@@ -9,9 +9,11 @@
 #include "mlir/Conversion/LoopsToGPU/LoopsToGPUPass.h"
 #include "mlir/Conversion/LoopsToGPU/LoopsToGPU.h"
 #include "mlir/Dialect/AffineOps/AffineOps.h"
+#include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/LoopOps/LoopOps.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Pass/Pass.h"
+#include "mlir/Transforms/DialectConversion.h"
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/CommandLine.h"
@@ -115,6 +117,21 @@ struct ImperfectlyNestedForLoopMapper
   SmallVector<int64_t, 3> workGroupSize;
 };
 
+struct ParallelLoopToGpuPass : public OperationPass<ParallelLoopToGpuPass> {
+  void runOnOperation() override {
+    OwningRewritePatternList patterns;
+    populateParallelLoopToGPUPatterns(patterns, &getContext());
+    ConversionTarget target(getContext());
+    target.addLegalDialect<StandardOpsDialect>();
+    target.addLegalDialect<AffineOpsDialect>();
+    target.addLegalDialect<gpu::GPUDialect>();
+    target.addLegalDialect<loop::LoopOpsDialect>();
+    target.addIllegalOp<loop::ParallelOp>();
+    if (failed(applyPartialConversion(getOperation(), target, patterns)))
+      signalPassFailure();
+  }
+};
+
 } // namespace
 
 std::unique_ptr<OpPassBase<FuncOp>>
@@ -128,6 +145,10 @@ mlir::createLoopToGPUPass(ArrayRef<int64_t> numWorkGroups,
                           ArrayRef<int64_t> workGroupSize) {
   return std::make_unique<ImperfectlyNestedForLoopMapper>(numWorkGroups,
                                                           workGroupSize);
+}
+
+std::unique_ptr<Pass> mlir::createParallelLoopToGpuPass() {
+  return std::make_unique<ParallelLoopToGpuPass>();
 }
 
 static PassRegistration<ForLoopMapper>
@@ -145,3 +166,7 @@ static PassRegistration<ImperfectlyNestedForLoopMapper> loopOpToGPU(
       return std::make_unique<ImperfectlyNestedForLoopMapper>(numWorkGroups,
                                                               workGroupSize);
     });
+
+static PassRegistration<ParallelLoopToGpuPass>
+    pass("convert-parallel-loops-to-gpu", "Convert mapped loop.parallel ops"
+                                          " to gpu launch operations.");
