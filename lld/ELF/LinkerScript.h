@@ -282,6 +282,7 @@ public:
   ExprValue getSymbolValue(StringRef name, const Twine &loc);
 
   void addOrphanSections();
+  void diagnoseOrphanHandling() const;
   void adjustSectionsBeforeSorting();
   void adjustSectionsAfterSorting();
 
@@ -320,6 +321,9 @@ public:
   // Used to implement INSERT [AFTER|BEFORE]. Contains output sections that need
   // to be reordered.
   std::vector<InsertCommand> insertCommands;
+
+  // Sections that will be warned/errored by --orphan-handling.
+  std::vector<const InputSectionBase *> orphanSections;
 
   // Sections whose addresses are not equal to their addrExpr values.
   std::vector<std::pair<const OutputSection *, uint64_t>>
