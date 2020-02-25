@@ -182,9 +182,12 @@ namespace llvm {
     bool isHighCostExpansion(const SCEV *Expr, Loop *L, unsigned Budget,
                              const TargetTransformInfo *TTI,
                              const Instruction *At = nullptr) {
+      assert(TTI && "This function requires TTI to be provided.");
+      if (!TTI)      // In assert-less builds, avoid crashing
+        return true; // by always claiming to be high-cost.
       SmallPtrSet<const SCEV *, 8> Processed;
       int BudgetRemaining = Budget * TargetTransformInfo::TCC_Basic;
-      return isHighCostExpansionHelper(Expr, L, At, BudgetRemaining, TTI,
+      return isHighCostExpansionHelper(Expr, L, At, BudgetRemaining, *TTI,
                                        Processed);
     }
 
@@ -329,7 +332,7 @@ namespace llvm {
     /// Recursive helper function for isHighCostExpansion.
     bool isHighCostExpansionHelper(const SCEV *S, Loop *L,
                                    const Instruction *At, int &BudgetRemaining,
-                                   const TargetTransformInfo *TTI,
+                                   const TargetTransformInfo &TTI,
                                    SmallPtrSetImpl<const SCEV *> &Processed);
 
     /// Insert the specified binary operator, doing a small amount of work to

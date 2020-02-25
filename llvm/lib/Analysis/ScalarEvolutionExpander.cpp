@@ -2137,7 +2137,7 @@ SCEVExpander::getRelatedExistingExpansion(const SCEV *S, const Instruction *At,
 
 bool SCEVExpander::isHighCostExpansionHelper(
     const SCEV *S, Loop *L, const Instruction *At, int &BudgetRemaining,
-    const TargetTransformInfo *TTI, SmallPtrSetImpl<const SCEV *> &Processed) {
+    const TargetTransformInfo &TTI, SmallPtrSetImpl<const SCEV *> &Processed) {
   // Was the cost of expansion of this expression already accounted for?
   if (!Processed.insert(S).second)
     return false; // We have already accounted for this expression.
@@ -2145,13 +2145,16 @@ bool SCEVExpander::isHighCostExpansionHelper(
   // If we can find an existing value for this scev available at the point "At"
   // then consider the expression cheap.
   if (At && getRelatedExistingExpansion(S, At, L))
-    return false;
+    return false; // Consider the expression to be free.
 
-  // Zero/One operand expressions
   switch (S->getSCEVType()) {
   case scUnknown:
   case scConstant:
-    return false;
+    return false; // Assume to be zero-cost.
+  }
+
+  // Zero/One operand expressions
+  switch (S->getSCEVType()) {
   case scTruncate:
     return isHighCostExpansionHelper(cast<SCEVTruncateExpr>(S)->getOperand(), L,
                                      At, BudgetRemaining, TTI, Processed);
