@@ -1027,6 +1027,69 @@ EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
     }
   }
 
+  // Split after an INLINEASM_BR block with outputs. This allows us to keep the
+  // copy to/from register instructions from being between two terminator
+  // instructions, which causes the machine instruction verifier agita.
+  auto TI = llvm::find_if(*BB, [](const MachineInstr &MI){
+    return MI.getOpcode() == TargetOpcode::INLINEASM_BR;
+  });
+  auto SplicePt = TI != BB->end() ? std::next(TI) : BB->end();
+  if (TI != BB->end() && SplicePt != BB->end() &&
+      TI->getOpcode() == TargetOpcode::INLINEASM_BR &&
+      SplicePt->getOpcode() == TargetOpcode::COPY) {
+    MachineBasicBlock *FallThrough = BB->getFallThrough();
+    if (!FallThrough)
+      for (const MachineOperand &MO : BB->back().operands())
+        if (MO.isMBB()) {
+          FallThrough = MO.getMBB();
+          break;
+        }
+    assert(FallThrough && "Cannot find default dest block for callbr!");
+
+    MachineBasicBlock *CopyBB = MF.CreateMachineBasicBlock(BB->getBasicBlock());
+    MachineFunction::iterator BBI(*BB);
+    MF.insert(++BBI, CopyBB);
+
+    CopyBB->splice(CopyBB->begin(), BB, SplicePt, BB->end());
+    CopyBB->setInlineAsmBrDefaultTarget();
+
+    CopyBB->addSuccessor(FallThrough, BranchProbability::getOne());
+    BB->addSuccessor(CopyBB, BranchProbability::getOne());
+
+    // Mark all physical registers defined in the original block as being live
+    // on entry to the copy block.
+    for (const auto &MI : *CopyBB)
+      for (const MachineOperand &MO : MI.operands())
+        if (MO.isReg()) {
+          Register reg = MO.getReg();
+          if (Register::isPhysicalRegister(reg)) {
+            CopyBB->addLiveIn(reg);
+            break;
+          }
+        }
+
+    // Bit of a hack: The copy block we created here exists only because we want
+    // the CFG to work with the current system. However, the successors to the
+    // block with the INLINEASM_BR instruction expect values to come from *that*
+    // block, not this usurper block. Thus we steal its successors and add them
+    // to the copy so that everyone is happy.
+    for (auto *Succ : BB->successors())
+      if (Succ != CopyBB && !CopyBB->isSuccessor(Succ))
+        CopyBB->addSuccessor(Succ, BranchProbability::getZero());
+
+    for (auto *Succ : CopyBB->successors())
+      if (BB->isSuccessor(Succ))
+        BB->removeSuccessor(Succ);
+
+    CopyBB->normalizeSuccProbs();
+    BB->normalizeSuccProbs();
+
+    BB->transferInlineAsmBrIndirectTargets(CopyBB);
+
+    InsertPos = CopyBB->end();
+    return CopyBB;
+  }
+
   InsertPos = Emitter.getInsertPos();
   return Emitter.getBlock();
 }

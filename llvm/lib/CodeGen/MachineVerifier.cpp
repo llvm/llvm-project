@@ -622,6 +622,7 @@ MachineVerifier::visitMachineBasicBlockBefore(const MachineBasicBlock *MBB) {
     // it is an entry block or landing pad.
     for (const auto &LI : MBB->liveins()) {
       if (isAllocatable(LI.PhysReg) && !MBB->isEHPad() &&
+          !MBB->isInlineAsmBrDefaultTarget() &&
           MBB->getIterator() != MBB->getParent()->begin()) {
         report("MBB has allocatable live-in, but isn't entry or landing-pad.", MBB);
         report_context(LI.PhysReg);
@@ -630,17 +631,30 @@ MachineVerifier::visitMachineBasicBlockBefore(const MachineBasicBlock *MBB) {
   }
 
   // Count the number of landing pad successors.
-  SmallPtrSet<MachineBasicBlock*, 4> LandingPadSuccs;
-  for (MachineBasicBlock::const_succ_iterator I = MBB->succ_begin(),
-       E = MBB->succ_end(); I != E; ++I) {
-    if ((*I)->isEHPad())
-      LandingPadSuccs.insert(*I);
-    if (!FunctionBlocks.count(*I))
+  SmallPtrSet<const MachineBasicBlock*, 4> LandingPadSuccs;
+  for (const auto *succ : MBB->successors()) {
+    if (succ->isEHPad())
+      LandingPadSuccs.insert(succ);
+    if (!FunctionBlocks.count(succ))
       report("MBB has successor that isn't part of the function.", MBB);
-    if (!MBBInfoMap[*I].Preds.count(MBB)) {
+    if (!MBBInfoMap[succ].Preds.count(MBB)) {
       report("Inconsistent CFG", MBB);
       errs() << "MBB is not in the predecessor list of the successor "
-             << printMBBReference(*(*I)) << ".\n";
+             << printMBBReference(*succ) << ".\n";
+    }
+  }
+
+  // Count the number of INLINEASM_BR indirect target successors.
+  SmallPtrSet<const MachineBasicBlock*, 4> IndirectTargetSuccs;
+  for (const auto *succ : MBB->successors()) {
+    if (MBB->isInlineAsmBrIndirectTarget(succ))
+      IndirectTargetSuccs.insert(succ);
+    if (!FunctionBlocks.count(succ))
+      report("MBB has successor that isn't part of the function.", MBB);
+    if (!MBBInfoMap[succ].Preds.count(MBB)) {
+      report("Inconsistent CFG", MBB);
+      errs() << "MBB is not in the predecessor list of the successor "
+             << printMBBReference(*succ) << ".\n";
     }
   }
 
@@ -681,11 +695,15 @@ MachineVerifier::visitMachineBasicBlockBefore(const MachineBasicBlock *MBB) {
         // It's possible that the block legitimately ends with a noreturn
         // call or an unreachable, in which case it won't actually fall
         // out the bottom of the function.
-      } else if (MBB->succ_size() == LandingPadSuccs.size()) {
+      } else if (MBB->succ_size() == LandingPadSuccs.size() ||
+                 MBB->succ_size() == IndirectTargetSuccs.size()) {
         // It's possible that the block legitimately ends with a noreturn
         // call or an unreachable, in which case it won't actually fall
         // out of the block.
-      } else if (MBB->succ_size() != 1+LandingPadSuccs.size()) {
+      } else if ((LandingPadSuccs.size() &&
+                  MBB->succ_size() != 1 + LandingPadSuccs.size()) ||
+                 (IndirectTargetSuccs.size() &&
+                  MBB->succ_size() != 1 + IndirectTargetSuccs.size())) {
         report("MBB exits via unconditional fall-through but doesn't have "
                "exactly one CFG successor!", MBB);
       } else if (!MBB->isSuccessor(&*MBBI)) {
@@ -707,7 +725,10 @@ MachineVerifier::visitMachineBasicBlockBefore(const MachineBasicBlock *MBB) {
       // landingpad, accept it as valid control flow.
       if (MBB->succ_size() != 1+LandingPadSuccs.size() &&
           (MBB->succ_size() != 1 || LandingPadSuccs.size() != 1 ||
-           *MBB->succ_begin() != *LandingPadSuccs.begin())) {
+           *MBB->succ_begin() != *LandingPadSuccs.begin()) &&
+          MBB->succ_size() != 1 + IndirectTargetSuccs.size() &&
+          (MBB->succ_size() != 1 || IndirectTargetSuccs.size() != 1 ||
+           *MBB->succ_begin() != *IndirectTargetSuccs.begin())) {
         report("MBB exits via unconditional branch but doesn't have "
                "exactly one CFG successor!", MBB);
       } else if (!MBB->isSuccessor(TBB)) {
