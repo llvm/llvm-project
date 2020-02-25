@@ -2128,6 +2128,16 @@ Usable as: Any Matcher
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1BinaryOperator.html">BinaryOperator</a>&gt;</td><td class="name" onclick="toggle('hasAnyOperatorName0')"><a name="hasAnyOperatorName0Anchor">hasAnyOperatorName</a></td><td>StringRef, ..., StringRef</td></tr>
+<tr><td colspan="4" class="doc" id="hasAnyOperatorName0"><pre>Matches operator expressions (binary or unary) that have any of the
+specified names.
+
+   hasAnyOperatorName("+", "-")
+ Is equivalent to
+   anyOf(hasOperatorName("+"), hasOperatorName("-"))
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1BinaryOperator.html">BinaryOperator</a>&gt;</td><td class="name" onclick="toggle('hasOperatorName0')"><a name="hasOperatorName0Anchor">hasOperatorName</a></td><td>std::string Name</td></tr>
 <tr><td colspan="4" class="doc" id="hasOperatorName0"><pre>Matches the operator Name of operator expressions (binary or
 unary).
@@ -4370,6 +4380,16 @@ unaryExprOrTypeTraitExpr(ofKind(UETT_SizeOf))
 
 If the matcher is use from clang-query, UnaryExprOrTypeTrait parameter
 should be passed as a quoted string. e.g., ofKind("UETT_SizeOf").
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1UnaryOperator.html">UnaryOperator</a>&gt;</td><td class="name" onclick="toggle('hasAnyOperatorName1')"><a name="hasAnyOperatorName1Anchor">hasAnyOperatorName</a></td><td>StringRef, ..., StringRef</td></tr>
+<tr><td colspan="4" class="doc" id="hasAnyOperatorName1"><pre>Matches operator expressions (binary or unary) that have any of the
+specified names.
+
+   hasAnyOperatorName("+", "-")
+ Is equivalent to
+   anyOf(hasOperatorName("+"), hasOperatorName("-"))
 </pre></td></tr>
 
 
