@@ -1234,6 +1234,9 @@ def err_omp_declare_simd_inbranch_notinbranch : Error<
   "unexpected '%0' clause, '%1' is specified already">;
 def err_expected_end_declare_target_or_variant : Error<
   "expected '#pragma omp end declare %select{target|variant}0'">;
+def err_expected_begin_declare_variant
+    : Error<"'#pragma omp end declare variant' with no matching '#pragma omp "
+            "begin declare variant'">;
 def err_omp_declare_target_unexpected_clause: Error<
   "unexpected '%0' clause, only %select{'to' or 'link'|'to', 'link' or 'device_type'}1 clauses expected">;
 def err_omp_expected_clause: Error<

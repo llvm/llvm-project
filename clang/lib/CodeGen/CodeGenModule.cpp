@@ -2615,11 +2615,6 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
     return;
   }
 
-    // Check if this must be emitted as declare variant.
-  if (LangOpts.OpenMP && isa<FunctionDecl>(Global) && OpenMPRuntime &&
-      OpenMPRuntime->emitDeclareVariant(GD, /*IsForDefinition=*/false))
-    return;
-
   // If we're deferring emission of a C++ variable with an
   // initializer, remember the order in which it appeared in the file.
   if (getLangOpts().CPlusPlus && isa<VarDecl>(Global) &&
@@ -2823,50 +2818,6 @@ void CodeGenModule::EmitMultiVersionFunctionDefinition(GlobalDecl GD,
     // Requires multiple emits.
   } else
     EmitGlobalFunctionDefinition(GD, GV);
-}
-
-void CodeGenModule::emitOpenMPDeviceFunctionRedefinition(
-    GlobalDecl OldGD, GlobalDecl NewGD, llvm::GlobalValue *GV) {
-  assert(getLangOpts().OpenMP && getLangOpts().OpenMPIsDevice &&
-         OpenMPRuntime && "Expected OpenMP device mode.");
-  const auto *D = cast<FunctionDecl>(OldGD.getDecl());
-
-  // Compute the function info and LLVM type.
-  const CGFunctionInfo &FI = getTypes().arrangeGlobalDeclaration(OldGD);
-  llvm::FunctionType *Ty = getTypes().GetFunctionType(FI);
-
-  // Get or create the prototype for the function.
-  if (!GV || (GV->getType()->getElementType() != Ty)) {
-    GV = cast<llvm::GlobalValue>(GetOrCreateLLVMFunction(
-        getMangledName(OldGD), Ty, GlobalDecl(), /*ForVTable=*/false,
-        /*DontDefer=*/true, /*IsThunk=*/false, llvm::AttributeList(),
-        ForDefinition));
-    SetFunctionAttributes(OldGD, cast<llvm::Function>(GV),
-                          /*IsIncompleteFunction=*/false,
-                          /*IsThunk=*/false);
-  }
-  // We need to set linkage and visibility on the function before
-  // generating code for it because various parts of IR generation
-  // want to propagate this information down (e.g. to local static
-  // declarations).
-  auto *Fn = cast<llvm::Function>(GV);
-  setFunctionLinkage(OldGD, Fn);
-
-  // FIXME: this is redundant with part of
-  // setFunctionDefinitionAttributes
-  setGVProperties(Fn, OldGD);
-
-  MaybeHandleStaticInExternC(D, Fn);
-
-  maybeSetTrivialComdat(*D, *Fn);
-
-  CodeGenFunction(*this).GenerateCode(NewGD, Fn, FI);
-
-  setNonAliasAttributes(OldGD, Fn);
-  SetLLVMFunctionAttributesForDefinition(D, Fn);
-
-  if (D->hasAttr<AnnotateAttr>())
-    AddGlobalAnnotations(D, Fn);
 }
 
 void CodeGenModule::EmitGlobalDefinition(GlobalDecl GD, llvm::GlobalValue *GV) {
@@ -3183,10 +3134,6 @@ llvm::Constant *CodeGenModule::GetOrCreateLLVMFunction(
         EmitGlobal(GDDef);
       }
     }
-    // Check if this must be emitted as declare variant and emit reference to
-    // the the declare variant function.
-    if (LangOpts.OpenMP && OpenMPRuntime)
-      (void)OpenMPRuntime->emitDeclareVariant(GD, /*IsForDefinition=*/true);
 
     if (FD->isMultiVersion()) {
       if (FD->hasAttr<TargetAttr>())
@@ -4518,11 +4465,6 @@ void CodeGenModule::HandleCXXStaticMemberVarInstantiation(VarDecl *VD) {
 
 void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD,
                                                  llvm::GlobalValue *GV) {
-  // Check if this must be emitted as declare variant.
-  if (LangOpts.OpenMP && OpenMPRuntime &&
-      OpenMPRuntime->emitDeclareVariant(GD, /*IsForDefinition=*/true))
-    return;
-
   const auto *D = cast<FunctionDecl>(GD.getDecl());
 
   // Compute the function info and LLVM type.

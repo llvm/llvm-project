@@ -2244,6 +2244,22 @@ bool Sema::isOpenMPGlobalCapturedDecl(ValueDecl *D, unsigned Level,
 
 void Sema::DestroyDataSharingAttributesStack() { delete DSAStack; }
 
+void Sema::ActOnOpenMPBeginDeclareVariant(SourceLocation Loc,
+                                          OMPTraitInfo &TI) {
+  if (!OMPDeclareVariantScopes.empty()) {
+    Diag(Loc, diag::warn_nested_declare_variant);
+    return;
+  }
+  OMPDeclareVariantScopes.push_back(OMPDeclareVariantScope(TI));
+}
+
+void Sema::ActOnOpenMPEndDeclareVariant() {
+  assert(isInOpenMPDeclareVariantScope() &&
+         "Not in OpenMP declare variant scope!");
+
+  OMPDeclareVariantScopes.pop_back();
+}
+
 void Sema::finalizeOpenMPDelayedAnalysis(const FunctionDecl *Caller,
                                          const FunctionDecl *Callee,
                                          SourceLocation Loc) {
@@ -5440,6 +5456,128 @@ static void setPrototype(Sema &S, FunctionDecl *FD, FunctionDecl *FDWithProto,
   FD->setParams(Params);
 }
 
+FunctionDecl *
+Sema::ActOnStartOfFunctionDefinitionInOpenMPDeclareVariantScope(Scope *S,
+                                                                Declarator &D) {
+  auto *BaseFD = cast<FunctionDecl>(ActOnDeclarator(S, D));
+  OMPDeclareVariantScope &DVScope = OMPDeclareVariantScopes.back();
+  std::string MangledName;
+  MangledName += D.getIdentifier()->getName();
+  MangledName += getOpenMPVariantManglingSeparatorStr();
+  MangledName += DVScope.NameSuffix;
+  IdentifierInfo &VariantII = Context.Idents.get(MangledName);
+
+  VariantII.setMangledOpenMPVariantName(true);
+  D.SetIdentifier(&VariantII, D.getBeginLoc());
+  return BaseFD;
+}
+
+void Sema::ActOnFinishedFunctionDefinitionInOpenMPDeclareVariantScope(
+    FunctionDecl *FD, FunctionDecl *BaseFD) {
+  // Do not mark function as is used to prevent its emission if this is the
+  // only place where it is used.
+  EnterExpressionEvaluationContext Unevaluated(
+      *this, Sema::ExpressionEvaluationContext::Unevaluated);
+
+  Expr *VariantFuncRef = DeclRefExpr::Create(
+      Context, NestedNameSpecifierLoc(), SourceLocation(), FD,
+      /* RefersToEnclosingVariableOrCapture */ false,
+      /* NameLoc */ FD->getLocation(), FD->getType(), ExprValueKind::VK_RValue);
+
+  OMPDeclareVariantScope &DVScope = OMPDeclareVariantScopes.back();
+  auto *OMPDeclareVariantA = OMPDeclareVariantAttr::CreateImplicit(
+      Context, VariantFuncRef, DVScope.TI);
+  BaseFD->addAttr(OMPDeclareVariantA);
+
+  BaseFD->setImplicit(true);
+}
+
+ExprResult Sema::ActOnOpenMPCall(Sema &S, ExprResult Call, Scope *Scope,
+                                 SourceLocation LParenLoc,
+                                 MultiExprArg ArgExprs,
+                                 SourceLocation RParenLoc, Expr *ExecConfig) {
+  // The common case is a regular call we do not want to specialize at all. Try
+  // to make that case fast by bailing early.
+  CallExpr *CE = dyn_cast<CallExpr>(Call.get());
+  if (!CE)
+    return Call;
+
+  FunctionDecl *CalleeFnDecl = CE->getDirectCallee();
+  if (!CalleeFnDecl)
+    return Call;
+
+  if (!CalleeFnDecl->hasAttr<OMPDeclareVariantAttr>())
+    return Call;
+
+  ASTContext &Context = S.getASTContext();
+  OMPContext OMPCtx(S.getLangOpts().OpenMPIsDevice,
+                    Context.getTargetInfo().getTriple());
+
+  SmallVector<Expr *, 4> Exprs;
+  SmallVector<VariantMatchInfo, 4> VMIs;
+  while (CalleeFnDecl) {
+    for (OMPDeclareVariantAttr *A :
+         CalleeFnDecl->specific_attrs<OMPDeclareVariantAttr>()) {
+      Expr *VariantRef = A->getVariantFuncRef();
+
+      VariantMatchInfo VMI;
+      OMPTraitInfo &TI = A->getTraitInfo();
+      TI.getAsVariantMatchInfo(Context, VMI, /* DeviceSetOnly */ false);
+      if (!isVariantApplicableInContext(VMI, OMPCtx))
+        continue;
+
+      VMIs.push_back(VMI);
+      Exprs.push_back(VariantRef);
+    }
+
+    CalleeFnDecl = CalleeFnDecl->getPreviousDecl();
+  }
+
+  ExprResult NewCall;
+  do {
+    int BestIdx = getBestVariantMatchForContext(VMIs, OMPCtx);
+    if (BestIdx < 0)
+      return Call;
+    Expr *BestExpr = cast<DeclRefExpr>(Exprs[BestIdx]);
+    Decl *BestDecl = cast<DeclRefExpr>(BestExpr)->getDecl();
+
+    {
+      // Try to build a (member) call expression for the current best applicable
+      // variant expression. We allow this to fail in which case we continue
+      // with the next best variant expression. The fail case is part of the
+      // implementation defined behavior in the OpenMP standard when it talks
+      // about what differences in the function prototypes: "Any differences
+      // that the specific OpenMP context requires in the prototype of the
+      // variant from the base function prototype are implementation defined."
+      // This wording is there to allow the specialized variant to have a
+      // different type than the base function. This is intended and OK but if
+      // we cannot create a call the difference is not in the "implementation
+      // defined range" we allow.
+      Sema::TentativeAnalysisScope Trap(*this);
+
+      if (auto *SpecializedMethod = dyn_cast<CXXMethodDecl>(BestDecl)) {
+        auto *MemberCall = dyn_cast<CXXMemberCallExpr>(CE);
+        BestExpr = MemberExpr::CreateImplicit(
+            S.Context, MemberCall->getImplicitObjectArgument(),
+            /* IsArrow */ false, SpecializedMethod, S.Context.BoundMemberTy,
+            MemberCall->getValueKind(), MemberCall->getObjectKind());
+      }
+      NewCall = S.BuildCallExpr(Scope, BestExpr, LParenLoc, ArgExprs, RParenLoc,
+                                ExecConfig);
+      if (NewCall.isUsable())
+        break;
+    }
+
+    VMIs.erase(VMIs.begin() + BestIdx);
+    Exprs.erase(Exprs.begin() + BestIdx);
+  } while (!VMIs.empty());
+
+  if (!NewCall.isUsable())
+    return Call;
+
+  return PseudoObjectExpr::Create(Context, CE, {NewCall.get()}, 0);
+}
+
 Optional<std::pair<FunctionDecl *, Expr *>>
 Sema::checkOpenMPDeclareVariantFunction(Sema::DeclGroupPtrTy DG,
                                         Expr *VariantRef, OMPTraitInfo &TI,
@@ -5710,25 +5848,6 @@ void Sema::ActOnOpenMPDeclareVariantDirective(FunctionDecl *FD,
   auto *NewAttr =
       OMPDeclareVariantAttr::CreateImplicit(Context, VariantRef, &TI, SR);
   FD->addAttr(NewAttr);
-}
-
-void Sema::markOpenMPDeclareVariantFuncsReferenced(SourceLocation Loc,
-                                                   FunctionDecl *Func,
-                                                   bool MightBeOdrUse) {
-  assert(LangOpts.OpenMP && "Expected OpenMP mode.");
-
-  if (!Func->isDependentContext() && Func->hasAttrs()) {
-    for (OMPDeclareVariantAttr *A :
-         Func->specific_attrs<OMPDeclareVariantAttr>()) {
-      // TODO: add checks for active OpenMP context where possible.
-      Expr *VariantRef = A->getVariantFuncRef();
-      auto *DRE = cast<DeclRefExpr>(VariantRef->IgnoreParenImpCasts());
-      auto *F = cast<FunctionDecl>(DRE->getDecl());
-      if (!F->isDefined() && F->isTemplateInstantiation())
-        InstantiateFunctionDefinition(Loc, F->getFirstDecl());
-      MarkFunctionReferenced(Loc, F, MightBeOdrUse);
-    }
-  }
 }
 
 StmtResult Sema::ActOnOpenMPParallelDirective(ArrayRef<OMPClause *> Clauses,

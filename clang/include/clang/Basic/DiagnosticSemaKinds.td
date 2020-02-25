@@ -10186,6 +10186,10 @@ def err_omp_non_lvalue_in_map_or_motion_clauses: Error<
   >;
 def err_omp_event_var_expected : Error<
   "expected variable of the 'omp_event_handle_t' type%select{|, not %1}0">;
+def warn_nested_declare_variant
+    : Warning<"nesting `omp begin/end declare variant` is not supported yet; "
+              "nested context ignored">,
+      InGroup<SourceUsesOpenMP>;
 } // end of OpenMP category
 
 let CategoryName = "Related Result Type Issue" in {

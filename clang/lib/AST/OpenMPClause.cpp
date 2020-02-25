@@ -1967,6 +1967,63 @@ void OMPTraitInfo::print(llvm::raw_ostream &OS,
   }
 }
 
+std::string OMPTraitInfo::getMangledName() const {
+  std::string MangledName;
+  llvm::raw_string_ostream OS(MangledName);
+  for (const OMPTraitInfo::OMPTraitSet &Set : Sets) {
+    OS << '.' << 'S' << unsigned(Set.Kind);
+    for (const OMPTraitInfo::OMPTraitSelector &Selector : Set.Selectors) {
+
+      bool AllowsTraitScore = false;
+      bool RequiresProperty = false;
+      isValidTraitSelectorForTraitSet(
+          Selector.Kind, Set.Kind, AllowsTraitScore, RequiresProperty);
+      OS << '.' << 's' << unsigned(Selector.Kind);
+
+      if (!RequiresProperty ||
+          Selector.Kind == TraitSelector::user_condition)
+        continue;
+
+      for (const OMPTraitInfo::OMPTraitProperty &Property : Selector.Properties)
+        OS << '.' << 'P'
+           << getOpenMPContextTraitPropertyName(Property.Kind);
+    }
+  }
+  return OS.str();
+}
+
+OMPTraitInfo::OMPTraitInfo(StringRef MangledName) {
+  unsigned long U;
+  do {
+    if (!MangledName.consume_front(".S"))
+      break;
+    if (MangledName.consumeInteger(10, U))
+      break;
+    Sets.push_back(OMPTraitSet());
+    OMPTraitSet &Set = Sets.back();
+    Set.Kind = TraitSet(U);
+    do {
+      if (!MangledName.consume_front(".s"))
+        break;
+      if (MangledName.consumeInteger(10, U))
+        break;
+      Set.Selectors.push_back(OMPTraitSelector());
+      OMPTraitSelector &Selector = Set.Selectors.back();
+      Selector.Kind = TraitSelector(U);
+      do {
+        if (!MangledName.consume_front(".P"))
+          break;
+        Selector.Properties.push_back(OMPTraitProperty());
+        OMPTraitProperty &Property = Selector.Properties.back();
+        std::pair<StringRef, StringRef> PropRestPair = MangledName.split('.');
+        Property.Kind =
+            getOpenMPContextTraitPropertyKind(Set.Kind, PropRestPair.first);
+        MangledName = PropRestPair.second;
+      } while (true);
+    } while (true);
+  } while (true);
+}
+
 llvm::raw_ostream &clang::operator<<(llvm::raw_ostream &OS,
                                      const OMPTraitInfo &TI) {
   LangOptions LO;
