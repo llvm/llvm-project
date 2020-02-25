@@ -119,6 +119,9 @@ Non-comprehensive list of changes in this release
 * Improved support for ``octeon`` MIPS-family CPU. Added ``octeon+`` to
   the list of of CPUs accepted by the driver.
 
+* For the WebAssembly target, the ``wasm-opt`` tool will now be run if it is
+  found in the PATH, which can reduce code size.
+
 New Compiler Flags
 ------------------
 

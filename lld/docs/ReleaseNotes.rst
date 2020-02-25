@@ -86,3 +86,4 @@ WebAssembly Improvements
   as it's best to keep them internal when possible. They can be
   explicitly exported with `--export=__data_end` and
   `--export=__heap_base`, respectively.
+* wasm-ld now elides .bss sections when the memory is not imported

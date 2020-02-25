@@ -234,7 +234,12 @@ Changes to the AVR Target
 Changes to the WebAssembly Target
 ---------------------------------
 
- During this release ...
+* __attribute__((used)) no longer implies that a symbol is exported, for
+  consistency with other targets.
+* Multivalue function signatures are now supported in WebAssembly object files
+* The new `atomic.fence` instruction is now supported
+* Thread-Local Storage (TLS) is now supported.
+* SIMD support is significantly expanded.
 
 Changes to the Windows Target
 -----------------------------
