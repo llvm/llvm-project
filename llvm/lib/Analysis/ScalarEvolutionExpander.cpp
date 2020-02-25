@@ -2219,6 +2219,64 @@ bool SCEVExpander::isHighCostExpansionHelper(
                                      TTI, Processed);
   }
 
+  if (const auto *NAry = dyn_cast<SCEVAddRecExpr>(S)) {
+    Type *OpType = NAry->getType();
+
+    assert(NAry->getNumOperands() >= 2 &&
+           "Polynomial should be at least linear");
+
+    int AddCost = TTI.getOperationCost(Instruction::Add, OpType);
+    int MulCost = TTI.getOperationCost(Instruction::Mul, OpType);
+
+    // In this polynominal, we may have some zero operands, and we shouldn't
+    // really charge for those. So how many non-zero coeffients are there?
+    int NumTerms = llvm::count_if(NAry->operands(),
+                                  [](const SCEV *S) { return !S->isZero(); });
+    assert(NumTerms >= 1 && "Polynominal should have at least one term.");
+    assert(!(*std::prev(NAry->operands().end()))->isZero() &&
+           "Last operand should not be zero");
+
+    // Much like with normal add expr, the polynominal will require
+    // one less addition than the number of it's terms.
+    BudgetRemaining -= AddCost * (NumTerms - 1);
+    if (BudgetRemaining < 0)
+      return true;
+
+    // Ignoring constant term (operand 0), how many of the coeffients are u> 1?
+    int NumNonZeroDegreeNonOneTerms =
+        llvm::count_if(make_range(std::next(NAry->op_begin()), NAry->op_end()),
+                       [](const SCEV *S) {
+                         auto *SConst = dyn_cast<SCEVConstant>(S);
+                         return !SConst || SConst->getAPInt().ugt(1);
+                       });
+    // Here, *each* one of those will require a multiplication.
+    BudgetRemaining -= MulCost * NumNonZeroDegreeNonOneTerms;
+    if (BudgetRemaining < 0)
+      return true;
+
+    // What is the degree of this polynominal?
+    int PolyDegree = NAry->getNumOperands() - 1;
+    assert(PolyDegree >= 1 && "Should be at least affine.");
+
+    // The final term will be:
+    //   Op_{PolyDegree} * x ^ {PolyDegree}
+    // Where  x ^ {PolyDegree}  will again require PolyDegree-1 mul operations.
+    // Note that  x ^ {PolyDegree} = x * x ^ {PolyDegree-1}  so charging for
+    // x ^ {PolyDegree}  will give us  x ^ {2} .. x ^ {PolyDegree-1}  for free.
+    // FIXME: this is conservatively correct, but might be overly pessimistic.
+    BudgetRemaining -= MulCost * (PolyDegree - 1);
+    if (BudgetRemaining < 0)
+      return true;
+
+    // And finally, the operands themselves should fit within the budget.
+    for (const SCEV *Op : NAry->operands()) {
+      if (isHighCostExpansionHelper(Op, L, At, BudgetRemaining, TTI, Processed))
+        return true;
+    }
+
+    return BudgetRemaining < 0;
+  }
+
   if (S->getSCEVType() == scAddExpr || S->getSCEVType() == scMulExpr) {
     const SCEVNAryExpr *NAry = dyn_cast<SCEVNAryExpr>(S);
 
@@ -2257,15 +2315,6 @@ bool SCEVExpander::isHighCostExpansionHelper(
   // the exit condition.
   if (isa<SCEVMinMaxExpr>(S))
     return true;
-
-  // Recurse past nary expressions, which commonly occur in the
-  // BackedgeTakenCount. They may already exist in program code, and if not,
-  // they are not too expensive rematerialize.
-  if (const SCEVNAryExpr *NAry = dyn_cast<SCEVNAryExpr>(S)) {
-    for (auto *Op : NAry->operands())
-      if (isHighCostExpansionHelper(Op, L, At, BudgetRemaining, TTI, Processed))
-        return true;
-  }
 
   // If we haven't recognized an expensive SCEV pattern, assume it's an
   // expression produced by program code.
