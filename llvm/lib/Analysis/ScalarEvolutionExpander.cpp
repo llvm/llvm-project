@@ -2130,8 +2130,7 @@ SCEVExpander::getRelatedExistingExpansion(const SCEV *S, const Instruction *At,
 
 bool SCEVExpander::isHighCostExpansionHelper(
     const SCEV *S, Loop *L, const Instruction *At,
-    SmallPtrSetImpl<const SCEV *> &Processed) {
-
+    const TargetTransformInfo *TTI, SmallPtrSetImpl<const SCEV *> &Processed) {
   // If we can find an existing value for this scev available at the point "At"
   // then consider the expression cheap.
   if (At && getRelatedExistingExpansion(S, At, L))
@@ -2143,14 +2142,14 @@ bool SCEVExpander::isHighCostExpansionHelper(
   case scConstant:
     return false;
   case scTruncate:
-    return isHighCostExpansionHelper(cast<SCEVTruncateExpr>(S)->getOperand(),
-                                     L, At, Processed);
+    return isHighCostExpansionHelper(cast<SCEVTruncateExpr>(S)->getOperand(), L,
+                                     At, TTI, Processed);
   case scZeroExtend:
     return isHighCostExpansionHelper(cast<SCEVZeroExtendExpr>(S)->getOperand(),
-                                     L, At, Processed);
+                                     L, At, TTI, Processed);
   case scSignExtend:
     return isHighCostExpansionHelper(cast<SCEVSignExtendExpr>(S)->getOperand(),
-                                     L, At, Processed);
+                                     L, At, TTI, Processed);
   }
 
   if (!Processed.insert(S).second)
@@ -2163,7 +2162,8 @@ bool SCEVExpander::isHighCostExpansionHelper(
     // lowered into a right shift.
     if (auto *SC = dyn_cast<SCEVConstant>(UDivExpr->getRHS()))
       if (SC->getAPInt().isPowerOf2()) {
-        if (isHighCostExpansionHelper(UDivExpr->getLHS(), L, At, Processed))
+        if (isHighCostExpansionHelper(UDivExpr->getLHS(), L, At, TTI,
+                                      Processed))
           return true;
         const DataLayout &DL =
             L->getHeader()->getParent()->getParent()->getDataLayout();
@@ -2200,7 +2200,7 @@ bool SCEVExpander::isHighCostExpansionHelper(
   // they are not too expensive rematerialize.
   if (const SCEVNAryExpr *NAry = dyn_cast<SCEVNAryExpr>(S)) {
     for (auto *Op : NAry->operands())
-      if (isHighCostExpansionHelper(Op, L, At, Processed))
+      if (isHighCostExpansionHelper(Op, L, At, TTI, Processed))
         return true;
   }
 

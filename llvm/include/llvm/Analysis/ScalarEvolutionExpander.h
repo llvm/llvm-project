@@ -178,9 +178,10 @@ namespace llvm {
     /// going to expand this expression. Sometimes this knowledge can lead to a
     /// more accurate cost estimation.
     bool isHighCostExpansion(const SCEV *Expr, Loop *L,
+                             const TargetTransformInfo *TTI,
                              const Instruction *At = nullptr) {
       SmallPtrSet<const SCEV *, 8> Processed;
-      return isHighCostExpansionHelper(Expr, L, At, Processed);
+      return isHighCostExpansionHelper(Expr, L, At, TTI, Processed);
     }
 
     /// This method returns the canonical induction variable of the specified
@@ -324,6 +325,7 @@ namespace llvm {
     /// Recursive helper function for isHighCostExpansion.
     bool isHighCostExpansionHelper(const SCEV *S, Loop *L,
                                    const Instruction *At,
+                                   const TargetTransformInfo *TTI,
                                    SmallPtrSetImpl<const SCEV *> &Processed);
 
     /// Insert the specified binary operator, doing a small amount of work to
