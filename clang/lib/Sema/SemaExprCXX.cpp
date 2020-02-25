@@ -3917,9 +3917,11 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
     llvm_unreachable("Cannot perform an ellipsis conversion");
 
   case ImplicitConversionSequence::BadConversion:
-    bool Diagnosed =
-        DiagnoseAssignmentResult(Incompatible, From->getExprLoc(), ToType,
-                                 From->getType(), From, Action);
+    Sema::AssignConvertType ConvTy =
+        CheckAssignmentConstraints(From->getExprLoc(), ToType, From->getType());
+    bool Diagnosed = DiagnoseAssignmentResult(
+        ConvTy == Compatible ? Incompatible : ConvTy, From->getExprLoc(),
+        ToType, From->getType(), From, Action);
     assert(Diagnosed && "failed to diagnose bad conversion"); (void)Diagnosed;
     return ExprError();
   }

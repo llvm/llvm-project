@@ -11,7 +11,7 @@ using E = void (Y::*)() noexcept;
 using F = void (Y::*)();
 
 void f(A a, B b, C c, D d, E e, F f, bool k) {
-  a = k ? a : b; // expected-error {{different exception specifications}}
+  a = k ? a : b; // expected-error {{incompatible function pointer types assigning to 'A' (aka 'void (*)() noexcept') from 'void (*)()'}}
   b = k ? a : b;
 
   c = k ? c : d; // expected-error {{different exception specifications}}
