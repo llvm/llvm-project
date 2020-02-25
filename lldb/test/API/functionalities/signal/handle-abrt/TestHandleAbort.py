@@ -55,6 +55,9 @@ class HandleAbortTestCase(TestBase):
         # Expect breakpoint in 'handler'
         frame = thread.GetFrameAtIndex(0)
         self.assertEqual(frame.GetDisplayFunctionName(), "handler", "Unexpected break?")
+        
+        self.runCmd("log enable lldb unwind")
+        self.runCmd("bt")
 
         # Expect that unwinding should find 'abort_caller'
         foundFoo = False
@@ -62,6 +65,7 @@ class HandleAbortTestCase(TestBase):
             if frame.GetDisplayFunctionName() == "abort_caller":
                 foundFoo = True
 
+        self.runCmd("log disable lldb unwind")
         self.assertTrue(foundFoo, "Unwinding did not find func that called abort")
 
         # Continue until we exit.
