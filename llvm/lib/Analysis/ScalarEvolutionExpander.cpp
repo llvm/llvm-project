@@ -2196,20 +2196,27 @@ bool SCEVExpander::isHighCostExpansionHelper(
     // UDivExpr is very likely a UDiv that ScalarEvolution's HowFarToZero or
     // HowManyLessThans produced to compute a precise expression, rather than a
     // UDiv from the user's code. If we can't find a UDiv in the code with some
-    // simple searching, assume the former consider UDivExpr expensive to
-    // compute.
-    BasicBlock *ExitingBB = L->getExitingBlock();
-    if (!ExitingBB)
-      return true;
+    // simple searching, we need to account for it's cost.
 
-    // At the beginning of this function we already tried to find existing value
-    // for plain 'S'. Now try to lookup 'S + 1' since it is common pattern
-    // involving division. This is just a simple search heuristic.
-    if (!At)
-      At = &ExitingBB->back();
-    if (!getRelatedExistingExpansion(
-            SE.getAddExpr(S, SE.getConstant(S->getType(), 1)), At, L))
-      return true;
+    BasicBlock *ExitingBB = L->getExitingBlock();
+    if (At || ExitingBB) {
+      if (!At)
+        At = &ExitingBB->back();
+
+      // At the beginning of this function we already tried to find existing
+      // value for plain 'S'. Now try to lookup 'S + 1' since it is common
+      // pattern involving division. This is just a simple search heuristic.
+      if (getRelatedExistingExpansion(
+              SE.getAddExpr(S, SE.getConstant(S->getType(), 1)), At, L))
+        return false; // Consider it to be free.
+    }
+
+    // Need to count the cost of this UDiv.
+    BudgetRemaining -= TTI.getOperationCost(Instruction::UDiv, S->getType());
+    return isHighCostExpansionHelper(UDivExpr->getLHS(), L, At, BudgetRemaining,
+                                     TTI, Processed) ||
+           isHighCostExpansionHelper(UDivExpr->getRHS(), L, At, BudgetRemaining,
+                                     TTI, Processed);
   }
 
   // HowManyLessThans uses a Max expression whenever the loop is not guarded by
