@@ -31,6 +31,33 @@ body: |
 ...
 
 ---
+name: test_smin_s64
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+
+    ; SI-LABEL: name: test_smin_s64
+    ; SI: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; SI: [[COPY1:%[0-9]+]]:_(s64) = COPY $vgpr2_vgpr3
+    ; SI: [[SMIN:%[0-9]+]]:_(s64) = G_SMIN [[COPY]], [[COPY1]]
+    ; SI: $vgpr0_vgpr1 = COPY [[SMIN]](s64)
+    ; VI-LABEL: name: test_smin_s64
+    ; VI: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; VI: [[COPY1:%[0-9]+]]:_(s64) = COPY $vgpr2_vgpr3
+    ; VI: [[SMIN:%[0-9]+]]:_(s64) = G_SMIN [[COPY]], [[COPY1]]
+    ; VI: $vgpr0_vgpr1 = COPY [[SMIN]](s64)
+    ; GFX9-LABEL: name: test_smin_s64
+    ; GFX9: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; GFX9: [[COPY1:%[0-9]+]]:_(s64) = COPY $vgpr2_vgpr3
+    ; GFX9: [[SMIN:%[0-9]+]]:_(s64) = G_SMIN [[COPY]], [[COPY1]]
+    ; GFX9: $vgpr0_vgpr1 = COPY [[SMIN]](s64)
+    %0:_(s64) = COPY $vgpr0_vgpr1
+    %1:_(s64) = COPY $vgpr2_vgpr3
+    %2:_(s64) = G_SMIN %0, %1
+    $vgpr0_vgpr1 = COPY %2
+...
+
+---
 name: test_smin_s16
 body: |
   bb.0:
