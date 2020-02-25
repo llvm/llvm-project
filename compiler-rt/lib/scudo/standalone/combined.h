@@ -449,6 +449,12 @@ public:
   void *reallocate(void *OldPtr, uptr NewSize, uptr Alignment = MinAlignment) {
     initThreadMaybe();
 
+    if (UNLIKELY(NewSize >= MaxAllowedMallocSize)) {
+      if (Options.MayReturnNull)
+        return nullptr;
+      reportAllocationSizeTooBig(NewSize, 0, MaxAllowedMallocSize);
+    }
+
     void *OldTaggedPtr = OldPtr;
     OldPtr = untagPointerMaybe(OldPtr);
 
@@ -502,9 +508,7 @@ public:
     // reasonable delta), we just keep the old block, and update the chunk
     // header to reflect the size change.
     if (reinterpret_cast<uptr>(OldPtr) + NewSize <= BlockEnd) {
-      const uptr Delta =
-          OldSize < NewSize ? NewSize - OldSize : OldSize - NewSize;
-      if (Delta <= SizeClassMap::MaxSize / 2) {
+      if (NewSize > OldSize || (OldSize - NewSize) < getPageSizeCached()) {
         Chunk::UnpackedHeader NewHeader = OldHeader;
         NewHeader.SizeOrUnusedBytes =
             (ClassId ? NewSize

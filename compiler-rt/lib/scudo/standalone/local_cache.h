@@ -165,13 +165,14 @@ private:
 
   NOINLINE void drain(PerClass *C, uptr ClassId) {
     const u32 Count = Min(C->MaxCount / 2, C->Count);
-    const uptr FirstIndexToDrain = C->Count - Count;
-    TransferBatch *B = createBatch(ClassId, C->Chunks[FirstIndexToDrain]);
+    TransferBatch *B = createBatch(ClassId, C->Chunks[0]);
     if (UNLIKELY(!B))
       reportOutOfMemory(
           SizeClassAllocator::getSizeByClassId(SizeClassMap::BatchClassId));
-    B->setFromArray(&C->Chunks[FirstIndexToDrain], Count);
+    B->setFromArray(&C->Chunks[0], Count);
     C->Count -= Count;
+    for (uptr I = 0; I < C->Count; I++)
+      C->Chunks[I] = C->Chunks[I + Count];
     Allocator->pushBatch(ClassId, B);
   }
 };
