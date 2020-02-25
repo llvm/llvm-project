@@ -84,7 +84,7 @@ void test_arr_expr() {
 
 // CHECK-ARR-LABEL: define void @_Z17test_new_arr_exprv
 void test_new_arr_expr() {
-  // CHECK-ARR: call i8* @_Znam(i64 17)
+  // CHECK-ARR: call noalias nonnull i8* @_Znam(i64 17)
   new char[std::is_constant_evaluated() || __builtin_is_constant_evaluated() ? 1 : 17];
 }
 

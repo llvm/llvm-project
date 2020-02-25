@@ -2952,7 +2952,8 @@ bool FunctionDecl::isReservedGlobalPlacementOperator() const {
   return (proto->getParamType(1).getCanonicalType() == Context.VoidPtrTy);
 }
 
-bool FunctionDecl::isReplaceableGlobalAllocationFunction(bool *IsAligned) const {
+bool FunctionDecl::isReplaceableGlobalAllocationFunction(
+    Optional<unsigned> *AlignmentParam, bool *IsNothrow) const {
   if (getDeclName().getNameKind() != DeclarationName::CXXOperatorName)
     return false;
   if (getDeclName().getCXXOverloadedOperator() != OO_New &&
@@ -2999,9 +3000,9 @@ bool FunctionDecl::isReplaceableGlobalAllocationFunction(bool *IsAligned) const 
   // In C++17, the next parameter can be a 'std::align_val_t' for aligned
   // new/delete.
   if (Ctx.getLangOpts().AlignedAllocation && !Ty.isNull() && Ty->isAlignValT()) {
-    if (IsAligned)
-      *IsAligned = true;
     Consume();
+    if (AlignmentParam)
+      *AlignmentParam = Params;
   }
 
   // Finally, if this is not a sized delete, the final parameter can
@@ -3010,8 +3011,11 @@ bool FunctionDecl::isReplaceableGlobalAllocationFunction(bool *IsAligned) const 
     Ty = Ty->getPointeeType();
     if (Ty.getCVRQualifiers() != Qualifiers::Const)
       return false;
-    if (Ty->isNothrowT())
+    if (Ty->isNothrowT()) {
+      if (IsNothrow)
+        *IsNothrow = true;
       Consume();
+    }
   }
 
   return Params == FPT->getNumParams();
