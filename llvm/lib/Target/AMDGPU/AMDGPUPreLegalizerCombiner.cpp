@@ -28,112 +28,13 @@
 using namespace llvm;
 using namespace MIPatternMatch;
 
-struct FMinFMaxLegacyInfo {
-  Register LHS;
-  Register RHS;
-  Register True;
-  Register False;
-  CmpInst::Predicate Pred;
-};
-
-// TODO: Make sure fmin_legacy/fmax_legacy don't canonicalize
-static bool matchFMinFMaxLegacy(MachineInstr &MI, MachineRegisterInfo &MRI,
-                                MachineFunction &MF, FMinFMaxLegacyInfo &Info) {
-  // FIXME: Combines should have subtarget predicates, and we shouldn't need
-  // this here.
-  if (!MF.getSubtarget<GCNSubtarget>().hasFminFmaxLegacy())
-    return false;
-
-  // FIXME: Type predicate on pattern
-  if (MRI.getType(MI.getOperand(0).getReg()) != LLT::scalar(32))
-    return false;
-
-  Register Cond = MI.getOperand(1).getReg();
-  if (!MRI.hasOneNonDBGUse(Cond) ||
-      !mi_match(Cond, MRI,
-                m_GFCmp(m_Pred(Info.Pred), m_Reg(Info.LHS), m_Reg(Info.RHS))))
-    return false;
-
-  Info.True = MI.getOperand(2).getReg();
-  Info.False = MI.getOperand(3).getReg();
-
-  if (!(Info.LHS == Info.True && Info.RHS == Info.False) &&
-      !(Info.LHS == Info.False && Info.RHS == Info.True))
-    return false;
-
-  switch (Info.Pred) {
-  case CmpInst::FCMP_FALSE:
-  case CmpInst::FCMP_OEQ:
-  case CmpInst::FCMP_ONE:
-  case CmpInst::FCMP_ORD:
-  case CmpInst::FCMP_UNO:
-  case CmpInst::FCMP_UEQ:
-  case CmpInst::FCMP_UNE:
-  case CmpInst::FCMP_TRUE:
-    return false;
-  default:
-    return true;
-  }
-}
-
-static void applySelectFCmpToFMinToFMaxLegacy(MachineInstr &MI,
-                                              const FMinFMaxLegacyInfo &Info) {
-
-  auto buildNewInst = [&MI](unsigned Opc, Register X, Register Y) {
-    MachineIRBuilder MIB(MI);
-    MIB.buildInstr(Opc, {MI.getOperand(0)}, {X, Y}, MI.getFlags());
-  };
-
-  switch (Info.Pred) {
-  case CmpInst::FCMP_ULT:
-  case CmpInst::FCMP_ULE:
-    if (Info.LHS == Info.True)
-      buildNewInst(AMDGPU::G_AMDGPU_FMIN_LEGACY, Info.RHS, Info.LHS);
-    else
-      buildNewInst(AMDGPU::G_AMDGPU_FMAX_LEGACY, Info.LHS, Info.RHS);
-    break;
-  case CmpInst::FCMP_OLE:
-  case CmpInst::FCMP_OLT: {
-    // We need to permute the operands to get the correct NaN behavior. The
-    // selected operand is the second one based on the failing compare with NaN,
-    // so permute it based on the compare type the hardware uses.
-    if (Info.LHS == Info.True)
-      buildNewInst(AMDGPU::G_AMDGPU_FMIN_LEGACY, Info.LHS, Info.RHS);
-    else
-      buildNewInst(AMDGPU::G_AMDGPU_FMAX_LEGACY, Info.RHS, Info.LHS);
-    break;
-  }
-  case CmpInst::FCMP_UGE:
-  case CmpInst::FCMP_UGT: {
-    if (Info.LHS == Info.True)
-      buildNewInst(AMDGPU::G_AMDGPU_FMAX_LEGACY, Info.RHS, Info.LHS);
-    else
-      buildNewInst(AMDGPU::G_AMDGPU_FMIN_LEGACY, Info.LHS, Info.RHS);
-    break;
-  }
-  case CmpInst::FCMP_OGT:
-  case CmpInst::FCMP_OGE: {
-    if (Info.LHS == Info.True)
-      buildNewInst(AMDGPU::G_AMDGPU_FMAX_LEGACY, Info.LHS, Info.RHS);
-    else
-      buildNewInst(AMDGPU::G_AMDGPU_FMIN_LEGACY, Info.RHS, Info.LHS);
-    break;
-  }
-  default:
-    llvm_unreachable("predicate should not have matched");
-  }
-
-  MI.eraseFromParent();
-}
-
-
 #define AMDGPUPRELEGALIZERCOMBINERHELPER_GENCOMBINERHELPER_DEPS
-#include "AMDGPUGenGICombiner.inc"
+#include "AMDGPUGenPreLegalizeGICombiner.inc"
 #undef AMDGPUPRELEGALIZERCOMBINERHELPER_GENCOMBINERHELPER_DEPS
 
 namespace {
 #define AMDGPUPRELEGALIZERCOMBINERHELPER_GENCOMBINERHELPER_H
-#include "AMDGPUGenGICombiner.inc"
+#include "AMDGPUGenPreLegalizeGICombiner.inc"
 #undef AMDGPUPRELEGALIZERCOMBINERHELPER_GENCOMBINERHELPER_H
 
 class AMDGPUPreLegalizerCombinerInfo : public CombinerInfo {
@@ -165,13 +66,6 @@ bool AMDGPUPreLegalizerCombinerInfo::combine(GISelChangeObserver &Observer,
     return true;
 
   switch (MI.getOpcode()) {
-  case TargetOpcode::G_SHL:
-  case TargetOpcode::G_LSHR:
-  case TargetOpcode::G_ASHR:
-    // On some subtargets, 64-bit shift is a quarter rate instruction. In the
-    // common case, splitting this into a move and a 32-bit shift is faster and
-    // the same code size.
-    return Helper.tryCombineShiftToUnmerge(MI, 32);
   case TargetOpcode::G_CONCAT_VECTORS:
     return Helper.tryCombineConcatVectors(MI);
   case TargetOpcode::G_SHUFFLE_VECTOR:
@@ -182,7 +76,7 @@ bool AMDGPUPreLegalizerCombinerInfo::combine(GISelChangeObserver &Observer,
 }
 
 #define AMDGPUPRELEGALIZERCOMBINERHELPER_GENCOMBINERHELPER_CPP
-#include "AMDGPUGenGICombiner.inc"
+#include "AMDGPUGenPreLegalizeGICombiner.inc"
 #undef AMDGPUPRELEGALIZERCOMBINERHELPER_GENCOMBINERHELPER_CPP
 
 // Pass boilerplate
@@ -194,7 +88,9 @@ public:
 
   AMDGPUPreLegalizerCombiner(bool IsOptNone = false);
 
-  StringRef getPassName() const override { return "AMDGPUPreLegalizerCombiner"; }
+  StringRef getPassName() const override {
+    return "AMDGPUPreLegalizerCombiner";
+  }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
