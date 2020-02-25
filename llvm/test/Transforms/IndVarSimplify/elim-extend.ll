@@ -143,8 +143,7 @@ define void @nestedIV(i8* %address, i32 %limit) nounwind {
 ; CHECK-NEXT:    [[INNERCMP:%.*]] = icmp sgt i64 [[TMP0]], [[INDVARS_IV_NEXT]]
 ; CHECK-NEXT:    br i1 [[INNERCMP]], label [[INNERLOOP]], label [[INNEREXIT:%.*]]
 ; CHECK:       innerexit:
-; CHECK-NEXT:    [[INNERCOUNT_LCSSA_WIDE:%.*]] = phi i64 [ [[INDVARS_IV_NEXT]], [[INNERLOOP]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = trunc i64 [[INNERCOUNT_LCSSA_WIDE]] to i32
+; CHECK-NEXT:    [[TMP4:%.*]] = trunc i64 [[TMP0]] to i32
 ; CHECK-NEXT:    br label [[OUTERMERGE]]
 ; CHECK:       outermerge:
 ; CHECK-NEXT:    [[INNERCOUNT_MERGE]] = phi i32 [ [[TMP4]], [[INNEREXIT]] ], [ [[INNERCOUNT]], [[INNERPREHEADER]] ]
