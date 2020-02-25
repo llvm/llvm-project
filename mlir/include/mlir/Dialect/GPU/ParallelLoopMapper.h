@@ -16,7 +16,7 @@
 
 namespace mlir {
 
-struct Region;
+class Region;
 
 namespace gpu {
 
