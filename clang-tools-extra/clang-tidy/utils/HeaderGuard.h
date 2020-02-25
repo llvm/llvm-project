@@ -10,7 +10,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_HEADERGUARD_H
 
 #include "../ClangTidy.h"
-#include "../utils/HeaderFileExtensionsUtils.h"
+#include "../utils/FileExtensionsUtils.h"
 
 namespace clang {
 namespace tidy {
@@ -29,8 +29,8 @@ public:
       : ClangTidyCheck(Name, Context),
         RawStringHeaderFileExtensions(Options.getLocalOrGlobal(
             "HeaderFileExtensions", utils::defaultHeaderFileExtensions())) {
-    utils::parseHeaderFileExtensions(RawStringHeaderFileExtensions,
-                                     HeaderFileExtensions, ',');
+    utils::parseFileExtensions(RawStringHeaderFileExtensions,
+                               HeaderFileExtensions, ',');
   }
   void registerPPCallbacks(const SourceManager &SM, Preprocessor *PP,
                            Preprocessor *ModuleExpanderPP) override;
@@ -54,7 +54,7 @@ public:
 
 private:
   std::string RawStringHeaderFileExtensions;
-  utils::HeaderFileExtensionsSet HeaderFileExtensions;
+  utils::FileExtensionsSet HeaderFileExtensions;
 };
 
 } // namespace utils
