@@ -2180,20 +2180,18 @@ bool SCEVExpander::isHighCostExpansionHelper(
 
 
   if (auto *UDivExpr = dyn_cast<SCEVUDivExpr>(S)) {
-    // If the divisor is a power of two and the SCEV type fits in a native
-    // integer (and the LHS not expensive), consider the division cheap
-    // irrespective of whether it occurs in the user code since it can be
-    // lowered into a right shift.
-    if (auto *SC = dyn_cast<SCEVConstant>(UDivExpr->getRHS()))
+    // If the divisor is a power of two count this as a logical right-shift.
+    if (auto *SC = dyn_cast<SCEVConstant>(UDivExpr->getRHS())) {
       if (SC->getAPInt().isPowerOf2()) {
-        if (isHighCostExpansionHelper(UDivExpr->getLHS(), L, At,
-                                      BudgetRemaining, TTI, Processed))
-          return true;
-        const DataLayout &DL =
-            L->getHeader()->getParent()->getParent()->getDataLayout();
-        unsigned Width = cast<IntegerType>(UDivExpr->getType())->getBitWidth();
-        return DL.isIllegalInteger(Width);
+        BudgetRemaining -=
+            TTI.getOperationCost(Instruction::LShr, S->getType());
+        // Note that we don't count the cost of RHS, because it is a constant,
+        // and we consider those to be free. But if that changes, we would need
+        // to log2() it first before calling isHighCostExpansionHelper().
+        return isHighCostExpansionHelper(UDivExpr->getLHS(), L, At,
+                                         BudgetRemaining, TTI, Processed);
       }
+    }
 
     // UDivExpr is very likely a UDiv that ScalarEvolution's HowFarToZero or
     // HowManyLessThans produced to compute a precise expression, rather than a
