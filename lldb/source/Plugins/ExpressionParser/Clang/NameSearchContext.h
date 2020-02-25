@@ -64,8 +64,10 @@ struct NameSearchContext {
   NameSearchContext(TypeSystemClang &clang_ts,
                     llvm::SmallVectorImpl<clang::NamedDecl *> &decls,
                     clang::DeclarationName &name, const clang::DeclContext *dc)
-      : m_clang_ts(clang_ts), m_decls(decls), m_decl_name(name),
-        m_decl_context(dc) {
+      : m_clang_ts(clang_ts), m_decls(decls),
+        m_namespace_map(std::make_shared<ClangASTImporter::NamespaceMap>()),
+        m_decl_name(name), m_decl_context(dc) {
+    ;
   }
 
   /// Create a VarDecl with the name being searched for and the provided type
