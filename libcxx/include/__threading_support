@@ -26,7 +26,15 @@
 #if defined(_LIBCPP_HAS_THREAD_API_PTHREAD)
 # include <pthread.h>
 # include <sched.h>
+// FIXME: On Apple, <semaphore.h> transitively includes <sys/param.h>, which
+//        is not well behaved because it defines several macros. This causes
+//        name collisions in some downstream projects. Instead, <sys/semaphore.h>
+//        gives us the declarations we need without the bad stuff.
+#ifdef __APPLE__
+# include <sys/semaphore.h>
+#else
 # include <semaphore.h>
+#endif
 # ifdef __APPLE__
 #  define _LIBCPP_NO_NATIVE_SEMAPHORES
 # endif
