@@ -302,6 +302,12 @@ protected:
   ///     is the containing object.
   void FindObjCPropertyAndIvarDecls(NameSearchContext &context);
 
+  /// Performs lookup into a namespace.
+  ///
+  /// \param context
+  ///     The NameSearchContext for a lookup inside a namespace.
+  void LookupInNamespace(NameSearchContext &context);
+
   /// A wrapper for TypeSystemClang::CopyType that sets a flag that
   /// indicates that we should not respond to queries during import.
   ///
