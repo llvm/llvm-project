@@ -284,6 +284,22 @@ def act_on_decl(declaration, comment, allowed_types):
       add_matcher(result, name, '%s, ..., %s' % (arg, arg), comment)
       return
 
+    m = re.match(
+        r"""^.*internal::VariadicFunction\s*<\s*
+              internal::PolymorphicMatcherWithParam1<[\S\s]+
+              AST_POLYMORPHIC_SUPPORTED_TYPES\(([^)]*)\)>,\s*([^,]+),
+              \s*[^>]+>\s*([a-zA-Z]*);$""", 
+        declaration, flags=re.X)
+
+    if m:
+      results, arg, name = m.groups()[:3]
+
+      result_types = [r.strip() for r in results.split(',')]
+      for result_type in result_types:
+        add_matcher(result_type, name, '%s, ..., %s' % (arg, arg), comment)
+      return
+      
+
     # Parse Variadic operator matchers.
     m = re.match(
         r"""^.*VariadicOperatorMatcherFunc\s*<\s*([^,]+),\s*([^\s]+)\s*>\s*
