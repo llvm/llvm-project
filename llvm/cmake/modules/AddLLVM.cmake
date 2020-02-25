@@ -1032,6 +1032,7 @@ endfunction()
 if(NOT LLVM_TOOLCHAIN_TOOLS)
   set (LLVM_TOOLCHAIN_TOOLS
     llvm-ar
+    llvm-cov
     llvm-cxxfilt
     llvm-ranlib
     llvm-lib
