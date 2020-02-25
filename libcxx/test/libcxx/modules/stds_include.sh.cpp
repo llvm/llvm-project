@@ -15,10 +15,6 @@
 // are not modular
 // XFAIL: LIBCXX-WINDOWS-FIXME
 
-// FIXME: The <atomic> header is not supported for single-threaded systems,
-// but still gets built as part of the 'std' module, which breaks the build.
-// XFAIL: libcpp-has-no-threads
-
 // REQUIRES: modules-support
 
 // NOTE: The -std=XXX flag is present in %flags, so we overwrite it by passing it after %flags.
