@@ -663,7 +663,7 @@ void ClangASTSource::FindExternalVisibleDecls(
     }
   }
 
-  if (context.m_found.type)
+  if (context.m_found_type)
     return;
 
   TypeList types;
@@ -699,17 +699,17 @@ void ClangASTSource::FindExternalVisibleDecls(
 
       context.AddTypeDecl(copied_clang_type);
 
-      context.m_found.type = true;
+      context.m_found_type = true;
       break;
     }
   }
 
-  if (!context.m_found.type) {
+  if (!context.m_found_type) {
     // Try the modules next.
     FindDeclInModules(context, name);
   }
 
-  if (!context.m_found.type) {
+  if (!context.m_found_type) {
     FindDeclInObjCRuntime(context, name);
   }
 }
@@ -882,7 +882,7 @@ void ClangASTSource::FindDeclInModules(NameSearchContext &context,
 
     context.AddNamedDecl(copied_named_decl);
 
-    context.m_found.type = true;
+    context.m_found_type = true;
   }
 }
 
