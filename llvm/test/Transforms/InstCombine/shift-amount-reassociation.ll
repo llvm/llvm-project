@@ -319,3 +319,18 @@ define i32 @n20(i32 %x, i32 %y) {
   %t3 = shl i32 %t1, %t2
   ret i32 %t3
 }
+
+; FIXME: this is a miscompile. We should not transform this.
+; See https://bugs.llvm.org/show_bug.cgi?id=44802
+define i3 @pr44802(i3 %t0) {
+; CHECK-LABEL: @pr44802(
+; CHECK-NEXT:    [[T1:%.*]] = sub i3 0, [[T0:%.*]]
+; CHECK-NEXT:    ret i3 [[T1]]
+;
+  %t1 = sub i3 0, %t0
+  %t2 = icmp ne i3 %t0, 0
+  %t3 = zext i1 %t2 to i3
+  %t4 = lshr i3 %t1, %t3
+  %t5 = lshr i3 %t4, %t3
+  ret i3 %t5
+}
