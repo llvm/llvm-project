@@ -32,6 +32,7 @@ SRCDIR := $(shell dirname $(firstword $(MAKEFILE_LIST)))/
 BUILDDIR := $(shell pwd)
 THIS_FILE_DIR := $(shell dirname $(lastword $(MAKEFILE_LIST)))/
 LLDB_BASE_DIR := $(THIS_FILE_DIR)../../../../../
+UPMEM_HOME ?= /usr
 
 OBJECTS =
 EXE = a.out
