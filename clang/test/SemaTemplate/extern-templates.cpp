@@ -23,9 +23,9 @@ extern template class X0<int*>;
 template<typename T>
 void X0<T>::Inner::g(T t) {
 #ifdef MS
-  t = 17; // expected-error{{assigning to 'long *' from incompatible}} expected-error{{assigning to 'int *' from incompatible}}
+  t = 17; // expected-error{{incompatible integer to pointer conversion assigning to 'long *'}} expected-error{{incompatible integer to pointer conversion assigning to 'int *'}}
 #else
-  t = 17; // expected-error{{assigning to 'long *' from incompatible}}
+  t = 17; // expected-error{{incompatible integer to pointer conversion assigning to 'long *'}}
 #endif
 }
 
