@@ -5474,7 +5474,8 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
 
     SDValue PassThru = Mgt->getPassThru();
     SDValue Chain = Mgt->getChain();
-    SDVTList VTs = Mgt->getVTList();
+    // Gather instructions have a mask output not in the ISD node.
+    SDVTList VTs = CurDAG->getVTList(ValueVT, MaskVT, MVT::Other);
 
     MachineSDNode *NewNode;
     if (AVX512Gather) {
@@ -5487,7 +5488,9 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       NewNode = CurDAG->getMachineNode(Opc, SDLoc(dl), VTs, Ops);
     }
     CurDAG->setNodeMemRefs(NewNode, {Mgt->getMemOperand()});
-    ReplaceNode(Node, NewNode);
+    ReplaceUses(SDValue(Node, 0), SDValue(NewNode, 0));
+    ReplaceUses(SDValue(Node, 1), SDValue(NewNode, 2));
+    CurDAG->RemoveDeadNode(Node);
     return;
   }
   case X86ISD::MSCATTER: {
@@ -5544,12 +5547,14 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
 
     SDValue Mask = Sc->getMask();
     SDValue Chain = Sc->getChain();
-    SDVTList VTs = Sc->getVTList();
+    // Scatter instructions have a mask output not in the ISD node.
+    SDVTList VTs = CurDAG->getVTList(Mask.getValueType(), MVT::Other);
     SDValue Ops[] = {Base, Scale, Index, Disp, Segment, Mask, Value, Chain};
 
     MachineSDNode *NewNode = CurDAG->getMachineNode(Opc, SDLoc(dl), VTs, Ops);
     CurDAG->setNodeMemRefs(NewNode, {Sc->getMemOperand()});
-    ReplaceNode(Node, NewNode);
+    ReplaceUses(SDValue(Node, 0), SDValue(NewNode, 1));
+    CurDAG->RemoveDeadNode(Node);
     return;
   }
   }
