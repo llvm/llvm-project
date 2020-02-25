@@ -44,11 +44,12 @@ DpuContext::DpuContext(dpu_t *dpu, struct _dpu_context_t *context,
     : m_dpu(dpu), m_context(context), nr_threads(_nr_threads) {
   running_threads = new uint8_t[nr_threads];
   last_resume_threads = new uint8_t[nr_threads];
-  for (unsigned int each_thread = 0; each_thread < nr_threads; each_thread++) {
+  for (unsigned int each_thread = 1; each_thread < nr_threads; each_thread++) {
     running_threads[each_thread] = 0xff;
     last_resume_threads[each_thread] = 0xff;
   }
   running_threads[0] = 0;
+  last_resume_threads[0] = 0;
 }
 
 DpuContext::~DpuContext() {
