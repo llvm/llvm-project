@@ -741,6 +741,13 @@ func @tensor_load_store(%0 : memref<4x4xi32>) {
   return
 }
 
+// CHECK-LABEL: func @atomic_rmw
+func @atomic_rmw(%I: memref<10xf32>, %val: f32, %i : index) {
+  // CHECK: %{{.*}} = atomic_rmw "addf" %{{.*}}, %{{.*}}[%{{.*}}]
+  %x = atomic_rmw "addf" %val, %I[%i] : (f32, memref<10xf32>) -> f32
+  return
+}
+
 // CHECK-LABEL: func @assume_alignment
 // CHECK-SAME: %[[MEMREF:.*]]: memref<4x4xf16>
 func @assume_alignment(%0: memref<4x4xf16>) {
