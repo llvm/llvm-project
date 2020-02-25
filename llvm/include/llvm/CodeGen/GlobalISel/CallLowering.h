@@ -84,7 +84,7 @@ public:
 
     /// Valid if the call has a swifterror inout parameter, and contains the
     /// vreg that the swifterror should be copied into after the call.
-    Register SwiftErrorVReg = 0;
+    Register SwiftErrorVReg;
 
     MDNode *KnownCallees = nullptr;
 
