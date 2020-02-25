@@ -688,13 +688,16 @@ entry:
   ret i1 %tobool
 }
 
-; FIXME: this is a miscompile. We should not transform this.
 ; See https://bugs.llvm.org/show_bug.cgi?id=44802
 define i1 @pr44802(i3 %a, i3 %x, i3 %y) {
 ; CHECK-LABEL: @pr44802(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i3 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i3 [[TMP1]], 0
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[T0:%.*]] = icmp ne i3 [[A:%.*]], 0
+; CHECK-NEXT:    [[T1:%.*]] = zext i1 [[T0]] to i3
+; CHECK-NEXT:    [[T2:%.*]] = lshr i3 [[X:%.*]], [[T1]]
+; CHECK-NEXT:    [[T3:%.*]] = shl i3 [[Y:%.*]], [[T1]]
+; CHECK-NEXT:    [[T4:%.*]] = and i3 [[T2]], [[T3]]
+; CHECK-NEXT:    [[T5:%.*]] = icmp ne i3 [[T4]], 0
+; CHECK-NEXT:    ret i1 [[T5]]
 ;
   %t0 = icmp ne i3 %a, 0
   %t1 = zext i1 %t0 to i3
