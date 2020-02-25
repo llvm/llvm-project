@@ -80,16 +80,17 @@ struct UnrollLoopOptions {
 
 LoopUnrollResult UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
                             ScalarEvolution *SE, DominatorTree *DT,
-                            AssumptionCache *AC, OptimizationRemarkEmitter *ORE,
-                            bool PreserveLCSSA, Loop **RemainderLoop = nullptr);
+                            AssumptionCache *AC,
+                            const llvm::TargetTransformInfo *TTI,
+                            OptimizationRemarkEmitter *ORE, bool PreserveLCSSA,
+                            Loop **RemainderLoop = nullptr);
 
-bool UnrollRuntimeLoopRemainder(Loop *L, unsigned Count,
-                                bool AllowExpensiveTripCount,
-                                bool UseEpilogRemainder, bool UnrollRemainder,
-                                bool ForgetAllSCEV, LoopInfo *LI,
-                                ScalarEvolution *SE, DominatorTree *DT,
-                                AssumptionCache *AC, bool PreserveLCSSA,
-                                Loop **ResultLoop = nullptr);
+bool UnrollRuntimeLoopRemainder(
+    Loop *L, unsigned Count, bool AllowExpensiveTripCount,
+    bool UseEpilogRemainder, bool UnrollRemainder, bool ForgetAllSCEV,
+    LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT, AssumptionCache *AC,
+    const TargetTransformInfo *TTI, bool PreserveLCSSA,
+    Loop **ResultLoop = nullptr);
 
 void computePeelCount(Loop *L, unsigned LoopSize,
                       TargetTransformInfo::UnrollingPreferences &UP,
@@ -104,6 +105,7 @@ LoopUnrollResult UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
                                   unsigned TripMultiple, bool UnrollRemainder,
                                   LoopInfo *LI, ScalarEvolution *SE,
                                   DominatorTree *DT, AssumptionCache *AC,
+                                  const TargetTransformInfo *TTI,
                                   OptimizationRemarkEmitter *ORE,
                                   Loop **EpilogueLoop = nullptr);
 
@@ -121,7 +123,8 @@ bool computeUnrollCount(Loop *L, const TargetTransformInfo &TTI,
 
 void simplifyLoopAfterUnroll(Loop *L, bool SimplifyIVs, LoopInfo *LI,
                              ScalarEvolution *SE, DominatorTree *DT,
-                             AssumptionCache *AC);
+                             AssumptionCache *AC,
+                             const TargetTransformInfo *TTI);
 
 MDNode *GetUnrollMetadata(MDNode *LoopID, StringRef Name);
 
