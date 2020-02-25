@@ -17,6 +17,7 @@
 #include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
 #include "mlir/Dialect/AffineOps/AffineOps.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
+#include "mlir/Dialect/GPU/ParallelLoopMapper.h"
 #include "mlir/Dialect/LoopOps/LoopOps.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/AffineExpr.h"
@@ -508,23 +509,20 @@ struct MappingAnnotation {
 
 } // namespace
 
-static constexpr const char *kProcessorEntryName = "processor";
-static constexpr const char *kIndexMapEntryName = "map";
-static constexpr const char *kBoundMapEntryName = "bound";
-
 /// Extracts the mapping annotations from the provided attribute. The attribute
 /// is expected to be of the form
 /// { processor = <unsigned>, map = <AffineMap>, bound = <AffineMap> }
 /// where the bound is optional.
 static MappingAnnotation extractMappingAnnotation(Attribute attribute) {
   DictionaryAttr dict = attribute.cast<DictionaryAttr>();
-  unsigned processor = dict.get(kProcessorEntryName)
+  unsigned processor = dict.get(gpu::kProcessorEntryName)
                            .cast<IntegerAttr>()
                            .getValue()
                            .getSExtValue();
-  AffineMap map = dict.get(kIndexMapEntryName).cast<AffineMapAttr>().getValue();
+  AffineMap map =
+      dict.get(gpu::kIndexMapEntryName).cast<AffineMapAttr>().getValue();
   AffineMapAttr boundAttr =
-      dict.get(kBoundMapEntryName).dyn_cast_or_null<AffineMapAttr>();
+      dict.get(gpu::kBoundMapEntryName).dyn_cast_or_null<AffineMapAttr>();
   AffineMap bound;
   if (boundAttr)
     bound = boundAttr.getValue();
@@ -583,7 +581,8 @@ static LogicalResult processParallelLoop(ParallelOp parallelOp,
                                          PatternRewriter &rewriter) {
   // TODO(herhut): Verify that this is a valid GPU mapping.
   // processor ids: 0-2 block [x/y/z], 3-5 -> thread [x/y/z], 6-> sequential
-  ArrayAttr mapping = parallelOp.getAttrOfType<ArrayAttr>("mapping");
+  ArrayAttr mapping =
+      parallelOp.getAttrOfType<ArrayAttr>(gpu::kMappingAttributeName);
 
   // TODO(herhut): Support reductions.
   if (!mapping || parallelOp.getNumResults() != 0)
