@@ -9375,12 +9375,6 @@ void ASTReader::diagnoseOdrViolations() {
 
     DeclContext *CanonDef = D->getDeclContext();
 
-    // Skip ODR checking for structs without a definition for C/ObjC mode.
-    if (!PP.getLangOpts().CPlusPlus)
-      if (RecordDecl *RD = dyn_cast<RecordDecl>(CanonDef))
-        if (!RD->isCompleteDefinition())
-          continue;
-
     bool Found = false;
     const Decl *DCanon = D->getCanonicalDecl();
 
@@ -11190,8 +11184,7 @@ void ASTReader::diagnoseOdrViolations() {
         Hashes.emplace_back(P.first, ComputeSubDeclODRHash(P.first));
         continue;
       }
-
-      if (!SubRec->isCompleteDefinition())
+      if (!SubRec->isAnonymousStructOrUnion())
         continue;
       for (auto *SubD : SubRec->decls())
         WorkList.push_front(std::make_pair(SubD, SubRec));
@@ -11209,16 +11202,12 @@ void ASTReader::diagnoseOdrViolations() {
 
     bool Diagnosed = false;
     RecordDecl *FirstRecord = Merge.first;
-    if (!FirstRecord->isCompleteDefinition())
-      continue;
 
     std::string FirstModule = getOwningModuleNameForDiagnostic(FirstRecord);
     for (auto *SecondRecord : Merge.second) {
       // Multiple different declarations got merged together; tell the user
       // where they came from.
       if (FirstRecord == SecondRecord)
-        continue;
-      if (!SecondRecord->isCompleteDefinition())
         continue;
 
       std::string SecondModule = getOwningModuleNameForDiagnostic(SecondRecord);
