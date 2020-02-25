@@ -255,10 +255,10 @@ define amdgpu_kernel void @v_sad_u32_i8_pat2(i8 addrspace(1)* %out) {
 ; GCN-LABEL: {{^}}s_sad_u32_i8_pat2:
 ; GCN: s_load_dword
 ; GCN: s_bfe_u32
-; GCN: s_sub_i32
-; GCN: s_and_b32
-; GCN: s_sub_i32
-; GCN: s_lshr_b32
+; GCN-DAG: s_sub_i32
+; GCN-DAG: s_and_b32
+; GCN-DAG: s_sub_i32
+; GCN-DAG: s_lshr_b32
 ; GCN: v_add_i32_e32
 define amdgpu_kernel void @s_sad_u32_i8_pat2(i8 addrspace(1)* %out, i8 zeroext %a, i8 zeroext %b, i8 zeroext %c) {
   %icmp0 = icmp ugt i8 %a, %b
