@@ -11,7 +11,7 @@ REM
 REM   Visual Studio 2019, CMake, Ninja, GNUWin32, SWIG, Python 3,
 REM   NSIS with the strlen_8192 patch,
 REM   Visual Studio 2019 SDK and Nuget (for the clang-format plugin),
-REM   Perl (for the OpenMP run-time).
+REM   Perl (for the OpenMP run-time), 7Zip.
 REM
 REM
 REM   For LLDB, SWIG version <= 3.0.8 needs to be used to work around
@@ -91,7 +91,13 @@ ninja check-sanitizer || ninja check-sanitizer || ninja check-sanitizer || exit 
 ninja check-clang-tools || ninja check-clang-tools || ninja check-clang-tools || exit /b
 ninja check-clangd || ninja check-clangd || ninja check-clangd || exit /b
 ninja package || exit /b
+
+7z x LLVM-%package_version%-win32.exe -orepack
+rmdir /s /q repack\$PLUGINSDIR
+del repack\Uninstall.exe
+7z a LLVM-%package_version%-win32.zip .\repack\* -mx9
 cd ..
+
 
 REM The plug-in is built separately as it uses a statically linked clang-format.exe.
 mkdir build_vsix
@@ -135,4 +141,9 @@ ninja check-sanitizer || ninja check-sanitizer || ninja check-sanitizer || exit 
 ninja check-clang-tools || ninja check-clang-tools || ninja check-clang-tools || exit /b
 ninja check-clangd || ninja check-clangd || ninja check-clangd || exit /b
 ninja package || exit /b
+
+7z x LLVM-%package_version%-win64.exe -orepack
+rmdir /s /q repack\$PLUGINSDIR
+del repack\Uninstall.exe
+7z a LLVM-%package_version%-win64.zip .\repack\* -mx9
 cd ..
