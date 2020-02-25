@@ -140,8 +140,8 @@ define void @nestedIV(i8* %address, i32 %limit) nounwind {
 ; CHECK-NEXT:    store i8 0, i8* [[ADR2]]
 ; CHECK-NEXT:    [[ADR3:%.*]] = getelementptr i8, i8* [[ADDRESS]], i64 [[INDVARS_IV_NEXT]]
 ; CHECK-NEXT:    store i8 0, i8* [[ADR3]]
-; CHECK-NEXT:    [[INNERCMP:%.*]] = icmp sgt i64 [[TMP0]], [[INDVARS_IV_NEXT]]
-; CHECK-NEXT:    br i1 [[INNERCMP]], label [[INNERLOOP]], label [[INNEREXIT:%.*]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[TMP0]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[INNERLOOP]], label [[INNEREXIT:%.*]]
 ; CHECK:       innerexit:
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc i64 [[TMP0]] to i32
 ; CHECK-NEXT:    br label [[OUTERMERGE]]
@@ -153,8 +153,8 @@ define void @nestedIV(i8* %address, i32 %limit) nounwind {
 ; CHECK-NEXT:    [[ADR5:%.*]] = getelementptr i8, i8* [[ADDRESS]], i64 [[OFS5]]
 ; CHECK-NEXT:    store i8 0, i8* [[ADR5]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT2]] = add nuw nsw i64 [[INDVARS_IV1]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT2]], [[WIDE_TRIP_COUNT]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[OUTERLOOP]], label [[RETURN:%.*]]
+; CHECK-NEXT:    [[EXITCOND4:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT2]], [[WIDE_TRIP_COUNT]]
+; CHECK-NEXT:    br i1 [[EXITCOND4]], label [[OUTERLOOP]], label [[RETURN:%.*]]
 ; CHECK:       return:
 ; CHECK-NEXT:    ret void
 ;
