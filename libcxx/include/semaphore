@@ -58,9 +58,7 @@ using binary_semaphore = counting_semaphore<1>;
 # error <semaphore> is not supported on this single threaded system
 #endif
 
-#if _LIBCPP_STD_VER < 14
-# error <semaphore> is requires C++14 or later
-#endif
+#if _LIBCPP_STD_VER >= 14
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -229,5 +227,7 @@ public:
 using binary_semaphore = counting_semaphore<1>;
 
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 14
 
 #endif //_LIBCPP_SEMAPHORE
