@@ -5,24 +5,13 @@
 target triple = "thumbv8.1m.main-arm-unknown-eabi"
 
 define float @add(float %a, float %b) {
-; CHECK-VFPV4-LABEL: add:
-; CHECK-VFPV4:       @ %bb.0: @ %entry
-; CHECK-VFPV4-NEXT:    vmov s0, r1
-; CHECK-VFPV4-NEXT:    vmov s2, r0
-; CHECK-VFPV4-NEXT:    vadd.f32 s0, s2, s0
-; CHECK-VFPV4-NEXT:    vmov r0, s0
-; CHECK-VFPV4-NEXT:    bx lr
-;
-; CHECK-FP16-LABEL: add:
-; CHECK-FP16:       @ %bb.0: @ %entry
-; CHECK-FP16-NEXT:    .pad #4
-; CHECK-FP16-NEXT:    sub sp, #4
-; CHECK-FP16-NEXT:    vmov s0, r1
-; CHECK-FP16-NEXT:    vmov s2, r0
-; CHECK-FP16-NEXT:    vadd.f32 s0, s2, s0
-; CHECK-FP16-NEXT:    vstr s0, [sp]
-; CHECK-FP16-NEXT:    ldr r0, [sp], #4
-; CHECK-FP16-NEXT:    bx lr
+; CHECK-LABEL: add:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov s0, r1
+; CHECK-NEXT:    vmov s2, r0
+; CHECK-NEXT:    vadd.f32 s0, s2, s0
+; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    bx lr
 entry:
   %add = fadd float %a, %b
   ret float %add

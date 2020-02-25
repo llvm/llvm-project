@@ -870,8 +870,8 @@ define void @foo_v4f32_v4f16(<4 x float> *%dest, <4 x i16> *%mask, <4 x half> *%
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    .pad #24
-; CHECK-NEXT:    sub sp, #24
+; CHECK-NEXT:    .pad #8
+; CHECK-NEXT:    sub sp, #8
 ; CHECK-NEXT:    vldrh.s32 q0, [r1]
 ; CHECK-NEXT:    mov.w lr, #0
 ; CHECK-NEXT:    @ implicit-def: $q1
@@ -967,26 +967,22 @@ define void @foo_v4f32_v4f16(<4 x float> *%dest, <4 x i16> *%mask, <4 x half> *%
 ; CHECK-NEXT:    rsbs r2, r2, #0
 ; CHECK-NEXT:    bfi r1, r2, #3, #1
 ; CHECK-NEXT:    lsls r2, r1, #31
-; CHECK-NEXT:    ittt ne
-; CHECK-NEXT:    vstrne s0, [sp, #12]
-; CHECK-NEXT:    ldrne r2, [sp, #12]
+; CHECK-NEXT:    itt ne
+; CHECK-NEXT:    vmovne r2, s0
 ; CHECK-NEXT:    strne r2, [r0]
 ; CHECK-NEXT:    lsls r2, r1, #30
-; CHECK-NEXT:    ittt mi
-; CHECK-NEXT:    vstrmi s1, [sp, #8]
-; CHECK-NEXT:    ldrmi r2, [sp, #8]
+; CHECK-NEXT:    itt mi
+; CHECK-NEXT:    vmovmi r2, s1
 ; CHECK-NEXT:    strmi r2, [r0, #4]
 ; CHECK-NEXT:    lsls r2, r1, #29
-; CHECK-NEXT:    ittt mi
-; CHECK-NEXT:    vstrmi s2, [sp, #4]
-; CHECK-NEXT:    ldrmi r2, [sp, #4]
+; CHECK-NEXT:    itt mi
+; CHECK-NEXT:    vmovmi r2, s2
 ; CHECK-NEXT:    strmi r2, [r0, #8]
 ; CHECK-NEXT:    lsls r1, r1, #28
-; CHECK-NEXT:    ittt mi
-; CHECK-NEXT:    vstrmi s3, [sp]
-; CHECK-NEXT:    ldrmi r1, [sp]
+; CHECK-NEXT:    itt mi
+; CHECK-NEXT:    vmovmi r1, s3
 ; CHECK-NEXT:    strmi r1, [r0, #12]
-; CHECK-NEXT:    add sp, #24
+; CHECK-NEXT:    add sp, #8
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
   %0 = load <4 x i16>, <4 x i16>* %mask, align 2
@@ -1002,8 +998,8 @@ define void @foo_v4f32_v4f16_unaligned(<4 x float> *%dest, <4 x i16> *%mask, <4 
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    .pad #24
-; CHECK-NEXT:    sub sp, #24
+; CHECK-NEXT:    .pad #8
+; CHECK-NEXT:    sub sp, #8
 ; CHECK-NEXT:    vldrh.s32 q0, [r1]
 ; CHECK-NEXT:    mov.w lr, #0
 ; CHECK-NEXT:    @ implicit-def: $q1
@@ -1099,26 +1095,22 @@ define void @foo_v4f32_v4f16_unaligned(<4 x float> *%dest, <4 x i16> *%mask, <4 
 ; CHECK-NEXT:    rsbs r2, r2, #0
 ; CHECK-NEXT:    bfi r1, r2, #3, #1
 ; CHECK-NEXT:    lsls r2, r1, #31
-; CHECK-NEXT:    ittt ne
-; CHECK-NEXT:    vstrne s0, [sp, #12]
-; CHECK-NEXT:    ldrne r2, [sp, #12]
+; CHECK-NEXT:    itt ne
+; CHECK-NEXT:    vmovne r2, s0
 ; CHECK-NEXT:    strne r2, [r0]
 ; CHECK-NEXT:    lsls r2, r1, #30
-; CHECK-NEXT:    ittt mi
-; CHECK-NEXT:    vstrmi s1, [sp, #8]
-; CHECK-NEXT:    ldrmi r2, [sp, #8]
+; CHECK-NEXT:    itt mi
+; CHECK-NEXT:    vmovmi r2, s1
 ; CHECK-NEXT:    strmi r2, [r0, #4]
 ; CHECK-NEXT:    lsls r2, r1, #29
-; CHECK-NEXT:    ittt mi
-; CHECK-NEXT:    vstrmi s2, [sp, #4]
-; CHECK-NEXT:    ldrmi r2, [sp, #4]
+; CHECK-NEXT:    itt mi
+; CHECK-NEXT:    vmovmi r2, s2
 ; CHECK-NEXT:    strmi r2, [r0, #8]
 ; CHECK-NEXT:    lsls r1, r1, #28
-; CHECK-NEXT:    ittt mi
-; CHECK-NEXT:    vstrmi s3, [sp]
-; CHECK-NEXT:    ldrmi r1, [sp]
+; CHECK-NEXT:    itt mi
+; CHECK-NEXT:    vmovmi r1, s3
 ; CHECK-NEXT:    strmi r1, [r0, #12]
-; CHECK-NEXT:    add sp, #24
+; CHECK-NEXT:    add sp, #8
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
   %0 = load <4 x i16>, <4 x i16>* %mask, align 2
