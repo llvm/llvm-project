@@ -42,11 +42,7 @@ namespace ast_matchers {
 
 AST_MATCHER_P(ObjCMessageExpr, hasAnySelectorMatcher, std::vector<std::string>,
               Matches) {
-  std::string SelString = Node.getSelector().getAsString();
-  for (const std::string &S : Matches)
-    if (S == SelString)
-      return true;
-  return false;
+  return llvm::is_contained(Matches, Node.getSelector().getAsString());
 }
 
 namespace internal {
@@ -312,11 +308,9 @@ bool AllOfVariadicOperator(const DynTypedNode &DynNode, ASTMatchFinder *Finder,
   // allOf leads to one matcher for each alternative in the first
   // matcher combined with each alternative in the second matcher.
   // Thus, we can reuse the same Builder.
-  for (const DynTypedMatcher &InnerMatcher : InnerMatchers) {
-    if (!InnerMatcher.matchesNoKindCheck(DynNode, Finder, Builder))
-      return false;
-  }
-  return true;
+  return llvm::all_of(InnerMatchers, [&](const DynTypedMatcher &InnerMatcher) {
+    return InnerMatcher.matchesNoKindCheck(DynNode, Finder, Builder);
+  });
 }
 
 bool EachOfVariadicOperator(const DynTypedNode &DynNode, ASTMatchFinder *Finder,
@@ -365,14 +359,15 @@ bool OptionallyVariadicOperator(const DynTypedNode &DynNode,
 inline static
 std::vector<std::string> vectorFromRefs(ArrayRef<const StringRef *> NameRefs) {
   std::vector<std::string> Names;
+  Names.reserve(NameRefs.size());
   for (auto *Name : NameRefs)
     Names.emplace_back(*Name);
   return Names;
 }
 
 Matcher<NamedDecl> hasAnyNameFunc(ArrayRef<const StringRef *> NameRefs) {
-  std::vector<std::string> Names = vectorFromRefs(NameRefs);
-  return internal::Matcher<NamedDecl>(new internal::HasNameMatcher(Names));
+  return internal::Matcher<NamedDecl>(
+      new internal::HasNameMatcher(vectorFromRefs(NameRefs)));
 }
 
 Matcher<ObjCMessageExpr> hasAnySelectorFunc(
@@ -381,9 +376,8 @@ Matcher<ObjCMessageExpr> hasAnySelectorFunc(
 }
 
 HasNameMatcher::HasNameMatcher(std::vector<std::string> N)
-    : UseUnqualifiedMatch(std::all_of(
-          N.begin(), N.end(),
-          [](StringRef Name) { return Name.find("::") == Name.npos; })),
+    : UseUnqualifiedMatch(llvm::all_of(
+          N, [](StringRef Name) { return Name.find("::") == Name.npos; })),
       Names(std::move(N)) {
 #ifndef NDEBUG
   for (StringRef Name : Names)
@@ -441,6 +435,7 @@ namespace {
 class PatternSet {
 public:
   PatternSet(ArrayRef<std::string> Names) {
+    Patterns.reserve(Names.size());
     for (StringRef Name : Names)
       Patterns.push_back({Name, Name.startswith("::")});
   }
@@ -465,10 +460,10 @@ public:
   /// A match will be a pattern that was fully consumed, that also matches the
   /// 'fully qualified' requirement.
   bool foundMatch(bool AllowFullyQualified) const {
-    for (auto& P: Patterns)
-      if (P.P.empty() && (AllowFullyQualified || !P.IsFullyQualified))
-        return true;
-    return false;
+    return llvm::any_of(Patterns, [&](const Pattern &Pattern) {
+      return Pattern.P.empty() &&
+             (AllowFullyQualified || !Pattern.IsFullyQualified);
+    });
   }
 
 private:
