@@ -635,15 +635,17 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
         .legalFor({S32, S16, V2S16})
         .moreElementsIf(isSmallOddVector(0), oneMoreElement(0))
         .clampMaxNumElements(0, S16, 2)
-        .clampScalar(0, S16, S32)
+        .minScalar(0, S16)
         .widenScalarToNextPow2(0)
-        .scalarize(0);
+        .scalarize(0)
+        .lower();
     } else {
       getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX})
         .legalFor({S32, S16})
         .widenScalarToNextPow2(0)
-        .clampScalar(0, S16, S32)
-        .scalarize(0);
+        .minScalar(0, S16)
+        .scalarize(0)
+        .lower();
     }
   } else {
     // TODO: Should have same legality without v_perm_b32
@@ -659,9 +661,10 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
     getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX})
       .legalFor({S32})
-      .clampScalar(0, S32, S32)
+      .minScalar(0, S32)
       .widenScalarToNextPow2(0)
-      .scalarize(0);
+      .scalarize(0)
+      .lower();
   }
 
   getActionDefinitionsBuilder(G_INTTOPTR)
