@@ -42,10 +42,6 @@ using ContentDescriptors = SmallVector<ContentDescriptor, 4>;
 
 } // end anonymous namespace
 
-static bool versionIsSupported(uint16_t Version) {
-  return Version >= 2 && Version <= 5;
-}
-
 void DWARFDebugLine::ContentTypeTracker::trackContentType(
     dwarf::LineNumberEntryFormat ContentType) {
   switch (ContentType) {
@@ -104,13 +100,9 @@ void DWARFDebugLine::Prologue::clear() {
 
 void DWARFDebugLine::Prologue::dump(raw_ostream &OS,
                                     DIDumpOptions DumpOptions) const {
-  if (!totalLengthIsValid())
-    return;
   OS << "Line table prologue:\n"
      << format("    total_length: 0x%8.8" PRIx64 "\n", TotalLength)
      << format("         version: %u\n", getVersion());
-  if (!versionIsSupported(getVersion()))
-    return;
   if (getVersion() >= 5)
     OS << format("    address_size: %u\n", getAddressSize())
        << format(" seg_select_size: %u\n", SegSelectorSize);
@@ -353,7 +345,7 @@ Error DWARFDebugLine::Prologue::parse(
         PrologueOffset, TotalLength);
   }
   FormParams.Version = DebugLineData.getU16(OffsetPtr);
-  if (!versionIsSupported(getVersion()))
+  if (getVersion() < 2 || getVersion() > 5)
     // Treat this error as unrecoverable - we cannot be sure what any of
     // the data represents including the length field, so cannot skip it or make
     // any reasonable assumptions.
