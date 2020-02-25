@@ -360,6 +360,16 @@ llvm::StringRef Debugger::GetStopShowColumnAnsiSuffix() const {
   return m_collection_sp->GetPropertyAtIndexAsString(nullptr, idx, "");
 }
 
+llvm::StringRef Debugger::GetStopShowLineMarkerAnsiPrefix() const {
+  const uint32_t idx = ePropertyStopShowLineMarkerAnsiPrefix;
+  return m_collection_sp->GetPropertyAtIndexAsString(nullptr, idx, "");
+}
+
+llvm::StringRef Debugger::GetStopShowLineMarkerAnsiSuffix() const {
+  const uint32_t idx = ePropertyStopShowLineMarkerAnsiSuffix;
+  return m_collection_sp->GetPropertyAtIndexAsString(nullptr, idx, "");
+}
+
 uint32_t Debugger::GetStopSourceLineCount(bool before) const {
   const uint32_t idx =
       before ? ePropertyStopLineCountBefore : ePropertyStopLineCountAfter;

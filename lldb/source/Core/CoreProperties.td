@@ -75,6 +75,14 @@ let Definition = "debugger" in {
     Global,
     DefaultStringValue<"${ansi.normal}">,
     Desc<"When displaying the column marker in a color-enabled (i.e. ANSI) terminal, use the ANSI terminal code specified in this format immediately after the column to be marked.">;
+  def StopShowLineMarkerAnsiPrefix: Property<"stop-show-line-ansi-prefix", "String">,
+    Global,
+    DefaultStringValue<"${ansi.fg.yellow}">,
+    Desc<"When displaying the line marker in a color-enabled (i.e. ANSI) terminal, use the ANSI terminal code specified in this format at the immediately before the line to be marked.">;
+  def StopShowLineMarkerAnsiSuffix: Property<"stop-show-line-ansi-suffix", "String">,
+    Global,
+    DefaultStringValue<"${ansi.normal}">,
+    Desc<"When displaying the line marker in a color-enabled (i.e. ANSI) terminal, use the ANSI terminal code specified in this format immediately after the line to be marked.">;
   def TerminalWidth: Property<"term-width", "SInt64">,
     Global,
     DefaultUnsignedValue<80>,
