@@ -1791,6 +1791,12 @@ bool eliminateDeadStoresMemorySSA(Function &F, AliasAnalysis &AA,
 
       if (!hasAnalyzableMemoryWrite(NI, TLI))
         break;
+
+      if (!isRemovable(NI)) {
+        LLVM_DEBUG(dbgs() << " skip, cannot remove def\n");
+        continue;
+      }
+
       MemoryLocation NILoc = *State.getLocForWriteEx(NI);
       // Check for anything that looks like it will be a barrier to further
       // removal
