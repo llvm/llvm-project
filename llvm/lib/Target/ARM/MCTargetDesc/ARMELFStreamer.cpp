@@ -1201,7 +1201,7 @@ inline void ARMELFStreamer::SwitchToEHSection(StringRef Prefix,
     Flags |= ELF::SHF_GROUP;
   MCSectionELF *EHSection = getContext().getELFSection(
       EHSecName, Type, Flags, 0, Group, FnSection.getUniqueID(),
-      static_cast<const MCSymbolELF *>(&Fn));
+      static_cast<const MCSymbolELF *>(FnSection.getBeginSymbol()));
 
   assert(EHSection && "Failed to get the required EH section");
 
