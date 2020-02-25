@@ -12,37 +12,37 @@
 ## We assign virtual addresses to allocatable sections automatically for executables and shared libraries.
 
 # EXE-DSO:      Section Headers:
-# EXE-DSO-NEXT:   [Nr] Name                  Type     Address          Off    Size   ES Flg Lk Inf Al
-# EXE-DSO-NEXT:   [ 0]                       NULL     0000000000000000 000000 000000 00     0   0  0
-# EXE-DSO-NEXT:   [ 1] .text.any.addr        PROGBITS 0000000000001000 000040 000003 00   A 0   0  0
-# EXE-DSO-NEXT:   [ 2] .text.shsize          PROGBITS 0000000000001003 000043 001234 00   A 0   0  0
-# EXE-DSO-NEXT:   [ 3] .text.align           PROGBITS 0000000000001100 000100 000004 00   A 0   0  256
-# EXE-DSO-NEXT:   [ 4] .data.any.addr        PROGBITS 0000000000002000 000104 000001 00   A 0   0  0
-# EXE-DSO-NEXT:   [ 5] .data.after.fill      PROGBITS 0000000000002101 000205 000001 00   A 0   0  0
-# EXE-DSO-NEXT:   [ 6] .data.return.back     PROGBITS 0000000000001500 000206 000001 00   A 0   0  0
-# EXE-DSO-NEXT:   [ 7] .data.return.back.foo PROGBITS 0000000000001501 000207 000000 00   A 0   0  0
-# EXE-DSO-NEXT:   [ 8] .dynsym               DYNSYM   0000000000001508 000208 000018 18   A 9   1  8
-# EXE-DSO-NEXT:   [ 9] .dynstr               STRTAB   0000000000001520 000220 000001 00   A 0   0  1
-# EXE-DSO-NEXT:   [10] .strtab               STRTAB   0000000000000000 000221 000001 00     0   0  1
-# EXE-DSO-NEXT:   [11] .shstrtab             STRTAB   0000000000000000 000222 000093 00     0   0  1
+# EXE-DSO-NEXT:   [Nr] Name              Type     Address          Off    Size   ES Flg Lk Inf Al
+# EXE-DSO-NEXT:   [ 0]                   NULL     0000000000000000 000000 000000 00     0   0  0
+# EXE-DSO-NEXT:   [ 1] .text.any.addr    PROGBITS 0000000000001000 000040 000003 00   A 0   0  0
+# EXE-DSO-NEXT:   [ 2] .text.shsize      PROGBITS 0000000000001003 000043 001234 00   A 0   0  0
+# EXE-DSO-NEXT:   [ 3] .text.align       PROGBITS 0000000000001100 000100 000004 00   A 0   0  256
+# EXE-DSO-NEXT:   [ 4] .data.any.addr    PROGBITS 0000000000002000 000104 000001 00   A 0   0  0
+# EXE-DSO-NEXT:   [ 5] .data.after.fill  PROGBITS 0000000000002101 000205 000001 00   A 0   0  0
+# EXE-DSO-NEXT:   [ 6] .data.go.back     PROGBITS 0000000000001500 000206 000001 00   A 0   0  0
+# EXE-DSO-NEXT:   [ 7] .data.go.back.foo PROGBITS 0000000000001501 000207 000000 00   A 0   0  0
+# EXE-DSO-NEXT:   [ 8] .dynsym           DYNSYM   0000000000001508 000208 000018 18   A 9   1  8
+# EXE-DSO-NEXT:   [ 9] .dynstr           STRTAB   0000000000001520 000220 000001 00   A 0   0  1
+# EXE-DSO-NEXT:   [10] .strtab           STRTAB   0000000000000000 000221 000001 00     0   0  1
+# EXE-DSO-NEXT:   [11] .shstrtab         STRTAB   0000000000000000 000222 00008b 00     0   0  1
 
 ## We do not assign virtual addresses to allocatable sections in a relocatable object
 ## unless YAML document has an explicit request.
 
 # REL:      Section Headers:
-# REL-NEXT:   [Nr] Name                  Type     Address          Off    Size   ES Flg Lk Inf Al
-# REL-NEXT:   [ 0]                       NULL     0000000000000000 000000 000000 00     0   0  0
-# REL-NEXT:   [ 1] .text.any.addr        PROGBITS 0000000000001000 000040 000003 00   A 0   0  0
-# REL-NEXT:   [ 2] .text.shsize          PROGBITS 0000000000000000 000043 001234 00   A 0   0  0
-# REL-NEXT:   [ 3] .text.align           PROGBITS 0000000000000000 000100 000004 00   A 0   0  256
-# REL-NEXT:   [ 4] .data.any.addr        PROGBITS 0000000000002000 000104 000001 00   A 0   0  0
-# REL-NEXT:   [ 5] .data.after.fill      PROGBITS 0000000000000000 000205 000001 00   A 0   0  0
-# REL-NEXT:   [ 6] .data.return.back     PROGBITS 0000000000001500 000206 000001 00   A 0   0  0
-# REL-NEXT:   [ 7] .data.return.back.foo PROGBITS 0000000000000000 000207 000000 00   A 0   0  0
-# REL-NEXT:   [ 8] .dynsym               DYNSYM   0000000000000000 000208 000018 18   A 9   1  8
-# REL-NEXT:   [ 9] .dynstr               STRTAB   0000000000000000 000220 000001 00   A 0   0  1
-# REL-NEXT:   [10] .strtab               STRTAB   0000000000000000 000221 000001 00     0   0  1
-# REL-NEXT:   [11] .shstrtab             STRTAB   0000000000000000 000222 000093 00     0   0  1
+# REL-NEXT:   [Nr] Name              Type     Address          Off    Size   ES Flg Lk Inf Al
+# REL-NEXT:   [ 0]                   NULL     0000000000000000 000000 000000 00     0   0  0
+# REL-NEXT:   [ 1] .text.any.addr    PROGBITS 0000000000001000 000040 000003 00   A 0   0  0
+# REL-NEXT:   [ 2] .text.shsize      PROGBITS 0000000000000000 000043 001234 00   A 0   0  0
+# REL-NEXT:   [ 3] .text.align       PROGBITS 0000000000000000 000100 000004 00   A 0   0  256
+# REL-NEXT:   [ 4] .data.any.addr    PROGBITS 0000000000002000 000104 000001 00   A 0   0  0
+# REL-NEXT:   [ 5] .data.after.fill  PROGBITS 0000000000000000 000205 000001 00   A 0   0  0
+# REL-NEXT:   [ 6] .data.go.back     PROGBITS 0000000000001500 000206 000001 00   A 0   0  0
+# REL-NEXT:   [ 7] .data.go.back.foo PROGBITS 0000000000000000 000207 000000 00   A 0   0  0
+# REL-NEXT:   [ 8] .dynsym           DYNSYM   0000000000000000 000208 000018 18   A 9   1  8
+# REL-NEXT:   [ 9] .dynstr           STRTAB   0000000000000000 000220 000001 00   A 0   0  1
+# REL-NEXT:   [10] .strtab           STRTAB   0000000000000000 000221 000001 00     0   0  1
+# REL-NEXT:   [11] .shstrtab         STRTAB   0000000000000000 000222 00008b 00     0   0  1
 
 --- !ELF
 FileHeader:
@@ -83,15 +83,15 @@ Sections:
     Type:  SHT_PROGBITS
     Flags: [ SHF_ALLOC ]
     Size:  0x1
-## Show we can return back in the address space and
+## Show we can go back in the address space and
 ## continue placing sections. The order of sections in the
 ## section header table will match the order in the YAML description.
-  - Name:    .data.return.back
+  - Name:    .data.go.back
     Address: 0x1500
     Type:    SHT_PROGBITS
     Flags:   [ SHF_ALLOC ]
     Size:    0x1
-  - Name:    .data.return.back.foo
+  - Name:    .data.go.back.foo
     Type:    SHT_PROGBITS
     Flags:   [ SHF_ALLOC ]
 ## Used to trigger creation of .dynsym and .dynstr.
