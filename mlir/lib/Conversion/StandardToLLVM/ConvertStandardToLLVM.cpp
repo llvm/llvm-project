@@ -2959,8 +2959,7 @@ struct LLVMLoweringPass : public ModulePass<LLVMLoweringPass> {
       populateStdToLLVMConversionPatterns(typeConverter, patterns, useAlloca,
                                           emitCWrappers);
 
-    ConversionTarget target(getContext());
-    target.addLegalDialect<LLVM::LLVMDialect>();
+    LLVMConversionTarget target(getContext());
     if (failed(applyPartialConversion(m, target, patterns, &typeConverter)))
       signalPassFailure();
   }
@@ -2985,6 +2984,11 @@ struct LLVMLoweringPass : public ModulePass<LLVMLoweringPass> {
       llvm::cl::init(false)};
 };
 } // end namespace
+
+mlir::LLVMConversionTarget::LLVMConversionTarget(MLIRContext &ctx)
+    : ConversionTarget(ctx) {
+  this->addLegalDialect<LLVM::LLVMDialect>();
+}
 
 std::unique_ptr<OpPassBase<ModuleOp>>
 mlir::createLowerToLLVMPass(bool useAlloca, bool useBarePtrCallConv,
