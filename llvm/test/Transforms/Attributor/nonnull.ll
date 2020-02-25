@@ -119,8 +119,8 @@ define i8* @test9(i8* %a, i64 %n) {
 }
 
 declare void @llvm.assume(i1)
-; FIXME: missing nonnull
-; ATTRIBUTOR: define i8* @test10
+; ATTRIBUTOR_OPM: define i8* @test10
+; ATTRIBUTOR_NPM: define nonnull i8* @test10
 define i8* @test10(i8* %a, i64 %n) {
   %cmp = icmp ne i64 %n, 0
   call void @llvm.assume(i1 %cmp)
