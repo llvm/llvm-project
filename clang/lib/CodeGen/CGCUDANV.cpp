@@ -22,7 +22,6 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/Support/Format.h"
-#include <cstring>
 
 using namespace clang;
 using namespace CodeGen;
@@ -246,21 +245,6 @@ void CGNVCUDARuntime::emitDeviceStub(CodeGenFunction &CGF,
     emitDeviceStubBodyNew(CGF, Args);
   else
     emitDeviceStubBodyLegacy(CGF, Args);
-
-  StringRef FnName = CGF.CurFn->getName();
-  if (FnName.startswith("__device_stub_")) {
-    StringRef OrigName = FnName.substr(std::strlen("__device_stub_"));
-    // If the device stub name is different from the original device-side kernel
-    // name, create an alias from the original kernel name to the device stub
-    // but as a regular data type instead of function.
-    llvm::Function *Fn = CGF.CurFn;
-    llvm::PointerType *Ty = Fn->getType();
-    llvm::PointerType *AliasTy =
-        llvm::PointerType::get(CGM.Int8Ty, Ty->getAddressSpace());
-    llvm::GlobalAlias::create(
-        CGM.Int8Ty, Ty->getAddressSpace(), Fn->getLinkage(), OrigName,
-        llvm::ConstantExpr::getBitCast(Fn, AliasTy), &CGM.getModule());
-  }
 }
 
 // CUDA 9.0+ uses new way to launch kernels. Parameters are packed in a local
