@@ -132,7 +132,10 @@ int Test::runTests() {
   int FailCount = 0;
   for (Test *T = Start; T != nullptr; T = T->Next, ++TestCount) {
     const char *TestName = T->getName();
-    llvm::outs() << "[ RUN      ] " << TestName << '\n';
+    constexpr auto GREEN = llvm::raw_ostream::GREEN;
+    constexpr auto RED = llvm::raw_ostream::RED;
+    constexpr auto RESET = llvm::raw_ostream::RESET;
+    llvm::outs() << GREEN << "[ RUN      ] " << RESET << TestName << '\n';
     RunContext Ctx;
     T->SetUp();
     T->Run(Ctx);
@@ -140,11 +143,11 @@ int Test::runTests() {
     auto Result = Ctx.status();
     switch (Result) {
     case RunContext::Result_Fail:
-      llvm::outs() << "[  FAILED  ] " << TestName << '\n';
+      llvm::outs() << RED << "[  FAILED  ] " << RESET << TestName << '\n';
       ++FailCount;
       break;
     case RunContext::Result_Pass:
-      llvm::outs() << "[       OK ] " << TestName << '\n';
+      llvm::outs() << GREEN << "[       OK ] " << RESET << TestName << '\n';
       break;
     }
   }
