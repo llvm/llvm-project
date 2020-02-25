@@ -1659,8 +1659,8 @@ bool IndVarSimplify::simplifyAndExtend(Loop *L,
       // Information about sign/zero extensions of CurrIV.
       IndVarSimplifyVisitor Visitor(CurrIV, SE, TTI, DT);
 
-      Changed |=
-          simplifyUsersOfIV(CurrIV, SE, DT, LI, DeadInsts, Rewriter, &Visitor);
+      Changed |= simplifyUsersOfIV(CurrIV, SE, DT, LI, TTI, DeadInsts, Rewriter,
+                                   &Visitor);
 
       if (Visitor.WI.WidestNativeType) {
         WideIVs.push_back(Visitor.WI);
@@ -2698,7 +2698,7 @@ bool IndVarSimplify::run(Loop *L) {
   // loop into any instructions outside of the loop that use the final values
   // of the current expressions.
   if (ReplaceExitValue != NeverRepl) {
-    if (int Rewrites = rewriteLoopExitValues(L, LI, TLI, SE, Rewriter, DT,
+    if (int Rewrites = rewriteLoopExitValues(L, LI, TLI, SE, TTI, Rewriter, DT,
                                              ReplaceExitValue, DeadInsts)) {
       NumReplaced += Rewrites;
       Changed = true;
@@ -2759,7 +2759,7 @@ bool IndVarSimplify::run(Loop *L) {
 
       // Avoid high cost expansions.  Note: This heuristic is questionable in
       // that our definition of "high cost" is not exactly principled.
-      if (Rewriter.isHighCostExpansion(ExitCount, L))
+      if (Rewriter.isHighCostExpansion(ExitCount, L, TTI))
         continue;
 
       // Check preconditions for proper SCEVExpander operation. SCEV does not
