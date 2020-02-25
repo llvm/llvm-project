@@ -173,8 +173,8 @@ namespace llvm {
       ChainedPhis.clear();
     }
 
-    /// Return true for expressions that may incur non-trivial cost to evaluate
-    /// at runtime.
+    /// Return true for expressions that can't be evaluated at runtime
+    /// within given \b Budget.
     ///
     /// At is an optional parameter which specifies point in code where user is
     /// going to expand this expression. Sometimes this knowledge can lead to a
