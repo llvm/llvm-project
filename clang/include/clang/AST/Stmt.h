@@ -3032,7 +3032,7 @@ public:
   }
 
   IdentifierInfo *getLabelIdentifier(unsigned i) const {
-    return Names[i + NumInputs];
+    return Names[i + NumOutputs + NumInputs];
   }
 
   AddrLabelExpr *getLabelExpr(unsigned i) const;
@@ -3043,11 +3043,11 @@ public:
   using labels_const_range = llvm::iterator_range<const_labels_iterator>;
 
   labels_iterator begin_labels() {
-    return &Exprs[0] + NumInputs;
+    return &Exprs[0] + NumOutputs + NumInputs;
   }
 
   labels_iterator end_labels() {
-    return &Exprs[0] + NumInputs + NumLabels;
+    return &Exprs[0] + NumOutputs + NumInputs + NumLabels;
   }
 
   labels_range labels() {
@@ -3055,11 +3055,11 @@ public:
   }
 
   const_labels_iterator begin_labels() const {
-    return &Exprs[0] + NumInputs;
+    return &Exprs[0] + NumOutputs + NumInputs;
   }
 
   const_labels_iterator end_labels() const {
-    return &Exprs[0] + NumInputs + NumLabels;
+    return &Exprs[0] + NumOutputs + NumInputs + NumLabels;
   }
 
   labels_const_range labels() const {
