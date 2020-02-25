@@ -39,20 +39,18 @@ struct NameSearchContext {
   /// report conflicts.
   llvm::SmallSet<CompilerType, 5> m_function_types;
 
-  struct {
-    bool variable : 1;
-    bool function_with_type_info : 1;
-    bool function : 1;
-    bool local_vars_nsp : 1;
-    bool type : 1;
-  } m_found;
+  bool m_found_variable = false;
+  bool m_found_function_with_type_info = false;
+  bool m_found_function = false;
+  bool m_found_local_vars_nsp = false;
+  bool m_found_type = false;
 
   /// Constructor
   ///
   /// Initializes class variables.
   ///
-  /// \param[in] astSource
-  ///     A reference to the AST source making a request.
+  /// \param[in] clang_ts
+  ///     The TypeSystemClang from which the request originates.
   ///
   /// \param[in] decls
   ///     A reference to a list into which new Decls will be placed.  This
@@ -68,7 +66,6 @@ struct NameSearchContext {
                     clang::DeclarationName &name, const clang::DeclContext *dc)
       : m_clang_ts(clang_ts), m_decls(decls), m_decl_name(name),
         m_decl_context(dc) {
-    memset(&m_found, 0, sizeof(m_found));
   }
 
   /// Create a VarDecl with the name being searched for and the provided type

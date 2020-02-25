@@ -1000,7 +1000,7 @@ void ClangExpressionDeclMap::LookupLocalVarNamespace(
   name_context.AddNamedDecl(namespace_decl);
   clang::DeclContext *ctxt = clang::Decl::castToDeclContext(namespace_decl);
   ctxt->setHasExternalVisibleStorage(true);
-  name_context.m_found.local_vars_nsp = true;
+  name_context.m_found_local_vars_nsp = true;
 }
 
 void ClangExpressionDeclMap::LookupInModulesDeclVendor(
@@ -1041,11 +1041,11 @@ void ClangExpressionDeclMap::LookupInModulesDeclVendor(
 
     context.AddNamedDecl(copied_function);
 
-    context.m_found.function_with_type_info = true;
-    context.m_found.function = true;
+    context.m_found_function_with_type_info = true;
+    context.m_found_function = true;
   } else if (auto copied_var = dyn_cast<clang::VarDecl>(copied_decl)) {
     context.AddNamedDecl(copied_var);
-    context.m_found.variable = true;
+    context.m_found_variable = true;
   }
 }
 
@@ -1087,7 +1087,7 @@ bool ClangExpressionDeclMap::LookupLocalVariable(
       variable_found = true;
       ValueObjectSP valobj = ValueObjectVariable::Create(frame, var);
       AddOneVariable(context, var, valobj);
-      context.m_found.variable = true;
+      context.m_found_variable = true;
     }
   }
   return variable_found;
@@ -1272,8 +1272,8 @@ void ClangExpressionDeclMap::LookupFunction(
           continue;
 
         AddOneFunction(context, sym_ctx.function, nullptr);
-        context.m_found.function_with_type_info = true;
-        context.m_found.function = true;
+        context.m_found_function_with_type_info = true;
+        context.m_found_function = true;
       } else if (sym_ctx.symbol) {
         if (sym_ctx.symbol->GetType() == eSymbolTypeReExported && target) {
           sym_ctx.symbol = sym_ctx.symbol->ResolveReExportedSymbol(*target);
@@ -1288,26 +1288,26 @@ void ClangExpressionDeclMap::LookupFunction(
       }
     }
 
-    if (!context.m_found.function_with_type_info) {
+    if (!context.m_found_function_with_type_info) {
       for (clang::NamedDecl *decl : decls_from_modules) {
         if (llvm::isa<clang::FunctionDecl>(decl)) {
           clang::NamedDecl *copied_decl =
               llvm::cast_or_null<FunctionDecl>(CopyDecl(decl));
           if (copied_decl) {
             context.AddNamedDecl(copied_decl);
-            context.m_found.function_with_type_info = true;
+            context.m_found_function_with_type_info = true;
           }
         }
       }
     }
 
-    if (!context.m_found.function_with_type_info) {
+    if (!context.m_found_function_with_type_info) {
       if (extern_symbol) {
         AddOneFunction(context, nullptr, extern_symbol);
-        context.m_found.function = true;
+        context.m_found_function = true;
       } else if (non_extern_symbol) {
         AddOneFunction(context, nullptr, non_extern_symbol);
-        context.m_found.function = true;
+        context.m_found_function = true;
       }
     }
   }
@@ -1404,7 +1404,7 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
     if (var) {
       valobj = ValueObjectVariable::Create(target, var);
       AddOneVariable(context, var, valobj);
-      context.m_found.variable = true;
+      context.m_found_variable = true;
       return;
     }
   }
@@ -1412,10 +1412,10 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
   LookupFunction(context, module_sp, name, namespace_decl);
 
   // Try the modules next.
-  if (!context.m_found.function_with_type_info)
+  if (!context.m_found_function_with_type_info)
     LookupInModulesDeclVendor(context, name);
 
-  if (target && !context.m_found.variable && !namespace_decl) {
+  if (target && !context.m_found_variable && !namespace_decl) {
     // We couldn't find a non-symbol variable for this.  Now we'll hunt for a
     // generic data symbol, and -- if it is found -- treat it as a variable.
     Status error;
@@ -1438,7 +1438,7 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
               clang::DiagnosticsEngine::Level::Warning, "%0");
       m_ast_context->getDiagnostics().Report(diag_id) << warning.c_str();
       AddOneGenericVariable(context, *data_symbol);
-      context.m_found.variable = true;
+      context.m_found_variable = true;
     }
   }
 }
