@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "numeric-output.h"
-#include "flang/common/unsigned-const-division.h"
+#include "flang/Common/unsigned-const-division.h"
 
 namespace Fortran::runtime::io {
 

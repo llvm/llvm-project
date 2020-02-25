@@ -6,7 +6,7 @@
 #
 #===------------------------------------------------------------------------===#
 
-add_subdirectory(decimal)
-add_subdirectory(evaluate)
-add_subdirectory(runtime)
-add_subdirectory(semantics)
+add_subdirectory(Decimal)
+add_subdirectory(Evaluate)
+add_subdirectory(Runtime)
+add_subdirectory(Semantics)

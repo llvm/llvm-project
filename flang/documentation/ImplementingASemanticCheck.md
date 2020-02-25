@@ -111,9 +111,9 @@ checking had already taken place.
 Most semantic checks for statements are implemented by walking the parse tree
 and performing analysis on the nodes they visit.  My plan was to use this
 method.  The infrastructure for walking the parse tree for statement semantic
-checking is implemented in the files `lib/semantics/semantics.cpp`.
+checking is implemented in the files `lib/Semantics/semantics.cpp`.
 Here's a fragment of the declaration of the framework's parse tree visitor from
-`lib/semantics/semantics.cpp`:
+`lib/Semantics/semantics.cpp`:
 
 ```C++
   // A parse tree visitor that calls Enter/Leave functions from each checker
@@ -136,7 +136,7 @@ Here's a fragment of the declaration of the framework's parse tree visitor from
 Since FUNCTION calls are a kind of expression, I was planning to base my
 implementation on the contents of `parser::Expr` nodes.  I would need to define
 either an `Enter()` or `Leave()` function whose parameter was a `parser::Expr`
-node.  Here's the declaration I put into `lib/semantics/check-do.h`:
+node.  Here's the declaration I put into `lib/Semantics/check-do.h`:
 
 ```C++
   void Leave(const parser::Expr &);
@@ -148,12 +148,12 @@ arbitrarily chose to implement the `Leave()` function to visit the parse tree
 node.
 
 Since my semantic check was focused on DO CONCURRENT statements, I added it to
-the file `lib/semantics/check-do.cpp` where most of the semantic checking for
+the file `lib/Semantics/check-do.cpp` where most of the semantic checking for
 DO statements already lived.
 
 ## Taking advantage of prior work
 When implementing a similar check for SUBROUTINE calls, I created a utility
-functions in `lib/semantics/semantics.cpp` to emit messages if
+functions in `lib/Semantics/semantics.cpp` to emit messages if
 a symbol corresponding to an active DO variable was being potentially modified:
 
 ```C++
@@ -176,7 +176,7 @@ functions.  The second is needed to determine whether to call them.
 ## Finding the source location
 The source code location information that I'd need for the error message must
 come from the parse tree.  I looked in the file
-`include/flang/parser/parse-tree.h` and determined that a `struct Expr`
+`include/flang/Parser/parse-tree.h` and determined that a `struct Expr`
 contained source location information since it had the field `CharBlock
 source`.  Thus, if I visited a `parser::Expr` node, I could get the source
 location information for the associated expression.
@@ -184,7 +184,7 @@ location information for the associated expression.
 ## Determining the `INTENT`
 I knew that I could find the `INTENT` of the dummy argument associated with the
 actual argument from the function called `dummyIntent()` in the class
-`evaluate::ActualArgument` in the file `include/flang/evaluate/call.h`.  So
+`evaluate::ActualArgument` in the file `include/flang/Evaluate/call.h`.  So
 if I could find an `evaluate::ActualArgument` in an expression, I could
   determine the `INTENT` of the associated dummy argument.  I knew that it was
   valid to call `dummyIntent()` because the data on which `dummyIntent()`
@@ -216,12 +216,12 @@ find all of the `evaluate::ActualArgument` nodes.
 
 Note that the compiler has multiple types called `Expr`.  One is in the
 `parser` namespace.  `parser::Expr` is defined in the file
-`include/flang/parser/parse-tree.h`.  It represents a parsed expression that
+`include/flang/Parser/parse-tree.h`.  It represents a parsed expression that
 maps directly to the source code and has fields that specify any operators in
 the expression, the operands, and the source position of the expression.
 
 Additionally, in the namespace `evaluate`, there are `evaluate::Expr<T>`
-template classes defined in the file `include/flang/evaluate/expression.h`.
+template classes defined in the file `include/flang/Evaluate/expression.h`.
 These are parameterized over the various types of Fortran and constitute a
 suite of strongly-typed representations of valid Fortran expressions of type
 `T` that have been fully elaborated with conversion operations and subjected to
@@ -231,7 +231,7 @@ owns an instance of `evaluate::Expr<SomeType>`, the most general representation
 of an analyzed expression.
 
 All of the declarations associated with both FUNCTION and SUBROUTINE calls are
-in `include/flang/evaluate/call.h`.  An `evaluate::FunctionRef` inherits from
+in `include/flang/Evaluate/call.h`.  An `evaluate::FunctionRef` inherits from
 an `evaluate::ProcedureRef` which contains the list of
 `evaluate::ActualArgument` nodes.  But the relationship between an
 `evaluate::FunctionRef` node and its associated arguments is not relevant.  I
@@ -269,16 +269,16 @@ argument was an active DO variable.
 ## Adding a parse tree visitor
 I started my implementation by adding a visitor for `parser::Expr` nodes.
 Since this analysis is part of DO construct checking, I did this in
-`lib/semantics/check-do.cpp`.  I added a print statement to the visitor to
+`lib/Semantics/check-do.cpp`.  I added a print statement to the visitor to
 verify that my new code was actually getting executed.  
 
-In `lib/semantics/check-do.h`, I added the declaration for the visitor:
+In `lib/Semantics/check-do.h`, I added the declaration for the visitor:
 
 ```C++
   void Leave(const parser::Expr &);
 ```
 
-In `lib/semantics/check-do.cpp`, I added an (almost empty) implementation:
+In `lib/Semantics/check-do.cpp`, I added an (almost empty) implementation:
 
 ```C++
   void DoChecker::Leave(const parser::Expr &) {
@@ -316,7 +316,7 @@ framework to walk the `evaluate::Expr` to gather all of the
 `evaluate::ActualArgument` nodes.  The code that I planned to model it on
 was the existing infrastructure that collected all of the `semantics::Symbol` nodes from an
 `evaluate::Expr`.  I found this implementation in
-`lib/evaluate/tools.cpp`:
+`lib/Evaluate/tools.cpp`:
 
 ```C++
   struct CollectSymbolsHelper
@@ -334,7 +334,7 @@ was the existing infrastructure that collected all of the `semantics::Symbol` no
 ```
 
 Note that the `CollectSymbols()` function returns a `semantics::Symbolset`,
-which is declared in `include/flang/semantics/symbol.h`:
+which is declared in `include/flang/Semantics/symbol.h`:
 
 ```C++
   using SymbolSet = std::set<SymbolRef>;
@@ -356,11 +356,11 @@ full `semantics::Symbol` objects into the set.  Ideally, we would be able to cre
 `std::set<Symbol &>` (a set of C++ references to symbols).  But C++ doesn't
 support sets that contain references.  This limitation is part of the rationale
 for the f18 implementation of type `common::Reference`, which is defined in
-  `include/flang/common/reference.h`.
+  `include/flang/Common/reference.h`.
 
 `SymbolRef`, the specialization of the template `common::Reference` for
 `semantics::Symbol`, is declared in the file
-`include/flang/semantics/symbol.h`:
+`include/flang/Semantics/symbol.h`:
 
 ```C++
   using SymbolRef = common::Reference<const Symbol>;
@@ -370,7 +370,7 @@ So to implement something that would collect `evaluate::ActualArgument`
 nodes from an `evaluate::Expr`, I first defined the required types
 `ActualArgumentRef` and `ActualArgumentSet`.  Since these are being
 used exclusively for DO construct semantic checking (currently), I put their
-definitions into `lib/semantics/check-do.cpp`:
+definitions into `lib/Semantics/check-do.cpp`:
 
 
 ```C++
@@ -386,7 +386,7 @@ Since `ActualArgument` is in the namespace `evaluate`, I put the
 definition for `ActualArgumentRef` in that namespace, too.
 
 I then modeled the code to create an `ActualArgumentSet` after the code to
-collect a `SymbolSet` and put it into `lib/semantics/check-do.cpp`:
+collect a `SymbolSet` and put it into `lib/Semantics/check-do.cpp`:
 
 
 ```C++
@@ -525,8 +525,8 @@ symbol table node (`semantics::Symbol`) for the variable.  My starting point was
 `evaluate::ActualArgument` node.  
 
 I was unsure of how to do this, so I browsed through existing code to look for
-how it treated `evaluate::ActualArgument` objects.  Since most of the code that deals with the `evaluate` namespace is in the lib/evaluate directory, I looked there.  I ran `grep` on all of the `.cpp` files looking for
-uses of `ActualArgument`.  One of the first hits I got was in `lib/evaluate/call.cpp` in the definition of `ActualArgument::GetType()`:
+how it treated `evaluate::ActualArgument` objects.  Since most of the code that deals with the `evaluate` namespace is in the lib/Evaluate directory, I looked there.  I ran `grep` on all of the `.cpp` files looking for
+uses of `ActualArgument`.  One of the first hits I got was in `lib/Evaluate/call.cpp` in the definition of `ActualArgument::GetType()`:
 
 ```C++
 std::optional<DynamicType> ActualArgument::GetType() const {
@@ -544,7 +544,7 @@ I noted the call to `UnwrapExpr()` that yielded a value of
 `Expr<SomeType>`.  So I guessed that I could use this member function to
 get an `evaluate::Expr<SomeType>` on which I could perform further analysis.
 
-I also knew that the header file `include/flang/evaluate/tools.h` held many
+I also knew that the header file `include/flang/Evaluate/tools.h` held many
 utility functions for dealing with `evaluate::Expr` objects.  I was hoping to
 find something that would determine if an `evaluate::Expr` was a variable.  So
 I searched for `IsVariable` and got a hit immediately.  
@@ -560,7 +560,7 @@ I searched for `IsVariable` and got a hit immediately.
 
 But I actually needed more than just the knowledge that an `evaluate::Expr` was
 a variable.  I needed the `semantics::Symbol` associated with the variable.  So
-I searched in `include/flang/evaluate/tools.h` for functions that returned a
+I searched in `include/flang/Evaluate/tools.h` for functions that returned a
 `semantics::Symbol`.  I found the following:
 
 ```C++

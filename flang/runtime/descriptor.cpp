@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "descriptor.h"
-#include "flang/common/idioms.h"
+#include "flang/Common/idioms.h"
 #include <cassert>
 #include <cstdlib>
 #include <cstring>

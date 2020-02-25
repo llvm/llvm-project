@@ -219,7 +219,7 @@ or assignments should exist for a class, explicitly `=delete` all of them.
 There are many -- perhaps too many -- means of indirect addressing
 data in this project.
 Some of these are standard C++ language and library features,
-while others are local inventions in `lib/common`:
+while others are local inventions in `lib/Common`:
 * Bare pointers (`Foo *p`): these are obviously nullable, non-owning,
 undefined when uninitialized, shallowly copyable, reassignable, and often
 not the right abstraction to use in this project.

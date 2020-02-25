@@ -14,8 +14,8 @@
 #include "environment.h"
 #include "io-error.h"
 #include "terminator.h"
-#include "flang/common/Fortran.h"
-#include "flang/decimal/decimal.h"
+#include "flang/Common/Fortran.h"
+#include "flang/Decimal/decimal.h"
 #include <cinttypes>
 #include <optional>
 

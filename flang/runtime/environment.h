@@ -9,7 +9,7 @@
 #ifndef FORTRAN_RUNTIME_ENVIRONMENT_H_
 #define FORTRAN_RUNTIME_ENVIRONMENT_H_
 
-#include "flang/decimal/decimal.h"
+#include "flang/Decimal/decimal.h"
 
 namespace Fortran::runtime {
 struct ExecutionEnvironment {

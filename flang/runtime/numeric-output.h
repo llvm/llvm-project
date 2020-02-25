@@ -20,7 +20,7 @@
 
 #include "format.h"
 #include "io-stmt.h"
-#include "flang/decimal/decimal.h"
+#include "flang/Decimal/decimal.h"
 
 namespace Fortran::runtime::io {
 
