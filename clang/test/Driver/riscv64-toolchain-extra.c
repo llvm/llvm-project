@@ -19,6 +19,7 @@
 // RUN: ln -s %S/Inputs/basic_riscv64_nogcc_tree/bin/riscv64-unknown-elf-ld %T/testroot-riscv64-baremetal-nogcc/bin/riscv64-unknown-elf-ld
 // RUN: ln -s %S/Inputs/basic_riscv64_nogcc_tree/riscv64-unknown-elf %T/testroot-riscv64-baremetal-nogcc/riscv64-unknown-elf
 // RUN: %T/testroot-riscv64-baremetal-nogcc/bin/clang %s -### -no-canonical-prefixes \
+// RUN:    --gcc-toolchain=%T/testroot-riscv64-baremetal-nogcc/invalid \
 // RUN:    -target riscv64-unknown-elf --rtlib=platform 2>&1 \
 // RUN:    | FileCheck -check-prefix=C-RV64-BAREMETAL-LP64-NOGCC %s
 
