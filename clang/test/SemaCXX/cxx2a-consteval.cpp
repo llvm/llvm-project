@@ -309,6 +309,14 @@ void test() {
 
 namespace alloc {
 
+consteval int f() {
+  int *A = new int(0);
+// expected-note@-1+ {{allocation performed here was not deallocated}}
+  return *A;
+}
+
+int i1 = f(); // expected-error {{is not a constant expression}}
+
 struct A {
   int* p = new int(42);
   // expected-note@-1+ {{heap allocation performed here}}
