@@ -474,9 +474,6 @@ int main(int argc, char **argv) {
   } else {
     assert(FileType == OFT_ObjectFile && "Invalid file type!");
 
-    // Don't waste memory on names of temp labels.
-    Ctx.setUseNamesOnTempLabels(false);
-
     if (!Out->os().supportsSeeking()) {
       BOS = std::make_unique<buffer_ostream>(Out->os());
       OS = BOS.get();

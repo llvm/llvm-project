@@ -79,6 +79,8 @@ public:
         InstPrinter->setCommentStream(CommentStream);
     if (Assembler->getBackendPtr())
       setAllowAutoPadding(Assembler->getBackend().allowAutoPadding());
+
+    Context.setUseNamesOnTempLabels(true);
   }
 
   MCAssembler &getAssembler() { return *Assembler; }
