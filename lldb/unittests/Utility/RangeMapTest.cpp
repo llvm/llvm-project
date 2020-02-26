@@ -19,6 +19,12 @@ static testing::Matcher<const EntryT *> EntryIs(uint32_t ID) {
   return testing::Pointee(testing::Field(&EntryT::data, ID));
 }
 
+std::vector<uint32_t> FindEntryIndexes(uint32_t address, RangeDataVectorT map) {
+  std::vector<uint32_t> result;
+  map.FindEntryIndexesThatContain(address, result);
+  return result;
+}
+
 TEST(RangeDataVector, FindEntryThatContains) {
   RangeDataVectorT Map;
   uint32_t NextID = 0;
@@ -93,4 +99,38 @@ TEST(RangeDataVector, CustomSort) {
   EXPECT_THAT(MapC.GetEntryRef(1).data, 52);
   EXPECT_THAT(MapC.GetEntryRef(2).data, 51);
   EXPECT_THAT(MapC.GetEntryRef(3).data, 50);
+}
+
+TEST(RangeDataVector, FindEntryIndexesThatContain) {
+  RangeDataVectorT Map;
+  Map.Append(EntryT(0, 10, 10));
+  Map.Append(EntryT(10, 10, 11));
+  Map.Append(EntryT(20, 10, 12));
+  Map.Sort();
+
+  EXPECT_THAT(FindEntryIndexes(0, Map), testing::ElementsAre(10));
+  EXPECT_THAT(FindEntryIndexes(9, Map), testing::ElementsAre(10));
+  EXPECT_THAT(FindEntryIndexes(10, Map), testing::ElementsAre(11));
+  EXPECT_THAT(FindEntryIndexes(19, Map), testing::ElementsAre(11));
+  EXPECT_THAT(FindEntryIndexes(20, Map), testing::ElementsAre(12));
+  EXPECT_THAT(FindEntryIndexes(29, Map), testing::ElementsAre(12));
+  EXPECT_THAT(FindEntryIndexes(30, Map), testing::ElementsAre());
+}
+
+TEST(RangeDataVector, FindEntryIndexesThatContain_Overlap) {
+  RangeDataVectorT Map;
+  Map.Append(EntryT(0, 40, 10));
+  Map.Append(EntryT(10, 20, 11));
+  Map.Append(EntryT(20, 10, 12));
+  Map.Sort();
+
+  EXPECT_THAT(FindEntryIndexes(0, Map), testing::ElementsAre(10));
+  EXPECT_THAT(FindEntryIndexes(9, Map), testing::ElementsAre(10));
+  EXPECT_THAT(FindEntryIndexes(10, Map), testing::ElementsAre(10, 11));
+  EXPECT_THAT(FindEntryIndexes(19, Map), testing::ElementsAre(10, 11));
+  EXPECT_THAT(FindEntryIndexes(20, Map), testing::ElementsAre(10, 11, 12));
+  EXPECT_THAT(FindEntryIndexes(29, Map), testing::ElementsAre(10, 11, 12));
+  EXPECT_THAT(FindEntryIndexes(30, Map), testing::ElementsAre(10));
+  EXPECT_THAT(FindEntryIndexes(39, Map), testing::ElementsAre(10));
+  EXPECT_THAT(FindEntryIndexes(40, Map), testing::ElementsAre());
 }
