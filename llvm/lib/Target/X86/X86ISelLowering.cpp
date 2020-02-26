@@ -25643,18 +25643,16 @@ SDValue X86TargetLowering::LowerFLT_ROUNDS_(SDValue Op,
   SDValue StackSlot =
       DAG.getFrameIndex(SSFI, getPointerTy(DAG.getDataLayout()));
 
-  MachineMemOperand *MMO =
-      MF.getMachineMemOperand(MachinePointerInfo::getFixedStack(MF, SSFI),
-                              MachineMemOperand::MOStore, 2, 2);
+  MachinePointerInfo MPI = MachinePointerInfo::getFixedStack(MF, SSFI);
 
   SDValue Chain = Op.getOperand(0);
   SDValue Ops[] = {Chain, StackSlot};
-  Chain = DAG.getMemIntrinsicNode(
-      X86ISD::FNSTCW16m, DL, DAG.getVTList(MVT::Other), Ops, MVT::i16, MMO);
+  Chain = DAG.getMemIntrinsicNode(X86ISD::FNSTCW16m, DL,
+                                  DAG.getVTList(MVT::Other), Ops, MVT::i16, MPI,
+                                  2 /*Align*/, MachineMemOperand::MOStore);
 
   // Load FP Control Word from stack slot
-  SDValue CWD =
-      DAG.getLoad(MVT::i16, DL, Chain, StackSlot, MachinePointerInfo());
+  SDValue CWD = DAG.getLoad(MVT::i16, DL, Chain, StackSlot, MPI, 2 /*Align*/);
   Chain = CWD.getValue(1);
 
   // Mask and turn the control bits into a shift for the lookup table.
