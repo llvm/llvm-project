@@ -7582,7 +7582,8 @@ SDValue PPCTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
     case ISD::SETLT:
       return DAG.getNode(PPCISD::XSMINCDP, dl, Op.getValueType(), LHS, RHS);
     }
-  }
+  } else if (!HasNoInfs || !HasNoNaNs)
+    return Op;
 
   // TODO: Propagate flags from the select rather than global settings.
   SDNodeFlags Flags;
