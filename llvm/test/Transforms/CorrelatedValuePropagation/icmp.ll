@@ -619,4 +619,39 @@ exit:
   ret i1 %iv
 }
 
+define void @test_cmp_phi(i8 %a) {
+; CHECK-LABEL: @test_cmp_phi(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C0:%.*]] = icmp ult i8 [[A:%.*]], 2
+; CHECK-NEXT:    br i1 [[C0]], label [[LOOP:%.*]], label [[EXIT:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[P:%.*]] = phi i8 [ [[A]], [[ENTRY:%.*]] ], [ [[B:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[C1:%.*]] = icmp ne i8 [[P]], 0
+; CHECK-NEXT:    [[C2:%.*]] = icmp ne i8 [[P]], 2
+; CHECK-NEXT:    [[C3:%.*]] = and i1 [[C1]], [[C2]]
+; CHECK-NEXT:    [[C4:%.*]] = call i1 @get_bool()
+; CHECK-NEXT:    [[B]] = zext i1 [[C4]] to i8
+; CHECK-NEXT:    br i1 [[C3]], label [[LOOP]], label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %c0 = icmp ult i8 %a, 2
+  br i1 %c0, label %loop, label %exit
+
+loop:
+  %p = phi i8 [ %a, %entry ], [ %b, %loop ]
+  %c1 = icmp ne i8 %p, 0
+  %c2 = icmp ne i8 %p, 2
+  %c3 = and i1 %c1, %c2
+  %c4 = call i1 @get_bool()
+  %b = zext i1 %c4 to i8
+  br i1 %c3, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+declare i1 @get_bool()
+
 attributes #4 = { noreturn }
