@@ -1106,6 +1106,30 @@ bool MCAssembler::relaxCVDefRange(MCAsmLayout &Layout,
   return OldSize != F.getContents().size();
 }
 
+bool MCAssembler::relaxFragment(MCAsmLayout &Layout, MCFragment &F) {
+  switch(F.getKind()) {
+  default:
+    return false;
+  case MCFragment::FT_Relaxable:
+    assert(!getRelaxAll() &&
+           "Did not expect a MCRelaxableFragment in RelaxAll mode");
+    return relaxInstruction(Layout, cast<MCRelaxableFragment>(F));
+  case MCFragment::FT_Dwarf:
+    return relaxDwarfLineAddr(Layout, cast<MCDwarfLineAddrFragment>(F));
+  case MCFragment::FT_DwarfFrame:
+    return relaxDwarfCallFrameFragment(Layout,
+                                       cast<MCDwarfCallFrameFragment>(F));
+  case MCFragment::FT_LEB:
+    return relaxLEB(Layout, cast<MCLEBFragment>(F));
+  case MCFragment::FT_BoundaryAlign:
+    return relaxBoundaryAlign(Layout, cast<MCBoundaryAlignFragment>(F));
+  case MCFragment::FT_CVInlineLines:
+    return relaxCVInlineLineTable(Layout, cast<MCCVInlineLineTableFragment>(F));
+  case MCFragment::FT_CVDefRange:
+    return relaxCVDefRange(Layout, cast<MCCVDefRangeFragment>(F));
+  }
+}
+
 bool MCAssembler::layoutSectionOnce(MCAsmLayout &Layout, MCSection &Sec) {
   // Holds the first fragment which needed relaxing during this layout. It will
   // remain NULL if none were relaxed.
@@ -1116,39 +1140,7 @@ bool MCAssembler::layoutSectionOnce(MCAsmLayout &Layout, MCSection &Sec) {
   // Attempt to relax all the fragments in the section.
   for (MCSection::iterator I = Sec.begin(), IE = Sec.end(); I != IE; ++I) {
     // Check if this is a fragment that needs relaxation.
-    bool RelaxedFrag = false;
-    switch(I->getKind()) {
-    default:
-      break;
-    case MCFragment::FT_Relaxable:
-      assert(!getRelaxAll() &&
-             "Did not expect a MCRelaxableFragment in RelaxAll mode");
-      RelaxedFrag = relaxInstruction(Layout, *cast<MCRelaxableFragment>(I));
-      break;
-    case MCFragment::FT_Dwarf:
-      RelaxedFrag = relaxDwarfLineAddr(Layout,
-                                       *cast<MCDwarfLineAddrFragment>(I));
-      break;
-    case MCFragment::FT_DwarfFrame:
-      RelaxedFrag =
-        relaxDwarfCallFrameFragment(Layout,
-                                    *cast<MCDwarfCallFrameFragment>(I));
-      break;
-    case MCFragment::FT_LEB:
-      RelaxedFrag = relaxLEB(Layout, *cast<MCLEBFragment>(I));
-      break;
-    case MCFragment::FT_BoundaryAlign:
-      RelaxedFrag =
-          relaxBoundaryAlign(Layout, *cast<MCBoundaryAlignFragment>(I));
-      break;
-    case MCFragment::FT_CVInlineLines:
-      RelaxedFrag =
-          relaxCVInlineLineTable(Layout, *cast<MCCVInlineLineTableFragment>(I));
-      break;
-    case MCFragment::FT_CVDefRange:
-      RelaxedFrag = relaxCVDefRange(Layout, *cast<MCCVDefRangeFragment>(I));
-      break;
-    }
+    bool RelaxedFrag = relaxFragment(Layout, *I);
     if (RelaxedFrag && !FirstRelaxedFragment)
       FirstRelaxedFragment = &*I;
   }
