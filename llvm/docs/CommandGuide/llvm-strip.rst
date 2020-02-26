@@ -101,10 +101,6 @@ multiple file formats.
 
  Display the version of the :program:`llvm-strip` executable.
 
-.. option:: @<FILE>
-
- Read command-line options and commands from response file `<FILE>`.
-
 .. option:: --wildcard, -w
 
   Allow wildcard syntax for symbol-related flags. On by default for
@@ -128,6 +124,10 @@ multiple file formats.
 
   The order of wildcards does not matter. For example, ``-w -N '*' -N '!x'`` is
   the same as ``-w -N '!x' -N '*'``.
+
+.. option:: @<FILE>
+
+ Read command-line options and commands from response file `<FILE>`.
 
 COFF-SPECIFIC OPTIONS
 ---------------------
