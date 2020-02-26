@@ -1100,32 +1100,126 @@ A pass-by-writeback is evaluated as follows:
 Ownership-qualified fields of structs and unions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-A program is ill-formed if it declares a member of a C struct or union to have
-a nontrivially ownership-qualified type.
+A member of a struct or union may be declared to have ownership-qualified
+type, except that it may not be declared to be ``__autoreleasing``.
 
 .. admonition:: Rationale
 
-  The resulting type would be non-POD in the C++ sense, but C does not give us
-  very good language tools for managing the lifetime of aggregates, so it is
-  more convenient to simply forbid them.  It is still possible to manage this
-  with a ``void*`` or an ``__unsafe_unretained`` object.
+  Permitting ``__strong`` and ``__weak`` references in aggregate types
+  allows programmers to take advantage of the normal language tools of
+  C and C++ while still automatically managing memory.  While it is
+  usually simpler and more idiomatic to use Objective-C objects for
+  secondary data structures, doing so can introduce extra allocation
+  and message-send overhead, which can cause to unacceptable
+  performance.  Using structs can resolve this tension.
 
-This restriction does not apply in Objective-C++.  However, nontrivally
-ownership-qualified types are considered non-POD: in C++11 terms, they are not
-trivially default constructible, copy constructible, move constructible, copy
-assignable, move assignable, or destructible.  It is a violation of C++'s One
-Definition Rule to use a class outside of ARC that, under ARC, would have a
-nontrivially ownership-qualified member.
+  ``__autoreleasing`` is forbidden because it is treacherous to rely
+  on autoreleases as an ownership tool outside of a function-local
+  contexts.
+
+  Earlier releases of Clang permitted ``__strong`` and ``__weak`` only
+  references in Objective-C++ classes, not in Objective-C.  This
+  restriction was an undesirable short-term constraint arising from the
+  complexity of adding support for non-trivial struct types to C.
+
+In Objective-C++, for the purposes of determining triviality of special
+members, nontrivially ownership-qualified types are treated as if they
+were class types with:
+- non-trivial default, copy, and move constructors,
+- non-trivial copy and move assignment operators, and
+- non-trivial destructors.
+
+In Objective-C, language rules have been added to cover non-trivial
+members of struct and union types.  These rules generally match the
+Objective-C++ behavior and can be summarized as follows:
+
+- Initializing, copying, or destroying a struct with non-trivial
+  members recursively initializes, copies or destroys those members
+  as appropriate for their type.
+
+- Copying or destroying a union with non-trivial members is ill-formed.
+  (This also applies to structs containing such unions.)  It is
+  nonetheless possible to create objects of these types by
+  zero-initializing suitable memory before accessing it through the
+  union type, and they may be destroyed by ensuring that any active
+  members are reset to ``nil`` before the memory is re-used.  These
+  techniques mirror the precautions necessary when working with
+  dynamically-allocated arrays of nontrivially ownership-qualified type.
+
+Structs and unions with non-trivial members are compatible in
+different language modes under the following conditions:
+
+- The types must be compatible ignoring ownership qualifiers according
+  to the baseline non-ARC rules.  This condition implies a pairwise
+  correspondance between fields.
+
+  Note that an Objective-C++ class with base classes, a user-provided
+  copy or move constructor, or a user-provided destructor is never
+  compatible with an Objective-C type.
+
+- If two fields correspond as above, and at least one of the fields is
+  ownership-qualified, then:
+
+    - the fields must be identically qualified, or else
+
+    - one type must be unqualified (and thus declared in a non-ARC mode),
+      and the other type must be qualified with ``__unsafe_unretained``
+      or ``__strong``.
+
+  Note that ``__weak`` fields must always be declared ``__weak``  because
+  of the need to pin those fields in memory and keep them properly
+  registered with the Objective-C runtime.  Non-ARC modes may still
+  declare fields ``__weak`` by enabling ``-fobjc-weak``.
+
+These compatibility rules permit a function that takes a parameter
+of non-trivial struct type to be written in ARC and called from
+non-ARC or vice-versa.  The convention for this always transfers
+ownership of objects stored in ``__strong`` fields from the caller
+to the callee, just as for an ``ns_consumed`` argument.  Therefore,
+non-ARC callers must ensure that such fields are initialized to a +1
+reference, and non-ARC callees must balance that +1 by releasing the
+reference or transferring it as appropriate.
+
+Likewise, a function returning a non-trivial struct may be written in
+ARC and called from non-ARC or vice-versa.  The convention for this
+always transfers ownership of objects stored in ``__strong`` fields
+from the callee to the caller, and so callees must initialize such
+fields with +1 references, and callers must balance that +1 by releasing
+or transferring them.
+
+Similar transfers of responsibility occur for ``__weak`` fields, but
+since both sides must use native ``__weak`` support to ensure
+calling convention compatibililty, this transfer is always handled
+automatically by the compiler.
 
 .. admonition:: Rationale
 
-  Unlike in C, we can express all the necessary ARC semantics for
-  ownership-qualified subobjects as suboperations of the (default) special
-  member functions for the class.  These functions then become non-trivial.
-  This has the non-obvious result that the class will have a non-trivial copy
-  constructor and non-trivial destructor; if this would not normally be true
-  outside of ARC, objects of the type will be passed and returned in an
-  ABI-incompatible manner.
+  In earlier releases, when non-trivial ownership was only permitted
+  on fields in Objective-C++, the ABI used for such classees was the
+  ordinary ABI for non-trivial C++ classes, which passes arguments and
+  returns indirectly and does not transfer responsibility for arguments.
+  When support for Objective-C structs was added, it was decided to
+  change to the current ABI for three reasons:
+
+  - It permits ARC / non-ARC compatibility for structs containing only
+    ``__strong`` references, as long as the non-ARC side is careful about
+    transferring ownership.
+
+  - It avoids unnecessary indirection for sufficiently small types that
+    the C ABI would prefer to pass in registers.
+
+  - Given that struct arguments must be produced at +1 to satisfy C's
+    semantics of initializing the local parameter variable, transferring
+    ownership of that copy to the callee is generally better for ARC
+    optimization, since otherwise there will be releases in the caller
+    that are much harder to pair with transfers in the callee.
+
+  Breaking compatibility with existing Objective-C++ structures was
+  considered an acceptable cost, as most Objective-C++ code does not have
+  binary-compatibility requirements.  Any existing code which cannot accept
+  this compatibility break, which is necessarily Objective-C++, should
+  force the use of the standard C++ ABI by declaring an empty (but
+  non-defaulted) destructor.
 
 .. _arc.ownership.inference:
 
