@@ -1,5 +1,5 @@
 ; REQUIRES: system-darwin
-; RUN: lli -jit-kind=orc-lazy %s
+; RUN: env ASAN_OPTIONS=detect_leaks=0 lli -jit-kind=orc-lazy %s
 ;
 ; Sanity check MachO Platform support: Call a no-op method (returning int 0) on
 ; an ObjC object. This test checks that we correctly auto-identify this as a
