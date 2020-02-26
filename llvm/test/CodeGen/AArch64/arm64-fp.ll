@@ -48,4 +48,27 @@ define { double, double } @testfn(double %x, double %y) #0 {
   ret { double, double } %r1
 }
 
+define <2 x float> @fake_fneg_splat_extract(<4 x float> %rhs) {
+; CHECK-LABEL: fake_fneg_splat_extract:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fneg v0.4s, v0.4s
+; CHECK-NEXT:    dup v0.2s, v0.s[3]
+; CHECK-NEXT:    ret
+  %rhs_neg = fsub <4 x float> <float -0.0, float -0.0, float -0.0, float -0.0>, %rhs
+  %splat = shufflevector <4 x float> %rhs_neg, <4 x float> undef, <2 x i32> <i32 3, i32 3>
+  ret <2 x float> %splat
+}
+
+define <2 x float> @fake_fneg_splat_extract_undef(<4 x float> %rhs) {
+; CHECK-LABEL: fake_fneg_splat_extract_undef:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    fneg v0.2s, v0.2s
+; CHECK-NEXT:    dup v0.2s, v0.s[1]
+; CHECK-NEXT:    ret
+  %rhs_neg = fsub <4 x float> <float undef, float -0.0, float -0.0, float -0.0>, %rhs
+  %splat = shufflevector <4 x float> %rhs_neg, <4 x float> undef, <2 x i32> <i32 3, i32 3>
+  ret <2 x float> %splat
+}
+
 attributes #0 = { "no-signed-zeros-fp-math"="true" }
