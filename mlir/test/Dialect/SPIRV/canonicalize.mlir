@@ -363,6 +363,36 @@ func @const_fold_vector_isub() -> vector<3xi32> {
 // -----
 
 //===----------------------------------------------------------------------===//
+// spv.LogicalAnd
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @convert_logical_and_true_false_scalar
+// CHECK-SAME: %[[ARG:.+]]: i1
+func @convert_logical_and_true_false_scalar(%arg: i1) -> (i1, i1) {
+  %true = spv.constant true
+  // CHECK: %[[FALSE:.+]] = spv.constant false
+  %false = spv.constant false
+  %0 = spv.LogicalAnd %true, %arg: i1
+  %1 = spv.LogicalAnd %arg, %false: i1
+  // CHECK: return %[[ARG]], %[[FALSE]]
+  return %0, %1: i1, i1
+}
+
+// CHECK-LABEL: @convert_logical_and_true_false_vector
+// CHECK-SAME: %[[ARG:.+]]: vector<3xi1>
+func @convert_logical_and_true_false_vector(%arg: vector<3xi1>) -> (vector<3xi1>, vector<3xi1>) {
+  %true = spv.constant dense<true> : vector<3xi1>
+  // CHECK: %[[FALSE:.+]] = spv.constant dense<false>
+  %false = spv.constant dense<false> : vector<3xi1>
+  %0 = spv.LogicalAnd %true, %arg: vector<3xi1>
+  %1 = spv.LogicalAnd %arg, %false: vector<3xi1>
+  // CHECK: return %[[ARG]], %[[FALSE]]
+  return %0, %1: vector<3xi1>, vector<3xi1>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // spv.LogicalNot
 //===----------------------------------------------------------------------===//
 
@@ -415,6 +445,36 @@ func @convert_logical_not_to_logical_equal(%arg0: vector<3xi1>, %arg1: vector<3x
   %2 = spv.LogicalNotEqual %arg0, %arg1 : vector<3xi1>
   %3 = spv.LogicalNot %2 : vector<3xi1>
   spv.ReturnValue %3 : vector<3xi1>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spv.LogicalOr
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @convert_logical_or_true_false_scalar
+// CHECK-SAME: %[[ARG:.+]]: i1
+func @convert_logical_or_true_false_scalar(%arg: i1) -> (i1, i1) {
+  // CHECK: %[[TRUE:.+]] = spv.constant true
+  %true = spv.constant true
+  %false = spv.constant false
+  %0 = spv.LogicalOr %true, %arg: i1
+  %1 = spv.LogicalOr %arg, %false: i1
+  // CHECK: return %[[TRUE]], %[[ARG]]
+  return %0, %1: i1, i1
+}
+
+// CHECK-LABEL: @convert_logical_or_true_false_vector
+// CHECK-SAME: %[[ARG:.+]]: vector<3xi1>
+func @convert_logical_or_true_false_vector(%arg: vector<3xi1>) -> (vector<3xi1>, vector<3xi1>) {
+  // CHECK: %[[TRUE:.+]] = spv.constant dense<true>
+  %true = spv.constant dense<true> : vector<3xi1>
+  %false = spv.constant dense<false> : vector<3xi1>
+  %0 = spv.LogicalOr %true, %arg: vector<3xi1>
+  %1 = spv.LogicalOr %arg, %false: vector<3xi1>
+  // CHECK: return %[[TRUE]], %[[ARG]]
+  return %0, %1: vector<3xi1>, vector<3xi1>
 }
 
 // -----
