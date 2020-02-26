@@ -3638,8 +3638,8 @@ size_t ObjectFileMachO::ParseSymtab() {
                               N_FUN_addr_to_sym_idx.equal_range(nlist.n_value);
                           if (range.first != range.second) {
                             bool found_it = false;
-                            for (const auto pos = range.first;
-                                 pos != range.second; ++pos) {
+                            for (auto pos = range.first; pos != range.second;
+                                 ++pos) {
                               if (sym[sym_idx].GetMangled().GetName(
                                       lldb::eLanguageTypeUnknown,
                                       Mangled::ePreferMangled) ==
@@ -3683,8 +3683,8 @@ size_t ObjectFileMachO::ParseSymtab() {
                               nlist.n_value);
                           if (range.first != range.second) {
                             bool found_it = false;
-                            for (const auto pos = range.first;
-                                 pos != range.second; ++pos) {
+                            for (auto pos = range.first; pos != range.second;
+                                 ++pos) {
                               if (sym[sym_idx].GetMangled().GetName(
                                       lldb::eLanguageTypeUnknown,
                                       Mangled::ePreferMangled) ==
