@@ -110,7 +110,7 @@ bool isBlacklisted(const NamedDecl &RenameDecl) {
 #include "StdSymbolMap.inc"
 #undef SYMBOL
   });
-  return StdSymbols->count(RenameDecl.getQualifiedNameAsString());
+  return StdSymbols->count(printQualifiedName(RenameDecl));
 }
 
 enum ReasonToReject {
