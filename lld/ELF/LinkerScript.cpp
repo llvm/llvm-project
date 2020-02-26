@@ -730,6 +730,12 @@ void LinkerScript::addOrphanSections() {
 
 void LinkerScript::diagnoseOrphanHandling() const {
   for (const InputSectionBase *sec : orphanSections) {
+    // Input SHT_REL[A] retained by --emit-relocs are ignored by
+    // computeInputSections(). Don't warn/error.
+    if (isa<InputSection>(sec) &&
+        cast<InputSection>(sec)->getRelocatedSection())
+      continue;
+
     StringRef name = getOutputSectionName(sec);
     if (config->orphanHandling == OrphanHandlingPolicy::Error)
       error(toString(sec) + " is being placed in '" + name + "'");
