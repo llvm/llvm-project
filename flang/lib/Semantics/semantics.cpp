@@ -19,6 +19,7 @@
 #include "check-do-forall.h"
 #include "check-if-stmt.h"
 #include "check-io.h"
+#include "check-namelist.h"
 #include "check-nullify.h"
 #include "check-omp-structure.h"
 #include "check-purity.h"
@@ -111,11 +112,11 @@ private:
 };
 
 using StatementSemanticsPass1 = ExprChecker;
-using StatementSemanticsPass2 = SemanticsVisitor<
-    AllocateChecker, ArithmeticIfStmtChecker, AssignmentChecker, CoarrayChecker,
-    DataChecker, DeallocateChecker, DoForallChecker, IfStmtChecker, IoChecker,
-    NullifyChecker, OmpStructureChecker, PurityChecker, ReturnStmtChecker,
-    StopChecker>;
+using StatementSemanticsPass2 = SemanticsVisitor<AllocateChecker,
+    ArithmeticIfStmtChecker, AssignmentChecker, CoarrayChecker, DataChecker,
+    DeallocateChecker, DoForallChecker, IfStmtChecker, IoChecker,
+    NamelistChecker, NullifyChecker, OmpStructureChecker, PurityChecker,
+    ReturnStmtChecker, StopChecker>;
 
 static bool PerformStatementSemantics(
     SemanticsContext &context, parser::Program &program) {

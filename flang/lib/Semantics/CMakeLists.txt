@@ -21,6 +21,7 @@ add_library(FortranSemantics
   check-do-forall.cpp
   check-if-stmt.cpp
   check-io.cpp
+  check-namelist.cpp
   check-nullify.cpp
   check-omp-structure.cpp
   check-purity.cpp
