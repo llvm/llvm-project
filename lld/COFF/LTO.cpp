@@ -38,9 +38,8 @@
 
 using namespace llvm;
 using namespace llvm::object;
-
-namespace lld {
-namespace coff {
+using namespace lld;
+using namespace lld::coff;
 
 // Creates an empty file to and returns a raw_fd_ostream to write to it.
 static std::unique_ptr<raw_fd_ostream> openFile(StringRef file) {
@@ -207,6 +206,3 @@ std::vector<StringRef> BitcodeCompiler::compile() {
 
   return ret;
 }
-
-} // namespace coff
-} // namespace lld
