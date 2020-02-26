@@ -21,7 +21,7 @@ public:
     IsValid () const;
 
     explicit operator bool() const;
-    
+
     bool
     GetIncludeArguments ()  const;
 

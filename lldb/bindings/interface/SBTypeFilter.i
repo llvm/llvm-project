@@ -27,7 +27,7 @@ namespace lldb {
         IsValid() const;
 
         explicit operator bool() const;
-        
+
         bool
         IsEqualTo (lldb::SBTypeFilter &rhs);
 

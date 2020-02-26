@@ -73,7 +73,7 @@ public:
     IsValid() const;
 
     explicit operator bool() const;
-    
+
     const char *
     GetName ();
 

@@ -80,7 +80,7 @@ public:
 
     explicit operator bool() const;
 
-    void 
+    void
     Clear();
 
     void
