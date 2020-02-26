@@ -9,10 +9,10 @@
 #ifndef LLVM_LIBC_SRC_MATH_ROUND_H
 #define LLVM_LIBC_SRC_MATH_ROUND_H
 
-namespace llvm_libc {
+namespace __llvm_libc {
 
 double round(double x);
 
-} // namespace llvm_libc
+} // namespace __llvm_libc
 
 #endif // LLVM_LIBC_SRC_MATH_ROUND_H
