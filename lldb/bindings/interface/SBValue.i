@@ -67,7 +67,7 @@ public:
     IsValid();
 
     explicit operator bool() const;
-    
+
     void
     Clear();
 
