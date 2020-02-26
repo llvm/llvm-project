@@ -681,13 +681,9 @@ void LinkerScript::addOrphanSections() {
   std::function<void(InputSectionBase *)> add;
   add = [&](InputSectionBase *s) {
     if (s->isLive() && !s->parent) {
+      orphanSections.push_back(s);
+
       StringRef name = getOutputSectionName(s);
-
-      if (config->orphanHandling == OrphanHandlingPolicy::Error)
-        error(toString(s) + " is being placed in '" + name + "'");
-      else if (config->orphanHandling == OrphanHandlingPolicy::Warn)
-        warn(toString(s) + " is being placed in '" + name + "'");
-
       if (OutputSection *sec = findByName(sectionCommands, name)) {
         sec->recordSection(s);
       } else {
@@ -730,6 +726,16 @@ void LinkerScript::addOrphanSections() {
     sectionCommands.insert(sectionCommands.end(), v.begin(), v.end());
   else
     sectionCommands.insert(sectionCommands.begin(), v.begin(), v.end());
+}
+
+void LinkerScript::diagnoseOrphanHandling() const {
+  for (const InputSectionBase *sec : orphanSections) {
+    StringRef name = getOutputSectionName(sec);
+    if (config->orphanHandling == OrphanHandlingPolicy::Error)
+      error(toString(sec) + " is being placed in '" + name + "'");
+    else if (config->orphanHandling == OrphanHandlingPolicy::Warn)
+      warn(toString(sec) + " is being placed in '" + name + "'");
+  }
 }
 
 uint64_t LinkerScript::advance(uint64_t size, unsigned alignment) {
