@@ -181,13 +181,23 @@ ParsedType Sema::getDestructorName(SourceLocation TildeLoc,
       ObjectTypePtr ? GetTypeFromParser(ObjectTypePtr) : QualType();
 
   auto CheckLookupResult = [&](LookupResult &Found) -> ParsedType {
-    // FIXME: Should we be suppressing ambiguities here?
-    if (Found.isAmbiguous()) {
-      Failed = true;
-      return nullptr;
-    }
+    auto IsAcceptableResult = [&](NamedDecl *D) -> bool {
+      auto *Type = dyn_cast<TypeDecl>(D->getUnderlyingDecl());
+      if (!Type)
+        return false;
 
+      if (SearchType.isNull() || SearchType->isDependentType())
+        return true;
+
+      QualType T = Context.getTypeDeclType(Type);
+      return Context.hasSameUnqualifiedType(T, SearchType);
+    };
+
+    unsigned NumAcceptableResults = 0;
     for (NamedDecl *D : Found) {
+      if (IsAcceptableResult(D))
+        ++NumAcceptableResults;
+
       // Don't list a class twice in the lookup failure diagnostic if it's
       // found by both its injected-class-name and by the name in the enclosing
       // scope.
@@ -199,10 +209,34 @@ ParsedType Sema::getDestructorName(SourceLocation TildeLoc,
         FoundDecls.push_back(D);
     }
 
+    // As an extension, attempt to "fix" an ambiguity by erasing all non-type
+    // results, and all non-matching results if we have a search type. It's not
+    // clear what the right behavior is if destructor lookup hits an ambiguity,
+    // but other compilers do generally accept at least some kinds of
+    // ambiguity.
+    if (Found.isAmbiguous() && NumAcceptableResults == 1) {
+      Diag(NameLoc, diag::ext_dtor_name_ambiguous);
+      LookupResult::Filter F = Found.makeFilter();
+      while (F.hasNext()) {
+        NamedDecl *D = F.next();
+        if (auto *TD = dyn_cast<TypeDecl>(D->getUnderlyingDecl()))
+          Diag(D->getLocation(), diag::note_destructor_type_here)
+              << Context.getTypeDeclType(TD);
+        else
+          Diag(D->getLocation(), diag::note_destructor_nontype_here);
+
+        if (!IsAcceptableResult(D))
+          F.erase();
+      }
+      F.done();
+    }
+
+    if (Found.isAmbiguous())
+      Failed = true;
+
     if (TypeDecl *Type = Found.getAsSingle<TypeDecl>()) {
-      QualType T = Context.getTypeDeclType(Type);
-      if (SearchType.isNull() || SearchType->isDependentType() ||
-          Context.hasSameUnqualifiedType(T, SearchType)) {
+      if (IsAcceptableResult(Type)) {
+        QualType T = Context.getTypeDeclType(Type);
         MarkAnyDeclReferenced(Type->getLocation(), Type, /*OdrUse=*/false);
         return CreateParsedType(T,
                                 Context.getTrivialTypeSourceInfo(T, NameLoc));
