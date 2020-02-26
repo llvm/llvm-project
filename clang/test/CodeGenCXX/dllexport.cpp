@@ -305,8 +305,8 @@ struct __declspec(dllexport) Befriended {
 void Befriended::func() {}
 
 // Implicit declarations can be redeclared with dllexport.
-// MSC-DAG: define dso_local dllexport noalias i8* @"??2@{{YAPAXI|YAPEAX_K}}@Z"(
-// GNU-DAG: define dso_local dllexport noalias i8* @_Znw{{[yj]}}(
+// MSC-DAG: define dso_local dllexport nonnull i8* @"??2@{{YAPAXI|YAPEAX_K}}@Z"(
+// GNU-DAG: define dso_local dllexport nonnull i8* @_Znw{{[yj]}}(
 void* alloc(__SIZE_TYPE__ n);
 __declspec(dllexport) void* operator new(__SIZE_TYPE__ n) { return alloc(n); }
 

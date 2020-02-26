@@ -7,7 +7,9 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 define i32 @test_01(double* %p, double %x, i32* %np, i32* %mp, i32 %k) {
 ; CHECK-LABEL: @test_01(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[K:%.*]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i32 [[K:%.*]], 1
+; CHECK-NEXT:    [[SMAX:%.*]] = select i1 [[TMP0]], i32 [[K]], i32 1
+; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[SMAX]] to i64
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV_WIDE:%.*]] = phi i64 [ [[CANONICAL_IV_NEXT_I:%.*]], [[LOOP]] ], [ 0, [[ENTRY:%.*]] ]
@@ -17,8 +19,8 @@ define i32 @test_01(double* %p, double %x, i32* %np, i32* %mp, i32 %k) {
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul double [[X:%.*]], [[LOAD]]
 ; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds double, double* [[P]], i64 [[IV_WIDE]]
 ; CHECK-NEXT:    store atomic double [[MUL]], double* [[GEP2]] unordered, align 8
-; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp slt i64 [[CANONICAL_IV_NEXT_I]], [[TMP0]]
-; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[CANONICAL_IV_NEXT_I]], [[WIDE_TRIP_COUNT]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i32 0
 ;

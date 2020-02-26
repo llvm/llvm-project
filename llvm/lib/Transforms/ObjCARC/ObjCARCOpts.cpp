@@ -1569,6 +1569,15 @@ ObjCARCOpt::VisitTopDown(BasicBlock *BB,
     }
   }
 
+  // Check that BB and MyStates have the same number of predecessors. This
+  // prevents retain calls that live outside a loop from being moved into the
+  // loop.
+  if (!BB->hasNPredecessors(MyStates.pred_end() - MyStates.pred_begin()))
+    for (auto I = MyStates.top_down_ptr_begin(),
+              E = MyStates.top_down_ptr_end();
+         I != E; ++I)
+      I->second.SetCFGHazardAfflicted(true);
+
   LLVM_DEBUG(dbgs() << "Before:\n"
                     << BBStates[BB] << "\n"
                     << "Performing Dataflow:\n");

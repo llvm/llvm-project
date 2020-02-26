@@ -16,14 +16,14 @@ define void @foo(i32 %sub.ptr.div.i, i8* %ref.i1174) local_unnamed_addr {
 ; CHECK:       for.body650.lr.ph:
 ; CHECK-NEXT:    br label [[FOR_BODY650:%.*]]
 ; CHECK:       loopexit:
-; CHECK-NEXT:    [[INC_I_I_LCSSA:%.*]] = phi i32 [ [[INC_I_I:%.*]], [[FOR_BODY650]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[DOTSROA_SPECULATED]], 1
 ; CHECK-NEXT:    br label [[XZ_EXIT]]
 ; CHECK:       XZ.exit:
-; CHECK-NEXT:    [[DB_SROA_9_0_LCSSA:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ [[INC_I_I_LCSSA]], [[LOOPEXIT:%.*]] ]
+; CHECK-NEXT:    [[DB_SROA_9_0_LCSSA:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ [[TMP0]], [[LOOPEXIT:%.*]] ]
 ; CHECK-NEXT:    br label [[END:%.*]]
 ; CHECK:       for.body650:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[FOR_BODY650_LR_PH]] ], [ [[INC655:%.*]], [[FOR_BODY650]] ]
-; CHECK-NEXT:    [[IV2:%.*]] = phi i32 [ 1, [[FOR_BODY650_LR_PH]] ], [ [[INC_I_I]], [[FOR_BODY650]] ]
+; CHECK-NEXT:    [[IV2:%.*]] = phi i32 [ 1, [[FOR_BODY650_LR_PH]] ], [ [[INC_I_I:%.*]], [[FOR_BODY650]] ]
 ; CHECK-NEXT:    [[ARRAYIDX_I_I1105:%.*]] = getelementptr inbounds i8, i8* [[REF_I1174:%.*]], i32 [[IV2]]
 ; CHECK-NEXT:    store i8 7, i8* [[ARRAYIDX_I_I1105]], align 1
 ; CHECK-NEXT:    [[INC_I_I]] = add nuw nsw i32 [[IV2]], 1

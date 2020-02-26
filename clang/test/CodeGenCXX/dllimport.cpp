@@ -308,8 +308,8 @@ USE(friend4)
 USE(friend5)
 
 // Implicit declarations can be redeclared with dllimport.
-// MSC-DAG: declare dllimport noalias i8* @"??2@{{YAPAXI|YAPEAX_K}}@Z"(
-// GNU-DAG: declare dllimport noalias i8* @_Znw{{[yj]}}(
+// MSC-DAG: declare dllimport nonnull i8* @"??2@{{YAPAXI|YAPEAX_K}}@Z"(
+// GNU-DAG: declare dllimport nonnull i8* @_Znw{{[yj]}}(
 __declspec(dllimport) void* operator new(__SIZE_TYPE__ n);
 void UNIQ(use)() { ::operator new(42); }
 

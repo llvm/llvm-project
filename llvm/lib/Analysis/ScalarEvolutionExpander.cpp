@@ -24,10 +24,17 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
+
+cl::opt<unsigned> llvm::SCEVCheapExpansionBudget(
+    "scev-cheap-expansion-budget", cl::Hidden, cl::init(4),
+    cl::desc("When performing SCEV expansion only if it is cheap to do, this "
+             "controls the budget that is considered cheap (default = 4)"));
+
 using namespace PatternMatch;
 
 /// ReuseOrCreateCast - Arrange for there to be a cast of V to Ty at IP,
@@ -2129,84 +2136,180 @@ SCEVExpander::getRelatedExistingExpansion(const SCEV *S, const Instruction *At,
 }
 
 bool SCEVExpander::isHighCostExpansionHelper(
-    const SCEV *S, Loop *L, const Instruction *At,
-    SmallPtrSetImpl<const SCEV *> &Processed) {
+    const SCEV *S, Loop *L, const Instruction &At, int &BudgetRemaining,
+    const TargetTransformInfo &TTI, SmallPtrSetImpl<const SCEV *> &Processed) {
+  if (BudgetRemaining < 0)
+    return true; // Already run out of budget, give up.
+
+  // Was the cost of expansion of this expression already accounted for?
+  if (!Processed.insert(S).second)
+    return false; // We have already accounted for this expression.
 
   // If we can find an existing value for this scev available at the point "At"
   // then consider the expression cheap.
-  if (At && getRelatedExistingExpansion(S, At, L))
-    return false;
+  if (getRelatedExistingExpansion(S, &At, L))
+    return false; // Consider the expression to be free.
 
-  // Zero/One operand expressions
   switch (S->getSCEVType()) {
   case scUnknown:
   case scConstant:
-    return false;
-  case scTruncate:
-    return isHighCostExpansionHelper(cast<SCEVTruncateExpr>(S)->getOperand(),
-                                     L, At, Processed);
-  case scZeroExtend:
-    return isHighCostExpansionHelper(cast<SCEVZeroExtendExpr>(S)->getOperand(),
-                                     L, At, Processed);
-  case scSignExtend:
-    return isHighCostExpansionHelper(cast<SCEVSignExtendExpr>(S)->getOperand(),
-                                     L, At, Processed);
+    return false; // Assume to be zero-cost.
   }
 
-  if (!Processed.insert(S).second)
-    return false;
+  if (auto *CastExpr = dyn_cast<SCEVCastExpr>(S)) {
+    unsigned Opcode;
+    switch (S->getSCEVType()) {
+    case scTruncate:
+      Opcode = Instruction::Trunc;
+      break;
+    case scZeroExtend:
+      Opcode = Instruction::ZExt;
+      break;
+    case scSignExtend:
+      Opcode = Instruction::SExt;
+      break;
+    default:
+      llvm_unreachable("There are no other cast types.");
+    }
+    const SCEV *Op = CastExpr->getOperand();
+    BudgetRemaining -=
+        TTI.getOperationCost(Opcode, S->getType(), Op->getType());
+    return isHighCostExpansionHelper(Op, L, At, BudgetRemaining, TTI,
+                                     Processed);
+  }
+
 
   if (auto *UDivExpr = dyn_cast<SCEVUDivExpr>(S)) {
-    // If the divisor is a power of two and the SCEV type fits in a native
-    // integer (and the LHS not expensive), consider the division cheap
-    // irrespective of whether it occurs in the user code since it can be
-    // lowered into a right shift.
-    if (auto *SC = dyn_cast<SCEVConstant>(UDivExpr->getRHS()))
+    // If the divisor is a power of two count this as a logical right-shift.
+    if (auto *SC = dyn_cast<SCEVConstant>(UDivExpr->getRHS())) {
       if (SC->getAPInt().isPowerOf2()) {
-        if (isHighCostExpansionHelper(UDivExpr->getLHS(), L, At, Processed))
-          return true;
-        const DataLayout &DL =
-            L->getHeader()->getParent()->getParent()->getDataLayout();
-        unsigned Width = cast<IntegerType>(UDivExpr->getType())->getBitWidth();
-        return DL.isIllegalInteger(Width);
+        BudgetRemaining -=
+            TTI.getOperationCost(Instruction::LShr, S->getType());
+        // Note that we don't count the cost of RHS, because it is a constant,
+        // and we consider those to be free. But if that changes, we would need
+        // to log2() it first before calling isHighCostExpansionHelper().
+        return isHighCostExpansionHelper(UDivExpr->getLHS(), L, At,
+                                         BudgetRemaining, TTI, Processed);
       }
+    }
 
     // UDivExpr is very likely a UDiv that ScalarEvolution's HowFarToZero or
     // HowManyLessThans produced to compute a precise expression, rather than a
     // UDiv from the user's code. If we can't find a UDiv in the code with some
-    // simple searching, assume the former consider UDivExpr expensive to
-    // compute.
-    BasicBlock *ExitingBB = L->getExitingBlock();
-    if (!ExitingBB)
-      return true;
+    // simple searching, we need to account for it's cost.
 
-    // At the beginning of this function we already tried to find existing value
-    // for plain 'S'. Now try to lookup 'S + 1' since it is common pattern
-    // involving division. This is just a simple search heuristic.
-    if (!At)
-      At = &ExitingBB->back();
-    if (!getRelatedExistingExpansion(
-            SE.getAddExpr(S, SE.getConstant(S->getType(), 1)), At, L))
-      return true;
+    // At the beginning of this function we already tried to find existing
+    // value for plain 'S'. Now try to lookup 'S + 1' since it is common
+    // pattern involving division. This is just a simple search heuristic.
+    if (getRelatedExistingExpansion(
+            SE.getAddExpr(S, SE.getConstant(S->getType(), 1)), &At, L))
+      return false; // Consider it to be free.
+
+    // Need to count the cost of this UDiv.
+    BudgetRemaining -= TTI.getOperationCost(Instruction::UDiv, S->getType());
+    return isHighCostExpansionHelper(UDivExpr->getLHS(), L, At, BudgetRemaining,
+                                     TTI, Processed) ||
+           isHighCostExpansionHelper(UDivExpr->getRHS(), L, At, BudgetRemaining,
+                                     TTI, Processed);
   }
 
-  // HowManyLessThans uses a Max expression whenever the loop is not guarded by
-  // the exit condition.
-  if (isa<SCEVMinMaxExpr>(S))
-    return true;
+  if (const auto *NAry = dyn_cast<SCEVAddRecExpr>(S)) {
+    Type *OpType = NAry->getType();
 
-  // Recurse past nary expressions, which commonly occur in the
-  // BackedgeTakenCount. They may already exist in program code, and if not,
-  // they are not too expensive rematerialize.
-  if (const SCEVNAryExpr *NAry = dyn_cast<SCEVNAryExpr>(S)) {
-    for (auto *Op : NAry->operands())
-      if (isHighCostExpansionHelper(Op, L, At, Processed))
+    assert(NAry->getNumOperands() >= 2 &&
+           "Polynomial should be at least linear");
+
+    int AddCost = TTI.getOperationCost(Instruction::Add, OpType);
+    int MulCost = TTI.getOperationCost(Instruction::Mul, OpType);
+
+    // In this polynominal, we may have some zero operands, and we shouldn't
+    // really charge for those. So how many non-zero coeffients are there?
+    int NumTerms = llvm::count_if(NAry->operands(),
+                                  [](const SCEV *S) { return !S->isZero(); });
+    assert(NumTerms >= 1 && "Polynominal should have at least one term.");
+    assert(!(*std::prev(NAry->operands().end()))->isZero() &&
+           "Last operand should not be zero");
+
+    // Much like with normal add expr, the polynominal will require
+    // one less addition than the number of it's terms.
+    BudgetRemaining -= AddCost * (NumTerms - 1);
+    if (BudgetRemaining < 0)
+      return true;
+
+    // Ignoring constant term (operand 0), how many of the coeffients are u> 1?
+    int NumNonZeroDegreeNonOneTerms =
+        llvm::count_if(make_range(std::next(NAry->op_begin()), NAry->op_end()),
+                       [](const SCEV *S) {
+                         auto *SConst = dyn_cast<SCEVConstant>(S);
+                         return !SConst || SConst->getAPInt().ugt(1);
+                       });
+    // Here, *each* one of those will require a multiplication.
+    BudgetRemaining -= MulCost * NumNonZeroDegreeNonOneTerms;
+    if (BudgetRemaining < 0)
+      return true;
+
+    // What is the degree of this polynominal?
+    int PolyDegree = NAry->getNumOperands() - 1;
+    assert(PolyDegree >= 1 && "Should be at least affine.");
+
+    // The final term will be:
+    //   Op_{PolyDegree} * x ^ {PolyDegree}
+    // Where  x ^ {PolyDegree}  will again require PolyDegree-1 mul operations.
+    // Note that  x ^ {PolyDegree} = x * x ^ {PolyDegree-1}  so charging for
+    // x ^ {PolyDegree}  will give us  x ^ {2} .. x ^ {PolyDegree-1}  for free.
+    // FIXME: this is conservatively correct, but might be overly pessimistic.
+    BudgetRemaining -= MulCost * (PolyDegree - 1);
+    if (BudgetRemaining < 0)
+      return true;
+
+    // And finally, the operands themselves should fit within the budget.
+    for (const SCEV *Op : NAry->operands()) {
+      if (isHighCostExpansionHelper(Op, L, At, BudgetRemaining, TTI, Processed))
         return true;
+    }
+
+    return BudgetRemaining < 0;
   }
 
-  // If we haven't recognized an expensive SCEV pattern, assume it's an
-  // expression produced by program code.
-  return false;
+  if (const SCEVNAryExpr *NAry = dyn_cast<SCEVNAryExpr>(S)) {
+    Type *OpType = NAry->getType();
+
+    int PairCost;
+    switch (S->getSCEVType()) {
+    case scAddExpr:
+      PairCost = TTI.getOperationCost(Instruction::Add, OpType);
+      break;
+    case scMulExpr:
+      // TODO: this is a very pessimistic cost modelling for Mul,
+      // because of Bin Pow algorithm actually used by the expander,
+      // see SCEVExpander::visitMulExpr(), ExpandOpBinPowN().
+      PairCost = TTI.getOperationCost(Instruction::Mul, OpType);
+      break;
+    case scSMaxExpr:
+    case scUMaxExpr:
+    case scSMinExpr:
+    case scUMinExpr:
+      PairCost = TTI.getOperationCost(Instruction::ICmp, OpType) +
+                 TTI.getOperationCost(Instruction::Select, OpType);
+      break;
+    default:
+      llvm_unreachable("There are no other variants here.");
+    }
+
+    assert(NAry->getNumOperands() > 1 &&
+           "Nary expr should have more than 1 operand.");
+    for (const SCEV *Op : NAry->operands()) {
+      if (isHighCostExpansionHelper(Op, L, At, BudgetRemaining, TTI, Processed))
+        return true;
+      if (Op == *NAry->op_begin())
+        continue;
+      BudgetRemaining -= PairCost;
+    }
+
+    return BudgetRemaining < 0;
+  }
+
+  llvm_unreachable("No other scev expressions possible.");
 }
 
 Value *SCEVExpander::expandCodeForPredicate(const SCEVPredicate *Pred,

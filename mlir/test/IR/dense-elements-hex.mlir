@@ -7,6 +7,9 @@
 // CHECK: dense<[1.000000e+01, 5.000000e+00]> : tensor<2xf64>
 "foo.op"() {dense.attr = dense<"0x00000000000024400000000000001440"> : tensor<2xf64>} : () -> ()
 
+// CHECK: dense<[1.000000e+01, 5.000000e+00]> : tensor<2xbf16>
+"foo.op"() {dense.attr = dense<"0x00000000000024400000000000001440"> : tensor<2xbf16>} : () -> ()
+
 // -----
 
 // expected-error@+1 {{elements hex string should start with '0x'}}

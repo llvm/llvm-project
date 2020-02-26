@@ -39,7 +39,7 @@ void may_throw();
 
 // CHECK-LABEL: define void @_Z1fv(
 void f() {
-  // CHECK: call i8* @_Znwm(i64
+  // CHECK: call noalias nonnull i8* @_Znwm(i64
 
   // If promise constructor throws, check that we free the memory.
 

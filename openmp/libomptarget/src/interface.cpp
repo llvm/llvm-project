@@ -71,19 +71,19 @@ static void HandleTargetOutcome(bool success) {
 ////////////////////////////////////////////////////////////////////////////////
 /// adds requires flags
 EXTERN void __tgt_register_requires(int64_t flags) {
-  RTLs.RegisterRequires(flags);
+  RTLs->RegisterRequires(flags);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 /// adds a target shared library to the target execution image
 EXTERN void __tgt_register_lib(__tgt_bin_desc *desc) {
-  RTLs.RegisterLib(desc);
+  RTLs->RegisterLib(desc);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 /// unloads a target shared library
 EXTERN void __tgt_unregister_lib(__tgt_bin_desc *desc) {
-  RTLs.UnregisterLib(desc);
+  RTLs->UnregisterLib(desc);
 }
 
 /// creates host-to-target data mapping, stores it in the
@@ -147,9 +147,9 @@ EXTERN void __tgt_target_data_end(int64_t device_id, int32_t arg_num,
     device_id = omp_get_default_device();
   }
 
-  RTLsMtx.lock();
+  RTLsMtx->lock();
   size_t Devices_size = Devices.size();
-  RTLsMtx.unlock();
+  RTLsMtx->unlock();
   if (Devices_size <= (size_t)device_id) {
     DP("Device ID  %" PRId64 " does not have a matching RTL.\n", device_id);
     HandleTargetOutcome(false);
@@ -343,8 +343,8 @@ EXTERN void __kmpc_push_target_tripcount(int64_t device_id,
 
   DP("__kmpc_push_target_tripcount(%" PRId64 ", %" PRIu64 ")\n", device_id,
       loop_tripcount);
-  TblMapMtx.lock();
+  TblMapMtx->lock();
   Devices[device_id].LoopTripCnt.emplace(__kmpc_global_thread_num(NULL),
                                          loop_tripcount);
-  TblMapMtx.unlock();
+  TblMapMtx->unlock();
 }

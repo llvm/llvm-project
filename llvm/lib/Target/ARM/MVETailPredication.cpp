@@ -158,7 +158,7 @@ void MVETailPredication::RematerializeIterCount() {
   ReplaceExitVal ReplaceExitValue = AlwaysRepl;
 
   formLCSSARecursively(*L, *DT, LI, SE);
-  rewriteLoopExitValues(L, LI, TLI, SE, Rewriter, DT, ReplaceExitValue,
+  rewriteLoopExitValues(L, LI, TLI, SE, TTI, Rewriter, DT, ReplaceExitValue,
                         DeadInsts);
 }
 
