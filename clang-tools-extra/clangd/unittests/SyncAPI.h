@@ -39,7 +39,8 @@ llvm::Expected<std::vector<DocumentHighlight>>
 runFindDocumentHighlights(ClangdServer &Server, PathRef File, Position Pos);
 
 llvm::Expected<FileEdits> runRename(ClangdServer &Server, PathRef File,
-                                    Position Pos, StringRef NewName);
+                                    Position Pos, StringRef NewName,
+                                    const clangd::RenameOptions &RenameOpts);
 
 std::string runDumpAST(ClangdServer &Server, PathRef File);
 

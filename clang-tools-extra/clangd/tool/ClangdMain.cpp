@@ -17,6 +17,7 @@
 #include "Transport.h"
 #include "index/Background.h"
 #include "index/Serialization.h"
+#include "refactor/Rename.h"
 #include "clang/Basic/Version.h"
 #include "clang/Format/Format.h"
 #include "llvm/ADT/Optional.h"
@@ -628,7 +629,6 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   }
   Opts.StaticIndex = StaticIdx.get();
   Opts.AsyncThreadsCount = WorkerThreadsCount;
-  Opts.CrossFileRename = CrossFileRename;
 
   clangd::CodeCompleteOptions CCOpts;
   CCOpts.IncludeIneligibleResults = IncludeIneligibleResults;
@@ -708,8 +708,13 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   llvm::Optional<OffsetEncoding> OffsetEncodingFromFlag;
   if (ForceOffsetEncoding != OffsetEncoding::UnsupportedEncoding)
     OffsetEncodingFromFlag = ForceOffsetEncoding;
+
+  clangd::RenameOptions RenameOpts;
+  // Shall we allow to custimize the file limit?
+  RenameOpts.AllowCrossFile = CrossFileRename;
+
   ClangdLSPServer LSPServer(
-      *TransportLayer, FSProvider, CCOpts, CompileCommandsDirPath,
+      *TransportLayer, FSProvider, CCOpts, RenameOpts, CompileCommandsDirPath,
       /*UseDirBasedCDB=*/CompileArgsFrom == FilesystemCompileArgs,
       OffsetEncodingFromFlag, Opts);
   llvm::set_thread_name("clangd.main");

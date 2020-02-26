@@ -533,7 +533,8 @@ TEST_F(ClangdVFSTest, InvalidCompileCommand) {
   EXPECT_EQ(runDumpAST(Server, FooCpp), "<no-ast>");
   EXPECT_ERROR(runLocateSymbolAt(Server, FooCpp, Position()));
   EXPECT_ERROR(runFindDocumentHighlights(Server, FooCpp, Position()));
-  EXPECT_ERROR(runRename(Server, FooCpp, Position(), "new_name"));
+  EXPECT_ERROR(runRename(Server, FooCpp, Position(), "new_name",
+                         clangd::RenameOptions()));
   // Identifier-based fallback completion.
   EXPECT_THAT(cantFail(runCodeComplete(Server, FooCpp, Position(),
                                        clangd::CodeCompleteOptions()))
