@@ -47,11 +47,6 @@ class MCRegisterInfo;
 class MemoryBuffer;
 class raw_ostream;
 
-/// Used as a return value for a error callback passed to DWARF context.
-/// Callback should return Halt if client application wants to stop
-/// object parsing, or should return Continue otherwise.
-enum class ErrorPolicy { Halt, Continue };
-
 /// DWARFContext
 /// This data structure is the top level entity that deals with dwarf debug
 /// information parsing. The actual data is supplied through DWARFObj.
@@ -91,7 +86,8 @@ class DWARFContext : public DIContext {
 
   std::unique_ptr<MCRegisterInfo> RegInfo;
 
-  std::function<void(Error)> RecoverableErrorHandler = defaultErrorHandler;
+  std::function<void(Error)> RecoverableErrorHandler =
+      WithColor::defaultErrorHandler;
   std::function<void(Error)> WarningHandler = WithColor::defaultWarningHandler;
 
   /// Read compile units from the debug_info section (if necessary)
@@ -352,13 +348,9 @@ public:
 
   function_ref<void(Error)> getWarningHandler() { return WarningHandler; }
 
-  /// Function used to handle default error reporting policy. Prints a error
-  /// message and returns Continue, so DWARF context ignores the error.
-  static ErrorPolicy defaultErrorHandler(Error E);
-
   static std::unique_ptr<DWARFContext>
   create(const object::ObjectFile &Obj, const LoadedObjectInfo *L = nullptr,
-         function_ref<ErrorPolicy(Error)> HandleError = defaultErrorHandler,
+         function_ref<void(Error)> HandleError = WithColor::defaultErrorHandler,
          std::string DWPName = "");
 
   static std::unique_ptr<DWARFContext>
