@@ -182,9 +182,7 @@ bool VectorLegalizer::Run() {
        E = std::prev(DAG.allnodes_end()); I != std::next(E); ++I) {
     // Check if the values of the nodes contain vectors. We don't need to check
     // the operands because we are going to check their values at some point.
-    for (SDNode::value_iterator J = I->value_begin(), E = I->value_end();
-         J != E; ++J)
-      HasVectors |= J->isVector();
+    HasVectors = llvm::any_of(I->values(), [](EVT T) { return T.isVector(); });
 
     // If we found a vector node we can start the legalization.
     if (HasVectors)
@@ -318,12 +316,10 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
     }
   }
 
-  bool HasVectorValueOrOp = false;
-  for (auto J = Node->value_begin(), E = Node->value_end(); J != E; ++J)
-    HasVectorValueOrOp |= J->isVector();
-  for (const SDValue &Oper : Node->op_values())
-    HasVectorValueOrOp |= Oper.getValueType().isVector();
-
+  bool HasVectorValueOrOp =
+      llvm::any_of(Node->values(), [](EVT T) { return T.isVector(); }) ||
+      llvm::any_of(Node->op_values(),
+                   [](SDValue O) { return O.getValueType().isVector(); });
   if (!HasVectorValueOrOp)
     return TranslateLegalizeResults(Op, Node);
 
