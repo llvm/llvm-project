@@ -3264,16 +3264,10 @@ bool DependenceInfo::tryDelinearize(Instruction *Src, Instruction *Dst,
   assert(isLoadOrStore(Dst) && "instruction is not load or store");
   Value *SrcPtr = getLoadStorePointerOperand(Src);
   Value *DstPtr = getLoadStorePointerOperand(Dst);
-
   Loop *SrcLoop = LI->getLoopFor(Src->getParent());
   Loop *DstLoop = LI->getLoopFor(Dst->getParent());
-
-  // Below code mimics the code in Delinearization.cpp
-  const SCEV *SrcAccessFn =
-    SE->getSCEVAtScope(SrcPtr, SrcLoop);
-  const SCEV *DstAccessFn =
-    SE->getSCEVAtScope(DstPtr, DstLoop);
-
+  const SCEV *SrcAccessFn = SE->getSCEVAtScope(SrcPtr, SrcLoop);
+  const SCEV *DstAccessFn = SE->getSCEVAtScope(DstPtr, DstLoop);
   const SCEVUnknown *SrcBase =
       dyn_cast<SCEVUnknown>(SE->getPointerBase(SrcAccessFn));
   const SCEVUnknown *DstBase =
@@ -3281,6 +3275,123 @@ bool DependenceInfo::tryDelinearize(Instruction *Src, Instruction *Dst,
 
   if (!SrcBase || !DstBase || SrcBase != DstBase)
     return false;
+
+  SmallVector<const SCEV *, 4> SrcSubscripts, DstSubscripts;
+
+  if (!tryDelinearizeFixedSize(Src, Dst, SrcAccessFn, DstAccessFn,
+                               SrcSubscripts, DstSubscripts) &&
+      !tryDelinearizeParametricSize(Src, Dst, SrcAccessFn, DstAccessFn,
+                                    SrcSubscripts, DstSubscripts))
+    return false;
+
+  int Size = SrcSubscripts.size();
+  LLVM_DEBUG({
+    dbgs() << "\nSrcSubscripts: ";
+    for (int I = 0; I < Size; I++)
+      dbgs() << *SrcSubscripts[I];
+    dbgs() << "\nDstSubscripts: ";
+    for (int I = 0; I < Size; I++)
+      dbgs() << *DstSubscripts[I];
+  });
+
+  // The delinearization transforms a single-subscript MIV dependence test into
+  // a multi-subscript SIV dependence test that is easier to compute. So we
+  // resize Pair to contain as many pairs of subscripts as the delinearization
+  // has found, and then initialize the pairs following the delinearization.
+  Pair.resize(Size);
+  for (int I = 0; I < Size; ++I) {
+    Pair[I].Src = SrcSubscripts[I];
+    Pair[I].Dst = DstSubscripts[I];
+    unifySubscriptType(&Pair[I]);
+  }
+
+  return true;
+}
+
+bool DependenceInfo::tryDelinearizeFixedSize(
+    Instruction *Src, Instruction *Dst, const SCEV *SrcAccessFn,
+    const SCEV *DstAccessFn, SmallVectorImpl<const SCEV *> &SrcSubscripts,
+    SmallVectorImpl<const SCEV *> &DstSubscripts) {
+
+  // In general we cannot safely assume that the subscripts recovered from GEPs
+  // are in the range of values defined for their corresponding array
+  // dimensions. For example some C language usage/interpretation make it
+  // impossible to verify this at compile-time. As such we give up here unless
+  // we can assume that the subscripts do not overlap into neighboring
+  // dimensions and that the number of dimensions matches the number of
+  // subscripts being recovered.
+  if (!DisableDelinearizationChecks)
+    return false;
+
+  Value *SrcPtr = getLoadStorePointerOperand(Src);
+  Value *DstPtr = getLoadStorePointerOperand(Dst);
+  const SCEVUnknown *SrcBase =
+      dyn_cast<SCEVUnknown>(SE->getPointerBase(SrcAccessFn));
+  const SCEVUnknown *DstBase =
+      dyn_cast<SCEVUnknown>(SE->getPointerBase(DstAccessFn));
+  assert(SrcBase && DstBase && SrcBase == DstBase &&
+         "expected src and dst scev unknowns to be equal");
+
+  // Check the simple case where the array dimensions are fixed size.
+  auto *SrcGEP = dyn_cast<GetElementPtrInst>(SrcPtr);
+  auto *DstGEP = dyn_cast<GetElementPtrInst>(DstPtr);
+  if (!SrcGEP || !DstGEP)
+    return false;
+
+  SmallVector<int, 4> SrcSizes, DstSizes;
+  SE->getIndexExpressionsFromGEP(SrcGEP, SrcSubscripts, SrcSizes);
+  SE->getIndexExpressionsFromGEP(DstGEP, DstSubscripts, DstSizes);
+
+  // Check that the two size arrays are non-empty and equal in length and
+  // value.
+  if (SrcSizes.empty() || SrcSubscripts.size() <= 1 ||
+      SrcSizes.size() != DstSizes.size() ||
+      !std::equal(SrcSizes.begin(), SrcSizes.end(), DstSizes.begin())) {
+    SrcSubscripts.clear();
+    DstSubscripts.clear();
+    return false;
+  }
+
+  Value *SrcBasePtr = SrcGEP->getOperand(0);
+  Value *DstBasePtr = DstGEP->getOperand(0);
+  while (auto *PCast = dyn_cast<BitCastInst>(SrcBasePtr))
+    SrcBasePtr = PCast->getOperand(0);
+  while (auto *PCast = dyn_cast<BitCastInst>(DstBasePtr))
+    DstBasePtr = PCast->getOperand(0);
+
+  // Check that for identical base pointers we do not miss index offsets
+  // that have been added before this GEP is applied.
+  if (SrcBasePtr == SrcBase->getValue() && DstBasePtr == DstBase->getValue()) {
+    assert(SrcSubscripts.size() == DstSubscripts.size() &&
+           SrcSubscripts.size() == SrcSizes.size() + 1 &&
+           "Expected equal number of entries in the list of sizes and "
+           "subscripts.");
+    LLVM_DEBUG({
+      dbgs() << "Delinearized subscripts of fixed-size array\n"
+             << "SrcGEP:" << *SrcGEP << "\n"
+             << "DstGEP:" << *DstGEP << "\n";
+    });
+    return true;
+  }
+
+  SrcSubscripts.clear();
+  DstSubscripts.clear();
+  return false;
+}
+
+bool DependenceInfo::tryDelinearizeParametricSize(
+    Instruction *Src, Instruction *Dst, const SCEV *SrcAccessFn,
+    const SCEV *DstAccessFn, SmallVectorImpl<const SCEV *> &SrcSubscripts,
+    SmallVectorImpl<const SCEV *> &DstSubscripts) {
+
+  Value *SrcPtr = getLoadStorePointerOperand(Src);
+  Value *DstPtr = getLoadStorePointerOperand(Dst);
+  const SCEVUnknown *SrcBase =
+      dyn_cast<SCEVUnknown>(SE->getPointerBase(SrcAccessFn));
+  const SCEVUnknown *DstBase =
+      dyn_cast<SCEVUnknown>(SE->getPointerBase(DstAccessFn));
+  assert(SrcBase && DstBase && SrcBase == DstBase &&
+         "expected src and dst scev unknowns to be equal");
 
   const SCEV *ElementSize = SE->getElementSize(Src);
   if (ElementSize != SE->getElementSize(Dst))
@@ -3304,7 +3415,6 @@ bool DependenceInfo::tryDelinearize(Instruction *Src, Instruction *Dst,
   SE->findArrayDimensions(Terms, Sizes, ElementSize);
 
   // Third step: compute the access functions for each subscript.
-  SmallVector<const SCEV *, 4> SrcSubscripts, DstSubscripts;
   SE->computeAccessFunctions(SrcAR, SrcSubscripts, Sizes);
   SE->computeAccessFunctions(DstAR, DstSubscripts, Sizes);
 
@@ -3313,7 +3423,7 @@ bool DependenceInfo::tryDelinearize(Instruction *Src, Instruction *Dst,
       SrcSubscripts.size() != DstSubscripts.size())
     return false;
 
-  int size = SrcSubscripts.size();
+  size_t Size = SrcSubscripts.size();
 
   // Statically check that the array bounds are in-range. The first subscript we
   // don't have a size for and it cannot overflow into another subscript, so is
@@ -3322,39 +3432,19 @@ bool DependenceInfo::tryDelinearize(Instruction *Src, Instruction *Dst,
   // FIXME: It may be better to record these sizes and add them as constraints
   // to the dependency checks.
   if (!DisableDelinearizationChecks)
-    for (int i = 1; i < size; ++i) {
-      if (!isKnownNonNegative(SrcSubscripts[i], SrcPtr))
+    for (size_t I = 1; I < Size; ++I) {
+      if (!isKnownNonNegative(SrcSubscripts[I], SrcPtr))
         return false;
 
-      if (!isKnownLessThan(SrcSubscripts[i], Sizes[i - 1]))
+      if (!isKnownLessThan(SrcSubscripts[I], Sizes[I - 1]))
         return false;
 
-      if (!isKnownNonNegative(DstSubscripts[i], DstPtr))
+      if (!isKnownNonNegative(DstSubscripts[I], DstPtr))
         return false;
 
-      if (!isKnownLessThan(DstSubscripts[i], Sizes[i - 1]))
+      if (!isKnownLessThan(DstSubscripts[I], Sizes[I - 1]))
         return false;
     }
-
-  LLVM_DEBUG({
-    dbgs() << "\nSrcSubscripts: ";
-    for (int i = 0; i < size; i++)
-      dbgs() << *SrcSubscripts[i];
-    dbgs() << "\nDstSubscripts: ";
-    for (int i = 0; i < size; i++)
-      dbgs() << *DstSubscripts[i];
-  });
-
-  // The delinearization transforms a single-subscript MIV dependence test into
-  // a multi-subscript SIV dependence test that is easier to compute. So we
-  // resize Pair to contain as many pairs of subscripts as the delinearization
-  // has found, and then initialize the pairs following the delinearization.
-  Pair.resize(size);
-  for (int i = 0; i < size; ++i) {
-    Pair[i].Src = SrcSubscripts[i];
-    Pair[i].Dst = DstSubscripts[i];
-    unifySubscriptType(&Pair[i]);
-  }
 
   return true;
 }
