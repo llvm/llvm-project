@@ -5072,14 +5072,6 @@ static unsigned getCallOpcode(PPCTargetLowering::CallFlags CFlags,
   return PPCISD::CALL;
 }
 
-static bool isValidAIXExternalSymSDNode(StringRef SymName) {
-  return StringSwitch<bool>(SymName)
-      .Cases("__divdi3", "__fixunsdfdi", "__floatundidf", "__floatundisf",
-             "__moddi3", "__udivdi3", "__umoddi3", true)
-      .Cases("ceil", "floor", "memcpy", "memmove", "memset", "round", true)
-      .Default(false);
-}
-
 static SDValue transformCallee(const SDValue &Callee, SelectionDAG &DAG,
                                const SDLoc &dl, const PPCSubtarget &Subtarget) {
   if (!Subtarget.usesFunctionDescriptors() && !Subtarget.isELFv2ABI())
@@ -5163,12 +5155,7 @@ static SDValue transformCallee(const SDValue &Callee, SelectionDAG &DAG,
                                               SC);
     }
 
-    // TODO: Remove this when the support for ExternalSymbolSDNode is complete.
-    if (isValidAIXExternalSymSDNode(SymName)) {
-      return getAIXFuncEntryPointSymbolSDNode(SymName, true, XCOFF::C_EXT);
-    }
-
-    report_fatal_error("Unexpected ExternalSymbolSDNode: " + Twine(SymName));
+    return getAIXFuncEntryPointSymbolSDNode(SymName, true, XCOFF::C_EXT);
   }
 
   // No transformation needed.
