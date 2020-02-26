@@ -1,4 +1,4 @@
-add_llvm_library(MLIRSPIRVTransforms
+add_mlir_dialect_library(MLIRSPIRVTransforms
   DecorateSPIRVCompositeTypeLayoutPass.cpp
   LowerABIAttributesPass.cpp
 

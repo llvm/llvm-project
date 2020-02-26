@@ -9,7 +9,7 @@ set(LIBS
   MLIRTransformUtils
   )
   
-add_llvm_library(MLIRLinalgUtils
+add_mlir_dialect_library(MLIRLinalgUtils
 
   Utils.cpp
 

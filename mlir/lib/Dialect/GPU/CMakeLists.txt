@@ -1,4 +1,4 @@
-add_llvm_library(MLIRGPU
+add_mlir_dialect_library(MLIRGPU
   IR/GPUDialect.cpp
   Transforms/AllReduceLowering.cpp
   Transforms/KernelOutlining.cpp
