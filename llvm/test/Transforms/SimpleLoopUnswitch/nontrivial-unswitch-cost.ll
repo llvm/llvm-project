@@ -57,7 +57,8 @@ define void @test_unswitch(i1* %ptr, i1 %cond) {
 entry:
   br label %loop_begin
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 %cond, label %entry.split.us, label %entry.split
+; CHECK-NEXT:    %[[COND_FR:.*]] = freeze i1 %cond
+; CHECK-NEXT:    br i1 %[[COND_FR]], label %entry.split.us, label %entry.split
 
 loop_begin:
   call void @x()
@@ -127,7 +128,8 @@ define void @test_unswitch_non_dup_code(i1* %ptr, i1 %cond) {
 entry:
   br label %loop_begin
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 %cond, label %entry.split.us, label %entry.split
+; CHECK-NEXT:    %[[COND_FR:.*]] = freeze i1 %cond
+; CHECK-NEXT:    br i1 %[[COND_FR]], label %entry.split.us, label %entry.split
 
 loop_begin:
   call void @x()
@@ -208,7 +210,8 @@ define void @test_unswitch_non_dup_code_in_cfg(i1* %ptr, i1 %cond) {
 entry:
   br label %loop_begin
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 %cond, label %entry.split.us, label %entry.split
+; CHECK-NEXT:    %[[COND_FR:.*]] = freeze i1 %cond
+; CHECK-NEXT:    br i1 %[[COND_FR]], label %entry.split.us, label %entry.split
 
 loop_begin:
   call void @x()
@@ -364,7 +367,8 @@ define void @test_unswitch_large_exit(i1* %ptr, i1 %cond) {
 entry:
   br label %loop_begin
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 %cond, label %entry.split.us, label %entry.split
+; CHECK-NEXT:    %[[COND_FR:.*]] = freeze i1 %cond
+; CHECK-NEXT:    br i1 %[[COND_FR]], label %entry.split.us, label %entry.split
 
 loop_begin:
   call void @x()
@@ -441,7 +445,8 @@ define void @test_unswitch_dedicated_exiting(i1* %ptr, i1 %cond) {
 entry:
   br label %loop_begin
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 %cond, label %entry.split.us, label %entry.split
+; CHECK-NEXT:    %[[COND_FR:.*]] = freeze i1 %cond
+; CHECK-NEXT:    br i1 %[[COND_FR]], label %entry.split.us, label %entry.split
 
 loop_begin:
   call void @x()
