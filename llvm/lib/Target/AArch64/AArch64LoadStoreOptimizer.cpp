@@ -68,7 +68,7 @@ static cl::opt<unsigned> UpdateLimit("aarch64-update-scan-limit", cl::init(100),
 
 // Enable register renaming to find additional store pairing opportunities.
 static cl::opt<bool> EnableRenaming("aarch64-load-store-renaming",
-                                    cl::init(false), cl::Hidden);
+                                    cl::init(true), cl::Hidden);
 
 #define AARCH64_LOAD_STORE_OPT_NAME "AArch64 load / store optimization pass"
 
