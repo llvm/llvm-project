@@ -9,6 +9,7 @@
 #include "flang/Parser/parse-tree.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/indirection.h"
+#include "flang/Parser/tools.h"
 #include "flang/Parser/user-state.h"
 #include <algorithm>
 
@@ -180,6 +181,19 @@ StructureConstructor FunctionReference::ConvertToStructureConstructor(
     }
     components.emplace_back(
         std::move(keyword), ComponentDataSource{ActualArgToExpr(arg)});
+  }
+  DerivedTypeSpec spec{std::move(name), std::list<TypeParamSpec>{}};
+  spec.derivedTypeSpec = &derived;
+  return StructureConstructor{std::move(spec), std::move(components)};
+}
+
+StructureConstructor ArrayElement::ConvertToStructureConstructor(
+    const semantics::DerivedTypeSpec &derived) {
+  Name name{std::get<parser::Name>(base.u)};
+  std::list<ComponentSpec> components;
+  for (auto &subscript : subscripts) {
+    components.emplace_back(std::optional<Keyword>{},
+        ComponentDataSource{std::move(*Unwrap<Expr>(subscript))});
   }
   DerivedTypeSpec spec{std::move(name), std::list<TypeParamSpec>{}};
   spec.derivedTypeSpec = &derived;

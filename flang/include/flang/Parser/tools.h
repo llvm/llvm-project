@@ -79,6 +79,9 @@ struct UnwrapperHelper {
 template<typename A, typename B> const A *Unwrap(const B &x) {
   return UnwrapperHelper::Unwrap<A>(x);
 }
+template<typename A, typename B> A *Unwrap(B &x) {
+  return const_cast<A *>(Unwrap<A, B>(const_cast<const B &>(x)));
+}
 
 // Get the CoindexedNamedObject if the entity is a coindexed object.
 const CoindexedNamedObject *GetCoindexedNamedObject(const AllocateObject &);

@@ -37,12 +37,25 @@ subroutine CheckRepeat
   DATA myName%age / digits(myAge) * 35 /
 end
 
-!subroutine CheckValue
-!  use m1
-!  !C883
-!  !ERROR: Derived type 'persn' not found
-!  DATA myname / persn(2, 'Abcd Efgh') /
-!  !C884
-!  !ERROR: Structure constructor in data value must be a constant expression
-!  DATA myname / person(myAge, 'Abcd Ijkl') /
-!end
+subroutine CheckValue
+  use m1
+  !OK: constant structure constructor
+  data myname / person(1, 'Abcd Ijkl') /
+  !C883
+  !ERROR: Must have INTEGER type, but is CHARACTER(1)
+  data myname / persn(2, 'Abcd Efgh') /
+  !C884
+  !ERROR: Structure constructor in data value must be a constant expression
+  data myname / person(myAge, 'Abcd Ijkl') /
+  integer, parameter :: a(5) =(/11, 22, 33, 44, 55/)
+  integer :: b(5) =(/11, 22, 33, 44, 55/)
+  integer :: i
+  integer :: x
+  !OK: constant array element
+  data x / a(1) /
+  !C886, C887
+  !ERROR: Must be a constant value
+  data x / a(i) /
+  !ERROR: Must be a constant value
+  data x / b(1) /
+end

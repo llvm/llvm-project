@@ -948,6 +948,7 @@ public:
   bool Pre(const parser::AcImpliedDo &);
   bool Pre(const parser::DataImpliedDo &);
   bool Pre(const parser::DataStmtObject &);
+  bool Pre(const parser::DataStmtValue &);
   bool Pre(const parser::DoConstruct &);
   void Post(const parser::DoConstruct &);
   bool Pre(const parser::ForallConstruct &);
@@ -4685,6 +4686,24 @@ bool ConstructVisitor::Pre(const parser::DataStmtObject &x) {
       },
       x.u);
   return false;
+}
+
+bool ConstructVisitor::Pre(const parser::DataStmtValue &x) {
+  const auto &data{std::get<parser::DataStmtConstant>(x.t)};
+  auto &mutableData{const_cast<parser::DataStmtConstant &>(data)};
+  if (auto *elem{parser::Unwrap<parser::ArrayElement>(mutableData)}) {
+    if (const auto *name{std::get_if<parser::Name>(&elem->base.u)}) {
+      if (const Symbol * symbol{FindSymbol(*name)}) {
+        if (const Symbol * ultimate{GetAssociationRoot(*symbol)}) {
+          if (ultimate->has<DerivedTypeDetails>()) {
+            mutableData.u = elem->ConvertToStructureConstructor(
+                DerivedTypeSpec{name->source, *ultimate});
+          }
+        }
+      }
+    }
+  }
+  return true;
 }
 
 bool ConstructVisitor::Pre(const parser::DoConstruct &x) {

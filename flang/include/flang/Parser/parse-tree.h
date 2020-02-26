@@ -1818,6 +1818,8 @@ struct ArrayElement {
   ArrayElement(DataRef &&dr, std::list<SectionSubscript> &&ss)
     : base{std::move(dr)}, subscripts(std::move(ss)) {}
   Substring ConvertToSubstring();
+  StructureConstructor ConvertToStructureConstructor(
+      const semantics::DerivedTypeSpec &);
   DataRef base;
   std::list<SectionSubscript> subscripts;
 };
