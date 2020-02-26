@@ -166,7 +166,7 @@ TEST_F(CoreAPIsStandardTest, RemoveSymbolsTest) {
     // Attempt 3: Search now that all symbols are fully materialized
     // (Foo, Baz), or not yet materialized (Bar).
     auto Err = JD.remove({Foo, Bar, Baz});
-    EXPECT_FALSE(!!Err) << "Expected failure";
+    EXPECT_FALSE(!!Err) << "Expected success";
   }
 
   EXPECT_TRUE(BarDiscarded) << "\"Bar\" should have been discarded";

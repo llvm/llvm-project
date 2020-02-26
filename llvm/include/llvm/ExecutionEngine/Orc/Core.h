@@ -1019,11 +1019,6 @@ private:
     JITSymbolFlags getFlags() const { return Flags; }
     SymbolState getState() const { return static_cast<SymbolState>(State); }
 
-    bool isInMaterializationPhase() const {
-      return getState() == SymbolState::Materializing ||
-             getState() == SymbolState::Resolved;
-    }
-
     bool hasMaterializerAttached() const { return MaterializerAttached; }
     bool isPendingRemoval() const { return PendingRemoval; }
 
