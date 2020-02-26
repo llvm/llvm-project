@@ -784,7 +784,7 @@ protected:
         std::is_same_v<T, std::int64_t> || std::is_same_v<T, std::uint64_t>) {
       ss << x;
     }
-    if (ss.tellp() != 0) {
+    if (ss.tellp()) {
       return ss.str();
     }
     if constexpr (std::is_same_v<T, Name> || HasSource<T>::value) {
