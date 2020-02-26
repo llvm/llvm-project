@@ -33,7 +33,6 @@
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Target/Language.h"
-#include "lldb/Target/Language.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StructuredDataPlugin.h"
 #include "lldb/Target/Target.h"
