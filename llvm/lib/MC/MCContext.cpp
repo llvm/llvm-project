@@ -405,6 +405,7 @@ MCSectionELF *MCContext::getELFSection(const Twine &Section, unsigned Type,
   StringRef Group = "";
   if (GroupSym)
     Group = GroupSym->getName();
+  assert(!(LinkedToSym && LinkedToSym->getName().empty()));
   // Do the lookup, if we have a hit, return it.
   auto IterBool = ELFUniquingMap.insert(std::make_pair(
       ELFSectionKey{Section.str(), Group,
