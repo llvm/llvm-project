@@ -162,10 +162,12 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
     // Record in the cache that we know nothing for MI.
     // This will get updated later and in the meantime, if we reach that
     // phi again, because of a loop, we will cut the search thanks to this
-    // cache entry. When this happens this cache entry is actually accurate,
-    // thus we are not losing anything by doing that, because right now,
-    // the main analysis will reach the maximum depth without being able
-    // to fully analyze the phi.
+    // cache entry.
+    // We could actually build up more information on the phi by not cutting
+    // the search, but that additional information is more a side effect
+    // than an intended choice.
+    // Therefore, for now, save on compile time until we derive a proper way
+    // to derive known bits for PHIs within loops.
     ComputeKnownBitsCache[R] = KnownBits(BitWidth);
     // PHI's operand are a mix of registers and basic blocks interleaved.
     // We only care about the register ones.
