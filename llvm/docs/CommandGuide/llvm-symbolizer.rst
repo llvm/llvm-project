@@ -256,41 +256,41 @@ OPTIONS
   Print human readable output. If :option:`--inlining` is specified, the
   enclosing scope is prefixed by (inlined by).
 
-.. code-block:: console
+  .. code-block:: console
 
-  $ llvm-symbolizer --obj=inlined.elf 0x4004be --inlining --pretty-print
-  baz() at /tmp/test.cpp:11:18
-   (inlined by) main at /tmp/test.cpp:15:0
+    $ llvm-symbolizer --obj=inlined.elf 0x4004be --inlining --pretty-print
+    baz() at /tmp/test.cpp:11:18
+     (inlined by) main at /tmp/test.cpp:15:0
 
 .. option:: --print-address, --addresses, -a
 
   Print address before the source code location. Defaults to false.
 
-.. code-block:: console
+  .. code-block:: console
 
-  $ llvm-symbolizer --obj=inlined.elf --print-address 0x4004be
-  0x4004be
-  baz()
-  /tmp/test.cpp:11:18
-  main
-  /tmp/test.cpp:15:0
+    $ llvm-symbolizer --obj=inlined.elf --print-address 0x4004be
+    0x4004be
+    baz()
+    /tmp/test.cpp:11:18
+    main
+    /tmp/test.cpp:15:0
 
-  $ llvm-symbolizer --obj=inlined.elf 0x4004be --pretty-print --print-address
-  0x4004be: baz() at /tmp/test.cpp:11:18
-   (inlined by) main at /tmp/test.cpp:15:0
+    $ llvm-symbolizer --obj=inlined.elf 0x4004be --pretty-print --print-address
+    0x4004be: baz() at /tmp/test.cpp:11:18
+     (inlined by) main at /tmp/test.cpp:15:0
 
 .. option:: --print-source-context-lines <N>
 
   Print ``N`` lines of source context for each symbolized address.
 
-.. code-block:: console
+  .. code-block:: console
 
-  $ llvm-symbolizer --obj=test.elf 0x400490 --print-source-context-lines=2
-  baz()
-  /tmp/test.cpp:11:0
-  10  :   volatile int k = 42;
-  11 >:   return foz() + k;
-  12  : }
+    $ llvm-symbolizer --obj=test.elf 0x400490 --print-source-context-lines=2
+    baz()
+    /tmp/test.cpp:11:0
+    10  :   volatile int k = 42;
+    11 >:   return foz() + k;
+    12  : }
 
 .. _llvm-symbolizer-opt-use-symbol-table:
 
@@ -303,19 +303,19 @@ OPTIONS
 
   Print verbose line and column information.
 
-.. code-block:: console
+  .. code-block:: console
 
-  $ llvm-symbolizer --obj=inlined.elf --verbose 0x4004be
-  baz()
-    Filename: /tmp/test.cpp
-  Function start line: 9
-    Line: 11
-    Column: 18
-  main
-    Filename: /tmp/test.cpp
-  Function start line: 14
-    Line: 15
-    Column: 0
+    $ llvm-symbolizer --obj=inlined.elf --verbose 0x4004be
+    baz()
+      Filename: /tmp/test.cpp
+    Function start line: 9
+      Line: 11
+      Column: 18
+    main
+      Filename: /tmp/test.cpp
+    Function start line: 14
+      Line: 15
+      Column: 0
 
 .. option:: --version
 
@@ -336,18 +336,18 @@ MACH-O SPECIFIC OPTIONS
   the input (see example below). If the architecture is not specified in either
   way, the address will not be symbolized. Defaults to empty string.
 
-.. code-block:: console
+  .. code-block:: console
 
-  $ cat addr.txt
-  /tmp/mach_universal_binary:i386 0x1f84
-  /tmp/mach_universal_binary:x86_64 0x100000f24
+    $ cat addr.txt
+    /tmp/mach_universal_binary:i386 0x1f84
+    /tmp/mach_universal_binary:x86_64 0x100000f24
 
-  $ llvm-symbolizer < addr.txt
-  _main
-  /tmp/source_i386.cc:8
+    $ llvm-symbolizer < addr.txt
+    _main
+    /tmp/source_i386.cc:8
 
-  _main
-  /tmp/source_x86_64.cc:8
+    _main
+    /tmp/source_x86_64.cc:8
 
 .. option:: --dsym-hint <path/to/file.dSYM>
 
