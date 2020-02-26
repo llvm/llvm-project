@@ -43,6 +43,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -214,24 +215,34 @@ std::vector<LocatedSymbol> locateSymbolAt(ParsedAST &AST, Position Pos,
     }
   }
 
+  auto CurLoc = sourceLocationInMainFile(SM, Pos);
+  if (!CurLoc) {
+    elog("locateSymbolAt failed to convert position to source location: {0}",
+         CurLoc.takeError());
+    return {};
+  }
+
   // Macros are simple: there's no declaration/definition distinction.
   // As a consequence, there's no need to look them up in the index either.
-  SourceLocation IdentStartLoc = SM.getMacroArgExpandedLocation(
-      getBeginningOfIdentifier(Pos, AST.getSourceManager(), AST.getLangOpts()));
   std::vector<LocatedSymbol> Result;
-  if (auto M = locateMacroAt(IdentStartLoc, AST.getPreprocessor())) {
-    if (auto Loc = makeLocation(AST.getASTContext(),
-                                M->Info->getDefinitionLoc(), *MainFilePath)) {
-      LocatedSymbol Macro;
-      Macro.Name = std::string(M->Name);
-      Macro.PreferredDeclaration = *Loc;
-      Macro.Definition = Loc;
-      Result.push_back(std::move(Macro));
+  const auto *TouchedIdentifier =
+      syntax::spelledIdentifierTouching(*CurLoc, AST.getTokens());
+  if (TouchedIdentifier) {
+    if (auto M = locateMacroAt(TouchedIdentifier->location(),
+                               AST.getPreprocessor())) {
+      if (auto Loc = makeLocation(AST.getASTContext(),
+                                  M->Info->getDefinitionLoc(), *MainFilePath)) {
+        LocatedSymbol Macro;
+        Macro.Name = std::string(M->Name);
+        Macro.PreferredDeclaration = *Loc;
+        Macro.Definition = Loc;
+        Result.push_back(std::move(Macro));
 
-      // Don't look at the AST or index if we have a macro result.
-      // (We'd just return declarations referenced from the macro's
-      // expansion.)
-      return Result;
+        // Don't look at the AST or index if we have a macro result.
+        // (We'd just return declarations referenced from the macro's
+        // expansion.)
+        return Result;
+      }
     }
   }
 
@@ -243,15 +254,6 @@ std::vector<LocatedSymbol> locateSymbolAt(ParsedAST &AST, Position Pos,
   // Results follow the order of Symbols.Decls.
   // Keep track of SymbolID -> index mapping, to fill in index data later.
   llvm::DenseMap<SymbolID, size_t> ResultIndex;
-
-  SourceLocation SourceLoc;
-  if (auto L = sourceLocationInMainFile(SM, Pos)) {
-    SourceLoc = *L;
-  } else {
-    elog("locateSymbolAt failed to convert position to source location: {0}",
-         L.takeError());
-    return Result;
-  }
 
   auto AddResultDecl = [&](const NamedDecl *D) {
     const NamedDecl *Def = getDefinition(D);
@@ -277,16 +279,15 @@ std::vector<LocatedSymbol> locateSymbolAt(ParsedAST &AST, Position Pos,
   // Emit all symbol locations (declaration or definition) from AST.
   DeclRelationSet Relations =
       DeclRelation::TemplatePattern | DeclRelation::Alias;
-  for (const NamedDecl *D : getDeclAtPosition(AST, SourceLoc, Relations)) {
+  for (const NamedDecl *D : getDeclAtPosition(AST, *CurLoc, Relations)) {
     // Special case: void foo() ^override: jump to the overridden method.
     if (const auto *CMD = llvm::dyn_cast<CXXMethodDecl>(D)) {
-      const InheritableAttr* Attr = D->getAttr<OverrideAttr>();
+      const InheritableAttr *Attr = D->getAttr<OverrideAttr>();
       if (!Attr)
         Attr = D->getAttr<FinalAttr>();
-      const syntax::Token *Tok =
-          spelledIdentifierTouching(SourceLoc, AST.getTokens());
-      if (Attr && Tok &&
-          SM.getSpellingLoc(Attr->getLocation()) == Tok->location()) {
+      if (Attr && TouchedIdentifier &&
+          SM.getSpellingLoc(Attr->getLocation()) ==
+              TouchedIdentifier->location()) {
         // We may be overridding multiple methods - offer them all.
         for (const NamedDecl *ND : CMD->overridden_methods())
           AddResultDecl(ND);
@@ -296,8 +297,9 @@ std::vector<LocatedSymbol> locateSymbolAt(ParsedAST &AST, Position Pos,
 
     // Special case: the point of declaration of a template specialization,
     // it's more useful to navigate to the template declaration.
-    if (SM.getMacroArgExpandedLocation(D->getLocation()) == IdentStartLoc) {
-      if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(D)) {
+    if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(D)) {
+      if (TouchedIdentifier &&
+          D->getLocation() == TouchedIdentifier->location()) {
         AddResultDecl(CTSD->getSpecializedTemplate());
         continue;
       }
@@ -416,12 +418,12 @@ std::vector<DocumentHighlight> findDocumentHighlights(ParsedAST &AST,
   // FIXME: show references to macro within file?
   DeclRelationSet Relations =
       DeclRelation::TemplatePattern | DeclRelation::Alias;
-  auto References = findRefs(
-      getDeclAtPosition(AST,
-                        SM.getMacroArgExpandedLocation(getBeginningOfIdentifier(
-                            Pos, SM, AST.getLangOpts())),
-                        Relations),
-      AST);
+  auto CurLoc = sourceLocationInMainFile(SM, Pos);
+  if (!CurLoc) {
+    llvm::consumeError(CurLoc.takeError());
+    return {};
+  }
+  auto References = findRefs(getDeclAtPosition(AST, *CurLoc, Relations), AST);
 
   // FIXME: we may get multiple DocumentHighlights with the same location and
   // different kinds, deduplicate them.
@@ -456,11 +458,18 @@ ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
     return Results;
   }
   auto URIMainFile = URIForFile::canonicalize(*MainFilePath, *MainFilePath);
-  auto Loc = SM.getMacroArgExpandedLocation(
-      getBeginningOfIdentifier(Pos, SM, AST.getLangOpts()));
+  auto CurLoc = sourceLocationInMainFile(SM, Pos);
+  if (!CurLoc) {
+    llvm::consumeError(CurLoc.takeError());
+    return {};
+  }
+  SourceLocation SLocId;
+  if (const auto *IdentifierAtCursor =
+          syntax::spelledIdentifierTouching(*CurLoc, AST.getTokens()))
+    SLocId = IdentifierAtCursor->location();
   RefsRequest Req;
 
-  if (auto Macro = locateMacroAt(Loc, AST.getPreprocessor())) {
+  if (auto Macro = locateMacroAt(SLocId, AST.getPreprocessor())) {
     // Handle references to macro.
     if (auto MacroSID = getSymbolID(Macro->Name, Macro->Info, SM)) {
       // Collect macro references from main file.
@@ -483,7 +492,7 @@ ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
     // DeclRelation::Underlying.
     DeclRelationSet Relations = DeclRelation::TemplatePattern |
                                 DeclRelation::Alias | DeclRelation::Underlying;
-    auto Decls = getDeclAtPosition(AST, Loc, Relations);
+    auto Decls = getDeclAtPosition(AST, *CurLoc, Relations);
 
     // We traverse the AST to find references in the main file.
     auto MainFileRefs = findRefs(Decls, AST);
@@ -541,8 +550,11 @@ ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
 
 std::vector<SymbolDetails> getSymbolInfo(ParsedAST &AST, Position Pos) {
   const SourceManager &SM = AST.getSourceManager();
-  auto Loc = SM.getMacroArgExpandedLocation(
-      getBeginningOfIdentifier(Pos, SM, AST.getLangOpts()));
+  auto CurLoc = sourceLocationInMainFile(SM, Pos);
+  if (!CurLoc) {
+    llvm::consumeError(CurLoc.takeError());
+    return {};
+  }
 
   std::vector<SymbolDetails> Results;
 
@@ -550,7 +562,7 @@ std::vector<SymbolDetails> getSymbolInfo(ParsedAST &AST, Position Pos) {
   // DeclRelation::Underlying.
   DeclRelationSet Relations = DeclRelation::TemplatePattern |
                               DeclRelation::Alias | DeclRelation::Underlying;
-  for (const NamedDecl *D : getDeclAtPosition(AST, Loc, Relations)) {
+  for (const NamedDecl *D : getDeclAtPosition(AST, *CurLoc, Relations)) {
     SymbolDetails NewSymbol;
     std::string QName = printQualifiedName(*D);
     auto SplitQName = splitQualifiedName(QName);
@@ -570,7 +582,13 @@ std::vector<SymbolDetails> getSymbolInfo(ParsedAST &AST, Position Pos) {
     Results.push_back(std::move(NewSymbol));
   }
 
-  if (auto M = locateMacroAt(Loc, AST.getPreprocessor())) {
+  const auto *IdentifierAtCursor =
+      syntax::spelledIdentifierTouching(*CurLoc, AST.getTokens());
+  if (!IdentifierAtCursor)
+    return Results;
+
+  if (auto M = locateMacroAt(IdentifierAtCursor->location(),
+                             AST.getPreprocessor())) {
     SymbolDetails NewMacro;
     NewMacro.name = std::string(M->Name);
     llvm::SmallString<32> USR;
@@ -747,17 +765,18 @@ const CXXRecordDecl *findRecordTypeAt(ParsedAST &AST, Position Pos) {
   };
 
   const SourceManager &SM = AST.getSourceManager();
-  SourceLocation SourceLocationBeg = SM.getMacroArgExpandedLocation(
-      getBeginningOfIdentifier(Pos, SM, AST.getLangOpts()));
-  unsigned Offset = SM.getDecomposedSpellingLoc(SourceLocationBeg).second;
   const CXXRecordDecl *Result = nullptr;
-  SelectionTree::createEach(AST.getASTContext(), AST.getTokens(), Offset,
-                            Offset, [&](SelectionTree ST) {
+  auto Offset = positionToOffset(SM.getBufferData(SM.getMainFileID()), Pos);
+  if (!Offset) {
+    llvm::consumeError(Offset.takeError());
+    return Result;
+  }
+  SelectionTree::createEach(AST.getASTContext(), AST.getTokens(), *Offset,
+                            *Offset, [&](SelectionTree ST) {
                               Result = RecordFromNode(ST.commonAncestor());
                               return Result != nullptr;
                             });
   return Result;
-
 }
 
 std::vector<const CXXRecordDecl *> typeParents(const CXXRecordDecl *CXXRD) {
