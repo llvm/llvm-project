@@ -252,6 +252,65 @@ Changes to the Windows Target
 
 * Fixed section relative relocations in .debug_frame in DWARF debug info
 
+Changes to the RISC-V Target
+----------------------------
+
+New Features:
+* The Machine Outliner has been enabled.
+* Shrink-wrapping has been enabled.
+* The Machine Scheduler has been enabled and scheduler descriptions for the
+  Rocket micro-architecture have been added, covering both 32- and 64-bit Rocket
+  cores.
+* This release lays the groundwork for enabling LTO in a future LLVM release.
+  In particular, LLVM now uses a new `target-abi` module metadata item to
+  represent the chosen RISC-V psABI variant. Frontends should add this module
+  flag to prevent ABI lowering problems when LTO is enabled in a future LLVM
+  release.
+* Support has been added for assembling RVC HINT instructions.
+* Added code lowering for half-precision floats.
+* The `fscsr` and `frcsr` (`fssr`, `frsr`) obsolete aliases have been added to
+  the assembler for use in legacy code.
+* The stack can now be realigned even when there are variable-sized objects in
+  the same frame.
+* fastcc is now supported.
+* llvm-objdump now supports `-M no-aliases` and `-M numeric` for altering the
+  dumped assembly. These match the behaviour of GNU objdump.
+
+Improvements:
+* Trap and Debugtrap now lower to RISC-V-specific trap instructions.
+* LLVM IR Inline assembly now supports using ABI register names and using
+  floating point registers in constraints.
+* Stack Pointer adjustments have been changed to better match RISC-V's immediates.
+* `ra` (`x1`) can now be used as a callee-saved register.
+* The assembler now suggests spelling corrections for unknown assembly
+  mnemonics.
+* Stack offsets of greater than 32-bits are now accepted on RV64.
+* Some variadic functions can now be tail-call optimised.
+* We now custom-lower 32-bit arithmetic operations on RV64 to reduce
+  sign-extensions.
+
+
+Bug Fixes:
+
+* There was an issue with register preservation after calls in interrupt
+  handlers, where some registers were marked as preserved even though they were
+  not being preserved by the call. This has been corrected, and now only
+  callee-saved registers are live over a function call in an interrupt handler
+  (just like calls in regular functions).
+* Atomic instructions now only accept GPRs (plus an offset) in memory operands.
+* Fixed some issues with evalutaion of relocations and fixups.
+* The error messages around missing RISC-V extensions in the assembler have been
+  improved.
+* The error messages around unsupported relocations have been improved.
+* Non-PIC code no longer forces Local Exec TLS.
+* There have been some small changes to the code generation for atomic
+  operations.
+* RISC-V no longer emits incorrect CFI directives in function prologs and
+  epilogs.
+* RV64 no longer clears the upper bits when returning complex types from
+  libcalls using the LP64 psABI.
+
+
 
 Changes to the OCaml bindings
 -----------------------------
