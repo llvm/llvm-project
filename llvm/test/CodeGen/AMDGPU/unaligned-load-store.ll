@@ -29,7 +29,7 @@ define amdgpu_kernel void @global_unaligned_load_store_i16(i16 addrspace(1)* %p,
   ret void
 }
 
-; FUNC-LABEL: {{^}}local_unaligned_load_store_i32:
+; SI-LABEL: {{^}}local_unaligned_load_store_i32:
 
 ; SI: ds_read_u8
 ; SI: ds_read_u8
@@ -80,7 +80,7 @@ define amdgpu_kernel void @global_align2_load_store_i32(i32 addrspace(1)* %p, i3
   ret void
 }
 
-; FUNC-LABEL: {{^}}local_align2_load_store_i32:
+; GCN-LABEL: {{^}}local_align2_load_store_i32:
 ; GCN: ds_read_u16
 ; GCN: ds_read_u16
 ; GCN: ds_write_b16
@@ -91,7 +91,7 @@ define amdgpu_kernel void @local_align2_load_store_i32(i32 addrspace(3)* %p, i32
   ret void
 }
 
-; FUNC-LABEL: {{^}}local_unaligned_load_store_i64:
+; SI-LABEL: {{^}}local_unaligned_load_store_i64:
 ; SI: ds_read_u8
 ; SI: ds_read_u8
 ; SI: ds_read_u8
@@ -245,7 +245,7 @@ define amdgpu_kernel void @unaligned_load_store_i64_global(i64 addrspace(1)* %p,
   ret void
 }
 
-; FUNC-LABEL: {{^}}local_unaligned_load_store_v4i32:
+; GCN-LABEL: {{^}}local_unaligned_load_store_v4i32:
 ; GCN: ds_read_u8
 ; GCN: ds_read_u8
 ; GCN: ds_read_u8
@@ -335,7 +335,7 @@ define amdgpu_kernel void @global_unaligned_load_store_v4i32(<4 x i32> addrspace
   ret void
 }
 
-; FUNC-LABEL: {{^}}local_load_i64_align_4:
+; GCN-LABEL: {{^}}local_load_i64_align_4:
 ; GCN: ds_read2_b32
 define amdgpu_kernel void @local_load_i64_align_4(i64 addrspace(1)* nocapture %out, i64 addrspace(3)* %in) #0 {
   %val = load i64, i64 addrspace(3)* %in, align 4
@@ -343,7 +343,7 @@ define amdgpu_kernel void @local_load_i64_align_4(i64 addrspace(1)* nocapture %o
   ret void
 }
 
-; FUNC-LABEL: {{^}}local_load_i64_align_4_with_offset
+; GCN-LABEL: {{^}}local_load_i64_align_4_with_offset
 ; GCN: ds_read2_b32 v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]}} offset0:8 offset1:9
 define amdgpu_kernel void @local_load_i64_align_4_with_offset(i64 addrspace(1)* nocapture %out, i64 addrspace(3)* %in) #0 {
   %ptr = getelementptr i64, i64 addrspace(3)* %in, i32 4
@@ -352,7 +352,7 @@ define amdgpu_kernel void @local_load_i64_align_4_with_offset(i64 addrspace(1)* 
   ret void
 }
 
-; FUNC-LABEL: {{^}}local_load_i64_align_4_with_split_offset:
+; GCN-LABEL: {{^}}local_load_i64_align_4_with_split_offset:
 ; The tests for the case where the lo offset is 8-bits, but the hi offset is 9-bits
 ; GCN: ds_read2_b32 v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]}} offset1:1
 ; GCN: s_endpgm
@@ -365,7 +365,7 @@ define amdgpu_kernel void @local_load_i64_align_4_with_split_offset(i64 addrspac
   ret void
 }
 
-; FUNC-LABEL: {{^}}local_load_i64_align_1:
+; GCN-LABEL: {{^}}local_load_i64_align_1:
 ; GCN: ds_read_u8
 ; GCN: ds_read_u8
 ; GCN: ds_read_u8
@@ -381,14 +381,14 @@ define amdgpu_kernel void @local_load_i64_align_1(i64 addrspace(1)* nocapture %o
   ret void
 }
 
-; FUNC-LABEL: {{^}}local_store_i64_align_4:
+; GCN-LABEL: {{^}}local_store_i64_align_4:
 ; GCN: ds_write2_b32
 define amdgpu_kernel void @local_store_i64_align_4(i64 addrspace(3)* %out, i64 %val) #0 {
   store i64 %val, i64 addrspace(3)* %out, align 4
   ret void
 }
 
-; FUNC-LABEL: {{^}}local_store_i64_align_4_with_offset
+; GCN-LABEL: {{^}}local_store_i64_align_4_with_offset
 ; GCN: ds_write2_b32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} offset0:8 offset1:9
 ; GCN: s_endpgm
 define amdgpu_kernel void @local_store_i64_align_4_with_offset(i64 addrspace(3)* %out) #0 {
@@ -397,7 +397,7 @@ define amdgpu_kernel void @local_store_i64_align_4_with_offset(i64 addrspace(3)*
   ret void
 }
 
-; FUNC-LABEL: {{^}}local_store_i64_align_4_with_split_offset:
+; GCN-LABEL: {{^}}local_store_i64_align_4_with_split_offset:
 ; The tests for the case where the lo offset is 8-bits, but the hi offset is 9-bits
 ; GCN: ds_write2_b32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} offset1:1
 ; GCN: s_endpgm
