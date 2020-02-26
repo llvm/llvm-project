@@ -593,6 +593,14 @@ TEST(RenameTest, Renameable) {
          }
        )cpp",
        "not a supported kind", !HeaderFile, Index},
+      {R"cpp(// disallow rename on blacklisted symbols (e.g. std symbols)
+         namespace std {
+         inline namespace __u {
+         class str^ing {};
+         }
+         }
+       )cpp",
+       "not a supported kind", !HeaderFile, Index},
 
       {R"cpp(
          void foo(int);
