@@ -16017,13 +16017,8 @@ void Sema::MarkFunctionReferenced(SourceLocation Loc, FunctionDecl *Func,
     Func->markUsed(Context);
   }
 
-  if (LangOpts.OpenMP) {
+  if (LangOpts.OpenMP)
     markOpenMPDeclareVariantFuncsReferenced(Loc, Func, MightBeOdrUse);
-    if (LangOpts.OpenMPIsDevice)
-      checkOpenMPDeviceFunction(Loc, Func);
-    else
-      checkOpenMPHostFunction(Loc, Func);
-  }
 }
 
 /// Directly mark a variable odr-used. Given a choice, prefer to use

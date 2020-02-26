@@ -890,6 +890,12 @@ private:
   // A list of late parsed template function data.
   SmallVector<uint64_t, 1> LateParsedTemplates;
 
+  /// The IDs of all decls to be checked for deferred diags.
+  ///
+  /// Sema tracks these to emit deferred diags.
+  SmallVector<uint64_t, 4> DeclsToCheckForDeferredDiags;
+
+
 public:
   struct ImportedSubmodule {
     serialization::SubmoduleID ID;
@@ -1982,6 +1988,9 @@ public:
 
   void ReadUnusedLocalTypedefNameCandidates(
       llvm::SmallSetVector<const TypedefNameDecl *, 4> &Decls) override;
+
+  void ReadDeclsToCheckForDeferredDiags(
+      llvm::SmallVector<Decl *, 4> &Decls) override;
 
   void ReadReferencedSelectors(
            SmallVectorImpl<std::pair<Selector, SourceLocation>> &Sels) override;
