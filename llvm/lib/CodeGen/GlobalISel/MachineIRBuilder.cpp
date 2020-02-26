@@ -390,22 +390,6 @@ MachineInstrBuilder MachineIRBuilder::buildStore(const SrcOp &Val,
   return MIB;
 }
 
-MachineInstrBuilder MachineIRBuilder::buildUAddo(const DstOp &Res,
-                                                 const DstOp &CarryOut,
-                                                 const SrcOp &Op0,
-                                                 const SrcOp &Op1) {
-  return buildInstr(TargetOpcode::G_UADDO, {Res, CarryOut}, {Op0, Op1});
-}
-
-MachineInstrBuilder MachineIRBuilder::buildUAdde(const DstOp &Res,
-                                                 const DstOp &CarryOut,
-                                                 const SrcOp &Op0,
-                                                 const SrcOp &Op1,
-                                                 const SrcOp &CarryIn) {
-  return buildInstr(TargetOpcode::G_UADDE, {Res, CarryOut},
-                    {Op0, Op1, CarryIn});
-}
-
 MachineInstrBuilder MachineIRBuilder::buildAnyExt(const DstOp &Res,
                                                   const SrcOp &Op) {
   return buildInstr(TargetOpcode::G_ANYEXT, Res, Op);
