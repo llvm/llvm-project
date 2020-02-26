@@ -1643,6 +1643,21 @@ TEST(Matcher, HasNameSupportsFunctionScope) {
   EXPECT_TRUE(matches(code, fieldDecl(hasName("::a::F(int)::S::m"))));
 }
 
+TEST(Matcher, HasNameQualifiedSupportsLinkage) {
+  // https://bugs.llvm.org/show_bug.cgi?id=42193
+  std::string code = R"cpp(namespace foo { extern "C" void test(); })cpp";
+  EXPECT_TRUE(matches(code, functionDecl(hasName("test"))));
+  EXPECT_TRUE(matches(code, functionDecl(hasName("foo::test"))));
+  EXPECT_TRUE(matches(code, functionDecl(hasName("::foo::test"))));
+  EXPECT_TRUE(notMatches(code, functionDecl(hasName("::test"))));
+
+  code = R"cpp(namespace foo { extern "C" { void test(); } })cpp";
+  EXPECT_TRUE(matches(code, functionDecl(hasName("test"))));
+  EXPECT_TRUE(matches(code, functionDecl(hasName("foo::test"))));
+  EXPECT_TRUE(matches(code, functionDecl(hasName("::foo::test"))));
+  EXPECT_TRUE(notMatches(code, functionDecl(hasName("::test"))));
+}
+
 TEST(Matcher, HasAnyName) {
   const std::string Code = "namespace a { namespace b { class C; } }";
 
