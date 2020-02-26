@@ -97,6 +97,15 @@ TEST(HighlightsTest, All) {
       R"cpp(// Function parameter in decl
         void foo(int [[^bar]]);
       )cpp",
+      R"cpp(// Not touching any identifiers.
+        struct Foo {
+          [[~]]Foo() {};
+        };
+        void foo() {
+          Foo f;
+          f.[[^~]]Foo();
+        }
+      )cpp",
   };
   for (const char *Test : Tests) {
     Annotations T(Test);
@@ -959,6 +968,15 @@ TEST(FindReferences, WithinAST) {
        template <typename T>
        class [[Foo]] {};
        void func([[Fo^o]]<int>);
+      )cpp",
+      R"cpp(// Not touching any identifiers.
+        struct Foo {
+          [[~]]Foo() {};
+        };
+        void foo() {
+          Foo f;
+          f.[[^~]]Foo();
+        }
       )cpp",
   };
   for (const char *Test : Tests) {
