@@ -11,6 +11,7 @@
 // The test below checks that the driver correctly finds the linker and
 // runtime if and only if they exist.
 //
+// REQUIRES: platform-linker
 // RUN: mkdir -p %T/testroot-riscv32-baremetal-nogcc/bin
 // RUN: [ ! -s %T/testroot-riscv32-baremetal-nogcc/bin/clang ] || rm %T/testroot-riscv32-baremetal-nogcc/bin/clang
 // RUN: [ ! -s %T/testroot-riscv32-baremetal-nogcc/bin/riscv32-unknown-elf-ld ] || rm %T/testroot-riscv32-baremetal-nogcc/bin/riscv32-unknown-elf-ld
