@@ -268,6 +268,12 @@ public:
                       : static_cast<const DerivedT &>(*this);
   }
 
+  /// Take the last n elements.
+  DerivedT take_back(size_t n = 1) const {
+    return n < size() ? drop_front(size() - n)
+                      : static_cast<const DerivedT &>(*this);
+  }
+
   /// Allow conversion to SmallVector if necessary.
   /// TODO(riverriddle) Remove this when SmallVector accepts different range
   /// types in its constructor.
