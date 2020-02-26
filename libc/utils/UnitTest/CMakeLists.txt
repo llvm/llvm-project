@@ -6,3 +6,4 @@ add_llvm_library(
 )
 target_include_directories(LibcUnitTest PUBLIC ${LIBC_SOURCE_DIR})
 add_dependencies(LibcUnitTest standalone_cpp)
+target_link_libraries(LibcUnitTest PUBLIC libc_test_utils)
