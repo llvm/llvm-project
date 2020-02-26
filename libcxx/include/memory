@@ -3863,11 +3863,6 @@ public:
         return __r;
     }
 
-    template<class _Alloc, class ..._Args>
-        static
-        shared_ptr<_Tp>
-        allocate_shared(const _Alloc& __a, _Args&& ...__args);
-
 private:
     template <class _Yp, bool = is_function<_Yp>::value>
         struct __shared_ptr_default_allocator
@@ -4181,26 +4176,6 @@ shared_ptr<_Tp>::shared_ptr(unique_ptr<_Yp, _Dp> __r,
 }
 
 template<class _Tp>
-template<class _Alloc, class ..._Args>
-shared_ptr<_Tp>
-shared_ptr<_Tp>::allocate_shared(const _Alloc& __a, _Args&& ...__args)
-{
-    static_assert( is_constructible<_Tp, _Args...>::value, "Can't construct object in allocate_shared" );
-    typedef __shared_ptr_emplace<_Tp, _Alloc> _CntrlBlk;
-    typedef typename __allocator_traits_rebind<_Alloc, _CntrlBlk>::type _A2;
-    typedef __allocator_destructor<_A2> _D2;
-    _A2 __a2(__a);
-    unique_ptr<_CntrlBlk, _D2> __hold2(__a2.allocate(1), _D2(__a2, 1));
-    ::new(static_cast<void*>(_VSTD::addressof(*__hold2.get())))
-        _CntrlBlk(__a, _VSTD::forward<_Args>(__args)...);
-    shared_ptr<_Tp> __r;
-    __r.__ptr_ = __hold2.get()->get();
-    __r.__cntrl_ = _VSTD::addressof(*__hold2.release());
-    __r.__enable_weak_this(__r.__ptr_, __r.__ptr_);
-    return __r;
-}
-
-template<class _Tp>
 shared_ptr<_Tp>::~shared_ptr()
 {
     if (__cntrl_)
@@ -4412,7 +4387,19 @@ typename enable_if
 >::type
 allocate_shared(const _Alloc& __a, _Args&& ...__args)
 {
-    return shared_ptr<_Tp>::allocate_shared(__a, _VSTD::forward<_Args>(__args)...);
+    static_assert( is_constructible<_Tp, _Args...>::value, "Can't construct object in allocate_shared");
+
+    typedef __shared_ptr_emplace<_Tp, _Alloc> _CntrlBlk;
+    typedef typename __allocator_traits_rebind<_Alloc, _CntrlBlk>::type _A2;
+    typedef __allocator_destructor<_A2> _D2;
+
+    _A2 __a2(__a);
+    unique_ptr<_CntrlBlk, _D2> __hold2(__a2.allocate(1), _D2(__a2, 1));
+    ::new(static_cast<void*>(_VSTD::addressof(*__hold2.get())))
+        _CntrlBlk(__a, _VSTD::forward<_Args>(__args)...);
+
+    typename shared_ptr<_Tp>::element_type *__p = __hold2.get()->get();
+    return shared_ptr<_Tp>::__create_with_control_block(__p, _VSTD::addressof(*__hold2.release()));
 }
 
 template<class _Tp, class _Up>
