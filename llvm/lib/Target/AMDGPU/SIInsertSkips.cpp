@@ -83,6 +83,7 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<MachineDominatorTree>();
+    AU.addPreserved<MachineDominatorTree>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
@@ -528,6 +529,8 @@ bool SIInsertSkips::runOnMachineFunction(MachineFunction &MF) {
           BuildMI(MBB, &MI, MI.getDebugLoc(), TII->get(AMDGPU::S_BRANCH))
             .addMBB(EmptyMBBAtEnd);
           MI.eraseFromParent();
+
+          MDT->getBase().insertEdge(&MBB, EmptyMBBAtEnd);
         }
         break;
 
