@@ -41,9 +41,8 @@ using namespace llvm::COFF;
 using namespace llvm::object;
 using namespace llvm::support;
 using namespace llvm::support::endian;
-
-namespace lld {
-namespace coff {
+using namespace lld;
+using namespace lld::coff;
 
 /* To re-generate DOSProgram:
 $ cat > /tmp/DOSProgram.asm
@@ -290,7 +289,7 @@ private:
 static Timer codeLayoutTimer("Code Layout", Timer::root());
 static Timer diskCommitTimer("Commit Output File", Timer::root());
 
-void writeResult() { Writer().run(); }
+void lld::coff::writeResult() { Writer().run(); }
 
 void OutputSection::addChunk(Chunk *c) {
   chunks.push_back(c);
@@ -1950,6 +1949,3 @@ PartialSection *Writer::findPartialSection(StringRef name, uint32_t outChars) {
     return it->second;
   return nullptr;
 }
-
-} // namespace coff
-} // namespace lld
