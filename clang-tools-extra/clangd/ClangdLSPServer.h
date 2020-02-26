@@ -42,6 +42,7 @@ public:
   // FIXME: Clean up signature around CDBs.
   ClangdLSPServer(Transport &Transp, const FileSystemProvider &FSProvider,
                   const clangd::CodeCompleteOptions &CCOpts,
+                  const clangd::RenameOptions &RenameOpts,
                   llvm::Optional<Path> CompileCommandsDir, bool UseDirBasedCDB,
                   llvm::Optional<OffsetEncoding> ForcedOffsetEncoding,
                   const ClangdServer::Options &Opts);
@@ -197,6 +198,8 @@ private:
   const FileSystemProvider &FSProvider;
   /// Options used for code completion
   clangd::CodeCompleteOptions CCOpts;
+  /// Options used for rename.
+  clangd::RenameOptions RenameOpts;
   /// Options used for diagnostics.
   ClangdDiagnosticOptions DiagOpts;
   /// The supported kinds of the client.

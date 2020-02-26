@@ -721,8 +721,13 @@ TEST(CrossFileRenameTests, DirtyBuffer) {
   TestTU TU = TestTU::withCode(MainCode.code());
   auto AST = TU.build();
   llvm::StringRef NewName = "newName";
-  auto Results = rename({MainCode.point(), NewName, AST, MainFilePath,
-                         Index.get(), /*CrossFile=*/true, GetDirtyBuffer});
+  auto Results = rename({MainCode.point(),
+                         NewName,
+                         AST,
+                         MainFilePath,
+                         Index.get(),
+                         {/*CrossFile=*/true},
+                         GetDirtyBuffer});
   ASSERT_TRUE(bool(Results)) << Results.takeError();
   EXPECT_THAT(
       applyEdits(std::move(*Results)),
@@ -737,8 +742,13 @@ TEST(CrossFileRenameTests, DirtyBuffer) {
   // Set a file "bar.cc" on disk.
   TU.AdditionalFiles["bar.cc"] = std::string(BarCode.code());
   AST = TU.build();
-  Results = rename({MainCode.point(), NewName, AST, MainFilePath, Index.get(),
-                    /*CrossFile=*/true, GetDirtyBuffer});
+  Results = rename({MainCode.point(),
+                    NewName,
+                    AST,
+                    MainFilePath,
+                    Index.get(),
+                    {/*CrossFile=*/true},
+                    GetDirtyBuffer});
   ASSERT_TRUE(bool(Results)) << Results.takeError();
   EXPECT_THAT(
       applyEdits(std::move(*Results)),
@@ -768,8 +778,13 @@ TEST(CrossFileRenameTests, DirtyBuffer) {
                        Callback) const override {}
     size_t estimateMemoryUsage() const override { return 0; }
   } PIndex;
-  Results = rename({MainCode.point(), NewName, AST, MainFilePath, &PIndex,
-                    /*CrossFile=*/true, GetDirtyBuffer});
+  Results = rename({MainCode.point(),
+                    NewName,
+                    AST,
+                    MainFilePath,
+                    &PIndex,
+                    {/*CrossFile=*/true},
+                    GetDirtyBuffer});
   EXPECT_FALSE(Results);
   EXPECT_THAT(llvm::toString(Results.takeError()),
               testing::HasSubstr("too many occurrences"));
@@ -810,9 +825,12 @@ TEST(CrossFileRename, QueryCtorInIndex) {
 
     RefsRequest *Out;
   } RIndex(&Req);
-  auto Results =
-      rename({MainCode.point(), "NewName", AST, testPath("main.cc"), &RIndex,
-              /*CrossFile=*/true});
+  auto Results = rename({MainCode.point(),
+                         "NewName",
+                         AST,
+                         testPath("main.cc"),
+                         &RIndex,
+                         {/*CrossFile=*/true}});
   ASSERT_TRUE(bool(Results)) << Results.takeError();
   const auto HeaderSymbols = TU.headerSymbols();
   EXPECT_THAT(Req.IDs,
@@ -857,8 +875,12 @@ TEST(CrossFileRenameTests, DeduplicateRefsFromIndex) {
     Ref ReturnedRef;
   } DIndex(XRefInBarCC);
   llvm::StringRef NewName = "newName";
-  auto Results = rename({MainCode.point(), NewName, AST, MainFilePath, &DIndex,
-                         /*CrossFile=*/true});
+  auto Results = rename({MainCode.point(),
+                         NewName,
+                         AST,
+                         MainFilePath,
+                         &DIndex,
+                         {/*CrossFile=*/true}});
   ASSERT_TRUE(bool(Results)) << Results.takeError();
   EXPECT_THAT(
       applyEdits(std::move(*Results)),
@@ -1045,7 +1067,6 @@ TEST(CrossFileRenameTests, WithUpToDateIndex) {
     FS.Files[FooCCPath] = std::string(FooCC.code());
 
     auto ServerOpts = ClangdServer::optsForTest();
-    ServerOpts.CrossFileRename = true;
     ServerOpts.BuildDynamicSymbolIndex = true;
     ClangdServer Server(CDB, FS, ServerOpts);
 
@@ -1056,8 +1077,8 @@ TEST(CrossFileRenameTests, WithUpToDateIndex) {
 
     llvm::StringRef NewName = "NewName";
     for (const auto &RenamePos : FooH.points()) {
-      auto FileEditsList =
-          llvm::cantFail(runRename(Server, FooHPath, RenamePos, NewName));
+      auto FileEditsList = llvm::cantFail(runRename(
+          Server, FooHPath, RenamePos, NewName, {/*CrossFile=*/true}));
       EXPECT_THAT(
           applyEdits(std::move(FileEditsList)),
           UnorderedElementsAre(
