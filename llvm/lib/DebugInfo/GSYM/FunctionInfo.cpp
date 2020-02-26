@@ -170,7 +170,7 @@ llvm::Expected<LookupResult> FunctionInfo::lookup(DataExtractor &Data,
   // This function will be called with the result of a binary search of the
   // address table, we must still make sure the address does not fall into a
   // gap between functions are after the last function.
-  if (Addr >= LR.FuncRange.End)
+  if (LR.FuncRange.size() > 0 && !LR.FuncRange.contains(Addr))
     return createStringError(std::errc::io_error,
         "address 0x%" PRIx64 " is not in GSYM", Addr);
 
