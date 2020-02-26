@@ -1,6 +1,6 @@
 # RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs -run-pass machine-scheduler -o - %s | FileCheck -check-prefix=GCN %s
 
-# CGN-LABEL: name: flat_load_clustering
+# GCN-LABEL: name: flat_load_clustering
 # GCN:      FLAT_LOAD_DWORD
 # GCN-NEXT: FLAT_LOAD_DWORD
 --- |
