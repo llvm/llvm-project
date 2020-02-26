@@ -170,7 +170,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
   _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>::size_type basic_string<_CharType>::rfind(value_type, size_type) const) \
   _Func(_LIBCPP_FUNC_VIS const basic_string<_CharType>::size_type basic_string<_CharType>::npos) \
   _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>& basic_string<_CharType>::assign(size_type, value_type)) \
-  _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>& basic_string<_CharType>::erase(size_type, size_type)) \
+  _Func(_LIBCPP_FUNC_VIS void basic_string<_CharType>::__erase_external_with_move(size_type, size_type)) \
   _Func(_LIBCPP_FUNC_VIS basic_string<_CharType>& basic_string<_CharType>::append(basic_string const&, size_type, size_type)) \
   _Func(_LIBCPP_FUNC_VIS int basic_string<_CharType>::compare(value_type const*) const) \
   _Func(_LIBCPP_FUNC_VIS int basic_string<_CharType>::compare(size_type, size_type, value_type const*) const) \

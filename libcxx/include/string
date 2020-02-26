@@ -1574,6 +1574,10 @@ private:
     _LIBCPP_INLINE_VISIBILITY
     void __erase_to_end(size_type __pos);
 
+    // __erase_external_with_move is invoked for erase() invocations where
+    // `n ~= npos`, likely requiring memory moves on the string data.
+    void __erase_external_with_move(size_type __pos, size_type __n);
+
     _LIBCPP_INLINE_VISIBILITY
     void __copy_assign_alloc(const basic_string& __str)
         {__copy_assign_alloc(__str, integral_constant<bool,
@@ -2997,15 +3001,16 @@ basic_string<_CharT, _Traits, _Allocator>::replace(const_iterator __i1, const_it
 
 // erase
 
+// 'externally instantiated' erase() implementation, called when __n != npos.
+// Does not check __pos against size()
 template <class _CharT, class _Traits, class _Allocator>
-basic_string<_CharT, _Traits, _Allocator>&
-basic_string<_CharT, _Traits, _Allocator>::erase(size_type __pos, size_type __n)
+void
+basic_string<_CharT, _Traits, _Allocator>::__erase_external_with_move(
+    size_type __pos, size_type __n)
 {
-    size_type __sz = size();
-    if (__pos > __sz)
-        this->__throw_out_of_range();
     if (__n)
     {
+        size_type __sz = size();
         value_type* __p = _VSTD::__to_address(__get_pointer());
         __n = _VSTD::min(__n, __sz - __pos);
         size_type __n_move = __sz - __pos - __n;
@@ -3016,7 +3021,19 @@ basic_string<_CharT, _Traits, _Allocator>::erase(size_type __pos, size_type __n)
         __invalidate_iterators_past(__sz);
         traits_type::assign(__p[__sz], value_type());
     }
-    return *this;
+}
+
+template <class _CharT, class _Traits, class _Allocator>
+basic_string<_CharT, _Traits, _Allocator>&
+basic_string<_CharT, _Traits, _Allocator>::erase(size_type __pos,
+                                                 size_type __n) {
+  if (__pos > size()) this->__throw_out_of_range();
+  if (__n == npos) {
+    __erase_to_end(__pos);
+  } else {
+    __erase_external_with_move(__pos, __n);
+  }
+  return *this;
 }
 
 template <class _CharT, class _Traits, class _Allocator>
