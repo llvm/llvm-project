@@ -72,6 +72,7 @@ private:
   const int ReachingDefDefaultVal = -(1 << 20);
 
   using InstSet = SmallPtrSetImpl<MachineInstr*>;
+  using BlockSet = SmallPtrSetImpl<MachineBasicBlock*>;
 
 public:
   static char ID; // Pass identification, replacement for typeid
@@ -107,14 +108,6 @@ public:
   /// PhysReg that reaches MI, relative to the begining of MI's basic block.
   int getReachingDef(MachineInstr *MI, int PhysReg) const;
 
-  /// Provides the instruction of the closest reaching def instruction of
-  /// PhysReg that reaches MI, relative to the begining of MI's basic block.
-  MachineInstr *getReachingMIDef(MachineInstr *MI, int PhysReg) const;
-
-  /// Provides the MI, from the given block, corresponding to the Id or a
-  /// nullptr if the id does not refer to the block.
-  MachineInstr *getInstFromId(MachineBasicBlock *MBB, int InstId) const;
-
   /// Return whether A and B use the same def of PhysReg.
   bool hasSameReachingDef(MachineInstr *A, MachineInstr *B, int PhysReg) const;
 
@@ -126,6 +119,18 @@ public:
   /// nullptr for a non-live out or non-local def.
   MachineInstr *getLocalLiveOutMIDef(MachineBasicBlock *MBB,
                                      int PhysReg) const;
+
+  /// If a single MachineInstr creates the reaching definition, then return it.
+  /// Otherwise return null.
+  MachineInstr *getUniqueReachingMIDef(MachineInstr *MI, int PhysReg) const;
+
+  /// If a single MachineInstr creates the reaching definition, for MIs operand
+  /// at Idx, then return it. Otherwise return null.
+  MachineInstr *getMIOperand(MachineInstr *MI, unsigned Idx) const;
+
+  /// If a single MachineInstr creates the reaching definition, for MIs MO,
+  /// then return it. Otherwise return null.
+  MachineInstr *getMIOperand(MachineInstr *MI, MachineOperand &MO) const;
 
   /// Provide whether the register has been defined in the same basic block as,
   /// and before, MI.
@@ -146,6 +151,11 @@ public:
   /// This does not consider live-outs.
   void getReachingLocalUses(MachineInstr *MI, int PhysReg,
                             InstSet &Uses) const;
+
+  /// Search MBB for a definition of PhysReg and insert it into Defs. If no
+  /// definition is found, recursively search the predecessor blocks for them.
+  void getLiveOuts(MachineBasicBlock *MBB, int PhysReg, InstSet &Defs,
+                   BlockSet &VisitedBBs) const;
 
   /// For the given block, collect the instructions that use the live-in
   /// value of the provided register. Return whether the value is still
@@ -210,6 +220,14 @@ private:
   /// the redundant use-def chain.
   bool isSafeToRemove(MachineInstr *MI, InstSet &Visited,
                       InstSet &ToRemove, InstSet &Ignore) const;
+
+  /// Provides the MI, from the given block, corresponding to the Id or a
+  /// nullptr if the id does not refer to the block.
+  MachineInstr *getInstFromId(MachineBasicBlock *MBB, int InstId) const;
+
+  /// Provides the instruction of the closest reaching def instruction of
+  /// PhysReg that reaches MI, relative to the begining of MI's basic block.
+  MachineInstr *getReachingLocalMIDef(MachineInstr *MI, int PhysReg) const;
 };
 
 } // namespace llvm

@@ -166,5 +166,201 @@ entry:
   ret <8 x i16> %2
 }
 
+define arm_aapcs_vfpcc <16 x i8> @test_vmovnbq_m_s16(<16 x i8> %a, <8 x i16> %b, i16 zeroext %p) {
+; LE-LABEL: test_vmovnbq_m_s16:
+; LE:       @ %bb.0: @ %entry
+; LE-NEXT:    vmsr p0, r0
+; LE-NEXT:    vpst
+; LE-NEXT:    vmovnbt.i16 q0, q1
+; LE-NEXT:    bx lr
+;
+; BE-LABEL: test_vmovnbq_m_s16:
+; BE:       @ %bb.0: @ %entry
+; BE-NEXT:    vrev64.16 q2, q1
+; BE-NEXT:    vrev64.8 q1, q0
+; BE-NEXT:    vmsr p0, r0
+; BE-NEXT:    vpst
+; BE-NEXT:    vmovnbt.i16 q1, q2
+; BE-NEXT:    vrev64.8 q0, q1
+; BE-NEXT:    bx lr
+entry:
+  %0 = zext i16 %p to i32
+  %1 = tail call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 %0)
+  %2 = tail call <16 x i8> @llvm.arm.mve.vmovn.predicated.v16i8.v8i16.v8i1(<16 x i8> %a, <8 x i16> %b, i32 0, <8 x i1> %1)
+  ret <16 x i8> %2
+}
+
+define arm_aapcs_vfpcc <8 x i16> @test_vmovnbq_m_s32(<8 x i16> %a, <4 x i32> %b, i16 zeroext %p) {
+; LE-LABEL: test_vmovnbq_m_s32:
+; LE:       @ %bb.0: @ %entry
+; LE-NEXT:    vmsr p0, r0
+; LE-NEXT:    vpst
+; LE-NEXT:    vmovnbt.i32 q0, q1
+; LE-NEXT:    bx lr
+;
+; BE-LABEL: test_vmovnbq_m_s32:
+; BE:       @ %bb.0: @ %entry
+; BE-NEXT:    vrev64.32 q2, q1
+; BE-NEXT:    vrev64.16 q1, q0
+; BE-NEXT:    vmsr p0, r0
+; BE-NEXT:    vpst
+; BE-NEXT:    vmovnbt.i32 q1, q2
+; BE-NEXT:    vrev64.16 q0, q1
+; BE-NEXT:    bx lr
+entry:
+  %0 = zext i16 %p to i32
+  %1 = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %0)
+  %2 = tail call <8 x i16> @llvm.arm.mve.vmovn.predicated.v8i16.v4i32.v4i1(<8 x i16> %a, <4 x i32> %b, i32 0, <4 x i1> %1)
+  ret <8 x i16> %2
+}
+
+define arm_aapcs_vfpcc <16 x i8> @test_vmovnbq_m_u16(<16 x i8> %a, <8 x i16> %b, i16 zeroext %p) {
+; LE-LABEL: test_vmovnbq_m_u16:
+; LE:       @ %bb.0: @ %entry
+; LE-NEXT:    vmsr p0, r0
+; LE-NEXT:    vpst
+; LE-NEXT:    vmovnbt.i16 q0, q1
+; LE-NEXT:    bx lr
+;
+; BE-LABEL: test_vmovnbq_m_u16:
+; BE:       @ %bb.0: @ %entry
+; BE-NEXT:    vrev64.16 q2, q1
+; BE-NEXT:    vrev64.8 q1, q0
+; BE-NEXT:    vmsr p0, r0
+; BE-NEXT:    vpst
+; BE-NEXT:    vmovnbt.i16 q1, q2
+; BE-NEXT:    vrev64.8 q0, q1
+; BE-NEXT:    bx lr
+entry:
+  %0 = zext i16 %p to i32
+  %1 = tail call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 %0)
+  %2 = tail call <16 x i8> @llvm.arm.mve.vmovn.predicated.v16i8.v8i16.v8i1(<16 x i8> %a, <8 x i16> %b, i32 0, <8 x i1> %1)
+  ret <16 x i8> %2
+}
+
+define arm_aapcs_vfpcc <8 x i16> @test_vmovnbq_m_u32(<8 x i16> %a, <4 x i32> %b, i16 zeroext %p) {
+; LE-LABEL: test_vmovnbq_m_u32:
+; LE:       @ %bb.0: @ %entry
+; LE-NEXT:    vmsr p0, r0
+; LE-NEXT:    vpst
+; LE-NEXT:    vmovnbt.i32 q0, q1
+; LE-NEXT:    bx lr
+;
+; BE-LABEL: test_vmovnbq_m_u32:
+; BE:       @ %bb.0: @ %entry
+; BE-NEXT:    vrev64.32 q2, q1
+; BE-NEXT:    vrev64.16 q1, q0
+; BE-NEXT:    vmsr p0, r0
+; BE-NEXT:    vpst
+; BE-NEXT:    vmovnbt.i32 q1, q2
+; BE-NEXT:    vrev64.16 q0, q1
+; BE-NEXT:    bx lr
+entry:
+  %0 = zext i16 %p to i32
+  %1 = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %0)
+  %2 = tail call <8 x i16> @llvm.arm.mve.vmovn.predicated.v8i16.v4i32.v4i1(<8 x i16> %a, <4 x i32> %b, i32 0, <4 x i1> %1)
+  ret <8 x i16> %2
+}
+
+define arm_aapcs_vfpcc <16 x i8> @test_vmovntq_m_s16(<16 x i8> %a, <8 x i16> %b, i16 zeroext %p) {
+; LE-LABEL: test_vmovntq_m_s16:
+; LE:       @ %bb.0: @ %entry
+; LE-NEXT:    vmsr p0, r0
+; LE-NEXT:    vpst
+; LE-NEXT:    vmovntt.i16 q0, q1
+; LE-NEXT:    bx lr
+;
+; BE-LABEL: test_vmovntq_m_s16:
+; BE:       @ %bb.0: @ %entry
+; BE-NEXT:    vrev64.16 q2, q1
+; BE-NEXT:    vrev64.8 q1, q0
+; BE-NEXT:    vmsr p0, r0
+; BE-NEXT:    vpst
+; BE-NEXT:    vmovntt.i16 q1, q2
+; BE-NEXT:    vrev64.8 q0, q1
+; BE-NEXT:    bx lr
+entry:
+  %0 = zext i16 %p to i32
+  %1 = tail call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 %0)
+  %2 = tail call <16 x i8> @llvm.arm.mve.vmovn.predicated.v16i8.v8i16.v8i1(<16 x i8> %a, <8 x i16> %b, i32 1, <8 x i1> %1)
+  ret <16 x i8> %2
+}
+
+define arm_aapcs_vfpcc <8 x i16> @test_vmovntq_m_s32(<8 x i16> %a, <4 x i32> %b, i16 zeroext %p) {
+; LE-LABEL: test_vmovntq_m_s32:
+; LE:       @ %bb.0: @ %entry
+; LE-NEXT:    vmsr p0, r0
+; LE-NEXT:    vpst
+; LE-NEXT:    vmovntt.i32 q0, q1
+; LE-NEXT:    bx lr
+;
+; BE-LABEL: test_vmovntq_m_s32:
+; BE:       @ %bb.0: @ %entry
+; BE-NEXT:    vrev64.32 q2, q1
+; BE-NEXT:    vrev64.16 q1, q0
+; BE-NEXT:    vmsr p0, r0
+; BE-NEXT:    vpst
+; BE-NEXT:    vmovntt.i32 q1, q2
+; BE-NEXT:    vrev64.16 q0, q1
+; BE-NEXT:    bx lr
+entry:
+  %0 = zext i16 %p to i32
+  %1 = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %0)
+  %2 = tail call <8 x i16> @llvm.arm.mve.vmovn.predicated.v8i16.v4i32.v4i1(<8 x i16> %a, <4 x i32> %b, i32 1, <4 x i1> %1)
+  ret <8 x i16> %2
+}
+
+define arm_aapcs_vfpcc <16 x i8> @test_vmovntq_m_u16(<16 x i8> %a, <8 x i16> %b, i16 zeroext %p) {
+; LE-LABEL: test_vmovntq_m_u16:
+; LE:       @ %bb.0: @ %entry
+; LE-NEXT:    vmsr p0, r0
+; LE-NEXT:    vpst
+; LE-NEXT:    vmovntt.i16 q0, q1
+; LE-NEXT:    bx lr
+;
+; BE-LABEL: test_vmovntq_m_u16:
+; BE:       @ %bb.0: @ %entry
+; BE-NEXT:    vrev64.16 q2, q1
+; BE-NEXT:    vrev64.8 q1, q0
+; BE-NEXT:    vmsr p0, r0
+; BE-NEXT:    vpst
+; BE-NEXT:    vmovntt.i16 q1, q2
+; BE-NEXT:    vrev64.8 q0, q1
+; BE-NEXT:    bx lr
+entry:
+  %0 = zext i16 %p to i32
+  %1 = tail call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 %0)
+  %2 = tail call <16 x i8> @llvm.arm.mve.vmovn.predicated.v16i8.v8i16.v8i1(<16 x i8> %a, <8 x i16> %b, i32 1, <8 x i1> %1)
+  ret <16 x i8> %2
+}
+
+define arm_aapcs_vfpcc <8 x i16> @test_vmovntq_m_u32(<8 x i16> %a, <4 x i32> %b, i16 zeroext %p) {
+; LE-LABEL: test_vmovntq_m_u32:
+; LE:       @ %bb.0: @ %entry
+; LE-NEXT:    vmsr p0, r0
+; LE-NEXT:    vpst
+; LE-NEXT:    vmovntt.i32 q0, q1
+; LE-NEXT:    bx lr
+;
+; BE-LABEL: test_vmovntq_m_u32:
+; BE:       @ %bb.0: @ %entry
+; BE-NEXT:    vrev64.32 q2, q1
+; BE-NEXT:    vrev64.16 q1, q0
+; BE-NEXT:    vmsr p0, r0
+; BE-NEXT:    vpst
+; BE-NEXT:    vmovntt.i32 q1, q2
+; BE-NEXT:    vrev64.16 q0, q1
+; BE-NEXT:    bx lr
+entry:
+  %0 = zext i16 %p to i32
+  %1 = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %0)
+  %2 = tail call <8 x i16> @llvm.arm.mve.vmovn.predicated.v8i16.v4i32.v4i1(<8 x i16> %a, <4 x i32> %b, i32 1, <4 x i1> %1)
+  ret <8 x i16> %2
+}
+
 declare <8 x i16> @llvm.arm.mve.vreinterpretq.v8i16.v16i8(<16 x i8>)
 declare <4 x i32> @llvm.arm.mve.vreinterpretq.v4i32.v8i16(<8 x i16>)
+declare <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32)
+declare <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32)
+declare <16 x i8> @llvm.arm.mve.vmovn.predicated.v16i8.v8i16.v8i1(<16 x i8>, <8 x i16>, i32, <8 x i1>)
+declare <8 x i16> @llvm.arm.mve.vmovn.predicated.v8i16.v4i32.v4i1(<8 x i16>, <4 x i32>, i32, <4 x i1>)

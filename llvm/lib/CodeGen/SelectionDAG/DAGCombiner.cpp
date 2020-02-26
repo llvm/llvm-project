@@ -7494,13 +7494,17 @@ SDValue DAGCombiner::visitRotate(SDNode *N) {
   }
 
   // fold (rot x, c) -> (rot x, c % BitSize)
-  // TODO - support non-uniform vector amounts.
-  if (ConstantSDNode *Cst = isConstOrConstSplat(N1)) {
-    if (Cst->getAPIntValue().uge(Bitsize)) {
-      uint64_t RotAmt = Cst->getAPIntValue().urem(Bitsize);
-      return DAG.getNode(N->getOpcode(), dl, VT, N0,
-                         DAG.getConstant(RotAmt, dl, N1.getValueType()));
-    }
+  bool OutOfRange = false;
+  auto MatchOutOfRange = [Bitsize, &OutOfRange](ConstantSDNode *C) {
+    OutOfRange |= C->getAPIntValue().uge(Bitsize);
+    return true;
+  };
+  if (ISD::matchUnaryPredicate(N1, MatchOutOfRange) && OutOfRange) {
+    EVT AmtVT = N1.getValueType();
+    SDValue Bits = DAG.getConstant(Bitsize, dl, AmtVT);
+    if (SDValue Amt =
+            DAG.FoldConstantArithmetic(ISD::UREM, dl, AmtVT, {N1, Bits}))
+      return DAG.getNode(N->getOpcode(), dl, VT, N0, Amt);
   }
 
   // Simplify the operands using demanded-bits information.
@@ -18551,6 +18555,15 @@ static SDValue narrowExtractedVectorBinOp(SDNode *Extract, SelectionDAG &DAG) {
   unsigned BOpcode = BinOp.getOpcode();
   if (!TLI.isBinOp(BOpcode) || BinOp.getNode()->getNumValues() != 1)
     return SDValue();
+
+  // Exclude the fake form of fneg (fsub -0.0, x) because that is likely to be
+  // reduced to the unary fneg when it is visited, and we probably want to deal
+  // with fneg in a target-specific way.
+  if (BOpcode == ISD::FSUB) {
+    auto *C = isConstOrConstSplatFP(BinOp.getOperand(0), /*AllowUndefs*/ true);
+    if (C && C->getValueAPF().isNegZero())
+      return SDValue();
+  }
 
   // The binop must be a vector type, so we can extract some fraction of it.
   EVT WideBVT = BinOp.getValueType();

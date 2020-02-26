@@ -2,8 +2,8 @@
 
 # GCN-LABEL: name: test{{$}}
 # GCN: S_WAITCNT -16257
-# GGN: DS_READ2_B32
-# GGN: DS_READ2_B32
+# GCN: DS_READ2_B32
+# GCN: DS_READ2_B32
 # GCN: S_WAITCNT 383{{$}}
 # GCN-NEXT: $vgpr1 = V_ADD_U32_e32 1, killed $vgpr1, implicit $exec
 # GCN-NEXT: $vgpr1 = V_MAX_U32_e32 killed $vgpr0, killed $vgpr1, implicit $exec

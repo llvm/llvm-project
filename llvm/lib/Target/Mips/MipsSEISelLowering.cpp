@@ -1342,9 +1342,8 @@ static SDValue lowerDSPIntr(SDValue Op, SelectionDAG &DAG, unsigned Opc) {
   // Scan output.
   SmallVector<EVT, 2> ResTys;
 
-  for (SDNode::value_iterator I = Op->value_begin(), E = Op->value_end();
-       I != E; ++I)
-    ResTys.push_back((*I == MVT::i64) ? MVT::Untyped : *I);
+  for (EVT Ty : Op->values())
+    ResTys.push_back((Ty == MVT::i64) ? MVT::Untyped : Ty);
 
   // Create node.
   SDValue Val = DAG.getNode(Opc, DL, ResTys, Ops);

@@ -164,7 +164,7 @@ body:             |
 ---
 
 # GCN-LABEL: name: s_fold_shl_imm_regimm_32{{$}}
-# GC1: %13 = V_MOV_B32_e32 4096, implicit $exec
+# GCN: %13:vgpr_32 = V_MOV_B32_e32 4096, implicit $exec
 # GCN: BUFFER_STORE_DWORD_OFFSET killed %13,
 
 name:            s_fold_shl_imm_regimm_32

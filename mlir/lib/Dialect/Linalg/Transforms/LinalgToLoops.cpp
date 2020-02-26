@@ -20,6 +20,7 @@
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/Pass/Pass.h"
+#include "mlir/Support/Functional.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/STLExtras.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -179,7 +180,9 @@ public:
            "expected linalg op with buffer semantics");
     auto b = ScopedContext::getBuilder();
     auto loc = ScopedContext::getLocation();
-    auto maps = loopToOperandRangesMaps(convOp);
+    auto mapsRange = convOp.indexing_maps().getAsRange<AffineMapAttr>();
+    auto maps = functional::map([](AffineMapAttr a) { return a.getValue(); },
+                                mapsRange);
     SmallVector<ValueHandle, 8> fIdx(
         makeCanonicalAffineApplies(b, loc, maps[0], allIvs));
     SmallVector<ValueHandle, 8> imIdx(
@@ -439,8 +442,11 @@ LogicalResult LinalgOpToLoopsImpl<LoopTy, IndexedValueTy, ConcreteOpTy>::doit(
   auto nLoops = nPar + nRed + nWin;
   if (!loweringIsAllowed<LoopTy>(nPar, nLoops))
     return failure();
-  auto invertedMap =
-      inversePermutation(concatAffineMaps(loopToOperandRangesMaps(linalgOp)));
+  auto mapsRange =
+      linalgOp.indexing_maps().template getAsRange<AffineMapAttr>();
+  auto maps =
+      functional::map([](AffineMapAttr a) { return a.getValue(); }, mapsRange);
+  auto invertedMap = inversePermutation(concatAffineMaps(maps));
   if (!invertedMap) {
     LinalgScopedEmitter<IndexedValueTy, ConcreteOpTy>::emitScalarImplementation(
         {}, linalgOp);

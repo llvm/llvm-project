@@ -52,8 +52,15 @@
 #define COMPILER_RT_ALIAS(name, aliasname) \
   COMPILER_RT_ABI __typeof(name) aliasname __attribute__((__alias__(#name)));
 #elif defined(__APPLE__)
+#if defined(VISIBILITY_HIDDEN)
+#define COMPILER_RT_ALIAS_VISIBILITY(name) \
+  __asm__(".private_extern " SYMBOL_NAME(name));
+#else
+#define COMPILER_RT_ALIAS_VISIBILITY(name)
+#endif
 #define COMPILER_RT_ALIAS(name, aliasname) \
   __asm__(".globl " SYMBOL_NAME(aliasname)); \
+  COMPILER_RT_ALIAS_VISIBILITY(aliasname) \
   __asm__(SYMBOL_NAME(aliasname) " = " SYMBOL_NAME(name)); \
   COMPILER_RT_ABI __typeof(name) aliasname;
 #elif defined(_WIN32)

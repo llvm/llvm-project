@@ -339,6 +339,12 @@ spelledIdentifierTouching(SourceLocation Loc,
 /// The result will *not* have a 'eof' token at the end.
 std::vector<syntax::Token> tokenize(FileID FID, const SourceManager &SM,
                                     const LangOptions &LO);
+/// Similar to one above, instead of whole file tokenizes a part of it. Note
+/// that, the first token might be incomplete if FR.startOffset is not at the
+/// beginning of a token, and the last token returned will start before the
+/// FR.endOffset but might end after it.
+std::vector<syntax::Token>
+tokenize(const FileRange &FR, const SourceManager &SM, const LangOptions &LO);
 
 /// Collects tokens for the main file while running the frontend action. An
 /// instance of this object should be created on

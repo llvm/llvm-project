@@ -773,7 +773,7 @@ define amdgpu_kernel void @i1_arg(i1 addrspace(1)* %out, i1 %x) nounwind {
 ; HSA-GFX9: kernarg_segment_alignment = 4
 
 ; GCN: s_load_dword
-; SGCN: buffer_store_dword
+; GCN: {{buffer|flat|global}}_store_dword
 define amdgpu_kernel void @i1_arg_zext_i32(i32 addrspace(1)* %out, i1 %x) nounwind {
   %ext = zext i1 %x to i32
   store i32 %ext, i32 addrspace(1)* %out, align 4

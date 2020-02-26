@@ -62,6 +62,11 @@ public:
       // Otherwise, the default basic cost is used.
       return TTI::TCC_Basic;
 
+    case Instruction::Freeze:
+      // Freeze operation is free because it should be lowered into a register
+      // use without any register copy in assembly code.
+      return TTI::TCC_Free;
+
     case Instruction::FDiv:
     case Instruction::FRem:
     case Instruction::SDiv:

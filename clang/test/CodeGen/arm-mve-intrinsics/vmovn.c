@@ -197,3 +197,187 @@ uint16x8_t test_vmovntq_u32(uint16x8_t a, uint32x4_t b)
     return vmovntq_u32(a, b);
 #endif /* POLYMORPHIC */
 }
+
+// LE-LABEL: @test_vmovnbq_m_s16(
+// LE-NEXT:  entry:
+// LE-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// LE-NEXT:    [[TMP1:%.*]] = call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[TMP0]])
+// LE-NEXT:    [[TMP2:%.*]] = call <16 x i8> @llvm.arm.mve.vmovn.predicated.v16i8.v8i16.v8i1(<16 x i8> [[A:%.*]], <8 x i16> [[B:%.*]], i32 0, <8 x i1> [[TMP1]])
+// LE-NEXT:    ret <16 x i8> [[TMP2]]
+//
+// BE-LABEL: @test_vmovnbq_m_s16(
+// BE-NEXT:  entry:
+// BE-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// BE-NEXT:    [[TMP1:%.*]] = call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[TMP0]])
+// BE-NEXT:    [[TMP2:%.*]] = call <16 x i8> @llvm.arm.mve.vmovn.predicated.v16i8.v8i16.v8i1(<16 x i8> [[A:%.*]], <8 x i16> [[B:%.*]], i32 0, <8 x i1> [[TMP1]])
+// BE-NEXT:    ret <16 x i8> [[TMP2]]
+//
+int8x16_t test_vmovnbq_m_s16(int8x16_t a, int16x8_t b, mve_pred16_t p)
+{
+#ifdef POLYMORPHIC
+    return vmovnbq_m(a, b, p);
+#else /* POLYMORPHIC */
+    return vmovnbq_m_s16(a, b, p);
+#endif /* POLYMORPHIC */
+}
+
+// LE-LABEL: @test_vmovnbq_m_s32(
+// LE-NEXT:  entry:
+// LE-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// LE-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
+// LE-NEXT:    [[TMP2:%.*]] = call <8 x i16> @llvm.arm.mve.vmovn.predicated.v8i16.v4i32.v4i1(<8 x i16> [[A:%.*]], <4 x i32> [[B:%.*]], i32 0, <4 x i1> [[TMP1]])
+// LE-NEXT:    ret <8 x i16> [[TMP2]]
+//
+// BE-LABEL: @test_vmovnbq_m_s32(
+// BE-NEXT:  entry:
+// BE-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// BE-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
+// BE-NEXT:    [[TMP2:%.*]] = call <8 x i16> @llvm.arm.mve.vmovn.predicated.v8i16.v4i32.v4i1(<8 x i16> [[A:%.*]], <4 x i32> [[B:%.*]], i32 0, <4 x i1> [[TMP1]])
+// BE-NEXT:    ret <8 x i16> [[TMP2]]
+//
+int16x8_t test_vmovnbq_m_s32(int16x8_t a, int32x4_t b, mve_pred16_t p)
+{
+#ifdef POLYMORPHIC
+    return vmovnbq_m(a, b, p);
+#else /* POLYMORPHIC */
+    return vmovnbq_m_s32(a, b, p);
+#endif /* POLYMORPHIC */
+}
+
+// LE-LABEL: @test_vmovnbq_m_u16(
+// LE-NEXT:  entry:
+// LE-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// LE-NEXT:    [[TMP1:%.*]] = call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[TMP0]])
+// LE-NEXT:    [[TMP2:%.*]] = call <16 x i8> @llvm.arm.mve.vmovn.predicated.v16i8.v8i16.v8i1(<16 x i8> [[A:%.*]], <8 x i16> [[B:%.*]], i32 0, <8 x i1> [[TMP1]])
+// LE-NEXT:    ret <16 x i8> [[TMP2]]
+//
+// BE-LABEL: @test_vmovnbq_m_u16(
+// BE-NEXT:  entry:
+// BE-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// BE-NEXT:    [[TMP1:%.*]] = call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[TMP0]])
+// BE-NEXT:    [[TMP2:%.*]] = call <16 x i8> @llvm.arm.mve.vmovn.predicated.v16i8.v8i16.v8i1(<16 x i8> [[A:%.*]], <8 x i16> [[B:%.*]], i32 0, <8 x i1> [[TMP1]])
+// BE-NEXT:    ret <16 x i8> [[TMP2]]
+//
+uint8x16_t test_vmovnbq_m_u16(uint8x16_t a, uint16x8_t b, mve_pred16_t p)
+{
+#ifdef POLYMORPHIC
+    return vmovnbq_m(a, b, p);
+#else /* POLYMORPHIC */
+    return vmovnbq_m_u16(a, b, p);
+#endif /* POLYMORPHIC */
+}
+
+// LE-LABEL: @test_vmovnbq_m_u32(
+// LE-NEXT:  entry:
+// LE-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// LE-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
+// LE-NEXT:    [[TMP2:%.*]] = call <8 x i16> @llvm.arm.mve.vmovn.predicated.v8i16.v4i32.v4i1(<8 x i16> [[A:%.*]], <4 x i32> [[B:%.*]], i32 0, <4 x i1> [[TMP1]])
+// LE-NEXT:    ret <8 x i16> [[TMP2]]
+//
+// BE-LABEL: @test_vmovnbq_m_u32(
+// BE-NEXT:  entry:
+// BE-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// BE-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
+// BE-NEXT:    [[TMP2:%.*]] = call <8 x i16> @llvm.arm.mve.vmovn.predicated.v8i16.v4i32.v4i1(<8 x i16> [[A:%.*]], <4 x i32> [[B:%.*]], i32 0, <4 x i1> [[TMP1]])
+// BE-NEXT:    ret <8 x i16> [[TMP2]]
+//
+uint16x8_t test_vmovnbq_m_u32(uint16x8_t a, uint32x4_t b, mve_pred16_t p)
+{
+#ifdef POLYMORPHIC
+    return vmovnbq_m(a, b, p);
+#else /* POLYMORPHIC */
+    return vmovnbq_m_u32(a, b, p);
+#endif /* POLYMORPHIC */
+}
+
+// LE-LABEL: @test_vmovntq_m_s16(
+// LE-NEXT:  entry:
+// LE-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// LE-NEXT:    [[TMP1:%.*]] = call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[TMP0]])
+// LE-NEXT:    [[TMP2:%.*]] = call <16 x i8> @llvm.arm.mve.vmovn.predicated.v16i8.v8i16.v8i1(<16 x i8> [[A:%.*]], <8 x i16> [[B:%.*]], i32 1, <8 x i1> [[TMP1]])
+// LE-NEXT:    ret <16 x i8> [[TMP2]]
+//
+// BE-LABEL: @test_vmovntq_m_s16(
+// BE-NEXT:  entry:
+// BE-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// BE-NEXT:    [[TMP1:%.*]] = call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[TMP0]])
+// BE-NEXT:    [[TMP2:%.*]] = call <16 x i8> @llvm.arm.mve.vmovn.predicated.v16i8.v8i16.v8i1(<16 x i8> [[A:%.*]], <8 x i16> [[B:%.*]], i32 1, <8 x i1> [[TMP1]])
+// BE-NEXT:    ret <16 x i8> [[TMP2]]
+//
+int8x16_t test_vmovntq_m_s16(int8x16_t a, int16x8_t b, mve_pred16_t p)
+{
+#ifdef POLYMORPHIC
+    return vmovntq_m(a, b, p);
+#else /* POLYMORPHIC */
+    return vmovntq_m_s16(a, b, p);
+#endif /* POLYMORPHIC */
+}
+
+// LE-LABEL: @test_vmovntq_m_s32(
+// LE-NEXT:  entry:
+// LE-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// LE-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
+// LE-NEXT:    [[TMP2:%.*]] = call <8 x i16> @llvm.arm.mve.vmovn.predicated.v8i16.v4i32.v4i1(<8 x i16> [[A:%.*]], <4 x i32> [[B:%.*]], i32 1, <4 x i1> [[TMP1]])
+// LE-NEXT:    ret <8 x i16> [[TMP2]]
+//
+// BE-LABEL: @test_vmovntq_m_s32(
+// BE-NEXT:  entry:
+// BE-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// BE-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
+// BE-NEXT:    [[TMP2:%.*]] = call <8 x i16> @llvm.arm.mve.vmovn.predicated.v8i16.v4i32.v4i1(<8 x i16> [[A:%.*]], <4 x i32> [[B:%.*]], i32 1, <4 x i1> [[TMP1]])
+// BE-NEXT:    ret <8 x i16> [[TMP2]]
+//
+int16x8_t test_vmovntq_m_s32(int16x8_t a, int32x4_t b, mve_pred16_t p)
+{
+#ifdef POLYMORPHIC
+    return vmovntq_m(a, b, p);
+#else /* POLYMORPHIC */
+    return vmovntq_m_s32(a, b, p);
+#endif /* POLYMORPHIC */
+}
+
+// LE-LABEL: @test_vmovntq_m_u16(
+// LE-NEXT:  entry:
+// LE-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// LE-NEXT:    [[TMP1:%.*]] = call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[TMP0]])
+// LE-NEXT:    [[TMP2:%.*]] = call <16 x i8> @llvm.arm.mve.vmovn.predicated.v16i8.v8i16.v8i1(<16 x i8> [[A:%.*]], <8 x i16> [[B:%.*]], i32 1, <8 x i1> [[TMP1]])
+// LE-NEXT:    ret <16 x i8> [[TMP2]]
+//
+// BE-LABEL: @test_vmovntq_m_u16(
+// BE-NEXT:  entry:
+// BE-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// BE-NEXT:    [[TMP1:%.*]] = call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[TMP0]])
+// BE-NEXT:    [[TMP2:%.*]] = call <16 x i8> @llvm.arm.mve.vmovn.predicated.v16i8.v8i16.v8i1(<16 x i8> [[A:%.*]], <8 x i16> [[B:%.*]], i32 1, <8 x i1> [[TMP1]])
+// BE-NEXT:    ret <16 x i8> [[TMP2]]
+//
+uint8x16_t test_vmovntq_m_u16(uint8x16_t a, uint16x8_t b, mve_pred16_t p)
+{
+#ifdef POLYMORPHIC
+    return vmovntq_m(a, b, p);
+#else /* POLYMORPHIC */
+    return vmovntq_m_u16(a, b, p);
+#endif /* POLYMORPHIC */
+}
+
+// LE-LABEL: @test_vmovntq_m_u32(
+// LE-NEXT:  entry:
+// LE-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// LE-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
+// LE-NEXT:    [[TMP2:%.*]] = call <8 x i16> @llvm.arm.mve.vmovn.predicated.v8i16.v4i32.v4i1(<8 x i16> [[A:%.*]], <4 x i32> [[B:%.*]], i32 1, <4 x i1> [[TMP1]])
+// LE-NEXT:    ret <8 x i16> [[TMP2]]
+//
+// BE-LABEL: @test_vmovntq_m_u32(
+// BE-NEXT:  entry:
+// BE-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// BE-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
+// BE-NEXT:    [[TMP2:%.*]] = call <8 x i16> @llvm.arm.mve.vmovn.predicated.v8i16.v4i32.v4i1(<8 x i16> [[A:%.*]], <4 x i32> [[B:%.*]], i32 1, <4 x i1> [[TMP1]])
+// BE-NEXT:    ret <8 x i16> [[TMP2]]
+//
+uint16x8_t test_vmovntq_m_u32(uint16x8_t a, uint32x4_t b, mve_pred16_t p)
+{
+#ifdef POLYMORPHIC
+    return vmovntq_m(a, b, p);
+#else /* POLYMORPHIC */
+    return vmovntq_m_u32(a, b, p);
+#endif /* POLYMORPHIC */
+}

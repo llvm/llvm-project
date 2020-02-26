@@ -172,6 +172,8 @@ class MockGDBServerResponder:
             return self.qHostInfo()
         if packet == "qGetWorkingDir":
             return self.qGetWorkingDir()
+        if packet == "qOffsets":
+            return self.qOffsets();
         if packet == "qsProcessInfo":
             return self.qsProcessInfo()
         if packet.startswith("qfProcessInfo"):
@@ -187,6 +189,9 @@ class MockGDBServerResponder:
 
     def qGetWorkingDir(self):
         return "2f"
+
+    def qOffsets(self):
+        return ""
 
     def qHostInfo(self):
         return "ptrsize:8;endian:little;"

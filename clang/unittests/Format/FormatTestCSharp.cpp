@@ -525,11 +525,11 @@ Shape[] shapes = new[] {
 
   // Omitted final `,`s will change the formatting.
   verifyFormat(R"(//
-Shape[] shapes = new[] {new Circle {Radius = 2.7281, Colour = Colours.Red},
-                        new Square {
-                            Side = 101.1,
-                            Colour = Colours.Yellow,
-                        }};)",
+Shape[] shapes = new[] { new Circle { Radius = 2.7281, Colour = Colours.Red },
+                         new Square {
+                             Side = 101.1,
+                             Colour = Colours.Yellow,
+                         } };)",
                Style);
 }
 
@@ -573,6 +573,28 @@ public string Name {
   set => _name = value;
 })",
                Style);
+}
+
+TEST_F(FormatTestCSharp, CSharpSpaces) {
+  FormatStyle Style = getGoogleStyle(FormatStyle::LK_CSharp);
+  Style.SpaceBeforeSquareBrackets = false;
+  Style.SpacesInSquareBrackets = false;
+  Style.SpaceBeforeCpp11BracedList = true;
+  Style.Cpp11BracedListStyle = false;
+  Style.SpacesInContainerLiterals = false;
+
+  verifyFormat(R"(new Car { "Door", 0.1 })", Style);
+  verifyFormat(R"(new Car { 0.1, "Door" })", Style);
+  verifyFormat(R"(new string[] { "A" })", Style);
+  verifyFormat(R"(new string[] {})", Style);
+  verifyFormat(R"(new Car { someVariableName })", Style);
+  verifyFormat(R"(new Car { someVariableName })", Style);
+  verifyFormat(R"(new Dictionary<string, string> { ["Key"] = "Value" };)",
+               Style);
+  verifyFormat(R"(Apply(x => x.Name, x => () => x.ID);)", Style);
+  verifyFormat(R"(bool[] xs = { true, true };)", Style);
+  verifyFormat(R"(taskContext.Factory.Run(async () => doThing(args);)", Style);
+  verifyFormat(R"(catch (TestException) when (innerFinallyExecuted))", Style);
 }
 
 } // namespace format

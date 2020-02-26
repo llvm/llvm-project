@@ -100,6 +100,246 @@ uint32x4_t test_vcvtq_u32_f32(float32x4_t a)
     return vcvtq_u32_f32(a);
 }
 
+// CHECK-LABEL: @test_vcvtq_m_f16_s16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <8 x half> @llvm.arm.mve.vcvt.fp.int.predicated.v8f16.v8i16.v8i1(<8 x i16> [[A:%.*]], i32 0, <8 x i1> [[TMP1]], <8 x half> [[INACTIVE:%.*]])
+// CHECK-NEXT:    ret <8 x half> [[TMP2]]
+//
+float16x8_t test_vcvtq_m_f16_s16(float16x8_t inactive, int16x8_t a, mve_pred16_t p)
+{
+#ifdef POLYMORPHIC
+    return vcvtq_m(inactive, a, p);
+#else /* POLYMORPHIC */
+    return vcvtq_m_f16_s16(inactive, a, p);
+#endif /* POLYMORPHIC */
+}
+
+// CHECK-LABEL: @test_vcvtq_m_f16_u16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <8 x half> @llvm.arm.mve.vcvt.fp.int.predicated.v8f16.v8i16.v8i1(<8 x i16> [[A:%.*]], i32 1, <8 x i1> [[TMP1]], <8 x half> [[INACTIVE:%.*]])
+// CHECK-NEXT:    ret <8 x half> [[TMP2]]
+//
+float16x8_t test_vcvtq_m_f16_u16(float16x8_t inactive, uint16x8_t a, mve_pred16_t p)
+{
+#ifdef POLYMORPHIC
+    return vcvtq_m(inactive, a, p);
+#else /* POLYMORPHIC */
+    return vcvtq_m_f16_u16(inactive, a, p);
+#endif /* POLYMORPHIC */
+}
+
+// CHECK-LABEL: @test_vcvtq_m_f32_s32(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <4 x float> @llvm.arm.mve.vcvt.fp.int.predicated.v4f32.v4i32.v4i1(<4 x i32> [[A:%.*]], i32 0, <4 x i1> [[TMP1]], <4 x float> [[INACTIVE:%.*]])
+// CHECK-NEXT:    ret <4 x float> [[TMP2]]
+//
+float32x4_t test_vcvtq_m_f32_s32(float32x4_t inactive, int32x4_t a, mve_pred16_t p)
+{
+#ifdef POLYMORPHIC
+    return vcvtq_m(inactive, a, p);
+#else /* POLYMORPHIC */
+    return vcvtq_m_f32_s32(inactive, a, p);
+#endif /* POLYMORPHIC */
+}
+
+// CHECK-LABEL: @test_vcvtq_m_f32_u32(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <4 x float> @llvm.arm.mve.vcvt.fp.int.predicated.v4f32.v4i32.v4i1(<4 x i32> [[A:%.*]], i32 1, <4 x i1> [[TMP1]], <4 x float> [[INACTIVE:%.*]])
+// CHECK-NEXT:    ret <4 x float> [[TMP2]]
+//
+float32x4_t test_vcvtq_m_f32_u32(float32x4_t inactive, uint32x4_t a, mve_pred16_t p)
+{
+#ifdef POLYMORPHIC
+    return vcvtq_m(inactive, a, p);
+#else /* POLYMORPHIC */
+    return vcvtq_m_f32_u32(inactive, a, p);
+#endif /* POLYMORPHIC */
+}
+
+// CHECK-LABEL: @test_vcvtq_m_s16_f16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <8 x i16> @llvm.arm.mve.vcvt.fp.int.predicated.v8i16.v8f16.v8i1(<8 x half> [[A:%.*]], i32 0, <8 x i1> [[TMP1]], <8 x i16> [[INACTIVE:%.*]])
+// CHECK-NEXT:    ret <8 x i16> [[TMP2]]
+//
+int16x8_t test_vcvtq_m_s16_f16(int16x8_t inactive, float16x8_t a, mve_pred16_t p)
+{
+#ifdef POLYMORPHIC
+    return vcvtq_m(inactive, a, p);
+#else /* POLYMORPHIC */
+    return vcvtq_m_s16_f16(inactive, a, p);
+#endif /* POLYMORPHIC */
+}
+
+// CHECK-LABEL: @test_vcvtq_m_s32_f32(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i32> @llvm.arm.mve.vcvt.fp.int.predicated.v4i32.v4f32.v4i1(<4 x float> [[A:%.*]], i32 0, <4 x i1> [[TMP1]], <4 x i32> [[INACTIVE:%.*]])
+// CHECK-NEXT:    ret <4 x i32> [[TMP2]]
+//
+int32x4_t test_vcvtq_m_s32_f32(int32x4_t inactive, float32x4_t a, mve_pred16_t p)
+{
+#ifdef POLYMORPHIC
+    return vcvtq_m(inactive, a, p);
+#else /* POLYMORPHIC */
+    return vcvtq_m_s32_f32(inactive, a, p);
+#endif /* POLYMORPHIC */
+}
+
+// CHECK-LABEL: @test_vcvtq_m_u16_f16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <8 x i16> @llvm.arm.mve.vcvt.fp.int.predicated.v8i16.v8f16.v8i1(<8 x half> [[A:%.*]], i32 1, <8 x i1> [[TMP1]], <8 x i16> [[INACTIVE:%.*]])
+// CHECK-NEXT:    ret <8 x i16> [[TMP2]]
+//
+uint16x8_t test_vcvtq_m_u16_f16(uint16x8_t inactive, float16x8_t a, mve_pred16_t p)
+{
+#ifdef POLYMORPHIC
+    return vcvtq_m(inactive, a, p);
+#else /* POLYMORPHIC */
+    return vcvtq_m_u16_f16(inactive, a, p);
+#endif /* POLYMORPHIC */
+}
+
+// CHECK-LABEL: @test_vcvtq_m_u32_f32(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i32> @llvm.arm.mve.vcvt.fp.int.predicated.v4i32.v4f32.v4i1(<4 x float> [[A:%.*]], i32 1, <4 x i1> [[TMP1]], <4 x i32> [[INACTIVE:%.*]])
+// CHECK-NEXT:    ret <4 x i32> [[TMP2]]
+//
+uint32x4_t test_vcvtq_m_u32_f32(uint32x4_t inactive, float32x4_t a, mve_pred16_t p)
+{
+#ifdef POLYMORPHIC
+    return vcvtq_m(inactive, a, p);
+#else /* POLYMORPHIC */
+    return vcvtq_m_u32_f32(inactive, a, p);
+#endif /* POLYMORPHIC */
+}
+
+// CHECK-LABEL: @test_vcvtq_x_f16_s16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <8 x half> @llvm.arm.mve.vcvt.fp.int.predicated.v8f16.v8i16.v8i1(<8 x i16> [[A:%.*]], i32 0, <8 x i1> [[TMP1]], <8 x half> undef)
+// CHECK-NEXT:    ret <8 x half> [[TMP2]]
+//
+float16x8_t test_vcvtq_x_f16_s16(int16x8_t a, mve_pred16_t p)
+{
+#ifdef POLYMORPHIC
+    return vcvtq_x(a, p);
+#else /* POLYMORPHIC */
+    return vcvtq_x_f16_s16(a, p);
+#endif /* POLYMORPHIC */
+}
+
+// CHECK-LABEL: @test_vcvtq_x_f16_u16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <8 x half> @llvm.arm.mve.vcvt.fp.int.predicated.v8f16.v8i16.v8i1(<8 x i16> [[A:%.*]], i32 1, <8 x i1> [[TMP1]], <8 x half> undef)
+// CHECK-NEXT:    ret <8 x half> [[TMP2]]
+//
+float16x8_t test_vcvtq_x_f16_u16(uint16x8_t a, mve_pred16_t p)
+{
+#ifdef POLYMORPHIC
+    return vcvtq_x(a, p);
+#else /* POLYMORPHIC */
+    return vcvtq_x_f16_u16(a, p);
+#endif /* POLYMORPHIC */
+}
+
+// CHECK-LABEL: @test_vcvtq_x_f32_s32(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <4 x float> @llvm.arm.mve.vcvt.fp.int.predicated.v4f32.v4i32.v4i1(<4 x i32> [[A:%.*]], i32 0, <4 x i1> [[TMP1]], <4 x float> undef)
+// CHECK-NEXT:    ret <4 x float> [[TMP2]]
+//
+float32x4_t test_vcvtq_x_f32_s32(int32x4_t a, mve_pred16_t p)
+{
+#ifdef POLYMORPHIC
+    return vcvtq_x(a, p);
+#else /* POLYMORPHIC */
+    return vcvtq_x_f32_s32(a, p);
+#endif /* POLYMORPHIC */
+}
+
+// CHECK-LABEL: @test_vcvtq_x_f32_u32(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <4 x float> @llvm.arm.mve.vcvt.fp.int.predicated.v4f32.v4i32.v4i1(<4 x i32> [[A:%.*]], i32 1, <4 x i1> [[TMP1]], <4 x float> undef)
+// CHECK-NEXT:    ret <4 x float> [[TMP2]]
+//
+float32x4_t test_vcvtq_x_f32_u32(uint32x4_t a, mve_pred16_t p)
+{
+#ifdef POLYMORPHIC
+    return vcvtq_x(a, p);
+#else /* POLYMORPHIC */
+    return vcvtq_x_f32_u32(a, p);
+#endif /* POLYMORPHIC */
+}
+
+// CHECK-LABEL: @test_vcvtq_x_s16_f16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <8 x i16> @llvm.arm.mve.vcvt.fp.int.predicated.v8i16.v8f16.v8i1(<8 x half> [[A:%.*]], i32 0, <8 x i1> [[TMP1]], <8 x i16> undef)
+// CHECK-NEXT:    ret <8 x i16> [[TMP2]]
+//
+int16x8_t test_vcvtq_x_s16_f16(float16x8_t a, mve_pred16_t p)
+{
+    return vcvtq_x_s16_f16(a, p);
+}
+
+// CHECK-LABEL: @test_vcvtq_x_s32_f32(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i32> @llvm.arm.mve.vcvt.fp.int.predicated.v4i32.v4f32.v4i1(<4 x float> [[A:%.*]], i32 0, <4 x i1> [[TMP1]], <4 x i32> undef)
+// CHECK-NEXT:    ret <4 x i32> [[TMP2]]
+//
+int32x4_t test_vcvtq_x_s32_f32(float32x4_t a, mve_pred16_t p)
+{
+    return vcvtq_x_s32_f32(a, p);
+}
+
+// CHECK-LABEL: @test_vcvtq_x_u16_f16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <8 x i16> @llvm.arm.mve.vcvt.fp.int.predicated.v8i16.v8f16.v8i1(<8 x half> [[A:%.*]], i32 1, <8 x i1> [[TMP1]], <8 x i16> undef)
+// CHECK-NEXT:    ret <8 x i16> [[TMP2]]
+//
+uint16x8_t test_vcvtq_x_u16_f16(float16x8_t a, mve_pred16_t p)
+{
+    return vcvtq_x_u16_f16(a, p);
+}
+
+// CHECK-LABEL: @test_vcvtq_x_u32_f32(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i32> @llvm.arm.mve.vcvt.fp.int.predicated.v4i32.v4f32.v4i1(<4 x float> [[A:%.*]], i32 1, <4 x i1> [[TMP1]], <4 x i32> undef)
+// CHECK-NEXT:    ret <4 x i32> [[TMP2]]
+//
+uint32x4_t test_vcvtq_x_u32_f32(float32x4_t a, mve_pred16_t p)
+{
+    return vcvtq_x_u32_f32(a, p);
+}
+
 // CHECK-LABEL: @test_vcvttq_f16_f32(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = call <8 x half> @llvm.arm.mve.vcvt.narrow(<8 x half> [[A:%.*]], <4 x float> [[B:%.*]], i32 1)

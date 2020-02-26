@@ -413,7 +413,7 @@ entry:
 ; GCN-LABEL: {{^}}atomic_umax_i64_addr64_offset:
 ; CI: buffer_atomic_umax_x2 v{{\[[0-9]+:[0-9]+\]}}, v[{{[0-9]+}}:{{[0-9]+}}], s[{{[0-9]+}}:{{[0-9]+}}], 0 addr64 offset:32{{$}}
 ; VI: flat_atomic_umax_x2 v[{{[0-9]+:[0-9]+}}], v{{\[[0-9]+:[0-9]+\]$}}
-; FX9: global_atomic_umax_x2 v[{{[0-9]+:[0-9]+}}], v{{\[[0-9]+:[0-9]+\]}} offset:32{{$}}
+; GFX9: global_atomic_umax_x2 v[{{[0-9]+:[0-9]+}}], v{{\[[0-9]+:[0-9]+\]}}, off offset:32{{$}}
 define amdgpu_kernel void @atomic_umax_i64_addr64_offset(i64 addrspace(1)* %out, i64 %in, i64 %index) {
 entry:
   %ptr = getelementptr i64, i64 addrspace(1)* %out, i64 %index

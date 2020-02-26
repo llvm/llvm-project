@@ -1,5 +1,5 @@
 # RUN: llc -run-pass=aarch64-ldst-opt -mtriple=arm64-apple-iphoneos -verify-machineinstrs -aarch64-load-store-renaming=true -o - %s | FileCheck %s
-# RUN: llc -run-pass=aarch64-ldst-opt -mtriple=arm64-apple-iphoneos -verify-machineinstrs -o - %s | FileCheck --check-prefix=NO-RENAME %s
+# RUN: llc -run-pass=aarch64-ldst-opt -mtriple=arm64-apple-iphoneos -verify-machineinstrs -aarch64-load-store-renaming=false -o - %s | FileCheck --check-prefix=NO-RENAME %s
 
 # NO-RENAME-NOT: STP
 # NO-RENAME:     test12

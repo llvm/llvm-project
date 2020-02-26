@@ -45,6 +45,13 @@ using namespace lldb_private::process_gdb_remote;
 using namespace lldb_private;
 using namespace std::chrono;
 
+llvm::raw_ostream &process_gdb_remote::operator<<(llvm::raw_ostream &os,
+                                                  const QOffsets &offsets) {
+  return os << llvm::formatv(
+             "QOffsets({0}, [{1:@[x]}])", offsets.segments,
+             llvm::make_range(offsets.offsets.begin(), offsets.offsets.end()));
+}
+
 // GDBRemoteCommunicationClient constructor
 GDBRemoteCommunicationClient::GDBRemoteCommunicationClient()
     : GDBRemoteClientBase("gdb-remote.client", "gdb-remote.client.rx_packet"),
@@ -3529,6 +3536,46 @@ Status GDBRemoteCommunicationClient::SendGetTraceDataPacket(
     buffer = buffer.slice(buffer.size());
   }
   return error;
+}
+
+llvm::Optional<QOffsets> GDBRemoteCommunicationClient::GetQOffsets() {
+  StringExtractorGDBRemote response;
+  if (SendPacketAndWaitForResponse(
+          "qOffsets", response, /*send_async=*/false) != PacketResult::Success)
+    return llvm::None;
+  if (!response.IsNormalResponse())
+    return llvm::None;
+
+  QOffsets result;
+  llvm::StringRef ref = response.GetStringRef();
+  const auto &GetOffset = [&] {
+    addr_t offset;
+    if (ref.consumeInteger(16, offset))
+      return false;
+    result.offsets.push_back(offset);
+    return true;
+  };
+
+  if (ref.consume_front("Text=")) {
+    result.segments = false;
+    if (!GetOffset())
+      return llvm::None;
+    if (!ref.consume_front(";Data=") || !GetOffset())
+      return llvm::None;
+    if (ref.empty())
+      return result;
+    if (ref.consume_front(";Bss=") && GetOffset() && ref.empty())
+      return result;
+  } else if (ref.consume_front("TextSeg=")) {
+    result.segments = true;
+    if (!GetOffset())
+      return llvm::None;
+    if (ref.empty())
+      return result;
+    if (ref.consume_front(";DataSeg=") && GetOffset() && ref.empty())
+      return result;
+  }
+  return llvm::None;
 }
 
 bool GDBRemoteCommunicationClient::GetModuleInfo(
