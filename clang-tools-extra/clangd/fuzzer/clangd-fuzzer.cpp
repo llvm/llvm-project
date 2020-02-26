@@ -16,6 +16,7 @@
 #include "ClangdServer.h"
 #include "CodeComplete.h"
 #include "FSProvider.h"
+#include "refactor/Rename.h"
 #include <cstdio>
 #include <sstream>
 
@@ -36,8 +37,8 @@ extern "C" int LLVMFuzzerTestOneInput(uint8_t *data, size_t size) {
   ClangdServer::Options Opts;
 
   // Initialize and run ClangdLSPServer.
-  ClangdLSPServer LSPServer(*Transport, FS, CCOpts, llvm::None, false,
-                            llvm::None, Opts);
+  ClangdLSPServer LSPServer(*Transport, FS, CCOpts, RenameOptions(), llvm::None,
+                            false, llvm::None, Opts);
   LSPServer.run();
   return 0;
 }
