@@ -2870,21 +2870,34 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     if (Left.is(tok::numeric_constant) && Right.is(tok::percent))
       return Right.WhitespaceRange.getEnd() != Right.WhitespaceRange.getBegin();
   } else if (Style.isCSharp()) {
+    // Require spaces around '{' and  before '}' unless they appear in
+    // interpolated strings. Interpolated strings are merged into a single token
+    // so cannot have spaces inserted by this function.
+
+    // Space before { (including space within '{ {').
+    if (Right.is(tok::l_brace))
+      return true;
+
+    // Spaces inside braces.
+    if (Left.is(tok::l_brace) && Right.isNot(tok::r_brace))
+      return true;
+
+    if (Left.isNot(tok::l_brace) && Right.is(tok::r_brace))
+      return true;
+
+    // Spaces around '=>'.
+    if (Left.is(TT_JsFatArrow) || Right.is(TT_JsFatArrow))
+      return true;
+
     // space between type and variable e.g. Dictionary<string,string> foo;
     if (Left.is(TT_TemplateCloser) && Right.is(TT_StartOfName))
       return true;
+
     // space between keywords and paren e.g. "using ("
     if (Right.is(tok::l_paren))
-      if (Left.is(tok::kw_using))
+      if (Left.isOneOf(tok::kw_using, Keywords.kw_async, Keywords.kw_when))
         return Style.SpaceBeforeParens == FormatStyle::SBPO_ControlStatements ||
                spaceRequiredBeforeParens(Right);
-    // space between ']' and '{'
-    if (Left.is(tok::r_square) && Right.is(tok::l_brace))
-      return true;
-    // space before '{' in "new MyType {"
-    if (Right.is(tok::l_brace) && Left.Previous &&
-        Left.Previous->is(tok::kw_new))
-      return true;
   } else if (Style.Language == FormatStyle::LK_JavaScript) {
     if (Left.is(TT_JsFatArrow))
       return true;
