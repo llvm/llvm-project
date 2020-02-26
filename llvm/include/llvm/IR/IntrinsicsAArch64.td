@@ -619,7 +619,7 @@ def int_aarch64_neon_tbx4 : AdvSIMD_Tbx4_Intrinsic;
 
 let TargetPrefix = "aarch64" in {
   class FPCR_Get_Intrinsic
-    : Intrinsic<[llvm_i64_ty], [], [IntrNoMem]>;
+    : Intrinsic<[llvm_i64_ty], [], [IntrNoMem, IntrHasSideEffects]>;
 }
 
 // FPCR
