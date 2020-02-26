@@ -227,7 +227,7 @@ entry:
   ret void
 }
 
-; FUNC-LABEL: {{^}}div_afn_2_x_pat_f16:
+; SI-LABEL: {{^}}div_afn_2_x_pat_f16:
 ; SI: v_mul_f32_e32 v{{[0-9]+}}, 0.5, v{{[0-9]+}}
 
 ; GFX8_9_10: v_mul_f16_e32 [[MUL:v[0-9]+]], 0.5, v{{[0-9]+}}
@@ -239,7 +239,7 @@ define amdgpu_kernel void @div_afn_2_x_pat_f16(half addrspace(1)* %out) #0 {
   ret void
 }
 
-; FUNC-LABEL: {{^}}div_afn_k_x_pat_f16:
+; SI-LABEL: {{^}}div_afn_k_x_pat_f16:
 ; SI: v_mul_f32_e32 v{{[0-9]+}}, 0x3dcccccd, v{{[0-9]+}}
 
 ; GFX8_9_10: v_mul_f16_e32 [[MUL:v[0-9]+]], 0x2e66, v{{[0-9]+}}
@@ -251,7 +251,7 @@ define amdgpu_kernel void @div_afn_k_x_pat_f16(half addrspace(1)* %out) #0 {
   ret void
 }
 
-; FUNC-LABEL: {{^}}div_afn_neg_k_x_pat_f16:
+; SI-LABEL: {{^}}div_afn_neg_k_x_pat_f16:
 ; SI: v_mul_f32_e32 v{{[0-9]+}}, 0xbdcccccd, v{{[0-9]+}}
 
 ; GFX8_9_10: v_mul_f16_e32 [[MUL:v[0-9]+]], 0xae66, v{{[0-9]+}}

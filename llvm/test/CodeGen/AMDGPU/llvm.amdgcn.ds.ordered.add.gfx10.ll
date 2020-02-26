@@ -1,6 +1,6 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs -show-mc-encoding < %s | FileCheck -check-prefixes=GCN %s
 
-; FUNC-LABEL: {{^}}ds_ordered_add:
+; GCN-LABEL: {{^}}ds_ordered_add:
 ; GCN-DAG: v_mov_b32_e32 v[[INCR:[0-9]+]], 31
 ; GCN-DAG: s_mov_b32 m0,
 ; GCN: ds_ordered_count v{{[0-9]+}}, v[[INCR]] offset:772 gds
@@ -10,7 +10,7 @@ define amdgpu_kernel void @ds_ordered_add(i32 addrspace(2)* inreg %gds, i32 addr
   ret void
 }
 
-; FUNC-LABEL: {{^}}ds_ordered_add_4dw:
+; GCN-LABEL: {{^}}ds_ordered_add_4dw:
 ; GCN-DAG: v_mov_b32_e32 v[[INCR:[0-9]+]], 31
 ; GCN-DAG: s_mov_b32 m0,
 ; GCN: ds_ordered_count v{{[0-9]+}}, v[[INCR]] offset:49924 gds
