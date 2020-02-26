@@ -183,12 +183,12 @@ static void buildPartialUnswitchConditionalBranch(BasicBlock &BB,
                                                   bool Direction,
                                                   BasicBlock &UnswitchedSucc,
                                                   BasicBlock &NormalSucc,
-                                                  bool insertFreeze) {
+                                                  bool InsertFreeze) {
   IRBuilder<> IRB(&BB);
 
   Value *Cond = Direction ? IRB.CreateOr(Invariants) :
     IRB.CreateAnd(Invariants);
-  if (insertFreeze)
+  if (InsertFreeze)
     Cond = IRB.CreateFreeze(Cond, Cond->getName() + ".fr");
   IRB.CreateCondBr(Cond, Direction ? &UnswitchedSucc : &NormalSucc,
                    Direction ? &NormalSucc : &UnswitchedSucc);
@@ -2016,7 +2016,7 @@ static void unswitchNontrivialInvariants(
 
   ICFLoopSafetyInfo SafetyInfo(&DT);
   SafetyInfo.computeLoopSafetyInfo(&L);
-  bool insertFreeze = !SafetyInfo.isGuaranteedToExecute(TI, &DT, &L);
+  bool InsertFreeze = !SafetyInfo.isGuaranteedToExecute(TI, &DT, &L);
 
   // If the edge from this terminator to a successor dominates that successor,
   // store a map from each block in its dominator subtree to it. This lets us
@@ -2075,7 +2075,7 @@ static void unswitchNontrivialInvariants(
       BasicBlock *ClonedPH = ClonedPHs.begin()->second;
       BI->setSuccessor(ClonedSucc, ClonedPH);
       BI->setSuccessor(1 - ClonedSucc, LoopPH);
-      if (insertFreeze) {
+      if (InsertFreeze) {
         auto Cond = BI->getCondition();
         if (!isGuaranteedNotToBeUndefOrPoison(Cond))
           BI->setCondition(new FreezeInst(Cond, Cond->getName() + ".fr", BI));
@@ -2095,7 +2095,7 @@ static void unswitchNontrivialInvariants(
         else
           Case.setSuccessor(ClonedPHs.find(Case.getCaseSuccessor())->second);
 
-      if (insertFreeze) {
+      if (InsertFreeze) {
         auto Cond = SI->getCondition();
         if (!isGuaranteedNotToBeUndefOrPoison(Cond))
           SI->setCondition(new FreezeInst(Cond, Cond->getName() + ".fr", SI));
@@ -2177,7 +2177,7 @@ static void unswitchNontrivialInvariants(
     // When doing a partial unswitch, we have to do a bit more work to build up
     // the branch in the split block.
     buildPartialUnswitchConditionalBranch(*SplitBB, Invariants, Direction,
-                                          *ClonedPH, *LoopPH, insertFreeze);
+                                          *ClonedPH, *LoopPH, InsertFreeze);
     DTUpdates.push_back({DominatorTree::Insert, SplitBB, ClonedPH});
 
     if (MSSAU) {
