@@ -1017,6 +1017,9 @@ public:
 
   value_iterator value_begin() const { return ValueList; }
   value_iterator value_end() const { return ValueList+NumValues; }
+  iterator_range<value_iterator> values() const {
+    return llvm::make_range(value_begin(), value_end());
+  }
 
   /// Return the opcode of this operation for printing.
   std::string getOperationName(const SelectionDAG *G = nullptr) const;
