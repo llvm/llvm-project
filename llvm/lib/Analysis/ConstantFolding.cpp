@@ -1447,6 +1447,10 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case Intrinsic::convert_from_fp16:
   case Intrinsic::convert_to_fp16:
   case Intrinsic::bitreverse:
+  case Intrinsic::amdgcn_cubeid:
+  case Intrinsic::amdgcn_cubema:
+  case Intrinsic::amdgcn_cubesc:
+  case Intrinsic::amdgcn_cubetc:
   case Intrinsic::amdgcn_fmul_legacy:
   case Intrinsic::amdgcn_fract:
   case Intrinsic::x86_sse_cvtss2si:
@@ -2305,6 +2309,61 @@ static Constant *ConstantFoldScalarCall2(StringRef Name,
   return nullptr;
 }
 
+static APFloat ConstantFoldAMDGCNCubeIntrinsic(Intrinsic::ID IntrinsicID,
+                                               const APFloat &S0,
+                                               const APFloat &S1,
+                                               const APFloat &S2) {
+  unsigned ID;
+  const fltSemantics &Sem = S0.getSemantics();
+  APFloat MA(Sem), SC(Sem), TC(Sem);
+  if (abs(S2) >= abs(S0) && abs(S2) >= abs(S1)) {
+    if (S2.isNegative() && S2.isNonZero() && !S2.isNaN()) {
+      // S2 < 0
+      ID = 5;
+      SC = -S0;
+    } else {
+      ID = 4;
+      SC = S0;
+    }
+    MA = S2;
+    TC = -S1;
+  } else if (abs(S1) >= abs(S0)) {
+    if (S1.isNegative() && S1.isNonZero() && !S1.isNaN()) {
+      // S1 < 0
+      ID = 3;
+      TC = -S2;
+    } else {
+      ID = 2;
+      TC = S2;
+    }
+    MA = S1;
+    SC = S0;
+  } else {
+    if (S0.isNegative() && S0.isNonZero() && !S0.isNaN()) {
+      // S0 < 0
+      ID = 1;
+      SC = S2;
+    } else {
+      ID = 0;
+      SC = -S2;
+    }
+    MA = S0;
+    TC = -S1;
+  }
+  switch (IntrinsicID) {
+  default:
+    llvm_unreachable("unhandled amdgcn cube intrinsic");
+  case Intrinsic::amdgcn_cubeid:
+    return APFloat(Sem, ID);
+  case Intrinsic::amdgcn_cubema:
+    return MA + MA;
+  case Intrinsic::amdgcn_cubesc:
+    return SC;
+  case Intrinsic::amdgcn_cubetc:
+    return TC;
+  }
+}
+
 static Constant *ConstantFoldScalarCall3(StringRef Name,
                                          Intrinsic::ID IntrinsicID,
                                          Type *Ty,
@@ -2323,6 +2382,15 @@ static Constant *ConstantFoldScalarCall3(StringRef Name,
           APFloat V = Op1->getValueAPF();
           V.fusedMultiplyAdd(Op2->getValueAPF(), Op3->getValueAPF(),
                              APFloat::rmNearestTiesToEven);
+          return ConstantFP::get(Ty->getContext(), V);
+        }
+        case Intrinsic::amdgcn_cubeid:
+        case Intrinsic::amdgcn_cubema:
+        case Intrinsic::amdgcn_cubesc:
+        case Intrinsic::amdgcn_cubetc: {
+          APFloat V = ConstantFoldAMDGCNCubeIntrinsic(
+              IntrinsicID, Op1->getValueAPF(), Op2->getValueAPF(),
+              Op3->getValueAPF());
           return ConstantFP::get(Ty->getContext(), V);
         }
         }
