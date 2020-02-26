@@ -36,6 +36,7 @@ extern "C" {
 #include <dpu_memory.h>
 #include <dpu_program.h>
 #include <dpu_runner.h>
+#include <dpu_types.h>
 }
 
 using namespace lldb;
@@ -157,10 +158,15 @@ bool Dpu::Boot() {
   ReadIRAM(0, (void *)(&first_instruction), sizeof(dpuinstruction_t));
 
   const dpuinstruction_t breakpoint_instruction = 0x00007e6320000000;
-  WriteIRAM(0, (const void *)(&breakpoint_instruction),
-            sizeof(dpuinstruction_t));
+  WriteIRAMUntraced(0, (const void *)(&breakpoint_instruction),
+                    sizeof(dpuinstruction_t));
 
   int res = dpu_custom_for_dpu(m_dpu, DPU_COMMAND_DPU_PREEXECUTION, NULL);
+  if (res != DPU_OK)
+    return false;
+
+  res = dpu_custom_for_dpu(m_dpu, DPU_COMMAND_EVENT_START,
+                           (dpu_custom_command_args_t)DPU_EVENT_DEBUG_ACTION);
   if (res != DPU_OK)
     return false;
 
@@ -174,8 +180,14 @@ bool Dpu::Boot() {
     unsigned int exit_status;
     switch (PollStatus(&exit_status)) {
     case StateType::eStateStopped:
-      WriteIRAM(0, (const void *)(&first_instruction),
-                sizeof(dpuinstruction_t));
+      res =
+          dpu_custom_for_dpu(m_dpu, DPU_COMMAND_EVENT_END,
+                             (dpu_custom_command_args_t)DPU_EVENT_DEBUG_ACTION);
+      if (res != DPU_OK)
+        return false;
+
+      WriteIRAMUntraced(0, (const void *)(&first_instruction),
+                        sizeof(dpuinstruction_t));
       return true;
     case StateType::eStateRunning:
       break;
@@ -380,8 +392,8 @@ StateType Dpu::StepThread(uint32_t thread_index, unsigned int *exit_status) {
       if (!ReadIRAM(current_pc, &inst_to_restore_if_printf_enable,
                     sizeof(inst_to_restore_if_printf_enable)))
         return StateType::eStateCrashed;
-      if (!WriteIRAM(current_pc, (const void *)&inst_to_replace_with,
-                     sizeof(inst_to_replace_with)))
+      if (!WriteIRAMUntraced(current_pc, (const void *)&inst_to_replace_with,
+                             sizeof(inst_to_replace_with)))
         return StateType::eStateCrashed;
     }
   }
@@ -390,8 +402,9 @@ StateType Dpu::StepThread(uint32_t thread_index, unsigned int *exit_status) {
 
   // Write back the breakpoint
   if (inst_to_restore_if_printf_enable != UNKNOWN_INSTRUCTION) {
-    if (!WriteIRAM(current_pc, (const void *)&inst_to_restore_if_printf_enable,
-                   sizeof(inst_to_restore_if_printf_enable)))
+    if (!WriteIRAMUntraced(current_pc,
+                           (const void *)&inst_to_restore_if_printf_enable,
+                           sizeof(inst_to_restore_if_printf_enable)))
       return StateType::eStateCrashed;
   }
 
@@ -480,6 +493,23 @@ bool Dpu::ReadWRAM(uint32_t offset, void *buf, size_t size) {
                                      size / sizeof(dpuword_t));
   }
   return ret == DPU_OK;
+}
+
+bool Dpu::WriteIRAMUntraced(uint32_t offset, const void *buf, size_t size) {
+  if (dpu_custom_for_dpu(m_dpu, DPU_COMMAND_EVENT_START,
+                         (dpu_custom_command_args_t)DPU_EVENT_DEBUG_ACTION) !=
+      DPU_OK)
+    return false;
+
+  if (!WriteIRAM(offset, buf, size))
+    return false;
+
+  if (dpu_custom_for_dpu(m_dpu, DPU_COMMAND_EVENT_END,
+                         (dpu_custom_command_args_t)DPU_EVENT_DEBUG_ACTION) !=
+      DPU_OK)
+    return false;
+
+  return true;
 }
 
 bool Dpu::WriteIRAM(uint32_t offset, const void *buf, size_t size) {

@@ -106,6 +106,8 @@ public:
   lldb::addr_t GetClosePrintfSequenceAddr();
 
 private:
+  bool WriteIRAMUntraced(uint32_t offset, const void *buf, size_t size);
+
   DpuRank *m_rank;
   dpu_t *m_dpu;
   int nr_threads;
