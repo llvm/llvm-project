@@ -19627,6 +19627,7 @@ SDValue X86TargetLowering::LowerUINT_TO_FP(SDValue Op,
   APInt FF(64, 0x5F80000000000000ULL);
   SDValue FudgePtr = DAG.getConstantPool(
       ConstantInt::get(*DAG.getContext(), FF), PtrVT);
+  unsigned CPAlignment = cast<ConstantPoolSDNode>(FudgePtr)->getAlignment();
 
   // Get a pointer to FF if the sign bit was set, or to 0 otherwise.
   SDValue Zero = DAG.getIntPtrConstant(0, dl);
@@ -19638,7 +19639,7 @@ SDValue X86TargetLowering::LowerUINT_TO_FP(SDValue Op,
   SDValue Fudge = DAG.getExtLoad(
       ISD::EXTLOAD, dl, MVT::f80, Chain, FudgePtr,
       MachinePointerInfo::getConstantPool(DAG.getMachineFunction()), MVT::f32,
-      /* Alignment = */ 4);
+      CPAlignment);
   Chain = Fudge.getValue(1);
   // Extend everything to 80 bits to force it to be done on x87.
   // TODO: Are there any fast-math-flags to propagate here?
