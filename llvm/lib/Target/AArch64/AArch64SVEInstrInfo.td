@@ -1921,8 +1921,8 @@ let Predicates = [HasSVE2] in {
   defm STNT1D_ZZR_D : sve2_mem_sstnt_vs<0b110, "stnt1d", Z_d, ZPR64>;
 
   // SVE2 table lookup (three sources)
-  defm TBL_ZZZZ : sve2_int_perm_tbl<"tbl">;
-  defm TBX_ZZZ  : sve2_int_perm_tbx<"tbx">;
+  defm TBL_ZZZZ : sve2_int_perm_tbl<"tbl", int_aarch64_sve_tbl2>;
+  defm TBX_ZZZ  : sve2_int_perm_tbx<"tbx", int_aarch64_sve_tbx>;
 
   // SVE2 integer compare scalar count and limit
   defm WHILEGE_PWW : sve_int_while4_rr<0b000, "whilege", int_aarch64_sve_whilege>;
@@ -1970,7 +1970,7 @@ let Predicates = [HasSVE2SHA3] in {
 
 let Predicates = [HasSVE2BitPerm] in {
   // SVE2 bitwise permute
-  defm BEXT_ZZZ : sve2_misc_bitwise<0b1100, "bext">;
-  defm BDEP_ZZZ : sve2_misc_bitwise<0b1101, "bdep">;
-  defm BGRP_ZZZ : sve2_misc_bitwise<0b1110, "bgrp">;
+  defm BEXT_ZZZ : sve2_misc_bitwise<0b1100, "bext", int_aarch64_sve_bext_x>;
+  defm BDEP_ZZZ : sve2_misc_bitwise<0b1101, "bdep", int_aarch64_sve_bdep_x>;
+  defm BGRP_ZZZ : sve2_misc_bitwise<0b1110, "bgrp", int_aarch64_sve_bgrp_x>;
 }
