@@ -24,6 +24,26 @@ using namespace mlir;
 // Common utility functions
 //===----------------------------------------------------------------------===//
 
+/// Returns true if the given `irVal` is a scalar or splat vector constant of
+/// the given `boolVal`.
+static bool isScalarOrSplatBoolAttr(Attribute boolAttr, bool boolVal) {
+  if (!boolAttr)
+    return false;
+
+  auto type = boolAttr.getType();
+  if (type.isInteger(1)) {
+    auto attr = boolAttr.cast<BoolAttr>();
+    return attr.getValue() == boolVal;
+  }
+  if (auto vecType = type.cast<VectorType>()) {
+    if (vecType.getElementType().isInteger(1))
+      if (auto attr = boolAttr.dyn_cast<SplatElementsAttr>())
+        return attr.getSplatValue().template cast<BoolAttr>().getValue() ==
+               boolVal;
+  }
+  return false;
+}
+
 // Extracts an element from the given `composite` by following the given
 // `indices`. Returns a null Attribute if error happens.
 static Attribute extractCompositeElement(Attribute composite,
@@ -188,6 +208,24 @@ OpFoldResult spirv::ISubOp::fold(ArrayRef<Attribute> operands) {
 }
 
 //===----------------------------------------------------------------------===//
+// spv.LogicalAnd
+//===----------------------------------------------------------------------===//
+
+OpFoldResult spirv::LogicalAndOp::fold(ArrayRef<Attribute> operands) {
+  assert(operands.size() == 2 && "spv.LogicalAnd should take two operands");
+
+  // x && true = x
+  if (isScalarOrSplatBoolAttr(operands.back(), true))
+    return operand1();
+
+  // x && false = false
+  if (isScalarOrSplatBoolAttr(operands.back(), false))
+    return operands.back();
+
+  return Attribute();
+}
+
+//===----------------------------------------------------------------------===//
 // spv.LogicalNot
 //===----------------------------------------------------------------------===//
 
@@ -196,6 +234,24 @@ void spirv::LogicalNotOp::getCanonicalizationPatterns(
   results.insert<ConvertLogicalNotOfIEqual, ConvertLogicalNotOfINotEqual,
                  ConvertLogicalNotOfLogicalEqual,
                  ConvertLogicalNotOfLogicalNotEqual>(context);
+}
+
+//===----------------------------------------------------------------------===//
+// spv.LogicalOr
+//===----------------------------------------------------------------------===//
+
+OpFoldResult spirv::LogicalOrOp::fold(ArrayRef<Attribute> operands) {
+  assert(operands.size() == 2 && "spv.LogicalOr should take two operands");
+
+  // x || true = true
+  if (isScalarOrSplatBoolAttr(operands.back(), true))
+    return operands.back();
+
+  // x || false = x
+  if (isScalarOrSplatBoolAttr(operands.back(), false))
+    return operand1();
+
+  return Attribute();
 }
 
 //===----------------------------------------------------------------------===//
