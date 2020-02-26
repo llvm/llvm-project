@@ -627,11 +627,9 @@ define void @test_cmp_phi(i8 %a) {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[P:%.*]] = phi i8 [ [[A]], [[ENTRY:%.*]] ], [ [[B:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[C1:%.*]] = icmp ne i8 [[P]], 0
-; CHECK-NEXT:    [[C2:%.*]] = icmp ne i8 [[P]], 2
-; CHECK-NEXT:    [[C3:%.*]] = and i1 [[C1]], [[C2]]
 ; CHECK-NEXT:    [[C4:%.*]] = call i1 @get_bool()
 ; CHECK-NEXT:    [[B]] = zext i1 [[C4]] to i8
-; CHECK-NEXT:    br i1 [[C3]], label [[LOOP]], label [[EXIT]]
+; CHECK-NEXT:    br i1 [[C1]], label [[LOOP]], label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
