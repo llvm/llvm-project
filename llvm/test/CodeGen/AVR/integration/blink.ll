@@ -89,7 +89,7 @@ entry:
 
   br label %while.body
 
-; CHECK-LABEL: LBB3_1
+; CHECK-LABEL: .LBB3_1
 while.body:
 
   ; CHECK: call turn_on
@@ -98,6 +98,6 @@ while.body:
   ; CHECK-NEXT: call turn_off
   call void @turn_off()
 
-  ; CHECK-NEXT: rjmp LBB3_1
+  ; CHECK-NEXT: rjmp .LBB3_1
   br label %while.body
 }

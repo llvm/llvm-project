@@ -21,6 +21,7 @@ AVRMCAsmInfo::AVRMCAsmInfo(const Triple &TT, const MCTargetOptions &Options) {
   CalleeSaveStackSlotSize = 2;
   CommentString = ";";
   PrivateGlobalPrefix = ".L";
+  PrivateLabelPrefix = ".L";
   UsesELFSectionDirectiveForBSS = true;
   UseIntegratedAssembler = true;
   SupportsDebugInformation = true;
