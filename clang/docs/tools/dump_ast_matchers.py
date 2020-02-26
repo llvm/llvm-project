@@ -101,6 +101,8 @@ def unify_arguments(args):
   args = re.sub(r'extern const\s+(.*)&', r'\1 ', args)
   args = re.sub(r'&', r' ', args)
   args = re.sub(r'(^|\s)M\d?(\s)', r'\1Matcher<*>\2', args)
+  args = re.sub(r'BindableMatcher', r'Matcher', args)
+  args = re.sub(r'const Matcher', r'Matcher', args)
   return args
 
 def unify_type(result_type):
@@ -125,7 +127,8 @@ def add_matcher(result_type, name, args, comment, is_dyncast=False):
     'id': matcher_id,
   }
   if is_dyncast:
-    node_matchers[result_type + name] = matcher_html
+    dict = node_matchers
+    lookup = result_type + name
   # Use a heuristic to figure out whether a matcher is a narrowing or
   # traversal matcher. By default, matchers that take other matchers as
   # arguments (and are not node matchers) do traversal. We specifically
@@ -133,9 +136,14 @@ def add_matcher(result_type, name, args, comment, is_dyncast=False):
   # arguments.
   elif ('Matcher<' not in args or
         name in ['allOf', 'anyOf', 'anything', 'unless']):
-    narrowing_matchers[result_type + name + esc(args)] = matcher_html
+    dict = narrowing_matchers
+    lookup = result_type + name + esc(args)
   else:
-    traversal_matchers[result_type + name + esc(args)] = matcher_html
+    dict = traversal_matchers
+    lookup = result_type + name + esc(args)
+  
+  if dict.get(lookup) is None or len(dict.get(lookup)) < len(matcher_html):
+    dict[lookup] = matcher_html
 
 def act_on_decl(declaration, comment, allowed_types):
   """Parse the matcher out of the given declaration and comment.
@@ -145,6 +153,9 @@ def act_on_decl(declaration, comment, allowed_types):
      definition.
   """
   if declaration.strip():
+
+    if re.match(r'^\s?(#|namespace|using)', declaration): return
+
     # Node matchers are defined by writing:
     #   VariadicDynCastAllOfMatcher<ResultType, ArgumentType> name;
     m = re.match(r""".*Variadic(?:DynCast)?AllOfMatcher\s*<
@@ -317,16 +328,27 @@ def act_on_decl(declaration, comment, allowed_types):
 
     # Parse free standing matcher functions, like:
     #   Matcher<ResultType> Name(Matcher<ArgumentType> InnerMatcher) {
-    m = re.match(r"""^\s*(.*)\s+
+    m = re.match(r"""^\s*(?:template\s+<\s*(?:class|typename)\s+(.+)\s*>\s+)?   
+                     (.*)\s+
                      ([^\s\(]+)\s*\(
                      (.*)
                      \)\s*{""", declaration, re.X)
     if m:
-      result, name, args = m.groups()
+      template_name, result, name, args = m.groups()
+      if template_name:
+        matcherTemplateArgs = re.findall(r'Matcher<\s*(%s)\s*>' % template_name, args)
+        templateArgs = re.findall(r'(?:^|[\s,<])(%s)(?:$|[\s,>])' % template_name, args)
+        if len(matcherTemplateArgs) < len(templateArgs):
+          # The template name is used naked, so don't replace with `*`` later on
+          template_name = None
+        else :
+          args = re.sub(r'(^|[\s,<])%s($|[\s,>])' % template_name, r'\1*\2', args)
       args = ', '.join(p.strip() for p in args.split(','))
-      m = re.match(r'.*\s+internal::(Bindable)?Matcher<([^>]+)>$', result)
+      m = re.match(r'(?:^|.*\s+)internal::(?:Bindable)?Matcher<([^>]+)>$', result)
       if m:
-        result_types = [m.group(2)]
+        result_types = [m.group(1)]
+        if template_name and len(result_types) is 1 and result_types[0] == template_name:
+          result_types = ['*']
       else:
         result_types = extract_result_types(comment)
       if not result_types:
