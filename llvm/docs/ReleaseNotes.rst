@@ -106,6 +106,12 @@ Non-comprehensive list of changes in this release
   still under heavy development and disabled by default, to enable an early run
   pass ``-mllvm -attributor-disable=false`` to an invocation of clang.
 
+* New matrix math intrinsics have been added to LLVM
+  (see :ref:`LLVM Language Reference Manual <i_matrixintrinsics>`), together
+  with the LowerMatrixIntrinsics pass. The pass lowers matrix intrinsics
+  to a set of efficient vector instructions. The lowering pass is off
+  by default and can be enabled by passing ``-mllvm -enable-matrix`` to an
+  invocation of clang.
 
 
 Changes to the LLVM IR

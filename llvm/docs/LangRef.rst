@@ -14553,6 +14553,9 @@ Arguments:
 """"""""""
 The argument to this intrinsic must be a vector of floating-point values.
 
+
+.. _i_matrixintrinsics:
+
 Matrix Intrinsics
 -----------------
 
