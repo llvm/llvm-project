@@ -895,8 +895,8 @@ void JITDylib::replace(std::unique_ptr<MaterializationUnit> MU) {
         for (auto &KV : MU->getSymbols()) {
           auto SymI = Symbols.find(KV.first);
           assert(SymI != Symbols.end() && "Replacing unknown symbol");
-          assert(SymI->second.isInMaterializationPhase() &&
-                 "Can not call replace on a symbol that is not materializing");
+          assert(SymI->second.getState() == SymbolState::Materializing &&
+                 "Can not replace a symbol that ha is not materializing");
           assert(!SymI->second.hasMaterializerAttached() &&
                  "Symbol should not have materializer attached already");
           assert(UnmaterializedInfos.count(KV.first) == 0 &&
@@ -943,7 +943,9 @@ JITDylib::getRequestedSymbols(const SymbolFlagsMap &SymbolFlags) const {
 
     for (auto &KV : SymbolFlags) {
       assert(Symbols.count(KV.first) && "JITDylib does not cover this symbol?");
-      assert(Symbols.find(KV.first)->second.isInMaterializationPhase() &&
+      assert(Symbols.find(KV.first)->second.getState() !=
+                 SymbolState::NeverSearched &&
+             Symbols.find(KV.first)->second.getState() != SymbolState::Ready &&
              "getRequestedSymbols can only be called for symbols that have "
              "started materializing");
       auto I = MaterializingInfos.find(KV.first);
@@ -961,7 +963,7 @@ JITDylib::getRequestedSymbols(const SymbolFlagsMap &SymbolFlags) const {
 void JITDylib::addDependencies(const SymbolStringPtr &Name,
                                const SymbolDependenceMap &Dependencies) {
   assert(Symbols.count(Name) && "Name not in symbol table");
-  assert(Symbols[Name].isInMaterializationPhase() &&
+  assert(Symbols[Name].getState() < SymbolState::Emitted &&
          "Can not add dependencies for a symbol that is not materializing");
 
   LLVM_DEBUG({
@@ -1432,7 +1434,8 @@ Error JITDylib::remove(const SymbolNameSet &Names) {
       }
 
       // Note symbol materializing.
-      if (I->second.isInMaterializationPhase()) {
+      if (I->second.getState() != SymbolState::NeverSearched &&
+          I->second.getState() != SymbolState::Ready) {
         Materializing.insert(Name);
         continue;
       }
@@ -1600,7 +1603,8 @@ Error JITDylib::lodgeQueryImpl(MaterializationUnitList &MUs,
 
         // Add the query to the PendingQueries list and continue, deleting the
         // element.
-        assert(SymI->second.isInMaterializationPhase() &&
+        assert(SymI->second.getState() != SymbolState::NeverSearched &&
+               SymI->second.getState() != SymbolState::Ready &&
                "By this line the symbol should be materializing");
         auto &MI = MaterializingInfos[Name];
         MI.addQuery(Q);
@@ -1720,7 +1724,8 @@ bool JITDylib::lookupImpl(
         }
 
         // Add the query to the PendingQueries list.
-        assert(SymI->second.isInMaterializationPhase() &&
+        assert(SymI->second.getState() != SymbolState::NeverSearched &&
+               SymI->second.getState() != SymbolState::Ready &&
                "By this line the symbol should be materializing");
         auto &MI = MaterializingInfos[Name];
         MI.addQuery(Q);
