@@ -28,7 +28,6 @@ TEST(ScudoSizeClassMapTest, AndroidSizeClassMap) {
   testSizeClassMap<scudo::AndroidSizeClassMap>();
 }
 
-
 struct OneClassSizeClassConfig {
   static const scudo::uptr NumBits = 1;
   static const scudo::uptr MinSizeLog = 5;
