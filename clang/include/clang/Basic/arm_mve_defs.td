@@ -506,8 +506,8 @@ multiclass IntrinsicMX<Type rettype, dag arguments, dag cg,
   // provides the input value of the output register, i.e. all the
   // inactive lanes in the predicated operation take their values from
   // this.
-  def "_m" # nameSuffix:
-     Intrinsic<rettype, !con((args rettype:$inactive), arguments), cg> {
+  def : Intrinsic<rettype, !con((args rettype:$inactive), arguments), cg>,
+        NameOverride<NAME # "_m" # nameSuffix> {
     let pnt = pnt_m;
   }
 
@@ -515,8 +515,8 @@ multiclass IntrinsicMX<Type rettype, dag arguments, dag cg,
     // The _x variant leaves off that parameter, and simply uses an
     // undef value of the same type.
 
-    def "_x" # nameSuffix:
-      Intrinsic<rettype, arguments, (seq (undef rettype):$inactive, cg)> {
+    def : Intrinsic<rettype, arguments, (seq (undef rettype):$inactive, cg)>,
+          NameOverride<NAME # "_x" # nameSuffix> {
       let pnt = pnt_x;
     }
   }
