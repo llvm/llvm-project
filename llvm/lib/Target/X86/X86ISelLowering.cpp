@@ -25647,14 +25647,15 @@ SDValue X86TargetLowering::LowerFLT_ROUNDS_(SDValue Op,
       MF.getMachineMemOperand(MachinePointerInfo::getFixedStack(MF, SSFI),
                               MachineMemOperand::MOStore, 2, 2);
 
-  SDValue Ops[] = { DAG.getEntryNode(), StackSlot };
-  SDValue Chain = DAG.getMemIntrinsicNode(X86ISD::FNSTCW16m, DL,
-                                          DAG.getVTList(MVT::Other),
-                                          Ops, MVT::i16, MMO);
+  SDValue Chain = Op.getOperand(0);
+  SDValue Ops[] = {Chain, StackSlot};
+  Chain = DAG.getMemIntrinsicNode(
+      X86ISD::FNSTCW16m, DL, DAG.getVTList(MVT::Other), Ops, MVT::i16, MMO);
 
   // Load FP Control Word from stack slot
   SDValue CWD =
       DAG.getLoad(MVT::i16, DL, Chain, StackSlot, MachinePointerInfo());
+  Chain = CWD.getValue(1);
 
   // Mask and turn the control bits into a shift for the lookup table.
   SDValue Shift =
@@ -25670,7 +25671,9 @@ SDValue X86TargetLowering::LowerFLT_ROUNDS_(SDValue Op,
                 DAG.getNode(ISD::SRL, DL, MVT::i32, LUT, Shift),
                 DAG.getConstant(3, DL, MVT::i32));
 
-  return DAG.getZExtOrTrunc(RetVal, DL, VT);
+  RetVal = DAG.getZExtOrTrunc(RetVal, DL, VT);
+
+  return DAG.getMergeValues({RetVal, Chain}, DL);
 }
 
 // Split an unary integer op into 2 half sized ops.

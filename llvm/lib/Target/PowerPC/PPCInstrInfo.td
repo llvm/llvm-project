@@ -155,7 +155,8 @@ def PPCSExtVElems  : SDNode<"PPCISD::SExtVElems", SDT_PPCSExtVElems, []>;
 
 // Extract FPSCR (not modeled at the DAG level).
 def PPCmffs   : SDNode<"PPCISD::MFFS",
-                       SDTypeProfile<1, 0, [SDTCisVT<0, f64>]>, []>;
+                       SDTypeProfile<1, 0, [SDTCisVT<0, f64>]>,
+                       [SDNPHasChain]>;
 
 // Perform FADD in round-to-zero mode.
 def PPCfaddrtz: SDNode<"PPCISD::FADDRTZ", SDTFPBinOp, []>;
