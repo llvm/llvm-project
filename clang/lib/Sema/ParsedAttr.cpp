@@ -110,13 +110,26 @@ struct ParsedAttrInfo {
   unsigned IsKnownToGCC : 1;
   unsigned IsSupportedByPragmaAttribute : 1;
 
-  bool (*DiagAppertainsToDecl)(Sema &S, const ParsedAttr &Attr, const Decl *);
-  bool (*DiagLangOpts)(Sema &S, const ParsedAttr &Attr);
-  bool (*ExistsInTarget)(const TargetInfo &Target);
-  unsigned (*SpellingIndexToSemanticSpelling)(const ParsedAttr &Attr);
-  void (*GetPragmaAttributeMatchRules)(
-      llvm::SmallVectorImpl<std::pair<attr::SubjectMatchRule, bool>> &Rules,
-      const LangOptions &LangOpts);
+  virtual ~ParsedAttrInfo() = default;
+
+  virtual bool diagAppertainsToDecl(Sema &S, const ParsedAttr &Attr,
+                                    const Decl *) const {
+    return true;
+  }
+  virtual bool diagLangOpts(Sema &S, const ParsedAttr &Attr) const {
+    return true;
+  }
+  virtual bool existsInTarget(const TargetInfo &Target) const {
+    return true;
+  }
+  virtual unsigned
+  spellingIndexToSemanticSpelling(const ParsedAttr &Attr) const {
+    return UINT_MAX;
+  }
+  virtual void getPragmaAttributeMatchRules(
+    llvm::SmallVectorImpl<std::pair<attr::SubjectMatchRule, bool>> &Rules,
+    const LangOptions &LangOpts) const {
+  }
 };
 
 namespace {
@@ -126,7 +139,13 @@ namespace {
 } // namespace
 
 static const ParsedAttrInfo &getInfo(const ParsedAttr &A) {
-  return AttrInfoMap[A.getKind()];
+  // If we have a ParsedAttrInfo for this ParsedAttr then return that,
+  // otherwise return a default ParsedAttrInfo.
+  if (A.getKind() < llvm::array_lengthof(AttrInfoMap))
+    return *AttrInfoMap[A.getKind()];
+
+  static ParsedAttrInfo DefaultParsedAttrInfo;
+  return DefaultParsedAttrInfo;
 }
 
 unsigned ParsedAttr::getMinArgs() const { return getInfo(*this).NumArgs; }
@@ -140,7 +159,7 @@ bool ParsedAttr::hasCustomParsing() const {
 }
 
 bool ParsedAttr::diagnoseAppertainsTo(Sema &S, const Decl *D) const {
-  return getInfo(*this).DiagAppertainsToDecl(S, *this, D);
+  return getInfo(*this).diagAppertainsToDecl(S, *this, D);
 }
 
 bool ParsedAttr::appliesToDecl(const Decl *D,
@@ -152,11 +171,11 @@ void ParsedAttr::getMatchRules(
     const LangOptions &LangOpts,
     SmallVectorImpl<std::pair<attr::SubjectMatchRule, bool>> &MatchRules)
     const {
-  return getInfo(*this).GetPragmaAttributeMatchRules(MatchRules, LangOpts);
+  return getInfo(*this).getPragmaAttributeMatchRules(MatchRules, LangOpts);
 }
 
 bool ParsedAttr::diagnoseLangOpts(Sema &S) const {
-  return getInfo(*this).DiagLangOpts(S, *this);
+  return getInfo(*this).diagLangOpts(S, *this);
 }
 
 bool ParsedAttr::isTargetSpecificAttr() const {
@@ -168,7 +187,7 @@ bool ParsedAttr::isTypeAttr() const { return getInfo(*this).IsType; }
 bool ParsedAttr::isStmtAttr() const { return getInfo(*this).IsStmt; }
 
 bool ParsedAttr::existsInTarget(const TargetInfo &Target) const {
-  return getInfo(*this).ExistsInTarget(Target);
+  return getInfo(*this).existsInTarget(Target);
 }
 
 bool ParsedAttr::isKnownToGCC() const { return getInfo(*this).IsKnownToGCC; }
@@ -178,7 +197,7 @@ bool ParsedAttr::isSupportedByPragmaAttribute() const {
 }
 
 unsigned ParsedAttr::getSemanticSpelling() const {
-  return getInfo(*this).SpellingIndexToSemanticSpelling(*this);
+  return getInfo(*this).spellingIndexToSemanticSpelling(*this);
 }
 
 bool ParsedAttr::hasVariadicArg() const {
