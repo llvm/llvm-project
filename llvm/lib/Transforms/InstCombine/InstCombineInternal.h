@@ -445,8 +445,7 @@ public:
   Instruction *visitShuffleVectorInst(ShuffleVectorInst &SVI);
   Instruction *visitExtractValueInst(ExtractValueInst &EV);
   Instruction *visitLandingPadInst(LandingPadInst &LI);
-  Instruction *visitVAStartInst(VAStartInst &I);
-  Instruction *visitVACopyInst(VACopyInst &I);
+  Instruction *visitVAEndInst(VAEndInst &I);
   Instruction *visitFreeze(FreezeInst &I);
 
   /// Specify what to return for unhandled instructions.
