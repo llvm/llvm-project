@@ -1350,7 +1350,7 @@ define <32 x i8> @constant_funnnel_v32i8(<32 x i8> %x) nounwind {
 ; XOPAVX1-LABEL: constant_funnnel_v32i8:
 ; XOPAVX1:       # %bb.0:
 ; XOPAVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; XOPAVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,255,254,253,252,251,250,249,248,249,250,251,252,253,254,255]
+; XOPAVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,7,6,5,4,3,2,1,0,1,2,3,4,5,6,7]
 ; XOPAVX1-NEXT:    vprotb %xmm2, %xmm1, %xmm1
 ; XOPAVX1-NEXT:    vprotb %xmm2, %xmm0, %xmm0
 ; XOPAVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
@@ -1359,7 +1359,7 @@ define <32 x i8> @constant_funnnel_v32i8(<32 x i8> %x) nounwind {
 ; XOPAVX2-LABEL: constant_funnnel_v32i8:
 ; XOPAVX2:       # %bb.0:
 ; XOPAVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; XOPAVX2-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,255,254,253,252,251,250,249,248,249,250,251,252,253,254,255]
+; XOPAVX2-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,7,6,5,4,3,2,1,0,1,2,3,4,5,6,7]
 ; XOPAVX2-NEXT:    vprotb %xmm2, %xmm1, %xmm1
 ; XOPAVX2-NEXT:    vprotb %xmm2, %xmm0, %xmm0
 ; XOPAVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
