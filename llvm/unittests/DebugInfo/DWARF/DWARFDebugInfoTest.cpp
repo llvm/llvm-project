@@ -2506,7 +2506,7 @@ TEST(DWARFDebugInfo, TestDwarfVerifyCUDontShareLineTable) {
               "offset:");
 }
 
-TEST(DWARFDebugInfo, TestErrorReportingPolicy) {
+TEST(DWARFDebugInfo, TestErrorReporting) {
   Triple Triple("x86_64-pc-linux");
   if (!isConfigurationSupported(Triple))
       return;
@@ -2529,26 +2529,14 @@ TEST(DWARFDebugInfo, TestErrorReportingPolicy) {
   auto Obj = object::ObjectFile::createObjectFile(FileBuffer);
   EXPECT_TRUE((bool)Obj);
 
-  // Case 1: error handler handles all errors. That allows
-  // DWARFContext to parse whole file and find both two errors we know about.
+  // DWARFContext parses whole file and finds the two errors we expect.
   int Errors = 0;
   std::unique_ptr<DWARFContext> Ctx1 =
       DWARFContext::create(**Obj, nullptr, [&](Error E) {
         ++Errors;
         consumeError(std::move(E));
-        return ErrorPolicy::Continue;
       });
   EXPECT_TRUE(Errors == 2);
-
-  // Case 2: error handler stops parsing of object after first error.
-  Errors = 0;
-  std::unique_ptr<DWARFContext> Ctx2 =
-      DWARFContext::create(**Obj, nullptr, [&](Error E) {
-        ++Errors;
-        consumeError(std::move(E));
-        return ErrorPolicy::Halt;
-      });
-  EXPECT_TRUE(Errors == 1);
 }
 
 TEST(DWARFDebugInfo, TestDwarfVerifyCURangesIncomplete) {
