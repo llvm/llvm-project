@@ -31,6 +31,22 @@
 namespace lldb_private {
 namespace process_gdb_remote {
 
+/// The offsets used by the target when relocating the executable. Decoded from
+/// qOffsets packet response.
+struct QOffsets {
+  /// If true, the offsets field describes segments. Otherwise, it describes
+  /// sections.
+  bool segments;
+
+  /// The individual offsets. Section offsets have two or three members.
+  /// Segment offsets have either one of two.
+  std::vector<uint64_t> offsets;
+};
+inline bool operator==(const QOffsets &a, const QOffsets &b) {
+  return a.segments == b.segments && a.offsets == b.offsets;
+}
+llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const QOffsets &offsets);
+
 class GDBRemoteCommunicationClient : public GDBRemoteClientBase {
 public:
   GDBRemoteCommunicationClient();
@@ -424,6 +440,11 @@ public:
   bool GetLoadedDynamicLibrariesInfosSupported();
 
   bool GetSharedCacheInfoSupported();
+
+  /// Use qOffsets to query the offset used when relocating the target
+  /// executable. If successful, the returned structure will contain at least
+  /// one value in the offsets field.
+  llvm::Optional<QOffsets> GetQOffsets();
 
   bool GetModuleInfo(const FileSpec &module_file_spec,
                      const ArchSpec &arch_spec, ModuleSpec &module_spec);
