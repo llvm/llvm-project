@@ -611,9 +611,9 @@ private:
     }
     bool onIdentifierExpr(const MCExpr *SymRef, StringRef SymRefName,
                           const InlineAsmIdentifierInfo &IDInfo,
-                          bool ParsingInlineAsm, StringRef &ErrMsg) {
+                          bool ParsingMSInlineAsm, StringRef &ErrMsg) {
       // InlineAsm: Treat an enum value as an integer
-      if (ParsingInlineAsm)
+      if (ParsingMSInlineAsm)
         if (IDInfo.isKind(InlineAsmIdentifierInfo::IK_EnumVal))
           return onInteger(IDInfo.Enum.EnumVal, ErrMsg);
       // Treat a symbolic constant like an integer
@@ -634,7 +634,7 @@ private:
         MemExpr = true;
         State = IES_INTEGER;
         IC.pushOperand(IC_IMM);
-        if (ParsingInlineAsm)
+        if (ParsingMSInlineAsm)
           Info = IDInfo;
         break;
       }
@@ -815,7 +815,7 @@ private:
       }
     }
     bool onOffset(const MCExpr *Val, SMLoc OffsetLoc, StringRef ID,
-                  const InlineAsmIdentifierInfo &IDInfo, bool ParsingInlineAsm,
+                  const InlineAsmIdentifierInfo &IDInfo, bool ParsingMSInlineAsm,
                   StringRef &ErrMsg) {
       PrevState = State;
       switch (State) {
@@ -833,7 +833,7 @@ private:
         // As we cannot yet resolve the actual value (offset), we retain
         // the requested semantics by pushing a '0' to the operands stack
         IC.pushOperand(IC_IMM);
-        if (ParsingInlineAsm) {
+        if (ParsingMSInlineAsm) {
           Info = IDInfo;
         }
         break;
@@ -899,10 +899,10 @@ private:
 
   bool ParseIntelMemoryOperandSize(unsigned &Size);
   std::unique_ptr<X86Operand>
-  CreateMemForInlineAsm(unsigned SegReg, const MCExpr *Disp, unsigned BaseReg,
-                        unsigned IndexReg, unsigned Scale, SMLoc Start,
-                        SMLoc End, unsigned Size, StringRef Identifier,
-                        const InlineAsmIdentifierInfo &Info);
+  CreateMemForMSInlineAsm(unsigned SegReg, const MCExpr *Disp, unsigned BaseReg,
+                          unsigned IndexReg, unsigned Scale, SMLoc Start,
+                          SMLoc End, unsigned Size, StringRef Identifier,
+                          const InlineAsmIdentifierInfo &Info);
 
   bool parseDirectiveEven(SMLoc L);
   bool ParseDirectiveCode(StringRef IDVal, SMLoc L);
@@ -1177,7 +1177,7 @@ bool X86AsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
 
   // The "flags" and "mxcsr" registers cannot be referenced directly.
   // Treat it as an identifier instead.
-  if (isParsingInlineAsm() && isParsingIntelSyntax() &&
+  if (isParsingMSInlineAsm() && isParsingIntelSyntax() &&
       (RegNo == X86::EFLAGS || RegNo == X86::MXCSR))
     RegNo = 0;
 
@@ -1458,7 +1458,7 @@ std::unique_ptr<X86Operand> X86AsmParser::ParseOperand() {
   return ParseATTOperand();
 }
 
-std::unique_ptr<X86Operand> X86AsmParser::CreateMemForInlineAsm(
+std::unique_ptr<X86Operand> X86AsmParser::CreateMemForMSInlineAsm(
     unsigned SegReg, const MCExpr *Disp, unsigned BaseReg, unsigned IndexReg,
     unsigned Scale, SMLoc Start, SMLoc End, unsigned Size, StringRef Identifier,
     const InlineAsmIdentifierInfo &Info) {
@@ -1536,7 +1536,7 @@ bool X86AsmParser::ParseIntelNamedOperator(StringRef Name,
       return true;
     StringRef ErrMsg;
     ParseError =
-        SM.onOffset(Val, OffsetLoc, ID, Info, isParsingInlineAsm(), ErrMsg);
+        SM.onOffset(Val, OffsetLoc, ID, Info, isParsingMSInlineAsm(), ErrMsg);
     if (ParseError)
       return Error(SMLoc::getFromPointer(Name.data()), ErrMsg);
   } else {
@@ -1595,7 +1595,7 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
       // Symbol reference, when parsing assembly content
       InlineAsmIdentifierInfo Info;
       const MCExpr *Val;
-      if (!isParsingInlineAsm()) {
+      if (!isParsingMSInlineAsm()) {
         if (getParser().parsePrimaryExpr(Val, End)) {
           return Error(Tok.getLoc(), "Unexpected identifier!");
         } else if (SM.onIdentifierExpr(Val, Identifier, Info, false, ErrMsg)) {
@@ -1646,8 +1646,8 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
             return Error(Loc, "invalid reference to undefined symbol");
           StringRef Identifier = Sym->getName();
           InlineAsmIdentifierInfo Info;
-          if (SM.onIdentifierExpr(Val, Identifier, Info,
-              isParsingInlineAsm(), ErrMsg))
+          if (SM.onIdentifierExpr(Val, Identifier, Info, isParsingMSInlineAsm(),
+                                  ErrMsg))
             return Error(Loc, ErrMsg);
           End = consumeToken();
         } else {
@@ -1741,7 +1741,7 @@ bool X86AsmParser::ParseIntelInlineAsmIdentifier(
     const MCExpr *&Val, StringRef &Identifier, InlineAsmIdentifierInfo &Info,
     bool IsUnevaluatedOperand, SMLoc &End, bool IsParsingOffsetOperator) {
   MCAsmParser &Parser = getParser();
-  assert(isParsingInlineAsm() && "Expected to be parsing inline assembly.");
+  assert(isParsingMSInlineAsm() && "Expected to be parsing inline assembly.");
   Val = nullptr;
 
   StringRef LineBuf(Identifier.data());
@@ -1844,7 +1844,7 @@ bool X86AsmParser::ParseIntelDotOperator(IntelExprStateMachine &SM, SMLoc &End) 
     APInt DotDisp;
     DotDispStr.getAsInteger(10, DotDisp);
     Offset = DotDisp.getZExtValue();
-  } else if (isParsingInlineAsm() && Tok.is(AsmToken::Identifier)) {
+  } else if (isParsingMSInlineAsm() && Tok.is(AsmToken::Identifier)) {
     std::pair<StringRef, StringRef> BaseMember = DotDispStr.split('.');
     if (SemaCallback->LookupInlineAsmField(BaseMember.first, BaseMember.second,
                                            Offset))
@@ -1869,7 +1869,7 @@ bool X86AsmParser::ParseIntelOffsetOperator(const MCExpr *&Val, StringRef &ID,
   // Eat offset, mark start of identifier.
   SMLoc Start = Lex().getLoc();
   ID = getTok().getString();
-  if (!isParsingInlineAsm()) {
+  if (!isParsingMSInlineAsm()) {
     if ((getTok().isNot(AsmToken::Identifier) &&
          getTok().isNot(AsmToken::String)) ||
         getParser().parsePrimaryExpr(Val, End))
@@ -1992,7 +1992,7 @@ std::unique_ptr<X86Operand> X86AsmParser::ParseIntelOperand() {
   if (ParseIntelExpression(SM, End))
     return nullptr;
 
-  if (isParsingInlineAsm())
+  if (isParsingMSInlineAsm())
     RewriteIntelExpression(SM, Start, Tok.getLoc());
 
   int64_t Imm = SM.getImm();
@@ -2006,7 +2006,7 @@ std::unique_ptr<X86Operand> X86AsmParser::ParseIntelOperand() {
   // RegNo != 0 specifies a valid segment register,
   // and we are parsing a segment override
   if (!SM.isMemExpr() && !RegNo) {
-    if (isParsingInlineAsm() && SM.isOffsetOperator()) {
+    if (isParsingMSInlineAsm() && SM.isOffsetOperator()) {
       const InlineAsmIdentifierInfo Info = SM.getIdentifierInfo();
       if (Info.isKind(InlineAsmIdentifierInfo::IK_Var)) {
         // Disp includes the address of a variable; make sure this is recorded
@@ -2058,10 +2058,10 @@ std::unique_ptr<X86Operand> X86AsmParser::ParseIntelOperand() {
       CheckBaseRegAndIndexRegAndScale(BaseReg, IndexReg, Scale, is64BitMode(),
                                       ErrMsg))
     return ErrorOperand(Start, ErrMsg);
-  if (isParsingInlineAsm())
-    return CreateMemForInlineAsm(RegNo, Disp, BaseReg, IndexReg,
-                                 Scale, Start, End, Size, SM.getSymName(),
-                                 SM.getIdentifierInfo());
+  if (isParsingMSInlineAsm())
+    return CreateMemForMSInlineAsm(RegNo, Disp, BaseReg, IndexReg, Scale, Start,
+                                   End, Size, SM.getSymName(),
+                                   SM.getIdentifierInfo());
   if (!(BaseReg || IndexReg || RegNo))
     return X86Operand::CreateMem(getPointerWidth(), Disp, Start, End, Size);
   return X86Operand::CreateMem(getPointerWidth(), RegNo, Disp,
@@ -2764,7 +2764,7 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
     // In MS inline asm curly braces mark the beginning/end of a block,
     // therefore they should be interepreted as end of statement
     CurlyAsEndOfStatement =
-        isParsingIntelSyntax() && isParsingInlineAsm() &&
+        isParsingIntelSyntax() && isParsingMSInlineAsm() &&
         (getLexer().is(AsmToken::LCurly) || getLexer().is(AsmToken::RCurly));
     if (getLexer().isNot(AsmToken::EndOfStatement) && !CurlyAsEndOfStatement)
       return TokError("unexpected token in argument list");
