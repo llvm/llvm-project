@@ -171,3 +171,388 @@ float32x4_t test_vrndnq_f32(float32x4_t a)
     return vrndnq_f32(a);
 #endif /* POLYMORPHIC */
 }
+
+// CHECK-LABEL: @test_vrndaq_m_f16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <8 x half> @llvm.arm.mve.vrinta.predicated.v8f16.v8i1(<8 x half> [[A:%.*]], <8 x i1> [[TMP1]], <8 x half> [[INACTIVE:%.*]])
+// CHECK-NEXT:    ret <8 x half> [[TMP2]]
+//
+float16x8_t test_vrndaq_m_f16(float16x8_t inactive, float16x8_t a, mve_pred16_t p)
+{
+#ifdef POLYMORPHIC
+    return vrndaq_m(inactive, a, p);
+#else /* POLYMORPHIC */
+    return vrndaq_m_f16(inactive, a, p);
+#endif /* POLYMORPHIC */
+}
+
+// CHECK-LABEL: @test_vrndaq_m_f32(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <4 x float> @llvm.arm.mve.vrinta.predicated.v4f32.v4i1(<4 x float> [[A:%.*]], <4 x i1> [[TMP1]], <4 x float> [[INACTIVE:%.*]])
+// CHECK-NEXT:    ret <4 x float> [[TMP2]]
+//
+float32x4_t test_vrndaq_m_f32(float32x4_t inactive, float32x4_t a, mve_pred16_t p)
+{
+#ifdef POLYMORPHIC
+    return vrndaq_m(inactive, a, p);
+#else /* POLYMORPHIC */
+    return vrndaq_m_f32(inactive, a, p);
+#endif /* POLYMORPHIC */
+}
+
+// CHECK-LABEL: @test_vrndmq_m_f16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <8 x half> @llvm.arm.mve.vrintm.predicated.v8f16.v8i1(<8 x half> [[A:%.*]], <8 x i1> [[TMP1]], <8 x half> [[INACTIVE:%.*]])
+// CHECK-NEXT:    ret <8 x half> [[TMP2]]
+//
+float16x8_t test_vrndmq_m_f16(float16x8_t inactive, float16x8_t a, mve_pred16_t p)
+{
+#ifdef POLYMORPHIC
+    return vrndmq_m(inactive, a, p);
+#else /* POLYMORPHIC */
+    return vrndmq_m_f16(inactive, a, p);
+#endif /* POLYMORPHIC */
+}
+
+// CHECK-LABEL: @test_vrndmq_m_f32(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <4 x float> @llvm.arm.mve.vrintm.predicated.v4f32.v4i1(<4 x float> [[A:%.*]], <4 x i1> [[TMP1]], <4 x float> [[INACTIVE:%.*]])
+// CHECK-NEXT:    ret <4 x float> [[TMP2]]
+//
+float32x4_t test_vrndmq_m_f32(float32x4_t inactive, float32x4_t a, mve_pred16_t p)
+{
+#ifdef POLYMORPHIC
+    return vrndmq_m(inactive, a, p);
+#else /* POLYMORPHIC */
+    return vrndmq_m_f32(inactive, a, p);
+#endif /* POLYMORPHIC */
+}
+
+// CHECK-LABEL: @test_vrndnq_m_f16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <8 x half> @llvm.arm.mve.vrintn.predicated.v8f16.v8i1(<8 x half> [[A:%.*]], <8 x i1> [[TMP1]], <8 x half> [[INACTIVE:%.*]])
+// CHECK-NEXT:    ret <8 x half> [[TMP2]]
+//
+float16x8_t test_vrndnq_m_f16(float16x8_t inactive, float16x8_t a, mve_pred16_t p)
+{
+#ifdef POLYMORPHIC
+    return vrndnq_m(inactive, a, p);
+#else /* POLYMORPHIC */
+    return vrndnq_m_f16(inactive, a, p);
+#endif /* POLYMORPHIC */
+}
+
+// CHECK-LABEL: @test_vrndnq_m_f32(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <4 x float> @llvm.arm.mve.vrintn.predicated.v4f32.v4i1(<4 x float> [[A:%.*]], <4 x i1> [[TMP1]], <4 x float> [[INACTIVE:%.*]])
+// CHECK-NEXT:    ret <4 x float> [[TMP2]]
+//
+float32x4_t test_vrndnq_m_f32(float32x4_t inactive, float32x4_t a, mve_pred16_t p)
+{
+#ifdef POLYMORPHIC
+    return vrndnq_m(inactive, a, p);
+#else /* POLYMORPHIC */
+    return vrndnq_m_f32(inactive, a, p);
+#endif /* POLYMORPHIC */
+}
+
+// CHECK-LABEL: @test_vrndpq_m_f16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <8 x half> @llvm.arm.mve.vrintp.predicated.v8f16.v8i1(<8 x half> [[A:%.*]], <8 x i1> [[TMP1]], <8 x half> [[INACTIVE:%.*]])
+// CHECK-NEXT:    ret <8 x half> [[TMP2]]
+//
+float16x8_t test_vrndpq_m_f16(float16x8_t inactive, float16x8_t a, mve_pred16_t p)
+{
+#ifdef POLYMORPHIC
+    return vrndpq_m(inactive, a, p);
+#else /* POLYMORPHIC */
+    return vrndpq_m_f16(inactive, a, p);
+#endif /* POLYMORPHIC */
+}
+
+// CHECK-LABEL: @test_vrndpq_m_f32(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <4 x float> @llvm.arm.mve.vrintp.predicated.v4f32.v4i1(<4 x float> [[A:%.*]], <4 x i1> [[TMP1]], <4 x float> [[INACTIVE:%.*]])
+// CHECK-NEXT:    ret <4 x float> [[TMP2]]
+//
+float32x4_t test_vrndpq_m_f32(float32x4_t inactive, float32x4_t a, mve_pred16_t p)
+{
+#ifdef POLYMORPHIC
+    return vrndpq_m(inactive, a, p);
+#else /* POLYMORPHIC */
+    return vrndpq_m_f32(inactive, a, p);
+#endif /* POLYMORPHIC */
+}
+
+// CHECK-LABEL: @test_vrndq_m_f16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <8 x half> @llvm.arm.mve.vrintz.predicated.v8f16.v8i1(<8 x half> [[A:%.*]], <8 x i1> [[TMP1]], <8 x half> [[INACTIVE:%.*]])
+// CHECK-NEXT:    ret <8 x half> [[TMP2]]
+//
+float16x8_t test_vrndq_m_f16(float16x8_t inactive, float16x8_t a, mve_pred16_t p)
+{
+#ifdef POLYMORPHIC
+    return vrndq_m(inactive, a, p);
+#else /* POLYMORPHIC */
+    return vrndq_m_f16(inactive, a, p);
+#endif /* POLYMORPHIC */
+}
+
+// CHECK-LABEL: @test_vrndq_m_f32(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <4 x float> @llvm.arm.mve.vrintz.predicated.v4f32.v4i1(<4 x float> [[A:%.*]], <4 x i1> [[TMP1]], <4 x float> [[INACTIVE:%.*]])
+// CHECK-NEXT:    ret <4 x float> [[TMP2]]
+//
+float32x4_t test_vrndq_m_f32(float32x4_t inactive, float32x4_t a, mve_pred16_t p)
+{
+#ifdef POLYMORPHIC
+    return vrndq_m(inactive, a, p);
+#else /* POLYMORPHIC */
+    return vrndq_m_f32(inactive, a, p);
+#endif /* POLYMORPHIC */
+}
+
+// CHECK-LABEL: @test_vrndxq_m_f16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <8 x half> @llvm.arm.mve.vrintx.predicated.v8f16.v8i1(<8 x half> [[A:%.*]], <8 x i1> [[TMP1]], <8 x half> [[INACTIVE:%.*]])
+// CHECK-NEXT:    ret <8 x half> [[TMP2]]
+//
+float16x8_t test_vrndxq_m_f16(float16x8_t inactive, float16x8_t a, mve_pred16_t p)
+{
+#ifdef POLYMORPHIC
+    return vrndxq_m(inactive, a, p);
+#else /* POLYMORPHIC */
+    return vrndxq_m_f16(inactive, a, p);
+#endif /* POLYMORPHIC */
+}
+
+// CHECK-LABEL: @test_vrndxq_m_f32(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <4 x float> @llvm.arm.mve.vrintx.predicated.v4f32.v4i1(<4 x float> [[A:%.*]], <4 x i1> [[TMP1]], <4 x float> [[INACTIVE:%.*]])
+// CHECK-NEXT:    ret <4 x float> [[TMP2]]
+//
+float32x4_t test_vrndxq_m_f32(float32x4_t inactive, float32x4_t a, mve_pred16_t p)
+{
+#ifdef POLYMORPHIC
+    return vrndxq_m(inactive, a, p);
+#else /* POLYMORPHIC */
+    return vrndxq_m_f32(inactive, a, p);
+#endif /* POLYMORPHIC */
+}
+
+// CHECK-LABEL: @test_vrndaq_x_f16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <8 x half> @llvm.arm.mve.vrinta.predicated.v8f16.v8i1(<8 x half> [[A:%.*]], <8 x i1> [[TMP1]], <8 x half> undef)
+// CHECK-NEXT:    ret <8 x half> [[TMP2]]
+//
+float16x8_t test_vrndaq_x_f16(float16x8_t a, mve_pred16_t p)
+{
+#ifdef POLYMORPHIC
+    return vrndaq_x(a, p);
+#else /* POLYMORPHIC */
+    return vrndaq_x_f16(a, p);
+#endif /* POLYMORPHIC */
+}
+
+// CHECK-LABEL: @test_vrndaq_x_f32(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <4 x float> @llvm.arm.mve.vrinta.predicated.v4f32.v4i1(<4 x float> [[A:%.*]], <4 x i1> [[TMP1]], <4 x float> undef)
+// CHECK-NEXT:    ret <4 x float> [[TMP2]]
+//
+float32x4_t test_vrndaq_x_f32(float32x4_t a, mve_pred16_t p)
+{
+#ifdef POLYMORPHIC
+    return vrndaq_x(a, p);
+#else /* POLYMORPHIC */
+    return vrndaq_x_f32(a, p);
+#endif /* POLYMORPHIC */
+}
+
+// CHECK-LABEL: @test_vrndmq_x_f16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <8 x half> @llvm.arm.mve.vrintm.predicated.v8f16.v8i1(<8 x half> [[A:%.*]], <8 x i1> [[TMP1]], <8 x half> undef)
+// CHECK-NEXT:    ret <8 x half> [[TMP2]]
+//
+float16x8_t test_vrndmq_x_f16(float16x8_t a, mve_pred16_t p)
+{
+#ifdef POLYMORPHIC
+    return vrndmq_x(a, p);
+#else /* POLYMORPHIC */
+    return vrndmq_x_f16(a, p);
+#endif /* POLYMORPHIC */
+}
+
+// CHECK-LABEL: @test_vrndmq_x_f32(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <4 x float> @llvm.arm.mve.vrintm.predicated.v4f32.v4i1(<4 x float> [[A:%.*]], <4 x i1> [[TMP1]], <4 x float> undef)
+// CHECK-NEXT:    ret <4 x float> [[TMP2]]
+//
+float32x4_t test_vrndmq_x_f32(float32x4_t a, mve_pred16_t p)
+{
+#ifdef POLYMORPHIC
+    return vrndmq_x(a, p);
+#else /* POLYMORPHIC */
+    return vrndmq_x_f32(a, p);
+#endif /* POLYMORPHIC */
+}
+
+// CHECK-LABEL: @test_vrndnq_x_f16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <8 x half> @llvm.arm.mve.vrintn.predicated.v8f16.v8i1(<8 x half> [[A:%.*]], <8 x i1> [[TMP1]], <8 x half> undef)
+// CHECK-NEXT:    ret <8 x half> [[TMP2]]
+//
+float16x8_t test_vrndnq_x_f16(float16x8_t a, mve_pred16_t p)
+{
+#ifdef POLYMORPHIC
+    return vrndnq_x(a, p);
+#else /* POLYMORPHIC */
+    return vrndnq_x_f16(a, p);
+#endif /* POLYMORPHIC */
+}
+
+// CHECK-LABEL: @test_vrndnq_x_f32(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <4 x float> @llvm.arm.mve.vrintn.predicated.v4f32.v4i1(<4 x float> [[A:%.*]], <4 x i1> [[TMP1]], <4 x float> undef)
+// CHECK-NEXT:    ret <4 x float> [[TMP2]]
+//
+float32x4_t test_vrndnq_x_f32(float32x4_t a, mve_pred16_t p)
+{
+#ifdef POLYMORPHIC
+    return vrndnq_x(a, p);
+#else /* POLYMORPHIC */
+    return vrndnq_x_f32(a, p);
+#endif /* POLYMORPHIC */
+}
+
+// CHECK-LABEL: @test_vrndpq_x_f16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <8 x half> @llvm.arm.mve.vrintp.predicated.v8f16.v8i1(<8 x half> [[A:%.*]], <8 x i1> [[TMP1]], <8 x half> undef)
+// CHECK-NEXT:    ret <8 x half> [[TMP2]]
+//
+float16x8_t test_vrndpq_x_f16(float16x8_t a, mve_pred16_t p)
+{
+#ifdef POLYMORPHIC
+    return vrndpq_x(a, p);
+#else /* POLYMORPHIC */
+    return vrndpq_x_f16(a, p);
+#endif /* POLYMORPHIC */
+}
+
+// CHECK-LABEL: @test_vrndpq_x_f32(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <4 x float> @llvm.arm.mve.vrintp.predicated.v4f32.v4i1(<4 x float> [[A:%.*]], <4 x i1> [[TMP1]], <4 x float> undef)
+// CHECK-NEXT:    ret <4 x float> [[TMP2]]
+//
+float32x4_t test_vrndpq_x_f32(float32x4_t a, mve_pred16_t p)
+{
+#ifdef POLYMORPHIC
+    return vrndpq_x(a, p);
+#else /* POLYMORPHIC */
+    return vrndpq_x_f32(a, p);
+#endif /* POLYMORPHIC */
+}
+
+// CHECK-LABEL: @test_vrndq_x_f16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <8 x half> @llvm.arm.mve.vrintz.predicated.v8f16.v8i1(<8 x half> [[A:%.*]], <8 x i1> [[TMP1]], <8 x half> undef)
+// CHECK-NEXT:    ret <8 x half> [[TMP2]]
+//
+float16x8_t test_vrndq_x_f16(float16x8_t a, mve_pred16_t p)
+{
+#ifdef POLYMORPHIC
+    return vrndq_x(a, p);
+#else /* POLYMORPHIC */
+    return vrndq_x_f16(a, p);
+#endif /* POLYMORPHIC */
+}
+
+// CHECK-LABEL: @test_vrndq_x_f32(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <4 x float> @llvm.arm.mve.vrintz.predicated.v4f32.v4i1(<4 x float> [[A:%.*]], <4 x i1> [[TMP1]], <4 x float> undef)
+// CHECK-NEXT:    ret <4 x float> [[TMP2]]
+//
+float32x4_t test_vrndq_x_f32(float32x4_t a, mve_pred16_t p)
+{
+#ifdef POLYMORPHIC
+    return vrndq_x(a, p);
+#else /* POLYMORPHIC */
+    return vrndq_x_f32(a, p);
+#endif /* POLYMORPHIC */
+}
+
+// CHECK-LABEL: @test_vrndxq_x_f16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <8 x half> @llvm.arm.mve.vrintx.predicated.v8f16.v8i1(<8 x half> [[A:%.*]], <8 x i1> [[TMP1]], <8 x half> undef)
+// CHECK-NEXT:    ret <8 x half> [[TMP2]]
+//
+float16x8_t test_vrndxq_x_f16(float16x8_t a, mve_pred16_t p)
+{
+#ifdef POLYMORPHIC
+    return vrndxq_x(a, p);
+#else /* POLYMORPHIC */
+    return vrndxq_x_f16(a, p);
+#endif /* POLYMORPHIC */
+}
+
+// CHECK-LABEL: @test_vrndxq_x_f32(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <4 x float> @llvm.arm.mve.vrintx.predicated.v4f32.v4i1(<4 x float> [[A:%.*]], <4 x i1> [[TMP1]], <4 x float> undef)
+// CHECK-NEXT:    ret <4 x float> [[TMP2]]
+//
+float32x4_t test_vrndxq_x_f32(float32x4_t a, mve_pred16_t p)
+{
+#ifdef POLYMORPHIC
+    return vrndxq_x(a, p);
+#else /* POLYMORPHIC */
+    return vrndxq_x_f32(a, p);
+#endif /* POLYMORPHIC */
+}
+
