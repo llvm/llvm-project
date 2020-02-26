@@ -496,6 +496,10 @@ typedef __char32_t char32_t;
 #define _LIBCPP_COMPILER_HAS_BUILTIN_LAUNDER
 #endif
 
+#if __has_builtin(__builtin_constant_p)
+#define _LIBCPP_COMPILER_HAS_BUILTIN_CONSTANT_P
+#endif
+
 #if !__is_identifier(__has_unique_object_representations)
 #define _LIBCPP_HAS_UNIQUE_OBJECT_REPRESENTATIONS
 #endif
@@ -537,9 +541,7 @@ typedef __char32_t char32_t;
 
 #if _GNUC_VER >= 700
 #define _LIBCPP_COMPILER_HAS_BUILTIN_LAUNDER
-#endif
-
-#if _GNUC_VER >= 700
+#define _LIBCPP_COMPILER_HAS_BUILTIN_CONSTANT_P
 #define _LIBCPP_HAS_UNIQUE_OBJECT_REPRESENTATIONS
 #endif
 
@@ -1531,6 +1533,12 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
 #  define _LIBCPP_FOPEN_CLOEXEC_MODE "e"
 #else
 #  define _LIBCPP_FOPEN_CLOEXEC_MODE
+#endif
+
+#ifdef _LIBCPP_COMPILER_HAS_BUILTIN_CONSTANT_P
+#define _LIBCPP_BUILTIN_CONSTANT_P(x) __builtin_constant_p(x)
+#else
+#define _LIBCPP_BUILTIN_CONSTANT_P(x) false
 #endif
 
 #endif // __cplusplus
