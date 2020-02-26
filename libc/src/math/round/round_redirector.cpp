@@ -8,10 +8,10 @@
 
 #include <math.h>
 
-namespace llvm_libc {
+namespace __llvm_libc {
 
 double __round_redirector(double x) {
   return ::round(x);
 }
 
-} // namespace llvm_libc
+} // namespace __llvm_libc

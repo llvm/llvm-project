@@ -10,7 +10,7 @@
 
 #include "src/__support/common.h"
 
-namespace llvm_libc {
+namespace __llvm_libc {
 
 double __round_redirector(double x);
 
@@ -18,4 +18,4 @@ double LLVM_LIBC_ENTRYPOINT(round)(double x) {
   return __round_redirector(x);
 }
 
-} // namespace llvm_libc
+} // namespace __llvm_libc
