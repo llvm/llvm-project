@@ -18556,6 +18556,15 @@ static SDValue narrowExtractedVectorBinOp(SDNode *Extract, SelectionDAG &DAG) {
   if (!TLI.isBinOp(BOpcode) || BinOp.getNode()->getNumValues() != 1)
     return SDValue();
 
+  // Exclude the fake form of fneg (fsub -0.0, x) because that is likely to be
+  // reduced to the unary fneg when it is visited, and we probably want to deal
+  // with fneg in a target-specific way.
+  if (BOpcode == ISD::FSUB) {
+    auto *C = isConstOrConstSplatFP(BinOp.getOperand(0), /*AllowUndefs*/ true);
+    if (C && C->getValueAPF().isNegZero())
+      return SDValue();
+  }
+
   // The binop must be a vector type, so we can extract some fraction of it.
   EVT WideBVT = BinOp.getValueType();
   if (!WideBVT.isVector())
