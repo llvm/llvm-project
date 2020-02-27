@@ -349,7 +349,7 @@ define float @fsub_fsub_sel_extra_use1(float %x, float %y, i1 %cond) {
 ; CHECK-NEXT:    [[N1:%.*]] = fsub float -0.000000e+00, [[X:%.*]]
 ; CHECK-NEXT:    call void @use(float [[N1]])
 ; CHECK-NEXT:    [[SEL_V:%.*]] = select i1 [[COND:%.*]], float [[X]], float [[Y:%.*]]
-; CHECK-NEXT:    [[SEL:%.*]] = fsub float -0.000000e+00, [[SEL_V]]
+; CHECK-NEXT:    [[SEL:%.*]] = fneg float [[SEL_V]]
 ; CHECK-NEXT:    ret float [[SEL]]
 ;
   %n1 = fsub float -0.0, %x

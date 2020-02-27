@@ -2189,7 +2189,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
         llvm_unreachable("unexpected intrinsic ID");
       }
       Value *NewCall = Builder.CreateBinaryIntrinsic(NewIID, X, Y, II);
-      Instruction *FNeg = BinaryOperator::CreateFNeg(NewCall);
+      Instruction *FNeg = UnaryOperator::CreateFNeg(NewCall);
       FNeg->copyIRFlags(II);
       return FNeg;
     }
@@ -2354,7 +2354,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     if (match(II->getArgOperand(0), m_OneUse(m_FNeg(m_Value(X))))) {
       // sin(-x) --> -sin(x)
       Value *NewSin = Builder.CreateUnaryIntrinsic(Intrinsic::sin, X, II);
-      Instruction *FNeg = BinaryOperator::CreateFNeg(NewSin);
+      Instruction *FNeg = UnaryOperator::CreateFNeg(NewSin);
       FNeg->copyFastMathFlags(II);
       return FNeg;
     }

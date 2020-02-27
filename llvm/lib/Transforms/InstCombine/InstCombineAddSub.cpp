@@ -2136,7 +2136,7 @@ Instruction *InstCombiner::visitFSub(BinaryOperator &I) {
   // fsub nsz 0, X ==> fsub nsz -0.0, X
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
   if (I.hasNoSignedZeros() && match(Op0, m_PosZeroFP()))
-    return BinaryOperator::CreateFNegFMF(Op1, &I);
+    return UnaryOperator::CreateFNegFMF(Op1, &I);
 
   if (Instruction *X = foldFNegIntoConstant(I))
     return X;
@@ -2214,12 +2214,12 @@ Instruction *InstCombiner::visitFSub(BinaryOperator &I) {
   if (I.hasAllowReassoc() && I.hasNoSignedZeros()) {
     // (Y - X) - Y --> -X
     if (match(Op0, m_FSub(m_Specific(Op1), m_Value(X))))
-      return BinaryOperator::CreateFNegFMF(X, &I);
+      return UnaryOperator::CreateFNegFMF(X, &I);
 
     // Y - (X + Y) --> -X
     // Y - (Y + X) --> -X
     if (match(Op1, m_c_FAdd(m_Specific(Op0), m_Value(X))))
-      return BinaryOperator::CreateFNegFMF(X, &I);
+      return UnaryOperator::CreateFNegFMF(X, &I);
 
     // (X * C) - X --> X * (C - 1.0)
     if (match(Op0, m_FMul(m_Specific(Op1), m_Constant(C)))) {
