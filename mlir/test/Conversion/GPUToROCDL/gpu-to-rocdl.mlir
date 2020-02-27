@@ -82,21 +82,6 @@ gpu.module @kernel_module {
 }
 
 // -----
-
-gpu.module @kernel_module {
-  // CHECK: llvm.func @__ocml_tanh_f32(!llvm.float) -> !llvm.float
-  // CHECK: llvm.func @__ocml_tanh_f64(!llvm.double) -> !llvm.double
-  // CHECK-LABEL: func @gpu_tanh
-  func @gpu_tanh(%arg_f32 : f32, %arg_f64 : f64) {
-    %result32 = std.tanh %arg_f32 : f32
-    // CHECK: llvm.call @__ocml_tanh_f32(%{{.*}}) : (!llvm.float) -> !llvm.float
-    %result64 = std.tanh %arg_f64 : f64
-    // CHECK: llvm.call @__ocml_tanh_f64(%{{.*}}) : (!llvm.double) -> !llvm.double
-    std.return
-  }
-}
-
-// -----
 gpu.module @kernel_module {
   // CHECK: llvm.func @__ocml_exp_f32(!llvm.float) -> !llvm.float
   // CHECK: llvm.func @__ocml_exp_f64(!llvm.double) -> !llvm.double
@@ -133,4 +118,64 @@ gpu.module @kernel_module {
     }
     "test.finish" () : () -> ()
   }) : () -> ()
+}
+
+// -----
+
+gpu.module @kernel_module {
+  // CHECK: llvm.func @__ocml_log_f32(!llvm.float) -> !llvm.float
+  // CHECK: llvm.func @__ocml_log_f64(!llvm.double) -> !llvm.double
+  // CHECK-LABEL: func @gpu_log
+  func @gpu_log(%arg_f32 : f32, %arg_f64 : f64) {
+    %result32 = std.log %arg_f32 : f32
+    // CHECK: llvm.call @__ocml_log_f32(%{{.*}}) : (!llvm.float) -> !llvm.float
+    %result64 = std.log %arg_f64 : f64
+    // CHECK: llvm.call @__ocml_log_f64(%{{.*}}) : (!llvm.double) -> !llvm.double
+    std.return
+  }
+}
+
+// -----
+
+gpu.module @kernel_module {
+  // CHECK: llvm.func @__ocml_log10_f32(!llvm.float) -> !llvm.float
+  // CHECK: llvm.func @__ocml_log10_f64(!llvm.double) -> !llvm.double
+  // CHECK-LABEL: func @gpu_log10
+  func @gpu_log10(%arg_f32 : f32, %arg_f64 : f64) {
+    %result32 = std.log10 %arg_f32 : f32
+    // CHECK: llvm.call @__ocml_log10_f32(%{{.*}}) : (!llvm.float) -> !llvm.float
+    %result64 = std.log10 %arg_f64 : f64
+    // CHECK: llvm.call @__ocml_log10_f64(%{{.*}}) : (!llvm.double) -> !llvm.double
+    std.return
+  }
+}
+
+// -----
+
+gpu.module @kernel_module {
+  // CHECK: llvm.func @__ocml_log2_f32(!llvm.float) -> !llvm.float
+  // CHECK: llvm.func @__ocml_log2_f64(!llvm.double) -> !llvm.double
+  // CHECK-LABEL: func @gpu_log2
+  func @gpu_log2(%arg_f32 : f32, %arg_f64 : f64) {
+    %result32 = std.log2 %arg_f32 : f32
+    // CHECK: llvm.call @__ocml_log2_f32(%{{.*}}) : (!llvm.float) -> !llvm.float
+    %result64 = std.log2 %arg_f64 : f64
+    // CHECK: llvm.call @__ocml_log2_f64(%{{.*}}) : (!llvm.double) -> !llvm.double
+    std.return
+  }
+}
+
+// -----
+
+gpu.module @kernel_module {
+  // CHECK: llvm.func @__ocml_tanh_f32(!llvm.float) -> !llvm.float
+  // CHECK: llvm.func @__ocml_tanh_f64(!llvm.double) -> !llvm.double
+  // CHECK-LABEL: func @gpu_tanh
+  func @gpu_tanh(%arg_f32 : f32, %arg_f64 : f64) {
+    %result32 = std.tanh %arg_f32 : f32
+    // CHECK: llvm.call @__ocml_tanh_f32(%{{.*}}) : (!llvm.float) -> !llvm.float
+    %result64 = std.tanh %arg_f64 : f64
+    // CHECK: llvm.call @__ocml_tanh_f64(%{{.*}}) : (!llvm.double) -> !llvm.double
+    std.return
+  }
 }
