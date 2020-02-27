@@ -1369,7 +1369,7 @@ MachineInstr *MachineLICMBase::ExtractHoistableLoad(MachineInstr *MI) {
   // Otherwise we successfully unfolded a load that we can hoist.
 
   // Update the call site info.
-  if (MI->isCandidateForCallSiteEntry())
+  if (MI->shouldUpdateCallSiteInfo())
     MF.eraseCallSiteInfo(MI);
 
   MI->eraseFromParent();
