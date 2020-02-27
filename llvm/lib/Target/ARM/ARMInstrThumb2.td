@@ -3851,7 +3851,7 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1 in {
 }
 
 // IT block
-let Defs = [ITSTATE] in
+let Defs = [ITSTATE], Uses = [CPSR] in
 def t2IT : Thumb2XI<(outs), (ins it_pred:$cc, it_mask:$mask),
                     AddrModeNone, 2,  IIC_iALUx,
                     "it$mask\t$cc", "", []>,

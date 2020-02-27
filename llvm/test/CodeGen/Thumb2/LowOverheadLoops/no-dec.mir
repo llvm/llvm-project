@@ -151,7 +151,7 @@ body:             |
     renamable $r2 = tLDRi renamable $r0, 1, 14, $noreg :: (load 4 from %ir.info2)
     renamable $r2 = tLDRHi killed renamable $r2, 1, 14, $noreg :: (load 2 from %ir.idx3)
     tCMPr killed renamable $r2, renamable $r1, 14, $noreg, implicit-def $cpsr
-    t2IT 0, 8, implicit-def $itstate
+    t2IT 0, 8, implicit-def $itstate, implicit $cpsr
     tBX_RET 0, killed $cpsr, implicit $r0, implicit killed $itstate
     renamable $r0 = tLDRi killed renamable $r0, 0, 14, $noreg :: (load 4 from %ir.next4)
     tCMPi8 renamable $r0, 0, 14, $noreg, implicit-def $cpsr

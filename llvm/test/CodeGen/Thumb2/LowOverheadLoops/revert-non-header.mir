@@ -253,12 +253,12 @@ body:             |
     renamable $r4 = tLDRr renamable $r3, $r6, 14, $noreg :: (load 4 from %ir.uglygep12)
     renamable $r2 = tLDRr renamable $r5, $r6, 14, $noreg :: (load 4 from %ir.uglygep34)
     tCMPr renamable $r2, renamable $r4, 14, $noreg, implicit-def $cpsr
-    t2IT 12, 1, implicit-def $itstate
+    t2IT 12, 1, implicit-def $itstate, implicit $cpsr
     tSTRr killed renamable $r4, renamable $r5, $r6, 12, $cpsr, implicit $itstate :: (store 4 into %ir.5)
     tSTRr killed renamable $r2, renamable $r3, $r6, 12, $cpsr, implicit $itstate :: (store 4 into %ir.uglygep6)
     renamable $r6 = tADDhirr killed renamable $r6, renamable $r10, 12, $cpsr, implicit $r6, implicit $itstate
     renamable $r7 = nsw t2SUBrr killed renamable $r7, renamable $r9, 12, $cpsr, $noreg, implicit $r7, implicit killed $itstate
-    t2IT 12, 8, implicit-def $itstate
+    t2IT 12, 8, implicit-def $itstate, implicit $cpsr
     t2CMPri renamable $r7, -1, 12, killed $cpsr, implicit-def $cpsr, implicit killed $itstate
     tBcc %bb.8, 12, killed $cpsr
     tB %bb.5, 14, $noreg
