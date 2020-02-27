@@ -78,9 +78,6 @@ entry:
 ; CHECKOBJ-NEXT:       28: 68 65 6c 6c
 ; CHECKOBJ-NEXT:       2c: 6f 20 77 6f
 ; CHECKOBJ-NEXT:       30: 72 6c 64 21
-; CHECKOBJ-NEXT:       34: 0a 00 61 62    {{.*}}{{[[:space:]] *}}
-; CHECKOBJ-NEXT: 00000036 .L.str:
-; CHECKOBJ-NEXT:       36: 61 62 63 64
-; CHECKOBJ-NEXT:       3a: 65 66 67 68
-; CHECKOBJ-NEXT:       3e: 00
-; CHECKOBJ-NEXT:       3f: 00
+; CHECKOBJ-NEXT:       34: 0a 00 61 62
+; CHECKOBJ-NEXT:       38: 63 64 65 66
+; CHECKOBJ-NEXT:       3c: 67 68 00 00
