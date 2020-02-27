@@ -19092,7 +19092,7 @@ SDValue X86TargetLowering::LowerSINT_TO_FP(SDValue Op,
   SDValue StackSlot = DAG.getFrameIndex(SSFI, PtrVT);
   Chain = DAG.getStore(Chain, dl, ValueToStore, StackSlot, MPI, Size);
   std::pair<SDValue, SDValue> Tmp =
-      BuildFILD(Op, SrcVT, Chain, StackSlot, MPI, Size, DAG);
+      BuildFILD(VT, SrcVT, dl, Chain, StackSlot, MPI, Size, DAG);
 
   if (IsStrict)
     return DAG.getMergeValues({Tmp.first, Tmp.second}, dl);
@@ -19100,18 +19100,16 @@ SDValue X86TargetLowering::LowerSINT_TO_FP(SDValue Op,
   return Tmp.first;
 }
 
-std::pair<SDValue, SDValue>
-X86TargetLowering::BuildFILD(SDValue Op, EVT SrcVT, SDValue Chain,
-                             SDValue Pointer, MachinePointerInfo PtrInfo,
-                             unsigned Align, SelectionDAG &DAG) const {
+std::pair<SDValue, SDValue> X86TargetLowering::BuildFILD(
+    EVT DstVT, EVT SrcVT, const SDLoc &DL, SDValue Chain, SDValue Pointer,
+    MachinePointerInfo PtrInfo, unsigned Align, SelectionDAG &DAG) const {
   // Build the FILD
-  SDLoc DL(Op);
   SDVTList Tys;
-  bool useSSE = isScalarFPTypeInSSEReg(Op.getValueType());
+  bool useSSE = isScalarFPTypeInSSEReg(DstVT);
   if (useSSE)
     Tys = DAG.getVTList(MVT::f80, MVT::Other);
   else
-    Tys = DAG.getVTList(Op.getValueType(), MVT::Other);
+    Tys = DAG.getVTList(DstVT, MVT::Other);
 
   SDValue FILDOps[] = {Chain, Pointer};
   SDValue Result =
@@ -19121,7 +19119,7 @@ X86TargetLowering::BuildFILD(SDValue Op, EVT SrcVT, SDValue Chain,
 
   if (useSSE) {
     MachineFunction &MF = DAG.getMachineFunction();
-    unsigned SSFISize = Op.getValueSizeInBits() / 8;
+    unsigned SSFISize = DstVT.getStoreSize();
     int SSFI = MF.getFrameInfo().CreateStackObject(SSFISize, SSFISize, false);
     auto PtrVT = getPointerTy(MF.getDataLayout());
     SDValue StackSlot = DAG.getFrameIndex(SSFI, PtrVT);
@@ -19131,10 +19129,10 @@ X86TargetLowering::BuildFILD(SDValue Op, EVT SrcVT, SDValue Chain,
         MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), SSFI),
         MachineMemOperand::MOStore, SSFISize, SSFISize);
 
-    Chain = DAG.getMemIntrinsicNode(X86ISD::FST, DL, Tys, FSTOps,
-                                    Op.getValueType(), StoreMMO);
+    Chain =
+        DAG.getMemIntrinsicNode(X86ISD::FST, DL, Tys, FSTOps, DstVT, StoreMMO);
     Result = DAG.getLoad(
-        Op.getValueType(), DL, Chain, StackSlot,
+        DstVT, DL, Chain, StackSlot,
         MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), SSFI));
     Chain = Result.getValue(1);
   }
@@ -19577,7 +19575,7 @@ SDValue X86TargetLowering::LowerUINT_TO_FP(SDValue Op,
     SDValue Store2 = DAG.getStore(Store1, dl, DAG.getConstant(0, dl, MVT::i32),
                                   OffsetSlot, MPI.getWithOffset(4), 4);
     std::pair<SDValue, SDValue> Tmp =
-        BuildFILD(Op, MVT::i64, Store2, StackSlot, MPI, 8, DAG);
+        BuildFILD(DstVT, MVT::i64, dl, Store2, StackSlot, MPI, 8, DAG);
     if (IsStrict)
       return DAG.getMergeValues({Tmp.first, Tmp.second}, dl);
 
@@ -45043,7 +45041,6 @@ static SDValue combineSIntToFP(SDNode *N, SelectionDAG &DAG,
   if (!Subtarget.useSoftFloat() && Subtarget.hasX87() &&
       Op0.getOpcode() == ISD::LOAD) {
     LoadSDNode *Ld = cast<LoadSDNode>(Op0.getNode());
-    EVT LdVT = Ld->getValueType(0);
 
     // This transformation is not supported if the result type is f16 or f128.
     if (VT == MVT::f16 || VT == MVT::f128)
@@ -45054,12 +45051,11 @@ static SDValue combineSIntToFP(SDNode *N, SelectionDAG &DAG,
     if (Subtarget.hasDQI() && VT != MVT::f80)
       return SDValue();
 
-    if (Ld->isSimple() && !VT.isVector() &&
-        ISD::isNON_EXTLoad(Op0.getNode()) && Op0.hasOneUse() &&
-        !Subtarget.is64Bit() && LdVT == MVT::i64) {
+    if (Ld->isSimple() && !VT.isVector() && ISD::isNormalLoad(Op0.getNode()) &&
+        Op0.hasOneUse() && !Subtarget.is64Bit() && InVT == MVT::i64) {
       std::pair<SDValue, SDValue> Tmp =
           Subtarget.getTargetLowering()->BuildFILD(
-              SDValue(N, 0), LdVT, Ld->getChain(), Ld->getBasePtr(),
+              VT, InVT, SDLoc(N), Ld->getChain(), Ld->getBasePtr(),
               Ld->getPointerInfo(), Ld->getAlignment(), DAG);
       DAG.ReplaceAllUsesOfValueWith(Op0.getValue(1), Tmp.second);
       return Tmp.first;
