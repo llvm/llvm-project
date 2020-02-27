@@ -5,78 +5,35 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// This file declares basic classes and functions to debug structured MLIR
+// types at runtime. Entities in this file may not be compatible with targets
+// without a C++ runtime. These may be progressively migrated to CRunnerUtils.h
+// over time.
+//
+//===----------------------------------------------------------------------===//
 
 #ifndef EXECUTIONENGINE_RUNNERUTILS_H_
 #define EXECUTIONENGINE_RUNNERUTILS_H_
 
-#include <assert.h>
-#include <cstdint>
-#include <iostream>
-
 #ifdef _WIN32
-#ifndef MLIR_RUNNER_UTILS_EXPORT
+#ifndef MLIR_RUNNERUTILS_EXPORT
 #ifdef mlir_runner_utils_EXPORTS
 /* We are building this library */
-#define MLIR_RUNNER_UTILS_EXPORT __declspec(dllexport)
+#define MLIR_RUNNERUTILS_EXPORT __declspec(dllexport)
 #else
 /* We are using this library */
-#define MLIR_RUNNER_UTILS_EXPORT __declspec(dllimport)
+#define MLIR_RUNNERUTILS_EXPORT __declspec(dllimport)
 #endif // mlir_runner_utils_EXPORTS
-#endif // MLIR_RUNNER_UTILS_EXPORT
+#endif // MLIR_RUNNERUTILS_EXPORT
 #else
-#define MLIR_RUNNER_UTILS_EXPORT
+#define MLIR_RUNNERUTILS_EXPORT
 #endif // _WIN32
 
-template <typename T, int N> struct StridedMemRefType;
-template <typename StreamType, typename T, int N>
-void printMemRefMetaData(StreamType &os, StridedMemRefType<T, N> &V);
+#include <assert.h>
+#include <iostream>
 
-template <int N> void dropFront(int64_t arr[N], int64_t *res) {
-  for (unsigned i = 1; i < N; ++i)
-    *(res + i - 1) = arr[i];
-}
-
-/// StridedMemRef descriptor type with static rank.
-template <typename T, int N> struct StridedMemRefType {
-  T *basePtr;
-  T *data;
-  int64_t offset;
-  int64_t sizes[N];
-  int64_t strides[N];
-  // This operator[] is extremely slow and only for sugaring purposes.
-  StridedMemRefType<T, N - 1> operator[](int64_t idx) {
-    StridedMemRefType<T, N - 1> res;
-    res.basePtr = basePtr;
-    res.data = data;
-    res.offset = offset + idx * strides[0];
-    dropFront<N>(sizes, res.sizes);
-    dropFront<N>(strides, res.strides);
-    return res;
-  }
-};
-
-/// StridedMemRef descriptor type specialized for rank 1.
-template <typename T> struct StridedMemRefType<T, 1> {
-  T *basePtr;
-  T *data;
-  int64_t offset;
-  int64_t sizes[1];
-  int64_t strides[1];
-  T &operator[](int64_t idx) { return *(data + offset + idx * strides[0]); }
-};
-
-/// StridedMemRef descriptor type specialized for rank 0.
-template <typename T> struct StridedMemRefType<T, 0> {
-  T *basePtr;
-  T *data;
-  int64_t offset;
-};
-
-// Unranked MemRef
-template <typename T> struct UnrankedMemRefType {
-  int64_t rank;
-  void *descriptor;
-};
+#include "mlir/ExecutionEngine/CRunnerUtils.h"
 
 template <typename StreamType, typename T, int N>
 void printMemRefMetaData(StreamType &os, StridedMemRefType<T, N> &V) {
@@ -261,35 +218,27 @@ template <typename T> void printMemRef(StridedMemRefType<T, 0> &M) {
 ////////////////////////////////////////////////////////////////////////////////
 // Currently exposed C API.
 ////////////////////////////////////////////////////////////////////////////////
-extern "C" MLIR_RUNNER_UTILS_EXPORT void
+extern "C" MLIR_RUNNERUTILS_EXPORT void
 _mlir_ciface_print_memref_i8(UnrankedMemRefType<int8_t> *M);
-extern "C" MLIR_RUNNER_UTILS_EXPORT void
+extern "C" MLIR_RUNNERUTILS_EXPORT void
 _mlir_ciface_print_memref_f32(UnrankedMemRefType<float> *M);
 
-extern "C" MLIR_RUNNER_UTILS_EXPORT void print_memref_f32(int64_t rank,
-                                                          void *ptr);
+extern "C" MLIR_RUNNERUTILS_EXPORT void print_memref_f32(int64_t rank,
+                                                         void *ptr);
 
-extern "C" MLIR_RUNNER_UTILS_EXPORT void
+extern "C" MLIR_RUNNERUTILS_EXPORT void
 _mlir_ciface_print_memref_0d_f32(StridedMemRefType<float, 0> *M);
-extern "C" MLIR_RUNNER_UTILS_EXPORT void
+extern "C" MLIR_RUNNERUTILS_EXPORT void
 _mlir_ciface_print_memref_1d_f32(StridedMemRefType<float, 1> *M);
-extern "C" MLIR_RUNNER_UTILS_EXPORT void
+extern "C" MLIR_RUNNERUTILS_EXPORT void
 _mlir_ciface_print_memref_2d_f32(StridedMemRefType<float, 2> *M);
-extern "C" MLIR_RUNNER_UTILS_EXPORT void
+extern "C" MLIR_RUNNERUTILS_EXPORT void
 _mlir_ciface_print_memref_3d_f32(StridedMemRefType<float, 3> *M);
-extern "C" MLIR_RUNNER_UTILS_EXPORT void
+extern "C" MLIR_RUNNERUTILS_EXPORT void
 _mlir_ciface_print_memref_4d_f32(StridedMemRefType<float, 4> *M);
 
-extern "C" MLIR_RUNNER_UTILS_EXPORT void
+extern "C" MLIR_RUNNERUTILS_EXPORT void
 _mlir_ciface_print_memref_vector_4x4xf32(
     StridedMemRefType<Vector2D<4, 4, float>, 2> *M);
-
-// Small runtime support "lib" for vector.print lowering.
-extern "C" MLIR_RUNNER_UTILS_EXPORT void print_f32(float f);
-extern "C" MLIR_RUNNER_UTILS_EXPORT void print_f64(double d);
-extern "C" MLIR_RUNNER_UTILS_EXPORT void print_open();
-extern "C" MLIR_RUNNER_UTILS_EXPORT void print_close();
-extern "C" MLIR_RUNNER_UTILS_EXPORT void print_comma();
-extern "C" MLIR_RUNNER_UTILS_EXPORT void print_newline();
 
 #endif // EXECUTIONENGINE_RUNNERUTILS_H_
