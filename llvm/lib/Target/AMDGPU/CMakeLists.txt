@@ -56,6 +56,7 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPULowerIntrinsics.cpp
   AMDGPULowerKernelArguments.cpp
   AMDGPULowerKernelAttributes.cpp
+  AMDGPULowerKernelCalls.cpp
   AMDGPUMachineCFGStructurizer.cpp
   AMDGPUMachineFunction.cpp
   AMDGPUMachineModuleInfo.cpp
@@ -65,6 +66,7 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPUPostLegalizerCombiner.cpp
   AMDGPUPreLegalizerCombiner.cpp
   AMDGPUPromoteAlloca.cpp
+  AMDGPUPromotePointerKernArgsToGlobal.cpp
   AMDGPUPropagateAttributes.cpp
   AMDGPURegisterBankInfo.cpp
   AMDGPURewriteOutArguments.cpp
@@ -137,3 +139,16 @@ add_subdirectory(Disassembler)
 add_subdirectory(MCTargetDesc)
 add_subdirectory(TargetInfo)
 add_subdirectory(Utils)
+
+install(
+    FILES
+        ${CMAKE_CURRENT_SOURCE_DIR}/AMDGPU.h
+    DESTINATION include/llvm/Target/AMDGPU
+    COMPONENT llvm-headers
+)
+
+install(
+    FILES ${CMAKE_CURRENT_SOURCE_DIR}/Disassembler/CodeObjectDisassembler.h
+    DESTINATION include/llvm/Target/AMDGPU/Disassembler
+    COMPONENT llvm-headers
+)

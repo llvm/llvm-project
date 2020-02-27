@@ -394,6 +394,9 @@ class CXXRecordDecl : public RecordDecl {
     /// mangling in the Itanium C++ ABI.
     unsigned ManglingNumber : 31;
 
+    /// The device side name mangling number.
+    unsigned DeviceManglingNumber = 0;
+
     /// The declaration that provides context for this lambda, if the
     /// actual DeclContext does not suffice. This is used for lambdas that
     /// occur within default arguments of function parameters within the class
@@ -1737,6 +1740,16 @@ public:
     getLambdaData().ManglingNumber = ManglingNumber;
     getLambdaData().ContextDecl = ContextDecl;
     getLambdaData().HasKnownInternalLinkage = HasKnownInternalLinkage;
+  }
+
+  /// Set the device side mangling number.
+  void setDeviceLambdaManglingNumber(unsigned Num) {
+    getLambdaData().DeviceManglingNumber = Num;
+  }
+
+  unsigned getDeviceLambdaManglingNumber() const {
+    assert(isLambda() && "Not a lambda closure type!");
+    return getLambdaData().DeviceManglingNumber;
   }
 
   /// Returns the inheritance model used for this record.

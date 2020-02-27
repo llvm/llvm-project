@@ -11,13 +11,14 @@ define i64 @_Z8wyhash64v() {
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i64 [[TMP2]] to i128
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul nuw i128 [[TMP3]], 11795372955171141389
 ; CHECK-NEXT:    [[TMP5:%.*]] = lshr i128 [[TMP4]], 64
-; CHECK-NEXT:    [[DOTMASKED:%.*]] = and i128 [[TMP4]], 18446744073709551615
-; CHECK-NEXT:    [[TMP6:%.*]] = xor i128 [[TMP5]], [[DOTMASKED]]
-; CHECK-NEXT:    [[TMP7:%.*]] = mul nuw nsw i128 [[TMP6]], 1946526487930394057
-; CHECK-NEXT:    [[TMP8:%.*]] = lshr i128 [[TMP7]], 64
-; CHECK-NEXT:    [[TMP9:%.*]] = xor i128 [[TMP8]], [[TMP7]]
-; CHECK-NEXT:    [[TMP10:%.*]] = trunc i128 [[TMP9]] to i64
-; CHECK-NEXT:    ret i64 [[TMP10]]
+; CHECK-NEXT:    [[TMP6:%.*]] = mul i64 [[TMP2]], -6651371118538410227
+; CHECK-NEXT:    [[DOTMASKED:%.*]] = zext i64 [[TMP6]] to i128
+; CHECK-NEXT:    [[TMP7:%.*]] = xor i128 [[TMP5]], [[DOTMASKED]]
+; CHECK-NEXT:    [[TMP8:%.*]] = mul nuw nsw i128 [[TMP7]], 1946526487930394057
+; CHECK-NEXT:    [[TMP9:%.*]] = lshr i128 [[TMP8]], 64
+; CHECK-NEXT:    [[TMP10:%.*]] = xor i128 [[TMP9]], [[TMP8]]
+; CHECK-NEXT:    [[TMP11:%.*]] = trunc i128 [[TMP10]] to i64
+; CHECK-NEXT:    ret i64 [[TMP11]]
 ;
   %1 = load i64, i64* @wyhash64_x, align 8
   %2 = add i64 %1, 6971258582664805397

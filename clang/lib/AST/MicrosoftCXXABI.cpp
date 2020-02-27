@@ -23,6 +23,138 @@
 
 using namespace clang;
 
+// Before revising the interface, clone of `ItaniumNumberingContext` from
+// `lib/AST/ItaniumCXXABI.cpp`.
+// {{{ BEGIN CLONE
+namespace {
+
+/// According to Itanium C++ ABI 5.1.2:
+/// the name of an anonymous union is considered to be
+/// the name of the first named data member found by a pre-order,
+/// depth-first, declaration-order walk of the data members of
+/// the anonymous union.
+/// If there is no such data member (i.e., if all of the data members
+/// in the union are unnamed), then there is no way for a program to
+/// refer to the anonymous union, and there is therefore no need to mangle its name.
+///
+/// Returns the name of anonymous union VarDecl or nullptr if it is not found.
+static const IdentifierInfo *findAnonymousUnionVarDeclName(const VarDecl& VD) {
+  const RecordType *RT = VD.getType()->getAs<RecordType>();
+  assert(RT && "type of VarDecl is expected to be RecordType.");
+  assert(RT->getDecl()->isUnion() && "RecordType is expected to be a union.");
+  if (const FieldDecl *FD = RT->getDecl()->findFirstNamedDataMember()) {
+    return FD->getIdentifier();
+  }
+
+  return nullptr;
+}
+
+/// The name of a decomposition declaration.
+struct DecompositionDeclName {
+  using BindingArray = ArrayRef<const BindingDecl*>;
+
+  /// Representative example of a set of bindings with these names.
+  BindingArray Bindings;
+
+  /// Iterators over the sequence of identifiers in the name.
+  struct Iterator
+      : llvm::iterator_adaptor_base<Iterator, BindingArray::const_iterator,
+                                    std::random_access_iterator_tag,
+                                    const IdentifierInfo *> {
+    Iterator(BindingArray::const_iterator It) : iterator_adaptor_base(It) {}
+    const IdentifierInfo *operator*() const {
+      return (*this->I)->getIdentifier();
+    }
+  };
+  Iterator begin() const { return Iterator(Bindings.begin()); }
+  Iterator end() const { return Iterator(Bindings.end()); }
+};
+}
+
+namespace llvm {
+template<>
+struct DenseMapInfo<DecompositionDeclName> {
+  using ArrayInfo = llvm::DenseMapInfo<ArrayRef<const BindingDecl*>>;
+  using IdentInfo = llvm::DenseMapInfo<const IdentifierInfo*>;
+  static DecompositionDeclName getEmptyKey() {
+    return {ArrayInfo::getEmptyKey()};
+  }
+  static DecompositionDeclName getTombstoneKey() {
+    return {ArrayInfo::getTombstoneKey()};
+  }
+  static unsigned getHashValue(DecompositionDeclName Key) {
+    assert(!isEqual(Key, getEmptyKey()) && !isEqual(Key, getTombstoneKey()));
+    return llvm::hash_combine_range(Key.begin(), Key.end());
+  }
+  static bool isEqual(DecompositionDeclName LHS, DecompositionDeclName RHS) {
+    if (ArrayInfo::isEqual(LHS.Bindings, ArrayInfo::getEmptyKey()))
+      return ArrayInfo::isEqual(RHS.Bindings, ArrayInfo::getEmptyKey());
+    if (ArrayInfo::isEqual(LHS.Bindings, ArrayInfo::getTombstoneKey()))
+      return ArrayInfo::isEqual(RHS.Bindings, ArrayInfo::getTombstoneKey());
+    return LHS.Bindings.size() == RHS.Bindings.size() &&
+           std::equal(LHS.begin(), LHS.end(), RHS.begin());
+  }
+};
+}
+
+namespace {
+
+/// Keeps track of the mangled names of lambda expressions and block
+/// literals within a particular context.
+class ItaniumNumberingContext : public MangleNumberingContext {
+  llvm::DenseMap<const Type *, unsigned> ManglingNumbers;
+  llvm::DenseMap<const IdentifierInfo *, unsigned> VarManglingNumbers;
+  llvm::DenseMap<const IdentifierInfo *, unsigned> TagManglingNumbers;
+  llvm::DenseMap<DecompositionDeclName, unsigned>
+      DecompsitionDeclManglingNumbers;
+
+public:
+  unsigned getManglingNumber(const CXXMethodDecl *CallOperator) override {
+    const FunctionProtoType *Proto =
+        CallOperator->getType()->getAs<FunctionProtoType>();
+    ASTContext &Context = CallOperator->getASTContext();
+
+    FunctionProtoType::ExtProtoInfo EPI;
+    EPI.Variadic = Proto->isVariadic();
+    QualType Key =
+        Context.getFunctionType(Context.VoidTy, Proto->getParamTypes(), EPI);
+    Key = Context.getCanonicalType(Key);
+    return ++ManglingNumbers[Key->castAs<FunctionProtoType>()];
+  }
+
+  unsigned getManglingNumber(const BlockDecl *BD) override {
+    const Type *Ty = nullptr;
+    return ++ManglingNumbers[Ty];
+  }
+
+  unsigned getStaticLocalNumber(const VarDecl *VD) override {
+    return 0;
+  }
+
+  /// Variable decls are numbered by identifier.
+  unsigned getManglingNumber(const VarDecl *VD, unsigned) override {
+    if (auto *DD = dyn_cast<DecompositionDecl>(VD)) {
+      DecompositionDeclName Name{DD->bindings()};
+      return ++DecompsitionDeclManglingNumbers[Name];
+    }
+
+    const IdentifierInfo *Identifier = VD->getIdentifier();
+    if (!Identifier) {
+      // VarDecl without an identifier represents an anonymous union
+      // declaration.
+      Identifier = findAnonymousUnionVarDeclName(*VD);
+    }
+    return ++VarManglingNumbers[Identifier];
+  }
+
+  unsigned getManglingNumber(const TagDecl *TD, unsigned) override {
+    return ++TagManglingNumbers[TD->getIdentifier()];
+  }
+};
+
+} // End anonymous namesapce
+// END CLONE }}}
+
 namespace {
 
 /// Numbers things which need to correspond across multiple TUs.
@@ -61,6 +193,41 @@ public:
   unsigned getManglingNumber(const TagDecl *TD,
                              unsigned MSLocalManglingNumber) override {
     return MSLocalManglingNumber;
+  }
+};
+
+class MSHIPNumberingContext : public MangleNumberingContext {
+  MicrosoftNumberingContext HostCtx;
+  ItaniumNumberingContext DeviceCtx;
+
+public:
+
+  unsigned getManglingNumber(const CXXMethodDecl *CallOperator) override {
+    return HostCtx.getManglingNumber(CallOperator);
+  }
+
+  unsigned getManglingNumber(const BlockDecl *BD) override {
+    return HostCtx.getManglingNumber(BD);
+  }
+
+  unsigned getStaticLocalNumber(const VarDecl *VD) override {
+    return HostCtx.getStaticLocalNumber(VD);
+  }
+
+  unsigned getManglingNumber(const VarDecl *VD,
+                             unsigned MSLocalManglingNumber) override {
+    return HostCtx.getManglingNumber(VD, MSLocalManglingNumber);
+  }
+
+  unsigned getManglingNumber(const TagDecl *TD,
+                             unsigned MSLocalManglingNumber) override {
+    return HostCtx.getManglingNumber(TD, MSLocalManglingNumber);
+  }
+
+  bool hasDeviceMangleNumberingContext() override { return true; }
+
+  unsigned getDeviceManglingNumber(const CXXMethodDecl *CallOperator) override {
+    return DeviceCtx.getManglingNumber(CallOperator);
   }
 };
 
@@ -133,6 +300,8 @@ public:
 
   std::unique_ptr<MangleNumberingContext>
   createMangleNumberingContext() const override {
+    if (Context.getLangOpts().CUDA)
+      return std::make_unique<MSHIPNumberingContext>();
     return std::make_unique<MicrosoftNumberingContext>();
   }
 };

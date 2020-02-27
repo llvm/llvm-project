@@ -680,15 +680,16 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
 
   // At O0 we want to fully disable inlining outside of cases marked with
   // 'alwaysinline' that are required for correctness.
-  Opts.setInlining((Opts.OptimizationLevel == 0)
-                       ? CodeGenOptions::OnlyAlwaysInlining
-                       : CodeGenOptions::NormalInlining);
+  Opts.setInlining(
+      (!Args.hasArg(OPT_disable_O0_noinline) && Opts.OptimizationLevel == 0)
+          ? CodeGenOptions::OnlyAlwaysInlining
+          : CodeGenOptions::NormalInlining);
   // Explicit inlining flags can disable some or all inlining even at
   // optimization levels above zero.
   if (Arg *InlineArg = Args.getLastArg(
           options::OPT_finline_functions, options::OPT_finline_hint_functions,
           options::OPT_fno_inline_functions, options::OPT_fno_inline)) {
-    if (Opts.OptimizationLevel > 0) {
+    if (Args.hasArg(OPT_disable_O0_noinline) || Opts.OptimizationLevel > 0) {
       const Option &InlineOpt = InlineArg->getOption();
       if (InlineOpt.matches(options::OPT_finline_functions))
         Opts.setInlining(CodeGenOptions::NormalInlining);
@@ -2330,15 +2331,9 @@ void CompilerInvocation::setLangDefaults(LangOptions &Opts, InputKind IK,
     Opts.NativeHalfType = 1;
     Opts.NativeHalfArgsAndReturns = 1;
     Opts.OpenCLCPlusPlus = Opts.CPlusPlus;
-
     // Include default header file for OpenCL.
-    if (Opts.IncludeDefaultHeader) {
-      if (Opts.DeclareOpenCLBuiltins) {
-        // Only include base header file for builtin types and constants.
-        PPOpts.Includes.push_back("opencl-c-base.h");
-      } else {
-        PPOpts.Includes.push_back("opencl-c.h");
-      }
+    if (Opts.IncludeDefaultHeader && !Opts.DeclareOpenCLBuiltins) {
+      PPOpts.Includes.push_back("opencl-c.h");
     }
   }
 

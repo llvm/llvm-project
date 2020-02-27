@@ -8220,7 +8220,7 @@ AMDGPUTargetCodeGenInfo::getLLVMSyncScopeID(const LangOptions &LangOpts,
     Name = "wavefront";
   }
 
-  if (Ordering != llvm::AtomicOrdering::SequentiallyConsistent) {
+  if(Ordering != llvm::AtomicOrdering::SequentiallyConsistent) {
     if (!Name.empty())
       Name = Twine(Twine(Name) + Twine("-")).str();
 

@@ -7,6 +7,8 @@
 // RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CLC++ -fdeclare-opencl-builtins -DNO_HEADER
 // RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CLC++ -fdeclare-opencl-builtins -finclude-default-header
 
+// XFAIL: *
+
 // Test the -fdeclare-opencl-builtins option.
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable

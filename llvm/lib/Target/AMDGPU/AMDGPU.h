@@ -200,6 +200,10 @@ ModulePass *createAMDGPUAlwaysInlinePass(bool GlobalOpt = true);
 ModulePass *createR600OpenCLImageTypeLoweringPass();
 FunctionPass *createAMDGPUAnnotateUniformValues();
 
+ModulePass *createAMDGPULowerKernelCallsPass();
+void initializeAMDGPULowerKernelCallsPass(PassRegistry&);
+extern char &AMDGPULowerKernelCallsID;
+
 ModulePass *createAMDGPUPrintfRuntimeBinding();
 void initializeAMDGPUPrintfRuntimeBindingPass(PassRegistry&);
 extern char &AMDGPUPrintfRuntimeBindingID;
@@ -257,6 +261,9 @@ extern char &GCNRegBankReassignID;
 
 void initializeGCNNSAReassignPass(PassRegistry &);
 extern char &GCNNSAReassignID;
+
+FunctionPass *createAMDGPUPromotePointerKernArgsToGlobalPass();
+void initializeAMDGPUPromotePointerKernArgsToGlobalPass(PassRegistry &);
 
 namespace AMDGPU {
 enum TargetIndex {

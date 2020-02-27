@@ -3702,8 +3702,19 @@ static void RenderDebugOptions(const ToolChain &TC, const Driver &D,
         DebuggerTuning = llvm::DebuggerKind::LLDB;
       else if (A->getOption().matches(options::OPT_gsce))
         DebuggerTuning = llvm::DebuggerKind::SCE;
-      else
+      else {
         DebuggerTuning = llvm::DebuggerKind::GDB;
+        if (T.getArch() == llvm::Triple::amdgcn) {
+          CmdArgs.push_back("-disable-O0-optnone");
+          CmdArgs.push_back("-disable-O0-noinline");
+          // -ggdb with AMDGCN does not currently compose with options that
+          // affect the debug info kind. The behavior of commands like `-ggdb
+          // -g` may be surprising (the -g is effectively ignored).
+          DebugInfoKind = codegenoptions::DebugLineTablesOnly;
+          if (SplitDWARFInlining)
+            DwarfFission = DwarfFissionKind::None;
+        }
+      }
     }
   }
 
@@ -5464,7 +5475,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     // Imitate GCC 4.2.1 by default if -fms-compatibility is not in effect.
     GNUCVer = VersionTuple(4, 2, 1);
   }
-  if (!GNUCVer.empty()) {
+  if (C.getDefaultToolChain().getArch() != llvm::Triple::amdgcn &&
+      !GNUCVer.empty()) {
     CmdArgs.push_back(
         Args.MakeArgString("-fgnuc-version=" + GNUCVer.getAsString()));
   }
@@ -6976,7 +6988,7 @@ void OffloadBundler::ConstructJob(Compilation &C, const JobAction &JA,
   C.addCommand(std::make_unique<Command>(
       JA, *this,
       TCArgs.MakeArgString(getToolChain().GetProgramPath(getShortName())),
-      CmdArgs, None));
+      CmdArgs, Inputs));
 }
 
 void OffloadBundler::ConstructJobMultipleOutputs(
@@ -7042,7 +7054,7 @@ void OffloadBundler::ConstructJobMultipleOutputs(
   C.addCommand(std::make_unique<Command>(
       JA, *this,
       TCArgs.MakeArgString(getToolChain().GetProgramPath(getShortName())),
-      CmdArgs, None));
+      CmdArgs, Inputs));
 }
 
 void OffloadWrapper::ConstructJob(Compilation &C, const JobAction &JA,

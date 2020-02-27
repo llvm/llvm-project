@@ -2270,7 +2270,9 @@ template <class ELFT> void Writer<ELFT>::fixSectionAlignments() {
       // maximum page size boundary so that we can find the ELF header at the
       // start. We cannot benefit from overlapping p_offset ranges with the
       // previous segment anyway.
-      if (config->zSeparate == SeparateSegmentKind::Loadable ||
+      bool enable = config->emachine != EM_AMDGPU;
+
+      if (!enable || config->zSeparate == SeparateSegmentKind::Loadable ||
           (config->zSeparate == SeparateSegmentKind::Code && prev &&
            (prev->p_flags & PF_X) != (p->p_flags & PF_X)) ||
           cmd->type == SHT_LLVM_PART_EHDR)

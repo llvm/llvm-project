@@ -66,7 +66,7 @@ void test_merge_if(int a) {
 // CHECK: br i1 %[[tobool]], label %[[if_end:.+]], label %[[if_then:.+]]
 // CHECK: [[if_then]]:
 // CHECK: tail call spir_func void @f()
-// CHECK-NOT: call spir_func void @convfun()
+// CHECK-NOT: call spir_func void @non_convfun()
 // CHECK-NOT: call spir_func void @g()
 // CHECK: br label %[[if_end]]
 // CHECK: [[if_end]]:

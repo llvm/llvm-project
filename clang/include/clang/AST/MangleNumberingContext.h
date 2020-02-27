@@ -16,6 +16,7 @@
 
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/Support/ErrorHandling.h"
 
 namespace clang {
 
@@ -52,6 +53,15 @@ public:
   /// this context.
   virtual unsigned getManglingNumber(const TagDecl *TD,
                                      unsigned MSLocalManglingNumber) = 0;
+
+  /// Has device mangle number context.
+  virtual bool hasDeviceMangleNumberingContext() { return false; }
+
+  /// Retrieve the mangling number of a new lambda expression with the
+  /// given call operator within the device context.
+  virtual unsigned getDeviceManglingNumber(const CXXMethodDecl *) {
+    llvm_unreachable("There's no device context associated!");
+  }
 };
 
 } // end namespace clang
