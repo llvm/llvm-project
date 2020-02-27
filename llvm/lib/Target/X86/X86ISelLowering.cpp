@@ -23423,7 +23423,7 @@ SDValue X86TargetLowering::LowerVAARG(SDValue Op, SelectionDAG &DAG) const {
   EVT ArgVT = Op.getNode()->getValueType(0);
   Type *ArgTy = ArgVT.getTypeForEVT(*DAG.getContext());
   uint32_t ArgSize = DAG.getDataLayout().getTypeAllocSize(ArgTy);
-  uint8_t ArgMode;
+  uint8_t ArgMode = 0;
 
   // Decide which area this value should be read from.
   // TODO: Implement the AMD64 ABI in its entirety. This simple
