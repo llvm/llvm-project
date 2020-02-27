@@ -10,8 +10,8 @@
 # Verify that DW_OP_LLVM_entry_values are generated for parameters with multiple
 # DBG_VALUEs at entry block.
 # CHECK: DBG_VALUE $edi, $noreg, !{{.*}}, !DIExpression(DW_OP_LLVM_entry_value, 1), debug-location {{.*}}
-# CHECK: DBG_VALUE $edx, $noreg, !{{.*}}, !DIExpression(DW_OP_LLVM_entry_value, 1), debug-location {{.*}}
 # CHECK: DBG_VALUE $esi, $noreg, !{{.*}}, !DIExpression(DW_OP_LLVM_entry_value, 1), debug-location {{.*}}
+# CHECK: DBG_VALUE $edx, $noreg, !{{.*}}, !DIExpression(DW_OP_LLVM_entry_value, 1), debug-location {{.*}}
 
 --- |
   ; ModuleID = 'multiple-param-dbg-value-entry.ll'
