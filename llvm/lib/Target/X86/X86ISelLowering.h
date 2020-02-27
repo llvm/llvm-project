@@ -1326,7 +1326,7 @@ namespace llvm {
 
     unsigned getAddressSpace(void) const;
 
-    SDValue FP_TO_INTHelper(SDValue Op, SelectionDAG &DAG, bool isSigned,
+    SDValue FP_TO_INTHelper(SDValue Op, SelectionDAG &DAG, bool IsSigned,
                             SDValue &Chain) const;
     SDValue LRINT_LLRINTHelper(SDNode *N, SelectionDAG &DAG) const;
 
@@ -1419,7 +1419,7 @@ namespace llvm {
     const MCPhysReg *getScratchRegisters(CallingConv::ID CC) const override;
 
     TargetLoweringBase::AtomicExpansionKind
-    shouldExpandAtomicLoadInIR(LoadInst *SI) const override;
+    shouldExpandAtomicLoadInIR(LoadInst *LI) const override;
     bool shouldExpandAtomicStoreInIR(StoreInst *SI) const override;
     TargetLoweringBase::AtomicExpansionKind
     shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const override;
@@ -1498,15 +1498,15 @@ namespace llvm {
                               SDValue &X86CC) const;
 
     /// Check if replacement of SQRT with RSQRT should be disabled.
-    bool isFsqrtCheap(SDValue Operand, SelectionDAG &DAG) const override;
+    bool isFsqrtCheap(SDValue Op, SelectionDAG &DAG) const override;
 
     /// Use rsqrt* to speed up sqrt calculations.
-    SDValue getSqrtEstimate(SDValue Operand, SelectionDAG &DAG, int Enabled,
+    SDValue getSqrtEstimate(SDValue Op, SelectionDAG &DAG, int Enabled,
                             int &RefinementSteps, bool &UseOneConstNR,
                             bool Reciprocal) const override;
 
     /// Use rcp* to speed up fdiv calculations.
-    SDValue getRecipEstimate(SDValue Operand, SelectionDAG &DAG, int Enabled,
+    SDValue getRecipEstimate(SDValue Op, SelectionDAG &DAG, int Enabled,
                              int &RefinementSteps) const override;
 
     /// Reassociate floating point divisions into multiply by reciprocal.
