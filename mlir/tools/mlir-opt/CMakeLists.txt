@@ -19,23 +19,15 @@ target_link_libraries(MLIRMlirOptMain
 )
 
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
+get_property(conversion_libs GLOBAL PROPERTY MLIR_CONVERSION_LIBS)
 set(LIBS
   ${dialect_libs}
+  ${conversion_libs}
   MLIRLoopOpsTransforms
   MLIRLoopAnalysis
   MLIRAnalysis
-  MLIRAffineToStandard
   MLIRDialect
-  MLIRLoopsToGPU
-  MLIRLinalgToLLVM
-
-  MLIRLoopToStandard
   MLIREDSC
-  MLIRGPUtoCUDATransforms
-  MLIRGPUtoNVVMTransforms
-  MLIRGPUtoROCDLTransforms
-  MLIRGPUtoSPIRVTransforms
-  MLIRGPUtoVulkanTransforms
   MLIROptLib
   MLIRParser
   MLIRPass
@@ -43,11 +35,8 @@ set(LIBS
   MLIRQuantizerSupport
   MLIRQuantizerTransforms
   MLIRSPIRV
-  MLIRLinalgToSPIRVTransforms
-  MLIRStandardToSPIRVTransforms
   MLIRSPIRVTestPasses
   MLIRSPIRVTransforms
-  MLIRStandardToLLVM
   MLIRTransforms
   MLIRTransformUtils
   MLIRTestDialect
@@ -55,8 +44,6 @@ set(LIBS
   MLIRTestPass
   MLIRTestTransforms
   MLIRSupport
-  MLIRVectorToLLVM
-  MLIRVectorToLoops
   MLIRIR
   MLIROptLib
   LLVMSupport
