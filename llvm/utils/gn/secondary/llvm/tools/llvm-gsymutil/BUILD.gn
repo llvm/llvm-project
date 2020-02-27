@@ -1,9 +1,7 @@
 executable("llvm-gsymutil") {
   deps = [
-    "//llvm/lib/CodeGen/AsmPrinter",
     "//llvm/lib/DebugInfo/DWARF",
     "//llvm/lib/DebugInfo/GSYM",
-    "//llvm/lib/MC",
     "//llvm/lib/Object",
     "//llvm/lib/Support",
     "//llvm/lib/Target",

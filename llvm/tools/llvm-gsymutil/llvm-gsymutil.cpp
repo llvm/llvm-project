@@ -1,4 +1,4 @@
-//===-- llvm-gsymutil.cpp - GSYM dumping and creation utility for llvm ----===//
+//===-- gsymutil.cpp - GSYM dumping and creation utility for llvm ---------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -431,10 +431,7 @@ int main(int argc, char const *argv[]) {
   PrettyStackTraceProgram X(argc, argv);
   llvm_shutdown_obj Y; // Call llvm_shutdown() on exit.
 
-  llvm::InitializeAllTargetInfos();
-  llvm::InitializeAllTargetMCs();
   llvm::InitializeAllTargets();
-  llvm::InitializeAllAsmPrinters();
 
   const char *Overview =
       "A tool for dumping, searching and creating GSYM files.\n\n"
