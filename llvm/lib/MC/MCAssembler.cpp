@@ -224,6 +224,7 @@ bool MCAssembler::evaluateFixup(const MCAsmLayout &Layout,
     return getBackend().evaluateTargetFixup(*this, Layout, Fixup, DF, Target,
                                             Value, WasForced);
 
+  unsigned FixupFlags = getBackendPtr()->getFixupKindInfo(Fixup.getKind()).Flags;
   bool IsPCRel = getBackendPtr()->getFixupKindInfo(Fixup.getKind()).Flags &
                  MCFixupKindInfo::FKF_IsPCRel;
 
@@ -239,8 +240,9 @@ bool MCAssembler::evaluateFixup(const MCAsmLayout &Layout,
       if (A->getKind() != MCSymbolRefExpr::VK_None || SA.isUndefined()) {
         IsResolved = false;
       } else if (auto *Writer = getWriterPtr()) {
-        IsResolved = Writer->isSymbolRefDifferenceFullyResolvedImpl(
-            *this, SA, *DF, false, true);
+        IsResolved = (FixupFlags & MCFixupKindInfo::FKF_Constant) ||
+                     Writer->isSymbolRefDifferenceFullyResolvedImpl(
+                         *this, SA, *DF, false, true);
       }
     }
   } else {
