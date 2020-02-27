@@ -47,7 +47,7 @@ body:             |
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $r4, -8
   ; CHECK:   tCMPi8 renamable $r1, 4, 14 /* CC::al */, $noreg, implicit-def $cpsr
   ; CHECK:   renamable $r3 = t2MOVi 4, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   t2IT 11, 8, implicit-def $itstate
+  ; CHECK:   t2IT 11, 8, implicit-def $itstate, implicit $cpsr
   ; CHECK:   dead $r3 = tMOVr renamable $r1, 11 /* CC::lt */, killed $cpsr, implicit killed renamable $r3, implicit killed $itstate
   ; CHECK:   tCMPi8 renamable $r1, 2, 14 /* CC::al */, $noreg, implicit-def $cpsr
   ; CHECK:   renamable $r12 = t2MOVi 4, 14 /* CC::al */, $noreg, $noreg
@@ -62,7 +62,7 @@ body:             |
   ; CHECK:   liveins: $r0, $r1, $r2, $r12
   ; CHECK:   renamable $r4, dead $cpsr = tMOVi8 1, 14 /* CC::al */, $noreg
   ; CHECK:   tCMPi8 renamable $r1, 4, 14 /* CC::al */, $noreg, implicit-def $cpsr
-  ; CHECK:   t2IT 11, 8, implicit-def $itstate
+  ; CHECK:   t2IT 11, 8, implicit-def $itstate, implicit $cpsr
   ; CHECK:   $r12 = tMOVr renamable $r1, 11 /* CC::lt */, killed $cpsr, implicit killed renamable $r12, implicit killed $itstate
   ; CHECK:   renamable $r3 = t2SUBrr renamable $r1, killed renamable $r12, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   renamable $r3, dead $cpsr = tADDi8 killed renamable $r3, 3, 14 /* CC::al */, $noreg
@@ -122,7 +122,7 @@ body:             |
     frame-setup CFI_INSTRUCTION offset $r4, -8
     tCMPi8 renamable $r1, 4, 14, $noreg, implicit-def $cpsr
     renamable $r3 = t2MOVi 4, 14, $noreg, $noreg
-    t2IT 11, 8, implicit-def $itstate
+    t2IT 11, 8, implicit-def $itstate, implicit $cpsr
     $r3 = tMOVr renamable $r1, 11, killed $cpsr, implicit killed renamable $r3, implicit killed $itstate
     tCMPi8 renamable $r1, 2, 14, $noreg, implicit-def $cpsr
     renamable $r12 = t2MOVi 4, 14, $noreg, $noreg
@@ -144,7 +144,7 @@ body:             |
     renamable $r3, dead $cpsr = tADDi8 killed renamable $r3, 3, 14, $noreg
     tCMPi8 renamable $r1, 4, 14, $noreg, implicit-def $cpsr
     renamable $lr = nuw nsw t2ADDrs renamable $r4, killed renamable $r3, 19, 14, $noreg, $noreg
-    t2IT 11, 8, implicit-def $itstate
+    t2IT 11, 8, implicit-def $itstate, implicit $cpsr
     $r12 = tMOVr renamable $r1, 11, killed $cpsr, implicit killed renamable $r12, implicit killed $itstate
     renamable $r3 = t2SUBrr renamable $r1, killed renamable $r12, 14, $noreg, $noreg
     renamable $r3, dead $cpsr = tADDi8 killed renamable $r3, 3, 14, $noreg
