@@ -296,6 +296,12 @@ RawComment *ASTContext::getRawCommentForDeclNoCache(const Decl *D) const {
   return getRawCommentForDeclNoCacheImpl(D, DeclLoc, *CommentsInThisFile);
 }
 
+void ASTContext::addComment(const RawComment &RC) {
+  assert(LangOpts.RetainCommentsFromSystemHeaders ||
+         !SourceMgr.isInSystemHeader(RC.getSourceRange().getBegin()));
+  Comments.addComment(RC, LangOpts.CommentOpts, BumpAlloc);
+}
+
 /// If we have a 'templated' declaration for a template, adjust 'D' to
 /// refer to the actual template.
 /// If we have an implicit instantiation, adjust 'D' to refer to template.

@@ -721,15 +721,7 @@ public:
   RawComment *getRawCommentForDeclNoCache(const Decl *D) const;
 
 public:
-  RawCommentList &getRawCommentList() {
-    return Comments;
-  }
-
-  void addComment(const RawComment &RC) {
-    assert(LangOpts.RetainCommentsFromSystemHeaders ||
-           !SourceMgr.isInSystemHeader(RC.getSourceRange().getBegin()));
-    Comments.addComment(RC, LangOpts.CommentOpts, BumpAlloc);
-  }
+  void addComment(const RawComment &RC);
 
   /// Return the documentation comment attached to a given declaration.
   /// Returns nullptr if no comment is attached.
