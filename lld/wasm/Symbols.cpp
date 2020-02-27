@@ -29,6 +29,10 @@ std::string toString(const wasm::Symbol &sym) {
 }
 
 std::string maybeDemangleSymbol(StringRef name) {
+  // WebAssembly requires caller and callee signatures to match, so we mangle
+  // `main` in the case where we need to pass it arguments.
+  if (name == "__main_argc_argv")
+    return "main";
   if (wasm::config->demangle)
     return demangleItanium(name);
   return std::string(name);
