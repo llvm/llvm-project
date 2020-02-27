@@ -2893,6 +2893,10 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     if (Left.is(TT_TemplateCloser) && Right.is(TT_StartOfName))
       return true;
 
+    // space after comma in '[,]'.
+    if (Left.is(tok::comma) && Right.is(tok::r_square))
+      return Style.SpacesInSquareBrackets;
+
     // space between keywords and paren e.g. "using ("
     if (Right.is(tok::l_paren))
       if (Left.isOneOf(tok::kw_using, Keywords.kw_async, Keywords.kw_when))
