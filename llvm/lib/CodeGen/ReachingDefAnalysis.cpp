@@ -547,7 +547,7 @@ ReachingDefAnalysis::isSafeToRemove(MachineInstr *MI, InstSet &Visited,
 void ReachingDefAnalysis::collectLocalKilledOperands(MachineInstr *MI,
                                                      InstSet &Dead) const {
   Dead.insert(MI);
-  auto IsDead = [this](MachineInstr *Def, int PhysReg) {
+  auto IsDead = [this, &Dead](MachineInstr *Def, int PhysReg) {
     unsigned LiveDefs = 0;
     for (auto &MO : Def->operands()) {
       if (!isValidRegDef(MO))
@@ -561,7 +561,10 @@ void ReachingDefAnalysis::collectLocalKilledOperands(MachineInstr *MI,
 
     SmallPtrSet<MachineInstr*, 4> Uses;
     getGlobalUses(Def, PhysReg, Uses);
-    return Uses.size() == 1;
+    for (auto *Use : Uses)
+      if (!Dead.count(Use))
+        return false;
+    return true;
   };
 
   for (auto &MO : MI->operands()) {
