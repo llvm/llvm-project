@@ -181,8 +181,8 @@ protected:
   ///
   /// \param[in] inst
   ///     The instruction to be instrumented.
-  void RegisterInstruction(llvm::Instruction &i) {
-    m_to_instrument.push_back(&i);
+  void RegisterInstruction(llvm::Instruction &inst) {
+    m_to_instrument.push_back(&inst);
   }
 
   /// Determine whether a single instruction is interesting to instrument,
