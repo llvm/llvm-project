@@ -10,8 +10,8 @@ declare i8 @llvm.ctlz.i8(i8)
 
 ; CHECK-LABEL: count_leading_zeros:
 ; CHECK: cpi    [[RESULT:r[0-9]+]], 0
-; CHECK: brne   LBB0_1
-; CHECK: rjmp   LBB0_2
+; CHECK: brne   .LBB0_1
+; CHECK: rjmp   .LBB0_2
 ; CHECK: mov    [[SCRATCH:r[0-9]+]], {{.*}}[[RESULT]]
 ; CHECK: lsr    {{.*}}[[SCRATCH]]
 ; CHECK: or     {{.*}}[[SCRATCH]], {{.*}}[[RESULT]]

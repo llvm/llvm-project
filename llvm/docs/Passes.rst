@@ -803,12 +803,15 @@ loop to increment the value by the appropriate amount.
 
 A simple loop rotation transformation.
 
+.. _passes-loop-simplify:
+
 ``-loop-simplify``: Canonicalize natural loops
 ----------------------------------------------
 
 This pass performs several transformations to transform natural loops into a
 simpler form, which makes subsequent analyses and transformations simpler and
-more effective.
+more effective. A summary of it can be found in
+:ref:`Loop Terminology, Loop Simplify Form <loop-terminology-loop-simplify>`.
 
 Loop pre-header insertion guarantees that there is a single, non-critical entry
 edge from outside of the loop to the loop header.  This simplifies a number of

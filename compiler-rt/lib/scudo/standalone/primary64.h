@@ -395,12 +395,11 @@ private:
         (Region->Stats.PoppedBlocks - Region->Stats.PushedBlocks) * BlockSize;
     if (BytesInFreeList < PageSize)
       return 0; // No chance to release anything.
-    if ((Region->Stats.PushedBlocks -
-         Region->ReleaseInfo.PushedBlocksAtLastRelease) *
-            BlockSize <
-        PageSize) {
+    const uptr BytesPushed = (Region->Stats.PushedBlocks -
+                              Region->ReleaseInfo.PushedBlocksAtLastRelease) *
+                             BlockSize;
+    if (BytesPushed < PageSize)
       return 0; // Nothing new to release.
-    }
 
     if (!Force) {
       const s32 IntervalMs = getReleaseToOsIntervalMs();
@@ -415,8 +414,7 @@ private:
 
     ReleaseRecorder Recorder(Region->RegionBeg, &Region->Data);
     releaseFreeMemoryToOS(Region->FreeList, Region->RegionBeg,
-                          roundUpTo(Region->AllocatedUser, PageSize) / PageSize,
-                          BlockSize, &Recorder);
+                          Region->AllocatedUser, BlockSize, &Recorder);
 
     if (Recorder.getReleasedRangesCount() > 0) {
       Region->ReleaseInfo.PushedBlocksAtLastRelease =

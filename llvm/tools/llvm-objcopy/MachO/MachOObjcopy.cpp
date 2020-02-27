@@ -66,7 +66,11 @@ static void updateAndRemoveSymbols(const CopyConfig &Config, Object &Obj) {
   auto RemovePred = [Config](const std::unique_ptr<SymbolEntry> &N) {
     if (N->Referenced)
       return false;
-    return Config.StripAll;
+    if (Config.StripAll)
+      return true;
+    if (Config.DiscardMode == DiscardType::All && !(N->n_type & MachO::N_EXT))
+      return true;
+    return false;
   };
 
   Obj.SymTable.removeSymbols(RemovePred);
@@ -172,8 +176,8 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj) {
       Config.StripNonAlloc || Config.StripSections || Config.Weaken ||
       Config.DecompressDebugSections || Config.StripNonAlloc ||
       Config.StripSections || Config.StripUnneeded ||
-      Config.DiscardMode != DiscardType::None || !Config.SymbolsToAdd.empty() ||
-      Config.EntryExpr) {
+      Config.DiscardMode == DiscardType::Locals ||
+      !Config.SymbolsToAdd.empty() || Config.EntryExpr) {
     return createStringError(llvm::errc::invalid_argument,
                              "option not supported by llvm-objcopy for MachO");
   }

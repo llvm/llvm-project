@@ -141,10 +141,25 @@ are important for working successfully with this interface.
   reachability of the loop.
   
 
+.. _loop-terminology-loop-simplify:
+
 Loop Simplify Form
 ==================
 
-TBD
+The Loop Simplify Form is a canonical form that makes
+several analyses and transformations simpler and more effective.
+It is ensured by the LoopSimplify
+(:ref:`-loop-simplify <passes-loop-simplify>`) pass and is automatically
+added by the pass managers when scheduling a LoopPass.
+This pass is implemented in
+`LoopInfo.h <http://llvm.org/doxygen/LoopSimplify_8h_source.html>`_.
+When it is successful, the loop has:
+
+* A preheader.
+* A single backedge (which implies that there is a single latch).
+* Dedicated exits. That is, no exit block for the loop
+  has a predecessor that is outside the loop. This implies
+  that all exit blocks are dominated by the loop header.
 
 
 Loop Closed SSA (LCSSA)

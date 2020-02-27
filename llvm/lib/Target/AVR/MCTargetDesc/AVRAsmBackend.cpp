@@ -244,8 +244,18 @@ void AVRAsmBackend::adjustFixupValue(const MCFixup &Fixup,
   // To handle both cases, we simply un-adjust the temporary label
   // case so it acts like all other labels.
   if (const MCSymbolRefExpr *A = Target.getSymA()) {
-    if (A->getSymbol().isTemporary())
-      Value += 2;
+    if (A->getSymbol().isTemporary()) {
+      switch (Kind) {
+      case FK_Data_1:
+      case FK_Data_2:
+      case FK_Data_4:
+      case FK_Data_8:
+        // Don't shift value for absolute addresses.
+        break;
+      default:
+        Value += 2;
+      }
+    }
   }
 
   switch (Kind) {

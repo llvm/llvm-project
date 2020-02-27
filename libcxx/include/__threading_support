@@ -26,17 +26,11 @@
 #if defined(_LIBCPP_HAS_THREAD_API_PTHREAD)
 # include <pthread.h>
 # include <sched.h>
-// FIXME: On Apple, <semaphore.h> transitively includes <sys/param.h>, which
-//        is not well behaved because it defines several macros. This causes
-//        name collisions in some downstream projects. Instead, <sys/semaphore.h>
-//        gives us the declarations we need without the bad stuff.
-#ifdef __APPLE__
-# include <sys/semaphore.h>
-#else
-# include <semaphore.h>
-#endif
 # ifdef __APPLE__
 #  define _LIBCPP_NO_NATIVE_SEMAPHORES
+# endif
+# ifndef _LIBCPP_NO_NATIVE_SEMAPHORES
+# include <semaphore.h>
 # endif
 #elif defined(_LIBCPP_HAS_THREAD_API_C11)
 # include <threads.h>
@@ -77,9 +71,11 @@ typedef pthread_mutex_t __libcpp_recursive_mutex_t;
 typedef pthread_cond_t __libcpp_condvar_t;
 #define _LIBCPP_CONDVAR_INITIALIZER PTHREAD_COND_INITIALIZER
 
+#ifndef _LIBCPP_NO_NATIVE_SEMAPHORES
 // Semaphore
 typedef sem_t __libcpp_semaphore_t;
-#define _LIBCPP_SEMAPHORE_MAX SEM_VALUE_MAX
+# define _LIBCPP_SEMAPHORE_MAX SEM_VALUE_MAX
+#endif
 
 // Execute once
 typedef pthread_once_t __libcpp_exec_once_flag;
@@ -210,6 +206,8 @@ int __libcpp_condvar_timedwait(__libcpp_condvar_t *__cv, __libcpp_mutex_t *__m,
 _LIBCPP_THREAD_ABI_VISIBILITY
 int __libcpp_condvar_destroy(__libcpp_condvar_t* __cv);
 
+#ifndef _LIBCPP_NO_NATIVE_SEMAPHORES
+
 // Semaphore
 _LIBCPP_THREAD_ABI_VISIBILITY
 bool __libcpp_semaphore_init(__libcpp_semaphore_t* __sem, int __init);
@@ -225,6 +223,8 @@ bool __libcpp_semaphore_wait(__libcpp_semaphore_t* __sem);
 
 _LIBCPP_THREAD_ABI_VISIBILITY
 bool __libcpp_semaphore_wait_timed(__libcpp_semaphore_t* __sem, chrono::nanoseconds const& __ns);
+
+#endif // _LIBCPP_NO_NATIVE_SEMAPHORES
 
 // Execute once
 _LIBCPP_THREAD_ABI_VISIBILITY

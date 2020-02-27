@@ -15368,8 +15368,9 @@ static void EvaluateAndDiagnoseImmediateInvocation(
   Expr::EvalResult Eval;
   Eval.Diag = &Notes;
   ConstantExpr *CE = Candidate.getPointer();
-  if (!CE->EvaluateAsConstantExpr(Eval, Expr::EvaluateForCodeGen,
-                                  SemaRef.getASTContext(), true)) {
+  bool Result = CE->EvaluateAsConstantExpr(Eval, Expr::EvaluateForCodeGen,
+                                           SemaRef.getASTContext(), true);
+  if (!Result || !Notes.empty()) {
     Expr *InnerExpr = CE->getSubExpr()->IgnoreImplicit();
     FunctionDecl *FD = nullptr;
     if (auto *Call = dyn_cast<CallExpr>(InnerExpr))

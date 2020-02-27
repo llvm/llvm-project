@@ -172,6 +172,8 @@ template<ptrdiff_t __least_max_value>
 using __semaphore_base =
     __atomic_semaphore_base;
 
+#define _LIBCPP_SEMAPHORE_MAX (numeric_limits<ptrdiff_t>::max())
+
 #endif //_LIBCPP_NO_NATIVE_SEMAPHORES
 
 template<ptrdiff_t __least_max_value = _LIBCPP_SEMAPHORE_MAX>

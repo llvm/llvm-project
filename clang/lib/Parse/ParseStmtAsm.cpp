@@ -631,8 +631,8 @@ StmtResult Parser::ParseMicrosoftAsmStatement(SourceLocation AsmLoc) {
   // Change to the Intel dialect.
   Parser->setAssemblerDialect(1);
   Parser->setTargetParser(*TargetParser.get());
-  Parser->setParsingInlineAsm(true);
-  TargetParser->setParsingInlineAsm(true);
+  Parser->setParsingMSInlineAsm(true);
+  TargetParser->setParsingMSInlineAsm(true);
 
   ClangAsmParserCallback Callback(*this, AsmLoc, AsmString, AsmToks,
                                   TokOffsets);

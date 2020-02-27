@@ -165,8 +165,8 @@ public:
   /// Run the parser on the input source buffer.
   virtual bool Run(bool NoInitialTextSection, bool NoFinalize = false) = 0;
 
-  virtual void setParsingInlineAsm(bool V) = 0;
-  virtual bool isParsingInlineAsm() = 0;
+  virtual void setParsingMSInlineAsm(bool V) = 0;
+  virtual bool isParsingMSInlineAsm() = 0;
 
   /// Parse MS-style inline assembly.
   virtual bool parseMSInlineAsm(
