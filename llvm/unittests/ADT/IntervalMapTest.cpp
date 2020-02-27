@@ -51,6 +51,16 @@ TEST(IntervalMapTest, EmptyMap) {
   EXPECT_TRUE(I2 == CI);
 }
 
+// Test one-element closed ranges.
+TEST(IntervalMapTest, OneElementRanges) {
+  UUMap::Allocator allocator;
+  UUMap map(allocator);
+  map.insert(1, 1, 1);
+  map.insert(2, 2, 2);
+  EXPECT_EQ(1u, map.lookup(1));
+  EXPECT_EQ(2u, map.lookup(2));
+}
+
 // Single entry map tests
 TEST(IntervalMapTest, SingleEntryMap) {
   UUMap::Allocator allocator;
