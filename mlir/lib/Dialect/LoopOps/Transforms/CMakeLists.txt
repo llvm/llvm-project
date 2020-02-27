@@ -1,5 +1,6 @@
 add_llvm_library(MLIRLoopOpsTransforms
   ParallelLoopFusion.cpp
+  ParallelLoopSpecialization.cpp
   ParallelLoopTiling.cpp
 
   ADDITIONAL_HEADER_DIRS
