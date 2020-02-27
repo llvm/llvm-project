@@ -292,7 +292,7 @@ Objective-C Language Changes in Clang
 
   One particular issue you may run into is attempting to use a class
   as a key in a dictionary literal. This will now result in an error,
-  because ``Class`` is not convertable to ``id<NSCopying>``. (Note that
+  because ``Class`` is not convertible to ``id<NSCopying>``. (Note that
   this was already a warning in Objective-C mode.) While an arbitrary
   ``Class`` object is not guaranteed to implement ``NSCopying``, the
   default metaclass implementation does. Therefore, the recommended
@@ -500,7 +500,7 @@ Static Analyzer
 
 - ``deadcode.DeadStores`` now warns about nested dead stores.
 
-- Condition values that are relevant to the occurance of a bug are far better
+- Condition values that are relevant to the occurrence of a bug are far better
   explained in bug reports.
 
 - Despite still being at an alpha stage, checkers implementing taint analyses
