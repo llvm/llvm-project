@@ -50,7 +50,8 @@ enum CCMangling {
   CCM_Fast,
   CCM_RegCall,
   CCM_Vector,
-  CCM_Std
+  CCM_Std,
+  CCM_WasmMainArgcArgv
 };
 
 static bool isExternC(const NamedDecl *ND) {
@@ -63,6 +64,16 @@ static CCMangling getCallingConvMangling(const ASTContext &Context,
                                          const NamedDecl *ND) {
   const TargetInfo &TI = Context.getTargetInfo();
   const llvm::Triple &Triple = TI.getTriple();
+
+  // On wasm, the argc/argv form of "main" is renamed so that the startup code
+  // can call it with the correct function signature.
+  // On Emscripten, users may be exporting "main" and expecting to call it
+  // themselves, so we can't mangle it.
+  if (Triple.isWasm() && !Triple.isOSEmscripten())
+    if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(ND))
+      if (FD->isMain() && FD->hasPrototype() && FD->param_size() == 2)
+        return CCM_WasmMainArgcArgv;
+
   if (!Triple.isOSWindows() || !Triple.isX86())
     return CCM_Other;
 
@@ -143,6 +154,12 @@ void MangleContext::mangleName(const NamedDecl *D, raw_ostream &Out) {
 
   const ASTContext &ASTContext = getASTContext();
   CCMangling CC = getCallingConvMangling(ASTContext, D);
+
+  if (CC == CCM_WasmMainArgcArgv) {
+    Out << "__main_argc_argv";
+    return;
+  }
+
   bool MCXX = shouldMangleCXXName(D);
   const TargetInfo &TI = Context.getTargetInfo();
   if (CC == CCM_Other || (MCXX && TI.getCXXABI() == TargetCXXABI::Microsoft)) {
