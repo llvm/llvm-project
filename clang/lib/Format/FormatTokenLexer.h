@@ -56,7 +56,6 @@ private:
   bool tryMergeCSharpDoubleQuestion();
   bool tryTransformCSharpForEach();
   bool tryMergeCSharpAttributeAndTarget();
-  bool tryMergeCSharpNamedArgument();
 
   bool tryMergeTokens(ArrayRef<tok::TokenKind> Kinds, TokenType NewType);
 

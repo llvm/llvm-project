@@ -546,6 +546,8 @@ PrintOrderDetails(orderNum: 31, productName: "Red Mug",
 PrintOrderDetails(orderNum: 31, productName: "Red Mug",  // comment
                   sellerName: "Gift Shop");)",
                Style);
+
+  verifyFormat(R"(foreach (var tickCount in task.Begin(seed: 0)) {)", Style);
 }
 
 TEST_F(FormatTestCSharp, CSharpPropertyAccessors) {
