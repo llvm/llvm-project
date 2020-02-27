@@ -79,6 +79,7 @@ Improvements to Clang's diagnostics
   warning of the same name. It warns about statements that are indented as if
   they were part of a if/else/for/while statement but are not semantically
   part of that if/else/for/while.
+- -Wbitwise-op-parentheses and -Wlogical-op-parentheses are disabled by default.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -156,6 +157,13 @@ New Compiler Flags
   with reproducible builds that are location independent. The new
   ``-ffile-prefix-map`` option is equivalent to specifying both
   ``-fdebug-prefix-map`` and ``-fmacro-prefix-map``.
+
+- ``-fpatchable-function-entry=N[,M]`` is added to generate M NOPs before the
+  function entry and N-M NOPs after the function entry. This is used by AArch64
+  ftrace in the Linux kernel.
+
+- ``-mbranches-within-32B-boundaries`` is added as an x86 assembler mitigation
+  for Intel's Jump Condition Code Erratum.
 
 Deprecated Compiler Flags
 -------------------------
