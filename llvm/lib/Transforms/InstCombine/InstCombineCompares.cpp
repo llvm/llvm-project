@@ -5799,10 +5799,10 @@ Instruction *InstCombiner::foldFCmpIntToFPConst(FCmpInst &I, Instruction *LHSI,
     }
   } else {
     // See if the RHS value is < UnsignedMin.
-    APFloat SMin(RHS.getSemantics());
-    SMin.convertFromAPInt(APInt::getMinValue(IntWidth), true,
+    APFloat UMin(RHS.getSemantics());
+    UMin.convertFromAPInt(APInt::getMinValue(IntWidth), false,
                           APFloat::rmNearestTiesToEven);
-    if (SMin.compare(RHS) == APFloat::cmpGreaterThan) { // umin > 12312.0
+    if (UMin.compare(RHS) == APFloat::cmpGreaterThan) { // umin > 12312.0
       if (Pred == ICmpInst::ICMP_NE || Pred == ICmpInst::ICMP_UGT ||
           Pred == ICmpInst::ICMP_UGE)
         return replaceInstUsesWith(I, Builder.getTrue());
