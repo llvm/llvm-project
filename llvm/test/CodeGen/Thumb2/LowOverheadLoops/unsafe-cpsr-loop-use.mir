@@ -109,7 +109,7 @@ body:             |
   ; CHECK:   renamable $r3, renamable $r1 = t2LDR_PRE killed renamable $r1, 4, 14 /* CC::al */, $noreg :: (load 4 from %ir.scevgep7)
   ; CHECK:   tCMPhir renamable $lr, renamable $r2, 14 /* CC::al */, $noreg, implicit-def $cpsr
   ; CHECK:   $lr = t2SUBri killed renamable $lr, 1, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   t2IT 2, 8, implicit-def $itstate, implicit $cpsr
+  ; CHECK:   t2IT 2, 8, implicit-def $itstate
   ; CHECK:   renamable $r3 = tLSRri $noreg, killed renamable $r3, 1, 2 /* CC::hs */, killed $cpsr, implicit killed renamable $r3, implicit killed $itstate
   ; CHECK:   early-clobber renamable $r0 = t2STR_PRE killed renamable $r3, killed renamable $r0, 4, 14 /* CC::al */, $noreg :: (store 4 into %ir.scevgep4)
   ; CHECK:   renamable $lr = tMOVr killed $lr, 14 /* CC::al */, $noreg
@@ -140,7 +140,7 @@ body:             |
     renamable $r3, renamable $r1 = t2LDR_PRE killed renamable $r1, 4, 14, $noreg :: (load 4 from %ir.scevgep7)
     tCMPhir renamable $lr, renamable $r2, 14, $noreg, implicit-def $cpsr
     renamable $lr = t2LoopDec killed renamable $lr, 1
-    t2IT 2, 8, implicit-def $itstate, implicit $cpsr
+    t2IT 2, 8, implicit-def $itstate
     renamable $r3 = tLSRri $noreg, killed renamable $r3, 1, 2, killed $cpsr, implicit renamable $r3, implicit killed $itstate
     early-clobber renamable $r0 = t2STR_PRE killed renamable $r3, killed renamable $r0, 4, 14, $noreg :: (store 4 into %ir.scevgep4)
     renamable $lr = tMOVr $lr, 14, $noreg
