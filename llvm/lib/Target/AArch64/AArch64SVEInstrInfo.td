@@ -53,6 +53,22 @@ def AArch64ld1s_gather_uxtw_scaled : SDNode<"AArch64ISD::GLD1S_UXTW_SCALED", SDT
 def AArch64ld1s_gather_sxtw_scaled : SDNode<"AArch64ISD::GLD1S_SXTW_SCALED", SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue]>;
 def AArch64ld1s_gather_imm         : SDNode<"AArch64ISD::GLD1S_IMM",         SDT_AArch64_GATHER_VS, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue]>;
 
+def AArch64ldff1_gather              : SDNode<"AArch64ISD::GLDFF1",             SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue]>;
+def AArch64ldff1_gather_scaled       : SDNode<"AArch64ISD::GLDFF1_SCALED",      SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue]>;
+def AArch64ldff1_gather_uxtw         : SDNode<"AArch64ISD::GLDFF1_UXTW",        SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue]>;
+def AArch64ldff1_gather_sxtw         : SDNode<"AArch64ISD::GLDFF1_SXTW",        SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue]>;
+def AArch64ldff1_gather_uxtw_scaled  : SDNode<"AArch64ISD::GLDFF1_UXTW_SCALED", SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue]>;
+def AArch64ldff1_gather_sxtw_scaled  : SDNode<"AArch64ISD::GLDFF1_SXTW_SCALED", SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue]>;
+def AArch64ldff1_gather_imm          : SDNode<"AArch64ISD::GLDFF1_IMM",         SDT_AArch64_GATHER_VS, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue]>;
+
+def AArch64ldff1s_gather             : SDNode<"AArch64ISD::GLDFF1S",             SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue]>;
+def AArch64ldff1s_gather_scaled      : SDNode<"AArch64ISD::GLDFF1S_SCALED",      SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue]>;
+def AArch64ldff1s_gather_uxtw        : SDNode<"AArch64ISD::GLDFF1S_UXTW",        SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue]>;
+def AArch64ldff1s_gather_sxtw        : SDNode<"AArch64ISD::GLDFF1S_SXTW",        SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue]>;
+def AArch64ldff1s_gather_uxtw_scaled : SDNode<"AArch64ISD::GLDFF1S_UXTW_SCALED", SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue]>;
+def AArch64ldff1s_gather_sxtw_scaled : SDNode<"AArch64ISD::GLDFF1S_SXTW_SCALED", SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue]>;
+def AArch64ldff1s_gather_imm         : SDNode<"AArch64ISD::GLDFF1S_IMM",         SDT_AArch64_GATHER_VS, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue]>;
+
 // Scatter stores - node definitions
 //
 def SDT_AArch64_SCATTER_SV : SDTypeProfile<0, 5, [
@@ -581,114 +597,114 @@ let Predicates = [HasSVE] in {
   // Gathers using unscaled 32-bit offsets, e.g.
   //    ld1h z0.s, p0/z, [x0, z0.s, uxtw]
   defm GLD1SB_S   : sve_mem_32b_gld_vs_32_unscaled<0b0000, "ld1sb",   AArch64ld1s_gather_sxtw,   AArch64ld1s_gather_uxtw,   ZPR32ExtSXTW8Only, ZPR32ExtUXTW8Only, nxv4i8>;
-  defm GLDFF1SB_S : sve_mem_32b_gld_vs_32_unscaled<0b0001, "ldff1sb", null_frag,                 null_frag,                 ZPR32ExtSXTW8Only, ZPR32ExtUXTW8Only, nxv4i8>;
+  defm GLDFF1SB_S : sve_mem_32b_gld_vs_32_unscaled<0b0001, "ldff1sb", AArch64ldff1s_gather_sxtw, AArch64ldff1s_gather_uxtw, ZPR32ExtSXTW8Only, ZPR32ExtUXTW8Only, nxv4i8>;
   defm GLD1B_S    : sve_mem_32b_gld_vs_32_unscaled<0b0010, "ld1b",    AArch64ld1_gather_sxtw,    AArch64ld1_gather_uxtw,    ZPR32ExtSXTW8Only, ZPR32ExtUXTW8Only, nxv4i8>;
-  defm GLDFF1B_S  : sve_mem_32b_gld_vs_32_unscaled<0b0011, "ldff1b",  null_frag,                 null_frag,                 ZPR32ExtSXTW8Only, ZPR32ExtUXTW8Only, nxv4i8>;
-  defm GLD1SH_S   : sve_mem_32b_gld_vs_32_unscaled<0b0100, "ld1sh",   AArch64ld1s_gather_sxtw,   AArch64ld1s_gather_uxtw,   ZPR32ExtSXTW8, ZPR32ExtUXTW8, nxv4i16>;
-  defm GLDFF1SH_S : sve_mem_32b_gld_vs_32_unscaled<0b0101, "ldff1sh", null_frag,                 null_frag,                 ZPR32ExtSXTW8, ZPR32ExtUXTW8, nxv4i16>;
-  defm GLD1H_S    : sve_mem_32b_gld_vs_32_unscaled<0b0110, "ld1h",    AArch64ld1_gather_sxtw,    AArch64ld1_gather_uxtw,    ZPR32ExtSXTW8, ZPR32ExtUXTW8, nxv4i16>;
-  defm GLDFF1H_S  : sve_mem_32b_gld_vs_32_unscaled<0b0111, "ldff1h",  null_frag,                 null_frag,                 ZPR32ExtSXTW8, ZPR32ExtUXTW8, nxv4i16>;
-  defm GLD1W      : sve_mem_32b_gld_vs_32_unscaled<0b1010, "ld1w",    AArch64ld1_gather_sxtw,    AArch64ld1_gather_uxtw,    ZPR32ExtSXTW8, ZPR32ExtUXTW8, nxv4i32>;
-  defm GLDFF1W    : sve_mem_32b_gld_vs_32_unscaled<0b1011, "ldff1w",  null_frag,                 null_frag,                 ZPR32ExtSXTW8, ZPR32ExtUXTW8, nxv4i32>;
+  defm GLDFF1B_S  : sve_mem_32b_gld_vs_32_unscaled<0b0011, "ldff1b",  AArch64ldff1_gather_sxtw,  AArch64ldff1_gather_uxtw,  ZPR32ExtSXTW8Only, ZPR32ExtUXTW8Only, nxv4i8>;
+  defm GLD1SH_S   : sve_mem_32b_gld_vs_32_unscaled<0b0100, "ld1sh",   AArch64ld1s_gather_sxtw,   AArch64ld1s_gather_uxtw,   ZPR32ExtSXTW8,     ZPR32ExtUXTW8,     nxv4i16>;
+  defm GLDFF1SH_S : sve_mem_32b_gld_vs_32_unscaled<0b0101, "ldff1sh", AArch64ldff1s_gather_sxtw, AArch64ldff1s_gather_uxtw, ZPR32ExtSXTW8,     ZPR32ExtUXTW8,     nxv4i16>;
+  defm GLD1H_S    : sve_mem_32b_gld_vs_32_unscaled<0b0110, "ld1h",    AArch64ld1_gather_sxtw,    AArch64ld1_gather_uxtw,    ZPR32ExtSXTW8,     ZPR32ExtUXTW8,     nxv4i16>;
+  defm GLDFF1H_S  : sve_mem_32b_gld_vs_32_unscaled<0b0111, "ldff1h",  AArch64ldff1_gather_sxtw,  AArch64ldff1_gather_uxtw,  ZPR32ExtSXTW8,     ZPR32ExtUXTW8,     nxv4i16>;
+  defm GLD1W      : sve_mem_32b_gld_vs_32_unscaled<0b1010, "ld1w",    AArch64ld1_gather_sxtw,    AArch64ld1_gather_uxtw,    ZPR32ExtSXTW8,     ZPR32ExtUXTW8,     nxv4i32>;
+  defm GLDFF1W    : sve_mem_32b_gld_vs_32_unscaled<0b1011, "ldff1w",  AArch64ldff1_gather_sxtw,  AArch64ldff1_gather_uxtw,  ZPR32ExtSXTW8,     ZPR32ExtUXTW8,     nxv4i32>;
 
   // Gathers using scaled 32-bit offsets, e.g.
   //    ld1h z0.s, p0/z, [x0, z0.s, uxtw #1]
-  defm GLD1SH_S   : sve_mem_32b_gld_sv_32_scaled<0b0100, "ld1sh",   AArch64ld1s_gather_sxtw_scaled, AArch64ld1s_gather_uxtw_scaled, ZPR32ExtSXTW16, ZPR32ExtUXTW16, nxv4i16>;
-  defm GLDFF1SH_S : sve_mem_32b_gld_sv_32_scaled<0b0101, "ldff1sh", null_frag,                      null_frag,                      ZPR32ExtSXTW16, ZPR32ExtUXTW16, nxv4i16>;
-  defm GLD1H_S    : sve_mem_32b_gld_sv_32_scaled<0b0110, "ld1h",    AArch64ld1_gather_sxtw_scaled,  AArch64ld1_gather_uxtw_scaled,  ZPR32ExtSXTW16, ZPR32ExtUXTW16, nxv4i16>;
-  defm GLDFF1H_S  : sve_mem_32b_gld_sv_32_scaled<0b0111, "ldff1h",  null_frag,                      null_frag,                      ZPR32ExtSXTW16, ZPR32ExtUXTW16, nxv4i16>;
-  defm GLD1W      : sve_mem_32b_gld_sv_32_scaled<0b1010, "ld1w",    AArch64ld1_gather_sxtw_scaled,  AArch64ld1_gather_uxtw_scaled,  ZPR32ExtSXTW32, ZPR32ExtUXTW32, nxv4i32>;
-  defm GLDFF1W    : sve_mem_32b_gld_sv_32_scaled<0b1011, "ldff1w",  null_frag,                      null_frag,                      ZPR32ExtSXTW32, ZPR32ExtUXTW32, nxv4i32>;
+  defm GLD1SH_S   : sve_mem_32b_gld_sv_32_scaled<0b0100, "ld1sh",   AArch64ld1s_gather_sxtw_scaled,   AArch64ld1s_gather_uxtw_scaled,   ZPR32ExtSXTW16, ZPR32ExtUXTW16, nxv4i16>;
+  defm GLDFF1SH_S : sve_mem_32b_gld_sv_32_scaled<0b0101, "ldff1sh", AArch64ldff1s_gather_sxtw_scaled, AArch64ldff1s_gather_uxtw_scaled, ZPR32ExtSXTW16, ZPR32ExtUXTW16, nxv4i16>;
+  defm GLD1H_S    : sve_mem_32b_gld_sv_32_scaled<0b0110, "ld1h",    AArch64ld1_gather_sxtw_scaled,    AArch64ld1_gather_uxtw_scaled,    ZPR32ExtSXTW16, ZPR32ExtUXTW16, nxv4i16>;
+  defm GLDFF1H_S  : sve_mem_32b_gld_sv_32_scaled<0b0111, "ldff1h",  AArch64ldff1_gather_sxtw_scaled,  AArch64ldff1_gather_uxtw_scaled,  ZPR32ExtSXTW16, ZPR32ExtUXTW16, nxv4i16>;
+  defm GLD1W      : sve_mem_32b_gld_sv_32_scaled<0b1010, "ld1w",    AArch64ld1_gather_sxtw_scaled,    AArch64ld1_gather_uxtw_scaled,    ZPR32ExtSXTW32, ZPR32ExtUXTW32, nxv4i32>;
+  defm GLDFF1W    : sve_mem_32b_gld_sv_32_scaled<0b1011, "ldff1w",  AArch64ldff1_gather_sxtw_scaled,  AArch64ldff1_gather_uxtw_scaled,  ZPR32ExtSXTW32, ZPR32ExtUXTW32, nxv4i32>;
 
   // Gathers using 32-bit pointers with scaled offset, e.g.
   //    ld1h z0.s, p0/z, [z0.s, #16]
-  defm GLD1SB_S   : sve_mem_32b_gld_vi_32_ptrs<0b0000, "ld1sb",   imm0_31, AArch64ld1s_gather_imm,  nxv4i8>;
-  defm GLDFF1SB_S : sve_mem_32b_gld_vi_32_ptrs<0b0001, "ldff1sb", imm0_31, null_frag,               nxv4i8>;
-  defm GLD1B_S    : sve_mem_32b_gld_vi_32_ptrs<0b0010, "ld1b",    imm0_31, AArch64ld1_gather_imm,   nxv4i8>;
-  defm GLDFF1B_S  : sve_mem_32b_gld_vi_32_ptrs<0b0011, "ldff1b",  imm0_31, null_frag,               nxv4i8>;
-  defm GLD1SH_S   : sve_mem_32b_gld_vi_32_ptrs<0b0100, "ld1sh",   uimm5s2, AArch64ld1s_gather_imm,  nxv4i16>;
-  defm GLDFF1SH_S : sve_mem_32b_gld_vi_32_ptrs<0b0101, "ldff1sh", uimm5s2, null_frag,               nxv4i16>;
-  defm GLD1H_S    : sve_mem_32b_gld_vi_32_ptrs<0b0110, "ld1h",    uimm5s2, AArch64ld1_gather_imm,   nxv4i16>;
-  defm GLDFF1H_S  : sve_mem_32b_gld_vi_32_ptrs<0b0111, "ldff1h",  uimm5s2, null_frag,               nxv4i16>;
-  defm GLD1W      : sve_mem_32b_gld_vi_32_ptrs<0b1010, "ld1w",    uimm5s4, AArch64ld1_gather_imm,   nxv4i32>;
-  defm GLDFF1W    : sve_mem_32b_gld_vi_32_ptrs<0b1011, "ldff1w",  uimm5s4, null_frag,               nxv4i32>;
+  defm GLD1SB_S   : sve_mem_32b_gld_vi_32_ptrs<0b0000, "ld1sb",   imm0_31, AArch64ld1s_gather_imm,   nxv4i8>;
+  defm GLDFF1SB_S : sve_mem_32b_gld_vi_32_ptrs<0b0001, "ldff1sb", imm0_31, AArch64ldff1s_gather_imm, nxv4i8>;
+  defm GLD1B_S    : sve_mem_32b_gld_vi_32_ptrs<0b0010, "ld1b",    imm0_31, AArch64ld1_gather_imm,    nxv4i8>;
+  defm GLDFF1B_S  : sve_mem_32b_gld_vi_32_ptrs<0b0011, "ldff1b",  imm0_31, AArch64ldff1_gather_imm,  nxv4i8>;
+  defm GLD1SH_S   : sve_mem_32b_gld_vi_32_ptrs<0b0100, "ld1sh",   uimm5s2, AArch64ld1s_gather_imm,   nxv4i16>;
+  defm GLDFF1SH_S : sve_mem_32b_gld_vi_32_ptrs<0b0101, "ldff1sh", uimm5s2, AArch64ldff1s_gather_imm, nxv4i16>;
+  defm GLD1H_S    : sve_mem_32b_gld_vi_32_ptrs<0b0110, "ld1h",    uimm5s2, AArch64ld1_gather_imm,    nxv4i16>;
+  defm GLDFF1H_S  : sve_mem_32b_gld_vi_32_ptrs<0b0111, "ldff1h",  uimm5s2, AArch64ldff1_gather_imm,  nxv4i16>;
+  defm GLD1W      : sve_mem_32b_gld_vi_32_ptrs<0b1010, "ld1w",    uimm5s4, AArch64ld1_gather_imm,    nxv4i32>;
+  defm GLDFF1W    : sve_mem_32b_gld_vi_32_ptrs<0b1011, "ldff1w",  uimm5s4, AArch64ldff1_gather_imm,  nxv4i32>;
 
   // Gathers using 64-bit pointers with scaled offset, e.g.
   //    ld1h z0.d, p0/z, [z0.d, #16]
-  defm GLD1SB_D   : sve_mem_64b_gld_vi_64_ptrs<0b0000, "ld1sb",   imm0_31, AArch64ld1s_gather_imm,  nxv2i8>;
-  defm GLDFF1SB_D : sve_mem_64b_gld_vi_64_ptrs<0b0001, "ldff1sb", imm0_31, null_frag,               nxv2i8>;
-  defm GLD1B_D    : sve_mem_64b_gld_vi_64_ptrs<0b0010, "ld1b",    imm0_31, AArch64ld1_gather_imm,   nxv2i8>;
-  defm GLDFF1B_D  : sve_mem_64b_gld_vi_64_ptrs<0b0011, "ldff1b",  imm0_31, null_frag,               nxv2i8>;
-  defm GLD1SH_D   : sve_mem_64b_gld_vi_64_ptrs<0b0100, "ld1sh",   uimm5s2, AArch64ld1s_gather_imm,  nxv2i16>;
-  defm GLDFF1SH_D : sve_mem_64b_gld_vi_64_ptrs<0b0101, "ldff1sh", uimm5s2, null_frag,               nxv2i16>;
-  defm GLD1H_D    : sve_mem_64b_gld_vi_64_ptrs<0b0110, "ld1h",    uimm5s2, AArch64ld1_gather_imm,   nxv2i16>;
-  defm GLDFF1H_D  : sve_mem_64b_gld_vi_64_ptrs<0b0111, "ldff1h",  uimm5s2, null_frag,               nxv2i16>;
-  defm GLD1SW_D   : sve_mem_64b_gld_vi_64_ptrs<0b1000, "ld1sw",   uimm5s4, AArch64ld1s_gather_imm,  nxv2i32>;
-  defm GLDFF1SW_D : sve_mem_64b_gld_vi_64_ptrs<0b1001, "ldff1sw", uimm5s4, null_frag,               nxv2i32>;
-  defm GLD1W_D    : sve_mem_64b_gld_vi_64_ptrs<0b1010, "ld1w",    uimm5s4, AArch64ld1_gather_imm,   nxv2i32>;
-  defm GLDFF1W_D  : sve_mem_64b_gld_vi_64_ptrs<0b1011, "ldff1w",  uimm5s4, null_frag,               nxv2i32>;
-  defm GLD1D      : sve_mem_64b_gld_vi_64_ptrs<0b1110, "ld1d",    uimm5s8, AArch64ld1_gather_imm,   nxv2i64>;
-  defm GLDFF1D    : sve_mem_64b_gld_vi_64_ptrs<0b1111, "ldff1d",  uimm5s8, null_frag,               nxv2i64>;
+  defm GLD1SB_D   : sve_mem_64b_gld_vi_64_ptrs<0b0000, "ld1sb",   imm0_31, AArch64ld1s_gather_imm,   nxv2i8>;
+  defm GLDFF1SB_D : sve_mem_64b_gld_vi_64_ptrs<0b0001, "ldff1sb", imm0_31, AArch64ldff1s_gather_imm, nxv2i8>;
+  defm GLD1B_D    : sve_mem_64b_gld_vi_64_ptrs<0b0010, "ld1b",    imm0_31, AArch64ld1_gather_imm,    nxv2i8>;
+  defm GLDFF1B_D  : sve_mem_64b_gld_vi_64_ptrs<0b0011, "ldff1b",  imm0_31, AArch64ldff1_gather_imm,  nxv2i8>;
+  defm GLD1SH_D   : sve_mem_64b_gld_vi_64_ptrs<0b0100, "ld1sh",   uimm5s2, AArch64ld1s_gather_imm,   nxv2i16>;
+  defm GLDFF1SH_D : sve_mem_64b_gld_vi_64_ptrs<0b0101, "ldff1sh", uimm5s2, AArch64ldff1s_gather_imm, nxv2i16>;
+  defm GLD1H_D    : sve_mem_64b_gld_vi_64_ptrs<0b0110, "ld1h",    uimm5s2, AArch64ld1_gather_imm,    nxv2i16>;
+  defm GLDFF1H_D  : sve_mem_64b_gld_vi_64_ptrs<0b0111, "ldff1h",  uimm5s2, AArch64ldff1_gather_imm,  nxv2i16>;
+  defm GLD1SW_D   : sve_mem_64b_gld_vi_64_ptrs<0b1000, "ld1sw",   uimm5s4, AArch64ld1s_gather_imm,   nxv2i32>;
+  defm GLDFF1SW_D : sve_mem_64b_gld_vi_64_ptrs<0b1001, "ldff1sw", uimm5s4, AArch64ldff1s_gather_imm, nxv2i32>;
+  defm GLD1W_D    : sve_mem_64b_gld_vi_64_ptrs<0b1010, "ld1w",    uimm5s4, AArch64ld1_gather_imm,    nxv2i32>;
+  defm GLDFF1W_D  : sve_mem_64b_gld_vi_64_ptrs<0b1011, "ldff1w",  uimm5s4, AArch64ldff1_gather_imm,  nxv2i32>;
+  defm GLD1D      : sve_mem_64b_gld_vi_64_ptrs<0b1110, "ld1d",    uimm5s8, AArch64ld1_gather_imm,    nxv2i64>;
+  defm GLDFF1D    : sve_mem_64b_gld_vi_64_ptrs<0b1111, "ldff1d",  uimm5s8, AArch64ldff1_gather_imm,  nxv2i64>;
 
   // Gathers using unscaled 64-bit offsets, e.g.
   //    ld1h z0.d, p0/z, [x0, z0.d]
-  defm GLD1SB_D   : sve_mem_64b_gld_vs2_64_unscaled<0b0000, "ld1sb",   AArch64ld1s_gather,  nxv2i8>;
-  defm GLDFF1SB_D : sve_mem_64b_gld_vs2_64_unscaled<0b0001, "ldff1sb", null_frag,           nxv2i8>;
-  defm GLD1B_D    : sve_mem_64b_gld_vs2_64_unscaled<0b0010, "ld1b",    AArch64ld1_gather,   nxv2i8>;
-  defm GLDFF1B_D  : sve_mem_64b_gld_vs2_64_unscaled<0b0011, "ldff1b",  null_frag,           nxv2i8>;
-  defm GLD1SH_D   : sve_mem_64b_gld_vs2_64_unscaled<0b0100, "ld1sh",   AArch64ld1s_gather,  nxv2i16>;
-  defm GLDFF1SH_D : sve_mem_64b_gld_vs2_64_unscaled<0b0101, "ldff1sh", null_frag,           nxv2i16>;
-  defm GLD1H_D    : sve_mem_64b_gld_vs2_64_unscaled<0b0110, "ld1h",    AArch64ld1_gather,   nxv2i16>;
-  defm GLDFF1H_D  : sve_mem_64b_gld_vs2_64_unscaled<0b0111, "ldff1h",  null_frag,           nxv2i16>;
-  defm GLD1SW_D   : sve_mem_64b_gld_vs2_64_unscaled<0b1000, "ld1sw",   AArch64ld1s_gather,  nxv2i32>;
-  defm GLDFF1SW_D : sve_mem_64b_gld_vs2_64_unscaled<0b1001, "ldff1sw", null_frag,           nxv2i32>;
-  defm GLD1W_D    : sve_mem_64b_gld_vs2_64_unscaled<0b1010, "ld1w",    AArch64ld1_gather,   nxv2i32>;
-  defm GLDFF1W_D  : sve_mem_64b_gld_vs2_64_unscaled<0b1011, "ldff1w",  null_frag,           nxv2i32>;
-  defm GLD1D      : sve_mem_64b_gld_vs2_64_unscaled<0b1110, "ld1d",    AArch64ld1_gather,   nxv2i64>;
-  defm GLDFF1D    : sve_mem_64b_gld_vs2_64_unscaled<0b1111, "ldff1d",  null_frag,           nxv2i64>;
+  defm GLD1SB_D   : sve_mem_64b_gld_vs2_64_unscaled<0b0000, "ld1sb",   AArch64ld1s_gather,   nxv2i8>;
+  defm GLDFF1SB_D : sve_mem_64b_gld_vs2_64_unscaled<0b0001, "ldff1sb", AArch64ldff1s_gather, nxv2i8>;
+  defm GLD1B_D    : sve_mem_64b_gld_vs2_64_unscaled<0b0010, "ld1b",    AArch64ld1_gather,    nxv2i8>;
+  defm GLDFF1B_D  : sve_mem_64b_gld_vs2_64_unscaled<0b0011, "ldff1b",  AArch64ldff1_gather,  nxv2i8>;
+  defm GLD1SH_D   : sve_mem_64b_gld_vs2_64_unscaled<0b0100, "ld1sh",   AArch64ld1s_gather,   nxv2i16>;
+  defm GLDFF1SH_D : sve_mem_64b_gld_vs2_64_unscaled<0b0101, "ldff1sh", AArch64ldff1s_gather, nxv2i16>;
+  defm GLD1H_D    : sve_mem_64b_gld_vs2_64_unscaled<0b0110, "ld1h",    AArch64ld1_gather,    nxv2i16>;
+  defm GLDFF1H_D  : sve_mem_64b_gld_vs2_64_unscaled<0b0111, "ldff1h",  AArch64ldff1_gather,  nxv2i16>;
+  defm GLD1SW_D   : sve_mem_64b_gld_vs2_64_unscaled<0b1000, "ld1sw",   AArch64ld1s_gather,   nxv2i32>;
+  defm GLDFF1SW_D : sve_mem_64b_gld_vs2_64_unscaled<0b1001, "ldff1sw", AArch64ldff1s_gather, nxv2i32>;
+  defm GLD1W_D    : sve_mem_64b_gld_vs2_64_unscaled<0b1010, "ld1w",    AArch64ld1_gather,    nxv2i32>;
+  defm GLDFF1W_D  : sve_mem_64b_gld_vs2_64_unscaled<0b1011, "ldff1w",  AArch64ldff1_gather,  nxv2i32>;
+  defm GLD1D      : sve_mem_64b_gld_vs2_64_unscaled<0b1110, "ld1d",    AArch64ld1_gather,    nxv2i64>;
+  defm GLDFF1D    : sve_mem_64b_gld_vs2_64_unscaled<0b1111, "ldff1d",  AArch64ldff1_gather,  nxv2i64>;
 
   // Gathers using scaled 64-bit offsets, e.g.
   //    ld1h z0.d, p0/z, [x0, z0.d, lsl #1]
-  defm GLD1SH_D   : sve_mem_64b_gld_sv2_64_scaled<0b0100, "ld1sh",    AArch64ld1s_gather_scaled,  ZPR64ExtLSL16, nxv2i16>;
-  defm GLDFF1SH_D : sve_mem_64b_gld_sv2_64_scaled<0b0101, "ldff1sh",  null_frag,                  ZPR64ExtLSL16, nxv2i16>;
-  defm GLD1H_D    : sve_mem_64b_gld_sv2_64_scaled<0b0110, "ld1h",     AArch64ld1_gather_scaled,   ZPR64ExtLSL16, nxv2i16>;
-  defm GLDFF1H_D  : sve_mem_64b_gld_sv2_64_scaled<0b0111, "ldff1h",   null_frag,                  ZPR64ExtLSL16, nxv2i16>;
-  defm GLD1SW_D   : sve_mem_64b_gld_sv2_64_scaled<0b1000, "ld1sw",    AArch64ld1s_gather_scaled,  ZPR64ExtLSL32, nxv2i32>;
-  defm GLDFF1SW_D : sve_mem_64b_gld_sv2_64_scaled<0b1001, "ldff1sw",  null_frag,                  ZPR64ExtLSL32, nxv2i32>;
-  defm GLD1W_D    : sve_mem_64b_gld_sv2_64_scaled<0b1010, "ld1w",     AArch64ld1_gather_scaled,   ZPR64ExtLSL32, nxv2i32>;
-  defm GLDFF1W_D  : sve_mem_64b_gld_sv2_64_scaled<0b1011, "ldff1w",   null_frag,                  ZPR64ExtLSL32, nxv2i32>;
-  defm GLD1D      : sve_mem_64b_gld_sv2_64_scaled<0b1110, "ld1d",     AArch64ld1_gather_scaled,   ZPR64ExtLSL64, nxv2i64>;
-  defm GLDFF1D    : sve_mem_64b_gld_sv2_64_scaled<0b1111, "ldff1d",   null_frag,                  ZPR64ExtLSL64, nxv2i64>;
+  defm GLD1SH_D   : sve_mem_64b_gld_sv2_64_scaled<0b0100, "ld1sh",    AArch64ld1s_gather_scaled,   ZPR64ExtLSL16, nxv2i16>;
+  defm GLDFF1SH_D : sve_mem_64b_gld_sv2_64_scaled<0b0101, "ldff1sh",  AArch64ldff1s_gather_scaled, ZPR64ExtLSL16, nxv2i16>;
+  defm GLD1H_D    : sve_mem_64b_gld_sv2_64_scaled<0b0110, "ld1h",     AArch64ld1_gather_scaled,    ZPR64ExtLSL16, nxv2i16>;
+  defm GLDFF1H_D  : sve_mem_64b_gld_sv2_64_scaled<0b0111, "ldff1h",   AArch64ldff1_gather_scaled,  ZPR64ExtLSL16, nxv2i16>;
+  defm GLD1SW_D   : sve_mem_64b_gld_sv2_64_scaled<0b1000, "ld1sw",    AArch64ld1s_gather_scaled,   ZPR64ExtLSL32, nxv2i32>;
+  defm GLDFF1SW_D : sve_mem_64b_gld_sv2_64_scaled<0b1001, "ldff1sw",  AArch64ldff1s_gather_scaled, ZPR64ExtLSL32, nxv2i32>;
+  defm GLD1W_D    : sve_mem_64b_gld_sv2_64_scaled<0b1010, "ld1w",     AArch64ld1_gather_scaled,    ZPR64ExtLSL32, nxv2i32>;
+  defm GLDFF1W_D  : sve_mem_64b_gld_sv2_64_scaled<0b1011, "ldff1w",   AArch64ldff1_gather_scaled,  ZPR64ExtLSL32, nxv2i32>;
+  defm GLD1D      : sve_mem_64b_gld_sv2_64_scaled<0b1110, "ld1d",     AArch64ld1_gather_scaled,    ZPR64ExtLSL64, nxv2i64>;
+  defm GLDFF1D    : sve_mem_64b_gld_sv2_64_scaled<0b1111, "ldff1d",   AArch64ldff1_gather_scaled,  ZPR64ExtLSL64, nxv2i64>;
 
   // Gathers using unscaled 32-bit offsets unpacked in 64-bits elements, e.g.
   //    ld1h z0.d, p0/z, [x0, z0.d, uxtw]
   defm GLD1SB_D   : sve_mem_64b_gld_vs_32_unscaled<0b0000, "ld1sb",   AArch64ld1s_gather_sxtw,   AArch64ld1s_gather_uxtw,   ZPR64ExtSXTW8Only, ZPR64ExtUXTW8Only, nxv2i8>;
-  defm GLDFF1SB_D : sve_mem_64b_gld_vs_32_unscaled<0b0001, "ldff1sb", null_frag,                 null_frag,                 ZPR64ExtSXTW8Only, ZPR64ExtUXTW8Only, nxv2i8>;
+  defm GLDFF1SB_D : sve_mem_64b_gld_vs_32_unscaled<0b0001, "ldff1sb", AArch64ldff1s_gather_sxtw, AArch64ldff1s_gather_uxtw, ZPR64ExtSXTW8Only, ZPR64ExtUXTW8Only, nxv2i8>;
   defm GLD1B_D    : sve_mem_64b_gld_vs_32_unscaled<0b0010, "ld1b",    AArch64ld1_gather_sxtw,    AArch64ld1_gather_uxtw,    ZPR64ExtSXTW8Only, ZPR64ExtUXTW8Only, nxv2i8>;
-  defm GLDFF1B_D  : sve_mem_64b_gld_vs_32_unscaled<0b0011, "ldff1b",  null_frag,                 null_frag,                 ZPR64ExtSXTW8Only, ZPR64ExtUXTW8Only, nxv2i8>;
+  defm GLDFF1B_D  : sve_mem_64b_gld_vs_32_unscaled<0b0011, "ldff1b",  AArch64ldff1_gather_sxtw,  AArch64ldff1_gather_uxtw,  ZPR64ExtSXTW8Only, ZPR64ExtUXTW8Only, nxv2i8>;
   defm GLD1SH_D   : sve_mem_64b_gld_vs_32_unscaled<0b0100, "ld1sh",   AArch64ld1s_gather_sxtw,   AArch64ld1s_gather_uxtw,   ZPR64ExtSXTW8, ZPR64ExtUXTW8, nxv2i16>;
-  defm GLDFF1SH_D : sve_mem_64b_gld_vs_32_unscaled<0b0101, "ldff1sh", null_frag,                 null_frag,                 ZPR64ExtSXTW8, ZPR64ExtUXTW8, nxv2i16>;
+  defm GLDFF1SH_D : sve_mem_64b_gld_vs_32_unscaled<0b0101, "ldff1sh", AArch64ldff1s_gather_sxtw, AArch64ldff1s_gather_uxtw, ZPR64ExtSXTW8, ZPR64ExtUXTW8, nxv2i16>;
   defm GLD1H_D    : sve_mem_64b_gld_vs_32_unscaled<0b0110, "ld1h",    AArch64ld1_gather_sxtw,    AArch64ld1_gather_uxtw,    ZPR64ExtSXTW8, ZPR64ExtUXTW8, nxv2i16>;
-  defm GLDFF1H_D  : sve_mem_64b_gld_vs_32_unscaled<0b0111, "ldff1h",  null_frag,                 null_frag,                 ZPR64ExtSXTW8, ZPR64ExtUXTW8, nxv2i16>;
+  defm GLDFF1H_D  : sve_mem_64b_gld_vs_32_unscaled<0b0111, "ldff1h",  AArch64ldff1_gather_sxtw,  AArch64ldff1_gather_uxtw,  ZPR64ExtSXTW8, ZPR64ExtUXTW8, nxv2i16>;
   defm GLD1SW_D   : sve_mem_64b_gld_vs_32_unscaled<0b1000, "ld1sw",   AArch64ld1s_gather_sxtw,   AArch64ld1s_gather_uxtw,   ZPR64ExtSXTW8, ZPR64ExtUXTW8, nxv2i32>;
-  defm GLDFF1SW_D : sve_mem_64b_gld_vs_32_unscaled<0b1001, "ldff1sw", null_frag,                 null_frag,                 ZPR64ExtSXTW8, ZPR64ExtUXTW8, nxv2i32>;
+  defm GLDFF1SW_D : sve_mem_64b_gld_vs_32_unscaled<0b1001, "ldff1sw", AArch64ldff1s_gather_sxtw, AArch64ldff1s_gather_uxtw, ZPR64ExtSXTW8, ZPR64ExtUXTW8, nxv2i32>;
   defm GLD1W_D    : sve_mem_64b_gld_vs_32_unscaled<0b1010, "ld1w",    AArch64ld1_gather_sxtw,    AArch64ld1_gather_uxtw,    ZPR64ExtSXTW8, ZPR64ExtUXTW8, nxv2i32>;
-  defm GLDFF1W_D  : sve_mem_64b_gld_vs_32_unscaled<0b1011, "ldff1w",  null_frag,                 null_frag,                 ZPR64ExtSXTW8, ZPR64ExtUXTW8, nxv2i32>;
+  defm GLDFF1W_D  : sve_mem_64b_gld_vs_32_unscaled<0b1011, "ldff1w",  AArch64ldff1_gather_sxtw,  AArch64ldff1_gather_uxtw,  ZPR64ExtSXTW8, ZPR64ExtUXTW8, nxv2i32>;
   defm GLD1D      : sve_mem_64b_gld_vs_32_unscaled<0b1110, "ld1d",    AArch64ld1_gather_sxtw,    AArch64ld1_gather_uxtw,    ZPR64ExtSXTW8, ZPR64ExtUXTW8, nxv2i64>;
-  defm GLDFF1D    : sve_mem_64b_gld_vs_32_unscaled<0b1111, "ldff1d",  null_frag,                 null_frag,                 ZPR64ExtSXTW8, ZPR64ExtUXTW8, nxv2i64>;
+  defm GLDFF1D    : sve_mem_64b_gld_vs_32_unscaled<0b1111, "ldff1d",  AArch64ldff1_gather_sxtw,  AArch64ldff1_gather_uxtw,  ZPR64ExtSXTW8, ZPR64ExtUXTW8, nxv2i64>;
 
   // Gathers using scaled 32-bit offsets unpacked in 64-bits elements, e.g.
   //    ld1h z0.d, p0/z, [x0, z0.d, uxtw #1]
-  defm GLD1SH_D   : sve_mem_64b_gld_sv_32_scaled<0b0100, "ld1sh",   AArch64ld1s_gather_sxtw_scaled, AArch64ld1s_gather_uxtw_scaled, ZPR64ExtSXTW16, ZPR64ExtUXTW16, nxv2i16>;
-  defm GLDFF1SH_D : sve_mem_64b_gld_sv_32_scaled<0b0101, "ldff1sh", null_frag, null_frag,                                           ZPR64ExtSXTW16, ZPR64ExtUXTW16, nxv2i16>;
-  defm GLD1H_D    : sve_mem_64b_gld_sv_32_scaled<0b0110, "ld1h",    AArch64ld1_gather_sxtw_scaled, AArch64ld1_gather_uxtw_scaled,   ZPR64ExtSXTW16, ZPR64ExtUXTW16, nxv2i16>;
-  defm GLDFF1H_D  : sve_mem_64b_gld_sv_32_scaled<0b0111, "ldff1h",  null_frag, null_frag,                                           ZPR64ExtSXTW16, ZPR64ExtUXTW16, nxv2i16>;
-  defm GLD1SW_D   : sve_mem_64b_gld_sv_32_scaled<0b1000, "ld1sw",   AArch64ld1s_gather_sxtw_scaled, AArch64ld1s_gather_uxtw_scaled, ZPR64ExtSXTW32, ZPR64ExtUXTW32, nxv2i32>;
-  defm GLDFF1SW_D : sve_mem_64b_gld_sv_32_scaled<0b1001, "ldff1sw", null_frag, null_frag,                                           ZPR64ExtSXTW32, ZPR64ExtUXTW32, nxv2i32>;
-  defm GLD1W_D    : sve_mem_64b_gld_sv_32_scaled<0b1010, "ld1w",    AArch64ld1_gather_sxtw_scaled, AArch64ld1_gather_uxtw_scaled,   ZPR64ExtSXTW32, ZPR64ExtUXTW32, nxv2i32>;
-  defm GLDFF1W_D  : sve_mem_64b_gld_sv_32_scaled<0b1011, "ldff1w",  null_frag, null_frag,                                           ZPR64ExtSXTW32, ZPR64ExtUXTW32, nxv2i32>;
-  defm GLD1D      : sve_mem_64b_gld_sv_32_scaled<0b1110, "ld1d",    AArch64ld1_gather_sxtw_scaled, AArch64ld1_gather_uxtw_scaled,   ZPR64ExtSXTW64, ZPR64ExtUXTW64, nxv2i64>;
-  defm GLDFF1D    : sve_mem_64b_gld_sv_32_scaled<0b1111, "ldff1d",  null_frag, null_frag,                                           ZPR64ExtSXTW64, ZPR64ExtUXTW64, nxv2i64>;
+  defm GLD1SH_D   : sve_mem_64b_gld_sv_32_scaled<0b0100, "ld1sh",   AArch64ld1s_gather_sxtw_scaled,   AArch64ld1s_gather_uxtw_scaled,   ZPR64ExtSXTW16, ZPR64ExtUXTW16, nxv2i16>;
+  defm GLDFF1SH_D : sve_mem_64b_gld_sv_32_scaled<0b0101, "ldff1sh", AArch64ldff1s_gather_sxtw_scaled, AArch64ldff1s_gather_uxtw_scaled, ZPR64ExtSXTW16, ZPR64ExtUXTW16, nxv2i16>;
+  defm GLD1H_D    : sve_mem_64b_gld_sv_32_scaled<0b0110, "ld1h",    AArch64ld1_gather_sxtw_scaled,    AArch64ld1_gather_uxtw_scaled,    ZPR64ExtSXTW16, ZPR64ExtUXTW16, nxv2i16>;
+  defm GLDFF1H_D  : sve_mem_64b_gld_sv_32_scaled<0b0111, "ldff1h",  AArch64ldff1_gather_sxtw_scaled,  AArch64ldff1_gather_uxtw_scaled,  ZPR64ExtSXTW16, ZPR64ExtUXTW16, nxv2i16>;
+  defm GLD1SW_D   : sve_mem_64b_gld_sv_32_scaled<0b1000, "ld1sw",   AArch64ld1s_gather_sxtw_scaled,   AArch64ld1s_gather_uxtw_scaled,   ZPR64ExtSXTW32, ZPR64ExtUXTW32, nxv2i32>;
+  defm GLDFF1SW_D : sve_mem_64b_gld_sv_32_scaled<0b1001, "ldff1sw", AArch64ldff1s_gather_sxtw_scaled, AArch64ldff1s_gather_uxtw_scaled, ZPR64ExtSXTW32, ZPR64ExtUXTW32, nxv2i32>;
+  defm GLD1W_D    : sve_mem_64b_gld_sv_32_scaled<0b1010, "ld1w",    AArch64ld1_gather_sxtw_scaled,    AArch64ld1_gather_uxtw_scaled,    ZPR64ExtSXTW32, ZPR64ExtUXTW32, nxv2i32>;
+  defm GLDFF1W_D  : sve_mem_64b_gld_sv_32_scaled<0b1011, "ldff1w",  AArch64ldff1_gather_sxtw_scaled,  AArch64ldff1_gather_uxtw_scaled,  ZPR64ExtSXTW32, ZPR64ExtUXTW32, nxv2i32>;
+  defm GLD1D      : sve_mem_64b_gld_sv_32_scaled<0b1110, "ld1d",    AArch64ld1_gather_sxtw_scaled,    AArch64ld1_gather_uxtw_scaled,    ZPR64ExtSXTW64, ZPR64ExtUXTW64, nxv2i64>;
+  defm GLDFF1D    : sve_mem_64b_gld_sv_32_scaled<0b1111, "ldff1d",  AArch64ldff1_gather_sxtw_scaled,  AArch64ldff1_gather_uxtw_scaled,  ZPR64ExtSXTW64, ZPR64ExtUXTW64, nxv2i64>;
 
   // Non-temporal contiguous loads (register + immediate)
   defm LDNT1B_ZRI : sve_mem_cldnt_si<0b00, "ldnt1b", Z_b, ZPR8>;
