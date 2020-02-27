@@ -1460,6 +1460,7 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case Intrinsic::convert_to_fp16:
   case Intrinsic::bitreverse:
   case Intrinsic::amdgcn_fmul_legacy:
+  case Intrinsic::amdgcn_fract:
   case Intrinsic::x86_sse_cvtss2si:
   case Intrinsic::x86_sse_cvtss2si64:
   case Intrinsic::x86_sse_cvttss2si:
@@ -1786,10 +1787,23 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       return ConstantFP::get(Ty->getContext(), U);
     }
 
+    if (IntrinsicID == Intrinsic::amdgcn_fract) {
+      // The v_fract instruction behaves like the OpenCL spec, which defines
+      // fract(x) as fmin(x - floor(x), 0x1.fffffep-1f): "The min() operator is
+      //   there to prevent fract(-small) from returning 1.0. It returns the
+      //   largest positive floating-point number less than 1.0."
+      APFloat FloorU(U);
+      FloorU.roundToIntegral(APFloat::rmTowardNegative);
+      APFloat FractU(U - FloorU);
+      APFloat AlmostOne(U.getSemantics(), 1);
+      AlmostOne.next(/*nextDown*/ true);
+      return ConstantFP::get(Ty->getContext(), minimum(FractU, AlmostOne));
+    }
+
     /// We only fold functions with finite arguments. Folding NaN and inf is
     /// likely to be aborted with an exception anyway, and some host libms
     /// have known errors raising exceptions.
-    if (Op->getValueAPF().isNaN() || Op->getValueAPF().isInfinity())
+    if (!U.isFinite())
       return nullptr;
 
     /// Currently APFloat versions of these functions do not exist, so we use
