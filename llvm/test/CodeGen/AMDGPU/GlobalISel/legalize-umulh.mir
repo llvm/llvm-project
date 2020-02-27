@@ -38,3 +38,43 @@ body: |
     %2:_(<2 x s32>) = G_UMULH %0, %1
     $vgpr0_vgpr1 = COPY %2
 ...
+
+---
+name: test_umulh_s64
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+
+    ; CHECK-LABEL: name: test_umulh_s64
+    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $vgpr2_vgpr3
+    ; CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s64)
+    ; CHECK: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY1]](s64)
+    ; CHECK: [[MUL:%[0-9]+]]:_(s32) = G_MUL [[UV1]], [[UV2]]
+    ; CHECK: [[MUL1:%[0-9]+]]:_(s32) = G_MUL [[UV]], [[UV3]]
+    ; CHECK: [[UMULH:%[0-9]+]]:_(s32) = G_UMULH [[UV]], [[UV2]]
+    ; CHECK: [[UADDO:%[0-9]+]]:_(s32), [[UADDO1:%[0-9]+]]:_(s1) = G_UADDO [[MUL]], [[MUL1]]
+    ; CHECK: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[UADDO1]](s1)
+    ; CHECK: [[UADDO2:%[0-9]+]]:_(s32), [[UADDO3:%[0-9]+]]:_(s1) = G_UADDO [[UADDO]], [[UMULH]]
+    ; CHECK: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[UADDO3]](s1)
+    ; CHECK: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[ZEXT]], [[ZEXT1]]
+    ; CHECK: [[MUL2:%[0-9]+]]:_(s32) = G_MUL [[UV1]], [[UV3]]
+    ; CHECK: [[UMULH1:%[0-9]+]]:_(s32) = G_UMULH [[UV1]], [[UV2]]
+    ; CHECK: [[UMULH2:%[0-9]+]]:_(s32) = G_UMULH [[UV]], [[UV3]]
+    ; CHECK: [[UADDO4:%[0-9]+]]:_(s32), [[UADDO5:%[0-9]+]]:_(s1) = G_UADDO [[MUL2]], [[UMULH1]]
+    ; CHECK: [[ZEXT2:%[0-9]+]]:_(s32) = G_ZEXT [[UADDO5]](s1)
+    ; CHECK: [[UADDO6:%[0-9]+]]:_(s32), [[UADDO7:%[0-9]+]]:_(s1) = G_UADDO [[UADDO4]], [[UMULH2]]
+    ; CHECK: [[ZEXT3:%[0-9]+]]:_(s32) = G_ZEXT [[UADDO7]](s1)
+    ; CHECK: [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[ZEXT2]], [[ZEXT3]]
+    ; CHECK: [[UADDO8:%[0-9]+]]:_(s32), [[UADDO9:%[0-9]+]]:_(s1) = G_UADDO [[UADDO6]], [[ADD]]
+    ; CHECK: [[ZEXT4:%[0-9]+]]:_(s32) = G_ZEXT [[UADDO9]](s1)
+    ; CHECK: [[ADD2:%[0-9]+]]:_(s32) = G_ADD [[ADD1]], [[ZEXT4]]
+    ; CHECK: [[UMULH3:%[0-9]+]]:_(s32) = G_UMULH [[UV1]], [[UV3]]
+    ; CHECK: [[ADD3:%[0-9]+]]:_(s32) = G_ADD [[UMULH3]], [[ADD2]]
+    ; CHECK: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UADDO8]](s32), [[ADD3]](s32)
+    ; CHECK: $vgpr0_vgpr1 = COPY [[MV]](s64)
+    %0:_(s64) = COPY $vgpr0_vgpr1
+    %1:_(s64) = COPY $vgpr2_vgpr3
+    %2:_(s64) = G_UMULH %0, %1
+    $vgpr0_vgpr1 = COPY %2
+...
