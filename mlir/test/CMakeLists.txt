@@ -41,6 +41,7 @@ set(MLIR_TEST_DEPENDS
   cblas
   cblas_interface
   mlir_runner_utils
+  mlir_c_runner_utils
   )
 
 if(LLVM_BUILD_EXAMPLES)
