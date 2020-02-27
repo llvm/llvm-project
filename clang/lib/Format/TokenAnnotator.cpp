@@ -776,6 +776,11 @@ private:
           Tok->Type = TT_JsTypeColon;
           break;
         }
+      } else if (Style.isCSharp()) {
+        if (Contexts.back().ContextKind == tok::l_paren) {
+          Tok->Type = TT_CSharpNamedArgumentColon;
+          break;
+        }
       }
       if (Contexts.back().ColonIsDictLiteral ||
           Style.Language == FormatStyle::LK_Proto ||
@@ -3052,6 +3057,8 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
       return Style.SpacesInContainerLiterals;
     if (Right.is(TT_AttributeColon))
       return false;
+    if (Right.is(TT_CSharpNamedArgumentColon))
+      return false;
     return true;
   }
   if (Left.is(TT_UnaryOperator)) {
@@ -3200,7 +3207,11 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
   if (Right.NewlinesBefore > 1 && Style.MaxEmptyLinesToKeep > 0)
     return true;
 
-  if (Style.Language == FormatStyle::LK_JavaScript) {
+  if (Style.isCSharp()) {
+    if (Right.is(TT_CSharpNamedArgumentColon) ||
+        Left.is(TT_CSharpNamedArgumentColon))
+      return false;
+  } else if (Style.Language == FormatStyle::LK_JavaScript) {
     // FIXME: This might apply to other languages and token kinds.
     if (Right.is(tok::string_literal) && Left.is(tok::plus) && Left.Previous &&
         Left.Previous->is(tok::string_literal))
@@ -3485,9 +3496,12 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
 bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
                                     const FormatToken &Right) {
   const FormatToken &Left = *Right.Previous;
-
   // Language-specific stuff.
-  if (Style.Language == FormatStyle::LK_Java) {
+  if (Style.isCSharp()) {
+    if (Left.is(TT_CSharpNamedArgumentColon) ||
+        Right.is(TT_CSharpNamedArgumentColon))
+      return false;
+  } else if (Style.Language == FormatStyle::LK_Java) {
     if (Left.isOneOf(Keywords.kw_throws, Keywords.kw_extends,
                      Keywords.kw_implements))
       return false;
