@@ -2702,7 +2702,8 @@ bool AArch64DAGToDAGISel::tryShiftAmountMod(SDNode *N) {
     // bits that are implicitly ANDed off by the above opcodes and if so, skip
     // the AND.
     uint64_t MaskImm;
-    if (!isOpcWithIntImmediate(ShiftAmt.getNode(), ISD::AND, MaskImm))
+    if (!isOpcWithIntImmediate(ShiftAmt.getNode(), ISD::AND, MaskImm) &&
+        !isOpcWithIntImmediate(ShiftAmt.getNode(), AArch64ISD::ANDS, MaskImm))
       return false;
 
     if (countTrailingOnes(MaskImm) < Bits)
