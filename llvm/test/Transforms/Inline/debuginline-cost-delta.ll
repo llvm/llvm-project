@@ -1,3 +1,6 @@
+; Require asserts for -debug-only
+; REQUIRES: asserts
+
 ; RUN: opt < %s -inline -debug-only=inline-cost -disable-output -print-instruction-deltas 2>&1 | FileCheck %s
 
 ; CHECK:       Analyzing call of callee1... (caller:foo)
