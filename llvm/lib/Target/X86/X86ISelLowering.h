@@ -1208,7 +1208,9 @@ namespace llvm {
     Value *getSafeStackPointerLocation(IRBuilder<> &IRB) const override;
 
     std::pair<SDValue, SDValue> BuildFILD(SDValue Op, EVT SrcVT, SDValue Chain,
-                                          SDValue StackSlot,
+                                          SDValue Pointer,
+                                          MachinePointerInfo PtrInfo,
+                                          unsigned Align,
                                           SelectionDAG &DAG) const;
 
     bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const override;
