@@ -228,7 +228,7 @@ void AllSources::EmitMessage(llvm::raw_ostream &o,
             o << ':' << pos.line << ':' << pos.column;
             o << ": " << message << '\n';
             if (echoSourceLine) {
-              const char *text{inc.source.content() +
+              const char *text{inc.source.content().data() +
                   inc.source.GetLineStartOffset(pos.line)};
               o << "  ";
               for (const char *p{text}; *p != '\n'; ++p) {

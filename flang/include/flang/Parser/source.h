@@ -19,6 +19,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include "llvm/Support/MemoryBuffer.h"
 
 namespace llvm {
 class raw_ostream;
@@ -42,8 +43,8 @@ public:
   explicit SourceFile(Encoding e) : encoding_{e} {}
   ~SourceFile();
   std::string path() const { return path_; }
-  const char *content() const { return content_; }
-  std::size_t bytes() const { return bytes_; }
+  llvm::ArrayRef<char> content() const { return buf_->getBuffer().slice(bom_end_, buf_end_ - bom_end_); }
+  std::size_t bytes() const { return content().size(); }
   std::size_t lines() const { return lineStart_.size(); }
   Encoding encoding() const { return encoding_; }
 
@@ -56,20 +57,16 @@ public:
   }
 
 private:
-  bool ReadFile(std::string errorPath, llvm::raw_ostream &error);
+  void ReadFile();
   void IdentifyPayload();
   void RecordLineStarts();
 
   std::string path_;
-  int fileDescriptor_{-1};
-  bool isMemoryMapped_{false};
-  const char *address_{nullptr};  // raw content
-  std::size_t size_{0};
-  const char *content_{nullptr};  // usable content
-  std::size_t bytes_{0};
+  std::unique_ptr<llvm::WritableMemoryBuffer> buf_;
   std::vector<std::size_t> lineStart_;
-  std::string normalized_;
-  Encoding encoding_{Encoding::UTF_8};
+  std::size_t bom_end_ {0};
+  std::size_t buf_end_;
+  Encoding encoding_;
 };
 }
 #endif  // FORTRAN_PARSER_SOURCE_H_

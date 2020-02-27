@@ -63,7 +63,7 @@ void Prescanner::Prescan(ProvenanceRange range) {
   std::size_t offset{0};
   const SourceFile *source{allSources.GetSourceFile(startProvenance_, &offset)};
   CHECK(source);
-  start_ = source->content() + offset;
+  start_ = source->content().data() + offset;
   limit_ = start_ + range.size();
   nextLine_ = start_;
   const bool beganInFixedForm{inFixedForm_};

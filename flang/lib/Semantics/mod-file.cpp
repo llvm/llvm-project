@@ -728,8 +728,8 @@ static std::string CheckSum(const std::string_view &contents) {
   return result;
 }
 
-static bool VerifyHeader(const char *content, std::size_t len) {
-  std::string_view sv{content, len};
+static bool VerifyHeader(llvm::ArrayRef<char> content) {
+  std::string_view sv{content.data(), content.size()};
   if (sv.substr(0, ModHeader::magicLen) != ModHeader::magic) {
     return false;
   }
@@ -767,7 +767,7 @@ Scope *ModFileReader::Read(const SourceName &name, Scope *ancestor) {
     return nullptr;
   }
   CHECK(sourceFile);
-  if (!VerifyHeader(sourceFile->content(), sourceFile->bytes())) {
+  if (!VerifyHeader(sourceFile->content())) {
     Say(name, ancestorName, "File has invalid checksum: %s"_en_US,
         sourceFile->path());
     return nullptr;
