@@ -1435,7 +1435,7 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
 #  define _LIBCPP_AVAILABILITY_TO_CHARS                                        \
      _LIBCPP_AVAILABILITY_FILESYSTEM
 #  define _LIBCPP_AVAILABILITY_SYNC                                            \
-     __attribute__((availability(unavailable, message="The C++20 Synchronization Library requires runtime support that hasn't been shipped on Apple platforms yet!")))
+     /*FIXME:mark this as unavailable on Apple platforms*/
 #else
 #  define _LIBCPP_AVAILABILITY_SHARED_MUTEX
 #  define _LIBCPP_AVAILABILITY_BAD_VARIANT_ACCESS
