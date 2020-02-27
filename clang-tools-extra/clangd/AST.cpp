@@ -25,7 +25,6 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Index/USRGeneration.h"
-#include "clang/Lex/Lexer.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
@@ -417,16 +416,8 @@ public:
 
 llvm::Optional<QualType> getDeducedType(ASTContext &ASTCtx,
                                         SourceLocation Loc) {
-  Token Tok;
-  // Only try to find a deduced type if the token is auto or decltype.
-  if (!Loc.isValid() ||
-      Lexer::getRawToken(Loc, Tok, ASTCtx.getSourceManager(),
-                         ASTCtx.getLangOpts(), false) ||
-      !Tok.is(tok::raw_identifier) ||
-      !(Tok.getRawIdentifier() == "auto" ||
-        Tok.getRawIdentifier() == "decltype")) {
+  if (!Loc.isValid())
     return {};
-  }
   DeducedTypeVisitor V(Loc);
   V.TraverseAST(ASTCtx);
   if (V.DeducedType.isNull())
