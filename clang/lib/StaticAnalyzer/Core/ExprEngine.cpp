@@ -1315,6 +1315,8 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Expr::MSDependentExistsStmtClass:
     case Stmt::CilkForStmtClass:
       llvm_unreachable("Stmt should not be in analyzer evaluation loop");
+    case Stmt::ForallStmtClass:
+      llvm_unreachable("Stmt should not be in analyzer evaluation loop");
 
     case Stmt::ObjCSubscriptRefExprClass:
     case Stmt::ObjCPropertyRefExprClass:

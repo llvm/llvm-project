@@ -4064,6 +4064,32 @@ public:
                               Expr *LoopCount, Expr *Stride,
                               QualType SpanType);
 
+  StmtResult ActOnForallStmt(SourceLocation ForLoc,
+                          SourceLocation LParenLoc,
+                          Stmt *First,
+                          ConditionResult Second,
+                          FullExprArg Third,
+                          SourceLocation RParenLoc,
+                          Stmt *Body);
+
+  StmtResult ActOnCXXForallRangeStmt(Scope *S, SourceLocation ForLoc,
+                                  SourceLocation CoawaitLoc,
+                                  Stmt *InitStmt,
+                                  Stmt *LoopVar,
+                                  SourceLocation ColonLoc, Expr *Collection,
+                                  SourceLocation RParenLoc,
+                                  BuildForRangeKind Kind);
+  StmtResult BuildCXXForallRangeStmt(SourceLocation ForLoc,
+                                  SourceLocation CoawaitLoc,
+                                  Stmt *InitStmt,
+                                  SourceLocation ColonLoc,
+                                  Stmt *RangeDecl, Stmt *Begin, Stmt *End,
+                                  Expr *Cond, Expr *Inc,
+                                  Stmt *LoopVarDecl,
+                                  SourceLocation RParenLoc,
+                                  BuildForRangeKind Kind);
+  StmtResult FinishCXXForallRangeStmt(Stmt *ForRange, Stmt *Body);
+
   StmtResult ActOnReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
                              Scope *CurScope);
   StmtResult BuildReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp);

@@ -2593,6 +2593,18 @@ DEF_TRAVERSE_STMT(CUDAKernelCallExpr, {})
 
 DEF_TRAVERSE_STMT(SpawnStmt, {})
 DEF_TRAVERSE_STMT(SyncStmt, {})
+DEF_TRAVERSE_STMT(ForallStmt, {})
+DEF_TRAVERSE_STMT(CXXForallRangeStmt, {
+  if (!getDerived().shouldVisitImplicitCode()) {
+    if (S->getInit())
+      TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(S->getInit());
+    TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(S->getLoopVarStmt());
+    TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(S->getRangeInit());
+    TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(S->getBody());
+    // Visit everything else only if shouldVisitImplicitCode().
+    ShouldVisitChildren = false;
+  }
+})
 
 DEF_TRAVERSE_STMT(CilkSpawnStmt, {})
 DEF_TRAVERSE_STMT(CilkSpawnExpr, {})

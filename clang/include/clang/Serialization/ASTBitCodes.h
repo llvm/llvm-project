@@ -1989,6 +1989,8 @@ namespace serialization {
 
       STMT_SPAWN,
       STMT_SYNC,
+      STMT_FORALL,
+      STMT_CXX_FORALL_RANGE,
 
       // Cilk Plus
       STMT_CILKSPAWN,

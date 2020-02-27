@@ -538,6 +538,7 @@ namespace clang {
     ExpectedStmt VisitCilkSpawnStmt(CilkSpawnStmt *S);
     ExpectedStmt VisitCilkSyncStmt(CilkSyncStmt *S);
     ExpectedStmt VisitCilkForStmt(CilkForStmt *S);
+    ExpectedStmt VisitForallStmt(ForallStmt *S);
     ExpectedStmt VisitSpawnStmt(SpawnStmt *S);
     ExpectedStmt VisitSyncStmt(SyncStmt *S);
 
@@ -6186,6 +6187,28 @@ ExpectedStmt ASTNodeImporter::VisitCilkForStmt(CilkForStmt *S) {
       Importer.getToContext(), ToInit, ToLimitStmt, ToInitCond, ToBeginStmt,
       ToEndStmt, ToCond, /*ToConditionVariable,*/ ToInc,
       ToLoopVariable, ToBody, ToCilkForLoc, ToLParenLoc, ToRParenLoc);
+}
+
+ExpectedStmt ASTNodeImporter::VisitForallStmt(ForallStmt *S) {
+  auto Imp = importSeq(
+      S->getInit(), S->getCond(), S->getConditionVariable(), S->getInc(),
+      S->getBody(), S->getForallLoc(), S->getLParenLoc(), S->getRParenLoc());
+  if (!Imp)
+    return Imp.takeError();
+
+  Stmt *ToInit;
+  Expr *ToCond, *ToInc;
+  VarDecl *ToConditionVariable;
+  Stmt *ToBody;
+  SourceLocation ToForallLoc, ToLParenLoc, ToRParenLoc;
+  std::tie(
+      ToInit, ToCond, ToConditionVariable,  ToInc, ToBody, ToForallLoc,
+      ToLParenLoc, ToRParenLoc) = *Imp;
+
+  return new (Importer.getToContext()) ForallStmt(
+      Importer.getToContext(),
+      ToInit, ToCond, ToConditionVariable, ToInc, ToBody, ToForallLoc, ToLParenLoc,
+      ToRParenLoc);
 }
 
 //----------------------------------------------------------------------------
