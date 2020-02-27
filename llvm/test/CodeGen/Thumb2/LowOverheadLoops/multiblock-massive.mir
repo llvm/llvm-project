@@ -121,7 +121,7 @@ body:             |
     frame-setup CFI_INSTRUCTION offset $lr, -4
     frame-setup CFI_INSTRUCTION offset $r4, -8
     tCMPi8 $r3, 0, 14, $noreg, implicit-def $cpsr
-    t2IT 0, 8, implicit-def $itstate, implicit $cpsr
+    t2IT 0, 8, implicit-def $itstate
     tPOP_RET 0, killed $cpsr, def $r4, def $pc, implicit killed $itstate
     $lr = tMOVr $r3, 14, $noreg
     t2DoLoopStart killed $r3

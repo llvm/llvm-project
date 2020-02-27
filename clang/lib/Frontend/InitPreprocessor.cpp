@@ -460,6 +460,13 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
     if (LangOpts.FastRelaxedMath)
       Builder.defineMacro("__FAST_RELAXED_MATH__");
   }
+
+  if (LangOpts.SYCL) {
+    // SYCL Version is set to a value when building SYCL applications
+    if (LangOpts.SYCLVersion == 2017)
+      Builder.defineMacro("CL_SYCL_LANGUAGE_VERSION", "121");
+  }
+
   // Not "standard" per se, but available even with the -undef flag.
   if (LangOpts.AsmPreprocessor)
     Builder.defineMacro("__ASSEMBLER__");

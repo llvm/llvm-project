@@ -141,7 +141,7 @@ body:             |
     liveins: $lr, $r0, $r1, $r2, $r3, $r12
   
     tCMPi8 killed renamable $r3, 32, 14, $noreg, implicit-def $cpsr
-    t2IT 0, 8, implicit-def $itstate, implicit $cpsr
+    t2IT 0, 8, implicit-def $itstate
     renamable $r1 = nsw tADDi8 $noreg, killed renamable $r1, 1, 0, killed $cpsr, implicit $r1, implicit killed $itstate
   
   bb.3.for.inc:

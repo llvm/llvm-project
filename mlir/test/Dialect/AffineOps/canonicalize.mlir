@@ -17,7 +17,7 @@
 // Affine maps for test case: compose_affine_maps_dependent_loads
 // CHECK-DAG: [[MAP9:#map[0-9]+]] = affine_map<(d0) -> (d0 + 3)>
 // CHECK-DAG: [[MAP10:#map[0-9]+]] = affine_map<(d0) -> (d0 * 3)>
-// CHECK-DAG: [[MAP11:#map[0-9]+]] = affine_map<(d0) -> ((d0 + 7) ceildiv 3)>
+// CHECK-DAG: [[MAP11:#map[0-9]+]] = affine_map<(d0) -> ((d0 + 3) ceildiv 3)>
 // CHECK-DAG: [[MAP12:#map[0-9]+]] = affine_map<(d0) -> (d0 * 7 - 49)>
 
 // Affine maps for test case: compose_affine_maps_diamond_dependency
@@ -187,9 +187,9 @@ func @compose_affine_maps_dependent_loads() {
 
         // Swizzle %x00, %x01 and %c3, %c7
         %x10 = affine.apply affine_map<(d0, d1)[s0, s1] -> (d0 * s1)>
-           (%x01, %x00)[%c7, %c3]
+           (%x01, %x00)[%c3, %c7]
         %x11 = affine.apply affine_map<(d0, d1)[s0, s1] -> (d1 ceildiv s0)>
-           (%x01, %x00)[%c7, %c3]
+           (%x01, %x00)[%c3, %c7]
 
         // CHECK-NEXT: [[I2A:%[0-9]+]] = affine.apply [[MAP12]](%{{.*}})
         // CHECK-NEXT: [[I2B:%[0-9]+]] = affine.apply [[MAP11]](%{{.*}})
@@ -567,4 +567,30 @@ func @affine_min(%arg0: index) {
     }
   }
   return
+}
+
+// -----
+
+// Reproducer for PR45031. This used to fold into an incorrect map because
+// symbols were concatenated in the wrong order during map folding. Map
+// composition places the symbols of the original map before those of the map
+// it is composed with, e.g. A.compose(B) will first have all symbols of A,
+// then all symbols of B.
+
+#map1 = affine_map<(d0)[s0, s1] -> (d0 * s0 + s1)>
+#map2 = affine_map<(d0)[s0] -> (1024, -d0 + s0)>
+
+// CHECK: #[[MAP:.*]] = affine_map<()[s0, s1] -> (1024, s1 * -1024 + s0)>
+
+// CHECK: func @rep(%[[ARG0:.*]]: index, %[[ARG1:.*]]: index)
+func @rep(%arg0 : index, %arg1 : index) -> index {
+  // CHECK-NOT: constant
+  %c0 = constant 0 : index
+  %c1024 = constant 1024 : index
+  // CHECK-NOT: affine.apply
+  %0 = affine.apply #map1(%arg0)[%c1024, %c0]
+
+  // CHECK: affine.min #[[MAP]]()[%[[ARG1]], %[[ARG0]]]
+  %1 = affine.min #map2(%0)[%arg1]
+  return %1 : index
 }

@@ -536,8 +536,12 @@ AffineApplyNormalizer::AffineApplyNormalizer(AffineMap map,
           auxiliaryExprs.push_back(renumberOneDim(t));
         } else {
           // c. The mathematical composition of AffineMap concatenates symbols.
-          //    We do the same for symbol operands.
-          concatenatedSymbols.push_back(t);
+          //    Note that the map composition will put symbols already present
+          //    in the map before any symbols coming from the auxiliary map, so
+          //    we insert them before any symbols that are due to renumbering,
+          //    and after the proper symbols we have seen already.
+          concatenatedSymbols.insert(
+              std::next(concatenatedSymbols.begin(), numProperSymbols++), t);
         }
       }
     }
