@@ -309,10 +309,33 @@ Objective-C Language Changes in Clang
     // Fix: add an explicit cast to 'id'.
     NSDictionary* d = @{(id)cls : @"Hello"};
 
-OpenCL C Language Changes in Clang
-----------------------------------
+OpenCL Kernel Language Changes in Clang
+---------------------------------------
 
-...
+Generic changes:
+
+- Made ``__private`` to be appear explicitly in diagnostics, AST, etc.
+- Fixed diagnostics of ``enqueue_kernel``.
+
+OpenCL builtin functions:
+
+- The majority of the OpenCL builtin functions are now available through
+  the experimental `TableGen` driven ``-fdeclare-opencl-builtins`` option.
+- Align the ``enqueue_marker`` declaration in standard ``opencl-c.h`` to the
+  OpenCL spec.
+- Avoid a void pointer cast in the ``CLK_NULL_EVENT`` definition.
+- Aligned OpenCL with c11 atomic fetch max/min.
+
+Changes in C++ for OpenCL:
+
+- Fixed language mode predefined macros for C++ mode.
+- Allow OpenCL C style compound vector initialization.
+- Improved destructor support.
+- Implemented address space deduction for pointers/references
+  to arrays and auto variables.
+- Added address spaces support for lambdas and ``constexpr``.
+- Fixed misc address spaces usages in classes.
+
 
 ABI Changes in Clang
 --------------------
