@@ -548,18 +548,47 @@ DIE &DwarfDebug::constructSubprogramDefinitionDIE(const DISubprogram *SP) {
   return *CU.getOrCreateSubprogramDIE(SP);
 }
 
+/// Represents a parameter whose call site value can be described by applying a
+/// debug expression to a register in the forwarded register worklist.
+struct FwdRegParamInfo {
+  /// The described parameter register.
+  unsigned ParamReg;
+
+  /// Debug expression that has been built up when walking through the
+  /// instruction chain that produces the parameter's value.
+  const DIExpression *Expr;
+};
+
 /// Register worklist for finding call site values.
-using FwdRegWorklist = MapVector<unsigned, SmallVector<unsigned, 2>>;
+using FwdRegWorklist = MapVector<unsigned, SmallVector<FwdRegParamInfo, 2>>;
 
 /// Emit call site parameter entries that are described by the given value and
 /// debug expression.
 template <typename ValT>
 static void finishCallSiteParams(ValT Val, const DIExpression *Expr,
-                                 ArrayRef<unsigned> DescribedParams,
+                                 ArrayRef<FwdRegParamInfo> DescribedParams,
                                  ParamSet &Params) {
-  DbgValueLoc DbgLocVal(Expr, Val);
-  for (auto ParamReg : DescribedParams) {
-    DbgCallSiteParam CSParm(ParamReg, DbgLocVal);
+  for (auto Param : DescribedParams) {
+    bool ShouldCombineExpressions = Expr && Param.Expr->getNumElements() > 0;
+
+    // TODO: Entry value operations can currently not be combined with any
+    // other expressions, so we can't emit call site entries in those cases.
+    if (ShouldCombineExpressions && Expr->isEntryValue())
+      continue;
+
+    // If a parameter's call site value is produced by a chain of
+    // instructions we may have already created an expression for the
+    // parameter when walking through the instructions. Append that to the
+    // base expression.
+    const DIExpression *CombinedExpr =
+        ShouldCombineExpressions
+            ? DIExpression::append(Expr, Param.Expr->getElements())
+            : Expr;
+    assert((!CombinedExpr || CombinedExpr->isValid()) &&
+           "Combined debug expression is invalid");
+
+    DbgValueLoc DbgLocVal(CombinedExpr, Val);
+    DbgCallSiteParam CSParm(Param.ParamReg, DbgLocVal);
     Params.push_back(CSParm);
     ++NumCSParams;
   }
@@ -567,15 +596,30 @@ static void finishCallSiteParams(ValT Val, const DIExpression *Expr,
 
 /// Add \p Reg to the worklist, if it's not already present, and mark that the
 /// given parameter registers' values can (potentially) be described using
-/// that register.
+/// that register and an debug expression.
 static void addToFwdRegWorklist(FwdRegWorklist &Worklist, unsigned Reg,
-                                ArrayRef<unsigned> ParamsToAdd) {
+                                const DIExpression *Expr,
+                                ArrayRef<FwdRegParamInfo> ParamsToAdd) {
   auto I = Worklist.insert({Reg, {}});
   auto &ParamsForFwdReg = I.first->second;
-  for (auto ParamReg : ParamsToAdd) {
-    assert(!is_contained(ParamsForFwdReg, ParamReg) &&
+  for (auto Param : ParamsToAdd) {
+    assert(none_of(ParamsForFwdReg,
+                   [Param](const FwdRegParamInfo &D) {
+                     return D.ParamReg == Param.ParamReg;
+                   }) &&
            "Same parameter described twice by forwarding reg");
-    ParamsForFwdReg.push_back(ParamReg);
+
+    // If a parameter's call site value is produced by a chain of
+    // instructions we may have already created an expression for the
+    // parameter when walking through the instructions. Append that to the
+    // new expression.
+    const DIExpression *CombinedExpr =
+        (Param.Expr->getNumElements() > 0)
+            ? DIExpression::append(Expr, Param.Expr->getElements())
+            : Expr;
+    assert(CombinedExpr->isValid() && "Combined debug expression is invalid");
+
+    ParamsForFwdReg.push_back({Param.ParamReg, CombinedExpr});
   }
 }
 
@@ -622,10 +666,14 @@ static void collectCallSiteParameters(const MachineInstr *CallMI,
   // instruction has been handled.
   FwdRegWorklist NewWorklistItems;
 
+  const DIExpression *EmptyExpr =
+      DIExpression::get(MF->getFunction().getContext(), {});
+
   // Add all the forwarding registers into the ForwardedRegWorklist.
   for (auto ArgReg : CallFwdRegsInfo->second) {
     bool InsertedReg =
-        ForwardedRegWorklist.insert({ArgReg.Reg, {{ArgReg.Reg}}}).second;
+        ForwardedRegWorklist.insert({ArgReg.Reg, {{ArgReg.Reg, EmptyExpr}}})
+            .second;
     assert(InsertedReg && "Single register used to forward two arguments?");
     (void)InsertedReg;
   }
@@ -686,11 +734,6 @@ static void collectCallSiteParameters(const MachineInstr *CallMI,
                                ForwardedRegWorklist[ParamFwdReg], Params);
         } else if (ParamValue->first.isReg()) {
           Register RegLoc = ParamValue->first.getReg();
-          // TODO: For now, there is no use of describing the value loaded into the
-          //       register that is also the source registers (e.g. $r0 = add $r0, x).
-          if (ParamFwdReg == RegLoc)
-            continue;
-
           unsigned SP = TLI->getStackPointerRegisterToSaveRestore();
           Register FP = TRI->getFrameRegister(*MF);
           bool IsSPorFP = (RegLoc == SP) || (RegLoc == FP);
@@ -698,18 +741,14 @@ static void collectCallSiteParameters(const MachineInstr *CallMI,
             MachineLocation MLoc(RegLoc, /*IsIndirect=*/IsSPorFP);
             finishCallSiteParams(MLoc, ParamValue->second,
                                  ForwardedRegWorklist[ParamFwdReg], Params);
-          // TODO: Add support for entry value plus an expression.
-          } else if (ShouldTryEmitEntryVals &&
-                     ParamValue->second->getNumElements() == 0) {
-            assert(RegLoc != ParamFwdReg &&
-                   "Can't handle a register that is described by itself");
+          } else {
             // ParamFwdReg was described by the non-callee saved register
             // RegLoc. Mark that the call site values for the parameters are
             // dependent on that register instead of ParamFwdReg. Since RegLoc
             // may be a register that will be handled in this iteration, we
             // postpone adding the items to the worklist, and instead keep them
             // in a temporary container.
-            addToFwdRegWorklist(NewWorklistItems, RegLoc,
+            addToFwdRegWorklist(NewWorklistItems, RegLoc, ParamValue->second,
                                 ForwardedRegWorklist[ParamFwdReg]);
           }
         }
@@ -723,7 +762,8 @@ static void collectCallSiteParameters(const MachineInstr *CallMI,
     // Now that we are done handling this instruction, add items from the
     // temporary worklist to the real one.
     for (auto New : NewWorklistItems)
-      addToFwdRegWorklist(ForwardedRegWorklist, New.first, New.second);
+      addToFwdRegWorklist(ForwardedRegWorklist, New.first, EmptyExpr,
+                          New.second);
     NewWorklistItems.clear();
   }
 
