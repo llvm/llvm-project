@@ -1260,7 +1260,7 @@ bool MachineOutliner::outline(Module &M,
                   MOP.getReg(), true, /* isDef = true */
                   true /* isImp = true */));
           }
-          if (MI.isCandidateForCallSiteEntry())
+          if (MI.shouldUpdateCallSiteInfo())
             MI.getMF()->eraseCallSiteInfo(&MI);
         };
         // Copy over the defs in the outlined range.

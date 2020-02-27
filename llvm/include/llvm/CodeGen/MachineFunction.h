@@ -1006,20 +1006,18 @@ public:
   /// Following functions update call site info. They should be called before
   /// removing, replacing or copying call instruction.
 
-  /// Move the call site info from \p Old to \New call site info. This function
-  /// is used when we are replacing one call instruction with another one to
-  /// the same callee.
-  void moveCallSiteInfo(const MachineInstr *Old,
-                        const MachineInstr *New);
-
   /// Erase the call site info for \p MI. It is used to remove a call
   /// instruction from the instruction stream.
   void eraseCallSiteInfo(const MachineInstr *MI);
-
   /// Copy the call site info from \p Old to \ New. Its usage is when we are
   /// making a copy of the instruction that will be inserted at different point
   /// of the instruction stream.
   void copyCallSiteInfo(const MachineInstr *Old,
+                        const MachineInstr *New);
+  /// Move the call site info from \p Old to \New call site info. This function
+  /// is used when we are replacing one call instruction with another one to
+  /// the same callee.
+  void moveCallSiteInfo(const MachineInstr *Old,
                         const MachineInstr *New);
 };
 
