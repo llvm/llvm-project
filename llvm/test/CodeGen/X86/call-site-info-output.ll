@@ -1,6 +1,6 @@
 ; Test call site info MIR printer and parser.Parser assertions and machine
 ; verifier will check the rest;
-; RUN: llc %s -stop-before=finalize-isel -o %t.mir
+; RUN: llc -debug-entry-values %s -stop-before=finalize-isel -o %t.mir
 ; RUN: cat %t.mir | FileCheck %s
 ; CHECK: name: fn2
 ; CHECK: callSites:
@@ -10,7 +10,7 @@
 ; CHECK-NEXT:   arg: 0, reg: '$edi'
 ; CHECK-NEXT:   arg: 1, reg: '$esi'
 ; CHECK-NEXT:   arg: 2, reg: '$edx'
-; RUN: llc %t.mir -run-pass=finalize-isel -o -| FileCheck %s --check-prefix=PARSER
+; RUN: llc -debug-entry-values %t.mir -run-pass=finalize-isel -o -| FileCheck %s --check-prefix=PARSER
 ; Verify that we are able to parse output mir and that we are getting the same result.
 ; PARSER: name: fn2
 ; PARSER: callSites:

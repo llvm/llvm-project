@@ -864,7 +864,7 @@ EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
     }
 
     if (MI->isCandidateForCallSiteEntry() &&
-        DAG->getTarget().Options.ShouldEmitDebugEntryValues())
+        DAG->getTarget().Options.EnableDebugEntryValues)
       MF.addCallArgsForwardingRegs(MI, DAG->getSDCallSiteInfo(Node));
 
     return MI;

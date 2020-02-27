@@ -1117,7 +1117,7 @@ void LiveDebugValues::transferRegisterDef(
 
   if (auto *TPC = getAnalysisIfAvailable<TargetPassConfig>()) {
     auto &TM = TPC->getTM<TargetMachine>();
-    if (TM.Options.ShouldEmitDebugEntryValues())
+    if (TM.Options.EnableDebugEntryValues)
       emitEntryValues(MI, OpenRanges, VarLocIDs, Transfers, KillSet);
   }
 }
@@ -1622,7 +1622,7 @@ void LiveDebugValues::recordEntryValue(const MachineInstr &MI,
                                        VarLocMap &VarLocIDs) {
   if (auto *TPC = getAnalysisIfAvailable<TargetPassConfig>()) {
     auto &TM = TPC->getTM<TargetMachine>();
-    if (!TM.Options.ShouldEmitDebugEntryValues())
+    if (!TM.Options.EnableDebugEntryValues)
       return;
   }
 
