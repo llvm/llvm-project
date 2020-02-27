@@ -1070,6 +1070,8 @@ protected:
       result.GetErrorStream().Printf(
           "error: expression evaluation of address to watch failed\n");
       result.GetErrorStream() << "expression evaluated: \n" << expr << "\n";
+      if (valobj_sp && !valobj_sp->GetError().Success())
+        result.GetErrorStream() << valobj_sp->GetError().AsCString() << "\n";
       result.SetStatus(eReturnStatusFailed);
       return false;
     }
