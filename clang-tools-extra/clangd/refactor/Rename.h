@@ -26,6 +26,18 @@ class SymbolIndex;
 using DirtyBufferGetter =
     llvm::function_ref<llvm::Optional<std::string>(PathRef AbsPath)>;
 
+struct RenameOptions {
+  /// If true, enable cross-file rename; otherwise, only allows to rename a
+  /// symbol that's only used in the current file.
+  bool AllowCrossFile = false;
+  /// The mamimum number of affected files (0 means no limit), only meaningful
+  /// when AllowCrossFile = true.
+  /// If the actual number exceeds the limit, rename is forbidden.
+  size_t LimitFiles = 50;
+  /// If true, format the rename edits, only meaningful in ClangdServer layer.
+  bool WantFormat = false;
+};
+
 struct RenameInputs {
   Position Pos; // the position triggering the rename
   llvm::StringRef NewName;
@@ -35,7 +47,7 @@ struct RenameInputs {
 
   const SymbolIndex *Index = nullptr;
 
-  bool AllowCrossFile = false;
+  RenameOptions Opts = {};
   // When set, used by the rename to get file content for all rename-related
   // files.
   // If there is no corresponding dirty buffer, we will use the file content
@@ -43,7 +55,7 @@ struct RenameInputs {
   DirtyBufferGetter GetDirtyBuffer = nullptr;
 };
 
-/// Renames all occurrences of the symbol.
+/// Renames all occurrences of the symbol. The result edits are unformatted.
 /// If AllowCrossFile is false, returns an error if rename a symbol that's used
 /// in another file (per the index).
 llvm::Expected<FileEdits> rename(const RenameInputs &RInputs);

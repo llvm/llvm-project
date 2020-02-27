@@ -27,7 +27,9 @@
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/Specifiers.h"
+#include "clang/Basic/TokenKinds.h"
 #include "clang/Index/IndexSymbol.h"
+#include "clang/Tooling/Syntax/Tokens.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
@@ -523,24 +525,44 @@ llvm::Optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
                                    format::FormatStyle Style,
                                    const SymbolIndex *Index) {
   const SourceManager &SM = AST.getSourceManager();
-  llvm::Optional<HoverInfo> HI;
-  SourceLocation SourceLocationBeg = SM.getMacroArgExpandedLocation(
-      getBeginningOfIdentifier(Pos, SM, AST.getLangOpts()));
+  auto CurLoc = sourceLocationInMainFile(SM, Pos);
+  if (!CurLoc) {
+    llvm::consumeError(CurLoc.takeError());
+    return llvm::None;
+  }
+  auto TokensTouchingCursor =
+      syntax::spelledTokensTouching(*CurLoc, AST.getTokens());
+  if (TokensTouchingCursor.empty())
+    return llvm::None;
 
-  if (auto Deduced = getDeducedType(AST.getASTContext(), SourceLocationBeg)) {
+  // In general we prefer the touching token that works over the one that
+  // doesn't, see SelectionTree::create(). The following locations are used only
+  // for triggering on macros and auto/decltype, so simply choosing the lone
+  // identifier-or-keyword token is equivalent.
+  SourceLocation IdentLoc;
+  SourceLocation AutoLoc;
+  for (const auto &Tok : TokensTouchingCursor) {
+    if (Tok.kind() == tok::identifier)
+      IdentLoc = Tok.location();
+    if (Tok.kind() == tok::kw_auto || Tok.kind() == tok::kw_decltype)
+      AutoLoc = Tok.location();
+  }
+
+  llvm::Optional<HoverInfo> HI;
+  if (auto Deduced = getDeducedType(AST.getASTContext(), AutoLoc)) {
     HI = getHoverContents(*Deduced, AST.getASTContext(), Index);
-  } else if (auto M = locateMacroAt(SourceLocationBeg, AST.getPreprocessor())) {
+    HI->SymRange =
+        getTokenRange(AST.getSourceManager(), AST.getLangOpts(), AutoLoc);
+  } else if (auto M = locateMacroAt(IdentLoc, AST.getPreprocessor())) {
     HI = getHoverContents(*M, AST);
+    HI->SymRange =
+        getTokenRange(AST.getSourceManager(), AST.getLangOpts(), IdentLoc);
   } else {
-    auto Offset = positionToOffset(SM.getBufferData(SM.getMainFileID()), Pos);
-    if (!Offset) {
-      llvm::consumeError(Offset.takeError());
-      return llvm::None;
-    }
+    auto Offset = SM.getFileOffset(*CurLoc);
     // Editors send the position on the left of the hovered character.
     // So our selection tree should be biased right. (Tested with VSCode).
     SelectionTree ST = SelectionTree::createRight(
-        AST.getASTContext(), AST.getTokens(), *Offset, *Offset);
+        AST.getASTContext(), AST.getTokens(), Offset, Offset);
     std::vector<const Decl *> Result;
     if (const SelectionTree::Node *N = ST.commonAncestor()) {
       auto Decls = explicitReferenceTargets(N->ASTNode, DeclRelation::Alias);
@@ -565,9 +587,15 @@ llvm::Optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
   if (auto Formatted =
           tooling::applyAllReplacements(HI->Definition, Replacements))
     HI->Definition = *Formatted;
+  // FIXME: We should rather fill this with info coming from SelectionTree node.
+  if (!HI->SymRange) {
+    SourceLocation ToHighlight = TokensTouchingCursor.front().location();
+    if (IdentLoc.isValid())
+      ToHighlight = IdentLoc;
+    HI->SymRange =
+        getTokenRange(AST.getSourceManager(), AST.getLangOpts(), ToHighlight);
+  }
 
-  HI->SymRange = getTokenRange(AST.getSourceManager(), AST.getLangOpts(),
-                               SourceLocationBeg);
   return HI;
 }
 

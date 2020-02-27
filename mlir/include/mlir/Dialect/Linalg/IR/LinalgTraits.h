@@ -234,10 +234,11 @@ public:
     if (!maybeReferenceIteratorTypes && name != "generic" &&
         name != "indexed_generic") {
       this->getOperation()->dump();
-      llvm_unreachable("Op missing ");
+      llvm_unreachable("Op missing referenceIterators");
     }
 
-    // If we have a reference, build the reference attribute.
+    // If we have a reference, build the reference attribute and set it in the
+    // op before returning.
     auto *ctx = this->getOperation()->getContext();
     auto attrRange = llvm::map_range(*maybeReferenceIteratorTypes,
                                      [ctx](StringRef str) -> Attribute {

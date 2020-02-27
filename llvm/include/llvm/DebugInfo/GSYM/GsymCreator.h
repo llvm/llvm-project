@@ -141,6 +141,8 @@ class GsymCreator {
   std::vector<llvm::gsym::FileEntry> Files;
   std::vector<uint8_t> UUID;
   Optional<AddressRanges> ValidTextRanges;
+  AddressRanges Ranges;
+  llvm::Optional<uint64_t> BaseAddress;
   bool Finalized = false;
 
 public:
@@ -231,6 +233,17 @@ public:
   /// object.
   size_t getNumFunctionInfos() const;
 
+  /// Check if an address has already been added as a function info.
+  ///
+  /// FunctionInfo data can come from many sources: debug info, symbol tables,
+  /// exception information, and more. Symbol tables should be added after
+  /// debug info and can use this function to see if a symbol's start address
+  /// has already been added to the GsymReader. Calling this before adding
+  /// a function info from a source other than debug info avoids clients adding
+  /// many redundant FunctionInfo objects from many sources only for them to be
+  /// removed during the finalize() call.
+  bool hasFunctionInfoForAddress(uint64_t Addr) const;
+
   /// Set valid .text address ranges that all functions must be contained in.
   void SetValidTextRanges(AddressRanges &TextRanges) {
     ValidTextRanges = TextRanges;
@@ -262,6 +275,20 @@ public:
   ///          text ranges have been set, false otherwise.
   bool IsValidTextAddress(uint64_t Addr) const;
 
+  /// Set the base address to use for the GSYM file.
+  ///
+  /// Setting the base address to use for the GSYM file. Object files typically
+  /// get loaded from a base address when the OS loads them into memory. Using
+  /// GSYM files for symbolication becomes easier if the base address in the
+  /// GSYM header is the same address as it allows addresses to be easily slid
+  /// and allows symbolication without needing to find the original base
+  /// address in the original object file.
+  ///
+  /// \param  Addr The address to use as the base address of the GSYM file
+  ///              when it is saved to disk.
+  void setBaseAddress(uint64_t Addr) {
+    BaseAddress = Addr;
+  }
 };
 
 } // namespace gsym

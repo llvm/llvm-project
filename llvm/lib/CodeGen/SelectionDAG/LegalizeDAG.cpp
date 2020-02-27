@@ -2823,6 +2823,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
   }
   case ISD::FLT_ROUNDS_:
     Results.push_back(DAG.getConstant(1, dl, Node->getValueType(0)));
+    Results.push_back(Node->getOperand(0));
     break;
   case ISD::EH_RETURN:
   case ISD::EH_LABEL:

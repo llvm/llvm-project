@@ -27,6 +27,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/IR/AssemblyAnnotationWriter.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
@@ -38,6 +39,7 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -50,6 +52,10 @@ static cl::opt<int>
     DefaultThreshold("inlinedefault-threshold", cl::Hidden, cl::init(225),
                      cl::ZeroOrMore,
                      cl::desc("Default amount of inlining to perform"));
+
+static cl::opt<bool> PrintDebugInstructionDeltas("print-instruction-deltas",
+    cl::Hidden, cl::init(false),
+    cl::desc("Prints deltas of cost and threshold per instruction"));
 
 static cl::opt<int> InlineThreshold(
     "inline-threshold", cl::Hidden, cl::init(225), cl::ZeroOrMore,
@@ -99,6 +105,26 @@ static cl::opt<bool> OptComputeFullInlineCost(
 
 namespace {
 class InlineCostCallAnalyzer;
+
+// This struct is used to store information about inline cost of a
+// particular instruction
+struct InstructionCostDetail {
+  int CostBefore;
+  int CostAfter;
+  int ThresholdBefore;
+  int ThresholdAfter;
+};
+
+class CostAnnotationWriter : public AssemblyAnnotationWriter {
+public:
+  // This DenseMap stores the delta change in cost and threshold after
+  // accounting for the given instruction.
+  DenseMap <const Instruction *, InstructionCostDetail> CostThresholdMap;
+
+  virtual void emitInstructionAnnot(const Instruction *I,
+                                        formatted_raw_ostream &OS);
+};
+
 class CallAnalyzer : public InstVisitor<CallAnalyzer, bool> {
   typedef InstVisitor<CallAnalyzer, bool> Base;
   friend class InstVisitor<CallAnalyzer, bool>;
@@ -134,6 +160,12 @@ protected:
   /// Extension points for handling callsite features.
   /// Called after a basic block was analyzed.
   virtual void onBlockAnalyzed(const BasicBlock *BB) {}
+
+  /// Called before an instruction was analyzed
+  virtual void onInstructionAnalysisStart(const Instruction *I) {}
+
+  /// Called after an instruction was analyzed
+  virtual void onInstructionAnalysisFinish(const Instruction *I) {}
 
   /// Called at the end of the analysis of the callsite. Return the outcome of
   /// the analysis, i.e. 'InlineResult(true)' if the inlining may happen, or
@@ -538,6 +570,24 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
     }
   }
 
+  void onInstructionAnalysisStart(const Instruction *I) override {
+    // This function is called to store the initial cost of inlining before
+    // the given instruction was assessed.
+    if (!PrintDebugInstructionDeltas)
+        return ;
+    Writer.CostThresholdMap[I].CostBefore = Cost;
+    Writer.CostThresholdMap[I].ThresholdBefore = Threshold;
+  }
+
+  void onInstructionAnalysisFinish(const Instruction *I) override {
+    // This function is called to find new values of cost and threshold after
+    // the instruction has been assessed.
+    if (!PrintDebugInstructionDeltas)
+        return ;
+    Writer.CostThresholdMap[I].CostAfter = Cost;
+    Writer.CostThresholdMap[I].ThresholdAfter = Threshold;
+  }
+
   InlineResult finalizeAnalysis() override {
     // Loops generally act a lot like calls in that they act like barriers to
     // movement, require a certain amount of setup, etc. So when optimising for
@@ -637,6 +687,10 @@ public:
                               Params.ComputeFullInlineCost || ORE),
         Params(Params), Threshold(Params.DefaultThreshold),
         BoostIndirectCalls(BoostIndirect) {}
+
+  /// Annotation Writer for cost annotation
+  CostAnnotationWriter Writer;
+
   void dump();
 
   virtual ~InlineCostCallAnalyzer() {}
@@ -655,6 +709,25 @@ void CallAnalyzer::disableSROAForArg(AllocaInst *SROAArg) {
   EnabledSROAAllocas.erase(SROAArg);
   disableLoadElimination();
 }
+
+void CostAnnotationWriter::emitInstructionAnnot(
+    const Instruction *I, formatted_raw_ostream &OS) {
+    // The cost of inlining of the given instruction is printed always.
+    // The threshold delta is printed only when it is non-zero. It happens
+    // when we decided to give a bonus at a particular instruction.
+    OS << "; cost before = " << CostThresholdMap[I].CostBefore <<
+              ", cost after = " << CostThresholdMap[I].CostAfter <<
+              ", threshold before = " << CostThresholdMap[I].ThresholdBefore <<
+              ", threshold after = " << CostThresholdMap[I].ThresholdAfter <<
+              ", ";
+    OS << "cost delta = " << CostThresholdMap[I].CostAfter -
+                                CostThresholdMap[I].CostBefore;
+    if (CostThresholdMap[I].ThresholdAfter != CostThresholdMap[I].ThresholdBefore)
+      OS << ", threshold delta = " << CostThresholdMap[I].ThresholdAfter -
+                                CostThresholdMap[I].ThresholdBefore;
+    OS << "\n";
+}
+
 /// If 'V' maps to a SROA candidate, disable SROA for it.
 void CallAnalyzer::disableSROA(Value *V) {
   if (auto *SROAArg = getSROAArgForValueOrNull(V)) {
@@ -1763,11 +1836,14 @@ CallAnalyzer::analyzeBlock(BasicBlock *BB,
     // all of the per-instruction logic. The visit tree returns true if we
     // consumed the instruction in any way, and false if the instruction's base
     // cost should count against inlining.
+    onInstructionAnalysisStart(&*I);
+
     if (Base::visit(&*I))
       ++NumInstructionsSimplified;
     else
       onMissedSimplification();
 
+    onInstructionAnalysisFinish(&*I);
     using namespace ore;
     // If the visit this instruction detected an uninlinable pattern, abort.
     InlineResult IR = InlineResult::success();
@@ -2049,6 +2125,8 @@ InlineResult CallAnalyzer::analyze() {
 /// Dump stats about this call's analysis.
 LLVM_DUMP_METHOD void InlineCostCallAnalyzer::dump() {
 #define DEBUG_PRINT_STAT(x) dbgs() << "      " #x ": " << x << "\n"
+  if (PrintDebugInstructionDeltas)
+    F.print(dbgs(), &Writer);
   DEBUG_PRINT_STAT(NumConstantArgs);
   DEBUG_PRINT_STAT(NumConstantOffsetPtrArgs);
   DEBUG_PRINT_STAT(NumAllocaArgs);

@@ -43,6 +43,7 @@ write_lit_config("lit_site_cfg") {
     "LLVM_WITH_Z3=",  # Must be empty, not 0.
     "CLANG_BUILD_EXAMPLES=0",
     "CLANG_DEFAULT_CXX_STDLIB=",  # Empty string means "default value" here.
+    "CLANG_DEFAULT_LINKER=",
     "CLANG_TOOLS_DIR=" + rebase_path("$root_out_dir/bin"),
 
     # This is only used if LLVM_USE_SANITIZER includes lsan and the host

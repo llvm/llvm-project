@@ -330,81 +330,49 @@ def : ScalarSplatPat<v2f64, f64, F64>;
 //===----------------------------------------------------------------------===//
 
 // Extract lane as a scalar: extract_lane / extract_lane_s / extract_lane_u
-multiclass ExtractLane<ValueType vec_t, string vec, ImmLeaf imm_t,
-                       WebAssemblyRegClass reg_t, bits<32> simdop,
-                       string suffix = "", SDNode extract = vector_extract> {
+multiclass ExtractLane<ValueType vec_t, string vec, WebAssemblyRegClass reg_t,
+                       bits<32> simdop, string suffix = ""> {
   defm EXTRACT_LANE_#vec_t#suffix :
       SIMD_I<(outs reg_t:$dst), (ins V128:$vec, vec_i8imm_op:$idx),
-             (outs), (ins vec_i8imm_op:$idx),
-             [(set reg_t:$dst, (extract (vec_t V128:$vec), (i32 imm_t:$idx)))],
+             (outs), (ins vec_i8imm_op:$idx), [],
              vec#".extract_lane"#suffix#"\t$dst, $vec, $idx",
              vec#".extract_lane"#suffix#"\t$idx", simdop>;
 }
 
-multiclass ExtractPat<ValueType lane_t, int mask> {
-  def _s : PatFrag<(ops node:$vec, node:$idx),
-                   (i32 (sext_inreg
-                     (i32 (vector_extract
-                       node:$vec,
-                       node:$idx
-                     )),
-                     lane_t
-                   ))>;
-  def _u : PatFrag<(ops node:$vec, node:$idx),
-                   (i32 (and
-                     (i32 (vector_extract
-                       node:$vec,
-                       node:$idx
-                     )),
-                     (i32 mask)
-                   ))>;
-}
+defm "" : ExtractLane<v16i8, "i8x16", I32, 5, "_s">;
+defm "" : ExtractLane<v16i8, "i8x16", I32, 6, "_u">;
+defm "" : ExtractLane<v8i16, "i16x8", I32, 9, "_s">;
+defm "" : ExtractLane<v8i16, "i16x8", I32, 10, "_u">;
+defm "" : ExtractLane<v4i32, "i32x4", I32, 13>;
+defm "" : ExtractLane<v2i64, "i64x2", I64, 16>;
+defm "" : ExtractLane<v4f32, "f32x4", F32, 19>;
+defm "" : ExtractLane<v2f64, "f64x2", F64, 22>;
 
-defm extract_i8x16 : ExtractPat<i8, 0xff>;
-defm extract_i16x8 : ExtractPat<i16, 0xffff>;
+def : Pat<(vector_extract (v16i8 V128:$vec), (i32 LaneIdx16:$idx)),
+          (EXTRACT_LANE_v16i8_u V128:$vec, imm:$idx)>;
+def : Pat<(vector_extract (v8i16 V128:$vec), (i32 LaneIdx8:$idx)),
+          (EXTRACT_LANE_v8i16_u V128:$vec, imm:$idx)>;
+def : Pat<(vector_extract (v4i32 V128:$vec), (i32 LaneIdx4:$idx)),
+          (EXTRACT_LANE_v4i32 V128:$vec, imm:$idx)>;
+def : Pat<(vector_extract (v4f32 V128:$vec), (i32 LaneIdx4:$idx)),
+          (EXTRACT_LANE_v4f32 V128:$vec, imm:$idx)>;
+def : Pat<(vector_extract (v2i64 V128:$vec), (i32 LaneIdx2:$idx)),
+          (EXTRACT_LANE_v2i64 V128:$vec, imm:$idx)>;
+def : Pat<(vector_extract (v2f64 V128:$vec), (i32 LaneIdx2:$idx)),
+          (EXTRACT_LANE_v2f64 V128:$vec, imm:$idx)>;
 
-multiclass ExtractLaneExtended<string sign, bits<32> baseInst> {
-  defm "" : ExtractLane<v16i8, "i8x16", LaneIdx16, I32, baseInst, sign,
-                        !cast<PatFrag>("extract_i8x16"#sign)>;
-  defm "" : ExtractLane<v8i16, "i16x8", LaneIdx8, I32, !add(baseInst, 4), sign,
-                        !cast<PatFrag>("extract_i16x8"#sign)>;
-}
-
-defm "" : ExtractLaneExtended<"_s", 5>;
-defm "" : ExtractLaneExtended<"_u", 6>;
-defm "" : ExtractLane<v4i32, "i32x4", LaneIdx4, I32, 13>;
-defm "" : ExtractLane<v2i64, "i64x2", LaneIdx2, I64, 16>;
-defm "" : ExtractLane<v4f32, "f32x4", LaneIdx4, F32, 19>;
-defm "" : ExtractLane<v2f64, "f64x2", LaneIdx2, F64, 22>;
-
-// It would be more conventional to use unsigned extracts, but v8
-// doesn't implement them yet
-def : Pat<(i32 (vector_extract (v16i8 V128:$vec), (i32 LaneIdx16:$idx))),
-          (EXTRACT_LANE_v16i8_s V128:$vec, (i32 LaneIdx16:$idx))>;
-def : Pat<(i32 (vector_extract (v8i16 V128:$vec), (i32 LaneIdx8:$idx))),
-          (EXTRACT_LANE_v8i16_s V128:$vec, (i32 LaneIdx8:$idx))>;
-
-// Lower undef lane indices to zero
-def : Pat<(and (i32 (vector_extract (v16i8 V128:$vec), undef)), (i32 0xff)),
-          (EXTRACT_LANE_v16i8_u V128:$vec, 0)>;
-def : Pat<(and (i32 (vector_extract (v8i16 V128:$vec), undef)), (i32 0xffff)),
-          (EXTRACT_LANE_v8i16_u V128:$vec, 0)>;
-def : Pat<(i32 (vector_extract (v16i8 V128:$vec), undef)),
-          (EXTRACT_LANE_v16i8_u V128:$vec, 0)>;
-def : Pat<(i32 (vector_extract (v8i16 V128:$vec), undef)),
-          (EXTRACT_LANE_v8i16_u V128:$vec, 0)>;
-def : Pat<(sext_inreg (i32 (vector_extract (v16i8 V128:$vec), undef)), i8),
-          (EXTRACT_LANE_v16i8_s V128:$vec, 0)>;
-def : Pat<(sext_inreg (i32 (vector_extract (v8i16 V128:$vec), undef)), i16),
-          (EXTRACT_LANE_v8i16_s V128:$vec, 0)>;
-def : Pat<(vector_extract (v4i32 V128:$vec), undef),
-          (EXTRACT_LANE_v4i32 V128:$vec, 0)>;
-def : Pat<(vector_extract (v2i64 V128:$vec), undef),
-          (EXTRACT_LANE_v2i64 V128:$vec, 0)>;
-def : Pat<(vector_extract (v4f32 V128:$vec), undef),
-          (EXTRACT_LANE_v4f32 V128:$vec, 0)>;
-def : Pat<(vector_extract (v2f64 V128:$vec), undef),
-          (EXTRACT_LANE_v2f64 V128:$vec, 0)>;
+def : Pat<
+  (sext_inreg (vector_extract (v16i8 V128:$vec), (i32 LaneIdx16:$idx)), i8),
+  (EXTRACT_LANE_v16i8_s V128:$vec, imm:$idx)>;
+def : Pat<
+  (and (vector_extract (v16i8 V128:$vec), (i32 LaneIdx16:$idx)), (i32 0xff)),
+  (EXTRACT_LANE_v16i8_u V128:$vec, imm:$idx)>;
+def : Pat<
+  (sext_inreg (vector_extract (v8i16 V128:$vec), (i32 LaneIdx8:$idx)), i16),
+  (EXTRACT_LANE_v8i16_s V128:$vec, imm:$idx)>;
+def : Pat<
+  (and (vector_extract (v8i16 V128:$vec), (i32 LaneIdx8:$idx)), (i32 0xffff)),
+  (EXTRACT_LANE_v8i16_u V128:$vec, imm:$idx)>;
 
 // Replace lane value: replace_lane
 multiclass ReplaceLane<ValueType vec_t, string vec, ImmLeaf imm_t,

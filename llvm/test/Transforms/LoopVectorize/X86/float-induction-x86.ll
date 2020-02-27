@@ -425,8 +425,8 @@ define double @external_use_with_fast_math(double* %a, i64 %n) {
 ; AUTO_VEC-NEXT:    store double [[J]], double* [[TMP0]], align 8
 ; AUTO_VEC-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
 ; AUTO_VEC-NEXT:    [[J_NEXT]] = fadd fast double [[J]], 3.000000e+00
-; AUTO_VEC-NEXT:    [[COND:%.*]] = icmp slt i64 [[I_NEXT]], [[N]]
-; AUTO_VEC-NEXT:    br i1 [[COND]], label [[FOR_BODY]], label [[FOR_END]], !llvm.loop !9
+; AUTO_VEC-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[I_NEXT]], [[SMAX]]
+; AUTO_VEC-NEXT:    br i1 [[EXITCOND]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop !9
 ; AUTO_VEC:       for.end:
 ; AUTO_VEC-NEXT:    [[J_LCSSA:%.*]] = phi double [ [[TMP47]], [[MIDDLE_BLOCK]] ], [ [[J]], [[FOR_BODY]] ]
 ; AUTO_VEC-NEXT:    ret double [[J_LCSSA]]
@@ -452,18 +452,74 @@ for.end:
 define double @external_use_without_fast_math(double* %a, i64 %n) {
 ; AUTO_VEC-LABEL: @external_use_without_fast_math(
 ; AUTO_VEC-NEXT:  entry:
+; AUTO_VEC-NEXT:    [[TMP0:%.*]] = icmp sgt i64 [[N:%.*]], 1
+; AUTO_VEC-NEXT:    [[SMAX:%.*]] = select i1 [[TMP0]], i64 [[N]], i64 1
+; AUTO_VEC-NEXT:    [[TMP1:%.*]] = add nsw i64 [[SMAX]], -1
+; AUTO_VEC-NEXT:    [[XTRAITER:%.*]] = and i64 [[SMAX]], 7
+; AUTO_VEC-NEXT:    [[TMP2:%.*]] = icmp ult i64 [[TMP1]], 7
+; AUTO_VEC-NEXT:    br i1 [[TMP2]], label [[FOR_END_UNR_LCSSA:%.*]], label [[ENTRY_NEW:%.*]]
+; AUTO_VEC:       entry.new:
+; AUTO_VEC-NEXT:    [[UNROLL_ITER:%.*]] = sub nsw i64 [[SMAX]], [[XTRAITER]]
 ; AUTO_VEC-NEXT:    br label [[FOR_BODY:%.*]]
 ; AUTO_VEC:       for.body:
-; AUTO_VEC-NEXT:    [[I:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[FOR_BODY]] ]
-; AUTO_VEC-NEXT:    [[J:%.*]] = phi double [ 0.000000e+00, [[ENTRY]] ], [ [[J_NEXT:%.*]], [[FOR_BODY]] ]
+; AUTO_VEC-NEXT:    [[I:%.*]] = phi i64 [ 0, [[ENTRY_NEW]] ], [ [[I_NEXT_7:%.*]], [[FOR_BODY]] ]
+; AUTO_VEC-NEXT:    [[J:%.*]] = phi double [ 0.000000e+00, [[ENTRY_NEW]] ], [ [[J_NEXT_7:%.*]], [[FOR_BODY]] ]
+; AUTO_VEC-NEXT:    [[NITER:%.*]] = phi i64 [ [[UNROLL_ITER]], [[ENTRY_NEW]] ], [ [[NITER_NSUB_7:%.*]], [[FOR_BODY]] ]
 ; AUTO_VEC-NEXT:    [[TMP0:%.*]] = getelementptr double, double* [[A:%.*]], i64 [[I]]
 ; AUTO_VEC-NEXT:    store double [[J]], double* [[TMP0]], align 8
-; AUTO_VEC-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
-; AUTO_VEC-NEXT:    [[J_NEXT]] = fadd double [[J]], 3.000000e+00
-; AUTO_VEC-NEXT:    [[COND:%.*]] = icmp slt i64 [[I_NEXT]], [[N:%.*]]
-; AUTO_VEC-NEXT:    br i1 [[COND]], label [[FOR_BODY]], label [[FOR_END:%.*]]
+; AUTO_VEC-NEXT:    [[I_NEXT:%.*]] = or i64 [[I]], 1
+; AUTO_VEC-NEXT:    [[J_NEXT:%.*]] = fadd double [[J]], 3.000000e+00
+; AUTO_VEC-NEXT:    [[TMP0_1:%.*]] = getelementptr double, double* [[A]], i64 [[I_NEXT]]
+; AUTO_VEC-NEXT:    store double [[J_NEXT]], double* [[TMP0_1]], align 8
+; AUTO_VEC-NEXT:    [[I_NEXT_1:%.*]] = or i64 [[I]], 2
+; AUTO_VEC-NEXT:    [[J_NEXT_1:%.*]] = fadd double [[J_NEXT]], 3.000000e+00
+; AUTO_VEC-NEXT:    [[TMP0_2:%.*]] = getelementptr double, double* [[A]], i64 [[I_NEXT_1]]
+; AUTO_VEC-NEXT:    store double [[J_NEXT_1]], double* [[TMP0_2]], align 8
+; AUTO_VEC-NEXT:    [[I_NEXT_2:%.*]] = or i64 [[I]], 3
+; AUTO_VEC-NEXT:    [[J_NEXT_2:%.*]] = fadd double [[J_NEXT_1]], 3.000000e+00
+; AUTO_VEC-NEXT:    [[TMP0_3:%.*]] = getelementptr double, double* [[A]], i64 [[I_NEXT_2]]
+; AUTO_VEC-NEXT:    store double [[J_NEXT_2]], double* [[TMP0_3]], align 8
+; AUTO_VEC-NEXT:    [[I_NEXT_3:%.*]] = or i64 [[I]], 4
+; AUTO_VEC-NEXT:    [[J_NEXT_3:%.*]] = fadd double [[J_NEXT_2]], 3.000000e+00
+; AUTO_VEC-NEXT:    [[TMP0_4:%.*]] = getelementptr double, double* [[A]], i64 [[I_NEXT_3]]
+; AUTO_VEC-NEXT:    store double [[J_NEXT_3]], double* [[TMP0_4]], align 8
+; AUTO_VEC-NEXT:    [[I_NEXT_4:%.*]] = or i64 [[I]], 5
+; AUTO_VEC-NEXT:    [[J_NEXT_4:%.*]] = fadd double [[J_NEXT_3]], 3.000000e+00
+; AUTO_VEC-NEXT:    [[TMP0_5:%.*]] = getelementptr double, double* [[A]], i64 [[I_NEXT_4]]
+; AUTO_VEC-NEXT:    store double [[J_NEXT_4]], double* [[TMP0_5]], align 8
+; AUTO_VEC-NEXT:    [[I_NEXT_5:%.*]] = or i64 [[I]], 6
+; AUTO_VEC-NEXT:    [[J_NEXT_5:%.*]] = fadd double [[J_NEXT_4]], 3.000000e+00
+; AUTO_VEC-NEXT:    [[TMP0_6:%.*]] = getelementptr double, double* [[A]], i64 [[I_NEXT_5]]
+; AUTO_VEC-NEXT:    store double [[J_NEXT_5]], double* [[TMP0_6]], align 8
+; AUTO_VEC-NEXT:    [[I_NEXT_6:%.*]] = or i64 [[I]], 7
+; AUTO_VEC-NEXT:    [[J_NEXT_6:%.*]] = fadd double [[J_NEXT_5]], 3.000000e+00
+; AUTO_VEC-NEXT:    [[TMP0_7:%.*]] = getelementptr double, double* [[A]], i64 [[I_NEXT_6]]
+; AUTO_VEC-NEXT:    store double [[J_NEXT_6]], double* [[TMP0_7]], align 8
+; AUTO_VEC-NEXT:    [[I_NEXT_7]] = add nuw nsw i64 [[I]], 8
+; AUTO_VEC-NEXT:    [[J_NEXT_7]] = fadd double [[J_NEXT_6]], 3.000000e+00
+; AUTO_VEC-NEXT:    [[NITER_NSUB_7]] = add i64 [[NITER]], -8
+; AUTO_VEC-NEXT:    [[NITER_NCMP_7:%.*]] = icmp eq i64 [[NITER_NSUB_7]], 0
+; AUTO_VEC-NEXT:    br i1 [[NITER_NCMP_7]], label [[FOR_END_UNR_LCSSA]], label [[FOR_BODY]]
+; AUTO_VEC:       for.end.unr-lcssa:
+; AUTO_VEC-NEXT:    [[J_LCSSA_PH:%.*]] = phi double [ undef, [[ENTRY:%.*]] ], [ [[J_NEXT_6]], [[FOR_BODY]] ]
+; AUTO_VEC-NEXT:    [[I_UNR:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[I_NEXT_7]], [[FOR_BODY]] ]
+; AUTO_VEC-NEXT:    [[J_UNR:%.*]] = phi double [ 0.000000e+00, [[ENTRY]] ], [ [[J_NEXT_7]], [[FOR_BODY]] ]
+; AUTO_VEC-NEXT:    [[LCMP_MOD:%.*]] = icmp eq i64 [[XTRAITER]], 0
+; AUTO_VEC-NEXT:    br i1 [[LCMP_MOD]], label [[FOR_END:%.*]], label [[FOR_BODY_EPIL:%.*]]
+; AUTO_VEC:       for.body.epil:
+; AUTO_VEC-NEXT:    [[I_EPIL:%.*]] = phi i64 [ [[I_NEXT_EPIL:%.*]], [[FOR_BODY_EPIL]] ], [ [[I_UNR]], [[FOR_END_UNR_LCSSA]] ]
+; AUTO_VEC-NEXT:    [[J_EPIL:%.*]] = phi double [ [[J_NEXT_EPIL:%.*]], [[FOR_BODY_EPIL]] ], [ [[J_UNR]], [[FOR_END_UNR_LCSSA]] ]
+; AUTO_VEC-NEXT:    [[EPIL_ITER:%.*]] = phi i64 [ [[EPIL_ITER_SUB:%.*]], [[FOR_BODY_EPIL]] ], [ [[XTRAITER]], [[FOR_END_UNR_LCSSA]] ]
+; AUTO_VEC-NEXT:    [[TMP0_EPIL:%.*]] = getelementptr double, double* [[A]], i64 [[I_EPIL]]
+; AUTO_VEC-NEXT:    store double [[J_EPIL]], double* [[TMP0_EPIL]], align 8
+; AUTO_VEC-NEXT:    [[I_NEXT_EPIL]] = add nuw nsw i64 [[I_EPIL]], 1
+; AUTO_VEC-NEXT:    [[J_NEXT_EPIL]] = fadd double [[J_EPIL]], 3.000000e+00
+; AUTO_VEC-NEXT:    [[EPIL_ITER_SUB]] = add i64 [[EPIL_ITER]], -1
+; AUTO_VEC-NEXT:    [[EPIL_ITER_CMP:%.*]] = icmp eq i64 [[EPIL_ITER_SUB]], 0
+; AUTO_VEC-NEXT:    br i1 [[EPIL_ITER_CMP]], label [[FOR_END]], label [[FOR_BODY_EPIL]], !llvm.loop !10
 ; AUTO_VEC:       for.end:
-; AUTO_VEC-NEXT:    ret double [[J]]
+; AUTO_VEC-NEXT:    [[J_LCSSA:%.*]] = phi double [ [[J_LCSSA_PH]], [[FOR_END_UNR_LCSSA]] ], [ [[J_EPIL]], [[FOR_BODY_EPIL]] ]
+; AUTO_VEC-NEXT:    ret double [[J_LCSSA]]
 ;
 entry:
   br label %for.body

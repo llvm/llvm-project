@@ -195,7 +195,7 @@ int ReachingDefAnalysis::getReachingDef(MachineInstr *MI, int PhysReg) const {
   return LatestDef;
 }
 
-MachineInstr* ReachingDefAnalysis::getReachingMIDef(MachineInstr *MI,
+MachineInstr* ReachingDefAnalysis::getReachingLocalMIDef(MachineInstr *MI,
                                                     int PhysReg) const {
   return getInstFromId(MI->getParent(), getReachingDef(MI, PhysReg));
 }
@@ -250,7 +250,7 @@ void ReachingDefAnalysis::getReachingLocalUses(MachineInstr *Def, int PhysReg,
 
     // If/when we find a new reaching def, we know that there's no more uses
     // of 'Def'.
-    if (getReachingMIDef(&*MI, PhysReg) != Def)
+    if (getReachingLocalMIDef(&*MI, PhysReg) != Def)
       return;
 
     for (auto &MO : MI->operands()) {
@@ -311,6 +311,59 @@ ReachingDefAnalysis::getGlobalUses(MachineInstr *MI, int PhysReg,
   }
 }
 
+void
+ReachingDefAnalysis::getLiveOuts(MachineBasicBlock *MBB, int PhysReg,
+                                 InstSet &Defs, BlockSet &VisitedBBs) const {
+  if (VisitedBBs.count(MBB))
+    return;
+
+  VisitedBBs.insert(MBB);
+  LivePhysRegs LiveRegs(*TRI);
+  LiveRegs.addLiveOuts(*MBB);
+  if (!LiveRegs.contains(PhysReg))
+    return;
+
+  if (auto *Def = getLocalLiveOutMIDef(MBB, PhysReg))
+    Defs.insert(Def);
+  else
+    for (auto *Pred : MBB->predecessors())
+      getLiveOuts(Pred, PhysReg, Defs, VisitedBBs);
+}
+
+MachineInstr *ReachingDefAnalysis::getUniqueReachingMIDef(MachineInstr *MI,
+                                                          int PhysReg) const {
+  // If there's a local def before MI, return it.
+  MachineInstr *LocalDef = getReachingLocalMIDef(MI, PhysReg);
+  if (InstIds.lookup(LocalDef) < InstIds.lookup(MI))
+    return LocalDef;
+
+  SmallPtrSet<MachineBasicBlock*, 4> VisitedBBs;
+  SmallPtrSet<MachineInstr*, 2> Incoming;
+  for (auto *Pred : MI->getParent()->predecessors())
+    getLiveOuts(Pred, PhysReg, Incoming, VisitedBBs);
+
+  // If we have a local def and an incoming instruction, then there's not a
+  // unique instruction def.
+  if (!Incoming.empty() && LocalDef)
+    return nullptr;
+  else if (Incoming.size() == 1)
+    return *Incoming.begin();
+  else
+    return LocalDef;
+}
+
+MachineInstr *ReachingDefAnalysis::getMIOperand(MachineInstr *MI,
+                                                unsigned Idx) const {
+  assert(MI->getOperand(Idx).isReg() && "Expected register operand");
+  return getUniqueReachingMIDef(MI, MI->getOperand(Idx).getReg());
+}
+
+MachineInstr *ReachingDefAnalysis::getMIOperand(MachineInstr *MI,
+                                                MachineOperand &MO) const {
+  assert(MO.isReg() && "Expected register operand");
+  return getUniqueReachingMIDef(MI, MO.getReg());
+}
+
 bool ReachingDefAnalysis::isRegUsedAfter(MachineInstr *MI, int PhysReg) const {
   MachineBasicBlock *MBB = MI->getParent();
   LivePhysRegs LiveRegs(*TRI);
@@ -337,7 +390,7 @@ bool ReachingDefAnalysis::isRegDefinedAfter(MachineInstr *MI,
     return true;
 
   if (auto *Def = getLocalLiveOutMIDef(MBB, PhysReg))
-    return Def == getReachingMIDef(MI, PhysReg);
+    return Def == getReachingLocalMIDef(MI, PhysReg);
 
   return false;
 }
@@ -492,7 +545,7 @@ void ReachingDefAnalysis::collectLocalKilledOperands(MachineInstr *MI,
   for (auto &MO : MI->uses()) {
     if (!MO.isReg() || MO.getReg() == 0 || !MO.isKill())
       continue;
-    if (MachineInstr *Def = getReachingMIDef(MI, MO.getReg()))
+    if (MachineInstr *Def = getReachingLocalMIDef(MI, MO.getReg()))
       if (IsDead(Def, MO.getReg()))
         collectLocalKilledOperands(Def, Dead);
   }
@@ -508,7 +561,7 @@ bool ReachingDefAnalysis::isSafeToDefRegAt(MachineInstr *MI, int PhysReg,
                                            InstSet &Ignore) const {
   // Check for any uses of the register after MI.
   if (isRegUsedAfter(MI, PhysReg)) {
-    if (auto *Def = getReachingMIDef(MI, PhysReg)) {
+    if (auto *Def = getReachingLocalMIDef(MI, PhysReg)) {
       SmallPtrSet<MachineInstr*, 2> Uses;
       getReachingLocalUses(Def, PhysReg, Uses);
       for (auto *Use : Uses)

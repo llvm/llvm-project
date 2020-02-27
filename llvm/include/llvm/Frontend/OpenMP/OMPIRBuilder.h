@@ -188,7 +188,9 @@ public:
 
   ///}
 
-private:
+  /// Return the insertion point used by the underlying IRBuilder.
+  InsertPointTy getInsertionPoint() { return Builder.saveIP(); }
+
   /// Update the internal location to \p Loc.
   bool updateToLocation(const LocationDescription &Loc) {
     Builder.restoreIP(Loc.IP);

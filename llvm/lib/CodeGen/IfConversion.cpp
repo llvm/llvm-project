@@ -1851,7 +1851,7 @@ bool IfConverter::IfConvertDiamondCommon(
   while (NumDups1 != 0) {
     // Since this instruction is going to be deleted, update call
     // site info state if the instruction is call instruction.
-    if (DI2->isCandidateForCallSiteEntry())
+    if (DI2->shouldUpdateCallSiteInfo())
       MBB2.getParent()->eraseCallSiteInfo(&*DI2);
 
     ++DI2;
@@ -1900,7 +1900,7 @@ bool IfConverter::IfConvertDiamondCommon(
 
     // Since this instruction is going to be deleted, update call
     // site info state if the instruction is call instruction.
-    if (DI1->isCandidateForCallSiteEntry())
+    if (DI1->shouldUpdateCallSiteInfo())
       MBB1.getParent()->eraseCallSiteInfo(&*DI1);
 
     // skip dbg_value instructions

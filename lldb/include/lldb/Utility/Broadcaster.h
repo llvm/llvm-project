@@ -259,19 +259,6 @@ public:
   void CheckInWithManager();
 
   /// Broadcast an event which has no associated data.
-  ///
-  /// \param[in] event_type
-  ///     The element from the enum defining this broadcaster's events
-  ///     that is being broadcast.
-  ///
-  /// \param[in] event_data
-  ///     User event data that will be owned by the lldb::Event that
-  ///     is created internally.
-  ///
-  /// \param[in] unique
-  ///     If true, then only add an event of this type if there isn't
-  ///     one already in the queue.
-  ///
   void BroadcastEvent(lldb::EventSP &event_sp) {
     m_broadcaster_sp->BroadcastEvent(event_sp);
   }
@@ -308,7 +295,7 @@ public:
   /// different from what is requested in \a event_mask, and to track this the
   /// actual event bits that are acquired get returned.
   ///
-  /// \param[in] listener
+  /// \param[in] listener_sp
   ///     The Listener object that wants to monitor the events that
   ///     get broadcast by this object.
   ///
@@ -347,9 +334,6 @@ public:
   /// \param[in] event_mask
   ///     A bit mask that indicates which events the listener is
   ///     asking to monitor.
-  ///
-  /// \return
-  ///     The NULL terminated C string name of this Broadcaster.
   void SetEventName(uint32_t event_mask, const char *name) {
     m_broadcaster_sp->SetEventName(event_mask, name);
   }
@@ -367,7 +351,7 @@ public:
   /// (assuming \a listener was listening to this object) for other listener
   /// objects to use.
   ///
-  /// \param[in] listener
+  /// \param[in] listener_sp
   ///     A Listener object that previously called AddListener.
   ///
   /// \param[in] event_mask
@@ -389,7 +373,7 @@ public:
   /// now go to the hijacking listener. Only one hijack can occur at a time.
   /// If we need more than this we will have to implement a Listener stack.
   ///
-  /// \param[in] listener
+  /// \param[in] listener_sp
   ///     A Listener object.  You do not need to call StartListeningForEvents
   ///     for this broadcaster (that would fail anyway since the event bits
   ///     would most likely be taken by the listener(s) you are usurping.

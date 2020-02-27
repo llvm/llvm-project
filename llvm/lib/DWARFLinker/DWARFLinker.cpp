@@ -171,6 +171,12 @@ static void analyzeImportedModule(
   StringRef Path = dwarf::toStringRef(DIE.find(dwarf::DW_AT_LLVM_include_path));
   if (!Path.endswith(".swiftinterface"))
     return;
+  // Don't track interfaces that are part of the SDK.
+  StringRef SysRoot = dwarf::toStringRef(DIE.find(dwarf::DW_AT_LLVM_sysroot));
+  if (SysRoot.empty())
+    SysRoot = CU.getSysRoot();
+  if (!SysRoot.empty() && Path.startswith(SysRoot))
+    return;
   if (Optional<DWARFFormValue> Val = DIE.find(dwarf::DW_AT_name))
     if (Optional<const char *> Name = Val->getAsCString()) {
       auto &Entry = (*ParseableSwiftInterfaces)[*Name];

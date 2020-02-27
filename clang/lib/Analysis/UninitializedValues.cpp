@@ -766,7 +766,7 @@ void TransferFunctions::VisitGCCAsmStmt(GCCAsmStmt *as) {
   if (!as->isAsmGoto())
     return;
 
-  for (const auto &o : as->outputs())
+  for (const Expr *o : as->outputs())
     if (const VarDecl *VD = findVar(o).getDecl())
       vals[VD] = Initialized;
 }

@@ -61,6 +61,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/LowLevelTypeImpl.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
@@ -696,8 +697,8 @@ void MachineInstr::eraseFromBundle() {
   getParent()->erase_instr(this);
 }
 
-bool MachineInstr::isCandidateForCallSiteEntry() const {
-  if (!isCall(MachineInstr::IgnoreBundle))
+bool MachineInstr::isCandidateForCallSiteEntry(QueryType Type) const {
+  if (!isCall(Type))
     return false;
   switch (getOpcode()) {
   case TargetOpcode::PATCHABLE_EVENT_CALL:
@@ -708,6 +709,12 @@ bool MachineInstr::isCandidateForCallSiteEntry() const {
     return false;
   }
   return true;
+}
+
+bool MachineInstr::shouldUpdateCallSiteInfo() const {
+  if (isBundle())
+    return isCandidateForCallSiteEntry(MachineInstr::AnyInBundle);
+  return isCandidateForCallSiteEntry();
 }
 
 unsigned MachineInstr::getNumExplicitOperands() const {
@@ -1462,6 +1469,37 @@ LLT MachineInstr::getTypeToPrint(unsigned OpIdx, SmallBitVector &PrintedTypes,
 LLVM_DUMP_METHOD void MachineInstr::dump() const {
   dbgs() << "  ";
   print(dbgs());
+}
+
+LLVM_DUMP_METHOD void MachineInstr::dumprImpl(
+    const MachineRegisterInfo &MRI, unsigned Depth, unsigned MaxDepth,
+    SmallPtrSetImpl<const MachineInstr *> &AlreadySeenInstrs) const {
+  if (Depth >= MaxDepth)
+    return;
+  if (!AlreadySeenInstrs.insert(this).second)
+    return;
+  // PadToColumn always inserts at least one space.
+  // Don't mess up the alignment if we don't want any space.
+  if (Depth)
+    fdbgs().PadToColumn(Depth * 2);
+  print(fdbgs());
+  for (const MachineOperand &MO : operands()) {
+    if (!MO.isReg() || MO.isDef())
+      continue;
+    Register Reg = MO.getReg();
+    if (Reg.isPhysical())
+      continue;
+    const MachineInstr *NewMI = MRI.getUniqueVRegDef(Reg);
+    if (NewMI == nullptr)
+      continue;
+    NewMI->dumprImpl(MRI, Depth + 1, MaxDepth, AlreadySeenInstrs);
+  }
+}
+
+LLVM_DUMP_METHOD void MachineInstr::dumpr(const MachineRegisterInfo &MRI,
+                                          unsigned MaxDepth) const {
+  SmallPtrSet<const MachineInstr *, 16> AlreadySeenInstrs;
+  dumprImpl(MRI, 0, MaxDepth, AlreadySeenInstrs);
 }
 #endif
 

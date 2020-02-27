@@ -13292,6 +13292,21 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_cosf:
   case AMDGPU::BI__builtin_amdgcn_cosh:
     return emitUnaryBuiltin(*this, E, Intrinsic::amdgcn_cos);
+  case AMDGPU::BI__builtin_amdgcn_dispatch_ptr: {
+    auto *F = CGM.getIntrinsic(Intrinsic::amdgcn_dispatch_ptr);
+    auto *Call = Builder.CreateCall(F);
+    Call->addAttribute(
+        AttributeList::ReturnIndex,
+        Attribute::getWithDereferenceableBytes(Call->getContext(), 64));
+    Call->addAttribute(
+        AttributeList::ReturnIndex,
+        Attribute::getWithAlignment(Call->getContext(), Align(4)));
+    QualType BuiltinRetType = E->getType();
+    auto *RetTy = cast<llvm::PointerType>(ConvertType(BuiltinRetType));
+    if (RetTy == Call->getType())
+      return Call;
+    return Builder.CreateAddrSpaceCast(Call, RetTy);
+  }
   case AMDGPU::BI__builtin_amdgcn_log_clampf:
     return emitUnaryBuiltin(*this, E, Intrinsic::amdgcn_log_clamp);
   case AMDGPU::BI__builtin_amdgcn_ldexp:

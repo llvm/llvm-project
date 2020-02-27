@@ -2118,8 +2118,12 @@ DenseElementsAttr TensorLiteralParser::getHexAttr(llvm::SMLoc loc,
 
   // Check that the size of the hex data correpsonds to the size of the type, or
   // a splat of the type.
+  // TODO: bf16 is currently stored as a double, this should be removed when
+  // APFloat properly supports it.
+  int64_t elementWidth =
+      elementType.isBF16() ? 64 : elementType.getIntOrFloatBitWidth();
   if (static_cast<int64_t>(data.size() * CHAR_BIT) !=
-      (type.getNumElements() * elementType.getIntOrFloatBitWidth())) {
+      (type.getNumElements() * elementWidth)) {
     p.emitError(loc) << "elements hex data size is invalid for provided type: "
                      << type;
     return nullptr;

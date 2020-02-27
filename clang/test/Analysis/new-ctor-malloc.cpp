@@ -11,6 +11,7 @@ void *operator new(size_t size) throw() {
   if (!x) // expected-note    {{Assuming 'x' is non-null}}
           // expected-note@-1 {{Taking false branch}}
     return nullptr;
+  // expected-warning@-1 {{null returned from function that requires a non-null return value}}
   return x;
 }
 

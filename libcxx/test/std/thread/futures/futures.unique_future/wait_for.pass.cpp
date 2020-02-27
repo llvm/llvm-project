@@ -45,57 +45,28 @@ void func5(std::promise<void> p)
     p.set_value();
 }
 
+template <typename T, typename F>
+void test(F func) {
+    typedef std::chrono::high_resolution_clock Clock;
+    std::promise<T> p;
+    std::future<T> f = p.get_future();
+    std::thread(func, std::move(p)).detach();
+    assert(f.valid());
+    assert(f.wait_for(ms(300)) == std::future_status::timeout);
+    assert(f.valid());
+    assert(f.wait_for(ms(300)) == std::future_status::ready);
+    assert(f.valid());
+    Clock::time_point t0 = Clock::now();
+    f.wait();
+    Clock::time_point t1 = Clock::now();
+    assert(f.valid());
+    assert(t1-t0 < ms(50));
+}
+
 int main(int, char**)
 {
-    typedef std::chrono::high_resolution_clock Clock;
-    {
-        typedef int T;
-        std::promise<T> p;
-        std::future<T> f = p.get_future();
-        std::thread(func1, std::move(p)).detach();
-        assert(f.valid());
-        assert(f.wait_for(ms(300)) == std::future_status::timeout);
-        assert(f.valid());
-        assert(f.wait_for(ms(300)) == std::future_status::ready);
-        assert(f.valid());
-        Clock::time_point t0 = Clock::now();
-        f.wait();
-        Clock::time_point t1 = Clock::now();
-        assert(f.valid());
-        assert(t1-t0 < ms(50));
-    }
-    {
-        typedef int& T;
-        std::promise<T> p;
-        std::future<T> f = p.get_future();
-        std::thread(func3, std::move(p)).detach();
-        assert(f.valid());
-        assert(f.wait_for(ms(300)) == std::future_status::timeout);
-        assert(f.valid());
-        assert(f.wait_for(ms(300)) == std::future_status::ready);
-        assert(f.valid());
-        Clock::time_point t0 = Clock::now();
-        f.wait();
-        Clock::time_point t1 = Clock::now();
-        assert(f.valid());
-        assert(t1-t0 < ms(50));
-    }
-    {
-        typedef void T;
-        std::promise<T> p;
-        std::future<T> f = p.get_future();
-        std::thread(func5, std::move(p)).detach();
-        assert(f.valid());
-        assert(f.wait_for(ms(300)) == std::future_status::timeout);
-        assert(f.valid());
-        assert(f.wait_for(ms(300)) == std::future_status::ready);
-        assert(f.valid());
-        Clock::time_point t0 = Clock::now();
-        f.wait();
-        Clock::time_point t1 = Clock::now();
-        assert(f.valid());
-        assert(t1-t0 < ms(50));
-    }
-
-  return 0;
+    test<int>(func1);
+    test<int&>(func3);
+    test<void>(func5);
+    return 0;
 }

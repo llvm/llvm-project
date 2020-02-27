@@ -242,6 +242,25 @@ enum NodeType : unsigned {
   GLD1S_UXTW_SCALED,
   GLD1S_SXTW_SCALED,
   GLD1S_IMM,
+
+  // Unsigned gather loads.
+  GLDFF1,
+  GLDFF1_SCALED,
+  GLDFF1_UXTW,
+  GLDFF1_SXTW,
+  GLDFF1_UXTW_SCALED,
+  GLDFF1_SXTW_SCALED,
+  GLDFF1_IMM,
+
+  // Signed gather loads.
+  GLDFF1S,
+  GLDFF1S_SCALED,
+  GLDFF1S_UXTW,
+  GLDFF1S_SXTW,
+  GLDFF1S_UXTW_SCALED,
+  GLDFF1S_SXTW_SCALED,
+  GLDFF1S_IMM,
+
   // Scatter store
   SST1,
   SST1_SCALED,

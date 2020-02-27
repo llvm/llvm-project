@@ -87,7 +87,7 @@ entry:
 ; GFX9: global_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, off{{$}}
 ; GFX9: global_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, off offset:16{{$}}
 ; GFX9-NEXT: s_waitcnt
-; NGFX9-NOT: global_load_dword
+; GFX9-NOT: global_load_dword
 
 define amdgpu_cs void @_amdgpu_cs_main(i64 inreg %arg) {
 bb:

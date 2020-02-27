@@ -262,6 +262,10 @@ private:
   // MachineInstrs are pool-allocated and owned by MachineFunction.
   friend class MachineFunction;
 
+  void
+  dumprImpl(const MachineRegisterInfo &MRI, unsigned Depth, unsigned MaxDepth,
+            SmallPtrSetImpl<const MachineInstr *> &AlreadySeenInstrs) const;
+
 public:
   MachineInstr(const MachineInstr &) = delete;
   MachineInstr &operator=(const MachineInstr &) = delete;
@@ -685,7 +689,11 @@ public:
 
   /// Return true if this is a call instruction that may have an associated
   /// call site entry in the debug info.
-  bool isCandidateForCallSiteEntry() const;
+  bool isCandidateForCallSiteEntry(QueryType Type = IgnoreBundle) const;
+  /// Return true if copying, moving, or erasing this instruction requires
+  /// updating Call Site Info (see \ref copyCallSiteInfo, \ref moveCallSiteInfo,
+  /// \ref eraseCallSiteInfo).
+  bool shouldUpdateCallSiteInfo() const;
 
   /// Returns true if the specified instruction stops control flow
   /// from executing the instruction immediately following it.  Examples include
@@ -1534,6 +1542,10 @@ public:
              bool AddNewLine = true,
              const TargetInstrInfo *TII = nullptr) const;
   void dump() const;
+  /// Print on dbgs() the current instruction and the instructions defining its
+  /// operands and so on until we reach \p MaxDepth.
+  void dumpr(const MachineRegisterInfo &MRI,
+             unsigned MaxDepth = UINT_MAX) const;
   /// @}
 
   //===--------------------------------------------------------------------===//

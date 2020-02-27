@@ -35,10 +35,12 @@ define double @testoeq(double %a, double %b, double %c, double %d) {
 ;
 ; NO-FAST-P9-LABEL: testoeq:
 ; NO-FAST-P9:       # %bb.0: # %entry
-; NO-FAST-P9-NEXT:    xssubdp f0, f1, f2
-; NO-FAST-P9-NEXT:    fsel f1, f0, f3, f4
-; NO-FAST-P9-NEXT:    xsnegdp f0, f0
-; NO-FAST-P9-NEXT:    fsel f1, f0, f1, f4
+; NO-FAST-P9-NEXT:    xscmpudp cr0, f1, f2
+; NO-FAST-P9-NEXT:    beq cr0, .LBB0_2
+; NO-FAST-P9-NEXT:  # %bb.1: # %entry
+; NO-FAST-P9-NEXT:    fmr f3, f4
+; NO-FAST-P9-NEXT:  .LBB0_2: # %entry
+; NO-FAST-P9-NEXT:    fmr f1, f3
 ; NO-FAST-P9-NEXT:    blr
 ;
 ; NO-FAST-P8-LABEL: testoeq:

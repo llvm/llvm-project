@@ -1814,7 +1814,7 @@ struct PragmaClangAttributeSupport {
 
   void emitMatchRuleList(raw_ostream &OS);
 
-  std::string generateStrictConformsTo(const Record &Attr, raw_ostream &OS);
+  void generateStrictConformsTo(const Record &Attr, raw_ostream &OS);
 
   void generateParsingHelpers(raw_ostream &OS);
 };
@@ -1975,21 +1975,17 @@ static std::string GenerateTestExpression(ArrayRef<Record *> LangOpts) {
   return Test;
 }
 
-std::string
+void
 PragmaClangAttributeSupport::generateStrictConformsTo(const Record &Attr,
                                                       raw_ostream &OS) {
-  if (!isAttributedSupported(Attr))
-    return "nullptr";
+  if (!isAttributedSupported(Attr) || Attr.isValueUnset("Subjects"))
+    return;
   // Generate a function that constructs a set of matching rules that describe
   // to which declarations the attribute should apply to.
-  std::string FnName = "matchRulesFor" + Attr.getName().str();
-  OS << "static void " << FnName << "(llvm::SmallVectorImpl<std::pair<"
+  OS << "virtual void getPragmaAttributeMatchRules("
+     << "llvm::SmallVectorImpl<std::pair<"
      << AttributeSubjectMatchRule::EnumName
-     << ", bool>> &MatchRules, const LangOptions &LangOpts) {\n";
-  if (Attr.isValueUnset("Subjects")) {
-    OS << "}\n\n";
-    return FnName;
-  }
+     << ", bool>> &MatchRules, const LangOptions &LangOpts) const {\n";
   const Record *SubjectObj = Attr.getValueAsDef("Subjects");
   std::vector<Record *> Subjects = SubjectObj->getValueAsListOfDefs("Subjects");
   for (const auto *Subject : Subjects) {
@@ -2006,7 +2002,6 @@ PragmaClangAttributeSupport::generateStrictConformsTo(const Record &Attr,
     }
   }
   OS << "}\n\n";
-  return FnName;
 }
 
 void PragmaClangAttributeSupport::generateParsingHelpers(raw_ostream &OS) {
@@ -3300,14 +3295,8 @@ static void emitArgInfo(const Record &R, raw_ostream &OS) {
 
   // If there is a variadic argument, we will set the optional argument count
   // to its largest value. Since it's currently a 4-bit number, we set it to 15.
-  OS << ArgCount << ", " << (HasVariadic ? 15 : OptCount);
-}
-
-static void GenerateDefaultAppertainsTo(raw_ostream &OS) {
-  OS << "static bool defaultAppertainsTo(Sema &, const ParsedAttr &,";
-  OS << "const Decl *) {\n";
-  OS << "  return true;\n";
-  OS << "}\n\n";
+  OS << "    NumArgs = " << ArgCount << ";\n";
+  OS << "    OptArgs = " << (HasVariadic ? 15 : OptCount) << ";\n";
 }
 
 static std::string GetDiagnosticSpelling(const Record &R) {
@@ -3388,16 +3377,14 @@ static std::string functionNameForCustomAppertainsTo(const Record &Subject) {
   return "is" + Subject.getName().str();
 }
 
-static std::string GenerateCustomAppertainsTo(const Record &Subject,
-                                              raw_ostream &OS) {
+static void GenerateCustomAppertainsTo(const Record &Subject, raw_ostream &OS) {
   std::string FnName = functionNameForCustomAppertainsTo(Subject);
 
-  // If this code has already been generated, simply return the previous
-  // instance of it.
+  // If this code has already been generated, we don't need to do anything.
   static std::set<std::string> CustomSubjectSet;
   auto I = CustomSubjectSet.find(FnName);
   if (I != CustomSubjectSet.end())
-    return *I;
+    return;
 
   // This only works with non-root Decls.
   Record *Base = Subject.getValueAsDef(BaseFieldName);
@@ -3406,7 +3393,7 @@ static std::string GenerateCustomAppertainsTo(const Record &Subject,
   if (Base->isSubClassOf("SubsetSubject")) {
     PrintFatalError(Subject.getLoc(),
                     "SubsetSubjects within SubsetSubjects is not supported");
-    return "";
+    return;
   }
 
   OS << "static bool " << FnName << "(const Decl *D) {\n";
@@ -3418,14 +3405,13 @@ static std::string GenerateCustomAppertainsTo(const Record &Subject,
   OS << "}\n\n";
 
   CustomSubjectSet.insert(FnName);
-  return FnName;
 }
 
-static std::string GenerateAppertainsTo(const Record &Attr, raw_ostream &OS) {
+static void GenerateAppertainsTo(const Record &Attr, raw_ostream &OS) {
   // If the attribute does not contain a Subjects definition, then use the
   // default appertainsTo logic.
   if (Attr.isValueUnset("Subjects"))
-    return "defaultAppertainsTo";
+    return;
 
   const Record *SubjectObj = Attr.getValueAsDef("Subjects");
   std::vector<Record*> Subjects = SubjectObj->getValueAsListOfDefs("Subjects");
@@ -3433,52 +3419,46 @@ static std::string GenerateAppertainsTo(const Record &Attr, raw_ostream &OS) {
   // If the list of subjects is empty, it is assumed that the attribute
   // appertains to everything.
   if (Subjects.empty())
-    return "defaultAppertainsTo";
+    return;
 
   bool Warn = SubjectObj->getValueAsDef("Diag")->getValueAsBit("Warn");
 
   // Otherwise, generate an appertainsTo check specific to this attribute which
-  // checks all of the given subjects against the Decl passed in. Return the
-  // name of that check to the caller.
+  // checks all of the given subjects against the Decl passed in.
   //
   // If D is null, that means the attribute was not applied to a declaration
   // at all (for instance because it was applied to a type), or that the caller
   // has determined that the check should fail (perhaps prior to the creation
   // of the declaration).
-  std::string FnName = "check" + Attr.getName().str() + "AppertainsTo";
-  std::stringstream SS;
-  SS << "static bool " << FnName << "(Sema &S, const ParsedAttr &Attr, ";
-  SS << "const Decl *D) {\n";
-  SS << "  if (!D || (";
+  OS << "virtual bool diagAppertainsToDecl(Sema &S, ";
+  OS << "const ParsedAttr &Attr, const Decl *D) const {\n";
+  OS << "  if (!D || (";
   for (auto I = Subjects.begin(), E = Subjects.end(); I != E; ++I) {
-    // If the subject has custom code associated with it, generate a function
-    // for it. The function cannot be inlined into this check (yet) because it
-    // requires the subject to be of a specific type, and were that information
-    // inlined here, it would not support an attribute with multiple custom
-    // subjects.
+    // If the subject has custom code associated with it, use the generated
+    // function for it. The function cannot be inlined into this check (yet)
+    // because it requires the subject to be of a specific type, and were that
+    // information inlined here, it would not support an attribute with multiple
+    // custom subjects.
     if ((*I)->isSubClassOf("SubsetSubject")) {
-      SS << "!" << GenerateCustomAppertainsTo(**I, OS) << "(D)";
+      OS << "!" << functionNameForCustomAppertainsTo(**I) << "(D)";
     } else {
-      SS << "!isa<" << GetSubjectWithSuffix(*I) << ">(D)";
+      OS << "!isa<" << GetSubjectWithSuffix(*I) << ">(D)";
     }
 
     if (I + 1 != E)
-      SS << " && ";
+      OS << " && ";
   }
-  SS << ")) {\n";
-  SS << "    S.Diag(Attr.getLoc(), diag::";
-  SS << (Warn ? "warn_attribute_wrong_decl_type_str" :
+  OS << ")) {\n";
+  OS << "    S.Diag(Attr.getLoc(), diag::";
+  OS << (Warn ? "warn_attribute_wrong_decl_type_str" :
                "err_attribute_wrong_decl_type_str");
-  SS << ")\n";
-  SS << "      << Attr << ";
-  SS << CalculateDiagnostic(*SubjectObj) << ";\n";
-  SS << "    return false;\n";
-  SS << "  }\n";
-  SS << "  return true;\n";
-  SS << "}\n\n";
-
-  OS << SS.str();
-  return FnName;
+  OS << ")\n";
+  OS << "      << Attr << ";
+  OS << CalculateDiagnostic(*SubjectObj) << ";\n";
+  OS << "    return false;\n";
+  OS << "  }\n";
+  OS << "  return true;\n";
+  OS << "}\n\n";
 }
 
 static void
@@ -3517,37 +3497,16 @@ emitAttributeMatchRules(PragmaClangAttributeSupport &PragmaAttributeSupport,
   OS << "}\n\n";
 }
 
-static void GenerateDefaultLangOptRequirements(raw_ostream &OS) {
-  OS << "static bool defaultDiagnoseLangOpts(Sema &, ";
-  OS << "const ParsedAttr &) {\n";
-  OS << "  return true;\n";
-  OS << "}\n\n";
-}
-
-static std::string GenerateLangOptRequirements(const Record &R,
-                                               raw_ostream &OS) {
+static void GenerateLangOptRequirements(const Record &R,
+                                        raw_ostream &OS) {
   // If the attribute has an empty or unset list of language requirements,
-  // return the default handler.
+  // use the default handler.
   std::vector<Record *> LangOpts = R.getValueAsListOfDefs("LangOpts");
   if (LangOpts.empty())
-    return "defaultDiagnoseLangOpts";
+    return;
 
-  // Generate a unique function name for the diagnostic test. The list of
-  // options should usually be short (one or two options), and the
-  // uniqueness isn't strictly necessary (it is just for codegen efficiency).
-  std::string FnName = "check";
-  for (auto I = LangOpts.begin(), E = LangOpts.end(); I != E; ++I)
-    FnName += (*I)->getValueAsString("Name");
-  FnName += "LangOpts";
-
-  // If this code has already been generated, simply return the previous
-  // instance of it.
-  static std::set<std::string> CustomLangOptsSet;
-  auto I = CustomLangOptsSet.find(FnName);
-  if (I != CustomLangOptsSet.end())
-    return *I;
-
-  OS << "static bool " << FnName << "(Sema &S, const ParsedAttr &Attr) {\n";
+  OS << "virtual bool diagLangOpts(Sema &S, const ParsedAttr &Attr) ";
+  OS << "const {\n";
   OS << "  auto &LangOpts = S.LangOpts;\n";
   OS << "  if (" << GenerateTestExpression(LangOpts) << ")\n";
   OS << "    return true;\n\n";
@@ -3555,24 +3514,15 @@ static std::string GenerateLangOptRequirements(const Record &R,
   OS << "<< Attr;\n";
   OS << "  return false;\n";
   OS << "}\n\n";
-
-  CustomLangOptsSet.insert(FnName);
-  return FnName;
 }
 
-static void GenerateDefaultTargetRequirements(raw_ostream &OS) {
-  OS << "static bool defaultTargetRequirements(const TargetInfo &) {\n";
-  OS << "  return true;\n";
-  OS << "}\n\n";
-}
-
-static std::string GenerateTargetRequirements(const Record &Attr,
-                                              const ParsedAttrMap &Dupes,
-                                              raw_ostream &OS) {
-  // If the attribute is not a target specific attribute, return the default
+static void GenerateTargetRequirements(const Record &Attr,
+                                       const ParsedAttrMap &Dupes,
+                                       raw_ostream &OS) {
+  // If the attribute is not a target specific attribute, use the default
   // target handler.
   if (!Attr.isSubClassOf("TargetSpecificAttr"))
-    return "defaultTargetRequirements";
+    return;
 
   // Get the list of architectures to be tested for.
   const Record *R = Attr.getValueAsDef("Target");
@@ -3600,55 +3550,37 @@ static std::string GenerateTargetRequirements(const Record &Attr,
   std::string Test;
   bool UsesT = GenerateTargetSpecificAttrChecks(R, Arches, Test, &FnName);
 
-  // If this code has already been generated, simply return the previous
-  // instance of it.
-  static std::set<std::string> CustomTargetSet;
-  auto I = CustomTargetSet.find(FnName);
-  if (I != CustomTargetSet.end())
-    return *I;
-
-  OS << "static bool " << FnName << "(const TargetInfo &Target) {\n";
+  OS << "virtual bool existsInTarget(const TargetInfo &Target) const {\n";
   if (UsesT)
     OS << "  const llvm::Triple &T = Target.getTriple(); (void)T;\n";
   OS << "  return " << Test << ";\n";
   OS << "}\n\n";
-
-  CustomTargetSet.insert(FnName);
-  return FnName;
 }
 
-static void GenerateDefaultSpellingIndexToSemanticSpelling(raw_ostream &OS) {
-  OS << "static unsigned defaultSpellingIndexToSemanticSpelling("
-     << "const ParsedAttr &Attr) {\n";
-  OS << "  return UINT_MAX;\n";
-  OS << "}\n\n";
-}
-
-static std::string GenerateSpellingIndexToSemanticSpelling(const Record &Attr,
-                                                           raw_ostream &OS) {
+static void GenerateSpellingIndexToSemanticSpelling(const Record &Attr,
+                                                    raw_ostream &OS) {
   // If the attribute does not have a semantic form, we can bail out early.
   if (!Attr.getValueAsBit("ASTNode"))
-    return "defaultSpellingIndexToSemanticSpelling";
+    return;
 
   std::vector<FlattenedSpelling> Spellings = GetFlattenedSpellings(Attr);
 
   // If there are zero or one spellings, or all of the spellings share the same
   // name, we can also bail out early.
   if (Spellings.size() <= 1 || SpellingNamesAreCommon(Spellings))
-    return "defaultSpellingIndexToSemanticSpelling";
+    return;
 
   // Generate the enumeration we will use for the mapping.
   SemanticSpellingMap SemanticToSyntacticMap;
   std::string Enum = CreateSemanticSpellings(Spellings, SemanticToSyntacticMap);
   std::string Name = Attr.getName().str() + "AttrSpellingMap";
 
-  OS << "static unsigned " << Name << "(const ParsedAttr &Attr) {\n";
+  OS << "virtual unsigned spellingIndexToSemanticSpelling(";
+  OS << "const ParsedAttr &Attr) const {\n";
   OS << Enum;
   OS << "  unsigned Idx = Attr.getAttributeSpellingListIndex();\n";
   WriteSemanticSpellingSwitch("Idx", SemanticToSyntacticMap, OS);
   OS << "}\n\n";
-
-  return Name;
 }
 
 static bool IsKnownToGCC(const Record &Attr) {
@@ -3671,19 +3603,19 @@ void EmitClangAttrParsedAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
   ParsedAttrMap Dupes;
   ParsedAttrMap Attrs = getParsedAttrList(Records, &Dupes);
 
-  // Generate the default appertainsTo, target and language option diagnostic,
-  // and spelling list index mapping methods.
-  GenerateDefaultAppertainsTo(OS);
-  GenerateDefaultLangOptRequirements(OS);
-  GenerateDefaultTargetRequirements(OS);
-  GenerateDefaultSpellingIndexToSemanticSpelling(OS);
+  // Generate all of the custom appertainsTo functions that the attributes
+  // will be using.
+  for (auto I : Attrs) {
+    const Record &Attr = *I.second;
+    if (Attr.isValueUnset("Subjects"))
+      continue;
+    const Record *SubjectObj = Attr.getValueAsDef("Subjects");
+    for (auto Subject : SubjectObj->getValueAsListOfDefs("Subjects"))
+      if (Subject->isSubClassOf("SubsetSubject"))
+        GenerateCustomAppertainsTo(*Subject, OS);
+  }
 
-  // Generate the appertainsTo diagnostic methods and write their names into
-  // another mapping. At the same time, generate the AttrInfoMap object
-  // contents. Due to the reliance on generated code, use separate streams so
-  // that code will not be interleaved.
-  std::string Buffer;
-  raw_string_ostream SS {Buffer};
+  // Generate a ParsedAttrInfo struct for each of the attributes.
   for (auto I = Attrs.begin(), E = Attrs.end(); I != E; ++I) {
     // TODO: If the attribute's kind appears in the list of duplicates, that is
     // because it is a target-specific attribute that appears multiple times.
@@ -3693,33 +3625,39 @@ void EmitClangAttrParsedAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
 
     // We need to generate struct instances based off ParsedAttrInfo from
     // ParsedAttr.cpp.
-    SS << "  { ";
-    emitArgInfo(*I->second, SS);
-    SS << ", " << I->second->getValueAsBit("HasCustomParsing");
-    SS << ", " << I->second->isSubClassOf("TargetSpecificAttr");
-    SS << ", "
-       << (I->second->isSubClassOf("TypeAttr") ||
-           I->second->isSubClassOf("DeclOrTypeAttr"));
-    SS << ", " << I->second->isSubClassOf("StmtAttr");
-    SS << ", " << IsKnownToGCC(*I->second);
-    SS << ", " << PragmaAttributeSupport.isAttributedSupported(*I->second);
-    SS << ", " << GenerateAppertainsTo(*I->second, OS);
-    SS << ", " << GenerateLangOptRequirements(*I->second, OS);
-    SS << ", " << GenerateTargetRequirements(*I->second, Dupes, OS);
-    SS << ", " << GenerateSpellingIndexToSemanticSpelling(*I->second, OS);
-    SS << ", "
-       << PragmaAttributeSupport.generateStrictConformsTo(*I->second, OS);
-    SS << " }";
-
-    if (I + 1 != E)
-      SS << ",";
-
-    SS << "  // AT_" << I->first << "\n";
+    const Record &Attr = *I->second;
+    OS << "struct ParsedAttrInfo" << I->first << " : public ParsedAttrInfo {\n";
+    OS << "  ParsedAttrInfo" << I->first << "() {\n";
+    emitArgInfo(Attr, OS);
+    OS << "    HasCustomParsing = ";
+    OS << Attr.getValueAsBit("HasCustomParsing") << ";\n";
+    OS << "    IsTargetSpecific = ";
+    OS << Attr.isSubClassOf("TargetSpecificAttr") << ";\n";
+    OS << "    IsType = ";
+    OS << (Attr.isSubClassOf("TypeAttr") ||
+           Attr.isSubClassOf("DeclOrTypeAttr")) << ";\n";
+    OS << "    IsStmt = ";
+    OS << Attr.isSubClassOf("StmtAttr") << ";\n";
+    OS << "    IsKnownToGCC = ";
+    OS << IsKnownToGCC(Attr) << ";\n";
+    OS << "    IsSupportedByPragmaAttribute = ";
+    OS << PragmaAttributeSupport.isAttributedSupported(*I->second) << ";\n";
+    OS << "  }\n";
+    GenerateAppertainsTo(Attr, OS);
+    GenerateLangOptRequirements(Attr, OS);
+    GenerateTargetRequirements(Attr, Dupes, OS);
+    GenerateSpellingIndexToSemanticSpelling(Attr, OS);
+    PragmaAttributeSupport.generateStrictConformsTo(*I->second, OS);
+    OS << "static const ParsedAttrInfo" << I->first << " Instance;\n";
+    OS << "};\n";
+    OS << "const ParsedAttrInfo" << I->first << " ParsedAttrInfo" << I->first
+       << "::Instance;\n";
   }
 
-  OS << "static const ParsedAttrInfo AttrInfoMap[ParsedAttr::UnknownAttribute "
-        "+ 1] = {\n";
-  OS << SS.str();
+  OS << "static const ParsedAttrInfo *AttrInfoMap[] = {\n";
+  for (auto I = Attrs.begin(), E = Attrs.end(); I != E; ++I) {
+    OS << "&ParsedAttrInfo" << I->first << "::Instance,\n";
+  }
   OS << "};\n\n";
 
   // Generate the attribute match rules.

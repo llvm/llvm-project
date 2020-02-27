@@ -609,6 +609,7 @@ namespace ISD {
     ///  1 Round to nearest
     ///  2 Round to +inf
     ///  3 Round to -inf
+    /// Result is rounding mode and chain. Input is a chain.
     FLT_ROUNDS_,
 
     /// X = FP_EXTEND(Y) - Extend a smaller FP type into a larger FP type.

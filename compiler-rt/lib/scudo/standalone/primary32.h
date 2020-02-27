@@ -386,11 +386,11 @@ private:
         (Sci->Stats.PoppedBlocks - Sci->Stats.PushedBlocks) * BlockSize;
     if (BytesInFreeList < PageSize)
       return 0; // No chance to release anything.
-    if ((Sci->Stats.PushedBlocks - Sci->ReleaseInfo.PushedBlocksAtLastRelease) *
-            BlockSize <
-        PageSize) {
+    const uptr BytesPushed =
+        (Sci->Stats.PushedBlocks - Sci->ReleaseInfo.PushedBlocksAtLastRelease) *
+        BlockSize;
+    if (BytesPushed < PageSize)
       return 0; // Nothing new to release.
-    }
 
     if (!Force) {
       const s32 IntervalMs = getReleaseToOsIntervalMs();
@@ -407,12 +407,13 @@ private:
     // iterate multiple times over the same freelist if a ClassId spans multiple
     // regions. But it will have to do for now.
     uptr TotalReleasedBytes = 0;
+    const uptr Size = (RegionSize / BlockSize) * BlockSize;
     for (uptr I = MinRegionIndex; I <= MaxRegionIndex; I++) {
       if (PossibleRegions[I] - 1U == ClassId) {
         const uptr Region = I * RegionSize;
         ReleaseRecorder Recorder(Region);
-        releaseFreeMemoryToOS(Sci->FreeList, Region, RegionSize / PageSize,
-                              BlockSize, &Recorder);
+        releaseFreeMemoryToOS(Sci->FreeList, Region, Size, BlockSize,
+                              &Recorder);
         if (Recorder.getReleasedRangesCount() > 0) {
           Sci->ReleaseInfo.PushedBlocksAtLastRelease = Sci->Stats.PushedBlocks;
           Sci->ReleaseInfo.RangesReleased += Recorder.getReleasedRangesCount();

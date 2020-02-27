@@ -111,7 +111,7 @@ void XRayInstrumentation::replaceRetWithPatchableRet(
         for (auto &MO : T.operands())
           MIB.add(MO);
         Terminators.push_back(&T);
-        if (T.isCandidateForCallSiteEntry())
+        if (T.shouldUpdateCallSiteInfo())
           MF.eraseCallSiteInfo(&T);
       }
     }

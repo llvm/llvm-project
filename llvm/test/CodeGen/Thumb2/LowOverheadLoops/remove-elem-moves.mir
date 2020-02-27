@@ -162,7 +162,7 @@ body:             |
   ; CHECK:   liveins: $r0, $r1, $r2
   ; CHECK:   renamable $r3 = t2ADDrs renamable $r0, renamable $r2, 18, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   tCMPr killed renamable $r3, renamable $r1, 14 /* CC::al */, $noreg, implicit-def $cpsr
-  ; CHECK:   t2IT 8, 4, implicit-def $itstate
+  ; CHECK:   t2IT 8, 4, implicit-def $itstate, implicit $cpsr
   ; CHECK:   renamable $r3 = t2ADDrs renamable $r1, renamable $r2, 18, 8 /* CC::hi */, $cpsr, $noreg, implicit $itstate
   ; CHECK:   tCMPr killed renamable $r3, renamable $r0, 8 /* CC::hi */, killed $cpsr, implicit-def $cpsr, implicit killed $itstate
   ; CHECK:   tBcc %bb.6, 8 /* CC::hi */, killed $cpsr
@@ -195,7 +195,7 @@ body:             |
   ; CHECK:   liveins: $r2, $r3, $r4, $r7, $r12
   ; CHECK:   tCMPr killed renamable $r4, killed renamable $r2, 14 /* CC::al */, $noreg, implicit-def $cpsr
   ; CHECK:   $lr = tMOVr killed $r7, 14 /* CC::al */, $noreg
-  ; CHECK:   t2IT 0, 8, implicit-def $itstate
+  ; CHECK:   t2IT 0, 8, implicit-def $itstate, implicit $cpsr
   ; CHECK:   tPOP_RET 0 /* CC::eq */, killed $cpsr, def $r4, def $r5, def $r7, def $pc, implicit killed $itstate
   ; CHECK:   tB %bb.7, 14 /* CC::al */, $noreg
   ; CHECK: bb.6:
@@ -247,7 +247,7 @@ body:             |
 
     renamable $r3 = t2ADDrs renamable $r0, renamable $r2, 18, 14, $noreg, $noreg
     tCMPr killed renamable $r3, renamable $r1, 14, $noreg, implicit-def $cpsr
-    t2IT 8, 4, implicit-def $itstate
+    t2IT 8, 4, implicit-def $itstate, implicit $cpsr
     renamable $r3 = t2ADDrs renamable $r1, renamable $r2, 18, 8, $cpsr, $noreg, implicit $itstate
     tCMPr killed renamable $r3, renamable $r0, 8, killed $cpsr, implicit-def $cpsr, implicit killed $itstate
     tBcc %bb.6, 8, killed $cpsr
@@ -287,7 +287,7 @@ body:             |
 
     tCMPr killed renamable $r4, killed renamable $r2, 14, $noreg, implicit-def $cpsr
     $lr = tMOVr killed $r7, 14, $noreg
-    t2IT 0, 8, implicit-def $itstate
+    t2IT 0, 8, implicit-def $itstate, implicit $cpsr
     tPOP_RET 0, killed $cpsr, def $r4, def $r5, def $r7, def $pc, implicit killed $itstate
     tB %bb.7, 14, $noreg
 

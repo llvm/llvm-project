@@ -20,9 +20,8 @@
 
 using namespace llvm;
 using namespace llvm::codeview;
-
-namespace lld {
-namespace coff {
+using namespace lld;
+using namespace lld::coff;
 
 namespace {
 // The TypeServerSource class represents a PDB type server, a file referenced by
@@ -94,25 +93,27 @@ public:
 
 TpiSource::TpiSource(TpiKind k, const ObjFile *f) : kind(k), file(f) {}
 
-TpiSource *makeTpiSource(const ObjFile *f) {
+TpiSource *lld::coff::makeTpiSource(const ObjFile *f) {
   return make<TpiSource>(TpiSource::Regular, f);
 }
 
-TpiSource *makeUseTypeServerSource(const ObjFile *f,
+TpiSource *lld::coff::makeUseTypeServerSource(const ObjFile *f,
                                               const TypeServer2Record *ts) {
   TypeServerSource::enqueue(f, *ts);
   return make<UseTypeServerSource>(f, ts);
 }
 
-TpiSource *makePrecompSource(const ObjFile *f) {
+TpiSource *lld::coff::makePrecompSource(const ObjFile *f) {
   return make<PrecompSource>(f);
 }
 
-TpiSource *makeUsePrecompSource(const ObjFile *f,
+TpiSource *lld::coff::makeUsePrecompSource(const ObjFile *f,
                                            const PrecompRecord *precomp) {
   return make<UsePrecompSource>(f, precomp);
 }
 
+namespace lld {
+namespace coff {
 template <>
 const PrecompRecord &retrieveDependencyInfo(const TpiSource *source) {
   assert(source->kind == TpiSource::UsingPCH);
@@ -124,6 +125,8 @@ const TypeServer2Record &retrieveDependencyInfo(const TpiSource *source) {
   assert(source->kind == TpiSource::UsingPDB);
   return ((const UseTypeServerSource *)source)->typeServerDependency;
 }
+} // namespace coff
+} // namespace lld
 
 std::map<std::string, std::pair<std::string, TypeServerSource *>>
     TypeServerSource::instances;
@@ -204,7 +207,8 @@ TypeServerSource::findFromFile(const ObjFile *dependentFile) {
 
 // FIXME: Temporary interface until PDBLinker::maybeMergeTypeServerPDB() is
 // moved here.
-Expected<llvm::pdb::NativeSession *> findTypeServerSource(const ObjFile *f) {
+Expected<llvm::pdb::NativeSession *>
+lld::coff::findTypeServerSource(const ObjFile *f) {
   Expected<TypeServerSource *> ts = TypeServerSource::findFromFile(f);
   if (!ts)
     return ts.takeError();
@@ -232,7 +236,7 @@ void TypeServerSource::enqueue(const ObjFile *dependentFile,
 // will be merged in. NOTE - a PDB load failure is not a link error: some
 // debug info will simply be missing from the final PDB - that is the default
 // accepted behavior.
-void loadTypeServerSource(llvm::MemoryBufferRef m) {
+void lld::coff::loadTypeServerSource(llvm::MemoryBufferRef m) {
   std::string path = normalizePdbPath(m.getBufferIdentifier());
 
   Expected<TypeServerSource *> ts = TypeServerSource::getInstance(m);
@@ -259,6 +263,3 @@ Expected<TypeServerSource *> TypeServerSource::getInstance(MemoryBufferRef m) {
     return info.takeError();
   return make<TypeServerSource>(m, session.release());
 }
-
-} // namespace coff
-} // namespace lld

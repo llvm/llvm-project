@@ -7494,13 +7494,17 @@ SDValue DAGCombiner::visitRotate(SDNode *N) {
   }
 
   // fold (rot x, c) -> (rot x, c % BitSize)
-  // TODO - support non-uniform vector amounts.
-  if (ConstantSDNode *Cst = isConstOrConstSplat(N1)) {
-    if (Cst->getAPIntValue().uge(Bitsize)) {
-      uint64_t RotAmt = Cst->getAPIntValue().urem(Bitsize);
-      return DAG.getNode(N->getOpcode(), dl, VT, N0,
-                         DAG.getConstant(RotAmt, dl, N1.getValueType()));
-    }
+  bool OutOfRange = false;
+  auto MatchOutOfRange = [Bitsize, &OutOfRange](ConstantSDNode *C) {
+    OutOfRange |= C->getAPIntValue().uge(Bitsize);
+    return true;
+  };
+  if (ISD::matchUnaryPredicate(N1, MatchOutOfRange) && OutOfRange) {
+    EVT AmtVT = N1.getValueType();
+    SDValue Bits = DAG.getConstant(Bitsize, dl, AmtVT);
+    if (SDValue Amt =
+            DAG.FoldConstantArithmetic(ISD::UREM, dl, AmtVT, {N1, Bits}))
+      return DAG.getNode(N->getOpcode(), dl, VT, N0, Amt);
   }
 
   // Simplify the operands using demanded-bits information.
@@ -16623,33 +16627,6 @@ SDValue DAGCombiner::visitSTORE(SDNode *N) {
           CombineTo(ST1, ST1->getChain());
           return SDValue();
         }
-
-        // If ST stores to a subset of preceding store's write set, we may be
-        // able to fold ST's value into the preceding stored value. As we know
-        // the other uses of ST1's chain are unconcerned with ST, this folding
-        // will not affect those nodes.
-        int64_t BitOffset;
-        if (ChainBase.contains(DAG, ChainBitSize, STBase, STBitSize,
-                               BitOffset)) {
-          SDValue ChainValue = ST1->getValue();
-          if (auto *C1 = dyn_cast<ConstantSDNode>(ChainValue)) {
-            if (auto *C = dyn_cast<ConstantSDNode>(Value)) {
-              APInt Val = C1->getAPIntValue();
-              APInt InsertVal = C->getAPIntValue().zextOrTrunc(STBitSize);
-              // FIXME: Handle Big-endian mode.
-              if (!DAG.getDataLayout().isBigEndian()) {
-                Val.insertBits(InsertVal, BitOffset);
-                SDValue NewSDVal =
-                    DAG.getConstant(Val, SDLoc(C), ChainValue.getValueType(),
-                                    C1->isTargetOpcode(), C1->isOpaque());
-                SDNode *NewST1 = DAG.UpdateNodeOperands(
-                    ST1, ST1->getChain(), NewSDVal, ST1->getOperand(2),
-                    ST1->getOperand(3));
-                return CombineTo(ST, SDValue(NewST1, 0));
-              }
-            }
-          }
-        } // End ST subset of ST1 case.
       }
     }
   }
@@ -18578,6 +18555,15 @@ static SDValue narrowExtractedVectorBinOp(SDNode *Extract, SelectionDAG &DAG) {
   unsigned BOpcode = BinOp.getOpcode();
   if (!TLI.isBinOp(BOpcode) || BinOp.getNode()->getNumValues() != 1)
     return SDValue();
+
+  // Exclude the fake form of fneg (fsub -0.0, x) because that is likely to be
+  // reduced to the unary fneg when it is visited, and we probably want to deal
+  // with fneg in a target-specific way.
+  if (BOpcode == ISD::FSUB) {
+    auto *C = isConstOrConstSplatFP(BinOp.getOperand(0), /*AllowUndefs*/ true);
+    if (C && C->getValueAPF().isNegZero())
+      return SDValue();
+  }
 
   // The binop must be a vector type, so we can extract some fraction of it.
   EVT WideBVT = BinOp.getValueType();

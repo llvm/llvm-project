@@ -60,6 +60,7 @@ public:
   void disable() {}
   void enable() {}
   void releaseToOS() {}
+  void setReleaseToOsIntervalMs(UNUSED s32 Interval) {}
 };
 
 template <uptr MaxEntriesCount = 32U, uptr MaxEntrySize = 1UL << 19,

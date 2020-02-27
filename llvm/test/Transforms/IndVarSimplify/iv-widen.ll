@@ -122,15 +122,17 @@ define void @loop_1(i32 %lim) {
 ; CHECK-NEXT:    [[ENTRY_COND:%.*]] = icmp ne i32 [[LIM:%.*]], 0
 ; CHECK-NEXT:    br i1 [[ENTRY_COND]], label [[LOOP_PREHEADER:%.*]], label [[LEAVE:%.*]]
 ; CHECK:       loop.preheader:
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[LIM]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ugt i32 [[LIM]], 2
+; CHECK-NEXT:    [[UMAX:%.*]] = select i1 [[TMP0]], i32 [[LIM]], i32 2
+; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[UMAX]] to i64
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 1, [[LOOP_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i64 [[INDVARS_IV]], -1
 ; CHECK-NEXT:    call void @dummy.i64(i64 [[TMP1]])
-; CHECK-NEXT:    [[BE_COND:%.*]] = icmp ult i64 [[INDVARS_IV_NEXT]], [[TMP0]]
-; CHECK-NEXT:    br i1 [[BE_COND]], label [[LOOP]], label [[LEAVE_LOOPEXIT:%.*]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[LEAVE_LOOPEXIT:%.*]]
 ; CHECK:       leave.loopexit:
 ; CHECK-NEXT:    br label [[LEAVE]]
 ; CHECK:       leave:
@@ -165,7 +167,9 @@ define void @loop_2(i32 %size, i32 %nsteps, i32 %hsize, i32* %lined, i8 %tmp1) {
 ; CHECK-NEXT:    [[BC0:%.*]] = bitcast i32* [[LINED:%.*]] to i8*
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[SIZE]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[HSIZE:%.*]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[NSTEPS:%.*]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[NSTEPS:%.*]], 1
+; CHECK-NEXT:    [[SMAX:%.*]] = select i1 [[TMP2]], i32 [[NSTEPS]], i32 1
+; CHECK-NEXT:    [[WIDE_TRIP_COUNT11:%.*]] = zext i32 [[SMAX]] to i64
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV7:%.*]] = phi i64 [ [[INDVARS_IV_NEXT8:%.*]], [[FOR_INC:%.*]] ], [ 0, [[ENTRY:%.*]] ]
@@ -200,8 +204,8 @@ define void @loop_2(i32 %size, i32 %nsteps, i32 %hsize, i32* %lined, i8 %tmp1) {
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       for.inc:
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT8]] = add nuw nsw i64 [[INDVARS_IV7]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT8]], [[TMP2]]
-; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT:%.*]]
+; CHECK-NEXT:    [[EXITCOND12:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT8]], [[WIDE_TRIP_COUNT11]]
+; CHECK-NEXT:    br i1 [[EXITCOND12]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT:%.*]]
 ; CHECK:       for.end.loopexit:
 ; CHECK-NEXT:    ret void
 ;

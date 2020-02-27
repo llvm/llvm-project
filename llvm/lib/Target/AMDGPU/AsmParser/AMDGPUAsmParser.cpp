@@ -1989,6 +1989,7 @@ static unsigned getSpecialRegForName(StringRef RegName) {
     .Case("tma_hi", AMDGPU::TMA_HI)
     .Case("tba_lo", AMDGPU::TBA_LO)
     .Case("tba_hi", AMDGPU::TBA_HI)
+    .Case("pc", AMDGPU::PC_REG)
     .Case("null", AMDGPU::SGPR_NULL)
     .Default(AMDGPU::NoRegister);
 }

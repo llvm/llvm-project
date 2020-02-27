@@ -2174,13 +2174,12 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
     return lowerBitcast(MI);
   case TargetOpcode::G_SREM:
   case TargetOpcode::G_UREM: {
-    Register QuotReg = MRI.createGenericVirtualRegister(Ty);
-    MIRBuilder.buildInstr(MI.getOpcode() == G_SREM ? G_SDIV : G_UDIV, {QuotReg},
-                          {MI.getOperand(1), MI.getOperand(2)});
+    auto Quot =
+        MIRBuilder.buildInstr(MI.getOpcode() == G_SREM ? G_SDIV : G_UDIV, {Ty},
+                              {MI.getOperand(1), MI.getOperand(2)});
 
-    Register ProdReg = MRI.createGenericVirtualRegister(Ty);
-    MIRBuilder.buildMul(ProdReg, QuotReg, MI.getOperand(2));
-    MIRBuilder.buildSub(MI.getOperand(0), MI.getOperand(1), ProdReg);
+    auto Prod = MIRBuilder.buildMul(Ty, Quot, MI.getOperand(2));
+    MIRBuilder.buildSub(MI.getOperand(0), MI.getOperand(1), Prod);
     MI.eraseFromParent();
     return Legalized;
   }
@@ -2209,9 +2208,7 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
     MIRBuilder.setInsertPt(MIRBuilder.getMBB(), ++MIRBuilder.getInsertPt());
 
     auto HiPart = MIRBuilder.buildInstr(Opcode, {Ty}, {LHS, RHS});
-
-    Register Zero = MRI.createGenericVirtualRegister(Ty);
-    MIRBuilder.buildConstant(Zero, 0);
+    auto Zero = MIRBuilder.buildConstant(Ty, 0);
 
     // For *signed* multiply, overflow is detected by checking:
     // (hi != (lo >> bitwidth-1))
@@ -2433,12 +2430,10 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
     Register LHS = MI.getOperand(2).getReg();
     Register RHS = MI.getOperand(3).getReg();
     Register CarryIn = MI.getOperand(4).getReg();
+    LLT Ty = MRI.getType(Res);
 
-    Register TmpRes = MRI.createGenericVirtualRegister(Ty);
-    Register ZExtCarryIn = MRI.createGenericVirtualRegister(Ty);
-
-    MIRBuilder.buildAdd(TmpRes, LHS, RHS);
-    MIRBuilder.buildZExt(ZExtCarryIn, CarryIn);
+    auto TmpRes = MIRBuilder.buildAdd(Ty, LHS, RHS);
+    auto ZExtCarryIn = MIRBuilder.buildZExt(Ty, CarryIn);
     MIRBuilder.buildAdd(Res, TmpRes, ZExtCarryIn);
     MIRBuilder.buildICmp(CmpInst::ICMP_ULT, CarryOut, Res, LHS);
 
@@ -2463,17 +2458,15 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
     Register LHS = MI.getOperand(2).getReg();
     Register RHS = MI.getOperand(3).getReg();
     Register BorrowIn = MI.getOperand(4).getReg();
+    const LLT CondTy = MRI.getType(BorrowOut);
+    const LLT Ty = MRI.getType(Res);
 
-    Register TmpRes = MRI.createGenericVirtualRegister(Ty);
-    Register ZExtBorrowIn = MRI.createGenericVirtualRegister(Ty);
-    Register LHS_EQ_RHS = MRI.createGenericVirtualRegister(LLT::scalar(1));
-    Register LHS_ULT_RHS = MRI.createGenericVirtualRegister(LLT::scalar(1));
-
-    MIRBuilder.buildSub(TmpRes, LHS, RHS);
-    MIRBuilder.buildZExt(ZExtBorrowIn, BorrowIn);
+    auto TmpRes = MIRBuilder.buildSub(Ty, LHS, RHS);
+    auto ZExtBorrowIn = MIRBuilder.buildZExt(Ty, BorrowIn);
     MIRBuilder.buildSub(Res, TmpRes, ZExtBorrowIn);
-    MIRBuilder.buildICmp(CmpInst::ICMP_EQ, LHS_EQ_RHS, LHS, RHS);
-    MIRBuilder.buildICmp(CmpInst::ICMP_ULT, LHS_ULT_RHS, LHS, RHS);
+
+    auto LHS_EQ_RHS = MIRBuilder.buildICmp(CmpInst::ICMP_EQ, CondTy, LHS, RHS);
+    auto LHS_ULT_RHS = MIRBuilder.buildICmp(CmpInst::ICMP_ULT, CondTy, LHS, RHS);
     MIRBuilder.buildSelect(BorrowOut, LHS_EQ_RHS, BorrowIn, LHS_ULT_RHS);
 
     MI.eraseFromParent();

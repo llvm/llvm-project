@@ -181,13 +181,23 @@ ParsedType Sema::getDestructorName(SourceLocation TildeLoc,
       ObjectTypePtr ? GetTypeFromParser(ObjectTypePtr) : QualType();
 
   auto CheckLookupResult = [&](LookupResult &Found) -> ParsedType {
-    // FIXME: Should we be suppressing ambiguities here?
-    if (Found.isAmbiguous()) {
-      Failed = true;
-      return nullptr;
-    }
+    auto IsAcceptableResult = [&](NamedDecl *D) -> bool {
+      auto *Type = dyn_cast<TypeDecl>(D->getUnderlyingDecl());
+      if (!Type)
+        return false;
 
+      if (SearchType.isNull() || SearchType->isDependentType())
+        return true;
+
+      QualType T = Context.getTypeDeclType(Type);
+      return Context.hasSameUnqualifiedType(T, SearchType);
+    };
+
+    unsigned NumAcceptableResults = 0;
     for (NamedDecl *D : Found) {
+      if (IsAcceptableResult(D))
+        ++NumAcceptableResults;
+
       // Don't list a class twice in the lookup failure diagnostic if it's
       // found by both its injected-class-name and by the name in the enclosing
       // scope.
@@ -199,10 +209,34 @@ ParsedType Sema::getDestructorName(SourceLocation TildeLoc,
         FoundDecls.push_back(D);
     }
 
+    // As an extension, attempt to "fix" an ambiguity by erasing all non-type
+    // results, and all non-matching results if we have a search type. It's not
+    // clear what the right behavior is if destructor lookup hits an ambiguity,
+    // but other compilers do generally accept at least some kinds of
+    // ambiguity.
+    if (Found.isAmbiguous() && NumAcceptableResults == 1) {
+      Diag(NameLoc, diag::ext_dtor_name_ambiguous);
+      LookupResult::Filter F = Found.makeFilter();
+      while (F.hasNext()) {
+        NamedDecl *D = F.next();
+        if (auto *TD = dyn_cast<TypeDecl>(D->getUnderlyingDecl()))
+          Diag(D->getLocation(), diag::note_destructor_type_here)
+              << Context.getTypeDeclType(TD);
+        else
+          Diag(D->getLocation(), diag::note_destructor_nontype_here);
+
+        if (!IsAcceptableResult(D))
+          F.erase();
+      }
+      F.done();
+    }
+
+    if (Found.isAmbiguous())
+      Failed = true;
+
     if (TypeDecl *Type = Found.getAsSingle<TypeDecl>()) {
-      QualType T = Context.getTypeDeclType(Type);
-      if (SearchType.isNull() || SearchType->isDependentType() ||
-          Context.hasSameUnqualifiedType(T, SearchType)) {
+      if (IsAcceptableResult(Type)) {
+        QualType T = Context.getTypeDeclType(Type);
         MarkAnyDeclReferenced(Type->getLocation(), Type, /*OdrUse=*/false);
         return CreateParsedType(T,
                                 Context.getTrivialTypeSourceInfo(T, NameLoc));
@@ -1788,8 +1822,9 @@ Sema::isUnavailableAlignedAllocationFunction(const FunctionDecl &FD) const {
     return false;
   if (FD.isDefined())
     return false;
-  bool IsAligned = false;
-  if (FD.isReplaceableGlobalAllocationFunction(&IsAligned) && IsAligned)
+  Optional<unsigned> AlignmentParam;
+  if (FD.isReplaceableGlobalAllocationFunction(&AlignmentParam) &&
+      AlignmentParam.hasValue())
     return true;
   return false;
 }
@@ -2116,18 +2151,80 @@ Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
     // arguments. Skip the first parameter because we don't have a corresponding
     // argument. Skip the second parameter too if we're passing in the
     // alignment; we've already filled it in.
+    unsigned NumImplicitArgs = PassAlignment ? 2 : 1;
     if (GatherArgumentsForCall(PlacementLParen, OperatorNew, Proto,
-                               PassAlignment ? 2 : 1, PlacementArgs,
-                               AllPlaceArgs, CallType))
+                               NumImplicitArgs, PlacementArgs, AllPlaceArgs,
+                               CallType))
       return ExprError();
 
     if (!AllPlaceArgs.empty())
       PlacementArgs = AllPlaceArgs;
 
-    // FIXME: This is wrong: PlacementArgs misses out the first (size) argument.
-    DiagnoseSentinelCalls(OperatorNew, PlacementLParen, PlacementArgs);
+    // We would like to perform some checking on the given `operator new` call,
+    // but the PlacementArgs does not contain the implicit arguments,
+    // namely allocation size and maybe allocation alignment,
+    // so we need to conjure them.
 
-    // FIXME: Missing call to CheckFunctionCall or equivalent
+    QualType SizeTy = Context.getSizeType();
+    unsigned SizeTyWidth = Context.getTypeSize(SizeTy);
+
+    llvm::APInt SingleEltSize(
+        SizeTyWidth, Context.getTypeSizeInChars(AllocType).getQuantity());
+
+    // How many bytes do we want to allocate here?
+    llvm::Optional<llvm::APInt> AllocationSize;
+    if (!ArraySize.hasValue() && !AllocType->isDependentType()) {
+      // For non-array operator new, we only want to allocate one element.
+      AllocationSize = SingleEltSize;
+    } else if (KnownArraySize.hasValue() && !AllocType->isDependentType()) {
+      // For array operator new, only deal with static array size case.
+      bool Overflow;
+      AllocationSize = llvm::APInt(SizeTyWidth, *KnownArraySize)
+                           .umul_ov(SingleEltSize, Overflow);
+      (void)Overflow;
+      assert(
+          !Overflow &&
+          "Expected that all the overflows would have been handled already.");
+    }
+
+    IntegerLiteral AllocationSizeLiteral(
+        Context,
+        AllocationSize.getValueOr(llvm::APInt::getNullValue(SizeTyWidth)),
+        SizeTy, SourceLocation());
+    // Otherwise, if we failed to constant-fold the allocation size, we'll
+    // just give up and pass-in something opaque, that isn't a null pointer.
+    OpaqueValueExpr OpaqueAllocationSize(SourceLocation(), SizeTy, VK_RValue,
+                                         OK_Ordinary, /*SourceExpr=*/nullptr);
+
+    // Let's synthesize the alignment argument in case we will need it.
+    // Since we *really* want to allocate these on stack, this is slightly ugly
+    // because there might not be a `std::align_val_t` type.
+    EnumDecl *StdAlignValT = getStdAlignValT();
+    QualType AlignValT =
+        StdAlignValT ? Context.getTypeDeclType(StdAlignValT) : SizeTy;
+    IntegerLiteral AlignmentLiteral(
+        Context,
+        llvm::APInt(Context.getTypeSize(SizeTy),
+                    Alignment / Context.getCharWidth()),
+        SizeTy, SourceLocation());
+    ImplicitCastExpr DesiredAlignment(ImplicitCastExpr::OnStack, AlignValT,
+                                      CK_IntegralCast, &AlignmentLiteral,
+                                      VK_RValue);
+
+    // Adjust placement args by prepending conjured size and alignment exprs.
+    llvm::SmallVector<Expr *, 8> CallArgs;
+    CallArgs.reserve(NumImplicitArgs + PlacementArgs.size());
+    CallArgs.emplace_back(AllocationSize.hasValue()
+                              ? static_cast<Expr *>(&AllocationSizeLiteral)
+                              : &OpaqueAllocationSize);
+    if (PassAlignment)
+      CallArgs.emplace_back(&DesiredAlignment);
+    CallArgs.insert(CallArgs.end(), PlacementArgs.begin(), PlacementArgs.end());
+
+    DiagnoseSentinelCalls(OperatorNew, PlacementLParen, CallArgs);
+
+    checkCall(OperatorNew, Proto, /*ThisArg=*/nullptr, CallArgs,
+              /*IsMemberFunction=*/false, StartLoc, Range, CallType);
 
     // Warn if the type is over-aligned and is being allocated by (unaligned)
     // global operator new.
@@ -2881,6 +2978,7 @@ void Sema::DeclareGlobalAllocationFunction(DeclarationName Name,
     Alloc->setParams(ParamDecls);
     if (ExtraAttr)
       Alloc->addAttr(ExtraAttr);
+    AddKnownFunctionAttributesForReplaceableGlobalAllocationFunction(Alloc);
     Context.getTranslationUnitDecl()->addDecl(Alloc);
     IdResolver.tryAddTopLevelDecl(Alloc, Name);
   };

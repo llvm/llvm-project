@@ -14,9 +14,8 @@
 #ifndef LLVM_SUPPORT_SWAPBYTEORDER_H
 #define LLVM_SUPPORT_SWAPBYTEORDER_H
 
-#include "llvm/Support/Compiler.h"
-#include "llvm/Support/DataTypes.h"
 #include <cstddef>
+#include <cstdint>
 #include <type_traits>
 #if defined(_MSC_VER) && !defined(_DEBUG)
 #include <stdlib.h>
@@ -105,15 +104,16 @@ inline   signed short getSwappedBytes(  signed short C) { return SwapByteOrder_1
 inline unsigned int   getSwappedBytes(unsigned int   C) { return SwapByteOrder_32(C); }
 inline   signed int   getSwappedBytes(  signed int   C) { return SwapByteOrder_32(C); }
 
-#if __LONG_MAX__ == __INT_MAX__
-inline unsigned long  getSwappedBytes(unsigned long  C) { return SwapByteOrder_32(C); }
-inline   signed long  getSwappedBytes(  signed long  C) { return SwapByteOrder_32(C); }
-#elif __LONG_MAX__ == __LONG_LONG_MAX__
-inline unsigned long  getSwappedBytes(unsigned long  C) { return SwapByteOrder_64(C); }
-inline   signed long  getSwappedBytes(  signed long  C) { return SwapByteOrder_64(C); }
-#else
-#error "Unknown long size!"
-#endif
+inline unsigned long getSwappedBytes(unsigned long C) {
+  // Handle LLP64 and LP64 platforms.
+  return sizeof(long) == sizeof(int) ? SwapByteOrder_32((uint32_t)C)
+                                     : SwapByteOrder_64((uint64_t)C);
+}
+inline signed long getSwappedBytes(signed long C) {
+  // Handle LLP64 and LP64 platforms.
+  return sizeof(long) == sizeof(int) ? SwapByteOrder_32((uint32_t)C)
+                                     : SwapByteOrder_64((uint64_t)C);
+}
 
 inline unsigned long long getSwappedBytes(unsigned long long C) {
   return SwapByteOrder_64(C);

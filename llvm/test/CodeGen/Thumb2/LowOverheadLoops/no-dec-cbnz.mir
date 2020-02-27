@@ -134,7 +134,7 @@ body:             |
   ; CHECK-LOB:   renamable $r2 = tLDRi renamable $r0, 1, 14 /* CC::al */, $noreg :: (load 4 from %ir.info2)
   ; CHECK-LOB:   renamable $r2 = tLDRHi killed renamable $r2, 1, 14 /* CC::al */, $noreg :: (load 2 from %ir.idx3)
   ; CHECK-LOB:   tCMPr killed renamable $r2, renamable $r1, 14 /* CC::al */, $noreg, implicit-def $cpsr
-  ; CHECK-LOB:   t2IT 0, 8, implicit-def $itstate
+  ; CHECK-LOB:   t2IT 0, 8, implicit-def $itstate, implicit $cpsr
   ; CHECK-LOB:   tBX_RET 0 /* CC::eq */, killed $cpsr, implicit $r0, implicit killed $itstate
   ; CHECK-LOB:   renamable $r0 = tLDRi killed renamable $r0, 0, 14 /* CC::al */, $noreg :: (load 4 from %ir.next4)
   ; CHECK-LOB:   tCBNZ $r0, %bb.8
@@ -187,7 +187,7 @@ body:             |
   ; CHECK-NOLOB:   renamable $r2 = tLDRi renamable $r0, 1, 14 /* CC::al */, $noreg :: (load 4 from %ir.info2)
   ; CHECK-NOLOB:   renamable $r2 = tLDRHi killed renamable $r2, 1, 14 /* CC::al */, $noreg :: (load 2 from %ir.idx3)
   ; CHECK-NOLOB:   tCMPr killed renamable $r2, renamable $r1, 14 /* CC::al */, $noreg, implicit-def $cpsr
-  ; CHECK-NOLOB:   t2IT 0, 8, implicit-def $itstate
+  ; CHECK-NOLOB:   t2IT 0, 8, implicit-def $itstate, implicit $cpsr
   ; CHECK-NOLOB:   tBX_RET 0 /* CC::eq */, killed $cpsr, implicit $r0, implicit killed $itstate
   ; CHECK-NOLOB:   renamable $r0 = tLDRi killed renamable $r0, 0, 14 /* CC::al */, $noreg :: (load 4 from %ir.next4)
   ; CHECK-NOLOB:   tCMPi8 renamable $r0, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
@@ -248,7 +248,7 @@ body:             |
     renamable $r2 = tLDRi renamable $r0, 1, 14, $noreg :: (load 4 from %ir.info2)
     renamable $r2 = tLDRHi killed renamable $r2, 1, 14, $noreg :: (load 2 from %ir.idx3)
     tCMPr killed renamable $r2, renamable $r1, 14, $noreg, implicit-def $cpsr
-    t2IT 0, 8, implicit-def $itstate
+    t2IT 0, 8, implicit-def $itstate, implicit $cpsr
     tBX_RET 0, killed $cpsr, implicit $r0, implicit killed $itstate
     renamable $r0 = tLDRi killed renamable $r0, 0, 14, $noreg :: (load 4 from %ir.next4)
     tCMPi8 renamable $r0, 0, 14, $noreg, implicit-def $cpsr

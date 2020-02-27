@@ -563,7 +563,13 @@ SDValue DAGTypeLegalizer::PromoteIntRes_FLT_ROUNDS(SDNode *N) {
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
   SDLoc dl(N);
 
-  return DAG.getNode(N->getOpcode(), dl, NVT);
+  SDValue Res =
+      DAG.getNode(N->getOpcode(), dl, {NVT, MVT::Other}, N->getOperand(0));
+
+  // Legalize the chain result - switch anything that used the old chain to
+  // use the new one.
+  ReplaceValueWith(SDValue(N, 1), Res.getValue(1));
+  return Res;
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_INT_EXTEND(SDNode *N) {
@@ -2744,10 +2750,15 @@ void DAGTypeLegalizer::ExpandIntRes_FLT_ROUNDS(SDNode *N, SDValue &Lo,
   unsigned NBitWidth = NVT.getSizeInBits();
 
   EVT ShiftAmtTy = TLI.getShiftAmountTy(NVT, DAG.getDataLayout());
-  Lo = DAG.getNode(ISD::FLT_ROUNDS_, dl, NVT);
+  Lo = DAG.getNode(ISD::FLT_ROUNDS_, dl, {NVT, MVT::Other}, N->getOperand(0));
+  SDValue Chain = Lo.getValue(1);
   // The high part is the sign of Lo, as -1 is a valid value for FLT_ROUNDS
   Hi = DAG.getNode(ISD::SRA, dl, NVT, Lo,
                    DAG.getConstant(NBitWidth - 1, dl, ShiftAmtTy));
+
+  // Legalize the chain result - switch anything that used the old chain to
+  // use the new one.
+  ReplaceValueWith(SDValue(N, 1), Chain);
 }
 
 void DAGTypeLegalizer::ExpandIntRes_FP_TO_SINT(SDNode *N, SDValue &Lo,

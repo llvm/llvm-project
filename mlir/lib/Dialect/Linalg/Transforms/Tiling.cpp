@@ -22,6 +22,7 @@
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/Pass/Pass.h"
+#include "mlir/Support/Functional.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/STLExtras.h"
 #include "mlir/Transforms/FoldUtils.h"
@@ -263,7 +264,8 @@ makeTiledViews(OpBuilder &b, Location loc, LinalgOp linalgOp,
     Value view = *(viewIteratorBegin + viewIndex);
     auto viewType = view.getType().cast<MemRefType>();
     unsigned rank = viewType.getRank();
-    auto map = loopToOperandRangesMaps(linalgOp)[viewIndex];
+    auto mapAttr = linalgOp.indexing_maps()[viewIndex];
+    auto map = mapAttr.cast<AffineMapAttr>().getValue();
     // If the view is not tiled, we can use it as is.
     if (!isTiled(map, tileSizes)) {
       res.push_back(view);
@@ -355,8 +357,10 @@ Optional<TiledLinalgOp> static tileLinalgOpImpl(OpBuilder &b, LinalgOp op,
   auto viewSizes = getViewSizes(b, op);
   // The flattened loopToOperandRangesMaps is expected to be an invertible
   // permutation map (asserted in the inverse calculation).
-  auto viewSizesToLoopsMap =
-      inversePermutation(concatAffineMaps(loopToOperandRangesMaps(op)));
+  auto mapsRange = op.indexing_maps().getAsRange<AffineMapAttr>();
+  auto maps =
+      functional::map([](AffineMapAttr a) { return a.getValue(); }, mapsRange);
+  auto viewSizesToLoopsMap = inversePermutation(concatAffineMaps(maps));
   assert(viewSizesToLoopsMap && "expected invertible map");
 
   SmallVector<SubViewOp::Range, 4> loopRanges;

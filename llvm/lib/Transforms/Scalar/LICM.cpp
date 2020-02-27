@@ -742,41 +742,6 @@ public:
 };
 } // namespace
 
-
-/// Return true if we know how to rewrite all uses of the given alloca after
-/// hoisting it out of the loop.  The main concerns are a) potential captures
-/// and b) invariant.start markers which don't capture, but are no longer
-/// valid w/o a corresponding invariant.end.
-static bool canRewriteUsesOfAlloca(AllocaInst &AI) {
-  // TODO: This looks a lot like capture tracking, but we need to remove any
-  // invariant starts if we extend the lifetime of the alloca by hoisting it.
-  // We should probably refactor capture tracking into a form which allows us
-  // to reuse the relevant bits and remove the duplicated logic here.
-
-  SmallVector<Use *, 16> Worklist;
-  for (Use &U : AI.uses())
-    Worklist.push_back(&U);
-  
-  unsigned NumUsesExplored = 0;
-  while (!Worklist.empty()) {
-    Use *U = Worklist.pop_back_val();
-    Instruction *I = cast<Instruction>(U->getUser());
-    NumUsesExplored++;
-    if (NumUsesExplored > DefaultMaxUsesToExplore)
-      return false;
-    // Non capturing, terminating uses
-    if (isa<LoadInst>(I) ||
-        (isa<StoreInst>(I) && U->getOperandNo() == 1))
-      continue;
-    // Non capturing, non-terminating
-    if (!isa<BitCastInst>(I) && !isa<GetElementPtrInst>(I))
-      return false;
-    for (Use &U : I->uses())
-      Worklist.push_back(&U);
-  }
-  return true;
-}
-
 /// Walk the specified region of the CFG (defined by all blocks dominated by
 /// the specified block, and that are in the current loop) in depth first
 /// order w.r.t the DominatorTree.  This allows us to visit definitions before
@@ -890,16 +855,6 @@ bool llvm::hoistRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
       if ((IsInvariantStart(I) || isGuard(&I)) &&
           CurLoop->hasLoopInvariantOperands(&I) &&
           MustExecuteWithoutWritesBefore(I)) {
-        hoist(I, DT, CurLoop, CFH.getOrCreateHoistedBlock(BB), SafetyInfo,
-              MSSAU, SE, ORE);
-        HoistedInstructions.push_back(&I);
-        Changed = true;
-        continue;
-      }
-
-      if (isa<AllocaInst>(&I) &&
-          SafetyInfo->isGuaranteedToExecute(I, DT, CurLoop) &&
-          canRewriteUsesOfAlloca(cast<AllocaInst>(I))) {
         hoist(I, DT, CurLoop, CFH.getOrCreateHoistedBlock(BB), SafetyInfo,
               MSSAU, SE, ORE);
         HoistedInstructions.push_back(&I);

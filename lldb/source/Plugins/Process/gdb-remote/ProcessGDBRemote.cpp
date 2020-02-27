@@ -1102,11 +1102,38 @@ void ProcessGDBRemote::DidLaunchOrAttach(ArchSpec &process_arch) {
     }
   }
 
+  MaybeLoadExecutableModule();
+
   // Find out which StructuredDataPlugins are supported by the debug monitor.
   // These plugins transmit data over async $J packets.
   if (StructuredData::Array *supported_packets =
           m_gdb_comm.GetSupportedStructuredDataPlugins())
     MapSupportedStructuredDataPlugins(*supported_packets);
+}
+
+void ProcessGDBRemote::MaybeLoadExecutableModule() {
+  ModuleSP module_sp = GetTarget().GetExecutableModule();
+  if (!module_sp)
+    return;
+
+  llvm::Optional<QOffsets> offsets = m_gdb_comm.GetQOffsets();
+  if (!offsets)
+    return;
+
+  bool is_uniform =
+      size_t(llvm::count(offsets->offsets, offsets->offsets[0])) ==
+      offsets->offsets.size();
+  if (!is_uniform)
+    return; // TODO: Handle non-uniform responses.
+
+  bool changed = false;
+  module_sp->SetLoadAddress(GetTarget(), offsets->offsets[0],
+                            /*value_is_offset=*/true, changed);
+  if (changed) {
+    ModuleList list;
+    list.Append(module_sp);
+    m_process->GetTarget().ModulesDidLoad(list);
+  }
 }
 
 void ProcessGDBRemote::DidLaunch() {

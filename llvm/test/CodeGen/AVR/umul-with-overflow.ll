@@ -13,7 +13,7 @@ entry-block:
 ; CHECK: mov    [[HIGH:r[0-9]+]], r1
 ; CHECK: ldi    [[RET:r[0-9]+]], 1
 ; CHECK: cpi    {{.*}}[[HIGH]], 0
-; CHECK: brne   [[LABEL:LBB[_0-9]+]]
+; CHECK: brne   [[LABEL:.LBB[_0-9]+]]
 ; CHECK: ldi    {{.*}}[[RET]], 0
 ; CHECK: {{.*}}[[LABEL]]
 ; CHECK: ret

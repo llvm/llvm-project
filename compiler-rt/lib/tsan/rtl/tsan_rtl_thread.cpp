@@ -285,19 +285,34 @@ void ThreadFinish(ThreadState *thr) {
   ctx->thread_registry->FinishThread(thr->tid);
 }
 
-static bool FindThreadByUid(ThreadContextBase *tctx, void *arg) {
-  uptr uid = (uptr)arg;
-  if (tctx->user_id == uid && tctx->status != ThreadStatusInvalid) {
+struct ConsumeThreadContext {
+  uptr uid;
+  ThreadContextBase *tctx;
+};
+
+static bool ConsumeThreadByUid(ThreadContextBase *tctx, void *arg) {
+  ConsumeThreadContext *findCtx = (ConsumeThreadContext *)arg;
+  if (tctx->user_id == findCtx->uid && tctx->status != ThreadStatusInvalid) {
+    if (findCtx->tctx) {
+      // Ensure that user_id is unique. If it's not the case we are screwed.
+      // Something went wrong before, but now there is no way to recover.
+      // Returning a wrong thread is not an option, it may lead to very hard
+      // to debug false positives (e.g. if we join a wrong thread).
+      Report("ThreadSanitizer: dup thread with used id 0x%zx\n", findCtx->uid);
+      Die();
+    }
+    findCtx->tctx = tctx;
     tctx->user_id = 0;
-    return true;
   }
   return false;
 }
 
-int ThreadTid(ThreadState *thr, uptr pc, uptr uid) {
-  int res = ctx->thread_registry->FindThread(FindThreadByUid, (void*)uid);
-  DPrintf("#%d: ThreadTid uid=%zu tid=%d\n", thr->tid, uid, res);
-  return res;
+int ThreadConsumeTid(ThreadState *thr, uptr pc, uptr uid) {
+  ConsumeThreadContext findCtx = {uid, nullptr};
+  ctx->thread_registry->FindThread(ConsumeThreadByUid, &findCtx);
+  int tid = findCtx.tctx ? findCtx.tctx->tid : ThreadRegistry::kUnknownTid;
+  DPrintf("#%d: ThreadTid uid=%zu tid=%d\n", thr->tid, uid, tid);
+  return tid;
 }
 
 void ThreadJoin(ThreadState *thr, uptr pc, int tid) {
