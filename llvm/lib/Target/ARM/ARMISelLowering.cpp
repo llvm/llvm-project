@@ -717,7 +717,6 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
   if (Subtarget->hasFullFP16()) {
     addRegisterClass(MVT::f16, &ARM::HPRRegClass);
     setOperationAction(ISD::BITCAST, MVT::i16, Custom);
-    setOperationAction(ISD::BITCAST, MVT::i32, Custom);
     setOperationAction(ISD::BITCAST, MVT::f16, Custom);
 
     setOperationAction(ISD::FMINNUM, MVT::f16, Legal);
@@ -5738,27 +5737,6 @@ static SDValue ExpandBITCAST(SDNode *N, SelectionDAG &DAG,
   EVT SrcVT = Op.getValueType();
   EVT DstVT = N->getValueType(0);
   const bool HasFullFP16 = Subtarget->hasFullFP16();
-
-  if (SrcVT == MVT::f32 && DstVT == MVT::i32) {
-     // FullFP16: half values are passed in S-registers, and we don't
-     // need any of the bitcast and moves:
-     //
-     // t2: f32,ch = CopyFromReg t0, Register:f32 %0
-     //   t5: i32 = bitcast t2
-     // t18: f16 = ARMISD::VMOVhr t5
-     if (Op.getOpcode() != ISD::CopyFromReg ||
-         Op.getValueType() != MVT::f32)
-       return SDValue();
-
-     auto Move = N->use_begin();
-     if (Move->getOpcode() != ARMISD::VMOVhr)
-       return SDValue();
-
-     SDValue Ops[] = { Op.getOperand(0), Op.getOperand(1) };
-     SDValue Copy = DAG.getNode(ISD::CopyFromReg, SDLoc(Op), MVT::f16, Ops);
-     DAG.ReplaceAllUsesWith(*Move, &Copy);
-     return Copy;
-  }
 
   if (SrcVT == MVT::i16 && DstVT == MVT::f16) {
     if (!HasFullFP16)
@@ -12881,6 +12859,25 @@ static SDValue PerformVMOVDRRCombine(SDNode *N, SelectionDAG &DAG) {
   return SDValue();
 }
 
+static SDValue PerformVMOVhrCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
+  // FullFP16: half values are passed in S-registers, and we don't
+  // need any of the bitcast and moves:
+  //
+  //     t2: f32,ch = CopyFromReg t0, Register:f32 %0
+  //   t5: i32 = bitcast t2
+  // t18: f16 = ARMISD::VMOVhr t5
+  SDValue BC = N->getOperand(0);
+  if (BC->getOpcode() != ISD::BITCAST)
+    return SDValue();
+  SDValue Copy = BC->getOperand(0);
+  if (Copy.getValueType() != MVT::f32 || Copy->getOpcode() != ISD::CopyFromReg)
+    return SDValue();
+
+  SDValue Ops[] = {Copy->getOperand(0), Copy->getOperand(1)};
+  SDValue NewCopy = DCI.DAG.getNode(ISD::CopyFromReg, SDLoc(N), MVT::f16, Ops);
+  return NewCopy;
+}
+
 /// hasNormalLoadOperand - Check if any of the operands of a BUILD_VECTOR node
 /// are normal, non-volatile loads.  If so, it is profitable to bitcast an
 /// i64 vector to have f64 elements, since the value can then be loaded
@@ -14936,6 +14933,7 @@ SDValue ARMTargetLowering::PerformDAGCombine(SDNode *N,
   case ARMISD::BFI:     return PerformBFICombine(N, DCI);
   case ARMISD::VMOVRRD: return PerformVMOVRRDCombine(N, DCI, Subtarget);
   case ARMISD::VMOVDRR: return PerformVMOVDRRCombine(N, DCI.DAG);
+  case ARMISD::VMOVhr:  return PerformVMOVhrCombine(N, DCI);
   case ISD::STORE:      return PerformSTORECombine(N, DCI, Subtarget);
   case ISD::BUILD_VECTOR: return PerformBUILD_VECTORCombine(N, DCI, Subtarget);
   case ISD::INSERT_VECTOR_ELT: return PerformInsertEltCombine(N, DCI);
