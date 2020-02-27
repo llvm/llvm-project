@@ -86,8 +86,8 @@ Non-comprehensive list of changes in this release
 
 
 * Windows Control Flow Guard: the ``-cfguard`` option now emits CFG checks on
-  indirect function calls. The previous behavior is still available with the 
-  ``-cfguard-nochecks`` option. Note that this feature should always be used 
+  indirect function calls. The previous behavior is still available with the
+  ``-cfguard-nochecks`` option. Note that this feature should always be used
   with optimizations enabled.
 
 * ``Callbacks`` have been added to ``CommandLine Options``.  These can
@@ -122,6 +122,10 @@ Changes to the LLVM IR
   to update their tests; if so there is a script utils/add_argument_names.py
   that correctly converted 80-90% of Clang tests. Some manual work will almost
   certainly still be needed.
+
+* A new `freeze` instruction is added. The `freeze` instruction is used to stop
+  IR-level propagation of undef and poison values. Currently its support is
+  preliminary; a freeze-equivalent operation for SelDag/MIR needs to be added.
 
 
 Changes to building LLVM
