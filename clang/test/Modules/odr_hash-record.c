@@ -371,6 +371,16 @@ union U u;
 // expected-note@first.h:* {{declaration of 'b' does not match}}
 #endif
 
+#if defined(FIRST)
+struct TSS1 {
+  int tss1;
+};
+#elif defined(SECOND)
+typedef struct TSS1 TSS1;
+#else
+struct TSS1 *tss1;
+#endif
+
 // Keep macros contained to one file.
 #ifdef FIRST
 #undef FIRST

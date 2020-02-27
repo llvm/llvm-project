@@ -25,7 +25,7 @@
 // RUN: echo "}"                        >> %t/Inputs/module.map
 
 // Run test
-// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/cache -x objective-c -I%t/Inputs -verify %s -fblocks -fobjc-arc
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/cache -x objective-c -I%t/Inputs -verify %s -fblocks -fobjc-arc -Wno-objc-root-class
 
 #if !defined(FIRST) && !defined(SECOND)
 #include "first.h"
@@ -38,6 +38,8 @@
 @protocol X
 @end
 @protocol Y
+@end
+@interface Blues
 @end
 #endif
 
@@ -106,6 +108,23 @@
 @end
 // expected-error@first.h:* {{category 'Free' on interface 'Jazz' has different definitions in different modules; first difference is definition in module 'FirstModule' found property name 'f'}}
 // expected-note@second.h:* {{but in 'SecondModule' found property name 'd'}}
+#endif
+
+// Test that clang won't merge extensions by looking at
+// -Wincomplete-implementation warning for methods added in each extension
+#if defined(FIRST)
+@interface Blues ()
+-(void)play;
+@end
+#elif defined(SECOND)
+@interface Blues ()
+-(void)improvise;
+@end
+#else
+@implementation Blues // expected-warning {{method definition for 'play' not found}} expected-warning {{method definition for 'improvise' not found}}
+@end
+// expected-note@first.h:* {{method 'play' declared here}}
+// expected-note@second.h:* {{method 'improvise' declared here}}
 #endif
 
 // Keep macros contained to one file.

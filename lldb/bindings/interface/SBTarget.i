@@ -955,12 +955,6 @@ public:
     void
     SetLaunchInfo (const lldb::SBLaunchInfo &launch_info);
 
-    %feature("autodoc", "
-    Returns the platform's process extended crash information.") GetExtendedCrashInformation;
-    lldb::SBStructuredData
-    GetExtendedCrashInformation ();
-
-
     void SetCollectingStats(bool v);
 
     bool GetCollectingStats();

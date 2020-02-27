@@ -1453,12 +1453,13 @@ class DeclContext {
     /// Represents the way this type is passed to a function.
     uint64_t ArgPassingRestrictions : 2;
 
-    /// True if a valid hash is stored in ODRHash.
-    uint64_t HasODRHash : 1;
+    /// True if a valid hash is stored in ODRHash. This should shave off some
+    /// extra storage and prevent CXXRecordDecl to store unused bits.
+    uint64_t ODRHash : 28;
   };
 
   /// Number of non-inherited bits in RecordDeclBitfields.
-  enum { NumRecordDeclBits = 15 };
+  enum { NumRecordDeclBits = 42 };
 
   /// Stores the bits used by OMPDeclareReductionDecl.
   /// If modified NumOMPDeclareReductionDeclBits and the accessor

@@ -1,2 +1,2 @@
 # RUN: %lldb -x -b -o "settings show disassembly-format" | FileCheck %s
-# CHECK: disassembly-format (format-string) = "{${function.initial-function}{${module.file.basename}\`}{${function.name-without-args}}:\n}{${function.changed}\n{${module.file.basename}\`}{${function.name-without-args}}:\n}{${current-pc-arrow} }${addr-file-or-load}{ <${function.concrete-only-addr-offset-no-padding}>}: "
+# CHECK: disassembly-format (format-string) = "{${function.initial-function}{${module.file.basename}\`}{${function.name-without-args}}:\n}{${function.changed}\n{${module.file.basename}\`}{${function.name-without-args}}:\n}{${ansi.fg.yellow}${current-pc-arrow}${ansi.normal} }${addr-file-or-load}{ <${function.concrete-only-addr-offset-no-padding}>}: "
