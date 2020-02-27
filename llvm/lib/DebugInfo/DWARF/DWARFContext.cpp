@@ -65,8 +65,12 @@ using FileLineInfoKind = DILineInfoSpecifier::FileLineInfoKind;
 using FunctionNameKind = DILineInfoSpecifier::FunctionNameKind;
 
 DWARFContext::DWARFContext(std::unique_ptr<const DWARFObject> DObj,
-                           std::string DWPName)
-    : DIContext(CK_DWARF), DWPName(std::move(DWPName)), DObj(std::move(DObj)) {}
+                           std::string DWPName,
+                           std::function<void(Error)> RecoverableErrorHandler,
+                           std::function<void(Error)> WarningHandler)
+    : DIContext(CK_DWARF), DWPName(std::move(DWPName)),
+      RecoverableErrorHandler(RecoverableErrorHandler),
+      WarningHandler(WarningHandler), DObj(std::move(DObj)) {}
 
 DWARFContext::~DWARFContext() = default;
 
@@ -1885,18 +1889,25 @@ public:
 
 std::unique_ptr<DWARFContext>
 DWARFContext::create(const object::ObjectFile &Obj, const LoadedObjectInfo *L,
-                     function_ref<void(Error)> HandleError,
-                     std::string DWPName) {
-  auto DObj = std::make_unique<DWARFObjInMemory>(Obj, L, HandleError);
-  return std::make_unique<DWARFContext>(std::move(DObj), std::move(DWPName));
+                     std::string DWPName,
+                     std::function<void(Error)> RecoverableErrorHandler,
+                     std::function<void(Error)> WarningHandler) {
+  auto DObj =
+      std::make_unique<DWARFObjInMemory>(Obj, L, RecoverableErrorHandler);
+  return std::make_unique<DWARFContext>(std::move(DObj), std::move(DWPName),
+                                        RecoverableErrorHandler,
+                                        WarningHandler);
 }
 
 std::unique_ptr<DWARFContext>
 DWARFContext::create(const StringMap<std::unique_ptr<MemoryBuffer>> &Sections,
-                     uint8_t AddrSize, bool isLittleEndian) {
+                     uint8_t AddrSize, bool isLittleEndian,
+                     std::function<void(Error)> RecoverableErrorHandler,
+                     std::function<void(Error)> WarningHandler) {
   auto DObj =
       std::make_unique<DWARFObjInMemory>(Sections, AddrSize, isLittleEndian);
-  return std::make_unique<DWARFContext>(std::move(DObj), "");
+  return std::make_unique<DWARFContext>(
+      std::move(DObj), "", RecoverableErrorHandler, WarningHandler);
 }
 
 Error DWARFContext::loadRegisterInfo(const object::ObjectFile &Obj) {

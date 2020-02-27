@@ -18,12 +18,11 @@ declare <4 x i32> @llvm.fshr.v4i32(<4 x i32>, <4 x i32>, <4 x i32>)
 define i32 @fshl_i32(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: fshl_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w9, w2, #0x1f
+; CHECK-NEXT:    ands w9, w2, #0x1f
 ; CHECK-NEXT:    neg w9, w9
 ; CHECK-NEXT:    lsl w8, w0, w2
 ; CHECK-NEXT:    lsr w9, w1, w9
 ; CHECK-NEXT:    orr w8, w8, w9
-; CHECK-NEXT:    tst w2, #0x1f
 ; CHECK-NEXT:    csel w0, w0, w8, eq
 ; CHECK-NEXT:    ret
   %f = call i32 @llvm.fshl.i32(i32 %x, i32 %y, i32 %z)
@@ -146,12 +145,11 @@ define i8 @fshl_i8_const_fold() {
 define i32 @fshr_i32(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: fshr_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w9, w2, #0x1f
+; CHECK-NEXT:    ands w9, w2, #0x1f
 ; CHECK-NEXT:    neg w9, w9
 ; CHECK-NEXT:    lsr w8, w1, w2
 ; CHECK-NEXT:    lsl w9, w0, w9
 ; CHECK-NEXT:    orr w8, w9, w8
-; CHECK-NEXT:    tst w2, #0x1f
 ; CHECK-NEXT:    csel w0, w1, w8, eq
 ; CHECK-NEXT:    ret
   %f = call i32 @llvm.fshr.i32(i32 %x, i32 %y, i32 %z)

@@ -12,70 +12,84 @@ define fastcc void @_ZN12_GLOBAL__N_127PolynomialMultiplyRecognize9recognizeEv()
 ; CHECK-NEXT:    [[SUB_I:%.*]] = add nsw i32 undef, -1
 ; CHECK-NEXT:    [[CONV31_I:%.*]] = and i32 undef, [[SUB_I]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds %"struct.std::array", %"struct.std::array"* undef, i64 0, i32 0, i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[SUB_I]] to i8
+; CHECK-NEXT:    [[CONV_I_I1199:%.*]] = and i8 [[TMP1]], 1
+; CHECK-NEXT:    store i8 [[CONV_I_I1199]], i8* [[TMP0]], align 1
+; CHECK-NEXT:    [[SHR_I_I:%.*]] = lshr i32 [[CONV31_I]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i32 [[SHR_I_I]] to i8
+; CHECK-NEXT:    [[CONV_1_I_I:%.*]] = and i8 [[TMP2]], 1
 ; CHECK-NEXT:    [[ARRAYIDX_I_I7_1_I_I:%.*]] = getelementptr inbounds %"struct.std::array", %"struct.std::array"* undef, i64 0, i32 0, i64 1
+; CHECK-NEXT:    store i8 [[CONV_1_I_I]], i8* [[ARRAYIDX_I_I7_1_I_I]], align 1
+; CHECK-NEXT:    [[SHR_1_I_I:%.*]] = lshr i32 [[CONV31_I]], 2
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc i32 [[SHR_1_I_I]] to i8
+; CHECK-NEXT:    [[CONV_2_I_I:%.*]] = and i8 [[TMP3]], 1
 ; CHECK-NEXT:    [[ARRAYIDX_I_I7_2_I_I:%.*]] = getelementptr inbounds %"struct.std::array", %"struct.std::array"* undef, i64 0, i32 0, i64 2
+; CHECK-NEXT:    store i8 [[CONV_2_I_I]], i8* [[ARRAYIDX_I_I7_2_I_I]], align 1
+; CHECK-NEXT:    [[SHR_2_I_I:%.*]] = lshr i32 [[CONV31_I]], 3
+; CHECK-NEXT:    [[TMP4:%.*]] = trunc i32 [[SHR_2_I_I]] to i8
+; CHECK-NEXT:    [[CONV_3_I_I:%.*]] = and i8 [[TMP4]], 1
 ; CHECK-NEXT:    [[ARRAYIDX_I_I7_3_I_I:%.*]] = getelementptr inbounds %"struct.std::array", %"struct.std::array"* undef, i64 0, i32 0, i64 3
+; CHECK-NEXT:    store i8 [[CONV_3_I_I]], i8* [[ARRAYIDX_I_I7_3_I_I]], align 1
+; CHECK-NEXT:    [[SHR_3_I_I:%.*]] = lshr i32 [[CONV31_I]], 4
+; CHECK-NEXT:    [[TMP5:%.*]] = trunc i32 [[SHR_3_I_I]] to i8
+; CHECK-NEXT:    [[CONV_4_I_I:%.*]] = and i8 [[TMP5]], 1
 ; CHECK-NEXT:    [[ARRAYIDX_I_I7_4_I_I:%.*]] = getelementptr inbounds %"struct.std::array", %"struct.std::array"* undef, i64 0, i32 0, i64 4
+; CHECK-NEXT:    store i8 [[CONV_4_I_I]], i8* [[ARRAYIDX_I_I7_4_I_I]], align 1
+; CHECK-NEXT:    [[SHR_4_I_I:%.*]] = lshr i32 [[CONV31_I]], 5
+; CHECK-NEXT:    [[TMP6:%.*]] = trunc i32 [[SHR_4_I_I]] to i8
+; CHECK-NEXT:    [[CONV_5_I_I:%.*]] = and i8 [[TMP6]], 1
 ; CHECK-NEXT:    [[ARRAYIDX_I_I7_5_I_I:%.*]] = getelementptr inbounds %"struct.std::array", %"struct.std::array"* undef, i64 0, i32 0, i64 5
+; CHECK-NEXT:    store i8 [[CONV_5_I_I]], i8* [[ARRAYIDX_I_I7_5_I_I]], align 1
+; CHECK-NEXT:    [[SHR_5_I_I:%.*]] = lshr i32 [[CONV31_I]], 6
+; CHECK-NEXT:    [[TMP7:%.*]] = trunc i32 [[SHR_5_I_I]] to i8
+; CHECK-NEXT:    [[CONV_6_I_I:%.*]] = and i8 [[TMP7]], 1
 ; CHECK-NEXT:    [[ARRAYIDX_I_I7_6_I_I:%.*]] = getelementptr inbounds %"struct.std::array", %"struct.std::array"* undef, i64 0, i32 0, i64 6
+; CHECK-NEXT:    store i8 [[CONV_6_I_I]], i8* [[ARRAYIDX_I_I7_6_I_I]], align 1
+; CHECK-NEXT:    [[SHR_6_I_I:%.*]] = lshr i32 [[CONV31_I]], 7
+; CHECK-NEXT:    [[TMP8:%.*]] = trunc i32 [[SHR_6_I_I]] to i8
+; CHECK-NEXT:    [[CONV_7_I_I:%.*]] = and i8 [[TMP8]], 1
 ; CHECK-NEXT:    [[ARRAYIDX_I_I7_7_I_I:%.*]] = getelementptr inbounds %"struct.std::array", %"struct.std::array"* undef, i64 0, i32 0, i64 7
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i32> undef, i32 [[CONV31_I]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i32> [[TMP1]], i32 [[CONV31_I]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i32> [[TMP2]], i32 [[CONV31_I]], i32 2
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x i32> [[TMP3]], i32 [[CONV31_I]], i32 3
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x i32> [[TMP4]], i32 [[CONV31_I]], i32 4
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x i32> [[TMP5]], i32 [[CONV31_I]], i32 5
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x i32> [[TMP6]], i32 [[CONV31_I]], i32 6
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <8 x i32> [[TMP7]], i32 [[CONV31_I]], i32 7
-; CHECK-NEXT:    [[TMP9:%.*]] = lshr <8 x i32> [[TMP8]], <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8>
+; CHECK-NEXT:    store i8 [[CONV_7_I_I]], i8* [[ARRAYIDX_I_I7_7_I_I]], align 1
+; CHECK-NEXT:    [[SHR_7_I_I:%.*]] = lshr i32 [[CONV31_I]], 8
+; CHECK-NEXT:    [[TMP9:%.*]] = trunc i32 [[SHR_7_I_I]] to i8
+; CHECK-NEXT:    [[CONV_8_I_I:%.*]] = and i8 [[TMP9]], 1
 ; CHECK-NEXT:    [[ARRAYIDX_I_I7_8_I_I:%.*]] = getelementptr inbounds %"struct.std::array", %"struct.std::array"* undef, i64 0, i32 0, i64 8
+; CHECK-NEXT:    store i8 [[CONV_8_I_I]], i8* [[ARRAYIDX_I_I7_8_I_I]], align 1
+; CHECK-NEXT:    [[SHR_8_I_I:%.*]] = lshr i32 [[CONV31_I]], 9
+; CHECK-NEXT:    [[TMP10:%.*]] = trunc i32 [[SHR_8_I_I]] to i8
+; CHECK-NEXT:    [[CONV_9_I_I:%.*]] = and i8 [[TMP10]], 1
 ; CHECK-NEXT:    [[ARRAYIDX_I_I7_9_I_I:%.*]] = getelementptr inbounds %"struct.std::array", %"struct.std::array"* undef, i64 0, i32 0, i64 9
+; CHECK-NEXT:    store i8 [[CONV_9_I_I]], i8* [[ARRAYIDX_I_I7_9_I_I]], align 1
+; CHECK-NEXT:    [[SHR_9_I_I:%.*]] = lshr i32 [[CONV31_I]], 10
+; CHECK-NEXT:    [[TMP11:%.*]] = trunc i32 [[SHR_9_I_I]] to i8
+; CHECK-NEXT:    [[CONV_10_I_I:%.*]] = and i8 [[TMP11]], 1
 ; CHECK-NEXT:    [[ARRAYIDX_I_I7_10_I_I:%.*]] = getelementptr inbounds %"struct.std::array", %"struct.std::array"* undef, i64 0, i32 0, i64 10
+; CHECK-NEXT:    store i8 [[CONV_10_I_I]], i8* [[ARRAYIDX_I_I7_10_I_I]], align 1
+; CHECK-NEXT:    [[SHR_10_I_I:%.*]] = lshr i32 [[CONV31_I]], 11
+; CHECK-NEXT:    [[TMP12:%.*]] = trunc i32 [[SHR_10_I_I]] to i8
+; CHECK-NEXT:    [[CONV_11_I_I:%.*]] = and i8 [[TMP12]], 1
 ; CHECK-NEXT:    [[ARRAYIDX_I_I7_11_I_I:%.*]] = getelementptr inbounds %"struct.std::array", %"struct.std::array"* undef, i64 0, i32 0, i64 11
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x i32> undef, i32 [[CONV31_I]], i32 0
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i32> [[TMP10]], i32 [[CONV31_I]], i32 1
-; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x i32> [[TMP11]], i32 [[CONV31_I]], i32 2
-; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x i32> [[TMP12]], i32 [[CONV31_I]], i32 3
-; CHECK-NEXT:    [[TMP14:%.*]] = lshr <4 x i32> [[TMP13]], <i32 9, i32 10, i32 11, i32 12>
+; CHECK-NEXT:    store i8 [[CONV_11_I_I]], i8* [[ARRAYIDX_I_I7_11_I_I]], align 1
+; CHECK-NEXT:    [[SHR_11_I_I:%.*]] = lshr i32 [[CONV31_I]], 12
+; CHECK-NEXT:    [[TMP13:%.*]] = trunc i32 [[SHR_11_I_I]] to i8
+; CHECK-NEXT:    [[CONV_12_I_I:%.*]] = and i8 [[TMP13]], 1
 ; CHECK-NEXT:    [[ARRAYIDX_I_I7_12_I_I:%.*]] = getelementptr inbounds %"struct.std::array", %"struct.std::array"* undef, i64 0, i32 0, i64 12
+; CHECK-NEXT:    store i8 [[CONV_12_I_I]], i8* [[ARRAYIDX_I_I7_12_I_I]], align 1
 ; CHECK-NEXT:    [[SHR_12_I_I:%.*]] = lshr i32 [[CONV31_I]], 13
+; CHECK-NEXT:    [[TMP14:%.*]] = trunc i32 [[SHR_12_I_I]] to i8
+; CHECK-NEXT:    [[CONV_13_I_I:%.*]] = and i8 [[TMP14]], 1
 ; CHECK-NEXT:    [[ARRAYIDX_I_I7_13_I_I:%.*]] = getelementptr inbounds %"struct.std::array", %"struct.std::array"* undef, i64 0, i32 0, i64 13
+; CHECK-NEXT:    store i8 [[CONV_13_I_I]], i8* [[ARRAYIDX_I_I7_13_I_I]], align 1
 ; CHECK-NEXT:    [[SHR_13_I_I:%.*]] = lshr i32 [[CONV31_I]], 14
+; CHECK-NEXT:    [[TMP15:%.*]] = trunc i32 [[SHR_13_I_I]] to i8
+; CHECK-NEXT:    [[CONV_14_I_I:%.*]] = and i8 [[TMP15]], 1
 ; CHECK-NEXT:    [[ARRAYIDX_I_I7_14_I_I:%.*]] = getelementptr inbounds %"struct.std::array", %"struct.std::array"* undef, i64 0, i32 0, i64 14
+; CHECK-NEXT:    store i8 [[CONV_14_I_I]], i8* [[ARRAYIDX_I_I7_14_I_I]], align 1
 ; CHECK-NEXT:    [[SHR_14_I_I:%.*]] = lshr i32 [[CONV31_I]], 15
-; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <16 x i32> undef, i32 [[SUB_I]], i32 0
-; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <8 x i32> [[TMP9]], i32 0
-; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <16 x i32> [[TMP15]], i32 [[TMP16]], i32 1
-; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <8 x i32> [[TMP9]], i32 1
-; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <16 x i32> [[TMP17]], i32 [[TMP18]], i32 2
-; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <8 x i32> [[TMP9]], i32 2
-; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <16 x i32> [[TMP19]], i32 [[TMP20]], i32 3
-; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <8 x i32> [[TMP9]], i32 3
-; CHECK-NEXT:    [[TMP23:%.*]] = insertelement <16 x i32> [[TMP21]], i32 [[TMP22]], i32 4
-; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <8 x i32> [[TMP9]], i32 4
-; CHECK-NEXT:    [[TMP25:%.*]] = insertelement <16 x i32> [[TMP23]], i32 [[TMP24]], i32 5
-; CHECK-NEXT:    [[TMP26:%.*]] = extractelement <8 x i32> [[TMP9]], i32 5
-; CHECK-NEXT:    [[TMP27:%.*]] = insertelement <16 x i32> [[TMP25]], i32 [[TMP26]], i32 6
-; CHECK-NEXT:    [[TMP28:%.*]] = extractelement <8 x i32> [[TMP9]], i32 6
-; CHECK-NEXT:    [[TMP29:%.*]] = insertelement <16 x i32> [[TMP27]], i32 [[TMP28]], i32 7
-; CHECK-NEXT:    [[TMP30:%.*]] = extractelement <8 x i32> [[TMP9]], i32 7
-; CHECK-NEXT:    [[TMP31:%.*]] = insertelement <16 x i32> [[TMP29]], i32 [[TMP30]], i32 8
-; CHECK-NEXT:    [[TMP32:%.*]] = extractelement <4 x i32> [[TMP14]], i32 0
-; CHECK-NEXT:    [[TMP33:%.*]] = insertelement <16 x i32> [[TMP31]], i32 [[TMP32]], i32 9
-; CHECK-NEXT:    [[TMP34:%.*]] = extractelement <4 x i32> [[TMP14]], i32 1
-; CHECK-NEXT:    [[TMP35:%.*]] = insertelement <16 x i32> [[TMP33]], i32 [[TMP34]], i32 10
-; CHECK-NEXT:    [[TMP36:%.*]] = extractelement <4 x i32> [[TMP14]], i32 2
-; CHECK-NEXT:    [[TMP37:%.*]] = insertelement <16 x i32> [[TMP35]], i32 [[TMP36]], i32 11
-; CHECK-NEXT:    [[TMP38:%.*]] = extractelement <4 x i32> [[TMP14]], i32 3
-; CHECK-NEXT:    [[TMP39:%.*]] = insertelement <16 x i32> [[TMP37]], i32 [[TMP38]], i32 12
-; CHECK-NEXT:    [[TMP40:%.*]] = insertelement <16 x i32> [[TMP39]], i32 [[SHR_12_I_I]], i32 13
-; CHECK-NEXT:    [[TMP41:%.*]] = insertelement <16 x i32> [[TMP40]], i32 [[SHR_13_I_I]], i32 14
-; CHECK-NEXT:    [[TMP42:%.*]] = insertelement <16 x i32> [[TMP41]], i32 [[SHR_14_I_I]], i32 15
-; CHECK-NEXT:    [[TMP43:%.*]] = trunc <16 x i32> [[TMP42]] to <16 x i8>
-; CHECK-NEXT:    [[TMP44:%.*]] = and <16 x i8> [[TMP43]], <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+; CHECK-NEXT:    [[TMP16:%.*]] = trunc i32 [[SHR_14_I_I]] to i8
+; CHECK-NEXT:    [[CONV_15_I_I:%.*]] = and i8 [[TMP16]], 1
 ; CHECK-NEXT:    [[ARRAYIDX_I_I7_15_I_I:%.*]] = getelementptr inbounds %"struct.std::array", %"struct.std::array"* undef, i64 0, i32 0, i64 15
-; CHECK-NEXT:    [[TMP45:%.*]] = bitcast i8* [[TMP0]] to <16 x i8>*
-; CHECK-NEXT:    store <16 x i8> [[TMP44]], <16 x i8>* [[TMP45]], align 1
+; CHECK-NEXT:    store i8 [[CONV_15_I_I]], i8* [[ARRAYIDX_I_I7_15_I_I]], align 1
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.end50.i:
 ; CHECK-NEXT:    ret void

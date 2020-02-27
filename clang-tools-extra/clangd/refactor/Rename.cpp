@@ -531,8 +531,9 @@ llvm::Expected<FileEdits> rename(const RenameInputs &RInputs) {
   if (!MainFileRenameEdit)
     return MainFileRenameEdit.takeError();
 
-  if (!Opts.AllowCrossFile) {
-    // Within-file rename: just return the main file results.
+  // return the main file edit if this is a within-file rename or the symbol
+  // being renamed is function local.
+  if (!Opts.AllowCrossFile || RenameDecl.getParentFunctionOrMethod()) {
     return FileEdits(
         {std::make_pair(RInputs.MainFilePath,
                         Edit{MainFileCode, std::move(*MainFileRenameEdit)})});

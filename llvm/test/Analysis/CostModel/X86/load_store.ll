@@ -72,10 +72,10 @@ define i32 @loads(i32 %arg) {
   ;CHECK: cost of 3 {{.*}} load
   load <3 x i64>, <3 x i64>* undef, align 4
 
-  ;CHECK: cost of 10 {{.*}} load
+  ;CHECK: cost of 12 {{.*}} load
   load <5 x i32>, <5 x i32>* undef, align 4
 
-  ;CHECK: cost of 10 {{.*}} load
+  ;CHECK: cost of 14 {{.*}} load
   load <5 x i64>, <5 x i64>* undef, align 4
 
   ret i32 undef

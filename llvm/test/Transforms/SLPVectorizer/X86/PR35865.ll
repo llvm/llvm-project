@@ -5,13 +5,15 @@ define void @_Z10fooConvertPDv4_xS0_S0_PKS_() {
 ; CHECK-LABEL: @_Z10fooConvertPDv4_xS0_S0_PKS_(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <16 x half> undef, i32 4
-; CHECK-NEXT:    [[CONV_I_4_I:%.*]] = fpext half [[TMP0]] to float
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float [[CONV_I_4_I]] to i32
-; CHECK-NEXT:    [[VECINS_I_4_I:%.*]] = insertelement <8 x i32> undef, i32 [[TMP1]], i32 4
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <16 x half> undef, i32 5
-; CHECK-NEXT:    [[CONV_I_5_I:%.*]] = fpext half [[TMP2]] to float
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float [[CONV_I_5_I]] to i32
-; CHECK-NEXT:    [[VECINS_I_5_I:%.*]] = insertelement <8 x i32> [[VECINS_I_4_I]], i32 [[TMP3]], i32 5
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <16 x half> undef, i32 5
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x half> undef, half [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x half> [[TMP2]], half [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = fpext <2 x half> [[TMP3]] to <2 x float>
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <2 x float> [[TMP4]] to <2 x i32>
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i32> [[TMP5]], i32 0
+; CHECK-NEXT:    [[VECINS_I_4_I:%.*]] = insertelement <8 x i32> undef, i32 [[TMP6]], i32 4
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i32> [[TMP5]], i32 1
+; CHECK-NEXT:    [[VECINS_I_5_I:%.*]] = insertelement <8 x i32> [[VECINS_I_4_I]], i32 [[TMP7]], i32 5
 ; CHECK-NEXT:    ret void
 ;
 entry:

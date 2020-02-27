@@ -76,8 +76,6 @@ void FormatTokenLexer::tryMergePreviousTokens() {
     return;
 
   if (Style.isCSharp()) {
-    if (tryMergeCSharpNamedArgument())
-      return;
     if (tryMergeCSharpAttributeAndTarget())
       return;
     if (tryMergeCSharpKeywordVariables())
@@ -182,39 +180,6 @@ bool FormatTokenLexer::tryMergeJSPrivateIdentifier() {
                 Identifier->TokenText.end() - Hash->TokenText.begin());
   Hash->ColumnWidth += Identifier->ColumnWidth;
   Hash->Type = TT_JsPrivateIdentifier;
-  Tokens.erase(Tokens.end() - 1);
-  return true;
-}
-
-// Merge 'argName' and ':' into a single token in `foo(argName: bar)`.
-bool FormatTokenLexer::tryMergeCSharpNamedArgument() {
-  if (Tokens.size() < 2)
-    return false;
-  auto &Colon = *(Tokens.end() - 1);
-  if (!Colon->is(tok::colon))
-    return false;
-
-  auto &Name = *(Tokens.end() - 2);
-  if (!Name->is(tok::identifier))
-    return false;
-    
-  const FormatToken *CommaOrLeftParen = nullptr;
-  for (auto I = Tokens.rbegin() + 2, E = Tokens.rend(); I != E; ++I) {
-    // NB: Because previous pointers are not initialized yet, this cannot use
-    // Token.getPreviousNonComment.
-    if ((*I)->isNot(tok::comment)) {
-      CommaOrLeftParen = *I;
-      break;
-    }
-  }
-
-  if (!CommaOrLeftParen || !CommaOrLeftParen->isOneOf(tok::l_paren, tok::comma))
-    return false;
-
-  Name->TokenText = StringRef(Name->TokenText.begin(),
-                              Colon->TokenText.end() - Name->TokenText.begin());
-  Name->ColumnWidth += Colon->ColumnWidth;
-  Name->Type = TT_CSharpNamedArgument;
   Tokens.erase(Tokens.end() - 1);
   return true;
 }
@@ -609,7 +574,7 @@ void FormatTokenLexer::handleCSharpVerbatimAndInterpolatedStrings() {
   size_t LastBreak = LiteralText.rfind('\n');
   if (LastBreak != StringRef::npos) {
     CSharpStringLiteral->IsMultiline = true;
-    unsigned StartColumn = 0; // The template tail spans the entire line.
+    unsigned StartColumn = 0;
     CSharpStringLiteral->LastLineColumnWidth = encoding::columnWidthWithTabs(
         LiteralText.substr(LastBreak + 1, LiteralText.size()), StartColumn,
         Style.TabWidth, Encoding);

@@ -19,8 +19,8 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/raw_ostream.h"
-
 #include <string>
+#include <unordered_map>
 
 namespace clang {
 namespace tooling {

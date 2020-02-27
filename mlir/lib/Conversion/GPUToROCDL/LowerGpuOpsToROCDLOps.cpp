@@ -58,13 +58,19 @@ public:
                                                  "__ocml_cos_f64");
     patterns.insert<OpToFuncCallLowering<ExpOp>>(converter, "__ocml_exp_f32",
                                                  "__ocml_exp_f64");
+    patterns.insert<OpToFuncCallLowering<LogOp>>(converter, "__ocml_log_f32",
+                                                 "__ocml_log_f64");
+    patterns.insert<OpToFuncCallLowering<Log10Op>>(
+        converter, "__ocml_log10_f32", "__ocml_log10_f64");
+    patterns.insert<OpToFuncCallLowering<Log2Op>>(converter, "__ocml_log2_f32",
+                                                  "__ocml_log2_f64");
     patterns.insert<OpToFuncCallLowering<TanhOp>>(converter, "__ocml_tanh_f32",
                                                   "__ocml_tanh_f64");
 
     ConversionTarget target(getContext());
     target.addLegalDialect<LLVM::LLVMDialect, ROCDL::ROCDLDialect>();
-    target.addIllegalOp<LLVM::FAbsOp, LLVM::FCeilOp, LLVM::CosOp,
-                        LLVM::ExpOp>();
+    target.addIllegalOp<LLVM::CosOp, LLVM::ExpOp, LLVM::FAbsOp, LLVM::FCeilOp,
+                        LLVM::LogOp, LLVM::Log10Op, LLVM::Log2Op>();
     target.addDynamicallyLegalOp<LLVM::CallOp>(
         gpu::filterIllegalLLVMIntrinsics({"tanh", "tanhf"}, m.getContext()));
     target.addIllegalOp<FuncOp>();

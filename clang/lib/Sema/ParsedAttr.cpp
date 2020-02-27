@@ -25,6 +25,8 @@
 
 using namespace clang;
 
+LLVM_INSTANTIATE_REGISTRY(ParsedAttrInfoRegistry)
+
 IdentifierLoc *IdentifierLoc::create(ASTContext &Ctx, SourceLocation Loc,
                                      IdentifierInfo *Ident) {
   IdentifierLoc *Result = new (Ctx) IdentifierLoc;
@@ -100,66 +102,58 @@ void AttributePool::takePool(AttributePool &pool) {
   pool.Attrs.clear();
 }
 
-struct ParsedAttrInfo {
-  unsigned NumArgs : 4;
-  unsigned OptArgs : 4;
-  unsigned HasCustomParsing : 1;
-  unsigned IsTargetSpecific : 1;
-  unsigned IsType : 1;
-  unsigned IsStmt : 1;
-  unsigned IsKnownToGCC : 1;
-  unsigned IsSupportedByPragmaAttribute : 1;
-
-  virtual ~ParsedAttrInfo() = default;
-
-  virtual bool diagAppertainsToDecl(Sema &S, const ParsedAttr &Attr,
-                                    const Decl *) const {
-    return true;
-  }
-  virtual bool diagLangOpts(Sema &S, const ParsedAttr &Attr) const {
-    return true;
-  }
-  virtual bool existsInTarget(const TargetInfo &Target) const {
-    return true;
-  }
-  virtual unsigned
-  spellingIndexToSemanticSpelling(const ParsedAttr &Attr) const {
-    return UINT_MAX;
-  }
-  virtual void getPragmaAttributeMatchRules(
-    llvm::SmallVectorImpl<std::pair<attr::SubjectMatchRule, bool>> &Rules,
-    const LangOptions &LangOpts) const {
-  }
-};
-
 namespace {
 
 #include "clang/Sema/AttrParsedAttrImpl.inc"
 
 } // namespace
 
-static const ParsedAttrInfo &getInfo(const ParsedAttr &A) {
-  // If we have a ParsedAttrInfo for this ParsedAttr then return that,
-  // otherwise return a default ParsedAttrInfo.
-  if (A.getKind() < llvm::array_lengthof(AttrInfoMap))
-    return *AttrInfoMap[A.getKind()];
+const ParsedAttrInfo &ParsedAttrInfo::get(const AttributeCommonInfo &A) {
+  // If we have a ParsedAttrInfo for this ParsedAttr then return that.
+  if (A.getParsedKind() < llvm::array_lengthof(AttrInfoMap))
+    return *AttrInfoMap[A.getParsedKind()];
 
+  // If this is an ignored attribute then return an appropriate ParsedAttrInfo.
+  static ParsedAttrInfo IgnoredParsedAttrInfo(
+      AttributeCommonInfo::IgnoredAttribute);
+  if (A.getParsedKind() == AttributeCommonInfo::IgnoredAttribute)
+    return IgnoredParsedAttrInfo;
+
+  // Otherwise this may be an attribute defined by a plugin. First instantiate
+  // all plugin attributes if we haven't already done so.
+  static std::list<std::unique_ptr<ParsedAttrInfo>> PluginAttrInstances;
+  if (PluginAttrInstances.empty())
+    for (auto It : ParsedAttrInfoRegistry::entries())
+      PluginAttrInstances.emplace_back(It.instantiate());
+
+  // Search for a ParsedAttrInfo whose name and syntax match.
+  std::string FullName = A.getNormalizedFullName();
+  AttributeCommonInfo::Syntax SyntaxUsed = A.getSyntax();
+  if (SyntaxUsed == AttributeCommonInfo::AS_ContextSensitiveKeyword)
+    SyntaxUsed = AttributeCommonInfo::AS_Keyword;
+
+  for (auto &Ptr : PluginAttrInstances)
+    for (auto &S : Ptr->Spellings)
+      if (S.Syntax == SyntaxUsed && S.NormalizedFullName == FullName)
+        return *Ptr;
+
+  // If we failed to find a match then return a default ParsedAttrInfo.
   static ParsedAttrInfo DefaultParsedAttrInfo;
   return DefaultParsedAttrInfo;
 }
 
-unsigned ParsedAttr::getMinArgs() const { return getInfo(*this).NumArgs; }
+unsigned ParsedAttr::getMinArgs() const { return getInfo().NumArgs; }
 
 unsigned ParsedAttr::getMaxArgs() const {
-  return getMinArgs() + getInfo(*this).OptArgs;
+  return getMinArgs() + getInfo().OptArgs;
 }
 
 bool ParsedAttr::hasCustomParsing() const {
-  return getInfo(*this).HasCustomParsing;
+  return getInfo().HasCustomParsing;
 }
 
 bool ParsedAttr::diagnoseAppertainsTo(Sema &S, const Decl *D) const {
-  return getInfo(*this).diagAppertainsToDecl(S, *this, D);
+  return getInfo().diagAppertainsToDecl(S, *this, D);
 }
 
 bool ParsedAttr::appliesToDecl(const Decl *D,
@@ -171,33 +165,33 @@ void ParsedAttr::getMatchRules(
     const LangOptions &LangOpts,
     SmallVectorImpl<std::pair<attr::SubjectMatchRule, bool>> &MatchRules)
     const {
-  return getInfo(*this).getPragmaAttributeMatchRules(MatchRules, LangOpts);
+  return getInfo().getPragmaAttributeMatchRules(MatchRules, LangOpts);
 }
 
 bool ParsedAttr::diagnoseLangOpts(Sema &S) const {
-  return getInfo(*this).diagLangOpts(S, *this);
+  return getInfo().diagLangOpts(S, *this);
 }
 
 bool ParsedAttr::isTargetSpecificAttr() const {
-  return getInfo(*this).IsTargetSpecific;
+  return getInfo().IsTargetSpecific;
 }
 
-bool ParsedAttr::isTypeAttr() const { return getInfo(*this).IsType; }
+bool ParsedAttr::isTypeAttr() const { return getInfo().IsType; }
 
-bool ParsedAttr::isStmtAttr() const { return getInfo(*this).IsStmt; }
+bool ParsedAttr::isStmtAttr() const { return getInfo().IsStmt; }
 
 bool ParsedAttr::existsInTarget(const TargetInfo &Target) const {
-  return getInfo(*this).existsInTarget(Target);
+  return getInfo().existsInTarget(Target);
 }
 
-bool ParsedAttr::isKnownToGCC() const { return getInfo(*this).IsKnownToGCC; }
+bool ParsedAttr::isKnownToGCC() const { return getInfo().IsKnownToGCC; }
 
 bool ParsedAttr::isSupportedByPragmaAttribute() const {
-  return getInfo(*this).IsSupportedByPragmaAttribute;
+  return getInfo().IsSupportedByPragmaAttribute;
 }
 
 unsigned ParsedAttr::getSemanticSpelling() const {
-  return getInfo(*this).spellingIndexToSemanticSpelling(*this);
+  return getInfo().spellingIndexToSemanticSpelling(*this);
 }
 
 bool ParsedAttr::hasVariadicArg() const {
@@ -205,5 +199,5 @@ bool ParsedAttr::hasVariadicArg() const {
   // claim that as being variadic. If we someday get an attribute that
   // legitimately bumps up against that maximum, we can use another bit to track
   // whether it's truly variadic or not.
-  return getInfo(*this).OptArgs == 15;
+  return getInfo().OptArgs == 15;
 }

@@ -546,6 +546,8 @@ PrintOrderDetails(orderNum: 31, productName: "Red Mug",
 PrintOrderDetails(orderNum: 31, productName: "Red Mug",  // comment
                   sellerName: "Gift Shop");)",
                Style);
+
+  verifyFormat(R"(foreach (var tickCount in task.Begin(seed: 0)) {)", Style);
 }
 
 TEST_F(FormatTestCSharp, CSharpPropertyAccessors) {
@@ -595,6 +597,10 @@ TEST_F(FormatTestCSharp, CSharpSpaces) {
   verifyFormat(R"(bool[] xs = { true, true };)", Style);
   verifyFormat(R"(taskContext.Factory.Run(async () => doThing(args);)", Style);
   verifyFormat(R"(catch (TestException) when (innerFinallyExecuted))", Style);
+  verifyFormat(R"(private float[,] Values;)", Style);
+
+  Style.SpacesInSquareBrackets = true;
+  verifyFormat(R"(private float[, ] Values;)", Style);
 }
 
 } // namespace format

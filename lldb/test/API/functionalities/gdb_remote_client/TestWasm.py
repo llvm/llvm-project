@@ -94,6 +94,7 @@ class TestWasm(GDBRemoteTestBase):
         lldb.DBG.SetSelectedPlatform(self._initial_platform)
         super(TestWasm, self).tearDown()
 
+    @skipIfAsan
     @skipIfXmlSupportMissing
     def test_load_module_with_embedded_symbols_from_remote(self):
         """Test connecting to a WebAssembly engine via GDB-remote and loading a Wasm module with embedded DWARF symbols"""
@@ -137,6 +138,7 @@ class TestWasm(GDBRemoteTestBase):
         self.assertEquals(load_address | debug_line_section.GetFileOffset(), debug_line_section.GetLoadAddress(target))
 
         
+    @skipIfAsan
     @skipIfXmlSupportMissing
     def test_load_module_with_stripped_symbols_from_remote(self):
         """Test connecting to a WebAssembly engine via GDB-remote and loading a Wasm module with symbols stripped into a separate Wasm file"""
@@ -188,6 +190,7 @@ class TestWasm(GDBRemoteTestBase):
         self.assertEquals(LLDB_INVALID_ADDRESS, debug_line_section.GetLoadAddress(target))
 
 
+    @skipIfAsan
     @skipIfXmlSupportMissing
     def test_load_module_from_file(self):
         """Test connecting to a WebAssembly engine via GDB-remote and loading a Wasm module from a file"""
