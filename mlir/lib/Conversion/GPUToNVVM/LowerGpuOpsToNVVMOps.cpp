@@ -681,8 +681,8 @@ public:
     populateGpuToNVVMConversionPatterns(converter, patterns);
     ConversionTarget target(getContext());
     target.addIllegalDialect<gpu::GPUDialect>();
-    target.addIllegalOp<LLVM::FAbsOp, LLVM::FCeilOp, LLVM::CosOp,
-                        LLVM::ExpOp>();
+    target.addIllegalOp<LLVM::CosOp, LLVM::ExpOp, LLVM::FAbsOp, LLVM::FCeilOp,
+                        LLVM::LogOp, LLVM::Log10Op, LLVM::Log2Op>();
     target.addIllegalOp<FuncOp>();
     target.addLegalDialect<LLVM::LLVMDialect>();
     target.addLegalDialect<NVVM::NVVMDialect>();
@@ -719,6 +719,12 @@ void mlir::populateGpuToNVVMConversionPatterns(
                                                "__nv_cos");
   patterns.insert<OpToFuncCallLowering<ExpOp>>(converter, "__nv_expf",
                                                "__nv_exp");
+  patterns.insert<OpToFuncCallLowering<LogOp>>(converter, "__nv_logf",
+                                               "__nv_log");
+  patterns.insert<OpToFuncCallLowering<Log10Op>>(converter, "__nv_log10f",
+                                                 "__nv_log10");
+  patterns.insert<OpToFuncCallLowering<Log2Op>>(converter, "__nv_log2f",
+                                                "__nv_log2");
   patterns.insert<OpToFuncCallLowering<TanhOp>>(converter, "__nv_tanhf",
                                                 "__nv_tanh");
 }
