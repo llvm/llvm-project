@@ -524,10 +524,12 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::RealLiteralConstant &x) {
   if (letterKind) {
     defaultKind = *letterKind;
   }
+  // C716 requires 'E' as an exponent, but this is more useful
   auto kind{AnalyzeKindParam(x.kind, defaultKind)};
-  if (x.kind && letterKind && expoLetter != 'e') {  // C716
-    Say("Explicit kind parameter on REAL constant can only be used with"
-        " exponent letter 'E'"_err_en_US);
+  if (letterKind && kind != *letterKind && expoLetter != 'e') {
+    Say("Explicit kind parameter on real constant disagrees with "
+        "exponent letter '%c'"_en_US,
+        expoLetter);
   }
   auto result{common::SearchTypes(
       RealTypeVisitor{kind, x.real.source, GetFoldingContext()})};

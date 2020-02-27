@@ -6,9 +6,7 @@ subroutine s(var)
   real :: realvar1 = 4.0E6_4
   real :: realvar2 = 4.0D6
   real :: realvar3 = 4.0Q6
-  !ERROR: Explicit kind parameter on REAL constant can only be used with exponent letter 'E'
   real :: realvar4 = 4.0D6_8
-  !ERROR: Explicit kind parameter on REAL constant can only be used with exponent letter 'E'
   real :: realvar5 = 4.0Q6_16
   real :: realvar6 = 4.0E6_8
   real :: realvar7 = 4.0E6_10
@@ -19,9 +17,7 @@ subroutine s(var)
   double precision :: doublevar1 = 4.0E6_4
   double precision :: doublevar2 = 4.0D6
   double precision :: doublevar3 = 4.0Q6
-  !ERROR: Explicit kind parameter on REAL constant can only be used with exponent letter 'E'
   double precision :: doublevar4 = 4.0D6_8
-  !ERROR: Explicit kind parameter on REAL constant can only be used with exponent letter 'E'
   double precision :: doublevar5 = 4.0Q6_16
   double precision :: doublevar6 = 4.0E6_8
   double precision :: doublevar7 = 4.0E6_10

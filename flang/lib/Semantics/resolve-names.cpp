@@ -3277,7 +3277,8 @@ void DeclarationVisitor::Post(const parser::CharSelector::LengthAndKind &x) {
       !evaluate::IsValidKindOfIntrinsicType(
           TypeCategory::Character, *intKind)) {  // C715, C719
     Say(currStmtSource().value(),
-        "KIND value (%jd) not valid for CHARACTER"_err_en_US, *intKind);
+        "KIND value (%jd) not valid for CHARACTER"_err_en_US,
+        static_cast<std::intmax_t>(*intKind));
   }
   if (x.length) {
     charInfo_.length = GetParamValue(*x.length, common::TypeParamAttr::Len);

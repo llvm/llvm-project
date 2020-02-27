@@ -198,10 +198,7 @@ bool IsDummy(const Symbol &symbol) {
 
 bool IsStmtFunction(const Symbol &symbol) {
   const auto *subprogram{symbol.detailsIf<SubprogramDetails>()};
-  if (subprogram && subprogram->stmtFunction()) {
-    return true;
-  }
-  return false;
+  return subprogram && subprogram->stmtFunction();
 }
 
 bool IsInStmtFunction(const Symbol &symbol) {
