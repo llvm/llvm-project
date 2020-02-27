@@ -105,7 +105,7 @@ body:             |
   ; CHECK:   renamable $r3, dead $cpsr = tLSLri renamable $r2, 1, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $r12 = t2MOVi 4, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   tCMPi8 killed renamable $r3, 4, 14 /* CC::al */, $noreg, implicit-def $cpsr
-  ; CHECK:   t2IT 11, 8, implicit-def $itstate, implicit $cpsr
+  ; CHECK:   t2IT 11, 8, implicit-def $itstate
   ; CHECK:   $r1 = t2ADDri renamable $r0, 3, 11 /* CC::lt */, $noreg, $noreg, implicit $itstate
   ; CHECK:   $r3 = t2LSLri renamable $r2, 1, 11 /* CC::lt */, $cpsr, $noreg, implicit renamable $r12, implicit $itstate
   ; CHECK:   $r12 = t2LSLri renamable $r3, 1, 11 /* CC::lt */, killed $cpsr, $noreg, implicit killed renamable $r12, implicit killed $itstate
@@ -139,7 +139,7 @@ body:             |
     renamable $r3, dead $cpsr = tLSLri renamable $r2, 1, 14, $noreg
     renamable $r12 = t2MOVi 4, 14, $noreg, $noreg
     tCMPi8 renamable $r3, 4, 14, $noreg, implicit-def $cpsr
-    t2IT 11, 8, implicit-def $itstate, implicit $cpsr
+    t2IT 11, 8, implicit-def $itstate
     $r1 = t2ADDri killed renamable $r0, 3, 11, $noreg, $noreg, implicit $itstate
     $r3 = t2LSLri renamable $r2, 1, 11, $cpsr, $noreg, implicit renamable $r12, implicit $itstate
     $r12 = t2LSLri renamable $r3, 1, 11, killed $cpsr, $noreg, implicit killed renamable $r12, implicit killed $itstate

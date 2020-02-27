@@ -115,7 +115,7 @@ body:             |
   ; CHECK:   successors: %bb.1(0x80000000)
   ; CHECK:   liveins: $lr, $r0, $r1, $r2
   ; CHECK:   tCMPi8 renamable $r2, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
-  ; CHECK:   t2IT 0, 2, implicit-def $itstate, implicit $cpsr
+  ; CHECK:   t2IT 0, 2, implicit-def $itstate
   ; CHECK:   renamable $r0 = t2MOVi16 32767, 0 /* CC::eq */, $cpsr, implicit killed $r0, implicit $itstate
   ; CHECK:   renamable $r0 = tSXTH killed renamable $r0, 0 /* CC::eq */, $cpsr, implicit killed $r0, implicit $itstate
   ; CHECK:   tBX_RET 0 /* CC::eq */, killed $cpsr, implicit $r0, implicit killed $itstate
@@ -162,7 +162,7 @@ body:             |
     liveins: $r0, $r1, $r2, $lr
 
     tCMPi8 renamable $r2, 0, 14, $noreg, implicit-def $cpsr
-    t2IT 0, 2, implicit-def $itstate, implicit $cpsr
+    t2IT 0, 2, implicit-def $itstate
     renamable $r0 = t2MOVi16 32767, 0, $cpsr, implicit killed $r0, implicit $itstate
     renamable $r0 = tSXTH killed renamable $r0, 0, $cpsr, implicit killed $r0, implicit $itstate
     tBX_RET 0, killed $cpsr, implicit $r0, implicit killed $itstate

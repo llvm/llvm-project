@@ -249,7 +249,7 @@ body:             |
   ; CHECK:   renamable $r3 = t2CSINC $zr, $zr, 13, implicit killed $cpsr
   ; CHECK:   tCMPi8 renamable $r2, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
   ; CHECK:   renamable $r3 = t2ANDrr killed renamable $r3, killed renamable $r7, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   t2IT 12, 8, implicit-def $itstate, implicit $cpsr
+  ; CHECK:   t2IT 12, 8, implicit-def $itstate
   ; CHECK:   $r2 = tMOVi8 $noreg, 0, 12 /* CC::gt */, killed $cpsr, implicit killed renamable $r2, implicit killed $itstate
   ; CHECK:   renamable $r6 = tADDhirr killed renamable $r6, killed renamable $r3, 14 /* CC::al */, $noreg
   ; CHECK:   $lr = t2LEUpdate killed renamable $lr, %bb.2
@@ -331,7 +331,7 @@ body:             |
   ; CHECK:   renamable $r2 = t2CSINC $zr, $zr, 13, implicit killed $cpsr
   ; CHECK:   tCMPi8 renamable $r1, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
   ; CHECK:   renamable $r2 = t2ANDrr killed renamable $r2, killed renamable $r3, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   t2IT 12, 8, implicit-def $itstate, implicit $cpsr
+  ; CHECK:   t2IT 12, 8, implicit-def $itstate
   ; CHECK:   $r1 = tMOVi8 $noreg, 0, 12 /* CC::gt */, killed $cpsr, implicit killed renamable $r1, implicit killed $itstate
   ; CHECK:   renamable $r0 = tADDhirr killed renamable $r0, killed renamable $r2, 14 /* CC::al */, $noreg
   ; CHECK:   $lr = t2LEUpdate killed renamable $lr, %bb.10
@@ -400,7 +400,7 @@ body:             |
     renamable $r3 = t2CSINC $zr, $zr, 13, implicit killed $cpsr
     tCMPi8 renamable $r2, 0, 14, $noreg, implicit-def $cpsr
     renamable $r3 = t2ANDrr killed renamable $r3, killed renamable $r7, 14, $noreg, $noreg
-    t2IT 12, 8, implicit-def $itstate, implicit $cpsr
+    t2IT 12, 8, implicit-def $itstate
     $r2 = tMOVi8 $noreg, 0, 12, killed $cpsr, implicit killed renamable $r2, implicit killed $itstate
     renamable $r6 = tADDhirr killed renamable $r6, killed renamable $r3, 14, $noreg
     t2LoopEnd renamable $lr, %bb.2, implicit-def dead $cpsr
@@ -503,7 +503,7 @@ body:             |
     renamable $r2 = t2CSINC $zr, $zr, 13, implicit killed $cpsr
     tCMPi8 renamable $r1, 0, 14, $noreg, implicit-def $cpsr
     renamable $r2 = t2ANDrr killed renamable $r2, killed renamable $r3, 14, $noreg, $noreg
-    t2IT 12, 8, implicit-def $itstate, implicit $cpsr
+    t2IT 12, 8, implicit-def $itstate
     $r1 = tMOVi8 $noreg, 0, 12, killed $cpsr, implicit killed renamable $r1, implicit killed $itstate
     renamable $r0 = tADDhirr killed renamable $r0, killed renamable $r2, 14, $noreg
     t2LoopEnd renamable $lr, %bb.10, implicit-def dead $cpsr

@@ -265,7 +265,7 @@ body:             |
   ; CHECK:   renamable $r5 = t2CSINC $zr, $zr, 9, implicit killed $cpsr
   ; CHECK:   renamable $r5, dead $cpsr = tAND killed renamable $r5, killed renamable $r4, 14 /* CC::al */, $noreg
   ; CHECK:   dead renamable $r5, $cpsr = tLSLri killed renamable $r5, 31, 14 /* CC::al */, $noreg
-  ; CHECK:   t2IT 0, 4, implicit-def $itstate, implicit $cpsr
+  ; CHECK:   t2IT 0, 4, implicit-def $itstate
   ; CHECK:   renamable $r6 = t2ANDrr killed renamable $r6, killed renamable $r12, 0 /* CC::eq */, $cpsr, $noreg, implicit killed $r6, implicit $itstate
   ; CHECK:   dead renamable $r6 = t2LSLri killed renamable $r6, 31, 0 /* CC::eq */, killed $cpsr, def $cpsr, implicit killed $r6, implicit killed $itstate
   ; CHECK:   tBcc %bb.4, 0 /* CC::eq */, killed $cpsr
@@ -400,7 +400,7 @@ body:             |
     renamable $r5 = t2CSINC $zr, $zr, 9, implicit killed $cpsr
     renamable $r5, dead $cpsr = tAND killed renamable $r5, killed renamable $r4, 14, $noreg
     dead renamable $r5, $cpsr = tLSLri killed renamable $r5, 31, 14, $noreg
-    t2IT 0, 4, implicit-def $itstate, implicit $cpsr
+    t2IT 0, 4, implicit-def $itstate
     renamable $r6 = t2ANDrr killed renamable $r6, killed renamable $r12, 0, $cpsr, $noreg, implicit $r6, implicit $itstate
     dead renamable $r6 = t2LSLri killed renamable $r6, 31, 0, killed $cpsr, def $cpsr, implicit killed $r6, implicit killed $itstate
     tBcc %bb.4, 0, killed $cpsr

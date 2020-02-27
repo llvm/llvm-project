@@ -42,7 +42,7 @@ body: |
 
     t2CMPri $r0, 32, 14, $noreg, implicit-def $cpsr
     BUNDLE implicit-def dead $itstate, implicit-def $cpsr, implicit killed $r0, implicit killed $cpsr {
-      t2IT 1, 24, implicit-def $itstate, implicit $cpsr
+      t2IT 1, 24, implicit-def $itstate
       t2CMPri killed $r0, 9, 1, killed $cpsr, implicit-def $cpsr, implicit internal killed $itstate
     }
     t2Bcc %bb.3, 1, killed $cpsr
