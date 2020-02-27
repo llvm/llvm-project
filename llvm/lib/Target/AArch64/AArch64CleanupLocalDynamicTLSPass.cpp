@@ -106,7 +106,7 @@ struct LDTLSCleanup : public MachineFunctionPass {
                              .addReg(TLSBaseAddrReg);
 
     // Update the call site info.
-    if (I.isCandidateForCallSiteEntry())
+    if (I.shouldUpdateCallSiteInfo())
       I.getMF()->eraseCallSiteInfo(&I);
 
     // Erase the TLS_base_addr instruction.
