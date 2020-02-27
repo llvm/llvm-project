@@ -331,7 +331,7 @@ define float @unary_neg_ext_op1_extra_use(half %a, float %b) {
 define float @neg_trunc_op1_extra_use(double %a, float %b) {
 ; CHECK-LABEL: @neg_trunc_op1_extra_use(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc double [[A:%.*]] to float
-; CHECK-NEXT:    [[T2:%.*]] = fsub float -0.000000e+00, [[TMP1]]
+; CHECK-NEXT:    [[T2:%.*]] = fneg float [[TMP1]]
 ; CHECK-NEXT:    [[T3:%.*]] = fadd float [[TMP1]], [[B:%.*]]
 ; CHECK-NEXT:    call void @use(float [[T2]])
 ; CHECK-NEXT:    ret float [[T3]]

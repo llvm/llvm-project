@@ -269,7 +269,7 @@ define float @fold8_reassoc(float %f1) {
 
 define float @fsub_fadd_common_op_fneg(float %x, float %y) {
 ; CHECK-LABEL: @fsub_fadd_common_op_fneg(
-; CHECK-NEXT:    [[R:%.*]] = fsub fast float -0.000000e+00, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fneg fast float [[X:%.*]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %a = fadd float %x, %y
@@ -283,7 +283,7 @@ define float @fsub_fadd_common_op_fneg(float %x, float %y) {
 
 define float @fsub_fadd_common_op_fneg_reassoc_nsz(float %x, float %y) {
 ; CHECK-LABEL: @fsub_fadd_common_op_fneg_reassoc_nsz(
-; CHECK-NEXT:    [[R:%.*]] = fsub reassoc nsz float -0.000000e+00, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fneg reassoc nsz float [[X:%.*]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %a = fadd float %x, %y
@@ -295,7 +295,7 @@ define float @fsub_fadd_common_op_fneg_reassoc_nsz(float %x, float %y) {
 
 define <2 x float> @fsub_fadd_common_op_fneg_vec(<2 x float> %x, <2 x float> %y) {
 ; CHECK-LABEL: @fsub_fadd_common_op_fneg_vec(
-; CHECK-NEXT:    [[R:%.*]] = fsub reassoc nsz <2 x float> <float -0.000000e+00, float -0.000000e+00>, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fneg reassoc nsz <2 x float> [[X:%.*]]
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
   %a = fadd <2 x float> %x, %y
@@ -308,7 +308,7 @@ define <2 x float> @fsub_fadd_common_op_fneg_vec(<2 x float> %x, <2 x float> %y)
 
 define float @fsub_fadd_common_op_fneg_commute(float %x, float %y) {
 ; CHECK-LABEL: @fsub_fadd_common_op_fneg_commute(
-; CHECK-NEXT:    [[R:%.*]] = fsub reassoc nsz float -0.000000e+00, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fneg reassoc nsz float [[X:%.*]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %a = fadd float %y, %x
@@ -320,7 +320,7 @@ define float @fsub_fadd_common_op_fneg_commute(float %x, float %y) {
 
 define <2 x float> @fsub_fadd_common_op_fneg_commute_vec(<2 x float> %x, <2 x float> %y) {
 ; CHECK-LABEL: @fsub_fadd_common_op_fneg_commute_vec(
-; CHECK-NEXT:    [[R:%.*]] = fsub reassoc nsz <2 x float> <float -0.000000e+00, float -0.000000e+00>, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fneg reassoc nsz <2 x float> [[X:%.*]]
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
   %a = fadd <2 x float> %y, %x
@@ -333,7 +333,7 @@ define <2 x float> @fsub_fadd_common_op_fneg_commute_vec(<2 x float> %x, <2 x fl
 
 define float @fsub_fsub_common_op_fneg(float %x, float %y) {
 ; CHECK-LABEL: @fsub_fsub_common_op_fneg(
-; CHECK-NEXT:    [[R:%.*]] = fsub reassoc nsz float -0.000000e+00, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fneg reassoc nsz float [[X:%.*]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %s = fsub float %y, %x
@@ -345,7 +345,7 @@ define float @fsub_fsub_common_op_fneg(float %x, float %y) {
 
 define <2 x float> @fsub_fsub_common_op_fneg_vec(<2 x float> %x, <2 x float> %y) {
 ; CHECK-LABEL: @fsub_fsub_common_op_fneg_vec(
-; CHECK-NEXT:    [[R:%.*]] = fsub reassoc nsz <2 x float> <float -0.000000e+00, float -0.000000e+00>, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fneg reassoc nsz <2 x float> [[X:%.*]]
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
   %s = fsub <2 x float> %y, %x
@@ -534,7 +534,7 @@ define float @fneg1(float %f1, float %f2) {
 
 define float @fneg2(float %x) {
 ; CHECK-LABEL: @fneg2(
-; CHECK-NEXT:    [[SUB:%.*]] = fsub nsz float -0.000000e+00, [[X:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = fneg nsz float [[X:%.*]]
 ; CHECK-NEXT:    ret float [[SUB]]
 ;
   %sub = fsub nsz float 0.0, %x
@@ -543,7 +543,7 @@ define float @fneg2(float %x) {
 
 define <2 x float> @fneg2_vec_undef(<2 x float> %x) {
 ; CHECK-LABEL: @fneg2_vec_undef(
-; CHECK-NEXT:    [[SUB:%.*]] = fsub nsz <2 x float> <float -0.000000e+00, float -0.000000e+00>, [[X:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = fneg nsz <2 x float> [[X:%.*]]
 ; CHECK-NEXT:    ret <2 x float> [[SUB]]
 ;
   %sub = fsub nsz <2 x float> <float undef, float 0.0>, %x
