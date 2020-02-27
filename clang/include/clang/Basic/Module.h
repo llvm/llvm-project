@@ -15,13 +15,11 @@
 #ifndef LLVM_CLANG_BASIC_MODULE_H
 #define LLVM_CLANG_BASIC_MODULE_H
 
-#include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/PointerIntPair.h"
-#include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/STLExtras.h"
@@ -44,6 +42,9 @@ class raw_ostream;
 
 namespace clang {
 
+class DirectoryEntry;
+class FileEntry;
+class FileManager;
 class LangOptions;
 class TargetInfo;
 
@@ -101,7 +102,7 @@ public:
   std::string PresumedModuleMapFile;
 
   /// The umbrella header or directory.
-  llvm::PointerUnion<const DirectoryEntry *, const FileEntry *> Umbrella;
+  const void *Umbrella = nullptr;
 
   /// The module signature.
   ASTFileSignature Signature;
@@ -267,6 +268,9 @@ public:
   /// Whether this module came from a "private" module map, found next
   /// to a regular (public) module map.
   unsigned ModuleMapIsPrivate : 1;
+
+  /// Whether Umbrella is a directory or header.
+  unsigned HasUmbrellaDir : 1;
 
   /// Describes the visibility of the various names within a
   /// particular module.
@@ -487,22 +491,18 @@ public:
   /// Retrieve the header that serves as the umbrella header for this
   /// module.
   Header getUmbrellaHeader() const {
-    if (auto *E = Umbrella.dyn_cast<const FileEntry *>())
-      return Header{UmbrellaAsWritten, E};
+    if (!HasUmbrellaDir)
+      return Header{UmbrellaAsWritten,
+                    static_cast<const FileEntry *>(Umbrella)};
     return Header{};
   }
 
   /// Determine whether this module has an umbrella directory that is
   /// not based on an umbrella header.
-  bool hasUmbrellaDir() const {
-    return Umbrella && Umbrella.is<const DirectoryEntry *>();
-  }
+  bool hasUmbrellaDir() const { return Umbrella && HasUmbrellaDir; }
 
   /// Add a top-level header associated with this module.
-  void addTopHeader(const FileEntry *File) {
-    assert(File);
-    TopHeaders.insert(File);
-  }
+  void addTopHeader(const FileEntry *File);
 
   /// Add a top-level header filename associated with this module.
   void addTopHeaderFilename(StringRef Filename) {
