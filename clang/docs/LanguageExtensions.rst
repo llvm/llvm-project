@@ -1783,6 +1783,52 @@ controlled state.
 
 .. _langext-__builtin_shufflevector:
 
+``__builtin_dump_struct``
+-------------------------
+
+**Syntax**:
+
+.. code-block:: c++
+
+     __builtin_dump_struct(&some_struct, &some_printf_func);
+
+**Examples**:
+
+.. code-block:: c++
+
+     struct S {
+       int x, y;
+       float f;
+       struct T {
+         int i;
+       } t;
+     };
+
+     void func(struct S *s) {
+       __builtin_dump_struct(s, &printf);
+     }
+
+Example output:
+
+.. code-block:: none
+
+     struct S {
+     int i : 100
+     int j : 42
+     float f : 3.14159
+     struct T t : struct T {
+         int i : 1997
+         }
+     }
+
+**Description**:
+
+The '``__builtin_dump_struct``' function is used to print the fields of a simple
+structure and their values for debugging purposes. The builtin accepts a pointer
+to a structure to dump the fields of, and a pointer to a formatted output
+function whose signature must be: ``int (*)(const char *, ...)`` and must
+support the format specifiers used by ``printf()``.
+
 ``__builtin_shufflevector``
 ---------------------------
 
