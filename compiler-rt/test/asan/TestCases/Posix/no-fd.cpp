@@ -4,6 +4,11 @@
 
 // Test ASan initialization
 
+// This test closes the 0, 1, and 2 file descriptors before an exec() and relies
+// on them remaining closed across an execve(). This is not the case on newer
+// versions of Android.
+// UNSUPPORTED: android
+
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>

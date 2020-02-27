@@ -1,5 +1,9 @@
 // RUN: %clangxx -g %s -o %t && %run %t
 
+// Newer versions of Android have FDSan, and will fail this test as FDSan will
+// catch the error instead.
+// UNSUPPORTED: android
+
 #include <assert.h>
 #include <stdio.h>
 #include <unistd.h>
