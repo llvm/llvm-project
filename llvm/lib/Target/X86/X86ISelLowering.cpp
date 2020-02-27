@@ -28525,7 +28525,6 @@ static SDValue LowerMSCATTER(SDValue Op, const X86Subtarget &Subtarget,
   }
 
   MVT IndexVT = Index.getSimpleValueType();
-  MVT MaskVT = Mask.getSimpleValueType();
 
   // If the index is v2i32, we're being called by type legalization and we
   // should just let the default handling take care of it.
@@ -28543,7 +28542,7 @@ static SDValue LowerMSCATTER(SDValue Op, const X86Subtarget &Subtarget,
 
     VT = MVT::getVectorVT(VT.getVectorElementType(), NumElts);
     IndexVT = MVT::getVectorVT(IndexVT.getVectorElementType(), NumElts);
-    MaskVT = MVT::getVectorVT(MVT::i1, NumElts);
+    MVT MaskVT = MVT::getVectorVT(MVT::i1, NumElts);
 
     Src = ExtendToType(Src, VT, DAG);
     Index = ExtendToType(Index, IndexVT, DAG);
@@ -28677,7 +28676,6 @@ static SDValue LowerMGATHER(SDValue Op, const X86Subtarget &Subtarget,
   SDValue Mask = N->getMask();
   SDValue PassThru = N->getPassThru();
   MVT IndexVT = Index.getSimpleValueType();
-  MVT MaskVT = Mask.getSimpleValueType();
 
   assert(VT.getScalarSizeInBits() >= 32 && "Unsupported gather op");
 
@@ -28698,7 +28696,7 @@ static SDValue LowerMGATHER(SDValue Op, const X86Subtarget &Subtarget,
 
     VT = MVT::getVectorVT(VT.getVectorElementType(), NumElts);
     IndexVT = MVT::getVectorVT(IndexVT.getVectorElementType(), NumElts);
-    MaskVT = MVT::getVectorVT(MVT::i1, NumElts);
+    MVT MaskVT = MVT::getVectorVT(MVT::i1, NumElts);
 
     PassThru = ExtendToType(PassThru, VT, DAG);
     Index = ExtendToType(Index, IndexVT, DAG);
