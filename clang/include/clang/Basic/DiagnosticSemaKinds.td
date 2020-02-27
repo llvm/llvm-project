@@ -6237,8 +6237,8 @@ def err_typecheck_illegal_increment_decrement : Error<
   "cannot %select{decrement|increment}1 value of type %0">;
 def err_typecheck_expect_int : Error<
   "used type %0 where integer is required">;
-def err_typecheck_arithmetic_incomplete_type : Error<
-  "arithmetic on a pointer to an incomplete type %0">;
+def err_typecheck_arithmetic_incomplete_or_sizeless_type : Error<
+  "arithmetic on a pointer to %select{an incomplete|sizeless}0 type %1">;
 def err_typecheck_pointer_arith_function_type : Error<
   "arithmetic on%select{ a|}0 pointer%select{|s}0 to%select{ the|}2 "
   "function type%select{|s}2 %1%select{| and %3}2">;
