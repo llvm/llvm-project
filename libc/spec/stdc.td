@@ -8,6 +8,14 @@ def StdC : StandardSpec<"stdc"> {
   RestrictedPtrType CharRestrictedPtr = RestrictedPtrType<CharType>;
   ConstType ConstCharRestrictedPtr = ConstType<CharRestrictedPtr>;
 
+  NamedType MtxTType = NamedType<"mtx_t">;
+  PtrType MtxTTypePtr = PtrType<MtxTType>;
+  NamedType ThrdStartTType = NamedType<"thrd_start_t">;
+  NamedType ThrdTType = NamedType<"thrd_t">;
+  PtrType ThrdTTypePtr = PtrType<ThrdTType>;
+
+  PtrType IntPtr = PtrType<IntType>;
+
   HeaderSpec String = HeaderSpec<
       "string.h",
       [
@@ -16,6 +24,7 @@ def StdC : StandardSpec<"stdc"> {
       [
           SizeTType,
       ],
+      [], // Enumerations
       [
           FunctionSpec<
               "memcpy",
@@ -143,6 +152,7 @@ def StdC : StandardSpec<"stdc"> {
           NamedType<"float_t">,
           NamedType<"double_t">,
       ],
+      [], // Enumerations
       [
           FunctionSpec<"acos", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
           FunctionSpec<"acosl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>]>,
@@ -155,6 +165,7 @@ def StdC : StandardSpec<"stdc"> {
       [ // Types
           SizeTType,
       ],
+      [], // Enumerations
       [
           FunctionSpec<
               "snprintf",
@@ -174,9 +185,7 @@ def StdC : StandardSpec<"stdc"> {
         Macro<"EDOM">,
         Macro<"EILSEQ">,
         Macro<"ERANGE">,
-      ],
-      [], // Types
-      []  // Functions
+      ]
   >;
 
   HeaderSpec Signal = HeaderSpec<
@@ -197,8 +206,70 @@ def StdC : StandardSpec<"stdc"> {
         NamedType<"sigset_t">,
         SizeTType,
       ],
+      [], // Enumerations
       [
         FunctionSpec<"raise", RetValSpec<IntType>, [ArgSpec<IntType>]>,
+      ]
+  >;
+
+  HeaderSpec Threads = HeaderSpec<
+      "threads.h",
+      [], // Macros
+      [
+          MtxTType,
+          ThrdStartTType,
+          ThrdTType,
+      ],
+      [
+          EnumeratedNameValue<"mtx_plain">,
+          EnumeratedNameValue<"mtx_recursive">,
+          EnumeratedNameValue<"mtx_timed">,
+          EnumeratedNameValue<"thrd_timedout">,
+          EnumeratedNameValue<"thrd_success">,
+          EnumeratedNameValue<"thrd_busy">,
+          EnumeratedNameValue<"thrd_error">,
+          EnumeratedNameValue<"thrd_nomem">,
+      ],
+      [
+          FunctionSpec<
+              "mtx_init",
+              RetValSpec<IntType>,
+              [
+                  ArgSpec<MtxTTypePtr>,
+                  ArgSpec<IntType>,
+              ]
+          >,
+          FunctionSpec<
+              "mtx_lock",
+              RetValSpec<IntType>,
+              [
+                  ArgSpec<MtxTTypePtr>,
+              ]
+          >,
+          FunctionSpec<
+              "mtx_unlock",
+              RetValSpec<IntType>,
+              [
+                  ArgSpec<MtxTTypePtr>,
+              ]
+          >,
+          FunctionSpec<
+              "thrd_create",
+              RetValSpec<IntType>,
+              [
+                  ArgSpec<ThrdTTypePtr>,
+                  ArgSpec<ThrdStartTType>,
+                  ArgSpec<VoidPtr>,
+              ]
+          >,
+          FunctionSpec<
+              "thrd_join",
+              RetValSpec<IntType>,
+              [
+                  ArgSpec<ThrdTTypePtr>,
+                  ArgSpec<IntPtr>,
+              ]
+          >
       ]
   >;
 
@@ -208,5 +279,6 @@ def StdC : StandardSpec<"stdc"> {
     String,
     StdIO,
     Signal,
+    Threads,
   ];
 }

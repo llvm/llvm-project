@@ -143,3 +143,16 @@ def SignalAPI : PublicAPI<"signal.h"> {
     "raise",
   ];
 }
+
+def ThreadsAPI : PublicAPI<"threads.h"> {
+  let Enumerations = [
+    "mtx_plain",
+    "mtx_recursive",
+    "mtx_timed",
+    "thrd_timedout",
+    "thrd_success",
+    "thrd_busy",
+    "thrd_error",
+    "thrd_nomem",
+  ];
+}

@@ -75,11 +75,13 @@ class APIGenerator {
   // Mapping from names to records defining them.
   NameToRecordMapping MacroSpecMap;
   NameToRecordMapping TypeSpecMap;
+  NameToRecordMapping EnumerationSpecMap;
   NameToRecordMapping FunctionSpecMap;
   NameToRecordMapping MacroDefsMap;
   NameToRecordMapping TypeDeclsMap;
 
   NameSet Structs;
+  NameSet Enumerations;
   NameSet Functions;
 
   bool isaNamedType(llvm::Record *Def) { return isa(Def, NamedTypeClass); }
@@ -136,6 +138,13 @@ class APIGenerator {
           FunctionSpecMap[std::string(FunctionSpec->getValueAsString("Name"))] =
               FunctionSpec;
         }
+
+        auto EnumerationSpecList =
+            HeaderSpec->getValueAsListOfDefs("Enumerations");
+        for (llvm::Record *EnumerationSpec : EnumerationSpecList) {
+          EnumerationSpecMap[std::string(
+              EnumerationSpec->getValueAsString("Name"))] = EnumerationSpec;
+        }
       }
     }
   }
@@ -159,6 +168,10 @@ class APIGenerator {
     auto FunctionList = PublicAPI->getValueAsListOfStrings("Functions");
     for (llvm::StringRef FunctionName : FunctionList)
       Functions.insert(std::string(FunctionName));
+
+    auto EnumerationList = PublicAPI->getValueAsListOfStrings("Enumerations");
+    for (llvm::StringRef EnumerationName : EnumerationList)
+      Enumerations.insert(std::string(EnumerationName));
   }
 
   void index(llvm::RecordKeeper &Records) {
@@ -210,6 +223,25 @@ public:
 
       OS << '\n';
     }
+
+    if (Enumerations.size() != 0)
+      OS << "enum {" << '\n';
+    for (const auto &Name : Enumerations) {
+      if (EnumerationSpecMap.find(Name) == EnumerationSpecMap.end())
+        llvm::PrintFatalError(
+            Name + " is not listed as an enumeration in any standard spec.\n");
+
+      llvm::Record *EnumerationSpec = EnumerationSpecMap[Name];
+      OS << "  " << EnumerationSpec->getValueAsString("Name");
+      auto Value = EnumerationSpec->getValueAsString("Value");
+      if (Value == "__default__") {
+        OS << ",\n";
+      } else {
+        OS << " = " << Value << ",\n";
+      }
+    }
+    if (Enumerations.size() != 0)
+      OS << "};\n\n";
 
     OS << "__BEGIN_C_DECLS\n\n";
     for (auto &Name : Functions) {
