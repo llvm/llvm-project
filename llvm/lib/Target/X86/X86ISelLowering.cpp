@@ -26486,9 +26486,12 @@ SDValue X86TargetLowering::LowerWin64_i128OP(SDValue Op, SelectionDAG &DAG) cons
     assert(ArgVT.isInteger() && ArgVT.getSizeInBits() == 128 &&
            "Unexpected argument type for lowering");
     SDValue StackPtr = DAG.CreateStackTemporary(ArgVT, 16);
+    int SPFI = cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex();
+    MachinePointerInfo MPI =
+        MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), SPFI);
     Entry.Node = StackPtr;
     InChain = DAG.getStore(InChain, dl, Op->getOperand(i), StackPtr,
-                           MachinePointerInfo(), /* Alignment = */ 16);
+                           MPI, /* Alignment = */ 16);
     Type *ArgTy = ArgVT.getTypeForEVT(*DAG.getContext());
     Entry.Ty = PointerType::get(ArgTy,0);
     Entry.IsSExt = false;
