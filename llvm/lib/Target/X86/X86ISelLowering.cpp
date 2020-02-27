@@ -566,7 +566,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FGETSIGN, MVT::i64, Custom);
     setOperationAction(ISD::FGETSIGN, MVT::i32, Custom);
 
-  } else if (!useSoftFloat() && X86ScalarSSEf32 && (UseX87 || Is64Bit)) {
+  } else if (!Subtarget.useSoftFloat() && X86ScalarSSEf32 &&
+             (UseX87 || Is64Bit)) {
     // Use SSE for f32, x87 for f64.
     // Set up the FP register classes.
     addRegisterClass(MVT::f32, &X86::FR32RegClass);
