@@ -68,26 +68,25 @@ define i128 @mul_i128(i128 %x, i128 %y) {
 define i160 @mul_i160(i160 %x, i160 %y) {
 ; CHECK-LABEL: mul_i160:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mul x9, x1, x4
-; CHECK-NEXT:    mul x10, x1, x5
-; CHECK-NEXT:    mul x11, x0, x5
-; CHECK-NEXT:    umulh x12, x0, x4
-; CHECK-NEXT:    madd x10, x2, x4, x10
-; CHECK-NEXT:    adds x9, x9, x11
-; CHECK-NEXT:    umulh x13, x1, x4
+; CHECK-NEXT:    mul x8, x1, x4
+; CHECK-NEXT:    mul x9, x0, x5
+; CHECK-NEXT:    umulh x10, x0, x4
+; CHECK-NEXT:    mul x11, x2, x4
+; CHECK-NEXT:    adds x8, x8, x9
+; CHECK-NEXT:    mul x12, x1, x5
+; CHECK-NEXT:    mul x13, x0, x6
+; CHECK-NEXT:    umulh x14, x1, x4
+; CHECK-NEXT:    adcs x1, x8, x10
+; CHECK-NEXT:    adc x9, xzr, xzr
+; CHECK-NEXT:    adds x10, x11, x12
+; CHECK-NEXT:    umulh x8, x0, x5
 ; CHECK-NEXT:    cset w11, hs
-; CHECK-NEXT:    adds x1, x9, x12
-; CHECK-NEXT:    and x11, x11, #0x1
-; CHECK-NEXT:    umulh x14, x0, x5
-; CHECK-NEXT:    mul x8, x0, x4
-; CHECK-NEXT:    madd x9, x0, x6, x10
-; CHECK-NEXT:    cset w10, hs
-; CHECK-NEXT:    and x10, x10, #0x1
-; CHECK-NEXT:    add x10, x11, x10
-; CHECK-NEXT:    add x11, x13, x14
-; CHECK-NEXT:    add x10, x11, x10
-; CHECK-NEXT:    mov x0, x8
-; CHECK-NEXT:    add x2, x9, x10
+; CHECK-NEXT:    adc x10, x10, x13
+; CHECK-NEXT:    cmp w11, #1
+; CHECK-NEXT:    mul x0, x0, x4
+; CHECK-NEXT:    adc x10, x10, x14
+; CHECK-NEXT:    adc x8, x10, x8
+; CHECK-NEXT:    adc x2, x8, x9
 ; CHECK-NEXT:    ret
   %mul = mul i160 %x, %y
   ret i160 %mul
@@ -96,26 +95,25 @@ define i160 @mul_i160(i160 %x, i160 %y) {
 define i192 @mul_i192(i192 %x, i192 %y) {
 ; CHECK-LABEL: mul_i192:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mul x9, x1, x4
-; CHECK-NEXT:    mul x10, x1, x5
-; CHECK-NEXT:    mul x11, x0, x5
-; CHECK-NEXT:    umulh x12, x0, x4
-; CHECK-NEXT:    madd x10, x2, x4, x10
-; CHECK-NEXT:    adds x9, x9, x11
-; CHECK-NEXT:    umulh x13, x1, x4
+; CHECK-NEXT:    mul x8, x1, x4
+; CHECK-NEXT:    mul x9, x0, x5
+; CHECK-NEXT:    umulh x10, x0, x4
+; CHECK-NEXT:    mul x11, x2, x4
+; CHECK-NEXT:    adds x8, x8, x9
+; CHECK-NEXT:    mul x12, x1, x5
+; CHECK-NEXT:    mul x13, x0, x6
+; CHECK-NEXT:    umulh x14, x1, x4
+; CHECK-NEXT:    adcs x1, x8, x10
+; CHECK-NEXT:    adc x9, xzr, xzr
+; CHECK-NEXT:    adds x10, x11, x12
+; CHECK-NEXT:    umulh x8, x0, x5
 ; CHECK-NEXT:    cset w11, hs
-; CHECK-NEXT:    adds x1, x9, x12
-; CHECK-NEXT:    and x11, x11, #0x1
-; CHECK-NEXT:    umulh x14, x0, x5
-; CHECK-NEXT:    mul x8, x0, x4
-; CHECK-NEXT:    madd x9, x0, x6, x10
-; CHECK-NEXT:    cset w10, hs
-; CHECK-NEXT:    and x10, x10, #0x1
-; CHECK-NEXT:    add x10, x11, x10
-; CHECK-NEXT:    add x11, x13, x14
-; CHECK-NEXT:    add x10, x11, x10
-; CHECK-NEXT:    mov x0, x8
-; CHECK-NEXT:    add x2, x9, x10
+; CHECK-NEXT:    adc x10, x10, x13
+; CHECK-NEXT:    cmp w11, #1
+; CHECK-NEXT:    mul x0, x0, x4
+; CHECK-NEXT:    adc x10, x10, x14
+; CHECK-NEXT:    adc x8, x10, x8
+; CHECK-NEXT:    adc x2, x8, x9
 ; CHECK-NEXT:    ret
   %mul = mul i192 %x, %y
   ret i192 %mul
@@ -127,50 +125,40 @@ define i224 @mul_i224(i224 %x, i224 %y) {
 ; CHECK-NEXT:    mul x8, x1, x4
 ; CHECK-NEXT:    mul x9, x0, x5
 ; CHECK-NEXT:    umulh x10, x0, x4
-; CHECK-NEXT:    mul x14, x2, x5
-; CHECK-NEXT:    adds x8, x8, x9
 ; CHECK-NEXT:    mul x11, x2, x4
-; CHECK-NEXT:    cset w9, hs
-; CHECK-NEXT:    adds x8, x8, x10
-; CHECK-NEXT:    and x9, x9, #0x1
+; CHECK-NEXT:    adds x8, x8, x9
 ; CHECK-NEXT:    mul x12, x1, x5
-; CHECK-NEXT:    cset w10, hs
-; CHECK-NEXT:    and x10, x10, #0x1
+; CHECK-NEXT:    adcs x8, x8, x10
+; CHECK-NEXT:    mul x14, x2, x5
+; CHECK-NEXT:    adc x10, xzr, xzr
 ; CHECK-NEXT:    mul x13, x0, x6
-; CHECK-NEXT:    add x9, x9, x10
-; CHECK-NEXT:    umulh x15, x1, x4
 ; CHECK-NEXT:    adds x11, x11, x12
+; CHECK-NEXT:    umulh x15, x1, x4
 ; CHECK-NEXT:    madd x14, x3, x4, x14
 ; CHECK-NEXT:    umulh x16, x0, x5
 ; CHECK-NEXT:    madd x12, x1, x6, x14
 ; CHECK-NEXT:    cset w14, hs
-; CHECK-NEXT:    adds x11, x11, x13
-; CHECK-NEXT:    cset w13, hs
-; CHECK-NEXT:    adds x11, x11, x15
-; CHECK-NEXT:    and x14, x14, #0x1
+; CHECK-NEXT:    adcs x11, x11, x13
+; CHECK-NEXT:    adc x13, xzr, xzr
+; CHECK-NEXT:    cmp w14, #1
 ; CHECK-NEXT:    umulh x17, x2, x4
-; CHECK-NEXT:    and x13, x13, #0x1
-; CHECK-NEXT:    add x13, x14, x13
-; CHECK-NEXT:    umulh x18, x1, x5
-; CHECK-NEXT:    cset w1, hs
-; CHECK-NEXT:    adds x11, x11, x16
-; CHECK-NEXT:    and x14, x1, #0x1
+; CHECK-NEXT:    adcs x11, x11, x15
+; CHECK-NEXT:    adc x13, x13, xzr
+; CHECK-NEXT:    cmp w14, #1
+; CHECK-NEXT:    umulh x9, x1, x5
+; CHECK-NEXT:    adcs x11, x11, x16
 ; CHECK-NEXT:    mov x1, x8
-; CHECK-NEXT:    umulh x15, x0, x6
-; CHECK-NEXT:    add x10, x13, x14
-; CHECK-NEXT:    cset w13, hs
-; CHECK-NEXT:    adds x2, x11, x9
-; CHECK-NEXT:    and x9, x13, #0x1
+; CHECK-NEXT:    adc x13, x13, xzr
+; CHECK-NEXT:    cmp w14, #1
+; CHECK-NEXT:    umulh x18, x0, x6
+; CHECK-NEXT:    adcs x2, x11, x10
+; CHECK-NEXT:    adc x10, x13, xzr
 ; CHECK-NEXT:    madd x12, x0, x7, x12
-; CHECK-NEXT:    cset w11, hs
-; CHECK-NEXT:    add x9, x10, x9
-; CHECK-NEXT:    add x13, x17, x18
-; CHECK-NEXT:    and x10, x11, #0x1
+; CHECK-NEXT:    add x9, x17, x9
 ; CHECK-NEXT:    mul x0, x0, x4
+; CHECK-NEXT:    add x9, x9, x18
 ; CHECK-NEXT:    add x9, x9, x10
-; CHECK-NEXT:    add x11, x13, x15
-; CHECK-NEXT:    add x10, x12, x11
-; CHECK-NEXT:    add x3, x10, x9
+; CHECK-NEXT:    add x3, x12, x9
 ; CHECK-NEXT:    ret
   %mul = mul i224 %x, %y
   ret i224 %mul
@@ -182,50 +170,40 @@ define i256 @mul_i256(i256 %x, i256 %y) {
 ; CHECK-NEXT:    mul x8, x1, x4
 ; CHECK-NEXT:    mul x9, x0, x5
 ; CHECK-NEXT:    umulh x10, x0, x4
-; CHECK-NEXT:    mul x14, x2, x5
-; CHECK-NEXT:    adds x8, x8, x9
 ; CHECK-NEXT:    mul x11, x2, x4
-; CHECK-NEXT:    cset w9, hs
-; CHECK-NEXT:    adds x8, x8, x10
-; CHECK-NEXT:    and x9, x9, #0x1
+; CHECK-NEXT:    adds x8, x8, x9
 ; CHECK-NEXT:    mul x12, x1, x5
-; CHECK-NEXT:    cset w10, hs
-; CHECK-NEXT:    and x10, x10, #0x1
+; CHECK-NEXT:    adcs x8, x8, x10
+; CHECK-NEXT:    mul x14, x2, x5
+; CHECK-NEXT:    adc x10, xzr, xzr
 ; CHECK-NEXT:    mul x13, x0, x6
-; CHECK-NEXT:    add x9, x9, x10
-; CHECK-NEXT:    umulh x15, x1, x4
 ; CHECK-NEXT:    adds x11, x11, x12
+; CHECK-NEXT:    umulh x15, x1, x4
 ; CHECK-NEXT:    madd x14, x3, x4, x14
 ; CHECK-NEXT:    umulh x16, x0, x5
 ; CHECK-NEXT:    madd x12, x1, x6, x14
 ; CHECK-NEXT:    cset w14, hs
-; CHECK-NEXT:    adds x11, x11, x13
-; CHECK-NEXT:    cset w13, hs
-; CHECK-NEXT:    adds x11, x11, x15
-; CHECK-NEXT:    and x14, x14, #0x1
+; CHECK-NEXT:    adcs x11, x11, x13
+; CHECK-NEXT:    adc x13, xzr, xzr
+; CHECK-NEXT:    cmp w14, #1
 ; CHECK-NEXT:    umulh x17, x2, x4
-; CHECK-NEXT:    and x13, x13, #0x1
-; CHECK-NEXT:    add x13, x14, x13
-; CHECK-NEXT:    umulh x18, x1, x5
-; CHECK-NEXT:    cset w1, hs
-; CHECK-NEXT:    adds x11, x11, x16
-; CHECK-NEXT:    and x14, x1, #0x1
+; CHECK-NEXT:    adcs x11, x11, x15
+; CHECK-NEXT:    adc x13, x13, xzr
+; CHECK-NEXT:    cmp w14, #1
+; CHECK-NEXT:    umulh x9, x1, x5
+; CHECK-NEXT:    adcs x11, x11, x16
 ; CHECK-NEXT:    mov x1, x8
-; CHECK-NEXT:    umulh x15, x0, x6
-; CHECK-NEXT:    add x10, x13, x14
-; CHECK-NEXT:    cset w13, hs
-; CHECK-NEXT:    adds x2, x11, x9
-; CHECK-NEXT:    and x9, x13, #0x1
+; CHECK-NEXT:    adc x13, x13, xzr
+; CHECK-NEXT:    cmp w14, #1
+; CHECK-NEXT:    umulh x18, x0, x6
+; CHECK-NEXT:    adcs x2, x11, x10
+; CHECK-NEXT:    adc x10, x13, xzr
 ; CHECK-NEXT:    madd x12, x0, x7, x12
-; CHECK-NEXT:    cset w11, hs
-; CHECK-NEXT:    add x9, x10, x9
-; CHECK-NEXT:    add x13, x17, x18
-; CHECK-NEXT:    and x10, x11, #0x1
+; CHECK-NEXT:    add x9, x17, x9
 ; CHECK-NEXT:    mul x0, x0, x4
+; CHECK-NEXT:    add x9, x9, x18
 ; CHECK-NEXT:    add x9, x9, x10
-; CHECK-NEXT:    add x11, x13, x15
-; CHECK-NEXT:    add x10, x12, x11
-; CHECK-NEXT:    add x3, x10, x9
+; CHECK-NEXT:    add x3, x12, x9
 ; CHECK-NEXT:    ret
   %mul = mul i256 %x, %y
   ret i256 %mul
