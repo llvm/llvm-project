@@ -2602,6 +2602,7 @@ bool SubprogramVisitor::HandleStmtFunction(const parser::StmtFunctionStmt &x) {
   if (resultType) {
     resultDetails.set_type(*resultType);
   }
+  resultDetails.set_funcResult(true);
   Symbol &result{MakeSymbol(name, std::move(resultDetails))};
   ApplyImplicitRules(result);
   details.set_result(result);
@@ -3271,6 +3272,13 @@ void DeclarationVisitor::Post(const parser::IntrinsicTypeSpec::Character &) {
 }
 void DeclarationVisitor::Post(const parser::CharSelector::LengthAndKind &x) {
   charInfo_.kind = EvaluateSubscriptIntExpr(x.kind);
+  std::optional<std::int64_t> intKind{ToInt64(charInfo_.kind)};
+  if (intKind &&
+      !evaluate::IsValidKindOfIntrinsicType(
+          TypeCategory::Character, *intKind)) {  // C715, C719
+    Say(currStmtSource().value(),
+        "KIND value (%jd) not valid for CHARACTER"_err_en_US, *intKind);
+  }
   if (x.length) {
     charInfo_.length = GetParamValue(*x.length, common::TypeParamAttr::Len);
   }

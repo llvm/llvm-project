@@ -4,6 +4,7 @@ module m
   !ERROR: Must have INTEGER type, but is REAL(4)
   integer :: aa = 2_a
   integer :: b = 8
+  ! C713 A scalar-int-constant-name shall be a named constant of type integer.
   !ERROR: Must be a constant value
   integer :: bb = 2_b
   !TODO: should get error -- not scalar

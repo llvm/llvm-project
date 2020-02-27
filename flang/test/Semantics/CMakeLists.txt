@@ -31,6 +31,7 @@ set(ERROR_TESTS
   io09.f90
   io10.f90
   kinds02.f90
+  kinds04.f90
   resolve01.f90
   resolve02.f90
   resolve03.f90
@@ -103,6 +104,9 @@ set(ERROR_TESTS
   resolve70.f90
   resolve71.f90
   resolve72.f90
+  resolve73.f90
+  resolve74.f90
+  resolve75.f90
   stop01.f90
   structconst01.f90
   structconst02.f90
@@ -207,6 +211,7 @@ set(ERROR_TESTS
   critical02.f90
   critical03.f90
   block-data01.f90
+  complex01.f90
   data01.f90
 )
 

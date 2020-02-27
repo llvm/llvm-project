@@ -105,9 +105,11 @@ private:
 
 void CheckHelper::Check(const ParamValue &value, bool canBeAssumed) {
   if (value.isAssumed()) {
-    if (!canBeAssumed) {  // C795
+    if (!canBeAssumed) {  // C795, C721, C726
       messages_.Say(
-          "An assumed (*) type parameter may be used only for a dummy argument, associate name, or named constant"_err_en_US);
+          "An assumed (*) type parameter may be used only for a (non-statement"
+          " function) dummy argument, associate name, named constant, or"
+          " external function result"_err_en_US);
     }
   } else {
     CheckSpecExpr(value.GetExplicit());
@@ -186,16 +188,19 @@ void CheckHelper::Check(const Symbol &symbol) {
       }
     }
   }
-  if (type) {
+  if (type) {  // Section 7.2, paragraph 7
     bool canHaveAssumedParameter{IsNamedConstant(symbol) ||
-        IsAssumedLengthCharacterFunction(symbol) ||
+        IsAssumedLengthExternalCharacterFunction(symbol) ||  // C722
         symbol.test(Symbol::Flag::ParentComp)};
-    if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
-      canHaveAssumedParameter |= object->isDummy() ||
-          (object->isFuncResult() &&
-              type->category() == DeclTypeSpec::Character);
-    } else {
-      canHaveAssumedParameter |= symbol.has<AssocEntityDetails>();
+    if (!IsStmtFunctionDummy(symbol)) {  // C726
+      if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
+        canHaveAssumedParameter |= object->isDummy() ||
+            (object->isFuncResult() &&
+                type->category() == DeclTypeSpec::Character) ||
+            IsStmtFunctionResult(symbol);  // Avoids multiple messages
+      } else {
+        canHaveAssumedParameter |= symbol.has<AssocEntityDetails>();
+      }
     }
     Check(*type, canHaveAssumedParameter);
     if (InPure() && InFunction() && IsFunctionResult(symbol)) {
@@ -216,7 +221,7 @@ void CheckHelper::Check(const Symbol &symbol) {
       }
     }
   }
-  if (IsAssumedLengthCharacterFunction(symbol)) {  // C723
+  if (IsAssumedLengthExternalCharacterFunction(symbol)) {  // C723
     if (symbol.attrs().test(Attr::RECURSIVE)) {
       messages_.Say(
           "An assumed-length CHARACTER(*) function cannot be RECURSIVE"_err_en_US);

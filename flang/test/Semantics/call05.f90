@@ -19,9 +19,9 @@ module m
   class(t2), allocatable :: pa2(:)
   class(*), pointer :: up(:)
   class(*), allocatable :: ua(:)
-  !ERROR: An assumed (*) type parameter may be used only for a dummy argument, associate name, or named constant
+  !ERROR: An assumed (*) type parameter may be used only for a (non-statement function) dummy argument, associate name, named constant, or external function result
   type(pdt(*)), pointer :: amp(:)
-  !ERROR: An assumed (*) type parameter may be used only for a dummy argument, associate name, or named constant
+  !ERROR: An assumed (*) type parameter may be used only for a (non-statement function) dummy argument, associate name, named constant, or external function result
   type(pdt(*)), allocatable :: ama(:)
   type(pdt(:)), pointer :: dmp(:)
   type(pdt(:)), allocatable :: dma(:)

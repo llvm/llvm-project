@@ -500,10 +500,10 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::RealLiteralConstant &x) {
   // Use a local message context around the real literal for better
   // provenance on any messages.
   auto restorer{GetContextualMessages().SetLocation(x.real.source)};
-  // If a kind parameter appears, it defines the kind of the literal and any
-  // letter used in an exponent part (e.g., the 'E' in "6.02214E+23")
-  // should agree.  In the absence of an explicit kind parameter, any exponent
-  // letter determines the kind.  Otherwise, defaults apply.
+  // If a kind parameter appears, it defines the kind of the literal and the
+  // letter used in an exponent part must be 'E' (e.g., the 'E' in
+  // "6.02214E+23").  In the absence of an explicit kind parameter, any
+  // exponent letter determines the kind.  Otherwise, defaults apply.
   auto &defaults{context_.defaultKinds()};
   int defaultKind{defaults.GetDefaultKind(TypeCategory::Real)};
   const char *end{x.real.source.end()};
@@ -525,14 +525,13 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::RealLiteralConstant &x) {
     defaultKind = *letterKind;
   }
   auto kind{AnalyzeKindParam(x.kind, defaultKind)};
-  if (letterKind && kind != *letterKind && expoLetter != 'e') {
-    Say("Explicit kind parameter on real constant disagrees with "
-        "exponent letter '%c'"_en_US,
-        expoLetter);
+  if (x.kind && letterKind && expoLetter != 'e') {  // C716
+    Say("Explicit kind parameter on REAL constant can only be used with"
+        " exponent letter 'E'"_err_en_US);
   }
   auto result{common::SearchTypes(
       RealTypeVisitor{kind, x.real.source, GetFoldingContext()})};
-  if (!result) {
+  if (!result) {  // C717
     Say("Unsupported REAL(KIND=%d)"_err_en_US, kind);
   }
   return AsMaybeExpr(std::move(result));
@@ -704,7 +703,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::NamedConstant &n) {
     if (IsConstantExpr(folded)) {
       return {folded};
     }
-    Say(n.v.source, "must be a constant"_err_en_US);
+    Say(n.v.source, "must be a constant"_err_en_US);  // C718
   }
   return std::nullopt;
 }
@@ -1820,8 +1819,8 @@ void ExpressionAnalyzer::CheckForBadRecursion(
       if (proc.attrs().test(semantics::Attr::NON_RECURSIVE)) {  // 15.6.2.1(3)
         msg = Say("NON_RECURSIVE procedure '%s' cannot call itself"_err_en_US,
             callSite);
-      } else if (IsAssumedLengthCharacterFunction(proc)) {  // 15.6.2.1(3)
-        msg = Say(
+      } else if (IsAssumedLengthExternalCharacterFunction(proc)) {
+        msg = Say(  // 15.6.2.1(3)
             "Assumed-length CHARACTER(*) function '%s' cannot call itself"_err_en_US,
             callSite);
       }
@@ -2422,7 +2421,7 @@ DynamicType ExpressionAnalyzer::GetDefaultKindOfType(
 
 bool ExpressionAnalyzer::CheckIntrinsicKind(
     TypeCategory category, std::int64_t kind) {
-  if (IsValidKindOfIntrinsicType(category, kind)) {
+  if (IsValidKindOfIntrinsicType(category, kind)) {  // C712, C714, C715
     return true;
   } else {
     Say("%s(KIND=%jd) is not a supported type"_err_en_US,
@@ -2471,7 +2470,7 @@ bool ExpressionAnalyzer::EnforceTypeConstraint(parser::CharBlock at,
     const MaybeExpr &result, TypeCategory category, bool defaultKind) {
   if (result) {
     if (auto type{result->GetType()}) {
-      if (type->category() != category) { // C885
+      if (type->category() != category) {  // C885
         Say(at, "Must have %s type, but is %s"_err_en_US,
             ToUpperCase(EnumToString(category)),
             ToUpperCase(type->AsFortran()));

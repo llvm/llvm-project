@@ -66,6 +66,7 @@ subroutine s6b
   integer :: l = 4
   forall(integer(k) :: i = 1:10)
   end forall
+  ! C713 A scalar-int-constant-name shall be a named constant of type integer.
   !ERROR: Must be a constant value
   forall(integer(l) :: i = 1:10)
   end forall

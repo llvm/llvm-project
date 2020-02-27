@@ -101,7 +101,7 @@ ConvertRealOperandsResult ConvertRealOperands(
             return {AsSameKindExprs<TypeCategory::Real>(
                 ConvertTo(ry, std::move(bx)), std::move(ry))};
           },
-          [&](auto &&, auto &&) -> ConvertRealOperandsResult {
+          [&](auto &&, auto &&) -> ConvertRealOperandsResult {  // C718
             messages.Say("operands must be INTEGER or REAL"_err_en_US);
             return std::nullopt;
           },

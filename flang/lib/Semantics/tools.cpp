@@ -196,6 +196,29 @@ bool IsDummy(const Symbol &symbol) {
   }
 }
 
+bool IsStmtFunction(const Symbol &symbol) {
+  const auto *subprogram{symbol.detailsIf<SubprogramDetails>()};
+  if (subprogram && subprogram->stmtFunction()) {
+    return true;
+  }
+  return false;
+}
+
+bool IsInStmtFunction(const Symbol &symbol) {
+  if (const Symbol * function{symbol.owner().symbol()}) {
+    return IsStmtFunction(*function);
+  }
+  return false;
+}
+
+bool IsStmtFunctionDummy(const Symbol &symbol) {
+  return IsDummy(symbol) && IsInStmtFunction(symbol);
+}
+
+bool IsStmtFunctionResult(const Symbol &symbol) {
+  return IsFunctionResult(symbol) && IsInStmtFunction(symbol);
+}
+
 bool IsPointerDummy(const Symbol &symbol) {
   return IsPointer(symbol) && IsDummy(symbol);
 }
@@ -686,11 +709,13 @@ bool IsAssumedLengthCharacter(const Symbol &symbol) {
   }
 }
 
-bool IsAssumedLengthCharacterFunction(const Symbol &symbol) {
-  // Assumed-length character functions only appear as such in their
-  // definitions; their interfaces, pointers to them, and dummy procedures
-  // cannot be assumed-length.
-  return symbol.has<SubprogramDetails>() && IsAssumedLengthCharacter(symbol);
+// C722 and C723:  For a function to be assumed length, it must be external and
+// of CHARACTER type
+bool IsAssumedLengthExternalCharacterFunction(const Symbol &symbol) {
+  return IsAssumedLengthCharacter(symbol) &&
+      ((symbol.has<SubprogramDetails>() && symbol.owner().IsGlobal()) ||
+          (symbol.test(Symbol::Flag::Function) &&
+              symbol.attrs().test(Attr::EXTERNAL)));
 }
 
 const Symbol *IsExternalInPureContext(

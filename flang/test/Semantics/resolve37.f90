@@ -6,6 +6,7 @@ integer :: n = 2
 !ERROR: Must be a constant value
 parameter(m=n)
 integer(k) :: x
+! C713 A scalar-int-constant-name shall be a named constant of type integer.
 !ERROR: Must have INTEGER type, but is REAL(4)
 integer(l) :: y
 !ERROR: Must be a constant value

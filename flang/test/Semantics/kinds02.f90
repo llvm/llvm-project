@@ -1,3 +1,15 @@
+! C712 The value of scalar-int-constant-expr shall be nonnegative and 
+! shall specify a representation method that exists on the processor.
+! C714 The value of kind-param shall be nonnegative.
+! C715 The value of kind-param shall specify a representation method that 
+! exists on the processor.
+! C719 The value of scalar-int-constant-expr shall be nonnegative and shall 
+! specify a representation method that exists on the processor.
+! C725 The optional comma in a length-selector is permitted only if no 
+! double-colon separator appears in the typedeclaration- stmt.
+! C727 The value of kind-param shall specify a representation method that 
+! exists on the processor.
+!
 !ERROR: INTEGER(KIND=0) is not a supported type
 integer(kind=0) :: j0
 !ERROR: INTEGER(KIND=-1) is not a supported type
@@ -40,4 +52,19 @@ logical(kind=-1) :: lm1
 logical(kind=3) :: l3
 !ERROR: LOGICAL(KIND=16) is not a supported type
 logical(kind=16) :: l16
+character (len=99, kind=1) :: cvar1
+character (len=99, kind=2) :: cvar2
+character *4, cvar3
+character *(5), cvar4
+!ERROR: KIND value (3) not valid for CHARACTER
+character (len=99, kind=3) :: cvar5
+!ERROR: KIND value (-1) not valid for CHARACTER
+character (len=99, kind=-1) :: cvar6
+character(len=*), parameter :: cvar7 = 1_"abcd"
+character(len=*), parameter :: cvar8 = 2_"abcd"
+!ERROR: CHARACTER(KIND=3) is not a supported type
+character(len=*), parameter :: cvar9 = 3_"abcd"
+character(len=*), parameter :: cvar10 = 4_"abcd"
+!ERROR: CHARACTER(KIND=8) is not a supported type
+character(len=*), parameter :: cvar11 = 8_"abcd"
 end program

@@ -48,7 +48,7 @@ const DeclTypeSpec *FindParentTypeSpec(const DerivedTypeSpec &);
 const DeclTypeSpec *FindParentTypeSpec(const DeclTypeSpec &);
 const DeclTypeSpec *FindParentTypeSpec(const Scope &);
 const DeclTypeSpec *FindParentTypeSpec(const Symbol &);
- 
+
 // Return the Symbol of the variable of a construct association, if it exists
 const Symbol *GetAssociationRoot(const Symbol &);
 
@@ -78,6 +78,10 @@ bool DoesScopeContain(const Scope *, const Symbol &);
 bool IsUseAssociated(const Symbol &, const Scope &);
 bool IsHostAssociated(const Symbol &, const Scope &);
 bool IsDummy(const Symbol &);
+bool IsStmtFunction(const Symbol &);
+bool IsInStmtFunction(const Symbol &);
+bool IsStmtFunctionDummy(const Symbol &);
+bool IsStmtFunctionResult(const Symbol &);
 bool IsPointerDummy(const Symbol &);
 bool IsFunction(const Symbol &);
 bool IsPureProcedure(const Symbol &);
@@ -154,7 +158,7 @@ inline bool IsAssumedSizeArray(const Symbol &symbol) {
   return details && details->IsAssumedSize();
 }
 bool IsAssumedLengthCharacter(const Symbol &);
-bool IsAssumedLengthCharacterFunction(const Symbol &);
+bool IsAssumedLengthExternalCharacterFunction(const Symbol &);
 // Is the symbol modifiable in this scope
 std::optional<parser::MessageFixedText> WhyNotModifiable(
     const Symbol &, const Scope &);
