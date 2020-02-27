@@ -16,7 +16,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/PointerLikeTypeTraits.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -32,18 +31,28 @@ struct DenseMapInfo {
   //static bool isEqual(const T &LHS, const T &RHS);
 };
 
-// Provide DenseMapInfo for all pointers.
+// Provide DenseMapInfo for all pointers. Come up with sentinel pointer values
+// that are aligned to alignof(T) bytes, but try to avoid requiring T to be
+// complete. This allows clients to instantiate DenseMap<T*, ...> with forward
+// declared key types. Assume that no pointer key type requires more than 4096
+// bytes of alignment.
 template<typename T>
 struct DenseMapInfo<T*> {
+  // The following should hold, but it would require T to be complete:
+  // static_assert(alignof(T) <= (1 << Log2MaxAlign),
+  //               "DenseMap does not support pointer keys requiring more than "
+  //               "Log2MaxAlign bits of alignment");
+  static constexpr uintptr_t Log2MaxAlign = 12;
+
   static inline T* getEmptyKey() {
     uintptr_t Val = static_cast<uintptr_t>(-1);
-    Val <<= PointerLikeTypeTraits<T*>::NumLowBitsAvailable;
+    Val <<= Log2MaxAlign;
     return reinterpret_cast<T*>(Val);
   }
 
   static inline T* getTombstoneKey() {
     uintptr_t Val = static_cast<uintptr_t>(-2);
-    Val <<= PointerLikeTypeTraits<T*>::NumLowBitsAvailable;
+    Val <<= Log2MaxAlign;
     return reinterpret_cast<T*>(Val);
   }
 
