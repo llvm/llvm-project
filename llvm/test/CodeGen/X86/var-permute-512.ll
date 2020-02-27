@@ -1232,3 +1232,904 @@ define <16 x float> @var_shuffle_v16f32(<16 x float> %v, <16 x i32> %indices) no
   %ret15 = insertelement <16 x float> %ret14, float %v15, i32 15
   ret <16 x float> %ret15
 }
+
+define void @var_cvt_shuffle_v64f32_v64i8_idx(<64 x float>* %dst, <64 x i8> %src, i32 %b) nounwind {
+; AVX512F-LABEL: var_cvt_shuffle_v64f32_v64i8_idx:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    pushq %rbp
+; AVX512F-NEXT:    movq %rsp, %rbp
+; AVX512F-NEXT:    andq $-64, %rsp
+; AVX512F-NEXT:    subq $4160, %rsp # imm = 0x1040
+; AVX512F-NEXT:    # kill: def $esi killed $esi def $rsi
+; AVX512F-NEXT:    vpbroadcastd %esi, %zmm4
+; AVX512F-NEXT:    vpaddd {{.*}}(%rip), %zmm4, %zmm1
+; AVX512F-NEXT:    vpaddd {{.*}}(%rip), %zmm4, %zmm2
+; AVX512F-NEXT:    vpaddd {{.*}}(%rip), %zmm4, %zmm3
+; AVX512F-NEXT:    vpaddd {{.*}}(%rip), %zmm4, %zmm4
+; AVX512F-NEXT:    vmovd %xmm4, %eax
+; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    andl $63, %eax
+; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vextractf64x4 $1, %zmm0, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vmovaps %ymm0, (%rsp)
+; AVX512F-NEXT:    movzbl 3968(%rsp,%rax), %eax
+; AVX512F-NEXT:    vmovd %eax, %xmm0
+; AVX512F-NEXT:    vpextrd $1, %xmm4, %eax
+; AVX512F-NEXT:    andl $63, %eax
+; AVX512F-NEXT:    vpinsrb $1, 3904(%rsp,%rax), %xmm0, %xmm0
+; AVX512F-NEXT:    vpextrd $2, %xmm4, %eax
+; AVX512F-NEXT:    andl $63, %eax
+; AVX512F-NEXT:    vpinsrb $2, 3840(%rsp,%rax), %xmm0, %xmm0
+; AVX512F-NEXT:    vpextrd $3, %xmm4, %eax
+; AVX512F-NEXT:    vextracti128 $1, %ymm4, %xmm5
+; AVX512F-NEXT:    andl $63, %eax
+; AVX512F-NEXT:    vpinsrb $3, 3776(%rsp,%rax), %xmm0, %xmm0
+; AVX512F-NEXT:    vmovd %xmm5, %eax
+; AVX512F-NEXT:    andl $63, %eax
+; AVX512F-NEXT:    vpinsrb $4, 3712(%rsp,%rax), %xmm0, %xmm0
+; AVX512F-NEXT:    vpextrd $1, %xmm5, %eax
+; AVX512F-NEXT:    andl $63, %eax
+; AVX512F-NEXT:    vpinsrb $5, 3648(%rsp,%rax), %xmm0, %xmm0
+; AVX512F-NEXT:    vpextrd $2, %xmm5, %eax
+; AVX512F-NEXT:    andl $63, %eax
+; AVX512F-NEXT:    vpinsrb $6, 3584(%rsp,%rax), %xmm0, %xmm0
+; AVX512F-NEXT:    vpextrd $3, %xmm5, %eax
+; AVX512F-NEXT:    vextracti32x4 $2, %zmm4, %xmm5
+; AVX512F-NEXT:    andl $63, %eax
+; AVX512F-NEXT:    vpinsrb $7, 3520(%rsp,%rax), %xmm0, %xmm0
+; AVX512F-NEXT:    vmovd %xmm5, %eax
+; AVX512F-NEXT:    andl $63, %eax
+; AVX512F-NEXT:    vpinsrb $8, 3456(%rsp,%rax), %xmm0, %xmm0
+; AVX512F-NEXT:    vpextrd $1, %xmm5, %eax
+; AVX512F-NEXT:    andl $63, %eax
+; AVX512F-NEXT:    vpinsrb $9, 3392(%rsp,%rax), %xmm0, %xmm0
+; AVX512F-NEXT:    vpextrd $2, %xmm5, %eax
+; AVX512F-NEXT:    andl $63, %eax
+; AVX512F-NEXT:    vpinsrb $10, 3328(%rsp,%rax), %xmm0, %xmm0
+; AVX512F-NEXT:    vpextrd $3, %xmm5, %eax
+; AVX512F-NEXT:    vextracti32x4 $3, %zmm4, %xmm4
+; AVX512F-NEXT:    andl $63, %eax
+; AVX512F-NEXT:    vpinsrb $11, 3264(%rsp,%rax), %xmm0, %xmm0
+; AVX512F-NEXT:    vmovd %xmm4, %eax
+; AVX512F-NEXT:    andl $63, %eax
+; AVX512F-NEXT:    vpinsrb $12, 3200(%rsp,%rax), %xmm0, %xmm0
+; AVX512F-NEXT:    vpextrd $1, %xmm4, %eax
+; AVX512F-NEXT:    andl $63, %eax
+; AVX512F-NEXT:    vpinsrb $13, 3136(%rsp,%rax), %xmm0, %xmm0
+; AVX512F-NEXT:    vpextrd $2, %xmm4, %eax
+; AVX512F-NEXT:    andl $63, %eax
+; AVX512F-NEXT:    vpinsrb $14, 3072(%rsp,%rax), %xmm0, %xmm0
+; AVX512F-NEXT:    vpextrd $3, %xmm4, %eax
+; AVX512F-NEXT:    andl $63, %eax
+; AVX512F-NEXT:    vpinsrb $15, 3008(%rsp,%rax), %xmm0, %xmm0
+; AVX512F-NEXT:    vmovd %xmm3, %eax
+; AVX512F-NEXT:    andl $63, %eax
+; AVX512F-NEXT:    movzbl 2944(%rsp,%rax), %eax
+; AVX512F-NEXT:    vmovd %eax, %xmm4
+; AVX512F-NEXT:    vpextrd $1, %xmm3, %eax
+; AVX512F-NEXT:    andl $63, %eax
+; AVX512F-NEXT:    vpinsrb $1, 2880(%rsp,%rax), %xmm4, %xmm4
+; AVX512F-NEXT:    vpextrd $2, %xmm3, %eax
+; AVX512F-NEXT:    andl $63, %eax
+; AVX512F-NEXT:    vpinsrb $2, 2816(%rsp,%rax), %xmm4, %xmm4
+; AVX512F-NEXT:    vpextrd $3, %xmm3, %eax
+; AVX512F-NEXT:    vextracti128 $1, %ymm3, %xmm5
+; AVX512F-NEXT:    andl $63, %eax
+; AVX512F-NEXT:    vpinsrb $3, 2752(%rsp,%rax), %xmm4, %xmm4
+; AVX512F-NEXT:    vmovd %xmm5, %eax
+; AVX512F-NEXT:    andl $63, %eax
+; AVX512F-NEXT:    vpinsrb $4, 2688(%rsp,%rax), %xmm4, %xmm4
+; AVX512F-NEXT:    vpextrd $1, %xmm5, %eax
+; AVX512F-NEXT:    andl $63, %eax
+; AVX512F-NEXT:    vpinsrb $5, 2624(%rsp,%rax), %xmm4, %xmm4
+; AVX512F-NEXT:    vpextrd $2, %xmm5, %eax
+; AVX512F-NEXT:    andl $63, %eax
+; AVX512F-NEXT:    vpinsrb $6, 2560(%rsp,%rax), %xmm4, %xmm4
+; AVX512F-NEXT:    vpextrd $3, %xmm5, %eax
+; AVX512F-NEXT:    vextracti32x4 $2, %zmm3, %xmm5
+; AVX512F-NEXT:    andl $63, %eax
+; AVX512F-NEXT:    vpinsrb $7, 2496(%rsp,%rax), %xmm4, %xmm4
+; AVX512F-NEXT:    vmovd %xmm5, %eax
+; AVX512F-NEXT:    andl $63, %eax
+; AVX512F-NEXT:    vpinsrb $8, 2432(%rsp,%rax), %xmm4, %xmm4
+; AVX512F-NEXT:    vpextrd $1, %xmm5, %eax
+; AVX512F-NEXT:    andl $63, %eax
+; AVX512F-NEXT:    vpinsrb $9, 2368(%rsp,%rax), %xmm4, %xmm4
+; AVX512F-NEXT:    vpextrd $2, %xmm5, %eax
+; AVX512F-NEXT:    andl $63, %eax
+; AVX512F-NEXT:    vpinsrb $10, 2304(%rsp,%rax), %xmm4, %xmm4
+; AVX512F-NEXT:    vpextrd $3, %xmm5, %eax
+; AVX512F-NEXT:    vextracti32x4 $3, %zmm3, %xmm3
+; AVX512F-NEXT:    andl $63, %eax
+; AVX512F-NEXT:    vpinsrb $11, 2240(%rsp,%rax), %xmm4, %xmm4
+; AVX512F-NEXT:    vmovd %xmm3, %eax
+; AVX512F-NEXT:    andl $63, %eax
+; AVX512F-NEXT:    vpinsrb $12, 2176(%rsp,%rax), %xmm4, %xmm4
+; AVX512F-NEXT:    vpextrd $1, %xmm3, %eax
+; AVX512F-NEXT:    andl $63, %eax
+; AVX512F-NEXT:    vpinsrb $13, 2112(%rsp,%rax), %xmm4, %xmm4
+; AVX512F-NEXT:    vpextrd $2, %xmm3, %eax
+; AVX512F-NEXT:    andl $63, %eax
+; AVX512F-NEXT:    vpinsrb $14, 2048(%rsp,%rax), %xmm4, %xmm4
+; AVX512F-NEXT:    vpextrd $3, %xmm3, %eax
+; AVX512F-NEXT:    andl $63, %eax
+; AVX512F-NEXT:    vpinsrb $15, 1984(%rsp,%rax), %xmm4, %xmm3
+; AVX512F-NEXT:    vmovd %xmm2, %eax
+; AVX512F-NEXT:    andl $63, %eax
+; AVX512F-NEXT:    movzbl 1920(%rsp,%rax), %eax
+; AVX512F-NEXT:    vmovd %eax, %xmm4
+; AVX512F-NEXT:    vpextrd $1, %xmm2, %eax
+; AVX512F-NEXT:    andl $63, %eax
+; AVX512F-NEXT:    vpinsrb $1, 1856(%rsp,%rax), %xmm4, %xmm4
+; AVX512F-NEXT:    vpextrd $2, %xmm2, %eax
+; AVX512F-NEXT:    andl $63, %eax
+; AVX512F-NEXT:    vpinsrb $2, 1792(%rsp,%rax), %xmm4, %xmm4
+; AVX512F-NEXT:    vpextrd $3, %xmm2, %eax
+; AVX512F-NEXT:    vextracti128 $1, %ymm2, %xmm5
+; AVX512F-NEXT:    andl $63, %eax
+; AVX512F-NEXT:    vpinsrb $3, 1728(%rsp,%rax), %xmm4, %xmm4
+; AVX512F-NEXT:    vmovd %xmm5, %eax
+; AVX512F-NEXT:    andl $63, %eax
+; AVX512F-NEXT:    vpinsrb $4, 1664(%rsp,%rax), %xmm4, %xmm4
+; AVX512F-NEXT:    vpextrd $1, %xmm5, %eax
+; AVX512F-NEXT:    andl $63, %eax
+; AVX512F-NEXT:    vpinsrb $5, 1600(%rsp,%rax), %xmm4, %xmm4
+; AVX512F-NEXT:    vpextrd $2, %xmm5, %eax
+; AVX512F-NEXT:    andl $63, %eax
+; AVX512F-NEXT:    vpinsrb $6, 1536(%rsp,%rax), %xmm4, %xmm4
+; AVX512F-NEXT:    vpextrd $3, %xmm5, %eax
+; AVX512F-NEXT:    vextracti32x4 $2, %zmm2, %xmm5
+; AVX512F-NEXT:    andl $63, %eax
+; AVX512F-NEXT:    vpinsrb $7, 1472(%rsp,%rax), %xmm4, %xmm4
+; AVX512F-NEXT:    vmovd %xmm5, %eax
+; AVX512F-NEXT:    andl $63, %eax
+; AVX512F-NEXT:    vpinsrb $8, 1408(%rsp,%rax), %xmm4, %xmm4
+; AVX512F-NEXT:    vpextrd $1, %xmm5, %eax
+; AVX512F-NEXT:    andl $63, %eax
+; AVX512F-NEXT:    vpinsrb $9, 1344(%rsp,%rax), %xmm4, %xmm4
+; AVX512F-NEXT:    vpextrd $2, %xmm5, %eax
+; AVX512F-NEXT:    andl $63, %eax
+; AVX512F-NEXT:    vpinsrb $10, 1280(%rsp,%rax), %xmm4, %xmm4
+; AVX512F-NEXT:    vpextrd $3, %xmm5, %eax
+; AVX512F-NEXT:    vextracti32x4 $3, %zmm2, %xmm2
+; AVX512F-NEXT:    andl $63, %eax
+; AVX512F-NEXT:    vpinsrb $11, 1216(%rsp,%rax), %xmm4, %xmm4
+; AVX512F-NEXT:    vmovd %xmm2, %eax
+; AVX512F-NEXT:    andl $63, %eax
+; AVX512F-NEXT:    vpinsrb $12, 1152(%rsp,%rax), %xmm4, %xmm4
+; AVX512F-NEXT:    vpextrd $1, %xmm2, %eax
+; AVX512F-NEXT:    andl $63, %eax
+; AVX512F-NEXT:    vpinsrb $13, 1088(%rsp,%rax), %xmm4, %xmm4
+; AVX512F-NEXT:    vpextrd $2, %xmm2, %eax
+; AVX512F-NEXT:    andl $63, %eax
+; AVX512F-NEXT:    vpinsrb $14, 1024(%rsp,%rax), %xmm4, %xmm4
+; AVX512F-NEXT:    vpextrd $3, %xmm2, %eax
+; AVX512F-NEXT:    andl $63, %eax
+; AVX512F-NEXT:    vpinsrb $15, 960(%rsp,%rax), %xmm4, %xmm2
+; AVX512F-NEXT:    vmovd %xmm1, %eax
+; AVX512F-NEXT:    andl $63, %eax
+; AVX512F-NEXT:    movzbl 896(%rsp,%rax), %eax
+; AVX512F-NEXT:    vmovd %eax, %xmm4
+; AVX512F-NEXT:    vpextrd $1, %xmm1, %eax
+; AVX512F-NEXT:    andl $63, %eax
+; AVX512F-NEXT:    vpinsrb $1, 832(%rsp,%rax), %xmm4, %xmm4
+; AVX512F-NEXT:    vpextrd $2, %xmm1, %eax
+; AVX512F-NEXT:    andl $63, %eax
+; AVX512F-NEXT:    vpinsrb $2, 768(%rsp,%rax), %xmm4, %xmm4
+; AVX512F-NEXT:    vpextrd $3, %xmm1, %eax
+; AVX512F-NEXT:    vextracti128 $1, %ymm1, %xmm5
+; AVX512F-NEXT:    andl $63, %eax
+; AVX512F-NEXT:    vpinsrb $3, 704(%rsp,%rax), %xmm4, %xmm4
+; AVX512F-NEXT:    vmovd %xmm5, %eax
+; AVX512F-NEXT:    andl $63, %eax
+; AVX512F-NEXT:    vpinsrb $4, 640(%rsp,%rax), %xmm4, %xmm4
+; AVX512F-NEXT:    vpextrd $1, %xmm5, %eax
+; AVX512F-NEXT:    andl $63, %eax
+; AVX512F-NEXT:    vpinsrb $5, 576(%rsp,%rax), %xmm4, %xmm4
+; AVX512F-NEXT:    vpextrd $2, %xmm5, %eax
+; AVX512F-NEXT:    andl $63, %eax
+; AVX512F-NEXT:    vpinsrb $6, 512(%rsp,%rax), %xmm4, %xmm4
+; AVX512F-NEXT:    vpextrd $3, %xmm5, %eax
+; AVX512F-NEXT:    vextracti32x4 $2, %zmm1, %xmm5
+; AVX512F-NEXT:    andl $63, %eax
+; AVX512F-NEXT:    vpinsrb $7, 448(%rsp,%rax), %xmm4, %xmm4
+; AVX512F-NEXT:    vmovd %xmm5, %eax
+; AVX512F-NEXT:    andl $63, %eax
+; AVX512F-NEXT:    vpinsrb $8, 384(%rsp,%rax), %xmm4, %xmm4
+; AVX512F-NEXT:    vpextrd $1, %xmm5, %eax
+; AVX512F-NEXT:    andl $63, %eax
+; AVX512F-NEXT:    vpinsrb $9, 320(%rsp,%rax), %xmm4, %xmm4
+; AVX512F-NEXT:    andl $63, %esi
+; AVX512F-NEXT:    vpinsrb $10, 4032(%rsp,%rsi), %xmm4, %xmm4
+; AVX512F-NEXT:    vpextrd $3, %xmm5, %eax
+; AVX512F-NEXT:    vextracti32x4 $3, %zmm1, %xmm1
+; AVX512F-NEXT:    andl $63, %eax
+; AVX512F-NEXT:    vpinsrb $11, 256(%rsp,%rax), %xmm4, %xmm4
+; AVX512F-NEXT:    vmovd %xmm1, %eax
+; AVX512F-NEXT:    andl $63, %eax
+; AVX512F-NEXT:    vpinsrb $12, 192(%rsp,%rax), %xmm4, %xmm4
+; AVX512F-NEXT:    vpextrd $1, %xmm1, %eax
+; AVX512F-NEXT:    andl $63, %eax
+; AVX512F-NEXT:    vpinsrb $13, 128(%rsp,%rax), %xmm4, %xmm4
+; AVX512F-NEXT:    vpextrd $2, %xmm1, %eax
+; AVX512F-NEXT:    andl $63, %eax
+; AVX512F-NEXT:    vpinsrb $14, 64(%rsp,%rax), %xmm4, %xmm4
+; AVX512F-NEXT:    vpextrd $3, %xmm1, %eax
+; AVX512F-NEXT:    andl $63, %eax
+; AVX512F-NEXT:    vpinsrb $15, (%rsp,%rax), %xmm4, %xmm1
+; AVX512F-NEXT:    vpmovsxbd %xmm0, %zmm0
+; AVX512F-NEXT:    vcvtdq2ps %zmm0, %zmm0
+; AVX512F-NEXT:    vpmovsxbd %xmm3, %zmm3
+; AVX512F-NEXT:    vcvtdq2ps %zmm3, %zmm3
+; AVX512F-NEXT:    vpmovsxbd %xmm2, %zmm2
+; AVX512F-NEXT:    vcvtdq2ps %zmm2, %zmm2
+; AVX512F-NEXT:    vpmovsxbd %xmm1, %zmm1
+; AVX512F-NEXT:    vcvtdq2ps %zmm1, %zmm1
+; AVX512F-NEXT:    vmovaps %zmm1, 192(%rdi)
+; AVX512F-NEXT:    vmovaps %zmm2, 128(%rdi)
+; AVX512F-NEXT:    vmovaps %zmm3, 64(%rdi)
+; AVX512F-NEXT:    vmovaps %zmm0, (%rdi)
+; AVX512F-NEXT:    movq %rbp, %rsp
+; AVX512F-NEXT:    popq %rbp
+; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    retq
+;
+; AVX512BW-LABEL: var_cvt_shuffle_v64f32_v64i8_idx:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    pushq %rbp
+; AVX512BW-NEXT:    movq %rsp, %rbp
+; AVX512BW-NEXT:    andq $-64, %rsp
+; AVX512BW-NEXT:    subq $128, %rsp
+; AVX512BW-NEXT:    # kill: def $esi killed $esi def $rsi
+; AVX512BW-NEXT:    vpbroadcastd %esi, %zmm2
+; AVX512BW-NEXT:    vpaddd {{.*}}(%rip), %zmm2, %zmm1
+; AVX512BW-NEXT:    vmovd %xmm1, %eax
+; AVX512BW-NEXT:    vmovaps %zmm0, (%rsp)
+; AVX512BW-NEXT:    andl $63, %eax
+; AVX512BW-NEXT:    movzbl (%rsp,%rax), %eax
+; AVX512BW-NEXT:    vmovd %eax, %xmm0
+; AVX512BW-NEXT:    vpextrd $1, %xmm1, %eax
+; AVX512BW-NEXT:    andl $63, %eax
+; AVX512BW-NEXT:    vpinsrb $1, (%rsp,%rax), %xmm0, %xmm0
+; AVX512BW-NEXT:    vpextrd $2, %xmm1, %eax
+; AVX512BW-NEXT:    andl $63, %eax
+; AVX512BW-NEXT:    vpinsrb $2, (%rsp,%rax), %xmm0, %xmm0
+; AVX512BW-NEXT:    vpextrd $3, %xmm1, %eax
+; AVX512BW-NEXT:    vextracti128 $1, %ymm1, %xmm3
+; AVX512BW-NEXT:    andl $63, %eax
+; AVX512BW-NEXT:    vpinsrb $3, (%rsp,%rax), %xmm0, %xmm0
+; AVX512BW-NEXT:    vmovd %xmm3, %eax
+; AVX512BW-NEXT:    andl $63, %eax
+; AVX512BW-NEXT:    vpinsrb $4, (%rsp,%rax), %xmm0, %xmm0
+; AVX512BW-NEXT:    vpextrd $1, %xmm3, %eax
+; AVX512BW-NEXT:    andl $63, %eax
+; AVX512BW-NEXT:    vpinsrb $5, (%rsp,%rax), %xmm0, %xmm0
+; AVX512BW-NEXT:    vpextrd $2, %xmm3, %eax
+; AVX512BW-NEXT:    andl $63, %eax
+; AVX512BW-NEXT:    vpinsrb $6, (%rsp,%rax), %xmm0, %xmm0
+; AVX512BW-NEXT:    vpextrd $3, %xmm3, %eax
+; AVX512BW-NEXT:    vextracti32x4 $2, %zmm1, %xmm4
+; AVX512BW-NEXT:    andl $63, %eax
+; AVX512BW-NEXT:    vpinsrb $7, (%rsp,%rax), %xmm0, %xmm0
+; AVX512BW-NEXT:    vmovd %xmm4, %eax
+; AVX512BW-NEXT:    andl $63, %eax
+; AVX512BW-NEXT:    vpinsrb $8, (%rsp,%rax), %xmm0, %xmm0
+; AVX512BW-NEXT:    vpextrd $1, %xmm4, %eax
+; AVX512BW-NEXT:    andl $63, %eax
+; AVX512BW-NEXT:    vpinsrb $9, (%rsp,%rax), %xmm0, %xmm0
+; AVX512BW-NEXT:    vpaddd {{.*}}(%rip), %zmm2, %zmm5
+; AVX512BW-NEXT:    vpaddd {{.*}}(%rip), %zmm2, %zmm3
+; AVX512BW-NEXT:    vpaddd {{.*}}(%rip), %zmm2, %zmm2
+; AVX512BW-NEXT:    andl $63, %esi
+; AVX512BW-NEXT:    vpinsrb $10, (%rsp,%rsi), %xmm0, %xmm0
+; AVX512BW-NEXT:    vpextrd $3, %xmm4, %eax
+; AVX512BW-NEXT:    vextracti32x4 $3, %zmm1, %xmm1
+; AVX512BW-NEXT:    andl $63, %eax
+; AVX512BW-NEXT:    vpinsrb $11, (%rsp,%rax), %xmm0, %xmm0
+; AVX512BW-NEXT:    vmovd %xmm1, %eax
+; AVX512BW-NEXT:    andl $63, %eax
+; AVX512BW-NEXT:    vpinsrb $12, (%rsp,%rax), %xmm0, %xmm0
+; AVX512BW-NEXT:    vpextrd $1, %xmm1, %eax
+; AVX512BW-NEXT:    andl $63, %eax
+; AVX512BW-NEXT:    vpinsrb $13, (%rsp,%rax), %xmm0, %xmm0
+; AVX512BW-NEXT:    vpextrd $2, %xmm1, %eax
+; AVX512BW-NEXT:    andl $63, %eax
+; AVX512BW-NEXT:    vpinsrb $14, (%rsp,%rax), %xmm0, %xmm0
+; AVX512BW-NEXT:    vpextrd $3, %xmm1, %eax
+; AVX512BW-NEXT:    andl $63, %eax
+; AVX512BW-NEXT:    vpinsrb $15, (%rsp,%rax), %xmm0, %xmm8
+; AVX512BW-NEXT:    vmovd %xmm5, %eax
+; AVX512BW-NEXT:    andl $63, %eax
+; AVX512BW-NEXT:    movzbl (%rsp,%rax), %eax
+; AVX512BW-NEXT:    vmovd %eax, %xmm1
+; AVX512BW-NEXT:    vpextrd $1, %xmm5, %eax
+; AVX512BW-NEXT:    andl $63, %eax
+; AVX512BW-NEXT:    vpinsrb $1, (%rsp,%rax), %xmm1, %xmm1
+; AVX512BW-NEXT:    vpextrd $2, %xmm5, %eax
+; AVX512BW-NEXT:    andl $63, %eax
+; AVX512BW-NEXT:    vpinsrb $2, (%rsp,%rax), %xmm1, %xmm1
+; AVX512BW-NEXT:    vpextrd $3, %xmm5, %eax
+; AVX512BW-NEXT:    vextracti128 $1, %ymm5, %xmm4
+; AVX512BW-NEXT:    andl $63, %eax
+; AVX512BW-NEXT:    vpinsrb $3, (%rsp,%rax), %xmm1, %xmm1
+; AVX512BW-NEXT:    vmovd %xmm4, %eax
+; AVX512BW-NEXT:    andl $63, %eax
+; AVX512BW-NEXT:    vpinsrb $4, (%rsp,%rax), %xmm1, %xmm1
+; AVX512BW-NEXT:    vpextrd $1, %xmm4, %eax
+; AVX512BW-NEXT:    andl $63, %eax
+; AVX512BW-NEXT:    vpinsrb $5, (%rsp,%rax), %xmm1, %xmm1
+; AVX512BW-NEXT:    vpextrd $2, %xmm4, %eax
+; AVX512BW-NEXT:    andl $63, %eax
+; AVX512BW-NEXT:    vpinsrb $6, (%rsp,%rax), %xmm1, %xmm1
+; AVX512BW-NEXT:    vpextrd $3, %xmm4, %eax
+; AVX512BW-NEXT:    vextracti32x4 $2, %zmm5, %xmm4
+; AVX512BW-NEXT:    andl $63, %eax
+; AVX512BW-NEXT:    vpinsrb $7, (%rsp,%rax), %xmm1, %xmm1
+; AVX512BW-NEXT:    vmovd %xmm4, %eax
+; AVX512BW-NEXT:    andl $63, %eax
+; AVX512BW-NEXT:    vpinsrb $8, (%rsp,%rax), %xmm1, %xmm1
+; AVX512BW-NEXT:    vpextrd $1, %xmm4, %eax
+; AVX512BW-NEXT:    andl $63, %eax
+; AVX512BW-NEXT:    vpinsrb $9, (%rsp,%rax), %xmm1, %xmm1
+; AVX512BW-NEXT:    vpextrd $2, %xmm4, %eax
+; AVX512BW-NEXT:    andl $63, %eax
+; AVX512BW-NEXT:    vpinsrb $10, (%rsp,%rax), %xmm1, %xmm6
+; AVX512BW-NEXT:    vpextrd $3, %xmm4, %eax
+; AVX512BW-NEXT:    vextracti32x4 $3, %zmm5, %xmm1
+; AVX512BW-NEXT:    andl $63, %eax
+; AVX512BW-NEXT:    vpinsrb $11, (%rsp,%rax), %xmm6, %xmm4
+; AVX512BW-NEXT:    vmovd %xmm1, %eax
+; AVX512BW-NEXT:    andl $63, %eax
+; AVX512BW-NEXT:    vpinsrb $12, (%rsp,%rax), %xmm4, %xmm4
+; AVX512BW-NEXT:    vmovd %xmm3, %eax
+; AVX512BW-NEXT:    andl $63, %eax
+; AVX512BW-NEXT:    movzbl (%rsp,%rax), %eax
+; AVX512BW-NEXT:    vmovd %eax, %xmm5
+; AVX512BW-NEXT:    vpextrd $1, %xmm3, %eax
+; AVX512BW-NEXT:    andl $63, %eax
+; AVX512BW-NEXT:    vpinsrb $1, (%rsp,%rax), %xmm5, %xmm5
+; AVX512BW-NEXT:    vpextrd $2, %xmm3, %eax
+; AVX512BW-NEXT:    andl $63, %eax
+; AVX512BW-NEXT:    vpinsrb $2, (%rsp,%rax), %xmm5, %xmm5
+; AVX512BW-NEXT:    vpextrd $3, %xmm3, %eax
+; AVX512BW-NEXT:    vextracti128 $1, %ymm3, %xmm6
+; AVX512BW-NEXT:    andl $63, %eax
+; AVX512BW-NEXT:    vpinsrb $3, (%rsp,%rax), %xmm5, %xmm5
+; AVX512BW-NEXT:    vmovd %xmm6, %eax
+; AVX512BW-NEXT:    andl $63, %eax
+; AVX512BW-NEXT:    vpinsrb $4, (%rsp,%rax), %xmm5, %xmm5
+; AVX512BW-NEXT:    vpextrd $1, %xmm6, %eax
+; AVX512BW-NEXT:    andl $63, %eax
+; AVX512BW-NEXT:    vpinsrb $5, (%rsp,%rax), %xmm5, %xmm5
+; AVX512BW-NEXT:    vpextrd $2, %xmm6, %eax
+; AVX512BW-NEXT:    andl $63, %eax
+; AVX512BW-NEXT:    vpinsrb $6, (%rsp,%rax), %xmm5, %xmm7
+; AVX512BW-NEXT:    vpextrd $3, %xmm6, %eax
+; AVX512BW-NEXT:    vextracti32x4 $2, %zmm3, %xmm5
+; AVX512BW-NEXT:    andl $63, %eax
+; AVX512BW-NEXT:    vpinsrb $7, (%rsp,%rax), %xmm7, %xmm6
+; AVX512BW-NEXT:    vmovd %xmm5, %eax
+; AVX512BW-NEXT:    andl $63, %eax
+; AVX512BW-NEXT:    vpinsrb $8, (%rsp,%rax), %xmm6, %xmm6
+; AVX512BW-NEXT:    vpextrd $1, %xmm5, %eax
+; AVX512BW-NEXT:    andl $63, %eax
+; AVX512BW-NEXT:    vpinsrb $9, (%rsp,%rax), %xmm6, %xmm6
+; AVX512BW-NEXT:    vpextrd $2, %xmm5, %eax
+; AVX512BW-NEXT:    andl $63, %eax
+; AVX512BW-NEXT:    vpinsrb $10, (%rsp,%rax), %xmm6, %xmm6
+; AVX512BW-NEXT:    vmovd %xmm2, %eax
+; AVX512BW-NEXT:    andl $63, %eax
+; AVX512BW-NEXT:    movzbl (%rsp,%rax), %eax
+; AVX512BW-NEXT:    vmovd %eax, %xmm7
+; AVX512BW-NEXT:    vpextrd $1, %xmm2, %eax
+; AVX512BW-NEXT:    andl $63, %eax
+; AVX512BW-NEXT:    vpinsrb $1, (%rsp,%rax), %xmm7, %xmm7
+; AVX512BW-NEXT:    vpextrd $2, %xmm2, %eax
+; AVX512BW-NEXT:    andl $63, %eax
+; AVX512BW-NEXT:    vpinsrb $2, (%rsp,%rax), %xmm7, %xmm7
+; AVX512BW-NEXT:    vpextrd $3, %xmm2, %eax
+; AVX512BW-NEXT:    vextracti128 $1, %ymm2, %xmm0
+; AVX512BW-NEXT:    andl $63, %eax
+; AVX512BW-NEXT:    vpinsrb $3, (%rsp,%rax), %xmm7, %xmm7
+; AVX512BW-NEXT:    vmovd %xmm0, %eax
+; AVX512BW-NEXT:    andl $63, %eax
+; AVX512BW-NEXT:    vpinsrb $4, (%rsp,%rax), %xmm7, %xmm7
+; AVX512BW-NEXT:    vpextrd $1, %xmm0, %eax
+; AVX512BW-NEXT:    andl $63, %eax
+; AVX512BW-NEXT:    vpinsrb $5, (%rsp,%rax), %xmm7, %xmm7
+; AVX512BW-NEXT:    vpextrd $2, %xmm0, %eax
+; AVX512BW-NEXT:    andl $63, %eax
+; AVX512BW-NEXT:    vpinsrb $6, (%rsp,%rax), %xmm7, %xmm7
+; AVX512BW-NEXT:    vpextrd $3, %xmm0, %eax
+; AVX512BW-NEXT:    vextracti32x4 $2, %zmm2, %xmm0
+; AVX512BW-NEXT:    andl $63, %eax
+; AVX512BW-NEXT:    vpinsrb $7, (%rsp,%rax), %xmm7, %xmm7
+; AVX512BW-NEXT:    vmovd %xmm0, %eax
+; AVX512BW-NEXT:    andl $63, %eax
+; AVX512BW-NEXT:    vpinsrb $8, (%rsp,%rax), %xmm7, %xmm7
+; AVX512BW-NEXT:    vpextrd $1, %xmm0, %eax
+; AVX512BW-NEXT:    andl $63, %eax
+; AVX512BW-NEXT:    vpinsrb $9, (%rsp,%rax), %xmm7, %xmm7
+; AVX512BW-NEXT:    vpextrd $2, %xmm0, %eax
+; AVX512BW-NEXT:    andl $63, %eax
+; AVX512BW-NEXT:    movzbl (%rsp,%rax), %eax
+; AVX512BW-NEXT:    vpinsrb $10, %eax, %xmm7, %xmm7
+; AVX512BW-NEXT:    vpextrd $3, %xmm0, %eax
+; AVX512BW-NEXT:    vextracti32x4 $3, %zmm2, %xmm0
+; AVX512BW-NEXT:    andl $63, %eax
+; AVX512BW-NEXT:    movzbl (%rsp,%rax), %eax
+; AVX512BW-NEXT:    vpinsrb $11, %eax, %xmm7, %xmm2
+; AVX512BW-NEXT:    vmovd %xmm0, %eax
+; AVX512BW-NEXT:    andl $63, %eax
+; AVX512BW-NEXT:    movzbl (%rsp,%rax), %eax
+; AVX512BW-NEXT:    vpinsrb $12, %eax, %xmm2, %xmm2
+; AVX512BW-NEXT:    vpextrd $1, %xmm0, %eax
+; AVX512BW-NEXT:    andl $63, %eax
+; AVX512BW-NEXT:    movzbl (%rsp,%rax), %eax
+; AVX512BW-NEXT:    vpinsrb $13, %eax, %xmm2, %xmm2
+; AVX512BW-NEXT:    vpextrd $2, %xmm0, %eax
+; AVX512BW-NEXT:    andl $63, %eax
+; AVX512BW-NEXT:    movzbl (%rsp,%rax), %eax
+; AVX512BW-NEXT:    vpinsrb $14, %eax, %xmm2, %xmm2
+; AVX512BW-NEXT:    vpextrd $3, %xmm0, %eax
+; AVX512BW-NEXT:    andl $63, %eax
+; AVX512BW-NEXT:    movzbl (%rsp,%rax), %eax
+; AVX512BW-NEXT:    vpinsrb $15, %eax, %xmm2, %xmm0
+; AVX512BW-NEXT:    vpextrd $3, %xmm5, %eax
+; AVX512BW-NEXT:    vextracti32x4 $3, %zmm3, %xmm2
+; AVX512BW-NEXT:    andl $63, %eax
+; AVX512BW-NEXT:    movzbl (%rsp,%rax), %eax
+; AVX512BW-NEXT:    vpinsrb $11, %eax, %xmm6, %xmm3
+; AVX512BW-NEXT:    vmovd %xmm2, %eax
+; AVX512BW-NEXT:    andl $63, %eax
+; AVX512BW-NEXT:    movzbl (%rsp,%rax), %eax
+; AVX512BW-NEXT:    vpinsrb $12, %eax, %xmm3, %xmm3
+; AVX512BW-NEXT:    vpextrd $1, %xmm2, %eax
+; AVX512BW-NEXT:    andl $63, %eax
+; AVX512BW-NEXT:    movzbl (%rsp,%rax), %eax
+; AVX512BW-NEXT:    vpinsrb $13, %eax, %xmm3, %xmm3
+; AVX512BW-NEXT:    vpextrd $2, %xmm2, %eax
+; AVX512BW-NEXT:    andl $63, %eax
+; AVX512BW-NEXT:    movzbl (%rsp,%rax), %eax
+; AVX512BW-NEXT:    vpinsrb $14, %eax, %xmm3, %xmm3
+; AVX512BW-NEXT:    vpextrd $3, %xmm2, %eax
+; AVX512BW-NEXT:    andl $63, %eax
+; AVX512BW-NEXT:    movzbl (%rsp,%rax), %eax
+; AVX512BW-NEXT:    vpinsrb $15, %eax, %xmm3, %xmm2
+; AVX512BW-NEXT:    vpextrd $1, %xmm1, %eax
+; AVX512BW-NEXT:    andl $63, %eax
+; AVX512BW-NEXT:    movzbl (%rsp,%rax), %eax
+; AVX512BW-NEXT:    vpinsrb $13, %eax, %xmm4, %xmm3
+; AVX512BW-NEXT:    vpextrd $2, %xmm1, %eax
+; AVX512BW-NEXT:    andl $63, %eax
+; AVX512BW-NEXT:    movzbl (%rsp,%rax), %eax
+; AVX512BW-NEXT:    vpinsrb $14, %eax, %xmm3, %xmm3
+; AVX512BW-NEXT:    vpextrd $3, %xmm1, %eax
+; AVX512BW-NEXT:    andl $63, %eax
+; AVX512BW-NEXT:    movzbl (%rsp,%rax), %eax
+; AVX512BW-NEXT:    vpinsrb $15, %eax, %xmm3, %xmm1
+; AVX512BW-NEXT:    vpmovsxbd %xmm0, %zmm0
+; AVX512BW-NEXT:    vcvtdq2ps %zmm0, %zmm0
+; AVX512BW-NEXT:    vpmovsxbd %xmm2, %zmm2
+; AVX512BW-NEXT:    vcvtdq2ps %zmm2, %zmm2
+; AVX512BW-NEXT:    vpmovsxbd %xmm1, %zmm1
+; AVX512BW-NEXT:    vcvtdq2ps %zmm1, %zmm1
+; AVX512BW-NEXT:    vpmovsxbd %xmm8, %zmm3
+; AVX512BW-NEXT:    vcvtdq2ps %zmm3, %zmm3
+; AVX512BW-NEXT:    vmovaps %zmm3, 192(%rdi)
+; AVX512BW-NEXT:    vmovaps %zmm1, 128(%rdi)
+; AVX512BW-NEXT:    vmovaps %zmm2, 64(%rdi)
+; AVX512BW-NEXT:    vmovaps %zmm0, (%rdi)
+; AVX512BW-NEXT:    movq %rbp, %rsp
+; AVX512BW-NEXT:    popq %rbp
+; AVX512BW-NEXT:    vzeroupper
+; AVX512BW-NEXT:    retq
+;
+; AVX512VBMI-LABEL: var_cvt_shuffle_v64f32_v64i8_idx:
+; AVX512VBMI:       # %bb.0:
+; AVX512VBMI-NEXT:    pushq %rbp
+; AVX512VBMI-NEXT:    movq %rsp, %rbp
+; AVX512VBMI-NEXT:    andq $-64, %rsp
+; AVX512VBMI-NEXT:    subq $128, %rsp
+; AVX512VBMI-NEXT:    # kill: def $esi killed $esi def $rsi
+; AVX512VBMI-NEXT:    vpbroadcastd %esi, %zmm1
+; AVX512VBMI-NEXT:    vpaddd {{.*}}(%rip), %zmm1, %zmm2
+; AVX512VBMI-NEXT:    vmovd %xmm2, %eax
+; AVX512VBMI-NEXT:    vmovdqa64 %zmm0, (%rsp)
+; AVX512VBMI-NEXT:    andl $63, %eax
+; AVX512VBMI-NEXT:    movzbl (%rsp,%rax), %eax
+; AVX512VBMI-NEXT:    vmovd %eax, %xmm3
+; AVX512VBMI-NEXT:    vpextrd $1, %xmm2, %eax
+; AVX512VBMI-NEXT:    andl $63, %eax
+; AVX512VBMI-NEXT:    vpinsrb $1, (%rsp,%rax), %xmm3, %xmm3
+; AVX512VBMI-NEXT:    vpextrd $2, %xmm2, %eax
+; AVX512VBMI-NEXT:    andl $63, %eax
+; AVX512VBMI-NEXT:    vpinsrb $2, (%rsp,%rax), %xmm3, %xmm3
+; AVX512VBMI-NEXT:    vpextrd $3, %xmm2, %eax
+; AVX512VBMI-NEXT:    vextracti128 $1, %ymm2, %xmm4
+; AVX512VBMI-NEXT:    andl $63, %eax
+; AVX512VBMI-NEXT:    vpinsrb $3, (%rsp,%rax), %xmm3, %xmm3
+; AVX512VBMI-NEXT:    vmovd %xmm4, %eax
+; AVX512VBMI-NEXT:    andl $63, %eax
+; AVX512VBMI-NEXT:    vpinsrb $4, (%rsp,%rax), %xmm3, %xmm3
+; AVX512VBMI-NEXT:    vpextrd $1, %xmm4, %eax
+; AVX512VBMI-NEXT:    andl $63, %eax
+; AVX512VBMI-NEXT:    vpinsrb $5, (%rsp,%rax), %xmm3, %xmm3
+; AVX512VBMI-NEXT:    vpextrd $2, %xmm4, %eax
+; AVX512VBMI-NEXT:    andl $63, %eax
+; AVX512VBMI-NEXT:    vpinsrb $6, (%rsp,%rax), %xmm3, %xmm3
+; AVX512VBMI-NEXT:    vpextrd $3, %xmm4, %eax
+; AVX512VBMI-NEXT:    vextracti32x4 $2, %zmm2, %xmm4
+; AVX512VBMI-NEXT:    andl $63, %eax
+; AVX512VBMI-NEXT:    vpinsrb $7, (%rsp,%rax), %xmm3, %xmm3
+; AVX512VBMI-NEXT:    vmovd %xmm4, %eax
+; AVX512VBMI-NEXT:    andl $63, %eax
+; AVX512VBMI-NEXT:    vpinsrb $8, (%rsp,%rax), %xmm3, %xmm3
+; AVX512VBMI-NEXT:    vpextrd $1, %xmm4, %eax
+; AVX512VBMI-NEXT:    andl $63, %eax
+; AVX512VBMI-NEXT:    vpinsrb $9, (%rsp,%rax), %xmm3, %xmm3
+; AVX512VBMI-NEXT:    andl $63, %esi
+; AVX512VBMI-NEXT:    vpinsrb $10, (%rsp,%rsi), %xmm3, %xmm3
+; AVX512VBMI-NEXT:    vpextrd $3, %xmm4, %eax
+; AVX512VBMI-NEXT:    vextracti32x4 $3, %zmm2, %xmm2
+; AVX512VBMI-NEXT:    andl $63, %eax
+; AVX512VBMI-NEXT:    vpinsrb $11, (%rsp,%rax), %xmm3, %xmm3
+; AVX512VBMI-NEXT:    vmovd %xmm2, %eax
+; AVX512VBMI-NEXT:    andl $63, %eax
+; AVX512VBMI-NEXT:    vpinsrb $12, (%rsp,%rax), %xmm3, %xmm3
+; AVX512VBMI-NEXT:    vpextrd $1, %xmm2, %eax
+; AVX512VBMI-NEXT:    andl $63, %eax
+; AVX512VBMI-NEXT:    vpinsrb $13, (%rsp,%rax), %xmm3, %xmm3
+; AVX512VBMI-NEXT:    vpextrd $2, %xmm2, %eax
+; AVX512VBMI-NEXT:    andl $63, %eax
+; AVX512VBMI-NEXT:    vpinsrb $14, (%rsp,%rax), %xmm3, %xmm3
+; AVX512VBMI-NEXT:    vpextrd $3, %xmm2, %eax
+; AVX512VBMI-NEXT:    andl $63, %eax
+; AVX512VBMI-NEXT:    vpinsrb $15, (%rsp,%rax), %xmm3, %xmm2
+; AVX512VBMI-NEXT:    vpaddd {{.*}}(%rip), %zmm1, %zmm3
+; AVX512VBMI-NEXT:    vpmovdb %zmm3, %xmm3
+; AVX512VBMI-NEXT:    vpaddd {{.*}}(%rip), %zmm1, %zmm4
+; AVX512VBMI-NEXT:    vpmovdb %zmm4, %xmm4
+; AVX512VBMI-NEXT:    vpaddd {{.*}}(%rip), %zmm1, %zmm1
+; AVX512VBMI-NEXT:    vpmovdb %zmm1, %xmm1
+; AVX512VBMI-NEXT:    vpmovsxbd %xmm2, %zmm2
+; AVX512VBMI-NEXT:    vcvtdq2ps %zmm2, %zmm2
+; AVX512VBMI-NEXT:    vpermb %zmm0, %zmm1, %zmm1
+; AVX512VBMI-NEXT:    vpmovsxbd %xmm1, %zmm1
+; AVX512VBMI-NEXT:    vcvtdq2ps %zmm1, %zmm1
+; AVX512VBMI-NEXT:    vpermb %zmm0, %zmm4, %zmm4
+; AVX512VBMI-NEXT:    vpmovsxbd %xmm4, %zmm4
+; AVX512VBMI-NEXT:    vcvtdq2ps %zmm4, %zmm4
+; AVX512VBMI-NEXT:    vpermb %zmm0, %zmm3, %zmm0
+; AVX512VBMI-NEXT:    vpmovsxbd %xmm0, %zmm0
+; AVX512VBMI-NEXT:    vcvtdq2ps %zmm0, %zmm0
+; AVX512VBMI-NEXT:    vmovaps %zmm0, 128(%rdi)
+; AVX512VBMI-NEXT:    vmovaps %zmm4, 64(%rdi)
+; AVX512VBMI-NEXT:    vmovaps %zmm1, (%rdi)
+; AVX512VBMI-NEXT:    vmovaps %zmm2, 192(%rdi)
+; AVX512VBMI-NEXT:    movq %rbp, %rsp
+; AVX512VBMI-NEXT:    popq %rbp
+; AVX512VBMI-NEXT:    vzeroupper
+; AVX512VBMI-NEXT:    retq
+  %b_broadcast_init = insertelement <64 x i32> undef, i32 %b, i32 0
+  %b_broadcast = shufflevector <64 x i32> %b_broadcast_init, <64 x i32> undef, <64 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 undef, i32 0, i32 0, i32 0, i32 0, i32 0>
+  %sub_add__b_broadcast_ = add <64 x i32> %b_broadcast, <i32 58, i32 57, i32 56, i32 55, i32 54, i32 53, i32 52, i32 51, i32 50, i32 49, i32 48, i32 47, i32 46, i32 45, i32 44, i32 43, i32 42, i32 41, i32 40, i32 39, i32 38, i32 37, i32 36, i32 35, i32 34, i32 33, i32 32, i32 31, i32 30, i32 29, i32 28, i32 27, i32 26, i32 25, i32 24, i32 23, i32 22, i32 21, i32 20, i32 19, i32 18, i32 17, i32 16, i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 undef, i32 -1, i32 -2, i32 -3, i32 -4, i32 -5>
+  %index_0.i.i = extractelement <64 x i32> %sub_add__b_broadcast_, i32 0
+  %index_1.i.i = extractelement <64 x i32> %sub_add__b_broadcast_, i32 1
+  %index_2.i.i = extractelement <64 x i32> %sub_add__b_broadcast_, i32 2
+  %index_3.i.i = extractelement <64 x i32> %sub_add__b_broadcast_, i32 3
+  %index_4.i.i = extractelement <64 x i32> %sub_add__b_broadcast_, i32 4
+  %index_5.i.i = extractelement <64 x i32> %sub_add__b_broadcast_, i32 5
+  %index_6.i.i = extractelement <64 x i32> %sub_add__b_broadcast_, i32 6
+  %index_7.i.i = extractelement <64 x i32> %sub_add__b_broadcast_, i32 7
+  %index_8.i.i = extractelement <64 x i32> %sub_add__b_broadcast_, i32 8
+  %index_9.i.i = extractelement <64 x i32> %sub_add__b_broadcast_, i32 9
+  %index_10.i.i = extractelement <64 x i32> %sub_add__b_broadcast_, i32 10
+  %index_11.i.i = extractelement <64 x i32> %sub_add__b_broadcast_, i32 11
+  %index_12.i.i = extractelement <64 x i32> %sub_add__b_broadcast_, i32 12
+  %index_13.i.i = extractelement <64 x i32> %sub_add__b_broadcast_, i32 13
+  %index_14.i.i = extractelement <64 x i32> %sub_add__b_broadcast_, i32 14
+  %index_15.i.i = extractelement <64 x i32> %sub_add__b_broadcast_, i32 15
+  %index_16.i.i = extractelement <64 x i32> %sub_add__b_broadcast_, i32 16
+  %index_17.i.i = extractelement <64 x i32> %sub_add__b_broadcast_, i32 17
+  %index_18.i.i = extractelement <64 x i32> %sub_add__b_broadcast_, i32 18
+  %index_19.i.i = extractelement <64 x i32> %sub_add__b_broadcast_, i32 19
+  %index_20.i.i = extractelement <64 x i32> %sub_add__b_broadcast_, i32 20
+  %index_21.i.i = extractelement <64 x i32> %sub_add__b_broadcast_, i32 21
+  %index_22.i.i = extractelement <64 x i32> %sub_add__b_broadcast_, i32 22
+  %index_23.i.i = extractelement <64 x i32> %sub_add__b_broadcast_, i32 23
+  %index_24.i.i = extractelement <64 x i32> %sub_add__b_broadcast_, i32 24
+  %index_25.i.i = extractelement <64 x i32> %sub_add__b_broadcast_, i32 25
+  %index_26.i.i = extractelement <64 x i32> %sub_add__b_broadcast_, i32 26
+  %index_27.i.i = extractelement <64 x i32> %sub_add__b_broadcast_, i32 27
+  %index_28.i.i = extractelement <64 x i32> %sub_add__b_broadcast_, i32 28
+  %index_29.i.i = extractelement <64 x i32> %sub_add__b_broadcast_, i32 29
+  %index_30.i.i = extractelement <64 x i32> %sub_add__b_broadcast_, i32 30
+  %index_31.i.i = extractelement <64 x i32> %sub_add__b_broadcast_, i32 31
+  %index_32.i.i = extractelement <64 x i32> %sub_add__b_broadcast_, i32 32
+  %index_33.i.i = extractelement <64 x i32> %sub_add__b_broadcast_, i32 33
+  %index_34.i.i = extractelement <64 x i32> %sub_add__b_broadcast_, i32 34
+  %index_35.i.i = extractelement <64 x i32> %sub_add__b_broadcast_, i32 35
+  %index_36.i.i = extractelement <64 x i32> %sub_add__b_broadcast_, i32 36
+  %index_37.i.i = extractelement <64 x i32> %sub_add__b_broadcast_, i32 37
+  %index_38.i.i = extractelement <64 x i32> %sub_add__b_broadcast_, i32 38
+  %index_39.i.i = extractelement <64 x i32> %sub_add__b_broadcast_, i32 39
+  %index_40.i.i = extractelement <64 x i32> %sub_add__b_broadcast_, i32 40
+  %index_41.i.i = extractelement <64 x i32> %sub_add__b_broadcast_, i32 41
+  %index_42.i.i = extractelement <64 x i32> %sub_add__b_broadcast_, i32 42
+  %index_43.i.i = extractelement <64 x i32> %sub_add__b_broadcast_, i32 43
+  %index_44.i.i = extractelement <64 x i32> %sub_add__b_broadcast_, i32 44
+  %index_45.i.i = extractelement <64 x i32> %sub_add__b_broadcast_, i32 45
+  %index_46.i.i = extractelement <64 x i32> %sub_add__b_broadcast_, i32 46
+  %index_47.i.i = extractelement <64 x i32> %sub_add__b_broadcast_, i32 47
+  %index_48.i.i = extractelement <64 x i32> %sub_add__b_broadcast_, i32 48
+  %index_49.i.i = extractelement <64 x i32> %sub_add__b_broadcast_, i32 49
+  %index_50.i.i = extractelement <64 x i32> %sub_add__b_broadcast_, i32 50
+  %index_51.i.i = extractelement <64 x i32> %sub_add__b_broadcast_, i32 51
+  %index_52.i.i = extractelement <64 x i32> %sub_add__b_broadcast_, i32 52
+  %index_53.i.i = extractelement <64 x i32> %sub_add__b_broadcast_, i32 53
+  %index_54.i.i = extractelement <64 x i32> %sub_add__b_broadcast_, i32 54
+  %index_55.i.i = extractelement <64 x i32> %sub_add__b_broadcast_, i32 55
+  %index_56.i.i = extractelement <64 x i32> %sub_add__b_broadcast_, i32 56
+  %index_57.i.i = extractelement <64 x i32> %sub_add__b_broadcast_, i32 57
+  %index_59.i.i = extractelement <64 x i32> %sub_add__b_broadcast_, i32 59
+  %index_60.i.i = extractelement <64 x i32> %sub_add__b_broadcast_, i32 60
+  %index_61.i.i = extractelement <64 x i32> %sub_add__b_broadcast_, i32 61
+  %index_62.i.i = extractelement <64 x i32> %sub_add__b_broadcast_, i32 62
+  %index_63.i.i = extractelement <64 x i32> %sub_add__b_broadcast_, i32 63
+  %v_0.i.i = extractelement <64 x i8> %src, i32 %index_0.i.i
+  %v_1.i.i = extractelement <64 x i8> %src, i32 %index_1.i.i
+  %v_2.i.i = extractelement <64 x i8> %src, i32 %index_2.i.i
+  %v_3.i.i = extractelement <64 x i8> %src, i32 %index_3.i.i
+  %v_4.i.i = extractelement <64 x i8> %src, i32 %index_4.i.i
+  %v_5.i.i = extractelement <64 x i8> %src, i32 %index_5.i.i
+  %v_6.i.i = extractelement <64 x i8> %src, i32 %index_6.i.i
+  %v_7.i.i = extractelement <64 x i8> %src, i32 %index_7.i.i
+  %v_8.i.i = extractelement <64 x i8> %src, i32 %index_8.i.i
+  %v_9.i.i = extractelement <64 x i8> %src, i32 %index_9.i.i
+  %v_10.i.i = extractelement <64 x i8> %src, i32 %index_10.i.i
+  %v_11.i.i = extractelement <64 x i8> %src, i32 %index_11.i.i
+  %v_12.i.i = extractelement <64 x i8> %src, i32 %index_12.i.i
+  %v_13.i.i = extractelement <64 x i8> %src, i32 %index_13.i.i
+  %v_14.i.i = extractelement <64 x i8> %src, i32 %index_14.i.i
+  %v_15.i.i = extractelement <64 x i8> %src, i32 %index_15.i.i
+  %v_16.i.i = extractelement <64 x i8> %src, i32 %index_16.i.i
+  %v_17.i.i = extractelement <64 x i8> %src, i32 %index_17.i.i
+  %v_18.i.i = extractelement <64 x i8> %src, i32 %index_18.i.i
+  %v_19.i.i = extractelement <64 x i8> %src, i32 %index_19.i.i
+  %v_20.i.i = extractelement <64 x i8> %src, i32 %index_20.i.i
+  %v_21.i.i = extractelement <64 x i8> %src, i32 %index_21.i.i
+  %v_22.i.i = extractelement <64 x i8> %src, i32 %index_22.i.i
+  %v_23.i.i = extractelement <64 x i8> %src, i32 %index_23.i.i
+  %v_24.i.i = extractelement <64 x i8> %src, i32 %index_24.i.i
+  %v_25.i.i = extractelement <64 x i8> %src, i32 %index_25.i.i
+  %v_26.i.i = extractelement <64 x i8> %src, i32 %index_26.i.i
+  %v_27.i.i = extractelement <64 x i8> %src, i32 %index_27.i.i
+  %v_28.i.i = extractelement <64 x i8> %src, i32 %index_28.i.i
+  %v_29.i.i = extractelement <64 x i8> %src, i32 %index_29.i.i
+  %v_30.i.i = extractelement <64 x i8> %src, i32 %index_30.i.i
+  %v_31.i.i = extractelement <64 x i8> %src, i32 %index_31.i.i
+  %v_32.i.i = extractelement <64 x i8> %src, i32 %index_32.i.i
+  %v_33.i.i = extractelement <64 x i8> %src, i32 %index_33.i.i
+  %v_34.i.i = extractelement <64 x i8> %src, i32 %index_34.i.i
+  %v_35.i.i = extractelement <64 x i8> %src, i32 %index_35.i.i
+  %v_36.i.i = extractelement <64 x i8> %src, i32 %index_36.i.i
+  %v_37.i.i = extractelement <64 x i8> %src, i32 %index_37.i.i
+  %v_38.i.i = extractelement <64 x i8> %src, i32 %index_38.i.i
+  %v_39.i.i = extractelement <64 x i8> %src, i32 %index_39.i.i
+  %v_40.i.i = extractelement <64 x i8> %src, i32 %index_40.i.i
+  %v_41.i.i = extractelement <64 x i8> %src, i32 %index_41.i.i
+  %v_42.i.i = extractelement <64 x i8> %src, i32 %index_42.i.i
+  %v_43.i.i = extractelement <64 x i8> %src, i32 %index_43.i.i
+  %v_44.i.i = extractelement <64 x i8> %src, i32 %index_44.i.i
+  %v_45.i.i = extractelement <64 x i8> %src, i32 %index_45.i.i
+  %v_46.i.i = extractelement <64 x i8> %src, i32 %index_46.i.i
+  %v_47.i.i = extractelement <64 x i8> %src, i32 %index_47.i.i
+  %v_48.i.i = extractelement <64 x i8> %src, i32 %index_48.i.i
+  %v_49.i.i = extractelement <64 x i8> %src, i32 %index_49.i.i
+  %v_50.i.i = extractelement <64 x i8> %src, i32 %index_50.i.i
+  %v_51.i.i = extractelement <64 x i8> %src, i32 %index_51.i.i
+  %v_52.i.i = extractelement <64 x i8> %src, i32 %index_52.i.i
+  %v_53.i.i = extractelement <64 x i8> %src, i32 %index_53.i.i
+  %v_54.i.i = extractelement <64 x i8> %src, i32 %index_54.i.i
+  %v_55.i.i = extractelement <64 x i8> %src, i32 %index_55.i.i
+  %v_56.i.i = extractelement <64 x i8> %src, i32 %index_56.i.i
+  %v_57.i.i = extractelement <64 x i8> %src, i32 %index_57.i.i
+  %v_58.i.i = extractelement <64 x i8> %src, i32 %b
+  %v_59.i.i = extractelement <64 x i8> %src, i32 %index_59.i.i
+  %v_60.i.i = extractelement <64 x i8> %src, i32 %index_60.i.i
+  %v_61.i.i = extractelement <64 x i8> %src, i32 %index_61.i.i
+  %v_62.i.i = extractelement <64 x i8> %src, i32 %index_62.i.i
+  %v_63.i.i = extractelement <64 x i8> %src, i32 %index_63.i.i
+  %dst_0.i.i = insertelement <64 x i8> undef, i8 %v_0.i.i, i32 0
+  %dst_1.i.i = insertelement <64 x i8> %dst_0.i.i, i8 %v_1.i.i, i32 1
+  %dst_2.i.i = insertelement <64 x i8> %dst_1.i.i, i8 %v_2.i.i, i32 2
+  %dst_3.i.i = insertelement <64 x i8> %dst_2.i.i, i8 %v_3.i.i, i32 3
+  %dst_4.i.i = insertelement <64 x i8> %dst_3.i.i, i8 %v_4.i.i, i32 4
+  %dst_5.i.i = insertelement <64 x i8> %dst_4.i.i, i8 %v_5.i.i, i32 5
+  %dst_6.i.i = insertelement <64 x i8> %dst_5.i.i, i8 %v_6.i.i, i32 6
+  %dst_7.i.i = insertelement <64 x i8> %dst_6.i.i, i8 %v_7.i.i, i32 7
+  %dst_8.i.i = insertelement <64 x i8> %dst_7.i.i, i8 %v_8.i.i, i32 8
+  %dst_9.i.i = insertelement <64 x i8> %dst_8.i.i, i8 %v_9.i.i, i32 9
+  %dst_10.i.i = insertelement <64 x i8> %dst_9.i.i, i8 %v_10.i.i, i32 10
+  %dst_11.i.i = insertelement <64 x i8> %dst_10.i.i, i8 %v_11.i.i, i32 11
+  %dst_12.i.i = insertelement <64 x i8> %dst_11.i.i, i8 %v_12.i.i, i32 12
+  %dst_13.i.i = insertelement <64 x i8> %dst_12.i.i, i8 %v_13.i.i, i32 13
+  %dst_14.i.i = insertelement <64 x i8> %dst_13.i.i, i8 %v_14.i.i, i32 14
+  %dst_15.i.i = insertelement <64 x i8> %dst_14.i.i, i8 %v_15.i.i, i32 15
+  %dst_16.i.i = insertelement <64 x i8> %dst_15.i.i, i8 %v_16.i.i, i32 16
+  %dst_17.i.i = insertelement <64 x i8> %dst_16.i.i, i8 %v_17.i.i, i32 17
+  %dst_18.i.i = insertelement <64 x i8> %dst_17.i.i, i8 %v_18.i.i, i32 18
+  %dst_19.i.i = insertelement <64 x i8> %dst_18.i.i, i8 %v_19.i.i, i32 19
+  %dst_20.i.i = insertelement <64 x i8> %dst_19.i.i, i8 %v_20.i.i, i32 20
+  %dst_21.i.i = insertelement <64 x i8> %dst_20.i.i, i8 %v_21.i.i, i32 21
+  %dst_22.i.i = insertelement <64 x i8> %dst_21.i.i, i8 %v_22.i.i, i32 22
+  %dst_23.i.i = insertelement <64 x i8> %dst_22.i.i, i8 %v_23.i.i, i32 23
+  %dst_24.i.i = insertelement <64 x i8> %dst_23.i.i, i8 %v_24.i.i, i32 24
+  %dst_25.i.i = insertelement <64 x i8> %dst_24.i.i, i8 %v_25.i.i, i32 25
+  %dst_26.i.i = insertelement <64 x i8> %dst_25.i.i, i8 %v_26.i.i, i32 26
+  %dst_27.i.i = insertelement <64 x i8> %dst_26.i.i, i8 %v_27.i.i, i32 27
+  %dst_28.i.i = insertelement <64 x i8> %dst_27.i.i, i8 %v_28.i.i, i32 28
+  %dst_29.i.i = insertelement <64 x i8> %dst_28.i.i, i8 %v_29.i.i, i32 29
+  %dst_30.i.i = insertelement <64 x i8> %dst_29.i.i, i8 %v_30.i.i, i32 30
+  %dst_31.i.i = insertelement <64 x i8> %dst_30.i.i, i8 %v_31.i.i, i32 31
+  %dst_32.i.i = insertelement <64 x i8> %dst_31.i.i, i8 %v_32.i.i, i32 32
+  %dst_33.i.i = insertelement <64 x i8> %dst_32.i.i, i8 %v_33.i.i, i32 33
+  %dst_34.i.i = insertelement <64 x i8> %dst_33.i.i, i8 %v_34.i.i, i32 34
+  %dst_35.i.i = insertelement <64 x i8> %dst_34.i.i, i8 %v_35.i.i, i32 35
+  %dst_36.i.i = insertelement <64 x i8> %dst_35.i.i, i8 %v_36.i.i, i32 36
+  %dst_37.i.i = insertelement <64 x i8> %dst_36.i.i, i8 %v_37.i.i, i32 37
+  %dst_38.i.i = insertelement <64 x i8> %dst_37.i.i, i8 %v_38.i.i, i32 38
+  %dst_39.i.i = insertelement <64 x i8> %dst_38.i.i, i8 %v_39.i.i, i32 39
+  %dst_40.i.i = insertelement <64 x i8> %dst_39.i.i, i8 %v_40.i.i, i32 40
+  %dst_41.i.i = insertelement <64 x i8> %dst_40.i.i, i8 %v_41.i.i, i32 41
+  %dst_42.i.i = insertelement <64 x i8> %dst_41.i.i, i8 %v_42.i.i, i32 42
+  %dst_43.i.i = insertelement <64 x i8> %dst_42.i.i, i8 %v_43.i.i, i32 43
+  %dst_44.i.i = insertelement <64 x i8> %dst_43.i.i, i8 %v_44.i.i, i32 44
+  %dst_45.i.i = insertelement <64 x i8> %dst_44.i.i, i8 %v_45.i.i, i32 45
+  %dst_46.i.i = insertelement <64 x i8> %dst_45.i.i, i8 %v_46.i.i, i32 46
+  %dst_47.i.i = insertelement <64 x i8> %dst_46.i.i, i8 %v_47.i.i, i32 47
+  %dst_48.i.i = insertelement <64 x i8> %dst_47.i.i, i8 %v_48.i.i, i32 48
+  %dst_49.i.i = insertelement <64 x i8> %dst_48.i.i, i8 %v_49.i.i, i32 49
+  %dst_50.i.i = insertelement <64 x i8> %dst_49.i.i, i8 %v_50.i.i, i32 50
+  %dst_51.i.i = insertelement <64 x i8> %dst_50.i.i, i8 %v_51.i.i, i32 51
+  %dst_52.i.i = insertelement <64 x i8> %dst_51.i.i, i8 %v_52.i.i, i32 52
+  %dst_53.i.i = insertelement <64 x i8> %dst_52.i.i, i8 %v_53.i.i, i32 53
+  %dst_54.i.i = insertelement <64 x i8> %dst_53.i.i, i8 %v_54.i.i, i32 54
+  %dst_55.i.i = insertelement <64 x i8> %dst_54.i.i, i8 %v_55.i.i, i32 55
+  %dst_56.i.i = insertelement <64 x i8> %dst_55.i.i, i8 %v_56.i.i, i32 56
+  %dst_57.i.i = insertelement <64 x i8> %dst_56.i.i, i8 %v_57.i.i, i32 57
+  %dst_58.i.i = insertelement <64 x i8> %dst_57.i.i, i8 %v_58.i.i, i32 58
+  %dst_59.i.i = insertelement <64 x i8> %dst_58.i.i, i8 %v_59.i.i, i32 59
+  %dst_60.i.i = insertelement <64 x i8> %dst_59.i.i, i8 %v_60.i.i, i32 60
+  %dst_61.i.i = insertelement <64 x i8> %dst_60.i.i, i8 %v_61.i.i, i32 61
+  %dst_62.i.i = insertelement <64 x i8> %dst_61.i.i, i8 %v_62.i.i, i32 62
+  %dst_63.i.i = insertelement <64 x i8> %dst_62.i.i, i8 %v_63.i.i, i32 63
+  %shuf_load_to_float = sitofp <64 x i8> %dst_63.i.i to <64 x float>
+  store <64 x float> %shuf_load_to_float, <64 x float>* %dst
+  ret void
+}
