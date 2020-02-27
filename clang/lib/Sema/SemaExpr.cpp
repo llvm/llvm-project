@@ -4885,8 +4885,9 @@ Sema::CreateBuiltinArraySubscriptExpr(Expr *Base, SourceLocation LLoc,
     // See IsCForbiddenLValueType.
     if (!ResultType.hasQualifiers()) VK = VK_RValue;
   } else if (!ResultType->isDependentType() &&
-      RequireCompleteType(LLoc, ResultType,
-                          diag::err_subscript_incomplete_type, BaseExpr))
+             RequireCompleteSizedType(
+                 LLoc, ResultType,
+                 diag::err_subscript_incomplete_or_sizeless_type, BaseExpr))
     return ExprError();
 
   assert(VK == VK_RValue || LangOpts.CPlusPlus ||

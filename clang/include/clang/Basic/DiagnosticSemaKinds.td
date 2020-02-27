@@ -6126,8 +6126,8 @@ def err_typecheck_subscript_not_integer : Error<
   "array subscript is not an integer">;
 def err_subscript_function_type : Error<
   "subscript of pointer to function type %0">;
-def err_subscript_incomplete_type : Error<
-  "subscript of pointer to incomplete type %0">;
+def err_subscript_incomplete_or_sizeless_type : Error<
+  "subscript of pointer to %select{incomplete|sizeless}0 type %1">;
 def err_dereference_incomplete_type : Error<
   "dereference of pointer to incomplete type %0">;
 def ext_gnu_subscript_void_type : Extension<
