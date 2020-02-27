@@ -595,6 +595,10 @@ TEST_F(FormatTestCSharp, CSharpSpaces) {
   verifyFormat(R"(bool[] xs = { true, true };)", Style);
   verifyFormat(R"(taskContext.Factory.Run(async () => doThing(args);)", Style);
   verifyFormat(R"(catch (TestException) when (innerFinallyExecuted))", Style);
+  verifyFormat(R"(private float[,] Values;)", Style);
+
+  Style.SpacesInSquareBrackets = true;
+  verifyFormat(R"(private float[, ] Values;)", Style);
 }
 
 } // namespace format
