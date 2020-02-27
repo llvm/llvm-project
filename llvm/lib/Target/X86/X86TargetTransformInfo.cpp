@@ -2393,10 +2393,11 @@ int X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index) {
    };
 
   assert(Val->isVectorTy() && "This must be a vector type");
-
   Type *ScalarType = Val->getScalarType();
+  int RegisterFileMoveCost = 0;
 
-  if (Index != -1U) {
+  if (Index != -1U && (Opcode == Instruction::ExtractElement ||
+                       Opcode == Instruction::InsertElement)) {
     // Legalize the type.
     std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Val);
 
@@ -2405,17 +2406,32 @@ int X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index) {
       return 0;
 
     // The type may be split. Normalize the index to the new type.
-    unsigned Width = LT.second.getVectorNumElements();
-    Index = Index % Width;
+    unsigned NumElts = LT.second.getVectorNumElements();
+    unsigned SubNumElts = NumElts;
+    Index = Index % NumElts;
+
+    // For >128-bit vectors, we need to extract higher 128-bit subvectors.
+    // For inserts, we also need to insert the subvector back.
+    if (LT.second.getSizeInBits() > 128) {
+      assert((LT.second.getSizeInBits() % 128) == 0 && "Illegal vector");
+      unsigned NumSubVecs = LT.second.getSizeInBits() / 128;
+      SubNumElts = NumElts / NumSubVecs;
+      if (SubNumElts <= Index) {
+        RegisterFileMoveCost += (Opcode == Instruction::InsertElement ? 2 : 1);
+        Index %= SubNumElts;
+      }
+    }
 
     if (Index == 0) {
       // Floating point scalars are already located in index #0.
+      // Many insertions to #0 can fold away for scalar fp-ops, so let's assume
+      // true for all.
       if (ScalarType->isFloatingPointTy())
-        return 0;
+        return RegisterFileMoveCost;
 
-      // Assume movd/movq XMM <-> GPR is relatively cheap on all targets.
-      if (ScalarType->isIntegerTy())
-        return 1;
+      // Assume movd/movq XMM -> GPR is relatively cheap on all targets.
+      if (ScalarType->isIntegerTy() && Opcode == Instruction::ExtractElement)
+        return 1 + RegisterFileMoveCost;
     }
 
     int ISD = TLI->InstructionOpcodeToISD(Opcode);
@@ -2423,14 +2439,36 @@ int X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index) {
     MVT MScalarTy = LT.second.getScalarType();
     if (ST->isSLM())
       if (auto *Entry = CostTableLookup(SLMCostTbl, ISD, MScalarTy))
-        return Entry->Cost;
+        return Entry->Cost + RegisterFileMoveCost;
+
+    // Assume pinsr/pextr XMM <-> GPR is relatively cheap on all targets.
+    if ((MScalarTy == MVT::i16 && ST->hasSSE2()) ||
+        (MScalarTy.isInteger() && ST->hasSSE41()))
+      return 1 + RegisterFileMoveCost;
+
+    // Assume insertps is relatively cheap on all targets.
+    if (MScalarTy == MVT::f32 && ST->hasSSE41() &&
+        Opcode == Instruction::InsertElement)
+      return 1 + RegisterFileMoveCost;
+
+    // For extractions we just need to shuffle the element to index 0, which
+    // should be very cheap (assume cost = 1). For insertions we need to shuffle
+    // the elements to its destination. In both cases we must handle the
+    // subvector move(s).
+    // TODO: Under what circumstances should we shuffle using the full width?
+    int ShuffleCost = 1;
+    if (Opcode == Instruction::InsertElement) {
+      Type *SubTy = VectorType::get(Val->getVectorElementType(), SubNumElts);
+      ShuffleCost = getShuffleCost(TTI::SK_PermuteTwoSrc, SubTy, 0, SubTy);
+    }
+    int IntOrFpCost = ScalarType->isFloatingPointTy() ? 0 : 1;
+    return ShuffleCost + IntOrFpCost + RegisterFileMoveCost;
   }
 
   // Add to the base cost if we know that the extracted element of a vector is
   // destined to be moved to and used in the integer register file.
-  int RegisterFileMoveCost = 0;
   if (Opcode == Instruction::ExtractElement && ScalarType->isPointerTy())
-    RegisterFileMoveCost = 1;
+    RegisterFileMoveCost += 1;
 
   return BaseT::getVectorInstrCost(Opcode, Val, Index) + RegisterFileMoveCost;
 }
