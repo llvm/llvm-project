@@ -312,60 +312,6 @@ TEST(SourceCodeTests, SourceLocationInMainFile) {
   }
 }
 
-TEST(SourceCodeTests, GetBeginningOfIdentifier) {
-  std::string Preamble = R"cpp(
-struct Bar { int func(); };
-#define MACRO(X) void f() { X; }
-Bar* bar;
-  )cpp";
-  // First ^ is the expected beginning, last is the search position.
-  for (const std::string &Text : std::vector<std::string>{
-           "int ^f^oo();", // inside identifier
-           "int ^foo();",  // beginning of identifier
-           "int ^foo^();", // end of identifier
-           "int foo(^);",  // non-identifier
-           "^int foo();",  // beginning of file (can't back up)
-           "int ^f0^0();", // after a digit (lexing at N-1 is wrong)
-           "/^/ comments", // non-interesting token
-           "void f(int abc) { abc ^ ++; }",    // whitespace
-           "void f(int abc) { ^abc^++; }",     // range of identifier
-           "void f(int abc) { ++^abc^; }",     // range of identifier
-           "void f(int abc) { ++^abc; }",      // range of identifier
-           "void f(int abc) { ^+^+abc; }",     // range of operator
-           "void f(int abc) { ^abc^ ++; }",    // range of identifier
-           "void f(int abc) { abc ^++^; }",    // range of operator
-           "void f(int abc) { ^++^ abc; }",    // range of operator
-           "void f(int abc) { ++ ^abc^; }",    // range of identifier
-           "void f(int abc) { ^++^/**/abc; }", // range of operator
-           "void f(int abc) { ++/**/^abc; }",  // range of identifier
-           "void f(int abc) { ^abc^/**/++; }", // range of identifier
-           "void f(int abc) { abc/**/^++; }",  // range of operator
-           "void f() {^ }", // outside of identifier and operator
-           "int ^λλ^λ();",  // UTF-8 handled properly when backing up
-
-           // identifier in macro arg
-           "MACRO(bar->^func())",  // beginning of identifier
-           "MACRO(bar->^fun^c())", // inside identifier
-           "MACRO(bar->^func^())", // end of identifier
-           "MACRO(^bar->func())",  // begin identifier
-           "MACRO(^bar^->func())", // end identifier
-           "^MACRO(bar->func())",  // beginning of macro name
-           "^MAC^RO(bar->func())", // inside macro name
-           "^MACRO^(bar->func())", // end of macro name
-       }) {
-    std::string WithPreamble = Preamble + Text;
-    Annotations TestCase(WithPreamble);
-    auto AST = TestTU::withCode(TestCase.code()).build();
-    const auto &SourceMgr = AST.getSourceManager();
-    SourceLocation Actual = getBeginningOfIdentifier(
-        TestCase.points().back(), SourceMgr, AST.getLangOpts());
-    Position ActualPos = offsetToPosition(
-        TestCase.code(),
-        SourceMgr.getFileOffset(SourceMgr.getSpellingLoc(Actual)));
-    EXPECT_EQ(TestCase.points().front(), ActualPos) << Text;
-  }
-}
-
 TEST(SourceCodeTests, CollectIdentifiers) {
   auto Style = format::getLLVMStyle();
   auto IDs = collectIdentifiers(R"cpp(
@@ -481,9 +427,11 @@ TEST(SourceCodeTests, GetMacros) {
    )cpp");
   TestTU TU = TestTU::withCode(Code.code());
   auto AST = TU.build();
-  auto Loc = getBeginningOfIdentifier(Code.point(), AST.getSourceManager(),
-                                      AST.getLangOpts());
-  auto Result = locateMacroAt(Loc, AST.getPreprocessor());
+  auto CurLoc = sourceLocationInMainFile(AST.getSourceManager(), Code.point());
+  ASSERT_TRUE(bool(CurLoc));
+  const auto *Id = syntax::spelledIdentifierTouching(*CurLoc, AST.getTokens());
+  ASSERT_TRUE(Id);
+  auto Result = locateMacroAt(Id->location(), AST.getPreprocessor());
   ASSERT_TRUE(Result);
   EXPECT_THAT(*Result, MacroName("MACRO"));
 }
