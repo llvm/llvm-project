@@ -1,12 +1,13 @@
-//===- mlir_runner_utils.h - Utils for debugging MLIR CPU execution -------===//
+//===- RunnerUtils.h - Utils for debugging MLIR execution -----------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef MLIR_CPU_RUNNER_MLIRUTILS_H_
-#define MLIR_CPU_RUNNER_MLIRUTILS_H_
+
+#ifndef EXECUTIONENGINE_RUNNERUTILS_H_
+#define EXECUTIONENGINE_RUNNERUTILS_H_
 
 #include <assert.h>
 #include <cstdint>
@@ -291,4 +292,4 @@ extern "C" MLIR_RUNNER_UTILS_EXPORT void print_close();
 extern "C" MLIR_RUNNER_UTILS_EXPORT void print_comma();
 extern "C" MLIR_RUNNER_UTILS_EXPORT void print_newline();
 
-#endif // MLIR_CPU_RUNNER_MLIRUTILS_H_
+#endif // EXECUTIONENGINE_RUNNERUTILS_H_
