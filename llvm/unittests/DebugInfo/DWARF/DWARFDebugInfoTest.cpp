@@ -2532,7 +2532,7 @@ TEST(DWARFDebugInfo, TestErrorReporting) {
   // DWARFContext parses whole file and finds the two errors we expect.
   int Errors = 0;
   std::unique_ptr<DWARFContext> Ctx1 =
-      DWARFContext::create(**Obj, nullptr, [&](Error E) {
+      DWARFContext::create(**Obj, nullptr, "", [&](Error E) {
         ++Errors;
         consumeError(std::move(E));
       });

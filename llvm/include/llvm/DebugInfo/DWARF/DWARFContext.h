@@ -106,7 +106,11 @@ class DWARFContext : public DIContext {
 
 public:
   DWARFContext(std::unique_ptr<const DWARFObject> DObj,
-               std::string DWPName = "");
+               std::string DWPName = "",
+               std::function<void(Error)> RecoverableErrorHandler =
+                   WithColor::defaultErrorHandler,
+               std::function<void(Error)> WarningHandler =
+                   WithColor::defaultWarningHandler);
   ~DWARFContext();
 
   DWARFContext(DWARFContext &) = delete;
@@ -350,12 +354,19 @@ public:
 
   static std::unique_ptr<DWARFContext>
   create(const object::ObjectFile &Obj, const LoadedObjectInfo *L = nullptr,
-         function_ref<void(Error)> HandleError = WithColor::defaultErrorHandler,
-         std::string DWPName = "");
+         std::string DWPName = "",
+         std::function<void(Error)> RecoverableErrorHandler =
+             WithColor::defaultErrorHandler,
+         std::function<void(Error)> WarningHandler =
+             WithColor::defaultWarningHandler);
 
   static std::unique_ptr<DWARFContext>
   create(const StringMap<std::unique_ptr<MemoryBuffer>> &Sections,
-         uint8_t AddrSize, bool isLittleEndian = sys::IsLittleEndianHost);
+         uint8_t AddrSize, bool isLittleEndian = sys::IsLittleEndianHost,
+         std::function<void(Error)> RecoverableErrorHandler =
+             WithColor::defaultErrorHandler,
+         std::function<void(Error)> WarningHandler =
+             WithColor::defaultWarningHandler);
 
   /// Loads register info for the architecture of the provided object file.
   /// Improves readability of dumped DWARF expressions. Requires the caller to
