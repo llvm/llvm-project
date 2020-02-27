@@ -5371,7 +5371,8 @@ Optional<RegImmPair> ARMBaseInstrInfo::isAddImmediate(const MachineInstr &MI,
 
   // TODO: Handle cases where Reg is a super- or sub-register of the
   // destination register.
-  if (Reg != MI.getOperand(0).getReg())
+  const MachineOperand &Op0 = MI.getOperand(0);
+  if (!Op0.isReg() || Reg != Op0.getReg())
     return None;
 
   // We describe SUBri or ADDri instructions.
@@ -5383,8 +5384,7 @@ Optional<RegImmPair> ARMBaseInstrInfo::isAddImmediate(const MachineInstr &MI,
   // TODO: Third operand can be global address (usually some string). Since
   //       strings can be relocated we cannot calculate their offsets for
   //       now.
-  if (!MI.getOperand(0).isReg() || !MI.getOperand(1).isReg() ||
-      !MI.getOperand(2).isImm())
+  if (!MI.getOperand(1).isReg() || !MI.getOperand(2).isImm())
     return None;
 
   Offset = MI.getOperand(2).getImm() * Sign;
