@@ -155,21 +155,6 @@ gpu.module @test_module {
 }
 
 // -----
-
-gpu.module @test_module {
-  // CHECK: llvm.func @__nv_tanhf(!llvm.float) -> !llvm.float
-  // CHECK: llvm.func @__nv_tanh(!llvm.double) -> !llvm.double
-  // CHECK-LABEL: func @gpu_tanh
-  func @gpu_tanh(%arg_f32 : f32, %arg_f64 : f64) {
-    %result32 = std.tanh %arg_f32 : f32
-    // CHECK: llvm.call @__nv_tanhf(%{{.*}}) : (!llvm.float) -> !llvm.float
-    %result64 = std.tanh %arg_f64 : f64
-    // CHECK: llvm.call @__nv_tanh(%{{.*}}) : (!llvm.double) -> !llvm.double
-    std.return
-  }
-}
-
-// -----
 gpu.module @test_module {
   // CHECK: llvm.func @__nv_expf(!llvm.float) -> !llvm.float
   // CHECK: llvm.func @__nv_exp(!llvm.double) -> !llvm.double
@@ -181,6 +166,66 @@ gpu.module @test_module {
     // CHECK: llvm.call @__nv_expf(%{{.*}}) : (!llvm.float) -> !llvm.float
     %result64 = std.exp %arg_f64 : f64
     // CHECK: llvm.call @__nv_exp(%{{.*}}) : (!llvm.double) -> !llvm.double
+    std.return
+  }
+}
+
+// -----
+
+gpu.module @test_module {
+  // CHECK: llvm.func @__nv_logf(!llvm.float) -> !llvm.float
+  // CHECK: llvm.func @__nv_log(!llvm.double) -> !llvm.double
+  // CHECK-LABEL: func @gpu_log
+  func @gpu_log(%arg_f32 : f32, %arg_f64 : f64) {
+    %result32 = std.log %arg_f32 : f32
+    // CHECK: llvm.call @__nv_logf(%{{.*}}) : (!llvm.float) -> !llvm.float
+    %result64 = std.log %arg_f64 : f64
+    // CHECK: llvm.call @__nv_log(%{{.*}}) : (!llvm.double) -> !llvm.double
+    std.return
+  }
+}
+
+// -----
+
+gpu.module @test_module {
+  // CHECK: llvm.func @__nv_log10f(!llvm.float) -> !llvm.float
+  // CHECK: llvm.func @__nv_log10(!llvm.double) -> !llvm.double
+  // CHECK-LABEL: func @gpu_log10
+  func @gpu_log10(%arg_f32 : f32, %arg_f64 : f64) {
+    %result32 = std.log10 %arg_f32 : f32
+    // CHECK: llvm.call @__nv_log10f(%{{.*}}) : (!llvm.float) -> !llvm.float
+    %result64 = std.log10 %arg_f64 : f64
+    // CHECK: llvm.call @__nv_log10(%{{.*}}) : (!llvm.double) -> !llvm.double
+    std.return
+  }
+}
+
+// -----
+
+gpu.module @test_module {
+  // CHECK: llvm.func @__nv_log2f(!llvm.float) -> !llvm.float
+  // CHECK: llvm.func @__nv_log2(!llvm.double) -> !llvm.double
+  // CHECK-LABEL: func @gpu_log2
+  func @gpu_log2(%arg_f32 : f32, %arg_f64 : f64) {
+    %result32 = std.log2 %arg_f32 : f32
+    // CHECK: llvm.call @__nv_log2f(%{{.*}}) : (!llvm.float) -> !llvm.float
+    %result64 = std.log2 %arg_f64 : f64
+    // CHECK: llvm.call @__nv_log2(%{{.*}}) : (!llvm.double) -> !llvm.double
+    std.return
+  }
+}
+
+// -----
+
+gpu.module @test_module {
+  // CHECK: llvm.func @__nv_tanhf(!llvm.float) -> !llvm.float
+  // CHECK: llvm.func @__nv_tanh(!llvm.double) -> !llvm.double
+  // CHECK-LABEL: func @gpu_tanh
+  func @gpu_tanh(%arg_f32 : f32, %arg_f64 : f64) {
+    %result32 = std.tanh %arg_f32 : f32
+    // CHECK: llvm.call @__nv_tanhf(%{{.*}}) : (!llvm.float) -> !llvm.float
+    %result64 = std.tanh %arg_f64 : f64
+    // CHECK: llvm.call @__nv_tanh(%{{.*}}) : (!llvm.double) -> !llvm.double
     std.return
   }
 }
