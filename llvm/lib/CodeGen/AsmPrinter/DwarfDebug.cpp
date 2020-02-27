@@ -548,6 +548,37 @@ DIE &DwarfDebug::constructSubprogramDefinitionDIE(const DISubprogram *SP) {
   return *CU.getOrCreateSubprogramDIE(SP);
 }
 
+/// Register worklist for finding call site values.
+using FwdRegWorklist = MapVector<unsigned, SmallVector<unsigned, 2>>;
+
+/// Emit call site parameter entries that are described by the given value and
+/// debug expression.
+template <typename ValT>
+static void finishCallSiteParams(ValT Val, const DIExpression *Expr,
+                                 ArrayRef<unsigned> DescribedParams,
+                                 ParamSet &Params) {
+  DbgValueLoc DbgLocVal(Expr, Val);
+  for (auto ParamReg : DescribedParams) {
+    DbgCallSiteParam CSParm(ParamReg, DbgLocVal);
+    Params.push_back(CSParm);
+    ++NumCSParams;
+  }
+}
+
+/// Add \p Reg to the worklist, if it's not already present, and mark that the
+/// given parameter registers' values can (potentially) be described using
+/// that register.
+static void addToFwdRegWorklist(FwdRegWorklist &Worklist, unsigned Reg,
+                                ArrayRef<unsigned> ParamsToAdd) {
+  auto I = Worklist.insert({Reg, {}});
+  auto &ParamsForFwdReg = I.first->second;
+  for (auto ParamReg : ParamsToAdd) {
+    assert(!is_contained(ParamsForFwdReg, ParamReg) &&
+           "Same parameter described twice by forwarding reg");
+    ParamsForFwdReg.push_back(ParamReg);
+  }
+}
+
 /// Try to interpret values loaded into registers that forward parameters
 /// for \p CallMI. Store parameters with interpreted value into \p Params.
 static void collectCallSiteParameters(const MachineInstr *CallMI,
@@ -567,11 +598,6 @@ static void collectCallSiteParameters(const MachineInstr *CallMI,
 
   // Skip the call instruction.
   auto I = std::next(CallMI->getReverseIterator());
-
-  // Register worklist. Each register has an associated list of parameter
-  // registers whose call site values potentially can be described using that
-  // register.
-  using FwdRegWorklist = MapVector<unsigned, SmallVector<unsigned, 2>>;
 
   FwdRegWorklist ForwardedRegWorklist;
 
@@ -599,7 +625,7 @@ static void collectCallSiteParameters(const MachineInstr *CallMI,
   // Add all the forwarding registers into the ForwardedRegWorklist.
   for (auto ArgReg : CallFwdRegsInfo->second) {
     bool InsertedReg =
-        ForwardedRegWorklist.insert({ArgReg.Reg, {ArgReg.Reg}}).second;
+        ForwardedRegWorklist.insert({ArgReg.Reg, {{ArgReg.Reg}}}).second;
     assert(InsertedReg && "Single register used to forward two arguments?");
     (void)InsertedReg;
   }
@@ -631,28 +657,6 @@ static void collectCallSiteParameters(const MachineInstr *CallMI,
     }
   };
 
-  auto finishCallSiteParams = [&](DbgValueLoc DbgLocVal,
-                                  ArrayRef<unsigned> ParamRegs) {
-    for (auto FwdReg : ParamRegs) {
-      DbgCallSiteParam CSParm(FwdReg, DbgLocVal);
-      Params.push_back(CSParm);
-      ++NumCSParams;
-    }
-  };
-
-  // Add Reg to the worklist, if it's not already present, and mark that the
-  // given parameter registers' values can (potentially) be described using
-  // that register.
-  auto addToWorklist = [](FwdRegWorklist &Worklist, unsigned Reg,
-                          ArrayRef<unsigned> ParamRegs) {
-    auto I = Worklist.insert({Reg, {}});
-    for (auto ParamReg : ParamRegs) {
-      assert(!is_contained(I.first->second, ParamReg) &&
-             "Same parameter described twice by forwarding reg");
-      I.first->second.push_back(ParamReg);
-    }
-  };
-
   // Search for a loading value in forwarding registers.
   for (; I != MBB->rend(); ++I) {
     // Skip bundle headers.
@@ -678,8 +682,8 @@ static void collectCallSiteParameters(const MachineInstr *CallMI,
       if (auto ParamValue = TII->describeLoadedValue(*I, ParamFwdReg)) {
         if (ParamValue->first.isImm()) {
           int64_t Val = ParamValue->first.getImm();
-          DbgValueLoc DbgLocVal(ParamValue->second, Val);
-          finishCallSiteParams(DbgLocVal, ForwardedRegWorklist[ParamFwdReg]);
+          finishCallSiteParams(Val, ParamValue->second,
+                               ForwardedRegWorklist[ParamFwdReg], Params);
         } else if (ParamValue->first.isReg()) {
           Register RegLoc = ParamValue->first.getReg();
           // TODO: For now, there is no use of describing the value loaded into the
@@ -691,10 +695,9 @@ static void collectCallSiteParameters(const MachineInstr *CallMI,
           Register FP = TRI->getFrameRegister(*MF);
           bool IsSPorFP = (RegLoc == SP) || (RegLoc == FP);
           if (TRI->isCalleeSavedPhysReg(RegLoc, *MF) || IsSPorFP) {
-            DbgValueLoc DbgLocVal(ParamValue->second,
-                                  MachineLocation(RegLoc,
-                                                  /*IsIndirect=*/IsSPorFP));
-            finishCallSiteParams(DbgLocVal, ForwardedRegWorklist[ParamFwdReg]);
+            MachineLocation MLoc(RegLoc, /*IsIndirect=*/IsSPorFP);
+            finishCallSiteParams(MLoc, ParamValue->second,
+                                 ForwardedRegWorklist[ParamFwdReg], Params);
           // TODO: Add support for entry value plus an expression.
           } else if (ShouldTryEmitEntryVals &&
                      ParamValue->second->getNumElements() == 0) {
@@ -706,8 +709,8 @@ static void collectCallSiteParameters(const MachineInstr *CallMI,
             // may be a register that will be handled in this iteration, we
             // postpone adding the items to the worklist, and instead keep them
             // in a temporary container.
-            addToWorklist(NewWorklistItems, RegLoc,
-                          ForwardedRegWorklist[ParamFwdReg]);
+            addToFwdRegWorklist(NewWorklistItems, RegLoc,
+                                ForwardedRegWorklist[ParamFwdReg]);
           }
         }
       }
@@ -720,7 +723,7 @@ static void collectCallSiteParameters(const MachineInstr *CallMI,
     // Now that we are done handling this instruction, add items from the
     // temporary worklist to the real one.
     for (auto New : NewWorklistItems)
-      addToWorklist(ForwardedRegWorklist, New.first, New.second);
+      addToFwdRegWorklist(ForwardedRegWorklist, New.first, New.second);
     NewWorklistItems.clear();
   }
 
@@ -730,8 +733,8 @@ static void collectCallSiteParameters(const MachineInstr *CallMI,
     DIExpression *EntryExpr = DIExpression::get(
         MF->getFunction().getContext(), {dwarf::DW_OP_LLVM_entry_value, 1});
     for (auto RegEntry : ForwardedRegWorklist) {
-      DbgValueLoc DbgLocVal(EntryExpr, MachineLocation(RegEntry.first));
-      finishCallSiteParams(DbgLocVal, RegEntry.second);
+      MachineLocation MLoc(RegEntry.first);
+      finishCallSiteParams(MLoc, EntryExpr, RegEntry.second, Params);
     }
   }
 }
