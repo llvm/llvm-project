@@ -189,6 +189,35 @@ define amdgpu_ps <4 x float> @wqm_kill_to_demote2(<8 x i32> inreg %rsrc, <4 x i3
   ret <4 x float> %rtex
 }
 
+
+; GCN-LABEL: {{^}}sinking_image_sample:
+; GCN-NEXT: ; %.entry
+; GCN-NOT: image_sample
+; GCN: s_cbranch_exec
+; GCN: image_sample
+define amdgpu_ps void @sinking_image_sample(float %arg0, <8 x i32> inreg %arg1, <4 x i32> inreg %arg2, float %arg3) {
+.entry:
+  %tmp0 = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 7, float %arg0, <8 x i32> %arg1, <4 x i32> %arg2, i1 false, i32 0, i32 0)
+  %tmp1 = fcmp olt float %arg3, 0.000000e+00
+  br i1 %tmp1, label %kill_br, label %next
+
+kill_br:
+  call void @llvm.amdgcn.kill(i1 false)
+  br label %exit
+
+next:
+  %tmp2 = extractelement <4 x float> %tmp0, i32 2
+  %tmp3 = extractelement <4 x float> %tmp0, i32 3
+  %tmp4 = fadd reassoc nnan nsz arcp contract float %tmp2, %tmp3
+  br label %exit
+
+exit:                                            ; preds = %bb102
+  %outp = phi float [ %tmp4, %next ], [ undef, %kill_br]
+  call void @llvm.amdgcn.exp.f32(i32 immarg 0, i32 immarg 15, float %outp, float %outp, float %outp, float %outp, i1 immarg true, i1 immarg true)
+  ret void
+}
+
+
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
 
