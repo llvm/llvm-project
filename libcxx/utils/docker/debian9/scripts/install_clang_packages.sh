@@ -20,7 +20,7 @@ Available options:
 EOF
 }
 
-VERSION="9"
+VERSION="10"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -71,7 +71,7 @@ clang++ --version
 
 # Figure out the libc++ and libc++abi package versions that we want.
 if [ "$VERSION" == "" ]; then
-  VERSION="$(apt-cache search 'libc\+\+-[0-9]-dev' | awk '{print $1}' | awk -F- '{print $2}')"
+  VERSION="$(apt-cache search 'libc\+\+-[0-9]+-dev' | awk '{print $1}' | awk -F- '{print $2}')"
   echo "Installing version '$VERSION'"
 fi
 
