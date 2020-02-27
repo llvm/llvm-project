@@ -41,6 +41,7 @@ target_link_libraries(toyc-ch6
     MLIRLLVMIR
     MLIRParser
     MLIRPass
+    MLIRSupport
     MLIRTargetLLVMIR
     MLIRTransforms
     LLVMOrcJIT
