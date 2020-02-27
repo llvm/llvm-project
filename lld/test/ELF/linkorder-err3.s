@@ -4,7 +4,7 @@
 # RUN: not ld.lld %t.o -o /dev/null 2>&1 | FileCheck %s
 
 # CHECK:      error: incompatible section flags for .bar
-# CHECK-NEXT: >>> {{.*}}section-metadata-err3.s.tmp.o:(.bar): 0x2
+# CHECK-NEXT: >>> {{.*}}.o:(.bar): 0x2
 # CHECK-NEXT: >>> output section .bar: 0x82
 
 .section .foo,"a",@progbits
