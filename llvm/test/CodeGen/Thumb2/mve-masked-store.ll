@@ -483,8 +483,8 @@ entry:
 define arm_aapcs_vfpcc void @masked_v4f32_align1(<4 x float> *%dest, <4 x float> %a, <4 x i32> %b) {
 ; CHECK-LE-LABEL: masked_v4f32_align1:
 ; CHECK-LE:       @ %bb.0: @ %entry
-; CHECK-LE-NEXT:    .pad #20
-; CHECK-LE-NEXT:    sub sp, #20
+; CHECK-LE-NEXT:    .pad #4
+; CHECK-LE-NEXT:    sub sp, #4
 ; CHECK-LE-NEXT:    vcmp.i32 ne, q1, zr
 ; CHECK-LE-NEXT:    movs r1, #0
 ; CHECK-LE-NEXT:    vmrs r2, p0
@@ -501,32 +501,28 @@ define arm_aapcs_vfpcc void @masked_v4f32_align1(<4 x float> *%dest, <4 x float>
 ; CHECK-LE-NEXT:    rsbs r2, r2, #0
 ; CHECK-LE-NEXT:    bfi r1, r2, #3, #1
 ; CHECK-LE-NEXT:    lsls r2, r1, #31
-; CHECK-LE-NEXT:    ittt ne
-; CHECK-LE-NEXT:    vstrne s0, [sp, #12]
-; CHECK-LE-NEXT:    ldrne r2, [sp, #12]
+; CHECK-LE-NEXT:    itt ne
+; CHECK-LE-NEXT:    vmovne r2, s0
 ; CHECK-LE-NEXT:    strne r2, [r0]
 ; CHECK-LE-NEXT:    lsls r2, r1, #30
-; CHECK-LE-NEXT:    ittt mi
-; CHECK-LE-NEXT:    vstrmi s1, [sp, #8]
-; CHECK-LE-NEXT:    ldrmi r2, [sp, #8]
+; CHECK-LE-NEXT:    itt mi
+; CHECK-LE-NEXT:    vmovmi r2, s1
 ; CHECK-LE-NEXT:    strmi r2, [r0, #4]
 ; CHECK-LE-NEXT:    lsls r2, r1, #29
-; CHECK-LE-NEXT:    ittt mi
-; CHECK-LE-NEXT:    vstrmi s2, [sp, #4]
-; CHECK-LE-NEXT:    ldrmi r2, [sp, #4]
+; CHECK-LE-NEXT:    itt mi
+; CHECK-LE-NEXT:    vmovmi r2, s2
 ; CHECK-LE-NEXT:    strmi r2, [r0, #8]
 ; CHECK-LE-NEXT:    lsls r1, r1, #28
-; CHECK-LE-NEXT:    ittt mi
-; CHECK-LE-NEXT:    vstrmi s3, [sp]
-; CHECK-LE-NEXT:    ldrmi r1, [sp]
+; CHECK-LE-NEXT:    itt mi
+; CHECK-LE-NEXT:    vmovmi r1, s3
 ; CHECK-LE-NEXT:    strmi r1, [r0, #12]
-; CHECK-LE-NEXT:    add sp, #20
+; CHECK-LE-NEXT:    add sp, #4
 ; CHECK-LE-NEXT:    bx lr
 ;
 ; CHECK-BE-LABEL: masked_v4f32_align1:
 ; CHECK-BE:       @ %bb.0: @ %entry
-; CHECK-BE-NEXT:    .pad #20
-; CHECK-BE-NEXT:    sub sp, #20
+; CHECK-BE-NEXT:    .pad #4
+; CHECK-BE-NEXT:    sub sp, #4
 ; CHECK-BE-NEXT:    vrev64.32 q2, q1
 ; CHECK-BE-NEXT:    movs r1, #0
 ; CHECK-BE-NEXT:    vcmp.i32 ne, q2, zr
@@ -545,26 +541,22 @@ define arm_aapcs_vfpcc void @masked_v4f32_align1(<4 x float> *%dest, <4 x float>
 ; CHECK-BE-NEXT:    rsbs r2, r2, #0
 ; CHECK-BE-NEXT:    bfi r1, r2, #3, #1
 ; CHECK-BE-NEXT:    lsls r2, r1, #31
-; CHECK-BE-NEXT:    ittt ne
-; CHECK-BE-NEXT:    vstrne s4, [sp, #12]
-; CHECK-BE-NEXT:    ldrne r2, [sp, #12]
+; CHECK-BE-NEXT:    itt ne
+; CHECK-BE-NEXT:    vmovne r2, s4
 ; CHECK-BE-NEXT:    strne r2, [r0]
 ; CHECK-BE-NEXT:    lsls r2, r1, #30
-; CHECK-BE-NEXT:    ittt mi
-; CHECK-BE-NEXT:    vstrmi s5, [sp, #8]
-; CHECK-BE-NEXT:    ldrmi r2, [sp, #8]
+; CHECK-BE-NEXT:    itt mi
+; CHECK-BE-NEXT:    vmovmi r2, s5
 ; CHECK-BE-NEXT:    strmi r2, [r0, #4]
 ; CHECK-BE-NEXT:    lsls r2, r1, #29
-; CHECK-BE-NEXT:    ittt mi
-; CHECK-BE-NEXT:    vstrmi s6, [sp, #4]
-; CHECK-BE-NEXT:    ldrmi r2, [sp, #4]
+; CHECK-BE-NEXT:    itt mi
+; CHECK-BE-NEXT:    vmovmi r2, s6
 ; CHECK-BE-NEXT:    strmi r2, [r0, #8]
 ; CHECK-BE-NEXT:    lsls r1, r1, #28
-; CHECK-BE-NEXT:    ittt mi
-; CHECK-BE-NEXT:    vstrmi s7, [sp]
-; CHECK-BE-NEXT:    ldrmi r1, [sp]
+; CHECK-BE-NEXT:    itt mi
+; CHECK-BE-NEXT:    vmovmi r1, s7
 ; CHECK-BE-NEXT:    strmi r1, [r0, #12]
-; CHECK-BE-NEXT:    add sp, #20
+; CHECK-BE-NEXT:    add sp, #4
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %c = icmp ugt <4 x i32> %b, zeroinitializer
