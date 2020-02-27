@@ -1734,6 +1734,32 @@ def int_aarch64_sve_ld1_gather_uxtw_index : AdvSIMD_GatherLoad_SV_32b_Offsets_In
 
 def int_aarch64_sve_ld1_gather_scalar_offset : AdvSIMD_GatherLoad_VS_Intrinsic;
 
+
+//
+// First-faulting gather loads: scalar base + vector offsets
+//
+
+// 64 bit unscalled offsets
+def int_aarch64_sve_ldff1_gather : AdvSIMD_GatherLoad_SV_64b_Offsets_Intrinsic;
+
+// 64 bit scaled offsets
+def int_aarch64_sve_ldff1_gather_index : AdvSIMD_GatherLoad_SV_64b_Offsets_Intrinsic;
+
+// 32 bit unscaled offsets, sign (sxtw) or zero (uxtw) extended to 64 bits
+def int_aarch64_sve_ldff1_gather_sxtw : AdvSIMD_GatherLoad_SV_32b_Offsets_Intrinsic;
+def int_aarch64_sve_ldff1_gather_uxtw : AdvSIMD_GatherLoad_SV_32b_Offsets_Intrinsic;
+
+// 32 bit scaled offsets, sign (sxtw) or zero (uxtw) extended to 64 bits
+def int_aarch64_sve_ldff1_gather_sxtw_index : AdvSIMD_GatherLoad_SV_32b_Offsets_Intrinsic;
+def int_aarch64_sve_ldff1_gather_uxtw_index : AdvSIMD_GatherLoad_SV_32b_Offsets_Intrinsic;
+
+//
+// First-faulting gather loads: vector base + scalar offset
+//
+
+def int_aarch64_sve_ldff1_gather_scalar_offset : AdvSIMD_GatherLoad_VS_Intrinsic;
+
+
 //
 // Scatter stores: scalar base + vector offsets
 //
