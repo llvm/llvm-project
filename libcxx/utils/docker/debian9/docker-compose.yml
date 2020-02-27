@@ -5,10 +5,10 @@ services:
       context: .
       dockerfile: llvm-builder-base.Dockerfile
       target: llvm-builder-base
-    image: ericwf/llvm-builder-base:new
+    image: ericwf/llvm-builder-base:latest
   llvm-buildbot-worker:
     build:
       context: .
       dockerfile: llvm-buildbot-worker.Dockerfile
       target: llvm-buildbot-worker
-    image: ericwf/llvm-buildbot-worker:new
+    image: ericwf/llvm-buildbot-worker:latest

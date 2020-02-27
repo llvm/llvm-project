@@ -20,7 +20,7 @@ Available options:
 EOF
 }
 
-VERSION="10"
+VERSION="11"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
