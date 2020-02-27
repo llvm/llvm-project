@@ -1,4 +1,4 @@
-//===- mlir_runner_utils.cpp - Utils for MLIR CPU execution ---------------===//
+//===- RunnerUtils.cpp - Utils for MLIR CPU execution ---------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "include/mlir_runner_utils.h"
+#include "mlir/ExecutionEngine/RunnerUtils.h"
 
 #include <cinttypes>
 #include <cstdio>
