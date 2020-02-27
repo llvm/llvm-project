@@ -2178,6 +2178,14 @@ public:
     data().ReferencedProtocols.set(List, Num, Locs, C);
   }
 
+  /// This is true iff the protocol is tagged with the `objc_static_protocol`
+  /// attribute.
+  bool isNonRuntimeProtocol() const;
+
+  /// Get the set of all protocols implied by this protocols inheritance
+  /// hierarchy.
+  void getImpliedProtocols(llvm::DenseSet<const ObjCProtocolDecl *> &IPs) const;
+
   ObjCProtocolDecl *lookupProtocolNamed(IdentifierInfo *PName);
 
   // Lookup a method. First, we search locally. If a method isn't

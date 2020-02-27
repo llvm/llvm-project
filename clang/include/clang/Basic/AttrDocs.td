@@ -4620,6 +4620,22 @@ properties, including auto-synthesized properties.
   }];
 }
 
+def ObjCNonRuntimeProtocolDocs : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+The ``objc_non_runtime_protocol`` attribute can be used to mark that an
+Objective-C protocol is only used during static type-checking and doesn't need
+to be represented dynamically. This avoids several small code-size and run-time
+overheads associated with handling the protocol's metadata. A non-runtime
+protocol cannot be used as the operand of a ``@protocol`` expression, and
+dynamic attempts to find it with ``objc_getProtocol`` will fail.
+
+If a non-runtime protocol inherits from any ordinary protocols, classes and
+derived protocols that declare conformance to the non-runtime protocol will
+dynamically list their conformance to those bare protocols.
+  }];
+}
+
 def SelectAnyDocs : Documentation {
   let Category = DocCatDecl;
   let Content = [{
