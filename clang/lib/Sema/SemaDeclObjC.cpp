@@ -1806,7 +1806,7 @@ Decl *Sema::ActOnStartCategoryInterface(
     Decl *const *ProtoRefs, unsigned NumProtoRefs,
     const SourceLocation *ProtoLocs, SourceLocation EndProtoLoc,
     const ParsedAttributesView &AttrList) {
-  ObjCCategoryDecl *CDecl;
+  ObjCCategoryDecl *CDecl = nullptr;
   ObjCInterfaceDecl *IDecl = getObjCInterfaceDecl(ClassName, ClassLoc, true);
 
   /// Check that class of this category is already completely declared.
@@ -1819,10 +1819,11 @@ Decl *Sema::ActOnStartCategoryInterface(
     // the enclosing method declarations.  We mark the decl invalid
     // to make it clear that this isn't a valid AST.
     CDecl = ObjCCategoryDecl::Create(Context, CurContext, AtInterfaceLoc,
-                                     ClassLoc, CategoryLoc, CategoryName,
-                                     IDecl, typeParamList);
+                                     ClassLoc, CategoryLoc, CategoryName, IDecl,
+                                     nullptr, typeParamList);
     CDecl->setInvalidDecl();
     CurContext->addDecl(CDecl);
+    CDecl->startDefinition();
 
     if (!IDecl)
       Diag(ClassLoc, diag::err_undef_interface) << ClassName;
@@ -1835,14 +1836,15 @@ Decl *Sema::ActOnStartCategoryInterface(
           diag::note_implementation_declared);
   }
 
+  ObjCCategoryDecl *PrevDecl = nullptr;
   if (CategoryName) {
     /// Check for duplicate interface declaration for this category
-    if (ObjCCategoryDecl *Previous
-          = IDecl->FindCategoryDeclaration(CategoryName)) {
+    PrevDecl = IDecl->FindCategoryDeclaration(CategoryName);
+    if (!getLangOpts().Modules && PrevDecl) {
       // Class extensions can be declared multiple times, categories cannot.
       Diag(CategoryLoc, diag::warn_dup_category_def)
         << ClassName << CategoryName;
-      Diag(Previous->getLocation(), diag::note_previous_definition);
+      Diag(PrevDecl->getLocation(), diag::note_previous_definition);
     }
   }
 
@@ -1867,15 +1869,21 @@ Decl *Sema::ActOnStartCategoryInterface(
 
   CDecl = ObjCCategoryDecl::Create(Context, CurContext, AtInterfaceLoc,
                                    ClassLoc, CategoryLoc, CategoryName, IDecl,
-                                   typeParamList);
-  // FIXME: PushOnScopeChains?
+                                   PrevDecl, typeParamList);
   CurContext->addDecl(CDecl);
+
+  if (!PrevDecl)
+    CDecl->startDefinition();
 
   // Process the attributes before looking at protocols to ensure that the
   // availability attribute is attached to the category to provide availability
   // checking for protocol uses.
   ProcessDeclAttributeList(TUScope, CDecl, AttrList);
   AddPragmaAttributes(TUScope, CDecl);
+
+  // Merge attributes from previous declarations.
+  if (PrevDecl)
+    mergeDeclAttributes(CDecl, PrevDecl);
 
   if (NumProtoRefs) {
     diagnoseUseOfProtocols(*this, CDecl, (ObjCProtocolDecl*const*)ProtoRefs,
@@ -1908,10 +1916,11 @@ Decl *Sema::ActOnStartCategoryImplementation(
       // Category @implementation with no corresponding @interface.
       // Create and install one.
       CatIDecl = ObjCCategoryDecl::Create(Context, CurContext, AtCatImplLoc,
-                                          ClassLoc, CatLoc,
-                                          CatName, IDecl,
+                                          ClassLoc, CatLoc, CatName, IDecl,
+                                          /*PrevDecl=*/nullptr,
                                           /*typeParamList=*/nullptr);
       CatIDecl->setImplicit();
+      CatIDecl->startDefinition();
     }
   }
 

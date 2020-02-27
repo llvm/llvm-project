@@ -167,6 +167,10 @@ namespace clang {
     void ReadObjCDefinitionData(struct ObjCProtocolDecl::DefinitionData &Data);
     void MergeDefinitionData(ObjCProtocolDecl *D,
                              struct ObjCProtocolDecl::DefinitionData &&NewDD);
+    void ReadObjCDefinitionData(ObjCCategoryDecl *CD,
+                                struct ObjCCategoryDecl::DefinitionData &Data);
+    void MergeDefinitionData(ObjCCategoryDecl *D,
+                             struct ObjCCategoryDecl::DefinitionData &&NewDD);
 
     static DeclContext *getPrimaryDCForAnonymousDecl(DeclContext *LexicalDC);
 
@@ -1181,12 +1185,6 @@ void ASTDeclReader::MergeDefinitionData(ObjCInterfaceDecl *D,
   bool DetectedOdrViolation = false;
   auto &DD = D->data();
 
-  // FIXME: add support for categories and extensions, for now
-  // skip any potential ODR violation.
-  if (!D->known_extensions_empty() || !D->known_categories_empty() ||
-      NewDD.CategoryList)
-    return;
-
   auto &FirstProtos = D->getReferencedProtocols();
   auto &SecondProtos = NewDD.ReferencedProtocols;
   if (MergeCheckProtocolList(FirstProtos, SecondProtos))
@@ -1312,19 +1310,10 @@ void ASTDeclReader::VisitObjCAtDefsFieldDecl(ObjCAtDefsFieldDecl *FD) {
   VisitFieldDecl(FD);
 }
 
-void ASTDeclReader::VisitObjCCategoryDecl(ObjCCategoryDecl *CD) {
-  VisitObjCContainerDecl(CD);
-  CD->setCategoryNameLoc(readSourceLocation());
-  CD->setIvarLBraceLoc(readSourceLocation());
-  CD->setIvarRBraceLoc(readSourceLocation());
-
-  // Note that this category has been deserialized. We do this before
-  // deserializing the interface declaration, so that it will consider this
-  /// category.
-  Reader.CategoriesDeserialized.insert(CD);
-
-  CD->ClassInterface = readDeclAs<ObjCInterfaceDecl>();
-  CD->TypeParamList = ReadObjCTypeParamList();
+void ASTDeclReader::ReadObjCDefinitionData(
+    ObjCCategoryDecl *CD, struct ObjCCategoryDecl::DefinitionData &Data) {
+  Data.ODRHash = Record.readInt();
+  Data.HasODRHash = true;
   unsigned NumProtoRefs = Record.readInt();
   SmallVector<ObjCProtocolDecl *, 16> ProtoRefs;
   ProtoRefs.reserve(NumProtoRefs);
@@ -1334,14 +1323,64 @@ void ASTDeclReader::VisitObjCCategoryDecl(ObjCCategoryDecl *CD) {
   ProtoLocs.reserve(NumProtoRefs);
   for (unsigned I = 0; I != NumProtoRefs; ++I)
     ProtoLocs.push_back(readSourceLocation());
-  CD->setProtocolList(ProtoRefs.data(), NumProtoRefs, ProtoLocs.data(),
-                      Reader.getContext());
+  Data.ReferencedProtocols.set(ProtoRefs.data(), NumProtoRefs, ProtoLocs.data(),
+                               Reader.getContext());
 
   // Protocols in the class extension belong to the class.
   if (NumProtoRefs > 0 && CD->ClassInterface && CD->IsClassExtension())
     CD->ClassInterface->mergeClassExtensionProtocolList(
         (ObjCProtocolDecl *const *)ProtoRefs.data(), NumProtoRefs,
         Reader.getContext());
+}
+
+void ASTDeclReader::MergeDefinitionData(
+    ObjCCategoryDecl *D, struct ObjCCategoryDecl::DefinitionData &&NewDD) {
+  assert(!D->IsClassExtension() && "Class extensions are not to be merged");
+
+  bool DetectedOdrViolation = false;
+  auto &DD = D->data();
+
+  auto &FirstProtos = D->getReferencedProtocols();
+  auto &SecondProtos = NewDD.ReferencedProtocols;
+
+  if (MergeCheckProtocolList(FirstProtos, SecondProtos))
+    DetectedOdrViolation = true;
+  if (D->getODRHash() != NewDD.ODRHash)
+    DetectedOdrViolation = true;
+
+  if (DetectedOdrViolation)
+    Reader.PendingObjCCategoryOdrMergeFailures[DD.Definition].push_back(
+        {NewDD.Definition, &NewDD});
+}
+
+void ASTDeclReader::VisitObjCCategoryDecl(ObjCCategoryDecl *CD) {
+  RedeclarableResult Redecl = VisitRedeclarable(CD);
+  VisitObjCContainerDecl(CD);
+  CD->setCategoryNameLoc(readSourceLocation());
+  CD->setIvarLBraceLoc(readSourceLocation());
+  CD->setIvarRBraceLoc(readSourceLocation());
+
+  // Note that this category has been deserialized. We do this before
+  // deserializing the interface declaration, so that it will consider this
+  // category.
+  Reader.CategoriesDeserialized.insert(CD);
+
+  CD->ClassInterface = readDeclAs<ObjCInterfaceDecl>();
+  CD->TypeParamList = ReadObjCTypeParamList();
+  mergeRedeclarable(CD, Redecl);
+
+  CD->allocateDefinitionData();
+  ReadObjCDefinitionData(CD, CD->data());
+
+  // Class extensions are additive and not supposed to
+  // be merged, nothing to check here.
+  if (CD->IsClassExtension())
+    return;
+
+  ObjCCategoryDecl *Canon = CD->getCanonicalDecl();
+  assert(Canon->Data.getPointer() && "Always expected to have a defintion");
+  MergeDefinitionData(Canon, std::move(CD->data()));
+  CD->Data = Canon->Data;
 }
 
 void ASTDeclReader::VisitObjCCompatibleAliasDecl(ObjCCompatibleAliasDecl *CAD) {
@@ -3084,6 +3123,20 @@ static bool isSameEntity(NamedDecl *X, NamedDecl *Y) {
   if (isa<ObjCInterfaceDecl>(X) || isa<ObjCProtocolDecl>(X))
     return true;
 
+  // Objective-C categories match if:
+  // - Not a class extensions.
+  // - Declared on top of the same class interface.
+  if (ObjCCategoryDecl *CX = dyn_cast<ObjCCategoryDecl>(X)) {
+    if (ObjCCategoryDecl *CY = dyn_cast<ObjCCategoryDecl>(Y)) {
+      if (CX->IsClassExtension() || CY->IsClassExtension())
+        return false;
+      ObjCInterfaceDecl *IX = CX->getClassInterface();
+      ObjCInterfaceDecl *IY = CY->getClassInterface();
+      return IX->getDeclName() == IY->getDeclName();
+    }
+    return false;
+  }
+
   if (isa<ClassTemplateSpecializationDecl>(X)) {
     // No need to handle these here: we merge them when adding them to the
     // template.
@@ -4244,28 +4297,12 @@ namespace {
 
       // Check for duplicate categories.
       if (Cat->getDeclName()) {
+        // ObjCCategoryDecl are redeclarable and ODR diagnosed in case of
+        // redefinition, no need to check for multiple copies here.
         ObjCCategoryDecl *&Existing = NameCategoryMap[Cat->getDeclName()];
-        if (Existing &&
-            Reader.getOwningModuleFile(Existing)
-                                          != Reader.getOwningModuleFile(Cat)) {
-          // FIXME: We should not warn for duplicates in diamond:
-          //
-          //   MT     //
-          //  /  \    //
-          // ML  MR   //
-          //  \  /    //
-          //   MB     //
-          //
-          // If there are duplicates in ML/MR, there will be warning when
-          // creating MB *and* when importing MB. We should not warn when
-          // importing.
-          Reader.Diag(Cat->getLocation(), diag::warn_dup_category_def)
-            << Interface->getDeclName() << Cat->getDeclName();
-          Reader.Diag(Existing->getLocation(), diag::note_previous_definition);
-        } else if (!Existing) {
-          // Record this category.
+        // Record this category.
+        if (!Existing)
           Existing = Cat;
-        }
       }
 
       // Add this category to the end of the chain.
