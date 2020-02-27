@@ -1125,7 +1125,27 @@ public:
   double convertToDouble() const { return getIEEE().convertToDouble(); }
   float convertToFloat() const { return getIEEE().convertToFloat(); }
 
-  bool operator==(const APFloat &) const = delete;
+  bool operator==(const APFloat &RHS) const { return compare(RHS) == cmpEqual; }
+
+  bool operator!=(const APFloat &RHS) const { return compare(RHS) != cmpEqual; }
+
+  bool operator<(const APFloat &RHS) const {
+    return compare(RHS) == cmpLessThan;
+  }
+
+  bool operator>(const APFloat &RHS) const {
+    return compare(RHS) == cmpGreaterThan;
+  }
+
+  bool operator<=(const APFloat &RHS) const {
+    cmpResult Res = compare(RHS);
+    return Res == cmpLessThan || Res == cmpEqual;
+  }
+
+  bool operator>=(const APFloat &RHS) const {
+    cmpResult Res = compare(RHS);
+    return Res == cmpGreaterThan || Res == cmpEqual;
+  }
 
   cmpResult compare(const APFloat &RHS) const {
     assert(&getSemantics() == &RHS.getSemantics() &&
