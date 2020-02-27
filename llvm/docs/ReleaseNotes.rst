@@ -260,8 +260,8 @@ Changes to the RISC-V Target
 ----------------------------
 
 New Features:
-* The Machine Outliner has been enabled.
-* Shrink-wrapping has been enabled.
+* The Machine Outliner is now supported, but not enabled by default.
+* Shrink-wrapping is now supported.
 * The Machine Scheduler has been enabled and scheduler descriptions for the
   Rocket micro-architecture have been added, covering both 32- and 64-bit Rocket
   cores.
@@ -276,9 +276,12 @@ New Features:
   the assembler for use in legacy code.
 * The stack can now be realigned even when there are variable-sized objects in
   the same frame.
-* fastcc is now supported.
+* fastcc is now supported. This is a more efficient, unstandardised, calling
+  convention for calls to private leaf functions in the same IR module.
 * llvm-objdump now supports `-M no-aliases` and `-M numeric` for altering the
-  dumped assembly. These match the behaviour of GNU objdump.
+  dumped assembly. These match the behaviour of GNU objdump, respectively
+  disabling instruction aliases and printing the numeric register names rather
+  than the ABI register names.
 
 Improvements:
 * Trap and Debugtrap now lower to RISC-V-specific trap instructions.
@@ -289,20 +292,19 @@ Improvements:
 * The assembler now suggests spelling corrections for unknown assembly
   mnemonics.
 * Stack offsets of greater than 32-bits are now accepted on RV64.
-* Some variadic functions can now be tail-call optimised.
-* We now custom-lower 32-bit arithmetic operations on RV64 to reduce
-  sign-extensions.
-
+* Variadic functions can now be tail-call optimised, as long as they do not use
+  stack memory for passing arguments.
+* Code generation has been changed for 32-bit arithmetic operations on RV64 to
+  reduce sign-extensions.
 
 Bug Fixes:
-
 * There was an issue with register preservation after calls in interrupt
   handlers, where some registers were marked as preserved even though they were
   not being preserved by the call. This has been corrected, and now only
   callee-saved registers are live over a function call in an interrupt handler
   (just like calls in regular functions).
 * Atomic instructions now only accept GPRs (plus an offset) in memory operands.
-* Fixed some issues with evalutaion of relocations and fixups.
+* Fixed some issues with evaluation of relocations and fixups.
 * The error messages around missing RISC-V extensions in the assembler have been
   improved.
 * The error messages around unsupported relocations have been improved.
@@ -314,7 +316,10 @@ Bug Fixes:
 * RV64 no longer clears the upper bits when returning complex types from
   libcalls using the LP64 psABI.
 
-
+Compiler-RT:
+* RISC-V (both 64-bit and 32-bit) is now supported by compiler-rt, allowing
+  crtbegin and crtend to be built.
+* The Sanitizers now support 64-bit RISC-V on linux.
 
 Changes to the OCaml bindings
 -----------------------------
