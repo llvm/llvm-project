@@ -1036,6 +1036,13 @@ public:
     APFLOAT_DISPATCH_ON_SEMANTICS(next(nextDown));
   }
 
+  /// Negate an APFloat.
+  APFloat operator-() const {
+    APFloat Result(*this);
+    Result.changeSign();
+    return Result;
+  }
+
   /// Add two APFloats, rounding ties to the nearest even.
   /// No error checking.
   APFloat operator+(const APFloat &RHS) const {
