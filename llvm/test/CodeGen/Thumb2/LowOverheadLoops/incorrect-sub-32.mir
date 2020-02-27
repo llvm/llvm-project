@@ -111,7 +111,7 @@ body:             |
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $lr, -4
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $r7, -8
   ; CHECK:   tCMPi8 renamable $r3, 1, 14 /* CC::al */, $noreg, implicit-def $cpsr
-  ; CHECK:   t2IT 11, 8, implicit-def $itstate, implicit $cpsr
+  ; CHECK:   t2IT 11, 8, implicit-def $itstate
   ; CHECK:   tPOP_RET 11 /* CC::lt */, killed $cpsr, def $r7, def $pc, implicit killed $itstate
   ; CHECK:   renamable $r12 = t2ADDri renamable $r3, 3, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   renamable $lr = t2MOVi 1, 14 /* CC::al */, $noreg, $noreg
@@ -142,7 +142,7 @@ body:             |
     frame-setup CFI_INSTRUCTION offset $lr, -4
     frame-setup CFI_INSTRUCTION offset $r7, -8
     tCMPi8 renamable $r3, 1, 14, $noreg, implicit-def $cpsr
-    t2IT 11, 8, implicit-def $itstate, implicit $cpsr
+    t2IT 11, 8, implicit-def $itstate
     tPOP_RET 11, killed $cpsr, def $r7, def $pc, implicit killed $itstate
     renamable $r12 = t2ADDri renamable $r3, 3, 14, $noreg, $noreg
     renamable $lr = t2MOVi 1, 14, $noreg, $noreg

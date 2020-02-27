@@ -107,7 +107,7 @@ body:             |
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $r4, -8
   ; CHECK:   renamable $r12 = t2MOVi 0, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   t2CMPrs killed renamable $r12, renamable $r3, 11, 14 /* CC::al */, $noreg, implicit-def $cpsr
-  ; CHECK:   t2IT 0, 8, implicit-def $itstate, implicit $cpsr
+  ; CHECK:   t2IT 0, 8, implicit-def $itstate
   ; CHECK:   tPOP_RET 0 /* CC::eq */, killed $cpsr, def $r4, def $pc, implicit killed $itstate
   ; CHECK:   renamable $r12 = t2LSRri killed renamable $r3, 1, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   renamable $r3, dead $cpsr = tMOVi8 0, 14 /* CC::al */, $noreg
@@ -135,7 +135,7 @@ body:             |
     frame-setup CFI_INSTRUCTION offset $r4, -8
     renamable $r12 = t2MOVi 0, 14, $noreg, $noreg
     t2CMPrs killed renamable $r12, renamable $r3, 11, 14, $noreg, implicit-def $cpsr
-    t2IT 0, 8, implicit-def $itstate, implicit $cpsr
+    t2IT 0, 8, implicit-def $itstate
     tPOP_RET 0, killed $cpsr, def $r4, def $pc, implicit killed $itstate
     renamable $r12 = t2MOVi 3, 14, $noreg, $noreg
     renamable $lr = t2MOVi 1, 14, $noreg, $noreg
