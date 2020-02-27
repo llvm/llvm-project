@@ -233,7 +233,7 @@ bool checkDebugifyMetadata(Module &M,
 
     // Find missing lines.
     for (Instruction &I : instructions(F)) {
-      if (isa<DbgValueInst>(&I))
+      if (isa<DbgValueInst>(&I) || isa<PHINode>(&I))
         continue;
 
       auto DL = I.getDebugLoc();
