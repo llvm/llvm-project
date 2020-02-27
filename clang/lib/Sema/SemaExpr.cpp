@@ -6175,10 +6175,10 @@ Sema::BuildCompoundLiteralExpr(SourceLocation LParenLoc, TypeSourceInfo *TInfo,
   QualType literalType = TInfo->getType();
 
   if (literalType->isArrayType()) {
-    if (RequireCompleteType(LParenLoc, Context.getBaseElementType(literalType),
-          diag::err_illegal_decl_array_incomplete_type,
-          SourceRange(LParenLoc,
-                      LiteralExpr->getSourceRange().getEnd())))
+    if (RequireCompleteSizedType(
+            LParenLoc, Context.getBaseElementType(literalType),
+            diag::err_array_incomplete_or_sizeless_type,
+            SourceRange(LParenLoc, LiteralExpr->getSourceRange().getEnd())))
       return ExprError();
     if (literalType->isVariableArrayType())
       return ExprError(Diag(LParenLoc, diag::err_variable_object_no_init)

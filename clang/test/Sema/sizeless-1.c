@@ -51,6 +51,8 @@ void unused() {
 
 struct incomplete_struct *incomplete_ptr;
 
+typedef svint8_t sizeless_array[1]; // expected-error {{array has sizeless element type}}
+
 void func(int sel) {
   static svint8_t static_int8; // expected-error {{non-local variable with sizeless type 'svint8_t'}}
 
@@ -92,6 +94,9 @@ void func(int sel) {
 
   _Atomic svint8_t atomic_int8;      // expected-error {{_Atomic cannot be applied to sizeless type 'svint8_t'}}
   __restrict svint8_t restrict_int8; // expected-error {{requires a pointer or reference}}
+
+  svint8_t array_int8[1];          // expected-error {{array has sizeless element type}}
+  svint8_t array_int8_init[] = {}; // expected-error {{array has sizeless element type}}
 
   _Bool test_int8 = init_int8; // expected-error {{initializing '_Bool' with an expression of incompatible type 'svint8_t'}}
 
