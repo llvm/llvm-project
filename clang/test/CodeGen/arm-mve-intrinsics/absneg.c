@@ -527,7 +527,6 @@ int32x4_t test_vqnegq_s32(int32x4_t a)
     return vqnegq_s32(a);
 #endif /* POLYMORPHIC */
 }
-#include <arm_mve.h>
 
 // CHECK-LABEL: @test_vnegq_m_f16(
 // CHECK-NEXT:  entry:
@@ -689,8 +688,6 @@ int32x4_t test_vnegq_x_s32(int32x4_t a, mve_pred16_t p)
 #endif /* POLYMORPHIC */
 }
 
-#include <arm_mve.h>
-
 // CHECK-LABEL: @test_vabsq_m_f16(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
@@ -851,8 +848,6 @@ int32x4_t test_vabsq_x_s32(int32x4_t a, mve_pred16_t p)
 #endif /* POLYMORPHIC */
 }
 
-#include <arm_mve.h>
-
 // CHECK-LABEL: @test_vqnegq_m_s8(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
@@ -900,8 +895,6 @@ int32x4_t test_vqnegq_m_s32(int32x4_t inactive, int32x4_t a, mve_pred16_t p)
     return vqnegq_m_s32(inactive, a, p);
 #endif /* POLYMORPHIC */
 }
-
-#include <arm_mve.h>
 
 // CHECK-LABEL: @test_vqabsq_m_s8(
 // CHECK-NEXT:  entry:
