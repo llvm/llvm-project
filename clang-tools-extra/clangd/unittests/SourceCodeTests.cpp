@@ -436,6 +436,20 @@ TEST(SourceCodeTests, GetMacros) {
   EXPECT_THAT(*Result, MacroName("MACRO"));
 }
 
+TEST(SourceCodeTests, WorksAtBeginOfFile) {
+  Annotations Code("^MACRO");
+  TestTU TU = TestTU::withCode(Code.code());
+  TU.HeaderCode = "#define MACRO int x;";
+  auto AST = TU.build();
+  auto CurLoc = sourceLocationInMainFile(AST.getSourceManager(), Code.point());
+  ASSERT_TRUE(bool(CurLoc));
+  const auto *Id = syntax::spelledIdentifierTouching(*CurLoc, AST.getTokens());
+  ASSERT_TRUE(Id);
+  auto Result = locateMacroAt(Id->location(), AST.getPreprocessor());
+  ASSERT_TRUE(Result);
+  EXPECT_THAT(*Result, MacroName("MACRO"));
+}
+
 TEST(SourceCodeTests, IsInsideMainFile){
   TestTU TU;
   TU.HeaderCode = R"cpp(

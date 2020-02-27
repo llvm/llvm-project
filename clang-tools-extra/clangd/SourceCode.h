@@ -281,7 +281,8 @@ struct DefinedMacro {
   llvm::StringRef Name;
   const MacroInfo *Info;
 };
-/// Gets the macro at a specified \p Loc.
+/// Gets the macro at a specified \p Loc. It must be a spelling location and
+/// point to the beginning of identifier.
 llvm::Optional<DefinedMacro> locateMacroAt(SourceLocation Loc,
                                            Preprocessor &PP);
 
