@@ -38,7 +38,7 @@ public:
   InstCombineWorklist(InstCombineWorklist &&) = default;
   InstCombineWorklist &operator=(InstCombineWorklist &&) = default;
 
-  bool isEmpty() const { return Worklist.empty(); }
+  bool isEmpty() const { return Worklist.empty() && Deferred.empty(); }
 
   /// Add instruction to the worklist.
   /// Instructions will be visited in the order they are added.
@@ -72,26 +72,15 @@ public:
       push(I);
   }
 
-  void addDeferredInstructions() {
-    for (Instruction *I : reverse(Deferred))
-      push(I);
-    Deferred.clear();
+  Instruction *popDeferred() {
+    if (Deferred.empty())
+      return nullptr;
+    return Deferred.pop_back_val();
   }
 
-  /// AddInitialGroup - Add the specified batch of stuff in reverse order.
-  /// which should only be done when the worklist is empty and when the group
-  /// has no duplicates.
-  void addInitialGroup(ArrayRef<Instruction *> List) {
-    assert(Worklist.empty() && "Worklist must be empty to add initial group");
-    Worklist.reserve(List.size()+16);
-    WorklistMap.reserve(List.size());
-    LLVM_DEBUG(dbgs() << "IC: ADDING: " << List.size()
-                      << " instrs to worklist\n");
-    unsigned Idx = 0;
-    for (Instruction *I : reverse(List)) {
-      WorklistMap.insert(std::make_pair(I, Idx++));
-      Worklist.push_back(I);
-    }
+  void reserve(size_t Size) {
+    Worklist.reserve(Size + 16);
+    WorklistMap.reserve(Size);
   }
 
   /// Remove I from the worklist if it exists.
@@ -107,6 +96,8 @@ public:
   }
 
   Instruction *removeOne() {
+    if (Worklist.empty())
+      return nullptr;
     Instruction *I = Worklist.pop_back_val();
     WorklistMap.erase(I);
     return I;
