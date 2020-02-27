@@ -699,10 +699,13 @@ bool TargetInstrInfo::hasReassociableSibling(const MachineInstr &Inst,
     std::swap(MI1, MI2);
 
   // 1. The previous instruction must be the same type as Inst.
-  // 2. The previous instruction must have virtual register definitions for its
+  // 2. The previous instruction must also be associative/commutative (this can
+  //    be different even for instructions with the same opcode if traits like
+  //    fast-math-flags are included).
+  // 3. The previous instruction must have virtual register definitions for its
   //    operands in the same basic block as Inst.
-  // 3. The previous instruction's result must only be used by Inst.
-  return MI1->getOpcode() == AssocOpcode &&
+  // 4. The previous instruction's result must only be used by Inst.
+  return MI1->getOpcode() == AssocOpcode && isAssociativeAndCommutative(*MI1) &&
          hasReassociableOperands(*MI1, MBB) &&
          MRI.hasOneNonDBGUse(MI1->getOperand(0).getReg());
 }
