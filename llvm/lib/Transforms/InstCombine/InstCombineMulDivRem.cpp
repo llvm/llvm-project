@@ -411,7 +411,7 @@ Instruction *InstCombiner::visitFMul(BinaryOperator &I) {
   // X * -1.0 --> -X
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
   if (match(Op1, m_SpecificFP(-1.0)))
-    return BinaryOperator::CreateFNegFMF(Op0, &I);
+    return UnaryOperator::CreateFNegFMF(Op0, &I);
 
   // -X * -Y --> X * Y
   Value *X, *Y;

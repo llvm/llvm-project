@@ -170,7 +170,7 @@ define <2 x double> @test_simplify4v(<2 x double> %x) {
 
 define <2 x float> @test_simplify4vn(<2 x float> %x) {
 ; CHECK-LABEL: @test_simplify4vn(
-; ANY-NEXT:    [[MUL:%.*]] = fsub <2 x float> <float -0.000000e+00, float -0.000000e+00>, [[X:%.*]]
+; ANY-NEXT:    [[MUL:%.*]] = fneg <2 x float> [[X:%.*]]
 ; ANY-NEXT:    [[EXP2:%.*]] = call <2 x float> @llvm.exp2.v2f32(<2 x float> [[MUL]])
 ; ANY-NEXT:    ret <2 x float> [[EXP2]]
 ; MSVC-NEXT:   [[POW:%.*]] = call <2 x float> @llvm.pow.v2f32(<2 x float> <float 5.000000e-01, float 5.000000e-01>, <2 x float> [[X:%.*]])

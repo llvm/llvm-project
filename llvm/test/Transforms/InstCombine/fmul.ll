@@ -336,7 +336,7 @@ define <2 x float> @neg_mul_vec_undef(<2 x float> %x, <2 x float> %y) {
 ; (0.0 - X) * Y
 define float @neg_sink_nsz(float %x, float %y) {
 ; CHECK-LABEL: @neg_sink_nsz(
-; CHECK-NEXT:    [[SUB1:%.*]] = fsub nsz float -0.000000e+00, [[X:%.*]]
+; CHECK-NEXT:    [[SUB1:%.*]] = fneg nsz float [[X:%.*]]
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[SUB1]], [[Y:%.*]]
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
@@ -409,7 +409,7 @@ for.end:                                          ; preds = %for.cond
 ; X * -1.0 => -0.0 - X
 define float @test9(float %x) {
 ; CHECK-LABEL: @test9(
-; CHECK-NEXT:    [[MUL:%.*]] = fsub float -0.000000e+00, [[X:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = fneg float [[X:%.*]]
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
   %mul = fmul float %x, -1.0
@@ -419,7 +419,7 @@ define float @test9(float %x) {
 ; PR18532
 define <4 x float> @test10(<4 x float> %x) {
 ; CHECK-LABEL: @test10(
-; CHECK-NEXT:    [[MUL:%.*]] = fsub arcp afn <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, [[X:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = fneg arcp afn <4 x float> [[X:%.*]]
 ; CHECK-NEXT:    ret <4 x float> [[MUL]]
 ;
   %mul = fmul arcp afn <4 x float> %x, <float -1.0, float -1.0, float -1.0, float -1.0>
