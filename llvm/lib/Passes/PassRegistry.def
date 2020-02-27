@@ -92,6 +92,7 @@ MODULE_PASS("tsan-module", ThreadSanitizerPass())
 MODULE_PASS("kasan-module", ModuleAddressSanitizerPass(/*CompileKernel=*/true, false, true, false))
 MODULE_PASS("sancov-module", ModuleSanitizerCoveragePass())
 MODULE_PASS("poison-checking", PoisonCheckingPass())
+MODULE_PASS("stack-safety-annotator", StackSafetyGlobalAnnotatorPass())
 #undef MODULE_PASS
 
 #ifndef CGSCC_ANALYSIS
