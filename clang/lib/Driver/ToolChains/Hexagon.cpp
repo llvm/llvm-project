@@ -523,6 +523,13 @@ unsigned HexagonToolChain::getOptimizationLevel(
 void HexagonToolChain::addClangTargetOptions(const ArgList &DriverArgs,
                                              ArgStringList &CC1Args,
                                              Action::OffloadKind) const {
+  bool UseInitArrayDefault = false;
+
+  if (!DriverArgs.hasFlag(options::OPT_fuse_init_array,
+                          options::OPT_fno_use_init_array,
+                          UseInitArrayDefault))
+    CC1Args.push_back("-fno-use-init-array");
+
   if (DriverArgs.hasArg(options::OPT_ffixed_r19)) {
     CC1Args.push_back("-target-feature");
     CC1Args.push_back("+reserved-r19");
