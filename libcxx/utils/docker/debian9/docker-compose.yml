@@ -1,0 +1,14 @@
+version: '3.7'
+services:
+  llvm-builder-base:
+    build:
+      context: .
+      dockerfile: llvm-builder-base.Dockerfile
+      target: llvm-builder-base
+    image: ericwf/llvm-builder-base:new
+  llvm-buildbot-worker:
+    build:
+      context: .
+      dockerfile: llvm-buildbot-worker.Dockerfile
+      target: llvm-buildbot-worker
+    image: ericwf/llvm-buildbot-worker:new

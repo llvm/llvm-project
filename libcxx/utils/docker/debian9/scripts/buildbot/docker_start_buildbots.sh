@@ -3,6 +3,6 @@ set -x
 
 # Update the libc++ sources in the image in order to use the most recent version of
 # run_buildbots.sh
-cd /libcxx
+cd /llvm-project/
 git pull
-/libcxx/utils/docker/scripts/run_buildbot.sh "$@"
+/llvm-project/libcxx/utils/docker/debian9/scripts/buildbot/run_buildbot.sh "$@"
