@@ -442,3 +442,21 @@ define <4 x float> @test_perfectshuffle_dupext_v4f32(<4 x float> %a, <4 x float>
   %r = shufflevector <4 x float> %a, <4 x float> %b, <4 x i32> <i32 0, i32 0, i32 4, i32 5>
   ret <4 x float> %r
 }
+
+define void @disguised_dup(<4 x float> %x, <4 x float>* %p1, <4 x float>* %p2) {
+; CHECK-LABEL: disguised_dup:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    dup.4s v1, v0[0]
+; CHECK-NEXT:    ext.16b v0, v0, v0, #12
+; CHECK-NEXT:    ext.16b v0, v0, v1, #8
+; CHECK-NEXT:    zip2.4s v1, v0, v0
+; CHECK-NEXT:    ext.16b v1, v0, v1, #12
+; CHECK-NEXT:    str q0, [x0]
+; CHECK-NEXT:    str q1, [x1]
+; CHECK-NEXT:    ret
+  %shuf = shufflevector <4 x float> %x, <4 x float> undef, <4 x i32> <i32 1, i32 2, i32 0, i32 0>
+  %dup = shufflevector <4 x float> %shuf, <4 x float> undef, <4 x i32> <i32 3, i32 2, i32 2, i32 3>
+  store <4 x float> %shuf, <4 x float>* %p1, align 8
+  store <4 x float> %dup, <4 x float>* %p2, align 8
+  ret void
+}
