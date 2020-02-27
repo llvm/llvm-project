@@ -5758,15 +5758,15 @@ define void @PR43609(double* nocapture %x, <2 x i64> %y) #0 {
 ; SSE2-NEXT:    por %xmm5, %xmm0
 ; SSE2-NEXT:    movapd {{.*#+}} xmm6 = [1.9342813118337666E+25,1.9342813118337666E+25]
 ; SSE2-NEXT:    subpd %xmm6, %xmm0
+; SSE2-NEXT:    addpd %xmm3, %xmm0
 ; SSE2-NEXT:    pand %xmm1, %xmm2
 ; SSE2-NEXT:    por %xmm4, %xmm2
 ; SSE2-NEXT:    psrlq $32, %xmm1
 ; SSE2-NEXT:    por %xmm5, %xmm1
 ; SSE2-NEXT:    subpd %xmm6, %xmm1
-; SSE2-NEXT:    movapd {{.*#+}} xmm4 = [5.0E-1,5.0E-1]
-; SSE2-NEXT:    addpd %xmm4, %xmm0
-; SSE2-NEXT:    addpd %xmm3, %xmm0
-; SSE2-NEXT:    addpd %xmm4, %xmm1
+; SSE2-NEXT:    addpd %xmm2, %xmm1
+; SSE2-NEXT:    movapd {{.*#+}} xmm2 = [5.0E-1,5.0E-1]
+; SSE2-NEXT:    addpd %xmm2, %xmm0
 ; SSE2-NEXT:    addpd %xmm2, %xmm1
 ; SSE2-NEXT:    movupd %xmm0, (%rdi)
 ; SSE2-NEXT:    movupd %xmm1, 16(%rdi)
@@ -5786,15 +5786,15 @@ define void @PR43609(double* nocapture %x, <2 x i64> %y) #0 {
 ; SSE41-NEXT:    por %xmm5, %xmm0
 ; SSE41-NEXT:    movapd {{.*#+}} xmm6 = [1.9342813118337666E+25,1.9342813118337666E+25]
 ; SSE41-NEXT:    subpd %xmm6, %xmm0
+; SSE41-NEXT:    addpd %xmm3, %xmm0
 ; SSE41-NEXT:    pblendw {{.*#+}} xmm2 = xmm1[0,1],xmm2[2,3],xmm1[4,5],xmm2[6,7]
 ; SSE41-NEXT:    por %xmm4, %xmm2
 ; SSE41-NEXT:    psrlq $32, %xmm1
 ; SSE41-NEXT:    por %xmm5, %xmm1
 ; SSE41-NEXT:    subpd %xmm6, %xmm1
-; SSE41-NEXT:    movapd {{.*#+}} xmm4 = [5.0E-1,5.0E-1]
-; SSE41-NEXT:    addpd %xmm4, %xmm0
-; SSE41-NEXT:    addpd %xmm3, %xmm0
-; SSE41-NEXT:    addpd %xmm4, %xmm1
+; SSE41-NEXT:    addpd %xmm2, %xmm1
+; SSE41-NEXT:    movapd {{.*#+}} xmm2 = [5.0E-1,5.0E-1]
+; SSE41-NEXT:    addpd %xmm2, %xmm0
 ; SSE41-NEXT:    addpd %xmm2, %xmm1
 ; SSE41-NEXT:    movupd %xmm0, (%rdi)
 ; SSE41-NEXT:    movupd %xmm1, 16(%rdi)
@@ -5812,16 +5812,16 @@ define void @PR43609(double* nocapture %x, <2 x i64> %y) #0 {
 ; AVX1-NEXT:    vpor %xmm5, %xmm0, %xmm0
 ; AVX1-NEXT:    vmovapd {{.*#+}} xmm6 = [1.9342813118337666E+25,1.9342813118337666E+25]
 ; AVX1-NEXT:    vsubpd %xmm6, %xmm0, %xmm0
+; AVX1-NEXT:    vaddpd %xmm0, %xmm3, %xmm0
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm2 = xmm1[0,1],xmm2[2,3],xmm1[4,5],xmm2[6,7]
 ; AVX1-NEXT:    vpor %xmm4, %xmm2, %xmm2
 ; AVX1-NEXT:    vpsrlq $32, %xmm1, %xmm1
 ; AVX1-NEXT:    vpor %xmm5, %xmm1, %xmm1
 ; AVX1-NEXT:    vsubpd %xmm6, %xmm1, %xmm1
-; AVX1-NEXT:    vmovapd {{.*#+}} xmm4 = [5.0E-1,5.0E-1]
-; AVX1-NEXT:    vaddpd %xmm4, %xmm0, %xmm0
-; AVX1-NEXT:    vaddpd %xmm0, %xmm3, %xmm0
-; AVX1-NEXT:    vaddpd %xmm4, %xmm1, %xmm1
 ; AVX1-NEXT:    vaddpd %xmm1, %xmm2, %xmm1
+; AVX1-NEXT:    vmovapd {{.*#+}} xmm2 = [5.0E-1,5.0E-1]
+; AVX1-NEXT:    vaddpd %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vaddpd %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vmovupd %xmm0, (%rdi)
 ; AVX1-NEXT:    vmovupd %xmm1, 16(%rdi)
 ; AVX1-NEXT:    retq
@@ -5838,16 +5838,16 @@ define void @PR43609(double* nocapture %x, <2 x i64> %y) #0 {
 ; AVX2-NEXT:    vpor %xmm5, %xmm0, %xmm0
 ; AVX2-NEXT:    vmovapd {{.*#+}} xmm6 = [1.9342813118337666E+25,1.9342813118337666E+25]
 ; AVX2-NEXT:    vsubpd %xmm6, %xmm0, %xmm0
+; AVX2-NEXT:    vaddpd %xmm0, %xmm3, %xmm0
 ; AVX2-NEXT:    vpblendd {{.*#+}} xmm2 = xmm1[0],xmm2[1],xmm1[2],xmm2[3]
 ; AVX2-NEXT:    vpor %xmm4, %xmm2, %xmm2
 ; AVX2-NEXT:    vpsrlq $32, %xmm1, %xmm1
 ; AVX2-NEXT:    vpor %xmm5, %xmm1, %xmm1
 ; AVX2-NEXT:    vsubpd %xmm6, %xmm1, %xmm1
-; AVX2-NEXT:    vmovapd {{.*#+}} xmm4 = [5.0E-1,5.0E-1]
-; AVX2-NEXT:    vaddpd %xmm4, %xmm0, %xmm0
-; AVX2-NEXT:    vaddpd %xmm0, %xmm3, %xmm0
-; AVX2-NEXT:    vaddpd %xmm4, %xmm1, %xmm1
 ; AVX2-NEXT:    vaddpd %xmm1, %xmm2, %xmm1
+; AVX2-NEXT:    vmovapd {{.*#+}} xmm2 = [5.0E-1,5.0E-1]
+; AVX2-NEXT:    vaddpd %xmm2, %xmm0, %xmm0
+; AVX2-NEXT:    vaddpd %xmm2, %xmm1, %xmm1
 ; AVX2-NEXT:    vmovupd %xmm0, (%rdi)
 ; AVX2-NEXT:    vmovupd %xmm1, 16(%rdi)
 ; AVX2-NEXT:    retq
@@ -5864,16 +5864,16 @@ define void @PR43609(double* nocapture %x, <2 x i64> %y) #0 {
 ; AVX512F-NEXT:    vpor %xmm5, %xmm0, %xmm0
 ; AVX512F-NEXT:    vmovapd {{.*#+}} xmm6 = [1.9342813118337666E+25,1.9342813118337666E+25]
 ; AVX512F-NEXT:    vsubpd %xmm6, %xmm0, %xmm0
+; AVX512F-NEXT:    vaddpd %xmm0, %xmm3, %xmm0
 ; AVX512F-NEXT:    vpblendd {{.*#+}} xmm2 = xmm1[0],xmm2[1],xmm1[2],xmm2[3]
 ; AVX512F-NEXT:    vpor %xmm4, %xmm2, %xmm2
 ; AVX512F-NEXT:    vpsrlq $32, %xmm1, %xmm1
 ; AVX512F-NEXT:    vpor %xmm5, %xmm1, %xmm1
 ; AVX512F-NEXT:    vsubpd %xmm6, %xmm1, %xmm1
-; AVX512F-NEXT:    vmovapd {{.*#+}} xmm4 = [5.0E-1,5.0E-1]
-; AVX512F-NEXT:    vaddpd %xmm4, %xmm0, %xmm0
-; AVX512F-NEXT:    vaddpd %xmm0, %xmm3, %xmm0
-; AVX512F-NEXT:    vaddpd %xmm4, %xmm1, %xmm1
 ; AVX512F-NEXT:    vaddpd %xmm1, %xmm2, %xmm1
+; AVX512F-NEXT:    vmovapd {{.*#+}} xmm2 = [5.0E-1,5.0E-1]
+; AVX512F-NEXT:    vaddpd %xmm2, %xmm0, %xmm0
+; AVX512F-NEXT:    vaddpd %xmm2, %xmm1, %xmm1
 ; AVX512F-NEXT:    vmovupd %xmm0, (%rdi)
 ; AVX512F-NEXT:    vmovupd %xmm1, 16(%rdi)
 ; AVX512F-NEXT:    retq
@@ -5890,16 +5890,16 @@ define void @PR43609(double* nocapture %x, <2 x i64> %y) #0 {
 ; AVX512VL-NEXT:    vpor %xmm5, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vmovapd {{.*#+}} xmm6 = [1.9342813118337666E+25,1.9342813118337666E+25]
 ; AVX512VL-NEXT:    vsubpd %xmm6, %xmm0, %xmm0
+; AVX512VL-NEXT:    vaddpd %xmm0, %xmm3, %xmm0
 ; AVX512VL-NEXT:    vpand %xmm2, %xmm1, %xmm2
 ; AVX512VL-NEXT:    vpor %xmm4, %xmm2, %xmm2
 ; AVX512VL-NEXT:    vpsrlq $32, %xmm1, %xmm1
 ; AVX512VL-NEXT:    vpor %xmm5, %xmm1, %xmm1
 ; AVX512VL-NEXT:    vsubpd %xmm6, %xmm1, %xmm1
-; AVX512VL-NEXT:    vmovapd {{.*#+}} xmm4 = [5.0E-1,5.0E-1]
-; AVX512VL-NEXT:    vaddpd %xmm4, %xmm0, %xmm0
-; AVX512VL-NEXT:    vaddpd %xmm0, %xmm3, %xmm0
-; AVX512VL-NEXT:    vaddpd %xmm4, %xmm1, %xmm1
 ; AVX512VL-NEXT:    vaddpd %xmm1, %xmm2, %xmm1
+; AVX512VL-NEXT:    vmovapd {{.*#+}} xmm2 = [5.0E-1,5.0E-1]
+; AVX512VL-NEXT:    vaddpd %xmm2, %xmm0, %xmm0
+; AVX512VL-NEXT:    vaddpd %xmm2, %xmm1, %xmm1
 ; AVX512VL-NEXT:    vmovupd %xmm0, (%rdi)
 ; AVX512VL-NEXT:    vmovupd %xmm1, 16(%rdi)
 ; AVX512VL-NEXT:    retq
