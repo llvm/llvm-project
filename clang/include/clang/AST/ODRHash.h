@@ -15,6 +15,7 @@
 #ifndef LLVM_CLANG_AST_ODRHASH_H
 #define LLVM_CLANG_AST_ODRHASH_H
 
+#include "clang/AST/Attr.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TemplateBase.h"
@@ -89,6 +90,10 @@ public:
   // while AddDecl does not.
   void AddSubDecl(const Decl *D);
 
+  // Process attributes attached to a type that is being hashed.
+  void AddAttrs(const NamedDecl *D);
+  void AddAttr(const Attr *A);
+
   // Reset the object for reuse.
   void clear();
 
@@ -111,6 +116,7 @@ public:
   void AddBoolean(bool value);
 
   static bool isWhitelistedDecl(const Decl* D, const DeclContext *Parent);
+  static bool isWhitelistedAttr(const Attr *A);
 
 private:
   void AddDeclarationNameImpl(DeclarationName Name);
