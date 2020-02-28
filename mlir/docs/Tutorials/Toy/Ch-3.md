@@ -25,7 +25,7 @@ use of DRR requires that the operations be defined using ODS, as described in
 ## Optimize Transpose using C++ style pattern-match and rewrite
 
 Let's start with a simple pattern and try to eliminate a sequence of two
-transpose that cancel out: `transpose(transpose(X)) -> X`. Here is the
+transposes that cancel out: `transpose(transpose(X)) -> X`. Here is the
 corresponding Toy example:
 
 ```toy
@@ -70,7 +70,7 @@ void double_transpose(int A[N][M]) {
 }
 ```
 
-For a simple C++ approach to rewrite involving matching a tree-like pattern in
+For a simple C++ approach to rewrite, involving matching a tree-like pattern in
 the IR and replacing it with a different set of operations, we can plug into the
 MLIR `Canonicalizer` pass by implementing a `RewritePattern`:
 
