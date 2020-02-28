@@ -674,6 +674,7 @@ adds sp, #-4096
         dmb #0x0
 
         dmb sy
+        dmb.w sy
         dmb st
         dmb sh
         dmb ish
@@ -686,6 +687,7 @@ adds sp, #-4096
         dmb osh
         dmb oshst
         dmb
+        dmb.w
 
 @ CHECK: dmb	sy                      @ encoding: [0xbf,0xf3,0x5f,0x8f]
 @ CHECK: dmb	st                      @ encoding: [0xbf,0xf3,0x5e,0x8f]
@@ -705,6 +707,7 @@ adds sp, #-4096
 @ CHECK: dmb	#0x0                    @ encoding: [0xbf,0xf3,0x50,0x8f]
 
 @ CHECK: dmb	sy                      @ encoding: [0xbf,0xf3,0x5f,0x8f]
+@ CHECK: dmb	sy                      @ encoding: [0xbf,0xf3,0x5f,0x8f]
 @ CHECK: dmb	st                      @ encoding: [0xbf,0xf3,0x5e,0x8f]
 @ CHECK: dmb	ish                     @ encoding: [0xbf,0xf3,0x5b,0x8f]
 @ CHECK: dmb	ish                     @ encoding: [0xbf,0xf3,0x5b,0x8f]
@@ -716,6 +719,7 @@ adds sp, #-4096
 @ CHECK: dmb	nshst                   @ encoding: [0xbf,0xf3,0x56,0x8f]
 @ CHECK: dmb	osh                     @ encoding: [0xbf,0xf3,0x53,0x8f]
 @ CHECK: dmb	oshst                   @ encoding: [0xbf,0xf3,0x52,0x8f]
+@ CHECK: dmb	sy                      @ encoding: [0xbf,0xf3,0x5f,0x8f]
 @ CHECK: dmb	sy                      @ encoding: [0xbf,0xf3,0x5f,0x8f]
 
 
@@ -740,6 +744,7 @@ adds sp, #-4096
         dsb #0x0
 
         dsb sy
+        dsb.w sy
         dsb st
         dsb sh
         dsb ish
@@ -752,6 +757,7 @@ adds sp, #-4096
         dsb osh
         dsb oshst
         dsb
+        dsb.w
 
 @ CHECK: dsb	sy                      @ encoding: [0xbf,0xf3,0x4f,0x8f]
 @ CHECK: dsb	st                      @ encoding: [0xbf,0xf3,0x4e,0x8f]
@@ -771,6 +777,7 @@ adds sp, #-4096
 @ CHECK: ssbb                           @ encoding: [0xbf,0xf3,0x40,0x8f]
 
 @ CHECK: dsb	sy                      @ encoding: [0xbf,0xf3,0x4f,0x8f]
+@ CHECK: dsb	sy                      @ encoding: [0xbf,0xf3,0x4f,0x8f]
 @ CHECK: dsb	st                      @ encoding: [0xbf,0xf3,0x4e,0x8f]
 @ CHECK: dsb	ish                     @ encoding: [0xbf,0xf3,0x4b,0x8f]
 @ CHECK: dsb	ish                     @ encoding: [0xbf,0xf3,0x4b,0x8f]
@@ -782,6 +789,7 @@ adds sp, #-4096
 @ CHECK: dsb	nshst                   @ encoding: [0xbf,0xf3,0x46,0x8f]
 @ CHECK: dsb	osh                     @ encoding: [0xbf,0xf3,0x43,0x8f]
 @ CHECK: dsb	oshst                   @ encoding: [0xbf,0xf3,0x42,0x8f]
+@ CHECK: dsb	sy                      @ encoding: [0xbf,0xf3,0x4f,0x8f]
 @ CHECK: dsb	sy                      @ encoding: [0xbf,0xf3,0x4f,0x8f]
 
 
@@ -809,10 +817,14 @@ adds sp, #-4096
 @ ISB
 @------------------------------------------------------------------------------
         isb sy
+        isb.w sy
         isb
+        isb.w
         isb #15
         isb #1
 
+@ CHECK: isb	sy                      @ encoding: [0xbf,0xf3,0x6f,0x8f]
+@ CHECK: isb	sy                      @ encoding: [0xbf,0xf3,0x6f,0x8f]
 @ CHECK: isb	sy                      @ encoding: [0xbf,0xf3,0x6f,0x8f]
 @ CHECK: isb	sy                      @ encoding: [0xbf,0xf3,0x6f,0x8f]
 @ CHECK: isb	sy                      @ encoding: [0xbf,0xf3,0x6f,0x8f]
