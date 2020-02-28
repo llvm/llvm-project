@@ -1,3 +1,4 @@
+// REQUIRES: arm
 // RUN: llvm-mc -g --triple=thumbv6m-none-eabi --arm-add-build-attributes -filetype=obj -o %t.o %s
 // RUN: not ld.lld %t.o -o /dev/null 2>&1 | FileCheck %s
 
