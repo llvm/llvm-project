@@ -15,6 +15,7 @@
 #include "clang/AST/DeclOpenMP.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/LocInfoType.h"
+#include "clang/Basic/Module.h"
 #include "clang/Basic/SourceManager.h"
 
 using namespace clang;

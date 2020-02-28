@@ -40,6 +40,10 @@
 class DWARFASTParserClang;
 class PDBASTParser;
 
+namespace clang {
+class FileManager;
+}
+
 namespace lldb_private {
 
 class ClangASTMetadata;
