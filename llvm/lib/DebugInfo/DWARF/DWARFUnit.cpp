@@ -285,6 +285,16 @@ bool DWARFUnitHeader::extract(DWARFContext &Context,
     else
       UnitType = DW_UT_compile;
   }
+  if (isTypeUnit()) {
+    TypeHash = debug_info.getU64(offset_ptr, &Err);
+    TypeOffset = debug_info.getUnsigned(
+        offset_ptr, FormParams.getDwarfOffsetByteSize(), &Err);
+  } else if (UnitType == DW_UT_split_compile || UnitType == DW_UT_skeleton)
+    DWOId = debug_info.getU64(offset_ptr, &Err);
+
+  if (errorToBool(std::move(Err)))
+    return false;
+
   if (IndexEntry) {
     if (AbbrOffset)
       return false;
@@ -296,15 +306,6 @@ bool DWARFUnitHeader::extract(DWARFContext &Context,
       return false;
     AbbrOffset = AbbrEntry->Offset;
   }
-  if (isTypeUnit()) {
-    TypeHash = debug_info.getU64(offset_ptr, &Err);
-    TypeOffset = debug_info.getUnsigned(
-        offset_ptr, FormParams.getDwarfOffsetByteSize(), &Err);
-  } else if (UnitType == DW_UT_split_compile || UnitType == DW_UT_skeleton)
-    DWOId = debug_info.getU64(offset_ptr, &Err);
-
-  if (errorToBool(std::move(Err)))
-    return false;
 
   // Header fields all parsed, capture the size of this unit header.
   assert(*offset_ptr - Offset <= 255 && "unexpected header size");
