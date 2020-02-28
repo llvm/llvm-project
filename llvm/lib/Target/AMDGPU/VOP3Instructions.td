@@ -425,7 +425,7 @@ let isCommutable = 1 in {
 let SchedRW = [WriteQuarterRate32, WriteSALU] in {
 def V_MAD_U64_U32 : VOP3Inst <"v_mad_u64_u32", VOP3b_I64_I1_I32_I32_I64>;
 def V_MAD_I64_I32 : VOP3Inst <"v_mad_i64_i32", VOP3b_I64_I1_I32_I32_I64>;
-} // End SchedRW = [WriteDouble, WriteSALU]
+} // End SchedRW = [WriteQuarterRate32, WriteSALU]
 } // End isCommutable = 1
 
 } // End SubtargetPredicate = isGFX7Plus
