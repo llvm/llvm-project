@@ -313,7 +313,7 @@ attributes #0 = { nounwind }
 ; CHECK-NEXT:  _g.offset.ref.da.0:
 ; CHECK-NEXT:    .quad (_g+148)@AUTH(da,0)
 
-@g.offset.ptrauth.da.0 = private constant { i8*, i32, i64, i64 } { i8* getelementptr inbounds (i8, i8* bitcast (i32* @g to i8*), i64 148), i32 2, i64 0, i64 0 }, section "llvm.ptrauth"
+@g.offset.ptrauth.da.0 = private constant { i8*, i32, i64, i64 } { i8* getelementptr (i8, i8* bitcast (i32* @g to i8*), i64 148), i32 2, i64 0, i64 0 }, section "llvm.ptrauth"
 
 @g.offset.ref.da.0 = constant i8* bitcast ({ i8*, i32, i64, i64 }* @g.offset.ptrauth.da.0 to i8*)
 
@@ -322,7 +322,7 @@ attributes #0 = { nounwind }
 ; CHECK-NEXT:  _g.big_offset.ref.da.0:
 ; CHECK-NEXT:    .quad (_g+2147549185)@AUTH(da,0)
 
-@g.big_offset.ptrauth.da.0 = private constant { i8*, i32, i64, i64 } { i8* getelementptr inbounds (i8, i8* bitcast (i32* @g to i8*), i64 add (i64 2147483648, i64 65537)), i32 2, i64 0, i64 0 }, section "llvm.ptrauth"
+@g.big_offset.ptrauth.da.0 = private constant { i8*, i32, i64, i64 } { i8* getelementptr (i8, i8* bitcast (i32* @g to i8*), i64 add (i64 2147483648, i64 65537)), i32 2, i64 0, i64 0 }, section "llvm.ptrauth"
 
 @g.big_offset.ref.da.0 = constant i8* bitcast ({ i8*, i32, i64, i64 }* @g.big_offset.ptrauth.da.0 to i8*)
 

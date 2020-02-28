@@ -43,18 +43,21 @@ static MCSymbol *getAuthGVStub(const GlobalVariable *GVB, AsmPrinter &Printer) {
   // Figure out the base symbol and the addend, if any.
   APInt Offset(64, 0);
   const Value *BaseGV =
-      PAI.getPointer()->stripAndAccumulateInBoundsConstantOffsets(
-          Printer.getDataLayout(), Offset);
+    PAI.getPointer()->stripAndAccumulateConstantOffsets(
+      Printer.getDataLayout(), Offset, /*AllowNonInbounds=*/true);
 
   auto *BaseGVB = dyn_cast<GlobalValue>(BaseGV);
 
   // If we can't understand the referenced ConstantExpr, there's nothing
   // else we can do: emit an error.
   if (!BaseGVB) {
-    BaseGVB = GVB;
-    BaseGV->getContext().emitError(
-        "Couldn't resolve target base/addend of llvm.ptrauth global '" +
-        BaseGV->getName() + "'");
+    BaseGVB = PAI.getGV();
+
+    std::string Buf;
+    raw_string_ostream OS(Buf);
+    OS << "Couldn't resolve target base/addend of llvm.ptrauth global '"
+      << *BaseGVB << "'";
+    BaseGV->getContext().emitError(OS.str());
   }
 
   uint16_t Discriminator = PAI.getDiscriminator()->getZExtValue();
