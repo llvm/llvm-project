@@ -5,10 +5,6 @@ lld 10.0.0 Release Notes
 .. contents::
     :local:
 
-.. warning::
-   These are in-progress notes for the upcoming LLVM 10.0.0 release.
-   Release notes for previous releases can be found on
-   `the Download Page <https://releases.llvm.org/download.html>`_.
 
 Introduction
 ============
@@ -33,7 +29,7 @@ ELF Improvements
 * New ``elf32btsmipn32_fbsd`` and ``elf32ltsmipn32_fbsd`` emulations
   are supported.
 
-* Relax MIPS ``jalr``and ``jr`` instructions marked by the ``R_MIPS_JALR``
+* Relax MIPS ``jalr`` and ``jr`` instructions marked by the ``R_MIPS_JALR``
   relocation.
 * For certain "undefined symbol" errors, a definition with a close spelling will be suggested.
   (`D67039 <https://reviews.llvm.org/D67039>`_)
@@ -90,10 +86,6 @@ Breaking changes
   could cause subtle bugs.
   (`D70468 <https://reviews.llvm.org/D70468>`_)
 
-COFF Improvements
------------------
-
-* ...
 
 MinGW Improvements
 ------------------
@@ -126,10 +118,6 @@ MinGW Improvements
   (which can happen for the default-null symbol for weak symbols)
   (`1737cc750c46 <https://reviews.llvm.org/rG1737cc750c46>`)
 
-MachO Improvements
-------------------
-
-* Item 1.
 
 WebAssembly Improvements
 ------------------------

@@ -1,6 +1,6 @@
-========================================
-Clang 10.0.0 (In-Progress) Release Notes
-========================================
+==========================
+Clang 10.0.0 Release Notes
+==========================
 
 .. contents::
    :local:
@@ -8,11 +8,6 @@ Clang 10.0.0 (In-Progress) Release Notes
 
 Written by the `LLVM Team <https://llvm.org/>`_
 
-.. warning::
-
-   These are in-progress notes for the upcoming Clang 10 release.
-   Release notes for previous releases can be found on
-   `the Download Page <https://releases.llvm.org/download.html>`_.
 
 Introduction
 ============
@@ -30,10 +25,6 @@ For more information about Clang or LLVM, including information about the
 latest release, please see the `Clang Web Site <https://clang.llvm.org>`_ or the
 `LLVM Web Site <https://llvm.org>`_.
 
-Note that if you are reading this file from a Subversion checkout or the
-main Clang web page, this document applies to the *next* release, not
-the current one. To see the release notes for a specific release, please
-see the `releases page <https://llvm.org/releases/>`_.
 
 What's New in Clang 10.0.0?
 ===========================
@@ -58,27 +49,33 @@ Improvements to Clang's diagnostics
 
 - -Wtautological-overlap-compare will warn on negative numbers and non-int
   types.
+
 - -Wtautological-compare for self comparisons and
   -Wtautological-overlap-compare will now look through member and array
   access to determine if two operand expressions are the same.
+
 - -Wtautological-bitwise-compare is a new warning group.  This group has the
   current warning which diagnoses the tautological comparison of a bitwise
   operation and a constant. The group also has the new warning which diagnoses
   when a bitwise-or with a non-negative value is converted to a bool, since
   that bool will always be true.
+
 - -Wbitwise-conditional-parentheses will warn on operator precedence issues
   when mixing bitwise-and (&) and bitwise-or (|) operator with the
   conditional operator (?:).
+
 - -Wrange-loop-analysis got several improvements. It no longer warns about a
   copy being made when the result is bound to an rvalue reference. It no longer
   warns when an object of a small, trivially copyable type is copied. The
   warning now offers fixits. Excluding -Wrange-loop-bind-reference it is now
   part of -Wall. To reduce the number of false positives the diagnostic is
   disabled in macros and template instantiations.
+
 - -Wmisleading-indentation has been added. This warning is similar to the GCC
   warning of the same name. It warns about statements that are indented as if
   they were part of a if/else/for/while statement but are not semantically
   part of that if/else/for/while.
+
 - -Wbitwise-op-parentheses and -Wlogical-op-parentheses are disabled by default.
 
 Non-comprehensive list of changes in this release
@@ -98,7 +95,7 @@ Non-comprehensive list of changes in this release
   learned to sanitize pre/post increment/decrement of types with bit width
   smaller than ``int``.
 
-- For X86 target, -march=skylake-avx512, -march=icelake-client,
+* For X86 target, -march=skylake-avx512, -march=icelake-client,
   -march=icelake-server, -march=cascadelake, -march=cooperlake will default to
   not using 512-bit zmm registers in vectorized code unless 512-bit intrinsics
   are used in the source code. 512-bit operations are known to cause the CPUs
@@ -145,12 +142,12 @@ New Compiler Flags
   please let us know if you encounter a situation where you need to specify this
   flag for correct program behavior.
 
-- The `-ffixed-xX` flags now work on RISC-V. These reserve the corresponding
+- The ``-ffixed-xX`` flags now work on RISC-V. These reserve the corresponding
   general-purpose registers.
 
-- RISC-V has added `-mcmodel=medany` and `-mcmodel=medlow` as aliases for
-  `-mcmodel=small` and `-mcmodel=medium` respectively. Preprocessor definitions
-  for `__riscv_cmodel_medlow` and `__riscv_cmodel_medany` have been corrected.
+- RISC-V has added ``-mcmodel=medany`` and ``-mcmodel=medlow`` as aliases for
+  ``-mcmodel=small`` and ``-mcmodel=medium`` respectively. Preprocessor definitions
+  for ``__riscv_cmodel_medlow`` and ``__riscv_cmodel_medany`` have been corrected.
 
 - ``-fmacro-prefix-map=OLD=NEW`` substitutes directory prefix ``OLD`` for
   ``NEW`` in predefined preprocessor macros such as ``__FILE__``. This helps
@@ -173,11 +170,11 @@ future versions of Clang.
 
 - -mmpx used to enable the __MPX__ preprocessor define for the Intel MPX
   instructions. There were no MPX intrinsics.
+
 - -mno-mpx used to disable -mmpx and is the default behavior.
+
 - -fconcepts-ts previously used to enable experimental concepts support. Use
   -std=c++2a instead to enable Concepts support.
-
-- ...
 
 Modified Compiler Flags
 -----------------------
@@ -212,11 +209,6 @@ Modified Compiler Flags
 - RISC-V now supports multilibs in baremetal environments. This support does not
   extend to supporting multilib aliases.
 
-New Pragmas in Clang
---------------------
-
-- ...
-
 Attribute Changes in Clang
 --------------------------
 
@@ -247,16 +239,6 @@ Windows Support
   functions using the new ``__declspec(guard(nocf))`` modifier.
 
 
-C Language Changes in Clang
----------------------------
-
-- ...
-
-C11 Feature Support
-^^^^^^^^^^^^^^^^^^^
-
-...
-
 C++ Language Changes in Clang
 -----------------------------
 
@@ -264,11 +246,6 @@ C++ Language Changes in Clang
   where used without the `extern` keyword. As this is a change compared to
   how it behaved in previous Clang versions, a warning is emitted for this
   combination.
-
-C++1z Feature Support
-^^^^^^^^^^^^^^^^^^^^^
-
-...
 
 Objective-C Language Changes in Clang
 -------------------------------------
@@ -390,10 +367,6 @@ Other improvements:
 - Added basic analysis for use of the uninitialized variables in clauses.
 - Bug fixes.
 
-CUDA Support in Clang
----------------------
-
-- ...
 
 Internal API Changes
 --------------------
@@ -429,12 +402,6 @@ release of Clang. Users of the build system should adjust accordingly.
   statically linking clang's components. This option will reduce the size of
   binary distributions at the expense of compiler performance.
 
-- ...
-
-AST Matchers
-------------
-
-- ...
 
 clang-format
 ------------
@@ -578,25 +545,6 @@ Undefined Behavior Sanitizer (UBSan)
         return getelementpointer_inbounds(base, offset);
       }
 
-Core Analysis Improvements
-==========================
-
-- ...
-
-New Issues Found
-================
-
-- ...
-
-Python Binding Changes
-----------------------
-
-The following methods have been added:
-
--  ...
-
-Significant Known Problems
-==========================
 
 Additional Information
 ======================

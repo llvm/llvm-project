@@ -1,18 +1,12 @@
-====================================================
-Extra Clang Tools 10.0.0 (In-Progress) Release Notes
-====================================================
+======================================
+Extra Clang Tools 10.0.0 Release Notes
+======================================
 
 .. contents::
    :local:
    :depth: 3
 
 Written by the `LLVM Team <https://llvm.org/>`_
-
-.. warning::
-
-   These are in-progress notes for the upcoming Extra Clang Tools 10 release.
-   Release notes for previous releases can be found on
-   `the Download Page <https://releases.llvm.org/download.html>`_.
 
 Introduction
 ============
@@ -27,11 +21,6 @@ For more information about Clang or LLVM, including information about
 the latest release, please see the `Clang Web Site <https://clang.llvm.org>`_ or
 the `LLVM Web Site <https://llvm.org>`_.
 
-Note that if you are reading this file from a Subversion checkout or the
-main Clang web page, this document applies to the *next* release, not
-the current one. To see the release notes for a specific release, please
-see the `releases page <https://llvm.org/releases/>`_.
-
 What's New in Extra Clang Tools 10.0.0?
 =======================================
 
@@ -39,10 +28,6 @@ Some of the major new features and improvements to Extra Clang Tools are listed
 here. Generic improvements to Extra Clang Tools as a whole or to its underlying
 infrastructure are described first, followed by tool-specific sections.
 
-Major New Features
-------------------
-
-...
 
 Improvements to clangd
 ----------------------
@@ -59,10 +44,10 @@ Improvements to clangd
 
 - clangd can be more easily used remotely or in a docker container.
 
-  The `--path-mappings` flag translates between local and remote paths.
+  The ``--path-mappings`` flag translates between local and remote paths.
 
 - Experimental support for renaming across files (behind the
-  `--cross-file-rename` flag).
+  ``--cross-file-rename`` flag).
 
 - Hover now exposes more information, including the type of symbols and the
   value of constant expressions.
@@ -81,7 +66,7 @@ Improvements to clangd
 - Semantic highlighting is more robust, highlights more types of tokens, and
   as an extension provides information about inactive preprocessor regions.
 
-- Code completion results now include an extension field `score`.
+- Code completion results now include an extension field ``score``.
 
   This allows clients to incorporate clangd quality signals when re-ranking code
   completion after client-side fuzzy-matching.
@@ -97,16 +82,6 @@ Improvements to clang-doc
 
 - :doc:`clang-doc <clang-doc>` now generates documentation in HTML format.
 
-Improvements to clang-query
----------------------------
-
-The improvements are...
-
-Improvements to clang-rename
-----------------------------
-
-The improvements are...
-
 Improvements to clang-tidy
 --------------------------
 
@@ -116,7 +91,7 @@ New checks
 - New :doc:`bugprone-bad-signal-to-kill-thread
   <clang-tidy/checks/bugprone-bad-signal-to-kill-thread>` check.
 
-  Finds ``pthread_kill`` function calls when a thread is terminated by 
+  Finds ``pthread_kill`` function calls when a thread is terminated by
   raising ``SIGTERM`` signal.
 
 - New :doc:`bugprone-dynamic-static-initializers
@@ -211,7 +186,7 @@ New checks
 - New :doc:`readability-qualified-auto
   <clang-tidy/checks/readability-qualified-auto>` check.
 
-  Adds pointer and ``const`` qualifications to ``auto``-typed variables 
+  Adds pointer and ``const`` qualifications to ``auto``-typed variables
   that are deduced to pointers and ``const`` pointers.
 
 - New :doc:`readability-redundant-access-specifiers
@@ -296,25 +271,6 @@ Renamed checks
 - The 'objc-avoid-spinlock' check was renamed to :doc:`darwin-avoid-spinlock
   <clang-tidy/checks/darwin-avoid-spinlock>`
 
-Improvements to include-fixer
------------------------------
-
-The improvements are...
-
-Improvements to clang-include-fixer
------------------------------------
-
-The improvements are...
-
-Improvements to modularize
---------------------------
-
-The improvements are...
-
-Improvements to pp-trace
-------------------------
-
-The improvements are...
 
 Clang-tidy visual studio plugin
 -------------------------------
