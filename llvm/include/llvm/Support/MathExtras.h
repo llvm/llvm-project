@@ -14,7 +14,6 @@
 #define LLVM_SUPPORT_MATHEXTRAS_H
 
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/SwapByteOrder.h"
 #include <algorithm>
 #include <cassert>
 #include <climits>
@@ -468,21 +467,6 @@ constexpr inline bool isPowerOf2_32(uint32_t Value) {
 /// Return true if the argument is a power of two > 0 (64 bit edition.)
 constexpr inline bool isPowerOf2_64(uint64_t Value) {
   return Value && !(Value & (Value - 1));
-}
-
-/// Return a byte-swapped representation of the 16-bit argument.
-inline uint16_t ByteSwap_16(uint16_t Value) {
-  return sys::SwapByteOrder_16(Value);
-}
-
-/// Return a byte-swapped representation of the 32-bit argument.
-inline uint32_t ByteSwap_32(uint32_t Value) {
-  return sys::SwapByteOrder_32(Value);
-}
-
-/// Return a byte-swapped representation of the 64-bit argument.
-inline uint64_t ByteSwap_64(uint64_t Value) {
-  return sys::SwapByteOrder_64(Value);
 }
 
 /// Count the number of ones from the most significant bit to the first
