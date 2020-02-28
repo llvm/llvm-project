@@ -114,7 +114,7 @@ struct SimpleValue {
            isa<CmpInst>(Inst) || isa<SelectInst>(Inst) ||
            isa<ExtractElementInst>(Inst) || isa<InsertElementInst>(Inst) ||
            isa<ShuffleVectorInst>(Inst) || isa<ExtractValueInst>(Inst) ||
-           isa<InsertValueInst>(Inst);
+           isa<InsertValueInst>(Inst) || isa<FreezeInst>(Inst);
   }
 };
 
@@ -268,6 +268,9 @@ static unsigned getHashValueImpl(SimpleValue Val) {
   if (CastInst *CI = dyn_cast<CastInst>(Inst))
     return hash_combine(CI->getOpcode(), CI->getType(), CI->getOperand(0));
 
+  if (FreezeInst *FI = dyn_cast<FreezeInst>(Inst))
+    return hash_combine(FI->getOpcode(), FI->getOperand(0));
+
   if (const ExtractValueInst *EVI = dyn_cast<ExtractValueInst>(Inst))
     return hash_combine(EVI->getOpcode(), EVI->getOperand(0),
                         hash_combine_range(EVI->idx_begin(), EVI->idx_end()));
@@ -279,7 +282,8 @@ static unsigned getHashValueImpl(SimpleValue Val) {
 
   assert((isa<CallInst>(Inst) || isa<GetElementPtrInst>(Inst) ||
           isa<ExtractElementInst>(Inst) || isa<InsertElementInst>(Inst) ||
-          isa<ShuffleVectorInst>(Inst) || isa<UnaryOperator>(Inst)) &&
+          isa<ShuffleVectorInst>(Inst) || isa<UnaryOperator>(Inst) ||
+          isa<FreezeInst>(Inst)) &&
          "Invalid/unknown instruction");
 
   // Mix in the opcode.
