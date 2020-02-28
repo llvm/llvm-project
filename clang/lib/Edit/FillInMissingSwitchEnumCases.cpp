@@ -12,6 +12,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/NestedNameSpecifier.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/Edit/RefactoringFixits.h"
 #include <unordered_map>
 

@@ -15,6 +15,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/NSAPI.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/Edit/RefactoringFixits.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/DenseSet.h"
