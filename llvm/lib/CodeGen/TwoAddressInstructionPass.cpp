@@ -1238,21 +1238,18 @@ bool TwoAddressInstructionPass::tryInstructionCommute(MachineInstr *MI,
                                         Dist)) {
       MadeChange = true;
       ++NumCommuted;
-      if (AggressiveCommute) {
+      if (AggressiveCommute)
         ++NumAggrCommuted;
-        // There might be more than two commutable operands, update BaseOp and
-        // continue scanning.
-        // FIXME: This assumes that the new instruction's operands are in the
-        // same positions and were simply swapped.
-        BaseOpReg = OtherOpReg;
-        BaseOpKilled = OtherOpKilled;
-        // Resamples OpsNum in case the number of operands was reduced. This
-        // happens with X86.
-        OpsNum = MI->getDesc().getNumOperands();
-        continue;
-      }
-      // If this was a commute based on kill, we won't do better continuing.
-      return MadeChange;
+
+      // There might be more than two commutable operands, update BaseOp and
+      // continue scanning.
+      // FIXME: This assumes that the new instruction's operands are in the
+      // same positions and were simply swapped.
+      BaseOpReg = OtherOpReg;
+      BaseOpKilled = OtherOpKilled;
+      // Resamples OpsNum in case the number of operands was reduced. This
+      // happens with X86.
+      OpsNum = MI->getDesc().getNumOperands();
     }
   }
   return MadeChange;
