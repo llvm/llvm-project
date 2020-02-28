@@ -1,5 +1,5 @@
-// RUN: %clang_dfsan -fno-sanitize=dataflow -fPIE -DCALLBACKS -c %s -o %t-callbacks.o
-// RUN: %clang_dfsan -mllvm -dfsan-event-callbacks %s %t-callbacks.o -o %t
+// RUN: %clang_dfsan -fno-sanitize=dataflow -O2 -fPIE -DCALLBACKS -c %s -o %t-callbacks.o
+// RUN: %clang_dfsan -O2 -mllvm -dfsan-event-callbacks %s %t-callbacks.o -o %t
 // RUN: %run %t 2>&1 | FileCheck %s
 
 // Tests that callbacks are inserted for store events when
@@ -35,10 +35,14 @@ void __dfsan_store_callback(dfsan_label Label) {
     assert(0);
   }
 
-  // CHECK: Label 1 stored to memory
-  // CHECK: Label 2 stored to memory
-  // CHECK: Label 3 stored to memory
   fprintf(stderr, "Label %u stored to memory\n", Label);
+}
+
+void __dfsan_load_callback(dfsan_label Label) {
+  if (!Label)
+    return;
+
+  fprintf(stderr, "Label %u loaded from memory\n", Label);
 }
 
 #else
@@ -57,9 +61,24 @@ int main(void) {
   dfsan_set_label(LabelJ, &J, sizeof(J));
   LabelIJ = dfsan_union(LabelI, LabelJ);
 
+  // CHECK: Label 1 stored to memory
   volatile int Sink = I;
+
+  // CHECK: Label 1 loaded from memory
+  assert(Sink == 1);
+
+  // CHECK: Label 2 stored to memory
   Sink = J;
+
+  // CHECK: Label 2 loaded from memory
+  assert(Sink == 2);
+
+  // CHECK: Label 2 loaded from memory
+  // CHECK: Label 3 stored to memory
   Sink += I;
+
+  // CHECK: Label 3 loaded from memory
+  assert(Sink == 3);
 
   return 0;
 }

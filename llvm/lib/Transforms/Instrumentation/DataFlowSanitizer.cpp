@@ -163,10 +163,11 @@ static cl::opt<bool> ClDebugNonzeroLabels(
     cl::Hidden);
 
 // Experimental feature that inserts callbacks for certain data events.
-// Currently callbacks are only inserted for stores.
+// Currently callbacks are only inserted for loads and stores.
 //
 // If this flag is set to true, the user must provide definitions for the
 // following callback functions:
+//   void __dfsan_load_callback(dfsan_label Label);
 //   void __dfsan_store_callback(dfsan_label Label);
 static cl::opt<bool> ClEventCallbacks(
     "dfsan-event-callbacks",
@@ -356,7 +357,7 @@ class DataFlowSanitizer : public ModulePass {
   FunctionType *DFSanSetLabelFnTy;
   FunctionType *DFSanNonzeroLabelFnTy;
   FunctionType *DFSanVarargWrapperFnTy;
-  FunctionType *DFSanStoreCallbackFnTy;
+  FunctionType *DFSanLoadStoreCallbackFnTy;
   FunctionCallee DFSanUnionFn;
   FunctionCallee DFSanCheckedUnionFn;
   FunctionCallee DFSanUnionLoadFn;
@@ -364,6 +365,7 @@ class DataFlowSanitizer : public ModulePass {
   FunctionCallee DFSanSetLabelFn;
   FunctionCallee DFSanNonzeroLabelFn;
   FunctionCallee DFSanVarargWrapperFn;
+  FunctionCallee DFSanLoadCallbackFn;
   FunctionCallee DFSanStoreCallbackFn;
   MDNode *ColdCallWeights;
   DFSanABIList ABIList;
@@ -596,7 +598,7 @@ bool DataFlowSanitizer::doInitialization(Module &M) {
       Type::getVoidTy(*Ctx), None, /*isVarArg=*/false);
   DFSanVarargWrapperFnTy = FunctionType::get(
       Type::getVoidTy(*Ctx), Type::getInt8PtrTy(*Ctx), /*isVarArg=*/false);
-  DFSanStoreCallbackFnTy =
+  DFSanLoadStoreCallbackFnTy =
       FunctionType::get(Type::getVoidTy(*Ctx), ShadowTy, /*isVarArg=*/false);
 
   if (GetArgTLSPtr) {
@@ -798,8 +800,10 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
   DFSanVarargWrapperFn = Mod->getOrInsertFunction("__dfsan_vararg_wrapper",
                                                   DFSanVarargWrapperFnTy);
 
+  DFSanLoadCallbackFn = Mod->getOrInsertFunction("__dfsan_load_callback",
+                                                 DFSanLoadStoreCallbackFnTy);
   DFSanStoreCallbackFn = Mod->getOrInsertFunction("__dfsan_store_callback",
-                                                  DFSanStoreCallbackFnTy);
+                                                  DFSanLoadStoreCallbackFnTy);
 
   std::vector<Function *> FnsToInstrument;
   SmallPtrSet<Function *, 2> FnsWithNativeABI;
@@ -812,6 +816,7 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
         &i != DFSanSetLabelFn.getCallee()->stripPointerCasts() &&
         &i != DFSanNonzeroLabelFn.getCallee()->stripPointerCasts() &&
         &i != DFSanVarargWrapperFn.getCallee()->stripPointerCasts() &&
+        &i != DFSanLoadCallbackFn.getCallee()->stripPointerCasts() &&
         &i != DFSanStoreCallbackFn.getCallee()->stripPointerCasts())
       FnsToInstrument.push_back(&i);
   }
@@ -1344,6 +1349,10 @@ void DFSanVisitor::visitLoadInst(LoadInst &LI) {
     DFSF.NonZeroChecks.push_back(Shadow);
 
   DFSF.setShadow(&LI, Shadow);
+  if (ClEventCallbacks) {
+    IRBuilder<> IRB(&LI);
+    IRB.CreateCall(DFSF.DFS.DFSanLoadCallbackFn, Shadow);
+  }
 }
 
 void DFSanFunction::storeShadow(Value *Addr, uint64_t Size, Align Alignment,
