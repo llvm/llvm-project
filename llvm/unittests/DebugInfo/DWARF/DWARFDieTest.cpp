@@ -105,9 +105,9 @@ TEST(DWARFDie, getLocations) {
           &ErrorInfoBase::message,
           "Unable to resolve indirect address 1 for: DW_LLE_startx_length")));
 
-  EXPECT_THAT_EXPECTED(Die.getLocations(DW_AT_call_data_location),
-                       Failed<ErrorInfoBase>(testing::Property(
-                           &ErrorInfoBase::message, "unexpected end of data")));
+  EXPECT_THAT_EXPECTED(
+      Die.getLocations(DW_AT_call_data_location),
+      FailedWithMessage("unexpected end of data at offset 0x20"));
 
   EXPECT_THAT_EXPECTED(
       Die.getLocations(DW_AT_call_data_value),

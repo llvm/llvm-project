@@ -15,10 +15,11 @@
 
 using namespace llvm;
 
-static void unexpectedEndReached(Error *E) {
+static void unexpectedEndReached(Error *E, uint64_t Offset) {
   if (E)
     *E = createStringError(errc::illegal_byte_sequence,
-                           "unexpected end of data");
+                           "unexpected end of data at offset 0x%" PRIx64,
+                           Offset);
 }
 
 static bool isError(Error *E) { return E && *E; }
@@ -33,7 +34,7 @@ static T getU(uint64_t *offset_ptr, const DataExtractor *de,
 
   uint64_t offset = *offset_ptr;
   if (!de->isValidOffsetForDataOfSize(offset, sizeof(T))) {
-    unexpectedEndReached(Err);
+    unexpectedEndReached(Err, offset);
     return val;
   }
   std::memcpy(&val, &Data[offset], sizeof(val));
@@ -56,7 +57,7 @@ static T *getUs(uint64_t *offset_ptr, T *dst, uint32_t count,
   uint64_t offset = *offset_ptr;
 
   if (!de->isValidOffsetForDataOfSize(offset, sizeof(*dst) * count)) {
-    unexpectedEndReached(Err);
+    unexpectedEndReached(Err, offset);
     return nullptr;
   }
   for (T *value_ptr = dst, *end = dst + count; value_ptr != end;
@@ -229,5 +230,5 @@ void DataExtractor::skip(Cursor &C, uint64_t Length) const {
   if (isValidOffsetForDataOfSize(C.Offset, Length))
     C.Offset += Length;
   else
-    unexpectedEndReached(&C.Err);
+    unexpectedEndReached(&C.Err, C.Offset);
 }
