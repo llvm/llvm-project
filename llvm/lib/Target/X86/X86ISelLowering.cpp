@@ -37138,10 +37138,12 @@ static SDValue combineBitcast(SDNode *N, SelectionDAG &DAG,
                        DAG.getBitcast(MVT::i16, N0.getOperand(0)));
 
   // Combine (bitcast (vbroadcast_load)) -> (vbroadcast_load). The memory VT
-  // determines // the number of bits loaded. Remaining bits are zero.
+  // determines the number of bits loaded.
   if (N0.getOpcode() == X86ISD::VBROADCAST_LOAD && N0.hasOneUse() &&
       VT.getScalarSizeInBits() == SrcVT.getScalarSizeInBits()) {
     auto *BCast = cast<MemIntrinsicSDNode>(N0);
+    assert(VT.getScalarSizeInBits() == BCast->getMemoryVT().getSizeInBits() &&
+           "Unexpected load size!");
     SDVTList Tys = DAG.getVTList(VT, MVT::Other);
     SDValue Ops[] = { BCast->getChain(), BCast->getBasePtr() };
     SDValue ResNode =
