@@ -42,7 +42,7 @@ subroutine CheckValue
   !OK: constant structure constructor
   data myname / person(1, 'Abcd Ijkl') /
   !C883
-  !ERROR: Must have INTEGER type, but is CHARACTER(1)
+  !ERROR: 'persn' is not an array
   data myname / persn(2, 'Abcd Efgh') /
   !C884
   !ERROR: Structure constructor in data value must be a constant expression

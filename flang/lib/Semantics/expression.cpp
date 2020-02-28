@@ -238,8 +238,10 @@ MaybeExpr ExpressionAnalyzer::CompleteSubscripts(ArrayRef &&ref) {
   if (subscripts == 0) {
     // nothing to check
   } else if (subscripts != symbolRank) {
-    Say("Reference to rank-%d object '%s' has %d subscripts"_err_en_US,
-        symbolRank, symbol.name(), subscripts);
+    if (symbolRank != 0) {
+      Say("Reference to rank-%d object '%s' has %d subscripts"_err_en_US,
+          symbolRank, symbol.name(), subscripts);
+    }
     return std::nullopt;
   } else if (Component * component{ref.base().UnwrapComponent()}) {
     int baseRank{component->base().Rank()};
@@ -886,16 +888,25 @@ std::vector<Subscript> ExpressionAnalyzer::AnalyzeSectionSubscripts(
 }
 
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::ArrayElement &ae) {
-  std::vector<Subscript> subscripts{AnalyzeSectionSubscripts(ae.subscripts)};
   if (MaybeExpr baseExpr{Analyze(ae.base)}) {
-    if (std::optional<DataRef> dataRef{ExtractDataRef(std::move(*baseExpr))}) {
-      if (!subscripts.empty()) {
-        return ApplySubscripts(std::move(*dataRef), std::move(subscripts));
+    if (ae.subscripts.empty()) {
+      // will be converted to function call later or error reported
+      return std::nullopt;
+    } else if (baseExpr->Rank() == 0) {
+      if (const Symbol * symbol{GetLastSymbol(*baseExpr)}) {
+        Say("'%s' is not an array"_err_en_US, symbol->name());
       }
+    } else if (std::optional<DataRef> dataRef{
+                   ExtractDataRef(std::move(*baseExpr))}) {
+      return ApplySubscripts(
+          std::move(*dataRef), AnalyzeSectionSubscripts(ae.subscripts));
     } else {
       Say("Subscripts may be applied only to an object, component, or array constant"_err_en_US);
     }
   }
+  // error was reported: analyze subscripts without reporting more errors
+  auto restorer{GetContextualMessages().DiscardMessages()};
+  AnalyzeSectionSubscripts(ae.subscripts);
   return std::nullopt;
 }
 
@@ -2296,7 +2307,9 @@ static void CheckFuncRefToArrayElementRefHasSubscripts(
       name = &std::get<parser::ProcComponentRef>(proc.u).v.thing.component;
     }
     auto &msg{context.Say(funcRef.v.source,
-        "Reference to array '%s' with empty subscript list"_err_en_US,
+        name->symbol && name->symbol->Rank() == 0
+            ? "'%s' is not a function"_err_en_US
+            : "Reference to array '%s' with empty subscript list"_err_en_US,
         name->source)};
     if (name->symbol) {
       if (semantics::IsFunctionResultWithSameNameAsFunction(*name->symbol)) {

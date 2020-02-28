@@ -9,7 +9,7 @@ contains
   ! testing with data object results
   function f1()
     real :: x, f1
-    !ERROR: Reference to array 'f1' with empty subscript list
+    !ERROR: 'f1' is not a function
     x = acos(f1())
     f1 = x
     x = acos(f1) !OK
@@ -17,7 +17,7 @@ contains
   function f2(i)
     integer i
     real :: x, f2
-    !ERROR: Reference to rank-0 object 'f2' has 1 subscripts
+    !ERROR: 'f2' is not an array
     x = acos(f2(i+1))
     f2 = x
     x = acos(f2) !OK
@@ -62,7 +62,7 @@ contains
   end function
   function f7() result(f7) !OKI (warning)
     real :: x, f7
-    !ERROR: Reference to array 'f7' with empty subscript list
+    !ERROR: 'f7' is not a function
     x = acos(f7())
     f7 = x
     x = acos(f7) !OK
@@ -123,7 +123,15 @@ contains
   ! testing that calling the result is also caught
   function f6() result(r)
     real :: x, r
-    !ERROR: Reference to array 'r' with empty subscript list
+    !ERROR: 'r' is not a function
     x = r()
   end function
 end module
+
+subroutine array_rank_test()
+  real :: x(10, 10), y
+  !ERROR: Reference to rank-2 object 'x' has 1 subscripts
+  y = x(1)
+  !ERROR: Reference to rank-2 object 'x' has 3 subscripts
+  y = x(1, 2, 3)
+end
