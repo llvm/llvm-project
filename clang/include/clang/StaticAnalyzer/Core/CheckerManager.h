@@ -14,6 +14,7 @@
 #define LLVM_CLANG_STATICANALYZER_CORE_CHECKERMANAGER_H
 
 #include "clang/Analysis/ProgramPoint.h"
+#include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState_Fwd.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/Store.h"
@@ -121,14 +122,36 @@ enum class ObjCMessageVisitKind {
 };
 
 class CheckerManager {
-  ASTContext &Context;
+  ASTContext *Context;
   const LangOptions LangOpts;
   AnalyzerOptions &AOptions;
   CheckerNameRef CurrentCheckerName;
+  DiagnosticsEngine &Diags;
+  std::unique_ptr<CheckerRegistry> Registry;
 
 public:
+  // These constructors are defined in the Frontend library, because
+  // CheckerRegistry, a crucial component of the initialization is in there.
+  // CheckerRegistry cannot be moved to the Core library, because the checker
+  // registration functions are defined in the Checkers library, and the library
+  // dependencies look like this: Core -> Checkers -> Frontend.
+
+  CheckerManager(
+      ASTContext &Context, AnalyzerOptions &AOptions,
+      ArrayRef<std::string> plugins,
+      ArrayRef<std::function<void(CheckerRegistry &)>> checkerRegistrationFns);
+
+  /// Constructs a CheckerManager that ignores all non TblGen-generated
+  /// checkers. Useful for unit testing, unless the checker infrastructure
+  /// itself is tested.
   CheckerManager(ASTContext &Context, AnalyzerOptions &AOptions)
-      : Context(Context), LangOpts(Context.getLangOpts()), AOptions(AOptions) {}
+      : CheckerManager(Context, AOptions, {}, {}) {}
+
+  /// Constructs a CheckerManager without requiring an AST. No checker
+  /// registration will take place. Only useful for retrieving the
+  /// CheckerRegistry and print for help flags where the AST is unavalaible.
+  CheckerManager(AnalyzerOptions &AOptions, const LangOptions &LangOpts,
+                 DiagnosticsEngine &Diags, ArrayRef<std::string> plugins);
 
   ~CheckerManager();
 
@@ -141,7 +164,12 @@ public:
 
   const LangOptions &getLangOpts() const { return LangOpts; }
   AnalyzerOptions &getAnalyzerOptions() const { return AOptions; }
-  ASTContext &getASTContext() const { return Context; }
+  const CheckerRegistry &getCheckerRegistry() const { return *Registry; }
+  DiagnosticsEngine &getDiagnostics() const { return Diags; }
+  ASTContext &getASTContext() const {
+    assert(Context);
+    return *Context;
+  }
 
   /// Emits an error through a DiagnosticsEngine about an invalid user supplied
   /// checker option value.

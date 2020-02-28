@@ -23,6 +23,7 @@
 #include "clang/Frontend/Utils.h"
 #include "clang/FrontendTool/Utils.h"
 #include "clang/Rewrite/Frontend/FrontendActions.h"
+#include "clang/StaticAnalyzer/Frontend/AnalyzerHelpFlags.h"
 #include "clang/StaticAnalyzer/Frontend/FrontendActions.h"
 #include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
@@ -243,35 +244,24 @@ bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
   // These should happen AFTER plugins have been loaded!
 
   AnalyzerOptions &AnOpts = *Clang->getAnalyzerOpts();
+
   // Honor -analyzer-checker-help and -analyzer-checker-help-hidden.
   if (AnOpts.ShowCheckerHelp || AnOpts.ShowCheckerHelpAlpha ||
       AnOpts.ShowCheckerHelpDeveloper) {
-    ento::printCheckerHelp(llvm::outs(),
-                           Clang->getFrontendOpts().Plugins,
-                           AnOpts,
-                           Clang->getDiagnostics(),
-                           Clang->getLangOpts());
+    ento::printCheckerHelp(llvm::outs(), *Clang);
     return true;
   }
 
   // Honor -analyzer-checker-option-help.
   if (AnOpts.ShowCheckerOptionList || AnOpts.ShowCheckerOptionAlphaList ||
       AnOpts.ShowCheckerOptionDeveloperList) {
-    ento::printCheckerConfigList(llvm::outs(),
-                                 Clang->getFrontendOpts().Plugins,
-                                 *Clang->getAnalyzerOpts(),
-                                 Clang->getDiagnostics(),
-                                 Clang->getLangOpts());
+    ento::printCheckerConfigList(llvm::outs(), *Clang);
     return true;
   }
 
   // Honor -analyzer-list-enabled-checkers.
   if (AnOpts.ShowEnabledCheckerList) {
-    ento::printEnabledCheckerList(llvm::outs(),
-                                  Clang->getFrontendOpts().Plugins,
-                                  AnOpts,
-                                  Clang->getDiagnostics(),
-                                  Clang->getLangOpts());
+    ento::printEnabledCheckerList(llvm::outs(), *Clang);
     return true;
   }
 
