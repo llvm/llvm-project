@@ -1316,7 +1316,6 @@ void DFSanVisitor::visitLoadInst(LoadInst &LI) {
   } else {
     Align = 1;
   }
-  IRBuilder<> IRB(&LI);
   Value *Shadow = DFSF.loadShadow(LI.getPointerOperand(), Size, Align, &LI);
   if (ClCombinePointerLabelsOnLoad) {
     Value *PtrShadow = DFSF.getShadow(LI.getPointerOperand());
