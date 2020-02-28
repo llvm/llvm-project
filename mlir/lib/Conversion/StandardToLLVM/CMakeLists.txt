@@ -1,4 +1,4 @@
-add_llvm_library(MLIRStandardToLLVM
+add_mlir_conversion_library(MLIRStandardToLLVM
   ConvertStandardToLLVM.cpp
 
   ADDITIONAL_HEADER_DIRS
