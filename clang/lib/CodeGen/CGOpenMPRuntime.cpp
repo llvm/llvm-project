@@ -22,6 +22,7 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/BitmaskEnum.h"
 #include "clang/Basic/OpenMPKinds.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SetOperations.h"

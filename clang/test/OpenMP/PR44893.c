@@ -1,4 +1,4 @@
-// RUN: %clang -fopenmp -O -g -x c %s -c -disable-output -o %t
+// RUN: %clang -fopenmp -O -g -x c %s -S -disable-output -o %t
 
 // Do not crash ;)
 

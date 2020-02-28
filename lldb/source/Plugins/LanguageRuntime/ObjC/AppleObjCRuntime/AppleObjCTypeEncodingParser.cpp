@@ -15,6 +15,8 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/StringLexer.h"
 
+#include "clang/Basic/TargetInfo.h"
+
 #include <vector>
 
 using namespace lldb_private;

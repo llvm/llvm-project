@@ -1,4 +1,5 @@
 #include "clang/AST/JSONNodeDumper.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/StringSwitch.h"
 

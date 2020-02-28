@@ -893,5 +893,299 @@ define void @test39_atomic(i8* %P, i8* %Q, i8* %R) {
   ret void
 }
 
+define i32 @test40() {
+; CHECK-LABEL: @test40(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[M:%.*]] = call i8* @calloc(i32 9, i32 20)
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[P_NEXT:%.*]] = getelementptr inbounds i8, i8* [[M]], i64 [[INDVARS_IV_NEXT]]
+; CHECK-NEXT:    store i8 1, i8* [[P_NEXT]]
+; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds i8, i8* [[M]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    store i8 0, i8* [[P]]
+; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp ugt i64 [[INDVARS_IV]], 15
+; CHECK-NEXT:    br i1 [[CONTINUE]], label [[LOOP]], label [[RETURN:%.*]]
+; CHECK:       return:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  %m = call i8* @calloc(i32 9, i32 20)
+  br label %loop
+loop:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %loop ]
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %p.next = getelementptr inbounds i8, i8* %m, i64 %indvars.iv.next
+  store i8 1, i8* %p.next
+  %p = getelementptr inbounds i8, i8* %m, i64 %indvars.iv
+  store i8 0, i8* %p
+  %continue = icmp ugt i64 %indvars.iv, 15
+  br i1 %continue, label %loop, label %return
+return:
+  ret i32 0
+}
+
+define i32 @test41() {
+; CHECK-LABEL: @test41(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[M:%.*]] = call i8* @calloc(i32 9, i32 20)
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[CONT:%.*]] ]
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[P_NEXT:%.*]] = getelementptr inbounds i8, i8* [[M]], i64 [[INDVARS_IV_NEXT]]
+; CHECK-NEXT:    store i8 1, i8* [[P_NEXT]]
+; CHECK-NEXT:    br label [[CONT]]
+; CHECK:       cont:
+; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds i8, i8* [[M]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    store i8 0, i8* [[P]]
+; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp ugt i64 [[INDVARS_IV]], 15
+; CHECK-NEXT:    br i1 [[CONTINUE]], label [[LOOP]], label [[RETURN:%.*]]
+; CHECK:       return:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  %m = call i8* @calloc(i32 9, i32 20)
+  br label %loop
+loop:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %cont ]
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %p.next = getelementptr inbounds i8, i8* %m, i64 %indvars.iv.next
+  store i8 1, i8* %p.next
+  br label %cont
+
+cont:
+  %p = getelementptr inbounds i8, i8* %m, i64 %indvars.iv
+  store i8 0, i8* %p
+  %continue = icmp ugt i64 %indvars.iv, 15
+  br i1 %continue, label %loop, label %return
+
+return:
+  ret i32 0
+}
+
+; The store is redundant here, but currently we fail to eliminate it.
+; We are walking from the store up to the calloc and translate phis as
+; needed. In this case we fail to translate %p while going over the
+; backedge. Because of that we conservatively assume that zero initialized
+; memory is clobbered.
+define i32 @test42() {
+; CHECK-LABEL: @test42(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[M:%.*]] = call i8* @calloc(i32 9, i32 20)
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[CONT:%.*]] ]
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    br label [[CONT]]
+; CHECK:       cont:
+; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds i8, i8* [[M]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    store i8 0, i8* [[P]]
+; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp ugt i64 [[INDVARS_IV]], 15
+; CHECK-NEXT:    br i1 [[CONTINUE]], label [[LOOP]], label [[RETURN:%.*]]
+; CHECK:       return:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  %m = call i8* @calloc(i32 9, i32 20)
+  br label %loop
+loop:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %cont ]
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  br label %cont
+
+cont:
+  %p = getelementptr inbounds i8, i8* %m, i64 %indvars.iv
+  store i8 0, i8* %p
+  %continue = icmp ugt i64 %indvars.iv, 15
+  br i1 %continue, label %loop, label %return
+
+return:
+  ret i32 0
+}
+
+define i32 @test43() {
+; CHECK-LABEL: @test43(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[M:%.*]] = call i8* @calloc(i32 9, i32 20)
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[CONT_2:%.*]] ]
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[P_NEXT:%.*]] = getelementptr inbounds i8, i8* [[M]], i64 [[INDVARS_IV_NEXT]]
+; CHECK-NEXT:    store i8 1, i8* [[P_NEXT]]
+; CHECK-NEXT:    br label [[CONT:%.*]]
+; CHECK:       cont:
+; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds i8, i8* [[M]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    store i8 0, i8* [[P]]
+; CHECK-NEXT:    br label [[CONT_2]]
+; CHECK:       cont.2:
+; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp ugt i64 [[INDVARS_IV]], 15
+; CHECK-NEXT:    br i1 [[CONTINUE]], label [[LOOP]], label [[RETURN:%.*]]
+; CHECK:       return:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  %m = call i8* @calloc(i32 9, i32 20)
+  br label %loop
+loop:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %cont.2 ]
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %p.next = getelementptr inbounds i8, i8* %m, i64 %indvars.iv.next
+  store i8 1, i8* %p.next
+  br label %cont
+
+cont:
+  %p = getelementptr inbounds i8, i8* %m, i64 %indvars.iv
+  store i8 0, i8* %p
+  br label %cont.2
+
+cont.2:
+  %continue = icmp ugt i64 %indvars.iv, 15
+  br i1 %continue, label %loop, label %return
+
+return:
+  ret i32 0
+}
+
+define i32 @test44() {
+; CHECK-LABEL: @test44(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[M:%.*]] = call i8* @calloc(i32 9, i32 20)
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[CONT_2:%.*]] ]
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[P_NEXT:%.*]] = getelementptr inbounds i8, i8* [[M]], i64 [[INDVARS_IV_NEXT]]
+; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds i8, i8* [[M]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    store i8 0, i8* [[P]]
+; CHECK-NEXT:    br label [[CONT:%.*]]
+; CHECK:       cont:
+; CHECK-NEXT:    store i8 1, i8* [[P_NEXT]]
+; CHECK-NEXT:    br label [[CONT_2]]
+; CHECK:       cont.2:
+; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp ugt i64 [[INDVARS_IV]], 15
+; CHECK-NEXT:    br i1 [[CONTINUE]], label [[LOOP]], label [[RETURN:%.*]]
+; CHECK:       return:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  %m = call i8* @calloc(i32 9, i32 20)
+  br label %loop
+loop:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %cont.2 ]
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %p.next = getelementptr inbounds i8, i8* %m, i64 %indvars.iv.next
+  %p = getelementptr inbounds i8, i8* %m, i64 %indvars.iv
+  store i8 0, i8* %p
+  br label %cont
+
+cont:
+  store i8 1, i8* %p.next
+  br label %cont.2
+
+cont.2:
+  %continue = icmp ugt i64 %indvars.iv, 15
+  br i1 %continue, label %loop, label %return
+
+return:
+  ret i32 0
+}
+
+; This is an example which can potentially benefit from PHI translation.
+; Current implementation doesn't handle this case though. This is because
+; we don't visit the same block with different addresses while looking for
+; clobbering instructions.
+define i32 @test45(i1 %c) {
+; CHECK-LABEL: @test45(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[M:%.*]] = call i8* @calloc(i32 9, i32 20)
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[TRUE:%.*]], label [[FALSE:%.*]]
+; CHECK:       true:
+; CHECK-NEXT:    [[P_1:%.*]] = getelementptr inbounds i8, i8* [[M]], i64 1
+; CHECK-NEXT:    store i8 1, i8* [[P_1]]
+; CHECK-NEXT:    br label [[CONT:%.*]]
+; CHECK:       false:
+; CHECK-NEXT:    [[P_2:%.*]] = getelementptr inbounds i8, i8* [[M]], i64 2
+; CHECK-NEXT:    store i8 1, i8* [[P_2]]
+; CHECK-NEXT:    br label [[CONT]]
+; CHECK:       cont:
+; CHECK-NEXT:    [[OFFSET:%.*]] = phi i64 [ 2, [[TRUE]] ], [ 1, [[FALSE]] ]
+; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds i8, i8* [[M]], i64 [[OFFSET]]
+; CHECK-NEXT:    store i8 0, i8* [[P]]
+; CHECK-NEXT:    br label [[RETURN:%.*]]
+; CHECK:       return:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  %m = call i8* @calloc(i32 9, i32 20)
+  br i1 %c, label %true, label %false
+
+true:
+  %p.1 = getelementptr inbounds i8, i8* %m, i64 1
+  store i8 1, i8* %p.1
+  br label %cont
+
+false:
+  %p.2 = getelementptr inbounds i8, i8* %m, i64 2
+  store i8 1, i8* %p.2
+  br label %cont
+
+cont:
+  %offset = phi i64 [ 2, %true ], [ 1, %false ]
+  %p = getelementptr inbounds i8, i8* %m, i64 %offset
+  store i8 0, i8* %p
+  br label %return
+
+return:
+  ret i32 0
+}
+
+; This is test45 modified in a way to demonstrate PHI translation
+; improving the accuracy of the analysis (on a slightly convoluted
+; case though).
+define i32 @test46(i1 %c) {
+; CHECK-LABEL: @test46(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[M:%.*]] = call i8* @calloc(i32 9, i32 20)
+; CHECK-NEXT:    [[P_1:%.*]] = getelementptr inbounds i8, i8* [[M]], i64 1
+; CHECK-NEXT:    [[P_2:%.*]] = getelementptr inbounds i8, i8* [[M]], i64 2
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[TRUE:%.*]], label [[FALSE:%.*]]
+; CHECK:       true:
+; CHECK-NEXT:    store i8 1, i8* [[P_1]]
+; CHECK-NEXT:    br label [[CONT:%.*]]
+; CHECK:       false:
+; CHECK-NEXT:    store i8 1, i8* [[P_1]]
+; CHECK-NEXT:    br label [[CONT]]
+; CHECK:       cont:
+; CHECK-NEXT:    br label [[RETURN:%.*]]
+; CHECK:       return:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  %m = call i8* @calloc(i32 9, i32 20)
+  %p.1 = getelementptr inbounds i8, i8* %m, i64 1
+  %p.2 = getelementptr inbounds i8, i8* %m, i64 2
+  br i1 %c, label %true, label %false
+
+true:
+  store i8 1, i8* %p.1
+  br label %cont
+
+false:
+  store i8 1, i8* %p.1
+  br label %cont
+
+cont:
+  %offset = phi i64 [ 2, %true ], [ 2, %false ]
+  %p = getelementptr inbounds i8, i8* %m, i64 %offset
+  store i8 0, i8* %p
+  br label %return
+
+return:
+  ret i32 0
+}
+
 declare void @llvm.memmove.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i1)
 declare void @llvm.memmove.element.unordered.atomic.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i32)

@@ -222,16 +222,6 @@ TEST(MathExtras, CTLog2) {
   EXPECT_EQ(CTLog2<1ULL << 15>(), 15U);
 }
 
-TEST(MathExtras, ByteSwap_32) {
-  EXPECT_EQ(0x44332211u, ByteSwap_32(0x11223344));
-  EXPECT_EQ(0xDDCCBBAAu, ByteSwap_32(0xAABBCCDD));
-}
-
-TEST(MathExtras, ByteSwap_64) {
-  EXPECT_EQ(0x8877665544332211ULL, ByteSwap_64(0x1122334455667788LL));
-  EXPECT_EQ(0x1100FFEEDDCCBBAAULL, ByteSwap_64(0xAABBCCDDEEFF0011LL));
-}
-
 TEST(MathExtras, countLeadingOnes) {
   for (int i = 30; i >= 0; --i) {
     // Start with all ones and unset some bit.

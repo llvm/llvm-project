@@ -85,14 +85,8 @@
 
 declare void @bar()
 
-define void @loop_nested3_conds5(i32* %addr, i1 %c1i, i1 %c2i, i1 %c3i, i1 %c4i, i1 %c5i) {
+define void @loop_nested3_conds5(i32* %addr, i1 %c1, i1 %c2, i1 %c3, i1 %c4, i1 %c5) {
 entry:
-  ; c1 ~ c5 are guaranteed to be never undef or poison.
-  %c1 = freeze i1 %c1i
-  %c2 = freeze i1 %c2i
-  %c3 = freeze i1 %c3i
-  %c4 = freeze i1 %c4i
-  %c5 = freeze i1 %c5i
   %addr1 = getelementptr i32, i32* %addr, i64 0
   %addr2 = getelementptr i32, i32* %addr, i64 1
   %addr3 = getelementptr i32, i32* %addr, i64 2
