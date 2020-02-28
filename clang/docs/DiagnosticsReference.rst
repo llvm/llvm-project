@@ -1636,7 +1636,7 @@ Synonym for `-Wc++17-compat-mangling`_.
 Synonym for `-Wc++17-extensions`_.
 
 
--Wc++2a-compat
+-Wc++20-compat
 --------------
 Some of the diagnostics controlled by this flag are enabled by default.
 
@@ -1651,32 +1651,32 @@ Some of the diagnostics controlled by this flag are enabled by default.
 +------------------------------------------------------------------------------------------------------------+
 
 +-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`aggregate initialization of type` |nbsp| :placeholder:`A` |nbsp| :diagtext:`with user-declared constructors is incompatible with C++2a`|
+|:warning:`warning:` |nbsp| :diagtext:`aggregate initialization of type` |nbsp| :placeholder:`A` |nbsp| :diagtext:`with user-declared constructors is incompatible with C++20`|
 +-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 
 +------------------------------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`this expression will be parsed as explicit(bool) in C++2a`|
+|:warning:`warning:` |nbsp| :diagtext:`this expression will be parsed as explicit(bool) in C++20`|
 +------------------------------------------------------------------------------------------------+
 
 +------------------------------------------------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`'<=>' is a single token in C++2a; add a space to avoid a change in behavior`|
+|:warning:`warning:` |nbsp| :diagtext:`'<=>' is a single token in C++20; add a space to avoid a change in behavior`|
 +------------------------------------------------------------------------------------------------------------------+
 
 +--------------------------------------------------------------------------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`type of UTF-8 string literal will change from array of const char to array of const char8\_t in C++2a`|
+|:warning:`warning:` |nbsp| :diagtext:`type of UTF-8 string literal will change from array of const char to array of const char8\_t in C++20`|
 +--------------------------------------------------------------------------------------------------------------------------------------------+
 
 +-------------------------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`'`:placeholder:`A`:diagtext:`' is a keyword in C++2a`|
+|:warning:`warning:` |nbsp| :diagtext:`'`:placeholder:`A`:diagtext:`' is a keyword in C++20`|
 +-------------------------------------------------------------------------------------------+
 
 
--Wc++2a-compat-pedantic
+-Wc++20-compat-pedantic
 -----------------------
-Synonym for `-Wc++2a-compat`_.
+Synonym for `-Wc++20-compat`_.
 
 
--Wc++2a-designator
+-Wc++20-designator
 ------------------
 **Diagnostic text:**
 
@@ -1685,24 +1685,24 @@ Synonym for `-Wc++2a-compat`_.
 +------------------------------------------------------------------------------------+
 
 
--Wc++2a-extensions
+-Wc++20-extensions
 ------------------
 Some of the diagnostics controlled by this flag are enabled by default.
 
-Also controls `-Wc++2a-designator`_.
+Also controls `-Wc++20-designator`_.
 
 **Diagnostic text:**
 
 +---------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`use of function template name with no prior declaration in function call with explicit template arguments is a C++2a extension`|
+|:warning:`warning:` |nbsp| :diagtext:`use of function template name with no prior declaration in function call with explicit template arguments is a C++20 extension`|
 +---------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 
 +----------------------------------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`default member initializer for bit-field is a C++2a extension`|
+|:warning:`warning:` |nbsp| :diagtext:`default member initializer for bit-field is a C++20 extension`|
 +----------------------------------------------------------------------------------------------------+
 
 +-----------------------------------------------------------------------------------+-------------------------+----------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`use of this statement in a constexpr` |nbsp| |+-----------------------+| |nbsp| :diagtext:`is a C++2a extension`|
+|:warning:`warning:` |nbsp| :diagtext:`use of this statement in a constexpr` |nbsp| |+-----------------------+| |nbsp| :diagtext:`is a C++20 extension`|
 |                                                                                   ||:diagtext:`function`   ||                                        |
 |                                                                                   |+-----------------------+|                                        |
 |                                                                                   ||:diagtext:`constructor`||                                        |
@@ -1714,7 +1714,7 @@ Also controls `-Wc++2a-designator`_.
 +----------------------------------------------------------------------------------------------------------------------+
 
 +------------------------------------------------------------------------------+-------------------------+----------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`function try block in constexpr` |nbsp| |+-----------------------+| |nbsp| :diagtext:`is a C++2a extension`|
+|:warning:`warning:` |nbsp| :diagtext:`function try block in constexpr` |nbsp| |+-----------------------+| |nbsp| :diagtext:`is a C++20 extension`|
 |                                                                              ||:diagtext:`function`   ||                                        |
 |                                                                              |+-----------------------+|                                        |
 |                                                                              ||:diagtext:`constructor`||                                        |
@@ -1734,11 +1734,11 @@ Also controls `-Wc++2a-designator`_.
 +---------------------------------------------------------------------------------------------------------------------------+
 
 +---------------------------------------------------------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`use of the` |nbsp| :placeholder:`A` |nbsp| :diagtext:`attribute is a C++2a extension`|
+|:warning:`warning:` |nbsp| :diagtext:`use of the` |nbsp| :placeholder:`A` |nbsp| :diagtext:`attribute is a C++20 extension`|
 +---------------------------------------------------------------------------------------------------------------------------+
 
 +---------------------------------------------------------------------------------+--------------------------------------------------------------+----------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`decomposition declaration declared` |nbsp| |+------------------------------------------------------------+| |nbsp| :diagtext:`is a C++2a extension`|
+|:warning:`warning:` |nbsp| :diagtext:`decomposition declaration declared` |nbsp| |+------------------------------------------------------------+| |nbsp| :diagtext:`is a C++20 extension`|
 |                                                                                 ||+------------------------------------------+                ||                                        |
 |                                                                                 |||:diagtext:`'`:placeholder:`B`:diagtext:`'`|                ||                                        |
 |                                                                                 ||+------------------------------------------+                ||                                        |
@@ -1754,32 +1754,47 @@ Also controls `-Wc++2a-designator`_.
 +-------------------------------------------------------------------------------------------+
 
 +--------------------------------------------------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`explicit capture of 'this' with a capture default of '=' is a C++2a extension`|
+|:warning:`warning:` |nbsp| :diagtext:`explicit capture of 'this' with a capture default of '=' is a C++20 extension`|
 +--------------------------------------------------------------------------------------------------------------------+
 
 +--------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`explicit(bool) is a C++2a extension`|
+|:warning:`warning:` |nbsp| :diagtext:`explicit(bool) is a C++20 extension`|
 +--------------------------------------------------------------------------+
 
 +-----------------------------------------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`range-based for loop initialization statements are a C++2a extension`|
+|:warning:`warning:` |nbsp| :diagtext:`range-based for loop initialization statements are a C++20 extension`|
 +-----------------------------------------------------------------------------------------------------------+
 
 +---------------------------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`initialized lambda pack captures are a C++2a extension`|
+|:warning:`warning:` |nbsp| :diagtext:`initialized lambda pack captures are a C++20 extension`|
 +---------------------------------------------------------------------------------------------+
 
 +----------------------------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`inline nested namespace definition is a C++2a extension`|
+|:warning:`warning:` |nbsp| :diagtext:`inline nested namespace definition is a C++20 extension`|
 +----------------------------------------------------------------------------------------------+
 
 +--------------------------------------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`explicit template parameter list for lambdas is a C++2a extension`|
+|:warning:`warning:` |nbsp| :diagtext:`explicit template parameter list for lambdas is a C++20 extension`|
 +--------------------------------------------------------------------------------------------------------+
 
 +--------------------------------------------------------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`invoking a pointer to a 'const &' member function on an rvalue is a C++2a extension`|
+|:warning:`warning:` |nbsp| :diagtext:`invoking a pointer to a 'const &' member function on an rvalue is a C++20 extension`|
 +--------------------------------------------------------------------------------------------------------------------------+
+
+
+-Wc++2a-compat
+--------------
+Synonym for `-Wc++20-compat`_.
+
+
+-Wc++2a-compat-pedantic
+-----------------------
+Synonym for `-Wc++20-compat-pedantic`_.
+
+
+-Wc++2a-extensions
+------------------
+Synonym for `-Wc++20-extensions`_.
 
 
 -Wc++98-c++11-c++14-c++17-compat
@@ -1787,15 +1802,15 @@ Also controls `-Wc++2a-designator`_.
 **Diagnostic text:**
 
 +------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`use of function template name with no prior function template declaration in function call with explicit template arguments is incompatible with C++ standards before C++2a`|
+|:warning:`warning:` |nbsp| :diagtext:`use of function template name with no prior function template declaration in function call with explicit template arguments is incompatible with C++ standards before C++20`|
 +------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 
 +-------------------------------------------------------------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`default member initializer for bit-field is incompatible with C++ standards before C++2a`|
+|:warning:`warning:` |nbsp| :diagtext:`default member initializer for bit-field is incompatible with C++ standards before C++20`|
 +-------------------------------------------------------------------------------------------------------------------------------+
 
 +-----------------------------------------------------------------------------------+-------------------------+-------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`use of this statement in a constexpr` |nbsp| |+-----------------------+| |nbsp| :diagtext:`is incompatible with C++ standards before C++2a`|
+|:warning:`warning:` |nbsp| :diagtext:`use of this statement in a constexpr` |nbsp| |+-----------------------+| |nbsp| :diagtext:`is incompatible with C++ standards before C++20`|
 |                                                                                   ||:diagtext:`function`   ||                                                                   |
 |                                                                                   |+-----------------------+|                                                                   |
 |                                                                                   ||:diagtext:`constructor`||                                                                   |
@@ -1807,7 +1822,7 @@ Also controls `-Wc++2a-designator`_.
 +-------------------------------------------------------------------------------------------------------------------------------------------------+
 
 +------------------------------------------------------------------------------+-------------------------+-------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`function try block in constexpr` |nbsp| |+-----------------------+| |nbsp| :diagtext:`is incompatible with C++ standards before C++2a`|
+|:warning:`warning:` |nbsp| :diagtext:`function try block in constexpr` |nbsp| |+-----------------------+| |nbsp| :diagtext:`is incompatible with C++ standards before C++20`|
 |                                                                              ||:diagtext:`function`   ||                                                                   |
 |                                                                              |+-----------------------+|                                                                   |
 |                                                                              ||:diagtext:`constructor`||                                                                   |
@@ -1827,11 +1842,11 @@ Also controls `-Wc++2a-designator`_.
 +------------------------------------------------------------------------------------------------------------------------------------------------------+
 
 +-------------------------------------------------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`virtual constexpr functions are incompatible with C++ standards before C++2a`|
+|:warning:`warning:` |nbsp| :diagtext:`virtual constexpr functions are incompatible with C++ standards before C++20`|
 +-------------------------------------------------------------------------------------------------------------------+
 
 +---------------------------------------------------------------------------------+--------------------------------------------------------------+-------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`decomposition declaration declared` |nbsp| |+------------------------------------------------------------+| |nbsp| :diagtext:`is incompatible with C++ standards before C++2a`|
+|:warning:`warning:` |nbsp| :diagtext:`decomposition declaration declared` |nbsp| |+------------------------------------------------------------+| |nbsp| :diagtext:`is incompatible with C++ standards before C++20`|
 |                                                                                 ||+------------------------------------------+                ||                                                                   |
 |                                                                                 |||:diagtext:`'`:placeholder:`B`:diagtext:`'`|                ||                                                                   |
 |                                                                                 ||+------------------------------------------+                ||                                                                   |
@@ -1847,7 +1862,7 @@ Also controls `-Wc++2a-designator`_.
 +----------------------------------------------------------------------------------------------------------------------+
 
 +-------------------------------------------------------------------------+--------------------------------------+----------------------------------------------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`explicitly defaulting this` |nbsp| |+------------------------------------+| |nbsp| :diagtext:`with a type different from the implicit type is incompatible with C++ standards before C++2a`|
+|:warning:`warning:` |nbsp| :diagtext:`explicitly defaulting this` |nbsp| |+------------------------------------+| |nbsp| :diagtext:`with a type different from the implicit type is incompatible with C++ standards before C++20`|
 |                                                                         ||:diagtext:`default constructor`     ||                                                                                                                |
 |                                                                         |+------------------------------------+|                                                                                                                |
 |                                                                         ||:diagtext:`copy constructor`        ||                                                                                                                |
@@ -1863,27 +1878,27 @@ Also controls `-Wc++2a-designator`_.
 +-------------------------------------------------------------------------+--------------------------------------+----------------------------------------------------------------------------------------------------------------+
 
 +-----------------------------------------------------------------------------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`explicit capture of 'this' with a capture default of '=' is incompatible with C++ standards before C++2a`|
+|:warning:`warning:` |nbsp| :diagtext:`explicit capture of 'this' with a capture default of '=' is incompatible with C++ standards before C++20`|
 +-----------------------------------------------------------------------------------------------------------------------------------------------+
 
 +-----------------------------------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`explicit(bool) is incompatible with C++ standards before C++2a`|
+|:warning:`warning:` |nbsp| :diagtext:`explicit(bool) is incompatible with C++ standards before C++20`|
 +-----------------------------------------------------------------------------------------------------+
 
 +--------------------------------------------------------------------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`range-based for loop initialization statements are incompatible with C++ standards before C++2a`|
+|:warning:`warning:` |nbsp| :diagtext:`range-based for loop initialization statements are incompatible with C++ standards before C++20`|
 +--------------------------------------------------------------------------------------------------------------------------------------+
 
 +------------------------------------------------------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`initialized lambda capture packs are incompatible with C++ standards before C++2a`|
+|:warning:`warning:` |nbsp| :diagtext:`initialized lambda capture packs are incompatible with C++ standards before C++20`|
 +------------------------------------------------------------------------------------------------------------------------+
 
 +-------------------------------------------------------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`inline nested namespace definition is incompatible with C++ standards before C++2a`|
+|:warning:`warning:` |nbsp| :diagtext:`inline nested namespace definition is incompatible with C++ standards before C++20`|
 +-------------------------------------------------------------------------------------------------------------------------+
 
 +---------------------------+----------------------------------+-----------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| |+--------------------------------+| |nbsp| :diagtext:`of lambda is incompatible with C++ standards before C++2a`|
+|:warning:`warning:` |nbsp| |+--------------------------------+| |nbsp| :diagtext:`of lambda is incompatible with C++ standards before C++20`|
 |                           ||:diagtext:`default construction`||                                                                             |
 |                           |+--------------------------------+|                                                                             |
 |                           ||:diagtext:`assignment`          ||                                                                             |
@@ -1891,11 +1906,11 @@ Also controls `-Wc++2a-designator`_.
 +---------------------------+----------------------------------+-----------------------------------------------------------------------------+
 
 +-----------------------------------------------------------------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`explicit template parameter list for lambdas is incompatible with C++ standards before C++2a`|
+|:warning:`warning:` |nbsp| :diagtext:`explicit template parameter list for lambdas is incompatible with C++ standards before C++20`|
 +-----------------------------------------------------------------------------------------------------------------------------------+
 
 +-----------------------------------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`'<=>' operator is incompatible with C++ standards before C++2a`|
+|:warning:`warning:` |nbsp| :diagtext:`'<=>' operator is incompatible with C++ standards before C++20`|
 +-----------------------------------------------------------------------------------------------------+
 
 +----------------------------------------------------------------------------------------------------------------+
@@ -1914,7 +1929,7 @@ Also controls `-Wc++98-c++11-c++14-c++17-compat`_.
 +---------------------------------------------------------------------------------------------------------------+
 
 +-----------------------------------------------------------------------------------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`invoking a pointer to a 'const &' member function on an rvalue is incompatible with C++ standards before C++2a`|
+|:warning:`warning:` |nbsp| :diagtext:`invoking a pointer to a 'const &' member function on an rvalue is incompatible with C++ standards before C++20`|
 +-----------------------------------------------------------------------------------------------------------------------------------------------------+
 
 
@@ -2535,7 +2550,7 @@ Some of the diagnostics controlled by this flag are enabled by default.
 ----------------
 Some of the diagnostics controlled by this flag are enabled by default.
 
-Also controls `-Wc++2a-designator`_.
+Also controls `-Wc++20-designator`_.
 
 **Diagnostic text:**
 
@@ -2828,7 +2843,7 @@ This diagnostic is enabled by default.
 **Diagnostic text:**
 
 +---------------------------------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`ISO C++2a does not permit the 'bool' keyword after 'concept'`|
+|:warning:`warning:` |nbsp| :diagtext:`ISO C++20 does not permit the 'bool' keyword after 'concept'`|
 +---------------------------------------------------------------------------------------------------+
 
 
@@ -3402,7 +3417,7 @@ Also controls `-Wdeprecated-anon-enum-enum-conversion`_, `-Wdeprecated-array-com
 +--------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 
 +----------------------------------------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`-fconcepts-ts is deprecated - use '-std=c++2a' for Concepts support`|
+|:warning:`warning:` |nbsp| :diagtext:`-fconcepts-ts is deprecated - use '-std=c++20' for Concepts support`|
 +----------------------------------------------------------------------------------------------------------+
 
 +-----------------------------------------------------------------------------------------------------------------------------------------------------------+
@@ -6550,6 +6565,14 @@ This diagnostic is enabled by default.
 |                           |+--------------------------------------------------------------+|                                       |
 +---------------------------+----------------------------------------------------------------+---------------------------------------+
 
++---------------------------+-------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------+
+|:warning:`warning:` |nbsp| |+-----------------------------+| |nbsp| :diagtext:`from` |nbsp| :placeholder:`B` |nbsp| :diagtext:`to` |nbsp| :placeholder:`C` |nbsp| :diagtext:`changes address space of nested pointers`|
+|                           ||:diagtext:`reinterpret\_cast`||                                                                                                                                                          |
+|                           |+-----------------------------+|                                                                                                                                                          |
+|                           ||:diagtext:`C-style cast`     ||                                                                                                                                                          |
+|                           |+-----------------------------+|                                                                                                                                                          |
++---------------------------+-------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------+
+
 
 -Wincompatible-property-type
 ----------------------------
@@ -7684,6 +7707,8 @@ This diagnostic is enabled by default.
 --------------------
 This diagnostic is enabled by default.
 
+Also controls `-Wmicrosoft-template-shadow`_.
+
 **Diagnostic text:**
 
 +------------------------------------------------------------------------------------------------------------------------------------------------------+
@@ -7732,13 +7757,20 @@ This diagnostic is enabled by default.
 |:warning:`warning:` |nbsp| :diagtext:`'static' can only be specified inside the class definition`|
 +-------------------------------------------------------------------------------------------------+
 
-+---------------------------------------------------------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`declaration of` |nbsp| :placeholder:`A` |nbsp| :diagtext:`shadows template parameter`|
-+---------------------------------------------------------------------------------------------------------------------------+
-
 +--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 |:warning:`warning:` |nbsp| :diagtext:`use of undeclared identifier` |nbsp| :placeholder:`A`:diagtext:`; unqualified lookup into dependent bases of class template` |nbsp| :placeholder:`B` |nbsp| :diagtext:`is a Microsoft extension`|
 +--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+
+
+-Wmicrosoft-template-shadow
+---------------------------
+This diagnostic is enabled by default.
+
+**Diagnostic text:**
+
++---------------------------------------------------------------------------------------------------------------------------+
+|:warning:`warning:` |nbsp| :diagtext:`declaration of` |nbsp| :placeholder:`A` |nbsp| :diagtext:`shadows template parameter`|
++---------------------------------------------------------------------------------------------------------------------------+
 
 
 -Wmicrosoft-union-member-reference
@@ -8142,7 +8174,7 @@ This diagnostic is an error by default, but the flag ``-Wno-modules-import-neste
 ------
 Some of the diagnostics controlled by this flag are enabled by default.
 
-Controls `-Wcast-of-sel-type`_, `-Wchar-subscripts`_, `-Wcomment`_, `-Wdelete-non-virtual-dtor`_, `-Wextern-c-compat`_, `-Wformat`_, `-Wimplicit`_, `-Winfinite-recursion`_, `-Wint-in-bool-context`_, `-Wloop-analysis`_, `-Wmismatched-tags`_, `-Wmissing-braces`_, `-Wmove`_, `-Wmultichar`_, `-Wobjc-designated-initializers`_, `-Wobjc-flexible-array`_, `-Wobjc-missing-super-calls`_, `-Woverloaded-virtual`_, `-Wprivate-extern`_, `-Wreorder`_, `-Wreturn-type`_, `-Wself-assign`_, `-Wself-move`_, `-Wsizeof-array-argument`_, `-Wsizeof-array-decay`_, `-Wstring-plus-int`_, `-Wtautological-compare`_, `-Wtrigraphs`_, `-Wuninitialized`_, `-Wunknown-pragmas`_, `-Wunused`_, `-Wuser-defined-warnings`_, `-Wvolatile-register-var`_.
+Controls `-Wcast-of-sel-type`_, `-Wchar-subscripts`_, `-Wcomment`_, `-Wdelete-non-virtual-dtor`_, `-Wextern-c-compat`_, `-Wfor-loop-analysis`_, `-Wformat`_, `-Wimplicit`_, `-Winfinite-recursion`_, `-Wint-in-bool-context`_, `-Wmismatched-tags`_, `-Wmissing-braces`_, `-Wmove`_, `-Wmultichar`_, `-Wobjc-designated-initializers`_, `-Wobjc-flexible-array`_, `-Wobjc-missing-super-calls`_, `-Woverloaded-virtual`_, `-Wprivate-extern`_, `-Wrange-loop-construct`_, `-Wreorder`_, `-Wreturn-type`_, `-Wself-assign`_, `-Wself-move`_, `-Wsizeof-array-argument`_, `-Wsizeof-array-decay`_, `-Wstring-plus-int`_, `-Wtautological-compare`_, `-Wtrigraphs`_, `-Wuninitialized`_, `-Wunknown-pragmas`_, `-Wunused`_, `-Wuser-defined-warnings`_, `-Wvolatile-register-var`_.
 
 
 -Wmove
@@ -9691,7 +9723,7 @@ This diagnostic is enabled by default.
 
 -Wpedantic
 ----------
-Also controls `-Wc++11-extra-semi`_, `-Wc++11-long-long`_, `-Wc++14-binary-literal`_, `-Wc++2a-designator`_, `-Wc11-extensions`_, `-Wcomplex-component-init`_, `-Wdeclaration-after-statement`_, `-Wdollar-in-identifier-extension`_, `-Wembedded-directive`_, `-Wempty-translation-unit`_, `-Wfixed-enum-extension`_, `-Wflexible-array-extensions`_, `-Wfour-char-constants`_, `-Wgnu-anonymous-struct`_, `-Wgnu-auto-type`_, `-Wgnu-binary-literal`_, `-Wgnu-case-range`_, `-Wgnu-complex-integer`_, `-Wgnu-compound-literal-initializer`_, `-Wgnu-conditional-omitted-operand`_, `-Wgnu-empty-initializer`_, `-Wgnu-empty-struct`_, `-Wgnu-flexible-array-initializer`_, `-Wgnu-flexible-array-union-member`_, `-Wgnu-folding-constant`_, `-Wgnu-imaginary-constant`_, `-Wgnu-include-next`_, `-Wgnu-label-as-value`_, `-Wgnu-redeclared-enum`_, `-Wgnu-statement-expression`_, `-Wgnu-union-cast`_, `-Wgnu-zero-line-directive`_, `-Wgnu-zero-variadic-macro-arguments`_, `-Wimport-preprocessor-directive-pedantic`_, `-Wkeyword-macro`_, `-Wlanguage-extension-token`_, `-Wlong-long`_, `-Wmicrosoft-charize`_, `-Wmicrosoft-comment-paste`_, `-Wmicrosoft-cpp-macro`_, `-Wmicrosoft-end-of-file`_, `-Wmicrosoft-enum-value`_, `-Wmicrosoft-fixed-enum`_, `-Wmicrosoft-flexible-array`_, `-Wmicrosoft-redeclare-static`_, `-Wnested-anon-types`_, `-Wnullability-extension`_, `-Woverlength-strings`_, `-Wretained-language-linkage`_, `-Wundefined-internal-type`_, `-Wvla-extension`_, `-Wzero-length-array`_.
+Also controls `-Wc++11-extra-semi`_, `-Wc++11-long-long`_, `-Wc++14-binary-literal`_, `-Wc++20-designator`_, `-Wc11-extensions`_, `-Wcomplex-component-init`_, `-Wdeclaration-after-statement`_, `-Wdollar-in-identifier-extension`_, `-Wembedded-directive`_, `-Wempty-translation-unit`_, `-Wfixed-enum-extension`_, `-Wflexible-array-extensions`_, `-Wfour-char-constants`_, `-Wgnu-anonymous-struct`_, `-Wgnu-auto-type`_, `-Wgnu-binary-literal`_, `-Wgnu-case-range`_, `-Wgnu-complex-integer`_, `-Wgnu-compound-literal-initializer`_, `-Wgnu-conditional-omitted-operand`_, `-Wgnu-empty-initializer`_, `-Wgnu-empty-struct`_, `-Wgnu-flexible-array-initializer`_, `-Wgnu-flexible-array-union-member`_, `-Wgnu-folding-constant`_, `-Wgnu-imaginary-constant`_, `-Wgnu-include-next`_, `-Wgnu-label-as-value`_, `-Wgnu-redeclared-enum`_, `-Wgnu-statement-expression`_, `-Wgnu-union-cast`_, `-Wgnu-zero-line-directive`_, `-Wgnu-zero-variadic-macro-arguments`_, `-Wimport-preprocessor-directive-pedantic`_, `-Wkeyword-macro`_, `-Wlanguage-extension-token`_, `-Wlong-long`_, `-Wmicrosoft-charize`_, `-Wmicrosoft-comment-paste`_, `-Wmicrosoft-cpp-macro`_, `-Wmicrosoft-end-of-file`_, `-Wmicrosoft-enum-value`_, `-Wmicrosoft-fixed-enum`_, `-Wmicrosoft-flexible-array`_, `-Wmicrosoft-redeclare-static`_, `-Wnested-anon-types`_, `-Wnullability-extension`_, `-Woverlength-strings`_, `-Wretained-language-linkage`_, `-Wundefined-internal-type`_, `-Wvla-extension`_, `-Wzero-length-array`_.
 
 **Diagnostic text:**
 
@@ -9768,7 +9800,7 @@ Also controls `-Wc++11-extra-semi`_, `-Wc++11-long-long`_, `-Wc++14-binary-liter
 +--------------------------------------------------------------------------------------------------------------------------------------+
 
 +--------------------------------------------------------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`invoking a pointer to a 'const &' member function on an rvalue is a C++2a extension`|
+|:warning:`warning:` |nbsp| :diagtext:`invoking a pointer to a 'const &' member function on an rvalue is a C++20 extension`|
 +--------------------------------------------------------------------------------------------------------------------------+
 
 +----------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
@@ -9936,7 +9968,7 @@ Also controls `-Wc++11-extra-semi`_, `-Wc++11-long-long`_, `-Wc++14-binary-liter
 +---------------------------------------------------------------------------------------------------------------------------+
 
 +---------------------------------------------------------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`use of the` |nbsp| :placeholder:`A` |nbsp| :diagtext:`attribute is a C++2a extension`|
+|:warning:`warning:` |nbsp| :diagtext:`use of the` |nbsp| :placeholder:`A` |nbsp| :diagtext:`attribute is a C++20 extension`|
 +---------------------------------------------------------------------------------------------------------------------------+
 
 +-----------------------------------------------------------------------------+--------------------+---------------------------------------------+
@@ -10569,6 +10601,20 @@ This diagnostic is enabled by default.
 
 -Wrange-loop-analysis
 ---------------------
+Controls `-Wrange-loop-bind-reference`_, `-Wrange-loop-construct`_.
+
+
+-Wrange-loop-bind-reference
+---------------------------
+**Diagnostic text:**
+
++-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|:warning:`warning:` |nbsp| :diagtext:`loop variable` |nbsp| :placeholder:`A` |nbsp| :diagtext:`is always a copy because the range of type` |nbsp| :placeholder:`B` |nbsp| :diagtext:`does not return a reference`|
++-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+
+
+-Wrange-loop-construct
+----------------------
 **Diagnostic text:**
 
 +----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
@@ -10578,10 +10624,6 @@ This diagnostic is enabled by default.
 +---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 |:warning:`warning:` |nbsp| :diagtext:`loop variable` |nbsp| :placeholder:`A` |nbsp| :diagtext:`of type` |nbsp| :placeholder:`B` |nbsp| :diagtext:`creates a copy from type` |nbsp| :placeholder:`C`|
 +---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-
-+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`loop variable` |nbsp| :placeholder:`A` |nbsp| :diagtext:`is always a copy because the range of type` |nbsp| :placeholder:`B` |nbsp| :diagtext:`does not return a reference`|
-+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 
 
 -Wreadonly-iboutlet-property
@@ -13137,6 +13179,10 @@ This diagnostic is enabled by default.
 +----------------------------------------------------------------------------------------------------------------------+
 |:warning:`warning:` |nbsp| :diagtext:`the flag '`:placeholder:`A`:diagtext:`' has been deprecated and will be ignored`|
 +----------------------------------------------------------------------------------------------------------------------+
+
++--------------------------------------------------------------------------------------+
+|:warning:`warning:` |nbsp| :diagtext:`ignoring -fdiscard-value-names for LLVM Bitcode`|
++--------------------------------------------------------------------------------------+
 
 
 -Wunused-comparison
