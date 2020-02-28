@@ -696,8 +696,8 @@ void MachineInstr::eraseFromBundle() {
   getParent()->erase_instr(this);
 }
 
-bool MachineInstr::isCandidateForCallSiteEntry() const {
-  if (!isCall(MachineInstr::IgnoreBundle))
+bool MachineInstr::isCandidateForCallSiteEntry(QueryType Type) const {
+  if (!isCall(Type))
     return false;
   switch (getOpcode()) {
   case TargetOpcode::PATCHABLE_EVENT_CALL:
@@ -708,6 +708,12 @@ bool MachineInstr::isCandidateForCallSiteEntry() const {
     return false;
   }
   return true;
+}
+
+bool MachineInstr::shouldUpdateCallSiteInfo() const {
+  if (isBundle())
+    return isCandidateForCallSiteEntry(MachineInstr::AnyInBundle);
+  return isCandidateForCallSiteEntry();
 }
 
 unsigned MachineInstr::getNumExplicitOperands() const {

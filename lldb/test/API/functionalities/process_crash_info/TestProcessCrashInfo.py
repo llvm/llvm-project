@@ -25,6 +25,7 @@ class PlatformProcessCrashInfoTestCase(TestBase):
         self.runCmd("settings clear auto-confirm")
         TestBase.tearDown(self)
 
+    @skipIfAsan # The test process intentionally double-frees.
     @skipUnlessDarwin
     def test_cli(self):
         """Test that `process status --verbose` fetches the extended crash
@@ -41,6 +42,7 @@ class PlatformProcessCrashInfoTestCase(TestBase):
                     patterns=["\"message\".*pointer being freed was not allocated"])
 
 
+    @skipIfAsan # The test process intentionally hits a memory bug.
     @skipUnlessDarwin
     def test_api(self):
         """Test that lldb can fetch a crashed process' extended crash information
