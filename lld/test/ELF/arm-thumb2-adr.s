@@ -1,3 +1,4 @@
+// REQUIRES: arm
 // RUN: llvm-mc --triple=thumbv7m-none-eabi --arm-add-build-attributes -filetype=obj -o %t.o %s
 // RUN: echo "SECTIONS { \
 // RUN:                 .rodata.low 0x8012  : { *(.rodata.low) } \
