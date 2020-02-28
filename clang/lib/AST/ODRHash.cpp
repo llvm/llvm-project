@@ -475,6 +475,9 @@ public:
 bool ODRHash::isWhitelistedDecl(const Decl *D, const DeclContext *Parent) {
   if (D->isImplicit()) return false;
   if (D->getDeclContext() != Parent) return false;
+  bool ShouldHashIvar = D->getASTContext().getLangOpts().ODRCheckIvars;
+  bool ShouldHashProperties = D->getASTContext().getLangOpts().ODRCheckProperties;
+  bool ShouldHashMethods = D->getASTContext().getLangOpts().ODRCheckMethods;
 
   switch (D->getKind()) {
     default:
@@ -491,10 +494,13 @@ bool ODRHash::isWhitelistedDecl(const Decl *D, const DeclContext *Parent) {
     case Decl::TypeAlias:
     case Decl::Typedef:
     case Decl::Var:
-    case Decl::ObjCMethod:
-    case Decl::ObjCIvar:
-    case Decl::ObjCProperty:
       return true;
+    case Decl::ObjCMethod:
+      return ShouldHashMethods;
+    case Decl::ObjCIvar:
+      return ShouldHashIvar;
+    case Decl::ObjCProperty:
+      return ShouldHashProperties;
   }
 }
 
