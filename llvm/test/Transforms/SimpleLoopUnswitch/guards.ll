@@ -81,8 +81,7 @@ exit:
 define void @test_conditional_guards(i1 %cond, i32 %N) {
 ; CHECK-LABEL: @test_conditional_guards(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[COND_FR:%.*]] = freeze i1 [[COND:%.*]]
-; CHECK-NEXT:    br i1 [[COND_FR]], label [[ENTRY_SPLIT_US:%.*]], label [[ENTRY_SPLIT:%.*]]
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[ENTRY_SPLIT_US:%.*]], label [[ENTRY_SPLIT:%.*]]
 ; CHECK:       entry.split.us:
 ; CHECK-NEXT:    br label [[LOOP_US:%.*]]
 ; CHECK:       loop.us:
