@@ -132,6 +132,10 @@ RelExpr ARM::getRelExpr(RelType type, const Symbol &s,
   case R_ARM_THM_MOVW_PREL_NC:
   case R_ARM_THM_MOVT_PREL:
     return R_PC;
+  case R_ARM_THM_ALU_PREL_11_0:
+  case R_ARM_THM_PC8:
+  case R_ARM_THM_PC12:
+    return R_ARM_PCA;
   case R_ARM_MOVW_BREL_NC:
   case R_ARM_MOVW_BREL:
   case R_ARM_MOVT_BREL:
@@ -570,6 +574,50 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
                   ((val << 4) & 0x7000) |    // imm3
                   (val & 0x00ff));           // imm8
     break;
+  case R_ARM_THM_ALU_PREL_11_0: {
+    // ADR encoding T2 (sub), T3 (add) i:imm3:imm8
+    int64_t imm = val;
+    uint16_t sub = 0;
+    if (imm < 0) {
+      imm = -imm;
+      sub = 0x00a0;
+    }
+    checkUInt(loc, imm, 12, rel);
+    write16le(loc, (read16le(loc) & 0xfb0f) | sub | (imm & 0x800) >> 1);
+    write16le(loc + 2,
+              (read16le(loc + 2) & 0x8f00) | (imm & 0x700) << 4 | (imm & 0xff));
+    break;
+  }
+  case R_ARM_THM_PC8:
+    // ADR and LDR literal encoding T1 positive offset only imm8:00
+    // R_ARM_THM_PC8 is S + A - Pa, we have ((S + A) | T) - Pa, if S is a
+    // function then addr is 0 (modulo 2) and Pa is 0 (modulo 4) so we can clear
+    // bottom bit to recover S + A - Pa.
+    if (rel.sym->isFunc())
+      val &= ~0x1;
+    checkUInt(loc, val, 10, rel);
+    checkAlignment(loc, val, 4, rel);
+    write16le(loc, (read16le(loc) & 0xff00) | (val & 0x3fc) >> 2);
+    break;
+  case R_ARM_THM_PC12: {
+    // LDR (literal) encoding T2, add = (U == '1') imm12
+    // imm12 is unsigned
+    // R_ARM_THM_PC12 is S + A - Pa, we have ((S + A) | T) - Pa, if S is a
+    // function then addr is 0 (modulo 2) and Pa is 0 (modulo 4) so we can clear
+    // bottom bit to recover S + A - Pa.
+    if (rel.sym->isFunc())
+      val &= ~0x1;
+    int64_t imm12 = val;
+    uint16_t u = 0x0080;
+    if (imm12 < 0) {
+      imm12 = -imm12;
+      u = 0;
+    }
+    checkUInt(loc, imm12, 12, rel);
+    write16le(loc, read16le(loc) | u);
+    write16le(loc + 2, (read16le(loc + 2) & 0xf000) | imm12);
+    break;
+  }
   default:
     error(getErrorLocation(loc) + "unrecognized relocation " +
           toString(rel.type));
@@ -659,6 +707,30 @@ int64_t ARM::getImplicitAddend(const uint8_t *buf, RelType type) const {
                             ((hi & 0x0400) << 1) |  // i
                             ((lo & 0x7000) >> 4) |  // imm3
                             (lo & 0x00ff));         // imm8
+  }
+  case R_ARM_THM_ALU_PREL_11_0: {
+    // Thumb2 ADR, which is an alias for a sub or add instruction with an
+    // unsigned immediate.
+    // ADR encoding T2 (sub), T3 (add) i:imm3:imm8
+    uint16_t hi = read16le(buf);
+    uint16_t lo = read16le(buf + 2);
+    uint64_t imm = (hi & 0x0400) << 1 | // i
+                   (lo & 0x7000) >> 4 | // imm3
+                   (lo & 0x00ff);       // imm8
+    // For sub, addend is negative, add is positive.
+    return (hi & 0x00f0) ? -imm : imm;
+  }
+  case R_ARM_THM_PC8:
+    // ADR and LDR (literal) encoding T1
+    // From ELF for the ARM Architecture the initial signed addend is formed
+    // from an unsigned field using expression (((imm8:00 + 4) & 0x3ff) – 4)
+    // this trick permits the PC bias of -4 to be encoded using imm8 = 0xff
+    return ((((read16le(buf) & 0xff) << 2) + 4) & 0x3ff) - 4;
+  case R_ARM_THM_PC12: {
+    // LDR (literal) encoding T2, add = (U == '1') imm12
+    bool u = read16le(buf) & 0x0080;
+    uint64_t imm12 = read16le(buf + 2) & 0x0fff;
+    return u ? imm12 : -imm12;
   }
   }
 }
