@@ -300,20 +300,20 @@ LogicalResult TestOpWithVariadicResultsAndFolder::fold(
 LogicalResult mlir::OpWithInferTypeInterfaceOp::inferReturnTypes(
     MLIRContext *, Optional<Location> location, ValueRange operands,
     ArrayRef<NamedAttribute> attributes, RegionRange regions,
-    SmallVectorImpl<Type> &inferedReturnTypes) {
+    SmallVectorImpl<Type> &inferredReturnTypes) {
   if (operands[0].getType() != operands[1].getType()) {
     return emitOptionalError(location, "operand type mismatch ",
                              operands[0].getType(), " vs ",
                              operands[1].getType());
   }
-  inferedReturnTypes.assign({operands[0].getType()});
+  inferredReturnTypes.assign({operands[0].getType()});
   return success();
 }
 
 LogicalResult OpWithShapedTypeInferTypeInterfaceOp::inferReturnTypeComponents(
     MLIRContext *context, Optional<Location> location, ValueRange operands,
     ArrayRef<NamedAttribute> attributes, RegionRange regions,
-    SmallVectorImpl<ShapedTypeComponents> &inferedReturnShapes) {
+    SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
   // Create return type consisting of the last element of the first operand.
   auto operandType = *operands.getTypes().begin();
   auto sval = operandType.dyn_cast<ShapedType>();
@@ -323,7 +323,7 @@ LogicalResult OpWithShapedTypeInferTypeInterfaceOp::inferReturnTypeComponents(
   int64_t dim =
       sval.hasRank() ? sval.getShape().front() : ShapedType::kDynamicSize;
   auto type = IntegerType::get(17, context);
-  inferedReturnShapes.push_back(ShapedTypeComponents({dim}, type));
+  inferredReturnShapes.push_back(ShapedTypeComponents({dim}, type));
   return success();
 }
 
