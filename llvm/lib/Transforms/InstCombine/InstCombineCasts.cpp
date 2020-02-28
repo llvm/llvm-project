@@ -2151,7 +2151,7 @@ static Instruction *foldBitCastBitwiseLogic(BitCastInst &BitCast,
   if (match(BO->getOperand(1), m_Constant(C))) {
     // bitcast (logic X, C) --> logic (bitcast X, C')
     Value *CastedOp0 = Builder.CreateBitCast(BO->getOperand(0), DestTy);
-    Value *CastedC = ConstantExpr::getBitCast(C, DestTy);
+    Value *CastedC = Builder.CreateBitCast(C, DestTy);
     return BinaryOperator::Create(BO->getOpcode(), CastedOp0, CastedC);
   }
 
