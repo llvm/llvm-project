@@ -2016,6 +2016,20 @@ private:
         if (TreeEntry *TE = BundleMember->TE) {
           int Lane = BundleMember->Lane;
           assert(Lane >= 0 && "Lane not set");
+
+          // Since vectorization tree is being built recursively this assertion
+          // ensures that the tree entry has all operands set before reaching
+          // this code. Couple of exceptions known at the moment are extracts
+          // where their second (immediate) operand is not added. Since
+          // immediates do not affect scheduler behavior this is considered
+          // okay.
+          auto *In = TE->getMainOp();
+          assert(In &&
+                 (isa<ExtractValueInst>(In) || isa<ExtractElementInst>(In) ||
+                  In->getNumOperands() == TE->getNumOperands()) &&
+                 "Missed TreeEntry operands?");
+          (void)In; // fake use to avoid build failure when assertions disabled
+
           for (unsigned OpIdx = 0, NumOperands = TE->getNumOperands();
                OpIdx != NumOperands; ++OpIdx)
             if (auto *I = dyn_cast<Instruction>(TE->getOperand(OpIdx)[Lane]))
