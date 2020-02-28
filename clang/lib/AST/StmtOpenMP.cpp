@@ -10,9 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/AST/StmtOpenMP.h"
-
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/StmtOpenMP.h"
 
 using namespace clang;
 using namespace llvm::omp;
@@ -757,6 +756,29 @@ OMPFlushDirective *OMPFlushDirective::CreateEmpty(const ASTContext &C,
       llvm::alignTo(sizeof(OMPFlushDirective), alignof(OMPClause *));
   void *Mem = C.Allocate(Size + sizeof(OMPClause *) * NumClauses);
   return new (Mem) OMPFlushDirective(NumClauses);
+}
+
+OMPDepobjDirective *OMPDepobjDirective::Create(const ASTContext &C,
+                                               SourceLocation StartLoc,
+                                               SourceLocation EndLoc,
+                                               ArrayRef<OMPClause *> Clauses) {
+  unsigned Size =
+      llvm::alignTo(sizeof(OMPDepobjDirective), alignof(OMPClause *));
+  void *Mem = C.Allocate(Size + sizeof(OMPClause *) * Clauses.size(),
+                         alignof(OMPDepobjDirective));
+  auto *Dir = new (Mem) OMPDepobjDirective(StartLoc, EndLoc, Clauses.size());
+  Dir->setClauses(Clauses);
+  return Dir;
+}
+
+OMPDepobjDirective *OMPDepobjDirective::CreateEmpty(const ASTContext &C,
+                                                    unsigned NumClauses,
+                                                    EmptyShell) {
+  unsigned Size =
+      llvm::alignTo(sizeof(OMPDepobjDirective), alignof(OMPClause *));
+  void *Mem = C.Allocate(Size + sizeof(OMPClause *) * NumClauses,
+                         alignof(OMPDepobjDirective));
+  return new (Mem) OMPDepobjDirective(NumClauses);
 }
 
 OMPOrderedDirective *OMPOrderedDirective::Create(const ASTContext &C,
