@@ -1018,8 +1018,8 @@ AArch64AsmPrinter::lowerPtrAuthGlobalConstant(const GlobalPtrAuthInfo &PAI) {
   // Figure out the base symbol and the addend, if any.
   APInt Offset(64, 0);
   const Value *BaseGV =
-    PAI.getPointer()->stripAndAccumulateInBoundsConstantOffsets(
-      getDataLayout(), Offset);
+    PAI.getPointer()->stripAndAccumulateConstantOffsets(
+      getDataLayout(), Offset, /*AllowNonInbounds=*/true);
 
   auto *BaseGVB = dyn_cast<GlobalValue>(BaseGV);
 
@@ -1027,9 +1027,12 @@ AArch64AsmPrinter::lowerPtrAuthGlobalConstant(const GlobalPtrAuthInfo &PAI) {
   // else we can do: emit an error.
   if (!BaseGVB) {
     BaseGVB = PAI.getGV();
-    BaseGV->getContext().emitError(
-        "Couldn't resolve target base/addend of llvm.ptrauth global '" +
-        BaseGV->getName() + "'");
+
+    std::string Buf;
+    raw_string_ostream OS(Buf);
+    OS << "Couldn't resolve target base/addend of llvm.ptrauth global '"
+      << *BaseGVB << "'";
+    BaseGV->getContext().emitError(OS.str());
   }
 
   // If there is an addend, turn that into the appropriate MCExpr.
