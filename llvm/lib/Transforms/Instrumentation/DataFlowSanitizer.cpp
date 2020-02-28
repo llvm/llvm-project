@@ -163,12 +163,14 @@ static cl::opt<bool> ClDebugNonzeroLabels(
     cl::Hidden);
 
 // Experimental feature that inserts callbacks for certain data events.
-// Currently callbacks are only inserted for loads and stores.
+// Currently callbacks are only inserted for loads, stores, and memory transfers
+// (i.e. memcpy and memmove).
 //
 // If this flag is set to true, the user must provide definitions for the
 // following callback functions:
 //   void __dfsan_load_callback(dfsan_label Label);
 //   void __dfsan_store_callback(dfsan_label Label);
+//   void __dfsan_mem_transfer_callback(dfsan_label *Start, size_t Len);
 static cl::opt<bool> ClEventCallbacks(
     "dfsan-event-callbacks",
     cl::desc("Insert calls to __dfsan_*_callback functions on data events."),
@@ -358,6 +360,7 @@ class DataFlowSanitizer : public ModulePass {
   FunctionType *DFSanNonzeroLabelFnTy;
   FunctionType *DFSanVarargWrapperFnTy;
   FunctionType *DFSanLoadStoreCallbackFnTy;
+  FunctionType *DFSanMemTransferCallbackFnTy;
   FunctionCallee DFSanUnionFn;
   FunctionCallee DFSanCheckedUnionFn;
   FunctionCallee DFSanUnionLoadFn;
@@ -367,6 +370,7 @@ class DataFlowSanitizer : public ModulePass {
   FunctionCallee DFSanVarargWrapperFn;
   FunctionCallee DFSanLoadCallbackFn;
   FunctionCallee DFSanStoreCallbackFn;
+  FunctionCallee DFSanMemTransferCallbackFn;
   MDNode *ColdCallWeights;
   DFSanABIList ABIList;
   DenseMap<Value *, Function *> UnwrappedFnMap;
@@ -600,6 +604,10 @@ bool DataFlowSanitizer::doInitialization(Module &M) {
       Type::getVoidTy(*Ctx), Type::getInt8PtrTy(*Ctx), /*isVarArg=*/false);
   DFSanLoadStoreCallbackFnTy =
       FunctionType::get(Type::getVoidTy(*Ctx), ShadowTy, /*isVarArg=*/false);
+  Type *DFSanMemTransferCallbackArgs[2] = {ShadowPtrTy, IntptrTy};
+  DFSanMemTransferCallbackFnTy =
+      FunctionType::get(Type::getVoidTy(*Ctx), DFSanMemTransferCallbackArgs,
+                        /*isVarArg=*/false);
 
   if (GetArgTLSPtr) {
     Type *ArgTLSTy = ArrayType::get(ShadowTy, 64);
@@ -804,6 +812,8 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
                                                  DFSanLoadStoreCallbackFnTy);
   DFSanStoreCallbackFn = Mod->getOrInsertFunction("__dfsan_store_callback",
                                                   DFSanLoadStoreCallbackFnTy);
+  DFSanMemTransferCallbackFn = Mod->getOrInsertFunction(
+      "__dfsan_mem_transfer_callback", DFSanMemTransferCallbackFnTy);
 
   std::vector<Function *> FnsToInstrument;
   SmallPtrSet<Function *, 2> FnsWithNativeABI;
@@ -817,7 +827,8 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
         &i != DFSanNonzeroLabelFn.getCallee()->stripPointerCasts() &&
         &i != DFSanVarargWrapperFn.getCallee()->stripPointerCasts() &&
         &i != DFSanLoadCallbackFn.getCallee()->stripPointerCasts() &&
-        &i != DFSanStoreCallbackFn.getCallee()->stripPointerCasts())
+        &i != DFSanStoreCallbackFn.getCallee()->stripPointerCasts() &&
+        &i != DFSanMemTransferCallbackFn.getCallee()->stripPointerCasts())
       FnsToInstrument.push_back(&i);
   }
 
@@ -1520,13 +1531,13 @@ void DFSanVisitor::visitMemSetInst(MemSetInst &I) {
 
 void DFSanVisitor::visitMemTransferInst(MemTransferInst &I) {
   IRBuilder<> IRB(&I);
-  Value *DestShadow = DFSF.DFS.getShadowAddress(I.getDest(), &I);
+  Value *RawDestShadow = DFSF.DFS.getShadowAddress(I.getDest(), &I);
   Value *SrcShadow = DFSF.DFS.getShadowAddress(I.getSource(), &I);
   Value *LenShadow = IRB.CreateMul(
       I.getLength(),
       ConstantInt::get(I.getLength()->getType(), DFSF.DFS.ShadowWidth / 8));
   Type *Int8Ptr = Type::getInt8PtrTy(*DFSF.DFS.Ctx);
-  DestShadow = IRB.CreateBitCast(DestShadow, Int8Ptr);
+  Value *DestShadow = IRB.CreateBitCast(RawDestShadow, Int8Ptr);
   SrcShadow = IRB.CreateBitCast(SrcShadow, Int8Ptr);
   auto *MTI = cast<MemTransferInst>(
       IRB.CreateCall(I.getFunctionType(), I.getCalledValue(),
@@ -1537,6 +1548,10 @@ void DFSanVisitor::visitMemTransferInst(MemTransferInst &I) {
   } else {
     MTI->setDestAlignment(DFSF.DFS.ShadowWidth / 8);
     MTI->setSourceAlignment(DFSF.DFS.ShadowWidth / 8);
+  }
+  if (ClEventCallbacks) {
+    IRB.CreateCall(DFSF.DFS.DFSanMemTransferCallbackFn,
+                   {RawDestShadow, I.getLength()});
   }
 }
 
