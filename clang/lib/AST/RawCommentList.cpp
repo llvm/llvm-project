@@ -16,6 +16,7 @@
 #include "clang/AST/CommentSema.h"
 #include "clang/Basic/CharInfo.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/Allocator.h"
 
 using namespace clang;
 
