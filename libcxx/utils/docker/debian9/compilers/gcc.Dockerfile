@@ -14,6 +14,7 @@ LABEL maintainer "libc++ Developers"
 ARG branch
 ARG cherry_pick=""
 ARG install_prefix
+ARG cache_date=stable
 
 ADD scripts/build_gcc_version.sh /tmp/
 RUN /tmp/build_gcc_version.sh \

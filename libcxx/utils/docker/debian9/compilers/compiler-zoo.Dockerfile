@@ -19,6 +19,7 @@ COPY --from=ericwf/compiler:gcc-5 /opt/gcc-5   /opt/gcc-5
 COPY --from=ericwf/compiler:gcc-6 /opt/gcc-6   /opt/gcc-6
 COPY --from=ericwf/compiler:gcc-7 /opt/gcc-7   /opt/gcc-7
 COPY --from=ericwf/compiler:gcc-8 /opt/gcc-8   /opt/gcc-8
+COPY --from=ericwf/compiler:gcc-9 /opt/gcc-9   /opt/gcc-9
 COPY --from=ericwf/compiler:gcc-tot /opt/gcc-tot /opt/gcc-tot
 
 COPY --from=ericwf/compiler:llvm-3.6 /opt/llvm-3.6 /opt/llvm-3.6
@@ -30,6 +31,7 @@ COPY --from=ericwf/compiler:llvm-5 /opt/llvm-5 /opt/llvm-5
 COPY --from=ericwf/compiler:llvm-6 /opt/llvm-6 /opt/llvm-6
 COPY --from=ericwf/compiler:llvm-7 /opt/llvm-7 /opt/llvm-7
 COPY --from=ericwf/compiler:llvm-8 /opt/llvm-8 /opt/llvm-8
+COPY --from=ericwf/compiler:llvm-9 /opt/llvm-9 /opt/llvm-9
 COPY --from=ericwf/compiler:llvm-tot /opt/llvm-tot /opt/llvm-tot
 
 
