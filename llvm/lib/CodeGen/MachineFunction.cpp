@@ -851,32 +851,32 @@ MachineFunction::CallSiteInfoMap::iterator
 MachineFunction::getCallSiteInfo(const MachineInstr *MI) {
   assert(MI->isCandidateForCallSiteEntry() &&
          "Call site info refers only to call (MI) candidates");
-  if (!Target.Options.ShouldEmitDebugEntryValues())
+
+  if (!Target.Options.EnableDebugEntryValues)
     return CallSitesInfo.end();
   return CallSitesInfo.find(MI);
 }
 
-void MachineFunction::moveCallSiteInfo(const MachineInstr *Old,
-                                       const MachineInstr *New) {
-  assert(Old->isCandidateForCallSiteEntry() &&
-         "Call site info refers only to call (MI) candidates");
+/// Return the call machine instruction or find a call within bundle.
+static const MachineInstr *getCallInstr(const MachineInstr *MI) {
+  if (!MI->isBundle())
+    return MI;
 
-  if (!New->isCandidateForCallSiteEntry())
-    return eraseCallSiteInfo(Old);
+  for (auto &BMI : make_range(getBundleStart(MI->getIterator()),
+                              getBundleEnd(MI->getIterator())))
+    if (BMI.isCandidateForCallSiteEntry())
+      return &BMI;
 
-  CallSiteInfoMap::iterator CSIt = getCallSiteInfo(Old);
-  if (CSIt == CallSitesInfo.end())
-    return;
-
-  CallSiteInfo CSInfo = std::move(CSIt->second);
-  CallSitesInfo.erase(CSIt);
-  CallSitesInfo[New] = CSInfo;
+  llvm_unreachable("Unexpected bundle without a call site candidate");
 }
 
 void MachineFunction::eraseCallSiteInfo(const MachineInstr *MI) {
-  assert(MI->isCandidateForCallSiteEntry() &&
-         "Call site info refers only to call (MI) candidates");
-  CallSiteInfoMap::iterator CSIt = getCallSiteInfo(MI);
+  assert(MI->shouldUpdateCallSiteInfo() &&
+         "Call site info refers only to call (MI) candidates or "
+         "candidates inside bundles");
+
+  const MachineInstr *CallMI = getCallInstr(MI);
+  CallSiteInfoMap::iterator CSIt = getCallSiteInfo(CallMI);
   if (CSIt == CallSitesInfo.end())
     return;
   CallSitesInfo.erase(CSIt);
@@ -884,17 +884,38 @@ void MachineFunction::eraseCallSiteInfo(const MachineInstr *MI) {
 
 void MachineFunction::copyCallSiteInfo(const MachineInstr *Old,
                                        const MachineInstr *New) {
-  assert(Old->isCandidateForCallSiteEntry() &&
-         "Call site info refers only to call (MI) candidates");
+  assert(Old->shouldUpdateCallSiteInfo() &&
+         "Call site info refers only to call (MI) candidates or "
+         "candidates inside bundles");
 
   if (!New->isCandidateForCallSiteEntry())
     return eraseCallSiteInfo(Old);
 
-  CallSiteInfoMap::iterator CSIt = getCallSiteInfo(Old);
+  const MachineInstr *OldCallMI = getCallInstr(Old);
+  CallSiteInfoMap::iterator CSIt = getCallSiteInfo(OldCallMI);
   if (CSIt == CallSitesInfo.end())
     return;
 
   CallSiteInfo CSInfo = CSIt->second;
+  CallSitesInfo[New] = CSInfo;
+}
+
+void MachineFunction::moveCallSiteInfo(const MachineInstr *Old,
+                                       const MachineInstr *New) {
+  assert(Old->shouldUpdateCallSiteInfo() &&
+         "Call site info refers only to call (MI) candidates or "
+         "candidates inside bundles");
+
+  if (!New->isCandidateForCallSiteEntry())
+    return eraseCallSiteInfo(Old);
+
+  const MachineInstr *OldCallMI = getCallInstr(Old);
+  CallSiteInfoMap::iterator CSIt = getCallSiteInfo(OldCallMI);
+  if (CSIt == CallSitesInfo.end())
+    return;
+
+  CallSiteInfo CSInfo = std::move(CSIt->second);
+  CallSitesInfo.erase(CSIt);
   CallSitesInfo[New] = CSInfo;
 }
 

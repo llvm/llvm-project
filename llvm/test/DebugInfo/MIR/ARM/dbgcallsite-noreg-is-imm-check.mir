@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=armebv6k-unknown-linux-gnueabihf -filetype=obj -start-after=machineverifier %s -o -| llvm-dwarfdump - | FileCheck %s --implicit-check-not=DW_TAG_GNU_call_site_parameter
+# RUN: llc -debug-entry-values -mtriple=armebv6k-unknown-linux-gnueabihf -filetype=obj -start-after=machineverifier %s -o -| llvm-dwarfdump - | FileCheck %s --implicit-check-not=DW_TAG_GNU_call_site_parameter
 
 ## The test was handmade.
 
@@ -7,7 +7,7 @@
   source_filename = "test.c"
   target datalayout = "E-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
   target triple = "armebv6k-unknown-linux-gnueabihf"
-  
+
   ; Function Attrs: nounwind
   define dso_local arm_aapcscc i32 @func1(i32 %arg1) local_unnamed_addr !dbg !14 {
   entry:
@@ -17,17 +17,16 @@
     %call = call arm_aapcscc i32 @func2(i32 %add), !dbg !19
     ret i32  0, !dbg !19
   }
-  
-  
+
   declare !dbg !4 dso_local arm_aapcscc i32 @func2(i32) local_unnamed_addr
-  
+
   ; Function Attrs: nounwind readnone speculatable willreturn
   declare void @llvm.dbg.value(metadata, metadata, metadata)
-  
+
   !llvm.dbg.cu = !{!0}
   !llvm.module.flags = !{!9, !10, !11, !12}
   !llvm.ident = !{!13}
-  
+
   !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 10.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !3, nameTableKind: None)
   !1 = !DIFile(filename: "test.c", directory: "/")
   !2 = !{}
@@ -53,12 +52,12 @@
 name:            func1
 alignment:       4
 callSites:
-  - { bb: 0, offset: 11, fwdArgRegs: 
+  - { bb: 0, offset: 11, fwdArgRegs:
       - { arg: 0, reg: '$r0' } }
 body:             |
   bb.0.entry:
     liveins: $r0, $r1, $r2, $r4, $r10, $lr
-  
+
     DBG_VALUE $r0, $noreg, !18, !DIExpression(), debug-location !19
     $sp = frame-setup STMDB_UPD $sp, 14, $noreg, killed $r4, killed $r10, $r11, killed $lr
     frame-setup CFI_INSTRUCTION def_cfa_offset 16
