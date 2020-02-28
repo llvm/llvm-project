@@ -22,28 +22,6 @@
 namespace llvm {
 namespace dsymutil {
 
-/// Retrieve the section named \a SecName in \a Obj.
-///
-/// To accommodate for platform discrepancies, the name passed should be
-/// (for example) 'debug_info' to match either '__debug_info' or '.debug_info'.
-/// This function will strip the initial platform-specific characters.
-static Optional<object::SectionRef>
-getSectionByName(const object::ObjectFile &Obj, StringRef SecName) {
-  for (const object::SectionRef &Section : Obj.sections()) {
-    StringRef SectionName;
-    if (Expected<StringRef> NameOrErr = Section.getName())
-      SectionName = *NameOrErr;
-    else
-      consumeError(NameOrErr.takeError());
-
-    SectionName = SectionName.substr(SectionName.find_first_not_of("._"));
-    if (SectionName != SecName)
-      continue;
-    return Section;
-  }
-  return None;
-}
-
 bool DwarfStreamer::init(Triple TheTriple) {
   std::string ErrorStr;
   std::string TripleName;
