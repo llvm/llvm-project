@@ -299,7 +299,8 @@ bool DWARFUnitHeader::extract(DWARFContext &Context,
     if (AbbrOffset)
       return false;
     auto *UnitContrib = IndexEntry->getOffset();
-    if (!UnitContrib || UnitContrib->Length != (Length + 4))
+    if (!UnitContrib ||
+        UnitContrib->Length != (Length + getUnitLengthFieldByteSize()))
       return false;
     auto *AbbrEntry = IndexEntry->getOffset(DW_SECT_ABBREV);
     if (!AbbrEntry)
