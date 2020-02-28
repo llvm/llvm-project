@@ -1279,6 +1279,8 @@ StringRef SIRegisterInfo::getRegAsmName(unsigned Reg) const {
 const TargetRegisterClass *
 SIRegisterInfo::getPhysRegClass(MCRegister Reg) const {
   static const TargetRegisterClass *const BaseClasses[] = {
+    &AMDGPU::VGPR_LO16RegClass,
+    &AMDGPU::VGPR_HI16RegClass,
     &AMDGPU::VGPR_32RegClass,
     &AMDGPU::SReg_32RegClass,
     &AMDGPU::AGPR_32RegClass,
@@ -1318,6 +1320,9 @@ SIRegisterInfo::getPhysRegClass(MCRegister Reg) const {
 bool SIRegisterInfo::hasVGPRs(const TargetRegisterClass *RC) const {
   unsigned Size = getRegSizeInBits(*RC);
   switch (Size) {
+  case 16:
+    return getCommonSubClass(&AMDGPU::VGPR_LO16RegClass, RC) != nullptr ||
+           getCommonSubClass(&AMDGPU::VGPR_HI16RegClass, RC) != nullptr;
   case 32:
     return getCommonSubClass(&AMDGPU::VGPR_32RegClass, RC) != nullptr;
   case 64:
