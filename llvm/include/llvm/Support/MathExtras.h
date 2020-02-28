@@ -18,6 +18,7 @@
 #include <cassert>
 #include <climits>
 #include <cmath>
+#include <cstdint>
 #include <cstring>
 #include <limits>
 #include <type_traits>
