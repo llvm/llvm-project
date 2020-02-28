@@ -574,6 +574,9 @@ def ftest_module_file_extension_EQ :
            "The argument is parsed as blockname:major:minor:hashed:user info">;
 def fconcepts_ts : Flag<["-"], "fconcepts-ts">,
   HelpText<"Enable C++ Extensions for Concepts.">;
+def fodr_hash_attributes:
+  Flag<["-"], "fodr-hash-attributes">,
+  HelpText<"Enable ODR hash checking for attributes ">;
 
 let Group = Action_Group in {
 

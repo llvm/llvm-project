@@ -285,6 +285,7 @@ def err_module_odr_violation_mismatch_decl_diff : Error<
     " property attribute|"
   "%select{no|'required'|'optional'}4 %select{property|method}5 control|"
   "with %ordinal4 protocol named %5|"
+  "%select{no attribute|%5}4|"
   "}3">;
 
 def note_module_odr_violation_mismatch_decl_diff : Note<"but in '%0' found "
@@ -368,6 +369,7 @@ def note_module_odr_violation_mismatch_decl_diff : Note<"but in '%0' found "
   "no written or default attribute for property|"
   "%select{no|'required'|'optional'}2 %select{property|method}3 control|"
   "with %ordinal2 protocol named %3|"
+  "%select{no attribute|%3}2|"
   "}1">;
 
 def err_module_odr_violation_function : Error<

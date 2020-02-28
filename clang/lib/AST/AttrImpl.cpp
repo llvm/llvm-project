@@ -17,3 +17,33 @@
 using namespace clang;
 
 #include "clang/AST/AttrImpl.inc"
+
+// FIXME: this should be auto generated from Attr.td
+bool Attr::compare(const Attr *A, const Attr *B) {
+  if (A->getKind() != B->getKind())
+    return A->getKind() < B->getKind();
+
+  switch (A->getKind()) {
+  case attr::ObjCBridge: {
+    auto *MA = cast<ObjCBridgeAttr>(A);
+    auto *MB = cast<ObjCBridgeAttr>(B);
+    if (!MA->getBridgedType())
+      return true;
+    if (!MB->getBridgedType())
+      return false;
+    return MA->getBridgedType()->getName() < MB->getBridgedType()->getName();
+  }
+  case attr::ObjCBridgeMutable: {
+    auto *MA = cast<ObjCBridgeMutableAttr>(A);
+    auto *MB = cast<ObjCBridgeMutableAttr>(B);
+    if (!MA->getBridgedType())
+      return true;
+    if (!MB->getBridgedType())
+      return false;
+    return MA->getBridgedType()->getName() < MB->getBridgedType()->getName();
+  }
+  default:
+    llvm_unreachable("Not implemented");
+  }
+  return false;
+}

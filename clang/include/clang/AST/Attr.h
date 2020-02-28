@@ -109,6 +109,10 @@ public:
 
   // Pretty print this attribute.
   void printPretty(raw_ostream &OS, const PrintingPolicy &Policy) const;
+
+  // Compare two attributes, used for sorting attributes in a Subject.
+  // FIXME: this should be auto generated from Attr.td
+  static bool compare(const Attr *A, const Attr *B);
 };
 
 class TypeAttr : public Attr {
