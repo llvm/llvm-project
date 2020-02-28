@@ -82,6 +82,19 @@ static void invokeCreateWithInferedReturnType(Operation *op) {
   }
 }
 
+static void reifyReturnShape(Operation *op) {
+  OpBuilder b(op);
+
+  // Use permutations of 2 args as operands.
+  auto shapedOp = cast<OpWithShapedTypeInferTypeInterfaceOp>(op);
+  SmallVector<Value, 2> shapes;
+  if (failed(shapedOp.reifyReturnTypeShapes(b, shapes)))
+    return;
+  for (auto it : llvm::enumerate(shapes))
+    op->emitRemark() << "value " << it.index() << ": "
+                     << it.value().getDefiningOp();
+}
+
 struct TestReturnTypeDriver : public FunctionPass<TestReturnTypeDriver> {
   void runOnFunction() override {
     if (getFunction().getName() == "testCreateFunctions") {
@@ -99,6 +112,16 @@ struct TestReturnTypeDriver : public FunctionPass<TestReturnTypeDriver> {
             op);
       };
       return;
+    }
+    if (getFunction().getName() == "testReifyFunctions") {
+      std::vector<Operation *> ops;
+      // Collect ops to avoid triggering on inserted ops.
+      for (auto &op : getFunction().getBody().front())
+        if (isa<OpWithShapedTypeInferTypeInterfaceOp>(op))
+          ops.push_back(&op);
+      // Generate test patterns for each, but skip terminator.
+      for (auto *op : ops)
+        reifyReturnShape(op);
     }
   }
 };
