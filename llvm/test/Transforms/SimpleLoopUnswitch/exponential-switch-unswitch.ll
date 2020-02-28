@@ -86,11 +86,8 @@
 ; LOOP-MAX-COUNT-111:     Loop at depth 2 containing:
 ; LOOP-MAX-NOT: Loop at depth 2 containing:
 
-define i32 @loop_switch(i32* %addr, i32 %c1i, i32 %c2i) {
+define i32 @loop_switch(i32* %addr, i32 %c1, i32 %c2) {
 entry:
-  ; c1, c2 are guaranteed to be never undef or poison.
-  %c1 = freeze i32 %c1i
-  %c2 = freeze i32 %c2i
   %addr1 = getelementptr i32, i32* %addr, i64 0
   %addr2 = getelementptr i32, i32* %addr, i64 1
   %check0 = icmp eq i32 %c2, 0
