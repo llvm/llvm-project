@@ -236,6 +236,8 @@ def: T_R_pat<Y2_dczeroa,     int_hexagon_Y2_dczeroa>;
 def: T_RR_pat<Y4_l2fetch,    int_hexagon_Y4_l2fetch>;
 def: T_RP_pat<Y5_l2fetch,    int_hexagon_Y5_l2fetch>;
 
+def: Pat<(int_hexagon_Y2_dcfetch I32:$Rt), (Y2_dcfetchbo I32:$Rt, 0)>;
+
 //
 // Patterns for optimizing code generations for HVX.
 
