@@ -875,7 +875,11 @@ bool TargetLowering::SimplifyDemandedBits(
     APInt SrcDemandedBits = DemandedBits.zextOrSelf(SrcBitWidth);
     if (SimplifyDemandedBits(Src, SrcDemandedBits, SrcKnown, TLO, Depth + 1))
       return true;
-    Known = SrcKnown.anyextOrTrunc(BitWidth);
+
+    // Upper elements are undef, so only get the knownbits if we just demand
+    // the bottom element.
+    if (DemandedElts == 1)
+      Known = SrcKnown.anyextOrTrunc(BitWidth);
     break;
   }
   case ISD::BUILD_VECTOR:
