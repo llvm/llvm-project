@@ -2929,6 +2929,13 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
       Args.hasArg(OPT_fmodules_local_submodule_visibility) || Opts.ModulesTS ||
       Opts.CPlusPlusModules;
   Opts.ODRCheckAttributes = Args.hasArg(OPT_fodr_hash_attributes);
+  Opts.ODRCheckCategories = !Args.hasArg(OPT_fno_odr_hash_categories);
+  Opts.ODRCheckInterfaces = !Args.hasArg(OPT_fno_odr_hash_interfaces);
+  Opts.ODRCheckProtocols = !Args.hasArg(OPT_fno_odr_hash_protocols);
+  Opts.ODRCheckRecords = !Args.hasArg(OPT_fno_odr_hash_records);
+  Opts.ODRCheckProperties = !Args.hasArg(OPT_fno_odr_hash_properties);
+  Opts.ODRCheckIvars = !Args.hasArg(OPT_fno_odr_hash_ivars);
+  Opts.ODRCheckMethods = !Args.hasArg(OPT_fno_odr_hash_methods);
   Opts.ModulesCodegen = Args.hasArg(OPT_fmodules_codegen);
   Opts.ModulesDebugInfo = Args.hasArg(OPT_fmodules_debuginfo);
   Opts.ModulesHashErrorDiags = Args.hasArg(OPT_fmodules_hash_error_diagnostics);

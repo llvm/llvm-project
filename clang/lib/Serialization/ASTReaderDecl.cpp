@@ -807,7 +807,8 @@ ASTDeclReader::VisitRecordDeclImpl(RecordDecl *RD) {
   // structural equivalence is the usual way to check for ODR-like semantics
   // in ObjC/C, but using ODRHash is prefered if possible because of better
   // performance.
-  if (!Reader.getContext().getLangOpts().CPlusPlus) {
+  if (!Reader.getContext().getLangOpts().CPlusPlus &&
+      Reader.getContext().getLangOpts().ODRCheckRecords) {
     RecordDecl *Canon = static_cast<RecordDecl *>(RD->getCanonicalDecl());
     if (RD == Canon || Canon->getODRHash() == RD->getODRHash())
       return Redecl;
@@ -1191,9 +1192,13 @@ void ASTDeclReader::MergeDefinitionData(ObjCInterfaceDecl *D,
   bool DetectedOdrViolation = false;
   auto &DD = D->data();
 
+  if (!Reader.getContext().getLangOpts().ODRCheckInterfaces)
+    return;
+
   auto &FirstProtos = D->getReferencedProtocols();
   auto &SecondProtos = NewDD.ReferencedProtocols;
-  if (MergeCheckProtocolList(FirstProtos, SecondProtos))
+  if (Reader.getContext().getLangOpts().ODRCheckProtocols &&
+      MergeCheckProtocolList(FirstProtos, SecondProtos))
     DetectedOdrViolation = true;
   if (D->getODRHash() != NewDD.ODRHash)
     DetectedOdrViolation = true;
@@ -1273,6 +1278,9 @@ void ASTDeclReader::MergeDefinitionData(ObjCProtocolDecl *D,
 
   auto &FirstProtos = D->getReferencedProtocols();
   auto &SecondProtos = NewDD.ReferencedProtocols;
+  if (!Reader.getContext().getLangOpts().ODRCheckProtocols)
+    return;
+
   if (MergeCheckProtocolList(FirstProtos, SecondProtos))
     DetectedOdrViolation = true;
   if (D->getODRHash() != NewDD.ODRHash)
@@ -1349,7 +1357,11 @@ void ASTDeclReader::MergeDefinitionData(
   auto &FirstProtos = D->getReferencedProtocols();
   auto &SecondProtos = NewDD.ReferencedProtocols;
 
-  if (MergeCheckProtocolList(FirstProtos, SecondProtos))
+  if (!Reader.getContext().getLangOpts().ODRCheckCategories)
+    return;
+
+  if (Reader.getContext().getLangOpts().ODRCheckProtocols &&
+      MergeCheckProtocolList(FirstProtos, SecondProtos))
     DetectedOdrViolation = true;
   if (D->getODRHash() != NewDD.ODRHash)
     DetectedOdrViolation = true;
