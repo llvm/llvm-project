@@ -41,7 +41,7 @@ protected:
   virtual SmartPtrTypeMatcher getSmartPointerTypeMatcher() const = 0;
 
   /// Returns whether the C++ version is compatible with current check.
-  virtual bool isLanguageVersionSupported(const LangOptions &LangOpts) const;
+  bool isLanguageVersionSupported(const LangOptions &LangOpts) const override;
 
   static const char PointerType[];
 
