@@ -22,18 +22,7 @@
 
 define %union.rec* @Manifest(%union.rec* %x, %union.rec* %env, %struct.STYLE* %style, %union.rec** %bthr, %union.rec** %fthr, %union.rec** %target, %union.rec** %crs, i32 %ok, i32 %need_expand, %union.rec** %enclose, i32 %fcr) nounwind {
 entry:
-; CHECK: ldrd
-; CHECK-NEXT: movs    r5, #0
-; CHECK-NEXT: cmp     r5, #0
-; CHECK-NEXT: ldm.w
-; CHECK-NEXT: ldr{{(.w)?}} {{(r[0-9]+)|(lr)}}, [r7, #28]
-; CHECK-NEXT: ittt    ne
-; CHECK-NEXT: addne   sp, #292
-; CHECK-NEXT: popne.w {r8, r10, r11}
-; CHECK-NEXT: popne   {r4, r5, r6, r7, pc}
-; CHECK-NEXT: cmp.w   r0, #450
-; CHECK-NEXT: blt
-
+; CHECK:       ldr{{(.w)?}}	{{(r[0-9]+)|(lr)}}, [r7, #28]
   %xgaps.i = alloca [32 x %union.rec*], align 4   ; <[32 x %union.rec*]*> [#uses=0]
   %ycomp.i = alloca [32 x %union.rec*], align 4   ; <[32 x %union.rec*]*> [#uses=0]
   br label %bb20
