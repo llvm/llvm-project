@@ -29,7 +29,7 @@ LogicalResult mlir::detail::inferReturnTensorTypes(
         componentTypeFn,
     MLIRContext *context, Optional<Location> location, ValueRange operands,
     ArrayRef<NamedAttribute> attributes, RegionRange regions,
-    SmallVectorImpl<Type> &inferedReturnTypes) {
+    SmallVectorImpl<Type> &inferredReturnTypes) {
   SmallVector<ShapedTypeComponents, 2> retComponents;
   if (failed(componentTypeFn(context, location, operands, attributes, regions,
                              retComponents)))
@@ -37,23 +37,23 @@ LogicalResult mlir::detail::inferReturnTensorTypes(
   for (auto shapeAndType : retComponents) {
     assert(shapeAndType.getAttribute() == nullptr && "attribute not supported");
     if (shapeAndType.hasRank())
-      inferedReturnTypes.push_back(RankedTensorType::get(
+      inferredReturnTypes.push_back(RankedTensorType::get(
           shapeAndType.getDims(), shapeAndType.getElementType()));
     else
-      inferedReturnTypes.push_back(
+      inferredReturnTypes.push_back(
           UnrankedTensorType::get(shapeAndType.getElementType()));
   }
   return success();
 }
 
 LogicalResult mlir::detail::verifyInferredResultTypes(Operation *op) {
-  SmallVector<Type, 4> inferedReturnTypes;
+  SmallVector<Type, 4> inferredReturnTypes;
   auto retTypeFn = cast<InferTypeOpInterface>(op);
   if (failed(retTypeFn.inferReturnTypes(op->getContext(), op->getLoc(),
                                         op->getOperands(), op->getAttrs(),
-                                        op->getRegions(), inferedReturnTypes)))
+                                        op->getRegions(), inferredReturnTypes)))
     return failure();
-  if (!retTypeFn.isCompatibleReturnTypes(inferedReturnTypes,
+  if (!retTypeFn.isCompatibleReturnTypes(inferredReturnTypes,
                                          op->getResultTypes()))
     return op->emitOpError(
         "inferred type incompatible with return type of operation");
