@@ -600,7 +600,7 @@ TEST_F(FormatTestCSharp, CSharpSpaces) {
   verifyFormat(R"(private float[,] Values;)", Style);
 
   Style.SpacesInSquareBrackets = true;
-  verifyFormat(R"(private float[, ] Values;)", Style);
+  verifyFormat(R"(private float[ , ] Values;)", Style);
 }
 
 TEST_F(FormatTestCSharp, CSharpNullableTypes) {
@@ -608,11 +608,7 @@ TEST_F(FormatTestCSharp, CSharpNullableTypes) {
   Style.SpacesInSquareBrackets = false;
 
   verifyFormat(R"(public float? Value;)", Style); // no space before `?`.
-
-  // Erroneous spaces in square brackets here will be tackled in a follow-up
-  // patch and are not addressed by setting
-  // `Style.SpacesInSquareBrackets = false;`
-  verifyFormat(R"(int?[] arr = new int?[ 10 ];)",
+  verifyFormat(R"(int?[] arr = new int?[10];)",
                Style); // An array of a nullable type.
 }
 

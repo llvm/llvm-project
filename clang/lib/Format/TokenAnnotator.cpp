@@ -2902,8 +2902,8 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     if (Left.is(TT_TemplateCloser) && Right.is(TT_StartOfName))
       return true;
 
-    // space after comma in '[,]'.
-    if (Left.is(tok::comma) && Right.is(tok::r_square))
+    // spaces inside square brackets.
+    if (Left.is(tok::l_square) || Right.is(tok::r_square))
       return Style.SpacesInSquareBrackets;
 
     // No space before ? in nullable types.
