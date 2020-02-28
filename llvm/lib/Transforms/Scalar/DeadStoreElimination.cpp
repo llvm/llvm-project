@@ -617,23 +617,39 @@ static bool isPossibleSelfRead(Instruction *Inst,
 /// instruction.
 static bool memoryIsNotModifiedBetween(Instruction *FirstI,
                                        Instruction *SecondI,
-                                       AliasAnalysis *AA) {
-  SmallVector<BasicBlock *, 16> WorkList;
-  SmallPtrSet<BasicBlock *, 8> Visited;
+                                       AliasAnalysis *AA,
+                                       const DataLayout &DL,
+                                       DominatorTree *DT) {
+  // Do a backwards scan through the CFG from SecondI to FirstI. Look for
+  // instructions which can modify the memory location accessed by SecondI.
+  //
+  // While doing the walk keep track of the address to check. It might be
+  // different in different basic blocks due to PHI translation.
+  using BlockAddressPair = std::pair<BasicBlock *, PHITransAddr>;
+  SmallVector<BlockAddressPair, 16> WorkList;
+  // Keep track of the address we visited each block with. Bail out if we
+  // visit a block with different addresses.
+  DenseMap<BasicBlock *, Value *> Visited;
+
   BasicBlock::iterator FirstBBI(FirstI);
   ++FirstBBI;
   BasicBlock::iterator SecondBBI(SecondI);
   BasicBlock *FirstBB = FirstI->getParent();
   BasicBlock *SecondBB = SecondI->getParent();
   MemoryLocation MemLoc = MemoryLocation::get(SecondI);
+  auto *MemLocPtr = const_cast<Value *>(MemLoc.Ptr);
 
   // Start checking the SecondBB.
-  WorkList.push_back(SecondBB);
+  WorkList.push_back(
+      std::make_pair(SecondBB, PHITransAddr(MemLocPtr, DL, nullptr)));
   bool isFirstBlock = true;
 
   // Check all blocks going backward until we reach the FirstBB.
   while (!WorkList.empty()) {
-    BasicBlock *B = WorkList.pop_back_val();
+    BlockAddressPair Current = WorkList.pop_back_val();
+    BasicBlock *B = Current.first;
+    PHITransAddr &Addr = Current.second;
+    Value *Ptr = Addr.getAddr();
 
     // Ignore instructions before FirstI if this is the FirstBB.
     BasicBlock::iterator BI = (B == FirstBB ? FirstBBI : B->begin());
@@ -652,16 +668,31 @@ static bool memoryIsNotModifiedBetween(Instruction *FirstI,
     for (; BI != EI; ++BI) {
       Instruction *I = &*BI;
       if (I->mayWriteToMemory() && I != SecondI)
-        if (isModSet(AA->getModRefInfo(I, MemLoc)))
+        if (isModSet(AA->getModRefInfo(I, MemLoc.getWithNewPtr(Ptr))))
           return false;
     }
     if (B != FirstBB) {
       assert(B != &FirstBB->getParent()->getEntryBlock() &&
           "Should not hit the entry block because SI must be dominated by LI");
       for (auto PredI = pred_begin(B), PE = pred_end(B); PredI != PE; ++PredI) {
-        if (!Visited.insert(*PredI).second)
+        PHITransAddr PredAddr = Addr;
+        if (PredAddr.NeedsPHITranslationFromBlock(B)) {
+          if (!PredAddr.IsPotentiallyPHITranslatable())
+            return false;
+          if (PredAddr.PHITranslateValue(B, *PredI, DT, false))
+            return false;
+        }
+        Value *TranslatedPtr = PredAddr.getAddr();
+        auto Inserted = Visited.insert(std::make_pair(*PredI, TranslatedPtr));
+        if (!Inserted.second) {
+          // We already visited this block before. If it was with a different
+          // address - bail out!
+          if (TranslatedPtr != Inserted.first->second)
+            return false;
+          // ... otherwise just skip it.
           continue;
-        WorkList.push_back(*PredI);
+        }
+        WorkList.push_back(std::make_pair(*PredI, PredAddr));
       }
     }
   }
@@ -1063,7 +1094,8 @@ static bool eliminateNoopStore(Instruction *Inst, BasicBlock::iterator &BBI,
                                const DataLayout &DL,
                                const TargetLibraryInfo *TLI,
                                InstOverlapIntervalsTy &IOL,
-                               MapVector<Instruction *, bool> &ThrowableInst) {
+                               MapVector<Instruction *, bool> &ThrowableInst,
+                               DominatorTree *DT) {
   // Must be a store instruction.
   StoreInst *SI = dyn_cast<StoreInst>(Inst);
   if (!SI)
@@ -1073,7 +1105,8 @@ static bool eliminateNoopStore(Instruction *Inst, BasicBlock::iterator &BBI,
   // then the store can be removed.
   if (LoadInst *DepLoad = dyn_cast<LoadInst>(SI->getValueOperand())) {
     if (SI->getPointerOperand() == DepLoad->getPointerOperand() &&
-        isRemovable(SI) && memoryIsNotModifiedBetween(DepLoad, SI, AA)) {
+        isRemovable(SI) &&
+        memoryIsNotModifiedBetween(DepLoad, SI, AA, DL, DT)) {
 
       LLVM_DEBUG(
           dbgs() << "DSE: Remove Store Of Load from same pointer:\n  LOAD: "
@@ -1092,7 +1125,7 @@ static bool eliminateNoopStore(Instruction *Inst, BasicBlock::iterator &BBI,
         dyn_cast<Instruction>(GetUnderlyingObject(SI->getPointerOperand(), DL));
 
     if (UnderlyingPointer && isCallocLikeFn(UnderlyingPointer, TLI) &&
-        memoryIsNotModifiedBetween(UnderlyingPointer, SI, AA)) {
+        memoryIsNotModifiedBetween(UnderlyingPointer, SI, AA, DL, DT)) {
       LLVM_DEBUG(
           dbgs() << "DSE: Remove null store to the calloc'ed object:\n  DEAD: "
                  << *Inst << "\n  OBJECT: " << *UnderlyingPointer << '\n');
@@ -1140,7 +1173,7 @@ static bool eliminateDeadStores(BasicBlock &BB, AliasAnalysis *AA,
 
     // eliminateNoopStore will update in iterator, if necessary.
     if (eliminateNoopStore(Inst, BBI, AA, MD, DL, TLI, IOL,
-                           ThrowableInst)) {
+                           ThrowableInst, DT)) {
       MadeChange = true;
       continue;
     }
@@ -1258,7 +1291,7 @@ static bool eliminateDeadStores(BasicBlock &BB, AliasAnalysis *AA,
               Later && isa<ConstantInt>(Later->getValueOperand()) &&
               DL.typeSizeEqualsStoreSize(
                   Later->getValueOperand()->getType()) &&
-              memoryIsNotModifiedBetween(Earlier, Later, AA)) {
+              memoryIsNotModifiedBetween(Earlier, Later, AA, DL, DT)) {
             // If the store we find is:
             //   a) partially overwritten by the store to 'Loc'
             //   b) the later store is fully contained in the earlier one and
