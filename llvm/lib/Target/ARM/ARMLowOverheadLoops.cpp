@@ -815,10 +815,13 @@ void ARMLowOverheadLoops::RevertWhile(MachineInstr *MI) const {
 bool ARMLowOverheadLoops::RevertLoopDec(MachineInstr *MI) const {
   LLVM_DEBUG(dbgs() << "ARM Loops: Reverting to sub: " << *MI);
   MachineBasicBlock *MBB = MI->getParent();
-  MachineInstr *Last = &MBB->back();
   SmallPtrSet<MachineInstr*, 1> Ignore;
-  if (Last->getOpcode() == ARM::t2LoopEnd)
-    Ignore.insert(Last);
+  for (auto I = MachineBasicBlock::iterator(MI), E = MBB->end(); I != E; ++I) {
+    if (I->getOpcode() == ARM::t2LoopEnd) {
+      Ignore.insert(&*I);
+      break;
+    }
+  }
 
   // If nothing defines CPSR between LoopDec and LoopEnd, use a t2SUBS.
   bool SetFlags = RDA->isSafeToDefRegAt(MI, ARM::CPSR, Ignore);
