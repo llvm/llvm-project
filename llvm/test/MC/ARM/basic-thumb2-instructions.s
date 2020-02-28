@@ -1929,6 +1929,7 @@ adds sp, #-4096
         pld [r7, #257]
         pld [r1, #0]
         pld [r1, #-0]
+        pld.w [r1, #-0]
 
 @ CHECK: pld	[r5, #-4]               @ encoding: [0x15,0xf8,0x04,0xfc]
 @ CHECK: pld	[r6, #32]               @ encoding: [0x96,0xf8,0x20,0xf0]
@@ -1936,6 +1937,7 @@ adds sp, #-4096
 @ CHECK: pld	[r6, #257]              @ encoding: [0x96,0xf8,0x01,0xf1]
 @ CHECK: pld	[r7, #257]              @ encoding: [0x97,0xf8,0x01,0xf1]
 @ CHECK: pld	[r1]                    @ encoding: [0x91,0xf8,0x00,0xf0]
+@ CHECK: pld	[r1, #-0]               @ encoding: [0x11,0xf8,0x00,0xfc]
 @ CHECK: pld	[r1, #-0]               @ encoding: [0x11,0xf8,0x00,0xfc]
 
 
@@ -1948,6 +1950,8 @@ adds sp, #-4096
             @   fixup A - offset: 0, value: _foo, kind: fixup_t2_ldst_pcrel_12
 
         pld [pc,#-4095]
+        pld.w [pc,#-4095]
+@ CHECK: pld [pc, #-4095]            @ encoding: [0x1f,0xf8,0xff,0xff]
 @ CHECK: pld [pc, #-4095]            @ encoding: [0x1f,0xf8,0xff,0xff]
 
 
@@ -1956,17 +1960,21 @@ adds sp, #-4096
 @------------------------------------------------------------------------------
         pld [r8, r1]
         pld [r5, r2]
+        pld.w [r5, r2]
         pld [r0, r2, lsl #3]
         pld [r8, r2, lsl #2]
         pld [sp, r2, lsl #1]
         pld [sp, r2, lsl #0]
+        pld.w [sp, r2, lsl #1]
 
 @ CHECK: pld	[r8, r1]                @ encoding: [0x18,0xf8,0x01,0xf0]
+@ CHECK: pld	[r5, r2]                @ encoding: [0x15,0xf8,0x02,0xf0]
 @ CHECK: pld	[r5, r2]                @ encoding: [0x15,0xf8,0x02,0xf0]
 @ CHECK: pld	[r0, r2, lsl #3]        @ encoding: [0x10,0xf8,0x32,0xf0]
 @ CHECK: pld	[r8, r2, lsl #2]        @ encoding: [0x18,0xf8,0x22,0xf0]
 @ CHECK: pld	[sp, r2, lsl #1]        @ encoding: [0x1d,0xf8,0x12,0xf0]
 @ CHECK: pld	[sp, r2]                @ encoding: [0x1d,0xf8,0x02,0xf0]
+@ CHECK: pld	[sp, r2, lsl #1]        @ encoding: [0x1d,0xf8,0x12,0xf0]
 
 @------------------------------------------------------------------------------
 @ PLI(immediate)
@@ -1978,6 +1986,7 @@ adds sp, #-4096
         pli [r7, #257]
         pli [pc, #+4095]
         pli [pc, #-4095]
+        pli.w [pc, #-4095]
 
 @ CHECK: pli	[r5, #-4]               @ encoding: [0x15,0xf9,0x04,0xfc]
 @ CHECK: pli	[r6, #32]               @ encoding: [0x96,0xf9,0x20,0xf0]
@@ -1985,6 +1994,7 @@ adds sp, #-4096
 @ CHECK: pli	[r6, #257]              @ encoding: [0x96,0xf9,0x01,0xf1]
 @ CHECK: pli	[r7, #257]              @ encoding: [0x97,0xf9,0x01,0xf1]
 @ CHECK: pli    [pc, #4095]             @ encoding: [0x9f,0xf9,0xff,0xff]
+@ CHECK: pli    [pc, #-4095]            @ encoding: [0x1f,0xf9,0xff,0xff]
 @ CHECK: pli    [pc, #-4095]            @ encoding: [0x1f,0xf9,0xff,0xff]
 
 
@@ -2003,17 +2013,21 @@ adds sp, #-4096
 @------------------------------------------------------------------------------
         pli [r8, r1]
         pli [r5, r2]
+        pli.w [r5, r2]
         pli [r0, r2, lsl #3]
         pli [r8, r2, lsl #2]
         pli [sp, r2, lsl #1]
         pli [sp, r2, lsl #0]
+        pli.w [sp, r2, lsl #1]
 
 @ CHECK: pli	[r8, r1]                @ encoding: [0x18,0xf9,0x01,0xf0]
+@ CHECK: pli	[r5, r2]                @ encoding: [0x15,0xf9,0x02,0xf0]
 @ CHECK: pli	[r5, r2]                @ encoding: [0x15,0xf9,0x02,0xf0]
 @ CHECK: pli	[r0, r2, lsl #3]        @ encoding: [0x10,0xf9,0x32,0xf0]
 @ CHECK: pli	[r8, r2, lsl #2]        @ encoding: [0x18,0xf9,0x22,0xf0]
 @ CHECK: pli	[sp, r2, lsl #1]        @ encoding: [0x1d,0xf9,0x12,0xf0]
 @ CHECK: pli	[sp, r2]                @ encoding: [0x1d,0xf9,0x02,0xf0]
+@ CHECK: pli	[sp, r2, lsl #1]        @ encoding: [0x1d,0xf9,0x12,0xf0]
 
 @------------------------------------------------------------------------------
 @ POP (alias)
