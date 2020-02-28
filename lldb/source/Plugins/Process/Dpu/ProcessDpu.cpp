@@ -330,6 +330,13 @@ Status ProcessDpu::Detach() {
   Status error;
   bool success;
 
+  if (m_dpu->PrintfEnable()) {
+    RemoveSoftwareBreakpoint(m_dpu->GetOpenPrintfSequenceAddr() |
+                             k_dpu_iram_base);
+    RemoveSoftwareBreakpoint(m_dpu->GetClosePrintfSequenceAddr() |
+                             k_dpu_iram_base);
+  }
+
   m_dpu->ResumeThreads(NULL, false);
 
   Dpu *dpu_neighbor = m_rank->GetDpuFromSliceIdAndDpuId(
