@@ -67,6 +67,10 @@ int main(int argc, char *argv[]) {
                AMD_COMGR_STATUS_SUCCESS);
   parseIsaName(dataAction, "amdgcn-amd-amdhsa--gfx801+xnack",
                AMD_COMGR_STATUS_SUCCESS);
+  parseIsaName(dataAction, "amdgcn-amd-amdhsa--gfx908+xnack+sram-ecc",
+               AMD_COMGR_STATUS_SUCCESS);
+  parseIsaName(dataAction, "amdgcn-amd-amdhsa--gfx1010+xnack",
+               AMD_COMGR_STATUS_SUCCESS);
   parseIsaName(dataAction, "", AMD_COMGR_STATUS_SUCCESS);
   parseIsaName(dataAction, NULL, AMD_COMGR_STATUS_SUCCESS);
   parseIsaName(dataAction, "amdgcn-amd-amdhsa-opencl-gfx803",
