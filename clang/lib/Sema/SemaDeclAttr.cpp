@@ -6561,7 +6561,9 @@ static void handleObjCExternallyRetainedAttr(Sema &S, Decl *D,
 
   // If D is a function-like declaration (method, block, or function), then we
   // make every parameter psuedo-strong.
-  for (unsigned I = 0, E = getFunctionOrMethodNumParams(D); I != E; ++I) {
+  unsigned NumParams =
+      hasFunctionProto(D) ? getFunctionOrMethodNumParams(D) : 0;
+  for (unsigned I = 0; I != NumParams; ++I) {
     auto *PVD = const_cast<ParmVarDecl *>(getFunctionOrMethodParam(D, I));
     QualType Ty = PVD->getType();
 
