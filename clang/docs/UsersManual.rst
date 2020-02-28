@@ -3297,59 +3297,58 @@ Execute ``clang-cl /?`` to see a list of supported options:
     CL.EXE COMPATIBILITY OPTIONS:
       /?                      Display available options
       /arch:<value>           Set architecture for code generation
-      /Brepro-                Emit an object file which cannot be reproduced over time
-      /Brepro                 Emit an object file which can be reproduced over time
+      /Brepro-                Write current time into COFF output (default)
+      /Brepro                 Do not write current time into COFF output (breaks link.exe /incremental)
       /clang:<arg>            Pass <arg> to the clang driver
-      /C                      Don't discard comments when preprocessing
+      /C                      Do not discard comments when preprocessing
       /c                      Compile only
       /d1PP                   Retain macro definitions in /E mode
       /d1reportAllClassLayout Dump record layout information
-      /diagnostics:caret      Enable caret and column diagnostics (on by default)
+      /diagnostics:caret      Enable caret and column diagnostics (default)
       /diagnostics:classic    Disable column and caret diagnostics
       /diagnostics:column     Disable caret diagnostics but keep column info
       /D <macro[=value]>      Define macro
-      /EH<value>              Exception handling model
+      /EH<value>              Set exception handling model
       /EP                     Disable linemarker output and preprocess to stdout
       /execution-charset:<value>
-                              Runtime encoding, supports only UTF-8
+                              Set runtime encoding, supports only UTF-8
       /E                      Preprocess to stdout
       /fallback               Fall back to cl.exe if clang-cl fails to compile
       /FA                     Output assembly code file during compilation
-      /Fa<file or directory>  Output assembly code to this file during compilation (with /FA)
-      /Fe<file or directory>  Set output executable file or directory (ends in / or \)
+      /Fa<file or dir/>       Set assembly output file name (with /FA)
+      /Fe<file or dir/>       Set output executable file name
       /FI <value>             Include file before parsing
       /Fi<file>               Set preprocess output file name (with /P)
-      /Fo<file or directory>  Set output object file, or directory (ends in / or \) (with /c)
+      /Fo<file or dir/>       Set output object file (with /c)
       /fp:except-
       /fp:except
       /fp:fast
       /fp:precise
       /fp:strict
-      /Fp<filename>           Set pch filename (with /Yc and /Yu)
+      /Fp<file>               Set pch file name (with /Yc and /Yu)
       /GA                     Assume thread-local variables are defined in the executable
       /Gd                     Set __cdecl as a default calling convention
       /GF-                    Disable string pooling
       /GF                     Enable string pooling (default)
-      /GR-                    Disable emission of RTTI data
+      /GR-                    Do not emit RTTI data
       /Gregcall               Set __regcall as a default calling convention
-      /GR                     Enable emission of RTTI data
+      /GR                     Emit RTTI data (default)
       /Gr                     Set __fastcall as a default calling convention
       /GS-                    Disable buffer security check
       /GS                     Enable buffer security check (default)
       /Gs                     Use stack probes (default)
       /Gs<value>              Set stack probe size (default 4096)
-      /guard:<value>          Enable Control Flow Guard with /guard:cf,
-                              or only the table with /guard:cf,nochecks
+      /guard:<value>          Enable Control Flow Guard with /guard:cf, or only the table with /guard:cf,nochecks
       /Gv                     Set __vectorcall as a default calling convention
-      /Gw-                    Don't put each data item in its own section
+      /Gw-                    Do not put each data item in its own section (default)
       /Gw                     Put each data item in its own section
-      /GX-                    Disable exception handling
-      /GX                     Enable exception handling
-      /Gy-                    Don't put each function in its own section (default)
+      /GX-                    Deprecated (like not passing /EH)
+      /GX                     Deprecated; use /EHsc
+      /Gy-                    Do not put each function in its own section (default)
       /Gy                     Put each function in its own section
       /Gz                     Set __stdcall as a default calling convention
       /help                   Display available options
-      /imsvc <dir>            Add directory to system include search path, as if part of %INCLUDE%
+      /imsvc <dir>            Add <dir> to system include search path, as if in %INCLUDE%
       /I <dir>                Add directory to include search path
       /J                      Make char type unsigned
       /LDd                    Create debug DLL
@@ -3359,35 +3358,37 @@ Execute ``clang-cl /?`` to see a list of supported options:
       /MD                     Use DLL run-time
       /MTd                    Use static debug run-time
       /MT                     Use static run-time
-      /O0                     Disable optimization
-      /O1                     Optimize for size  (same as /Og     /Os /Oy /Ob2 /GF /Gy)
-      /O2                     Optimize for speed (same as /Og /Oi /Ot /Oy /Ob2 /GF /Gy)
+      /O1                     Optimize for size  (like /Og     /Os /Oy /Ob2 /GF /Gy)
+      /O2                     Optimize for speed (like /Og /Oi /Ot /Oy /Ob2 /GF /Gy)
       /Ob0                    Disable function inlining
-      /Ob1                    Only inline functions which are (explicitly or implicitly) marked inline
+      /Ob1                    Only inline functions explicitly or implicitly marked inline
       /Ob2                    Inline functions as deemed beneficial by the compiler
       /Od                     Disable optimization
       /Og                     No effect
       /Oi-                    Disable use of builtin functions
       /Oi                     Enable use of builtin functions
+      /openmp-                Disable OpenMP support
+      /openmp:experimental    Enable OpenMP support with experimental SIMD support
+      /openmp                 Enable OpenMP support
       /Os                     Optimize for size
       /Ot                     Optimize for speed
-      /Ox                     Deprecated (same as /Og /Oi /Ot /Oy /Ob2); use /O2 instead
+      /Ox                     Deprecated (like /Og /Oi /Ot /Oy /Ob2); use /O2
       /Oy-                    Disable frame pointer omission (x86 only, default)
       /Oy                     Enable frame pointer omission (x86 only)
       /O<flags>               Set multiple /O flags at once; e.g. '/O2y-' for '/O2 /Oy-'
-      /o <file or directory>  Set output file or directory (ends in / or \)
+      /o <file or dir/>       Deprecated (set output file name); use /Fe or /Fe
       /P                      Preprocess to file
       /Qvec-                  Disable the loop vectorization passes
       /Qvec                   Enable the loop vectorization passes
-      /showFilenames-         Don't print the name of each compiled file (default)
+      /showFilenames-         Do not print the name of each compiled file (default)
       /showFilenames          Print the name of each compiled file
       /showIncludes           Print info about included files to stderr
-      /source-charset:<value> Source encoding, supports only UTF-8
-      /std:<value>            Language standard to compile for
+      /source-charset:<value> Set source encoding, supports only UTF-8
+      /std:<value>            Set C++ version (c++14,c++17,c++latest)
       /TC                     Treat all source files as C
-      /Tc <filename>          Specify a C source file
+      /Tc <file>              Treat <file> as C source file
       /TP                     Treat all source files as C++
-      /Tp <filename>          Specify a C++ source file
+      /Tp <file>              Treat <file> as C++ source file
       /utf-8                  Set source and runtime encoding to UTF-8 (default)
       /U <macro>              Undefine macro
       /vd<value>              Control vtordisp placement
@@ -3404,17 +3405,19 @@ Execute ``clang-cl /?`` to see a list of supported options:
       /W3                     Enable -Wall
       /W4                     Enable -Wall and -Wextra
       /Wall                   Enable -Weverything
-      /WX-                    Do not treat warnings as errors
+      /WX-                    Do not treat warnings as errors (default)
       /WX                     Treat warnings as errors
       /w                      Disable all warnings
-      /X                      Don't add %INCLUDE% to the include search path
+      /X                      Do not add %INCLUDE% to include search path
       /Y-                     Disable precompiled headers, overrides /Yc and /Yu
       /Yc<filename>           Generate a pch file for all code up to and including <filename>
       /Yu<filename>           Load a pch file and use it instead of all code up to and including <filename>
       /Z7                     Enable CodeView debug information in object files
-      /Zc:char8_t             Enable C++2a char8_t type
-      /Zc:char8_t-            Disable C++2a char8_t type
-      /Zc:dllexportInlines-   Don't dllexport/dllimport inline member functions of dllexport/import classes
+      /Zc:alignedNew-         Disable C++17 aligned allocation functions
+      /Zc:alignedNew          Enable C++17 aligned allocation functions
+      /Zc:char8_t-            Disable char8_t from c++2a
+      /Zc:char8_t             Enable char8_t from C++2a
+      /Zc:dllexportInlines-   Do not dllexport/dllimport inline member functions of dllexport/import classes
       /Zc:dllexportInlines    dllexport/dllimport inline member functions of dllexport/import classes (default)
       /Zc:sizedDealloc-       Disable C++14 sized global deallocation functions
       /Zc:sizedDealloc        Enable C++14 sized global deallocation functions
@@ -3423,18 +3426,21 @@ Execute ``clang-cl /?`` to see a list of supported options:
       /Zc:threadSafeInit      Enable thread-safe initialization of static variables
       /Zc:trigraphs-          Disable trigraphs (default)
       /Zc:trigraphs           Enable trigraphs
-      /Zc:twoPhase-           Disable two-phase name lookup in templates
+      /Zc:twoPhase-           Disable two-phase name lookup in templates (default)
       /Zc:twoPhase            Enable two-phase name lookup in templates
       /Zd                     Emit debug line number tables only
-      /Zi                     Alias for /Z7. Does not produce PDBs.
-      /Zl                     Don't mention any default libraries in the object file
-      /Zp                     Set the default maximum struct packing alignment to 1
-      /Zp<value>              Specify the default maximum struct packing alignment
+      /Zi                     Like /Z7
+      /Zl                     Do not let object file auto-link default libraries
+      /Zp                     Set default maximum struct packing alignment to 1
+      /Zp<value>              Set default maximum struct packing alignment
       /Zs                     Syntax-check only
 
     OPTIONS:
       -###                    Print (but do not run) the commands to run for this compilation
       --analyze               Run the static analyzer
+      -enable-trivial-auto-var-init-zero-knowing-it-will-be-removed-from-clang
+                              Trivial automatic variable initialization to zero is only here for benchmarks, it'll
+                              eventually be removed, and I'm OK with that because I'm only using it to benchmark
       -faddrsig               Emit an address-significance table
       -fansi-escape-codes     Use ANSI escape codes for diagnostics
       -fblocks                Enable the 'blocks' language feature
@@ -3444,6 +3450,13 @@ Execute ``clang-cl /?`` to see a list of supported options:
       -fcomplete-member-pointers
                               Require member pointer base types to be complete if they would be significant under the Microsoft ABI
       -fcoverage-mapping      Generate coverage mapping to enable code coverage analysis
+      -fcs-profile-generate=<directory>
+                              Generate instrumented code to collect context sensitive execution counts into
+                              <directory>/default.profraw (overridden by LLVM_PROFILE_FILE env var)
+      -fcs-profile-generate   Generate instrumented code to collect context sensitive execution counts into
+                              default.profraw (overridden by LLVM_PROFILE_FILE env var)
+      -fdebug-compilation-dir <value>
+                              The compilation directory to embed in the debug info.
       -fdebug-macro           Emit macro debug information
       -fdelayed-template-parsing
                               Parse templated function definitions at the end of the translation unit
@@ -3451,16 +3464,17 @@ Execute ``clang-cl /?`` to see a list of supported options:
                               Print absolute paths in diagnostics
       -fdiagnostics-parseable-fixits
                               Print fix-its in machine parseable form
+      -fgnuc-version=<value>  Sets various macros to claim compatibility with the given GCC version (default is 4.2.1)
+      -fintegrated-cc1        Run cc1 in-process
       -flto=<value>           Set LTO mode to either 'full' or 'thin'
       -flto                   Enable LTO in 'full' mode
       -fmerge-all-constants   Allow merging of constants
       -fms-compatibility-version=<value>
-                              Dot-separated value representing the Microsoft compiler version
-                              number to report in _MSC_VER (0 = don't define it (default))
+                              Dot-separated value representing the Microsoft compiler version number to report in
+                              _MSC_VER (0 = don't define it (default))
       -fms-compatibility      Enable full Microsoft Visual C++ compatibility
       -fms-extensions         Accept some non-standard constructs supported by the Microsoft compiler
-      -fmsc-version=<value>   Microsoft compiler version number to report in _MSC_VER
-                              (0 = don't define it (default))
+      -fmsc-version=<value>   Microsoft compiler version number to report in _MSC_VER (0 = don't define it (default))
       -fno-addrsig            Don't emit an address-significance table
       -fno-builtin-<value>    Disable implicit builtin knowledge of a specific function
       -fno-builtin            Disable implicit builtin knowledge of functions
@@ -3471,6 +3485,11 @@ Execute ``clang-cl /?`` to see a list of supported options:
       -fno-debug-macro        Do not emit macro debug information
       -fno-delayed-template-parsing
                               Disable delayed template parsing
+      -fno-integrated-cc1     Spawn a separate process for each cc1
+      -fno-profile-generate   Disable generation of profile instrumentation.
+      -fno-profile-instr-generate
+                              Disable generation of profile instrumentation.
+      -fno-profile-instr-use  Disable using instrumentation data for profile-guided optimization
       -fno-sanitize-address-poison-custom-array-cookie
                               Disable poisoning array cookies when using custom operator new[] in AddressSanitizer
       -fno-sanitize-address-use-after-scope
@@ -3478,6 +3497,8 @@ Execute ``clang-cl /?`` to see a list of supported options:
       -fno-sanitize-address-use-odr-indicator
                               Disable ODR indicator globals
       -fno-sanitize-blacklist Don't use blacklist file for sanitizers
+      -fno-sanitize-cfi-canonical-jump-tables
+                              Do not make the jump table addresses canonical in the symbol table
       -fno-sanitize-cfi-cross-dso
                               Disable control flow integrity (CFI) checks for cross-DSO calls.
       -fno-sanitize-coverage=<value>
@@ -3498,17 +3519,26 @@ Execute ``clang-cl /?`` to see a list of supported options:
       -fno-sanitize-trap=<value>
                               Disable trapping for specified sanitizers
       -fno-standalone-debug   Limit debug information produced to reduce size of debug binary
+      -fno-temp-file          Directly create compilation output files. This may lead to incorrect incremental builds if the compiler crashes
       -fobjc-runtime=<value>  Specify the target Objective-C runtime kind and version
+      -forder-file-instrumentation
+                              Generate instrumented code to collect order file into default.profraw file
+                              (overridden by '=' form of option or LLVM_PROFILE_FILE env var)
       -fprofile-exclude-files=<value>
                               Instrument only functions from files where names don't match all the regexes separated by a semi-colon
       -fprofile-filter-files=<value>
                               Instrument only functions from files where names match any regex separated by a semi-colon
+      -fprofile-generate=<directory>
+                              Generate instrumented code to collect execution counts into
+                              <directory>/default.profraw (overridden by LLVM_PROFILE_FILE env var)
+      -fprofile-generate      Generate instrumented code to collect execution counts into
+                              default.profraw (overridden by LLVM_PROFILE_FILE env var)
       -fprofile-instr-generate=<file>
-                              Generate instrumented code to collect execution counts into <file>
-                              (overridden by LLVM_PROFILE_FILE env var)
+                              Generate instrumented code to collect execution counts into
+                              <file> (overridden by LLVM_PROFILE_FILE env var)
       -fprofile-instr-generate
-                              Generate instrumented code to collect execution counts into default.profraw file
-                              (overridden by '=' form of option or LLVM_PROFILE_FILE env var)
+                              Generate instrumented code to collect execution counts into
+                              default.profraw file (overridden by '=' form of option or LLVM_PROFILE_FILE env var)
       -fprofile-instr-use=<value>
                               Use instrumentation data for profile-guided optimization
       -fprofile-remapping-file=<file>
@@ -3522,9 +3552,12 @@ Execute ``clang-cl /?`` to see a list of supported options:
       -fsanitize-address-use-after-scope
                               Enable use-after-scope detection in AddressSanitizer
       -fsanitize-address-use-odr-indicator
-                              Enable ODR indicator globals to avoid false ODR violation reports in partially sanitized programs at the cost of an increase in binary size
+                              Enable ODR indicator globals to avoid false ODR violation reports in partially sanitized
+                              programs at the cost of an increase in binary size
       -fsanitize-blacklist=<value>
                               Path to blacklist file for sanitizers
+      -fsanitize-cfi-canonical-jump-tables
+                              Make the jump table addresses canonical in the symbol table
       -fsanitize-cfi-cross-dso
                               Enable control flow integrity (CFI) checks for cross-DSO calls.
       -fsanitize-cfi-icall-generalize-pointers
@@ -3532,7 +3565,8 @@ Execute ``clang-cl /?`` to see a list of supported options:
       -fsanitize-coverage=<value>
                               Specify the type of coverage instrumentation for Sanitizers
       -fsanitize-hwaddress-abi=<value>
-                              Select the HWAddressSanitizer ABI to target (interceptor or platform, default interceptor)
+                              Select the HWAddressSanitizer ABI to target (interceptor or platform,
+                              default interceptor). This option is currently unused.
       -fsanitize-memory-track-origins=<value>
                               Enable origins tracking in MemorySanitizer
       -fsanitize-memory-track-origins
@@ -3542,6 +3576,8 @@ Execute ``clang-cl /?`` to see a list of supported options:
       -fsanitize-recover=<value>
                               Enable recovery for specified sanitizers
       -fsanitize-stats        Enable sanitizer statistics gathering.
+      -fsanitize-system-blacklist=<value>
+                              Path to system blacklist file for sanitizers
       -fsanitize-thread-atomics
                               Enable atomic operations instrumentation in ThreadSanitizer (default)
       -fsanitize-thread-func-entry-exit
@@ -3551,18 +3587,31 @@ Execute ``clang-cl /?`` to see a list of supported options:
       -fsanitize-trap=<value> Enable trapping for specified sanitizers
       -fsanitize-undefined-strip-path-components=<number>
                               Strip (or keep only, if negative) a given number of path components when emitting check metadata.
-      -fsanitize=<check>      Turn on runtime checks for various forms of undefined or suspicious
-                              behavior. See user manual for available checks
+      -fsanitize=<check>      Turn on runtime checks for various forms of undefined or suspicious behavior. See user manual for available checks
       -fsplit-lto-unit        Enables splitting of the LTO unit.
       -fstandalone-debug      Emit full debug info for all types used by the program
+      -fthin-link-bitcode=<value>
+                              Write minimized bitcode to <file> for the ThinLTO thin link only
+      -fthinlto-index=<value> Perform ThinLTO importing using provided function summary index
+      -ftime-trace-granularity=<value>
+                              Minimum time granularity (in microseconds) traced by time profiler
+      -ftime-trace            Turn on time profiler. Generates JSON file based on output filename.
+      -ftrivial-auto-var-init=<value>
+                              Initialize trivial automatic stack variables: uninitialized (default) | pattern
+      -fvirtual-function-elimination
+                              Enables dead virtual function elimination optimization. Requires -flto=full
       -fwhole-program-vtables Enables whole-program vtable optimization. Requires -flto
       -gcodeview-ghash        Emit type record hashes in a .debug$H section
       -gcodeview              Generate CodeView debug information
+      -gdwarf                 Generate source-level debug information with the default dwarf version
       -gline-directives-only  Emit debug line info directives only
       -gline-tables-only      Emit debug line number tables only
+      -gno-inline-line-tables Don't emit inline line tables
       -miamcu                 Use Intel MCU ABI
       -mllvm <value>          Additional arguments to forward to LLVM's option processing
       -nobuiltininc           Disable builtin #include directories
+      -print-supported-cpus   Print supported cpu models for the given target
+                              (if target is not specified, it will print the supported cpus for the default target)
       -Qunused-arguments      Don't emit warning for unused driver arguments
       -R<remark>              Enable the specified remark
       --target=<value>        Generate code for the given target
