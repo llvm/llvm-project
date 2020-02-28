@@ -53,6 +53,8 @@ class DpuListTestCase(TestBase):
 
         breakpoint_poll = target.BreakpointCreateByName("dpu_poll_rank")
         process.Continue()
+
+        thread = process.GetSelectedThread()
         self.assertTrue(thread.GetStopReason() == lldb.eStopReasonBreakpoint)
         target.BreakpointDelete(breakpoint_poll.GetID())
 
