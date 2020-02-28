@@ -40,7 +40,7 @@ void naivelyFuseParallelOps(Region &region);
 ///                                           min(tileSize[1], %arg3-%j1))
 ///                                        step (%arg4, %arg5)
 /// The old loop is replaced with the new one.
-void tileParallelLoop(ParallelOp op, ArrayRef<int64_t> tileSizes);
+void tileParallelLoop(ParallelOp op, llvm::ArrayRef<int64_t> tileSizes);
 
 } // namespace loop
 } // namespace mlir
