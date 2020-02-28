@@ -74,6 +74,7 @@ private:
 protected:
   AssumptionCacheTracker *ACT;
   ProfileSummaryInfo *PSI;
+  std::function<const TargetLibraryInfo &(Function &)> GetTLI;
   ImportedFunctionsInliningStatistics ImportedFunctionsStats;
 };
 

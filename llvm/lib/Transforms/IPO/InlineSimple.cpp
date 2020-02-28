@@ -71,7 +71,7 @@ public:
     };
     return llvm::getInlineCost(
         cast<CallBase>(*CS.getInstruction()), Params, TTI, GetAssumptionCache,
-        /*GetBFI=*/None, PSI, RemarksEnabled ? &ORE : nullptr);
+        /*GetBFI=*/None, GetTLI, PSI, RemarksEnabled ? &ORE : nullptr);
   }
 
   bool runOnSCC(CallGraphSCC &SCC) override;
