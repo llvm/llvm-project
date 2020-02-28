@@ -15,8 +15,7 @@
 #include "unparse.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/indirection.h"
-#include <ostream>
-#include <sstream>
+#include "llvm/Support/raw_ostream.h"
 #include <string>
 #include <type_traits>
 
@@ -37,7 +36,7 @@ struct HasSource<T, decltype((void)T::source, 0)> : std::true_type {};
 class ParseTreeDumper {
 public:
   explicit ParseTreeDumper(
-      std::ostream &out, const AnalyzedObjectsAsFortran *asFortran = nullptr)
+      llvm::raw_ostream &out, const AnalyzedObjectsAsFortran *asFortran = nullptr)
     : out_(out), asFortran_{asFortran} {}
 
   static constexpr const char *GetNodeName(const char *) { return "char *"; }
@@ -761,7 +760,8 @@ public:
 protected:
   // Return a Fortran representation of this node to include in the dump
   template<typename T> std::string AsFortran(const T &x) {
-    std::ostringstream ss;
+    std::string buf;
+    llvm::raw_string_ostream ss{buf};
     if constexpr (std::is_same_v<T, Expr>) {
       if (asFortran_ && x.typedExpr) {
         asFortran_->expr(ss, *x.typedExpr);
@@ -784,7 +784,7 @@ protected:
         std::is_same_v<T, std::int64_t> || std::is_same_v<T, std::uint64_t>) {
       ss << x;
     }
-    if (ss.tellp()) {
+    if (ss.tell()) {
       return ss.str();
     }
     if constexpr (std::is_same_v<T, Name> || HasSource<T>::value) {
@@ -830,13 +830,13 @@ protected:
 
 private:
   int indent_{0};
-  std::ostream &out_;
+  llvm::raw_ostream &out_;
   const AnalyzedObjectsAsFortran *const asFortran_;
   bool emptyline_{false};
 };
 
 template<typename T>
-void DumpTree(std::ostream &out, const T &x,
+void DumpTree(llvm::raw_ostream &out, const T &x,
     const AnalyzedObjectsAsFortran *asFortran = nullptr) {
   ParseTreeDumper dumper{out, asFortran};
   Walk(x, dumper);

@@ -11,6 +11,7 @@
 #include "flang/Common/idioms.h"
 #include "flang/Decimal/decimal.h"
 #include "flang/Parser/characters.h"
+#include "llvm/Support/raw_ostream.h"
 #include <limits>
 
 namespace Fortran::evaluate::value {
@@ -478,8 +479,8 @@ template<typename W, int P> std::string Real<W, P>::DumpHexadecimal() const {
 }
 
 template<typename W, int P>
-std::ostream &Real<W, P>::AsFortran(
-    std::ostream &o, int kind, bool minimal) const {
+llvm::raw_ostream &Real<W, P>::AsFortran(
+    llvm::raw_ostream &o, int kind, bool minimal) const {
   if (IsNotANumber()) {
     o << "(0._" << kind << "/0.)";
   } else if (IsInfinite()) {

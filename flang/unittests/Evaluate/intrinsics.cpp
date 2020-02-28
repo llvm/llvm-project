@@ -4,8 +4,8 @@
 #include "flang/Evaluate/expression.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Parser/provenance.h"
+#include "llvm/Support/raw_ostream.h"
 #include <initializer_list>
-#include <iostream>
 #include <map>
 #include <string>
 
@@ -31,7 +31,7 @@ public:
   parser::ContextualMessages Messages(parser::Messages &buffer) {
     return parser::ContextualMessages{cooked_.data(), &buffer};
   }
-  void Emit(std::ostream &o, const parser::Messages &messages) {
+  void Emit(llvm::raw_ostream &o, const parser::Messages &messages) {
     messages.Emit(o, cooked_);
   }
 
@@ -88,17 +88,18 @@ struct TestCall {
       int rank = 0, bool isElemental = false) {
     Marshal();
     parser::CharBlock fName{strings(name)};
-    std::cout << "function: " << fName.ToString();
+    llvm::outs() << "function: " << fName.ToString();
     char sep{'('};
     for (const auto &a : args) {
-      std::cout << sep;
+      llvm::outs() << sep;
       sep = ',';
-      a->AsFortran(std::cout);
+      a->AsFortran(llvm::outs());
     }
     if (sep == '(') {
-      std::cout << '(';
+      llvm::outs() << '(';
     }
-    std::cout << ')' << std::endl;
+    llvm::outs() << ')' << '\n';
+    llvm::outs().flush();
     CallCharacteristics call{fName.ToString()};
     auto messages{strings.Messages(buffer)};
     FoldingContext context{messages, defaults, table};
@@ -126,7 +127,7 @@ struct TestCall {
       TEST((messages.messages() && messages.messages()->AnyFatalError()) ||
           name == "bad");
     }
-    strings.Emit(std::cout, buffer);
+    strings.Emit(llvm::outs(), buffer);
   }
 
   const common::IntrinsicTypeDefaultKinds &defaults;
@@ -143,7 +144,7 @@ void TestIntrinsics() {
   MATCH(4, defaults.GetDefaultKind(TypeCategory::Integer));
   MATCH(4, defaults.GetDefaultKind(TypeCategory::Real));
   IntrinsicProcTable table{IntrinsicProcTable::Configure(defaults)};
-  table.Dump(std::cout);
+  table.Dump(llvm::outs());
 
   using Int1 = Type<TypeCategory::Integer, 1>;
   using Int4 = Type<TypeCategory::Integer, 4>;

@@ -13,6 +13,10 @@
 #include <string>
 #include <vector>
 
+namespace llvm {
+class raw_ostream;
+}
+
 namespace Fortran::parser {
 struct Program;
 }
@@ -24,7 +28,7 @@ class Symbol;
 
 bool ResolveNames(SemanticsContext &, const parser::Program &);
 void ResolveSpecificationParts(SemanticsContext &, const Symbol &);
-void DumpSymbols(std::ostream &);
+void DumpSymbols(llvm::raw_ostream &);
 
 }
 

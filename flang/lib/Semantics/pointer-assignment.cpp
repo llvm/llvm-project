@@ -19,6 +19,7 @@
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
+#include "llvm/Support/raw_ostream.h"
 #include <optional>
 #include <set>
 #include <string>
@@ -232,7 +233,8 @@ void PointerAssignmentChecker::Check(const evaluate::Designator<T> &d) {
   if (msg) {
     auto restorer{common::ScopedSet(lhs_, last)};
     if (auto *m{std::get_if<MessageFixedText>(&*msg)}) {
-      std::ostringstream ss;
+      std::string buf;
+      llvm::raw_string_ostream ss{buf};
       d.AsFortran(ss);
       Say(*m, description_, ss.str());
     } else {

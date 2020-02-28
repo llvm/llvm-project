@@ -1,4 +1,5 @@
 #include "fp-testing.h"
+#include "llvm/Support/Errno.h"
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -15,11 +16,13 @@ ScopedHostFloatingPointEnvironment::ScopedHostFloatingPointEnvironment(
 ) {
   errno = 0;
   if (feholdexcept(&originalFenv_) != 0) {
-    std::fprintf(stderr, "feholdexcept() failed: %s\n", std::strerror(errno));
+    std::fprintf(stderr, "feholdexcept() failed: %s\n",
+        llvm::sys::StrError(errno).c_str());
     std::abort();
   }
   if (fegetenv(&currentFenv_) != 0) {
-    std::fprintf(stderr, "fegetenv() failed: %s\n", std::strerror(errno));
+    std::fprintf(
+        stderr, "fegetenv() failed: %s\n", llvm::sys::StrError(errno).c_str());
     std::abort();
   }
 #if __x86_64__
@@ -38,7 +41,8 @@ ScopedHostFloatingPointEnvironment::ScopedHostFloatingPointEnvironment(
 #endif
   errno = 0;
   if (fesetenv(&currentFenv_) != 0) {
-    std::fprintf(stderr, "fesetenv() failed: %s\n", std::strerror(errno));
+    std::fprintf(
+        stderr, "fesetenv() failed: %s\n", llvm::sys::StrError(errno).c_str());
     std::abort();
   }
 }
@@ -46,7 +50,8 @@ ScopedHostFloatingPointEnvironment::ScopedHostFloatingPointEnvironment(
 ScopedHostFloatingPointEnvironment::~ScopedHostFloatingPointEnvironment() {
   errno = 0;
   if (fesetenv(&originalFenv_) != 0) {
-    std::fprintf(stderr, "fesetenv() failed: %s\n", std::strerror(errno));
+    std::fprintf(
+        stderr, "fesetenv() failed: %s\n", llvm::sys::StrError(errno).c_str());
     std::abort();
   }
 }

@@ -9,6 +9,7 @@
 #include "flang/Parser/message.h"
 #include "flang/Common/idioms.h"
 #include "flang/Parser/char-set.h"
+#include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cstdarg>
 #include <cstddef>
@@ -19,7 +20,7 @@
 
 namespace Fortran::parser {
 
-std::ostream &operator<<(std::ostream &o, const MessageFixedText &t) {
+llvm::raw_ostream &operator<<(llvm::raw_ostream &o, const MessageFixedText &t) {
   std::size_t n{t.text().size()};
   for (std::size_t j{0}; j < n; ++j) {
     o << t.text()[j];
@@ -187,8 +188,8 @@ std::optional<ProvenanceRange> Message::GetProvenanceRange(
       location_);
 }
 
-void Message::Emit(
-    std::ostream &o, const CookedSource &cooked, bool echoSourceLine) const {
+void Message::Emit(llvm::raw_ostream &o, const CookedSource &cooked,
+    bool echoSourceLine) const {
   std::optional<ProvenanceRange> provenanceRange{GetProvenanceRange(cooked)};
   std::string text;
   if (IsFatal()) {
@@ -306,8 +307,8 @@ void Messages::ResolveProvenances(const CookedSource &cooked) {
   }
 }
 
-void Messages::Emit(
-    std::ostream &o, const CookedSource &cooked, bool echoSourceLines) const {
+void Messages::Emit(llvm::raw_ostream &o, const CookedSource &cooked,
+    bool echoSourceLines) const {
   std::vector<const Message *> sorted;
   for (const auto &msg : messages_) {
     sorted.push_back(&msg);

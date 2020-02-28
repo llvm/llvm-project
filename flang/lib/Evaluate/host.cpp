@@ -9,7 +9,7 @@
 #include "host.h"
 
 #include "flang/Common/idioms.h"
-#include <cerrno>
+#include "llvm/Support/Errno.h"
 #include <cfenv>
 
 namespace Fortran::evaluate::host {
@@ -20,12 +20,12 @@ void HostFloatingPointEnvironment::SetUpHostFloatingPointEnvironment(
   errno = 0;
   if (feholdexcept(&originalFenv_) != 0) {
     common::die("Folding with host runtime: feholdexcept() failed: %s",
-        std::strerror(errno));
+        llvm::sys::StrError(errno).c_str());
     return;
   }
   if (fegetenv(&currentFenv_) != 0) {
     common::die("Folding with host runtime: fegetenv() failed: %s",
-        std::strerror(errno));
+        llvm::sys::StrError(errno).c_str());
     return;
   }
 #if __x86_64__
@@ -72,7 +72,7 @@ void HostFloatingPointEnvironment::SetUpHostFloatingPointEnvironment(
   errno = 0;
   if (fesetenv(&currentFenv_) != 0) {
     common::die("Folding with host runtime: fesetenv() failed: %s",
-        std::strerror(errno));
+        llvm::sys::StrError(errno).c_str());
     return;
   }
   switch (context.rounding().mode) {
@@ -127,10 +127,11 @@ void HostFloatingPointEnvironment::CheckAndRestoreFloatingPointEnvironment(
   }
   errno = 0;
   if (fesetenv(&originalFenv_) != 0) {
-    std::fprintf(stderr, "fesetenv() failed: %s\n", std::strerror(errno));
+    std::fprintf(
+        stderr, "fesetenv() failed: %s\n", llvm::sys::StrError(errno).c_str());
     common::die(
         "Folding with host runtime: fesetenv() failed while restoring fenv: %s",
-        std::strerror(errno));
+        llvm::sys::StrError(errno).c_str());
   }
   errno = 0;
 }

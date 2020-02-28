@@ -21,6 +21,7 @@ add_executable(format-test
 target_link_libraries(format-test
   FortranRuntime
   RuntimeTesting
+  LLVMSupport
 )
 
 add_test(Format format-test)
@@ -32,6 +33,7 @@ add_executable(hello-world
 target_link_libraries(hello-world
   FortranRuntime
   RuntimeTesting
+  LLVMSupport
 )
 
 add_test(HelloWorld hello-world)
@@ -42,6 +44,7 @@ add_executable(external-hello-world
 
 target_link_libraries(external-hello-world
   FortranRuntime
+  LLVMSupport
 )
 
 add_executable(list-input-test
@@ -51,6 +54,7 @@ add_executable(list-input-test
 target_link_libraries(list-input-test
   FortranRuntime
   RuntimeTesting
+  LLVMSupport
 )
 
 add_test(ListInput list-input-test)

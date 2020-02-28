@@ -1,10 +1,10 @@
 #include "testing.h"
 #include "../../runtime/terminator.h"
+#include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cstdarg>
 #include <cstdio>
 #include <cstring>
-#include <iostream>
 #include <string>
 
 static int failures{0};
@@ -21,16 +21,16 @@ void StartTests() {
   Fortran::runtime::Terminator::RegisterCrashHandler(CatchCrash);
 }
 
-std::ostream &Fail() {
+llvm::raw_ostream &Fail() {
   ++failures;
-  return std::cerr;
+  return llvm::errs();
 }
 
 int EndTests() {
   if (failures == 0) {
-    std::cout << "PASS\n";
+    llvm::outs() << "PASS\n";
   } else {
-    std::cout << "FAIL " << failures << " tests\n";
+    llvm::outs() << "FAIL " << failures << " tests\n";
   }
   return failures != 0;
 }

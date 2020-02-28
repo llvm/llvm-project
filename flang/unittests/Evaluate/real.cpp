@@ -1,10 +1,10 @@
 #include "fp-testing.h"
 #include "testing.h"
 #include "flang/Evaluate/type.h"
+#include "llvm/Support/raw_ostream.h"
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
-#include <sstream>
 #include <type_traits>
 
 using namespace Fortran::evaluate;
@@ -149,7 +149,8 @@ template<typename R> void basicTests(int rm, Rounding rounding) {
       TEST(ivf.flags.empty())(ldesc);
       MATCH(x, ivf.value.ToUInt64())(ldesc);
       if (rounding.mode == RoundingMode::TiesToEven) {  // to match stold()
-        std::stringstream ss;
+        std::string buf;
+        llvm::raw_string_ostream ss{buf};
         vr.value.AsFortran(ss, kind, false /*exact*/);
         std::string decimal{ss.str()};
         const char *p{decimal.data()};
@@ -398,7 +399,9 @@ void subsetTests(int pass, Rounding rounding, std::uint32_t opds) {
       ("%d IsInfinite(0x%jx)", pass, static_cast<std::intmax_t>(rj));
 
       static constexpr int kind{REAL::bits / 8};
-      std::stringstream ss, css;
+      std::string ssBuf, cssBuf;
+      llvm::raw_string_ostream ss{ssBuf};
+      llvm::raw_string_ostream css{cssBuf};
       x.AsFortran(ss, kind, false /*exact*/);
       std::string s{ss.str()};
       if (IsNaN(rj)) {

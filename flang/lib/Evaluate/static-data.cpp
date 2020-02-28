@@ -13,7 +13,7 @@ namespace Fortran::evaluate {
 
 bool StaticDataObject::bigEndian{false};
 
-std::ostream &StaticDataObject::AsFortran(std::ostream &o) const {
+llvm::raw_ostream &StaticDataObject::AsFortran(llvm::raw_ostream &o) const {
   if (auto string{AsString()}) {
     o << parser::QuoteCharacterLiteral(*string);
   } else if (auto string{AsU16String()}) {

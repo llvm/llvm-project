@@ -31,11 +31,12 @@
 #include "flang/Parser/parsing.h"
 #include "flang/Parser/provenance.h"
 #include "flang/Parser/unparse.h"
-#include <cerrno>
+#include "llvm/Support/Errno.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/raw_ostream.h"
 #include <cstdio>
 #include <cstring>
 #include <fstream>
-#include <iostream>
 #include <list>
 #include <memory>
 #include <optional>
@@ -112,14 +113,14 @@ bool ParentProcess() {
 void Exec(std::vector<char *> &argv, bool verbose = false) {
   if (verbose) {
     for (size_t j{0}; j < argv.size(); ++j) {
-      std::cerr << (j > 0 ? " " : "") << argv[j];
+      llvm::errs() << (j > 0 ? " " : "") << argv[j];
     }
-    std::cerr << '\n';
+    llvm::errs() << '\n';
   }
   argv.push_back(nullptr);
   execvp(argv[0], &argv[0]);
-  std::cerr << "execvp(" << argv[0] << ") failed: " << std::strerror(errno)
-            << '\n';
+  llvm::errs() << "execvp(" << argv[0]
+               << ") failed: " << llvm::sys::StrError(errno) << '\n';
   exit(EXIT_FAILURE);
 }
 
@@ -173,52 +174,52 @@ std::string CompileFortran(
   parsing.Prescan(path, options);
   if (!parsing.messages().empty() &&
       (driver.warningsAreErrors || parsing.messages().AnyFatalError())) {
-    std::cerr << driver.prefix << "could not scan " << path << '\n';
-    parsing.messages().Emit(std::cerr, parsing.cooked());
+    llvm::errs() << driver.prefix << "could not scan " << path << '\n';
+    parsing.messages().Emit(llvm::errs(), parsing.cooked());
     exitStatus = EXIT_FAILURE;
     return {};
   }
   if (driver.dumpProvenance) {
-    parsing.DumpProvenance(std::cout);
+    parsing.DumpProvenance(llvm::outs());
     return {};
   }
   if (driver.dumpCookedChars) {
-    parsing.DumpCookedChars(std::cout);
+    parsing.DumpCookedChars(llvm::outs());
     return {};
   }
-  parsing.Parse(&std::cout);
+  parsing.Parse(llvm::outs());
   auto stop{CPUseconds()};
   if (driver.timeParse) {
     if (canTime) {
-      std::cout << "parse time for " << path << ": " << (stop - start)
-                << " CPU seconds\n";
+      llvm::outs() << "parse time for " << path << ": " << (stop - start)
+                   << " CPU seconds\n";
     } else {
-      std::cout << "no timing information due to lack of clock_gettime()\n";
+      llvm::outs() << "no timing information due to lack of clock_gettime()\n";
     }
   }
 
   parsing.ClearLog();
-  parsing.messages().Emit(std::cerr, parsing.cooked());
+  parsing.messages().Emit(llvm::errs(), parsing.cooked());
   if (!parsing.consumedWholeFile()) {
-    parsing.EmitMessage(
-        std::cerr, parsing.finalRestingPlace(), "parser FAIL (final position)");
+    parsing.EmitMessage(llvm::errs(), parsing.finalRestingPlace(),
+        "parser FAIL (final position)");
     exitStatus = EXIT_FAILURE;
     return {};
   }
   if ((!parsing.messages().empty() &&
           (driver.warningsAreErrors || parsing.messages().AnyFatalError())) ||
       !parsing.parseTree()) {
-    std::cerr << driver.prefix << "could not parse " << path << '\n';
+    llvm::errs() << driver.prefix << "could not parse " << path << '\n';
     exitStatus = EXIT_FAILURE;
     return {};
   }
   auto &parseTree{*parsing.parseTree()};
   if (driver.dumpParseTree) {
-    Fortran::parser::DumpTree(std::cout, parseTree);
+    Fortran::parser::DumpTree(llvm::outs(), parseTree);
     return {};
   }
   if (driver.dumpUnparse) {
-    Unparse(std::cout, parseTree, driver.encoding, true /*capitalize*/,
+    Unparse(llvm::outs(), parseTree, driver.encoding, true /*capitalize*/,
         options.features.IsEnabled(
             Fortran::common::LanguageFeature::BackslashEscapes));
     return {};
@@ -233,8 +234,12 @@ std::string CompileFortran(
   std::snprintf(tmpSourcePath, sizeof tmpSourcePath, "/tmp/f18-%lx.f90",
       static_cast<unsigned long>(getpid()));
   {
-    std::ofstream tmpSource;
-    tmpSource.open(tmpSourcePath);
+    std::error_code EC;
+    llvm::raw_fd_ostream tmpSource(tmpSourcePath, EC, llvm::sys::fs::F_None);
+    if (EC) {
+      llvm::errs() << EC.message();
+      std::exit(EXIT_FAILURE);
+    }
     Unparse(tmpSource, parseTree, driver.encoding, true /*capitalize*/,
         options.features.IsEnabled(
             Fortran::common::LanguageFeature::BackslashEscapes));
@@ -402,7 +407,7 @@ int main(int argc, char *const argv[]) {
     } else if (arg == "-i8" || arg == "-fdefault-integer-8") {
       defaultKinds.set_defaultIntegerKind(8);
     } else if (arg == "-help" || arg == "--help" || arg == "-?") {
-      std::cerr
+      llvm::errs()
           << "f18-parse-demo options:\n"
           << "  -Mfixed | -Mfree     force the source form\n"
           << "  -Mextend             132-column fixed form\n"
@@ -425,7 +430,7 @@ int main(int argc, char *const argv[]) {
           << "Other options are passed through to the $F18_FC compiler.\n";
       return exitStatus;
     } else if (arg == "-V") {
-      std::cerr << "\nf18-parse-demo\n";
+      llvm::errs() << "\nf18-parse-demo\n";
       return exitStatus;
     } else {
       driver.fcArgs.push_back(arg);

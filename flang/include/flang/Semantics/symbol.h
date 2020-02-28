@@ -19,6 +19,10 @@
 #include <set>
 #include <vector>
 
+namespace llvm {
+class raw_ostream;
+}
+
 namespace Fortran::semantics {
 
 /// A Symbol consists of common information (name, owner, and attributes)
@@ -79,7 +83,7 @@ private:
   std::vector<Symbol *> dummyArgs_;  // nullptr -> alternate return indicator
   Symbol *result_{nullptr};
   MaybeExpr stmtFunction_;
-  friend std::ostream &operator<<(std::ostream &, const SubprogramDetails &);
+  friend llvm::raw_ostream &operator<<(llvm::raw_ostream &, const SubprogramDetails &);
 };
 
 // For SubprogramNameDetails, the kind indicates whether it is the name
@@ -121,7 +125,7 @@ private:
   bool isFuncResult_{false};
   const DeclTypeSpec *type_{nullptr};
   MaybeExpr bindName_;
-  friend std::ostream &operator<<(std::ostream &, const EntityDetails &);
+  friend llvm::raw_ostream &operator<<(llvm::raw_ostream &, const EntityDetails &);
 };
 
 // Symbol is associated with a name or expression in a SELECT TYPE or ASSOCIATE.
@@ -176,7 +180,7 @@ private:
   ArraySpec shape_;
   ArraySpec coshape_;
   const Symbol *commonBlock_{nullptr};  // common block this object is in
-  friend std::ostream &operator<<(std::ostream &, const ObjectEntityDetails &);
+  friend llvm::raw_ostream &operator<<(llvm::raw_ostream &, const ObjectEntityDetails &);
 };
 
 // Mixin for details with passed-object dummy argument.
@@ -213,7 +217,7 @@ public:
 private:
   ProcInterface interface_;
   std::optional<const Symbol *> init_;
-  friend std::ostream &operator<<(std::ostream &, const ProcEntityDetails &);
+  friend llvm::raw_ostream &operator<<(llvm::raw_ostream &, const ProcEntityDetails &);
 };
 
 // These derived type details represent the characteristics of a derived
@@ -259,7 +263,7 @@ private:
   std::list<SourceName> componentNames_;
   bool sequence_{false};
   bool isForwardReferenced_{false};
-  friend std::ostream &operator<<(std::ostream &, const DerivedTypeDetails &);
+  friend llvm::raw_ostream &operator<<(llvm::raw_ostream &, const DerivedTypeDetails &);
 };
 
 class ProcBindingDetails : public WithPassArg {
@@ -443,7 +447,7 @@ using Details = std::variant<UnknownDetails, MainProgramDetails, ModuleDetails,
     DerivedTypeDetails, UseDetails, UseErrorDetails, HostAssocDetails,
     GenericDetails, ProcBindingDetails, NamelistDetails, CommonBlockDetails,
     FinalProcDetails, TypeParamDetails, MiscDetails>;
-std::ostream &operator<<(std::ostream &, const Details &);
+llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Details &);
 std::string DetailsToString(const Details &);
 
 class Symbol {
@@ -657,8 +661,8 @@ private:
 
   Symbol() {}  // only created in class Symbols
   const std::string GetDetailsName() const;
-  friend std::ostream &operator<<(std::ostream &, const Symbol &);
-  friend std::ostream &DumpForUnparse(std::ostream &, const Symbol &, bool);
+  friend llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Symbol &);
+  friend llvm::raw_ostream &DumpForUnparse(llvm::raw_ostream &, const Symbol &, bool);
 
   // If a derived type's symbol refers to an extended derived type,
   // return the parent component's symbol.  The scope of the derived type
@@ -669,7 +673,7 @@ private:
   template<class, std::size_t> friend struct std::array;
 };
 
-std::ostream &operator<<(std::ostream &, Symbol::Flag);
+llvm::raw_ostream &operator<<(llvm::raw_ostream &, Symbol::Flag);
 
 // Manage memory for all symbols. BLOCK_SIZE symbols at a time are allocated.
 // Make() returns a reference to the next available one. They are never

@@ -12,32 +12,32 @@
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/tools.h"
-#include <ostream>
+#include "llvm/Support/raw_ostream.h"
 #include <string>
 
 namespace Fortran::semantics {
 
 template<typename T>
-static void DumpOptional(std::ostream &os, const char *label, const T &x) {
+static void DumpOptional(llvm::raw_ostream &os, const char *label, const T &x) {
   if (x) {
     os << ' ' << label << ':' << *x;
   }
 }
 template<typename T>
-static void DumpExpr(std::ostream &os, const char *label,
+static void DumpExpr(llvm::raw_ostream &os, const char *label,
     const std::optional<evaluate::Expr<T>> &x) {
   if (x) {
     x->AsFortran(os << ' ' << label << ':');
   }
 }
 
-static void DumpBool(std::ostream &os, const char *label, bool x) {
+static void DumpBool(llvm::raw_ostream &os, const char *label, bool x) {
   if (x) {
     os << ' ' << label;
   }
 }
 
-static void DumpSymbolVector(std::ostream &os, const SymbolVector &list) {
+static void DumpSymbolVector(llvm::raw_ostream &os, const SymbolVector &list) {
   char sep{' '};
   for (const Symbol &elem : list) {
     os << sep << elem.name();
@@ -45,19 +45,19 @@ static void DumpSymbolVector(std::ostream &os, const SymbolVector &list) {
   }
 }
 
-static void DumpType(std::ostream &os, const Symbol &symbol) {
+static void DumpType(llvm::raw_ostream &os, const Symbol &symbol) {
   if (const auto *type{symbol.GetType()}) {
     os << *type << ' ';
   }
 }
-static void DumpType(std::ostream &os, const DeclTypeSpec *type) {
+static void DumpType(llvm::raw_ostream &os, const DeclTypeSpec *type) {
   if (type) {
     os << ' ' << *type;
   }
 }
 
 template<typename T>
-static void DumpList(std::ostream &os, const char *label, const T &list) {
+static void DumpList(llvm::raw_ostream &os, const char *label, const T &list) {
   if (!list.empty()) {
     os << ' ' << label << ':';
     char sep{' '};
@@ -81,7 +81,8 @@ void ModuleDetails::set_scope(const Scope *scope) {
   scope_ = scope;
 }
 
-std::ostream &operator<<(std::ostream &os, const SubprogramDetails &x) {
+llvm::raw_ostream &operator<<(
+    llvm::raw_ostream &os, const SubprogramDetails &x) {
   DumpBool(os, "isInterface", x.isInterface_);
   DumpExpr(os, "bindName", x.bindName_);
   if (x.result_) {
@@ -334,7 +335,7 @@ bool Symbol::IsFromModFile() const {
 ObjectEntityDetails::ObjectEntityDetails(EntityDetails &&d)
   : EntityDetails(d) {}
 
-std::ostream &operator<<(std::ostream &os, const EntityDetails &x) {
+llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const EntityDetails &x) {
   DumpBool(os, "dummy", x.isDummy());
   DumpBool(os, "funcResult", x.isFuncResult());
   if (x.type()) {
@@ -344,7 +345,8 @@ std::ostream &operator<<(std::ostream &os, const EntityDetails &x) {
   return os;
 }
 
-std::ostream &operator<<(std::ostream &os, const ObjectEntityDetails &x) {
+llvm::raw_ostream &operator<<(
+    llvm::raw_ostream &os, const ObjectEntityDetails &x) {
   os << *static_cast<const EntityDetails *>(&x);
   DumpList(os, "shape", x.shape());
   DumpList(os, "coshape", x.coshape());
@@ -352,13 +354,15 @@ std::ostream &operator<<(std::ostream &os, const ObjectEntityDetails &x) {
   return os;
 }
 
-std::ostream &operator<<(std::ostream &os, const AssocEntityDetails &x) {
+llvm::raw_ostream &operator<<(
+    llvm::raw_ostream &os, const AssocEntityDetails &x) {
   os << *static_cast<const EntityDetails *>(&x);
   DumpExpr(os, "expr", x.expr());
   return os;
 }
 
-std::ostream &operator<<(std::ostream &os, const ProcEntityDetails &x) {
+llvm::raw_ostream &operator<<(
+    llvm::raw_ostream &os, const ProcEntityDetails &x) {
   if (auto *symbol{x.interface_.symbol()}) {
     os << ' ' << symbol->name();
   } else {
@@ -376,13 +380,14 @@ std::ostream &operator<<(std::ostream &os, const ProcEntityDetails &x) {
   return os;
 }
 
-std::ostream &operator<<(std::ostream &os, const DerivedTypeDetails &x) {
+llvm::raw_ostream &operator<<(
+    llvm::raw_ostream &os, const DerivedTypeDetails &x) {
   DumpBool(os, "sequence", x.sequence_);
   DumpList(os, "components", x.componentNames_);
   return os;
 }
 
-std::ostream &operator<<(std::ostream &os, const Details &details) {
+llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Details &details) {
   os << DetailsToString(details);
   std::visit(
       common::visitors{
@@ -453,11 +458,12 @@ std::ostream &operator<<(std::ostream &os, const Details &details) {
   return os;
 }
 
-std::ostream &operator<<(std::ostream &o, Symbol::Flag flag) {
+llvm::raw_ostream &operator<<(llvm::raw_ostream &o, Symbol::Flag flag) {
   return o << Symbol::EnumToString(flag);
 }
 
-std::ostream &operator<<(std::ostream &o, const Symbol::Flags &flags) {
+llvm::raw_ostream &operator<<(
+    llvm::raw_ostream &o, const Symbol::Flags &flags) {
   std::size_t n{flags.count()};
   std::size_t seen{0};
   for (std::size_t j{0}; seen < n; ++j) {
@@ -472,7 +478,7 @@ std::ostream &operator<<(std::ostream &o, const Symbol::Flags &flags) {
   return o;
 }
 
-std::ostream &operator<<(std::ostream &os, const Symbol &symbol) {
+llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Symbol &symbol) {
   os << symbol.name();
   if (!symbol.attrs().empty()) {
     os << ", " << symbol.attrs();
@@ -487,7 +493,7 @@ std::ostream &operator<<(std::ostream &os, const Symbol &symbol) {
 // Output a unique name for a scope by qualifying it with the names of
 // parent scopes. For scopes without corresponding symbols, use the kind
 // with an index (e.g. Block1, Block2, etc.).
-static void DumpUniqueName(std::ostream &os, const Scope &scope) {
+static void DumpUniqueName(llvm::raw_ostream &os, const Scope &scope) {
   if (!scope.IsGlobal()) {
     DumpUniqueName(os, scope.parent());
     os << '/';
@@ -511,8 +517,8 @@ static void DumpUniqueName(std::ostream &os, const Scope &scope) {
 
 // Dump a symbol for UnparseWithSymbols. This will be used for tests so the
 // format should be reasonably stable.
-std::ostream &DumpForUnparse(
-    std::ostream &os, const Symbol &symbol, bool isDef) {
+llvm::raw_ostream &DumpForUnparse(
+    llvm::raw_ostream &os, const Symbol &symbol, bool isDef) {
   DumpUniqueName(os, symbol.owner());
   os << '/' << symbol.name();
   if (isDef) {

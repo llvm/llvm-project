@@ -4,9 +4,9 @@
 #include "../../runtime/descriptor.h"
 #include "../../runtime/io-api.h"
 #include "../../runtime/io-error.h"
+#include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cstring>
-#include <iostream>
 
 using namespace Fortran::runtime;
 using namespace Fortran::runtime::io;

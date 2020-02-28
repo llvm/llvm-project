@@ -17,6 +17,7 @@ add_executable(leading-zero-bit-count-test
 
 target_link_libraries(leading-zero-bit-count-test
   FortranEvaluateTesting
+  LLVMSupport
 )
 
 add_executable(bit-population-count-test
@@ -25,6 +26,7 @@ add_executable(bit-population-count-test
 
 target_link_libraries(bit-population-count-test
   FortranEvaluateTesting
+  LLVMSupport
 )
 
 add_executable(uint128-test
@@ -33,6 +35,7 @@ add_executable(uint128-test
 
 target_link_libraries(uint128-test
   FortranEvaluateTesting
+  LLVMSupport
 )
 
 # These routines live in lib/Common but we test them here.
@@ -49,6 +52,7 @@ target_link_libraries(expression-test
   FortranEvaluate
   FortranSemantics
   FortranParser
+  LLVMSupport
 )
 
 add_executable(integer-test
@@ -59,6 +63,7 @@ target_link_libraries(integer-test
   FortranEvaluateTesting
   FortranEvaluate
   FortranSemantics
+  LLVMSupport
 )
 
 add_executable(intrinsics-test
@@ -72,6 +77,7 @@ target_link_libraries(intrinsics-test
   FortranSemantics
   FortranParser
   FortranRuntime
+  LLVMSupport
 )
 
 add_executable(logical-test
@@ -82,6 +88,7 @@ target_link_libraries(logical-test
   FortranEvaluateTesting
   FortranEvaluate
   FortranSemantics
+  LLVMSupport
 )
 
 # GCC -fno-exceptions breaks the fenv.h interfaces needed to capture
@@ -98,6 +105,7 @@ target_link_libraries(real-test
   FortranEvaluate
   FortranDecimal
   FortranSemantics
+  LLVMSupport
 )
 
 add_executable(reshape-test
@@ -109,6 +117,7 @@ target_link_libraries(reshape-test
   FortranSemantics
   FortranEvaluate
   FortranRuntime
+  LLVMSupport
 )
 
 add_executable(ISO-Fortran-binding-test
@@ -120,6 +129,7 @@ target_link_libraries(ISO-Fortran-binding-test
   FortranEvaluate
   FortranSemantics
   FortranRuntime
+  LLVMSupport
 )
 
 add_executable(folding-test
@@ -130,6 +140,7 @@ target_link_libraries(folding-test
   FortranEvaluateTesting
   FortranEvaluate
   FortranSemantics
+  LLVMSupport
 )
 
 add_test(Expression expression-test)

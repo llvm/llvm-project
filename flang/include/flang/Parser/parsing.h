@@ -15,8 +15,8 @@
 #include "parse-tree.h"
 #include "provenance.h"
 #include "flang/Common/Fortran-features.h"
+#include "llvm/Support/raw_ostream.h"
 #include <optional>
-#include <ostream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -50,19 +50,19 @@ public:
   std::optional<Program> &parseTree() { return parseTree_; }
 
   const SourceFile *Prescan(const std::string &path, Options);
-  void DumpCookedChars(std::ostream &) const;
-  void DumpProvenance(std::ostream &) const;
-  void DumpParsingLog(std::ostream &) const;
-  void Parse(std::ostream *debugOutput = nullptr);
+  void DumpCookedChars(llvm::raw_ostream &) const;
+  void DumpProvenance(llvm::raw_ostream &) const;
+  void DumpParsingLog(llvm::raw_ostream &) const;
+  void Parse(llvm::raw_ostream &debugOutput);
   void ClearLog();
 
-  void EmitMessage(std::ostream &o, const char *at, const std::string &message,
+  void EmitMessage(llvm::raw_ostream &o, const char *at, const std::string &message,
       bool echoSourceLine = false) const {
     cooked_.allSources().EmitMessage(
         o, cooked_.GetProvenanceRange(CharBlock(at)), message, echoSourceLine);
   }
 
-  bool ForTesting(std::string path, std::ostream &);
+  bool ForTesting(std::string path, llvm::raw_ostream &);
 
 private:
   Options options_;

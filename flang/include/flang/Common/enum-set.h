@@ -16,11 +16,11 @@
 
 #include "constexpr-bitset.h"
 #include "idioms.h"
+#include "llvm/Support/raw_ostream.h"
 #include <bitset>
 #include <cstddef>
 #include <initializer_list>
 #include <optional>
-#include <ostream>
 #include <string>
 #include <type_traits>
 
@@ -199,8 +199,8 @@ public:
     }
   }
 
-  std::ostream &Dump(
-      std::ostream &o, std::string EnumToString(enumerationType)) const {
+  llvm::raw_ostream &Dump(
+      llvm::raw_ostream &o, std::string EnumToString(enumerationType)) const {
     char sep{'{'};
     IterateOverMembers([&](auto e) {
       o << sep << EnumToString(e);

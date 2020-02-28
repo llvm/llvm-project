@@ -19,6 +19,10 @@
 #include <string>
 #include <vector>
 
+namespace llvm {
+class raw_ostream;
+}
+
 namespace Fortran::common {
 class IntrinsicTypeDefaultKinds;
 }
@@ -209,9 +213,9 @@ public:
     return context_.FindScope(where);
   }
   bool AnyFatalError() const { return context_.AnyFatalError(); }
-  void EmitMessages(std::ostream &) const;
-  void DumpSymbols(std::ostream &);
-  void DumpSymbolsSources(std::ostream &) const;
+  void EmitMessages(llvm::raw_ostream &) const;
+  void DumpSymbols(llvm::raw_ostream &);
+  void DumpSymbolsSources(llvm::raw_ostream &) const;
 
 private:
   SemanticsContext &context_;

@@ -1,8 +1,8 @@
 #include "flang/Decimal/decimal.h"
+#include "llvm/Support/raw_ostream.h"
 #include <cinttypes>
 #include <cstdio>
 #include <cstring>
-#include <iostream>
 
 static constexpr int incr{1};  // steps through all values
 static constexpr bool doNegative{true};
@@ -18,11 +18,12 @@ union u {
   std::uint32_t u;
 };
 
-std::ostream &failed(float x) {
+llvm::raw_ostream &failed(float x) {
   ++fails;
   union u u;
   u.x = x;
-  return std::cout << "FAIL: 0x" << std::hex << u.u << std::dec;
+  llvm::outs() << "FAIL: 0x";
+  return llvm::outs().write_hex(u.u);
 }
 
 void testReadback(float x, int flags) {
@@ -30,9 +31,10 @@ void testReadback(float x, int flags) {
   union u u;
   u.x = x;
   if (!(tests & 0x3fffff)) {
-    std::cerr << "\n0x" << std::hex << u.u << std::dec << ' ';
+    llvm::errs() << "\n0x";
+    llvm::errs().write_hex(u.u) << ' ';
   } else if (!(tests & 0xffff)) {
-    std::cerr << '.';
+    llvm::errs() << '.';
   }
   ++tests;
   auto result{ConvertFloatToDecimal(buffer, sizeof buffer,
@@ -56,15 +58,13 @@ void testReadback(float x, int flags) {
     if (!(x == x)) {
       if (y == y || *p != '\0' || (rflags & Invalid)) {
         u.x = y;
-        failed(x) << " (NaN) " << flags << ": -> '" << result.str << "' -> 0x"
-                  << std::hex << u.u << std::dec << " '" << p << "' " << rflags
-                  << '\n';
+        failed(x) << " (NaN) " << flags << ": -> '" << result.str << "' -> 0x";
+        failed(x).write_hex(u.u) << " '" << p << "' " << rflags << '\n';
       }
     } else if (x != y || *p != '\0' || (rflags & Invalid)) {
       u.x = y;
-      failed(x) << ' ' << flags << ": -> '" << result.str << "' -> 0x"
-                << std::hex << u.u << std::dec << " '" << p << "' " << rflags
-                << '\n';
+      failed(x) << ' ' << flags << ": -> '" << result.str << "' -> 0x";
+      failed(x).write_hex(u.u) << " '" << p << "' " << rflags << '\n';
     }
   }
 }
@@ -83,6 +83,6 @@ int main() {
       }
     }
   }
-  std::cout << '\n' << tests << " tests run, " << fails << " tests failed\n";
+  llvm::outs() << '\n' << tests << " tests run, " << fails << " tests failed\n";
   return fails > 0;
 }

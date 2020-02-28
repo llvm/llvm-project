@@ -21,6 +21,10 @@
 #include <variant>
 #include <vector>
 
+namespace llvm {
+class raw_ostream;
+}
+
 namespace Fortran::parser {
 struct Keyword;
 }
@@ -71,7 +75,7 @@ private:
     : category_{category}, expr_{std::move(expr)} {}
   Category category_{Category::Explicit};
   MaybeSubscriptIntExpr expr_;
-  friend std::ostream &operator<<(std::ostream &, const Bound &);
+  friend llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Bound &);
 };
 
 // A type parameter value: integer expression or assumed or deferred.
@@ -107,7 +111,7 @@ private:
   Category category_{Category::Explicit};
   common::TypeParamAttr attr_{common::TypeParamAttr::Kind};
   MaybeIntExpr expr_;
-  friend std::ostream &operator<<(std::ostream &, const ParamValue &);
+  friend llvm::raw_ostream &operator<<(llvm::raw_ostream &, const ParamValue &);
 };
 
 class IntrinsicTypeSpec {
@@ -126,7 +130,7 @@ protected:
 private:
   TypeCategory category_;
   KindExpr kind_;
-  friend std::ostream &operator<<(std::ostream &os, const IntrinsicTypeSpec &x);
+  friend llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const IntrinsicTypeSpec &x);
 };
 
 class NumericTypeSpec : public IntrinsicTypeSpec {
@@ -153,7 +157,7 @@ public:
 
 private:
   ParamValue length_;
-  friend std::ostream &operator<<(std::ostream &os, const CharacterTypeSpec &x);
+  friend llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const CharacterTypeSpec &x);
 };
 
 class ShapeSpec {
@@ -205,7 +209,7 @@ private:
   ShapeSpec(Bound &&lb, Bound &&ub) : lb_{std::move(lb)}, ub_{std::move(ub)} {}
   Bound lb_;
   Bound ub_;
-  friend std::ostream &operator<<(std::ostream &, const ShapeSpec &);
+  friend llvm::raw_ostream &operator<<(llvm::raw_ostream &, const ShapeSpec &);
 };
 
 struct ArraySpec : public std::vector<ShapeSpec> {
@@ -224,7 +228,7 @@ private:
     return !empty() && std::all_of(begin(), end(), predicate);
   }
 };
-std::ostream &operator<<(std::ostream &, const ArraySpec &);
+llvm::raw_ostream &operator<<(llvm::raw_ostream &, const ArraySpec &);
 
 // Each DerivedTypeSpec has a typeSymbol that has DerivedTypeDetails.
 // The name may not match the symbol's name in case of a USE rename.
@@ -289,7 +293,7 @@ private:
   bool instantiated_{false};
   RawParameters rawParameters_;
   ParameterMapType parameters_;
-  friend std::ostream &operator<<(std::ostream &, const DerivedTypeSpec &);
+  friend llvm::raw_ostream &operator<<(llvm::raw_ostream &, const DerivedTypeSpec &);
 };
 
 class DeclTypeSpec {
@@ -370,7 +374,7 @@ private:
       CharacterTypeSpec, DerivedTypeSpec>
       typeSpec_;
 };
-std::ostream &operator<<(std::ostream &, const DeclTypeSpec &);
+llvm::raw_ostream &operator<<(llvm::raw_ostream &, const DeclTypeSpec &);
 
 // This represents a proc-interface in the declaration of a procedure or
 // procedure component. It comprises a symbol that represents the specific

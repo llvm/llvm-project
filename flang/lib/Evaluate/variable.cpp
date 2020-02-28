@@ -14,7 +14,6 @@
 #include "flang/Parser/characters.h"
 #include "flang/Parser/message.h"
 #include "flang/Semantics/symbol.h"
-#include <ostream>
 #include <type_traits>
 
 using namespace Fortran::parser::literals;

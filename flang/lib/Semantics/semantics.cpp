@@ -35,12 +35,13 @@
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/symbol.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace Fortran::semantics {
 
 using NameToSymbolMap = std::map<const char *, SymbolRef>;
-static void DoDumpSymbols(std::ostream &, const Scope &, int indent = 0);
-static void PutIndent(std::ostream &, int indent);
+static void DoDumpSymbols(llvm::raw_ostream &, const Scope &, int indent = 0);
+static void PutIndent(llvm::raw_ostream &, int indent);
 
 static void GetSymbolNames(const Scope &scope, NameToSymbolMap &symbols) {
   // Finds all symbol names in the scope without collecting duplicates.
@@ -282,15 +283,15 @@ bool Semantics::Perform() {
       ModFileWriter{context_}.WriteAll();
 }
 
-void Semantics::EmitMessages(std::ostream &os) const {
+void Semantics::EmitMessages(llvm::raw_ostream &os) const {
   context_.messages().Emit(os, cooked_);
 }
 
-void Semantics::DumpSymbols(std::ostream &os) {
+void Semantics::DumpSymbols(llvm::raw_ostream &os) {
   DoDumpSymbols(os, context_.globalScope());
 }
 
-void Semantics::DumpSymbolsSources(std::ostream &os) const {
+void Semantics::DumpSymbolsSources(llvm::raw_ostream &os) const {
   NameToSymbolMap symbols;
   GetSymbolNames(context_.globalScope(), symbols);
   for (const auto &pair : symbols) {
@@ -306,7 +307,7 @@ void Semantics::DumpSymbolsSources(std::ostream &os) const {
   }
 }
 
-void DoDumpSymbols(std::ostream &os, const Scope &scope, int indent) {
+void DoDumpSymbols(llvm::raw_ostream &os, const Scope &scope, int indent) {
   PutIndent(os, indent);
   os << Scope::EnumToString(scope.kind()) << " scope:";
   if (const auto *symbol{scope.symbol()}) {
@@ -357,7 +358,7 @@ void DoDumpSymbols(std::ostream &os, const Scope &scope, int indent) {
   --indent;
 }
 
-static void PutIndent(std::ostream &os, int indent) {
+static void PutIndent(llvm::raw_ostream &os, int indent) {
   for (int i = 0; i < indent; ++i) {
     os << "  ";
   }

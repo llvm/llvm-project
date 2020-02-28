@@ -16,13 +16,15 @@
 #include "flang/Evaluate/common.h"
 #include <cinttypes>
 #include <limits>
-#include <ostream>
 #include <string>
 
 // Some environments, viz. clang on Darwin, allow the macro HUGE
 // to leak out of <math.h> even when it is never directly included.
 #undef HUGE
 
+namespace llvm {
+class raw_ostream;
+}
 namespace Fortran::evaluate::value {
 
 // LOG10(2.)*1E12
@@ -310,7 +312,7 @@ public:
 
   // Emits a character representation for an equivalent Fortran constant
   // or parenthesized constant expression that produces this value.
-  std::ostream &AsFortran(std::ostream &, int kind, bool minimal = false) const;
+  llvm::raw_ostream &AsFortran(llvm::raw_ostream &, int kind, bool minimal = false) const;
 
 private:
   using Significand = Integer<significandBits>;  // no implicit bit

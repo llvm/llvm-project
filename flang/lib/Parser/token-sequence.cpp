@@ -8,6 +8,7 @@
 
 #include "token-sequence.h"
 #include "flang/Parser/characters.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace Fortran::parser {
 
@@ -123,7 +124,7 @@ void TokenSequence::Put(const std::string &s, Provenance provenance) {
   Put(s.data(), s.size(), provenance);
 }
 
-void TokenSequence::Put(const std::stringstream &ss, Provenance provenance) {
+void TokenSequence::Put(llvm::raw_string_ostream &ss, Provenance provenance) {
   Put(ss.str(), provenance);
 }
 
@@ -248,7 +249,7 @@ void TokenSequence::Emit(CookedSource &cooked) const {
   cooked.PutProvenanceMappings(provenances_);
 }
 
-void TokenSequence::Dump(std::ostream &o) const {
+void TokenSequence::Dump(llvm::raw_ostream &o) const {
   o << "TokenSequence has " << char_.size() << " chars; nextStart_ "
     << nextStart_ << '\n';
   for (std::size_t j{0}; j < start_.size(); ++j) {

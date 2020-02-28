@@ -13,6 +13,10 @@
 #include "real.h"
 #include <string>
 
+namespace llvm {
+class raw_ostream;
+}
+
 namespace Fortran::evaluate::value {
 
 template<typename REAL_TYPE> class Complex {
@@ -82,7 +86,7 @@ public:
   }
 
   std::string DumpHexadecimal() const;
-  std::ostream &AsFortran(std::ostream &, int kind) const;
+  llvm::raw_ostream &AsFortran(llvm::raw_ostream &, int kind) const;
 
   // TODO: (C)ABS once Real::HYPOT is done
   // TODO: unit testing

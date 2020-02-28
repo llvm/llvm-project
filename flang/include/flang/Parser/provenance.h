@@ -15,12 +15,11 @@
 #include "source.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/interval.h"
+#include "llvm/Support/raw_ostream.h"
 #include <cstddef>
 #include <map>
 #include <memory>
 #include <optional>
-#include <ostream>
-#include <sstream>
 #include <string>
 #include <utility>
 #include <variant>
@@ -91,7 +90,7 @@ public:
   bool empty() const { return map_.empty(); }
   void Put(ProvenanceRange, std::size_t offset);
   std::optional<std::size_t> Map(ProvenanceRange) const;
-  std::ostream &Dump(std::ostream &) const;
+  llvm::raw_ostream &Dump(llvm::raw_ostream &) const;
 
 private:
   // A comparison function object for use in std::multimap<Compare=>.
@@ -120,7 +119,7 @@ public:
   ProvenanceRange Map(std::size_t at) const;
   void RemoveLastBytes(std::size_t);
   ProvenanceRangeToOffsetMappings Invert(const AllSources &) const;
-  std::ostream &Dump(std::ostream &) const;
+  llvm::raw_ostream &Dump(llvm::raw_ostream &) const;
 
 private:
   struct ContiguousProvenanceMapping {
@@ -150,8 +149,8 @@ public:
 
   void PushSearchPathDirectory(std::string);
   std::string PopSearchPathDirectory();
-  const SourceFile *Open(std::string path, std::stringstream *error);
-  const SourceFile *ReadStandardInput(std::stringstream *error);
+  const SourceFile *Open(std::string path, llvm::raw_ostream &error);
+  const SourceFile *ReadStandardInput(llvm::raw_ostream &error);
 
   ProvenanceRange AddIncludedFile(
       const SourceFile &, ProvenanceRange, bool isModule = false);
@@ -163,7 +162,7 @@ public:
   bool IsValid(ProvenanceRange range) const {
     return range.size() > 0 && range_.Contains(range);
   }
-  void EmitMessage(std::ostream &, const std::optional<ProvenanceRange> &,
+  void EmitMessage(llvm::raw_ostream &, const std::optional<ProvenanceRange> &,
       const std::string &message, bool echoSourceLine = false) const;
   const SourceFile *GetSourceFile(
       Provenance, std::size_t *offset = nullptr) const;
@@ -174,7 +173,7 @@ public:
   Provenance CompilerInsertionProvenance(char ch);
   Provenance CompilerInsertionProvenance(const char *, std::size_t);
   ProvenanceRange IntersectionWithSourceFiles(ProvenanceRange) const;
-  std::ostream &Dump(std::ostream &) const;
+  llvm::raw_ostream &Dump(llvm::raw_ostream &) const;
 
 private:
   struct Inclusion {
@@ -260,7 +259,7 @@ public:
   void Marshal();  // marshals text into one contiguous block
   void CompileProvenanceRangeToOffsetMappings();
   std::string AcquireData() { return std::move(data_); }
-  std::ostream &Dump(std::ostream &) const;
+  llvm::raw_ostream &Dump(llvm::raw_ostream &) const;
 
 private:
   AllSources &allSources_;

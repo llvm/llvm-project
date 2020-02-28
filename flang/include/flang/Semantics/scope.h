@@ -22,6 +22,10 @@
 #include <set>
 #include <string>
 
+namespace llvm {
+class raw_ostream;
+}
+
 namespace Fortran::semantics {
 
 using namespace parser::literals;
@@ -234,7 +238,7 @@ private:
   bool CanImport(const SourceName &) const;
   const DeclTypeSpec &MakeLengthlessType(DeclTypeSpec &&);
 
-  friend std::ostream &operator<<(std::ostream &, const Scope &);
+  friend llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Scope &);
 };
 }
 #endif  // FORTRAN_SEMANTICS_SCOPE_H_

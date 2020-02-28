@@ -12,6 +12,7 @@ add_executable(quick-sanity-test
 
 target_link_libraries(quick-sanity-test
   FortranDecimal
+  LLVMSupport
 )
 
 add_executable(thorough-test
@@ -20,6 +21,7 @@ add_executable(thorough-test
 
 target_link_libraries(thorough-test
   FortranDecimal
+  LLVMSupport
 )
 
 add_test(Sanity quick-sanity-test)

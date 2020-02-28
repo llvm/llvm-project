@@ -12,8 +12,7 @@
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
-#include <ostream>
-#include <sstream>
+#include "llvm/Support/raw_ostream.h"
 
 namespace Fortran::semantics {
 
@@ -272,7 +271,8 @@ void DerivedTypeSpec::Instantiate(
 }
 
 std::string DerivedTypeSpec::AsFortran() const {
-  std::stringstream ss;
+  std::string buf;
+  llvm::raw_string_ostream ss{buf};
   ss << name_;
   if (!rawParameters_.empty()) {
     CHECK(parameters_.empty());
@@ -306,13 +306,13 @@ std::string DerivedTypeSpec::AsFortran() const {
   return ss.str();
 }
 
-std::ostream &operator<<(std::ostream &o, const DerivedTypeSpec &x) {
+llvm::raw_ostream &operator<<(llvm::raw_ostream &o, const DerivedTypeSpec &x) {
   return o << x.AsFortran();
 }
 
 Bound::Bound(int bound) : expr_{bound} {}
 
-std::ostream &operator<<(std::ostream &o, const Bound &x) {
+llvm::raw_ostream &operator<<(llvm::raw_ostream &o, const Bound &x) {
   if (x.isAssumed()) {
     o << '*';
   } else if (x.isDeferred()) {
@@ -325,7 +325,7 @@ std::ostream &operator<<(std::ostream &o, const Bound &x) {
   return o;
 }
 
-std::ostream &operator<<(std::ostream &o, const ShapeSpec &x) {
+llvm::raw_ostream &operator<<(llvm::raw_ostream &o, const ShapeSpec &x) {
   if (x.lb_.isAssumed()) {
     CHECK(x.ub_.isAssumed());
     o << "..";
@@ -365,7 +365,8 @@ bool ArraySpec::IsAssumedRank() const {
   return Rank() == 1 && front().lbound().isAssumed();
 }
 
-std::ostream &operator<<(std::ostream &os, const ArraySpec &arraySpec) {
+llvm::raw_ostream &operator<<(
+    llvm::raw_ostream &os, const ArraySpec &arraySpec) {
   char sep{'('};
   for (auto &shape : arraySpec) {
     os << sep << shape;
@@ -398,7 +399,8 @@ std::string ParamValue::AsFortran() const {
   case Category::Deferred: return ":";
   case Category::Explicit:
     if (expr_) {
-      std::stringstream ss;
+      std::string buf;
+      llvm::raw_string_ostream ss{buf};
       expr_->AsFortran(ss);
       return ss.str();
     } else {
@@ -407,7 +409,7 @@ std::string ParamValue::AsFortran() const {
   }
 }
 
-std::ostream &operator<<(std::ostream &o, const ParamValue &x) {
+llvm::raw_ostream &operator<<(llvm::raw_ostream &o, const ParamValue &x) {
   return o << x.AsFortran();
 }
 
@@ -417,7 +419,8 @@ IntrinsicTypeSpec::IntrinsicTypeSpec(TypeCategory category, KindExpr &&kind)
 }
 
 static std::string KindAsFortran(const KindExpr &kind) {
-  std::stringstream ss;
+  std::string buf;
+  llvm::raw_string_ostream ss{buf};
   if (auto k{evaluate::ToInt64(kind)}) {
     ss << *k;  // emit unsuffixed kind code
   } else {
@@ -431,7 +434,8 @@ std::string IntrinsicTypeSpec::AsFortran() const {
       KindAsFortran(kind_) + ')';
 }
 
-std::ostream &operator<<(std::ostream &os, const IntrinsicTypeSpec &x) {
+llvm::raw_ostream &operator<<(
+    llvm::raw_ostream &os, const IntrinsicTypeSpec &x) {
   return os << x.AsFortran();
 }
 
@@ -439,7 +443,8 @@ std::string CharacterTypeSpec::AsFortran() const {
   return "CHARACTER(" + length_.AsFortran() + ',' + KindAsFortran(kind()) + ')';
 }
 
-std::ostream &operator<<(std::ostream &os, const CharacterTypeSpec &x) {
+llvm::raw_ostream &operator<<(
+    llvm::raw_ostream &os, const CharacterTypeSpec &x) {
   return os << x.AsFortran();
 }
 
@@ -494,7 +499,7 @@ std::string DeclTypeSpec::AsFortran() const {
   }
 }
 
-std::ostream &operator<<(std::ostream &o, const DeclTypeSpec &x) {
+llvm::raw_ostream &operator<<(llvm::raw_ostream &o, const DeclTypeSpec &x) {
   return o << x.AsFortran();
 }
 

@@ -3,8 +3,8 @@
 #include "testing.h"
 #include "../../runtime/descriptor.h"
 #include "../../runtime/io-api.h"
+#include "llvm/Support/raw_ostream.h"
 #include <cstring>
-#include <iostream>
 
 using namespace Fortran::runtime;
 using namespace Fortran::runtime::io;
@@ -110,8 +110,8 @@ static void realInTest(
     Fail() << '\'' << format << "' failed reading '" << data << "', status "
            << static_cast<int>(status) << " iomsg '" << iomsg << "'\n";
   } else if (u.raw != want) {
-    Fail() << '\'' << format << "' failed reading '" << data << "', want 0x"
-           << std::hex << want << ", got 0x" << u.raw << std::dec << '\n';
+    Fail() << '\'' << format << "' failed reading '" << data << "', want 0x";
+    Fail().write_hex(want) << ", got 0x" << u.raw << '\n';
   }
 }
 

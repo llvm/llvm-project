@@ -1,8 +1,8 @@
 #include "testing.h"
+#include "llvm/Support/raw_ostream.h"
 #include <cstdarg>
 #include <cstdio>
 #include <cstdlib>
-#include <iostream>
 
 namespace testing {
 
@@ -103,22 +103,22 @@ FailureDetailPrinter Compare(const char *file, int line, const char *xs,
 int Complete() {
   if (failures == 0) {
     if (passes == 1) {
-      std::cout << "single test PASSES\n";
+      llvm::outs() << "single test PASSES\n";
     } else {
-      std::cout << "all " << std::dec << passes << " tests PASS\n";
+      llvm::outs() << "all " << passes << " tests PASS\n";
     }
     passes = 0;
     return EXIT_SUCCESS;
   } else {
     if (passes == 1) {
-      std::cerr << "1 test passes, ";
+      llvm::errs() << "1 test passes, ";
     } else {
-      std::cerr << std::dec << passes << " tests pass, ";
+      llvm::errs() << passes << " tests pass, ";
     }
     if (failures == 1) {
-      std::cerr << "1 test FAILS\n";
+      llvm::errs() << "1 test FAILS\n";
     } else {
-      std::cerr << std::dec << failures << " tests FAIL\n";
+      llvm::errs() << failures << " tests FAIL\n";
     }
     passes = failures = 0;
     return EXIT_FAILURE;

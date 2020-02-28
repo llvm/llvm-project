@@ -14,8 +14,11 @@
 #include "flang/Common/default-kinds.h"
 #include "flang/Common/reference.h"
 #include <map>
-#include <ostream>
 #include <vector>
+
+namespace llvm {
+class raw_ostream;
+}
 
 namespace Fortran::semantics {
 class Symbol;
@@ -110,7 +113,7 @@ public:
   constexpr Result result() const { return result_; }
 
   constexpr DynamicType GetType() const { return result_.GetType(); }
-  std::ostream &AsFortran(std::ostream &) const;
+  llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
 
 protected:
   std::vector<Element> Reshape(const ConstantSubscripts &) const;
@@ -178,7 +181,7 @@ public:
   Scalar<Result> At(const ConstantSubscripts &) const;
 
   Constant Reshape(ConstantSubscripts &&) const;
-  std::ostream &AsFortran(std::ostream &) const;
+  llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
   static constexpr DynamicType GetType() {
     return {TypeCategory::Character, KIND};
   }

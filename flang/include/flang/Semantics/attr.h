@@ -14,6 +14,10 @@
 #include <cinttypes>
 #include <string>
 
+namespace llvm {
+class raw_ostream;
+}
+
 namespace Fortran::semantics {
 
 // All available attributes.
@@ -38,13 +42,13 @@ public:
   void CheckValid(const Attrs &allowed) const;
 
 private:
-  friend std::ostream &operator<<(std::ostream &, const Attrs &);
+  friend llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Attrs &);
 };
 
 // Return string representation of attr that matches Fortran source.
 std::string AttrToString(Attr attr);
 
-std::ostream &operator<<(std::ostream &o, Attr attr);
-std::ostream &operator<<(std::ostream &o, const Attrs &attrs);
+llvm::raw_ostream &operator<<(llvm::raw_ostream &o, Attr attr);
+llvm::raw_ostream &operator<<(llvm::raw_ostream &o, const Attrs &attrs);
 }
 #endif  // FORTRAN_SEMANTICS_ATTR_H_

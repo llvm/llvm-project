@@ -22,11 +22,11 @@
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
+#include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <functional>
 #include <optional>
 #include <set>
-#include <sstream>
 
 // Typedef for optional generic expressions (ubiquitous in this file)
 using MaybeExpr =
@@ -174,7 +174,7 @@ public:
   // Find and return a user-defined assignment
   std::optional<ProcedureRef> TryDefinedAssignment();
   std::optional<ProcedureRef> GetDefinedAssignmentProc();
-  void Dump(std::ostream &);
+  void Dump(llvm::raw_ostream &);
 
 private:
   MaybeExpr TryDefinedOp(
@@ -2426,7 +2426,8 @@ MaybeExpr ExpressionAnalyzer::ExprOrVariable(const PARSED &x) {
     x.typedExpr.reset(new GenericExprWrapper{std::move(result)});
     if (!x.typedExpr->v) {
       if (!context_.AnyFatalError()) {
-        std::stringstream dump;
+        std::string buf;
+        llvm::raw_string_ostream dump{buf};
         parser::DumpTree(dump, x);
         Say("Internal error: Expression analysis failed on: %s"_err_en_US,
             dump.str());
@@ -2542,7 +2543,7 @@ bool ExpressionAnalyzer::EnforceTypeConstraint(parser::CharBlock at,
     const MaybeExpr &result, TypeCategory category, bool defaultKind) {
   if (result) {
     if (auto type{result->GetType()}) {
-      if (type->category() != category) {  // C885
+      if (type->category() != category) { // C885
         Say(at, "Must have %s type, but is %s"_err_en_US,
             ToUpperCase(EnumToString(category)),
             ToUpperCase(type->AsFortran()));
@@ -2848,7 +2849,7 @@ std::optional<ProcedureRef> ArgumentAnalyzer::GetDefinedAssignmentProc() {
   }
 }
 
-void ArgumentAnalyzer::Dump(std::ostream &os) {
+void ArgumentAnalyzer::Dump(llvm::raw_ostream &os) {
   os << "source_: " << source_.ToString() << " fatalErrors_ = " << fatalErrors_
      << '\n';
   for (const auto &actual : actuals_) {

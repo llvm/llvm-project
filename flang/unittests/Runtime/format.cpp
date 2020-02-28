@@ -3,9 +3,9 @@
 #include "testing.h"
 #include "../runtime/format-implementation.h"
 #include "../runtime/io-error.h"
+#include "llvm/Support/raw_ostream.h"
 #include <cstdarg>
 #include <cstring>
-#include <iostream>
 #include <string>
 #include <vector>
 
@@ -93,13 +93,13 @@ void TestFormatContext::Check(Results &expect) {
   if (expect != results) {
     Fail() << "expected:";
     for (const std::string &s : expect) {
-      std::cerr << ' ' << s;
+      llvm::errs() << ' ' << s;
     }
-    std::cerr << "\ngot:";
+    llvm::errs() << "\ngot:";
     for (const std::string &s : results) {
-      std::cerr << ' ' << s;
+      llvm::errs() << ' ' << s;
     }
-    std::cerr << '\n';
+    llvm::errs() << '\n';
   }
   expect.clear();
   results.clear();

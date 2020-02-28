@@ -18,8 +18,11 @@
 #include "flang/Parser/char-block.h"
 #include "flang/Semantics/attr.h"
 #include <optional>
-#include <ostream>
 #include <vector>
+
+namespace llvm {
+class raw_ostream;
+}
 
 namespace Fortran::semantics {
 class Symbol;
@@ -60,7 +63,7 @@ public:
     bool operator==(const AssumedType &that) const {
       return &*symbol_ == &*that.symbol_;
     }
-    std::ostream &AsFortran(std::ostream &) const;
+    llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
 
   private:
     SymbolRef symbol_;
@@ -101,7 +104,7 @@ public:
   std::optional<DynamicType> GetType() const;
   int Rank() const;
   bool operator==(const ActualArgument &) const;
-  std::ostream &AsFortran(std::ostream &) const;
+  llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
 
   std::optional<parser::CharBlock> keyword() const { return keyword_; }
   void set_keyword(parser::CharBlock x) { keyword_ = x; }
@@ -146,7 +149,7 @@ struct SpecificIntrinsic {
   DECLARE_CONSTRUCTORS_AND_ASSIGNMENTS(SpecificIntrinsic)
   ~SpecificIntrinsic();
   bool operator==(const SpecificIntrinsic &) const;
-  std::ostream &AsFortran(std::ostream &) const;
+  llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
 
   IntrinsicProcedure name;
   bool isRestrictedSpecific{false};  // if true, can only call it, not pass it
@@ -177,7 +180,7 @@ struct ProcedureDesignator {
   int Rank() const;
   bool IsElemental() const;
   std::optional<Expr<SubscriptInteger>> LEN() const;
-  std::ostream &AsFortran(std::ostream &) const;
+  llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
 
   std::variant<SpecificIntrinsic, SymbolRef,
       common::CopyableIndirection<Component>>
@@ -200,7 +203,7 @@ public:
   int Rank() const;
   bool IsElemental() const { return proc_.IsElemental(); }
   bool operator==(const ProcedureRef &) const;
-  std::ostream &AsFortran(std::ostream &) const;
+  llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
 
 protected:
   ProcedureDesignator proc_;

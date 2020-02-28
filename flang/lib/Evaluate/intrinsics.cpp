@@ -16,10 +16,9 @@
 #include "flang/Evaluate/shape.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Evaluate/type.h"
+#include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <map>
-#include <ostream>
-#include <sstream>
 #include <string>
 #include <utility>
 
@@ -90,7 +89,7 @@ ENUM_CLASS(KindCode, none, defaultIntegerKind,
 struct TypePattern {
   CategorySet categorySet;
   KindCode kindCode{KindCode::none};
-  std::ostream &Dump(std::ostream &) const;
+  llvm::raw_ostream &Dump(llvm::raw_ostream &) const;
 };
 
 // Abbreviations for argument and result patterns in the intrinsic prototypes:
@@ -195,7 +194,7 @@ struct IntrinsicDummyArgument {
   TypePattern typePattern;
   Rank rank{Rank::elemental};
   Optionality optionality{Optionality::required};
-  std::ostream &Dump(std::ostream &) const;
+  llvm::raw_ostream &Dump(llvm::raw_ostream &) const;
 };
 
 // constexpr abbreviations for popular arguments:
@@ -234,7 +233,7 @@ struct IntrinsicInterface {
       const common::IntrinsicTypeDefaultKinds &, ActualArguments &,
       FoldingContext &context) const;
   int CountArguments() const;
-  std::ostream &Dump(std::ostream &) const;
+  llvm::raw_ostream &Dump(llvm::raw_ostream &) const;
 };
 
 int IntrinsicInterface::CountArguments() const {
@@ -1517,7 +1516,7 @@ public:
   std::optional<SpecificIntrinsicFunctionInterface> IsSpecificIntrinsicFunction(
       const std::string &) const;
 
-  std::ostream &Dump(std::ostream &) const;
+  llvm::raw_ostream &Dump(llvm::raw_ostream &) const;
 
 private:
   DynamicType GetSpecificType(const TypePattern &) const;
@@ -2000,7 +1999,7 @@ IntrinsicProcTable::IsSpecificIntrinsicFunction(const std::string &name) const {
   return DEREF(impl_).IsSpecificIntrinsicFunction(name);
 }
 
-std::ostream &TypePattern::Dump(std::ostream &o) const {
+llvm::raw_ostream &TypePattern::Dump(llvm::raw_ostream &o) const {
   if (categorySet == AnyType) {
     o << "any type";
   } else {
@@ -2016,7 +2015,7 @@ std::ostream &TypePattern::Dump(std::ostream &o) const {
   return o;
 }
 
-std::ostream &IntrinsicDummyArgument::Dump(std::ostream &o) const {
+llvm::raw_ostream &IntrinsicDummyArgument::Dump(llvm::raw_ostream &o) const {
   if (keyword) {
     o << keyword << '=';
   }
@@ -2024,7 +2023,7 @@ std::ostream &IntrinsicDummyArgument::Dump(std::ostream &o) const {
       << ' ' << EnumToString(rank) << ' ' << EnumToString(optionality);
 }
 
-std::ostream &IntrinsicInterface::Dump(std::ostream &o) const {
+llvm::raw_ostream &IntrinsicInterface::Dump(llvm::raw_ostream &o) const {
   o << name;
   char sep{'('};
   for (const auto &d : dummy) {
@@ -2040,7 +2039,8 @@ std::ostream &IntrinsicInterface::Dump(std::ostream &o) const {
   return result.Dump(o << " -> ") << ' ' << EnumToString(rank);
 }
 
-std::ostream &IntrinsicProcTable::Implementation::Dump(std::ostream &o) const {
+llvm::raw_ostream &IntrinsicProcTable::Implementation::Dump(
+    llvm::raw_ostream &o) const {
   o << "generic intrinsic functions:\n";
   for (const auto &iter : genericFuncs_) {
     iter.second->Dump(o << iter.first << ": ") << '\n';
@@ -2060,7 +2060,7 @@ std::ostream &IntrinsicProcTable::Implementation::Dump(std::ostream &o) const {
   return o;
 }
 
-std::ostream &IntrinsicProcTable::Dump(std::ostream &o) const {
+llvm::raw_ostream &IntrinsicProcTable::Dump(llvm::raw_ostream &o) const {
   return impl_->Dump(o);
 }
 }

@@ -13,6 +13,7 @@
 #include "flang/Evaluate/tools.h"
 #include "flang/Evaluate/variable.h"
 #include "flang/Parser/message.h"
+#include "llvm/Support/raw_ostream.h"
 #include <string>
 #include <type_traits>
 

@@ -10,13 +10,16 @@
 #define FORTRAN_SEMANTICS_MOD_FILE_H_
 
 #include "flang/Semantics/attr.h"
-#include <sstream>
 #include <string>
 
 namespace Fortran::parser {
 class CharBlock;
 class Message;
 class MessageFixedText;
+}
+
+namespace llvm {
+class raw_ostream;
 }
 
 namespace Fortran::semantics {
@@ -33,17 +36,23 @@ public:
 
 private:
   SemanticsContext &context_;
-  std::stringstream uses_;
-  std::stringstream useExtraAttrs_;  // attrs added to used entity
-  std::stringstream decls_;
-  std::stringstream contains_;
+  // Buffer to use with raw_string_ostream
+  std::string usesBuf_;
+  std::string useExtraAttrsBuf_;
+  std::string declsBuf_;
+  std::string containsBuf_;
+
+  llvm::raw_string_ostream uses_{usesBuf_};
+  llvm::raw_string_ostream useExtraAttrs_{useExtraAttrsBuf_};  // attrs added to used entity
+  llvm::raw_string_ostream decls_{declsBuf_};
+  llvm::raw_string_ostream contains_{containsBuf_};
 
   void WriteAll(const Scope &);
   void WriteOne(const Scope &);
   void Write(const Symbol &);
   std::string GetAsString(const Symbol &);
   void PutSymbols(const Scope &);
-  void PutSymbol(std::stringstream &, const Symbol &);
+  void PutSymbol(llvm::raw_ostream &, const Symbol &);
   void PutDerivedType(const Symbol &);
   void PutSubprogram(const Symbol &);
   void PutGeneric(const Symbol &);

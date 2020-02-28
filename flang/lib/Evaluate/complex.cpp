@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Evaluate/complex.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace Fortran::evaluate::value {
 
@@ -90,7 +91,7 @@ template<typename R> std::string Complex<R>::DumpHexadecimal() const {
 }
 
 template<typename R>
-std::ostream &Complex<R>::AsFortran(std::ostream &o, int kind) const {
+llvm::raw_ostream &Complex<R>::AsFortran(llvm::raw_ostream &o, int kind) const {
   re_.AsFortran(o << '(', kind);
   im_.AsFortran(o << ',', kind);
   return o << ')';

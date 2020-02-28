@@ -9,10 +9,10 @@
 #ifndef FORTRAN_EVALUATE_FORMATTING_H_
 #define FORTRAN_EVALUATE_FORMATTING_H_
 
-// It is inconvenient in C++ to have std::ostream::operator<<() as a direct
+// It is inconvenient in C++ to have llvm::raw_ostream::operator<<() as a direct
 // friend function of a class template with many instantiations, so the
 // various representational class templates in lib/Evaluate format themselves
-// via AsFortran(std::ostream &) member functions, which the operator<<()
+// via AsFortran(llvm::raw_ostream &) member functions, which the operator<<()
 // overload below will call.  Others have AsFortran() member functions that
 // return strings.
 //
@@ -20,31 +20,31 @@
 // representational class templates that need it, not by external clients.
 
 #include "flang/Common/indirection.h"
+#include "llvm/Support/raw_ostream.h"
 #include <optional>
-#include <ostream>
 #include <type_traits>
 
 namespace Fortran::evaluate {
 
 template<typename A>
-auto operator<<(std::ostream &o, const A &x) -> decltype(x.AsFortran(o)) {
+auto operator<<(llvm::raw_ostream &o, const A &x) -> decltype(x.AsFortran(o)) {
   return x.AsFortran(o);
 }
 
 template<typename A>
-auto operator<<(std::ostream &o, const A &x) -> decltype(o << x.AsFortran()) {
+auto operator<<(llvm::raw_ostream &o, const A &x) -> decltype(o << x.AsFortran()) {
   return o << x.AsFortran();
 }
 
 template<typename A, bool COPYABLE>
 auto operator<<(
-    std::ostream &o, const Fortran::common::Indirection<A, COPYABLE> &x)
+    llvm::raw_ostream &o, const Fortran::common::Indirection<A, COPYABLE> &x)
     -> decltype(o << x.value()) {
   return o << x.value();
 }
 
 template<typename A>
-auto operator<<(std::ostream &o, const std::optional<A> &x)
+auto operator<<(llvm::raw_ostream &o, const std::optional<A> &x)
     -> decltype(o << *x) {
   if (x) {
     o << *x;

@@ -9,8 +9,9 @@
 #include "flang/Parser/source.h"
 #include "flang/Common/idioms.h"
 #include "flang/Parser/char-buffer.h"
+#include "llvm/Support/Errno.h"
+#include "llvm/Support/raw_ostream.h"
 #include <algorithm>
-#include <cerrno>
 #include <cstddef>
 #include <cstring>
 #include <fcntl.h>
@@ -111,36 +112,38 @@ static std::size_t RemoveCarriageReturns(char *buffer, std::size_t bytes) {
   return wrote;
 }
 
-bool SourceFile::Open(std::string path, std::stringstream *error) {
+bool SourceFile::Open(std::string path, llvm::raw_ostream &error) {
   Close();
   path_ = path;
   std::string errorPath{"'"s + path + "'"};
   errno = 0;
   fileDescriptor_ = open(path.c_str(), O_RDONLY);
   if (fileDescriptor_ < 0) {
-    *error << "Could not open " << errorPath << ": " << std::strerror(errno);
+    error << "Could not open " << errorPath << ": "
+          << llvm::sys::StrError(errno);
     return false;
   }
   ++openFileDescriptors;
   return ReadFile(errorPath, error);
 }
 
-bool SourceFile::ReadStandardInput(std::stringstream *error) {
+bool SourceFile::ReadStandardInput(llvm::raw_ostream &error) {
   Close();
   path_ = "standard input";
   fileDescriptor_ = 0;
   return ReadFile(path_, error);
 }
 
-bool SourceFile::ReadFile(std::string errorPath, std::stringstream *error) {
+bool SourceFile::ReadFile(std::string errorPath, llvm::raw_ostream &error) {
   struct stat statbuf;
   if (fstat(fileDescriptor_, &statbuf) != 0) {
-    *error << "fstat failed on " << errorPath << ": " << std::strerror(errno);
+    error << "fstat failed on " << errorPath << ": "
+          << llvm::sys::StrError(errno);
     Close();
     return false;
   }
   if (S_ISDIR(statbuf.st_mode)) {
-    *error << errorPath << " is a directory";
+    error << errorPath << " is a directory";
     Close();
     return false;
   }
@@ -203,7 +206,8 @@ bool SourceFile::ReadFile(std::string errorPath, std::stringstream *error) {
     char *to{buffer.FreeSpace(count)};
     ssize_t got{read(fileDescriptor_, to, count)};
     if (got < 0) {
-      *error << "could not read " << errorPath << ": " << std::strerror(errno);
+      error << "could not read " << errorPath << ": "
+            << llvm::sys::StrError(errno);
       Close();
       return false;
     }

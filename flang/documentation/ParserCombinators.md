@@ -160,5 +160,5 @@ is built.  All of the following parsers consume characters acquired from
 
 ### Debugging Parser
 Last, a string literal `"..."_debug` denotes a parser that emits the string to
-`std::cerr` and succeeds.  It is useful for tracing while debugging a parser but should
+`llvm::errs` and succeeds.  It is useful for tracing while debugging a parser but should
 obviously not be committed for production code.

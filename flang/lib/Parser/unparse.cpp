@@ -16,6 +16,7 @@
 #include "flang/Parser/characters.h"
 #include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Parser/parse-tree.h"
+#include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cinttypes>
 #include <cstddef>
@@ -25,9 +26,9 @@ namespace Fortran::parser {
 
 class UnparseVisitor {
 public:
-  UnparseVisitor(std::ostream &out, int indentationAmount, Encoding encoding,
-      bool capitalize, bool backslashEscapes, preStatementType *preStatement,
-      AnalyzedObjectsAsFortran *asFortran)
+  UnparseVisitor(llvm::raw_ostream &out, int indentationAmount,
+      Encoding encoding, bool capitalize, bool backslashEscapes,
+      preStatementType *preStatement, AnalyzedObjectsAsFortran *asFortran)
     : out_{out}, indentationAmount_{indentationAmount}, encoding_{encoding},
       capitalizeKeywords_{capitalize}, backslashEscapes_{backslashEscapes},
       preStatement_{preStatement}, asFortran_{asFortran} {}
@@ -2511,7 +2512,7 @@ private:
     structureComponents_.clear();
   }
 
-  std::ostream &out_;
+  llvm::raw_ostream &out_;
   int indent_{0};
   const int indentationAmount_{1};
   int column_{1};
@@ -2593,7 +2594,7 @@ void UnparseVisitor::Word(const char *str) {
 
 void UnparseVisitor::Word(const std::string &str) { Word(str.c_str()); }
 
-void Unparse(std::ostream &out, const Program &program, Encoding encoding,
+void Unparse(llvm::raw_ostream &out, const Program &program, Encoding encoding,
     bool capitalizeKeywords, bool backslashEscapes,
     preStatementType *preStatement, AnalyzedObjectsAsFortran *asFortran) {
   UnparseVisitor visitor{out, 1, encoding, capitalizeKeywords, backslashEscapes,

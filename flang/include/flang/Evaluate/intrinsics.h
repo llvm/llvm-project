@@ -16,8 +16,11 @@
 #include "flang/Parser/char-block.h"
 #include "flang/Parser/message.h"
 #include <optional>
-#include <ostream>
 #include <string>
+
+namespace llvm {
+class raw_ostream;
+}
 
 namespace Fortran::evaluate {
 
@@ -76,7 +79,7 @@ public:
   std::optional<SpecificIntrinsicFunctionInterface> IsSpecificIntrinsicFunction(
       const std::string &) const;
 
-  std::ostream &Dump(std::ostream &) const;
+  llvm::raw_ostream &Dump(llvm::raw_ostream &) const;
 
 private:
   Implementation *impl_{nullptr};  // owning pointer

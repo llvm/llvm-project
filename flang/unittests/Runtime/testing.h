@@ -4,8 +4,12 @@
 #include <cstddef>
 #include <iosfwd>
 
+namespace llvm {
+ class raw_ostream;
+}
+
 void StartTests();
-std::ostream &Fail();
+llvm::raw_ostream &Fail();
 int EndTests();
 
 void SetCharacter(char *, std::size_t, const char *);

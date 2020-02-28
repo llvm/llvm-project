@@ -16,10 +16,13 @@
 
 #include "characters.h"
 #include <cstddef>
-#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
+
+namespace llvm {
+class raw_ostream;
+}
 
 namespace Fortran::parser {
 
@@ -44,8 +47,8 @@ public:
   std::size_t lines() const { return lineStart_.size(); }
   Encoding encoding() const { return encoding_; }
 
-  bool Open(std::string path, std::stringstream *error);
-  bool ReadStandardInput(std::stringstream *error);
+  bool Open(std::string path, llvm::raw_ostream &error);
+  bool ReadStandardInput(llvm::raw_ostream &error);
   void Close();
   SourcePosition FindOffsetLineAndColumn(std::size_t) const;
   std::size_t GetLineStartOffset(int lineNumber) const {
@@ -53,7 +56,7 @@ public:
   }
 
 private:
-  bool ReadFile(std::string errorPath, std::stringstream *error);
+  bool ReadFile(std::string errorPath, llvm::raw_ostream &error);
   void IdentifyPayload();
   void RecordLineStarts();
 

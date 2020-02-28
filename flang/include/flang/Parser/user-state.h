@@ -18,9 +18,9 @@
 #include "flang/Common/idioms.h"
 #include "flang/Parser/char-block.h"
 #include "flang/Parser/parse-tree.h"
+#include "llvm/Support/raw_ostream.h"
 #include <cinttypes>
 #include <optional>
-#include <ostream>
 #include <set>
 #include <unordered_map>
 
@@ -40,9 +40,9 @@ public:
   const CookedSource &cooked() const { return cooked_; }
   const common::LanguageFeatureControl &features() const { return features_; }
 
-  std::ostream *debugOutput() const { return debugOutput_; }
-  UserState &set_debugOutput(std::ostream *out) {
-    debugOutput_ = out;
+  llvm::raw_ostream *debugOutput() const { return debugOutput_; }
+  UserState &set_debugOutput(llvm::raw_ostream &out) {
+    debugOutput_ = &out;
     return *this;
   }
 
@@ -91,7 +91,7 @@ public:
 private:
   const CookedSource &cooked_;
 
-  std::ostream *debugOutput_{nullptr};
+  llvm::raw_ostream *debugOutput_{nullptr};
 
   ParsingLog *log_{nullptr};
   bool instrumentedParse_{false};

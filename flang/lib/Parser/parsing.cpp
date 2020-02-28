@@ -13,7 +13,7 @@
 #include "flang/Parser/message.h"
 #include "flang/Parser/provenance.h"
 #include "flang/Parser/source.h"
-#include <sstream>
+#include "llvm/Support/raw_ostream.h"
 
 namespace Fortran::parser {
 
@@ -29,12 +29,13 @@ const SourceFile *Parsing::Prescan(const std::string &path, Options options) {
     }
   }
 
-  std::stringstream fileError;
+  std::string buf;
+  llvm::raw_string_ostream fileError{buf};
   const SourceFile *sourceFile;
   if (path == "-") {
-    sourceFile = allSources.ReadStandardInput(&fileError);
+    sourceFile = allSources.ReadStandardInput(fileError);
   } else {
-    sourceFile = allSources.Open(path, &fileError);
+    sourceFile = allSources.Open(path, fileError);
   }
   if (!fileError.str().empty()) {
     ProvenanceRange range{allSources.AddCompilerInsertion(path)};
@@ -85,7 +86,7 @@ const SourceFile *Parsing::Prescan(const std::string &path, Options options) {
   return sourceFile;
 }
 
-void Parsing::DumpCookedChars(std::ostream &out) const {
+void Parsing::DumpCookedChars(llvm::raw_ostream &out) const {
   UserState userState{cooked_, common::LanguageFeatureControl{}};
   ParseState parseState{cooked_};
   parseState.set_inFixedForm(options_.isFixedForm).set_userState(&userState);
@@ -94,13 +95,15 @@ void Parsing::DumpCookedChars(std::ostream &out) const {
   }
 }
 
-void Parsing::DumpProvenance(std::ostream &out) const { cooked_.Dump(out); }
+void Parsing::DumpProvenance(llvm::raw_ostream &out) const {
+  cooked_.Dump(out);
+}
 
-void Parsing::DumpParsingLog(std::ostream &out) const {
+void Parsing::DumpParsingLog(llvm::raw_ostream &out) const {
   log_.Dump(out, cooked_);
 }
 
-void Parsing::Parse(std::ostream *out) {
+void Parsing::Parse(llvm::raw_ostream &out) {
   UserState userState{cooked_, options_.features};
   userState.set_debugOutput(out)
       .set_instrumentedParse(options_.instrumentedParse)
@@ -117,14 +120,15 @@ void Parsing::Parse(std::ostream *out) {
 
 void Parsing::ClearLog() { log_.clear(); }
 
-bool Parsing::ForTesting(std::string path, std::ostream &err) {
+bool Parsing::ForTesting(std::string path, llvm::raw_ostream &err) {
+  llvm::raw_null_ostream NullStream;
   Prescan(path, Options{});
   if (messages_.AnyFatalError()) {
     messages_.Emit(err, cooked_);
     err << "could not scan " << path << '\n';
     return false;
   }
-  Parse();
+  Parse(NullStream);
   messages_.Emit(err, cooked_);
   if (!consumedWholeFile_) {
     EmitMessage(err, finalRestingPlace_, "parser FAIL; final position");

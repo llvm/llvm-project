@@ -28,10 +28,13 @@
 #include "flang/Parser/char-block.h"
 #include <algorithm>
 #include <list>
-#include <ostream>
 #include <tuple>
 #include <type_traits>
 #include <variant>
+
+namespace llvm {
+class raw_ostream;
+}
 
 namespace Fortran::evaluate {
 
@@ -90,7 +93,7 @@ public:
   std::optional<DynamicType> GetType() const;
   int Rank() const;
   std::string AsFortran() const;
-  std::ostream &AsFortran(std::ostream &) const;
+  llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
   static Derived Rewrite(FoldingContext &, Derived &&);
 };
 
@@ -185,7 +188,7 @@ public:
     return operand_ == that.operand_;
   }
 
-  std::ostream &AsFortran(std::ostream &) const;
+  llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
 
 private:
   Container operand_;
@@ -212,7 +215,7 @@ struct Convert : public Operation<Convert<TO, FROMCAT>, TO, SomeKind<FROMCAT>> {
   using Operand = SomeKind<FROMCAT>;
   using Base = Operation<Convert, Result, Operand>;
   using Base::Base;
-  std::ostream &AsFortran(std::ostream &) const;
+  llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
 };
 
 template<typename A>
@@ -446,7 +449,7 @@ public:
   template<typename T> explicit ArrayConstructor(const Expr<T> &) {}
   static constexpr Result result() { return Result{}; }
   static constexpr DynamicType GetType() { return Result::GetType(); }
-  std::ostream &AsFortran(std::ostream &) const;
+  llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
 };
 
 template<int KIND>
@@ -464,7 +467,7 @@ public:
   bool operator==(const ArrayConstructor &) const;
   static constexpr Result result() { return Result{}; }
   static constexpr DynamicType GetType() { return Result::GetType(); }
-  std::ostream &AsFortran(std::ostream &) const;
+  llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
   const Expr<SubscriptInteger> &LEN() const { return length_.value(); }
 
 private:
@@ -488,7 +491,7 @@ public:
   bool operator==(const ArrayConstructor &) const;
   constexpr Result result() const { return result_; }
   constexpr DynamicType GetType() const { return result_.GetType(); }
-  std::ostream &AsFortran(std::ostream &) const;
+  llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
 
 private:
   Result result_;
@@ -629,7 +632,7 @@ public:
   int Rank() const {
     return std::visit([](const auto &x) { return x.Rank(); }, u);
   }
-  std::ostream &AsFortran(std::ostream &o) const;
+  llvm::raw_ostream &AsFortran(llvm::raw_ostream &o) const;
   common::MapTemplate<Relational, DirectlyComparableTypes> u;
 };
 
@@ -715,7 +718,7 @@ public:
   StructureConstructor &Add(const semantics::Symbol &, Expr<SomeType> &&);
   int Rank() const { return 0; }
   DynamicType GetType() const;
-  std::ostream &AsFortran(std::ostream &) const;
+  llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
 
 private:
   Result result_;
@@ -823,7 +826,7 @@ public:
   using BoundsSpec = std::vector<Expr<SubscriptInteger>>;
   using BoundsRemapping =
       std::vector<std::pair<Expr<SubscriptInteger>, Expr<SubscriptInteger>>>;
-  std::ostream &AsFortran(std::ostream &) const;
+  llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
 
   Expr<SomeType> lhs;
   Expr<SomeType> rhs;

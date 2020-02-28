@@ -19,6 +19,10 @@
 #include <string>
 #include <utility>
 
+namespace llvm {
+class raw_ostream;
+}
+
 namespace Fortran::parser {
 
 class CharBlock {
@@ -134,7 +138,7 @@ inline bool operator>(const char *left, const CharBlock &right) {
   return right < left;
 }
 
-std::ostream &operator<<(std::ostream &os, const CharBlock &x);
+llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const CharBlock &x);
 
 }
 

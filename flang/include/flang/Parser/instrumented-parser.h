@@ -15,7 +15,10 @@
 #include "flang/Parser/provenance.h"
 #include <cstddef>
 #include <map>
-#include <ostream>
+
+namespace llvm {
+class raw_ostream;
+}
 
 namespace Fortran::parser {
 
@@ -28,7 +31,7 @@ public:
   bool Fails(const char *at, const MessageFixedText &tag, ParseState &);
   void Note(const char *at, const MessageFixedText &tag, bool pass,
       const ParseState &);
-  void Dump(std::ostream &, const CookedSource &) const;
+  void Dump(llvm::raw_ostream &, const CookedSource &) const;
 
 private:
   struct LogForPosition {

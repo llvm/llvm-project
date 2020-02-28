@@ -11,7 +11,6 @@
 
 #include "flang/Common/template.h"
 #include "flang/Parser/parse-tree.h"
-#include "llvm/Support/raw_ostream.h"
 #include <memory>
 
 /// Build a light-weight tree over the parse-tree to help with lowering to FIR.
@@ -25,6 +24,10 @@
 /// units.  Function like units will contain lists of evaluations.  Evaluations
 /// are either statements or constructs, where a construct contains a list of
 /// evaluations. The resulting PFT structure can then be used to create FIR.
+
+namespace llvm {
+class raw_ostream;
+}
 
 namespace Fortran::lower {
 namespace pft {

@@ -12,12 +12,16 @@
 #include "flang/Parser/characters.h"
 #include <iosfwd>
 
+namespace llvm {
+class raw_ostream;
+}
+
 namespace Fortran::parser {
 struct Program;
 }
 
 namespace Fortran::semantics {
-void UnparseWithSymbols(std::ostream &, const parser::Program &,
+void UnparseWithSymbols(llvm::raw_ostream &, const parser::Program &,
     parser::Encoding encoding = parser::Encoding::UTF_8);
 }
 

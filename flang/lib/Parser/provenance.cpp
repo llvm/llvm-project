@@ -8,6 +8,7 @@
 
 #include "flang/Parser/provenance.h"
 #include "flang/Common/idioms.h"
+#include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <utility>
 
@@ -166,7 +167,7 @@ std::string AllSources::PopSearchPathDirectory() {
   return directory;
 }
 
-const SourceFile *AllSources::Open(std::string path, std::stringstream *error) {
+const SourceFile *AllSources::Open(std::string path, llvm::raw_ostream &error) {
   std::unique_ptr<SourceFile> source{std::make_unique<SourceFile>(encoding_)};
   if (source->Open(LocateSourceFile(path, searchPath_), error)) {
     return ownedSourceFiles_.emplace_back(std::move(source)).get();
@@ -175,7 +176,7 @@ const SourceFile *AllSources::Open(std::string path, std::stringstream *error) {
   }
 }
 
-const SourceFile *AllSources::ReadStandardInput(std::stringstream *error) {
+const SourceFile *AllSources::ReadStandardInput(llvm::raw_ostream &error) {
   std::unique_ptr<SourceFile> source{std::make_unique<SourceFile>(encoding_)};
   if (source->ReadStandardInput(error)) {
     return ownedSourceFiles_.emplace_back(std::move(source)).get();
@@ -209,7 +210,7 @@ ProvenanceRange AllSources::AddCompilerInsertion(std::string text) {
   return covers;
 }
 
-void AllSources::EmitMessage(std::ostream &o,
+void AllSources::EmitMessage(llvm::raw_ostream &o,
     const std::optional<ProvenanceRange> &range, const std::string &message,
     bool echoSourceLine) const {
   if (!range) {
@@ -470,12 +471,13 @@ void CookedSource::CompileProvenanceRangeToOffsetMappings() {
   }
 }
 
-static void DumpRange(std::ostream &o, const ProvenanceRange &r) {
+static void DumpRange(llvm::raw_ostream &o, const ProvenanceRange &r) {
   o << "[" << r.start().offset() << ".." << r.Last().offset() << "] ("
     << r.size() << " bytes)";
 }
 
-std::ostream &ProvenanceRangeToOffsetMappings::Dump(std::ostream &o) const {
+llvm::raw_ostream &ProvenanceRangeToOffsetMappings::Dump(
+    llvm::raw_ostream &o) const {
   for (const auto &m : map_) {
     o << "provenances ";
     DumpRange(o, m.first);
@@ -485,7 +487,8 @@ std::ostream &ProvenanceRangeToOffsetMappings::Dump(std::ostream &o) const {
   return o;
 }
 
-std::ostream &OffsetToProvenanceMappings::Dump(std::ostream &o) const {
+llvm::raw_ostream &OffsetToProvenanceMappings::Dump(
+    llvm::raw_ostream &o) const {
   for (const ContiguousProvenanceMapping &m : provenanceMap_) {
     std::size_t n{m.range.size()};
     o << "offsets [" << m.start << ".." << (m.start + n - 1)
@@ -496,7 +499,7 @@ std::ostream &OffsetToProvenanceMappings::Dump(std::ostream &o) const {
   return o;
 }
 
-std::ostream &AllSources::Dump(std::ostream &o) const {
+llvm::raw_ostream &AllSources::Dump(llvm::raw_ostream &o) const {
   o << "AllSources range_ ";
   DumpRange(o, range_);
   o << '\n';
@@ -517,7 +520,8 @@ std::ostream &AllSources::Dump(std::ostream &o) const {
               o << "compiler '" << ins.text << '\'';
               if (ins.text.length() == 1) {
                 int ch = ins.text[0];
-                o << " (0x" << std::hex << (ch & 0xff) << std::dec << ")";
+                o << "(0x";
+                o.write_hex(ch & 0xff) << ")";
               }
             },
         },
@@ -531,7 +535,7 @@ std::ostream &AllSources::Dump(std::ostream &o) const {
   return o;
 }
 
-std::ostream &CookedSource::Dump(std::ostream &o) const {
+llvm::raw_ostream &CookedSource::Dump(llvm::raw_ostream &o) const {
   o << "CookedSource:\n";
   allSources_.Dump(o);
   o << "CookedSource::provenanceMap_:\n";

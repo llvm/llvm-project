@@ -17,10 +17,13 @@
 #include "flang/Parser/provenance.h"
 #include <cstddef>
 #include <cstring>
-#include <ostream>
 #include <string>
 #include <utility>
 #include <vector>
+
+namespace llvm {
+class raw_ostream;
+}
 
 namespace Fortran::parser {
 
@@ -91,7 +94,7 @@ public:
   void Put(const char *, std::size_t, Provenance);
   void Put(const CharBlock &, Provenance);
   void Put(const std::string &, Provenance);
-  void Put(const std::stringstream &, Provenance);
+  void Put(llvm::raw_string_ostream &, Provenance);
 
   Provenance GetTokenProvenance(
       std::size_t token, std::size_t offset = 0) const;
@@ -109,7 +112,7 @@ public:
   TokenSequence &RemoveRedundantBlanks(std::size_t firstChar = 0);
   TokenSequence &ClipComment(bool skipFirst = false);
   void Emit(CookedSource &) const;
-  void Dump(std::ostream &) const;
+  void Dump(llvm::raw_ostream &) const;
 
 private:
   std::size_t TokenBytes(std::size_t token) const {

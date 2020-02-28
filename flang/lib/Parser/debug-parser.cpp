@@ -8,7 +8,6 @@
 
 #include "debug-parser.h"
 #include "flang/Parser/user-state.h"
-#include <ostream>
 #include <string>
 
 namespace Fortran::parser {

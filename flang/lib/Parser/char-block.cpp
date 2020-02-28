@@ -7,11 +7,11 @@
 //----------------------------------------------------------------------------//
 
 #include "flang/Parser/char-block.h"
-#include <ostream>
+#include "llvm/Support/raw_ostream.h"
 
 namespace Fortran::parser {
 
-std::ostream &operator<<(std::ostream &os, const CharBlock &x) {
+llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const CharBlock &x) {
   return os << x.ToString();
 }
 

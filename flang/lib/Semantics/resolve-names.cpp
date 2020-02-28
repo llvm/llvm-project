@@ -33,9 +33,9 @@
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
 #include "flang/Semantics/type.h"
+#include "llvm/Support/raw_ostream.h"
 #include <list>
 #include <map>
-#include <ostream>
 #include <set>
 #include <stack>
 
@@ -86,8 +86,10 @@ private:
   // the default Fortran mappings nor the mapping defined in parents.
   std::map<char, common::Reference<const DeclTypeSpec>> map_;
 
-  friend std::ostream &operator<<(std::ostream &, const ImplicitRules &);
-  friend void ShowImplicitRule(std::ostream &, const ImplicitRules &, char);
+  friend llvm::raw_ostream &operator<<(
+      llvm::raw_ostream &, const ImplicitRules &);
+  friend void ShowImplicitRule(
+      llvm::raw_ostream &, const ImplicitRules &, char);
 };
 
 // scope -> implicit rules for that scope
@@ -1463,7 +1465,8 @@ char ImplicitRules::Incr(char ch) {
   }
 }
 
-std::ostream &operator<<(std::ostream &o, const ImplicitRules &implicitRules) {
+llvm::raw_ostream &operator<<(
+    llvm::raw_ostream &o, const ImplicitRules &implicitRules) {
   o << "ImplicitRules:\n";
   for (char ch = 'a'; ch; ch = ImplicitRules::Incr(ch)) {
     ShowImplicitRule(o, implicitRules, ch);
@@ -1474,7 +1477,7 @@ std::ostream &operator<<(std::ostream &o, const ImplicitRules &implicitRules) {
   return o;
 }
 void ShowImplicitRule(
-    std::ostream &o, const ImplicitRules &implicitRules, char ch) {
+    llvm::raw_ostream &o, const ImplicitRules &implicitRules, char ch) {
   auto it{implicitRules.map_.find(ch)};
   if (it != implicitRules.map_.end()) {
     o << "  " << ch << ": " << *it->second << '\n';

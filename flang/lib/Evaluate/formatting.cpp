@@ -14,11 +14,12 @@
 #include "flang/Evaluate/tools.h"
 #include "flang/Parser/characters.h"
 #include "flang/Semantics/symbol.h"
-#include <sstream>
+#include "llvm/Support/raw_ostream.h"
 
 namespace Fortran::evaluate {
 
-static void ShapeAsFortran(std::ostream &o, const ConstantSubscripts &shape) {
+static void ShapeAsFortran(
+    llvm::raw_ostream &o, const ConstantSubscripts &shape) {
   if (GetRank(shape) > 1) {
     o << ",shape=";
     char ch{'['};
@@ -31,7 +32,8 @@ static void ShapeAsFortran(std::ostream &o, const ConstantSubscripts &shape) {
 }
 
 template<typename RESULT, typename VALUE>
-std::ostream &ConstantBase<RESULT, VALUE>::AsFortran(std::ostream &o) const {
+llvm::raw_ostream &ConstantBase<RESULT, VALUE>::AsFortran(
+    llvm::raw_ostream &o) const {
   if (Rank() > 1) {
     o << "reshape(";
   }
@@ -71,8 +73,8 @@ std::ostream &ConstantBase<RESULT, VALUE>::AsFortran(std::ostream &o) const {
 }
 
 template<int KIND>
-std::ostream &Constant<Type<TypeCategory::Character, KIND>>::AsFortran(
-    std::ostream &o) const {
+llvm::raw_ostream &Constant<Type<TypeCategory::Character, KIND>>::AsFortran(
+    llvm::raw_ostream &o) const {
   if (Rank() > 1) {
     o << "reshape(";
   }
@@ -97,11 +99,12 @@ std::ostream &Constant<Type<TypeCategory::Character, KIND>>::AsFortran(
   return o;
 }
 
-std::ostream &ActualArgument::AssumedType::AsFortran(std::ostream &o) const {
+llvm::raw_ostream &ActualArgument::AssumedType::AsFortran(
+    llvm::raw_ostream &o) const {
   return o << symbol_->name().ToString();
 }
 
-std::ostream &ActualArgument::AsFortran(std::ostream &o) const {
+llvm::raw_ostream &ActualArgument::AsFortran(llvm::raw_ostream &o) const {
   if (keyword_) {
     o << keyword_->ToString() << '=';
   }
@@ -115,11 +118,11 @@ std::ostream &ActualArgument::AsFortran(std::ostream &o) const {
   }
 }
 
-std::ostream &SpecificIntrinsic::AsFortran(std::ostream &o) const {
+llvm::raw_ostream &SpecificIntrinsic::AsFortran(llvm::raw_ostream &o) const {
   return o << name;
 }
 
-std::ostream &ProcedureRef::AsFortran(std::ostream &o) const {
+llvm::raw_ostream &ProcedureRef::AsFortran(llvm::raw_ostream &o) const {
   for (const auto &arg : arguments_) {
     if (arg && arg->isPassedObject()) {
       arg->AsFortran(o) << '%';
@@ -306,7 +309,8 @@ static OperatorSpelling SpellOperator(const Relational<T> &x) {
 }
 
 template<typename D, typename R, typename... O>
-std::ostream &Operation<D, R, O...>::AsFortran(std::ostream &o) const {
+llvm::raw_ostream &Operation<D, R, O...>::AsFortran(
+    llvm::raw_ostream &o) const {
   Precedence lhsPrec{ToPrecedence(left())};
   OperatorSpelling spelling{SpellOperator(derived())};
   o << spelling.prefix;
@@ -337,7 +341,7 @@ std::ostream &Operation<D, R, O...>::AsFortran(std::ostream &o) const {
 }
 
 template<typename TO, TypeCategory FROMCAT>
-std::ostream &Convert<TO, FROMCAT>::AsFortran(std::ostream &o) const {
+llvm::raw_ostream &Convert<TO, FROMCAT>::AsFortran(llvm::raw_ostream &o) const {
   static_assert(TO::category == TypeCategory::Integer ||
           TO::category == TypeCategory::Real ||
           TO::category == TypeCategory::Character ||
@@ -355,21 +359,22 @@ std::ostream &Convert<TO, FROMCAT>::AsFortran(std::ostream &o) const {
   return o << ",kind=" << TO::kind << ')';
 }
 
-std::ostream &Relational<SomeType>::AsFortran(std::ostream &o) const {
+llvm::raw_ostream &Relational<SomeType>::AsFortran(llvm::raw_ostream &o) const {
   std::visit([&](const auto &rel) { rel.AsFortran(o); }, u);
   return o;
 }
 
 template<typename T>
-std::ostream &EmitArray(std::ostream &o, const Expr<T> &expr) {
+llvm::raw_ostream &EmitArray(llvm::raw_ostream &o, const Expr<T> &expr) {
   return expr.AsFortran(o);
 }
 
 template<typename T>
-std::ostream &EmitArray(std::ostream &, const ArrayConstructorValues<T> &);
+llvm::raw_ostream &EmitArray(
+    llvm::raw_ostream &, const ArrayConstructorValues<T> &);
 
 template<typename T>
-std::ostream &EmitArray(std::ostream &o, const ImpliedDo<T> &implDo) {
+llvm::raw_ostream &EmitArray(llvm::raw_ostream &o, const ImpliedDo<T> &implDo) {
   o << '(';
   EmitArray(o, implDo.values());
   o << ',' << ImpliedDoIndex::Result::AsFortran()
@@ -381,8 +386,8 @@ std::ostream &EmitArray(std::ostream &o, const ImpliedDo<T> &implDo) {
 }
 
 template<typename T>
-std::ostream &EmitArray(
-    std::ostream &o, const ArrayConstructorValues<T> &values) {
+llvm::raw_ostream &EmitArray(
+    llvm::raw_ostream &o, const ArrayConstructorValues<T> &values) {
   const char *sep{""};
   for (const auto &value : values) {
     o << sep;
@@ -393,21 +398,23 @@ std::ostream &EmitArray(
 }
 
 template<typename T>
-std::ostream &ArrayConstructor<T>::AsFortran(std::ostream &o) const {
+llvm::raw_ostream &ArrayConstructor<T>::AsFortran(llvm::raw_ostream &o) const {
   o << '[' << GetType().AsFortran() << "::";
   EmitArray(o, *this);
   return o << ']';
 }
 
 template<int KIND>
-std::ostream &ArrayConstructor<Type<TypeCategory::Character, KIND>>::AsFortran(
-    std::ostream &o) const {
+llvm::raw_ostream &
+ArrayConstructor<Type<TypeCategory::Character, KIND>>::AsFortran(
+    llvm::raw_ostream &o) const {
   o << '[' << GetType().AsFortran(LEN().AsFortran()) << "::";
   EmitArray(o, *this);
   return o << ']';
 }
 
-std::ostream &ArrayConstructor<SomeDerived>::AsFortran(std::ostream &o) const {
+llvm::raw_ostream &ArrayConstructor<SomeDerived>::AsFortran(
+    llvm::raw_ostream &o) const {
   o << '[' << GetType().AsFortran() << "::";
   EmitArray(o, *this);
   return o << ']';
@@ -415,13 +422,15 @@ std::ostream &ArrayConstructor<SomeDerived>::AsFortran(std::ostream &o) const {
 
 template<typename RESULT>
 std::string ExpressionBase<RESULT>::AsFortran() const {
-  std::ostringstream ss;
+  std::string buf;
+  llvm::raw_string_ostream ss{buf};
   AsFortran(ss);
   return ss.str();
 }
 
 template<typename RESULT>
-std::ostream &ExpressionBase<RESULT>::AsFortran(std::ostream &o) const {
+llvm::raw_ostream &ExpressionBase<RESULT>::AsFortran(
+    llvm::raw_ostream &o) const {
   std::visit(
       common::visitors{
           [&](const BOZLiteralConstant &x) {
@@ -438,7 +447,7 @@ std::ostream &ExpressionBase<RESULT>::AsFortran(std::ostream &o) const {
   return o;
 }
 
-std::ostream &StructureConstructor::AsFortran(std::ostream &o) const {
+llvm::raw_ostream &StructureConstructor::AsFortran(llvm::raw_ostream &o) const {
   o << DerivedTypeSpecAsFortran(result_.derivedTypeSpec());
   if (values_.empty()) {
     o << '(';
@@ -496,7 +505,8 @@ std::string SomeDerived::AsFortran() const {
 }
 
 std::string DerivedTypeSpecAsFortran(const semantics::DerivedTypeSpec &spec) {
-  std::stringstream ss;
+  std::string buf;
+  llvm::raw_string_ostream ss{buf};
   ss << spec.name().ToString();
   char ch{'('};
   for (const auto &[name, value] : spec.parameters()) {
@@ -516,33 +526,35 @@ std::string DerivedTypeSpecAsFortran(const semantics::DerivedTypeSpec &spec) {
   return ss.str();
 }
 
-std::ostream &EmitVar(std::ostream &o, const Symbol &symbol) {
+llvm::raw_ostream &EmitVar(llvm::raw_ostream &o, const Symbol &symbol) {
   return o << symbol.name().ToString();
 }
 
-std::ostream &EmitVar(std::ostream &o, const std::string &lit) {
+llvm::raw_ostream &EmitVar(llvm::raw_ostream &o, const std::string &lit) {
   return o << parser::QuoteCharacterLiteral(lit);
 }
 
-std::ostream &EmitVar(std::ostream &o, const std::u16string &lit) {
+llvm::raw_ostream &EmitVar(llvm::raw_ostream &o, const std::u16string &lit) {
   return o << parser::QuoteCharacterLiteral(lit);
 }
 
-std::ostream &EmitVar(std::ostream &o, const std::u32string &lit) {
+llvm::raw_ostream &EmitVar(llvm::raw_ostream &o, const std::u32string &lit) {
   return o << parser::QuoteCharacterLiteral(lit);
 }
 
-template<typename A> std::ostream &EmitVar(std::ostream &o, const A &x) {
+template<typename A>
+llvm::raw_ostream &EmitVar(llvm::raw_ostream &o, const A &x) {
   return x.AsFortran(o);
 }
 
 template<typename A>
-std::ostream &EmitVar(std::ostream &o, common::Reference<A> x) {
+llvm::raw_ostream &EmitVar(llvm::raw_ostream &o, common::Reference<A> x) {
   return EmitVar(o, *x);
 }
 
 template<typename A>
-std::ostream &EmitVar(std::ostream &o, const A *p, const char *kw = nullptr) {
+llvm::raw_ostream &EmitVar(
+    llvm::raw_ostream &o, const A *p, const char *kw = nullptr) {
   if (p) {
     if (kw) {
       o << kw;
@@ -553,8 +565,8 @@ std::ostream &EmitVar(std::ostream &o, const A *p, const char *kw = nullptr) {
 }
 
 template<typename A>
-std::ostream &EmitVar(
-    std::ostream &o, const std::optional<A> &x, const char *kw = nullptr) {
+llvm::raw_ostream &EmitVar(
+    llvm::raw_ostream &o, const std::optional<A> &x, const char *kw = nullptr) {
   if (x) {
     if (kw) {
       o << kw;
@@ -565,8 +577,8 @@ std::ostream &EmitVar(
 }
 
 template<typename A, bool COPY>
-std::ostream &EmitVar(std::ostream &o, const common::Indirection<A, COPY> &p,
-    const char *kw = nullptr) {
+llvm::raw_ostream &EmitVar(llvm::raw_ostream &o,
+    const common::Indirection<A, COPY> &p, const char *kw = nullptr) {
   if (kw) {
     o << kw;
   }
@@ -575,35 +587,36 @@ std::ostream &EmitVar(std::ostream &o, const common::Indirection<A, COPY> &p,
 }
 
 template<typename A>
-std::ostream &EmitVar(std::ostream &o, const std::shared_ptr<A> &p) {
+llvm::raw_ostream &EmitVar(llvm::raw_ostream &o, const std::shared_ptr<A> &p) {
   CHECK(p);
   return EmitVar(o, *p);
 }
 
 template<typename... A>
-std::ostream &EmitVar(std::ostream &o, const std::variant<A...> &u) {
+llvm::raw_ostream &EmitVar(llvm::raw_ostream &o, const std::variant<A...> &u) {
   std::visit([&](const auto &x) { EmitVar(o, x); }, u);
   return o;
 }
 
-std::ostream &BaseObject::AsFortran(std::ostream &o) const {
+llvm::raw_ostream &BaseObject::AsFortran(llvm::raw_ostream &o) const {
   return EmitVar(o, u);
 }
 
 template<int KIND>
-std::ostream &TypeParamInquiry<KIND>::AsFortran(std::ostream &o) const {
+llvm::raw_ostream &TypeParamInquiry<KIND>::AsFortran(
+    llvm::raw_ostream &o) const {
   if (base_) {
     return base_->AsFortran(o) << '%';
   }
   return EmitVar(o, parameter_);
 }
 
-std::ostream &Component::AsFortran(std::ostream &o) const {
+llvm::raw_ostream &Component::AsFortran(llvm::raw_ostream &o) const {
   base_.value().AsFortran(o);
   return EmitVar(o << '%', symbol_);
 }
 
-std::ostream &NamedEntity::AsFortran(std::ostream &o) const {
+llvm::raw_ostream &NamedEntity::AsFortran(llvm::raw_ostream &o) const {
   std::visit(
       common::visitors{
           [&](SymbolRef s) { EmitVar(o, s); },
@@ -613,18 +626,18 @@ std::ostream &NamedEntity::AsFortran(std::ostream &o) const {
   return o;
 }
 
-std::ostream &Triplet::AsFortran(std::ostream &o) const {
+llvm::raw_ostream &Triplet::AsFortran(llvm::raw_ostream &o) const {
   EmitVar(o, lower_) << ':';
   EmitVar(o, upper_);
   EmitVar(o << ':', stride_.value());
   return o;
 }
 
-std::ostream &Subscript::AsFortran(std::ostream &o) const {
+llvm::raw_ostream &Subscript::AsFortran(llvm::raw_ostream &o) const {
   return EmitVar(o, u);
 }
 
-std::ostream &ArrayRef::AsFortran(std::ostream &o) const {
+llvm::raw_ostream &ArrayRef::AsFortran(llvm::raw_ostream &o) const {
   base_.AsFortran(o);
   char separator{'('};
   for (const Subscript &ss : subscript_) {
@@ -634,7 +647,7 @@ std::ostream &ArrayRef::AsFortran(std::ostream &o) const {
   return o << ')';
 }
 
-std::ostream &CoarrayRef::AsFortran(std::ostream &o) const {
+llvm::raw_ostream &CoarrayRef::AsFortran(llvm::raw_ostream &o) const {
   bool first{true};
   for (const Symbol &part : base_) {
     if (first) {
@@ -668,26 +681,26 @@ std::ostream &CoarrayRef::AsFortran(std::ostream &o) const {
   return o << ']';
 }
 
-std::ostream &DataRef::AsFortran(std::ostream &o) const {
+llvm::raw_ostream &DataRef::AsFortran(llvm::raw_ostream &o) const {
   return EmitVar(o, u);
 }
 
-std::ostream &Substring::AsFortran(std::ostream &o) const {
+llvm::raw_ostream &Substring::AsFortran(llvm::raw_ostream &o) const {
   EmitVar(o, parent_) << '(';
   EmitVar(o, lower_) << ':';
   return EmitVar(o, upper_) << ')';
 }
 
-std::ostream &ComplexPart::AsFortran(std::ostream &o) const {
+llvm::raw_ostream &ComplexPart::AsFortran(llvm::raw_ostream &o) const {
   return complex_.AsFortran(o) << '%' << EnumToString(part_);
 }
 
-std::ostream &ProcedureDesignator::AsFortran(std::ostream &o) const {
+llvm::raw_ostream &ProcedureDesignator::AsFortran(llvm::raw_ostream &o) const {
   return EmitVar(o, u);
 }
 
 template<typename T>
-std::ostream &Designator<T>::AsFortran(std::ostream &o) const {
+llvm::raw_ostream &Designator<T>::AsFortran(llvm::raw_ostream &o) const {
   std::visit(
       common::visitors{
           [&](SymbolRef symbol) { EmitVar(o, symbol); },
@@ -697,7 +710,7 @@ std::ostream &Designator<T>::AsFortran(std::ostream &o) const {
   return o;
 }
 
-std::ostream &DescriptorInquiry::AsFortran(std::ostream &o) const {
+llvm::raw_ostream &DescriptorInquiry::AsFortran(llvm::raw_ostream &o) const {
   switch (field_) {
   case Field::LowerBound: o << "lbound("; break;
   case Field::Extent: o << "size("; break;
@@ -716,7 +729,7 @@ std::ostream &DescriptorInquiry::AsFortran(std::ostream &o) const {
   }
 }
 
-std::ostream &Assignment::AsFortran(std::ostream &o) const {
+llvm::raw_ostream &Assignment::AsFortran(llvm::raw_ostream &o) const {
   std::visit(
       common::visitors{
           [&](const Assignment::Intrinsic &) {

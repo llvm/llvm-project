@@ -11,6 +11,7 @@
 #include "flang/Common/idioms.h"
 #include "flang/Parser/characters.h"
 #include "flang/Parser/message.h"
+#include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cinttypes>
 #include <cstddef>
@@ -19,7 +20,6 @@
 #include <memory>
 #include <optional>
 #include <set>
-#include <sstream>
 #include <utility>
 
 namespace Fortran::parser {
@@ -257,7 +257,8 @@ std::optional<TokenSequence> Preprocessor::MacroReplacement(
           repl = "\""s +
               allSources_.GetPath(prescanner.GetCurrentProvenance()) + '"';
         } else if (name == "__LINE__") {
-          std::stringstream ss;
+          std::string buf;
+          llvm::raw_string_ostream ss{buf};
           ss << allSources_.GetLineNumber(prescanner.GetCurrentProvenance());
           repl = ss.str();
         }
@@ -574,8 +575,9 @@ void Preprocessor::Directive(const TokenSequence &dir, Prescanner *prescanner) {
           "#include: empty include file name"_err_en_US);
       return;
     }
-    std::stringstream error;
-    const SourceFile *included{allSources_.Open(include, &error)};
+    std::string buf;
+    llvm::raw_string_ostream error{buf};
+    const SourceFile *included{allSources_.Open(include, error)};
     if (!included) {
       prescanner->Say(dir.GetTokenProvenanceRange(dirOffset),
           "#include: %s"_err_en_US, error.str());

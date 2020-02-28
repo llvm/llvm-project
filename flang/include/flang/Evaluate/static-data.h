@@ -17,9 +17,12 @@
 #include <cinttypes>
 #include <memory>
 #include <optional>
-#include <ostream>
 #include <string>
 #include <vector>
+
+namespace llvm {
+class raw_ostream;
+}
 
 namespace Fortran::evaluate {
 
@@ -63,7 +66,7 @@ public:
   std::optional<std::string> AsString() const;
   std::optional<std::u16string> AsU16String() const;
   std::optional<std::u32string> AsU32String() const;
-  std::ostream &AsFortran(std::ostream &) const;
+  llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
 
   static bool bigEndian;
 

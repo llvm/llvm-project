@@ -1,8 +1,8 @@
 #define AVOID_NATIVE_UINT128_T 1
 #include "flang/Common/uint128.h"
 #include "testing.h"
+#include "llvm/Support/raw_ostream.h"
 #include <cinttypes>
-#include <iostream>
 
 #if (defined __GNUC__ || defined __clang__) && defined __SIZEOF_INT128__
 #define HAS_NATIVE_UINT128_T 1
@@ -123,10 +123,10 @@ int main() {
     }
   }
 #if HAS_NATIVE_UINT128_T
-  std::cout << "Environment has native __uint128_t\n";
+  llvm::outs() << "Environment has native __uint128_t\n";
   TestVsNative();
 #else
-  std::cout << "Environment lacks native __uint128_t\n";
+  llvm::outs() << "Environment lacks native __uint128_t\n";
 #endif
   return testing::Complete();
 }

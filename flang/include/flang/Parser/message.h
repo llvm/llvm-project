@@ -22,7 +22,6 @@
 #include <cstring>
 #include <forward_list>
 #include <optional>
-#include <ostream>
 #include <string>
 #include <utility>
 #include <variant>
@@ -187,7 +186,7 @@ public:
   std::string ToString() const;
   std::optional<ProvenanceRange> GetProvenanceRange(const CookedSource &) const;
   void Emit(
-      std::ostream &, const CookedSource &, bool echoSourceLine = true) const;
+      llvm::raw_ostream &, const CookedSource &, bool echoSourceLine = true) const;
 
   // If this Message or any of its attachments locates itself via a CharBlock
   // within a particular CookedSource, replace its location with the
@@ -255,7 +254,7 @@ public:
   void Merge(Messages &&);
   void Copy(const Messages &);
   void ResolveProvenances(const CookedSource &);
-  void Emit(std::ostream &, const CookedSource &cooked,
+  void Emit(llvm::raw_ostream &, const CookedSource &cooked,
       bool echoSourceLines = true) const;
   void AttachTo(Message &);
   bool AnyFatalError() const;

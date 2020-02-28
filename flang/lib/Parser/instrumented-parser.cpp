@@ -9,8 +9,8 @@
 #include "flang/Parser/instrumented-parser.h"
 #include "flang/Parser/message.h"
 #include "flang/Parser/provenance.h"
+#include "llvm/Support/raw_ostream.h"
 #include <map>
-#include <ostream>
 
 namespace Fortran::parser {
 
@@ -63,7 +63,7 @@ void ParsingLog::Note(const char *at, const MessageFixedText &tag, bool pass,
   }
 }
 
-void ParsingLog::Dump(std::ostream &o, const CookedSource &cooked) const {
+void ParsingLog::Dump(llvm::raw_ostream &o, const CookedSource &cooked) const {
   for (const auto &posLog : perPos_) {
     const char *at{reinterpret_cast<const char *>(posLog.first)};
     for (const auto &tagLog : posLog.second.perTag) {

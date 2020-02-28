@@ -10,9 +10,9 @@
 #include "flang/Parser/characters.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/type.h"
+#include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <memory>
-#include <sstream>
 
 namespace Fortran::semantics {
 
@@ -32,7 +32,8 @@ bool EquivalenceObject::operator<(const EquivalenceObject &that) const {
 }
 
 std::string EquivalenceObject::AsFortran() const {
-  std::stringstream ss;
+  std::string buf;
+  llvm::raw_string_ostream ss{buf};
   ss << symbol.name().ToString();
   if (!subscripts.empty()) {
     char sep{'('};
@@ -283,7 +284,7 @@ void Scope::AddSourceRange(const parser::CharBlock &source) {
   }
 }
 
-std::ostream &operator<<(std::ostream &os, const Scope &scope) {
+llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Scope &scope) {
   os << Scope::EnumToString(scope.kind()) << " scope: ";
   if (auto *symbol{scope.symbol()}) {
     os << *symbol << ' ';

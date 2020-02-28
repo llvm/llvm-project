@@ -19,7 +19,6 @@
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/tools.h"
 #include <initializer_list>
-#include <ostream>
 #include <variant>
 
 namespace Fortran::semantics {

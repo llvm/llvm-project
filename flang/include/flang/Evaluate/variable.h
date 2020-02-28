@@ -25,9 +25,12 @@
 #include "flang/Common/template.h"
 #include "flang/Parser/char-block.h"
 #include <optional>
-#include <ostream>
 #include <variant>
 #include <vector>
+
+namespace llvm {
+class raw_ostream;
+}
 
 namespace Fortran::semantics {
 class Symbol;
@@ -49,7 +52,7 @@ struct BaseObject {
   EVALUATE_UNION_CLASS_BOILERPLATE(BaseObject)
   int Rank() const;
   std::optional<Expr<SubscriptInteger>> LEN() const;
-  std::ostream &AsFortran(std::ostream &) const;
+  llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
   const Symbol *symbol() const {
     if (const auto *result{std::get_if<SymbolRef>(&u)}) {
       return &result->get();
@@ -82,7 +85,7 @@ public:
   const Symbol &GetLastSymbol() const { return symbol_; }
   std::optional<Expr<SubscriptInteger>> LEN() const;
   bool operator==(const Component &) const;
-  std::ostream &AsFortran(std::ostream &) const;
+  llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
 
 private:
   common::CopyableIndirection<DataRef> base_;
@@ -110,7 +113,7 @@ public:
   int Rank() const;
   std::optional<Expr<SubscriptInteger>> LEN() const;
   bool operator==(const NamedEntity &) const;
-  std::ostream &AsFortran(std::ostream &) const;
+  llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
 
 private:
   std::variant<SymbolRef, Component> u_;
@@ -140,7 +143,7 @@ public:
 
   static constexpr int Rank() { return 0; }  // always scalar
   bool operator==(const TypeParamInquiry &) const;
-  std::ostream &AsFortran(std::ostream &) const;
+  llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
 
 private:
   std::optional<NamedEntity> base_;
@@ -168,7 +171,7 @@ public:
 
   bool operator==(const Triplet &) const;
   bool IsStrideOne() const;
-  std::ostream &AsFortran(std::ostream &) const;
+  llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
 
 private:
   std::optional<IndirectSubscriptIntegerExpr> lower_, upper_;
@@ -181,7 +184,7 @@ struct Subscript {
   explicit Subscript(Expr<SubscriptInteger> &&s)
     : u{IndirectSubscriptIntegerExpr::Make(std::move(s))} {}
   int Rank() const;
-  std::ostream &AsFortran(std::ostream &) const;
+  llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
   std::variant<IndirectSubscriptIntegerExpr, Triplet> u;
 };
 
@@ -217,7 +220,7 @@ public:
   const Symbol &GetLastSymbol() const;
   std::optional<Expr<SubscriptInteger>> LEN() const;
   bool operator==(const ArrayRef &) const;
-  std::ostream &AsFortran(std::ostream &) const;
+  llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
 
 private:
   NamedEntity base_;
@@ -265,7 +268,7 @@ public:
   NamedEntity GetBase() const;
   std::optional<Expr<SubscriptInteger>> LEN() const;
   bool operator==(const CoarrayRef &) const;
-  std::ostream &AsFortran(std::ostream &) const;
+  llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
 
 private:
   SymbolVector base_;
@@ -286,7 +289,7 @@ struct DataRef {
   const Symbol &GetFirstSymbol() const;
   const Symbol &GetLastSymbol() const;
   std::optional<Expr<SubscriptInteger>> LEN() const;
-  std::ostream &AsFortran(std::ostream &) const;
+  llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
 
   std::variant<SymbolRef, Component, ArrayRef, CoarrayRef> u;
 };
@@ -327,7 +330,7 @@ public:
   const Symbol *GetLastSymbol() const;
   std::optional<Expr<SubscriptInteger>> LEN() const;
   bool operator==(const Substring &) const;
-  std::ostream &AsFortran(std::ostream &) const;
+  llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
 
   std::optional<Expr<SomeCharacter>> Fold(FoldingContext &);
 
@@ -352,7 +355,7 @@ public:
   const Symbol &GetFirstSymbol() const { return complex_.GetFirstSymbol(); }
   const Symbol &GetLastSymbol() const { return complex_.GetLastSymbol(); }
   bool operator==(const ComplexPart &) const;
-  std::ostream &AsFortran(std::ostream &) const;
+  llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
 
 private:
   DataRef complex_;
@@ -387,7 +390,7 @@ public:
   BaseObject GetBaseObject() const;
   const Symbol *GetLastSymbol() const;
   std::optional<Expr<SubscriptInteger>> LEN() const;
-  std::ostream &AsFortran(std::ostream &o) const;
+  llvm::raw_ostream &AsFortran(llvm::raw_ostream &o) const;
 
   Variant u;
 };
@@ -405,7 +408,7 @@ template<typename T> struct Variable {
   int Rank() const {
     return std::visit([](const auto &x) { return x.Rank(); }, u);
   }
-  std::ostream &AsFortran(std::ostream &o) const {
+  llvm::raw_ostream &AsFortran(llvm::raw_ostream &o) const {
     std::visit([&](const auto &x) { x.AsFortran(o); }, u);
     return o;
   }
@@ -428,7 +431,7 @@ public:
 
   static constexpr int Rank() { return 0; }  // always scalar
   bool operator==(const DescriptorInquiry &) const;
-  std::ostream &AsFortran(std::ostream &) const;
+  llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
 
 private:
   NamedEntity base_;

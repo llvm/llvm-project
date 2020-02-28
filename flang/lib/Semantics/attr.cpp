@@ -8,7 +8,7 @@
 
 #include "flang/Semantics/attr.h"
 #include "flang/Common/idioms.h"
-#include <ostream>
+#include "llvm/Support/raw_ostream.h"
 #include <stddef.h>
 
 namespace Fortran::semantics {
@@ -29,11 +29,11 @@ std::string AttrToString(Attr attr) {
   }
 }
 
-std::ostream &operator<<(std::ostream &o, Attr attr) {
+llvm::raw_ostream &operator<<(llvm::raw_ostream &o, Attr attr) {
   return o << AttrToString(attr);
 }
 
-std::ostream &operator<<(std::ostream &o, const Attrs &attrs) {
+llvm::raw_ostream &operator<<(llvm::raw_ostream &o, const Attrs &attrs) {
   std::size_t n{attrs.count()};
   std::size_t seen{0};
   for (std::size_t j{0}; seen < n; ++j) {

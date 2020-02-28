@@ -11,6 +11,7 @@
 #include "flang/Common/indirection.h"
 #include "flang/Parser/tools.h"
 #include "flang/Parser/user-state.h"
+#include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 
 // So "delete Expr;" calls an external destructor for its typedExpr.
@@ -252,7 +253,7 @@ CharBlock Variable::GetSource() const {
       u);
 }
 
-std::ostream &operator<<(std::ostream &os, const Name &x) {
+llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Name &x) {
   return os << x.ToString();
 }
 
