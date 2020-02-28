@@ -2259,7 +2259,8 @@ define <8 x i32> @load_sext_8i1_to_8i32(<8 x i1> *%ptr) {
 ;
 ; AVX2-LABEL: load_sext_8i1_to_8i32:
 ; AVX2:       # %bb.0: # %entry
-; AVX2-NEXT:    vpbroadcastd (%rdi), %ymm0
+; AVX2-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX2-NEXT:    vpbroadcastd %xmm0, %ymm0
 ; AVX2-NEXT:    vmovdqa {{.*#+}} ymm1 = [1,2,4,8,16,32,64,128]
 ; AVX2-NEXT:    vpand %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpcmpeqd %ymm1, %ymm0, %ymm0
