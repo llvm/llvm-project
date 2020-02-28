@@ -175,7 +175,7 @@ TEST_F(FormatTestCSharp, CSharpNullConditional) {
   Style.SpaceBeforeParens = FormatStyle::SBPO_Always;
 
   verifyFormat(
-      "public Person(string firstName, string lastName, int? age=null)");
+      "public Person(string firstName, string lastName, int? age = null)");
 
   verifyFormat("foo () {\n"
                "  switch (args?.Length) {}\n"
@@ -601,6 +601,19 @@ TEST_F(FormatTestCSharp, CSharpSpaces) {
 
   Style.SpacesInSquareBrackets = true;
   verifyFormat(R"(private float[, ] Values;)", Style);
+}
+
+TEST_F(FormatTestCSharp, CSharpNullableTypes) {
+  FormatStyle Style = getGoogleStyle(FormatStyle::LK_CSharp);
+  Style.SpacesInSquareBrackets = false;
+
+  verifyFormat(R"(public float? Value;)", Style); // no space before `?`.
+
+  // Erroneous spaces in square brackets here will be tackled in a follow-up
+  // patch and are not addressed by setting
+  // `Style.SpacesInSquareBrackets = false;`
+  verifyFormat(R"(int?[] arr = new int?[ 10 ];)",
+               Style); // An array of a nullable type.
 }
 
 } // namespace format
