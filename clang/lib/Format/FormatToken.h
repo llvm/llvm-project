@@ -104,6 +104,7 @@ namespace format {
   TYPE(CSharpStringLiteral)                                                    \
   TYPE(CSharpNullCoalescing)                                                   \
   TYPE(CSharpNamedArgumentColon)                                               \
+  TYPE(CSharpNullableTypeQuestionMark)                                         \
   TYPE(Unknown)
 
 enum TokenType {
