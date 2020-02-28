@@ -1,4 +1,4 @@
-add_llvm_library(MLIRLoopOpsTransforms
+add_mlir_dialect_library(MLIRLoopOpsTransforms
   ParallelLoopFusion.cpp
   ParallelLoopSpecialization.cpp
   ParallelLoopTiling.cpp

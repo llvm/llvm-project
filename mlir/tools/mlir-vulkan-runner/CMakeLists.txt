@@ -51,31 +51,24 @@ if (MLIR_VULKAN_RUNNER_ENABLED)
     ${Vulkan_LIBRARY}
   )
 
+  get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
   set(LIBS
+    ${dialect_libs}
     LLVMCore
     LLVMSupport
     MLIRJitRunner
-    MLIRAffineOps
     MLIRAnalysis
     MLIREDSC
     MLIRExecutionEngine
-    MLIRFxpMathOps
-    MLIRGPU
     MLIRGPUtoCUDATransforms
     MLIRGPUtoNVVMTransforms
     MLIRGPUtoSPIRVTransforms
     MLIRGPUtoVulkanTransforms
     MLIRIR
     MLIRLLVMIR
-    MLIRLinalgOps
     MLIRLoopToStandard
-    MLIROpenMP
     MLIRParser
-    MLIRQuantOps
-    MLIRROCDLIR
-    MLIRSPIRV
     MLIRSPIRVTransforms
-    MLIRStandardOps
     MLIRStandardToLLVM
     MLIRSupport
     MLIRTargetLLVMIR
