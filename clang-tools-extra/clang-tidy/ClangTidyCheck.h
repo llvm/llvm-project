@@ -53,10 +53,23 @@ public:
   /// constructor using the Options.get() methods below.
   ClangTidyCheck(StringRef CheckName, ClangTidyContext *Context);
 
+  /// Override this to disable registering matchers and PP callbacks if an
+  /// invalid language version is being used.
+  ///
+  /// For example if a check is examining overloaded functions then this should
+  /// be overridden to return false when the CPlusPlus flag is not set in
+  /// \p LangOpts.
+  virtual bool isLanguageVersionSupported(const LangOptions &LangOpts) const {
+    return true;
+  }
+
   /// Override this to register ``PPCallbacks`` in the preprocessor.
   ///
   /// This should be used for clang-tidy checks that analyze preprocessor-
   /// dependent properties, e.g. include directives and macro definitions.
+  ///
+  /// This will only be executed if the function isLanguageVersionSupported
+  /// returns true.
   ///
   /// There are two Preprocessors to choose from that differ in how they handle
   /// modular #includes:
@@ -79,6 +92,9 @@ public:
   /// You can register as many matchers as necessary with \p Finder. Usually,
   /// "this" will be used as callback, but you can also specify other callback
   /// classes. Thereby, different matchers can trigger different callbacks.
+  ///
+  /// This will only be executed if the function isLanguageVersionSupported
+  /// returns true.
   ///
   /// If you need to merge information between the different matchers, you can
   /// store these as members of the derived class. However, note that all

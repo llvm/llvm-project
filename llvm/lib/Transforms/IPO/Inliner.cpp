@@ -35,6 +35,7 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Transforms/Utils/Local.h"
+#include "llvm/Transforms/Utils/CallPromotionUtils.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CallSite.h"
@@ -528,7 +529,7 @@ static bool
 inlineCallsImpl(CallGraphSCC &SCC, CallGraph &CG,
                 std::function<AssumptionCache &(Function &)> GetAssumptionCache,
                 ProfileSummaryInfo *PSI,
-                std::function<TargetLibraryInfo &(Function &)> GetTLI,
+                std::function<const TargetLibraryInfo &(Function &)> GetTLI,
                 bool InsertLifetime,
                 function_ref<InlineCost(CallSite CS)> GetInlineCost,
                 function_ref<AAResults &(Function &)> AARGetter,
@@ -761,7 +762,7 @@ bool LegacyInlinerBase::inlineCalls(CallGraphSCC &SCC) {
   CallGraph &CG = getAnalysis<CallGraphWrapperPass>().getCallGraph();
   ACT = &getAnalysis<AssumptionCacheTracker>();
   PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
-  auto GetTLI = [&](Function &F) -> TargetLibraryInfo & {
+  GetTLI = [&](Function &F) -> const TargetLibraryInfo & {
     return getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
   };
   auto GetAssumptionCache = [&](Function &F) -> AssumptionCache & {
@@ -1008,6 +1009,9 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
     auto GetBFI = [&](Function &F) -> BlockFrequencyInfo & {
       return FAM.getResult<BlockFrequencyAnalysis>(F);
     };
+    auto GetTLI = [&](Function &F) -> const TargetLibraryInfo & {
+      return FAM.getResult<TargetLibraryAnalysis>(F);
+    };
 
     auto GetInlineCost = [&](CallSite CS) {
       Function &Callee = *CS.getCalledFunction();
@@ -1016,7 +1020,7 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
           Callee.getContext().getDiagHandlerPtr()->isMissedOptRemarkEnabled(
               DEBUG_TYPE);
       return getInlineCost(cast<CallBase>(*CS.getInstruction()), Params,
-                           CalleeTTI, GetAssumptionCache, {GetBFI}, PSI,
+                           CalleeTTI, GetAssumptionCache, {GetBFI}, GetTLI, PSI,
                            RemarksEnabled ? &ORE : nullptr);
     };
 
@@ -1100,10 +1104,20 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
       if (!IFI.InlinedCallSites.empty()) {
         int NewHistoryID = InlineHistory.size();
         InlineHistory.push_back({&Callee, InlineHistoryID});
-        for (CallSite &CS : reverse(IFI.InlinedCallSites))
-          if (Function *NewCallee = CS.getCalledFunction())
+        for (CallSite &CS : reverse(IFI.InlinedCallSites)) {
+          Function *NewCallee = CS.getCalledFunction();
+          if (!NewCallee) {
+            // Try to promote an indirect (virtual) call without waiting for the
+            // post-inline cleanup and the next DevirtSCCRepeatedPass iteration
+            // because the next iteration may not happen and we may miss
+            // inlining it.
+            if (tryPromoteCall(CS))
+              NewCallee = CS.getCalledFunction();
+          }
+          if (NewCallee)
             if (!NewCallee->isDeclaration())
               Calls.push_back({CS, NewHistoryID});
+        }
       }
 
       if (InlinerFunctionImportStats != InlinerFunctionImportStatsOpts::No)

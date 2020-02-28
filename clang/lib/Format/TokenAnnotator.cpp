@@ -987,6 +987,10 @@ private:
       if (Line.MustBeDeclaration && !Contexts.back().IsExpression &&
           Style.Language == FormatStyle::LK_JavaScript)
         break;
+      if (Style.isCSharp() && Line.MustBeDeclaration) {
+        Tok->Type = TT_CSharpNullableTypeQuestionMark;
+        break;
+      }
       parseConditional();
       break;
     case tok::kw_template:
@@ -2898,9 +2902,13 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     if (Left.is(TT_TemplateCloser) && Right.is(TT_StartOfName))
       return true;
 
-    // space after comma in '[,]'.
-    if (Left.is(tok::comma) && Right.is(tok::r_square))
+    // spaces inside square brackets.
+    if (Left.is(tok::l_square) || Right.is(tok::r_square))
       return Style.SpacesInSquareBrackets;
+
+    // No space before ? in nullable types.
+    if (Right.is(TT_CSharpNullableTypeQuestionMark))
+      return false;
 
     // space between keywords and paren e.g. "using ("
     if (Right.is(tok::l_paren))

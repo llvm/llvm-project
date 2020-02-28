@@ -15,6 +15,7 @@
 #define MLIR_ANALYSIS_INFERTYPEOPINTERFACE_H_
 
 #include "mlir/IR/Attributes.h"
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/Support/LLVM.h"

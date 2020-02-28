@@ -14,6 +14,7 @@ namespace mlir {
 namespace edsc {
 namespace intrinsics {
 
+using vector_broadcast = ValueBuilder<vector::BroadcastOp>;
 using vector_contract = ValueBuilder<vector::ContractionOp>;
 using vector_print = OperationBuilder<vector::PrintOp>;
 

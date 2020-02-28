@@ -3266,6 +3266,7 @@ int BoUpSLP::getEntryCost(TreeEntry *E) {
     }
     return ReuseShuffleCost + getGatherCost(VL);
   }
+  assert(E->State == TreeEntry::Vectorize && "Unhandled state");
   assert(E->getOpcode() && allSameType(VL) && allSameBlock(VL) && "Invalid VL");
   Instruction *VL0 = E->getMainOp();
   unsigned ShuffleOrOp =
@@ -3275,7 +3276,7 @@ int BoUpSLP::getEntryCost(TreeEntry *E) {
       return 0;
 
     case Instruction::ExtractValue:
-    case Instruction::ExtractElement:
+    case Instruction::ExtractElement: {
       if (NeedToShuffleReuses) {
         unsigned Idx = 0;
         for (unsigned I : E->ReuseShuffleIndices) {
@@ -3304,43 +3305,40 @@ int BoUpSLP::getEntryCost(TreeEntry *E) {
               TTI->getVectorInstrCost(Instruction::ExtractElement, VecTy, Idx);
         }
       }
-      if (E->State == TreeEntry::Vectorize) {
-        int DeadCost = ReuseShuffleCost;
-        if (!E->ReorderIndices.empty()) {
-          // TODO: Merge this shuffle with the ReuseShuffleCost.
-          DeadCost += TTI->getShuffleCost(
-              TargetTransformInfo::SK_PermuteSingleSrc, VecTy);
-        }
-        for (unsigned i = 0, e = VL.size(); i < e; ++i) {
-          Instruction *E = cast<Instruction>(VL[i]);
-          // If all users are going to be vectorized, instruction can be
-          // considered as dead.
-          // The same, if have only one user, it will be vectorized for sure.
-          if (areAllUsersVectorized(E)) {
-            // Take credit for instruction that will become dead.
-            if (E->hasOneUse()) {
-              Instruction *Ext = E->user_back();
-              if ((isa<SExtInst>(Ext) || isa<ZExtInst>(Ext)) &&
-                  all_of(Ext->users(),
-                         [](User *U) { return isa<GetElementPtrInst>(U); })) {
-                // Use getExtractWithExtendCost() to calculate the cost of
-                // extractelement/ext pair.
-                DeadCost -= TTI->getExtractWithExtendCost(
-                    Ext->getOpcode(), Ext->getType(), VecTy, i);
-                // Add back the cost of s|zext which is subtracted separately.
-                DeadCost += TTI->getCastInstrCost(
-                    Ext->getOpcode(), Ext->getType(), E->getType(), Ext);
-                continue;
-              }
-            }
-            DeadCost -=
-                TTI->getVectorInstrCost(Instruction::ExtractElement, VecTy, i);
-          }
-        }
-        return DeadCost;
+      int DeadCost = ReuseShuffleCost;
+      if (!E->ReorderIndices.empty()) {
+        // TODO: Merge this shuffle with the ReuseShuffleCost.
+        DeadCost += TTI->getShuffleCost(
+            TargetTransformInfo::SK_PermuteSingleSrc, VecTy);
       }
-      return ReuseShuffleCost + getGatherCost(VL);
-
+      for (unsigned i = 0, e = VL.size(); i < e; ++i) {
+        Instruction *E = cast<Instruction>(VL[i]);
+        // If all users are going to be vectorized, instruction can be
+        // considered as dead.
+        // The same, if have only one user, it will be vectorized for sure.
+        if (areAllUsersVectorized(E)) {
+          // Take credit for instruction that will become dead.
+          if (E->hasOneUse()) {
+            Instruction *Ext = E->user_back();
+            if ((isa<SExtInst>(Ext) || isa<ZExtInst>(Ext)) &&
+                all_of(Ext->users(),
+                       [](User *U) { return isa<GetElementPtrInst>(U); })) {
+              // Use getExtractWithExtendCost() to calculate the cost of
+              // extractelement/ext pair.
+              DeadCost -= TTI->getExtractWithExtendCost(
+                  Ext->getOpcode(), Ext->getType(), VecTy, i);
+              // Add back the cost of s|zext which is subtracted separately.
+              DeadCost += TTI->getCastInstrCost(
+                  Ext->getOpcode(), Ext->getType(), E->getType(), Ext);
+              continue;
+            }
+          }
+          DeadCost -=
+              TTI->getVectorInstrCost(Instruction::ExtractElement, VecTy, i);
+        }
+      }
+      return DeadCost;
+    }
     case Instruction::ZExt:
     case Instruction::SExt:
     case Instruction::FPToUI:
@@ -4071,6 +4069,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
     return V;
   }
 
+  assert(E->State == TreeEntry::Vectorize && "Unhandled state");
   unsigned ShuffleOrOp =
       E->isAltShuffle() ? (unsigned)Instruction::ShuffleVector : E->getOpcode();
   switch (ShuffleOrOp) {
@@ -4111,72 +4110,45 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
     }
 
     case Instruction::ExtractElement: {
-      if (E->State == TreeEntry::Vectorize) {
-        Value *V = E->getSingleOperand(0);
-        if (!E->ReorderIndices.empty()) {
-          OrdersType Mask;
-          inversePermutation(E->ReorderIndices, Mask);
-          Builder.SetInsertPoint(VL0);
-          V = Builder.CreateShuffleVector(V, UndefValue::get(VecTy), Mask,
-                                          "reorder_shuffle");
-        }
-        if (NeedToShuffleReuses) {
-          // TODO: Merge this shuffle with the ReorderShuffleMask.
-          if (E->ReorderIndices.empty())
-            Builder.SetInsertPoint(VL0);
-          V = Builder.CreateShuffleVector(V, UndefValue::get(VecTy),
-                                          E->ReuseShuffleIndices, "shuffle");
-        }
-        E->VectorizedValue = V;
-        return V;
+      Value *V = E->getSingleOperand(0);
+      if (!E->ReorderIndices.empty()) {
+        OrdersType Mask;
+        inversePermutation(E->ReorderIndices, Mask);
+        Builder.SetInsertPoint(VL0);
+        V = Builder.CreateShuffleVector(V, UndefValue::get(VecTy), Mask,
+                                        "reorder_shuffle");
       }
-      setInsertPointAfterBundle(E);
-      auto *V = Gather(E->Scalars, VecTy);
       if (NeedToShuffleReuses) {
+        // TODO: Merge this shuffle with the ReorderShuffleMask.
+        if (E->ReorderIndices.empty())
+          Builder.SetInsertPoint(VL0);
         V = Builder.CreateShuffleVector(V, UndefValue::get(VecTy),
                                         E->ReuseShuffleIndices, "shuffle");
-        if (auto *I = dyn_cast<Instruction>(V)) {
-          GatherSeq.insert(I);
-          CSEBlocks.insert(I->getParent());
-        }
       }
       E->VectorizedValue = V;
       return V;
     }
     case Instruction::ExtractValue: {
-      if (E->State == TreeEntry::Vectorize) {
-        LoadInst *LI = cast<LoadInst>(E->getSingleOperand(0));
-        Builder.SetInsertPoint(LI);
-        PointerType *PtrTy = PointerType::get(VecTy, LI->getPointerAddressSpace());
-        Value *Ptr = Builder.CreateBitCast(LI->getOperand(0), PtrTy);
-        LoadInst *V = Builder.CreateAlignedLoad(VecTy, Ptr, LI->getAlign());
-        Value *NewV = propagateMetadata(V, E->Scalars);
-        if (!E->ReorderIndices.empty()) {
-          OrdersType Mask;
-          inversePermutation(E->ReorderIndices, Mask);
-          NewV = Builder.CreateShuffleVector(NewV, UndefValue::get(VecTy), Mask,
-                                             "reorder_shuffle");
-        }
-        if (NeedToShuffleReuses) {
-          // TODO: Merge this shuffle with the ReorderShuffleMask.
-          NewV = Builder.CreateShuffleVector(
-              NewV, UndefValue::get(VecTy), E->ReuseShuffleIndices, "shuffle");
-        }
-        E->VectorizedValue = NewV;
-        return NewV;
+      LoadInst *LI = cast<LoadInst>(E->getSingleOperand(0));
+      Builder.SetInsertPoint(LI);
+      PointerType *PtrTy =
+          PointerType::get(VecTy, LI->getPointerAddressSpace());
+      Value *Ptr = Builder.CreateBitCast(LI->getOperand(0), PtrTy);
+      LoadInst *V = Builder.CreateAlignedLoad(VecTy, Ptr, LI->getAlign());
+      Value *NewV = propagateMetadata(V, E->Scalars);
+      if (!E->ReorderIndices.empty()) {
+        OrdersType Mask;
+        inversePermutation(E->ReorderIndices, Mask);
+        NewV = Builder.CreateShuffleVector(NewV, UndefValue::get(VecTy), Mask,
+                                           "reorder_shuffle");
       }
-      setInsertPointAfterBundle(E);
-      auto *V = Gather(E->Scalars, VecTy);
       if (NeedToShuffleReuses) {
-        V = Builder.CreateShuffleVector(V, UndefValue::get(VecTy),
-                                        E->ReuseShuffleIndices, "shuffle");
-        if (auto *I = dyn_cast<Instruction>(V)) {
-          GatherSeq.insert(I);
-          CSEBlocks.insert(I->getParent());
-        }
+        // TODO: Merge this shuffle with the ReorderShuffleMask.
+        NewV = Builder.CreateShuffleVector(NewV, UndefValue::get(VecTy),
+                                           E->ReuseShuffleIndices, "shuffle");
       }
-      E->VectorizedValue = V;
-      return V;
+      E->VectorizedValue = NewV;
+      return NewV;
     }
     case Instruction::ZExt:
     case Instruction::SExt:
