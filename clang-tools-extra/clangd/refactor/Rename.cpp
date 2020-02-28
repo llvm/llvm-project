@@ -502,7 +502,7 @@ llvm::Expected<FileEdits> rename(const RenameInputs &RInputs) {
     return makeError(ReasonToReject::NoSymbolFound);
   // FIXME: Renaming macros is not supported yet, the macro-handling code should
   // be moved to rename tooling library.
-  if (locateMacroAt(IdentifierToken->location(), AST.getPreprocessor()))
+  if (locateMacroAt(*IdentifierToken, AST.getPreprocessor()))
     return makeError(ReasonToReject::UnsupportedSymbol);
 
   auto DeclsUnderCursor = locateDeclAt(AST, IdentifierToken->location());

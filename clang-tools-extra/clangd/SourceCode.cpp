@@ -891,17 +891,12 @@ llvm::StringSet<> collectWords(llvm::StringRef Content) {
   return Result;
 }
 
-llvm::Optional<DefinedMacro> locateMacroAt(SourceLocation Loc,
+llvm::Optional<DefinedMacro> locateMacroAt(const syntax::Token &SpelledTok,
                                            Preprocessor &PP) {
+  SourceLocation Loc = SpelledTok.location();
   assert(Loc.isFileID());
   const auto &SM = PP.getSourceManager();
-  const auto &LangOpts = PP.getLangOpts();
-  Token Result;
-  if (Lexer::getRawToken(Loc, Result, SM, LangOpts, false))
-    return None;
-  if (Result.is(tok::raw_identifier))
-    PP.LookUpIdentifierInfo(Result);
-  IdentifierInfo *IdentifierInfo = Result.getIdentifierInfo();
+  IdentifierInfo *IdentifierInfo = PP.getIdentifierInfo(SpelledTok.text(SM));
   if (!IdentifierInfo || !IdentifierInfo->hadMacroDefinition())
     return None;
 
