@@ -86,8 +86,6 @@ public:
   // Returns the file from which this symbol was created.
   InputFile *getFile() const { return file; }
 
-  uint32_t getFlags() const { return flags; }
-
   InputChunk *getChunk() const;
 
   // Indicates that the section or import for this symbol will be included in
@@ -124,14 +122,12 @@ public:
 
 protected:
   Symbol(StringRef name, Kind k, uint32_t flags, InputFile *f)
-      : name(name), file(f), flags(flags), symbolKind(k),
-        referenced(!config->gcSections), requiresGOT(false),
-        isUsedInRegularObj(false), forceExport(false), canInline(false),
-        traced(false) {}
+      : name(name), file(f), symbolKind(k), referenced(!config->gcSections),
+        requiresGOT(false), isUsedInRegularObj(false), forceExport(false),
+        canInline(false), traced(false), flags(flags) {}
 
   StringRef name;
   InputFile *file;
-  uint32_t flags;
   uint32_t outputSymbolIndex = INVALID_INDEX;
   uint32_t gotIndex = INVALID_INDEX;
   Kind symbolKind;
@@ -160,6 +156,8 @@ public:
 
   // True if this symbol is specified by --trace-symbol option.
   bool traced : 1;
+
+  uint32_t flags;
 };
 
 class FunctionSymbol : public Symbol {
