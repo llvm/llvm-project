@@ -97,6 +97,18 @@ def InferShapedTypeOpInterface : OpInterface<"InferShapedTypeOpInterface"> {
                     "SmallVectorImpl<ShapedTypeComponents>&":
                       $inferedReturnShapes)
     >,
+    InterfaceMethod<
+      /*desc=*/[{Reify the shape computation for the operation.
+
+      Insert operations using the given OpBulder that computes the result shape.
+      }],
+      /*retTy=*/"LogicalResult",
+      /*methodName=*/"reifyReturnTypeShapes",
+      /*args=*/(ins "OpBuilder&":$builder,
+                    "SmallVectorImpl<Value>&":$reifiedReturnShapes),
+      /*methodBody=*/[{}],
+      /*defaultImplementation=*/[{ return failure(); }]
+    >,
   ];
 }
 
