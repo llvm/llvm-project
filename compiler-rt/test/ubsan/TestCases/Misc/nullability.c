@@ -2,6 +2,11 @@
 // RUN: %run %t foo 2>&1 | count 0
 // RUN: %run %t 2>&1 | FileCheck %s
 
+// RUN: echo "nullability-arg:nullability.c" > %t.supp
+// RUN: echo "nullability-return:nullability.c" >> %t.supp
+// RUN: echo "nullability-assign:nullability.c" >> %t.supp
+// RUN: UBSAN_OPTIONS=suppressions=%t.supp %run %t 2>&1 | count 0
+
 // CHECK: nullability.c:[[@LINE+2]]:41: runtime error: null pointer returned from function declared to never return null
 // CHECK-NEXT: nullability.c:[[@LINE+1]]:6: note: _Nonnull return type annotation specified here
 int *_Nonnull nonnull_retval1(int *p) { return p; }
