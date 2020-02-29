@@ -10,11 +10,12 @@ set(LIB_LIBS
   MLIRPass
   MLIRTransforms
   MLIRSupport
-)
+  LLVMSupport
+  )
 add_llvm_library(MLIRMlirOptMain
   mlir-opt.cpp
-)
-target_link_libraries(MLIRMlirOptMain
+
+  LINK_LIBS
   ${LIB_LIBS}
 )
 

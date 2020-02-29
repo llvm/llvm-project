@@ -38,6 +38,12 @@ target_link_libraries(toyc-ch7
     MLIRIR
     MLIRParser
     MLIRPass
+    MLIRSupport
     MLIRTargetLLVMIR
     MLIRTransforms
+    LLVMOrcJIT
+    LLVMSupport
+    LLVMX86CodeGen
+    LLVMX86Desc
+    LLVMX86Info
     )

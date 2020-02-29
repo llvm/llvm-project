@@ -25,14 +25,14 @@ if(MLIR_CUDA_RUNNER_ENABLED)
 
   add_llvm_library(cuda-runtime-wrappers SHARED
     cuda-runtime-wrappers.cpp
+
+    LINK_LIBS
+    LLVMSupport
+    ${CUDA_RUNTIME_LIBRARY}
   )
   target_include_directories(cuda-runtime-wrappers
     PRIVATE ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}
     LLVMSupport
-  )
-  target_link_libraries(cuda-runtime-wrappers
-    LLVMSupport
-    ${CUDA_RUNTIME_LIBRARY}
   )
 
   get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)

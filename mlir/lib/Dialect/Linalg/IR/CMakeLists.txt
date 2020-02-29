@@ -1,7 +1,8 @@
 set(LIBS
-
   MLIRIR
   MLIRStandardOps
+  MLIRSupport
+  LLVMSupport
   )
 
 add_mlir_dialect_library(MLIRLinalgOps
@@ -12,6 +13,12 @@ add_mlir_dialect_library(MLIRLinalgOps
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/Linalg
   DEPENDS
   intrinsics_gen
+
+  LINK_LIBS
+  MLIRIR
+  MLIRStandardOps
+  MLIRSupport
+  LLVMSupport
   )
 
 add_dependencies(MLIRLinalgOps
@@ -21,4 +28,3 @@ add_dependencies(MLIRLinalgOps
   MLIRLinalgStructuredOpsIncGen
   MLIRLinalgStructuredOpsInterfaceIncGen
   )
-target_link_libraries(MLIRLinalgOps ${LIBS})
