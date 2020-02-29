@@ -12,15 +12,13 @@ add_llvm_library(MLIRExecutionEngine
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/ExecutionEngine
+  )
+target_link_libraries(MLIRExecutionEngine
 
-  LINK_LIBS
-  MLIRIR
   MLIRLLVMIR
-  MLIRSupport
   MLIRTargetLLVMIR
   LLVMBitReader
   LLVMBitWriter
-  LLVMCore
   LLVMExecutionEngine
   LLVMObject
   LLVMOrcJIT
@@ -34,8 +32,8 @@ add_llvm_library(MLIRExecutionEngine
   LLVMTarget
   LLVMVectorize
   LLVMTransformUtils
-  ${outlibs}
-  )
+
+  ${outlibs})
 
 add_llvm_library(mlir_c_runner_utils SHARED CRunnerUtils.cpp)
 target_compile_definitions(mlir_c_runner_utils PRIVATE mlir_c_runner_utils_EXPORTS)
