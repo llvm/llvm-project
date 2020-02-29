@@ -364,10 +364,8 @@ bool X86AsmBackend::needAlign(MCObjectStreamer &OS) const {
     return false;
   assert(allowAutoPadding() && "incorrect initialization!");
 
-  MCAssembler &Assembler = OS.getAssembler();
-  MCSection *Sec = OS.getCurrentSectionOnly();
   // To be Done: Currently don't deal with Bundle cases.
-  if (Assembler.isBundlingEnabled() && Sec->isBundleLocked())
+  if (OS.getAssembler().isBundlingEnabled())
     return false;
 
   // Branches only need to be aligned in 32-bit or 64-bit mode.
