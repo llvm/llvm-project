@@ -57,6 +57,13 @@ void __dfsan_mem_transfer_callback(dfsan_label *Start, size_t Len) {
   fprintf(stderr, "Label %u copied to memory\n", Start[0]);
 }
 
+void __dfsan_cmp_callback(dfsan_label CombinedLabel) {
+  if (!CombinedLabel)
+    return;
+
+  fprintf(stderr, "Label %u used for branching\n", CombinedLabel);
+}
+
 #else
 // Compile this code with DFSan and -dfsan-event-callbacks to insert the
 // callbacks.
@@ -82,12 +89,14 @@ int main(int Argc, char *Argv[]) {
   volatile int Sink = I;
 
   // CHECK: Label 1 loaded from memory
+  // CHECK: Label 1 used for branching
   assert(Sink == 1);
 
   // CHECK: Label 2 stored to memory
   Sink = J;
 
   // CHECK: Label 2 loaded from memory
+  // CHECK: Label 2 used for branching
   assert(Sink == 2);
 
   // CHECK: Label 2 loaded from memory
@@ -95,7 +104,11 @@ int main(int Argc, char *Argv[]) {
   Sink += I;
 
   // CHECK: Label 3 loaded from memory
+  // CHECK: Label 3 used for branching
   assert(Sink == 3);
+
+  // CHECK: Label 3 used for branching
+  assert(I != J);
 
   LenArgv = strlen(Argv[1]);
   LabelArgv = dfsan_create_label("Argv", 0);
