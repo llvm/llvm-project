@@ -415,17 +415,17 @@ void StackMaps::emitStackmapHeader(MCStreamer &OS) {
   // Header.
   OS.emitIntValue(StackMapVersion, 1); // Version.
   OS.emitIntValue(0, 1);               // Reserved.
-  OS.emitIntValue(0, 2);               // Reserved.
+  OS.emitInt16(0);                     // Reserved.
 
   // Num functions.
   LLVM_DEBUG(dbgs() << WSMP << "#functions = " << FnInfos.size() << '\n');
-  OS.emitIntValue(FnInfos.size(), 4);
+  OS.emitInt32(FnInfos.size());
   // Num constants.
   LLVM_DEBUG(dbgs() << WSMP << "#constants = " << ConstPool.size() << '\n');
-  OS.emitIntValue(ConstPool.size(), 4);
+  OS.emitInt32(ConstPool.size());
   // Num callsites.
   LLVM_DEBUG(dbgs() << WSMP << "#callsites = " << CSInfos.size() << '\n');
-  OS.emitIntValue(CSInfos.size(), 4);
+  OS.emitInt32(CSInfos.size());
 }
 
 /// Emit the function frame record for each function.
@@ -503,11 +503,11 @@ void StackMaps::emitCallsiteEntries(MCStreamer &OS) {
     if (CSLocs.size() > UINT16_MAX || LiveOuts.size() > UINT16_MAX) {
       OS.emitIntValue(UINT64_MAX, 8); // Invalid ID.
       OS.emitValue(CSI.CSOffsetExpr, 4);
-      OS.emitIntValue(0, 2); // Reserved.
-      OS.emitIntValue(0, 2); // 0 locations.
-      OS.emitIntValue(0, 2); // padding.
-      OS.emitIntValue(0, 2); // 0 live-out registers.
-      OS.emitIntValue(0, 4); // padding.
+      OS.emitInt16(0); // Reserved.
+      OS.emitInt16(0); // 0 locations.
+      OS.emitInt16(0); // padding.
+      OS.emitInt16(0); // 0 live-out registers.
+      OS.emitInt32(0); // padding.
       continue;
     }
 
@@ -515,27 +515,27 @@ void StackMaps::emitCallsiteEntries(MCStreamer &OS) {
     OS.emitValue(CSI.CSOffsetExpr, 4);
 
     // Reserved for flags.
-    OS.emitIntValue(0, 2);
-    OS.emitIntValue(CSLocs.size(), 2);
+    OS.emitInt16(0);
+    OS.emitInt16(CSLocs.size());
 
     for (const auto &Loc : CSLocs) {
       OS.emitIntValue(Loc.Type, 1);
       OS.emitIntValue(0, 1);  // Reserved
-      OS.emitIntValue(Loc.Size, 2);
-      OS.emitIntValue(Loc.Reg, 2);
-      OS.emitIntValue(0, 2);  // Reserved
-      OS.emitIntValue(Loc.Offset, 4);
+      OS.emitInt16(Loc.Size);
+      OS.emitInt16(Loc.Reg);
+      OS.emitInt16(0); // Reserved
+      OS.emitInt32(Loc.Offset);
     }
 
     // Emit alignment to 8 byte.
     OS.emitValueToAlignment(8);
 
     // Num live-out registers and padding to align to 4 byte.
-    OS.emitIntValue(0, 2);
-    OS.emitIntValue(LiveOuts.size(), 2);
+    OS.emitInt16(0);
+    OS.emitInt16(LiveOuts.size());
 
     for (const auto &LO : LiveOuts) {
-      OS.emitIntValue(LO.DwarfRegNum, 2);
+      OS.emitInt16(LO.DwarfRegNum);
       OS.emitIntValue(0, 1);
       OS.emitIntValue(LO.Size, 1);
     }
