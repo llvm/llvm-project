@@ -406,7 +406,7 @@ Symbol *SymbolTable::addDefinedEvent(StringRef name, uint32_t flags,
 template <typename T>
 static void setImportAttributes(T *existing, Optional<StringRef> importName,
                                 Optional<StringRef> importModule,
-                                InputFile *file) {
+                                uint32_t flags, InputFile *file) {
   if (importName) {
     if (!existing->importName)
       existing->importName = importName;
@@ -426,6 +426,12 @@ static void setImportAttributes(T *existing, Optional<StringRef> importName,
             toString(existing->getFile()) + "\n>>> defined as " +
             *importModule + " in " + toString(file));
   }
+
+  // Update symbol binding, if the existing symbol is weak
+  uint32_t binding = flags & WASM_SYMBOL_BINDING_MASK;
+  if (existing->isWeak() && binding != WASM_SYMBOL_BINDING_WEAK) {
+    existing->flags = (existing->flags & ~WASM_SYMBOL_BINDING_MASK) | binding;
+  }
 }
 
 Symbol *SymbolTable::addUndefinedFunction(StringRef name,
@@ -436,7 +442,8 @@ Symbol *SymbolTable::addUndefinedFunction(StringRef name,
                                           bool isCalledDirectly) {
   LLVM_DEBUG(dbgs() << "addUndefinedFunction: " << name << " ["
                     << (sig ? toString(*sig) : "none")
-                    << "] IsCalledDirectly:" << isCalledDirectly << "\n");
+                    << "] IsCalledDirectly:" << isCalledDirectly << " flags=0x"
+                    << utohexstr(flags) << "\n");
   assert(flags & WASM_SYMBOL_UNDEFINED);
 
   Symbol *s;
@@ -460,20 +467,21 @@ Symbol *SymbolTable::addUndefinedFunction(StringRef name,
       reportTypeError(s, file, WASM_SYMBOL_TYPE_FUNCTION);
       return s;
     }
-    auto *existingUndefined = dyn_cast<UndefinedFunction>(existingFunction);
     if (!existingFunction->signature && sig)
       existingFunction->signature = sig;
+    auto *existingUndefined = dyn_cast<UndefinedFunction>(existingFunction);
     if (isCalledDirectly && !signatureMatches(existingFunction, sig)) {
-      // If the existing undefined functions is not called direcltly then let
+      // If the existing undefined functions is not called directly then let
       // this one take precedence.  Otherwise the existing function is either
-      // direclty called or defined, in which case we need a function variant.
+      // directly called or defined, in which case we need a function variant.
       if (existingUndefined && !existingUndefined->isCalledDirectly)
         replaceSym();
       else if (getFunctionVariant(s, sig, file, &s))
         replaceSym();
     }
     if (existingUndefined)
-      setImportAttributes(existingUndefined, importName, importModule, file);
+      setImportAttributes(existingUndefined, importName, importModule, flags,
+                          file);
   }
 
   return s;
@@ -634,7 +642,7 @@ InputFunction *SymbolTable::replaceWithUnreachable(Symbol *sym,
   auto *func = make<SyntheticFunction>(sig, sym->getName(), debugName);
   func->setBody(unreachableFn);
   syntheticFunctions.emplace_back(func);
-  replaceSymbol<DefinedFunction>(sym, sym->getName(), sym->getFlags(), nullptr,
+  replaceSymbol<DefinedFunction>(sym, sym->getName(), sym->flags, nullptr,
                                  func);
   return func;
 }
