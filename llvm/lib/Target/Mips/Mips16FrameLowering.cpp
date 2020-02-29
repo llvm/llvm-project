@@ -135,10 +135,9 @@ bool Mips16FrameLowering::spillCalleeSavedRegisters(
   return true;
 }
 
-bool Mips16FrameLowering::restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
-                                          MachineBasicBlock::iterator MI,
-                                       std::vector<CalleeSavedInfo> &CSI,
-                                       const TargetRegisterInfo *TRI) const {
+bool Mips16FrameLowering::restoreCalleeSavedRegisters(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
+    MutableArrayRef<CalleeSavedInfo> CSI, const TargetRegisterInfo *TRI) const {
   //
   // Registers RA,S0,S1 are the callee saved registers and they will be restored
   // with the restore instruction during emitEpilogue.
