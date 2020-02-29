@@ -207,11 +207,9 @@ public:
 
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override {
-    bool Is64 = TT.isPPC64();
-    return createPPCMachObjectWriter(
-        /*Is64Bit=*/Is64,
-        (Is64 ? MachO::CPU_TYPE_POWERPC64 : MachO::CPU_TYPE_POWERPC),
-        MachO::CPU_SUBTYPE_POWERPC_ALL);
+    uint32_t CPUType = cantFail(MachO::getCPUType(TT));
+    uint32_t CPUSubType = cantFail(MachO::getCPUSubType(TT));
+    return createPPCMachObjectWriter(TT.isArch64Bit(), CPUType, CPUSubType);
   }
 };
 
