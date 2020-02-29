@@ -51,9 +51,11 @@ public:
     return true;
   }
 
-  bool restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
-      MachineBasicBlock::iterator MI, std::vector<CalleeSavedInfo> &CSI,
-      const TargetRegisterInfo *TRI) const override {
+  bool
+  restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
+                              MachineBasicBlock::iterator MI,
+                              MutableArrayRef<CalleeSavedInfo> CSI,
+                              const TargetRegisterInfo *TRI) const override {
     return true;
   }
 
