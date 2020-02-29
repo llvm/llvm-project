@@ -49,41 +49,14 @@ function(add_mlir_dialect dialect dialect_doc_filename)
   add_dependencies(mlir-doc ${dialect_doc_filename}DocGen)
 endfunction()
 
-# Declare a library which can be compiled in libMLIR.so
-macro(add_mlir_library name)
-  cmake_parse_arguments(ARG
-    "SHARED;INSTALL_WITH_TOOLCHAIN"
-    ""
-    "ADDITIONAL_HEADERS"
-    ${ARGN})
-  set(srcs)
-  if(ARG_SHARED)
-    set(LIBTYPE SHARED)
-  else()
-    # llvm_add_library ignores BUILD_SHARED_LIBS if STATIC is explicitly set,
-    # so we need to handle it here.
-    if(BUILD_SHARED_LIBS)
-      set(LIBTYPE SHARED)
-    else()
-      set(LIBTYPE STATIC)
-    endif()
-    if(NOT XCODE)
-      # The Xcode generator doesn't handle object libraries correctly.
-      list(APPEND LIBTYPE OBJECT)
-    endif()
-    set_property(GLOBAL APPEND PROPERTY MLIR_ALL_LIBS ${name})
-  endif()
-  add_llvm_library(${name} ${LIBTYPE} ${ARG_UNPARSED_ARGUMENTS} ${srcs})
-endmacro(add_mlir_library)
-
 # Declare the library associated with a dialect.
 function(add_mlir_dialect_library name)
   set_property(GLOBAL APPEND PROPERTY MLIR_DIALECT_LIBS ${name})
-  add_mlir_library(${ARGV})
+  add_llvm_library(${ARGV})
 endfunction(add_mlir_dialect_library)
 
 # Declare the library associated with a conversion.
 function(add_mlir_conversion_library name)
   set_property(GLOBAL APPEND PROPERTY MLIR_CONVERSION_LIBS ${name})
-  add_mlir_library(${ARGV})
+  add_llvm_library(${ARGV})
 endfunction(add_mlir_conversion_library)
