@@ -297,6 +297,9 @@ public:
   /// Should a temporary file be used during compilation.
   unsigned UseTemporary : 1;
 
+  /// When using -emit-module, treat the modulemap as a system module.
+  unsigned IsSystemModule : 1;
+
   CodeCompleteOptions CodeCompleteOpts;
 
   /// Specifies the output format of the AST.
