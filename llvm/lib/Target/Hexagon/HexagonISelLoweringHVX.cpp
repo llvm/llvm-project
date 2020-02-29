@@ -1083,7 +1083,7 @@ HexagonTargetLowering::compressHvxPred(SDValue VecQ, const SDLoc &dl,
   // These are bytes with the LSB rotated left with respect to their index.
   for (unsigned i = 0; i != HwLen/8; ++i) {
     for (unsigned j = 0; j != 8; ++j)
-      Tmp.push_back(ConstantInt::get(Int8Ty, 1u << j));
+      Tmp.push_back(ConstantInt::get(Int8Ty, 1ull << j));
   }
   Constant *CV = ConstantVector::get(Tmp);
   unsigned Align = HwLen;
