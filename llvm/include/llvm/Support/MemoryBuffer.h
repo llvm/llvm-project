@@ -19,7 +19,6 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/ErrorOr.h"
-#include "llvm/Support/FileSystem.h"
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -27,6 +26,18 @@
 namespace llvm {
 
 class MemoryBufferRef;
+
+namespace sys {
+namespace fs {
+// Duplicated from FileSystem.h to avoid a dependency.
+#if defined(_WIN32)
+// A Win32 HANDLE is a typedef of void*
+using file_t = void *;
+#else
+using file_t = int;
+#endif
+} // namespace fs
+} // namespace sys
 
 /// This interface provides simple read-only access to a block of memory, and
 /// provides simple methods for reading files and standard input into a memory
@@ -47,9 +58,6 @@ protected:
 
   void init(const char *BufStart, const char *BufEnd,
             bool RequiresNullTerminator);
-
-  static constexpr sys::fs::mapped_file_region::mapmode Mapmode =
-      sys::fs::mapped_file_region::readonly;
 
 public:
   MemoryBuffer(const MemoryBuffer &) = delete;
@@ -156,9 +164,6 @@ class WritableMemoryBuffer : public MemoryBuffer {
 protected:
   WritableMemoryBuffer() = default;
 
-  static constexpr sys::fs::mapped_file_region::mapmode Mapmode =
-      sys::fs::mapped_file_region::priv;
-
 public:
   using MemoryBuffer::getBuffer;
   using MemoryBuffer::getBufferEnd;
@@ -217,9 +222,6 @@ private:
 class WriteThroughMemoryBuffer : public MemoryBuffer {
 protected:
   WriteThroughMemoryBuffer() = default;
-
-  static constexpr sys::fs::mapped_file_region::mapmode Mapmode =
-      sys::fs::mapped_file_region::readwrite;
 
 public:
   using MemoryBuffer::getBuffer;
