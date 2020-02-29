@@ -15,10 +15,6 @@ add_llvm_library(MLIRTestDialect
   TestDialect.cpp
   TestPatterns.cpp
 
-  DEPENDS
-  MLIRTestOpsIncGen
-  MLIRTypeInferOpInterfaceIncGen
-
   LINK_LIBS
   MLIRAnalysis
   MLIRDialect
@@ -28,4 +24,8 @@ add_llvm_library(MLIRTestDialect
   MLIRTransforms
   MLIRTransformUtils
   LLVMSupport
+)
+add_dependencies(MLIRTestDialect
+  MLIRTestOpsIncGen
+  MLIRTypeInferOpInterfaceIncGen
 )

@@ -68,10 +68,8 @@ if(MLIR_CUDA_RUNNER_ENABLED)
 
   add_llvm_tool(mlir-cuda-runner
     mlir-cuda-runner.cpp
-
-    DEPENDS
-    cuda-runtime-wrappers
-    )
+  )
+  add_dependencies(mlir-cuda-runner cuda-runtime-wrappers)
   target_include_directories(mlir-cuda-runner
     PRIVATE ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}
   )
