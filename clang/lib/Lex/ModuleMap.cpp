@@ -1244,6 +1244,11 @@ void ModuleMap::setInferredModuleAllowedBy(Module *M, const FileEntry *ModMap) {
   InferredModuleAllowedBy[M] = ModMap;
 }
 
+void ModuleMap::addAdditionalModuleMapFile(const Module *M,
+                                           const FileEntry *ModuleMap) {
+  AdditionalModMaps[M].insert(ModuleMap);
+}
+
 LLVM_DUMP_METHOD void ModuleMap::dump() {
   llvm::errs() << "Modules:";
   for (llvm::StringMap<Module *>::iterator M = Modules.begin(),
