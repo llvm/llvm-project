@@ -10,9 +10,9 @@ define amdgpu_kernel void @use_lds_globals(i32 addrspace(1)* %out, i32 addrspace
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
 ; CHECK-NEXT:    s_add_u32 s2, 4, 4
-; CHECK-NEXT:    v_mov_b32_e32 v2, s2
+; CHECK-NEXT:    v_mov_b32_e32 v0, s2
 ; CHECK-NEXT:    s_mov_b32 m0, -1
-; CHECK-NEXT:    ds_read_b32 v2, v2
+; CHECK-NEXT:    ds_read_b32 v2, v0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_add_u32 s0, s0, 4
 ; CHECK-NEXT:    s_addc_u32 s1, s1, 0
