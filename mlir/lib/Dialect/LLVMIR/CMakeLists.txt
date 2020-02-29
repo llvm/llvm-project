@@ -11,10 +11,7 @@ add_mlir_dialect_library(MLIRLLVMIR
   MLIRIR
   MLIRSupport
   )
-add_dependencies(MLIRLLVMIR
-  MLIRLLVMOpsIncGen
-  MLIRLLVMConversionsIncGen
-  )
+add_dependencies(MLIRLLVMIR MLIRLLVMOpsIncGen MLIRLLVMConversionsIncGen LLVMAsmParser LLVMCore LLVMSupport)
 
 add_mlir_dialect_library(MLIRNVVMIR
   IR/NVVMDialect.cpp
@@ -29,11 +26,7 @@ add_mlir_dialect_library(MLIRNVVMIR
   LLVMSupport
   LLVMCore
   )
-add_dependencies(MLIRNVVMIR
-  MLIRNVVMOpsIncGen
-  MLIRNVVMConversionsIncGen
-  )
-
+add_dependencies(MLIRNVVMIR MLIRNVVMOpsIncGen MLIRNVVMConversionsIncGen LLVMAsmParser LLVMCore LLVMSupport)
 
 
 add_mlir_dialect_library(MLIRROCDLIR
@@ -48,7 +41,4 @@ add_mlir_dialect_library(MLIRROCDLIR
   LLVMSupport
   MLIRIR
   )
-add_dependencies(MLIRROCDLIR
-  MLIRROCDLOpsIncGen
-  MLIRROCDLConversionsIncGen
-  )
+add_dependencies(MLIRROCDLIR MLIRROCDLOpsIncGen MLIRROCDLConversionsIncGen LLVMAsmParser LLVMCore LLVMSupport)

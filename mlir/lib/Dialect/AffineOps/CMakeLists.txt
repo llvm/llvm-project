@@ -13,6 +13,10 @@ add_mlir_dialect_library(MLIRAffineOps
   LLVMSupport
   )
 add_dependencies(MLIRAffineOps
+
   MLIRAffineOpsIncGen
+  MLIREDSC
+  MLIRIR
   MLIRLoopLikeInterfaceIncGen
+  MLIRStandardOps
   )

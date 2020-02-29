@@ -10,3 +10,4 @@ add_mlir_dialect_library(MLIRSDBM
   MLIRSupport
   LLVMSupport
   )
+add_dependencies(MLIRSDBM MLIRIR)

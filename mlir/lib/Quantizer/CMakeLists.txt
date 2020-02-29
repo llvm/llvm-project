@@ -18,6 +18,12 @@ add_llvm_library(MLIRQuantizerSupport
   LLVMSupport
   )
 
+add_dependencies(MLIRQuantizerSupport
+                 MLIRIR
+                 MLIRQuantOps
+                 MLIRSupport
+                 MLIRStandardOps)
+
 # Configurations.
 add_llvm_library(MLIRQuantizerFxpMathConfig
   Configurations/FxpMathConfig.cpp
@@ -35,8 +41,8 @@ add_llvm_library(MLIRQuantizerFxpMathConfig
   )
 
 add_dependencies(MLIRQuantizerFxpMathConfig
-  MLIRFxpMathOpsIncGen
-  )
+                 MLIRFxpMathOpsIncGen
+                 MLIRQuantizerSupport)
 
 # Transforms.
 add_llvm_library(MLIRQuantizerTransforms
@@ -56,3 +62,7 @@ add_llvm_library(MLIRQuantizerTransforms
   MLIRTransformUtils
   LLVMSupport
   )
+add_dependencies(MLIRQuantizerTransforms
+  MLIRQuantizerFxpMathConfig
+  MLIRQuantizerSupport
+  MLIRPass)

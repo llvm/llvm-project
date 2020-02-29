@@ -10,7 +10,4 @@ add_llvm_library(MLIRIR
   LLVMSupport
   ${LLVM_PTHREAD_LIB}
   )
-add_dependencies(MLIRIR
-  MLIRCallOpInterfacesIncGen
-  MLIROpAsmInterfacesIncGen
-  )
+add_dependencies(MLIRIR MLIRCallOpInterfacesIncGen MLIROpAsmInterfacesIncGen MLIRSupport LLVMSupport)

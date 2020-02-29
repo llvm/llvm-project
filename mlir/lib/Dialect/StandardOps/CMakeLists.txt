@@ -14,6 +14,10 @@ add_mlir_dialect_library(MLIRStandardOps
   LLVMSupport
   )
 add_dependencies(MLIRStandardOps
+
   MLIRCallOpInterfacesIncGen
+  MLIREDSC
+  MLIRIR
   MLIRStandardOpsIncGen
+  LLVMSupport
   )
