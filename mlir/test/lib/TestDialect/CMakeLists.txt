@@ -25,7 +25,6 @@ add_llvm_library(MLIRTestDialect
   MLIRIR
   MLIRLinalgTransforms
   MLIRPass
-  MLIRStandardOps
   MLIRTransforms
   MLIRTransformUtils
   LLVMSupport

@@ -8,7 +8,6 @@ target_link_libraries(mlir-sdbm-api-test
   PRIVATE
   MLIRIR
   MLIRSDBM
-  MLIRSupport
   LLVMCore
   LLVMSupport
 )
