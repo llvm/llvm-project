@@ -21107,21 +21107,24 @@ bool DAGCombiner::isAlias(SDNode *Op0, SDNode *Op1) const {
   // If we know required SrcValue1 and SrcValue2 have relatively large
   // alignment compared to the size and offset of the access, we may be able
   // to prove they do not alias. This check is conservative for now to catch
-  // cases created by splitting vector types.
+  // cases created by splitting vector types, it only works when the offsets are
+  // multiples of the size of the data.
   int64_t SrcValOffset0 = MUC0.MMO->getOffset();
   int64_t SrcValOffset1 = MUC1.MMO->getOffset();
   unsigned OrigAlignment0 = MUC0.MMO->getBaseAlignment();
   unsigned OrigAlignment1 = MUC1.MMO->getBaseAlignment();
+  auto &Size0 = MUC0.NumBytes;
+  auto &Size1 = MUC1.NumBytes;
   if (OrigAlignment0 == OrigAlignment1 && SrcValOffset0 != SrcValOffset1 &&
-      MUC0.NumBytes.hasValue() && MUC1.NumBytes.hasValue() &&
-      *MUC0.NumBytes == *MUC1.NumBytes && OrigAlignment0 > *MUC0.NumBytes) {
+      Size0.hasValue() && Size1.hasValue() && *Size0 == *Size1 &&
+      OrigAlignment0 > *Size0 && SrcValOffset0 % *Size0 == 0 &&
+      SrcValOffset1 % *Size1 == 0) {
     int64_t OffAlign0 = SrcValOffset0 % OrigAlignment0;
     int64_t OffAlign1 = SrcValOffset1 % OrigAlignment1;
 
     // There is no overlap between these relatively aligned accesses of
     // similar size. Return no alias.
-    if ((OffAlign0 + *MUC0.NumBytes) <= OffAlign1 ||
-        (OffAlign1 + *MUC1.NumBytes) <= OffAlign0)
+    if ((OffAlign0 + *Size0) <= OffAlign1 || (OffAlign1 + *Size1) <= OffAlign0)
       return false;
   }
 
@@ -21134,11 +21137,12 @@ bool DAGCombiner::isAlias(SDNode *Op0, SDNode *Op1) const {
     UseAA = false;
 #endif
 
-  if (UseAA && AA && MUC0.MMO->getValue() && MUC1.MMO->getValue()) {
+  if (UseAA && AA && MUC0.MMO->getValue() && MUC1.MMO->getValue() &&
+      Size0.hasValue() && Size1.hasValue()) {
     // Use alias analysis information.
     int64_t MinOffset = std::min(SrcValOffset0, SrcValOffset1);
-    int64_t Overlap0 = *MUC0.NumBytes + SrcValOffset0 - MinOffset;
-    int64_t Overlap1 = *MUC1.NumBytes + SrcValOffset1 - MinOffset;
+    int64_t Overlap0 = *Size0 + SrcValOffset0 - MinOffset;
+    int64_t Overlap1 = *Size1 + SrcValOffset1 - MinOffset;
     AliasResult AAResult = AA->alias(
         MemoryLocation(MUC0.MMO->getValue(), Overlap0,
                        UseTBAA ? MUC0.MMO->getAAInfo() : AAMDNodes()),
