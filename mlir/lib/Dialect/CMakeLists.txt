@@ -12,11 +12,12 @@ add_subdirectory(SPIRV)
 add_subdirectory(StandardOps)
 add_subdirectory(VectorOps)
 
+
 set(LLVM_OPTIONAL_SOURCES
   Traits.cpp
 )
 
-add_mlir_library(MLIRDialect
+add_llvm_library(MLIRDialect
   Traits.cpp
 
   ADDITIONAL_HEADER_DIRS
