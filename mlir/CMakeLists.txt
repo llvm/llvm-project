@@ -34,9 +34,11 @@ include_directories( ${MLIR_INCLUDE_DIR})
 
 add_subdirectory(include/mlir)
 add_subdirectory(lib)
-add_subdirectory(tools)
 add_subdirectory(unittests)
 add_subdirectory(test)
+# Tools needs to come late to ensure that MLIR_ALL_LIBS is populated.
+# Generally things after this point may depend on MLIR_ALL_LIBS or libMLIR.so.
+add_subdirectory(tools)
 
 if( LLVM_INCLUDE_EXAMPLES )
   add_subdirectory(examples)
