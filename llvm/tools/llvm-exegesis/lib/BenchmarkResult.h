@@ -28,6 +28,8 @@
 #include <vector>
 
 namespace llvm {
+class Error;
+
 namespace exegesis {
 
 struct InstructionBenchmarkKey {
