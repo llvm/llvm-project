@@ -1,5 +1,5 @@
 file(GLOB globbed *.c *.cpp)
-add_mlir_library(MLIRPass
+add_llvm_library(MLIRPass
   ${globbed}
 
   ADDITIONAL_HEADER_DIRS
