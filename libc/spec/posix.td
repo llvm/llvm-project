@@ -84,6 +84,7 @@ def POSIX : StandardSpec<"POSIX"> {
         Macro<"EXDEV">,
       ],
       [], // Types
+      [], // Enumerations
       []  // Functions
   >;
 
@@ -107,6 +108,7 @@ def POSIX : StandardSpec<"POSIX"> {
         SizeTType,
         OffTType,
       ],
+      [], // Enumerations
       [
         FunctionSpec<
             "mmap",
