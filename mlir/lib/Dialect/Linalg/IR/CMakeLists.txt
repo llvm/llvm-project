@@ -4,7 +4,7 @@ set(LIBS
   MLIRStandardOps
   )
 
-add_llvm_library(MLIRLinalgOps
+add_mlir_dialect_library(MLIRLinalgOps
   LinalgOps.cpp
   LinalgTypes.cpp
 

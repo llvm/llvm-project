@@ -1,4 +1,4 @@
-add_llvm_library(MLIRVectorOps
+add_mlir_dialect_library(MLIRVectorOps
   VectorOps.cpp
   VectorTransforms.cpp
   VectorUtils.cpp

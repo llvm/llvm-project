@@ -35,29 +35,20 @@ if(MLIR_CUDA_RUNNER_ENABLED)
     ${CUDA_RUNTIME_LIBRARY}
   )
 
+  get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
   set(LIBS
+    ${dialect_libs}
     LLVMCore
     LLVMSupport
     MLIRJitRunner
-    MLIRAffineOps
     MLIRAnalysis
     MLIREDSC
     MLIRExecutionEngine
-    MLIRFxpMathOps
-    MLIRGPU
     MLIRGPUtoCUDATransforms
     MLIRGPUtoNVVMTransforms
     MLIRIR
-    MLIRLLVMIR
-    MLIRLinalgOps
     MLIRLoopToStandard
-    MLIROpenMP
     MLIRParser
-    MLIRQuantOps
-    MLIRROCDLIR
-    MLIRSPIRV
-    MLIRSPIRV
-    MLIRStandardOps
     MLIRStandardToLLVM
     MLIRSupport
     MLIRTargetLLVMIR

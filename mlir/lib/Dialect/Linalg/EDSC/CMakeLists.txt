@@ -8,7 +8,7 @@ set(LIBS
   MLIRStandardOps
   )
 
-add_llvm_library(MLIRLinalgEDSC
+add_mlir_dialect_library(MLIRLinalgEDSC
   Builders.cpp
 
   ADDITIONAL_HEADER_DIRS

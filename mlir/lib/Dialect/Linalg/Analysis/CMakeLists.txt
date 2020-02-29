@@ -5,7 +5,7 @@ set(LIBS
   )
 
 
-add_llvm_library(MLIRLinalgAnalysis
+add_mlir_dialect_library(MLIRLinalgAnalysis
   DependenceAnalysis.cpp
   
   ADDITIONAL_HEADER_DIRS
