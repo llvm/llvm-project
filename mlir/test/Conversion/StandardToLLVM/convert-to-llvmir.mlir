@@ -910,3 +910,39 @@ func @assume_alignment(%0 : memref<4x4xf16>) {
   assume_alignment %0, 16 : memref<4x4xf16>
   return
 }
+
+// -----
+
+// CHECK-LABEL: func @mlir_cast_to_llvm
+// CHECK-SAME: %[[ARG:.*]]:
+func @mlir_cast_to_llvm(%0 : vector<2xf16>) -> !llvm<"<2 x half>"> {
+  %1 = llvm.mlir.cast %0 : vector<2xf16> to !llvm<"<2 x half>">
+  // CHECK-NEXT: llvm.return %[[ARG]]
+  return %1 : !llvm<"<2 x half>">
+}
+
+// CHECK-LABEL: func @mlir_cast_from_llvm
+// CHECK-SAME: %[[ARG:.*]]:
+func @mlir_cast_from_llvm(%0 : !llvm<"<2 x half>">) -> vector<2xf16> {
+  %1 = llvm.mlir.cast %0 : !llvm<"<2 x half>"> to vector<2xf16>
+  // CHECK-NEXT: llvm.return %[[ARG]]
+  return %1 : vector<2xf16>
+}
+
+// -----
+
+// CHECK-LABEL: func @mlir_cast_to_llvm
+// CHECK-SAME: %[[ARG:.*]]:
+func @mlir_cast_to_llvm(%0 : f16) -> !llvm.half {
+  %1 = llvm.mlir.cast %0 : f16 to !llvm.half
+  // CHECK-NEXT: llvm.return %[[ARG]]
+  return %1 : !llvm.half
+}
+
+// CHECK-LABEL: func @mlir_cast_from_llvm
+// CHECK-SAME: %[[ARG:.*]]:
+func @mlir_cast_from_llvm(%0 : !llvm.half) -> f16 {
+  %1 = llvm.mlir.cast %0 : !llvm.half to f16
+  // CHECK-NEXT: llvm.return %[[ARG]]
+  return %1 : f16
+}
