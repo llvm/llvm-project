@@ -204,6 +204,8 @@ static bool ShouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
       Name.startswith("avx512.mask.cvtqq2pd.") || // Added in 7.0 updated 9.0
       Name.startswith("avx512.mask.cvtuqq2pd.") || // Added in 7.0 updated 9.0
       Name.startswith("avx512.mask.cvtdq2ps.") || // Added in 7.0 updated 9.0
+      Name == "avx512.mask.vcvtph2ps.128" || // Added in 11.0
+      Name == "avx512.mask.vcvtph2ps.256" || // Added in 11.0
       Name == "avx512.mask.cvtqq2ps.256" || // Added in 9.0
       Name == "avx512.mask.cvtqq2ps.512" || // Added in 9.0
       Name == "avx512.mask.cvtuqq2ps.256" || // Added in 9.0
@@ -316,6 +318,7 @@ static bool ShouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
       Name == "avx.cvtdq2.pd.256" || // Added in 3.9
       Name == "avx.cvtdq2.ps.256" || // Added in 7.0
       Name == "avx.cvt.ps2.pd.256" || // Added in 3.9
+      Name.startswith("vcvtph2ps.") || // Added in 11.0
       Name.startswith("avx.vinsertf128.") || // Added in 3.7
       Name == "avx2.vinserti128" || // Added in 3.7
       Name.startswith("avx512.mask.insert") || // Added in 4.0
@@ -2132,6 +2135,23 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
                          : Builder.CreateSIToFP(Rep, DstTy, "cvt");
       }
 
+      if (CI->getNumArgOperands() >= 3)
+        Rep = EmitX86Select(Builder, CI->getArgOperand(2), Rep,
+                            CI->getArgOperand(1));
+    } else if (IsX86 && (Name.startswith("avx512.mask.vcvtph2ps.") ||
+                         Name.startswith("vcvtph2ps."))) {
+      Type *DstTy = CI->getType();
+      Rep = CI->getArgOperand(0);
+      Type *SrcTy = Rep->getType();
+      unsigned NumDstElts = DstTy->getVectorNumElements();
+      if (NumDstElts != SrcTy->getVectorNumElements()) {
+        assert(NumDstElts == 4 && "Unexpected vector size");
+        uint32_t ShuffleMask[4] = {0, 1, 2, 3};
+        Rep = Builder.CreateShuffleVector(Rep, Rep, ShuffleMask);
+      }
+      Rep = Builder.CreateBitCast(
+          Rep, VectorType::get(Type::getHalfTy(C), NumDstElts));
+      Rep = Builder.CreateFPExt(Rep, DstTy, "cvtph2ps");
       if (CI->getNumArgOperands() >= 3)
         Rep = EmitX86Select(Builder, CI->getArgOperand(2), Rep,
                             CI->getArgOperand(1));
