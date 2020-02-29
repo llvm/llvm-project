@@ -179,8 +179,7 @@ static bool filterArch(MachOObjectFile &Obj) {
   if (ArchFilters.empty())
     return true;
 
-  Triple ObjTriple(Obj.getArchTriple());
-  StringRef ObjArch = ObjTriple.getArchName();
+  StringRef ObjArch = Obj.getArchTriple().getArchName();
 
   for (auto Arch : ArchFilters) {
     // Match name.
@@ -351,8 +350,7 @@ static llvm::Error handleBuffer(StringRef Filename, MemoryBufferRef Buffer,
   error(Filename, errorToErrorCode(BinOrErr.takeError()));
 
   if (auto *Obj = dyn_cast<ObjectFile>(BinOrErr->get())) {
-    Triple ObjTriple(Obj->makeTriple());
-    auto ArchName = ObjTriple.getArchName();
+    auto ArchName = Obj->makeTriple().getArchName();
     outs() << "Output file (" << ArchName << "): " << OutFile << "\n";
     if (auto Err = handleObjectFile(*Obj, OutFile.c_str()))
       return Err;
@@ -376,8 +374,7 @@ static llvm::Error handleBuffer(StringRef Filename, MemoryBufferRef Buffer,
 
     // Now handle each architecture we need to convert.
     for (auto &Obj: FilterObjs) {
-      Triple ObjTriple(Obj->getArchTriple());
-      auto ArchName = ObjTriple.getArchName();
+      auto ArchName = Obj->getArchTriple().getArchName();
       std::string ArchOutFile(OutFile);
       // If we are only handling a single architecture, then we will use the
       // normal output file. If we are handling multiple architectures append
