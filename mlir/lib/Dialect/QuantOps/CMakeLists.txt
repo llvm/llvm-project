@@ -11,14 +11,6 @@ add_mlir_dialect_library(MLIRQuantOps
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/QuantOps
-
-  LINK_LIBS
-  MLIRIR
-  MLIRPass
-  MLIRSupport
-  MLIRStandardOps
-  MLIRTransformUtils
-  LLVMSupport
   )
 add_dependencies(MLIRQuantOps
                  MLIRIR
@@ -26,3 +18,11 @@ add_dependencies(MLIRQuantOps
                  MLIRQuantOpsIncGen
                  MLIRSupport
                  MLIRStandardOps)
+
+target_link_libraries(MLIRQuantOps
+  MLIRIR
+  MLIRPass
+  MLIRSupport
+  MLIRStandardOps
+  MLIRTransformUtils
+  )

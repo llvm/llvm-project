@@ -1,5 +1,5 @@
 set(LIBS
-  MLIRAffineOps
+
   MLIREDSC
   MLIRIR
   MLIRLinalgOps
@@ -7,7 +7,6 @@ set(LIBS
   MLIRPass
   MLIRStandardOps
   MLIRTransformUtils
-  LLVMSupport
   )
 
 add_mlir_dialect_library(MLIRLinalgUtils
@@ -18,8 +17,7 @@ add_mlir_dialect_library(MLIRLinalgUtils
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/Linalg
   DEPENDS
   intrinsics_gen
-
-  LINK_LIBS
-  ${LIBS})
+  )
 
 add_dependencies(MLIRLinalgUtils ${LIBS})
+target_link_libraries(MLIRLinalgUtils ${LIBS})
