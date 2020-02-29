@@ -365,6 +365,98 @@ entry:
   ret <2 x i64> %1
 }
 
+define <4 x float> @test_mm_mask_cvtph_ps(<4 x float> %__W, i8 zeroext %__U, <2 x i64> %__A) {
+; X86-LABEL: test_mm_mask_cvtph_ps:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    kmovw %eax, %k1
+; X86-NEXT:    vcvtph2ps %xmm1, %xmm0 {%k1}
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_mm_mask_cvtph_ps:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vcvtph2ps %xmm1, %xmm0 {%k1}
+; X64-NEXT:    retq
+entry:
+  %0 = bitcast <2 x i64> %__A to <8 x i16>
+  %1 = shufflevector <8 x i16> %0, <8 x i16> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %2 = bitcast <4 x i16> %1 to <4 x half>
+  %3 = bitcast i8 %__U to <8 x i1>
+  %4 = shufflevector <8 x i1> %3, <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %5 = fpext <4 x half> %2 to <4 x float>
+  %6 = select <4 x i1> %4, <4 x float> %5, <4 x float> %__W
+  ret <4 x float> %6
+}
+
+define <4 x float> @test_mm_maskz_cvtph_ps(i8 zeroext %__U, <2 x i64> %__A) {
+; X86-LABEL: test_mm_maskz_cvtph_ps:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    kmovw %eax, %k1
+; X86-NEXT:    vcvtph2ps %xmm0, %xmm0 {%k1} {z}
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_mm_maskz_cvtph_ps:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vcvtph2ps %xmm0, %xmm0 {%k1} {z}
+; X64-NEXT:    retq
+entry:
+  %0 = bitcast <2 x i64> %__A to <8 x i16>
+  %1 = shufflevector <8 x i16> %0, <8 x i16> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %2 = bitcast <4 x i16> %1 to <4 x half>
+  %3 = bitcast i8 %__U to <8 x i1>
+  %4 = shufflevector <8 x i1> %3, <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %5 = fpext <4 x half> %2 to <4 x float>
+  %6 = select <4 x i1> %4, <4 x float> %5, <4 x float> zeroinitializer
+  ret <4 x float> %6
+}
+
+define <8 x float> @test_mm256_mask_cvtph_ps(<8 x float> %__W, i8 zeroext %__U, <2 x i64> %__A) {
+; X86-LABEL: test_mm256_mask_cvtph_ps:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    kmovw %eax, %k1
+; X86-NEXT:    vcvtph2ps %xmm1, %ymm0 {%k1}
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_mm256_mask_cvtph_ps:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vcvtph2ps %xmm1, %ymm0 {%k1}
+; X64-NEXT:    retq
+entry:
+  %0 = bitcast <2 x i64> %__A to <8 x i16>
+  %1 = bitcast <8 x i16> %0 to <8 x half>
+  %2 = bitcast i8 %__U to <8 x i1>
+  %3 = fpext <8 x half> %1 to <8 x float>
+  %4 = select <8 x i1> %2, <8 x float> %3, <8 x float> %__W
+  ret <8 x float> %4
+}
+
+define <8 x float> @test_mm256_maskz_cvtph_ps(i8 zeroext %__U, <2 x i64> %__A) {
+; X86-LABEL: test_mm256_maskz_cvtph_ps:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    kmovw %eax, %k1
+; X86-NEXT:    vcvtph2ps %xmm0, %ymm0 {%k1} {z}
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_mm256_maskz_cvtph_ps:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vcvtph2ps %xmm0, %ymm0 {%k1} {z}
+; X64-NEXT:    retq
+entry:
+  %0 = bitcast <2 x i64> %__A to <8 x i16>
+  %1 = bitcast <8 x i16> %0 to <8 x half>
+  %2 = bitcast i8 %__U to <8 x i1>
+  %3 = fpext <8 x half> %1 to <8 x float>
+  %4 = select <8 x i1> %2, <8 x float> %3, <8 x float> zeroinitializer
+  ret <8 x float> %4
+}
+
 define <2 x i64> @test_mm_mask_cvtps_epi32(<2 x i64> %__W, i8 zeroext %__U, <4 x float> %__A) {
 ; X86-LABEL: test_mm_mask_cvtps_epi32:
 ; X86:       # %bb.0: # %entry
