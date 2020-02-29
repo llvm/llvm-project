@@ -347,12 +347,18 @@ bool OptionallyVariadicOperator(const DynTypedNode &DynNode,
                                 BoundNodesTreeBuilder *Builder,
                                 ArrayRef<DynTypedMatcher> InnerMatchers) {
   BoundNodesTreeBuilder Result;
+  bool Matched = false;
   for (const DynTypedMatcher &InnerMatcher : InnerMatchers) {
     BoundNodesTreeBuilder BuilderInner(*Builder);
-    if (InnerMatcher.matches(DynNode, Finder, &BuilderInner))
+    if (InnerMatcher.matches(DynNode, Finder, &BuilderInner)) {
+      Matched = true;
       Result.addMatch(BuilderInner);
+    }
   }
-  *Builder = std::move(Result);
+  // If there were no matches, we can't assign to `*Builder`; we'd (incorrectly)
+  // clear it because `Result` is empty.
+  if (Matched)
+    *Builder = std::move(Result);
   return true;
 }
 
