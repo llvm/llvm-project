@@ -2697,9 +2697,9 @@ define <8 x i32>@test_int_x86_avx512_mask_broadcasti32x2_256(<4 x i32> %x0, <8 x
 ; X86:       # %bb.0:
 ; X86-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x08]
-; X86-NEXT:    vpbroadcastq (%eax), %ymm2 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7d,0x59,0x10]
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
-; X86-NEXT:    vmovdqa32 %ymm2, %ymm1 {%k1} # encoding: [0x62,0xf1,0x7d,0x29,0x6f,0xca]
+; X86-NEXT:    vbroadcasti32x2 (%eax), %ymm1 {%k1} # encoding: [0x62,0xf2,0x7d,0x29,0x59,0x08]
+; X86-NEXT:    # ymm1 {%k1} = mem[0,1,0,1,0,1,0,1]
 ; X86-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm2 # EVEX TO VEX Compression encoding: [0xc4,0xe3,0x7d,0x38,0xd0,0x01]
 ; X86-NEXT:    vinserti32x4 $1, %xmm0, %ymm0, %ymm0 {%k1} {z} # encoding: [0x62,0xf3,0x7d,0xa9,0x38,0xc0,0x01]
 ; X86-NEXT:    vpaddd %ymm2, %ymm0, %ymm0 # EVEX TO VEX Compression encoding: [0xc5,0xfd,0xfe,0xc2]
