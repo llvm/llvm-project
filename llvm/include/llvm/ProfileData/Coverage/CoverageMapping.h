@@ -743,7 +743,7 @@ Error getFuncNameViaRef(const FuncRecordTy *Record,
 template <class FuncRecordTy, support::endianness Endian>
 StringRef getCoverageMappingOutOfLine(const FuncRecordTy *Record,
                                       const char *MappingBuf) {
-  return {MappingBuf, getDataSize<FuncRecordTy, Endian>(Record)};
+  return {MappingBuf, size_t(getDataSize<FuncRecordTy, Endian>(Record))};
 }
 
 /// Advance to the next out-of-line coverage mapping and its associated
