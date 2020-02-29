@@ -10,9 +10,6 @@ add_llvm_library(MLIRTransformUtils
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Transforms
 
-  DEPENDS
-  MLIRStandardOpsIncGen
-
   LINK_LIBS
   MLIRAffineOps
   MLIRAnalysis
@@ -23,3 +20,4 @@ add_llvm_library(MLIRTransformUtils
   MLIRStandardOps
   LLVMSupport
   )
+add_dependencies(MLIRTransformUtils MLIRStandardOpsIncGen)

@@ -23,11 +23,6 @@ add_llvm_library(MLIRTestTransforms
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Transforms
 
-  DEPENDS
-  MLIRStandardOpsIncGen
-  MLIRTestLinalgTransformPatternsIncGen
-  MLIRTestVectorTransformPatternsIncGen
-
   LINK_LIBS
   MLIRAffineOps
   MLIRAnalysis
@@ -52,3 +47,6 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../TestDialect)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/../TestDialect)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../DeclarativeTransforms)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/../DeclarativeTransforms)
+add_dependencies(MLIRTestTransforms MLIRStandardOpsIncGen)
+add_dependencies(MLIRTestTransforms MLIRTestLinalgTransformPatternsIncGen)
+add_dependencies(MLIRTestTransforms MLIRTestVectorTransformPatternsIncGen)
