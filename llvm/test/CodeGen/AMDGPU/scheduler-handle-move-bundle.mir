@@ -19,10 +19,10 @@ body:             |
     ; GCN-LABEL: name: handleMove_bundle
     ; GCN: liveins: $sgpr4_sgpr5
     ; GCN: [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
-    ; GCN: $vcc_hi = IMPLICIT_DEF
-    ; GCN: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
     ; GCN: [[S_LOAD_DWORD_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[COPY]], 0, 0, 0 :: (dereferenceable invariant load 4, align 16, addrspace 4)
+    ; GCN: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
     ; GCN: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    ; GCN: $vcc_hi = IMPLICIT_DEF
     ; GCN: DS_WRITE_B32_gfx9 [[V_MOV_B32_e32_1]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec :: (store 4, addrspace 3)
     ; GCN: [[V_MOV_B32_e32_2:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 2, implicit $exec
     ; GCN: $m0 = S_MOV_B32 0
