@@ -120,8 +120,6 @@ class X86AsmBackend : public MCAsmBackend {
 
   bool needAlign(MCObjectStreamer &OS) const;
   bool needAlignInst(const MCInst &Inst) const;
-  MCBoundaryAlignFragment *
-  getOrCreateBoundaryAlignFragment(MCObjectStreamer &OS) const;
   MCInst PrevInst;
 
 public:
@@ -395,21 +393,6 @@ bool X86AsmBackend::needAlignInst(const MCInst &Inst) const {
           (AlignBranchType & X86::AlignBranchIndirect));
 }
 
-static bool canReuseBoundaryAlignFragment(const MCBoundaryAlignFragment &F) {
-  // If a MCBoundaryAlignFragment has not been used to emit NOP,we can reuse it.
-  return !F.canEmitNops();
-}
-
-MCBoundaryAlignFragment *
-X86AsmBackend::getOrCreateBoundaryAlignFragment(MCObjectStreamer &OS) const {
-  auto *F = dyn_cast_or_null<MCBoundaryAlignFragment>(OS.getCurrentFragment());
-  if (!F || !canReuseBoundaryAlignFragment(*F)) {
-    F = new MCBoundaryAlignFragment(AlignBoundary);
-    OS.insert(F);
-  }
-  return F;
-}
-
 /// Insert MCBoundaryAlignFragment before instructions to align branches.
 void X86AsmBackend::alignBranchesBegin(MCObjectStreamer &OS,
                                        const MCInst &Inst) {
@@ -439,13 +422,15 @@ void X86AsmBackend::alignBranchesBegin(MCObjectStreamer &OS,
     //
     // We will treat the JCC as a unfused branch although it may be fused
     // with the CMP.
-    auto *F = getOrCreateBoundaryAlignFragment(OS);
+    auto *F = OS.getOrCreateBoundaryAlignFragment();
+    F->setAlignment(AlignBoundary);
     F->setEmitNops(true);
     F->setFused(false);
   } else if (NeedAlignFused && isFirstMacroFusibleInst(Inst, *MCII)) {
     // We don't know if macro fusion happens until the reaching the next
     // instruction, so a place holder is put here if necessary.
-    getOrCreateBoundaryAlignFragment(OS);
+    auto *F = OS.getOrCreateBoundaryAlignFragment();
+    F->setAlignment(AlignBoundary);
   }
 
   PrevInst = Inst;

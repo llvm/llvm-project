@@ -533,7 +533,7 @@ class MCBoundaryAlignFragment : public MCFragment {
   uint64_t Size = 0;
 
 public:
-  MCBoundaryAlignFragment(Align AlignBoundary, bool Fused = false,
+  MCBoundaryAlignFragment(Align AlignBoundary = Align(1), bool Fused = false,
                           bool EmitNops = false, MCSection *Sec = nullptr)
       : MCFragment(FT_BoundaryAlign, false, Sec), AlignBoundary(AlignBoundary),
         Fused(Fused), EmitNops(EmitNops) {}
@@ -542,6 +542,7 @@ public:
   void setSize(uint64_t Value) { Size = Value; }
 
   Align getAlignment() const { return AlignBoundary; }
+  void setAlignment(Align Value) { AlignBoundary = Value; }
 
   bool isFused() const { return Fused; }
   void setFused(bool Value) { Fused = Value; }
