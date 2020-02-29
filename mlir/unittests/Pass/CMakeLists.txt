@@ -3,7 +3,4 @@ add_mlir_unittest(MLIRPassTests
 )
 target_link_libraries(MLIRPassTests
   PRIVATE
-  MLIRIR
-  MLIRPass
-  MLIRStandardOps
-  MLIRSupport)
+  MLIRPass)
