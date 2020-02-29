@@ -4708,11 +4708,18 @@ const Value *llvm::getGuaranteedNonFullPoisonOp(const Instruction *I) {
     case Instruction::SRem:
       return I->getOperand(1);
 
+    case Instruction::Call:
+      if (auto *II = dyn_cast<IntrinsicInst>(I)) {
+        switch (II->getIntrinsicID()) {
+        case Intrinsic::assume:
+          return II->getArgOperand(0);
+        default:
+          return nullptr;
+        }
+      }
+      return nullptr;
+
     default:
-      // Note: It's really tempting to think that a conditional branch or
-      // switch should be listed here, but that's incorrect.  It's not
-      // branching off of poison which is UB, it is executing a side effecting
-      // instruction which follows the branch.
       return nullptr;
   }
 }
