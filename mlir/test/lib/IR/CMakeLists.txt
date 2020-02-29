@@ -13,6 +13,3 @@ add_llvm_library(MLIRTestIR
   )
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../TestDialect)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/../TestDialect)
-add_dependencies(MLIRTestIR
-  MLIRTestDialect
-  )
