@@ -15,9 +15,13 @@
 
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/Host.h"
 
 namespace llvm {
+
+class Triple;
+
 namespace MachO {
 // Enums from <mach-o/loader.h>
 enum : uint32_t {
@@ -1519,6 +1523,9 @@ enum CPUSubTypePowerPC {
   CPU_SUBTYPE_MC980000_ALL = CPU_SUBTYPE_POWERPC_ALL,
   CPU_SUBTYPE_MC98601 = CPU_SUBTYPE_POWERPC_601
 };
+
+Expected<uint32_t> getCPUType(const Triple &T);
+Expected<uint32_t> getCPUSubType(const Triple &T);
 
 struct x86_thread_state32_t {
   uint32_t eax;
