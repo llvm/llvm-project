@@ -36,10 +36,11 @@ public:
                                  ArrayRef<CalleeSavedInfo> CSI,
                                  const TargetRegisterInfo *TRI) const override;
 
-  bool restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
-                                  MachineBasicBlock::iterator MI,
-                                  std::vector<CalleeSavedInfo> &CSI,
-                                  const TargetRegisterInfo *TRI) const override;
+  bool
+  restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
+                              MachineBasicBlock::iterator MI,
+                              MutableArrayRef<CalleeSavedInfo> CSI,
+                              const TargetRegisterInfo *TRI) const override;
 
   bool keepFramePointer(const MachineFunction &MF) const override;
 
@@ -77,9 +78,9 @@ private:
                     unsigned StrOpc, bool NoGap, bool (*Func)(unsigned, bool),
                     unsigned NumAlignedDPRCS2Regs, unsigned MIFlags = 0) const;
   void emitPopInst(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
-                   std::vector<CalleeSavedInfo> &CSI, unsigned LdmOpc,
+                   MutableArrayRef<CalleeSavedInfo> CSI, unsigned LdmOpc,
                    unsigned LdrOpc, bool isVarArg, bool NoGap,
-                   bool(*Func)(unsigned, bool),
+                   bool (*Func)(unsigned, bool),
                    unsigned NumAlignedDPRCS2Regs) const;
 
   MachineBasicBlock::iterator

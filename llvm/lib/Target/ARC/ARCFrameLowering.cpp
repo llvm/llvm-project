@@ -417,7 +417,7 @@ bool ARCFrameLowering::spillCalleeSavedRegisters(
 
 bool ARCFrameLowering::restoreCalleeSavedRegisters(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
-    std::vector<CalleeSavedInfo> &CSI, const TargetRegisterInfo *TRI) const {
+    MutableArrayRef<CalleeSavedInfo> CSI, const TargetRegisterInfo *TRI) const {
   LLVM_DEBUG(dbgs() << "Restore callee saved registers: "
                     << MBB.getParent()->getName() << "\n");
   // There are routines for saving at least 3 registers (r13 to r15, etc.)

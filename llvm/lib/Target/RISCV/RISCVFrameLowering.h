@@ -53,7 +53,7 @@ public:
   bool
   restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
                               MachineBasicBlock::iterator MI,
-                              std::vector<CalleeSavedInfo> &CSI,
+                              MutableArrayRef<CalleeSavedInfo> CSI,
                               const TargetRegisterInfo *TRI) const override;
 
   // Get the first stack adjustment amount for SplitSPAdjust.
