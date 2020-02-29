@@ -215,6 +215,15 @@ MCObjectStreamer::getOrCreateDataFragment(const MCSubtargetInfo *STI) {
   return F;
 }
 
+MCBoundaryAlignFragment *MCObjectStreamer::getOrCreateBoundaryAlignFragment() {
+  auto *F = dyn_cast_or_null<MCBoundaryAlignFragment>(getCurrentFragment());
+  if (!F || F->canEmitNops()) {
+    F = new MCBoundaryAlignFragment();
+    insert(F);
+  }
+  return F;
+}
+
 void MCObjectStreamer::visitUsedSymbol(const MCSymbol &Sym) {
   Assembler->registerSymbol(Sym);
 }
