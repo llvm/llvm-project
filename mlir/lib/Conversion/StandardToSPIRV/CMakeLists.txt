@@ -10,17 +10,18 @@ add_mlir_conversion_library(MLIRStandardToSPIRVTransforms
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/SPIRV
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/IR
-  )
 
-add_dependencies(MLIRStandardToSPIRVTransforms
-  MLIRStandardToSPIRVIncGen)
-
-target_link_libraries(MLIRStandardToSPIRVTransforms
+  LINK_LIBS
   MLIRIR
   MLIRPass
   MLIRSPIRV
   MLIRSupport
+  MLIRTransforms
   MLIRTransformUtils
   MLIRSPIRV
   MLIRStandardOps
+  LLVMSupport
   )
+
+add_dependencies(MLIRStandardToSPIRVTransforms
+  MLIRStandardToSPIRVIncGen)

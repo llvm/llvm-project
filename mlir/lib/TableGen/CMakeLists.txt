@@ -15,5 +15,8 @@ add_llvm_library(LLVMMLIRTableGen
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/TableGen
+
+  LINK_LIBS
+  LLVMSupport
+  LLVMTableGen
   )
-target_link_libraries(LLVMMLIRTableGen LLVMSupport LLVMTableGen)
