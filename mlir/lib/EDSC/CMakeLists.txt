@@ -27,4 +27,3 @@ add_llvm_library(MLIREDSCInterface
   MLIRParser
   LLVMSupport
   )
-add_dependencies(MLIREDSCInterface MLIRIR)
