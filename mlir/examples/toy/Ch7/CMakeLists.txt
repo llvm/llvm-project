@@ -18,12 +18,14 @@ add_toy_chapter(toyc-ch7
   mlir/LowerToLLVM.cpp
   mlir/ShapeInferencePass.cpp
   mlir/ToyCombine.cpp
+
+  DEPENDS
+  ToyCh7ShapeInferenceInterfaceIncGen
+  ToyCh7OpsIncGen
+  ToyCh7CombineIncGen
+  MLIRCallOpInterfacesIncGen
   )
 
-add_dependencies(toyc-ch7 ToyCh7ShapeInferenceInterfaceIncGen)
-add_dependencies(toyc-ch7 ToyCh7OpsIncGen)
-add_dependencies(toyc-ch7 ToyCh7CombineIncGen)
-add_dependencies(toyc-ch7 MLIRCallOpInterfacesIncGen)
 include_directories(include/)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/include/)
