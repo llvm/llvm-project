@@ -76,12 +76,11 @@ void writePPC32GlinkSection(uint8_t *buf, size_t numEntries) {
   // non-GOT-non-PLT relocations referencing external functions for -fpie/-fPIE.
   uint32_t glink = in.plt->getVA(); // VA of .glink
   if (!config->isPic) {
-    for (const Symbol *sym : in.plt->entries)
-      if (sym->needsPltAddr) {
-        writePPC32PltCallStub(buf, sym->getGotPltVA(), nullptr, 0);
-        buf += 16;
-        glink += 16;
-      }
+    for (const Symbol *sym : cast<PPC32GlinkSection>(in.plt)->canonical_plts) {
+      writePPC32PltCallStub(buf, sym->getGotPltVA(), nullptr, 0);
+      buf += 16;
+      glink += 16;
+    }
   }
 
   // On PPC Secure PLT ABI, bl foo@plt jumps to a call stub, which loads an
