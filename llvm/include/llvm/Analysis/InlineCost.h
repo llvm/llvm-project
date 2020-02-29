@@ -27,6 +27,7 @@ class DataLayout;
 class Function;
 class ProfileSummaryInfo;
 class TargetTransformInfo;
+class TargetLibraryInfo;
 
 namespace InlineConstants {
 // Various thresholds used by inline cost analysis.
@@ -219,6 +220,7 @@ InlineCost getInlineCost(
     CallBase &Call, const InlineParams &Params, TargetTransformInfo &CalleeTTI,
     std::function<AssumptionCache &(Function &)> &GetAssumptionCache,
     Optional<function_ref<BlockFrequencyInfo &(Function &)>> GetBFI,
+    function_ref<const TargetLibraryInfo &(Function &)> GetTLI,
     ProfileSummaryInfo *PSI, OptimizationRemarkEmitter *ORE = nullptr);
 
 /// Get an InlineCost with the callee explicitly specified.
@@ -231,6 +233,7 @@ getInlineCost(CallBase &Call, Function *Callee, const InlineParams &Params,
               TargetTransformInfo &CalleeTTI,
               std::function<AssumptionCache &(Function &)> &GetAssumptionCache,
               Optional<function_ref<BlockFrequencyInfo &(Function &)>> GetBFI,
+              function_ref<const TargetLibraryInfo &(Function &)> GetTLI,
               ProfileSummaryInfo *PSI, OptimizationRemarkEmitter *ORE);
 
 /// Minimal filter to detect invalid constructs for inlining.

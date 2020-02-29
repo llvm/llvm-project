@@ -24,6 +24,7 @@
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Config/llvm-config.h"
@@ -102,6 +103,12 @@ static cl::opt<bool> OptComputeFullInlineCost(
     "inline-cost-full", cl::Hidden, cl::init(false), cl::ZeroOrMore,
     cl::desc("Compute the full inline cost of a call site even when the cost "
              "exceeds the threshold."));
+
+static cl::opt<bool> InlineCallerSupersetNoBuiltin(
+    "inline-caller-superset-nobuiltin", cl::Hidden, cl::init(true),
+    cl::ZeroOrMore,
+    cl::desc("Allow inlining when caller has a superset of callee's nobuiltin "
+             "attributes."));
 
 namespace {
 class InlineCostCallAnalyzer;
@@ -2146,10 +2153,17 @@ LLVM_DUMP_METHOD void InlineCostCallAnalyzer::dump() {
 
 /// Test that there are no attribute conflicts between Caller and Callee
 ///        that prevent inlining.
-static bool functionsHaveCompatibleAttributes(Function *Caller,
-                                              Function *Callee,
-                                              TargetTransformInfo &TTI) {
+static bool functionsHaveCompatibleAttributes(
+    Function *Caller, Function *Callee, TargetTransformInfo &TTI,
+    function_ref<const TargetLibraryInfo &(Function &)> &GetTLI) {
+  // Note that CalleeTLI must be a copy not a reference. The legacy pass manager
+  // caches the most recently created TLI in the TargetLibraryInfoWrapperPass
+  // object, and always returns the same object (which is overwritten on each
+  // GetTLI call). Therefore we copy the first result.
+  auto CalleeTLI = GetTLI(*Callee);
   return TTI.areInlineCompatible(Caller, Callee) &&
+         GetTLI(*Caller).areInlineCompatible(CalleeTLI,
+                                             InlineCallerSupersetNoBuiltin) &&
          AttributeFuncs::areInlineCompatible(*Caller, *Callee);
 }
 
@@ -2190,9 +2204,10 @@ InlineCost llvm::getInlineCost(
     CallBase &Call, const InlineParams &Params, TargetTransformInfo &CalleeTTI,
     std::function<AssumptionCache &(Function &)> &GetAssumptionCache,
     Optional<function_ref<BlockFrequencyInfo &(Function &)>> GetBFI,
+    function_ref<const TargetLibraryInfo &(Function &)> GetTLI,
     ProfileSummaryInfo *PSI, OptimizationRemarkEmitter *ORE) {
   return getInlineCost(Call, Call.getCalledFunction(), Params, CalleeTTI,
-                       GetAssumptionCache, GetBFI, PSI, ORE);
+                       GetAssumptionCache, GetBFI, GetTLI, PSI, ORE);
 }
 
 InlineCost llvm::getInlineCost(
@@ -2200,6 +2215,7 @@ InlineCost llvm::getInlineCost(
     TargetTransformInfo &CalleeTTI,
     std::function<AssumptionCache &(Function &)> &GetAssumptionCache,
     Optional<function_ref<BlockFrequencyInfo &(Function &)>> GetBFI,
+    function_ref<const TargetLibraryInfo &(Function &)> GetTLI,
     ProfileSummaryInfo *PSI, OptimizationRemarkEmitter *ORE) {
 
   // Cannot inline indirect calls.
@@ -2232,7 +2248,7 @@ InlineCost llvm::getInlineCost(
   // Never inline functions with conflicting attributes (unless callee has
   // always-inline attribute).
   Function *Caller = Call.getCaller();
-  if (!functionsHaveCompatibleAttributes(Caller, Callee, CalleeTTI))
+  if (!functionsHaveCompatibleAttributes(Caller, Callee, CalleeTTI, GetTLI))
     return llvm::InlineCost::getNever("conflicting attributes");
 
   // Don't inline this call if the caller has the optnone attribute.
