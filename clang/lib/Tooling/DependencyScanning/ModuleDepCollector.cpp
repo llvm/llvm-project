@@ -170,6 +170,9 @@ void ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
     "-remove-preceeding-explicit-module-build-incompatible-options",
     "-fno-implicit-modules", "-emit-module", "-fmodule-name=" + MD.ModuleName,
   };
+  
+  if (M->IsSystem)
+    MD.NonPathCommandLine.push_back("-fsystem-module");
 
   llvm::DenseSet<const Module *> AddedModules;
   addAllSubmoduleDeps(M, MD, AddedModules);
