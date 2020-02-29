@@ -163,11 +163,15 @@ static cl::opt<bool> ClDebugNonzeroLabels(
     cl::Hidden);
 
 // Experimental feature that inserts callbacks for certain data events.
-// Currently callbacks are only inserted for stores.
+// Currently callbacks are only inserted for loads, stores, memory transfers
+// (i.e. memcpy and memmove), and comparisons.
 //
 // If this flag is set to true, the user must provide definitions for the
 // following callback functions:
+//   void __dfsan_load_callback(dfsan_label Label);
 //   void __dfsan_store_callback(dfsan_label Label);
+//   void __dfsan_mem_transfer_callback(dfsan_label *Start, size_t Len);
+//   void __dfsan_cmp_callback(dfsan_label CombinedLabel);
 static cl::opt<bool> ClEventCallbacks(
     "dfsan-event-callbacks",
     cl::desc("Insert calls to __dfsan_*_callback functions on data events."),
@@ -356,7 +360,8 @@ class DataFlowSanitizer : public ModulePass {
   FunctionType *DFSanSetLabelFnTy;
   FunctionType *DFSanNonzeroLabelFnTy;
   FunctionType *DFSanVarargWrapperFnTy;
-  FunctionType *DFSanStoreCallbackFnTy;
+  FunctionType *DFSanLoadStoreCmpCallbackFnTy;
+  FunctionType *DFSanMemTransferCallbackFnTy;
   FunctionCallee DFSanUnionFn;
   FunctionCallee DFSanCheckedUnionFn;
   FunctionCallee DFSanUnionLoadFn;
@@ -364,7 +369,10 @@ class DataFlowSanitizer : public ModulePass {
   FunctionCallee DFSanSetLabelFn;
   FunctionCallee DFSanNonzeroLabelFn;
   FunctionCallee DFSanVarargWrapperFn;
+  FunctionCallee DFSanLoadCallbackFn;
   FunctionCallee DFSanStoreCallbackFn;
+  FunctionCallee DFSanMemTransferCallbackFn;
+  FunctionCallee DFSanCmpCallbackFn;
   MDNode *ColdCallWeights;
   DFSanABIList ABIList;
   DenseMap<Value *, Function *> UnwrappedFnMap;
@@ -451,7 +459,10 @@ public:
     return DFSF.F->getParent()->getDataLayout();
   }
 
-  void visitOperandShadowInst(Instruction &I);
+  // Combines shadow values for all of I's operands. Returns the combined shadow
+  // value.
+  Value *visitOperandShadowInst(Instruction &I);
+
   void visitUnaryOperator(UnaryOperator &UO);
   void visitBinaryOperator(BinaryOperator &BO);
   void visitCastInst(CastInst &CI);
@@ -596,8 +607,12 @@ bool DataFlowSanitizer::doInitialization(Module &M) {
       Type::getVoidTy(*Ctx), None, /*isVarArg=*/false);
   DFSanVarargWrapperFnTy = FunctionType::get(
       Type::getVoidTy(*Ctx), Type::getInt8PtrTy(*Ctx), /*isVarArg=*/false);
-  DFSanStoreCallbackFnTy =
+  DFSanLoadStoreCmpCallbackFnTy =
       FunctionType::get(Type::getVoidTy(*Ctx), ShadowTy, /*isVarArg=*/false);
+  Type *DFSanMemTransferCallbackArgs[2] = {ShadowPtrTy, IntptrTy};
+  DFSanMemTransferCallbackFnTy =
+      FunctionType::get(Type::getVoidTy(*Ctx), DFSanMemTransferCallbackArgs,
+                        /*isVarArg=*/false);
 
   if (GetArgTLSPtr) {
     Type *ArgTLSTy = ArrayType::get(ShadowTy, 64);
@@ -798,8 +813,14 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
   DFSanVarargWrapperFn = Mod->getOrInsertFunction("__dfsan_vararg_wrapper",
                                                   DFSanVarargWrapperFnTy);
 
-  DFSanStoreCallbackFn = Mod->getOrInsertFunction("__dfsan_store_callback",
-                                                  DFSanStoreCallbackFnTy);
+  DFSanLoadCallbackFn = Mod->getOrInsertFunction("__dfsan_load_callback",
+                                                 DFSanLoadStoreCmpCallbackFnTy);
+  DFSanStoreCallbackFn = Mod->getOrInsertFunction(
+      "__dfsan_store_callback", DFSanLoadStoreCmpCallbackFnTy);
+  DFSanMemTransferCallbackFn = Mod->getOrInsertFunction(
+      "__dfsan_mem_transfer_callback", DFSanMemTransferCallbackFnTy);
+  DFSanCmpCallbackFn = Mod->getOrInsertFunction("__dfsan_cmp_callback",
+                                                DFSanLoadStoreCmpCallbackFnTy);
 
   std::vector<Function *> FnsToInstrument;
   SmallPtrSet<Function *, 2> FnsWithNativeABI;
@@ -812,7 +833,10 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
         &i != DFSanSetLabelFn.getCallee()->stripPointerCasts() &&
         &i != DFSanNonzeroLabelFn.getCallee()->stripPointerCasts() &&
         &i != DFSanVarargWrapperFn.getCallee()->stripPointerCasts() &&
-        &i != DFSanStoreCallbackFn.getCallee()->stripPointerCasts())
+        &i != DFSanLoadCallbackFn.getCallee()->stripPointerCasts() &&
+        &i != DFSanStoreCallbackFn.getCallee()->stripPointerCasts() &&
+        &i != DFSanMemTransferCallbackFn.getCallee()->stripPointerCasts() &&
+        &i != DFSanCmpCallbackFn.getCallee()->stripPointerCasts())
       FnsToInstrument.push_back(&i);
   }
 
@@ -1196,9 +1220,10 @@ Value *DFSanFunction::combineOperandShadows(Instruction *Inst) {
   return Shadow;
 }
 
-void DFSanVisitor::visitOperandShadowInst(Instruction &I) {
+Value *DFSanVisitor::visitOperandShadowInst(Instruction &I) {
   Value *CombinedShadow = DFSF.combineOperandShadows(&I);
   DFSF.setShadow(&I, CombinedShadow);
+  return CombinedShadow;
 }
 
 // Generates IR to load shadow corresponding to bytes [Addr, Addr+Size), where
@@ -1344,6 +1369,10 @@ void DFSanVisitor::visitLoadInst(LoadInst &LI) {
     DFSF.NonZeroChecks.push_back(Shadow);
 
   DFSF.setShadow(&LI, Shadow);
+  if (ClEventCallbacks) {
+    IRBuilder<> IRB(&LI);
+    IRB.CreateCall(DFSF.DFS.DFSanLoadCallbackFn, Shadow);
+  }
 }
 
 void DFSanFunction::storeShadow(Value *Addr, uint64_t Size, Align Alignment,
@@ -1431,7 +1460,13 @@ void DFSanVisitor::visitBinaryOperator(BinaryOperator &BO) {
 
 void DFSanVisitor::visitCastInst(CastInst &CI) { visitOperandShadowInst(CI); }
 
-void DFSanVisitor::visitCmpInst(CmpInst &CI) { visitOperandShadowInst(CI); }
+void DFSanVisitor::visitCmpInst(CmpInst &CI) {
+  Value *CombinedShadow = visitOperandShadowInst(CI);
+  if (ClEventCallbacks) {
+    IRBuilder<> IRB(&CI);
+    IRB.CreateCall(DFSF.DFS.DFSanCmpCallbackFn, CombinedShadow);
+  }
+}
 
 void DFSanVisitor::visitGetElementPtrInst(GetElementPtrInst &GEPI) {
   visitOperandShadowInst(GEPI);
@@ -1511,13 +1546,13 @@ void DFSanVisitor::visitMemSetInst(MemSetInst &I) {
 
 void DFSanVisitor::visitMemTransferInst(MemTransferInst &I) {
   IRBuilder<> IRB(&I);
-  Value *DestShadow = DFSF.DFS.getShadowAddress(I.getDest(), &I);
+  Value *RawDestShadow = DFSF.DFS.getShadowAddress(I.getDest(), &I);
   Value *SrcShadow = DFSF.DFS.getShadowAddress(I.getSource(), &I);
   Value *LenShadow = IRB.CreateMul(
       I.getLength(),
       ConstantInt::get(I.getLength()->getType(), DFSF.DFS.ShadowWidth / 8));
   Type *Int8Ptr = Type::getInt8PtrTy(*DFSF.DFS.Ctx);
-  DestShadow = IRB.CreateBitCast(DestShadow, Int8Ptr);
+  Value *DestShadow = IRB.CreateBitCast(RawDestShadow, Int8Ptr);
   SrcShadow = IRB.CreateBitCast(SrcShadow, Int8Ptr);
   auto *MTI = cast<MemTransferInst>(
       IRB.CreateCall(I.getFunctionType(), I.getCalledValue(),
@@ -1528,6 +1563,10 @@ void DFSanVisitor::visitMemTransferInst(MemTransferInst &I) {
   } else {
     MTI->setDestAlignment(DFSF.DFS.ShadowWidth / 8);
     MTI->setSourceAlignment(DFSF.DFS.ShadowWidth / 8);
+  }
+  if (ClEventCallbacks) {
+    IRB.CreateCall(DFSF.DFS.DFSanMemTransferCallbackFn,
+                   {RawDestShadow, I.getLength()});
   }
 }
 

@@ -1,5 +1,5 @@
 file(GLOB globbed *.c *.cpp)
-add_llvm_library(MLIRLoopOps
+add_mlir_dialect_library(MLIRLoopOps
   ${globbed}
   EDSC/Builders.cpp
 

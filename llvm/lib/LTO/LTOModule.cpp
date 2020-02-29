@@ -28,6 +28,7 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Object/IRObjectFile.h"
+#include "llvm/Object/MachO.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Host.h"
@@ -675,4 +676,12 @@ const char *LTOModule::getDependentLibrary(lto::InputFile *input, size_t index,
   StringRef S = input->getDependentLibraries()[index];
   *size = S.size();
   return S.data();
+}
+
+Expected<uint32_t> LTOModule::getMachOCPUType() const {
+  return MachO::getCPUType(Triple(Mod->getTargetTriple()));
+}
+
+Expected<uint32_t> LTOModule::getMachOCPUSubType() const {
+  return MachO::getCPUSubType(Triple(Mod->getTargetTriple()));
 }

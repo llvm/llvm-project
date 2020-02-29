@@ -1150,6 +1150,11 @@ TargetInstrInfo::describeLoadedValue(const MachineInstr &MI,
   if (auto DestSrc = isCopyInstr(MI)) {
     Register DestReg = DestSrc->Destination->getReg();
 
+    // If the copy destination is the forwarding reg, describe the forwarding
+    // reg using the copy source as the backup location. Example:
+    //
+    //   x0 = MOV x7
+    //   call callee(x0)      ; x0 described as x7
     if (Reg == DestReg)
       return ParamLoadedValue(*DestSrc->Source, Expr);
 

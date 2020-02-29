@@ -15,11 +15,11 @@ class FileFormatError(Exception):
 
 def backend_int_pair(s):
   backend, sep, value = s.partition('=')
-  if (sep is None):
+  if sep is None:
     raise argparse.ArgumentTypeError("'=' missing, expected name=value")
-  if (not backend):
+  if not backend:
     raise argparse.ArgumentTypeError("Expected name=value")
-  if (not value):
+  if not value:
     raise argparse.ArgumentTypeError("Expected name=value")
   return backend, int(value)
 
@@ -60,7 +60,7 @@ def main():
   num_rules = dict(args.num_rules)
   for backend, rules_for_backend in covered_rules.items():
     if backend in num_rules:
-      print("%s: %3.2f%% of rules covered" % (backend, float(len(rules_for_backend)) / num_rules[backend]) * 100))
+      print("%s: %3.2f%% of rules covered" % (backend, float(len(rules_for_backend)) / num_rules[backend]) * 100)
     else:
       print("%s: %d rules covered" % (backend, len(rules_for_backend)))
 

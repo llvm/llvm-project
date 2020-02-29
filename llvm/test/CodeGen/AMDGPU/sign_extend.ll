@@ -294,9 +294,9 @@ define amdgpu_kernel void @v_sext_i1_to_i16_with_and(i16 addrspace(1)* %out, i32
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    v_mov_b32_e32 v1, s2
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, s0, v0
-; SI-NEXT:    v_cmp_eq_u32_e64 s[0:1], s1, v1
+; SI-NEXT:    v_mov_b32_e32 v0, s2
+; SI-NEXT:    v_cmp_eq_u32_e64 s[0:1], s1, v0
 ; SI-NEXT:    s_and_b64 s[0:1], vcc, s[0:1]
 ; SI-NEXT:    v_cndmask_b32_e64 v0, 0, -1, s[0:1]
 ; SI-NEXT:    buffer_store_short v0, off, s[4:7], 0
@@ -309,9 +309,9 @@ define amdgpu_kernel void @v_sext_i1_to_i16_with_and(i16 addrspace(1)* %out, i32
 ; VI-NEXT:    s_mov_b32 s7, 0xf000
 ; VI-NEXT:    s_mov_b32 s6, -1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    v_mov_b32_e32 v1, s2
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, s0, v0
-; VI-NEXT:    v_cmp_eq_u32_e64 s[0:1], s1, v1
+; VI-NEXT:    v_mov_b32_e32 v0, s2
+; VI-NEXT:    v_cmp_eq_u32_e64 s[0:1], s1, v0
 ; VI-NEXT:    s_and_b64 s[0:1], vcc, s[0:1]
 ; VI-NEXT:    v_cndmask_b32_e64 v0, 0, -1, s[0:1]
 ; VI-NEXT:    buffer_store_short v0, off, s[4:7], 0

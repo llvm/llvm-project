@@ -890,6 +890,45 @@ static void printGlobalOp(OpAsmPrinter &p, GlobalOp op) {
     p.printRegion(initializer, /*printEntryBlockArgs=*/false);
 }
 
+//===----------------------------------------------------------------------===//
+// Verifier for LLVM::DialectCastOp.
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verify(DialectCastOp op) {
+  auto verifyMLIRCastType = [&op](Type type) -> LogicalResult {
+    if (auto llvmType = type.dyn_cast<LLVM::LLVMType>()) {
+      if (llvmType.isVectorTy())
+        llvmType = llvmType.getVectorElementType();
+      if (llvmType.isIntegerTy() || llvmType.isHalfTy() ||
+          llvmType.isFloatTy() || llvmType.isDoubleTy()) {
+        return success();
+      }
+      return op.emitOpError("type must be non-index integer types, float "
+                            "types, or vector of mentioned types.");
+    }
+    if (auto vectorType = type.dyn_cast<VectorType>()) {
+      if (vectorType.getShape().size() > 1)
+        return op.emitOpError("only 1-d vector is allowed");
+      type = vectorType.getElementType();
+    }
+    if (type.isSignlessIntOrFloat())
+      return success();
+    // Note that memrefs are not supported. We currently don't have a use case
+    // for it, but even if we do, there are challenges:
+    // * if we allow memrefs to cast from/to memref descriptors, then the
+    // semantics of the cast op depends on the implementation detail of the
+    // descriptor.
+    // * if we allow memrefs to cast from/to bare pointers, some users might
+    // alternatively want metadata that only present in the descriptor.
+    //
+    // TODO(timshen): re-evaluate the memref cast design when it's needed.
+    return op.emitOpError("type must be non-index integer types, float types, "
+                          "or vector of mentioned types.");
+  };
+  return failure(failed(verifyMLIRCastType(op.in().getType())) ||
+                 failed(verifyMLIRCastType(op.getType())));
+}
+
 // Parses one of the keywords provided in the list `keywords` and returns the
 // position of the parsed keyword in the list. If none of the keywords from the
 // list is parsed, returns -1.

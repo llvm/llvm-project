@@ -1,5 +1,5 @@
 file(GLOB globbed *.c *.cpp)
-add_llvm_library(MLIRShape
+add_mlir_dialect_library(MLIRShape
   ${globbed}
 
   ADDITIONAL_HEADER_DIRS

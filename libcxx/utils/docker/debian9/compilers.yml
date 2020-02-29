@@ -15,7 +15,7 @@ services:
       args:
         branch: releases/gcc-4.8.5
         install_prefix: /opt/gcc-4.8.5
-        cherry_pick: ec1cc0263f156f70693a62cf17b254a0029f4852
+        cherry_pick: 3a27b4db566c2cde8e043220f3d2c5401159b10e
     image: ericwf/compiler:gcc-4.8.5
   gcc-4.9.4:
     build:

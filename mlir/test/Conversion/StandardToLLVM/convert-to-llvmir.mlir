@@ -486,6 +486,18 @@ func @fpext(%arg0 : f16, %arg1 : f32) {
 }
 
 // Checking conversion of integer types to floating point.
+// CHECK-LABEL: @fpext
+func @fpext_vector(%arg0 : vector<2xf16>, %arg1 : vector<2xf32>) {
+// CHECK-NEXT: = llvm.fpext {{.*}} : !llvm<"<2 x half>"> to !llvm<"<2 x float>">
+  %0 = fpext %arg0: vector<2xf16> to vector<2xf32>
+// CHECK-NEXT: = llvm.fpext {{.*}} : !llvm<"<2 x half>"> to !llvm<"<2 x double>">
+  %1 = fpext %arg0: vector<2xf16> to vector<2xf64>
+// CHECK-NEXT: = llvm.fpext {{.*}} : !llvm<"<2 x float>"> to !llvm<"<2 x double>">
+  %2 = fpext %arg1: vector<2xf32> to vector<2xf64>
+  return
+}
+
+// Checking conversion of integer types to floating point.
 // CHECK-LABEL: @fptrunc
 func @fptrunc(%arg0 : f32, %arg1 : f64) {
 // CHECK-NEXT: = llvm.fptrunc {{.*}} : !llvm.float to !llvm.half
@@ -494,6 +506,18 @@ func @fptrunc(%arg0 : f32, %arg1 : f64) {
   %1 = fptrunc %arg1: f64 to f16
 // CHECK-NEXT: = llvm.fptrunc {{.*}} : !llvm.double to !llvm.float
   %2 = fptrunc %arg1: f64 to f32
+  return
+}
+
+// Checking conversion of integer types to floating point.
+// CHECK-LABEL: @fptrunc
+func @fptrunc_vector(%arg0 : vector<2xf32>, %arg1 : vector<2xf64>) {
+// CHECK-NEXT: = llvm.fptrunc {{.*}} : !llvm<"<2 x float>"> to !llvm<"<2 x half>">
+  %0 = fptrunc %arg0: vector<2xf32> to vector<2xf16>
+// CHECK-NEXT: = llvm.fptrunc {{.*}} : !llvm<"<2 x double>"> to !llvm<"<2 x half>">
+  %1 = fptrunc %arg1: vector<2xf64> to vector<2xf16>
+// CHECK-NEXT: = llvm.fptrunc {{.*}} : !llvm<"<2 x double>"> to !llvm<"<2 x float>">
+  %2 = fptrunc %arg1: vector<2xf64> to vector<2xf32>
   return
 }
 
@@ -909,4 +933,40 @@ func @assume_alignment(%0 : memref<4x4xf16>) {
   // CHECK-NEXT: "llvm.intr.assume"(%[[CONDITION]]) : (!llvm.i1) -> ()
   assume_alignment %0, 16 : memref<4x4xf16>
   return
+}
+
+// -----
+
+// CHECK-LABEL: func @mlir_cast_to_llvm
+// CHECK-SAME: %[[ARG:.*]]:
+func @mlir_cast_to_llvm(%0 : vector<2xf16>) -> !llvm<"<2 x half>"> {
+  %1 = llvm.mlir.cast %0 : vector<2xf16> to !llvm<"<2 x half>">
+  // CHECK-NEXT: llvm.return %[[ARG]]
+  return %1 : !llvm<"<2 x half>">
+}
+
+// CHECK-LABEL: func @mlir_cast_from_llvm
+// CHECK-SAME: %[[ARG:.*]]:
+func @mlir_cast_from_llvm(%0 : !llvm<"<2 x half>">) -> vector<2xf16> {
+  %1 = llvm.mlir.cast %0 : !llvm<"<2 x half>"> to vector<2xf16>
+  // CHECK-NEXT: llvm.return %[[ARG]]
+  return %1 : vector<2xf16>
+}
+
+// -----
+
+// CHECK-LABEL: func @mlir_cast_to_llvm
+// CHECK-SAME: %[[ARG:.*]]:
+func @mlir_cast_to_llvm(%0 : f16) -> !llvm.half {
+  %1 = llvm.mlir.cast %0 : f16 to !llvm.half
+  // CHECK-NEXT: llvm.return %[[ARG]]
+  return %1 : !llvm.half
+}
+
+// CHECK-LABEL: func @mlir_cast_from_llvm
+// CHECK-SAME: %[[ARG:.*]]:
+func @mlir_cast_from_llvm(%0 : !llvm.half) -> f16 {
+  %1 = llvm.mlir.cast %0 : !llvm.half to f16
+  // CHECK-NEXT: llvm.return %[[ARG]]
+  return %1 : f16
 }

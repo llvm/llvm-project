@@ -162,8 +162,7 @@ void ToyToLLVMLoweringPass::runOnModule() {
   // The first thing to define is the conversion target. This will define the
   // final target for this lowering. For this lowering, we are only targeting
   // the LLVM dialect.
-  ConversionTarget target(getContext());
-  target.addLegalDialect<LLVM::LLVMDialect>();
+  LLVMConversionTarget target(getContext());
   target.addLegalOp<ModuleOp, ModuleTerminatorOp>();
 
   // During this lowering, we will also be lowering the MemRef types, that are

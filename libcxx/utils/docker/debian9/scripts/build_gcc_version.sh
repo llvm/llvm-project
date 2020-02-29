@@ -79,7 +79,6 @@ git clone --branch "$GCC_BRANCH" --single-branch --depth=1 git://gcc.gnu.org/git
 
 pushd "$GCC_SOURCE_DIR"
 if [ "$CHERRY_PICK" != "" ]; then
-  git checkout -b cherry-pick-branch
   git fetch origin master --unshallow # Urg, we have to get the entire history. This will take a while.
   git cherry-pick --no-commit -X theirs "$CHERRY_PICK"
 fi

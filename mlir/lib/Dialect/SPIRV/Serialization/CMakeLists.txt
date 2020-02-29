@@ -1,4 +1,4 @@
-add_llvm_library(MLIRSPIRVSerialization
+add_mlir_dialect_library(MLIRSPIRVSerialization
   Deserializer.cpp
   Serializer.cpp
   SPIRVBinaryUtils.cpp

@@ -1537,8 +1537,8 @@ define amdgpu_kernel void @bfe_u32_constant_fold_test_18(i32 addrspace(1)* %out)
 define amdgpu_kernel void @simplify_bfe_u32_multi_use_arg(i32 addrspace(1)* %out0,
 ; SI-LABEL: simplify_bfe_u32_multi_use_arg:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xd
+; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    s_load_dwordx4 s[8:11], s[0:1], 0x9
 ; SI-NEXT:    s_mov_b32 s6, s2
