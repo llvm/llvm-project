@@ -36,6 +36,45 @@ bool ignoreReport(SourceLocation SLoc, ReportOptions Opts, ErrorType ET) {
   return SLoc.isDisabled() || IsPCSuppressed(ET, Opts.pc, SLoc.getFilename());
 }
 
+/// Situations in which we might emit a check for the suitability of a
+/// pointer or glvalue. Needs to be kept in sync with CodeGenFunction.h in
+/// clang.
+enum TypeCheckKind {
+  /// Checking the operand of a load. Must be suitably sized and aligned.
+  TCK_Load,
+  /// Checking the destination of a store. Must be suitably sized and aligned.
+  TCK_Store,
+  /// Checking the bound value in a reference binding. Must be suitably sized
+  /// and aligned, but is not required to refer to an object (until the
+  /// reference is used), per core issue 453.
+  TCK_ReferenceBinding,
+  /// Checking the object expression in a non-static data member access. Must
+  /// be an object within its lifetime.
+  TCK_MemberAccess,
+  /// Checking the 'this' pointer for a call to a non-static member function.
+  /// Must be an object within its lifetime.
+  TCK_MemberCall,
+  /// Checking the 'this' pointer for a constructor call.
+  TCK_ConstructorCall,
+  /// Checking the operand of a static_cast to a derived pointer type. Must be
+  /// null or an object within its lifetime.
+  TCK_DowncastPointer,
+  /// Checking the operand of a static_cast to a derived reference type. Must
+  /// be an object within its lifetime.
+  TCK_DowncastReference,
+  /// Checking the operand of a cast to a base object. Must be suitably sized
+  /// and aligned.
+  TCK_Upcast,
+  /// Checking the operand of a cast to a virtual base object. Must be an
+  /// object within its lifetime.
+  TCK_UpcastToVirtualBase,
+  /// Checking the value assigned to a _Nonnull pointer. Must not be null.
+  TCK_NonnullAssign,
+  /// Checking the operand of a dynamic_cast or a typeid expression.  Must be
+  /// null or an object within its lifetime.
+  TCK_DynamicOperation
+};
+
 const char *TypeCheckKinds[] = {
     "load of", "store to", "reference binding to", "member access within",
     "member call on", "constructor call on", "downcast of", "downcast of",
@@ -50,7 +89,9 @@ static void handleTypeMismatchImpl(TypeMismatchData *Data, ValueHandle Pointer,
   uptr Alignment = (uptr)1 << Data->LogAlignment;
   ErrorType ET;
   if (!Pointer)
-    ET = ErrorType::NullPointerUse;
+    ET = (Data->TypeCheckKind == TCK_NonnullAssign)
+             ? ErrorType::NullPointerUseWithNullability
+             : ErrorType::NullPointerUse;
   else if (Pointer & (Alignment - 1))
     ET = ErrorType::MisalignedPointerUse;
   else
@@ -71,6 +112,7 @@ static void handleTypeMismatchImpl(TypeMismatchData *Data, ValueHandle Pointer,
 
   switch (ET) {
   case ErrorType::NullPointerUse:
+  case ErrorType::NullPointerUseWithNullability:
     Diag(Loc, DL_Error, ET, "%0 null pointer of type %1")
         << TypeCheckKinds[Data->TypeCheckKind] << Data->Type;
     break;
@@ -604,7 +646,8 @@ static void handleNonNullReturn(NonNullReturnData *Data, SourceLocation *LocPtr,
     UNREACHABLE("source location pointer is null!");
 
   SourceLocation Loc = LocPtr->acquire();
-  ErrorType ET = ErrorType::InvalidNullReturn;
+  ErrorType ET = IsAttr ? ErrorType::InvalidNullReturn
+                        : ErrorType::InvalidNullReturnWithNullability;
 
   if (ignoreReport(Loc, Opts, ET))
     return;
@@ -648,7 +691,8 @@ void __ubsan::__ubsan_handle_nullability_return_v1_abort(
 static void handleNonNullArg(NonNullArgData *Data, ReportOptions Opts,
                              bool IsAttr) {
   SourceLocation Loc = Data->Loc.acquire();
-  ErrorType ET = ErrorType::InvalidNullArgument;
+  ErrorType ET = IsAttr ? ErrorType::InvalidNullArgument
+                        : ErrorType::InvalidNullArgumentWithNullability;
 
   if (ignoreReport(Loc, Opts, ET))
     return;
