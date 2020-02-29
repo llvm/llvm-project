@@ -49,14 +49,20 @@ function(add_mlir_dialect dialect dialect_doc_filename)
   add_dependencies(mlir-doc ${dialect_doc_filename}DocGen)
 endfunction()
 
+# Declare a library which can be compiled in libMLIR.so
+macro(add_mlir_library name)
+  set_property(GLOBAL APPEND PROPERTY MLIR_ALL_LIBS ${name})
+  add_llvm_library(${ARGV})
+endmacro(add_mlir_library)
+
 # Declare the library associated with a dialect.
 function(add_mlir_dialect_library name)
   set_property(GLOBAL APPEND PROPERTY MLIR_DIALECT_LIBS ${name})
-  add_llvm_library(${ARGV})
+  add_mlir_library(${ARGV})
 endfunction(add_mlir_dialect_library)
 
 # Declare the library associated with a conversion.
 function(add_mlir_conversion_library name)
   set_property(GLOBAL APPEND PROPERTY MLIR_CONVERSION_LIBS ${name})
-  add_llvm_library(${ARGV})
+  add_mlir_library(${ARGV})
 endfunction(add_mlir_conversion_library)

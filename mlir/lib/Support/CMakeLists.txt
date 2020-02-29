@@ -7,7 +7,7 @@ set(LLVM_OPTIONAL_SOURCES
   TranslateClParser.cpp
 )
 
-add_llvm_library(MLIRSupport
+add_mlir_library(MLIRSupport
   FileUtilities.cpp
   StorageUniquer.cpp
   ToolUtilities.cpp
@@ -20,7 +20,7 @@ add_llvm_library(MLIRSupport
   ${LLVM_PTHREAD_LIB}
   )
 
-add_llvm_library(MLIROptLib
+add_mlir_library(MLIROptLib
   MlirOptMain.cpp
 
   ADDITIONAL_HEADER_DIRS
@@ -34,7 +34,7 @@ add_llvm_library(MLIROptLib
   LLVMSupport
   )
 
-add_llvm_library(MLIRTranslateClParser
+add_mlir_library(MLIRTranslateClParser
   TranslateClParser.cpp
 
   ADDITIONAL_HEADER_DIRS

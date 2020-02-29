@@ -1,6 +1,6 @@
 add_subdirectory(Utils)
 
-add_llvm_library(MLIRTransforms
+add_mlir_library(MLIRTransforms
   AffineDataCopyGeneration.cpp
   AffineLoopInvariantCodeMotion.cpp
   Canonicalizer.cpp
