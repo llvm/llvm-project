@@ -369,6 +369,13 @@ protected:
   LLVMTypeConverter &typeConverter;
 };
 
+/// Derived class that automatically populates legalization information for
+/// different LLVM ops.
+class LLVMConversionTarget : public ConversionTarget {
+public:
+  explicit LLVMConversionTarget(MLIRContext &ctx);
+};
+
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_STANDARDTOLLVM_CONVERTSTANDARDTOLLVM_H
