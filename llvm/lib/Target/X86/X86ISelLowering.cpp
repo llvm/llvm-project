@@ -2062,6 +2062,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   setTargetDAGCombine(ISD::MGATHER);
   setTargetDAGCombine(ISD::FP16_TO_FP);
   setTargetDAGCombine(ISD::FP_EXTEND);
+  setTargetDAGCombine(ISD::STRICT_FP_EXTEND);
   setTargetDAGCombine(ISD::FP_ROUND);
 
   computeRegisterProperties(Subtarget.getRegisterInfo());
@@ -28985,6 +28986,23 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     Results.push_back(Res);
     return;
   }
+  case X86ISD::STRICT_CVTPH2PS: {
+    EVT VT = N->getValueType(0);
+    SDValue Lo, Hi;
+    std::tie(Lo, Hi) = DAG.SplitVectorOperand(N, 1);
+    EVT LoVT, HiVT;
+    std::tie(LoVT, HiVT) = DAG.GetSplitDestVTs(VT);
+    Lo = DAG.getNode(X86ISD::STRICT_CVTPH2PS, dl, {LoVT, MVT::Other},
+                     {N->getOperand(0), Lo});
+    Hi = DAG.getNode(X86ISD::STRICT_CVTPH2PS, dl, {HiVT, MVT::Other},
+                     {N->getOperand(0), Hi});
+    SDValue Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other,
+                                Lo.getValue(1), Hi.getValue(1));
+    SDValue Res = DAG.getNode(ISD::CONCAT_VECTORS, dl, VT, Lo, Hi);
+    Results.push_back(Res);
+    Results.push_back(Chain);
+    return;
+  }
   case ISD::CTPOP: {
     assert(N->getValueType(0) == MVT::i64 && "Unexpected VT!");
     // Use a v2i64 if possible.
@@ -29555,7 +29573,8 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
       Results.push_back(V.getValue(1));
     return;
   }
-  case ISD::FP_EXTEND: {
+  case ISD::FP_EXTEND:
+  case ISD::STRICT_FP_EXTEND: {
     // Right now, only MVT::v2f32 has OperationAction for FP_EXTEND.
     // No other ValueType for FP_EXTEND should reach this point.
     assert(N->getValueType(0) == MVT::v2f32 &&
@@ -43810,7 +43829,8 @@ static SDValue combineBT(SDNode *N, SelectionDAG &DAG,
 
 static SDValue combineCVTPH2PS(SDNode *N, SelectionDAG &DAG,
                                TargetLowering::DAGCombinerInfo &DCI) {
-  SDValue Src = N->getOperand(0);
+  bool IsStrict = N->getOpcode() == X86ISD::STRICT_CVTPH2PS;
+  SDValue Src = N->getOperand(IsStrict ? 1 : 0);
 
   if (N->getValueType(0) == MVT::v4f32 && Src.getValueType() == MVT::v8i16) {
     APInt KnownUndef, KnownZero;
@@ -43822,6 +43842,11 @@ static SDValue combineCVTPH2PS(SDNode *N, SelectionDAG &DAG,
       return SDValue(N, 0);
     }
 
+    // FIXME: Shrink vector loads.
+    if (IsStrict)
+      return SDValue();
+
+    // Convert a full vector load into vzload when not all bits are needed.
     if (ISD::isNormalLoad(Src.getNode()) && Src.hasOneUse()) {
       LoadSDNode *LN = cast<LoadSDNode>(N->getOperand(0));
       // Unless the load is volatile or atomic.
@@ -46721,8 +46746,9 @@ static SDValue combineFP_EXTEND(SDNode *N, SelectionDAG &DAG,
   if (!Subtarget.hasF16C() || Subtarget.useSoftFloat())
     return SDValue();
 
+  bool IsStrict = N->isStrictFPOpcode();
   EVT VT = N->getValueType(0);
-  SDValue Src = N->getOperand(0);
+  SDValue Src = N->getOperand(IsStrict ? 1 : 0);
   EVT SrcVT = Src.getValueType();
 
   if (!SrcVT.isVector() || SrcVT.getVectorElementType() != MVT::f16)
@@ -46755,12 +46781,29 @@ static SDValue combineFP_EXTEND(SDNode *N, SelectionDAG &DAG,
   // Destination is vXf32 with at least 4 elements.
   EVT CvtVT = EVT::getVectorVT(*DAG.getContext(), MVT::f32,
                                std::max(4U, NumElts));
-  SDValue Cvt = DAG.getNode(X86ISD::CVTPH2PS, dl, CvtVT, Src);
+  SDValue Cvt, Chain;
+  if (IsStrict) {
+    Cvt = DAG.getNode(X86ISD::STRICT_CVTPH2PS, dl, {CvtVT, MVT::Other},
+                      {N->getOperand(0), Src});
+    Chain = Cvt.getValue(1);
+  } else {
+    Cvt = DAG.getNode(X86ISD::CVTPH2PS, dl, CvtVT, Src);
+  }
 
   if (NumElts < 4) {
     assert(NumElts == 2 && "Unexpected size");
     Cvt = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, MVT::v2f32, Cvt,
                       DAG.getIntPtrConstant(0, dl));
+  }
+
+  if (IsStrict) {
+    // Extend to the original VT if necessary.
+    if (Cvt.getValueType() != VT) {
+      Cvt = DAG.getNode(ISD::STRICT_FP_EXTEND, dl, {VT, MVT::Other},
+                        {Chain, Cvt});
+      Chain = Cvt.getValue(1);
+    }
+    return DAG.getMergeValues({Cvt, Chain}, dl);
   }
 
   // Extend to the original VT if necessary.
@@ -46876,6 +46919,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::CVTP2UI:
   case X86ISD::CVTTP2SI:
   case X86ISD::CVTTP2UI:    return combineCVTP2I_CVTTP2I(N, DAG, DCI);
+  case X86ISD::STRICT_CVTPH2PS:
   case X86ISD::CVTPH2PS:    return combineCVTPH2PS(N, DAG, DCI);
   case X86ISD::BT:          return combineBT(N, DAG, DCI);
   case ISD::ANY_EXTEND:
@@ -46962,6 +47006,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::KSHIFTL:
   case X86ISD::KSHIFTR:     return combineKSHIFT(N, DAG, DCI);
   case ISD::FP16_TO_FP:     return combineFP16_TO_FP(N, DAG, Subtarget);
+  case ISD::STRICT_FP_EXTEND:
   case ISD::FP_EXTEND:      return combineFP_EXTEND(N, DAG, Subtarget);
   case ISD::FP_ROUND:       return combineFP_ROUND(N, DAG, Subtarget);
   }
