@@ -23,7 +23,6 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/ProfileSummary.h"
 #include "llvm/ProfileData/InstrProfData.inc"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
@@ -1139,10 +1138,6 @@ void createIRLevelProfileFlagVar(Module &M, bool IsCS);
 
 // Create the variable for the profile file name.
 void createProfileFileNameVar(Module &M, StringRef InstrProfileOutput);
-
-// Whether to compress function names in profile records, and filenames in
-// code coverage mappings. Used by the Instrumentation library and unit tests.
-extern cl::opt<bool> DoInstrProfNameCompression;
 
 } // end namespace llvm
 #endif // LLVM_PROFILEDATA_INSTRPROF_H

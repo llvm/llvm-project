@@ -74,6 +74,10 @@ cl::opt<unsigned> MemOPSizeLarge(
 
 namespace {
 
+cl::opt<bool> DoNameCompression("enable-name-compression",
+                                cl::desc("Enable name string compression"),
+                                cl::init(true));
+
 cl::opt<bool> DoHashBasedCounterSplit(
     "hash-based-counter-split",
     cl::desc("Rename counter variable of a comdat function based on cfg hash"),
@@ -969,7 +973,7 @@ void InstrProfiling::emitNameData() {
 
   std::string CompressedNameStr;
   if (Error E = collectPGOFuncNameStrings(ReferencedNames, CompressedNameStr,
-                                          DoInstrProfNameCompression)) {
+                                          DoNameCompression)) {
     report_fatal_error(toString(std::move(E)), false);
   }
 
