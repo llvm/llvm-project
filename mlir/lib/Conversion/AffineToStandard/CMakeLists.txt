@@ -14,12 +14,3 @@ add_mlir_conversion_library(MLIRAffineToStandard
   LLVMCore
   LLVMSupport
   )
-add_dependencies(
-  MLIRAffineToStandard
-
-  MLIRAffineOps
-  MLIRStandardOps
-  MLIRIR
-  LLVMCore
-  LLVMSupport
-)
