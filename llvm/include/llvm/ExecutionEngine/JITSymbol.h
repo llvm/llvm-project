@@ -30,6 +30,7 @@
 namespace llvm {
 
 class GlobalValue;
+class GlobalValueSummary;
 
 namespace object {
 
@@ -159,6 +160,10 @@ public:
   /// Construct a JITSymbolFlags value based on the flags of the given global
   /// value.
   static JITSymbolFlags fromGlobalValue(const GlobalValue &GV);
+
+  /// Construct a JITSymbolFlags value based on the flags of the given global
+  /// value summary.
+  static JITSymbolFlags fromSummary(GlobalValueSummary *S);
 
   /// Construct a JITSymbolFlags value based on the flags of the given libobject
   /// symbol.

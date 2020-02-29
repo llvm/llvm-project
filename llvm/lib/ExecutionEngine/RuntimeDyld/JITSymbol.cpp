@@ -14,6 +14,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/Object/ObjectFile.h"
 
 using namespace llvm;
@@ -31,6 +32,22 @@ JITSymbolFlags llvm::JITSymbolFlags::fromGlobalValue(const GlobalValue &GV) {
     Flags |= JITSymbolFlags::Callable;
   else if (isa<GlobalAlias>(GV) &&
            isa<Function>(cast<GlobalAlias>(GV).getAliasee()))
+    Flags |= JITSymbolFlags::Callable;
+
+  return Flags;
+}
+
+JITSymbolFlags llvm::JITSymbolFlags::fromSummary(GlobalValueSummary *S) {
+  JITSymbolFlags Flags = JITSymbolFlags::None;
+  auto L = S->linkage();
+  if (GlobalValue::isWeakLinkage(L) || GlobalValue::isLinkOnceLinkage(L))
+    Flags |= JITSymbolFlags::Weak;
+  if (GlobalValue::isCommonLinkage(L))
+    Flags |= JITSymbolFlags::Common;
+  if (GlobalValue::isExternalLinkage(L) || GlobalValue::isExternalWeakLinkage(L))
+    Flags |= JITSymbolFlags::Exported;
+
+  if (isa<FunctionSummary>(S))
     Flags |= JITSymbolFlags::Callable;
 
   return Flags;
