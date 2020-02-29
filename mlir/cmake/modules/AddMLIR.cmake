@@ -54,3 +54,9 @@ function(add_mlir_dialect_library name)
   set_property(GLOBAL APPEND PROPERTY MLIR_DIALECT_LIBS ${name})
   add_llvm_library(${ARGV})
 endfunction(add_mlir_dialect_library)
+
+# Declare the library associated with a conversion.
+function(add_mlir_conversion_library name)
+  set_property(GLOBAL APPEND PROPERTY MLIR_CONVERSION_LIBS ${name})
+  add_llvm_library(${ARGV})
+endfunction(add_mlir_conversion_library)

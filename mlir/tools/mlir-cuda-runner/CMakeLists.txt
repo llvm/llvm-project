@@ -36,20 +36,18 @@ if(MLIR_CUDA_RUNNER_ENABLED)
   )
 
   get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
+  get_property(conversion_libs GLOBAL PROPERTY MLIR_CONVERSION_LIBS)
   set(LIBS
     ${dialect_libs}
+    ${conversion_libs}
     LLVMCore
     LLVMSupport
     MLIRJitRunner
     MLIRAnalysis
     MLIREDSC
     MLIRExecutionEngine
-    MLIRGPUtoCUDATransforms
-    MLIRGPUtoNVVMTransforms
     MLIRIR
-    MLIRLoopToStandard
     MLIRParser
-    MLIRStandardToLLVM
     MLIRSupport
     MLIRTargetLLVMIR
     MLIRTransforms
