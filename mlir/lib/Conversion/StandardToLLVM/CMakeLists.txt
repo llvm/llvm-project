@@ -13,3 +13,11 @@ add_mlir_conversion_library(MLIRStandardToLLVM
   LLVMCore
   LLVMSupport
   )
+add_dependencies(
+  MLIRStandardToLLVM
+
+  MLIRLLVMIR
+  MLIRTransforms
+  LLVMCore
+  LLVMSupport
+)

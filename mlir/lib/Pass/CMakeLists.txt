@@ -12,3 +12,4 @@ add_llvm_library(MLIRPass
   LLVMIRReader
   LLVMSupport
   )
+add_dependencies(MLIRPass MLIRAnalysis MLIRIR LLVMSupport)
