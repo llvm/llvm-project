@@ -12,6 +12,7 @@ add_mlir_dialect_library(MLIRVectorOps
   MLIRVectorTransformPatternsIncGen
 
   LINK_LIBS
+  MLIREDSC
   MLIRIR
   MLIRStandardOps
   MLIRAffineOps
