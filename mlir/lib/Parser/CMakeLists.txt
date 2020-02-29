@@ -11,3 +11,4 @@ add_llvm_library(MLIRParser
   MLIRAnalysis
   LLVMSupport
   )
+add_dependencies(MLIRParser MLIRIR MLIRAnalysis)
