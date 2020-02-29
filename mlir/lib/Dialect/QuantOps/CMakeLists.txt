@@ -21,8 +21,5 @@ add_mlir_dialect_library(MLIRQuantOps
   LLVMSupport
   )
 add_dependencies(MLIRQuantOps
-                 MLIRIR
-                 MLIRPass
-                 MLIRQuantOpsIncGen
-                 MLIRSupport
-                 MLIRStandardOps)
+  MLIRQuantOpsIncGen
+  )

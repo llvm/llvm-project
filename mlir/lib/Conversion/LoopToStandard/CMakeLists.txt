@@ -13,11 +13,3 @@ add_mlir_conversion_library(MLIRLoopToStandard
   LLVMCore
   LLVMSupport
   )
-add_dependencies(
-  MLIRLoopToStandard
-
-  MLIRLoopOps
-  MLIRTransforms
-  LLVMCore
-  LLVMSupport
-)
