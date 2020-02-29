@@ -23,6 +23,10 @@ class Pass;
 /// Creates a loop fusion pass which fuses parallel loops.
 std::unique_ptr<Pass> createParallelLoopFusionPass();
 
+/// Creates a pass that specializes parallel loop for unrolling and
+/// vectorization.
+std::unique_ptr<Pass> createParallelLoopSpecializationPass();
+
 /// Creates a pass which tiles innermost parallel loops.
 std::unique_ptr<Pass>
 createParallelLoopTilingPass(llvm::ArrayRef<int64_t> tileSize = {});
