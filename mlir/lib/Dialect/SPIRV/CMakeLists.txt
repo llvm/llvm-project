@@ -14,6 +14,15 @@ add_mlir_dialect_library(MLIRSPIRV
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/SPIRV
 
+  DEPENDS
+  MLIRSPIRVAvailabilityIncGen
+  MLIRSPIRVCanonicalizationIncGen
+  MLIRSPIRVEnumAvailabilityIncGen
+  MLIRSPIRVEnumsIncGen
+  MLIRSPIRVOpsIncGen
+  MLIRSPIRVOpUtilsGen
+  MLIRSPIRVTargetAndABIIncGen
+
   LINK_LIBS
   MLIRIR
   MLIRParser
@@ -22,16 +31,6 @@ add_mlir_dialect_library(MLIRSPIRV
   MLIRTransforms
   LLVMSupport
   )
-
-add_dependencies(MLIRSPIRV
-  MLIRSPIRVAvailabilityIncGen
-  MLIRSPIRVCanonicalizationIncGen
-  MLIRSPIRVEnumAvailabilityIncGen
-  MLIRSPIRVEnumsIncGen
-  MLIRSPIRVOpsIncGen
-  MLIRSPIRVOpUtilsGen
-  MLIRSPIRVTargetAndABIIncGen)
-
 
 add_subdirectory(Serialization)
 add_subdirectory(Transforms)
