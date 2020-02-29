@@ -670,7 +670,6 @@ ELFFile<ELFT>::getStringTableForSymtab(const Elf_Shdr &Sec,
                                        Elf_Shdr_Range Sections) const {
 
   if (Sec.sh_type != ELF::SHT_SYMTAB && Sec.sh_type != ELF::SHT_DYNSYM)
-    // TODO: this error is untested.
     return createError(
         "invalid sh_type for symbol table, expected SHT_SYMTAB or SHT_DYNSYM");
   auto SectionOrErr = object::getSection<ELFT>(Sections, Sec.sh_link);
