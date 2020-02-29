@@ -5,7 +5,8 @@
 // RUN: echo "nullability-arg:nullability.c" > %t.supp
 // RUN: echo "nullability-return:nullability.c" >> %t.supp
 // RUN: echo "nullability-assign:nullability.c" >> %t.supp
-// RUN: UBSAN_OPTIONS=suppressions=%t.supp %run %t 2>&1 | count 0
+// RUN: UBSAN_OPTIONS=suppressions=%t.supp %run %t 2>&1 | FileCheck -allow-empty -check-prefix=SUPPRESS %s
+// SUPPRESS-NOT: runtime error
 
 // CHECK: nullability.c:[[@LINE+2]]:41: runtime error: null pointer returned from function declared to never return null
 // CHECK-NEXT: nullability.c:[[@LINE+1]]:6: note: _Nonnull return type annotation specified here
