@@ -35,5 +35,4 @@ target_link_libraries(toyc-ch5
     MLIRIR
     MLIRParser
     MLIRPass
-    MLIRSupport
     MLIRTransforms)
