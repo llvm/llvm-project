@@ -13,8 +13,12 @@ add_mlir_dialect_library(MLIRLoopOps
   LLVMSupport
   )
 add_dependencies(MLIRLoopOps
+
+  MLIREDSC
   MLIRLoopLikeInterfaceIncGen
   MLIRLoopOpsIncGen
+  MLIRStandardOps
+  LLVMSupport
   )
 
 add_subdirectory(Transforms)

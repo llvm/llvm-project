@@ -1,16 +1,5 @@
-add_mlir_dialect_library(MLIRLinalgTransforms
-  Fusion.cpp
-  LinalgTransforms.cpp
-  LinalgToLoops.cpp
-  Promotion.cpp
-  Tiling.cpp
+set(LIBS
 
-  ADDITIONAL_HEADER_DIRS
-  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/Linalg
-  DEPENDS
-  intrinsics_gen
-
-  LINK_LIBS
   MLIRAffineOps
   MLIRAnalysis
   MLIREDSC
@@ -27,6 +16,25 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   MLIRVectorOps
   LLVMSupport
   )
+
+add_mlir_dialect_library(MLIRLinalgTransforms
+  Fusion.cpp
+  LinalgTransforms.cpp
+  LinalgToLoops.cpp
+  Promotion.cpp
+  Tiling.cpp
+
+  ADDITIONAL_HEADER_DIRS
+  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/Linalg
+  DEPENDS
+  intrinsics_gen
+
+  LINK_LIBS
+  ${LIBS}
+  )
+
 add_dependencies(MLIRLinalgTransforms
+
+  ${LIBS}
   MLIRLinalgTransformPatternsIncGen
   )
