@@ -5,12 +5,12 @@ add_llvm_library(MLIRIR
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/IR
 
-  DEPENDS
-  MLIRCallOpInterfacesIncGen
-  MLIROpAsmInterfacesIncGen
-
   LINK_LIBS
   MLIRSupport
   LLVMSupport
   ${LLVM_PTHREAD_LIB}
+  )
+add_dependencies(MLIRIR
+  MLIRCallOpInterfacesIncGen
+  MLIROpAsmInterfacesIncGen
   )
