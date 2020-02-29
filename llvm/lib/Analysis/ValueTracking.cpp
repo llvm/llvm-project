@@ -4551,6 +4551,13 @@ bool llvm::isGuaranteedNotToBeUndefOrPoison(const Value *V) {
       return true;
   }
 
+  if (auto I = dyn_cast<Instruction>(V)) {
+    if (programUndefinedIfFullPoison(I) && I->getType()->isIntegerTy(1))
+      // Note: once we have an agreement that poison is a value-wise concept,
+      // we can remove the isIntegerTy(1) constraint.
+      return true;
+  }
+
   return false;
 }
 
