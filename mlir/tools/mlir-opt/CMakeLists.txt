@@ -4,7 +4,6 @@ set(LLVM_OPTIONAL_SOURCES
 
 set(LIB_LIBS
   MLIRAnalysis
-  MLIRIR
   MLIRLLVMIR
   MLIROptLib
   MLIRParser
