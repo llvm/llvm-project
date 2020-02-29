@@ -6,6 +6,9 @@ add_mlir_conversion_library(MLIRGPUtoSPIRVTransforms
   ConvertGPUToSPIRV.cpp
   ConvertGPUToSPIRVPass.cpp
 
+  DEPENDS
+  MLIRGPUToSPIRVIncGen
+
   LINK_LIBS
   MLIRGPU
   MLIRIR
@@ -18,6 +21,3 @@ add_mlir_conversion_library(MLIRGPUtoSPIRVTransforms
   MLIRTransforms
   LLVMSupport
   )
-
-add_dependencies(MLIRGPUtoSPIRVTransforms
-  MLIRGPUToSPIRVIncGen)
