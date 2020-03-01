@@ -577,9 +577,10 @@ void ExprEngine::handleConstructor(const Expr *E,
   // paths when no-return temporary destructors are used for assertions.
   const AnalysisDeclContext *ADC = LCtx->getAnalysisDeclContext();
   if (!ADC->getCFGBuildOptions().AddTemporaryDtors) {
-    if (TargetRegion && isa<CXXTempObjectRegion>(TargetRegion) &&
+    if (llvm::isa_and_nonnull<CXXTempObjectRegion>(TargetRegion) &&
         cast<CXXConstructorDecl>(Call->getDecl())
-            ->getParent()->isAnyDestructorNoReturn()) {
+            ->getParent()
+            ->isAnyDestructorNoReturn()) {
 
       // If we've inlined the constructor, then DstEvaluated would be empty.
       // In this case we still want a sink, which could be implemented
@@ -603,7 +604,7 @@ void ExprEngine::handleConstructor(const Expr *E,
   }
 
   ExplodedNodeSet DstPostArgumentCleanup;
-  for (auto I : DstEvaluated)
+  for (ExplodedNode *I : DstEvaluated)
     finishArgumentConstruction(DstPostArgumentCleanup, I, *Call);
 
   // If there were other constructors called for object-type arguments
@@ -712,7 +713,7 @@ void ExprEngine::VisitCXXNewAllocatorCall(const CXXNewExpr *CNE,
 
   ExplodedNodeSet DstPostCall;
   StmtNodeBuilder CallBldr(DstPreCall, DstPostCall, *currBldrCtx);
-  for (auto I : DstPreCall) {
+  for (ExplodedNode *I : DstPreCall) {
     // FIXME: Provide evalCall for checkers?
     defaultEvalCall(CallBldr, I, *Call);
   }
@@ -722,7 +723,7 @@ void ExprEngine::VisitCXXNewAllocatorCall(const CXXNewExpr *CNE,
   // CXXNewExpr gets processed.
   ExplodedNodeSet DstPostValue;
   StmtNodeBuilder ValueBldr(DstPostCall, DstPostValue, *currBldrCtx);
-  for (auto I : DstPostCall) {
+  for (ExplodedNode *I : DstPostCall) {
     // FIXME: Because CNE serves as the "call site" for the allocator (due to
     // lack of a better expression in the AST), the conjured return value symbol
     // is going to be of the same type (C++ object pointer type). Technically
@@ -756,10 +757,8 @@ void ExprEngine::VisitCXXNewAllocatorCall(const CXXNewExpr *CNE,
   ExplodedNodeSet DstPostPostCallCallback;
   getCheckerManager().runCheckersForPostCall(DstPostPostCallCallback,
                                              DstPostValue, *Call, *this);
-  for (auto I : DstPostPostCallCallback) {
-    getCheckerManager().runCheckersForNewAllocator(
-        CNE, *getObjectUnderConstruction(I->getState(), CNE, LCtx), Dst, I,
-        *this);
+  for (ExplodedNode *I : DstPostPostCallCallback) {
+    getCheckerManager().runCheckersForNewAllocator(*Call, Dst, I, *this);
   }
 }
 

@@ -285,9 +285,9 @@ public:
 
 class NewAllocator {
   template <typename CHECKER>
-  static void _checkNewAllocator(void *checker, const CXXNewExpr *NE,
-                                 SVal Target, CheckerContext &C) {
-    ((const CHECKER *)checker)->checkNewAllocator(NE, Target, C);
+  static void _checkNewAllocator(void *checker, const CXXAllocatorCall &Call,
+                                 CheckerContext &C) {
+    ((const CHECKER *)checker)->checkNewAllocator(Call, C);
   }
 
 public:
