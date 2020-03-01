@@ -1826,45 +1826,40 @@ define void @splat4_v8i32_load_store(<8 x i32>* %s, <32 x i32>* %d) {
 define void @splat4_v4f64_load_store(<4 x double>* %s, <16 x double>* %d) {
 ; AVX1-LABEL: splat4_v4f64_load_store:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovupd (%rdi), %ymm0
-; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm0[0,1,0,1]
-; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3,2,3]
-; AVX1-NEXT:    vmovddup {{.*#+}} ymm2 = ymm1[0,0,2,2]
-; AVX1-NEXT:    vmovddup {{.*#+}} ymm3 = ymm0[0,0,2,2]
-; AVX1-NEXT:    vpermilpd {{.*#+}} ymm1 = ymm1[1,1,3,3]
-; AVX1-NEXT:    vpermilpd {{.*#+}} ymm0 = ymm0[1,1,3,3]
-; AVX1-NEXT:    vmovupd %ymm0, 96(%rsi)
-; AVX1-NEXT:    vmovupd %ymm3, 64(%rsi)
-; AVX1-NEXT:    vmovupd %ymm1, 32(%rsi)
-; AVX1-NEXT:    vmovupd %ymm2, (%rsi)
+; AVX1-NEXT:    vbroadcastsd (%rdi), %ymm0
+; AVX1-NEXT:    vbroadcastsd 16(%rdi), %ymm1
+; AVX1-NEXT:    vbroadcastsd 8(%rdi), %ymm2
+; AVX1-NEXT:    vbroadcastsd 24(%rdi), %ymm3
+; AVX1-NEXT:    vmovups %ymm3, 96(%rsi)
+; AVX1-NEXT:    vmovups %ymm1, 64(%rsi)
+; AVX1-NEXT:    vmovups %ymm2, 32(%rsi)
+; AVX1-NEXT:    vmovups %ymm0, (%rsi)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: splat4_v4f64_load_store:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovups (%rdi), %ymm0
-; AVX2-NEXT:    vbroadcastsd (%rdi), %ymm1
-; AVX2-NEXT:    vpermpd {{.*#+}} ymm2 = ymm0[2,2,2,2]
-; AVX2-NEXT:    vpermpd {{.*#+}} ymm3 = ymm0[1,1,1,1]
-; AVX2-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[3,3,3,3]
-; AVX2-NEXT:    vmovups %ymm0, 96(%rsi)
-; AVX2-NEXT:    vmovups %ymm2, 64(%rsi)
-; AVX2-NEXT:    vmovups %ymm3, 32(%rsi)
-; AVX2-NEXT:    vmovups %ymm1, (%rsi)
+; AVX2-NEXT:    vbroadcastsd (%rdi), %ymm0
+; AVX2-NEXT:    vbroadcastsd 16(%rdi), %ymm1
+; AVX2-NEXT:    vbroadcastsd 8(%rdi), %ymm2
+; AVX2-NEXT:    vbroadcastsd 24(%rdi), %ymm3
+; AVX2-NEXT:    vmovups %ymm3, 96(%rsi)
+; AVX2-NEXT:    vmovups %ymm1, 64(%rsi)
+; AVX2-NEXT:    vmovups %ymm2, 32(%rsi)
+; AVX2-NEXT:    vmovups %ymm0, (%rsi)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: splat4_v4f64_load_store:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmovups (%rdi), %ymm0
-; AVX512-NEXT:    vbroadcastsd (%rdi), %ymm1
-; AVX512-NEXT:    vpermpd {{.*#+}} ymm2 = ymm0[2,2,2,2]
-; AVX512-NEXT:    vpermpd {{.*#+}} ymm3 = ymm0[1,1,1,1]
-; AVX512-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[3,3,3,3]
+; AVX512-NEXT:    vbroadcastsd (%rdi), %ymm0
+; AVX512-NEXT:    vbroadcastsd 16(%rdi), %ymm1
+; AVX512-NEXT:    vbroadcastsd 8(%rdi), %ymm2
+; AVX512-NEXT:    vbroadcastsd 24(%rdi), %ymm3
+; AVX512-NEXT:    vinsertf64x4 $1, %ymm2, %zmm0, %zmm0
 ; AVX512-NEXT:    vinsertf64x4 $1, %ymm3, %zmm1, %zmm1
-; AVX512-NEXT:    vinsertf64x4 $1, %ymm0, %zmm2, %zmm0
-; AVX512-NEXT:    vmovups %zmm0, 64(%rsi)
-; AVX512-NEXT:    vmovups %zmm1, (%rsi)
+; AVX512-NEXT:    vmovups %zmm1, 64(%rsi)
+; AVX512-NEXT:    vmovups %zmm0, (%rsi)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %x = load <4 x double>, <4 x double>* %s, align 8
@@ -1878,45 +1873,40 @@ define void @splat4_v4f64_load_store(<4 x double>* %s, <16 x double>* %d) {
 define void @splat4_v4i64_load_store(<4 x i64>* %s, <16 x i64>* %d) {
 ; AVX1-LABEL: splat4_v4i64_load_store:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovupd (%rdi), %ymm0
-; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm0[0,1,0,1]
-; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3,2,3]
-; AVX1-NEXT:    vmovddup {{.*#+}} ymm2 = ymm1[0,0,2,2]
-; AVX1-NEXT:    vmovddup {{.*#+}} ymm3 = ymm0[0,0,2,2]
-; AVX1-NEXT:    vpermilpd {{.*#+}} ymm1 = ymm1[1,1,3,3]
-; AVX1-NEXT:    vpermilpd {{.*#+}} ymm0 = ymm0[1,1,3,3]
-; AVX1-NEXT:    vmovupd %ymm0, 96(%rsi)
-; AVX1-NEXT:    vmovupd %ymm3, 64(%rsi)
-; AVX1-NEXT:    vmovupd %ymm1, 32(%rsi)
-; AVX1-NEXT:    vmovupd %ymm2, (%rsi)
+; AVX1-NEXT:    vbroadcastsd (%rdi), %ymm0
+; AVX1-NEXT:    vbroadcastsd 16(%rdi), %ymm1
+; AVX1-NEXT:    vbroadcastsd 8(%rdi), %ymm2
+; AVX1-NEXT:    vbroadcastsd 24(%rdi), %ymm3
+; AVX1-NEXT:    vmovups %ymm3, 96(%rsi)
+; AVX1-NEXT:    vmovups %ymm1, 64(%rsi)
+; AVX1-NEXT:    vmovups %ymm2, 32(%rsi)
+; AVX1-NEXT:    vmovups %ymm0, (%rsi)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: splat4_v4i64_load_store:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovups (%rdi), %ymm0
-; AVX2-NEXT:    vbroadcastsd (%rdi), %ymm1
-; AVX2-NEXT:    vpermpd {{.*#+}} ymm2 = ymm0[2,2,2,2]
-; AVX2-NEXT:    vpermpd {{.*#+}} ymm3 = ymm0[1,1,1,1]
-; AVX2-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[3,3,3,3]
-; AVX2-NEXT:    vmovups %ymm0, 96(%rsi)
-; AVX2-NEXT:    vmovups %ymm2, 64(%rsi)
-; AVX2-NEXT:    vmovups %ymm3, 32(%rsi)
-; AVX2-NEXT:    vmovups %ymm1, (%rsi)
+; AVX2-NEXT:    vbroadcastsd (%rdi), %ymm0
+; AVX2-NEXT:    vbroadcastsd 16(%rdi), %ymm1
+; AVX2-NEXT:    vbroadcastsd 8(%rdi), %ymm2
+; AVX2-NEXT:    vbroadcastsd 24(%rdi), %ymm3
+; AVX2-NEXT:    vmovups %ymm3, 96(%rsi)
+; AVX2-NEXT:    vmovups %ymm1, 64(%rsi)
+; AVX2-NEXT:    vmovups %ymm2, 32(%rsi)
+; AVX2-NEXT:    vmovups %ymm0, (%rsi)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: splat4_v4i64_load_store:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmovups (%rdi), %ymm0
-; AVX512-NEXT:    vbroadcastsd (%rdi), %ymm1
-; AVX512-NEXT:    vpermpd {{.*#+}} ymm2 = ymm0[2,2,2,2]
-; AVX512-NEXT:    vpermpd {{.*#+}} ymm3 = ymm0[1,1,1,1]
-; AVX512-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[3,3,3,3]
+; AVX512-NEXT:    vbroadcastsd (%rdi), %ymm0
+; AVX512-NEXT:    vbroadcastsd 16(%rdi), %ymm1
+; AVX512-NEXT:    vbroadcastsd 8(%rdi), %ymm2
+; AVX512-NEXT:    vbroadcastsd 24(%rdi), %ymm3
+; AVX512-NEXT:    vinsertf64x4 $1, %ymm2, %zmm0, %zmm0
 ; AVX512-NEXT:    vinsertf64x4 $1, %ymm3, %zmm1, %zmm1
-; AVX512-NEXT:    vinsertf64x4 $1, %ymm0, %zmm2, %zmm0
-; AVX512-NEXT:    vmovups %zmm0, 64(%rsi)
-; AVX512-NEXT:    vmovups %zmm1, (%rsi)
+; AVX512-NEXT:    vmovups %zmm1, 64(%rsi)
+; AVX512-NEXT:    vmovups %zmm0, (%rsi)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %x = load <4 x i64>, <4 x i64>* %s, align 8
