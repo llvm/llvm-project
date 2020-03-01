@@ -6,17 +6,11 @@ define i8* @f(i32 %n) {
 entry:
   %id = call token @llvm.coro.id(i32 0, i8* null, i8* null, i8* null)
   %size = call i32 @llvm.coro.size.i32()
-  %need.dyn.alloc = call i1 @llvm.coro.alloc(token %id)
-  br i1 %need.dyn.alloc, label %dyn.alloc, label %coro.begin
-dyn.alloc:
   %alloc = call i8* @malloc(i32 %size)
-  br label %coro.begin
-coro.begin:
-  %phi = phi i8* [ null, %entry ], [ %alloc, %dyn.alloc ]
-  %hdl = call noalias i8* @llvm.coro.begin(token %id, i8* %phi)
+  %hdl = call noalias i8* @llvm.coro.begin(token %id, i8* %alloc)
   br label %loop
 loop:
-  %n.val = phi i32 [ %n, %coro.begin ], [ %inc, %loop.resume ]
+  %n.val = phi i32 [ %n, %entry ], [ %inc, %loop.resume ]
   call void @print(i32 %n.val) #4
   %0 = call i8 @llvm.coro.suspend(token none, i1 false)
   switch i8 %0, label %suspend [i8 0, label %loop.resume
@@ -43,15 +37,8 @@ entry:
   %hdl = call i8* @f(i32 4)
   call void @llvm.coro.resume(i8* %hdl)
   call void @llvm.coro.resume(i8* %hdl)
-  %c = ptrtoint i8* %hdl to i64
-  %to = icmp eq i64 %c, 0
-  br i1 %to, label %return, label %destroy
-destroy:
   call void @llvm.coro.destroy(i8* %hdl)
-  br label %return
-return:
   ret i32 0
-; CHECK-NOT:  i8* @malloc
 ; CHECK:      call void @print(i32 4)
 ; CHECK-NEXT: call void @print(i32 -5)
 ; CHECK-NEXT: call void @print(i32 5)
