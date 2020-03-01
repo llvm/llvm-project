@@ -216,14 +216,9 @@ entry:
 define float @test_zext_fcmp_une(float %a, float %b) nounwind {
 ; CMOV-LABEL: test_zext_fcmp_une:
 ; CMOV:       # %bb.0: # %entry
-; CMOV-NEXT:    ucomiss %xmm1, %xmm0
-; CMOV-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CMOV-NEXT:    jne .LBB5_3
-; CMOV-NEXT:  # %bb.1: # %entry
-; CMOV-NEXT:    jp .LBB5_3
-; CMOV-NEXT:  # %bb.2: # %entry
-; CMOV-NEXT:    xorps %xmm0, %xmm0
-; CMOV-NEXT:  .LBB5_3: # %entry
+; CMOV-NEXT:    cmpneqss %xmm1, %xmm0
+; CMOV-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CMOV-NEXT:    andps %xmm1, %xmm0
 ; CMOV-NEXT:    retq
 ;
 ; NOCMOV-LABEL: test_zext_fcmp_une:
@@ -259,14 +254,9 @@ entry:
 define float @test_zext_fcmp_oeq(float %a, float %b) nounwind {
 ; CMOV-LABEL: test_zext_fcmp_oeq:
 ; CMOV:       # %bb.0: # %entry
-; CMOV-NEXT:    ucomiss %xmm1, %xmm0
-; CMOV-NEXT:    xorps %xmm0, %xmm0
-; CMOV-NEXT:    jne .LBB6_3
-; CMOV-NEXT:  # %bb.1: # %entry
-; CMOV-NEXT:    jp .LBB6_3
-; CMOV-NEXT:  # %bb.2: # %entry
-; CMOV-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CMOV-NEXT:  .LBB6_3: # %entry
+; CMOV-NEXT:    cmpeqss %xmm1, %xmm0
+; CMOV-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CMOV-NEXT:    andps %xmm1, %xmm0
 ; CMOV-NEXT:    retq
 ;
 ; NOCMOV-LABEL: test_zext_fcmp_oeq:
