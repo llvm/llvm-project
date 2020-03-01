@@ -264,7 +264,7 @@ void NoRecursionCheck::check(const MatchFinder::MatchResult &Result) {
   for (llvm::scc_iterator<CallGraph *> SCCI = llvm::scc_begin(&CG),
                                        SCCE = llvm::scc_end(&CG);
        SCCI != SCCE; ++SCCI) {
-    if (!SCCI.hasLoop()) // We only care about cycles, not standalone nodes.
+    if (!SCCI.hasCycle()) // We only care about cycles, not standalone nodes.
       continue;
     handleSCC(*SCCI);
   }

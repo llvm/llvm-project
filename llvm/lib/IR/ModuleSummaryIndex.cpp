@@ -300,7 +300,7 @@ void ModuleSummaryIndex::dumpSCCs(raw_ostream &O) {
       if (V.getSummaryList().size())
         F = cast<FunctionSummary>(V.getSummaryList().front().get());
       O << " " << (F == nullptr ? "External" : "") << " " << utostr(V.getGUID())
-        << (I.hasLoop() ? " (has loop)" : "") << "\n";
+        << (I.hasCycle() ? " (has cycle)" : "") << "\n";
     }
     O << "}\n";
   }
