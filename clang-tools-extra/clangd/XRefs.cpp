@@ -29,6 +29,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Index/IndexDataConsumer.h"
@@ -149,25 +150,27 @@ std::vector<const NamedDecl *> getDeclAtPosition(ParsedAST &AST,
   return Result;
 }
 
-llvm::Optional<Location> makeLocation(ASTContext &AST, SourceLocation TokLoc,
+// Expects Loc to be a SpellingLocation, will bail out otherwise as it can't
+// figure out a filename.
+llvm::Optional<Location> makeLocation(const ASTContext &AST, SourceLocation Loc,
                                       llvm::StringRef TUPath) {
-  const SourceManager &SourceMgr = AST.getSourceManager();
-  const FileEntry *F = SourceMgr.getFileEntryForID(SourceMgr.getFileID(TokLoc));
+  const auto &SM = AST.getSourceManager();
+  const FileEntry *F = SM.getFileEntryForID(SM.getFileID(Loc));
   if (!F)
     return None;
-  auto FilePath = getCanonicalPath(F, SourceMgr);
+  auto FilePath = getCanonicalPath(F, SM);
   if (!FilePath) {
     log("failed to get path!");
     return None;
   }
-  if (auto Range =
-          getTokenRange(AST.getSourceManager(), AST.getLangOpts(), TokLoc)) {
-    Location L;
-    L.uri = URIForFile::canonicalize(*FilePath, TUPath);
-    L.range = *Range;
-    return L;
-  }
-  return None;
+  Location L;
+  L.uri = URIForFile::canonicalize(*FilePath, TUPath);
+  // We call MeasureTokenLength here as TokenBuffer doesn't store spelled tokens
+  // outside the main file.
+  auto TokLen = Lexer::MeasureTokenLength(Loc, SM, AST.getLangOpts());
+  L.range = halfOpenToRange(
+      SM, CharSourceRange::getCharRange(Loc, Loc.getLocWithOffset(TokLen)));
+  return L;
 }
 
 } // namespace
@@ -373,11 +376,15 @@ namespace {
 class ReferenceFinder : public index::IndexDataConsumer {
 public:
   struct Reference {
-    SourceLocation Loc;
+    syntax::Token SpelledTok;
     index::SymbolRoleSet Role;
+
+    Range range(const SourceManager &SM) const {
+      return halfOpenToRange(SM, SpelledTok.range(SM).toCharRange(SM));
+    }
   };
 
-  ReferenceFinder(ASTContext &AST, Preprocessor &PP,
+  ReferenceFinder(const ParsedAST &AST,
                   const std::vector<const NamedDecl *> &TargetDecls)
       : AST(AST) {
     for (const NamedDecl *D : TargetDecls)
@@ -386,13 +393,17 @@ public:
 
   std::vector<Reference> take() && {
     llvm::sort(References, [](const Reference &L, const Reference &R) {
-      return std::tie(L.Loc, L.Role) < std::tie(R.Loc, R.Role);
+      auto LTok = L.SpelledTok.location();
+      auto RTok = R.SpelledTok.location();
+      return std::tie(LTok, L.Role) < std::tie(RTok, R.Role);
     });
     // We sometimes see duplicates when parts of the AST get traversed twice.
     References.erase(std::unique(References.begin(), References.end(),
                                  [](const Reference &L, const Reference &R) {
-                                   return std::tie(L.Loc, L.Role) ==
-                                          std::tie(R.Loc, R.Role);
+                                   auto LTok = L.SpelledTok.location();
+                                   auto RTok = R.SpelledTok.location();
+                                   return std::tie(LTok, L.Role) ==
+                                          std::tie(RTok, R.Role);
                                  }),
                      References.end());
     return std::move(References);
@@ -404,22 +415,27 @@ public:
                        SourceLocation Loc,
                        index::IndexDataConsumer::ASTNodeInfo ASTNode) override {
     assert(D->isCanonicalDecl() && "expect D to be a canonical declaration");
+    if (!CanonicalTargets.count(D))
+      return true;
+    const auto &TB = AST.getTokens();
     const SourceManager &SM = AST.getSourceManager();
     Loc = SM.getFileLoc(Loc);
-    if (isInsideMainFile(Loc, SM) && CanonicalTargets.count(D))
-      References.push_back({Loc, Roles});
+    // We are only traversing decls *inside* the main file, so this should hold.
+    assert(isInsideMainFile(Loc, SM));
+    if (const auto *Tok = TB.spelledTokenAt(Loc))
+      References.push_back({*Tok, Roles});
     return true;
   }
 
 private:
   llvm::SmallSet<const Decl *, 4> CanonicalTargets;
   std::vector<Reference> References;
-  const ASTContext &AST;
+  const ParsedAST &AST;
 };
 
 std::vector<ReferenceFinder::Reference>
 findRefs(const std::vector<const NamedDecl *> &Decls, ParsedAST &AST) {
-  ReferenceFinder RefFinder(AST.getASTContext(), AST.getPreprocessor(), Decls);
+  ReferenceFinder RefFinder(AST, Decls);
   index::IndexingOptions IndexOpts;
   IndexOpts.SystemSymbolFilter =
       index::IndexingOptions::SystemSymbolFilterKind::All;
@@ -450,18 +466,15 @@ std::vector<DocumentHighlight> findDocumentHighlights(ParsedAST &AST,
   // different kinds, deduplicate them.
   std::vector<DocumentHighlight> Result;
   for (const auto &Ref : References) {
-    if (auto Range =
-            getTokenRange(AST.getSourceManager(), AST.getLangOpts(), Ref.Loc)) {
-      DocumentHighlight DH;
-      DH.range = *Range;
-      if (Ref.Role & index::SymbolRoleSet(index::SymbolRole::Write))
-        DH.kind = DocumentHighlightKind::Write;
-      else if (Ref.Role & index::SymbolRoleSet(index::SymbolRole::Read))
-        DH.kind = DocumentHighlightKind::Read;
-      else
-        DH.kind = DocumentHighlightKind::Text;
-      Result.push_back(std::move(DH));
-    }
+    DocumentHighlight DH;
+    DH.range = Ref.range(SM);
+    if (Ref.Role & index::SymbolRoleSet(index::SymbolRole::Write))
+      DH.kind = DocumentHighlightKind::Write;
+    else if (Ref.Role & index::SymbolRoleSet(index::SymbolRole::Read))
+      DH.kind = DocumentHighlightKind::Read;
+    else
+      DH.kind = DocumentHighlightKind::Text;
+    Result.push_back(std::move(DH));
   }
   return Result;
 }
@@ -524,16 +537,15 @@ ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
     MainFileRefs.erase(std::unique(MainFileRefs.begin(), MainFileRefs.end(),
                                    [](const ReferenceFinder::Reference &L,
                                       const ReferenceFinder::Reference &R) {
-                                     return L.Loc == R.Loc;
+                                     return L.SpelledTok.location() ==
+                                            R.SpelledTok.location();
                                    }),
                        MainFileRefs.end());
     for (const auto &Ref : MainFileRefs) {
-      if (auto Range = getTokenRange(SM, AST.getLangOpts(), Ref.Loc)) {
-        Location Result;
-        Result.range = *Range;
-        Result.uri = URIMainFile;
-        Results.References.push_back(std::move(Result));
-      }
+      Location Result;
+      Result.range = Ref.range(SM);
+      Result.uri = URIMainFile;
+      Results.References.push_back(std::move(Result));
     }
     if (Index && Results.References.size() <= Limit) {
       for (const Decl *D : Decls) {
