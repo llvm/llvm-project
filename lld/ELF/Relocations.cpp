@@ -946,8 +946,12 @@ static bool maybeReportUndefined(Symbol &sym, InputSectionBase &sec,
   // .toc and the .rela.toc are incorrectly not placed in the comdat. The ELF
   // spec says references from outside the group to a STB_LOCAL symbol are not
   // allowed. Work around the bug.
-  if (config->emachine == EM_PPC64 &&
-      cast<Undefined>(sym).discardedSecIdx != 0 && sec.name == ".toc")
+  //
+  // PPC32 .got2 is similar but cannot be fixed. Multiple .got2 is infeasible
+  // because .LC0-.LTOC is not representable if the two labels are in different
+  // .got2
+  if (cast<Undefined>(sym).discardedSecIdx != 0 &&
+      (sec.name == ".got2" || sec.name == ".toc"))
     return false;
 
   bool isWarning =
