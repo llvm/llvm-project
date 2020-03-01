@@ -33,8 +33,9 @@ entry:
 ; LARGE-BSS-DAG:     lwz {{[0-9]+}}, 0([[VREG]])
 ; LARGE-BSS-DAG:     stw {{[0-9]+}}, 8(1)
 ; LARGE-BSS:         lwz 30, 24(1)
-; LARGE-BSS:       [[VREF]]:
-; LARGE-BSS-NEXT:     .p2align 2
+; LARGE-BSS:       .section .got2,"aw",@progbits
+; LARGE-BSS-NEXT:    .p2align 2
+; LARGE-BSS-NEXT:  [[VREF]]:
 ; LARGE-BSS-NEXT:    .long bar
 ; LARGE-SECUREPLT:   addis 30, 30, .LTOC-.L0$pb@ha
 ; LARGE-SECUREPLT:   addi 30, 30, .LTOC-.L0$pb@l

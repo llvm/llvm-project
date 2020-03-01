@@ -137,8 +137,8 @@ public:
     return "Linux PPC Assembly Printer";
   }
 
-  bool doFinalization(Module &M) override;
   void emitStartOfAsmFile(Module &M) override;
+  void emitEndOfAsmFile(Module &) override;
 
   void emitFunctionEntryLabel() override;
 
@@ -1396,7 +1396,7 @@ void PPCLinuxAsmPrinter::emitFunctionEntryLabel() {
   OutStreamer->SwitchSection(Current.first, Current.second);
 }
 
-bool PPCLinuxAsmPrinter::doFinalization(Module &M) {
+void PPCLinuxAsmPrinter::emitEndOfAsmFile(Module &M) {
   const DataLayout &DL = getDataLayout();
 
   bool isPPC64 = DL.getPointerSizeInBits() == 64;
@@ -1405,31 +1405,26 @@ bool PPCLinuxAsmPrinter::doFinalization(Module &M) {
       static_cast<PPCTargetStreamer &>(*OutStreamer->getTargetStreamer());
 
   if (!TOC.empty()) {
-    MCSectionELF *Section;
-
-    if (isPPC64)
-      Section = OutStreamer->getContext().getELFSection(
-          ".toc", ELF::SHT_PROGBITS, ELF::SHF_WRITE | ELF::SHF_ALLOC);
-        else
-          Section = OutStreamer->getContext().getELFSection(
-              ".got2", ELF::SHT_PROGBITS, ELF::SHF_WRITE | ELF::SHF_ALLOC);
+    const char *Name = isPPC64 ? ".toc" : ".got2";
+    MCSectionELF *Section = OutContext.getELFSection(
+        Name, ELF::SHT_PROGBITS, ELF::SHF_WRITE | ELF::SHF_ALLOC);
     OutStreamer->SwitchSection(Section);
+    if (!isPPC64)
+      OutStreamer->emitValueToAlignment(4);
 
     for (const auto &TOCMapPair : TOC) {
       const MCSymbol *const TOCEntryTarget = TOCMapPair.first;
       MCSymbol *const TOCEntryLabel = TOCMapPair.second;
 
       OutStreamer->emitLabel(TOCEntryLabel);
-      if (isPPC64) {
+      if (isPPC64)
         TS.emitTCEntry(*TOCEntryTarget);
-      } else {
-        OutStreamer->emitValueToAlignment(4);
+      else
         OutStreamer->emitSymbolValue(TOCEntryTarget, 4);
-      }
     }
   }
 
-  return AsmPrinter::doFinalization(M);
+  PPCAsmPrinter::emitEndOfAsmFile(M);
 }
 
 /// EmitFunctionBodyStart - Emit a global entry point prefix for ELFv2.
