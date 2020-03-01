@@ -8546,6 +8546,26 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
     Inst = TmpInst;
     return true;
   }
+  // Alias for 'ldr{sb,h,sh}t Rt, [Rn] {, #imm}' for ommitted immediate.
+  case ARM::LDRSBTii:
+  case ARM::LDRHTii:
+  case ARM::LDRSHTii: {
+    MCInst TmpInst;
+
+    if (Inst.getOpcode() == ARM::LDRSBTii)
+      TmpInst.setOpcode(ARM::LDRSBTi);
+    else if (Inst.getOpcode() == ARM::LDRHTii)
+      TmpInst.setOpcode(ARM::LDRHTi);
+    else if (Inst.getOpcode() == ARM::LDRSHTii)
+      TmpInst.setOpcode(ARM::LDRSHTi);
+    TmpInst.addOperand(Inst.getOperand(0));
+    TmpInst.addOperand(Inst.getOperand(1));
+    TmpInst.addOperand(Inst.getOperand(1));
+    TmpInst.addOperand(MCOperand::createImm(256));
+    TmpInst.addOperand(Inst.getOperand(2));
+    Inst = TmpInst;
+    return true;
+  }
   // Alias for alternate form of 'str{,b}t Rt, [Rn], #imm' instruction.
   case ARM::STRT_POST:
   case ARM::STRBT_POST: {
