@@ -449,8 +449,6 @@ define void @disguised_dup(<4 x float> %x, <4 x float>* %p1, <4 x float>* %p2) {
 ; CHECK-NEXT:    dup.4s v1, v0[0]
 ; CHECK-NEXT:    ext.16b v0, v0, v0, #12
 ; CHECK-NEXT:    ext.16b v0, v0, v1, #8
-; CHECK-NEXT:    zip2.4s v1, v0, v0
-; CHECK-NEXT:    ext.16b v1, v0, v1, #12
 ; CHECK-NEXT:    str q0, [x0]
 ; CHECK-NEXT:    str q1, [x1]
 ; CHECK-NEXT:    ret
