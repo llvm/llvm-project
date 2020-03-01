@@ -126,6 +126,8 @@ class X86AsmBackend : public MCAsmBackend {
   X86AlignBranchKind AlignBranchType;
   Align AlignBoundary;
 
+  uint8_t determinePaddingPrefix(const MCInst &Inst) const;
+
   bool isMacroFused(const MCInst &Cmp, const MCInst &Jcc) const;
 
   bool needAlign(MCObjectStreamer &OS) const;
@@ -338,6 +340,83 @@ static bool isFirstMacroFusibleInst(const MCInst &Inst,
   X86::FirstMacroFusionInstKind FIK =
       X86::classifyFirstOpcodeInMacroFusion(Inst.getOpcode());
   return FIK != X86::FirstMacroFusionInstKind::Invalid;
+}
+
+/// X86 can reduce the bytes of NOP by padding instructions with prefixes to
+/// get a better peformance in some cases. Here, we determine which prefix is
+/// the most suitable.
+///
+/// If the instruction has a segment override prefix, use the existing one.
+/// If the target is 64-bit, use the CS.
+/// If the target is 32-bit,
+///   - If the instruction has a ESP/EBP base register, use SS.
+///   - Otherwise use DS.
+uint8_t X86AsmBackend::determinePaddingPrefix(const MCInst &Inst) const {
+  assert((STI.hasFeature(X86::Mode32Bit) || STI.hasFeature(X86::Mode64Bit)) &&
+         "Prefixes can be added only in 32-bit or 64-bit mode.");
+  const MCInstrDesc &Desc = MCII->get(Inst.getOpcode());
+  uint64_t TSFlags = Desc.TSFlags;
+
+  // Determine where the memory operand starts, if present.
+  int MemoryOperand = X86II::getMemoryOperandNo(TSFlags);
+  if (MemoryOperand != -1)
+    MemoryOperand += X86II::getOperandBias(Desc);
+
+  unsigned SegmentReg = 0;
+  if (MemoryOperand >= 0) {
+    // Check for explicit segment override on memory operand.
+    SegmentReg = Inst.getOperand(MemoryOperand + X86::AddrSegmentReg).getReg();
+  }
+
+  switch (TSFlags & X86II::FormMask) {
+  default:
+    break;
+  case X86II::RawFrmDstSrc: {
+    // Check segment override opcode prefix as needed (not for %ds).
+    if (Inst.getOperand(2).getReg() != X86::DS)
+      SegmentReg = Inst.getOperand(2).getReg();
+    break;
+  }
+  case X86II::RawFrmSrc: {
+    // Check segment override opcode prefix as needed (not for %ds).
+    if (Inst.getOperand(1).getReg() != X86::DS)
+      SegmentReg = Inst.getOperand(1).getReg();
+    break;
+  }
+  case X86II::RawFrmMemOffs: {
+    // Check segment override opcode prefix as needed.
+    SegmentReg = Inst.getOperand(1).getReg();
+    break;
+  }
+  }
+
+  switch (SegmentReg) {
+  case 0:
+    break;
+  case X86::CS:
+    return X86::CS_Encoding;
+  case X86::DS:
+    return X86::DS_Encoding;
+  case X86::ES:
+    return X86::ES_Encoding;
+  case X86::FS:
+    return X86::FS_Encoding;
+  case X86::GS:
+    return X86::GS_Encoding;
+  case X86::SS:
+    return X86::SS_Encoding;
+  }
+
+  if (STI.hasFeature(X86::Mode64Bit))
+    return X86::CS_Encoding;
+
+  if (MemoryOperand >= 0) {
+    unsigned BaseRegNum = MemoryOperand + X86::AddrBaseReg;
+    unsigned BaseReg = Inst.getOperand(BaseRegNum).getReg();
+    if (BaseReg == X86::ESP || BaseReg == X86::EBP)
+      return X86::SS_Encoding;
+  }
+  return X86::DS_Encoding;
 }
 
 /// Check if the two instructions will be macro-fused on the target cpu.
