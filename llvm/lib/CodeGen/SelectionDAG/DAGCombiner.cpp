@@ -30,6 +30,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/DAGCombine.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -19259,6 +19260,56 @@ static SDValue combineShuffleOfSplatVal(ShuffleVectorSDNode *Shuf,
                               NewMask);
 }
 
+/// Combine shuffle of shuffle of the form:
+/// shuf (shuf X, undef, InnerMask), undef, OuterMask --> splat X
+static SDValue formSplatFromShuffles(ShuffleVectorSDNode *OuterShuf,
+                                     SelectionDAG &DAG) {
+  if (!OuterShuf->getOperand(1).isUndef())
+    return SDValue();
+  auto *InnerShuf = dyn_cast<ShuffleVectorSDNode>(OuterShuf->getOperand(0));
+  if (!InnerShuf || !InnerShuf->getOperand(1).isUndef())
+    return SDValue();
+
+  ArrayRef<int> OuterMask = OuterShuf->getMask();
+  ArrayRef<int> InnerMask = InnerShuf->getMask();
+  unsigned NumElts = OuterMask.size();
+  assert(NumElts == InnerMask.size() && "Mask length mismatch");
+  SmallVector<int, 32> CombinedMask(NumElts, -1);
+  int SplatIndex = -1;
+  for (unsigned i = 0; i != NumElts; ++i) {
+    // Undef lanes remain undef.
+    int OuterMaskElt = OuterMask[i];
+    if (OuterMaskElt == -1)
+      continue;
+
+    // Peek through the shuffle masks to get the underlying source element.
+    int InnerMaskElt = InnerMask[OuterMaskElt];
+    if (InnerMaskElt == -1)
+      continue;
+
+    // Initialize the splatted element.
+    if (SplatIndex == -1)
+      SplatIndex = InnerMaskElt;
+
+    // Non-matching index - this is not a splat.
+    if (SplatIndex != InnerMaskElt)
+      return SDValue();
+
+    CombinedMask[i] = InnerMaskElt;
+  }
+  assert(all_of(CombinedMask, [](int M) { return M == -1; }) ||
+         getSplatIndex(CombinedMask) != -1 && "Expected a splat mask");
+
+  // TODO: The transform may be a win even if the mask is not legal.
+  EVT VT = OuterShuf->getValueType(0);
+  assert(VT == InnerShuf->getValueType(0) && "Expected matching shuffle types");
+  if (!DAG.getTargetLoweringInfo().isShuffleMaskLegal(CombinedMask, VT))
+    return SDValue();
+
+  return DAG.getVectorShuffle(VT, SDLoc(OuterShuf), InnerShuf->getOperand(0),
+                              InnerShuf->getOperand(1), CombinedMask);
+}
+
 /// If the shuffle mask is taking exactly one element from the first vector
 /// operand and passing through all other elements from the second vector
 /// operand, return the index of the mask element that is choosing an element
@@ -19415,6 +19466,9 @@ SDValue DAGCombiner::visitVECTOR_SHUFFLE(SDNode *N) {
 
   // A shuffle of a single vector that is a splatted value can always be folded.
   if (SDValue V = combineShuffleOfSplatVal(SVN, DAG))
+    return V;
+
+  if (SDValue V = formSplatFromShuffles(SVN, DAG))
     return V;
 
   // If it is a splat, check if the argument vector is another splat or a
