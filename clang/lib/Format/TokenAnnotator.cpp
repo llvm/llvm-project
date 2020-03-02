@@ -972,7 +972,7 @@ private:
       }
       break;
     case tok::question:
-      if (Tok->is(TT_CSharpNullConditionalSq)) {
+      if (Tok->is(TT_CSharpNullConditionalLSquare)) {
         if (!parseSquare())
           return false;
         break;
@@ -1456,7 +1456,7 @@ private:
         return;
       }
       if (CurrentToken->TokenText == "?[") {
-        Current.Type = TT_CSharpNullConditionalSq;
+        Current.Type = TT_CSharpNullConditionalLSquare;
         return;
       }
     }
@@ -2947,11 +2947,11 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
       return true;
 
     // No space before '?['.
-    if (Right.is(TT_CSharpNullConditionalSq))
+    if (Right.is(TT_CSharpNullConditionalLSquare))
       return false;
 
     // Possible space inside `?[ 0 ]`.
-    if (Left.is(TT_CSharpNullConditionalSq))
+    if (Left.is(TT_CSharpNullConditionalLSquare))
       return Style.SpacesInSquareBrackets;
 
     // space between keywords and paren e.g. "using ("
