@@ -545,6 +545,12 @@ Undefined Behavior Sanitizer (UBSan)
       return getelementpointer_inbounds(base, offset);
     }
 
+Changes deferred to Clang-11 release
+------------------------------------
+
+- The next release of clang (clang-11) will upgrade the default C language
+  standard used if not specified via command line from gnu11 to gnu17.
+
 
 Additional Information
 ======================
