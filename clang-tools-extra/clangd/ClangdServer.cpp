@@ -394,14 +394,6 @@ void ClangdServer::rename(PathRef File, Position Pos, llvm::StringRef NewName,
   WorkScheduler.runWithAST("Rename", File, std::move(Action));
 }
 
-void ClangdServer::rename(PathRef File, Position Pos, llvm::StringRef NewName,
-                          bool WantFormat, Callback<FileEdits> CB) {
-  RenameOptions Opts;
-  Opts.WantFormat = WantFormat;
-  Opts.AllowCrossFile = false;
-  rename(File, Pos, NewName, Opts, std::move(CB));
-}
-
 // May generate several candidate selections, due to SelectionTree ambiguity.
 // vector of pointers because GCC doesn't like non-copyable Selection.
 static llvm::Expected<std::vector<std::unique_ptr<Tweak::Selection>>>
