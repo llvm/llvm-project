@@ -7665,9 +7665,6 @@ bool LLParser::ParseTypeTestResolution(TypeTestResolution &TTRes) {
     return true;
 
   switch (Lex.getKind()) {
-  case lltok::kw_unknown:
-    TTRes.TheKind = TypeTestResolution::Unknown;
-    break;
   case lltok::kw_unsat:
     TTRes.TheKind = TypeTestResolution::Unsat;
     break;
