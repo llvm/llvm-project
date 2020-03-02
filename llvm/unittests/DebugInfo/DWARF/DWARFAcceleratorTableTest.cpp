@@ -8,45 +8,42 @@
 
 #include "llvm/DebugInfo/DWARF/DWARFAcceleratorTable.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
 
-namespace {
-
-void ExpectDebugNamesExtractError(StringRef NamesSecData, StringRef StrSecData,
-                                  const char *ErrorMessage) {
-  DWARFSection NamesDWARFSection;
-  NamesDWARFSection.Data = NamesSecData;
-  StringMap<std::unique_ptr<MemoryBuffer>> Sections;
-  auto Context = DWARFContext::create(Sections, /* AddrSize = */ 4,
-                                      /* isLittleEndian = */ true);
-  DWARFDataExtractor NamesExtractor(Context->getDWARFObj(), NamesDWARFSection,
-                                    /* isLittleEndian = */ true,
-                                    /* AddrSize = */ 4);
+static Error ExtractDebugNames(StringRef NamesSecData, StringRef StrSecData) {
+  DWARFDataExtractor NamesExtractor(NamesSecData,
+                                    /*isLittleEndian=*/true,
+                                    /*AddrSize=*/4);
   DataExtractor StrExtractor(StrSecData,
-                             /* isLittleEndian = */ true,
-                             /* AddrSize = */ 4);
+                             /*isLittleEndian=*/true,
+                             /*AddrSize=*/4);
   DWARFDebugNames Table(NamesExtractor, StrExtractor);
-  Error E = Table.extract();
-  ASSERT_TRUE(E.operator bool());
-  EXPECT_STREQ(ErrorMessage, toString(std::move(E)).c_str());
+  return Table.extract();
 }
+
+namespace {
 
 TEST(DWARFDebugNames, ReservedUnitLength) {
   static const char NamesSecData[64] =
       "\xf0\xff\xff\xff"; // Reserved unit length value
-  ExpectDebugNamesExtractError(StringRef(NamesSecData, sizeof(NamesSecData)),
-                               StringRef(),
-                               "Unsupported reserved unit length value");
+  EXPECT_THAT_ERROR(
+      ExtractDebugNames(StringRef(NamesSecData, sizeof(NamesSecData)),
+                        StringRef()),
+      FailedWithMessage("parsing .debug_names header at 0x0: unsupported "
+                        "reserved unit length of value 0xfffffff0"));
 }
 
 TEST(DWARFDebugNames, TooSmallForDWARF64) {
   // DWARF64 header takes at least 44 bytes.
   static const char NamesSecData[43] = "\xff\xff\xff\xff"; // DWARF64 mark
-  ExpectDebugNamesExtractError(
-      StringRef(NamesSecData, sizeof(NamesSecData)), StringRef(),
-      "Section too small: cannot read header.");
+  EXPECT_THAT_ERROR(
+      ExtractDebugNames(StringRef(NamesSecData, sizeof(NamesSecData)),
+                        StringRef()),
+      FailedWithMessage("parsing .debug_names header at 0x0: unexpected end of "
+                        "data at offset 0x28"));
 }
 
 } // end anonymous namespace

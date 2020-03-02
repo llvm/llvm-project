@@ -1,7 +1,7 @@
 # RUN: llvm-mc -triple x86_64-pc-linux %s -filetype=obj | \
 # RUN:   not llvm-dwarfdump -verify - | FileCheck %s
 
-# CHECK: Section too small: cannot read header augmentation.
+# CHECK: parsing .debug_names header at 0x0: cannot read header augmentation
 
 	.section	.debug_str,"MS",@progbits,1
 .Lstring_producer:
