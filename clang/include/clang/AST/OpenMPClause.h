@@ -6693,6 +6693,46 @@ public:
   }
 };
 
+/// This represents 'destroy' clause in the '#pragma omp depobj'
+/// directive.
+///
+/// \code
+/// #pragma omp depobj(a) destroy
+/// \endcode
+/// In this example directive '#pragma omp depobj' has 'destroy' clause.
+class OMPDestroyClause final : public OMPClause {
+public:
+  /// Build 'destroy' clause.
+  ///
+  /// \param StartLoc Starting location of the clause.
+  /// \param EndLoc Ending location of the clause.
+  OMPDestroyClause(SourceLocation StartLoc, SourceLocation EndLoc)
+      : OMPClause(OMPC_destroy, StartLoc, EndLoc) {}
+
+  /// Build an empty clause.
+  OMPDestroyClause()
+      : OMPClause(OMPC_destroy, SourceLocation(), SourceLocation()) {}
+
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  child_range used_children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range used_children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == OMPC_destroy;
+  }
+};
+
 /// This class implements a simple visitor for OMPClause
 /// subclasses.
 template<class ImplClass, template <typename> class Ptr, typename RetTy>

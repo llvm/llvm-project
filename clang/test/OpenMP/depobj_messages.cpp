@@ -21,7 +21,7 @@ T tmain(T argc) {
 #pragma omp depobj(x) untied  // expected-error {{unexpected OpenMP clause 'untied' in directive '#pragma omp depobj'}}
 #pragma omp depobj(x) unknown // expected-warning {{extra tokens at the end of '#pragma omp depobj' are ignored}}
   if (argc)
-#pragma omp depobj(x) depend(in:s) // expected-error {{'#pragma omp depobj' cannot be an immediate substatement}}
+#pragma omp depobj(x) destroy // expected-error {{'#pragma omp depobj' cannot be an immediate substatement}}
     if (argc) {
 #pragma omp depobj(x) depend(in:s)
     }
@@ -143,9 +143,14 @@ label1 : {
   ;
 #pragma omp depobj(x) seq_cst // expected-error {{unexpected OpenMP clause 'seq_cst' in directive '#pragma omp depobj'}}
 #pragma omp depobj(x) depend(in: x)
+#pragma omp depobj(x) destroy destroy // expected-error {{directive '#pragma omp depobj' cannot contain more than one 'destroy' clause}}
+#pragma omp depobj(x) depend(in: x) destroy // expected-error {{exactly one of 'depend', 'destroy', or 'update' clauses is expected}}
+#pragma omp depobj(x) destroy depend(in: x) // expected-error {{exactly one of 'depend', 'destroy', or 'update' clauses is expected}}
 #pragma omp depobj(x) (x) depend(in: x) // expected-warning {{extra tokens at the end of '#pragma omp depobj' are ignored}}
 #pragma omp depobj(x) depend(in: x) depend(out:x) // expected-error {{exactly one of 'depend', 'destroy', or 'update' clauses is expected}}
 #pragma omp depend(out:x) depobj(x) // expected-error {{expected an OpenMP directive}}
+#pragma omp destroy depobj(x) // expected-error {{expected an OpenMP directive}}
 #pragma omp depobj depend(in:x) (x) // expected-error {{expected depobj expression}} expected-warning {{extra tokens at the end of '#pragma omp depobj' are ignored}}
+#pragma omp depobj destroy (x) // expected-error {{expected depobj expression}} expected-warning {{extra tokens at the end of '#pragma omp depobj' are ignored}}
   return tmain(argc); // expected-note {{in instantiation of function template specialization 'tmain<int>' requested here}}
 }

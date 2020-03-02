@@ -18,12 +18,15 @@ template <class T>
 T tmain(T argc) {
   static T a;
 #pragma omp depobj(a) depend(in:argc)
+#pragma omp depobj(argc) destroy
   return argc;
 }
 // CHECK:      static T a;
 // CHECK-NEXT: #pragma omp depobj (a) depend(in : argc){{$}}
+// CHECK-NEXT: #pragma omp depobj (argc) destroy{{$}}
 // CHECK:      static void *a;
 // CHECK-NEXT: #pragma omp depobj (a) depend(in : argc){{$}}
+// CHECK-NEXT: #pragma omp depobj (argc) destroy{{$}}
 
 int main(int argc, char **argv) {
   static omp_depend_t a;
@@ -31,7 +34,9 @@ int main(int argc, char **argv) {
 // CHECK: static omp_depend_t a;
 // CHECK-NEXT: omp_depend_t b;
 #pragma omp depobj(a) depend(out:argc, argv)
+#pragma omp depobj(b) destroy
 // CHECK-NEXT: #pragma omp depobj (a) depend(out : argc,argv)
+// CHECK-NEXT: #pragma omp depobj (b) destroy
   (void)tmain(a), tmain(b);
   return 0;
 }
