@@ -65,7 +65,7 @@ Non-comprehensive list of changes in this release
   with optimizations enabled.
 
 * ``Callbacks`` have been added to ``CommandLine Options``.  These can
-  be used to validate of selectively enable other options.
+  be used to validate or selectively enable other options.
 
 * The function attributes ``no-frame-pointer-elim`` and
   ``no-frame-pointer-elim-non-leaf`` have been replaced by ``frame-pointer``,
@@ -77,7 +77,7 @@ Non-comprehensive list of changes in this release
   `D59918 <https://reviews.llvm.org/D59918>`_, `LLVM-Dev talk <https://youtu.be/CzWkc_JcfS0>`_).
   In this release, 19 different attributes are inferred, including 12 LLVM IR
   attributes and 7 "abstract" attributes, such as liveness. The Attributor is
-  still under heavy development and disabled by default, to enable an early run
+  still under heavy development and disabled by default; to enable an early run
   pass ``-mllvm -attributor-disable=false`` to an invocation of clang.
 
 * New matrix math intrinsics have been added to LLVM
@@ -154,33 +154,33 @@ Changes to the PowerPC Target
 
 Optimization:
 
-  *  Improved register pressure estimates in the loop vectorizer based on type
+* Improved register pressure estimates in the loop vectorizer based on type
 
-  *  Improved the PowerPC cost model for the vectorizer
+* Improved the PowerPC cost model for the vectorizer
 
-  *  Enabled vectorization of math routines on PowerPC using MASSV (Mathematical Acceleration SubSystem) library
+* Enabled vectorization of math routines on PowerPC using MASSV (Mathematical Acceleration SubSystem) library
 
-compiler-rt:
+copiler-rt:
 
-  *  Added/improved conversion functions from IBM long double to 128-bit integers
+* Added/improved conversion functions from IBM long double to 128-bit integers
 
 Codegen:
 
-   *  Optimized memory access instructions in loops (pertaining to update-form instructions and address computation)
+* Optimized memory access instructions in loops (pertaining to update-form instructions and address computation)
 
-   *  Added options to disable hoisting instructions to hotter blocks based on statically or profile-based block hotness estimates
+* Added options to disable hoisting instructions to hotter blocks based on statically or profile-based block hotness estimates
 
-   *  Code generation improvements (particularly with floating point and vector code as well as handling condition registers)
+* Code generation improvements (particularly with floating point and vector code as well as handling condition registers)
 
-   *  Various infrastructural improvements, code refactoring, and bug fixes
+* Various infrastructural improvements, code refactoring, and bug fixes
 
-   *  Optimized handling of control flow based on multiple comparison of same values
+* Optimized handling of control flow based on multiple comparison of same values
 
 Tools:
 
-  *   llvm-readobj supports displaying file header, section headers, symbol table and relocation entries for XCOFF object files
+* llvm-readobj supports displaying file header, section headers, symbol table and relocation entries for XCOFF object files
 
-  *   llvm-objdump supports disassembling physical sections for XCOFF object files
+* llvm-objdump supports disassembling physical sections for XCOFF object files
 
 
 Changes to the SystemZ Target
@@ -203,9 +203,7 @@ Changes to the SystemZ Target
 Changes to the X86 Target
 -------------------------
 
- During this release ...
-
-* Less than 128 bit vector types, v2i32, v4i16, v2i16, v8i8, v4i8, and v2i8, are
+* Less-than-128-bit vector types, v2i32, v4i16, v2i16, v8i8, v4i8, and v2i8, are
   now stored in the lower bits of an xmm register and the upper bits are
   undefined. Previously the elements were spread apart with undefined bits in
   between them.
@@ -287,6 +285,7 @@ New Features:
   than the ABI register names.
 
 Improvements:
+
 * Trap and Debugtrap now lower to RISC-V-specific trap instructions.
 
 * LLVM IR Inline assembly now supports using ABI register names and using

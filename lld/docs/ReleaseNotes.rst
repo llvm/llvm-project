@@ -92,31 +92,31 @@ MinGW Improvements
 
 * Allow using custom .edata sections from input object files (for use
   by Wine)
-  (`dadc6f248868 <https://reviews.llvm.org/rGdadc6f248868>`)
+  (`dadc6f248868 <https://reviews.llvm.org/rGdadc6f248868>`_)
 
 * Don't implicitly create import libraries unless requested
-  (`6540e55067e3 <https://reviews.llvm.org/rG6540e55067e3>`)
+  (`6540e55067e3 <https://reviews.llvm.org/rG6540e55067e3>`_)
 
 * Support merging multiple resource object files
-  (`3d3a9b3b413d <https://reviews.llvm.org/rG3d3a9b3b413d>`)
+  (`3d3a9b3b413d <https://reviews.llvm.org/rG3d3a9b3b413d>`_)
   and properly handle the default manifest object files that GCC can pass
-  (`d581dd501381 <https://reviews.llvm.org/rGd581dd501381>`)
+  (`d581dd501381 <https://reviews.llvm.org/rGd581dd501381>`_)
 
 * Demangle itanium symbol names in warnings/error messages
-  (`a66fc1c99f3e <https://reviews.llvm.org/rGa66fc1c99f3e>`)
+  (`a66fc1c99f3e <https://reviews.llvm.org/rGa66fc1c99f3e>`_)
 
 * Print source locations for undefined references and duplicate symbols,
   if possible
-  (`1d06d48bb346 <https://reviews.llvm.org/rG1d06d48bb346>`)
+  (`1d06d48bb346 <https://reviews.llvm.org/rG1d06d48bb346>`_)
   and
-  (`b38f577c015c <https://reviews.llvm.org/rGb38f577c015c>`)
+  (`b38f577c015c <https://reviews.llvm.org/rGb38f577c015c>`_)
 
 * Look for more filename patterns when resolving ``-l`` options
-  (`0226c35262df <https://reviews.llvm.org/rG0226c35262df>`)
+  (`0226c35262df <https://reviews.llvm.org/rG0226c35262df>`_)
 
 * Don't error out on duplicate absolute symbols with the same value
   (which can happen for the default-null symbol for weak symbols)
-  (`1737cc750c46 <https://reviews.llvm.org/rG1737cc750c46>`)
+  (`1737cc750c46 <https://reviews.llvm.org/rG1737cc750c46>`_)
 
 
 WebAssembly Improvements

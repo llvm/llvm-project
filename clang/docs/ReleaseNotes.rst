@@ -511,39 +511,39 @@ Static Analyzer
 Undefined Behavior Sanitizer (UBSan)
 ------------------------------------
 
-- * The ``pointer-overflow`` check was extended added to catch the cases where
-    a non-zero offset is applied to a null pointer, or the result of
-    applying the offset is a null pointer.
+* The ``pointer-overflow`` check was extended added to catch the cases where
+  a non-zero offset is applied to a null pointer, or the result of
+  applying the offset is a null pointer.
 
-    .. code-block:: c++
+  .. code-block:: c++
 
-      #include <cstdint> // for intptr_t
+    #include <cstdint> // for intptr_t
 
-      static char *getelementpointer_inbounds(char *base, unsigned long offset) {
-        // Potentially UB.
-        return base + offset;
-      }
+    static char *getelementpointer_inbounds(char *base, unsigned long offset) {
+      // Potentially UB.
+      return base + offset;
+    }
 
-      char *getelementpointer_unsafe(char *base, unsigned long offset) {
-        // Always apply offset. UB if base is ``nullptr`` and ``offset`` is not
-        // zero, or if ``base`` is non-``nullptr`` and ``offset`` is
-        // ``-reinterpret_cast<intptr_t>(base)``.
-        return getelementpointer_inbounds(base, offset);
-      }
+    char *getelementpointer_unsafe(char *base, unsigned long offset) {
+      // Always apply offset. UB if base is ``nullptr`` and ``offset`` is not
+      // zero, or if ``base`` is non-``nullptr`` and ``offset`` is
+      // ``-reinterpret_cast<intptr_t>(base)``.
+      return getelementpointer_inbounds(base, offset);
+    }
 
-      char *getelementpointer_safe(char *base, unsigned long offset) {
-        // Cast pointer to integer, perform usual arithmetic addition,
-        // and cast to pointer. This is legal.
-        char *computed =
-            reinterpret_cast<char *>(reinterpret_cast<intptr_t>(base) + offset);
-        // If either the pointer becomes non-``nullptr``, or becomes
-        // ``nullptr``, we must use ``computed`` result.
-        if (((base == nullptr) && (computed != nullptr)) ||
-            ((base != nullptr) && (computed == nullptr)))
-          return computed;
-        // Else we can use ``getelementpointer_inbounds()``.
-        return getelementpointer_inbounds(base, offset);
-      }
+    char *getelementpointer_safe(char *base, unsigned long offset) {
+      // Cast pointer to integer, perform usual arithmetic addition,
+      // and cast to pointer. This is legal.
+      char *computed =
+          reinterpret_cast<char *>(reinterpret_cast<intptr_t>(base) + offset);
+      // If either the pointer becomes non-``nullptr``, or becomes
+      // ``nullptr``, we must use ``computed`` result.
+      if (((base == nullptr) && (computed != nullptr)) ||
+          ((base != nullptr) && (computed == nullptr)))
+        return computed;
+      // Else we can use ``getelementpointer_inbounds()``.
+      return getelementpointer_inbounds(base, offset);
+    }
 
 
 Additional Information
