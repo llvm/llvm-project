@@ -170,6 +170,12 @@ TEST_F(FormatTestCSharp, CSharpFatArrows) {
   verifyFormat("public override string ToString() => \"{Name}\\{Age}\";");
 }
 
+TEST_F(FormatTestCSharp, CSharpConditionalExpressions) {
+  FormatStyle Style = getGoogleStyle(FormatStyle::LK_CSharp);
+  // conditional expression is not seen as a NullConditional.
+  verifyFormat("var y = A < B ? -1 : 1;", Style);
+}
+
 TEST_F(FormatTestCSharp, CSharpNullConditional) {
   FormatStyle Style = getGoogleStyle(FormatStyle::LK_CSharp);
   Style.SpaceBeforeParens = FormatStyle::SBPO_Always;
