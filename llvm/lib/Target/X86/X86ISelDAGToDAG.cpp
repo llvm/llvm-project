@@ -4845,23 +4845,23 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     SDValue N0 = Node->getOperand(0);
     SDValue N1 = Node->getOperand(1);
 
-    unsigned Opc, MOpc;
+    unsigned ROpc, MOpc;
     bool isSigned = Opcode == ISD::SDIVREM;
     if (!isSigned) {
       switch (NVT.SimpleTy) {
       default: llvm_unreachable("Unsupported VT!");
-      case MVT::i8:  Opc = X86::DIV8r;  MOpc = X86::DIV8m;  break;
-      case MVT::i16: Opc = X86::DIV16r; MOpc = X86::DIV16m; break;
-      case MVT::i32: Opc = X86::DIV32r; MOpc = X86::DIV32m; break;
-      case MVT::i64: Opc = X86::DIV64r; MOpc = X86::DIV64m; break;
+      case MVT::i8:  ROpc = X86::DIV8r;  MOpc = X86::DIV8m;  break;
+      case MVT::i16: ROpc = X86::DIV16r; MOpc = X86::DIV16m; break;
+      case MVT::i32: ROpc = X86::DIV32r; MOpc = X86::DIV32m; break;
+      case MVT::i64: ROpc = X86::DIV64r; MOpc = X86::DIV64m; break;
       }
     } else {
       switch (NVT.SimpleTy) {
       default: llvm_unreachable("Unsupported VT!");
-      case MVT::i8:  Opc = X86::IDIV8r;  MOpc = X86::IDIV8m;  break;
-      case MVT::i16: Opc = X86::IDIV16r; MOpc = X86::IDIV16m; break;
-      case MVT::i32: Opc = X86::IDIV32r; MOpc = X86::IDIV32m; break;
-      case MVT::i64: Opc = X86::IDIV64r; MOpc = X86::IDIV64m; break;
+      case MVT::i8:  ROpc = X86::IDIV8r;  MOpc = X86::IDIV8m;  break;
+      case MVT::i16: ROpc = X86::IDIV16r; MOpc = X86::IDIV16m; break;
+      case MVT::i32: ROpc = X86::IDIV32r; MOpc = X86::IDIV32m; break;
+      case MVT::i64: ROpc = X86::IDIV64r; MOpc = X86::IDIV64m; break;
       }
     }
 
@@ -4970,7 +4970,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       CurDAG->setNodeMemRefs(CNode, {cast<LoadSDNode>(N1)->getMemOperand()});
     } else {
       InFlag =
-        SDValue(CurDAG->getMachineNode(Opc, dl, MVT::Glue, N1, InFlag), 0);
+        SDValue(CurDAG->getMachineNode(ROpc, dl, MVT::Glue, N1, InFlag), 0);
     }
 
     // Prevent use of AH in a REX instruction by explicitly copying it to
