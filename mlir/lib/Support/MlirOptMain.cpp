@@ -59,6 +59,7 @@ static LogicalResult performActions(raw_ostream &os, bool verifyDiagnostics,
 
   // Print the output.
   module->print(os);
+  os << '\n';
   return success();
 }
 
