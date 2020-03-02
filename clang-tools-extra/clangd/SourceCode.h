@@ -216,6 +216,35 @@ std::vector<Range> collectIdentifierRanges(llvm::StringRef Identifier,
 /// - drops stopwords like "get" and "for"
 llvm::StringSet<> collectWords(llvm::StringRef Content);
 
+// Something that looks like a word in the source code.
+// Could be a "real" token that's "live" in the AST, a spelled token consumed by
+// the preprocessor, or part of a spelled token (e.g. word in a comment).
+struct SpelledWord {
+  // (Spelling) location of the start of the word.
+  SourceLocation Location;
+  // The range of the word itself, excluding any quotes.
+  // This is a subrange of the file buffer.
+  llvm::StringRef Text;
+  // Whether this word is likely to refer to an identifier. True if:
+  // - the word is a spelled identifier token
+  // - Text is identifier-like (e.g. "foo_bar")
+  // - Text is surrounded by backticks (e.g. Foo in "// returns `Foo`")
+  bool LikelyIdentifier = false;
+  // Set if the word is contained in a token spelled in the file.
+  // (This should always be true, but comments aren't retained by TokenBuffer).
+  const syntax::Token *PartOfSpelledToken = nullptr;
+  // Set if the word is exactly a token spelled in the file.
+  const syntax::Token *SpelledToken = nullptr;
+  // Set if the word is a token spelled in the file, and that token survives
+  // preprocessing to emit an expanded token spelled the same way.
+  const syntax::Token *ExpandedToken = nullptr;
+
+  // Find the unique word that contains SpelledLoc or starts/ends there.
+  static llvm::Optional<SpelledWord> touching(SourceLocation SpelledLoc,
+                                              const syntax::TokenBuffer &TB,
+                                              const LangOptions &LangOpts);
+};
+
 /// Heuristically determine namespaces visible at a point, without parsing Code.
 /// This considers using-directives and enclosing namespace-declarations that
 /// are visible (and not obfuscated) in the file itself (not headers).
