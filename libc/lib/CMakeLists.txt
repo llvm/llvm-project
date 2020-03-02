@@ -15,6 +15,9 @@ add_entrypoint_library(
 
     # signal.h entrypoints
     raise
+    sigaddset
+    sigemptyset
+    sigprocmask
 )
 
 add_entrypoint_library(
