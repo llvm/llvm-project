@@ -264,9 +264,6 @@ public:
   /// highlighting them in prepare stage).
   void rename(PathRef File, Position Pos, llvm::StringRef NewName,
               const RenameOptions &Opts, Callback<FileEdits> CB);
-  // FIXME: remove this compatibility method in favor above.
-  void rename(PathRef File, Position Pos, llvm::StringRef NewName,
-              bool WantFormat, Callback<FileEdits> CB);
 
   struct TweakRef {
     std::string ID;    /// ID to pass for applyTweak.
