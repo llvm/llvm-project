@@ -276,6 +276,7 @@ OPENMP_CLAUSE(allocate, OMPAllocateClause)
 OPENMP_CLAUSE(nontemporal, OMPNontemporalClause)
 OPENMP_CLAUSE(order, OMPOrderClause)
 OPENMP_CLAUSE(depobj, OMPDepobjClause)
+OPENMP_CLAUSE(destroy, OMPDestroyClause)
 
 // Clauses allowed for OpenMP directive 'parallel'.
 OPENMP_PARALLEL_CLAUSE(if)
@@ -1084,6 +1085,7 @@ OPENMP_FLUSH_CLAUSE(release)
 
 // Clauses allowed for OpenMP directive 'depobj'.
 OPENMP_DEPOBJ_CLAUSE(depend)
+OPENMP_DEPOBJ_CLAUSE(destroy)
 
 #undef OPENMP_DEPOBJ_CLAUSE
 #undef OPENMP_FLUSH_CLAUSE

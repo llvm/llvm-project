@@ -8874,6 +8874,13 @@ TreeTransform<Derived>::TransformOMPNogroupClause(OMPNogroupClause *C) {
 }
 
 template <typename Derived>
+OMPClause *
+TreeTransform<Derived>::TransformOMPDestroyClause(OMPDestroyClause *C) {
+  // No need to rebuild this clause, no template-dependent parameters.
+  return C;
+}
+
+template <typename Derived>
 OMPClause *TreeTransform<Derived>::TransformOMPUnifiedAddressClause(
     OMPUnifiedAddressClause *C) {
   llvm_unreachable("unified_address clause cannot appear in dependent context");

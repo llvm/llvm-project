@@ -532,6 +532,8 @@ void OMPClauseProfiler::VisitOMPSIMDClause(const OMPSIMDClause *) {}
 
 void OMPClauseProfiler::VisitOMPNogroupClause(const OMPNogroupClause *) {}
 
+void OMPClauseProfiler::VisitOMPDestroyClause(const OMPDestroyClause *) {}
+
 template<typename T>
 void OMPClauseProfiler::VisitOMPClauseList(T *Node) {
   for (auto *E : Node->varlists()) {

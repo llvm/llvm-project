@@ -143,6 +143,7 @@ const OMPClauseWithPreInit *OMPClauseWithPreInit::get(const OMPClause *C) {
   case OMPC_match:
   case OMPC_nontemporal:
   case OMPC_order:
+  case OMPC_destroy:
     break;
   }
 
@@ -228,6 +229,7 @@ const OMPClauseWithPostUpdate *OMPClauseWithPostUpdate::get(const OMPClause *C) 
   case OMPC_match:
   case OMPC_nontemporal:
   case OMPC_order:
+  case OMPC_destroy:
     break;
   }
 
@@ -1421,6 +1423,10 @@ void OMPClausePrinter::VisitOMPHintClause(OMPHintClause *Node) {
   OS << "hint(";
   Node->getHint()->printPretty(OS, nullptr, Policy, 0);
   OS << ")";
+}
+
+void OMPClausePrinter::VisitOMPDestroyClause(OMPDestroyClause *) {
+  OS << "destroy";
 }
 
 template<typename T>
