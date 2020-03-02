@@ -49,6 +49,15 @@ struct StreamState {
   }
 };
 
+class StreamChecker;
+
+using FnCheck = std::function<void(const StreamChecker *, const CallEvent &,
+                                   CheckerContext &)>;
+
+struct FnDescription {
+  FnCheck EvalFn;
+};
+
 class StreamChecker : public Checker<eval::Call,
                                      check::DeadSymbols > {
   mutable std::unique_ptr<BuiltinBug> BT_nullfp, BT_illegalwhence,
@@ -59,35 +68,33 @@ public:
   void checkDeadSymbols(SymbolReaper &SymReaper, CheckerContext &C) const;
 
 private:
-  using FnCheck = std::function<void(const StreamChecker *, const CallEvent &,
-                                     CheckerContext &)>;
 
-  CallDescriptionMap<FnCheck> Callbacks = {
-      {{"fopen"}, &StreamChecker::evalFopen},
-      {{"freopen", 3}, &StreamChecker::evalFreopen},
-      {{"tmpfile"}, &StreamChecker::evalFopen},
-      {{"fclose", 1}, &StreamChecker::evalFclose},
+  CallDescriptionMap<FnDescription> FnDescriptions = {
+      {{"fopen"}, {&StreamChecker::evalFopen}},
+      {{"freopen", 3}, {&StreamChecker::evalFreopen}},
+      {{"tmpfile"}, {&StreamChecker::evalFopen}},
+      {{"fclose", 1}, {&StreamChecker::evalFclose}},
       {{"fread", 4},
-       std::bind(&StreamChecker::checkArgNullStream, _1, _2, _3, 3)},
+       {std::bind(&StreamChecker::checkArgNullStream, _1, _2, _3, 3)}},
       {{"fwrite", 4},
-       std::bind(&StreamChecker::checkArgNullStream, _1, _2, _3, 3)},
-      {{"fseek", 3}, &StreamChecker::evalFseek},
+       {std::bind(&StreamChecker::checkArgNullStream, _1, _2, _3, 3)}},
+      {{"fseek", 3}, {&StreamChecker::evalFseek}},
       {{"ftell", 1},
-       std::bind(&StreamChecker::checkArgNullStream, _1, _2, _3, 0)},
+       {std::bind(&StreamChecker::checkArgNullStream, _1, _2, _3, 0)}},
       {{"rewind", 1},
-       std::bind(&StreamChecker::checkArgNullStream, _1, _2, _3, 0)},
+       {std::bind(&StreamChecker::checkArgNullStream, _1, _2, _3, 0)}},
       {{"fgetpos", 2},
-       std::bind(&StreamChecker::checkArgNullStream, _1, _2, _3, 0)},
+       {std::bind(&StreamChecker::checkArgNullStream, _1, _2, _3, 0)}},
       {{"fsetpos", 2},
-       std::bind(&StreamChecker::checkArgNullStream, _1, _2, _3, 0)},
+       {std::bind(&StreamChecker::checkArgNullStream, _1, _2, _3, 0)}},
       {{"clearerr", 1},
-       std::bind(&StreamChecker::checkArgNullStream, _1, _2, _3, 0)},
+       {std::bind(&StreamChecker::checkArgNullStream, _1, _2, _3, 0)}},
       {{"feof", 1},
-       std::bind(&StreamChecker::checkArgNullStream, _1, _2, _3, 0)},
+       {std::bind(&StreamChecker::checkArgNullStream, _1, _2, _3, 0)}},
       {{"ferror", 1},
-       std::bind(&StreamChecker::checkArgNullStream, _1, _2, _3, 0)},
+       {std::bind(&StreamChecker::checkArgNullStream, _1, _2, _3, 0)}},
       {{"fileno", 1},
-       std::bind(&StreamChecker::checkArgNullStream, _1, _2, _3, 0)},
+       {std::bind(&StreamChecker::checkArgNullStream, _1, _2, _3, 0)}},
   };
 
   void evalFopen(const CallEvent &Call, CheckerContext &C) const;
@@ -125,11 +132,11 @@ bool StreamChecker::evalCall(const CallEvent &Call, CheckerContext &C) const {
       return false;
   }
 
-  const FnCheck *Callback = Callbacks.lookup(Call);
-  if (!Callback)
+  const FnDescription *Description = FnDescriptions.lookup(Call);
+  if (!Description)
     return false;
 
-  (*Callback)(this, Call, C);
+  (Description->EvalFn)(this, Call, C);
 
   return C.isDifferent();
 }
