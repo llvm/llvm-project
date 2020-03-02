@@ -144,9 +144,8 @@ define float @f32_one_step_variables(float %x, float %y) #1 {
 ; FMA-RECIP:       # %bb.0:
 ; FMA-RECIP-NEXT:    vrcpss %xmm1, %xmm1, %xmm2
 ; FMA-RECIP-NEXT:    vmulss %xmm2, %xmm0, %xmm3
-; FMA-RECIP-NEXT:    vfmsub213ss {{.*#+}} xmm1 = (xmm3 * xmm1) - xmm0
-; FMA-RECIP-NEXT:    vfnmadd213ss {{.*#+}} xmm2 = -(xmm1 * xmm2) + xmm3
-; FMA-RECIP-NEXT:    vmovaps %xmm2, %xmm0
+; FMA-RECIP-NEXT:    vfmsub231ss {{.*#+}} xmm0 = (xmm3 * xmm1) - xmm0
+; FMA-RECIP-NEXT:    vfnmadd213ss {{.*#+}} xmm0 = -(xmm2 * xmm0) + xmm3
 ; FMA-RECIP-NEXT:    retq
 ;
 ; BDVER2-LABEL: f32_one_step_variables:
@@ -181,9 +180,8 @@ define float @f32_one_step_variables(float %x, float %y) #1 {
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vrcpss %xmm1, %xmm1, %xmm2
 ; HASWELL-NEXT:    vmulss %xmm2, %xmm0, %xmm3
-; HASWELL-NEXT:    vfmsub213ss {{.*#+}} xmm1 = (xmm3 * xmm1) - xmm0
-; HASWELL-NEXT:    vfnmadd213ss {{.*#+}} xmm2 = -(xmm1 * xmm2) + xmm3
-; HASWELL-NEXT:    vmovaps %xmm2, %xmm0
+; HASWELL-NEXT:    vfmsub231ss {{.*#+}} xmm0 = (xmm3 * xmm1) - xmm0
+; HASWELL-NEXT:    vfnmadd213ss {{.*#+}} xmm0 = -(xmm2 * xmm0) + xmm3
 ; HASWELL-NEXT:    retq
 ;
 ; HASWELL-NO-FMA-LABEL: f32_one_step_variables:
@@ -200,9 +198,8 @@ define float @f32_one_step_variables(float %x, float %y) #1 {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vrcpss %xmm1, %xmm1, %xmm2
 ; AVX512-NEXT:    vmulss %xmm2, %xmm0, %xmm3
-; AVX512-NEXT:    vfmsub213ss {{.*#+}} xmm1 = (xmm3 * xmm1) - xmm0
-; AVX512-NEXT:    vfnmadd213ss {{.*#+}} xmm2 = -(xmm1 * xmm2) + xmm3
-; AVX512-NEXT:    vmovaps %xmm2, %xmm0
+; AVX512-NEXT:    vfmsub231ss {{.*#+}} xmm0 = (xmm3 * xmm1) - xmm0
+; AVX512-NEXT:    vfnmadd213ss {{.*#+}} xmm0 = -(xmm2 * xmm0) + xmm3
 ; AVX512-NEXT:    retq
   %div = fdiv fast float %x, %y
   ret float %div
@@ -445,10 +442,11 @@ define <4 x float> @v4f32_one_step(<4 x float> %x) #1 {
 ;
 ; HASWELL-LABEL: v4f32_one_step:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    vrcpps %xmm0, %xmm1
-; HASWELL-NEXT:    vbroadcastss {{.*#+}} xmm2 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
-; HASWELL-NEXT:    vfmsub213ps {{.*#+}} xmm0 = (xmm1 * xmm0) - xmm2
-; HASWELL-NEXT:    vfnmadd132ps {{.*#+}} xmm0 = -(xmm0 * xmm1) + xmm1
+; HASWELL-NEXT:    vrcpps %xmm0, %xmm2
+; HASWELL-NEXT:    vbroadcastss {{.*#+}} xmm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; HASWELL-NEXT:    vfmsub231ps {{.*#+}} xmm1 = (xmm2 * xmm0) - xmm1
+; HASWELL-NEXT:    vfnmadd132ps {{.*#+}} xmm1 = -(xmm1 * xmm2) + xmm2
+; HASWELL-NEXT:    vmovaps %xmm1, %xmm0
 ; HASWELL-NEXT:    retq
 ;
 ; HASWELL-NO-FMA-LABEL: v4f32_one_step:
@@ -463,10 +461,11 @@ define <4 x float> @v4f32_one_step(<4 x float> %x) #1 {
 ;
 ; KNL-LABEL: v4f32_one_step:
 ; KNL:       # %bb.0:
-; KNL-NEXT:    vrcpps %xmm0, %xmm1
-; KNL-NEXT:    vbroadcastss {{.*#+}} xmm2 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
-; KNL-NEXT:    vfmsub213ps {{.*#+}} xmm0 = (xmm1 * xmm0) - xmm2
-; KNL-NEXT:    vfnmadd132ps {{.*#+}} xmm0 = -(xmm0 * xmm1) + xmm1
+; KNL-NEXT:    vrcpps %xmm0, %xmm2
+; KNL-NEXT:    vbroadcastss {{.*#+}} xmm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; KNL-NEXT:    vfmsub231ps {{.*#+}} xmm1 = (xmm2 * xmm0) - xmm1
+; KNL-NEXT:    vfnmadd132ps {{.*#+}} xmm1 = -(xmm1 * xmm2) + xmm2
+; KNL-NEXT:    vmovaps %xmm1, %xmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: v4f32_one_step:
@@ -505,9 +504,8 @@ define <4 x float> @v4f32_one_step_variables(<4 x float> %x, <4 x float> %y) #1 
 ; FMA-RECIP:       # %bb.0:
 ; FMA-RECIP-NEXT:    vrcpps %xmm1, %xmm2
 ; FMA-RECIP-NEXT:    vmulps %xmm2, %xmm0, %xmm3
-; FMA-RECIP-NEXT:    vfmsub213ps {{.*#+}} xmm1 = (xmm3 * xmm1) - xmm0
-; FMA-RECIP-NEXT:    vfnmadd213ps {{.*#+}} xmm2 = -(xmm1 * xmm2) + xmm3
-; FMA-RECIP-NEXT:    vmovaps %xmm2, %xmm0
+; FMA-RECIP-NEXT:    vfmsub231ps {{.*#+}} xmm0 = (xmm3 * xmm1) - xmm0
+; FMA-RECIP-NEXT:    vfnmadd213ps {{.*#+}} xmm0 = -(xmm2 * xmm0) + xmm3
 ; FMA-RECIP-NEXT:    retq
 ;
 ; BDVER2-LABEL: v4f32_one_step_variables:
@@ -542,9 +540,8 @@ define <4 x float> @v4f32_one_step_variables(<4 x float> %x, <4 x float> %y) #1 
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vrcpps %xmm1, %xmm2
 ; HASWELL-NEXT:    vmulps %xmm2, %xmm0, %xmm3
-; HASWELL-NEXT:    vfmsub213ps {{.*#+}} xmm1 = (xmm3 * xmm1) - xmm0
-; HASWELL-NEXT:    vfnmadd213ps {{.*#+}} xmm2 = -(xmm1 * xmm2) + xmm3
-; HASWELL-NEXT:    vmovaps %xmm2, %xmm0
+; HASWELL-NEXT:    vfmsub231ps {{.*#+}} xmm0 = (xmm3 * xmm1) - xmm0
+; HASWELL-NEXT:    vfnmadd213ps {{.*#+}} xmm0 = -(xmm2 * xmm0) + xmm3
 ; HASWELL-NEXT:    retq
 ;
 ; HASWELL-NO-FMA-LABEL: v4f32_one_step_variables:
@@ -561,9 +558,8 @@ define <4 x float> @v4f32_one_step_variables(<4 x float> %x, <4 x float> %y) #1 
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vrcpps %xmm1, %xmm2
 ; AVX512-NEXT:    vmulps %xmm2, %xmm0, %xmm3
-; AVX512-NEXT:    vfmsub213ps {{.*#+}} xmm1 = (xmm3 * xmm1) - xmm0
-; AVX512-NEXT:    vfnmadd213ps {{.*#+}} xmm2 = -(xmm1 * xmm2) + xmm3
-; AVX512-NEXT:    vmovaps %xmm2, %xmm0
+; AVX512-NEXT:    vfmsub231ps {{.*#+}} xmm0 = (xmm3 * xmm1) - xmm0
+; AVX512-NEXT:    vfnmadd213ps {{.*#+}} xmm0 = -(xmm2 * xmm0) + xmm3
 ; AVX512-NEXT:    retq
   %div = fdiv fast <4 x float> %x, %y
   ret <4 x float> %div
@@ -816,10 +812,11 @@ define <8 x float> @v8f32_one_step(<8 x float> %x) #1 {
 ;
 ; HASWELL-LABEL: v8f32_one_step:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    vrcpps %ymm0, %ymm1
-; HASWELL-NEXT:    vbroadcastss {{.*#+}} ymm2 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
-; HASWELL-NEXT:    vfmsub213ps {{.*#+}} ymm0 = (ymm1 * ymm0) - ymm2
-; HASWELL-NEXT:    vfnmadd132ps {{.*#+}} ymm0 = -(ymm0 * ymm1) + ymm1
+; HASWELL-NEXT:    vrcpps %ymm0, %ymm2
+; HASWELL-NEXT:    vbroadcastss {{.*#+}} ymm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; HASWELL-NEXT:    vfmsub231ps {{.*#+}} ymm1 = (ymm2 * ymm0) - ymm1
+; HASWELL-NEXT:    vfnmadd132ps {{.*#+}} ymm1 = -(ymm1 * ymm2) + ymm2
+; HASWELL-NEXT:    vmovaps %ymm1, %ymm0
 ; HASWELL-NEXT:    retq
 ;
 ; HASWELL-NO-FMA-LABEL: v8f32_one_step:
@@ -834,10 +831,11 @@ define <8 x float> @v8f32_one_step(<8 x float> %x) #1 {
 ;
 ; KNL-LABEL: v8f32_one_step:
 ; KNL:       # %bb.0:
-; KNL-NEXT:    vrcpps %ymm0, %ymm1
-; KNL-NEXT:    vbroadcastss {{.*#+}} ymm2 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
-; KNL-NEXT:    vfmsub213ps {{.*#+}} ymm0 = (ymm1 * ymm0) - ymm2
-; KNL-NEXT:    vfnmadd132ps {{.*#+}} ymm0 = -(ymm0 * ymm1) + ymm1
+; KNL-NEXT:    vrcpps %ymm0, %ymm2
+; KNL-NEXT:    vbroadcastss {{.*#+}} ymm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; KNL-NEXT:    vfmsub231ps {{.*#+}} ymm1 = (ymm2 * ymm0) - ymm1
+; KNL-NEXT:    vfnmadd132ps {{.*#+}} ymm1 = -(ymm1 * ymm2) + ymm2
+; KNL-NEXT:    vmovaps %ymm1, %ymm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: v8f32_one_step:
