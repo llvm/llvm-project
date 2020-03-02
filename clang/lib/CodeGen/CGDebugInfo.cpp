@@ -1787,36 +1787,18 @@ CGDebugInfo::CollectTemplateParams(const TemplateParameterList *TPList,
   for (unsigned i = 0, e = TAList.size(); i != e; ++i) {
     const TemplateArgument &TA = TAList[i];
     StringRef Name;
-    bool defaultParameter = false;
     if (TPList)
       Name = TPList->getParam(i)->getName();
     switch (TA.getKind()) {
     case TemplateArgument::Type: {
       llvm::DIType *TTy = getOrCreateType(TA.getAsType(), Unit);
-
-      if (TPList)
-        if (auto *templateType =
-                dyn_cast_or_null<TemplateTypeParmDecl>(TPList->getParam(i)))
-          if (templateType->hasDefaultArgument())
-            defaultParameter =
-                templateType->getDefaultArgument() == TA.getAsType();
-
-      TemplateParams.push_back(DBuilder.createTemplateTypeParameter(
-          TheCU, Name, TTy, defaultParameter));
-
+      TemplateParams.push_back(
+          DBuilder.createTemplateTypeParameter(TheCU, Name, TTy));
     } break;
     case TemplateArgument::Integral: {
       llvm::DIType *TTy = getOrCreateType(TA.getIntegralType(), Unit);
-      if (TPList)
-        if (auto *templateType =
-                dyn_cast_or_null<NonTypeTemplateParmDecl>(TPList->getParam(i)))
-          if (templateType->hasDefaultArgument())
-            defaultParameter =
-                templateType->getDefaultArgument()->EvaluateKnownConstInt(
-                    CGM.getContext()) == TA.getAsIntegral();
-
       TemplateParams.push_back(DBuilder.createTemplateValueParameter(
-          TheCU, Name, TTy, defaultParameter,
+          TheCU, Name, TTy,
           llvm::ConstantInt::get(CGM.getLLVMContext(), TA.getAsIntegral())));
     } break;
     case TemplateArgument::Declaration: {
@@ -1855,7 +1837,7 @@ CGDebugInfo::CollectTemplateParams(const TemplateParameterList *TPList,
         V = V->stripPointerCasts();
       }
       TemplateParams.push_back(DBuilder.createTemplateValueParameter(
-          TheCU, Name, TTy, defaultParameter, cast_or_null<llvm::Constant>(V)));
+          TheCU, Name, TTy, cast_or_null<llvm::Constant>(V)));
     } break;
     case TemplateArgument::NullPtr: {
       QualType T = TA.getNullPtrType();
@@ -1873,8 +1855,8 @@ CGDebugInfo::CollectTemplateParams(const TemplateParameterList *TPList,
           V = CGM.getCXXABI().EmitNullMemberPointer(MPT);
       if (!V)
         V = llvm::ConstantInt::get(CGM.Int8Ty, 0);
-      TemplateParams.push_back(DBuilder.createTemplateValueParameter(
-          TheCU, Name, TTy, defaultParameter, V));
+      TemplateParams.push_back(
+          DBuilder.createTemplateValueParameter(TheCU, Name, TTy, V));
     } break;
     case TemplateArgument::Template:
       TemplateParams.push_back(DBuilder.createTemplateTemplateParameter(
@@ -1895,7 +1877,7 @@ CGDebugInfo::CollectTemplateParams(const TemplateParameterList *TPList,
       assert(V && "Expression in template argument isn't constant");
       llvm::DIType *TTy = getOrCreateType(T, Unit);
       TemplateParams.push_back(DBuilder.createTemplateValueParameter(
-          TheCU, Name, TTy, defaultParameter, V->stripPointerCasts()));
+          TheCU, Name, TTy, V->stripPointerCasts()));
     } break;
     // And the following should never occur:
     case TemplateArgument::TemplateExpansion:

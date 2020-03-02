@@ -443,22 +443,19 @@ namespace llvm {
     /// \param Scope        Scope in which this type is defined.
     /// \param Name         Type parameter name.
     /// \param Ty           Parameter type.
-    /// \param IsDefault    Parameter is default or not
-    DITemplateTypeParameter *createTemplateTypeParameter(DIScope *Scope,
-                                                         StringRef Name,
-                                                         DIType *Ty,
-                                                         bool IsDefault);
+    DITemplateTypeParameter *
+    createTemplateTypeParameter(DIScope *Scope, StringRef Name, DIType *Ty);
 
     /// Create debugging information for template
     /// value parameter.
     /// \param Scope        Scope in which this type is defined.
     /// \param Name         Value parameter name.
     /// \param Ty           Parameter type.
-    /// \param IsDefault    Parameter is default or not
     /// \param Val          Constant parameter value.
-    DITemplateValueParameter *
-    createTemplateValueParameter(DIScope *Scope, StringRef Name, DIType *Ty,
-                                 bool IsDefault, Constant *Val);
+    DITemplateValueParameter *createTemplateValueParameter(DIScope *Scope,
+                                                           StringRef Name,
+                                                           DIType *Ty,
+                                                           Constant *Val);
 
     /// Create debugging information for a template template parameter.
     /// \param Scope        Scope in which this type is defined.

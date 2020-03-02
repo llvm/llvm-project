@@ -843,45 +843,36 @@ template <> struct MDNodeKeyImpl<DIModule> {
 template <> struct MDNodeKeyImpl<DITemplateTypeParameter> {
   MDString *Name;
   Metadata *Type;
-  bool IsDefault;
 
-  MDNodeKeyImpl(MDString *Name, Metadata *Type, bool IsDefault)
-      : Name(Name), Type(Type), IsDefault(IsDefault) {}
+  MDNodeKeyImpl(MDString *Name, Metadata *Type) : Name(Name), Type(Type) {}
   MDNodeKeyImpl(const DITemplateTypeParameter *N)
-      : Name(N->getRawName()), Type(N->getRawType()),
-        IsDefault(N->isDefault()) {}
+      : Name(N->getRawName()), Type(N->getRawType()) {}
 
   bool isKeyOf(const DITemplateTypeParameter *RHS) const {
-    return Name == RHS->getRawName() && Type == RHS->getRawType() &&
-           IsDefault == RHS->isDefault();
+    return Name == RHS->getRawName() && Type == RHS->getRawType();
   }
 
-  unsigned getHashValue() const { return hash_combine(Name, Type, IsDefault); }
+  unsigned getHashValue() const { return hash_combine(Name, Type); }
 };
 
 template <> struct MDNodeKeyImpl<DITemplateValueParameter> {
   unsigned Tag;
   MDString *Name;
   Metadata *Type;
-  bool IsDefault;
   Metadata *Value;
 
-  MDNodeKeyImpl(unsigned Tag, MDString *Name, Metadata *Type, bool IsDefault,
-                Metadata *Value)
-      : Tag(Tag), Name(Name), Type(Type), IsDefault(IsDefault), Value(Value) {}
+  MDNodeKeyImpl(unsigned Tag, MDString *Name, Metadata *Type, Metadata *Value)
+      : Tag(Tag), Name(Name), Type(Type), Value(Value) {}
   MDNodeKeyImpl(const DITemplateValueParameter *N)
       : Tag(N->getTag()), Name(N->getRawName()), Type(N->getRawType()),
-        IsDefault(N->isDefault()), Value(N->getValue()) {}
+        Value(N->getValue()) {}
 
   bool isKeyOf(const DITemplateValueParameter *RHS) const {
     return Tag == RHS->getTag() && Name == RHS->getRawName() &&
-           Type == RHS->getRawType() && IsDefault == RHS->isDefault() &&
-           Value == RHS->getValue();
+           Type == RHS->getRawType() && Value == RHS->getValue();
   }
 
-  unsigned getHashValue() const {
-    return hash_combine(Tag, Name, Type, IsDefault, Value);
-  }
+  unsigned getHashValue() const { return hash_combine(Tag, Name, Type, Value); }
 };
 
 template <> struct MDNodeKeyImpl<DIGlobalVariable> {

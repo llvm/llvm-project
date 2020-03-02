@@ -2131,11 +2131,9 @@ public:
 /// Base class for template parameters.
 class DITemplateParameter : public DINode {
 protected:
-  bool IsDefault;
-
   DITemplateParameter(LLVMContext &Context, unsigned ID, StorageType Storage,
-                      unsigned Tag, bool IsDefault, ArrayRef<Metadata *> Ops)
-      : DINode(Context, ID, Storage, Tag, Ops), IsDefault(IsDefault) {}
+                      unsigned Tag, ArrayRef<Metadata *> Ops)
+      : DINode(Context, ID, Storage, Tag, Ops) {}
   ~DITemplateParameter() = default;
 
 public:
@@ -2144,7 +2142,6 @@ public:
 
   MDString *getRawName() const { return getOperandAs<MDString>(0); }
   Metadata *getRawType() const { return getOperand(1); }
-  bool isDefault() const { return IsDefault; }
 
   static bool classof(const Metadata *MD) {
     return MD->getMetadataID() == DITemplateTypeParameterKind ||
@@ -2157,35 +2154,30 @@ class DITemplateTypeParameter : public DITemplateParameter {
   friend class MDNode;
 
   DITemplateTypeParameter(LLVMContext &Context, StorageType Storage,
-                          bool IsDefault, ArrayRef<Metadata *> Ops)
+                          ArrayRef<Metadata *> Ops)
       : DITemplateParameter(Context, DITemplateTypeParameterKind, Storage,
-                            dwarf::DW_TAG_template_type_parameter, IsDefault,
-                            Ops) {}
+                            dwarf::DW_TAG_template_type_parameter, Ops) {}
   ~DITemplateTypeParameter() = default;
 
   static DITemplateTypeParameter *getImpl(LLVMContext &Context, StringRef Name,
-                                          DIType *Type, bool IsDefault,
-                                          StorageType Storage,
+                                          DIType *Type, StorageType Storage,
                                           bool ShouldCreate = true) {
-    return getImpl(Context, getCanonicalMDString(Context, Name), Type,
-                   IsDefault, Storage, ShouldCreate);
+    return getImpl(Context, getCanonicalMDString(Context, Name), Type, Storage,
+                   ShouldCreate);
   }
   static DITemplateTypeParameter *getImpl(LLVMContext &Context, MDString *Name,
-                                          Metadata *Type, bool IsDefault,
-                                          StorageType Storage,
+                                          Metadata *Type, StorageType Storage,
                                           bool ShouldCreate = true);
 
   TempDITemplateTypeParameter cloneImpl() const {
-    return getTemporary(getContext(), getName(), getType(), isDefault());
+    return getTemporary(getContext(), getName(), getType());
   }
 
 public:
-  DEFINE_MDNODE_GET(DITemplateTypeParameter,
-                    (StringRef Name, DIType *Type, bool IsDefault),
-                    (Name, Type, IsDefault))
-  DEFINE_MDNODE_GET(DITemplateTypeParameter,
-                    (MDString *Name, Metadata *Type, bool IsDefault),
-                    (Name, Type, IsDefault))
+  DEFINE_MDNODE_GET(DITemplateTypeParameter, (StringRef Name, DIType *Type),
+                    (Name, Type))
+  DEFINE_MDNODE_GET(DITemplateTypeParameter, (MDString * Name, Metadata *Type),
+                    (Name, Type))
 
   TempDITemplateTypeParameter clone() const { return cloneImpl(); }
 
@@ -2199,40 +2191,36 @@ class DITemplateValueParameter : public DITemplateParameter {
   friend class MDNode;
 
   DITemplateValueParameter(LLVMContext &Context, StorageType Storage,
-                           unsigned Tag, bool IsDefault,
-                           ArrayRef<Metadata *> Ops)
+                           unsigned Tag, ArrayRef<Metadata *> Ops)
       : DITemplateParameter(Context, DITemplateValueParameterKind, Storage, Tag,
-                            IsDefault, Ops) {}
+                            Ops) {}
   ~DITemplateValueParameter() = default;
 
   static DITemplateValueParameter *getImpl(LLVMContext &Context, unsigned Tag,
                                            StringRef Name, DIType *Type,
-                                           bool IsDefault, Metadata *Value,
-                                           StorageType Storage,
+                                           Metadata *Value, StorageType Storage,
                                            bool ShouldCreate = true) {
     return getImpl(Context, Tag, getCanonicalMDString(Context, Name), Type,
-                   IsDefault, Value, Storage, ShouldCreate);
+                   Value, Storage, ShouldCreate);
   }
   static DITemplateValueParameter *getImpl(LLVMContext &Context, unsigned Tag,
                                            MDString *Name, Metadata *Type,
-                                           bool IsDefault, Metadata *Value,
-                                           StorageType Storage,
+                                           Metadata *Value, StorageType Storage,
                                            bool ShouldCreate = true);
 
   TempDITemplateValueParameter cloneImpl() const {
     return getTemporary(getContext(), getTag(), getName(), getType(),
-                        isDefault(), getValue());
+                        getValue());
   }
 
 public:
   DEFINE_MDNODE_GET(DITemplateValueParameter,
-                    (unsigned Tag, StringRef Name, DIType *Type, bool IsDefault,
+                    (unsigned Tag, StringRef Name, DIType *Type,
                      Metadata *Value),
-                    (Tag, Name, Type, IsDefault, Value))
-  DEFINE_MDNODE_GET(DITemplateValueParameter,
-                    (unsigned Tag, MDString *Name, Metadata *Type,
-                     bool IsDefault, Metadata *Value),
-                    (Tag, Name, Type, IsDefault, Value))
+                    (Tag, Name, Type, Value))
+  DEFINE_MDNODE_GET(DITemplateValueParameter, (unsigned Tag, MDString *Name,
+                                               Metadata *Type, Metadata *Value),
+                    (Tag, Name, Type, Value))
 
   TempDITemplateValueParameter clone() const { return cloneImpl(); }
 

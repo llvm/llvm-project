@@ -406,26 +406,25 @@ DIBuilder::createObjCProperty(StringRef Name, DIFile *File, unsigned LineNumber,
 
 DITemplateTypeParameter *
 DIBuilder::createTemplateTypeParameter(DIScope *Context, StringRef Name,
-                                       DIType *Ty, bool isDefault) {
+                                       DIType *Ty) {
   assert((!Context || isa<DICompileUnit>(Context)) && "Expected compile unit");
-  return DITemplateTypeParameter::get(VMContext, Name, Ty, isDefault);
+  return DITemplateTypeParameter::get(VMContext, Name, Ty);
 }
 
 static DITemplateValueParameter *
 createTemplateValueParameterHelper(LLVMContext &VMContext, unsigned Tag,
                                    DIScope *Context, StringRef Name, DIType *Ty,
-                                   bool IsDefault, Metadata *MD) {
+                                   Metadata *MD) {
   assert((!Context || isa<DICompileUnit>(Context)) && "Expected compile unit");
-  return DITemplateValueParameter::get(VMContext, Tag, Name, Ty, IsDefault, MD);
+  return DITemplateValueParameter::get(VMContext, Tag, Name, Ty, MD);
 }
 
 DITemplateValueParameter *
 DIBuilder::createTemplateValueParameter(DIScope *Context, StringRef Name,
-                                        DIType *Ty, bool isDefault,
-                                        Constant *Val) {
+                                        DIType *Ty, Constant *Val) {
   return createTemplateValueParameterHelper(
       VMContext, dwarf::DW_TAG_template_value_parameter, Context, Name, Ty,
-      isDefault, getConstantOrNull(Val));
+      getConstantOrNull(Val));
 }
 
 DITemplateValueParameter *
@@ -433,7 +432,7 @@ DIBuilder::createTemplateTemplateParameter(DIScope *Context, StringRef Name,
                                            DIType *Ty, StringRef Val) {
   return createTemplateValueParameterHelper(
       VMContext, dwarf::DW_TAG_GNU_template_template_param, Context, Name, Ty,
-      false, MDString::get(VMContext, Val));
+      MDString::get(VMContext, Val));
 }
 
 DITemplateValueParameter *
@@ -441,7 +440,7 @@ DIBuilder::createTemplateParameterPack(DIScope *Context, StringRef Name,
                                        DIType *Ty, DINodeArray Val) {
   return createTemplateValueParameterHelper(
       VMContext, dwarf::DW_TAG_GNU_template_parameter_pack, Context, Name, Ty,
-      false, Val.get());
+      Val.get());
 }
 
 DICompositeType *DIBuilder::createClassType(
