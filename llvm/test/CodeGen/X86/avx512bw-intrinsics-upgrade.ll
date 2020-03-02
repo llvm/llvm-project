@@ -7,8 +7,8 @@ declare i32 @llvm.x86.avx512.kunpck.wd(i32, i32)
 define i32@test_int_x86_avx512_kunpck_wd(i32 %x0, i32 %x1) {
 ; X86-LABEL: test_int_x86_avx512_kunpck_wd:
 ; X86:       # %bb.0:
-; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k0 # encoding: [0xc5,0xf8,0x90,0x44,0x24,0x04]
-; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf8,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k0 # encoding: [0xc4,0xe1,0xf9,0x90,0x44,0x24,0x04]
+; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x08]
 ; X86-NEXT:    kunpckwd %k1, %k0, %k0 # encoding: [0xc5,0xfc,0x4b,0xc1]
 ; X86-NEXT:    kmovd %k0, %eax # encoding: [0xc5,0xfb,0x93,0xc0]
 ; X86-NEXT:    retl # encoding: [0xc3]
@@ -29,8 +29,10 @@ declare i64 @llvm.x86.avx512.kunpck.dq(i64, i64)
 define i64@test_int_x86_avx512_kunpck_qd(i64 %x0, i64 %x1) {
 ; X86-LABEL: test_int_x86_avx512_kunpck_qd:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx # encoding: [0x8b,0x54,0x24,0x04]
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x0c]
+; X86-NEXT:    kmovq {{[0-9]+}}(%esp), %k0 # encoding: [0xc4,0xe1,0xf8,0x90,0x44,0x24,0x04]
+; X86-NEXT:    kmovq {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf8,0x90,0x4c,0x24,0x0c]
+; X86-NEXT:    kmovd %k0, %edx # encoding: [0xc5,0xfb,0x93,0xd0]
+; X86-NEXT:    kmovd %k1, %eax # encoding: [0xc5,0xfb,0x93,0xc1]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
 ; X64-LABEL: test_int_x86_avx512_kunpck_qd:
