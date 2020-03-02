@@ -48,6 +48,7 @@ if(DEFINED LLVM_BUILD_MAIN_SRC_DIR)
 endif()
 
 find_package(AMDDeviceLibs CONFIG)
+find_package(ZLIB)
 
 message("")
 message("------------LLVM_DIR: ${LLVM_DIR}")
@@ -230,6 +231,7 @@ target_link_libraries(amd_comgr
     ${CLANG_LIBS}
     ${LLD_LIBS}
     ${LLVM_LIBS}
+    ZLIB::ZLIB
 )
 
 if (NOT UNIX)
