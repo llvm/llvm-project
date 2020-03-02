@@ -724,24 +724,24 @@ DIModule *DIModule::getImpl(LLVMContext &Context, Metadata *Scope,
   DEFINE_GETIMPL_STORE_NO_CONSTRUCTOR_ARGS(DIModule, Ops);
 }
 
-DITemplateTypeParameter *DITemplateTypeParameter::getImpl(LLVMContext &Context,
-                                                          MDString *Name,
-                                                          Metadata *Type,
-                                                          StorageType Storage,
-                                                          bool ShouldCreate) {
+DITemplateTypeParameter *
+DITemplateTypeParameter::getImpl(LLVMContext &Context, MDString *Name,
+                                 Metadata *Type, bool isDefault,
+                                 StorageType Storage, bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");
-  DEFINE_GETIMPL_LOOKUP(DITemplateTypeParameter, (Name, Type));
+  DEFINE_GETIMPL_LOOKUP(DITemplateTypeParameter, (Name, Type, isDefault));
   Metadata *Ops[] = {Name, Type};
-  DEFINE_GETIMPL_STORE_NO_CONSTRUCTOR_ARGS(DITemplateTypeParameter, Ops);
+  DEFINE_GETIMPL_STORE(DITemplateTypeParameter, (isDefault), Ops);
 }
 
 DITemplateValueParameter *DITemplateValueParameter::getImpl(
     LLVMContext &Context, unsigned Tag, MDString *Name, Metadata *Type,
-    Metadata *Value, StorageType Storage, bool ShouldCreate) {
+    bool isDefault, Metadata *Value, StorageType Storage, bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");
-  DEFINE_GETIMPL_LOOKUP(DITemplateValueParameter, (Tag, Name, Type, Value));
+  DEFINE_GETIMPL_LOOKUP(DITemplateValueParameter,
+                        (Tag, Name, Type, isDefault, Value));
   Metadata *Ops[] = {Name, Type, Value};
-  DEFINE_GETIMPL_STORE(DITemplateValueParameter, (Tag), Ops);
+  DEFINE_GETIMPL_STORE(DITemplateValueParameter, (Tag, isDefault), Ops);
 }
 
 DIGlobalVariable *
