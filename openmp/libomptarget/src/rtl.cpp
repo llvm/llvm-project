@@ -37,7 +37,7 @@ std::mutex *TrlTblMtx;
 HostPtrToTableMapTy *HostPtrToTableMap;
 std::mutex *TblMapMtx;
 
-__attribute__((constructor(0))) void init() {
+__attribute__((constructor(101))) void init() {
   DP("Init target library!\n");
   RTLs = new RTLsTy();
   RTLsMtx = new std::mutex();
@@ -47,7 +47,7 @@ __attribute__((constructor(0))) void init() {
   TblMapMtx = new std::mutex();
 }
 
-__attribute__((destructor(0))) void deinit() {
+__attribute__((destructor(101))) void deinit() {
   DP("Deinit target library!\n");
   delete RTLs;
   delete RTLsMtx;
