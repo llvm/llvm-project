@@ -135,12 +135,11 @@ def SysMManAPI : PublicAPI<"sys/mman.h"> {
 }
 
 def SignalAPI : PublicAPI<"signal.h"> {
-  let TypeDeclarations = [
-    SizeT, // This is needed by <linux/signal.h>.
-  ];
-
   let Functions = [
     "raise",
+    "sigprocmask",
+    "sigemptyset",
+    "sigaddset",
   ];
 }
 

@@ -8,6 +8,7 @@
 
 #include "include/signal.h"
 #include "src/signal/raise.h"
+
 #include "utils/UnitTest/Test.h"
 
 TEST(SignalTest, Raise) {
