@@ -373,6 +373,27 @@ bool X86AsmBackend::needAlign(MCObjectStreamer &OS) const {
   return true;
 }
 
+/// X86 has certain instructions which enable interrupts exactly one
+/// instruction *after* the instruction which stores to SS.  Return true if the
+/// given instruction has such an interrupt delay slot.
+static bool hasInterruptDelaySlot(const MCInst &Inst) {
+  switch (Inst.getOpcode()) {
+  case X86::POPSS16:
+  case X86::POPSS32:
+  case X86::STI:
+    return true;
+
+  case X86::MOV16sr:
+  case X86::MOV32sr:
+  case X86::MOV64sr:
+  case X86::MOV16sm:
+    if (Inst.getOperand(0).getReg() == X86::SS)
+      return true;
+    break;
+  }
+  return false;
+}
+
 /// Check if the instruction operand needs to be aligned. Padding is disabled
 /// before intruction which may be rewritten by linker(e.g. TLSCALL).
 bool X86AsmBackend::needAlignInst(const MCInst &Inst) const {
@@ -401,7 +422,10 @@ void X86AsmBackend::alignBranchesBegin(MCObjectStreamer &OS,
 
   MCFragment *CF = OS.getCurrentFragment();
   bool NeedAlignFused = AlignBranchType & X86::AlignBranchFused;
-  if (NeedAlignFused && isMacroFused(PrevInst, Inst) && CF) {
+  if (hasInterruptDelaySlot(PrevInst)) {
+    // If this instruction follows an interrupt enabling instruction with a one
+    // instruction delay, inserting a nop would change behavior.
+  } else if (NeedAlignFused && isMacroFused(PrevInst, Inst) && CF) {
     // Macro fusion actually happens and there is no other fragment inserted
     // after the previous instruction. NOP can be emitted in PF to align fused
     // jcc.
