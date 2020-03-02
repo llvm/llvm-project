@@ -3,7 +3,7 @@
 
 # CHECK-LABEL: name: foo
 # CHECK: bb.0:
-# CHECK: liveins: $d0:0x00000002, $d1, $d2:0x00000010
+# CHECK: liveins: $d0:0x0000000000000002, $d1, $d2:0x0000000000000010
 
 --- |
   define void @foo() {
