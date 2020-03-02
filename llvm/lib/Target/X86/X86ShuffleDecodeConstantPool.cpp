@@ -11,8 +11,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "X86ShuffleDecodeConstantPool.h"
 #include "Utils/X86ShuffleDecode.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Constants.h"
 
 //===----------------------------------------------------------------------===//
@@ -185,13 +187,12 @@ void DecodeVPERMILPMask(const Constant *C, unsigned ElSize, unsigned Width,
 }
 
 void DecodeVPERMIL2PMask(const Constant *C, unsigned M2Z, unsigned ElSize,
-                         unsigned Width,
-                         SmallVectorImpl<int> &ShuffleMask) {
+                         unsigned Width, SmallVectorImpl<int> &ShuffleMask) {
   Type *MaskTy = C->getType();
   unsigned MaskTySize = MaskTy->getPrimitiveSizeInBits();
   (void)MaskTySize;
-  assert((MaskTySize == 128 || MaskTySize == 256) &&
-         Width >= MaskTySize && "Unexpected vector size.");
+  assert((MaskTySize == 128 || MaskTySize == 256) && Width >= MaskTySize &&
+         "Unexpected vector size.");
 
   // The shuffle mask requires elements the same size as the target.
   APInt UndefElts;
