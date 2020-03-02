@@ -38,9 +38,9 @@ namespace llvm {
 
   struct LaneBitmask {
     // When changing the underlying type, change the format string as well.
-    using Type = unsigned;
+    using Type = uint64_t;
     enum : unsigned { BitWidth = 8*sizeof(Type) };
-    constexpr static const char *const FormatStr = "%08X";
+    constexpr static const char *const FormatStr = "%016lX";
 
     constexpr LaneBitmask() = default;
     explicit constexpr LaneBitmask(Type V) : Mask(V) {}
@@ -76,7 +76,7 @@ namespace llvm {
       return countPopulation(Mask);
     }
     unsigned getHighestLane() const {
-      return Log2_32(Mask);
+      return Log2_64(Mask);
     }
 
     static constexpr LaneBitmask getNone() { return LaneBitmask(0); }
