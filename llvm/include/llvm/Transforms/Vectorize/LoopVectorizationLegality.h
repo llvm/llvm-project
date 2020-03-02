@@ -235,13 +235,13 @@ public:
   PHINode *getPrimaryInduction() { return PrimaryInduction; }
 
   /// Returns the reduction variables found in the loop.
-  ReductionList *getReductionVars() { return &Reductions; }
+  ReductionList &getReductionVars() { return Reductions; }
 
   /// Returns the induction variables found in the loop.
-  InductionList *getInductionVars() { return &Inductions; }
+  InductionList &getInductionVars() { return Inductions; }
 
   /// Return the first-order recurrences found in the loop.
-  RecurrenceSet *getFirstOrderRecurrences() { return &FirstOrderRecurrences; }
+  RecurrenceSet &getFirstOrderRecurrences() { return FirstOrderRecurrences; }
 
   /// Return the set of instructions to sink to handle first-order recurrences.
   DenseMap<Instruction *, Instruction *> &getSinkAfter() { return SinkAfter; }
