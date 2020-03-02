@@ -454,11 +454,14 @@ MaybeExpr ExpressionAnalyzer::IntLiteralConstant(const PARSED &x) {
 }
 
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::IntLiteralConstant &x) {
+  auto restorer{
+      GetContextualMessages().SetLocation(std::get<parser::CharBlock>(x.t))};
   return IntLiteralConstant(x);
 }
 
 MaybeExpr ExpressionAnalyzer::Analyze(
     const parser::SignedIntLiteralConstant &x) {
+  auto restorer{GetContextualMessages().SetLocation(x.source)};
   return IntLiteralConstant(x);
 }
 
@@ -551,6 +554,18 @@ MaybeExpr ExpressionAnalyzer::Analyze(
     return result;
   }
   return std::nullopt;
+}
+
+MaybeExpr ExpressionAnalyzer::Analyze(
+    const parser::SignedComplexLiteralConstant &x) {
+  auto result{Analyze(std::get<parser::ComplexLiteralConstant>(x.t))};
+  if (!result) {
+    return std::nullopt;
+  } else if (std::get<parser::Sign>(x.t) == parser::Sign::Negative) {
+    return AsGenericExpr(-std::move(std::get<Expr<SomeComplex>>(result->u)));
+  } else {
+    return result;
+  }
 }
 
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::ComplexPart &x) {
@@ -2949,4 +2964,18 @@ bool ExprChecker::Walk(const parser::Program &program) {
   parser::Walk(program, *this);
   return !context_.AnyFatalError();
 }
+
+bool ExprChecker::Pre(const parser::DataStmtConstant &x) {
+  std::visit(
+      common::visitors{
+          [&](const parser::NullInit &) {},
+          [&](const parser::InitialDataTarget &y) {
+            AnalyzeExpr(context_, y.value());
+          },
+          [&](const auto &y) { AnalyzeExpr(context_, y); },
+      },
+      x.u);
+  return false;
+}
+
 }

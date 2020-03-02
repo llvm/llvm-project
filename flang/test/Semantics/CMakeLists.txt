@@ -213,6 +213,7 @@ set(ERROR_TESTS
   block-data01.f90
   complex01.f90
   data01.f90
+  data02.f90
   namelist01.f90
 )
 

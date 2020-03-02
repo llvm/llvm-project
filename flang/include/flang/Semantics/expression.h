@@ -230,6 +230,10 @@ public:
     return Analyze<parser::DataRef>(dr);
   }
   MaybeExpr Analyze(const parser::StructureComponent &);
+  MaybeExpr Analyze(const parser::SignedIntLiteralConstant &);
+  MaybeExpr Analyze(const parser::SignedRealLiteralConstant &);
+  MaybeExpr Analyze(const parser::SignedComplexLiteralConstant &);
+  MaybeExpr Analyze(const parser::StructureConstructor &);
 
   void Analyze(const parser::CallStmt &);
   const Assignment *Analyze(const parser::AssignmentStmt &);
@@ -240,9 +244,7 @@ protected:
 
 private:
   MaybeExpr Analyze(const parser::IntLiteralConstant &);
-  MaybeExpr Analyze(const parser::SignedIntLiteralConstant &);
   MaybeExpr Analyze(const parser::RealLiteralConstant &);
-  MaybeExpr Analyze(const parser::SignedRealLiteralConstant &);
   MaybeExpr Analyze(const parser::ComplexPart &);
   MaybeExpr Analyze(const parser::ComplexLiteralConstant &);
   MaybeExpr Analyze(const parser::LogicalLiteralConstant &);
@@ -255,7 +257,6 @@ private:
   MaybeExpr Analyze(const parser::CoindexedNamedObject &);
   MaybeExpr Analyze(const parser::CharLiteralConstantSubstring &);
   MaybeExpr Analyze(const parser::ArrayConstructor &);
-  MaybeExpr Analyze(const parser::StructureConstructor &);
   MaybeExpr Analyze(const parser::FunctionReference &,
       std::optional<parser::StructureConstructor> * = nullptr);
   MaybeExpr Analyze(const parser::Expr::Parentheses &);
@@ -448,6 +449,7 @@ public:
     AnalyzePointerAssignmentStmt(context_, x);
     return false;
   }
+  bool Pre(const parser::DataStmtConstant &);
 
   template<typename A> bool Pre(const parser::Scalar<A> &x) {
     AnalyzeExpr(context_, x);
