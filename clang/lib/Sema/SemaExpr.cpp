@@ -7586,6 +7586,11 @@ QualType Sema::CheckConditionalOperands(ExprResult &Cond, ExprResult &LHS,
       /*IsIntFirstExpr=*/false))
     return LHSTy;
 
+  // Allow ?: operations in which both operands have the same
+  // built-in sizeless type.
+  if (LHSTy->isSizelessBuiltinType() && LHSTy == RHSTy)
+    return LHSTy;
+
   // Emit a better diagnostic if one of the expressions is a null pointer
   // constant and the other is not a pointer type. In this case, the user most
   // likely forgot to take the address of the other expression.
