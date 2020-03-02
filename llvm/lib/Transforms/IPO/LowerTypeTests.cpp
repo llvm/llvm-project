@@ -1040,9 +1040,11 @@ void LowerTypeTestsModule::importTypeTest(CallInst *CI) {
     report_fatal_error("Second argument of llvm.type.test must be metadata");
 
   auto TypeIdStr = dyn_cast<MDString>(TypeIdMDVal->getMetadata());
+  // If this is a local unpromoted type, which doesn't have a metadata string,
+  // treat as Unknown and delay lowering, so that we can still utilize it for
+  // later optimizations.
   if (!TypeIdStr)
-    report_fatal_error(
-        "Second argument of llvm.type.test must be a metadata string");
+    return;
 
   TypeIdLowering TIL = importTypeId(TypeIdStr->getString());
   Value *Lowered = lowerTypeTestCall(TypeIdStr, CI, TIL);
