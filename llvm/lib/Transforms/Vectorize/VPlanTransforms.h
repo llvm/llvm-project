@@ -26,7 +26,7 @@ public:
   /// widen recipes.
   static void VPInstructionsToVPRecipes(
       Loop *OrigLoop, VPlanPtr &Plan,
-      LoopVectorizationLegality::InductionList *Inductions,
+      LoopVectorizationLegality::InductionList &Inductions,
       SmallPtrSetImpl<Instruction *> &DeadInstructions);
 };
 
