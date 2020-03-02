@@ -61,8 +61,7 @@ static StringRef getOSLibDir(const llvm::Triple &Triple, const ArgList &Args) {
   return Triple.isArch32Bit() ? "lib" : "lib64";
 }
 
-Hurd::Hurd(const Driver &D, const llvm::Triple &Triple,
-           const ArgList &Args)
+Hurd::Hurd(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
     : Generic_ELF(D, Triple, Args) {
   std::string SysRoot = computeSysRoot();
   path_list &Paths = getFilePaths();
@@ -169,4 +168,9 @@ void Hurd::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   addExternCSystemInclude(DriverArgs, CC1Args, SysRoot + "/include");
 
   addExternCSystemInclude(DriverArgs, CC1Args, SysRoot + "/usr/include");
+}
+
+void Hurd::addExtraOpts(llvm::opt::ArgStringList &CmdArgs) const {
+  for (const auto &Opt : ExtraOpts)
+    CmdArgs.push_back(Opt.c_str());
 }
