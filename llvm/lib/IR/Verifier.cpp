@@ -2364,8 +2364,7 @@ void Verifier::visitFunction(const Function &F) {
   if (!HasDebugInfo)
     return;
 
-  // Check that all !dbg attachments lead to back to N (or, at least, another
-  // subprogram that describes the same function).
+  // Check that all !dbg attachments lead to back to N.
   //
   // FIXME: Check this incrementally while visiting !dbg attachments.
   // FIXME: Only check when N is the canonical subprogram for F.
@@ -2394,11 +2393,9 @@ void Verifier::visitFunction(const Function &F) {
     if (SP && ((Scope != SP) && !Seen.insert(SP).second))
       return;
 
-    // FIXME: Once N is canonical, check "SP == &N".
     AssertDI(SP->describes(&F),
              "!dbg attachment points at wrong subprogram for function", N, &F,
              &I, DL, Scope, SP);
-    visitMDNode(*SP);
   };
   for (auto &BB : F)
     for (auto &I : BB) {
