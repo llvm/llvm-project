@@ -616,6 +616,9 @@ func @splattensorattr() -> () {
   // CHECK: "splatBoolTensor"() {bar = dense<false> : tensor<i1>} : () -> ()
   "splatBoolTensor"(){bar = dense<false> : tensor<i1>} : () -> ()
 
+  // CHECK: "splatUIntTensor"() {bar = dense<222> : tensor<2x1x4xui8>} : () -> ()
+  "splatUIntTensor"(){bar = dense<222> : tensor<2x1x4xui8>} : () -> ()
+
   // CHECK: "splatIntTensor"() {bar = dense<5> : tensor<2x1x4xi32>} : () -> ()
   "splatIntTensor"(){bar = dense<5> : tensor<2x1x4xi32>} : () -> ()
 

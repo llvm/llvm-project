@@ -1372,17 +1372,18 @@ void ModulePrinter::printAttribute(Attribute attr,
 
 /// Print the integer element of the given DenseElementsAttr at 'index'.
 static void printDenseIntElement(DenseElementsAttr attr, raw_ostream &os,
-                                 unsigned index) {
+                                 unsigned index, bool isSigned) {
   APInt value = *std::next(attr.int_value_begin(), index);
   if (value.getBitWidth() == 1)
     os << (value.getBoolValue() ? "true" : "false");
   else
-    value.print(os, /*isSigned=*/true);
+    value.print(os, isSigned);
 }
 
 /// Print the float element of the given DenseElementsAttr at 'index'.
 static void printDenseFloatElement(DenseElementsAttr attr, raw_ostream &os,
-                                   unsigned index) {
+                                   unsigned index, bool isSigned) {
+  assert(isSigned && "floating point values are always signed");
   APFloat value = *std::next(attr.float_value_begin(), index);
   printFloatValue(value, os);
 }
@@ -1392,6 +1393,7 @@ void ModulePrinter::printDenseElementsAttr(DenseElementsAttr attr,
   auto type = attr.getType();
   auto shape = type.getShape();
   auto rank = type.getRank();
+  bool isSigned = !type.getElementType().isUnsignedInteger();
 
   // The function used to print elements of this attribute.
   auto printEltFn = type.getElementType().isa<IntegerType>()
@@ -1400,7 +1402,7 @@ void ModulePrinter::printDenseElementsAttr(DenseElementsAttr attr,
 
   // Special case for 0-d and splat tensors.
   if (attr.isSplat()) {
-    printEltFn(attr, os, 0);
+    printEltFn(attr, os, 0, isSigned);
     return;
   }
 
@@ -1452,7 +1454,7 @@ void ModulePrinter::printDenseElementsAttr(DenseElementsAttr attr,
     while (openBrackets++ < rank)
       os << '[';
     openBrackets = rank;
-    printEltFn(attr, os, idx);
+    printEltFn(attr, os, idx, isSigned);
     bumpCounter();
   }
   while (openBrackets-- > 0)

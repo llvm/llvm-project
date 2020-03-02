@@ -339,6 +339,30 @@ def I16 : I<16>;
 def I32 : I<32>;
 def I64 : I<64>;
 
+// Unsigned integer types.
+// Any unsigned integer type irrespective of its width.
+def AnyUnsignedInteger : Type<
+  CPred<"$_self.isUnsignedInteger()">, "unsigned integer">;
+
+// Unsigned integer type of a specific width.
+class UI<int width>
+    : Type<CPred<"$_self.isUnsignedInteger(" # width # ")">,
+                  width # "-bit unsigned integer">,
+      BuildableType<"$_builder.getIntegerType(" # width #
+                    ", /*isSigned=*/false)"> {
+  int bitwidth = width;
+}
+
+class UnsignedIntOfWidths<list<int> widths> :
+    AnyTypeOf<!foreach(w, widths, UI<w>),
+              StrJoinInt<widths, "/">.result # "-bit unsigned integer">;
+
+def UI1  : UI<1>;
+def UI8  : UI<8>;
+def UI16 : UI<16>;
+def UI32 : UI<32>;
+def UI64 : UI<64>;
+
 // Floating point types.
 
 // Any float type irrespective of its width.
