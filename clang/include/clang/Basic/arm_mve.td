@@ -453,6 +453,15 @@ foreach half = [ "b", "t" ] in {
       VecOf<f16>, (args VecOf<f16>:$inactive, Vector:$a, PredOf<f32>:$pred),
       (IRInt<"vcvt_narrow_predicated"> $inactive, $a, halfconst, $pred)>;
   } // params = [f32], pnt = PNT_None
+
+  let params = [f16], pnt = PNT_None in {
+    def vcvt#half#q_f32: Intrinsic<VecOf<f32>, (args Vector:$a),
+      (IRInt<"vcvt_widen"> $a, halfconst)>;
+    defm vcvt#half#q: IntrinsicMX<
+      VecOf<f32>, (args Vector:$a, PredOf<f32>:$pred),
+      (IRInt<"vcvt_widen_predicated"> $inactive, $a, halfconst, $pred),
+      1, "_f32">;
+  } // params = [f16], pnt = PNT_None
 } // loop over half = "b", "t"
 
 multiclass float_int_conversions<Type FScalar, Type IScalar, IRBuilderBase ftoi, IRBuilderBase itof> {

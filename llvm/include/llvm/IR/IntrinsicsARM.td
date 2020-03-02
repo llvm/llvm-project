@@ -911,8 +911,22 @@ multiclass MVEPredicatedM<list<LLVMType> rets, list<LLVMType> params,
           LLVMMatchType<0>, rets[0])], props>;
 }
 
+// Intrinsic with a predicated and a non-predicated case. The predicated case
+// has two additional parameters: inactive (the value for inactive lanes, can
+// be undef) and predicate.
+multiclass MVEMXPredicated<list<LLVMType> rets, list<LLVMType> flags,
+                           list<LLVMType> params, LLVMType inactive,
+                           LLVMType predicate,
+                           list<IntrinsicProperty> props = [IntrNoMem]> {
+  def "":          Intrinsic<rets, flags # params, props>;
+  def _predicated: Intrinsic<rets, flags # [inactive] # params # [predicate],
+                             props>;
+}
+
 defm int_arm_mve_vcvt_narrow: MVEPredicated<[llvm_v8f16_ty],
    [llvm_v8f16_ty, llvm_v4f32_ty, llvm_i32_ty], llvm_v4i1_ty>;
+defm int_arm_mve_vcvt_widen: MVEMXPredicated<[llvm_v4f32_ty], [],
+   [llvm_v8f16_ty, llvm_i32_ty], llvm_v4f32_ty, llvm_v4i1_ty>;
 
 defm int_arm_mve_vldr_gather_base: MVEPredicated<
    [llvm_anyvector_ty], [llvm_anyvector_ty, llvm_i32_ty],
@@ -1043,18 +1057,6 @@ def int_arm_mve_vmull: Intrinsic<
 def int_arm_mve_vmull_poly: Intrinsic<
    [llvm_anyvector_ty],
    [llvm_anyvector_ty, LLVMMatchType<1>, llvm_i32_ty], [IntrNoMem]>;
-
-// Intrinsic with a predicated and a non-predicated case. The predicated case
-// has two additional parameters: inactive (the value for inactive lanes, can
-// be undef) and predicate.
-multiclass MVEMXPredicated<list<LLVMType> rets, list<LLVMType> flags,
-                           list<LLVMType> params, LLVMType inactive,
-                           LLVMType predicate,
-                           list<IntrinsicProperty> props = [IntrNoMem]> {
-  def "":          Intrinsic<rets, flags # params, props>;
-  def _predicated: Intrinsic<rets, flags # [inactive] # params # [predicate],
-                             props>;
-}
 
 // The first two parameters are compile-time constants:
 // * Halving: 0 means  halving (vhcaddq), 1 means non-halving (vcaddq) 

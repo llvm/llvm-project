@@ -4515,6 +4515,17 @@ multiclass MVE_VCVT_f2h_m<string iname, int half> {
 
 multiclass MVE_VCVT_h2f_m<string iname, int half> {
   def "": MVE_VCVT_ff<iname, "f32.f16", 0b1, half, (ins), vpred_r, "">;
+  defvar Inst = !cast<Instruction>(NAME);
+
+  let Predicates = [HasMVEFloat] in {
+    def : Pat<(v4f32 (int_arm_mve_vcvt_widen (v8f16 MQPR:$Qm), (i32 half))),
+              (v4f32 (Inst (v8f16 MQPR:$Qm)))>;
+    def : Pat<(v4f32 (int_arm_mve_vcvt_widen_predicated
+                         (v4f32 MQPR:$inactive), (v8f16 MQPR:$Qm), (i32 half),
+                         (v4i1 VCCR:$mask))),
+              (v4f32 (Inst (v8f16 MQPR:$Qm), ARMVCCThen,
+                           (v4i1 VCCR:$mask), (v4f32 MQPR:$inactive)))>;
+  }
 }
 
 defm MVE_VCVTf16f32bh : MVE_VCVT_f2h_m<"vcvtb", 0b0>;
