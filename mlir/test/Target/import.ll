@@ -297,3 +297,14 @@ define i32 @invokeLandingpad() personality i8* bitcast (i32 (...)* @__gxx_person
   ; CHECK: llvm.return %{{[0-9]+}} : !llvm.i32
   ret i32 0
 }
+
+;CHECK-LABEL: @useFreezeOp
+define i32 @useFreezeOp(i32 %x) {
+  ;CHECK: %{{[0-9]+}} = llvm.freeze %{{[0-9a-z]+}} : !llvm.i32
+  %1 = freeze i32 %x
+  %2 = add i8 10, 10
+  ;CHECK: %{{[0-9]+}} = llvm.freeze %{{[0-9]+}} : !llvm.i8
+  %3 = freeze i8 %2
+  %poison = add nsw i1 0, undef
+  ret i32 0
+}

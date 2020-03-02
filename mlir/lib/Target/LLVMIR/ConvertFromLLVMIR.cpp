@@ -426,6 +426,12 @@ Value Importer::processConstant(llvm::Constant *c) {
     i->deleteValue();
     return instMap[c] = instMap[i];
   }
+  if (auto *ue = dyn_cast<llvm::UndefValue>(c)) {
+    LLVMType type = processType(ue->getType());
+    if (!type)
+      return nullptr;
+    return instMap[c] = bEntry.create<UndefOp>(UnknownLoc::get(context), type);
+  }
   emitError(unknownLoc) << "unhandled constant: " << diag(*c);
   return nullptr;
 }
@@ -493,7 +499,7 @@ static const DenseMap<unsigned, StringRef> opcMap = {
     // ICmp is handled specially.
     // FIXME: fcmp
     // PHI is handled specially.
-    INST(Call, Call),
+    INST(Freeze, Freeze), INST(Call, Call),
     // FIXME: select
     // FIXME: vaarg
     // FIXME: extractelement
@@ -591,6 +597,7 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
   case llvm::Instruction::PtrToInt:
   case llvm::Instruction::IntToPtr:
   case llvm::Instruction::AddrSpaceCast:
+  case llvm::Instruction::Freeze:
   case llvm::Instruction::BitCast: {
     OperationState state(loc, opcMap.lookup(inst->getOpcode()));
     SmallVector<Value, 4> ops;
