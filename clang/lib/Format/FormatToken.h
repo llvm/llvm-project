@@ -102,9 +102,11 @@ namespace format {
   TYPE(TypenameMacro)                                                          \
   TYPE(UnaryOperator)                                                          \
   TYPE(CSharpStringLiteral)                                                    \
-  TYPE(CSharpNullCoalescing)                                                   \
   TYPE(CSharpNamedArgumentColon)                                               \
-  TYPE(CSharpNullableTypeQuestionMark)                                         \
+  TYPE(CSharpNullable)                                                         \
+  TYPE(CSharpNullCoalescing)                                                   \
+  TYPE(CSharpNullConditional)                                                  \
+  TYPE(CSharpNullConditionalSq)                                                \
   TYPE(Unknown)
 
 enum TokenType {
