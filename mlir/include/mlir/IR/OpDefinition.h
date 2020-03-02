@@ -20,6 +20,7 @@
 #define MLIR_IR_OPDEFINITION_H
 
 #include "mlir/IR/Operation.h"
+#include "llvm/Support/PointerLikeTypeTraits.h"
 #include <type_traits>
 
 namespace mlir {
