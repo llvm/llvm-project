@@ -264,41 +264,18 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
     UseG0 = G.getValue() == 0;
   }
 
+  //----------------------------------------------------------------------------
+  //
+  //----------------------------------------------------------------------------
   CmdArgs.push_back("-o");
   CmdArgs.push_back(Output.getFilename());
-
-  if (HTC.getTriple().isMusl()) {
-    if (!Args.hasArg(options::OPT_shared, options::OPT_static))
-      CmdArgs.push_back("-dynamic-linker=/lib/ld-musl-hexagon.so.1");
-
-    if (!Args.hasArg(options::OPT_shared,
-                     options::OPT_nostartfiles,
-                     options::OPT_nostdlib))
-      CmdArgs.push_back(Args.MakeArgString(D.SysRoot + "/lib/crt1.o"));
-    else if (Args.hasArg(options::OPT_shared) &&
-             !Args.hasArg(options::OPT_nostartfiles, options::OPT_nostdlib))
-      CmdArgs.push_back(Args.MakeArgString(D.SysRoot + "/lib/Scrt1.o"));
-
-    CmdArgs.push_back(
-        Args.MakeArgString(StringRef("-L") + D.SysRoot + "/lib"));
-    Args.AddAllArgs(CmdArgs,
-                    {options::OPT_T_Group, options::OPT_e, options::OPT_s,
-                     options::OPT_t, options::OPT_u_Group});
-    AddLinkerInputs(HTC, Inputs, Args, CmdArgs, JA);
-
-    if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
-      CmdArgs.push_back("-lclang_rt.builtins-hexagon");
-      CmdArgs.push_back("-lc");
-    }
-
-    return;
-  }
 
   //----------------------------------------------------------------------------
   // moslib
   //----------------------------------------------------------------------------
   std::vector<std::string> OsLibs;
   bool HasStandalone = false;
+
   for (const Arg *A : Args.filtered(options::OPT_moslib_EQ)) {
     A->claim();
     OsLibs.emplace_back(A->getValue());
