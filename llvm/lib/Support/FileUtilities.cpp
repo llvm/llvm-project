@@ -318,9 +318,8 @@ llvm::Error llvm::writeFileAtomically(
         atomic_write_error::output_stream_error);
   }
 
-  if (const std::error_code Error =
-          sys::fs::rename(/*from=*/GeneratedUniqPath.c_str(),
-                          /*to=*/FinalPath.str().c_str())) {
+  if (sys::fs::rename(/*from=*/GeneratedUniqPath.c_str(),
+                      /*to=*/FinalPath.str().c_str())) {
     return llvm::make_error<AtomicFileWriteError>(
         atomic_write_error::failed_to_rename_temp_file);
   }
