@@ -12,6 +12,7 @@
 
 #include "llvm/Support/StringPool.h"
 #include "llvm/ADT/StringRef.h"
+#include <cassert>
 
 using namespace llvm;
 
