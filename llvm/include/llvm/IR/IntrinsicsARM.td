@@ -1166,6 +1166,12 @@ def int_arm_mve_vcvt_fp_int_predicated: Intrinsic<
    llvm_anyvector_ty /* predicate */, LLVMMatchType<0> /* inactive */],
   [IntrNoMem]>;
 
+foreach suffix = ["a","n","p","m"] in {
+  defm "int_arm_mve_vcvt"#suffix: MVEMXPredicated<
+    [llvm_anyvector_ty /* output */], [llvm_i32_ty /* unsigned */],
+    [llvm_anyvector_ty /* input */], LLVMMatchType<0>, llvm_anyvector_ty>;
+}
+
 def int_arm_mve_vrintn: Intrinsic<
   [llvm_anyvector_ty], [LLVMMatchType<0>], [IntrNoMem]>;
 def int_arm_mve_vcls: Intrinsic<
