@@ -12,6 +12,7 @@
 #include "mlir/IR/TypeSupport.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/Support/PointerLikeTypeTraits.h"
 
 namespace mlir {
 class FloatType;

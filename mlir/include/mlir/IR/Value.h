@@ -16,6 +16,7 @@
 #include "mlir/IR/Types.h"
 #include "mlir/IR/UseDefLists.h"
 #include "mlir/Support/LLVM.h"
+#include "llvm/Support/PointerLikeTypeTraits.h"
 
 namespace mlir {
 class AsmState;
