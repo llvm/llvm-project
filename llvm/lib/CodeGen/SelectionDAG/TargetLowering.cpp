@@ -894,8 +894,8 @@ bool TargetLowering::SimplifyDemandedBits(
       return false; // Don't fall through, will infinitely loop.
     } else if (ISD::isZEXTLoad(Op.getNode()) && Op.getResNo() == 0) {
       // If this is a ZEXTLoad and we are looking at the loaded value.
-      EVT VT = LD->getMemoryVT();
-      unsigned MemBits = VT.getScalarSizeInBits();
+      EVT MemVT = LD->getMemoryVT();
+      unsigned MemBits = MemVT.getScalarSizeInBits();
       Known.Zero.setBitsFrom(MemBits);
       return false; // Don't fall through, will infinitely loop.
     }
