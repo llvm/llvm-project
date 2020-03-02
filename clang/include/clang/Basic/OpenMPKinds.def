@@ -209,6 +209,9 @@
 #ifndef OPENMP_FLUSH_CLAUSE
 #define OPENMP_FLUSH_CLAUSE(Name)
 #endif
+#ifndef OPENMP_DEPOBJ_CLAUSE
+#define OPENMP_DEPOBJ_CLAUSE(Name)
+#endif
 
 // OpenMP clauses.
 OPENMP_CLAUSE(allocator, OMPAllocatorClause)
@@ -272,6 +275,7 @@ OPENMP_CLAUSE(atomic_default_mem_order, OMPAtomicDefaultMemOrderClause)
 OPENMP_CLAUSE(allocate, OMPAllocateClause)
 OPENMP_CLAUSE(nontemporal, OMPNontemporalClause)
 OPENMP_CLAUSE(order, OMPOrderClause)
+OPENMP_CLAUSE(depobj, OMPDepobjClause)
 
 // Clauses allowed for OpenMP directive 'parallel'.
 OPENMP_PARALLEL_CLAUSE(if)
@@ -1078,6 +1082,10 @@ OPENMP_FLUSH_CLAUSE(acq_rel)
 OPENMP_FLUSH_CLAUSE(acquire)
 OPENMP_FLUSH_CLAUSE(release)
 
+// Clauses allowed for OpenMP directive 'depobj'.
+OPENMP_DEPOBJ_CLAUSE(depend)
+
+#undef OPENMP_DEPOBJ_CLAUSE
 #undef OPENMP_FLUSH_CLAUSE
 #undef OPENMP_ORDER_KIND
 #undef OPENMP_LASTPRIVATE_KIND

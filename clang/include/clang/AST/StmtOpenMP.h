@@ -2314,6 +2314,64 @@ public:
   }
 };
 
+/// This represents '#pragma omp depobj' directive.
+///
+/// \code
+/// #pragma omp depobj(a) depend(in:x,y)
+/// \endcode
+/// In this example directive '#pragma omp  depobj' initializes a depobj object
+/// 'a' with dependence type 'in' and a list with 'x' and 'y' locators.
+class OMPDepobjDirective final : public OMPExecutableDirective {
+  friend class ASTStmtReader;
+
+  /// Build directive with the given start and end location.
+  ///
+  /// \param StartLoc Starting location of the directive kind.
+  /// \param EndLoc Ending location of the directive.
+  /// \param NumClauses Number of clauses.
+  ///
+  OMPDepobjDirective(SourceLocation StartLoc, SourceLocation EndLoc,
+                     unsigned NumClauses)
+      : OMPExecutableDirective(this, OMPDepobjDirectiveClass,
+                               llvm::omp::OMPD_depobj, StartLoc, EndLoc,
+                               NumClauses, 0) {}
+
+  /// Build an empty directive.
+  ///
+  /// \param NumClauses Number of clauses.
+  ///
+  explicit OMPDepobjDirective(unsigned NumClauses)
+      : OMPExecutableDirective(this, OMPDepobjDirectiveClass,
+                               llvm::omp::OMPD_depobj, SourceLocation(),
+                               SourceLocation(), NumClauses, 0) {}
+
+public:
+  /// Creates directive with a list of \a Clauses.
+  ///
+  /// \param C AST context.
+  /// \param StartLoc Starting location of the directive kind.
+  /// \param EndLoc Ending Location of the directive.
+  /// \param Clauses List of clauses.
+  ///
+  static OMPDepobjDirective *Create(const ASTContext &C,
+                                    SourceLocation StartLoc,
+                                    SourceLocation EndLoc,
+                                    ArrayRef<OMPClause *> Clauses);
+
+  /// Creates an empty directive with the place for \a NumClauses
+  /// clauses.
+  ///
+  /// \param C AST context.
+  /// \param NumClauses Number of clauses.
+  ///
+  static OMPDepobjDirective *CreateEmpty(const ASTContext &C,
+                                         unsigned NumClauses, EmptyShell);
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == OMPDepobjDirectiveClass;
+  }
+};
+
 /// This represents '#pragma omp ordered' directive.
 ///
 /// \code
