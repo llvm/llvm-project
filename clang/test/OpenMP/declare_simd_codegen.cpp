@@ -114,6 +114,9 @@ float foo(float *q, float x, int k) { return 0; }
 #pragma omp declare simd notinbranch
 double foo(double x) { return 0; }
 
+#pragma omp declare simd notinbranch linear(i)
+double constlinear(const int i) { return 0.0; }
+
 // CHECK-DAG: define {{.+}}@_Z5add_1Pf(
 // CHECK-DAG: define {{.+}}@_Z1hIiEvPT_S1_S1_S1_(
 // CHECK-DAG: define {{.+}}@_Z1hIfEvPT_S1_S1_S1_(
@@ -131,6 +134,7 @@ double foo(double x) { return 0; }
 // CHECK-DAG: define {{.+}}@_Z3fooPffi(
 // CHECK-DAG: define {{.+}}@_Z3food(
 // CHECK-DAG: declare {{.+}}@_Z5add_2Pf(
+// CHECK-DAG: define {{.+}}@_Z11constlineari(
 
 // CHECK-DAG: "_ZGVbM4l8__Z5add_1Pf"
 // CHECK-DAG: "_ZGVbN4l8__Z5add_1Pf"
@@ -319,6 +323,11 @@ double foo(double x) { return 0; }
 // CHECK-DAG: "_ZGVcN4v__Z3food"
 // CHECK-DAG: "_ZGVdN4v__Z3food"
 // CHECK-DAG: "_ZGVeN8v__Z3food"
+
+// CHECK-DAG: "_ZGVbN2l__Z11constlineari"
+// CHECK-DAG: "_ZGVcN4l__Z11constlineari"
+// CHECK-DAG: "_ZGVdN4l__Z11constlineari"
+// CHECK-DAG: "_ZGVeN8l__Z11constlineari"
 
 // CHECK-NOT: "_ZGV{{.+}}__Z1fRA_i
 
