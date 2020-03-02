@@ -2754,6 +2754,13 @@ public:
   /// The default implementation just freezes the set of reserved registers.
   virtual void finalizeLowering(MachineFunction &MF) const;
 
+  //===----------------------------------------------------------------------===//
+  //  GlobalISel Hooks
+  //===----------------------------------------------------------------------===//
+  /// Check whether or not \p MI needs to be moved close to its uses.
+  virtual bool shouldLocalize(const MachineInstr &MI, const TargetTransformInfo *TTI) const;
+
+
 private:
   const TargetMachine &TM;
 
