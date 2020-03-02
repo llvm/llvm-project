@@ -12,6 +12,7 @@
 #include "mlir/IR/AttributeSupport.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/Support/PointerLikeTypeTraits.h"
 
 namespace mlir {
 class AffineMap;

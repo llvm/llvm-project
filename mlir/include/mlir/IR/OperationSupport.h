@@ -21,6 +21,7 @@
 #include "mlir/IR/Value.h"
 #include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/PointerUnion.h"
+#include "llvm/Support/PointerLikeTypeTraits.h"
 #include "llvm/Support/TrailingObjects.h"
 #include <memory>
 

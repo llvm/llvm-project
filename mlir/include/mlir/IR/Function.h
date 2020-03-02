@@ -18,6 +18,7 @@
 #include "mlir/IR/FunctionSupport.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/SymbolTable.h"
+#include "llvm/Support/PointerLikeTypeTraits.h"
 
 namespace mlir {
 //===--------------------------------------------------------------------===//
