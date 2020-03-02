@@ -396,9 +396,6 @@ def V_LSHL_B64 : VOP3Inst <"v_lshl_b64", VOP3_Profile<VOP_I64_I64_I32>, shl>;
 def V_LSHR_B64 : VOP3Inst <"v_lshr_b64", VOP3_Profile<VOP_I64_I64_I32>, srl>;
 def V_ASHR_I64 : VOP3Inst <"v_ashr_i64", VOP3_Profile<VOP_I64_I64_I32>, sra>;
 } // End SubtargetPredicate = isGFX6GFX7
-let SubtargetPredicate = isGFX6GFX7GFX10 in {
-def V_MULLIT_F32 : VOP3Inst <"v_mullit_f32", VOP3_Profile<VOP_F32_F32_F32_F32>>;
-} // End SubtargetPredicate = isGFX6GFX7GFX10
 
 let SubtargetPredicate = isGFX8Plus in {
 def V_LSHLREV_B64 : VOP3Inst <"v_lshlrev_b64", VOP3_Profile<VOP_I64_I32_I64>, lshl_rev>;
@@ -407,6 +404,9 @@ def V_ASHRREV_I64 : VOP3Inst <"v_ashrrev_i64", VOP3_Profile<VOP_I64_I32_I64>, as
 } // End SubtargetPredicate = isGFX8Plus
 } // End SchedRW = [Write64Bit]
 
+let SubtargetPredicate = isGFX6GFX7GFX10 in {
+def V_MULLIT_F32 : VOP3Inst <"v_mullit_f32", VOP3_Profile<VOP_F32_F32_F32_F32>>;
+} // End SubtargetPredicate = isGFX6GFX7GFX10
 
 let SchedRW = [Write32Bit] in {
 let SubtargetPredicate = isGFX8Plus in {
@@ -425,7 +425,7 @@ let isCommutable = 1 in {
 let SchedRW = [WriteQuarterRate32, WriteSALU] in {
 def V_MAD_U64_U32 : VOP3Inst <"v_mad_u64_u32", VOP3b_I64_I1_I32_I32_I64>;
 def V_MAD_I64_I32 : VOP3Inst <"v_mad_i64_i32", VOP3b_I64_I1_I32_I32_I64>;
-} // End SchedRW = [WriteDouble, WriteSALU]
+} // End SchedRW = [WriteQuarterRate32, WriteSALU]
 } // End isCommutable = 1
 
 } // End SubtargetPredicate = isGFX7Plus

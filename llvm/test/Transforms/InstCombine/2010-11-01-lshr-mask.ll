@@ -1,4 +1,4 @@
-; RUN: opt -instcombine -instcombine-infinite-loop-threshold=3 -S < %s | FileCheck %s
+; RUN: opt -instcombine -instcombine-infinite-loop-threshold=2 -S < %s | FileCheck %s
 
 ; <rdar://problem/8606771>
 define i32 @main(i32 %argc) {

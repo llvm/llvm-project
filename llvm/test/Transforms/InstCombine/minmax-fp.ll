@@ -273,7 +273,7 @@ define <2 x float> @fsub_fmax(<2 x float> %x, <2 x float> %y) {
 ; CHECK-LABEL: define {{[^@]+}}@fsub_fmax(
 ; CHECK-NEXT:    [[COND_INV:%.*]] = fcmp nnan nsz ogt <2 x float> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = select nnan nsz <2 x i1> [[COND_INV]], <2 x float> [[Y]], <2 x float> [[X]]
-; CHECK-NEXT:    [[MAX:%.*]] = fsub <2 x float> <float -0.000000e+00, float -0.000000e+00>, [[TMP1]]
+; CHECK-NEXT:    [[MAX:%.*]] = fneg <2 x float> [[TMP1]]
 ; CHECK-NEXT:    ret <2 x float> [[MAX]]
 ;
   %n1 = fsub <2 x float> <float -0.0, float -0.0>, %x
@@ -287,7 +287,7 @@ define <2 x double> @fsub_fmin(<2 x double> %x, <2 x double> %y) {
 ; CHECK-LABEL: define {{[^@]+}}@fsub_fmin(
 ; CHECK-NEXT:    [[COND:%.*]] = fcmp nnan ogt <2 x double> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[MAX_V:%.*]] = select <2 x i1> [[COND]], <2 x double> [[X]], <2 x double> [[Y]]
-; CHECK-NEXT:    [[MAX:%.*]] = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, [[MAX_V]]
+; CHECK-NEXT:    [[MAX:%.*]] = fneg <2 x double> [[MAX_V]]
 ; CHECK-NEXT:    ret <2 x double> [[MAX]]
 ;
   %n1 = fsub <2 x double> <double -0.0, double -0.0>, %x

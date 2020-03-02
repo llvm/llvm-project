@@ -525,7 +525,8 @@ template <class ELFT> void createSyntheticSections() {
     add(in.ibtPlt);
   }
 
-  in.plt = make<PltSection>();
+  in.plt = config->emachine == EM_PPC ? make<PPC32GlinkSection>()
+                                      : make<PltSection>();
   add(in.plt);
   in.iplt = make<IpltSection>();
   add(in.iplt);

@@ -45,7 +45,7 @@ second <commit> that differ from the first <commit>.
 The following git-config settings set the default of the corresponding option:
   clangFormat.binary
   clangFormat.commit
-  clangFormat.extension
+  clangFormat.extensions
   clangFormat.style
 '''
 

@@ -301,6 +301,8 @@ ParsedAST::build(std::unique_ptr<clang::CompilerInvocation> CI,
     });
     Preprocessor *PP = &Clang->getPreprocessor();
     for (const auto &Check : CTChecks) {
+      if (!Check->isLanguageVersionSupported(CTContext->getLangOpts()))
+        continue;
       // FIXME: the PP callbacks skip the entire preamble.
       // Checks that want to see #includes in the main file do not see them.
       Check->registerPPCallbacks(Clang->getSourceManager(), PP, PP);

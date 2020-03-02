@@ -38,13 +38,12 @@ body:             |
   ; CHECK-LABEL: name: arm_cmplx_conj_f32_mve
   ; CHECK: bb.0:
   ; CHECK:   successors: %bb.1(0x80000000)
-  ; CHECK:   liveins: $lr, $r0, $r1, $r3, $r4
+  ; CHECK:   liveins: $lr, $r0, $r1, $r2, $r4
   ; CHECK:   frame-setup tPUSH 14 /* CC::al */, $noreg, killed $r4, killed $lr, implicit-def $sp, implicit $sp
   ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_offset 8
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $lr, -4
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $r4, -8
-  ; CHECK:   tCMPi8 renamable $r3, 4, 14 /* CC::al */, $noreg, implicit-def dead $cpsr
-  ; FIXME:   tLSRi needs to be producing the value in r3
+  ; CHECK:   renamable $r3, dead $cpsr = tLSLri killed renamable $r2, 1, 14 /* CC::al */, $noreg
   ; CHECK:   $r4 = t2MOVi16 target-flags(arm-lo16) @arm_cmplx_conj_f32_mve.cmplx_conj_sign, 14 /* CC::al */, $noreg
   ; CHECK:   $r4 = t2MOVTi16 killed $r4, target-flags(arm-hi16) @arm_cmplx_conj_f32_mve.cmplx_conj_sign, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $q0 = nnan ninf nsz MVE_VLDRWU32 killed renamable $r4, 0, 0, $noreg

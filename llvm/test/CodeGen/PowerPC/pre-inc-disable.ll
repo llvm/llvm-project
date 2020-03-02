@@ -356,22 +356,24 @@ define void @test16(i16* nocapture readonly %sums, i32 signext %delta, i32 signe
 ; CHECK-LABEL: test16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sldi r4, r4, 1
-; CHECK-NEXT:    lxsihzx v2, r3, r4
-; CHECK-NEXT:    vsplth v2, v2, 3
-; CHECK-NEXT:    xxlxor v3, v3, v3
-; CHECK-NEXT:    vmrglh v2, v3, v2
-; CHECK-NEXT:    vsplth v4, v3, 7
 ; CHECK-NEXT:    add r6, r3, r4
-; CHECK-NEXT:    li r3, 16
-; CHECK-NEXT:    vmrglw v2, v2, v4
-; CHECK-NEXT:    lxsihzx v4, r6, r3
+; CHECK-NEXT:    li r7, 16
+; CHECK-NEXT:    lxsihzx v2, r6, r7
+; CHECK-NEXT:    lxsihzx v4, r3, r4
+; CHECK-NEXT:    li r6, 0
+; CHECK-NEXT:    mtvsrd f0, r6
+; CHECK-NEXT:    vsplth v4, v4, 3
+; CHECK-NEXT:    xxswapd v3, vs0
+; CHECK-NEXT:    vsplth v2, v2, 3
 ; CHECK-NEXT:    addis r3, r2, .LCPI3_0@toc@ha
 ; CHECK-NEXT:    addi r3, r3, .LCPI3_0@toc@l
-; CHECK-NEXT:    vsplth v4, v4, 3
-; CHECK-NEXT:    vmrglh v3, v3, v4
+; CHECK-NEXT:    vmrglh v4, v3, v4
+; CHECK-NEXT:    vmrglh v2, v3, v2
+; CHECK-NEXT:    vsplth v3, v3, 7
+; CHECK-NEXT:    vmrglw v3, v4, v3
 ; CHECK-NEXT:    lxvx v4, 0, r3
 ; CHECK-NEXT:    li r3, 0
-; CHECK-NEXT:    vperm v2, v3, v2, v4
+; CHECK-NEXT:    vperm v2, v2, v3, v4
 ; CHECK-NEXT:    xxspltw v3, v2, 2
 ; CHECK-NEXT:    vadduwm v2, v2, v3
 ; CHECK-NEXT:    vextuwrx r3, r3, v2

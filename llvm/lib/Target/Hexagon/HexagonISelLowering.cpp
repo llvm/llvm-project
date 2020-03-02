@@ -1681,8 +1681,6 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::STORE, VT, Custom);
   }
 
-  setOperationAction(ISD::STORE, MVT::v128i1, Custom);
-
   for (MVT VT : {MVT::v2i16, MVT::v4i8, MVT::v8i8, MVT::v2i32, MVT::v4i16,
                  MVT::v2i32}) {
     setCondCodeAction(ISD::SETNE,  VT, Expand);
@@ -1696,8 +1694,6 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
 
   // Custom-lower bitcasts from i8 to v8i1.
   setOperationAction(ISD::BITCAST,        MVT::i8,    Custom);
-  setOperationAction(ISD::BITCAST,        MVT::i32,   Custom);
-  setOperationAction(ISD::BITCAST,        MVT::i64,   Custom);
   setOperationAction(ISD::SETCC,          MVT::v2i16, Custom);
   setOperationAction(ISD::VSELECT,        MVT::v4i8,  Custom);
   setOperationAction(ISD::VSELECT,        MVT::v2i16, Custom);
@@ -3081,6 +3077,12 @@ void
 HexagonTargetLowering::LowerOperationWrapper(SDNode *N,
                                              SmallVectorImpl<SDValue> &Results,
                                              SelectionDAG &DAG) const {
+  if (isHvxOperation(N)) {
+    LowerHvxOperationWrapper(N, Results, DAG);
+    if (!Results.empty())
+      return;
+  }
+
   // We are only custom-lowering stores to verify the alignment of the
   // address if it is a compile-time constant. Since a store can be modified
   // during type-legalization (the value being stored may need legalization),
@@ -3094,6 +3096,12 @@ void
 HexagonTargetLowering::ReplaceNodeResults(SDNode *N,
                                           SmallVectorImpl<SDValue> &Results,
                                           SelectionDAG &DAG) const {
+  if (isHvxOperation(N)) {
+    ReplaceHvxNodeResults(N, Results, DAG);
+    if (!Results.empty())
+      return;
+  }
+
   const SDLoc &dl(N);
   switch (N->getOpcode()) {
     case ISD::SRL:
@@ -3378,12 +3386,25 @@ EVT HexagonTargetLowering::getOptimalMemOpType(
   return MVT::Other;
 }
 
+bool HexagonTargetLowering::allowsMemoryAccess(LLVMContext &Context,
+      const DataLayout &DL, EVT VT, unsigned AddrSpace, unsigned Alignment,
+      MachineMemOperand::Flags Flags, bool *Fast) const {
+  MVT SVT = VT.getSimpleVT();
+  if (Subtarget.isHVXVectorType(SVT, true))
+    return allowsHvxMemoryAccess(SVT, Alignment, Flags, Fast);
+  return TargetLoweringBase::allowsMemoryAccess(
+              Context, DL, VT, AddrSpace, Alignment, Flags, Fast);
+}
+
 bool HexagonTargetLowering::allowsMisalignedMemoryAccesses(
-    EVT VT, unsigned AS, unsigned Align, MachineMemOperand::Flags Flags,
-    bool *Fast) const {
+      EVT VT, unsigned AddrSpace, unsigned Alignment,
+      MachineMemOperand::Flags Flags, bool *Fast) const {
+  MVT SVT = VT.getSimpleVT();
+  if (Subtarget.isHVXVectorType(SVT, true))
+    return allowsHvxMisalignedMemoryAccesses(SVT, Alignment, Flags, Fast);
   if (Fast)
     *Fast = false;
-  return Subtarget.isHVXVectorType(VT.getSimpleVT());
+  return false;
 }
 
 std::pair<const TargetRegisterClass*, uint8_t>

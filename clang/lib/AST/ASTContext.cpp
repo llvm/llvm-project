@@ -296,6 +296,12 @@ RawComment *ASTContext::getRawCommentForDeclNoCache(const Decl *D) const {
   return getRawCommentForDeclNoCacheImpl(D, DeclLoc, *CommentsInThisFile);
 }
 
+void ASTContext::addComment(const RawComment &RC) {
+  assert(LangOpts.RetainCommentsFromSystemHeaders ||
+         !SourceMgr.isInSystemHeader(RC.getSourceRange().getBegin()));
+  Comments.addComment(RC, LangOpts.CommentOpts, BumpAlloc);
+}
+
 /// If we have a 'templated' declaration for a template, adjust 'D' to
 /// refer to the actual template.
 /// If we have an implicit instantiation, adjust 'D' to refer to template.
@@ -1722,6 +1728,10 @@ CharUnits ASTContext::getDeclAlign(const Decl *D, bool ForAlignof) const {
   }
 
   return toCharUnitsFromBits(Align);
+}
+
+CharUnits ASTContext::getExnObjectAlignment() const {
+  return toCharUnitsFromBits(Target->getExnObjectAlignment());
 }
 
 // getTypeInfoDataSizeInChars - Return the size of a type, in
@@ -6220,39 +6230,39 @@ QualType ASTContext::getBlockDescriptorExtendedType() const {
   return getTagDeclType(BlockDescriptorExtendedType);
 }
 
-TargetInfo::OpenCLTypeKind ASTContext::getOpenCLTypeKind(const Type *T) const {
+OpenCLTypeKind ASTContext::getOpenCLTypeKind(const Type *T) const {
   const auto *BT = dyn_cast<BuiltinType>(T);
 
   if (!BT) {
     if (isa<PipeType>(T))
-      return TargetInfo::OCLTK_Pipe;
+      return OCLTK_Pipe;
 
-    return TargetInfo::OCLTK_Default;
+    return OCLTK_Default;
   }
 
   switch (BT->getKind()) {
 #define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix)                   \
   case BuiltinType::Id:                                                        \
-    return TargetInfo::OCLTK_Image;
+    return OCLTK_Image;
 #include "clang/Basic/OpenCLImageTypes.def"
 
   case BuiltinType::OCLClkEvent:
-    return TargetInfo::OCLTK_ClkEvent;
+    return OCLTK_ClkEvent;
 
   case BuiltinType::OCLEvent:
-    return TargetInfo::OCLTK_Event;
+    return OCLTK_Event;
 
   case BuiltinType::OCLQueue:
-    return TargetInfo::OCLTK_Queue;
+    return OCLTK_Queue;
 
   case BuiltinType::OCLReserveID:
-    return TargetInfo::OCLTK_ReserveID;
+    return OCLTK_ReserveID;
 
   case BuiltinType::OCLSampler:
-    return TargetInfo::OCLTK_Sampler;
+    return OCLTK_Sampler;
 
   default:
-    return TargetInfo::OCLTK_Default;
+    return OCLTK_Default;
   }
 }
 
@@ -6323,6 +6333,24 @@ bool ASTContext::getByrefLifetime(QualType Ty,
     LifeTime = Qualifiers::OCL_None;
   }
   return true;
+}
+
+CanQualType ASTContext::getNSUIntegerType() const {
+  assert(Target && "Expected target to be initialized");
+  const llvm::Triple &T = Target->getTriple();
+  // Windows is LLP64 rather than LP64
+  if (T.isOSWindows() && T.isArch64Bit())
+    return UnsignedLongLongTy;
+  return UnsignedLongTy;
+}
+
+CanQualType ASTContext::getNSIntegerType() const {
+  assert(Target && "Expected target to be initialized");
+  const llvm::Triple &T = Target->getTriple();
+  // Windows is LLP64 rather than LP64
+  if (T.isOSWindows() && T.isArch64Bit())
+    return LongLongTy;
+  return LongTy;
 }
 
 TypedefDecl *ASTContext::getObjCInstanceTypeDecl() {

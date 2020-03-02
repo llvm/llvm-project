@@ -40,8 +40,14 @@ entry:
   %hdl = call i8* @f(i32 4)
   call void @llvm.coro.resume(i8* %hdl)
   call void @llvm.coro.resume(i8* %hdl)
+  %to = icmp eq i8* %hdl, null
+  br i1 %to, label %return, label %destroy
+destroy:
   call void @llvm.coro.destroy(i8* %hdl)
+  br label %return
+return:
   ret i32 0
+; CHECK-NOT:  call i8* @CustomAlloc
 ; CHECK:      call void @print(i32 4)
 ; CHECK-NEXT: call void @print(i32 5)
 ; CHECK-NEXT: call void @print(i32 6)

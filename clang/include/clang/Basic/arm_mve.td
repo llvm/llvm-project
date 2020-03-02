@@ -453,6 +453,15 @@ foreach half = [ "b", "t" ] in {
       VecOf<f16>, (args VecOf<f16>:$inactive, Vector:$a, PredOf<f32>:$pred),
       (IRInt<"vcvt_narrow_predicated"> $inactive, $a, halfconst, $pred)>;
   } // params = [f32], pnt = PNT_None
+
+  let params = [f16], pnt = PNT_None in {
+    def vcvt#half#q_f32: Intrinsic<VecOf<f32>, (args Vector:$a),
+      (IRInt<"vcvt_widen"> $a, halfconst)>;
+    defm vcvt#half#q: IntrinsicMX<
+      VecOf<f32>, (args Vector:$a, PredOf<f32>:$pred),
+      (IRInt<"vcvt_widen_predicated"> $inactive, $a, halfconst, $pred),
+      1, "_f32">;
+  } // params = [f16], pnt = PNT_None
 } // loop over half = "b", "t"
 
 multiclass float_int_conversions<Type FScalar, Type IScalar, IRBuilderBase ftoi, IRBuilderBase itof> {
@@ -473,11 +482,25 @@ multiclass float_int_conversions<Type FScalar, Type IScalar, IRBuilderBase ftoi,
     let pnt = PNT_None in {
       def : Intrinsic<IVector, (args FVector:$a), (ftoi $a, IVector)>,
             NameOverride<"vcvtq_" # IScalar>;
+
+      foreach suffix = ["a","n","p","m"] in
+        def : Intrinsic<IVector, (args FVector:$a),
+                        (IRInt<"vcvt"#suffix, [IVector, FVector]>
+                            (unsignedflag IScalar), $a)>,
+              NameOverride<"vcvt"#suffix#"q_" # IScalar>;
     }
     defm vcvtq: IntrinsicMX<IVector, (args FVector:$a, Predicate:$pred),
         (IRInt<"vcvt_fp_int_predicated", [IVector, FVector, Predicate]>
             $a, (unsignedflag IScalar), $pred, $inactive),
         1, "_" # IScalar, PNT_2Type, PNT_None>;
+
+    foreach suffix = ["a","n","p","m"] in {
+      defm "vcvt"#suffix#"q" : IntrinsicMX<
+          IVector, (args FVector:$a, Predicate:$pred),
+          (IRInt<"vcvt"#suffix#"_predicated", [IVector, FVector, Predicate]>
+              (unsignedflag IScalar), $inactive, $a, $pred),
+          1, "_" # IScalar, PNT_2Type, PNT_None>;
+    }
   }
 }
 
@@ -513,6 +536,33 @@ multiclass vmovn<bit top, dag wide_result> {
 defm vmovntq: vmovn<1, (zip (vreinterpret $inactive, Vector), $a)>;
 defm vmovnbq: vmovn<0,
    (zip $a, (vreinterpret (vrev $inactive, (bitsize Scalar)), Vector))>;
+
+multiclass vqmovn<bit top, Type RetScalar> {
+  defvar RetVector = VecOf<RetScalar>;
+
+  let params = [s16, u16, s32, u32] in {
+    def : Intrinsic<
+      RetVector, (args RetVector:$inactive, Vector:$a),
+      (IRInt<"vqmovn", [RetVector, Vector]>
+          $inactive, $a, (unsignedflag RetScalar), (unsignedflag Scalar), top)>,
+      NameOverride<NAME>;
+    def: Intrinsic<
+      RetVector, (args RetVector:$inactive, Vector:$a, Predicate:$pred),
+      (IRInt<"vqmovn_predicated", [RetVector, Vector, Predicate]>
+          $inactive, $a, (unsignedflag RetScalar), (unsignedflag Scalar),
+          top, $pred)>,
+      NameOverride<NAME # "_m">;
+  }
+}
+
+let params = [s16, s32, u16, u32] in {
+  defm vqmovntq: vqmovn<1, HalfScalar>;
+  defm vqmovnbq: vqmovn<0, HalfScalar>;
+}
+let params = [s16, s32] in {
+  defm vqmovuntq: vqmovn<1, UHalfScalar>;
+  defm vqmovunbq: vqmovn<0, UHalfScalar>;
+}
 
 multiclass vrnd<IRIntBase ir_int, string suffix> {
   let params = T.Float in {

@@ -1,4 +1,4 @@
-add_llvm_library(MLIRLinalgToLLVM
+add_mlir_conversion_library(MLIRLinalgToLLVM
   LinalgToLLVM.cpp
 
   ADDITIONAL_HEADER_DIRS

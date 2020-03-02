@@ -1657,8 +1657,6 @@ def: Pat<(int_hexagon_S2_interleave DoubleRegs:$src1),
          (S2_interleave DoubleRegs:$src1)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_S2_deinterleave DoubleRegs:$src1),
          (S2_deinterleave DoubleRegs:$src1)>, Requires<[HasV5]>;
-def: Pat<(int_hexagon_Y2_dcfetch IntRegs:$src1),
-         (Y2_dcfetch IntRegs:$src1)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_Y2_dczeroa IntRegs:$src1),
          (Y2_dczeroa IntRegs:$src1)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_Y2_dccleana IntRegs:$src1),

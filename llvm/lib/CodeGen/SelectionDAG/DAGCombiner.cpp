@@ -30,6 +30,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/DAGCombine.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -13156,33 +13157,24 @@ SDValue DAGCombiner::visitSINT_TO_FP(SDNode *N) {
   }
 
   // The next optimizations are desirable only if SELECT_CC can be lowered.
-  if (TLI.isOperationLegalOrCustom(ISD::SELECT_CC, VT) || !LegalOperations) {
-    // fold (sint_to_fp (setcc x, y, cc)) -> (select_cc x, y, -1.0, 0.0,, cc)
-    if (N0.getOpcode() == ISD::SETCC && N0.getValueType() == MVT::i1 &&
-        !VT.isVector() &&
-        (!LegalOperations ||
-         TLI.isOperationLegalOrCustom(ISD::ConstantFP, VT))) {
-      SDLoc DL(N);
-      SDValue Ops[] =
-        { N0.getOperand(0), N0.getOperand(1),
-          DAG.getConstantFP(-1.0, DL, VT), DAG.getConstantFP(0.0, DL, VT),
-          N0.getOperand(2) };
-      return DAG.getNode(ISD::SELECT_CC, DL, VT, Ops);
-    }
+  // fold (sint_to_fp (setcc x, y, cc)) -> (select (setcc x, y, cc), -1.0, 0.0)
+  if (N0.getOpcode() == ISD::SETCC && N0.getValueType() == MVT::i1 &&
+      !VT.isVector() &&
+      (!LegalOperations || TLI.isOperationLegalOrCustom(ISD::ConstantFP, VT))) {
+    SDLoc DL(N);
+    return DAG.getSelect(DL, VT, N0, DAG.getConstantFP(-1.0, DL, VT),
+                         DAG.getConstantFP(0.0, DL, VT));
+  }
 
-    // fold (sint_to_fp (zext (setcc x, y, cc))) ->
-    //      (select_cc x, y, 1.0, 0.0,, cc)
-    if (N0.getOpcode() == ISD::ZERO_EXTEND &&
-        N0.getOperand(0).getOpcode() == ISD::SETCC &&!VT.isVector() &&
-        (!LegalOperations ||
-         TLI.isOperationLegalOrCustom(ISD::ConstantFP, VT))) {
-      SDLoc DL(N);
-      SDValue Ops[] =
-        { N0.getOperand(0).getOperand(0), N0.getOperand(0).getOperand(1),
-          DAG.getConstantFP(1.0, DL, VT), DAG.getConstantFP(0.0, DL, VT),
-          N0.getOperand(0).getOperand(2) };
-      return DAG.getNode(ISD::SELECT_CC, DL, VT, Ops);
-    }
+  // fold (sint_to_fp (zext (setcc x, y, cc))) ->
+  //      (select (setcc x, y, cc), 1.0, 0.0)
+  if (N0.getOpcode() == ISD::ZERO_EXTEND &&
+      N0.getOperand(0).getOpcode() == ISD::SETCC && !VT.isVector() &&
+      (!LegalOperations || TLI.isOperationLegalOrCustom(ISD::ConstantFP, VT))) {
+    SDLoc DL(N);
+    return DAG.getSelect(DL, VT, N0.getOperand(0),
+                         DAG.getConstantFP(1.0, DL, VT),
+                         DAG.getConstantFP(0.0, DL, VT));
   }
 
   if (SDValue FTrunc = foldFPToIntToFP(N, DAG, TLI))
@@ -13216,19 +13208,12 @@ SDValue DAGCombiner::visitUINT_TO_FP(SDNode *N) {
       return DAG.getNode(ISD::SINT_TO_FP, SDLoc(N), VT, N0);
   }
 
-  // The next optimizations are desirable only if SELECT_CC can be lowered.
-  if (TLI.isOperationLegalOrCustom(ISD::SELECT_CC, VT) || !LegalOperations) {
-    // fold (uint_to_fp (setcc x, y, cc)) -> (select_cc x, y, -1.0, 0.0,, cc)
-    if (N0.getOpcode() == ISD::SETCC && !VT.isVector() &&
-        (!LegalOperations ||
-         TLI.isOperationLegalOrCustom(ISD::ConstantFP, VT))) {
-      SDLoc DL(N);
-      SDValue Ops[] =
-        { N0.getOperand(0), N0.getOperand(1),
-          DAG.getConstantFP(1.0, DL, VT), DAG.getConstantFP(0.0, DL, VT),
-          N0.getOperand(2) };
-      return DAG.getNode(ISD::SELECT_CC, DL, VT, Ops);
-    }
+  // fold (uint_to_fp (setcc x, y, cc)) -> (select (setcc x, y, cc), 1.0, 0.0)
+  if (N0.getOpcode() == ISD::SETCC && !VT.isVector() &&
+      (!LegalOperations || TLI.isOperationLegalOrCustom(ISD::ConstantFP, VT))) {
+    SDLoc DL(N);
+    return DAG.getSelect(DL, VT, N0, DAG.getConstantFP(1.0, DL, VT),
+                         DAG.getConstantFP(0.0, DL, VT));
   }
 
   if (SDValue FTrunc = foldFPToIntToFP(N, DAG, TLI))
@@ -18676,6 +18661,13 @@ static SDValue narrowExtractedVectorLoad(SDNode *Extract, SelectionDAG &DAG) {
 
   // Allow targets to opt-out.
   EVT VT = Extract->getValueType(0);
+
+  // Only handle byte sized scalars otherwise the offset is incorrect.
+  // FIXME: We might be able to do better if the VT is byte sized and the index
+  // is aligned.
+  if (!VT.getScalarType().isByteSized())
+    return SDValue();
+
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   if (!TLI.shouldReduceLoadWidth(Ld, Ld->getExtensionType(), VT))
     return SDValue();
@@ -19259,6 +19251,57 @@ static SDValue combineShuffleOfSplatVal(ShuffleVectorSDNode *Shuf,
                               NewMask);
 }
 
+/// Combine shuffle of shuffle of the form:
+/// shuf (shuf X, undef, InnerMask), undef, OuterMask --> splat X
+static SDValue formSplatFromShuffles(ShuffleVectorSDNode *OuterShuf,
+                                     SelectionDAG &DAG) {
+  if (!OuterShuf->getOperand(1).isUndef())
+    return SDValue();
+  auto *InnerShuf = dyn_cast<ShuffleVectorSDNode>(OuterShuf->getOperand(0));
+  if (!InnerShuf || !InnerShuf->getOperand(1).isUndef())
+    return SDValue();
+
+  ArrayRef<int> OuterMask = OuterShuf->getMask();
+  ArrayRef<int> InnerMask = InnerShuf->getMask();
+  unsigned NumElts = OuterMask.size();
+  assert(NumElts == InnerMask.size() && "Mask length mismatch");
+  SmallVector<int, 32> CombinedMask(NumElts, -1);
+  int SplatIndex = -1;
+  for (unsigned i = 0; i != NumElts; ++i) {
+    // Undef lanes remain undef.
+    int OuterMaskElt = OuterMask[i];
+    if (OuterMaskElt == -1)
+      continue;
+
+    // Peek through the shuffle masks to get the underlying source element.
+    int InnerMaskElt = InnerMask[OuterMaskElt];
+    if (InnerMaskElt == -1)
+      continue;
+
+    // Initialize the splatted element.
+    if (SplatIndex == -1)
+      SplatIndex = InnerMaskElt;
+
+    // Non-matching index - this is not a splat.
+    if (SplatIndex != InnerMaskElt)
+      return SDValue();
+
+    CombinedMask[i] = InnerMaskElt;
+  }
+  assert((all_of(CombinedMask, [](int M) { return M == -1; }) ||
+          getSplatIndex(CombinedMask) != -1) &&
+         "Expected a splat mask");
+
+  // TODO: The transform may be a win even if the mask is not legal.
+  EVT VT = OuterShuf->getValueType(0);
+  assert(VT == InnerShuf->getValueType(0) && "Expected matching shuffle types");
+  if (!DAG.getTargetLoweringInfo().isShuffleMaskLegal(CombinedMask, VT))
+    return SDValue();
+
+  return DAG.getVectorShuffle(VT, SDLoc(OuterShuf), InnerShuf->getOperand(0),
+                              InnerShuf->getOperand(1), CombinedMask);
+}
+
 /// If the shuffle mask is taking exactly one element from the first vector
 /// operand and passing through all other elements from the second vector
 /// operand, return the index of the mask element that is choosing an element
@@ -19415,6 +19458,9 @@ SDValue DAGCombiner::visitVECTOR_SHUFFLE(SDNode *N) {
 
   // A shuffle of a single vector that is a splatted value can always be folded.
   if (SDValue V = combineShuffleOfSplatVal(SVN, DAG))
+    return V;
+
+  if (SDValue V = formSplatFromShuffles(SVN, DAG))
     return V;
 
   // If it is a splat, check if the argument vector is another splat or a
@@ -21107,21 +21153,24 @@ bool DAGCombiner::isAlias(SDNode *Op0, SDNode *Op1) const {
   // If we know required SrcValue1 and SrcValue2 have relatively large
   // alignment compared to the size and offset of the access, we may be able
   // to prove they do not alias. This check is conservative for now to catch
-  // cases created by splitting vector types.
+  // cases created by splitting vector types, it only works when the offsets are
+  // multiples of the size of the data.
   int64_t SrcValOffset0 = MUC0.MMO->getOffset();
   int64_t SrcValOffset1 = MUC1.MMO->getOffset();
   unsigned OrigAlignment0 = MUC0.MMO->getBaseAlignment();
   unsigned OrigAlignment1 = MUC1.MMO->getBaseAlignment();
+  auto &Size0 = MUC0.NumBytes;
+  auto &Size1 = MUC1.NumBytes;
   if (OrigAlignment0 == OrigAlignment1 && SrcValOffset0 != SrcValOffset1 &&
-      MUC0.NumBytes.hasValue() && MUC1.NumBytes.hasValue() &&
-      *MUC0.NumBytes == *MUC1.NumBytes && OrigAlignment0 > *MUC0.NumBytes) {
+      Size0.hasValue() && Size1.hasValue() && *Size0 == *Size1 &&
+      OrigAlignment0 > *Size0 && SrcValOffset0 % *Size0 == 0 &&
+      SrcValOffset1 % *Size1 == 0) {
     int64_t OffAlign0 = SrcValOffset0 % OrigAlignment0;
     int64_t OffAlign1 = SrcValOffset1 % OrigAlignment1;
 
     // There is no overlap between these relatively aligned accesses of
     // similar size. Return no alias.
-    if ((OffAlign0 + *MUC0.NumBytes) <= OffAlign1 ||
-        (OffAlign1 + *MUC1.NumBytes) <= OffAlign0)
+    if ((OffAlign0 + *Size0) <= OffAlign1 || (OffAlign1 + *Size1) <= OffAlign0)
       return false;
   }
 
@@ -21134,11 +21183,12 @@ bool DAGCombiner::isAlias(SDNode *Op0, SDNode *Op1) const {
     UseAA = false;
 #endif
 
-  if (UseAA && AA && MUC0.MMO->getValue() && MUC1.MMO->getValue()) {
+  if (UseAA && AA && MUC0.MMO->getValue() && MUC1.MMO->getValue() &&
+      Size0.hasValue() && Size1.hasValue()) {
     // Use alias analysis information.
     int64_t MinOffset = std::min(SrcValOffset0, SrcValOffset1);
-    int64_t Overlap0 = *MUC0.NumBytes + SrcValOffset0 - MinOffset;
-    int64_t Overlap1 = *MUC1.NumBytes + SrcValOffset1 - MinOffset;
+    int64_t Overlap0 = *Size0 + SrcValOffset0 - MinOffset;
+    int64_t Overlap1 = *Size1 + SrcValOffset1 - MinOffset;
     AliasResult AAResult = AA->alias(
         MemoryLocation(MUC0.MMO->getValue(), Overlap0,
                        UseTBAA ? MUC0.MMO->getAAInfo() : AAMDNodes()),

@@ -24,6 +24,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Registry.h"
 #include "llvm/Support/VersionTuple.h"
 #include <cassert>
 #include <cstddef>
@@ -37,6 +38,72 @@ class Decl;
 class Expr;
 class IdentifierInfo;
 class LangOptions;
+class ParsedAttr;
+class Sema;
+
+struct ParsedAttrInfo {
+  /// Corresponds to the Kind enum.
+  unsigned AttrKind : 16;
+  /// The number of required arguments of this attribute.
+  unsigned NumArgs : 4;
+  /// The number of optional arguments of this attributes.
+  unsigned OptArgs : 4;
+  /// True if the parsing does not match the semantic content.
+  unsigned HasCustomParsing : 1;
+  /// True if this attribute is only available for certain targets.
+  unsigned IsTargetSpecific : 1;
+  /// True if this attribute applies to types.
+  unsigned IsType : 1;
+  /// True if this attribute applies to statements.
+  unsigned IsStmt : 1;
+  /// True if this attribute has any spellings that are known to gcc.
+  unsigned IsKnownToGCC : 1;
+  /// True if this attribute is supported by #pragma clang attribute.
+  unsigned IsSupportedByPragmaAttribute : 1;
+  /// The syntaxes supported by this attribute and how they're spelled.
+  struct Spelling {
+    AttributeCommonInfo::Syntax Syntax;
+    std::string NormalizedFullName;
+  };
+  std::vector<Spelling> Spellings;
+
+  ParsedAttrInfo(AttributeCommonInfo::Kind AttrKind =
+                     AttributeCommonInfo::UnknownAttribute)
+      : AttrKind(AttrKind), NumArgs(0), OptArgs(0), HasCustomParsing(0),
+        IsTargetSpecific(0), IsType(0), IsStmt(0), IsKnownToGCC(0),
+        IsSupportedByPragmaAttribute(0) {}
+
+  virtual ~ParsedAttrInfo() = default;
+
+  /// Check if this attribute appertains to D, and issue a diagnostic if not.
+  virtual bool diagAppertainsToDecl(Sema &S, const ParsedAttr &Attr,
+                                    const Decl *D) const {
+    return true;
+  }
+  /// Check if this attribute is allowed by the language we are compiling, and
+  /// issue a diagnostic if not.
+  virtual bool diagLangOpts(Sema &S, const ParsedAttr &Attr) const {
+    return true;
+  }
+  /// Check if this attribute is allowed when compiling for the given target.
+  virtual bool existsInTarget(const TargetInfo &Target) const {
+    return true;
+  }
+  /// Convert the spelling index of Attr to a semantic spelling enum value.
+  virtual unsigned
+  spellingIndexToSemanticSpelling(const ParsedAttr &Attr) const {
+    return UINT_MAX;
+  }
+  /// Populate Rules with the match rules of this attribute.
+  virtual void getPragmaAttributeMatchRules(
+      llvm::SmallVectorImpl<std::pair<attr::SubjectMatchRule, bool>> &Rules,
+      const LangOptions &LangOpts) const {
+  }
+
+  static const ParsedAttrInfo &get(const AttributeCommonInfo &A);
+};
+
+typedef llvm::Registry<ParsedAttrInfo> ParsedAttrInfoRegistry;
 
 /// Represents information about a change in availability for
 /// an entity, which is part of the encoding of the 'availability'
@@ -181,6 +248,8 @@ private:
 
   const Expr *MessageExpr;
 
+  const ParsedAttrInfo &Info;
+
   ArgsUnion *getArgsBuffer() { return getTrailingObjects<ArgsUnion>(); }
   ArgsUnion const *getArgsBuffer() const {
     return getTrailingObjects<ArgsUnion>();
@@ -207,7 +276,8 @@ private:
         EllipsisLoc(ellipsisLoc), NumArgs(numArgs), Invalid(false),
         UsedAsTypeAttr(false), IsAvailability(false),
         IsTypeTagForDatatype(false), IsProperty(false), HasParsedType(false),
-        HasProcessingCache(false), IsPragmaClangAttribute(false) {
+        HasProcessingCache(false), IsPragmaClangAttribute(false),
+        Info(ParsedAttrInfo::get(*this)) {
     if (numArgs)
       memcpy(getArgsBuffer(), args, numArgs * sizeof(ArgsUnion));
   }
@@ -225,7 +295,8 @@ private:
         NumArgs(1), Invalid(false), UsedAsTypeAttr(false), IsAvailability(true),
         IsTypeTagForDatatype(false), IsProperty(false), HasParsedType(false),
         HasProcessingCache(false), IsPragmaClangAttribute(false),
-        UnavailableLoc(unavailable), MessageExpr(messageExpr) {
+        UnavailableLoc(unavailable), MessageExpr(messageExpr),
+        Info(ParsedAttrInfo::get(*this)) {
     ArgsUnion PVal(Parm);
     memcpy(getArgsBuffer(), &PVal, sizeof(ArgsUnion));
     new (getAvailabilityData()) detail::AvailabilityData(
@@ -242,7 +313,7 @@ private:
         NumArgs(3), Invalid(false), UsedAsTypeAttr(false),
         IsAvailability(false), IsTypeTagForDatatype(false), IsProperty(false),
         HasParsedType(false), HasProcessingCache(false),
-        IsPragmaClangAttribute(false) {
+        IsPragmaClangAttribute(false), Info(ParsedAttrInfo::get(*this)) {
     ArgsUnion *Args = getArgsBuffer();
     Args[0] = Parm1;
     Args[1] = Parm2;
@@ -259,7 +330,7 @@ private:
         NumArgs(1), Invalid(false), UsedAsTypeAttr(false),
         IsAvailability(false), IsTypeTagForDatatype(true), IsProperty(false),
         HasParsedType(false), HasProcessingCache(false),
-        IsPragmaClangAttribute(false) {
+        IsPragmaClangAttribute(false), Info(ParsedAttrInfo::get(*this)) {
     ArgsUnion PVal(ArgKind);
     memcpy(getArgsBuffer(), &PVal, sizeof(ArgsUnion));
     detail::TypeTagForDatatypeData &ExtraData = getTypeTagForDatatypeDataSlot();
@@ -277,7 +348,7 @@ private:
         NumArgs(0), Invalid(false), UsedAsTypeAttr(false),
         IsAvailability(false), IsTypeTagForDatatype(false), IsProperty(false),
         HasParsedType(true), HasProcessingCache(false),
-        IsPragmaClangAttribute(false) {
+        IsPragmaClangAttribute(false), Info(ParsedAttrInfo::get(*this)) {
     new (&getTypeBuffer()) ParsedType(typeArg);
   }
 
@@ -291,7 +362,7 @@ private:
         NumArgs(0), Invalid(false), UsedAsTypeAttr(false),
         IsAvailability(false), IsTypeTagForDatatype(false), IsProperty(true),
         HasParsedType(false), HasProcessingCache(false),
-        IsPragmaClangAttribute(false) {
+        IsPragmaClangAttribute(false), Info(ParsedAttrInfo::get(*this)) {
     new (&getPropertyDataBuffer()) detail::PropertyData(getterId, setterId);
   }
 
@@ -534,7 +605,10 @@ public:
     }
   }
 
-  AttributeCommonInfo::Kind getKind() const { return getParsedKind(); }
+  AttributeCommonInfo::Kind getKind() const {
+    return AttributeCommonInfo::Kind(Info.AttrKind);
+  }
+  const ParsedAttrInfo &getInfo() const { return Info; }
 };
 
 class AttributePool;

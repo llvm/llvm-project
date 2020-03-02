@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <string>
 #include <vector>
+#include <deque>
 
 namespace llvm {
 namespace exegesis {

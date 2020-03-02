@@ -51,13 +51,13 @@ hook into.
 The first thing we need to do is to define the constraints on inlining
 operations in the Toy dialect. This information is provided through a
 [dialect interface](../../Interfaces.md#dialect-interfaces). This is essentially
-a class containing a set of virtual hooks for which a dialect may provide a
-specialization. In this case, the interface is `DialectInlinerInterface`.
+a class containing a set of virtual hooks which the dialect can override.
+In this case, the interface is `DialectInlinerInterface`.
 
 ```c++
 /// This class defines the interface for handling inlining with Toy operations.
-/// We simplify inherit from the base interface class and provide a
-/// specialization of the necessary methods.
+/// We simplify inherit from the base interface class and override
+/// the necessary methods.
 struct ToyInlinerInterface : public DialectInlinerInterface {
   using DialectInlinerInterface::DialectInlinerInterface;
 
@@ -108,10 +108,7 @@ To add this interface we just need to include the definition into our operation
 specification file (`Ops.td`):
 
 ```tablegen
-#ifdef MLIR_CALLINTERFACES
-#else
 include "mlir/Analysis/CallInterfaces.td"
-#endif // MLIR_CALLINTERFACES
 ```
 
 and add it to the traits list of `GenericCallOp`:
@@ -260,7 +257,7 @@ the operation definition specification (ODS) framework.
 
 The interface is defined by inheriting from `OpInterface`, which takes the name
 to be given to the generated C++ interface class as a template argument. For our
-purposes, we will name the generated class a simpler `ShapeInference`. We also
+purposes, we will simply name the generated class `ShapeInference`. We also
 provide a description for the interface.
 
 ```tablegen
@@ -281,10 +278,7 @@ information.
 
 ```tablegen
 def ShapeInferenceOpInterface : OpInterface<"ShapeInference"> {
-  let description = [{
-    Interface to access a registered method to infer the return types for an
-    operation that can be used during type inference.
-  }];
+  ...
 
   let methods = [
     InterfaceMethod<"Infer and set the output shape for the current operation.",
@@ -321,7 +315,7 @@ operation (i.e. other function-like operations), but here our module only
 contains functions, so there is no need to generalize to all operations.
 
 Implementing such a pass is done by creating a class inheriting from
-`mlir::FunctionPass` and overriding the `runOnFunction()` method:
+`mlir::FunctionPass` and overriding the `runOnFunction()` method.
 
 ```c++
 class ShapeInferencePass : public mlir::FunctionPass<ShapeInferencePass> {
@@ -332,7 +326,15 @@ class ShapeInferencePass : public mlir::FunctionPass<ShapeInferencePass> {
 };
 ```
 
-The algorithm operates as follows:
+While at it, let's also create a helper method for instantiating the pass:
+
+```c++
+std::unique_ptr<mlir::Pass> mlir::toy::createShapeInferencePass() {
+  return std::make_unique<ShapeInferencePass>();
+}
+```
+
+The shape inference algorithm operates as follows:
 
 1.  Build a worklist containing all the operations that return a dynamically
     shaped tensor: these are the operations that need shape inference.
@@ -344,8 +346,8 @@ The algorithm operates as follows:
     -   infer the shape of its output from the argument types.
 3.  If the worklist is empty, the algorithm succeeded.
 
-When processing an operation, we query if it registered the `ShapeInference`
-interface.
+When processing an operation like described, we query if it registered the
+`ShapeInference` interface, using this code snippet:
 
 ```c++
   // Ask the operation to infer its output shapes.

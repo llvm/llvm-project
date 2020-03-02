@@ -679,12 +679,11 @@ public:
     OwningRewritePatternList patterns;
     populateStdToLLVMConversionPatterns(converter, patterns);
     populateGpuToNVVMConversionPatterns(converter, patterns);
-    ConversionTarget target(getContext());
+    LLVMConversionTarget target(getContext());
     target.addIllegalDialect<gpu::GPUDialect>();
     target.addIllegalOp<LLVM::CosOp, LLVM::ExpOp, LLVM::FAbsOp, LLVM::FCeilOp,
                         LLVM::LogOp, LLVM::Log10Op, LLVM::Log2Op>();
     target.addIllegalOp<FuncOp>();
-    target.addLegalDialect<LLVM::LLVMDialect>();
     target.addLegalDialect<NVVM::NVVMDialect>();
     target.addDynamicallyLegalOp<mlir::LLVM::CallOp>(
         gpu::filterIllegalLLVMIntrinsics({"tanh", "tanhf"}, m.getContext()));

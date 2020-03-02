@@ -120,7 +120,7 @@ infrastructure has the capability to opaquely represent all of its core
 components: attributes, operations, types, etc. This allows MLIR to parse,
 represent, and [round-trip](../../../getting_started/Glossary.md#round-trip) any valid IR. For
 example, we could place our Toy operation from above into an `.mlir` file and
-round-trip through *mlir-opt* without registering anything:
+round-trip through *mlir-opt* without registering any dialect:
 
 ```mlir
 func @toy_func(%tensor: tensor<2x3xf64>) -> tensor<3x2xf64> {
@@ -161,8 +161,8 @@ provide an easy avenue for high-level analysis and transformation.
 ```c++
 /// This is the definition of the Toy dialect. A dialect inherits from
 /// mlir::Dialect and registers custom attributes, operations, and types (in its
-/// constructor). It can also override some general behavior exposed via virtual
-/// methods, which will be demonstrated in later chapters of the tutorial.
+/// constructor). It can also override virtual methods to change some general
+/// behavior, which will be demonstrated in later chapters of the tutorial.
 class ToyDialect : public mlir::Dialect {
  public:
   explicit ToyDialect(mlir::MLIRContext *ctx);
@@ -203,7 +203,7 @@ verification, etc.
 
 ```c++
 class ConstantOp : public mlir::Op<ConstantOp,
-                     /// The ConstantOp takes zero inputs.
+                     /// The ConstantOp takes no inputs.
                      mlir::OpTrait::ZeroOperands,
                      /// The ConstantOp returns a single result.
                      mlir::OpTrait::OneResult,
@@ -277,7 +277,7 @@ void processConstantOp(mlir::Operation *operation) {
   if (!op)
     return;
 
-  // Get the internal operation instance back.
+  // Get the internal operation instance wrapped by the smart pointer.
   mlir::Operation *internalOperation = op.getOperation();
   assert(internalOperation == operation &&
          "these operation instances are the same");
@@ -473,31 +473,7 @@ the implementation inline.
 
 ```tablegen
 def ConstantOp : Toy_Op<"constant", [NoSideEffect]> {
-  // Provide a summary and description for this operation. This can be used to
-  // auto-generate documentation of the operations within our dialect.
-  let summary = "constant operation";
-  let description = [{
-    Constant operation turns a literal into an SSA value. The data is attached
-    to the operation as an attribute. For example:
-
-      %0 = "toy.constant"()
-         { value = dense<[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]> : tensor<2x3xf64> }
-        : () -> tensor<2x3xf64>
-  }];
-
-  // The constant operation takes an attribute as the only input.
-  // `F64ElementsAttr` corresponds to a 64-bit floating-point ElementsAttr.
-  let arguments = (ins F64ElementsAttr:$value);
-
-  // The generic call operation returns a single value of TensorType.
-  // F64Tensor corresponds to a 64-bit floating-point TensorType.
-  let results = (outs F64Tensor);
-
-  // Add additional verification logic to the constant operation. Here we invoke
-  // a static `verify` method in a c++ source file. This codeblock is executed
-  // inside of ConstantOp::verify, so we can use `this` to refer to the current
-  // operation instance.
-  let verifier = [{ return ::verify(*this); }];
+  ...
 
   // Add custom build methods for the constant operation. These methods populate
   // the `state` that MLIR uses to create operations, i.e. these are used when
@@ -612,7 +588,7 @@ static void print(mlir::OpAsmPrinter &printer, PrintOp op) {
   printer << " : " << op.input().getType();
 }
 
-/// The 'OpAsmPrinter' class provides a collection of methods for parsing
+/// The 'OpAsmParser' class provides a collection of methods for parsing
 /// various punctuation, as well as attributes, operands, types, etc. Each of
 /// these methods returns a `ParseResult`. This class is a wrapper around
 /// `LogicalResult` that can be converted to a boolean `true` value on failure,

@@ -875,7 +875,11 @@ bool TargetLowering::SimplifyDemandedBits(
     APInt SrcDemandedBits = DemandedBits.zextOrSelf(SrcBitWidth);
     if (SimplifyDemandedBits(Src, SrcDemandedBits, SrcKnown, TLO, Depth + 1))
       return true;
-    Known = SrcKnown.anyextOrTrunc(BitWidth);
+
+    // Upper elements are undef, so only get the knownbits if we just demand
+    // the bottom element.
+    if (DemandedElts == 1)
+      Known = SrcKnown.anyextOrTrunc(BitWidth);
     break;
   }
   case ISD::BUILD_VECTOR:
@@ -890,8 +894,8 @@ bool TargetLowering::SimplifyDemandedBits(
       return false; // Don't fall through, will infinitely loop.
     } else if (ISD::isZEXTLoad(Op.getNode()) && Op.getResNo() == 0) {
       // If this is a ZEXTLoad and we are looking at the loaded value.
-      EVT VT = LD->getMemoryVT();
-      unsigned MemBits = VT.getScalarSizeInBits();
+      EVT MemVT = LD->getMemoryVT();
+      unsigned MemBits = MemVT.getScalarSizeInBits();
       Known.Zero.setBitsFrom(MemBits);
       return false; // Don't fall through, will infinitely loop.
     }

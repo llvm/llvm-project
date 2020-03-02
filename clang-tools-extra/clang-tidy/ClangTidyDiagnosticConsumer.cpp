@@ -62,6 +62,9 @@ protected:
     }
     assert(Error.Message.Message.empty() && "Overwriting a diagnostic message");
     Error.Message = TidyMessage;
+    for (const CharSourceRange &SourceRange : Ranges) {
+      Error.Ranges.emplace_back(Loc.getManager(), SourceRange);
+    }
   }
 
   void emitDiagnosticLoc(FullSourceLoc Loc, PresumedLoc PLoc,

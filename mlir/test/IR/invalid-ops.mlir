@@ -563,6 +563,46 @@ func @fpext_f32_to_i32(%arg0 : f32) {
 
 // -----
 
+func @fpext_vec(%arg0 : vector<2xf16>) {
+  // expected-error@+1 {{are cast incompatible}}
+  %0 = fpext %arg0 : vector<2xf16> to vector<3xf32>
+  return
+}
+
+// -----
+
+func @fpext_vec_f32_to_f16(%arg0 : vector<2xf32>) {
+  // expected-error@+1 {{are cast incompatible}}
+  %0 = fpext %arg0 : vector<2xf32> to vector<2xf16>
+  return
+}
+
+// -----
+
+func @fpext_vec_f16_to_f16(%arg0 : vector<2xf16>) {
+  // expected-error@+1 {{are cast incompatible}}
+  %0 = fpext %arg0 : vector<2xf16> to vector<2xf16>
+  return
+}
+
+// -----
+
+func @fpext_vec_i32_to_f32(%arg0 : vector<2xi32>) {
+  // expected-error@+1 {{are cast incompatible}}
+  %0 = fpext %arg0 : vector<2xi32> to vector<2xf32>
+  return
+}
+
+// -----
+
+func @fpext_vec_f32_to_i32(%arg0 : vector<2xf32>) {
+  // expected-error@+1 {{are cast incompatible}}
+  %0 = fpext %arg0 : vector<2xf32> to vector<2xi32>
+  return
+}
+
+// -----
+
 func @fptrunc_f16_to_f32(%arg0 : f16) {
   // expected-error@+1 {{are cast incompatible}}
   %0 = fptrunc %arg0 : f16 to f32
@@ -590,6 +630,46 @@ func @fptrunc_i32_to_f32(%arg0 : i32) {
 func @fptrunc_f32_to_i32(%arg0 : f32) {
   // expected-error@+1 {{are cast incompatible}}
   %0 = fptrunc %arg0 : f32 to i32
+  return
+}
+
+// -----
+
+func @fptrunc_vec(%arg0 : vector<2xf16>) {
+  // expected-error@+1 {{are cast incompatible}}
+  %0 = fptrunc %arg0 : vector<2xf16> to vector<3xf32>
+  return
+}
+
+// -----
+
+func @fptrunc_vec_f16_to_f32(%arg0 : vector<2xf16>) {
+  // expected-error@+1 {{are cast incompatible}}
+  %0 = fptrunc %arg0 : vector<2xf16> to vector<2xf32>
+  return
+}
+
+// -----
+
+func @fptrunc_vec_f32_to_f32(%arg0 : vector<2xf32>) {
+  // expected-error@+1 {{are cast incompatible}}
+  %0 = fptrunc %arg0 : vector<2xf32> to vector<2xf32>
+  return
+}
+
+// -----
+
+func @fptrunc_vec_i32_to_f32(%arg0 : vector<2xi32>) {
+  // expected-error@+1 {{are cast incompatible}}
+  %0 = fptrunc %arg0 : vector<2xi32> to vector<2xf32>
+  return
+}
+
+// -----
+
+func @fptrunc_vec_f32_to_i32(%arg0 : vector<2xf32>) {
+  // expected-error@+1 {{are cast incompatible}}
+  %0 = fptrunc %arg0 : vector<2xf32> to vector<2xi32>
   return
 }
 

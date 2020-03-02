@@ -341,7 +341,7 @@ Instruction *InstCombiner::foldSelectOpOp(SelectInst &SI, Instruction *TI,
     // TODO: Remove the hack for the binop form when the unary op is optimized
     //       properly with all IR passes.
     if (TI->getOpcode() != Instruction::FNeg)
-      return BinaryOperator::CreateFNegFMF(NewSel, cast<BinaryOperator>(TI));
+      return UnaryOperator::CreateFNegFMF(NewSel, cast<BinaryOperator>(TI));
     return UnaryOperator::CreateFNeg(NewSel);
   }
 

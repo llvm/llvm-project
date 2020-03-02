@@ -220,4 +220,219 @@ exit:
   ret void
 }
 
+define void @many_exits([100 x i64] %len) {
+entry:
+  br label %loop
+loop:
+  %iv = phi i64 [0, %entry], [%iv.next, %backedge]
+  %len0 = extractvalue [100 x i64] %len, 0
+  %early0 = icmp eq i64 %iv, %len0
+  call void @side_effect()
+  br i1 %early0, label %exit, label %cont0
+cont0:
+  %len1 = extractvalue [100 x i64] %len, 1
+  %early1 = icmp eq i64 %iv, %len1
+  call void @side_effect()
+  br i1 %early1, label %exit, label %cont1
+cont1:
+  %len2 = extractvalue [100 x i64] %len, 2
+  %early2 = icmp eq i64 %iv, %len2
+  call void @side_effect()
+  br i1 %early2, label %exit, label %cont2
+cont2:
+  %len3 = extractvalue [100 x i64] %len, 3
+  %early3 = icmp eq i64 %iv, %len3
+  call void @side_effect()
+  br i1 %early3, label %exit, label %cont3
+cont3:
+  %len4 = extractvalue [100 x i64] %len, 4
+  %early4 = icmp eq i64 %iv, %len4
+  call void @side_effect()
+  br i1 %early4, label %exit, label %cont4
+cont4:
+  %len5 = extractvalue [100 x i64] %len, 5
+  %early5 = icmp eq i64 %iv, %len5
+  call void @side_effect()
+  br i1 %early5, label %exit, label %cont5
+cont5:
+  %len6 = extractvalue [100 x i64] %len, 6
+  %early6 = icmp eq i64 %iv, %len6
+  call void @side_effect()
+  br i1 %early6, label %exit, label %cont6
+cont6:
+  %len7 = extractvalue [100 x i64] %len, 7
+  %early7 = icmp eq i64 %iv, %len7
+  call void @side_effect()
+  br i1 %early7, label %exit, label %cont7
+cont7:
+  %len8 = extractvalue [100 x i64] %len, 8
+  %early8 = icmp eq i64 %iv, %len8
+  call void @side_effect()
+  br i1 %early8, label %exit, label %cont8
+cont8:
+  %len9 = extractvalue [100 x i64] %len, 9
+  %early9 = icmp eq i64 %iv, %len9
+  call void @side_effect()
+  br i1 %early9, label %exit, label %cont9
+cont9:
+  %len10 = extractvalue [100 x i64] %len, 10
+  %early10 = icmp eq i64 %iv, %len10
+  call void @side_effect()
+  br i1 %early10, label %exit, label %cont10
+cont10:
+  %len11 = extractvalue [100 x i64] %len, 11
+  %early11 = icmp eq i64 %iv, %len11
+  call void @side_effect()
+  br i1 %early11, label %exit, label %cont11
+cont11:
+  %len12 = extractvalue [100 x i64] %len, 12
+  %early12 = icmp eq i64 %iv, %len12
+  call void @side_effect()
+  br i1 %early12, label %exit, label %cont12
+cont12:
+  %len13 = extractvalue [100 x i64] %len, 13
+  %early13 = icmp eq i64 %iv, %len13
+  call void @side_effect()
+  br i1 %early13, label %exit, label %cont13
+cont13:
+  %len14 = extractvalue [100 x i64] %len, 14
+  %early14 = icmp eq i64 %iv, %len14
+  call void @side_effect()
+  br i1 %early14, label %exit, label %cont14
+cont14:
+  %len15 = extractvalue [100 x i64] %len, 15
+  %early15 = icmp eq i64 %iv, %len15
+  call void @side_effect()
+  br i1 %early15, label %exit, label %cont15
+cont15:
+  %len16 = extractvalue [100 x i64] %len, 16
+  %early16 = icmp eq i64 %iv, %len16
+  call void @side_effect()
+  br i1 %early16, label %exit, label %cont16
+cont16:
+  %len17 = extractvalue [100 x i64] %len, 17
+  %early17 = icmp eq i64 %iv, %len17
+  call void @side_effect()
+  br i1 %early17, label %exit, label %cont17
+cont17:
+  %len18 = extractvalue [100 x i64] %len, 18
+  %early18 = icmp eq i64 %iv, %len18
+  call void @side_effect()
+  br i1 %early18, label %exit, label %cont18
+cont18:
+  %len19 = extractvalue [100 x i64] %len, 19
+  %early19 = icmp eq i64 %iv, %len19
+  call void @side_effect()
+  br i1 %early19, label %exit, label %cont19
+cont19:
+  %len20 = extractvalue [100 x i64] %len, 20
+  %early20 = icmp eq i64 %iv, %len20
+  call void @side_effect()
+  br i1 %early20, label %exit, label %cont20
+cont20:
+  %len21 = extractvalue [100 x i64] %len, 21
+  %early21 = icmp eq i64 %iv, %len21
+  call void @side_effect()
+  br i1 %early21, label %exit, label %cont21
+cont21:
+  %len22 = extractvalue [100 x i64] %len, 22
+  %early22 = icmp eq i64 %iv, %len22
+  call void @side_effect()
+  br i1 %early22, label %exit, label %cont22
+cont22:
+  %len23 = extractvalue [100 x i64] %len, 23
+  %early23 = icmp eq i64 %iv, %len23
+  call void @side_effect()
+  br i1 %early23, label %exit, label %cont23
+cont23:
+  %len24 = extractvalue [100 x i64] %len, 24
+  %early24 = icmp eq i64 %iv, %len24
+  call void @side_effect()
+  br i1 %early24, label %exit, label %cont24
+cont24:
+  %len25 = extractvalue [100 x i64] %len, 25
+  %early25 = icmp eq i64 %iv, %len25
+  call void @side_effect()
+  br i1 %early25, label %exit, label %cont25
+cont25:
+  %len26 = extractvalue [100 x i64] %len, 26
+  %early26 = icmp eq i64 %iv, %len26
+  call void @side_effect()
+  br i1 %early26, label %exit, label %cont26
+cont26:
+  %len27 = extractvalue [100 x i64] %len, 27
+  %early27 = icmp eq i64 %iv, %len27
+  call void @side_effect()
+  br i1 %early27, label %exit, label %cont27
+cont27:
+  %len28 = extractvalue [100 x i64] %len, 28
+  %early28 = icmp eq i64 %iv, %len28
+  call void @side_effect()
+  br i1 %early28, label %exit, label %cont28
+cont28:
+  %len29 = extractvalue [100 x i64] %len, 29
+  %early29 = icmp eq i64 %iv, %len29
+  call void @side_effect()
+  br i1 %early29, label %exit, label %cont29
+cont29:
+  %len30 = extractvalue [100 x i64] %len, 30
+  %early30 = icmp eq i64 %iv, %len30
+  call void @side_effect()
+  br i1 %early30, label %exit, label %cont30
+cont30:
+  %len31 = extractvalue [100 x i64] %len, 31
+  %early31 = icmp eq i64 %iv, %len31
+  call void @side_effect()
+  br i1 %early31, label %exit, label %cont31
+cont31:
+  %len32 = extractvalue [100 x i64] %len, 32
+  %early32 = icmp eq i64 %iv, %len32
+  call void @side_effect()
+  br i1 %early32, label %exit, label %cont32
+cont32:
+  %len33 = extractvalue [100 x i64] %len, 33
+  %early33 = icmp eq i64 %iv, %len33
+  call void @side_effect()
+  br i1 %early33, label %exit, label %cont33
+cont33:
+  %len34 = extractvalue [100 x i64] %len, 34
+  %early34 = icmp eq i64 %iv, %len34
+  call void @side_effect()
+  br i1 %early34, label %exit, label %cont34
+cont34:
+  %len35 = extractvalue [100 x i64] %len, 35
+  %early35 = icmp eq i64 %iv, %len35
+  call void @side_effect()
+  br i1 %early35, label %exit, label %cont35
+cont35:
+  %len36 = extractvalue [100 x i64] %len, 36
+  %early36 = icmp eq i64 %iv, %len36
+  call void @side_effect()
+  br i1 %early36, label %exit, label %cont36
+cont36:
+  %len37 = extractvalue [100 x i64] %len, 37
+  %early37 = icmp eq i64 %iv, %len37
+  call void @side_effect()
+  br i1 %early37, label %exit, label %cont37
+cont37:
+  %len38 = extractvalue [100 x i64] %len, 38
+  %early38 = icmp eq i64 %iv, %len38
+  call void @side_effect()
+  br i1 %early38, label %exit, label %cont38
+cont38:
+  %len39 = extractvalue [100 x i64] %len, 39
+  %early39 = icmp eq i64 %iv, %len39
+  call void @side_effect()
+  br i1 %early39, label %exit, label %cont39
+cont39:
+  br label %backedge
+backedge:
+  call void @side_effect()
+  %cmp2 = icmp ult i64 %iv, 999
+  %iv.next = add i64 %iv, 1
+  br i1 %cmp2, label %loop, label %exit
+exit:
+  ret void
+}
+
 declare void @side_effect()

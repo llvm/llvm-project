@@ -254,7 +254,7 @@ bool CrashRecoveryContext::RunSafely(function_ref<void()> Fn) {
 // XP, so if support for older versions of Windows is required,
 // it will have to be added.
 
-#include "Windows/WindowsSupport.h"
+#include "llvm/Support/Windows/WindowsSupport.h"
 
 static LONG CALLBACK ExceptionHandler(PEXCEPTION_POINTERS ExceptionInfo)
 {

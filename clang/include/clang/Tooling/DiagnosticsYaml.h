@@ -22,9 +22,18 @@
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(clang::tooling::Diagnostic)
 LLVM_YAML_IS_SEQUENCE_VECTOR(clang::tooling::DiagnosticMessage)
+LLVM_YAML_IS_SEQUENCE_VECTOR(clang::tooling::FileByteRange)
 
 namespace llvm {
 namespace yaml {
+
+template <> struct MappingTraits<clang::tooling::FileByteRange> {
+  static void mapping(IO &Io, clang::tooling::FileByteRange &R) {
+    Io.mapRequired("FilePath", R.FilePath);
+    Io.mapRequired("FileOffset", R.FileOffset);
+    Io.mapRequired("Length", R.Length);
+  }
+};
 
 template <> struct MappingTraits<clang::tooling::DiagnosticMessage> {
   static void mapping(IO &Io, clang::tooling::DiagnosticMessage &M) {
@@ -58,11 +67,12 @@ template <> struct MappingTraits<clang::tooling::Diagnostic> {
 
     NormalizedDiagnostic(const IO &, const clang::tooling::Diagnostic &D)
         : DiagnosticName(D.DiagnosticName), Message(D.Message), Notes(D.Notes),
-          DiagLevel(D.DiagLevel), BuildDirectory(D.BuildDirectory) {}
+          DiagLevel(D.DiagLevel), BuildDirectory(D.BuildDirectory),
+          Ranges(D.Ranges) {}
 
     clang::tooling::Diagnostic denormalize(const IO &) {
       return clang::tooling::Diagnostic(DiagnosticName, Message, Notes,
-                                        DiagLevel, BuildDirectory);
+                                        DiagLevel, BuildDirectory, Ranges);
     }
 
     std::string DiagnosticName;
@@ -71,6 +81,7 @@ template <> struct MappingTraits<clang::tooling::Diagnostic> {
     SmallVector<clang::tooling::DiagnosticMessage, 1> Notes;
     clang::tooling::Diagnostic::Level DiagLevel;
     std::string BuildDirectory;
+    SmallVector<clang::tooling::FileByteRange, 1> Ranges;
   };
 
   static void mapping(IO &Io, clang::tooling::Diagnostic &D) {
@@ -79,6 +90,7 @@ template <> struct MappingTraits<clang::tooling::Diagnostic> {
     Io.mapRequired("DiagnosticName", Keys->DiagnosticName);
     Io.mapRequired("DiagnosticMessage", Keys->Message);
     Io.mapOptional("Notes", Keys->Notes);
+    Io.mapOptional("Ranges", Keys->Ranges);
 
     // FIXME: Export properly all the different fields.
   }

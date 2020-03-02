@@ -139,6 +139,10 @@ public:
   /// Disable support for multi-threading within the pass manager.
   void disableMultithreading(bool disable = true);
 
+  /// Return true if the pass manager is configured with multi-threading
+  /// enabled.
+  bool isMultithreadingEnabled();
+
   /// Enable support for the pass manager to generate a reproducer on the event
   /// of a crash or a pass failure. `outputFile` is a .mlir filename used to
   /// write the generated reproducer.

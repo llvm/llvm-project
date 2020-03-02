@@ -192,6 +192,7 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
             .Case("0xc20", "cortex-m0")
             .Case("0xc23", "cortex-m3")
             .Case("0xc24", "cortex-m4")
+            .Case("0xd22", "cortex-m55")
             .Case("0xd02", "cortex-a34")
             .Case("0xd04", "cortex-a35")
             .Case("0xd03", "cortex-a53")

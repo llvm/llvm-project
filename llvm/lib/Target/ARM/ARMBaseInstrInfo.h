@@ -105,6 +105,11 @@ protected:
   Optional<DestSourcePair>
   isCopyInstrImpl(const MachineInstr &MI) const override;
 
+  /// Specialization of \ref TargetInstrInfo::describeLoadedValue, used to
+  /// enhance debug entry value descriptions for ARM targets.
+  Optional<ParamLoadedValue> describeLoadedValue(const MachineInstr &MI,
+                                                 Register Reg) const override;
+
 public:
   // Return whether the target has an explicit NOP encoding.
   bool hasNOP() const;

@@ -167,15 +167,18 @@ private:
   /// Attempt to load a debug object from disk.
   ErrorOr<const object::ObjectFile &> loadObject(const DebugMapObject &Obj,
                                                  const Triple &triple);
-  ErrorOr<DwarfLinkerObjFile &> loadObject(const DebugMapObject &Obj,
-                                           const DebugMap &DebugMap,
-                                           remarks::RemarkLinker &RL);
+  ErrorOr<DwarfFile &> loadObject(const DebugMapObject &Obj,
+                                  const DebugMap &DebugMap,
+                                  remarks::RemarkLinker &RL);
 
   raw_fd_ostream &OutFile;
   BinaryHolder &BinHolder;
   LinkOptions Options;
   std::unique_ptr<DwarfStreamer> Streamer;
-  std::vector<std::unique_ptr<DwarfLinkerObjFile>> ObjectsForLinking;
+  std::vector<std::unique_ptr<DwarfFile>> ObjectsForLinking;
+  std::vector<std::unique_ptr<DWARFContext>> ContextForLinking;
+  std::vector<std::unique_ptr<AddressManager>> AddressMapForLinking;
+  std::vector<std::string> EmptyWarnings;
 
   /// A list of all .swiftinterface files referenced by the debug
   /// info, mapping Module name to path on disk. The entries need to

@@ -382,6 +382,9 @@ module LLVM_Utils {
 
     umbrella "Support"
     module * { export * }
+    
+    // Exclude this; it should only be used on Windows.
+    exclude header "Support/Windows/WindowsSupport.h"
 
     // Exclude these; they are fundamentally non-modular.
     exclude header "Support/PluginLoader.h"

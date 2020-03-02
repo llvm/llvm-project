@@ -1,7 +1,13 @@
-// RUN: %clang_cc1 -verify=expected,warn -fopenmp -ferror-limit 200 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,le45 -fopenmp -ferror-limit 200 %s -Wno-openmp-target -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,le45 -fopenmp -fopenmp-version=40 -ferror-limit 200 %s -Wno-openmp-target -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,le45 -fopenmp -fopenmp-version=45 -ferror-limit 200 %s -Wno-openmp-target -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,le50 -fopenmp -fopenmp-version=50 -ferror-limit 200 %s -Wno-openmp-target -Wuninitialized
 // RUN: %clang_cc1 -DCCODE -verify -fopenmp -ferror-limit 200 -x c %s -Wno-openmp -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 200 %s -Wno-openmp-target -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,le45 -fopenmp-simd -ferror-limit 200 %s -Wno-openmp-target -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,le45 -fopenmp-simd -fopenmp-version=40 -ferror-limit 200 %s -Wno-openmp-target -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,le45 -fopenmp-simd -fopenmp-version=45 -ferror-limit 200 %s -Wno-openmp-target -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,le50 -fopenmp-simd -fopenmp-version=50 -ferror-limit 200 %s -Wno-openmp-target -Wuninitialized
 // RUN: %clang_cc1 -DCCODE -verify -fopenmp-simd -ferror-limit 200 -x c %s -Wno-openmp-mapping -Wuninitialized
 #ifdef CCODE
 void foo(int arg) {
@@ -57,9 +63,9 @@ struct SA {
     {}
     #pragma omp target map(arg[2:2],a,d) // expected-error {{subscripted value is not an array or pointer}}
     {}
-    #pragma omp target map(arg,a*2) // expected-error {{expected expression containing only member accesses and/or array sections based on named variables}}
+    #pragma omp target map(arg,a*2) // le45-error {{expected expression containing only member accesses and/or array sections based on named variables}} le50-error {{expected addressable lvalue in 'map' clause}}
     {}
-    #pragma omp target map(arg,(c+1)[2]) // expected-error {{expected expression containing only member accesses and/or array sections based on named variables}}
+    #pragma omp target map(arg,(c+1)[2]) // le45-error {{expected expression containing only member accesses and/or array sections based on named variables}}
     {}
     #pragma omp target map(arg,a[:2],d) // expected-error {{subscripted value is not an array or pointer}}
     {}
@@ -305,7 +311,7 @@ void SAclient(int arg) {
   {}
   #pragma omp target map(r.S.Arr[:12])
   {}
-  #pragma omp target map(r.S.foo()[:12]) // expected-error {{expected expression containing only member accesses and/or array sections based on named variables}}
+  #pragma omp target map(r.S.foo()[:12]) // le45-error {{expected expression containing only member accesses and/or array sections based on named variables}} le50-error {{expected addressable lvalue in 'map' clause}}
   {}
   #pragma omp target map(r.C, r.D)
   {}
@@ -339,7 +345,7 @@ void SAclient(int arg) {
   {}
   #pragma omp target map(r.S.Ptr[:])  // expected-error {{section length is unspecified and cannot be inferred because subscripted value is not an array}}
   {}
-  #pragma omp target map((p+1)->A)  // expected-error {{expected expression containing only member accesses and/or array sections based on named variables}}
+  #pragma omp target map((p+1)->A)  // le45-error {{expected expression containing only member accesses and/or array sections based on named variables}}
   {}
   #pragma omp target map(u.B)  // expected-error {{mapping of union members is not allowed}}
   {}
@@ -479,7 +485,7 @@ T tmain(T argc) {
   foo();
 #pragma omp target map(T) // expected-error {{'T' does not refer to a value}}
   foo();
-#pragma omp target map(I) // expected-error 2 {{expected expression containing only member accesses and/or array sections based on named variables}}
+#pragma omp target map(I) // le45-error 2 {{expected expression containing only member accesses and/or array sections based on named variables}} le50-error 2 {{expected addressable lvalue in 'map' clause}}
   foo();
 #pragma omp target map(S2::S2s)
   foo();
@@ -496,7 +502,7 @@ T tmain(T argc) {
 #pragma omp target map(to, x)
   foo();
 #pragma omp target data map(to x) // expected-error {{expected ',' or ')' in 'map' clause}}
-#pragma omp target data map(tofrom: argc > 0 ? x : y) // expected-error 2 {{expected expression containing only member accesses and/or array sections based on named variables}}
+#pragma omp target data map(tofrom: argc > 0 ? x : y) // le45-error 2 {{expected expression containing only member accesses and/or array sections based on named variables}} le50-error 2 {{expected addressable lvalue in 'map' clause}}
 #pragma omp target data map(argc)
 #pragma omp target data map(S1) // expected-error {{'S1' does not refer to a value}}
 #pragma omp target data map(a, b, c, d, f) // expected-error {{incomplete type 'S1' where a complete type is required}} warn-warning 2 {{Type 'const S2' is not trivially copyable and not guaranteed to be mapped correctly}} warn-warning 2 {{Type 'const S3' is not trivially copyable and not guaranteed to be mapped correctly}}
@@ -603,7 +609,7 @@ int main(int argc, char **argv) {
 #pragma omp target map(to, x)
   foo();
 #pragma omp target data map(to x) // expected-error {{expected ',' or ')' in 'map' clause}}
-#pragma omp target data map(tofrom: argc > 0 ? argv[1] : argv[2]) // expected-error {{xpected expression containing only member accesses and/or array sections based on named variables}}
+#pragma omp target data map(tofrom: argc > 0 ? argv[1] : argv[2]) // le45-error {{expected expression containing only member accesses and/or array sections based on named variables}} le50-error {{expected addressable lvalue in 'map' clause}}
 #pragma omp target data map(argc)
 #pragma omp target data map(S1) // expected-error {{'S1' does not refer to a value}}
 #pragma omp target data map(a, b, c, d, f) // expected-error {{incomplete type 'S1' where a complete type is required}} warn-warning {{Type 'const S2' is not trivially copyable and not guaranteed to be mapped correctly}} warn-warning {{Type 'const S3' is not trivially copyable and not guaranteed to be mapped correctly}}
@@ -693,6 +699,29 @@ int main(int argc, char **argv) {
 #pragma omp target map(s.s.s.b[:2])
   { s.s.s.b[0]++; }
 #pragma omp target map(s8[0:1], s9) // warn-warning {{Type 'class S8' is not trivially copyable and not guaranteed to be mapped correctly}} warn-warning {{Type 'class S9' is not trivially copyable and not guaranteed to be mapped correctly}}
+  {}
+
+  int **BB, *offset, *a;
+
+#pragma omp target map(**(BB+*offset)) // le45-error {{expected expression containing only member accesses and/or array sections based on named variables}}
+  {}
+#pragma omp target map(**(BB+y)) // le45-error {{expected expression containing only member accesses and/or array sections based on named variables}}
+  {}
+#pragma omp target map(*(a+*offset)) // le45-error {{expected expression containing only member accesses and/or array sections based on named variables}}
+  {}
+#pragma omp target map(**(*offset+BB)) // le45-error {{expected expression containing only member accesses and/or array sections based on named variables}}
+  {}
+#pragma omp target map(**(y+BB)) // le45-error {{expected expression containing only member accesses and/or array sections based on named variables}}
+  {}
+#pragma omp target map(*(*offset+a)) // le45-error {{expected expression containing only member accesses and/or array sections based on named variables}}
+  {}
+#pragma omp target map(**(*offset+BB+*a)) // le45-error {{expected expression containing only member accesses and/or array sections based on named variables}}
+  {}
+#pragma omp target map(**(*(*(&offset))+BB+*a)) // le45-error {{expected expression containing only member accesses and/or array sections based on named variables}}
+  {}
+#pragma omp target map(*(a+(a))) // expected-error {{invalid operands to binary expression ('int *' and 'int *')}}
+  {}
+#pragma omp target map(*(1+*a+*a)) // expected-error {{indirection requires pointer operand ('int' invalid)}}
   {}
 
   return tmain<int, 3>(argc)+tmain<from, 4>(argc); // expected-note {{in instantiation of function template specialization 'tmain<int, 3>' requested here}} expected-note {{in instantiation of function template specialization 'tmain<int, 4>' requested here}}

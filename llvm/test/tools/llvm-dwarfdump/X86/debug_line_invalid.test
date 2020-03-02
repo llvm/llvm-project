@@ -46,7 +46,7 @@
 ## For fatal issues, the following table(s) should not be dumped:
 # FATAL:      debug_line[0x00000048]
 # RESERVED-NOT: prologue
-# RESERVED: warning: parsing line table prologue at offset 0x00000048 unsupported reserved unit length found of value 0xfffffffe
+# RESERVED: warning: parsing line table prologue at offset 0x00000048: unsupported reserved unit length of value 0xfffffffe
 # RESERVED-NOT: prologue
 # FATAL-NOT:  debug_line
 
@@ -197,8 +197,8 @@
 # LAST:          0x00000000cafebabe {{.*}} end_sequence
 
 # ALL-NOT:  warning:
-# ALL:      warning: parsing line table prologue at offset 0x00000048 found unsupported version 0
-# ALL-NEXT: warning: parsing line table prologue at offset 0x0000004e found unsupported version 1
+# ALL:      warning: parsing line table prologue at offset 0x00000048: unsupported version 0
+# ALL-NEXT: warning: parsing line table prologue at offset 0x0000004e: unsupported version 1
 # ALL-NEXT: warning: parsing line table prologue at 0x00000054 found an invalid directory or file table description at 0x00000073
 # ALL-NEXT: warning: failed to parse entry content descriptions because no path was found
 # ALL-NEXT: warning: parsing line table prologue at 0x00000081 found an invalid directory or file table description at 0x000000ba

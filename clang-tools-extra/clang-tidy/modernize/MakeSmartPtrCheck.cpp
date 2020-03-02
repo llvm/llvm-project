@@ -68,17 +68,12 @@ bool MakeSmartPtrCheck::isLanguageVersionSupported(
 void MakeSmartPtrCheck::registerPPCallbacks(const SourceManager &SM,
                                             Preprocessor *PP,
                                             Preprocessor *ModuleExpanderPP) {
-  if (isLanguageVersionSupported(getLangOpts())) {
     Inserter = std::make_unique<utils::IncludeInserter>(SM, getLangOpts(),
                                                          IncludeStyle);
     PP->addPPCallbacks(Inserter->CreatePPCallbacks());
-  }
 }
 
 void MakeSmartPtrCheck::registerMatchers(ast_matchers::MatchFinder *Finder) {
-  if (!isLanguageVersionSupported(getLangOpts()))
-    return;
-
   // Calling make_smart_ptr from within a member function of a type with a
   // private or protected constructor would be ill-formed.
   auto CanCallCtor = unless(has(ignoringImpCasts(

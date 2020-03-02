@@ -535,8 +535,8 @@ define <4 x i32> @vec_sel_xor_multi_use(<4 x i32> %a, <4 x i32> %b, <4 x i1> %c)
 
 define i32 @allSignBits(i32 %cond, i32 %tval, i32 %fval) {
 ; CHECK-LABEL: @allSignBits(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[COND:%.*]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 [[TVAL:%.*]], i32 [[FVAL:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[COND:%.*]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 [[FVAL:%.*]], i32 [[TVAL:%.*]]
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
   %bitmask = ashr i32 %cond, 31
@@ -549,8 +549,8 @@ define i32 @allSignBits(i32 %cond, i32 %tval, i32 %fval) {
 
 define <4 x i8> @allSignBits_vec(<4 x i8> %cond, <4 x i8> %tval, <4 x i8> %fval) {
 ; CHECK-LABEL: @allSignBits_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt <4 x i8> [[COND:%.*]], zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = select <4 x i1> [[TMP1]], <4 x i8> [[TVAL:%.*]], <4 x i8> [[FVAL:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i8> [[COND:%.*]], <i8 -1, i8 -1, i8 -1, i8 -1>
+; CHECK-NEXT:    [[TMP2:%.*]] = select <4 x i1> [[TMP1]], <4 x i8> [[FVAL:%.*]], <4 x i8> [[TVAL:%.*]]
 ; CHECK-NEXT:    ret <4 x i8> [[TMP2]]
 ;
   %bitmask = ashr <4 x i8> %cond, <i8 7, i8 7, i8 7, i8 7>

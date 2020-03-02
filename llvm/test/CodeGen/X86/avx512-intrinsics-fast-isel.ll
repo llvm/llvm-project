@@ -1907,6 +1907,62 @@ entry:
   ret <4 x float> %vecins.i
 }
 
+define <16 x float> @test_mm512_cvtph_ps(<4 x i64> %__A) {
+; CHECK-LABEL: test_mm512_cvtph_ps:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vcvtph2ps %ymm0, %zmm0
+; CHECK-NEXT:    ret{{[l|q]}}
+entry:
+  %0 = bitcast <4 x i64> %__A to <16 x i16>
+  %1 = bitcast <16 x i16> %0 to <16 x half>
+  %2 = fpext <16 x half> %1 to <16 x float>
+  ret <16 x float> %2
+}
+
+define <16 x float> @test_mm512_mask_cvtph_ps(<16 x float> %__W, i16 zeroext %__U, <4 x i64> %__A) {
+; X86-LABEL: test_mm512_mask_cvtph_ps:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    kmovw %eax, %k1
+; X86-NEXT:    vcvtph2ps %ymm1, %zmm0 {%k1}
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_mm512_mask_cvtph_ps:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vcvtph2ps %ymm1, %zmm0 {%k1}
+; X64-NEXT:    retq
+entry:
+  %0 = bitcast <4 x i64> %__A to <16 x i16>
+  %1 = bitcast <16 x i16> %0 to <16 x half>
+  %2 = bitcast i16 %__U to <16 x i1>
+  %3 = fpext <16 x half> %1 to <16 x float>
+  %4 = select <16 x i1> %2, <16 x float> %3, <16 x float> %__W
+  ret <16 x float> %4
+}
+
+define <16 x float> @test_mm512_maskz_cvtph_ps(i16 zeroext %__U, <4 x i64> %__A) {
+; X86-LABEL: test_mm512_maskz_cvtph_ps:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    kmovw %eax, %k1
+; X86-NEXT:    vcvtph2ps %ymm0, %zmm0 {%k1} {z}
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_mm512_maskz_cvtph_ps:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vcvtph2ps %ymm0, %zmm0 {%k1} {z}
+; X64-NEXT:    retq
+entry:
+  %0 = bitcast <4 x i64> %__A to <16 x i16>
+  %1 = bitcast <16 x i16> %0 to <16 x half>
+  %2 = bitcast i16 %__U to <16 x i1>
+  %3 = fpext <16 x half> %1 to <16 x float>
+  %4 = select <16 x i1> %2, <16 x float> %3, <16 x float> zeroinitializer
+  ret <16 x float> %4
+}
+
 define <8 x double> @test_mm512_cvtps_pd(<8 x float> %__A) {
 ; CHECK-LABEL: test_mm512_cvtps_pd:
 ; CHECK:       # %bb.0: # %entry

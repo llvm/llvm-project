@@ -4842,33 +4842,38 @@ bool LLParser::ParseDIModule(MDNode *&Result, bool IsDistinct) {
 }
 
 /// ParseDITemplateTypeParameter:
-///   ::= !DITemplateTypeParameter(name: "Ty", type: !1)
+///   ::= !DITemplateTypeParameter(name: "Ty", type: !1, defaulted: false)
 bool LLParser::ParseDITemplateTypeParameter(MDNode *&Result, bool IsDistinct) {
 #define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
   OPTIONAL(name, MDStringField, );                                             \
-  REQUIRED(type, MDField, );
+  REQUIRED(type, MDField, );                                                   \
+  OPTIONAL(defaulted, MDBoolField, );
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
-  Result =
-      GET_OR_DISTINCT(DITemplateTypeParameter, (Context, name.Val, type.Val));
+  Result = GET_OR_DISTINCT(DITemplateTypeParameter,
+                           (Context, name.Val, type.Val, defaulted.Val));
   return false;
 }
 
 /// ParseDITemplateValueParameter:
 ///   ::= !DITemplateValueParameter(tag: DW_TAG_template_value_parameter,
-///                                 name: "V", type: !1, value: i32 7)
+///                                 name: "V", type: !1, defaulted: false,
+///                                 value: i32 7)
 bool LLParser::ParseDITemplateValueParameter(MDNode *&Result, bool IsDistinct) {
 #define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
   OPTIONAL(tag, DwarfTagField, (dwarf::DW_TAG_template_value_parameter));      \
   OPTIONAL(name, MDStringField, );                                             \
   OPTIONAL(type, MDField, );                                                   \
+  OPTIONAL(defaulted, MDBoolField, );                                          \
   REQUIRED(value, MDField, );
+
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
-  Result = GET_OR_DISTINCT(DITemplateValueParameter,
-                           (Context, tag.Val, name.Val, type.Val, value.Val));
+  Result = GET_OR_DISTINCT(
+      DITemplateValueParameter,
+      (Context, tag.Val, name.Val, type.Val, defaulted.Val, value.Val));
   return false;
 }
 

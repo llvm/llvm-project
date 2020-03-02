@@ -78,6 +78,65 @@ define <16 x float> @cvt_16i16_to_16f32(<16 x i16> %a0) nounwind {
   ret <16 x float> %2
 }
 
+define <2 x float> @cvt_2i16_to_2f32_constrained(<2 x i16> %a0) nounwind strictfp {
+; ALL-LABEL: cvt_2i16_to_2f32_constrained:
+; ALL:       # %bb.0:
+; ALL-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
+; ALL-NEXT:    vcvtph2ps %xmm0, %xmm0
+; ALL-NEXT:    retq
+  %1 = bitcast <2 x i16> %a0 to <2 x half>
+  %2 = call <2 x float> @llvm.experimental.constrained.fpext.v2f32.v2f16(<2 x half> %1, metadata !"fpexcept.strict") strictfp
+  ret <2 x float> %2
+}
+declare <2 x float> @llvm.experimental.constrained.fpext.v2f32.v2f16(<2 x half>, metadata) strictfp
+
+define <4 x float> @cvt_4i16_to_4f32_constrained(<4 x i16> %a0) nounwind strictfp {
+; ALL-LABEL: cvt_4i16_to_4f32_constrained:
+; ALL:       # %bb.0:
+; ALL-NEXT:    vcvtph2ps %xmm0, %xmm0
+; ALL-NEXT:    retq
+  %1 = bitcast <4 x i16> %a0 to <4 x half>
+  %2 = call <4 x float> @llvm.experimental.constrained.fpext.v4f32.v4f16(<4 x half> %1, metadata !"fpexcept.strict") strictfp
+  ret <4 x float> %2
+}
+declare <4 x float> @llvm.experimental.constrained.fpext.v4f32.v4f16(<4 x half>, metadata) strictfp
+
+define <8 x float> @cvt_8i16_to_8f32_constrained(<8 x i16> %a0) nounwind strictfp {
+; ALL-LABEL: cvt_8i16_to_8f32_constrained:
+; ALL:       # %bb.0:
+; ALL-NEXT:    vcvtph2ps %xmm0, %ymm0
+; ALL-NEXT:    retq
+  %1 = bitcast <8 x i16> %a0 to <8 x half>
+  %2 = call <8 x float> @llvm.experimental.constrained.fpext.v8f32.v8f16(<8 x half> %1, metadata !"fpexcept.strict") strictfp
+  ret <8 x float> %2
+}
+declare <8 x float> @llvm.experimental.constrained.fpext.v8f32.v8f16(<8 x half>, metadata) strictfp
+
+define <16 x float> @cvt_16i16_to_16f32_constrained(<16 x i16> %a0) nounwind strictfp {
+; AVX1-LABEL: cvt_16i16_to_16f32_constrained:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX1-NEXT:    vcvtph2ps %xmm1, %ymm1
+; AVX1-NEXT:    vcvtph2ps %xmm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: cvt_16i16_to_16f32_constrained:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX2-NEXT:    vcvtph2ps %xmm1, %ymm1
+; AVX2-NEXT:    vcvtph2ps %xmm0, %ymm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: cvt_16i16_to_16f32_constrained:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vcvtph2ps %ymm0, %zmm0
+; AVX512-NEXT:    retq
+  %1 = bitcast <16 x i16> %a0 to <16 x half>
+  %2 = call <16 x float> @llvm.experimental.constrained.fpext.v16f32.v16f16(<16 x half> %1, metadata !"fpexcept.strict") strictfp
+  ret <16 x float> %2
+}
+declare <16 x float> @llvm.experimental.constrained.fpext.v16f32.v16f16(<16 x half>, metadata) strictfp
+
 ;
 ; Half to Float (Load)
 ;
@@ -150,6 +209,29 @@ define <16 x float> @load_cvt_16i16_to_16f32(<16 x i16>* %a0) nounwind {
   %2 = bitcast <16 x i16> %1 to <16 x half>
   %3 = fpext <16 x half> %2 to <16 x float>
   ret <16 x float> %3
+}
+
+define <4 x float> @load_cvt_4i16_to_4f32_constrained(<4 x i16>* %a0) nounwind strictfp {
+; ALL-LABEL: load_cvt_4i16_to_4f32_constrained:
+; ALL:       # %bb.0:
+; ALL-NEXT:    vcvtph2ps (%rdi), %xmm0
+; ALL-NEXT:    retq
+  %1 = load <4 x i16>, <4 x i16>* %a0
+  %2 = bitcast <4 x i16> %1 to <4 x half>
+  %3 = call <4 x float> @llvm.experimental.constrained.fpext.v4f32.v4f16(<4 x half> %2, metadata !"fpexcept.strict") strictfp
+  ret <4 x float> %3
+}
+
+define <4 x float> @load_cvt_8i16_to_4f32_constrained(<8 x i16>* %a0) nounwind {
+; ALL-LABEL: load_cvt_8i16_to_4f32_constrained:
+; ALL:       # %bb.0:
+; ALL-NEXT:    vcvtph2ps (%rdi), %xmm0
+; ALL-NEXT:    retq
+  %1 = load <8 x i16>, <8 x i16>* %a0
+  %2 = shufflevector <8 x i16> %1, <8 x i16> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %3 = bitcast <4 x i16> %2 to <4 x half>
+  %4 = call <4 x float> @llvm.experimental.constrained.fpext.v4f32.v4f16(<4 x half> %3, metadata !"fpexcept.strict") strictfp
+  ret <4 x float> %4
 }
 
 ;
@@ -243,6 +325,59 @@ define <8 x double> @cvt_8i16_to_8f64(<8 x i16> %a0) nounwind {
   %2 = fpext <8 x half> %1 to <8 x double>
   ret <8 x double> %2
 }
+
+define <2 x double> @cvt_2i16_to_2f64_constrained(<2 x i16> %a0) nounwind strictfp {
+; ALL-LABEL: cvt_2i16_to_2f64_constrained:
+; ALL:       # %bb.0:
+; ALL-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
+; ALL-NEXT:    vcvtph2ps %xmm0, %xmm0
+; ALL-NEXT:    vcvtps2pd %xmm0, %xmm0
+; ALL-NEXT:    retq
+  %1 = bitcast <2 x i16> %a0 to <2 x half>
+  %2 = call <2 x double> @llvm.experimental.constrained.fpext.v2f64.v2f16(<2 x half> %1, metadata !"fpexcept.strict") strictfp
+  ret <2 x double> %2
+}
+declare <2 x double> @llvm.experimental.constrained.fpext.v2f64.v2f16(<2 x half>, metadata) strictfp
+
+define <4 x double> @cvt_4i16_to_4f64_constrained(<4 x i16> %a0) nounwind strictfp {
+; ALL-LABEL: cvt_4i16_to_4f64_constrained:
+; ALL:       # %bb.0:
+; ALL-NEXT:    vcvtph2ps %xmm0, %xmm0
+; ALL-NEXT:    vcvtps2pd %xmm0, %ymm0
+; ALL-NEXT:    retq
+  %1 = bitcast <4 x i16> %a0 to <4 x half>
+  %2 = call <4 x double> @llvm.experimental.constrained.fpext.v4f64.v4f16(<4 x half> %1, metadata !"fpexcept.strict") strictfp
+  ret <4 x double> %2
+}
+declare <4 x double> @llvm.experimental.constrained.fpext.v4f64.v4f16(<4 x half>, metadata) strictfp
+
+define <8 x double> @cvt_8i16_to_8f64_constrained(<8 x i16> %a0) nounwind strictfp {
+; AVX1-LABEL: cvt_8i16_to_8f64_constrained:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vcvtph2ps %xmm0, %ymm0
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX1-NEXT:    vcvtps2pd %xmm1, %ymm1
+; AVX1-NEXT:    vcvtps2pd %xmm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: cvt_8i16_to_8f64_constrained:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vcvtph2ps %xmm0, %ymm0
+; AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX2-NEXT:    vcvtps2pd %xmm1, %ymm1
+; AVX2-NEXT:    vcvtps2pd %xmm0, %ymm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: cvt_8i16_to_8f64_constrained:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vcvtph2ps %xmm0, %ymm0
+; AVX512-NEXT:    vcvtps2pd %ymm0, %zmm0
+; AVX512-NEXT:    retq
+  %1 = bitcast <8 x i16> %a0 to <8 x half>
+  %2 = call <8 x double> @llvm.experimental.constrained.fpext.v8f64.v8f16(<8 x half> %1, metadata !"fpexcept.strict") strictfp
+  ret <8 x double> %2
+}
+declare <8 x double> @llvm.experimental.constrained.fpext.v8f64.v8f16(<8 x half>, metadata) strictfp
 
 ;
 ; Half to Double (Load)

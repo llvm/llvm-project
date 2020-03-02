@@ -43,26 +43,26 @@ MSP430TargetELFStreamer::MSP430TargetELFStreamer(MCStreamer &S,
   Streamer.SwitchSection(AttributeSection);
 
   // Format version.
-  Streamer.emitIntValue(0x41, 1);
+  Streamer.emitInt8(0x41);
   // Subsection length.
-  Streamer.emitIntValue(22, 4);
+  Streamer.emitInt32(22);
   // Vendor name string, zero-terminated.
   Streamer.emitBytes("mspabi");
-  Streamer.emitIntValue(0, 1);
+  Streamer.emitInt8(0);
 
   // Attribute vector scope tag. 1 stands for the entire file.
-  Streamer.emitIntValue(1, 1);
+  Streamer.emitInt8(1);
   // Attribute vector length.
-  Streamer.emitIntValue(11, 4);
+  Streamer.emitInt32(11);
   // OFBA_MSPABI_Tag_ISA(4) = 1, MSP430
-  Streamer.emitIntValue(4, 1);
-  Streamer.emitIntValue(1, 1);
+  Streamer.emitInt8(4);
+  Streamer.emitInt8(1);
   // OFBA_MSPABI_Tag_Code_Model(6) = 1, Small
-  Streamer.emitIntValue(6, 1);
-  Streamer.emitIntValue(1, 1);
+  Streamer.emitInt8(6);
+  Streamer.emitInt8(1);
   // OFBA_MSPABI_Tag_Data_Model(8) = 1, Small
-  Streamer.emitIntValue(8, 1);
-  Streamer.emitIntValue(1, 1);
+  Streamer.emitInt8(8);
+  Streamer.emitInt8(1);
 }
 
 MCELFStreamer &MSP430TargetELFStreamer::getStreamer() {

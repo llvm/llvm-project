@@ -147,6 +147,20 @@ define i32 @ext1_ext1_add_same_vec_cse(<4 x i32> %x) {
   ret i32 %r
 }
 
+; Don't assert if extract indices have different types.
+
+define i32 @ext1_ext1_add_same_vec_diff_idx_ty(<4 x i32> %x) {
+; CHECK-LABEL: @ext1_ext1_add_same_vec_diff_idx_ty(
+; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i32> [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i32> [[TMP1]], i32 1
+; CHECK-NEXT:    ret i32 [[TMP2]]
+;
+  %e0 = extractelement <4 x i32> %x, i32 1
+  %e1 = extractelement <4 x i32> %x, i64 1
+  %r = add i32 %e0, %e1
+  ret i32 %r
+}
+
 declare void @use_i8(i8)
 
 ; Negative test - same vector operand; scalar code is cheaper than general case

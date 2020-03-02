@@ -353,6 +353,10 @@ void XCOFFObjectWriter::executePostLayoutBinding(MCAssembler &Asm,
       if (XSym == ContainingCsect->getQualNameSymbol())
         continue;
 
+      // Only put a label into the symbol table when it is an external label.
+      if (!XSym->isExternal())
+        continue;
+
       assert(SectionMap.find(ContainingCsect) != SectionMap.end() &&
              "Expected containing csect to exist in map");
       // Lookup the containing csect and add the symbol to it.

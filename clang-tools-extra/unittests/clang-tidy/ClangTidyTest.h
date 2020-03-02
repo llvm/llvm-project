@@ -67,6 +67,8 @@ private:
     // `getLangOpts()`).
     CheckFactory<CheckTypes...>::createChecks(&Context, Checks);
     for (auto &Check : Checks) {
+      if (!Check->isLanguageVersionSupported(Context.getLangOpts()))
+        continue;
       Check->registerMatchers(&Finder);
       Check->registerPPCallbacks(Compiler.getSourceManager(), PP, PP);
     }

@@ -135,11 +135,23 @@ def SysMManAPI : PublicAPI<"sys/mman.h"> {
 }
 
 def SignalAPI : PublicAPI<"signal.h"> {
-  let TypeDeclarations = [
-    SizeT, // This is needed by <linux/signal.h>.
-  ];
-
   let Functions = [
     "raise",
+    "sigprocmask",
+    "sigemptyset",
+    "sigaddset",
+  ];
+}
+
+def ThreadsAPI : PublicAPI<"threads.h"> {
+  let Enumerations = [
+    "mtx_plain",
+    "mtx_recursive",
+    "mtx_timed",
+    "thrd_timedout",
+    "thrd_success",
+    "thrd_busy",
+    "thrd_error",
+    "thrd_nomem",
   ];
 }

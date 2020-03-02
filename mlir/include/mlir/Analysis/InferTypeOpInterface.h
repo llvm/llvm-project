@@ -15,6 +15,7 @@
 #define MLIR_ANALYSIS_INFERTYPEOPINTERFACE_H_
 
 #include "mlir/IR/Attributes.h"
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/Support/LLVM.h"
@@ -86,7 +87,7 @@ LogicalResult inferReturnTensorTypes(
         componentTypeFn,
     MLIRContext *context, Optional<Location> location, ValueRange operands,
     ArrayRef<NamedAttribute> attributes, RegionRange regions,
-    SmallVectorImpl<Type> &inferedReturnTypes);
+    SmallVectorImpl<Type> &inferredReturnTypes);
 
 /// Verifies that the inferred result types match the actual result types for
 /// the op. Precondition: op implements InferTypeOpInterface.
@@ -97,7 +98,7 @@ LogicalResult verifyInferredResultTypes(Operation *op);
 
 namespace OpTrait {
 
-/// Tensor type inference trait that constructs a tensor from the infered
+/// Tensor type inference trait that constructs a tensor from the inferred
 /// shape and elemental types.
 /// Requires: Op implements functions of InferShapedTypeOpInterface.
 template <typename ConcreteType>
@@ -107,10 +108,10 @@ public:
   inferReturnTypes(MLIRContext *context, Optional<Location> location,
                    ValueRange operands, ArrayRef<NamedAttribute> attributes,
                    RegionRange regions,
-                   SmallVectorImpl<Type> &inferedReturnTypes) {
+                   SmallVectorImpl<Type> &inferredReturnTypes) {
     return ::mlir::detail::inferReturnTensorTypes(
         ConcreteType::inferReturnTypeComponents, context, location, operands,
-        attributes, regions, inferedReturnTypes);
+        attributes, regions, inferredReturnTypes);
   }
 };
 

@@ -1,4 +1,4 @@
-add_llvm_library(MLIRGPUtoROCDLTransforms
+add_mlir_conversion_library(MLIRGPUtoROCDLTransforms
   LowerGpuOpsToROCDLOps.cpp
   )
 target_link_libraries(MLIRGPUtoROCDLTransforms

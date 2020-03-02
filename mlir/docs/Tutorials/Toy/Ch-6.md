@@ -94,7 +94,7 @@ by relying on [transitive lowering](../../../getting_started/Glossary.md#transit
   mlir::populateLoopToStdConversionPatterns(patterns, &getContext());
   mlir::populateStdToLLVMConversionPatterns(typeConverter, patterns);
 
-  // The only remaining operation to lower from the `toy` dialect, is the
+  // The only remaining operation, to lower from the `toy` dialect, is the
   // PrintOp.
   patterns.insert<PrintOpLowering>(&getContext());
 ```

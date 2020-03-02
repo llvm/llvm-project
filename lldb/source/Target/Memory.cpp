@@ -232,8 +232,13 @@ size_t MemoryCache::Read(addr_t addr, void *dst, size_t dst_len,
         if (process_bytes_read == 0)
           return dst_len - bytes_left;
 
-        if (process_bytes_read != cache_line_byte_size)
+        if (process_bytes_read != cache_line_byte_size) {
+          if (process_bytes_read < data_buffer_heap_up->GetByteSize()) {
+            dst_len -= data_buffer_heap_up->GetByteSize() - process_bytes_read;
+            bytes_left = process_bytes_read;
+          }
           data_buffer_heap_up->SetByteSize(process_bytes_read);
+        }
         m_L2_cache[curr_addr] = DataBufferSP(data_buffer_heap_up.release());
         // We have read data and put it into the cache, continue through the
         // loop again to get the data out of the cache...

@@ -1184,8 +1184,7 @@ void LowerVectorToLLVMPass::runOnModule() {
   populateVectorToLLVMConversionPatterns(converter, patterns);
   populateStdToLLVMConversionPatterns(converter, patterns);
 
-  ConversionTarget target(getContext());
-  target.addLegalDialect<LLVM::LLVMDialect>();
+  LLVMConversionTarget target(getContext());
   target.addDynamicallyLegalOp<FuncOp>(
       [&](FuncOp op) { return converter.isSignatureLegal(op.getType()); });
   if (failed(

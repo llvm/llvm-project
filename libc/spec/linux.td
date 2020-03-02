@@ -55,16 +55,12 @@ def Linux : StandardSpec<"Linux"> {
         Macro<"EL2NSYNC">,
         Macro<"EADV">,
         Macro<"ECOMM">,
-      ],
-      [], // Types
-      []  // Functions
+      ]
   >;
 
   HeaderSpec SysMMan = HeaderSpec<
       "sys/mman.h",
-      [Macro<"MAP_ANONYMOUS">],
-      [], // Types
-      []  // Functions
+      [Macro<"MAP_ANONYMOUS">]
   >;
 
   HeaderSpec Signal = HeaderSpec<
@@ -106,9 +102,7 @@ def Linux : StandardSpec<"Linux"> {
         Macro<"SIGPWR">,
         Macro<"SIGSYS">,
         Macro<"SIGUNUSED">,
-      ],
-      [], // Types
-      []  // Functions
+      ]
   >;
 
   let Headers = [

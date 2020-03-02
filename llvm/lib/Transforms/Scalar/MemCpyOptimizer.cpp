@@ -1302,9 +1302,13 @@ bool MemCpyOptPass::processByValArgument(CallSite CS, unsigned ArgNo) {
     return false;
 
   Value *TmpCast = MDep->getSource();
-  if (MDep->getSource()->getType() != ByValArg->getType())
-    TmpCast = new BitCastInst(MDep->getSource(), ByValArg->getType(),
-                              "tmpcast", CS.getInstruction());
+  if (MDep->getSource()->getType() != ByValArg->getType()) {
+    BitCastInst *TmpBitCast = new BitCastInst(MDep->getSource(), ByValArg->getType(),
+                                              "tmpcast", CS.getInstruction());
+    // Set the tmpcast's DebugLoc to MDep's
+    TmpBitCast->setDebugLoc(MDep->getDebugLoc());
+    TmpCast = TmpBitCast;
+  }
 
   LLVM_DEBUG(dbgs() << "MemCpyOptPass: Forwarding memcpy to byval:\n"
                     << "  " << *MDep << "\n"

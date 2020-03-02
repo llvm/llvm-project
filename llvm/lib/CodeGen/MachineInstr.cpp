@@ -1525,7 +1525,6 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
                          bool IsStandalone, bool SkipOpers, bool SkipDebugLoc,
                          bool AddNewLine, const TargetInstrInfo *TII) const {
   // We can be a bit tidier if we know the MachineFunction.
-  const MachineFunction *MF = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
   const MachineRegisterInfo *MRI = nullptr;
   const TargetIntrinsicInfo *IntrinsicInfo = nullptr;
@@ -1817,14 +1816,6 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
     }
     auto *DV = cast<DILocalVariable>(getOperand(e - 2).getMetadata());
     OS << " line no:" <<  DV->getLine();
-    if (auto *InlinedAt = debugLoc->getInlinedAt()) {
-      DebugLoc InlinedAtDL(InlinedAt);
-      if (InlinedAtDL && MF) {
-        OS << " inlined @[ ";
-        InlinedAtDL.print(OS);
-        OS << " ]";
-      }
-    }
     if (isIndirectDebugValue())
       OS << " indirect";
   }
@@ -2197,7 +2188,7 @@ void MachineInstr::changeDebugValuesDefReg(Register Reg) {
 
 using MMOList = SmallVector<const MachineMemOperand *, 2>;
 
-static unsigned getSpillSlotSize(MMOList &Accesses,
+static unsigned getSpillSlotSize(const MMOList &Accesses,
                                  const MachineFrameInfo &MFI) {
   unsigned Size = 0;
   for (auto A : Accesses)

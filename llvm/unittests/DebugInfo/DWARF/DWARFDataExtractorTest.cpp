@@ -41,13 +41,15 @@ TEST(DWARFDataExtractorTest, getInitialLength) {
   auto ErrorResult = std::make_tuple(0, dwarf::DWARF32, 0);
 
   // Empty data.
-  EXPECT_THAT_EXPECTED(GetWithError({}),
-                       FailedWithMessage("unexpected end of data"));
+  EXPECT_THAT_EXPECTED(
+      GetWithError({}),
+      FailedWithMessage("unexpected end of data at offset 0x0"));
   EXPECT_EQ(GetWithoutError({}), ErrorResult);
 
   // Not long enough for the U32 field.
-  EXPECT_THAT_EXPECTED(GetWithError({0x00, 0x01, 0x02}),
-                       FailedWithMessage("unexpected end of data"));
+  EXPECT_THAT_EXPECTED(
+      GetWithError({0x00, 0x01, 0x02}),
+      FailedWithMessage("unexpected end of data at offset 0x0"));
   EXPECT_EQ(GetWithoutError({0x00, 0x01, 0x02}), ErrorResult);
 
   EXPECT_THAT_EXPECTED(
@@ -72,14 +74,15 @@ TEST(DWARFDataExtractorTest, getInitialLength) {
   EXPECT_EQ(GetWithoutError({0xff, 0xff, 0xff, 0xf0}), ErrorResult);
 
   // DWARF64 marker without the subsequent length field.
-  EXPECT_THAT_EXPECTED(GetWithError({0xff, 0xff, 0xff, 0xff}),
-                       FailedWithMessage("unexpected end of data"));
+  EXPECT_THAT_EXPECTED(
+      GetWithError({0xff, 0xff, 0xff, 0xff}),
+      FailedWithMessage("unexpected end of data at offset 0x4"));
   EXPECT_EQ(GetWithoutError({0xff, 0xff, 0xff, 0xff}), ErrorResult);
 
   // Not enough data for the U64 length.
   EXPECT_THAT_EXPECTED(
       GetWithError({0xff, 0xff, 0xff, 0xff, 0x00, 0x01, 0x02, 0x03}),
-      FailedWithMessage("unexpected end of data"));
+      FailedWithMessage("unexpected end of data at offset 0x4"));
   EXPECT_EQ(GetWithoutError({0xff, 0xff, 0xff, 0xff, 0x00, 0x01, 0x02, 0x03}),
             ErrorResult);
 

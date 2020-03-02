@@ -63,15 +63,19 @@ bool ObjCLocalizeStringLiteral::prepare(const Selection &Inputs) {
 
 Expected<Tweak::Effect>
 ObjCLocalizeStringLiteral::apply(const Selection &Inputs) {
-  auto &SM = Inputs.AST->getSourceManager();
-  auto &LangOpts = Inputs.AST->getASTContext().getLangOpts();
+  auto *AST = Inputs.AST;
+  auto &SM = AST->getSourceManager();
+  const auto &TB = AST->getTokens();
+  auto Toks = TB.spelledForExpanded(TB.expandedTokens(Str->getSourceRange()));
+  if (!Toks || Toks->empty())
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "Failed to find tokens to replace.");
+  // Insert `NSLocalizedString(` before the literal.
   auto Reps = tooling::Replacements(tooling::Replacement(
-      SM, CharSourceRange::getCharRange(Str->getBeginLoc()),
-      "NSLocalizedString(", LangOpts));
-  SourceLocation EndLoc = Lexer::getLocForEndOfToken(
-      Str->getEndLoc(), 0, Inputs.AST->getSourceManager(), LangOpts);
-  if (auto Err = Reps.add(tooling::Replacement(
-          SM, CharSourceRange::getCharRange(EndLoc), ", @\"\")", LangOpts)))
+      SM, Toks->front().location(), 0, "NSLocalizedString("));
+  // Insert `, @"")` after the literal.
+  if (auto Err = Reps.add(
+          tooling::Replacement(SM, Toks->back().endLocation(), 0, ", @\"\")")))
     return std::move(Err);
   return Effect::mainFileEdit(SM, std::move(Reps));
 }

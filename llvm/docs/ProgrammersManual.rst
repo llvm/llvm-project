@@ -2341,11 +2341,11 @@ always better.
 
 .. _ds_bit:
 
-Bit storage containers (BitVector, SparseBitVector)
----------------------------------------------------
+Bit storage containers (BitVector, SparseBitVector, CoalescingBitVector)
+------------------------------------------------------------------------
 
-Unlike the other containers, there are only two bit storage containers, and
-choosing when to use each is relatively straightforward.
+There are three bit storage containers, and choosing when to use each is
+relatively straightforward.
 
 One additional option is ``std::vector<bool>``: we discourage its use for two
 reasons 1) the implementation in many common compilers (e.g.  commonly
@@ -2394,6 +2394,22 @@ implementation, setting or testing bits in sorted order (either forwards or
 reverse) is O(1) worst case.  Testing and setting bits within 128 bits (depends
 on size) of the current bit is also O(1).  As a general statement,
 testing/setting bits in a SparseBitVector is O(distance away from last set bit).
+
+.. _dss_coalescingbitvector:
+
+CoalescingBitVector
+^^^^^^^^^^^^^^^^^^^
+
+The CoalescingBitVector container is similar in principle to a SparseBitVector,
+but is optimized to represent large contiguous ranges of set bits compactly. It
+does this by coalescing contiguous ranges of set bits into intervals. Searching
+for a bit in a CoalescingBitVector is O(log(gaps between contiguous ranges)).
+
+CoalescingBitVector is a better choice than BitVector when gaps between ranges
+of set bits are large. It's a better choice than SparseBitVector when find()
+operations must have fast, predictable performance. However, it's not a good
+choice for representing sets which have lots of very short ranges. E.g. the set
+`{2*x : x \in [0, n)}` would be a pathological input.
 
 .. _debugging:
 

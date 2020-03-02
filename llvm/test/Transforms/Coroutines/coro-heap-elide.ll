@@ -84,6 +84,120 @@ entry:
   ret void
 }
 
+; CHECK-LABEL: @callResume_with_coro_suspend_1(
+define void @callResume_with_coro_suspend_1() {
+entry:
+; CHECK: alloca %f.frame
+; CHECK-NOT: coro.begin
+; CHECK-NOT: CustomAlloc
+; CHECK: call void @may_throw()
+  %hdl = call i8* @f()
+
+; CHECK-NEXT: call fastcc void bitcast (void (%f.frame*)* @f.resume to void (i8*)*)(i8* %vFrame)
+  %0 = call i8* @llvm.coro.subfn.addr(i8* %hdl, i8 0)
+  %1 = bitcast i8* %0 to void (i8*)*
+  call fastcc void %1(i8* %hdl)
+  %2 = call token @llvm.coro.save(i8* %hdl)
+  %3 = call i8 @llvm.coro.suspend(token %2, i1 false)
+  switch i8 %3, label  %coro.ret [
+    i8 0, label %final.suspend
+    i8 1, label %cleanups
+  ]
+
+; CHECK-LABEL: final.suspend:
+final.suspend:
+; CHECK-NEXT: call fastcc void bitcast (void (%f.frame*)* @f.cleanup to void (i8*)*)(i8* %vFrame)
+  %4 = call i8* @llvm.coro.subfn.addr(i8* %hdl, i8 1)
+  %5 = bitcast i8* %4 to void (i8*)*
+  call fastcc void %5(i8* %hdl)
+  %6 = call token @llvm.coro.save(i8* %hdl)
+  %7 = call i8 @llvm.coro.suspend(token %6, i1 true)
+  switch i8 %7, label  %coro.ret [
+    i8 0, label %coro.ret
+    i8 1, label %cleanups
+  ]
+
+; CHECK-LABEL: cleanups:
+cleanups:
+; CHECK-NEXT: call fastcc void bitcast (void (%f.frame*)* @f.cleanup to void (i8*)*)(i8* %vFrame)
+  %8 = call i8* @llvm.coro.subfn.addr(i8* %hdl, i8 1)
+  %9 = bitcast i8* %8 to void (i8*)*
+  call fastcc void %9(i8* %hdl)
+  br label %coro.ret
+
+; CHECK-LABEL: coro.ret:
+coro.ret:
+; CHECK-NEXT: ret void
+  ret void
+}
+
+; CHECK-LABEL: @callResume_with_coro_suspend_2(
+define void @callResume_with_coro_suspend_2() personality i8* null {
+entry:
+; CHECK: alloca %f.frame
+; CHECK-NOT: coro.begin
+; CHECK-NOT: CustomAlloc
+; CHECK: call void @may_throw()
+  %hdl = call i8* @f()
+
+  %0 = call token @llvm.coro.save(i8* %hdl)
+; CHECK: invoke fastcc void bitcast (void (%f.frame*)* @f.resume to void (i8*)*)(i8* %vFrame)
+  %1 = call i8* @llvm.coro.subfn.addr(i8* %hdl, i8 0)
+  %2 = bitcast i8* %1 to void (i8*)*
+  invoke fastcc void %2(i8* %hdl)
+    to label %invoke.cont1 unwind label %lpad
+
+; CHECK-LABEL: invoke.cont1:
+invoke.cont1:
+  %3 = call i8 @llvm.coro.suspend(token %0, i1 false)
+  switch i8 %3, label  %coro.ret [
+    i8 0, label %final.ready
+    i8 1, label %cleanups
+  ]
+
+; CHECK-LABEL: lpad:
+lpad:
+  %4 = landingpad { i8*, i32 }
+          catch i8* null
+; CHECK: call fastcc void bitcast (void (%f.frame*)* @f.cleanup to void (i8*)*)(i8* %vFrame)
+  %5 = call i8* @llvm.coro.subfn.addr(i8* %hdl, i8 1)
+  %6 = bitcast i8* %5 to void (i8*)*
+  call fastcc void %6(i8* %hdl)
+  br label %final.suspend
+
+; CHECK-LABEL: final.ready:
+final.ready:
+; CHECK-NEXT: call fastcc void bitcast (void (%f.frame*)* @f.cleanup to void (i8*)*)(i8* %vFrame)
+  %7 = call i8* @llvm.coro.subfn.addr(i8* %hdl, i8 1)
+  %8 = bitcast i8* %7 to void (i8*)*
+  call fastcc void %8(i8* %hdl)
+  br label %final.suspend
+
+; CHECK-LABEL: final.suspend:
+final.suspend:
+  %9 = call token @llvm.coro.save(i8* %hdl)
+  %10 = call i8 @llvm.coro.suspend(token %9, i1 true)
+  switch i8 %10, label  %coro.ret [
+    i8 0, label %coro.ret
+    i8 1, label %cleanups
+  ]
+
+; CHECK-LABEL: cleanups:
+cleanups:
+; CHECK-NEXT: call fastcc void bitcast (void (%f.frame*)* @f.cleanup to void (i8*)*)(i8* %vFrame)
+  %11 = call i8* @llvm.coro.subfn.addr(i8* %hdl, i8 1)
+  %12 = bitcast i8* %11 to void (i8*)*
+  call fastcc void %12(i8* %hdl)
+  br label %coro.ret
+
+; CHECK-LABEL: coro.ret:
+coro.ret:
+; CHECK-NEXT: ret void
+  ret void
+}
+
+
+
 ; CHECK-LABEL: @callResume_PR34897_no_elision(
 define void @callResume_PR34897_no_elision(i1 %cond) {
 ; CHECK-LABEL: entry:
@@ -161,3 +275,5 @@ declare i8* @llvm.coro.free(token, i8*)
 declare i8* @llvm.coro.begin(token, i8*)
 declare i8* @llvm.coro.frame(token)
 declare i8* @llvm.coro.subfn.addr(i8*, i8)
+declare i8 @llvm.coro.suspend(token, i1)
+declare token @llvm.coro.save(i8*)

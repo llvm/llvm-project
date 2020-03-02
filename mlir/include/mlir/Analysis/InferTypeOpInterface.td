@@ -42,7 +42,7 @@ def InferTypeOpInterface : OpInterface<"InferTypeOpInterface"> {
                     "ValueRange":$operands,
                     "ArrayRef<NamedAttribute>":$attributes,
                     "RegionRange":$regions,
-                    "SmallVectorImpl<Type>&":$inferedReturnTypes)
+                    "SmallVectorImpl<Type>&":$inferredReturnTypes)
     >,
     StaticInterfaceMethod<
       /*desc=*/"Returns whether two array of types are compatible result types"
@@ -95,7 +95,19 @@ def InferShapedTypeOpInterface : OpInterface<"InferShapedTypeOpInterface"> {
                     "ArrayRef<NamedAttribute>":$attributes,
                     "RegionRange":$regions,
                     "SmallVectorImpl<ShapedTypeComponents>&":
-                      $inferedReturnShapes)
+                      $inferredReturnShapes)
+    >,
+    InterfaceMethod<
+      /*desc=*/[{Reify the shape computation for the operation.
+
+      Insert operations using the given OpBulder that computes the result shape.
+      }],
+      /*retTy=*/"LogicalResult",
+      /*methodName=*/"reifyReturnTypeShapes",
+      /*args=*/(ins "OpBuilder&":$builder,
+                    "SmallVectorImpl<Value>&":$reifiedReturnShapes),
+      /*methodBody=*/[{}],
+      /*defaultImplementation=*/[{ return failure(); }]
     >,
   ];
 }

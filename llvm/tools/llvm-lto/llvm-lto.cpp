@@ -223,6 +223,10 @@ static cl::opt<bool> CheckHasObjC(
     "check-for-objc", cl::init(false),
     cl::desc("Only check if the module has objective-C defined in it"));
 
+static cl::opt<bool> PrintMachOCPUOnly(
+    "print-macho-cpu-only", cl::init(false),
+    cl::desc("Instead of running LTO, print the mach-o cpu in each IR file"));
+
 namespace {
 
 struct ModuleInfo {
@@ -401,6 +405,30 @@ static void listDependentLibraries() {
       assert(S);
       outs() << StringRef(S, L) << "\n";
     }
+  }
+}
+
+static void printMachOCPUOnly() {
+  LLVMContext Context;
+  Context.setDiagnosticHandler(std::make_unique<LLVMLTODiagnosticHandler>(),
+                               true);
+  TargetOptions Options = InitTargetOptionsFromCodeGenFlags();
+  for (auto &Filename : InputFilenames) {
+    ErrorOr<std::unique_ptr<LTOModule>> ModuleOrErr =
+        LTOModule::createFromFile(Context, Filename, Options);
+    if (!ModuleOrErr)
+      error(ModuleOrErr, "llvm-lto: ");
+
+    Expected<uint32_t> CPUType = (*ModuleOrErr)->getMachOCPUType();
+    Expected<uint32_t> CPUSubType = (*ModuleOrErr)->getMachOCPUSubType();
+    if (!CPUType)
+      error("Error while printing mach-o cputype: " +
+            toString(CPUType.takeError()));
+    if (!CPUSubType)
+      error("Error while printing mach-o cpusubtype: " +
+            toString(CPUSubType.takeError()));
+    outs() << llvm::format("%s:\ncputype: %u\ncpusubtype: %u\n",
+                           Filename.c_str(), *CPUType, *CPUSubType);
   }
 }
 
@@ -902,6 +930,11 @@ int main(int argc, char **argv) {
       else
         outs() << "Bitcode " << Filename << " does not contain ObjC\n";
     }
+    return 0;
+  }
+
+  if (PrintMachOCPUOnly) {
+    printMachOCPUOnly();
     return 0;
   }
 

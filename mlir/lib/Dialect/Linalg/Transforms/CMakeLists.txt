@@ -16,7 +16,7 @@ set(LIBS
   MLIRVectorOps
   )
 
-add_llvm_library(MLIRLinalgTransforms
+add_mlir_dialect_library(MLIRLinalgTransforms
   Fusion.cpp
   LinalgTransforms.cpp
   LinalgToLoops.cpp

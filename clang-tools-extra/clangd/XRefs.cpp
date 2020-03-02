@@ -228,8 +228,7 @@ std::vector<LocatedSymbol> locateSymbolAt(ParsedAST &AST, Position Pos,
   const auto *TouchedIdentifier =
       syntax::spelledIdentifierTouching(*CurLoc, AST.getTokens());
   if (TouchedIdentifier) {
-    if (auto M = locateMacroAt(TouchedIdentifier->location(),
-                               AST.getPreprocessor())) {
+    if (auto M = locateMacroAt(*TouchedIdentifier, AST.getPreprocessor())) {
       if (auto Loc = makeLocation(AST.getASTContext(),
                                   M->Info->getDefinitionLoc(), *MainFilePath)) {
         LocatedSymbol Macro;
@@ -463,13 +462,14 @@ ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
     llvm::consumeError(CurLoc.takeError());
     return {};
   }
-  SourceLocation SLocId;
+  llvm::Optional<DefinedMacro> Macro;
   if (const auto *IdentifierAtCursor =
-          syntax::spelledIdentifierTouching(*CurLoc, AST.getTokens()))
-    SLocId = IdentifierAtCursor->location();
-  RefsRequest Req;
+          syntax::spelledIdentifierTouching(*CurLoc, AST.getTokens())) {
+    Macro = locateMacroAt(*IdentifierAtCursor, AST.getPreprocessor());
+  }
 
-  if (auto Macro = locateMacroAt(SLocId, AST.getPreprocessor())) {
+  RefsRequest Req;
+  if (Macro) {
     // Handle references to macro.
     if (auto MacroSID = getSymbolID(Macro->Name, Macro->Info, SM)) {
       // Collect macro references from main file.
@@ -587,8 +587,7 @@ std::vector<SymbolDetails> getSymbolInfo(ParsedAST &AST, Position Pos) {
   if (!IdentifierAtCursor)
     return Results;
 
-  if (auto M = locateMacroAt(IdentifierAtCursor->location(),
-                             AST.getPreprocessor())) {
+  if (auto M = locateMacroAt(*IdentifierAtCursor, AST.getPreprocessor())) {
     SymbolDetails NewMacro;
     NewMacro.name = std::string(M->Name);
     llvm::SmallString<32> USR;

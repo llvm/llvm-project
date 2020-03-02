@@ -16,6 +16,7 @@
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/ModuleSlotTracker.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCSymbol.h"
@@ -28,144 +29,20 @@
 using namespace llvm;
 
 namespace {
-// Add a few Bogus backend classes so we can create MachineInstrs without
-// depending on a real target.
-class BogusTargetLowering : public TargetLowering {
-public:
-  BogusTargetLowering(TargetMachine &TM) : TargetLowering(TM) {}
-};
-
-class BogusFrameLowering : public TargetFrameLowering {
-public:
-  BogusFrameLowering()
-      : TargetFrameLowering(TargetFrameLowering::StackGrowsDown, Align(4), 4) {}
-
-  void emitPrologue(MachineFunction &MF,
-                    MachineBasicBlock &MBB) const override {}
-  void emitEpilogue(MachineFunction &MF,
-                    MachineBasicBlock &MBB) const override {}
-  bool hasFP(const MachineFunction &MF) const override { return false; }
-};
-
-static TargetRegisterClass *const BogusRegisterClasses[] = {nullptr};
-
-class BogusRegisterInfo : public TargetRegisterInfo {
-public:
-  BogusRegisterInfo()
-      : TargetRegisterInfo(nullptr, BogusRegisterClasses, BogusRegisterClasses,
-                           nullptr, nullptr, LaneBitmask(~0u), nullptr) {
-    InitMCRegisterInfo(nullptr, 0, 0, 0, nullptr, 0, nullptr, 0, nullptr,
-                       nullptr, nullptr, nullptr, nullptr, 0, nullptr, nullptr);
-  }
-
-  const MCPhysReg *
-  getCalleeSavedRegs(const MachineFunction *MF) const override {
-    return nullptr;
-  }
-  ArrayRef<const uint32_t *> getRegMasks() const override { return None; }
-  ArrayRef<const char *> getRegMaskNames() const override { return None; }
-  BitVector getReservedRegs(const MachineFunction &MF) const override {
-    return BitVector();
-  }
-  const RegClassWeight &
-  getRegClassWeight(const TargetRegisterClass *RC) const override {
-    static RegClassWeight Bogus{1, 16};
-    return Bogus;
-  }
-  unsigned getRegUnitWeight(unsigned RegUnit) const override { return 1; }
-  unsigned getNumRegPressureSets() const override { return 0; }
-  const char *getRegPressureSetName(unsigned Idx) const override {
-    return "bogus";
-  }
-  unsigned getRegPressureSetLimit(const MachineFunction &MF,
-                                  unsigned Idx) const override {
-    return 0;
-  }
-  const int *
-  getRegClassPressureSets(const TargetRegisterClass *RC) const override {
-    static const int Bogus[] = {0, -1};
-    return &Bogus[0];
-  }
-  const int *getRegUnitPressureSets(unsigned RegUnit) const override {
-    static const int Bogus[] = {0, -1};
-    return &Bogus[0];
-  }
-
-  Register getFrameRegister(const MachineFunction &MF) const override {
-    return 0;
-  }
-  void eliminateFrameIndex(MachineBasicBlock::iterator MI, int SPAdj,
-                           unsigned FIOperandNum,
-                           RegScavenger *RS = nullptr) const override {}
-};
-
-class BogusSubtarget : public TargetSubtargetInfo {
-public:
-  BogusSubtarget(TargetMachine &TM)
-      : TargetSubtargetInfo(Triple(""), "", "", {}, {}, nullptr, nullptr,
-                            nullptr, nullptr, nullptr, nullptr),
-        FL(), TL(TM) {}
-  ~BogusSubtarget() override {}
-
-  const TargetFrameLowering *getFrameLowering() const override { return &FL; }
-
-  const TargetLowering *getTargetLowering() const override { return &TL; }
-
-  const TargetInstrInfo *getInstrInfo() const override { return &TII; }
-
-  const TargetRegisterInfo *getRegisterInfo() const override { return &TRI; }
-
-private:
-  BogusFrameLowering FL;
-  BogusRegisterInfo TRI;
-  BogusTargetLowering TL;
-  TargetInstrInfo TII;
-};
-
-class BogusTargetMachine : public LLVMTargetMachine {
-public:
-  BogusTargetMachine()
-      : LLVMTargetMachine(Target(), "", Triple(""), "", "", TargetOptions(),
-                          Reloc::Static, CodeModel::Small, CodeGenOpt::Default),
-        ST(*this) {}
-
-  ~BogusTargetMachine() override {}
-
-  const TargetSubtargetInfo *getSubtargetImpl(const Function &) const override {
-    return &ST;
-  }
-
-private:
-  BogusSubtarget ST;
-};
+// Include helper functions to ease the manipulation of MachineFunctions.
+#include "MFCommon.inc"
 
 std::unique_ptr<MCContext> createMCContext(MCAsmInfo *AsmInfo) {
   return std::make_unique<MCContext>(
       AsmInfo, nullptr, nullptr, nullptr, nullptr, false);
 }
 
-std::unique_ptr<BogusTargetMachine> createTargetMachine() {
-  return std::make_unique<BogusTargetMachine>();
-}
-
-std::unique_ptr<MachineFunction> createMachineFunction() {
-  LLVMContext Ctx;
-  Module M("Module", Ctx);
-  auto Type = FunctionType::get(Type::getVoidTy(Ctx), false);
-  auto F = Function::Create(Type, GlobalValue::ExternalLinkage, "Test", &M);
-
-  auto TM = createTargetMachine();
-  unsigned FunctionNum = 42;
-  MachineModuleInfo MMI(TM.get());
-  const TargetSubtargetInfo &STI = *TM->getSubtargetImpl(*F);
-
-  return std::make_unique<MachineFunction>(*F, *TM, STI, FunctionNum, MMI);
-}
-
 // This test makes sure that MachineInstr::isIdenticalTo handles Defs correctly
 // for various combinations of IgnoreDefs, and also that it is symmetrical.
 TEST(IsIdenticalToTest, DifferentDefs) {
-  auto MF = createMachineFunction();
+  LLVMContext Ctx;
+  Module Mod("Module", Ctx);
+  auto MF = createMachineFunction(Ctx, Mod);
 
   unsigned short NumOps = 2;
   unsigned char NumDefs = 1;
@@ -234,7 +111,9 @@ void checkHashAndIsEqualMatch(MachineInstr *MI1, MachineInstr *MI2) {
 // This test makes sure that MachineInstrExpressionTraits::isEqual is in sync
 // with MachineInstrExpressionTraits::getHashValue.
 TEST(MachineInstrExpressionTraitTest, IsEqualAgreesWithGetHashValue) {
-  auto MF = createMachineFunction();
+  LLVMContext Ctx;
+  Module Mod("Module", Ctx);
+  auto MF = createMachineFunction(Ctx, Mod);
 
   unsigned short NumOps = 2;
   unsigned char NumDefs = 1;
@@ -312,13 +191,14 @@ TEST(MachineInstrExpressionTraitTest, IsEqualAgreesWithGetHashValue) {
 }
 
 TEST(MachineInstrPrintingTest, DebugLocPrinting) {
-  auto MF = createMachineFunction();
+  LLVMContext Ctx;
+  Module Mod("Module", Ctx);
+  auto MF = createMachineFunction(Ctx, Mod);
 
   MCOperandInfo OpInfo{0, 0, MCOI::OPERAND_REGISTER, 0};
   MCInstrDesc MCID = {0, 1,       1,       0,       0, 0,
                       0, nullptr, nullptr, &OpInfo, 0, nullptr};
 
-  LLVMContext Ctx;
   DIFile *DIF = DIFile::getDistinct(Ctx, "filename", "");
   DISubprogram *DIS = DISubprogram::getDistinct(
       Ctx, nullptr, "", "", DIF, 0, nullptr, 0, nullptr, 0, 0, DINode::FlagZero,
@@ -339,7 +219,9 @@ TEST(MachineInstrPrintingTest, DebugLocPrinting) {
 }
 
 TEST(MachineInstrSpan, DistanceBegin) {
-  auto MF = createMachineFunction();
+  LLVMContext Ctx;
+  Module Mod("Module", Ctx);
+  auto MF = createMachineFunction(Ctx, Mod);
   auto MBB = MF->CreateMachineBasicBlock();
 
   MCInstrDesc MCID = {0, 0,       0,       0,       0, 0,
@@ -355,7 +237,9 @@ TEST(MachineInstrSpan, DistanceBegin) {
 }
 
 TEST(MachineInstrSpan, DistanceEnd) {
-  auto MF = createMachineFunction();
+  LLVMContext Ctx;
+  Module Mod("Module", Ctx);
+  auto MF = createMachineFunction(Ctx, Mod);
   auto MBB = MF->CreateMachineBasicBlock();
 
   MCInstrDesc MCID = {0, 0,       0,       0,       0, 0,
@@ -371,7 +255,9 @@ TEST(MachineInstrSpan, DistanceEnd) {
 }
 
 TEST(MachineInstrExtraInfo, AddExtraInfo) {
-  auto MF = createMachineFunction();
+  LLVMContext Ctx;
+  Module Mod("Module", Ctx);
+  auto MF = createMachineFunction(Ctx, Mod);
   MCInstrDesc MCID = {0, 0,       0,       0,       0, 0,
                       0, nullptr, nullptr, nullptr, 0, nullptr};
 
@@ -384,7 +270,6 @@ TEST(MachineInstrExtraInfo, AddExtraInfo) {
   MMOs.push_back(MMO);
   MCSymbol *Sym1 = MC->createTempSymbol("pre_label", false);
   MCSymbol *Sym2 = MC->createTempSymbol("post_label", false);
-  LLVMContext Ctx;
   MDNode *MDN = MDNode::getDistinct(Ctx, None);
 
   ASSERT_TRUE(MI->memoperands_empty());
@@ -418,7 +303,9 @@ TEST(MachineInstrExtraInfo, AddExtraInfo) {
 }
 
 TEST(MachineInstrExtraInfo, ChangeExtraInfo) {
-  auto MF = createMachineFunction();
+  LLVMContext Ctx;
+  Module Mod("Module", Ctx);
+  auto MF = createMachineFunction(Ctx, Mod);
   MCInstrDesc MCID = {0, 0,       0,       0,       0, 0,
                       0, nullptr, nullptr, nullptr, 0, nullptr};
 
@@ -431,7 +318,6 @@ TEST(MachineInstrExtraInfo, ChangeExtraInfo) {
   MMOs.push_back(MMO);
   MCSymbol *Sym1 = MC->createTempSymbol("pre_label", false);
   MCSymbol *Sym2 = MC->createTempSymbol("post_label", false);
-  LLVMContext Ctx;
   MDNode *MDN = MDNode::getDistinct(Ctx, None);
 
   MI->setMemRefs(*MF, MMOs);
@@ -455,7 +341,9 @@ TEST(MachineInstrExtraInfo, ChangeExtraInfo) {
 }
 
 TEST(MachineInstrExtraInfo, RemoveExtraInfo) {
-  auto MF = createMachineFunction();
+  LLVMContext Ctx;
+  Module Mod("Module", Ctx);
+  auto MF = createMachineFunction(Ctx, Mod);
   MCInstrDesc MCID = {0, 0,       0,       0,       0, 0,
                       0, nullptr, nullptr, nullptr, 0, nullptr};
 
@@ -469,7 +357,6 @@ TEST(MachineInstrExtraInfo, RemoveExtraInfo) {
   MMOs.push_back(MMO);
   MCSymbol *Sym1 = MC->createTempSymbol("pre_label", false);
   MCSymbol *Sym2 = MC->createTempSymbol("post_label", false);
-  LLVMContext Ctx;
   MDNode *MDN = MDNode::getDistinct(Ctx, None);
 
   MI->setMemRefs(*MF, MMOs);

@@ -21,6 +21,7 @@ parent = Libraries
 required_libraries =
  AggressiveInstCombine
  Analysis
+ BinaryFormat
  BitReader
  BitWriter
  CodeGen

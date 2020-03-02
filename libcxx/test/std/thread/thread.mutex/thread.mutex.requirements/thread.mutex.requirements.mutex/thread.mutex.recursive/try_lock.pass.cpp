@@ -8,6 +8,8 @@
 //
 // UNSUPPORTED: libcpp-has-no-threads
 
+// FLAKY_TEST.
+
 // <mutex>
 
 // class recursive_mutex;

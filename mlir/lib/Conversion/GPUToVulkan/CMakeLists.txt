@@ -1,4 +1,4 @@
-add_llvm_library(MLIRGPUtoVulkanTransforms
+add_mlir_conversion_library(MLIRGPUtoVulkanTransforms
   ConvertLaunchFuncToVulkanCalls.cpp
   )
 

@@ -39,7 +39,6 @@
 #include "clang/Basic/SanitizerBlacklist.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
-#include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/XRayLists.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -74,6 +73,7 @@
 namespace llvm {
 
 struct fltSemantics;
+template <typename T, unsigned N> class SmallPtrSet;
 
 } // namespace llvm
 
@@ -131,7 +131,6 @@ class VarTemplateDecl;
 class VTableContextBase;
 struct BlockVarCopyInit;
 
-
 namespace Builtin {
 
 class Context;
@@ -139,6 +138,7 @@ class Context;
 } // namespace Builtin
 
 enum BuiltinTemplateKind : int;
+enum OpenCLTypeKind : uint8_t;
 
 namespace comments {
 
@@ -721,15 +721,7 @@ public:
   RawComment *getRawCommentForDeclNoCache(const Decl *D) const;
 
 public:
-  RawCommentList &getRawCommentList() {
-    return Comments;
-  }
-
-  void addComment(const RawComment &RC) {
-    assert(LangOpts.RetainCommentsFromSystemHeaders ||
-           !SourceMgr.isInSystemHeader(RC.getSourceRange().getBegin()));
-    Comments.addComment(RC, LangOpts.CommentOpts, BumpAlloc);
-  }
+  void addComment(const RawComment &RC);
 
   /// Return the documentation comment attached to a given declaration.
   /// Returns nullptr if no comment is attached.
@@ -1213,7 +1205,7 @@ public:
   QualType getBlockDescriptorExtendedType() const;
 
   /// Map an AST Type to an OpenCLTypeKind enum value.
-  TargetInfo::OpenCLTypeKind getOpenCLTypeKind(const Type *T) const;
+  OpenCLTypeKind getOpenCLTypeKind(const Type *T) const;
 
   /// Get address space for OpenCL type.
   LangAS getOpenCLTypeAddrSpace(const Type *T) const;
@@ -1643,23 +1635,9 @@ public:
     return NSCopyingName;
   }
 
-  CanQualType getNSUIntegerType() const {
-    assert(Target && "Expected target to be initialized");
-    const llvm::Triple &T = Target->getTriple();
-    // Windows is LLP64 rather than LP64
-    if (T.isOSWindows() && T.isArch64Bit())
-      return UnsignedLongLongTy;
-    return UnsignedLongTy;
-  }
+  CanQualType getNSUIntegerType() const;
 
-  CanQualType getNSIntegerType() const {
-    assert(Target && "Expected target to be initialized");
-    const llvm::Triple &T = Target->getTriple();
-    // Windows is LLP64 rather than LP64
-    if (T.isOSWindows() && T.isArch64Bit())
-      return LongLongTy;
-    return LongTy;
-  }
+  CanQualType getNSIntegerType() const;
 
   /// Retrieve the identifier 'bool'.
   IdentifierInfo *getBoolName() const {
@@ -2137,9 +2115,7 @@ public:
   /// Return the alignment (in bytes) of the thrown exception object. This is
   /// only meaningful for targets that allocate C++ exceptions in a system
   /// runtime, such as those using the Itanium C++ ABI.
-  CharUnits getExnObjectAlignment() const {
-    return toCharUnitsFromBits(Target->getExnObjectAlignment());
-  }
+  CharUnits getExnObjectAlignment() const;
 
   /// Get or compute information about the layout of the specified
   /// record (struct/union/class) \p D, which indicates its size and field

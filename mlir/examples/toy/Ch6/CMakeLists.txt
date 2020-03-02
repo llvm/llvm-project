@@ -27,19 +27,18 @@ add_dependencies(toyc-ch6 MLIRCallOpInterfacesIncGen)
 include_directories(include/)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/include/)
+get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
+get_property(conversion_libs GLOBAL PROPERTY MLIR_CONVERSION_LIBS)
 target_link_libraries(toyc-ch6
   PRIVATE
-    MLIRAllDialects
-    MLIRAffineToStandard
+    ${dialect_libs}
+    ${conversion_libs}
     MLIRAnalysis
     MLIRExecutionEngine
     MLIRIR
     MLIRLLVMIR
-    MLIRLoopToStandard
     MLIRParser
     MLIRPass
-    MLIRStandardToLLVM
     MLIRTargetLLVMIR
     MLIRTransforms
     )
-

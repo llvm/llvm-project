@@ -511,6 +511,9 @@ bool llvm::tryPromoteCall(CallSite &CS) {
   if (!DirectCallee)
     return false; // No function pointer found.
 
+  if (!isLegalToPromote(CS, DirectCallee))
+    return false;
+
   // Success.
   promoteCall(CS, DirectCallee);
   return true;

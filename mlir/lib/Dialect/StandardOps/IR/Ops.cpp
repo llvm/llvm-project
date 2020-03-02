@@ -2601,6 +2601,10 @@ bool FPExtOp::areCastCompatible(Type a, Type b) {
   if (auto fa = a.dyn_cast<FloatType>())
     if (auto fb = b.dyn_cast<FloatType>())
       return fa.getWidth() < fb.getWidth();
+  if (auto va = a.dyn_cast<VectorType>())
+    if (auto vb = b.dyn_cast<VectorType>())
+      return va.getShape().equals(vb.getShape()) &&
+             areCastCompatible(va.getElementType(), vb.getElementType());
   return false;
 }
 
@@ -2612,6 +2616,10 @@ bool FPTruncOp::areCastCompatible(Type a, Type b) {
   if (auto fa = a.dyn_cast<FloatType>())
     if (auto fb = b.dyn_cast<FloatType>())
       return fa.getWidth() > fb.getWidth();
+  if (auto va = a.dyn_cast<VectorType>())
+    if (auto vb = b.dyn_cast<VectorType>())
+      return va.getShape().equals(vb.getShape()) &&
+             areCastCompatible(va.getElementType(), vb.getElementType());
   return false;
 }
 

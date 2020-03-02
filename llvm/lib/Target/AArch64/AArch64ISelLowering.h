@@ -261,6 +261,10 @@ enum NodeType : unsigned {
   GLDFF1S_SXTW_SCALED,
   GLDFF1S_IMM,
 
+  // Non-temporal gather loads
+  GLDNT1,
+  GLDNT1S,
+
   // Scatter store
   SST1,
   SST1_SCALED,
@@ -269,6 +273,9 @@ enum NodeType : unsigned {
   SST1_UXTW_SCALED,
   SST1_SXTW_SCALED,
   SST1_IMM,
+
+  // Non-temporal scatter store
+  SSTNT1,
 
   // Strict (exception-raising) floating point comparison
   STRICT_FCMP = ISD::FIRST_TARGET_STRICTFP_OPCODE,

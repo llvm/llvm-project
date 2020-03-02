@@ -2391,6 +2391,7 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
              [&](BasicBlock *A, BasicBlock *B) {
                // std::sort sorts in ascending order, so we want the inverse of
                // the normal dominance relation.
+               if (A == B) return false;
                if (DT->properlyDominates(A, B)) return true;
                if (DT->properlyDominates(B, A)) return false;
                llvm_unreachable("expected total dominance order!");

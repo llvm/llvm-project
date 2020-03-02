@@ -3389,7 +3389,7 @@ bool MipsAsmParser::expandLoadSingleImmToFPR(MCInst &Inst, SMLoc IDLoc,
 
   getStreamer().SwitchSection(ReadOnlySection);
   getStreamer().emitLabel(Sym, IDLoc);
-  getStreamer().emitIntValue(ImmOp32, 4);
+  getStreamer().emitInt32(ImmOp32);
   getStreamer().SwitchSection(CS);
 
   if (emitPartialAddress(TOut, IDLoc, Sym))

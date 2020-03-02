@@ -150,7 +150,6 @@ class CombinationGenerator {
     WrappingIterator() = delete;
     WrappingIterator(const WrappingIterator &) = delete;
     WrappingIterator(WrappingIterator &&) = delete;
-    WrappingIterator &operator=(WrappingIterator) = delete;
     WrappingIterator &operator=(const WrappingIterator &) = delete;
     WrappingIterator &operator=(WrappingIterator &&) = delete;
   };

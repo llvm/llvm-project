@@ -1,4 +1,4 @@
-add_llvm_library(MLIROpenMP
+add_mlir_dialect_library(MLIROpenMP
   IR/OpenMPDialect.cpp
 
   ADDITIONAL_HEADER_DIRS

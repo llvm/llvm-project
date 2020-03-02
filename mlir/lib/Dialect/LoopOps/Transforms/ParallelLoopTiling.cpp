@@ -13,13 +13,14 @@
 #include "mlir/Dialect/AffineOps/AffineOps.h"
 #include "mlir/Dialect/LoopOps/LoopOps.h"
 #include "mlir/Dialect/LoopOps/Passes.h"
+#include "mlir/Dialect/LoopOps/Transforms.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/Support/CommandLine.h"
 
 using namespace mlir;
-using loop::ParallelOp;
+using namespace mlir::loop;
 
 /// Tile a parallel loop of the form
 ///   loop.parallel (%i0, %i1) = (%arg0, %arg1) to (%arg2, %arg3)
@@ -33,7 +34,7 @@ using loop::ParallelOp;
 ///                                           min(tileSize[1], %arg3-%j1))
 ///                                        step (%arg4, %arg5)
 /// The old loop is replaced with the new one.
-static void tileParallelLoop(ParallelOp op, ArrayRef<int64_t> tileSizes) {
+void mlir::loop::tileParallelLoop(ParallelOp op, ArrayRef<int64_t> tileSizes) {
   OpBuilder b(op);
   auto zero = b.create<ConstantIndexOp>(op.getLoc(), 0);
   SmallVector<Value, 2> tileSizeConstants;

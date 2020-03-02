@@ -806,12 +806,12 @@ bool ELFAsmParser::ParseDirectiveVersion(StringRef, SMLoc) {
 
   getStreamer().PushSection();
   getStreamer().SwitchSection(Note);
-  getStreamer().emitIntValue(Data.size()+1, 4); // namesz.
-  getStreamer().emitIntValue(0, 4);             // descsz = 0 (no description).
-  getStreamer().emitIntValue(1, 4);             // type = NT_VERSION.
-  getStreamer().emitBytes(Data);                // name.
-  getStreamer().emitIntValue(0, 1);             // terminate the string.
-  getStreamer().emitValueToAlignment(4);        // ensure 4 byte alignment.
+  getStreamer().emitInt32(Data.size() + 1); // namesz
+  getStreamer().emitInt32(0);               // descsz = 0 (no description).
+  getStreamer().emitInt32(1);               // type = NT_VERSION
+  getStreamer().emitBytes(Data);            // name
+  getStreamer().emitInt8(0);                // NUL
+  getStreamer().emitValueToAlignment(4);
   getStreamer().PopSection();
   return false;
 }

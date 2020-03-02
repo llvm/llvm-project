@@ -77,9 +77,9 @@ end:
 define void @test_recursive(i32* %p, i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-LABEL: @test_recursive(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = or i32 [[B:%.*]], [[A:%.*]]
 ; CHECK-NEXT:    [[X4:%.*]] = icmp eq i32 [[D:%.*]], 0
-; CHECK-NEXT:    [[TMP0:%.*]] = or i32 [[C:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[TMP0]], [[A:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[TMP0]], [[C:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i32 [[TMP1]], 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = xor i1 [[X4]], true
 ; CHECK-NEXT:    [[TMP4:%.*]] = or i1 [[TMP2]], [[TMP3]]

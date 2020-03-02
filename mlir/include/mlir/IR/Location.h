@@ -15,6 +15,7 @@
 #define MLIR_IR_LOCATION_H
 
 #include "mlir/IR/Attributes.h"
+#include "llvm/Support/PointerLikeTypeTraits.h"
 
 namespace mlir {
 

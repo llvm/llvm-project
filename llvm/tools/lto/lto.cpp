@@ -327,6 +327,27 @@ const char* lto_module_get_linkeropts(lto_module_t mod) {
   return unwrap(mod)->getLinkerOpts().data();
 }
 
+lto_bool_t lto_module_get_macho_cputype(lto_module_t mod,
+                                        unsigned int *out_cputype,
+                                        unsigned int *out_cpusubtype) {
+  LTOModule *M = unwrap(mod);
+  Expected<uint32_t> CPUType = M->getMachOCPUType();
+  if (!CPUType) {
+    sLastErrorString = toString(CPUType.takeError());
+    return true;
+  }
+  *out_cputype = *CPUType;
+
+  Expected<uint32_t> CPUSubType = M->getMachOCPUSubType();
+  if (!CPUSubType) {
+    sLastErrorString = toString(CPUSubType.takeError());
+    return true;
+  }
+  *out_cpusubtype = *CPUSubType;
+
+  return false;
+}
+
 void lto_codegen_set_diagnostic_handler(lto_code_gen_t cg,
                                         lto_diagnostic_handler_t diag_handler,
                                         void *ctxt) {

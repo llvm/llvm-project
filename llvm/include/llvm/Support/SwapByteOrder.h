@@ -42,19 +42,10 @@
 #endif
 
 namespace llvm {
-namespace sys {
 
-#if defined(BYTE_ORDER) && defined(BIG_ENDIAN) && BYTE_ORDER == BIG_ENDIAN
-constexpr bool IsBigEndianHost = true;
-#else
-constexpr bool IsBigEndianHost = false;
-#endif
-
-static const bool IsLittleEndianHost = !IsBigEndianHost;
-
-/// SwapByteOrder_16 - This function returns a byte-swapped representation of
+/// ByteSwap_16 - This function returns a byte-swapped representation of
 /// the 16-bit argument.
-inline uint16_t SwapByteOrder_16(uint16_t value) {
+inline uint16_t ByteSwap_16(uint16_t value) {
 #if defined(_MSC_VER) && !defined(_DEBUG)
   // The DLL version of the runtime lacks these functions (bug!?), but in a
   // release build they're replaced with BSWAP instructions anyway.
@@ -67,7 +58,7 @@ inline uint16_t SwapByteOrder_16(uint16_t value) {
 }
 
 /// This function returns a byte-swapped representation of the 32-bit argument.
-inline uint32_t SwapByteOrder_32(uint32_t value) {
+inline uint32_t ByteSwap_32(uint32_t value) {
 #if defined(__llvm__) || (defined(__GNUC__) && !defined(__ICC))
   return __builtin_bswap32(value);
 #elif defined(_MSC_VER) && !defined(_DEBUG)
@@ -82,44 +73,54 @@ inline uint32_t SwapByteOrder_32(uint32_t value) {
 }
 
 /// This function returns a byte-swapped representation of the 64-bit argument.
-inline uint64_t SwapByteOrder_64(uint64_t value) {
+inline uint64_t ByteSwap_64(uint64_t value) {
 #if defined(__llvm__) || (defined(__GNUC__) && !defined(__ICC))
   return __builtin_bswap64(value);
 #elif defined(_MSC_VER) && !defined(_DEBUG)
   return _byteswap_uint64(value);
 #else
-  uint64_t Hi = SwapByteOrder_32(uint32_t(value));
-  uint32_t Lo = SwapByteOrder_32(uint32_t(value >> 32));
+  uint64_t Hi = ByteSwap_32(uint32_t(value));
+  uint32_t Lo = ByteSwap_32(uint32_t(value >> 32));
   return (Hi << 32) | Lo;
 #endif
 }
+
+namespace sys {
+
+#if defined(BYTE_ORDER) && defined(BIG_ENDIAN) && BYTE_ORDER == BIG_ENDIAN
+constexpr bool IsBigEndianHost = true;
+#else
+constexpr bool IsBigEndianHost = false;
+#endif
+
+static const bool IsLittleEndianHost = !IsBigEndianHost;
 
 inline unsigned char  getSwappedBytes(unsigned char C) { return C; }
 inline   signed char  getSwappedBytes(signed char C) { return C; }
 inline          char  getSwappedBytes(char C) { return C; }
 
-inline unsigned short getSwappedBytes(unsigned short C) { return SwapByteOrder_16(C); }
-inline   signed short getSwappedBytes(  signed short C) { return SwapByteOrder_16(C); }
+inline unsigned short getSwappedBytes(unsigned short C) { return ByteSwap_16(C); }
+inline   signed short getSwappedBytes(  signed short C) { return ByteSwap_16(C); }
 
-inline unsigned int   getSwappedBytes(unsigned int   C) { return SwapByteOrder_32(C); }
-inline   signed int   getSwappedBytes(  signed int   C) { return SwapByteOrder_32(C); }
+inline unsigned int   getSwappedBytes(unsigned int   C) { return ByteSwap_32(C); }
+inline   signed int   getSwappedBytes(  signed int   C) { return ByteSwap_32(C); }
 
 inline unsigned long getSwappedBytes(unsigned long C) {
   // Handle LLP64 and LP64 platforms.
-  return sizeof(long) == sizeof(int) ? SwapByteOrder_32((uint32_t)C)
-                                     : SwapByteOrder_64((uint64_t)C);
+  return sizeof(long) == sizeof(int) ? ByteSwap_32((uint32_t)C)
+                                     : ByteSwap_64((uint64_t)C);
 }
 inline signed long getSwappedBytes(signed long C) {
   // Handle LLP64 and LP64 platforms.
-  return sizeof(long) == sizeof(int) ? SwapByteOrder_32((uint32_t)C)
-                                     : SwapByteOrder_64((uint64_t)C);
+  return sizeof(long) == sizeof(int) ? ByteSwap_32((uint32_t)C)
+                                     : ByteSwap_64((uint64_t)C);
 }
 
 inline unsigned long long getSwappedBytes(unsigned long long C) {
-  return SwapByteOrder_64(C);
+  return ByteSwap_64(C);
 }
 inline signed long long getSwappedBytes(signed long long C) {
-  return SwapByteOrder_64(C);
+  return ByteSwap_64(C);
 }
 
 inline float getSwappedBytes(float C) {
@@ -128,7 +129,7 @@ inline float getSwappedBytes(float C) {
     float f;
   } in, out;
   in.f = C;
-  out.i = SwapByteOrder_32(in.i);
+  out.i = ByteSwap_32(in.i);
   return out.f;
 }
 
@@ -138,7 +139,7 @@ inline double getSwappedBytes(double C) {
     double d;
   } in, out;
   in.d = C;
-  out.i = SwapByteOrder_64(in.i);
+  out.i = ByteSwap_64(in.i);
   return out.d;
 }
 

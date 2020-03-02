@@ -23,6 +23,7 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/Token.h"
 #include "clang/Tooling/Core/Replacement.h"
+#include "clang/Tooling/Syntax/Tokens.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/STLExtras.h"
@@ -612,31 +613,26 @@ cleanupAndFormat(StringRef Code, const tooling::Replacements &Replaces,
 
 static void
 lex(llvm::StringRef Code, const LangOptions &LangOpts,
-    llvm::function_ref<void(const clang::Token &, const SourceManager &SM)>
+    llvm::function_ref<void(const syntax::Token &, const SourceManager &SM)>
         Action) {
   // FIXME: InMemoryFileAdapter crashes unless the buffer is null terminated!
   std::string NullTerminatedCode = Code.str();
   SourceManagerForFile FileSM("dummy.cpp", NullTerminatedCode);
   auto &SM = FileSM.get();
-  auto FID = SM.getMainFileID();
-  // Create a raw lexer (with no associated preprocessor object).
-  Lexer Lex(FID, SM.getBuffer(FID), SM, LangOpts);
-  Token Tok;
-
-  while (!Lex.LexFromRawLexer(Tok))
+  for (const auto &Tok : syntax::tokenize(SM.getMainFileID(), SM, LangOpts))
     Action(Tok, SM);
-  // LexFromRawLexer returns true after it lexes last token, so we still have
-  // one more token to report.
-  Action(Tok, SM);
 }
 
 llvm::StringMap<unsigned> collectIdentifiers(llvm::StringRef Content,
                                              const format::FormatStyle &Style) {
   llvm::StringMap<unsigned> Identifiers;
   auto LangOpt = format::getFormattingLangOpts(Style);
-  lex(Content, LangOpt, [&](const clang::Token &Tok, const SourceManager &) {
-    if (Tok.getKind() == tok::raw_identifier)
-      ++Identifiers[Tok.getRawIdentifier()];
+  lex(Content, LangOpt, [&](const syntax::Token &Tok, const SourceManager &SM) {
+    if (Tok.kind() == tok::identifier)
+      ++Identifiers[Tok.text(SM)];
+    // FIXME: Should this function really return keywords too ?
+    else if (const auto *Keyword = tok::getKeywordSpelling(Tok.kind()))
+      ++Identifiers[Keyword];
   });
   return Identifiers;
 }
@@ -645,16 +641,13 @@ std::vector<Range> collectIdentifierRanges(llvm::StringRef Identifier,
                                            llvm::StringRef Content,
                                            const LangOptions &LangOpts) {
   std::vector<Range> Ranges;
-  lex(Content, LangOpts, [&](const clang::Token &Tok, const SourceManager &SM) {
-    if (Tok.getKind() != tok::raw_identifier)
-      return;
-    if (Tok.getRawIdentifier() != Identifier)
-      return;
-    auto Range = getTokenRange(SM, LangOpts, Tok.getLocation());
-    if (!Range)
-      return;
-    Ranges.push_back(*Range);
-  });
+  lex(Content, LangOpts,
+      [&](const syntax::Token &Tok, const SourceManager &SM) {
+        if (Tok.kind() != tok::identifier || Tok.text(SM) != Identifier)
+          return;
+        if (auto Range = getTokenRange(SM, LangOpts, Tok.location()))
+          Ranges.push_back(*Range);
+      });
   return Ranges;
 }
 
@@ -691,97 +684,113 @@ void parseNamespaceEvents(llvm::StringRef Code,
 
   NamespaceEvent Event;
   lex(Code, format::getFormattingLangOpts(Style),
-      [&](const clang::Token &Tok,const SourceManager &SM) {
-    Event.Pos = sourceLocToPosition(SM, Tok.getLocation());
-    switch (Tok.getKind()) {
-    case tok::raw_identifier:
-      // In raw mode, this could be a keyword or a name.
-      switch (State) {
-      case UsingNamespace:
-      case UsingNamespaceName:
-        NSName.append(std::string(Tok.getRawIdentifier()));
-        State = UsingNamespaceName;
-        break;
-      case Namespace:
-      case NamespaceName:
-        NSName.append(std::string(Tok.getRawIdentifier()));
-        State = NamespaceName;
-        break;
-      case Using:
-        State =
-            (Tok.getRawIdentifier() == "namespace") ? UsingNamespace : Default;
-        break;
-      case Default:
-        NSName.clear();
-        if (Tok.getRawIdentifier() == "namespace")
-          State = Namespace;
-        else if (Tok.getRawIdentifier() == "using")
-          State = Using;
-        break;
-      }
-      break;
-    case tok::coloncolon:
-      // This can come at the beginning or in the middle of a namespace name.
-      switch (State) {
-      case UsingNamespace:
-      case UsingNamespaceName:
-        NSName.append("::");
-        State = UsingNamespaceName;
-        break;
-      case NamespaceName:
-        NSName.append("::");
-        State = NamespaceName;
-        break;
-      case Namespace: // Not legal here.
-      case Using:
-      case Default:
-        State = Default;
-        break;
-      }
-      break;
-    case tok::l_brace:
-      // Record which { started a namespace, so we know when } ends one.
-      if (State == NamespaceName) {
-        // Parsed: namespace <name> {
-        BraceStack.push_back(true);
-        Enclosing.push_back(NSName);
-        Event.Trigger = NamespaceEvent::BeginNamespace;
-        Event.Payload = llvm::join(Enclosing, "::");
-        Callback(Event);
-      } else {
-        // This case includes anonymous namespaces (State = Namespace).
-        // For our purposes, they're not namespaces and we ignore them.
-        BraceStack.push_back(false);
-      }
-      State = Default;
-      break;
-    case tok::r_brace:
-      // If braces are unmatched, we're going to be confused, but don't crash.
-      if (!BraceStack.empty()) {
-        if (BraceStack.back()) {
-          // Parsed: } // namespace
-          Enclosing.pop_back();
-          Event.Trigger = NamespaceEvent::EndNamespace;
-          Event.Payload = llvm::join(Enclosing, "::");
-          Callback(Event);
+      [&](const syntax::Token &Tok, const SourceManager &SM) {
+        Event.Pos = sourceLocToPosition(SM, Tok.location());
+        switch (Tok.kind()) {
+        case tok::kw_using:
+          State = State == Default ? Using : Default;
+          break;
+        case tok::kw_namespace:
+          switch (State) {
+          case Using:
+            State = UsingNamespace;
+            break;
+          case Default:
+            State = Namespace;
+            break;
+          default:
+            State = Default;
+            break;
+          }
+          break;
+        case tok::identifier:
+          switch (State) {
+          case UsingNamespace:
+            NSName.clear();
+            LLVM_FALLTHROUGH;
+          case UsingNamespaceName:
+            NSName.append(Tok.text(SM).str());
+            State = UsingNamespaceName;
+            break;
+          case Namespace:
+            NSName.clear();
+            LLVM_FALLTHROUGH;
+          case NamespaceName:
+            NSName.append(Tok.text(SM).str());
+            State = NamespaceName;
+            break;
+          case Using:
+          case Default:
+            State = Default;
+            break;
+          }
+          break;
+        case tok::coloncolon:
+          // This can come at the beginning or in the middle of a namespace
+          // name.
+          switch (State) {
+          case UsingNamespace:
+            NSName.clear();
+            LLVM_FALLTHROUGH;
+          case UsingNamespaceName:
+            NSName.append("::");
+            State = UsingNamespaceName;
+            break;
+          case NamespaceName:
+            NSName.append("::");
+            State = NamespaceName;
+            break;
+          case Namespace: // Not legal here.
+          case Using:
+          case Default:
+            State = Default;
+            break;
+          }
+          break;
+        case tok::l_brace:
+          // Record which { started a namespace, so we know when } ends one.
+          if (State == NamespaceName) {
+            // Parsed: namespace <name> {
+            BraceStack.push_back(true);
+            Enclosing.push_back(NSName);
+            Event.Trigger = NamespaceEvent::BeginNamespace;
+            Event.Payload = llvm::join(Enclosing, "::");
+            Callback(Event);
+          } else {
+            // This case includes anonymous namespaces (State = Namespace).
+            // For our purposes, they're not namespaces and we ignore them.
+            BraceStack.push_back(false);
+          }
+          State = Default;
+          break;
+        case tok::r_brace:
+          // If braces are unmatched, we're going to be confused, but don't
+          // crash.
+          if (!BraceStack.empty()) {
+            if (BraceStack.back()) {
+              // Parsed: } // namespace
+              Enclosing.pop_back();
+              Event.Trigger = NamespaceEvent::EndNamespace;
+              Event.Payload = llvm::join(Enclosing, "::");
+              Callback(Event);
+            }
+            BraceStack.pop_back();
+          }
+          break;
+        case tok::semi:
+          if (State == UsingNamespaceName) {
+            // Parsed: using namespace <name> ;
+            Event.Trigger = NamespaceEvent::UsingDirective;
+            Event.Payload = std::move(NSName);
+            Callback(Event);
+          }
+          State = Default;
+          break;
+        default:
+          State = Default;
+          break;
         }
-        BraceStack.pop_back();
-      }
-      break;
-    case tok::semi:
-      if (State == UsingNamespaceName) {
-        // Parsed: using namespace <name> ;
-        Event.Trigger = NamespaceEvent::UsingDirective;
-        Event.Payload = std::move(NSName);
-        Callback(Event);
-      }
-      State = Default;
-      break;
-    default:
-      State = Default;
-      break;
-    }
-  });
+      });
 }
 
 // Returns the prefix namespaces of NS: {"" ... NS}.
@@ -882,27 +891,21 @@ llvm::StringSet<> collectWords(llvm::StringRef Content) {
   return Result;
 }
 
-llvm::Optional<DefinedMacro> locateMacroAt(SourceLocation Loc,
+llvm::Optional<DefinedMacro> locateMacroAt(const syntax::Token &SpelledTok,
                                            Preprocessor &PP) {
+  SourceLocation Loc = SpelledTok.location();
+  assert(Loc.isFileID());
   const auto &SM = PP.getSourceManager();
-  const auto &LangOpts = PP.getLangOpts();
-  Token Result;
-  if (Lexer::getRawToken(SM.getSpellingLoc(Loc), Result, SM, LangOpts, false))
-    return None;
-  if (Result.is(tok::raw_identifier))
-    PP.LookUpIdentifierInfo(Result);
-  IdentifierInfo *IdentifierInfo = Result.getIdentifierInfo();
+  IdentifierInfo *IdentifierInfo = PP.getIdentifierInfo(SpelledTok.text(SM));
   if (!IdentifierInfo || !IdentifierInfo->hadMacroDefinition())
     return None;
 
-  std::pair<FileID, unsigned int> DecLoc = SM.getDecomposedExpansionLoc(Loc);
   // Get the definition just before the searched location so that a macro
-  // referenced in a '#undef MACRO' can still be found.
-  SourceLocation BeforeSearchedLocation =
-      SM.getMacroArgExpandedLocation(SM.getLocForStartOfFile(DecLoc.first)
-                                         .getLocWithOffset(DecLoc.second - 1));
-  MacroDefinition MacroDef =
-      PP.getMacroDefinitionAtLoc(IdentifierInfo, BeforeSearchedLocation);
+  // referenced in a '#undef MACRO' can still be found. Note that we only do
+  // that if Loc is not pointing at start of file.
+  if (SM.getLocForStartOfFile(SM.getFileID(Loc)) != Loc)
+    Loc = Loc.getLocWithOffset(-1);
+  MacroDefinition MacroDef = PP.getMacroDefinitionAtLoc(IdentifierInfo, Loc);
   if (auto *MI = MacroDef.getMacroInfo())
     return DefinedMacro{IdentifierInfo->getName(), MI};
   return None;

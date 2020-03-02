@@ -2447,12 +2447,9 @@ PltSection::PltSection()
     : SyntheticSection(SHF_ALLOC | SHF_EXECINSTR, SHT_PROGBITS, 16, ".plt"),
       headerSize(target->pltHeaderSize) {
   // On PowerPC, this section contains lazy symbol resolvers.
-  if (config->emachine == EM_PPC || config->emachine == EM_PPC64) {
+  if (config->emachine == EM_PPC64) {
     name = ".glink";
     alignment = 4;
-    // PLTresolve is at the end.
-    if (config->emachine == EM_PPC)
-      footerSize = 64;
   }
 
   // On x86 when IBT is enabled, this section contains the second PLT (lazy
@@ -2468,11 +2465,6 @@ PltSection::PltSection()
 }
 
 void PltSection::writeTo(uint8_t *buf) {
-  if (config->emachine == EM_PPC) {
-    writePPC32GlinkSection(buf, entries.size());
-    return;
-  }
-
   // At beginning of PLT, we have code to call the dynamic
   // linker to resolve dynsyms at runtime. Write such code.
   target->writePltHeader(buf);
@@ -2490,7 +2482,7 @@ void PltSection::addEntry(Symbol &sym) {
 }
 
 size_t PltSection::getSize() const {
-  return headerSize + entries.size() * target->pltEntrySize + footerSize;
+  return headerSize + entries.size() * target->pltEntrySize;
 }
 
 bool PltSection::isNeeded() const {
@@ -2542,6 +2534,19 @@ void IpltSection::addSymbols() {
     target->addPltSymbols(*this, off);
     off += target->pltEntrySize;
   }
+}
+
+PPC32GlinkSection::PPC32GlinkSection() {
+  name = ".glink";
+  alignment = 4;
+}
+
+void PPC32GlinkSection::writeTo(uint8_t *buf) {
+  writePPC32GlinkSection(buf, entries.size());
+}
+
+size_t PPC32GlinkSection::getSize() const {
+  return headerSize + entries.size() * target->pltEntrySize + footerSize;
 }
 
 // This is an x86-only extra PLT section and used only when a security
@@ -2668,12 +2673,12 @@ readAddressAreas(DWARFContext &dwarf, InputSection *sec) {
   uint32_t cuIdx = 0;
   for (std::unique_ptr<DWARFUnit> &cu : dwarf.compile_units()) {
     if (Error e = cu->tryExtractDIEsIfNeeded(false)) {
-      error(toString(sec) + ": " + toString(std::move(e)));
+      warn(toString(sec) + ": " + toString(std::move(e)));
       return {};
     }
     Expected<DWARFAddressRangesVector> ranges = cu->collectAddressRanges();
     if (!ranges) {
-      error(toString(sec) + ": " + toString(ranges.takeError()));
+      warn(toString(sec) + ": " + toString(ranges.takeError()));
       return {};
     }
 

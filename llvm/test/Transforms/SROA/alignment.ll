@@ -228,4 +228,19 @@ define void @test10() {
   ret void
 }
 
+%struct = type { i32, i32 }
+define dso_local i32 @pr45010(%struct* %A) {
+; CHECK-LABEL: @pr45010
+; CHECK: load atomic volatile i32, {{.*}}, align 4
+
+  %B = alloca %struct, align 4
+  %A.i = getelementptr inbounds %struct, %struct* %A, i32 0, i32 0
+  %B.i = getelementptr inbounds %struct, %struct* %B, i32 0, i32 0
+  %1 = load i32, i32* %A.i, align 4
+  store atomic volatile i32 %1, i32* %B.i release, align 4
+  %2 = bitcast %struct* %B to i32*
+  %x = load atomic volatile i32, i32* %2 acquire, align 4
+  ret i32 %x
+}
+
 declare void @populate(i8*)

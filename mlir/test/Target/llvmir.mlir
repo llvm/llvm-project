@@ -1171,3 +1171,13 @@ llvm.func @invokeLandingpad() -> !llvm.i32 {
 ^bb3:	// pred: ^bb1
   %8 = llvm.invoke @bar(%6) to ^bb2 unwind ^bb1 : (!llvm<"i8*">) -> !llvm<"i8*">
 }
+
+// CHECK-LABEL: @callFreezeOp
+llvm.func @callFreezeOp(%x : !llvm.i32) {
+  // CHECK: freeze i32 %{{[0-9]+}}
+  %0 = llvm.freeze %x : !llvm.i32
+  %1 = llvm.mlir.undef : !llvm.i32
+  // CHECK: freeze i32 undef 
+  %2 = llvm.freeze %1 : !llvm.i32
+  llvm.return
+}

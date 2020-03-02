@@ -3406,6 +3406,22 @@ static bool TryToSinkInstruction(Instruction *I, BasicBlock *DestBlock) {
 
 bool InstCombiner::run() {
   while (!Worklist.isEmpty()) {
+    // Walk deferred instructions in reverse order, and push them to the
+    // worklist, which means they'll end up popped from the worklist in-order.
+    while (Instruction *I = Worklist.popDeferred()) {
+      // Check to see if we can DCE the instruction. We do this already here to
+      // reduce the number of uses and thus allow other folds to trigger.
+      // Note that eraseInstFromFunction() may push additional instructions on
+      // the deferred worklist, so this will DCE whole instruction chains.
+      if (isInstructionTriviallyDead(I, &TLI)) {
+        eraseInstFromFunction(*I);
+        ++NumDeadInst;
+        continue;
+      }
+
+      Worklist.push(I);
+    }
+
     Instruction *I = Worklist.removeOne();
     if (I == nullptr) continue;  // skip null values.
 
@@ -3552,7 +3568,6 @@ bool InstCombiner::run() {
       }
       MadeIRChange = true;
     }
-    Worklist.addDeferredInstructions();
   }
 
   Worklist.zap();
@@ -3587,16 +3602,6 @@ static bool AddReachableCodeToWorklist(BasicBlock *BB, const DataLayout &DL,
 
     for (BasicBlock::iterator BBI = BB->begin(), E = BB->end(); BBI != E; ) {
       Instruction *Inst = &*BBI++;
-
-      // DCE instruction if trivially dead.
-      if (isInstructionTriviallyDead(Inst, TLI)) {
-        ++NumDeadInst;
-        LLVM_DEBUG(dbgs() << "IC: DCE: " << *Inst << '\n');
-        salvageDebugInfoOrMarkUndef(*Inst);
-        Inst->eraseFromParent();
-        MadeIRChange = true;
-        continue;
-      }
 
       // ConstantProp instruction if trivially constant.
       if (!Inst->use_empty() &&
@@ -3665,7 +3670,21 @@ static bool AddReachableCodeToWorklist(BasicBlock *BB, const DataLayout &DL,
   // of the function down.  This jives well with the way that it adds all uses
   // of instructions to the worklist after doing a transformation, thus avoiding
   // some N^2 behavior in pathological cases.
-  ICWorklist.addInitialGroup(InstrsForInstCombineWorklist);
+  ICWorklist.reserve(InstrsForInstCombineWorklist.size());
+  for (Instruction *Inst : reverse(InstrsForInstCombineWorklist)) {
+    // DCE instruction if trivially dead. As we iterate in reverse program
+    // order here, we will clean up whole chains of dead instructions.
+    if (isInstructionTriviallyDead(Inst, TLI)) {
+      ++NumDeadInst;
+      LLVM_DEBUG(dbgs() << "IC: DCE: " << *Inst << '\n');
+      salvageDebugInfoOrMarkUndef(*Inst);
+      Inst->eraseFromParent();
+      MadeIRChange = true;
+      continue;
+    }
+
+    ICWorklist.push(Inst);
+  }
 
   return MadeIRChange;
 }

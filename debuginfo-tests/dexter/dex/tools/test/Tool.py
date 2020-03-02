@@ -6,6 +6,7 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 """Test tool."""
 
+import math
 import os
 import csv
 import pickle
@@ -94,6 +95,9 @@ class Tool(TestToolBase):
                             help='exit with status FAIL(2) if the test result'
                                 ' is less than this value.',
                             metavar='<float>')
+        parser.add_argument('--calculate-average',
+                            action="store_true",
+                            help='calculate the average score of every test run')
         super(Tool, self).add_tool_arguments(parser, defaults)
 
     def _build_test_case(self):
@@ -225,6 +229,19 @@ class Tool(TestToolBase):
 
         if not options.verbose:
             self.context.o.auto('\n')
+
+        if options.calculate_average:
+            # Calculate and print the average score
+            score_sum = 0.0
+            num_tests = 0
+            for test_case in self._test_cases:
+                score = test_case.score
+                if not test_case.error and not math.isnan(score):
+                    score_sum += test_case.score
+                    num_tests += 1
+
+            if num_tests != 0:
+                print("@avg: ({:.4f})".format(score_sum/num_tests))
 
         summary_path = os.path.join(options.results_directory, 'summary.csv')
         with open(summary_path, mode='w', newline='') as fp:

@@ -1,4 +1,4 @@
-add_llvm_library(MLIRAffineOps
+add_mlir_dialect_library(MLIRAffineOps
   AffineOps.cpp
   AffineValueMap.cpp
   EDSC/Builders.cpp

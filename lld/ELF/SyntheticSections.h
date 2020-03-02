@@ -684,7 +684,6 @@ public:
   size_t getNumEntries() const { return entries.size(); }
 
   size_t headerSize;
-  size_t footerSize = 0;
 
   std::vector<const Symbol *> entries;
 };
@@ -703,6 +702,16 @@ public:
   bool isNeeded() const override { return !entries.empty(); }
   void addSymbols();
   void addEntry(Symbol &sym);
+};
+
+class PPC32GlinkSection : public PltSection {
+public:
+  PPC32GlinkSection();
+  void writeTo(uint8_t *buf) override;
+  size_t getSize() const override;
+
+  std::vector<const Symbol *> canonical_plts;
+  static constexpr size_t footerSize = 64;
 };
 
 // This is x86-only.

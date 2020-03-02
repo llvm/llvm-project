@@ -2162,23 +2162,17 @@ void AsmPrinter::emitModuleCommandLines(Module &M) {
 
 /// Emit a byte directive and value.
 ///
-void AsmPrinter::emitInt8(int Value) const {
-  OutStreamer->emitIntValue(Value, 1);
-}
+void AsmPrinter::emitInt8(int Value) const { OutStreamer->emitInt8(Value); }
 
 /// Emit a short directive and value.
-void AsmPrinter::emitInt16(int Value) const {
-  OutStreamer->emitIntValue(Value, 2);
-}
+void AsmPrinter::emitInt16(int Value) const { OutStreamer->emitInt16(Value); }
 
 /// Emit a long directive and value.
-void AsmPrinter::emitInt32(int Value) const {
-  OutStreamer->emitIntValue(Value, 4);
-}
+void AsmPrinter::emitInt32(int Value) const { OutStreamer->emitInt32(Value); }
 
 /// Emit a long long directive and value.
 void AsmPrinter::emitInt64(uint64_t Value) const {
-  OutStreamer->emitIntValue(Value, 8);
+  OutStreamer->emitInt64(Value);
 }
 
 /// Emit something like ".long Hi-Lo" where the size in bytes of the directive

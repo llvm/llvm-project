@@ -260,6 +260,21 @@ public:
     return *this;
   }
 
+  /// Determine whether a callee with the given TLI can be inlined into
+  /// caller with this TLI, based on 'nobuiltin' attributes. When requested,
+  /// allow inlining into a caller with a superset of the callee's nobuiltin
+  /// attributes, which is conservatively correct.
+  bool areInlineCompatible(const TargetLibraryInfo &CalleeTLI,
+                           bool AllowCallerSuperset) const {
+    if (!AllowCallerSuperset)
+      return OverrideAsUnavailable == CalleeTLI.OverrideAsUnavailable;
+    BitVector B = OverrideAsUnavailable;
+    B |= CalleeTLI.OverrideAsUnavailable;
+    // We can inline if the union of the caller and callee's nobuiltin
+    // attributes is no stricter than the caller's nobuiltin attributes.
+    return B == OverrideAsUnavailable;
+  }
+
   /// Searches for a particular function name.
   ///
   /// If it is one of the known library functions, return true and set F to the

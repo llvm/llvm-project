@@ -697,3 +697,71 @@ uint32x4_t test_vcvtq_x_n_u32_f32(float32x4_t a, mve_pred16_t p)
 {
     return vcvtq_x_n_u32_f32(a, 32, p);
 }
+
+// CHECK-LABEL: @test_vcvtbq_f32_f16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = call <4 x float> @llvm.arm.mve.vcvt.widen(<8 x half> [[A:%.*]], i32 0)
+// CHECK-NEXT:    ret <4 x float> [[TMP0]]
+//
+float32x4_t test_vcvtbq_f32_f16(float16x8_t a)
+{
+    return vcvtbq_f32_f16(a);
+}
+
+// CHECK-LABEL: @test_vcvttq_f32_f16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = call <4 x float> @llvm.arm.mve.vcvt.widen(<8 x half> [[A:%.*]], i32 1)
+// CHECK-NEXT:    ret <4 x float> [[TMP0]]
+//
+float32x4_t test_vcvttq_f32_f16(float16x8_t a)
+{
+    return vcvttq_f32_f16(a);
+}
+
+// CHECK-LABEL: @test_vcvtbq_m_f32_f16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <4 x float> @llvm.arm.mve.vcvt.widen.predicated(<4 x float> [[INACTIVE:%.*]], <8 x half> [[A:%.*]], i32 0, <4 x i1> [[TMP1]])
+// CHECK-NEXT:    ret <4 x float> [[TMP2]]
+//
+float32x4_t test_vcvtbq_m_f32_f16(float32x4_t inactive, float16x8_t a, mve_pred16_t p)
+{
+    return vcvtbq_m_f32_f16(inactive, a, p);
+}
+
+// CHECK-LABEL: @test_vcvttq_m_f32_f16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <4 x float> @llvm.arm.mve.vcvt.widen.predicated(<4 x float> [[INACTIVE:%.*]], <8 x half> [[A:%.*]], i32 1, <4 x i1> [[TMP1]])
+// CHECK-NEXT:    ret <4 x float> [[TMP2]]
+//
+float32x4_t test_vcvttq_m_f32_f16(float32x4_t inactive, float16x8_t a, mve_pred16_t p)
+{
+    return vcvttq_m_f32_f16(inactive, a, p);
+}
+
+// CHECK-LABEL: @test_vcvtbq_x_f32_f16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <4 x float> @llvm.arm.mve.vcvt.widen.predicated(<4 x float> undef, <8 x half> [[A:%.*]], i32 0, <4 x i1> [[TMP1]])
+// CHECK-NEXT:    ret <4 x float> [[TMP2]]
+//
+float32x4_t test_vcvtbq_x_f32_f16(float16x8_t a, mve_pred16_t p)
+{
+    return vcvtbq_x_f32_f16(a, p);
+}
+
+// CHECK-LABEL: @test_vcvttq_x_f32_f16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <4 x float> @llvm.arm.mve.vcvt.widen.predicated(<4 x float> undef, <8 x half> [[A:%.*]], i32 1, <4 x i1> [[TMP1]])
+// CHECK-NEXT:    ret <4 x float> [[TMP2]]
+//
+float32x4_t test_vcvttq_x_f32_f16(float16x8_t a, mve_pred16_t p)
+{
+    return vcvttq_x_f32_f16(a, p);
+}

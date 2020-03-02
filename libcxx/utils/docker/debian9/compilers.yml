@@ -1,0 +1,174 @@
+version: '3.7'
+
+x-build-clang: &build-clang
+    context: .
+    dockerfile: compilers/clang.Dockerfile
+
+x-build-gcc: &build-gcc
+    context: .
+    dockerfile: compilers/gcc.Dockerfile
+
+services:
+  gcc-4.8.5:
+    build:
+      <<: *build-gcc
+      args:
+        branch: releases/gcc-4.8.5
+        install_prefix: /opt/gcc-4.8.5
+        cherry_pick: 3a27b4db566c2cde8e043220f3d2c5401159b10e
+    image: ericwf/compiler:gcc-4.8.5
+  gcc-4.9.4:
+    build:
+      <<: *build-gcc
+      args:
+        branch: releases/gcc-4.9.4
+        install_prefix: /opt/gcc-4.9.4
+    image: ericwf/compiler:gcc-4.9.4
+  gcc-5:
+    build:
+      <<: *build-gcc
+      args:
+        branch: releases/gcc-5.5.0
+        install_prefix: /opt/gcc-5
+    image: ericwf/compiler:gcc-5
+  gcc-6:
+    build:
+      <<: *build-gcc
+      args:
+        branch: releases/gcc-6.5.0
+        install_prefix: /opt/gcc-6
+    image: ericwf/compiler:gcc-6
+  gcc-7:
+    build:
+      <<: *build-gcc
+      args:
+        branch: releases/gcc-7.4.0
+        install_prefix: /opt/gcc-7
+    image: ericwf/compiler:gcc-7
+  gcc-8:
+    build:
+      <<: *build-gcc
+      args:
+        branch: releases/gcc-8.2.0
+        install_prefix: /opt/gcc-8
+    image: ericwf/compiler:gcc-8
+  gcc-9:
+    build:
+      <<: *build-gcc
+      args:
+        branch: releases/gcc-9.2.0
+        install_prefix: /opt/gcc-9
+    image: ericwf/compiler:gcc-9
+  # Add LLVM compilers
+  llvm-3.6:
+    build:
+      <<: *build-clang
+      args:
+        branch: release/3.6.x
+        install_prefix: /opt/llvm-3.6
+    image: ericwf/compiler:llvm-3.6
+  llvm-3.7:
+    build:
+      <<: *build-clang
+      args:
+        branch: release/3.7.x
+        install_prefix: /opt/llvm-3.7
+    image: ericwf/compiler:llvm-3.7
+  llvm-3.8:
+    build:
+      <<: *build-clang
+      args:
+        branch: release/3.8.x
+        install_prefix: /opt/llvm-3.8
+    image: ericwf/compiler:llvm-3.8
+  llvm-3.9:
+    build:
+      <<: *build-clang
+      args:
+        branch: release/3.9.x
+        install_prefix: /opt/llvm-3.9
+    image: ericwf/compiler:llvm-3.9
+  llvm-4:
+    build:
+      <<: *build-clang
+      args:
+        branch: release/4.x
+        install_prefix: /opt/llvm-4
+    image: ericwf/compiler:llvm-4
+  llvm-5:
+    build:
+      <<: *build-clang
+      args:
+        branch: release/5.x
+        install_prefix: /opt/llvm-5
+    image: ericwf/compiler:llvm-5
+  llvm-6:
+    build:
+      <<: *build-clang
+      args:
+        branch: release/6.x
+        install_prefix: /opt/llvm-6
+    image: ericwf/compiler:llvm-6
+  llvm-7:
+    build:
+      <<: *build-clang
+      args:
+        branch: release/7.x
+        install_prefix: /opt/llvm-7
+    image: ericwf/compiler:llvm-7
+  llvm-8:
+    build:
+      <<: *build-clang
+      args:
+        branch: release/8.x
+        install_prefix: /opt/llvm-8
+    image: ericwf/compiler:llvm-8
+  llvm-9:
+    build:
+      <<: *build-clang
+      args:
+        branch: release/9.x
+        install_prefix: /opt/llvm-9
+    image: ericwf/compiler:llvm-9
+  gcc-tot:
+    build:
+      <<: *build-gcc
+      args:
+        branch: master
+        cache_date: feb-27
+        install_prefix: /opt/gcc-tot
+    image: ericwf/compiler:gcc-tot
+  llvm-tot:
+    build:
+      <<: *build-clang
+      args:
+        branch: master
+        cache_date: feb-27
+        install_prefix: /opt/llvm-tot
+    image: ericwf/compiler:llvm-tot
+  compiler-zoo:
+    build:
+      context: .
+      dockerfile: compilers/compiler-zoo.Dockerfile
+      target: compiler-zoo
+    image: ericwf/compiler-zoo:latest
+    depends_on:
+      - gcc-4.8.5
+      - gcc-4.9.4
+      - gcc-5
+      - gcc-6
+      - gcc-7
+      - gcc-8
+      - gcc-9
+      - gcc-tot
+      - llvm-3.6
+      - llvm-3.7
+      - llvm-3.8
+      - llvm-3.9
+      - llvm-4
+      - llvm-5
+      - llvm-6
+      - llvm-7
+      - llvm-8
+      - llvm-9
+      - llvm-tot

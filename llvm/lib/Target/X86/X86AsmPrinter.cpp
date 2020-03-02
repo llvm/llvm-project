@@ -604,9 +604,9 @@ void X86AsmPrinter::emitStartOfAsmFile(Module &M) {
       OutStreamer->emitBytes(StringRef("GNU", 4)); // note name
 
       // Emitting an Elf_Prop for the CET properties.
-      OutStreamer->emitIntValue(ELF::GNU_PROPERTY_X86_FEATURE_1_AND, 4);
-      OutStreamer->emitIntValue(4, 4);               // data size
-      OutStreamer->emitIntValue(FeatureFlagsAnd, 4); // data
+      OutStreamer->emitInt32(ELF::GNU_PROPERTY_X86_FEATURE_1_AND);
+      OutStreamer->emitInt32(4);                          // data size
+      OutStreamer->emitInt32(FeatureFlagsAnd);            // data
       emitAlignment(WordSize == 4 ? Align(4) : Align(8)); // padding
 
       OutStreamer->endSection(Nt);

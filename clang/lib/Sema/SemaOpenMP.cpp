@@ -5269,7 +5269,8 @@ Sema::DeclGroupPtrTy Sema::ActOnOpenMPDeclareSimdDirective(
               E->containsUnexpandedParameterPack())
             continue;
           (void)CheckOpenMPLinearDecl(CanonPVD, E->getExprLoc(), LinKind,
-                                      PVD->getOriginalType());
+                                      PVD->getOriginalType(),
+                                      /*IsDeclareSimd=*/true);
           continue;
         }
       }
@@ -5289,7 +5290,7 @@ Sema::DeclGroupPtrTy Sema::ActOnOpenMPDeclareSimdDirective(
           E->isInstantiationDependent() || E->containsUnexpandedParameterPack())
         continue;
       (void)CheckOpenMPLinearDecl(/*D=*/nullptr, E->getExprLoc(), LinKind,
-                                  E->getType());
+                                  E->getType(), /*IsDeclareSimd=*/true);
       continue;
     }
     Diag(E->getExprLoc(), diag::err_omp_param_or_this_in_clause)
@@ -14547,8 +14548,8 @@ bool Sema::CheckOpenMPLinearModifier(OpenMPLinearClauseKind LinKind,
 }
 
 bool Sema::CheckOpenMPLinearDecl(const ValueDecl *D, SourceLocation ELoc,
-                                 OpenMPLinearClauseKind LinKind,
-                                 QualType Type) {
+                                 OpenMPLinearClauseKind LinKind, QualType Type,
+                                 bool IsDeclareSimd) {
   const auto *VD = dyn_cast_or_null<VarDecl>(D);
   // A variable must not have an incomplete type or a reference type.
   if (RequireCompleteType(ELoc, Type, diag::err_omp_linear_incomplete_type))
@@ -14564,8 +14565,10 @@ bool Sema::CheckOpenMPLinearDecl(const ValueDecl *D, SourceLocation ELoc,
   // OpenMP 5.0 [2.19.3, List Item Privatization, Restrictions]
   // A variable that is privatized must not have a const-qualified type
   // unless it is of class type with a mutable member. This restriction does
-  // not apply to the firstprivate clause.
-  if (rejectConstNotMutableType(*this, D, Type, OMPC_linear, ELoc))
+  // not apply to the firstprivate clause, nor to the linear clause on
+  // declarative directives (like declare simd).
+  if (!IsDeclareSimd &&
+      rejectConstNotMutableType(*this, D, Type, OMPC_linear, ELoc))
     return true;
 
   // A list item must be of integral or pointer type.
@@ -15479,10 +15482,14 @@ class MapBaseChecker final : public StmtVisitor<MapBaseChecker, bool> {
   SourceRange ERange;
 
   void emitErrorMsg() {
-    if (!NoDiagnose) {
-      // If nothing else worked, this is not a valid map clause expression.
-      SemaRef.Diag(ELoc, diag::err_omp_expected_named_var_member_or_array_expression)
-        << ERange;
+    // If nothing else worked, this is not a valid map clause expression.
+    if (SemaRef.getLangOpts().OpenMP < 50) {
+      SemaRef.Diag(ELoc,
+                   diag::err_omp_expected_named_var_member_or_array_expression)
+          << ERange;
+    } else {
+      SemaRef.Diag(ELoc, diag::err_omp_non_lvalue_in_map_or_motion_clauses)
+          << getOpenMPClauseName(CKind) << ERange;
     }
   }
 
@@ -15492,6 +15499,7 @@ public:
       emitErrorMsg();
       return false;
     }
+    assert(!RelevantExpr && "RelevantExpr is expected to be nullptr");
     RelevantExpr = DRE;
     // Record the component.
     Components.emplace_back(DRE, DRE->getDecl());
@@ -15502,11 +15510,13 @@ public:
     Expr *E = ME;
     Expr *BaseE = ME->getBase()->IgnoreParenCasts();
 
-    if (isa<CXXThisExpr>(BaseE))
+    if (isa<CXXThisExpr>(BaseE)) {
+      assert(!RelevantExpr && "RelevantExpr is expected to be nullptr");
       // We found a base expression: this->Val.
       RelevantExpr = ME;
-    else
+    } else {
       E = BaseE;
+    }
 
     if (!isa<FieldDecl>(ME->getMemberDecl())) {
       if (!NoDiagnose) {
@@ -15597,6 +15607,7 @@ public:
         SemaRef.Diag(AE->getIdx()->getExprLoc(),
                      diag::note_omp_invalid_subscript_on_this_ptr_map);
       }
+      assert(!RelevantExpr && "RelevantExpr is expected to be nullptr");
       RelevantExpr = TE;
     }
 
@@ -15669,12 +15680,51 @@ public:
         SemaRef.Diag(OASE->getLowerBound()->getExprLoc(),
                      diag::note_omp_invalid_lower_bound_on_this_ptr_mapping);
       }
+      assert(!RelevantExpr && "RelevantExpr is expected to be nullptr");
       RelevantExpr = TE;
     }
 
     // Record the component - we don't have any declaration associated.
     Components.emplace_back(OASE, nullptr);
     return RelevantExpr || Visit(E);
+  }
+  bool VisitUnaryOperator(UnaryOperator *UO) {
+    if (SemaRef.getLangOpts().OpenMP < 50 || !UO->isLValue() ||
+        UO->getOpcode() != UO_Deref) {
+      emitErrorMsg();
+      return false;
+    }
+    if (!RelevantExpr) {
+      // Record the component if haven't found base decl.
+      Components.emplace_back(UO, nullptr);
+    }
+    return RelevantExpr || Visit(UO->getSubExpr()->IgnoreParenImpCasts());
+  }
+  bool VisitBinaryOperator(BinaryOperator *BO) {
+    if (SemaRef.getLangOpts().OpenMP < 50 || !BO->getType()->isPointerType()) {
+      emitErrorMsg();
+      return false;
+    }
+
+    // Pointer arithmetic is the only thing we expect to happen here so after we
+    // make sure the binary operator is a pointer type, the we only thing need
+    // to to is to visit the subtree that has the same type as root (so that we
+    // know the other subtree is just an offset)
+    Expr *LE = BO->getLHS()->IgnoreParenImpCasts();
+    Expr *RE = BO->getRHS()->IgnoreParenImpCasts();
+    Components.emplace_back(BO, nullptr);
+    assert((LE->getType().getTypePtr() == BO->getType().getTypePtr() ||
+            RE->getType().getTypePtr() == BO->getType().getTypePtr()) &&
+           "Either LHS or RHS have base decl inside");
+    if (BO->getType().getTypePtr() == LE->getType().getTypePtr())
+      return RelevantExpr || Visit(LE);
+    return RelevantExpr || Visit(RE);
+  }
+  bool VisitCXXThisExpr(CXXThisExpr *CTE) {
+    assert(!RelevantExpr && "RelevantExpr is expected to be nullptr");
+    RelevantExpr = CTE;
+    Components.emplace_back(CTE, nullptr);
+    return true;
   }
   bool VisitStmt(Stmt *) {
     emitErrorMsg();
@@ -15704,7 +15754,7 @@ static const Expr *checkMapClauseExpressionBase(
   SourceRange ERange = E->getSourceRange();
   MapBaseChecker Checker(SemaRef, CKind, CurComponents, NoDiagnose, ELoc,
                          ERange);
-  if (Checker.Visit(E->IgnoreParenImpCasts()))
+  if (Checker.Visit(E->IgnoreParens()))
     return Checker.getFoundBase();
   return nullptr;
 }
@@ -16159,10 +16209,15 @@ static void checkMappableExpressionList(
 
     Expr *SimpleExpr = RE->IgnoreParenCasts();
 
-    if (!RE->IgnoreParenImpCasts()->isLValue()) {
-      SemaRef.Diag(ELoc,
-                   diag::err_omp_expected_named_var_member_or_array_expression)
-          << RE->getSourceRange();
+    if (!RE->isLValue()) {
+      if (SemaRef.getLangOpts().OpenMP < 50) {
+        SemaRef.Diag(
+            ELoc, diag::err_omp_expected_named_var_member_or_array_expression)
+            << RE->getSourceRange();
+      } else {
+        SemaRef.Diag(ELoc, diag::err_omp_non_lvalue_in_map_or_motion_clauses)
+            << getOpenMPClauseName(CKind) << RE->getSourceRange();
+      }
       continue;
     }
 

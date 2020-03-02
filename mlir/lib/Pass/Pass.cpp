@@ -598,6 +598,10 @@ void PassManager::disableMultithreading(bool disable) {
   getImpl().disableThreads = disable;
 }
 
+bool PassManager::isMultithreadingEnabled() {
+  return !getImpl().disableThreads;
+}
+
 /// Enable support for the pass manager to generate a reproducer on the event
 /// of a crash or a pass failure. `outputFile` is a .mlir filename used to write
 /// the generated reproducer.

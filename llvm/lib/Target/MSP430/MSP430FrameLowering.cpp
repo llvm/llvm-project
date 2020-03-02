@@ -200,11 +200,9 @@ bool MSP430FrameLowering::spillCalleeSavedRegisters(
   return true;
 }
 
-bool
-MSP430FrameLowering::restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
-                                                 MachineBasicBlock::iterator MI,
-                                        std::vector<CalleeSavedInfo> &CSI,
-                                        const TargetRegisterInfo *TRI) const {
+bool MSP430FrameLowering::restoreCalleeSavedRegisters(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
+    MutableArrayRef<CalleeSavedInfo> CSI, const TargetRegisterInfo *TRI) const {
   if (CSI.empty())
     return false;
 

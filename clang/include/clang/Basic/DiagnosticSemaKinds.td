@@ -10113,6 +10113,9 @@ def err_omp_flush_order_clause_and_list : Error<
   "'flush' directive with memory order clause '%0' cannot have the list">;
 def note_omp_flush_order_clause_here : Note<
   "memory order clause '%0' is specified here">;
+def err_omp_non_lvalue_in_map_or_motion_clauses: Error<
+  "expected addressable lvalue in '%0' clause"
+  >;
 } // end of OpenMP category
 
 let CategoryName = "Related Result Type Issue" in {

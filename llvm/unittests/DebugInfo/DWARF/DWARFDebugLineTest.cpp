@@ -210,6 +210,11 @@ TEST_F(DebugLineBasicFixture, GetOrParseLineTableAtInvalidOffsetAfterData) {
   generate();
 
   EXPECT_THAT_EXPECTED(
+      getOrParseLineTableFatalErrors(0),
+      FailedWithMessage("parsing line table prologue at offset 0x00000000: "
+                        "unexpected end of data at offset 0x0"));
+
+  EXPECT_THAT_EXPECTED(
       getOrParseLineTableFatalErrors(1),
       FailedWithMessage(
           "offset 0x00000001 is not a valid debug line section offset"));
@@ -316,8 +321,8 @@ TEST_F(DebugLineBasicFixture, ErrorForReservedLength) {
   EXPECT_THAT_EXPECTED(
       getOrParseLineTableFatalErrors(),
       FailedWithMessage(
-          "parsing line table prologue at offset 0x00000000 unsupported "
-          "reserved unit length found of value 0xfffffff0"));
+          "parsing line table prologue at offset 0x00000000: unsupported "
+          "reserved unit length of value 0xfffffff0"));
 }
 
 struct DebugLineUnsupportedVersionFixture : public TestWithParam<uint16_t>,
@@ -339,8 +344,8 @@ TEST_P(DebugLineUnsupportedVersionFixture, ErrorForUnsupportedVersion) {
 
   EXPECT_THAT_EXPECTED(
       getOrParseLineTableFatalErrors(),
-      FailedWithMessage("parsing line table prologue at offset 0x00000000 "
-                        "found unsupported version " +
+      FailedWithMessage("parsing line table prologue at offset 0x00000000: "
+                        "unsupported version " +
                         std::to_string(Version)));
 }
 
@@ -807,7 +812,7 @@ TEST_F(DebugLineBasicFixture, ParserAlwaysDoneForEmptySection) {
   EXPECT_TRUE(Parser.done());
 }
 
-TEST_F(DebugLineBasicFixture, ParserMovesToEndForBadLengthWhenParsing) {
+TEST_F(DebugLineBasicFixture, ParserMarkedAsDoneForBadLengthWhenParsing) {
   if (!setupGenerator())
     return;
 
@@ -819,18 +824,18 @@ TEST_F(DebugLineBasicFixture, ParserMovesToEndForBadLengthWhenParsing) {
   DWARFDebugLine::SectionParser Parser(LineData, *Context, CUs, TUs);
   Parser.parseNext(RecordRecoverable, RecordUnrecoverable);
 
-  EXPECT_EQ(Parser.getOffset(), 4u);
+  EXPECT_EQ(Parser.getOffset(), 0u);
   EXPECT_TRUE(Parser.done());
   EXPECT_FALSE(Recoverable);
 
   EXPECT_THAT_ERROR(
       std::move(Unrecoverable),
       FailedWithMessage(
-          "parsing line table prologue at offset 0x00000000 unsupported "
-          "reserved unit length found of value 0xfffffff0"));
+          "parsing line table prologue at offset 0x00000000: unsupported "
+          "reserved unit length of value 0xfffffff0"));
 }
 
-TEST_F(DebugLineBasicFixture, ParserMovesToEndForBadLengthWhenSkipping) {
+TEST_F(DebugLineBasicFixture, ParserMarkedAsDoneForBadLengthWhenSkipping) {
   if (!setupGenerator())
     return;
 
@@ -842,15 +847,15 @@ TEST_F(DebugLineBasicFixture, ParserMovesToEndForBadLengthWhenSkipping) {
   DWARFDebugLine::SectionParser Parser(LineData, *Context, CUs, TUs);
   Parser.skip(RecordRecoverable, RecordUnrecoverable);
 
-  EXPECT_EQ(Parser.getOffset(), 4u);
+  EXPECT_EQ(Parser.getOffset(), 0u);
   EXPECT_TRUE(Parser.done());
   EXPECT_FALSE(Recoverable);
 
   EXPECT_THAT_ERROR(
       std::move(Unrecoverable),
       FailedWithMessage(
-          "parsing line table prologue at offset 0x00000000 unsupported "
-          "reserved unit length found of value 0xfffffff0"));
+          "parsing line table prologue at offset 0x00000000: unsupported "
+          "reserved unit length of value 0xfffffff0"));
 }
 
 TEST_F(DebugLineBasicFixture, ParserReportsFirstErrorInEachTableWhenParsing) {
@@ -873,10 +878,10 @@ TEST_F(DebugLineBasicFixture, ParserReportsFirstErrorInEachTableWhenParsing) {
 
   EXPECT_THAT_ERROR(
       std::move(Unrecoverable),
-      FailedWithMessage("parsing line table prologue at offset 0x00000000 "
-                        "found unsupported version 0",
-                        "parsing line table prologue at offset 0x00000006 "
-                        "found unsupported version 1"));
+      FailedWithMessage("parsing line table prologue at offset 0x00000000: "
+                        "unsupported version 0",
+                        "parsing line table prologue at offset 0x00000006: "
+                        "unsupported version 1"));
 }
 
 TEST_F(DebugLineBasicFixture, ParserReportsNonPrologueProblemsWhenParsing) {
@@ -932,10 +937,10 @@ TEST_F(DebugLineBasicFixture,
 
   EXPECT_THAT_ERROR(
       std::move(Unrecoverable),
-      FailedWithMessage("parsing line table prologue at offset 0x00000000 "
-                        "found unsupported version 0",
-                        "parsing line table prologue at offset 0x00000006 "
-                        "found unsupported version 1"));
+      FailedWithMessage("parsing line table prologue at offset 0x00000000: "
+                        "unsupported version 0",
+                        "parsing line table prologue at offset 0x00000006: "
+                        "unsupported version 1"));
 }
 
 TEST_F(DebugLineBasicFixture, ParserIgnoresNonPrologueErrorsWhenSkipping) {

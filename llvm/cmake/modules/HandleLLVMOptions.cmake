@@ -77,7 +77,22 @@ endif()
 
 if(LLVM_ENABLE_EXPENSIVE_CHECKS)
   add_definitions(-DEXPENSIVE_CHECKS)
-  add_definitions(-D_GLIBCXX_DEBUG)
+
+  # In some libstdc++ versions, std::min_element is not constexpr when
+  # _GLIBCXX_DEBUG is enabled.
+  CHECK_CXX_SOURCE_COMPILES("
+    #define _GLIBCXX_DEBUG
+    #include <algorithm>
+    int main(int argc, char** argv) {
+      static constexpr int data[] = {0, 1};
+      constexpr const int* min_elt = std::min_element(&data[0], &data[2]);
+      return 0;
+    }" CXX_SUPPORTS_GLIBCXX_DEBUG)
+  if(CXX_SUPPORTS_GLIBCXX_DEBUG)
+    add_definitions(-D_GLIBCXX_DEBUG)
+  else()
+    add_definitions(-D_GLIBCXX_ASSERTIONS)
+  endif()
 endif()
 
 string(TOUPPER "${LLVM_ABI_BREAKING_CHECKS}" uppercase_LLVM_ABI_BREAKING_CHECKS)
@@ -499,7 +514,6 @@ if (MSVC)
       -wd4244 # Suppress ''argument' : conversion from 'type1' to 'type2', possible loss of data'
       -wd4267 # Suppress ''var' : conversion from 'size_t' to 'type', possible loss of data'
       -wd4291 # Suppress ''declaration' : no matching operator delete found; memory will not be freed if initialization throws an exception'
-      -wd4345 # Suppress 'behavior change: an object of POD type constructed with an initializer of the form () will be default-initialized'
       -wd4351 # Suppress 'new behavior: elements of array 'array' will be default initialized'
       -wd4456 # Suppress 'declaration of 'var' hides local variable'
       -wd4457 # Suppress 'declaration of 'var' hides function parameter'
@@ -747,9 +761,15 @@ if(LLVM_USE_SANITIZER)
   endif()
 endif()
 
-# Turn on -gsplit-dwarf if requested
-if(LLVM_USE_SPLIT_DWARF)
-  add_definitions("-gsplit-dwarf")
+# Turn on -gsplit-dwarf if requested in debug builds.
+if (LLVM_USE_SPLIT_DWARF AND
+    ((uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG") OR
+     (uppercase_CMAKE_BUILD_TYPE STREQUAL "RELWITHDEBINFO")))
+  # Limit to clang and gcc so far. Add compilers supporting this option.
+  if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR
+      CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    add_compile_options(-gsplit-dwarf)
+  endif()
 endif()
 
 add_definitions( -D__STDC_CONSTANT_MACROS )

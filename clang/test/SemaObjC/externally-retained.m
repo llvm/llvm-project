@@ -118,3 +118,6 @@ void test13(ObjCTy *first, __weak ObjCTy *second, __unsafe_unretained ObjCTy *th
 }
 
 #pragma clang attribute ext_ret.pop
+
+__attribute__((objc_externally_retained))
+void unprototyped();

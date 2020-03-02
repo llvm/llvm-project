@@ -663,6 +663,11 @@ public:
     emitIntValue(Value, Size);
   }
 
+  void emitInt8(uint64_t Value) { emitIntValue(Value, 1); }
+  void emitInt16(uint64_t Value) { emitIntValue(Value, 2); }
+  void emitInt32(uint64_t Value) { emitIntValue(Value, 4); }
+  void emitInt64(uint64_t Value) { emitIntValue(Value, 8); }
+
   /// Special case of EmitValue that avoids the client having to pass
   /// in a MCExpr for constant integers & prints in Hex format for certain
   /// modes, pads the field with leading zeros to Size width

@@ -531,6 +531,7 @@ uint32_t GVN::ValueTable::lookupOrAdd(Value *V) {
     case Instruction::AddrSpaceCast:
     case Instruction::BitCast:
     case Instruction::Select:
+    case Instruction::Freeze:
     case Instruction::ExtractElement:
     case Instruction::InsertElement:
     case Instruction::ShuffleVector:

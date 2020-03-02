@@ -1,4 +1,4 @@
-add_llvm_library(MLIRSDBM
+add_mlir_dialect_library(MLIRSDBM
   SDBM.cpp
   SDBMExpr.cpp
 

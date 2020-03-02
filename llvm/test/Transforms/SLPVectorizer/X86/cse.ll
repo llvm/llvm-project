@@ -131,7 +131,8 @@ define i32 @test2(double* nocapture %G, i32 %k) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = load double, double* [[TMP2]], align 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = fmul double [[TMP3]], 4.000000e+00
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP14:%.*]], label [[TMP5:%.*]]
-; CHECK:         [[TMP6:%.*]] = getelementptr inbounds double, double* [[G]], i64 6
+; CHECK:       5:
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds double, double* [[G]], i64 6
 ; CHECK-NEXT:    [[TMP7:%.*]] = load double, double* [[TMP6]], align 8
 ; CHECK-NEXT:    [[TMP8:%.*]] = fmul double [[TMP7]], 3.000000e+00
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x double> undef, double [[TMP4]], i32 0
@@ -141,7 +142,8 @@ define i32 @test2(double* nocapture %G, i32 %k) {
 ; CHECK-NEXT:    [[TMP13:%.*]] = bitcast double* [[G]] to <2 x double>*
 ; CHECK-NEXT:    store <2 x double> [[TMP11]], <2 x double>* [[TMP13]], align 8
 ; CHECK-NEXT:    br label [[TMP24:%.*]]
-; CHECK:         [[TMP15:%.*]] = getelementptr inbounds double, double* [[G]], i64 2
+; CHECK:       14:
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds double, double* [[G]], i64 2
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds double, double* [[G]], i64 6
 ; CHECK-NEXT:    [[TMP17:%.*]] = load double, double* [[TMP16]], align 8
 ; CHECK-NEXT:    [[TMP18:%.*]] = fmul double [[TMP17]], 3.000000e+00
@@ -152,7 +154,8 @@ define i32 @test2(double* nocapture %G, i32 %k) {
 ; CHECK-NEXT:    [[TMP23:%.*]] = bitcast double* [[TMP15]] to <2 x double>*
 ; CHECK-NEXT:    store <2 x double> [[TMP21]], <2 x double>* [[TMP23]], align 8
 ; CHECK-NEXT:    br label [[TMP24]]
-; CHECK:         ret i32 undef
+; CHECK:       24:
+; CHECK-NEXT:    ret i32 undef
 ;
   %1 = icmp eq i32 %k, 0
   %2 = getelementptr inbounds double, double* %G, i64 5

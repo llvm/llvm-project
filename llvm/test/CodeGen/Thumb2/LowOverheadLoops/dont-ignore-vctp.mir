@@ -95,12 +95,12 @@ body:             |
   ; CHECK-LABEL: name: dont_ignore_vctp
   ; CHECK: bb.0.entry:
   ; CHECK:   successors: %bb.1(0x80000000)
-  ; CHECK:   liveins: $lr, $r0, $r1, $r3, $r7
+  ; CHECK:   liveins: $lr, $r0, $r1, $r2, $r7
   ; CHECK:   frame-setup tPUSH 14 /* CC::al */, $noreg, killed $r7, killed $lr, implicit-def $sp, implicit $sp
   ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_offset 8
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $lr, -4
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $r7, -8
-  ; CHECK:   tCMPi8 renamable $r3, 4, 14 /* CC::al */, $noreg, implicit-def dead $cpsr
+  ; CHECK:   renamable $r3, dead $cpsr = tLSLri killed renamable $r2, 1, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $r2 = tLEApcrel %const.0, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $q0 = MVE_VLDRWU32 killed renamable $r2, 0, 0, $noreg :: (load 16 from constant-pool)
   ; CHECK:   $lr = MVE_DLSTP_32 killed renamable $r3

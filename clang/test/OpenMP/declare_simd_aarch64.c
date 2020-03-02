@@ -116,6 +116,15 @@ double c02(double *x, char y);
 // AARCH64: "_ZGVnM16uv_c02" "_ZGVnM8uv_c02"
 // AARCH64-NOT: c02
 
+/************************************/
+/* Linear with a constant parameter */
+/************************************/
+
+#pragma omp declare simd notinbranch linear(i)
+double constlinear(const int i);
+// AARCH64: "_ZGVnN2l_constlinear" "_ZGVnN4l_constlinear"
+// AARCH64-NOT: constlinear
+
 /*************************/
 /* sincos-like signature */
 /*************************/
@@ -170,6 +179,7 @@ void do_something() {
   D = b03(D);
   *I = c01(D, *S);
   *D = c02(D, *S);
+  constlinear(*I);
   sincos(*D, D, D);
   SinCos(*D, D, D);
   foo2(I, *I);

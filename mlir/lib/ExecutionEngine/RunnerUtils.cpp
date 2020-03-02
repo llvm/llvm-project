@@ -1,4 +1,4 @@
-//===- RunnerUtils.cpp - Utils for MLIR CPU execution ---------------------===//
+//===- RunnerUtils.cpp - Utils for MLIR exec on targets with a C++ runtime ===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,15 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Utilities for interfacing MLIR types with C code as well as printing,
-// debugging etc.
+// This file imlpements basic functions to debug structured MLIR types at
+// runtime. Entities in this file may not be compatible with targets without a
+// C++ runtime. These may be progressively migrated to CRunnerUtils.cpp over
+// time.
 //
 //===----------------------------------------------------------------------===//
 
 #include "mlir/ExecutionEngine/RunnerUtils.h"
-
-#include <cinttypes>
-#include <cstdio>
 
 extern "C" void _mlir_ciface_print_memref_vector_4x4xf32(
     StridedMemRefType<Vector2D<4, 4, float>, 2> *M) {
@@ -85,16 +84,3 @@ extern "C" void
 _mlir_ciface_print_memref_4d_f32(StridedMemRefType<float, 4> *M) {
   impl::printMemRef(*M);
 }
-
-// Small runtime support "lib" for vector.print lowering.
-// By providing elementary printing methods only, this
-// library can remain fully unaware of low-level implementation
-// details of our vectors. Also useful for direct LLVM IR output.
-extern "C" void print_i32(int32_t i) { fprintf(stdout, "%" PRId32, i); }
-extern "C" void print_i64(int64_t l) { fprintf(stdout, "%" PRId64, l); }
-extern "C" void print_f32(float f) { fprintf(stdout, "%g", f); }
-extern "C" void print_f64(double d) { fprintf(stdout, "%lg", d); }
-extern "C" void print_open() { fputs("( ", stdout); }
-extern "C" void print_close() { fputs(" )", stdout); }
-extern "C" void print_comma() { fputs(", ", stdout); }
-extern "C" void print_newline() { fputc('\n', stdout); }

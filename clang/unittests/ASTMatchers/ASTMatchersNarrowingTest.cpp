@@ -2012,6 +2012,19 @@ TEST(Optionally, SubmatchersDoNotMatch) {
       std::make_unique<VerifyIdIsBoundTo<FieldDecl>>("v")));
 }
 
+// Regression test.
+TEST(Optionally, SubmatchersDoNotMatchButPreserveBindings) {
+  std::string Code = "class A { int a; int b; };";
+  auto Matcher = recordDecl(decl().bind("decl"),
+                            optionally(has(fieldDecl(hasName("c")).bind("v"))));
+  // "decl" is still bound.
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      Code, Matcher, std::make_unique<VerifyIdIsBoundTo<RecordDecl>>("decl")));
+  // "v" is not bound, but the match still suceeded.
+  EXPECT_TRUE(matchAndVerifyResultFalse(
+      Code, Matcher, std::make_unique<VerifyIdIsBoundTo<FieldDecl>>("v")));
+}
+
 TEST(Optionally, SubmatchersMatch) {
   EXPECT_TRUE(matchAndVerifyResultTrue(
       "class A { int a; int c; };",

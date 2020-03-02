@@ -1799,8 +1799,8 @@ void InnerLoopVectorizer::widenIntOrFpInduction(PHINode *IV, TruncInst *Trunc) {
   assert((IV->getType()->isIntegerTy() || IV != OldInduction) &&
          "Primary induction variable must have an integer type");
 
-  auto II = Legal->getInductionVars()->find(IV);
-  assert(II != Legal->getInductionVars()->end() && "IV is not an induction");
+  auto II = Legal->getInductionVars().find(IV);
+  assert(II != Legal->getInductionVars().end() && "IV is not an induction");
 
   auto ID = II->second;
   assert(IV->getType() == ID.getStartValue()->getType() && "Types must match");
@@ -3026,8 +3026,7 @@ BasicBlock *InnerLoopVectorizer::createVectorizedLoopSkeleton() {
   // This variable saves the new starting index for the scalar loop. It is used
   // to test if there are any tail iterations left once the vector loop has
   // completed.
-  LoopVectorizationLegality::InductionList *List = Legal->getInductionVars();
-  for (auto &InductionEntry : *List) {
+  for (auto &InductionEntry : Legal->getInductionVars()) {
     PHINode *OrigPhi = InductionEntry.first;
     InductionDescriptor II = InductionEntry.second;
 
@@ -3465,7 +3464,7 @@ void InnerLoopVectorizer::fixVectorizedLoop() {
   PSE.getSE()->forgetLoop(OrigLoop);
 
   // Fix-up external users of the induction variables.
-  for (auto &Entry : *Legal->getInductionVars())
+  for (auto &Entry : Legal->getInductionVars())
     fixupIVUsers(Entry.first, Entry.second,
                  getOrCreateVectorTripCount(LI->getLoopFor(LoopVectorBody)),
                  IVEndValues[Entry.first], LoopMiddleBlock);
@@ -3691,7 +3690,7 @@ void InnerLoopVectorizer::fixReduction(PHINode *Phi) {
   // Get it's reduction variable descriptor.
   assert(Legal->isReductionVariable(Phi) &&
          "Unable to find the reduction variable");
-  RecurrenceDescriptor RdxDesc = (*Legal->getReductionVars())[Phi];
+  RecurrenceDescriptor RdxDesc = Legal->getReductionVars()[Phi];
 
   RecurrenceDescriptor::RecurrenceKind RK = RdxDesc.getRecurrenceKind();
   TrackingVH<Value> ReductionStartValue = RdxDesc.getRecurrenceStartValue();
@@ -4152,9 +4151,9 @@ void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN, unsigned UF,
 
   // This PHINode must be an induction variable.
   // Make sure that we know about it.
-  assert(Legal->getInductionVars()->count(P) && "Not an induction variable");
+  assert(Legal->getInductionVars().count(P) && "Not an induction variable");
 
-  InductionDescriptor II = Legal->getInductionVars()->lookup(P);
+  InductionDescriptor II = Legal->getInductionVars().lookup(P);
   const DataLayout &DL = OrigLoop->getHeader()->getModule()->getDataLayout();
 
   // FIXME: The newly created binary instructions should contain nsw/nuw flags,
@@ -4518,7 +4517,7 @@ void LoopVectorizationCostModel::collectLoopScalars(unsigned VF) {
   // TODO: Once we are able to vectorize pointer induction variables we should
   //       no longer insert them into the worklist here.
   auto *Latch = TheLoop->getLoopLatch();
-  for (auto &Induction : *Legal->getInductionVars()) {
+  for (auto &Induction : Legal->getInductionVars()) {
     auto *Ind = Induction.first;
     auto *IndUpdate = cast<Instruction>(Ind->getIncomingValueForBlock(Latch));
     if (Induction.second.getKind() != InductionDescriptor::IK_PtrInduction)
@@ -4561,7 +4560,7 @@ void LoopVectorizationCostModel::collectLoopScalars(unsigned VF) {
 
   // An induction variable will remain scalar if all users of the induction
   // variable and induction variable update remain scalar.
-  for (auto &Induction : *Legal->getInductionVars()) {
+  for (auto &Induction : Legal->getInductionVars()) {
     auto *Ind = Induction.first;
     auto *IndUpdate = cast<Instruction>(Ind->getIncomingValueForBlock(Latch));
 
@@ -4852,7 +4851,7 @@ void LoopVectorizationCostModel::collectLoopUniforms(unsigned VF) {
   // nodes separately. An induction variable will remain uniform if all users
   // of the induction variable and induction variable update remain uniform.
   // The code below handles both pointer and non-pointer induction variables.
-  for (auto &Induction : *Legal->getInductionVars()) {
+  for (auto &Induction : Legal->getInductionVars()) {
     auto *Ind = Induction.first;
     auto *IndUpdate = cast<Instruction>(Ind->getIncomingValueForBlock(Latch));
 
@@ -5157,7 +5156,7 @@ LoopVectorizationCostModel::getSmallestAndWidestTypes() {
       if (auto *PN = dyn_cast<PHINode>(&I)) {
         if (!Legal->isReductionVariable(PN))
           continue;
-        RecurrenceDescriptor RdxDesc = (*Legal->getReductionVars())[PN];
+        RecurrenceDescriptor RdxDesc = Legal->getReductionVars()[PN];
         T = RdxDesc.getRecurrenceType();
       }
 
@@ -5299,7 +5298,7 @@ unsigned LoopVectorizationCostModel::selectInterleaveCount(unsigned VF,
 
   // Interleave if we vectorized this loop and there is a reduction that could
   // benefit from interleaving.
-  if (VF > 1 && !Legal->getReductionVars()->empty()) {
+  if (VF > 1 && !Legal->getReductionVars().empty()) {
     LLVM_DEBUG(dbgs() << "LV: Interleaving because of reductions.\n");
     return IC;
   }
@@ -5330,7 +5329,7 @@ unsigned LoopVectorizationCostModel::selectInterleaveCount(unsigned VF,
     // by this point), we can increase the critical path length if the loop
     // we're interleaving is inside another loop. Limit, by default to 2, so the
     // critical path only gets increased by one reduction operation.
-    if (!Legal->getReductionVars()->empty() && TheLoop->getLoopDepth() > 1) {
+    if (!Legal->getReductionVars().empty() && TheLoop->getLoopDepth() > 1) {
       unsigned F = static_cast<unsigned>(MaxNestedScalarReductionIC);
       SmallIC = std::min(SmallIC, F);
       StoresIC = std::min(StoresIC, F);
@@ -5350,7 +5349,7 @@ unsigned LoopVectorizationCostModel::selectInterleaveCount(unsigned VF,
 
   // Interleave if this is a large loop (small loops are already dealt with by
   // this point) that could benefit from interleaving.
-  bool HasReductions = !Legal->getReductionVars()->empty();
+  bool HasReductions = !Legal->getReductionVars().empty();
   if (TTI.enableAggressiveInterleaving(HasReductions)) {
     LLVM_DEBUG(dbgs() << "LV: Interleaving to expose ILP.\n");
     return IC;
@@ -6430,14 +6429,14 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
 
   // Ignore type-promoting instructions we identified during reduction
   // detection.
-  for (auto &Reduction : *Legal->getReductionVars()) {
+  for (auto &Reduction : Legal->getReductionVars()) {
     RecurrenceDescriptor &RedDes = Reduction.second;
     SmallPtrSetImpl<Instruction *> &Casts = RedDes.getCastInsts();
     VecValuesToIgnore.insert(Casts.begin(), Casts.end());
   }
   // Ignore type-casting instructions we identified during induction
   // detection.
-  for (auto &Induction : *Legal->getInductionVars()) {
+  for (auto &Induction : Legal->getInductionVars()) {
     InductionDescriptor &IndDes = Induction.second;
     const SmallVectorImpl<Instruction *> &Casts = IndDes.getCastInsts();
     VecValuesToIgnore.insert(Casts.begin(), Casts.end());
@@ -6601,7 +6600,7 @@ void LoopVectorizationPlanner::collectTriviallyDeadInstructions(
   // We create new "steps" for induction variable updates to which the original
   // induction variables map. An original update instruction will be dead if
   // all its users except the induction variable are dead.
-  for (auto &Induction : *Legal->getInductionVars()) {
+  for (auto &Induction : Legal->getInductionVars()) {
     PHINode *Ind = Induction.first;
     auto *IndUpdate = cast<Instruction>(Ind->getIncomingValueForBlock(Latch));
     if (llvm::all_of(IndUpdate->users(), [&](User *U) -> bool {
@@ -6815,7 +6814,7 @@ VPRecipeBuilder::tryToOptimizeInduction(Instruction *I, VFRange &Range) {
   if (PHINode *Phi = dyn_cast<PHINode>(I)) {
     // Check if this is an integer or fp induction. If so, build the recipe that
     // produces its scalar and vector values.
-    InductionDescriptor II = Legal->getInductionVars()->lookup(Phi);
+    InductionDescriptor II = Legal->getInductionVars().lookup(Phi);
     if (II.getKind() == InductionDescriptor::IK_IntInduction ||
         II.getKind() == InductionDescriptor::IK_FpInduction)
       return new VPWidenIntOrFpInductionRecipe(Phi);
@@ -7109,7 +7108,7 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(unsigned MinVF,
   // required in order to introduce a select between them in VPlan.
   if (CM.foldTailByMasking()) {
     NeedDef.insert(Legal->getPrimaryInduction());
-    for (auto &Reduction : *Legal->getReductionVars()) {
+    for (auto &Reduction : Legal->getReductionVars()) {
       NeedDef.insert(Reduction.first);
       NeedDef.insert(Reduction.second.getLoopExitInstr());
     }
@@ -7281,7 +7280,7 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
   if (CM.foldTailByMasking()) {
     Builder.setInsertPoint(VPBB);
     auto *Cond = RecipeBuilder.createBlockInMask(OrigLoop->getHeader(), Plan);
-    for (auto &Reduction : *Legal->getReductionVars()) {
+    for (auto &Reduction : Legal->getReductionVars()) {
       VPValue *Phi = Plan->getVPValue(Reduction.first);
       VPValue *Red = Plan->getVPValue(Reduction.second.getLoopExitInstr());
       Builder.createNaryOp(Instruction::Select, {Cond, Red, Phi});

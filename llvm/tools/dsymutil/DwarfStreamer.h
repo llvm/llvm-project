@@ -76,8 +76,7 @@ public:
   void emitPaperTrailWarningsDie(DIE &Die) override;
 
   /// Emit contents of section SecName From Obj.
-  void emitSectionContents(const object::ObjectFile &Obj,
-                           StringRef SecName) override;
+  void emitSectionContents(StringRef SecData, StringRef SecName) override;
 
   /// Emit the string table described by \p Pool.
   void emitStrings(const NonRelocatableStringpool &Pool) override;
@@ -117,9 +116,6 @@ public:
   /// Copy the debug_line over to the updated binary while unobfuscating the
   /// file names and directories.
   void translateLineTable(DataExtractor LineData, uint64_t Offset) override;
-
-  /// Copy over the debug sections that are not modified when updating.
-  void copyInvariantDebugSection(const object::ObjectFile &Obj);
 
   uint64_t getLineSectionSize() const override { return LineSectionSize; }
 

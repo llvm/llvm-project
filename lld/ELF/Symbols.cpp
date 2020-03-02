@@ -514,7 +514,6 @@ void Symbol::resolveUndefined(const Undefined &other) {
     // reference is weak.
     if (other.binding != STB_WEAK || !referenced)
       binding = other.binding;
-    referenced = true;
   }
 }
 
@@ -687,7 +686,6 @@ void Symbol::resolveShared(const SharedSymbol &other) {
     uint8_t bind = binding;
     replace(other);
     binding = bind;
-    referenced = true;
   }
 }
 

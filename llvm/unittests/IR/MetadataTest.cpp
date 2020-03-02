@@ -2076,17 +2076,19 @@ typedef MetadataTest DITemplateTypeParameterTest;
 TEST_F(DITemplateTypeParameterTest, get) {
   StringRef Name = "template";
   DIType *Type = getBasicType("basic");
+  bool defaulted = false;
 
-  auto *N = DITemplateTypeParameter::get(Context, Name, Type);
+  auto *N = DITemplateTypeParameter::get(Context, Name, Type, defaulted);
 
   EXPECT_EQ(dwarf::DW_TAG_template_type_parameter, N->getTag());
   EXPECT_EQ(Name, N->getName());
   EXPECT_EQ(Type, N->getType());
-  EXPECT_EQ(N, DITemplateTypeParameter::get(Context, Name, Type));
+  EXPECT_EQ(N, DITemplateTypeParameter::get(Context, Name, Type, defaulted));
 
-  EXPECT_NE(N, DITemplateTypeParameter::get(Context, "other", Type));
-  EXPECT_NE(N,
-            DITemplateTypeParameter::get(Context, Name, getBasicType("other")));
+  EXPECT_NE(N, DITemplateTypeParameter::get(Context, "other", Type, defaulted));
+  EXPECT_NE(N, DITemplateTypeParameter::get(Context, Name,
+                                            getBasicType("other"), defaulted));
+  EXPECT_NE(N, DITemplateTypeParameter::get(Context, Name, Type, true));
 
   TempDITemplateTypeParameter Temp = N->clone();
   EXPECT_EQ(N, MDNode::replaceWithUniqued(std::move(Temp)));
@@ -2098,24 +2100,31 @@ TEST_F(DITemplateValueParameterTest, get) {
   unsigned Tag = dwarf::DW_TAG_template_value_parameter;
   StringRef Name = "template";
   DIType *Type = getBasicType("basic");
+  bool defaulted = false;
   Metadata *Value = getConstantAsMetadata();
 
-  auto *N = DITemplateValueParameter::get(Context, Tag, Name, Type, Value);
+  auto *N =
+      DITemplateValueParameter::get(Context, Tag, Name, Type, defaulted, Value);
   EXPECT_EQ(Tag, N->getTag());
   EXPECT_EQ(Name, N->getName());
   EXPECT_EQ(Type, N->getType());
   EXPECT_EQ(Value, N->getValue());
-  EXPECT_EQ(N, DITemplateValueParameter::get(Context, Tag, Name, Type, Value));
+  EXPECT_EQ(N, DITemplateValueParameter::get(Context, Tag, Name, Type,
+                                             defaulted, Value));
 
   EXPECT_NE(N, DITemplateValueParameter::get(
                    Context, dwarf::DW_TAG_GNU_template_template_param, Name,
-                   Type, Value));
-  EXPECT_NE(N,
-            DITemplateValueParameter::get(Context, Tag, "other", Type, Value));
+                   Type, defaulted, Value));
+  EXPECT_NE(N, DITemplateValueParameter::get(Context, Tag, "other", Type,
+                                             defaulted, Value));
   EXPECT_NE(N, DITemplateValueParameter::get(Context, Tag, Name,
-                                             getBasicType("other"), Value));
-  EXPECT_NE(N, DITemplateValueParameter::get(Context, Tag, Name, Type,
-                                             getConstantAsMetadata()));
+                                             getBasicType("other"), defaulted,
+                                             Value));
+  EXPECT_NE(N,
+            DITemplateValueParameter::get(Context, Tag, Name, Type, defaulted,
+                                          getConstantAsMetadata()));
+  EXPECT_NE(
+      N, DITemplateValueParameter::get(Context, Tag, Name, Type, true, Value));
 
   TempDITemplateValueParameter Temp = N->clone();
   EXPECT_EQ(N, MDNode::replaceWithUniqued(std::move(Temp)));

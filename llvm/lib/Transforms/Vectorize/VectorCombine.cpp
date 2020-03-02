@@ -46,8 +46,9 @@ static cl::opt<bool> DisableVectorCombine(
 static bool isExtractExtractCheap(Instruction *Ext0, Instruction *Ext1,
                                   unsigned Opcode,
                                   const TargetTransformInfo &TTI) {
-  assert(Ext0->getOperand(1) == Ext1->getOperand(1) &&
-         isa<ConstantInt>(Ext0->getOperand(1)) &&
+  assert(isa<ConstantInt>(Ext0->getOperand(1)) &&
+         (cast<ConstantInt>(Ext0->getOperand(1))->getZExtValue() ==
+          cast<ConstantInt>(Ext1->getOperand(1))->getZExtValue()) &&
          "Expected same constant extract index");
 
   Type *ScalarTy = Ext0->getType();

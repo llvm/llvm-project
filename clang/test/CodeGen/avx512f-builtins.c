@@ -9460,17 +9460,32 @@ __m256 test_mm512_maskz_cvtpd_ps (__mmask8 __U, __m512d __A)
   return _mm512_maskz_cvtpd_ps (__U,__A);
 }
 
+__m512 test_mm512_cvtph_ps (__m256i __A)
+{
+  // CHECK-LABEL: @test_mm512_cvtph_ps 
+  // CHECK: bitcast <4 x i64> %{{.*}} to <16 x i16>
+  // CHECK: bitcast <16 x i16> %{{.*}} to <16 x half>
+  // CHECK: fpext <16 x half> %{{.*}} to <16 x float>
+  return _mm512_cvtph_ps (__A);
+}
+
 __m512 test_mm512_mask_cvtph_ps (__m512 __W, __mmask16 __U, __m256i __A)
 {
   // CHECK-LABEL: @test_mm512_mask_cvtph_ps 
-  // CHECK: @llvm.x86.avx512.mask.vcvtph2ps.512
+  // CHECK: bitcast <4 x i64> %{{.*}} to <16 x i16>
+  // CHECK: bitcast <16 x i16> %{{.*}} to <16 x half>
+  // CHECK: fpext <16 x half> %{{.*}} to <16 x float>
+  // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
   return _mm512_mask_cvtph_ps (__W,__U,__A);
 }
 
 __m512 test_mm512_maskz_cvtph_ps (__mmask16 __U, __m256i __A)
 {
   // CHECK-LABEL: @test_mm512_maskz_cvtph_ps 
-  // CHECK: @llvm.x86.avx512.mask.vcvtph2ps.512
+  // CHECK: bitcast <4 x i64> %{{.*}} to <16 x i16>
+  // CHECK: bitcast <16 x i16> %{{.*}} to <16 x half>
+  // CHECK: fpext <16 x half> %{{.*}} to <16 x float>
+  // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
   return _mm512_maskz_cvtph_ps (__U,__A);
 }
 

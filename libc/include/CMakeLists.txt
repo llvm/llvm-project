@@ -36,6 +36,14 @@ add_gen_header(
 )
 
 add_gen_header(
+  threads_h
+  DEF_FILE threads.h.def
+  GEN_HDR threads.h
+  DEPENDS
+    llvm_libc_common_h
+)
+
+add_gen_header(
   errno_h
   DEF_FILE errno.h.def
   PARAMS

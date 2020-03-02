@@ -2283,11 +2283,9 @@ static bool isCalleeSavedCR(unsigned Reg) {
   return PPC::CR2 == Reg || Reg == PPC::CR3 || Reg == PPC::CR4;
 }
 
-bool
-PPCFrameLowering::restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
-                                        MachineBasicBlock::iterator MI,
-                                        std::vector<CalleeSavedInfo> &CSI,
-                                        const TargetRegisterInfo *TRI) const {
+bool PPCFrameLowering::restoreCalleeSavedRegisters(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
+    MutableArrayRef<CalleeSavedInfo> CSI, const TargetRegisterInfo *TRI) const {
   MachineFunction *MF = MBB.getParent();
   const PPCInstrInfo &TII = *Subtarget.getInstrInfo();
   PPCFunctionInfo *FI = MF->getInfo<PPCFunctionInfo>();
