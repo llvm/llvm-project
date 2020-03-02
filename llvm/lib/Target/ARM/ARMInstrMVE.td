@@ -4452,6 +4452,35 @@ defm : MVE_VMOVN_p<MVE_VMOVNi32th, 1, MVE_v8i16, MVE_v4i32>;
 defm : MVE_VMOVN_p<MVE_VMOVNi16bh, 0, MVE_v16i8, MVE_v8i16>;
 defm : MVE_VMOVN_p<MVE_VMOVNi16th, 1, MVE_v16i8, MVE_v8i16>;
 
+multiclass MVE_VQMOVN_p<Instruction Inst, bit outU, bit inU, bit top,
+                        MVEVectorVTInfo VTI, MVEVectorVTInfo InVTI> {
+  def : Pat<(VTI.Vec (int_arm_mve_vqmovn (VTI.Vec MQPR:$Qd_src),
+                                  (InVTI.Vec MQPR:$Qm),
+                                  (i32 outU), (i32 inU), (i32 top))),
+            (VTI.Vec (Inst (VTI.Vec MQPR:$Qd_src),
+                              (InVTI.Vec MQPR:$Qm)))>;
+
+  def : Pat<(VTI.Vec (int_arm_mve_vqmovn_predicated (VTI.Vec MQPR:$Qd_src),
+                                  (InVTI.Vec MQPR:$Qm),
+                                  (i32 outU), (i32 inU), (i32 top),
+                                  (InVTI.Pred VCCR:$pred))),
+            (VTI.Vec (Inst (VTI.Vec MQPR:$Qd_src),
+                              (InVTI.Vec MQPR:$Qm),
+                              ARMVCCThen, (InVTI.Pred VCCR:$pred)))>;
+}
+
+defm : MVE_VQMOVN_p<MVE_VQMOVNs32bh,  0, 0, 0, MVE_v8i16, MVE_v4i32>;
+defm : MVE_VQMOVN_p<MVE_VQMOVNs32th,  0, 0, 1, MVE_v8i16, MVE_v4i32>;
+defm : MVE_VQMOVN_p<MVE_VQMOVNs16bh,  0, 0, 0, MVE_v16i8, MVE_v8i16>;
+defm : MVE_VQMOVN_p<MVE_VQMOVNs16th,  0, 0, 1, MVE_v16i8, MVE_v8i16>;
+defm : MVE_VQMOVN_p<MVE_VQMOVNu32bh,  1, 1, 0, MVE_v8i16, MVE_v4i32>;
+defm : MVE_VQMOVN_p<MVE_VQMOVNu32th,  1, 1, 1, MVE_v8i16, MVE_v4i32>;
+defm : MVE_VQMOVN_p<MVE_VQMOVNu16bh,  1, 1, 0, MVE_v16i8, MVE_v8i16>;
+defm : MVE_VQMOVN_p<MVE_VQMOVNu16th,  1, 1, 1, MVE_v16i8, MVE_v8i16>;
+defm : MVE_VQMOVN_p<MVE_VQMOVUNs32bh, 1, 0, 0, MVE_v8i16, MVE_v4i32>;
+defm : MVE_VQMOVN_p<MVE_VQMOVUNs32th, 1, 0, 1, MVE_v8i16, MVE_v4i32>;
+defm : MVE_VQMOVN_p<MVE_VQMOVUNs16bh, 1, 0, 0, MVE_v16i8, MVE_v8i16>;
+defm : MVE_VQMOVN_p<MVE_VQMOVUNs16th, 1, 0, 1, MVE_v16i8, MVE_v8i16>;
 
 class MVE_VCVT_ff<string iname, string suffix, bit op, bit T,
                   list<dag> pattern=[]>
