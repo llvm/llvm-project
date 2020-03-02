@@ -4537,14 +4537,6 @@ def : InstAlias<"mttbhi $Rx", (MTSPR 988, gprc:$Rx)>, Requires<[IsPPC4xx]>;
 
 def : InstAlias<"xnop", (XORI R0, R0, 0)>;
 
-def : InstAlias<"mr $rA, $rB", (OR8 g8rc:$rA, g8rc:$rB, g8rc:$rB)>;
-def : InstAlias<"mr. $rA, $rB", (OR8_rec g8rc:$rA, g8rc:$rB, g8rc:$rB)>;
-
-def : InstAlias<"not $rA, $rB", (NOR8 g8rc:$rA, g8rc:$rB, g8rc:$rB)>;
-def : InstAlias<"not. $rA, $rB", (NOR8_rec g8rc:$rA, g8rc:$rB, g8rc:$rB)>;
-
-def : InstAlias<"mtcr $rA", (MTCRF8 255, g8rc:$rA)>;
-
 foreach BATR = 0-3 in {
     def : InstAlias<"mtdbatu "#BATR#", $Rx",
                     (MTSPR !add(BATR, !add(BATR, 536)), gprc:$Rx)>,
@@ -4609,11 +4601,6 @@ def SUBIC : PPCAsmPseudo<"subic $rA, $rB, $imm",
                          (ins gprc:$rA, gprc:$rB, s16imm:$imm)>;
 def SUBIC_rec : PPCAsmPseudo<"subic. $rA, $rB, $imm",
                           (ins gprc:$rA, gprc:$rB, s16imm:$imm)>;
-
-def : InstAlias<"sub $rA, $rB, $rC", (SUBF8 g8rc:$rA, g8rc:$rC, g8rc:$rB)>;
-def : InstAlias<"sub. $rA, $rB, $rC", (SUBF8_rec g8rc:$rA, g8rc:$rC, g8rc:$rB)>;
-def : InstAlias<"subc $rA, $rB, $rC", (SUBFC8 g8rc:$rA, g8rc:$rC, g8rc:$rB)>;
-def : InstAlias<"subc. $rA, $rB, $rC", (SUBFC8_rec g8rc:$rA, g8rc:$rC, g8rc:$rB)>;
 
 def : InstAlias<"mtmsrd $RS", (MTMSRD gprc:$RS, 0)>;
 def : InstAlias<"mtmsr $RS", (MTMSR gprc:$RS, 0)>;
