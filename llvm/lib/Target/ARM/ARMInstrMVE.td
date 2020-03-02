@@ -4483,9 +4483,10 @@ defm : MVE_VQMOVN_p<MVE_VQMOVUNs16bh, 1, 0, 0, MVE_v16i8, MVE_v8i16>;
 defm : MVE_VQMOVN_p<MVE_VQMOVUNs16th, 1, 0, 1, MVE_v16i8, MVE_v8i16>;
 
 class MVE_VCVT_ff<string iname, string suffix, bit op, bit T,
-                  list<dag> pattern=[]>
-  : MVE_qDest_qSrc<iname, suffix, (outs MQPR:$Qd), (ins MQPR:$Qd_src, MQPR:$Qm),
-                   "$Qd, $Qm", vpred_n, "$Qd = $Qd_src", pattern> {
+                  dag iops_extra, vpred_ops vpred, string cstr>
+  : MVE_qDest_qSrc<iname, suffix, (outs MQPR:$Qd),
+                   !con(iops_extra, (ins MQPR:$Qm)), "$Qd, $Qm",
+                   vpred, cstr, []> {
   let Inst{28} = op;
   let Inst{21-16} = 0b111111;
   let Inst{12} = T;
@@ -4496,7 +4497,8 @@ class MVE_VCVT_ff<string iname, string suffix, bit op, bit T,
 }
 
 multiclass MVE_VCVT_f2h_m<string iname, int half> {
-  def "": MVE_VCVT_ff<iname, "f16.f32", 0b0, half>;
+  def "": MVE_VCVT_ff<iname, "f16.f32", 0b0, half,
+                      (ins MQPR:$Qd_src), vpred_n, "$Qd = $Qd_src">;
   defvar Inst = !cast<Instruction>(NAME);
 
   let Predicates = [HasMVEFloat] in {
@@ -4512,7 +4514,7 @@ multiclass MVE_VCVT_f2h_m<string iname, int half> {
 }
 
 multiclass MVE_VCVT_h2f_m<string iname, int half> {
-  def "": MVE_VCVT_ff<iname, "f32.f16", 0b1, half>;
+  def "": MVE_VCVT_ff<iname, "f32.f16", 0b1, half, (ins), vpred_r, "">;
 }
 
 defm MVE_VCVTf16f32bh : MVE_VCVT_f2h_m<"vcvtb", 0b0>;
