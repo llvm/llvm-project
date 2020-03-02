@@ -13157,33 +13157,24 @@ SDValue DAGCombiner::visitSINT_TO_FP(SDNode *N) {
   }
 
   // The next optimizations are desirable only if SELECT_CC can be lowered.
-  if (TLI.isOperationLegalOrCustom(ISD::SELECT_CC, VT) || !LegalOperations) {
-    // fold (sint_to_fp (setcc x, y, cc)) -> (select_cc x, y, -1.0, 0.0,, cc)
-    if (N0.getOpcode() == ISD::SETCC && N0.getValueType() == MVT::i1 &&
-        !VT.isVector() &&
-        (!LegalOperations ||
-         TLI.isOperationLegalOrCustom(ISD::ConstantFP, VT))) {
-      SDLoc DL(N);
-      SDValue Ops[] =
-        { N0.getOperand(0), N0.getOperand(1),
-          DAG.getConstantFP(-1.0, DL, VT), DAG.getConstantFP(0.0, DL, VT),
-          N0.getOperand(2) };
-      return DAG.getNode(ISD::SELECT_CC, DL, VT, Ops);
-    }
+  // fold (sint_to_fp (setcc x, y, cc)) -> (select (setcc x, y, cc), -1.0, 0.0)
+  if (N0.getOpcode() == ISD::SETCC && N0.getValueType() == MVT::i1 &&
+      !VT.isVector() &&
+      (!LegalOperations || TLI.isOperationLegalOrCustom(ISD::ConstantFP, VT))) {
+    SDLoc DL(N);
+    return DAG.getSelect(DL, VT, N0, DAG.getConstantFP(-1.0, DL, VT),
+                         DAG.getConstantFP(0.0, DL, VT));
+  }
 
-    // fold (sint_to_fp (zext (setcc x, y, cc))) ->
-    //      (select_cc x, y, 1.0, 0.0,, cc)
-    if (N0.getOpcode() == ISD::ZERO_EXTEND &&
-        N0.getOperand(0).getOpcode() == ISD::SETCC &&!VT.isVector() &&
-        (!LegalOperations ||
-         TLI.isOperationLegalOrCustom(ISD::ConstantFP, VT))) {
-      SDLoc DL(N);
-      SDValue Ops[] =
-        { N0.getOperand(0).getOperand(0), N0.getOperand(0).getOperand(1),
-          DAG.getConstantFP(1.0, DL, VT), DAG.getConstantFP(0.0, DL, VT),
-          N0.getOperand(0).getOperand(2) };
-      return DAG.getNode(ISD::SELECT_CC, DL, VT, Ops);
-    }
+  // fold (sint_to_fp (zext (setcc x, y, cc))) ->
+  //      (select (setcc x, y, cc), 1.0, 0.0)
+  if (N0.getOpcode() == ISD::ZERO_EXTEND &&
+      N0.getOperand(0).getOpcode() == ISD::SETCC && !VT.isVector() &&
+      (!LegalOperations || TLI.isOperationLegalOrCustom(ISD::ConstantFP, VT))) {
+    SDLoc DL(N);
+    return DAG.getSelect(DL, VT, N0.getOperand(0),
+                         DAG.getConstantFP(1.0, DL, VT),
+                         DAG.getConstantFP(0.0, DL, VT));
   }
 
   if (SDValue FTrunc = foldFPToIntToFP(N, DAG, TLI))
@@ -13217,19 +13208,12 @@ SDValue DAGCombiner::visitUINT_TO_FP(SDNode *N) {
       return DAG.getNode(ISD::SINT_TO_FP, SDLoc(N), VT, N0);
   }
 
-  // The next optimizations are desirable only if SELECT_CC can be lowered.
-  if (TLI.isOperationLegalOrCustom(ISD::SELECT_CC, VT) || !LegalOperations) {
-    // fold (uint_to_fp (setcc x, y, cc)) -> (select_cc x, y, -1.0, 0.0,, cc)
-    if (N0.getOpcode() == ISD::SETCC && !VT.isVector() &&
-        (!LegalOperations ||
-         TLI.isOperationLegalOrCustom(ISD::ConstantFP, VT))) {
-      SDLoc DL(N);
-      SDValue Ops[] =
-        { N0.getOperand(0), N0.getOperand(1),
-          DAG.getConstantFP(1.0, DL, VT), DAG.getConstantFP(0.0, DL, VT),
-          N0.getOperand(2) };
-      return DAG.getNode(ISD::SELECT_CC, DL, VT, Ops);
-    }
+  // fold (uint_to_fp (setcc x, y, cc)) -> (select (setcc x, y, cc), 1.0, 0.0)
+  if (N0.getOpcode() == ISD::SETCC && !VT.isVector() &&
+      (!LegalOperations || TLI.isOperationLegalOrCustom(ISD::ConstantFP, VT))) {
+    SDLoc DL(N);
+    return DAG.getSelect(DL, VT, N0, DAG.getConstantFP(1.0, DL, VT),
+                         DAG.getConstantFP(0.0, DL, VT));
   }
 
   if (SDValue FTrunc = foldFPToIntToFP(N, DAG, TLI))
