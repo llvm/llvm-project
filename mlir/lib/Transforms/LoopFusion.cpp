@@ -869,7 +869,7 @@ static unsigned getMemRefEltSizeInBytes(MemRefType memRefType) {
   auto elementType = memRefType.getElementType();
 
   unsigned sizeInBits;
-  if (elementType.isSignlessIntOrFloat()) {
+  if (elementType.isIntOrFloat()) {
     sizeInBits = elementType.getIntOrFloatBitWidth();
   } else {
     auto vectorType = elementType.cast<VectorType>();
