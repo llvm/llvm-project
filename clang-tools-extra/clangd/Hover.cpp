@@ -532,32 +532,37 @@ llvm::Optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
   }
   auto TokensTouchingCursor =
       syntax::spelledTokensTouching(*CurLoc, AST.getTokens());
+  // Early exit if there were no tokens around the cursor.
   if (TokensTouchingCursor.empty())
     return llvm::None;
 
-  // In general we prefer the touching token that works over the one that
-  // doesn't, see SelectionTree::create(). The following locations are used only
-  // for triggering on macros and auto/decltype, so simply choosing the lone
-  // identifier-or-keyword token is equivalent.
+  // To be used as a backup for highlighting the selected token.
   SourceLocation IdentLoc;
-  SourceLocation AutoLoc;
+  llvm::Optional<HoverInfo> HI;
+  // Macros and deducedtype only works on identifiers and auto/decltype keywords
+  // respectively. Therefore they are only trggered on whichever works for them,
+  // similar to SelectionTree::create().
   for (const auto &Tok : TokensTouchingCursor) {
-    if (Tok.kind() == tok::identifier)
+    if (Tok.kind() == tok::identifier) {
       IdentLoc = Tok.location();
-    if (Tok.kind() == tok::kw_auto || Tok.kind() == tok::kw_decltype)
-      AutoLoc = Tok.location();
+      if (auto M = locateMacroAt(Tok, AST.getPreprocessor())) {
+        HI = getHoverContents(*M, AST);
+        HI->SymRange = getTokenRange(AST.getSourceManager(), AST.getLangOpts(),
+                                     Tok.location());
+        break;
+      }
+    } else if (Tok.kind() == tok::kw_auto || Tok.kind() == tok::kw_decltype) {
+      if (auto Deduced = getDeducedType(AST.getASTContext(), Tok.location())) {
+        HI = getHoverContents(*Deduced, AST.getASTContext(), Index);
+        HI->SymRange = getTokenRange(AST.getSourceManager(), AST.getLangOpts(),
+                                     Tok.location());
+        break;
+      }
+    }
   }
 
-  llvm::Optional<HoverInfo> HI;
-  if (auto Deduced = getDeducedType(AST.getASTContext(), AutoLoc)) {
-    HI = getHoverContents(*Deduced, AST.getASTContext(), Index);
-    HI->SymRange =
-        getTokenRange(AST.getSourceManager(), AST.getLangOpts(), AutoLoc);
-  } else if (auto M = locateMacroAt(IdentLoc, AST.getPreprocessor())) {
-    HI = getHoverContents(*M, AST);
-    HI->SymRange =
-        getTokenRange(AST.getSourceManager(), AST.getLangOpts(), IdentLoc);
-  } else {
+  // If it wasn't auto/decltype or macro, look for decls and expressions.
+  if (!HI) {
     auto Offset = SM.getFileOffset(*CurLoc);
     // Editors send the position on the left of the hovered character.
     // So our selection tree should be biased right. (Tested with VSCode).

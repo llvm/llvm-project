@@ -6,6 +6,8 @@ declare <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32)
 
 declare <8 x half> @llvm.arm.mve.vcvt.narrow(<8 x half>, <4 x float>, i32)
 declare <8 x half> @llvm.arm.mve.vcvt.narrow.predicated(<8 x half>, <4 x float>, i32, <4 x i1>)
+declare <4 x float> @llvm.arm.mve.vcvt.widen(<8 x half>, i32)
+declare <4 x float> @llvm.arm.mve.vcvt.widen.predicated(<4 x float>, <8 x half>, i32, <4 x i1>)
 
 declare <8 x half> @llvm.arm.mve.vcvt.fix.v8f16.v8i16(i32, <8 x i16>, i32)
 declare <4 x float> @llvm.arm.mve.vcvt.fix.v4f32.v4i32(i32, <4 x i32>, i32)
@@ -366,4 +368,52 @@ entry:
   %1 = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %0)
   %2 = call <4 x i32> @llvm.arm.mve.vcvt.fix.predicated.v4i32.v4f32.v4i1(i32 1, <4 x i32> undef, <4 x float> %a, i32 32, <4 x i1> %1)
   ret <4 x i32> %2
+}
+
+define arm_aapcs_vfpcc <4 x float> @test_vcvtbq_f32_f16(<8 x half> %a) {
+; CHECK-LABEL: test_vcvtbq_f32_f16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vcvtb.f32.f16 q0, q0
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = tail call <4 x float> @llvm.arm.mve.vcvt.widen(<8 x half> %a, i32 0)
+  ret <4 x float> %0
+}
+
+define arm_aapcs_vfpcc <4 x float> @test_vcvttq_f32_f16(<8 x half> %a) {
+; CHECK-LABEL: test_vcvttq_f32_f16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vcvtt.f32.f16 q0, q0
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = tail call <4 x float> @llvm.arm.mve.vcvt.widen(<8 x half> %a, i32 1)
+  ret <4 x float> %0
+}
+
+define arm_aapcs_vfpcc <4 x float> @test_vcvtbq_m_f32_f16(<4 x float> %inactive, <8 x half> %a, i16 zeroext %p) {
+; CHECK-LABEL: test_vcvtbq_m_f32_f16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmsr p0, r0
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vcvtbt.f32.f16 q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = zext i16 %p to i32
+  %1 = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %0)
+  %2 = tail call <4 x float> @llvm.arm.mve.vcvt.widen.predicated(<4 x float> %inactive, <8 x half> %a, i32 0, <4 x i1> %1)
+  ret <4 x float> %2
+}
+
+define arm_aapcs_vfpcc <4 x float> @test_vcvttq_m_f32_f16(<4 x float> %inactive, <8 x half> %a, i16 zeroext %p) {
+; CHECK-LABEL: test_vcvttq_m_f32_f16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmsr p0, r0
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vcvttt.f32.f16 q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = zext i16 %p to i32
+  %1 = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %0)
+  %2 = tail call <4 x float> @llvm.arm.mve.vcvt.widen.predicated(<4 x float> %inactive, <8 x half> %a, i32 1, <4 x i1> %1)
+  ret <4 x float> %2
 }

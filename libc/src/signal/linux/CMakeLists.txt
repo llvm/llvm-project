@@ -9,6 +9,43 @@ add_entrypoint_object(
   DEPENDS
     sys_syscall_h
     linux_syscall_h
+    signal_h
+)
+
+add_entrypoint_object(
+  sigprocmask
+  SRCS
+    sigprocmask.cpp
+  HDRS
+    signal.h
+    ../sigprocmask.h
+  DEPENDS
+    sys_syscall_h
+    linux_syscall_h
+    __errno_location
+    signal_h
+)
+
+add_entrypoint_object(
+  sigemptyset
+  SRCS
+    sigemptyset.cpp
+  HDRS
+    signal.h
+    ../sigemptyset.h
+  DEPENDS
+    __errno_location
+    signal_h
+)
+
+add_entrypoint_object(
+  sigaddset
+  SRCS
+    sigaddset.cpp
+  HDRS
+    signal.h
+    ../sigaddset.h
+  DEPENDS
     __errno_location
     signal_h
 )

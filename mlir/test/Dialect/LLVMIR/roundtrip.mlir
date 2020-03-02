@@ -282,3 +282,14 @@ llvm.func @invokeLandingpad() -> !llvm.i32 {
 ^bb4:
   llvm.return %0 : !llvm.i32
 }
+
+// CHECK-LABEL: @useFreezeOp
+func @useFreezeOp(%arg0: !llvm.i32) {
+  // CHECK:  = llvm.freeze %[[ARG0:.*]] : !llvm.i32
+  %0 = llvm.freeze %arg0 : !llvm.i32
+  // CHECK: %[[x:.*]] = llvm.mlir.undef : !llvm.i8
+  %1 = llvm.mlir.undef : !llvm.i8
+  // CHECK:  = llvm.freeze %[[x]] : !llvm.i8
+  %2 = llvm.freeze %1 : !llvm.i8
+  return
+}

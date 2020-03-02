@@ -891,27 +891,21 @@ llvm::StringSet<> collectWords(llvm::StringRef Content) {
   return Result;
 }
 
-llvm::Optional<DefinedMacro> locateMacroAt(SourceLocation Loc,
+llvm::Optional<DefinedMacro> locateMacroAt(const syntax::Token &SpelledTok,
                                            Preprocessor &PP) {
+  SourceLocation Loc = SpelledTok.location();
+  assert(Loc.isFileID());
   const auto &SM = PP.getSourceManager();
-  const auto &LangOpts = PP.getLangOpts();
-  Token Result;
-  if (Lexer::getRawToken(SM.getSpellingLoc(Loc), Result, SM, LangOpts, false))
-    return None;
-  if (Result.is(tok::raw_identifier))
-    PP.LookUpIdentifierInfo(Result);
-  IdentifierInfo *IdentifierInfo = Result.getIdentifierInfo();
+  IdentifierInfo *IdentifierInfo = PP.getIdentifierInfo(SpelledTok.text(SM));
   if (!IdentifierInfo || !IdentifierInfo->hadMacroDefinition())
     return None;
 
-  std::pair<FileID, unsigned int> DecLoc = SM.getDecomposedExpansionLoc(Loc);
   // Get the definition just before the searched location so that a macro
-  // referenced in a '#undef MACRO' can still be found.
-  SourceLocation BeforeSearchedLocation =
-      SM.getMacroArgExpandedLocation(SM.getLocForStartOfFile(DecLoc.first)
-                                         .getLocWithOffset(DecLoc.second - 1));
-  MacroDefinition MacroDef =
-      PP.getMacroDefinitionAtLoc(IdentifierInfo, BeforeSearchedLocation);
+  // referenced in a '#undef MACRO' can still be found. Note that we only do
+  // that if Loc is not pointing at start of file.
+  if (SM.getLocForStartOfFile(SM.getFileID(Loc)) != Loc)
+    Loc = Loc.getLocWithOffset(-1);
+  MacroDefinition MacroDef = PP.getMacroDefinitionAtLoc(IdentifierInfo, Loc);
   if (auto *MI = MacroDef.getMacroInfo())
     return DefinedMacro{IdentifierInfo->getName(), MI};
   return None;

@@ -608,7 +608,7 @@ DenseElementsAttr::FloatElementIterator::FloatElementIterator(
 
 DenseElementsAttr DenseElementsAttr::get(ShapedType type,
                                          ArrayRef<Attribute> values) {
-  assert(type.getElementType().isSignlessIntOrFloat() &&
+  assert(type.getElementType().isIntOrFloat() &&
          "expected int or float element type");
   assert(hasSameElementsOrSplat(type, values));
 

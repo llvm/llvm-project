@@ -22,7 +22,7 @@ entry:
 ; CHECK: ld [[REG2:[0-9]+]], .LC[[TOCNUM]]@toc@l([[REG1]])
 ; CHECK: lwz {{[0-9]+}}, 0([[REG2]])
 ; CHECK: stw {{[0-9]+}}, 0([[REG2]])
-; CHECK: .section .toc
-; CHECK: .LC[[TOCNUM]]:
-; CHECK: .tc [[VAR:[a-z0-9A-Z_.]+]][TC],{{[a-z0-9A-Z_.]+}}
-; CHECK: .comm [[VAR]],4,4
+; CHECK: .comm ti,4,4
+; CHECK:      .section .toc,"aw",@progbits
+; CHECK-NEXT: .LC[[TOCNUM]]:
+; CHECK-NEXT: .tc ti[TC],ti

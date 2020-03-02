@@ -14,15 +14,16 @@
 #ifndef LLVM_LIB_TARGET_X86_UTILS_X86SHUFFLEDECODE_H
 #define LLVM_LIB_TARGET_X86_UTILS_X86SHUFFLEDECODE_H
 
-#include "llvm/ADT/APInt.h"
-#include "llvm/ADT/SmallVector.h"
+#include <cstdint>
 
 //===----------------------------------------------------------------------===//
 //  Vector Mask Decoding
 //===----------------------------------------------------------------------===//
 
 namespace llvm {
+class APInt;
 template <typename T> class ArrayRef;
+template <typename T> class SmallVectorImpl;
 
 enum { SM_SentinelUndef = -1, SM_SentinelZero = -2 };
 
@@ -61,20 +62,14 @@ void DecodeVALIGNMask(unsigned NumElts, unsigned Imm,
                       SmallVectorImpl<int> &ShuffleMask);
 
 /// Decodes the shuffle masks for pshufd/pshufw/vpermilpd/vpermilps.
-/// VT indicates the type of the vector allowing it to handle different
-/// datatypes and vector widths.
 void DecodePSHUFMask(unsigned NumElts, unsigned ScalarBits, unsigned Imm,
                      SmallVectorImpl<int> &ShuffleMask);
 
 /// Decodes the shuffle masks for pshufhw.
-/// VT indicates the type of the vector allowing it to handle different
-/// datatypes and vector widths.
 void DecodePSHUFHWMask(unsigned NumElts, unsigned Imm,
                        SmallVectorImpl<int> &ShuffleMask);
 
 /// Decodes the shuffle masks for pshuflw.
-/// VT indicates the type of the vector allowing it to handle different
-/// datatypes and vector widths.
 void DecodePSHUFLWMask(unsigned NumElts, unsigned Imm,
                        SmallVectorImpl<int> &ShuffleMask);
 
@@ -82,20 +77,14 @@ void DecodePSHUFLWMask(unsigned NumElts, unsigned Imm,
 void DecodePSWAPMask(unsigned NumElts, SmallVectorImpl<int> &ShuffleMask);
 
 /// Decodes the shuffle masks for shufp*.
-/// VT indicates the type of the vector allowing it to handle different
-/// datatypes and vector widths.
 void DecodeSHUFPMask(unsigned NumElts, unsigned ScalarBits, unsigned Imm,
                      SmallVectorImpl<int> &ShuffleMask);
 
 /// Decodes the shuffle masks for unpckhps/unpckhpd and punpckh*.
-/// VT indicates the type of the vector allowing it to handle different
-/// datatypes and vector widths.
 void DecodeUNPCKHMask(unsigned NumElts, unsigned ScalarBits,
                       SmallVectorImpl<int> &ShuffleMask);
 
 /// Decodes the shuffle masks for unpcklps/unpcklpd and punpckl*.
-/// VT indicates the type of the vector allowing it to handle different
-/// datatypes and vector widths.
 void DecodeUNPCKLMask(unsigned NumElts, unsigned ScalarBits,
                       SmallVectorImpl<int> &ShuffleMask);
 
@@ -119,6 +108,7 @@ void DecodeVPERM2X128Mask(unsigned NumElts, unsigned Imm,
                           SmallVectorImpl<int> &ShuffleMask);
 
 /// Decode a shuffle packed values at 128-bit granularity
+/// (SHUFF32x4/SHUFF64x2/SHUFI32x4/SHUFI64x2)
 /// immediate mask into a shuffle mask.
 void decodeVSHUF64x2FamilyMask(unsigned NumElts, unsigned ScalarSize,
                                unsigned Imm, SmallVectorImpl<int> &ShuffleMask);

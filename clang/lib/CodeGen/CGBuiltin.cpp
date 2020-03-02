@@ -1521,8 +1521,7 @@ static llvm::Value *dumpRecord(CodeGenFunction &CGF, QualType RType,
 
     // We check whether we are in a recursive type
     if (CanonicalType->isRecordType()) {
-      Value *TmpRes =
-          dumpRecord(CGF, CanonicalType, FieldPtr, Align, Func, Lvl + 1);
+      TmpRes = dumpRecord(CGF, CanonicalType, FieldPtr, Align, Func, Lvl + 1);
       Res = CGF.Builder.CreateAdd(TmpRes, Res);
       continue;
     }
@@ -10327,6 +10326,46 @@ Value *CodeGenFunction::EmitX86CpuIs(const CallExpr *E) {
   return EmitX86CpuIs(CPUStr);
 }
 
+// Convert F16 halfs to floats.
+static Value *EmitX86CvtF16ToFloatExpr(CodeGenFunction &CGF,
+                                       ArrayRef<Value *> Ops,
+                                       llvm::Type *DstTy) {
+  assert((Ops.size() == 1 || Ops.size() == 3 || Ops.size() == 4) &&
+         "Unknown cvtph2ps intrinsic");
+
+  // If the SAE intrinsic doesn't use default rounding then we can't upgrade.
+  if (Ops.size() == 4 && cast<llvm::ConstantInt>(Ops[3])->getZExtValue() != 4) {
+    Intrinsic::ID IID = Intrinsic::x86_avx512_mask_vcvtph2ps_512;
+    Function *F =
+        CGF.CGM.getIntrinsic(IID, {DstTy, Ops[0]->getType(), Ops[1]->getType(),
+                                   Ops[2]->getType(), Ops[3]->getType()});
+    return CGF.Builder.CreateCall(F, {Ops[0], Ops[1], Ops[2], Ops[3]});
+  }
+
+  unsigned NumDstElts = DstTy->getVectorNumElements();
+  Value *Src = Ops[0];
+
+  // Extract the subvector.
+  if (NumDstElts != Src->getType()->getVectorNumElements()) {
+    assert(NumDstElts == 4 && "Unexpected vector size");
+    uint32_t ShuffleMask[4] = {0, 1, 2, 3};
+    Src = CGF.Builder.CreateShuffleVector(Src, UndefValue::get(Src->getType()),
+                                          ShuffleMask);
+  }
+
+  // Bitcast from vXi16 to vXf16.
+  llvm::Type *HalfTy = llvm::VectorType::get(
+      llvm::Type::getHalfTy(CGF.getLLVMContext()), NumDstElts);
+  Src = CGF.Builder.CreateBitCast(Src, HalfTy);
+
+  // Perform the fp-extension.
+  Value *Res = CGF.Builder.CreateFPExt(Src, DstTy, "cvtph2ps");
+
+  if (Ops.size() >= 3)
+    Res = EmitX86Select(CGF, Ops[2], Res, Ops[1]);
+  return Res;
+}
+
 // Convert a BF16 to a float.
 static Value *EmitX86CvtBF16ToFloatExpr(CodeGenFunction &CGF,
                                         const CallExpr *E,
@@ -12530,6 +12569,14 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     return getCmpIntrinsicCall(Intrinsic::x86_sse2_cmp_sd, 6);
   case X86::BI__builtin_ia32_cmpordsd:
     return getCmpIntrinsicCall(Intrinsic::x86_sse2_cmp_sd, 7);
+
+  // f16c half2float intrinsics
+  case X86::BI__builtin_ia32_vcvtph2ps:
+  case X86::BI__builtin_ia32_vcvtph2ps256:
+  case X86::BI__builtin_ia32_vcvtph2ps_mask:
+  case X86::BI__builtin_ia32_vcvtph2ps256_mask:
+  case X86::BI__builtin_ia32_vcvtph2ps512_mask:
+    return EmitX86CvtF16ToFloatExpr(*this, Ops, ConvertType(E->getType()));
 
 // AVX512 bf16 intrinsics
   case X86::BI__builtin_ia32_cvtneps2bf16_128_mask: {

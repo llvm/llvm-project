@@ -2543,50 +2543,6 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     }
     break;
 
-  case Intrinsic::x86_vcvtph2ps_128:
-  case Intrinsic::x86_vcvtph2ps_256: {
-    auto Arg = II->getArgOperand(0);
-    auto ArgType = cast<VectorType>(Arg->getType());
-    auto RetType = cast<VectorType>(II->getType());
-    unsigned ArgWidth = ArgType->getNumElements();
-    unsigned RetWidth = RetType->getNumElements();
-    assert(RetWidth <= ArgWidth && "Unexpected input/return vector widths");
-    assert(ArgType->isIntOrIntVectorTy() &&
-           ArgType->getScalarSizeInBits() == 16 &&
-           "CVTPH2PS input type should be 16-bit integer vector");
-    assert(RetType->getScalarType()->isFloatTy() &&
-           "CVTPH2PS output type should be 32-bit float vector");
-
-    // Constant folding: Convert to generic half to single conversion.
-    if (isa<ConstantAggregateZero>(Arg))
-      return replaceInstUsesWith(*II, ConstantAggregateZero::get(RetType));
-
-    if (isa<ConstantDataVector>(Arg)) {
-      auto VectorHalfAsShorts = Arg;
-      if (RetWidth < ArgWidth) {
-        SmallVector<uint32_t, 8> SubVecMask;
-        for (unsigned i = 0; i != RetWidth; ++i)
-          SubVecMask.push_back((int)i);
-        VectorHalfAsShorts = Builder.CreateShuffleVector(
-            Arg, UndefValue::get(ArgType), SubVecMask);
-      }
-
-      auto VectorHalfType =
-          VectorType::get(Type::getHalfTy(II->getContext()), RetWidth);
-      auto VectorHalfs =
-          Builder.CreateBitCast(VectorHalfAsShorts, VectorHalfType);
-      auto VectorFloats = Builder.CreateFPExt(VectorHalfs, RetType);
-      return replaceInstUsesWith(*II, VectorFloats);
-    }
-
-    // We only use the lowest lanes of the argument.
-    if (Value *V = SimplifyDemandedVectorEltsLow(Arg, ArgWidth, RetWidth)) {
-      II->setArgOperand(0, V);
-      return II;
-    }
-    break;
-  }
-
   case Intrinsic::x86_sse_cvtss2si:
   case Intrinsic::x86_sse_cvtss2si64:
   case Intrinsic::x86_sse_cvttss2si:

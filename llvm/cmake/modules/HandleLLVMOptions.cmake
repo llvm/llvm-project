@@ -77,7 +77,22 @@ endif()
 
 if(LLVM_ENABLE_EXPENSIVE_CHECKS)
   add_definitions(-DEXPENSIVE_CHECKS)
-  add_definitions(-D_GLIBCXX_DEBUG)
+
+  # In some libstdc++ versions, std::min_element is not constexpr when
+  # _GLIBCXX_DEBUG is enabled.
+  CHECK_CXX_SOURCE_COMPILES("
+    #define _GLIBCXX_DEBUG
+    #include <algorithm>
+    int main(int argc, char** argv) {
+      static constexpr int data[] = {0, 1};
+      constexpr const int* min_elt = std::min_element(&data[0], &data[2]);
+      return 0;
+    }" CXX_SUPPORTS_GLIBCXX_DEBUG)
+  if(CXX_SUPPORTS_GLIBCXX_DEBUG)
+    add_definitions(-D_GLIBCXX_DEBUG)
+  else()
+    add_definitions(-D_GLIBCXX_ASSERTIONS)
+  endif()
 endif()
 
 string(TOUPPER "${LLVM_ABI_BREAKING_CHECKS}" uppercase_LLVM_ABI_BREAKING_CHECKS)

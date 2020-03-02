@@ -117,7 +117,7 @@
 // RUN: %clang_cc1 -E -dM -triple=x86_64-apple-darwin < /dev/null | FileCheck -match-full-lines -check-prefix C-DEFAULT %s
 // RUN: %clang_cc1 -E -dM -triple=armv7a-apple-darwin < /dev/null | FileCheck -match-full-lines -check-prefix C-DEFAULT %s
 //
-// C-DEFAULT:#define __STDC_VERSION__ 201112L
+// C-DEFAULT:#define __STDC_VERSION__ 201710L
 //
 // RUN: %clang_cc1 -ffreestanding -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix FREESTANDING %s
 // FREESTANDING:#define __STDC_HOSTED__ 0
@@ -2098,7 +2098,7 @@
 // MIPS32BE:#define __SIZE_WIDTH__ 32
 // MIPS32BE-CXX:#define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 8U
 // MIPS32BE:#define __STDC_HOSTED__ 0
-// MIPS32BE-C:#define __STDC_VERSION__ 201112L
+// MIPS32BE-C:#define __STDC_VERSION__ 201710L
 // MIPS32BE:#define __STDC__ 1
 // MIPS32BE:#define __UINT16_C_SUFFIX__
 // MIPS32BE:#define __UINT16_MAX__ 65535
@@ -2557,7 +2557,7 @@
 // MIPSN32BE: #define __STDC_HOSTED__ 0
 // MIPSN32BE: #define __STDC_UTF_16__ 1
 // MIPSN32BE: #define __STDC_UTF_32__ 1
-// MIPSN32BE-C: #define __STDC_VERSION__ 201112L
+// MIPSN32BE-C: #define __STDC_VERSION__ 201710L
 // MIPSN32BE: #define __STDC__ 1
 // MIPSN32BE: #define __UINT16_C_SUFFIX__
 // MIPSN32BE: #define __UINT16_FMTX__ "hX"
@@ -2864,7 +2864,7 @@
 // MIPSN32EL: #define __STDC_HOSTED__ 0
 // MIPSN32EL: #define __STDC_UTF_16__ 1
 // MIPSN32EL: #define __STDC_UTF_32__ 1
-// MIPSN32EL: #define __STDC_VERSION__ 201112L
+// MIPSN32EL: #define __STDC_VERSION__ 201710L
 // MIPSN32EL: #define __STDC__ 1
 // MIPSN32EL: #define __UINT16_C_SUFFIX__
 // MIPSN32EL: #define __UINT16_FMTX__ "hX"
@@ -5390,7 +5390,7 @@
 // PPC-DARWIN:#define __SIZE_TYPE__ long unsigned int
 // PPC-DARWIN:#define __SIZE_WIDTH__ 32
 // PPC-DARWIN:#define __STDC_HOSTED__ 0
-// PPC-DARWIN:#define __STDC_VERSION__ 201112L
+// PPC-DARWIN:#define __STDC_VERSION__ 201710L
 // PPC-DARWIN:#define __STDC__ 1
 // PPC-DARWIN:#define __UINT16_C_SUFFIX__
 // PPC-DARWIN:#define __UINT16_MAX__ 65535
@@ -6602,7 +6602,7 @@
 // X86_64-CLOUDABI:#define __STDC_ISO_10646__ 201206L
 // X86_64-CLOUDABI:#define __STDC_UTF_16__ 1
 // X86_64-CLOUDABI:#define __STDC_UTF_32__ 1
-// X86_64-CLOUDABI:#define __STDC_VERSION__ 201112L
+// X86_64-CLOUDABI:#define __STDC_VERSION__ 201710L
 // X86_64-CLOUDABI:#define __STDC__ 1
 // X86_64-CLOUDABI:#define __UINT16_C_SUFFIX__
 // X86_64-CLOUDABI:#define __UINT16_FMTX__ "hX"
@@ -7601,7 +7601,7 @@
 // WEBASSEMBLY-NOT:#define __STDC_NO_THREADS__
 // WEBASSEMBLY-NEXT:#define __STDC_UTF_16__ 1
 // WEBASSEMBLY-NEXT:#define __STDC_UTF_32__ 1
-// WEBASSEMBLY-NEXT:#define __STDC_VERSION__ 201112L
+// WEBASSEMBLY-NEXT:#define __STDC_VERSION__ 201710L
 // WEBASSEMBLY-NEXT:#define __STDC__ 1
 // WEBASSEMBLY-NEXT:#define __UINT16_C_SUFFIX__
 // WEBASSEMBLY-NEXT:#define __UINT16_FMTX__ "hX"
@@ -8166,7 +8166,7 @@
 // RISCV32: #define __STDC_HOSTED__ 0
 // RISCV32: #define __STDC_UTF_16__ 1
 // RISCV32: #define __STDC_UTF_32__ 1
-// RISCV32: #define __STDC_VERSION__ 201112L
+// RISCV32: #define __STDC_VERSION__ 201710L
 // RISCV32: #define __STDC__ 1
 // RISCV32: #define __UINT16_C_SUFFIX__
 // RISCV32: #define __UINT16_MAX__ 65535
@@ -8373,7 +8373,7 @@
 // RISCV64: #define __STDC_HOSTED__ 0
 // RISCV64: #define __STDC_UTF_16__ 1
 // RISCV64: #define __STDC_UTF_32__ 1
-// RISCV64: #define __STDC_VERSION__ 201112L
+// RISCV64: #define __STDC_VERSION__ 201710L
 // RISCV64: #define __STDC__ 1
 // RISCV64: #define __UINT16_C_SUFFIX__
 // RISCV64: #define __UINT16_MAX__ 65535

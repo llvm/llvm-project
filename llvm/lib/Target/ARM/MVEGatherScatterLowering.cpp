@@ -145,26 +145,35 @@ Value *MVEGatherScatterLowering::checkGEP(Value *&Offsets, Type *Ty, Value *Ptr,
     return nullptr;
   }
   Offsets = GEP->getOperand(1);
-  // SExt offsets inside masked gathers are not permitted by the architecture;
-  // we therefore can't fold them
+  // Paranoid check whether the number of parallel lanes is the same
+  assert(Ty->getVectorNumElements() ==
+         Offsets->getType()->getVectorNumElements());
+  // Only <N x i32> offsets can be integrated into an arm gather, any smaller
+  // type would have to be sign extended by the gep - and arm gathers can only
+  // zero extend. Additionally, the offsets do have to originate from a zext of
+  // a vector with element types smaller or equal the type of the gather we're
+  // looking at
+  if (Offsets->getType()->getScalarSizeInBits() != 32)
+    return nullptr;
   if (ZExtInst *ZextOffs = dyn_cast<ZExtInst>(Offsets))
     Offsets = ZextOffs->getOperand(0);
-  Type *OffsType = VectorType::getInteger(cast<VectorType>(Ty));
-  // If the offset we found does not have the type the intrinsic expects,
-  // i.e., the same type as the gather (or scatter input) itself, we need to
-  // convert it (only i types) or fall back to expanding the gather
-  if (OffsType != Offsets->getType()) {
-    if (OffsType->getScalarSizeInBits() >
-        Offsets->getType()->getScalarSizeInBits()) {
-      LLVM_DEBUG(dbgs() << "masked gathers/scatters: extending offsets\n");
-      Offsets = Builder.CreateZExt(Offsets, OffsType, "");
-    } else {
+  else if (!(Offsets->getType()->getVectorNumElements() == 4 &&
+             Offsets->getType()->getScalarSizeInBits() == 32))
+    return nullptr;
+
+  if (Ty != Offsets->getType()) {
+    if ((Ty->getScalarSizeInBits() <
+         Offsets->getType()->getScalarSizeInBits())) {
       LLVM_DEBUG(dbgs() << "masked gathers/scatters: no correct offset type."
                         << " Can't create intrinsic.\n");
       return nullptr;
+    } else {
+      Offsets = Builder.CreateZExt(
+          Offsets, VectorType::getInteger(cast<VectorType>(Ty)));
     }
   }
   // If none of the checks failed, return the gep's base pointer
+  LLVM_DEBUG(dbgs() << "masked gathers/scatters: found correct offsets\n");
   return GEPPtr;
 }
 

@@ -36,6 +36,67 @@ template <int N> void dropFront(int64_t arr[N], int64_t *res) {
     *(res + i - 1) = arr[i];
 }
 
+//===----------------------------------------------------------------------===//
+// Codegen-compatible structures for Vector type.
+//===----------------------------------------------------------------------===//
+namespace detail {
+  template <unsigned N>
+  constexpr unsigned nextPowerOf2();
+  template <>
+  constexpr unsigned nextPowerOf2<0>() {
+    return 1;
+  }
+  template <>
+  constexpr unsigned nextPowerOf2<1>() {
+    return 1;
+  }
+  template <unsigned N>
+  constexpr unsigned nextPowerOf2() {
+    return (!(N & (N - 1))) ? N : 2 * nextPowerOf2<(N + 1) / 2>();
+  }
+} // end namespace detail
+
+// N-D vectors recurse down to 1-D.
+template <typename T, int Dim, int... Dims>
+struct Vector {
+  constexpr Vector<T, Dims...> &operator[](unsigned i) { return vector[i]; }
+  constexpr const Vector<T, Dims...> &operator[](unsigned i) const {
+    return vector[i];
+  }
+
+private:
+  Vector<T, Dims...> vector[Dim];
+};
+
+// 1-D vectors in LLVM are automatically padded to the next power of 2.
+// We insert explicit padding in to account for this.
+template <typename T, int Dim> struct Vector<T, Dim> {
+  Vector() {
+    static_assert(detail::nextPowerOf2<sizeof(T[Dim])>() >= sizeof(T[Dim]),
+                  "size error");
+    static_assert(detail::nextPowerOf2<sizeof(T[Dim])>() < 2 * sizeof(T[Dim]),
+                  "size error");
+  }
+  constexpr T &operator[](unsigned i) { return vector[i]; }
+  constexpr const T &operator[](unsigned i) const { return vector[i]; }
+
+private:
+  T vector[Dim];
+  char padding[detail::nextPowerOf2<sizeof(T[Dim])>() - sizeof(T[Dim])];
+};
+
+template <int D1, typename T>
+using Vector1D = Vector<T, D1>;
+template <int D1, int D2, typename T>
+using Vector2D = Vector<T, D1, D2>;
+template <int D1, int D2, int D3, typename T>
+using Vector3D = Vector<T, D1, D2, D3>;
+template <int D1, int D2, int D3, int D4, typename T>
+using Vector4D = Vector<T, D1, D2, D3, D4>;
+
+//===----------------------------------------------------------------------===//
+// Codegen-compatible structures for StridedMemRef type.
+//===----------------------------------------------------------------------===//
 /// StridedMemRef descriptor type with static rank.
 template <typename T, int N> struct StridedMemRefType {
   T *basePtr;
@@ -72,13 +133,18 @@ template <typename T> struct StridedMemRefType<T, 0> {
   int64_t offset;
 };
 
+//===----------------------------------------------------------------------===//
+// Codegen-compatible structure for UnrankedMemRef type.
+//===----------------------------------------------------------------------===//
 // Unranked MemRef
 template <typename T> struct UnrankedMemRefType {
   int64_t rank;
   void *descriptor;
 };
 
-// Small runtime support "lib" for vector.print lowering.
+//===----------------------------------------------------------------------===//
+// Small runtime support "lib" for vector.print lowering during codegen.
+//===----------------------------------------------------------------------===//
 extern "C" MLIR_CRUNNERUTILS_EXPORT void print_f32(float f);
 extern "C" MLIR_CRUNNERUTILS_EXPORT void print_f64(double d);
 extern "C" MLIR_CRUNNERUTILS_EXPORT void print_open();

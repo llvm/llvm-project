@@ -42212,7 +42212,8 @@ static SDValue combineMaskedStore(SDNode *N, SelectionDAG &DAG,
   if (Mask.getScalarValueSizeInBits() != 1) {
     APInt DemandedBits(APInt::getSignMask(VT.getScalarSizeInBits()));
     if (TLI.SimplifyDemandedBits(Mask, DemandedBits, DCI)) {
-      DCI.AddToWorklist(N);
+      if (N->getOpcode() != ISD::DELETED_NODE)
+        DCI.AddToWorklist(N);
       return SDValue(N, 0);
     }
     if (SDValue NewMask =
@@ -42479,7 +42480,8 @@ static SDValue combineVEXTRACT_STORE(SDNode *N, SelectionDAG &DAG,
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   if (TLI.SimplifyDemandedVectorElts(StoredVal, DemandedElts, KnownUndef,
                                      KnownZero, DCI)) {
-    DCI.AddToWorklist(N);
+    if (N->getOpcode() != ISD::DELETED_NODE)
+      DCI.AddToWorklist(N);
     return SDValue(N, 0);
   }
 
@@ -43828,7 +43830,8 @@ static SDValue combineBT(SDNode *N, SelectionDAG &DAG,
   unsigned BitWidth = N1.getValueSizeInBits();
   APInt DemandedMask = APInt::getLowBitsSet(BitWidth, Log2_32(BitWidth));
   if (DAG.getTargetLoweringInfo().SimplifyDemandedBits(N1, DemandedMask, DCI)) {
-    DCI.AddToWorklist(N);
+    if (N->getOpcode() != ISD::DELETED_NODE)
+      DCI.AddToWorklist(N);
     return SDValue(N, 0);
   }
 
@@ -43846,7 +43849,8 @@ static SDValue combineCVTPH2PS(SDNode *N, SelectionDAG &DAG,
     APInt DemandedElts = APInt::getLowBitsSet(8, 4);
     if (TLI.SimplifyDemandedVectorElts(Src, DemandedElts, KnownUndef, KnownZero,
                                        DCI)) {
-      DCI.AddToWorklist(N);
+      if (N->getOpcode() != ISD::DELETED_NODE)
+        DCI.AddToWorklist(N);
       return SDValue(N, 0);
     }
 
@@ -44755,7 +44759,8 @@ static SDValue combineX86GatherScatter(SDNode *N, SelectionDAG &DAG,
     const TargetLowering &TLI = DAG.getTargetLoweringInfo();
     APInt DemandedMask(APInt::getSignMask(Mask.getScalarValueSizeInBits()));
     if (TLI.SimplifyDemandedBits(Mask, DemandedMask, DCI)) {
-      DCI.AddToWorklist(N);
+      if (N->getOpcode() != ISD::DELETED_NODE)
+        DCI.AddToWorklist(N);
       return SDValue(N, 0);
     }
   }
@@ -44847,7 +44852,8 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
     const TargetLowering &TLI = DAG.getTargetLoweringInfo();
     APInt DemandedMask(APInt::getSignMask(Mask.getScalarValueSizeInBits()));
     if (TLI.SimplifyDemandedBits(Mask, DemandedMask, DCI)) {
-      DCI.AddToWorklist(N);
+      if (N->getOpcode() != ISD::DELETED_NODE)
+        DCI.AddToWorklist(N);
       return SDValue(N, 0);
     }
   }

@@ -15,6 +15,7 @@
 
 #include "mlir/Dialect/SPIRV/SPIRVTypes.h"
 #include "mlir/IR/Function.h"
+#include "llvm/Support/PointerLikeTypeTraits.h"
 
 namespace mlir {
 class OpBuilder;

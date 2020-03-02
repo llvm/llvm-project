@@ -2239,54 +2239,54 @@ SDValue SparcTargetLowering::LowerF128Compare(SDValue LHS, SDValue RHS,
 
   switch(SPCC) {
   default: {
-    SDValue RHS = DAG.getTargetConstant(0, DL, Result.getValueType());
+    SDValue RHS = DAG.getConstant(0, DL, Result.getValueType());
     SPCC = SPCC::ICC_NE;
     return DAG.getNode(SPISD::CMPICC, DL, MVT::Glue, Result, RHS);
   }
   case SPCC::FCC_UL : {
     SDValue Mask   = DAG.getConstant(1, DL, Result.getValueType());
     Result = DAG.getNode(ISD::AND, DL, Result.getValueType(), Result, Mask);
-    SDValue RHS    = DAG.getTargetConstant(0, DL, Result.getValueType());
+    SDValue RHS    = DAG.getConstant(0, DL, Result.getValueType());
     SPCC = SPCC::ICC_NE;
     return DAG.getNode(SPISD::CMPICC, DL, MVT::Glue, Result, RHS);
   }
   case SPCC::FCC_ULE: {
-    SDValue RHS = DAG.getTargetConstant(2, DL, Result.getValueType());
+    SDValue RHS = DAG.getConstant(2, DL, Result.getValueType());
     SPCC = SPCC::ICC_NE;
     return DAG.getNode(SPISD::CMPICC, DL, MVT::Glue, Result, RHS);
   }
   case SPCC::FCC_UG :  {
-    SDValue RHS = DAG.getTargetConstant(1, DL, Result.getValueType());
+    SDValue RHS = DAG.getConstant(1, DL, Result.getValueType());
     SPCC = SPCC::ICC_G;
     return DAG.getNode(SPISD::CMPICC, DL, MVT::Glue, Result, RHS);
   }
   case SPCC::FCC_UGE: {
-    SDValue RHS = DAG.getTargetConstant(1, DL, Result.getValueType());
+    SDValue RHS = DAG.getConstant(1, DL, Result.getValueType());
     SPCC = SPCC::ICC_NE;
     return DAG.getNode(SPISD::CMPICC, DL, MVT::Glue, Result, RHS);
   }
 
   case SPCC::FCC_U  :  {
-    SDValue RHS = DAG.getTargetConstant(3, DL, Result.getValueType());
+    SDValue RHS = DAG.getConstant(3, DL, Result.getValueType());
     SPCC = SPCC::ICC_E;
     return DAG.getNode(SPISD::CMPICC, DL, MVT::Glue, Result, RHS);
   }
   case SPCC::FCC_O  :  {
-    SDValue RHS = DAG.getTargetConstant(3, DL, Result.getValueType());
+    SDValue RHS = DAG.getConstant(3, DL, Result.getValueType());
     SPCC = SPCC::ICC_NE;
     return DAG.getNode(SPISD::CMPICC, DL, MVT::Glue, Result, RHS);
   }
   case SPCC::FCC_LG :  {
     SDValue Mask   = DAG.getConstant(3, DL, Result.getValueType());
     Result = DAG.getNode(ISD::AND, DL, Result.getValueType(), Result, Mask);
-    SDValue RHS    = DAG.getTargetConstant(0, DL, Result.getValueType());
+    SDValue RHS    = DAG.getConstant(0, DL, Result.getValueType());
     SPCC = SPCC::ICC_NE;
     return DAG.getNode(SPISD::CMPICC, DL, MVT::Glue, Result, RHS);
   }
   case SPCC::FCC_UE : {
     SDValue Mask   = DAG.getConstant(3, DL, Result.getValueType());
     Result = DAG.getNode(ISD::AND, DL, Result.getValueType(), Result, Mask);
-    SDValue RHS    = DAG.getTargetConstant(0, DL, Result.getValueType());
+    SDValue RHS    = DAG.getConstant(0, DL, Result.getValueType());
     SPCC = SPCC::ICC_E;
     return DAG.getNode(SPISD::CMPICC, DL, MVT::Glue, Result, RHS);
   }

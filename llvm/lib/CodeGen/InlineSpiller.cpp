@@ -40,6 +40,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SlotIndexes.h"
+#include "llvm/CodeGen/StackMaps.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -536,7 +537,19 @@ bool InlineSpiller::canGuaranteeAssignmentAfterRemat(unsigned VReg,
   // At the moment, we only handle this for STATEPOINTs since they're the only
   // pseudo op where we've seen this.  If we start seeing other instructions
   // with the same problem, we need to revisit this.
-  return (MI.getOpcode() != TargetOpcode::STATEPOINT);
+  if (MI.getOpcode() != TargetOpcode::STATEPOINT)
+    return true;
+  // For STATEPOINTs we allow re-materialization for fixed arguments only hoping
+  // that number of physical registers is enough to cover all fixed arguments.
+  // If it is not true we need to revisit it.
+  for (unsigned Idx = StatepointOpers(&MI).getVarIdx(),
+                EndIdx = MI.getNumOperands();
+       Idx < EndIdx; ++Idx) {
+    MachineOperand &MO = MI.getOperand(Idx);
+    if (MO.isReg() && MO.getReg() == VReg)
+      return false;
+  }
+  return true;
 }
 
 /// reMaterializeFor - Attempt to rematerialize before MI instead of reloading.

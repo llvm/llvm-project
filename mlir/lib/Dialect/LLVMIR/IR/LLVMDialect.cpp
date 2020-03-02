@@ -18,6 +18,7 @@
 #include "mlir/IR/Module.h"
 #include "mlir/IR/StandardTypes.h"
 
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Function.h"

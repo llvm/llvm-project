@@ -1244,7 +1244,7 @@ bool LoopVectorizationLegality::prepareToFoldTailByMasking() {
 
   SmallPtrSet<const Value *, 8> ReductionLiveOuts;
 
-  for (auto &Reduction : *getReductionVars())
+  for (auto &Reduction : getReductionVars())
     ReductionLiveOuts.insert(Reduction.second.getLoopExitInstr());
 
   // TODO: handle non-reduction outside users when tail is folded by masking.

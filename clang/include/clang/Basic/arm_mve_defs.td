@@ -323,8 +323,10 @@ def SVector: VecOf<SScalar>;
 // UHalfVector is a vector of half-sized _unsigned integers_.
 def DblVector: VecOf<DoubleSize<Scalar>>;
 def DblPredicate: PredOf<DoubleSize<Scalar>>;
-def HalfVector: VecOf<HalfSize<Scalar>>;
-def UHalfVector: VecOf<Unsigned<HalfSize<Scalar>>>;
+def HalfScalar: HalfSize<Scalar>;
+def HalfVector: VecOf<HalfScalar>;
+def UHalfScalar: Unsigned<HalfSize<Scalar>>;
+def UHalfVector: VecOf<UHalfScalar>;
 
 // Expands to the 32-bit integer of the same signedness as Scalar.
 def Scalar32: CopyKind<u32, Scalar>;

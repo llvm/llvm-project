@@ -14,6 +14,7 @@
 #define MLIR_IR_MODULE_H
 
 #include "mlir/IR/SymbolTable.h"
+#include "llvm/Support/PointerLikeTypeTraits.h"
 
 namespace mlir {
 class ModuleTerminatorOp;

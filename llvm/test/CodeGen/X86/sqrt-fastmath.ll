@@ -328,10 +328,10 @@ define <4 x float> @v4f32_estimate(<4 x float> %x) #1 {
 ; AVX512-NEXT:    vrsqrtps %xmm0, %xmm1
 ; AVX512-NEXT:    vmulps %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm2 = [-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0]
-; AVX512-NEXT:    vfmadd213ps {{.*#+}} xmm0 = (xmm1 * xmm0) + xmm2
-; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm2 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
-; AVX512-NEXT:    vmulps %xmm2, %xmm1, %xmm1
+; AVX512-NEXT:    vfmadd231ps {{.*#+}} xmm2 = (xmm1 * xmm0) + xmm2
+; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm0 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
 ; AVX512-NEXT:    vmulps %xmm0, %xmm1, %xmm0
+; AVX512-NEXT:    vmulps %xmm2, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %sqrt = tail call <4 x float> @llvm.sqrt.v4f32(<4 x float> %x)
   %div = fdiv fast <4 x float> <float 1.0, float 1.0, float 1.0, float 1.0>, %sqrt
@@ -401,10 +401,10 @@ define <8 x float> @v8f32_estimate(<8 x float> %x) #1 {
 ; AVX512-NEXT:    vrsqrtps %ymm0, %ymm1
 ; AVX512-NEXT:    vmulps %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    vbroadcastss {{.*#+}} ymm2 = [-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0]
-; AVX512-NEXT:    vfmadd213ps {{.*#+}} ymm0 = (ymm1 * ymm0) + ymm2
-; AVX512-NEXT:    vbroadcastss {{.*#+}} ymm2 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
-; AVX512-NEXT:    vmulps %ymm2, %ymm1, %ymm1
+; AVX512-NEXT:    vfmadd231ps {{.*#+}} ymm2 = (ymm1 * ymm0) + ymm2
+; AVX512-NEXT:    vbroadcastss {{.*#+}} ymm0 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
 ; AVX512-NEXT:    vmulps %ymm0, %ymm1, %ymm0
+; AVX512-NEXT:    vmulps %ymm2, %ymm0, %ymm0
 ; AVX512-NEXT:    retq
   %sqrt = tail call <8 x float> @llvm.sqrt.v8f32(<8 x float> %x)
   %div = fdiv fast <8 x float> <float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0>, %sqrt

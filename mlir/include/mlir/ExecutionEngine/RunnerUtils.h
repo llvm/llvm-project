@@ -60,18 +60,6 @@ void printUnrankedMemRefMetaData(StreamType &os, UnrankedMemRefType<T> &V) {
      << "descriptor@ = " << reinterpret_cast<void *>(V.descriptor) << "\n";
 }
 
-template <typename T, int Dim, int... Dims> struct Vector {
-  Vector<T, Dims...> vector[Dim];
-};
-template <typename T, int Dim> struct Vector<T, Dim> { T vector[Dim]; };
-
-template <int D1, typename T> using Vector1D = Vector<T, D1>;
-template <int D1, int D2, typename T> using Vector2D = Vector<T, D1, D2>;
-template <int D1, int D2, int D3, typename T>
-using Vector3D = Vector<T, D1, D2, D3>;
-template <int D1, int D2, int D3, int D4, typename T>
-using Vector4D = Vector<T, D1, D2, D3, D4>;
-
 ////////////////////////////////////////////////////////////////////////////////
 // Templated instantiation follows.
 ////////////////////////////////////////////////////////////////////////////////
@@ -104,7 +92,7 @@ void VectorDataPrinter<T, M, Dims...>::print(std::ostream &os,
   static_assert(sizeof(val) == M * StaticSizeMult<Dims...>::value * sizeof(T),
                 "Incorrect vector size!");
   // First
-  os << "(" << val.vector[0];
+  os << "(" << val[0];
   if (M > 1)
     os << ", ";
   if (sizeof...(Dims) > 1)
@@ -112,14 +100,14 @@ void VectorDataPrinter<T, M, Dims...>::print(std::ostream &os,
   // Kernel
   for (unsigned i = 1; i + 1 < M; ++i) {
     printSpace(os, 2 * sizeof...(Dims));
-    os << val.vector[i] << ", ";
+    os << val[i] << ", ";
     if (sizeof...(Dims) > 1)
       os << "\n";
   }
   // Last
   if (M > 1) {
     printSpace(os, sizeof...(Dims));
-    os << val.vector[M - 1];
+    os << val[M - 1];
   }
   os << ")";
 }

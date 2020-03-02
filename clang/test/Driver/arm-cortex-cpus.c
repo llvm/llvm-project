@@ -820,6 +820,9 @@
 // CHECK-CORTEX-M33:  "-cc1"{{.*}} "-triple" "thumbv8m.main-{{.*}} "-target-cpu" "cortex-m33"
 // CHECK-CORTEX-M35P:  "-cc1"{{.*}} "-triple" "thumbv8m.main-{{.*}} "-target-cpu" "cortex-m35p"
 
+// RUN: %clang -target arm -mcpu=cortex-m55 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CORTEX-M55 %s
+// CHECK-CORTEX-M55:  "-cc1"{{.*}} "-triple" "thumbv8.1m.main-{{.*}} "-target-cpu" "cortex-m55"
+
 // ================== Check whether -mcpu accepts mixed-case values.
 // RUN: %clang -target arm-linux-gnueabi -mcpu=Cortex-a5 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CASE-INSENSITIVE-CPUV7A %s
 // RUN: %clang -target arm-linux-gnueabi -mcpu=cortex-A7 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CASE-INSENSITIVE-CPUV7A %s

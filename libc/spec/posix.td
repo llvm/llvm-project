@@ -1,3 +1,9 @@
+def SigSetType : NamedType<"sigset_t">;
+def SigSetPtrType : PtrType<SigSetType>;
+def ConstSigSetPtrType : ConstType<SigSetPtrType>;
+def RestrictSigSetType : RestrictedPtrType<SigSetType>;
+def ConstRestrictSigSetType : ConstType<RestrictSigSetType>;
+
 def POSIX : StandardSpec<"POSIX"> {
   NamedType OffTType = NamedType<"off_t">;
 
@@ -128,8 +134,33 @@ def POSIX : StandardSpec<"POSIX"> {
       ]
   >;
 
+  HeaderSpec Signal = HeaderSpec<
+      "signal.h",
+      [], // Macros
+      [], // Types
+      [], // Enumerations
+      [
+        FunctionSpec<
+          "sigprocmask",
+          RetValSpec<IntType>,
+          [ArgSpec<IntType>, ArgSpec<ConstRestrictSigSetType>, ArgSpec<RestrictSigSetType>]
+        >,
+        FunctionSpec<
+          "sigemptyset",
+          RetValSpec<IntType>,
+          [ArgSpec<SigSetPtrType>]
+        >,
+        FunctionSpec<
+          "sigaddset",
+          RetValSpec<IntType>,
+          [ArgSpec<SigSetPtrType>]
+        >,
+      ]
+  >;
+
   let Headers = [
     Errno,
     SysMMan,
+    Signal,
   ];
 }

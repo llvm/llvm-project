@@ -451,6 +451,11 @@ def LLVM_SelectOp
     }]>];
   let assemblyFormat = "operands attr-dict `:` type($condition) `,` type($res)";
 }
+def LLVM_FreezeOp : LLVM_OneResultOp<"freeze", [SameOperandsAndResultType]>,
+                    Arguments<(ins LLVM_Type:$val)> {
+  let assemblyFormat = "$val attr-dict `:` type($val)";
+  string llvmBuilder = "builder.CreateFreeze($val);";
+}
 
 // Terminators.
 def LLVM_BrOp : LLVM_TerminatorOp<"br", []> {

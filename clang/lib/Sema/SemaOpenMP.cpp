@@ -5269,7 +5269,8 @@ Sema::DeclGroupPtrTy Sema::ActOnOpenMPDeclareSimdDirective(
               E->containsUnexpandedParameterPack())
             continue;
           (void)CheckOpenMPLinearDecl(CanonPVD, E->getExprLoc(), LinKind,
-                                      PVD->getOriginalType());
+                                      PVD->getOriginalType(),
+                                      /*IsDeclareSimd=*/true);
           continue;
         }
       }
@@ -5289,7 +5290,7 @@ Sema::DeclGroupPtrTy Sema::ActOnOpenMPDeclareSimdDirective(
           E->isInstantiationDependent() || E->containsUnexpandedParameterPack())
         continue;
       (void)CheckOpenMPLinearDecl(/*D=*/nullptr, E->getExprLoc(), LinKind,
-                                  E->getType());
+                                  E->getType(), /*IsDeclareSimd=*/true);
       continue;
     }
     Diag(E->getExprLoc(), diag::err_omp_param_or_this_in_clause)
@@ -14547,8 +14548,8 @@ bool Sema::CheckOpenMPLinearModifier(OpenMPLinearClauseKind LinKind,
 }
 
 bool Sema::CheckOpenMPLinearDecl(const ValueDecl *D, SourceLocation ELoc,
-                                 OpenMPLinearClauseKind LinKind,
-                                 QualType Type) {
+                                 OpenMPLinearClauseKind LinKind, QualType Type,
+                                 bool IsDeclareSimd) {
   const auto *VD = dyn_cast_or_null<VarDecl>(D);
   // A variable must not have an incomplete type or a reference type.
   if (RequireCompleteType(ELoc, Type, diag::err_omp_linear_incomplete_type))
@@ -14564,8 +14565,10 @@ bool Sema::CheckOpenMPLinearDecl(const ValueDecl *D, SourceLocation ELoc,
   // OpenMP 5.0 [2.19.3, List Item Privatization, Restrictions]
   // A variable that is privatized must not have a const-qualified type
   // unless it is of class type with a mutable member. This restriction does
-  // not apply to the firstprivate clause.
-  if (rejectConstNotMutableType(*this, D, Type, OMPC_linear, ELoc))
+  // not apply to the firstprivate clause, nor to the linear clause on
+  // declarative directives (like declare simd).
+  if (!IsDeclareSimd &&
+      rejectConstNotMutableType(*this, D, Type, OMPC_linear, ELoc))
     return true;
 
   // A list item must be of integral or pointer type.

@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/BinaryFormat/AMDGPUMetadataVerifier.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/AMDGPUMetadata.h"
 
 namespace llvm {

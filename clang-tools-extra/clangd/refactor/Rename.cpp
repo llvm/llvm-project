@@ -295,23 +295,6 @@ Range toRange(const SymbolLocation &L) {
   return R;
 }
 
-std::vector<const CXXConstructorDecl *> getConstructors(const NamedDecl *ND) {
-  std::vector<const CXXConstructorDecl *> Ctors;
-  if (const auto *RD = dyn_cast<CXXRecordDecl>(ND)) {
-    if (!RD->hasUserDeclaredConstructor())
-      return {};
-    for (const CXXConstructorDecl *Ctor : RD->ctors())
-      Ctors.push_back(Ctor);
-    for (const auto *D : RD->decls()) {
-      if (const auto *FTD = dyn_cast<FunctionTemplateDecl>(D))
-        if (const auto *Ctor =
-                dyn_cast<CXXConstructorDecl>(FTD->getTemplatedDecl()))
-          Ctors.push_back(Ctor);
-    }
-  }
-  return Ctors;
-}
-
 // Return all rename occurrences (using the index) outside of the main file,
 // grouped by the absolute file path.
 llvm::Expected<llvm::StringMap<std::vector<Range>>>
@@ -321,14 +304,6 @@ findOccurrencesOutsideFile(const NamedDecl &RenameDecl,
   trace::Span Tracer("FindOccurrencesOutsideFile");
   RefsRequest RQuest;
   RQuest.IDs.insert(*getSymbolID(&RenameDecl));
-  // Classes and their constructors are different symbols, and have different
-  // symbol ID.
-  // When querying references for a class, clangd's own index will also return
-  // references of the corresponding class constructors, but this is not true
-  // for all index backends, e.g. kythe, so we add all constructors to the query
-  // request.
-  for (const auto *Ctor : getConstructors(&RenameDecl))
-    RQuest.IDs.insert(*getSymbolID(Ctor));
 
   // Absolute file path => rename occurrences in that file.
   llvm::StringMap<std::vector<Range>> AffectedFiles;
@@ -502,7 +477,7 @@ llvm::Expected<FileEdits> rename(const RenameInputs &RInputs) {
     return makeError(ReasonToReject::NoSymbolFound);
   // FIXME: Renaming macros is not supported yet, the macro-handling code should
   // be moved to rename tooling library.
-  if (locateMacroAt(IdentifierToken->location(), AST.getPreprocessor()))
+  if (locateMacroAt(*IdentifierToken, AST.getPreprocessor()))
     return makeError(ReasonToReject::UnsupportedSymbol);
 
   auto DeclsUnderCursor = locateDeclAt(AST, IdentifierToken->location());

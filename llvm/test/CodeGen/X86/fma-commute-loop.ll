@@ -25,25 +25,23 @@ define void @eggs(<8 x double>* %arg, <8 x double>* %arg1, <8 x double>* %arg2, 
 ; CHECK-NEXT:    addq {{[0-9]+}}(%rsp), %r12
 ; CHECK-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vxorpd %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vxorpd %xmm4, %xmm4, %xmm4
 ; CHECK-NEXT:    vxorpd %xmm5, %xmm5, %xmm5
-; CHECK-NEXT:    vxorpd %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  LBB0_1: ## %bb15
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vmovapd %zmm5, %zmm6
-; CHECK-NEXT:    vmovapd %zmm4, %zmm7
-; CHECK-NEXT:    vmovupd (%rax,%r11,8), %zmm4
-; CHECK-NEXT:    vmovupd (%rax,%r13,8), %zmm5
+; CHECK-NEXT:    vmovupd (%rax,%r11,8), %zmm6
+; CHECK-NEXT:    vmovupd (%rax,%r13,8), %zmm7
 ; CHECK-NEXT:    vmovupd (%rax,%r12,8), %zmm8
 ; CHECK-NEXT:    vbroadcastsd (%r15,%rbx,8), %zmm9
-; CHECK-NEXT:    vfmadd231pd {{.*#+}} zmm0 = (zmm4 * zmm9) + zmm0
-; CHECK-NEXT:    vfmadd231pd {{.*#+}} zmm1 = (zmm5 * zmm9) + zmm1
+; CHECK-NEXT:    vfmadd231pd {{.*#+}} zmm0 = (zmm6 * zmm9) + zmm0
+; CHECK-NEXT:    vfmadd231pd {{.*#+}} zmm1 = (zmm7 * zmm9) + zmm1
 ; CHECK-NEXT:    vfmadd231pd {{.*#+}} zmm2 = (zmm8 * zmm9) + zmm2
 ; CHECK-NEXT:    vbroadcastsd (%r14,%rbx,8), %zmm9
-; CHECK-NEXT:    vfmadd213pd {{.*#+}} zmm4 = (zmm9 * zmm4) + zmm7
-; CHECK-NEXT:    vfmadd213pd {{.*#+}} zmm5 = (zmm9 * zmm5) + zmm6
-; CHECK-NEXT:    vfmadd231pd {{.*#+}} zmm3 = (zmm8 * zmm9) + zmm3
+; CHECK-NEXT:    vfmadd231pd {{.*#+}} zmm3 = (zmm9 * zmm6) + zmm3
+; CHECK-NEXT:    vfmadd231pd {{.*#+}} zmm4 = (zmm9 * zmm7) + zmm4
+; CHECK-NEXT:    vfmadd231pd {{.*#+}} zmm5 = (zmm8 * zmm9) + zmm5
 ; CHECK-NEXT:    incq %rbx
 ; CHECK-NEXT:    cmpq %rbx, %r10
 ; CHECK-NEXT:    jne LBB0_1
@@ -51,9 +49,9 @@ define void @eggs(<8 x double>* %arg, <8 x double>* %arg1, <8 x double>* %arg2, 
 ; CHECK-NEXT:    vmovapd %zmm0, (%rdi)
 ; CHECK-NEXT:    vmovapd %zmm1, (%rsi)
 ; CHECK-NEXT:    vmovapd %zmm2, (%rdx)
-; CHECK-NEXT:    vmovapd %zmm4, (%rcx)
-; CHECK-NEXT:    vmovapd %zmm5, (%r8)
-; CHECK-NEXT:    vmovapd %zmm3, (%r9)
+; CHECK-NEXT:    vmovapd %zmm3, (%rcx)
+; CHECK-NEXT:    vmovapd %zmm4, (%r8)
+; CHECK-NEXT:    vmovapd %zmm5, (%r9)
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %r12
 ; CHECK-NEXT:    popq %r13

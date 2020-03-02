@@ -289,8 +289,10 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
   if (!canPeel(L))
     return;
 
-  // Only try to peel innermost loops.
-  if (!L->empty())
+  // Only try to peel innermost loops by default.
+  // The constraint can be relaxed by the target in TTI.getUnrollingPreferences
+  // or by the flag -unroll-allow-loop-nests-peeling.
+  if (!UP.AllowLoopNestsPeeling && !L->empty())
     return;
 
   // If the user provided a peel count, use that.
@@ -508,7 +510,10 @@ static void cloneLoopBlocks(
     BasicBlock *NewBB = CloneBasicBlock(*BB, VMap, ".peel", F);
     NewBlocks.push_back(NewBB);
 
-    if (ParentLoop)
+    // If an original block is an immediate child of the loop L, its copy
+    // is a child of a ParentLoop after peeling. If a block is a child of
+    // a nested loop, it is handled in the cloneLoop() call below.
+    if (ParentLoop && LI->getLoopFor(*BB) == L)
       ParentLoop->addBasicBlockToLoop(NewBB, *LI);
 
     VMap[*BB] = NewBB;
@@ -523,6 +528,12 @@ static void cloneLoopBlocks(
         DT->addNewBlock(NewBB, cast<BasicBlock>(VMap[IDom->getBlock()]));
       }
     }
+  }
+
+  // Recursively create the new Loop objects for nested loops, if any,
+  // to preserve LoopInfo.
+  for (Loop *ChildLoop : *L) {
+    cloneLoop(ChildLoop, ParentLoop, VMap, LI, nullptr);
   }
 
   // Hook-up the control flow for the newly inserted blocks.

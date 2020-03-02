@@ -33,8 +33,8 @@ namespace llvm {
 /// Compared to SparseBitVector, CoalescingBitVector offers more predictable
 /// performance for non-sequential find() operations.
 ///
-/// \param IndexT - The type of the index into the bitvector.
-/// \param N - The first N coalesced intervals of set bits are stored in-place
+/// \tparam IndexT - The type of the index into the bitvector.
+/// \tparam N - The first N coalesced intervals of set bits are stored in-place
 /// (in the initial heap allocation).
 template <typename IndexT, unsigned N = 16> class CoalescingBitVector {
   static_assert(std::is_unsigned<IndexT>::value,

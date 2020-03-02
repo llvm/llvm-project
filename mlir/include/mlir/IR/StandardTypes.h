@@ -328,8 +328,9 @@ public:
     // Note: Non standard/builtin types are allowed to exist within tensor
     // types. Dialects are expected to verify that tensor types have a valid
     // element type within that dialect.
-    return type.isSignlessIntOrFloat() || type.isa<ComplexType>() ||
-           type.isa<VectorType>() || type.isa<OpaqueType>() ||
+    return type.isa<ComplexType>() || type.isa<FloatType>() ||
+           type.isa<IntegerType>() || type.isa<OpaqueType>() ||
+           type.isa<VectorType>() ||
            (type.getKind() > Type::Kind::LAST_STANDARD_TYPE);
   }
 

@@ -171,21 +171,32 @@ __m128 test_mm_maskz_sqrt_ss(__mmask8 __U, __m128 __A, __m128 __B){
 __m512 test_mm512_cvtph_ps (__m256i __A)
 {
   // COMMON-LABEL: test_mm512_cvtph_ps 
-  // COMMONIR: @llvm.x86.avx512.mask.vcvtph2ps.512
+  // COMMONIR: bitcast <4 x i64> %{{.*}} to <16 x i16>
+  // COMMONIR: bitcast <16 x i16> %{{.*}} to <16 x half>
+  // UNCONSTRAINED: fpext <16 x half> %{{.*}} to <16 x float>
+  // CONSTRAINED: call <16 x float> @llvm.experimental.constrained.fpext.v16f32.v16f16(<16 x half> %{{.*}}, metadata !"fpexcept.strict")
   return _mm512_cvtph_ps (__A);
 }
 
 __m512 test_mm512_mask_cvtph_ps (__m512 __W, __mmask16 __U, __m256i __A)
 {
   // COMMON-LABEL: test_mm512_mask_cvtph_ps 
-  // COMMONIR: @llvm.x86.avx512.mask.vcvtph2ps.512
+  // COMMONIR: bitcast <4 x i64> %{{.*}} to <16 x i16>
+  // COMMONIR: bitcast <16 x i16> %{{.*}} to <16 x half>
+  // UNCONSTRAINED: fpext <16 x half> %{{.*}} to <16 x float>
+  // CONSTRAINED: call <16 x float> @llvm.experimental.constrained.fpext.v16f32.v16f16(<16 x half> %{{.*}}, metadata !"fpexcept.strict")
+  // COMMONIR: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
   return _mm512_mask_cvtph_ps (__W,__U,__A);
 }
 
 __m512 test_mm512_maskz_cvtph_ps (__mmask16 __U, __m256i __A)
 {
   // COMMON-LABEL: test_mm512_maskz_cvtph_ps 
-  // COMMONIR: @llvm.x86.avx512.mask.vcvtph2ps.512
+  // COMMONIR: bitcast <4 x i64> %{{.*}} to <16 x i16>
+  // COMMONIR: bitcast <16 x i16> %{{.*}} to <16 x half>
+  // UNCONSTRAINED: fpext <16 x half> %{{.*}} to <16 x float>
+  // CONSTRAINED: call <16 x float> @llvm.experimental.constrained.fpext.v16f32.v16f16(<16 x half> %{{.*}}, metadata !"fpexcept.strict")
+  // COMMONIR: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
   return _mm512_maskz_cvtph_ps (__U,__A);
 }
 

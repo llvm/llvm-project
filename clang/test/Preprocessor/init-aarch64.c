@@ -236,7 +236,7 @@
 // AARCH64-NEXT: #define __STDC_HOSTED__ 1
 // AARCH64-NEXT: #define __STDC_UTF_16__ 1
 // AARCH64-NEXT: #define __STDC_UTF_32__ 1
-// AARCH64_C: #define __STDC_VERSION__ 201112L
+// AARCH64_C: #define __STDC_VERSION__ 201710L
 // AARCH64-NEXT: #define __STDC__ 1
 // AARCH64-NEXT: #define __UINT16_C_SUFFIX__ 
 // AARCH64-NEXT: #define __UINT16_FMTX__ "hX"
@@ -646,7 +646,7 @@
 // AARCH64-MSVC: #define __STDC_HOSTED__ 0
 // AARCH64-MSVC: #define __STDC_UTF_16__ 1
 // AARCH64-MSVC: #define __STDC_UTF_32__ 1
-// AARCH64-MSVC: #define __STDC_VERSION__ 201112L
+// AARCH64-MSVC: #define __STDC_VERSION__ 201710L
 // AARCH64-MSVC: #define __STDC__ 1
 // AARCH64-MSVC: #define __UINT16_C_SUFFIX__
 // AARCH64-MSVC: #define __UINT16_MAX__ 65535

@@ -17,6 +17,7 @@
 #include "clang/Driver/Driver.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"

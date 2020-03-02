@@ -21,6 +21,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Format/Format.h"
 #include "clang/Tooling/Core/Replacement.h"
+#include "clang/Tooling/Syntax/Tokens.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Error.h"
@@ -281,8 +282,9 @@ struct DefinedMacro {
   llvm::StringRef Name;
   const MacroInfo *Info;
 };
-/// Gets the macro at a specified \p Loc.
-llvm::Optional<DefinedMacro> locateMacroAt(SourceLocation Loc,
+/// Gets the macro referenced by \p SpelledTok. It must be a spelled token
+/// aligned to the beginning of an identifier.
+llvm::Optional<DefinedMacro> locateMacroAt(const syntax::Token &SpelledTok,
                                            Preprocessor &PP);
 
 /// Infers whether this is a header from the FileName and LangOpts (if
