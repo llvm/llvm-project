@@ -457,7 +457,8 @@ void DWARFContext::dump(
   if (shouldDump(Explicit, ".debug_aranges", DIDT_ID_DebugAranges,
                  DObj->getArangesSection())) {
     uint64_t offset = 0;
-    DataExtractor arangesData(DObj->getArangesSection(), isLittleEndian(), 0);
+    DWARFDataExtractor arangesData(DObj->getArangesSection(), isLittleEndian(),
+                                   0);
     DWARFDebugArangeSet set;
     while (arangesData.isValidOffset(offset)) {
       if (Error E = set.extract(arangesData, &offset)) {
