@@ -2263,7 +2263,7 @@ void CompilerInvocation::setLangDefaults(LangOptions &Opts, InputKind IK,
       if (T.isPS4())
         LangStd = LangStandard::lang_gnu99;
       else
-        LangStd = LangStandard::lang_gnu11;
+        LangStd = LangStandard::lang_gnu17;
 #endif
       break;
     case Language::ObjC:
