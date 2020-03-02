@@ -15,7 +15,7 @@ func @parallel_loop_bidy_bidx(%arg0 : index, %arg1 : index, %arg2 : index,
   return
 }
 
-// CHECK:       #[[MAP0:.*]] = affine_map<()[s0, s1, s2] -> (s0 - s1 ceildiv s2)>
+// CHECK:       #[[MAP0:.*]] = affine_map<()[s0, s1, s2] -> ((s0 - s1) ceildiv s2)>
 // CHECK:       #[[MAP1:.*]] = affine_map<(d0)[s0, s1] -> (d0 * s0 + s1)>
 
 // CHECK:       module {
@@ -66,7 +66,7 @@ func @parallel_loop_tiled(%arg0 : index, %arg1 : index, %arg2 : index,
   return
 }
 
-// CHECK:       #[[MAP0:.*]] = affine_map<()[s0, s1, s2] -> (s0 - s1 ceildiv s2)>
+// CHECK:       #[[MAP0:.*]] = affine_map<()[s0, s1, s2] -> ((s0 - s1) ceildiv s2)>
 // CHECK:       #[[MAP1:.*]] = affine_map<(d0)[s0, s1] -> (d0 * s0 + s1)>
 
 // CHECK:       module {
@@ -115,7 +115,7 @@ func @parallel_loop_bidy_seq(%arg0 : index, %arg1 : index, %arg2 : index,
   return
 }
 
-// CHECK:       #[[MAP0:.*]] = affine_map<()[s0, s1, s2] -> (s0 - s1 ceildiv s2)>
+// CHECK:       #[[MAP0:.*]] = affine_map<()[s0, s1, s2] -> ((s0 - s1) ceildiv s2)>
 // CHECK:       #[[MAP1:.*]] = affine_map<(d0)[s0, s1] -> (d0 * s0 + s1)>
 
 // CHECK:       module {
@@ -166,7 +166,7 @@ func @parallel_loop_tiled_seq(%arg0 : index, %arg1 : index, %arg2 : index,
   return
 }
 
-// CHECK:       #[[MAP0:.*]] = affine_map<()[s0, s1, s2] -> (s0 - s1 ceildiv s2)>
+// CHECK:       #[[MAP0:.*]] = affine_map<()[s0, s1, s2] -> ((s0 - s1) ceildiv s2)>
 // CHECK:       #[[MAP1:.*]] = affine_map<(d0)[s0, s1] -> (d0 * s0 + s1)>
 
 // CHECK:       module {
@@ -241,7 +241,7 @@ module {
 }
 
 // CHECK:       #[[MAP0:.*]] = affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)>
-// CHECK:       #[[MAP1:.*]] = affine_map<()[s0, s1, s2] -> (s0 - s1 ceildiv s2)>
+// CHECK:       #[[MAP1:.*]] = affine_map<()[s0, s1, s2] -> ((s0 - s1) ceildiv s2)>
 // CHECK:       #[[MAP2:.*]] = affine_map<(d0)[s0, s1] -> (d0 * s0 + s1)>
 // CHECK:       #[[MAP3:.*]] = affine_map<(d0)[s0] -> (2, -d0 + s0)>
 // CHECK:       #[[MAP4:.*]] = affine_map<(d0)[s0] -> (3, -d0 + s0)>

@@ -653,8 +653,8 @@ static LogicalResult processParallelLoop(ParallelOp parallelOp,
           // affine.apply here so that it composes nicely with the provided map.
           AffineMap stepMap =
               AffineMap::get(0, 3,
-                             (rewriter.getAffineSymbolExpr(0) -
-                              rewriter.getAffineSymbolExpr(1).ceilDiv(
+                             ((rewriter.getAffineSymbolExpr(0) -
+                              rewriter.getAffineSymbolExpr(1)).ceilDiv(
                                   rewriter.getAffineSymbolExpr(2))));
           Value launchBound = rewriter.create<AffineApplyOp>(
               loc, annotation.boundMap.compose(stepMap),
