@@ -22,6 +22,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <atomic>
+#include <cassert>
 #include <cstdarg>
 #include <cstdio>
 #include <tuple>

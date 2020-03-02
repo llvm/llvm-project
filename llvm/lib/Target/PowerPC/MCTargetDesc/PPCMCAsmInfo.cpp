@@ -12,6 +12,7 @@
 
 #include "PPCMCAsmInfo.h"
 #include "llvm/ADT/Triple.h"
+#include <cassert>
 
 using namespace llvm;
 
