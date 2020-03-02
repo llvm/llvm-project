@@ -12,7 +12,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "X86ShuffleDecode.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
 
 //===----------------------------------------------------------------------===//
 //  Vector Mask Decoding
@@ -141,9 +143,6 @@ void DecodeVALIGNMask(unsigned NumElts, unsigned Imm,
     ShuffleMask.push_back(i + Imm);
 }
 
-/// DecodePSHUFMask - This decodes the shuffle masks for pshufw, pshufd, and vpermilp*.
-/// VT indicates the type of the vector allowing it to handle different
-/// datatypes and vector widths.
 void DecodePSHUFMask(unsigned NumElts, unsigned ScalarBits, unsigned Imm,
                      SmallVectorImpl<int> &ShuffleMask) {
   unsigned Size = NumElts * ScalarBits;
@@ -197,9 +196,6 @@ void DecodePSWAPMask(unsigned NumElts, SmallVectorImpl<int> &ShuffleMask) {
     ShuffleMask.push_back(h);
 }
 
-/// DecodeSHUFPMask - This decodes the shuffle masks for shufp*. VT indicates
-/// the type of the vector allowing it to handle different datatypes and vector
-/// widths.
 void DecodeSHUFPMask(unsigned NumElts, unsigned ScalarBits,
                      unsigned Imm, SmallVectorImpl<int> &ShuffleMask) {
   unsigned NumLaneElts = 128 / ScalarBits;
@@ -217,9 +213,6 @@ void DecodeSHUFPMask(unsigned NumElts, unsigned ScalarBits,
   }
 }
 
-/// DecodeUNPCKHMask - This decodes the shuffle masks for unpckhps/unpckhpd
-/// and punpckh*. VT indicates the type of the vector allowing it to handle
-/// different datatypes and vector widths.
 void DecodeUNPCKHMask(unsigned NumElts, unsigned ScalarBits,
                       SmallVectorImpl<int> &ShuffleMask) {
   // Handle 128 and 256-bit vector lengths. AVX defines UNPCK* to operate
@@ -236,9 +229,6 @@ void DecodeUNPCKHMask(unsigned NumElts, unsigned ScalarBits,
   }
 }
 
-/// DecodeUNPCKLMask - This decodes the shuffle masks for unpcklps/unpcklpd
-/// and punpckl*. VT indicates the type of the vector allowing it to handle
-/// different datatypes and vector widths.
 void DecodeUNPCKLMask(unsigned NumElts, unsigned ScalarBits,
                       SmallVectorImpl<int> &ShuffleMask) {
   // Handle 128 and 256-bit vector lengths. AVX defines UNPCK* to operate
@@ -255,13 +245,11 @@ void DecodeUNPCKLMask(unsigned NumElts, unsigned ScalarBits,
   }
 }
 
-/// Decodes a broadcast of the first element of a vector.
 void DecodeVectorBroadcast(unsigned NumElts,
                            SmallVectorImpl<int> &ShuffleMask) {
   ShuffleMask.append(NumElts, 0);
 }
 
-/// Decodes a broadcast of a subvector to a larger vector type.
 void DecodeSubVectorBroadcast(unsigned DstNumElts, unsigned SrcNumElts,
                               SmallVectorImpl<int> &ShuffleMask) {
   unsigned Scale = DstNumElts / SrcNumElts;
@@ -271,9 +259,6 @@ void DecodeSubVectorBroadcast(unsigned DstNumElts, unsigned SrcNumElts,
       ShuffleMask.push_back(j);
 }
 
-/// Decode a shuffle packed values at 128-bit granularity
-/// (SHUFF32x4/SHUFF64x2/SHUFI32x4/SHUFI64x2)
-/// immediate mask into a shuffle mask.
 void decodeVSHUF64x2FamilyMask(unsigned NumElts, unsigned ScalarSize,
                                unsigned Imm,
                                SmallVectorImpl<int> &ShuffleMask) {
@@ -374,7 +359,6 @@ void DecodeVPPERMMask(ArrayRef<uint64_t> RawMask, const APInt &UndefElts,
   }
 }
 
-/// DecodeVPERMMask - this decodes the shuffle masks for VPERMQ/VPERMPD.
 void DecodeVPERMMask(unsigned NumElts, unsigned Imm,
                      SmallVectorImpl<int> &ShuffleMask) {
   for (unsigned l = 0; l != NumElts; l += 4)
@@ -384,32 +368,31 @@ void DecodeVPERMMask(unsigned NumElts, unsigned Imm,
 
 void DecodeZeroExtendMask(unsigned SrcScalarBits, unsigned DstScalarBits,
                           unsigned NumDstElts, bool IsAnyExtend,
-                          SmallVectorImpl<int> &Mask) {
+                          SmallVectorImpl<int> &ShuffleMask) {
   unsigned Scale = DstScalarBits / SrcScalarBits;
   assert(SrcScalarBits < DstScalarBits &&
          "Expected zero extension mask to increase scalar size");
 
+  int Sentinel = IsAnyExtend ? SM_SentinelUndef : SM_SentinelZero;
   for (unsigned i = 0; i != NumDstElts; i++) {
-    Mask.push_back(i);
-    for (unsigned j = 1; j != Scale; j++)
-      Mask.push_back(IsAnyExtend ? SM_SentinelUndef : SM_SentinelZero);
+    ShuffleMask.push_back(i);
+    ShuffleMask.append(Scale - 1, Sentinel);
   }
 }
 
 void DecodeZeroMoveLowMask(unsigned NumElts,
                            SmallVectorImpl<int> &ShuffleMask) {
   ShuffleMask.push_back(0);
-  for (unsigned i = 1; i < NumElts; i++)
-    ShuffleMask.push_back(SM_SentinelZero);
+  ShuffleMask.append(NumElts - 1, SM_SentinelZero);
 }
 
 void DecodeScalarMoveMask(unsigned NumElts, bool IsLoad,
-                          SmallVectorImpl<int> &Mask) {
+                          SmallVectorImpl<int> &ShuffleMask) {
   // First element comes from the first element of second source.
   // Remaining elements: Load zero extends / Move copies from first source.
-  Mask.push_back(NumElts);
+  ShuffleMask.push_back(NumElts);
   for (unsigned i = 1; i < NumElts; i++)
-    Mask.push_back(IsLoad ? static_cast<int>(SM_SentinelZero) : i);
+    ShuffleMask.push_back(IsLoad ? static_cast<int>(SM_SentinelZero) : i);
 }
 
 void DecodeEXTRQIMask(unsigned NumElts, unsigned EltSize, int Len, int Idx,
