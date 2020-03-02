@@ -39,14 +39,50 @@ template <int N> void dropFront(int64_t arr[N], int64_t *res) {
 //===----------------------------------------------------------------------===//
 // Codegen-compatible structures for Vector type.
 //===----------------------------------------------------------------------===//
+namespace detail {
+  template <unsigned N>
+  constexpr unsigned nextPowerOf2();
+  template <>
+  constexpr unsigned nextPowerOf2<0>() {
+    return 1;
+  }
+  template <>
+  constexpr unsigned nextPowerOf2<1>() {
+    return 1;
+  }
+  template <unsigned N>
+  constexpr unsigned nextPowerOf2() {
+    return (!(N & (N - 1))) ? N : 2 * nextPowerOf2<(N + 1) / 2>();
+  }
+} // end namespace detail
+
+// N-D vectors recurse down to 1-D.
 template <typename T, int Dim, int... Dims>
 struct Vector {
+  constexpr Vector<T, Dims...> &operator[](unsigned i) { return vector[i]; }
+  constexpr const Vector<T, Dims...> &operator[](unsigned i) const {
+    return vector[i];
+  }
+
+private:
   Vector<T, Dims...> vector[Dim];
 };
 
-template <typename T, int Dim>
-struct Vector<T, Dim> {
+// 1-D vectors in LLVM are automatically padded to the next power of 2.
+// We insert explicit padding in to account for this.
+template <typename T, int Dim> struct Vector<T, Dim> {
+  Vector() {
+    static_assert(detail::nextPowerOf2<sizeof(T[Dim])>() >= sizeof(T[Dim]),
+                  "size error");
+    static_assert(detail::nextPowerOf2<sizeof(T[Dim])>() < 2 * sizeof(T[Dim]),
+                  "size error");
+  }
+  constexpr T &operator[](unsigned i) { return vector[i]; }
+  constexpr const T &operator[](unsigned i) const { return vector[i]; }
+
+private:
   T vector[Dim];
+  char padding[detail::nextPowerOf2<sizeof(T[Dim])>() - sizeof(T[Dim])];
 };
 
 template <int D1, typename T>
