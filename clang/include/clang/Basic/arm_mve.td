@@ -514,6 +514,33 @@ defm vmovntq: vmovn<1, (zip (vreinterpret $inactive, Vector), $a)>;
 defm vmovnbq: vmovn<0,
    (zip $a, (vreinterpret (vrev $inactive, (bitsize Scalar)), Vector))>;
 
+multiclass vqmovn<bit top, Type RetScalar> {
+  defvar RetVector = VecOf<RetScalar>;
+
+  let params = [s16, u16, s32, u32] in {
+    def : Intrinsic<
+      RetVector, (args RetVector:$inactive, Vector:$a),
+      (IRInt<"vqmovn", [RetVector, Vector]>
+          $inactive, $a, (unsignedflag RetScalar), (unsignedflag Scalar), top)>,
+      NameOverride<NAME>;
+    def: Intrinsic<
+      RetVector, (args RetVector:$inactive, Vector:$a, Predicate:$pred),
+      (IRInt<"vqmovn_predicated", [RetVector, Vector, Predicate]>
+          $inactive, $a, (unsignedflag RetScalar), (unsignedflag Scalar),
+          top, $pred)>,
+      NameOverride<NAME # "_m">;
+  }
+}
+
+let params = [s16, s32, u16, u32] in {
+  defm vqmovntq: vqmovn<1, HalfScalar>;
+  defm vqmovnbq: vqmovn<0, HalfScalar>;
+}
+let params = [s16, s32] in {
+  defm vqmovuntq: vqmovn<1, UHalfScalar>;
+  defm vqmovunbq: vqmovn<0, UHalfScalar>;
+}
+
 multiclass vrnd<IRIntBase ir_int, string suffix> {
   let params = T.Float in {
     def "": Intrinsic<Vector, (args Vector:$a), (ir_int $a)>;

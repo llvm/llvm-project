@@ -1211,4 +1211,13 @@ def int_arm_mve_vmovn_predicated: Intrinsic<[llvm_anyvector_ty],
    [LLVMMatchType<0>, llvm_anyvector_ty, llvm_i32_ty /* top half */,
     llvm_anyvector_ty /* predicate */], [IntrNoMem]>;
 
+def int_arm_mve_vqmovn: Intrinsic<[llvm_anyvector_ty],
+   [LLVMMatchType<0>, llvm_anyvector_ty,
+    llvm_i32_ty /* unsigned output */, llvm_i32_ty /* unsigned input */,
+    llvm_i32_ty /* top half */], [IntrNoMem]>;
+def int_arm_mve_vqmovn_predicated: Intrinsic<[llvm_anyvector_ty],
+   [LLVMMatchType<0>, llvm_anyvector_ty,
+    llvm_i32_ty /* unsigned output */, llvm_i32_ty /* unsigned input */,
+    llvm_i32_ty /* top half */, llvm_anyvector_ty /* pred */], [IntrNoMem]>;
+
 } // end TargetPrefix
