@@ -148,7 +148,7 @@ public:
     virtual void anchor();
 
   protected:
-    ~Cleanup() = default;
+    virtual ~Cleanup() = default;
 
   public:
     Cleanup(const Cleanup &) = default;
