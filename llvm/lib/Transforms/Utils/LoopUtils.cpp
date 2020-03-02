@@ -1499,3 +1499,27 @@ void llvm::appendLoopsToWorklist(LoopInfo &LI,
                                  SmallPriorityWorklist<Loop *, 4> &Worklist) {
   appendReversedLoopsToWorklist(LI, Worklist);
 }
+
+Loop *llvm::cloneLoop(Loop *L, Loop *PL, ValueToValueMapTy &VM,
+                      LoopInfo *LI, LPPassManager *LPM) {
+  Loop &New = *LI->AllocateLoop();
+  if (PL)
+    PL->addChildLoop(&New);
+  else
+    LI->addTopLevelLoop(&New);
+
+  if (LPM)
+    LPM->addLoop(New);
+
+  // Add all of the blocks in L to the new loop.
+  for (Loop::block_iterator I = L->block_begin(), E = L->block_end();
+       I != E; ++I)
+    if (LI->getLoopFor(*I) == L)
+      New.addBasicBlockToLoop(cast<BasicBlock>(VM[*I]), *LI);
+
+  // Add all of the subloops to the new loop.
+  for (Loop *I : *L)
+    cloneLoop(I, &New, VM, LI, LPM);
+
+  return &New;
+}
