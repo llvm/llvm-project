@@ -106,7 +106,7 @@ namespace format {
   TYPE(CSharpNullable)                                                         \
   TYPE(CSharpNullCoalescing)                                                   \
   TYPE(CSharpNullConditional)                                                  \
-  TYPE(CSharpNullConditionalSq)                                                \
+  TYPE(CSharpNullConditionalLSquare)                                           \
   TYPE(Unknown)
 
 enum TokenType {
