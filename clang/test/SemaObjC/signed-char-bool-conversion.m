@@ -69,6 +69,11 @@ void t3(struct has_bf *bf) {
   b = local.nested->unsigned_bf2; // expected-warning{{implicit conversion from integral type 'unsigned int' to 'BOOL'}}
 }
 
+void t4(BoolProp *bp) {
+  BOOL local = YES;
+  bp.p = 1 ? local : NO; // no warning
+}
+
 __attribute__((objc_root_class))
 @interface BFIvar {
   struct has_bf bf;
