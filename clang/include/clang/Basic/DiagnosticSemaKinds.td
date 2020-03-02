@@ -5925,7 +5925,7 @@ def err_func_def_incomplete_result : Error<
   "incomplete result type %0 in function definition">;
 def err_atomic_specifier_bad_type : Error<
   "_Atomic cannot be applied to "
-  "%select{incomplete |array |function |reference |atomic |qualified |}0type "
+  "%select{incomplete |array |function |reference |atomic |qualified |sizeless |}0type "
   "%1 %select{||||||which is not trivially copyable}0">;
 
 // Expressions.

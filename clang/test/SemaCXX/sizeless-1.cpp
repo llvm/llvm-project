@@ -98,6 +98,7 @@ void func(int sel) {
   const volatile svint8_t const_volatile_int8 = local_int8; // expected-note {{declared const here}}
   const volatile svint8_t uninit_const_volatile_int8;       // expected-error {{default initialization of an object of const type 'const volatile svint8_t'}}
 
+  _Atomic svint8_t atomic_int8;      // expected-error {{_Atomic cannot be applied to sizeless type 'svint8_t'}}
   __restrict svint8_t restrict_int8; // expected-error {{requires a pointer or reference}}
 
   bool test_int8 = init_int8; // expected-error {{cannot initialize a variable of type 'bool' with an lvalue of type 'svint8_t'}}
