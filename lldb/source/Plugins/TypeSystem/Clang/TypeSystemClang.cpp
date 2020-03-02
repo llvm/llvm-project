@@ -84,12 +84,14 @@ using llvm::StringSwitch;
 LLDB_PLUGIN_DEFINE(TypeSystemClang)
 
 namespace {
-#ifdef LLDB_CONFIGURATION_DEBUG
 static void VerifyDecl(clang::Decl *decl) {
   assert(decl && "VerifyDecl called with nullptr?");
+#ifndef NDEBUG
+  // We don't care about the actual access value here but only want to trigger
+  // that Clang calls its internal Decl::AccessDeclContextSanity check.
   decl->getAccess();
-}
 #endif
+}
 
 static inline bool
 TypeSystemClangSupportsLanguage(lldb::LanguageType language) {
@@ -1415,9 +1417,7 @@ ClassTemplateDecl *TypeSystemClang::CreateClassTemplateDecl(
 
     decl_ctx->addDecl(class_template_decl);
 
-#ifdef LLDB_CONFIGURATION_DEBUG
     VerifyDecl(class_template_decl);
-#endif
   }
 
   return class_template_decl;
@@ -1687,9 +1687,7 @@ NamespaceDecl *TypeSystemClang::GetUniqueNamespaceDeclaration(
       }
     }
   }
-#ifdef LLDB_CONFIGURATION_DEBUG
   VerifyDecl(namespace_decl);
-#endif
   return namespace_decl;
 }
 
@@ -1892,9 +1890,7 @@ FunctionDecl *TypeSystemClang::CreateFunctionDeclaration(
   if (func_decl)
     decl_ctx->addDecl(func_decl);
 
-#ifdef LLDB_CONFIGURATION_DEBUG
   VerifyDecl(func_decl);
-#endif
 
   return func_decl;
 }
@@ -6937,9 +6933,7 @@ clang::FieldDecl *TypeSystemClang::AddFieldToRecordType(
 
       record_decl->addDecl(field);
 
-#ifdef LLDB_CONFIGURATION_DEBUG
       VerifyDecl(field);
-#endif
     }
   } else {
     clang::ObjCInterfaceDecl *class_interface_decl =
@@ -6962,9 +6956,7 @@ clang::FieldDecl *TypeSystemClang::AddFieldToRecordType(
       if (field) {
         class_interface_decl->addDecl(field);
 
-#ifdef LLDB_CONFIGURATION_DEBUG
         VerifyDecl(field);
-#endif
       }
     }
   }
@@ -7128,9 +7120,7 @@ clang::VarDecl *TypeSystemClang::AddVariableToRecordType(
       TypeSystemClang::ConvertAccessTypeToAccessSpecifier(access));
   record_decl->addDecl(var_decl);
 
-#ifdef LLDB_CONFIGURATION_DEBUG
   VerifyDecl(var_decl);
-#endif
 
   return var_decl;
 }
@@ -7310,9 +7300,7 @@ clang::CXXMethodDecl *TypeSystemClang::AddMethodToCXXRecordType(
     }
   }
 
-#ifdef LLDB_CONFIGURATION_DEBUG
   VerifyDecl(cxx_method_decl);
-#endif
 
   return cxx_method_decl;
 }
@@ -7704,9 +7692,7 @@ clang::ObjCMethodDecl *TypeSystemClang::AddMethodToObjCObjectType(
 
   class_interface_decl->addDecl(objc_method_decl);
 
-#ifdef LLDB_CONFIGURATION_DEBUG
   VerifyDecl(objc_method_decl);
-#endif
 
   return objc_method_decl;
 }
@@ -7904,10 +7890,7 @@ clang::EnumConstantDecl *TypeSystemClang::AddEnumerationValueToEnumerationType(
 
   enutype->getDecl()->addDecl(enumerator_decl);
 
-#ifdef LLDB_CONFIGURATION_DEBUG
   VerifyDecl(enumerator_decl);
-#endif
-
   return enumerator_decl;
 }
 
