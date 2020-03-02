@@ -6703,6 +6703,7 @@ emitNumTeamsForTargetDirective(CodeGenFunction &CGF,
   case OMPD_taskgroup:
   case OMPD_atomic:
   case OMPD_flush:
+  case OMPD_depobj:
   case OMPD_teams:
   case OMPD_target_data:
   case OMPD_target_exit_data:
@@ -7014,6 +7015,7 @@ emitNumThreadsForTargetDirective(CodeGenFunction &CGF,
   case OMPD_taskgroup:
   case OMPD_atomic:
   case OMPD_flush:
+  case OMPD_depobj:
   case OMPD_teams:
   case OMPD_target_data:
   case OMPD_target_exit_data:
@@ -8798,6 +8800,7 @@ getNestedDistributeDirective(ASTContext &Ctx, const OMPExecutableDirective &D) {
     case OMPD_taskgroup:
     case OMPD_atomic:
     case OMPD_flush:
+    case OMPD_depobj:
     case OMPD_teams:
     case OMPD_target_data:
     case OMPD_target_exit_data:
@@ -9561,6 +9564,7 @@ void CGOpenMPRuntime::scanForTargetRegionsFunctions(const Stmt *S,
     case OMPD_taskgroup:
     case OMPD_atomic:
     case OMPD_flush:
+    case OMPD_depobj:
     case OMPD_teams:
     case OMPD_target_data:
     case OMPD_target_exit_data:
@@ -10201,6 +10205,7 @@ void CGOpenMPRuntime::emitTargetDataStandAloneCall(
     case OMPD_taskgroup:
     case OMPD_atomic:
     case OMPD_flush:
+    case OMPD_depobj:
     case OMPD_teams:
     case OMPD_target_data:
     case OMPD_distribute:
