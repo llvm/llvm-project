@@ -1826,7 +1826,7 @@ static bool foldMaskAndShiftToScale(SelectionDAG &DAG, SDValue N,
 
   // There is nothing we can do here unless the mask is removing some bits.
   // Also, the addressing mode can only represent shifts of 1, 2, or 3 bits.
-  if (AMShiftAmt <= 0 || AMShiftAmt > 3) return true;
+  if (AMShiftAmt == 0 || AMShiftAmt > 3) return true;
 
   // We also need to ensure that mask is a continuous run of bits.
   if (countTrailingOnes(Mask >> MaskTZ) + MaskTZ + MaskLZ != 64) return true;
@@ -1921,7 +1921,7 @@ static bool foldMaskedShiftToBEXTR(SelectionDAG &DAG, SDValue N,
 
   // There is nothing we can do here unless the mask is removing some bits.
   // Also, the addressing mode can only represent shifts of 1, 2, or 3 bits.
-  if (AMShiftAmt <= 0 || AMShiftAmt > 3) return true;
+  if (AMShiftAmt == 0 || AMShiftAmt > 3) return true;
 
   MVT VT = N.getSimpleValueType();
   SDLoc DL(N);
