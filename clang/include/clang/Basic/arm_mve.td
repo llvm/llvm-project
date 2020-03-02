@@ -482,11 +482,25 @@ multiclass float_int_conversions<Type FScalar, Type IScalar, IRBuilderBase ftoi,
     let pnt = PNT_None in {
       def : Intrinsic<IVector, (args FVector:$a), (ftoi $a, IVector)>,
             NameOverride<"vcvtq_" # IScalar>;
+
+      foreach suffix = ["a","n","p","m"] in
+        def : Intrinsic<IVector, (args FVector:$a),
+                        (IRInt<"vcvt"#suffix, [IVector, FVector]>
+                            (unsignedflag IScalar), $a)>,
+              NameOverride<"vcvt"#suffix#"q_" # IScalar>;
     }
     defm vcvtq: IntrinsicMX<IVector, (args FVector:$a, Predicate:$pred),
         (IRInt<"vcvt_fp_int_predicated", [IVector, FVector, Predicate]>
             $a, (unsignedflag IScalar), $pred, $inactive),
         1, "_" # IScalar, PNT_2Type, PNT_None>;
+
+    foreach suffix = ["a","n","p","m"] in {
+      defm "vcvt"#suffix#"q" : IntrinsicMX<
+          IVector, (args FVector:$a, Predicate:$pred),
+          (IRInt<"vcvt"#suffix#"_predicated", [IVector, FVector, Predicate]>
+              (unsignedflag IScalar), $inactive, $a, $pred),
+          1, "_" # IScalar, PNT_2Type, PNT_None>;
+    }
   }
 }
 

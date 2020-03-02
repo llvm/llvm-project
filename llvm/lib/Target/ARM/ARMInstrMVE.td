@@ -3659,21 +3659,42 @@ class MVE_VCVT_fp_int_anpm<string suffix, bits<2> size, bit op, string anpm,
   let validForTailPredication = 1;
 }
 
-multiclass MVE_VCVT_fp_int_anpm_multi<string suffix, bits<2> size, bit op,
-                                list<dag> pattern=[]> {
-  def a : MVE_VCVT_fp_int_anpm<suffix, size, op, "a", 0b00>;
-  def n : MVE_VCVT_fp_int_anpm<suffix, size, op, "n", 0b01>;
-  def p : MVE_VCVT_fp_int_anpm<suffix, size, op, "p", 0b10>;
-  def m : MVE_VCVT_fp_int_anpm<suffix, size, op, "m", 0b11>;
+multiclass MVE_VCVT_fp_int_anpm_inner<MVEVectorVTInfo Int, MVEVectorVTInfo Flt,
+                                      string anpm, bits<2> rm> {
+  def "": MVE_VCVT_fp_int_anpm<Int.Suffix # "." # Flt.Suffix, Int.Size,
+                               Int.Unsigned, anpm, rm>;
+
+  defvar Inst         = !cast<Instruction>(NAME);
+  defvar IntrBaseName = "int_arm_mve_vcvt" # anpm;
+  defvar UnpredIntr   = !cast<Intrinsic>(IntrBaseName);
+  defvar PredIntr     = !cast<Intrinsic>(IntrBaseName # "_predicated");
+
+  let Predicates = [HasMVEFloat] in {
+    def : Pat<(Int.Vec (UnpredIntr (i32 Int.Unsigned), (Flt.Vec MQPR:$in))),
+              (Int.Vec (Inst (Flt.Vec MQPR:$in)))>;
+
+    def : Pat<(Int.Vec (PredIntr (i32 Int.Unsigned), (Int.Vec MQPR:$inactive),
+                                 (Flt.Vec MQPR:$in), (Flt.Pred VCCR:$pred))),
+              (Int.Vec (Inst (Flt.Vec MQPR:$in), ARMVCCThen,
+                             (Flt.Pred VCCR:$pred), (Int.Vec MQPR:$inactive)))>;
+  }
+}
+
+multiclass MVE_VCVT_fp_int_anpm_outer<MVEVectorVTInfo Int,
+                                      MVEVectorVTInfo Flt> {
+  defm a : MVE_VCVT_fp_int_anpm_inner<Int, Flt, "a", 0b00>;
+  defm n : MVE_VCVT_fp_int_anpm_inner<Int, Flt, "n", 0b01>;
+  defm p : MVE_VCVT_fp_int_anpm_inner<Int, Flt, "p", 0b10>;
+  defm m : MVE_VCVT_fp_int_anpm_inner<Int, Flt, "m", 0b11>;
 }
 
 // This defines instructions such as MVE_VCVTu16f16a, with an explicit
 // rounding-mode suffix on the mnemonic. The class below will define
 // the bare MVE_VCVTu16f16 (with implied rounding toward zero).
-defm MVE_VCVTs16f16 : MVE_VCVT_fp_int_anpm_multi<"s16.f16", 0b01, 0b0>;
-defm MVE_VCVTu16f16 : MVE_VCVT_fp_int_anpm_multi<"u16.f16", 0b01, 0b1>;
-defm MVE_VCVTs32f32 : MVE_VCVT_fp_int_anpm_multi<"s32.f32", 0b10, 0b0>;
-defm MVE_VCVTu32f32 : MVE_VCVT_fp_int_anpm_multi<"u32.f32", 0b10, 0b1>;
+defm MVE_VCVTs16f16 : MVE_VCVT_fp_int_anpm_outer<MVE_v8s16, MVE_v8f16>;
+defm MVE_VCVTu16f16 : MVE_VCVT_fp_int_anpm_outer<MVE_v8u16, MVE_v8f16>;
+defm MVE_VCVTs32f32 : MVE_VCVT_fp_int_anpm_outer<MVE_v4s32, MVE_v4f32>;
+defm MVE_VCVTu32f32 : MVE_VCVT_fp_int_anpm_outer<MVE_v4u32, MVE_v4f32>;
 
 class MVE_VCVT_fp_int<string suffix, bits<2> size, bit toint, bit unsigned,
                       list<dag> pattern=[]>
