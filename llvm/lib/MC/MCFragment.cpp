@@ -431,8 +431,7 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
     else
       OS << " unfused branch)";
     OS << "\n       ";
-    OS << " BoundarySize:" << BF->getAlignment().value()
-       << " Size:" << BF->getSize();
+    OS << " BoundarySize:" << BF->getAlignment().value();
     break;
   }
   case MCFragment::FT_SymbolId: {
