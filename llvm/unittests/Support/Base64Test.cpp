@@ -39,7 +39,8 @@ TEST(Base64Test, Base64) {
   // With non-printable values.
   char NonPrintableVector[] = {0x00, 0x00, 0x00,       0x46,
                                0x00, 0x08, (char)0xff, (char)0xee};
-  TestBase64({NonPrintableVector, sizeof(NonPrintableVector)}, "AAAARgAI/+4=");
+  TestBase64(StringRef(NonPrintableVector, sizeof(NonPrintableVector)),
+             "AAAARgAI/+4=");
 
   // Large test case
   char LargeVector[] = {0x54, 0x68, 0x65, 0x20, 0x71, 0x75, 0x69, 0x63, 0x6b,
@@ -47,6 +48,6 @@ TEST(Base64Test, Base64) {
                         0x78, 0x20, 0x6a, 0x75, 0x6d, 0x70, 0x73, 0x20, 0x6f,
                         0x76, 0x65, 0x72, 0x20, 0x31, 0x33, 0x20, 0x6c, 0x61,
                         0x7a, 0x79, 0x20, 0x64, 0x6f, 0x67, 0x73, 0x2e};
-  TestBase64({LargeVector, sizeof(LargeVector)},
+  TestBase64(LargeVector,
              "VGhlIHF1aWNrIGJyb3duIGZveCBqdW1wcyBvdmVyIDEzIGxhenkgZG9ncy4=");
 }
