@@ -9,7 +9,6 @@ add_llvm_unittest(SupportTests
   AnnotationsTest.cpp
   ARMAttributeParser.cpp
   ArrayRecyclerTest.cpp
-  Base64Test.cpp
   BinaryStreamTest.cpp
   BlockFrequencyTest.cpp
   BranchProbabilityTest.cpp
