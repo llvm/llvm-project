@@ -12,7 +12,6 @@ unittest("SupportTests") {
     "AllocatorTest.cpp",
     "AnnotationsTest.cpp",
     "ArrayRecyclerTest.cpp",
-    "Base64Test.cpp",
     "BinaryStreamTest.cpp",
     "BlockFrequencyTest.cpp",
     "BranchProbabilityTest.cpp",
