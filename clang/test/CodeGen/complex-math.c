@@ -1,12 +1,12 @@
 // FIXME: This file should not be using -O1; that makes it depend on the entire LLVM IR optimizer.
 
-// RUN: %clang_cc1 %s -O1 -fno-experimental-new-pass-manager -emit-llvm -triple x86_64-unknown-unknown -o - | FileCheck %s --check-prefix=X86
-// RUN: %clang_cc1 %s -O1 -fno-experimental-new-pass-manager -emit-llvm -triple x86_64-pc-win64 -o - | FileCheck %s --check-prefix=X86
-// RUN: %clang_cc1 %s -O1 -fno-experimental-new-pass-manager -emit-llvm -triple i686-unknown-unknown -o - | FileCheck %s --check-prefix=X86
-// RUN: %clang_cc1 %s -O1 -fno-experimental-new-pass-manager -emit-llvm -triple powerpc-unknown-unknown -o - | FileCheck %s --check-prefix=PPC
-// RUN: %clang_cc1 %s -O1 -fno-experimental-new-pass-manager -emit-llvm -triple armv7-none-linux-gnueabi -o - | FileCheck %s --check-prefix=ARM
-// RUN: %clang_cc1 %s -O1 -fno-experimental-new-pass-manager -emit-llvm -triple armv7-none-linux-gnueabihf -o - | FileCheck %s --check-prefix=ARMHF
-// RUN: %clang_cc1 %s -O1 -fno-experimental-new-pass-manager -emit-llvm -triple thumbv7k-apple-watchos2.0 -o - -target-abi aapcs16 | FileCheck %s --check-prefix=ARM7K
+// RUN: %clang_cc1 %s -O0 -fno-experimental-new-pass-manager -emit-llvm -triple x86_64-unknown-unknown -o - | FileCheck %s --check-prefix=X86
+// RUN: %clang_cc1 %s -O0 -fno-experimental-new-pass-manager -emit-llvm -triple x86_64-pc-win64 -o - | FileCheck %s --check-prefix=X86
+// RUN: %clang_cc1 %s -O0 -fno-experimental-new-pass-manager -emit-llvm -triple i686-unknown-unknown -o - | FileCheck %s --check-prefix=X86
+// RUN: %clang_cc1 %s -O0 -fno-experimental-new-pass-manager -emit-llvm -triple powerpc-unknown-unknown -o - | FileCheck %s --check-prefix=PPC
+// RUN: %clang_cc1 %s -O0 -fno-experimental-new-pass-manager -emit-llvm -triple armv7-none-linux-gnueabi -o - | FileCheck %s --check-prefix=ARM
+// RUN: %clang_cc1 %s -O0 -fno-experimental-new-pass-manager -emit-llvm -triple armv7-none-linux-gnueabihf -o - | FileCheck %s --check-prefix=ARMHF
+// RUN: %clang_cc1 %s -O0 -fno-experimental-new-pass-manager -emit-llvm -triple thumbv7k-apple-watchos2.0 -o - -target-abi aapcs16 | FileCheck %s --check-prefix=ARM7K
 // RUN: %clang_cc1 %s -O1 -fno-experimental-new-pass-manager -emit-llvm -triple aarch64-unknown-unknown -ffast-math -o - | FileCheck %s --check-prefix=AARCH64-FASTMATH
 
 float _Complex add_float_rr(float a, float b) {
