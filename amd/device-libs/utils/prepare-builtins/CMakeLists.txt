@@ -16,6 +16,8 @@ include_directories(${LLVM_INCLUDE_DIR})
 include_directories(${LLVM_CONFIG_INCLUDE_DIR})
 include_directories(${LLVM_MAIN_INCLUDE_DIR})
 
+find_package(ZLIB)
+
 add_executable(prepare-builtins prepare-builtins.cpp)
 llvm_map_components_to_libnames(llvm_libs support core bitreader bitwriter)
-target_link_libraries(prepare-builtins ${llvm_libs})
+target_link_libraries(prepare-builtins ${llvm_libs} ZLIB::ZLIB)
