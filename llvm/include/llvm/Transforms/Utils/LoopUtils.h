@@ -24,6 +24,7 @@
 #include "llvm/Analysis/DemandedBits.h"
 #include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/Analysis/IVDescriptors.h"
+#include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/MustExecute.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Dominators.h"
@@ -31,6 +32,7 @@
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Transforms/Utils/ValueMapper.h"
 
 namespace llvm {
 
@@ -426,6 +428,12 @@ void appendReversedLoopsToWorklist(RangeT &&,
 /// already reversed loops in LI.
 /// FIXME: Consider changing the order in LoopInfo.
 void appendLoopsToWorklist(LoopInfo &, SmallPriorityWorklist<Loop *, 4> &);
+
+/// Recursively clone the specified loop and all of its children,
+/// mapping the blocks with the specified map.
+Loop *cloneLoop(Loop *L, Loop *PL, ValueToValueMapTy &VM,
+                LoopInfo *LI, LPPassManager *LPM);
+
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_UTILS_LOOPUTILS_H
