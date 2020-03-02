@@ -1301,7 +1301,6 @@ static llvm::Expected<ParsedExpression> ParseAndImport(
 
   // Note, we disable delayed parsing for the swift expression parser.
   swift::parseIntoSourceFile(*source_file, buffer_id,
-                             /*PersistentState=*/nullptr,
                              /*DelayBodyParsing=*/false);
 
   if (swift_ast_context->HasErrors())
