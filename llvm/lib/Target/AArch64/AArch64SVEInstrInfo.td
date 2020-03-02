@@ -69,6 +69,9 @@ def AArch64ldff1s_gather_uxtw_scaled : SDNode<"AArch64ISD::GLDFF1S_UXTW_SCALED",
 def AArch64ldff1s_gather_sxtw_scaled : SDNode<"AArch64ISD::GLDFF1S_SXTW_SCALED", SDT_AArch64_GATHER_SV, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue]>;
 def AArch64ldff1s_gather_imm         : SDNode<"AArch64ISD::GLDFF1S_IMM",         SDT_AArch64_GATHER_VS, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue]>;
 
+def AArch64ldnt1_gather  : SDNode<"AArch64ISD::GLDNT1",  SDT_AArch64_GATHER_VS, [SDNPHasChain, SDNPMayLoad]>;
+def AArch64ldnt1s_gather : SDNode<"AArch64ISD::GLDNT1S", SDT_AArch64_GATHER_VS, [SDNPHasChain, SDNPMayLoad]>;
+
 // Scatter stores - node definitions
 //
 def SDT_AArch64_SCATTER_SV : SDTypeProfile<0, 5, [
@@ -88,6 +91,8 @@ def AArch64st1_scatter_sxtw        : SDNode<"AArch64ISD::SST1_SXTW",        SDT_
 def AArch64st1_scatter_uxtw_scaled : SDNode<"AArch64ISD::SST1_UXTW_SCALED", SDT_AArch64_SCATTER_SV, [SDNPHasChain, SDNPMayStore, SDNPOptInGlue]>;
 def AArch64st1_scatter_sxtw_scaled : SDNode<"AArch64ISD::SST1_SXTW_SCALED", SDT_AArch64_SCATTER_SV, [SDNPHasChain, SDNPMayStore, SDNPOptInGlue]>;
 def AArch64st1_scatter_imm         : SDNode<"AArch64ISD::SST1_IMM",         SDT_AArch64_SCATTER_VS, [SDNPHasChain, SDNPMayStore, SDNPOptInGlue]>;
+
+def AArch64stnt1_scatter : SDNode<"AArch64ISD::SSTNT1", SDT_AArch64_SCATTER_VS, [SDNPHasChain, SDNPMayStore]>;
 
 // AArch64 SVE/SVE2 - the remaining node definitions
 //
@@ -1909,32 +1914,32 @@ let Predicates = [HasSVE2] in {
   def EXT_ZZI_B : sve2_int_perm_extract_i_cons<"ext">;
 
   // SVE2 non-temporal gather loads
-  defm LDNT1SB_ZZR_S : sve2_mem_gldnt_vs<0b00000, "ldnt1sb", Z_s, ZPR32>;
-  defm LDNT1B_ZZR_S  : sve2_mem_gldnt_vs<0b00001, "ldnt1b",  Z_s, ZPR32>;
-  defm LDNT1SH_ZZR_S : sve2_mem_gldnt_vs<0b00100, "ldnt1sh", Z_s, ZPR32>;
-  defm LDNT1H_ZZR_S  : sve2_mem_gldnt_vs<0b00101, "ldnt1h",  Z_s, ZPR32>;
-  defm LDNT1W_ZZR_S  : sve2_mem_gldnt_vs<0b01001, "ldnt1w",  Z_s, ZPR32>;
+  defm LDNT1SB_ZZR_S : sve2_mem_gldnt_vs_32_ptrs<0b00000, "ldnt1sb", AArch64ldnt1s_gather, nxv4i8>;
+  defm LDNT1B_ZZR_S  : sve2_mem_gldnt_vs_32_ptrs<0b00001, "ldnt1b",  AArch64ldnt1_gather,  nxv4i8>;
+  defm LDNT1SH_ZZR_S : sve2_mem_gldnt_vs_32_ptrs<0b00100, "ldnt1sh", AArch64ldnt1s_gather, nxv4i16>;
+  defm LDNT1H_ZZR_S  : sve2_mem_gldnt_vs_32_ptrs<0b00101, "ldnt1h",  AArch64ldnt1_gather,  nxv4i16>;
+  defm LDNT1W_ZZR_S  : sve2_mem_gldnt_vs_32_ptrs<0b01001, "ldnt1w",  AArch64ldnt1_gather,  nxv4i32>;
 
-  defm LDNT1SB_ZZR_D : sve2_mem_gldnt_vs<0b10000, "ldnt1sb", Z_d, ZPR64>;
-  defm LDNT1B_ZZR_D  : sve2_mem_gldnt_vs<0b10010, "ldnt1b",  Z_d, ZPR64>;
-  defm LDNT1SH_ZZR_D : sve2_mem_gldnt_vs<0b10100, "ldnt1sh", Z_d, ZPR64>;
-  defm LDNT1H_ZZR_D  : sve2_mem_gldnt_vs<0b10110, "ldnt1h",  Z_d, ZPR64>;
-  defm LDNT1SW_ZZR_D : sve2_mem_gldnt_vs<0b11000, "ldnt1sw", Z_d, ZPR64>;
-  defm LDNT1W_ZZR_D  : sve2_mem_gldnt_vs<0b11010, "ldnt1w",  Z_d, ZPR64>;
-  defm LDNT1D_ZZR_D  : sve2_mem_gldnt_vs<0b11110, "ldnt1d",  Z_d, ZPR64>;
+  defm LDNT1SB_ZZR_D : sve2_mem_gldnt_vs_64_ptrs<0b10000, "ldnt1sb", AArch64ldnt1s_gather, nxv2i8>;
+  defm LDNT1B_ZZR_D  : sve2_mem_gldnt_vs_64_ptrs<0b10010, "ldnt1b",  AArch64ldnt1_gather,  nxv2i8>;
+  defm LDNT1SH_ZZR_D : sve2_mem_gldnt_vs_64_ptrs<0b10100, "ldnt1sh", AArch64ldnt1s_gather, nxv2i16>;
+  defm LDNT1H_ZZR_D  : sve2_mem_gldnt_vs_64_ptrs<0b10110, "ldnt1h",  AArch64ldnt1_gather,  nxv2i16>;
+  defm LDNT1SW_ZZR_D : sve2_mem_gldnt_vs_64_ptrs<0b11000, "ldnt1sw", AArch64ldnt1s_gather, nxv2i32>;
+  defm LDNT1W_ZZR_D  : sve2_mem_gldnt_vs_64_ptrs<0b11010, "ldnt1w",  AArch64ldnt1_gather,  nxv2i32>;
+  defm LDNT1D_ZZR_D  : sve2_mem_gldnt_vs_64_ptrs<0b11110, "ldnt1d",  AArch64ldnt1_gather,  nxv2i64>;
 
   // SVE2 vector splice (constructive)
   defm SPLICE_ZPZZ : sve2_int_perm_splice_cons<"splice">;
 
   // SVE2 non-temporal scatter stores
-  defm STNT1B_ZZR_S : sve2_mem_sstnt_vs<0b001, "stnt1b", Z_s, ZPR32>;
-  defm STNT1H_ZZR_S : sve2_mem_sstnt_vs<0b011, "stnt1h", Z_s, ZPR32>;
-  defm STNT1W_ZZR_S : sve2_mem_sstnt_vs<0b101, "stnt1w", Z_s, ZPR32>;
+  defm STNT1B_ZZR_S : sve2_mem_sstnt_vs_32_ptrs<0b001, "stnt1b", AArch64stnt1_scatter, nxv4i8>;
+  defm STNT1H_ZZR_S : sve2_mem_sstnt_vs_32_ptrs<0b011, "stnt1h", AArch64stnt1_scatter, nxv4i16>;
+  defm STNT1W_ZZR_S : sve2_mem_sstnt_vs_32_ptrs<0b101, "stnt1w", AArch64stnt1_scatter, nxv4i32>;
 
-  defm STNT1B_ZZR_D : sve2_mem_sstnt_vs<0b000, "stnt1b", Z_d, ZPR64>;
-  defm STNT1H_ZZR_D : sve2_mem_sstnt_vs<0b010, "stnt1h", Z_d, ZPR64>;
-  defm STNT1W_ZZR_D : sve2_mem_sstnt_vs<0b100, "stnt1w", Z_d, ZPR64>;
-  defm STNT1D_ZZR_D : sve2_mem_sstnt_vs<0b110, "stnt1d", Z_d, ZPR64>;
+  defm STNT1B_ZZR_D : sve2_mem_sstnt_vs_64_ptrs<0b000, "stnt1b", AArch64stnt1_scatter, nxv2i8>;
+  defm STNT1H_ZZR_D : sve2_mem_sstnt_vs_64_ptrs<0b010, "stnt1h", AArch64stnt1_scatter, nxv2i16>;
+  defm STNT1W_ZZR_D : sve2_mem_sstnt_vs_64_ptrs<0b100, "stnt1w", AArch64stnt1_scatter, nxv2i32>;
+  defm STNT1D_ZZR_D : sve2_mem_sstnt_vs_64_ptrs<0b110, "stnt1d", AArch64stnt1_scatter, nxv2i64>;
 
   // SVE2 table lookup (three sources)
   defm TBL_ZZZZ : sve2_int_perm_tbl<"tbl", int_aarch64_sve_tbl2>;

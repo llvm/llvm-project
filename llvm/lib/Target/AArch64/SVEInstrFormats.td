@@ -5071,16 +5071,36 @@ class sve2_mem_sstnt_vs_base<bits<3> opc, string asm,
   let mayStore = 1;
 }
 
-multiclass sve2_mem_sstnt_vs<bits<3> opc, string asm,
-                             RegisterOperand listty, ZPRRegOp zprty> {
-  def _REAL : sve2_mem_sstnt_vs_base<opc, asm, listty, zprty>;
+multiclass sve2_mem_sstnt_vs_32_ptrs<bits<3> opc, string asm,
+                             SDPatternOperator op,
+                             ValueType vt> {
+  def _REAL : sve2_mem_sstnt_vs_base<opc, asm, Z_s, ZPR32>;
 
   def : InstAlias<asm # "\t$Zt, $Pg, [$Zn, $Rm]",
-                 (!cast<Instruction>(NAME # _REAL) zprty:$Zt, PPR3bAny:$Pg, zprty:$Zn, GPR64:$Rm), 0>;
+                 (!cast<Instruction>(NAME # _REAL) ZPR32:$Zt, PPR3bAny:$Pg, ZPR32:$Zn, GPR64:$Rm), 0>;
   def : InstAlias<asm # "\t$Zt, $Pg, [$Zn]",
-                 (!cast<Instruction>(NAME # _REAL) zprty:$Zt, PPR3bAny:$Pg, zprty:$Zn, XZR), 0>;
+                 (!cast<Instruction>(NAME # _REAL) ZPR32:$Zt, PPR3bAny:$Pg, ZPR32:$Zn, XZR), 0>;
   def : InstAlias<asm # "\t$Zt, $Pg, [$Zn]",
-                 (!cast<Instruction>(NAME # _REAL) listty:$Zt, PPR3bAny:$Pg, zprty:$Zn, XZR), 1>;
+                 (!cast<Instruction>(NAME # _REAL) Z_s:$Zt, PPR3bAny:$Pg, ZPR32:$Zn, XZR), 1>;
+
+  def : Pat <(op (nxv4i32 ZPR32:$Zt), (nxv4i1 PPR3bAny:$Pg), (nxv4i32 ZPR32:$Zn), (i64 GPR64:$Rm), vt),
+             (!cast<Instruction>(NAME # _REAL) ZPR32:$Zt, PPR3bAny:$Pg, ZPR32:$Zn, GPR64:$Rm)>;
+}
+
+multiclass sve2_mem_sstnt_vs_64_ptrs<bits<3> opc, string asm,
+                             SDPatternOperator op,
+                             ValueType vt> {
+  def _REAL : sve2_mem_sstnt_vs_base<opc, asm, Z_d, ZPR64>;
+
+  def : InstAlias<asm # "\t$Zt, $Pg, [$Zn, $Rm]",
+                 (!cast<Instruction>(NAME # _REAL) ZPR64:$Zt, PPR3bAny:$Pg, ZPR64:$Zn, GPR64:$Rm), 0>;
+  def : InstAlias<asm # "\t$Zt, $Pg, [$Zn]",
+                 (!cast<Instruction>(NAME # _REAL) ZPR64:$Zt, PPR3bAny:$Pg, ZPR64:$Zn, XZR), 0>;
+  def : InstAlias<asm # "\t$Zt, $Pg, [$Zn]",
+                 (!cast<Instruction>(NAME # _REAL) Z_d:$Zt, PPR3bAny:$Pg, ZPR64:$Zn, XZR), 1>;
+
+  def : Pat <(op (nxv2i64 ZPR64:$Zt), (nxv2i1 PPR3bAny:$Pg), (nxv2i64 ZPR64:$Zn), (i64 GPR64:$Rm), vt),
+             (!cast<Instruction>(NAME # _REAL) ZPR64:$Zt, PPR3bAny:$Pg, ZPR64:$Zn, GPR64:$Rm)>;
 }
 
 class sve_mem_sst_sv<bits<3> opc, bit xs, bit scaled, string asm,
@@ -6529,17 +6549,38 @@ class sve2_mem_gldnt_vs_base<bits<5> opc, dag iops, string asm,
   let mayLoad = 1;
 }
 
-multiclass sve2_mem_gldnt_vs<bits<5> opc, string asm,
-                             RegisterOperand listty, ZPRRegOp zprty> {
-  def _REAL : sve2_mem_gldnt_vs_base<opc, (ins PPR3bAny:$Pg, zprty:$Zn, GPR64:$Rm),
-                                     asm, listty>;
+multiclass sve2_mem_gldnt_vs_32_ptrs<bits<5> opc, string asm,
+                                  SDPatternOperator op,
+                                  ValueType vt> {
+  def _REAL : sve2_mem_gldnt_vs_base<opc, (ins PPR3bAny:$Pg, ZPR32:$Zn, GPR64:$Rm),
+                                     asm, Z_s>;
 
   def : InstAlias<asm # "\t$Zt, $Pg/z, [$Zn, $Rm]",
-                 (!cast<Instruction>(NAME # _REAL) zprty:$Zt, PPR3bAny:$Pg, zprty:$Zn, GPR64:$Rm), 0>;
+                 (!cast<Instruction>(NAME # _REAL) ZPR32:$Zt, PPR3bAny:$Pg, ZPR32:$Zn, GPR64:$Rm), 0>;
   def : InstAlias<asm # "\t$Zt, $Pg/z, [$Zn]",
-                 (!cast<Instruction>(NAME # _REAL) zprty:$Zt, PPR3bAny:$Pg, zprty:$Zn, XZR), 0>;
+                 (!cast<Instruction>(NAME # _REAL) ZPR32:$Zt, PPR3bAny:$Pg, ZPR32:$Zn, XZR), 0>;
   def : InstAlias<asm # "\t$Zt, $Pg/z, [$Zn]",
-                 (!cast<Instruction>(NAME # _REAL) listty:$Zt, PPR3bAny:$Pg, zprty:$Zn, XZR), 1>;
+                 (!cast<Instruction>(NAME # _REAL) Z_s:$Zt, PPR3bAny:$Pg, ZPR32:$Zn, XZR), 1>;
+
+  def : Pat <(nxv4i32 (op (nxv4i1 PPR3bAny:$Pg), (nxv4i32 ZPR32:$Zd), (i64 GPR64:$Rm), vt)),
+             (!cast<Instruction>(NAME # _REAL) PPR3bAny:$Pg, ZPR32:$Zd, GPR64:$Rm)>;
+}
+
+multiclass sve2_mem_gldnt_vs_64_ptrs<bits<5> opc, string asm,
+                                   SDPatternOperator op,
+                                   ValueType vt> {
+  def _REAL : sve2_mem_gldnt_vs_base<opc, (ins PPR3bAny:$Pg, ZPR64:$Zn, GPR64:$Rm),
+                                     asm, Z_d>;
+
+  def : InstAlias<asm # "\t$Zt, $Pg/z, [$Zn, $Rm]",
+                 (!cast<Instruction>(NAME # _REAL) ZPR64:$Zt, PPR3bAny:$Pg, ZPR64:$Zn, GPR64:$Rm), 0>;
+  def : InstAlias<asm # "\t$Zt, $Pg/z, [$Zn]",
+                 (!cast<Instruction>(NAME # _REAL) ZPR64:$Zt, PPR3bAny:$Pg, ZPR64:$Zn, XZR), 0>;
+  def : InstAlias<asm # "\t$Zt, $Pg/z, [$Zn]",
+                 (!cast<Instruction>(NAME # _REAL) Z_d:$Zt, PPR3bAny:$Pg, ZPR64:$Zn, XZR), 1>;
+
+  def : Pat <(nxv2i64 (op (nxv2i1 PPR3bAny:$Pg), (nxv2i64 ZPR64:$Zd), (i64 GPR64:$Rm), vt)),
+             (!cast<Instruction>(NAME # _REAL) PPR3bAny:$Pg, ZPR64:$Zd, GPR64:$Rm)>;
 }
 
 //===----------------------------------------------------------------------===//
