@@ -340,18 +340,15 @@ Error DWARFDebugLine::Prologue::parse(
   const uint64_t PrologueOffset = *OffsetPtr;
 
   clear();
-  TotalLength = DebugLineData.getRelocatedValue(4, OffsetPtr);
-  if (TotalLength == dwarf::DW_LENGTH_DWARF64) {
-    FormParams.Format = dwarf::DWARF64;
-    TotalLength = DebugLineData.getU64(OffsetPtr);
-  } else if (TotalLength >= dwarf::DW_LENGTH_lo_reserved) {
-    // Treat this error as unrecoverable - we have no way of knowing where the
-    // table ends.
-    return createStringError(errc::invalid_argument,
-        "parsing line table prologue at offset 0x%8.8" PRIx64
-        " unsupported reserved unit length found of value 0x%8.8" PRIx64,
-        PrologueOffset, TotalLength);
-  }
+  Error Err = Error::success();
+  std::tie(TotalLength, FormParams.Format) =
+      DebugLineData.getInitialLength(OffsetPtr, &Err);
+  if (Err)
+    return createStringError(
+        errc::invalid_argument,
+        "parsing line table prologue at offset 0x%8.8" PRIx64 ": %s",
+        PrologueOffset, toString(std::move(Err)).c_str());
+
   FormParams.Version = DebugLineData.getU16(OffsetPtr);
   if (!versionIsSupported(getVersion()))
     // Treat this error as unrecoverable - we cannot be sure what any of
@@ -360,7 +357,7 @@ Error DWARFDebugLine::Prologue::parse(
     return createStringError(
         errc::not_supported,
         "parsing line table prologue at offset 0x%8.8" PRIx64
-        " found unsupported version %" PRIu16,
+        ": unsupported version %" PRIu16,
         PrologueOffset, getVersion());
 
   if (getVersion() >= 5) {
@@ -1218,8 +1215,7 @@ DWARFDebugLine::SectionParser::SectionParser(DWARFDataExtractor &Data,
 }
 
 bool DWARFDebugLine::Prologue::totalLengthIsValid() const {
-  return TotalLength == dwarf::DW_LENGTH_DWARF64 ||
-         TotalLength < dwarf::DW_LENGTH_lo_reserved;
+  return TotalLength != 0u;
 }
 
 DWARFDebugLine::LineTable DWARFDebugLine::SectionParser::parseNext(
