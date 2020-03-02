@@ -377,56 +377,36 @@ void DWARFDebugNames::Header::dump(ScopedPrinter &W) const {
 
 Error DWARFDebugNames::Header::extract(const DWARFDataExtractor &AS,
                                              uint64_t *Offset) {
-  uint64_t StartingOffset = *Offset;
-  // Check that we can read the unit length field.
-  if (!AS.isValidOffsetForDataOfSize(StartingOffset, 4))
+  auto HeaderError = [Offset = *Offset](Error E) {
     return createStringError(errc::illegal_byte_sequence,
-                             "Section too small: cannot read header.");
-  UnitLength = AS.getU32(Offset);
-  if (UnitLength >= dwarf::DW_LENGTH_lo_reserved &&
-      UnitLength != dwarf::DW_LENGTH_DWARF64)
-    return createStringError(errc::illegal_byte_sequence,
-                             "Unsupported reserved unit length value");
-  Format = (UnitLength == dwarf::DW_LENGTH_DWARF64) ? dwarf::DWARF64
-                                                    : dwarf::DWARF32;
+                             "parsing .debug_names header at 0x%" PRIx64 ": %s",
+                             Offset, toString(std::move(E)).c_str());
+  };
 
-  // These fields are the same for 32-bit and 64-bit DWARF formats.
-  constexpr unsigned CommonHeaderSize = 2 + // Version
-                                        2 + // Padding
-                                        4 + // CU count
-                                        4 + // Local TU count
-                                        4 + // Foreign TU count
-                                        4 + // Bucket count
-                                        4 + // Name count
-                                        4 + // Abbreviations table size
-                                        4;  // Augmentation string size
-  // Check that we can read the fixed-size part.
-  if (!AS.isValidOffsetForDataOfSize(
-          StartingOffset,
-          CommonHeaderSize + dwarf::getUnitLengthFieldByteSize(Format)))
-    return createStringError(errc::illegal_byte_sequence,
-                             "Section too small: cannot read header.");
-  if (Format == dwarf::DWARF64)
-    UnitLength = AS.getU64(Offset);
-  Version = AS.getU16(Offset);
-  // Skip padding
-  *Offset += 2;
-  CompUnitCount = AS.getU32(Offset);
-  LocalTypeUnitCount = AS.getU32(Offset);
-  ForeignTypeUnitCount = AS.getU32(Offset);
-  BucketCount = AS.getU32(Offset);
-  NameCount = AS.getU32(Offset);
-  AbbrevTableSize = AS.getU32(Offset);
-  AugmentationStringSize = alignTo(AS.getU32(Offset), 4);
+  DataExtractor::Cursor C(*Offset);
+  std::tie(UnitLength, Format) = AS.getInitialLength(C);
 
-  if (!AS.isValidOffsetForDataOfSize(*Offset, AugmentationStringSize))
-    return createStringError(
-        errc::illegal_byte_sequence,
-        "Section too small: cannot read header augmentation.");
+  Version = AS.getU16(C);
+  AS.skip(C, 2); // padding
+  CompUnitCount = AS.getU32(C);
+  LocalTypeUnitCount = AS.getU32(C);
+  ForeignTypeUnitCount = AS.getU32(C);
+  BucketCount = AS.getU32(C);
+  NameCount = AS.getU32(C);
+  AbbrevTableSize = AS.getU32(C);
+  AugmentationStringSize = alignTo(AS.getU32(C), 4);
+
+  if (!C)
+    return HeaderError(C.takeError());
+
+  if (!AS.isValidOffsetForDataOfSize(C.tell(), AugmentationStringSize))
+    return HeaderError(createStringError(errc::illegal_byte_sequence,
+                                         "cannot read header augmentation"));
   AugmentationString.resize(AugmentationStringSize);
-  AS.getU8(Offset, reinterpret_cast<uint8_t *>(AugmentationString.data()),
+  AS.getU8(C, reinterpret_cast<uint8_t *>(AugmentationString.data()),
            AugmentationStringSize);
-  return Error::success();
+  *Offset = C.tell();
+  return C.takeError();
 }
 
 void DWARFDebugNames::Abbrev::dump(ScopedPrinter &W) const {
