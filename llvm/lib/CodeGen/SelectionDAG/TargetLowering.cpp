@@ -3871,6 +3871,7 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
         case ISD::SETUEQ: NewCond = IsNegInf ? ISD::SETULE : ISD::SETUGE; break;
         case ISD::SETUNE: NewCond = IsNegInf ? ISD::SETUGT : ISD::SETULT; break;
         case ISD::SETONE: NewCond = IsNegInf ? ISD::SETOGT : ISD::SETOLT; break;
+        default: break;
         }
         if (NewCond != ISD::SETCC_INVALID &&
             isCondCodeLegal(NewCond, N0.getSimpleValueType()))
