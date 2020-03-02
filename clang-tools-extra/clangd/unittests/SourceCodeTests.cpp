@@ -431,7 +431,7 @@ TEST(SourceCodeTests, GetMacros) {
   ASSERT_TRUE(bool(CurLoc));
   const auto *Id = syntax::spelledIdentifierTouching(*CurLoc, AST.getTokens());
   ASSERT_TRUE(Id);
-  auto Result = locateMacroAt(Id->location(), AST.getPreprocessor());
+  auto Result = locateMacroAt(*Id, AST.getPreprocessor());
   ASSERT_TRUE(Result);
   EXPECT_THAT(*Result, MacroName("MACRO"));
 }
@@ -445,7 +445,7 @@ TEST(SourceCodeTests, WorksAtBeginOfFile) {
   ASSERT_TRUE(bool(CurLoc));
   const auto *Id = syntax::spelledIdentifierTouching(*CurLoc, AST.getTokens());
   ASSERT_TRUE(Id);
-  auto Result = locateMacroAt(Id->location(), AST.getPreprocessor());
+  auto Result = locateMacroAt(*Id, AST.getPreprocessor());
   ASSERT_TRUE(Result);
   EXPECT_THAT(*Result, MacroName("MACRO"));
 }
