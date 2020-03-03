@@ -19,7 +19,8 @@
 # CHECK-NEXT:     AddressAlign:    0x0000000000000002
 # CHECK-NEXT:     EntSize:         0x0000000000000002
 # CHECK-NEXT:     Entries:         [ 0, 3, 4 ]
-# CHECK-NEXT: DynamicSymbols:
+# CHECK-NEXT:   - Name:
+# CHECK:      DynamicSymbols:
 # CHECK-NEXT:   - Name:    f1
 # CHECK-NEXT:     Binding: STB_GLOBAL
 # CHECK-NEXT:   - Name:    f2
