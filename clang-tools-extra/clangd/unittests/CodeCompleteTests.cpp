@@ -1509,7 +1509,7 @@ TEST(CompletionTest, DocumentationFromChangedFileCrash) {
     }
     int a = fun^
   )cpp");
-  Server.addDocument(FooCpp, Source.code(), WantDiagnostics::Yes);
+  Server.addDocument(FooCpp, Source.code(), "null", WantDiagnostics::Yes);
   // We need to wait for preamble to build.
   ASSERT_TRUE(Server.blockUntilIdleForTest());
 
@@ -1575,7 +1575,7 @@ TEST(CompletionTest, NonDocComments) {
   // FIXME: Auto-completion in a template requires disabling delayed template
   // parsing.
   CDB.ExtraClangFlags.push_back("-fno-delayed-template-parsing");
-  runAddDocument(Server, FooCpp, Source.code(), WantDiagnostics::Yes);
+  runAddDocument(Server, FooCpp, Source.code(), "null", WantDiagnostics::Yes);
   CodeCompleteResult Completions = cantFail(runCodeComplete(
       Server, FooCpp, Source.point(), clangd::CodeCompleteOptions()));
 

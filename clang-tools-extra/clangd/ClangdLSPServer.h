@@ -21,6 +21,7 @@
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/Support/JSON.h"
 #include <memory>
 
 namespace clang {
@@ -57,10 +58,11 @@ public:
 
 private:
   // Implement ClangdServer::Callbacks.
-  void onDiagnosticsReady(PathRef File, std::vector<Diag> Diagnostics) override;
+  void onDiagnosticsReady(PathRef File, llvm::StringRef Version,
+                          std::vector<Diag> Diagnostics) override;
   void onFileUpdated(PathRef File, const TUStatus &Status) override;
   void
-  onHighlightingsReady(PathRef File,
+  onHighlightingsReady(PathRef File, llvm::StringRef Version,
                        std::vector<HighlightingToken> Highlightings) override;
   void onBackgroundIndexProgress(const BackgroundQueue::Stats &Stats) override;
 
