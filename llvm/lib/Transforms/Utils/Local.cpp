@@ -75,6 +75,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <algorithm>
 #include <cassert>
@@ -1230,24 +1231,6 @@ unsigned llvm::getOrEnforceKnownAlignment(Value *V, unsigned PrefAlign,
 ///  Dbg Intrinsic utilities
 ///
 
-/// See if there is a dbg.value intrinsic for DIVar before I.
-static bool LdStHasDebugValue(DILocalVariable *DIVar, DIExpression *DIExpr,
-                              Instruction *I) {
-  // Since we can't guarantee that the original dbg.declare instrinsic
-  // is removed by LowerDbgDeclare(), we need to make sure that we are
-  // not inserting the same dbg.value intrinsic over and over.
-  BasicBlock::InstListType::iterator PrevI(I);
-  if (PrevI != I->getParent()->getInstList().begin()) {
-    --PrevI;
-    if (DbgValueInst *DVI = dyn_cast<DbgValueInst>(PrevI))
-      if (DVI->getValue() == I->getOperand(0) &&
-          DVI->getVariable() == DIVar &&
-          DVI->getExpression() == DIExpr)
-        return true;
-  }
-  return false;
-}
-
 /// See if there is a dbg.value intrinsic for DIVar for the PHI node.
 static bool PhiHasDebugValue(DILocalVariable *DIVar,
                              DIExpression *DIExpr,
@@ -1324,13 +1307,11 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
     // know which part) we insert an dbg.value instrinsic to indicate that we
     // know nothing about the variable's content.
     DV = UndefValue::get(DV->getType());
-    if (!LdStHasDebugValue(DIVar, DIExpr, SI))
-      Builder.insertDbgValueIntrinsic(DV, DIVar, DIExpr, NewLoc, SI);
+    Builder.insertDbgValueIntrinsic(DV, DIVar, DIExpr, NewLoc, SI);
     return;
   }
 
-  if (!LdStHasDebugValue(DIVar, DIExpr, SI))
-    Builder.insertDbgValueIntrinsic(DV, DIVar, DIExpr, NewLoc, SI);
+  Builder.insertDbgValueIntrinsic(DV, DIVar, DIExpr, NewLoc, SI);
 }
 
 /// Inserts a llvm.dbg.value intrinsic before a load of an alloca'd value
@@ -1340,9 +1321,6 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
   auto *DIVar = DII->getVariable();
   auto *DIExpr = DII->getExpression();
   assert(DIVar && "Missing variable");
-
-  if (LdStHasDebugValue(DIVar, DIExpr, LI))
-    return;
 
   if (!valueCoversEntireFragment(LI->getType(), DII)) {
     // FIXME: If only referring to a part of the variable described by the
@@ -1410,6 +1388,7 @@ static bool isStructure(AllocaInst *AI) {
 /// LowerDbgDeclare - Lowers llvm.dbg.declare intrinsics into appropriate set
 /// of llvm.dbg.value intrinsics.
 bool llvm::LowerDbgDeclare(Function &F) {
+  bool Changed = false;
   DIBuilder DIB(*F.getParent(), /*AllowUnresolved*/ false);
   SmallVector<DbgDeclareInst *, 4> Dbgs;
   for (auto &FI : F)
@@ -1418,7 +1397,7 @@ bool llvm::LowerDbgDeclare(Function &F) {
         Dbgs.push_back(DDI);
 
   if (Dbgs.empty())
-    return false;
+    return Changed;
 
   for (auto &I : Dbgs) {
     DbgDeclareInst *DDI = I;
@@ -1471,8 +1450,14 @@ bool llvm::LowerDbgDeclare(Function &F) {
       }
     }
     DDI->eraseFromParent();
+    Changed = true;
   }
-  return true;
+
+  if (Changed)
+  for (BasicBlock &BB : F)
+    RemoveRedundantDbgInstrs(&BB);
+
+  return Changed;
 }
 
 /// Propagate dbg.value intrinsics through the newly inserted PHIs.

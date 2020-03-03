@@ -776,33 +776,35 @@ static const char *TestingFormatMagic = "llvmcovmtestdata";
 
 Expected<std::unique_ptr<BinaryCoverageReader>>
 BinaryCoverageReader::createCoverageReaderFromBuffer(
-    StringRef Coverage, StringRef FuncRecords, InstrProfSymtab &&ProfileNames,
+    StringRef Coverage, std::string &&FuncRecords, InstrProfSymtab &&ProfileNames,
     uint8_t BytesInAddress, support::endianness Endian) {
-  std::unique_ptr<BinaryCoverageReader> Reader(new BinaryCoverageReader());
+  std::unique_ptr<BinaryCoverageReader> Reader(
+      new BinaryCoverageReader(std::move(FuncRecords)));
   Reader->ProfileNames = std::move(ProfileNames);
+  StringRef FuncRecordsRef = Reader->FuncRecords;
   if (BytesInAddress == 4 && Endian == support::endianness::little) {
     if (Error E =
             readCoverageMappingData<uint32_t, support::endianness::little>(
-                Reader->ProfileNames, Coverage, FuncRecords,
+                Reader->ProfileNames, Coverage, FuncRecordsRef,
                 Reader->MappingRecords, Reader->Filenames,
                 Reader->Decompressed))
       return std::move(E);
   } else if (BytesInAddress == 4 && Endian == support::endianness::big) {
     if (Error E = readCoverageMappingData<uint32_t, support::endianness::big>(
-            Reader->ProfileNames, Coverage, FuncRecords, Reader->MappingRecords,
-            Reader->Filenames, Reader->Decompressed))
+            Reader->ProfileNames, Coverage, FuncRecordsRef,
+            Reader->MappingRecords, Reader->Filenames, Reader->Decompressed))
       return std::move(E);
   } else if (BytesInAddress == 8 && Endian == support::endianness::little) {
     if (Error E =
             readCoverageMappingData<uint64_t, support::endianness::little>(
-                Reader->ProfileNames, Coverage, FuncRecords,
+                Reader->ProfileNames, Coverage, FuncRecordsRef,
                 Reader->MappingRecords, Reader->Filenames,
                 Reader->Decompressed))
       return std::move(E);
   } else if (BytesInAddress == 8 && Endian == support::endianness::big) {
     if (Error E = readCoverageMappingData<uint64_t, support::endianness::big>(
-            Reader->ProfileNames, Coverage, FuncRecords, Reader->MappingRecords,
-            Reader->Filenames, Reader->Decompressed))
+            Reader->ProfileNames, Coverage, FuncRecordsRef,
+            Reader->MappingRecords, Reader->Filenames, Reader->Decompressed))
       return std::move(E);
   } else
     return make_error<CoverageMapError>(coveragemap_error::malformed);
@@ -846,7 +848,10 @@ loadTestingFormat(StringRef Data) {
       CoverageMapping, "", std::move(ProfileNames), BytesInAddress, Endian);
 }
 
-static Expected<SectionRef> lookupSection(ObjectFile &OF, StringRef Name) {
+/// Find all sections that match \p Name. There may be more than one if comdats
+/// are in use, e.g. for the __llvm_covfun section on ELF.
+static Expected<std::vector<SectionRef>> lookupSections(ObjectFile &OF,
+                                                        StringRef Name) {
   // On COFF, the object file section name may end in "$M". This tells the
   // linker to sort these sections between "$A" and "$Z". The linker removes the
   // dollar and everything after it in the final binary. Do the same to match.
@@ -856,14 +861,17 @@ static Expected<SectionRef> lookupSection(ObjectFile &OF, StringRef Name) {
   };
   Name = stripSuffix(Name);
 
+  std::vector<SectionRef> Sections;
   for (const auto &Section : OF.sections()) {
     Expected<StringRef> NameOrErr = Section.getName();
     if (!NameOrErr)
       return NameOrErr.takeError();
     if (stripSuffix(*NameOrErr) == Name)
-      return Section;
+      Sections.push_back(Section);
   }
-  return make_error<CoverageMapError>(coveragemap_error::no_data_found);
+  if (Sections.empty())
+    return make_error<CoverageMapError>(coveragemap_error::no_data_found);
+  return Sections;
 }
 
 static Expected<std::unique_ptr<BinaryCoverageReader>>
@@ -895,41 +903,51 @@ loadBinaryFormat(std::unique_ptr<Binary> Bin, StringRef Arch) {
   // Look for the sections that we are interested in.
   auto ObjFormat = OF->getTripleObjectFormat();
   auto NamesSection =
-      lookupSection(*OF, getInstrProfSectionName(IPSK_name, ObjFormat,
+      lookupSections(*OF, getInstrProfSectionName(IPSK_name, ObjFormat,
                                                  /*AddSegmentInfo=*/false));
   if (auto E = NamesSection.takeError())
     return std::move(E);
   auto CoverageSection =
-      lookupSection(*OF, getInstrProfSectionName(IPSK_covmap, ObjFormat,
-                                                 /*AddSegmentInfo=*/false));
+      lookupSections(*OF, getInstrProfSectionName(IPSK_covmap, ObjFormat,
+                                                  /*AddSegmentInfo=*/false));
   if (auto E = CoverageSection.takeError())
     return std::move(E);
-  auto CoverageMappingOrErr = CoverageSection->getContents();
+  std::vector<SectionRef> CoverageSectionRefs = *CoverageSection;
+  if (CoverageSectionRefs.size() != 1)
+    return make_error<CoverageMapError>(coveragemap_error::malformed);
+  auto CoverageMappingOrErr = CoverageSectionRefs.back().getContents();
   if (!CoverageMappingOrErr)
     return CoverageMappingOrErr.takeError();
   StringRef CoverageMapping = CoverageMappingOrErr.get();
 
   InstrProfSymtab ProfileNames;
-  if (Error E = ProfileNames.create(*NamesSection))
+  std::vector<SectionRef> NamesSectionRefs = *NamesSection;
+  if (NamesSectionRefs.size() != 1)
+    return make_error<CoverageMapError>(coveragemap_error::malformed);
+  if (Error E = ProfileNames.create(NamesSectionRefs.back()))
     return std::move(E);
 
   // Look for the coverage records section (Version4 only).
-  StringRef FuncRecords;
-  auto CoverageRecordsSection =
-      lookupSection(*OF, getInstrProfSectionName(IPSK_covfun, ObjFormat,
-                                                 /*AddSegmentInfo=*/false));
-  if (auto E = CoverageRecordsSection.takeError())
+  std::string FuncRecords;
+  auto CoverageRecordsSections =
+      lookupSections(*OF, getInstrProfSectionName(IPSK_covfun, ObjFormat,
+                                                  /*AddSegmentInfo=*/false));
+  if (auto E = CoverageRecordsSections.takeError())
     consumeError(std::move(E));
   else {
-    auto CoverageRecordsOrErr = CoverageRecordsSection->getContents();
-    if (!CoverageRecordsOrErr)
-      return CoverageRecordsOrErr.takeError();
-    FuncRecords = CoverageRecordsOrErr.get();
+    for (SectionRef Section : *CoverageRecordsSections) {
+      auto CoverageRecordsOrErr = Section.getContents();
+      if (!CoverageRecordsOrErr)
+        return CoverageRecordsOrErr.takeError();
+      FuncRecords += CoverageRecordsOrErr.get();
+      while (FuncRecords.size() % 8 != 0)
+        FuncRecords += '\0';
+    }
   }
 
   return BinaryCoverageReader::createCoverageReaderFromBuffer(
-      CoverageMapping, FuncRecords, std::move(ProfileNames), BytesInAddress,
-      Endian);
+      CoverageMapping, std::move(FuncRecords), std::move(ProfileNames),
+      BytesInAddress, Endian);
 }
 
 Expected<std::vector<std::unique_ptr<BinaryCoverageReader>>>

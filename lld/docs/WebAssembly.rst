@@ -137,7 +137,7 @@ By default no undefined symbols are allowed in the final binary.  The flag
 ``--allow-undefined`` results in a WebAssembly import being defined for each
 undefined symbol.  It is then up to the runtime to provide such symbols.
 
-Alternativly symbols can be marked in the source code as with the
+Alternatively symbols can be marked in the source code as with the
 ``import_name`` and/or ``import_module`` clang attributes which signals that
 they are expected to be undefined at static link time.
 

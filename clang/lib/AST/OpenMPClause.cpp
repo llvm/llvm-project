@@ -111,6 +111,7 @@ const OMPClauseWithPreInit *OMPClauseWithPreInit::get(const OMPClause *C) {
   case OMPC_mergeable:
   case OMPC_threadprivate:
   case OMPC_flush:
+  case OMPC_depobj:
   case OMPC_read:
   case OMPC_write:
   case OMPC_update:
@@ -142,6 +143,7 @@ const OMPClauseWithPreInit *OMPClauseWithPreInit::get(const OMPClause *C) {
   case OMPC_match:
   case OMPC_nontemporal:
   case OMPC_order:
+  case OMPC_destroy:
     break;
   }
 
@@ -189,6 +191,7 @@ const OMPClauseWithPostUpdate *OMPClauseWithPostUpdate::get(const OMPClause *C) 
   case OMPC_mergeable:
   case OMPC_threadprivate:
   case OMPC_flush:
+  case OMPC_depobj:
   case OMPC_read:
   case OMPC_write:
   case OMPC_update:
@@ -226,6 +229,7 @@ const OMPClauseWithPostUpdate *OMPClauseWithPostUpdate::get(const OMPClause *C) 
   case OMPC_match:
   case OMPC_nontemporal:
   case OMPC_order:
+  case OMPC_destroy:
     break;
   }
 
@@ -835,6 +839,20 @@ OMPFlushClause *OMPFlushClause::CreateEmpty(const ASTContext &C, unsigned N) {
   return new (Mem) OMPFlushClause(N);
 }
 
+OMPDepobjClause *OMPDepobjClause::Create(const ASTContext &C,
+                                         SourceLocation StartLoc,
+                                         SourceLocation LParenLoc,
+                                         SourceLocation RParenLoc,
+                                         Expr *Depobj) {
+  auto *Clause = new (C) OMPDepobjClause(StartLoc, LParenLoc, RParenLoc);
+  Clause->setDepobj(Depobj);
+  return Clause;
+}
+
+OMPDepobjClause *OMPDepobjClause::CreateEmpty(const ASTContext &C) {
+  return new (C) OMPDepobjClause();
+}
+
 OMPDependClause *
 OMPDependClause::Create(const ASTContext &C, SourceLocation StartLoc,
                         SourceLocation LParenLoc, SourceLocation EndLoc,
@@ -1407,6 +1425,10 @@ void OMPClausePrinter::VisitOMPHintClause(OMPHintClause *Node) {
   OS << ")";
 }
 
+void OMPClausePrinter::VisitOMPDestroyClause(OMPDestroyClause *) {
+  OS << "destroy";
+}
+
 template<typename T>
 void OMPClausePrinter::VisitOMPClauseList(T *Node, char StartSym) {
   for (typename T::varlist_iterator I = Node->varlist_begin(),
@@ -1595,6 +1617,12 @@ void OMPClausePrinter::VisitOMPFlushClause(OMPFlushClause *Node) {
     VisitOMPClauseList(Node, '(');
     OS << ")";
   }
+}
+
+void OMPClausePrinter::VisitOMPDepobjClause(OMPDepobjClause *Node) {
+  OS << "(";
+  Node->getDepobj()->printPretty(OS, nullptr, Policy, 0);
+  OS << ")";
 }
 
 void OMPClausePrinter::VisitOMPDependClause(OMPDependClause *Node) {

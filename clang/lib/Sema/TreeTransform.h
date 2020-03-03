@@ -1811,6 +1811,17 @@ public:
                                             EndLoc);
   }
 
+  /// Build a new OpenMP 'depobj' pseudo clause.
+  ///
+  /// By default, performs semantic analysis to build the new OpenMP clause.
+  /// Subclasses may override this routine to provide different behavior.
+  OMPClause *RebuildOMPDepobjClause(Expr *Depobj, SourceLocation StartLoc,
+                                    SourceLocation LParenLoc,
+                                    SourceLocation EndLoc) {
+    return getSema().ActOnOpenMPDepobjClause(Depobj, StartLoc, LParenLoc,
+                                             EndLoc);
+  }
+
   /// Build a new OpenMP 'depend' pseudo clause.
   ///
   /// By default, performs semantic analysis to build the new OpenMP clause.
@@ -8265,6 +8276,17 @@ TreeTransform<Derived>::TransformOMPFlushDirective(OMPFlushDirective *D) {
 
 template <typename Derived>
 StmtResult
+TreeTransform<Derived>::TransformOMPDepobjDirective(OMPDepobjDirective *D) {
+  DeclarationNameInfo DirName;
+  getDerived().getSema().StartOpenMPDSABlock(OMPD_depobj, DirName, nullptr,
+                                             D->getBeginLoc());
+  StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
+  getDerived().getSema().EndOpenMPDSABlock(Res.get());
+  return Res;
+}
+
+template <typename Derived>
+StmtResult
 TreeTransform<Derived>::TransformOMPOrderedDirective(OMPOrderedDirective *D) {
   DeclarationNameInfo DirName;
   getDerived().getSema().StartOpenMPDSABlock(OMPD_ordered, DirName, nullptr,
@@ -8852,6 +8874,13 @@ TreeTransform<Derived>::TransformOMPNogroupClause(OMPNogroupClause *C) {
 }
 
 template <typename Derived>
+OMPClause *
+TreeTransform<Derived>::TransformOMPDestroyClause(OMPDestroyClause *C) {
+  // No need to rebuild this clause, no template-dependent parameters.
+  return C;
+}
+
+template <typename Derived>
 OMPClause *TreeTransform<Derived>::TransformOMPUnifiedAddressClause(
     OMPUnifiedAddressClause *C) {
   llvm_unreachable("unified_address clause cannot appear in dependent context");
@@ -9162,6 +9191,16 @@ OMPClause *TreeTransform<Derived>::TransformOMPFlushClause(OMPFlushClause *C) {
   }
   return getDerived().RebuildOMPFlushClause(Vars, C->getBeginLoc(),
                                             C->getLParenLoc(), C->getEndLoc());
+}
+
+template <typename Derived>
+OMPClause *
+TreeTransform<Derived>::TransformOMPDepobjClause(OMPDepobjClause *C) {
+  ExprResult E = getDerived().TransformExpr(C->getDepobj());
+  if (E.isInvalid())
+    return nullptr;
+  return getDerived().RebuildOMPDepobjClause(E.get(), C->getBeginLoc(),
+                                             C->getLParenLoc(), C->getEndLoc());
 }
 
 template <typename Derived>

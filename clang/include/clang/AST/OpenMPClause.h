@@ -4108,6 +4108,92 @@ public:
   }
 };
 
+/// This represents implicit clause 'depobj' for the '#pragma omp depobj'
+/// directive.
+/// This clause does not exist by itself, it can be only as a part of 'omp
+/// depobj' directive. This clause is introduced to keep the original structure
+/// of \a OMPExecutableDirective class and its derivatives and to use the
+/// existing infrastructure of clauses with the list of variables.
+///
+/// \code
+/// #pragma omp depobj(a) destroy
+/// \endcode
+/// In this example directive '#pragma omp depobj' has implicit clause 'depobj'
+/// with the depobj 'a'.
+class OMPDepobjClause final : public OMPClause {
+  friend class OMPClauseReader;
+
+  /// Location of '('.
+  SourceLocation LParenLoc;
+
+  /// Chunk size.
+  Expr *Depobj = nullptr;
+
+  /// Build clause with number of variables \a N.
+  ///
+  /// \param StartLoc Starting location of the clause.
+  /// \param LParenLoc Location of '('.
+  /// \param EndLoc Ending location of the clause.
+  OMPDepobjClause(SourceLocation StartLoc, SourceLocation LParenLoc,
+                  SourceLocation EndLoc)
+      : OMPClause(OMPC_depobj, StartLoc, EndLoc), LParenLoc(LParenLoc) {}
+
+  /// Build an empty clause.
+  ///
+  explicit OMPDepobjClause()
+      : OMPClause(OMPC_depobj, SourceLocation(), SourceLocation()) {}
+
+  void setDepobj(Expr *E) { Depobj = E; }
+
+  /// Sets the location of '('.
+  void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
+
+public:
+  /// Creates clause.
+  ///
+  /// \param C AST context.
+  /// \param StartLoc Starting location of the clause.
+  /// \param LParenLoc Location of '('.
+  /// \param EndLoc Ending location of the clause.
+  /// \param Depobj depobj expression associated with the 'depobj' directive.
+  static OMPDepobjClause *Create(const ASTContext &C, SourceLocation StartLoc,
+                                 SourceLocation LParenLoc,
+                                 SourceLocation EndLoc, Expr *Depobj);
+
+  /// Creates an empty clause.
+  ///
+  /// \param C AST context.
+  static OMPDepobjClause *CreateEmpty(const ASTContext &C);
+
+  /// Returns depobj expression associated with the clause.
+  Expr *getDepobj() { return Depobj; }
+  const Expr *getDepobj() const { return Depobj; }
+
+  /// Returns the location of '('.
+  SourceLocation getLParenLoc() const { return LParenLoc; }
+
+  child_range children() {
+    return child_range(reinterpret_cast<Stmt **>(&Depobj),
+                       reinterpret_cast<Stmt **>(&Depobj) + 1);
+  }
+
+  const_child_range children() const {
+    auto Children = const_cast<OMPDepobjClause *>(this)->children();
+    return const_child_range(Children.begin(), Children.end());
+  }
+
+  child_range used_children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range used_children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == OMPC_depobj;
+  }
+};
+
 /// This represents implicit clause 'depend' for the '#pragma omp task'
 /// directive.
 ///
@@ -6604,6 +6690,46 @@ public:
 
   static bool classof(const OMPClause *T) {
     return T->getClauseKind() == OMPC_order;
+  }
+};
+
+/// This represents 'destroy' clause in the '#pragma omp depobj'
+/// directive.
+///
+/// \code
+/// #pragma omp depobj(a) destroy
+/// \endcode
+/// In this example directive '#pragma omp depobj' has 'destroy' clause.
+class OMPDestroyClause final : public OMPClause {
+public:
+  /// Build 'destroy' clause.
+  ///
+  /// \param StartLoc Starting location of the clause.
+  /// \param EndLoc Ending location of the clause.
+  OMPDestroyClause(SourceLocation StartLoc, SourceLocation EndLoc)
+      : OMPClause(OMPC_destroy, StartLoc, EndLoc) {}
+
+  /// Build an empty clause.
+  OMPDestroyClause()
+      : OMPClause(OMPC_destroy, SourceLocation(), SourceLocation()) {}
+
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  child_range used_children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range used_children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == OMPC_destroy;
   }
 };
 

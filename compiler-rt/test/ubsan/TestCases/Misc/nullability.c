@@ -1,3 +1,4 @@
+// UNSUPPORTED: android
 // RUN: %clang -w -fsanitize=nullability-arg,nullability-assign,nullability-return %s -O3 -o %t
 // RUN: %run %t foo 2>&1 | count 0
 // RUN: %run %t 2>&1 | FileCheck %s
@@ -5,11 +6,7 @@
 // RUN: echo "nullability-arg:nullability.c" > %t.supp
 // RUN: echo "nullability-return:nullability.c" >> %t.supp
 // RUN: echo "nullability-assign:nullability.c" >> %t.supp
-// RUN: UBSAN_OPTIONS=suppressions=%t.supp %run %t 
-//
-// XXX: This test is failing on the sanitizer-x86_64-linux-android, but not
-// in a way that provides debuggable output. Relax the check so we can debug.
-// 2>&1 | FileCheck -allow-empty -check-prefix=SUPPRESS %s
+// RUN: UBSAN_OPTIONS=suppressions=%t.supp %run %t 2>&1 | FileCheck -allow-empty -check-prefix=SUPPRESS %s
 // SUPPRESS-NOT: runtime error
 
 // CHECK: nullability.c:[[@LINE+2]]:41: runtime error: null pointer returned from function declared to never return null

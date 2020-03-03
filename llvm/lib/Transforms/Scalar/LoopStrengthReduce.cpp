@@ -3530,9 +3530,6 @@ static bool mayUsePostIncMode(const TargetTransformInfo &TTI,
   const SCEV *LoopStep = AR->getStepRecurrence(SE);
   if (!isa<SCEVConstant>(LoopStep))
     return false;
-  if (LU.AccessTy.getType()->getScalarSizeInBits() !=
-      LoopStep->getType()->getScalarSizeInBits())
-    return false;
   // Check if a post-indexed load/store can be used.
   if (TTI.isIndexedLoadLegal(TTI.MIM_PostInc, AR->getType()) ||
       TTI.isIndexedStoreLegal(TTI.MIM_PostInc, AR->getType())) {

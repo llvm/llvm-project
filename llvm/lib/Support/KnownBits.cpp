@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/KnownBits.h"
+#include <cassert>
 
 using namespace llvm;
 

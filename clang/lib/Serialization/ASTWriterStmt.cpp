@@ -2314,6 +2314,13 @@ void ASTStmtWriter::VisitOMPFlushDirective(OMPFlushDirective *D) {
   Code = serialization::STMT_OMP_FLUSH_DIRECTIVE;
 }
 
+void ASTStmtWriter::VisitOMPDepobjDirective(OMPDepobjDirective *D) {
+  VisitStmt(D);
+  Record.push_back(D->getNumClauses());
+  VisitOMPExecutableDirective(D);
+  Code = serialization::STMT_OMP_DEPOBJ_DIRECTIVE;
+}
+
 void ASTStmtWriter::VisitOMPOrderedDirective(OMPOrderedDirective *D) {
   VisitStmt(D);
   Record.push_back(D->getNumClauses());
