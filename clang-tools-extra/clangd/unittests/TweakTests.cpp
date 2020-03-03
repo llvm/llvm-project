@@ -2068,6 +2068,80 @@ TEST_F(DefineOutlineTest, ApplyTest) {
               };)cpp",
           "Foo::Foo(int z) __attribute__((weak)) : bar(2){}\n",
       },
+      // Virt specifiers.
+      {
+          R"cpp(
+            struct A {
+              virtual void f^oo() {}
+            };)cpp",
+          R"cpp(
+            struct A {
+              virtual void foo() ;
+            };)cpp",
+          " void A::foo() {}\n",
+      },
+      {
+          R"cpp(
+            struct A {
+              virtual virtual void virtual f^oo() {}
+            };)cpp",
+          R"cpp(
+            struct A {
+              virtual virtual void virtual foo() ;
+            };)cpp",
+          "  void  A::foo() {}\n",
+      },
+      {
+          R"cpp(
+            struct A {
+              virtual void foo() = 0;
+            };
+            struct B : A {
+              void fo^o() override {}
+            };)cpp",
+          R"cpp(
+            struct A {
+              virtual void foo() = 0;
+            };
+            struct B : A {
+              void foo() override ;
+            };)cpp",
+          "void B::foo()  {}\n",
+      },
+      {
+          R"cpp(
+            struct A {
+              virtual void foo() = 0;
+            };
+            struct B : A {
+              void fo^o() final {}
+            };)cpp",
+          R"cpp(
+            struct A {
+              virtual void foo() = 0;
+            };
+            struct B : A {
+              void foo() final ;
+            };)cpp",
+          "void B::foo()  {}\n",
+      },
+      {
+          R"cpp(
+            struct A {
+              virtual void foo() = 0;
+            };
+            struct B : A {
+              void fo^o() final override {}
+            };)cpp",
+          R"cpp(
+            struct A {
+              virtual void foo() = 0;
+            };
+            struct B : A {
+              void foo() final override ;
+            };)cpp",
+          "void B::foo()   {}\n",
+      },
   };
   for (const auto &Case : Cases) {
     SCOPED_TRACE(Case.Test);
@@ -2081,6 +2155,8 @@ TEST_F(DefineOutlineTest, HandleMacros) {
   llvm::StringMap<std::string> EditedFiles;
   ExtraFiles["Test.cpp"] = "";
   FileName = "Test.hpp";
+  ExtraArgs.push_back("-DVIRTUAL=virtual");
+  ExtraArgs.push_back("-DOVER=override");
 
   struct {
     llvm::StringRef Test;
@@ -2118,6 +2194,48 @@ TEST_F(DefineOutlineTest, HandleMacros) {
           #define TARGET foo
           void TARGET();)cpp",
        "void TARGET(){ return; }"},
+      {R"cpp(#define VIRT virtual
+          struct A {
+            VIRT void f^oo() {}
+          };)cpp",
+       R"cpp(#define VIRT virtual
+          struct A {
+            VIRT void foo() ;
+          };)cpp",
+       " void A::foo() {}\n"},
+      {R"cpp(
+          struct A {
+            VIRTUAL void f^oo() {}
+          };)cpp",
+       R"cpp(
+          struct A {
+            VIRTUAL void foo() ;
+          };)cpp",
+       " void A::foo() {}\n"},
+      {R"cpp(
+          struct A {
+            virtual void foo() = 0;
+          };
+          struct B : A {
+            void fo^o() OVER {}
+          };)cpp",
+       R"cpp(
+          struct A {
+            virtual void foo() = 0;
+          };
+          struct B : A {
+            void foo() OVER ;
+          };)cpp",
+       "void B::foo()  {}\n"},
+      {R"cpp(#define STUPID_MACRO(X) virtual
+          struct A {
+            STUPID_MACRO(sizeof sizeof int) void f^oo() {}
+          };)cpp",
+       R"cpp(#define STUPID_MACRO(X) virtual
+          struct A {
+            STUPID_MACRO(sizeof sizeof int) void foo() ;
+          };)cpp",
+       " void A::foo() {}\n"},
   };
   for (const auto &Case : Cases) {
     SCOPED_TRACE(Case.Test);
@@ -2227,6 +2345,49 @@ TEST_F(DefineOutlineTest, QualifyFunctionName) {
     EXPECT_THAT(EditedFiles, testing::ElementsAre(FileWithContents(
                                  testPath("Test.cpp"), Case.ExpectedSource)))
         << Case.TestHeader;
+  }
+}
+
+TEST_F(DefineOutlineTest, FailsMacroSpecifier) {
+  FileName = "Test.hpp";
+  ExtraFiles["Test.cpp"] = "";
+  ExtraArgs.push_back("-DFINALOVER=final override");
+
+  std::pair<StringRef, StringRef> Cases[] = {
+      {
+          R"cpp(
+          #define VIRT virtual void
+          struct A {
+            VIRT fo^o() {}
+          };)cpp",
+          "fail: define outline: Can't move out of line as function has a "
+          "macro `virtual` specifier."},
+      {
+          R"cpp(
+          #define OVERFINAL final override
+          struct A {
+            virtual void foo() {}
+          };
+          struct B : A {
+            void fo^o() OVERFINAL {}
+          };)cpp",
+          "fail: define outline: Can't move out of line as function has a "
+          "macro `override` specifier.\ndefine outline: Can't move out of line "
+          "as function has a macro `final` specifier."},
+      {
+          R"cpp(
+          struct A {
+            virtual void foo() {}
+          };
+          struct B : A {
+            void fo^o() FINALOVER {}
+          };)cpp",
+          "fail: define outline: Can't move out of line as function has a "
+          "macro `override` specifier.\ndefine outline: Can't move out of line "
+          "as function has a macro `final` specifier."},
+  };
+  for (const auto &Case : Cases) {
+    EXPECT_EQ(apply(Case.first), Case.second);
   }
 }
 } // namespace
