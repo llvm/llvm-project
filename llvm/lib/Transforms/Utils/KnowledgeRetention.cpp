@@ -171,6 +171,18 @@ CallInst *llvm::BuildAssumeFromInst(const Instruction *I, Module *M) {
   return Builder.build();
 }
 
+static bool BundleHasArguement(const CallBase::BundleOpInfo &BOI,
+                               unsigned Idx) {
+  return BOI.End - BOI.Begin > Idx;
+}
+
+static Value *getValueFromBundleOpInfo(IntrinsicInst &Assume,
+                                const CallBase::BundleOpInfo &BOI,
+                                unsigned Idx) {
+  assert(BundleHasArguement(BOI, Idx) && "index out of range");
+  return (Assume.op_begin() + BOI.Begin + Idx)->get();
+}
+
 #ifndef NDEBUG
 
 static bool isExistingAttribute(StringRef Name) {
@@ -219,12 +231,6 @@ bool llvm::hasAttributeInAssume(CallInst &AssumeCI, Value *IsOn,
                             return LHS < BOI.Tag->getKey();
                           }));
 
-  auto getValueFromBundleOpInfo = [&Assume](const CallBase::BundleOpInfo &BOI,
-                                            unsigned Idx) {
-    assert(BOI.End - BOI.Begin > Idx && "index out of range");
-    return (Assume.op_begin() + BOI.Begin + Idx)->get();
-  };
-
   if (Lookup == Assume.bundle_op_info_end() ||
       Lookup->Tag->getKey() != AttrName)
     return false;
@@ -235,7 +241,7 @@ bool llvm::hasAttributeInAssume(CallInst &AssumeCI, Value *IsOn,
       if (Lookup == Assume.bundle_op_info_end() ||
           Lookup->Tag->getKey() != AttrName)
         return false;
-      if (getValueFromBundleOpInfo(*Lookup, BOIE_WasOn) == IsOn)
+      if (getValueFromBundleOpInfo(Assume, *Lookup, BOIE_WasOn) == IsOn)
         break;
       if (AQR == AssumeQuery::Highest &&
           Lookup == Assume.bundle_op_info_begin())
@@ -247,10 +253,39 @@ bool llvm::hasAttributeInAssume(CallInst &AssumeCI, Value *IsOn,
   if (Lookup->End - Lookup->Begin < BOIE_Argument)
     return true;
   if (ArgVal)
-    *ArgVal =
-        cast<ConstantInt>(getValueFromBundleOpInfo(*Lookup, BOIE_Argument))
-            ->getZExtValue();
+    *ArgVal = cast<ConstantInt>(
+                  getValueFromBundleOpInfo(Assume, *Lookup, BOIE_Argument))
+                  ->getZExtValue();
   return true;
+}
+
+void llvm::fillMapFromAssume(CallInst &AssumeCI, RetainedKnowledgeMap &Result) {
+  IntrinsicInst &Assume = cast<IntrinsicInst>(AssumeCI);
+  assert(Assume.getIntrinsicID() == Intrinsic::assume &&
+         "this function is intended to be used on llvm.assume");
+  for (auto &Bundles : Assume.bundle_op_infos()) {
+    std::pair<Value *, Attribute::AttrKind> Key{
+        nullptr, Attribute::getAttrKindFromName(Bundles.Tag->getKey())};
+    if (BundleHasArguement(Bundles, BOIE_WasOn))
+      Key.first = getValueFromBundleOpInfo(Assume, Bundles, BOIE_WasOn);
+
+    if (Key.first == nullptr && Key.second == Attribute::None)
+      continue;
+    if (!BundleHasArguement(Bundles, BOIE_Argument)) {
+      Result[Key] = {0, 0};
+      continue;
+    }
+    unsigned Val = cast<ConstantInt>(
+                       getValueFromBundleOpInfo(Assume, Bundles, BOIE_Argument))
+                       ->getZExtValue();
+    auto Lookup = Result.find(Key);
+    if (Lookup == Result.end()) {
+      Result[Key] = {Val, Val};
+      continue;
+    }
+    Lookup->second.Min = std::min(Val, Lookup->second.Min);
+    Lookup->second.Max = std::max(Val, Lookup->second.Max);
+  }
 }
 
 PreservedAnalyses AssumeBuilderPass::run(Function &F,
