@@ -971,22 +971,7 @@ declare void @test_stackarg_int(i32, i32, i32, i32, i32, i32, i32, i32, i8 zeroe
 ; CHECK-LABEL:     name: call_test_stackarg_int{{.*}}
 
 ; The DAG block permits some invalid inputs for the benefit of allowing more valid orderings.
-; 32BIT-DAG:  renamable $r[[REGCADDR:[0-9]+]] = LWZtoc @c, $r2 :: (load 4 from got)
-; 32BIT-DAG:  renamable $r[[REGC:[0-9]+]] = LBZ 0, killed renamable $r[[REGCADDR]] :: (dereferenceable load 1 from @c)
-; 32BIT-DAG:  renamable $r[[REGSIADDR:[0-9]+]] = LWZtoc @si, $r2 :: (load 4 from got)
-; 32BIT-DAG:  renamable $r[[REGSI:[0-9]+]] = LHA 0, killed renamable $r[[REGSIADDR]] :: (dereferenceable load 2 from @si)
-; 32BIT-DAG:  renamable $r[[REGIADDR:[0-9]+]] = LWZtoc @i, $r2 :: (load 4 from got)
-; 32BIT-DAG:  renamable $r[[REGI:[0-9]+]] = LWZ 0, killed renamable $r[[REGIADDR]] :: (dereferenceable load 4 from @i)
-; 32BIT-DAG:  renamable $r[[REGLLIADDR:[0-9]+]] = LWZtoc @lli, $r2 :: (load 4 from got)
-; 32BIT-DAG:  renamable $r[[REGLLI1:[0-9]+]] = LWZ 0, renamable $r[[REGLLIADDR]] :: (dereferenceable load 4 from @lli, align 8)
-; 32BIT-DAG:  renamable $r[[REGLLI2:[0-9]+]] = LWZ 4, killed renamable $r[[REGLLIADDR]] :: (dereferenceable load 4 from @lli + 4)
-; 32BIT-NEXT: ADJCALLSTACKDOWN 80, 0, implicit-def dead $r1, implicit $r1
-; 32BIT-DAG:  STW killed renamable $r[[REGC]], 56, $r1 :: (store 4)
-; 32BIT-DAG:  STW killed renamable $r[[REGSI]], 60, $r1 :: (store 4)
-; 32BIT-DAG:  STW killed renamable $r[[REGI]], 64, $r1 :: (store 4)
-; 32BIT-DAG:  STW killed renamable $r[[REGLLI1]], 68, $r1 :: (store 4)
-; 32BIT-DAG:  STW killed renamable $r[[REGLLI2]], 72, $r1 :: (store 4)
-; 32BIT-DAG:  STW renamable $r[[REGI]], 76, $r1 :: (store 4)
+; 32BIT-DAG:  ADJCALLSTACKDOWN 80, 0, implicit-def dead $r1, implicit $r1
 ; 32BIT-DAG:  $r3 = LI 1
 ; 32BIT-DAG:  $r4 = LI 2
 ; 32BIT-DAG:  $r5 = LI 3
@@ -995,6 +980,21 @@ declare void @test_stackarg_int(i32, i32, i32, i32, i32, i32, i32, i32, i8 zeroe
 ; 32BIT-DAG:  $r8 = LI 6
 ; 32BIT-DAG:  $r9 = LI 7
 ; 32BIT-DAG:  $r10 = LI 8
+; 32BIT-DAG:  renamable $r[[REGCADDR:[0-9]+]] = LWZtoc @c, $r2 :: (load 4 from got)
+; 32BIT-DAG:  renamable $r[[REGC:[0-9]+]] = LBZ 0, killed renamable $r[[REGCADDR]] :: (dereferenceable load 1 from @c)
+; 32BIT-DAG:  STW killed renamable $r[[REGC]], 56, $r1 :: (store 4)
+; 32BIT-DAG:  renamable $r[[REGSIADDR:[0-9]+]] = LWZtoc @si, $r2 :: (load 4 from got)
+; 32BIT-DAG:  renamable $r[[REGSI:[0-9]+]] = LHA 0, killed renamable $r[[REGSIADDR]] :: (dereferenceable load 2 from @si)
+; 32BIT-DAG:  STW killed renamable $r[[REGSI]], 60, $r1 :: (store 4)
+; 32BIT-DAG:  renamable $r[[REGIADDR:[0-9]+]] = LWZtoc @i, $r2 :: (load 4 from got)
+; 32BIT-DAG:  renamable $r[[REGI:[0-9]+]] = LWZ 0, killed renamable $r[[REGIADDR]] :: (dereferenceable load 4 from @i)
+; 32BIT-DAG:  STW killed renamable $r[[REGI]], 64, $r1 :: (store 4)
+; 32BIT-DAG:  renamable $r[[REGLLIADDR:[0-9]+]] = LWZtoc @lli, $r2 :: (load 4 from got)
+; 32BIT-DAG:  renamable $r[[REGLLI1:[0-9]+]] = LWZ 0, renamable $r[[REGLLIADDR]] :: (dereferenceable load 4 from @lli, align 8)
+; 32BIT-DAG:  STW killed renamable $r[[REGLLI1]], 68, $r1 :: (store 4)
+; 32BIT-DAG:  renamable $r[[REGLLI2:[0-9]+]] = LWZ 4, killed renamable $r[[REGLLIADDR]] :: (dereferenceable load 4 from @lli + 4)
+; 32BIT-DAG:  STW killed renamable $r[[REGLLI2]], 72, $r1 :: (store 4)
+; 32BIT-DAG:  STW renamable $r[[REGI]], 76, $r1 :: (store 4)
 ; 32BIT-NEXT: BL_NOP <mcsymbol .test_stackarg_int>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $r4, implicit $r5, implicit $r6, implicit $r7, implicit $r8, implicit $r9, implicit $r10, implicit $r2, implicit-def $r1
 ; 32BIT-NEXT: ADJCALLSTACKUP 80, 0, implicit-def dead $r1, implicit $r1
 
@@ -1013,13 +1013,7 @@ declare void @test_stackarg_float(i32, i32, i32, i32, i32, i32, i32, i32, float,
 ; CHECK-LABEL:     name:            call_test_stackarg_float
 
 ; The DAG block permits some invalid inputs for the benefit of allowing more valid orderings.
-; 32BIT-DAG:   renamable $r[[REGF:[0-9]+]] = LWZtoc @f, $r2 :: (load 4 from got)
-; 32BIT-DAG:   renamable $f1 = LFS 0, killed renamable $r[[REGF]] :: (dereferenceable load 4 from @f)
-; 32BIT-DAG:   renamable $r[[REGD:[0-9]+]] = LWZtoc @d, $r2 :: (load 4 from got)
-; 32BIT-DAG:   renamable $f2 = LFD 0, killed renamable $r[[REGD]] :: (dereferenceable load 8 from @d)
-; 32BIT-NEXT:  ADJCALLSTACKDOWN 68, 0, implicit-def dead $r1, implicit $r1
-; 32BIT-DAG:   STFS renamable $f1, 56, $r1 :: (store 4)
-; 32BIT-DAG:   STFD renamable $f2, 60, $r1 :: (store 8)
+; 32BIT-DAG:   ADJCALLSTACKDOWN 68, 0, implicit-def dead $r1, implicit $r1
 ; 32BIT-DAG:   $r3 = LI 1
 ; 32BIT-DAG:   $r4 = LI 2
 ; 32BIT-DAG:   $r5 = LI 3
@@ -1028,6 +1022,12 @@ declare void @test_stackarg_float(i32, i32, i32, i32, i32, i32, i32, i32, float,
 ; 32BIT-DAG:   $r8 = LI 6
 ; 32BIT-DAG:   $r9 = LI 7
 ; 32BIT-DAG:   $r10 = LI 8
+; 32BIT-DAG:   renamable $r[[REGF:[0-9]+]] = LWZtoc @f, $r2 :: (load 4 from got)
+; 32BIT-DAG:   renamable $f1 = LFS 0, killed renamable $r[[REGF]] :: (dereferenceable load 4 from @f)
+; 32BIT-DAG:   renamable $r[[REGD:[0-9]+]] = LWZtoc @d, $r2 :: (load 4 from got)
+; 32BIT-DAG:   renamable $f2 = LFD 0, killed renamable $r[[REGD]] :: (dereferenceable load 8 from @d)
+; 32BIT-DAG:   STFS renamable $f1, 56, $r1 :: (store 4)
+; 32BIT-DAG:   STFD renamable $f2, 60, $r1 :: (store 8)
 ; 32BIT-NEXT:  BL_NOP <mcsymbol .test_stackarg_float>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $r4, implicit killed $r5, implicit killed $r6, implicit killed $r7, implicit killed $r8, implicit killed $r9, implicit killed $r10, implicit $f1, implicit $f2, implicit $r2, implicit-def $r1
 ; 32BIT-NEXT:  ADJCALLSTACKUP 68, 0, implicit-def dead $r1, implicit $r1
 
@@ -1035,12 +1035,6 @@ declare void @test_stackarg_float(i32, i32, i32, i32, i32, i32, i32, i32, float,
 
 ; The DAG block permits some invalid inputs for the benefit of allowing more valid orderings.
 ; ASM32PWR4:      stwu 1, -80(1)
-; ASM32PWR4-DAG:  lwz [[REGF:[0-9]+]], LC8(2)
-; ASM32PWR4-DAG:  lfs 1, 0([[REGF]])
-; ASM32PWR4-DAG:  lwz [[REGD:[0-9]+]], LC9(2)
-; ASM32PWR4-DAG:  lfd 2, 0([[REGD:[0-9]+]])
-; ASM32PWR4-DAG:  stfs 1, 56(1)
-; ASM32PWR4-DAG:  stfd 2, 60(1)
 ; ASM32PWR4-DAG:  li 3, 1
 ; ASM32PWR4-DAG:  li 4, 2
 ; ASM32PWR4-DAG:  li 5, 3
@@ -1049,18 +1043,18 @@ declare void @test_stackarg_float(i32, i32, i32, i32, i32, i32, i32, i32, float,
 ; ASM32PWR4-DAG:  li 8, 6
 ; ASM32PWR4-DAG:  li 9, 7
 ; ASM32PWR4-DAG:  li 10, 8
+; ASM32PWR4-DAG:  lwz [[REGF:[0-9]+]], LC8(2)
+; ASM32PWR4-DAG:  lfs 1, 0([[REGF]])
+; ASM32PWR4-DAG:  lwz [[REGD:[0-9]+]], LC9(2)
+; ASM32PWR4-DAG:  lfd 2, 0([[REGD:[0-9]+]])
+; ASM32PWR4-DAG:  stfs 1, 56(1)
+; ASM32PWR4-DAG:  stfd 2, 60(1)
 ; ASM32PWR4-NEXT: bl .test_stackarg_float
 ; ASM32PWR4-NEXT: nop
 ; ASM32PWR4-NEXT: addi 1, 1, 80
 
 ; The DAG block permits some invalid inputs for the benefit of allowing more valid orderings.
-; 64BIT-DAG:   renamable $x[[REGF:[0-9]+]] = LDtoc @f, $x2 :: (load 8 from got)
-; 64BIT-DAG:   renamable $f1 = LFS 0, killed renamable $x[[REGF]] :: (dereferenceable load 4 from @f)
-; 64BIT-DAG:   renamable $x[[REGD:[0-9]+]] = LDtoc @d, $x2 :: (load 8 from got)
-; 64BIT-DAG:   renamable $f2 = LFD 0, killed renamable $x[[REGD]] :: (dereferenceable load 8 from @d)
-; 64BIT-NEXT:  ADJCALLSTACKDOWN 128, 0, implicit-def dead $r1, implicit $r1
-; 64BIT-DAG:   STFS renamable $f1, 112, $x1 :: (store 4)
-; 64BIT-DAG:   STFD renamable $f2, 120, $x1 :: (store 8)
+; 64BIT-DAG:   ADJCALLSTACKDOWN 128, 0, implicit-def dead $r1, implicit $r1
 ; 64BIT-DAG:   $x3 = LI8 1
 ; 64BIT-DAG:   $x4 = LI8 2
 ; 64BIT-DAG:   $x5 = LI8 3
@@ -1069,17 +1063,17 @@ declare void @test_stackarg_float(i32, i32, i32, i32, i32, i32, i32, i32, float,
 ; 64BIT-DAG:   $x8 = LI8 6
 ; 64BIT-DAG:   $x9 = LI8 7
 ; 64BIT-DAG:   $x10 = LI8 8
+; 64BIT-DAG:   renamable $x[[REGF:[0-9]+]] = LDtoc @f, $x2 :: (load 8 from got)
+; 64BIT-DAG:   renamable $f1 = LFS 0, killed renamable $x[[REGF]] :: (dereferenceable load 4 from @f)
+; 64BIT-DAG:   renamable $x[[REGD:[0-9]+]] = LDtoc @d, $x2 :: (load 8 from got)
+; 64BIT-DAG:   renamable $f2 = LFD 0, killed renamable $x[[REGD]] :: (dereferenceable load 8 from @d)
+; 64BIT-DAG:   STFS renamable $f1, 112, $x1 :: (store 4)
+; 64BIT-DAG:   STFD renamable $f2, 120, $x1 :: (store 8)
 ; 64BIT-NEXT:  BL8_NOP <mcsymbol .test_stackarg_float>, csr_aix64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x4, implicit killed $x5, implicit killed $x6, implicit killed $x7, implicit killed $x8, implicit killed $x9, implicit killed $x10, implicit $f1, implicit $f2, implicit $x2, implicit-def $r1
 ; 64BIT-NEXT:  ADJCALLSTACKUP 128, 0, implicit-def dead $r1, implicit $r1
 
 ; The DAG block permits some invalid inputs for the benefit of allowing more valid orderings.
 ; ASM64PWR4:      stdu 1, -128(1)
-; ASM64PWR4-DAG:  ld [[REGF:[0-9]+]], LC7(2)
-; ASM64PWR4-DAG:  lfs 1, 0([[REGF]])
-; ASM64PWR4-DAG:  ld [[REGD:[0-9]+]], LC8(2)
-; ASM64PWR4-DAG:  lfd 2, 0([[REGD]])
-; ASM64PWR4-DAG:  stfs 1, 112(1)
-; ASM64PWR4-DAG:  stfd 2, 120(1)
 ; ASM64PWR4-DAG:  li 3, 1
 ; ASM64PWR4-DAG:  li 4, 2
 ; ASM64PWR4-DAG:  li 5, 3
@@ -1088,6 +1082,12 @@ declare void @test_stackarg_float(i32, i32, i32, i32, i32, i32, i32, i32, float,
 ; ASM64PWR4-DAG:  li 8, 6
 ; ASM64PWR4-DAG:  li 9, 7
 ; ASM64PWR4-DAG:  li 10, 8
+; ASM64PWR4-DAG:  ld [[REGF:[0-9]+]], LC7(2)
+; ASM64PWR4-DAG:  lfs 1, 0([[REGF]])
+; ASM64PWR4-DAG:  ld [[REGD:[0-9]+]], LC8(2)
+; ASM64PWR4-DAG:  lfd 2, 0([[REGD]])
+; ASM64PWR4-DAG:  stfs 1, 112(1)
+; ASM64PWR4-DAG:  stfd 2, 120(1)
 ; ASM64PWR4-NEXT: bl .test_stackarg_float
 ; ASM64PWR4-NEXT: nop
 ; ASM64PWR4-NEXT: addi 1, 1, 128
@@ -1104,8 +1104,6 @@ declare void @test_stackarg_float2(i32, i32, i32, i32, i32, i32, ...)
 ; CHECK-LABEL:     name: call_test_stackarg_float2{{.*}}
 
 ; The DAG block permits some invalid inputs for the benefit of allowing more valid orderings.
-; 32BIT-DAG:   renamable $r[[REG:[0-9]+]] = LWZtoc @d, $r2 :: (load 4 from got)
-; 32BIT-DAG:   renamable $f1 = LFD 0, killed renamable $r[[REG]] :: (dereferenceable load 8 from @d)
 ; 32BIT-DAG:   ADJCALLSTACKDOWN 56, 0, implicit-def dead $r1, implicit $r1
 ; 32BIT-DAG:   $r3 = LI 1
 ; 32BIT-DAG:   $r4 = LI 2
@@ -1113,6 +1111,8 @@ declare void @test_stackarg_float2(i32, i32, i32, i32, i32, i32, ...)
 ; 32BIT-DAG:   $r6 = LI 4
 ; 32BIT-DAG:   $r7 = LI 5
 ; 32BIT-DAG:   $r8 = LI 6
+; 32BIT-DAG:   renamable $r[[REG:[0-9]+]] = LWZtoc @d, $r2 :: (load 4 from got)
+; 32BIT-DAG:   renamable $f1 = LFD 0, killed renamable $r[[REG]] :: (dereferenceable load 8 from @d)
 ; 32BIT-DAG:   STFD renamable $f1, 0, %stack.0 :: (store 8 into %stack.0)
 ; 32BIT-DAG:   renamable $r9 = LWZ 0, %stack.0 :: (load 4 from %stack.0, align 8)
 ; 32BIT-DAG:   renamable $r10 = LWZ 4, %stack.0 :: (load 4 from %stack.0 + 4)
@@ -1139,8 +1139,6 @@ declare void @test_stackarg_float2(i32, i32, i32, i32, i32, i32, ...)
 ; ASM32PWR4-NEXT: addi 1, 1, 64
 
 ; The DAG block permits some invalid inputs for the benefit of allowing more valid orderings.
-; 64BIT-DAG:   renamable $x[[REG:[0-9]+]] = LDtoc @d, $x2 :: (load 8 from got)
-; 64BIT-DAG:   renamable $f1 = LFD 0, killed renamable $x[[REG]] :: (dereferenceable load 8 from @d)
 ; 64BIT-DAG:   ADJCALLSTACKDOWN 112, 0, implicit-def dead $r1, implicit $r1
 ; 64BIT-DAG:   $x3 = LI8 1
 ; 64BIT-DAG:   $x4 = LI8 2
@@ -1148,6 +1146,8 @@ declare void @test_stackarg_float2(i32, i32, i32, i32, i32, i32, ...)
 ; 64BIT-DAG:   $x6 = LI8 4
 ; 64BIT-DAG:   $x7 = LI8 5
 ; 64BIT-DAG:   $x8 = LI8 6
+; 64BIT-DAG:   renamable $x[[REG:[0-9]+]] = LDtoc @d, $x2 :: (load 8 from got)
+; 64BIT-DAG:   renamable $f1 = LFD 0, killed renamable $x[[REG]] :: (dereferenceable load 8 from @d)
 ; 64BIT-DAG:   STFD renamable $f1, 0, %stack.0 :: (store 8 into %stack.0)
 ; 64BIT-DAG:   renamable $x9 = LD 0, %stack.0 :: (load 8 from %stack.0)
 ; 64BIT-NEXT:  BL8_NOP <mcsymbol .test_stackarg_float2>, csr_aix64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit killed $x4, implicit killed $x5, implicit killed $x6, implicit killed $x7, implicit killed $x8, implicit $f1, implicit $x9, implicit $x2, implicit-def $r1
@@ -1184,13 +1184,7 @@ declare void @test_stackarg_float3(i32, i32, i32, i32, i32, i32, i32, ...)
 
 ; The DAG block permits some invalid inputs for the benefit of allowing more valid orderings.
 ; In 32-bit the double arg is written to memory because it cannot be fully stored in the last 32-bit GPR.
-; 32BIT-DAG:   renamable $r[[REGD:[0-9]+]] = LWZtoc @d, $r2 :: (load 4 from got)
-; 32BIT-DAG:   renamable $f1 = LFD 0, killed renamable $r[[REGD]] :: (dereferenceable load 8 from @d)
-; 32BIT-DAG:   renamable $r[[REGF:[0-9]+]] = LWZtoc @f, $r2 :: (load 4 from got)
-; 32BIT-DAG:   renamable $f2 = LFS 0, killed renamable $r[[REGF]] :: (dereferenceable load 4 from @f)
 ; 32BIT-DAG:   ADJCALLSTACKDOWN 64, 0, implicit-def dead $r1, implicit $r1
-; 32BIT-DAG:   STFD renamable $f1, 52, $r1 :: (store 8)
-; 32BIT-DAG:   STFS renamable $f2, 60, $r1 :: (store 4)
 ; 32BIT-DAG:   $r3 = LI 1
 ; 32BIT-DAG:   $r4 = LI 2
 ; 32BIT-DAG:   $r5 = LI 3
@@ -1198,6 +1192,12 @@ declare void @test_stackarg_float3(i32, i32, i32, i32, i32, i32, i32, ...)
 ; 32BIT-DAG:   $r7 = LI 5
 ; 32BIT-DAG:   $r8 = LI 6
 ; 32BIT-DAG:   $r9 = LI 7
+; 32BIT-DAG:   renamable $r[[REGD:[0-9]+]] = LWZtoc @d, $r2 :: (load 4 from got)
+; 32BIT-DAG:   renamable $f1 = LFD 0, killed renamable $r[[REGD]] :: (dereferenceable load 8 from @d)
+; 32BIT-DAG:   renamable $r[[REGF:[0-9]+]] = LWZtoc @f, $r2 :: (load 4 from got)
+; 32BIT-DAG:   renamable $f2 = LFS 0, killed renamable $r[[REGF]] :: (dereferenceable load 4 from @f)
+; 32BIT-DAG:   STFD renamable $f1, 52, $r1 :: (store 8)
+; 32BIT-DAG:   STFS renamable $f2, 60, $r1 :: (store 4)
 ; 32BIT-DAG:   STFD renamable $f1, 0, %stack.0 :: (store 8 into %stack.0)
 ; 32BIT-DAG:   renamable $r10 = LWZ 0, %stack.0 :: (load 4 from %stack.0, align 8)
 ; 32BIT-NEXT:  BL_NOP <mcsymbol .test_stackarg_float3>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit killed $r4, implicit killed $r5, implicit killed $r6, implicit killed $r7, implicit killed $r8, implicit killed $r9, implicit $f1, implicit $r10, implicit $f2, implicit $r2, implicit-def $r1
@@ -1207,12 +1207,6 @@ declare void @test_stackarg_float3(i32, i32, i32, i32, i32, i32, i32, ...)
 
 ; The DAG block permits some invalid inputs for the benefit of allowing more valid orderings.
 ; ASM32PWR4:       stwu 1, -80(1)
-; ASM32PWR4-DAG:   lwz [[REGD:[0-9]+]], LC9(2)
-; ASM32PWR4-DAG:   lfd 1, 0([[REGD]])
-; ASM32PWR4-DAG:   lwz [[REGF:[0-9]+]], LC8(2)
-; ASM32PWR4-DAG:   lfs 2, 0([[REGF]])
-; ASM32PWR4-DAG:   stfd 1, 52(1)
-; ASM32PWR4-DAG:   stfs 2, 60(1)
 ; ASM32PWR4-DAG:   li 3, 1
 ; ASM32PWR4-DAG:   li 4, 2
 ; ASM32PWR4-DAG:   li 5, 3
@@ -1220,6 +1214,12 @@ declare void @test_stackarg_float3(i32, i32, i32, i32, i32, i32, i32, ...)
 ; ASM32PWR4-DAG:   li 7, 5
 ; ASM32PWR4-DAG:   li 8, 6
 ; ASM32PWR4-DAG:   li 9, 7
+; ASM32PWR4-DAG:   lwz [[REGD:[0-9]+]], LC9(2)
+; ASM32PWR4-DAG:   lfd 1, 0([[REGD]])
+; ASM32PWR4-DAG:   lwz [[REGF:[0-9]+]], LC8(2)
+; ASM32PWR4-DAG:   lfs 2, 0([[REGF]])
+; ASM32PWR4-DAG:   stfd 1, 52(1)
+; ASM32PWR4-DAG:   stfs 2, 60(1)
 ; ASM32PWR4-DAG:   stfd 1, 72(1)
 ; ASM32PWR4-DAG:   lwz 10, 72(1)
 ; ASM32PWR4-NEXT:  bl .test_stackarg_float3
@@ -1228,12 +1228,7 @@ declare void @test_stackarg_float3(i32, i32, i32, i32, i32, i32, i32, ...)
 
 ; The DAG block permits some invalid inputs for the benefit of allowing more valid orderings.
 ; In 64-bit the double arg is not written to memory because it is fully stored in the last 64-bit GPR.
-; 64BIT-DAG:   renamable $x[[REGD:[0-9]+]] = LDtoc @d, $x2 :: (load 8 from got)
-; 64BIT-DAG:   renamable $f1 = LFD 0, killed renamable $x[[REGD]] :: (dereferenceable load 8 from @d)
-; 64BIT-DAG:   renamable $x[[REGF:[0-9]+]] = LDtoc @f, $x2 :: (load 8 from got)
-; 64BIT-DAG:   renamable $f2 = LFS 0, killed renamable $x[[REGF]] :: (dereferenceable load 4 from @f)
 ; 64BIT-DAG:   ADJCALLSTACKDOWN 120, 0, implicit-def dead $r1, implicit $r1
-; 64BIT-DAG:   STFS renamable $f2, 112, $x1 :: (store 4)
 ; 64BIT-DAG:   $x3 = LI8 1
 ; 64BIT-DAG:   $x4 = LI8 2
 ; 64BIT-DAG:   $x5 = LI8 3
@@ -1241,6 +1236,11 @@ declare void @test_stackarg_float3(i32, i32, i32, i32, i32, i32, i32, ...)
 ; 64BIT-DAG:   $x7 = LI8 5
 ; 64BIT-DAG:   $x8 = LI8 6
 ; 64BIT-DAG:   $x9 = LI8 7
+; 64BIT-DAG:   renamable $x[[REGD:[0-9]+]] = LDtoc @d, $x2 :: (load 8 from got)
+; 64BIT-DAG:   renamable $f1 = LFD 0, killed renamable $x[[REGD]] :: (dereferenceable load 8 from @d)
+; 64BIT-DAG:   renamable $x[[REGF:[0-9]+]] = LDtoc @f, $x2 :: (load 8 from got)
+; 64BIT-DAG:   renamable $f2 = LFS 0, killed renamable $x[[REGF]] :: (dereferenceable load 4 from @f)
+; 64BIT-DAG:   STFS renamable $f2, 112, $x1 :: (store 4)
 ; 64BIT-DAG:   STFD renamable $f1, 0, %stack.0 :: (store 8 into %stack.0)
 ; 64BIT-DAG:   renamable $x10 = LD 0, %stack.0 :: (load 8 from %stack.0)
 ; 64BIT-NEXT:  BL8_NOP <mcsymbol .test_stackarg_float3>, csr_aix64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit killed $x4, implicit killed $x5, implicit killed $x6, implicit killed $x7, implicit killed $x8, implicit killed $x9, implicit $f1, implicit $x10, implicit $f2, implicit $x2, implicit-def $r1
@@ -1249,11 +1249,6 @@ declare void @test_stackarg_float3(i32, i32, i32, i32, i32, i32, i32, ...)
 
 ; The DAG block permits some invalid inputs for the benefit of allowing more valid orderings.
 ; ASM64PWR4:       stdu 1, -128(1)
-; ASM64PWR4-DAG:   ld [[REGD:[0-9]+]], LC8(2)
-; ASM64PWR4-DAG:   lfd 1, 0([[REGD]])
-; ASM64PWR4-DAG:   ld [[REGF:[0-9]+]], LC7(2)
-; ASM64PWR4-DAG:   lfs 2, 0([[REGF]])
-; ASM64PWR4-DAG:   stfs 2, 112(1)
 ; ASM64PWR4-DAG:   li 3, 1
 ; ASM64PWR4-DAG:   li 4, 2
 ; ASM64PWR4-DAG:   li 5, 3
@@ -1261,6 +1256,11 @@ declare void @test_stackarg_float3(i32, i32, i32, i32, i32, i32, i32, ...)
 ; ASM64PWR4-DAG:   li 7, 5
 ; ASM64PWR4-DAG:   li 8, 6
 ; ASM64PWR4-DAG:   li 9, 7
+; ASM64PWR4-DAG:   ld [[REGD:[0-9]+]], LC8(2)
+; ASM64PWR4-DAG:   lfd 1, 0([[REGD]])
+; ASM64PWR4-DAG:   ld [[REGF:[0-9]+]], LC7(2)
+; ASM64PWR4-DAG:   lfs 2, 0([[REGF]])
+; ASM64PWR4-DAG:   stfs 2, 112(1)
 ; ASM64PWR4-DAG:   stfd 1, 120(1)
 ; ASM64PWR4-DAG:   ld 10, 120(1)
 ; ASM64PWR4-NEXT:  bl .test_stackarg_float3
