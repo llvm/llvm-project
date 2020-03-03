@@ -143,10 +143,10 @@ def main():
 
     if args.use_libtool:
         files = [f for f in files if not f.startswith('__.SYMDEF')]
-        execute_command_verbose([libtool_exe, '-static', '-o', args.output, '-sD'] + files,
+        execute_command_verbose([libtool_exe, '-static', '-o', args.output, '-s'] + files,
                                 cwd=temp_directory_root, verbose=args.verbose)
     else:
-        execute_command_verbose([ar_exe, 'rcsD', args.output] + files,
+        execute_command_verbose([ar_exe, 'rcs', args.output] + files,
                                 cwd=temp_directory_root, verbose=args.verbose)
 
 
