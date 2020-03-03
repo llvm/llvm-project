@@ -39,15 +39,78 @@ template <int N> void dropFront(int64_t arr[N], int64_t *res) {
 //===----------------------------------------------------------------------===//
 // Codegen-compatible structures for Vector type.
 //===----------------------------------------------------------------------===//
+namespace detail {
+template <unsigned N>
+constexpr bool isPowerOf2() {
+  return (!(N & (N - 1)));
+}
+  
+template <unsigned N>
+constexpr unsigned nextPowerOf2();
+template <>
+constexpr unsigned nextPowerOf2<0>() {
+  return 1;
+}
+template <>
+constexpr unsigned nextPowerOf2<1>() {
+  return 1;
+}
+template <unsigned N> constexpr unsigned nextPowerOf2() {
+  return isPowerOf2<N>() ? N : 2 * nextPowerOf2<(N + 1) / 2>();
+}
+
+template <typename T, int Dim, bool IsPowerOf2>
+struct Vector1D;
+
+template <typename T, int Dim>
+struct Vector1D<T, Dim, /*IsPowerOf2=*/true> {
+  Vector1D() {
+    static_assert(detail::nextPowerOf2<sizeof(T[Dim])>() == sizeof(T[Dim]),
+                  "size error");
+  }
+  constexpr T &operator[](unsigned i) { return vector[i]; }
+  constexpr const T &operator[](unsigned i) const { return vector[i]; }
+
+private:
+  T vector[Dim];
+};
+
+// 1-D vector, padded to the next power of 2 allocation.
+// Specialization occurs to avoid zero size arrays (which fail in -Werror).
+template <typename T, int Dim>
+struct Vector1D<T, Dim, /*IsPowerOf2=*/false> {
+  Vector1D() {
+    static_assert(detail::nextPowerOf2<sizeof(T[Dim])>() > sizeof(T[Dim]),
+                  "size error");
+    static_assert(detail::nextPowerOf2<sizeof(T[Dim])>() < 2 * sizeof(T[Dim]),
+                  "size error");
+  }
+  constexpr T &operator[](unsigned i) { return vector[i]; }
+  constexpr const T &operator[](unsigned i) const { return vector[i]; }
+
+private:
+  T vector[Dim];
+  char padding[detail::nextPowerOf2<sizeof(T[Dim])>() - sizeof(T[Dim])];
+};
+} // end namespace detail
+
+// N-D vectors recurse down to 1-D.
 template <typename T, int Dim, int... Dims>
 struct Vector {
+  constexpr Vector<T, Dims...> &operator[](unsigned i) { return vector[i]; }
+  constexpr const Vector<T, Dims...> &operator[](unsigned i) const {
+    return vector[i];
+  }
+
+private:
   Vector<T, Dims...> vector[Dim];
 };
 
+// 1-D vectors in LLVM are automatically padded to the next power of 2.
+// We insert explicit padding in to account for this.
 template <typename T, int Dim>
-struct Vector<T, Dim> {
-  T vector[Dim];
-};
+struct Vector<T, Dim>
+  : public detail::Vector1D<T, Dim, detail::isPowerOf2<sizeof(T[Dim])>()> {};
 
 template <int D1, typename T>
 using Vector1D = Vector<T, D1>;
