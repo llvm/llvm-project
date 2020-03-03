@@ -18,9 +18,6 @@ namespace tidy {
 namespace abseil {
 
 void NoNamespaceCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus)
-    return;
-
   Finder->addMatcher(
       namespaceDecl(hasName("::absl"), unless(isInAbseilFile()))
           .bind("abslNamespace"),

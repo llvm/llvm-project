@@ -27,11 +27,6 @@ static const llvm::StringMap<StringRef> ReplacementTypes = {
     {"seek_dir", "seekdir"}};
 
 void DeprecatedIosBaseAliasesCheck::registerMatchers(MatchFinder *Finder) {
-  // Only register the matchers for C++; the functionality currently does not
-  // provide any benefit to other languages, despite being benign.
-  if (!getLangOpts().CPlusPlus)
-    return;
-
   auto IoStateDecl = typedefDecl(hasAnyName(DeprecatedTypes)).bind("TypeDecl");
   auto IoStateType =
       qualType(hasDeclaration(IoStateDecl), unless(elaboratedType()));

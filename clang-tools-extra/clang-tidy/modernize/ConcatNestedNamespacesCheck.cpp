@@ -63,9 +63,6 @@ ConcatNestedNamespacesCheck::concatNamespaces() {
 
 void ConcatNestedNamespacesCheck::registerMatchers(
     ast_matchers::MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus17)
-    return;
-
   Finder->addMatcher(ast_matchers::namespaceDecl().bind("namespace"), this);
 }
 

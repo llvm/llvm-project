@@ -257,12 +257,6 @@ void ImplicitBoolConversionCheck::storeOptions(
 }
 
 void ImplicitBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
-  // This check doesn't make much sense if we run it on language without
-  // built-in bool support.
-  if (!getLangOpts().Bool) {
-    return;
-  }
-
   auto exceptionCases =
       expr(anyOf(allOf(isMacroExpansion(), unless(isNULLMacroExpansion())),
                  has(ignoringImplicit(memberExpr(hasDeclaration(fieldDecl(hasBitWidth(1)))))),

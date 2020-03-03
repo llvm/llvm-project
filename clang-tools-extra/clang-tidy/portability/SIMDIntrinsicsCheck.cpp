@@ -92,8 +92,6 @@ void SIMDIntrinsicsCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void SIMDIntrinsicsCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus11)
-    return;
   // If Std is not specified, infer it from the language options.
   // libcxx implementation backports it to C++11 std::experimental::simd.
   if (Std.empty())

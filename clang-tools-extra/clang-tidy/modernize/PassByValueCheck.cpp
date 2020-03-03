@@ -131,11 +131,6 @@ void PassByValueCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void PassByValueCheck::registerMatchers(MatchFinder *Finder) {
-  // Only register the matchers for C++; the functionality currently does not
-  // provide any benefit to other languages, despite being benign.
-  if (!getLangOpts().CPlusPlus)
-    return;
-
   Finder->addMatcher(
       cxxConstructorDecl(
           forEachConstructorInitializer(
@@ -170,14 +165,9 @@ void PassByValueCheck::registerMatchers(MatchFinder *Finder) {
 void PassByValueCheck::registerPPCallbacks(const SourceManager &SM,
                                            Preprocessor *PP,
                                            Preprocessor *ModuleExpanderPP) {
-  // Only register the preprocessor callbacks for C++; the functionality
-  // currently does not provide any benefit to other languages, despite being
-  // benign.
-  if (getLangOpts().CPlusPlus) {
     Inserter = std::make_unique<utils::IncludeInserter>(SM, getLangOpts(),
                                                          IncludeStyle);
     PP->addPPCallbacks(Inserter->CreatePPCallbacks());
-  }
 }
 
 void PassByValueCheck::check(const MatchFinder::MatchResult &Result) {

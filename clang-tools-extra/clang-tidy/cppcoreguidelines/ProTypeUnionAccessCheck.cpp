@@ -17,9 +17,6 @@ namespace tidy {
 namespace cppcoreguidelines {
 
 void ProTypeUnionAccessCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus)
-    return;
-
   Finder->addMatcher(
       memberExpr(hasObjectExpression(hasType(recordDecl(isUnion()))))
           .bind("expr"),

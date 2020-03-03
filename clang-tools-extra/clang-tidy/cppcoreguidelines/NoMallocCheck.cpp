@@ -37,10 +37,6 @@ void NoMallocCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void NoMallocCheck::registerMatchers(MatchFinder *Finder) {
-  // C-style memory management is only problematic in C++.
-  if (!getLangOpts().CPlusPlus)
-    return;
-
   // Registering malloc, will suggest RAII.
   Finder->addMatcher(callExpr(callee(functionDecl(hasAnyListedName(AllocList))))
                          .bind("allocation"),

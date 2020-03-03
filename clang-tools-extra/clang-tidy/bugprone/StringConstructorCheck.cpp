@@ -35,9 +35,6 @@ void StringConstructorCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void StringConstructorCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus)
-    return;
-
   const auto ZeroExpr = expr(ignoringParenImpCasts(integerLiteral(equals(0))));
   const auto CharExpr = expr(ignoringParenImpCasts(characterLiteral()));
   const auto NegativeExpr = expr(ignoringParenImpCasts(

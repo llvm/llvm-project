@@ -209,9 +209,6 @@ AST_MATCHER(CXXMethodDecl, usesThisAsConst) {
 }
 
 void MakeMemberFunctionConstCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus)
-    return;
-
   Finder->addMatcher(
       cxxMethodDecl(
           isDefinition(), isUserProvided(),

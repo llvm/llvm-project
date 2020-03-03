@@ -25,8 +25,6 @@ namespace abseil {
 //    argument.
 
 void RedundantStrcatCallsCheck::registerMatchers(MatchFinder* Finder) {
-  if (!getLangOpts().CPlusPlus) 
-  	return;
   const auto CallToStrcat =
       callExpr(callee(functionDecl(hasName("::absl::StrCat"))));
   const auto CallToStrappend =

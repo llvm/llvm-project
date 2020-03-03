@@ -39,9 +39,6 @@ void OwningMemoryCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 /// Match common cases, where the owner semantic is relevant, like function
 /// calls, delete expressions and others.
 void OwningMemoryCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus11)
-    return;
-
   const auto OwnerDecl = typeAliasTemplateDecl(hasName("::gsl::owner"));
   const auto IsOwnerType = hasType(OwnerDecl);
 

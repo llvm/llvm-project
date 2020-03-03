@@ -49,9 +49,6 @@ AST_MATCHER_P(Expr, hasParentIgnoringImpCasts,
 } // namespace
 
 void ProBoundsArrayToPointerDecayCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus)
-    return;
-
   // The only allowed array to pointer decay
   // 1) just before array subscription
   // 2) inside a range-for over an array

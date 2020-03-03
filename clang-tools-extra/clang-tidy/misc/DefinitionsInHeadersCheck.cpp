@@ -49,8 +49,6 @@ void DefinitionsInHeadersCheck::storeOptions(
 }
 
 void DefinitionsInHeadersCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus)
-    return;
   auto DefinitionMatcher =
       anyOf(functionDecl(isDefinition(), unless(isDeleted())),
             varDecl(isDefinition()));

@@ -34,8 +34,6 @@ void SpecialMemberFunctionsCheck::storeOptions(
 }
 
 void SpecialMemberFunctionsCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus)
-    return;
   Finder->addMatcher(
       cxxRecordDecl(
           eachOf(

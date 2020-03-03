@@ -88,10 +88,6 @@ bool MultipleInheritanceCheck::isInterface(const CXXRecordDecl *Node) {
 }
 
 void MultipleInheritanceCheck::registerMatchers(MatchFinder *Finder) {
-  // Requires C++.
-  if (!getLangOpts().CPlusPlus)
-    return;
-
   // Match declarations which have bases.
   Finder->addMatcher(
       cxxRecordDecl(allOf(hasBases(), isDefinition())).bind("decl"), this);

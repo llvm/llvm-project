@@ -18,11 +18,6 @@ namespace tidy {
 namespace bugprone {
 
 void InaccurateEraseCheck::registerMatchers(MatchFinder *Finder) {
-  // Only register the matchers for C++; the functionality currently does not
-  // provide any benefit to other languages, despite being benign.
-  if (!getLangOpts().CPlusPlus)
-    return;
-
   const auto EndCall =
       callExpr(
           callee(functionDecl(hasAnyName("remove", "remove_if", "unique"))),

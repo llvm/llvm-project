@@ -44,8 +44,6 @@ void DynamicStaticInitializersCheck::storeOptions(
 }
 
 void DynamicStaticInitializersCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus || getLangOpts().ThreadsafeStatics)
-    return;
   Finder->addMatcher(
       varDecl(hasGlobalStorage(), unless(hasConstantDeclaration())).bind("var"),
       this);

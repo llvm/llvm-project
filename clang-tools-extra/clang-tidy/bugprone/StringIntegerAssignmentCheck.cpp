@@ -18,8 +18,6 @@ namespace tidy {
 namespace bugprone {
 
 void StringIntegerAssignmentCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus)
-    return;
   Finder->addMatcher(
       cxxOperatorCallExpr(
           anyOf(hasOverloadedOperatorName("="),
