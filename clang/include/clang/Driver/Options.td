@@ -848,7 +848,8 @@ def fno_record_command_line : Flag<["-"], "fno-record-command-line">,
   Group<f_clang_Group>;
 def : Flag<["-"], "frecord-gcc-switches">, Alias<frecord_command_line>;
 def : Flag<["-"], "fno-record-gcc-switches">, Alias<fno_record_command_line>;
-def fcommon : Flag<["-"], "fcommon">, Group<f_Group>;
+def fcommon : Flag<["-"], "fcommon">, Group<f_Group>,
+  Flags<[CoreOption, CC1Option]>, HelpText<"Place uninitialized global variables in a common block">;
 def fcompile_resource_EQ : Joined<["-"], "fcompile-resource=">, Group<f_Group>;
 def fcomplete_member_pointers : Flag<["-"], "fcomplete-member-pointers">, Group<f_clang_Group>,
    Flags<[CoreOption, CC1Option]>,

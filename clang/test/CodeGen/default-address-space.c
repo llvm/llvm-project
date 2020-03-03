@@ -1,13 +1,13 @@
 // RUN: %clang_cc1 -triple amdgcn---amdgiz -emit-llvm < %s | FileCheck -check-prefixes=CHECK,COM %s
 
-// CHECK-DAG: @foo = common addrspace(1) global i32 0
+// CHECK-DAG: @foo = addrspace(1) global i32 0
 int foo;
 
-// CHECK-DAG: @ban = common addrspace(1) global [10 x i32] zeroinitializer
+// CHECK-DAG: @ban = addrspace(1) global [10 x i32] zeroinitializer
 int ban[10];
 
-// CHECK-DAG: @A = common addrspace(1) global i32* null
-// CHECK-DAG: @B = common addrspace(1) global i32* null
+// CHECK-DAG: @A = addrspace(1) global i32* null
+// CHECK-DAG: @B = addrspace(1) global i32* null
 int *A;
 int *B;
 
