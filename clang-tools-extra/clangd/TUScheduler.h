@@ -213,10 +213,6 @@ public:
   /// if requested with WantDiags::Auto or WantDiags::Yes.
   void remove(PathRef File);
 
-  /// Returns the current contents of the buffer for File, per last update().
-  /// The returned StringRef may be invalidated by any write to TUScheduler.
-  llvm::StringRef getContents(PathRef File) const;
-
   /// Returns a snapshot of all file buffer contents, per last update().
   llvm::StringMap<std::string> getAllFileContents() const;
 
