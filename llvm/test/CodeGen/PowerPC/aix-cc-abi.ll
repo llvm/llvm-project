@@ -998,6 +998,88 @@ declare void @test_stackarg_int(i32, i32, i32, i32, i32, i32, i32, i32, i8 zeroe
 ; 32BIT-NEXT: BL_NOP <mcsymbol .test_stackarg_int>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $r4, implicit $r5, implicit $r6, implicit $r7, implicit $r8, implicit $r9, implicit $r10, implicit $r2, implicit-def $r1
 ; 32BIT-NEXT: ADJCALLSTACKUP 80, 0, implicit-def dead $r1, implicit $r1
 
+; CHECKASM-LABEL: .call_test_stackarg_int:
+
+; The DAG block permits some invalid inputs for the benefit of allowing more valid orderings.
+; ASM32PWR4:       stwu 1, -80(1)
+; ASM32PWR4-DAG:   li 3, 1
+; ASM32PWR4-DAG:   li 4, 2
+; ASM32PWR4-DAG:   li 5, 3
+; ASM32PWR4-DAG:   li 6, 4
+; ASM32PWR4-DAG:   li 7, 5
+; ASM32PWR4-DAG:   li 8, 6
+; ASM32PWR4-DAG:   li 9, 7
+; ASM32PWR4-DAG:   li 10, 8
+; ASM32PWR4-DAG:   lwz [[REGCADDR:[0-9]+]], LC6(2)
+; ASM32PWR4-DAG:   lbz [[REGC:[0-9]+]], 0([[REGCADDR]])
+; ASM32PWR4-DAG:   stw [[REGC]], 56(1)
+; ASM32PWR4-DAG:   lwz [[REGSIADDR:[0-9]+]], LC4(2)
+; ASM32PWR4-DAG:   lha [[REGSI:[0-9]+]], 0([[REGSIADDR]])
+; ASM32PWR4-DAG:   stw [[REGSI]], 60(1)
+; ASM32PWR4-DAG:   lwz [[REGIADDR:[0-9]+]], LC5(2)
+; ASM32PWR4-DAG:   lwz [[REGI:[0-9]+]], 0([[REGIADDR]])
+; ASM32PWR4-DAG:   stw [[REGI]], 64(1)
+; ASM32PWR4-DAG:   lwz [[REGLLIADDR:[0-9]+]], LC7(2)
+; ASM32PWR4-DAG:   lwz [[REGLLI1:[0-9]+]], 0([[REGLLIADDR]])
+; ASM32PWR4-DAG:   stw [[REGLLI1]], 68(1)
+; ASM32PWR4-DAG:   lwz [[REGLLI2:[0-9]+]], 4([[REGLLIADDR]])
+; ASM32PWR4-DAG:   stw [[REGLLI2]], 72(1)
+; ASM32PWR4-DAG:   stw [[REGI]], 76(1)
+; ASM32PWR4-NEXT:  bl .test_stackarg_int
+; ASM32PWR4-NEXT:  nop
+
+; The DAG block permits some invalid inputs for the benefit of allowing more valid orderings.
+; 64BIT-DAG:   ADJCALLSTACKDOWN 152, 0, implicit-def dead $r1, implicit $r1
+; 64BIT-DAG:   $x3 = LI8 1
+; 64BIT-DAG:   $x4 = LI8 2
+; 64BIT-DAG:   $x5 = LI8 3
+; 64BIT-DAG:   $x6 = LI8 4
+; 64BIT-DAG:   $x7 = LI8 5
+; 64BIT-DAG:   $x8 = LI8 6
+; 64BIT-DAG:   $x9 = LI8 7
+; 64BIT-DAG:   $x10 = LI8 8
+; 64BIT-DAG:   renamable $x[[REGCADDR:[0-9]+]] = LDtoc @c, $x2 :: (load 8 from got)
+; 64BIT-DAG:   renamable $r[[REGC:[0-9]+]] = LBZ 0, killed renamable $x[[REGCADDR]] :: (dereferenceable load 1 from @c)
+; 64BIT-DAG:   STW killed renamable $r[[REGC]], 112, $x1 :: (store 4)
+; 64BIT-DAG:   renamable $x[[REGSIADDR:[0-9]+]] = LDtoc @si, $x2 :: (load 8 from got)
+; 64BIT-DAG:   renamable $r[[REGSI:[0-9]+]] = LHA 0, killed renamable $x[[REGSIADDR]] :: (dereferenceable load 2 from @si)
+; 64BIT-DAG:   STW killed renamable $r[[REGSI]], 120, $x1 :: (store 4)
+; 64BIT-DAG:   renamable $x[[REGIADDR:[0-9]+]] = LDtoc @i, $x2 :: (load 8 from got)
+; 64BIT-DAG:   renamable $r[[REGI:[0-9]+]] = LWZ 0, killed renamable $x[[REGIADDR]] :: (dereferenceable load 4 from @i)
+; 64BIT-DAG:   STW killed renamable $r[[REGI]], 128, $x1 :: (store 4)
+; 64BIT-DAG:   renamable $x[[REGLLIADDR:[0-9]+]] = LDtoc @lli, $x2 :: (load 8 from got)
+; 64BIT-DAG:   renamable $x[[REGLLI:[0-9]+]] = LD 0, killed renamable $x[[REGLLIADDR]] :: (dereferenceable load 8 from @lli)
+; 64BIT-DAG:   STD killed renamable $x[[REGLLI]], 136, $x1 :: (store 8)
+; 64BIT-DAG:   STW renamable $r[[REGI]], 144, $x1 :: (store 4)
+; 64BIT-NEXT:  BL8_NOP <mcsymbol .test_stackarg_int>, csr_aix64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x4, implicit $x5, implicit $x6, implicit $x7, implicit $x8, implicit $x9, implicit $x10, implicit $x2, implicit-def $r1
+; 64BIT-NEXT:  ADJCALLSTACKUP 152, 0, implicit-def dead $r1, implicit $r1
+
+; The DAG block permits some invalid inputs for the benefit of allowing more valid orderings.
+; ASM64PWR4-DAG:   stdu 1, -160(1)
+; ASM64PWR4-DAG:   li 3, 1
+; ASM64PWR4-DAG:   li 4, 2
+; ASM64PWR4-DAG:   li 5, 3
+; ASM64PWR4-DAG:   li 6, 4
+; ASM64PWR4-DAG:   li 7, 5
+; ASM64PWR4-DAG:   li 8, 6
+; ASM64PWR4-DAG:   li 9, 7
+; ASM64PWR4-DAG:   li 10, 8
+; ASM64PWR4-DAG:   ld [[REGCADDR:[0-9]+]], LC5(2)
+; ASM64PWR4-DAG:   lbz [[REGC:[0-9]+]], 0([[REGCADDR]])
+; ASM64PWR4-DAG:   stw [[REGC]], 112(1)
+; ASM64PWR4-DAG:   ld [[REGSIADDR:[0-9]+]], LC3(2)
+; ASM64PWR4-DAG:   lha [[REGSI:[0-9]+]], 0([[REGSIADDR]])
+; ASM64PWR4-DAG:   stw [[REGSI]], 120(1)
+; ASM64PWR4-DAG:   ld [[REGIADDR:[0-9]+]], LC4(2)
+; ASM64PWR4-DAG:   lwz [[REGI:[0-9]+]], 0([[REGIADDR]])
+; ASM64PWR4-DAG:   stw [[REGI]], 128(1)
+; ASM64PWR4-DAG:   ld [[REGLLIADDR:[0-9]+]], LC6(2)
+; ASM64PWR4-DAG:   ld [[REGLLI:[0-9]+]], 0([[REGLLIADDR]])
+; ASM64PWR4-DAG:   std [[REGLLI]], 136(1)
+; ASM64PWR4-DAG:   stw [[REGI]], 144(1)
+; ASM64PWR4-NEXT:  bl .test_stackarg_int
+; ASM64PWR4-NEXT:  nop
+
 ; Basic saving of floating point type arguments to the parameter save area.
 ; The float and double arguments will pass in both fpr as well as parameter save area.
 define void @call_test_stackarg_float() {
