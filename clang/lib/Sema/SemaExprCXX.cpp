@@ -956,6 +956,11 @@ bool Sema::CheckCXXThrowOperand(SourceLocation ThrowLoc,
                             E->getSourceRange()))
       return true;
 
+    if (!isPointer && Ty->isSizelessType()) {
+      Diag(ThrowLoc, diag::err_throw_sizeless) << Ty << E->getSourceRange();
+      return true;
+    }
+
     if (RequireNonAbstractType(ThrowLoc, ExceptionObjectTy,
                                diag::err_throw_abstract_type, E))
       return true;
