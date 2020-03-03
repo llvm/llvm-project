@@ -73,7 +73,9 @@ public:
     #define GET_ATTR_NAMES
     #define ATTRIBUTE_ENUM(ENUM_NAME, OTHER) ENUM_NAME,
     #include "llvm/IR/Attributes.inc"
-    EndAttrKinds           ///< Sentinal value useful for loops
+    EndAttrKinds,          ///< Sentinal value useful for loops
+    EmptyKey,              ///< Use as Empty key for DenseMap of AttrKind
+    TombstoneKey,          ///< Use as Tombstone key for DenseMap of AttrKind
   };
 
 private:

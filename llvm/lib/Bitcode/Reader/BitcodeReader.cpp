@@ -1218,6 +1218,8 @@ StructType *BitcodeReader::createIdentifiedStructType(LLVMContext &Context) {
 static uint64_t getRawAttributeMask(Attribute::AttrKind Val) {
   switch (Val) {
   case Attribute::EndAttrKinds:
+  case Attribute::EmptyKey:
+  case Attribute::TombstoneKey:
     llvm_unreachable("Synthetic enumerators which should never get here");
 
   case Attribute::None:            return 0;
