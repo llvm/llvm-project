@@ -1537,6 +1537,9 @@ def err_distant_exception_spec : Error<
 def err_incomplete_in_exception_spec : Error<
   "%select{|pointer to |reference to }0incomplete type %1 is not allowed "
   "in exception specification">;
+def err_sizeless_in_exception_spec : Error<
+  "%select{|reference to }0sizeless type %1 is not allowed "
+  "in exception specification">;
 def ext_incomplete_in_exception_spec : ExtWarn<err_incomplete_in_exception_spec.Text>,
   InGroup<MicrosoftExceptionSpec>;
 def err_rref_in_exception_spec : Error<

@@ -345,6 +345,12 @@ void with_default(svint8_t = svint8_t());
 constexpr int ce_taking_int8(svint8_t) { return 1; } // expected-error {{constexpr function's 1st parameter type 'svint8_t' (aka '__SVInt8_t') is not a literal type}}
 #endif
 
+#if __cplusplus < 201703L
+void throwing_func() throw(svint8_t); // expected-error {{sizeless type 'svint8_t' (aka '__SVInt8_t') is not allowed in exception specification}}
+void throwing_pointer_func() throw(svint8_t *);
+void throwing_reference_func() throw(svint8_t &); // expected-error {{reference to sizeless type 'svint8_t' (aka '__SVInt8_t') is not allowed in exception specification}}
+#endif
+
 template <typename T>
 void template_fn_direct(T) {}
 template <typename T>
