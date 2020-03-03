@@ -19,6 +19,7 @@
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/ADT/DenseMap.h"
 
 namespace llvm {
 
@@ -58,9 +59,41 @@ inline bool hasAttributeInAssume(CallInst &AssumeCI, Value *IsOn,
       AssumeCI, IsOn, Attribute::getNameFromAttrKind(Kind), ArgVal, AQR);
 }
 
-/// TODO: Add an function to create/fill a map from the bundle when users intend
-/// to make many different queries on the same bundles. to be used for example
-/// in the Attributor.
+template<> struct DenseMapInfo<Attribute::AttrKind> {
+  static constexpr auto MaxValue = std::numeric_limits<
+      std::underlying_type<Attribute::AttrKind>::type>::max();
+  static Attribute::AttrKind getEmptyKey() {
+    return static_cast<Attribute::AttrKind>(MaxValue);
+  }
+  static Attribute::AttrKind getTombstoneKey() {
+    return static_cast<Attribute::AttrKind>(MaxValue - 1);
+  }
+  static unsigned getHashValue(Attribute::AttrKind AK) {
+    return hash_combine(AK);
+  }
+  static bool isEqual(Attribute::AttrKind LHS, Attribute::AttrKind RHS) {
+    return LHS == RHS;
+  }
+};
+
+/// The map Key contains the Value on for which the attribute is valid and
+/// the Attribute that is valid for that value.
+/// If the Attribute is not on any value, the Value is nullptr.
+using RetainedKnowledgeKey = std::pair<Value *, Attribute::AttrKind>;
+
+struct MinMax {
+  unsigned Min;
+  unsigned Max;
+};
+
+using RetainedKnowledgeMap = DenseMap<RetainedKnowledgeKey, MinMax>;
+
+/// Insert into the map all the informations contained in the operand bundles of
+/// the llvm.assume. This should be used instead of hasAttributeInAssume when
+/// many queries are going to be made on the same llvm.assume.
+/// String attributes are not inserted in the map.
+/// If the IR changes the map will be outdated.
+void fillMapFromAssume(CallInst &AssumeCI, RetainedKnowledgeMap &Result);
 
 //===----------------------------------------------------------------------===//
 // Utilities for testing
