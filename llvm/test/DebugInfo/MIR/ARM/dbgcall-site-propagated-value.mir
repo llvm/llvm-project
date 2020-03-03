@@ -1,4 +1,4 @@
-# RUN: llc -debug-entry-values -run-pass=livedebugvalues -o - %s | FileCheck %s
+# RUN: llc -run-pass=livedebugvalues -o - %s | FileCheck %s
 
 # Based on the following C reproducer:
 #
@@ -20,7 +20,7 @@
 #
 # Generated using:
 #
-# clang -Os -fno-inline -Xclang -femit-debug-entry-values -g --target=armeb.
+# clang -Os -fno-inline -g --target=armeb.
 
 --- |
   target datalayout = "E-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"

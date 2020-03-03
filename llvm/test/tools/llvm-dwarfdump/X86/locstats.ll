@@ -1,4 +1,4 @@
-; RUN: llc -debug-entry-values %s -o - -filetype=obj \
+; RUN: llc %s -o - -filetype=obj \
 ; RUN:   | llvm-dwarfdump -statistics - | FileCheck %s
 ;
 ; CHECK: "entry value scope bytes covered":5

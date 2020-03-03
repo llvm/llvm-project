@@ -10,7 +10,7 @@
 
 ; Next test would previously trigger an assertion responsible for verification of
 ; call site info state.
-; RUN: llc -stop-after=if-converter -debug-entry-values -mtriple=thumbv6t2-eabi %s -o -| FileCheck %s -check-prefix=CHECK-CALLSITE
+; RUN: llc -stop-after=if-converter -mtriple=thumbv6t2-eabi %s -o -| FileCheck %s -check-prefix=CHECK-CALLSITE
 ; CHECK-CALLSITE: name:  test_used_flags
 ; CHECK-CALLSITE: callSites:
 
