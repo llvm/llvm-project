@@ -563,6 +563,19 @@ def ProcA76     : SubtargetFeature<"a76", "ARMProcFamily", "CortexA76",
                                     FeatureSSBS
                                     ]>;
 
+def ProcA64FX : SubtargetFeature<"a64fx", "ARMProcFamily", "A64FX",
+                                 "Fujitsu A64FX processors", [
+                                  HasV8_2aOps,
+                                  FeatureFPARMv8,
+                                  FeatureNEON,
+                                  FeatureSHA2,
+                                  FeaturePerfMon,
+                                  FeatureFullFP16,
+                                  FeatureSVE,
+                                  FeaturePostRAScheduler,
+                                  FeatureComplxNum
+                                  ]>;
+
 // Note that cyclone does not fuse AES instructions, but newer apple chips do
 // perform the fusion and cyclone is used by default when targetting apple OSes.
 def ProcAppleA7 : SubtargetFeature<"apple-a7", "ARMProcFamily", "AppleA7",
@@ -900,6 +913,10 @@ def : ProcessorModel<"apple-s5", CycloneModel, [ProcAppleA12]>;
 
 // Alias for the latest Apple processor model supported by LLVM.
 def : ProcessorModel<"apple-latest", CycloneModel, [ProcAppleA13]>;
+
+// Fujitsu A64FX
+// FIXME: Scheduling model is not implemented yet.
+def : ProcessorModel<"a64fx", NoSchedModel, [ProcA64FX]>;
 
 //===----------------------------------------------------------------------===//
 // Assembly parser
