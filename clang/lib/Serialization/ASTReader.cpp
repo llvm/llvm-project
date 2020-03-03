@@ -11657,7 +11657,7 @@ OMPClause *OMPClauseReader::readClause() {
     C = new (Context) OMPWriteClause();
     break;
   case OMPC_update:
-    C = new (Context) OMPUpdateClause();
+    C = OMPUpdateClause::CreateEmpty(Context, Record.readInt());
     break;
   case OMPC_capture:
     C = new (Context) OMPCaptureClause();
@@ -11938,7 +11938,13 @@ void OMPClauseReader::VisitOMPReadClause(OMPReadClause *) {}
 
 void OMPClauseReader::VisitOMPWriteClause(OMPWriteClause *) {}
 
-void OMPClauseReader::VisitOMPUpdateClause(OMPUpdateClause *) {}
+void OMPClauseReader::VisitOMPUpdateClause(OMPUpdateClause *C) {
+  if (C->isExtended()) {
+    C->setLParenLoc(Record.readSourceLocation());
+    C->setArgumentLoc(Record.readSourceLocation());
+    C->setDependencyKind(Record.readEnum<OpenMPDependClauseKind>());
+  }
+}
 
 void OMPClauseReader::VisitOMPCaptureClause(OMPCaptureClause *) {}
 
