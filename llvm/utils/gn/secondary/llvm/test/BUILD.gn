@@ -216,7 +216,7 @@ group("test") {
     "//llvm/tools/llvm-elfabi",
     "//llvm/tools/llvm-exegesis",
     "//llvm/tools/llvm-extract",
-    "//llvm/tools/llvm-gsym:llvm-gsymutil",
+    "//llvm/tools/llvm-gsymutil:llvm-gsymutil"
     "//llvm/tools/llvm-ifs",
     "//llvm/tools/llvm-isel-fuzzer",
     "//llvm/tools/llvm-jitlink",
