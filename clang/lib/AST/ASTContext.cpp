@@ -475,10 +475,20 @@ void ASTContext::attachCommentsToJustParsedDecls(ArrayRef<Decl *> Decls,
   if (Comments.empty() || Decls.empty())
     return;
 
-  // See if there are any new comments that are not attached to a decl.
-  // The location doesn't have to be precise - we care only about the file.
-  const FileID File =
-      SourceMgr.getDecomposedLoc((*Decls.begin())->getLocation()).first;
+  FileID File;
+  for (Decl *D : Decls) {
+    SourceLocation Loc = D->getLocation();
+    if (Loc.isValid()) {
+      // See if there are any new comments that are not attached to a decl.
+      // The location doesn't have to be precise - we care only about the file.
+      File = SourceMgr.getDecomposedLoc(Loc).first;
+      break;
+    }
+  }
+
+  if (File.isInvalid())
+    return;
+
   auto CommentsInThisFile = Comments.getCommentsInFile(File);
   if (!CommentsInThisFile || CommentsInThisFile->empty() ||
       CommentsInThisFile->rbegin()->second->isAttached())
