@@ -35,6 +35,7 @@ add_entrypoint_object(
     ../sigemptyset.h
   DEPENDS
     __errno_location
+    errno_h
     signal_h
 )
 
@@ -47,5 +48,6 @@ add_entrypoint_object(
     ../sigaddset.h
   DEPENDS
     __errno_location
+    errno_h
     signal_h
 )
