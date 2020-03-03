@@ -1302,8 +1302,6 @@ static llvm::Expected<ParsedExpression> ParseAndImport(
   //        inserting them in.
   swift_ast_context->AddDebuggerClient(external_lookup);
 
-  swift::parseIntoSourceFile(*source_file, buffer_id);
-
   if (swift_ast_context->HasErrors())
     return make_error<SwiftASTContextError>();
 
