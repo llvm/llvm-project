@@ -391,6 +391,20 @@ void OpEmitter::genAttrGetters() {
       emitAttrWithReturnType(name, attr);
     }
   }
+
+  // Generate helper method to query whether a named attribute is a derived
+  // attribute. This enables, for example, avoiding adding an attribute that
+  // overlaps with a derived attribute.
+  auto &method =
+      opClass.newMethod("bool", "isDerivedAttribute", "StringRef name");
+  auto &body = method.body();
+  auto derivedAttr = make_filter_range(op.getAttributes(),
+                                       [](const NamedAttribute &namedAttr) {
+                                         return namedAttr.attr.isDerivedAttr();
+                                       });
+  for (auto namedAttr : derivedAttr)
+    body << "    if (name == \"" << namedAttr.name << "\") return true;\n";
+  body << " return false;";
 }
 
 void OpEmitter::genAttrSetters() {
