@@ -273,6 +273,15 @@ TEST_F(FormatTestCSharp, Attributes) {
                "{\n"
                "}");
 
+  // [] in an attribute do not cause premature line wrapping or indenting.
+  verifyFormat(R"(//
+public class A
+{
+    [SomeAttribute(new[] { RED, GREEN, BLUE }, -1.0f, 1.0f)]
+    [DoNotSerialize]
+    public Data MemberVariable;
+})");
+
   //  Unwrappable lines go on a line of their own.
   // 'target:' is not treated as a label.
   // Modify Style to enforce a column limit.
