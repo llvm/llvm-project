@@ -1127,11 +1127,11 @@ bool MCAssembler::layoutSectionOnce(MCAsmLayout &Layout, MCSection &Sec) {
   MCFragment *FirstRelaxedFragment = nullptr;
 
   // Attempt to relax all the fragments in the section.
-  for (MCSection::iterator I = Sec.begin(), IE = Sec.end(); I != IE; ++I) {
+  for (MCFragment &Frag : Sec) {
     // Check if this is a fragment that needs relaxation.
-    bool RelaxedFrag = relaxFragment(Layout, *I);
+    bool RelaxedFrag = relaxFragment(Layout, Frag);
     if (RelaxedFrag && !FirstRelaxedFragment)
-      FirstRelaxedFragment = &*I;
+      FirstRelaxedFragment = &Frag;
   }
   if (FirstRelaxedFragment) {
     Layout.invalidateFragmentsFrom(FirstRelaxedFragment);
@@ -1144,8 +1144,7 @@ bool MCAssembler::layoutOnce(MCAsmLayout &Layout) {
   ++stats::RelaxationSteps;
 
   bool WasRelaxed = false;
-  for (iterator it = begin(), ie = end(); it != ie; ++it) {
-    MCSection &Sec = *it;
+  for (MCSection &Sec : *this) {
     while (layoutSectionOnce(Layout, Sec))
       WasRelaxed = true;
   }
