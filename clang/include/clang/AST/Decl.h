@@ -3539,6 +3539,7 @@ class EnumDecl : public TagDecl {
   /// negative enumerators of this enum. (see getNumNegativeBits)
   void setNumNegativeBits(unsigned Num) { EnumDeclBits.NumNegativeBits = Num; }
 
+public:
   /// True if this tag declaration is a scoped enumeration. Only
   /// possible in C++11 mode.
   void setScoped(bool Scoped = true) { EnumDeclBits.IsScoped = Scoped; }
@@ -3555,6 +3556,7 @@ class EnumDecl : public TagDecl {
   /// Microsoft-style enumeration with a fixed underlying type.
   void setFixed(bool Fixed = true) { EnumDeclBits.IsFixed = Fixed; }
 
+private:
   /// True if a valid hash is stored in ODRHash.
   bool hasODRHash() const { return EnumDeclBits.HasODRHash; }
   void setHasODRHash(bool Hash = true) { EnumDeclBits.HasODRHash = Hash; }

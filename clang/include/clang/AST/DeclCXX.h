@@ -2722,8 +2722,6 @@ class CXXConversionDecl : public CXXMethodDecl {
 
   ExplicitSpecifier ExplicitSpec;
 
-  void setExplicitSpecifier(ExplicitSpecifier ES) { ExplicitSpec = ES; }
-
 public:
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
@@ -2745,6 +2743,7 @@ public:
 
   /// Return true if the declartion is already resolved to be explicit.
   bool isExplicit() const { return getExplicitSpecifier().isExplicit(); }
+  void setExplicitSpecifier(ExplicitSpecifier ES) { ExplicitSpec = ES; }
 
   /// Returns the type that this conversion function is converting to.
   QualType getConversionType() const {
