@@ -103,6 +103,8 @@ public:
                             DiagnosticsEngine &Diags) override;
 
   BuiltinVaListKind getBuiltinVaListKind() const override {
+    if (getTriple().isMusl())
+      return TargetInfo::HexagonBuiltinVaList;
     return TargetInfo::CharPtrBuiltinVaList;
   }
 
