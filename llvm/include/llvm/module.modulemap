@@ -47,6 +47,11 @@ module LLVM_Bitcode {
  module * { export * }
 }
 
+module LLVM_Bitstream {
+ requires cplusplus
+ umbrella "Bitstream"
+ module * { export * }
+}
 
 module LLVM_BinaryFormat {
     requires cplusplus
