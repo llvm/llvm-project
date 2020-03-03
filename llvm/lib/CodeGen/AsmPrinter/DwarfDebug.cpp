@@ -2400,25 +2400,6 @@ void DwarfDebug::emitDebugLocEntryLocation(const DebugLocStream::Entry &Entry,
   emitDebugLocEntry(Streamer, Entry, CU);
 }
 
-// Emit the common part of the DWARF 5 range/locations list tables header.
-static void emitListsTableHeaderStart(AsmPrinter *Asm,
-                                      MCSymbol *TableStart,
-                                      MCSymbol *TableEnd) {
-  // Build the table header, which starts with the length field.
-  Asm->OutStreamer->AddComment("Length");
-  Asm->emitLabelDifference(TableEnd, TableStart, 4);
-  Asm->OutStreamer->emitLabel(TableStart);
-  // Version number (DWARF v5 and later).
-  Asm->OutStreamer->AddComment("Version");
-  Asm->emitInt16(Asm->OutStreamer->getContext().getDwarfVersion());
-  // Address size.
-  Asm->OutStreamer->AddComment("Address size");
-  Asm->emitInt8(Asm->MAI->getCodePointerSize());
-  // Segment selector size.
-  Asm->OutStreamer->AddComment("Segment selector size");
-  Asm->emitInt8(0);
-}
-
 // Emit the header of a DWARF 5 range list table list table. Returns the symbol
 // that designates the end of the table for the caller to emit when the table is
 // complete.
@@ -2426,7 +2407,8 @@ static MCSymbol *emitRnglistsTableHeader(AsmPrinter *Asm,
                                          const DwarfFile &Holder) {
   MCSymbol *TableStart = Asm->createTempSymbol("debug_rnglist_table_start");
   MCSymbol *TableEnd = Asm->createTempSymbol("debug_rnglist_table_end");
-  emitListsTableHeaderStart(Asm, TableStart, TableEnd);
+  mcdwarf::emitListsTableHeaderStart(Asm->OutStreamer.get(), TableStart,
+                                     TableEnd);
 
   Asm->OutStreamer->AddComment("Offset entry count");
   Asm->emitInt32(Holder.getRangeLists().size());
@@ -2445,7 +2427,8 @@ static MCSymbol *emitLoclistsTableHeader(AsmPrinter *Asm,
                                          const DwarfDebug &DD) {
   MCSymbol *TableStart = Asm->createTempSymbol("debug_loclist_table_start");
   MCSymbol *TableEnd = Asm->createTempSymbol("debug_loclist_table_end");
-  emitListsTableHeaderStart(Asm, TableStart, TableEnd);
+  mcdwarf::emitListsTableHeaderStart(Asm->OutStreamer.get(), TableStart,
+                                     TableEnd);
 
   const auto &DebugLocs = DD.getDebugLocs();
 
