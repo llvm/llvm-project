@@ -73,4 +73,132 @@ define double @constant_fold_fma_nan(double* %p) {
   ret double %r
 }
 
+define double @fdiv_nnan_nan_op0(double %x) {
+; CHECK-LABEL: fdiv_nnan_nan_op0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x8, #-2251799813685248
+; CHECK-NEXT:    fmov d1, x8
+; CHECK-NEXT:    fdiv d0, d1, d0
+; CHECK-NEXT:    ret
+  %r = fdiv nnan double 0xfff8000000000000, %x
+  ret double %r
+}
+
+define double @fmul_nnan_nan_op1(double %x) {
+; CHECK-LABEL: fmul_nnan_nan_op1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x8, #9221120237041090560
+; CHECK-NEXT:    fmov d1, x8
+; CHECK-NEXT:    fmul d0, d0, d1
+; CHECK-NEXT:    ret
+  %r = fmul nnan double %x, 0x7ff8000000000000
+  ret double %r
+}
+
+define double @fdiv_ninf_nan_op0(double %x) {
+; CHECK-LABEL: fdiv_ninf_nan_op0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x8, #-2251799813685248
+; CHECK-NEXT:    fmov d1, x8
+; CHECK-NEXT:    fdiv d0, d1, d0
+; CHECK-NEXT:    ret
+  %r = fdiv ninf double 0xfff8000000000000, %x
+  ret double %r
+}
+
+define double @fadd_ninf_nan_op1(double %x) {
+; CHECK-LABEL: fadd_ninf_nan_op1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x8, #9221120237041090560
+; CHECK-NEXT:    fmov d1, x8
+; CHECK-NEXT:    fadd d0, d0, d1
+; CHECK-NEXT:    ret
+  %r = fadd ninf double %x, 0x7ff8000000000000
+  ret double %r
+}
+
+define double @fdiv_ninf_inf_op0(double %x) {
+; CHECK-LABEL: fdiv_ninf_inf_op0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x8, #9218868437227405312
+; CHECK-NEXT:    fmov d1, x8
+; CHECK-NEXT:    fdiv d0, d1, d0
+; CHECK-NEXT:    ret
+  %r = fdiv ninf double 0x7ff0000000000000, %x
+  ret double %r
+}
+
+define double @fadd_ninf_inf_op1(double %x) {
+; CHECK-LABEL: fadd_ninf_inf_op1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x8, #-4503599627370496
+; CHECK-NEXT:    fmov d1, x8
+; CHECK-NEXT:    fadd d0, d0, d1
+; CHECK-NEXT:    ret
+  %r = fadd ninf double %x, 0xfff0000000000000
+  ret double %r
+}
+
+define double @fsub_nnan_inf_op0(double %x) {
+; CHECK-LABEL: fsub_nnan_inf_op0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x8, #9218868437227405312
+; CHECK-NEXT:    fmov d1, x8
+; CHECK-NEXT:    fsub d0, d1, d0
+; CHECK-NEXT:    ret
+  %r = fsub nnan double 0x7ff0000000000000, %x
+  ret double %r
+}
+
+define double @fmul_nnan_inf_op1(double %x) {
+; CHECK-LABEL: fmul_nnan_inf_op1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x8, #-4503599627370496
+; CHECK-NEXT:    fmov d1, x8
+; CHECK-NEXT:    fmul d0, d0, d1
+; CHECK-NEXT:    ret
+  %r = fmul nnan double %x, 0xfff0000000000000
+  ret double %r
+}
+
+define double @fdiv_nnan_undef_op0(double %x) {
+; CHECK-LABEL: fdiv_nnan_undef_op0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x8, #9221120237041090560
+; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    ret
+  %r = fdiv nnan double undef, %x
+  ret double %r
+}
+
+define double @fdiv_nnan_undef_op1(double %x) {
+; CHECK-LABEL: fdiv_nnan_undef_op1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x8, #9221120237041090560
+; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    ret
+  %r = fdiv nnan double %x, undef
+  ret double %r
+}
+
+define double @fdiv_ninf_undef_op0(double %x) {
+; CHECK-LABEL: fdiv_ninf_undef_op0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x8, #9221120237041090560
+; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    ret
+  %r = fdiv ninf double undef, %x
+  ret double %r
+}
+
+define double @fdiv_ninf_undef_op1(double %x) {
+; CHECK-LABEL: fdiv_ninf_undef_op1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x8, #9221120237041090560
+; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    ret
+  %r = fdiv ninf double %x, undef
+  ret double %r
+}
+
 declare double @llvm.fma.f64(double, double, double)
