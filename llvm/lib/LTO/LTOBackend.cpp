@@ -61,8 +61,10 @@ Error Config::addSaveTemps(std::string OutputFileName,
   std::error_code EC;
   ResolutionFile = std::make_unique<raw_fd_ostream>(
       OutputFileName + "resolution.txt", EC, sys::fs::OpenFlags::OF_Text);
-  if (EC)
+  if (EC) {
+    ResolutionFile.reset();
     return errorCodeToError(EC);
+  }
 
   auto setHook = [&](std::string PathSuffix, ModuleHookFn &Hook) {
     // Keep track of the hook provided by the linker, which also needs to run.
