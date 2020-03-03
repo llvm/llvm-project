@@ -14,6 +14,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include <cassert>
 #include <string>
 
 // Important this comes last because it defines "_REGEX_H_". At least on
