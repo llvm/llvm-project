@@ -608,8 +608,12 @@ std::string Thread::GetStopDescription() {
 std::string Thread::GetStopDescriptionRaw() {
   StopInfoSP stop_info_sp = GetStopInfo();
   std::string raw_stop_description;
-  if (stop_info_sp && stop_info_sp->IsValid())
+  if (stop_info_sp && stop_info_sp->IsValid()) {
     raw_stop_description = stop_info_sp->GetDescription();
+    assert((!raw_stop_description.empty() ||
+            stop_info_sp->GetStopReason() == eStopReasonNone) &&
+           "StopInfo returned an empty description.");
+  }
   return raw_stop_description;
 }
 
