@@ -86,5 +86,95 @@ TEST(VPInstructionTest, moveAfter) {
   EXPECT_EQ(I3->getParent(), I4->getParent());
 }
 
+TEST(VPBasicBlockTest, getPlan) {
+  {
+    VPBasicBlock *VPBB1 = new VPBasicBlock();
+    VPBasicBlock *VPBB2 = new VPBasicBlock();
+    VPBasicBlock *VPBB3 = new VPBasicBlock();
+    VPBasicBlock *VPBB4 = new VPBasicBlock();
+
+    //     VPBB1
+    //     /   \
+    // VPBB2  VPBB3
+    //    \    /
+    //    VPBB4
+    VPBlockUtils::connectBlocks(VPBB1, VPBB2);
+    VPBlockUtils::connectBlocks(VPBB1, VPBB3);
+    VPBlockUtils::connectBlocks(VPBB2, VPBB4);
+    VPBlockUtils::connectBlocks(VPBB3, VPBB4);
+
+    VPlan Plan;
+    Plan.setEntry(VPBB1);
+
+    EXPECT_EQ(&Plan, VPBB1->getPlan());
+    EXPECT_EQ(&Plan, VPBB2->getPlan());
+    EXPECT_EQ(&Plan, VPBB3->getPlan());
+    EXPECT_EQ(&Plan, VPBB4->getPlan());
+  }
+
+  {
+    // Region block is entry into VPlan.
+    VPBasicBlock *R1BB1 = new VPBasicBlock();
+    VPBasicBlock *R1BB2 = new VPBasicBlock();
+    VPRegionBlock *R1 = new VPRegionBlock(R1BB1, R1BB2, "R1");
+    VPBlockUtils::connectBlocks(R1BB1, R1BB2);
+
+    VPlan Plan;
+    Plan.setEntry(R1);
+    EXPECT_EQ(&Plan, R1->getPlan());
+    EXPECT_EQ(&Plan, R1BB1->getPlan());
+    EXPECT_EQ(&Plan, R1BB2->getPlan());
+  }
+
+  {
+    // VPBasicBlock is the entry into the VPlan, followed by a region.
+    VPBasicBlock *R1BB1 = new VPBasicBlock();
+    VPBasicBlock *R1BB2 = new VPBasicBlock();
+    VPRegionBlock *R1 = new VPRegionBlock(R1BB1, R1BB2, "R1");
+    VPBlockUtils::connectBlocks(R1BB1, R1BB2);
+
+    VPBasicBlock *VPBB1 = new VPBasicBlock();
+    VPBlockUtils::connectBlocks(VPBB1, R1);
+
+    VPlan Plan;
+    Plan.setEntry(VPBB1);
+    EXPECT_EQ(&Plan, VPBB1->getPlan());
+    EXPECT_EQ(&Plan, R1->getPlan());
+    EXPECT_EQ(&Plan, R1BB1->getPlan());
+    EXPECT_EQ(&Plan, R1BB2->getPlan());
+  }
+
+  {
+    VPBasicBlock *R1BB1 = new VPBasicBlock();
+    VPBasicBlock *R1BB2 = new VPBasicBlock();
+    VPRegionBlock *R1 = new VPRegionBlock(R1BB1, R1BB2, "R1");
+    VPBlockUtils::connectBlocks(R1BB1, R1BB2);
+
+    VPBasicBlock *R2BB1 = new VPBasicBlock();
+    VPBasicBlock *R2BB2 = new VPBasicBlock();
+    VPRegionBlock *R2 = new VPRegionBlock(R2BB1, R2BB2, "R2");
+    VPBlockUtils::connectBlocks(R2BB1, R2BB2);
+
+    VPBasicBlock *VPBB1 = new VPBasicBlock();
+    VPBlockUtils::connectBlocks(VPBB1, R1);
+    VPBlockUtils::connectBlocks(VPBB1, R2);
+
+    VPBasicBlock *VPBB2 = new VPBasicBlock();
+    VPBlockUtils::connectBlocks(R1, VPBB2);
+    VPBlockUtils::connectBlocks(R2, VPBB2);
+
+    VPlan Plan;
+    Plan.setEntry(VPBB1);
+    EXPECT_EQ(&Plan, VPBB1->getPlan());
+    EXPECT_EQ(&Plan, R1->getPlan());
+    EXPECT_EQ(&Plan, R1BB1->getPlan());
+    EXPECT_EQ(&Plan, R1BB2->getPlan());
+    EXPECT_EQ(&Plan, R2->getPlan());
+    EXPECT_EQ(&Plan, R2BB1->getPlan());
+    EXPECT_EQ(&Plan, R2BB2->getPlan());
+    EXPECT_EQ(&Plan, VPBB2->getPlan());
+  }
+}
+
 } // namespace
 } // namespace llvm

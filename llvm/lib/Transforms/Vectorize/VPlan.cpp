@@ -56,6 +56,32 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, const VPValue &V) {
   return OS;
 }
 
+// Get the top-most entry block of \p Start. This is the entry block of the
+// containing VPlan. This function is templated to support both const and non-const blocks
+template <typename T> static T *getPlanEntry(T *Start) {
+  T *Next = Start;
+  T *Current = Start;
+  while ((Next = Next->getParent()))
+    Current = Next;
+
+  SmallSetVector<T *, 8> WorkList;
+  WorkList.insert(Current);
+
+  for (unsigned i = 0; i < WorkList.size(); i++) {
+    T *Current = WorkList[i];
+    if (Current->getNumPredecessors() == 0)
+      return Current;
+    auto &Predecessors = Current->getPredecessors();
+    WorkList.insert(Predecessors.begin(), Predecessors.end());
+  }
+
+  llvm_unreachable("VPlan without any entry node without predecessors");
+}
+
+VPlan *VPBlockBase::getPlan() { return getPlanEntry(this)->Plan; }
+
+const VPlan *VPBlockBase::getPlan() const { return getPlanEntry(this)->Plan; }
+
 /// \return the VPBasicBlock that is the entry of Block, possibly indirectly.
 const VPBasicBlock *VPBlockBase::getEntryBasicBlock() const {
   const VPBlockBase *Block = this;
@@ -69,6 +95,12 @@ VPBasicBlock *VPBlockBase::getEntryBasicBlock() {
   while (VPRegionBlock *Region = dyn_cast<VPRegionBlock>(Block))
     Block = Region->getEntry();
   return cast<VPBasicBlock>(Block);
+}
+
+void VPBlockBase::setPlan(VPlan *ParentPlan) {
+  assert(ParentPlan->getEntry() == this &&
+         "Can only set plan on its entry block.");
+  Plan = ParentPlan;
 }
 
 /// \return the VPBasicBlock that is the exit of Block, possibly indirectly.
