@@ -16,7 +16,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Bitcode/BitcodeReader.h"
-#include "llvm/CodeGen/CommandFlags.inc"
+#include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/LTO/Caching.h"
 #include "llvm/LTO/LTO.h"
@@ -28,6 +28,8 @@
 
 using namespace llvm;
 using namespace lto;
+
+static codegen::RegisterCodeGenFlags CGF;
 
 static cl::opt<char>
     OptLevel("O", cl::desc("Optimization level. [-O0, -O1, -O2, or -O3] "
@@ -220,12 +222,12 @@ static int run(int argc, char **argv) {
       exit(1);
   };
 
-  Conf.CPU = MCPU;
-  Conf.Options = InitTargetOptionsFromCodeGenFlags();
-  Conf.MAttrs = MAttrs;
-  if (auto RM = getRelocModel())
-    Conf.RelocModel = *RM;
-  Conf.CodeModel = getCodeModel();
+  Conf.CPU = codegen::getMCPU();
+  Conf.Options = codegen::InitTargetOptionsFromCodeGenFlags();
+  Conf.MAttrs = codegen::getMAttrs();
+  if (auto RM = codegen::getExplicitRelocModel())
+    Conf.RelocModel = RM.getValue();
+  Conf.CodeModel = codegen::getExplicitCodeModel();
 
   Conf.DebugPassManager = DebugPassManager;
 
@@ -267,8 +269,8 @@ static int run(int argc, char **argv) {
     return 1;
   }
 
-  if (FileType.getNumOccurrences())
-    Conf.CGFileType = FileType;
+  if (auto FT = codegen::getExplicitFileType())
+    Conf.CGFileType = FT.getValue();
 
   Conf.OverrideTriple = OverrideTriple;
   Conf.DefaultTriple = DefaultTriple;

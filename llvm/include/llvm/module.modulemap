@@ -29,7 +29,6 @@ module LLVM_Backend {
     exclude header "CodeGen/LinkAllCodegenComponents.h"
 
     // These are intended for (repeated) textual inclusion.
-    textual header "CodeGen/CommandFlags.inc"
     textual header "CodeGen/DIEValue.def"
   }
 }
@@ -317,8 +316,6 @@ module LLVM_MC {
 
   umbrella "MC"
   module * { export * }
-
-  textual header "MC/MCTargetOptionsCommandFlags.inc"
 }
 
 // Used by llvm-tblgen

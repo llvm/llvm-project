@@ -21,7 +21,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
-#include "llvm/CodeGen/CommandFlags.inc"
+#include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/LLVMContext.h"
@@ -61,6 +61,8 @@
 #include <vector>
 
 using namespace llvm;
+
+static codegen::RegisterCodeGenFlags CGF;
 
 static cl::opt<char>
     OptLevel("O", cl::desc("Optimization level. [-O0, -O1, -O2, or -O3] "
@@ -412,7 +414,7 @@ static void printMachOCPUOnly() {
   LLVMContext Context;
   Context.setDiagnosticHandler(std::make_unique<LLVMLTODiagnosticHandler>(),
                                true);
-  TargetOptions Options = InitTargetOptionsFromCodeGenFlags();
+  TargetOptions Options = codegen::InitTargetOptionsFromCodeGenFlags();
   for (auto &Filename : InputFilenames) {
     ErrorOr<std::unique_ptr<LTOModule>> ModuleOrErr =
         LTOModule::createFromFile(Context, Filename, Options);
@@ -549,7 +551,7 @@ public:
   ThinLTOCodeGenerator ThinGenerator;
 
   ThinLTOProcessing(const TargetOptions &Options) {
-    ThinGenerator.setCodePICModel(getRelocModel());
+    ThinGenerator.setCodePICModel(codegen::getExplicitRelocModel());
     ThinGenerator.setTargetOptions(Options);
     ThinGenerator.setCacheDir(ThinLTOCacheDir);
     ThinGenerator.setCachePruningInterval(ThinLTOCachePruningInterval);
@@ -901,7 +903,7 @@ int main(int argc, char **argv) {
   InitializeAllAsmParsers();
 
   // set up the TargetOptions for the machine
-  TargetOptions Options = InitTargetOptionsFromCodeGenFlags();
+  TargetOptions Options = codegen::InitTargetOptionsFromCodeGenFlags();
 
   if (ListSymbolsOnly) {
     listSymbols(Options);
@@ -962,7 +964,7 @@ int main(int argc, char **argv) {
   if (UseDiagnosticHandler)
     CodeGen.setDiagnosticHandler(handleDiagnostics, nullptr);
 
-  CodeGen.setCodePICModel(getRelocModel());
+  CodeGen.setCodePICModel(codegen::getExplicitRelocModel());
   CodeGen.setFreestanding(EnableFreestanding);
 
   CodeGen.setDebugInfo(LTO_DEBUG_MODEL_DWARF);
@@ -1013,22 +1015,18 @@ int main(int argc, char **argv) {
     CodeGen.addMustPreserveSymbol(KeptDSOSyms[i]);
 
   // Set cpu and attrs strings for the default target/subtarget.
-  CodeGen.setCpu(MCPU.c_str());
+  CodeGen.setCpu(codegen::getMCPU().c_str());
 
   CodeGen.setOptLevel(OptLevel - '0');
 
-  std::string attrs;
-  for (unsigned i = 0; i < MAttrs.size(); ++i) {
-    if (i > 0)
-      attrs.append(",");
-    attrs.append(MAttrs[i]);
+  auto MAttrs = codegen::getMAttrs();
+  if (!MAttrs.empty()) {
+    std::string attrs = join(MAttrs, ",");
+    CodeGen.setAttr(attrs);
   }
 
-  if (!attrs.empty())
-    CodeGen.setAttr(attrs);
-
-  if (FileType.getNumOccurrences())
-    CodeGen.setFileType(FileType);
+  if (auto FT = codegen::getExplicitFileType())
+    CodeGen.setFileType(FT.getValue());
 
   if (!OutputFilename.empty()) {
     if (!CodeGen.optimize(DisableVerify, DisableInline, DisableGVNLoadPRE,
