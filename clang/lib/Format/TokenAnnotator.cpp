@@ -384,11 +384,11 @@ private:
 
     if (!AttrTok)
       return false;
-
-    // Move past the end of ']'.
+    
+    // Allow an attribute to be the only content of a file.
     AttrTok = AttrTok->Next;
     if (!AttrTok)
-      return false;
+      return true;
 
     // Limit this to being an access modifier that follows.
     if (AttrTok->isOneOf(tok::kw_public, tok::kw_private, tok::kw_protected,
@@ -460,7 +460,7 @@ private:
                                      Contexts.back().InCpp11AttributeSpecifier;
 
     // Treat C# Attributes [STAThread] much like C++ attributes [[...]].
-    bool IsCSharp11AttributeSpecifier =
+    bool IsCSharpAttributeSpecifier =
         isCSharpAttributeSpecifier(*Left) ||
         Contexts.back().InCSharpAttributeSpecifier;
 
@@ -469,7 +469,8 @@ private:
     bool StartsObjCMethodExpr =
         !IsCppStructuredBinding && !InsideInlineASM && !CppArrayTemplates &&
         Style.isCpp() && !IsCpp11AttributeSpecifier &&
-        Contexts.back().CanBeExpression && Left->isNot(TT_LambdaLSquare) &&
+        !IsCSharpAttributeSpecifier && Contexts.back().CanBeExpression &&
+        Left->isNot(TT_LambdaLSquare) &&
         !CurrentToken->isOneOf(tok::l_brace, tok::r_square) &&
         (!Parent ||
          Parent->isOneOf(tok::colon, tok::l_square, tok::l_paren,
@@ -496,7 +497,7 @@ private:
       } else if (Style.isCpp() && Contexts.back().ContextKind == tok::l_brace &&
                  Parent && Parent->isOneOf(tok::l_brace, tok::comma)) {
         Left->Type = TT_DesignatedInitializerLSquare;
-      } else if (IsCSharp11AttributeSpecifier) {
+      } else if (IsCSharpAttributeSpecifier) {
         Left->Type = TT_AttributeSquare;
       } else if (CurrentToken->is(tok::r_square) && Parent &&
                  Parent->is(TT_TemplateCloser)) {
@@ -559,13 +560,13 @@ private:
 
     Contexts.back().ColonIsObjCMethodExpr = StartsObjCMethodExpr;
     Contexts.back().InCpp11AttributeSpecifier = IsCpp11AttributeSpecifier;
-    Contexts.back().InCSharpAttributeSpecifier = IsCSharp11AttributeSpecifier;
+    Contexts.back().InCSharpAttributeSpecifier = IsCSharpAttributeSpecifier;
 
     while (CurrentToken) {
       if (CurrentToken->is(tok::r_square)) {
         if (IsCpp11AttributeSpecifier)
           CurrentToken->Type = TT_AttributeSquare;
-        if (IsCSharp11AttributeSpecifier)
+        if (IsCSharpAttributeSpecifier)
           CurrentToken->Type = TT_AttributeSquare;
         else if (((CurrentToken->Next &&
                    CurrentToken->Next->is(tok::l_paren)) ||
@@ -777,6 +778,10 @@ private:
           break;
         }
       } else if (Style.isCSharp()) {
+        if (Contexts.back().InCSharpAttributeSpecifier) {
+          Tok->Type = TT_AttributeColon;
+          break;
+        }
         if (Contexts.back().ContextKind == tok::l_paren) {
           Tok->Type = TT_CSharpNamedArgumentColon;
           break;
@@ -2922,6 +2927,10 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     if (Left.is(TT_JsFatArrow) || Right.is(TT_JsFatArrow))
       return true;
 
+    // No spaces around attribute target colons
+    if (Left.is(TT_AttributeColon) || Right.is(TT_AttributeColon))
+      return false;
+
     // space between type and variable e.g. Dictionary<string,string> foo;
     if (Left.is(TT_TemplateCloser) && Right.is(TT_StartOfName))
       return true;
@@ -3550,8 +3559,8 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
   const FormatToken &Left = *Right.Previous;
   // Language-specific stuff.
   if (Style.isCSharp()) {
-    if (Left.is(TT_CSharpNamedArgumentColon) ||
-        Right.is(TT_CSharpNamedArgumentColon))
+    if (Left.isOneOf(TT_CSharpNamedArgumentColon, TT_AttributeColon) ||
+        Right.isOneOf(TT_CSharpNamedArgumentColon, TT_AttributeColon))
       return false;
   } else if (Style.Language == FormatStyle::LK_Java) {
     if (Left.isOneOf(Keywords.kw_throws, Keywords.kw_extends,
