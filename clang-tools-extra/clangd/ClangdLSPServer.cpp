@@ -814,7 +814,9 @@ void ClangdLSPServer::onDocumentDidClose(
   // VSCode). Note that this cannot race with actual diagnostics responses
   // because removeDocument() guarantees no diagnostic callbacks will be
   // executed after it returns.
-  publishDiagnostics(URIForFile::canonicalize(File, /*TUPath=*/File), {});
+  PublishDiagnosticsParams Notification;
+  Notification.uri = URIForFile::canonicalize(File, /*TUPath=*/File);
+  publishDiagnostics(Notification);
 }
 
 void ClangdLSPServer::onDocumentOnTypeFormatting(
@@ -1151,18 +1153,13 @@ void ClangdLSPServer::applyConfiguration(
 }
 
 void ClangdLSPServer::publishSemanticHighlighting(
-    SemanticHighlightingParams Params) {
+    const SemanticHighlightingParams &Params) {
   notify("textDocument/semanticHighlighting", Params);
 }
 
 void ClangdLSPServer::publishDiagnostics(
-    const URIForFile &File, std::vector<clangd::Diagnostic> Diagnostics) {
-  // Publish diagnostics.
-  notify("textDocument/publishDiagnostics",
-         llvm::json::Object{
-             {"uri", File},
-             {"diagnostics", std::move(Diagnostics)},
-         });
+    const PublishDiagnosticsParams &Params) {
+  notify("textDocument/publishDiagnostics", Params);
 }
 
 // FIXME: This function needs to be properly tested.
@@ -1368,15 +1365,15 @@ void ClangdLSPServer::onHighlightingsReady(
 
 void ClangdLSPServer::onDiagnosticsReady(PathRef File,
                                          std::vector<Diag> Diagnostics) {
-  auto URI = URIForFile::canonicalize(File, /*TUPath=*/File);
-  std::vector<Diagnostic> LSPDiagnostics;
+  PublishDiagnosticsParams Notification;
+  Notification.uri = URIForFile::canonicalize(File, /*TUPath=*/File);
   DiagnosticToReplacementMap LocalFixIts; // Temporary storage
   for (auto &Diag : Diagnostics) {
-    toLSPDiags(Diag, URI, DiagOpts,
+    toLSPDiags(Diag, Notification.uri, DiagOpts,
                [&](clangd::Diagnostic Diag, llvm::ArrayRef<Fix> Fixes) {
                  auto &FixItsForDiagnostic = LocalFixIts[Diag];
                  llvm::copy(Fixes, std::back_inserter(FixItsForDiagnostic));
-                 LSPDiagnostics.push_back(std::move(Diag));
+                 Notification.diagnostics.push_back(std::move(Diag));
                });
   }
 
@@ -1387,7 +1384,7 @@ void ClangdLSPServer::onDiagnosticsReady(PathRef File,
   }
 
   // Send a notification to the LSP client.
-  publishDiagnostics(URI, std::move(LSPDiagnostics));
+  publishDiagnostics(Notification);
 }
 
 void ClangdLSPServer::onBackgroundIndexProgress(
