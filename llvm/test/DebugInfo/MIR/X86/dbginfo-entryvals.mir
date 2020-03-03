@@ -1,4 +1,4 @@
-# RUN: llc -debug-entry-values -run-pass=livedebugvalues -march=x86-64 -o - %s | FileCheck %s
+# RUN: llc -debug-entry-values -run-pass=livedebugvalues -verify-machineinstrs -march=x86-64 -o - %s | FileCheck %s
 #
 #extern void fn2(int);
 #
@@ -15,7 +15,7 @@
 #  u --;
 #}
 # CHECK: DBG_VALUE $edi, $noreg, !14, !DIExpression(DW_OP_LLVM_entry_value, 1), debug-location {{.*}}
-# CHECK: DBG_VALUE $esi, $noreg, !15, !DIExpression(DW_OP_LLVM_entry_value, 1), debug-location {{.*}}
+# CHECK-NOT: DBG_VALUE $esi, $noreg, !15, !DIExpression(DW_OP_LLVM_entry_value, 1)
 
 --- |
   ; ModuleID = 'test.c'
