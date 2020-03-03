@@ -347,13 +347,7 @@ option(LLVM_ENABLE_LIBPFM "Use libpfm for performance counters if available." ON
 
 option(LLVM_ENABLE_THREADS "Use threads if available." ON)
 
-if(CMAKE_SYSTEM_NAME STREQUAL Windows)
-  set(zlib_DEFAULT "OFF")
-else()
-  set(zlib_DEFAULT "ON")
-endif()
-
-set(LLVM_ENABLE_ZLIB "${zlib_DEFAULT}" CACHE STRING "Use zlib for compression/decompression if available. Can be ON, OFF, or FORCE_ON")
+option(LLVM_ENABLE_ZLIB "Use zlib for compression/decompression if available." ON)
 
 set(LLVM_Z3_INSTALL_DIR "" CACHE STRING "Install directory of the Z3 solver.")
 
