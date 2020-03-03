@@ -54,7 +54,7 @@ public:
 
     return std::make_unique<PPChainedCallbacks>(
         collectIncludeStructureCallback(*SourceMgr, &Includes),
-        std::make_unique<CollectMainFileMacros>(*SourceMgr, *LangOpts, Macros));
+        std::make_unique<CollectMainFileMacros>(*SourceMgr, Macros));
   }
 
   CommentHandler *getCommentHandler() override {
