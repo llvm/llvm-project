@@ -180,3 +180,59 @@ func @parallel_loop(%arg0 : index, %arg1 : index, %arg2 : index,
   }
   return
 }
+
+// CHECK-LABEL: @for_yield
+// CHECK-SAME: (%[[LB:.*]]: index, %[[UB:.*]]: index, %[[STEP:.*]]: index)
+// CHECK:        %[[INIT0:.*]] = constant 0
+// CHECK:        %[[INIT1:.*]] = constant 1
+// CHECK:        br ^[[COND:.*]](%[[LB]], %[[INIT0]], %[[INIT1]] : index, f32, f32)
+//
+// CHECK:      ^[[COND]](%[[ITER:.*]]: index, %[[ITER_ARG0:.*]]: f32, %[[ITER_ARG1:.*]]: f32):
+// CHECK:        %[[CMP:.*]] = cmpi "slt", %[[ITER]], %[[UB]] : index
+// CHECK:        cond_br %[[CMP]], ^[[BODY:.*]], ^[[CONTINUE:.*]]
+//
+// CHECK:      ^[[BODY]]:
+// CHECK:        %[[SUM:.*]] = addf %[[ITER_ARG0]], %[[ITER_ARG1]] : f32
+// CHECK:        %[[STEPPED:.*]] = addi %[[ITER]], %[[STEP]] : index
+// CHECK:        br ^[[COND]](%[[STEPPED]], %[[SUM]], %[[SUM]] : index, f32, f32)
+//
+// CHECK:      ^[[CONTINUE]]:
+// CHECK:        return %[[ITER_ARG0]], %[[ITER_ARG1]] : f32, f32
+func @for_yield(%arg0 : index, %arg1 : index, %arg2 : index) -> (f32, f32) {
+  %s0 = constant 0.0 : f32
+  %s1 = constant 1.0 : f32
+  %result:2 = loop.for %i0 = %arg0 to %arg1 step %arg2 iter_args(%si = %s0, %sj = %s1) -> (f32, f32) {
+    %sn = addf %si, %sj : f32
+    loop.yield %sn, %sn : f32, f32
+  }
+  return %result#0, %result#1 : f32, f32
+}
+
+// CHECK-LABEL: @nested_for_yield
+// CHECK-SAME: (%[[LB:.*]]: index, %[[UB:.*]]: index, %[[STEP:.*]]: index)
+// CHECK:         %[[INIT:.*]] = constant
+// CHECK:         br ^[[COND_OUT:.*]](%[[LB]], %[[INIT]] : index, f32)
+// CHECK:       ^[[COND_OUT]](%[[ITER_OUT:.*]]: index, %[[ARG_OUT:.*]]: f32):
+// CHECK:         cond_br %{{.*}}, ^[[BODY_OUT:.*]], ^[[CONT_OUT:.*]]
+// CHECK:       ^[[BODY_OUT]]:
+// CHECK:         br ^[[COND_IN:.*]](%[[LB]], %[[ARG_OUT]] : index, f32)
+// CHECK:       ^[[COND_IN]](%[[ITER_IN:.*]]: index, %[[ARG_IN:.*]]: f32):
+// CHECK:         cond_br %{{.*}}, ^[[BODY_IN:.*]], ^[[CONT_IN:.*]]
+// CHECK:       ^[[BODY_IN]]
+// CHECK:         %[[RES:.*]] = addf
+// CHECK:         br ^[[COND_IN]](%{{.*}}, %[[RES]] : index, f32)
+// CHECK:       ^[[CONT_IN]]:
+// CHECK:         br ^[[COND_OUT]](%{{.*}}, %[[ARG_IN]] : index, f32)
+// CHECK:       ^[[CONT_OUT]]:
+// CHECK:         return %[[ARG_OUT]] : f32
+func @nested_for_yield(%arg0 : index, %arg1 : index, %arg2 : index) -> f32 {
+  %s0 = constant 1.0 : f32
+  %r = loop.for %i0 = %arg0 to %arg1 step %arg2 iter_args(%iter = %s0) -> (f32) {
+    %result = loop.for %i1 = %arg0 to %arg1 step %arg2 iter_args(%si = %iter) -> (f32) {
+      %sn = addf %si, %si : f32
+      loop.yield %sn : f32
+    }
+    loop.yield %result : f32
+  }
+  return %r : f32
+}
