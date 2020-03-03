@@ -15564,6 +15564,11 @@ VarDecl *Sema::BuildExceptionDeclaration(Scope *S,
       !BaseType->isDependentType() && RequireCompleteType(Loc, BaseType, DK))
     Invalid = true;
 
+  if (!Invalid && Mode != 1 && BaseType->isSizelessType()) {
+    Diag(Loc, diag::err_catch_sizeless) << (Mode == 2 ? 1 : 0) << BaseType;
+    Invalid = true;
+  }
+
   if (!Invalid && !ExDeclType->isDependentType() &&
       RequireNonAbstractType(Loc, ExDeclType,
                              diag::err_abstract_type_in_decl,
