@@ -65,6 +65,7 @@ LLVM_YAML_STRONG_TYPEDEF(uint32_t, MIPS_AFL_FLAGS1)
 LLVM_YAML_STRONG_TYPEDEF(uint32_t, MIPS_ISA)
 
 LLVM_YAML_STRONG_TYPEDEF(StringRef, YAMLFlowString)
+LLVM_YAML_STRONG_TYPEDEF(int64_t, YAMLIntUInt)
 
 // For now, hardcode 64 bits everywhere that 32 or 64 would be needed
 // since 64-bit can hold 32-bit values too.
@@ -439,7 +440,7 @@ struct Group : Section {
 
 struct Relocation {
   llvm::yaml::Hex64 Offset;
-  int64_t Addend;
+  YAMLIntUInt Addend;
   ELF_REL Type;
   Optional<StringRef> Symbol;
 };
@@ -541,6 +542,14 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::SectionName)
 
 namespace llvm {
 namespace yaml {
+
+template <> struct ScalarTraits<ELFYAML::YAMLIntUInt> {
+  static void output(const ELFYAML::YAMLIntUInt &Val, void *Ctx,
+                     raw_ostream &Out);
+  static StringRef input(StringRef Scalar, void *Ctx,
+                         ELFYAML::YAMLIntUInt &Val);
+  static QuotingType mustQuote(StringRef) { return QuotingType::None; }
+};
 
 template <>
 struct ScalarEnumerationTraits<ELFYAML::ELF_ET> {
