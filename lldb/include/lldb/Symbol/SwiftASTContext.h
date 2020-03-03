@@ -70,6 +70,29 @@ struct SourceModule;
 class SwiftASTContext;
 CompilerType ToCompilerType(swift::Type qual_type);
 
+/// The implementation of lldb::Type's m_payload field for TypeSystemSwift.
+class TypePayloadSwift {
+  /// Layout: bit 1 ... IsFixedValueBuffer.
+  uint32_t m_payload = 0;
+
+  static constexpr unsigned FixedValueBufferBit = 1;
+public:
+  TypePayloadSwift() = default;
+  explicit TypePayloadSwift(bool is_fixed_value_buffer);
+  explicit TypePayloadSwift(uint32_t opaque_payload) : m_payload(opaque_payload) {}
+  operator uint32_t() { return m_payload; }
+
+  /// \return whether this is a Swift fixed-size buffer. Resilient variables in
+  /// fixed-size buffers may be indirect depending on the runtime size of the
+  /// type. This is more a property of the value than of its type.
+  bool IsFixedValueBuffer() { return Flags(m_payload).Test(FixedValueBufferBit); }
+  void SetIsFixedValueBuffer(bool is_fixed_value_buffer) {
+    m_payload = is_fixed_value_buffer
+                    ? Flags(m_payload).Set(FixedValueBufferBit)
+                    : Flags(m_payload).Clear(FixedValueBufferBit);
+  }
+};
+  
 /// Abstract base class for all Swift TypeSystems.
 ///
 /// Swift CompilerTypes are either a mangled name or a Swift AST
