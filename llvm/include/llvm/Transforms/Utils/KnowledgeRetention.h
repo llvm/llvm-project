@@ -60,13 +60,11 @@ inline bool hasAttributeInAssume(CallInst &AssumeCI, Value *IsOn,
 }
 
 template<> struct DenseMapInfo<Attribute::AttrKind> {
-  static constexpr auto MaxValue = std::numeric_limits<
-      std::underlying_type<Attribute::AttrKind>::type>::max();
   static Attribute::AttrKind getEmptyKey() {
-    return static_cast<Attribute::AttrKind>(MaxValue);
+    return Attribute::EmptyKey;
   }
   static Attribute::AttrKind getTombstoneKey() {
-    return static_cast<Attribute::AttrKind>(MaxValue - 1);
+    return Attribute::TombstoneKey;
   }
   static unsigned getHashValue(Attribute::AttrKind AK) {
     return hash_combine(AK);
