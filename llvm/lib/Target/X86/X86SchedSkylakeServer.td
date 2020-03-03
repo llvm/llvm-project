@@ -1963,14 +1963,14 @@ def SKXWriteResGroup171 : SchedWriteRes<[SKXPort06,SKXPort0156]> {
 def: InstRW<[SKXWriteResGroup171], (instrs LOOPE, LOOPNE)>;
 
 def SKXWriteResGroup174 : SchedWriteRes<[SKXPort01]> {
-  let Latency = 12;
+  let Latency = 15;
   let NumMicroOps = 3;
   let ResourceCycles = [3];
 }
 def: InstRW<[SKXWriteResGroup174], (instregex "VPMULLQ(Z128|Z256)rr")>;
 
 def SKXWriteResGroup174z : SchedWriteRes<[SKXPort05]> {
-  let Latency = 12;
+  let Latency = 15;
   let NumMicroOps = 3;
   let ResourceCycles = [3];
 }
@@ -2131,8 +2131,8 @@ def SKXWriteResGroup202 : SchedWriteRes<[SKXPort0,SKXPort1,SKXPort5,SKXPort6,SKX
 }
 def: InstRW<[SKXWriteResGroup202], (instrs XCH_F)>;
 
-def SKXWriteResGroup205 : SchedWriteRes<[SKXPort23,SKXPort015]> {
-  let Latency = 18;
+def SKXWriteResGroup205 : SchedWriteRes<[SKXPort23,SKXPort01]> {
+  let Latency = 21;
   let NumMicroOps = 4;
   let ResourceCycles = [1,3];
 }
@@ -2159,13 +2159,19 @@ def SKXWriteResGroup209 : SchedWriteRes<[SKXPort0,SKXPort23,SKXFPDivider]> {
 }
 def : SchedAlias<WriteFDiv64Ld,  SKXWriteResGroup209>; // TODO - convert to ZnWriteResFpuPair
 
-def SKXWriteResGroup211 : SchedWriteRes<[SKXPort23,SKXPort015]> {
-  let Latency = 19;
+def SKXWriteResGroup211 : SchedWriteRes<[SKXPort23,SKXPort01]> {
+  let Latency = 22;
   let NumMicroOps = 4;
   let ResourceCycles = [1,3];
 }
-def: InstRW<[SKXWriteResGroup211], (instregex "VPMULLQZ256rm(b?)",
-                                              "VPMULLQZrm(b?)")>;
+def: InstRW<[SKXWriteResGroup211], (instregex "VPMULLQZ256rm(b?)")>;
+
+def SKXWriteResGroup211_1 : SchedWriteRes<[SKXPort23,SKXPort05]> {
+  let Latency = 22;
+  let NumMicroOps = 4;
+  let ResourceCycles = [1,3];
+}
+def: InstRW<[SKXWriteResGroup211_1], (instregex "VPMULLQZrm(b?)")>;
 
 def SKXWriteResGroup215 : SchedWriteRes<[SKXPort0]> {
   let Latency = 20;
