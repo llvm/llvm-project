@@ -18,11 +18,6 @@ namespace misc {
 
 void UnconventionalAssignOperatorCheck::registerMatchers(
     ast_matchers::MatchFinder *Finder) {
-  // Only register the matchers for C++; the functionality currently does not
-  // provide any benefit to other languages, despite being benign.
-  if (!getLangOpts().CPlusPlus)
-    return;
-
   const auto HasGoodReturnType = cxxMethodDecl(returns(lValueReferenceType(
       pointee(unless(isConstQualified()),
               anyOf(autoType(), hasDeclaration(equalsBoundNode("class")))))));

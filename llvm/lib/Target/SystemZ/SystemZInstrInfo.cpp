@@ -820,18 +820,11 @@ void SystemZInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     return;
   }
 
-  // Move CC value from/to a GR32.
-  if (SrcReg == SystemZ::CC) {
-    auto MIB = BuildMI(MBB, MBBI, DL, get(SystemZ::IPM), DestReg);
-    if (KillSrc) {
-      const MachineFunction *MF = MBB.getParent();
-      const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
-      MIB->addRegisterKilled(SrcReg, TRI);
-    }
-    return;
-  }
+  // Move CC value from a GR32.
   if (DestReg == SystemZ::CC) {
-    BuildMI(MBB, MBBI, DL, get(SystemZ::TMLH))
+    unsigned Opcode =
+      SystemZ::GR32BitRegClass.contains(SrcReg) ? SystemZ::TMLH : SystemZ::TMHH;
+    BuildMI(MBB, MBBI, DL, get(Opcode))
       .addReg(SrcReg, getKillRegState(KillSrc))
       .addImm(3 << (SystemZ::IPM_CC - 16));
     return;
@@ -856,12 +849,6 @@ void SystemZInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     Opcode = SystemZ::VLR;
   else if (SystemZ::AR32BitRegClass.contains(DestReg, SrcReg))
     Opcode = SystemZ::CPYA;
-  else if (SystemZ::AR32BitRegClass.contains(DestReg) &&
-           SystemZ::GR32BitRegClass.contains(SrcReg))
-    Opcode = SystemZ::SAR;
-  else if (SystemZ::GR32BitRegClass.contains(DestReg) &&
-           SystemZ::AR32BitRegClass.contains(SrcReg))
-    Opcode = SystemZ::EAR;
   else
     llvm_unreachable("Impossible reg-to-reg copy");
 

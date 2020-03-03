@@ -104,8 +104,6 @@ body:             |
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $lr, -4
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $r7, -8
   ; CHECK:   renamable $r3, dead $cpsr = tLSLri killed renamable $r2, 1, 14 /* CC::al */, $noreg
-  ; CHECK:   dead renamable $r12 = t2MOVi 4, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   tCMPi8 renamable $r3, 4, 14 /* CC::al */, $noreg, implicit-def dead $cpsr
   ; CHECK:   renamable $r2 = tLEApcrel %const.0, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $q0 = MVE_VLDRWU32 killed renamable $r2, 0, 0, $noreg :: (load 16 from constant-pool)
   ; CHECK:   $lr = MVE_DLSTP_32 killed renamable $r3

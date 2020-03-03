@@ -32,18 +32,12 @@ void ProBoundsConstantArrayIndexCheck::storeOptions(
 
 void ProBoundsConstantArrayIndexCheck::registerPPCallbacks(
     const SourceManager &SM, Preprocessor *PP, Preprocessor *ModuleExpanderPP) {
-  if (!getLangOpts().CPlusPlus)
-    return;
-
   Inserter = std::make_unique<utils::IncludeInserter>(SM, getLangOpts(),
                                                        IncludeStyle);
   PP->addPPCallbacks(Inserter->CreatePPCallbacks());
 }
 
 void ProBoundsConstantArrayIndexCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus)
-    return;
-
   // Note: if a struct contains an array member, the compiler-generated
   // constructor has an arraySubscriptExpr.
   Finder->addMatcher(

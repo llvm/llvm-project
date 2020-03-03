@@ -27,11 +27,6 @@ StaticAssertCheck::StaticAssertCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context) {}
 
 void StaticAssertCheck::registerMatchers(MatchFinder *Finder) {
-  // This checker only makes sense for languages that have static assertion
-  // capabilities: C++11 and C11.
-  if (!(getLangOpts().CPlusPlus11 || getLangOpts().C11))
-    return;
-
   auto NegatedString = unaryOperator(
       hasOperatorName("!"), hasUnaryOperand(ignoringImpCasts(stringLiteral())));
   auto IsAlwaysFalse =

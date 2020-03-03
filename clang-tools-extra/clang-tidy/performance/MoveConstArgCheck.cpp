@@ -40,9 +40,6 @@ void MoveConstArgCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void MoveConstArgCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus)
-    return;
-
   auto MoveCallMatcher =
       callExpr(callee(functionDecl(hasName("::std::move"))), argumentCountIs(1),
                unless(isInTemplateInstantiation()))

@@ -22,11 +22,6 @@ namespace tidy {
 namespace openmp {
 
 void UseDefaultNoneCheck::registerMatchers(MatchFinder *Finder) {
-  // Don't register the check if OpenMP is not enabled; the OpenMP pragmas are
-  // completely ignored then, so no OpenMP entires will be present in the AST.
-  if (!getLangOpts().OpenMP)
-    return;
-
   Finder->addMatcher(
       ompExecutableDirective(
           allOf(isAllowedToContainClauseKind(OMPC_default),

@@ -208,9 +208,6 @@ void UseEqualsDefaultCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void UseEqualsDefaultCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus)
-    return;
-
   // Destructor.
   Finder->addMatcher(cxxDestructorDecl(isDefinition()).bind(SpecialFunction),
                      this);

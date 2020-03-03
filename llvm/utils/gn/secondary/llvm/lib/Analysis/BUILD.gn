@@ -68,7 +68,6 @@ static_library("Analysis") {
     "LoopAnalysisManager.cpp",
     "LoopCacheAnalysis.cpp",
     "LoopInfo.cpp",
-    "LoopNestAnalysis.cpp",
     "LoopPass.cpp",
     "LoopUnrollAnalyzer.cpp",
     "MemDepPrinter.cpp",

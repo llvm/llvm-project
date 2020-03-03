@@ -29,9 +29,6 @@ void UnhandledSelfAssignmentCheck::storeOptions(
 }
 
 void UnhandledSelfAssignmentCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus)
-    return;
-
   // We don't care about deleted, default or implicit operator implementations.
   const auto IsUserDefined = cxxMethodDecl(
       isDefinition(), unless(anyOf(isDeleted(), isImplicit(), isDefaulted())));

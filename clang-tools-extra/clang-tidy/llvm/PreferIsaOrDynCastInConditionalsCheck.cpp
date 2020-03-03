@@ -23,9 +23,6 @@ namespace llvm_check {
 
 void PreferIsaOrDynCastInConditionalsCheck::registerMatchers(
     MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus)
-    return;
-
   auto Condition = hasCondition(implicitCastExpr(has(
       callExpr(
           allOf(unless(isMacroID()), unless(cxxMemberCallExpr()),

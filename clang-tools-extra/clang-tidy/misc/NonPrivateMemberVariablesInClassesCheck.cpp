@@ -50,9 +50,6 @@ NonPrivateMemberVariablesInClassesCheck::
 
 void NonPrivateMemberVariablesInClassesCheck::registerMatchers(
     MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus)
-    return;
-
   // We can ignore structs/classes with all member variables being public.
   auto ShouldIgnoreRecord =
       allOf(boolean(IgnoreClassesWithAllMemberVariablesBeingPublic),

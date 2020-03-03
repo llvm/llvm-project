@@ -18,10 +18,6 @@ namespace tidy {
 namespace objc {
 
 void DeallocInCategoryCheck::registerMatchers(MatchFinder *Finder) {
-  // This check should only be applied to Objective-C sources.
-  if (!getLangOpts().ObjC)
-    return;
-
   // Non-NSObject/NSProxy-derived objects may not have -dealloc as a special
   // method. However, it seems highly unrealistic to expect many false-positives
   // by warning on -dealloc in categories on classes without one of those

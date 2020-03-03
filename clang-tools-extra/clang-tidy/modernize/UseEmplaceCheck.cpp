@@ -40,9 +40,6 @@ UseEmplaceCheck::UseEmplaceCheck(StringRef Name, ClangTidyContext *Context)
           Options.get("TupleMakeFunctions", DefaultTupleMakeFunctions))) {}
 
 void UseEmplaceCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus11)
-    return;
-
   // FIXME: Bunch of functionality that could be easily added:
   // + add handling of `push_front` for std::forward_list, std::list
   // and std::deque.
