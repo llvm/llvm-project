@@ -8670,14 +8670,29 @@ static SDValue lowerBuildVectorAsBroadcast(BuildVectorSDNode *BVOp,
     return SDValue();
 
   if (ScalarSize == 32 || (IsGE256 && ScalarSize == 64) ||
-      (Subtarget.hasVLX() && ScalarSize == 64))
-    return DAG.getNode(X86ISD::VBROADCAST, dl, VT, Ld);
+      (Subtarget.hasVLX() && ScalarSize == 64)) {
+    auto *LN = cast<LoadSDNode>(Ld);
+    SDVTList Tys = DAG.getVTList(VT, MVT::Other);
+    SDValue Ops[] = {LN->getChain(), LN->getBasePtr()};
+    SDValue BCast =
+        DAG.getMemIntrinsicNode(X86ISD::VBROADCAST_LOAD, dl, Tys, Ops,
+                                LN->getMemoryVT(), LN->getMemOperand());
+    DAG.ReplaceAllUsesOfValueWith(SDValue(LN, 1), BCast.getValue(1));
+    return BCast;
+  }
 
   // The integer check is needed for the 64-bit into 128-bit so it doesn't match
   // double since there is no vbroadcastsd xmm
-  if (Subtarget.hasInt256() && Ld.getValueType().isInteger()) {
-    if (ScalarSize == 8 || ScalarSize == 16 || ScalarSize == 64)
-      return DAG.getNode(X86ISD::VBROADCAST, dl, VT, Ld);
+  if (Subtarget.hasInt256() && Ld.getValueType().isInteger() &&
+      (ScalarSize == 8 || ScalarSize == 16 || ScalarSize == 64)) {
+    auto *LN = cast<LoadSDNode>(Ld);
+    SDVTList Tys = DAG.getVTList(VT, MVT::Other);
+    SDValue Ops[] = {LN->getChain(), LN->getBasePtr()};
+    SDValue BCast =
+        DAG.getMemIntrinsicNode(X86ISD::VBROADCAST_LOAD, dl, Tys, Ops,
+                                LN->getMemoryVT(), LN->getMemOperand());
+    DAG.ReplaceAllUsesOfValueWith(SDValue(LN, 1), BCast.getValue(1));
+    return BCast;
   }
 
   // Unsupported broadcast.
