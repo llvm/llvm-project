@@ -439,8 +439,14 @@ void XCOFFObjectWriter::writeSections(const MCAssembler &Asm,
     if (Section->Index == Section::UninitializedIndex || Section->IsVirtual)
       continue;
 
-    assert(CurrentAddressLocation == Section->Address &&
-           "Sections should be written consecutively.");
+    // There could be a gap (without corresponding zero padding) between
+    // sections.
+    assert(CurrentAddressLocation <= Section->Address &&
+           "CurrentAddressLocation should be less than or equal to section "
+           "address.");
+
+    CurrentAddressLocation = Section->Address;
+
     for (const auto *Group : Section->Groups) {
       for (const auto &Csect : *Group) {
         if (uint32_t PaddingSize = Csect.Address - CurrentAddressLocation)
