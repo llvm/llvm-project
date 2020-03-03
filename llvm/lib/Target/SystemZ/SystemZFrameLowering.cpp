@@ -315,9 +315,10 @@ void SystemZFrameLowering::
 processFunctionBeforeFrameFinalized(MachineFunction &MF,
                                     RegScavenger *RS) const {
   MachineFrameInfo &MFFrame = MF.getFrameInfo();
+  bool BackChain = MF.getFunction().hasFnAttribute("backchain");
 
-  if (!usePackedStack(MF))
-    // Always create the full incoming register save area.
+  if (!usePackedStack(MF) || BackChain)
+    // Create the incoming register save area.
     getOrCreateFramePointerSaveIndex(MF);
 
   // Get the size of our stack frame to be allocated ...
