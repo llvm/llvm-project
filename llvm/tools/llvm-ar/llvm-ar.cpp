@@ -1150,8 +1150,6 @@ static int ar_main(int argc, char **argv) {
 
   cl::ExpandResponseFiles(Saver, getRspQuoting(makeArrayRef(argv, argc)), Argv);
 
-  ArrayRef<const char *> ArgsArr = makeArrayRef(argv, argc);
-
   for (ArrayRef<const char *>::iterator ArgIt = Argv.begin();
        ArgIt != Argv.end(); ++ArgIt) {
     const char *Match = nullptr;
