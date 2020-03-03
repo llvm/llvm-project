@@ -531,6 +531,13 @@ bool fromJSON(const llvm::json::Value &Params, Diagnostic &R) {
   return true;
 }
 
+llvm::json::Value toJSON(const PublishDiagnosticsParams &PDP) {
+  return llvm::json::Object{
+    {"uri", PDP.uri},
+    {"diagnostics", PDP.diagnostics},
+  };
+}
+
 bool fromJSON(const llvm::json::Value &Params, CodeActionContext &R) {
   llvm::json::ObjectMapper O(Params);
   return O && O.map("diagnostics", R.diagnostics);

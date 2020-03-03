@@ -133,11 +133,10 @@ private:
   void applyConfiguration(const ConfigurationSettings &Settings);
 
   /// Sends a "publishSemanticHighlighting" notification to the LSP client.
-  void publishSemanticHighlighting(SemanticHighlightingParams Params);
+  void publishSemanticHighlighting(const SemanticHighlightingParams &);
 
   /// Sends a "publishDiagnostics" notification to the LSP client.
-  void publishDiagnostics(const URIForFile &File,
-                          std::vector<clangd::Diagnostic> Diagnostics);
+  void publishDiagnostics(const PublishDiagnosticsParams &);
 
   /// Since initialization of CDBs and ClangdServer is done lazily, the
   /// following context captures the one used while creating ClangdLSPServer and
