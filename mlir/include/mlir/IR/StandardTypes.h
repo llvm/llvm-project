@@ -658,6 +658,20 @@ AffineMap makeStridedLinearLayoutMap(ArrayRef<int64_t> strides, int64_t offset,
 /// `t` with simplified layout.
 MemRefType canonicalizeStridedLayout(MemRefType t);
 
+/// Given MemRef `sizes` that are either static or dynamic, returns the
+/// canonical "contiguous" strides AffineExpr. Strides are multiplicative and
+/// once a dynamic dimension is encountered, all canonical strides become
+/// dynamic and need to be encoded with a different symbol.
+/// For canonical strides expressions, the offset is always 0 and and fastest
+/// varying stride is always `1`.
+///
+/// Examples:
+///   - memref<3x4x5xf32> has canonical stride expression `20*d0 + 5*d1 + d2`.
+///   - memref<3x?x5xf32> has canonical stride expression `s0*d0 + 5*d1 + d2`.
+///   - memref<3x4x?xf32> has canonical stride expression `s1*d0 + s0*d1 + d2`.
+AffineExpr makeCanonicalStridedLayoutExpr(ArrayRef<int64_t> sizes,
+                                          MLIRContext *context);
+
 /// Return true if the layout for `t` is compatible with strided semantics.
 bool isStrided(MemRefType t);
 
