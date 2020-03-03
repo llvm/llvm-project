@@ -237,6 +237,10 @@ private:
   void SelectMVE_VADCSBC(SDNode *N, uint16_t OpcodeWithCarry,
                          uint16_t OpcodeWithNoCarry, bool Add, bool Predicated);
 
+  /// SelectMVE_VSHLC - Select MVE intrinsics for a shift that carries between
+  /// vector lanes.
+  void SelectMVE_VSHLC(SDNode *N, bool Predicated);
+
   /// Select long MVE vector reductions with two vector operands
   /// Stride is the number of vector element widths the instruction can operate
   /// on:
@@ -2569,6 +2573,25 @@ void ARMDAGToDAGISel::SelectMVE_VADCSBC(SDNode *N, uint16_t OpcodeWithCarry,
   CurDAG->SelectNodeTo(N, Opcode, N->getVTList(), makeArrayRef(Ops));
 }
 
+void ARMDAGToDAGISel::SelectMVE_VSHLC(SDNode *N, bool Predicated) {
+  SDLoc Loc(N);
+  SmallVector<SDValue, 8> Ops;
+
+  // One vector input, followed by a 32-bit word of bits to shift in
+  // and then an immediate shift count
+  Ops.push_back(N->getOperand(1));
+  Ops.push_back(N->getOperand(2));
+  int32_t ImmValue = cast<ConstantSDNode>(N->getOperand(3))->getZExtValue();
+  Ops.push_back(getI32Imm(ImmValue, Loc)); // immediate shift count
+
+  if (Predicated)
+    AddMVEPredicateToOps(Ops, Loc, N->getOperand(4));
+  else
+    AddEmptyMVEPredicateToOps(Ops, Loc);
+
+  CurDAG->SelectNodeTo(N, ARM::MVE_VSHLC, N->getVTList(), makeArrayRef(Ops));
+}
+
 static bool SDValueToConstBool(SDValue SDVal) {
   assert(isa<ConstantSDNode>(SDVal) && "expected a compile-time constant");
   ConstantSDNode *SDValConstant = dyn_cast<ConstantSDNode>(SDVal);
@@ -4592,6 +4615,10 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
     case Intrinsic::arm_mve_vsbc_predicated:
       SelectMVE_VADCSBC(N, ARM::MVE_VSBC, ARM::MVE_VSBCI, true,
                         IntNo == Intrinsic::arm_mve_vsbc_predicated);
+      return;
+    case Intrinsic::arm_mve_vshlc:
+    case Intrinsic::arm_mve_vshlc_predicated:
+      SelectMVE_VSHLC(N, IntNo == Intrinsic::arm_mve_vshlc_predicated);
       return;
 
     case Intrinsic::arm_mve_vmlldava:
