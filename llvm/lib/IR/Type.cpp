@@ -529,52 +529,22 @@ StructType *Module::getTypeByName(StringRef Name) const {
   return getContext().pImpl->NamedStructTypes.lookup(Name);
 }
 
-//===----------------------------------------------------------------------===//
-//                       CompositeType Implementation
-//===----------------------------------------------------------------------===//
-
-Type *CompositeType::getTypeAtIndex(const Value *V) const {
-  if (auto *STy = dyn_cast<StructType>(this)) {
-    unsigned Idx =
-      (unsigned)cast<Constant>(V)->getUniqueInteger().getZExtValue();
-    assert(indexValid(Idx) && "Invalid structure index!");
-    return STy->getElementType(Idx);
-  }
-
-  return cast<SequentialType>(this)->getElementType();
+Type *StructType::getTypeAtIndex(const Value *V) const {
+  unsigned Idx = (unsigned)cast<Constant>(V)->getUniqueInteger().getZExtValue();
+  assert(indexValid(Idx) && "Invalid structure index!");
+  return getElementType(Idx);
 }
 
-Type *CompositeType::getTypeAtIndex(unsigned Idx) const{
-  if (auto *STy = dyn_cast<StructType>(this)) {
-    assert(indexValid(Idx) && "Invalid structure index!");
-    return STy->getElementType(Idx);
-  }
-
-  return cast<SequentialType>(this)->getElementType();
-}
-
-bool CompositeType::indexValid(const Value *V) const {
-  if (auto *STy = dyn_cast<StructType>(this)) {
-    // Structure indexes require (vectors of) 32-bit integer constants.  In the
-    // vector case all of the indices must be equal.
-    if (!V->getType()->isIntOrIntVectorTy(32))
-      return false;
-    const Constant *C = dyn_cast<Constant>(V);
-    if (C && V->getType()->isVectorTy())
-      C = C->getSplatValue();
-    const ConstantInt *CU = dyn_cast_or_null<ConstantInt>(C);
-    return CU && CU->getZExtValue() < STy->getNumElements();
-  }
-
-  // Sequential types can be indexed by any integer.
-  return V->getType()->isIntOrIntVectorTy();
-}
-
-bool CompositeType::indexValid(unsigned Idx) const {
-  if (auto *STy = dyn_cast<StructType>(this))
-    return Idx < STy->getNumElements();
-  // Sequential types can be indexed by any integer.
-  return true;
+bool StructType::indexValid(const Value *V) const {
+  // Structure indexes require (vectors of) 32-bit integer constants.  In the
+  // vector case all of the indices must be equal.
+  if (!V->getType()->isIntOrIntVectorTy(32))
+    return false;
+  const Constant *C = dyn_cast<Constant>(V);
+  if (C && V->getType()->isVectorTy())
+    C = C->getSplatValue();
+  const ConstantInt *CU = dyn_cast_or_null<ConstantInt>(C);
+  return CU && CU->getZExtValue() < getNumElements();
 }
 
 //===----------------------------------------------------------------------===//
