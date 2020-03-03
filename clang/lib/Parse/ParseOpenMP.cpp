@@ -2447,7 +2447,6 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
   case OMPC_mergeable:
   case OMPC_read:
   case OMPC_write:
-  case OMPC_update:
   case OMPC_capture:
   case OMPC_seq_cst:
   case OMPC_acq_rel:
@@ -2475,6 +2474,17 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
     }
 
     Clause = ParseOpenMPClause(CKind, WrongDirective);
+    break;
+  case OMPC_update:
+    if (!FirstClause) {
+      Diag(Tok, diag::err_omp_more_one_clause)
+          << getOpenMPDirectiveName(DKind) << getOpenMPClauseName(CKind) << 0;
+      ErrorFound = true;
+    }
+
+    Clause = (DKind == OMPD_depobj)
+                 ? ParseOpenMPSimpleClause(CKind, WrongDirective)
+                 : ParseOpenMPClause(CKind, WrongDirective);
     break;
   case OMPC_private:
   case OMPC_firstprivate:
@@ -2593,10 +2603,13 @@ OMPClause *Parser::ParseOpenMPSingleExprClause(OpenMPClauseKind Kind,
 /// Parsing of simple OpenMP clauses like 'default' or 'proc_bind'.
 ///
 ///    default-clause:
-///         'default' '(' 'none' | 'shared' ')
+///         'default' '(' 'none' | 'shared' ')'
 ///
 ///    proc_bind-clause:
-///         'proc_bind' '(' 'master' | 'close' | 'spread' ')
+///         'proc_bind' '(' 'master' | 'close' | 'spread' ')'
+///
+///    update-clause:
+///         'update' '(' 'in' | 'out' | 'inout' | 'mutexinoutset' ')'
 ///
 OMPClause *Parser::ParseOpenMPSimpleClause(OpenMPClauseKind Kind,
                                            bool ParseOnly) {
