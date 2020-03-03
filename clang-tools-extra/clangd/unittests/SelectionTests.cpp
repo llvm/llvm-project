@@ -415,7 +415,7 @@ TEST(SelectionTest, CommonAncestor) {
 
 // Regression test: this used to match the injected X, not the outer X.
 TEST(SelectionTest, InjectedClassName) {
-  const char* Code = "struct ^X { int x; };";
+  const char *Code = "struct ^X { int x; };";
   auto AST = TestTU::withCode(Annotations(Code).code()).build();
   auto T = makeSelectionTree(Code, AST);
   ASSERT_EQ("CXXRecordDecl", nodeKind(T.commonAncestor())) << T;
@@ -508,7 +508,8 @@ TEST(SelectionTest, IncludedFile) {
 }
 
 TEST(SelectionTest, MacroArgExpansion) {
-  // If a macro arg is expanded several times, we consider them all selected.
+  // If a macro arg is expanded several times, we only consider the first one
+  // selected.
   const char *Case = R"cpp(
     int mul(int, int);
     #define SQUARE(X) mul(X, X);
@@ -517,15 +518,8 @@ TEST(SelectionTest, MacroArgExpansion) {
   Annotations Test(Case);
   auto AST = TestTU::withCode(Test.code()).build();
   auto T = makeSelectionTree(Case, AST);
-  // Unfortunately, this makes the common ancestor the CallExpr...
-  // FIXME: hack around this by picking one?
-  EXPECT_EQ("CallExpr", T.commonAncestor()->kind());
-  EXPECT_FALSE(T.commonAncestor()->Selected);
-  EXPECT_EQ(2u, T.commonAncestor()->Children.size());
-  for (const auto* N : T.commonAncestor()->Children) {
-    EXPECT_EQ("IntegerLiteral", N->kind());
-    EXPECT_TRUE(N->Selected);
-  }
+  EXPECT_EQ("IntegerLiteral", T.commonAncestor()->kind());
+  EXPECT_TRUE(T.commonAncestor()->Selected);
 
   // Verify that the common assert() macro doesn't suffer from this.
   // (This is because we don't associate the stringified token with the arg).
@@ -542,7 +536,7 @@ TEST(SelectionTest, MacroArgExpansion) {
 }
 
 TEST(SelectionTest, Implicit) {
-  const char* Test = R"cpp(
+  const char *Test = R"cpp(
     struct S { S(const char*); };
     int f(S);
     int x = f("^");
