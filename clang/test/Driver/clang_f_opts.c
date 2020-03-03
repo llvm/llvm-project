@@ -12,7 +12,7 @@
 // CHECK-OPTIONS2: -fno-gnu-keywords
 // CHECK-OPTIONS2: -fno-builtin
 // CHECK-OPTIONS2: -fshort-enums
-// CHECK-OPTIONS2-NOT: -fcommon
+// CHECK-OPTIONS2: -fno-common
 // CHECK-OPTIONS2: -fno-show-source-location
 
 // RUN: %clang -### -S -Wwrite-strings %s 2>&1 | FileCheck -check-prefix=WRITE-STRINGS1 %s
