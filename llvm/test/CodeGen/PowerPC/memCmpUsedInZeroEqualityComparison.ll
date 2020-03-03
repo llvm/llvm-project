@@ -89,28 +89,8 @@ define signext i32 @zeroEqualityTest03(i8* %x, i8* %y) {
 ; Validate with > 0
 define signext i32 @zeroEqualityTest04() {
 ; CHECK-LABEL: zeroEqualityTest04:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    b .LBB3_2
-; CHECK-NEXT:  # %bb.1: # %loadbb1
+; CHECK:       # %bb.0: # %loadbb
 ; CHECK-NEXT:    li 3, 0
-; CHECK-NEXT:    li 5, 0
-; CHECK-NEXT:    li 4, 0
-; CHECK-NEXT:    b .LBB3_4
-; CHECK-NEXT:  .LBB3_2:
-; CHECK-NEXT:    li 3, 1
-; CHECK-NEXT:    li 4, 3
-; CHECK-NEXT:    sldi 3, 3, 58
-; CHECK-NEXT:    sldi 4, 4, 56
-; CHECK-NEXT:  # %bb.3: # %res_block
-; CHECK-NEXT:    cmpld 3, 4
-; CHECK-NEXT:    li 3, 1
-; CHECK-NEXT:    li 4, -1
-; CHECK-NEXT:    isel 5, 4, 3, 0
-; CHECK-NEXT:  .LBB3_4: # %endblock
-; CHECK-NEXT:    extsw 3, 5
-; CHECK-NEXT:    neg 3, 3
-; CHECK-NEXT:    rldicl 3, 3, 1, 63
-; CHECK-NEXT:    xori 3, 3, 1
 ; CHECK-NEXT:    blr
   %call = tail call signext i32 @memcmp(i8* bitcast ([4 x i32]* @zeroEqualityTest02.buffer1 to i8*), i8* bitcast ([4 x i32]* @zeroEqualityTest02.buffer2 to i8*), i64 16)
   %not.cmp = icmp slt i32 %call, 1
@@ -121,22 +101,8 @@ define signext i32 @zeroEqualityTest04() {
 ; Validate with < 0
 define signext i32 @zeroEqualityTest05() {
 ; CHECK-LABEL: zeroEqualityTest05:
-; CHECK:       # %bb.0:
+; CHECK:       # %bb.0: # %loadbb
 ; CHECK-NEXT:    li 3, 0
-; CHECK-NEXT:    li 4, 0
-; CHECK-NEXT:  # %bb.1: # %loadbb1
-; CHECK-NEXT:    li 3, 0
-; CHECK-NEXT:  # %bb.2:
-; CHECK-NEXT:    lis 3, 768
-; CHECK-NEXT:    lis 4, 1024
-; CHECK-NEXT:  # %bb.3: # %res_block
-; CHECK-NEXT:    cmpld 3, 4
-; CHECK-NEXT:    li 3, 1
-; CHECK-NEXT:    li 4, -1
-; CHECK-NEXT:    isel 3, 4, 3, 0
-; CHECK-NEXT:  # %bb.4: # %endblock
-; CHECK-NEXT:    nor 3, 3, 3
-; CHECK-NEXT:    rlwinm 3, 3, 1, 31, 31
 ; CHECK-NEXT:    blr
   %call = tail call signext i32 @memcmp(i8* bitcast ([4 x i32]* @zeroEqualityTest03.buffer1 to i8*), i8* bitcast ([4 x i32]* @zeroEqualityTest03.buffer2 to i8*), i64 16)
   %call.lobit = lshr i32 %call, 31

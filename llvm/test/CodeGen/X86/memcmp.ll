@@ -276,7 +276,7 @@ define i1 @length2_eq_nobuiltin_attr(i8* %X, i8* %Y) nounwind {
 
 define i32 @length3(i8* %X, i8* %Y) nounwind {
 ; X86-LABEL: length3:
-; X86:       # %bb.0: # %loadbb
+; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -285,14 +285,14 @@ define i32 @length3(i8* %X, i8* %Y) nounwind {
 ; X86-NEXT:    rolw $8, %dx
 ; X86-NEXT:    rolw $8, %si
 ; X86-NEXT:    cmpw %si, %dx
-; X86-NEXT:    jne .LBB11_1
-; X86-NEXT:  # %bb.2: # %loadbb1
+; X86-NEXT:    jne .LBB11_3
+; X86-NEXT:  # %bb.1: # %loadbb1
 ; X86-NEXT:    movzbl 2(%eax), %eax
 ; X86-NEXT:    movzbl 2(%ecx), %ecx
 ; X86-NEXT:    subl %ecx, %eax
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB11_1: # %res_block
+; X86-NEXT:  .LBB11_3: # %res_block
 ; X86-NEXT:    setae %al
 ; X86-NEXT:    movzbl %al, %eax
 ; X86-NEXT:    leal -1(%eax,%eax), %eax
@@ -300,19 +300,19 @@ define i32 @length3(i8* %X, i8* %Y) nounwind {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: length3:
-; X64:       # %bb.0: # %loadbb
+; X64:       # %bb.0:
 ; X64-NEXT:    movzwl (%rdi), %eax
 ; X64-NEXT:    movzwl (%rsi), %ecx
 ; X64-NEXT:    rolw $8, %ax
 ; X64-NEXT:    rolw $8, %cx
 ; X64-NEXT:    cmpw %cx, %ax
-; X64-NEXT:    jne .LBB11_1
-; X64-NEXT:  # %bb.2: # %loadbb1
+; X64-NEXT:    jne .LBB11_3
+; X64-NEXT:  # %bb.1: # %loadbb1
 ; X64-NEXT:    movzbl 2(%rdi), %eax
 ; X64-NEXT:    movzbl 2(%rsi), %ecx
 ; X64-NEXT:    subl %ecx, %eax
 ; X64-NEXT:    retq
-; X64-NEXT:  .LBB11_1: # %res_block
+; X64-NEXT:  .LBB11_3: # %res_block
 ; X64-NEXT:    setae %al
 ; X64-NEXT:    movzbl %al, %eax
 ; X64-NEXT:    leal -1(%rax,%rax), %eax
@@ -491,7 +491,7 @@ define i1 @length4_eq_const(i8* %X) nounwind {
 
 define i32 @length5(i8* %X, i8* %Y) nounwind {
 ; X86-LABEL: length5:
-; X86:       # %bb.0: # %loadbb
+; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -500,14 +500,14 @@ define i32 @length5(i8* %X, i8* %Y) nounwind {
 ; X86-NEXT:    bswapl %edx
 ; X86-NEXT:    bswapl %esi
 ; X86-NEXT:    cmpl %esi, %edx
-; X86-NEXT:    jne .LBB18_1
-; X86-NEXT:  # %bb.2: # %loadbb1
+; X86-NEXT:    jne .LBB18_3
+; X86-NEXT:  # %bb.1: # %loadbb1
 ; X86-NEXT:    movzbl 4(%eax), %eax
 ; X86-NEXT:    movzbl 4(%ecx), %ecx
 ; X86-NEXT:    subl %ecx, %eax
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB18_1: # %res_block
+; X86-NEXT:  .LBB18_3: # %res_block
 ; X86-NEXT:    setae %al
 ; X86-NEXT:    movzbl %al, %eax
 ; X86-NEXT:    leal -1(%eax,%eax), %eax
@@ -515,19 +515,19 @@ define i32 @length5(i8* %X, i8* %Y) nounwind {
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: length5:
-; X64:       # %bb.0: # %loadbb
+; X64:       # %bb.0:
 ; X64-NEXT:    movl (%rdi), %eax
 ; X64-NEXT:    movl (%rsi), %ecx
 ; X64-NEXT:    bswapl %eax
 ; X64-NEXT:    bswapl %ecx
 ; X64-NEXT:    cmpl %ecx, %eax
-; X64-NEXT:    jne .LBB18_1
-; X64-NEXT:  # %bb.2: # %loadbb1
+; X64-NEXT:    jne .LBB18_3
+; X64-NEXT:  # %bb.1: # %loadbb1
 ; X64-NEXT:    movzbl 4(%rdi), %eax
 ; X64-NEXT:    movzbl 4(%rsi), %ecx
 ; X64-NEXT:    subl %ecx, %eax
 ; X64-NEXT:    retq
-; X64-NEXT:  .LBB18_1: # %res_block
+; X64-NEXT:  .LBB18_3: # %res_block
 ; X64-NEXT:    setae %al
 ; X64-NEXT:    movzbl %al, %eax
 ; X64-NEXT:    leal -1(%rax,%rax), %eax
@@ -567,7 +567,7 @@ define i1 @length5_eq(i8* %X, i8* %Y) nounwind {
 
 define i1 @length5_lt(i8* %X, i8* %Y) nounwind {
 ; X86-LABEL: length5_lt:
-; X86:       # %bb.0: # %loadbb
+; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -576,38 +576,38 @@ define i1 @length5_lt(i8* %X, i8* %Y) nounwind {
 ; X86-NEXT:    bswapl %edx
 ; X86-NEXT:    bswapl %esi
 ; X86-NEXT:    cmpl %esi, %edx
-; X86-NEXT:    jne .LBB20_1
-; X86-NEXT:  # %bb.2: # %loadbb1
+; X86-NEXT:    jne .LBB20_3
+; X86-NEXT:  # %bb.1: # %loadbb1
 ; X86-NEXT:    movzbl 4(%eax), %eax
 ; X86-NEXT:    movzbl 4(%ecx), %ecx
 ; X86-NEXT:    subl %ecx, %eax
-; X86-NEXT:    jmp .LBB20_3
-; X86-NEXT:  .LBB20_1: # %res_block
+; X86-NEXT:    jmp .LBB20_2
+; X86-NEXT:  .LBB20_3: # %res_block
 ; X86-NEXT:    setae %al
 ; X86-NEXT:    movzbl %al, %eax
 ; X86-NEXT:    leal -1(%eax,%eax), %eax
-; X86-NEXT:  .LBB20_3: # %endblock
+; X86-NEXT:  .LBB20_2: # %endblock
 ; X86-NEXT:    shrl $31, %eax
 ; X86-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: length5_lt:
-; X64:       # %bb.0: # %loadbb
+; X64:       # %bb.0:
 ; X64-NEXT:    movl (%rdi), %eax
 ; X64-NEXT:    movl (%rsi), %ecx
 ; X64-NEXT:    bswapl %eax
 ; X64-NEXT:    bswapl %ecx
 ; X64-NEXT:    cmpl %ecx, %eax
-; X64-NEXT:    jne .LBB20_1
-; X64-NEXT:  # %bb.2: # %loadbb1
+; X64-NEXT:    jne .LBB20_3
+; X64-NEXT:  # %bb.1: # %loadbb1
 ; X64-NEXT:    movzbl 4(%rdi), %eax
 ; X64-NEXT:    movzbl 4(%rsi), %ecx
 ; X64-NEXT:    subl %ecx, %eax
 ; X64-NEXT:    shrl $31, %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
-; X64-NEXT:  .LBB20_1: # %res_block
+; X64-NEXT:  .LBB20_3: # %res_block
 ; X64-NEXT:    setae %al
 ; X64-NEXT:    movzbl %al, %eax
 ; X64-NEXT:    leal -1(%rax,%rax), %eax
