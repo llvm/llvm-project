@@ -943,11 +943,8 @@ void ARMLowOverheadLoops::IterationCountDCE(LowOverheadLoop &LoLoop) {
   if (ModifiedITs.empty()) {
     LLVM_DEBUG(dbgs() << "ARM Loops: Will remove iteration count:\n";
                for (auto *MI : Killed)
-                 dbgs() << " - " << *MI;
-               for (auto *MI : DeadITs)
                  dbgs() << " - " << *MI);
     LoLoop.ToRemove.insert(Killed.begin(), Killed.end());
-    LoLoop.ToRemove.insert(DeadITs.begin(), DeadITs.end());
   }
 
   // Collect and remove the users of iteration count.
