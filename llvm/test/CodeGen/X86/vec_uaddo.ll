@@ -1035,7 +1035,7 @@ define <4 x i32> @uaddo_v4i24(<4 x i24> %a0, <4 x i24> %a1, <4 x i24>* %p2) noun
 ;
 ; AVX1-LABEL: uaddo_v4i24:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [2.35098856E-38,2.35098856E-38,2.35098856E-38,2.35098856E-38]
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [16777215,16777215,16777215,16777215]
 ; AVX1-NEXT:    vandps %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vandps %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm1
