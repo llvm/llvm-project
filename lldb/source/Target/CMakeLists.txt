@@ -79,6 +79,7 @@ add_lldb_library(lldbTarget
 
   LINK_COMPONENTS
     Support
+    MC
   )
 
 add_dependencies(lldbTarget
