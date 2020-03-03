@@ -6897,8 +6897,8 @@ def err_array_new_needs_size : Error<
   "array size must be specified in new expression with no initializer">;
 def err_bad_new_type : Error<
   "cannot allocate %select{function|reference}1 type %0 with new">;
-def err_new_incomplete_type : Error<
-  "allocation of incomplete type %0">;
+def err_new_incomplete_or_sizeless_type : Error<
+  "allocation of %select{incomplete|sizeless}0 type %1">;
 def err_new_array_nonconst : Error<
   "only the first dimension of an allocated array may have dynamic size">;
 def err_new_array_size_unknown_from_init : Error<
