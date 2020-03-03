@@ -900,40 +900,53 @@ void ARMLowOverheadLoops::IterationCountDCE(LowOverheadLoop &LoLoop) {
   if (!LoLoop.IsTailPredicationLegal())
     return;
 
-  MachineInstr *Def = RDA->getMIOperand(LoLoop.Start, 0);
-  if (!Def)
-    return;
+  LLVM_DEBUG(dbgs() << "ARM Loops: Trying DCE on loop iteration count.\n");
 
-  // Collect IT blocks.
+  MachineInstr *Def = RDA->getMIOperand(LoLoop.Start, 0);
+  if (!Def) {
+    LLVM_DEBUG(dbgs() << "ARM Loops: Couldn't find iteration count.\n");
+    return;
+  }
+
+  // Collect and remove the users of iteration count.
+  SmallPtrSet<MachineInstr*, 4> Killed  = { LoLoop.Start, LoLoop.Dec,
+                                            LoLoop.End, LoLoop.InsertPt };
+  SmallPtrSet<MachineInstr*, 2> Remove;
+  if (RDA->isSafeToRemove(Def, Remove, Killed))
+    LoLoop.ToRemove.insert(Remove.begin(), Remove.end());
+  else {
+    LLVM_DEBUG(dbgs() << "ARM Loops: Unsafe to remove loop iteration count.\n");
+    return;
+  }
+
+  // Collect the dead code and the MBBs in which they reside.
+  RDA->collectKilledOperands(Def, Killed);
+  SmallPtrSet<MachineBasicBlock*, 2> BasicBlocks;
+  for (auto *MI : Killed)
+    BasicBlocks.insert(MI->getParent());
+
+  // Collect IT blocks in all affected basic blocks.
   std::map<MachineInstr *, SmallPtrSet<MachineInstr *, 2>> ITBlocks;
-  std::map<MachineInstr *, MachineInstr *> Predicates;
-  MachineInstr *IT = nullptr;
-  for (auto &MI : *Def->getParent()) {
-    if (MI.getOpcode() == ARM::t2IT)
-      IT = &MI;
-    else if (TII->getPredicate(MI) != ARMCC::AL) {
-      ITBlocks[IT].insert(&MI);
-      Predicates[&MI] = IT;
+  for (auto *MBB : BasicBlocks) {
+    for (auto &MI : *MBB) {
+      if (MI.getOpcode() != ARM::t2IT)
+        continue;
+      RDA->getReachingLocalUses(&MI, ARM::ITSTATE, ITBlocks[&MI]);
     }
   }
 
   // If we're removing all of the instructions within an IT block, then
   // also remove the IT instruction.
   SmallPtrSet<MachineInstr*, 2> ModifiedITs;
-  SmallPtrSet<MachineInstr*, 2> DeadITs;
-  SmallPtrSet<MachineInstr*, 4> Killed;
-  RDA->collectLocalKilledOperands(Def, Killed);
   for (auto *MI : Killed) {
-    if (!Predicates.count(MI))
-      continue;
-
-    MachineInstr *IT = Predicates[MI];
-    auto &CurrentBlock = ITBlocks[IT];
-    CurrentBlock.erase(MI);
-    ModifiedITs.insert(IT);
-    if (CurrentBlock.empty()) {
-      DeadITs.insert(IT);
-      ModifiedITs.erase(IT);
+    if (MachineOperand *MO = MI->findRegisterUseOperand(ARM::ITSTATE)) {
+      MachineInstr *IT = RDA->getMIOperand(MI, *MO);
+      auto &CurrentBlock = ITBlocks[IT];
+      CurrentBlock.erase(MI);
+      if (CurrentBlock.empty())
+        ModifiedITs.erase(IT);
+      else
+        ModifiedITs.insert(IT);
     }
   }
 
@@ -945,14 +958,8 @@ void ARMLowOverheadLoops::IterationCountDCE(LowOverheadLoop &LoLoop) {
                for (auto *MI : Killed)
                  dbgs() << " - " << *MI);
     LoLoop.ToRemove.insert(Killed.begin(), Killed.end());
-  }
-
-  // Collect and remove the users of iteration count.
-  SmallPtrSet<MachineInstr*, 4> Ignore = { LoLoop.Start, LoLoop.Dec,
-                                           LoLoop.End, LoLoop.InsertPt };
-  SmallPtrSet<MachineInstr*, 2> Remove;
-  if (RDA->isSafeToRemove(Def, Remove, Ignore))
-    LoLoop.ToRemove.insert(Remove.begin(), Remove.end());
+  } else
+    LLVM_DEBUG(dbgs() << "ARM Loops: Would need to modify IT block(s).\n");
 }
 
 MachineInstr* ARMLowOverheadLoops::ExpandLoopStart(LowOverheadLoop &LoLoop) {
@@ -1076,8 +1083,8 @@ void ARMLowOverheadLoops::Expand(LowOverheadLoop &LoLoop) {
     MIB.add(End->getOperand(0));
     MIB.add(End->getOperand(1));
     LLVM_DEBUG(dbgs() << "ARM Loops: Inserted LE: " << *MIB);
-    LoLoop.Dec->eraseFromParent();
-    End->eraseFromParent();
+    LoLoop.ToRemove.insert(LoLoop.Dec);
+    LoLoop.ToRemove.insert(End);
     return &*MIB;
   };
 

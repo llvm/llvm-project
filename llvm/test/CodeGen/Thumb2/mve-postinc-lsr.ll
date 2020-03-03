@@ -576,15 +576,7 @@ define i32 @arm_nn_mat_mul_core_4x_s8(i32 %row_elements, i32 %offset, i8* %row_b
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, r10, lr}
 ; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, r10, lr}
-; CHECK-NEXT:    add.w r7, r0, #15
 ; CHECK-NEXT:    ldr.w r12, [sp, #32]
-; CHECK-NEXT:    mov.w lr, #1
-; CHECK-NEXT:    asrs r6, r7, #31
-; CHECK-NEXT:    add.w r4, r7, r6, lsr #28
-; CHECK-NEXT:    asrs r5, r4, #4
-; CHECK-NEXT:    cmp r5, #1
-; CHECK-NEXT:    it gt
-; CHECK-NEXT:    asrgt.w lr, r4, #4
 ; CHECK-NEXT:    cmp r0, #1
 ; CHECK-NEXT:    blt .LBB4_3
 ; CHECK-NEXT:  @ %bb.1: @ %for.body.preheader
