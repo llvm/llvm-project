@@ -33,7 +33,7 @@ def SVEPrefetchOperand : AsmOperandClass {
   let RenderMethod = "addPrefetchOperands";
 }
 
-def sve_prfop : Operand<i32>, ImmLeaf<i32, [{
+def sve_prfop : Operand<i32>, TImmLeaf<i32, [{
     return (((uint32_t)Imm) <= 15);
   }]> {
   let PrintMethod = "printPrefetchOp<true>";

@@ -1273,9 +1273,9 @@ def int_aarch64_sve_stnt1 : AdvSIMD_1Vec_PredStore_Intrinsic;
 // Prefetch
 //
 
-def int_aarch64_sve_prf : Intrinsic<[], [llvm_anyvector_ty,
-                                         llvm_ptr_ty,
-                                         llvm_i32_ty], [IntrArgMemOnly]>;
+def int_aarch64_sve_prf
+  : Intrinsic<[], [llvm_anyvector_ty, llvm_ptr_ty, llvm_i32_ty],
+                  [IntrArgMemOnly, ImmArg<2>]>;
 
 //
 // Scalar to vector operations
