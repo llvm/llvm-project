@@ -1,4 +1,4 @@
-# RUN: not llc -mtriple aarch64-linux-gnu -verify-machineinstrs -start-after=livedebugvalues \
+# RUN: not --crash llc -mtriple aarch64-linux-gnu -verify-machineinstrs -start-after=livedebugvalues \
 # RUN:   -filetype=obj -o /dev/null %s 2>&1 | FileCheck %s
 
 # CHECK: *** Bad machine code: Non-terminator instruction after the first terminator ***
