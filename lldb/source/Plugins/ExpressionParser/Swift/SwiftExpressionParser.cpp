@@ -1300,9 +1300,7 @@ static llvm::Expected<ParsedExpression> ParseAndImport(
   swift_ast_context->AddDebuggerClient(external_lookup);
 
   // Note, we disable delayed parsing for the swift expression parser.
-  swift::parseIntoSourceFile(*source_file, buffer_id,
-                             /*PersistentState=*/nullptr,
-                             /*DelayBodyParsing=*/false);
+  swift::parseIntoSourceFile(*source_file, buffer_id);
 
   if (swift_ast_context->HasErrors())
     return make_error<SwiftASTContextError>();
