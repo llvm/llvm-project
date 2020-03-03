@@ -17,7 +17,7 @@ void call_imported_function() {
 }
 
 // CHECK: @import_int = external dllimport global i32
-// CHECK: @export_int = common dso_local dllexport global i32 0, align 4
+// CHECK: @export_int = dso_local dllexport global i32 0, align 4
 
 // CHECK: define dso_local dllexport arm_aapcs_vfpcc void @export_implemented_function()
 
