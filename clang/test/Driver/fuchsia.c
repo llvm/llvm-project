@@ -22,7 +22,7 @@
 // CHECK-AARCH64: "-fsanitize=shadow-call-stack"
 // CHECK-X86_64: "-fsanitize=safe-stack"
 // CHECK: "-stack-protector" "2"
-// CHECK-NOT: "-fcommon"
+// CHECK: "-fno-common"
 // CHECK: {{.*}}ld.lld{{.*}}" "-z" "now" "-z" "rodynamic" "-z" "separate-loadable-segments"
 // CHECK: "--sysroot=[[SYSROOT]]"
 // CHECK: "-pie"
