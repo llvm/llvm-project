@@ -421,7 +421,7 @@ LogicalResult ModuleTranslation::convertBlock(Block &bb, bool ignoreArguments) {
 
 /// Create named global variables that correspond to llvm.mlir.global
 /// definitions.
-void ModuleTranslation::convertGlobals() {
+LogicalResult ModuleTranslation::convertGlobals() {
   for (auto op : getModuleBody(mlirModule).getOps<LLVM::GlobalOp>()) {
     llvm::Type *type = op.getType().getUnderlyingType();
     llvm::Constant *cst = llvm::UndefValue::get(type);
@@ -432,17 +432,16 @@ void ModuleTranslation::convertGlobals() {
         cst = llvm::ConstantDataArray::getString(
             llvmModule->getContext(), strAttr.getValue(), /*AddNull=*/false);
         type = cst->getType();
-      } else {
-        cst = getLLVMConstant(type, op.getValueOrNull(), op.getLoc());
+      } else if (!(cst = getLLVMConstant(type, op.getValueOrNull(),
+                                         op.getLoc()))) {
+        return failure();
       }
     } else if (Block *initializer = op.getInitializerBlock()) {
       llvm::IRBuilder<> builder(llvmModule->getContext());
       for (auto &op : initializer->without_terminator()) {
         if (failed(convertOperation(op, builder)) ||
-            !isa<llvm::Constant>(valueMapping.lookup(op.getResult(0)))) {
-          emitError(op.getLoc(), "unemittable constant value");
-          return;
-        }
+            !isa<llvm::Constant>(valueMapping.lookup(op.getResult(0))))
+          return emitError(op.getLoc(), "unemittable constant value");
       }
       ReturnOp ret = cast<ReturnOp>(initializer->getTerminator());
       cst = cast<llvm::Constant>(valueMapping.lookup(ret.getOperand(0)));
@@ -460,6 +459,8 @@ void ModuleTranslation::convertGlobals() {
 
     globalsMapping.try_emplace(op, var);
   }
+
+  return success();
 }
 
 /// Get the SSA value passed to the current block from the terminator operation
