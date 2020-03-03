@@ -262,12 +262,8 @@ bool DWARFUnitHeader::extract(DWARFContext &Context,
   IndexEntry = Entry;
   if (!IndexEntry && Index)
     IndexEntry = Index->getFromOffset(*offset_ptr);
-  Length = debug_info.getRelocatedValue(4, offset_ptr, nullptr, &Err);
-  FormParams.Format = DWARF32;
-  if (Length == dwarf::DW_LENGTH_DWARF64) {
-    Length = debug_info.getU64(offset_ptr, &Err);
-    FormParams.Format = DWARF64;
-  }
+  std::tie(Length, FormParams.Format) =
+      debug_info.getInitialLength(offset_ptr, &Err);
   FormParams.Version = debug_info.getU16(offset_ptr, &Err);
   if (FormParams.Version >= 5) {
     UnitType = debug_info.getU8(offset_ptr, &Err);
