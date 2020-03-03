@@ -72,10 +72,10 @@ public:
     MinRegionIndex = NumRegions; // MaxRegionIndex is already initialized to 0.
 
     u32 Seed;
+    const u64 Time = getMonotonicTime();
     if (UNLIKELY(!getRandom(reinterpret_cast<void *>(&Seed), sizeof(Seed))))
-      Seed =
-          static_cast<u32>(getMonotonicTime() ^
-                           (reinterpret_cast<uptr>(SizeClassInfoArray) >> 6));
+      Seed = static_cast<u32>(
+          Time ^ (reinterpret_cast<uptr>(SizeClassInfoArray) >> 6));
     const uptr PageSize = getPageSizeCached();
     for (uptr I = 0; I < NumClasses; I++) {
       SizeClassInfo *Sci = getSizeClassInfo(I);
@@ -83,6 +83,8 @@ public:
       // See comment in the 64-bit primary about releasing smaller size classes.
       Sci->CanRelease = (I != SizeClassMap::BatchClassId) &&
                         (getSizeByClassId(I) >= (PageSize / 32));
+      if (Sci->CanRelease)
+        Sci->ReleaseInfo.LastReleaseAtNs = Time;
     }
     setReleaseToOsIntervalMs(ReleaseToOsInterval);
   }
@@ -208,6 +210,7 @@ private:
   static const uptr NumClasses = SizeClassMap::NumClasses;
   static const uptr RegionSize = 1UL << RegionSizeLog;
   static const uptr NumRegions = SCUDO_MMAP_RANGE_SIZE >> RegionSizeLog;
+  static const u32 MaxNumBatches = SCUDO_ANDROID ? 4U : 8U;
   typedef FlatByteMap<NumRegions> ByteMap;
 
   struct SizeClassStats {
@@ -225,6 +228,8 @@ private:
   struct ALIGNED(SCUDO_CACHE_LINE_SIZE) SizeClassInfo {
     HybridMutex Mutex;
     SinglyLinkedList<TransferBatch> FreeList;
+    uptr CurrentRegion;
+    uptr CurrentRegionAllocated;
     SizeClassStats Stats;
     bool CanRelease;
     u32 RandState;
@@ -315,21 +320,50 @@ private:
 
   NOINLINE TransferBatch *populateFreeList(CacheT *C, uptr ClassId,
                                            SizeClassInfo *Sci) {
-    const uptr Region = allocateRegion(ClassId);
-    if (UNLIKELY(!Region))
-      return nullptr;
-    C->getStats().add(StatMapped, RegionSize);
+    uptr Region;
+    uptr Offset;
+    // If the size-class currently has a region associated to it, use it. The
+    // newly created blocks will be located after the currently allocated memory
+    // for that region (up to RegionSize). Otherwise, create a new region, where
+    // the new blocks will be carved from the beginning.
+    if (Sci->CurrentRegion) {
+      Region = Sci->CurrentRegion;
+      DCHECK_GT(Sci->CurrentRegionAllocated, 0U);
+      Offset = Sci->CurrentRegionAllocated;
+    } else {
+      DCHECK_EQ(Sci->CurrentRegionAllocated, 0U);
+      Region = allocateRegion(ClassId);
+      if (UNLIKELY(!Region))
+        return nullptr;
+      C->getStats().add(StatMapped, RegionSize);
+      Sci->CurrentRegion = Region;
+      Offset = 0;
+    }
+
     const uptr Size = getSizeByClassId(ClassId);
     const u32 MaxCount = TransferBatch::getMaxCached(Size);
-    DCHECK_GT(MaxCount, 0);
-    const uptr NumberOfBlocks = RegionSize / Size;
-    DCHECK_GT(NumberOfBlocks, 0);
+    DCHECK_GT(MaxCount, 0U);
+    // The maximum number of blocks we should carve in the region is dictated
+    // by the maximum number of batches we want to fill, and the amount of
+    // memory left in the current region (we use the lowest of the two). This
+    // will not be 0 as we ensure that a region can at least hold one block (via
+    // static_assert and at the end of this function).
+    const u32 NumberOfBlocks =
+        Min(MaxNumBatches * MaxCount,
+            static_cast<u32>((RegionSize - Offset) / Size));
+    DCHECK_GT(NumberOfBlocks, 0U);
+
     TransferBatch *B = nullptr;
-    constexpr u32 ShuffleArraySize = 8U * TransferBatch::MaxNumCached;
+    constexpr u32 ShuffleArraySize =
+        MaxNumBatches * TransferBatch::MaxNumCached;
+    // Fill the transfer batches and put them in the size-class freelist. We
+    // need to randomize the blocks for security purposes, so we first fill a
+    // local array that we then shuffle before populating the batches.
     void *ShuffleArray[ShuffleArraySize];
     u32 Count = 0;
     const uptr AllocatedUser = Size * NumberOfBlocks;
-    for (uptr I = Region; I < Region + AllocatedUser; I += Size) {
+    for (uptr I = Region + Offset; I < Region + Offset + AllocatedUser;
+         I += Size) {
       ShuffleArray[Count++] = reinterpret_cast<void *>(I);
       if (Count == ShuffleArraySize) {
         if (UNLIKELY(!populateBatches(C, Sci, ClassId, &B, MaxCount,
@@ -352,9 +386,18 @@ private:
     DCHECK_GT(B->getCount(), 0);
 
     C->getStats().add(StatFree, AllocatedUser);
+    DCHECK_LE(Sci->CurrentRegionAllocated + AllocatedUser, RegionSize);
+    // If there is not enough room in the region currently associated to fit
+    // more blocks, we deassociate the region by resetting CurrentRegion and
+    // CurrentRegionAllocated. Otherwise, update the allocated amount.
+    if (RegionSize - (Sci->CurrentRegionAllocated + AllocatedUser) < Size) {
+      Sci->CurrentRegion = 0;
+      Sci->CurrentRegionAllocated = 0;
+    } else {
+      Sci->CurrentRegionAllocated += AllocatedUser;
+    }
     Sci->AllocatedUser += AllocatedUser;
-    if (Sci->CanRelease)
-      Sci->ReleaseInfo.LastReleaseAtNs = getMonotonicTime();
+
     return B;
   }
 
@@ -407,10 +450,15 @@ private:
     // iterate multiple times over the same freelist if a ClassId spans multiple
     // regions. But it will have to do for now.
     uptr TotalReleasedBytes = 0;
-    const uptr Size = (RegionSize / BlockSize) * BlockSize;
+    const uptr MaxSize = (RegionSize / BlockSize) * BlockSize;
     for (uptr I = MinRegionIndex; I <= MaxRegionIndex; I++) {
       if (PossibleRegions[I] - 1U == ClassId) {
         const uptr Region = I * RegionSize;
+        // If the region is the one currently associated to the size-class, we
+        // only need to release up to CurrentRegionAllocated, MaxSize otherwise.
+        const uptr Size = (Region == Sci->CurrentRegion)
+                              ? Sci->CurrentRegionAllocated
+                              : MaxSize;
         ReleaseRecorder Recorder(Region);
         releaseFreeMemoryToOS(Sci->FreeList, Region, Size, BlockSize,
                               &Recorder);
