@@ -1,8 +1,8 @@
-// RUN: mlir-opt %s | FileCheck %s
+// RUN: mlir-opt %s | FileCheck %s --dump-input-on-failure
 // Verify the printed output can be parsed.
-// RUN: mlir-opt %s | mlir-opt | FileCheck %s
+// RUN: mlir-opt %s | mlir-opt | FileCheck %s --dump-input-on-failure
 // Verify the generic form can be parsed.
-// RUN: mlir-opt -mlir-print-op-generic %s | mlir-opt | FileCheck %s
+// RUN: mlir-opt -mlir-print-op-generic %s | mlir-opt | FileCheck %s --dump-input-on-failure
 
 func @std_for(%arg0 : index, %arg1 : index, %arg2 : index) {
   loop.for %i0 = %arg0 to %arg1 step %arg2 {
@@ -59,9 +59,10 @@ func @std_parallel_loop(%arg0 : index, %arg1 : index, %arg2 : index,
     %min = select %min_cmp, %i0, %i1 : index
     %max_cmp = cmpi "sge", %i0, %i1 : index
     %max = select %max_cmp, %i0, %i1 : index
-    %red = loop.parallel (%i2) = (%min) to (%max) step (%i1) {
-      %zero = constant 0.0 : f32
-      loop.reduce(%zero) {
+    %zero = constant 0.0 : f32
+    %red = loop.parallel (%i2) = (%min) to (%max) step (%i1) init (%zero) {
+      %one = constant 1.0 : f32
+      loop.reduce(%one) {
         ^bb0(%lhs : f32, %rhs: f32):
           %res = addf %lhs, %rhs : f32
           loop.reduce.return %res : f32
@@ -83,9 +84,11 @@ func @std_parallel_loop(%arg0 : index, %arg1 : index, %arg2 : index,
 //  CHECK-NEXT:     %[[MIN:.*]] = select %[[MIN_CMP]], %[[I0]], %[[I1]] : index
 //  CHECK-NEXT:     %[[MAX_CMP:.*]] = cmpi "sge", %[[I0]], %[[I1]] : index
 //  CHECK-NEXT:     %[[MAX:.*]] = select %[[MAX_CMP]], %[[I0]], %[[I1]] : index
-//  CHECK-NEXT:     loop.parallel (%{{.*}}) = (%[[MIN]]) to (%[[MAX]]) step (%[[I1]]) {
-//  CHECK-NEXT:       %[[ZERO:.*]] = constant 0.000000e+00 : f32
-//  CHECK-NEXT:       loop.reduce(%[[ZERO]]) {
+//  CHECK-NEXT:     %[[ZERO:.*]] = constant 0.000000e+00 : f32
+//  CHECK-NEXT:     loop.parallel (%{{.*}}) = (%[[MIN]]) to (%[[MAX]])
+//  CHECK-SAME:           step (%[[I1]]) init (%[[ZERO]]) {
+//  CHECK-NEXT:       %[[ONE:.*]] = constant 1.000000e+00 : f32
+//  CHECK-NEXT:       loop.reduce(%[[ONE]]) {
 //  CHECK-NEXT:       ^bb0(%[[LHS:.*]]: f32, %[[RHS:.*]]: f32):
 //  CHECK-NEXT:         %[[RES:.*]] = addf %[[LHS]], %[[RHS]] : f32
 //  CHECK-NEXT:         loop.reduce.return %[[RES]] : f32
