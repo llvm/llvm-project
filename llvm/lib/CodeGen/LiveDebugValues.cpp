@@ -959,6 +959,10 @@ void LiveDebugValues::emitEntryValues(MachineInstr &MI,
                                       VarLocMap &VarLocIDs,
                                       TransferMap &Transfers,
                                       VarLocSet &KillSet) {
+  // Do not insert entry value locations after a terminator.
+  if (MI.isTerminator())
+    return;
+
   for (uint64_t ID : KillSet) {
     LocIndex Idx = LocIndex::fromRawInteger(ID);
     const VarLoc &VL = VarLocIDs[Idx];
@@ -1003,6 +1007,7 @@ void LiveDebugValues::insertTransferDebugPair(
     // Record the new location as an open range, and a postponed transfer
     // inserting a DBG_VALUE for this location.
     OpenRanges.insert(LocId, VL);
+    assert(!MI.isTerminator() && "Cannot insert DBG_VALUE after terminator");
     TransferDebugPair MIP = {&MI, LocId};
     Transfers.push_back(MIP);
   };
@@ -1778,6 +1783,8 @@ bool LiveDebugValues::ExtendRanges(MachineFunction &MF) {
 
   // Add any DBG_VALUE instructions created by location transfers.
   for (auto &TR : Transfers) {
+    assert(!TR.TransferInst->isTerminator() &&
+           "Cannot insert DBG_VALUE after terminator");
     MachineBasicBlock *MBB = TR.TransferInst->getParent();
     const VarLoc &VL = VarLocIDs[TR.LocationID];
     MachineInstr *MI = VL.BuildDbgValue(MF);
