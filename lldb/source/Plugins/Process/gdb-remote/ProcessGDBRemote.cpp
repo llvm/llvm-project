@@ -3127,7 +3127,7 @@ Status ProcessGDBRemote::EnableBreakpointSite(BreakpointSite *bp_site) {
     if (m_gdb_comm.SupportsGDBStoppointPacket(eBreakpointSoftware)) {
       if (error_no != UINT8_MAX)
         error.SetErrorStringWithFormat(
-            "error: %d sending the breakpoint request", errno);
+            "error: %d sending the breakpoint request", error_no);
       else
         error.SetErrorString("error sending the breakpoint request");
       return error;
