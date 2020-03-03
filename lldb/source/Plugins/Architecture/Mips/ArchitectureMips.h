@@ -35,10 +35,9 @@ public:
                                     AddressClass addr_class) const override;
 
 private:
-  Instruction *GetInstructionAtAddress(const ExecutionContext &exe_ctx,
+  Instruction *GetInstructionAtAddress(Target &target,
                                        const Address &resolved_addr,
                                        lldb::addr_t symbol_offset) const;
-
 
   static std::unique_ptr<Architecture> Create(const ArchSpec &arch);
   ArchitectureMips(const ArchSpec &arch) : m_arch(arch) {}
