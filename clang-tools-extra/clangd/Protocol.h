@@ -239,6 +239,7 @@ bool fromJSON(const llvm::json::Value &E, TraceLevel &Out);
 
 struct NoParams {};
 inline bool fromJSON(const llvm::json::Value &, NoParams &) { return true; }
+using InitializedParams = NoParams;
 using ShutdownParams = NoParams;
 using ExitParams = NoParams;
 

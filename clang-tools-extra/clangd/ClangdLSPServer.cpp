@@ -600,6 +600,8 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
   Reply(std::move(Result));
 }
 
+void ClangdLSPServer::onInitialized(const InitializedParams &Params) {}
+
 void ClangdLSPServer::onShutdown(const ShutdownParams &Params,
                                  Callback<std::nullptr_t> Reply) {
   // Do essentially nothing, just say we're ready to exit.
@@ -1243,6 +1245,7 @@ ClangdLSPServer::ClangdLSPServer(
       NegotiatedOffsetEncoding(ForcedOffsetEncoding) {
   // clang-format off
   MsgHandler->bind("initialize", &ClangdLSPServer::onInitialize);
+  MsgHandler->bind("initialized", &ClangdLSPServer::onInitialized);
   MsgHandler->bind("shutdown", &ClangdLSPServer::onShutdown);
   MsgHandler->bind("sync", &ClangdLSPServer::onSync);
   MsgHandler->bind("textDocument/rangeFormatting", &ClangdLSPServer::onDocumentRangeFormatting);
