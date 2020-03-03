@@ -67,6 +67,7 @@ private:
   // LSP methods. Notifications have signature void(const Params&).
   // Calls have signature void(const Params&, Callback<Response>).
   void onInitialize(const InitializeParams &, Callback<llvm::json::Value>);
+  void onInitialized(const InitializedParams &);
   void onShutdown(const ShutdownParams &, Callback<std::nullptr_t>);
   void onSync(const NoParams &, Callback<std::nullptr_t>);
   void onDocumentDidOpen(const DidOpenTextDocumentParams &);
