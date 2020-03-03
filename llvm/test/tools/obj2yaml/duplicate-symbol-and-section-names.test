@@ -125,13 +125,7 @@ Symbols:
 # RUN: yaml2obj --docnum=3 %s -o %t3
 # RUN: obj2yaml %t3 | FileCheck %s --check-prefix=CASE3
 
-# CASE3:      --- !ELF
-# CASE3-NEXT: FileHeader:
-# CASE3-NEXT:   Class:   ELFCLASS64
-# CASE3-NEXT:   Data:    ELFDATA2LSB
-# CASE3-NEXT:   Type:    ET_DYN
-# CASE3-NEXT:   Machine: EM_X86_64
-# CASE3-NEXT: Symbols:
+# CASE3:      Symbols:
 # CASE3-NEXT:   - Name:    foo
 # CASE3-NEXT:     Binding: STB_GLOBAL
 # CASE3-NEXT: DynamicSymbols:
