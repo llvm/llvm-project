@@ -36,10 +36,7 @@ void NamespaceCommentCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void NamespaceCommentCheck::registerMatchers(MatchFinder *Finder) {
-  // Only register the matchers for C++; the functionality currently does not
-  // provide any benefit to other languages, despite being benign.
-  if (getLangOpts().CPlusPlus)
-    Finder->addMatcher(namespaceDecl().bind("namespace"), this);
+  Finder->addMatcher(namespaceDecl().bind("namespace"), this);
 }
 
 static bool locationsInSameFile(const SourceManager &Sources,

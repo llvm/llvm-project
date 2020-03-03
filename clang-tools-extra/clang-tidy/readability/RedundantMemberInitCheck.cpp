@@ -26,9 +26,6 @@ void RedundantMemberInitCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void RedundantMemberInitCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus)
-    return;
-
   auto Construct =
       cxxConstructExpr(
           hasDeclaration(cxxConstructorDecl(hasParent(

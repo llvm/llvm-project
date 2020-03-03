@@ -17,9 +17,6 @@ namespace tidy {
 namespace bugprone {
 
 void ThrowKeywordMissingCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus)
-    return;
-
   auto CtorInitializerList =
       cxxConstructorDecl(hasAnyConstructorInitializer(anything()));
 

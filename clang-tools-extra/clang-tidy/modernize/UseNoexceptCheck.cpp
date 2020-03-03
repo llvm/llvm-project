@@ -27,9 +27,6 @@ void UseNoexceptCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void UseNoexceptCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus11)
-    return;
-
   Finder->addMatcher(
       functionDecl(
           cxxMethodDecl(

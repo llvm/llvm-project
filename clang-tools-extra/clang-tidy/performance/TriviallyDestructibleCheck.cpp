@@ -36,9 +36,6 @@ AST_MATCHER_P(CXXRecordDecl, hasBase, Matcher<QualType>, InnerMatcher) {
 } // namespace
 
 void TriviallyDestructibleCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus11)
-    return;
-
   Finder->addMatcher(
       cxxDestructorDecl(
           isDefaulted(),

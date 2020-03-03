@@ -17,9 +17,6 @@ namespace abseil {
 using namespace clang::ast_matchers;
 
 void DurationDivisionCheck::registerMatchers(MatchFinder *finder) {
-  if (!getLangOpts().CPlusPlus)
-    return;
-
   const auto DurationExpr =
       expr(hasType(cxxRecordDecl(hasName("::absl::Duration"))));
   finder->addMatcher(
