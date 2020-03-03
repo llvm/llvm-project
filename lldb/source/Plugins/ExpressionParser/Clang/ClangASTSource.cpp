@@ -110,9 +110,6 @@ bool ClangASTSource::FindExternalVisibleDeclsByName(
 
   std::string decl_name(clang_decl_name.getAsString());
 
-  //    if (m_decl_map.DoingASTImport ())
-  //      return DeclContext::lookup_result();
-  //
   switch (clang_decl_name.getNameKind()) {
   // Normal identifiers.
   case DeclarationName::Identifier: {
@@ -179,16 +176,11 @@ bool ClangASTSource::FindExternalVisibleDeclsByName(
     return false;
   }
   m_active_lookups.insert(uniqued_const_decl_name);
-  //  static uint32_t g_depth = 0;
-  //  ++g_depth;
-  //  printf("[%5u] FindExternalVisibleDeclsByName() \"%s\"\n", g_depth,
-  //  uniqued_const_decl_name);
   llvm::SmallVector<NamedDecl *, 4> name_decls;
   NameSearchContext name_search_context(*m_clang_ast_context, name_decls,
                                         clang_decl_name, decl_ctx);
   FindExternalVisibleDecls(name_search_context);
   SetExternalVisibleDeclsForName(decl_ctx, clang_decl_name, name_decls);
-  //  --g_depth;
   m_active_lookups.erase(uniqued_const_decl_name);
   return (name_decls.size() != 0);
 }
