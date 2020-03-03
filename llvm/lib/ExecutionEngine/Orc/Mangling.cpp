@@ -119,6 +119,7 @@ getObjectSymbolInfo(ExecutionSession &ES, MemoryBufferRef ObjBuffer) {
         raw_string_ostream(InitSymString)
             << "$." << ObjBuffer.getBufferIdentifier() << ".__inits";
         InitSymbol = ES.intern(InitSymString);
+        SymbolFlags[InitSymbol] = JITSymbolFlags();
         break;
       }
     }
