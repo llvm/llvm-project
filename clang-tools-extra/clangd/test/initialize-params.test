@@ -47,6 +47,10 @@
 # CHECK-NEXT:      "textDocumentSync": 2,
 # CHECK-NEXT:      "typeHierarchyProvider": true
 # CHECK-NEXT:      "workspaceSymbolProvider": true
+# CHECK-NEXT:    },
+# CHECK-NEXT:    "serverInfo": {
+# CHECK-NEXT:      "name": "clangd",
+# CHECK-NEXT:      "version": "{{.*}}clangd version {{.*}}"
 # CHECK-NEXT:    }
 # CHECK-NEXT:  }
 ---

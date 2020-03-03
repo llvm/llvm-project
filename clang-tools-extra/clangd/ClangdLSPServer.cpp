@@ -18,6 +18,7 @@
 #include "Trace.h"
 #include "URI.h"
 #include "refactor/Tweak.h"
+#include "clang/Basic/Version.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
@@ -546,7 +547,10 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
           CodeAction::INFO_KIND}}};
 
   llvm::json::Object Result{
-      {{"capabilities",
+      {{"serverInfo",
+        llvm::json::Object{{"name", "clangd"},
+                           {"version", getClangToolFullVersion("clangd")}}},
+       {"capabilities",
         llvm::json::Object{
             {"textDocumentSync", (int)TextDocumentSyncKind::Incremental},
             {"documentFormattingProvider", true},
