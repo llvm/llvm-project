@@ -133,6 +133,7 @@ class X86AsmBackend : public MCAsmBackend {
   bool needAlign(MCObjectStreamer &OS) const;
   bool needAlignInst(const MCInst &Inst) const;
   MCInst PrevInst;
+  MCBoundaryAlignFragment *PendingBoundaryAlign = nullptr;
 
 public:
   X86AsmBackend(const Target &T, const MCSubtargetInfo &STI)
@@ -493,27 +494,30 @@ bool X86AsmBackend::needAlignInst(const MCInst &Inst) const {
           (AlignBranchType & X86::AlignBranchIndirect));
 }
 
-/// Insert MCBoundaryAlignFragment before instructions to align branches.
+/// Insert BoundaryAlignFragment before instructions to align branches.
 void X86AsmBackend::alignBranchesBegin(MCObjectStreamer &OS,
                                        const MCInst &Inst) {
   if (!needAlign(OS))
     return;
 
-  MCFragment *CF = OS.getCurrentFragment();
-  bool NeedAlignFused = AlignBranchType & X86::AlignBranchFused;
-  if (hasInterruptDelaySlot(PrevInst)) {
+  if (hasInterruptDelaySlot(PrevInst))
     // If this instruction follows an interrupt enabling instruction with a one
     // instruction delay, inserting a nop would change behavior.
-  } else if (NeedAlignFused && isMacroFused(PrevInst, Inst) && CF) {
+    return;
+
+  if (!isMacroFused(PrevInst, Inst))
+    // Macro fusion doesn't happen indeed, clear the pending.
+    PendingBoundaryAlign = nullptr;
+
+  if (PendingBoundaryAlign &&
+      OS.getCurrentFragment()->getPrevNode() == PendingBoundaryAlign) {
     // Macro fusion actually happens and there is no other fragment inserted
-    // after the previous instruction. NOP can be emitted in PF to align fused
-    // jcc.
-    if (auto *PF =
-            dyn_cast_or_null<MCBoundaryAlignFragment>(CF->getPrevNode())) {
-      const_cast<MCBoundaryAlignFragment *>(PF)->setEmitNops(true);
-      const_cast<MCBoundaryAlignFragment *>(PF)->setFused(true);
-    }
-  } else if (needAlignInst(Inst)) {
+    // after the previous instruction.
+    //
+    // Do nothing here since we already inserted a BoudaryAlign fragment when
+    // we met the first instruction in the fused pair and we'll tie them
+    // together in alignBranchesEnd.
+    //
     // Note: When there is at least one fragment, such as MCAlignFragment,
     // inserted after the previous instruction, e.g.
     //
@@ -525,36 +529,38 @@ void X86AsmBackend::alignBranchesBegin(MCObjectStreamer &OS,
     //
     // We will treat the JCC as a unfused branch although it may be fused
     // with the CMP.
-    auto *F = OS.getOrCreateBoundaryAlignFragment();
-    F->setAlignment(AlignBoundary);
-    F->setEmitNops(true);
-    F->setFused(false);
-  } else if (NeedAlignFused && isFirstMacroFusibleInst(Inst, *MCII)) {
-    // We don't know if macro fusion happens until the reaching the next
-    // instruction, so a place holder is put here if necessary.
-    auto *F = OS.getOrCreateBoundaryAlignFragment();
-    F->setAlignment(AlignBoundary);
+    return;
   }
 
-  PrevInst = Inst;
+  if (needAlignInst(Inst) || ((AlignBranchType & X86::AlignBranchFused) &&
+                              isFirstMacroFusibleInst(Inst, *MCII))) {
+    // If we meet a unfused branch or the first instuction in a fusiable pair,
+    // insert a BoundaryAlign fragment.
+    OS.insert(PendingBoundaryAlign =
+                  new MCBoundaryAlignFragment(AlignBoundary));
+  }
 }
 
-/// Insert a MCBoundaryAlignFragment to mark the end of the branch to be aligned
-/// if necessary.
+/// Set the last fragment to be aligned for the BoundaryAlignFragment.
 void X86AsmBackend::alignBranchesEnd(MCObjectStreamer &OS, const MCInst &Inst) {
   if (!needAlign(OS))
     return;
-  // If the branch is emitted into a MCRelaxableFragment, we can determine the
-  // size of the branch easily in MCAssembler::relaxBoundaryAlign. When the
-  // branch is fused, the fused branch(macro fusion pair) must be emitted into
-  // two fragments. Or when the branch is unfused, the branch must be emitted
-  // into one fragment. The MCRelaxableFragment naturally marks the end of the
-  // fused or unfused branch.
-  // Otherwise, we need to insert a MCBoundaryAlignFragment to mark the end of
-  // the branch. This MCBoundaryAlignFragment may be reused to emit NOP to align
-  // other branch.
-  if (needAlignInst(Inst) && !isa<MCRelaxableFragment>(OS.getCurrentFragment()))
-    OS.insert(new MCBoundaryAlignFragment(AlignBoundary));
+
+  PrevInst = Inst;
+
+  if (!needAlignInst(Inst) || !PendingBoundaryAlign)
+    return;
+
+  // Tie the aligned instructions into a a pending BoundaryAlign.
+  PendingBoundaryAlign->setLastFragment(OS.getCurrentFragment());
+  PendingBoundaryAlign = nullptr;
+
+  // We need to ensure that further data isn't added to the current
+  // DataFragment, so that we can get the size of instructions later in
+  // MCAssembler::relaxBoundaryAlign. The easiest way is to insert a new empty
+  // DataFragment.
+  if (isa_and_nonnull<MCDataFragment>(OS.getCurrentFragment()))
+    OS.insert(new MCDataFragment());
 
   // Update the maximum alignment on the current section if necessary.
   MCSection *Sec = OS.getCurrentSectionOnly();
@@ -862,16 +868,12 @@ void X86AsmBackend::finishLayout(MCAssembler const &Asm,
       // If we're looking at a boundary align, make sure we don't try to pad
       // its target instructions for some following directive.  Doing so would
       // break the alignment of the current boundary align.
-      if (F.getKind() == MCFragment::FT_BoundaryAlign) {
-        auto &BF = cast<MCBoundaryAlignFragment>(F);
-        const MCFragment *F = BF.getNextNode();
-        // If the branch is unfused, it is emitted into one fragment, otherwise
-        // it is emitted into two fragments at most, the next
-        // MCBoundaryAlignFragment(if exists) also marks the end of the branch.
-        for (int i = 0, N = BF.isFused() ? 2 : 1;
-             i != N && !isa<MCBoundaryAlignFragment>(F);
-             ++i, F = F->getNextNode(), I++) {
-        }
+      if (auto *BF = dyn_cast<MCBoundaryAlignFragment>(&F)) {
+        const MCFragment *LastFragment = BF->getLastFragment();
+        if (!LastFragment)
+          continue;
+        while (&*I != LastFragment)
+          ++I;
       }
     }
   }

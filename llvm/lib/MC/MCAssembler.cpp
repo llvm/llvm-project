@@ -996,27 +996,22 @@ static bool needPadding(uint64_t StartAddr, uint64_t Size,
 
 bool MCAssembler::relaxBoundaryAlign(MCAsmLayout &Layout,
                                      MCBoundaryAlignFragment &BF) {
-  // The MCBoundaryAlignFragment that doesn't emit NOP should not be relaxed.
-  if (!BF.canEmitNops())
+  // BoundaryAlignFragment that doesn't need to align any fragment should not be
+  // relaxed.
+  if (!BF.getLastFragment())
     return false;
 
-  uint64_t AlignedOffset = Layout.getFragmentOffset(BF.getNextNode());
+  uint64_t AlignedOffset = Layout.getFragmentOffset(&BF);
   uint64_t AlignedSize = 0;
-  const MCFragment *F = BF.getNextNode();
-  // If the branch is unfused, it is emitted into one fragment, otherwise it is
-  // emitted into two fragments at most, the next MCBoundaryAlignFragment(if
-  // exists) also marks the end of the branch.
-  for (auto i = 0, N = BF.isFused() ? 2 : 1;
-       i != N && !isa<MCBoundaryAlignFragment>(F); ++i, F = F->getNextNode()) {
+  for (const MCFragment *F = BF.getLastFragment(); F != &BF;
+       F = F->getPrevNode())
     AlignedSize += computeFragmentSize(Layout, *F);
-  }
-  uint64_t OldSize = BF.getSize();
-  AlignedOffset -= OldSize;
+
   Align BoundaryAlignment = BF.getAlignment();
   uint64_t NewSize = needPadding(AlignedOffset, AlignedSize, BoundaryAlignment)
                          ? offsetToAlignment(AlignedOffset, BoundaryAlignment)
                          : 0U;
-  if (NewSize == OldSize)
+  if (NewSize == BF.getSize())
     return false;
   BF.setSize(NewSize);
   Layout.invalidateFragmentsFrom(&BF);
