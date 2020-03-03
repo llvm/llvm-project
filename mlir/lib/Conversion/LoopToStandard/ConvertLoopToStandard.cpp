@@ -45,21 +45,26 @@ struct LoopToStandardPass : public OperationPass<LoopToStandardPass> {
 // are split out into a separate continuation (exit) block. A condition block is
 // created before the continuation block. It checks the exit condition of the
 // loop and branches either to the continuation block, or to the first block of
-// the body. Induction variable modification is appended to the last block of
-// the body (which is the exit block from the body subgraph thanks to the
+// the body. The condition block takes as arguments the values of the induction
+// variable followed by loop-carried values. Since it dominates both the body
+// blocks and the continuation block, loop-carried values are visible in all of
+// those blocks. Induction variable modification is appended to the last block
+// of the body (which is the exit block from the body subgraph thanks to the
 // invariant we maintain) along with a branch that loops back to the condition
-// block.
+// block. Loop-carried values are the loop terminator operands, which are
+// forwarded to the branch.
 //
 //      +---------------------------------+
 //      |   <code before the ForOp>       |
+//      |   <definitions of %init...>     |
 //      |   <compute initial %iv value>   |
-//      |   br cond(%iv)                  |
+//      |   br cond(%iv, %init...)        |
 //      +---------------------------------+
 //             |
 //  -------|   |
 //  |      v   v
 //  |   +--------------------------------+
-//  |   | cond(%iv):                     |
+//  |   | cond(%iv, %init...):           |
 //  |   |   <compare %iv to upper bound> |
 //  |   |   cond_br %r, body, end        |
 //  |   +--------------------------------+
@@ -68,6 +73,7 @@ struct LoopToStandardPass : public OperationPass<LoopToStandardPass> {
 //  |          v                            |
 //  |   +--------------------------------+  |
 //  |   | body-first:                    |  |
+//  |   |   <%init visible by dominance> |  |
 //  |   |   <body contents>              |  |
 //  |   +--------------------------------+  |
 //  |                   |                   |
@@ -76,15 +82,17 @@ struct LoopToStandardPass : public OperationPass<LoopToStandardPass> {
 //  |   +--------------------------------+  |
 //  |   | body-last:                     |  |
 //  |   |   <body contents>              |  |
+//  |   |   <operands of yield = %yields>|  |
 //  |   |   %new_iv =<add step to %iv>   |  |
-//  |   |   br cond(%new_iv)             |  |
+//  |   |   br cond(%new_iv, %yields)    |  |
 //  |   +--------------------------------+  |
 //  |          |                            |
 //  |-----------        |--------------------
 //                      v
 //      +--------------------------------+
 //      | end:                           |
-//      |   <code after the ForOp> |
+//      |   <code after the ForOp>       |
+//      |   <%init visible by dominance> |
 //      +--------------------------------+
 //
 struct ForLowering : public OpRewritePattern<ForOp> {
@@ -133,7 +141,7 @@ struct ForLowering : public OpRewritePattern<ForOp> {
 //         v   v
 //      +--------------------------------+
 //      | continue:                      |
-//      |   <code after the IfOp>  |
+//      |   <code after the IfOp>        |
 //      +--------------------------------+
 //
 struct IfLowering : public OpRewritePattern<IfOp> {
@@ -162,10 +170,10 @@ ForLowering::matchAndRewrite(ForOp forOp, PatternRewriter &rewriter) const {
   auto initPosition = rewriter.getInsertionPoint();
   auto *endBlock = rewriter.splitBlock(initBlock, initPosition);
 
-  // Use the first block of the loop body as the condition block since it is
-  // the block that has the induction variable as its argument.  Split out
-  // all operations from the first block into a new block.  Move all body
-  // blocks from the loop body region to the region containing the loop.
+  // Use the first block of the loop body as the condition block since it is the
+  // block that has the induction variable and loop-carried values as arguments.
+  // Split out all operations from the first block into a new block. Move all
+  // body blocks from the loop body region to the region containing the loop.
   auto *conditionBlock = &forOp.region().front();
   auto *firstBodyBlock =
       rewriter.splitBlock(conditionBlock, conditionBlock->begin());
@@ -174,15 +182,20 @@ ForLowering::matchAndRewrite(ForOp forOp, PatternRewriter &rewriter) const {
   auto iv = conditionBlock->getArgument(0);
 
   // Append the induction variable stepping logic to the last body block and
-  // branch back to the condition block.  Construct an expression f :
-  // (x -> x+step) and apply this expression to the induction variable.
-  rewriter.eraseOp(lastBodyBlock->getTerminator());
+  // branch back to the condition block. Loop-carried values are taken from
+  // operands of the loop terminator.
+  Operation *terminator = lastBodyBlock->getTerminator();
   rewriter.setInsertionPointToEnd(lastBodyBlock);
   auto step = forOp.step();
   auto stepped = rewriter.create<AddIOp>(loc, iv, step).getResult();
   if (!stepped)
     return matchFailure();
-  rewriter.create<BranchOp>(loc, conditionBlock, stepped);
+
+  SmallVector<Value, 8> loopCarried;
+  loopCarried.push_back(stepped);
+  loopCarried.append(terminator->operand_begin(), terminator->operand_end());
+  rewriter.create<BranchOp>(loc, conditionBlock, loopCarried);
+  rewriter.eraseOp(terminator);
 
   // Compute loop bounds before branching to the condition.
   rewriter.setInsertionPointToEnd(initBlock);
@@ -190,7 +203,14 @@ ForLowering::matchAndRewrite(ForOp forOp, PatternRewriter &rewriter) const {
   Value upperBound = forOp.upperBound();
   if (!lowerBound || !upperBound)
     return matchFailure();
-  rewriter.create<BranchOp>(loc, conditionBlock, lowerBound);
+
+  // The initial values of loop-carried values is obtained from the operands
+  // of the loop operation.
+  SmallVector<Value, 8> destOperands;
+  destOperands.push_back(lowerBound);
+  auto iterOperands = forOp.getIterOperands();
+  destOperands.append(iterOperands.begin(), iterOperands.end());
+  rewriter.create<BranchOp>(loc, conditionBlock, destOperands);
 
   // With the body block done, we can fill in the condition block.
   rewriter.setInsertionPointToEnd(conditionBlock);
@@ -199,8 +219,9 @@ ForLowering::matchAndRewrite(ForOp forOp, PatternRewriter &rewriter) const {
 
   rewriter.create<CondBranchOp>(loc, comparison, firstBodyBlock,
                                 ArrayRef<Value>(), endBlock, ArrayRef<Value>());
-  // Ok, we're done!
-  rewriter.eraseOp(forOp);
+  // The result of the loop operation is the values of the condition block
+  // arguments except the induction variable on the last iteration.
+  rewriter.replaceOp(forOp, conditionBlock->getArguments().drop_front());
   return matchSuccess();
 }
 
