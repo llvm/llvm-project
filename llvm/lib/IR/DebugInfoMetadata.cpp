@@ -660,12 +660,7 @@ DISubprogram *DISubprogram::getImpl(
 
 bool DISubprogram::describes(const Function *F) const {
   assert(F && "Invalid function");
-  if (F->getSubprogram() == this)
-    return true;
-  StringRef Name = getLinkageName();
-  if (Name.empty())
-    Name = getName();
-  return F->getName() == Name;
+  return F->getSubprogram() == this;
 }
 
 DILexicalBlock *DILexicalBlock::getImpl(LLVMContext &Context, Metadata *Scope,

@@ -532,6 +532,8 @@ void OMPClauseProfiler::VisitOMPSIMDClause(const OMPSIMDClause *) {}
 
 void OMPClauseProfiler::VisitOMPNogroupClause(const OMPNogroupClause *) {}
 
+void OMPClauseProfiler::VisitOMPDestroyClause(const OMPDestroyClause *) {}
+
 template<typename T>
 void OMPClauseProfiler::VisitOMPClauseList(T *Node) {
   for (auto *E : Node->varlists()) {
@@ -719,6 +721,10 @@ OMPClauseProfiler::VisitOMPCopyprivateClause(const OMPCopyprivateClause *C) {
 void OMPClauseProfiler::VisitOMPFlushClause(const OMPFlushClause *C) {
   VisitOMPClauseList(C);
 }
+void OMPClauseProfiler::VisitOMPDepobjClause(const OMPDepobjClause *C) {
+  if (const Expr *Depobj = C->getDepobj())
+    Profiler->VisitStmt(Depobj);
+}
 void OMPClauseProfiler::VisitOMPDependClause(const OMPDependClause *C) {
   VisitOMPClauseList(C);
 }
@@ -882,6 +888,10 @@ void StmtProfiler::VisitOMPTaskgroupDirective(const OMPTaskgroupDirective *S) {
 }
 
 void StmtProfiler::VisitOMPFlushDirective(const OMPFlushDirective *S) {
+  VisitOMPExecutableDirective(S);
+}
+
+void StmtProfiler::VisitOMPDepobjDirective(const OMPDepobjDirective *S) {
   VisitOMPExecutableDirective(S);
 }
 

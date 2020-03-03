@@ -259,6 +259,8 @@ const char *AVRTargetLowering::getTargetNodeName(unsigned Opcode) const {
     NODE(ASR);
     NODE(LSLLOOP);
     NODE(LSRLOOP);
+    NODE(ROLLOOP);
+    NODE(RORLOOP);
     NODE(ASRLOOP);
     NODE(BRCOND);
     NODE(CMP);

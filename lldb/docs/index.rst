@@ -3,7 +3,7 @@
 The LLDB Debugger
 =================
 
-Welcome to the LLDB version |release| documentation!
+Welcome to the LLDB documentation!
 
 LLDB is a next generation, high-performance debugger. It is built as a set of
 reusable components which highly leverage existing libraries in the larger LLVM

@@ -6161,6 +6161,8 @@ void OMPClauseWriter::VisitOMPSIMDClause(OMPSIMDClause *) {}
 
 void OMPClauseWriter::VisitOMPNogroupClause(OMPNogroupClause *) {}
 
+void OMPClauseWriter::VisitOMPDestroyClause(OMPDestroyClause *) {}
+
 void OMPClauseWriter::VisitOMPPrivateClause(OMPPrivateClause *C) {
   Record.push_back(C->varlist_size());
   Record.AddSourceLocation(C->getLParenLoc());
@@ -6340,6 +6342,11 @@ void OMPClauseWriter::VisitOMPFlushClause(OMPFlushClause *C) {
   Record.AddSourceLocation(C->getLParenLoc());
   for (auto *VE : C->varlists())
     Record.AddStmt(VE);
+}
+
+void OMPClauseWriter::VisitOMPDepobjClause(OMPDepobjClause *C) {
+  Record.AddStmt(C->getDepobj());
+  Record.AddSourceLocation(C->getLParenLoc());
 }
 
 void OMPClauseWriter::VisitOMPDependClause(OMPDependClause *C) {

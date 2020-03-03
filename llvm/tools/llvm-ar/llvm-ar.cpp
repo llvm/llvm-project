@@ -83,6 +83,9 @@ OPTIONS:
     =bsd                -   bsd
   --plugin=<string>     - ignored for compatibility
   -h --help             - display this help and exit
+  --rsp-quoting         - quoting style for response files
+    =posix              -   posix
+    =windows            -   windows
   --version             - print the version and exit
   @<file>               - read options from <file>
 
@@ -1096,61 +1099,105 @@ static bool handleGenericOption(StringRef arg) {
   return false;
 }
 
-static int ar_main(int argc, char **argv) {
-  SmallVector<const char *, 0> Argv(argv, argv + argc);
-  StringSaver Saver(Alloc);
-  cl::ExpandResponseFiles(Saver, cl::TokenizeGNUCommandLine, Argv);
-  for (size_t i = 1; i < Argv.size(); ++i) {
-    StringRef Arg = Argv[i];
-    const char *match = nullptr;
-    auto MatchFlagWithArg = [&](const char *expected) {
-      size_t len = strlen(expected);
-      if (Arg == expected) {
-        if (++i >= Argv.size())
-          fail(std::string(expected) + " requires an argument");
-        match = Argv[i];
-        return true;
-      }
-      if (Arg.startswith(expected) && Arg.size() > len && Arg[len] == '=') {
-        match = Arg.data() + len + 1;
-        return true;
-      }
-      return false;
-    };
-    if (handleGenericOption(Argv[i]))
-      return 0;
-    if (Arg == "--") {
-      for (; i < Argv.size(); ++i)
-        PositionalArgs.push_back(Argv[i]);
-      break;
-    }
-    if (Arg[0] == '-') {
-      if (Arg.startswith("--"))
-        Arg = Argv[i] + 2;
+static const char *matchFlagWithArg(StringRef Expected,
+                                    ArrayRef<const char *>::iterator &ArgIt,
+                                    ArrayRef<const char *> Args) {
+  StringRef Arg = *ArgIt;
+
+  if (Arg.startswith("--"))
+    Arg = Arg.substr(2);
+  else if (Arg.startswith("-"))
+    Arg = Arg.substr(1);
+
+  size_t len = Expected.size();
+  if (Arg == Expected) {
+    if (++ArgIt == Args.end())
+      fail(std::string(Expected) + " requires an argument");
+
+    return *ArgIt;
+  }
+  if (Arg.startswith(Expected) && Arg.size() > len && Arg[len] == '=')
+    return Arg.data() + len + 1;
+
+  return nullptr;
+}
+
+static cl::TokenizerCallback getRspQuoting(ArrayRef<const char *> ArgsArr) {
+  cl::TokenizerCallback Ret =
+      Triple(sys::getProcessTriple()).getOS() == Triple::Win32
+          ? cl::TokenizeWindowsCommandLine
+          : cl::TokenizeGNUCommandLine;
+
+  for (ArrayRef<const char *>::iterator ArgIt = ArgsArr.begin();
+       ArgIt != ArgsArr.end(); ++ArgIt) {
+    if (const char *Match = matchFlagWithArg("rsp-quoting", ArgIt, ArgsArr)) {
+      StringRef MatchRef = Match;
+      if (MatchRef == "posix")
+        Ret = cl::TokenizeGNUCommandLine;
+      else if (MatchRef == "windows")
+        Ret = cl::TokenizeWindowsCommandLine;
       else
-        Arg = Argv[i] + 1;
-      if (Arg == "M") {
-        MRI = true;
-      } else if (MatchFlagWithArg("format")) {
-        FormatType = StringSwitch<Format>(match)
-                         .Case("default", Default)
-                         .Case("gnu", GNU)
-                         .Case("darwin", DARWIN)
-                         .Case("bsd", BSD)
-                         .Default(Unknown);
-        if (FormatType == Unknown)
-          fail(std::string("Invalid format ") + match);
-      } else if (MatchFlagWithArg("plugin")) {
-        // Ignored.
-      } else {
-        Options += Argv[i] + 1;
-      }
-    } else if (Options.empty()) {
-      Options += Argv[i];
-    } else {
-      PositionalArgs.push_back(Argv[i]);
+        fail(std::string("Invalid response file quoting style ") + Match);
     }
   }
+
+  return Ret;
+}
+
+static int ar_main(int argc, char **argv) {
+  SmallVector<const char *, 0> Argv(argv + 1, argv + argc);
+  StringSaver Saver(Alloc);
+
+  cl::ExpandResponseFiles(Saver, getRspQuoting(makeArrayRef(argv, argc)), Argv);
+
+  ArrayRef<const char *> ArgsArr = makeArrayRef(argv, argc);
+
+  for (ArrayRef<const char *>::iterator ArgIt = Argv.begin();
+       ArgIt != Argv.end(); ++ArgIt) {
+    const char *Match = nullptr;
+
+    if (handleGenericOption(*ArgIt))
+      return 0;
+    if (strcmp(*ArgIt, "--") == 0) {
+      ++ArgIt;
+      for (; ArgIt != Argv.end(); ++ArgIt)
+        PositionalArgs.push_back(*ArgIt);
+      break;
+    }
+
+    if (*ArgIt[0] != '-') {
+      if (Options.empty())
+        Options += *ArgIt;
+      else
+        PositionalArgs.push_back(*ArgIt);
+      continue;
+    }
+
+    if (strcmp(*ArgIt, "-M") == 0) {
+      MRI = true;
+      continue;
+    }
+
+    Match = matchFlagWithArg("format", ArgIt, Argv);
+    if (Match) {
+      FormatType = StringSwitch<Format>(Match)
+                       .Case("default", Default)
+                       .Case("gnu", GNU)
+                       .Case("darwin", DARWIN)
+                       .Case("bsd", BSD)
+                       .Default(Unknown);
+      if (FormatType == Unknown)
+        fail(std::string("Invalid format ") + Match);
+      continue;
+    }
+
+    if (matchFlagWithArg("plugin", ArgIt, Argv) ||
+        matchFlagWithArg("rsp-quoting", ArgIt, Argv))
+      continue;
+
+    Options += *ArgIt + 1;
+  }
+
   ArchiveOperation Operation = parseCommandLine();
   return performOperation(Operation, nullptr);
 }

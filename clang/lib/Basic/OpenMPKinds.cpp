@@ -25,7 +25,14 @@ OpenMPClauseKind clang::getOpenMPClauseKind(StringRef Str) {
   // clause for 'flush' directive. If the 'flush' clause is explicitly specified
   // the Parser should generate a warning about extra tokens at the end of the
   // directive.
-  if (Str == "flush")
+  // 'depobj' clause cannot be specified explicitly, because this is an implicit
+  // clause for 'depobj' directive. If the 'depobj' clause is explicitly
+  // specified the Parser should generate a warning about extra tokens at the
+  // end of the directive.
+  if (llvm::StringSwitch<bool>(Str)
+          .Case("flush", true)
+          .Case("depobj", true)
+          .Default(false))
     return OMPC_unknown;
   return llvm::StringSwitch<OpenMPClauseKind>(Str)
 #define OPENMP_CLAUSE(Name, Class) .Case(#Name, OMPC_##Name)
@@ -166,6 +173,7 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind,
   case OMPC_untied:
   case OMPC_mergeable:
   case OMPC_flush:
+  case OMPC_depobj:
   case OMPC_read:
   case OMPC_write:
   case OMPC_update:
@@ -194,6 +202,7 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind,
   case OMPC_dynamic_allocators:
   case OMPC_match:
   case OMPC_nontemporal:
+  case OMPC_destroy:
     break;
   }
   llvm_unreachable("Invalid OpenMP simple clause kind");
@@ -380,6 +389,7 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
   case OMPC_untied:
   case OMPC_mergeable:
   case OMPC_flush:
+  case OMPC_depobj:
   case OMPC_read:
   case OMPC_write:
   case OMPC_update:
@@ -408,6 +418,7 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
   case OMPC_dynamic_allocators:
   case OMPC_match:
   case OMPC_nontemporal:
+  case OMPC_destroy:
     break;
   }
   llvm_unreachable("Invalid OpenMP simple clause kind");
@@ -549,6 +560,20 @@ bool clang::isAllowedClauseForDirective(OpenMPDirectiveKind DKind,
   case OMPC_##Name:                                                            \
     return true;
 #include "clang/Basic/OpenMPKinds.def"
+    default:
+      break;
+    }
+    break;
+  case OMPD_depobj:
+    if (OpenMPVersion < 50)
+      return false;
+    switch (CKind) {
+#define OPENMP_DEPOBJ_CLAUSE(Name)                                             \
+  case OMPC_##Name:                                                            \
+    return true;
+#include "clang/Basic/OpenMPKinds.def"
+    case OMPC_depobj:
+      return true;
     default:
       break;
     }
@@ -1195,6 +1220,7 @@ void clang::getOpenMPCaptureRegions(
   case OMPD_cancellation_point:
   case OMPD_cancel:
   case OMPD_flush:
+  case OMPD_depobj:
   case OMPD_declare_reduction:
   case OMPD_declare_mapper:
   case OMPD_declare_simd:

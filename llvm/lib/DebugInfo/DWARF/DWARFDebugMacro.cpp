@@ -18,7 +18,8 @@ using namespace dwarf;
 void DWARFDebugMacro::dump(raw_ostream &OS) const {
   unsigned IndLevel = 0;
   for (const auto &Macros : MacroLists) {
-    for (const Entry &E : Macros) {
+    OS << format("0x%08" PRIx64 ":\n", Macros.Offset);
+    for (const Entry &E : Macros.Macros) {
       // There should not be DW_MACINFO_end_file when IndLevel is Zero. However,
       // this check handles the case of corrupted ".debug_macinfo" section.
       if (IndLevel > 0)
@@ -51,7 +52,6 @@ void DWARFDebugMacro::dump(raw_ostream &OS) const {
       }
       OS << "\n";
     }
-    OS << "\n";
   }
 }
 
@@ -62,15 +62,17 @@ void DWARFDebugMacro::parse(DataExtractor data) {
     if (!M) {
       MacroLists.emplace_back();
       M = &MacroLists.back();
+      M->Offset = Offset;
     }
     // A macro list entry consists of:
-    M->emplace_back();
-    Entry &E = M->back();
+    M->Macros.emplace_back();
+    Entry &E = M->Macros.back();
     // 1. Macinfo type
     E.Type = data.getULEB128(&Offset);
 
     if (E.Type == 0) {
       // Reached end of a ".debug_macinfo" section contribution.
+      M = nullptr;
       continue;
     }
 

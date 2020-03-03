@@ -607,6 +607,7 @@ TEST_F(FormatTestCSharp, CSharpSpaces) {
 
   Style.SpacesInSquareBrackets = true;
   verifyFormat(R"(private float[ , ] Values;)", Style);
+  verifyFormat(R"(string dirPath = args?[ 0 ];)", Style);
 }
 
 TEST_F(FormatTestCSharp, CSharpNullableTypes) {

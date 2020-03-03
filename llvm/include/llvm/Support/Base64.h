@@ -26,20 +26,23 @@ template <class InputBytes> std::string encodeBase64(InputBytes const &Bytes) {
 
   size_t i = 0, j = 0;
   for (size_t n = Bytes.size() / 3 * 3; i < n; i += 3, j += 4) {
-    uint32_t x = (Bytes[i] << 16) | (Bytes[i + 1] << 8) | Bytes[i + 2];
+    uint32_t x = ((unsigned char)Bytes[i] << 16) |
+                 ((unsigned char)Bytes[i + 1] << 8) |
+                 (unsigned char)Bytes[i + 2];
     Buffer[j + 0] = Table[(x >> 18) & 63];
     Buffer[j + 1] = Table[(x >> 12) & 63];
     Buffer[j + 2] = Table[(x >> 6) & 63];
     Buffer[j + 3] = Table[x & 63];
   }
   if (i + 1 == Bytes.size()) {
-    uint32_t x = (Bytes[i] << 16);
+    uint32_t x = ((unsigned char)Bytes[i] << 16);
     Buffer[j + 0] = Table[(x >> 18) & 63];
     Buffer[j + 1] = Table[(x >> 12) & 63];
     Buffer[j + 2] = '=';
     Buffer[j + 3] = '=';
   } else if (i + 2 == Bytes.size()) {
-    uint32_t x = (Bytes[i] << 16) | (Bytes[i + 1] << 8);
+    uint32_t x =
+        ((unsigned char)Bytes[i] << 16) | ((unsigned char)Bytes[i + 1] << 8);
     Buffer[j + 0] = Table[(x >> 18) & 63];
     Buffer[j + 1] = Table[(x >> 12) & 63];
     Buffer[j + 2] = Table[(x >> 6) & 63];

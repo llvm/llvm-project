@@ -101,12 +101,10 @@ Windows Support
 C Language Changes in Clang
 ---------------------------
 
+- The default C language standard used when `-std=` is not specified has been
+  upgraded from gnu11 to gnu17.
+
 - ...
-
-C11 Feature Support
-^^^^^^^^^^^^^^^^^^^
-
-...
 
 C++ Language Changes in Clang
 -----------------------------

@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Taint.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Checkers/SValExplainer.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
@@ -46,6 +47,7 @@ class ExprInspectionChecker : public Checker<eval::Call, check::DeadSymbols,
   void analyzerHashDump(const CallExpr *CE, CheckerContext &C) const;
   void analyzerDenote(const CallExpr *CE, CheckerContext &C) const;
   void analyzerExpress(const CallExpr *CE, CheckerContext &C) const;
+  void analyzerIsTainted(const CallExpr *CE, CheckerContext &C) const;
 
   typedef void (ExprInspectionChecker::*FnCheck)(const CallExpr *,
                                                  CheckerContext &C) const;
@@ -73,26 +75,34 @@ bool ExprInspectionChecker::evalCall(const CallEvent &Call,
 
   // These checks should have no effect on the surrounding environment
   // (globals should not be invalidated, etc), hence the use of evalCall.
-  FnCheck Handler = llvm::StringSwitch<FnCheck>(C.getCalleeName(CE))
-    .Case("clang_analyzer_eval", &ExprInspectionChecker::analyzerEval)
-    .Case("clang_analyzer_checkInlined",
-          &ExprInspectionChecker::analyzerCheckInlined)
-    .Case("clang_analyzer_crash", &ExprInspectionChecker::analyzerCrash)
-    .Case("clang_analyzer_warnIfReached",
-          &ExprInspectionChecker::analyzerWarnIfReached)
-    .Case("clang_analyzer_warnOnDeadSymbol",
-          &ExprInspectionChecker::analyzerWarnOnDeadSymbol)
-    .StartsWith("clang_analyzer_explain", &ExprInspectionChecker::analyzerExplain)
-    .StartsWith("clang_analyzer_dump", &ExprInspectionChecker::analyzerDump)
-    .Case("clang_analyzer_getExtent", &ExprInspectionChecker::analyzerGetExtent)
-    .Case("clang_analyzer_printState",
-          &ExprInspectionChecker::analyzerPrintState)
-    .Case("clang_analyzer_numTimesReached",
-          &ExprInspectionChecker::analyzerNumTimesReached)
-    .Case("clang_analyzer_hashDump", &ExprInspectionChecker::analyzerHashDump)
-    .Case("clang_analyzer_denote", &ExprInspectionChecker::analyzerDenote)
-    .Case("clang_analyzer_express", &ExprInspectionChecker::analyzerExpress)
-    .Default(nullptr);
+  FnCheck Handler =
+      llvm::StringSwitch<FnCheck>(C.getCalleeName(CE))
+          .Case("clang_analyzer_eval", &ExprInspectionChecker::analyzerEval)
+          .Case("clang_analyzer_checkInlined",
+                &ExprInspectionChecker::analyzerCheckInlined)
+          .Case("clang_analyzer_crash", &ExprInspectionChecker::analyzerCrash)
+          .Case("clang_analyzer_warnIfReached",
+                &ExprInspectionChecker::analyzerWarnIfReached)
+          .Case("clang_analyzer_warnOnDeadSymbol",
+                &ExprInspectionChecker::analyzerWarnOnDeadSymbol)
+          .StartsWith("clang_analyzer_explain",
+                      &ExprInspectionChecker::analyzerExplain)
+          .StartsWith("clang_analyzer_dump",
+                      &ExprInspectionChecker::analyzerDump)
+          .Case("clang_analyzer_getExtent",
+                &ExprInspectionChecker::analyzerGetExtent)
+          .Case("clang_analyzer_printState",
+                &ExprInspectionChecker::analyzerPrintState)
+          .Case("clang_analyzer_numTimesReached",
+                &ExprInspectionChecker::analyzerNumTimesReached)
+          .Case("clang_analyzer_hashDump",
+                &ExprInspectionChecker::analyzerHashDump)
+          .Case("clang_analyzer_denote", &ExprInspectionChecker::analyzerDenote)
+          .Case("clang_analyzer_express",
+                &ExprInspectionChecker::analyzerExpress)
+          .StartsWith("clang_analyzer_isTainted",
+                      &ExprInspectionChecker::analyzerIsTainted)
+          .Default(nullptr);
 
   if (!Handler)
     return false;
@@ -410,6 +420,17 @@ void ExprInspectionChecker::analyzerExpress(const CallExpr *CE,
   }
 
   reportBug(*Str, C);
+}
+
+void ExprInspectionChecker::analyzerIsTainted(const CallExpr *CE,
+                                              CheckerContext &C) const {
+  if (CE->getNumArgs() != 1) {
+    reportBug("clang_analyzer_isTainted() requires exactly one argument", C);
+    return;
+  }
+  const bool IsTainted =
+      taint::isTainted(C.getState(), CE->getArg(0), C.getLocationContext());
+  reportBug(IsTainted ? "YES" : "NO", C);
 }
 
 void ento::registerExprInspectionChecker(CheckerManager &Mgr) {

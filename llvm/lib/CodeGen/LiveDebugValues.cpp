@@ -138,7 +138,10 @@ struct LocIndex {
     return (static_cast<uint64_t>(Location) << 32) | Index;
   }
 
-  static LocIndex fromRawInteger(uint64_t ID) {
+  template<typename IntT> static LocIndex fromRawInteger(IntT ID) {
+    static_assert(std::is_unsigned<IntT>::value &&
+                      sizeof(ID) == sizeof(uint64_t),
+                  "Cannot convert raw integer to LocIndex");
     return {static_cast<uint32_t>(ID >> 32), static_cast<uint32_t>(ID)};
   }
 

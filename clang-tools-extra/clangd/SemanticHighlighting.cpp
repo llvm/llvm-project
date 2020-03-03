@@ -23,6 +23,7 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Tooling/Syntax/Tokens.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
@@ -128,40 +129,39 @@ llvm::Optional<HighlightingKind> kindForReference(const ReferenceLoc &R) {
   return Result;
 }
 
+// For a macro usage `DUMP(foo)`, we want:
+//  - DUMP --> "macro"
+//  - foo --> "variable".
+SourceLocation getHighlightableSpellingToken(SourceLocation L,
+                                             const SourceManager &SM) {
+  if (L.isFileID())
+    return SM.isWrittenInMainFile(L) ? L : SourceLocation{};
+  // Tokens expanded from the macro body contribute no highlightings.
+  if (!SM.isMacroArgExpansion(L))
+    return {};
+  // Tokens expanded from macro args are potentially highlightable.
+  return getHighlightableSpellingToken(SM.getImmediateSpellingLoc(L), SM);
+}
+
 /// Consumes source locations and maps them to text ranges for highlightings.
 class HighlightingsBuilder {
 public:
-  HighlightingsBuilder(const SourceManager &SourceMgr,
-                       const LangOptions &LangOpts)
-      : SourceMgr(SourceMgr), LangOpts(LangOpts) {}
+  HighlightingsBuilder(const ParsedAST &AST)
+      : TB(AST.getTokens()), SourceMgr(AST.getSourceManager()),
+        LangOpts(AST.getLangOpts()) {}
 
   void addToken(HighlightingToken T) { Tokens.push_back(T); }
 
   void addToken(SourceLocation Loc, HighlightingKind Kind) {
+    Loc = getHighlightableSpellingToken(Loc, SourceMgr);
     if (Loc.isInvalid())
       return;
-    if (Loc.isMacroID()) {
-      // Only intereseted in highlighting arguments in macros (DEF_X(arg)).
-      if (!SourceMgr.isMacroArgExpansion(Loc))
-        return;
-      Loc = SourceMgr.getSpellingLoc(Loc);
-    }
+    const auto *Tok = TB.spelledTokenAt(Loc);
+    assert(Tok);
 
-    // Non top level decls that are included from a header are not filtered by
-    // topLevelDecls. (example: method declarations being included from
-    // another file for a class from another file).
-    // There are also cases with macros where the spelling loc will not be in
-    // the main file and the highlighting would be incorrect.
-    if (!isInsideMainFile(Loc, SourceMgr))
-      return;
-
-    auto Range = getTokenRange(SourceMgr, LangOpts, Loc);
-    if (!Range) {
-      // R should always have a value, if it doesn't something is very wrong.
-      elog("Tried to add semantic token with an invalid range");
-      return;
-    }
-    Tokens.push_back(HighlightingToken{Kind, *Range});
+    auto Range = halfOpenToRange(SourceMgr,
+                                 Tok->range(SourceMgr).toCharRange(SourceMgr));
+    Tokens.push_back(HighlightingToken{Kind, std::move(Range)});
   }
 
   std::vector<HighlightingToken> collect(ParsedAST &AST) && {
@@ -211,6 +211,7 @@ public:
   }
 
 private:
+  const syntax::TokenBuffer &TB;
   const SourceManager &SourceMgr;
   const LangOptions &LangOpts;
   std::vector<HighlightingToken> Tokens;
@@ -311,7 +312,7 @@ takeLine(ArrayRef<HighlightingToken> AllTokens,
 std::vector<HighlightingToken> getSemanticHighlightings(ParsedAST &AST) {
   auto &C = AST.getASTContext();
   // Add highlightings for AST nodes.
-  HighlightingsBuilder Builder(AST.getSourceManager(), C.getLangOpts());
+  HighlightingsBuilder Builder(AST);
   // Highlight 'decltype' and 'auto' as their underlying types.
   CollectExtraHighlightings(Builder).TraverseAST(C);
   // Highlight all decls and references coming from the AST.

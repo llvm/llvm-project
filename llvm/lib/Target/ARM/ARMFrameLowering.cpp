@@ -1768,8 +1768,7 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
   if (!LRSpilled && AFI->isThumb1OnlyFunction()) {
     unsigned FnSize = EstimateFunctionSizeInBytes(MF, TII);
     // Force LR to be spilled if the Thumb function size is > 2048. This enables
-    // use of BL to implement far jump. If it turns out that it's not needed
-    // then the branch fix up path will undo it.
+    // use of BL to implement far jump.
     if (FnSize >= (1 << 11)) {
       CanEliminateFrame = false;
       ForceLRSpill = true;
@@ -2120,10 +2119,8 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
     }
   }
 
-  if (ForceLRSpill) {
+  if (ForceLRSpill)
     SavedRegs.set(ARM::LR);
-    AFI->setLRIsSpilledForFarJump(true);
-  }
   AFI->setLRIsSpilled(SavedRegs.test(ARM::LR));
 }
 

@@ -51,9 +51,11 @@ computeConversionSet(iterator_range<Region::iterator> region,
                                  : Optional<ConversionTarget::LegalOpDetails>();
       if (legalityInfo && legalityInfo->isRecursivelyLegal)
         continue;
-      for (auto &region : op.getRegions())
-        computeConversionSet(region.getBlocks(), region.getLoc(), toConvert,
-                             target);
+      for (auto &region : op.getRegions()) {
+        if (failed(computeConversionSet(region.getBlocks(), region.getLoc(),
+                                        toConvert, target)))
+          return failure();
+      }
     }
 
     // Recurse to children that haven't been visited.

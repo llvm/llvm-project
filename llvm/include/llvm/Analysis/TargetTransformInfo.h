@@ -494,6 +494,8 @@ public:
     bool UpperBound;
     /// Allow peeling off loop iterations.
     bool AllowPeeling;
+    /// Allow peeling off loop iterations for loop nests.
+    bool AllowLoopNestsPeeling;
     /// Allow unrolling of all the iterations of the runtime loop remainder.
     bool UnrollRemainder;
     /// Allow unroll and jam. Used to enable unroll and jam for the target.

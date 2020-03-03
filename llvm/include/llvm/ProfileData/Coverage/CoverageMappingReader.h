@@ -185,11 +185,17 @@ private:
   std::vector<CounterExpression> Expressions;
   std::vector<CounterMappingRegion> MappingRegions;
 
+  // Used to tie the lifetimes of coverage function records to the lifetime of
+  // this BinaryCoverageReader instance. Needed to support the format change in
+  // D69471, which can split up function records into multiple sections on ELF.
+  std::string FuncRecords;
+
   // Used to tie the lifetimes of decompressed strings to the lifetime of this
   // BinaryCoverageReader instance.
   DecompressedData Decompressed;
 
-  BinaryCoverageReader() = default;
+  BinaryCoverageReader(std::string &&FuncRecords)
+      : FuncRecords(std::move(FuncRecords)) {}
 
 public:
   BinaryCoverageReader(const BinaryCoverageReader &) = delete;
@@ -200,7 +206,7 @@ public:
          SmallVectorImpl<std::unique_ptr<MemoryBuffer>> &ObjectFileBuffers);
 
   static Expected<std::unique_ptr<BinaryCoverageReader>>
-  createCoverageReaderFromBuffer(StringRef Coverage, StringRef FuncRecords,
+  createCoverageReaderFromBuffer(StringRef Coverage, std::string &&FuncRecords,
                                  InstrProfSymtab &&ProfileNames,
                                  uint8_t BytesInAddress,
                                  support::endianness Endian);

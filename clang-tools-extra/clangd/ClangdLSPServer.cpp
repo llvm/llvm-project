@@ -18,6 +18,7 @@
 #include "Trace.h"
 #include "URI.h"
 #include "refactor/Tweak.h"
+#include "clang/Basic/Version.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
@@ -546,7 +547,10 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
           CodeAction::INFO_KIND}}};
 
   llvm::json::Object Result{
-      {{"capabilities",
+      {{"serverInfo",
+        llvm::json::Object{{"name", "clangd"},
+                           {"version", getClangToolFullVersion("clangd")}}},
+       {"capabilities",
         llvm::json::Object{
             {"textDocumentSync", (int)TextDocumentSyncKind::Incremental},
             {"documentFormattingProvider", true},
@@ -599,6 +603,8 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
              llvm::json::Object{{"scopes", buildHighlightScopeLookupTable()}}});
   Reply(std::move(Result));
 }
+
+void ClangdLSPServer::onInitialized(const InitializedParams &Params) {}
 
 void ClangdLSPServer::onShutdown(const ShutdownParams &Params,
                                  Callback<std::nullptr_t> Reply) {
@@ -808,7 +814,9 @@ void ClangdLSPServer::onDocumentDidClose(
   // VSCode). Note that this cannot race with actual diagnostics responses
   // because removeDocument() guarantees no diagnostic callbacks will be
   // executed after it returns.
-  publishDiagnostics(URIForFile::canonicalize(File, /*TUPath=*/File), {});
+  PublishDiagnosticsParams Notification;
+  Notification.uri = URIForFile::canonicalize(File, /*TUPath=*/File);
+  publishDiagnostics(Notification);
 }
 
 void ClangdLSPServer::onDocumentOnTypeFormatting(
@@ -1145,18 +1153,13 @@ void ClangdLSPServer::applyConfiguration(
 }
 
 void ClangdLSPServer::publishSemanticHighlighting(
-    SemanticHighlightingParams Params) {
+    const SemanticHighlightingParams &Params) {
   notify("textDocument/semanticHighlighting", Params);
 }
 
 void ClangdLSPServer::publishDiagnostics(
-    const URIForFile &File, std::vector<clangd::Diagnostic> Diagnostics) {
-  // Publish diagnostics.
-  notify("textDocument/publishDiagnostics",
-         llvm::json::Object{
-             {"uri", File},
-             {"diagnostics", std::move(Diagnostics)},
-         });
+    const PublishDiagnosticsParams &Params) {
+  notify("textDocument/publishDiagnostics", Params);
 }
 
 // FIXME: This function needs to be properly tested.
@@ -1243,6 +1246,7 @@ ClangdLSPServer::ClangdLSPServer(
       NegotiatedOffsetEncoding(ForcedOffsetEncoding) {
   // clang-format off
   MsgHandler->bind("initialize", &ClangdLSPServer::onInitialize);
+  MsgHandler->bind("initialized", &ClangdLSPServer::onInitialized);
   MsgHandler->bind("shutdown", &ClangdLSPServer::onShutdown);
   MsgHandler->bind("sync", &ClangdLSPServer::onSync);
   MsgHandler->bind("textDocument/rangeFormatting", &ClangdLSPServer::onDocumentRangeFormatting);
@@ -1361,15 +1365,15 @@ void ClangdLSPServer::onHighlightingsReady(
 
 void ClangdLSPServer::onDiagnosticsReady(PathRef File,
                                          std::vector<Diag> Diagnostics) {
-  auto URI = URIForFile::canonicalize(File, /*TUPath=*/File);
-  std::vector<Diagnostic> LSPDiagnostics;
+  PublishDiagnosticsParams Notification;
+  Notification.uri = URIForFile::canonicalize(File, /*TUPath=*/File);
   DiagnosticToReplacementMap LocalFixIts; // Temporary storage
   for (auto &Diag : Diagnostics) {
-    toLSPDiags(Diag, URI, DiagOpts,
+    toLSPDiags(Diag, Notification.uri, DiagOpts,
                [&](clangd::Diagnostic Diag, llvm::ArrayRef<Fix> Fixes) {
                  auto &FixItsForDiagnostic = LocalFixIts[Diag];
                  llvm::copy(Fixes, std::back_inserter(FixItsForDiagnostic));
-                 LSPDiagnostics.push_back(std::move(Diag));
+                 Notification.diagnostics.push_back(std::move(Diag));
                });
   }
 
@@ -1380,7 +1384,7 @@ void ClangdLSPServer::onDiagnosticsReady(PathRef File,
   }
 
   // Send a notification to the LSP client.
-  publishDiagnostics(URI, std::move(LSPDiagnostics));
+  publishDiagnostics(Notification);
 }
 
 void ClangdLSPServer::onBackgroundIndexProgress(

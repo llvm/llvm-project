@@ -2574,7 +2574,11 @@ enum CXCursorKind {
    */
   CXCursor_OMPParallelMasterDirective      = 285,
 
-  CXCursor_LastStmt = CXCursor_OMPParallelMasterDirective,
+  /** OpenMP depobj directive.
+   */
+  CXCursor_OMPDepobjDirective             = 286,
+
+  CXCursor_LastStmt = CXCursor_OMPDepobjDirective,
 
   /**
    * Cursor that represents the translation unit itself.

@@ -1,4 +1,4 @@
-// RUN: mlir-opt -convert-parallel-loops-to-gpu -split-input-file %s | FileCheck %s -dump-input-on-failure
+// RUN: mlir-opt -convert-parallel-loops-to-gpu -split-input-file -verify-diagnostics %s | FileCheck %s -dump-input-on-failure
 
 // 2-d parallel loop mapped to block.y and block.x
 
@@ -299,3 +299,55 @@ module {
 // CHECK:           return
 // CHECK:         }
 // CHECK:       }
+
+// -----
+
+// Mapping to the same processor twice.
+
+func @parallel_double_map(%arg0 : index, %arg1 : index, %arg2 : index,
+                          %arg3 : index,
+                          %buf : memref<?x?xf32>,
+                          %res : memref<?x?xf32>) {
+  %four = constant 4 : index
+  // expected-error@+2 {{cannot redefine the bound for processor 1}}
+  // expected-error@+1 {{failed to legalize operation 'loop.parallel'}}
+  loop.parallel (%i0, %i1) = (%arg0, %arg1) to (%arg2, %arg3)
+                                          step (%four, %four)  {
+  } { mapping = [
+      {processor = 1, map = affine_map<(d0) -> (d0)>, bound = affine_map<(d0) -> (d0)>},
+      {processor = 1, map = affine_map<(d0) -> (d0)>, bound = affine_map<(d0) -> (d0)>}
+    ] }
+  return
+}
+
+// -----
+
+// Loop with loop-variant upper bound.
+
+func @parallel_loop_loop_variant_bound(%arg0 : index, %arg1 : index, %arg2 : index,
+                                       %arg3 : index,
+                                       %buf : memref<?x?xf32>,
+                                       %res : memref<?x?xf32>) {
+  %zero = constant 0 : index
+  %one = constant 1 : index
+  %four = constant 4 : index
+  // expected-error@+1 {{failed to legalize operation 'loop.parallel'}}
+  loop.parallel (%i0, %i1) = (%arg0, %arg1) to (%arg2, %arg3)
+                                          step (%four, %four)  {
+    // expected-error@+1 {{cannot derive loop-invariant upper bound}}                                        
+    loop.parallel (%si0, %si1) = (%zero, %zero) to (%i0, %i1)
+                                            step (%one, %one)  {
+      %idx0 = addi %i0, %si0 : index
+      %idx1 = addi %i1, %si1 : index
+      %val = load %buf[%idx0, %idx1] : memref<?x?xf32>
+      store %val, %res[%idx1, %idx0] : memref<?x?xf32>
+    } { mapping = [
+        {processor = 4, map = affine_map<(d0) -> (d0)>, bound = affine_map<(d0) -> (d0)>},
+        {processor = 6, map = affine_map<(d0) -> (d0)>, bound = affine_map<(d0) -> (d0)>}
+      ] }
+  } { mapping = [
+      {processor = 1, map = affine_map<(d0) -> (d0)>, bound = affine_map<(d0) -> (d0)>},
+      {processor = 6, map = affine_map<(d0) -> (d0)>, bound = affine_map<(d0) -> (d0)>}
+    ] }
+  return
+}

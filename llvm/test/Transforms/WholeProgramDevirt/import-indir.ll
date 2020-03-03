@@ -32,7 +32,7 @@
 ; SUMMARY-NEXT: TypeIdMap:
 ; SUMMARY-NEXT:   typeid1:
 ; SUMMARY-NEXT:     TTRes:
-; SUMMARY-NEXT:       Kind:            Unknown
+; SUMMARY-NEXT:       Kind:            Unsat
 ; SUMMARY-NEXT:       SizeM1BitWidth:  0
 ; SUMMARY-NEXT:       AlignLog2:       0
 ; SUMMARY-NEXT:       SizeM1:          0

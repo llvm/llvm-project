@@ -84,6 +84,8 @@ bool Type::isSignlessIntOrFloat() {
   return isSignlessInteger() || isa<FloatType>();
 }
 
+bool Type::isIntOrFloat() { return isa<IntegerType>() || isa<FloatType>(); }
+
 //===----------------------------------------------------------------------===//
 // Integer Type
 //===----------------------------------------------------------------------===//
@@ -147,13 +149,10 @@ const llvm::fltSemantics &FloatType::getFloatSemantics() {
 }
 
 unsigned Type::getIntOrFloatBitWidth() {
-  assert(isSignlessIntOrFloat() && "only ints and floats have a bitwidth");
-  if (auto intType = dyn_cast<IntegerType>()) {
+  assert(isIntOrFloat() && "only integers and floats have a bitwidth");
+  if (auto intType = dyn_cast<IntegerType>())
     return intType.getWidth();
-  }
-
-  auto floatType = cast<FloatType>();
-  return floatType.getWidth();
+  return cast<FloatType>().getWidth();
 }
 
 //===----------------------------------------------------------------------===//
@@ -202,7 +201,7 @@ int64_t ShapedType::getSizeInBits() const {
          "cannot get the bit size of an aggregate with a dynamic shape");
 
   auto elementType = getElementType();
-  if (elementType.isSignlessIntOrFloat())
+  if (elementType.isIntOrFloat())
     return elementType.getIntOrFloatBitWidth() * getNumElements();
 
   // Tensors can have vectors and other tensors as elements, other shaped types
@@ -373,7 +372,7 @@ MemRefType MemRefType::getImpl(ArrayRef<int64_t> shape, Type elementType,
   auto *context = elementType.getContext();
 
   // Check that memref is formed from allowed types.
-  if (!elementType.isSignlessIntOrFloat() && !elementType.isa<VectorType>() &&
+  if (!elementType.isIntOrFloat() && !elementType.isa<VectorType>() &&
       !elementType.isa<ComplexType>())
     return emitOptionalError(location, "invalid memref element type"),
            MemRefType();
@@ -451,7 +450,7 @@ LogicalResult
 UnrankedMemRefType::verifyConstructionInvariants(Location loc, Type elementType,
                                                  unsigned memorySpace) {
   // Check that memref is formed from allowed types.
-  if (!elementType.isSignlessIntOrFloat() && !elementType.isa<VectorType>() &&
+  if (!elementType.isIntOrFloat() && !elementType.isa<VectorType>() &&
       !elementType.isa<ComplexType>())
     return emitError(loc, "invalid memref element type");
   return success();

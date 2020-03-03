@@ -1102,7 +1102,7 @@ Type Parser::parseMemRefType() {
     return nullptr;
 
   // Check that memref is formed from allowed types.
-  if (!elementType.isSignlessIntOrFloat() && !elementType.isa<VectorType>() &&
+  if (!elementType.isIntOrFloat() && !elementType.isa<VectorType>() &&
       !elementType.isa<ComplexType>())
     return emitError(typeLoc, "invalid memref element type"), nullptr;
 

@@ -16,6 +16,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/MachineValueType.h"
 #include "llvm/Support/SMLoc.h"
+#include <cassert>
 #include <string>
 #include <utility>
 #include <vector>

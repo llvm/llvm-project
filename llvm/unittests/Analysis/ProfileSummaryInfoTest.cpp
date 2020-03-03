@@ -65,6 +65,20 @@ protected:
         "  %y2 = phi i32 [0, %bb1], [1, %bb2] \n"
         "  ret i32 %y2\n"
         "}\n"
+        "define i32 @l(i32 %x) {{\n"
+        "bb0:\n"
+        "  %y1 = icmp eq i32 %x, 0 \n"
+        "  br i1 %y1, label %bb1, label %bb2, !prof !23 \n"
+        "bb1:\n"
+        "  %z1 = call i32 @g(i32 %x)\n"
+        "  br label %bb3\n"
+        "bb2:\n"
+        "  %z2 = call i32 @h(i32 %x)\n"
+        "  br label %bb3\n"
+        "bb3:\n"
+        "  %y2 = phi i32 [0, %bb1], [1, %bb2] \n"
+        "  ret i32 %y2\n"
+        "}\n"
         "!20 = !{{!\"function_entry_count\", i64 400}\n"
         "!21 = !{{!\"function_entry_count\", i64 1}\n"
         "!22 = !{{!\"function_entry_count\", i64 100}\n"
@@ -141,13 +155,25 @@ TEST_F(ProfileSummaryInfoTest, TestCommon) {
   EXPECT_FALSE(PSI.isHotCountNthPercentile(990000, 100));
   EXPECT_FALSE(PSI.isHotCountNthPercentile(990000, 2));
 
+  EXPECT_FALSE(PSI.isColdCountNthPercentile(990000, 400));
+  EXPECT_TRUE(PSI.isColdCountNthPercentile(990000, 100));
+  EXPECT_TRUE(PSI.isColdCountNthPercentile(990000, 2));
+
   EXPECT_TRUE(PSI.isHotCountNthPercentile(999999, 400));
   EXPECT_TRUE(PSI.isHotCountNthPercentile(999999, 100));
   EXPECT_FALSE(PSI.isHotCountNthPercentile(999999, 2));
 
+  EXPECT_FALSE(PSI.isColdCountNthPercentile(999999, 400));
+  EXPECT_FALSE(PSI.isColdCountNthPercentile(999999, 100));
+  EXPECT_TRUE(PSI.isColdCountNthPercentile(999999, 2));
+
   EXPECT_FALSE(PSI.isHotCountNthPercentile(10000, 400));
   EXPECT_FALSE(PSI.isHotCountNthPercentile(10000, 100));
   EXPECT_FALSE(PSI.isHotCountNthPercentile(10000, 2));
+
+  EXPECT_TRUE(PSI.isColdCountNthPercentile(10000, 400));
+  EXPECT_TRUE(PSI.isColdCountNthPercentile(10000, 100));
+  EXPECT_TRUE(PSI.isColdCountNthPercentile(10000, 2));
 
   EXPECT_TRUE(PSI.isFunctionEntryHot(F));
   EXPECT_FALSE(PSI.isFunctionEntryHot(G));
@@ -177,15 +203,30 @@ TEST_F(ProfileSummaryInfoTest, InstrProf) {
   EXPECT_FALSE(PSI.isHotBlockNthPercentile(990000, BB2, &BFI));
   EXPECT_TRUE(PSI.isHotBlockNthPercentile(990000, BB3, &BFI));
 
+  EXPECT_FALSE(PSI.isColdBlockNthPercentile(990000, &BB0, &BFI));
+  EXPECT_FALSE(PSI.isColdBlockNthPercentile(990000, BB1, &BFI));
+  EXPECT_TRUE(PSI.isColdBlockNthPercentile(990000, BB2, &BFI));
+  EXPECT_FALSE(PSI.isColdBlockNthPercentile(990000, BB3, &BFI));
+
   EXPECT_TRUE(PSI.isHotBlockNthPercentile(999900, &BB0, &BFI));
   EXPECT_TRUE(PSI.isHotBlockNthPercentile(999900, BB1, &BFI));
   EXPECT_TRUE(PSI.isHotBlockNthPercentile(999900, BB2, &BFI));
   EXPECT_TRUE(PSI.isHotBlockNthPercentile(999900, BB3, &BFI));
 
+  EXPECT_FALSE(PSI.isColdBlockNthPercentile(999900, &BB0, &BFI));
+  EXPECT_FALSE(PSI.isColdBlockNthPercentile(999900, BB1, &BFI));
+  EXPECT_FALSE(PSI.isColdBlockNthPercentile(999900, BB2, &BFI));
+  EXPECT_FALSE(PSI.isColdBlockNthPercentile(999900, BB3, &BFI));
+
   EXPECT_FALSE(PSI.isHotBlockNthPercentile(10000, &BB0, &BFI));
   EXPECT_FALSE(PSI.isHotBlockNthPercentile(10000, BB1, &BFI));
   EXPECT_FALSE(PSI.isHotBlockNthPercentile(10000, BB2, &BFI));
   EXPECT_FALSE(PSI.isHotBlockNthPercentile(10000, BB3, &BFI));
+
+  EXPECT_TRUE(PSI.isColdBlockNthPercentile(10000, &BB0, &BFI));
+  EXPECT_TRUE(PSI.isColdBlockNthPercentile(10000, BB1, &BFI));
+  EXPECT_TRUE(PSI.isColdBlockNthPercentile(10000, BB2, &BFI));
+  EXPECT_TRUE(PSI.isColdBlockNthPercentile(10000, BB3, &BFI));
 
   CallSite CS1(BB1->getFirstNonPHI());
   auto *CI2 = BB2->getFirstNonPHI();
@@ -199,6 +240,31 @@ TEST_F(ProfileSummaryInfoTest, InstrProf) {
   MDBuilder MDB(M->getContext());
   CI2->setMetadata(llvm::LLVMContext::MD_prof, MDB.createBranchWeights({400}));
   EXPECT_FALSE(PSI.isHotCallSite(CS2, &BFI));
+}
+
+TEST_F(ProfileSummaryInfoTest, InstrProfNoFuncEntryCount) {
+  auto M = makeLLVMModule("InstrProf");
+  Function *F = M->getFunction("l");
+  ProfileSummaryInfo PSI = buildPSI(M.get());
+  EXPECT_TRUE(PSI.hasProfileSummary());
+  EXPECT_TRUE(PSI.hasInstrumentationProfile());
+
+  BasicBlock &BB0 = F->getEntryBlock();
+  BasicBlock *BB1 = BB0.getTerminator()->getSuccessor(0);
+  BasicBlock *BB2 = BB0.getTerminator()->getSuccessor(1);
+  BasicBlock *BB3 = BB1->getSingleSuccessor();
+
+  BlockFrequencyInfo BFI = buildBFI(*F);
+
+  // Without the entry count, all should return false.
+  EXPECT_FALSE(PSI.isHotBlockNthPercentile(990000, &BB0, &BFI));
+  EXPECT_FALSE(PSI.isHotBlockNthPercentile(990000, BB1, &BFI));
+  EXPECT_FALSE(PSI.isHotBlockNthPercentile(990000, BB2, &BFI));
+  EXPECT_FALSE(PSI.isHotBlockNthPercentile(990000, BB3, &BFI));
+  EXPECT_FALSE(PSI.isColdBlockNthPercentile(990000, &BB0, &BFI));
+  EXPECT_FALSE(PSI.isColdBlockNthPercentile(990000, BB1, &BFI));
+  EXPECT_FALSE(PSI.isColdBlockNthPercentile(990000, BB2, &BFI));
+  EXPECT_FALSE(PSI.isColdBlockNthPercentile(990000, BB3, &BFI));
 }
 
 TEST_F(ProfileSummaryInfoTest, SampleProf) {
@@ -224,15 +290,30 @@ TEST_F(ProfileSummaryInfoTest, SampleProf) {
   EXPECT_FALSE(PSI.isHotBlockNthPercentile(990000, BB2, &BFI));
   EXPECT_TRUE(PSI.isHotBlockNthPercentile(990000, BB3, &BFI));
 
+  EXPECT_FALSE(PSI.isColdBlockNthPercentile(990000, &BB0, &BFI));
+  EXPECT_FALSE(PSI.isColdBlockNthPercentile(990000, BB1, &BFI));
+  EXPECT_TRUE(PSI.isColdBlockNthPercentile(990000, BB2, &BFI));
+  EXPECT_FALSE(PSI.isColdBlockNthPercentile(990000, BB3, &BFI));
+
   EXPECT_TRUE(PSI.isHotBlockNthPercentile(999900, &BB0, &BFI));
   EXPECT_TRUE(PSI.isHotBlockNthPercentile(999900, BB1, &BFI));
   EXPECT_TRUE(PSI.isHotBlockNthPercentile(999900, BB2, &BFI));
   EXPECT_TRUE(PSI.isHotBlockNthPercentile(999900, BB3, &BFI));
 
+  EXPECT_FALSE(PSI.isColdBlockNthPercentile(999900, &BB0, &BFI));
+  EXPECT_FALSE(PSI.isColdBlockNthPercentile(999900, BB1, &BFI));
+  EXPECT_FALSE(PSI.isColdBlockNthPercentile(999900, BB2, &BFI));
+  EXPECT_FALSE(PSI.isColdBlockNthPercentile(999900, BB3, &BFI));
+
   EXPECT_FALSE(PSI.isHotBlockNthPercentile(10000, &BB0, &BFI));
   EXPECT_FALSE(PSI.isHotBlockNthPercentile(10000, BB1, &BFI));
   EXPECT_FALSE(PSI.isHotBlockNthPercentile(10000, BB2, &BFI));
   EXPECT_FALSE(PSI.isHotBlockNthPercentile(10000, BB3, &BFI));
+
+  EXPECT_TRUE(PSI.isColdBlockNthPercentile(10000, &BB0, &BFI));
+  EXPECT_TRUE(PSI.isColdBlockNthPercentile(10000, BB1, &BFI));
+  EXPECT_TRUE(PSI.isColdBlockNthPercentile(10000, BB2, &BFI));
+  EXPECT_TRUE(PSI.isColdBlockNthPercentile(10000, BB3, &BFI));
 
   CallSite CS1(BB1->getFirstNonPHI());
   auto *CI2 = BB2->getFirstNonPHI();
@@ -250,6 +331,51 @@ TEST_F(ProfileSummaryInfoTest, SampleProf) {
   // weights that exceed the hot count threshold.
   CI2->setMetadata(llvm::LLVMContext::MD_prof, MDB.createBranchWeights({400}));
   EXPECT_TRUE(PSI.isHotCallSite(CS2, &BFI));
+
+  {
+    Function *F = M->getFunction("l");
+    BlockFrequencyInfo BFI = buildBFI(*F);
+    BasicBlock &BB0 = F->getEntryBlock();
+    BasicBlock *BB1 = BB0.getTerminator()->getSuccessor(0);
+    BasicBlock *BB2 = BB0.getTerminator()->getSuccessor(1);
+    BasicBlock *BB3 = BB1->getSingleSuccessor();
+
+    // Without the entry count, all should return false.
+    EXPECT_FALSE(PSI.isHotBlockNthPercentile(990000, &BB0, &BFI));
+    EXPECT_FALSE(PSI.isHotBlockNthPercentile(990000, BB1, &BFI));
+    EXPECT_FALSE(PSI.isHotBlockNthPercentile(990000, BB2, &BFI));
+    EXPECT_FALSE(PSI.isHotBlockNthPercentile(990000, BB3, &BFI));
+
+    EXPECT_FALSE(PSI.isColdBlockNthPercentile(990000, &BB0, &BFI));
+    EXPECT_FALSE(PSI.isColdBlockNthPercentile(990000, BB1, &BFI));
+    EXPECT_FALSE(PSI.isColdBlockNthPercentile(990000, BB2, &BFI));
+    EXPECT_FALSE(PSI.isColdBlockNthPercentile(990000, BB3, &BFI));
+  }
+}
+
+TEST_F(ProfileSummaryInfoTest, SampleProfNoFuncEntryCount) {
+  auto M = makeLLVMModule("SampleProfile");
+  Function *F = M->getFunction("l");
+  ProfileSummaryInfo PSI = buildPSI(M.get());
+  EXPECT_TRUE(PSI.hasProfileSummary());
+  EXPECT_TRUE(PSI.hasSampleProfile());
+
+  BasicBlock &BB0 = F->getEntryBlock();
+  BasicBlock *BB1 = BB0.getTerminator()->getSuccessor(0);
+  BasicBlock *BB2 = BB0.getTerminator()->getSuccessor(1);
+  BasicBlock *BB3 = BB1->getSingleSuccessor();
+
+  BlockFrequencyInfo BFI = buildBFI(*F);
+
+  // Without the entry count, all should return false.
+  EXPECT_FALSE(PSI.isHotBlockNthPercentile(990000, &BB0, &BFI));
+  EXPECT_FALSE(PSI.isHotBlockNthPercentile(990000, BB1, &BFI));
+  EXPECT_FALSE(PSI.isHotBlockNthPercentile(990000, BB2, &BFI));
+  EXPECT_FALSE(PSI.isHotBlockNthPercentile(990000, BB3, &BFI));
+  EXPECT_FALSE(PSI.isColdBlockNthPercentile(990000, &BB0, &BFI));
+  EXPECT_FALSE(PSI.isColdBlockNthPercentile(990000, BB1, &BFI));
+  EXPECT_FALSE(PSI.isColdBlockNthPercentile(990000, BB2, &BFI));
+  EXPECT_FALSE(PSI.isColdBlockNthPercentile(990000, BB3, &BFI));
 }
 
 } // end anonymous namespace

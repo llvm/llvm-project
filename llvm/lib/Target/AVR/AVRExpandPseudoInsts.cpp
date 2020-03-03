@@ -597,8 +597,8 @@ bool AVRExpandPseudo::expand<AVR::LDWRdPtr>(Block &MBB, BlockIt MBBI) {
 
   // Load low byte.
   auto MIBLO = buildMI(MBB, MBBI, OpLo)
-    .addReg(CurDstLoReg, RegState::Define)
-    .addReg(SrcReg, RegState::Define);
+                   .addReg(CurDstLoReg, RegState::Define)
+                   .addReg(SrcReg);
 
   // Push low byte onto stack if necessary.
   if (TmpReg)

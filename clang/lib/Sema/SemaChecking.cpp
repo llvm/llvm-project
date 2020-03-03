@@ -11587,7 +11587,16 @@ static void AnalyzeImplicitConversions(Sema &S, Expr *OrigE, SourceLocation CC,
   if (E->isTypeDependent() || E->isValueDependent())
     return;
 
-  if (const auto *UO = dyn_cast<UnaryOperator>(E))
+  Expr *SourceExpr = E;
+  // Examine, but don't traverse into the source expression of an
+  // OpaqueValueExpr, since it may have multiple parents and we don't want to
+  // emit duplicate diagnostics. Its fine to examine the form or attempt to
+  // evaluate it in the context of checking the specific conversion to T though.
+  if (auto *OVE = dyn_cast<OpaqueValueExpr>(E))
+    if (auto *Src = OVE->getSourceExpr())
+      SourceExpr = Src;
+
+  if (const auto *UO = dyn_cast<UnaryOperator>(SourceExpr))
     if (UO->getOpcode() == UO_Not &&
         UO->getSubExpr()->isKnownToHaveBooleanValue())
       S.Diag(UO->getBeginLoc(), diag::warn_bitwise_negation_bool)
@@ -11596,21 +11605,20 @@ static void AnalyzeImplicitConversions(Sema &S, Expr *OrigE, SourceLocation CC,
 
   // For conditional operators, we analyze the arguments as if they
   // were being fed directly into the output.
-  if (isa<ConditionalOperator>(E)) {
-    ConditionalOperator *CO = cast<ConditionalOperator>(E);
+  if (auto *CO = dyn_cast<ConditionalOperator>(SourceExpr)) {
     CheckConditionalOperator(S, CO, CC, T);
     return;
   }
 
   // Check implicit argument conversions for function calls.
-  if (CallExpr *Call = dyn_cast<CallExpr>(E))
+  if (CallExpr *Call = dyn_cast<CallExpr>(SourceExpr))
     CheckImplicitArgumentConversions(S, Call, CC);
 
   // Go ahead and check any implicit conversions we might have skipped.
   // The non-canonical typecheck is just an optimization;
   // CheckImplicitConversion will filter out dead implicit conversions.
-  if (E->getType() != T)
-    CheckImplicitConversion(S, E, T, CC, nullptr, IsListInit);
+  if (SourceExpr->getType() != T)
+    CheckImplicitConversion(S, SourceExpr, T, CC, nullptr, IsListInit);
 
   // Now continue drilling into this expression.
 

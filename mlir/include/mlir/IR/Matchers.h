@@ -93,9 +93,8 @@ struct constant_int_op_binder {
       return false;
     auto type = op->getResult(0).getType();
 
-    if (type.isSignlessIntOrIndex()) {
+    if (type.isa<IntegerType>() || type.isa<IndexType>())
       return attr_value_binder<IntegerAttr>(bind_value).match(attr);
-    }
     if (type.isa<VectorType>() || type.isa<RankedTensorType>()) {
       if (auto splatAttr = attr.dyn_cast<SplatElementsAttr>()) {
         return attr_value_binder<IntegerAttr>(bind_value)

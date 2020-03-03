@@ -239,6 +239,7 @@ bool fromJSON(const llvm::json::Value &E, TraceLevel &Out);
 
 struct NoParams {};
 inline bool fromJSON(const llvm::json::Value &, NoParams &) { return true; }
+using InitializedParams = NoParams;
 using ShutdownParams = NoParams;
 using ExitParams = NoParams;
 
@@ -790,6 +791,14 @@ struct LSPDiagnosticCompare {
 };
 bool fromJSON(const llvm::json::Value &, Diagnostic &);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Diagnostic &);
+
+struct PublishDiagnosticsParams {
+  /// The URI for which diagnostic information is reported.
+  URIForFile uri;
+  /// An array of diagnostic information items.
+  std::vector<Diagnostic> diagnostics;
+};
+llvm::json::Value toJSON(const PublishDiagnosticsParams &);
 
 struct CodeActionContext {
   /// An array of diagnostics.

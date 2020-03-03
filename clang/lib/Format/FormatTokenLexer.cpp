@@ -345,7 +345,7 @@ bool FormatTokenLexer::tryMergeCSharpNullConditional() {
 
   if (PeriodOrLSquare->is(tok::l_square)) {
     Question->Tok.setKind(tok::question); // no '?[' in clang tokens.
-    Question->Type = TT_CSharpNullConditionalSq;
+    Question->Type = TT_CSharpNullConditionalLSquare;
   } else {
     Question->Tok.setKind(tok::question); // no '?.' in clang tokens.
     Question->Type = TT_CSharpNullConditional;

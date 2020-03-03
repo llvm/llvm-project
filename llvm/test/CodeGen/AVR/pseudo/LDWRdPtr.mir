@@ -17,7 +17,7 @@ body: |
 
     ; CHECK-LABEL: test_ldwrdptr
 
-    ; CHECK:      $r0, $r31r30 = LDRdPtr
+    ; CHECK:               $r0 = LDRdPtr $r31r30
     ; CHECK-NEXT:          $r1 = LDDRdPtrQ $r31r30, 1
 
     $r1r0 = LDWRdPtr $r31r30
