@@ -89,7 +89,7 @@ define <4 x i64> @var_shift_v4i64(<4 x i64> %a, <4 x i64> %b) nounwind {
 ; X32-AVX1-LABEL: var_shift_v4i64:
 ; X32-AVX1:       # %bb.0:
 ; X32-AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; X32-AVX1-NEXT:    vmovddup {{.*#+}} xmm3 = [-0.0E+0,-0.0E+0]
+; X32-AVX1-NEXT:    vmovddup {{.*#+}} xmm3 = [9223372036854775808,9223372036854775808]
 ; X32-AVX1-NEXT:    # xmm3 = mem[0,0]
 ; X32-AVX1-NEXT:    vpsrlq %xmm2, %xmm3, %xmm4
 ; X32-AVX1-NEXT:    vpshufd {{.*#+}} xmm5 = xmm2[2,3,0,1]

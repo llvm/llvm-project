@@ -2044,7 +2044,7 @@ define <32 x i8> @constant_funnnel_v32i8(<32 x i8> %x, <32 x i8> %y) nounwind {
 ; AVX1-NEXT:    vpackuswb %xmm4, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
 ; AVX1-NEXT:    vorps %ymm2, %ymm0, %ymm0
-; AVX1-NEXT:    vbroadcastsd {{.*#+}} ymm2 = [NaN,NaN,NaN,NaN]
+; AVX1-NEXT:    vbroadcastsd {{.*#+}} ymm2 = [18446744073709551360,18446744073709551360,18446744073709551360,18446744073709551360]
 ; AVX1-NEXT:    vandps %ymm2, %ymm0, %ymm0
 ; AVX1-NEXT:    vandnps %ymm1, %ymm2, %ymm1
 ; AVX1-NEXT:    vorps %ymm1, %ymm0, %ymm0
@@ -2195,7 +2195,7 @@ define <32 x i8> @constant_funnnel_v32i8(<32 x i8> %x, <32 x i8> %y) nounwind {
 ; XOPAVX1-NEXT:    vpshlb %xmm4, %xmm0, %xmm0
 ; XOPAVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
 ; XOPAVX1-NEXT:    vorps %ymm2, %ymm0, %ymm0
-; XOPAVX1-NEXT:    vbroadcastsd {{.*#+}} ymm2 = [NaN,NaN,NaN,NaN]
+; XOPAVX1-NEXT:    vbroadcastsd {{.*#+}} ymm2 = [18446744073709551360,18446744073709551360,18446744073709551360,18446744073709551360]
 ; XOPAVX1-NEXT:    vpcmov %ymm2, %ymm1, %ymm0, %ymm0
 ; XOPAVX1-NEXT:    retq
 ;
