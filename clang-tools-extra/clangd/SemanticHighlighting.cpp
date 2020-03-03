@@ -26,6 +26,7 @@
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/Base64.h"
 #include "llvm/Support/Casting.h"
 #include <algorithm>
 
@@ -282,37 +283,6 @@ public:
 private:
   HighlightingsBuilder &H;
 };
-
-// Encode binary data into base64.
-// This was copied from compiler-rt/lib/fuzzer/FuzzerUtil.cpp.
-// FIXME: Factor this out into llvm/Support?
-std::string encodeBase64(const llvm::SmallVectorImpl<char> &Bytes) {
-  static const char Table[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-                              "abcdefghijklmnopqrstuvwxyz"
-                              "0123456789+/";
-  std::string Res;
-  size_t I;
-  for (I = 0; I + 2 < Bytes.size(); I += 3) {
-    uint32_t X = (Bytes[I] << 16) + (Bytes[I + 1] << 8) + Bytes[I + 2];
-    Res += Table[(X >> 18) & 63];
-    Res += Table[(X >> 12) & 63];
-    Res += Table[(X >> 6) & 63];
-    Res += Table[X & 63];
-  }
-  if (I + 1 == Bytes.size()) {
-    uint32_t X = (Bytes[I] << 16);
-    Res += Table[(X >> 18) & 63];
-    Res += Table[(X >> 12) & 63];
-    Res += "==";
-  } else if (I + 2 == Bytes.size()) {
-    uint32_t X = (Bytes[I] << 16) + (Bytes[I + 1] << 8);
-    Res += Table[(X >> 18) & 63];
-    Res += Table[(X >> 12) & 63];
-    Res += Table[(X >> 6) & 63];
-    Res += "=";
-  }
-  return Res;
-}
 
 void write32be(uint32_t I, llvm::raw_ostream &OS) {
   std::array<char, 4> Buf;
