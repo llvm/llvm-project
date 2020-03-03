@@ -1144,11 +1144,17 @@ TargetInstrInfo::describeLoadedValue(const MachineInstr &MI,
     if (Reg == DestReg)
       return ParamLoadedValue(*DestSrc->Source, Expr);
 
+    // This assert was hit in rdar://59772698 because the ARM backend failed
+    // to recognize a sequence of two VMOVS instructions which initialized a
+    // 64-bit register. That issue was fixed in D75273 and the fix was cherry
+    // picked, but we don't want the assert to fire on the stable branch in M3.
+#if 0
     // Cases where super- or sub-registers needs to be described should
     // be handled by the target's hook implementation.
     assert(!TRI->isSuperOrSubRegisterEq(Reg, DestReg) &&
            "TargetInstrInfo::describeLoadedValue can't describe super- or "
            "sub-regs for copy instructions");
+#endif
     return None;
   } else if (auto RegImm = isAddImmediate(MI, Reg)) {
     Register SrcReg = RegImm->Reg;

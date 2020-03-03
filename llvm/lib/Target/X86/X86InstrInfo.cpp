@@ -7673,6 +7673,17 @@ X86InstrInfo::describeLoadedValue(const MachineInstr &MI, Register Reg) const {
 
     return ParamLoadedValue(*Op, Expr);;
   }
+
+  // Do not describe moves of 8/16 bit values into a potentially wider
+  // forwarding reg. We should be able to describe this situation, but there
+  // is some confusion about how best to do it, as the straightforward approach
+  // may not be permitted by the standard.
+  //
+  // See discussion in https://reviews.llvm.org/D75326
+  case X86::MOV8ri:
+  case X86::MOV16ri:
+    return None;
+
   case X86::MOV32ri:
   case X86::MOV64ri:
   case X86::MOV64ri32:
@@ -7721,7 +7732,12 @@ X86InstrInfo::describeLoadedValue(const MachineInstr &MI, Register Reg) const {
     return ParamLoadedValue(MI.getOperand(1), Expr);
   }
   default:
+    // This assert was hit in rdar://59822099 because of the issue pointed out
+    // above (re: D75326). While we don't expect this assert to fire any more,
+    // we want to make sure it doesn't fire on the stable branch during M3.
+#if 0
     assert(!MI.isMoveImmediate() && "Unexpected MoveImm instruction");
+#endif
     return TargetInstrInfo::describeLoadedValue(MI, Reg);
   }
 }
