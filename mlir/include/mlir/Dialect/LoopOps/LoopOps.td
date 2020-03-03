@@ -52,7 +52,7 @@ def ForOp : Loop_Op<"for",
 
     The body region must contain exactly one block that terminates with
     "loop.yield".  Calling ForOp::build will create such a region and insert
-    the terminator implicitly if none is defined, so will the parsing even 
+    the terminator implicitly if none is defined, so will the parsing even
     in cases when it is absent from the custom format. For example:
 
     ```mlir
@@ -62,17 +62,17 @@ def ForOp : Loop_Op<"for",
     ```
 
     "loop.for" can also operate on loop-carried variables and returns the final values
-    after loop termination. The initial values of the variables are passed as additional SSA 
+    after loop termination. The initial values of the variables are passed as additional SSA
     operands to the "loop.for" following the 3 loop control SSA values mentioned above
-    (lower bound, upper bound and step). The operation region has equivalent arguments 
+    (lower bound, upper bound and step). The operation region has equivalent arguments
     for each variable representing the value of the variable at the current iteration.
-    
-    The region must terminate with a "loop.yield" that passes all the current iteration 
+
+    The region must terminate with a "loop.yield" that passes all the current iteration
     variables to the next iteration, or to the "loop.for" result, if at the last iteration.
-    "loop.for" results hold the final values after the last iteration. 
-    
+    "loop.for" results hold the final values after the last iteration.
+
     For example, to sum-reduce a memref:
-    
+
     ```mlir
     func @reduce(%buffer: memref<1024xf32>, %lb: index, %ub: index, %step: index) -> (f32) {
       // Initial sum set to 0.
@@ -85,14 +85,14 @@ def ForOp : Loop_Op<"for",
         loop.yield %sum_next : f32
       }
       return %sum : f32
-    }   
+    }
     ```
 
-    If the "loop.for" defines any values, a yield must be explicitly present. 
-    The number and types of the "loop.for" results must match the initial values 
+    If the "loop.for" defines any values, a yield must be explicitly present.
+    The number and types of the "loop.for" results must match the initial values
     in the "iter_args" binding and the yield operands.
-    
-    Another example with a nested "loop.if" (see "loop.if" for details) 
+
+    Another example with a nested "loop.if" (see "loop.if" for details)
     to perform conditional reduction:
 
     ```mlir
@@ -118,7 +118,7 @@ def ForOp : Loop_Op<"for",
                        Index:$upperBound,
                        Index:$step,
                        Variadic<AnyType>:$initArgs);
-  let results = (outs Variadic<AnyType>:$results);                       
+  let results = (outs Variadic<AnyType>:$results);
   let regions = (region SizedRegion<1>:$region);
 
   let skipDefaultBuilders = 1;
@@ -143,15 +143,15 @@ def ForOp : Loop_Op<"for",
     void setLowerBound(Value bound) { getOperation()->setOperand(0, bound); }
     void setUpperBound(Value bound) { getOperation()->setOperand(1, bound); }
     void setStep(Value step) { getOperation()->setOperand(2, step); }
-    
+
     /// Number of region arguments for loop-carried values
     unsigned getNumRegionIterArgs() {
-      return getBody()->getNumArguments() - 1; 
+      return getBody()->getNumArguments() - 1;
     }
     /// Number of operands controlling the loop: lb, ub, step
     unsigned getNumControlOperands() { return 3; }
     /// Does the operation hold operands for loop-carried values
-    bool hasIterOperands() { 
+    bool hasIterOperands() {
       return getOperation()->getNumOperands() > getNumControlOperands();
     }
     /// Get Number of loop-carried values
@@ -178,7 +178,7 @@ def IfOp : Loop_Op<"if",
     ```
 
     "loop.if" may also return results that are defined in its regions. The values
-    defined are determined by which execution path is taken. 
+    defined are determined by which execution path is taken.
     For example:
     ```mlir
        %x, %y = loop.if %b -> (f32, f32) {
@@ -186,8 +186,8 @@ def IfOp : Loop_Op<"if",
          %y_true = ...
          loop.yield %x_true, %y_true : f32, f32
        } else {
-         %x_false = ... 
-         %y_false = ... 
+         %x_false = ...
+         %y_false = ...
          loop.yield %x_false, %y_false : f32, f32
        }
     ```
@@ -196,7 +196,7 @@ def IfOp : Loop_Op<"if",
     defines no values, the "loop.yield" can be left out, and will be
     inserted implicitly. Otherwise, it must be explicit.
     Also, if "loop.if" defines one or more values, the 'else' block cannot
-    be omitted. 
+    be omitted.
 
     For example:
     ```mlir
@@ -230,18 +230,20 @@ def IfOp : Loop_Op<"if",
 }
 
 def ParallelOp : Loop_Op<"parallel",
-    [SameVariadicOperandSize, SingleBlockImplicitTerminator<"YieldOp">]> {
+    [AttrSizedOperandSegments, SingleBlockImplicitTerminator<"YieldOp">]> {
   let summary = "parallel for operation";
   let description = [{
-    The "loop.parallel" operation represents a loop nest taking 3 groups of SSA
-    values as operands that represent the lower bounds, upper bounds and steps,
-    respectively. The operation defines a variadic number of SSA values for its
-    induction variables. It has one region capturing the loop body. The
-    induction variables are represented as an argument of this region. These SSA
-    values always have type index, which is the size of the machine word. The
-    steps are values of type index, required to be positive.
-    The lower and upper bounds specify a half-open range: the range includes the
-    lower bound but does not include the upper bound.
+    The "loop.parallel" operation represents a loop nest taking 4 groups of SSA
+    values as operands that represent the lower bounds, upper bounds, steps and
+    initial values, respectively. The operation defines a variadic number of
+    SSA values for its induction variables. It has one region capturing the
+    loop body. The induction variables are represented as an argument of this
+    region. These SSA values always have type index, which is the size of the
+    machine word. The steps are values of type index, required to be positive.
+    The lower and upper bounds specify a half-open range: the range includes
+    the lower bound but does not include the upper bound. The initial values
+    have the same types as results of "loop.parallel". If there are no results,
+    the keyword `init` can be omitted. 
 
     Semantically we require that the iteration space can be iterated in any
     order, and the loop body can be executed in parallel. If there are data
@@ -250,10 +252,11 @@ def ParallelOp : Loop_Op<"parallel",
     The parallel loop operation supports reduction of values produced by
     individual iterations into a single result. This is modeled using the
     loop.reduce operation (see loop.reduce for details). Each result of a
-    loop.parallel operation is associated with a reduce operation that is an
-    immediate child. Reduces are matched to result values in order of their
-    appearance in the body. Consequently, we require that the body region has
-    the same number of results as it has reduce operations.
+    loop.parallel operation is associated with an initial value operand and
+    reduce operation that is an immediate child. Reductions are matched to result
+    and initial values in order of their appearance in the body. Consequently,
+    we require that the body region has the same number of results and initial
+    values as it has reduce operations.
 
     The body region must contain exactly one block that terminates with
     "loop.yield" without operands. Parsing ParallelOp will create such a region
@@ -273,7 +276,8 @@ def ParallelOp : Loop_Op<"parallel",
 
   let arguments = (ins Variadic<Index>:$lowerBound,
                        Variadic<Index>:$upperBound,
-                       Variadic<Index>:$step);
+                       Variadic<Index>:$step,
+                       Variadic<AnyType>:$initVals);
   let results = (outs Variadic<AnyType>:$results);
   let regions = (region SizedRegion<1>:$region);
 
@@ -281,10 +285,7 @@ def ParallelOp : Loop_Op<"parallel",
   let builders = [
     OpBuilder<"Builder *builder, OperationState &result, "
               "ValueRange lowerBounds, ValueRange upperBounds, "
-              "ValueRange steps">,
-    OpBuilder<"Builder *builder, OperationState &result, "
-              "ValueRange lowerBounds, ValueRange upperBounds, "
-              "ValueRange steps, ArrayRef<Type> resultTypes">
+              "ValueRange steps, ValueRange initVals = {}">,
   ];
 
   let extraClassDeclaration = [{
@@ -293,9 +294,10 @@ def ParallelOp : Loop_Op<"parallel",
       return getBody()->getNumArguments();
     }
     iterator_range<Block::args_iterator> getInductionVars() {
-      return {getBody()->args_begin(), getBody()->args_end()};
+      return getBody()->getArguments();
     }
     unsigned getNumLoops() { return step().size(); }
+    unsigned getNumReductions() { return initVals().size(); }
   }];
 }
 
@@ -369,13 +371,13 @@ def YieldOp : Loop_Op<"yield", [Terminator]> {
   let description = [{
     "loop.yield" yields an SSA value from a loop dialect op region and
     terminates the regions. The semantics of how the values are yielded
-    is defined by the parent operation. 
+    is defined by the parent operation.
     If "loop.yield" has any operands, the operands must match the parent
-    operation's results. 
-    If the parent operation defines no values, then the "loop.yield" may be 
+    operation's results.
+    If the parent operation defines no values, then the "loop.yield" may be
     left out in the custom syntax and the builders will insert one implicitly.
     Otherwise, it has to be present in the syntax to indicate which values
-    are yielded. 
+    are yielded.
   }];
 
   let arguments = (ins Variadic<AnyType>:$results);
