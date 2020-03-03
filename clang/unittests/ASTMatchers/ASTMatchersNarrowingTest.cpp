@@ -2007,9 +2007,8 @@ TEST(EachOf, BehavesLikeAnyOfUnlessBothMatch) {
 TEST(Optionally, SubmatchersDoNotMatch) {
   EXPECT_TRUE(matchAndVerifyResultFalse(
       "class A { int a; int b; };",
-      recordDecl(optionally(has(fieldDecl(hasName("c")).bind("v")),
-                            has(fieldDecl(hasName("d")).bind("v")))),
-      std::make_unique<VerifyIdIsBoundTo<FieldDecl>>("v")));
+      recordDecl(optionally(has(fieldDecl(hasName("c")).bind("c")))),
+      std::make_unique<VerifyIdIsBoundTo<FieldDecl>>("c")));
 }
 
 // Regression test.
@@ -2028,14 +2027,8 @@ TEST(Optionally, SubmatchersDoNotMatchButPreserveBindings) {
 TEST(Optionally, SubmatchersMatch) {
   EXPECT_TRUE(matchAndVerifyResultTrue(
       "class A { int a; int c; };",
-      recordDecl(optionally(has(fieldDecl(hasName("a")).bind("v")),
-                            has(fieldDecl(hasName("b")).bind("v")))),
-      std::make_unique<VerifyIdIsBoundTo<FieldDecl>>("v", 1)));
-  EXPECT_TRUE(matchAndVerifyResultTrue(
-      "class A { int c; int b; };",
-      recordDecl(optionally(has(fieldDecl(hasName("c")).bind("v")),
-                            has(fieldDecl(hasName("b")).bind("v")))),
-      std::make_unique<VerifyIdIsBoundTo<FieldDecl>>("v", 2)));
+      recordDecl(optionally(has(fieldDecl(hasName("a")).bind("v")))),
+      std::make_unique<VerifyIdIsBoundTo<FieldDecl>>("v")));
 }
 
 TEST(IsTemplateInstantiation, MatchesImplicitClassTemplateInstantiation) {
