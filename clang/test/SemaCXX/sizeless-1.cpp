@@ -516,6 +516,7 @@ void cxx_only(int sel) {
   _Static_assert(!__is_literal(svint8_t), "");
   _Static_assert(__is_pod(svint8_t), "");
   _Static_assert(!__is_polymorphic(svint8_t), "");
+  _Static_assert(__is_trivial(svint8_t), "");
   _Static_assert(__is_object(svint8_t), "");
   _Static_assert(!__is_arithmetic(svint8_t), "");
   _Static_assert(!__is_floating_point(svint8_t), "");

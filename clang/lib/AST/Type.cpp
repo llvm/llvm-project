@@ -2249,6 +2249,9 @@ bool QualType::isTrivialType(const ASTContext &Context) const {
   if ((*this)->isArrayType())
     return Context.getBaseElementType(*this).isTrivialType(Context);
 
+  if ((*this)->isSizelessBuiltinType())
+    return true;
+
   // Return false for incomplete types after skipping any incomplete array
   // types which are expressly allowed by the standard and thus our API.
   if ((*this)->isIncompleteType())
