@@ -66,9 +66,9 @@ public:
 
   bool ExceptionBreakpointsExplainStop(lldb::StopInfoSP stop_reason) override;
 
-  lldb::BreakpointResolverSP CreateExceptionResolver(Breakpoint *bkpt,
-                                                     bool catch_bp,
-                                                     bool throw_bp) override;
+  lldb::BreakpointResolverSP
+  CreateExceptionResolver(const lldb::BreakpointSP &bkpt,
+                          bool catch_bp, bool throw_bp) override;
 
   lldb::SearchFilterSP CreateExceptionSearchFilter() override;
   
@@ -81,10 +81,9 @@ public:
   uint32_t GetPluginVersion() override;
 
 protected:
-  lldb::BreakpointResolverSP CreateExceptionResolver(Breakpoint *bkpt,
-                                                     bool catch_bp,
-                                                     bool throw_bp,
-                                                     bool for_expressions);
+  lldb::BreakpointResolverSP
+  CreateExceptionResolver(const lldb::BreakpointSP &bkpt,
+                          bool catch_bp, bool throw_bp, bool for_expressions);
 
   lldb::BreakpointSP CreateExceptionBreakpoint(bool catch_bp, bool throw_bp,
                                                bool for_expressions,

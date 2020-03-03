@@ -103,9 +103,9 @@ public:
   static const ObjCLanguageRuntime::ObjCISA g_objc_Tagged_ISA_NSDate = 6;
 
 protected:
-  lldb::BreakpointResolverSP CreateExceptionResolver(Breakpoint *bkpt,
-                                                     bool catch_bp,
-                                                     bool throw_bp) override;
+  lldb::BreakpointResolverSP
+  CreateExceptionResolver(const lldb::BreakpointSP &bkpt,
+                          bool catch_bp, bool throw_bp) override;
 
 private:
   class HashTableSignature {

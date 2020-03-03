@@ -21,15 +21,17 @@ namespace lldb_private {
 
 class BreakpointResolverAddress : public BreakpointResolver {
 public:
-  BreakpointResolverAddress(Breakpoint *bkpt, const Address &addr);
+  BreakpointResolverAddress(const lldb::BreakpointSP &bkpt,
+                            const Address &addr);
 
-  BreakpointResolverAddress(Breakpoint *bkpt, const Address &addr,
+  BreakpointResolverAddress(const lldb::BreakpointSP &bkpt,
+                            const Address &addr,
                             const FileSpec &module_spec);
 
-  ~BreakpointResolverAddress() override;
+  ~BreakpointResolverAddress() override = default;
 
   static BreakpointResolver *
-  CreateFromStructuredData(Breakpoint *bkpt,
+  CreateFromStructuredData(const lldb::BreakpointSP &bkpt,
                            const StructuredData::Dictionary &options_dict,
                            Status &error);
 
@@ -56,11 +58,12 @@ public:
     return V->getResolverID() == BreakpointResolver::AddressResolver;
   }
 
-  lldb::BreakpointResolverSP CopyForBreakpoint(Breakpoint &breakpoint) override;
+  lldb::BreakpointResolverSP
+  CopyForBreakpoint(lldb::BreakpointSP &breakpoint) override;
 
 protected:
-  Address
-      m_addr; // The address - may be Section Offset or may be just an offset
+  Address m_addr;               // The address - may be Section Offset or
+                                // may be just an offset
   lldb::addr_t m_resolved_addr; // The current value of the resolved load
                                 // address for this breakpoint,
   FileSpec m_module_filespec;   // If this filespec is Valid, and m_addr is an

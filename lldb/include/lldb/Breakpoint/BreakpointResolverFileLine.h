@@ -20,19 +20,20 @@ namespace lldb_private {
 
 class BreakpointResolverFileLine : public BreakpointResolver {
 public:
-  BreakpointResolverFileLine(Breakpoint *bkpt, const FileSpec &resolver,
+  BreakpointResolverFileLine(const lldb::BreakpointSP &bkpt,
+                             const FileSpec &resolver,
                              uint32_t line_no, uint32_t column,
                              lldb::addr_t m_offset, bool check_inlines,
                              bool skip_prologue, bool exact_match);
 
   static BreakpointResolver *
-  CreateFromStructuredData(Breakpoint *bkpt,
+  CreateFromStructuredData(const lldb::BreakpointSP &bkpt,
                            const StructuredData::Dictionary &data_dict,
                            Status &error);
 
   StructuredData::ObjectSP SerializeToStructuredData() override;
 
-  ~BreakpointResolverFileLine() override;
+  ~BreakpointResolverFileLine() override = default;
 
   Searcher::CallbackReturn SearchCallback(SearchFilter &filter,
                                           SymbolContext &context,
@@ -52,7 +53,8 @@ public:
     return V->getResolverID() == BreakpointResolver::FileLineResolver;
   }
 
-  lldb::BreakpointResolverSP CopyForBreakpoint(Breakpoint &breakpoint) override;
+  lldb::BreakpointResolverSP
+  CopyForBreakpoint(lldb::BreakpointSP &breakpoint) override;
 
 protected:
   void FilterContexts(SymbolContextList &sc_list, bool is_relative);
