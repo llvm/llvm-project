@@ -254,9 +254,6 @@ ProTypeMemberInitCheck::ProTypeMemberInitCheck(StringRef Name,
       UseAssignment(Options.getLocalOrGlobal("UseAssignment", false)) {}
 
 void ProTypeMemberInitCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus)
-    return;
-
   auto IsUserProvidedNonDelegatingConstructor =
       allOf(isUserProvided(),
             unless(anyOf(isInstantiated(), isDelegatingConstructor())));

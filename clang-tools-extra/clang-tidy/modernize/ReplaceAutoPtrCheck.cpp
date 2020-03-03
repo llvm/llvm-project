@@ -83,11 +83,6 @@ void ReplaceAutoPtrCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void ReplaceAutoPtrCheck::registerMatchers(MatchFinder *Finder) {
-  // Only register the matchers for C++; the functionality currently does not
-  // provide any benefit to other languages, despite being benign.
-  if (!getLangOpts().CPlusPlus)
-    return;
-
   auto AutoPtrDecl = recordDecl(hasName("auto_ptr"), isFromStdNamespace());
   auto AutoPtrType = qualType(hasDeclaration(AutoPtrDecl));
 
@@ -135,11 +130,6 @@ void ReplaceAutoPtrCheck::registerMatchers(MatchFinder *Finder) {
 void ReplaceAutoPtrCheck::registerPPCallbacks(const SourceManager &SM,
                                               Preprocessor *PP,
                                               Preprocessor *ModuleExpanderPP) {
-  // Only register the preprocessor callbacks for C++; the functionality
-  // currently does not provide any benefit to other languages, despite being
-  // benign.
-  if (!getLangOpts().CPlusPlus)
-    return;
   Inserter = std::make_unique<utils::IncludeInserter>(SM, getLangOpts(),
                                                        IncludeStyle);
   PP->addPPCallbacks(Inserter->CreatePPCallbacks());

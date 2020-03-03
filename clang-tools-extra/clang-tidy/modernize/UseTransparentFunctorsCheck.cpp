@@ -26,9 +26,6 @@ void UseTransparentFunctorsCheck::storeOptions(
 }
 
 void UseTransparentFunctorsCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus14)
-    return;
-
   const auto TransparentFunctors =
       classTemplateSpecializationDecl(
           unless(hasAnyTemplateArgument(refersToType(voidType()))),

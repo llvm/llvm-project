@@ -17,10 +17,6 @@ namespace tidy {
 namespace cert {
 
 void DefaultOperatorNewAlignmentCheck::registerMatchers(MatchFinder *Finder) {
-  // Check not applicable in C++17 (or newer).
-  if (getLangOpts().CPlusPlus17)
-    return;
-
   Finder->addMatcher(
       cxxNewExpr(unless(hasAnyPlacementArg(anything()))).bind("new"), this);
 }

@@ -73,10 +73,6 @@ UnnecessaryValueParamCheck::UnnecessaryValueParamCheck(
           utils::options::parseStringList(Options.get("AllowedTypes", ""))) {}
 
 void UnnecessaryValueParamCheck::registerMatchers(MatchFinder *Finder) {
-  // This check is specific to C++ and doesn't apply to languages like
-  // Objective-C.
-  if (!getLangOpts().CPlusPlus)
-    return;
   const auto ExpensiveValueParamDecl = parmVarDecl(
       hasType(qualType(
           hasCanonicalType(matchers::isExpensiveToCopy()),

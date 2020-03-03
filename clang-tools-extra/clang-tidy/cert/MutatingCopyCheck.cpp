@@ -21,9 +21,6 @@ static constexpr llvm::StringLiteral MutatingOperatorName = "MutatingOp";
 static constexpr llvm::StringLiteral MutatingCallName = "MutatingCall";
 
 void MutatingCopyCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus)
-    return;
-
   const auto MemberExprOrSourceObject = anyOf(
       memberExpr(),
       declRefExpr(to(decl(equalsBoundNode(std::string(SourceDeclName))))));

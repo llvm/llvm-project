@@ -325,11 +325,7 @@ void UseAutoCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void UseAutoCheck::registerMatchers(MatchFinder *Finder) {
-  // Only register the matchers for C++; the functionality currently does not
-  // provide any benefit to other languages, despite being benign.
-  if (getLangOpts().CPlusPlus) {
     Finder->addMatcher(makeCombinedMatcher(), this);
-  }
 }
 
 void UseAutoCheck::replaceIterators(const DeclStmt *D, ASTContext *Context) {

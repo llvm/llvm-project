@@ -37,9 +37,6 @@ void UnnamedNamespaceInHeaderCheck::storeOptions(
 
 void UnnamedNamespaceInHeaderCheck::registerMatchers(
     ast_matchers::MatchFinder *Finder) {
-  // Only register the matchers for C++; the functionality currently does not
-  // provide any benefit to other languages, despite being benign.
-  if (getLangOpts().CPlusPlus)
     Finder->addMatcher(namespaceDecl(isAnonymous()).bind("anonymousNamespace"),
                        this);
 }

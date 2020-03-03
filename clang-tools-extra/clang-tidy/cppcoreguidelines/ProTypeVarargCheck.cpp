@@ -19,9 +19,6 @@ namespace cppcoreguidelines {
 const internal::VariadicDynCastAllOfMatcher<Stmt, VAArgExpr> vAArgExpr;
 
 void ProTypeVarargCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus)
-    return;
-
   Finder->addMatcher(vAArgExpr().bind("va_use"), this);
 
   Finder->addMatcher(

@@ -42,8 +42,6 @@ AST_MATCHER_P(Stmt, IgnoringTemporaries, ast_matchers::internal::Matcher<Stmt>,
 //       str.append(StrCat(...))
 
 void StrCatAppendCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus)
-  	return;
   const auto StrCat = functionDecl(hasName("::absl::StrCat"));
   // The arguments of absl::StrCat are implicitly converted to AlphaNum. This 
   // matches to the arguments because of that behavior. 

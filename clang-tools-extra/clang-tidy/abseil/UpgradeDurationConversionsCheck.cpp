@@ -18,9 +18,6 @@ namespace tidy {
 namespace abseil {
 
 void UpgradeDurationConversionsCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus)
-    return;
-
   // For the arithmetic calls, we match only the uses of the templated operators
   // where the template parameter is not a built-in type. This means the
   // instantiation makes use of an available user defined conversion to

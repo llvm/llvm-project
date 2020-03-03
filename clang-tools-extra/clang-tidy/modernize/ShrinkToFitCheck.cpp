@@ -19,9 +19,6 @@ namespace tidy {
 namespace modernize {
 
 void ShrinkToFitCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus11)
-    return;
-
   // Swap as a function need not to be considered, because rvalue can not
   // be bound to a non-const reference.
   const auto ShrinkableAsMember =

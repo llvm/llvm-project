@@ -23,9 +23,6 @@ AST_MATCHER(GotoStmt, isForwardJumping) {
 } // namespace
 
 void AvoidGotoCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus)
-    return;
-
   // TODO: This check does not recognize `IndirectGotoStmt` which is a
   // GNU extension. These must be matched separately and an AST matcher
   // is currently missing for them.

@@ -27,11 +27,6 @@ MoveConstructorInitCheck::MoveConstructorInitCheck(StringRef Name,
           Options.getLocalOrGlobal("IncludeStyle", "llvm"))) {}
 
 void MoveConstructorInitCheck::registerMatchers(MatchFinder *Finder) {
-  // Only register the matchers for C++11; the functionality currently does not
-  // provide any benefit to other languages, despite being benign.
-  if (!getLangOpts().CPlusPlus11)
-    return;
-
   Finder->addMatcher(
       cxxConstructorDecl(
           unless(isImplicit()), isMoveConstructor(),
