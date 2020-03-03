@@ -36,12 +36,11 @@ target_link_libraries(MLIRExecutionEngine
   ${outlibs})
 
 add_llvm_library(mlir_c_runner_utils SHARED CRunnerUtils.cpp)
-add_llvm_library(mlir_c_runner_utils_static CRunnerUtils.cpp)
 target_compile_definitions(mlir_c_runner_utils PRIVATE mlir_c_runner_utils_EXPORTS)
 
 add_llvm_library(mlir_runner_utils SHARED RunnerUtils.cpp)
 target_link_libraries(mlir_runner_utils
 
-  mlir_c_runner_utils_static
+  mlir_c_runner_utils
 )
 target_compile_definitions(mlir_runner_utils PRIVATE mlir_runner_utils_EXPORTS)
