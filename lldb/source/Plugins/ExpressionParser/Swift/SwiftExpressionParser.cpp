@@ -299,7 +299,7 @@ public:
                                ResultVector &RV) {
     static unsigned counter = 0;
     unsigned count = counter++;
-    
+
     StringRef NameStr = Name.getIdentifier().str();
 
     if (m_log) {
@@ -1158,7 +1158,7 @@ struct ModuleImportError : public llvm::ErrorInfo<ModuleImportError> {
     return inconvertibleErrorCode();
   }
 };
-  
+
 char PropagatedError::ID = 0;
 char SwiftASTContextError::ID = 0;
 char ModuleImportError::ID = 0;
@@ -1298,9 +1298,6 @@ static llvm::Expected<ParsedExpression> ParseAndImport(
   //        DebuggerClients alive as long as the Module we are not
   //        inserting them in.
   swift_ast_context->AddDebuggerClient(external_lookup);
-
-  // Note, we disable delayed parsing for the swift expression parser.
-  swift::parseIntoSourceFile(*source_file, buffer_id);
 
   if (swift_ast_context->HasErrors())
     return make_error<SwiftASTContextError>();
