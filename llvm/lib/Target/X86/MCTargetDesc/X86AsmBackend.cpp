@@ -466,7 +466,7 @@ void X86AsmBackend::alignBranchesEnd(MCObjectStreamer &OS, const MCInst &Inst) {
   if (!needAlign(OS))
     return;
   // If the branch is emitted into a MCRelaxableFragment, we can determine the
-  // size of the branch easily in during the process of layout. When the
+  // size of the branch easily in MCAssembler::relaxBoundaryAlign. When the
   // branch is fused, the fused branch(macro fusion pair) must be emitted into
   // two fragments. Or when the branch is unfused, the branch must be emitted
   // into one fragment. The MCRelaxableFragment naturally marks the end of the
