@@ -92,7 +92,7 @@ void VectorDataPrinter<T, M, Dims...>::print(std::ostream &os,
   static_assert(sizeof(val) == M * StaticSizeMult<Dims...>::value * sizeof(T),
                 "Incorrect vector size!");
   // First
-  os << "(" << val[0];
+  os << "(" << val.vector[0];
   if (M > 1)
     os << ", ";
   if (sizeof...(Dims) > 1)
@@ -100,14 +100,14 @@ void VectorDataPrinter<T, M, Dims...>::print(std::ostream &os,
   // Kernel
   for (unsigned i = 1; i + 1 < M; ++i) {
     printSpace(os, 2 * sizeof...(Dims));
-    os << val[i] << ", ";
+    os << val.vector[i] << ", ";
     if (sizeof...(Dims) > 1)
       os << "\n";
   }
   // Last
   if (M > 1) {
     printSpace(os, sizeof...(Dims));
-    os << val[M - 1];
+    os << val.vector[M - 1];
   }
   os << ")";
 }
