@@ -2496,6 +2496,9 @@ bool QualType::isCXX11PODType(const ASTContext &Context) const {
   const Type *BaseTy = ty->getBaseElementTypeUnsafe();
   assert(BaseTy && "NULL element type");
 
+  if (BaseTy->isSizelessBuiltinType())
+    return true;
+
   // Return false for incomplete types after skipping any incomplete array
   // types which are expressly allowed by the standard and thus our API.
   if (BaseTy->isIncompleteType())
