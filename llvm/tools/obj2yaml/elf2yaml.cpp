@@ -55,6 +55,7 @@ class ELFDumper {
                     std::vector<ELFYAML::Symbol> &Symbols);
   Error dumpSymbol(const Elf_Sym *Sym, const Elf_Shdr *SymTab,
                    StringRef StrTable, ELFYAML::Symbol &S);
+  Expected<std::vector<std::unique_ptr<ELFYAML::Chunk>>> dumpSections();
   Error dumpCommonSection(const Elf_Shdr *Shdr, ELFYAML::Section &S);
   Error dumpCommonRelocationSection(const Elf_Shdr *Shdr,
                                     ELFYAML::RelocationSection &S);
@@ -228,13 +229,27 @@ template <class ELFT> Expected<ELFYAML::Object *> ELFDumper<ELFT>::dump() {
       return std::move(E);
   }
 
+  if (Expected<std::vector<std::unique_ptr<ELFYAML::Chunk>>> ChunksOrErr =
+          dumpSections())
+    Y->Chunks = std::move(*ChunksOrErr);
+  else
+    return ChunksOrErr.takeError();
+
+  return Y.release();
+}
+
+template <class ELFT>
+Expected<std::vector<std::unique_ptr<ELFYAML::Chunk>>>
+ELFDumper<ELFT>::dumpSections() {
+  std::vector<std::unique_ptr<ELFYAML::Chunk>> Ret;
+
   for (const Elf_Shdr &Sec : Sections) {
     switch (Sec.sh_type) {
     case ELF::SHT_DYNAMIC: {
       Expected<ELFYAML::DynamicSection *> SecOrErr = dumpDynamicSection(&Sec);
       if (!SecOrErr)
         return SecOrErr.takeError();
-      Y->Chunks.emplace_back(*SecOrErr);
+      Ret.emplace_back(*SecOrErr);
       break;
     }
     case ELF::SHT_STRTAB:
@@ -247,7 +262,7 @@ template <class ELFT> Expected<ELFYAML::Object *> ELFDumper<ELFT>::dump() {
           dumpSymtabShndxSection(&Sec);
       if (!SecOrErr)
         return SecOrErr.takeError();
-      Y->Chunks.emplace_back(*SecOrErr);
+      Ret.emplace_back(*SecOrErr);
       break;
     }
     case ELF::SHT_REL:
@@ -255,84 +270,84 @@ template <class ELFT> Expected<ELFYAML::Object *> ELFDumper<ELFT>::dump() {
       Expected<ELFYAML::RelocationSection *> SecOrErr = dumpRelocSection(&Sec);
       if (!SecOrErr)
         return SecOrErr.takeError();
-      Y->Chunks.emplace_back(*SecOrErr);
+      Ret.emplace_back(*SecOrErr);
       break;
     }
     case ELF::SHT_RELR: {
       Expected<ELFYAML::RelrSection *> SecOrErr = dumpRelrSection(&Sec);
       if (!SecOrErr)
         return SecOrErr.takeError();
-      Y->Chunks.emplace_back(*SecOrErr);
+      Ret.emplace_back(*SecOrErr);
       break;
     }
     case ELF::SHT_GROUP: {
       Expected<ELFYAML::Group *> GroupOrErr = dumpGroup(&Sec);
       if (!GroupOrErr)
         return GroupOrErr.takeError();
-      Y->Chunks.emplace_back(*GroupOrErr);
+      Ret.emplace_back(*GroupOrErr);
       break;
     }
     case ELF::SHT_MIPS_ABIFLAGS: {
       Expected<ELFYAML::MipsABIFlags *> SecOrErr = dumpMipsABIFlags(&Sec);
       if (!SecOrErr)
         return SecOrErr.takeError();
-      Y->Chunks.emplace_back(*SecOrErr);
+      Ret.emplace_back(*SecOrErr);
       break;
     }
     case ELF::SHT_NOBITS: {
       Expected<ELFYAML::NoBitsSection *> SecOrErr = dumpNoBitsSection(&Sec);
       if (!SecOrErr)
         return SecOrErr.takeError();
-      Y->Chunks.emplace_back(*SecOrErr);
+      Ret.emplace_back(*SecOrErr);
       break;
     }
     case ELF::SHT_NOTE: {
       Expected<ELFYAML::NoteSection *> SecOrErr = dumpNoteSection(&Sec);
       if (!SecOrErr)
         return SecOrErr.takeError();
-      Y->Chunks.emplace_back(*SecOrErr);
+      Ret.emplace_back(*SecOrErr);
       break;
     }
     case ELF::SHT_HASH: {
       Expected<ELFYAML::HashSection *> SecOrErr = dumpHashSection(&Sec);
       if (!SecOrErr)
         return SecOrErr.takeError();
-      Y->Chunks.emplace_back(*SecOrErr);
+      Ret.emplace_back(*SecOrErr);
       break;
     }
     case ELF::SHT_GNU_HASH: {
       Expected<ELFYAML::GnuHashSection *> SecOrErr = dumpGnuHashSection(&Sec);
       if (!SecOrErr)
         return SecOrErr.takeError();
-      Y->Chunks.emplace_back(*SecOrErr);
+      Ret.emplace_back(*SecOrErr);
       break;
     }
     case ELF::SHT_GNU_verdef: {
       Expected<ELFYAML::VerdefSection *> SecOrErr = dumpVerdefSection(&Sec);
       if (!SecOrErr)
         return SecOrErr.takeError();
-      Y->Chunks.emplace_back(*SecOrErr);
+      Ret.emplace_back(*SecOrErr);
       break;
     }
     case ELF::SHT_GNU_versym: {
       Expected<ELFYAML::SymverSection *> SecOrErr = dumpSymverSection(&Sec);
       if (!SecOrErr)
         return SecOrErr.takeError();
-      Y->Chunks.emplace_back(*SecOrErr);
+      Ret.emplace_back(*SecOrErr);
       break;
     }
     case ELF::SHT_GNU_verneed: {
       Expected<ELFYAML::VerneedSection *> SecOrErr = dumpVerneedSection(&Sec);
       if (!SecOrErr)
         return SecOrErr.takeError();
-      Y->Chunks.emplace_back(*SecOrErr);
+      Ret.emplace_back(*SecOrErr);
       break;
     }
     case ELF::SHT_LLVM_ADDRSIG: {
       Expected<ELFYAML::AddrsigSection *> SecOrErr = dumpAddrsigSection(&Sec);
       if (!SecOrErr)
         return SecOrErr.takeError();
-      Y->Chunks.emplace_back(*SecOrErr);
+      Ret.emplace_back(*SecOrErr);
       break;
     }
     case ELF::SHT_LLVM_LINKER_OPTIONS: {
@@ -340,7 +355,7 @@ template <class ELFT> Expected<ELFYAML::Object *> ELFDumper<ELFT>::dump() {
           dumpLinkerOptionsSection(&Sec);
       if (!SecOrErr)
         return SecOrErr.takeError();
-      Y->Chunks.emplace_back(*SecOrErr);
+      Ret.emplace_back(*SecOrErr);
       break;
     }
     case ELF::SHT_LLVM_DEPENDENT_LIBRARIES: {
@@ -348,7 +363,7 @@ template <class ELFT> Expected<ELFYAML::Object *> ELFDumper<ELFT>::dump() {
           dumpDependentLibrariesSection(&Sec);
       if (!SecOrErr)
         return SecOrErr.takeError();
-      Y->Chunks.emplace_back(*SecOrErr);
+      Ret.emplace_back(*SecOrErr);
       break;
     }
     case ELF::SHT_LLVM_CALL_GRAPH_PROFILE: {
@@ -356,7 +371,7 @@ template <class ELFT> Expected<ELFYAML::Object *> ELFDumper<ELFT>::dump() {
           dumpCallGraphProfileSection(&Sec);
       if (!SecOrErr)
         return SecOrErr.takeError();
-      Y->Chunks.emplace_back(*SecOrErr);
+      Ret.emplace_back(*SecOrErr);
       break;
     }
     case ELF::SHT_NULL: {
@@ -378,7 +393,7 @@ template <class ELFT> Expected<ELFYAML::Object *> ELFDumper<ELFT>::dump() {
         if (!SpecialSecOrErr)
           return SpecialSecOrErr.takeError();
         if (*SpecialSecOrErr) {
-          Y->Chunks.emplace_back(*SpecialSecOrErr);
+          Ret.emplace_back(*SpecialSecOrErr);
           break;
         }
       }
@@ -387,12 +402,11 @@ template <class ELFT> Expected<ELFYAML::Object *> ELFDumper<ELFT>::dump() {
           dumpContentSection(&Sec);
       if (!SecOrErr)
         return SecOrErr.takeError();
-      Y->Chunks.emplace_back(*SecOrErr);
+      Ret.emplace_back(*SecOrErr);
     }
     }
   }
-
-  return Y.release();
+  return std::move(Ret);
 }
 
 template <class ELFT>
