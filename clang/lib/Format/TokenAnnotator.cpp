@@ -369,6 +369,17 @@ private:
     if (!Style.isCSharp())
       return false;
 
+    // `identifier[i]` is not an attribute.
+    if (Tok.Previous && Tok.Previous->is(tok::identifier))
+      return false;
+
+    // Chains [] in of `identifier[i][j][k]` are not attributes.
+    if (Tok.Previous && Tok.Previous->is(tok::r_square)) {
+      auto *MatchingParen = Tok.Previous->MatchingParen;
+      if (!MatchingParen || MatchingParen->is(TT_ArraySubscriptLSquare))
+        return false;
+    }
+
     const FormatToken *AttrTok = Tok.Next;
     if (!AttrTok)
       return false;
