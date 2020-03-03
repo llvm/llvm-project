@@ -120,9 +120,7 @@ lldb::addr_t ArchitectureMips::GetBreakableLoadAddress(lldb::addr_t addr,
   if (current_offset == 0)
     return addr;
 
-  ExecutionContext ctx;
-  target.CalculateExecutionContext(ctx);
-  auto insn = GetInstructionAtAddress(ctx, current_offset, addr);
+  auto insn = GetInstructionAtAddress(target, current_offset, addr);
 
   if (nullptr == insn || !insn->HasDelaySlot())
     return addr;
@@ -138,8 +136,7 @@ lldb::addr_t ArchitectureMips::GetBreakableLoadAddress(lldb::addr_t addr,
 }
 
 Instruction *ArchitectureMips::GetInstructionAtAddress(
-    const ExecutionContext &exe_ctx, const Address &resolved_addr,
-    addr_t symbol_offset) const {
+    Target &target, const Address &resolved_addr, addr_t symbol_offset) const {
 
   auto loop_count = symbol_offset / 2;
 
@@ -174,7 +171,7 @@ Instruction *ArchitectureMips::GetInstructionAtAddress(
     AddressRange range(addr, i * 2);
     uint32_t insn_size = 0;
 
-    disasm_sp->ParseInstructions(&exe_ctx, range, nullptr, prefer_file_cache);
+    disasm_sp->ParseInstructions(target, range, nullptr, prefer_file_cache);
 
     uint32_t num_insns = disasm_sp->GetInstructionList().GetSize();
     if (num_insns) {
