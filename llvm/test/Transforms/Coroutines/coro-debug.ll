@@ -12,8 +12,6 @@ entry:
   %x.addr = alloca i32, align 4
   %coro_hdl = alloca i8*, align 8
   store i32 %x, i32* %x.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %x.addr, metadata !12, metadata !13), !dbg !14
-  call void @llvm.dbg.declare(metadata i8** %coro_hdl, metadata !15, metadata !13), !dbg !16
   %0 = call token @llvm.coro.id(i32 0, i8* null, i8* bitcast (i8* (i32)* @f to i8*), i8* null), !dbg !16
   %1 = call i64 @llvm.coro.size.i64(), !dbg !16
   %call = call i8* @malloc(i64 %1), !dbg !16
@@ -28,6 +26,8 @@ entry:
   ], !dbg !17
 
 sw.bb:                                            ; preds = %entry
+  call void @llvm.dbg.declare(metadata i32* %x.addr, metadata !12, metadata !13), !dbg !14
+  call void @llvm.dbg.declare(metadata i8** %coro_hdl, metadata !15, metadata !13), !dbg !16
   br label %sw.epilog, !dbg !18
 
 sw.bb1:                                           ; preds = %entry
@@ -129,14 +129,16 @@ attributes #7 = { noduplicate }
 
 ; CHECK: define i8* @f(i32 %x) #0 !dbg ![[ORIG:[0-9]+]]
 ; CHECK: define internal fastcc void @f.resume(%f.Frame* noalias nonnull %FramePtr) #0 !dbg ![[RESUME:[0-9]+]]
+; CHECK: entry.resume:
+; CHECK-NEXT: call void @coro.devirt.trigger(i8* null)
+; CHECK-NEXT: call void @llvm.dbg.declare(metadata i32* %x.addr.reload.addr, metadata ![[RESUME_VAR:[0-9]+]]
 ; CHECK: define internal fastcc void @f.destroy(%f.Frame* noalias nonnull %FramePtr) #0 !dbg ![[DESTROY:[0-9]+]]
 ; CHECK: define internal fastcc void @f.cleanup(%f.Frame* noalias nonnull %FramePtr) #0 !dbg ![[CLEANUP:[0-9]+]]
 
 ; CHECK: ![[ORIG]] = distinct !DISubprogram(name: "f", linkageName: "flink"
-; CHECK: !DILocalVariable(name: "x", arg: 1, scope: ![[ORIG]]
 
 ; CHECK: ![[RESUME]] = distinct !DISubprogram(name: "f", linkageName: "flink"
-; CHECK: !DILocalVariable(name: "x", arg: 1, scope: ![[RESUME]]
+; CHECK: ![[RESUME_VAR]] = !DILocalVariable(name: "x", arg: 1, scope: ![[RESUME]]
 
 ; CHECK: ![[DESTROY]] = distinct !DISubprogram(name: "f", linkageName: "flink"
 
