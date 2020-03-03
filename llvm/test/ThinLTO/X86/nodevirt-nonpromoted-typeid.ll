@@ -33,8 +33,6 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-grtev4-linux-gnu"
 
-@llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @g, i8* null }]
-
 %struct.D = type { i32 (...)** }
 
 @_ZTV1D = internal constant { [3 x i8*] } { [3 x i8*] [i8* null, i8* undef, i8* bitcast (i32 (%struct.D*, i32)* @_ZN1D1mEi to i8*)] }, !type !3
@@ -58,23 +56,6 @@ entry:
 }
 ; CHECK-IR-LABEL: ret i32
 ; CHECK-IR-LABEL: }
-
-; Function Attrs: inlinehint nounwind uwtable
-define internal void @_ZN1DC2Ev(%struct.D* %this) unnamed_addr align 2 {
-entry:
-  %this.addr = alloca %struct.D*, align 8
-  store %struct.D* %this, %struct.D** %this.addr, align 8
-  %this1 = load %struct.D*, %struct.D** %this.addr
-  %0 = bitcast %struct.D* %this1 to i32 (...)***
-  store i32 (...)** bitcast (i8** getelementptr inbounds ({ [3 x i8*] }, { [3 x i8*] }* @_ZTV1D, i64 0, inrange i32 0, i64 2) to i32 (...)**), i32 (...)*** %0, align 8
-  ret void
-}
-
-define internal void @g() section ".text.startup" {
-  %d = alloca %struct.D, align 8
-  call void @_ZN1DC2Ev(%struct.D* %d)
-  ret void
-}
 
 declare i1 @llvm.type.test(i8*, metadata)
 declare void @llvm.assume(i1)

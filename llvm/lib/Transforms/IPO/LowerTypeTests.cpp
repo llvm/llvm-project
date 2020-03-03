@@ -735,9 +735,6 @@ static bool isKnownTypeIdMember(Metadata *TypeId, const DataLayout &DL,
 /// replace the call with.
 Value *LowerTypeTestsModule::lowerTypeTestCall(Metadata *TypeId, CallInst *CI,
                                                const TypeIdLowering &TIL) {
-  // Delay lowering if the resolution is currently unknown.
-  if (TIL.TheKind == TypeTestResolution::Unknown)
-    return nullptr;
   if (TIL.TheKind == TypeTestResolution::Unsat)
     return ConstantInt::getFalse(M.getContext());
 
@@ -1040,18 +1037,14 @@ void LowerTypeTestsModule::importTypeTest(CallInst *CI) {
     report_fatal_error("Second argument of llvm.type.test must be metadata");
 
   auto TypeIdStr = dyn_cast<MDString>(TypeIdMDVal->getMetadata());
-  // If this is a local unpromoted type, which doesn't have a metadata string,
-  // treat as Unknown and delay lowering, so that we can still utilize it for
-  // later optimizations.
   if (!TypeIdStr)
-    return;
+    report_fatal_error(
+        "Second argument of llvm.type.test must be a metadata string");
 
   TypeIdLowering TIL = importTypeId(TypeIdStr->getString());
   Value *Lowered = lowerTypeTestCall(TypeIdStr, CI, TIL);
-  if (Lowered) {
-    CI->replaceAllUsesWith(Lowered);
-    CI->eraseFromParent();
-  }
+  CI->replaceAllUsesWith(Lowered);
+  CI->eraseFromParent();
 }
 
 // ThinLTO backend: the function F has a jump table entry; update this module
@@ -1174,10 +1167,8 @@ void LowerTypeTestsModule::lowerTypeTestCalls(
     for (CallInst *CI : TIUI.CallSites) {
       ++NumTypeTestCallsLowered;
       Value *Lowered = lowerTypeTestCall(TypeId, CI, TIL);
-      if (Lowered) {
-        CI->replaceAllUsesWith(Lowered);
-        CI->eraseFromParent();
-      }
+      CI->replaceAllUsesWith(Lowered);
+      CI->eraseFromParent();
     }
   }
 }
