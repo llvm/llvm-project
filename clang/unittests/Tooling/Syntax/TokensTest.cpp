@@ -59,6 +59,7 @@ using ::testing::ElementsAre;
 using ::testing::Field;
 using ::testing::Matcher;
 using ::testing::Not;
+using ::testing::Pointee;
 using ::testing::StartsWith;
 
 namespace {
@@ -363,6 +364,12 @@ TEST_F(TokenCollectorTest, Locations) {
                   AllOf(Kind(tok::equal), RangeIs(Code.range("r3"))),
                   AllOf(Kind(tok::string_literal), RangeIs(Code.range("r4"))),
                   AllOf(Kind(tok::semi), RangeIs(Code.range("r5")))));
+
+  auto StartLoc = SourceMgr->getLocForStartOfFile(SourceMgr->getMainFileID());
+  for (auto &R : Code.ranges()) {
+    EXPECT_THAT(Buffer.spelledTokenAt(StartLoc.getLocWithOffset(R.Begin)),
+                Pointee(RangeIs(R)));
+  }
 }
 
 TEST_F(TokenCollectorTest, MacroDirectives) {
