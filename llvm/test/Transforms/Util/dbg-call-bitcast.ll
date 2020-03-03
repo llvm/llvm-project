@@ -10,6 +10,26 @@ define dso_local void @_Z1fv() {
 ; CHECK: call void @_Z1gPv
   call void @_Z1gPv(i8* nonnull %2)
   %3 = bitcast i32* %1 to i8*
+; CHECK-NOT: call void @llvm.dbg.value
+; CHECK: call void @_Z1gPv
+  call void @_Z1gPv(i8* nonnull %3)
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %2)
+  ret void, !dbg !21
+}
+
+define dso_local void @_Z2fv() {
+  %1 = alloca i32, align 4
+  %2 = bitcast i32* %1 to i8*
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %2)
+  call void @llvm.dbg.declare(metadata i32* %1, metadata !16, metadata !DIExpression()), !dbg !19
+; CHECK: %[[A:.*]] = alloca i32, align 4
+; CHECK: call void @llvm.dbg.value(metadata i32* %[[A]], {{.*}}, metadata !DIExpression(DW_OP_deref)
+; CHECK: call void @_Z1gPv
+  call void @_Z1gPv(i8* nonnull %2)
+  br label %block2
+
+block2:
+  %3 = bitcast i32* %1 to i8*
 ; CHECK: call void @llvm.dbg.value(metadata i32* %[[A]], {{.*}}, metadata !DIExpression(DW_OP_deref)
 ; CHECK: call void @_Z1gPv
   call void @_Z1gPv(i8* nonnull %3)
