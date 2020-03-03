@@ -16,7 +16,7 @@
 // CHECK-DEBUG: cannot yet generate debug info for SVE type '__SVFloat64_t'
 // CHECK-DEBUG: cannot yet generate debug info for SVE type '__SVBool_t'
 
-// CHECK: @ptr = global <vscale x 16 x i8>* null, align 8
+// CHECK: @ptr = common global <vscale x 16 x i8>* null, align 8
 // CHECK: %s8 = alloca <vscale x 16 x i8>, align 16
 // CHECK: %s16 = alloca <vscale x 8 x i16>, align 16
 // CHECK: %s32 = alloca <vscale x 4 x i32>, align 16

@@ -84,13 +84,6 @@ future versions of Clang.
 Modified Compiler Flags
 -----------------------
 
-- -fno-common has been enabled as the default for all targets.  Therefore, C
-  code that uses tentative definitions as definitions of a variable in multiple
-  translation units will trigger multiple-definition linker errors.  Generally,
-  this occurs when the use of the ``extern`` keyword is neglected in the declaration
-  of a variable in a header file. In some cases, no specific translation unit
-  provides a definition of the variable. The previous behavior can be restored by
-  specifying ``-fcommon``.
 
 New Pragmas in Clang
 --------------------
