@@ -101,14 +101,14 @@ static inline uint64_t SPMagic(SampleProfileFormat Format = SPF_Binary) {
          uint64_t('2') << (64 - 56) | uint64_t(Format);
 }
 
-// Get the proper representation of a string in the input Format.
-static inline StringRef getRepInFormat(StringRef Name,
-                                       SampleProfileFormat Format,
+/// Get the proper representation of a string according to whether the
+/// current Format uses MD5 to represent the string.
+static inline StringRef getRepInFormat(StringRef Name, bool UseMD5,
                                        std::string &GUIDBuf) {
   if (Name.empty())
     return Name;
   GUIDBuf = std::to_string(Function::getGUID(Name));
-  return (Format == SPF_Compact_Binary) ? StringRef(GUIDBuf) : Name;
+  return UseMD5 ? StringRef(GUIDBuf) : Name;
 }
 
 static inline uint64_t SPVersion() { return 103; }
@@ -154,18 +154,64 @@ struct SecHdrTableEntry {
   uint64_t Size;
 };
 
-enum SecFlags { SecFlagInValid = 0, SecFlagCompress = (1 << 0) };
+// Flags common for all sections are defined here. In SecHdrTableEntry::Flags,
+// common flags will be saved in the lower 32bits and section specific flags
+// will be saved in the higher 32 bits.
+enum class SecCommonFlags : uint32_t {
+  SecFlagInValid = 0,
+  SecFlagCompress = (1 << 0)
+};
 
-static inline void addSecFlags(SecHdrTableEntry &Entry, uint64_t Flags) {
-  Entry.Flags |= Flags;
+// Section specific flags are defined here.
+// !!!Note: Everytime a new enum class is created here, please add
+// a new check in verifySecFlag.
+enum class SecNameTableFlags : uint32_t {
+  SecFlagInValid = 0,
+  SecFlagMD5Name = (1 << 0)
+};
+
+// Verify section specific flag is used for the correct section.
+template <class SecFlagType>
+static inline void verifySecFlag(SecType Type, SecFlagType Flag) {
+  // No verification is needed for common flags.
+  if (std::is_same<SecCommonFlags, SecFlagType>())
+    return;
+
+  // Verification starts here for section specific flag.
+  bool IsFlagLegal = false;
+  switch (Type) {
+  case SecNameTable:
+    IsFlagLegal = std::is_same<SecNameTableFlags, SecFlagType>();
+    break;
+  default:
+    break;
+  }
+  if (!IsFlagLegal)
+    llvm_unreachable("Misuse of a flag in an incompatible section");
 }
 
-static inline void removeSecFlags(SecHdrTableEntry &Entry, uint64_t Flags) {
-  Entry.Flags &= ~Flags;
+template <class SecFlagType>
+static inline void addSecFlag(SecHdrTableEntry &Entry, SecFlagType Flag) {
+  verifySecFlag(Entry.Type, Flag);
+  auto FVal = static_cast<uint64_t>(Flag);
+  bool IsCommon = std::is_same<SecCommonFlags, SecFlagType>();
+  Entry.Flags |= IsCommon ? FVal : (FVal << 32);
 }
 
-static inline bool hasSecFlag(SecHdrTableEntry &Entry, SecFlags Flag) {
-  return Entry.Flags & Flag;
+template <class SecFlagType>
+static inline void removeSecFlag(SecHdrTableEntry &Entry, SecFlagType Flag) {
+  verifySecFlag(Entry.Type, Flag);
+  auto FVal = static_cast<uint64_t>(Flag);
+  bool IsCommon = std::is_same<SecCommonFlags, SecFlagType>();
+  Entry.Flags &= ~(IsCommon ? FVal : (FVal << 32));
+}
+
+template <class SecFlagType>
+static inline bool hasSecFlag(const SecHdrTableEntry &Entry, SecFlagType Flag) {
+  verifySecFlag(Entry.Type, Flag);
+  auto FVal = static_cast<uint64_t>(Flag);
+  bool IsCommon = std::is_same<SecCommonFlags, SecFlagType>();
+  return Entry.Flags & (IsCommon ? FVal : (FVal << 32));
 }
 
 /// Represents the relative location of an instruction.
@@ -379,7 +425,7 @@ public:
   const FunctionSamples *findFunctionSamplesAt(const LineLocation &Loc,
                                                StringRef CalleeName) const {
     std::string CalleeGUID;
-    CalleeName = getRepInFormat(CalleeName, Format, CalleeGUID);
+    CalleeName = getRepInFormat(CalleeName, UseMD5, CalleeGUID);
 
     auto iter = CallsiteSamples.find(Loc);
     if (iter == CallsiteSamples.end())
@@ -527,13 +573,13 @@ public:
   }
 
   /// Translate \p Name into its original name in Module.
-  /// When the Format is not SPF_Compact_Binary, \p Name needs no translation.
-  /// When the Format is SPF_Compact_Binary, \p Name in current FunctionSamples
+  /// When profile doesn't use MD5, \p Name needs no translation.
+  /// When profile uses MD5, \p Name in current FunctionSamples
   /// is actually GUID of the original function name. getNameInModule will
   /// translate \p Name in current FunctionSamples into its original name.
   /// If the original name doesn't exist in \p M, return empty StringRef.
   StringRef getNameInModule(StringRef Name, const Module *M) const {
-    if (Format != SPF_Compact_Binary)
+    if (!UseMD5)
       return Name;
 
     assert(GUIDToFuncNameMap && "GUIDToFuncNameMap needs to be popluated first");
@@ -560,16 +606,18 @@ public:
 
   static SampleProfileFormat Format;
 
+  /// Whether the profile uses MD5 to represent string.
+  static bool UseMD5;
+
   /// GUIDToFuncNameMap saves the mapping from GUID to the symbol name, for
   /// all the function symbols defined or declared in current module.
   DenseMap<uint64_t, StringRef> *GUIDToFuncNameMap = nullptr;
 
   // Assume the input \p Name is a name coming from FunctionSamples itself.
-  // If the format is SPF_Compact_Binary, the name is already a GUID and we
+  // If UseMD5 is true, the name is already a GUID and we
   // don't want to return the GUID of GUID.
   static uint64_t getGUID(StringRef Name) {
-    return (Format == SPF_Compact_Binary) ? std::stoull(Name.data())
-                                          : Function::getGUID(Name);
+    return UseMD5 ? std::stoull(Name.data()) : Function::getGUID(Name);
   }
 
 private:
