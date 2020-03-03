@@ -46,6 +46,11 @@
 using namespace llvm;
 using namespace llvm::PatternMatch;
 
+static cl::opt<bool> ForceReductionIntrinsic(
+    "force-reduction-intrinsics", cl::Hidden,
+    cl::desc("Force creating reduction intrinsics for testing."),
+    cl::init(false));
+
 #define DEBUG_TYPE "loop-utils"
 
 static const char *LLVMLoopDisableNonforced = "llvm.loop.disable_nonforced";
@@ -1015,7 +1020,8 @@ Value *llvm::createSimpleTargetReduction(
     llvm_unreachable("Unhandled opcode");
     break;
   }
-  if (TTI->useReductionIntrinsic(Opcode, Src->getType(), Flags))
+  if (ForceReductionIntrinsic ||
+      TTI->useReductionIntrinsic(Opcode, Src->getType(), Flags))
     return BuildFunc();
   return getShuffleReduction(Builder, Src, Opcode, MinMaxKind, RedOps);
 }
