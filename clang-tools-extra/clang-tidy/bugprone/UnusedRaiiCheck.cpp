@@ -24,11 +24,6 @@ AST_MATCHER(CXXRecordDecl, hasNonTrivialDestructor) {
 } // namespace
 
 void UnusedRaiiCheck::registerMatchers(MatchFinder *Finder) {
-  // Only register the matchers for C++; the functionality currently does not
-  // provide any benefit to other languages, despite being benign.
-  if (!getLangOpts().CPlusPlus)
-    return;
-
   // Look for temporaries that are constructed in-place and immediately
   // destroyed. Look for temporaries created by a functional cast but not for
   // those returned from a call.

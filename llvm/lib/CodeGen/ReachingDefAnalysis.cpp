@@ -33,10 +33,6 @@ bool isValidRegUseOf(const MachineOperand &MO, int PhysReg) {
   return isValidRegUse(MO) && MO.getReg() == PhysReg;
 }
 
-bool isKilledRegUse(const MachineOperand &MO) {
-  return isValidRegUse(MO) && MO.isKill();
-}
-
 bool isValidRegDef(const MachineOperand &MO) {
   return isValidReg(MO) && MO.isDef();
 }
@@ -353,7 +349,7 @@ MachineInstr *ReachingDefAnalysis::getUniqueReachingMIDef(MachineInstr *MI,
                                                           int PhysReg) const {
   // If there's a local def before MI, return it.
   MachineInstr *LocalDef = getReachingLocalMIDef(MI, PhysReg);
-  if (InstIds.lookup(LocalDef) < InstIds.lookup(MI))
+  if (LocalDef && InstIds.lookup(LocalDef) < InstIds.lookup(MI))
     return LocalDef;
 
   SmallPtrSet<MachineBasicBlock*, 4> VisitedBBs;
@@ -544,10 +540,10 @@ ReachingDefAnalysis::isSafeToRemove(MachineInstr *MI, InstSet &Visited,
   return true;
 }
 
-void ReachingDefAnalysis::collectLocalKilledOperands(MachineInstr *MI,
-                                                     InstSet &Dead) const {
+void ReachingDefAnalysis::collectKilledOperands(MachineInstr *MI,
+                                                InstSet &Dead) const {
   Dead.insert(MI);
-  auto IsDead = [this](MachineInstr *Def, int PhysReg) {
+  auto IsDead = [this, &Dead](MachineInstr *Def, int PhysReg) {
     unsigned LiveDefs = 0;
     for (auto &MO : Def->operands()) {
       if (!isValidRegDef(MO))
@@ -561,15 +557,18 @@ void ReachingDefAnalysis::collectLocalKilledOperands(MachineInstr *MI,
 
     SmallPtrSet<MachineInstr*, 4> Uses;
     getGlobalUses(Def, PhysReg, Uses);
-    return Uses.size() == 1;
+    for (auto *Use : Uses)
+      if (!Dead.count(Use))
+        return false;
+    return true;
   };
 
   for (auto &MO : MI->operands()) {
-    if (!isKilledRegUse(MO))
+    if (!isValidRegUse(MO))
       continue;
-    if (MachineInstr *Def = getReachingLocalMIDef(MI, MO.getReg()))
+    if (MachineInstr *Def = getMIOperand(MI, MO))
       if (IsDead(Def, MO.getReg()))
-        collectLocalKilledOperands(Def, Dead);
+        collectKilledOperands(Def, Dead);
   }
 }
 

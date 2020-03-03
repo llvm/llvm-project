@@ -324,12 +324,21 @@ void UnwrappedLineParser::parseFile() {
 }
 
 void UnwrappedLineParser::parseCSharpAttribute() {
+  int UnpairedSquareBrackets = 1;
   do {
     switch (FormatTok->Tok.getKind()) {
     case tok::r_square:
       nextToken();
-      addUnwrappedLine();
-      return;
+      --UnpairedSquareBrackets;
+      if (UnpairedSquareBrackets == 0) {
+        addUnwrappedLine();
+        return;
+      }
+      break;
+    case tok::l_square:
+      ++UnpairedSquareBrackets;
+      nextToken();
+      break;
     default:
       nextToken();
       break;

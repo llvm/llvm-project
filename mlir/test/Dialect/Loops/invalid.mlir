@@ -131,7 +131,7 @@ func @parallel_body_arguments_wrong_type(
   "loop.parallel"(%arg0, %arg1, %arg2) ({
     ^bb0(%i0: f32):
       loop.yield
-  }): (index, index, index) -> ()
+  }) {operand_segment_sizes = dense<[1, 1, 1, 0]>: vector<4xi32>}: (index, index, index) -> ()
   return
 }
 
@@ -139,11 +139,11 @@ func @parallel_body_arguments_wrong_type(
 
 func @parallel_body_wrong_number_of_arguments(
     %arg0: index, %arg1: index, %arg2: index) {
-  // expected-error@+1 {{'loop.parallel' op expects the same number of induction variables as bound and step values}}
+  // expected-error@+1 {{'loop.parallel' op expects the same number of induction variables: 2 as bound and step values: 1}}
   "loop.parallel"(%arg0, %arg1, %arg2) ({
     ^bb0(%i0: index, %i1: index):
       loop.yield
-  }): (index, index, index) -> ()
+  }) {operand_segment_sizes = dense<[1, 1, 1, 0]>: vector<4xi32>}: (index, index, index) -> ()
   return
 }
 
@@ -172,7 +172,7 @@ func @parallel_step_not_positive(
 
 func @parallel_fewer_results_than_reduces(
     %arg0 : index, %arg1: index, %arg2: index) {
-  // expected-error@+1 {{expects number of results to be the same as number of reductions}}
+  // expected-error@+1 {{expects number of results: 0 to be the same as number of reductions: 1}}
   loop.parallel (%i0) = (%arg0) to (%arg1) step (%arg2) {
     %c0 = constant 1.0 : f32
     loop.reduce(%c0) {
@@ -187,8 +187,9 @@ func @parallel_fewer_results_than_reduces(
 
 func @parallel_more_results_than_reduces(
     %arg0 : index, %arg1 : index, %arg2 : index) {
-  // expected-error@+1 {{expects number of results to be the same as number of reductions}}
-  %res = loop.parallel (%i0) = (%arg0) to (%arg1) step (%arg2) {
+  // expected-error@+2 {{expects number of results: 1 to be the same as number of reductions: 0}}
+  %zero = constant 1.0 : f32
+  %res = loop.parallel (%i0) = (%arg0) to (%arg1) step (%arg2) init (%zero) {
   } : f32
 
   return
@@ -196,10 +197,25 @@ func @parallel_more_results_than_reduces(
 
 // -----
 
+func @parallel_more_results_than_initial_values(
+    %arg0 : index, %arg1: index, %arg2: index) {
+  // expected-error@+1 {{expects number of results: 1 to be the same as number of initial values: 0}}
+  %res = loop.parallel (%i0) = (%arg0) to (%arg1) step (%arg2) {
+    loop.reduce(%arg0) {
+      ^bb0(%lhs: index, %rhs: index):
+        loop.reduce.return %lhs : index
+    } : index
+  } : f32
+  return
+}
+
+// -----
+
 func @parallel_different_types_of_results_and_reduces(
     %arg0 : index, %arg1: index, %arg2: index) {
-  %res = loop.parallel (%i0) = (%arg0) to (%arg1) step (%arg2) {
-    // expected-error@+1 {{expects type of reduce to be the same as result type: 'f32'}}
+  %zero = constant 0.0 : f32
+  %res = loop.parallel (%i0) = (%arg0) to (%arg1) step (%arg2) init (%zero) {
+    // expected-error@+1 {{expects type of reduce: 'index' to be the same as result type: 'f32'}}
     loop.reduce(%arg0) {
       ^bb0(%lhs: index, %rhs: index):
         loop.reduce.return %lhs : index
@@ -222,7 +238,8 @@ func @top_level_reduce(%arg0 : f32) {
 // -----
 
 func @reduce_empty_block(%arg0 : index, %arg1 : f32) {
-  %res = loop.parallel (%i0) = (%arg0) to (%arg0) step (%arg0) {
+  %zero = constant 0.0 : f32
+  %res = loop.parallel (%i0) = (%arg0) to (%arg0) step (%arg0) init (%zero) {
     // expected-error@+1 {{the block inside reduce should not be empty}}
     loop.reduce(%arg1) {
       ^bb0(%lhs : f32, %rhs : f32):
@@ -234,7 +251,8 @@ func @reduce_empty_block(%arg0 : index, %arg1 : f32) {
 // -----
 
 func @reduce_too_many_args(%arg0 : index, %arg1 : f32) {
-  %res = loop.parallel (%i0) = (%arg0) to (%arg0) step (%arg0) {
+  %zero = constant 0.0 : f32
+  %res = loop.parallel (%i0) = (%arg0) to (%arg0) step (%arg0) init (%zero) {
     // expected-error@+1 {{expects two arguments to reduce block of type 'f32'}}
     loop.reduce(%arg1) {
       ^bb0(%lhs : f32, %rhs : f32, %other : f32):
@@ -247,7 +265,8 @@ func @reduce_too_many_args(%arg0 : index, %arg1 : f32) {
 // -----
 
 func @reduce_wrong_args(%arg0 : index, %arg1 : f32) {
-  %res = loop.parallel (%i0) = (%arg0) to (%arg0) step (%arg0) {
+  %zero = constant 0.0 : f32
+  %res = loop.parallel (%i0) = (%arg0) to (%arg0) step (%arg0) init (%zero) {
     // expected-error@+1 {{expects two arguments to reduce block of type 'f32'}}
     loop.reduce(%arg1) {
       ^bb0(%lhs : f32, %rhs : i32):
@@ -261,7 +280,8 @@ func @reduce_wrong_args(%arg0 : index, %arg1 : f32) {
 // -----
 
 func @reduce_wrong_terminator(%arg0 : index, %arg1 : f32) {
-  %res = loop.parallel (%i0) = (%arg0) to (%arg0) step (%arg0) {
+  %zero = constant 0.0 : f32
+  %res = loop.parallel (%i0) = (%arg0) to (%arg0) step (%arg0) init (%zero) {
     // expected-error@+1 {{the block inside reduce should be terminated with a 'loop.reduce.return' op}}
     loop.reduce(%arg1) {
       ^bb0(%lhs : f32, %rhs : f32):
@@ -274,7 +294,8 @@ func @reduce_wrong_terminator(%arg0 : index, %arg1 : f32) {
 // -----
 
 func @reduceReturn_wrong_type(%arg0 : index, %arg1: f32) {
-  %res = loop.parallel (%i0) = (%arg0) to (%arg0) step (%arg0) {
+  %zero = constant 0.0 : f32
+  %res = loop.parallel (%i0) = (%arg0) to (%arg0) step (%arg0) init (%zero) {
     loop.reduce(%arg1) {
       ^bb0(%lhs : f32, %rhs : f32):
         %c0 = constant 1 : index

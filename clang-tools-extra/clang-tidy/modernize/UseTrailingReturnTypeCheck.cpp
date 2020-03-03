@@ -370,9 +370,6 @@ bool UseTrailingReturnTypeCheck::keepSpecifiers(
 }
 
 void UseTrailingReturnTypeCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus11)
-    return;
-
   auto F = functionDecl(unless(anyOf(hasTrailingReturn(), returns(voidType()),
                                      returns(autoType()), cxxConversionDecl(),
                                      cxxMethodDecl(isImplicit()))))

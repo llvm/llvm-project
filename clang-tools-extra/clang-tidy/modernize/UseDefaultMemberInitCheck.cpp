@@ -190,9 +190,6 @@ void UseDefaultMemberInitCheck::storeOptions(
 }
 
 void UseDefaultMemberInitCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus11)
-    return;
-
   auto Init =
       anyOf(stringLiteral(), characterLiteral(), integerLiteral(),
             unaryOperator(anyOf(hasOperatorName("+"), hasOperatorName("-")),

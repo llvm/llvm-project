@@ -245,6 +245,10 @@ public:
   ///     "DECL", "(", "a", ")", ";"}
   llvm::ArrayRef<syntax::Token> spelledTokens(FileID FID) const;
 
+  /// Returns the spelled Token starting at Loc, if there are no such tokens
+  /// returns nullptr.
+  const syntax::Token *spelledTokenAt(SourceLocation Loc) const;
+
   /// Get all tokens that expand a macro in \p FID. For the following input
   ///     #define FOO B
   ///     #define FOO2(X) int X

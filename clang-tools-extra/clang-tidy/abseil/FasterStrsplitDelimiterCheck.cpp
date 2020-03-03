@@ -57,9 +57,6 @@ llvm::Optional<std::string> makeCharacterLiteral(const StringLiteral *Literal,
 } // anonymous namespace
 
 void FasterStrsplitDelimiterCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus)
-    return;
-
   // Binds to one character string literals.
   const auto SingleChar =
       expr(ignoringParenCasts(stringLiteral(lengthIsOne()).bind("Literal")));

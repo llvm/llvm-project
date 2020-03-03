@@ -56,7 +56,8 @@ public:
       return nullptr;
 
     T translator(m, std::move(llvmModule));
-    translator.convertGlobals();
+    if (failed(translator.convertGlobals()))
+      return nullptr;
     if (failed(translator.convertFunctions()))
       return nullptr;
 
@@ -87,7 +88,7 @@ private:
   static LogicalResult checkSupportedModuleOps(Operation *m);
 
   LogicalResult convertFunctions();
-  void convertGlobals();
+  LogicalResult convertGlobals();
   LogicalResult convertOneFunction(LLVMFuncOp func);
   void connectPHINodes(LLVMFuncOp func);
   LogicalResult convertBlock(Block &bb, bool ignoreArguments);

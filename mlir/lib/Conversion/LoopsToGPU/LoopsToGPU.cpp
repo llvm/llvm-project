@@ -572,6 +572,7 @@ static LogicalResult processParallelLoop(ParallelOp parallelOp,
                                          gpu::LaunchOp launchOp,
                                          BlockAndValueMapping &cloningMap,
                                          SmallVectorImpl<Operation *> &worklist,
+                                         DenseMap<int, Value> &bounds,
                                          PatternRewriter &rewriter) {
   // TODO(herhut): Verify that this is a valid GPU mapping.
   // processor ids: 0-2 block [x/y/z], 3-5 -> thread [x/y/z], 6-> sequential
@@ -631,22 +632,27 @@ static LogicalResult processParallelLoop(ParallelOp parallelOp,
         // conditional. If the lower-bound is constant or defined before the
         // launch, we can use it in the launch bounds. Otherwise fail.
         if (!launchIndependent(lowerBound) &&
-            !isa<ConstantOp>(lowerBound.getDefiningOp()))
+            !isa_and_nonnull<ConstantOp>(lowerBound.getDefiningOp()))
           return failure();
         // The step must also be constant or defined outside of the loop nest.
-        if (!launchIndependent(step) && !isa<ConstantOp>(step.getDefiningOp()))
+        if (!launchIndependent(step) &&
+            !isa_and_nonnull<ConstantOp>(step.getDefiningOp()))
           return failure();
         // If the upper-bound is constant or defined before the launch, we can
         // use it in the launch bounds directly. Otherwise try derive a bound.
-        bool boundIsPrecise = launchIndependent(upperBound) ||
-                              isa<ConstantOp>(upperBound.getDefiningOp());
+        bool boundIsPrecise =
+            launchIndependent(upperBound) ||
+            isa_and_nonnull<ConstantOp>(upperBound.getDefiningOp());
         {
           PatternRewriter::InsertionGuard guard(rewriter);
           rewriter.setInsertionPoint(launchOp);
           if (!boundIsPrecise) {
             upperBound = deriveStaticUpperBound(upperBound, rewriter);
-            if (!upperBound)
-              return failure();
+            if (!upperBound) {
+              return parallelOp.emitOpError()
+                     << "cannot derive loop-invariant upper bound for number "
+                        "of iterations";
+            }
           }
           // Compute the number of iterations needed. We compute this as an
           // affine expression ceilDiv (upperBound - lowerBound) step. We use
@@ -654,8 +660,8 @@ static LogicalResult processParallelLoop(ParallelOp parallelOp,
           AffineMap stepMap =
               AffineMap::get(0, 3,
                              ((rewriter.getAffineSymbolExpr(0) -
-                              rewriter.getAffineSymbolExpr(1)).ceilDiv(
-                                  rewriter.getAffineSymbolExpr(2))));
+                               rewriter.getAffineSymbolExpr(1))
+                                  .ceilDiv(rewriter.getAffineSymbolExpr(2))));
           Value launchBound = rewriter.create<AffineApplyOp>(
               loc, annotation.boundMap.compose(stepMap),
               ValueRange{
@@ -664,7 +670,12 @@ static LogicalResult processParallelLoop(ParallelOp parallelOp,
                   ensureLaunchIndependent(
                       cloningMap.lookupOrDefault(lowerBound)),
                   ensureLaunchIndependent(cloningMap.lookupOrDefault(step))});
-          launchOp.setOperand(annotation.processor, launchBound);
+          if (bounds.find(annotation.processor) != bounds.end()) {
+            return parallelOp.emitOpError()
+                   << "cannot redefine the bound for processor "
+                   << annotation.processor;
+          }
+          bounds[annotation.processor] = launchBound;
         }
         if (!boundIsPrecise) {
           // We are using an approximation, create a surrounding conditional.
@@ -746,9 +757,10 @@ ParallelToGpuLaunchLowering::matchAndRewrite(ParallelOp parallelOp,
   rewriter.setInsertionPointToStart(&launchOp.body().front());
 
   BlockAndValueMapping cloningMap;
+  llvm::DenseMap<int, Value> launchBounds;
   SmallVector<Operation *, 16> worklist;
   if (failed(processParallelLoop(parallelOp, launchOp, cloningMap, worklist,
-                                 rewriter)))
+                                 launchBounds, rewriter)))
     return matchFailure();
 
   // Whether we have seen any side-effects. Reset when leaving an inner scope.
@@ -770,8 +782,9 @@ ParallelToGpuLaunchLowering::matchAndRewrite(ParallelOp parallelOp,
       // A nested loop.parallel needs insertion of code to compute indices.
       // Insert that now. This will also update the worklist with the loops
       // body.
-      processParallelLoop(nestedParallel, launchOp, cloningMap, worklist,
-                          rewriter);
+      if (failed(processParallelLoop(nestedParallel, launchOp, cloningMap,
+                                     worklist, launchBounds, rewriter)))
+        return matchFailure();
     } else if (op == launchOp.getOperation()) {
       // Found our sentinel value. We have finished the operations from one
       // nesting level, pop one level back up.
@@ -790,6 +803,11 @@ ParallelToGpuLaunchLowering::matchAndRewrite(ParallelOp parallelOp,
         return matchFailure();
     }
   }
+
+  // Now that we succeeded creating the launch operation, also update the
+  // bounds.
+  for (auto bound : launchBounds)
+    launchOp.setOperand(std::get<0>(bound), std::get<1>(bound));
 
   rewriter.eraseOp(parallelOp);
   return matchSuccess();

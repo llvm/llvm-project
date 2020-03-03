@@ -7193,8 +7193,9 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
   // ---------------------------------------------------------------------------
 
   // Create a dummy pre-entry VPBasicBlock to start building the VPlan.
+  auto Plan = std::make_unique<VPlan>();
   VPBasicBlock *VPBB = new VPBasicBlock("Pre-Entry");
-  auto Plan = std::make_unique<VPlan>(VPBB);
+  Plan->setEntry(VPBB);
 
   // Represent values that will have defs inside VPlan.
   for (Value *V : NeedDef)

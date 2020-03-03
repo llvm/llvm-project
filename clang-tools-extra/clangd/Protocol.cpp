@@ -90,6 +90,20 @@ bool fromJSON(const llvm::json::Value &Params, TextDocumentIdentifier &R) {
   return O && O.map("uri", R.uri);
 }
 
+llvm::json::Value toJSON(const VersionedTextDocumentIdentifier &R) {
+  auto Result = toJSON(static_cast<const TextDocumentIdentifier &>(R));
+  if (R.version)
+    Result.getAsObject()->try_emplace("version", R.version);
+  return Result;
+}
+
+bool fromJSON(const llvm::json::Value &Params,
+              VersionedTextDocumentIdentifier &R) {
+  llvm::json::ObjectMapper O(Params);
+  return fromJSON(Params, static_cast<TextDocumentIdentifier &>(R)) && O &&
+         O.map("version", R.version);
+}
+
 bool fromJSON(const llvm::json::Value &Params, Position &R) {
   llvm::json::ObjectMapper O(Params);
   return O && O.map("line", R.line) && O.map("character", R.character);
@@ -529,6 +543,13 @@ bool fromJSON(const llvm::json::Value &Params, Diagnostic &R) {
   O.map("code", R.code);
   O.map("source", R.source);
   return true;
+}
+
+llvm::json::Value toJSON(const PublishDiagnosticsParams &PDP) {
+  return llvm::json::Object{
+    {"uri", PDP.uri},
+    {"diagnostics", PDP.diagnostics},
+  };
 }
 
 bool fromJSON(const llvm::json::Value &Params, CodeActionContext &R) {

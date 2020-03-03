@@ -23,9 +23,6 @@ UseBoolLiteralsCheck::UseBoolLiteralsCheck(StringRef Name,
       IgnoreMacros(Options.getLocalOrGlobal("IgnoreMacros", true)) {}
 
 void UseBoolLiteralsCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus)
-    return;
-
   Finder->addMatcher(
       implicitCastExpr(
           has(ignoringParenImpCasts(integerLiteral().bind("literal"))),

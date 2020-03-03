@@ -45,6 +45,19 @@
 
 using namespace llvm;
 
+void mcdwarf::emitListsTableHeaderStart(MCStreamer *S, MCSymbol *TableStart,
+                                        MCSymbol *TableEnd) {
+  S->AddComment("Length");
+  S->emitAbsoluteSymbolDiff(TableEnd, TableStart, 4);
+  S->emitLabel(TableStart);
+  S->AddComment("Version");
+  S->emitInt16(S->getContext().getDwarfVersion());
+  S->AddComment("Address size");
+  S->emitInt8(S->getContext().getAsmInfo()->getCodePointerSize());
+  S->AddComment("Segment selector size");
+  S->emitInt8(0);
+}
+
 /// Manage the .debug_line_str section contents, if we use it.
 class llvm::MCDwarfLineStr {
   MCSymbol *LineStrLabel = nullptr;
@@ -925,7 +938,7 @@ static void EmitGenDwarfAranges(MCStreamer *MCOS,
 static void EmitGenDwarfInfo(MCStreamer *MCOS,
                              const MCSymbol *AbbrevSectionSymbol,
                              const MCSymbol *LineSectionSymbol,
-                             const MCSymbol *RangesSectionSymbol) {
+                             const MCSymbol *RangesSymbol) {
   MCContext &context = MCOS->getContext();
 
   MCOS->SwitchSection(context.getObjectFileInfo()->getDwarfInfoSection());
@@ -977,13 +990,11 @@ static void EmitGenDwarfInfo(MCStreamer *MCOS,
   else
     MCOS->emitInt32(0);
 
-  if (RangesSectionSymbol) {
-    // There are multiple sections containing code, so we must use the
-    // .debug_ranges sections.
-
-    // AT_ranges, the 4 byte offset from the start of the .debug_ranges section
-    // to the address range list for this compilation unit.
-    MCOS->emitSymbolValue(RangesSectionSymbol, 4);
+  if (RangesSymbol) {
+    // There are multiple sections containing code, so we must use
+    // .debug_ranges/.debug_rnglists. AT_ranges, the 4 byte offset from the
+    // start of the .debug_ranges/.debug_rnglists.
+    MCOS->emitSymbolValue(RangesSymbol, 4);
   } else {
     // If we only have one non-empty code section, we can use the simpler
     // AT_low_pc and AT_high_pc attributes.
@@ -1096,37 +1107,65 @@ static void EmitGenDwarfInfo(MCStreamer *MCOS,
 // When generating dwarf for assembly source files this emits the data for
 // .debug_ranges section. We only emit one range list, which spans all of the
 // executable sections of this file.
-static void EmitGenDwarfRanges(MCStreamer *MCOS) {
+static MCSymbol *emitGenDwarfRanges(MCStreamer *MCOS) {
   MCContext &context = MCOS->getContext();
   auto &Sections = context.getGenDwarfSectionSyms();
 
   const MCAsmInfo *AsmInfo = context.getAsmInfo();
   int AddrSize = AsmInfo->getCodePointerSize();
+  MCSymbol *RangesSymbol;
 
-  MCOS->SwitchSection(context.getObjectFileInfo()->getDwarfRangesSection());
+  if (MCOS->getContext().getDwarfVersion() >= 5) {
+    MCOS->SwitchSection(context.getObjectFileInfo()->getDwarfRnglistsSection());
+    MCSymbol *StartSymbol =
+        context.createTempSymbol("debug_rnglists_start", true, true);
+    MCSymbol *EndSymbol =
+        context.createTempSymbol("debug_rnglists_end", true, true);
+    mcdwarf::emitListsTableHeaderStart(MCOS, StartSymbol, EndSymbol);
+    MCOS->AddComment("Offset entry count");
+    MCOS->emitInt32(0);
+    RangesSymbol = context.createTempSymbol("debug_rnglist0_start", true, true);
+    MCOS->emitLabel(RangesSymbol);
+    for (MCSection *Sec : Sections) {
+      const MCSymbol *StartSymbol = Sec->getBeginSymbol();
+      const MCSymbol *EndSymbol = Sec->getEndSymbol(context);
+      const MCExpr *SectionStartAddr = MCSymbolRefExpr::create(
+          StartSymbol, MCSymbolRefExpr::VK_None, context);
+      const MCExpr *SectionSize =
+          MakeStartMinusEndExpr(*MCOS, *StartSymbol, *EndSymbol, 0);
+      MCOS->emitInt8(dwarf::DW_RLE_start_length);
+      MCOS->emitValue(SectionStartAddr, AddrSize);
+      MCOS->emitULEB128Value(SectionSize);
+    }
+    MCOS->emitInt8(dwarf::DW_RLE_end_of_list);
+    MCOS->emitLabel(EndSymbol);
+  } else {
+    MCOS->SwitchSection(context.getObjectFileInfo()->getDwarfRangesSection());
+    RangesSymbol = context.createTempSymbol("debug_ranges_start", true, true);
+    MCOS->emitLabel(RangesSymbol);
+    for (MCSection *Sec : Sections) {
+      const MCSymbol *StartSymbol = Sec->getBeginSymbol();
+      const MCSymbol *EndSymbol = Sec->getEndSymbol(context);
 
-  for (MCSection *Sec : Sections) {
-    const MCSymbol *StartSymbol = Sec->getBeginSymbol();
-    MCSymbol *EndSymbol = Sec->getEndSymbol(context);
-    assert(StartSymbol && "StartSymbol must not be NULL");
-    assert(EndSymbol && "EndSymbol must not be NULL");
+      // Emit a base address selection entry for the section start.
+      const MCExpr *SectionStartAddr = MCSymbolRefExpr::create(
+          StartSymbol, MCSymbolRefExpr::VK_None, context);
+      MCOS->emitFill(AddrSize, 0xFF);
+      MCOS->emitValue(SectionStartAddr, AddrSize);
 
-    // Emit a base address selection entry for the start of this section
-    const MCExpr *SectionStartAddr = MCSymbolRefExpr::create(
-      StartSymbol, MCSymbolRefExpr::VK_None, context);
-    MCOS->emitFill(AddrSize, 0xFF);
-    MCOS->emitValue(SectionStartAddr, AddrSize);
+      // Emit a range list entry spanning this section.
+      const MCExpr *SectionSize =
+          MakeStartMinusEndExpr(*MCOS, *StartSymbol, *EndSymbol, 0);
+      MCOS->emitIntValue(0, AddrSize);
+      emitAbsValue(*MCOS, SectionSize, AddrSize);
+    }
 
-    // Emit a range list entry spanning this section
-    const MCExpr *SectionSize = MakeStartMinusEndExpr(*MCOS,
-      *StartSymbol, *EndSymbol, 0);
+    // Emit end of list entry
     MCOS->emitIntValue(0, AddrSize);
-    emitAbsValue(*MCOS, SectionSize, AddrSize);
+    MCOS->emitIntValue(0, AddrSize);
   }
 
-  // Emit end of list entry
-  MCOS->emitIntValue(0, AddrSize);
-  MCOS->emitIntValue(0, AddrSize);
+  return RangesSymbol;
 }
 
 //
@@ -1145,7 +1184,7 @@ void MCGenDwarfInfo::Emit(MCStreamer *MCOS) {
     LineSectionSymbol = MCOS->getDwarfLineTableSymbol(0);
   MCSymbol *AbbrevSectionSymbol = nullptr;
   MCSymbol *InfoSectionSymbol = nullptr;
-  MCSymbol *RangesSectionSymbol = nullptr;
+  MCSymbol *RangesSymbol = nullptr;
 
   // Create end symbols for each section, and remove empty sections
   MCOS->getContext().finalizeDwarfSections(*MCOS);
@@ -1172,30 +1211,22 @@ void MCGenDwarfInfo::Emit(MCStreamer *MCOS) {
     AbbrevSectionSymbol = context.createTempSymbol();
     MCOS->emitLabel(AbbrevSectionSymbol);
   }
-  if (UseRangesSection) {
-    MCOS->SwitchSection(context.getObjectFileInfo()->getDwarfRangesSection());
-    if (CreateDwarfSectionSymbols) {
-      RangesSectionSymbol = context.createTempSymbol();
-      MCOS->emitLabel(RangesSectionSymbol);
-    }
-  }
-
-  assert((RangesSectionSymbol != nullptr) || !UseRangesSection);
 
   MCOS->SwitchSection(context.getObjectFileInfo()->getDwarfARangesSection());
 
   // Output the data for .debug_aranges section.
   EmitGenDwarfAranges(MCOS, InfoSectionSymbol);
 
-  if (UseRangesSection)
-    EmitGenDwarfRanges(MCOS);
+  if (UseRangesSection) {
+    RangesSymbol = emitGenDwarfRanges(MCOS);
+    assert(RangesSymbol);
+  }
 
   // Output the data for .debug_abbrev section.
   EmitGenDwarfAbbrev(MCOS);
 
   // Output the data for .debug_info section.
-  EmitGenDwarfInfo(MCOS, AbbrevSectionSymbol, LineSectionSymbol,
-                   RangesSectionSymbol);
+  EmitGenDwarfInfo(MCOS, AbbrevSectionSymbol, LineSectionSymbol, RangesSymbol);
 }
 
 //

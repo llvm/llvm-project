@@ -278,10 +278,7 @@ define i8 @shuf_test1(i16 %v) nounwind {
 ;
 ; X86-LABEL: shuf_test1:
 ; X86:       ## %bb.0:
-; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k0
-; X86-NEXT:    kshiftrw $8, %k0, %k0
-; X86-NEXT:    kmovd %k0, %eax
-; X86-NEXT:    ## kill: def $al killed $al killed $eax
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    retl
    %v1 = bitcast i16 %v to <16 x i1>
    %mask = shufflevector <16 x i1> %v1, <16 x i1> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>

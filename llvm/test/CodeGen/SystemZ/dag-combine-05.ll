@@ -26,10 +26,13 @@ bb:
   %tmp = icmp ult i16 %arg0, 9616
   %tmp1 = zext i1 %tmp to i32
   %tmp2 = load i16, i16* %src
-  %tmp3 = add i16 %tmp2, -1
-  %tmp4 = icmp ne i16 %tmp2, 0
-  %tmp5 = zext i1 %tmp4 to i32
+  %0 = call { i16, i1 } @llvm.uadd.with.overflow.i16(i16 %tmp2, i16 -1)
+  %math = extractvalue { i16, i1 } %0, 0
+  %ov = extractvalue { i16, i1 } %0, 1
+  %tmp5 = zext i1 %ov to i32
   %tmp6 = add nuw nsw i32 %tmp5, %tmp1
   store i32 %tmp6, i32* %dst
   ret void
 }
+
+declare { i16, i1 } @llvm.uadd.with.overflow.i16(i16, i16) #1

@@ -59,6 +59,7 @@ static_library("clangd") {
     "ClangdServer.cpp",
     "CodeComplete.cpp",
     "CodeCompletionStrings.cpp",
+    "CollectMacros.cpp",
     "CompileCommands.cpp",
     "Compiler.cpp",
     "Context.cpp",

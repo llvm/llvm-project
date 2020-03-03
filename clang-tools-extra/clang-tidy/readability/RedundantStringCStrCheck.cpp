@@ -114,11 +114,6 @@ AST_MATCHER(CXXConstructExpr,
 
 void RedundantStringCStrCheck::registerMatchers(
     ast_matchers::MatchFinder *Finder) {
-  // Only register the matchers for C++; the functionality currently does not
-  // provide any benefit to other languages, despite being benign.
-  if (!getLangOpts().CPlusPlus)
-    return;
-
   // Match expressions of type 'string' or 'string*'.
   const auto StringDecl = type(hasUnqualifiedDesugaredType(recordType(
       hasDeclaration(cxxRecordDecl(hasName("::std::basic_string"))))));

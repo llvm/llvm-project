@@ -193,7 +193,7 @@ lldb::DisassemblerSP Disassembler::DisassembleRange(
     const ArchSpec &arch, const char *plugin_name, const char *flavor,
     const ExecutionContext &exe_ctx, const AddressRange &range,
     bool prefer_file_cache) {
-  if (range.GetByteSize() <= 0)
+  if (range.GetByteSize() <= 0 || !exe_ctx.GetTargetPtr())
     return {};
 
   if (!range.GetBaseAddress().IsValid())
@@ -205,8 +205,8 @@ lldb::DisassemblerSP Disassembler::DisassembleRange(
   if (!disasm_sp)
     return {};
 
-  const size_t bytes_disassembled =
-      disasm_sp->ParseInstructions(&exe_ctx, range, nullptr, prefer_file_cache);
+  const size_t bytes_disassembled = disasm_sp->ParseInstructions(
+      exe_ctx.GetTargetRef(), range, nullptr, prefer_file_cache);
   if (bytes_disassembled == 0)
     return {};
 
@@ -243,7 +243,7 @@ bool Disassembler::Disassemble(Debugger &debugger, const ArchSpec &arch,
                                bool mixed_source_and_assembly,
                                uint32_t num_mixed_context_lines,
                                uint32_t options, Stream &strm) {
-  if (!disasm_range.GetByteSize())
+  if (!disasm_range.GetByteSize() || !exe_ctx.GetTargetPtr())
     return false;
 
   lldb::DisassemblerSP disasm_sp(Disassembler::FindPluginForTarget(
@@ -257,8 +257,8 @@ bool Disassembler::Disassemble(Debugger &debugger, const ArchSpec &arch,
                  range.GetBaseAddress());
   range.SetByteSize(disasm_range.GetByteSize());
   const bool prefer_file_cache = false;
-  size_t bytes_disassembled =
-      disasm_sp->ParseInstructions(&exe_ctx, range, &strm, prefer_file_cache);
+  size_t bytes_disassembled = disasm_sp->ParseInstructions(
+      exe_ctx.GetTargetRef(), range, &strm, prefer_file_cache);
   if (bytes_disassembled == 0)
     return false;
 
@@ -275,7 +275,7 @@ bool Disassembler::Disassemble(Debugger &debugger, const ArchSpec &arch,
                                bool mixed_source_and_assembly,
                                uint32_t num_mixed_context_lines,
                                uint32_t options, Stream &strm) {
-  if (num_instructions == 0)
+  if (num_instructions == 0 || !exe_ctx.GetTargetPtr())
     return false;
 
   lldb::DisassemblerSP disasm_sp(Disassembler::FindPluginForTarget(
@@ -288,7 +288,7 @@ bool Disassembler::Disassemble(Debugger &debugger, const ArchSpec &arch,
 
   const bool prefer_file_cache = false;
   size_t bytes_disassembled = disasm_sp->ParseInstructions(
-      &exe_ctx, addr, num_instructions, prefer_file_cache);
+      exe_ctx.GetTargetRef(), addr, num_instructions, prefer_file_cache);
   if (bytes_disassembled == 0)
     return false;
 
@@ -1182,59 +1182,51 @@ InstructionList::GetIndexOfInstructionAtLoadAddress(lldb::addr_t load_addr,
   return GetIndexOfInstructionAtAddress(address);
 }
 
-size_t Disassembler::ParseInstructions(const ExecutionContext *exe_ctx,
+size_t Disassembler::ParseInstructions(Target &target,
                                        const AddressRange &range,
                                        Stream *error_strm_ptr,
                                        bool prefer_file_cache) {
-  if (exe_ctx) {
-    Target *target = exe_ctx->GetTargetPtr();
-    const addr_t byte_size = range.GetByteSize();
-    if (target == nullptr || byte_size == 0 ||
-        !range.GetBaseAddress().IsValid())
-      return 0;
+  const addr_t byte_size = range.GetByteSize();
+  if (byte_size == 0 || !range.GetBaseAddress().IsValid())
+    return 0;
 
-    auto data_sp = std::make_shared<DataBufferHeap>(byte_size, '\0');
+  auto data_sp = std::make_shared<DataBufferHeap>(byte_size, '\0');
 
-    Status error;
-    lldb::addr_t load_addr = LLDB_INVALID_ADDRESS;
-    const size_t bytes_read = target->ReadMemory(
-        range.GetBaseAddress(), prefer_file_cache, data_sp->GetBytes(),
-        data_sp->GetByteSize(), error, &load_addr);
+  Status error;
+  lldb::addr_t load_addr = LLDB_INVALID_ADDRESS;
+  const size_t bytes_read = target.ReadMemory(
+      range.GetBaseAddress(), prefer_file_cache, data_sp->GetBytes(),
+      data_sp->GetByteSize(), error, &load_addr);
 
-    if (bytes_read > 0) {
-      if (bytes_read != data_sp->GetByteSize())
-        data_sp->SetByteSize(bytes_read);
-      DataExtractor data(data_sp, m_arch.GetByteOrder(),
-                         m_arch.GetAddressByteSize());
-      const bool data_from_file = load_addr == LLDB_INVALID_ADDRESS;
-      return DecodeInstructions(range.GetBaseAddress(), data, 0, UINT32_MAX,
-                                false, data_from_file);
-    } else if (error_strm_ptr) {
-      const char *error_cstr = error.AsCString();
-      if (error_cstr) {
-        error_strm_ptr->Printf("error: %s\n", error_cstr);
-      }
-    }
+  if (bytes_read > 0) {
+    if (bytes_read != data_sp->GetByteSize())
+      data_sp->SetByteSize(bytes_read);
+    DataExtractor data(data_sp, m_arch.GetByteOrder(),
+                       m_arch.GetAddressByteSize());
+    const bool data_from_file = load_addr == LLDB_INVALID_ADDRESS;
+    return DecodeInstructions(range.GetBaseAddress(), data, 0, UINT32_MAX,
+                              false, data_from_file);
   } else if (error_strm_ptr) {
-    error_strm_ptr->PutCString("error: invalid execution context\n");
+    const char *error_cstr = error.AsCString();
+    if (error_cstr) {
+      error_strm_ptr->Printf("error: %s\n", error_cstr);
+    }
   }
   return 0;
 }
 
-size_t Disassembler::ParseInstructions(const ExecutionContext *exe_ctx,
-                                       const Address &start,
+size_t Disassembler::ParseInstructions(Target &target, const Address &start,
                                        uint32_t num_instructions,
                                        bool prefer_file_cache) {
   m_instruction_list.Clear();
 
-  if (exe_ctx == nullptr || num_instructions == 0 || !start.IsValid())
+  if (num_instructions == 0 || !start.IsValid())
     return 0;
 
-  Target *target = exe_ctx->GetTargetPtr();
   // Calculate the max buffer size we will need in order to disassemble
   const addr_t byte_size = num_instructions * m_arch.GetMaximumOpcodeByteSize();
 
-  if (target == nullptr || byte_size == 0)
+  if (byte_size == 0)
     return 0;
 
   DataBufferHeap *heap_buffer = new DataBufferHeap(byte_size, '\0');
@@ -1243,8 +1235,8 @@ size_t Disassembler::ParseInstructions(const ExecutionContext *exe_ctx,
   Status error;
   lldb::addr_t load_addr = LLDB_INVALID_ADDRESS;
   const size_t bytes_read =
-      target->ReadMemory(start, prefer_file_cache, heap_buffer->GetBytes(),
-                         byte_size, error, &load_addr);
+      target.ReadMemory(start, prefer_file_cache, heap_buffer->GetBytes(),
+                        byte_size, error, &load_addr);
 
   const bool data_from_file = load_addr == LLDB_INVALID_ADDRESS;
 

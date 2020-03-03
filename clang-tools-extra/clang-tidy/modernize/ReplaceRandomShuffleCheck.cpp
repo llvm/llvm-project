@@ -27,9 +27,6 @@ ReplaceRandomShuffleCheck::ReplaceRandomShuffleCheck(StringRef Name,
           Options.getLocalOrGlobal("IncludeStyle", "llvm"))) {}
 
 void ReplaceRandomShuffleCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus11)
-    return;
-
   const auto Begin = hasArgument(0, expr());
   const auto End = hasArgument(1, expr());
   const auto RandomFunc = hasArgument(2, expr().bind("randomFunc"));

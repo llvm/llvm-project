@@ -176,7 +176,7 @@ public:
 
   /// Assuming MI is dead, recursively search the incoming operands which are
   /// killed by MI and collect those that would become dead.
-  void collectLocalKilledOperands(MachineInstr *MI, InstSet &Dead) const;
+  void collectKilledOperands(MachineInstr *MI, InstSet &Dead) const;
 
   /// Return whether removing this instruction will have no effect on the
   /// program, returning the redundant use-def chain.

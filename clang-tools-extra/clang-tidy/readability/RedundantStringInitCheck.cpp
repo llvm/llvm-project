@@ -71,8 +71,6 @@ void RedundantStringInitCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void RedundantStringInitCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus)
-    return;
   const auto hasStringTypeName = hasAnyNameStdString(StringNames);
   const auto hasStringCtorName =
       hasAnyNameStdString(removeNamespaces(StringNames));

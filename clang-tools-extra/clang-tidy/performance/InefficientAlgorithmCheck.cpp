@@ -27,11 +27,6 @@ static bool areTypesCompatible(QualType Left, QualType Right) {
 }
 
 void InefficientAlgorithmCheck::registerMatchers(MatchFinder *Finder) {
-  // Only register the matchers for C++; the functionality currently does not
-  // provide any benefit to other languages, despite being benign.
-  if (!getLangOpts().CPlusPlus)
-    return;
-
   const auto Algorithms =
       hasAnyName("::std::find", "::std::count", "::std::equal_range",
                  "::std::lower_bound", "::std::upper_bound");

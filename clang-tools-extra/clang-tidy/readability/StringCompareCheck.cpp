@@ -23,9 +23,6 @@ static const StringRef CompareMessage = "do not use 'compare' to test equality "
                                         "operator instead";
 
 void StringCompareCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus)
-    return;
-
   const auto StrCompare = cxxMemberCallExpr(
       callee(cxxMethodDecl(hasName("compare"),
                            ofClass(classTemplateSpecializationDecl(

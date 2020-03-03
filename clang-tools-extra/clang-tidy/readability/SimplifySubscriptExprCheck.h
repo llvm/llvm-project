@@ -22,6 +22,9 @@ namespace readability {
 class SimplifySubscriptExprCheck : public ClangTidyCheck {
 public:
   SimplifySubscriptExprCheck(StringRef Name, ClangTidyContext *Context);
+  bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
+    return LangOpts.CPlusPlus;
+  }
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
   void storeOptions(ClangTidyOptions::OptionMap& Opts) override;

@@ -20,11 +20,6 @@ namespace runtime {
 
 void OverloadedUnaryAndCheck::registerMatchers(
     ast_matchers::MatchFinder *Finder) {
-  // Only register the matchers for C++; the functionality currently does not
-  // provide any benefit to other languages, despite being benign.
-  if (!getLangOpts().CPlusPlus)
-    return;
-
   // Match unary methods that overload operator&.
   Finder->addMatcher(
       cxxMethodDecl(parameterCountIs(0), hasOverloadedOperatorName("&"))

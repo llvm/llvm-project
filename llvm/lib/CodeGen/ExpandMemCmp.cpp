@@ -76,7 +76,7 @@ class MemCmpExpansion {
   IRBuilder<> Builder;
   // Represents the decomposition in blocks of the expansion. For example,
   // comparing 33 bytes on X86+sse can be done with 2x16-byte loads and
-  // 1x1-byte load, which would be represented as [{16, 0}, {16, 16}, {32, 1}.
+  // 1x1-byte load, which would be represented as [{16, 0}, {16, 16}, {1, 32}.
   struct LoadEntry {
     LoadEntry(unsigned LoadSize, uint64_t Offset)
         : LoadSize(LoadSize), Offset(Offset) {

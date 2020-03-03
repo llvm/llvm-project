@@ -194,10 +194,6 @@ void ClangdServer::addDocument(PathRef File, llvm::StringRef Contents,
 
 void ClangdServer::removeDocument(PathRef File) { WorkScheduler.remove(File); }
 
-llvm::StringRef ClangdServer::getDocument(PathRef File) const {
-  return WorkScheduler.getContents(File);
-}
-
 void ClangdServer::codeComplete(PathRef File, Position Pos,
                                 const clangd::CodeCompleteOptions &Opts,
                                 Callback<CodeCompleteResult> CB) {

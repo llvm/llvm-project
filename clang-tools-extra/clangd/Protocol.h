@@ -124,6 +124,20 @@ struct TextDocumentIdentifier {
 llvm::json::Value toJSON(const TextDocumentIdentifier &);
 bool fromJSON(const llvm::json::Value &, TextDocumentIdentifier &);
 
+struct VersionedTextDocumentIdentifier : public TextDocumentIdentifier {
+  // The version number of this document. If a versioned text document
+  // identifier is sent from the server to the client and the file is not open
+  // in the editor (the server has not received an open notification before) the
+  // server can send `null` to indicate that the version is known and the
+  // content on disk is the master (as speced with document content ownership).
+  //
+  // The version number of a document will increase after each change, including
+  // undo/redo. The number doesn't need to be consecutive.
+  llvm::Optional<std::int64_t> version;
+};
+llvm::json::Value toJSON(const VersionedTextDocumentIdentifier &);
+bool fromJSON(const llvm::json::Value &, VersionedTextDocumentIdentifier &);
+
 struct Position {
   /// Line position in a document (zero-based).
   int line = 0;
@@ -223,7 +237,7 @@ struct TextDocumentItem {
   std::string languageId;
 
   /// The version number of this document (it will strictly increase after each
-  int version = 0;
+  std::int64_t version = 0;
 
   /// The content of the opened text document.
   std::string text;
@@ -239,6 +253,7 @@ bool fromJSON(const llvm::json::Value &E, TraceLevel &Out);
 
 struct NoParams {};
 inline bool fromJSON(const llvm::json::Value &, NoParams &) { return true; }
+using InitializedParams = NoParams;
 using ShutdownParams = NoParams;
 using ExitParams = NoParams;
 
@@ -642,7 +657,7 @@ struct DidChangeTextDocumentParams {
   /// The document that did change. The version number points
   /// to the version after all provided content changes have
   /// been applied.
-  TextDocumentIdentifier textDocument;
+  VersionedTextDocumentIdentifier textDocument;
 
   /// The actual content changes.
   std::vector<TextDocumentContentChangeEvent> contentChanges;
@@ -790,6 +805,14 @@ struct LSPDiagnosticCompare {
 };
 bool fromJSON(const llvm::json::Value &, Diagnostic &);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Diagnostic &);
+
+struct PublishDiagnosticsParams {
+  /// The URI for which diagnostic information is reported.
+  URIForFile uri;
+  /// An array of diagnostic information items.
+  std::vector<Diagnostic> diagnostics;
+};
+llvm::json::Value toJSON(const PublishDiagnosticsParams &);
 
 struct CodeActionContext {
   /// An array of diagnostics.

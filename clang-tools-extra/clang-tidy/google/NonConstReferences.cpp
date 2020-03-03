@@ -31,9 +31,6 @@ void NonConstReferences::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void NonConstReferences::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus)
-    return;
-
   Finder->addMatcher(
       parmVarDecl(
           unless(isInstantiated()),

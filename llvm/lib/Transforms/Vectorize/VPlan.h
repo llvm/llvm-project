@@ -365,6 +365,10 @@ private:
   /// Current block predicate - null if the block does not need a predicate.
   VPValue *Predicate = nullptr;
 
+  /// VPlan containing the block. Can only be set on the entry block of the
+  /// plan.
+  VPlan *Plan = nullptr;
+
   /// Add \p Successor as the last successor to this block.
   void appendSuccessor(VPBlockBase *Successor) {
     assert(Successor && "Cannot add nullptr successor!");
@@ -417,6 +421,14 @@ public:
 
   VPRegionBlock *getParent() { return Parent; }
   const VPRegionBlock *getParent() const { return Parent; }
+
+  /// \return A pointer to the plan containing the current block.
+  VPlan *getPlan();
+  const VPlan *getPlan() const;
+
+  /// Sets the pointer of the plan containing the block. The block must be the
+  /// entry block into the VPlan.
+  void setPlan(VPlan *ParentPlan);
 
   void setParent(VPRegionBlock *P) { Parent = P; }
 
@@ -1402,7 +1414,11 @@ public:
   VPBlockBase *getEntry() { return Entry; }
   const VPBlockBase *getEntry() const { return Entry; }
 
-  VPBlockBase *setEntry(VPBlockBase *Block) { return Entry = Block; }
+  VPBlockBase *setEntry(VPBlockBase *Block) {
+    Entry = Block;
+    Block->setPlan(this);
+    return Entry;
+  }
 
   /// The backedge taken count of the original loop.
   VPValue *getOrCreateBackedgeTakenCount() {

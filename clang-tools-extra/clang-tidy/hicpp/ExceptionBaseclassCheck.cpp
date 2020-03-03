@@ -17,9 +17,6 @@ namespace tidy {
 namespace hicpp {
 
 void ExceptionBaseclassCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus)
-    return;
-
   Finder->addMatcher(
       cxxThrowExpr(
           unless(has(expr(anyOf(isTypeDependent(), isValueDependent())))),

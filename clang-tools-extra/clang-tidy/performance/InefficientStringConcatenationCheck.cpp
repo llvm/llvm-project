@@ -28,9 +28,6 @@ InefficientStringConcatenationCheck::InefficientStringConcatenationCheck(
 
 void InefficientStringConcatenationCheck::registerMatchers(
     MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus)
-    return;
-
   const auto BasicStringType =
       hasType(qualType(hasUnqualifiedDesugaredType(recordType(
           hasDeclaration(cxxRecordDecl(hasName("::std::basic_string")))))));

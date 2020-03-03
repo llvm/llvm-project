@@ -19,10 +19,6 @@ namespace tidy {
 namespace modernize {
 
 void ReturnBracedInitListCheck::registerMatchers(MatchFinder *Finder) {
-  // Only register the matchers for C++.
-  if (!getLangOpts().CPlusPlus11)
-    return;
-
   // Skip list initialization and constructors with an initializer list.
   auto ConstructExpr =
       cxxConstructExpr(

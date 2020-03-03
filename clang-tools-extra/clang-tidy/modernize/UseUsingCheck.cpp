@@ -21,8 +21,6 @@ UseUsingCheck::UseUsingCheck(StringRef Name, ClangTidyContext *Context)
       IgnoreMacros(Options.getLocalOrGlobal("IgnoreMacros", true)) {}
 
 void UseUsingCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus11)
-    return;
   Finder->addMatcher(typedefDecl(unless(isInstantiated())).bind("typedef"),
                      this);
   // This matcher used to find tag declarations in source code within typedefs.

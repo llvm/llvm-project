@@ -730,6 +730,9 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     llvm_unreachable("Can not encode end-attribute kinds marker.");
   case Attribute::None:
     llvm_unreachable("Can not encode none-attribute.");
+  case Attribute::EmptyKey:
+  case Attribute::TombstoneKey:
+    llvm_unreachable("Trying to encode EmptyKey/TombstoneKey");
   }
 
   llvm_unreachable("Trying to encode unknown attribute");

@@ -125,6 +125,8 @@ void IOHandlerStack::PrintAsync(Stream *stream, const char *s, size_t len) {
     std::lock_guard<std::recursive_mutex> guard(m_mutex);
     if (m_top)
       m_top->PrintAsync(stream, s, len);
+    else
+      stream->Write(s, len);
   }
 }
 
