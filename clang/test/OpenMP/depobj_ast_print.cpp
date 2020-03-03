@@ -19,14 +19,17 @@ T tmain(T argc) {
   static T a;
 #pragma omp depobj(a) depend(in:argc)
 #pragma omp depobj(argc) destroy
+#pragma omp depobj(argc) update(inout)
   return argc;
 }
 // CHECK:      static T a;
 // CHECK-NEXT: #pragma omp depobj (a) depend(in : argc){{$}}
 // CHECK-NEXT: #pragma omp depobj (argc) destroy{{$}}
+// CHECK-NEXT: #pragma omp depobj (argc) update(inout){{$}}
 // CHECK:      static void *a;
 // CHECK-NEXT: #pragma omp depobj (a) depend(in : argc){{$}}
 // CHECK-NEXT: #pragma omp depobj (argc) destroy{{$}}
+// CHECK-NEXT: #pragma omp depobj (argc) update(inout){{$}}
 
 int main(int argc, char **argv) {
   static omp_depend_t a;
@@ -35,8 +38,10 @@ int main(int argc, char **argv) {
 // CHECK-NEXT: omp_depend_t b;
 #pragma omp depobj(a) depend(out:argc, argv)
 #pragma omp depobj(b) destroy
+#pragma omp depobj(b) update(mutexinoutset)
 // CHECK-NEXT: #pragma omp depobj (a) depend(out : argc,argv)
 // CHECK-NEXT: #pragma omp depobj (b) destroy
+// CHECK-NEXT: #pragma omp depobj (b) update(mutexinoutset)
   (void)tmain(a), tmain(b);
   return 0;
 }

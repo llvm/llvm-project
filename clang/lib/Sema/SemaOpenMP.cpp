@@ -12077,6 +12077,10 @@ OMPClause *Sema::ActOnOpenMPSimpleClause(
     Res = ActOnOpenMPOrderClause(static_cast<OpenMPOrderClauseKind>(Argument),
                                  ArgumentLoc, StartLoc, LParenLoc, EndLoc);
     break;
+  case OMPC_update:
+    Res = ActOnOpenMPUpdateClause(static_cast<OpenMPDependClauseKind>(Argument),
+                                  ArgumentLoc, StartLoc, LParenLoc, EndLoc);
+    break;
   case OMPC_if:
   case OMPC_final:
   case OMPC_num_threads:
@@ -12106,7 +12110,6 @@ OMPClause *Sema::ActOnOpenMPSimpleClause(
   case OMPC_depobj:
   case OMPC_read:
   case OMPC_write:
-  case OMPC_update:
   case OMPC_capture:
   case OMPC_seq_cst:
   case OMPC_acq_rel:
@@ -12236,6 +12239,23 @@ OMPClause *Sema::ActOnOpenMPOrderClause(OpenMPOrderClauseKind Kind,
   }
   return new (Context)
       OMPOrderClause(Kind, KindKwLoc, StartLoc, LParenLoc, EndLoc);
+}
+
+OMPClause *Sema::ActOnOpenMPUpdateClause(OpenMPDependClauseKind Kind,
+                                         SourceLocation KindKwLoc,
+                                         SourceLocation StartLoc,
+                                         SourceLocation LParenLoc,
+                                         SourceLocation EndLoc) {
+  if (Kind == OMPC_DEPEND_unknown) {
+    unsigned Except[] = {OMPC_DEPEND_source, OMPC_DEPEND_sink};
+    Diag(KindKwLoc, diag::err_omp_unexpected_clause_value)
+        << getListOfPossibleValues(OMPC_depend, /*First=*/0,
+                                   /*Last=*/OMPC_DEPEND_unknown, Except)
+        << getOpenMPClauseName(OMPC_update);
+    return nullptr;
+  }
+  return OMPUpdateClause::Create(Context, StartLoc, LParenLoc, KindKwLoc, Kind,
+                                 EndLoc);
 }
 
 OMPClause *Sema::ActOnOpenMPSingleExprWithArgClause(
@@ -12601,7 +12621,7 @@ OMPClause *Sema::ActOnOpenMPWriteClause(SourceLocation StartLoc,
 
 OMPClause *Sema::ActOnOpenMPUpdateClause(SourceLocation StartLoc,
                                          SourceLocation EndLoc) {
-  return new (Context) OMPUpdateClause(StartLoc, EndLoc);
+  return OMPUpdateClause::Create(Context, StartLoc, EndLoc);
 }
 
 OMPClause *Sema::ActOnOpenMPCaptureClause(SourceLocation StartLoc,
