@@ -196,8 +196,7 @@ evaluateBitcastFromPtr(Constant *Ptr, const DataLayout &DL,
     Constant *const IdxList[] = {IdxZero, IdxZero};
 
     Ptr = ConstantExpr::getGetElementPtr(Ty, Ptr, IdxList);
-    if (auto *FoldedPtr = ConstantFoldConstant(Ptr, DL, TLI))
-      Ptr = FoldedPtr;
+    Ptr = ConstantFoldConstant(Ptr, DL, TLI);
   }
   return Val;
 }
@@ -339,7 +338,8 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst,
         return false;  // no volatile/atomic accesses.
       }
       Constant *Ptr = getVal(SI->getOperand(1));
-      if (auto *FoldedPtr = ConstantFoldConstant(Ptr, DL, TLI)) {
+      Constant *FoldedPtr = ConstantFoldConstant(Ptr, DL, TLI);
+      if (Ptr != FoldedPtr) {
         LLVM_DEBUG(dbgs() << "Folding constant ptr expression: " << *Ptr);
         Ptr = FoldedPtr;
         LLVM_DEBUG(dbgs() << "; To: " << *Ptr << "\n");
@@ -448,7 +448,8 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst,
       }
 
       Constant *Ptr = getVal(LI->getOperand(0));
-      if (auto *FoldedPtr = ConstantFoldConstant(Ptr, DL, TLI)) {
+      Constant *FoldedPtr = ConstantFoldConstant(Ptr, DL, TLI);
+      if (Ptr != FoldedPtr) {
         Ptr = FoldedPtr;
         LLVM_DEBUG(dbgs() << "Found a constant pointer expression, constant "
                              "folding: "
@@ -648,9 +649,7 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst,
     }
 
     if (!CurInst->use_empty()) {
-      if (auto *FoldedInstResult = ConstantFoldConstant(InstResult, DL, TLI))
-        InstResult = FoldedInstResult;
-
+      InstResult = ConstantFoldConstant(InstResult, DL, TLI);
       setVal(&*CurInst, InstResult);
     }
 
