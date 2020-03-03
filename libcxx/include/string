@@ -1549,6 +1549,16 @@ private:
     inline
     void __init(size_type __n, value_type __c);
 
+    // Slow path for the (inlined) copy constructor for 'long' strings.
+    // Always externally instantiated and not inlined.
+    // Requires that __s is zero terminated.
+    // The main reason for this function to exist is because for unstable, we
+    // want to allow inlining of the copy constructor. However, we don't want
+    // to call the __init() functions as those are marked as inline which may
+    // result in over-aggressive inlining by the compiler, where our aim is
+    // to only inline the fast path code directly in the ctor.
+    void __init_copy_ctor_external(const value_type* __s, size_type __sz);
+
     template <class _InputIterator>
     inline
     _EnableIf
@@ -1850,7 +1860,9 @@ basic_string<_CharT, _Traits, _Allocator>::basic_string(const basic_string& __st
     if (!__str.__is_long())
         __r_.first().__r = __str.__r_.first().__r;
     else
-        __init(_VSTD::__to_address(__str.__get_long_pointer()), __str.__get_long_size());
+        __init_copy_ctor_external(_VSTD::__to_address(__str.__get_long_pointer()),
+                                  __str.__get_long_size());
+
 #if _LIBCPP_DEBUG_LEVEL >= 2
     __get_db()->__insert_c(this);
 #endif
@@ -1864,7 +1876,8 @@ basic_string<_CharT, _Traits, _Allocator>::basic_string(
     if (!__str.__is_long())
         __r_.first().__r = __str.__r_.first().__r;
     else
-        __init(_VSTD::__to_address(__str.__get_long_pointer()), __str.__get_long_size());
+        __init_copy_ctor_external(_VSTD::__to_address(__str.__get_long_pointer()),
+                                  __str.__get_long_size());
 #if _LIBCPP_DEBUG_LEVEL >= 2
     __get_db()->__insert_c(this);
 #endif
@@ -1888,6 +1901,25 @@ basic_string<_CharT, _Traits, _Allocator>::basic_string(basic_string&& __str)
     if (__is_long())
         __get_db()->swap(this, &__str);
 #endif
+}
+
+template <class _CharT, class _Traits, class _Allocator>
+void basic_string<_CharT, _Traits, _Allocator>::__init_copy_ctor_external(
+    const value_type* __s, size_type __sz) {
+  pointer __p;
+  if (__sz < __min_cap) {
+    __p = __get_short_pointer();
+    __set_short_size(__sz);
+  } else {
+    if (__sz > max_size())
+      this->__throw_length_error();
+    size_t __cap = __recommend(__sz);
+    __p = __alloc_traits::allocate(__alloc(), __cap + 1);
+    __set_long_pointer(__p);
+    __set_long_cap(__cap + 1);
+    __set_long_size(__sz);
+  }
+  traits_type::copy(_VSTD::__to_address(__p), __s, __sz + 1);
 }
 
 template <class _CharT, class _Traits, class _Allocator>
