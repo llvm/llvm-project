@@ -52,8 +52,7 @@ using ast_type_traits::DynTypedNode;
 // On traversing an AST node, its token range is erased from the unclaimed set.
 // The tokens actually removed are associated with that node, and hit-tested
 // against the selection to determine whether the node is selected.
-template <typename T>
-class IntervalSet {
+template <typename T> class IntervalSet {
 public:
   IntervalSet(llvm::ArrayRef<T> Range) { UnclaimedRanges.insert(Range); }
 
@@ -78,7 +77,7 @@ public:
       --Overlap.first;
       // ...unless B isn't selected at all.
       if (Overlap.first->end() <= Claim.begin())
-          ++Overlap.first;
+        ++Overlap.first;
     }
     if (Overlap.first == Overlap.second)
       return Out;
@@ -118,8 +117,7 @@ private:
   };
 
   // Disjoint sorted unclaimed ranges of expanded tokens.
-  std::set<llvm::ArrayRef<T>, RangeLess>
-      UnclaimedRanges;
+  std::set<llvm::ArrayRef<T>, RangeLess> UnclaimedRanges;
 };
 
 // Sentinel value for the selectedness of a node where we've seen no tokens yet.
@@ -148,11 +146,37 @@ bool shouldIgnore(const syntax::Token &Tok) {
   return Tok.kind() == tok::comment || Tok.kind() == tok::semi;
 }
 
+// Determine whether 'Target' is the first expansion of the macro
+// argument whose top-level spelling location is 'SpellingLoc'.
+bool isFirstExpansion(FileID Target, SourceLocation SpellingLoc,
+                      const SourceManager &SM) {
+  SourceLocation Prev = SpellingLoc;
+  while (true) {
+    // If the arg is expanded multiple times, getMacroArgExpandedLocation()
+    // returns the first expansion.
+    SourceLocation Next = SM.getMacroArgExpandedLocation(Prev);
+    // So if we reach the target, target is the first-expansion of the
+    // first-expansion ...
+    if (SM.getFileID(Next) == Target)
+      return true;
+
+    // Otherwise, if the FileID stops changing, we've reached the innermost
+    // macro expansion, and Target was on a different branch.
+    if (SM.getFileID(Next) == SM.getFileID(Prev))
+      return false;
+
+    Prev = Next;
+  }
+  return false;
+}
+
 // SelectionTester can determine whether a range of tokens from the PP-expanded
 // stream (corresponding to an AST node) is considered selected.
 //
 // When the tokens result from macro expansions, the appropriate tokens in the
 // main file are examined (macro invocation or args). Similarly for #includes.
+// However, only the first expansion of a given spelled token is considered
+// selected.
 //
 // It tests each token in the range (not just the endpoints) as contiguous
 // expanded tokens may not have contiguous spellings (with macros).
@@ -260,9 +284,14 @@ private:
     // Handle tokens that were passed as a macro argument.
     SourceLocation ArgStart = SM.getTopMacroCallerLoc(StartLoc);
     if (SM.getFileID(ArgStart) == SelFile) {
-      SourceLocation ArgEnd = SM.getTopMacroCallerLoc(Batch.back().location());
-      return testTokenRange(SM.getFileOffset(ArgStart),
-                            SM.getFileOffset(ArgEnd));
+      if (isFirstExpansion(FID, ArgStart, SM)) {
+        SourceLocation ArgEnd =
+            SM.getTopMacroCallerLoc(Batch.back().location());
+        return testTokenRange(SM.getFileOffset(ArgStart),
+                              SM.getFileOffset(ArgEnd));
+      } else {
+        /* fall through and treat as part of the macro body */
+      }
     }
 
     // Handle tokens produced by non-argument macro expansion.
@@ -346,7 +375,7 @@ std::string printNodeToString(const DynTypedNode &N, const PrintingPolicy &PP) {
 }
 #endif
 
-bool isImplicit(const Stmt* S) {
+bool isImplicit(const Stmt *S) {
   // Some Stmts are implicit and shouldn't be traversed, but there's no
   // "implicit" attribute on Stmt/Expr.
   // Unwrap implicit casts first if present (other nodes too?).
@@ -611,7 +640,7 @@ private:
       // int (*[[s]])();
       else if (auto *VD = llvm::dyn_cast<VarDecl>(D))
         return VD->getLocation();
-    } else if (const auto* CCI = N.get<CXXCtorInitializer>()) {
+    } else if (const auto *CCI = N.get<CXXCtorInitializer>()) {
       // : [[b_]](42)
       return CCI->getMemberLocation();
     }
@@ -747,10 +776,10 @@ const Node *SelectionTree::commonAncestor() const {
   return Ancestor != Root ? Ancestor : nullptr;
 }
 
-const DeclContext& SelectionTree::Node::getDeclContext() const {
-  for (const Node* CurrentNode = this; CurrentNode != nullptr;
+const DeclContext &SelectionTree::Node::getDeclContext() const {
+  for (const Node *CurrentNode = this; CurrentNode != nullptr;
        CurrentNode = CurrentNode->Parent) {
-    if (const Decl* Current = CurrentNode->ASTNode.get<Decl>()) {
+    if (const Decl *Current = CurrentNode->ASTNode.get<Decl>()) {
       if (CurrentNode != this)
         if (auto *DC = dyn_cast<DeclContext>(Current))
           return *DC;
