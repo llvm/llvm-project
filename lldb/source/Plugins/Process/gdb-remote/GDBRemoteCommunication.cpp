@@ -50,7 +50,7 @@
 #include <compression.h>
 #endif
 
-#if LLVM_ENABLE_ZLIB
+#if defined(HAVE_LIBZ)
 #include <zlib.h>
 #endif
 
@@ -582,7 +582,7 @@ bool GDBRemoteCommunication::DecompressPacket() {
   }
 #endif
 
-#if LLVM_ENABLE_ZLIB
+#if defined(HAVE_LIBZ)
   if (decompressed_bytes == 0 && decompressed_bufsize != ULONG_MAX &&
       decompressed_buffer != nullptr &&
       m_compression_type == CompressionType::ZlibDeflate) {
