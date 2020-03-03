@@ -30,6 +30,7 @@ class DerivedTypeSpec;
 class Scope;
 class Symbol;
 
+const Scope *FindModuleContaining(const Scope &);
 const Symbol *FindCommonBlockContaining(const Symbol &object);
 const Scope *FindProgramUnitContaining(const Scope &);
 const Scope *FindProgramUnitContaining(const Symbol &);
@@ -167,6 +168,9 @@ std::unique_ptr<parser::Message> WhyNotModifiable(SourceName, const SomeExpr &,
 const Symbol *IsExternalInPureContext(const Symbol &, const Scope &);
 bool HasCoarray(const parser::Expr &);
 bool IsPolymorphicAllocatable(const Symbol &);
+// Return an error if component symbol is not accessible from scope (7.5.4.8(2))
+std::optional<parser::MessageFormattedText> CheckAccessibleComponent(
+    const semantics::Scope &, const Symbol &);
 
 // Analysis of image control statements
 bool IsImageControlStmt(const parser::ExecutableConstruct &);

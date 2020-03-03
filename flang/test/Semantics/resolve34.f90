@@ -91,3 +91,43 @@ subroutine s7
   !ERROR: PRIVATE component 't1' is only accessible within module 'm7'
   j = x%t1%i1
 end
+
+! 7.5.4.8(2)
+module m8
+  type  :: t
+    integer :: i1
+    integer, private :: i2
+  end type
+contains
+  subroutine s0
+    type(t) :: x
+    x = t(i1=2, i2=5)  !OK
+  end
+end
+subroutine s8
+  use m8
+  type(t) :: x
+  !ERROR: PRIVATE component 'i2' is only accessible within module 'm8'
+  x = t(2, 5)
+  !ERROR: PRIVATE component 'i2' is only accessible within module 'm8'
+  x = t(i1=2, i2=5)
+end
+
+! 7.5.4.8(2)
+module m9
+  interface
+    module subroutine s()
+    end subroutine
+  end interface
+  type  :: t
+    integer :: i1
+    integer, private :: i2
+  end type
+end
+submodule(m9) sm8
+contains
+  module subroutine s
+    type(t) :: x
+    x = t(i1=2, i2=5)  !OK
+  end
+end

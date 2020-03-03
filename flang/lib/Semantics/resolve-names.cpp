@@ -230,7 +230,6 @@ public:
   bool SetPassNameOn(Symbol &);
   bool SetBindNameOn(Symbol &);
   void Post(const parser::LanguageBindingSpec &);
-  bool Pre(const parser::AccessSpec &);
   bool Pre(const parser::IntentSpec &);
   bool Pre(const parser::Pass &);
 
@@ -435,8 +434,6 @@ public:
   Scope &currScope() { return DEREF(currScope_); }
   // The enclosing scope, skipping blocks and derived types.
   Scope &InclusiveScope();
-  // The global scope, containing program units.
-  Scope &GlobalScope();
 
   // Create a new scope and push it on the scope stack.
   void PushScope(Scope::Kind kind, Symbol *symbol);
@@ -699,6 +696,7 @@ public:
   bool Pre(const parser::NamedConstant &);
   void Post(const parser::EnumDef &);
   bool Pre(const parser::Enumerator &);
+  bool Pre(const parser::AccessSpec &);
   bool Pre(const parser::AsynchronousStmt &);
   bool Pre(const parser::ContiguousStmt &);
   bool Pre(const parser::ExternalStmt &);
@@ -804,7 +802,6 @@ protected:
       const parser::Name &, const std::optional<parser::IntegerTypeSpec> &);
   bool CheckUseError(const parser::Name &);
   void CheckAccessibility(const SourceName &, bool, Symbol &);
-  bool CheckAccessibleComponent(const SourceName &, const Symbol &);
   void CheckCommonBlocks();
   void CheckSaveStmts();
   void CheckEquivalenceSets();
@@ -1545,10 +1542,6 @@ void AttrsVisitor::Post(const parser::LanguageBindingSpec &x) {
     bindName_ = EvaluateExpr(*x.v);
   }
 }
-bool AttrsVisitor::Pre(const parser::AccessSpec &x) {
-  attrs_->set(AccessSpecToAttr(x));
-  return false;
-}
 bool AttrsVisitor::Pre(const parser::IntentSpec &x) {
   CHECK(attrs_);
   attrs_->set(IntentSpecToAttr(x));
@@ -1907,16 +1900,9 @@ Scope &ScopeHandler::InclusiveScope() {
       return *scope;
     }
   }
-  common::die("inclusive scope not found");
+  DIE("inclusive scope not found");
 }
-Scope &ScopeHandler::GlobalScope() {
-  for (auto *scope = currScope_; scope; scope = &scope->parent()) {
-    if (scope->IsGlobal()) {
-      return *scope;
-    }
-  }
-  common::die("global scope not found");
-}
+
 void ScopeHandler::PushScope(Scope::Kind kind, Symbol *symbol) {
   PushScope(currScope().MakeScope(kind, symbol));
 }
@@ -2879,37 +2865,6 @@ void DeclarationVisitor::CheckAccessibility(
   }
 }
 
-// Check that component is accessible from current scope.
-bool DeclarationVisitor::CheckAccessibleComponent(
-    const SourceName &name, const Symbol &symbol) {
-  if (!symbol.attrs().test(Attr::PRIVATE)) {
-    return true;
-  }
-  // component must be in a module/submodule because of PRIVATE:
-  const Scope *moduleScope{&symbol.owner()};
-  CHECK(moduleScope->IsDerivedType());
-  while (
-      moduleScope->kind() != Scope::Kind::Module && !moduleScope->IsGlobal()) {
-    moduleScope = &moduleScope->parent();
-  }
-  if (moduleScope->kind() == Scope::Kind::Module) {
-    for (auto *scope{&currScope()}; !scope->IsGlobal();
-         scope = &scope->parent()) {
-      if (scope == moduleScope) {
-        return true;
-      }
-    }
-    Say(name,
-        "PRIVATE component '%s' is only accessible within module '%s'"_err_en_US,
-        name.ToString(), moduleScope->GetName().value());
-  } else {
-    Say(name,
-        "PRIVATE component '%s' is only accessible within its module"_err_en_US,
-        name.ToString());
-  }
-  return false;
-}
-
 void DeclarationVisitor::Post(const parser::TypeDeclarationStmt &) {
   if (!GetAttrs().HasAny({Attr::POINTER, Attr::ALLOCATABLE})) {  // C702
     if (const auto *typeSpec{GetDeclTypeSpec()}) {
@@ -3065,6 +3020,19 @@ bool DeclarationVisitor::Pre(const parser::Enumerator &enumerator) {
 
 void DeclarationVisitor::Post(const parser::EnumDef &) {
   enumerationState_ = EnumeratorState{};
+}
+
+bool DeclarationVisitor::Pre(const parser::AccessSpec &x) {
+  Attr attr{AccessSpecToAttr(x)};
+  const Scope &scope{
+      currScope().IsDerivedType() ? currScope().parent() : currScope()};
+  if (!scope.IsModule()) {  // C817
+    Say(currStmtSource().value(),
+        "%s attribute may only appear in the specification part of a module"_err_en_US,
+        EnumToString(attr));
+  }
+  attrs_->set(attr);
+  return false;
 }
 
 bool DeclarationVisitor::Pre(const parser::AsynchronousStmt &x) {
@@ -3833,12 +3801,7 @@ bool DeclarationVisitor::Pre(const parser::StructureConstructor &x) {
     // we need to resolve its symbol in the scope of the derived type.
     Walk(std::get<parser::ComponentDataSource>(component.t));
     if (const auto &kw{std::get<std::optional<parser::Keyword>>(component.t)}) {
-      if (Symbol * symbol{FindInTypeOrParents(*typeScope, kw->v)}) {
-        if (!kw->v.symbol) {
-          kw->v.symbol = symbol;
-        }
-        CheckAccessibleComponent(kw->v.source, *symbol);
-      }
+      FindInTypeOrParents(*typeScope, kw->v);
     }
   }
   return false;
@@ -5214,9 +5177,11 @@ const parser::Name *DeclarationVisitor::FindComponent(
   } else if (const DerivedTypeSpec * derived{type->AsDerived()}) {
     if (const Scope * scope{derived->scope()}) {
       if (Resolve(component, scope->FindComponent(component.source))) {
-        if (CheckAccessibleComponent(component.source, *component.symbol)) {
-          return &component;
+        if (auto msg{
+                CheckAccessibleComponent(currScope(), *component.symbol)}) {
+          context().Say(component.source, *msg);
         }
+        return &component;
       } else {
         SayDerivedType(component.source,
             "Component '%s' not found in derived type '%s'"_err_en_US, *scope);
@@ -5517,7 +5482,7 @@ bool ResolveNamesVisitor::SetProcFlag(
 
 bool ModuleVisitor::Pre(const parser::AccessStmt &x) {
   Attr accessAttr{AccessSpecToAttr(std::get<parser::AccessSpec>(x.t))};
-  if (currScope().kind() != Scope::Kind::Module) {
+  if (!currScope().IsModule()) {  // C869
     Say(currStmtSource().value(),
         "%s statement may only appear in the specification part of a module"_err_en_US,
         EnumToString(accessAttr));
@@ -5525,7 +5490,7 @@ bool ModuleVisitor::Pre(const parser::AccessStmt &x) {
   }
   const auto &accessIds{std::get<std::list<parser::AccessId>>(x.t)};
   if (accessIds.empty()) {
-    if (prevAccessStmt_) {
+    if (prevAccessStmt_) {  // C869
       Say("The default accessibility of this module has already been declared"_err_en_US)
           .Attach(*prevAccessStmt_, "Previous declaration"_en_US);
     }

@@ -24,6 +24,24 @@
 
 namespace Fortran::semantics {
 
+// Find this or containing scope that matches predicate
+static const Scope *FindScopeContaining(
+    const Scope &start, std::function<bool(const Scope &)> predicate) {
+  for (const Scope *scope{&start};; scope = &scope->parent()) {
+    if (predicate(*scope)) {
+      return scope;
+    }
+    if (scope->IsGlobal()) {
+      return nullptr;
+    }
+  }
+}
+
+const Scope *FindModuleContaining(const Scope &start) {
+  return FindScopeContaining(
+      start, [](const Scope &scope) { return scope.IsModule(); });
+}
+
 const Symbol *FindCommonBlockContaining(const Symbol &object) {
   if (const auto *details{object.detailsIf<ObjectEntityDetails>()}) {
     return details->commonBlock();
@@ -33,21 +51,15 @@ const Symbol *FindCommonBlockContaining(const Symbol &object) {
 }
 
 const Scope *FindProgramUnitContaining(const Scope &start) {
-  const Scope *scope{&start};
-  while (scope) {
-    switch (scope->kind()) {
+  return FindScopeContaining(start, [](const Scope &scope) {
+    switch (scope.kind()) {
     case Scope::Kind::Module:
     case Scope::Kind::MainProgram:
     case Scope::Kind::Subprogram:
-    case Scope::Kind::BlockData: return scope;
-    case Scope::Kind::Global: return nullptr;
-    case Scope::Kind::DerivedType:
-    case Scope::Kind::Block:
-    case Scope::Kind::Forall:
-    case Scope::Kind::ImpliedDos: scope = &scope->parent();
+    case Scope::Kind::BlockData: return true;
+    default: return false;
     }
-  }
-  return nullptr;
+  });
 }
 
 const Scope *FindProgramUnitContaining(const Symbol &symbol) {
@@ -164,16 +176,9 @@ bool IsUseAssociated(const Symbol &symbol, const Scope &scope) {
 
 bool DoesScopeContain(
     const Scope *maybeAncestor, const Scope &maybeDescendent) {
-  if (maybeAncestor) {
-    const Scope *scope{&maybeDescendent};
-    while (!scope->IsGlobal()) {
-      scope = &scope->parent();
-      if (scope == maybeAncestor) {
-        return true;
-      }
-    }
-  }
-  return false;
+  return maybeAncestor && !maybeDescendent.IsGlobal() &&
+      FindScopeContaining(maybeDescendent.parent(),
+          [&](const Scope &scope) { return &scope == maybeAncestor; });
 }
 
 bool DoesScopeContain(const Scope *maybeAncestor, const Symbol &symbol) {
@@ -717,7 +722,7 @@ bool IsAssumedLengthExternalCharacterFunction(const Symbol &symbol) {
 
 const Symbol *IsExternalInPureContext(
     const Symbol &symbol, const Scope &scope) {
-  if (const auto *pureProc{semantics::FindPureProcedureContaining(scope)}) {
+  if (const auto *pureProc{FindPureProcedureContaining(scope)}) {
     if (const Symbol * root{GetAssociationRoot(symbol)}) {
       if (const Symbol *
           visible{FindExternallyVisibleObject(*root, *pureProc)}) {
@@ -954,6 +959,21 @@ bool IsPolymorphic(const Symbol &symbol) {
 
 bool IsPolymorphicAllocatable(const Symbol &symbol) {
   return IsAllocatable(symbol) && IsPolymorphic(symbol);
+}
+
+std::optional<parser::MessageFormattedText> CheckAccessibleComponent(
+    const Scope &scope, const Symbol &symbol) {
+  CHECK(symbol.owner().IsDerivedType());  // symbol must be a component
+  if (symbol.attrs().test(Attr::PRIVATE)) {
+    if (const Scope * moduleScope{FindModuleContaining(symbol.owner())}) {
+      if (!moduleScope->sourceRange().Contains(scope.sourceRange())) {
+        return parser::MessageFormattedText{
+            "PRIVATE component '%s' is only accessible within module '%s'"_err_en_US,
+            symbol.name(), moduleScope->GetName().value()};
+      }
+    }
+  }
+  return std::nullopt;
 }
 
 std::list<SourceName> OrderParameterNames(const Symbol &typeSymbol) {
@@ -1227,10 +1247,10 @@ const Symbol *FindImmediateComponent(const DerivedTypeSpec &type,
 }
 
 bool IsFunctionResult(const Symbol &symbol) {
-  return (symbol.has<semantics::ObjectEntityDetails>() &&
-             symbol.get<semantics::ObjectEntityDetails>().isFuncResult()) ||
-      (symbol.has<semantics::ProcEntityDetails>() &&
-          symbol.get<semantics::ProcEntityDetails>().isFuncResult());
+  return (symbol.has<ObjectEntityDetails>() &&
+             symbol.get<ObjectEntityDetails>().isFuncResult()) ||
+      (symbol.has<ProcEntityDetails>() &&
+          symbol.get<ProcEntityDetails>().isFuncResult());
 }
 
 bool IsFunctionResultWithSameNameAsFunction(const Symbol &symbol) {

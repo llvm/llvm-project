@@ -72,16 +72,7 @@ const Scope *ModuleDetails::parent() const {
   return isSubmodule_ && scope_ ? &scope_->parent() : nullptr;
 }
 const Scope *ModuleDetails::ancestor() const {
-  if (!isSubmodule_ || !scope_) {
-    return nullptr;
-  }
-  for (auto *scope{scope_};;) {
-    auto *parent{&scope->parent()};
-    if (parent->kind() != Scope::Kind::Module) {
-      return scope;
-    }
-    scope = parent;
-  }
+  return isSubmodule_ && scope_ ? FindModuleContaining(*scope_) : nullptr;
 }
 void ModuleDetails::set_scope(const Scope *scope) {
   CHECK(!scope_);
