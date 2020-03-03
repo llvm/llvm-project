@@ -40,37 +40,6 @@ public:
                                  Location loc) override;
 };
 
-/// The predicate indicates the type of the comparison to perform:
-/// (un)orderedness, (in)equality and less/greater than (or equal to) as
-/// well as predicates that are always true or false.
-enum class CmpFPredicate {
-  FirstValidValue,
-  // Always false
-  AlwaysFalse = FirstValidValue,
-  // Ordered comparisons
-  OEQ,
-  OGT,
-  OGE,
-  OLT,
-  OLE,
-  ONE,
-  // Both ordered
-  ORD,
-  // Unordered comparisons
-  UEQ,
-  UGT,
-  UGE,
-  ULT,
-  ULE,
-  UNE,
-  // Any unordered
-  UNO,
-  // Always true
-  AlwaysTrue,
-  // Number of predicates.
-  NumPredicates
-};
-
 #define GET_OP_CLASSES
 #include "mlir/Dialect/StandardOps/IR/Ops.h.inc"
 
