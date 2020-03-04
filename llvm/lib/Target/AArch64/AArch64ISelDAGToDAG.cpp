@@ -190,6 +190,11 @@ public:
     return SelectSVELogicalImm(N, VT, Imm);
   }
 
+  template <unsigned Low, unsigned High>
+  bool SelectSVEShiftImm64(SDValue N, SDValue &Imm) {
+    return SelectSVEShiftImm64(N, Low, High, Imm);
+  }
+
   // Returns a suitable CNT/INC/DEC/RDVL multiplier to calculate VSCALE*N.
   template<signed Min, signed Max, signed Scale, bool Shift>
   bool SelectCntImm(SDValue N, SDValue &Imm) {
@@ -307,6 +312,8 @@ private:
   bool SelectSVELogicalImm(SDValue N, MVT VT, SDValue &Imm);
 
   bool SelectSVESignedArithImm(SDValue N, SDValue &Imm);
+  bool SelectSVEShiftImm64(SDValue N, uint64_t Low, uint64_t High,
+                           SDValue &Imm);
 
   bool SelectSVEArithImm(SDValue N, SDValue &Imm);
   bool SelectSVERegRegAddrMode(SDValue N, unsigned Scale, SDValue &Base,
@@ -3069,6 +3076,24 @@ bool AArch64DAGToDAGISel::SelectSVELogicalImm(SDValue N, MVT VT, SDValue &Imm) {
       return true;
     }
   }
+  return false;
+}
+
+// This method is only needed to "cast" i64s into i32s when the value
+// is a valid shift which has been splatted into a vector with i64 elements.
+// Every other type is fine in tablegen.
+bool AArch64DAGToDAGISel::SelectSVEShiftImm64(SDValue N, uint64_t Low,
+                                              uint64_t High, SDValue &Imm) {
+  if (auto *CN = dyn_cast<ConstantSDNode>(N)) {
+    uint64_t ImmVal = CN->getZExtValue();
+    SDLoc DL(N);
+
+    if (ImmVal >= Low && ImmVal <= High) {
+      Imm = CurDAG->getTargetConstant(ImmVal, DL, MVT::i32);
+      return true;
+    }
+  }
+
   return false;
 }
 
