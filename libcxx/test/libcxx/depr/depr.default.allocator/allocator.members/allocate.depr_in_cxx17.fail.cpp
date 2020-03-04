@@ -14,7 +14,7 @@
 // Deprecated in C++17
 
 // UNSUPPORTED: c++98, c++03, c++11, c++14
-// REQUIERS: verify-support
+// REQUIRES: verify-support
 
 // MODULES_DEFINES: _LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS
 #define _LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS
@@ -27,5 +27,5 @@ int main(int, char**)
     std::allocator<int> a;
     TEST_IGNORE_NODISCARD a.allocate(3, nullptr); // expected-error {{'allocate' is deprecated}}
 
-  return 0;
+    return 0;
 }
