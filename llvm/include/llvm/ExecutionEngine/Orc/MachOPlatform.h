@@ -59,8 +59,6 @@ public:
   void registerObjCSelectors() const;
   Error registerObjCClasses() const;
 
-  void dump() const;
-
 private:
   using RawPointerSectionList = std::vector<SectionExtent>;
 
