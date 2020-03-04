@@ -375,6 +375,11 @@ TEST(SelectionTest, CommonAncestor) {
             int test(I *f) { return 42 + [[f.^foo]]; }
           )cpp",
           "ObjCPropertyRefExpr"},
+      {"struct foo { [[int has^h<:32:>]]; };", "FieldDecl"},
+      {"struct foo { [[op^erator int()]]; };", "CXXConversionDecl"},
+      {"struct foo { [[^~foo()]]; };", "CXXDestructorDecl"},
+      // FIXME: The following to should be class itself instead.
+      {"struct foo { [[fo^o(){}]] };", "CXXConstructorDecl"},
   };
   for (const Case &C : Cases) {
     Annotations Test(C.Code);
