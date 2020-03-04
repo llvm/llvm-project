@@ -130,7 +130,7 @@ private:
 
   LogicalResult createInstance();
   LogicalResult createDevice();
-  LogicalResult getBestComputeQueue(const VkPhysicalDevice &physicalDevice);
+  LogicalResult getBestComputeQueue();
   LogicalResult createMemoryBuffers();
   LogicalResult createShaderModule();
   void initDescriptorSetLayoutBindingMap();
@@ -141,6 +141,7 @@ private:
   LogicalResult allocateDescriptorSets();
   LogicalResult setWriteDescriptors();
   LogicalResult createCommandPool();
+  LogicalResult createQueryPool();
   LogicalResult createComputeCommandBuffer();
   LogicalResult submitCommandBuffersToQueue();
 
@@ -164,9 +165,10 @@ private:
   // Vulkan objects.
   //===--------------------------------------------------------------------===//
 
-  VkInstance instance;
-  VkDevice device;
-  VkQueue queue;
+  VkInstance instance{VK_NULL_HANDLE};
+  VkPhysicalDevice physicalDevice{VK_NULL_HANDLE};
+  VkDevice device{VK_NULL_HANDLE};
+  VkQueue queue{VK_NULL_HANDLE};
 
   /// Specifies VulkanDeviceMemoryBuffers divided into sets.
   llvm::DenseMap<DescriptorSetIndex,
@@ -174,7 +176,7 @@ private:
       deviceMemoryBufferMap;
 
   /// Specifies shader module.
-  VkShaderModule shaderModule;
+  VkShaderModule shaderModule{VK_NULL_HANDLE};
 
   /// Specifies layout bindings.
   llvm::DenseMap<DescriptorSetIndex,
@@ -183,7 +185,7 @@ private:
 
   /// Specifies layouts of descriptor sets.
   llvm::SmallVector<VkDescriptorSetLayout, 1> descriptorSetLayouts;
-  VkPipelineLayout pipelineLayout;
+  VkPipelineLayout pipelineLayout{VK_NULL_HANDLE};
 
   /// Specifies descriptor sets.
   llvm::SmallVector<VkDescriptorSet, 1> descriptorSets;
@@ -191,11 +193,16 @@ private:
   /// Specifies a pool of descriptor set info, each descriptor set must have
   /// information such as type, index and amount of bindings.
   llvm::SmallVector<DescriptorSetInfo, 1> descriptorSetInfoPool;
-  VkDescriptorPool descriptorPool;
+  VkDescriptorPool descriptorPool{VK_NULL_HANDLE};
+
+  /// Timestamp query.
+  VkQueryPool queryPool{VK_NULL_HANDLE};
+  // Number of nonoseconds for timestamp to increase 1
+  float timestampPeriod{0.f};
 
   /// Computation pipeline.
-  VkPipeline pipeline;
-  VkCommandPool commandPool;
+  VkPipeline pipeline{VK_NULL_HANDLE};
+  VkCommandPool commandPool{VK_NULL_HANDLE};
   llvm::SmallVector<VkCommandBuffer, 1> commandBuffers;
 
   //===--------------------------------------------------------------------===//
@@ -203,6 +210,7 @@ private:
   //===--------------------------------------------------------------------===//
 
   uint32_t queueFamilyIndex{0};
+  VkQueueFamilyProperties queueFamilyProperties{};
   uint32_t memoryTypeIndex{VK_MAX_MEMORY_TYPES};
   VkDeviceSize memorySize{0};
 
