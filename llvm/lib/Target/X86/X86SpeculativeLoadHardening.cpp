@@ -1590,6 +1590,15 @@ static bool isDataInvariantLoad(MachineInstr &MI) {
   }
 }
 
+// Returns true if the MI has EFLAGS as a register def operand and it's live,
+// otherwise it returns false
+static bool isEFLAGSDefLive(const MachineInstr &MI) {
+  if (const MachineOperand *DefOp = MI.findRegisterDefOperand(X86::EFLAGS)) {
+    return !DefOp->isDead();
+  }
+  return false;
+}
+
 static bool isEFLAGSLive(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
                          const TargetRegisterInfo &TRI) {
   // Check if EFLAGS are alive by seeing if there is a def of them or they
@@ -1746,7 +1755,8 @@ void X86SpeculativeLoadHardeningPass::tracePredStateThroughBlocksAndHarden(
         // even once hardened this won't introduce a useful dependency that
         // could prune out subsequent loads.
         if (EnablePostLoadHardening && isDataInvariantLoad(MI) &&
-            MI.getDesc().getNumDefs() == 1 && MI.getOperand(0).isReg() &&
+            !isEFLAGSDefLive(MI) && MI.getDesc().getNumDefs() == 1 &&
+            MI.getOperand(0).isReg() &&
             canHardenRegister(MI.getOperand(0).getReg()) &&
             !HardenedAddrRegs.count(BaseReg) &&
             !HardenedAddrRegs.count(IndexReg)) {
@@ -1800,9 +1810,10 @@ void X86SpeculativeLoadHardeningPass::tracePredStateThroughBlocksAndHarden(
         if (HardenPostLoad.erase(&MI)) {
           assert(!MI.isCall() && "Must not try to post-load harden a call!");
 
-          // If this is a data-invariant load, we want to try and sink any
-          // hardening as far as possible.
-          if (isDataInvariantLoad(MI)) {
+          // If this is a data-invariant load and there is no EFLAGS
+          // interference, we want to try and sink any hardening as far as
+          // possible.
+          if (isDataInvariantLoad(MI) && !isEFLAGSDefLive(MI)) {
             // Sink the instruction we'll need to harden as far as we can down
             // the graph.
             MachineInstr *SunkMI = sinkPostLoadHardenedInst(MI, HardenPostLoad);
@@ -2154,6 +2165,9 @@ MachineInstr *X86SpeculativeLoadHardeningPass::sinkPostLoadHardenedInst(
     MachineInstr &InitialMI, SmallPtrSetImpl<MachineInstr *> &HardenedInstrs) {
   assert(isDataInvariantLoad(InitialMI) &&
          "Cannot get here with a non-invariant load!");
+  assert(!isEFLAGSDefLive(InitialMI) &&
+         "Cannot get here with a data invariant load "
+         "that interferes with EFLAGS!");
 
   // See if we can sink hardening the loaded value.
   auto SinkCheckToSingleUse =
@@ -2165,10 +2179,10 @@ MachineInstr *X86SpeculativeLoadHardeningPass::sinkPostLoadHardenedInst(
     // own.
     MachineInstr *SingleUseMI = nullptr;
     for (MachineInstr &UseMI : MRI->use_instructions(DefReg)) {
-      // If we're already going to harden this use, it is data invariant and
-      // within our block.
+      // If we're already going to harden this use, it is data invariant, it
+      // does not interfere with EFLAGS, and within our block.
       if (HardenedInstrs.count(&UseMI)) {
-        if (!isDataInvariantLoad(UseMI)) {
+        if (!isDataInvariantLoad(UseMI) || isEFLAGSDefLive(UseMI)) {
           // If we've already decided to harden a non-load, we must have sunk
           // some other post-load hardened instruction to it and it must itself
           // be data-invariant.
@@ -2204,7 +2218,8 @@ MachineInstr *X86SpeculativeLoadHardeningPass::sinkPostLoadHardenedInst(
 
       // If this single use isn't data invariant, isn't in this block, or has
       // interfering EFLAGS, we can't sink the hardening to it.
-      if (!isDataInvariant(UseMI) || UseMI.getParent() != MI.getParent())
+      if (!isDataInvariant(UseMI) || UseMI.getParent() != MI.getParent() ||
+          isEFLAGSDefLive(UseMI))
         return {};
 
       // If this instruction defines multiple registers bail as we won't harden
