@@ -12,6 +12,7 @@
 
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/DependencyFlags.h"
 #include "clang/AST/SelectorLocationsKind.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
@@ -30,13 +31,7 @@ ObjCArrayLiteral::ObjCArrayLiteral(ArrayRef<Expr *> Elements, QualType T,
       NumElements(Elements.size()), Range(SR), ArrayWithObjectsMethod(Method) {
   Expr **SaveElements = getElements();
   for (unsigned I = 0, N = Elements.size(); I != N; ++I) {
-    if (Elements[I]->isTypeDependent() || Elements[I]->isValueDependent())
-      ExprBits.ValueDependent = true;
-    if (Elements[I]->isInstantiationDependent())
-      ExprBits.InstantiationDependent = true;
-    if (Elements[I]->containsUnexpandedParameterPack())
-      ExprBits.ContainsUnexpandedParameterPack = true;
-
+    addDependence(turnTypeToValueDependence(Elements[I]->getDependence()));
     SaveElements[I] = Elements[I];
   }
 }
@@ -67,16 +62,11 @@ ObjCDictionaryLiteral::ObjCDictionaryLiteral(ArrayRef<ObjCDictionaryElement> VK,
   ExpansionData *Expansions =
       HasPackExpansions ? getTrailingObjects<ExpansionData>() : nullptr;
   for (unsigned I = 0; I < NumElements; I++) {
-    if (VK[I].Key->isTypeDependent() || VK[I].Key->isValueDependent() ||
-        VK[I].Value->isTypeDependent() || VK[I].Value->isValueDependent())
-      ExprBits.ValueDependent = true;
-    if (VK[I].Key->isInstantiationDependent() ||
-        VK[I].Value->isInstantiationDependent())
-      ExprBits.InstantiationDependent = true;
-    if (VK[I].EllipsisLoc.isInvalid() &&
-        (VK[I].Key->containsUnexpandedParameterPack() ||
-         VK[I].Value->containsUnexpandedParameterPack()))
-      ExprBits.ContainsUnexpandedParameterPack = true;
+    auto Deps = turnTypeToValueDependence(VK[I].Key->getDependence() |
+                                          VK[I].Value->getDependence());
+    if (VK[I].EllipsisLoc.isValid())
+      Deps &= ~ExprDependence::UnexpandedPack;
+    addDependence(Deps);
 
     KeyValues[I].Key = VK[I].Key;
     KeyValues[I].Value = VK[I].Value;
@@ -183,15 +173,7 @@ void ObjCMessageExpr::initArgsAndSelLocs(ArrayRef<Expr *> Args,
   setNumArgs(Args.size());
   Expr **MyArgs = getArgs();
   for (unsigned I = 0; I != Args.size(); ++I) {
-    if (Args[I]->isTypeDependent())
-      ExprBits.TypeDependent = true;
-    if (Args[I]->isValueDependent())
-      ExprBits.ValueDependent = true;
-    if (Args[I]->isInstantiationDependent())
-      ExprBits.InstantiationDependent = true;
-    if (Args[I]->containsUnexpandedParameterPack())
-      ExprBits.ContainsUnexpandedParameterPack = true;
-
+    addDependence(Args[I]->getDependence());
     MyArgs[I] = Args[I];
   }
 

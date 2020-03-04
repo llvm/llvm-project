@@ -16,6 +16,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/DependencyFlags.h"
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/TemplateName.h"
 #include "clang/AST/Type.h"
@@ -197,75 +198,49 @@ CXXRecordDecl *NestedNameSpecifier::getAsRecordDecl() const {
   llvm_unreachable("Invalid NNS Kind!");
 }
 
-/// Whether this nested name specifier refers to a dependent
-/// type or not.
-bool NestedNameSpecifier::isDependent() const {
+NestedNameSpecifierDependence NestedNameSpecifier::getDependence() const {
   switch (getKind()) {
-  case Identifier:
+  case Identifier: {
     // Identifier specifiers always represent dependent types
-    return true;
+    auto F = NestedNameSpecifierDependence::Dependent |
+             NestedNameSpecifierDependence::Instantiation;
+    // Prefix can contain unexpanded template parameters.
+    if (getPrefix())
+      return F | getPrefix()->getDependence();
+    return F;
+  }
 
   case Namespace:
   case NamespaceAlias:
   case Global:
-    return false;
+    return NestedNameSpecifierDependence::None;
 
   case Super: {
     CXXRecordDecl *RD = static_cast<CXXRecordDecl *>(Specifier);
     for (const auto &Base : RD->bases())
       if (Base.getType()->isDependentType())
-        return true;
-
-    return false;
+        // FIXME: must also be instantiation-dependent.
+        return NestedNameSpecifierDependence::Dependent;
+    return NestedNameSpecifierDependence::None;
   }
 
   case TypeSpec:
   case TypeSpecWithTemplate:
-    return getAsType()->isDependentType();
+    return toNestedNameSpecifierDependendence(getAsType()->getDependence());
   }
-
   llvm_unreachable("Invalid NNS Kind!");
 }
 
-/// Whether this nested name specifier refers to a dependent
-/// type or not.
+bool NestedNameSpecifier::isDependent() const {
+  return getDependence() & NestedNameSpecifierDependence::Dependent;
+}
+
 bool NestedNameSpecifier::isInstantiationDependent() const {
-  switch (getKind()) {
-  case Identifier:
-    // Identifier specifiers always represent dependent types
-    return true;
-
-  case Namespace:
-  case NamespaceAlias:
-  case Global:
-  case Super:
-    return false;
-
-  case TypeSpec:
-  case TypeSpecWithTemplate:
-    return getAsType()->isInstantiationDependentType();
-  }
-
-  llvm_unreachable("Invalid NNS Kind!");
+  return getDependence() & NestedNameSpecifierDependence::Instantiation;
 }
 
 bool NestedNameSpecifier::containsUnexpandedParameterPack() const {
-  switch (getKind()) {
-  case Identifier:
-    return getPrefix() && getPrefix()->containsUnexpandedParameterPack();
-
-  case Namespace:
-  case NamespaceAlias:
-  case Global:
-  case Super:
-    return false;
-
-  case TypeSpec:
-  case TypeSpecWithTemplate:
-    return getAsType()->containsUnexpandedParameterPack();
-  }
-
-  llvm_unreachable("Invalid NNS Kind!");
+  return getDependence() & NestedNameSpecifierDependence::UnexpandedPack;
 }
 
 /// Print this nested name specifier to the given output
