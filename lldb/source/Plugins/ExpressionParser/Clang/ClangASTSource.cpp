@@ -466,10 +466,7 @@ void ClangASTSource::FindExternalLexicalDecls(
 
   // Indicates whether we skipped any Decls of the original DeclContext.
   bool SkippedDecls = false;
-  for (DeclContext::decl_iterator iter = original_decl_context->decls_begin();
-       iter != original_decl_context->decls_end(); ++iter) {
-    Decl *decl = *iter;
-
+  for (Decl *decl : original_decl_context->decls()) {
     // The predicate function returns true if the passed declaration kind is
     // the one we are looking for.
     // See clang::ExternalASTSource::FindExternalLexicalDecls()
