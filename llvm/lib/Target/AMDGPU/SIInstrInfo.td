@@ -1304,10 +1304,8 @@ def VOP3OMods : ComplexPattern<untyped, 3, "SelectVOP3OMods">;
 def VOP3PMods  : ComplexPattern<untyped, 2, "SelectVOP3PMods">;
 
 def VOP3OpSel  : ComplexPattern<untyped, 2, "SelectVOP3OpSel">;
-def VOP3OpSel0 : ComplexPattern<untyped, 3, "SelectVOP3OpSel0">;
 
 def VOP3OpSelMods  : ComplexPattern<untyped, 2, "SelectVOP3OpSelMods">;
-def VOP3OpSelMods0 : ComplexPattern<untyped, 3, "SelectVOP3OpSelMods0">;
 
 def VOP3PMadMixMods  : ComplexPattern<untyped, 2, "SelectVOP3PMadMixMods">;
 
@@ -1738,7 +1736,7 @@ class getInsVOP3OpSel <RegisterOperand Src0RC,
     !if (HasClamp,
       (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
            Src1Mod:$src1_modifiers, Src1RC:$src1,
-           clampmod:$clamp,
+           clampmod0:$clamp,
            op_sel:$op_sel),
       (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
            Src1Mod:$src1_modifiers, Src1RC:$src1,
@@ -1748,7 +1746,7 @@ class getInsVOP3OpSel <RegisterOperand Src0RC,
       (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
            Src1Mod:$src1_modifiers, Src1RC:$src1,
            Src2Mod:$src2_modifiers, Src2RC:$src2,
-           clampmod:$clamp,
+           clampmod0:$clamp,
            op_sel:$op_sel),
       (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
            Src1Mod:$src1_modifiers, Src1RC:$src1,
