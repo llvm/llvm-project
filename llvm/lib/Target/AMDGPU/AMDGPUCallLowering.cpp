@@ -480,6 +480,43 @@ bool AMDGPUCallLowering::lowerFormalArgumentsKernel(
   return true;
 }
 
+/// Pack values \p SrcRegs to cover the vector type result \p DstRegs.
+static MachineInstrBuilder mergeVectorRegsToResultRegs(
+  MachineIRBuilder &B, ArrayRef<Register> DstRegs, ArrayRef<Register> SrcRegs) {
+  MachineRegisterInfo &MRI = *B.getMRI();
+  LLT LLTy = MRI.getType(DstRegs[0]);
+  LLT PartLLT = MRI.getType(SrcRegs[0]);
+
+  // Deal with v3s16 split into v2s16
+  LLT LCMTy = getLCMType(LLTy, PartLLT);
+  if (LCMTy == LLTy) {
+    // Common case where no padding is needed.
+    assert(DstRegs.size() == 1);
+    return B.buildConcatVectors(DstRegs[0], SrcRegs);
+  }
+
+  const int NumWide =  LCMTy.getSizeInBits() / PartLLT.getSizeInBits();
+  Register Undef = B.buildUndef(PartLLT).getReg(0);
+
+  // Build vector of undefs.
+  SmallVector<Register, 8> WidenedSrcs(NumWide, Undef);
+
+  // Replace the first sources with the real registers.
+  std::copy(SrcRegs.begin(), SrcRegs.end(), WidenedSrcs.begin());
+
+  auto Widened = B.buildConcatVectors(LCMTy, WidenedSrcs);
+  int NumDst = LCMTy.getSizeInBits() / LLTy.getSizeInBits();
+
+  SmallVector<Register, 8> PadDstRegs(NumDst);
+  std::copy(DstRegs.begin(), DstRegs.end(), PadDstRegs.begin());
+
+  // Create the excess dead defs for the unmerge.
+  for (int I = DstRegs.size(); I != NumDst; ++I)
+    PadDstRegs[I] = MRI.createGenericVirtualRegister(LLTy);
+
+  return B.buildUnmerge(PadDstRegs, Widened);
+}
+
 // TODO: Move this to generic code
 static void packSplitRegsToOrigType(MachineIRBuilder &B,
                                     ArrayRef<Register> OrigRegs,
@@ -492,22 +529,9 @@ static void packSplitRegsToOrigType(MachineIRBuilder &B,
   }
 
   if (LLTy.isVector() && PartLLT.isVector()) {
+    assert(OrigRegs.size() == 1);
     assert(LLTy.getElementType() == PartLLT.getElementType());
-
-    int DstElts = LLTy.getNumElements();
-    int PartElts = PartLLT.getNumElements();
-    if (DstElts % PartElts == 0)
-      B.buildConcatVectors(OrigRegs[0], Regs);
-    else {
-      // Deal with v3s16 split into v2s16
-      assert(PartElts == 2 && DstElts % 2 != 0);
-      int RoundedElts = PartElts * ((DstElts + PartElts - 1) / PartElts);
-
-      LLT RoundedDestTy = LLT::vector(RoundedElts, PartLLT.getElementType());
-      auto RoundedConcat = B.buildConcatVectors(RoundedDestTy, Regs);
-      B.buildExtract(OrigRegs[0], RoundedConcat, 0);
-    }
-
+    mergeVectorRegsToResultRegs(B, OrigRegs, Regs);
     return;
   }
 
