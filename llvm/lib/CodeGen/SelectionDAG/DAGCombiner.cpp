@@ -12220,6 +12220,9 @@ SDValue DAGCombiner::visitFADD(SDNode *N) {
   const TargetOptions &Options = DAG.getTarget().Options;
   const SDNodeFlags Flags = N->getFlags();
 
+  if (SDValue R = DAG.simplifyFPBinop(N->getOpcode(), N0, N1, Flags))
+    return R;
+
   // fold vector ops
   if (VT.isVector())
     if (SDValue FoldedVOp = SimplifyVBinOp(N))
@@ -12401,6 +12404,9 @@ SDValue DAGCombiner::visitFSUB(SDNode *N) {
   const TargetOptions &Options = DAG.getTarget().Options;
   const SDNodeFlags Flags = N->getFlags();
 
+  if (SDValue R = DAG.simplifyFPBinop(N->getOpcode(), N0, N1, Flags))
+    return R;
+
   // fold vector ops
   if (VT.isVector())
     if (SDValue FoldedVOp = SimplifyVBinOp(N))
@@ -12498,6 +12504,9 @@ SDValue DAGCombiner::visitFMUL(SDNode *N) {
   SDLoc DL(N);
   const TargetOptions &Options = DAG.getTarget().Options;
   const SDNodeFlags Flags = N->getFlags();
+
+  if (SDValue R = DAG.simplifyFPBinop(N->getOpcode(), N0, N1, Flags))
+    return R;
 
   // fold vector ops
   if (VT.isVector()) {
@@ -12831,6 +12840,9 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
   const TargetOptions &Options = DAG.getTarget().Options;
   SDNodeFlags Flags = N->getFlags();
 
+  if (SDValue R = DAG.simplifyFPBinop(N->getOpcode(), N0, N1, Flags))
+    return R;
+
   // fold vector ops
   if (VT.isVector())
     if (SDValue FoldedVOp = SimplifyVBinOp(N))
@@ -12931,6 +12943,10 @@ SDValue DAGCombiner::visitFREM(SDNode *N) {
   ConstantFPSDNode *N0CFP = dyn_cast<ConstantFPSDNode>(N0);
   ConstantFPSDNode *N1CFP = dyn_cast<ConstantFPSDNode>(N1);
   EVT VT = N->getValueType(0);
+  SDNodeFlags Flags = N->getFlags();
+
+  if (SDValue R = DAG.simplifyFPBinop(N->getOpcode(), N0, N1, Flags))
+    return R;
 
   // fold (frem c1, c2) -> fmod(c1,c2)
   if (N0CFP && N1CFP)
