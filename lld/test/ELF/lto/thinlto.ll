@@ -26,7 +26,7 @@
 ; RUN: mkdir -p %t.dir
 ; RUN: cp %t2.o %t.dir/t.o
 ; RUN: llvm-ar rcsT %t.dir/t.a %t.dir/t.o
-; RUN: ld.lld -save-temps %t1.o %t.dir/t.a -o - > /dev/null
+; RUN: ld.lld -save-temps %t1.o %t.dir/t.a -o %t.null
 ; RUN: ls '%t.dir/t.a(t.o at 0).0.preopt.bc'
 
 ; NM1: T f
