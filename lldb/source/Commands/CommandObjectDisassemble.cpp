@@ -281,24 +281,35 @@ bool CommandObjectDisassemble::DoExecute(Args &command,
   if (m_options.raw)
     options |= Disassembler::eOptionRawOuput;
 
+  std::vector<AddressRange> ranges;
   if (!m_options.func_name.empty()) {
     ConstString name(m_options.func_name.c_str());
+    const bool include_symbols = true;
+    const bool include_inlines = true;
 
-    if (Disassembler::Disassemble(
-            GetDebugger(), m_options.arch, plugin_name, flavor_string,
-            m_exe_ctx, name,
-            nullptr, // Module *
-            m_options.num_instructions, m_options.show_mixed,
-            m_options.show_mixed ? m_options.num_lines_context : 0, options,
-            result.GetOutputStream())) {
-      result.SetStatus(eReturnStatusSuccessFinishResult);
-    } else {
+    // Find functions matching the given name.
+    SymbolContextList sc_list;
+    target->GetImages().FindFunctions(
+        name, eFunctionNameTypeAuto, include_symbols, include_inlines, sc_list);
+
+    AddressRange range;
+    const uint32_t scope =
+        eSymbolContextBlock | eSymbolContextFunction | eSymbolContextSymbol;
+    const bool use_inline_block_range = true;
+    for (SymbolContext sc : sc_list.SymbolContexts()) {
+      for (uint32_t range_idx = 0;
+           sc.GetAddressRange(scope, range_idx, use_inline_block_range, range);
+           ++range_idx) {
+        ranges.push_back(range);
+      }
+    }
+    if (ranges.empty()) {
       result.AppendErrorWithFormat("Unable to find symbol with name '%s'.\n",
                                    name.GetCString());
       result.SetStatus(eReturnStatusFailed);
+      return result.Succeeded();
     }
   } else {
-    std::vector<AddressRange> ranges;
     AddressRange range;
     StackFrame *frame = m_exe_ctx.GetFramePtr();
     if (m_options.frame_line) {
@@ -444,45 +455,44 @@ bool CommandObjectDisassemble::DoExecute(Args &command,
       }
       ranges.push_back(range);
     }
+  }
 
-    bool print_sc_header = ranges.size() > 1;
-    for (AddressRange cur_range : ranges) {
-      bool success;
-      if (m_options.num_instructions != 0) {
-        success = Disassembler::Disassemble(
-            GetDebugger(), m_options.arch, plugin_name, flavor_string,
-            m_exe_ctx, cur_range.GetBaseAddress(), m_options.num_instructions,
-            m_options.show_mixed,
-            m_options.show_mixed ? m_options.num_lines_context : 0, options,
-            result.GetOutputStream());
-      } else {
-        if (cur_range.GetByteSize() == 0)
-          cur_range.SetByteSize(DEFAULT_DISASM_BYTE_SIZE);
+  bool print_sc_header = ranges.size() > 1;
+  for (AddressRange cur_range : ranges) {
+    bool success;
+    if (m_options.num_instructions != 0) {
+      success = Disassembler::Disassemble(
+          GetDebugger(), m_options.arch, plugin_name, flavor_string, m_exe_ctx,
+          cur_range.GetBaseAddress(), m_options.num_instructions,
+          m_options.show_mixed,
+          m_options.show_mixed ? m_options.num_lines_context : 0, options,
+          result.GetOutputStream());
+    } else {
+      if (cur_range.GetByteSize() == 0)
+        cur_range.SetByteSize(DEFAULT_DISASM_BYTE_SIZE);
 
-        success = Disassembler::Disassemble(
-            GetDebugger(), m_options.arch, plugin_name, flavor_string,
-            m_exe_ctx, cur_range, m_options.num_instructions,
-            m_options.show_mixed,
-            m_options.show_mixed ? m_options.num_lines_context : 0, options,
-            result.GetOutputStream());
-      }
-      if (success) {
-        result.SetStatus(eReturnStatusSuccessFinishResult);
-      } else {
-        if (m_options.symbol_containing_addr != LLDB_INVALID_ADDRESS) {
-          result.AppendErrorWithFormat(
-              "Failed to disassemble memory in function at 0x%8.8" PRIx64 ".\n",
-              m_options.symbol_containing_addr);
-        } else {
-          result.AppendErrorWithFormat(
-              "Failed to disassemble memory at 0x%8.8" PRIx64 ".\n",
-              cur_range.GetBaseAddress().GetLoadAddress(target));
-        }
-        result.SetStatus(eReturnStatusFailed);
-      }
-      if (print_sc_header)
-        result.AppendMessage("\n");
+      success = Disassembler::Disassemble(
+          GetDebugger(), m_options.arch, plugin_name, flavor_string, m_exe_ctx,
+          cur_range, m_options.num_instructions, m_options.show_mixed,
+          m_options.show_mixed ? m_options.num_lines_context : 0, options,
+          result.GetOutputStream());
     }
+    if (success) {
+      result.SetStatus(eReturnStatusSuccessFinishResult);
+    } else {
+      if (m_options.symbol_containing_addr != LLDB_INVALID_ADDRESS) {
+        result.AppendErrorWithFormat(
+            "Failed to disassemble memory in function at 0x%8.8" PRIx64 ".\n",
+            m_options.symbol_containing_addr);
+      } else {
+        result.AppendErrorWithFormat(
+            "Failed to disassemble memory at 0x%8.8" PRIx64 ".\n",
+            cur_range.GetBaseAddress().GetLoadAddress(target));
+      }
+      result.SetStatus(eReturnStatusFailed);
+    }
+    if (print_sc_header)
+      result.AppendMessage("\n");
   }
 
   return result.Succeeded();

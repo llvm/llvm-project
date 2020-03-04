@@ -410,20 +410,6 @@ public:
                           uint32_t num_mixed_context_lines, uint32_t options,
                           Stream &strm);
 
-  static size_t
-  Disassemble(Debugger &debugger, const ArchSpec &arch, const char *plugin_name,
-              const char *flavor, const ExecutionContext &exe_ctx,
-              SymbolContextList &sc_list, uint32_t num_instructions,
-              bool mixed_source_and_assembly, uint32_t num_mixed_context_lines,
-              uint32_t options, Stream &strm);
-
-  static bool
-  Disassemble(Debugger &debugger, const ArchSpec &arch, const char *plugin_name,
-              const char *flavor, const ExecutionContext &exe_ctx,
-              ConstString name, Module *module,
-              uint32_t num_instructions, bool mixed_source_and_assembly,
-              uint32_t num_mixed_context_lines, uint32_t options, Stream &strm);
-
   static bool
   Disassemble(Debugger &debugger, const ArchSpec &arch, const char *plugin_name,
               const char *flavor, const ExecutionContext &exe_ctx,
