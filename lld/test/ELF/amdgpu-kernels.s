@@ -34,6 +34,9 @@ kernel1:
 # CHECK: ]
 # CHECK: }
 
+# CHECK: ProgramHeader {
+# CHECK:   Type: PT_LOAD
+
 # CHECK: Symbol {
 # CHECK: Name: kernel0
 # CHECK: Value:
@@ -50,9 +53,4 @@ kernel1:
 # CHECK: Binding: Global
 # CHECK: Type: AMDGPU_HSA_KERNEL
 # CHECK: Section: .text
-# CHECK: }
-
-# CHECK: ProgramHeader {
-# CHECK: Type: PT_LOAD
-# CHECK: VirtualAddress:
 # CHECK: }

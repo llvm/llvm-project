@@ -7,6 +7,11 @@
 // RUN: llvm-objdump -s %tout | FileCheck %s --check-prefix=GOTPLT
 // RUN: llvm-readobj -r --dynamic-table %tout | FileCheck %s
 
+/// Check that the PLTRELSZ tag does not include the IRELATIVE relocations
+// CHECK: DynamicSection [
+// CHECK:  0x00000012 RELSZ                16 (bytes)
+// CHECK:  0x00000002 PLTRELSZ             16 (bytes)
+
 // Check that the IRELATIVE relocations are after the JUMP_SLOT in the plt
 // CHECK: Relocations [
 // CHECK-NEXT:   Section (4) .rel.dyn {
@@ -23,11 +28,6 @@
 // GOTPLT: Contents of section .got.plt:
 // GOTPLT:       403298 20224000 00000000 00000000 e6114000
 // GOTPLT-NEXT:  4032a8 f6114000 b4114000 b5114000
-
-// Check that the PLTRELSZ tag does not include the IRELATIVE relocations
-// CHECK: DynamicSection [
-// CHECK:  0x00000012 RELSZ                16 (bytes)
-// CHECK:  0x00000002 PLTRELSZ             16 (bytes)
 
 // Check that a PLT header is written and the ifunc entries appear last
 // DISASM: Disassembly of section .text:
