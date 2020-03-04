@@ -1,5 +1,4 @@
-// RUN: %clang_cc1 -triple i686-windows %s -fsyntax-only -Wno-unused-value -Wmicrosoft -verify -fms-extensions
-
+// RUN: %clang_cc1 -triple i686-windows %s -fsyntax-only -Wno-unused-value -Wno-pointer-to-int-cast -Wmicrosoft -verify -fms-extensions
 
 struct A
 {
@@ -93,13 +92,13 @@ enum : long long {  // expected-warning{{enumeration types with a fixed underlyi
 };
 
 void pointer_to_integral_type_conv(char* ptr) {
-   char ch = (char)ptr; // expected-warning{{cast to smaller integer type 'char' from 'char *' is a Microsoft extension}}
-   short sh = (short)ptr; // expected-warning{{cast to smaller integer type 'short' from 'char *' is a Microsoft extension}}
-   ch = (char)ptr; // expected-warning{{cast to smaller integer type 'char' from 'char *' is a Microsoft extension}}
-   sh = (short)ptr; // expected-warning{{cast to smaller integer type 'short' from 'char *' is a Microsoft extension}}
+  char ch = (char)ptr;
+  short sh = (short)ptr;
+  ch = (char)ptr;
+  sh = (short)ptr;
 
-   // This is valid ISO C.
-   _Bool b = (_Bool)ptr;
+  // This is valid ISO C.
+  _Bool b = (_Bool)ptr;
 }
 
 typedef struct {
