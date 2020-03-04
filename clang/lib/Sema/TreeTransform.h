@@ -2550,8 +2550,8 @@ public:
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
   ExprResult RebuildStmtExpr(SourceLocation LParenLoc, Stmt *SubStmt,
-                             SourceLocation RParenLoc) {
-    return getSema().ActOnStmtExpr(nullptr, LParenLoc, SubStmt, RParenLoc);
+                             SourceLocation RParenLoc, bool IsDependent) {
+    return getSema().BuildStmtExpr(LParenLoc, SubStmt, RParenLoc, IsDependent);
   }
 
   /// Build a new __builtin_choose_expr expression.
@@ -10432,16 +10432,20 @@ TreeTransform<Derived>::TransformStmtExpr(StmtExpr *E) {
     return ExprError();
   }
 
+  // FIXME: This is not correct when substituting inside a templated
+  // context that isn't a DeclContext (such as a variable template).
+  bool IsDependent = getSema().CurContext->isDependentContext();
+
   if (!getDerived().AlwaysRebuild() &&
+      IsDependent == E->isInstantiationDependent() &&
       SubStmt.get() == E->getSubStmt()) {
     // Calling this an 'error' is unintuitive, but it does the right thing.
     SemaRef.ActOnStmtExprError();
     return SemaRef.MaybeBindToTemporary(E);
   }
 
-  return getDerived().RebuildStmtExpr(E->getLParenLoc(),
-                                      SubStmt.get(),
-                                      E->getRParenLoc());
+  return getDerived().RebuildStmtExpr(E->getLParenLoc(), SubStmt.get(),
+                                      E->getRParenLoc(), IsDependent);
 }
 
 template<typename Derived>
