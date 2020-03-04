@@ -2385,7 +2385,7 @@ OptimizeGlobalVars(Module &M,
         // for that optional parameter, since we don't have a Function to
         // provide GetTLI anyway.
         Constant *New = ConstantFoldConstant(C, DL, /*TLI*/ nullptr);
-        if (New && New != C)
+        if (New != C)
           GV->setInitializer(New);
       }
 

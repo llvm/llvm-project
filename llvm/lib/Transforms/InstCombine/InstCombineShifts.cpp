@@ -616,10 +616,9 @@ static Value *getShiftedValue(Value *V, unsigned NumBits, bool isLeftShift,
     else
       V = IC.Builder.CreateLShr(C, NumBits);
     // If we got a constantexpr back, try to simplify it with TD info.
+    // TODO: This is dubious, IRBuilder<TargetFolder> should already do this.
     if (auto *C = dyn_cast<Constant>(V))
-      if (auto *FoldedC =
-              ConstantFoldConstant(C, DL, &IC.getTargetLibraryInfo()))
-        V = FoldedC;
+      V = ConstantFoldConstant(C, DL, &IC.getTargetLibraryInfo());
     return V;
   }
 
