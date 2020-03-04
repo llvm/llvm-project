@@ -47,11 +47,9 @@ Sections:
     Info: .text
     Relocations:
 ## Case 1: There is no symbol with index 0xFEFEFEFE.
-      - Offset: 0x0
-        Symbol: 0xFEFEFEFE
+      - Symbol: 0xFEFEFEFE
         Type:   R_X86_64_NONE
-      - Offset: 0x0
-        Symbol: 0xFEFEFEFE
+      - Symbol: 0xFEFEFEFE
         Type:   R_X86_64_NONE
 ## Case 2: Test that no warning is reported for a relocation against a symbol with index 0.
       - Offset: 0x2

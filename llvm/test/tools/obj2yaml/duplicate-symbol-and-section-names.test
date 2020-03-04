@@ -84,8 +84,7 @@ Symbols:
 # RUN: obj2yaml %t2 | FileCheck %s --check-prefix=CASE2
 
 # CASE2:      Relocations:
-# CASE2-NEXT:  - Offset: 0x0000000000000000
-# CASE2-NEXT:    Symbol: 'foo [1]'
+# CASE2-NEXT:  - Symbol: 'foo [1]'
 # CASE2-NEXT:    Type:   R_X86_64_PC32
 # CASE2-NEXT:  - Offset: 0x0000000000000004
 # CASE2-NEXT:    Symbol: foo
@@ -110,7 +109,6 @@ Sections:
     Link: .symtab
     Relocations:
       - Type: R_X86_64_PC32
-        Offset: 0
         Symbol: 'foo [1]'
       - Type: R_X86_64_PC32
         Offset: 4

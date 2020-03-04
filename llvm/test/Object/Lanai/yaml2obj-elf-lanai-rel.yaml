@@ -31,8 +31,7 @@ Sections:
     Info:            .text
     AddressAlign:    0x04
     Relocations:
-      - Offset:          0x0
-        Symbol:          main
+      - Symbol:          main
         Type:            R_LANAI_32
       - Offset:          0x4
         Type:            R_LANAI_NONE

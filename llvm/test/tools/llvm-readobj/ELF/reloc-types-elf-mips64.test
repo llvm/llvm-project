@@ -74,8 +74,7 @@ Sections:
     EntSize:      0x0000000000000018
     Info:         .text
     Relocations:
-      - Offset: 0x0000000000000000
-        Type:   R_MIPS_NONE
+      - Type:   R_MIPS_NONE
       - Offset: 0x0000000000000004
         Type:   R_MIPS_16
         Type2:  R_MIPS_16
