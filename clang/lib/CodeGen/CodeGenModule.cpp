@@ -1918,9 +1918,9 @@ void CodeGenModule::SetFunctionAttributes(GlobalDecl GD, llvm::Function *F,
   }
 }
 
-void CodeGenModule::addUsedGlobal(llvm::GlobalValue *GV) {
-  assert(!GV->isDeclaration() &&
-         "Only globals with definition can force usage.");
+void CodeGenModule::addUsedGlobal(llvm::GlobalValue *GV, bool SkipCheck) {
+  assert(SkipCheck || (!GV->isDeclaration() &&
+                       "Only globals with definition can force usage."));
   LLVMUsed.emplace_back(GV);
 }
 
@@ -4073,9 +4073,17 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
     }
   }
 
-  if (!IsHIPPinnedShadowVar)
+  // HIPPinnedShadowVar should remain in the final code object irrespective of
+  // whether it is used or not within the code. Add it to used list, so that
+  // it will not get eliminated when it is unused. Also, it is an extern var
+  // within device code, and it should *not* get initialized within device code.
+  if (IsHIPPinnedShadowVar)
+    addUsedGlobal(GV, /*SkipCheck=*/true);
+  else
     GV->setInitializer(Init);
-  if (emitter) emitter->finalize(GV);
+
+  if (emitter)
+    emitter->finalize(GV);
 
   // If it is safe to mark the global 'constant', do so now.
   GV->setConstant(!NeedsGlobalCtor && !NeedsGlobalDtor &&
