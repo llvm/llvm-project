@@ -364,17 +364,10 @@ void DWARFDebugFrame::parse(DWARFDataExtractor Data) {
   while (Data.isValidOffset(Offset)) {
     uint64_t StartOffset = Offset;
 
-    bool IsDWARF64 = false;
-    uint64_t Length = Data.getRelocatedValue(4, &Offset);
+    uint64_t Length;
+    DwarfFormat Format;
+    std::tie(Length, Format) = Data.getInitialLength(&Offset);
     uint64_t Id;
-
-    if (Length == dwarf::DW_LENGTH_DWARF64) {
-      // DWARF-64 is distinguished by the first 32 bits of the initial length
-      // field being 0xffffffff. Then, the next 64 bits are the actual entry
-      // length.
-      IsDWARF64 = true;
-      Length = Data.getRelocatedValue(8, &Offset);
-    }
 
     // At this point, Offset points to the next field after Length.
     // Length is the structure size excluding itself. Compute an offset one
@@ -384,6 +377,7 @@ void DWARFDebugFrame::parse(DWARFDataExtractor Data) {
     uint64_t EndStructureOffset = Offset + Length;
 
     // The Id field's size depends on the DWARF format
+    bool IsDWARF64 = Format == DWARF64;
     Id = Data.getRelocatedValue((IsDWARF64 && !IsEH) ? 8 : 4, &Offset);
     bool IsCIE =
         ((IsDWARF64 && Id == DW64_CIE_ID) || Id == DW_CIE_ID || (IsEH && !Id));
