@@ -373,7 +373,10 @@ TEST(ParsedASTTest, ReplayPreambleForTidyCheckers) {
   TU.AdditionalFiles["bar.h"] = "";
   TU.AdditionalFiles["baz.h"] = "";
   TU.AdditionalFiles["a.h"] = "";
-  TU.ExtraArgs = {"-isystem."};
+  // Since we are also testing #import directives, and they don't make much
+  // sense in c++ (also they actually break on windows), just set language to
+  // obj-c.
+  TU.ExtraArgs = {"-isystem.", "-xobjective-c"};
 
   const auto &AST = TU.build();
   const auto &SM = AST.getSourceManager();
