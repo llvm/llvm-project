@@ -4,9 +4,9 @@
 # RUN: ld.lld %t2.o -o %t2.so -shared
 # RUN: echo "SECTIONS { . = . + SIZEOF_HEADERS; PROVIDE(foo = 42);}" > %t.script
 # RUN: ld.lld -o %t --script %t.script %t.o %t2.so
-# RUN: llvm-objdump -t %t | FileCheck  %s
+# RUN: llvm-readelf -s %t | FileCheck  %s
 
-# CHECK: 000000000000002a         *ABS*           00000000 foo
+# CHECK: 000000000000002a 0 NOTYPE GLOBAL DEFAULT ABS foo
 
 .global _start
 _start:
