@@ -638,7 +638,7 @@ BreakpointSP Target::CreateBreakpoint(SearchFilterSP &filter_sp,
     const bool hardware = request_hardware || GetRequireHardwareBreakpoints();
     bp_sp.reset(new Breakpoint(*this, filter_sp, resolver_sp, hardware,
                                resolve_indirect_symbols));
-    resolver_sp->SetBreakpoint(bp_sp.get());
+    resolver_sp->SetBreakpoint(bp_sp);
     AddBreakpoint(bp_sp, internal);
   }
   return bp_sp;

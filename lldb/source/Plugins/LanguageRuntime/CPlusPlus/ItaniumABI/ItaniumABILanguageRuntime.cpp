@@ -418,12 +418,13 @@ lldb_private::ConstString ItaniumABILanguageRuntime::GetPluginName() {
 uint32_t ItaniumABILanguageRuntime::GetPluginVersion() { return 1; }
 
 BreakpointResolverSP ItaniumABILanguageRuntime::CreateExceptionResolver(
-    Breakpoint *bkpt, bool catch_bp, bool throw_bp) {
+    const BreakpointSP &bkpt, bool catch_bp, bool throw_bp) {
   return CreateExceptionResolver(bkpt, catch_bp, throw_bp, false);
 }
 
 BreakpointResolverSP ItaniumABILanguageRuntime::CreateExceptionResolver(
-    Breakpoint *bkpt, bool catch_bp, bool throw_bp, bool for_expressions) {
+    const BreakpointSP &bkpt, bool catch_bp, bool throw_bp,
+    bool for_expressions) {
   // One complication here is that most users DON'T want to stop at
   // __cxa_allocate_expression, but until we can do anything better with
   // predicting unwinding the expression parser does.  So we have two forms of
