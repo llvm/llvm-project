@@ -52,6 +52,9 @@ public:
   using Base::Base;
 
   /// Gets a TargetEnvAttr instance.
+  static TargetEnvAttr get(Version version, ArrayRef<Extension> extensions,
+                           ArrayRef<Capability> capabilities,
+                           DictionaryAttr limits);
   static TargetEnvAttr get(IntegerAttr version, ArrayAttr extensions,
                            ArrayAttr capabilities, DictionaryAttr limits);
 
@@ -86,7 +89,7 @@ public:
   ArrayAttr getCapabilitiesAttr();
 
   /// Returns the target resource limits.
-  DictionaryAttr getResourceLimits();
+  ResourceLimitsAttr getResourceLimits();
 
   static bool kindof(unsigned kind) { return kind == AttrKind::TargetEnv; }
 
