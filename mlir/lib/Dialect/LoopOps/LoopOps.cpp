@@ -413,7 +413,8 @@ static ParseResult parseParallelOp(OpAsmParser &parser,
   // Parse step value.
   SmallVector<OpAsmParser::OperandType, 4> initVals;
   if (succeeded(parser.parseOptionalKeyword("init"))) {
-    if (parser.parseOperandList(initVals, -1, OpAsmParser::Delimiter::Paren))
+    if (parser.parseOperandList(initVals, /*requiredOperandCount=*/-1,
+                                OpAsmParser::Delimiter::Paren))
       return failure();
   }
 
