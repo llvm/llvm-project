@@ -10,6 +10,9 @@
 
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Support/BinaryByteStream.h"
+#include "llvm/Support/Debug.h"
+
+#define DEBUG_TYPE "orc"
 
 namespace {
 
@@ -141,12 +144,6 @@ Error MachOJITDylibInitializers::registerObjCClasses() const {
   return Error::success();
 }
 
-void MachOJITDylibInitializers::dump() const {
-  for (auto &Extent : ModInitSections)
-    dbgs() << formatv("{0:x16}", Extent.Address) << " -- "
-           << formatv("{0:x16}", Extent.Address + 8 * Extent.NumPtrs) << "\n";
-}
-
 MachOPlatform::MachOPlatform(
     ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
     std::unique_ptr<MemoryBuffer> StandardSymbolsObject)
@@ -168,6 +165,10 @@ Error MachOPlatform::notifyAdding(JITDylib &JD, const MaterializationUnit &MU) {
 
   std::lock_guard<std::mutex> Lock(PlatformMutex);
   RegisteredInitSymbols[&JD].add(InitSym);
+  LLVM_DEBUG({
+    dbgs() << "MachOPlatform: Registered init symbol " << *InitSym << " for MU "
+           << MU.getName() << "\n";
+  });
   return Error::success();
 }
 
@@ -177,6 +178,11 @@ Error MachOPlatform::notifyRemoving(JITDylib &JD, VModuleKey K) {
 
 Expected<MachOPlatform::InitializerSequence>
 MachOPlatform::getInitializerSequence(JITDylib &JD) {
+
+  LLVM_DEBUG({
+    dbgs() << "MachOPlatform: Building initializer sequence for "
+           << JD.getName() << "\n";
+  });
 
   std::vector<JITDylib *> DFSLinkOrder;
 
@@ -200,6 +206,13 @@ MachOPlatform::getInitializerSequence(JITDylib &JD) {
     if (NewInitSymbols.empty())
       break;
 
+    LLVM_DEBUG({
+      dbgs() << "MachOPlatform: Issuing lookups for new init symbols: "
+                "(lookup may require multiple rounds)\n";
+      for (auto &KV : NewInitSymbols)
+        dbgs() << "  \"" << KV.first->getName() << "\": " << KV.second << "\n";
+    });
+
     // Outside the lock, issue the lookup.
     if (auto R = lookupInitSymbols(JD.getExecutionSession(), NewInitSymbols))
       ; // Nothing to do in the success case.
@@ -207,11 +220,20 @@ MachOPlatform::getInitializerSequence(JITDylib &JD) {
       return R.takeError();
   }
 
+  LLVM_DEBUG({
+    dbgs() << "MachOPlatform: Init symbol lookup complete, building init "
+              "sequence\n";
+  });
+
   // Lock again to collect the initializers.
   InitializerSequence FullInitSeq;
   {
     std::lock_guard<std::mutex> Lock(PlatformMutex);
     for (auto *InitJD : reverse(DFSLinkOrder)) {
+      LLVM_DEBUG({
+        dbgs() << "MachOPlatform: Appending inits for \"" << InitJD->getName()
+               << "\" to sequence\n";
+      });
       auto ISItr = InitSeqs.find(InitJD);
       if (ISItr != InitSeqs.end()) {
         FullInitSeq.emplace_back(InitJD, std::move(ISItr->second));
@@ -344,6 +366,31 @@ void MachOPlatform::InitScraperPlugin::modifyPassConfig(
       ObjCClassList = std::move(*ObjCClassListOrErr);
     else
       return ObjCClassListOrErr.takeError();
+
+    // Dump the scraped inits.
+    LLVM_DEBUG({
+      dbgs() << "MachOPlatform: Scraped " << G.getName() << " init sections:\n";
+      dbgs() << "  __objc_selrefs: ";
+      if (ObjCSelRefs.NumPtrs)
+        dbgs() << ObjCSelRefs.NumPtrs << " pointer(s) at "
+               << formatv("{0:x16}", ObjCSelRefs.Address) << "\n";
+      else
+        dbgs() << "none\n";
+
+      dbgs() << "  __objc_classlist: ";
+      if (ObjCClassList.NumPtrs)
+        dbgs() << ObjCClassList.NumPtrs << " pointer(s) at "
+               << formatv("{0:x16}", ObjCClassList.Address) << "\n";
+      else
+        dbgs() << "none\n";
+
+      dbgs() << "__mod_init_func: ";
+      if (ModInits.NumPtrs)
+        dbgs() << ModInits.NumPtrs << " pointer(s) at "
+               << formatv("{0:x16}", ModInits.Address) << "\n";
+      else
+        dbgs() << "none\n";
+    });
 
     MP.registerInitInfo(JD, ObjCImageInfoAddr, std::move(ModInits),
                         std::move(ObjCSelRefs), std::move(ObjCClassList));
