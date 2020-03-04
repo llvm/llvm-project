@@ -2032,11 +2032,13 @@ CodeGenFunction::GenerateCopyHelperFunction(const CGBlockInfo &blockInfo) {
   FunctionDecl *FD = FunctionDecl::Create(
       C, C.getTranslationUnitDecl(), SourceLocation(), SourceLocation(), II,
       FunctionTy, nullptr, SC_Static, false, false);
-
   setBlockHelperAttributesVisibility(blockInfo.CapturesNonExternalType, Fn, FI,
                                      CGM);
+  // This is necessary to avoid inheriting the previous line number.
+  FD->setImplicit();
   StartFunction(FD, ReturnTy, Fn, FI, args);
-  ApplyDebugLocation NL{*this, blockInfo.getBlockExpr()->getBeginLoc()};
+  auto AL = ApplyDebugLocation::CreateArtificial(*this);
+
   llvm::Type *structPtrTy = blockInfo.StructureType->getPointerTo();
 
   Address src = GetAddrOfLocalVar(&SrcDecl);
@@ -2227,10 +2229,12 @@ CodeGenFunction::GenerateDestroyHelperFunction(const CGBlockInfo &blockInfo) {
 
   setBlockHelperAttributesVisibility(blockInfo.CapturesNonExternalType, Fn, FI,
                                      CGM);
+  // This is necessary to avoid inheriting the previous line number.
+  FD->setImplicit();
   StartFunction(FD, ReturnTy, Fn, FI, args);
   markAsIgnoreThreadCheckingAtRuntime(Fn);
 
-  ApplyDebugLocation NL{*this, blockInfo.getBlockExpr()->getBeginLoc()};
+  auto AL = ApplyDebugLocation::CreateArtificial(*this);
 
   llvm::Type *structPtrTy = blockInfo.StructureType->getPointerTo();
 

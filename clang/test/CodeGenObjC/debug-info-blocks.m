@@ -17,13 +17,17 @@
 // CHECK-NOT: ret
 // CHECK: call {{.*}}, !dbg ![[DBG_LINE:[0-9]+]]
 // CHECK-NOT: ret
-// CHECK: load {{.*}}, !dbg ![[COPY_LINE:[0-9]+]]
-// CHECK: ret void, !dbg ![[COPY_LINE]]
-// CHECK: define {{.*}} @__destroy_helper_block_{{.*}}(i8* %0)
+// CHECK: load {{.*}}, !dbg ![[DBG_LINE]]
+// CHECK: ret {{.*}}, !dbg ![[DBG_LINE]]
+// CHECK: define {{.*}} @__destroy_helper_block_{{.*}}(i8*
 // CHECK-NOT: ret
 // CHECK: load {{.*}}, !dbg ![[DESTROY_LINE:[0-9]+]]
-// CHECK: ret void, !dbg ![[DESTROY_LINE]]
+// CHECK: ret {{.*}}, !dbg ![[DESTROY_LINE]]
 
+// CHECK-DAG: [[DBG_LINE]] = !DILocation(line: 0, scope: ![[COPY_SP:[0-9]+]])
+// CHECK-DAG: [[COPY_SP]] = distinct !DISubprogram(name: "__copy_helper_block_
+// CHECK-DAG: [[DESTROY_LINE]] = !DILocation(line: 0, scope: ![[DESTROY_SP:[0-9]+]])
+// CHECK-DAG: [[DESTROY_SP]] = distinct !DISubprogram(name: "__destroy_helper_block_
 typedef unsigned int NSUInteger;
 
 @protocol NSObject
@@ -57,11 +61,6 @@ static void run(void (^block)(void))
 - (id)init
 {
     if ((self = [super init])) {
-      // CHECK-DAG: [[DBG_LINE]] = !DILocation(line: 0, scope: ![[COPY_SP:[0-9]+]])
-      // CHECK-DAG: [[COPY_LINE]] = !DILocation(line: [[@LINE+7]], scope: ![[COPY_SP:[0-9]+]])
-      // CHECK-DAG: [[COPY_SP]] = distinct !DISubprogram(name: "__copy_helper_block_8_32o"
-      // CHECK-DAG: [[DESTROY_LINE]] = !DILocation(line: [[@LINE+5]], scope: ![[DESTROY_SP:[0-9]+]])
-      // CHECK-DAG: [[DESTROY_SP]] = distinct !DISubprogram(name: "__destroy_helper_block_8_32o"
       // CHECK-DAG: !DILocalVariable(arg: 1, scope: ![[COPY_SP]], {{.*}}, flags: DIFlagArtificial)
       // CHECK-DAG: !DILocalVariable(arg: 2, scope: ![[COPY_SP]], {{.*}}, flags: DIFlagArtificial)
       // CHECK-DAG: !DILocalVariable(arg: 1, scope: ![[DESTROY_SP]], {{.*}}, flags: DIFlagArtificial)
