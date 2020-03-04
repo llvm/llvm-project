@@ -18,4 +18,4 @@ SECTIONS {
 # CHECK:          bar           00000000 0000000000001000
 
 # CHECK: SYMBOL TABLE:
-# CHECK:     [[ADDR]]         abc                00000000 foo
+# CHECK:     [[ADDR]]         abc  0000000000000000 foo
