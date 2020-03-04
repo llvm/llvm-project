@@ -930,6 +930,9 @@ void DwarfDebug::finishUnitAttributes(const DICompileUnit *DIUnit,
   StringRef SysRoot = DIUnit->getSysRoot();
   if (!SysRoot.empty())
     NewCU.addString(Die, dwarf::DW_AT_LLVM_sysroot, SysRoot);
+  StringRef SDK = DIUnit->getSDK();
+  if (!SDK.empty())
+    NewCU.addString(Die, dwarf::DW_AT_APPLE_sdk, SDK);
 
   // Add DW_str_offsets_base to the unit DIE, except for split units.
   if (useSegmentedStringOffsetsTable() && !useSplitDwarf())

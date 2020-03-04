@@ -497,7 +497,7 @@ private:
         RetainedTypes, GlobalVariables, ImportedEntities, CU->getMacros(),
         CU->getDWOId(), CU->getSplitDebugInlining(),
         CU->getDebugInfoForProfiling(), CU->getNameTableKind(),
-        CU->getRangesBaseAddress(), CU->getSysRoot());
+        CU->getRangesBaseAddress(), CU->getSysRoot(), CU->getSDK());
   }
 
   DILocation *getReplacementMDLocation(DILocation *MLD) {
@@ -765,7 +765,8 @@ LLVMMetadataRef LLVMDIBuilderCreateCompileUnit(
     LLVMBool isOptimized, const char *Flags, size_t FlagsLen,
     unsigned RuntimeVer, const char *SplitName, size_t SplitNameLen,
     LLVMDWARFEmissionKind Kind, unsigned DWOId, LLVMBool SplitDebugInlining,
-    LLVMBool DebugInfoForProfiling, const char *SysRoot, size_t SysRootLen) {
+    LLVMBool DebugInfoForProfiling, const char *SysRoot, size_t SysRootLen,
+    const char *SDK, size_t SDKLen) {
   auto File = unwrapDI<DIFile>(FileRef);
 
   return wrap(unwrap(Builder)->createCompileUnit(
@@ -775,7 +776,7 @@ LLVMMetadataRef LLVMDIBuilderCreateCompileUnit(
       static_cast<DICompileUnit::DebugEmissionKind>(Kind), DWOId,
       SplitDebugInlining, DebugInfoForProfiling,
       DICompileUnit::DebugNameTableKind::Default, false,
-      StringRef(SysRoot, SysRootLen)));
+      StringRef(SysRoot, SysRootLen), StringRef(SDK, SDKLen)));
 }
 
 LLVMMetadataRef
