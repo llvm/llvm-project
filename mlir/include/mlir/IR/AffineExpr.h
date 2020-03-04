@@ -250,26 +250,6 @@ template <typename U> U AffineExpr::cast() const {
 AffineExpr simplifyAffineExpr(AffineExpr expr, unsigned numDims,
                               unsigned numSymbols);
 
-/// Flattens 'expr' into 'flattenedExpr'. Returns true on success or false
-/// if 'expr' could not be flattened (i.e., semi-affine is not yet handled).
-/// See documentation for AffineExprFlattener on how mod's and div's are
-/// flattened.
-bool getFlattenedAffineExpr(AffineExpr expr, unsigned numDims,
-                            unsigned numSymbols,
-                            SmallVectorImpl<int64_t> *flattenedExpr);
-
-/// Flattens the result expressions of the map to their corresponding flattened
-/// forms and set in 'flattenedExprs'. Returns true on success or false
-/// if any expression in the map could not be flattened (i.e., semi-affine is
-/// not yet handled).  For all affine expressions that share the same operands
-/// (like those of an affine map), this method should be used instead of
-/// repeatedly calling getFlattenedAffineExpr since local variables added to
-/// deal with div's and mod's will be reused across expressions.
-bool getFlattenedAffineExprs(
-    AffineMap map, std::vector<SmallVector<int64_t, 8>> *flattenedExprs);
-bool getFlattenedAffineExprs(
-    IntegerSet set, std::vector<SmallVector<int64_t, 8>> *flattenedExprs);
-
 namespace detail {
 template <int N> void bindDims(MLIRContext *ctx) {}
 
