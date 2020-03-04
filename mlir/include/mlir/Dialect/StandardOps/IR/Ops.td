@@ -1122,6 +1122,16 @@ def RemFOp : FloatArithmeticOp<"remf"> {
   let summary = "floating point division remainder operation";
 }
 
+def RsqrtOp : FloatUnaryOp<"rsqrt"> {
+  let summary = "reciprocal of sqrt (1 / sqrt of the specified value)";
+  let description = [{
+    The `rsqrt` operation computes the reciprocal of the square root. It takes
+    one operand and returns one result of the same type. This type may be a
+    float scalar type, a vector whose element type is float, or a tensor of
+    floats. It has no standard attributes.
+  }];
+}
+
 def SignedRemIOp : IntArithmeticOp<"remi_signed"> {
   let summary = "signed integer division remainder operation";
   let hasFolder = 1;
