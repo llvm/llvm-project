@@ -149,6 +149,20 @@ static void handleColorDiagnostics(opt::InputArgList &args) {
   }
 }
 
+static cl::TokenizerCallback getQuotingStyle(opt::InputArgList &args) {
+  if (auto *arg = args.getLastArg(OPT_rsp_quoting)) {
+    StringRef s = arg->getValue();
+    if (s != "windows" && s != "posix")
+      error("invalid response file quoting: " + s);
+    if (s == "windows")
+      return cl::TokenizeWindowsCommandLine;
+    return cl::TokenizeGNUCommandLine;
+  }
+  if (Triple(sys::getProcessTriple()).isOSWindows())
+    return cl::TokenizeWindowsCommandLine;
+  return cl::TokenizeGNUCommandLine;
+}
+
 // Find a file by concatenating given paths.
 static Optional<std::string> findFile(StringRef path1, const Twine &path2) {
   SmallString<128> s;
@@ -164,10 +178,15 @@ opt::InputArgList WasmOptTable::parse(ArrayRef<const char *> argv) {
   unsigned missingIndex;
   unsigned missingCount;
 
-  // Expand response files (arguments in the form of @<filename>)
-  cl::ExpandResponseFiles(saver, cl::TokenizeGNUCommandLine, vec);
-
+  // We need to get the quoting style for response files before parsing all
+  // options so we parse here before and ignore all the options but
+  // --rsp-quoting.
   opt::InputArgList args = this->ParseArgs(vec, missingIndex, missingCount);
+
+  // Expand response files (arguments in the form of @<filename>)
+  // and then parse the argument again.
+  cl::ExpandResponseFiles(saver, getQuotingStyle(args), vec);
+  args = this->ParseArgs(vec, missingIndex, missingCount);
 
   handleColorDiagnostics(args);
   for (auto *arg : args.filtered(OPT_UNKNOWN))

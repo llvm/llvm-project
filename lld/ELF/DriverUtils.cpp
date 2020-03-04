@@ -82,7 +82,7 @@ static cl::TokenizerCallback getQuotingStyle(opt::InputArgList &args) {
       return cl::TokenizeWindowsCommandLine;
     return cl::TokenizeGNUCommandLine;
   }
-  if (Triple(sys::getProcessTriple()).getOS() == Triple::Win32)
+  if (Triple(sys::getProcessTriple()).isOSWindows())
     return cl::TokenizeWindowsCommandLine;
   return cl::TokenizeGNUCommandLine;
 }
