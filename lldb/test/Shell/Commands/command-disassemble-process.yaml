@@ -40,6 +40,15 @@
 # CHECK-NEXT:     0x4008 <+6>: addb   %al, (%rsi)
 # CHECK-NEXT: (lldb) disassemble --address 0xdead
 # CHECK-NEXT: error: Could not find function bounds for address 0xdead
+# CHECK-NEXT: (lldb) disassemble --count 7
+# CHECK-NEXT: command-disassemble-process.exe`main:
+# CHECK-NEXT:     0x4002 <+0>: addb   %al, (%rcx)
+# CHECK-NEXT: ->  0x4004 <+2>: addb   %al, (%rdx)
+# CHECK-NEXT:     0x4006 <+4>: addb   %al, (%rbx)
+# CHECK-NEXT:     0x4008 <+6>: addb   %al, (%rsi)
+# CHECK-NEXT:     0x400a:      addb   %al, (%rdi)
+# CHECK-NEXT:     0x400c:      addb   %cl, (%rax)
+# CHECK-NEXT:     0x400e:      addb   %cl, (%rcx)
 # CHECK-NEXT: (lldb) disassemble --pc --count 7
 # CHECK-NEXT: command-disassemble-process.exe`main:
 # CHECK-NEXT: ->  0x4004 <+2>: addb   %al, (%rdx)
