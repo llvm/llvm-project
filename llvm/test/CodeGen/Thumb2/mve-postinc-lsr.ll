@@ -680,11 +680,386 @@ for.body:                                         ; preds = %for.body, %for.body
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 }
 
+define i8* @signext(i8* %input_row, i8* %input_col, i16 zeroext %output_ch, i16 zeroext %num_cols, i32* nocapture readnone %output_shift, i32* nocapture readnone %output_mult, i32 %out_offset, i32 %col_offset, i32 %row_offset, i16 signext %activation_min, i16 signext %activation_max, i16 zeroext %row_len, i32* nocapture readonly %bias, i8* returned %out) {
+; CHECK-LABEL: signext:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, r9, r10, r11, lr}
+; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, r11, lr}
+; CHECK-NEXT:    .pad #20
+; CHECK-NEXT:    sub sp, #20
+; CHECK-NEXT:    cmp r3, #4
+; CHECK-NEXT:    strd r0, r1, [sp, #12] @ 8-byte Folded Spill
+; CHECK-NEXT:    bne .LBB5_8
+; CHECK-NEXT:  @ %bb.1: @ %for.cond.preheader
+; CHECK-NEXT:    cmp r2, #0
+; CHECK-NEXT:    beq .LBB5_8
+; CHECK-NEXT:  @ %bb.2: @ %for.body.lr.ph
+; CHECK-NEXT:    ldr r7, [sp, #84]
+; CHECK-NEXT:    mov.w r11, #0
+; CHECK-NEXT:    ldr r3, [sp, #16] @ 4-byte Reload
+; CHECK-NEXT:    ldr r0, [sp, #68]
+; CHECK-NEXT:    add.w r1, r3, r7, lsl #1
+; CHECK-NEXT:    str r1, [sp, #8] @ 4-byte Spill
+; CHECK-NEXT:    adds r1, r3, r7
+; CHECK-NEXT:    str r1, [sp, #4] @ 4-byte Spill
+; CHECK-NEXT:    add.w r1, r7, r7, lsl #1
+; CHECK-NEXT:    vdup.16 q0, r0
+; CHECK-NEXT:    adds r0, r3, r1
+; CHECK-NEXT:    str r0, [sp] @ 4-byte Spill
+; CHECK-NEXT:    adds r0, r7, #7
+; CHECK-NEXT:    lsr.w r9, r0, #3
+; CHECK-NEXT:    b .LBB5_5
+; CHECK-NEXT:  .LBB5_3: @ in Loop: Header=BB5_5 Depth=1
+; CHECK-NEXT:    mov r10, r12
+; CHECK-NEXT:    mov r8, r12
+; CHECK-NEXT:    mov r6, r12
+; CHECK-NEXT:  .LBB5_4: @ %for.cond.cleanup23
+; CHECK-NEXT:    @ in Loop: Header=BB5_5 Depth=1
+; CHECK-NEXT:    ldr r1, [sp, #92]
+; CHECK-NEXT:    add.w r0, r8, r10
+; CHECK-NEXT:    add r0, r6
+; CHECK-NEXT:    add r0, r12
+; CHECK-NEXT:    strb.w r0, [r1, r11]
+; CHECK-NEXT:    add.w r11, r11, #1
+; CHECK-NEXT:    cmp r11, r2
+; CHECK-NEXT:    beq .LBB5_8
+; CHECK-NEXT:  .LBB5_5: @ %for.body
+; CHECK-NEXT:    @ =>This Loop Header: Depth=1
+; CHECK-NEXT:    @ Child Loop BB5_7 Depth 2
+; CHECK-NEXT:    ldr r0, [sp, #88]
+; CHECK-NEXT:    subs.w lr, r9, r9
+; CHECK-NEXT:    ldr.w r12, [r0, r11, lsl #2]
+; CHECK-NEXT:    ble .LBB5_3
+; CHECK-NEXT:  @ %bb.6: @ %for.body24.preheader
+; CHECK-NEXT:    @ in Loop: Header=BB5_5 Depth=1
+; CHECK-NEXT:    ldr r3, [sp, #84]
+; CHECK-NEXT:    mov r6, r12
+; CHECK-NEXT:    ldr r0, [sp, #12] @ 4-byte Reload
+; CHECK-NEXT:    dlstp.16 lr, r3
+; CHECK-NEXT:    ldr r1, [sp, #16] @ 4-byte Reload
+; CHECK-NEXT:    mov r8, r12
+; CHECK-NEXT:    mla r5, r11, r3, r0
+; CHECK-NEXT:    ldr r0, [sp, #8] @ 4-byte Reload
+; CHECK-NEXT:    ldrd r4, r7, [sp] @ 8-byte Folded Reload
+; CHECK-NEXT:    mov r10, r12
+; CHECK-NEXT:  .LBB5_7: @ %for.body24
+; CHECK-NEXT:    @ Parent Loop BB5_5 Depth=1
+; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2
+; CHECK-NEXT:    vldrb.s16 q1, [r4], #8
+; CHECK-NEXT:    vadd.i16 q2, q1, q0
+; CHECK-NEXT:    vldrb.s16 q1, [r5], #8
+; CHECK-NEXT:    vmlava.s16 r12, q1, q2
+; CHECK-NEXT:    vldrb.s16 q2, [r0], #8
+; CHECK-NEXT:    vadd.i16 q2, q2, q0
+; CHECK-NEXT:    vmlava.s16 r6, q1, q2
+; CHECK-NEXT:    vldrb.s16 q2, [r7], #8
+; CHECK-NEXT:    vadd.i16 q2, q2, q0
+; CHECK-NEXT:    vmlava.s16 r8, q1, q2
+; CHECK-NEXT:    vldrb.s16 q2, [r1], #8
+; CHECK-NEXT:    vadd.i16 q2, q2, q0
+; CHECK-NEXT:    vmlava.s16 r10, q1, q2
+; CHECK-NEXT:    letp lr, .LBB5_7
+; CHECK-NEXT:    b .LBB5_4
+; CHECK-NEXT:  .LBB5_8: @ %if.end
+; CHECK-NEXT:    ldr r0, [sp, #92]
+; CHECK-NEXT:    add sp, #20
+; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11, pc}
+entry:
+  %cmp = icmp eq i16 %num_cols, 4
+  br i1 %cmp, label %for.cond.preheader, label %if.end
+
+for.cond.preheader:                               ; preds = %entry
+  %conv2 = zext i16 %output_ch to i32
+  %cmp3127 = icmp eq i16 %output_ch, 0
+  br i1 %cmp3127, label %if.end, label %for.body.lr.ph
+
+for.body.lr.ph:                                   ; preds = %for.cond.preheader
+  %conv5 = zext i16 %row_len to i32
+  %add.ptr9 = getelementptr inbounds i8, i8* %input_col, i32 %conv5
+  %mul11 = shl nuw nsw i32 %conv5, 1
+  %add.ptr12 = getelementptr inbounds i8, i8* %input_col, i32 %mul11
+  %mul14 = mul nuw nsw i32 %conv5, 3
+  %add.ptr15 = getelementptr inbounds i8, i8* %input_col, i32 %mul14
+  %add = add nuw nsw i32 %conv5, 7
+  %div = lshr i32 %add, 3
+  %conv25 = trunc i32 %col_offset to i16
+  %.splatinsert.i = insertelement <8 x i16> undef, i16 %conv25, i32 0
+  %.splat.i = shufflevector <8 x i16> %.splatinsert.i, <8 x i16> undef, <8 x i32> zeroinitializer
+  br label %for.body
+
+for.body:                                         ; preds = %for.cond.cleanup23, %for.body.lr.ph
+  %i_out_ch.0129 = phi i32 [ 0, %for.body.lr.ph ], [ %inc37, %for.cond.cleanup23 ]
+  %i_row_loop.0128 = phi i32 [ undef, %for.body.lr.ph ], [ %i_row_loop.1.lcssa, %for.cond.cleanup23 ]
+  %arrayidx = getelementptr inbounds i32, i32* %bias, i32 %i_out_ch.0129
+  %0 = load i32, i32* %arrayidx, align 4
+  %cmp21111 = icmp slt i32 %i_row_loop.0128, %div
+  br i1 %cmp21111, label %for.body24.preheader, label %for.cond.cleanup23
+
+for.body24.preheader:                             ; preds = %for.body
+  %mul = mul nuw nsw i32 %i_out_ch.0129, %conv5
+  %add.ptr = getelementptr inbounds i8, i8* %input_row, i32 %mul
+  br label %for.body24
+
+for.cond.cleanup23:                               ; preds = %for.body24, %for.body
+  %acc_0.0.lcssa = phi i32 [ %0, %for.body ], [ %21, %for.body24 ]
+  %acc_1.0.lcssa = phi i32 [ %0, %for.body ], [ %22, %for.body24 ]
+  %acc_2.0.lcssa = phi i32 [ %0, %for.body ], [ %23, %for.body24 ]
+  %acc_3.0.lcssa = phi i32 [ %0, %for.body ], [ %24, %for.body24 ]
+  %i_row_loop.1.lcssa = phi i32 [ %i_row_loop.0128, %for.body ], [ %div, %for.body24 ]
+  %add31 = add nsw i32 %acc_1.0.lcssa, %acc_0.0.lcssa
+  %add32 = add nsw i32 %add31, %acc_2.0.lcssa
+  %add33 = add nsw i32 %add32, %acc_3.0.lcssa
+  %conv34 = trunc i32 %add33 to i8
+  %arrayidx35 = getelementptr inbounds i8, i8* %out, i32 %i_out_ch.0129
+  store i8 %conv34, i8* %arrayidx35, align 1
+  %inc37 = add nuw nsw i32 %i_out_ch.0129, 1
+  %exitcond133 = icmp eq i32 %inc37, %conv2
+  br i1 %exitcond133, label %if.end, label %for.body
+
+for.body24:                                       ; preds = %for.body24, %for.body24.preheader
+  %row_len_tmp.0122 = phi i32 [ %sub, %for.body24 ], [ %conv5, %for.body24.preheader ]
+  %ip_r0.0121 = phi i8* [ %add.ptr26, %for.body24 ], [ %add.ptr, %for.body24.preheader ]
+  %ip_c0.0120 = phi i8* [ %add.ptr27, %for.body24 ], [ %input_col, %for.body24.preheader ]
+  %ip_c1.0119 = phi i8* [ %add.ptr28, %for.body24 ], [ %add.ptr9, %for.body24.preheader ]
+  %ip_c2.0118 = phi i8* [ %add.ptr29, %for.body24 ], [ %add.ptr12, %for.body24.preheader ]
+  %i_row_loop.1117 = phi i32 [ %inc, %for.body24 ], [ %i_row_loop.0128, %for.body24.preheader ]
+  %ip_c3.0116 = phi i8* [ %add.ptr30, %for.body24 ], [ %add.ptr15, %for.body24.preheader ]
+  %acc_3.0115 = phi i32 [ %24, %for.body24 ], [ %0, %for.body24.preheader ]
+  %acc_2.0114 = phi i32 [ %23, %for.body24 ], [ %0, %for.body24.preheader ]
+  %acc_1.0113 = phi i32 [ %22, %for.body24 ], [ %0, %for.body24.preheader ]
+  %acc_0.0112 = phi i32 [ %21, %for.body24 ], [ %0, %for.body24.preheader ]
+  %1 = tail call <8 x i1> @llvm.arm.mve.vctp16(i32 %row_len_tmp.0122)
+  %sub = add nsw i32 %row_len_tmp.0122, -8
+  %2 = bitcast i8* %ip_r0.0121 to <8 x i8>*
+  %3 = tail call <8 x i8> @llvm.masked.load.v8i8.p0v8i8(<8 x i8>* %2, i32 1, <8 x i1> %1, <8 x i8> zeroinitializer)
+  %4 = sext <8 x i8> %3 to <8 x i16>
+  %add.ptr26 = getelementptr inbounds i8, i8* %ip_r0.0121, i32 8
+  %5 = bitcast i8* %ip_c0.0120 to <8 x i8>*
+  %6 = tail call <8 x i8> @llvm.masked.load.v8i8.p0v8i8(<8 x i8>* %5, i32 1, <8 x i1> %1, <8 x i8> zeroinitializer)
+  %7 = sext <8 x i8> %6 to <8 x i16>
+  %add.ptr27 = getelementptr inbounds i8, i8* %ip_c0.0120, i32 8
+  %8 = tail call <8 x i16> @llvm.arm.mve.add.predicated.v8i16.v8i1(<8 x i16> %7, <8 x i16> %.splat.i, <8 x i1> %1, <8 x i16> undef)
+  %9 = bitcast i8* %ip_c1.0119 to <8 x i8>*
+  %10 = tail call <8 x i8> @llvm.masked.load.v8i8.p0v8i8(<8 x i8>* %9, i32 1, <8 x i1> %1, <8 x i8> zeroinitializer)
+  %11 = sext <8 x i8> %10 to <8 x i16>
+  %add.ptr28 = getelementptr inbounds i8, i8* %ip_c1.0119, i32 8
+  %12 = tail call <8 x i16> @llvm.arm.mve.add.predicated.v8i16.v8i1(<8 x i16> %11, <8 x i16> %.splat.i, <8 x i1> %1, <8 x i16> undef)
+  %13 = bitcast i8* %ip_c2.0118 to <8 x i8>*
+  %14 = tail call <8 x i8> @llvm.masked.load.v8i8.p0v8i8(<8 x i8>* %13, i32 1, <8 x i1> %1, <8 x i8> zeroinitializer)
+  %15 = sext <8 x i8> %14 to <8 x i16>
+  %add.ptr29 = getelementptr inbounds i8, i8* %ip_c2.0118, i32 8
+  %16 = tail call <8 x i16> @llvm.arm.mve.add.predicated.v8i16.v8i1(<8 x i16> %15, <8 x i16> %.splat.i, <8 x i1> %1, <8 x i16> undef)
+  %17 = bitcast i8* %ip_c3.0116 to <8 x i8>*
+  %18 = tail call <8 x i8> @llvm.masked.load.v8i8.p0v8i8(<8 x i8>* %17, i32 1, <8 x i1> %1, <8 x i8> zeroinitializer)
+  %19 = sext <8 x i8> %18 to <8 x i16>
+  %add.ptr30 = getelementptr inbounds i8, i8* %ip_c3.0116, i32 8
+  %20 = tail call <8 x i16> @llvm.arm.mve.add.predicated.v8i16.v8i1(<8 x i16> %19, <8 x i16> %.splat.i, <8 x i1> %1, <8 x i16> undef)
+  %21 = tail call i32 @llvm.arm.mve.vmldava.predicated.v8i16.v8i1(i32 0, i32 0, i32 0, i32 %acc_0.0112, <8 x i16> %4, <8 x i16> %8, <8 x i1> %1)
+  %22 = tail call i32 @llvm.arm.mve.vmldava.predicated.v8i16.v8i1(i32 0, i32 0, i32 0, i32 %acc_1.0113, <8 x i16> %4, <8 x i16> %12, <8 x i1> %1)
+  %23 = tail call i32 @llvm.arm.mve.vmldava.predicated.v8i16.v8i1(i32 0, i32 0, i32 0, i32 %acc_2.0114, <8 x i16> %4, <8 x i16> %16, <8 x i1> %1)
+  %24 = tail call i32 @llvm.arm.mve.vmldava.predicated.v8i16.v8i1(i32 0, i32 0, i32 0, i32 %acc_3.0115, <8 x i16> %4, <8 x i16> %20, <8 x i1> %1)
+  %inc = add nsw i32 %i_row_loop.1117, 1
+  %exitcond = icmp eq i32 %inc, %div
+  br i1 %exitcond, label %for.cond.cleanup23, label %for.body24
+
+if.end:                                           ; preds = %for.cond.cleanup23, %for.cond.preheader, %entry
+  ret i8* %out
+}
+
+define i8* @signext_optsize(i8* %input_row, i8* %input_col, i16 zeroext %output_ch, i16 zeroext %num_cols, i32* nocapture readnone %output_shift, i32* nocapture readnone %output_mult, i32 %out_offset, i32 %col_offset, i32 %row_offset, i16 signext %activation_min, i16 signext %activation_max, i16 zeroext %row_len, i32* nocapture readonly %bias, i8* returned %out) optsize {
+; CHECK-LABEL: signext_optsize:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, r9, r10, r11, lr}
+; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, r11, lr}
+; CHECK-NEXT:    .pad #20
+; CHECK-NEXT:    sub sp, #20
+; CHECK-NEXT:    cmp r3, #4
+; CHECK-NEXT:    strd r0, r1, [sp, #12] @ 8-byte Folded Spill
+; CHECK-NEXT:    bne .LBB6_8
+; CHECK-NEXT:  @ %bb.1: @ %for.cond.preheader
+; CHECK-NEXT:    cmp r2, #0
+; CHECK-NEXT:    beq .LBB6_8
+; CHECK-NEXT:  @ %bb.2: @ %for.body.lr.ph
+; CHECK-NEXT:    ldr r7, [sp, #84]
+; CHECK-NEXT:    mov.w r11, #0
+; CHECK-NEXT:    ldr r3, [sp, #16] @ 4-byte Reload
+; CHECK-NEXT:    ldr r0, [sp, #68]
+; CHECK-NEXT:    add.w r1, r3, r7, lsl #1
+; CHECK-NEXT:    str r1, [sp, #8] @ 4-byte Spill
+; CHECK-NEXT:    adds r1, r3, r7
+; CHECK-NEXT:    str r1, [sp, #4] @ 4-byte Spill
+; CHECK-NEXT:    add.w r1, r7, r7, lsl #1
+; CHECK-NEXT:    vdup.16 q0, r0
+; CHECK-NEXT:    adds r0, r3, r1
+; CHECK-NEXT:    str r0, [sp] @ 4-byte Spill
+; CHECK-NEXT:    adds r0, r7, #7
+; CHECK-NEXT:    lsr.w r9, r0, #3
+; CHECK-NEXT:  .LBB6_3: @ %for.body
+; CHECK-NEXT:    @ =>This Loop Header: Depth=1
+; CHECK-NEXT:    @ Child Loop BB6_5 Depth 2
+; CHECK-NEXT:    ldr r0, [sp, #88]
+; CHECK-NEXT:    subs.w lr, r9, r9
+; CHECK-NEXT:    ldr.w r12, [r0, r11, lsl #2]
+; CHECK-NEXT:    ble .LBB6_6
+; CHECK-NEXT:  @ %bb.4: @ %for.body24.preheader
+; CHECK-NEXT:    @ in Loop: Header=BB6_3 Depth=1
+; CHECK-NEXT:    ldr r3, [sp, #84]
+; CHECK-NEXT:    mov r6, r12
+; CHECK-NEXT:    ldr r0, [sp, #12] @ 4-byte Reload
+; CHECK-NEXT:    dlstp.16 lr, r3
+; CHECK-NEXT:    ldr r1, [sp, #16] @ 4-byte Reload
+; CHECK-NEXT:    mov r8, r12
+; CHECK-NEXT:    mla r5, r11, r3, r0
+; CHECK-NEXT:    ldr r0, [sp, #8] @ 4-byte Reload
+; CHECK-NEXT:    ldrd r4, r7, [sp] @ 8-byte Folded Reload
+; CHECK-NEXT:    mov r10, r12
+; CHECK-NEXT:  .LBB6_5: @ %for.body24
+; CHECK-NEXT:    @ Parent Loop BB6_3 Depth=1
+; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2
+; CHECK-NEXT:    vldrb.s16 q1, [r4], #8
+; CHECK-NEXT:    vadd.i16 q2, q1, q0
+; CHECK-NEXT:    vldrb.s16 q1, [r5], #8
+; CHECK-NEXT:    vmlava.s16 r12, q1, q2
+; CHECK-NEXT:    vldrb.s16 q2, [r0], #8
+; CHECK-NEXT:    vadd.i16 q2, q2, q0
+; CHECK-NEXT:    vmlava.s16 r6, q1, q2
+; CHECK-NEXT:    vldrb.s16 q2, [r7], #8
+; CHECK-NEXT:    vadd.i16 q2, q2, q0
+; CHECK-NEXT:    vmlava.s16 r8, q1, q2
+; CHECK-NEXT:    vldrb.s16 q2, [r1], #8
+; CHECK-NEXT:    vadd.i16 q2, q2, q0
+; CHECK-NEXT:    vmlava.s16 r10, q1, q2
+; CHECK-NEXT:    letp lr, .LBB6_5
+; CHECK-NEXT:    b .LBB6_7
+; CHECK-NEXT:  .LBB6_6: @ in Loop: Header=BB6_3 Depth=1
+; CHECK-NEXT:    mov r10, r12
+; CHECK-NEXT:    mov r8, r12
+; CHECK-NEXT:    mov r6, r12
+; CHECK-NEXT:  .LBB6_7: @ %for.cond.cleanup23
+; CHECK-NEXT:    @ in Loop: Header=BB6_3 Depth=1
+; CHECK-NEXT:    ldr r1, [sp, #92]
+; CHECK-NEXT:    add.w r0, r8, r10
+; CHECK-NEXT:    add r0, r6
+; CHECK-NEXT:    add r0, r12
+; CHECK-NEXT:    strb.w r0, [r1, r11]
+; CHECK-NEXT:    add.w r11, r11, #1
+; CHECK-NEXT:    cmp r11, r2
+; CHECK-NEXT:    bne .LBB6_3
+; CHECK-NEXT:  .LBB6_8: @ %if.end
+; CHECK-NEXT:    ldr r0, [sp, #92]
+; CHECK-NEXT:    add sp, #20
+; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11, pc}
+entry:
+  %cmp = icmp eq i16 %num_cols, 4
+  br i1 %cmp, label %for.cond.preheader, label %if.end
+
+for.cond.preheader:                               ; preds = %entry
+  %conv2 = zext i16 %output_ch to i32
+  %cmp3127 = icmp eq i16 %output_ch, 0
+  br i1 %cmp3127, label %if.end, label %for.body.lr.ph
+
+for.body.lr.ph:                                   ; preds = %for.cond.preheader
+  %conv5 = zext i16 %row_len to i32
+  %add.ptr9 = getelementptr inbounds i8, i8* %input_col, i32 %conv5
+  %mul11 = shl nuw nsw i32 %conv5, 1
+  %add.ptr12 = getelementptr inbounds i8, i8* %input_col, i32 %mul11
+  %mul14 = mul nuw nsw i32 %conv5, 3
+  %add.ptr15 = getelementptr inbounds i8, i8* %input_col, i32 %mul14
+  %add = add nuw nsw i32 %conv5, 7
+  %div = lshr i32 %add, 3
+  %conv25 = trunc i32 %col_offset to i16
+  %.splatinsert.i = insertelement <8 x i16> undef, i16 %conv25, i32 0
+  %.splat.i = shufflevector <8 x i16> %.splatinsert.i, <8 x i16> undef, <8 x i32> zeroinitializer
+  br label %for.body
+
+for.body:                                         ; preds = %for.cond.cleanup23, %for.body.lr.ph
+  %i_out_ch.0129 = phi i32 [ 0, %for.body.lr.ph ], [ %inc37, %for.cond.cleanup23 ]
+  %i_row_loop.0128 = phi i32 [ undef, %for.body.lr.ph ], [ %i_row_loop.1.lcssa, %for.cond.cleanup23 ]
+  %arrayidx = getelementptr inbounds i32, i32* %bias, i32 %i_out_ch.0129
+  %0 = load i32, i32* %arrayidx, align 4
+  %cmp21111 = icmp slt i32 %i_row_loop.0128, %div
+  br i1 %cmp21111, label %for.body24.preheader, label %for.cond.cleanup23
+
+for.body24.preheader:                             ; preds = %for.body
+  %mul = mul nuw nsw i32 %i_out_ch.0129, %conv5
+  %add.ptr = getelementptr inbounds i8, i8* %input_row, i32 %mul
+  br label %for.body24
+
+for.cond.cleanup23:                               ; preds = %for.body24, %for.body
+  %acc_0.0.lcssa = phi i32 [ %0, %for.body ], [ %21, %for.body24 ]
+  %acc_1.0.lcssa = phi i32 [ %0, %for.body ], [ %22, %for.body24 ]
+  %acc_2.0.lcssa = phi i32 [ %0, %for.body ], [ %23, %for.body24 ]
+  %acc_3.0.lcssa = phi i32 [ %0, %for.body ], [ %24, %for.body24 ]
+  %i_row_loop.1.lcssa = phi i32 [ %i_row_loop.0128, %for.body ], [ %div, %for.body24 ]
+  %add31 = add nsw i32 %acc_1.0.lcssa, %acc_0.0.lcssa
+  %add32 = add nsw i32 %add31, %acc_2.0.lcssa
+  %add33 = add nsw i32 %add32, %acc_3.0.lcssa
+  %conv34 = trunc i32 %add33 to i8
+  %arrayidx35 = getelementptr inbounds i8, i8* %out, i32 %i_out_ch.0129
+  store i8 %conv34, i8* %arrayidx35, align 1
+  %inc37 = add nuw nsw i32 %i_out_ch.0129, 1
+  %exitcond133 = icmp eq i32 %inc37, %conv2
+  br i1 %exitcond133, label %if.end, label %for.body
+
+for.body24:                                       ; preds = %for.body24, %for.body24.preheader
+  %row_len_tmp.0122 = phi i32 [ %sub, %for.body24 ], [ %conv5, %for.body24.preheader ]
+  %ip_r0.0121 = phi i8* [ %add.ptr26, %for.body24 ], [ %add.ptr, %for.body24.preheader ]
+  %ip_c0.0120 = phi i8* [ %add.ptr27, %for.body24 ], [ %input_col, %for.body24.preheader ]
+  %ip_c1.0119 = phi i8* [ %add.ptr28, %for.body24 ], [ %add.ptr9, %for.body24.preheader ]
+  %ip_c2.0118 = phi i8* [ %add.ptr29, %for.body24 ], [ %add.ptr12, %for.body24.preheader ]
+  %i_row_loop.1117 = phi i32 [ %inc, %for.body24 ], [ %i_row_loop.0128, %for.body24.preheader ]
+  %ip_c3.0116 = phi i8* [ %add.ptr30, %for.body24 ], [ %add.ptr15, %for.body24.preheader ]
+  %acc_3.0115 = phi i32 [ %24, %for.body24 ], [ %0, %for.body24.preheader ]
+  %acc_2.0114 = phi i32 [ %23, %for.body24 ], [ %0, %for.body24.preheader ]
+  %acc_1.0113 = phi i32 [ %22, %for.body24 ], [ %0, %for.body24.preheader ]
+  %acc_0.0112 = phi i32 [ %21, %for.body24 ], [ %0, %for.body24.preheader ]
+  %1 = tail call <8 x i1> @llvm.arm.mve.vctp16(i32 %row_len_tmp.0122)
+  %sub = add nsw i32 %row_len_tmp.0122, -8
+  %2 = bitcast i8* %ip_r0.0121 to <8 x i8>*
+  %3 = tail call <8 x i8> @llvm.masked.load.v8i8.p0v8i8(<8 x i8>* %2, i32 1, <8 x i1> %1, <8 x i8> zeroinitializer)
+  %4 = sext <8 x i8> %3 to <8 x i16>
+  %add.ptr26 = getelementptr inbounds i8, i8* %ip_r0.0121, i32 8
+  %5 = bitcast i8* %ip_c0.0120 to <8 x i8>*
+  %6 = tail call <8 x i8> @llvm.masked.load.v8i8.p0v8i8(<8 x i8>* %5, i32 1, <8 x i1> %1, <8 x i8> zeroinitializer)
+  %7 = sext <8 x i8> %6 to <8 x i16>
+  %add.ptr27 = getelementptr inbounds i8, i8* %ip_c0.0120, i32 8
+  %8 = tail call <8 x i16> @llvm.arm.mve.add.predicated.v8i16.v8i1(<8 x i16> %7, <8 x i16> %.splat.i, <8 x i1> %1, <8 x i16> undef)
+  %9 = bitcast i8* %ip_c1.0119 to <8 x i8>*
+  %10 = tail call <8 x i8> @llvm.masked.load.v8i8.p0v8i8(<8 x i8>* %9, i32 1, <8 x i1> %1, <8 x i8> zeroinitializer)
+  %11 = sext <8 x i8> %10 to <8 x i16>
+  %add.ptr28 = getelementptr inbounds i8, i8* %ip_c1.0119, i32 8
+  %12 = tail call <8 x i16> @llvm.arm.mve.add.predicated.v8i16.v8i1(<8 x i16> %11, <8 x i16> %.splat.i, <8 x i1> %1, <8 x i16> undef)
+  %13 = bitcast i8* %ip_c2.0118 to <8 x i8>*
+  %14 = tail call <8 x i8> @llvm.masked.load.v8i8.p0v8i8(<8 x i8>* %13, i32 1, <8 x i1> %1, <8 x i8> zeroinitializer)
+  %15 = sext <8 x i8> %14 to <8 x i16>
+  %add.ptr29 = getelementptr inbounds i8, i8* %ip_c2.0118, i32 8
+  %16 = tail call <8 x i16> @llvm.arm.mve.add.predicated.v8i16.v8i1(<8 x i16> %15, <8 x i16> %.splat.i, <8 x i1> %1, <8 x i16> undef)
+  %17 = bitcast i8* %ip_c3.0116 to <8 x i8>*
+  %18 = tail call <8 x i8> @llvm.masked.load.v8i8.p0v8i8(<8 x i8>* %17, i32 1, <8 x i1> %1, <8 x i8> zeroinitializer)
+  %19 = sext <8 x i8> %18 to <8 x i16>
+  %add.ptr30 = getelementptr inbounds i8, i8* %ip_c3.0116, i32 8
+  %20 = tail call <8 x i16> @llvm.arm.mve.add.predicated.v8i16.v8i1(<8 x i16> %19, <8 x i16> %.splat.i, <8 x i1> %1, <8 x i16> undef)
+  %21 = tail call i32 @llvm.arm.mve.vmldava.predicated.v8i16.v8i1(i32 0, i32 0, i32 0, i32 %acc_0.0112, <8 x i16> %4, <8 x i16> %8, <8 x i1> %1)
+  %22 = tail call i32 @llvm.arm.mve.vmldava.predicated.v8i16.v8i1(i32 0, i32 0, i32 0, i32 %acc_1.0113, <8 x i16> %4, <8 x i16> %12, <8 x i1> %1)
+  %23 = tail call i32 @llvm.arm.mve.vmldava.predicated.v8i16.v8i1(i32 0, i32 0, i32 0, i32 %acc_2.0114, <8 x i16> %4, <8 x i16> %16, <8 x i1> %1)
+  %24 = tail call i32 @llvm.arm.mve.vmldava.predicated.v8i16.v8i1(i32 0, i32 0, i32 0, i32 %acc_3.0115, <8 x i16> %4, <8 x i16> %20, <8 x i1> %1)
+  %inc = add nsw i32 %i_row_loop.1117, 1
+  %exitcond = icmp eq i32 %inc, %div
+  br i1 %exitcond, label %for.cond.cleanup23, label %for.body24
+
+if.end:                                           ; preds = %for.cond.cleanup23, %for.cond.preheader, %entry
+  ret i8* %out
+}
+
 declare <16 x i1> @llvm.arm.mve.vctp8(i32)
+declare <8 x i1> @llvm.arm.mve.vctp16(i32)
 declare i32 @llvm.arm.mve.pred.v2i.v16i1(<16 x i1>)
-declare <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>*, i32 immarg, <4 x i1>, <4 x float>) #1
-declare void @llvm.masked.store.v4f32.p0v4f32(<4 x float>, <4 x float>*, i32 immarg, <4 x i1>) #2
+declare <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>*, i32 immarg, <4 x i1>, <4 x float>)
+declare <8 x i8> @llvm.masked.load.v8i8.p0v8i8(<8 x i8>*, i32, <8 x i1>, <8 x i8>)
 declare <16 x i8> @llvm.masked.load.v16i8.p0v16i8(<16 x i8>*, i32 immarg, <16 x i1>, <16 x i8>)
+declare void @llvm.masked.store.v4f32.p0v4f32(<4 x float>, <4 x float>*, i32 immarg, <4 x i1>)
 declare i32 @llvm.experimental.vector.reduce.add.v16i8(<16 x i32> %ext4)
 declare i32 @llvm.arm.mve.vmldava.v8i16(i32, i32, i32, i32, <8 x i16>, <8 x i16>)
 declare i32 @llvm.arm.mve.vmldava.predicated.v16i8.v16i1(i32, i32, i32, i32, <16 x i8>, <16 x i8>, <16 x i1>)
+declare i32 @llvm.arm.mve.vmldava.predicated.v8i16.v8i1(i32, i32, i32, i32, <8 x i16>, <8 x i16>, <8 x i1>)
+declare <8 x i16> @llvm.arm.mve.add.predicated.v8i16.v8i1(<8 x i16>, <8 x i16>, <8 x i1>, <8 x i16>)
