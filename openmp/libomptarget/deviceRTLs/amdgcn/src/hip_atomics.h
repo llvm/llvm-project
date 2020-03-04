@@ -11,29 +11,32 @@
 
 #include "target_impl.h"
 
-DEVICE unsigned atomicAdd(unsigned *address, unsigned val);
-DEVICE int atomicAdd(int *address, int val);
-DEVICE unsigned long long atomicAdd(unsigned long long *address,
-                                    unsigned long long val);
-
+// inc requires an amdgcn specific intrinsic which is not yet available
 DEVICE unsigned atomicInc(unsigned *address);
 DEVICE unsigned atomicInc(unsigned *address, unsigned max);
 DEVICE int atomicInc(int *address);
 
-DEVICE int atomicMax(int *address, int val);
-DEVICE unsigned atomicMax(unsigned *address, unsigned val);
-DEVICE unsigned long long atomicMax(unsigned long long *address,
-                                    unsigned long long val);
+namespace {
 
-DEVICE int atomicExch(int *address, int val);
-DEVICE unsigned atomicExch(unsigned *address, unsigned val);
-DEVICE unsigned long long atomicExch(unsigned long long *address,
-                                     unsigned long long val);
+template <typename T> DEVICE T atomicAdd(T *address, T val) {
+  return __atomic_fetch_add(address, val, __ATOMIC_SEQ_CST);
+}
 
-DEVICE unsigned atomicCAS(unsigned *address, unsigned compare, unsigned val);
-DEVICE int atomicCAS(int *address, int compare, int val);
-DEVICE unsigned long long atomicCAS(unsigned long long *address,
-                                    unsigned long long compare,
-                                    unsigned long long val);
+template <typename T> DEVICE T atomicMax(T *address, T val) {
+  return __atomic_fetch_max(address, val, __ATOMIC_SEQ_CST);
+}
 
+template <typename T> DEVICE T atomicExch(T *address, T val) {
+  T r;
+  __atomic_exchange(address, &val, &r, __ATOMIC_SEQ_CST);
+  return r;
+}
+
+template <typename T> DEVICE T atomicCAS(T *address, T compare, T val) {
+  (void)__atomic_compare_exchange(address, &compare, &val, false,
+                                  __ATOMIC_SEQ_CST, __ATOMIC_RELAXED);
+  return compare;
+}
+
+} // namespace
 #endif
