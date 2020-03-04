@@ -118,7 +118,7 @@ StringRef DWARFUnitIndex::getColumnHeader(DWARFSectionKind DS) {
     CASE(MACINFO);
     CASE(MACRO);
   }
-  llvm_unreachable("unknown DWARFSectionKind");
+  return "<unknown>";
 }
 
 void DWARFUnitIndex::dump(raw_ostream &OS) const {
