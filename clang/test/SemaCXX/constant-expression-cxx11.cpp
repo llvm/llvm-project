@@ -600,6 +600,10 @@ namespace CopyCtor {
   constexpr B c = b;
   static_assert(c.arr[2] == 3, "");
   static_assert(c.arr[7] == 0, "");
+
+  // OK: the copy ctor for X doesn't read any members.
+  struct X { struct Y {} y; } x1;
+  constexpr X x2 = x1;
 }
 
 constexpr int selfref[2][2][2] = {
