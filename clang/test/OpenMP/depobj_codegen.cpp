@@ -38,6 +38,7 @@ int main(int argc, char **argv) {
 }
 
 // CHECK-LABEL: @main
+// CHECK: [[B_ADDR:%.+]] = alloca i8*,
 // CHECK: [[GTID:%.+]] = call i32 @__kmpc_global_thread_num(
 // CHECK: [[DEP_ADDR_VOID:%.+]] = call i8* @__kmpc_alloc(i32 [[GTID]], i64 72, i8* null)
 // CHECK: [[DEP_ADDR:%.+]] = bitcast i8* [[DEP_ADDR_VOID]] to [3 x %struct.kmp_depend_info]*
@@ -61,8 +62,11 @@ int main(int argc, char **argv) {
 // CHECK: [[BASE_ADDR:%.+]] = getelementptr inbounds [3 x %struct.kmp_depend_info], [3 x %struct.kmp_depend_info]* [[DEP_ADDR]], i{{.+}} 0, i{{.+}} 0
 // CHECK: [[DEP:%.+]] = bitcast %struct.kmp_depend_info* [[BASE_ADDR]] to i8*
 // CHECK: store i8* [[DEP]], i8** [[MAIN_A]],
+// CHECK: [[B:%.+]] = load i8*, i8** [[B_ADDR]],
+// CHECK: call void @__kmpc_free(i32 [[GTID]], i8* [[B]], i8* null)
 
 // CHECK-LABEL: tmain
+// CHECK: [[ARGC_ADDR:%.+]] = alloca i8*,
 // CHECK: [[GTID:%.+]] = call i32 @__kmpc_global_thread_num(
 // CHECK: [[DEP_ADDR_VOID:%.+]] = call i8* @__kmpc_alloc(i32 [[GTID]], i64 48, i8* null)
 // CHECK: [[DEP_ADDR:%.+]] = bitcast i8* [[DEP_ADDR_VOID]] to [2 x %struct.kmp_depend_info]*
@@ -79,5 +83,7 @@ int main(int argc, char **argv) {
 // CHECK: [[BASE_ADDR:%.+]] = getelementptr inbounds [2 x %struct.kmp_depend_info], [2 x %struct.kmp_depend_info]* [[DEP_ADDR]], i{{.+}} 0, i{{.+}} 0
 // CHECK: [[DEP:%.+]] = bitcast %struct.kmp_depend_info* [[BASE_ADDR]] to i8*
 // CHECK: store i8* [[DEP]], i8** [[TMAIN_A]],
+// CHECK: [[ARGC:%.+]] = load i8*, i8** [[ARGC_ADDR]],
+// CHECK: call void @__kmpc_free(i32 [[GTID]], i8* [[ARGC]], i8* null)
 
 #endif
