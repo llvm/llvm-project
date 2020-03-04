@@ -274,29 +274,75 @@ ParallelLowering::matchAndRewrite(ParallelOp parallelOp,
   Location loc = parallelOp.getLoc();
   BlockAndValueMapping mapping;
 
-  if (parallelOp.getNumResults() != 0) {
-    // TODO: Implement lowering of parallelOp with reductions.
-    return matchFailure();
-  }
-
   // For a parallel loop, we essentially need to create an n-dimensional loop
   // nest. We do this by translating to loop.for ops and have those lowered in
-  // a further rewrite.
+  // a further rewrite. If a parallel loop contains reductions (and thus returns
+  // values), forward the initial values for the reductions down the loop
+  // hierarchy and bubble up the results by modifying the "yield" terminator.
+  SmallVector<Value, 4> iterArgs = llvm::to_vector<4>(parallelOp.initVals());
+  bool first = true;
+  SmallVector<Value, 4> loopResults(iterArgs);
   for (auto loop_operands :
        llvm::zip(parallelOp.getInductionVars(), parallelOp.lowerBound(),
                  parallelOp.upperBound(), parallelOp.step())) {
     Value iv, lower, upper, step;
     std::tie(iv, lower, upper, step) = loop_operands;
-    ForOp forOp = rewriter.create<ForOp>(loc, lower, upper, step);
+    ForOp forOp = rewriter.create<ForOp>(loc, lower, upper, step, iterArgs);
     mapping.map(iv, forOp.getInductionVar());
+    auto iterRange = forOp.getRegionIterArgs();
+    iterArgs.assign(iterRange.begin(), iterRange.end());
+
+    if (first) {
+      // Store the results of the outermost loop that will be used to replace
+      // the results of the parallel loop when it is fully rewritten.
+      loopResults.assign(forOp.result_begin(), forOp.result_end());
+      first = false;
+    } else {
+      // A loop is constructed with an empty "yield" terminator by default.
+      // Replace it with another "yield" that forwards the results of the nested
+      // loop to the parent loop. We need to explicitly make sure the new
+      // terminator is the last operation in the block because further transfoms
+      // rely on this.
+      rewriter.setInsertionPointToEnd(rewriter.getInsertionBlock());
+      rewriter.replaceOpWithNewOp<YieldOp>(
+          rewriter.getInsertionBlock()->getTerminator(), forOp.getResults());
+    }
+
     rewriter.setInsertionPointToStart(forOp.getBody());
   }
 
   // Now copy over the contents of the body.
-  for (auto &op : parallelOp.getBody()->without_terminator())
-    rewriter.clone(op, mapping);
+  SmallVector<Value, 4> yieldOperands;
+  yieldOperands.reserve(parallelOp.getNumResults());
+  for (auto &op : parallelOp.getBody()->without_terminator()) {
+    // Reduction blocks are handled differently.
+    auto reduce = dyn_cast<ReduceOp>(op);
+    if (!reduce) {
+      rewriter.clone(op, mapping);
+      continue;
+    }
 
-  rewriter.eraseOp(parallelOp);
+    // Clone the body of the reduction operation into the body of the loop,
+    // using operands of "loop.reduce" and iteration arguments corresponding
+    // to the reduction value to replace arguments of the reduction block.
+    // Collect operands of "loop.reduce.return" to be returned by a final
+    // "loop.yield" instead.
+    Value arg = iterArgs[yieldOperands.size()];
+    Block &reduceBlock = reduce.reductionOperator().front();
+    mapping.map(reduceBlock.getArgument(0), mapping.lookupOrDefault(arg));
+    mapping.map(reduceBlock.getArgument(1),
+                mapping.lookupOrDefault(reduce.operand()));
+    for (auto &nested : reduceBlock.without_terminator())
+      rewriter.clone(nested, mapping);
+    yieldOperands.push_back(
+        mapping.lookup(reduceBlock.getTerminator()->getOperand(0)));
+  }
+
+  rewriter.setInsertionPointToEnd(rewriter.getInsertionBlock());
+  rewriter.replaceOpWithNewOp<YieldOp>(
+      rewriter.getInsertionBlock()->getTerminator(), yieldOperands);
+
+  rewriter.replaceOp(parallelOp, loopResults);
 
   return matchSuccess();
 }

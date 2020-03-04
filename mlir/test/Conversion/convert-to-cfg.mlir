@@ -236,3 +236,88 @@ func @nested_for_yield(%arg0 : index, %arg1 : index, %arg2 : index) -> f32 {
   }
   return %r : f32
 }
+
+func @generate() -> i64
+
+// CHECK-LABEL: @simple_parallel_reduce_loop
+// CHECK-SAME: %[[LB:.*]]: index, %[[UB:.*]]: index, %[[STEP:.*]]: index, %[[INIT:.*]]: f32
+func @simple_parallel_reduce_loop(%arg0: index, %arg1: index,
+                                  %arg2: index, %arg3: f32) -> f32 {
+  // A parallel loop with reduction is converted through sequential loops with
+  // reductions into a CFG of blocks where the partially reduced value is
+  // passed across as a block argument.
+
+  // Branch to the condition block passing in the initial reduction value.
+  // CHECK:   br ^[[COND:.*]](%[[LB]], %[[INIT]]
+
+  // Condition branch takes as arguments the current value of the iteration
+  // variable and the current partially reduced value.
+  // CHECK: ^[[COND]](%[[ITER:.*]]: index, %[[ITER_ARG:.*]]: f32
+  // CHECK:   %[[COMP:.*]] = cmpi "slt", %[[ITER]], %[[UB]]
+  // CHECK:   cond_br %[[COMP]], ^[[BODY:.*]], ^[[CONTINUE:.*]]
+
+  // Bodies of loop.reduce operations are folded into the main loop body. The
+  // result of this partial reduction is passed as argument to the condition
+  // block.
+  // CHECK: ^[[BODY]]:
+  // CHECK:   %[[CST:.*]] = constant 4.2
+  // CHECK:   %[[PROD:.*]] = mulf %[[ITER_ARG]], %[[CST]]
+  // CHECK:   %[[INCR:.*]] = addi %[[ITER]], %[[STEP]]
+  // CHECK:   br ^[[COND]](%[[INCR]], %[[PROD]]
+
+  // The continuation block has access to the (last value of) reduction.
+  // CHECK: ^[[CONTINUE]]:
+  // CHECK:   return %[[ITER_ARG]]
+  %0 = loop.parallel (%i) = (%arg0) to (%arg1) step (%arg2) init(%arg3) {
+    %cst = constant 42.0 : f32
+    loop.reduce(%cst) {
+    ^bb0(%lhs: f32, %rhs: f32):
+      %1 = mulf %lhs, %rhs : f32
+      loop.reduce.return %1 : f32
+    } : f32
+  } : f32
+  return %0 : f32
+}
+
+// CHECK-LABEL: parallel_reduce_loop
+// CHECK-SAME: %[[INIT1:[0-9A-Za-z_]*]]: f32)
+func @parallel_reduce_loop(%arg0 : index, %arg1 : index, %arg2 : index,
+                           %arg3 : index, %arg4 : index, %arg5 : f32) -> (f32, i64) {
+  // Multiple reduction blocks should be folded in the same body, and the
+  // reduction value must be forwarded through block structures.
+  // CHECK:   %[[INIT2:.*]] = constant 42
+  // CHECK:   br ^[[COND_OUT:.*]](%{{.*}}, %[[INIT1]], %[[INIT2]]
+  // CHECK: ^[[COND_OUT]](%{{.*}}: index, %[[ITER_ARG1_OUT:.*]]: f32, %[[ITER_ARG2_OUT:.*]]: i64
+  // CHECK:   cond_br %{{.*}}, ^[[BODY_OUT:.*]], ^[[CONT_OUT:.*]]
+  // CHECK: ^[[BODY_OUT]]:
+  // CHECK:   br ^[[COND_IN:.*]](%{{.*}}, %[[ITER_ARG1_OUT]], %[[ITER_ARG2_OUT]]
+  // CHECK: ^[[COND_IN]](%{{.*}}: index, %[[ITER_ARG1_IN:.*]]: f32, %[[ITER_ARG2_IN:.*]]: i64
+  // CHECK:   cond_br %{{.*}}, ^[[BODY_IN:.*]], ^[[CONT_IN:.*]]
+  // CHECK: ^[[BODY_IN]]:
+  // CHECK:   %[[REDUCE1:.*]] = addf %[[ITER_ARG1_IN]], %{{.*}}
+  // CHECK:   %[[REDUCE2:.*]] = or %[[ITER_ARG2_IN]], %{{.*}}
+  // CHECK:   br ^[[COND_IN]](%{{.*}}, %[[REDUCE1]], %[[REDUCE2]]
+  // CHECK: ^[[CONT_IN]]:
+  // CHECK:   br ^[[COND_OUT]](%{{.*}}, %[[ITER_ARG1_IN]], %[[ITER_ARG2_IN]]
+  // CHECK: ^[[CONT_OUT]]:
+  // CHECK:   return %[[ITER_ARG1_OUT]], %[[ITER_ARG2_OUT]]
+  %step = constant 1 : index
+  %init = constant 42 : i64
+  %0:2 = loop.parallel (%i0, %i1) = (%arg0, %arg1) to (%arg2, %arg3)
+                       step (%arg4, %step) init(%arg5, %init) {
+    %cf = constant 42.0 : f32
+    loop.reduce(%cf) {
+    ^bb0(%lhs: f32, %rhs: f32):
+      %1 = addf %lhs, %rhs : f32
+      loop.reduce.return %1 : f32
+    } : f32
+
+    %2 = call @generate() : () -> i64
+    loop.reduce(%2) {
+    ^bb0(%lhs: i64, %rhs: i64):
+      %3 = or %lhs, %rhs : i64
+      loop.reduce.return %3 : i64
+    } : i64
+  } : f32, i64
+  return %0#0, %0#1 : f32, i64
+}
