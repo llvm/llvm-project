@@ -92,7 +92,6 @@ class ClangDiagPathDiagConsumer : public PathDiagnosticConsumer {
 
   bool IncludePath = false;
   bool ShouldEmitAsError = false;
-  bool FixitsAsRemarks = false;
   bool ApplyFixIts = false;
 
 public:
@@ -110,7 +109,6 @@ public:
 
   void enablePaths() { IncludePath = true; }
   void enableWerror() { ShouldEmitAsError = true; }
-  void enableFixitsAsRemarks() { FixitsAsRemarks = true; }
   void enableApplyFixIts() { ApplyFixIts = true; }
 
   void FlushDiagnosticsImpl(std::vector<const PathDiagnostic *> &Diags,
@@ -120,42 +118,24 @@ public:
             ? Diag.getCustomDiagID(DiagnosticsEngine::Error, "%0")
             : Diag.getCustomDiagID(DiagnosticsEngine::Warning, "%0");
     unsigned NoteID = Diag.getCustomDiagID(DiagnosticsEngine::Note, "%0");
-    unsigned RemarkID = Diag.getCustomDiagID(DiagnosticsEngine::Remark, "%0");
     SourceManager &SM = Diag.getSourceManager();
 
     Replacements Repls;
     auto reportPiece = [&](unsigned ID, FullSourceLoc Loc, StringRef String,
                            ArrayRef<SourceRange> Ranges,
                            ArrayRef<FixItHint> Fixits) {
-      if (!FixitsAsRemarks && !ApplyFixIts) {
+      if (!ApplyFixIts) {
         Diag.Report(Loc, ID) << String << Ranges << Fixits;
         return;
       }
 
       Diag.Report(Loc, ID) << String << Ranges;
-      if (FixitsAsRemarks) {
-        for (const FixItHint &Hint : Fixits) {
-          llvm::SmallString<128> Str;
-          llvm::raw_svector_ostream OS(Str);
-          // FIXME: Add support for InsertFromRange and
-          // BeforePreviousInsertion.
-          assert(!Hint.InsertFromRange.isValid() && "Not implemented yet!");
-          assert(!Hint.BeforePreviousInsertions && "Not implemented yet!");
-          OS << SM.getSpellingColumnNumber(Hint.RemoveRange.getBegin()) << "-"
-             << SM.getSpellingColumnNumber(Hint.RemoveRange.getEnd()) << ": '"
-             << Hint.CodeToInsert << "'";
-          Diag.Report(Loc, RemarkID) << OS.str();
-        }
-      }
+      for (const FixItHint &Hint : Fixits) {
+        Replacement Repl(SM, Hint.RemoveRange, Hint.CodeToInsert);
 
-      if (ApplyFixIts) {
-        for (const FixItHint &Hint : Fixits) {
-          Replacement Repl(SM, Hint.RemoveRange, Hint.CodeToInsert);
-
-          if (llvm::Error Err = Repls.add(Repl)) {
-            llvm::errs() << "Error applying replacement " << Repl.toString()
-                         << ": " << Err << "\n";
-          }
+        if (llvm::Error Err = Repls.add(Repl)) {
+          llvm::errs() << "Error applying replacement " << Repl.toString()
+                       << ": " << Err << "\n";
         }
       }
     };
@@ -297,9 +277,6 @@ public:
 
       if (Opts->AnalyzerWerror)
         clangDiags->enableWerror();
-
-      if (Opts->ShouldEmitFixItHintsAsRemarks)
-        clangDiags->enableFixitsAsRemarks();
 
       if (Opts->ShouldApplyFixIts)
         clangDiags->enableApplyFixIts();
