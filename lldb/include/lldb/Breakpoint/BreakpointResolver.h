@@ -44,7 +44,8 @@ public:
   ///   The breakpoint that owns this resolver.
   /// \param[in] resolverType
   ///   The concrete breakpoint resolver type for this breakpoint.
-  BreakpointResolver(Breakpoint *bkpt, unsigned char resolverType,
+  BreakpointResolver(const lldb::BreakpointSP &bkpt,
+                     unsigned char resolverType,
                      lldb::addr_t offset = 0);
 
   /// The Destructor is virtual, all significant breakpoint resolvers derive
@@ -55,7 +56,15 @@ public:
   ///
   /// \param[in] bkpt
   ///   The breakpoint that owns this resolver.
-  void SetBreakpoint(Breakpoint *bkpt);
+  void SetBreakpoint(const lldb::BreakpointSP &bkpt);
+
+  /// This gets the breakpoint for this resolver.
+  lldb::BreakpointSP GetBreakpoint() const {
+    auto breakpoint_sp = m_breakpoint.expired() ? lldb::BreakpointSP() :
+                                                  m_breakpoint.lock();
+    assert(breakpoint_sp);
+    return breakpoint_sp;
+  }
 
   /// This updates the offset for this breakpoint.  All the locations
   /// currently set for this breakpoint will have their offset adjusted when
@@ -149,7 +158,7 @@ public:
   static ResolverTy NameToResolverTy(llvm::StringRef name);
 
   virtual lldb::BreakpointResolverSP
-  CopyForBreakpoint(Breakpoint &breakpoint) = 0;
+  CopyForBreakpoint(lldb::BreakpointSP &breakpoint) = 0;
 
 protected:
   // Used for serializing resolver options:
@@ -202,14 +211,14 @@ protected:
   lldb::BreakpointLocationSP AddLocation(Address loc_addr,
                                          bool *new_location = nullptr);
 
-  Breakpoint *m_breakpoint; // This is the breakpoint we add locations to.
-  lldb::addr_t m_offset;    // A random offset the user asked us to add to any
-                            // breakpoints we set.
-
 private:
   /// Helper for \p SetSCMatchesByLine.
   void AddLocation(SearchFilter &filter, const SymbolContext &sc,
                    bool skip_prologue, llvm::StringRef log_ident);
+
+  lldb::BreakpointWP m_breakpoint; // This is the breakpoint we add locations to.
+  lldb::addr_t m_offset;    // A random offset the user asked us to add to any
+                            // breakpoints we set.
 
   // Subclass identifier (for llvm isa/dyn_cast)
   const unsigned char SubclassID;

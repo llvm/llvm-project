@@ -2,8 +2,8 @@
 ; RUN: opt -cost-model -analyze -mtriple=thumbv6m-none-eabi < %s | FileCheck %s --check-prefix=CHECK-V6M
 ; RUN: opt -cost-model -analyze -mtriple=thumbv7m-none-eabi -mcpu=cortex-m3 < %s | FileCheck %s --check-prefix=CHECK-V7M --check-prefix=CHECK-V7M-NOFP
 ; RUN: opt -cost-model -analyze -mtriple=thumbv7m-none-eabi -mcpu=cortex-m4 < %s | FileCheck %s --check-prefix=CHECK-V7M --check-prefix=CHECK-V7M-FP
-; RUN: opt -cost-model -analyze -mtriple=thumbv8.1-m.main-none-eabi -mattr=+mve < %s | FileCheck %s --check-prefix=CHECK-V7M --check-prefix=CHECK-MVE
-; RUN: opt -cost-model -analyze -mtriple=thumbv8.1-m.main-none-eabi -mattr=+mve.fp < %s | FileCheck %s --check-prefix=CHECK-V7M --check-prefix=CHECK-MVEFP
+; RUN: opt -cost-model -analyze -mtriple=thumbv8.1m.main-none-eabi -mattr=+mve < %s | FileCheck %s --check-prefix=CHECK-V7M --check-prefix=CHECK-MVE
+; RUN: opt -cost-model -analyze -mtriple=thumbv8.1m.main-none-eabi -mattr=+mve.fp < %s | FileCheck %s --check-prefix=CHECK-V7M --check-prefix=CHECK-MVEFP
 ; RUN: opt -cost-model -analyze -mtriple=thumbv7-apple-ios6.0.0 -mcpu=swift < %s | FileCheck %s --check-prefix=CHECK-T32
 ; RUN: opt -cost-model -analyze -mtriple=arm-none-eabi -mcpu=cortex-a53 < %s | FileCheck %s --check-prefix=CHECK-A32
 

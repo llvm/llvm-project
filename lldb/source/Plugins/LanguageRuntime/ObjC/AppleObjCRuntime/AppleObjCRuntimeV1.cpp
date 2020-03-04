@@ -105,8 +105,8 @@ ConstString AppleObjCRuntimeV1::GetPluginName() {
 uint32_t AppleObjCRuntimeV1::GetPluginVersion() { return 1; }
 
 BreakpointResolverSP
-AppleObjCRuntimeV1::CreateExceptionResolver(Breakpoint *bkpt, bool catch_bp,
-                                            bool throw_bp) {
+AppleObjCRuntimeV1::CreateExceptionResolver(const BreakpointSP &bkpt,
+                                            bool catch_bp, bool throw_bp) {
   BreakpointResolverSP resolver_sp;
 
   if (throw_bp)

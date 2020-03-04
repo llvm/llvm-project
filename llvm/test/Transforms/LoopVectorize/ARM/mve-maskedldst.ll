@@ -1,7 +1,7 @@
 ; RUN: opt -loop-vectorize < %s -S -o - | FileCheck %s
 
 target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
-target triple = "thumbv8.1-m.main-none-eabi"
+target triple = "thumbv8.1m.main-none-eabi"
 
 ; CHECK-LABEL: test_i32_align4
 ; CHECK: call void @llvm.masked.store.v4i32.p0v4i32
