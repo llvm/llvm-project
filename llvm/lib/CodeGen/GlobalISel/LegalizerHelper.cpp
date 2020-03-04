@@ -63,58 +63,6 @@ getNarrowTypeBreakDown(LLT OrigTy, LLT NarrowTy, LLT &LeftoverTy) {
   return std::make_pair(NumParts, NumLeftover);
 }
 
-static LLT getGCDType(LLT OrigTy, LLT TargetTy) {
-  if (OrigTy.isVector() && TargetTy.isVector()) {
-    assert(OrigTy.getElementType() == TargetTy.getElementType());
-    int GCD = greatestCommonDivisor(OrigTy.getNumElements(),
-                                    TargetTy.getNumElements());
-    return LLT::scalarOrVector(GCD, OrigTy.getElementType());
-  }
-
-  if (OrigTy.isVector() && !TargetTy.isVector()) {
-    assert(OrigTy.getElementType() == TargetTy);
-    return TargetTy;
-  }
-
-  assert(!OrigTy.isVector() && !TargetTy.isVector() &&
-         "GCD type of vector and scalar not implemented");
-
-  int GCD = greatestCommonDivisor(OrigTy.getSizeInBits(),
-                                  TargetTy.getSizeInBits());
-  return LLT::scalar(GCD);
-}
-
-static LLT getLCMType(LLT Ty0, LLT Ty1) {
-  if (!Ty0.isVector() && !Ty1.isVector()) {
-    unsigned Mul = Ty0.getSizeInBits() * Ty1.getSizeInBits();
-    int GCDSize = greatestCommonDivisor(Ty0.getSizeInBits(),
-                                        Ty1.getSizeInBits());
-    return LLT::scalar(Mul / GCDSize);
-  }
-
-  if (Ty0.isVector() && !Ty1.isVector()) {
-    assert(Ty0.getElementType() == Ty1 && "not yet handled");
-    return Ty0;
-  }
-
-  if (Ty1.isVector() && !Ty0.isVector()) {
-    assert(Ty1.getElementType() == Ty0 && "not yet handled");
-    return Ty1;
-  }
-
-  if (Ty0.isVector() && Ty1.isVector()) {
-    assert(Ty0.getElementType() == Ty1.getElementType() && "not yet handled");
-
-    int GCDElts = greatestCommonDivisor(Ty0.getNumElements(),
-                                        Ty1.getNumElements());
-
-    int Mul = Ty0.getNumElements() * Ty1.getNumElements();
-    return LLT::vector(Mul / GCDElts, Ty0.getElementType());
-  }
-
-  llvm_unreachable("not yet handled");
-}
-
 static Type *getFloatTypeForLLT(LLVMContext &Ctx, LLT Ty) {
 
   if (!Ty.isScalar())
