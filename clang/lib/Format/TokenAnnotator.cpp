@@ -1011,7 +1011,12 @@ private:
           Style.Language == FormatStyle::LK_JavaScript)
         break;
       if (Style.isCSharp()) {
-        if (Line.MustBeDeclaration && !Contexts.back().IsExpression) {
+        // `Type? name;` and `Type? name =` can only be nullable types.
+        // Line.MustBeDeclaration will be true for `Type? name;`.
+        if (!Contexts.back().IsExpression &&
+            (Line.MustBeDeclaration ||
+             (Tok->Next && Tok->Next->is(tok::identifier) && Tok->Next->Next &&
+              Tok->Next->Next->is(tok::equal)))) {
           Tok->Type = TT_CSharpNullable;
           break;
         }

@@ -631,7 +631,17 @@ TEST_F(FormatTestCSharp, CSharpNullableTypes) {
   FormatStyle Style = getGoogleStyle(FormatStyle::LK_CSharp);
   Style.SpacesInSquareBrackets = false;
 
+  verifyFormat(R"(//
+public class A {
+  void foo() { int? value = some.bar(); }
+})",
+               Style); // int? is nullable not a conditional expression.
+
+  verifyFormat(R"(void foo(int? x, int? y, int? z) {})",
+               Style); // Nullables in function definitions.
+
   verifyFormat(R"(public float? Value;)", Style); // no space before `?`.
+
   verifyFormat(R"(int?[] arr = new int?[10];)",
                Style); // An array of a nullable type.
 }
