@@ -13,20 +13,30 @@ namespace clang {
 namespace clangd {
 
 char CancelledError::ID = 0;
-static Key<std::shared_ptr<std::atomic<bool>>> FlagKey;
+
+// We don't want a cancelable scope to "shadow" an enclosing one.
+struct CancelState {
+  std::shared_ptr<std::atomic<bool>> Cancelled;
+  const CancelState *Parent;
+};
+static Key<CancelState> StateKey;
 
 std::pair<Context, Canceler> cancelableTask() {
-  auto Flag = std::make_shared<std::atomic<bool>>();
+  CancelState State;
+  State.Cancelled = std::make_shared<std::atomic<bool>>();
+  State.Parent = Context::current().get(StateKey);
   return {
-      Context::current().derive(FlagKey, Flag),
-      [Flag] { *Flag = true; },
+      Context::current().derive(StateKey, State),
+      [Flag(State.Cancelled)] { *Flag = true; },
   };
 }
 
 bool isCancelled(const Context &Ctx) {
-  if (auto *Flag = Ctx.get(FlagKey))
-    return **Flag;
-  return false; // Not in scope of a task.
+  for (const CancelState *State = Ctx.get(StateKey); State != nullptr;
+       State = State->Parent)
+    if (State->Cancelled->load())
+      return true;
+  return false;
 }
 
 } // namespace clangd

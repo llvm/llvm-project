@@ -19,6 +19,8 @@ namespace {
 llvm::json::Object encodeError(llvm::Error E) {
   std::string Message;
   ErrorCode Code = ErrorCode::UnknownErrorCode;
+  // FIXME: encode cancellation errors using RequestCancelled or ContentModified
+  // as appropriate.
   if (llvm::Error Unhandled = llvm::handleErrors(
           std::move(E), [&](const LSPError &L) -> llvm::Error {
             Message = L.Message;

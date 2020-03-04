@@ -184,7 +184,8 @@ public:
   void update(ParseInputs Inputs, WantDiagnostics);
   void
   runWithAST(llvm::StringRef Name,
-             llvm::unique_function<void(llvm::Expected<InputsAndAST>)> Action);
+             llvm::unique_function<void(llvm::Expected<InputsAndAST>)> Action,
+             TUScheduler::ASTActionInvalidation);
   bool blockUntilIdle(Deadline Timeout) const;
 
   std::shared_ptr<const PreambleData> getPossiblyStalePreamble() const;
@@ -214,7 +215,8 @@ private:
   void stop();
   /// Adds a new task to the end of the request queue.
   void startTask(llvm::StringRef Name, llvm::unique_function<void()> Task,
-                 llvm::Optional<WantDiagnostics> UpdateType);
+                 llvm::Optional<WantDiagnostics> UpdateType,
+                 TUScheduler::ASTActionInvalidation);
   /// Updates the TUStatus and emits it. Only called in the worker thread.
   void emitTUStatus(TUAction FAction,
                     const TUStatus::BuildDetails *Detail = nullptr);
@@ -237,6 +239,8 @@ private:
     steady_clock::time_point AddTime;
     Context Ctx;
     llvm::Optional<WantDiagnostics> UpdateType;
+    TUScheduler::ASTActionInvalidation InvalidationPolicy;
+    Canceler Invalidate;
   };
 
   /// Handles retention of ASTs.
@@ -542,12 +546,13 @@ void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags) {
     // Stash the AST in the cache for further use.
     IdleASTs.put(this, std::move(*AST));
   };
-  startTask(TaskName, std::move(Task), WantDiags);
+  startTask(TaskName, std::move(Task), WantDiags, TUScheduler::NoInvalidation);
 }
 
 void ASTWorker::runWithAST(
     llvm::StringRef Name,
-    llvm::unique_function<void(llvm::Expected<InputsAndAST>)> Action) {
+    llvm::unique_function<void(llvm::Expected<InputsAndAST>)> Action,
+    TUScheduler::ASTActionInvalidation Invalidation) {
   auto Task = [=, Action = std::move(Action)]() mutable {
     if (isCancelled())
       return Action(llvm::make_error<CancelledError>());
@@ -576,7 +581,7 @@ void ASTWorker::runWithAST(
           "invalid AST", llvm::errc::invalid_argument));
     Action(InputsAndAST{*CurrentInputs, **AST});
   };
-  startTask(Name, std::move(Task), /*UpdateType=*/None);
+  startTask(Name, std::move(Task), /*UpdateType=*/None, Invalidation);
 }
 
 std::shared_ptr<const PreambleData>
@@ -606,7 +611,9 @@ void ASTWorker::getCurrentPreamble(
                           },
                           "GetPreamble", steady_clock::now(),
                           Context::current().clone(),
-                          /*UpdateType=*/None});
+                          /*UpdateType=*/None,
+                          /*InvalidationPolicy=*/TUScheduler::NoInvalidation,
+                          /*Invalidate=*/nullptr});
   Lock.unlock();
   RequestsCV.notify_all();
 }
@@ -650,7 +657,8 @@ void ASTWorker::stop() {
 
 void ASTWorker::startTask(llvm::StringRef Name,
                           llvm::unique_function<void()> Task,
-                          llvm::Optional<WantDiagnostics> UpdateType) {
+                          llvm::Optional<WantDiagnostics> UpdateType,
+                          TUScheduler::ASTActionInvalidation Invalidation) {
   if (RunSync) {
     assert(!Done && "running a task after stop()");
     trace::Span Tracer(Name + ":" + llvm::sys::path::filename(FileName));
@@ -661,9 +669,26 @@ void ASTWorker::startTask(llvm::StringRef Name,
   {
     std::lock_guard<std::mutex> Lock(Mutex);
     assert(!Done && "running a task after stop()");
-    Requests.push_back(
-        {std::move(Task), std::string(Name), steady_clock::now(),
-         Context::current().derive(kFileBeingProcessed, FileName), UpdateType});
+    // Cancel any requests invalidated by this request.
+    if (UpdateType) {
+      for (auto &R : llvm::reverse(Requests)) {
+        if (R.InvalidationPolicy == TUScheduler::InvalidateOnUpdate)
+          R.Invalidate();
+        if (R.UpdateType)
+          break; // Older requests were already invalidated by the older update.
+      }
+    }
+
+    // Allow this request to be cancelled if invalidated.
+    Context Ctx = Context::current().derive(kFileBeingProcessed, FileName);
+    Canceler Invalidate = nullptr;
+    if (Invalidation) {
+      WithContext WC(std::move(Ctx));
+      std::tie(Ctx, Invalidate) = cancelableTask();
+    }
+    Requests.push_back({std::move(Task), std::string(Name), steady_clock::now(),
+                        std::move(Ctx), UpdateType, Invalidation,
+                        std::move(Invalidate)});
   }
   RequestsCV.notify_all();
 }
@@ -942,7 +967,8 @@ void TUScheduler::run(llvm::StringRef Name,
 
 void TUScheduler::runWithAST(
     llvm::StringRef Name, PathRef File,
-    llvm::unique_function<void(llvm::Expected<InputsAndAST>)> Action) {
+    llvm::unique_function<void(llvm::Expected<InputsAndAST>)> Action,
+    TUScheduler::ASTActionInvalidation Invalidation) {
   auto It = Files.find(File);
   if (It == Files.end()) {
     Action(llvm::make_error<LSPError>(
@@ -950,7 +976,7 @@ void TUScheduler::runWithAST(
     return;
   }
 
-  It->second->Worker->runWithAST(Name, std::move(Action));
+  It->second->Worker->runWithAST(Name, std::move(Action), Invalidation);
 }
 
 void TUScheduler::runWithPreamble(llvm::StringRef Name, PathRef File,
@@ -1065,6 +1091,16 @@ DebouncePolicy DebouncePolicy::fixed(clock::duration T) {
   DebouncePolicy P;
   P.Min = P.Max = T;
   return P;
+}
+
+void TUScheduler::InvalidatedError::log(llvm::raw_ostream &OS) const {
+  switch (Policy) {
+  case InvalidateOnUpdate:
+    OS << "Task was cancelled due to a subsequent change to the file.";
+    break;
+  case NoInvalidation:
+    llvm_unreachable("Invalidated for no reason?");
+  }
 }
 
 } // namespace clangd
