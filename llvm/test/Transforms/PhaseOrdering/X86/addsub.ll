@@ -4,7 +4,7 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-; TODO: Ideally, this should reach the backend with 1 fsub, 1 fadd, and 1 shuffle.
+; Ideally, this should reach the backend with 1 fsub, 1 fadd, and 1 shuffle.
 ; That may require some coordination between VectorCombine, SLP, and other passes.
 ; The end goal is to get a single "vaddsubps" instruction for x86 with AVX.
 
@@ -12,11 +12,7 @@ define <4 x float> @PR45015(<4 x float> %arg, <4 x float> %arg1) {
 ; CHECK-LABEL: @PR45015(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fsub <4 x float> [[ARG:%.*]], [[ARG1:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = fadd <4 x float> [[ARG]], [[ARG1]]
-; CHECK-NEXT:    [[T8:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> [[TMP2]], <4 x i32> <i32 0, i32 5, i32 undef, i32 undef>
-; CHECK-NEXT:    [[TMP3:%.*]] = fsub <4 x float> [[ARG]], [[ARG1]]
-; CHECK-NEXT:    [[T12:%.*]] = shufflevector <4 x float> [[T8]], <4 x float> [[TMP3]], <4 x i32> <i32 0, i32 1, i32 6, i32 undef>
-; CHECK-NEXT:    [[TMP4:%.*]] = fadd <4 x float> [[ARG]], [[ARG1]]
-; CHECK-NEXT:    [[T16:%.*]] = shufflevector <4 x float> [[T12]], <4 x float> [[TMP4]], <4 x i32> <i32 0, i32 1, i32 2, i32 7>
+; CHECK-NEXT:    [[T16:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> [[TMP2]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
 ; CHECK-NEXT:    ret <4 x float> [[T16]]
 ;
   %t = extractelement <4 x float> %arg, i32 0
@@ -45,13 +41,9 @@ define <4 x float> @PR45015(<4 x float> %arg, <4 x float> %arg1) {
 define { <2 x float>, <2 x float> } @add_aggregate(<2 x float> %a0, <2 x float> %a1, <2 x float> %b0, <2 x float> %b1) {
 ; CHECK-LABEL: @add_aggregate(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fadd <2 x float> [[A0:%.*]], [[B0:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = fadd <2 x float> [[A0]], [[B0]]
-; CHECK-NEXT:    [[RETVAL_0_1_INSERT:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> [[TMP2]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x float> [[A1:%.*]], [[B1:%.*]]
-; CHECK-NEXT:    [[TMP4:%.*]] = fadd <2 x float> [[A1]], [[B1]]
-; CHECK-NEXT:    [[RETVAL_1_1_INSERT:%.*]] = shufflevector <2 x float> [[TMP3]], <2 x float> [[TMP4]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[FCA_0_INSERT:%.*]] = insertvalue { <2 x float>, <2 x float> } undef, <2 x float> [[RETVAL_0_1_INSERT]], 0
-; CHECK-NEXT:    [[FCA_1_INSERT:%.*]] = insertvalue { <2 x float>, <2 x float> } [[FCA_0_INSERT]], <2 x float> [[RETVAL_1_1_INSERT]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd <2 x float> [[A1:%.*]], [[B1:%.*]]
+; CHECK-NEXT:    [[FCA_0_INSERT:%.*]] = insertvalue { <2 x float>, <2 x float> } undef, <2 x float> [[TMP1]], 0
+; CHECK-NEXT:    [[FCA_1_INSERT:%.*]] = insertvalue { <2 x float>, <2 x float> } [[FCA_0_INSERT]], <2 x float> [[TMP2]], 1
 ; CHECK-NEXT:    ret { <2 x float>, <2 x float> } [[FCA_1_INSERT]]
 ;
   %a00 = extractelement <2 x float> %a0, i32 0
@@ -81,18 +73,16 @@ define void @add_aggregate_store(<2 x float> %a0, <2 x float> %a1, <2 x float> %
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x float> [[TMP1]], i32 0
 ; CHECK-NEXT:    [[R0:%.*]] = getelementptr inbounds [[STRUCT_VECTOR4:%.*]], %struct.Vector4* [[R:%.*]], i64 0, i32 0
 ; CHECK-NEXT:    store float [[TMP2]], float* [[R0]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x float> [[A0]], [[B0]]
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[TMP3]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[TMP1]], i32 1
 ; CHECK-NEXT:    [[R1:%.*]] = getelementptr inbounds [[STRUCT_VECTOR4]], %struct.Vector4* [[R]], i64 0, i32 1
-; CHECK-NEXT:    store float [[TMP4]], float* [[R1]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = fadd <2 x float> [[A1:%.*]], [[B1:%.*]]
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x float> [[TMP5]], i32 0
+; CHECK-NEXT:    store float [[TMP3]], float* [[R1]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = fadd <2 x float> [[A1:%.*]], [[B1:%.*]]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x float> [[TMP4]], i32 0
 ; CHECK-NEXT:    [[R2:%.*]] = getelementptr inbounds [[STRUCT_VECTOR4]], %struct.Vector4* [[R]], i64 0, i32 2
-; CHECK-NEXT:    store float [[TMP6]], float* [[R2]], align 4
-; CHECK-NEXT:    [[TMP7:%.*]] = fadd <2 x float> [[A1]], [[B1]]
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x float> [[TMP7]], i32 1
+; CHECK-NEXT:    store float [[TMP5]], float* [[R2]], align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x float> [[TMP4]], i32 1
 ; CHECK-NEXT:    [[R3:%.*]] = getelementptr inbounds [[STRUCT_VECTOR4]], %struct.Vector4* [[R]], i64 0, i32 3
-; CHECK-NEXT:    store float [[TMP8]], float* [[R3]], align 4
+; CHECK-NEXT:    store float [[TMP6]], float* [[R3]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %a00 = extractelement <2 x float> %a0, i32 0

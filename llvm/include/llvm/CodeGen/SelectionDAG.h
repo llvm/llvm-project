@@ -1077,7 +1077,8 @@ public:
 
   /// Try to simplify a floating-point binary operation into 1 of its operands
   /// or a constant.
-  SDValue simplifyFPBinop(unsigned Opcode, SDValue X, SDValue Y);
+  SDValue simplifyFPBinop(unsigned Opcode, SDValue X, SDValue Y,
+                          SDNodeFlags Flags);
 
   /// VAArg produces a result and token chain, and takes a pointer
   /// and a source value as input.

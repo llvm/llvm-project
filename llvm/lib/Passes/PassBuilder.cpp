@@ -966,12 +966,15 @@ ModulePassManager PassBuilder::buildModuleOptimizationPipeline(
   OptimizePM.addPass(LoopVectorizePass(
       LoopVectorizeOptions(!PTO.LoopInterleaving, !PTO.LoopVectorization)));
 
+  // Enhance/cleanup vector code.
+  OptimizePM.addPass(VectorCombinePass());
+  OptimizePM.addPass(EarlyCSEPass());
+
   // Eliminate loads by forwarding stores from the previous iteration to loads
   // of the current iteration.
   OptimizePM.addPass(LoopLoadEliminationPass());
 
   // Cleanup after the loop optimization passes.
-  OptimizePM.addPass(VectorCombinePass());
   OptimizePM.addPass(InstCombinePass());
 
   // Now that we've formed fast to execute loop structures, we do further
@@ -990,10 +993,8 @@ ModulePassManager PassBuilder::buildModuleOptimizationPipeline(
                                      sinkCommonInsts(true)));
 
   // Optimize parallel scalar instruction chains into SIMD instructions.
-  if (PTO.SLPVectorization) {
+  if (PTO.SLPVectorization)
     OptimizePM.addPass(SLPVectorizerPass());
-    OptimizePM.addPass(VectorCombinePass());
-  }
 
   OptimizePM.addPass(InstCombinePass());
 
