@@ -279,6 +279,7 @@ bool ValueObject::UpdateValueIfNeeded(bool update_format) {
       SetValueIsValid(success);
 
       if (success) {
+        UpdateChildrenAddressType();
         const uint64_t max_checksum_size = 128;
         m_data.Checksum(m_value_checksum, max_checksum_size);
       } else {

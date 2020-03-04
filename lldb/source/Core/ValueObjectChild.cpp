@@ -141,6 +141,9 @@ bool ValueObjectChild::UpdateValue() {
               bool deref;
               std::tie(addr, deref) =
                   runtime->FixupPointerValue(addr, parent_type);
+              // The runtime will always return an address in the target.
+              // So make sure we force that here.
+              parent->SetAddressTypeOfChildren(eAddressTypeLoad);
               if (deref) {
                 // Read the pointer to the Objective-C object.
                 Target &target = process_sp->GetTarget();
