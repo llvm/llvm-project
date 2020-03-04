@@ -415,10 +415,13 @@ static SDValue getCopyFromPartsVector(SelectionDAG &DAG, const SDLoc &DL,
     // Build a vector with BUILD_VECTOR or CONCAT_VECTORS from the
     // intermediate operands.
     EVT BuiltVectorTy =
-        EVT::getVectorVT(*DAG.getContext(), IntermediateVT.getScalarType(),
-                         (IntermediateVT.isVector()
-                              ? IntermediateVT.getVectorNumElements() * NumParts
-                              : NumIntermediates));
+        IntermediateVT.isVector()
+            ? EVT::getVectorVT(
+                  *DAG.getContext(), IntermediateVT.getScalarType(),
+                  IntermediateVT.getVectorElementCount() * NumParts)
+            : EVT::getVectorVT(*DAG.getContext(),
+                               IntermediateVT.getScalarType(),
+                               NumIntermediates);
     Val = DAG.getNode(IntermediateVT.isVector() ? ISD::CONCAT_VECTORS
                                                 : ISD::BUILD_VECTOR,
                       DL, BuiltVectorTy, Ops);
