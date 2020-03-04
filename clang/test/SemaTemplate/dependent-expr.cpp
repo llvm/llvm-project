@@ -125,4 +125,11 @@ namespace PR45083 {
   };
 
   template void B<int>::f();
+
+  // Make sure we properly rebuild statement expression AST nodes even if the
+  // only thing that changes is the "is dependent" flag.
+  template<typename> void f() {
+    decltype(({})) x; // expected-error {{incomplete type}}
+  }
+  template void f<int>(); // expected-note {{instantiation of}}
 }
