@@ -39,7 +39,6 @@
   }
 
   define void @test_inttoptr() { ret void }
-  define void @many_local_use_intra_block() { ret void }
 
 ...
 
@@ -336,15 +335,15 @@ body:             |
   ; CHECK-LABEL: name: intrablock_with_globalvalue
   ; CHECK: bb.0.entry:
   ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK:   [[C:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 2
-  ; CHECK:   [[GV:%[0-9]+]]:gpr(p0) = G_GLOBAL_VALUE @var2
-  ; CHECK:   [[C1:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 3
-  ; CHECK:   [[GV1:%[0-9]+]]:gpr(p0) = G_GLOBAL_VALUE @var3
-  ; CHECK:   [[C2:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 0
-  ; CHECK:   [[GV2:%[0-9]+]]:gpr(p0) = G_GLOBAL_VALUE @var1
-  ; CHECK:   [[LOAD:%[0-9]+]]:gpr(s32) = G_LOAD [[GV2]](p0) :: (load 4 from @var1)
-  ; CHECK:   [[C3:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 1
-  ; CHECK:   [[ICMP:%[0-9]+]]:gpr(s32) = G_ICMP intpred(eq), [[LOAD]](s32), [[C3]]
+  ; CHECK:   [[GV:%[0-9]+]]:gpr(p0) = G_GLOBAL_VALUE @var1
+  ; CHECK:   [[C:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 1
+  ; CHECK:   [[C1:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 2
+  ; CHECK:   [[GV1:%[0-9]+]]:gpr(p0) = G_GLOBAL_VALUE @var2
+  ; CHECK:   [[C2:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 3
+  ; CHECK:   [[GV2:%[0-9]+]]:gpr(p0) = G_GLOBAL_VALUE @var3
+  ; CHECK:   [[C3:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 0
+  ; CHECK:   [[LOAD:%[0-9]+]]:gpr(s32) = G_LOAD [[GV]](p0) :: (load 4 from @var1)
+  ; CHECK:   [[ICMP:%[0-9]+]]:gpr(s32) = G_ICMP intpred(eq), [[LOAD]](s32), [[C]]
   ; CHECK:   [[TRUNC:%[0-9]+]]:gpr(s1) = G_TRUNC [[ICMP]](s32)
   ; CHECK:   G_BRCOND [[TRUNC]](s1), %bb.1
   ; CHECK:   G_BR %bb.2
@@ -404,12 +403,12 @@ body:             |
   ; CHECK:   liveins: $w0, $x1
   ; CHECK:   [[COPY:%[0-9]+]]:gpr(s32) = COPY $w0
   ; CHECK:   [[COPY1:%[0-9]+]]:gpr(p0) = COPY $x1
-  ; CHECK:   [[C:%[0-9]+]]:gpr(s64) = G_CONSTANT i64 0
-  ; CHECK:   [[INTTOPTR:%[0-9]+]]:gpr(p0) = G_INTTOPTR [[C]](s64)
-  ; CHECK:   [[C1:%[0-9]+]]:gpr(s64) = G_CONSTANT i64 128
-  ; CHECK:   [[INTTOPTR1:%[0-9]+]]:gpr(p0) = G_INTTOPTR [[C1]](s64)
-  ; CHECK:   [[C2:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 0
-  ; CHECK:   [[ICMP:%[0-9]+]]:gpr(s32) = G_ICMP intpred(eq), [[COPY]](s32), [[C2]]
+  ; CHECK:   [[C:%[0-9]+]]:gpr(s64) = G_CONSTANT i64 128
+  ; CHECK:   [[C1:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 0
+  ; CHECK:   [[C2:%[0-9]+]]:gpr(s64) = G_CONSTANT i64 0
+  ; CHECK:   [[INTTOPTR:%[0-9]+]]:gpr(p0) = G_INTTOPTR [[C2]](s64)
+  ; CHECK:   [[INTTOPTR1:%[0-9]+]]:gpr(p0) = G_INTTOPTR [[C]](s64)
+  ; CHECK:   [[ICMP:%[0-9]+]]:gpr(s32) = G_ICMP intpred(eq), [[COPY]](s32), [[C1]]
   ; CHECK:   [[TRUNC:%[0-9]+]]:gpr(s1) = G_TRUNC [[ICMP]](s32)
   ; CHECK:   G_BRCOND [[TRUNC]](s1), %bb.1
   ; CHECK:   G_BR %bb.2
@@ -450,29 +449,4 @@ body:             |
     $x0 = COPY %6(p0)
     RET_ReallyLR implicit $x0
 
-...
-
----
-name:            many_local_use_intra_block
-legalized:       true
-regBankSelected: true
-body:             |
-  bb.0:
-    ; CHECK-LABEL: name: many_local_use_intra_block
-    ; CHECK: [[C:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 1
-    ; CHECK: [[ADD:%[0-9]+]]:gpr(s32) = G_ADD [[C]], [[C]]
-    ; CHECK: [[ADD1:%[0-9]+]]:gpr(s32) = G_ADD [[C]], [[C]]
-    ; CHECK: [[ADD2:%[0-9]+]]:gpr(s32) = G_ADD [[C]], [[C]]
-    ; CHECK: [[ADD3:%[0-9]+]]:gpr(s32) = G_ADD [[C]], [[C]]
-    ; CHECK: [[ADD4:%[0-9]+]]:gpr(s32) = G_ADD [[C]], [[C]]
-    ; CHECK: [[C1:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 2
-    ; CHECK: [[ADD5:%[0-9]+]]:gpr(s32) = G_ADD [[C1]], [[C1]]
-    %0:gpr(s32) = G_CONSTANT i32 1
-    %1:gpr(s32) = G_CONSTANT i32 2
-    %2:gpr(s32) = G_ADD %0, %0
-    %3:gpr(s32) = G_ADD %0, %0
-    %4:gpr(s32) = G_ADD %0, %0
-    %5:gpr(s32) = G_ADD %0, %0
-    %6:gpr(s32) = G_ADD %0, %0
-    %7:gpr(s32) = G_ADD %1, %1
 ...
