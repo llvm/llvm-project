@@ -905,8 +905,9 @@ BitcodeFile::BitcodeFile(MemoryBufferRef mb, StringRef archiveName,
   // filename unique.
   MemoryBufferRef mbref(
       mb.getBuffer(),
-      saver.save(archiveName + path +
-                 (archiveName.empty() ? "" : utostr(offsetInArchive))));
+      saver.save(archiveName.empty() ? path
+                                     : archiveName + sys::path::filename(path) +
+                                           utostr(offsetInArchive)));
 
   obj = check(lto::InputFile::create(mbref));
 }
