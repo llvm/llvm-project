@@ -1,0 +1,28 @@
+# RUN: not --crash llc -o - %s -mtriple=x86_64-- -verify-cfiinstrs \
+# RUN:     -run-pass=cfi-instr-inserter 2>&1 | FileCheck %s
+# Test that CFI verifier finds inconsistent csr saved set between bb.end and
+# one of its precedessors.
+--- |
+  define void @inconsistentCSR() {
+  entry:
+    br label %then
+  then:
+    br label %end
+  end:
+    ret void
+  }
+...
+---
+# CHECK: *** Inconsistent CSR Saved between pred and succ in function inconsistentCSR ***
+# CHECK: LLVM ERROR: Found 1 in/out CFI information errors.
+name: inconsistentCSR
+body: |
+  bb.0.entry:
+    JCC_1 %bb.2, 5, implicit undef $eflags
+
+  bb.1.then:
+    CFI_INSTRUCTION offset $rbp, -16
+
+  bb.2.end:
+    RET 0
+...
