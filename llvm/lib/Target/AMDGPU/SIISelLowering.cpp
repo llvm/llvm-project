@@ -9827,8 +9827,13 @@ SDValue SITargetLowering::performCvtF32UByteNCombine(SDNode *N,
 
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   APInt DemandedBits = APInt::getBitsSet(32, 8 * Offset, 8 * Offset + 8);
-  if (TLI.SimplifyDemandedBits(Src, DemandedBits, DCI))
+  if (TLI.SimplifyDemandedBits(Src, DemandedBits, DCI)) {
+    // We simplified Src. If this node is not dead, visit it again so it is
+    // folded properly.
+    if (N->getOpcode() != ISD::DELETED_NODE)
+      DCI.AddToWorklist(N);
     return SDValue(N, 0);
+  }
 
   // Handle (or x, (srl y, 8)) pattern when known bits are zero.
   if (SDValue DemandedSrc =
