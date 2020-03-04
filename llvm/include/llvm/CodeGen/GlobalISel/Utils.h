@@ -184,5 +184,17 @@ inline bool isKnownNeverSNaN(Register Val, const MachineRegisterInfo &MRI) {
 unsigned inferAlignmentFromPtrInfo(MachineFunction &MF,
                                    const MachinePointerInfo &MPO);
 
+/// Return the least common multiple type of \p Ty0 and \p Ty1, by changing
+/// the number of vector elements or scalar bitwidth. The intent is a
+/// G_MERGE_VALUES can be constructed from \p Ty0 elements, and unmerged into
+/// \p Ty1.
+LLT getLCMType(LLT Ty0, LLT Ty1);
+
+/// Return a type that is greatest common divisor of \p OrigTy and \p
+/// TargetTy. This will either change the number of vector elements, or
+/// bitwidth of scalars. The intent is the result type can be used as the
+/// result of a G_UNMERGE_VALUES from \p OrigTy.
+LLT getGCDType(LLT OrigTy, LLT TargetTy);
+
 } // End namespace llvm.
 #endif
