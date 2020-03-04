@@ -478,7 +478,7 @@ void ClangASTSource::FindExternalLexicalDecls(
         std::string ast_dump = ClangUtil::DumpDecl(decl);
         if (const NamedDecl *context_named_decl =
                 dyn_cast<NamedDecl>(context_decl))
-          LLDB_LOG(log, "  FELD Adding [to {0}Decl {1}] lexical {2}Decl 34}",
+          LLDB_LOG(log, "  FELD Adding [to {0}Decl {1}] lexical {2}Decl {3}",
                    context_named_decl->getDeclKindName(),
                    context_named_decl->getName(), decl->getDeclKindName(),
                    ast_dump);
