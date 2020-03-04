@@ -28,6 +28,9 @@
 //     typedef std::reverse_iterator<const_iterator>    const_reverse_iterator;
 // };
 
+#define _LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS
+#define _LIBCPP_DISABLE_DEPRECATION_WARNINGS
+
 #include <deque>
 #include <iterator>
 #include <type_traits>

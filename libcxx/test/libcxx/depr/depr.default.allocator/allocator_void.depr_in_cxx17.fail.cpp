@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // <memory>
-
+//
 // template <>
 // class allocator<void>
 // {
@@ -18,22 +18,23 @@
 //
 //     template <class _Up> struct rebind {typedef allocator<_Up> other;};
 // };
+//
+// Deprecated in C++17
+
+// UNSUPPORTED: c++98, c++03, c++11, c++14
+// REQUIRES: verify-support
+
+// MODULES_DEFINES: _LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS
+#define _LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS
 
 #include <memory>
-#include <type_traits>
-
 #include "test_macros.h"
 
 int main(int, char**)
 {
-    static_assert((std::is_same<std::allocator<void>::pointer, void*>::value), "");
-    static_assert((std::is_same<std::allocator<void>::const_pointer, const void*>::value), "");
-    static_assert((std::is_same<std::allocator<void>::value_type, void>::value), "");
-    static_assert((std::is_same<std::allocator<void>::rebind<int>::other,
-                                std::allocator<int> >::value), "");
-    std::allocator<void> a;
-    std::allocator<void> a2 = a;
-    a2 = a;
+    typedef std::allocator<void>::pointer AP;             // expected-error{{'allocator<void>' is deprecated}}
+    typedef std::allocator<void>::const_pointer ACP;      // expected-error{{'allocator<void>' is deprecated}}
+    typedef std::allocator<void>::rebind<int>::other ARO; // expected-error{{'allocator<void>' is deprecated}}
 
   return 0;
 }
