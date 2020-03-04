@@ -8,9 +8,9 @@ declare void @free(i8*)
 ; that takes a swifterror parameter and "caller" is the caller of "foo".
 define float @foo(%swift_error** swifterror %error_ptr_ref) {
 ; CHECK-LABEL: foo:
+; CHECK: mov [[ID:w[0-9]+]], #1
 ; CHECK: mov w0, #16
 ; CHECK: malloc
-; CHECK: mov [[ID:w[0-9]+]], #1
 ; CHECK: strb [[ID]], [x0, #8]
 ; CHECK: mov x21, x0
 ; CHECK-NOT: x21
@@ -164,9 +164,9 @@ bb_end:
 define void @foo_sret(%struct.S* sret %agg.result, i32 %val1, %swift_error** swifterror %error_ptr_ref) {
 ; CHECK-LABEL: foo_sret:
 ; CHECK: mov [[SRET:x[0-9]+]], x8
+; CHECK: mov [[ID:w[0-9]+]], #1
 ; CHECK: mov w0, #16
 ; CHECK: malloc
-; CHECK: mov [[ID:w[0-9]+]], #1
 ; CHECK: strb [[ID]], [x0, #8]
 ; CHECK: str w{{.*}}, [{{.*}}[[SRET]], #4]
 ; CHECK: mov x21, x0
@@ -220,9 +220,9 @@ handler:
 declare void @llvm.va_start(i8*) nounwind
 define float @foo_vararg(%swift_error** swifterror %error_ptr_ref, ...) {
 ; CHECK-LABEL: foo_vararg:
+; CHECK-DAG: mov [[ID:w[0-9]+]], #1
 ; CHECK: mov w0, #16
 ; CHECK: malloc
-; CHECK-DAG: mov [[ID:w[0-9]+]], #1
 ; CHECK-DAG: strb [[ID]], [x0, #8]
 
 ; First vararg
