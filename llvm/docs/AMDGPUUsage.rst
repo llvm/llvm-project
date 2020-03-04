@@ -6067,7 +6067,7 @@ Frame Pointer
 +++++++++++++
 
 If the kernel needs a frame pointer for the reasons defined in
-``SIFrameLowering`` then SGPR34 is used and is always set to ``0`` in the
+``SIFrameLowering`` then SGPR33 is used and is always set to ``0`` in the
 kernel prolog. If a frame pointer is not required then all uses of the frame
 pointer are replaced with immediate ``0`` offsets.
 
@@ -8897,7 +8897,7 @@ registers and some in memory.
 The following is not part of the AMDGPU function calling convention but
 describes how the AMDGPU implements function calls:
 
-1.  SGPR34 is used as a frame pointer (FP) if necessary. Like the SP it is an
+1.  SGPR33 is used as a frame pointer (FP) if necessary. Like the SP it is an
     unswizzled scratch address. It is only needed if runtime sized ``alloca``
     are used, or for the reasons defined in ``SIFrameLowering``.
 2.  Runtime stack alignment is not currently supported.

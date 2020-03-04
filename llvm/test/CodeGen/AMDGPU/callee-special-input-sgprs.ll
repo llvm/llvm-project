@@ -530,7 +530,7 @@ define hidden void @func_use_every_sgpr_input_call_use_workgroup_id_xyz() #1 {
 }
 
 ; GCN-LABEL: {{^}}func_use_every_sgpr_input_call_use_workgroup_id_xyz_spill:
-; GCN-DAG: s_mov_b32 s34, s32
+; GCN-DAG: s_mov_b32 s33, s32
 ; GCN-DAG: s_add_u32 s32, s32, 0x400
 ; GCN-DAG: s_mov_b64 s{{\[}}[[LO_X:[0-9]+]]{{\:}}[[HI_X:[0-9]+]]{{\]}}, s[4:5]
 ; GCN-DAG: s_mov_b64 s{{\[}}[[LO_Y:[0-9]+]]{{\:}}[[HI_Y:[0-9]+]]{{\]}}, s[6:7]
@@ -550,7 +550,7 @@ define hidden void @func_use_every_sgpr_input_call_use_workgroup_id_xyz() #1 {
 
 ; GCN: s_swappc_b64
 
-; GCN-DAG: buffer_store_dword v{{[0-9]+}}, off, s[0:3], s34{{$}}
+; GCN-DAG: buffer_store_dword v{{[0-9]+}}, off, s[0:3], s33{{$}}
 ; GCN-DAG: v_mov_b32_e32 v[[LO1:[0-9]+]], s[[LO_X]]
 ; GCN-DAG: v_mov_b32_e32 v[[HI1:[0-9]+]], s[[HI_X]]
 ; GCN-DAG: {{flat|global}}_load_dword v{{[0-9]+}}, v{{\[}}[[LO1]]:[[HI1]]{{\]}}

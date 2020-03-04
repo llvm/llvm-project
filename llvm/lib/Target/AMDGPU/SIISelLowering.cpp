@@ -1950,7 +1950,7 @@ static void reservePrivateMemoryRegs(const TargetMachine &TM,
   // finalized, because it does not rely on the known stack size, only
   // properties like whether variable sized objects are present.
   if (ST.getFrameLowering()->hasFP(MF)) {
-    Info.setFrameOffsetReg(AMDGPU::SGPR34);
+    Info.setFrameOffsetReg(AMDGPU::SGPR33);
   }
 }
 
