@@ -63,7 +63,7 @@ def run_test_once(args, extra_args):
 
     try:
         builtin_include_dir = subprocess.check_output(
-            ['clang', '-print-file-name=include'], stderr=subprocess.STDOUT)
+            ['clang', '-print-file-name=include'], stderr=subprocess.STDOUT).decode()
     except subprocess.CalledProcessError as e:
         print('Cannot print Clang include directory: ' + e.output.decode())
 
