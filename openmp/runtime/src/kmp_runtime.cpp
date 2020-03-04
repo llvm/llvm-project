@@ -8217,7 +8217,6 @@ __kmp_determine_reduction_method(
 
   return (retval);
 }
-
 // this function is for testing set/get/determine reduce method
 kmp_int32 __kmp_get_reduce_method(void) {
   return ((__kmp_entry_thread()->th.th_local.packed_reduction_method) >> 8);
@@ -8296,4 +8295,13 @@ int __kmp_pause_resource(kmp_pause_status_t level) {
     // error message about invalid level
     return 1;
   }
+}
+
+
+void __kmp_omp_display_env(int verbose) {
+  __kmp_acquire_bootstrap_lock(&__kmp_initz_lock);
+  if (__kmp_init_serial == 0)
+    __kmp_do_serial_initialize();
+  __kmp_display_env_impl(!verbose, verbose);
+  __kmp_release_bootstrap_lock(&__kmp_initz_lock);
 }
