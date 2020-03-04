@@ -741,9 +741,10 @@ namespace llvm {
     ///                    A space-separated shell-quoted list of -D macro
     ///                    definitions as they would appear on a command line.
     /// \param IncludePath The path to the module map file.
+    /// \param APINotesFile The path to an API notes file for this module.
     DIModule *createModule(DIScope *Scope, StringRef Name,
                            StringRef ConfigurationMacros,
-                           StringRef IncludePath);
+                           StringRef IncludePath, StringRef APINotesFile = {});
 
     /// This creates a descriptor for a lexical block with a new file
     /// attached. This merely extends the existing

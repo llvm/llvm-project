@@ -412,7 +412,11 @@ HANDLE_DW_AT(0x3e00, LLVM_include_path, 0, LLVM)
 HANDLE_DW_AT(0x3e01, LLVM_config_macros, 0, LLVM)
 HANDLE_DW_AT(0x3e02, LLVM_sysroot, 0, LLVM)
 HANDLE_DW_AT(0x3e03, LLVM_tag_offset, 0, LLVM)
+// The missing numbers here are reserved for ptrauth support.
+HANDLE_DW_AT(0x3e07, LLVM_apinotes, 0, APPLE)
+
 // Apple extensions.
+
 HANDLE_DW_AT(0x3fe1, APPLE_optimized, 0, APPLE)
 HANDLE_DW_AT(0x3fe2, APPLE_flags, 0, APPLE)
 HANDLE_DW_AT(0x3fe3, APPLE_isa, 0, APPLE)

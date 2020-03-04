@@ -2061,6 +2061,7 @@ static void writeDIModule(raw_ostream &Out, const DIModule *N,
   Printer.printString("name", N->getName());
   Printer.printString("configMacros", N->getConfigurationMacros());
   Printer.printString("includePath", N->getIncludePath());
+  Printer.printString("apinotes", N->getAPINotesFile());
   Out << ")";
 }
 

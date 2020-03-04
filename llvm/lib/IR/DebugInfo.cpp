@@ -791,11 +791,13 @@ LLVMMetadataRef
 LLVMDIBuilderCreateModule(LLVMDIBuilderRef Builder, LLVMMetadataRef ParentScope,
                           const char *Name, size_t NameLen,
                           const char *ConfigMacros, size_t ConfigMacrosLen,
-                          const char *IncludePath, size_t IncludePathLen) {
+                          const char *IncludePath, size_t IncludePathLen,
+                          const char *APINotesFile, size_t APINotesFileLen) {
   return wrap(unwrap(Builder)->createModule(
       unwrapDI<DIScope>(ParentScope), StringRef(Name, NameLen),
       StringRef(ConfigMacros, ConfigMacrosLen),
-      StringRef(IncludePath, IncludePathLen)));
+      StringRef(IncludePath, IncludePathLen),
+      StringRef(APINotesFile, APINotesFileLen)));
 }
 
 LLVMMetadataRef LLVMDIBuilderCreateNameSpace(LLVMDIBuilderRef Builder,
