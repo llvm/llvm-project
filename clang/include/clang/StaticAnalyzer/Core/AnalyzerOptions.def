@@ -310,6 +310,10 @@ ANALYZER_OPTION(bool, ShouldEmitFixItHintsAsRemarks, "fixits-as-remarks",
                 "Emit fix-it hints as remarks for testing purposes",
                 false)
 
+ANALYZER_OPTION(bool, ShouldApplyFixIts, "apply-fixits",
+                "Apply the fix-it hints to the files",
+                false)
+
 //===----------------------------------------------------------------------===//
 // Unsigned analyzer options.
 //===----------------------------------------------------------------------===//
