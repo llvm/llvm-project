@@ -81,7 +81,7 @@ if config.clang_staticanalyzer:
         config.test_source_root, "Analysis", "check-analyzer-fixit.py")
     config.substitutions.append(
         ('%check_analyzer_fixit',
-         '%s %s' % (config.python_executable, check_analyzer_fixit_path)))
+         '"%s" %s' % (config.python_executable, check_analyzer_fixit_path)))
 
 llvm_config.add_tool_substitutions(tools, tool_dirs)
 
