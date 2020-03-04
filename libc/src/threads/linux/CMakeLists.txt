@@ -13,7 +13,7 @@ add_header_library(
   HDRS
     thread_utils.h
   DEPENDS
-    thread_start_args_h
+    .thread_start_args_h
 )
 
 add_entrypoint_object(
@@ -23,14 +23,14 @@ add_entrypoint_object(
   HDRS
     ../thrd_create.h
   DEPENDS
-    errno_h
-    linux_syscall_h
-    mmap
-    support_common_h
-    sys_syscall_h
-    threads_h
-    threads_utils
-    __errno_location
+    .threads_utils
+    libc.config.linux.linux_syscall_h
+    libc.include.errno
+    libc.include.sys_syscall
+    libc.include.threads
+    libc.src.__support.common
+    libc.src.errno.__errno_location
+    libc.src.sys.mman.mmap
   COMPILE_OPTIONS
     -fno-omit-frame-pointer # This allows us to sniff out the thread args from
                             # the new thread's stack reliably.
@@ -43,12 +43,12 @@ add_entrypoint_object(
   HDRS
     ../thrd_join.h
   DEPENDS
-    linux_syscall_h
-    munmap
-    support_common_h
-    sys_syscall_h
-    threads_h
-    threads_utils
+    .threads_utils
+    libc.config.linux.linux_syscall_h
+    libc.include.sys_syscall
+    libc.include.threads
+    libc.src.sys.mman.mmap
+    libc.src.__support.common
 )
 
 add_entrypoint_object(
@@ -58,8 +58,8 @@ add_entrypoint_object(
   HDRS
     ../mtx_init.h
   DEPENDS
-    threads_h
-    threads_utils
+    .threads_utils
+    libc.include.threads
 )
 
 add_entrypoint_object(
@@ -69,10 +69,10 @@ add_entrypoint_object(
   HDRS
     ../mtx_lock.h
   DEPENDS
-    linux_syscall_h
-    sys_syscall_h
-    threads_h
-    threads_utils
+    .threads_utils
+    libc.config.linux.linux_syscall_h
+    libc.include.sys_syscall
+    libc.include.threads
 )
 
 add_entrypoint_object(
@@ -82,8 +82,8 @@ add_entrypoint_object(
   HDRS
     ../mtx_unlock.h
   DEPENDS
-    linux_syscall_h
-    sys_syscall_h
-    threads_h
-    threads_utils
+    .threads_utils
+    libc.config.linux.linux_syscall_h
+    libc.include.sys_syscall
+    libc.include.threads
 )

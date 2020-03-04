@@ -7,9 +7,9 @@ add_libc_unittest(
   SRCS
     assert_test.cpp
   DEPENDS
-    __assert_fail
+    libc.src.assert.__assert_fail
     # These are necessary for now because dependencies are not properly added.
-    abort
-    raise
-    _Exit
+    libc.src.signal.raise
+    libc.src.stdlib._Exit
+    libc.src.stdlib.abort
 )

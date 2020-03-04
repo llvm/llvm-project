@@ -1,6 +1,13 @@
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
-  add_subdirectory(${LIBC_TARGET_OS})
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
 endif()
+
+add_entrypoint_object(
+  _Exit
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}._Exit
+)
 
 add_entrypoint_object(
   abort
@@ -9,7 +16,7 @@ add_entrypoint_object(
   HDRS
     abort.h
   DEPENDS
-    raise
-    _Exit
-    stdlib_h
+    libc.include.stdlib
+    libc.src.signal.raise
+    ._Exit
 )
