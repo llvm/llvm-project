@@ -61,11 +61,16 @@ LoopOpsDialect::LoopOpsDialect(MLIRContext *context)
 //===----------------------------------------------------------------------===//
 
 void ForOp::build(Builder *builder, OperationState &result, Value lb, Value ub,
-                  Value step) {
+                  Value step, ValueRange iterArgs) {
   result.addOperands({lb, ub, step});
+  result.addOperands(iterArgs);
+  for (Value v : iterArgs)
+    result.addTypes(v.getType());
   Region *bodyRegion = result.addRegion();
   ForOp::ensureTerminator(*bodyRegion, *builder, result.location);
   bodyRegion->front().addArgument(builder->getIndexType());
+  for (Value v : iterArgs)
+    bodyRegion->front().addArgument(v.getType());
 }
 
 static LogicalResult verify(ForOp op) {
