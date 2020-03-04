@@ -1908,7 +1908,7 @@ let Predicates = [HasSVE2] in {
   defm NBSL_ZZZZ  : sve2_int_bitwise_ternary_op<0b111, "nbsl",  int_aarch64_sve_nbsl>;
 
   // SVE2 bitwise xor and rotate right by immediate
-  defm XAR_ZZZI : sve2_int_rotate_right_imm<"xar">;
+  defm XAR_ZZZI : sve2_int_rotate_right_imm<"xar", int_aarch64_sve_xar>;
 
   // SVE2 extract vector (immediate offset, constructive)
   def EXT_ZZI_B : sve2_int_perm_extract_i_cons<"ext">;
