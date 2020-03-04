@@ -1943,7 +1943,7 @@ void printSymbolTable(const ObjectFile *O, StringRef ArchiveName,
     if (Common || isa<ELFObjectFileBase>(O)) {
       uint64_t Val =
           Common ? Symbol.getAlignment() : ELFSymbolRef(Symbol).getSize();
-      outs() << format("\t%08" PRIx64, Val);
+      outs() << '\t' << format(Fmt, Val);
     }
 
     if (isa<ELFObjectFileBase>(O)) {
