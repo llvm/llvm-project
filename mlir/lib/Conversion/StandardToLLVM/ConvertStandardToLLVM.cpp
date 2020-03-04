@@ -16,10 +16,12 @@
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Module.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/TypeUtilities.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/Functional.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -1662,6 +1664,74 @@ struct DeallocOpLowering : public LLVMLegalizationPattern<DeallocOp> {
   bool useAlloca;
 };
 
+// A `rsqrt` is converted into `1 / sqrt`.
+struct RsqrtOpLowering : public LLVMLegalizationPattern<RsqrtOp> {
+  using LLVMLegalizationPattern<RsqrtOp>::LLVMLegalizationPattern;
+
+  PatternMatchResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    OperandAdaptor<RsqrtOp> transformed(operands);
+    auto operandType =
+        transformed.operand().getType().dyn_cast_or_null<LLVM::LLVMType>();
+
+    if (!operandType)
+      return matchFailure();
+
+    auto loc = op->getLoc();
+    auto resultType = *op->result_type_begin();
+    auto floatType = getElementTypeOrSelf(resultType).cast<FloatType>();
+    auto floatOne = rewriter.getFloatAttr(floatType, 1.0);
+
+    if (!operandType.isArrayTy()) {
+      LLVM::ConstantOp one;
+      if (operandType.isVectorTy()) {
+        one = rewriter.create<LLVM::ConstantOp>(
+            loc, operandType,
+            SplatElementsAttr::get(resultType.cast<ShapedType>(), floatOne));
+      } else {
+        one = rewriter.create<LLVM::ConstantOp>(loc, operandType, floatOne);
+      }
+      auto sqrt = rewriter.create<LLVM::SqrtOp>(loc, transformed.operand());
+      rewriter.replaceOpWithNewOp<LLVM::FDivOp>(op, operandType, one, sqrt);
+      return matchSuccess();
+    }
+
+    auto vectorType = resultType.dyn_cast<VectorType>();
+    if (!vectorType)
+      return this->matchFailure();
+
+    auto vectorTypeInfo =
+        extractNDVectorTypeInfo(vectorType, this->typeConverter);
+    auto llvmVectorTy = vectorTypeInfo.llvmVectorTy;
+    if (!llvmVectorTy || operandType != vectorTypeInfo.llvmArrayTy)
+      return this->matchFailure();
+
+    Value desc = rewriter.create<LLVM::UndefOp>(loc, operandType);
+    nDVectorIterate(vectorTypeInfo, rewriter, [&](ArrayAttr position) {
+      // For this unrolled `position` corresponding to the `linearIndex`^th
+      // element, extract operand vectors
+      auto extractedOperand = rewriter.create<LLVM::ExtractValueOp>(
+          loc, llvmVectorTy, operands[0], position);
+      auto splatAttr = SplatElementsAttr::get(
+          mlir::VectorType::get(
+              {llvmVectorTy.getUnderlyingType()->getVectorNumElements()},
+              floatType),
+          floatOne);
+      auto one =
+          rewriter.create<LLVM::ConstantOp>(loc, llvmVectorTy, splatAttr);
+      auto sqrt =
+          rewriter.create<LLVM::SqrtOp>(loc, llvmVectorTy, extractedOperand);
+      auto div = rewriter.create<LLVM::FDivOp>(loc, llvmVectorTy, one, sqrt);
+      desc = rewriter.create<LLVM::InsertValueOp>(loc, operandType, desc, div,
+                                                  position);
+    });
+    rewriter.replaceOp(op, desc);
+
+    return matchSuccess();
+  }
+};
+
 // A `tanh` is converted into a call to the `tanh` function.
 struct TanhOpLowering : public LLVMLegalizationPattern<TanhOp> {
   using LLVMLegalizationPattern<TanhOp>::LLVMLegalizationPattern;
@@ -2806,6 +2876,7 @@ void mlir::populateStdToLLVMNonMemoryConversionPatterns(
       PrefetchOpLowering,
       RemFOpLowering,
       ReturnOpLowering,
+      RsqrtOpLowering,
       SIToFPLowering,
       SelectOpLowering,
       ShiftLeftOpLowering,

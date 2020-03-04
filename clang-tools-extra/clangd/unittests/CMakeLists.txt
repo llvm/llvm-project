@@ -86,6 +86,7 @@ add_unittest(ClangdUnitTests ClangdTests
 clang_target_link_libraries(ClangdTests
   PRIVATE
   clangAST
+  clangASTMatchers
   clangBasic
   clangFormat
   clangFrontend

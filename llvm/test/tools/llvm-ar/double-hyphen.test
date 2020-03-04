@@ -1,0 +1,9 @@
+## Test the use of "--" on the commandline
+
+# RUN: echo contents > %t.txt
+
+# RUN: rm -f %t.ar
+# RUN: llvm-ar rc -- %t.ar %t.txt 2>&1 | count 0
+
+# RUN: llvm-ar p %t.ar | FileCheck %s
+# CHECK: contents

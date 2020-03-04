@@ -546,6 +546,14 @@ Shape[] shapes = new[] { new Circle { Radius = 2.7281, Colour = Colours.Red },
                              Colour = Colours.Yellow,
                          } };)",
                Style);
+
+  // Lambdas can be supplied as initialiser arguments.
+  verifyFormat(R"(//
+private Transformer _transformer = new X.Y {
+    Filler = (Shape shape) => { return new Transform.Fill(shape, RED); },
+    Scaler = (Shape shape) => { return new Transform.Resize(shape, 0.1); },
+};)",
+               Style);
 }
 
 TEST_F(FormatTestCSharp, CSharpNamedArguments) {

@@ -20,7 +20,7 @@
 using namespace llvm;
 
 void DWARFDebugAranges::extract(
-    DataExtractor DebugArangesData,
+    DWARFDataExtractor DebugArangesData,
     function_ref<void(Error)> RecoverableErrorHandler) {
   if (!DebugArangesData.isValidOffset(0))
     return;
@@ -48,8 +48,8 @@ void DWARFDebugAranges::generate(DWARFContext *CTX) {
     return;
 
   // Extract aranges from .debug_aranges section.
-  DataExtractor ArangesData(CTX->getDWARFObj().getArangesSection(),
-                            CTX->isLittleEndian(), 0);
+  DWARFDataExtractor ArangesData(CTX->getDWARFObj().getArangesSection(),
+                                 CTX->isLittleEndian(), 0);
   extract(ArangesData, CTX->getRecoverableErrorHandler());
 
   // Generate aranges from DIEs: even if .debug_aranges section is present,

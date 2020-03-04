@@ -4,7 +4,7 @@
 
 # CHECK: .debug_addr contents:
 # CHECK-NOT: {{.}}
-# ERR: section is not large enough to contain an address table length at offset 0x0
+# ERR: parsing address table at offset 0x0: unexpected end of data at offset 0x0
 # ERR-NOT: {{.}}
 
 # too small section to contain length field

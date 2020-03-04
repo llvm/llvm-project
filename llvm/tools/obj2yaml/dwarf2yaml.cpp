@@ -57,8 +57,8 @@ void dumpDebugStrings(DWARFContext &DCtx, DWARFYAML::Data &Y) {
 }
 
 Error dumpDebugARanges(DWARFContext &DCtx, DWARFYAML::Data &Y) {
-  DataExtractor ArangesData(DCtx.getDWARFObj().getArangesSection(),
-                            DCtx.isLittleEndian(), 0);
+  DWARFDataExtractor ArangesData(DCtx.getDWARFObj().getArangesSection(),
+                                 DCtx.isLittleEndian(), 0);
   uint64_t Offset = 0;
   DWARFDebugArangeSet Set;
 

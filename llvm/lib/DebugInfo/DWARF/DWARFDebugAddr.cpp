@@ -44,34 +44,14 @@ Error DWARFDebugAddrTable::extractV5(const DWARFDataExtractor &Data,
                                      uint64_t *OffsetPtr, uint8_t CUAddrSize,
                                      std::function<void(Error)> WarnCallback) {
   Offset = *OffsetPtr;
-  // Check that we can read the unit length field.
-  if (!Data.isValidOffsetForDataOfSize(Offset, 4))
-    return createStringError(errc::invalid_argument,
-                             "section is not large enough to contain an "
-                             "address table length at offset 0x%" PRIx64,
-                             Offset);
-  Format = dwarf::DwarfFormat::DWARF32;
-  Length = Data.getU32(OffsetPtr);
-  if (Length == dwarf::DW_LENGTH_DWARF64) {
-    // Check that we can read the extended unit length field.
-    if (!Data.isValidOffsetForDataOfSize(*OffsetPtr, 8)) {
-      invalidateLength();
-      return createStringError(
-          errc::invalid_argument,
-          "section is not large enough to contain an extended length field "
-          "of the address table at offset 0x%" PRIx64,
-          Offset);
-    }
-    Format = dwarf::DwarfFormat::DWARF64;
-    Length = Data.getU64(OffsetPtr);
-  } else if (Length >= dwarf::DW_LENGTH_lo_reserved) {
-    uint64_t DiagnosticLength = Length;
+  llvm::Error Err = Error::success();
+  std::tie(Length, Format) = Data.getInitialLength(OffsetPtr, &Err);
+  if (Err) {
     invalidateLength();
-    return createStringError(
-        errc::not_supported,
-        "address table at offset 0x%" PRIx64
-        " has unsupported reserved unit length of value 0x%" PRIx64,
-        Offset, DiagnosticLength);
+    return createStringError(errc::invalid_argument,
+                             "parsing address table at offset 0x%" PRIx64
+                             ": %s",
+                             Offset, toString(std::move(Err)).c_str());
   }
 
   if (!Data.isValidOffsetForDataOfSize(*OffsetPtr, Length)) {
