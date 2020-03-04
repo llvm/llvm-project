@@ -258,6 +258,50 @@ define <vscale x 2 x i64> @nbsl_i64(<vscale x 2 x i64> %a,
   ret <vscale x 2 x i64> %res
 }
 
+;
+; XAR (vector, bitwise, unpredicated)
+;
+
+define <vscale x 16 x i8> @xar_b(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) {
+; CHECK-LABEL: xar_b:
+; CHECK: xar z0.b, z0.b, z1.b, #1
+; CHECK-NEXT: ret
+  %out = call <vscale x 16 x i8> @llvm.aarch64.sve.xar.nxv16i8(<vscale x 16 x i8> %a,
+                                                               <vscale x 16 x i8> %b,
+                                                               i32 1)
+  ret <vscale x 16 x i8> %out
+}
+
+define <vscale x 8 x i16> @xar_h(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) {
+; CHECK-LABEL: xar_h:
+; CHECK: xar z0.h, z0.h, z1.h, #2
+; CHECK-NEXT: ret
+  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.xar.nxv8i16(<vscale x 8 x i16> %a,
+                                                               <vscale x 8 x i16> %b,
+                                                               i32 2)
+  ret <vscale x 8 x i16> %out
+}
+
+define <vscale x 4 x i32> @xar_s(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
+; CHECK-LABEL: xar_s:
+; CHECK: xar z0.s, z0.s, z1.s, #3
+; CHECK-NEXT: ret
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.xar.nxv4i32(<vscale x 4 x i32> %a,
+                                                               <vscale x 4 x i32> %b,
+                                                               i32 3)
+  ret <vscale x 4 x i32> %out
+}
+
+define <vscale x 2 x i64> @xar_d(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
+; CHECK-LABEL: xar_d:
+; CHECK: xar z0.d, z0.d, z1.d, #4
+; CHECK-NEXT: ret
+  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.xar.nxv2i64(<vscale x 2 x i64> %a,
+                                                               <vscale x 2 x i64> %b,
+                                                               i32 4)
+  ret <vscale x 2 x i64> %out
+}
+
 declare <vscale x 16 x i8> @llvm.aarch64.sve.eor3.nxv16i8(<vscale x 16 x i8>,<vscale x 16 x i8>,<vscale x 16 x i8>)
 declare <vscale x 8 x i16> @llvm.aarch64.sve.eor3.nxv8i16(<vscale x 8 x i16>,<vscale x 8 x i16>,<vscale x 8 x i16>)
 declare <vscale x 4 x i32> @llvm.aarch64.sve.eor3.nxv4i32(<vscale x 4 x i32>,<vscale x 4 x i32>,<vscale x 4 x i32>)
@@ -282,3 +326,7 @@ declare <vscale x 16 x i8> @llvm.aarch64.sve.nbsl.nxv16i8(<vscale x 16 x i8>,<vs
 declare <vscale x 8 x i16> @llvm.aarch64.sve.nbsl.nxv8i16(<vscale x 8 x i16>,<vscale x 8 x i16>,<vscale x 8 x i16>)
 declare <vscale x 4 x i32> @llvm.aarch64.sve.nbsl.nxv4i32(<vscale x 4 x i32>,<vscale x 4 x i32>,<vscale x 4 x i32>)
 declare <vscale x 2 x i64> @llvm.aarch64.sve.nbsl.nxv2i64(<vscale x 2 x i64>,<vscale x 2 x i64>,<vscale x 2 x i64>)
+declare <vscale x 16 x i8> @llvm.aarch64.sve.xar.nxv16i8(<vscale x 16 x i8>, <vscale x 16 x i8>, i32)
+declare <vscale x 8 x i16> @llvm.aarch64.sve.xar.nxv8i16(<vscale x 8 x i16>, <vscale x 8 x i16>, i32)
+declare <vscale x 4 x i32> @llvm.aarch64.sve.xar.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i32>, i32)
+declare <vscale x 2 x i64> @llvm.aarch64.sve.xar.nxv2i64(<vscale x 2 x i64>, <vscale x 2 x i64>, i32)
