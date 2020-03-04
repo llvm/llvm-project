@@ -363,11 +363,12 @@ static unsigned getBitWidth(Type type) {
     // TODO: Make sure not caller relies on the actual pointer width value.
     return 64;
   }
-  if (type.isSignlessIntOrFloat()) {
+
+  if (type.isIntOrFloat())
     return type.getIntOrFloatBitWidth();
-  }
+
   if (auto vectorType = type.dyn_cast<VectorType>()) {
-    assert(vectorType.getElementType().isSignlessIntOrFloat());
+    assert(vectorType.getElementType().isIntOrFloat());
     return vectorType.getNumElements() *
            vectorType.getElementType().getIntOrFloatBitWidth();
   }
@@ -500,7 +501,7 @@ static void printAtomicUpdateOp(Operation *op, OpAsmPrinter &printer) {
 static LogicalResult verifyAtomicUpdateOp(Operation *op) {
   auto ptrType = op->getOperand(0).getType().cast<spirv::PointerType>();
   auto elementType = ptrType.getPointeeType();
-  if (!elementType.isSignlessInteger())
+  if (!elementType.isa<IntegerType>())
     return op->emitOpError(
                "pointer operand must point to an integer value, found ")
            << elementType;
@@ -1265,7 +1266,7 @@ static LogicalResult verify(spirv::ConstantOp constOp) {
       numElements *= t.getNumElements();
       opElemType = t.getElementType();
     }
-    if (!opElemType.isSignlessIntOrFloat()) {
+    if (!opElemType.isIntOrFloat()) {
       return constOp.emitOpError("only support nested array result type");
     }
 
@@ -1769,8 +1770,6 @@ static LogicalResult verify(spirv::GlobalVariableOp varOp) {
 //===----------------------------------------------------------------------===//
 
 static LogicalResult verify(spirv::GroupNonUniformBallotOp ballotOp) {
-  // TODO(antiagainst): check the result integer type's signedness bit is 0.
-
   spirv::Scope scope = ballotOp.execution_scope();
   if (scope != spirv::Scope::Workgroup && scope != spirv::Scope::Subgroup)
     return ballotOp.emitOpError(

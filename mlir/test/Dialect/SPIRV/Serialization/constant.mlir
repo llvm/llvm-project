@@ -27,6 +27,37 @@ spv.module "Logical" "GLSL450" {
     spv.Return
   }
 
+  // CHECK-LABEL: @si32_const
+  spv.func @si32_const() -> () "None" {
+    // CHECK: spv.constant 0 : si32
+    %0 = spv.constant  0 : si32
+    // CHECK: spv.constant 10 : si32
+    %1 = spv.constant 10 : si32
+    // CHECK: spv.constant -5 : si32
+    %2 = spv.constant -5 : si32
+
+    %3 = spv.IAdd %0, %1 : si32
+    %4 = spv.IAdd %2, %3 : si32
+    spv.Return
+  }
+
+  // CHECK-LABEL: @ui32_const
+  // We cannot differentiate signless vs. unsigned integers in SPIR-V blob
+  // because they all use 1 as the signedness bit. So we always treat them
+  // as signless integers.
+  spv.func @ui32_const() -> () "None" {
+    // CHECK: spv.constant 0 : i32
+    %0 = spv.constant  0 : ui32
+    // CHECK: spv.constant 10 : i32
+    %1 = spv.constant 10 : ui32
+    // CHECK: spv.constant -5 : i32
+    %2 = spv.constant 4294967291 : ui32
+
+    %3 = spv.IAdd %0, %1 : ui32
+    %4 = spv.IAdd %2, %3 : ui32
+    spv.Return
+  }
+
   // CHECK-LABEL: @i64_const
   spv.func @i64_const() -> () "None" {
     // CHECK: spv.constant 4294967296 : i64
@@ -141,8 +172,23 @@ spv.module "Logical" "GLSL450" {
     spv.Return
   }
 
-  // CHECK-LABEL: @array_const
-  spv.func @array_const() -> (!spv.array<2 x vector<2xf32>>) "None" {
+  // CHECK-LABEL: @ui64_array_const
+  spv.func @ui64_array_const() -> (!spv.array<3xui64>) "None" {
+    // CHECK: spv.constant [5, 6, 7] : !spv.array<3 x i64>
+    %0 = spv.constant [5 : ui64, 6 : ui64, 7 : ui64] : !spv.array<3 x ui64>
+
+    spv.ReturnValue %0: !spv.array<3xui64>
+  }
+
+  // CHECK-LABEL: @si32_array_const
+  spv.func @si32_array_const() -> (!spv.array<3xsi32>) "None" {
+    // CHECK: spv.constant [5 : si32, 6 : si32, 7 : si32] : !spv.array<3 x si32>
+    %0 = spv.constant [5 : si32, 6 : si32, 7 : si32] : !spv.array<3 x si32>
+
+    spv.ReturnValue %0 : !spv.array<3xsi32>
+  }
+  // CHECK-LABEL: @float_array_const
+  spv.func @float_array_const() -> (!spv.array<2 x vector<2xf32>>) "None" {
     // CHECK: spv.constant [dense<3.000000e+00> : vector<2xf32>, dense<[4.000000e+00, 5.000000e+00]> : vector<2xf32>] : !spv.array<2 x vector<2xf32>>
     %0 = spv.constant [dense<3.0> : vector<2xf32>, dense<[4., 5.]> : vector<2xf32>] : !spv.array<2 x vector<2xf32>>
 

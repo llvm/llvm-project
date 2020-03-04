@@ -752,7 +752,7 @@ func @logicalUnary(%arg0 : i1)
 
 func @logicalUnary(%arg0 : i32)
 {
-  // expected-error @+1 {{operand #0 must be 1-bit signless integer or vector of 1-bit signless integer values of length 2/3/4, but got 'i32'}}
+  // expected-error @+1 {{operand #0 must be bool or vector of bool values of length 2/3/4, but got 'i32'}}
   %0 = spv.LogicalNot %arg0 : i32
   return
 }
