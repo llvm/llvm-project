@@ -16,9 +16,9 @@ namespace {
 template <size_t SecSize>
 void ExpectExtractError(const char (&SecDataRaw)[SecSize],
                         const char *ErrorMessage) {
-  DataExtractor Extractor(StringRef(SecDataRaw, SecSize - 1),
-                          /* IsLittleEndian = */ true,
-                          /* AddressSize = */ 4);
+  DWARFDataExtractor Extractor(StringRef(SecDataRaw, SecSize - 1),
+                               /* IsLittleEndian = */ true,
+                               /* AddressSize = */ 4);
   DWARFDebugArangeSet Set;
   uint64_t Offset = 0;
   Error E = Set.extract(Extractor, &Offset);
@@ -111,29 +111,26 @@ TEST(DWARFDebugArangeSet, ReservedUnitLength) {
   // the section. 1 will be automatically subtracted in ExpectExtractError().
   static const char DebugArangesSecRaw[12 + 1] =
       "\xf0\xff\xff\xff"; // Reserved unit length value
-  ExpectExtractError(
-      DebugArangesSecRaw,
-      "address range table at offset 0x0 has unsupported reserved unit length "
-      "of value 0xfffffff0");
+  ExpectExtractError(DebugArangesSecRaw,
+                     "parsing address ranges table at offset 0x0: unsupported "
+                     "reserved unit length of value 0xfffffff0");
 }
 
 TEST(DWARFDebugArangeSet, SectionTooShort) {
   // Note: 1 will be automatically subtracted in ExpectExtractError().
   static const char DebugArangesSecRaw[11 + 1] = {0};
-  ExpectExtractError(
-      DebugArangesSecRaw,
-      "section is not large enough to contain an address range table "
-      "at offset 0x0");
+  ExpectExtractError(DebugArangesSecRaw,
+                     "parsing address ranges table at offset 0x0: unexpected "
+                     "end of data at offset 0xb");
 }
 
 TEST(DWARFDebugArangeSet, SectionTooShortDWARF64) {
   // Note: 1 will be automatically subtracted in ExpectExtractError().
   static const char DebugArangesSecRaw[23 + 1] =
       "\xff\xff\xff\xff"; // DWARF64 mark
-  ExpectExtractError(
-      DebugArangesSecRaw,
-      "section is not large enough to contain a DWARF64 address range table "
-      "at offset 0x0");
+  ExpectExtractError(DebugArangesSecRaw,
+                     "parsing address ranges table at offset 0x0: unexpected "
+                     "end of data at offset 0x17");
 }
 
 TEST(DWARFDebugArangeSet, NoSpaceForEntries) {

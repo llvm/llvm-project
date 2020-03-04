@@ -31,7 +31,8 @@ void DWARFDebugArangeSet::clear() {
   ArangeDescriptors.clear();
 }
 
-Error DWARFDebugArangeSet::extract(DataExtractor data, uint64_t *offset_ptr) {
+Error DWARFDebugArangeSet::extract(DWARFDataExtractor data,
+                                   uint64_t *offset_ptr) {
   assert(data.isValidOffset(*offset_ptr));
   ArangeDescriptors.clear();
   Offset = *offset_ptr;
@@ -59,45 +60,20 @@ Error DWARFDebugArangeSet::extract(DataExtractor data, uint64_t *offset_ptr) {
   // the segment selectors are omitted from all tuples, including
   // the terminating tuple.
 
-  constexpr unsigned CommonFieldsLength = 2 + // Version
-                                          1 + // Address Size
-                                          1;  // Segment Selector Size
-  static const unsigned DWARF32HeaderLength =
-      dwarf::getUnitLengthFieldByteSize(dwarf::DWARF32) + CommonFieldsLength +
-      dwarf::getDwarfOffsetByteSize(dwarf::DWARF32); // Debug Info Offset
-  static const unsigned DWARF64HeaderLength =
-      dwarf::getUnitLengthFieldByteSize(dwarf::DWARF64) + CommonFieldsLength +
-      dwarf::getDwarfOffsetByteSize(dwarf::DWARF64); // Debug Info Offset
-
-  if (!data.isValidOffsetForDataOfSize(Offset, DWARF32HeaderLength))
-    return createStringError(errc::invalid_argument,
-                             "section is not large enough to contain "
-                             "an address range table at offset 0x%" PRIx64,
-                             Offset);
-
-  dwarf::DwarfFormat format = dwarf::DWARF32;
-  HeaderData.Length = data.getU32(offset_ptr);
-  if (HeaderData.Length == dwarf::DW_LENGTH_DWARF64) {
-    if (!data.isValidOffsetForDataOfSize(Offset, DWARF64HeaderLength))
-      return createStringError(
-          errc::invalid_argument,
-          "section is not large enough to contain a DWARF64 "
-          "address range table at offset 0x%" PRIx64,
-          Offset);
-    HeaderData.Length = data.getU64(offset_ptr);
-    format = dwarf::DWARF64;
-  } else if (HeaderData.Length >= dwarf::DW_LENGTH_lo_reserved) {
-    return createStringError(
-        errc::invalid_argument,
-        "address range table at offset 0x%" PRIx64
-        " has unsupported reserved unit length of value 0x%8.8" PRIx64,
-        Offset, HeaderData.Length);
-  }
-  HeaderData.Version = data.getU16(offset_ptr);
+  dwarf::DwarfFormat format;
+  Error Err = Error::success();
+  std::tie(HeaderData.Length, format) = data.getInitialLength(offset_ptr, &Err);
+  HeaderData.Version = data.getU16(offset_ptr, &Err);
   HeaderData.CuOffset =
-      data.getUnsigned(offset_ptr, dwarf::getDwarfOffsetByteSize(format));
-  HeaderData.AddrSize = data.getU8(offset_ptr);
-  HeaderData.SegSize = data.getU8(offset_ptr);
+      data.getUnsigned(offset_ptr, dwarf::getDwarfOffsetByteSize(format), &Err);
+  HeaderData.AddrSize = data.getU8(offset_ptr, &Err);
+  HeaderData.SegSize = data.getU8(offset_ptr, &Err);
+  if (Err) {
+    return createStringError(errc::invalid_argument,
+                             "parsing address ranges table at offset 0x%" PRIx64
+                             ": %s",
+                             Offset, toString(std::move(Err)).c_str());
+  }
 
   // Perform basic validation of the header fields.
   uint64_t full_length =
