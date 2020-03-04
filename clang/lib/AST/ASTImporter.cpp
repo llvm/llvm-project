@@ -6631,8 +6631,9 @@ ExpectedStmt ASTNodeImporter::VisitStmtExpr(StmtExpr *E) {
   if (Err)
     return std::move(Err);
 
-  return new (Importer.getToContext()) StmtExpr(
-      ToSubStmt, ToType, ToLParenLoc, ToRParenLoc);
+  return new (Importer.getToContext())
+      StmtExpr(ToSubStmt, ToType, ToLParenLoc, ToRParenLoc,
+               E->isInstantiationDependent());
 }
 
 ExpectedStmt ASTNodeImporter::VisitUnaryOperator(UnaryOperator *E) {

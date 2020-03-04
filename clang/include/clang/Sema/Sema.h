@@ -5026,7 +5026,7 @@ public:
                             LabelDecl *TheDecl);
 
   void ActOnStartStmtExpr();
-  ExprResult ActOnStmtExpr(SourceLocation LPLoc, Stmt *SubStmt,
+  ExprResult ActOnStmtExpr(Scope *S, SourceLocation LPLoc, Stmt *SubStmt,
                            SourceLocation RPLoc); // "({..})"
   // Handle the final expression in a statement expression.
   ExprResult ActOnStmtExprResult(ExprResult E);
