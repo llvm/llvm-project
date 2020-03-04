@@ -5318,6 +5318,18 @@ Address CGOpenMPRuntime::emitDependClause(
   return DependenciesArray;
 }
 
+void CGOpenMPRuntime::emitDestroyClause(CodeGenFunction &CGF, LValue DepobjLVal,
+                                        SourceLocation Loc) {
+  llvm::Value *DepObjAddr = CGF.EmitLoadOfScalar(DepobjLVal, Loc);
+  llvm::Value *ThreadID = getThreadID(CGF, Loc);
+  // Use default allocator.
+  llvm::Value *Allocator = llvm::ConstantPointerNull::get(CGF.VoidPtrTy);
+  llvm::Value *Args[] = {ThreadID, DepObjAddr, Allocator};
+
+  // _kmpc_free(gtid, addr, nullptr);
+  (void)CGF.EmitRuntimeCall(createRuntimeFunction(OMPRTL__kmpc_free), Args);
+}
+
 void CGOpenMPRuntime::emitTaskCall(CodeGenFunction &CGF, SourceLocation Loc,
                                    const OMPExecutableDirective &D,
                                    llvm::Function *TaskFunction,

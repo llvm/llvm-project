@@ -1786,6 +1786,11 @@ public:
       CodeGenFunction &CGF,
       ArrayRef<std::pair<OpenMPDependClauseKind, const Expr *>> Dependencies,
       bool ForDepobj, SourceLocation Loc);
+
+  /// Emits the code to destroy the dependency object provided in depobj
+  /// directive.
+  void emitDestroyClause(CodeGenFunction &CGF, LValue DepobjLVal,
+                         SourceLocation Loc);
 };
 
 /// Class supports emissionof SIMD-only code.
