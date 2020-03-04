@@ -637,6 +637,13 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   }
 
   if (RC == &AMDGPU::SReg_64RegClass) {
+    if (SrcReg == AMDGPU::SCC) {
+      BuildMI(MBB, MI, DL, get(AMDGPU::S_CSELECT_B64), DestReg)
+          .addImm(1)
+          .addImm(0);
+      return;
+    }
+
     if (DestReg == AMDGPU::VCC) {
       if (AMDGPU::SReg_64RegClass.contains(SrcReg)) {
         BuildMI(MBB, MI, DL, get(AMDGPU::S_MOV_B64), AMDGPU::VCC)
@@ -663,10 +670,18 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   }
 
   if (DestReg == AMDGPU::SCC) {
-    assert(AMDGPU::SReg_32RegClass.contains(SrcReg));
-    BuildMI(MBB, MI, DL, get(AMDGPU::S_CMP_LG_U32))
-      .addReg(SrcReg, getKillRegState(KillSrc))
-      .addImm(0);
+    unsigned Opcode;
+    if (AMDGPU::SReg_32RegClass.contains(SrcReg)) {
+      Opcode = AMDGPU::S_CMP_LG_U32;
+    } else {
+      assert(AMDGPU::SReg_64RegClass.contains(SrcReg));
+      Opcode = AMDGPU::S_CMP_LG_U64;
+    }
+
+    BuildMI(MBB, MI, DL, get(Opcode))
+        .addReg(SrcReg, getKillRegState(KillSrc))
+        .addImm(0);
+
     return;
   }
 
@@ -5397,6 +5412,12 @@ void SIInstrInfo::moveToVALU(MachineInstr &TopInst,
       Inst.eraseFromParent();
     }
       continue;
+
+    case AMDGPU::S_CSELECT_B32:
+    case AMDGPU::S_CSELECT_B64:
+      lowerSelect(Worklist, Inst, MDT);
+      Inst.eraseFromParent();
+      continue;
     }
 
     if (NewOpcode == AMDGPU::INSTRUCTION_LIST_END) {
@@ -5535,6 +5556,78 @@ bool SIInstrInfo::moveScalarAddSub(SetVectorType &Worklist, MachineInstr &Inst,
   }
 
   return false;
+}
+
+void SIInstrInfo::lowerSelect(SetVectorType &Worklist, MachineInstr &Inst,
+                              MachineDominatorTree *MDT) const {
+
+  MachineBasicBlock &MBB = *Inst.getParent();
+  MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
+  MachineBasicBlock::iterator MII = Inst;
+  DebugLoc DL = Inst.getDebugLoc();
+
+  MachineOperand &Dest = Inst.getOperand(0);
+  MachineOperand &Src0 = Inst.getOperand(1);
+  MachineOperand &Src1 = Inst.getOperand(2);
+  MachineOperand &Cond = Inst.getOperand(3);
+
+  Register SCCSource = Cond.getReg();
+  // Find SCC def, and if that is a copy (SCC = COPY reg) then use reg instead.
+  if (!Cond.isUndef()) {
+    for (MachineInstr &CandI :
+         make_range(std::next(MachineBasicBlock::reverse_iterator(Inst)),
+                    Inst.getParent()->rend())) {
+      if (CandI.findRegisterDefOperandIdx(AMDGPU::SCC, false, false, &RI) !=
+          -1) {
+        if (CandI.isCopy() && CandI.getOperand(0).getReg() == AMDGPU::SCC) {
+          SCCSource = CandI.getOperand(1).getReg();
+        }
+        break;
+      }
+    }
+  }
+
+  // If this is a trivial select where the condition is effectively not SCC
+  // (SCCSource is a source of copy to SCC), then the select is semantically
+  // equivalent to copying SCCSource. Hence, there is no need to create
+  // V_CNDMASK, we can just use that and bail out.
+  if ((SCCSource != AMDGPU::SCC) && Src0.isImm() && (Src0.getImm() == -1) &&
+      Src1.isImm() && (Src1.getImm() == 0)) {
+    MRI.replaceRegWith(Dest.getReg(), SCCSource);
+    return;
+  }
+
+  const TargetRegisterClass *TC = ST.getWavefrontSize() == 64
+                                      ? &AMDGPU::SReg_64_XEXECRegClass
+                                      : &AMDGPU::SReg_32_XM0_XEXECRegClass;
+  Register CopySCC = MRI.createVirtualRegister(TC);
+
+  if (SCCSource == AMDGPU::SCC) {
+    // Insert a trivial select instead of creating a copy, because a copy from
+    // SCC would semantically mean just copying a single bit, but we may need
+    // the result to be a vector condition mask that needs preserving.
+    unsigned Opcode = (ST.getWavefrontSize() == 64) ? AMDGPU::S_CSELECT_B64
+                                                    : AMDGPU::S_CSELECT_B32;
+    auto NewSelect =
+        BuildMI(MBB, MII, DL, get(Opcode), CopySCC).addImm(-1).addImm(0);
+    NewSelect->getOperand(3).setIsUndef(Cond.isUndef());
+  } else {
+    BuildMI(MBB, MII, DL, get(AMDGPU::COPY), CopySCC).addReg(SCCSource);
+  }
+
+  Register ResultReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+
+  auto UpdatedInst =
+      BuildMI(MBB, MII, DL, get(AMDGPU::V_CNDMASK_B32_e64), ResultReg)
+          .addImm(0)
+          .add(Src1) // False
+          .addImm(0)
+          .add(Src0) // True
+          .addReg(CopySCC);
+
+  MRI.replaceRegWith(Dest.getReg(), ResultReg);
+  legalizeOperands(*UpdatedInst, MDT);
+  addUsersToMoveToVALUWorklist(ResultReg, MRI, Worklist);
 }
 
 void SIInstrInfo::lowerScalarAbs(SetVectorType &Worklist,
@@ -6118,6 +6211,8 @@ void SIInstrInfo::movePackToVALU(SetVectorType &Worklist,
 void SIInstrInfo::addSCCDefUsersToVALUWorklist(MachineOperand &Op,
                                                MachineInstr &SCCDefInst,
                                                SetVectorType &Worklist) const {
+  bool SCCUsedImplicitly = false;
+
   // Ensure that def inst defines SCC, which is still live.
   assert(Op.isReg() && Op.getReg() == AMDGPU::SCC && Op.isDef() &&
          !Op.isDead() && Op.getParent() == &SCCDefInst);
@@ -6132,19 +6227,32 @@ void SIInstrInfo::addSCCDefUsersToVALUWorklist(MachineOperand &Op,
       if (MI.isCopy()) {
         MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
         unsigned DestReg = MI.getOperand(0).getReg();
-        SmallVector<MachineInstr *, 4> Users;
+
         for (auto &User : MRI.use_nodbg_instructions(DestReg)) {
           if ((User.getOpcode() == AMDGPU::S_ADD_CO_PSEUDO) ||
               (User.getOpcode() == AMDGPU::S_SUB_CO_PSEUDO)) {
-            Users.push_back(&User);
+            User.getOperand(4).setReg(RI.getVCC());
             Worklist.insert(&User);
+          } else if (User.getOpcode() == AMDGPU::V_CNDMASK_B32_e64) {
+            User.getOperand(5).setReg(RI.getVCC());
+            // No need to add to Worklist.
           }
         }
-        for (auto &U : Users)
-          U->getOperand(4).setReg(RI.getVCC());
         CopyToDelete.push_back(&MI);
-      } else
+      } else {
+        if (MI.getOpcode() == AMDGPU::S_CSELECT_B32 ||
+            MI.getOpcode() == AMDGPU::S_CSELECT_B64) {
+          // This is an implicit use of SCC and it is really expected by
+          // the SCC users to handle.
+          // We cannot preserve the edge to the user so add the explicit
+          // copy: SCC = COPY VCC.
+          // The copy will be cleaned up during the processing of the user
+          // in lowerSelect.
+          SCCUsedImplicitly = true;
+        }
+
         Worklist.insert(&MI);
+      }
     }
     // Exit if we find another SCC def.
     if (MI.findRegisterDefOperandIdx(AMDGPU::SCC, false, false, &RI) != -1)
@@ -6152,6 +6260,12 @@ void SIInstrInfo::addSCCDefUsersToVALUWorklist(MachineOperand &Op,
   }
   for (auto &Copy : CopyToDelete)
     Copy->eraseFromParent();
+
+  if (SCCUsedImplicitly) {
+    BuildMI(*SCCDefInst.getParent(), std::next(SCCDefInst.getIterator()),
+            SCCDefInst.getDebugLoc(), get(AMDGPU::COPY), AMDGPU::SCC)
+        .addReg(RI.getVCC());
+  }
 }
 
 const TargetRegisterClass *SIInstrInfo::getDestEquivalentVGPRClass(

@@ -98,7 +98,8 @@ define amdgpu_kernel void @sgpr_trunc_i32_to_i1(i32 addrspace(1)* %out, i32 %a) 
 ; VI: s_load_dwordx2 s{{\[}}[[SLO:[0-9]+]]:{{[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0x4c
 ; GCN: s_and_b32 [[MASKED:s[0-9]+]], 1, s[[SLO]]
 ; GCN: v_cmp_eq_u32_e64 s{{\[}}[[VLO:[0-9]+]]:[[VHI:[0-9]+]]], [[MASKED]], 1{{$}}
-; GCN: v_cndmask_b32_e64 {{v[0-9]+}}, -12, 63, s{{\[}}[[VLO]]:[[VHI]]]
+; GCN: s_cmp_lg_u64 s{{\[}}[[VLO]]:[[VHI]]], 0
+; GCN: s_cselect_b32 {{s[0-9]+}}, 63, -12
 define amdgpu_kernel void @s_trunc_i64_to_i1(i32 addrspace(1)* %out, [8 x i32], i64 %x) {
   %trunc = trunc i64 %x to i1
   %sel = select i1 %trunc, i32 63, i32 -12
