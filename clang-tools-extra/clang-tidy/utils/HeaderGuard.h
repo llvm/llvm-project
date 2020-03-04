@@ -18,11 +18,12 @@ namespace utils {
 
 /// Finds and fixes header guards.
 /// The check supports these options:
-///   - `HeaderFileExtensions`: a comma-separated list of filename extensions of
-///     header files (The filename extension should not contain "." prefix).
-///     ",h,hh,hpp,hxx" by default.
+///   - `HeaderFileExtensions`: a semicolon-separated list of filename
+///     extensions of header files (The filename extension should not contain
+///     "." prefix). ";h;hh;hpp;hxx" by default.
+///
 ///     For extension-less header files, using an empty string or leaving an
-///     empty string between "," if there are other filename extensions.
+///     empty string between ";" if there are other filename extensions.
 class HeaderGuardCheck : public ClangTidyCheck {
 public:
   HeaderGuardCheck(StringRef Name, ClangTidyContext *Context)
@@ -30,7 +31,8 @@ public:
         RawStringHeaderFileExtensions(Options.getLocalOrGlobal(
             "HeaderFileExtensions", utils::defaultHeaderFileExtensions())) {
     utils::parseFileExtensions(RawStringHeaderFileExtensions,
-                               HeaderFileExtensions, ',');
+                               HeaderFileExtensions,
+                               utils::defaultFileExtensionDelimiters());
   }
   void registerPPCallbacks(const SourceManager &SM, Preprocessor *PP,
                            Preprocessor *ModuleExpanderPP) override;

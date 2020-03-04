@@ -125,6 +125,11 @@ Changes in existing checks
   check now detects in class initializers and constructor initializers which
   are deemed to be redundant.
 
+- Checks supporting the ``HeaderFileExtensions`` flag now support ``;`` as a
+  delimiter in addition to ``,``, with the latter being deprecated as of this
+  release. This simplifies how one specifies the options on the command line:
+  ``--config="{CheckOptions: [{ key: HeaderFileExtensions, value: h;;hpp;hxx }]}"``
+
 Renamed checks
 ^^^^^^^^^^^^^^
 

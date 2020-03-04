@@ -24,7 +24,8 @@ UnnamedNamespaceInHeaderCheck::UnnamedNamespaceInHeaderCheck(
       RawStringHeaderFileExtensions(Options.getLocalOrGlobal(
           "HeaderFileExtensions", utils::defaultHeaderFileExtensions())) {
   if (!utils::parseFileExtensions(RawStringHeaderFileExtensions,
-                                  HeaderFileExtensions, ',')) {
+                                  HeaderFileExtensions,
+                                  utils::defaultFileExtensionDelimiters())) {
     llvm::errs() << "Invalid header file extension: "
                  << RawStringHeaderFileExtensions << "\n";
   }
