@@ -10,7 +10,6 @@
 ; Check that /lldsavetemps is still usable in such case.
 ; RUN: lld-link /lib %T/thinlto/foo.obj /out:%t.lib
 ; RUN: lld-link /lldsavetemps /out:%t.exe /entry:main /subsystem:console %T/thinlto/main.obj %t.lib
-; RUN: ls '%t.libfoo.obj230.0.preopt.bc'
 
 ; CHECK-NOT: U foo
 
