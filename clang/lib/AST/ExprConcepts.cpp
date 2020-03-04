@@ -11,11 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/ExprConcepts.h"
-#include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTConcept.h"
+#include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
-#include "clang/AST/DeclarationName.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/DeclarationName.h"
+#include "clang/AST/DependencyFlags.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/TemplateBase.h"
@@ -23,8 +24,8 @@
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/Support/TrailingObjects.h"
 #include <algorithm>
-#include <utility>
 #include <string>
+#include <utility>
 
 using namespace clang;
 
@@ -46,14 +47,12 @@ ConceptSpecializationExpr::ConceptSpecializationExpr(const ASTContext &C,
                    ASTConstraintSatisfaction::Create(C, *Satisfaction) :
                    nullptr) {
   setTemplateArguments(ConvertedArgs);
-  bool IsInstantiationDependent = false;
-  bool ContainsUnexpandedParameterPack = false;
+  auto Deps = TemplateArgumentDependence::None;
+  const auto InterestingDeps = TemplateArgumentDependence::Instantiation |
+                               TemplateArgumentDependence::UnexpandedPack;
   for (const TemplateArgumentLoc& ArgLoc : ArgsAsWritten->arguments()) {
-    if (ArgLoc.getArgument().isInstantiationDependent())
-      IsInstantiationDependent = true;
-    if (ArgLoc.getArgument().containsUnexpandedParameterPack())
-      ContainsUnexpandedParameterPack = true;
-    if (ContainsUnexpandedParameterPack && IsInstantiationDependent)
+    Deps |= ArgLoc.getArgument().getDependence() & InterestingDeps;
+    if (Deps == InterestingDeps)
       break;
   }
 
@@ -62,8 +61,7 @@ ConceptSpecializationExpr::ConceptSpecializationExpr(const ASTContext &C,
          (!NestedNameSpec.getNestedNameSpecifier()->isInstantiationDependent() &&
           !NestedNameSpec.getNestedNameSpecifier()
               ->containsUnexpandedParameterPack()));
-  setInstantiationDependent(IsInstantiationDependent);
-  setContainsUnexpandedParameterPack(ContainsUnexpandedParameterPack);
+  addDependence(toExprDependence(Deps));
   assert((!isValueDependent() || isInstantiationDependent()) &&
          "should not be value-dependent");
 }
@@ -182,9 +180,14 @@ RequiresExpr::RequiresExpr(ASTContext &C, SourceLocation RequiresKWLoc,
   std::copy(Requirements.begin(), Requirements.end(),
             getTrailingObjects<concepts::Requirement *>());
   RequiresExprBits.IsSatisfied |= Dependent;
-  setValueDependent(Dependent);
-  setInstantiationDependent(Dependent);
-  setContainsUnexpandedParameterPack(ContainsUnexpandedParameterPack);
+  if (ContainsUnexpandedParameterPack)
+    addDependence(ExprDependence::UnexpandedPack);
+  // FIXME: this is incorrect for cases where we have a non-dependent
+  // requirement, but its parameters are instantiation-dependent. RequiresExpr
+  // should be instantiation-dependent if it has instantiation-dependent
+  // parameters.
+  if (Dependent)
+    addDependence(ExprDependence::ValueInstantiation);
 }
 
 RequiresExpr::RequiresExpr(ASTContext &C, EmptyShell Empty,

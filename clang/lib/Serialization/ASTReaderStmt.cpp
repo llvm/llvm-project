@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Serialization/ASTRecordReader.h"
 #include "clang/AST/ASTConcept.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/AttrIterator.h"
@@ -22,6 +21,7 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclarationName.h"
+#include "clang/AST/DependencyFlags.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
@@ -49,6 +49,7 @@
 #include "clang/Basic/TypeTraits.h"
 #include "clang/Lex/Token.h"
 #include "clang/Serialization/ASTBitCodes.h"
+#include "clang/Serialization/ASTRecordReader.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -511,10 +512,23 @@ void ASTStmtReader::VisitCapturedStmt(CapturedStmt *S) {
 void ASTStmtReader::VisitExpr(Expr *E) {
   VisitStmt(E);
   E->setType(Record.readType());
-  E->setTypeDependent(Record.readInt());
-  E->setValueDependent(Record.readInt());
-  E->setInstantiationDependent(Record.readInt());
-  E->ExprBits.ContainsUnexpandedParameterPack = Record.readInt();
+
+  // FIXME: write and read all DependentFlags with a single call.
+  bool TypeDependent = Record.readInt();
+  bool ValueDependent = Record.readInt();
+  bool InstantiationDependent = Record.readInt();
+  bool ContainsUnexpandedTemplateParameters = Record.readInt();
+  auto Deps = ExprDependence::None;
+  if (TypeDependent)
+    Deps |= ExprDependence::Type;
+  if (ValueDependent)
+    Deps |= ExprDependence::Value;
+  if (InstantiationDependent)
+    Deps |= ExprDependence::Instantiation;
+  if (ContainsUnexpandedTemplateParameters)
+    Deps |= ExprDependence::UnexpandedPack;
+  E->setDependence(Deps);
+
   E->setValueKind(static_cast<ExprValueKind>(Record.readInt()));
   E->setObjectKind(static_cast<ExprObjectKind>(Record.readInt()));
   assert(Record.getIdx() == NumExprFields &&
