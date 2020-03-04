@@ -573,7 +573,7 @@ Expected<const T *> ELFFile<ELFT>::getEntry(const Elf_Shdr *Section,
     return createError("section " + getSecIndexForError(this, Section) +
                        " has invalid sh_entsize: expected " + Twine(sizeof(T)) +
                        ", but got " + Twine(Section->sh_entsize));
-  size_t Pos = Section->sh_offset + Entry * sizeof(T);
+  uint64_t Pos = Section->sh_offset + Entry * sizeof(T);
   if (Pos + sizeof(T) > Buf.size())
     return createError("unable to access section " +
                        getSecIndexForError(this, Section) + " data at 0x" +

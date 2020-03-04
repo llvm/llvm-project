@@ -21,6 +21,14 @@
 ; RUN: llvm-nm %t31.lto.o | FileCheck %s --check-prefix=NM1
 ; RUN: llvm-nm %t32.lto.o | FileCheck %s --check-prefix=NM2
 
+; Check that -save-temps is usable with thin archives
+; RUN: rm -fr %t.dir
+; RUN: mkdir -p %t.dir
+; RUN: cp %t2.o %t.dir/t.o
+; RUN: llvm-ar rcsT %t.dir/t.a %t.dir/t.o
+; RUN: ld.lld -save-temps %t1.o %t.dir/t.a -o - > /dev/null
+; RUN: ls '%t.dir/t.a(t.o at 0).0.preopt.bc'
+
 ; NM1: T f
 ; NM2: T g
 
