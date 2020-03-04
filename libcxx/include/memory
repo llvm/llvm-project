@@ -841,12 +841,16 @@ struct __pointer_traits_difference_type<_Ptr, true>
     typedef _LIBCPP_NODEBUG_TYPE typename _Ptr::difference_type type;
 };
 
-template <class _Tp, class _Up, class = void>
-struct __has_rebind : false_type {};
-
 template <class _Tp, class _Up>
-struct __has_rebind<_Tp, _Up,
-    typename __void_t<typename _Tp::template rebind<_Up> >::type> : true_type {};
+struct __has_rebind
+{
+private:
+    struct __two {char __lx; char __lxx;};
+    template <class _Xp> static __two __test(...);
+    template <class _Xp> static char __test(typename _Xp::template rebind<_Up>* = 0);
+public:
+    static const bool value = sizeof(__test<_Tp>(0)) == 1;
+};
 
 template <class _Tp, class _Up, bool = __has_rebind<_Tp, _Up>::value>
 struct __pointer_traits_rebind
