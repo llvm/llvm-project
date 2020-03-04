@@ -18,12 +18,12 @@ entry:
 
 ; GCN-LABEL: {{^}}int4_extelt:
 ; GCN-NOT: buffer_
-; GCN-DAG: v_cmp_eq_u32_e64 [[C1:[^,]+]], [[IDX:s[0-9]+]], 1
-; GCN-DAG: v_cmp_ne_u32_e64 [[C2:[^,]+]], [[IDX]], 2
-; GCN-DAG: v_cmp_ne_u32_e64 [[C3:[^,]+]], [[IDX]], 3
+; GCN-DAG: s_cmp_lg_u32 [[IDX:s[0-9]+]], 2
+; GCN-DAG: v_cmp_eq_u32_e64 [[C1:[^,]+]], [[IDX]], 1
+; GCN-DAG: s_cmp_lg_u32 [[IDX]], 3
 ; GCN-DAG: v_cndmask_b32_e{{32|64}} [[V1:v[0-9]+]], 0, 1, [[C1]]
-; GCN-DAG: v_cndmask_b32_e{{32|64}} [[V2:v[0-9]+]], 2, [[V1]], [[C2]]
-; GCN-DAG: v_cndmask_b32_e{{32|64}} [[V3:v[0-9]+]], 4, [[V2]], [[C3]]
+; GCN-DAG: v_cndmask_b32_e{{32|64}} [[V2:v[0-9]+]], 2, [[V1]], vcc
+; GCN-DAG: v_cndmask_b32_e{{32|64}} [[V3:v[0-9]+]], 4, [[V2]], vcc
 ; GCN: store_dword v[{{[0-9:]+}}], [[V3]]
 define amdgpu_kernel void @int4_extelt(i32 addrspace(1)* %out, i32 %sel) {
 entry:
