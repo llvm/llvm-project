@@ -2,7 +2,7 @@
 # RUN: llvm-readobj --notes %t.o | FileCheck %s --check-prefix=LLVM
 # RUN: llvm-readelf --notes %t.o | FileCheck %s --check-prefix=GNU
 
-# GNU:      Displaying notes found
+# GNU:      Displaying notes found in: .note.foo
 # GNU-NEXT:   Owner                Data size        Description
 # GNU-NEXT:   AMDGPU               0x000000e6       NT_AMDGPU_METADATA (AMDGPU Metadata)
 # GNU-NEXT:     AMDGPU Metadata:
@@ -25,6 +25,7 @@
 
 # LLVM:      Notes [
 # LLVM-NEXT:   NoteSection {
+# LLVM-NEXT:     Name: .note.foo
 # LLVM-NEXT:     Offset:
 # LLVM-NEXT:     Size:
 # LLVM-NEXT:     Note {
