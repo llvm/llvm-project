@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
-// expected-no-diagnostics
 
 // PR5908
 template <typename Iterator>
@@ -107,4 +106,23 @@ namespace PR18152 {
     static const int n = {N};
   };
   template struct A<0>;
+}
+
+template<typename T> void stmt_expr_1() {
+  static_assert( ({ false; }), "" );
+}
+void stmt_expr_2() {
+  static_assert( ({ false; }), "" ); // expected-error {{failed}}
+}
+
+namespace PR45083 {
+  struct A { bool x; };
+
+  template<typename> struct B : A {
+    void f() {
+      const int n = ({ if (x) {} 0; });
+    }
+  };
+
+  template void B<int>::f();
 }

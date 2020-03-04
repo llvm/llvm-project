@@ -64,6 +64,9 @@ namespace clangd {
 //
 // SelectionTree tries to behave sensibly in the presence of macros, but does
 // not model any preprocessor concepts: the output is a subset of the AST.
+// When a macro argument is specifically selected, only its first expansion is
+// selected in the AST. (Returning a selection forest is unreasonably difficult
+// for callers to handle correctly.)
 //
 // Comments, directives and whitespace are completely ignored.
 // Semicolons are also ignored, as the AST generally does not model them well.
@@ -127,15 +130,15 @@ public:
     Selection Selected;
     // Walk up the AST to get the DeclContext of this Node,
     // which is not the node itself.
-    const DeclContext& getDeclContext() const;
+    const DeclContext &getDeclContext() const;
     // Printable node kind, like "CXXRecordDecl" or "AutoTypeLoc".
     std::string kind() const;
     // If this node is a wrapper with no syntax (e.g. implicit cast), return
     // its contents. (If multiple wrappers are present, unwraps all of them).
-    const Node& ignoreImplicit() const;
+    const Node &ignoreImplicit() const;
     // If this node is inside a wrapper with no syntax (e.g. implicit cast),
     // return that wrapper. (If multiple are present, unwraps all of them).
-    const Node& outerImplicit() const;
+    const Node &outerImplicit() const;
   };
   // The most specific common ancestor of all the selected nodes.
   // Returns nullptr if the common ancestor is the root.

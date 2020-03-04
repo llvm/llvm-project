@@ -200,12 +200,12 @@ define amdgpu_ps float @fcmp_s_s(float inreg %src0, float inreg %src1) {
   ; GFX9:   liveins: $sgpr2, $sgpr3
   ; GFX9:   [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr2
   ; GFX9:   [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr3
-  ; GFX9:   [[C:%[0-9]+]]:sgpr(s32) = G_FCONSTANT float 1.000000e+00
-  ; GFX9:   [[C1:%[0-9]+]]:sgpr(s32) = G_FCONSTANT float 0.000000e+00
   ; GFX9:   [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
   ; GFX9:   [[FCMP:%[0-9]+]]:vcc(s1) = G_FCMP floatpred(oeq), [[COPY]](s32), [[COPY2]]
-  ; GFX9:   [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-  ; GFX9:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[C1]](s32)
+  ; GFX9:   [[C:%[0-9]+]]:sgpr(s32) = G_FCONSTANT float 0.000000e+00
+  ; GFX9:   [[C1:%[0-9]+]]:sgpr(s32) = G_FCONSTANT float 1.000000e+00
+  ; GFX9:   [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[C1]](s32)
+  ; GFX9:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
   ; GFX9:   [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[FCMP]](s1), [[COPY3]], [[COPY4]]
   ; GFX9:   $vgpr0 = COPY [[SELECT]](s32)
   ; GFX9:   SI_RETURN_TO_EPILOG implicit $vgpr0
@@ -214,12 +214,12 @@ define amdgpu_ps float @fcmp_s_s(float inreg %src0, float inreg %src1) {
   ; GFX10:   liveins: $sgpr2, $sgpr3
   ; GFX10:   [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr2
   ; GFX10:   [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr3
-  ; GFX10:   [[C:%[0-9]+]]:sgpr(s32) = G_FCONSTANT float 1.000000e+00
-  ; GFX10:   [[C1:%[0-9]+]]:sgpr(s32) = G_FCONSTANT float 0.000000e+00
   ; GFX10:   [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
   ; GFX10:   [[FCMP:%[0-9]+]]:vcc(s1) = G_FCMP floatpred(oeq), [[COPY]](s32), [[COPY2]]
-  ; GFX10:   [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-  ; GFX10:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[C1]](s32)
+  ; GFX10:   [[C:%[0-9]+]]:sgpr(s32) = G_FCONSTANT float 0.000000e+00
+  ; GFX10:   [[C1:%[0-9]+]]:sgpr(s32) = G_FCONSTANT float 1.000000e+00
+  ; GFX10:   [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[C1]](s32)
+  ; GFX10:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
   ; GFX10:   [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[FCMP]](s1), [[COPY3]], [[COPY4]]
   ; GFX10:   $vgpr0 = COPY [[SELECT]](s32)
   ; GFX10:   SI_RETURN_TO_EPILOG implicit $vgpr0
@@ -336,13 +336,13 @@ define amdgpu_ps float @class_s_s(float inreg %src0, i32 inreg %src1) {
   ; GFX9:   liveins: $sgpr2, $sgpr3
   ; GFX9:   [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr2
   ; GFX9:   [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr3
-  ; GFX9:   [[C:%[0-9]+]]:sgpr(s32) = G_FCONSTANT float 1.000000e+00
-  ; GFX9:   [[C1:%[0-9]+]]:sgpr(s32) = G_FCONSTANT float 0.000000e+00
   ; GFX9:   [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
   ; GFX9:   [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
   ; GFX9:   [[INT:%[0-9]+]]:vcc(s1) = G_INTRINSIC intrinsic(@llvm.amdgcn.class), [[COPY2]](s32), [[COPY3]](s32)
-  ; GFX9:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-  ; GFX9:   [[COPY5:%[0-9]+]]:vgpr(s32) = COPY [[C1]](s32)
+  ; GFX9:   [[C:%[0-9]+]]:sgpr(s32) = G_FCONSTANT float 0.000000e+00
+  ; GFX9:   [[C1:%[0-9]+]]:sgpr(s32) = G_FCONSTANT float 1.000000e+00
+  ; GFX9:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[C1]](s32)
+  ; GFX9:   [[COPY5:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
   ; GFX9:   [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[INT]](s1), [[COPY4]], [[COPY5]]
   ; GFX9:   $vgpr0 = COPY [[SELECT]](s32)
   ; GFX9:   SI_RETURN_TO_EPILOG implicit $vgpr0
@@ -351,13 +351,13 @@ define amdgpu_ps float @class_s_s(float inreg %src0, i32 inreg %src1) {
   ; GFX10:   liveins: $sgpr2, $sgpr3
   ; GFX10:   [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr2
   ; GFX10:   [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr3
-  ; GFX10:   [[C:%[0-9]+]]:sgpr(s32) = G_FCONSTANT float 1.000000e+00
-  ; GFX10:   [[C1:%[0-9]+]]:sgpr(s32) = G_FCONSTANT float 0.000000e+00
   ; GFX10:   [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
   ; GFX10:   [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
   ; GFX10:   [[INT:%[0-9]+]]:vcc(s1) = G_INTRINSIC intrinsic(@llvm.amdgcn.class), [[COPY2]](s32), [[COPY3]](s32)
-  ; GFX10:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-  ; GFX10:   [[COPY5:%[0-9]+]]:vgpr(s32) = COPY [[C1]](s32)
+  ; GFX10:   [[C:%[0-9]+]]:sgpr(s32) = G_FCONSTANT float 0.000000e+00
+  ; GFX10:   [[C1:%[0-9]+]]:sgpr(s32) = G_FCONSTANT float 1.000000e+00
+  ; GFX10:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[C1]](s32)
+  ; GFX10:   [[COPY5:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
   ; GFX10:   [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[INT]](s1), [[COPY4]], [[COPY5]]
   ; GFX10:   $vgpr0 = COPY [[SELECT]](s32)
   ; GFX10:   SI_RETURN_TO_EPILOG implicit $vgpr0

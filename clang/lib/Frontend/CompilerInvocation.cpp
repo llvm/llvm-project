@@ -1906,6 +1906,11 @@ static InputKind ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
   Opts.ModulesEmbedAllFiles = Args.hasArg(OPT_fmodules_embed_all_files);
   Opts.IncludeTimestamps = !Args.hasArg(OPT_fno_pch_timestamp);
   Opts.UseTemporary = !Args.hasArg(OPT_fno_temp_file);
+  Opts.IsSystemModule = Args.hasArg(OPT_fsystem_module);
+
+  if (Opts.ProgramAction != frontend::GenerateModule && Opts.IsSystemModule)
+    Diags.Report(diag::err_drv_argument_only_allowed_with) << "-fsystem-module"
+                                                           << "-emit-module";
 
   Opts.CodeCompleteOpts.IncludeMacros
     = Args.hasArg(OPT_code_completion_macros);
@@ -2062,12 +2067,16 @@ static InputKind ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
         DashX = IK;
     }
 
+    bool IsSystem = false;
+
     // The -emit-module action implicitly takes a module map.
     if (Opts.ProgramAction == frontend::GenerateModule &&
-        IK.getFormat() == InputKind::Source)
+        IK.getFormat() == InputKind::Source) {
       IK = IK.withFormat(InputKind::ModuleMap);
+      IsSystem = Opts.IsSystemModule;
+    }
 
-    Opts.Inputs.emplace_back(std::move(Inputs[i]), IK);
+    Opts.Inputs.emplace_back(std::move(Inputs[i]), IK, IsSystem);
   }
 
   return DashX;

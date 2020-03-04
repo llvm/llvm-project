@@ -42,6 +42,7 @@ class AssumptionCache;
 class BasicBlock;
 class BranchInst;
 class CallInst;
+class DbgDeclareInst;
 class DbgVariableIntrinsic;
 class DbgValueInst;
 class DIBuilder;
@@ -320,6 +321,10 @@ void insertDebugValuesForPHIs(BasicBlock *BB,
 /// 'V' points to. This may include a mix of dbg.declare and
 /// dbg.addr intrinsics.
 TinyPtrVector<DbgVariableIntrinsic *> FindDbgAddrUses(Value *V);
+
+/// Like \c FindDbgAddrUses, but only returns dbg.declare intrinsics, not
+/// dbg.addr.
+TinyPtrVector<DbgDeclareInst *> FindDbgDeclareUses(Value *V);
 
 /// Finds the llvm.dbg.value intrinsics describing a value.
 void findDbgValues(SmallVectorImpl<DbgValueInst *> &DbgValues, Value *V);

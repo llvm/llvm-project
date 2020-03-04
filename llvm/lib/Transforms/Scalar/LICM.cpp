@@ -818,9 +818,8 @@ bool llvm::hoistRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
 
       // Attempt to remove floating point division out of the loop by
       // converting it to a reciprocal multiplication.
-      if (I.getOpcode() == Instruction::FDiv &&
-          CurLoop->isLoopInvariant(I.getOperand(1)) &&
-          I.hasAllowReciprocal()) {
+      if (I.getOpcode() == Instruction::FDiv && I.hasAllowReciprocal() &&
+          CurLoop->isLoopInvariant(I.getOperand(1))) {
         auto Divisor = I.getOperand(1);
         auto One = llvm::ConstantFP::get(Divisor->getType(), 1.0);
         auto ReciprocalDivisor = BinaryOperator::CreateFDiv(One, Divisor);

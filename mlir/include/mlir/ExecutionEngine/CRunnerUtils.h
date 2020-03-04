@@ -31,7 +31,8 @@
 
 #include <cstdint>
 
-template <int N> void dropFront(int64_t arr[N], int64_t *res) {
+template <int N>
+void dropFront(int64_t arr[N], int64_t *res) {
   for (unsigned i = 1; i < N; ++i)
     *(res + i - 1) = arr[i];
 }
@@ -40,23 +41,13 @@ template <int N> void dropFront(int64_t arr[N], int64_t *res) {
 // Codegen-compatible structures for Vector type.
 //===----------------------------------------------------------------------===//
 namespace detail {
-template <unsigned N>
-constexpr bool isPowerOf2() {
-  return (!(N & (N - 1)));
-}
-  
-template <unsigned N>
-constexpr unsigned nextPowerOf2();
-template <>
-constexpr unsigned nextPowerOf2<0>() {
-  return 1;
-}
-template <>
-constexpr unsigned nextPowerOf2<1>() {
-  return 1;
-}
-template <unsigned N> constexpr unsigned nextPowerOf2() {
-  return isPowerOf2<N>() ? N : 2 * nextPowerOf2<(N + 1) / 2>();
+
+constexpr bool isPowerOf2(int N) { return (!(N & (N - 1))); }
+
+constexpr unsigned nextPowerOf2(int N) {
+  if (N <= 1)
+    return 1;
+  return isPowerOf2(N) ? N : 2 * nextPowerOf2((N + 1) / 2);
 }
 
 template <typename T, int Dim, bool IsPowerOf2>
@@ -65,7 +56,7 @@ struct Vector1D;
 template <typename T, int Dim>
 struct Vector1D<T, Dim, /*IsPowerOf2=*/true> {
   Vector1D() {
-    static_assert(detail::nextPowerOf2<sizeof(T[Dim])>() == sizeof(T[Dim]),
+    static_assert(detail::nextPowerOf2(sizeof(T[Dim])) == sizeof(T[Dim]),
                   "size error");
   }
   constexpr T &operator[](unsigned i) { return vector[i]; }
@@ -80,9 +71,9 @@ private:
 template <typename T, int Dim>
 struct Vector1D<T, Dim, /*IsPowerOf2=*/false> {
   Vector1D() {
-    static_assert(detail::nextPowerOf2<sizeof(T[Dim])>() > sizeof(T[Dim]),
+    static_assert(detail::nextPowerOf2(sizeof(T[Dim])) > sizeof(T[Dim]),
                   "size error");
-    static_assert(detail::nextPowerOf2<sizeof(T[Dim])>() < 2 * sizeof(T[Dim]),
+    static_assert(detail::nextPowerOf2(sizeof(T[Dim])) < 2 * sizeof(T[Dim]),
                   "size error");
   }
   constexpr T &operator[](unsigned i) { return vector[i]; }
@@ -90,7 +81,7 @@ struct Vector1D<T, Dim, /*IsPowerOf2=*/false> {
 
 private:
   T vector[Dim];
-  char padding[detail::nextPowerOf2<sizeof(T[Dim])>() - sizeof(T[Dim])];
+  char padding[detail::nextPowerOf2(sizeof(T[Dim])) - sizeof(T[Dim])];
 };
 } // end namespace detail
 
@@ -110,7 +101,7 @@ private:
 // We insert explicit padding in to account for this.
 template <typename T, int Dim>
 struct Vector<T, Dim>
-  : public detail::Vector1D<T, Dim, detail::isPowerOf2<sizeof(T[Dim])>()> {};
+    : public detail::Vector1D<T, Dim, detail::isPowerOf2(sizeof(T[Dim]))> {};
 
 template <int D1, typename T>
 using Vector1D = Vector<T, D1>;
@@ -125,7 +116,8 @@ using Vector4D = Vector<T, D1, D2, D3, D4>;
 // Codegen-compatible structures for StridedMemRef type.
 //===----------------------------------------------------------------------===//
 /// StridedMemRef descriptor type with static rank.
-template <typename T, int N> struct StridedMemRefType {
+template <typename T, int N>
+struct StridedMemRefType {
   T *basePtr;
   T *data;
   int64_t offset;
@@ -144,7 +136,8 @@ template <typename T, int N> struct StridedMemRefType {
 };
 
 /// StridedMemRef descriptor type specialized for rank 1.
-template <typename T> struct StridedMemRefType<T, 1> {
+template <typename T>
+struct StridedMemRefType<T, 1> {
   T *basePtr;
   T *data;
   int64_t offset;
@@ -154,7 +147,8 @@ template <typename T> struct StridedMemRefType<T, 1> {
 };
 
 /// StridedMemRef descriptor type specialized for rank 0.
-template <typename T> struct StridedMemRefType<T, 0> {
+template <typename T>
+struct StridedMemRefType<T, 0> {
   T *basePtr;
   T *data;
   int64_t offset;
@@ -164,7 +158,8 @@ template <typename T> struct StridedMemRefType<T, 0> {
 // Codegen-compatible structure for UnrankedMemRef type.
 //===----------------------------------------------------------------------===//
 // Unranked MemRef
-template <typename T> struct UnrankedMemRefType {
+template <typename T>
+struct UnrankedMemRefType {
   int64_t rank;
   void *descriptor;
 };

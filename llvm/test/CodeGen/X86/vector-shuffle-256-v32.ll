@@ -2276,7 +2276,7 @@ define <32 x i8> @shuffle_v32i8_32_01_34_03_36_05_38_07_40_09_42_11_44_13_46_15_
 define <32 x i8> @load_fold_pblendvb(<32 x i8>* %px, <32 x i8> %y) {
 ; AVX1-LABEL: load_fold_pblendvb:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vbroadcastsd {{.*#+}} ymm1 = [-5.4861292804117373E+303,-5.4861292804117373E+303,-5.4861292804117373E+303,-5.4861292804117373E+303]
+; AVX1-NEXT:    vbroadcastsd {{.*#+}} ymm1 = [18374686483949879295,18374686483949879295,18374686483949879295,18374686483949879295]
 ; AVX1-NEXT:    vandnps (%rdi), %ymm1, %ymm2
 ; AVX1-NEXT:    vandps %ymm1, %ymm0, %ymm0
 ; AVX1-NEXT:    vorps %ymm2, %ymm0, %ymm0
@@ -2297,7 +2297,7 @@ define <32 x i8> @load_fold_pblendvb(<32 x i8>* %px, <32 x i8> %y) {
 ;
 ; XOPAVX1-LABEL: load_fold_pblendvb:
 ; XOPAVX1:       # %bb.0:
-; XOPAVX1-NEXT:    vbroadcastsd {{.*#+}} ymm1 = [-5.4861292804117373E+303,-5.4861292804117373E+303,-5.4861292804117373E+303,-5.4861292804117373E+303]
+; XOPAVX1-NEXT:    vbroadcastsd {{.*#+}} ymm1 = [18374686483949879295,18374686483949879295,18374686483949879295,18374686483949879295]
 ; XOPAVX1-NEXT:    vpcmov %ymm1, (%rdi), %ymm0, %ymm0
 ; XOPAVX1-NEXT:    retq
 ;
@@ -2314,7 +2314,7 @@ define <32 x i8> @load_fold_pblendvb(<32 x i8>* %px, <32 x i8> %y) {
 define <32 x i8> @load_fold_pblendvb_commute(<32 x i8>* %px, <32 x i8> %y) {
 ; AVX1-LABEL: load_fold_pblendvb_commute:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vbroadcastsd {{.*#+}} ymm1 = [-5.4861292804117373E+303,-5.4861292804117373E+303,-5.4861292804117373E+303,-5.4861292804117373E+303]
+; AVX1-NEXT:    vbroadcastsd {{.*#+}} ymm1 = [18374686483949879295,18374686483949879295,18374686483949879295,18374686483949879295]
 ; AVX1-NEXT:    vandnps %ymm0, %ymm1, %ymm0
 ; AVX1-NEXT:    vandps (%rdi), %ymm1, %ymm1
 ; AVX1-NEXT:    vorps %ymm0, %ymm1, %ymm0
@@ -2338,7 +2338,7 @@ define <32 x i8> @load_fold_pblendvb_commute(<32 x i8>* %px, <32 x i8> %y) {
 ; XOPAVX1-LABEL: load_fold_pblendvb_commute:
 ; XOPAVX1:       # %bb.0:
 ; XOPAVX1-NEXT:    vmovdqa (%rdi), %ymm1
-; XOPAVX1-NEXT:    vbroadcastsd {{.*#+}} ymm2 = [-5.4861292804117373E+303,-5.4861292804117373E+303,-5.4861292804117373E+303,-5.4861292804117373E+303]
+; XOPAVX1-NEXT:    vbroadcastsd {{.*#+}} ymm2 = [18374686483949879295,18374686483949879295,18374686483949879295,18374686483949879295]
 ; XOPAVX1-NEXT:    vpcmov %ymm2, %ymm0, %ymm1, %ymm0
 ; XOPAVX1-NEXT:    retq
 ;

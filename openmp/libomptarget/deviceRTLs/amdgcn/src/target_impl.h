@@ -142,11 +142,9 @@ DEVICE void *__kmpc_impl_malloc(size_t x);
 DEVICE void __kmpc_impl_free(void *x);
 
 // DEVICE versions of part of libc
-EXTERN __attribute__((noreturn)) void
-__assertfail(const char *, const char *, unsigned, const char *, size_t);
-INLINE void __assert_fail(const char *__message, const char *__file,
-                          unsigned int __line, const char *__function) {
-  __assertfail(__message, __file, __line, __function, sizeof(char));
+INLINE void __assert_fail(const char *, const char *, unsigned int,
+                          const char *) {
+  __builtin_trap();
 }
 EXTERN int printf(const char *, ...);
 

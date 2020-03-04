@@ -433,6 +433,34 @@ def CeilFOp : FloatUnaryOp<"ceilf"> {
   }];
 }
 
+// The predicate indicates the type of the comparison to perform:
+// (un)orderedness, (in)equality and less/greater than (or equal to) as
+// well as predicates that are always true or false.
+def CMPF_P_FALSE   : I64EnumAttrCase<"AlwaysFalse", 0, "false">;
+def CMPF_P_OEQ     : I64EnumAttrCase<"OEQ", 1, "oeq">;
+def CMPF_P_OGT     : I64EnumAttrCase<"OGT", 2, "ogt">;
+def CMPF_P_OGE     : I64EnumAttrCase<"OGE", 3, "oge">;
+def CMPF_P_OLT     : I64EnumAttrCase<"OLT", 4, "olt">;
+def CMPF_P_OLE     : I64EnumAttrCase<"OLE", 5, "ole">;
+def CMPF_P_ONE     : I64EnumAttrCase<"ONE", 6, "one">;
+def CMPF_P_ORD     : I64EnumAttrCase<"ORD", 7, "ord">;
+def CMPF_P_UEQ     : I64EnumAttrCase<"UEQ", 8, "ueq">;
+def CMPF_P_UGT     : I64EnumAttrCase<"UGT", 9, "ugt">;
+def CMPF_P_UGE     : I64EnumAttrCase<"UGE", 10, "uge">;
+def CMPF_P_ULT     : I64EnumAttrCase<"ULT", 11, "ult">;
+def CMPF_P_ULE     : I64EnumAttrCase<"ULE", 12, "ule">;
+def CMPF_P_UNE     : I64EnumAttrCase<"UNE", 13, "une">;
+def CMPF_P_UNO     : I64EnumAttrCase<"UNO", 14, "uno">;
+def CMPF_P_TRUE    : I64EnumAttrCase<"AlwaysTrue", 15, "true">;
+
+def CmpFPredicateAttr : I64EnumAttr<
+    "CmpFPredicate", "",
+    [CMPF_P_FALSE, CMPF_P_OEQ, CMPF_P_OGT, CMPF_P_OGE, CMPF_P_OLT, CMPF_P_OLE,
+     CMPF_P_ONE, CMPF_P_ORD, CMPF_P_UEQ, CMPF_P_UGT, CMPF_P_UGE, CMPF_P_ULT,
+     CMPF_P_ULE, CMPF_P_UNE, CMPF_P_UNO, CMPF_P_TRUE]> {
+  let cppNamespace = "::mlir";
+}
+
 def CmpFOp : Std_Op<"cmpf",
     [NoSideEffect, SameTypeOperands, SameOperandsAndResultShape,
      TypesMatchWith<
@@ -461,7 +489,11 @@ def CmpFOp : Std_Op<"cmpf",
       %r3 = "std.cmpf"(%0, %1) {predicate: 0} : (f8, f8) -> i1
   }];
 
-  let arguments = (ins FloatLike:$lhs, FloatLike:$rhs);
+  let arguments = (ins
+    CmpFPredicateAttr:$predicate,
+    FloatLike:$lhs,
+    FloatLike:$rhs
+  );
   let results = (outs BoolLike:$result);
 
   let builders = [OpBuilder<
@@ -480,7 +512,11 @@ def CmpFOp : Std_Op<"cmpf",
     }
   }];
 
+  let verifier = [{ return success(); }];
+
   let hasFolder = 1;
+
+  let assemblyFormat = "$predicate `,` $lhs `,` $rhs attr-dict `:` type($lhs)";
 }
 
 def CMPI_P_EQ  : I64EnumAttrCase<"eq", 0>;

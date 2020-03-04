@@ -338,7 +338,18 @@ TEST(LocateSymbol, All) {
        #define ADDRESSOF(X) &X;
        int *j = ADDRESSOF(^i);
       )cpp",
-
+      R"cpp(// Macro argument appearing multiple times in expansion
+        #define VALIDATE_TYPE(x) (void)x;
+        #define ASSERT(expr)       \
+          do {                     \
+            VALIDATE_TYPE(expr);   \
+            if (!expr);            \
+          } while (false)
+        bool [[waldo]]() { return true; }
+        void foo() {
+          ASSERT(wa^ldo());
+        }
+      )cpp",
       R"cpp(// Symbol concatenated inside macro (not supported)
        int *pi;
        #define POINTER(X) p ## X;

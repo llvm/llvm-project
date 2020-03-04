@@ -838,7 +838,7 @@ void MachineVerifier::visitMachineBundleBefore(const MachineInstr *MI) {
   if (MI->isTerminator() && !TII->isPredicated(*MI)) {
     if (!FirstTerminator)
       FirstTerminator = MI;
-  } else if (FirstTerminator && !MI->isDebugEntryValue()) {
+  } else if (FirstTerminator) {
     report("Non-terminator instruction after the first terminator", MI);
     errs() << "First terminator was:\t" << *FirstTerminator;
   }

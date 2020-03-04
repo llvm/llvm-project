@@ -61,27 +61,32 @@ def ForOp : Loop_Op<"for",
        }
     ```
 
-    "loop.for" can also operate on loop-carried variables and returns the final values
-    after loop termination. The initial values of the variables are passed as additional SSA
-    operands to the "loop.for" following the 3 loop control SSA values mentioned above
-    (lower bound, upper bound and step). The operation region has equivalent arguments
-    for each variable representing the value of the variable at the current iteration.
+    "loop.for" can also operate on loop-carried variables and returns the final
+    values after loop termination. The initial values of the variables are
+    passed as additional SSA operands to the "loop.for" following the 3 loop
+    control SSA values mentioned above (lower bound, upper bound and step). The
+    operation region has equivalent arguments for each variable representing
+    the value of the variable at the current iteration.
 
-    The region must terminate with a "loop.yield" that passes all the current iteration
-    variables to the next iteration, or to the "loop.for" result, if at the last iteration.
-    "loop.for" results hold the final values after the last iteration.
+    The region must terminate with a "loop.yield" that passes all the current
+    iteration variables to the next iteration, or to the "loop.for" result, if
+    at the last iteration.  "loop.for" results hold the final values after the
+    last iteration.
 
     For example, to sum-reduce a memref:
 
     ```mlir
-    func @reduce(%buffer: memref<1024xf32>, %lb: index, %ub: index, %step: index) -> (f32) {
+    func @reduce(%buffer: memref<1024xf32>, %lb: index,
+                 %ub: index, %step: index) -> (f32) {
       // Initial sum set to 0.
       %sum_0 = constant 0.0 : f32
       // iter_args binds initial values to the loop's region arguments.
-      %sum = loop.for %iv = %lb to %ub step %step iter_args(%sum_iter = %sum_0) -> (f32) {
+      %sum = loop.for %iv = %lb to %ub step %step
+          iter_args(%sum_iter = %sum_0) -> (f32) {
         %t = load %buffer[%iv] : memref<1024xf32>
         %sum_next = addf %sum_iter, %t : f32
-        // Yield current iteration sum to next iteration %sum_iter or to %sum if final iteration.
+        // Yield current iteration sum to next iteration %sum_iter or to %sum
+        // if final iteration.
         loop.yield %sum_next : f32
       }
       return %sum : f32
@@ -89,17 +94,19 @@ def ForOp : Loop_Op<"for",
     ```
 
     If the "loop.for" defines any values, a yield must be explicitly present.
-    The number and types of the "loop.for" results must match the initial values
-    in the "iter_args" binding and the yield operands.
+    The number and types of the "loop.for" results must match the initial
+    values in the "iter_args" binding and the yield operands.
 
     Another example with a nested "loop.if" (see "loop.if" for details)
     to perform conditional reduction:
 
     ```mlir
-    func @conditional_reduce(%buffer: memref<1024xf32>, %lb: index, %ub: index, %step: index) -> (f32) {
+    func @conditional_reduce(%buffer: memref<1024xf32>, %lb: index,
+                             %ub: index, %step: index) -> (f32) {
       %sum_0 = constant 0.0 : f32
       %c0 = constant 0.0 : f32
-      %sum = loop.for %iv = %lb to %ub step %step iter_args(%sum_iter = %sum_0) -> (f32) {
+      %sum = loop.for %iv = %lb to %ub step %step
+          iter_args(%sum_iter = %sum_0) -> (f32) {
         %t = load %buffer[%iv] : memref<1024xf32>
         %cond = cmpf "ugt", %t, %c0 : f32
         %sum_next = loop.if %cond -> (f32) {
@@ -177,8 +184,8 @@ def IfOp : Loop_Op<"if",
        }
     ```
 
-    "loop.if" may also return results that are defined in its regions. The values
-    defined are determined by which execution path is taken.
+    "loop.if" may also return results that are defined in its regions. The
+    values defined are determined by which execution path is taken.
     For example:
     ```mlir
        %x, %y = loop.if %b -> (f32, f32) {
@@ -260,7 +267,8 @@ def ParallelOp : Loop_Op<"parallel",
 
     The body region must contain exactly one block that terminates with
     "loop.yield" without operands. Parsing ParallelOp will create such a region
-    and insert the terminator when it is absent from the custom format. For example:
+    and insert the terminator when it is absent from the custom format.
+    For example:
 
     ```mlir
        loop.parallel (%iv) = (%lb) to (%ub) step (%step) {
@@ -354,8 +362,8 @@ def ReduceReturnOp :
   let summary = "terminator for reduce operation";
   let description = [{
     "loop.reduce.return" is a special terminator operation for the block inside
-    "loop.reduce". It terminates the region. It should have the same type as the
-    operand of "loop.reduce". Example for the custom format:
+    "loop.reduce". It terminates the region. It should have the same type as
+    the operand of "loop.reduce". Example for the custom format:
 
     ```mlir
       loop.reduce.return %res : f32
@@ -382,7 +390,8 @@ def YieldOp : Loop_Op<"yield", [Terminator]> {
 
   let arguments = (ins Variadic<AnyType>:$results);
   let builders = [
-    OpBuilder<"Builder *builder, OperationState &result", [{ /* nothing to do */ }]>
+    OpBuilder<"Builder *builder, OperationState &result",
+              [{ /* nothing to do */ }]>
   ];
 }
 #endif // LOOP_OPS

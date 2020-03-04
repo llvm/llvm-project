@@ -3047,15 +3047,22 @@ static void expandArray(APValue &Array, unsigned Index) {
 /// is trivial. Note that this is never true for a union type with fields
 /// (because the copy always "reads" the active member) and always true for
 /// a non-class type.
+static bool isReadByLvalueToRvalueConversion(const CXXRecordDecl *RD);
 static bool isReadByLvalueToRvalueConversion(QualType T) {
   CXXRecordDecl *RD = T->getBaseElementTypeUnsafe()->getAsCXXRecordDecl();
-  if (!RD || (RD->isUnion() && !RD->field_empty()))
-    return true;
+  return !RD || isReadByLvalueToRvalueConversion(RD);
+}
+static bool isReadByLvalueToRvalueConversion(const CXXRecordDecl *RD) {
+  // FIXME: A trivial copy of a union copies the object representation, even if
+  // the union is empty.
+  if (RD->isUnion())
+    return !RD->field_empty();
   if (RD->isEmpty())
     return false;
 
   for (auto *Field : RD->fields())
-    if (isReadByLvalueToRvalueConversion(Field->getType()))
+    if (!Field->isUnnamedBitfield() &&
+        isReadByLvalueToRvalueConversion(Field->getType()))
       return true;
 
   for (auto &BaseSpec : RD->bases())
@@ -5460,22 +5467,6 @@ static bool HandleUnionActiveMemberChange(EvalInfo &Info, const Expr *LHSExpr,
   return true;
 }
 
-/// Determine if a class has any fields that might need to be copied by a
-/// trivial copy or move operation.
-static bool hasFields(const CXXRecordDecl *RD) {
-  if (!RD || RD->isEmpty())
-    return false;
-  for (auto *FD : RD->fields()) {
-    if (FD->isUnnamedBitfield())
-      continue;
-    return true;
-  }
-  for (auto &Base : RD->bases())
-    if (hasFields(Base.getType()->getAsCXXRecordDecl()))
-      return true;
-  return false;
-}
-
 namespace {
 typedef SmallVector<APValue, 8> ArgVector;
 }
@@ -5546,7 +5537,8 @@ static bool HandleFunctionCall(SourceLocation CallLoc,
   const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(Callee);
   if (MD && MD->isDefaulted() &&
       (MD->getParent()->isUnion() ||
-       (MD->isTrivial() && hasFields(MD->getParent())))) {
+       (MD->isTrivial() &&
+        isReadByLvalueToRvalueConversion(MD->getParent())))) {
     assert(This &&
            (MD->isCopyAssignmentOperator() || MD->isMoveAssignmentOperator()));
     LValue RHS;
@@ -5633,7 +5625,8 @@ static bool HandleConstructorCall(const Expr *E, const LValue &This,
   // actually read them.
   if (Definition->isDefaulted() && Definition->isCopyOrMoveConstructor() &&
       (Definition->getParent()->isUnion() ||
-       (Definition->isTrivial() && hasFields(Definition->getParent())))) {
+       (Definition->isTrivial() &&
+        isReadByLvalueToRvalueConversion(Definition->getParent())))) {
     LValue RHS;
     RHS.setFrom(Info.Ctx, ArgValues[0]);
     return handleLValueToRValueConversion(

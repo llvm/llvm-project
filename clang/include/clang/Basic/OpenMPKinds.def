@@ -1086,6 +1086,7 @@ OPENMP_FLUSH_CLAUSE(release)
 // Clauses allowed for OpenMP directive 'depobj'.
 OPENMP_DEPOBJ_CLAUSE(depend)
 OPENMP_DEPOBJ_CLAUSE(destroy)
+OPENMP_DEPOBJ_CLAUSE(update)
 
 #undef OPENMP_DEPOBJ_CLAUSE
 #undef OPENMP_FLUSH_CLAUSE

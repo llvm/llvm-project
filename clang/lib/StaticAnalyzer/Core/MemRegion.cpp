@@ -842,8 +842,7 @@ getStackOrCaptureRegionForDeclContext(const LocationContext *LC,
         return SFC;
     }
     if (const auto *BC = dyn_cast<BlockInvocationContext>(LC)) {
-      const auto *BR =
-          static_cast<const BlockDataRegion *>(BC->getContextData());
+      const auto *BR = static_cast<const BlockDataRegion *>(BC->getData());
       // FIXME: This can be made more efficient.
       for (BlockDataRegion::referenced_vars_iterator
            I = BR->referenced_vars_begin(),

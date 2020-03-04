@@ -1527,6 +1527,14 @@ TinyPtrVector<DbgVariableIntrinsic *> llvm::FindDbgAddrUses(Value *V) {
   return Declares;
 }
 
+TinyPtrVector<DbgDeclareInst *> llvm::FindDbgDeclareUses(Value *V) {
+  TinyPtrVector<DbgDeclareInst *> DDIs;
+  for (DbgVariableIntrinsic *DVI : FindDbgAddrUses(V))
+    if (auto *DDI = dyn_cast<DbgDeclareInst>(DVI))
+      DDIs.push_back(DDI);
+  return DDIs;
+}
+
 void llvm::findDbgValues(SmallVectorImpl<DbgValueInst *> &DbgValues, Value *V) {
   // This function is hot. Check whether the value has any metadata to avoid a
   // DenseMap lookup.

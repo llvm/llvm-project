@@ -76,8 +76,6 @@ void FormatTokenLexer::tryMergePreviousTokens() {
     return;
 
   if (Style.isCSharp()) {
-    if (tryMergeCSharpAttributeAndTarget())
-      return;
     if (tryMergeCSharpKeywordVariables())
       return;
     if (tryMergeCSharpStringLiteral())
@@ -283,34 +281,6 @@ const llvm::StringSet<> FormatTokenLexer::CSharpAttributeTargets = {
     "assembly", "module",   "field",  "event", "method",
     "param",    "property", "return", "type",
 };
-
-bool FormatTokenLexer::tryMergeCSharpAttributeAndTarget() {
-  // Treat '[assembly:' and '[field:' as tokens in their own right.
-  if (Tokens.size() < 3)
-    return false;
-
-  auto &SquareBracket = *(Tokens.end() - 3);
-  auto &Target = *(Tokens.end() - 2);
-  auto &Colon = *(Tokens.end() - 1);
-
-  if (!SquareBracket->Tok.is(tok::l_square))
-    return false;
-
-  if (CSharpAttributeTargets.find(Target->TokenText) ==
-      CSharpAttributeTargets.end())
-    return false;
-
-  if (!Colon->Tok.is(tok::colon))
-    return false;
-
-  SquareBracket->TokenText =
-      StringRef(SquareBracket->TokenText.begin(),
-                Colon->TokenText.end() - SquareBracket->TokenText.begin());
-  SquareBracket->ColumnWidth += (Target->ColumnWidth + Colon->ColumnWidth);
-  Tokens.erase(Tokens.end() - 2);
-  Tokens.erase(Tokens.end() - 1);
-  return true;
-}
 
 bool FormatTokenLexer::tryMergeCSharpDoubleQuestion() {
   if (Tokens.size() < 2)
