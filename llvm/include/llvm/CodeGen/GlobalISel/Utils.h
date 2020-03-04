@@ -27,6 +27,7 @@ class MachineInstr;
 class MachineOperand;
 class MachineOptimizationRemarkEmitter;
 class MachineOptimizationRemarkMissed;
+struct MachinePointerInfo;
 class MachineRegisterInfo;
 class MCInstrDesc;
 class RegisterBankInfo;
@@ -179,6 +180,9 @@ bool isKnownNeverNaN(Register Val, const MachineRegisterInfo &MRI,
 inline bool isKnownNeverSNaN(Register Val, const MachineRegisterInfo &MRI) {
   return isKnownNeverNaN(Val, MRI, true);
 }
+
+unsigned inferAlignmentFromPtrInfo(MachineFunction &MF,
+                                   const MachinePointerInfo &MPO);
 
 } // End namespace llvm.
 #endif
