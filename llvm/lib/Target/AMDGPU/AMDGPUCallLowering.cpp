@@ -118,9 +118,13 @@ struct IncomingArgHandler : public CallLowering::ValueHandler {
 
   void assignValueToAddress(Register ValVReg, Register Addr, uint64_t Size,
                             MachinePointerInfo &MPO, CCValAssign &VA) override {
+    MachineFunction &MF = MIRBuilder.getMF();
+    unsigned Align = inferAlignmentFromPtrInfo(MF, MPO);
+
     // FIXME: Get alignment
-    auto MMO = MIRBuilder.getMF().getMachineMemOperand(
-      MPO, MachineMemOperand::MOLoad | MachineMemOperand::MOInvariant, Size, 1);
+    auto MMO = MF.getMachineMemOperand(
+        MPO, MachineMemOperand::MOLoad | MachineMemOperand::MOInvariant, Size,
+        Align);
     MIRBuilder.buildLoad(ValVReg, Addr, *MMO);
   }
 
