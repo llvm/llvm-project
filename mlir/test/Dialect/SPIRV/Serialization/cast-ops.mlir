@@ -4,6 +4,10 @@ spv.module "Logical" "GLSL450" {
   spv.func @bit_cast(%arg0 : f32) "None" {
     // CHECK: {{%.*}} = spv.Bitcast {{%.*}} : f32 to i32
     %0 = spv.Bitcast %arg0 : f32 to i32
+    // CHECK: {{%.*}} = spv.Bitcast {{%.*}} : i32 to si32
+    %1 = spv.Bitcast %0 : i32 to si32
+    // CHECK: {{%.*}} = spv.Bitcast {{%.*}} : si32 to i32
+    %2 = spv.Bitcast %1 : si32 to ui32
     spv.Return
   }
 }

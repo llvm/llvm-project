@@ -2945,6 +2945,17 @@ def SPV_SamplerUseAttr:
 // SPIR-V type definitions
 //===----------------------------------------------------------------------===//
 
+class IOrUI<int width>
+    : Type<Or<[CPred<"$_self.isSignlessInteger(" # width # ")">,
+               CPred<"$_self.isUnsignedInteger(" # width # ")">]>,
+           width # "-bit signless/unsigned integer"> {
+  int bitwidth = width;
+}
+
+class SignlessOrUnsignedIntOfWidths<list<int> widths> :
+    AnyTypeOf<!foreach(w, widths, IOrUI<w>),
+              StrJoinInt<widths, "/">.result # "-bit signless/unsigned integer">;
+
 def SPV_IsPtrType : CPred<"$_self.isa<::mlir::spirv::PointerType>()">;
 def SPV_IsArrayType : CPred<"$_self.isa<::mlir::spirv::ArrayType>()">;
 def SPV_IsRTArrayType : CPred<"$_self.isa<::mlir::spirv::RuntimeArrayType>()">;
@@ -2953,8 +2964,8 @@ def SPV_IsStructType : CPred<"$_self.isa<::mlir::spirv::StructType>()">;
 // See https://www.khronos.org/registry/spir-v/specs/unified1/SPIRV.html#_types
 // for the definition of the following types and type categories.
 
-def SPV_Void : TypeAlias<NoneType, "void type">;
-def SPV_Bool : I<1>;
+def SPV_Void : TypeAlias<NoneType, "void">;
+def SPV_Bool : TypeAlias<I1, "bool">;
 def SPV_Integer : AnyIntOfWidths<[8, 16, 32, 64]>;
 def SPV_Float : FloatOfWidths<[16, 32, 64]>;
 def SPV_Float16or32 : FloatOfWidths<[16, 32]>;
@@ -2977,6 +2988,8 @@ def SPV_Type : AnyTypeOf<[
     SPV_AnyPtr, SPV_AnyArray, SPV_AnyRTArray, SPV_AnyStruct
   ]>;
 
+def SPV_SignlessOrUnsignedInt : SignlessOrUnsignedIntOfWidths<[8, 16, 32, 64]>;
+
 class SPV_ScalarOrVectorOf<Type type> :
     AnyTypeOf<[type, VectorOfLengthAndType<[2, 3, 4], [type]>]>;
 
@@ -2985,7 +2998,8 @@ def SPV_ScalarOrVectorOrPtr : AnyTypeOf<[SPV_ScalarOrVector, SPV_AnyPtr]>;
 
 class SPV_Vec4<Type type> : VectorOfLengthAndType<[4], [type]>;
 def SPV_IntVec4 : SPV_Vec4<SPV_Integer>;
-def SPV_I32Vec4 : SPV_Vec4<I32>;
+def SPV_IOrUIVec4 : SPV_Vec4<SPV_SignlessOrUnsignedInt>;
+def SPV_Int32Vec4 : SPV_Vec4<AnyI32>;
 
 // TODO(antiagainst): Use a more appropriate way to model optional operands
 class SPV_Optional<Type type> : Variadic<type>;
