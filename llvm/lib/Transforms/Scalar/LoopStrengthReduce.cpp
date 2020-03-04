@@ -809,7 +809,12 @@ static bool isAddressUse(const TargetTransformInfo &TTI,
     switch (II->getIntrinsicID()) {
     case Intrinsic::memset:
     case Intrinsic::prefetch:
+    case Intrinsic::masked_load:
       if (II->getArgOperand(0) == OperandVal)
+        isAddress = true;
+      break;
+    case Intrinsic::masked_store:
+      if (II->getArgOperand(1) == OperandVal)
         isAddress = true;
       break;
     case Intrinsic::memmove:
@@ -860,6 +865,15 @@ static MemAccessTy getAccessType(const TargetTransformInfo &TTI,
     case Intrinsic::memcpy:
       AccessTy.AddrSpace = OperandVal->getType()->getPointerAddressSpace();
       AccessTy.MemTy = OperandVal->getType();
+      break;
+    case Intrinsic::masked_load:
+      AccessTy.AddrSpace =
+          II->getArgOperand(0)->getType()->getPointerAddressSpace();
+      break;
+    case Intrinsic::masked_store:
+      AccessTy.MemTy = II->getOperand(0)->getType();
+      AccessTy.AddrSpace =
+          II->getArgOperand(1)->getType()->getPointerAddressSpace();
       break;
     default: {
       MemIntrinsicInfo IntrInfo;
