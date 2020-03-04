@@ -63,24 +63,24 @@ TEST(HTMLGeneratorTest, emitNamespaceHTML) {
   std::string Expected = R"raw(<!DOCTYPE html>
 <meta charset="utf-8"/>
 <title>namespace Namespace</title>
-<link rel="stylesheet" href="clang-doc-default-stylesheet.css"/>
-<link rel="stylesheet" href="user-provided-stylesheet.css"/>
-<script src="index.js"></script>
+<link rel="stylesheet" href="../clang-doc-default-stylesheet.css"/>
+<link rel="stylesheet" href="../user-provided-stylesheet.css"/>
+<script src="../index.js"></script>
 <header id="project-title">test-project</header>
 <main>
-  <div id="sidebar-left" path="" class="col-xs-6 col-sm-3 col-md-2 sidebar sidebar-offcanvas-left"></div>
+  <div id="sidebar-left" path="Namespace" class="col-xs-6 col-sm-3 col-md-2 sidebar sidebar-offcanvas-left"></div>
   <div id="main-content" class="col-xs-12 col-sm-9 col-md-8 main-content">
     <h1>namespace Namespace</h1>
     <h2 id="Namespaces">Namespaces</h2>
     <ul>
       <li>
-        <a href="Namespace/ChildNamespace.html">ChildNamespace</a>
+        <a href="ChildNamespace/index.html">ChildNamespace</a>
       </li>
     </ul>
     <h2 id="Records">Records</h2>
     <ul>
       <li>
-        <a href="Namespace/ChildStruct.html">ChildStruct</a>
+        <a href="ChildStruct.html">ChildStruct</a>
       </li>
     </ul>
     <h2 id="Functions">Functions</h2>
@@ -196,14 +196,14 @@ TEST(HTMLGeneratorTest, emitRecordHTML) {
     <ul>
       <li>
         private 
-        <a href="../int.html">int</a>
+        <a href="../../../X/Y/int.html">int</a>
          X
       </li>
     </ul>
     <h2 id="Records">Records</h2>
     <ul>
       <li>
-        <a href="r/ChildStruct.html">ChildStruct</a>
+        <a href="../../../X/Y/Z/r/ChildStruct.html">ChildStruct</a>
       </li>
     </ul>
     <h2 id="Functions">Functions</h2>
