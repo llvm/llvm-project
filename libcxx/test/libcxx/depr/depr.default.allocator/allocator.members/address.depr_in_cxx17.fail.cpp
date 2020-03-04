@@ -6,23 +6,30 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++98, c++03, c++11, c++14, c++17
-// UNSUPPORTED: clang-3.3, clang-3.4, clang-3.5, clang-3.6, clang-3.7, clang-3.8
-
 // <memory>
 
 // allocator:
-// T* allocate(size_t n);
+// pointer address(reference x) const;
+// const_pointer address(const_reference x) const;
+
+// Deprecated in C++17
+
+// UNSUPPORTED: c++98, c++03, c++11, c++14
+// REQUIRES: verify-support
+
+// MODULES_DEFINES: _LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS
+#define _LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS
 
 #include <memory>
-#include <cassert>
-
 #include "test_macros.h"
 
 int main(int, char**)
 {
-    std::allocator<int> a;
-    a.allocate(3);          // expected-error {{ignoring return value of function declared with 'nodiscard' attribute}}
+  int x = 0;
+  std::allocator<int> a;
+
+  int* p = a.address(x); // expected-error{{'address' is deprecated}}
+  (void)p;
 
   return 0;
 }

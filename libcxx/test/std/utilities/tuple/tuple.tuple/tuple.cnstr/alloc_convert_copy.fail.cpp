@@ -26,13 +26,13 @@ struct ExplicitCopy {
 
 std::tuple<ExplicitCopy> const_explicit_copy_test() {
     const std::tuple<int> t1(42);
-    return {std::allocator_arg, std::allocator<void>{}, t1};
+    return {std::allocator_arg, std::allocator<int>{}, t1};
     // expected-error@-1 {{chosen constructor is explicit in copy-initialization}}
 }
 
 std::tuple<ExplicitCopy> non_const_explicit_copy_test() {
     std::tuple<int> t1(42);
-    return {std::allocator_arg, std::allocator<void>{}, t1};
+    return {std::allocator_arg, std::allocator<int>{}, t1};
     // expected-error@-1 {{chosen constructor is explicit in copy-initialization}}
 }
 

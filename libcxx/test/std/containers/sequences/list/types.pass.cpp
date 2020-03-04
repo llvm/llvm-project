@@ -21,6 +21,9 @@
 //     typedef typename allocator_type::pointer pointer;
 //     typedef typename allocator_type::const_pointer const_pointer;
 
+#define _LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS
+#define _LIBCPP_DISABLE_DEPRECATION_WARNINGS
+
 #include <list>
 #include <type_traits>
 

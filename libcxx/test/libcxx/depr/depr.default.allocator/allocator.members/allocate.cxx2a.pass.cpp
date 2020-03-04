@@ -9,7 +9,12 @@
 // <memory>
 
 // allocator:
-// T* allocate(size_t n);
+// T* allocate(size_t n, const void* hint);
+
+// MODULES_DEFINES: _LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS
+// MODULES_DEFINES: _LIBCPP_DISABLE_DEPRECATION_WARNINGS
+#define _LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS
+#define _LIBCPP_DISABLE_DEPRECATION_WARNINGS
 
 #include <memory>
 #include <cassert>
@@ -55,20 +60,19 @@ void test_aligned() {
   const bool IsOverAlignedType = Align > MaxAligned;
   const bool ExpectAligned = IsOverAlignedType && UsingAlignedNew;
   {
-    assert(globalMemCounter.checkOutstandingNewEq(0));
-    assert(T::constructed == 0);
     globalMemCounter.last_new_size = 0;
     globalMemCounter.last_new_align = 0;
-    T* ap = a.allocate(3);
-    DoNotOptimize(ap);
+    T* volatile ap2 = a.allocate(11, (const void*)5);
+    DoNotOptimize(ap2);
     assert(globalMemCounter.checkOutstandingNewEq(1));
     assert(globalMemCounter.checkNewCalledEq(1));
     assert(globalMemCounter.checkAlignedNewCalledEq(ExpectAligned));
-    assert(globalMemCounter.checkLastNewSizeEq(3 * sizeof(T)));
+    assert(globalMemCounter.checkLastNewSizeEq(11 * sizeof(T)));
     assert(globalMemCounter.checkLastNewAlignEq(ExpectAligned ? Align : 0));
     assert(T::constructed == 0);
     globalMemCounter.last_delete_align = 0;
-    a.deallocate(ap, 3);
+    a.deallocate(ap2, 11);
+    DoNotOptimize(ap2);
     assert(globalMemCounter.checkOutstandingNewEq(0));
     assert(globalMemCounter.checkDeleteCalledEq(1));
     assert(globalMemCounter.checkAlignedDeleteCalledEq(ExpectAligned));
