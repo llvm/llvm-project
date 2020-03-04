@@ -1031,6 +1031,14 @@ def int_arm_mve_vsbc_predicated: Intrinsic<
    [llvm_anyvector_ty, llvm_i32_ty],
    [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>,
     llvm_i32_ty, llvm_anyvector_ty], [IntrNoMem]>;
+def int_arm_mve_vshlc: Intrinsic<
+   [llvm_i32_ty /* bits shifted out */, llvm_anyvector_ty],
+   [LLVMMatchType<0>, llvm_i32_ty /* bits shifted in */,
+    llvm_i32_ty /* shift count */], [IntrNoMem]>;
+def int_arm_mve_vshlc_predicated: Intrinsic<
+   [llvm_i32_ty /* bits shifted out */, llvm_anyvector_ty],
+   [LLVMMatchType<0>, llvm_i32_ty /* bits shifted in */,
+    llvm_i32_ty /* shift count */, llvm_anyvector_ty], [IntrNoMem]>;
 def int_arm_mve_vmulh: Intrinsic<
    [llvm_anyvector_ty],
    [LLVMMatchType<0>, LLVMMatchType<0>, llvm_i32_ty /* unsigned */],

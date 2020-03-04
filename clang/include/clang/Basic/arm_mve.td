@@ -1166,6 +1166,22 @@ let params = T.Int32 in {
   defm vsbc: vadcsbc;
 }
 
+let params = T.Int in {
+  def vshlcq: Intrinsic<
+    Vector, (args Vector:$v, Ptr<u32>:$ps, imm_1to32:$imm),
+    (seq (load $ps):$s,
+         (IRInt<"vshlc", [Vector]> $v, $s, $imm):$pair,
+         (store (xval $pair, 0), $ps),
+         (xval $pair, 1))>;
+  def vshlcq_m: Intrinsic<
+    Vector, (args Vector:$v, Ptr<u32>:$ps, imm_1to32:$imm, Predicate:$pred),
+    (seq (load $ps):$s,
+         (IRInt<"vshlc_predicated", [Vector, Predicate]>
+              $v, $s, $imm, $pred):$pair,
+         (store (xval $pair, 0), $ps),
+         (xval $pair, 1))>;
+}
+
 multiclass VectorComplexAddPred<dag not_halving, dag angle> {
   def "" : Intrinsic<Vector, (args Vector:$a, Vector:$b),
      (IRInt<"vcaddq", [Vector]> not_halving, angle, $a, $b)>;
