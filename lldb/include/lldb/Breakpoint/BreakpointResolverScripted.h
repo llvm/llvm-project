@@ -23,15 +23,15 @@ namespace lldb_private {
 
 class BreakpointResolverScripted : public BreakpointResolver {
 public:
-  BreakpointResolverScripted(Breakpoint *bkpt,
+  BreakpointResolverScripted(const lldb::BreakpointSP &bkpt,
                              const llvm::StringRef class_name,
                              lldb::SearchDepth depth,
                              StructuredDataImpl *args_data);
 
-  ~BreakpointResolverScripted() override;
+  ~BreakpointResolverScripted() override = default;
 
   static BreakpointResolver *
-  CreateFromStructuredData(Breakpoint *bkpt,
+  CreateFromStructuredData(const lldb::BreakpointSP &bkpt,
                            const StructuredData::Dictionary &options_dict,
                            Status &error);
 
@@ -53,12 +53,13 @@ public:
     return V->getResolverID() == BreakpointResolver::PythonResolver;
   }
 
-  lldb::BreakpointResolverSP CopyForBreakpoint(Breakpoint &breakpoint) override;
+  lldb::BreakpointResolverSP
+  CopyForBreakpoint(lldb::BreakpointSP &breakpoint) override;
 
 protected:
   void NotifyBreakpointSet() override;
 private:
-  void CreateImplementationIfNeeded();
+  void CreateImplementationIfNeeded(lldb::BreakpointSP bkpt);
   ScriptInterpreter *GetScriptInterpreter();
   
   std::string m_class_name;

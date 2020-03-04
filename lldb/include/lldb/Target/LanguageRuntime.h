@@ -134,7 +134,8 @@ public:
   virtual DeclVendor *GetDeclVendor() { return nullptr; }
 
   virtual lldb::BreakpointResolverSP
-  CreateExceptionResolver(Breakpoint *bkpt, bool catch_bp, bool throw_bp) = 0;
+  CreateExceptionResolver(const lldb::BreakpointSP &bkpt,
+                          bool catch_bp, bool throw_bp) = 0;
 
   virtual lldb::SearchFilterSP CreateExceptionSearchFilter() {
     return m_process->GetTarget().GetSearchFilterForModule(nullptr);
