@@ -47,36 +47,36 @@ Major New Features
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- -Wtautological-overlap-compare will warn on negative numbers and non-int
+- ``-Wtautological-overlap-compare`` will warn on negative numbers and non-int
   types.
 
-- -Wtautological-compare for self comparisons and
-  -Wtautological-overlap-compare will now look through member and array
+- ``-Wtautological-compare`` for self comparisons and
+  ``-Wtautological-overlap-compare`` will now look through member and array
   access to determine if two operand expressions are the same.
 
-- -Wtautological-bitwise-compare is a new warning group.  This group has the
+- ``-Wtautological-bitwise-compare`` is a new warning group.  This group has the
   current warning which diagnoses the tautological comparison of a bitwise
   operation and a constant. The group also has the new warning which diagnoses
   when a bitwise-or with a non-negative value is converted to a bool, since
   that bool will always be true.
 
-- -Wbitwise-conditional-parentheses will warn on operator precedence issues
+- ``-Wbitwise-conditional-parentheses`` will warn on operator precedence issues
   when mixing bitwise-and (&) and bitwise-or (|) operator with the
   conditional operator (?:).
 
-- -Wrange-loop-analysis got several improvements. It no longer warns about a
+- ``-Wrange-loop-analysis`` got several improvements. It no longer warns about a
   copy being made when the result is bound to an rvalue reference. It no longer
   warns when an object of a small, trivially copyable type is copied. The
-  warning now offers fixits. Excluding -Wrange-loop-bind-reference it is now
-  part of -Wall. To reduce the number of false positives the diagnostic is
+  warning now offers fix-its. Excluding ``-Wrange-loop-bind-reference`` it is now
+  part of ``-Wall``. To reduce the number of false positives the diagnostic is
   disabled in macros and template instantiations.
 
-- -Wmisleading-indentation has been added. This warning is similar to the GCC
+- ``-Wmisleading-indentation`` has been added. This warning is similar to the GCC
   warning of the same name. It warns about statements that are indented as if
   they were part of a if/else/for/while statement but are not semantically
   part of that if/else/for/while.
 
-- -Wbitwise-op-parentheses and -Wlogical-op-parentheses are disabled by default.
+- ``-Wbitwise-op-parentheses`` and ``-Wlogical-op-parentheses`` are disabled by default.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -95,15 +95,15 @@ Non-comprehensive list of changes in this release
   learned to sanitize pre/post increment/decrement of types with bit width
   smaller than ``int``.
 
-* For X86 target, -march=skylake-avx512, -march=icelake-client,
-  -march=icelake-server, -march=cascadelake, -march=cooperlake will default to
+* For X86 target, ``-march=skylake-avx512``, ``-march=icelake-client``,
+  ``-march=icelake-server``, ``-march=cascadelake``, ``-march=cooperlake`` will default to
   not using 512-bit zmm registers in vectorized code unless 512-bit intrinsics
   are used in the source code. 512-bit operations are known to cause the CPUs
   to run at a lower frequency which can impact performance. This behavior can be
-  changed by passing -mprefer-vector-width=512 on the command line.
+  changed by passing ``-mprefer-vector-width=512`` on the command line.
 
-* clang now defaults to ``.init_array`` on Linux. It used to use ``.ctors`` if
-  the found gcc installation is older than 4.7.0. Add ``-fno-use-init-array`` to
+* Clang now defaults to ``.init_array`` on Linux. It used to use ``.ctors`` if
+  the found GCC installation is older than 4.7.0. Add ``-fno-use-init-array`` to
   get the old behavior (``.ctors``).
 
 * The behavior of the flag ``-flax-vector-conversions`` has been modified to
@@ -126,16 +126,16 @@ Non-comprehensive list of changes in this release
 New Compiler Flags
 ------------------
 
-- The -fgnuc-version= flag now controls the value of ``__GNUC__`` and related
+- The ``-fgnuc-version=`` flag now controls the value of ``__GNUC__`` and related
   macros. This flag does not enable or disable any GCC extensions implemented in
   Clang. Setting the version to zero causes Clang to leave ``__GNUC__`` and
   other GNU-namespaced macros, such as ``__GXX_WEAK__``, undefined.
 
-- vzeroupper insertion on X86 targets can now be disabled with -mno-vzeroupper.
+- vzeroupper insertion on X86 targets can now be disabled with ``-mno-vzeroupper``.
   You can also force vzeroupper insertion to be used on CPUs that normally
-  wouldn't with -mvzeroupper.
+  wouldn't with ``-mvzeroupper``.
 
-- The -fno-concept-satisfaction-caching can be used to disable caching for
+- The ``-fno-concept-satisfaction-caching`` can be used to disable caching for
   satisfactions of Concepts. The C++2a draft standard does not currently permit
   this caching, but disabling it may incur significant compile-time costs. This
   flag is intended for experimentation purposes and may be removed at any time;
@@ -168,12 +168,12 @@ Deprecated Compiler Flags
 The following options are deprecated and ignored. They will be removed in
 future versions of Clang.
 
-- -mmpx used to enable the __MPX__ preprocessor define for the Intel MPX
+- ``-mmpx`` used to enable the ``__MPX__`` preprocessor define for the Intel MPX
   instructions. There were no MPX intrinsics.
 
-- -mno-mpx used to disable -mmpx and is the default behavior.
+- ``-mno-mpx`` used to disable ``-mmpx`` and is the default behavior.
 
-- -fconcepts-ts previously used to enable experimental concepts support. Use
+- ``-fconcepts-ts`` previously used to enable experimental concepts support. Use
   -std=c++2a instead to enable Concepts support.
 
 Modified Compiler Flags
@@ -325,19 +325,19 @@ Changes in C++ for OpenCL:
 ABI Changes in Clang
 --------------------
 
-- gcc passes vectors of __int128 in memory on X86-64. Clang historically
+- GCC passes vectors of __int128 in memory on X86-64. Clang historically
   broke the vectors into multiple scalars using two 64-bit values for each
-  element. Clang now matches the gcc behavior on Linux and NetBSD. You can
-  switch back to old API behavior with flag: -fclang-abi-compat=9.0.
+  element. Clang now matches the GCC behavior on Linux and NetBSD. You can
+  switch back to old API behavior with flag: ``-fclang-abi-compat=9.0``.
 
 - RISC-V now chooses a default ``-march=`` and ``-mabi=`` to match (in almost
   all cases) the GCC defaults. On baremetal targets, where neither ``-march=``
   nor ``-mabi=`` are specified, Clang now differs from GCC by defaulting to
-  ``-march=rv32imac -mabi=ilp32`` or ``-march=rv64imac -mabi=lp64`` depending on
-  the architecture in the target triple. These do not always match the defaults
-  in Clang 9. We strongly suggest that you explicitly pass `-march=` and
-  `-mabi=` when compiling for RISC-V, due to how extensible this architecture
-  is.
+  ``-march=rv32imac`` ``-mabi=ilp32`` or ``-march=rv64imac`` ``-mabi=lp64``
+  depending on the architecture in the target triple. These do not always match
+  the defaults in Clang 9. We strongly suggest that you explicitly pass
+  ``-march=`` and ``-mabi=`` when compiling for RISC-V, due to how extensible
+  this architecture is.
 
 - RISC-V now uses `target-abi` module metadata to encode the chosen psABI. This
   ensures that the correct lowering will be done by LLVM when LTO is enabled.
@@ -421,7 +421,7 @@ clang-format
 
 - Clang-format has a new option called ``--dry-run`` or ``-n`` to emit a
   warning for clang-format violations. This can be used together
-  with --ferror-limit=N to limit the number of warnings per file and --Werror
+  with ``--ferror-limit=N`` to limit the number of warnings per file and ``--Werror``
   to make warnings into errors.
 
 - Option *IncludeIsMainSourceRegex* has been added to allow for additional

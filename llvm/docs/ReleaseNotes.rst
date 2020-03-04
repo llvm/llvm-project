@@ -108,16 +108,18 @@ Changes to the AArch64 Backend
 
 * Added support for Cortex-A65, Cortex-A65AE, Neoverse E1 and Neoverse N1 cores.
 
-* With a few more bugs fixed in the LLVM 10 release, clang-cl can now target windows-on-Arm well, demonstrated by building complex pieces of software such as Chromium and the Electron framework.
+* With a few more bugs fixed in the LLVM 10 release, clang-cl can now target
+  Windows-on-ARM well, demonstrated by building complex pieces of software such
+  as Chromium and the Electron framework.
 
-* Support for -fpatchable-function-entry was added.
+* Support for ``-fpatchable-function-entry`` was added.
 
 Changes to the ARM Backend
 --------------------------
 
-* Optimized Armv8.1-M code generation, including generating Low Overhead Loops.
+* Optimized ARMv8.1-M code generation, including generating Low Overhead Loops.
 
-* Added auto-vectorization for the Armv8.1-M MVE vector extension.
+* Added auto-vectorization for the ARMv8.1-M MVE vector extension.
 
 * Support was added for inline asm constraints s,j,x,N,O.
 
@@ -160,7 +162,7 @@ Optimization:
 
 * Enabled vectorization of math routines on PowerPC using MASSV (Mathematical Acceleration SubSystem) library
 
-copiler-rt:
+compiler-rt:
 
 * Added/improved conversion functions from IBM long double to 128-bit integers
 
@@ -211,12 +213,13 @@ Changes to the X86 Target
 * v32i8 and v64i8 vectors with AVX512F enabled, but AVX512BW disabled will now
   be passed in ZMM registers for calls and returns. Previously they were passed
   in two YMM registers. Old behavior can be enabled by passing
-  -x86-enable-old-knl-abi
+  ``-x86-enable-old-knl-abi``.
 
-* -mprefer-vector-width=256 is now the default behavior skylake-avx512 and later
-  Intel CPUs. This tries to limit the use of 512-bit registers which can cause a
-  decrease in CPU frequency on these CPUs. This can be re-enabled by passing
-  -mprefer-vector-width=512 to clang or passing -mattr=-prefer-256-bit to llc.
+* ``-mprefer-vector-width=256`` is now the default behavior skylake-avx512 and
+  later Intel CPUs. This tries to limit the use of 512-bit registers which can
+  cause a decrease in CPU frequency on these CPUs. This can be re-enabled by
+  passing ``-mprefer-vector-width=512`` to clang or passing
+  ``-mattr=-prefer-256-bit`` to llc.
 
 * Deprecated the mpx feature flag for the Intel MPX instructions. There were no
   intrinsics for this feature. This change only this effects the results
@@ -231,7 +234,7 @@ Changes to the X86 Target
 Changes to the WebAssembly Target
 ---------------------------------
 
-* __attribute__((used)) no longer implies that a symbol is exported, for
+* ``__attribute__((used))`` no longer implies that a symbol is exported, for
   consistency with other targets.
 
 * Multivalue function signatures are now supported in WebAssembly object files
@@ -328,8 +331,8 @@ Bug Fixes:
 * There have been some small changes to the code generation for atomic
   operations.
 
-* RISC-V no longer emits incorrect CFI directives in function prologs and
-  epilogs.
+* RISC-V no longer emits incorrect CFI directives in function prologues and
+  epilogues.
 
 * RV64 no longer clears the upper bits when returning complex types from
   libcalls using the LP64 psABI.
@@ -339,7 +342,7 @@ Compiler-RT:
 * RISC-V (both 64-bit and 32-bit) is now supported by compiler-rt, allowing
   crtbegin and crtend to be built.
 
-* The Sanitizers now support 64-bit RISC-V on linux.
+* The Sanitizers now support 64-bit RISC-V on Linux.
 
 
 
