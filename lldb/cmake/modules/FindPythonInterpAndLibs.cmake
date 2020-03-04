@@ -7,8 +7,11 @@
 if(PYTHON_LIBRARIES AND PYTHON_INCLUDE_DIRS AND PYTHON_EXECUTABLE AND SWIG_EXECUTABLE)
   set(PYTHONINTERPANDLIBS_FOUND TRUE)
 else()
-  find_package(SWIG 2.0)
-  if (SWIG_FOUND)
+  find_package(SWIG 2.0 QUIET)
+  if (SWIG_FOUND OR LLDB_USE_STATIC_BINDINGS)
+    if (LLDB_USE_STATIC_BINDINGS)
+      set(SWIG_EXECUTABLE "/not/found")
+    endif()
     if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Windows")
       # Use PYTHON_HOME as a hint to find Python 3.
       set(Python3_ROOT_DIR PYTHON_HOME)
