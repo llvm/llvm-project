@@ -152,7 +152,7 @@ It is ensured by the LoopSimplify
 (:ref:`-loop-simplify <passes-loop-simplify>`) pass and is automatically
 added by the pass managers when scheduling a LoopPass.
 This pass is implemented in
-`LoopInfo.h <http://llvm.org/doxygen/LoopSimplify_8h_source.html>`_.
+`LoopSimplify.h <http://llvm.org/doxygen/LoopSimplify_8h_source.html>`_.
 When it is successful, the loop has:
 
 * A preheader.
