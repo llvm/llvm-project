@@ -34,9 +34,7 @@ class TargetFolder final : public IRBuilderFolder {
 
   /// Fold - Fold the constant using target specific information.
   Constant *Fold(Constant *C) const {
-    if (Constant *CF = ConstantFoldConstant(C, DL))
-      return CF;
-    return C;
+    return ConstantFoldConstant(C, DL);
   }
 
   virtual void anchor();
