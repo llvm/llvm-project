@@ -1,6 +1,75 @@
 // RUN: mlir-opt %s -split-input-file -verify-diagnostics | FileCheck %s
 
 //===----------------------------------------------------------------------===//
+// Test integer attributes
+//===----------------------------------------------------------------------===//
+
+func @int_attrs_pass() {
+  "test.int_attrs"() {
+    // CHECK: any_i32_attr = 5 : ui32
+    any_i32_attr = 5 : ui32,
+    // CHECK-SAME: si32_attr = 7 : si32
+    si32_attr = 7 : si32,
+    // CHECK-SAME: ui32_attr = 6 : ui32
+    ui32_attr = 6 : ui32
+  } : () -> ()
+
+  "test.int_attrs"() {
+    // CHECK: any_i32_attr = 5 : si32
+    any_i32_attr = 5 : si32,
+    si32_attr = 7 : si32,
+    ui32_attr = 6 : ui32
+  } : () -> ()
+
+  "test.int_attrs"() {
+    // CHECK: any_i32_attr = 5 : i32
+    any_i32_attr = 5 : i32,
+    si32_attr = 7 : si32,
+    ui32_attr = 6 : ui32
+  } : () -> ()
+
+  return
+}
+
+// -----
+
+func @wrong_int_attrs_signedness_fail() {
+  // expected-error @+1 {{'si32_attr' failed to satisfy constraint: 32-bit signed integer attribute}}
+  "test.int_attrs"() {
+    any_i32_attr = 5 : i32,
+    si32_attr = 7 : ui32,
+    ui32_attr = 6 : ui32
+  } : () -> ()
+  return
+}
+
+// -----
+
+func @wrong_int_attrs_signedness_fail() {
+  // expected-error @+1 {{'ui32_attr' failed to satisfy constraint: 32-bit unsigned integer attribute}}
+  "test.int_attrs"() {
+    any_i32_attr = 5 : i32,
+    si32_attr = 7 : si32,
+    ui32_attr = 6 : si32
+  } : () -> ()
+  return
+}
+
+// -----
+
+func @wrong_int_attrs_type_fail() {
+  // expected-error @+1 {{'any_i32_attr' failed to satisfy constraint: 32-bit integer attribute}}
+  "test.int_attrs"() {
+    any_i32_attr = 5.0 : f32,
+    si32_attr = 7 : si32,
+    ui32_attr = 6 : ui32
+  } : () -> ()
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // Test Non-negative Int Attr
 //===----------------------------------------------------------------------===//
 
@@ -15,7 +84,7 @@ func @non_negative_int_attr_pass() {
 // -----
 
 func @negative_int_attr_fail() {
-  // expected-error @+1 {{'i32attr' failed to satisfy constraint: non-negative 32-bit integer attribute}}
+  // expected-error @+1 {{'i32attr' failed to satisfy constraint: 32-bit signless integer attribute whose value is non-negative}}
   "test.non_negative_int_attr"() {i32attr = -5 : i32, i64attr = 10 : i64} : () -> ()
   return
 }
@@ -23,7 +92,7 @@ func @negative_int_attr_fail() {
 // -----
 
 func @negative_int_attr_fail() {
-  // expected-error @+1 {{'i64attr' failed to satisfy constraint: non-negative 64-bit integer attribute}}
+  // expected-error @+1 {{'i64attr' failed to satisfy constraint: 64-bit signless integer attribute whose value is non-negative}}
   "test.non_negative_int_attr"() {i32attr = 5 : i32, i64attr = -10 : i64} : () -> ()
   return
 }
@@ -43,7 +112,7 @@ func @positive_int_attr_pass() {
 // -----
 
 func @positive_int_attr_fail() {
-  // expected-error @+1 {{'i32attr' failed to satisfy constraint: positive 32-bit integer attribute}}
+  // expected-error @+1 {{'i32attr' failed to satisfy constraint: 32-bit signless integer attribute whose value is positive}}
   "test.positive_int_attr"() {i32attr = 0 : i32, i64attr = 5: i64} : () -> ()
   return
 }
@@ -51,7 +120,7 @@ func @positive_int_attr_fail() {
 // -----
 
 func @positive_int_attr_fail() {
-  // expected-error @+1 {{'i64attr' failed to satisfy constraint: positive 64-bit integer attribute}}
+  // expected-error @+1 {{'i64attr' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive}}
   "test.positive_int_attr"() {i32attr = 5 : i32, i64attr = 0: i64} : () -> ()
   return
 }
@@ -59,7 +128,7 @@ func @positive_int_attr_fail() {
 // -----
 
 func @positive_int_attr_fail() {
-  // expected-error @+1 {{'i32attr' failed to satisfy constraint: positive 32-bit integer attribute}}
+  // expected-error @+1 {{'i32attr' failed to satisfy constraint: 32-bit signless integer attribute whose value is positive}}
   "test.positive_int_attr"() {i32attr = -10 : i32, i64attr = 5 : i64} : () -> ()
   return
 }
@@ -67,7 +136,7 @@ func @positive_int_attr_fail() {
 // -----
 
 func @positive_int_attr_fail() {
-  // expected-error @+1 {{'i64attr' failed to satisfy constraint: positive 64-bit integer attribute}}
+  // expected-error @+1 {{'i64attr' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive}}
   "test.positive_int_attr"() {i32attr = 5 : i32, i64attr = -10 : i64} : () -> ()
   return
 }
@@ -146,7 +215,7 @@ func @allowed_cases_pass() {
 // -----
 
 func @disallowed_case7_fail() {
-  // expected-error @+1 {{allowed 32-bit integer cases: 5, 10}}
+  // expected-error @+1 {{allowed 32-bit signless integer cases: 5, 10}}
   %0 = "test.i32_enum_attr"() {attr = 7: i32} : () -> i32
   return
 }
@@ -154,7 +223,7 @@ func @disallowed_case7_fail() {
 // -----
 
 func @disallowed_case7_fail() {
-  // expected-error @+1 {{allowed 32-bit integer cases: 5, 10}}
+  // expected-error @+1 {{allowed 32-bit signless integer cases: 5, 10}}
   %0 = "test.i32_enum_attr"() {attr = 5: i64} : () -> i32
   return
 }
@@ -177,7 +246,7 @@ func @allowed_cases_pass() {
 // -----
 
 func @disallowed_case7_fail() {
-  // expected-error @+1 {{allowed 64-bit integer cases: 5, 10}}
+  // expected-error @+1 {{allowed 64-bit signless integer cases: 5, 10}}
   %0 = "test.i64_enum_attr"() {attr = 7: i64} : () -> i32
   return
 }
@@ -185,7 +254,7 @@ func @disallowed_case7_fail() {
 // -----
 
 func @disallowed_case7_fail() {
-  // expected-error @+1 {{allowed 64-bit integer cases: 5, 10}}
+  // expected-error @+1 {{allowed 64-bit signless integer cases: 5, 10}}
   %0 = "test.i64_enum_attr"() {attr = 5: i32} : () -> i32
   return
 }
@@ -250,8 +319,58 @@ func @fn() { return }
 // Test IntElementsAttr
 //===----------------------------------------------------------------------===//
 
-func @correct_type_pass() {
+func @correct_int_elements_attr_pass() {
   "test.int_elements_attr"() {
+    // CHECK: any_i32_attr = dense<5> : tensor<1x2x3x4xui32>,
+    any_i32_attr = dense<5> : tensor<1x2x3x4xui32>,
+    i32_attr = dense<5> : tensor<6xi32>
+  } : () -> ()
+
+  "test.int_elements_attr"() {
+    // CHECK: any_i32_attr = dense<5> : tensor<1x2x3x4xsi32>,
+    any_i32_attr = dense<5> : tensor<1x2x3x4xsi32>,
+    i32_attr = dense<5> : tensor<6xi32>
+  } : () -> ()
+
+  "test.int_elements_attr"() {
+    // CHECK: any_i32_attr = dense<5> : tensor<1x2x3x4xi32>,
+    any_i32_attr = dense<5> : tensor<1x2x3x4xi32>,
+    i32_attr = dense<5> : tensor<6xi32>
+  } : () -> ()
+
+  return
+}
+
+// -----
+
+func @wrong_int_elements_attr_type_fail() {
+  // expected-error @+1 {{'any_i32_attr' failed to satisfy constraint: 32-bit integer elements attribute}}
+  "test.int_elements_attr"() {
+    any_i32_attr = dense<5.0> : tensor<1x2x3x4xf32>,
+    i32_attr = dense<5> : tensor<6xi32>
+  } : () -> ()
+  return
+}
+
+// -----
+
+func @wrong_int_elements_attr_signedness_fail() {
+  // expected-error @+1 {{'i32_attr' failed to satisfy constraint: 32-bit signless integer elements attribute}}
+  "test.int_elements_attr"() {
+    any_i32_attr = dense<5> : tensor<1x2x3x4xi32>,
+    i32_attr = dense<5> : tensor<6xsi32>
+  } : () -> ()
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// Test Ranked IntElementsAttr
+//===----------------------------------------------------------------------===//
+
+func @correct_type_pass() {
+  "test.ranked_int_elements_attr"() {
     // CHECK: matrix_i64_attr = dense<6> : tensor<4x8xi64>
     // CHECK: vector_i32_attr = dense<5> : tensor<2xi32>
     matrix_i64_attr = dense<6> : tensor<4x8xi64>,
@@ -263,8 +382,8 @@ func @correct_type_pass() {
 // -----
 
 func @wrong_element_type_fail() {
-  // expected-error @+1 {{failed to satisfy constraint: 32-bit int elements attribute of shape [2]}}
-  "test.int_elements_attr"() {
+  // expected-error @+1 {{failed to satisfy constraint: 32-bit signless int elements attribute of shape [2]}}
+  "test.ranked_int_elements_attr"() {
     matrix_i64_attr = dense<6> : tensor<4x8xi64>,
     vector_i32_attr = dense<5> : tensor<2xi64>
   } : () -> ()
@@ -274,8 +393,8 @@ func @wrong_element_type_fail() {
 // -----
 
 func @wrong_shape_fail() {
-  // expected-error @+1 {{failed to satisfy constraint: 64-bit int elements attribute of shape [4, 8]}}
-  "test.int_elements_attr"() {
+  // expected-error @+1 {{failed to satisfy constraint: 64-bit signless int elements attribute of shape [4, 8]}}
+  "test.ranked_int_elements_attr"() {
     matrix_i64_attr = dense<6> : tensor<4xi64>,
     vector_i32_attr = dense<5> : tensor<2xi32>
   } : () -> ()
@@ -285,8 +404,8 @@ func @wrong_shape_fail() {
 // -----
 
 func @wrong_shape_fail() {
-  // expected-error @+1 {{failed to satisfy constraint: 32-bit int elements attribute of shape [2]}}
-  "test.int_elements_attr"() {
+  // expected-error @+1 {{failed to satisfy constraint: 32-bit signless int elements attribute of shape [2]}}
+  "test.ranked_int_elements_attr"() {
     matrix_i64_attr = dense<6> : tensor<4x8xi64>,
     vector_i32_attr = dense<5> : tensor<i32>
   } : () -> ()

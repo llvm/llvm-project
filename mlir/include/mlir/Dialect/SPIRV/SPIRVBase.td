@@ -63,7 +63,7 @@ class SPV_BitEnumAttr<string name, string description,
                       list<BitEnumAttrCase> cases> :
     BitEnumAttr<name, description, cases> {
   let predicate = And<[
-    IntegerAttrBase<I32, "">.predicate,
+    I32Attr.predicate,
     SPV_IsKnownEnumCaseFor<name>,
   ]>;
   let cppNamespace = "::mlir::spirv";
@@ -74,7 +74,7 @@ class SPV_I32EnumAttr<string name, string description,
                       list<I32EnumAttrCase> cases> :
     I32EnumAttr<name, description, cases> {
   let predicate = And<[
-    IntegerAttrBase<I32, "">.predicate,
+    I32Attr.predicate,
     SPV_IsKnownEnumCaseFor<name>,
   ]>;
   let cppNamespace = "::mlir::spirv";
@@ -2955,7 +2955,7 @@ def SPV_IsStructType : CPred<"$_self.isa<::mlir::spirv::StructType>()">;
 
 def SPV_Void : TypeAlias<NoneType, "void type">;
 def SPV_Bool : I<1>;
-def SPV_Integer : IntOfWidths<[8, 16, 32, 64]>;
+def SPV_Integer : AnyIntOfWidths<[8, 16, 32, 64]>;
 def SPV_Float : FloatOfWidths<[16, 32, 64]>;
 def SPV_Float16or32 : FloatOfWidths<[16, 32]>;
 def SPV_Vector : VectorOfLengthAndType<[2, 3, 4],

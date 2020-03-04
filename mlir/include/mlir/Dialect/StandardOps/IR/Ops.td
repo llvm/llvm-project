@@ -253,7 +253,8 @@ def AssumeAlignmentOp : Std_Op<"assume_alignment"> {
     This operation doesn't affect the semantics of a correct program. It's for
     optimization only, and the optimization is best-effort.
   }];
-  let arguments = (ins AnyMemRef:$memref, PositiveI32Attr:$alignment);
+  let arguments = (ins AnyMemRef:$memref,
+                       Confined<I32Attr, [IntPositive]>:$alignment);
   let results = (outs);
 
   let assemblyFormat = "$memref `,` $alignment attr-dict `:` type($memref)";
