@@ -71,3 +71,22 @@ define i1 @fcmp_constexpr_one(float %conv) {
   %cmp = fcmp one float bitcast (i32 ptrtoint (i16* @a to i32) to float), bitcast (i32 ptrtoint (i16* @a to i32) to float)
   ret i1 %cmp
 }
+
+%T = type { i8 }
+@G = external global %T
+
+define i8* @bitcast_to_gep() {
+; CHECK-LABEL: @bitcast_to_gep(
+; CHECK-NEXT:    ret i8* getelementptr inbounds (%T, %T* @G, i32 0, i32 0)
+;
+  %p = bitcast %T* @G to i8*
+  ret i8* %p
+}
+
+define i8 addrspace(1)* @addrspacecast_to_gep() {
+; CHECK-LABEL: @addrspacecast_to_gep(
+; CHECK-NEXT:    ret i8 addrspace(1)* addrspacecast (i8* getelementptr inbounds (%T, %T* @G, i32 0, i32 0) to i8 addrspace(1)*)
+;
+  %p = addrspacecast %T* @G to i8 addrspace(1)*
+  ret i8 addrspace(1)* %p
+}
