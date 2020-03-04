@@ -1020,7 +1020,14 @@ def int_arm_mve_vabd: Intrinsic<
 def int_arm_mve_vadc: Intrinsic<
    [llvm_anyvector_ty, llvm_i32_ty],
    [LLVMMatchType<0>, LLVMMatchType<0>, llvm_i32_ty], [IntrNoMem]>;
+def int_arm_mve_vsbc: Intrinsic<
+   [llvm_anyvector_ty, llvm_i32_ty],
+   [LLVMMatchType<0>, LLVMMatchType<0>, llvm_i32_ty], [IntrNoMem]>;
 def int_arm_mve_vadc_predicated: Intrinsic<
+   [llvm_anyvector_ty, llvm_i32_ty],
+   [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>,
+    llvm_i32_ty, llvm_anyvector_ty], [IntrNoMem]>;
+def int_arm_mve_vsbc_predicated: Intrinsic<
    [llvm_anyvector_ty, llvm_i32_ty],
    [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>,
     llvm_i32_ty, llvm_anyvector_ty], [IntrNoMem]>;
