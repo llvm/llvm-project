@@ -45,25 +45,25 @@ struct DenormalMode {
   /// floating-point instructions implicitly treat the input value as 0.
   DenormalModeKind Input = DenormalModeKind::Invalid;
 
-  DenormalMode() = default;
-  DenormalMode(DenormalModeKind Out, DenormalModeKind In) :
+  constexpr DenormalMode() = default;
+  constexpr DenormalMode(DenormalModeKind Out, DenormalModeKind In) :
     Output(Out), Input(In) {}
 
 
-  static DenormalMode getInvalid() {
+  static constexpr DenormalMode getInvalid() {
     return DenormalMode(DenormalModeKind::Invalid, DenormalModeKind::Invalid);
   }
 
-  static DenormalMode getIEEE() {
+  static constexpr DenormalMode getIEEE() {
     return DenormalMode(DenormalModeKind::IEEE, DenormalModeKind::IEEE);
   }
 
-  static DenormalMode getPreserveSign() {
+  static constexpr DenormalMode getPreserveSign() {
     return DenormalMode(DenormalModeKind::PreserveSign,
                         DenormalModeKind::PreserveSign);
   }
 
-  static DenormalMode getPositiveZero() {
+  static constexpr DenormalMode getPositiveZero() {
     return DenormalMode(DenormalModeKind::PositiveZero,
                         DenormalModeKind::PositiveZero);
   }
