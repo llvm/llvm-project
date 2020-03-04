@@ -1883,7 +1883,7 @@ X86InstrInfo::findThreeSrcCommutedOpIndices(const MachineInstr &MI,
   unsigned KMaskOp = -1U;
   if (X86II::isKMasked(TSFlags)) {
     // For k-zero-masked operations it is Ok to commute the first vector
-    // operand.
+    // operand. Unless this is an intrinsic instruction.
     // For regular k-masked operations a conservative choice is done as the
     // elements of the first vector operand, for which the corresponding bit
     // in the k-mask operand is set to 0, are copied to the result of the
@@ -1902,7 +1902,7 @@ X86InstrInfo::findThreeSrcCommutedOpIndices(const MachineInstr &MI,
 
     // The operand with index = 1 is used as a source for those elements for
     // which the corresponding bit in the k-mask is set to 0.
-    if (X86II::isKMergeMasked(TSFlags))
+    if (X86II::isKMergeMasked(TSFlags) || IsIntrinsic)
       FirstCommutableVecOp = 3;
 
     LastCommutableVecOp++;
