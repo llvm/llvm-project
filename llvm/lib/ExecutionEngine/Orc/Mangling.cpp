@@ -99,6 +99,13 @@ getObjectSymbolInfo(ExecutionSession &ES, MemoryBufferRef ObjBuffer) {
     if (!(Sym.getFlags() & object::BasicSymbolRef::SF_Global))
       continue;
 
+    // Skip symbols that have type SF_File.
+    if (auto SymType = Sym.getType()) {
+      if (*SymType == object::SymbolRef::ST_File)
+        continue;
+    } else
+      return SymType.takeError();
+
     auto Name = Sym.getName();
     if (!Name)
       return Name.takeError();
@@ -119,6 +126,7 @@ getObjectSymbolInfo(ExecutionSession &ES, MemoryBufferRef ObjBuffer) {
         raw_string_ostream(InitSymString)
             << "$." << ObjBuffer.getBufferIdentifier() << ".__inits";
         InitSymbol = ES.intern(InitSymString);
+        SymbolFlags[InitSymbol] = JITSymbolFlags();
         break;
       }
     }

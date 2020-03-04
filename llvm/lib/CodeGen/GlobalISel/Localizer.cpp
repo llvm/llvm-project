@@ -86,8 +86,13 @@ bool Localizer::localizeInterBlock(MachineFunction &MF,
       LLVM_DEBUG(MachineInstr &MIUse = *MOUse.getParent();
                  dbgs() << "Checking use: " << MIUse
                         << " #Opd: " << MIUse.getOperandNo(&MOUse) << '\n');
-      if (isLocalUse(MOUse, MI, InsertMBB))
+      if (isLocalUse(MOUse, MI, InsertMBB)) {
+        // Even if we're in the same block, if the block is very large we could
+        // still have many long live ranges. Try to do intra-block localization
+        // too.
+        LocalizedInstrs.insert(&MI);
         continue;
+      }
       LLVM_DEBUG(dbgs() << "Fixing non-local use\n");
       Changed = true;
       auto MBBAndReg = std::make_pair(InsertMBB, Reg);

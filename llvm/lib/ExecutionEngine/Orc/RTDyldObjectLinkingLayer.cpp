@@ -116,6 +116,18 @@ void RTDyldObjectLinkingLayer::emit(MaterializationResponsibility R,
   auto InternalSymbols = std::make_shared<std::set<StringRef>>();
   {
     for (auto &Sym : (*Obj)->symbols()) {
+
+      // Skip file symbols.
+      if (auto SymType = Sym.getType()) {
+        if (*SymType == object::SymbolRef::ST_File)
+          continue;
+      } else {
+        ES.reportError(SymType.takeError());
+        R.failMaterialization();
+        return;
+      }
+
+      // Don't include symbols that aren't global.
       if (!(Sym.getFlags() & object::BasicSymbolRef::SF_Global)) {
         if (auto SymName = Sym.getName())
           InternalSymbols->insert(*SymName);

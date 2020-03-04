@@ -273,6 +273,15 @@ TEST_F(FormatTestCSharp, Attributes) {
                "{\n"
                "}");
 
+  // [] in an attribute do not cause premature line wrapping or indenting.
+  verifyFormat(R"(//
+public class A
+{
+    [SomeAttribute(new[] { RED, GREEN, BLUE }, -1.0f, 1.0f)]
+    [DoNotSerialize]
+    public Data MemberVariable;
+})");
+
   //  Unwrappable lines go on a line of their own.
   // 'target:' is not treated as a label.
   // Modify Style to enforce a column limit.
@@ -617,6 +626,14 @@ TEST_F(FormatTestCSharp, CSharpNullableTypes) {
   verifyFormat(R"(public float? Value;)", Style); // no space before `?`.
   verifyFormat(R"(int?[] arr = new int?[10];)",
                Style); // An array of a nullable type.
+}
+
+TEST_F(FormatTestCSharp, CSharpArraySubscripts) {
+  FormatStyle Style = getGoogleStyle(FormatStyle::LK_CSharp);
+
+  // Do not format array subscript operators as attributes.
+  verifyFormat(R"(if (someThings[index].Contains(myThing)) {)", Style);
+  verifyFormat(R"(if (someThings[i][j][k].Contains(myThing)) {)", Style);
 }
 
 } // namespace format

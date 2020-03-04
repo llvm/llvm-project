@@ -1,0 +1,4 @@
+# RUN: toyc-ch7 %s -emit=ast 2>&1 | FileCheck %s
+# CHECK-NOT: Assert
+# CHECK-NOT: Parse error
+# CHECK: Module

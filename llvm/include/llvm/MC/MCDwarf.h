@@ -43,8 +43,7 @@ class SourceMgr;
 
 namespace mcdwarf {
 // Emit the common part of the DWARF 5 range/locations list tables header.
-void emitListsTableHeaderStart(MCStreamer *S, MCSymbol *TableStart,
-                               MCSymbol *TableEnd);
+MCSymbol *emitListsTableHeaderStart(MCStreamer &S);
 } // namespace mcdwarf
 
 /// Instances of this class represent the name of the dwarf .file directive and

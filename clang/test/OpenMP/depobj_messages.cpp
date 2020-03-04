@@ -26,7 +26,7 @@ T tmain(T argc) {
 #pragma omp depobj(x) depend(in:s)
     }
   while (argc)
-#pragma omp depobj(x) depend(in:s) // expected-error {{'#pragma omp depobj' cannot be an immediate substatement}}
+#pragma omp depobj(x)update(inout) // expected-error {{'#pragma omp depobj' cannot be an immediate substatement}}
     while (argc) {
 #pragma omp depobj(x) depend(in:s)
     }
@@ -143,14 +143,23 @@ label1 : {
   ;
 #pragma omp depobj(x) seq_cst // expected-error {{unexpected OpenMP clause 'seq_cst' in directive '#pragma omp depobj'}}
 #pragma omp depobj(x) depend(in: x)
+#pragma omp depobj(x) update // expected-error {{expected '(' after 'update'}}
+#pragma omp depobj(x) update( // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error {{expected 'in', 'out', 'inout' or 'mutexinoutset' in OpenMP clause 'update'}}
+#pragma omp depobj(x) update(x // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error {{expected 'in', 'out', 'inout' or 'mutexinoutset' in OpenMP clause 'update'}}
 #pragma omp depobj(x) destroy destroy // expected-error {{directive '#pragma omp depobj' cannot contain more than one 'destroy' clause}}
+#pragma omp depobj(x) update(in) update(in) // expected-error {{directive '#pragma omp depobj' cannot contain more than one 'update' clause}}
 #pragma omp depobj(x) depend(in: x) destroy // expected-error {{exactly one of 'depend', 'destroy', or 'update' clauses is expected}}
 #pragma omp depobj(x) destroy depend(in: x) // expected-error {{exactly one of 'depend', 'destroy', or 'update' clauses is expected}}
+#pragma omp depobj(x) depend(in: x) update(mutexinoutset) // expected-error {{exactly one of 'depend', 'destroy', or 'update' clauses is expected}}
+#pragma omp depobj(x) update(inout) destroy // expected-error {{exactly one of 'depend', 'destroy', or 'update' clauses is expected}}
 #pragma omp depobj(x) (x) depend(in: x) // expected-warning {{extra tokens at the end of '#pragma omp depobj' are ignored}}
+#pragma omp depobj(x) (x) update(in) // expected-warning {{extra tokens at the end of '#pragma omp depobj' are ignored}}
 #pragma omp depobj(x) depend(in: x) depend(out:x) // expected-error {{exactly one of 'depend', 'destroy', or 'update' clauses is expected}}
 #pragma omp depend(out:x) depobj(x) // expected-error {{expected an OpenMP directive}}
 #pragma omp destroy depobj(x) // expected-error {{expected an OpenMP directive}}
+#pragma omp update(out) depobj(x) // expected-error {{expected an OpenMP directive}}
 #pragma omp depobj depend(in:x) (x) // expected-error {{expected depobj expression}} expected-warning {{extra tokens at the end of '#pragma omp depobj' are ignored}}
 #pragma omp depobj destroy (x) // expected-error {{expected depobj expression}} expected-warning {{extra tokens at the end of '#pragma omp depobj' are ignored}}
+#pragma omp depobj update(in) (x) // expected-error {{expected depobj expression}} expected-warning {{extra tokens at the end of '#pragma omp depobj' are ignored}}
   return tmain(argc); // expected-note {{in instantiation of function template specialization 'tmain<int>' requested here}}
 }

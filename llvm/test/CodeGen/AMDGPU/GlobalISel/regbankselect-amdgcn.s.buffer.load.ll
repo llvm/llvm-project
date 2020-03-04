@@ -1466,9 +1466,9 @@ define amdgpu_ps float @s_buffer_load_f32_offset_add_vgpr_sgpr_imm(<4 x i32> inr
   ; CHECK:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
   ; CHECK:   [[COPY5:%[0-9]+]]:sgpr(s32) = COPY $sgpr6
   ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:sgpr(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
-  ; CHECK:   [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1024
   ; CHECK:   [[COPY6:%[0-9]+]]:vgpr(s32) = COPY [[COPY5]](s32)
   ; CHECK:   [[ADD:%[0-9]+]]:vgpr(s32) = G_ADD [[COPY4]], [[COPY6]]
+  ; CHECK:   [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1024
   ; CHECK:   [[COPY7:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
   ; CHECK:   [[ADD1:%[0-9]+]]:vgpr(s32) = G_ADD [[ADD]], [[COPY7]]
   ; CHECK:   [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
@@ -1493,9 +1493,9 @@ define amdgpu_ps float @s_buffer_load_f32_offset_add_sgpr_vgpr_imm(<4 x i32> inr
   ; CHECK:   [[COPY4:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
   ; CHECK:   [[COPY5:%[0-9]+]]:sgpr(s32) = COPY $sgpr6
   ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:sgpr(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
-  ; CHECK:   [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1024
   ; CHECK:   [[COPY6:%[0-9]+]]:vgpr(s32) = COPY [[COPY5]](s32)
   ; CHECK:   [[ADD:%[0-9]+]]:vgpr(s32) = G_ADD [[COPY6]], [[COPY4]]
+  ; CHECK:   [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1024
   ; CHECK:   [[COPY7:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
   ; CHECK:   [[ADD1:%[0-9]+]]:vgpr(s32) = G_ADD [[ADD]], [[COPY7]]
   ; CHECK:   [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0

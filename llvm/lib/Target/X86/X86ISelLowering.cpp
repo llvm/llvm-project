@@ -8547,8 +8547,8 @@ static SDValue lowerBuildVectorAsBroadcast(BuildVectorSDNode *BVOp,
       LLVMContext *Ctx = DAG.getContext();
       MVT PVT = TLI.getPointerTy(DAG.getDataLayout());
       if (Subtarget.hasAVX()) {
-        if (SplatBitSize <= 64 && Subtarget.hasAVX2() &&
-            !(SplatBitSize == 64 && Subtarget.is32Bit())) {
+        if (SplatBitSize == 32 || SplatBitSize == 64 ||
+            (SplatBitSize < 32 && Subtarget.hasAVX2())) {
           // Splatted value can fit in one INTEGER constant in constant pool.
           // Load the constant and broadcast it.
           MVT CVT = MVT::getIntegerVT(SplatBitSize);
@@ -8558,38 +8558,17 @@ static SDValue lowerBuildVectorAsBroadcast(BuildVectorSDNode *BVOp,
           unsigned Repeat = VT.getSizeInBits() / SplatBitSize;
 
           unsigned Alignment = cast<ConstantPoolSDNode>(CP)->getAlignment();
-          Ld = DAG.getLoad(
-              CVT, dl, DAG.getEntryNode(), CP,
-              MachinePointerInfo::getConstantPool(DAG.getMachineFunction()),
-              Alignment);
-          SDValue Brdcst = DAG.getNode(X86ISD::VBROADCAST, dl,
-                                       MVT::getVectorVT(CVT, Repeat), Ld);
+          SDVTList Tys =
+              DAG.getVTList(MVT::getVectorVT(CVT, Repeat), MVT::Other);
+          SDValue Ops[] = {DAG.getEntryNode(), CP};
+          MachinePointerInfo MPI =
+              MachinePointerInfo::getConstantPool(DAG.getMachineFunction());
+          SDValue Brdcst = DAG.getMemIntrinsicNode(
+              X86ISD::VBROADCAST_LOAD, dl, Tys, Ops, CVT, MPI, Alignment,
+              MachineMemOperand::MOLoad);
           return DAG.getBitcast(VT, Brdcst);
-        } else if (SplatBitSize == 32 || SplatBitSize == 64) {
-          // Splatted value can fit in one FLOAT constant in constant pool.
-          // Load the constant and broadcast it.
-          // AVX have support for 32 and 64 bit broadcast for floats only.
-          // No 64bit integer in 32bit subtarget.
-          MVT CVT = MVT::getFloatingPointVT(SplatBitSize);
-          // Lower the splat via APFloat directly, to avoid any conversion.
-          Constant *C =
-              SplatBitSize == 32
-                  ? ConstantFP::get(*Ctx,
-                                    APFloat(APFloat::IEEEsingle(), SplatValue))
-                  : ConstantFP::get(*Ctx,
-                                    APFloat(APFloat::IEEEdouble(), SplatValue));
-          SDValue CP = DAG.getConstantPool(C, PVT);
-          unsigned Repeat = VT.getSizeInBits() / SplatBitSize;
-
-          unsigned Alignment = cast<ConstantPoolSDNode>(CP)->getAlignment();
-          Ld = DAG.getLoad(
-              CVT, dl, DAG.getEntryNode(), CP,
-              MachinePointerInfo::getConstantPool(DAG.getMachineFunction()),
-              Alignment);
-          SDValue Brdcst = DAG.getNode(X86ISD::VBROADCAST, dl,
-                                       MVT::getVectorVT(CVT, Repeat), Ld);
-          return DAG.getBitcast(VT, Brdcst);
-        } else if (SplatBitSize > 64) {
+        }
+        if (SplatBitSize > 64) {
           // Load the vector of constants and broadcast it.
           MVT CVT = VT.getScalarType();
           Constant *VecC = getConstantVector(VT, SplatValue, SplatBitSize,
@@ -8667,12 +8646,13 @@ static SDValue lowerBuildVectorAsBroadcast(BuildVectorSDNode *BVOp,
       SDValue CP =
           DAG.getConstantPool(C, TLI.getPointerTy(DAG.getDataLayout()));
       unsigned Alignment = cast<ConstantPoolSDNode>(CP)->getAlignment();
-      Ld = DAG.getLoad(
-          CVT, dl, DAG.getEntryNode(), CP,
-          MachinePointerInfo::getConstantPool(DAG.getMachineFunction()),
-          Alignment);
 
-      return DAG.getNode(X86ISD::VBROADCAST, dl, VT, Ld);
+      SDVTList Tys = DAG.getVTList(VT, MVT::Other);
+      SDValue Ops[] = {DAG.getEntryNode(), CP};
+      MachinePointerInfo MPI =
+          MachinePointerInfo::getConstantPool(DAG.getMachineFunction());
+      return DAG.getMemIntrinsicNode(X86ISD::VBROADCAST_LOAD, dl, Tys, Ops, CVT,
+                                     MPI, Alignment, MachineMemOperand::MOLoad);
     }
   }
 
@@ -8690,14 +8670,29 @@ static SDValue lowerBuildVectorAsBroadcast(BuildVectorSDNode *BVOp,
     return SDValue();
 
   if (ScalarSize == 32 || (IsGE256 && ScalarSize == 64) ||
-      (Subtarget.hasVLX() && ScalarSize == 64))
-    return DAG.getNode(X86ISD::VBROADCAST, dl, VT, Ld);
+      (Subtarget.hasVLX() && ScalarSize == 64)) {
+    auto *LN = cast<LoadSDNode>(Ld);
+    SDVTList Tys = DAG.getVTList(VT, MVT::Other);
+    SDValue Ops[] = {LN->getChain(), LN->getBasePtr()};
+    SDValue BCast =
+        DAG.getMemIntrinsicNode(X86ISD::VBROADCAST_LOAD, dl, Tys, Ops,
+                                LN->getMemoryVT(), LN->getMemOperand());
+    DAG.ReplaceAllUsesOfValueWith(SDValue(LN, 1), BCast.getValue(1));
+    return BCast;
+  }
 
   // The integer check is needed for the 64-bit into 128-bit so it doesn't match
   // double since there is no vbroadcastsd xmm
-  if (Subtarget.hasInt256() && Ld.getValueType().isInteger()) {
-    if (ScalarSize == 8 || ScalarSize == 16 || ScalarSize == 64)
-      return DAG.getNode(X86ISD::VBROADCAST, dl, VT, Ld);
+  if (Subtarget.hasInt256() && Ld.getValueType().isInteger() &&
+      (ScalarSize == 8 || ScalarSize == 16 || ScalarSize == 64)) {
+    auto *LN = cast<LoadSDNode>(Ld);
+    SDVTList Tys = DAG.getVTList(VT, MVT::Other);
+    SDValue Ops[] = {LN->getChain(), LN->getBasePtr()};
+    SDValue BCast =
+        DAG.getMemIntrinsicNode(X86ISD::VBROADCAST_LOAD, dl, Tys, Ops,
+                                LN->getMemoryVT(), LN->getMemOperand());
+    DAG.ReplaceAllUsesOfValueWith(SDValue(LN, 1), BCast.getValue(1));
+    return BCast;
   }
 
   // Unsupported broadcast.
@@ -46828,6 +46823,41 @@ static SDValue combineFP_EXTEND(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(ISD::FP_EXTEND, dl, VT, Cvt);
 }
 
+// Try to find a larger VBROADCAST_LOAD that we can extract from. Limit this to
+// cases where the loads have the same input chain and the output chains are
+// unused. This avoids any memory ordering issues.
+static SDValue combineVBROADCAST_LOAD(SDNode *N, SelectionDAG &DAG,
+                                      TargetLowering::DAGCombinerInfo &DCI) {
+  // Only do this if the chain result is unused.
+  if (N->hasAnyUseOfValue(1))
+    return SDValue();
+
+  auto *MemIntrin = cast<MemIntrinsicSDNode>(N);
+
+  SDValue Ptr = MemIntrin->getBasePtr();
+  SDValue Chain = MemIntrin->getChain();
+  EVT VT = N->getSimpleValueType(0);
+  EVT MemVT = MemIntrin->getMemoryVT();
+
+  // Look at other users of our base pointer and try to find a wider broadcast.
+  // The input chain and the size of the memory VT must match.
+  for (SDNode *User : Ptr->uses())
+    if (User != N && User->getOpcode() == X86ISD::VBROADCAST_LOAD &&
+        cast<MemIntrinsicSDNode>(User)->getBasePtr() == Ptr &&
+        cast<MemIntrinsicSDNode>(User)->getChain() == Chain &&
+        cast<MemIntrinsicSDNode>(User)->getMemoryVT().getSizeInBits() ==
+            MemVT.getSizeInBits() &&
+        !User->hasAnyUseOfValue(1) &&
+        User->getValueSizeInBits(0) > VT.getSizeInBits()) {
+      SDValue Extract = extractSubVector(SDValue(User, 0), 0, DAG, SDLoc(N),
+                                         VT.getSizeInBits());
+      Extract = DAG.getBitcast(VT, Extract);
+      return DCI.CombineTo(N, Extract, SDValue(User, 1));
+    }
+
+  return SDValue();
+}
+
 static SDValue combineFP_ROUND(SDNode *N, SelectionDAG &DAG,
                                const X86Subtarget &Subtarget) {
   if (!Subtarget.hasF16C() || Subtarget.useSoftFloat())
@@ -47027,6 +47057,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::STRICT_FP_EXTEND:
   case ISD::FP_EXTEND:      return combineFP_EXTEND(N, DAG, Subtarget);
   case ISD::FP_ROUND:       return combineFP_ROUND(N, DAG, Subtarget);
+  case X86ISD::VBROADCAST_LOAD: return combineVBROADCAST_LOAD(N, DAG, DCI);
   }
 
   return SDValue();

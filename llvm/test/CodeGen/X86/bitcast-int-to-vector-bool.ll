@@ -160,7 +160,7 @@ define <16 x i1> @bitcast_i16_16i1(i16 zeroext %a0) {
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovd %edi, %xmm0
 ; AVX1-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1]
-; AVX1-NEXT:    vmovddup {{.*#+}} xmm1 = [-1.7939930131212661E-307,-1.7939930131212661E-307]
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm1 = [9241421688590303745,9241421688590303745]
 ; AVX1-NEXT:    # xmm1 = mem[0,0]
 ; AVX1-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0

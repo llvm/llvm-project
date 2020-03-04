@@ -45,17 +45,21 @@
 
 using namespace llvm;
 
-void mcdwarf::emitListsTableHeaderStart(MCStreamer *S, MCSymbol *TableStart,
-                                        MCSymbol *TableEnd) {
-  S->AddComment("Length");
-  S->emitAbsoluteSymbolDiff(TableEnd, TableStart, 4);
-  S->emitLabel(TableStart);
-  S->AddComment("Version");
-  S->emitInt16(S->getContext().getDwarfVersion());
-  S->AddComment("Address size");
-  S->emitInt8(S->getContext().getAsmInfo()->getCodePointerSize());
-  S->AddComment("Segment selector size");
-  S->emitInt8(0);
+MCSymbol *mcdwarf::emitListsTableHeaderStart(MCStreamer &S) {
+  MCSymbol *Start =
+      S.getContext().createTempSymbol("debug_list_header_start", true, true);
+  MCSymbol *End =
+      S.getContext().createTempSymbol("debug_list_header_end", true, true);
+  S.AddComment("Length");
+  S.emitAbsoluteSymbolDiff(End, Start, 4);
+  S.emitLabel(Start);
+  S.AddComment("Version");
+  S.emitInt16(S.getContext().getDwarfVersion());
+  S.AddComment("Address size");
+  S.emitInt8(S.getContext().getAsmInfo()->getCodePointerSize());
+  S.AddComment("Segment selector size");
+  S.emitInt8(0);
+  return End;
 }
 
 /// Manage the .debug_line_str section contents, if we use it.
@@ -1117,11 +1121,7 @@ static MCSymbol *emitGenDwarfRanges(MCStreamer *MCOS) {
 
   if (MCOS->getContext().getDwarfVersion() >= 5) {
     MCOS->SwitchSection(context.getObjectFileInfo()->getDwarfRnglistsSection());
-    MCSymbol *StartSymbol =
-        context.createTempSymbol("debug_rnglists_start", true, true);
-    MCSymbol *EndSymbol =
-        context.createTempSymbol("debug_rnglists_end", true, true);
-    mcdwarf::emitListsTableHeaderStart(MCOS, StartSymbol, EndSymbol);
+    MCSymbol *EndSymbol = mcdwarf::emitListsTableHeaderStart(*MCOS);
     MCOS->AddComment("Offset entry count");
     MCOS->emitInt32(0);
     RangesSymbol = context.createTempSymbol("debug_rnglist0_start", true, true);

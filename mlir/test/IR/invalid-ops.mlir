@@ -346,28 +346,28 @@ func @invalid_cmp_attr(%idx : i32) {
 // -----
 
 func @cmpf_generic_invalid_predicate_value(%a : f32) {
-  // expected-error@+1 {{'predicate' attribute value out of range}}
+  // expected-error@+1 {{attribute 'predicate' failed to satisfy constraint: allowed 64-bit integer cases}}
   %r = "std.cmpf"(%a, %a) {predicate = 42} : (f32, f32) -> i1
 }
 
 // -----
 
 func @cmpf_canonical_invalid_predicate_value(%a : f32) {
-  // expected-error@+1 {{unknown comparison predicate "foo"}}
+  // expected-error@+1 {{invalid predicate attribute specification: "foo"}}
   %r = cmpf "foo", %a, %a : f32
 }
 
 // -----
 
 func @cmpf_canonical_invalid_predicate_value_signed(%a : f32) {
-  // expected-error@+1 {{unknown comparison predicate "sge"}}
+  // expected-error@+1 {{invalid predicate attribute specification: "sge"}}
   %r = cmpf "sge", %a, %a : f32
 }
 
 // -----
 
 func @cmpf_canonical_invalid_predicate_value_no_order(%a : f32) {
-  // expected-error@+1 {{unknown comparison predicate "eq"}}
+  // expected-error@+1 {{invalid predicate attribute specification: "eq"}}
   %r = cmpf "eq", %a, %a : f32
 }
 
@@ -380,14 +380,14 @@ func @cmpf_canonical_no_predicate_attr(%a : f32, %b : f32) {
 // -----
 
 func @cmpf_generic_no_predicate_attr(%a : f32, %b : f32) {
-  // expected-error@+1 {{requires an integer attribute named 'predicate'}}
+  // expected-error@+1 {{requires attribute 'predicate'}}
   %r = "std.cmpf"(%a, %b) {foo = 1} : (f32, f32) -> i1
 }
 
 // -----
 
 func @cmpf_wrong_type(%a : i32, %b : i32) {
-  %r = cmpf "oeq", %a, %b : i32 // expected-error {{operand #0 must be floating-point-like}}
+  %r = cmpf "oeq", %a, %b : i32 // expected-error {{must be floating-point-like}}
 }
 
 // -----
