@@ -2,7 +2,7 @@
 ; RUN: opt -cost-model -analyze -mtriple=thumbv6m-none-eabi < %s | FileCheck %s --check-prefix=CHECK-NOVEC
 ; RUN: opt -cost-model -analyze -mtriple=thumbv7m-none-eabi -mcpu=cortex-m3 < %s | FileCheck %s --check-prefix=CHECK-NOVEC
 ; RUN: opt -cost-model -analyze -mtriple=thumbv7m-none-eabi -mcpu=cortex-m4 < %s | FileCheck %s --check-prefix=CHECK-FP
-; RUN: opt -cost-model -analyze -mtriple=thumbv8.1-m.main-none-eabi -mattr=+mve < %s | FileCheck %s --check-prefix=CHECK-MVE
+; RUN: opt -cost-model -analyze -mtriple=thumbv8.1m.main-none-eabi -mattr=+mve < %s | FileCheck %s --check-prefix=CHECK-MVE
 ; RUN: opt -cost-model -analyze -mtriple=thumbv7-apple-ios6.0.0 -mcpu=swift < %s | FileCheck %s --check-prefix=CHECK-NEON
 ; RUN: opt -cost-model -analyze -mtriple=arm-none-eabi -mcpu=cortex-a53 < %s | FileCheck %s --check-prefix=CHECK-NEON
 
