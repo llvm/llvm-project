@@ -3,7 +3,7 @@
 
 ## Check we demangle symbols when printing symbol table.
 # CHECK:      SYMBOL TABLE:
-# CHECK-NEXT: 0000000000000000 g     F .text           00000000 foo()
+# CHECK-NEXT: 0000000000000000 g     F .text           0000000000000000 foo()
 
 ## Check we demangle symbols when printing relocations.
 # CHECK:      000000000000001 R_X86_64_PLT32 foo()-0x4
