@@ -12246,7 +12246,8 @@ OMPClause *Sema::ActOnOpenMPUpdateClause(OpenMPDependClauseKind Kind,
                                          SourceLocation StartLoc,
                                          SourceLocation LParenLoc,
                                          SourceLocation EndLoc) {
-  if (Kind == OMPC_DEPEND_unknown) {
+  if (Kind == OMPC_DEPEND_unknown || Kind == OMPC_DEPEND_source ||
+      Kind == OMPC_DEPEND_sink) {
     unsigned Except[] = {OMPC_DEPEND_source, OMPC_DEPEND_sink};
     Diag(KindKwLoc, diag::err_omp_unexpected_clause_value)
         << getListOfPossibleValues(OMPC_depend, /*First=*/0,
@@ -15260,7 +15261,8 @@ Sema::ActOnOpenMPDependClause(OpenMPDependClauseKind DepKind,
         << "'source' or 'sink'" << getOpenMPClauseName(OMPC_depend);
     return nullptr;
   }
-  if (DSAStack->getCurrentDirective() != OMPD_ordered &&
+  if ((DSAStack->getCurrentDirective() != OMPD_ordered ||
+       DSAStack->getCurrentDirective() == OMPD_depobj) &&
       (DepKind == OMPC_DEPEND_unknown || DepKind == OMPC_DEPEND_source ||
        DepKind == OMPC_DEPEND_sink)) {
     unsigned Except[] = {OMPC_DEPEND_source, OMPC_DEPEND_sink};
