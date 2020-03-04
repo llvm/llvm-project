@@ -6,23 +6,26 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++98, c++03, c++11, c++14, c++17
-// UNSUPPORTED: clang-3.3, clang-3.4, clang-3.5, clang-3.6, clang-3.7, clang-3.8
-
 // <memory>
 
 // allocator:
-// T* allocate(size_t n);
+// T* allocate(size_t n, const void* hint);
+
+// Deprecated in C++17
+
+// UNSUPPORTED: c++98, c++03, c++11, c++14
+// REQUIERS: verify-support
+
+// MODULES_DEFINES: _LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS
+#define _LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS
 
 #include <memory>
-#include <cassert>
-
 #include "test_macros.h"
 
 int main(int, char**)
 {
     std::allocator<int> a;
-    a.allocate(3);          // expected-error {{ignoring return value of function declared with 'nodiscard' attribute}}
+    TEST_IGNORE_NODISCARD a.allocate(3, nullptr); // expected-error {{'allocate' is deprecated}}
 
   return 0;
 }
