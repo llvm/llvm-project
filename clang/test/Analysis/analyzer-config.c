@@ -58,7 +58,6 @@
 // CHECK-NEXT: experimental-enable-naive-ctu-analysis = false
 // CHECK-NEXT: exploration_strategy = unexplored_first_queue
 // CHECK-NEXT: faux-bodies = true
-// CHECK-NEXT: fixits-as-remarks = false
 // CHECK-NEXT: graph-trim-interval = 1000
 // CHECK-NEXT: inline-lambdas = true
 // CHECK-NEXT: ipa = dynamic-bifurcate
