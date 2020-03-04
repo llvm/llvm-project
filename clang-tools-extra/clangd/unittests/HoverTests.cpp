@@ -339,7 +339,7 @@ class Foo {})cpp";
          HI.Definition = "~X()";
          HI.Parameters.emplace();
        }},
-      {"class X { operator [[in^t]](); };",
+      {"class X { [[op^erator]] int(); };",
        [](HoverInfo &HI) {
          HI.NamespaceScope = "";
          HI.Name = "operator int";
@@ -347,6 +347,13 @@ class Foo {})cpp";
          HI.Kind = index::SymbolKind::ConversionFunction;
          HI.Definition = "operator int()";
          HI.Parameters.emplace();
+       }},
+      {"class X { operator [[^X]](); };",
+       [](HoverInfo &HI) {
+         HI.NamespaceScope = "";
+         HI.Name = "X";
+         HI.Kind = index::SymbolKind::Class;
+         HI.Definition = "class X {}";
        }},
 
       // auto on lambda
