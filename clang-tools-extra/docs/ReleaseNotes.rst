@@ -98,6 +98,12 @@ New checks
 
   Finds recursive functions and diagnoses them.
 
+- New :doc:`bugprone-suspicious-includei
+  <clang-tidy/checks/bugprone-suspicious-include>` check.
+
+  Finds includes that appear to be referring to implementation files (which
+  tends to cause ODR violations), and diagnoses them.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
