@@ -12,9 +12,9 @@
 # WARN: warning: '[[FILE]]': no valid dynamic table was found
 # WARN-EMPTY:
 # WARN: File:
+# WARN: ProgramHeaders [
 # WARN: Symbols [
 # WARN: ]
-# WARN: ProgramHeaders [
 
 # WARN-GNU: warning: '[[FILE]]': invalid PT_DYNAMIC size (0x4){{$}}
 # WARN-GNU: warning: '[[FILE]]': section with index 1 has invalid size (0x4){{$}}

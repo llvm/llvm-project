@@ -22,17 +22,17 @@
 # RUN: llvm-readelf -x .got %t.64 | FileCheck --check-prefix=LE64-GOT %s
 # RUN: llvm-objdump -d --no-show-raw-insn %t.64 | FileCheck --check-prefixes=LE,LE64 %s
 
+# IE32-REL:      FLAGS STATIC_TLS
 # IE32-REL:      .rela.dyn {
 # IE32-REL-NEXT:   0x2218 R_RISCV_TLS_TPREL32 - 0xC
 # IE32-REL-NEXT:   0x2214 R_RISCV_TLS_TPREL32 a 0x0
 # IE32-REL-NEXT: }
-# IE32-REL:      FLAGS STATIC_TLS
 
+# IE64-REL:      FLAGS STATIC_TLS
 # IE64-REL:      .rela.dyn {
 # IE64-REL-NEXT:   0x2370 R_RISCV_TLS_TPREL64 - 0xC
 # IE64-REL-NEXT:   0x2368 R_RISCV_TLS_TPREL64 a 0x0
 # IE64-REL-NEXT: }
-# IE64-REL:      FLAGS STATIC_TLS
 
 ## rv32: &.got[0] - . = 0x2214 - . = 4096*1+112
 ## rv64: &.got[0] - . = 0x2368 - . = 4096*1+200

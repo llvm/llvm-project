@@ -10,13 +10,13 @@
 # RUN: llvm-readelf -x .plt %t | FileCheck --check-prefix=HEX %s
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
 
+# SEC:   .got PROGBITS 100202b8
+# RELOC: PPC_GOT 0x100202B8
+
 # RELOC:      .rela.plt {
 # RELOC-NEXT:   0x100302C4 R_PPC_JMP_SLOT f 0x0
 # RELOC-NEXT:   0x100302C8 R_PPC_JMP_SLOT g 0x0
 # RELOC-NEXT: }
-
-# SEC:   .got PROGBITS 100202b8
-# RELOC: PPC_GOT 0x100202B8
 
 ## .got2+0x8000-0x10004 = 0x30000+0x8000-0x10004 = 65536*2+32764
 # CHECK-LABEL: _start:

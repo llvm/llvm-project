@@ -14,6 +14,10 @@
 # At the same time, weak symbols should not cause adding DT_NEEDED;
 # this case is checked with symbol qux and %t4.so.
 
+# CHECK-NOT: NEEDED
+# CHECK:     NEEDED Shared library: [{{.*}}3.so]
+# CHECK-NOT: NEEDED
+
 # CHECK:      DynamicSymbols [
 # CHECK-NEXT:   Symbol {
 # CHECK-NEXT:     Name:
@@ -61,10 +65,6 @@
 # CHECK-NEXT:     Section: .text
 # CHECK-NEXT:   }
 # CHECK-NEXT: ]
-
-# CHECK-NOT: NEEDED
-# CHECK:     NEEDED Shared library: [{{.*}}3.so]
-# CHECK-NOT: NEEDED
 
 # Test with %t.o at the end too.
 # RUN: ld.lld --gc-sections --export-dynamic-symbol foo -o %t --as-needed %t2.so %t3.so %t4.so %t.o

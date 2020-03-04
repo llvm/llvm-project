@@ -8,11 +8,11 @@
 # LLVM-ALL: LoadName:
 # LLVM-ALL: ElfHeader {
 # LLVM-ALL: Sections [
+# LLVM-ALL: ProgramHeaders [
 # LLVM-ALL: Relocations [
-# LLVM-ALL: Symbols [
 # LLVM-ALL: EHFrameHeader {
 # LLVM-ALL: .eh_frame section at offset 0x1128 address 0x0:
-# LLVM-ALL: ProgramHeaders [
+# LLVM-ALL: Symbols [
 # LLVM-ALL: VersionSymbols [
 # LLVM-ALL: VersionDefinitions [
 # LLVM-ALL: VersionRequirements [
@@ -25,12 +25,12 @@
 
 # GNU-ALL: ELF Header:
 # GNU-ALL: There are {{.*}} section headers, starting at offset {{.*}}:
+# GNU-ALL: Program Headers:
+# GNU-ALL: Dynamic section at offset {{.*}} contains {{.*}} entries:
 # GNU-ALL: Relocation section '.rela.data' at offset {{.*}} contains {{.*}} entries:
-# GNU-ALL: Symbol table '.symtab' contains {{.*}} entries:
 # GNU-ALL: EHFrameHeader {
 # GNU-ALL: .eh_frame section at offset {{.*}} address 0x0:
-# GNU-ALL: Dynamic section at offset {{.*}} contains {{.*}} entries:
-# GNU-ALL: Program Headers:
+# GNU-ALL: Symbol table '.symtab' contains {{.*}} entries:
 # GNU-ALL: Version symbols section '.gnu.version' contains {{.*}} entries:
 # GNU-ALL: Version definition section '.gnu.version_d' contains {{.*}} entries:
 # GNU-ALL: Version needs section '.gnu.version_r' contains {{.*}} entries:
