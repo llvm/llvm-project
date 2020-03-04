@@ -210,9 +210,8 @@ define amdgpu_kernel void @load_v4i8_to_v4f32_unaligned(<4 x float> addrspace(1)
 ; SI-NEXT:    v_lshlrev_b32_e32 v0, 8, v0
 ; SI-NEXT:    v_or_b32_e32 v0, v0, v3
 ; SI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; SI-NEXT:    v_or_b32_e32 v3, v0, v4
+; SI-NEXT:    v_cvt_f32_ubyte3_e32 v3, v0
 ; SI-NEXT:    v_cvt_f32_ubyte2_e32 v2, v0
-; SI-NEXT:    v_cvt_f32_ubyte3_e32 v3, v3
 ; SI-NEXT:    v_cvt_f32_ubyte0_e32 v0, v4
 ; SI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
@@ -360,28 +359,27 @@ define amdgpu_kernel void @load_v7i8_to_v7f32(<7 x float> addrspace(1)* noalias 
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    buffer_load_ubyte v2, v[0:1], s[0:3], 0 addr64 offset:5
 ; SI-NEXT:    buffer_load_ubyte v3, v[0:1], s[0:3], 0 addr64 offset:6
-; SI-NEXT:    buffer_load_ubyte v6, v[0:1], s[0:3], 0 addr64
-; SI-NEXT:    buffer_load_ubyte v4, v[0:1], s[0:3], 0 addr64 offset:1
-; SI-NEXT:    buffer_load_ubyte v7, v[0:1], s[0:3], 0 addr64 offset:2
-; SI-NEXT:    buffer_load_ubyte v5, v[0:1], s[0:3], 0 addr64 offset:3
-; SI-NEXT:    buffer_load_ubyte v0, v[0:1], s[0:3], 0 addr64 offset:4
+; SI-NEXT:    buffer_load_ubyte v4, v[0:1], s[0:3], 0 addr64
+; SI-NEXT:    buffer_load_ubyte v5, v[0:1], s[0:3], 0 addr64 offset:1
+; SI-NEXT:    buffer_load_ubyte v6, v[0:1], s[0:3], 0 addr64 offset:2
+; SI-NEXT:    buffer_load_ubyte v7, v[0:1], s[0:3], 0 addr64 offset:3
+; SI-NEXT:    buffer_load_ubyte v8, v[0:1], s[0:3], 0 addr64 offset:4
 ; SI-NEXT:    s_mov_b32 s6, -1
-; SI-NEXT:    s_waitcnt vmcnt(5)
-; SI-NEXT:    v_cvt_f32_ubyte0_e32 v9, v3
+; SI-NEXT:    s_waitcnt vmcnt(4)
+; SI-NEXT:    v_cvt_f32_ubyte0_e32 v0, v4
 ; SI-NEXT:    s_waitcnt vmcnt(3)
-; SI-NEXT:    v_cvt_f32_ubyte2_e32 v1, v4
-; SI-NEXT:    s_waitcnt vmcnt(1)
-; SI-NEXT:    v_lshlrev_b32_e32 v8, 8, v5
-; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_cvt_f32_ubyte0_e32 v4, v0
-; SI-NEXT:    v_or_b32_e32 v0, v8, v7
-; SI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; SI-NEXT:    v_or_b32_e32 v6, v0, v6
+; SI-NEXT:    v_cvt_f32_ubyte2_e32 v1, v5
 ; SI-NEXT:    v_cvt_f32_ubyte2_e32 v5, v2
-; SI-NEXT:    v_cvt_f32_ubyte3_e32 v3, v0
-; SI-NEXT:    v_cvt_f32_ubyte2_e32 v2, v0
-; SI-NEXT:    v_cvt_f32_ubyte0_e32 v0, v6
-; SI-NEXT:    buffer_store_dword v9, off, s[4:7], 0 offset:24
+; SI-NEXT:    s_waitcnt vmcnt(1)
+; SI-NEXT:    v_lshlrev_b32_e32 v7, 8, v7
+; SI-NEXT:    v_or_b32_e32 v2, v7, v6
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    v_cvt_f32_ubyte0_e32 v4, v8
+; SI-NEXT:    v_cvt_f32_ubyte0_e32 v8, v3
+; SI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
+; SI-NEXT:    v_cvt_f32_ubyte3_e32 v3, v2
+; SI-NEXT:    v_cvt_f32_ubyte2_e32 v2, v2
+; SI-NEXT:    buffer_store_dword v8, off, s[4:7], 0 offset:24
 ; SI-NEXT:    buffer_store_dwordx2 v[4:5], off, s[4:7], 0 offset:16
 ; SI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
@@ -655,9 +653,8 @@ define amdgpu_kernel void @v4i8_zext_v4i32_to_v4f32(<4 x float> addrspace(1)* no
 ; SI-NEXT:    v_lshlrev_b32_e32 v0, 8, v0
 ; SI-NEXT:    v_or_b32_e32 v0, v0, v3
 ; SI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; SI-NEXT:    v_or_b32_e32 v3, v0, v4
+; SI-NEXT:    v_cvt_f32_ubyte3_e32 v3, v0
 ; SI-NEXT:    v_cvt_f32_ubyte2_e32 v2, v0
-; SI-NEXT:    v_cvt_f32_ubyte3_e32 v3, v3
 ; SI-NEXT:    v_cvt_f32_ubyte0_e32 v0, v4
 ; SI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[4:7], 0
 ; SI-NEXT:    s_endpgm

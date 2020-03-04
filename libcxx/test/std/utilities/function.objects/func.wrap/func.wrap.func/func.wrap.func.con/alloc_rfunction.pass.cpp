@@ -83,7 +83,7 @@ int main(int, char**)
         assert(A::count == 1);
         assert(f.target<A>() == nullptr);
         assert(f.target<Ref>());
-        std::function<int(int)> f2(std::allocator_arg, std::allocator<void>{},
+        std::function<int(int)> f2(std::allocator_arg, std::allocator<int>{},
                                    std::move(f));
         assert(A::count == 1);
         assert(f2.target<A>() == nullptr);
@@ -99,7 +99,7 @@ int main(int, char**)
         std::function<int(int)> f(p);
         assert(f.target<A>() == nullptr);
         assert(f.target<Ptr>());
-        std::function<int(int)> f2(std::allocator_arg, std::allocator<void>(),
+        std::function<int(int)> f2(std::allocator_arg, std::allocator<int>(),
                                    std::move(f));
         assert(f2.target<A>() == nullptr);
         assert(f2.target<Ptr>());

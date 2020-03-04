@@ -3908,6 +3908,8 @@ static inline void __kmp_resume_if_hard_paused() {
   }
 }
 
+extern void __kmp_omp_display_env(int verbose);
+
 #ifdef __cplusplus
 }
 #endif

@@ -4,7 +4,7 @@
 
 # CHECK: .debug_addr contents:
 # CHECK-NOT: {{.}}
-# ERR: section is not large enough to contain an extended length field of the address table at offset 0x0
+# ERR: parsing address table at offset 0x0: unexpected end of data at offset 0x4
 # ERR-NOT: {{.}}
 
 # too small section to contain an extended length field of a DWARF64 address table.

@@ -114,16 +114,16 @@ public:
   // Attach preprocessor hooks such that preamble events will be injected at
   // the appropriate time.
   // Events will be delivered to the *currently registered* PP callbacks.
-  static void attach(const IncludeStructure &Includes,
-                     CompilerInstance &Clang) {
+  static void attach(const IncludeStructure &Includes, CompilerInstance &Clang,
+                     const PreambleBounds &PB) {
     auto &PP = Clang.getPreprocessor();
     auto *ExistingCallbacks = PP.getPPCallbacks();
     // No need to replay events if nobody is listening.
     if (!ExistingCallbacks)
       return;
-    PP.addPPCallbacks(std::unique_ptr<PPCallbacks>(
-        new ReplayPreamble(Includes, ExistingCallbacks,
-                           Clang.getSourceManager(), PP, Clang.getLangOpts())));
+    PP.addPPCallbacks(std::unique_ptr<PPCallbacks>(new ReplayPreamble(
+        Includes, ExistingCallbacks, Clang.getSourceManager(), PP,
+        Clang.getLangOpts(), PB)));
     // We're relying on the fact that addPPCallbacks keeps the old PPCallbacks
     // around, creating a chaining wrapper. Guard against other implementations.
     assert(PP.getPPCallbacks() != ExistingCallbacks &&
@@ -133,9 +133,13 @@ public:
 private:
   ReplayPreamble(const IncludeStructure &Includes, PPCallbacks *Delegate,
                  const SourceManager &SM, Preprocessor &PP,
-                 const LangOptions &LangOpts)
-      : Includes(Includes), Delegate(Delegate), SM(SM), PP(PP),
-        LangOpts(LangOpts) {}
+                 const LangOptions &LangOpts, const PreambleBounds &PB)
+      : Includes(Includes), Delegate(Delegate), SM(SM), PP(PP) {
+    // Only tokenize the preamble section of the main file, as we are not
+    // interested in the rest of the tokens.
+    MainFileTokens = syntax::tokenize(
+        syntax::FileRange(SM.getMainFileID(), 0, PB.Size), SM, LangOpts);
+  }
 
   // In a normal compile, the preamble traverses the following structure:
   //
@@ -167,33 +171,53 @@ private:
         if (auto FE = SM.getFileManager().getFile(Inc.Resolved))
           File = *FE;
 
+      // Re-lex the #include directive to find its interesting parts.
+      auto HashLoc = SM.getComposedLoc(SM.getMainFileID(), Inc.HashOffset);
+      auto HashTok = llvm::partition_point(MainFileTokens,
+                                           [&HashLoc](const syntax::Token &T) {
+                                             return T.location() < HashLoc;
+                                           });
+      assert(HashTok != MainFileTokens.end() && HashTok->kind() == tok::hash);
+
+      auto IncludeTok = std::next(HashTok);
+      assert(IncludeTok != MainFileTokens.end());
+
+      auto FileTok = std::next(IncludeTok);
+      assert(FileTok != MainFileTokens.end());
+
+      // Create a fake import/include token, none of the callers seem to care
+      // about clang::Token::Flags.
+      Token SynthesizedIncludeTok;
+      SynthesizedIncludeTok.startToken();
+      SynthesizedIncludeTok.setLocation(IncludeTok->location());
+      SynthesizedIncludeTok.setLength(IncludeTok->length());
+      SynthesizedIncludeTok.setKind(tok::raw_identifier);
+      SynthesizedIncludeTok.setRawIdentifierData(IncludeTok->text(SM).data());
+      PP.LookUpIdentifierInfo(SynthesizedIncludeTok);
+
+      // Same here, create a fake one for Filename, including angles or quotes.
+      Token SynthesizedFilenameTok;
+      SynthesizedFilenameTok.startToken();
+      SynthesizedFilenameTok.setLocation(FileTok->location());
+      // Note that we can't make use of FileTok->length/text in here as in the
+      // case of angled includes this will contain tok::less instead of
+      // filename. Whereas Inc.Written contains the full header name including
+      // quotes/angles.
+      SynthesizedFilenameTok.setLength(Inc.Written.length());
+      SynthesizedFilenameTok.setKind(tok::header_name);
+      SynthesizedFilenameTok.setLiteralData(Inc.Written.data());
+
       llvm::StringRef WrittenFilename =
           llvm::StringRef(Inc.Written).drop_front().drop_back();
-      bool Angled = llvm::StringRef(Inc.Written).startswith("<");
-
-      // Re-lex the #include directive to find its interesting parts.
-      llvm::StringRef Src = SM.getBufferData(SM.getMainFileID());
-      Lexer RawLexer(SM.getLocForStartOfFile(SM.getMainFileID()), LangOpts,
-                     Src.begin(), Src.begin() + Inc.HashOffset, Src.end());
-      Token HashTok, IncludeTok, FilenameTok;
-      RawLexer.LexFromRawLexer(HashTok);
-      assert(HashTok.getKind() == tok::hash);
-      RawLexer.setParsingPreprocessorDirective(true);
-      RawLexer.LexFromRawLexer(IncludeTok);
-      IdentifierInfo *II = PP.getIdentifierInfo(IncludeTok.getRawIdentifier());
-      IncludeTok.setIdentifierInfo(II);
-      IncludeTok.setKind(II->getTokenID());
-      RawLexer.LexIncludeFilename(FilenameTok);
-
-      Delegate->InclusionDirective(
-          HashTok.getLocation(), IncludeTok, WrittenFilename, Angled,
-          CharSourceRange::getCharRange(FilenameTok.getLocation(),
-                                        FilenameTok.getEndLoc()),
-          File, "SearchPath", "RelPath", /*Imported=*/nullptr, Inc.FileKind);
+      Delegate->InclusionDirective(HashTok->location(), SynthesizedIncludeTok,
+                                   WrittenFilename, Inc.Written.front() == '<',
+                                   FileTok->range(SM).toCharRange(SM), File,
+                                   "SearchPath", "RelPath",
+                                   /*Imported=*/nullptr, Inc.FileKind);
       if (File)
         // FIXME: Use correctly named FileEntryRef.
-        Delegate->FileSkipped(FileEntryRef(File->getName(), *File), FilenameTok,
-                              Inc.FileKind);
+        Delegate->FileSkipped(FileEntryRef(File->getName(), *File),
+                              SynthesizedFilenameTok, Inc.FileKind);
       else {
         llvm::SmallString<1> UnusedRecovery;
         Delegate->FileNotFound(WrittenFilename, UnusedRecovery);
@@ -205,7 +229,7 @@ private:
   PPCallbacks *Delegate;
   const SourceManager &SM;
   Preprocessor &PP;
-  const LangOptions &LangOpts;
+  std::vector<syntax::Token> MainFileTokens;
 };
 
 } // namespace
@@ -337,7 +361,7 @@ ParsedAST::build(std::unique_ptr<clang::CompilerInvocation> CI,
   auto Includes = Preamble ? Preamble->Includes : IncludeStructure{};
   // Replay the preamble includes so that clang-tidy checks can see them.
   if (Preamble)
-    ReplayPreamble::attach(Includes, *Clang);
+    ReplayPreamble::attach(Includes, *Clang, Preamble->Preamble.getBounds());
   // Important: collectIncludeStructure is registered *after* ReplayPreamble!
   // Otherwise we would collect the replayed includes again...
   // (We can't *just* use the replayed includes, they don't have Resolved path).

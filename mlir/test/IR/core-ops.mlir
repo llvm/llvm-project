@@ -512,6 +512,9 @@ func @standard_instrs(tensor<4x4x?xf32>, f32, i32, index, i64, f16) {
   // CHECK: = fptrunc {{.*}} : vector<4xf32> to vector<4xf16>
   %144 = fptrunc %vcf32 : vector<4xf32> to vector<4xf16>
 
+  // CHECK: %{{[0-9]+}} = rsqrt %arg1 : f32
+  %145 = rsqrt %f : f32
+
   return
 }
 

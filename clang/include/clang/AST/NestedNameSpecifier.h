@@ -14,6 +14,7 @@
 #ifndef LLVM_CLANG_AST_NESTEDNAMESPECIFIER_H
 #define LLVM_CLANG_AST_NESTEDNAMESPECIFIER_H
 
+#include "clang/AST/DependencyFlags.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/FoldingSet.h"
@@ -198,6 +199,8 @@ public:
 
     return nullptr;
   }
+
+  NestedNameSpecifierDependence getDependence() const;
 
   /// Whether this nested name specifier refers to a dependent
   /// type or not.

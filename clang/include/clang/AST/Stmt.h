@@ -14,6 +14,7 @@
 #define LLVM_CLANG_AST_STMT_H
 
 #include "clang/AST/DeclGroup.h"
+#include "clang/AST/DependencyFlags.h"
 #include "clang/AST/StmtIterator.h"
 #include "clang/Basic/CapturedStmt.h"
 #include "clang/Basic/IdentifierTable.h"
@@ -315,12 +316,9 @@ protected:
 
     unsigned ValueKind : 2;
     unsigned ObjectKind : 3;
-    unsigned TypeDependent : 1;
-    unsigned ValueDependent : 1;
-    unsigned InstantiationDependent : 1;
-    unsigned ContainsUnexpandedParameterPack : 1;
+    unsigned /*ExprDependence*/ Dependent : ExprDependenceBits;
   };
-  enum { NumExprBits = NumStmtBits + 9 };
+  enum { NumExprBits = NumStmtBits + 5 + ExprDependenceBits };
 
   class ConstantExprBitfields {
     friend class ASTStmtReader;

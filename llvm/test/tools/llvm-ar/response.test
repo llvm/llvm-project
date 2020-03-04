@@ -17,6 +17,13 @@
 # RUN: llvm-ar @%t.response3.txt %t.txt
 # RUN: llvm-ar p %t3.a | FileCheck %s --check-prefix=CONTENTS
 
+## Newlines
+# RUN: echo contents > %t.txt
+# RUN: echo rc %t4.a > %t.newline.txt
+# RUN: echo %t.txt >> %t.newline.txt
+# RUN: llvm-ar @%t.newline.txt
+# RUN: llvm-ar p %t4.a | FileCheck %s --check-prefix=CONTENTS
+
 # CONTENTS: contents
 
 ## rsp-quoting

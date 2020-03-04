@@ -149,6 +149,7 @@ public:
   enum RequirementKind { RK_Type, RK_Simple, RK_Compound, RK_Nested };
 private:
   const RequirementKind Kind;
+  // FIXME: use RequirementDependence to model dependence?
   bool Dependent : 1;
   bool ContainsUnexpandedParameterPack : 1;
   bool Satisfied : 1;

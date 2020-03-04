@@ -142,10 +142,10 @@ label1 : {
 #pragma omp parallel depobj(argc) // expected-warning {{extra tokens at the end of '#pragma omp parallel' are ignored}}
   ;
 #pragma omp depobj(x) seq_cst // expected-error {{unexpected OpenMP clause 'seq_cst' in directive '#pragma omp depobj'}}
-#pragma omp depobj(x) depend(in: x)
+#pragma omp depobj(x) depend(source: x) // expected-error {{expected 'in', 'out', 'inout' or 'mutexinoutset' in OpenMP clause 'depend'}}
 #pragma omp depobj(x) update // expected-error {{expected '(' after 'update'}}
 #pragma omp depobj(x) update( // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error {{expected 'in', 'out', 'inout' or 'mutexinoutset' in OpenMP clause 'update'}}
-#pragma omp depobj(x) update(x // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error {{expected 'in', 'out', 'inout' or 'mutexinoutset' in OpenMP clause 'update'}}
+#pragma omp depobj(x) update(sink // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error {{expected 'in', 'out', 'inout' or 'mutexinoutset' in OpenMP clause 'update'}}
 #pragma omp depobj(x) destroy destroy // expected-error {{directive '#pragma omp depobj' cannot contain more than one 'destroy' clause}}
 #pragma omp depobj(x) update(in) update(in) // expected-error {{directive '#pragma omp depobj' cannot contain more than one 'update' clause}}
 #pragma omp depobj(x) depend(in: x) destroy // expected-error {{exactly one of 'depend', 'destroy', or 'update' clauses is expected}}

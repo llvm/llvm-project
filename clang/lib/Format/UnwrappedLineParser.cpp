@@ -1632,6 +1632,17 @@ bool UnwrappedLineParser::parseBracedList(bool ContinueOnSemicolons,
   // FIXME: Once we have an expression parser in the UnwrappedLineParser,
   // replace this by using parseAssigmentExpression() inside.
   do {
+    if (Style.isCSharp()) {
+      if (FormatTok->is(TT_JsFatArrow)) {
+        nextToken();
+        // Fat arrows can be followed by simple expressions or by child blocks
+        // in curly braces.
+        if (FormatTok->is(tok::l_brace)) {
+          parseChildBlock();
+          continue;
+        }
+      }
+    }
     if (Style.Language == FormatStyle::LK_JavaScript) {
       if (FormatTok->is(Keywords.kw_function) ||
           FormatTok->startsSequence(Keywords.kw_async, Keywords.kw_function)) {
@@ -1955,7 +1966,7 @@ void UnwrappedLineParser::parseNamespace() {
                      DeclarationScopeStack.size() > 1);
     parseBlock(/*MustBeDeclaration=*/true, AddLevel);
     // Munch the semicolon after a namespace. This is more common than one would
-    // think. Puttin the semicolon into its own line is very ugly.
+    // think. Putting the semicolon into its own line is very ugly.
     if (FormatTok->Tok.is(tok::semi))
       nextToken();
     addUnwrappedLine();
@@ -1966,6 +1977,19 @@ void UnwrappedLineParser::parseNamespace() {
 void UnwrappedLineParser::parseNew() {
   assert(FormatTok->is(tok::kw_new) && "'new' expected");
   nextToken();
+
+  if (Style.isCSharp()) {
+    do {
+      if (FormatTok->is(tok::l_brace))
+        parseBracedList();
+
+      if (FormatTok->isOneOf(tok::semi, tok::comma))
+        return;
+
+      nextToken();
+    } while (!eof());
+  }
+
   if (Style.Language != FormatStyle::LK_Java)
     return;
 

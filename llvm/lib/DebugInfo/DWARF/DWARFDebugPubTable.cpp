@@ -28,12 +28,8 @@ DWARFDebugPubTable::DWARFDebugPubTable(const DWARFObject &Obj,
     Sets.push_back({});
     Set &SetData = Sets.back();
 
-    dwarf::DwarfFormat Format = dwarf::DWARF32;
-    SetData.Length = PubNames.getU32(&Offset);
-    if (SetData.Length == dwarf::DW_LENGTH_DWARF64) {
-      Format = dwarf::DWARF64;
-      SetData.Length = PubNames.getU64(&Offset);
-    }
+    dwarf::DwarfFormat Format;
+    std::tie(SetData.Length, Format) = PubNames.getInitialLength(&Offset);
     const unsigned OffsetSize = dwarf::getDwarfOffsetByteSize(Format);
 
     SetData.Version = PubNames.getU16(&Offset);

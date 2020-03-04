@@ -10,6 +10,7 @@
 #include "Logger.h"
 #include "SourceCode.h"
 #include "clang/AST/ASTTypeTraits.h"
+#include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
@@ -634,12 +635,22 @@ private:
   // Usually empty, but sometimes children cover tokens but shouldn't own them.
   SourceRange earlySourceRange(const DynTypedNode &N) {
     if (const Decl *D = N.get<Decl>()) {
+      // We want constructor name to be claimed by TypeLoc not the constructor
+      // itself. Similar for deduction guides, we rather want to select the
+      // underlying TypeLoc.
+      // FIXME: Unfortunately this doesn't work, even though RecursiveASTVisitor
+      // traverses the underlying TypeLoc inside DeclarationName, it is null for
+      // constructors.
+      if (isa<CXXConstructorDecl>(D) || isa<CXXDeductionGuideDecl>(D))
+        return SourceRange();
+      // This will capture Field, Function, MSProperty, NonTypeTemplateParm and
+      // VarDecls. We want the name in the declarator to be claimed by the decl
+      // and not by any children. For example:
       // void [[foo]]();
-      if (auto *FD = llvm::dyn_cast<FunctionDecl>(D))
-        return FD->getNameInfo().getSourceRange();
       // int (*[[s]])();
-      else if (auto *VD = llvm::dyn_cast<VarDecl>(D))
-        return VD->getLocation();
+      // struct X { int [[hash]] [32]; [[operator]] int();}
+      if (const auto *DD = llvm::dyn_cast<DeclaratorDecl>(D))
+        return DD->getLocation();
     } else if (const auto *CCI = N.get<CXXCtorInitializer>()) {
       // : [[b_]](42)
       return CCI->getMemberLocation();

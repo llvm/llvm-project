@@ -164,9 +164,7 @@ Value *InstCombiner::EvaluateInDifferentType(Value *V, Type *Ty,
   if (Constant *C = dyn_cast<Constant>(V)) {
     C = ConstantExpr::getIntegerCast(C, Ty, isSigned /*Sext or ZExt*/);
     // If we got a constantexpr back, try to simplify it with DL info.
-    if (Constant *FoldedC = ConstantFoldConstant(C, DL, &TLI))
-      C = FoldedC;
-    return C;
+    return ConstantFoldConstant(C, DL, &TLI);
   }
 
   // Otherwise, it must be an instruction.
@@ -2153,7 +2151,7 @@ static Instruction *foldBitCastBitwiseLogic(BitCastInst &BitCast,
   if (match(BO->getOperand(1), m_Constant(C))) {
     // bitcast (logic X, C) --> logic (bitcast X, C')
     Value *CastedOp0 = Builder.CreateBitCast(BO->getOperand(0), DestTy);
-    Value *CastedC = ConstantExpr::getBitCast(C, DestTy);
+    Value *CastedC = Builder.CreateBitCast(C, DestTy);
     return BinaryOperator::Create(BO->getOpcode(), CastedOp0, CastedC);
   }
 

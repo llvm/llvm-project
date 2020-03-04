@@ -735,9 +735,9 @@ Value *Lint::findValueImpl(Value *V, bool OffsetOk,
     if (Value *W = SimplifyInstruction(Inst, {*DL, TLI, DT, AC}))
       return findValueImpl(W, OffsetOk, Visited);
   } else if (auto *C = dyn_cast<Constant>(V)) {
-    if (Value *W = ConstantFoldConstant(C, *DL, TLI))
-      if (W && W != V)
-        return findValueImpl(W, OffsetOk, Visited);
+    Value *W = ConstantFoldConstant(C, *DL, TLI);
+    if (W != V)
+      return findValueImpl(W, OffsetOk, Visited);
   }
 
   return V;

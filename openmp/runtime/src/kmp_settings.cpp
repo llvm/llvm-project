@@ -5720,7 +5720,11 @@ void __kmp_env_print() {
 } // __kmp_env_print
 
 void __kmp_env_print_2() {
+  __kmp_display_env_impl(__kmp_display_env, __kmp_display_env_verbose);
+} // __kmp_env_print_2
 
+
+void __kmp_display_env_impl(int display_env, int display_env_verbose) {
   kmp_env_blk_t block;
   kmp_str_buf_t buffer;
 
@@ -5737,9 +5741,9 @@ void __kmp_env_print_2() {
 
   for (int i = 0; i < __kmp_stg_count; ++i) {
     if (__kmp_stg_table[i].print != NULL &&
-        ((__kmp_display_env &&
+        ((display_env &&
           strncmp(__kmp_stg_table[i].name, "OMP_", 4) == 0) ||
-         __kmp_display_env_verbose)) {
+         display_env_verbose)) {
       __kmp_stg_table[i].print(&buffer, __kmp_stg_table[i].name,
                                __kmp_stg_table[i].data);
     }
@@ -5754,7 +5758,6 @@ void __kmp_env_print_2() {
   __kmp_str_buf_free(&buffer);
 
   __kmp_printf("\n");
-
-} // __kmp_env_print_2
+}
 
 // end of file
