@@ -11,27 +11,23 @@
 #ifndef FORTRAN_RUNTIME_LOCK_H_
 #define FORTRAN_RUNTIME_LOCK_H_
 
-#include <pthread.h>
+#include <mutex>
 
 namespace Fortran::runtime {
 
 class Lock {
 public:
-  Lock() { pthread_mutex_init(&mutex_, nullptr); }
-  ~Lock() { pthread_mutex_destroy(&mutex_); }
-  void Take() { pthread_mutex_lock(&mutex_); }
-  bool Try() { return pthread_mutex_trylock(&mutex_) != 0; }
-  void Drop() { pthread_mutex_unlock(&mutex_); }
-
+  void Take() { mutex_.lock(); }
+  bool Try() { return mutex_.try_lock(); }
+  void Drop() { mutex_.unlock(); }
   void CheckLocked(const Terminator &terminator) {
     if (Try()) {
       Drop();
       terminator.Crash("Lock::CheckLocked() failed");
     }
   }
-
 private:
-  pthread_mutex_t mutex_;
+  std::mutex mutex_;
 };
 
 class CriticalSection {
