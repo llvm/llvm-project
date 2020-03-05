@@ -95,7 +95,7 @@ def SPV_GroupNonUniformBallotOp : SPV_Op<"GroupNonUniformBallot", []> {
   );
 
   let results = (outs
-    SPV_IntVec4:$result
+    SPV_IOrUIVec4:$result
   );
 
   let assemblyFormat = [{

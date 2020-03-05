@@ -137,3 +137,104 @@ entry:
   %add = fsub double %mul, %a
   ret double %add
 }
+
+define float @fma_combine_no_ice() {
+; CHECK-FAST-LABEL: fma_combine_no_ice:
+; CHECK-FAST:       # %bb.0:
+; CHECK-FAST-NEXT:    addis 3, 2, .LCPI4_0@toc@ha
+; CHECK-FAST-NEXT:    addis 4, 2, .LCPI4_1@toc@ha
+; CHECK-FAST-NEXT:    lfs 0, .LCPI4_0@toc@l(3)
+; CHECK-FAST-NEXT:    lfsx 2, 0, 3
+; CHECK-FAST-NEXT:    addis 3, 2, .LCPI4_2@toc@ha
+; CHECK-FAST-NEXT:    lfs 3, .LCPI4_1@toc@l(4)
+; CHECK-FAST-NEXT:    lfs 1, .LCPI4_2@toc@l(3)
+; CHECK-FAST-NEXT:    xsmaddasp 3, 2, 0
+; CHECK-FAST-NEXT:    xsmaddasp 1, 2, 3
+; CHECK-FAST-NEXT:    xsnmsubasp 1, 3, 2
+; CHECK-FAST-NEXT:    blr
+;
+; CHECK-FAST-NOVSX-LABEL: fma_combine_no_ice:
+; CHECK-FAST-NOVSX:       # %bb.0:
+; CHECK-FAST-NOVSX-NEXT:    addis 3, 2, .LCPI4_0@toc@ha
+; CHECK-FAST-NOVSX-NEXT:    lfs 0, .LCPI4_0@toc@l(3)
+; CHECK-FAST-NOVSX-NEXT:    addis 3, 2, .LCPI4_1@toc@ha
+; CHECK-FAST-NOVSX-NEXT:    lfs 1, 0(3)
+; CHECK-FAST-NOVSX-NEXT:    lfs 2, .LCPI4_1@toc@l(3)
+; CHECK-FAST-NOVSX-NEXT:    addis 3, 2, .LCPI4_2@toc@ha
+; CHECK-FAST-NOVSX-NEXT:    fmadds 0, 1, 2, 0
+; CHECK-FAST-NOVSX-NEXT:    lfs 2, .LCPI4_2@toc@l(3)
+; CHECK-FAST-NOVSX-NEXT:    fmadds 2, 1, 0, 2
+; CHECK-FAST-NOVSX-NEXT:    fnmsubs 1, 0, 1, 2
+; CHECK-FAST-NOVSX-NEXT:    blr
+;
+; CHECK-LABEL: fma_combine_no_ice:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addis 3, 2, .LCPI4_0@toc@ha
+; CHECK-NEXT:    addis 4, 2, .LCPI4_1@toc@ha
+; CHECK-NEXT:    lfs 0, .LCPI4_0@toc@l(3)
+; CHECK-NEXT:    lfsx 2, 0, 3
+; CHECK-NEXT:    addis 3, 2, .LCPI4_2@toc@ha
+; CHECK-NEXT:    lfs 3, .LCPI4_1@toc@l(4)
+; CHECK-NEXT:    lfs 1, .LCPI4_2@toc@l(3)
+; CHECK-NEXT:    xsmaddasp 3, 2, 0
+; CHECK-NEXT:    xsmaddasp 1, 2, 3
+; CHECK-NEXT:    xsnmsubasp 1, 3, 2
+; CHECK-NEXT:    blr
+  %tmp = load float, float* undef, align 4
+  %tmp2 = load float, float* undef, align 4
+  %tmp3 = fmul fast float %tmp, 0x3FE372D780000000
+  %tmp4 = fadd fast float %tmp3, 1.000000e+00
+  %tmp5 = fmul fast float %tmp2, %tmp4
+  %tmp6 = load float, float* undef, align 4
+  %tmp7 = load float, float* undef, align 4
+  %tmp8 = fmul fast float %tmp7, 0x3FE372D780000000
+  %tmp9 = fsub fast float -1.000000e+00, %tmp8
+  %tmp10 = fmul fast float %tmp9, %tmp6
+  %tmp11 = fadd fast float %tmp5, 5.000000e-01
+  %tmp12 = fadd fast float %tmp11, %tmp10
+  ret float %tmp12
+}
+
+; This would crash while trying getNegatedExpression().
+define double @getNegatedExpression_crash(double %x, double %y) {
+; CHECK-FAST-LABEL: getNegatedExpression_crash:
+; CHECK-FAST:       # %bb.0:
+; CHECK-FAST-NEXT:    addis 3, 2, .LCPI5_1@toc@ha
+; CHECK-FAST-NEXT:    addis 4, 2, .LCPI5_0@toc@ha
+; CHECK-FAST-NEXT:    lfs 3, .LCPI5_1@toc@l(3)
+; CHECK-FAST-NEXT:    lfs 4, .LCPI5_0@toc@l(4)
+; CHECK-FAST-NEXT:    xssubdp 0, 1, 3
+; CHECK-FAST-NEXT:    xsmaddadp 3, 1, 4
+; CHECK-FAST-NEXT:    xsmaddadp 0, 3, 2
+; CHECK-FAST-NEXT:    fmr 1, 0
+; CHECK-FAST-NEXT:    blr
+;
+; CHECK-FAST-NOVSX-LABEL: getNegatedExpression_crash:
+; CHECK-FAST-NOVSX:       # %bb.0:
+; CHECK-FAST-NOVSX-NEXT:    addis 3, 2, .LCPI5_0@toc@ha
+; CHECK-FAST-NOVSX-NEXT:    addis 4, 2, .LCPI5_1@toc@ha
+; CHECK-FAST-NOVSX-NEXT:    lfs 0, .LCPI5_0@toc@l(3)
+; CHECK-FAST-NOVSX-NEXT:    lfs 3, .LCPI5_1@toc@l(4)
+; CHECK-FAST-NOVSX-NEXT:    fmadd 3, 1, 3, 0
+; CHECK-FAST-NOVSX-NEXT:    fsub 0, 1, 0
+; CHECK-FAST-NOVSX-NEXT:    fmadd 1, 3, 2, 0
+; CHECK-FAST-NOVSX-NEXT:    blr
+;
+; CHECK-LABEL: getNegatedExpression_crash:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addis 3, 2, .LCPI5_1@toc@ha
+; CHECK-NEXT:    addis 4, 2, .LCPI5_0@toc@ha
+; CHECK-NEXT:    lfs 3, .LCPI5_1@toc@l(3)
+; CHECK-NEXT:    lfs 4, .LCPI5_0@toc@l(4)
+; CHECK-NEXT:    xssubdp 0, 1, 3
+; CHECK-NEXT:    xsmaddadp 3, 1, 4
+; CHECK-NEXT:    xsmaddadp 0, 3, 2
+; CHECK-NEXT:    fmr 1, 0
+; CHECK-NEXT:    blr
+  %neg = fneg fast double %x
+  %fma = call fast double @llvm.fma.f64(double %neg, double 42.0, double -1.0)
+  %add = fadd fast double %x, 1.0
+  %fma1 = call fast double @llvm.fma.f64(double %fma, double %y, double %add)
+  ret double %fma1
+}
+declare double @llvm.fma.f64(double, double, double) nounwind readnone

@@ -79,12 +79,12 @@ int main(int, char**)
     }
     {
         const std::tuple<int> t1(42);
-        std::tuple<Explicit> t2{std::allocator_arg, std::allocator<void>{},  t1};
+        std::tuple<Explicit> t2{std::allocator_arg, std::allocator<int>{},  t1};
         assert(std::get<0>(t2).value == 42);
     }
     {
         const std::tuple<int> t1(42);
-        std::tuple<Implicit> t2 = {std::allocator_arg, std::allocator<void>{}, t1};
+        std::tuple<Implicit> t2 = {std::allocator_arg, std::allocator<int>{}, t1};
         assert(std::get<0>(t2).value == 42);
     }
 

@@ -76,7 +76,7 @@ func @loop_for_single_index_argument(%arg0: index) {
 // -----
 
 func @loop_if_not_i1(%arg0: index) {
-  // expected-error@+1 {{operand #0 must be 1-bit integer}}
+  // expected-error@+1 {{operand #0 must be 1-bit signless integer}}
   "loop.if"(%arg0) : (index) -> ()
   return
 }

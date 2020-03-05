@@ -383,6 +383,16 @@ namespace X86 {
     AlignBranchRet = 1U << 4,
     AlignBranchIndirect = 1U << 5
   };
+
+  /// Defines the encoding values for segment override prefix.
+  enum EncodingOfSegmentOverridePrefix : uint8_t {
+    CS_Encoding = 0x2E,
+    DS_Encoding = 0x3E,
+    ES_Encoding = 0x26,
+    FS_Encoding = 0x64,
+    GS_Encoding = 0x65,
+    SS_Encoding = 0x36
+  };
 } // end namespace X86;
 
 /// X86II - This namespace holds all of the target specific flags that

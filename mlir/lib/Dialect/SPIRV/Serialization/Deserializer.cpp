@@ -344,9 +344,6 @@ private:
   /// insertion point.
   LogicalResult processUndef(ArrayRef<uint32_t> operands);
 
-  /// Processes an OpBitcast instruction.
-  LogicalResult processBitcast(ArrayRef<uint32_t> words);
-
   /// Method to dispatch to the specialized deserialization function for an
   /// operation in SPIR-V dialect that is a mirror of an instruction in the
   /// SPIR-V spec. This is auto-generated from ODS. Dispatch is handled for
@@ -1045,30 +1042,35 @@ LogicalResult Deserializer::processType(spirv::Opcode opcode,
 
   switch (opcode) {
   case spirv::Opcode::OpTypeVoid:
-    if (operands.size() != 1) {
+    if (operands.size() != 1)
       return emitError(unknownLoc, "OpTypeVoid must have no parameters");
-    }
     typeMap[operands[0]] = opBuilder.getNoneType();
     break;
   case spirv::Opcode::OpTypeBool:
-    if (operands.size() != 1) {
+    if (operands.size() != 1)
       return emitError(unknownLoc, "OpTypeBool must have no parameters");
-    }
     typeMap[operands[0]] = opBuilder.getI1Type();
     break;
-  case spirv::Opcode::OpTypeInt:
-    if (operands.size() != 3) {
+  case spirv::Opcode::OpTypeInt: {
+    if (operands.size() != 3)
       return emitError(
           unknownLoc, "OpTypeInt must have bitwidth and signedness parameters");
-    }
-    // TODO: Ignoring the signedness right now. Need to handle this effectively
-    // in the MLIR representation.
-    typeMap[operands[0]] = opBuilder.getIntegerType(operands[1]);
-    break;
+
+    // SPIR-V OpTypeInt "Signedness specifies whether there are signed semantics
+    // to preserve or validate.
+    // 0 indicates unsigned, or no signedness semantics
+    // 1 indicates signed semantics."
+    //
+    // So we cannot differentiate signless and unsigned integers; always use
+    // signless semantics for such cases.
+    auto sign = operands[2] == 1 ? IntegerType::SignednessSemantics::Signed
+                                 : IntegerType::SignednessSemantics::Signless;
+    typeMap[operands[0]] = IntegerType::get(operands[1], sign, context);
+  } break;
   case spirv::Opcode::OpTypeFloat: {
-    if (operands.size() != 2) {
+    if (operands.size() != 2)
       return emitError(unknownLoc, "OpTypeFloat must have bitwidth parameter");
-    }
+
     Type floatTy;
     switch (operands[1]) {
     case 16:
@@ -1146,7 +1148,7 @@ LogicalResult Deserializer::processArrayType(ArrayRef<uint32_t> operands) {
   }
 
   if (auto intVal = countInfo->first.dyn_cast<IntegerAttr>()) {
-    count = intVal.getInt();
+    count = intVal.getValue().getZExtValue();
   } else {
     return emitError(unknownLoc, "OpTypeArray count must come from a "
                                  "scalar integer constant instruction");
@@ -1451,8 +1453,7 @@ LogicalResult Deserializer::processConstantNull(ArrayRef<uint32_t> operands) {
   }
 
   auto resultID = operands[1];
-  if (resultType.isSignlessInteger() || resultType.isa<FloatType>() ||
-      resultType.isa<VectorType>()) {
+  if (resultType.isIntOrFloat() || resultType.isa<VectorType>()) {
     auto attr = opBuilder.getZeroAttr(resultType);
     // For normal constants, we just record the attribute (and its type) for
     // later materialization at use sites.
@@ -2051,8 +2052,6 @@ LogicalResult Deserializer::processInstruction(spirv::Opcode opcode,
   // First dispatch all the instructions whose opcode does not correspond to
   // those that have a direct mirror in the SPIR-V dialect
   switch (opcode) {
-  case spirv::Opcode::OpBitcast:
-    return processBitcast(operands);
   case spirv::Opcode::OpCapability:
     return processCapability(operands);
   case spirv::Opcode::OpExtension:
@@ -2149,76 +2148,6 @@ LogicalResult Deserializer::processUndef(ArrayRef<uint32_t> operands) {
     return emitError(unknownLoc, "unknown type <id> with OpUndef instruction");
   }
   undefMap[operands[1]] = type;
-  return success();
-}
-
-// TODO(b/130356985): This method is copied from the auto-generated
-// deserialization function for OpBitcast instruction. This is to avoid
-// generating a Bitcast operations for cast from signed integer to unsigned
-// integer and viceversa. MLIR doesn't have native support for this so they both
-// end up mapping to the same type right now which is illegal according to
-// OpBitcast semantics (and enforced by the SPIR-V dialect).
-LogicalResult Deserializer::processBitcast(ArrayRef<uint32_t> words) {
-  SmallVector<Type, 1> resultTypes;
-  size_t wordIndex = 0;
-  (void)wordIndex;
-  uint32_t valueID = 0;
-  (void)valueID;
-  {
-    if (wordIndex >= words.size()) {
-      return emitError(
-          unknownLoc,
-          "expected result type <id> while deserializing spirv::BitcastOp");
-    }
-    auto ty = getType(words[wordIndex]);
-    if (!ty) {
-      return emitError(unknownLoc, "unknown type result <id> : ")
-             << words[wordIndex];
-    }
-    resultTypes.push_back(ty);
-    wordIndex++;
-    if (wordIndex >= words.size()) {
-      return emitError(
-          unknownLoc,
-          "expected result <id> while deserializing spirv::BitcastOp");
-    }
-  }
-  valueID = words[wordIndex++];
-  SmallVector<Value, 4> operands;
-  SmallVector<NamedAttribute, 4> attributes;
-  if (wordIndex < words.size()) {
-    auto arg = getValue(words[wordIndex]);
-    if (!arg) {
-      return emitError(unknownLoc, "unknown result <id> : ")
-             << words[wordIndex];
-    }
-    operands.push_back(arg);
-    wordIndex++;
-  }
-  if (wordIndex != words.size()) {
-    return emitError(unknownLoc,
-                     "found more operands than expected when deserializing "
-                     "spirv::BitcastOp, only ")
-           << wordIndex << " of " << words.size() << " processed";
-  }
-  if (resultTypes[0] == operands[0].getType() &&
-      resultTypes[0].isSignlessInteger()) {
-    // TODO(b/130356985): This check is added to ignore error in Op verification
-    // due to both signed and unsigned integers mapping to the same
-    // type. Without this check this method is same as what is auto-generated.
-    valueMap[valueID] = operands[0];
-    return success();
-  }
-
-  auto op = opBuilder.create<spirv::BitcastOp>(unknownLoc, resultTypes,
-                                               operands, attributes);
-  (void)op;
-  valueMap[valueID] = op.getResult();
-
-  if (decorations.count(valueID)) {
-    auto attrs = decorations[valueID].getAttrs();
-    attributes.append(attrs.begin(), attrs.end());
-  }
   return success();
 }
 

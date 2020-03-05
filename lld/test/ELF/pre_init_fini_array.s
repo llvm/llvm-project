@@ -59,6 +59,14 @@ _start:
 // CHECK-NEXT: Offset:
 // CHECK-NEXT: Size: [[FINI_SIZE:.*]]
 
+// CHECK: DynamicSection
+// CHECK: PREINIT_ARRAY        [[PREINIT_ADDR]]
+// CHECK: PREINIT_ARRAYSZ      [[PREINIT_SIZE]] (bytes)
+// CHECK: INIT_ARRAY           [[INIT_ADDR]]
+// CHECK: INIT_ARRAYSZ         [[INIT_SIZE]] (bytes)
+// CHECK: FINI_ARRAY           [[FINI_ADDR]]
+// CHECK: FINI_ARRAYSZ         [[FINI_SIZE]] (bytes)
+
 // CHECK:      Relocations [
 // CHECK-NEXT: ]
 
@@ -127,14 +135,6 @@ _start:
 // CHECK-NEXT:   ]
 // CHECK-NEXT:   Section: .preinit_array
 // CHECK-NEXT: }
-
-// CHECK: DynamicSection
-// CHECK: PREINIT_ARRAY        [[PREINIT_ADDR]]
-// CHECK: PREINIT_ARRAYSZ      [[PREINIT_SIZE]] (bytes)
-// CHECK: INIT_ARRAY           [[INIT_ADDR]]
-// CHECK: INIT_ARRAYSZ         [[INIT_SIZE]] (bytes)
-// CHECK: FINI_ARRAY           [[FINI_ADDR]]
-// CHECK: FINI_ARRAYSZ         [[FINI_SIZE]] (bytes)
 
 // DISASM:      _start:
 // DISASM-NEXT:   callq   {{.*}} <__preinit_array_start>

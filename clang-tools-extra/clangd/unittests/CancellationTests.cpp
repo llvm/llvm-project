@@ -44,6 +44,30 @@ TEST(CancellationTest, TaskContextDiesHandleLives) {
   Task.second();
 }
 
+struct NestedTasks {
+  std::pair<Context, Canceler> Outer, Inner;
+  NestedTasks() {
+    Outer = cancelableTask();
+    {
+      WithContext WithOuter(Outer.first.clone());
+      Inner = cancelableTask();
+    }
+  }
+};
+
+TEST(CancellationTest, Nested) {
+  // Cancelling inner task works but leaves outer task unaffected.
+  NestedTasks CancelInner;
+  CancelInner.Inner.second();
+  EXPECT_TRUE(isCancelled(CancelInner.Inner.first));
+  EXPECT_FALSE(isCancelled(CancelInner.Outer.first));
+  // Cancellation of outer task is inherited by inner task.
+  NestedTasks CancelOuter;
+  CancelOuter.Outer.second();
+  EXPECT_TRUE(isCancelled(CancelOuter.Inner.first));
+  EXPECT_TRUE(isCancelled(CancelOuter.Outer.first));
+}
+
 TEST(CancellationTest, AsynCancellationTest) {
   std::atomic<bool> HasCancelled(false);
   Notification Cancelled;

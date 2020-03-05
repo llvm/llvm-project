@@ -14,6 +14,7 @@
 namespace mlir {
 class AffineExpr;
 class AffineForOp;
+class AffineMap;
 class Location;
 struct LogicalResult;
 class MLIRContext;
@@ -29,6 +30,13 @@ class OwningRewritePatternList;
 /// arithmetic operations applied to the provided dimension and symbol values.
 Value expandAffineExpr(OpBuilder &builder, Location loc, AffineExpr expr,
                        ValueRange dimValues, ValueRange symbolValues);
+
+/// Create a sequence of operations that implement the `affineMap` applied to
+/// the given `operands` (as it it were an AffineApplyOp).
+Optional<SmallVector<Value, 8>> expandAffineMap(OpBuilder &builder,
+                                                Location loc,
+                                                AffineMap affineMap,
+                                                ValueRange operands);
 
 /// Collect a set of patterns to convert from the Affine dialect to the Standard
 /// dialect, in particular convert structured affine control flow into CFG

@@ -186,7 +186,7 @@ func @func_with_ops(f32) {
 
 func @func_with_ops(f32) {
 ^bb0(%a : f32):
-  // expected-error@+1 {{'std.addi' op operand #0 must be integer-like}}
+  // expected-error@+1 {{'std.addi' op operand #0 must be signless-integer-like}}
   %sf = addi %a, %a : f32
 }
 
@@ -201,7 +201,7 @@ func @func_with_ops(i32) {
 
 func @func_with_ops(i32) {
 ^bb0(%a : i32):
-  // expected-error@+1 {{failed to satisfy constraint: allowed 64-bit integer cases: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9}}
+  // expected-error@+1 {{failed to satisfy constraint: allowed 64-bit signless integer cases: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9}}
   %r = "std.cmpi"(%a, %a) {predicate = 42} : (i32, i32) -> i1
 }
 
@@ -226,7 +226,7 @@ func @func_with_ops(i32, i32) {
 // Integer comparisons are not recognized for float types.
 func @func_with_ops(f32, f32) {
 ^bb0(%a : f32, %b : f32):
-  %r = cmpi "eq", %a, %b : f32 // expected-error {{'lhs' must be integer-like, but got 'f32'}}
+  %r = cmpi "eq", %a, %b : f32 // expected-error {{'lhs' must be signless-integer-like, but got 'f32'}}
 }
 
 // -----
@@ -298,13 +298,13 @@ func @func_with_ops(i1, tensor<42xi32>, tensor<?xi32>) {
 // -----
 
 func @invalid_select_shape(%cond : i1, %idx : () -> ()) {
-  // expected-error@+1 {{'result' must be integer-like or floating-point-like, but got '() -> ()'}}
+  // expected-error@+1 {{'result' must be signless-integer-like or floating-point-like, but got '() -> ()'}}
   %sel = select %cond, %idx, %idx : () -> ()
 
 // -----
 
 func @invalid_cmp_shape(%idx : () -> ()) {
-  // expected-error@+1 {{'lhs' must be integer-like, but got '() -> ()'}}
+  // expected-error@+1 {{'lhs' must be signless-integer-like, but got '() -> ()'}}
   %cmp = cmpi "eq", %idx, %idx : () -> ()
 
 // -----
@@ -346,7 +346,7 @@ func @invalid_cmp_attr(%idx : i32) {
 // -----
 
 func @cmpf_generic_invalid_predicate_value(%a : f32) {
-  // expected-error@+1 {{attribute 'predicate' failed to satisfy constraint: allowed 64-bit integer cases}}
+  // expected-error@+1 {{attribute 'predicate' failed to satisfy constraint: allowed 64-bit signless integer cases}}
   %r = "std.cmpf"(%a, %a) {predicate = 42} : (f32, f32) -> i1
 }
 
@@ -827,7 +827,7 @@ func @invalid_view(%arg0 : index, %arg1 : index, %arg2 : index) {
 
 func @invalid_view(%arg0 : index, %arg1 : index, %arg2 : index) {
   %0 = alloc() : memref<2048xf32>
-  // expected-error@+1 {{must be 1D memref of 8-bit integer values}}
+  // expected-error@+1 {{must be 1D memref of 8-bit signless integer values}}
   %1 = view %0[][%arg0, %arg1]
     : memref<2048xf32> to memref<?x?xf32, affine_map<(d0, d1)[s0] -> (d0 * 4 + d1 + s0)>>
   return
@@ -1091,7 +1091,7 @@ func @invalid_prefetch_cache_type(%i : index) {
 
 func @invalid_prefetch_locality_hint(%i : index) {
   %0 = alloc() : memref<10xf32>
-  // expected-error@+1 {{32-bit integer attribute whose minimum value is 0 whose maximum value is 3}}
+  // expected-error@+1 {{32-bit signless integer attribute whose minimum value is 0 whose maximum value is 3}}
   prefetch %0[%i], read, locality<5>, data  : memref<10xf32>
   return
 }
@@ -1154,7 +1154,7 @@ func @assume_alignment(%0: memref<4x4xf16>) {
 
 // 0 alignment value.
 func @assume_alignment(%0: memref<4x4xf16>) {
-  // expected-error@+1 {{'std.assume_alignment' op attribute 'alignment' failed to satisfy constraint: positive 32-bit integer attribute}}
+  // expected-error@+1 {{'std.assume_alignment' op attribute 'alignment' failed to satisfy constraint: 32-bit signless integer attribute whose value is positive}}
   std.assume_alignment %0, 0 : memref<4x4xf16>
   return
 }

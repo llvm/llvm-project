@@ -411,3 +411,75 @@ func @indexed_generic_op_zero_rank(%arg0: memref<i32>, %arg1: memref<3x4xi32>)
 // CHECK:     %[[ij_int:.*]] = index_cast %[[ij]] : index to i32
 // CHECK:     %[[result:.*]] = addi %[[a]], %[[ij_int]] : i32
 // CHECK:     store %[[result]], %[[ARG1]][%[[i]], %[[j]]]
+
+#reduce_1D_access = [
+  affine_map<(i) -> (i)>,
+  affine_map<(i) -> (0)>
+]
+
+#trait_reduce_1D = {
+  args_in = 1,
+  args_out = 1,
+  indexing_maps = #reduce_1D_access,
+  iterator_types = ["reduction"],
+  library_call = "some_reduce_external_fn"
+}
+
+func @generic_op_1D_reduce(%arg0: memref<?xf32>, %arg1: memref<f32>)
+{
+  linalg.generic #trait_reduce_1D %arg0, %arg1 {
+    ^bb(%a: f32, %b: f32) :
+      %0 = addf %a, %b : f32
+      linalg.yield %0 : f32
+  } : memref<?xf32>, memref<f32>
+  return
+}
+// CHECK-LABEL: @generic_op_1D_reduce
+// CHECK-SAME: %[[ARG0:[a-zA-Z0-9_]*]]: memref<?xf32>
+// CHECK-SAME: %[[ARG1:[a-zA-Z0-9_]*]]: memref<f32>
+// CHECK: loop.for %[[i:.*]] = {{.*}}
+// CHECK:   %[[a:.*]] = load %[[ARG0]][%[[i]]]
+// CHECK:   %[[b:.*]] = load %[[ARG1]][]
+// CHECK:   %[[c:.*]] = addf %[[a]], %[[b]] : f32
+// CHECK:   store %[[c]], %[[ARG1]][]
+
+
+#reduce_init_1D_access = [
+  affine_map<(i) -> (i)>,
+  affine_map<(i) -> (0)>,
+  affine_map<(i) -> (0)>
+]
+
+#trait_reduce_init_1D = {
+  args_in = 2,
+  args_out = 1,
+  indexing_maps = #reduce_init_1D_access,
+  iterator_types = ["reduction"],
+  library_call = "some_reduce_external_fn"
+}
+
+func @indexed_generic_op_1D_reduce(%arg0: memref<?xf32>,
+                                   %arg1: memref<f32>,
+                                   %arg2: memref<f32>)
+{
+  linalg.indexed_generic #trait_reduce_init_1D %arg0, %arg1, %arg2 {
+    ^bb(%i : index, %a: f32, %b: f32, %c: f32) :
+      %0 = constant 0 : index
+      %1 = cmpi "eq", %0, %i : index
+      %2 = select %1, %b, %c : f32
+      %3 = addf %a, %2 : f32
+      linalg.yield %3 : f32
+  } : memref<?xf32>, memref<f32>, memref<f32>
+  return
+}
+// CHECK-LABEL: @indexed_generic_op_1D_reduce
+// CHECK-SAME: %[[ARG0:[a-zA-Z0-9_]*]]: memref<?xf32>
+// CHECK-SAME: %[[ARG1:[a-zA-Z0-9_]*]]: memref<f32>
+// CHECK-SAME: %[[ARG2:[a-zA-Z0-9_]*]]: memref<f32>
+// CHECK: loop.for %[[i:.*]] = {{.*}}
+// CHECK:   %[[a:.*]] = load %[[ARG0]][%[[i]]]
+// CHECK:   %[[b:.*]] = load %[[ARG1]][]
+// CHECK:   %[[c:.*]] = load %[[ARG2]][]
+// CHECK:   %[[d:.*]] = select %{{.*}}, %[[b]], %[[c]]
+// CHECK:   %[[e:.*]] = addf %[[a]], %[[d]]
+// CHECK:   store %[[e]], %[[ARG2]][]

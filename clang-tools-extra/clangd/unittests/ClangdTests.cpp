@@ -61,7 +61,7 @@ bool diagsContainErrors(const std::vector<Diag> &Diagnostics) {
 
 class ErrorCheckingCallbacks : public ClangdServer::Callbacks {
 public:
-  void onDiagnosticsReady(PathRef File,
+  void onDiagnosticsReady(PathRef File, llvm::StringRef Version,
                           std::vector<Diag> Diagnostics) override {
     bool HadError = diagsContainErrors(Diagnostics);
     std::lock_guard<std::mutex> Lock(Mutex);
@@ -82,7 +82,7 @@ private:
 /// least one error.
 class MultipleErrorCheckingCallbacks : public ClangdServer::Callbacks {
 public:
-  void onDiagnosticsReady(PathRef File,
+  void onDiagnosticsReady(PathRef File, llvm::StringRef Version,
                           std::vector<Diag> Diagnostics) override {
     bool HadError = diagsContainErrors(Diagnostics);
 
@@ -276,7 +276,7 @@ TEST_F(ClangdVFSTest, PropagatesContexts) {
     mutable int Got;
   } FS;
   struct Callbacks : public ClangdServer::Callbacks {
-    void onDiagnosticsReady(PathRef File,
+    void onDiagnosticsReady(PathRef File, llvm::StringRef Version,
                             std::vector<Diag> Diagnostics) override {
       Got = Context::current().getExisting(Secret);
     }
@@ -293,6 +293,23 @@ TEST_F(ClangdVFSTest, PropagatesContexts) {
   ASSERT_TRUE(Server.blockUntilIdleForTest());
   EXPECT_EQ(FS.Got, 42);
   EXPECT_EQ(Callbacks.Got, 42);
+}
+
+TEST_F(ClangdVFSTest, PropagatesVersion) {
+  MockCompilationDatabase CDB;
+  MockFSProvider FS;
+  struct Callbacks : public ClangdServer::Callbacks {
+    void onDiagnosticsReady(PathRef File, llvm::StringRef Version,
+                            std::vector<Diag> Diagnostics) override {
+      Got = Version.str();
+    }
+    std::string Got = "";
+  } Callbacks;
+
+  // Verify that the version is plumbed to diagnostics.
+  ClangdServer Server(CDB, FS, ClangdServer::optsForTest(), &Callbacks);
+  runAddDocument(Server, testPath("foo.cpp"), "void main(){}", "42");
+  EXPECT_EQ(Callbacks.Got, "42");
 }
 
 // Only enable this test on Unix
@@ -374,7 +391,7 @@ struct bar { T x; };
 
   // Now switch to C++ mode.
   CDB.ExtraClangFlags = {"-xc++"};
-  runAddDocument(Server, FooCpp, SourceContents2, WantDiagnostics::Auto);
+  runAddDocument(Server, FooCpp, SourceContents2);
   EXPECT_FALSE(DiagConsumer.hadErrorInLastDiags());
   // Subsequent addDocument calls should finish without errors too.
   runAddDocument(Server, FooCpp, SourceContents1);
@@ -406,7 +423,7 @@ int main() { return 0; }
 
   // Parse without the define, no errors should be produced.
   CDB.ExtraClangFlags = {};
-  runAddDocument(Server, FooCpp, SourceContents, WantDiagnostics::Auto);
+  runAddDocument(Server, FooCpp, SourceContents);
   ASSERT_TRUE(Server.blockUntilIdleForTest());
   EXPECT_FALSE(DiagConsumer.hadErrorInLastDiags());
   // Subsequent addDocument call should finish without errors too.
@@ -467,8 +484,8 @@ int hello;
   CDB.ExtraClangFlags.clear();
   DiagConsumer.clear();
   Server.removeDocument(BazCpp);
-  Server.addDocument(FooCpp, FooSource.code(), WantDiagnostics::Auto);
-  Server.addDocument(BarCpp, BarSource.code(), WantDiagnostics::Auto);
+  Server.addDocument(FooCpp, FooSource.code());
+  Server.addDocument(BarCpp, BarSource.code());
   ASSERT_TRUE(Server.blockUntilIdleForTest());
 
   EXPECT_THAT(DiagConsumer.filesWithDiags(),
@@ -595,7 +612,7 @@ int d;
   public:
     TestDiagConsumer() : Stats(FilesCount, FileStat()) {}
 
-    void onDiagnosticsReady(PathRef File,
+    void onDiagnosticsReady(PathRef File, llvm::StringRef Version,
                             std::vector<Diag> Diagnostics) override {
       StringRef FileIndexStr = llvm::sys::path::stem(File);
       ASSERT_TRUE(FileIndexStr.consume_front("Foo"));
@@ -672,8 +689,7 @@ int d;
       bool ShouldHaveErrors = ShouldHaveErrorsDist(RandGen);
       Server.addDocument(FilePaths[FileIndex],
                          ShouldHaveErrors ? SourceContentsWithErrors
-                                          : SourceContentsWithoutErrors,
-                         WantDiagnostics::Auto);
+                                          : SourceContentsWithoutErrors);
       UpdateStatsOnAddDocument(FileIndex, ShouldHaveErrors);
     };
 
@@ -775,7 +791,8 @@ TEST_F(ClangdThreadingTest, NoConcurrentDiagnostics) {
     NoConcurrentAccessDiagConsumer(std::promise<void> StartSecondReparse)
         : StartSecondReparse(std::move(StartSecondReparse)) {}
 
-    void onDiagnosticsReady(PathRef, std::vector<Diag>) override {
+    void onDiagnosticsReady(PathRef, llvm::StringRef,
+                            std::vector<Diag>) override {
       ++Count;
       std::unique_lock<std::mutex> Lock(Mutex, std::try_to_lock_t());
       ASSERT_TRUE(Lock.owns_lock())

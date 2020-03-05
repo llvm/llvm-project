@@ -81,7 +81,7 @@ struct Explicit {
 int main(int, char**)
 {
     {
-        std::tuple<Explicit> t{std::allocator_arg, std::allocator<void>{}, 42};
+        std::tuple<Explicit> t{std::allocator_arg, std::allocator<int>{}, 42};
         assert(std::get<0>(t).value == 42);
     }
     {

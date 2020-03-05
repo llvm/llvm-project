@@ -11,13 +11,6 @@
 # CHECK:  .rela.dyn   00000030 0000000000000248
 # CHECK:  .got.plt    00000010 00000000000033a0
 
-# TAGS:      Relocations [
-# TAGS-NEXT:   Section {{.*}} .rela.dyn {
-# TAGS-NEXT:     R_X86_64_IRELATIVE
-# TAGS-NEXT:     R_X86_64_IRELATIVE
-# TAGS-NEXT:   }
-# TAGS-NEXT: ]
-
 # TAGS:   Tag                Type                 Name/Value
 # TAGS:   0x0000000000000007 RELA                 0x248
 # TAGS:   0x0000000000000008 RELASZ               48 (bytes)
@@ -25,6 +18,13 @@
 # TAGS:   0x0000000000000002 PLTRELSZ             0 (bytes)
 # TAGS:   0x0000000000000003 PLTGOT               0x33A0
 # TAGS:   0x0000000000000014 PLTREL               RELA
+
+# TAGS:      Relocations [
+# TAGS-NEXT:   Section {{.*}} .rela.dyn {
+# TAGS-NEXT:     R_X86_64_IRELATIVE
+# TAGS-NEXT:     R_X86_64_IRELATIVE
+# TAGS-NEXT:   }
+# TAGS-NEXT: ]
 
 .text
 .type foo STT_GNU_IFUNC

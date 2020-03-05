@@ -8,7 +8,7 @@
 
 # CHECK: .data         00000008 000000000020215c DATA
 
-# CHECK: 0000000000202164         .data                 00000000 _edata
+# CHECK: 0000000000202164         .data  0000000000000000 _edata
 
 .text
 .globl _start

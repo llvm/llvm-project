@@ -1,7 +1,7 @@
 // REQUIRES: x86
 // RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
 // RUN: ld.lld --hash-style=sysv %t.o -o %t -pie
-// RUN: llvm-readobj -S -r -d %t | FileCheck %s
+// RUN: llvm-readobj -S -d -r %t | FileCheck %s
 // RUN: llvm-objdump -d %t | FileCheck --check-prefix=DISASM %s
 
 .globl _start
@@ -31,9 +31,10 @@ foo:
 // CHECK-NEXT: Offset:
 // CHECK-NEXT: Size: 8
 
+// CHECK:      0x000000006FFFFFF9 RELACOUNT            1
+
 // CHECK:      Relocations [
 // CHECK-NEXT:   Section ({{.*}}) .rela.dyn {
 // CHECK-NEXT:     0x22C8 R_X86_64_RELATIVE - 0x1215
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]
-// CHECK:      0x000000006FFFFFF9 RELACOUNT            1

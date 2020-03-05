@@ -18,7 +18,7 @@
 // and friends call, are not themselves constexpr-evaluatable.
 //
 // UNSUPPORTED: c++98, c++03
-// XFAIL: gcc
+// XFAIL: gcc-9, gcc-8, gcc-7, gcc-6, gcc-5
 
 #include <cmath>
 

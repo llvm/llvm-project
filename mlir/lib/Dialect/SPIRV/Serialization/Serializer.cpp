@@ -932,8 +932,11 @@ Serializer::prepareBasicType(Location loc, Type type, uint32_t resultID,
 
     typeEnum = spirv::Opcode::OpTypeInt;
     operands.push_back(intType.getWidth());
-    // TODO(antiagainst): support unsigned integers
-    operands.push_back(1);
+    // SPIR-V OpTypeInt "Signedness specifies whether there are signed semantics
+    // to preserve or validate.
+    // 0 indicates unsigned, or no signedness semantics
+    // 1 indicates signed semantics."
+    operands.push_back(intType.isSigned() ? 1 : 0);
     return success();
   }
 

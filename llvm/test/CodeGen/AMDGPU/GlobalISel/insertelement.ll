@@ -81,13 +81,13 @@ define <8 x float> @dyn_insertelement_v8f32_const_s_v_v(float %val, i32 %idx) {
 ; GPRIDX:       ; %bb.0: ; %entry
 ; GPRIDX-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GPRIDX-NEXT:    s_mov_b32 s11, 0x41000000
-; GPRIDX-NEXT:    s_mov_b32 s10, 0x40e00000
-; GPRIDX-NEXT:    s_mov_b32 s9, 0x40c00000
-; GPRIDX-NEXT:    s_mov_b32 s8, 0x40a00000
-; GPRIDX-NEXT:    s_mov_b32 s7, 4.0
-; GPRIDX-NEXT:    s_mov_b32 s6, 0x40400000
-; GPRIDX-NEXT:    s_mov_b32 s5, 2.0
 ; GPRIDX-NEXT:    s_mov_b32 s4, 1.0
+; GPRIDX-NEXT:    s_mov_b32 s5, 2.0
+; GPRIDX-NEXT:    s_mov_b32 s6, 0x40400000
+; GPRIDX-NEXT:    s_mov_b32 s7, 4.0
+; GPRIDX-NEXT:    s_mov_b32 s8, 0x40a00000
+; GPRIDX-NEXT:    s_mov_b32 s9, 0x40c00000
+; GPRIDX-NEXT:    s_mov_b32 s10, 0x40e00000
 ; GPRIDX-NEXT:    v_mov_b32_e32 v17, s11
 ; GPRIDX-NEXT:    v_mov_b32_e32 v16, s10
 ; GPRIDX-NEXT:    v_mov_b32_e32 v15, s9
@@ -131,18 +131,18 @@ define <8 x float> @dyn_insertelement_v8f32_const_s_v_v(float %val, i32 %idx) {
 ; MOVREL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; MOVREL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; MOVREL-NEXT:    s_mov_b32 s11, 0x41000000
-; MOVREL-NEXT:    s_mov_b32 s10, 0x40e00000
-; MOVREL-NEXT:    s_mov_b32 s9, 0x40c00000
-; MOVREL-NEXT:    s_mov_b32 s8, 0x40a00000
-; MOVREL-NEXT:    s_mov_b32 s7, 4.0
-; MOVREL-NEXT:    s_mov_b32 s6, 0x40400000
-; MOVREL-NEXT:    s_mov_b32 s5, 2.0
 ; MOVREL-NEXT:    s_mov_b32 s4, 1.0
+; MOVREL-NEXT:    s_mov_b32 s5, 2.0
+; MOVREL-NEXT:    s_mov_b32 s6, 0x40400000
+; MOVREL-NEXT:    s_mov_b32 s7, 4.0
+; MOVREL-NEXT:    s_mov_b32 s8, 0x40a00000
+; MOVREL-NEXT:    s_mov_b32 s9, 0x40c00000
+; MOVREL-NEXT:    s_mov_b32 s10, 0x40e00000
 ; MOVREL-NEXT:    v_mov_b32_e32 v17, s11
-; MOVREL-NEXT:    v_mov_b32_e32 v16, s10
-; MOVREL-NEXT:    v_mov_b32_e32 v15, s9
-; MOVREL-NEXT:    v_mov_b32_e32 v14, s8
 ; MOVREL-NEXT:    v_mov_b32_e32 v13, s7
+; MOVREL-NEXT:    v_mov_b32_e32 v14, s8
+; MOVREL-NEXT:    v_mov_b32_e32 v15, s9
+; MOVREL-NEXT:    v_mov_b32_e32 v16, s10
 ; MOVREL-NEXT:    v_mov_b32_e32 v12, s6
 ; MOVREL-NEXT:    v_mov_b32_e32 v11, s5
 ; MOVREL-NEXT:    v_mov_b32_e32 v10, s4
@@ -725,22 +725,22 @@ define void @dyn_insertelement_v8f64_const_s_v_v(double %val, i32 %idx) {
 ; GPRIDX-LABEL: dyn_insertelement_v8f64_const_s_v_v:
 ; GPRIDX:       ; %bb.0: ; %entry
 ; GPRIDX-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GPRIDX-NEXT:    s_mov_b32 s18, 0
+; GPRIDX-NEXT:    s_mov_b32 s8, 0
 ; GPRIDX-NEXT:    s_mov_b32 s19, 0x40200000
 ; GPRIDX-NEXT:    buffer_store_dword v32, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
 ; GPRIDX-NEXT:    buffer_store_dword v33, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GPRIDX-NEXT:    buffer_store_dword v34, off, s[0:3], s32 ; 4-byte Folded Spill
-; GPRIDX-NEXT:    s_mov_b32 s17, 0x401c0000
-; GPRIDX-NEXT:    s_mov_b32 s16, s18
-; GPRIDX-NEXT:    s_mov_b32 s15, 0x40180000
-; GPRIDX-NEXT:    s_mov_b32 s14, s18
-; GPRIDX-NEXT:    s_mov_b32 s13, 0x40140000
-; GPRIDX-NEXT:    s_mov_b32 s12, s18
-; GPRIDX-NEXT:    s_mov_b64 s[10:11], 4.0
-; GPRIDX-NEXT:    s_mov_b32 s9, 0x40080000
-; GPRIDX-NEXT:    s_mov_b32 s8, s18
-; GPRIDX-NEXT:    s_mov_b64 s[6:7], 2.0
 ; GPRIDX-NEXT:    s_mov_b64 s[4:5], 1.0
+; GPRIDX-NEXT:    s_mov_b64 s[6:7], 2.0
+; GPRIDX-NEXT:    s_mov_b32 s9, 0x40080000
+; GPRIDX-NEXT:    s_mov_b64 s[10:11], 4.0
+; GPRIDX-NEXT:    s_mov_b32 s13, 0x40140000
+; GPRIDX-NEXT:    s_mov_b32 s12, s8
+; GPRIDX-NEXT:    s_mov_b32 s15, 0x40180000
+; GPRIDX-NEXT:    s_mov_b32 s14, s8
+; GPRIDX-NEXT:    s_mov_b32 s17, 0x401c0000
+; GPRIDX-NEXT:    s_mov_b32 s16, s8
+; GPRIDX-NEXT:    s_mov_b32 s18, s8
 ; GPRIDX-NEXT:    v_mov_b32_e32 v34, s19
 ; GPRIDX-NEXT:    v_mov_b32_e32 v33, s18
 ; GPRIDX-NEXT:    v_mov_b32_e32 v32, s17
@@ -803,26 +803,26 @@ define void @dyn_insertelement_v8f64_const_s_v_v(double %val, i32 %idx) {
 ; MOVREL:       ; %bb.0: ; %entry
 ; MOVREL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; MOVREL-NEXT:    s_waitcnt_vscnt null, 0x0
-; MOVREL-NEXT:    s_mov_b32 s18, 0
+; MOVREL-NEXT:    s_mov_b32 s8, 0
 ; MOVREL-NEXT:    s_mov_b32 s19, 0x40200000
-; MOVREL-NEXT:    s_mov_b32 s17, 0x401c0000
-; MOVREL-NEXT:    s_mov_b32 s15, 0x40180000
-; MOVREL-NEXT:    s_mov_b32 s13, 0x40140000
-; MOVREL-NEXT:    s_mov_b32 s16, s18
-; MOVREL-NEXT:    s_mov_b32 s14, s18
-; MOVREL-NEXT:    s_mov_b32 s12, s18
-; MOVREL-NEXT:    s_mov_b64 s[10:11], 4.0
-; MOVREL-NEXT:    s_mov_b32 s9, 0x40080000
-; MOVREL-NEXT:    s_mov_b32 s8, s18
-; MOVREL-NEXT:    s_mov_b64 s[6:7], 2.0
 ; MOVREL-NEXT:    s_mov_b64 s[4:5], 1.0
+; MOVREL-NEXT:    s_mov_b64 s[6:7], 2.0
+; MOVREL-NEXT:    s_mov_b32 s9, 0x40080000
+; MOVREL-NEXT:    s_mov_b64 s[10:11], 4.0
+; MOVREL-NEXT:    s_mov_b32 s13, 0x40140000
+; MOVREL-NEXT:    s_mov_b32 s12, s8
+; MOVREL-NEXT:    s_mov_b32 s15, 0x40180000
+; MOVREL-NEXT:    s_mov_b32 s14, s8
+; MOVREL-NEXT:    s_mov_b32 s17, 0x401c0000
+; MOVREL-NEXT:    s_mov_b32 s16, s8
+; MOVREL-NEXT:    s_mov_b32 s18, s8
 ; MOVREL-NEXT:    buffer_store_dword v32, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
 ; MOVREL-NEXT:    buffer_store_dword v33, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; MOVREL-NEXT:    buffer_store_dword v34, off, s[0:3], s32 ; 4-byte Folded Spill
 ; MOVREL-NEXT:    v_mov_b32_e32 v34, s19
-; MOVREL-NEXT:    v_mov_b32_e32 v33, s18
 ; MOVREL-NEXT:    v_mov_b32_e32 v32, s17
 ; MOVREL-NEXT:    v_mov_b32_e32 v31, s16
+; MOVREL-NEXT:    v_mov_b32_e32 v33, s18
 ; MOVREL-NEXT:    v_mov_b32_e32 v30, s15
 ; MOVREL-NEXT:    v_mov_b32_e32 v29, s14
 ; MOVREL-NEXT:    v_mov_b32_e32 v28, s13

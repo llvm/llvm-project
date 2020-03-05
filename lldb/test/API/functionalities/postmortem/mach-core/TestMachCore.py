@@ -15,14 +15,6 @@ class MachCoreTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    def setUp(self):
-        super(MachCoreTestCase, self).setUp()
-        self._initial_platform = lldb.DBG.GetSelectedPlatform()
-
-    def tearDown(self):
-        lldb.DBG.SetSelectedPlatform(self._initial_platform)
-        super(MachCoreTestCase, self).tearDown()
-
     # This was originally marked as expected failure on Windows, but it has
     # started timing out instead, so the expectedFailure attribute no longer
     # correctly tracks it: llvm.org/pr37371

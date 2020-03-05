@@ -13,6 +13,9 @@
 
 #include "VulkanRuntime.h"
 
+#include "llvm/Support/Format.h"
+#include <chrono>
+
 using namespace mlir;
 
 void VulkanRuntime::setNumWorkGroups(const NumWorkGroups &numberWorkGroups) {
@@ -120,6 +123,7 @@ LogicalResult VulkanRuntime::destroy() {
   // Free and destroy.
   vkFreeCommandBuffers(device, commandPool, commandBuffers.size(),
                        commandBuffers.data());
+  vkDestroyQueryPool(device, queryPool, nullptr);
   vkDestroyCommandPool(device, commandPool, nullptr);
   vkFreeDescriptorSets(device, descriptorPool, descriptorSets.size(),
                        descriptorSets.data());
@@ -162,18 +166,46 @@ LogicalResult VulkanRuntime::run() {
       failed(createComputePipeline()) || failed(createDescriptorPool()) ||
       failed(allocateDescriptorSets()) || failed(setWriteDescriptors()) ||
       // Create command buffer.
-      failed(createCommandPool()) || failed(createComputeCommandBuffer())) {
+      failed(createCommandPool()) || failed(createQueryPool()) ||
+      failed(createComputeCommandBuffer())) {
     return failure();
   }
 
   // Get working queue.
   vkGetDeviceQueue(device, queueFamilyIndex, 0, &queue);
 
+  auto submitStart = std::chrono::high_resolution_clock::now();
   // Submit command buffer into the queue.
   if (failed(submitCommandBuffersToQueue()))
     return failure();
+  auto submitEnd = std::chrono::high_resolution_clock::now();
 
   RETURN_ON_VULKAN_ERROR(vkQueueWaitIdle(queue), "vkQueueWaitIdle");
+  auto execEnd = std::chrono::high_resolution_clock::now();
+
+  auto submitDuration = std::chrono::duration_cast<std::chrono::microseconds>(
+      submitEnd - submitStart);
+  auto execDuration = std::chrono::duration_cast<std::chrono::microseconds>(
+      execEnd - submitEnd);
+
+  if (queryPool != VK_NULL_HANDLE) {
+    uint64_t timestamps[2];
+    RETURN_ON_VULKAN_ERROR(
+        vkGetQueryPoolResults(
+            device, queryPool, /*firstQuery=*/0, /*queryCount=*/2,
+            /*dataSize=*/sizeof(timestamps),
+            /*pData=*/reinterpret_cast<void *>(timestamps),
+            /*stride=*/sizeof(uint64_t),
+            VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT),
+        "vkGetQueryPoolResults");
+    float microsec = (timestamps[1] - timestamps[0]) * timestampPeriod / 1000;
+    llvm::outs() << "Compute shader execution time: "
+                 << llvm::format("%0.3fus\n", microsec);
+  }
+
+  llvm::outs() << "Command buffer submit time: " << submitDuration.count()
+               << "us\nWait idle time: " << execDuration.count() << "us\n";
+
   return success();
 }
 
@@ -218,8 +250,9 @@ LogicalResult VulkanRuntime::createDevice() {
                          "physicalDeviceCount");
 
   // TODO(denis0x0D): find the best device.
-  const auto &physicalDevice = physicalDevices.front();
-  getBestComputeQueue(physicalDevice);
+  physicalDevice = physicalDevices.front();
+  if (failed(getBestComputeQueue()))
+    return failure();
 
   const float queuePrioritory = 1.0f;
   VkDeviceQueueCreateInfo deviceQueueCreateInfo = {};
@@ -275,39 +308,33 @@ LogicalResult VulkanRuntime::createDevice() {
   return success();
 }
 
-LogicalResult
-VulkanRuntime::getBestComputeQueue(const VkPhysicalDevice &physicalDevice) {
+LogicalResult VulkanRuntime::getBestComputeQueue() {
   uint32_t queueFamilyPropertiesCount = 0;
   vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice,
                                            &queueFamilyPropertiesCount, 0);
-  SmallVector<VkQueueFamilyProperties, 1> queueFamilyProperties(
-      queueFamilyPropertiesCount);
 
-  vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice,
-                                           &queueFamilyPropertiesCount,
-                                           queueFamilyProperties.data());
+  SmallVector<VkQueueFamilyProperties, 1> familyProperties(
+      queueFamilyPropertiesCount);
+  vkGetPhysicalDeviceQueueFamilyProperties(
+      physicalDevice, &queueFamilyPropertiesCount, familyProperties.data());
 
   // VK_QUEUE_COMPUTE_BIT specifies that queues in this queue family support
-  // compute operations.
+  // compute operations. Try to find a compute-only queue first if possible.
   for (uint32_t i = 0; i < queueFamilyPropertiesCount; ++i) {
-    const VkQueueFlags maskedFlags =
-        (~(VK_QUEUE_TRANSFER_BIT | VK_QUEUE_SPARSE_BINDING_BIT) &
-         queueFamilyProperties[i].queueFlags);
-
-    if (!(VK_QUEUE_GRAPHICS_BIT & maskedFlags) &&
-        (VK_QUEUE_COMPUTE_BIT & maskedFlags)) {
+    auto flags = familyProperties[i].queueFlags;
+    if ((flags & VK_QUEUE_COMPUTE_BIT) && !(flags & VK_QUEUE_GRAPHICS_BIT)) {
       queueFamilyIndex = i;
+      queueFamilyProperties = familyProperties[i];
       return success();
     }
   }
 
+  // Otherwise use a queue that can also support graphics.
   for (uint32_t i = 0; i < queueFamilyPropertiesCount; ++i) {
-    const VkQueueFlags maskedFlags =
-        (~(VK_QUEUE_TRANSFER_BIT | VK_QUEUE_SPARSE_BINDING_BIT) &
-         queueFamilyProperties[i].queueFlags);
-
-    if (VK_QUEUE_COMPUTE_BIT & maskedFlags) {
+    auto flags = familyProperties[i].queueFlags;
+    if ((flags & VK_QUEUE_COMPUTE_BIT)) {
       queueFamilyIndex = i;
+      queueFamilyProperties = familyProperties[i];
       return success();
     }
   }
@@ -627,21 +654,48 @@ LogicalResult VulkanRuntime::createCommandPool() {
   commandPoolCreateInfo.pNext = nullptr;
   commandPoolCreateInfo.flags = 0;
   commandPoolCreateInfo.queueFamilyIndex = queueFamilyIndex;
-  RETURN_ON_VULKAN_ERROR(
-      vkCreateCommandPool(device, &commandPoolCreateInfo, 0, &commandPool),
-      "vkCreateCommandPool");
+  RETURN_ON_VULKAN_ERROR(vkCreateCommandPool(device, &commandPoolCreateInfo,
+                                             /*pAllocator=*/nullptr,
+                                             &commandPool),
+                         "vkCreateCommandPool");
+  return success();
+}
+
+LogicalResult VulkanRuntime::createQueryPool() {
+  // Return directly if timestamp query is not supported.
+  if (queueFamilyProperties.timestampValidBits == 0)
+    return success();
+
+  // Get timestamp period for this physical device.
+  VkPhysicalDeviceProperties deviceProperties = {};
+  vkGetPhysicalDeviceProperties(physicalDevice, &deviceProperties);
+  timestampPeriod = deviceProperties.limits.timestampPeriod;
+
+  // Create query pool.
+  VkQueryPoolCreateInfo queryPoolCreateInfo = {};
+  queryPoolCreateInfo.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
+  queryPoolCreateInfo.pNext = nullptr;
+  queryPoolCreateInfo.flags = 0;
+  queryPoolCreateInfo.queryType = VK_QUERY_TYPE_TIMESTAMP;
+  queryPoolCreateInfo.queryCount = 2;
+  queryPoolCreateInfo.pipelineStatistics = 0;
+  RETURN_ON_VULKAN_ERROR(vkCreateQueryPool(device, &queryPoolCreateInfo,
+                                           /*pAllocator=*/nullptr, &queryPool),
+                         "vkCreateQueryPool");
+
   return success();
 }
 
 LogicalResult VulkanRuntime::createComputeCommandBuffer() {
   VkCommandBufferAllocateInfo commandBufferAllocateInfo = {};
-  VkCommandBuffer commandBuffer;
   commandBufferAllocateInfo.sType =
       VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
   commandBufferAllocateInfo.pNext = nullptr;
   commandBufferAllocateInfo.commandPool = commandPool;
   commandBufferAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
   commandBufferAllocateInfo.commandBufferCount = 1;
+
+  VkCommandBuffer commandBuffer;
   RETURN_ON_VULKAN_ERROR(vkAllocateCommandBuffers(device,
                                                   &commandBufferAllocateInfo,
                                                   &commandBuffer),
@@ -658,13 +712,23 @@ LogicalResult VulkanRuntime::createComputeCommandBuffer() {
       vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo),
       "vkBeginCommandBuffer");
 
-  // Commands.
+  if (queryPool != VK_NULL_HANDLE)
+    vkCmdResetQueryPool(commandBuffer, queryPool, 0, 2);
+
   vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline);
   vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE,
                           pipelineLayout, 0, descriptorSets.size(),
                           descriptorSets.data(), 0, 0);
+  // Get a timestamp before invoking the compute shader.
+  if (queryPool != VK_NULL_HANDLE)
+    vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                        queryPool, 0);
   vkCmdDispatch(commandBuffer, numWorkGroups.x, numWorkGroups.y,
                 numWorkGroups.z);
+  // Get another timestamp after invoking the compute shader.
+  if (queryPool != VK_NULL_HANDLE)
+    vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+                        queryPool, 1);
 
   // Commands end.
   RETURN_ON_VULKAN_ERROR(vkEndCommandBuffer(commandBuffer),

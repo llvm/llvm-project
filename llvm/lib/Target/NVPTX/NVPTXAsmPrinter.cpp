@@ -1815,7 +1815,7 @@ void NVPTXAsmPrinter::bufferLEByte(const Constant *CPV, int Bytes,
         aggBuffer->addBytes(ptr, 4, Bytes);
         break;
       } else if (const auto *Cexpr = dyn_cast<ConstantExpr>(CPV)) {
-        if (const auto *constInt = dyn_cast_or_null<ConstantInt>(
+        if (const auto *constInt = dyn_cast<ConstantInt>(
                 ConstantFoldConstant(Cexpr, DL))) {
           int int32 = (int)(constInt->getZExtValue());
           ConvertIntToBytes<>(ptr, int32);
@@ -1837,7 +1837,7 @@ void NVPTXAsmPrinter::bufferLEByte(const Constant *CPV, int Bytes,
         aggBuffer->addBytes(ptr, 8, Bytes);
         break;
       } else if (const ConstantExpr *Cexpr = dyn_cast<ConstantExpr>(CPV)) {
-        if (const auto *constInt = dyn_cast_or_null<ConstantInt>(
+        if (const auto *constInt = dyn_cast<ConstantInt>(
                 ConstantFoldConstant(Cexpr, DL))) {
           long long int64 = (long long)(constInt->getZExtValue());
           ConvertIntToBytes<>(ptr, int64);
@@ -1993,23 +1993,22 @@ NVPTXAsmPrinter::lowerConstantForGV(const Constant *CV, bool ProcessingGeneric) 
   }
 
   switch (CE->getOpcode()) {
-  default:
+  default: {
     // If the code isn't optimized, there may be outstanding folding
     // opportunities. Attempt to fold the expression using DataLayout as a
     // last resort before giving up.
-    if (Constant *C = ConstantFoldConstant(CE, getDataLayout()))
-      if (C && C != CE)
-        return lowerConstantForGV(C, ProcessingGeneric);
+    Constant *C = ConstantFoldConstant(CE, getDataLayout());
+    if (C != CE)
+      return lowerConstantForGV(C, ProcessingGeneric);
 
     // Otherwise report the problem to the user.
-    {
-      std::string S;
-      raw_string_ostream OS(S);
-      OS << "Unsupported expression in static initializer: ";
-      CE->printAsOperand(OS, /*PrintType=*/false,
-                     !MF ? nullptr : MF->getFunction().getParent());
-      report_fatal_error(OS.str());
-    }
+    std::string S;
+    raw_string_ostream OS(S);
+    OS << "Unsupported expression in static initializer: ";
+    CE->printAsOperand(OS, /*PrintType=*/false,
+                   !MF ? nullptr : MF->getFunction().getParent());
+    report_fatal_error(OS.str());
+  }
 
   case Instruction::AddrSpaceCast: {
     // Strip the addrspacecast and pass along the operand

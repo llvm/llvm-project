@@ -21,6 +21,8 @@
 
 #include <map>
 
+#define DEBUG_TYPE "orc"
+
 using namespace llvm;
 using namespace llvm::orc;
 
@@ -191,8 +193,17 @@ public:
   }
 
   Error initialize(JITDylib &JD) override {
+    LLVM_DEBUG({
+      dbgs() << "GenericLLVMIRPlatformSupport getting initializers to run\n";
+    });
     if (auto Initializers = getInitializers(JD)) {
+      LLVM_DEBUG(
+          { dbgs() << "GenericLLVMIRPlatformSupport running initializers\n"; });
       for (auto InitFnAddr : *Initializers) {
+        LLVM_DEBUG({
+          dbgs() << "  Running init " << formatv("{0:x16}", InitFnAddr)
+                 << "...\n";
+        });
         auto *InitFn = jitTargetAddressToFunction<void (*)()>(InitFnAddr);
         InitFn();
       }
@@ -202,8 +213,18 @@ public:
   }
 
   Error deinitialize(JITDylib &JD) override {
+    LLVM_DEBUG({
+      dbgs() << "GenericLLVMIRPlatformSupport getting deinitializers to run\n";
+    });
     if (auto Deinitializers = getDeinitializers(JD)) {
+      LLVM_DEBUG({
+        dbgs() << "GenericLLVMIRPlatformSupport running deinitializers\n";
+      });
       for (auto DeinitFnAddr : *Deinitializers) {
+        LLVM_DEBUG({
+          dbgs() << "  Running init " << formatv("{0:x16}", DeinitFnAddr)
+                 << "...\n";
+        });
         auto *DeinitFn = jitTargetAddressToFunction<void (*)()>(DeinitFnAddr);
         DeinitFn();
       }
@@ -238,6 +259,16 @@ private:
         }
       }
     }
+
+    LLVM_DEBUG({
+      dbgs() << "JITDylib init order is [ ";
+      for (auto *JD : llvm::reverse(DFSLinkOrder))
+        dbgs() << "\"" << JD->getName() << "\" ";
+      dbgs() << "]\n";
+      dbgs() << "Looking up init functions:\n";
+      for (auto &KV : LookupSymbols)
+        dbgs() << "  \"" << KV.first->getName() << "\": " << KV.second << "\n";
+    });
 
     auto &ES = getExecutionSession();
     auto LookupResult = Platform::lookupInitSymbols(ES, LookupSymbols);
@@ -519,18 +550,39 @@ public:
   }
 
   Error initialize(JITDylib &JD) override {
-    if (auto InitSeq = MP.getInitializerSequence(JD)) {
+    LLVM_DEBUG({
+      dbgs() << "MachOPlatformSupport initializing \"" << JD.getName()
+             << "\"\n";
+    });
+
+    auto InitSeq = MP.getInitializerSequence(JD);
+    if (!InitSeq)
+      return InitSeq.takeError();
+
+    // If ObjC is not enabled but there are JIT'd ObjC inits then return
+    // an error.
+    if (!objCRegistrationEnabled())
       for (auto &KV : *InitSeq) {
+        if (!KV.second.getObjCSelRefsSections().empty() ||
+            !KV.second.getObjCClassListSections().empty())
+          return make_error<StringError>("JITDylib " + KV.first->getName() +
+                                             " contains objc metadata but objc"
+                                             " is not enabled",
+                                         inconvertibleErrorCode());
+      }
+
+    // Run the initializers.
+    for (auto &KV : *InitSeq) {
+      if (objCRegistrationEnabled()) {
         KV.second.registerObjCSelectors();
         if (auto Err = KV.second.registerObjCClasses()) {
           // FIXME: Roll back registrations on error?
           return Err;
         }
       }
-      for (auto &KV : *InitSeq)
-        KV.second.runModInits();
-    } else
-      return InitSeq.takeError();
+      KV.second.runModInits();
+    }
+
     return Error::success();
   }
 
@@ -1039,10 +1091,13 @@ Error LLJIT::applyDataLayout(Module &M) {
 }
 
 void setUpGenericLLVMIRPlatform(LLJIT &J) {
+  LLVM_DEBUG(
+      { dbgs() << "Setting up GenericLLVMIRPlatform support for LLJIT\n"; });
   J.setPlatformSupport(std::make_unique<GenericLLVMIRPlatformSupport>(J));
 }
 
 Error setUpMachOPlatform(LLJIT &J) {
+  LLVM_DEBUG({ dbgs() << "Setting up MachOPlatform support for LLJIT\n"; });
   auto MP = MachOPlatformSupport::Create(J, J.getMainJITDylib());
   if (!MP)
     return MP.takeError();
