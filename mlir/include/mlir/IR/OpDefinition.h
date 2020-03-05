@@ -668,10 +668,6 @@ public:
   static LogicalResult verifyTrait(Operation *op) {
     return impl::verifyIsTerminator(op);
   }
-
-  unsigned getNumSuccessorOperands(unsigned index) {
-    return this->getOperation()->getNumSuccessorOperands(index);
-  }
 };
 
 /// This class provides verification for ops that are known to have zero

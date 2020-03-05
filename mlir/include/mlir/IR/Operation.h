@@ -374,7 +374,7 @@ public:
   }
 
   //===--------------------------------------------------------------------===//
-  // Terminators
+  // Successors
   //===--------------------------------------------------------------------===//
 
   MutableArrayRef<BlockOperand> getBlockOperands() {
@@ -387,61 +387,14 @@ public:
   succ_iterator successor_end() { return getSuccessors().end(); }
   SuccessorRange getSuccessors() { return SuccessorRange(this); }
 
-  /// Return the operands of this operation that are *not* successor arguments.
-  operand_range getNonSuccessorOperands();
-
-  operand_range getSuccessorOperands(unsigned index);
-
-  Value getSuccessorOperand(unsigned succIndex, unsigned opIndex) {
-    assert(!isKnownNonTerminator() && "only terminators may have successors");
-    assert(opIndex < getNumSuccessorOperands(succIndex));
-    return getOperand(getSuccessorOperandIndex(succIndex) + opIndex);
-  }
-
   bool hasSuccessors() { return numSuccs != 0; }
   unsigned getNumSuccessors() { return numSuccs; }
-  unsigned getNumSuccessorOperands(unsigned index) {
-    assert(!isKnownNonTerminator() && "only terminators may have successors");
-    assert(index < getNumSuccessors());
-    return getBlockOperands()[index].numSuccessorOperands;
-  }
 
   Block *getSuccessor(unsigned index) {
     assert(index < getNumSuccessors());
     return getBlockOperands()[index].get();
   }
   void setSuccessor(Block *block, unsigned index);
-
-  /// Erase a specific operand from the operand list of the successor at
-  /// 'index'.
-  void eraseSuccessorOperand(unsigned succIndex, unsigned opIndex) {
-    assert(succIndex < getNumSuccessors());
-    assert(opIndex < getNumSuccessorOperands(succIndex));
-    getOperandStorage().eraseOperand(getSuccessorOperandIndex(succIndex) +
-                                     opIndex);
-    --getBlockOperands()[succIndex].numSuccessorOperands;
-  }
-
-  /// Get the index of the first operand of the successor at the provided
-  /// index.
-  unsigned getSuccessorOperandIndex(unsigned index);
-
-  /// Return a pair (successorIndex, successorArgIndex) containing the index
-  /// of the successor that `operandIndex` belongs to and the index of the
-  /// argument to that successor that `operandIndex` refers to.
-  ///
-  /// If `operandIndex` is not a successor operand, None is returned.
-  Optional<std::pair<unsigned, unsigned>>
-  decomposeSuccessorOperandIndex(unsigned operandIndex);
-
-  /// Returns the `BlockArgument` corresponding to operand `operandIndex` in
-  /// some successor, or None if `operandIndex` isn't a successor operand index.
-  Optional<BlockArgument> getSuccessorBlockArgument(unsigned operandIndex) {
-    auto decomposed = decomposeSuccessorOperandIndex(operandIndex);
-    if (!decomposed.hasValue())
-      return None;
-    return getSuccessor(decomposed->first)->getArgument(decomposed->second);
-  }
 
   //===--------------------------------------------------------------------===//
   // Accessors for various properties of operations

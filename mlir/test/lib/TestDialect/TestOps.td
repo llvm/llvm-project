@@ -462,6 +462,7 @@ def UpdateAttr : Pat<(I32ElementsAttrOp $attr),
 
 def TestBranchOp : TEST_Op<"br",
     [DeclareOpInterfaceMethods<BranchOpInterface>, Terminator]> {
+  let arguments = (ins Variadic<AnyType>:$targetOperands);
   let successors = (successor AnySuccessor:$target);
 }
 

@@ -20,7 +20,7 @@ include "mlir/Analysis/ControlFlowInterfaces.td"
 
 // -----
 
-def SPV_BranchOp : SPV_Op<"Branch",[
+def SPV_BranchOp : SPV_Op<"Branch", [
     DeclareOpInterfaceMethods<BranchOpInterface>, InFunctionScope,
     Terminator]> {
   let summary = "Unconditional branch to target block.";
@@ -44,7 +44,7 @@ def SPV_BranchOp : SPV_Op<"Branch",[
     ```
   }];
 
-  let arguments = (ins);
+  let arguments = (ins Variadic<SPV_Type>:$targetOperands);
 
   let results = (outs);
 
@@ -56,7 +56,8 @@ def SPV_BranchOp : SPV_Op<"Branch",[
     OpBuilder<
       "Builder *, OperationState &state, "
       "Block *successor, ValueRange arguments = {}", [{
-        state.addSuccessor(successor, arguments);
+        state.addSuccessors(successor);
+        state.addOperands(arguments);
       }]
     >
   ];
@@ -73,14 +74,16 @@ def SPV_BranchOp : SPV_Op<"Branch",[
 
   let autogenSerialization = 0;
 
-  let assemblyFormat = "successors attr-dict";
+  let assemblyFormat = [{
+    $target (`(` $targetOperands^ `:` type($targetOperands) `)`)? attr-dict
+  }];
 }
 
 // -----
 
 def SPV_BranchConditionalOp : SPV_Op<"BranchConditional", [
-    DeclareOpInterfaceMethods<BranchOpInterface>, InFunctionScope,
-    Terminator]> {
+    AttrSizedOperandSegments, DeclareOpInterfaceMethods<BranchOpInterface>,
+    InFunctionScope, Terminator]> {
   let summary = [{
     If Condition is true, branch to true block, otherwise branch to false
     block.
@@ -121,13 +124,15 @@ def SPV_BranchConditionalOp : SPV_Op<"BranchConditional", [
 
   let arguments = (ins
     SPV_Bool:$condition,
+    Variadic<SPV_Type>:$trueTargetOperands,
+    Variadic<SPV_Type>:$falseTargetOperands,
     OptionalAttr<I32ArrayAttr>:$branch_weights
   );
 
   let results = (outs);
 
   let successors = (successor AnySuccessor:$trueTarget,
-                               AnySuccessor:$falseTarget);
+                              AnySuccessor:$falseTarget);
 
   let builders = [
     OpBuilder<
@@ -136,20 +141,17 @@ def SPV_BranchConditionalOp : SPV_Op<"BranchConditional", [
       "Block *falseBlock, ValueRange falseArguments, "
       "Optional<std::pair<uint32_t, uint32_t>> weights = {}",
       [{
-        state.addOperands(condition);
-        state.addSuccessor(trueBlock, trueArguments);
-        state.addSuccessor(falseBlock, falseArguments);
+        ArrayAttr weightsAttr;
         if (weights) {
-          auto attr =
+          weightsAttr =
               builder->getI32ArrayAttr({static_cast<int32_t>(weights->first),
                                         static_cast<int32_t>(weights->second)});
-          state.addAttribute("branch_weights", attr);
         }
+        build(builder, state, condition, trueArguments, falseArguments,
+              weightsAttr, trueBlock, falseBlock);
       }]
     >
   ];
-
-  let skipDefaultBuilders = 1;
 
   let autogenSerialization = 0;
 
@@ -165,34 +167,22 @@ def SPV_BranchConditionalOp : SPV_Op<"BranchConditional", [
 
     /// Returns the number of arguments to the true target block.
     unsigned getNumTrueBlockArguments() {
-      return getNumSuccessorOperands(kTrueIndex);
+      return trueTargetOperands().size();
     }
 
     /// Returns the number of arguments to the false target block.
     unsigned getNumFalseBlockArguments() {
-      return getNumSuccessorOperands(kFalseIndex);
+      return falseTargetOperands().size();
     }
 
     // Iterator and range support for true target block arguments.
-    operand_iterator true_block_argument_begin() {
-      return operand_begin() + getTrueBlockArgumentIndex();
-    }
-    operand_iterator true_block_argument_end() {
-      return true_block_argument_begin() + getNumTrueBlockArguments();
-    }
     operand_range getTrueBlockArguments() {
-      return {true_block_argument_begin(), true_block_argument_end()};
+      return trueTargetOperands();
     }
 
     // Iterator and range support for false target block arguments.
-    operand_iterator false_block_argument_begin() {
-      return true_block_argument_end();
-    }
-    operand_iterator false_block_argument_end() {
-      return false_block_argument_begin() + getNumFalseBlockArguments();
-    }
     operand_range getFalseBlockArguments() {
-      return {false_block_argument_begin(), false_block_argument_end()};
+      return falseTargetOperands();
     }
 
   private:
