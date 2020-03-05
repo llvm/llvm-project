@@ -192,11 +192,10 @@ private:
   internToJITSymbols(DenseMap<StringRef, DenseSet<StringRef>> IRNames) {
     assert(!IRNames.empty() && "No IRNames received to Intern?");
     TargetAndLikelies InternedNames;
-    DenseSet<SymbolStringPtr> TargetJITNames;
     for (auto &NamePair : IRNames) {
+      DenseSet<SymbolStringPtr> TargetJITNames;
       for (auto &TargetNames : NamePair.second)
         TargetJITNames.insert(Mangle(TargetNames));
-
       InternedNames[Mangle(NamePair.first)] = std::move(TargetJITNames);
     }
     return InternedNames;
