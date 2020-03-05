@@ -25,7 +25,7 @@
 ## Row 0:
     .long 1             # DW_SECT_INFO
     .long 9             # Invalid section identifier
-# Row 1:
+## Row 1:
     .long 0x1000        # Offset in .debug_info.dwo
     .long 0x2000
 ## Table of Section Sizes:

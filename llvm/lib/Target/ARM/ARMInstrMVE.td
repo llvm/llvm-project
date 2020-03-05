@@ -2649,6 +2649,7 @@ class MVE_VxSHRN<string iname, string suffix, bit bit_12, bit bit_28,
   let Inst{11-6} = 0b111111;
   let Inst{4} = 0b0;
   let Inst{0} = 0b1;
+  let validForTailPredication = 1;
 }
 
 def MVE_VRSHRNi16bh : MVE_VxSHRN<"vrshrnb", "i16", 0b0, 0b1, shr_imm8> {
@@ -2690,6 +2691,7 @@ class MVE_VxQRSHRUN<string iname, string suffix, bit bit_28, bit bit_12,
   let Inst{11-6} = 0b111111;
   let Inst{4} = 0b0;
   let Inst{0} = 0b0;
+  let validForTailPredication = 1;
 }
 
 def MVE_VQRSHRUNs16bh : MVE_VxQRSHRUN<
@@ -2738,6 +2740,7 @@ class MVE_VxQRSHRN<string iname, string suffix, bit bit_0, bit bit_12,
   let Inst{11-6} = 0b111101;
   let Inst{4} = 0b0;
   let Inst{0} = bit_0;
+  let validForTailPredication = 1;
 }
 
 multiclass MVE_VxQRSHRN_types<string iname, bit bit_0, bit bit_12> {

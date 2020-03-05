@@ -14,6 +14,7 @@ class TestPtrRefs(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @skipUnlessDarwin
+    @expectedFailureAll(oslist=["macosx"], debug_info=["dwarf", "gmodules"], bugnumber="llvm.org/pr45112")
     def test_ptr_refs(self):
         """Test format string functionality."""
         self.build()
@@ -42,5 +43,5 @@ class TestPtrRefs(TestBase):
 
         frame = thread.GetFrameAtIndex(0)
 
-        self.dbg.HandleCommand("script import lldb.macosx.heap")
+        self.runCmd("script import lldb.macosx.heap")
         self.expect("ptr_refs my_ptr", substrs=["malloc", "stack"])

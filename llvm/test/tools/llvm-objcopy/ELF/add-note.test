@@ -24,6 +24,7 @@ FileHeader:
 
 # CHECK:      Notes [
 # CHECK-NEXT:   NoteSection {
+# CHECK-NEXT:     Name: .note.gnu.build-id
 # CHECK-NEXT:     Offset:
 # CHECK-NEXT:     Size:
 # CHECK-NEXT:     Note {

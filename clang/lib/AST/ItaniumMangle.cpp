@@ -1784,8 +1784,8 @@ void CXXNameMangler::mangleLambda(const CXXRecordDecl *Lambda) {
 void CXXNameMangler::mangleLambdaSig(const CXXRecordDecl *Lambda) {
   for (auto *D : Lambda->getLambdaExplicitTemplateParameters())
     mangleTemplateParamDecl(D);
-  const FunctionProtoType *Proto = Lambda->getLambdaTypeInfo()->getType()->
-                                   getAs<FunctionProtoType>();
+  auto *Proto =
+      Lambda->getLambdaTypeInfo()->getType()->castAs<FunctionProtoType>();
   mangleBareFunctionType(Proto, /*MangleReturnType=*/false,
                          Lambda->getLambdaStaticInvoker());
 }

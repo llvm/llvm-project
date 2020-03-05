@@ -22,14 +22,6 @@ class MiniDumpNewTestCase(TestBase):
     _linux_x86_64_not_crashed_pid = 29939
     _linux_x86_64_not_crashed_pid_offset = 0xD967
 
-    def setUp(self):
-        super(MiniDumpNewTestCase, self).setUp()
-        self._initial_platform = lldb.DBG.GetSelectedPlatform()
-
-    def tearDown(self):
-        lldb.DBG.SetSelectedPlatform(self._initial_platform)
-        super(MiniDumpNewTestCase, self).tearDown()
-
     def process_from_yaml(self, yaml_file):
         minidump_path = self.getBuildArtifact(os.path.basename(yaml_file) + ".dmp")
         self.yaml2obj(yaml_file, minidump_path)

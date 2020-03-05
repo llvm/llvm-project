@@ -4560,7 +4560,8 @@ bool llvm::isGuaranteedNotToBeUndefOrPoison(const Value *V,
       return true;
   }
 
-  if (!CtxI || !DT)
+  // CxtI may be null or a cloned instruction.
+  if (!CtxI || !CtxI->getParent() || !DT)
     return false;
 
   // If V is used as a branch condition before reaching CtxI, V cannot be

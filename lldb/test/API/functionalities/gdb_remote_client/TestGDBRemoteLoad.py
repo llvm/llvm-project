@@ -6,14 +6,6 @@ from gdbclientutils import *
 
 class TestGDBRemoteLoad(GDBRemoteTestBase):
 
-    def setUp(self):
-        super(TestGDBRemoteLoad, self).setUp()
-        self._initial_platform = lldb.DBG.GetSelectedPlatform()
-
-    def tearDown(self):
-        lldb.DBG.SetSelectedPlatform(self._initial_platform)
-        super(TestGDBRemoteLoad, self).tearDown()
-
     def test_module_load_address(self):
         """Test that setting the load address of a module uses virtual addresses"""
         target = self.createTarget("a.yaml")

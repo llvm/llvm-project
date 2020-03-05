@@ -196,6 +196,58 @@ coro.ret:
   ret void
 }
 
+; CHECK-LABEL: @callResume_with_coro_suspend_3(
+define void @callResume_with_coro_suspend_3(i8 %cond) {
+entry:
+; CHECK: alloca %f.frame
+  switch i8 %cond, label  %coro.ret [
+    i8 0, label %init.suspend
+    i8 1, label %coro.ret
+  ]
+
+init.suspend:
+; CHECK-NOT: llvm.coro.begin
+; CHECK-NOT: CustomAlloc
+; CHECK: call void @may_throw()
+  %hdl = call i8* @f()
+; CHECK-NEXT: call fastcc void bitcast (void (%f.frame*)* @f.resume to void (i8*)*)(i8* %vFrame)
+  %0 = call i8* @llvm.coro.subfn.addr(i8* %hdl, i8 0)
+  %1 = bitcast i8* %0 to void (i8*)*
+  call fastcc void %1(i8* %hdl)
+  %2 = call token @llvm.coro.save(i8* %hdl)
+  %3 = call i8 @llvm.coro.suspend(token %2, i1 false)
+  switch i8 %3, label  %coro.ret [
+    i8 0, label %final.suspend
+    i8 1, label %cleanups
+  ]
+
+; CHECK-LABEL: final.suspend:
+final.suspend:
+; CHECK-NEXT: call fastcc void bitcast (void (%f.frame*)* @f.cleanup to void (i8*)*)(i8* %vFrame)
+  %4 = call i8* @llvm.coro.subfn.addr(i8* %hdl, i8 1)
+  %5 = bitcast i8* %4 to void (i8*)*
+  call fastcc void %5(i8* %hdl)
+  %6 = call token @llvm.coro.save(i8* %hdl)
+  %7 = call i8 @llvm.coro.suspend(token %6, i1 true)
+  switch i8 %7, label  %coro.ret [
+    i8 0, label %coro.ret
+    i8 1, label %cleanups
+  ]
+
+; CHECK-LABEL: cleanups:
+cleanups:
+; CHECK-NEXT: call fastcc void bitcast (void (%f.frame*)* @f.cleanup to void (i8*)*)(i8* %vFrame)
+  %8 = call i8* @llvm.coro.subfn.addr(i8* %hdl, i8 1)
+  %9 = bitcast i8* %8 to void (i8*)*
+  call fastcc void %9(i8* %hdl)
+  br label %coro.ret
+
+; CHECK-LABEL: coro.ret:
+coro.ret:
+; CHECK-NEXT: ret void
+  ret void
+}
+
 
 
 ; CHECK-LABEL: @callResume_PR34897_no_elision(
@@ -230,6 +282,41 @@ return:
 ; CHECK: ret void
   ret void
 }
+
+; CHECK-LABEL: @callResume_PR34897_elision(
+define void @callResume_PR34897_elision(i1 %cond) {
+; CHECK-LABEL: entry:
+entry:
+; CHECK: alloca %f.frame
+; CHECK: tail call void @bar(
+  tail call void @bar(i8* null)
+  br i1 %cond, label %if.then, label %if.else
+
+if.then:
+; CHECK-NOT: CustomAlloc
+; CHECK: call void @may_throw()
+  %hdl = call i8* @f()
+; CHECK: call void @bar(
+  tail call void @bar(i8* %hdl)
+; CHECK: call fastcc void bitcast (void (%f.frame*)* @f.resume to void (i8*)*)(i8*
+  %0 = call i8* @llvm.coro.subfn.addr(i8* %hdl, i8 0)
+  %1 = bitcast i8* %0 to void (i8*)*
+  call fastcc void %1(i8* %hdl)
+; CHECK-NEXT: call fastcc void bitcast (void (%f.frame*)* @f.cleanup to void (i8*)*)(i8*
+  %2 = call i8* @llvm.coro.subfn.addr(i8* %hdl, i8 1)
+  %3 = bitcast i8* %2 to void (i8*)*
+  call fastcc void %3(i8* %hdl)
+  br label %return
+
+if.else:
+  br label %return
+
+; CHECK-LABEL: return:
+return:
+; CHECK: ret void
+  ret void
+}
+
 
 ; a coroutine start function (cannot elide heap alloc, due to second argument to
 ; coro.begin not pointint to coro.alloc)

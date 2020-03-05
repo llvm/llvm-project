@@ -828,32 +828,32 @@ let Predicates = [HasComplxNum, HasNEON] in {
 // important for compatibility with other assemblers (e.g. GAS) when building
 // software compatible with both CPUs that do or don't implement PA.
 let Uses = [LR], Defs = [LR] in {
-  def PACIAZ   : SystemNoOperands<0b000, "hint #24">;
-  def PACIBZ   : SystemNoOperands<0b010, "hint #26">;
+  def PACIAZ   : SystemNoOperands<0b000, "hint\t#24">;
+  def PACIBZ   : SystemNoOperands<0b010, "hint\t#26">;
   let isAuthenticated = 1 in {
-    def AUTIAZ   : SystemNoOperands<0b100, "hint #28">;
-    def AUTIBZ   : SystemNoOperands<0b110, "hint #30">;
+    def AUTIAZ   : SystemNoOperands<0b100, "hint\t#28">;
+    def AUTIBZ   : SystemNoOperands<0b110, "hint\t#30">;
   }
 }
 let Uses = [LR, SP], Defs = [LR] in {
-  def PACIASP  : SystemNoOperands<0b001, "hint #25">;
-  def PACIBSP  : SystemNoOperands<0b011, "hint #27">;
+  def PACIASP  : SystemNoOperands<0b001, "hint\t#25">;
+  def PACIBSP  : SystemNoOperands<0b011, "hint\t#27">;
   let isAuthenticated = 1 in {
-    def AUTIASP  : SystemNoOperands<0b101, "hint #29">;
-    def AUTIBSP  : SystemNoOperands<0b111, "hint #31">;
+    def AUTIASP  : SystemNoOperands<0b101, "hint\t#29">;
+    def AUTIBSP  : SystemNoOperands<0b111, "hint\t#31">;
   }
 }
 let Uses = [X16, X17], Defs = [X17], CRm = 0b0001 in {
-  def PACIA1716  : SystemNoOperands<0b000, "hint #8">;
-  def PACIB1716  : SystemNoOperands<0b010, "hint #10">;
+  def PACIA1716  : SystemNoOperands<0b000, "hint\t#8">;
+  def PACIB1716  : SystemNoOperands<0b010, "hint\t#10">;
   let isAuthenticated = 1 in {
-    def AUTIA1716  : SystemNoOperands<0b100, "hint #12">;
-    def AUTIB1716  : SystemNoOperands<0b110, "hint #14">;
+    def AUTIA1716  : SystemNoOperands<0b100, "hint\t#12">;
+    def AUTIB1716  : SystemNoOperands<0b110, "hint\t#14">;
   }
 }
 
 let Uses = [LR], Defs = [LR], CRm = 0b0000 in {
-  def XPACLRI   : SystemNoOperands<0b111, "hint #7">;
+  def XPACLRI   : SystemNoOperands<0b111, "hint\t#7">;
 }
 
 // These pointer authentication instructions require armv8.3a

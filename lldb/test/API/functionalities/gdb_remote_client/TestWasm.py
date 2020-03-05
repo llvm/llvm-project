@@ -86,14 +86,6 @@ class MyResponder(MockGDBServerResponder):
 
 class TestWasm(GDBRemoteTestBase):
 
-    def setUp(self):
-        super(TestWasm, self).setUp()
-        self._initial_platform = lldb.DBG.GetSelectedPlatform()
-
-    def tearDown(self):
-        lldb.DBG.SetSelectedPlatform(self._initial_platform)
-        super(TestWasm, self).tearDown()
-
     @skipIfAsan
     @skipIfXmlSupportMissing
     def test_load_module_with_embedded_symbols_from_remote(self):

@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -fcuda-is-device \
 // RUN:   -triple nvptx-nvidia-cuda -emit-llvm -o - %s | \
-// RUN:   FileCheck -check-prefix=NOFTZ %s
+// RUN:   FileCheck -check-prefix=DEFAULT %s
 
 // RUN: %clang_cc1 -fcuda-is-device -fdenormal-fp-math-f32=ieee \
 // RUN:   -triple nvptx-nvidia-cuda -emit-llvm -o - %s | \
@@ -10,9 +10,10 @@
 // RUN:   -triple nvptx-nvidia-cuda -emit-llvm -o - %s | \
 // RUN:   FileCheck -check-prefix=FTZ %s
 
+// FIXME: Unspecified should default to ieee
 // RUN: %clang_cc1 -fcuda-is-device -x hip \
 // RUN:   -triple amdgcn-amd-amdhsa -target-cpu gfx900 -emit-llvm -o - %s | \
-// RUN:   FileCheck -check-prefix=AMDNOFTZ %s
+// RUN:   FileCheck -check-prefix=AMDFTZ %s
 
 // RUN: %clang_cc1 -fcuda-is-device -x hip \
 // RUN:   -triple amdgcn-amd-amdhsa -target-cpu gfx900 -fdenormal-fp-math-f32=ieee -emit-llvm -o - %s | \
@@ -40,6 +41,10 @@ extern "C" __device__ void foo() {}
 
 // FTZ: attributes #0 = {{.*}} "denormal-fp-math-f32"="preserve-sign,preserve-sign"
 // NOFTZ: attributes #0 = {{.*}} "denormal-fp-math-f32"="ieee,ieee"
+
+
+// FIXME: This should be removed
+// DEFAULT-NOT: "denormal-fp-math-f32"
 
 // AMDNOFTZ: attributes #0 = {{.*}}+fp32-denormals{{.*}}+fp64-fp16-denormals
 // AMDFTZ: attributes #0 = {{.*}}+fp64-fp16-denormals{{.*}}-fp32-denormals

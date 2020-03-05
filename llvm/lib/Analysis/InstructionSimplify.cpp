@@ -5364,7 +5364,6 @@ static Value *SimplifyFreezeInst(Value *Op0, const SimplifyQuery &Q) {
   // Use a utility function defined in ValueTracking.
   if (llvm::isGuaranteedNotToBeUndefOrPoison(Op0, Q.CxtI, Q.DT))
     return Op0;
-
   // We have room for improvement.
   return nullptr;
 }

@@ -10,14 +10,6 @@ class TestqOffsets(GDBRemoteTestBase):
         def qOffsets(self):
             return 'Text=470000;Data=470000'
 
-    def setUp(self):
-        super(TestqOffsets, self).setUp()
-        self._initial_platform = lldb.DBG.GetSelectedPlatform()
-
-    def tearDown(self):
-        lldb.DBG.SetSelectedPlatform(self._initial_platform)
-        super(TestqOffsets, self).tearDown()
-
     def test(self):
         self.server.responder = TestqOffsets.Responder()
         target = self.createTarget("qOffsets.yaml")

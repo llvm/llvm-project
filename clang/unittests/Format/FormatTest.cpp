@@ -15127,6 +15127,30 @@ TEST_F(FormatTest, GuessLanguageWithCaret) {
       guessLanguage("foo.h", "int(^foo[(kNumEntries + 10)])(char, float);"));
 }
 
+TEST_F(FormatTest, FormatsInlineAsmSymbolicNames) {
+  // ASM symbolic names are identifiers that must be surrounded by [] without
+  // space in between:
+  // https://gcc.gnu.org/onlinedocs/gcc/Extended-Asm.html#InputOperands
+
+  // Example from https://bugs.llvm.org/show_bug.cgi?id=45108.
+  verifyFormat(R"(//
+asm volatile("mrs %x[result], FPCR" : [result] "=r"(result));
+)");
+
+  // A list of several ASM symbolic names.
+  verifyFormat(R"(asm("mov %[e], %[d]" : [d] "=rm"(d), [e] "rm"(*e));)");
+
+  // ASM symbolic names in inline ASM with inputs and outputs.
+  verifyFormat(R"(//
+asm("cmoveq %1, %2, %[result]"
+    : [result] "=r"(result)
+    : "r"(test), "r"(new), "[result]"(old));
+)");
+
+  // ASM symbolic names in inline ASM with no outputs.
+  verifyFormat(R"(asm("mov %[e], %[d]" : : [d] "=rm"(d), [e] "rm"(*e));)");
+}
+
 TEST_F(FormatTest, GuessedLanguageWithInlineAsmClobbers) {
   EXPECT_EQ(FormatStyle::LK_Cpp,
             guessLanguage("foo.h", "void f() {\n"

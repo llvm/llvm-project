@@ -190,7 +190,7 @@ Additional Topics
 
 :doc:`MemTagSanitizer`
   Security hardening for production code aiming to mitigate memory
-  related vulnerabilities. Based on ARMv9 Memory Tagging Extension.
+  related vulnerabilities. Based on the Armv8.5-A Memory Tagging Extension.
 
 :doc:`Dependence Graphs <DependenceGraphs/index>`
   A description of the design of the various dependence graphs such as

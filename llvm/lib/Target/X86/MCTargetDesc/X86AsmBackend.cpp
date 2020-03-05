@@ -390,22 +390,8 @@ uint8_t X86AsmBackend::determinePaddingPrefix(const MCInst &Inst) const {
   }
   }
 
-  switch (SegmentReg) {
-  case 0:
-    break;
-  case X86::CS:
-    return X86::CS_Encoding;
-  case X86::DS:
-    return X86::DS_Encoding;
-  case X86::ES:
-    return X86::ES_Encoding;
-  case X86::FS:
-    return X86::FS_Encoding;
-  case X86::GS:
-    return X86::GS_Encoding;
-  case X86::SS:
-    return X86::SS_Encoding;
-  }
+  if (SegmentReg != 0)
+    return X86::getSegmentOverridePrefixForReg(SegmentReg);
 
   if (STI.hasFeature(X86::Mode64Bit))
     return X86::CS_Encoding;
@@ -820,7 +806,9 @@ void X86AsmBackend::finishLayout(MCAssembler const &Asm,
         continue;
       }
 
+#ifndef NDEBUG
       const uint64_t OrigOffset = Layout.getFragmentOffset(&F);
+#endif
       const uint64_t OrigSize = Asm.computeFragmentSize(Layout, F);
       if (OrigSize == 0 || Relaxable.empty()) {
         Relaxable.clear();
@@ -863,11 +851,13 @@ void X86AsmBackend::finishLayout(MCAssembler const &Asm,
       if (F.getKind() == MCFragment::FT_BoundaryAlign)
         cast<MCBoundaryAlignFragment>(F).setSize(RemainingSize);
 
+#ifndef NDEBUG
       const uint64_t FinalOffset = Layout.getFragmentOffset(&F);
       const uint64_t FinalSize = Asm.computeFragmentSize(Layout, F);
       assert(OrigOffset + OrigSize == FinalOffset + FinalSize &&
              "can't move start of next fragment!");
       assert(FinalSize == RemainingSize && "inconsistent size computation?");
+#endif
 
       // If we're looking at a boundary align, make sure we don't try to pad
       // its target instructions for some following directive.  Doing so would

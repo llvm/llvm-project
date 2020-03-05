@@ -18,14 +18,6 @@ class MiniDumpUUIDTestCase(TestBase):
 
     NO_DEBUG_INFO_TESTCASE = True
 
-    def setUp(self):
-        super(MiniDumpUUIDTestCase, self).setUp()
-        self._initial_platform = lldb.DBG.GetSelectedPlatform()
-
-    def tearDown(self):
-        lldb.DBG.SetSelectedPlatform(self._initial_platform)
-        super(MiniDumpUUIDTestCase, self).tearDown()
-
     def verify_module(self, module, verify_path, verify_uuid):
         uuid = module.GetUUIDString()
         self.assertEqual(verify_path, module.GetFileSpec().fullpath)

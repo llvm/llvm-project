@@ -623,7 +623,8 @@ public:
       const llvm::opt::ArgList &DriverArgs,
       Action::OffloadKind DeviceOffloadKind,
       const llvm::fltSemantics *FPType = nullptr) const {
-    return llvm::DenormalMode::getIEEE();
+    // FIXME: This should be IEEE when default handling is fixed.
+    return llvm::DenormalMode::getInvalid();
   }
 };
 

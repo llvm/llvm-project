@@ -1039,18 +1039,18 @@ declare void @test_stackarg_int(i32, i32, i32, i32, i32, i32, i32, i32, i8 zeroe
 ; 64BIT-DAG:   $x9 = LI8 7
 ; 64BIT-DAG:   $x10 = LI8 8
 ; 64BIT-DAG:   renamable $x[[REGCADDR:[0-9]+]] = LDtoc @c, $x2 :: (load 8 from got)
-; 64BIT-DAG:   renamable $r[[REGC:[0-9]+]] = LBZ 0, killed renamable $x[[REGCADDR]] :: (dereferenceable load 1 from @c)
-; 64BIT-DAG:   STW killed renamable $r[[REGC]], 112, $x1 :: (store 4)
+; 64BIT-DAG:   renamable $x[[REGC:[0-9]+]] = LBZ8 0, killed renamable $x[[REGCADDR]] :: (dereferenceable load 1 from @c)
+; 64BIT-DAG:   STD killed renamable $x[[REGC]], 112, $x1 :: (store 8)
 ; 64BIT-DAG:   renamable $x[[REGSIADDR:[0-9]+]] = LDtoc @si, $x2 :: (load 8 from got)
-; 64BIT-DAG:   renamable $r[[REGSI:[0-9]+]] = LHA 0, killed renamable $x[[REGSIADDR]] :: (dereferenceable load 2 from @si)
-; 64BIT-DAG:   STW killed renamable $r[[REGSI]], 120, $x1 :: (store 4)
+; 64BIT-DAG:   renamable $x[[REGSI:[0-9]+]] = LHA8 0, killed renamable $x[[REGSIADDR]] :: (dereferenceable load 2 from @si)
+; 64BIT-DAG:   STD killed renamable $x[[REGSI]], 120, $x1 :: (store 8)
 ; 64BIT-DAG:   renamable $x[[REGIADDR:[0-9]+]] = LDtoc @i, $x2 :: (load 8 from got)
-; 64BIT-DAG:   renamable $r[[REGI:[0-9]+]] = LWZ 0, killed renamable $x[[REGIADDR]] :: (dereferenceable load 4 from @i)
-; 64BIT-DAG:   STW killed renamable $r[[REGI]], 128, $x1 :: (store 4)
+; 64BIT-DAG:   renamable $x[[REGI:[0-9]+]] = LWZ8 0, killed renamable $x[[REGIADDR]] :: (dereferenceable load 4 from @i)
+; 64BIT-DAG:   STD killed renamable $x[[REGI]], 128, $x1 :: (store 8)
 ; 64BIT-DAG:   renamable $x[[REGLLIADDR:[0-9]+]] = LDtoc @lli, $x2 :: (load 8 from got)
 ; 64BIT-DAG:   renamable $x[[REGLLI:[0-9]+]] = LD 0, killed renamable $x[[REGLLIADDR]] :: (dereferenceable load 8 from @lli)
 ; 64BIT-DAG:   STD killed renamable $x[[REGLLI]], 136, $x1 :: (store 8)
-; 64BIT-DAG:   STW renamable $r[[REGI]], 144, $x1 :: (store 4)
+; 64BIT-DAG:   STD renamable $x[[REGI]], 144, $x1 :: (store 8)
 ; 64BIT-NEXT:  BL8_NOP <mcsymbol .test_stackarg_int>, csr_aix64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x4, implicit $x5, implicit $x6, implicit $x7, implicit $x8, implicit $x9, implicit $x10, implicit $x2, implicit-def $r1
 ; 64BIT-NEXT:  ADJCALLSTACKUP 152, 0, implicit-def dead $r1, implicit $r1
 
@@ -1066,17 +1066,17 @@ declare void @test_stackarg_int(i32, i32, i32, i32, i32, i32, i32, i32, i8 zeroe
 ; ASM64PWR4-DAG:   li 10, 8
 ; ASM64PWR4-DAG:   ld [[REGCADDR:[0-9]+]], LC5(2)
 ; ASM64PWR4-DAG:   lbz [[REGC:[0-9]+]], 0([[REGCADDR]])
-; ASM64PWR4-DAG:   stw [[REGC]], 112(1)
+; ASM64PWR4-DAG:   std [[REGC]], 112(1)
 ; ASM64PWR4-DAG:   ld [[REGSIADDR:[0-9]+]], LC3(2)
 ; ASM64PWR4-DAG:   lha [[REGSI:[0-9]+]], 0([[REGSIADDR]])
-; ASM64PWR4-DAG:   stw [[REGSI]], 120(1)
+; ASM64PWR4-DAG:   std [[REGSI]], 120(1)
 ; ASM64PWR4-DAG:   ld [[REGIADDR:[0-9]+]], LC4(2)
 ; ASM64PWR4-DAG:   lwz [[REGI:[0-9]+]], 0([[REGIADDR]])
-; ASM64PWR4-DAG:   stw [[REGI]], 128(1)
+; ASM64PWR4-DAG:   std [[REGI]], 128(1)
 ; ASM64PWR4-DAG:   ld [[REGLLIADDR:[0-9]+]], LC6(2)
 ; ASM64PWR4-DAG:   ld [[REGLLI:[0-9]+]], 0([[REGLLIADDR]])
 ; ASM64PWR4-DAG:   std [[REGLLI]], 136(1)
-; ASM64PWR4-DAG:   stw [[REGI]], 144(1)
+; ASM64PWR4-DAG:   std [[REGI]], 144(1)
 ; ASM64PWR4-NEXT:  bl .test_stackarg_int
 ; ASM64PWR4-NEXT:  nop
 

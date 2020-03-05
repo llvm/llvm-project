@@ -50,10 +50,6 @@ DEVICE bool checkRuntimeInitialized(kmp_Ident *loc);
 // get info from machine
 ////////////////////////////////////////////////////////////////////////////////
 
-// get low level ids of resources
-DEVICE unsigned GetWarpId();
-DEVICE unsigned GetLaneId();
-
 // get global ids to locate tread/team info (constant regardless of OMP)
 DEVICE int GetLogicalThreadIdInBlock(bool isSPMDExecutionMode);
 DEVICE int GetMasterThreadID();

@@ -29,6 +29,10 @@ class ExprCommandWithFixits(TestBase):
 
     def test_with_dummy_target(self):
         """Test calling expressions in the dummy target with errors that can be fixed by the FixIts."""
+
+        # Enable fix-its as they were intentionally disabled by TestBase.setUp.
+        self.runCmd("settings set target.auto-apply-fixits true")
+
         ret_val = lldb.SBCommandReturnObject()
         result = self.dbg.GetCommandInterpreter().HandleCommand("expression ((1 << 16) - 1))", ret_val)
         self.assertEqual(result, lldb.eReturnStatusSuccessFinishResult, "The expression was successful.")

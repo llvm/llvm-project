@@ -5,5 +5,5 @@
 
   add r0, r0, r0
 
-@ ARM:      00000000         .text  00000000 $a
-@ THUMB:    00000000         .text  00000000 $t
+@ ARM:      00000000 l       .text  00000000 $a
+@ THUMB:    00000000 l       .text  00000000 $t

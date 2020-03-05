@@ -25,7 +25,7 @@ v2:
   .word v1   # R_MIPS_32 target v1 addend 0
 
 # SYM: SYMBOL TABLE:
-# SYM: 00011000  .data  00000000 v1
+# SYM: 00011000 l .data  00000000 v1
 
 # BE: Contents of section .data:
 # BE-NEXT: {{.*}} 00000004 00011000

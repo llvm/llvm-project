@@ -774,16 +774,6 @@ def visit(prefix, dir, names):
             raise
 
 
-def setSetting(setting, value):
-    import lldb
-    ci = lldb.DBG.GetCommandInterpreter()
-    res = lldb.SBCommandReturnObject()
-    cmd = 'setting set %s %s'%(setting, value)
-    print(cmd)
-    ci.HandleCommand(cmd, res, False)
-    if not res.Succeeded():
-        raise Exception('failed to run "%s"'%cmd)
-
 # ======================================== #
 #                                          #
 # Execution of the test driver starts here #
@@ -809,6 +799,8 @@ def checkDsymForUUIDIsNotOn():
 
 
 def exitTestSuite(exitCode=None):
+    # lldb.py does SBDebugger.Initialize().
+    # Call SBDebugger.Terminate() on exit.
     import lldb
     lldb.SBDebugger.Terminate()
     if exitCode:
@@ -931,7 +923,7 @@ def checkWatchpointSupport():
 def checkDebugInfoSupport():
     import lldb
 
-    platform = lldb.DBG.GetSelectedPlatform().GetTriple().split('-')[2]
+    platform = lldb.selected_platform.GetTriple().split('-')[2]
     compiler = configuration.compiler
     skipped = []
     for cat in test_categories.debug_info_categories:
@@ -961,16 +953,12 @@ def run_suite():
 
     setupSysPath()
 
-
-    # For the time being, let's bracket the test runner within the
-    # lldb.SBDebugger.Initialize()/Terminate() pair.
     import lldb
+    # Use host platform by default.
+    lldb.selected_platform = lldb.SBPlatform.GetHostPlatform()
 
     # Now we can also import lldbutil
     from lldbsuite.test import lldbutil
-
-    # Create a singleton SBDebugger in the lldb namespace.
-    lldb.DBG = lldb.SBDebugger.Create()
 
     if configuration.lldb_platform_name:
         print("Setting up remote platform '%s'" %
@@ -1020,7 +1008,7 @@ def run_suite():
         if not lldb.remote_platform.SetWorkingDirectory(
                 configuration.lldb_platform_working_dir):
             raise Exception("failed to set working directory '%s'" % configuration.lldb_platform_working_dir)
-        lldb.DBG.SetSelectedPlatform(lldb.remote_platform)
+        lldb.selected_platform = lldb.remote_platform
     else:
         lldb.remote_platform = None
         configuration.lldb_platform_working_dir = None
@@ -1031,7 +1019,7 @@ def run_suite():
     build_dir = configuration.test_build_dir
     lldbutil.mkdir_p(build_dir)
 
-    target_platform = lldb.DBG.GetSelectedPlatform().GetTriple().split('-')[2]
+    target_platform = lldb.selected_platform.GetTriple().split('-')[2]
 
     checkLibcxxSupport()
     checkLibstdcxxSupport()
@@ -1058,10 +1046,6 @@ def run_suite():
     #
     # Now that we have loaded all the test cases, run the whole test suite.
     #
-
-    # Set any user-overridden settings.
-    for key, value in configuration.settings:
-        setSetting(key, value)
 
     # Install the control-c handler.
     unittest2.signals.installHandler()

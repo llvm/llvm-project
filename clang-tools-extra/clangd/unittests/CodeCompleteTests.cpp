@@ -29,7 +29,9 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <condition_variable>
+#include <functional>
 #include <mutex>
+#include <vector>
 
 namespace clang {
 namespace clangd {
@@ -1039,6 +1041,21 @@ template <template <class> class TT> int foo() {
 )cpp")
                          .Completions;
   EXPECT_THAT(Completions, Contains(Named("TT")));
+}
+
+TEST(CompletionTest, RecordCCResultCallback) {
+  std::vector<CodeCompletion> RecordedCompletions;
+  CodeCompleteOptions Opts;
+  Opts.RecordCCResult = [&RecordedCompletions](const CodeCompletion &CC,
+                                               const SymbolQualitySignals &,
+                                               const SymbolRelevanceSignals &,
+                                               float Score) {
+    RecordedCompletions.push_back(CC);
+  };
+
+  completions("int xy1, xy2; int a = xy^", /*IndexSymbols=*/{}, Opts);
+  EXPECT_THAT(RecordedCompletions,
+              UnorderedElementsAre(Named("xy1"), Named("xy2")));
 }
 
 SignatureHelp signatures(llvm::StringRef Text, Position Point,

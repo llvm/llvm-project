@@ -26,8 +26,8 @@ __start:
   .data
   .word _foo+8-.                    # R_MIPS_PC32
 
-# CHECK: 00020000         .text           00000000 __start
-# CHECK: 00020020         .text           00000000 _foo
+# CHECK: 00020000 g       .text           00000000 __start
+# CHECK: 00020020 g       .text           00000000 _foo
 
 # CHECK: Contents of section .data:
 # CHECK-NEXT: 30000 ffff0028 00000000 00000000 00000000

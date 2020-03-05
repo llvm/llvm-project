@@ -99,14 +99,8 @@ LLDDwarfObj<ELFT>::findAux(const InputSectionBase &sec, uint64_t pos,
   // its zero value will terminate the decoding of .debug_ranges prematurely.
   Symbol &s = file->getRelocTargetSym(rel);
   uint64_t val = 0;
-  if (auto *dr = dyn_cast<Defined>(&s)) {
+  if (auto *dr = dyn_cast<Defined>(&s))
     val = dr->value;
-
-    // FIXME: We should be consistent about always adding the file
-    // offset or not.
-    if (dr->section->flags & ELF::SHF_ALLOC)
-      val += cast<InputSection>(dr->section)->getOffsetInFile();
-  }
 
   DataRefImpl d;
   d.p = getAddend<ELFT>(rel);

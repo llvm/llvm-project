@@ -58,7 +58,6 @@ class SettingsCommandTestCase(TestBase):
                              '[3]: "b"',
                              '[4]: "c"'])
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr44430")
     def test_replace_target_run_args(self):
         """Test that 'replace target.run-args' works."""
         # Set the run-args and then replace the index-0 element.
@@ -358,7 +357,6 @@ class SettingsCommandTestCase(TestBase):
                     'thread-format (format-string) = "abc def   "')
         self.runCmd('settings clear thread-format')
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr44430")
     def test_settings_with_trailing_whitespace(self):
 
         # boolean

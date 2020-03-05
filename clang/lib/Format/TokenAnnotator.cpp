@@ -499,6 +499,8 @@ private:
     } else if (Left->is(TT_Unknown)) {
       if (StartsObjCMethodExpr) {
         Left->Type = TT_ObjCMethodExpr;
+      } else if (InsideInlineASM) {
+        Left->Type = TT_InlineASMSymbolicNameLSquare;
       } else if (IsCpp11AttributeSpecifier) {
         Left->Type = TT_AttributeSquare;
       } else if (Style.Language == FormatStyle::LK_JavaScript && Parent &&
