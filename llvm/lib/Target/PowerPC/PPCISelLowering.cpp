@@ -6796,6 +6796,16 @@ static bool CC_AIX(unsigned ValNo, MVT ValVT, MVT LocVT,
                    CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
                    CCState &State) {
 
+  const PPCSubtarget &Subtarget = static_cast<const PPCSubtarget &>(
+      State.getMachineFunction().getSubtarget());
+  const bool IsPPC64 = Subtarget.isPPC64();
+  const unsigned PtrByteSize = IsPPC64 ? 8 : 4;
+  const MVT RegVT = IsPPC64 ? MVT::i64 : MVT::i32;
+
+  assert((!ValVT.isInteger() ||
+          (ValVT.getSizeInBits() <= RegVT.getSizeInBits())) &&
+         "Integer argument exceeds register size: should have been legalized");
+
   if (ValVT == MVT::f128)
     report_fatal_error("f128 is unimplemented on AIX.");
 
@@ -6807,11 +6817,6 @@ static bool CC_AIX(unsigned ValNo, MVT ValVT, MVT LocVT,
 
   if (ValVT.isVector() || LocVT.isVector())
     report_fatal_error("Vector arguments are unimplemented on AIX.");
-
-  const PPCSubtarget &Subtarget = static_cast<const PPCSubtarget &>(
-      State.getMachineFunction().getSubtarget());
-  const bool IsPPC64 = Subtarget.isPPC64();
-  const unsigned PtrByteSize = IsPPC64 ? 8 : 4;
 
   static const MCPhysReg GPR_32[] = {// 32-bit registers.
                                      PPC::R3, PPC::R4, PPC::R5, PPC::R6,
@@ -6831,14 +6836,12 @@ static bool CC_AIX(unsigned ValNo, MVT ValVT, MVT LocVT,
   case MVT::i1:
   case MVT::i32: {
     const unsigned Offset = State.AllocateStack(PtrByteSize, PtrByteSize);
-    const MVT RegVT = IsPPC64 ? MVT::i64 : MVT::i32;
-    if (unsigned Reg = State.AllocateReg(IsPPC64 ? GPR_64 : GPR_32)) {
-      // Promote integers if needed.
-      if (ValVT.getSizeInBits() < RegVT.getSizeInBits())
-        LocInfo = ArgFlags.isSExt() ? CCValAssign::LocInfo::SExt
-                                    : CCValAssign::LocInfo::ZExt;
+    // AIX integer arguments are always passed in register width.
+    if (ValVT.getSizeInBits() < RegVT.getSizeInBits())
+      LocInfo = ArgFlags.isSExt() ? CCValAssign::LocInfo::SExt
+                                  : CCValAssign::LocInfo::ZExt;
+    if (unsigned Reg = State.AllocateReg(IsPPC64 ? GPR_64 : GPR_32))
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, RegVT, LocInfo));
-    }
     else
       State.addLoc(CCValAssign::getMem(ValNo, ValVT, Offset, RegVT, LocInfo));
 
@@ -6856,7 +6859,6 @@ static bool CC_AIX(unsigned ValNo, MVT ValVT, MVT LocVT,
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, FReg, LocVT, LocInfo));
 
     // Reserve and initialize GPRs or initialize the PSA as required.
-    const MVT RegVT = IsPPC64 ? MVT::i64 : MVT::i32;
     for (unsigned I = 0; I < StoreSize; I += PtrByteSize) {
       if (unsigned Reg = State.AllocateReg(IsPPC64 ? GPR_64 : GPR_32)) {
         assert(FReg && "An FPR should be available when a GPR is reserved.");
@@ -7080,21 +7082,21 @@ SDValue PPCTargetLowering::LowerCall_AIX(
     if (!VA.isRegLoc() && !VA.isMemLoc())
       report_fatal_error("Unexpected location for function call argument.");
 
-    if (VA.isRegLoc() && !VA.needsCustom()) {
-      switch (VA.getLocInfo()) {
-      default:
-        report_fatal_error("Unexpected argument extension type.");
-      case CCValAssign::Full:
-        break;
-      case CCValAssign::ZExt:
-        Arg = DAG.getNode(ISD::ZERO_EXTEND, dl, VA.getLocVT(), Arg);
-        break;
-      case CCValAssign::SExt:
-        Arg = DAG.getNode(ISD::SIGN_EXTEND, dl, VA.getLocVT(), Arg);
-        break;
-      }
-      RegsToPass.push_back(std::make_pair(VA.getLocReg(), Arg));
+    switch (VA.getLocInfo()) {
+    default:
+      report_fatal_error("Unexpected argument extension type.");
+    case CCValAssign::Full:
+      break;
+    case CCValAssign::ZExt:
+      Arg = DAG.getNode(ISD::ZERO_EXTEND, dl, VA.getLocVT(), Arg);
+      break;
+    case CCValAssign::SExt:
+      Arg = DAG.getNode(ISD::SIGN_EXTEND, dl, VA.getLocVT(), Arg);
+      break;
+    }
 
+    if (VA.isRegLoc() && !VA.needsCustom()) {
+      RegsToPass.push_back(std::make_pair(VA.getLocReg(), Arg));
       continue;
     }
 
