@@ -1328,44 +1328,47 @@ def check_variable(
         typename=None,
         num_children=None,
         use_synthetic=True):
+    name = valobj.GetName()
     test.assertTrue(
         valobj.IsValid(),
         "variable %s is not valid" %
-        (valobj.GetName() if valobj else "<unknown>"))
+        (name if valobj else "<unknown>"))
     if use_dynamic:
         valobj = valobj.GetDynamicValue(lldb.eDynamicCanRunTarget)
         test.assertTrue(
             valobj.IsValid(),
             "dynamic value of %s is not valid" %
-            (valobj.GetName() if valobj else "<unknown>"))
+            (name if valobj else "<unknown>"))
         test.assertTrue(
             valobj.IsDynamic(),
             "dynamic value of %s is not dynamic" %
-            (valobj.GetName() if valobj else "<unknown>"))
+            (name if valobj else "<unknown>"))
     if use_synthetic:
         valobj.SetPreferSyntheticValue(True)
     if summary:
+        valobj_summary = valobj.GetSummary()
         test.assertTrue(
-            valobj.GetSummary() == summary,
+            valobj_summary == summary,
             "expected summary: '%s' - actual summary: '%s'" %
-            (summary,
-             valobj.GetSummary() if valobj else "<unknown>"))
+            (summary, valobj_summary if valobj else "<unknown>"))
     if value:
+        valobj_value = valobj.GetValue()
         test.assertTrue(
-            valobj.GetValue() == value, "expected value: '%s' - actual value: '%s'" %
-            (value, valobj.GetValue() if valobj else "<unknown>"))
+            valobj_value == value, "expected value: '%s' - actual value: '%s'" %
+            (value, valobj_value if valobj else "<unknown>"))
     if typename:
+        valobj_typename = valobj.GetTypeName()
         test.assertTrue(
-            valobj.GetTypeName() == typename,
+            valobj_typename == typename,
             "expected typename: '%s' - actual typename: '%s'" %
             (typename,
-             valobj.GetTypeName() if valobj else "<unknown>"))
+             valobj_typename if valobj else "<unknown>"))
     if num_children:
+        valobj_num_children = valobj.GetNumChildren()
         test.assertTrue(
-            valobj.GetNumChildren() == num_children,
+            valobj_num_children == num_children,
             "expected num children: '%s' - actual num children: '%s'" %
-            (num_children,
-             valobj.GetNumChildren() if valobj else "<unknown>"))
+            (num_children, valobj_num_children if valobj else "<unknown>"))
 
 
 def check_children(test, valobj, thecallable):
