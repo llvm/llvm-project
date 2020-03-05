@@ -448,6 +448,18 @@ static bool getSubRegForClass(const TargetRegisterClass *RC,
   return true;
 }
 
+/// Returns the minimum size the given register bank can hold.
+static unsigned getMinSizeForRegBank(const RegisterBank &RB) {
+  switch (RB.getID()) {
+  case AArch64::GPRRegBankID:
+    return 32;
+  case AArch64::FPRRegBankID:
+    return 8;
+  default:
+    llvm_unreachable("Tried to get minimum size for unknown register bank.");
+  }
+}
+
 /// Check whether \p I is a currently unsupported binary operation:
 /// - it has an unsized type
 /// - an operand is not a vreg
@@ -636,23 +648,20 @@ static bool isValidCopy(const MachineInstr &I, const RegisterBank &DstBank,
 }
 #endif
 
-/// Helper function for selectCopy. Inserts a subregister copy from
-/// \p *From to \p *To, linking it up to \p I.
+/// Helper function for selectCopy. Inserts a subregister copy from \p SrcReg
+/// to \p *To.
 ///
-/// e.g, given I = "Dst = COPY SrcReg", we'll transform that into
-///
-/// CopyReg (From class) = COPY SrcReg
-/// SubRegCopy (To class) = COPY CopyReg:SubReg
-/// Dst = COPY SubRegCopy
-static bool selectSubregisterCopy(MachineInstr &I, MachineRegisterInfo &MRI,
-                                  const RegisterBankInfo &RBI, Register SrcReg,
-                                  const TargetRegisterClass *From,
-                                  const TargetRegisterClass *To,
-                                  unsigned SubReg) {
+/// E.g "To = COPY SrcReg:SubReg"
+static bool copySubReg(MachineInstr &I, MachineRegisterInfo &MRI,
+                       const RegisterBankInfo &RBI, Register SrcReg,
+                       const TargetRegisterClass *To, unsigned SubReg) {
+  assert(SrcReg.isValid() && "Expected a valid source register?");
+  assert(To && "Destination register class cannot be null");
+  assert(SubReg && "Expected a valid subregister");
+
   MachineIRBuilder MIB(I);
-  auto Copy = MIB.buildCopy({From}, {SrcReg});
-  auto SubRegCopy = MIB.buildInstr(TargetOpcode::COPY, {To}, {})
-                        .addReg(Copy.getReg(0), 0, SubReg);
+  auto SubRegCopy =
+      MIB.buildInstr(TargetOpcode::COPY, {To}, {}).addReg(SrcReg, 0, SubReg);
   MachineOperand &RegOp = I.getOperand(1);
   RegOp.setReg(SubRegCopy.getReg(0));
 
@@ -747,25 +756,28 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
     unsigned SrcSize = TRI.getRegSizeInBits(*SrcRC);
     unsigned DstSize = TRI.getRegSizeInBits(*DstRC);
 
-    // If we're doing a cross-bank copy on different-sized registers, we need
-    // to do a bit more work.
+    // If the source register is bigger than the destination we need to perform
+    // a subregister copy.
     if (SrcSize > DstSize) {
-      // We're doing a cross-bank copy into a smaller register. We need a
-      // subregister copy. First, get a register class that's on the same bank
-      // as the destination, but the same size as the source.
-      const TargetRegisterClass *SubregRC =
-          getMinClassForRegBank(DstRegBank, SrcSize, true);
-      assert(SubregRC && "Didn't get a register class for subreg?");
-
-      // Get the appropriate subregister for the destination.
       unsigned SubReg = 0;
-      if (!getSubRegForClass(DstRC, TRI, SubReg)) {
-        LLVM_DEBUG(dbgs() << "Couldn't determine subregister for copy.\n");
-        return false;
+
+      // If the source bank doesn't support a subregister copy small enough,
+      // then we first need to copy to the destination bank.
+      if (getMinSizeForRegBank(SrcRegBank) > DstSize) {
+        const TargetRegisterClass *SubregRC = getMinClassForRegBank(
+            DstRegBank, SrcSize, /* GetAllRegSet = */ true);
+        getSubRegForClass(DstRC, TRI, SubReg);
+
+        MachineIRBuilder MIB(I);
+        auto Copy = MIB.buildCopy({SubregRC}, {SrcReg});
+        copySubReg(I, MRI, RBI, Copy.getReg(0), DstRC, SubReg);
+      } else {
+        const TargetRegisterClass *SubregRC = getMinClassForRegBank(
+            SrcRegBank, DstSize, /* GetAllRegSet = */ true);
+        getSubRegForClass(SubregRC, TRI, SubReg);
+        copySubReg(I, MRI, RBI, SrcReg, DstRC, SubReg);
       }
 
-      // Now, insert a subregister copy using the new register class.
-      selectSubregisterCopy(I, MRI, RBI, SrcReg, SubregRC, DstRC, SubReg);
       return CheckCopy();
     }
 
