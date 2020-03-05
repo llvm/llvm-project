@@ -74,17 +74,54 @@ static LogicalResult verify(ReductionOp op) {
   auto kind = op.kind();
   Type eltType = op.dest().getType();
   if (kind == "add" || kind == "mul" || kind == "min" || kind == "max") {
-    if (eltType.isF32() || eltType.isF64() || eltType.isSignlessInteger(32) ||
-        eltType.isSignlessInteger(64))
-      return success();
-    return op.emitOpError("unsupported reduction type");
+    if (!eltType.isF32() && !eltType.isF64() &&
+        !eltType.isSignlessInteger(32) && !eltType.isSignlessInteger(64))
+      return op.emitOpError("unsupported reduction type");
+  } else if (kind == "and" || kind == "or" || kind == "xor") {
+    if (!eltType.isSignlessInteger(32) && !eltType.isSignlessInteger(64))
+      return op.emitOpError("unsupported reduction type");
+  } else {
+    return op.emitOpError("unknown reduction kind: ") << kind;
   }
-  if (kind == "and" || kind == "or" || kind == "xor") {
-    if (eltType.isSignlessInteger(32) || eltType.isSignlessInteger(64))
-      return success();
-    return op.emitOpError("unsupported reduction type");
+
+  // Verify optional accumulator.
+  if (!op.acc().empty()) {
+    if (kind != "add" && kind != "mul")
+      return op.emitOpError("no accumulator for reduction kind: ") << kind;
+    if (!eltType.isF32() && !eltType.isF64())
+      return op.emitOpError("no accumulator for type: ") << eltType;
   }
-  return op.emitOpError("unknown reduction kind: ") << kind;
+
+  return success();
+}
+
+static ParseResult parseReductionOp(OpAsmParser &parser,
+                                    OperationState &result) {
+  SmallVector<OpAsmParser::OperandType, 2> operandsInfo;
+  Type redType;
+  Type resType;
+  Attribute attr;
+  if (parser.parseAttribute(attr, "kind", result.attributes) ||
+      parser.parseComma() || parser.parseOperandList(operandsInfo) ||
+      parser.parseColonType(redType) ||
+      parser.parseKeywordType("into", resType) ||
+      (operandsInfo.size() > 0 &&
+       parser.resolveOperand(operandsInfo[0], redType, result.operands)) ||
+      (operandsInfo.size() > 1 &&
+       parser.resolveOperand(operandsInfo[1], resType, result.operands)) ||
+      parser.addTypeToList(resType, result.types))
+    return failure();
+  if (operandsInfo.size() < 1 || operandsInfo.size() > 2)
+    return parser.emitError(parser.getNameLoc(),
+                            "unsupported number of operands");
+  return success();
+}
+
+static void print(OpAsmPrinter &p, ReductionOp op) {
+  p << op.getOperationName() << " \"" << op.kind() << "\", " << op.vector();
+  if (!op.acc().empty())
+    p << ", " << op.acc();
+  p << " : " << op.vector().getType() << " into " << op.dest().getType();
 }
 
 //===----------------------------------------------------------------------===//
