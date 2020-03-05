@@ -164,6 +164,17 @@ TestDialect::verifyRegionResultAttribute(Operation *op, unsigned regionIndex,
 }
 
 //===----------------------------------------------------------------------===//
+// TestBranchOp
+//===----------------------------------------------------------------------===//
+
+Optional<OperandRange> TestBranchOp::getSuccessorOperands(unsigned index) {
+  assert(index == 0 && "invalid successor index");
+  return getOperands();
+}
+
+bool TestBranchOp::canEraseSuccessorOperand() { return true; }
+
+//===----------------------------------------------------------------------===//
 // Test IsolatedRegionOp - parse passthrough region arguments.
 //===----------------------------------------------------------------------===//
 

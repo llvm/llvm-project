@@ -16,6 +16,7 @@ add_llvm_library(MLIRTestDialect
   TestPatterns.cpp
 )
 add_dependencies(MLIRTestDialect
+  MLIRControlFlowInterfacesIncGen
   MLIRTestOpsIncGen
   MLIRTypeInferOpInterfaceIncGen
 )

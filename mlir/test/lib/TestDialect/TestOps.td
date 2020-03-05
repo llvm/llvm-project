@@ -11,6 +11,7 @@
 
 include "mlir/IR/OpBase.td"
 include "mlir/IR/OpAsmInterface.td"
+include "mlir/Analysis/ControlFlowInterfaces.td"
 include "mlir/Analysis/CallInterfaces.td"
 include "mlir/Analysis/InferTypeOpInterface.td"
 
@@ -446,6 +447,11 @@ def OpWithShapedTypeInferTypeInterfaceOp : TEST_Op<"op_with_shaped_type_infer_ty
    ]> {
   let arguments = (ins AnyTensor, AnyTensor);
   let results = (outs AnyTensor);
+
+  let extraClassDeclaration = [{
+    LogicalResult reifyReturnTypeShapes(OpBuilder &builder,
+                                        SmallVectorImpl<Value> &shapes);
+  }];
 }
 
 def IsNotScalar : Constraint<CPred<"$0.getType().getRank() != 0">>;
@@ -454,7 +460,8 @@ def UpdateAttr : Pat<(I32ElementsAttrOp $attr),
                      (I32ElementsAttrOp ConstantAttr<I32ElementsAttr, "0">),
                      [(IsNotScalar $attr)]>;
 
-def TestBranchOp : TEST_Op<"br", [Terminator]> {
+def TestBranchOp : TEST_Op<"br",
+    [DeclareOpInterfaceMethods<BranchOpInterface>, Terminator]> {
   let successors = (successor AnySuccessor:$target);
 }
 

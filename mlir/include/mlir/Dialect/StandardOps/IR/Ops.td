@@ -14,6 +14,7 @@
 #define STANDARD_OPS
 
 include "mlir/Analysis/CallInterfaces.td"
+include "mlir/Analysis/ControlFlowInterfaces.td"
 include "mlir/IR/OpAsmInterface.td"
 
 def Std_Dialect : Dialect {
@@ -331,7 +332,8 @@ def AtomicRMWOp : Std_Op<"atomic_rmw", [
 // BranchOp
 //===----------------------------------------------------------------------===//
 
-def BranchOp : Std_Op<"br", [Terminator]> {
+def BranchOp : Std_Op<"br",
+    [DeclareOpInterfaceMethods<BranchOpInterface>, Terminator]> {
   let summary = "branch operation";
   let description = [{
     The "br" operation represents a branch operation in a function.
@@ -668,7 +670,8 @@ def CmpIOp : Std_Op<"cmpi",
 // CondBranchOp
 //===----------------------------------------------------------------------===//
 
-def CondBranchOp : Std_Op<"cond_br", [Terminator]> {
+def CondBranchOp : Std_Op<"cond_br",
+    [DeclareOpInterfaceMethods<BranchOpInterface>, Terminator]> {
   let summary = "conditional branch operation";
   let description = [{
     The "cond_br" operation represents a conditional branch operation in a

@@ -482,13 +482,20 @@ Block *BranchOp::getDest() { return getSuccessor(); }
 void BranchOp::setDest(Block *block) { return setSuccessor(block); }
 
 void BranchOp::eraseOperand(unsigned index) {
-  getOperation()->eraseSuccessorOperand(0, index);
+  getOperation()->eraseOperand(index);
 }
 
 void BranchOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
                                            MLIRContext *context) {
   results.insert<SimplifyBrToBlockWithSinglePred>(context);
 }
+
+Optional<OperandRange> BranchOp::getSuccessorOperands(unsigned index) {
+  assert(index == 0 && "invalid successor index");
+  return getOperands();
+}
+
+bool BranchOp::canEraseSuccessorOperand() { return true; }
 
 //===----------------------------------------------------------------------===//
 // CallOp
@@ -748,6 +755,13 @@ void CondBranchOp::getCanonicalizationPatterns(
     OwningRewritePatternList &results, MLIRContext *context) {
   results.insert<SimplifyConstCondBranchPred>(context);
 }
+
+Optional<OperandRange> CondBranchOp::getSuccessorOperands(unsigned index) {
+  assert(index < getNumSuccessors() && "invalid successor index");
+  return index == trueIndex ? getTrueOperands() : getFalseOperands();
+}
+
+bool CondBranchOp::canEraseSuccessorOperand() { return true; }
 
 //===----------------------------------------------------------------------===//
 // Constant*Op

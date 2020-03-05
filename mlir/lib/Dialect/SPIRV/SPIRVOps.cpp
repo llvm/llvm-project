@@ -943,8 +943,28 @@ static LogicalResult verify(spirv::BitcastOp bitcastOp) {
 }
 
 //===----------------------------------------------------------------------===//
+// spv.BranchOp
+//===----------------------------------------------------------------------===//
+
+Optional<OperandRange> spirv::BranchOp::getSuccessorOperands(unsigned index) {
+  assert(index == 0 && "invalid successor index");
+  return getOperands();
+}
+
+bool spirv::BranchOp::canEraseSuccessorOperand() { return true; }
+
+//===----------------------------------------------------------------------===//
 // spv.BranchConditionalOp
 //===----------------------------------------------------------------------===//
+
+Optional<OperandRange>
+spirv::BranchConditionalOp::getSuccessorOperands(unsigned index) {
+  assert(index < 2 && "invalid successor index");
+  return index == kTrueIndex ? getTrueBlockArguments()
+                             : getFalseBlockArguments();
+}
+
+bool spirv::BranchConditionalOp::canEraseSuccessorOperand() { return true; }
 
 static ParseResult parseBranchConditionalOp(OpAsmParser &parser,
                                             OperationState &state) {
