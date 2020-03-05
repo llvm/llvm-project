@@ -509,7 +509,19 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
           cx->u)};
     }
   } else if (name == "rank") {
-    // TODO assumed-rank dummy argument
+    if (const auto *array{UnwrapExpr<Expr<SomeType>>(args[0])}) {
+      if (auto named{ExtractNamedEntity(*array)}) {
+        const Symbol &symbol{named->GetLastSymbol()};
+        if (semantics::IsAssumedRankArray(symbol)) {
+          // DescriptorInquiry can only be placed in expression of kind
+          // DescriptorInquiry::Result::kind.
+          return ConvertToType<T>(Expr<
+              Type<TypeCategory::Integer, DescriptorInquiry::Result::kind>>{
+              DescriptorInquiry{*named, DescriptorInquiry::Field::Rank}});
+        }
+      }
+      return Expr<T>{args[0].value().Rank()};
+    }
     return Expr<T>{args[0].value().Rank()};
   } else if (name == "selected_char_kind") {
     if (const auto *chCon{UnwrapExpr<Constant<TypeOf<std::string>>>(args[0])}) {
