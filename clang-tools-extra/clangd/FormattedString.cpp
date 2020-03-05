@@ -12,6 +12,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
@@ -26,23 +27,143 @@ namespace clangd {
 namespace markup {
 
 namespace {
+
+// Is <contents a plausible start to an HTML tag?
+// Contents may not be the rest of the line, but it's the rest of the plain
+// text, so we expect to see at least the tag name.
+bool looksLikeTag(llvm::StringRef Contents) {
+  if (Contents.empty())
+    return false;
+  if (Contents.front() == '!' || Contents.front() == '?' ||
+      Contents.front() == '/')
+    return true;
+  // Check the start of the tag name.
+  if (!llvm::isAlpha(Contents.front()))
+    return false;
+  // Drop rest of the tag name, and following whitespace.
+  Contents = Contents
+                 .drop_while([](char C) {
+                   return llvm::isAlnum(C) || C == '-' || C == '_' || C == ':';
+                 })
+                 .drop_while(isWhitespace);
+  // The rest of the tag consists of attributes, which have restrictive names.
+  // If we hit '=', all bets are off (attribute values can contain anything).
+  for (; !Contents.empty(); Contents = Contents.drop_front()) {
+    if (llvm::isAlnum(Contents.front()) || isWhitespace(Contents.front()))
+      continue;
+    if (Contents.front() == '>' || Contents.startswith("/>"))
+      return true; // May close the tag.
+    if (Contents.front() == '=')
+      return true; // Don't try to parse attribute values.
+    return false;  // Random punctuation means this isn't a tag.
+  }
+  return true; // Potentially incomplete tag.
+}
+
+// Tests whether C should be backslash-escaped in markdown.
+// The string being escaped is Before + C + After. This is part of a paragraph.
+// StartsLine indicates whether `Before` is the start of the line.
+// After may not be everything until the end of the line.
+//
+// It's always safe to escape punctuation, but want minimal escaping.
+// The strategy is to escape the first character of anything that might start
+// a markdown grammar construct.
+bool needsLeadingEscape(char C, llvm::StringRef Before, llvm::StringRef After,
+                        bool StartsLine) {
+  assert(Before.take_while(isWhitespace).empty());
+  auto RulerLength = [&]() -> /*Length*/ unsigned {
+    if (!StartsLine || !Before.empty())
+      return false;
+    llvm::StringRef A = After.rtrim();
+    return llvm::all_of(A, [C](char D) { return C == D; }) ? 1 + A.size() : 0;
+  };
+  auto IsBullet = [&]() {
+    return StartsLine && Before.empty() &&
+           (After.empty() || After.startswith(" "));
+  };
+  auto SpaceSurrounds = [&]() {
+    return (After.empty() || isWhitespace(After.front())) &&
+           (Before.empty() || isWhitespace(Before.back()));
+  };
+  auto WordSurrounds = [&]() {
+    return (!After.empty() && llvm::isAlnum(After.front())) &&
+           (!Before.empty() && llvm::isAlnum(Before.back()));
+  };
+
+  switch (C) {
+  case '\\': // Escaped character.
+    return true;
+  case '`': // Code block or inline code
+    // Any number of backticks can delimit an inline code block that can end
+    // anywhere (including on another line). We must escape them all.
+    return true;
+  case '~': // Code block
+    return StartsLine && Before.empty() && After.startswith("~~");
+  case '#': { // ATX heading.
+    if (!StartsLine || !Before.empty())
+      return false;
+    llvm::StringRef Rest = After.ltrim(C);
+    return Rest.empty() || Rest.startswith(" ");
+  }
+  case ']': // Link or link reference.
+    // We escape ] rather than [ here, because it's more constrained:
+    //   ](...) is an in-line link
+    //   ]: is a link reference
+    // The following are only links if the link reference exists:
+    //   ] by itself is a shortcut link
+    //   ][...] is an out-of-line link
+    // Because we never emit link references, we don't need to handle these.
+    return After.startswith(":") || After.startswith("(");
+  case '=': // Setex heading.
+    return RulerLength() > 0;
+  case '_': // Horizontal ruler or matched delimiter.
+    if (RulerLength() >= 3)
+      return true;
+    // Not a delimiter if surrounded by space, or inside a word.
+    // (The rules at word boundaries are subtle).
+    return !(SpaceSurrounds() || WordSurrounds());
+  case '-': // Setex heading, horizontal ruler, or bullet.
+    if (RulerLength() > 0)
+      return true;
+    return IsBullet();
+  case '+': // Bullet list.
+    return IsBullet();
+  case '*': // Bullet list, horizontal ruler, or delimiter.
+    return IsBullet() || RulerLength() >= 3 || !SpaceSurrounds();
+  case '<': // HTML tag (or autolink, which we choose not to escape)
+    return looksLikeTag(After);
+  case '>': // Quote marker. Needs escaping at start of line.
+    return StartsLine && Before.empty();
+  case '&': { // HTML entity reference
+    auto End = After.find(';');
+    if (End == llvm::StringRef::npos)
+      return false;
+    llvm::StringRef Content = After.substr(0, End);
+    if (Content.consume_front("#")) {
+      if (Content.consume_front("x") || Content.consume_front("X"))
+        return llvm::all_of(Content, llvm::isHexDigit);
+      return llvm::all_of(Content, llvm::isDigit);
+    }
+    return llvm::all_of(Content, llvm::isAlpha);
+  }
+  case '.': // Numbered list indicator. Escape 12. -> 12\. at start of line.
+  case ')':
+    return StartsLine && !Before.empty() &&
+           llvm::all_of(Before, llvm::isDigit) && After.startswith(" ");
+  default:
+    return false;
+  }
+}
+
 /// Escape a markdown text block. Ensures the punctuation will not introduce
 /// any of the markdown constructs.
-std::string renderText(llvm::StringRef Input) {
-  // Escaping ASCII punctuation ensures we can't start a markdown construct.
-  constexpr llvm::StringLiteral Punctuation =
-      R"txt(!"#$%&'()*+,-./:;<=>?@[\]^_`{|}~)txt";
-
+std::string renderText(llvm::StringRef Input, bool StartsLine) {
   std::string R;
-  for (size_t From = 0; From < Input.size();) {
-    size_t Next = Input.find_first_of(Punctuation, From);
-    R += Input.substr(From, Next - From);
-    if (Next == llvm::StringRef::npos)
-      break;
-    R += "\\";
-    R += Input[Next];
-
-    From = Next + 1;
+  for (unsigned I = 0; I < Input.size(); ++I) {
+    if (needsLeadingEscape(Input[I], Input.substr(0, I), Input.substr(I + 1),
+                           StartsLine))
+      R.push_back('\\');
+    R.push_back(Input[I]);
   }
   return R;
 }
@@ -236,7 +357,7 @@ void Paragraph::renderMarkdown(llvm::raw_ostream &OS) const {
     OS << Sep;
     switch (C.Kind) {
     case Chunk::PlainText:
-      OS << renderText(C.Contents);
+      OS << renderText(C.Contents, Sep.empty());
       break;
     case Chunk::InlineCode:
       OS << renderInlineBlock(C.Contents);
