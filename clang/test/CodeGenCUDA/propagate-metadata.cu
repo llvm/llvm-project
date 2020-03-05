@@ -15,7 +15,7 @@
 // RUN:   %s -o %t.bc -triple nvptx-unknown-unknown
 
 // RUN: %clang_cc1 -x cuda %s -emit-llvm -mlink-builtin-bitcode %t.bc -o - \
-// RUN:   -fno-trapping-math -fcuda-is-device -fdenormal-fp-math-f32=ieee -triple nvptx-unknown-unknown \
+// RUN:   -fno-trapping-math -fcuda-is-device -triple nvptx-unknown-unknown \
 // RUN: | FileCheck %s --check-prefix=CHECK --check-prefix=NOFTZ --check-prefix=NOFAST
 
 // RUN: %clang_cc1 -x cuda %s -emit-llvm -mlink-builtin-bitcode %t.bc \
@@ -60,8 +60,7 @@ __global__ void kernel() { lib_fn(); }
 // CHECK-SAME: convergent
 // CHECK-SAME: norecurse
 
-// FTZ-NOT: "denormal-fp-math"
-
+// FTZ: "denormal-fp-math"="ieee,ieee"
 // FTZ-SAME: "denormal-fp-math-f32"="preserve-sign,preserve-sign"
 // NOFTZ-SAME: "denormal-fp-math-f32"="ieee,ieee"
 
@@ -76,7 +75,8 @@ __global__ void kernel() { lib_fn(); }
 // CHECK-SAME: convergent
 // CHECK-NOT: norecurse
 
-// FTZ-NOT: "denormal-fp-math"
+// FTZ-SAME: "denormal-fp-math"="ieee,ieee"
+// NOFTZ-SAME: "denormal-fp-math"="ieee,ieee"
 
 // FTZ-SAME: "denormal-fp-math-f32"="preserve-sign,preserve-sign"
 // NOFTZ-SAME: "denormal-fp-math-f32"="ieee,ieee"
