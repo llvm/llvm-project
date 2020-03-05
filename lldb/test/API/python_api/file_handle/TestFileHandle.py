@@ -129,6 +129,7 @@ class FileHandleTestCase(lldbtest.TestBase):
             # even with collect_result=True.
             self.handleCmd('script 1+1')
             self.dbg.GetOutputFileHandle().write('FOO\n')
+            self.dbg.GetOutputFileHandle().flush()
         with open(self.out_filename, 'r') as f:
             self.assertEqual(readStrippedLines(f), ['2', 'FOO'])
 
@@ -246,6 +247,7 @@ class FileHandleTestCase(lldbtest.TestBase):
             self.assertTrue(status.Success())
             self.handleCmd('script 1+2')
             self.dbg.GetOutputFile().Write(b'quux')
+            self.dbg.GetOutputFile().Flush()
 
         with open(self.out_filename, 'r') as f:
             self.assertEqual(readStrippedLines(f), ['3', 'quux'])
