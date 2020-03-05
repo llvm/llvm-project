@@ -296,9 +296,7 @@ Optional<DILineInfo> ObjFile<ELFT>::getDILineInfo(InputSectionBase *s,
     }
   }
 
-  // Use fake address calculated by adding section file offset and offset in
-  // section. See comments for ObjectInfo class.
-  return dwarf->getDILineInfo(s->getOffsetInFile() + offset, sectionIndex);
+  return dwarf->getDILineInfo(offset, sectionIndex);
 }
 
 ELFFileBase::ELFFileBase(Kind k, MemoryBufferRef mb) : InputFile(k, mb) {
