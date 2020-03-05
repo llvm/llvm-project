@@ -39,6 +39,8 @@ public:
     uint64_t NumPtrs = 0;
   };
 
+  using RawPointerSectionList = std::vector<SectionExtent>;
+
   void setObjCImageInfoAddr(JITTargetAddress ObjCImageInfoAddr) {
     this->ObjCImageInfoAddr = ObjCImageInfoAddr;
   }
@@ -47,12 +49,24 @@ public:
     ModInitSections.push_back(std::move(ModInit));
   }
 
+  const RawPointerSectionList &getModInitsSections() const {
+    return ModInitSections;
+  }
+
   void addObjCSelRefsSection(SectionExtent ObjCSelRefs) {
     ObjCSelRefsSections.push_back(std::move(ObjCSelRefs));
   }
 
+  const RawPointerSectionList &getObjCSelRefsSections() const {
+    return ObjCSelRefsSections;
+  }
+
   void addObjCClassListSection(SectionExtent ObjCClassList) {
     ObjCClassListSections.push_back(std::move(ObjCClassList));
+  }
+
+  const RawPointerSectionList &getObjCClassListSections() const {
+    return ObjCClassListSections;
   }
 
   void runModInits() const;
@@ -60,7 +74,6 @@ public:
   Error registerObjCClasses() const;
 
 private:
-  using RawPointerSectionList = std::vector<SectionExtent>;
 
   JITTargetAddress ObjCImageInfoAddr;
   RawPointerSectionList ModInitSections;
