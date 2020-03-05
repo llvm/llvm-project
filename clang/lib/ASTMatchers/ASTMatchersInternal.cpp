@@ -346,18 +346,11 @@ bool OptionallyVariadicOperator(const DynTypedNode &DynNode,
                                 ASTMatchFinder *Finder,
                                 BoundNodesTreeBuilder *Builder,
                                 ArrayRef<DynTypedMatcher> InnerMatchers) {
-  BoundNodesTreeBuilder Result;
-  bool Matched = false;
-  for (const DynTypedMatcher &InnerMatcher : InnerMatchers) {
-    BoundNodesTreeBuilder BuilderInner(*Builder);
-    if (InnerMatcher.matches(DynNode, Finder, &BuilderInner)) {
-      Matched = true;
-      Result.addMatch(BuilderInner);
-    }
-  }
-  // If there were no matches, we can't assign to `*Builder`; we'd (incorrectly)
-  // clear it because `Result` is empty.
-  if (Matched)
+  if (InnerMatchers.size() != 1)
+    return false;
+
+  BoundNodesTreeBuilder Result(*Builder);
+  if (InnerMatchers[0].matches(DynNode, Finder, &Result))
     *Builder = std::move(Result);
   return true;
 }
@@ -859,9 +852,8 @@ const internal::VariadicOperatorMatcherFunc<
 const internal::VariadicOperatorMatcherFunc<
     2, std::numeric_limits<unsigned>::max()>
     allOf = {internal::DynTypedMatcher::VO_AllOf};
-const internal::VariadicOperatorMatcherFunc<
-    1, std::numeric_limits<unsigned>::max()>
-    optionally = {internal::DynTypedMatcher::VO_Optionally};
+const internal::VariadicOperatorMatcherFunc<1, 1> optionally = {
+    internal::DynTypedMatcher::VO_Optionally};
 const internal::VariadicFunction<internal::Matcher<NamedDecl>, StringRef,
                                  internal::hasAnyNameFunc>
     hasAnyName = {};
