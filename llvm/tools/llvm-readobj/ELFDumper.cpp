@@ -2690,7 +2690,9 @@ template <> void ELFDumper<ELF32LE>::printAttributes() {
     if (Contents.size() == 1)
       continue;
 
-    ARMAttributeParser(&W).parse(Contents, support::little);
+    // TODO: Print error and delete the redundant FormatVersion check above.
+    if (Error E = ARMAttributeParser(&W).parse(Contents, support::little))
+      consumeError(std::move(E));
   }
 }
 

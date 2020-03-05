@@ -840,8 +840,13 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(const Elf_Shdr &sec) {
       break;
     ARMAttributeParser attributes;
     ArrayRef<uint8_t> contents = check(this->getObj().getSectionContents(&sec));
-    attributes.parse(contents, config->ekind == ELF32LEKind ? support::little
-                                                            : support::big);
+    if (Error e = attributes.parse(contents, config->ekind == ELF32LEKind
+                                                 ? support::little
+                                                 : support::big)) {
+      auto *isec = make<InputSection>(*this, sec, name);
+      warn(toString(isec) + ": " + llvm::toString(std::move(e)));
+      break;
+    }
     updateSupportedARMFeatures(attributes);
     updateARMVFPArgs(attributes, this);
 
