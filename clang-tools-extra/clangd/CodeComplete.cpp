@@ -1660,6 +1660,10 @@ private:
                                ? Scores.Total / Relevance.NameMatch
                                : Scores.Quality;
 
+    if (Opts.RecordCCResult)
+      Opts.RecordCCResult(toCodeCompletion(Bundle), Quality, Relevance,
+                          Scores.Total);
+
     dlog("CodeComplete: {0} ({1}) = {2}\n{3}{4}\n", First.Name,
          llvm::to_string(Origin), Scores.Total, llvm::to_string(Quality),
          llvm::to_string(Relevance));

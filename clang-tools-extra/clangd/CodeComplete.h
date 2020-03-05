@@ -19,6 +19,7 @@
 #include "Logger.h"
 #include "Path.h"
 #include "Protocol.h"
+#include "Quality.h"
 #include "index/Index.h"
 #include "index/Symbol.h"
 #include "index/SymbolOrigin.h"
@@ -29,12 +30,14 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
+#include <functional>
 #include <future>
 
 namespace clang {
 class NamedDecl;
 namespace clangd {
 struct PreambleData;
+struct CodeCompletion;
 
 struct CodeCompleteOptions {
   /// Returns options that can be passed to clang's completion engine.
@@ -129,6 +132,16 @@ struct CodeCompleteOptions {
     /// Always use text-based completion.
     NeverParse,
   } RunParser = ParseIfReady;
+
+  /// Callback invoked on all CompletionCandidate after they are scored and
+  /// before they are ranked (by -Score). Thus the results are yielded in
+  /// arbitrary order.
+  ///
+  /// This callbacks allows capturing various internal structures used by clangd
+  /// during code completion. Eg: Symbol quality and relevance signals.
+  std::function<void(const CodeCompletion &, const SymbolQualitySignals &,
+                     const SymbolRelevanceSignals &, float Score)>
+      RecordCCResult;
 };
 
 // Semi-structured representation of a code-complete suggestion for our C++ API.
