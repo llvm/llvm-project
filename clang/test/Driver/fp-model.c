@@ -63,10 +63,6 @@
 // RUN:   | FileCheck --check-prefix=WARNf %s
 // WARNf: warning: overriding '-ffp-model=strict' option with '-Ofast' [-Woverriding-t-option]
 
-// RUN: %clang -### -ffp-model=strict -fdenormal-fp-math=preserve-sign,preserve-sign -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=WARN10 %s
-// WARN10: warning: overriding '-ffp-model=strict' option with '-fdenormal-fp-math=preserve-sign,preserve-sign' [-Woverriding-t-option]
-
 // RUN: %clang -### -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-NOROUND %s
 // CHECK-NOROUND: "-cc1"
