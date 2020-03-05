@@ -14,6 +14,7 @@
 
 #include "utils/CPP/TypeTraits.h"
 #include "utils/testutils/ExecuteFunction.h"
+#include "utils/testutils/StreamWrapper.h"
 
 namespace __llvm_libc {
 namespace testing {
@@ -43,6 +44,15 @@ bool test(RunContext &Ctx, TestCondition Cond, ValType LHS, ValType RHS,
           unsigned long Line);
 
 } // namespace internal
+
+struct MatcherBase {
+  virtual ~MatcherBase() {}
+  virtual void explainError(testutils::StreamWrapper &OS) {
+    OS << "unknown error\n";
+  }
+};
+
+template <typename T> struct Matcher : public MatcherBase { bool match(T &t); };
 
 // NOTE: One should not create instances and call methods on them directly. One
 // should use the macros TEST or TEST_F to write test cases.
@@ -90,6 +100,10 @@ protected:
                         const char *File, unsigned long Line);
 
   static bool testStrNe(RunContext &Ctx, const char *LHS, const char *RHS,
+                        const char *LHSStr, const char *RHSStr,
+                        const char *File, unsigned long Line);
+
+  static bool testMatch(RunContext &Ctx, bool MatchResult, MatcherBase &Matcher,
                         const char *LHSStr, const char *RHSStr,
                         const char *File, unsigned long Line);
 
@@ -228,6 +242,20 @@ private:
 
 #define ASSERT_DEATH(FUNC, EXIT)                                               \
   if (!EXPECT_DEATH(FUNC, EXIT))                                               \
+  return
+
+#define __CAT1(a, b) a##b
+#define __CAT(a, b) __CAT1(a, b)
+#define UNIQUE_VAR(prefix) __CAT(prefix, __LINE__)
+
+#define EXPECT_THAT(MATCH, MATCHER)                                            \
+  auto UNIQUE_VAR(__matcher) = (MATCHER);                                      \
+  __llvm_libc::testing::Test::testMatch(                                       \
+      Ctx, UNIQUE_VAR(__matcher).match((MATCH)), UNIQUE_VAR(__matcher),        \
+      #MATCH, #MATCHER, __FILE__, __LINE__)
+
+#define ASSERT_THAT(MATCH, MATCHER)                                            \
+  if (!EXPECT_THAT(MATCH, MATCHER))                                            \
   return
 
 #endif // LLVM_LIBC_UTILS_UNITTEST_H
