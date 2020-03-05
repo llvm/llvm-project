@@ -2,6 +2,9 @@
 ; RUN: opt < %s -vector-combine -S -mtriple=x86_64-- -mattr=SSE2 | FileCheck %s --check-prefixes=CHECK,SSE
 ; RUN: opt < %s -vector-combine -S -mtriple=x86_64-- -mattr=AVX2 | FileCheck %s --check-prefixes=CHECK,AVX
 
+declare void @use_i8(i8)
+declare void @use_f32(float)
+
 ; Eliminating extract is profitable.
 
 define i8 @ext0_ext0_add(<16 x i8> %x, <16 x i8> %y) {
@@ -162,8 +165,6 @@ define i32 @ext1_ext1_add_same_vec_diff_idx_ty(<4 x i32> %x) {
   ret i32 %r
 }
 
-declare void @use_i8(i8)
-
 ; Negative test - same vector operand; scalar code is cheaper than general case
 ;                 and vector code would be more expensive still.
 
@@ -256,12 +257,12 @@ define i8 @ext0_ext1_add(<16 x i8> %x, <16 x i8> %y) {
 ; CHECK-LABEL: @ext0_ext1_add(
 ; CHECK-NEXT:    [[E0:%.*]] = extractelement <16 x i8> [[X:%.*]], i32 0
 ; CHECK-NEXT:    [[E1:%.*]] = extractelement <16 x i8> [[Y:%.*]], i32 1
-; CHECK-NEXT:    [[R:%.*]] = add i8 [[E0]], [[E1]]
+; CHECK-NEXT:    [[R:%.*]] = add nuw i8 [[E0]], [[E1]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %e0 = extractelement <16 x i8> %x, i32 0
   %e1 = extractelement <16 x i8> %y, i32 1
-  %r = add i8 %e0, %e1
+  %r = add nuw i8 %e0, %e1
   ret i8 %r
 }
 
@@ -269,24 +270,67 @@ define i8 @ext5_ext0_add(<16 x i8> %x, <16 x i8> %y) {
 ; CHECK-LABEL: @ext5_ext0_add(
 ; CHECK-NEXT:    [[E0:%.*]] = extractelement <16 x i8> [[X:%.*]], i32 5
 ; CHECK-NEXT:    [[E1:%.*]] = extractelement <16 x i8> [[Y:%.*]], i32 0
-; CHECK-NEXT:    [[R:%.*]] = sub i8 [[E0]], [[E1]]
+; CHECK-NEXT:    [[R:%.*]] = sub nsw i8 [[E0]], [[E1]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %e0 = extractelement <16 x i8> %x, i32 5
   %e1 = extractelement <16 x i8> %y, i32 0
-  %r = sub i8 %e0, %e1
+  %r = sub nsw i8 %e0, %e1
   ret i8 %r
 }
 
-define i8 @ext5_ext6_add(<16 x i8> %x, <16 x i8> %y) {
-; CHECK-LABEL: @ext5_ext6_add(
-; CHECK-NEXT:    [[E0:%.*]] = extractelement <16 x i8> [[X:%.*]], i32 5
+define i8 @ext1_ext6_add(<16 x i8> %x, <16 x i8> %y) {
+; CHECK-LABEL: @ext1_ext6_add(
+; CHECK-NEXT:    [[E0:%.*]] = extractelement <16 x i8> [[X:%.*]], i32 1
 ; CHECK-NEXT:    [[E1:%.*]] = extractelement <16 x i8> [[Y:%.*]], i32 6
 ; CHECK-NEXT:    [[R:%.*]] = and i8 [[E0]], [[E1]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
-  %e0 = extractelement <16 x i8> %x, i32 5
+  %e0 = extractelement <16 x i8> %x, i32 1
   %e1 = extractelement <16 x i8> %y, i32 6
   %r = and i8 %e0, %e1
   ret i8 %r
+}
+
+define float @ext1_ext0_fmul(<4 x float> %x) {
+; CHECK-LABEL: @ext1_ext0_fmul(
+; CHECK-NEXT:    [[E0:%.*]] = extractelement <4 x float> [[X:%.*]], i32 1
+; CHECK-NEXT:    [[E1:%.*]] = extractelement <4 x float> [[X]], i32 0
+; CHECK-NEXT:    [[R:%.*]] = fmul float [[E0]], [[E1]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %e0 = extractelement <4 x float> %x, i32 1
+  %e1 = extractelement <4 x float> %x, i32 0
+  %r = fmul float %e0, %e1
+  ret float %r
+}
+
+define float @ext0_ext3_fmul_extra_use1(<4 x float> %x) {
+; CHECK-LABEL: @ext0_ext3_fmul_extra_use1(
+; CHECK-NEXT:    [[E0:%.*]] = extractelement <4 x float> [[X:%.*]], i32 0
+; CHECK-NEXT:    call void @use_f32(float [[E0]])
+; CHECK-NEXT:    [[E1:%.*]] = extractelement <4 x float> [[X]], i32 3
+; CHECK-NEXT:    [[R:%.*]] = fmul nnan float [[E0]], [[E1]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %e0 = extractelement <4 x float> %x, i32 0
+  call void @use_f32(float %e0)
+  %e1 = extractelement <4 x float> %x, i32 3
+  %r = fmul nnan float %e0, %e1
+  ret float %r
+}
+
+define float @ext0_ext3_fmul_extra_use2(<4 x float> %x) {
+; CHECK-LABEL: @ext0_ext3_fmul_extra_use2(
+; CHECK-NEXT:    [[E0:%.*]] = extractelement <4 x float> [[X:%.*]], i32 0
+; CHECK-NEXT:    [[E1:%.*]] = extractelement <4 x float> [[X]], i32 3
+; CHECK-NEXT:    call void @use_f32(float [[E1]])
+; CHECK-NEXT:    [[R:%.*]] = fmul ninf nsz float [[E0]], [[E1]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %e0 = extractelement <4 x float> %x, i32 0
+  %e1 = extractelement <4 x float> %x, i32 3
+  call void @use_f32(float %e1)
+  %r = fmul ninf nsz float %e0, %e1
+  ret float %r
 }

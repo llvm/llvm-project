@@ -695,9 +695,8 @@ static bool applyCmpPredicate(CmpFPredicate predicate, const APFloat &lhs,
     return cmpResult == APFloat::cmpUnordered;
   case CmpFPredicate::AlwaysTrue:
     return true;
-  default:
-    llvm_unreachable("unknown comparison predicate");
   }
+  llvm_unreachable("unknown comparison predicate");
 }
 
 // Constant folding hook for comparisons.

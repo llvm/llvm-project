@@ -633,7 +633,9 @@ public:
   virtual void execute(struct VPTransformState &State) = 0;
 
   /// Each recipe prints itself.
-  virtual void print(raw_ostream &O, const Twine &Indent) const = 0;
+  void print(raw_ostream &O, const Twine &Indent);
+  virtual void print(raw_ostream &O, const Twine &Indent,
+                     VPSlotTracker &SlotTracker) const = 0;
 
   /// Insert an unlinked recipe into a basic block immediately before
   /// the specified recipe.
@@ -719,10 +721,12 @@ public:
   void execute(VPTransformState &State) override;
 
   /// Print the Recipe.
-  void print(raw_ostream &O, const Twine &Indent) const override;
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
 
   /// Print the VPInstruction.
   void print(raw_ostream &O) const;
+  void print(raw_ostream &O, VPSlotTracker &SlotTracker) const;
 
   /// Return true if this instruction may modify memory.
   bool mayWriteToMemory() const {
@@ -768,7 +772,8 @@ public:
   }
 
   /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent) const override;
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
 };
 
 /// A recipe for handling GEP instructions.
@@ -798,7 +803,8 @@ public:
   void execute(VPTransformState &State) override;
 
   /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent) const override;
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
 };
 
 /// A recipe for handling phi nodes of integer and floating-point inductions,
@@ -823,7 +829,8 @@ public:
   void execute(VPTransformState &State) override;
 
   /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent) const override;
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
 };
 
 /// A recipe for handling all phi nodes except for integer and FP inductions.
@@ -844,7 +851,8 @@ public:
   void execute(VPTransformState &State) override;
 
   /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent) const override;
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
 };
 
 /// A recipe for vectorizing a phi-node as a sequence of mask-based select
@@ -875,7 +883,8 @@ public:
   void execute(VPTransformState &State) override;
 
   /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent) const override;
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
 };
 
 /// VPInterleaveRecipe is a recipe for transforming an interleave group of load
@@ -915,7 +924,8 @@ public:
   void execute(VPTransformState &State) override;
 
   /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent) const override;
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
 
   const InterleaveGroup<Instruction> *getInterleaveGroup() { return IG; }
 };
@@ -965,7 +975,8 @@ public:
   void setAlsoPack(bool Pack) { AlsoPack = Pack; }
 
   /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent) const override;
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
 };
 
 /// A recipe for generating conditional branches on the bits of a mask.
@@ -989,10 +1000,11 @@ public:
   void execute(VPTransformState &State) override;
 
   /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent) const override {
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override {
     O << " +\n" << Indent << "\"BRANCH-ON-MASK ";
     if (User)
-      O << *User->getOperand(0);
+      User->getOperand(0)->print(O, SlotTracker);
     else
       O << " All-One";
     O << "\\l\"";
@@ -1024,7 +1036,8 @@ public:
   void execute(VPTransformState &State) override;
 
   /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent) const override;
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
 };
 
 /// A Recipe for widening load/store operations.
@@ -1064,7 +1077,8 @@ public:
   void execute(VPTransformState &State) override;
 
   /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent) const override;
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
 };
 
 /// VPBasicBlock serves as the leaf of the Hierarchical Control-Flow Graph. It
@@ -1352,6 +1366,7 @@ struct GraphTraits<Inverse<VPRegionBlock *>>
   }
 };
 
+class VPSlotTracker;
 /// VPlan models a candidate for vectorization, encoding various decisions take
 /// to produce efficient output IR, including which branches, basic-blocks and
 /// output IR instructions to generate, and their cost. VPlan holds a
@@ -1359,6 +1374,7 @@ struct GraphTraits<Inverse<VPRegionBlock *>>
 /// VPBlock.
 class VPlan {
   friend class VPlanPrinter;
+  friend class VPSlotTracker;
 
 private:
   /// Hold the single entry to the Hierarchical CFG of the VPlan.
@@ -1392,7 +1408,10 @@ private:
   SmallVector<VPValue *, 4> VPCBVs;
 
 public:
-  VPlan(VPBlockBase *Entry = nullptr) : Entry(Entry) {}
+  VPlan(VPBlockBase *Entry = nullptr) : Entry(Entry) {
+    if (Entry)
+      Entry->setPlan(this);
+  }
 
   ~VPlan() {
     if (Entry)
@@ -1496,7 +1515,10 @@ private:
   unsigned BID = 0;
   SmallDenseMap<const VPBlockBase *, unsigned> BlockID;
 
-  VPlanPrinter(raw_ostream &O, const VPlan &P) : OS(O), Plan(P) {}
+  VPSlotTracker SlotTracker;
+
+  VPlanPrinter(raw_ostream &O, const VPlan &P)
+      : OS(O), Plan(P), SlotTracker(&P) {}
 
   /// Handle indentation.
   void bumpIndent(int b) { Indent = std::string((Depth += b) * TabWidth, ' '); }

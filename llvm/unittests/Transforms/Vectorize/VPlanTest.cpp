@@ -11,6 +11,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "gtest/gtest.h"
+#include <string>
 
 namespace llvm {
 namespace {
@@ -173,6 +174,76 @@ TEST(VPBasicBlockTest, getPlan) {
     EXPECT_EQ(&Plan, R2BB1->getPlan());
     EXPECT_EQ(&Plan, R2BB2->getPlan());
     EXPECT_EQ(&Plan, VPBB2->getPlan());
+  }
+}
+
+TEST(VPBasicBlockTest, print) {
+  VPInstruction *I1 = new VPInstruction(10, {});
+  VPInstruction *I2 = new VPInstruction(1, {I1});
+  VPInstruction *I3 = new VPInstruction(2, {I1, I2});
+
+  VPBasicBlock *VPBB1 = new VPBasicBlock();
+  VPBB1->appendRecipe(I1);
+  VPBB1->appendRecipe(I2);
+  VPBB1->appendRecipe(I3);
+
+  VPInstruction *I4 = new VPInstruction(4, {I3, I2});
+  VPInstruction *I5 = new VPInstruction(5, {I1});
+  VPBasicBlock *VPBB2 = new VPBasicBlock();
+  VPBB2->appendRecipe(I4);
+  VPBB2->appendRecipe(I5);
+
+  VPBlockUtils::connectBlocks(VPBB1, VPBB2);
+
+  // Check printing an instruction without associated VPlan.
+  {
+    std::string I3Dump;
+    raw_string_ostream OS(I3Dump);
+    I3->print(OS);
+    OS.flush();
+    EXPECT_EQ("<badref> = br <badref> <badref>", I3Dump);
+  }
+
+  VPlan Plan;
+  Plan.setEntry(VPBB1);
+  std::string FullDump;
+  raw_string_ostream(FullDump) << Plan;
+
+  EXPECT_EQ(R"(digraph VPlan {
+graph [labelloc=t, fontsize=30; label="Vectorization Plan"]
+node [shape=rect, fontname=Courier, fontsize=30]
+edge [fontname=Courier, fontsize=30]
+compound=true
+  N0 [label =
+    ":\n" +
+      "EMIT %vp0 = catchswitch\l" +
+      "EMIT %vp1 = ret %vp0\l" +
+      "EMIT %vp2 = br %vp0 %vp1\l"
+  ]
+  N0 -> N1 [ label=""]
+  N1 [label =
+    ":\n" +
+      "EMIT %vp3 = indirectbr %vp2 %vp1\l" +
+      "EMIT %vp4 = invoke %vp0\l"
+  ]
+}
+)",
+            FullDump);
+
+  {
+    std::string I3Dump;
+    raw_string_ostream OS(I3Dump);
+    I3->print(OS);
+    OS.flush();
+    EXPECT_EQ("%vp2 = br %vp0 %vp1", I3Dump);
+  }
+
+  {
+    std::string I2Dump;
+    raw_string_ostream OS(I2Dump);
+    OS << *I2;
+    OS.flush();
+    EXPECT_EQ("%vp1 = ret %vp0", I2Dump);
   }
 }
 
