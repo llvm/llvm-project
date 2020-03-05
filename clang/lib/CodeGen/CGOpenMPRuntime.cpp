@@ -5360,6 +5360,67 @@ void CGOpenMPRuntime::emitDestroyClause(CodeGenFunction &CGF, LValue DepobjLVal,
   (void)CGF.EmitRuntimeCall(createRuntimeFunction(OMPRTL__kmpc_free), Args);
 }
 
+void CGOpenMPRuntime::emitUpdateClause(CodeGenFunction &CGF, LValue DepobjLVal,
+                                       OpenMPDependClauseKind NewDepKind,
+                                       SourceLocation Loc) {
+  ASTContext &C = CGM.getContext();
+  QualType FlagsTy;
+  getDependTypes(C, KmpDependInfoTy, FlagsTy);
+  RecordDecl *KmpDependInfoRD =
+      cast<RecordDecl>(KmpDependInfoTy->getAsTagDecl());
+  llvm::Type *LLVMFlagsTy = CGF.ConvertTypeForMem(FlagsTy);
+  LValue Base = CGF.EmitLoadOfPointerLValue(
+      DepobjLVal.getAddress(CGF),
+      C.getPointerType(C.VoidPtrTy).castAs<PointerType>());
+  QualType KmpDependInfoPtrTy = C.getPointerType(KmpDependInfoTy);
+  Address Addr = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
+          Base.getAddress(CGF), CGF.ConvertTypeForMem(KmpDependInfoPtrTy));
+  Base = CGF.MakeAddrLValue(Addr, KmpDependInfoTy, Base.getBaseInfo(),
+                            Base.getTBAAInfo());
+  llvm::Value *DepObjAddr = CGF.Builder.CreateGEP(
+      Addr.getPointer(),
+      llvm::ConstantInt::get(CGF.IntPtrTy, -1, /*isSigned=*/true));
+  LValue NumDepsBase = CGF.MakeAddrLValue(
+      Address(DepObjAddr, Addr.getAlignment()), KmpDependInfoTy,
+      Base.getBaseInfo(), Base.getTBAAInfo());
+  // NumDeps = deps[i].base_addr;
+  LValue BaseAddrLVal = CGF.EmitLValueForField(
+      NumDepsBase, *std::next(KmpDependInfoRD->field_begin(), BaseAddr));
+  llvm::Value *NumDeps = CGF.EmitLoadOfScalar(BaseAddrLVal, Loc);
+
+  Address Begin = Base.getAddress(CGF);
+  // Cast from pointer to array type to pointer to single element.
+  llvm::Value *End = CGF.Builder.CreateGEP(Begin.getPointer(), NumDeps);
+  // The basic structure here is a while-do loop.
+  llvm::BasicBlock *BodyBB = CGF.createBasicBlock("omp.body");
+  llvm::BasicBlock *DoneBB = CGF.createBasicBlock("omp.done");
+  llvm::BasicBlock *EntryBB = CGF.Builder.GetInsertBlock();
+  CGF.EmitBlock(BodyBB);
+  llvm::PHINode *ElementPHI =
+      CGF.Builder.CreatePHI(Begin.getType(), 2, "omp.elementPast");
+  ElementPHI->addIncoming(Begin.getPointer(), EntryBB);
+  Begin = Address(ElementPHI, Begin.getAlignment());
+  Base = CGF.MakeAddrLValue(Begin, KmpDependInfoTy, Base.getBaseInfo(),
+                            Base.getTBAAInfo());
+  // deps[i].flags = NewDepKind;
+  RTLDependenceKindTy DepKind = translateDependencyKind(NewDepKind);
+  LValue FlagsLVal = CGF.EmitLValueForField(
+      Base, *std::next(KmpDependInfoRD->field_begin(), Flags));
+  CGF.EmitStoreOfScalar(llvm::ConstantInt::get(LLVMFlagsTy, DepKind),
+                        FlagsLVal);
+
+  // Shift the address forward by one element.
+  Address ElementNext =
+      CGF.Builder.CreateConstGEP(Begin, /*Index=*/1, "omp.elementNext");
+  ElementPHI->addIncoming(ElementNext.getPointer(),
+                          CGF.Builder.GetInsertBlock());
+  llvm::Value *IsEmpty =
+      CGF.Builder.CreateICmpEQ(ElementNext.getPointer(), End, "omp.isempty");
+  CGF.Builder.CreateCondBr(IsEmpty, DoneBB, BodyBB);
+  // Done.
+  CGF.EmitBlock(DoneBB, /*IsFinished=*/true);
+}
+
 void CGOpenMPRuntime::emitTaskCall(CodeGenFunction &CGF, SourceLocation Loc,
                                    const OMPExecutableDirective &D,
                                    llvm::Function *TaskFunction,
