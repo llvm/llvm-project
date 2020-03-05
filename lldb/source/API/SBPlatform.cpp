@@ -303,6 +303,12 @@ SBPlatform &SBPlatform::operator=(const SBPlatform &rhs) {
 
 SBPlatform::~SBPlatform() = default;
 
+SBPlatform SBPlatform::GetHostPlatform() {
+  SBPlatform host_platform;
+  host_platform.m_opaque_sp = Platform::GetHostPlatform();
+  return host_platform;
+}
+
 bool SBPlatform::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBPlatform, IsValid);
   return this->operator bool();

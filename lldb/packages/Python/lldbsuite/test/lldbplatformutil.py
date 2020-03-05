@@ -57,7 +57,7 @@ def _run_adb_command(cmd, device_id):
 
 def target_is_android():
     if not hasattr(target_is_android, 'result'):
-        triple = lldb.DBG.GetSelectedPlatform().GetTriple()
+        triple = lldb.selected_platform.GetTriple()
         match = re.match(".*-.*-.*-android", triple)
         target_is_android.result = match is not None
     return target_is_android.result
@@ -129,7 +129,7 @@ def getDarwinOSTriples():
 
 def getPlatform():
     """Returns the target platform which the tests are running on."""
-    triple = lldb.DBG.GetSelectedPlatform().GetTriple()
+    triple = lldb.selected_platform.GetTriple()
     if triple is None:
       # It might be an unconnected remote platform.
       return ''
