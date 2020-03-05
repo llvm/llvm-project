@@ -5490,9 +5490,20 @@ char TargetLowering::isNegatibleForFree(SDValue Op, SelectionDAG &DAG,
   EVT VT = Op.getValueType();
   const SDNodeFlags Flags = Op->getFlags();
   const TargetOptions &Options = DAG.getTarget().Options;
-  if (!Op.hasOneUse() && !(Op.getOpcode() == ISD::FP_EXTEND &&
-                           isFPExtFree(VT, Op.getOperand(0).getValueType())))
-    return 0;
+  if (!Op.hasOneUse()) {
+    bool IsFreeExtend = Op.getOpcode() == ISD::FP_EXTEND &&
+                        isFPExtFree(VT, Op.getOperand(0).getValueType());
+
+    // If we already have the use of the negated floating constant, it is free
+    // to negate it even it has multiple uses.
+    bool IsFreeConstant =
+        Op.getOpcode() == ISD::ConstantFP &&
+        !getNegatedExpression(Op, DAG, LegalOperations, ForCodeSize)
+             .use_empty();
+
+    if (!IsFreeExtend && !IsFreeConstant)
+      return 0;
+  }
 
   // Don't recurse exponentially.
   if (Depth > SelectionDAG::MaxRecursionDepth)
@@ -5687,14 +5698,7 @@ SDValue TargetLowering::getNegatedExpression(SDValue Op, SelectionDAG &DAG,
                                  ForCodeSize, Depth + 1);
     char V1 = isNegatibleForFree(Op.getOperand(1), DAG, LegalOperations,
                                  ForCodeSize, Depth + 1);
-    // TODO: This is a hack. It is possible that costs have changed between now
-    //       and the initial calls to isNegatibleForFree(). That is because we
-    //       are rewriting the expression, and that may change the number of
-    //       uses (and therefore the cost) of values. If the negation costs are
-    //       equal, only negate this value if it is a constant. Otherwise, try
-    //       operand 1. A better fix would eliminate uses as a cost factor or
-    //       track the change in uses as we rewrite the expression.
-    if (V0 > V1 || (V0 == V1 && isa<ConstantFPSDNode>(Op.getOperand(0)))) {
+    if (V0 > V1) {
       // fold (fneg (fma X, Y, Z)) -> (fma (fneg X), Y, (fneg Z))
       SDValue Neg0 = getNegatedExpression(
           Op.getOperand(0), DAG, LegalOperations, ForCodeSize, Depth + 1);
