@@ -38,7 +38,6 @@ target_link_libraries(FortranEvaluate
   FortranCommon
   FortranDecimal
   FortranParser
-  m
 )
 
 install (TARGETS FortranEvaluate

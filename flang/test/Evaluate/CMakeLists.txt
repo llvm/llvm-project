@@ -98,7 +98,6 @@ target_link_libraries(real-test
   FortranEvaluate
   FortranDecimal
   FortranSemantics
-  m
 )
 
 add_executable(reshape-test
