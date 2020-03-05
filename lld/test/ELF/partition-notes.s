@@ -9,20 +9,38 @@
 // RUN: llvm-objcopy --extract-main-partition %t %t0
 // RUN: llvm-objcopy --extract-partition=part1 %t %t1
 
-// RUN: llvm-readelf --all %t0 | FileCheck --check-prefixes=CHECK,PART0 %s
-// RUN: llvm-readelf --all %t1 | FileCheck --check-prefixes=CHECK,PART1 %s
+// RUN: llvm-readobj --all %t0 | FileCheck --check-prefixes=CHECK,PART0 %s
+// RUN: llvm-readobj --all %t1 | FileCheck --check-prefixes=CHECK,PART1 %s
 
-// CHECK: Program Headers:
-// CHECK: NOTE 0x{{0*}}[[NOTE_OFFSET:[^ ]*]]
+// CHECK:        Type: PT_NOTE
+// CHECK-NEXT:   Offset: 0x{{0*}}[[NOTE_OFFSET:[^ ]*]]
 
-// CHECK: Displaying notes found at file offset 0x{{0*}}[[NOTE_OFFSET]]
-// CHECK-NEXT: Owner
-// CHECK-NEXT: foo                   0x00000004	NT_VERSION (version)
-// CHECK-NEXT:  description data: 62 61 72 00
-// CHECK-NEXT: Displaying notes
-// CHECK-NEXT: Owner
-// CHECK-NEXT: GNU                   0x00000014	NT_GNU_BUILD_ID (unique build ID bitstring)
-// CHECK-NEXT: Build ID: 08b93eab87177a2356d1b0d1148339463f98dac2
+// CHECK:      Notes [
+// CHECK-NEXT:   NoteSection {
+// CHECK-NEXT:     Name: .note.obj
+// CHECK-NEXT:     Offset: 0x{{0*}}[[NOTE_OFFSET]]
+// CHECK-NEXT:     Size:
+// CHECK-NEXT:     Note {
+// CHECK-NEXT:       Owner: foo
+// CHECK-NEXT:       Data size: 0x4
+// CHECK-NEXT:       Type: NT_VERSION (version)
+// CHECK-NEXT:       Description data (
+// CHECK-NEXT:         0000: 62617200                             |bar.|
+// CHECK-NEXT:       )
+// CHECK-NEXT:     }
+// CHECK-NEXT:   }
+// CHECK-NEXT:   NoteSection {
+// CHECK-NEXT:     Name: .note.gnu.build-id
+// CHECK-NEXT:     Offset:
+// CHECK-NEXT:     Size:
+// CHECK-NEXT:     Note {
+// CHECK-NEXT:       Owner: GNU
+// CHECK-NEXT:       Data size:
+// CHECK-NEXT:       Type: NT_GNU_BUILD_ID (unique build ID bitstring)
+// CHECK-NEXT:       Build ID: 08b93eab87177a2356d1b0d1148339463f98dac2
+// CHECK-NEXT:     }
+// CHECK-NEXT:   }
+// CHECK-NEXT: ]
 
 .section .llvm_sympart,"",@llvm_sympart
 .asciz "part1"

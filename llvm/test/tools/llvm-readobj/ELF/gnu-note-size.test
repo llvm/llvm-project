@@ -2,12 +2,14 @@
 # RUN: llvm-readelf --notes %t | FileCheck %s --check-prefix=GNU
 # RUN: llvm-readobj --elf-output-style LLVM --notes %t | FileCheck %s --check-prefix=LLVM
 
-# GNU:        Owner                 Data size       Description
+# GNU:      Displaying notes found in: .note.ABI-tag
+# GNU-NEXT:   Owner                 Data size       Description
 # GNU-NEXT:   GNU                   0x00000004      NT_GNU_ABI_TAG (ABI version tag)
 # GNU-NEXT:     <corrupt GNU_ABI_TAG>
 
 # LLVM:      Notes [
 # LLVM-NEXT:   NoteSection {
+# LLVM-NEXT:     Name: .note.ABI-tag
 # LLVM-NEXT:     Offset:
 # LLVM-NEXT:     Size: 0x14
 # LLVM-NEXT:     Note {
