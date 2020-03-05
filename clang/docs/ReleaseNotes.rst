@@ -462,6 +462,8 @@ clang-format
     const x = foo ?? default;
     const z = foo?.bar?.baz;
 
+- Option ``AlwaysBreakAfterReturnType`` now manages all operator functions.
+
 libclang
 --------
 
