@@ -380,8 +380,7 @@ LogicalResult ModuleTranslation::convertOperation(Operation &opInst,
 
   if (opInst.getDialect() == ompDialect) {
     if (!ompBuilder) {
-      ompBuilder =
-          std::move(std::make_unique<llvm::OpenMPIRBuilder>(*llvmModule));
+      ompBuilder = std::make_unique<llvm::OpenMPIRBuilder>(*llvmModule);
       ompBuilder->initialize();
     }
 
