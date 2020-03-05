@@ -713,8 +713,7 @@ def Vector_ReshapeOp :
   Vector_Op<"reshape", [AttrSizedOperandSegments, NoSideEffect]>,
     Arguments<(ins AnyVector:$vector, Variadic<Index>:$input_shape,
                Variadic<Index>:$output_shape,
-               I64ArrayAttr:$fixed_vector_sizes,
-               I32ElementsAttr:$operand_segment_sizes)>,
+               I64ArrayAttr:$fixed_vector_sizes)>,
     Results<(outs AnyVector:$result)> {
   let summary = "vector reshape operation";
   let description = [{

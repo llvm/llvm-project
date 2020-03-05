@@ -1825,10 +1825,7 @@ void mlir::SubViewOp::build(Builder *b, OperationState &result, Value source,
                             ArrayRef<NamedAttribute> attrs) {
   if (!resultType)
     resultType = inferSubViewResultType(source.getType().cast<MemRefType>());
-  auto segmentAttr = b->getI32VectorAttr(
-      {1, static_cast<int>(offsets.size()), static_cast<int32_t>(sizes.size()),
-       static_cast<int32_t>(strides.size())});
-  build(b, result, resultType, source, offsets, sizes, strides, segmentAttr);
+  build(b, result, resultType, source, offsets, sizes, strides);
   result.addAttributes(attrs);
 }
 

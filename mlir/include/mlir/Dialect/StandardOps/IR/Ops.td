@@ -1713,14 +1713,11 @@ def SubViewOp : Std_Op<"subview", [AttrSizedOperandSegments, NoSideEffect]> {
     }
   }];
 
-  // TODO(b/144779634, ravishankarm) : Use different arguments for
-  // offsets, sizes and strides.
   let arguments = (ins
     AnyMemRef:$source,
     Variadic<Index>:$offsets,
     Variadic<Index>:$sizes,
-    Variadic<Index>:$strides,
-    I32ElementsAttr:$operand_segment_sizes
+    Variadic<Index>:$strides
   );
   let results = (outs AnyMemRef:$result);
 
