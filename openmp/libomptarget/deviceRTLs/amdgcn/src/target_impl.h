@@ -127,6 +127,8 @@ INLINE int GetThreadIdInBlock() { return __builtin_amdgcn_workitem_id_x(); }
 INLINE int GetBlockIdInKernel() { return __builtin_amdgcn_workgroup_id_x(); }
 DEVICE int GetNumberOfBlocksInKernel();
 DEVICE int GetNumberOfThreadsInBlock();
+DEVICE unsigned GetWarpId();
+DEVICE unsigned GetLaneId();
 
 DEVICE bool __kmpc_impl_is_first_active_thread();
 
