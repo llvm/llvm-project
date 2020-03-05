@@ -569,7 +569,13 @@ class Value;
 
   /// Return true if this function can prove that V is never undef value
   /// or poison value.
-  bool isGuaranteedNotToBeUndefOrPoison(const Value *V);
+  //
+  /// If CtxI and DT are specified this method performs flow-sensitive analysis
+  /// and returns true if it is guaranteed to be never undef or poison
+  /// immediately before the CtxI.
+  bool isGuaranteedNotToBeUndefOrPoison(const Value *V,
+                                        const Instruction *CtxI = nullptr,
+                                        const DominatorTree *DT = nullptr);
 
   /// Specific patterns of select instructions we can match.
   enum SelectPatternFlavor {
