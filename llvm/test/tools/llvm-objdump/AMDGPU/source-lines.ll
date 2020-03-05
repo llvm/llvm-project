@@ -4,7 +4,7 @@
 ; RUN: llvm-objdump -triple=amdgcn-amd-amdhsa -mcpu=gfx802 -disassemble -source %t.o | FileCheck --check-prefix=SOURCE %t.ll
 
 ; Prologue.
-; LINE:      source_lines_test:
+; LINE:      source_lines_test{{>?}}:
 ; LINE-NEXT: ; source_lines_test():
 ; LINE-NEXT: ; {{.*}}source-lines.cl:1
 ; Kernel.
@@ -21,7 +21,7 @@
 ; LINE-NEXT: s_endpgm
 
 ; Prologue.
-; SOURCE:      source_lines_test:
+; SOURCE:      source_lines_test{{>?}}:
 ; SOURCE-NEXT: ; kernel void source_lines_test(global int *Out) {
 ; Kernel.
 ; SOURCE: v_mov_b32_e32 v{{[0-9]+}}, 0x777

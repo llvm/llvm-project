@@ -32,7 +32,7 @@
 # DIS-NEXT:  30030 00000000 00000001 00000000 00000000
 # DIS-NEXT:  30040 00000000 00000001 ffffffff ffff8004
 
-# DIS:      __start:
+# DIS:      <__start>:
 # DIS-NEXT:    addiu   $2, $3, -32720
 # DIS-NEXT:    addiu   $2, $3, -32736
 # DIS-NEXT:    addiu   $2, $3, -32704

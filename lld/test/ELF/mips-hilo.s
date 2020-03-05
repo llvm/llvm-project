@@ -35,7 +35,7 @@ g1:
 # CHECK: 0021000 g       .text   00000000 __start
 # CHECK: 0021024 g     O .data   00000004 g1
 
-# CHECK:      __start:
+# CHECK:      <__start>:
 # CHECK-NEXT:  21000:   lui    $8, 2
 #                                  ^-- %hi(__start+4)
 # CHECK-NEXT:  21004:   lui    $9, 2

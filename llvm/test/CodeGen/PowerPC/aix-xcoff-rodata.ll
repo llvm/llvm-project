@@ -285,33 +285,33 @@
 ; SYMS:      ]
 
 ; DIS: Disassembly of section .text:
-; DIS: 00000000 const_ivar:
+; DIS: 00000000 <const_ivar>:
 ; DIS-NEXT:        0: 00 00 00 23
 ; DIS-NEXT:        4: 00 00 00 00
 
-; DIS: 00000008 const_llvar:
+; DIS: 00000008 <const_llvar>:
 ; DIS-NEXT:        8: 00 00 00 00
 ; DIS-NEXT:        c: 00 00 00 24
 
-; DIS: 00000010 const_svar:
+; DIS: 00000010 <const_svar>:
 ; DIS-NEXT:       10: 00 25 00 00
 
-; DIS: 00000014 const_fvar:
+; DIS: 00000014 <const_fvar>:
 ; DIS-NEXT:       14: 44 48 00 00
 
-; DIS: 00000018 const_dvar:
+; DIS: 00000018 <const_dvar>:
 ; DIS-NEXT:       18: 40 8c 20 00
 ; DIS-NEXT:       1c: 00 00 00 00
 
-; DIS: 00000020 const_over_aligned:
+; DIS: 00000020 <const_over_aligned>:
 ; DIS-NEXT:       20: 40 8c 20 00
 ; DIS-NEXT:       24: 00 00 00 00
 
-; DIS: 00000028 const_chrarray:
+; DIS: 00000028 <const_chrarray>:
 ; DIS-NEXT:       28: 61 62 63 64
 ; DIS-NEXT:       2c: 00 00 00 00
 
-; DIS: 00000030 const_dblarr:
+; DIS: 00000030 <const_dblarr>:
 ; DIS-NEXT:       30: 3f f0 00 00
 ; DIS-NEXT:       34: 00 00 00 00
 ; DIS-NEXT:       38: 40 00 00 00

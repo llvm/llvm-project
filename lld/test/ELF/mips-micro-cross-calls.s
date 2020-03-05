@@ -18,12 +18,12 @@
 # REG:  {{0*}}[[BAR:[0-9a-f]+]]    g     F .text  00000000 bar
 # REG:  {{0*}}[[MIC:[0-9a-f]+]]    g       .text  00000000 0x80 micro
 
-# REG:        __start:
+# REG:        <__start>:
 # REG-NEXT:      jalx 0x[[MIC]] <micro>
 # REG-NEXT:      nop
 # REG-NEXT:      jalx 0x[[FOOT]] <__microLA25Thunk_foo>
 
-# REG:        __LA25Thunk_bar:
+# REG:        <__LA25Thunk_bar>:
 # REG-NEXT:      lui  $25, 0x2
 # REG-NEXT:      j    0x[[BAR]] <bar>
 
@@ -31,12 +31,12 @@
 # MICRO: {{0*}}[[START:[0-9a-f]+]] g       .text  00000000 __start
 # MICRO: {{0*}}[[FOO:[0-9a-f]+]]   g     F .text  00000000 0x80 foo
 
-# MICRO:      micro:
+# MICRO:      <micro>:
 # MICRO-NEXT:    jalx 0x[[START]]
 # MICRO-NEXT:    nop
 # MICRO-NEXT:    jalx 0x[[BART]]
 
-# MICRO:      __microLA25Thunk_foo:
+# MICRO:      <__microLA25Thunk_foo>:
 # MICRO-NEXT:    lui  $25, 0x2
 # MICRO-NEXT:    j    0x[[FOO]] <foo>
 

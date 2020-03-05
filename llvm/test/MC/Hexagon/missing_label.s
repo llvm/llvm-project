@@ -4,5 +4,5 @@
 .I1:
 nop
 
-# CHECK: .I1:
+# CHECK: <.I1>:
 # CHECK:        nop

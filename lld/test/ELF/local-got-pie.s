@@ -16,9 +16,9 @@ foo:
 // 0x22C8 - 0x1210 - 5 = 4275
 // DISASM:      Disassembly of section .text:
 // DISASM-EMPTY:
-// DISASM-NEXT: _start:
+// DISASM-NEXT: <_start>:
 // DISASM-NEXT:   1210: {{.*}} callq 4275
-// DISASM:      foo:
+// DISASM:      <foo>:
 // DISASM-NEXT:   1215: {{.*}} nop
 
 // CHECK:      Name: .got

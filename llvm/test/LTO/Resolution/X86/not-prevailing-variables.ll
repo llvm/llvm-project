@@ -8,10 +8,10 @@
 
 ; Check 'var2' was not inlined.
 ; RUN: llvm-objdump -d %t2.o.1 | FileCheck %s
-; CHECK:      testVar1:
+; CHECK:      <testVar1>:
 ; CHECK-NEXT:   movl $10, %eax
 ; CHECK-NEXT:   retq
-; CHECK:      testVar2:
+; CHECK:      <testVar2>:
 ; CHECK-NEXT:   movl  (%rip), %eax
 ; CHECK-NEXT:   retq
 

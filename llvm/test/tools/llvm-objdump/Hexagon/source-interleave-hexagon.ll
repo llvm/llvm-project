@@ -65,9 +65,9 @@ attributes #1 = { nounwind readnone }
 !21 = !DILocation(line: 8, column: 15, scope: !14)
 !22 = !DILocation(line: 8, column: 13, scope: !14)
 !23 = !DILocation(line: 8, column: 3, scope: !14)
-; LINES: main:
+; LINES: <main>:
 ; LINES-NEXT: main():
 ; LINES-NEXT: SRC_COMPDIR/source-interleave-hexagon.c:6
 
-; SOURCE: main:
+; SOURCE: <main>:
 ; SOURCE-NEXT: int main() {

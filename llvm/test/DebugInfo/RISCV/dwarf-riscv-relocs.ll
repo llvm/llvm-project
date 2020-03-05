@@ -18,7 +18,7 @@
 ; Check that we can print the source, even with relocations.
 ; OBJDUMP-SOURCE: Disassembly of section .text:
 ; OBJDUMP-SOURCE-EMPTY:
-; OBJDUMP-SOURCE-NEXT: 00000000 main:
+; OBJDUMP-SOURCE-NEXT: 00000000 <main>:
 ; OBJDUMP-SOURCE: ; {
 ; OBJDUMP-SOURCE: ; return 0;
 

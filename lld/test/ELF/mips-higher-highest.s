@@ -14,10 +14,10 @@ __start:
   lui     $7, %highest(_foo+0x300047FFF7FF8)
   ld      $7, %higher (_foo+0x300047FFF7FF8)($7)
 
-# CHECK:      __start:
+# CHECK:      <__start>:
 # CHECK-NEXT:   lui     $6, 3
 # CHECK-NEXT:   daddiu  $6, $6, 5
 # CHECK-NEXT:   lui     $7, 3
 # CHECK-NEXT:   ld      $7, 5($7)
 # CHECK-EMPTY:
-# CHECK-NEXT: _foo:
+# CHECK-NEXT: <_foo>:

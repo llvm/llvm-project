@@ -21,7 +21,7 @@ _start:
 
 // CHECK: Disassembly of section .text:
 // CHECK-EMPTY:
-// CHECK-NEXT:  _start:
+// CHECK-NEXT:  <_start>:
 // CHECK-NEXT:   201120:       callq    -5
 // CHECK-NEXT:                 callq    -10
 // CHECK-NEXT:                 callq    -15
@@ -33,7 +33,7 @@ _start:
 
 // PIE:      Disassembly of section .text:
 // PIE-EMPTY:
-// PIE-NEXT: _start:
+// PIE-NEXT: <_start>:
 // PIE-NEXT:     1210:       callq   -5
 // PIE-NEXT:                 callq   -10
 // PIE-NEXT:                 callq   -15

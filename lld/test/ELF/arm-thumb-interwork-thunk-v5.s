@@ -26,34 +26,34 @@ _start:
         blx thumb_func
         bx lr
 
-// CHECK: _start:
+// CHECK: <_start>:
 // CHECK-NEXT: 12000: 03 00 00 ea     b       #12 <__ARMv5ABSLongThunk_thumb_func>
 // CHECK-NEXT: 12004: 01 00 00 fa     blx     #4 <thumb_func>
 // CHECK-NEXT: 12008: 00 00 00 fa     blx     #0 <thumb_func>
 // CHECK-NEXT: 1200c: 1e ff 2f e1     bx      lr
 
-// CHECK: thumb_func:
+// CHECK: <thumb_func>:
 // CHECK-NEXT: 12010: 70 47   bx      lr
 
-// CHECK: __ARMv5ABSLongThunk_thumb_func:
+// CHECK: <__ARMv5ABSLongThunk_thumb_func>:
 // CHECK-NEXT: 12014: 04 f0 1f e5     ldr     pc, [pc, #-4]
-// CHECK: $d:
+// CHECK: <$d>:
 // CHECK-NEXT: 12018: 11 20 01 00     .word   0x00012011
 
-// CHECK-PI: _start:
+// CHECK-PI: <_start>:
 // CHECK-PI-NEXT: 2000: 03 00 00 ea     b       #12 <__ARMV5PILongThunk_thumb_func>
 // CHECK-PI-NEXT: 2004: 01 00 00 fa     blx     #4 <thumb_func>
 // CHECK-PI-NEXT: 2008: 00 00 00 fa     blx     #0 <thumb_func>
 // CHECK-PI-NEXT: 200c: 1e ff 2f e1     bx      lr
 
-// CHECK-PI: thumb_func:
+// CHECK-PI: <thumb_func>:
 // CHECK-PI-NEXT: 2010: 70 47   bx      lr
 
-// CHECK-PI: __ARMV5PILongThunk_thumb_func:
+// CHECK-PI: <__ARMV5PILongThunk_thumb_func>:
 // CHECK-PI-NEXT: 2014: 04 c0 9f e5     ldr     r12, [pc, #4]
 // CHECK-PI-NEXT: 2018: 0c c0 8f e0     add     r12, pc, r12
 // CHECK-PI-NEXT: 201c: 1c ff 2f e1     bx      r12
-// CHECK-PI: $d:
+// CHECK-PI: <$d>:
 // CHECK-PI-NEXT: 2020: f1 ff ff ff     .word   0xfffffff1
 
         .section .text.1, "ax", %progbits

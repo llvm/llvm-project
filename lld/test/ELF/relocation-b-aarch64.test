@@ -9,9 +9,9 @@
 
 # CHECK: Disassembly of section .text:
 # CHECK-EMPTY:
-# CHECK-NEXT: foo:
+# CHECK-NEXT: <foo>:
 # CHECK-NEXT:    210120:       b       #4
-# CHECK: bar:
+# CHECK: <bar>:
 # CHECK-NEXT:    210124:       b       #-4
 
 !ELF

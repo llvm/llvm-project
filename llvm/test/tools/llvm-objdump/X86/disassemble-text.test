@@ -6,6 +6,6 @@
 foo:
 .ascii "this is a test"
 
-# CHECK: foo:
+# CHECK: <foo>:
 # CHECK: 0:{{.*}}this is
 # CHECK: 8:{{.*}}a test

@@ -114,7 +114,7 @@ define void @callThroughPtrWithArgs(void (i32, i16, i64)* nocapture) {
 ; MIR64-NEXT: ADJCALLSTACKUP 112, 0, implicit-def dead $r1, implicit $r1
 
 ; CHECKASM-LABEL: .callThroughPtrWithArgs:
-; CHECKOBJ-LABEL: .callThroughPtrWithArgs:
+; CHECKOBJ-LABEL: <.callThroughPtrWithArgs>:
 
 ; ASMOBJ32:      stwu 1, -64(1)
 ; ASMOBJ32-DAG:  lwz [[REG:[0-9]+]], 0(3)

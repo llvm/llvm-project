@@ -36,11 +36,11 @@
 // Check that a PLT header is written and the ifunc entries appear last
 // DISASM: Disassembly of section .text:
 // DISASM-EMPTY:
-// DISASM-NEXT: foo:
+// DISASM-NEXT: <foo>:
 // DISASM-NEXT:   2012d8:       retq
-// DISASM:      bar:
+// DISASM:      <bar>:
 // DISASM-NEXT:   2012d9:       retq
-// DISASM:      _start:
+// DISASM:      <_start>:
 // DISASM-NEXT:   2012da:       callq   65
 // DISASM-NEXT:   2012df:       callq   76
 // DISASM-NEXT:                 callq   {{.*}} <bar2@plt>
@@ -48,24 +48,24 @@
 // DISASM-EMPTY:
 // DISASM-NEXT: Disassembly of section .plt:
 // DISASM-EMPTY:
-// DISASM-NEXT: .plt:
+// DISASM-NEXT: <.plt>:
 // DISASM-NEXT:   2012f0:       pushq   8514(%rip)
 // DISASM-NEXT:   2012f6:       jmpq    *8516(%rip)
 // DISASM-NEXT:   2012fc:       nopl    (%rax)
 // DISASM-EMPTY:
-// DISASM-NEXT:   bar2@plt:
+// DISASM-NEXT:   <bar2@plt>:
 // DISASM-NEXT:   201300:       jmpq    *8514(%rip)
 // DISASM-NEXT:   201306:       pushq   $0
 // DISASM-NEXT:   20130b:       jmp     -32 <.plt>
 // DISASM-EMPTY:
-// DISASM-NEXT:   zed2@plt:
+// DISASM-NEXT:   <zed2@plt>:
 // DISASM-NEXT:   201310:       jmpq    *8506(%rip)
 // DISASM-NEXT:   201316:       pushq   $1
 // DISASM-NEXT:   20131b:       jmp     -48 <.plt>
 // DISASM-EMPTY:
 // DISASM-NEXT: Disassembly of section .iplt:
 // DISASM-EMPTY:
-// DISASM-NEXT: .iplt:
+// DISASM-NEXT: <.iplt>:
 // DISASM-NEXT:   201320:       jmpq    *8498(%rip)
 // DISASM-NEXT:   201326:       pushq   $0
 // DISASM-NEXT:   20132b:       jmp     -64 <.plt>

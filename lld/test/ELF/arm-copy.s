@@ -66,7 +66,7 @@ _start:
 
 // CODE: Disassembly of section .text:
 // CODE-EMPTY:
-// CODE-NEXT: _start:
+// CODE-NEXT: <_start>:
 // S + A = 0x13220 + 0 = 65536 * 1 + 12832
 // CODE-NEXT:   111b4:       movw    r2, #12832
 // CODE-NEXT:   111b8:       movt    r2, #1

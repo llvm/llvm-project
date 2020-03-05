@@ -65,12 +65,12 @@ tfunc\suff\():
  FUNCTION 30
  FUNCTION 31
 // Precreated Thunk Pool goes here
-// CHECK1: __ThumbV7PILongThunk_imported:
+// CHECK1: <__ThumbV7PILongThunk_imported>:
 // CHECK1-NEXT:  1000004:       40 f2 30 0c     movw    r12, #48
 // CHECK1-NEXT:  1000008:       c0 f2 10 0c     movt    r12, #16
 // CHECK1-NEXT:  100000c:       fc 44   add     r12, pc
 // CHECK1-NEXT:  100000e:       60 47   bx      r12
-// CHECK1: __ThumbV7PILongThunk_imported2:
+// CHECK1: <__ThumbV7PILongThunk_imported2>:
 // CHECK1-NEXT:  1000010:       40 f2 34 0c     movw    r12, #52
 // CHECK1-NEXT:  1000014:       c0 f2 10 0c     movt    r12, #16
 // CHECK1-NEXT:  1000018:       fc 44   add     r12, pc
@@ -88,37 +88,37 @@ callers:
  b.w imported
  beq.w imported
  b.w imported2
-// CHECK2: __ThumbV7PILongThunk_imported:
+// CHECK2: <__ThumbV7PILongThunk_imported>:
 // CHECK2-NEXT:  1100008:       40 f2 2c 0c     movw    r12, #44
 // CHECK2-NEXT:  110000c:       c0 f2 00 0c     movt    r12, #0
 // CHECK2-NEXT:  1100010:       fc 44   add     r12, pc
 // CHECK2-NEXT:  1100012:       60 47   bx      r12
-// CHECK2: callers:
+// CHECK2: <callers>:
 // CHECK2-NEXT:  1100014:       ff f6 f6 bf     b.w     #-1048596 <__ThumbV7PILongThunk_imported>
 // CHECK2-NEXT:  1100018:       3f f4 f6 af     beq.w   #-20 <__ThumbV7PILongThunk_imported>
 // CHECK2-NEXT:  110001c:       ff f6 f8 bf     b.w     #-1048592 <__ThumbV7PILongThunk_imported2>
 
 // CHECK3: Disassembly of section .plt:
 // CHECK3-EMPTY:
-// CHECK3-NEXT: $a:
+// CHECK3-NEXT: <$a>:
 // CHECK3-NEXT:  1100020:       04 e0 2d e5     str     lr, [sp, #-4]!
 // CHECK3-NEXT:  1100024:       00 e6 8f e2     add     lr, pc, #0, #12
 // CHECK3-NEXT:  1100028:       02 ea 8e e2     add     lr, lr, #8192
 // CHECK3-NEXT:  110002c:       94 f0 be e5     ldr     pc, [lr, #148]!
-// CHECK3: $d:
+// CHECK3: <$d>:
 // CHECK3-NEXT:  1100030:       d4 d4 d4 d4     .word   0xd4d4d4d4
 // CHECK3-NEXT:  1100034:       d4 d4 d4 d4     .word   0xd4d4d4d4
 // CHECK3-NEXT:  1100038:       d4 d4 d4 d4     .word   0xd4d4d4d4
 // CHECK3-NEXT:  110003c:       d4 d4 d4 d4     .word   0xd4d4d4d4
-// CHECK3: $a:
+// CHECK3: <$a>:
 // CHECK3-NEXT:  1100040:       00 c6 8f e2     add     r12, pc, #0, #12
 // CHECK3-NEXT:  1100044:       02 ca 8c e2     add     r12, r12, #8192
 // CHECK3-NEXT:  1100048:       7c f0 bc e5     ldr     pc, [r12, #124]!
-// CHECK3: $d:
+// CHECK3: <$d>:
 // CHECK3-NEXT:  110004c:       d4 d4 d4 d4     .word   0xd4d4d4d4
-// CHECK3: $a:
+// CHECK3: <$a>:
 // CHECK3-NEXT:  1100050:       00 c6 8f e2     add     r12, pc, #0, #12
 // CHECK3-NEXT:  1100054:       02 ca 8c e2     add     r12, r12, #8192
 // CHECK3-NEXT:  1100058:       70 f0 bc e5     ldr     pc, [r12, #112]!
-// CHECK3: $d:
+// CHECK3: <$d>:
 // CHECK3-NEXT:  110005c:       d4 d4 d4 d4     .word   0xd4d4d4d4

@@ -10,7 +10,7 @@
 
 # CHECK:      Disassembly of section .stack_sizes:
 # CHECK-EMPTY:
-# CHECK-NEXT:   .stack_sizes:
+# CHECK-NEXT:   <.stack_sizes>:
 # CHECK-NEXT:    01
 
 .section .text.live,"ax",@progbits

@@ -14,7 +14,7 @@
 
 # AFTER: Disassembly of section .text:
 # AFTER-EMPTY:
-# AFTER: .text:
+# AFTER: <.text>:
 # AFTER:     1000: 70 47         bx lr
 # AFTER:     1002: 00 bf         nop
 # AFTER:     1004: 20 20         movs r0, #32

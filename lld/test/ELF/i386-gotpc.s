@@ -10,6 +10,6 @@ movl $_GLOBAL_OFFSET_TABLE_, %eax
 
 // DISASM:      Disassembly of section .text:
 // DISASM-EMPTY:
-// DISASM-NEXT: .text:
+// DISASM-NEXT: <.text>:
 // DISASM-NEXT:    1158:       movl    $8248, %eax
 //                                     ^-- 0x3190 (.got.plt) - 0x1158 = 8248

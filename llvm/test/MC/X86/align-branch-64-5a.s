@@ -4,7 +4,7 @@
 # RUN: cmp %t1 %t2
 # RUN: FileCheck --input-file=%t1 %s
 
-# CHECK: 0000000000000000 foo:
+# CHECK: 0000000000000000 <foo>:
 # CHECK-COUNT-3:      : 64 89 04 25 01 00 00 00          movl    %eax, %fs:1
 # CHECK:            18: c1 e9 02                         shrl    $2, %ecx
 # CHECK-NEXT:       1b: 89 d1                            movl    %edx, %ecx

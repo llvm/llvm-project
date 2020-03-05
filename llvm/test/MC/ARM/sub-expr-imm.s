@@ -15,7 +15,7 @@ AES_Te:
   .word 1,2,3,4,5,6
   .word 1,2,3,4,5,6
   .word 1,2,3,4,5,6
-@ CHECK: AES_encrypt:
+@ CHECK: <AES_encrypt>:
 AES_encrypt:
 @ CHECK: sub	r10, r3, #264
   sub r10,r3,#(AES_encrypt-AES_Te)

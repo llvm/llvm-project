@@ -13,7 +13,7 @@ _start:
         call    *__tls_get_addr@GOTPCREL(%rip)
         ret
 
-// CHECK:      _start:
+// CHECK:      <_start>:
 // CHECK-NEXT:   movq    %fs:0, %rax
 // CHECK-NEXT:   leaq    -4(%rax), %rax
 // CHECK-NEXT:   retq
