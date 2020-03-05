@@ -3223,24 +3223,13 @@ void MachORebaseEntry::moveNext() {
                                        SegmentOffset) << "\n");
       break;
     case MachO::REBASE_OPCODE_ADD_ADDR_IMM_SCALED:
+      SegmentOffset += ImmValue * PointerSize;
       error = O->RebaseEntryCheckSegAndOffsets(SegmentIndex, SegmentOffset,
                                                PointerSize);
       if (error) {
         *E = malformedError("for REBASE_OPCODE_ADD_ADDR_IMM_SCALED " +
                             Twine(error) + " for opcode at: 0x" +
                             Twine::utohexstr(OpcodeStart - Opcodes.begin()));
-        moveToEnd();
-        return;
-      }
-      SegmentOffset += ImmValue * PointerSize;
-      error = O->RebaseEntryCheckSegAndOffsets(SegmentIndex, SegmentOffset,
-                                               PointerSize);
-      if (error) {
-        *E =
-            malformedError("for REBASE_OPCODE_ADD_ADDR_IMM_SCALED "
-                           " (after adding immediate times the pointer size) " +
-                           Twine(error) + " for opcode at: 0x" +
-                           Twine::utohexstr(OpcodeStart - Opcodes.begin()));
         moveToEnd();
         return;
       }
@@ -3812,15 +3801,6 @@ void MachOBindEntry::moveNext() {
         moveToEnd();
         return;
       }
-      error = O->BindEntryCheckSegAndOffsets(SegmentIndex, SegmentOffset,
-                                             PointerSize);
-      if (error) {
-        *E = malformedError("for BIND_OPCODE_DO_BIND_ADD_ADDR_IMM_SCALED " +
-                            Twine(error) + " for opcode at: 0x" +
-                            Twine::utohexstr(OpcodeStart - Opcodes.begin()));
-        moveToEnd();
-        return;
-      }
       if (SymbolName == StringRef()) {
         *E = malformedError(
             "for BIND_OPCODE_DO_BIND_ADD_ADDR_IMM_SCALED "
@@ -3844,11 +3824,9 @@ void MachOBindEntry::moveNext() {
       error = O->BindEntryCheckSegAndOffsets(SegmentIndex, SegmentOffset +
                                              AdvanceAmount, PointerSize);
       if (error) {
-        *E =
-            malformedError("for BIND_OPCODE_DO_BIND_ADD_ADDR_IMM_SCALED "
-                           " (after adding immediate times the pointer size) " +
-                           Twine(error) + " for opcode at: 0x" +
-                           Twine::utohexstr(OpcodeStart - Opcodes.begin()));
+        *E = malformedError("for BIND_OPCODE_DO_BIND_ADD_ADDR_IMM_SCALED " +
+                            Twine(error) + " for opcode at: 0x" +
+                            Twine::utohexstr(OpcodeStart - Opcodes.begin()));
         moveToEnd();
         return;
       }
