@@ -2549,9 +2549,10 @@ public:
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
-  ExprResult RebuildStmtExpr(SourceLocation LParenLoc, Stmt *SubStmt,
-                             SourceLocation RParenLoc, bool IsDependent) {
-    return getSema().BuildStmtExpr(LParenLoc, SubStmt, RParenLoc, IsDependent);
+  ExprResult RebuildStmtExpr(SourceLocation LParenLoc,
+                                   Stmt *SubStmt,
+                                   SourceLocation RParenLoc) {
+    return getSema().ActOnStmtExpr(LParenLoc, SubStmt, RParenLoc);
   }
 
   /// Build a new __builtin_choose_expr expression.
@@ -10432,20 +10433,16 @@ TreeTransform<Derived>::TransformStmtExpr(StmtExpr *E) {
     return ExprError();
   }
 
-  // FIXME: This is not correct when substituting inside a templated
-  // context that isn't a DeclContext (such as a variable template).
-  bool IsDependent = getSema().CurContext->isDependentContext();
-
   if (!getDerived().AlwaysRebuild() &&
-      IsDependent == E->isInstantiationDependent() &&
       SubStmt.get() == E->getSubStmt()) {
     // Calling this an 'error' is unintuitive, but it does the right thing.
     SemaRef.ActOnStmtExprError();
     return SemaRef.MaybeBindToTemporary(E);
   }
 
-  return getDerived().RebuildStmtExpr(E->getLParenLoc(), SubStmt.get(),
-                                      E->getRParenLoc(), IsDependent);
+  return getDerived().RebuildStmtExpr(E->getLParenLoc(),
+                                      SubStmt.get(),
+                                      E->getRParenLoc());
 }
 
 template<typename Derived>
@@ -11891,8 +11888,6 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
     NewTrailingRequiresClause = getDerived().TransformExpr(TRC);
 
   // Create the local class that will describe the lambda.
-  // FIXME: KnownDependent below is wrong when substituting inside a templated
-  // context that isn't a DeclContext (such as a variable template).
   CXXRecordDecl *OldClass = E->getLambdaClass();
   CXXRecordDecl *Class
     = getSema().createLambdaClosureType(E->getIntroducerRange(),

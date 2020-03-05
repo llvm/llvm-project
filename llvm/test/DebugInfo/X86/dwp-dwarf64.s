@@ -62,7 +62,7 @@
 ## Row 0:
     .long 1                     # DW_SECT_INFO
     .long 3                     # DW_SECT_ABBREV
-# Row 1:
+## Row 1:
     .long .LCUBegin-.debug_info.dwo     # Offset in .debug_info.dwo
     .long .LAbbrBegin-.debug_abbrev.dwo # Offset in .debug_abbrev.dwo
 ## Table of Section Sizes:

@@ -414,7 +414,6 @@ protected:
 public:
   CallbackVH() : ValueHandleBase(Callback) {}
   CallbackVH(Value *P) : ValueHandleBase(Callback, P) {}
-  CallbackVH(const Value *P) : CallbackVH(const_cast<Value *>(P)) {}
 
   operator Value*() const {
     return getValPtr();
