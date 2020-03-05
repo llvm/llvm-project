@@ -26,6 +26,7 @@
 #include "llvm/Support/Host.h"
 #include "llvm/Support/Mutex.h"
 #include "llvm/Support/SwapByteOrder.h"
+#include <deque>
 #include <map>
 #include <system_error>
 #include <unordered_map>
@@ -251,7 +252,9 @@ protected:
 
   // A list of all sections emitted by the dynamic linker.  These sections are
   // referenced in the code by means of their index in this list - SectionID.
-  typedef SmallVector<SectionEntry, 64> SectionList;
+  // Because references may be kept while the list grows, use a container that
+  // guarantees reference stability.
+  typedef std::deque<SectionEntry> SectionList;
   SectionList Sections;
 
   typedef unsigned SID; // Type for SectionIDs
