@@ -609,9 +609,8 @@ void OpEmitter::genNamedSuccessorGetters() {
     if (successor.name.empty())
       continue;
 
-    // Generate the accessors for a variadic successor.
+    // Generate the accessors for a variadic successor list.
     if (successor.isVariadic()) {
-      // Generate the getter.
       auto &m = opClass.newMethod("SuccessorRange", successor.name);
       m.body() << formatv(
           "  return {std::next(this->getOperation()->successor_begin(), {0}), "
@@ -620,21 +619,8 @@ void OpEmitter::genNamedSuccessorGetters() {
       continue;
     }
 
-    // Generate the block getter.
     auto &m = opClass.newMethod("Block *", successor.name);
     m.body() << formatv("  return this->getOperation()->getSuccessor({0});", i);
-
-    // Generate the all-operands getter.
-    auto &operandsMethod = opClass.newMethod(
-        "Operation::operand_range", (successor.name + "Operands").str());
-    operandsMethod.body() << formatv(
-        " return this->getOperation()->getSuccessorOperands({0});", i);
-
-    // Generate the individual-operand getter.
-    auto &operandMethod = opClass.newMethod(
-        "Value", (successor.name + "Operand").str(), "unsigned index");
-    operandMethod.body() << formatv(
-        " return this->getOperation()->getSuccessorOperand({0}, index);", i);
   }
 }
 
@@ -1044,14 +1030,9 @@ void OpEmitter::buildParamList(std::string &paramList,
   }
 
   /// Insert parameters for the block and operands for each successor.
-  const char *variadicSuccCode =
-      ", ArrayRef<Block *> {0}, ArrayRef<ValueRange> {0}Operands";
-  const char *succCode = ", Block *{0}, ValueRange {0}Operands";
-  for (const NamedSuccessor &namedSuccessor : op.getSuccessors()) {
-    if (namedSuccessor.isVariadic())
-      paramList += llvm::formatv(variadicSuccCode, namedSuccessor.name).str();
-    else
-      paramList += llvm::formatv(succCode, namedSuccessor.name).str();
+  for (const NamedSuccessor &succ : op.getSuccessors()) {
+    paramList += (succ.isVariadic() ? ", ArrayRef<Block *> " : ", Block *");
+    paramList += succ.name;
   }
 }
 
@@ -1123,14 +1104,7 @@ void OpEmitter::genCodeForAddingArgAndRegionForBuilder(OpMethodBody &body,
 
   // Push all successors to the result.
   for (const NamedSuccessor &namedSuccessor : op.getSuccessors()) {
-    if (namedSuccessor.isVariadic()) {
-      body << formatv("  for (int i = 0, e = {1}.size(); i != e; ++i)\n"
-                      "    {0}.addSuccessor({1}[i], {1}Operands[i]);\n",
-                      builderOpState, namedSuccessor.name);
-      continue;
-    }
-
-    body << formatv("  {0}.addSuccessor({1}, {1}Operands);\n", builderOpState,
+    body << formatv("  {0}.addSuccessors({1});\n", builderOpState,
                     namedSuccessor.name);
   }
 }
@@ -1488,9 +1462,7 @@ void OpEmitter::genTraits() {
   int numVariadicOperands = op.getNumVariadicOperands();
 
   // Add operand size trait.
-  // Note: Successor operands are also included in the operation's operand list,
-  // so we always need to use VariadicOperands in the presence of successors.
-  if (numVariadicOperands != 0 || op.getNumSuccessors()) {
+  if (numVariadicOperands != 0) {
     if (numOperands == numVariadicOperands)
       opClass.addTrait("OpTrait::VariadicOperands");
     else

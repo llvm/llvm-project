@@ -42,15 +42,11 @@ OperationState::OperationState(Location location, StringRef name,
 }
 
 void OperationState::addOperands(ValueRange newOperands) {
-  assert(successors.empty() && "Non successor operands should be added first.");
   operands.append(newOperands.begin(), newOperands.end());
 }
 
-void OperationState::addSuccessor(Block *successor, ValueRange succOperands) {
-  successors.push_back(successor);
-  // Insert a sentinel operand to mark a barrier between successor operands.
-  operands.push_back(nullptr);
-  operands.append(succOperands.begin(), succOperands.end());
+void OperationState::addSuccessors(SuccessorRange newSuccessors) {
+  successors.append(newSuccessors.begin(), newSuccessors.end());
 }
 
 Region *OperationState::addRegion() {

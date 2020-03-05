@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Transforms/RegionUtils.h"
+#include "mlir/Analysis/ControlFlowInterfaces.h"
 #include "mlir/IR/Block.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/RegionGraphTraits.h"
@@ -172,8 +173,9 @@ static bool isUseSpeciallyKnownDead(OpOperand &use, LiveMap &liveMap) {
   // node, rather than to the terminator op itself, a terminator op can't e.g.
   // "print" the value of a successor operand.
   if (owner->isKnownTerminator()) {
-    if (auto arg = owner->getSuccessorBlockArgument(operandIndex))
-      return !liveMap.wasProvenLive(*arg);
+    if (BranchOpInterface branchInterface = dyn_cast<BranchOpInterface>(owner))
+      if (auto arg = branchInterface.getSuccessorBlockArgument(operandIndex))
+        return !liveMap.wasProvenLive(*arg);
     return false;
   }
   return false;
@@ -200,6 +202,29 @@ static bool isOpIntrinsicallyLive(Operation *op) {
 }
 
 static void propagateLiveness(Region &region, LiveMap &liveMap);
+
+static void propagateTerminatorLiveness(Operation *op, LiveMap &liveMap) {
+  // Terminators are always live.
+  liveMap.setProvedLive(op);
+
+  // Check to see if we can reason about the successor operands and mutate them.
+  BranchOpInterface branchInterface = dyn_cast<BranchOpInterface>(op);
+  if (!branchInterface || !branchInterface.canEraseSuccessorOperand()) {
+    for (Block *successor : op->getSuccessors())
+      for (BlockArgument arg : successor->getArguments())
+        liveMap.setProvedLive(arg);
+    return;
+  }
+
+  // If we can't reason about the operands to a successor, conservatively mark
+  // all arguments as live.
+  for (unsigned i = 0, e = op->getNumSuccessors(); i != e; ++i) {
+    if (!branchInterface.getSuccessorOperands(i))
+      for (BlockArgument arg : op->getSuccessor(i)->getArguments())
+        liveMap.setProvedLive(arg);
+  }
+}
+
 static void propagateLiveness(Operation *op, LiveMap &liveMap) {
   // All Value's are either a block argument or an op result.
   // We call processValue on those cases.
@@ -207,6 +232,10 @@ static void propagateLiveness(Operation *op, LiveMap &liveMap) {
   // Recurse on any regions the op has.
   for (Region &region : op->getRegions())
     propagateLiveness(region, liveMap);
+
+  // Process terminator operations.
+  if (op->isKnownTerminator())
+    return propagateTerminatorLiveness(op, liveMap);
 
   // Process the op itself.
   if (isOpIntrinsicallyLive(op)) {
@@ -238,6 +267,10 @@ static void propagateLiveness(Region &region, LiveMap &liveMap) {
 
 static void eraseTerminatorSuccessorOperands(Operation *terminator,
                                              LiveMap &liveMap) {
+  BranchOpInterface branchOp = dyn_cast<BranchOpInterface>(terminator);
+  if (!branchOp)
+    return;
+
   for (unsigned succI = 0, succE = terminator->getNumSuccessors();
        succI < succE; succI++) {
     // Iterating successors in reverse is not strictly needed, since we
@@ -245,15 +278,17 @@ static void eraseTerminatorSuccessorOperands(Operation *terminator,
     // since it will promote later operands of the terminator being erased
     // first, reducing the quadratic-ness.
     unsigned succ = succE - succI - 1;
-    for (unsigned argI = 0, argE = terminator->getNumSuccessorOperands(succ);
-         argI < argE; argI++) {
+    Optional<OperandRange> succOperands = branchOp.getSuccessorOperands(succ);
+    if (!succOperands)
+      continue;
+    Block *successor = terminator->getSuccessor(succ);
+
+    for (unsigned argI = 0, argE = succOperands->size(); argI < argE; ++argI) {
       // Iterating args in reverse is needed for correctness, to avoid
       // shifting later args when earlier args are erased.
       unsigned arg = argE - argI - 1;
-      Value value = terminator->getSuccessor(succ)->getArgument(arg);
-      if (!liveMap.wasProvenLive(value)) {
-        terminator->eraseSuccessorOperand(succ, arg);
-      }
+      if (!liveMap.wasProvenLive(successor->getArgument(arg)))
+        branchOp.eraseSuccessorOperand(succ, arg);
     }
   }
 }

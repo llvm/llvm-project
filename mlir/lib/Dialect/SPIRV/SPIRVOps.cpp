@@ -971,7 +971,6 @@ static ParseResult parseBranchConditionalOp(OpAsmParser &parser,
   auto &builder = parser.getBuilder();
   OpAsmParser::OperandType condInfo;
   Block *dest;
-  SmallVector<Value, 4> destOperands;
 
   // Parse the condition.
   Type boolTy = builder.getI1Type();
@@ -996,17 +995,24 @@ static ParseResult parseBranchConditionalOp(OpAsmParser &parser,
   }
 
   // Parse the true branch.
+  SmallVector<Value, 4> trueOperands;
   if (parser.parseComma() ||
-      parser.parseSuccessorAndUseList(dest, destOperands))
+      parser.parseSuccessorAndUseList(dest, trueOperands))
     return failure();
-  state.addSuccessor(dest, destOperands);
+  state.addSuccessors(dest);
+  state.addOperands(trueOperands);
 
   // Parse the false branch.
-  destOperands.clear();
+  SmallVector<Value, 4> falseOperands;
   if (parser.parseComma() ||
-      parser.parseSuccessorAndUseList(dest, destOperands))
+      parser.parseSuccessorAndUseList(dest, falseOperands))
     return failure();
-  state.addSuccessor(dest, destOperands);
+  state.addSuccessors(dest);
+  state.addOperands(falseOperands);
+  state.addAttribute(
+      spirv::BranchConditionalOp::getOperandSegmentSizeAttr(),
+      builder.getI32VectorAttr({1, static_cast<int32_t>(trueOperands.size()),
+                                static_cast<int32_t>(falseOperands.size())}));
 
   return success();
 }
@@ -1024,11 +1030,11 @@ static void print(spirv::BranchConditionalOp branchOp, OpAsmPrinter &printer) {
   }
 
   printer << ", ";
-  printer.printSuccessorAndUseList(branchOp.getOperation(),
-                                   spirv::BranchConditionalOp::kTrueIndex);
+  printer.printSuccessorAndUseList(branchOp.getTrueBlock(),
+                                   branchOp.getTrueBlockArguments());
   printer << ", ";
-  printer.printSuccessorAndUseList(branchOp.getOperation(),
-                                   spirv::BranchConditionalOp::kFalseIndex);
+  printer.printSuccessorAndUseList(branchOp.getFalseBlock(),
+                                   branchOp.getFalseBlockArguments());
 }
 
 static LogicalResult verify(spirv::BranchConditionalOp branchOp) {

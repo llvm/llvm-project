@@ -634,21 +634,29 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
     auto *brInst = cast<llvm::BranchInst>(inst);
     OperationState state(loc,
                          brInst->isConditional() ? "llvm.cond_br" : "llvm.br");
-    SmallVector<Value, 4> ops;
     if (brInst->isConditional()) {
       Value condition = processValue(brInst->getCondition());
       if (!condition)
         return failure();
-      ops.push_back(condition);
+      state.addOperands(condition);
     }
-    state.addOperands(ops);
-    SmallVector<Block *, 4> succs;
-    for (auto *succ : llvm::reverse(brInst->successors())) {
+
+    std::array<int32_t, 3> operandSegmentSizes = {1, 0, 0};
+    for (int i : llvm::seq<int>(0, brInst->getNumSuccessors())) {
+      auto *succ = brInst->getSuccessor(i);
       SmallVector<Value, 4> blockArguments;
       if (failed(processBranchArgs(brInst, succ, blockArguments)))
         return failure();
-      state.addSuccessor(blocks[succ], blockArguments);
+      state.addSuccessors(blocks[succ]);
+      state.addOperands(blockArguments);
+      operandSegmentSizes[i + 1] = blockArguments.size();
     }
+
+    if (brInst->isConditional()) {
+      state.addAttribute(LLVM::CondBrOp::getOperandSegmentSizeAttr(),
+                         b.getI32VectorAttr(operandSegmentSizes));
+    }
+
     b.createOperation(state);
     return success();
   }

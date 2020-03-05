@@ -439,11 +439,11 @@ func @bbargs() -> (i16, i8) {
 func @verbose_terminators() -> (i1, i17) {
   %0:2 = "foo"() : () -> (i1, i17)
 // CHECK:  br ^bb1(%{{.*}}#0, %{{.*}}#1 : i1, i17)
-  "std.br"()[^bb1(%0#0, %0#1 : i1, i17)] : () -> ()
+  "std.br"(%0#0, %0#1)[^bb1] : (i1, i17) -> ()
 
 ^bb1(%x : i1, %y : i17):
 // CHECK:  cond_br %{{.*}}, ^bb2(%{{.*}} : i17), ^bb3(%{{.*}}, %{{.*}} : i1, i17)
-  "std.cond_br"(%x)[^bb2(%y : i17), ^bb3(%x, %y : i1, i17)] : (i1) -> ()
+  "std.cond_br"(%x, %y, %x, %y) [^bb2, ^bb3] {operand_segment_sizes = dense<[1, 1, 2]>: vector<3xi32>} : (i1, i17, i1, i17) -> ()
 
 ^bb2(%a : i17):
   %true = constant 1 : i1
@@ -844,8 +844,8 @@ func @terminator_with_regions() {
 
 // CHECK-LABEL: func @unregistered_term
 func @unregistered_term(%arg0 : i1) -> i1 {
-  // CHECK-NEXT: "unregistered_br"()[^bb1(%{{.*}} : i1)] : () -> ()
-  "unregistered_br"()[^bb1(%arg0 : i1)] : () -> ()
+  // CHECK-NEXT: "unregistered_br"(%{{.*}})[^bb1] : (i1) -> ()
+  "unregistered_br"(%arg0)[^bb1] : (i1) -> ()
 
 ^bb1(%arg1 : i1):
   return %arg1 : i1
