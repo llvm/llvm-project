@@ -279,11 +279,15 @@ func @vector_fma(%a: vector<8xf32>, %b: vector<8x4xf32>) {
 }
 
 // CHECK-LABEL: reduce_fp
-func @reduce_fp(%arg0: vector<16xf32>) -> f32 {
+func @reduce_fp(%arg0: vector<16xf32>, %arg1: f32) -> f32 {
   // CHECK:    vector.reduction "add", %{{.*}} : vector<16xf32> into f32
   vector.reduction "add", %arg0 : vector<16xf32> into f32
+  // CHECK:    vector.reduction "add", %{{.*}}, %{{.*}} : vector<16xf32> into f32
+  vector.reduction "add", %arg0, %arg1 : vector<16xf32> into f32
   // CHECK:    vector.reduction "mul", %{{.*}} : vector<16xf32> into f32
   vector.reduction "mul", %arg0 : vector<16xf32> into f32
+  // CHECK:    vector.reduction "mul", %{{.*}}, %{{.*}} : vector<16xf32> into f32
+  vector.reduction "mul", %arg0, %arg1 : vector<16xf32> into f32
   // CHECK:    vector.reduction "min", %{{.*}} : vector<16xf32> into f32
   vector.reduction "min", %arg0 : vector<16xf32> into f32
   // CHECK:    %[[X:.*]] = vector.reduction "max", %{{.*}} : vector<16xf32> into f32
