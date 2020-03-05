@@ -3955,6 +3955,35 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
 
     break;
   }
+  case Intrinsic::amdgcn_ballot: {
+    if (auto *Src = dyn_cast<ConstantInt>(II->getArgOperand(0))) {
+      if (Src->isZero()) {
+        // amdgcn.ballot(i1 0) is zero.
+        return replaceInstUsesWith(*II, Constant::getNullValue(II->getType()));
+      }
+
+      if (Src->isOne()) {
+        // amdgcn.ballot(i1 1) is exec.
+        const char *RegName = "exec";
+        if (II->getType()->isIntegerTy(32))
+          RegName = "exec_lo";
+        else if (!II->getType()->isIntegerTy(64))
+          break;
+
+        Function *NewF = Intrinsic::getDeclaration(
+            II->getModule(), Intrinsic::read_register, II->getType());
+        Metadata *MDArgs[] = {MDString::get(II->getContext(), RegName)};
+        MDNode *MD = MDNode::get(II->getContext(), MDArgs);
+        Value *Args[] = {MetadataAsValue::get(II->getContext(), MD)};
+        CallInst *NewCall = Builder.CreateCall(NewF, Args);
+        NewCall->addAttribute(AttributeList::FunctionIndex,
+                              Attribute::Convergent);
+        NewCall->takeName(II);
+        return replaceInstUsesWith(*II, NewCall);
+      }
+    }
+    break;
+  }
   case Intrinsic::amdgcn_wqm_vote: {
     // wqm_vote is identity when the argument is constant.
     if (!isa<Constant>(II->getArgOperand(0)))
@@ -4179,7 +4208,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
       return replaceOperand(*II, 2,
           ConstantInt::get(OpIntTy, GCR.getBasePtrIndex()));
     }
-    
+
     // Translate facts known about a pointer before relocating into
     // facts about the relocate value, while being careful to
     // preserve relocation semantics.

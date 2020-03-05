@@ -23,6 +23,13 @@ define amdgpu_kernel void @fcmp(float inreg %x, float inreg %y) {
   ret void
 }
 
+; CHECK-LABEL: for function 'ballot':
+define amdgpu_kernel void @ballot(i1 inreg %x) {
+; CHECK-NOT: DIVERGENT:  %ballot = call i64 @llvm.amdgcn.ballot.i32
+  %ballot = call i64 @llvm.amdgcn.ballot.i32(i1 %x)
+  ret void
+}
+
 ; SGPR asm outputs are uniform regardless of the input operands.
 ; CHECK-LABEL: for function 'asm_sgpr':
 ; CHECK: DIVERGENT: i32 %divergent
@@ -49,6 +56,7 @@ declare i32 @llvm.amdgcn.workitem.id.x() #0
 declare i32 @llvm.amdgcn.readfirstlane(i32) #0
 declare i64 @llvm.amdgcn.icmp.i32(i32, i32, i32) #1
 declare i64 @llvm.amdgcn.fcmp.i32(float, float, i32) #1
+declare i64 @llvm.amdgcn.ballot.i32(i1) #1
 
 attributes #0 = { nounwind readnone }
 attributes #1 = { nounwind readnone convergent }

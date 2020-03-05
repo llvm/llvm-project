@@ -804,6 +804,7 @@ bool GCNTTIImpl::isAlwaysUniform(const Value *V) const {
     case Intrinsic::amdgcn_readlane:
     case Intrinsic::amdgcn_icmp:
     case Intrinsic::amdgcn_fcmp:
+    case Intrinsic::amdgcn_ballot:
     case Intrinsic::amdgcn_if_break:
       return true;
     }
