@@ -200,19 +200,6 @@ public:
 // FIXME: This should be in a separate file.
 namespace {
 
-class DarwinPPCAsmBackend : public PPCAsmBackend {
-public:
-  DarwinPPCAsmBackend(const Target &T, const Triple &TT)
-      : PPCAsmBackend(T, TT) {}
-
-  std::unique_ptr<MCObjectTargetWriter>
-  createObjectTargetWriter() const override {
-    uint32_t CPUType = cantFail(MachO::getCPUType(TT));
-    uint32_t CPUSubType = cantFail(MachO::getCPUSubType(TT));
-    return createPPCMachObjectWriter(TT.isArch64Bit(), CPUType, CPUSubType);
-  }
-};
-
 class ELFPPCAsmBackend : public PPCAsmBackend {
 public:
   ELFPPCAsmBackend(const Target &T, const Triple &TT) : PPCAsmBackend(T, TT) {}
@@ -256,9 +243,6 @@ MCAsmBackend *llvm::createPPCAsmBackend(const Target &T,
                                         const MCRegisterInfo &MRI,
                                         const MCTargetOptions &Options) {
   const Triple &TT = STI.getTargetTriple();
-  if (TT.isOSDarwin())
-    return new DarwinPPCAsmBackend(T, TT);
-
   if (TT.isOSBinFormatXCOFF())
     return new XCOFFPPCAsmBackend(T, TT);
 

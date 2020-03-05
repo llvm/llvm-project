@@ -58,8 +58,6 @@ TEST(MachOTest, CPUType) {
   CHECK_CPUTYPE("arm64-apple-darwin", MachO::CPU_TYPE_ARM64);
   CHECK_CPUTYPE("arm64e-apple-darwin", MachO::CPU_TYPE_ARM64);
   CHECK_CPUTYPE("arm64_32-apple-darwin", MachO::CPU_TYPE_ARM64_32);
-  CHECK_CPUTYPE("powerpc-apple-darwin", MachO::CPU_TYPE_POWERPC);
-  CHECK_CPUTYPE("powerpc64-apple-darwin", MachO::CPU_TYPE_POWERPC64);
 
   {
     // Not a mach-o.
@@ -101,8 +99,6 @@ TEST(MachOTest, CPUSubType) {
   CHECK_CPUSUBTYPE("arm64-apple-darwin", MachO::CPU_SUBTYPE_ARM64_ALL);
   CHECK_CPUSUBTYPE("arm64e-apple-darwin", MachO::CPU_SUBTYPE_ARM64E);
   CHECK_CPUSUBTYPE("arm64_32-apple-darwin", MachO::CPU_SUBTYPE_ARM64_32_V8);
-  CHECK_CPUSUBTYPE("powerpc-apple-darwin", MachO::CPU_SUBTYPE_POWERPC_ALL);
-  CHECK_CPUSUBTYPE("powerpc64-apple-darwin", MachO::CPU_SUBTYPE_POWERPC_ALL);
 
   {
     // Not a mach-o.
