@@ -13948,14 +13948,9 @@ void Sema::ActOnStmtExprError() {
   PopExpressionEvaluationContext();
 }
 
-ExprResult Sema::ActOnStmtExpr(Scope *S, SourceLocation LPLoc, Stmt *SubStmt,
-                               SourceLocation RPLoc) {
-  return BuildStmtExpr(LPLoc, SubStmt, RPLoc,
-                       S->getTemplateParamParent() != nullptr);
-}
-
-ExprResult Sema::BuildStmtExpr(SourceLocation LPLoc, Stmt *SubStmt,
-                               SourceLocation RPLoc, bool IsDependent) {
+ExprResult
+Sema::ActOnStmtExpr(SourceLocation LPLoc, Stmt *SubStmt,
+                    SourceLocation RPLoc) { // "({..})"
   assert(SubStmt && isa<CompoundStmt>(SubStmt) && "Invalid action invocation!");
   CompoundStmt *Compound = cast<CompoundStmt>(SubStmt);
 
@@ -13986,8 +13981,7 @@ ExprResult Sema::BuildStmtExpr(SourceLocation LPLoc, Stmt *SubStmt,
 
   // FIXME: Check that expression type is complete/non-abstract; statement
   // expressions are not lvalues.
-  Expr *ResStmtExpr =
-      new (Context) StmtExpr(Compound, Ty, LPLoc, RPLoc, IsDependent);
+  Expr *ResStmtExpr = new (Context) StmtExpr(Compound, Ty, LPLoc, RPLoc);
   if (StmtExprMayBindToTemp)
     return MaybeBindToTemporary(ResStmtExpr);
   return ResStmtExpr;
