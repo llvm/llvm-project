@@ -48,8 +48,8 @@ define amdgpu_kernel void @reduced_nested_loop_conditions(i64 addrspace(3)* noca
 ; IR:       bb4:
 ; IR-NEXT:    br label [[FLOW:%.*]]
 ; IR:       bb5:
-; IR-NEXT:    [[PHI_BROKEN:%.*]] = phi i64 [ [[TMP3:%.*]], [[BB10:%.*]] ], [ 0, [[BB:%.*]] ]
-; IR-NEXT:    [[MY_TMP6:%.*]] = phi i32 [ 0, [[BB]] ], [ [[MY_TMP11:%.*]], [[BB10]] ]
+; IR-NEXT:    [[PHI_BROKEN:%.*]] = phi i64 [ [[TMP6:%.*]], [[BB10:%.*]] ], [ 0, [[BB:%.*]] ]
+; IR-NEXT:    [[MY_TMP6:%.*]] = phi i32 [ 0, [[BB]] ], [ [[TMP5:%.*]], [[BB10]] ]
 ; IR-NEXT:    [[MY_TMP7:%.*]] = icmp eq i32 [[MY_TMP6]], 1
 ; IR-NEXT:    [[TMP0:%.*]] = call { i1, i64 } @llvm.amdgcn.if.i64(i1 [[MY_TMP7]])
 ; IR-NEXT:    [[TMP1:%.*]] = extractvalue { i1, i64 } [[TMP0]], 0
@@ -60,15 +60,13 @@ define amdgpu_kernel void @reduced_nested_loop_conditions(i64 addrspace(3)* noca
 ; IR:       bb9:
 ; IR-NEXT:    br i1 false, label [[BB3:%.*]], label [[BB9:%.*]]
 ; IR:       bb10:
-; IR-NEXT:    [[MY_TMP11]] = phi i32 [ [[TMP6:%.*]], [[FLOW]] ]
-; IR-NEXT:    [[MY_TMP12:%.*]] = phi i1 [ [[TMP5:%.*]], [[FLOW]] ]
-; IR-NEXT:    [[TMP3]] = call i64 @llvm.amdgcn.if.break.i64(i1 [[MY_TMP12]], i64 [[PHI_BROKEN]])
-; IR-NEXT:    [[TMP4:%.*]] = call i1 @llvm.amdgcn.loop.i64(i64 [[TMP3]])
-; IR-NEXT:    br i1 [[TMP4]], label [[BB23:%.*]], label [[BB5]]
+; IR-NEXT:    [[TMP3:%.*]] = call i1 @llvm.amdgcn.loop.i64(i64 [[TMP6]])
+; IR-NEXT:    br i1 [[TMP3]], label [[BB23:%.*]], label [[BB5]]
 ; IR:       Flow:
-; IR-NEXT:    [[TMP5]] = phi i1 [ [[MY_TMP22:%.*]], [[BB4]] ], [ true, [[BB5]] ]
-; IR-NEXT:    [[TMP6]] = phi i32 [ [[MY_TMP21:%.*]], [[BB4]] ], [ undef, [[BB5]] ]
+; IR-NEXT:    [[TMP4:%.*]] = phi i1 [ [[MY_TMP22:%.*]], [[BB4]] ], [ true, [[BB5]] ]
+; IR-NEXT:    [[TMP5]] = phi i32 [ [[MY_TMP21:%.*]], [[BB4]] ], [ undef, [[BB5]] ]
 ; IR-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP2]])
+; IR-NEXT:    [[TMP6]] = call i64 @llvm.amdgcn.if.break.i64(i1 [[TMP4]], i64 [[PHI_BROKEN]])
 ; IR-NEXT:    br label [[BB10]]
 ; IR:       bb13:
 ; IR-NEXT:    [[MY_TMP14:%.*]] = phi i1 [ [[MY_TMP22]], [[BB3]] ], [ true, [[BB8]] ]
@@ -84,7 +82,7 @@ define amdgpu_kernel void @reduced_nested_loop_conditions(i64 addrspace(3)* noca
 ; IR-NEXT:    [[MY_TMP22]] = phi i1 [ false, [[BB16]] ], [ [[MY_TMP14]], [[BB13]] ]
 ; IR-NEXT:    br label [[BB9]]
 ; IR:       bb23:
-; IR-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP3]])
+; IR-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP6]])
 ; IR-NEXT:    ret void
 ;
 bb:
