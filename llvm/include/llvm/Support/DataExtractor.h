@@ -197,6 +197,8 @@ public:
   ///     is out of bounds, a default-initialized StringRef will be returned.
   StringRef getBytes(uint64_t *OffsetPtr, uint64_t Length) const;
 
+  StringRef getCStrRef(Cursor &C) const { return getCStrRef(&C.Offset); }
+
   /// Extract an unsigned integer of size \a byte_size from \a
   /// *offset_ptr.
   ///

@@ -34,14 +34,53 @@ bool testBuildAttr(unsigned Tag, unsigned Value,
     reinterpret_cast<const uint8_t*>(OS.str().c_str()), OS.str().size());
 
   ARMAttributeParser Parser;
-  Parser.parse(Bytes, support::little);
+  cantFail(Parser.parse(Bytes, support::little));
 
   return (Parser.hasAttribute(ExpectedTag) &&
     Parser.getAttributeValue(ExpectedTag) == ExpectedValue);
 }
 
+void testParseError(ArrayRef<uint8_t> bytes, const char *msg) {
+  ARMAttributeParser parser;
+  Error e = parser.parse(bytes, support::little);
+  EXPECT_STREQ(toString(std::move(e)).c_str(), msg);
+}
+
 bool testTagString(unsigned Tag, const char *name) {
   return ARMBuildAttrs::AttrTypeAsString(Tag).str() == name;
+}
+
+TEST(ARMAttributeParser, UnrecognizedFormatVersion) {
+  static const uint8_t bytes[] = {1};
+  testParseError(bytes, "unrecognized format-version: 0x1");
+}
+
+TEST(ARMAttributeParser, InvalidSubsectionLength) {
+  static const uint8_t bytes[] = {'A', 3, 0, 0, 0};
+  testParseError(bytes, "invalid subsection length 3 at offset 0x1");
+}
+
+TEST(ARMAttributeParser, UnrecognizedVendorName) {
+  static const uint8_t bytes[] = {'A', 7, 0, 0, 0, 'x', 'y', 0};
+  testParseError(bytes, "unrecognized vendor-name: xy");
+}
+
+TEST(ARMAttributeParser, InvalidAttributeSize) {
+  static const uint8_t bytes[] = {'A', 15,  0, 0, 0, 'a', 'e', 'a',
+                                  'b', 'i', 0, 4, 4, 0,   0,   0};
+  testParseError(bytes, "invalid attribute size 4 at offset 0xb");
+}
+
+TEST(ARMAttributeParser, UnrecognizedTag) {
+  static const uint8_t bytes[] = {'A', 15,  0, 0, 0, 'a', 'e', 'a',
+                                  'b', 'i', 0, 4, 5, 0,   0,   0};
+  testParseError(bytes, "unrecognized tag 0x4 at offset 0xb");
+}
+
+TEST(ARMAttributeParser, UnknownCPU_arch) {
+  static const uint8_t bytes[] = {'A', 15, 0, 0, 0, 'a', 'e', 'a', 'b',
+                                  'i', 0,  1, 7, 0, 0,   0,   6,   22};
+  testParseError(bytes, "unknown CPU_arch value: 22");
 }
 
 TEST(CPUArchBuildAttr, testBuildAttr) {
