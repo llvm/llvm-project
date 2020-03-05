@@ -126,69 +126,6 @@ static void ResolveAddress(const ExecutionContext &exe_ctx, const Address &addr,
   resolved_addr = addr;
 }
 
-size_t Disassembler::Disassemble(Debugger &debugger, const ArchSpec &arch,
-                                 const char *plugin_name, const char *flavor,
-                                 const ExecutionContext &exe_ctx,
-                                 SymbolContextList &sc_list,
-                                 uint32_t num_instructions,
-                                 bool mixed_source_and_assembly,
-                                 uint32_t num_mixed_context_lines,
-                                 uint32_t options, Stream &strm) {
-  size_t success_count = 0;
-  const size_t count = sc_list.GetSize();
-  SymbolContext sc;
-  AddressRange range;
-  const uint32_t scope =
-      eSymbolContextBlock | eSymbolContextFunction | eSymbolContextSymbol;
-  const bool use_inline_block_range = true;
-  for (size_t i = 0; i < count; ++i) {
-    if (!sc_list.GetContextAtIndex(i, sc))
-      break;
-    for (uint32_t range_idx = 0;
-         sc.GetAddressRange(scope, range_idx, use_inline_block_range, range);
-         ++range_idx) {
-      if (Disassemble(debugger, arch, plugin_name, flavor, exe_ctx, range,
-                      num_instructions, mixed_source_and_assembly,
-                      num_mixed_context_lines, options, strm)) {
-        ++success_count;
-        strm.EOL();
-      }
-    }
-  }
-  return success_count;
-}
-
-bool Disassembler::Disassemble(
-    Debugger &debugger, const ArchSpec &arch, const char *plugin_name,
-    const char *flavor, const ExecutionContext &exe_ctx, ConstString name,
-    Module *module, uint32_t num_instructions, bool mixed_source_and_assembly,
-    uint32_t num_mixed_context_lines, uint32_t options, Stream &strm) {
-  // If no name is given there's nothing to disassemble.
-  if (!name)
-    return false;
-
-  const bool include_symbols = true;
-  const bool include_inlines = true;
-
-  // Find functions matching the given name.
-  SymbolContextList sc_list;
-  if (module) {
-    module->FindFunctions(name, CompilerDeclContext(), eFunctionNameTypeAuto,
-                          include_symbols, include_inlines, sc_list);
-  } else if (exe_ctx.GetTargetPtr()) {
-    exe_ctx.GetTargetPtr()->GetImages().FindFunctions(
-        name, eFunctionNameTypeAuto, include_symbols, include_inlines, sc_list);
-  }
-
-  // If no functions were found there's nothing to disassemble.
-  if (sc_list.IsEmpty())
-    return false;
-
-  return Disassemble(debugger, arch, plugin_name, flavor, exe_ctx, sc_list,
-                     num_instructions, mixed_source_and_assembly,
-                     num_mixed_context_lines, options, strm);
-}
-
 lldb::DisassemblerSP Disassembler::DisassembleRange(
     const ArchSpec &arch, const char *plugin_name, const char *flavor,
     const ExecutionContext &exe_ctx, const AddressRange &range,
