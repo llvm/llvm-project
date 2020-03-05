@@ -30,7 +30,7 @@ struct Lowerer : coro::LowererBase {
   SmallVector<CoroSubFnInst *, 4> ResumeAddr;
   DenseMap<CoroBeginInst *, SmallVector<CoroSubFnInst *, 4>> DestroyAddr;
   SmallVector<CoroFreeInst *, 1> CoroFrees;
-  CoroSuspendInst *CoroFinalSuspend;
+  SmallPtrSet<const SwitchInst *, 4> CoroSuspendSwitches;
 
   Lowerer(Module &M) : LowererBase(M) {}
 
@@ -38,6 +38,8 @@ struct Lowerer : coro::LowererBase {
   bool shouldElide(Function *F, DominatorTree &DT) const;
   void collectPostSplitCoroIds(Function *F);
   bool processCoroId(CoroIdInst *, AAResults &AA, DominatorTree &DT);
+  bool hasEscapePath(const CoroBeginInst *,
+                     const SmallPtrSetImpl<BasicBlock *> &) const;
 };
 } // end anonymous namespace
 
@@ -142,6 +144,52 @@ void Lowerer::elideHeapAllocations(Function *F, Type *FrameTy, AAResults &AA) {
   removeTailCallAttribute(Frame, AA);
 }
 
+bool Lowerer::hasEscapePath(const CoroBeginInst *CB,
+                            const SmallPtrSetImpl<BasicBlock *> &TIs) const {
+  const auto &It = DestroyAddr.find(CB);
+  assert(It != DestroyAddr.end());
+
+  // Limit the number of blocks we visit.
+  unsigned Limit = 32 * (1 + It->second.size());
+
+  SmallVector<const BasicBlock *, 32> Worklist;
+  Worklist.push_back(CB->getParent());
+
+  SmallPtrSet<const BasicBlock *, 32> Visited;
+  // Consider basicblock of coro.destroy as visited one, so that we
+  // skip the path pass through coro.destroy.
+  for (auto *DA : It->second)
+    Visited.insert(DA->getParent());
+
+  do {
+    const auto *BB = Worklist.pop_back_val();
+    if (!Visited.insert(BB).second)
+      continue;
+    if (TIs.count(BB))
+      return true;
+
+    // Conservatively say that there is potentially a path.
+    if (!--Limit)
+      return true;
+
+    auto TI = BB->getTerminator();
+    // Although the default dest of coro.suspend switches is suspend pointer
+    // which means a escape path to normal terminator, it is reasonable to skip
+    // it since coroutine frame doesn't change outside the coroutine body.
+    if (isa<SwitchInst>(TI) &&
+        CoroSuspendSwitches.count(cast<SwitchInst>(TI))) {
+      Worklist.push_back(cast<SwitchInst>(TI)->getSuccessor(1));
+      Worklist.push_back(cast<SwitchInst>(TI)->getSuccessor(2));
+    } else
+      Worklist.append(succ_begin(BB), succ_end(BB));
+
+  } while (!Worklist.empty());
+
+  // We have exhausted all possible paths and are certain that coro.begin can
+  // not reach to any of terminators.
+  return false;
+}
+
 bool Lowerer::shouldElide(Function *F, DominatorTree &DT) const {
   // If no CoroAllocs, we cannot suppress allocation, so elision is not
   // possible.
@@ -154,61 +202,34 @@ bool Lowerer::shouldElide(Function *F, DominatorTree &DT) const {
   // If the value escaped, then coro.destroy would have been referencing a
   // memory location storing that value and not the virtual register.
 
-  SmallPtrSet<Instruction *, 8> Terminators;
-  bool HasMultiPred = false;
+  SmallPtrSet<BasicBlock *, 8> Terminators;
   // First gather all of the non-exceptional terminators for the function.
   // Consider the final coro.suspend as the real terminator when the current
   // function is a coroutine.
-  if (CoroFinalSuspend) {
-    // If block of final coro.suspend has more than one predecessor,
-    // then there is one resume path and the others are exceptional paths,
-    // consider these predecessors as terminators.
-    BasicBlock *FinalBB = CoroFinalSuspend->getParent();
-    if (FinalBB->hasNPredecessorsOrMore(2)) {
-      HasMultiPred = true;
-      for (auto *B : predecessors(FinalBB))
-        Terminators.insert(B->getTerminator());
-    } else
-      Terminators.insert(CoroFinalSuspend);
-  } else {
     for (BasicBlock &B : *F) {
       auto *TI = B.getTerminator();
       if (TI->getNumSuccessors() == 0 && !TI->isExceptionalTerminator() &&
           !isa<UnreachableInst>(TI))
-        Terminators.insert(TI);
+        Terminators.insert(&B);
     }
-  }
 
   // Filter out the coro.destroy that lie along exceptional paths.
-  SmallPtrSet<CoroSubFnInst *, 4> DAs;
-  SmallPtrSet<Instruction *, 2> TIs;
   SmallPtrSet<CoroBeginInst *, 8> ReferencedCoroBegins;
   for (auto &It : DestroyAddr) {
-    for (CoroSubFnInst *DA : It.second) {
-      for (Instruction *TI : Terminators) {
-        if (DT.dominates(DA, TI)) {
-          if (HasMultiPred)
-            TIs.insert(TI);
-          else
-            DAs.insert(DA);
+    for (Instruction *DA : It.second) {
+      for (BasicBlock *TI : Terminators) {
+        if (DT.dominates(DA, TI->getTerminator())) {
+          ReferencedCoroBegins.insert(It.first);
           break;
         }
       }
     }
-    // If all the predecessors dominate coro.destroys that reference same
-    // coro.begin, record the coro.begin
-    if (TIs.size() == Terminators.size()) {
-      ReferencedCoroBegins.insert(It.first);
-      TIs.clear();
-    }
-  }
 
-  // Find all the coro.begin referenced by coro.destroy along happy paths.
-  for (CoroSubFnInst *DA : DAs) {
-    if (auto *CB = dyn_cast<CoroBeginInst>(DA->getFrame()))
-      ReferencedCoroBegins.insert(CB);
-    else
-      return false;
+    // Whether there is any paths from coro.begin to Terminators which not pass
+    // through any of the coro.destroys.
+    if (!ReferencedCoroBegins.count(It.first) &&
+        !hasEscapePath(It.first, Terminators))
+      ReferencedCoroBegins.insert(It.first);
   }
 
   // If size of the set is the same as total number of coro.begin, that means we
@@ -219,7 +240,7 @@ bool Lowerer::shouldElide(Function *F, DominatorTree &DT) const {
 
 void Lowerer::collectPostSplitCoroIds(Function *F) {
   CoroIds.clear();
-  CoroFinalSuspend = nullptr;
+  CoroSuspendSwitches.clear();
   for (auto &I : instructions(F)) {
     if (auto *CII = dyn_cast<CoroIdInst>(&I))
       if (CII->getInfo().isPostSplit())
@@ -227,12 +248,16 @@ void Lowerer::collectPostSplitCoroIds(Function *F) {
         if (CII->getCoroutine() != CII->getFunction())
           CoroIds.push_back(CII);
 
+    // Consider case like:
+    // %0 = call i8 @llvm.coro.suspend(...)
+    // switch i8 %0, label %suspend [i8 0, label %resume
+    //                              i8 1, label %cleanup]
+    // and collect the SwitchInsts which are used by escape analysis later.
     if (auto *CSI = dyn_cast<CoroSuspendInst>(&I))
-      if (CSI->isFinal()) {
-        if (!CoroFinalSuspend)
-          CoroFinalSuspend = CSI;
-        else
-          report_fatal_error("Only one suspend point can be marked as final");
+      if (CSI->hasOneUse() && isa<SwitchInst>(CSI->use_begin()->getUser())) {
+        SwitchInst *SWI = cast<SwitchInst>(CSI->use_begin()->getUser());
+        if (SWI->getNumCases() == 2)
+          CoroSuspendSwitches.insert(SWI);
       }
   }
 }
