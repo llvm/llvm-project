@@ -39,9 +39,9 @@ func @matmul_f32(%A: memref<?xi8>, %M: index, %N: index, %K: index) {
 //       CHECK:   loop.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
 //       CHECK:     loop.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
 //       CHECK:       loop.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
-//       CHECK:         %[[vA:.*]] = std.subview {{.*}} : memref<?x?xf32, #[[strided2D]]>
-//       CHECK:         %[[vB:.*]] = std.subview {{.*}} : memref<?x?xf32, #[[strided2D]]>
-//       CHECK:         %[[vC:.*]] = std.subview {{.*}} : memref<?x?xf32, #[[strided2D]]>
+//       CHECK:         %[[vA:.*]] = subview {{.*}} : memref<?x?xf32, #[[strided2D]]>
+//       CHECK:         %[[vB:.*]] = subview {{.*}} : memref<?x?xf32, #[[strided2D]]>
+//       CHECK:         %[[vC:.*]] = subview {{.*}} : memref<?x?xf32, #[[strided2D]]>
 ///
 //       CHECK:         %[[tmpA:.*]] = alloc() : memref<32xi8>
 //       CHECK:         %[[fullA:.*]] = std.view %[[tmpA]][][{{.*}}] : memref<32xi8> to memref<?x?xf32>
@@ -104,9 +104,9 @@ func @matmul_f64(%A: memref<?xi8>, %M: index, %N: index, %K: index) {
 //       CHECK:   loop.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
 //       CHECK:     loop.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
 //       CHECK:       loop.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
-//       CHECK:         %[[vA_f64:.*]] = std.subview {{.*}} : memref<?x?xf64, #[[strided2D]]>
-//       CHECK:         %[[vB_f64:.*]] = std.subview {{.*}} : memref<?x?xf64, #[[strided2D]]>
-//       CHECK:         %[[vC_f64:.*]] = std.subview {{.*}} : memref<?x?xf64, #[[strided2D]]>
+//       CHECK:         %[[vA_f64:.*]] = subview {{.*}} : memref<?x?xf64, #[[strided2D]]>
+//       CHECK:         %[[vB_f64:.*]] = subview {{.*}} : memref<?x?xf64, #[[strided2D]]>
+//       CHECK:         %[[vC_f64:.*]] = subview {{.*}} : memref<?x?xf64, #[[strided2D]]>
 ///
 //       CHECK:         %[[tmpA_f64:.*]] = alloc() : memref<64xi8>
 //       CHECK:         %[[fullA_f64:.*]] = std.view %[[tmpA_f64]][][{{.*}}] : memref<64xi8> to memref<?x?xf64>
@@ -169,9 +169,9 @@ func @matmul_i32(%A: memref<?xi8>, %M: index, %N: index, %K: index) {
 //       CHECK:   loop.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
 //       CHECK:     loop.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
 //       CHECK:       loop.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
-//       CHECK:         %[[vA_i32:.*]] = std.subview {{.*}} : memref<?x?xi32, #[[strided2D]]>
-//       CHECK:         %[[vB_i32:.*]] = std.subview {{.*}} : memref<?x?xi32, #[[strided2D]]>
-//       CHECK:         %[[vC_i32:.*]] = std.subview {{.*}} : memref<?x?xi32, #[[strided2D]]>
+//       CHECK:         %[[vA_i32:.*]] = subview {{.*}} : memref<?x?xi32, #[[strided2D]]>
+//       CHECK:         %[[vB_i32:.*]] = subview {{.*}} : memref<?x?xi32, #[[strided2D]]>
+//       CHECK:         %[[vC_i32:.*]] = subview {{.*}} : memref<?x?xi32, #[[strided2D]]>
 ///
 //       CHECK:         %[[tmpA_i32:.*]] = alloc() : memref<32xi8>
 //       CHECK:         %[[fullA_i32:.*]] = std.view %[[tmpA_i32]][][{{.*}}] : memref<32xi8> to memref<?x?xi32>
