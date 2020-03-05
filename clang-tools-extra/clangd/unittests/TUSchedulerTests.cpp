@@ -466,7 +466,7 @@ TEST_F(TUSchedulerTests, ManyUpdates) {
         auto Inputs = getInputs(File, Contents.str());
         {
           WithContextValue WithNonce(NonceKey, ++Nonce);
-          Inputs.Version = Nonce;
+          Inputs.Version = std::to_string(Nonce);
           updateWithDiags(
               S, File, Inputs, WantDiagnostics::Auto,
               [File, Nonce, &Mut, &TotalUpdates](std::vector<Diag>) {
