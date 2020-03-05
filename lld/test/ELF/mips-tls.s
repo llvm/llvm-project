@@ -23,7 +23,7 @@
 
 # DIS: 00000000 l    O .tdata          00000000 loc
 # DIS: 00000004 g    O .tdata          00000000 bar
-# DIS: 00000000 g    O *UND*           00000000 foo
+# DIS: 00000000      O *UND*           00000000 foo
 
 # DIS:      Contents of section .got:
 # DIS-NEXT:  30000 00000000 80000000 00000000 ffff9004

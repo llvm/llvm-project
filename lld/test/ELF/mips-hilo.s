@@ -32,7 +32,7 @@ g1:
 
 # CHECK: SYMBOL TABLE:
 # CHECK: 0021020 l     O .data   00000004 l1
-# CHECK: 0021000         .text   00000000 __start
+# CHECK: 0021000 g       .text   00000000 __start
 # CHECK: 0021024 g     O .data   00000004 g1
 
 # CHECK:      __start:

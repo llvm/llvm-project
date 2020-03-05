@@ -11,7 +11,7 @@
 # RUN: llvm-objdump -d -s -t --print-imm-hex --no-show-raw-insn %t.exe | FileCheck %s
 # RUN: llvm-readobj -r %t.exe | FileCheck -check-prefix=REL %s
 
-# CHECK: 0000000000037ff0   .got  0000000000000000 .hidden _gp
+# CHECK: 0000000000037ff0 l .got  0000000000000000 .hidden _gp
 
 # CHECK:      Contents of section .rodata:
 # CHECK-NEXT:  {{[0-9a-f]+}} ffffffff fffe9014

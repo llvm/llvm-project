@@ -25,9 +25,9 @@
 # RUN:   | FileCheck --check-prefixes=ASM,EL %s
 # RUN: llvm-readelf -h %tel.exe | FileCheck --check-prefix=ELF %s
 
-# ASM: 00038000         .got   00000000 .hidden _gp
+# ASM: 00038000 l       .got   00000000 .hidden _gp
 # ASM: 00020100 g F     .text  00000000 0x80 foo
-# ASM: 00020110         .text  00000000 0x80 __start
+# ASM: 00020110 g       .text  00000000 0x80 __start
 
 # EB:      Contents of section .data:
 # EB-NEXT:  30000 fffe8111

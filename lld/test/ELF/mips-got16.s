@@ -11,7 +11,7 @@
 # RUN: llvm-readelf -r -A %t.so | FileCheck -check-prefix=GOT %s
 
 # CHECK: SYMBOL TABLE:
-# CHECK: 00024008         .data           00000000 .hidden bar
+# CHECK: 00024008 l       .data           00000000 .hidden bar
 # CHECK: 00000000         *UND*           00000000 foo
 
 # CHECK:       __start:

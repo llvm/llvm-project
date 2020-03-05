@@ -22,8 +22,8 @@
 # OBJ-NEXT:           00000014:  R_MIPS_LO16  .data
 
 # SO: SYMBOL TABLE
-# SO: {{0*}}[[D1:[0-9a-f]{1,4}]] .data {{0+}} data
-# SO: {{0*}}[[D2:[0-9a-f]{1,4}]] .data {{0+}} data
+# SO: {{0*}}[[D1:[0-9a-f]{1,4}]] l .data {{0+}} data
+# SO: {{0*}}[[D2:[0-9a-f]{1,4}]] l .data {{0+}} data
 
 # SO:      Disassembly of section .text:
 # SO-EMPTY:
