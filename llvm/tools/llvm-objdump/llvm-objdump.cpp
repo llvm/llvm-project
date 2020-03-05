@@ -1898,7 +1898,7 @@ void printSymbolTable(const ObjectFile *O, StringRef ArchiveName,
     bool Hidden = Flags & SymbolRef::SF_Hidden;
 
     char GlobLoc = ' ';
-    if (Type != SymbolRef::ST_Unknown)
+    if ((Section != O->section_end() || Absolute) && !Weak)
       GlobLoc = Global ? 'g' : 'l';
     char Debug = (Type == SymbolRef::ST_Debug || Type == SymbolRef::ST_File)
                  ? 'd' : ' ';

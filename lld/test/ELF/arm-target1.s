@@ -26,7 +26,7 @@
 // Force generation of $d.0 as section is not all data
   nop
 // RELATIVE: SYMBOL TABLE:
-// RELATIVE: 00001154         .text           00000000 patatino
+// RELATIVE: 00001154 l       .text           00000000 patatino
 // RELATIVE: Disassembly of section .text:
 // RELATIVE-EMPTY:
 // RELATIVE: $d.0:
