@@ -2255,15 +2255,64 @@ static MachineInstr *verifyCFIntrinsic(MachineInstr &MI,
   return &UseMI;
 }
 
-Register AMDGPULegalizerInfo::getLiveInRegister(MachineRegisterInfo &MRI,
-                                                Register Reg, LLT Ty) const {
-  Register LiveIn = MRI.getLiveInVirtReg(Reg);
-  if (LiveIn)
+Register AMDGPULegalizerInfo::insertLiveInCopy(MachineIRBuilder &B,
+                                               MachineRegisterInfo &MRI,
+                                               Register LiveIn,
+                                               Register PhyReg) const {
+  assert(PhyReg.isPhysical() && "Physical register expected");
+
+  // Insert the live-in copy, if required, by defining destination virtual
+  // register.
+  // FIXME: It seems EmitLiveInCopies isn't called anywhere?
+  if (!MRI.getVRegDef(LiveIn)) {
+    // FIXME: Should have scoped insert pt
+    MachineBasicBlock &OrigInsBB = B.getMBB();
+    auto OrigInsPt = B.getInsertPt();
+
+    MachineBasicBlock &EntryMBB = B.getMF().front();
+    EntryMBB.addLiveIn(PhyReg);
+    B.setInsertPt(EntryMBB, EntryMBB.begin());
+    B.buildCopy(LiveIn, PhyReg);
+
+    B.setInsertPt(OrigInsBB, OrigInsPt);
+  }
+
+  return LiveIn;
+}
+
+Register AMDGPULegalizerInfo::getLiveInRegister(MachineIRBuilder &B,
+                                                MachineRegisterInfo &MRI,
+                                                Register PhyReg, LLT Ty,
+                                                bool InsertLiveInCopy) const {
+  assert(PhyReg.isPhysical() && "Physical register expected");
+
+  // Get or create virtual live-in regester
+  Register LiveIn = MRI.getLiveInVirtReg(PhyReg);
+  if (!LiveIn) {
+    LiveIn = MRI.createGenericVirtualRegister(Ty);
+    MRI.addLiveIn(PhyReg, LiveIn);
+  }
+
+  // When the actual true copy required is from virtual register to physical
+  // register (to be inserted later), live-in copy insertion from physical
+  // to register virtual register is not required
+  if (!InsertLiveInCopy)
     return LiveIn;
 
-  Register NewReg = MRI.createGenericVirtualRegister(Ty);
-  MRI.addLiveIn(Reg, NewReg);
-  return NewReg;
+  return insertLiveInCopy(B, MRI, LiveIn, PhyReg);
+}
+
+const ArgDescriptor *AMDGPULegalizerInfo::getArgDescriptor(
+    MachineIRBuilder &B, AMDGPUFunctionArgInfo::PreloadedValue ArgType) const {
+  const SIMachineFunctionInfo *MFI = B.getMF().getInfo<SIMachineFunctionInfo>();
+  const ArgDescriptor *Arg;
+  const TargetRegisterClass *RC;
+  std::tie(Arg, RC) = MFI->getPreloadedValue(ArgType);
+  if (!Arg) {
+    LLVM_DEBUG(dbgs() << "Required arg register missing\n");
+    return nullptr;
+  }
+  return Arg;
 }
 
 bool AMDGPULegalizerInfo::loadInputValue(Register DstReg, MachineIRBuilder &B,
@@ -2271,12 +2320,14 @@ bool AMDGPULegalizerInfo::loadInputValue(Register DstReg, MachineIRBuilder &B,
   if (!Arg->isRegister() || !Arg->getRegister().isValid())
     return false; // TODO: Handle these
 
-  assert(Arg->getRegister().isPhysical());
+  Register SrcReg = Arg->getRegister();
+  assert(SrcReg.isPhysical() && "Physical register expected");
+  assert(DstReg.isVirtual() && "Virtual register expected");
 
   MachineRegisterInfo &MRI = *B.getMRI();
 
   LLT Ty = MRI.getType(DstReg);
-  Register LiveIn = getLiveInRegister(MRI, Arg->getRegister(), Ty);
+  Register LiveIn = getLiveInRegister(B, MRI, SrcReg, Ty);
 
   if (Arg->isMasked()) {
     // TODO: Should we try to emit this once in the entry block?
@@ -2292,50 +2343,27 @@ bool AMDGPULegalizerInfo::loadInputValue(Register DstReg, MachineIRBuilder &B,
     }
 
     B.buildAnd(DstReg, AndMaskSrc, B.buildConstant(S32, Mask >> Shift));
-  } else
+  } else {
     B.buildCopy(DstReg, LiveIn);
-
-  // Insert the argument copy if it doens't already exist.
-  // FIXME: It seems EmitLiveInCopies isn't called anywhere?
-  if (!MRI.getVRegDef(LiveIn)) {
-    // FIXME: Should have scoped insert pt
-    MachineBasicBlock &OrigInsBB = B.getMBB();
-    auto OrigInsPt = B.getInsertPt();
-
-    MachineBasicBlock &EntryMBB = B.getMF().front();
-    EntryMBB.addLiveIn(Arg->getRegister());
-    B.setInsertPt(EntryMBB, EntryMBB.begin());
-    B.buildCopy(LiveIn, Arg->getRegister());
-
-    B.setInsertPt(OrigInsBB, OrigInsPt);
   }
 
   return true;
 }
 
 bool AMDGPULegalizerInfo::legalizePreloadedArgIntrin(
-  MachineInstr &MI,
-  MachineRegisterInfo &MRI,
-  MachineIRBuilder &B,
-  AMDGPUFunctionArgInfo::PreloadedValue ArgType) const {
+    MachineInstr &MI, MachineRegisterInfo &MRI, MachineIRBuilder &B,
+    AMDGPUFunctionArgInfo::PreloadedValue ArgType) const {
   B.setInstr(MI);
 
-  const SIMachineFunctionInfo *MFI = B.getMF().getInfo<SIMachineFunctionInfo>();
-
-  const ArgDescriptor *Arg;
-  const TargetRegisterClass *RC;
-  std::tie(Arg, RC) = MFI->getPreloadedValue(ArgType);
-  if (!Arg) {
-    LLVM_DEBUG(dbgs() << "Required arg register missing\n");
+  const ArgDescriptor *Arg = getArgDescriptor(B, ArgType);
+  if (!Arg)
     return false;
-  }
 
-  if (loadInputValue(MI.getOperand(0).getReg(), B, Arg)) {
-    MI.eraseFromParent();
-    return true;
-  }
+  if (!loadInputValue(MI.getOperand(0).getReg(), B, Arg))
+    return false;
 
-  return false;
+  MI.eraseFromParent();
+  return true;
 }
 
 bool AMDGPULegalizerInfo::legalizeFDIV(MachineInstr &MI,
@@ -3558,6 +3586,61 @@ bool AMDGPULegalizerInfo::legalizeSBufferLoad(
   return true;
 }
 
+bool AMDGPULegalizerInfo::legalizeTrapIntrinsic(MachineInstr &MI,
+                                                MachineRegisterInfo &MRI,
+                                                MachineIRBuilder &B) const {
+  B.setInstr(MI);
+
+  // Is non-HSA path or trap-handler disabled? then, insert s_endpgm instruction
+  if (ST.getTrapHandlerAbi() != GCNSubtarget::TrapHandlerAbiHsa ||
+      !ST.isTrapHandlerEnabled()) {
+    B.buildInstr(AMDGPU::S_ENDPGM).addImm(0);
+  } else {
+    // Pass queue pointer to trap handler as input, and insert trap instruction
+    // Reference: https://llvm.org/docs/AMDGPUUsage.html#trap-handler-abi
+    const ArgDescriptor *Arg =
+        getArgDescriptor(B, AMDGPUFunctionArgInfo::QUEUE_PTR);
+    if (!Arg)
+      return false;
+    MachineRegisterInfo &MRI = *B.getMRI();
+    Register SGPR01(AMDGPU::SGPR0_SGPR1);
+    Register LiveIn = getLiveInRegister(
+        B, MRI, SGPR01, LLT::pointer(AMDGPUAS::CONSTANT_ADDRESS, 64),
+        /*InsertLiveInCopy=*/false);
+    if (!loadInputValue(LiveIn, B, Arg))
+      return false;
+    B.buildCopy(SGPR01, LiveIn);
+    B.buildInstr(AMDGPU::S_TRAP)
+        .addImm(GCNSubtarget::TrapIDLLVMTrap)
+        .addReg(SGPR01, RegState::Implicit);
+  }
+
+  MI.eraseFromParent();
+  return true;
+}
+
+bool AMDGPULegalizerInfo::legalizeDebugTrapIntrinsic(
+    MachineInstr &MI, MachineRegisterInfo &MRI, MachineIRBuilder &B) const {
+  B.setInstr(MI);
+
+  // Is non-HSA path or trap-handler disabled? then, report a warning
+  // accordingly
+  if (ST.getTrapHandlerAbi() != GCNSubtarget::TrapHandlerAbiHsa ||
+      !ST.isTrapHandlerEnabled()) {
+    DiagnosticInfoUnsupported NoTrap(B.getMF().getFunction(),
+                                     "debugtrap handler not supported",
+                                     MI.getDebugLoc(), DS_Warning);
+    LLVMContext &Ctx = B.getMF().getFunction().getContext();
+    Ctx.diagnose(NoTrap);
+  } else {
+    // Insert debug-trap instruction
+    B.buildInstr(AMDGPU::S_TRAP).addImm(GCNSubtarget::TrapIDLLVMDebugTrap);
+  }
+
+  MI.eraseFromParent();
+  return true;
+}
+
 bool AMDGPULegalizerInfo::legalizeIntrinsic(MachineInstr &MI,
                                             MachineIRBuilder &B,
                                             GISelChangeObserver &Observer) const {
@@ -3732,6 +3815,10 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(MachineInstr &MI,
     return legalizeAtomicIncDec(MI, B, true);
   case Intrinsic::amdgcn_atomic_dec:
     return legalizeAtomicIncDec(MI, B, false);
+  case Intrinsic::trap:
+    return legalizeTrapIntrinsic(MI, MRI, B);
+  case Intrinsic::debugtrap:
+    return legalizeDebugTrapIntrinsic(MI, MRI, B);
   default: {
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
             AMDGPU::getImageDimIntrinsicInfo(IntrID))
