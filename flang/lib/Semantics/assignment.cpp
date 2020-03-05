@@ -43,7 +43,7 @@ public:
   void Analyze(const parser::ConcurrentControl &);
 
 private:
-  void CheckForPureContext(const SomeExpr &lhs, const SomeExpr &rhs,
+  bool CheckForPureContext(const SomeExpr &lhs, const SomeExpr &rhs,
       parser::CharBlock rhsSource, bool isPointerAssignment);
   void CheckShape(parser::CharBlock, const SomeExpr *);
   template<typename... A>
@@ -110,16 +110,18 @@ static const char *WhyBaseObjectIsSuspicious(
   }
 }
 
-// Checks C1594(1,2)
-void CheckDefinabilityInPureScope(parser::ContextualMessages &messages,
+// Checks C1594(1,2); false if check fails
+bool CheckDefinabilityInPureScope(parser::ContextualMessages &messages,
     const Symbol &lhs, const Scope &context, const Scope &pure) {
   if (pure.symbol()) {
     if (const char *why{WhyBaseObjectIsSuspicious(lhs, context)}) {
       evaluate::SayWithDeclaration(messages, lhs,
           "Pure subprogram '%s' may not define '%s' because it is %s"_err_en_US,
           pure.symbol()->name(), lhs.name(), why);
+      return false;
     }
   }
+  return true;
 }
 
 static std::optional<std::string> GetPointerComponentDesignatorName(
@@ -135,21 +137,24 @@ static std::optional<std::string> GetPointerComponentDesignatorName(
   return std::nullopt;
 }
 
-// Checks C1594(5,6)
-void CheckCopyabilityInPureScope(parser::ContextualMessages &messages,
+// Checks C1594(5,6); false if check fails
+bool CheckCopyabilityInPureScope(parser::ContextualMessages &messages,
     const SomeExpr &expr, const Scope &scope) {
   if (const Symbol * base{GetFirstSymbol(expr)}) {
     if (const char *why{WhyBaseObjectIsSuspicious(*base, scope)}) {
       if (auto pointer{GetPointerComponentDesignatorName(expr)}) {
         evaluate::SayWithDeclaration(messages, *base,
-            "A pure subprogram may not copy the value of '%s' because it is %s and has the POINTER component '%s'"_err_en_US,
+            "A pure subprogram may not copy the value of '%s' because it is %s"
+            " and has the POINTER component '%s'"_err_en_US,
             base->name(), why, *pointer);
+        return false;
       }
     }
   }
+  return true;
 }
 
-void AssignmentContext::CheckForPureContext(const SomeExpr &lhs,
+bool AssignmentContext::CheckForPureContext(const SomeExpr &lhs,
     const SomeExpr &rhs, parser::CharBlock source, bool isPointerAssignment) {
   const Scope &scope{context_.FindScope(source)};
   if (const Scope * pure{FindPureProcedureContaining(scope)}) {
@@ -160,13 +165,12 @@ void AssignmentContext::CheckForPureContext(const SomeExpr &lhs,
           "A pure subprogram may not define a coindexed object"_err_en_US);
     } else if (const Symbol * base{GetFirstSymbol(lhs)}) {
       if (const auto *assoc{base->detailsIf<AssocEntityDetails>()}) {
-        if (auto dataRef{ExtractDataRef(assoc->expr())}) {
-          // ASSOCIATE(a=>x) -- check x, not a, for "a=..."
-          CheckDefinabilityInPureScope(
-              messages, dataRef->GetFirstSymbol(), scope, *pure);
-        }
-      } else {
-        CheckDefinabilityInPureScope(messages, *base, scope, *pure);
+        auto dataRef{ExtractDataRef(assoc->expr())};
+        // ASSOCIATE(a=>x) -- check x, not a, for "a=..."
+        base = dataRef ? &dataRef->GetFirstSymbol() : nullptr;
+      }
+      if (!CheckDefinabilityInPureScope(messages, *base, scope, *pure)) {
+        return false;
       }
     }
     if (isPointerAssignment) {
@@ -176,29 +180,31 @@ void AssignmentContext::CheckForPureContext(const SomeExpr &lhs,
           evaluate::SayWithDeclaration(messages, *base,
               "A pure subprogram may not use '%s' as the target of pointer assignment because it is %s"_err_en_US,
               base->name(), why);
+          return false;
         }
       }
-    } else {
-      if (auto type{evaluate::DynamicType::From(lhs)}) {
-        // C1596 checks for polymorphic deallocation in a pure subprogram
-        // due to automatic reallocation on assignment
-        if (type->IsPolymorphic()) {
-          context_.Say(
-              "Deallocation of polymorphic object is not permitted in a pure subprogram"_err_en_US);
-        }
-        if (const DerivedTypeSpec * derived{GetDerivedTypeSpec(type)}) {
-          if (auto bad{FindPolymorphicAllocatableNonCoarrayUltimateComponent(
-                  *derived)}) {
-            evaluate::SayWithDeclaration(messages, *bad,
-                "Deallocation of polymorphic non-coarray component '%s' is not permitted in a pure subprogram"_err_en_US,
-                bad.BuildResultDesignatorName());
-          } else {
-            CheckCopyabilityInPureScope(messages, rhs, scope);
-          }
+    } else if (auto type{evaluate::DynamicType::From(lhs)}) {
+      // C1596 checks for polymorphic deallocation in a pure subprogram
+      // due to automatic reallocation on assignment
+      if (type->IsPolymorphic()) {
+        context_.Say(
+            "Deallocation of polymorphic object is not permitted in a pure subprogram"_err_en_US);
+        return false;
+      }
+      if (const DerivedTypeSpec * derived{GetDerivedTypeSpec(type)}) {
+        if (auto bad{FindPolymorphicAllocatableNonCoarrayUltimateComponent(
+                *derived)}) {
+          evaluate::SayWithDeclaration(messages, *bad,
+              "Deallocation of polymorphic non-coarray component '%s' is not permitted in a pure subprogram"_err_en_US,
+              bad.BuildResultDesignatorName());
+          return false;
+        } else {
+          return CheckCopyabilityInPureScope(messages, rhs, scope);
         }
       }
     }
   }
+  return true;
 }
 
 // 10.2.3.1(2) The masks and LHS of assignments must all have the same shape
