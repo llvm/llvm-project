@@ -541,11 +541,11 @@ lldb::DisassemblerSP Symbol::GetInstructions(const ExecutionContext &exe_ctx,
                                              const char *flavor,
                                              bool prefer_file_cache) {
   ModuleSP module_sp(m_addr_range.GetBaseAddress().GetModule());
-  if (module_sp) {
+  if (module_sp && exe_ctx.HasTargetScope()) {
     const bool prefer_file_cache = false;
     return Disassembler::DisassembleRange(module_sp->GetArchitecture(), nullptr,
-                                          flavor, exe_ctx, m_addr_range,
-                                          prefer_file_cache);
+                                          flavor, exe_ctx.GetTargetRef(),
+                                          m_addr_range, prefer_file_cache);
   }
   return lldb::DisassemblerSP();
 }

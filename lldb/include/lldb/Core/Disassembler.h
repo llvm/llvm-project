@@ -379,13 +379,14 @@ public:
   FindPlugin(const ArchSpec &arch, const char *flavor, const char *plugin_name);
 
   // This version will use the value in the Target settings if flavor is NULL;
-  static lldb::DisassemblerSP
-  FindPluginForTarget(const lldb::TargetSP target_sp, const ArchSpec &arch,
-                      const char *flavor, const char *plugin_name);
+  static lldb::DisassemblerSP FindPluginForTarget(const Target &target,
+                                                  const ArchSpec &arch,
+                                                  const char *flavor,
+                                                  const char *plugin_name);
 
   static lldb::DisassemblerSP
   DisassembleRange(const ArchSpec &arch, const char *plugin_name,
-                   const char *flavor, const ExecutionContext &exe_ctx,
+                   const char *flavor, Target &target,
                    const AddressRange &disasm_range, bool prefer_file_cache);
 
   static lldb::DisassemblerSP
