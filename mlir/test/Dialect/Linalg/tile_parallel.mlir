@@ -31,9 +31,9 @@ func @sum(%lhs: memref<?x?xf32, offset: ?, strides: [?, 1]>,
 // TILE-2: [[LHS_ROWS:%.*]] = dim [[LHS]], 0
 // TILE-2: loop.parallel ([[I:%.*]]) = ([[C0]]) to ([[LHS_ROWS]]) step ([[C2]]) {
 // TILE-2-NO: loop.parallel
-// TILE-2:   [[LHS_SUBVIEW:%.*]] = std.subview [[LHS]]
-// TILE-2:   [[RHS_SUBVIEW:%.*]] = std.subview [[RHS]]
-// TILE-2:   [[SUM_SUBVIEW:%.*]] = std.subview [[SUM]]
+// TILE-2:   [[LHS_SUBVIEW:%.*]] = subview [[LHS]]
+// TILE-2:   [[RHS_SUBVIEW:%.*]] = subview [[RHS]]
+// TILE-2:   [[SUM_SUBVIEW:%.*]] = subview [[SUM]]
 // TILE-2:   linalg.generic {{.*}} [[LHS_SUBVIEW]], [[RHS_SUBVIEW]], [[SUM_SUBVIEW]] {
 
 // TILE-02-LABEL: func @sum(
@@ -44,9 +44,9 @@ func @sum(%lhs: memref<?x?xf32, offset: ?, strides: [?, 1]>,
 // TILE-02: [[LHS_COLS:%.*]] = dim [[LHS]], 1
 // TILE-02: loop.parallel ([[I:%.*]]) = ([[C0]]) to ([[LHS_COLS]]) step ([[C2]]) {
 // TILE-02-NO: loop.parallel
-// TILE-02:   [[LHS_SUBVIEW:%.*]] = std.subview [[LHS]]
-// TILE-02:   [[RHS_SUBVIEW:%.*]] = std.subview [[RHS]]
-// TILE-02:   [[SUM_SUBVIEW:%.*]] = std.subview [[SUM]]
+// TILE-02:   [[LHS_SUBVIEW:%.*]] = subview [[LHS]]
+// TILE-02:   [[RHS_SUBVIEW:%.*]] = subview [[RHS]]
+// TILE-02:   [[SUM_SUBVIEW:%.*]] = subview [[SUM]]
 // TILE-02:   linalg.generic {{.*}} [[LHS_SUBVIEW]], [[RHS_SUBVIEW]], [[SUM_SUBVIEW]] {
 
 // TILE-002-LABEL: func @sum(
@@ -64,7 +64,7 @@ func @sum(%lhs: memref<?x?xf32, offset: ?, strides: [?, 1]>,
 // TILE-234: [[LHS_COLS:%.*]] = dim [[LHS]], 1
 // TILE-234: loop.parallel ([[I:%.*]], [[J:%.*]]) = ([[C0]], [[C0]]) to ([[LHS_ROWS]], [[LHS_COLS]]) step ([[C2]], [[C3]]) {
 // TILE-234-NO: loop.parallel
-// TILE-234:   [[LHS_SUBVIEW:%.*]] = std.subview [[LHS]]
-// TILE-234:   [[RHS_SUBVIEW:%.*]] = std.subview [[RHS]]
-// TILE-234:   [[SUM_SUBVIEW:%.*]] = std.subview [[SUM]]
+// TILE-234:   [[LHS_SUBVIEW:%.*]] = subview [[LHS]]
+// TILE-234:   [[RHS_SUBVIEW:%.*]] = subview [[RHS]]
+// TILE-234:   [[SUM_SUBVIEW:%.*]] = subview [[SUM]]
 // TILE-234:   linalg.generic {{.*}} [[LHS_SUBVIEW]], [[RHS_SUBVIEW]], [[SUM_SUBVIEW]] {
