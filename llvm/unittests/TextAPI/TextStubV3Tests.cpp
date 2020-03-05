@@ -408,6 +408,31 @@ TEST(TBDv3, Platform_tvOSSim) {
             stripWhitespace(Buffer.c_str()));
 }
 
+TEST(TBDv3, Arch_arm64e) {
+  static const char TBDv3ArchArm64e[] = "--- !tapi-tbd-v3\n"
+                                        "archs: [ arm64, arm64e ]\n"
+                                        "platform: ios\n"
+                                        "install-name: Test.dylib\n"
+                                        "...\n";
+
+  auto Result =
+      TextAPIReader::get(MemoryBufferRef(TBDv3ArchArm64e, "Test.tbd"));
+  EXPECT_TRUE(!!Result);
+  auto File = std::move(Result.get());
+  auto Platform = PlatformKind::iOS;
+  auto Archs = AK_arm64 | AK_arm64e;
+  EXPECT_EQ(FileType::TBD_V3, File->getFileType());
+  EXPECT_EQ(File->getPlatforms().size(), 1U);
+  EXPECT_EQ(Platform, *File->getPlatforms().begin());
+  EXPECT_EQ(Archs, File->getArchitectures());
+
+  SmallString<4096> Buffer;
+  raw_svector_ostream OS(Buffer);
+  auto WriteResult = TextAPIWriter::writeToStream(OS, *File);
+  EXPECT_TRUE(!WriteResult);
+  EXPECT_EQ(stripWhitespace(TBDv3ArchArm64e), stripWhitespace(Buffer.c_str()));
+}
+
 TEST(TBDv3, Swift_1_0) {
   static const char TBDv3Swift1[] = "--- !tapi-tbd-v3\n"
                                     "archs: [ arm64 ]\n"
