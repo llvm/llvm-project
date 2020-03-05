@@ -1964,9 +1964,13 @@ public:
                                          /*withKeyword=*/true);
   }
 
+  /// Print the given successor.
+  void printSuccessor(Block *successor) override;
+
   /// Print an operation successor with the operands used for the block
   /// arguments.
-  void printSuccessorAndUseList(Operation *term, unsigned index) override;
+  void printSuccessorAndUseList(Block *successor,
+                                ValueRange succOperands) override;
 
   /// Print the given region.
   void printRegion(Region &region, bool printEntryBlockArgs,
@@ -2062,23 +2066,14 @@ void OperationPrinter::printGenericOp(Operation *op) {
   os << '"';
   printEscapedString(op->getName().getStringRef(), os);
   os << "\"(";
-
-  // Get the list of operands that are not successor operands.
-  unsigned totalNumSuccessorOperands = 0;
-  unsigned numSuccessors = op->getNumSuccessors();
-  for (unsigned i = 0; i < numSuccessors; ++i)
-    totalNumSuccessorOperands += op->getNumSuccessorOperands(i);
-  unsigned numProperOperands = op->getNumOperands() - totalNumSuccessorOperands;
-  interleaveComma(op->getOperands().take_front(numProperOperands),
-                  [&](Value value) { printValueID(value); });
-
+  interleaveComma(op->getOperands(), [&](Value value) { printValueID(value); });
   os << ')';
 
   // For terminators, print the list of successors and their operands.
-  if (numSuccessors != 0) {
+  if (op->getNumSuccessors() != 0) {
     os << '[';
-    interleaveComma(llvm::seq<unsigned>(0, numSuccessors),
-                    [&](unsigned i) { printSuccessorAndUseList(op, i); });
+    interleaveComma(op->getSuccessors(),
+                    [&](Block *successor) { printBlockName(successor); });
     os << ']';
   }
 
@@ -2167,12 +2162,14 @@ void OperationPrinter::printValueID(Value value, bool printResultNo) const {
   state->getSSANameState().printValueID(value, printResultNo, os);
 }
 
-void OperationPrinter::printSuccessorAndUseList(Operation *term,
-                                                unsigned index) {
-  printBlockName(term->getSuccessor(index));
+void OperationPrinter::printSuccessor(Block *successor) {
+  printBlockName(successor);
+}
 
-  auto succOperands = term->getSuccessorOperands(index);
-  if (succOperands.begin() == succOperands.end())
+void OperationPrinter::printSuccessorAndUseList(Block *successor,
+                                                ValueRange succOperands) {
+  printBlockName(successor);
+  if (succOperands.empty())
     return;
 
   os << '(';

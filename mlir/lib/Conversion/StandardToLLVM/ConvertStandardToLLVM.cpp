@@ -2185,13 +2185,10 @@ struct OneToOneLLVMTerminatorLowering
   using Super = OneToOneLLVMTerminatorLowering<SourceOp, TargetOp>;
 
   PatternMatchResult
-  matchAndRewrite(Operation *op, ArrayRef<Value> properOperands,
-                  ArrayRef<Block *> destinations,
-                  ArrayRef<ArrayRef<Value>> operands,
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    SmallVector<ValueRange, 2> operandRanges(operands.begin(), operands.end());
-    rewriter.replaceOpWithNewOp<TargetOp>(op, properOperands, destinations,
-                                          operandRanges, op->getAttrs());
+    rewriter.replaceOpWithNewOp<TargetOp>(op, operands, op->getSuccessors(),
+                                          op->getAttrs());
     return this->matchSuccess();
   }
 };
@@ -2213,13 +2210,12 @@ struct ReturnOpLowering : public LLVMLegalizationPattern<ReturnOp> {
     // If ReturnOp has 0 or 1 operand, create it and return immediately.
     if (numArguments == 0) {
       rewriter.replaceOpWithNewOp<LLVM::ReturnOp>(
-          op, ArrayRef<Value>(), ArrayRef<Block *>(), op->getAttrs());
+          op, ArrayRef<Type>(), ArrayRef<Value>(), op->getAttrs());
       return matchSuccess();
     }
     if (numArguments == 1) {
       rewriter.replaceOpWithNewOp<LLVM::ReturnOp>(
-          op, ArrayRef<Value>(operands.front()), ArrayRef<Block *>(),
-          op->getAttrs());
+          op, ArrayRef<Type>(), operands.front(), op->getAttrs());
       return matchSuccess();
     }
 
@@ -2234,8 +2230,8 @@ struct ReturnOpLowering : public LLVMLegalizationPattern<ReturnOp> {
           op->getLoc(), packedType, packed, operands[i],
           rewriter.getI64ArrayAttr(i));
     }
-    rewriter.replaceOpWithNewOp<LLVM::ReturnOp>(
-        op, llvm::makeArrayRef(packed), ArrayRef<Block *>(), op->getAttrs());
+    rewriter.replaceOpWithNewOp<LLVM::ReturnOp>(op, ArrayRef<Type>(), packed,
+                                                op->getAttrs());
     return matchSuccess();
   }
 };
@@ -2742,10 +2738,8 @@ struct AtomicCmpXchgOpLowering : public LoadStoreOpLowering<AtomicRMWOp> {
     auto memRefType = atomicOp.getMemRefType();
     auto dataPtr = getDataPtr(loc, memRefType, adaptor.memref(),
                               adaptor.indices(), rewriter, getModule());
-    auto init = rewriter.create<LLVM::LoadOp>(loc, dataPtr);
-    std::array<Value, 1> brRegionOperands{init};
-    std::array<ValueRange, 1> brOperands{brRegionOperands};
-    rewriter.create<LLVM::BrOp>(loc, ArrayRef<Value>{}, loopBlock, brOperands);
+    Value init = rewriter.create<LLVM::LoadOp>(loc, dataPtr);
+    rewriter.create<LLVM::BrOp>(loc, init, loopBlock);
 
     // Prepare the body of the loop block.
     rewriter.setInsertionPointToStart(loopBlock);
@@ -2768,19 +2762,14 @@ struct AtomicCmpXchgOpLowering : public LoadStoreOpLowering<AtomicRMWOp> {
         loc, pairType, dataPtr, loopArgument, select, successOrdering,
         failureOrdering);
     // Extract the %new_loaded and %ok values from the pair.
-    auto newLoaded = rewriter.create<LLVM::ExtractValueOp>(
+    Value newLoaded = rewriter.create<LLVM::ExtractValueOp>(
         loc, valueType, cmpxchg, rewriter.getI64ArrayAttr({0}));
-    auto ok = rewriter.create<LLVM::ExtractValueOp>(
+    Value ok = rewriter.create<LLVM::ExtractValueOp>(
         loc, boolType, cmpxchg, rewriter.getI64ArrayAttr({1}));
 
     // Conditionally branch to the end or back to the loop depending on %ok.
-    std::array<Value, 1> condBrProperOperands{ok};
-    std::array<Block *, 2> condBrDestinations{endBlock, loopBlock};
-    std::array<Value, 1> condBrRegionOperands{newLoaded};
-    std::array<ValueRange, 2> condBrOperands{ArrayRef<Value>{},
-                                             condBrRegionOperands};
-    rewriter.create<LLVM::CondBrOp>(loc, condBrProperOperands,
-                                    condBrDestinations, condBrOperands);
+    rewriter.create<LLVM::CondBrOp>(loc, ok, endBlock, ArrayRef<Value>(),
+                                    loopBlock, newLoaded);
 
     // The 'result' of the atomic_rmw op is the newly loaded value.
     rewriter.replaceOp(op, {newLoaded});

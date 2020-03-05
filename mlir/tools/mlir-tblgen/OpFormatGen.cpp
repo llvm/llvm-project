@@ -418,24 +418,20 @@ const char *const functionalTypeParserCode = R"(
 ///
 /// {0}: The name for the successor list.
 const char *successorListParserCode = R"(
-  SmallVector<std::pair<Block *, SmallVector<Value, 4>>, 2> {0}Successors;
+  SmallVector<Block *, 2> {0}Successors;
   {
     Block *succ;
-    SmallVector<Value, 4> succOperands;
-    // Parse the first successor.
-    auto firstSucc = parser.parseOptionalSuccessorAndUseList(succ,
-                                                             succOperands);
+    auto firstSucc = parser.parseOptionalSuccessor(succ);
     if (firstSucc.hasValue()) {
       if (failed(*firstSucc))
         return failure();
-      {0}Successors.emplace_back(succ, succOperands);
+      {0}Successors.emplace_back(succ);
 
       // Parse any trailing successors.
       while (succeeded(parser.parseOptionalComma())) {
-        succOperands.clear();
-        if (parser.parseSuccessorAndUseList(succ, succOperands))
+        if (parser.parseSuccessor(succ))
           return failure();
-        {0}Successors.emplace_back(succ, succOperands);
+        {0}Successors.emplace_back(succ);
       }
     }
   }
@@ -446,17 +442,8 @@ const char *successorListParserCode = R"(
 /// {0}: The name of the successor.
 const char *successorParserCode = R"(
   Block *{0}Successor = nullptr;
-  SmallVector<Value, 4> {0}Operands;
-  if (parser.parseSuccessorAndUseList({0}Successor, {0}Operands))
+  if (parser.parseSuccessor({0}Successor))
     return failure();
-)";
-
-/// The code snippet used to resolve a list of parsed successors.
-///
-/// {0}: The name of the successor list.
-const char *resolveSuccessorListParserCode = R"(
-  for (auto &succAndArgs : {0}Successors)
-    result.addSuccessor(succAndArgs.first, succAndArgs.second);
 )";
 
 /// Get the name used for the type list for the given type directive operand.
@@ -802,19 +789,16 @@ void OperationFormat::genParserSuccessorResolution(Operator &op,
   bool hasAllSuccessors = llvm::any_of(
       elements, [](auto &elt) { return isa<SuccessorsDirective>(elt.get()); });
   if (hasAllSuccessors) {
-    body << llvm::formatv(resolveSuccessorListParserCode, "full");
+    body << "  result.addSuccessors(fullSuccessors);\n";
     return;
   }
 
   // Otherwise, handle each successor individually.
   for (const NamedSuccessor &successor : op.getSuccessors()) {
-    if (successor.isVariadic()) {
-      body << llvm::formatv(resolveSuccessorListParserCode, successor.name);
-      continue;
-    }
-
-    body << llvm::formatv("  result.addSuccessor({0}Successor, {0}Operands);\n",
-                          successor.name);
+    if (successor.isVariadic())
+      body << "  result.addSuccessors(" << successor.name << "Successors);\n";
+    else
+      body << "  result.addSuccessors(" << successor.name << "Successor);\n";
   }
 }
 
@@ -957,28 +941,14 @@ static void genElementPrinter(Element *element, OpMethodBody &body,
     body << "  p << " << operand->getVar()->name << "();\n";
   } else if (auto *successor = dyn_cast<SuccessorVariable>(element)) {
     const NamedSuccessor *var = successor->getVar();
-    if (var->isVariadic()) {
-      body << "  {\n"
-           << "    auto succRange = " << var->name << "();\n"
-           << "    auto opSuccBegin = getOperation()->successor_begin();\n"
-           << "    int i = succRange.begin() - opSuccBegin;\n"
-           << "    int e = i + succRange.size();\n"
-           << "    interleaveComma(llvm::seq<int>(i, e), p, [&](int i) {\n"
-           << "      p.printSuccessorAndUseList(*this, i);\n"
-           << "    });\n"
-           << "  }\n";
-      return;
-    }
-
-    unsigned index = successor->getVar() - op.successor_begin();
-    body << "  p.printSuccessorAndUseList(*this, " << index << ");\n";
+    if (var->isVariadic())
+      body << "  interleaveComma(" << var->name << "(), p);\n";
+    else
+      body << "  p << " << var->name << "();\n";
   } else if (isa<OperandsDirective>(element)) {
     body << "  p << getOperation()->getOperands();\n";
   } else if (isa<SuccessorsDirective>(element)) {
-    body << "  interleaveComma(llvm::seq<int>(0, "
-            "getOperation()->getNumSuccessors()), p, [&](int i) {"
-         << "    p.printSuccessorAndUseList(*this, i);"
-         << "  });\n";
+    body << "  interleaveComma(getOperation()->getSuccessors(), p);\n";
   } else if (auto *dir = dyn_cast<TypeDirective>(element)) {
     body << "  p << ";
     genTypeOperandPrinter(dir->getOperand(), body) << ";\n";

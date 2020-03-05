@@ -153,7 +153,7 @@ func @block_arg_no_type() {
 
 func @block_arg_no_close_paren() {
 ^bb42:
-  br ^bb2( // expected-error@+1 {{expected ')' to close argument list}}
+  br ^bb2( // expected-error@+1 {{expected ':'}}
   return
 }
 
