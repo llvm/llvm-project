@@ -8,6 +8,7 @@
 
 #include "numeric-output.h"
 #include "flang/Common/unsigned-const-division.h"
+#include <algorithm>
 
 namespace Fortran::runtime::io {
 
