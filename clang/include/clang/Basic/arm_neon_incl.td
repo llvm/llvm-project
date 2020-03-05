@@ -88,6 +88,7 @@ def call_mangled;
 //          - "D" - Double the number of lanes in the type.
 //          - "8" - Convert type to an equivalent vector of 8-bit signed
 //                  integers.
+//          - "32" - Convert type to an equivalent vector of 32-bit integers.
 // example: (cast "R", "U", $p0) -> "(uint32x4_t)__p0" (assuming the return
 //           value is of type "int32x4_t".
 //          (cast $p0, "D", "8", $p1) -> "(int8x16_t)__p1" (assuming __p0
@@ -109,12 +110,6 @@ def dup;
 // example: (dup_typed $p1, $p2) -> "(float16x4_t) {__p2, __p2, __p2, __p2}"
 //          (assuming __p1 is float16x4_t, and __p2 is a compatible scalar).
 def dup_typed;
-// splat - Take a vector and a lane index, and return a vector of the same type
-//         containing repeated instances of the source vector at the lane index.
-// example: (splat $p0, $p1) ->
-//            "__builtin_shufflevector(__p0, __p0, __p1, __p1, __p1, __p1)"
-//          (assuming __p0 has four elements).
-def splat;
 // save_temp - Create a temporary (local) variable. The variable takes a name
 //             based on the zero'th parameter and can be referenced using
 //             using that name in subsequent DAGs in the same
