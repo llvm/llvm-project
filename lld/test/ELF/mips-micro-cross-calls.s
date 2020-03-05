@@ -16,7 +16,7 @@
 
 # REG:  {{0*}}[[FOOT:[0-9a-f]+]]   l     F .text  0000000e 0x80 __microLA25Thunk_foo
 # REG:  {{0*}}[[BAR:[0-9a-f]+]]    g     F .text  00000000 bar
-# REG:  {{0*}}[[MIC:[0-9a-f]+]]            .text  00000000 0x80 micro
+# REG:  {{0*}}[[MIC:[0-9a-f]+]]    g       .text  00000000 0x80 micro
 
 # REG:        __start:
 # REG-NEXT:      jalx 0x[[MIC]] <micro>
@@ -28,7 +28,7 @@
 # REG-NEXT:      j    0x[[BAR]] <bar>
 
 # MICRO: {{0*}}[[BART:[0-9a-f]+]]  l     F .text  00000010 __LA25Thunk_bar
-# MICRO: {{0*}}[[START:[0-9a-f]+]]         .text  00000000 __start
+# MICRO: {{0*}}[[START:[0-9a-f]+]] g       .text  00000000 __start
 # MICRO: {{0*}}[[FOO:[0-9a-f]+]]   g     F .text  00000000 0x80 foo
 
 # MICRO:      micro:

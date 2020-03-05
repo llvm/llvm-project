@@ -26,8 +26,8 @@ loc:
   .section  .rodata,"a",@progbits
   .gpword(loc)                                # R_MIPS_GPREL32
 
-# CHECK: 00020104      .text   00000000 loc
-# CHECK: 00028100      .got    00000000 .hidden _gp
+# CHECK: 00020104 l    .text   00000000 loc
+# CHECK: 00028100 l    .got    00000000 .hidden _gp
 # CHECK: 00020100 g  F .text   00000000 __start
 
 # CHECK:      Contents of section .rodata:

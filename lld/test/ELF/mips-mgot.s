@@ -16,10 +16,10 @@
 
 # CHECK: SYMBOL TABLE:
 # CHECK:           00000000 l    O .tdata          00000000 loc0
-# CHECK: [[FOO0:[0-9a-f]+]]        .text           00000000 foo0
+# CHECK: [[FOO0:[0-9a-f]+]] g      .text           00000000 foo0
 # CHECK:           00000000 g    O .tdata          00000000 tls0
 # CHECK:           00000004 g    O .tdata          00000000 tls1
-# CHECK: [[FOO2:[0-9a-f]+]]        .text           00000000 foo2
+# CHECK: [[FOO2:[0-9a-f]+]] g      .text           00000000 foo2
 
 # CHECK:      Contents of section .got:
 # CHECK-NEXT:  70000 00000000 80000000 [[FOO0]] [[FOO2]]

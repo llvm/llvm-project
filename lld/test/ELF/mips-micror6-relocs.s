@@ -21,7 +21,7 @@
 # RUN:   | FileCheck %s
 
 # CHECK: 00020100 g F     .text  00000000 0x80 foo
-# CHECK: 00020110         .text  00000000 0x80 __start
+# CHECK: 00020110 g       .text  00000000 0x80 __start
 
 # CHECK:      __start:
 # CHECK-NEXT:    20110:  lapc   $2, -12
