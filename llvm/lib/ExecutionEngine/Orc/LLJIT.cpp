@@ -555,18 +555,34 @@ public:
              << "\"\n";
     });
 
-    if (auto InitSeq = MP.getInitializerSequence(JD)) {
+    auto InitSeq = MP.getInitializerSequence(JD);
+    if (!InitSeq)
+      return InitSeq.takeError();
+
+    // If ObjC is not enabled but there are JIT'd ObjC inits then return
+    // an error.
+    if (!objCRegistrationEnabled())
       for (auto &KV : *InitSeq) {
+        if (!KV.second.getObjCSelRefsSections().empty() ||
+            !KV.second.getObjCClassListSections().empty())
+          return make_error<StringError>("JITDylib " + KV.first->getName() +
+                                             " contains objc metadata but objc"
+                                             " is not enabled",
+                                         inconvertibleErrorCode());
+      }
+
+    // Run the initializers.
+    for (auto &KV : *InitSeq) {
+      if (objCRegistrationEnabled()) {
         KV.second.registerObjCSelectors();
         if (auto Err = KV.second.registerObjCClasses()) {
           // FIXME: Roll back registrations on error?
           return Err;
         }
       }
-      for (auto &KV : *InitSeq)
-        KV.second.runModInits();
-    } else
-      return InitSeq.takeError();
+      KV.second.runModInits();
+    }
+
     return Error::success();
   }
 

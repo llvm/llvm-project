@@ -81,7 +81,7 @@ Error enableObjCRegistration(const char *PathToLibObjC) {
   return Error::success();
 }
 
-bool objcRegistrationEnabled() {
+bool objCRegistrationEnabled() {
   return ObjCRegistrationAPIState == ObjCRegistrationAPI::Initialized;
 }
 
@@ -98,7 +98,7 @@ void MachOJITDylibInitializers::runModInits() const {
 }
 
 void MachOJITDylibInitializers::registerObjCSelectors() const {
-  assert(objcRegistrationEnabled() && "ObjC registration not enabled.");
+  assert(objCRegistrationEnabled() && "ObjC registration not enabled.");
 
   for (const auto &ObjCSelRefs : ObjCSelRefsSections) {
     for (uint64_t I = 0; I != ObjCSelRefs.NumPtrs; ++I) {
@@ -112,7 +112,7 @@ void MachOJITDylibInitializers::registerObjCSelectors() const {
 }
 
 Error MachOJITDylibInitializers::registerObjCClasses() const {
-  assert(objcRegistrationEnabled() && "ObjC registration not enabled.");
+  assert(objCRegistrationEnabled() && "ObjC registration not enabled.");
 
   struct ObjCClassCompiled {
     void *Metaclass;
