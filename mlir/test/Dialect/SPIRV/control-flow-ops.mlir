@@ -24,7 +24,7 @@ func @branch_argument() -> () {
 // -----
 
 func @missing_accessor() -> () {
-  // expected-error @+1 {{has incorrect number of successors: expected 1 but found 0}}
+  // expected-error @+1 {{requires 1 successor but found 0}}
   spv.Branch
 }
 
@@ -32,7 +32,7 @@ func @missing_accessor() -> () {
 
 func @wrong_accessor_count() -> () {
   %true = spv.constant true
-  // expected-error @+1 {{incorrect number of successors: expected 1 but found 2}}
+  // expected-error @+1 {{requires 1 successor but found 2}}
   "spv.Branch"()[^one, ^two] : () -> ()
 ^one:
   spv.Return
@@ -116,7 +116,7 @@ func @wrong_condition_type() -> () {
 
 func @wrong_accessor_count() -> () {
   %true = spv.constant true
-  // expected-error @+1 {{incorrect number of successors: expected 2 but found 1}}
+  // expected-error @+1 {{requires 2 successors but found 1}}
   "spv.BranchConditional"(%true)[^one] : (i1) -> ()
 ^one:
   spv.Return

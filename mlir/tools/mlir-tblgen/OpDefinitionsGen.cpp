@@ -1390,26 +1390,8 @@ void OpEmitter::genRegionVerifier(OpMethodBody &body) {
 }
 
 void OpEmitter::genSuccessorVerifier(OpMethodBody &body) {
-  unsigned numSuccessors = op.getNumSuccessors();
-
-  const char *checkSuccessorSizeCode = R"(
-  if (this->getOperation()->getNumSuccessors() {0} {1}) {
-    return emitOpError("has incorrect number of successors: expected{2} {1}"
-                       " but found ")
-             << this->getOperation()->getNumSuccessors();
-  }
-  )";
-
-  // Verify this op has the correct number of successors.
-  unsigned numVariadicSuccessors = op.getNumVariadicSuccessors();
-  if (numVariadicSuccessors == 0) {
-    body << formatv(checkSuccessorSizeCode, "!=", numSuccessors, "");
-  } else if (numVariadicSuccessors != numSuccessors) {
-    body << formatv(checkSuccessorSizeCode, "<",
-                    numSuccessors - numVariadicSuccessors, " at least");
-  }
-
   // If we have no successors, there is nothing more to do.
+  unsigned numSuccessors = op.getNumSuccessors();
   if (numSuccessors == 0)
     return;
 
@@ -1441,31 +1423,44 @@ void OpEmitter::genSuccessorVerifier(OpMethodBody &body) {
   body << "  }\n";
 }
 
+/// Add a size count trait to the given operation class.
+static void addSizeCountTrait(OpClass &opClass, StringRef traitKind,
+                              int numNonVariadic, int numVariadic) {
+  if (numVariadic != 0) {
+    if (numNonVariadic == numVariadic)
+      opClass.addTrait("OpTrait::Variadic" + traitKind + "s");
+    else
+      opClass.addTrait("OpTrait::AtLeastN" + traitKind + "s<" +
+                       Twine(numNonVariadic - numVariadic) + ">::Impl");
+    return;
+  }
+  switch (numNonVariadic) {
+  case 0:
+    opClass.addTrait("OpTrait::Zero" + traitKind);
+    break;
+  case 1:
+    opClass.addTrait("OpTrait::One" + traitKind);
+    break;
+  default:
+    opClass.addTrait("OpTrait::N" + traitKind + "s<" + Twine(numNonVariadic) +
+                     ">::Impl");
+    break;
+  }
+}
+
 void OpEmitter::genTraits() {
   int numResults = op.getNumResults();
   int numVariadicResults = op.getNumVariadicResults();
 
   // Add return size trait.
-  if (numVariadicResults != 0) {
-    if (numResults == numVariadicResults)
-      opClass.addTrait("OpTrait::VariadicResults");
-    else
-      opClass.addTrait("OpTrait::AtLeastNResults<" +
-                       Twine(numResults - numVariadicResults) + ">::Impl");
-  } else {
-    switch (numResults) {
-    case 0:
-      opClass.addTrait("OpTrait::ZeroResult");
-      break;
-    case 1:
-      opClass.addTrait("OpTrait::OneResult");
-      break;
-    default:
-      opClass.addTrait("OpTrait::NResults<" + Twine(numResults) + ">::Impl");
-      break;
-    }
-  }
+  addSizeCountTrait(opClass, "Result", numResults, numVariadicResults);
 
+  // Add successor size trait.
+  unsigned numSuccessors = op.getNumSuccessors();
+  unsigned numVariadicSuccessors = op.getNumVariadicSuccessors();
+  addSizeCountTrait(opClass, "Successor", numSuccessors, numVariadicSuccessors);
+
+  // Add the native and interface traits.
   for (const auto &trait : op.getTraits()) {
     if (auto opTrait = dyn_cast<tblgen::NativeOpTrait>(&trait))
       opClass.addTrait(opTrait->getTrait());
