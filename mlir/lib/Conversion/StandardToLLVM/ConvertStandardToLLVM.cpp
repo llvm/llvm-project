@@ -2792,7 +2792,9 @@ struct AtomicCmpXchgOpLowering : public LoadStoreOpLowering<AtomicRMWOp> {
 } // namespace
 
 static void ensureDistinctSuccessors(Block &bb) {
-  auto *terminator = bb.getTerminator();
+  Operation *terminator = bb.getTerminator();
+  if (terminator->getNumSuccessors() < 2)
+    return;
 
   // Find repeated successors with arguments.
   llvm::SmallDenseMap<Block *, SmallVector<int, 4>> successorPositions;
@@ -2811,21 +2813,15 @@ static void ensureDistinctSuccessors(Block &bb) {
   // There is no need to pass arguments to the dummy block because it will be
   // dominated by the original block and can therefore use any values defined in
   // the original block.
+  OpBuilder builder(terminator->getContext());
   for (const auto &successor : successorPositions) {
-    const auto &positions = successor.second;
     // Start from the second occurrence of a block in the successor list.
-    for (auto position = std::next(positions.begin()), end = positions.end();
-         position != end; ++position) {
-      auto *dummyBlock = new Block();
-      bb.getParent()->push_back(dummyBlock);
-      auto builder = OpBuilder(dummyBlock);
-      SmallVector<Value, 8> operands(
-          terminator->getSuccessorOperands(*position));
-      builder.create<BranchOp>(terminator->getLoc(), successor.first, operands);
-      terminator->setSuccessor(dummyBlock, *position);
-      for (int i = 0, e = terminator->getNumSuccessorOperands(*position); i < e;
-           ++i)
-        terminator->eraseSuccessorOperand(*position, i);
+    for (int position : llvm::drop_begin(successor.second, 1)) {
+      Block *dummyBlock = builder.createBlock(bb.getParent());
+      terminator->setSuccessor(dummyBlock, position);
+      dummyBlock->addArguments(successor.first->getArgumentTypes());
+      builder.create<BranchOp>(terminator->getLoc(), successor.first,
+                               dummyBlock->getArguments());
     }
   }
 }

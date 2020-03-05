@@ -563,10 +563,19 @@ public:
   explicit TypeRange(OperandRange values);
   explicit TypeRange(ResultRange values);
   explicit TypeRange(ValueRange values);
+  explicit TypeRange(ArrayRef<Value> values);
+  explicit TypeRange(ArrayRef<BlockArgument> values)
+      : TypeRange(ArrayRef<Value>(values.data(), values.size())) {}
   template <typename ValueRangeT>
   TypeRange(ValueTypeRange<ValueRangeT> values)
       : TypeRange(ValueRangeT(values.begin().getCurrent(),
                               values.end().getCurrent())) {}
+  template <typename Arg,
+            typename = typename std::enable_if_t<
+                std::is_constructible<ArrayRef<Type>, Arg>::value>>
+  TypeRange(Arg &&arg) : TypeRange(ArrayRef<Type>(std::forward<Arg>(arg))) {}
+  TypeRange(std::initializer_list<Type> types)
+      : TypeRange(ArrayRef<Type>(types)) {}
 
 private:
   /// The owner of the range is either:

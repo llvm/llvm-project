@@ -294,7 +294,7 @@ static LogicalResult deleteDeadness(MutableArrayRef<Region> regions,
       // earlier arguments.
       for (unsigned i = 0, e = block.getNumArguments(); i < e; i++)
         if (!liveMap.wasProvenLive(block.getArgument(e - i - 1))) {
-          block.eraseArgument(e - i - 1, /*updatePredTerms=*/false);
+          block.eraseArgument(e - i - 1);
           erasedAnything = true;
         }
     }
