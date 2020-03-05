@@ -2303,6 +2303,9 @@ bool QualType::isTriviallyCopyableType(const ASTContext &Context) const {
   if (CanonicalType->isDependentType())
     return false;
 
+  if (CanonicalType->isSizelessBuiltinType())
+    return true;
+
   // Return false for incomplete types after skipping any incomplete array types
   // which are expressly allowed by the standard and thus our API.
   if (CanonicalType->isIncompleteType())
