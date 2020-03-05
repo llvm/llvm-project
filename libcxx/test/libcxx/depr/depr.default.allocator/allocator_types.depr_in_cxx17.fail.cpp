@@ -30,6 +30,10 @@
 // UNSUPPORTED: c++98, c++03, c++11, c++14
 // REQUIRES: verify-support
 
+// Clang 6 does not handle the deprecated attribute on template members properly,
+// so the rebind<int> check below fails.
+// UNSUPPORTED: clang-6
+
 // MODULES_DEFINES: _LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS
 #define _LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS
 
