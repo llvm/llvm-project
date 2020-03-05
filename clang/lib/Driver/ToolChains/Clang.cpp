@@ -2549,13 +2549,8 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       ReciprocalMath = false;
       SignedZeros = true;
       // -fno_fast_math restores default denormal and fpcontract handling
-      FPContract = "";
       DenormalFPMath = DefaultDenormalFPMath;
-
-      // FIXME: The target may have picked a non-IEEE default mode here based on
-      // -cl-denorms-are-zero. Should the target consider -fp-model interaction?
-      DenormalFP32Math = DefaultDenormalFP32Math;
-
+      FPContract = "";
       StringRef Val = A->getValue();
       if (OFastEnabled && !Val.equals("fast")) {
           // Only -ffp-model=fast is compatible with OFast, ignore.
@@ -2732,9 +2727,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       FPExceptionBehavior = "strict";
       // -fno_unsafe_math_optimizations restores default denormal handling
       DenormalFPMath = DefaultDenormalFPMath;
-
-      // The target may have opted to flush just f32 by default, so force IEEE.
-      DenormalFP32Math = llvm::DenormalMode::getIEEE();
+      DenormalFP32Math = DefaultDenormalFP32Math;
       break;
 
     case options::OPT_Ofast:
@@ -2775,12 +2768,11 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
     if (StrictFPModel) {
       // If -ffp-model=strict has been specified on command line but
       // subsequent options conflict then emit warning diagnostic.
+      // TODO: How should this interact with DenormalFP32Math?
       if (HonorINFs && HonorNaNs &&
         !AssociativeMath && !ReciprocalMath &&
         SignedZeros && TrappingMath && RoundingFPMath &&
-        (FPContract.equals("off") || FPContract.empty()) &&
-        DenormalFPMath == llvm::DenormalMode::getIEEE() &&
-        DenormalFP32Math == llvm::DenormalMode::getIEEE())
+        (FPContract.equals("off") || FPContract.empty()))
         // OK: Current Arg doesn't conflict with -ffp-model=strict
         ;
       else {
@@ -2834,8 +2826,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
     CmdArgs.push_back(Args.MakeArgString(ArgStr.str()));
   }
 
-  // Add f32 specific denormal mode flag if it's different.
-  if (DenormalFP32Math != DenormalFPMath) {
+  if (DenormalFP32Math.isValid()) {
     llvm::SmallString<64> DenormFlag;
     llvm::raw_svector_ostream ArgStr(DenormFlag);
     ArgStr << "-fdenormal-fp-math-f32=" << DenormalFP32Math;
