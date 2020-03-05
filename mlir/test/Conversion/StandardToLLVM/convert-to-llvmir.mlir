@@ -556,16 +556,16 @@ func @dfs_block_order(%arg0: i32) -> (i32) {
 }
 // CHECK-LABEL: func @cond_br_same_target(%arg0: !llvm.i1, %arg1: !llvm.i32, %arg2: !llvm.i32)
 func @cond_br_same_target(%arg0: i1, %arg1: i32, %arg2 : i32) -> (i32) {
-// CHECK-NEXT:  llvm.cond_br %arg0, ^[[origBlock:bb[0-9]+]](%arg1 : !llvm.i32), ^[[dummyBlock:bb[0-9]+]]
+// CHECK-NEXT:  llvm.cond_br %arg0, ^[[origBlock:bb[0-9]+]](%arg1 : !llvm.i32), ^[[dummyBlock:bb[0-9]+]](%arg2 : !llvm.i32)
   cond_br %arg0, ^bb1(%arg1 : i32), ^bb1(%arg2 : i32)
 
-// CHECK:      ^[[origBlock]](%0: !llvm.i32):
-// CHECK-NEXT:  llvm.return %0 : !llvm.i32
+// CHECK:      ^[[origBlock]](%[[BLOCKARG1:.*]]: !llvm.i32):
+// CHECK-NEXT:  llvm.return %[[BLOCKARG1]] : !llvm.i32
 ^bb1(%0 : i32):
   return %0 : i32
 
-// CHECK:      ^[[dummyBlock]]:
-// CHECK-NEXT:  llvm.br ^[[origBlock]](%arg2 : !llvm.i32)
+// CHECK:      ^[[dummyBlock]](%[[BLOCKARG2:.*]]: !llvm.i32):
+// CHECK-NEXT:  llvm.br ^[[origBlock]](%[[BLOCKARG2]] : !llvm.i32)
 }
 
 // CHECK-LABEL: func @fcmp(%arg0: !llvm.float, %arg1: !llvm.float) {

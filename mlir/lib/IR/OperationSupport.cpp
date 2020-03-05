@@ -150,6 +150,8 @@ TypeRange::TypeRange(OperandRange values)
 TypeRange::TypeRange(ResultRange values)
     : TypeRange(values.getBase()->getResultTypes().slice(values.getStartIndex(),
                                                          values.size())) {}
+TypeRange::TypeRange(ArrayRef<Value> values)
+    : TypeRange(values.data(), values.size()) {}
 TypeRange::TypeRange(ValueRange values) : TypeRange(OwnerT(), values.size()) {
   detail::ValueRangeOwner owner = values.begin().getBase();
   if (auto *op = reinterpret_cast<Operation *>(owner.ptr.dyn_cast<void *>()))
