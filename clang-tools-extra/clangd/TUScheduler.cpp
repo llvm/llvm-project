@@ -375,7 +375,7 @@ ASTWorker::~ASTWorker() {
 }
 
 void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags) {
-  llvm::StringRef TaskName = "Update";
+  std::string TaskName = llvm::formatv("Update ({0})", Inputs.Version);
   auto Task = [=]() mutable {
     auto RunPublish = [&](llvm::function_ref<void()> Publish) {
       // Ensure we only publish results from the worker if the file was not
@@ -409,8 +409,8 @@ void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags) {
     }
     RanASTCallback = false;
     emitTUStatus({TUAction::BuildingPreamble, TaskName});
-    log("Updating file {0} with command {1}\n[{2}]\n{3}", FileName,
-        Inputs.CompileCommand.Heuristic,
+    log("ASTWorker building file {0} version {1} with command {2}\n[{3}]\n{4}",
+        FileName, Inputs.Version, Inputs.CompileCommand.Heuristic,
         Inputs.CompileCommand.Directory,
         llvm::join(Inputs.CompileCommand.CommandLine, " "));
     // Rebuild the preamble and the AST.
@@ -431,8 +431,8 @@ void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags) {
       Details.BuildFailed = true;
       emitTUStatus({TUAction::BuildingPreamble, TaskName}, &Details);
       // Report the diagnostics we collected when parsing the command line.
-      Callbacks.onFailedAST(FileName, std::move(CompilerInvocationDiags),
-                            RunPublish);
+      Callbacks.onFailedAST(FileName, Inputs.Version,
+                            std::move(CompilerInvocationDiags), RunPublish);
       // Make sure anyone waiting for the preamble gets notified it could not
       // be built.
       PreambleWasBuilt.notify();
@@ -445,9 +445,11 @@ void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags) {
     std::shared_ptr<const PreambleData> NewPreamble = buildPreamble(
         FileName, *Invocation, OldPreamble, OldCommand, Inputs,
         StorePreambleInMemory,
-        [this](ASTContext &Ctx, std::shared_ptr<clang::Preprocessor> PP,
-               const CanonicalIncludes &CanonIncludes) {
-          Callbacks.onPreambleAST(FileName, Ctx, std::move(PP), CanonIncludes);
+        [this, Version(Inputs.Version)](
+            ASTContext &Ctx, std::shared_ptr<clang::Preprocessor> PP,
+            const CanonicalIncludes &CanonIncludes) {
+          Callbacks.onPreambleAST(FileName, Version, Ctx, std::move(PP),
+                                  CanonIncludes);
         });
 
     bool CanReuseAST = InputsAreTheSame && (OldPreamble == NewPreamble);
@@ -541,7 +543,8 @@ void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags) {
       // line if there were any.
       // FIXME: we might have got more errors while trying to build the AST,
       //        surface them too.
-      Callbacks.onFailedAST(FileName, CompilerInvocationDiags, RunPublish);
+      Callbacks.onFailedAST(FileName, Inputs.Version, CompilerInvocationDiags,
+                            RunPublish);
     }
     // Stash the AST in the cache for further use.
     IdleASTs.put(this, std::move(*AST));
@@ -563,6 +566,8 @@ void ASTWorker::runWithAST(
       std::unique_ptr<CompilerInvocation> Invocation = buildCompilerInvocation(
           *CurrentInputs, CompilerInvocationDiagConsumer);
       // Try rebuilding the AST.
+      vlog("ASTWorker rebuilding evicted AST to run {0}: {1} version {2}", Name,
+           FileName, CurrentInputs->Version);
       llvm::Optional<ParsedAST> NewAST =
           Invocation
               ? buildAST(FileName,
@@ -579,6 +584,8 @@ void ASTWorker::runWithAST(
     if (!*AST)
       return Action(llvm::make_error<llvm::StringError>(
           "invalid AST", llvm::errc::invalid_argument));
+    vlog("ASTWorker running {0} on version {2} of {1}", Name, FileName,
+         CurrentInputs->Version);
     Action(InputsAndAST{*CurrentInputs, **AST});
   };
   startTask(Name, std::move(Task), /*UpdateType=*/None, Invalidation);
@@ -788,8 +795,10 @@ Deadline ASTWorker::scheduleLocked() {
       I->UpdateType = WantDiagnostics::Auto;
   }
 
-  while (shouldSkipHeadLocked())
+  while (shouldSkipHeadLocked()) {
+    vlog("ASTWorker skipping {0} for {1}", Requests.front().Name, FileName);
     Requests.pop_front();
+  }
   assert(!Requests.empty() && "skipped the whole queue");
   // Some updates aren't dead yet, but never end up being used.
   // e.g. the first keystroke is live until obsoleted by the second.

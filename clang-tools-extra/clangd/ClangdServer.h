@@ -69,7 +69,7 @@ public:
 
     /// Called by ClangdServer when \p Diagnostics for \p File are ready.
     /// May be called concurrently for separate files, not for a single file.
-    virtual void onDiagnosticsReady(PathRef File,
+    virtual void onDiagnosticsReady(PathRef File, llvm::StringRef Version,
                                     std::vector<Diag> Diagnostics) {}
     /// Called whenever the file status is updated.
     /// May be called concurrently for separate files, not for a single file.
@@ -78,7 +78,7 @@ public:
     /// Called by ClangdServer when some \p Highlightings for \p File are ready.
     /// May be called concurrently for separate files, not for a single file.
     virtual void
-    onHighlightingsReady(PathRef File,
+    onHighlightingsReady(PathRef File, llvm::StringRef Version,
                          std::vector<HighlightingToken> Highlightings) {}
 
     /// Called when background indexing tasks are enqueued/started/completed.
@@ -171,13 +171,17 @@ public:
   /// \p File is already tracked. Also schedules parsing of the AST for it on a
   /// separate thread. When the parsing is complete, DiagConsumer passed in
   /// constructor will receive onDiagnosticsReady callback.
+  /// Version identifies this snapshot and is propagated to ASTs, preambles,
+  /// diagnostics etc built from it.
   void addDocument(PathRef File, StringRef Contents,
+                   llvm::StringRef Version = "null",
                    WantDiagnostics WD = WantDiagnostics::Auto,
                    bool ForceRebuild = false);
 
   /// Remove \p File from list of tracked files, schedule a request to free
   /// resources associated with it. Pending diagnostics for closed files may not
   /// be delivered, even if requested with WantDiags::Auto or WantDiags::Yes.
+  /// An empty set of diagnostics will be delivered, with Version = "".
   void removeDocument(PathRef File);
 
   /// Run code completion for \p File at \p Pos.

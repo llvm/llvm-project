@@ -122,7 +122,8 @@ public:
   /// Called on the AST that was built for emitting the preamble. The built AST
   /// contains only AST nodes from the #include directives at the start of the
   /// file. AST node in the current file should be observed on onMainAST call.
-  virtual void onPreambleAST(PathRef Path, ASTContext &Ctx,
+  virtual void onPreambleAST(PathRef Path, llvm::StringRef Version,
+                             ASTContext &Ctx,
                              std::shared_ptr<clang::Preprocessor> PP,
                              const CanonicalIncludes &) {}
 
@@ -153,8 +154,8 @@ public:
 
   /// Called whenever the AST fails to build. \p Diags will have the diagnostics
   /// that led to failure.
-  virtual void onFailedAST(PathRef Path, std::vector<Diag> Diags,
-                           PublishFn Publish) {}
+  virtual void onFailedAST(PathRef Path, llvm::StringRef Version,
+                           std::vector<Diag> Diags, PublishFn Publish) {}
 
   /// Called whenever the TU status is updated.
   virtual void onFileUpdated(PathRef File, const TUStatus &Status) {}

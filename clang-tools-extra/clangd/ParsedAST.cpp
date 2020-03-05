@@ -239,7 +239,8 @@ void dumpAST(ParsedAST &AST, llvm::raw_ostream &OS) {
 }
 
 llvm::Optional<ParsedAST>
-ParsedAST::build(std::unique_ptr<clang::CompilerInvocation> CI,
+ParsedAST::build(llvm::StringRef Version,
+                 std::unique_ptr<clang::CompilerInvocation> CI,
                  llvm::ArrayRef<Diag> CompilerInvocationDiags,
                  std::shared_ptr<const PreambleData> Preamble,
                  std::unique_ptr<llvm::MemoryBuffer> Buffer,
@@ -427,10 +428,10 @@ ParsedAST::build(std::unique_ptr<clang::CompilerInvocation> CI,
     std::vector<Diag> D = ASTDiags.take(CTContext.getPointer());
     Diags.insert(Diags.end(), D.begin(), D.end());
   }
-  return ParsedAST(std::move(Preamble), std::move(Clang), std::move(Action),
-                   std::move(Tokens), std::move(Macros), std::move(ParsedDecls),
-                   std::move(Diags), std::move(Includes),
-                   std::move(CanonIncludes));
+  return ParsedAST(Version, std::move(Preamble), std::move(Clang),
+                   std::move(Action), std::move(Tokens), std::move(Macros),
+                   std::move(ParsedDecls), std::move(Diags),
+                   std::move(Includes), std::move(CanonIncludes));
 }
 
 ParsedAST::ParsedAST(ParsedAST &&Other) = default;
@@ -512,14 +513,15 @@ const CanonicalIncludes &ParsedAST::getCanonicalIncludes() const {
   return CanonIncludes;
 }
 
-ParsedAST::ParsedAST(std::shared_ptr<const PreambleData> Preamble,
+ParsedAST::ParsedAST(llvm::StringRef Version,
+                     std::shared_ptr<const PreambleData> Preamble,
                      std::unique_ptr<CompilerInstance> Clang,
                      std::unique_ptr<FrontendAction> Action,
                      syntax::TokenBuffer Tokens, MainFileMacros Macros,
                      std::vector<Decl *> LocalTopLevelDecls,
                      std::vector<Diag> Diags, IncludeStructure Includes,
                      CanonicalIncludes CanonIncludes)
-    : Preamble(std::move(Preamble)), Clang(std::move(Clang)),
+    : Version(Version), Preamble(std::move(Preamble)), Clang(std::move(Clang)),
       Action(std::move(Action)), Tokens(std::move(Tokens)),
       Macros(std::move(Macros)), Diags(std::move(Diags)),
       LocalTopLevelDecls(std::move(LocalTopLevelDecls)),
@@ -546,7 +548,7 @@ buildAST(PathRef FileName, std::unique_ptr<CompilerInvocation> Invocation,
   }
 
   return ParsedAST::build(
-      std::make_unique<CompilerInvocation>(*Invocation),
+      Inputs.Version, std::make_unique<CompilerInvocation>(*Invocation),
       CompilerInvocationDiags, Preamble,
       llvm::MemoryBuffer::getMemBufferCopy(Inputs.Contents, FileName),
       std::move(VFS), Inputs.Index, Inputs.Opts);

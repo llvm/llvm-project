@@ -849,7 +849,8 @@ TEST(LocateSymbol, WithPreamble) {
       ElementsAre(Sym("foo.h", FooHeader.range())));
 
   // Only preamble is built, and no AST is built in this request.
-  Server.addDocument(FooCpp, FooWithoutHeader.code(), WantDiagnostics::No);
+  Server.addDocument(FooCpp, FooWithoutHeader.code(), "null",
+                     WantDiagnostics::No);
   // We build AST here, and it should use the latest preamble rather than the
   // stale one.
   EXPECT_THAT(
@@ -859,7 +860,8 @@ TEST(LocateSymbol, WithPreamble) {
   // Reset test environment.
   runAddDocument(Server, FooCpp, FooWithHeader.code());
   // Both preamble and AST are built in this request.
-  Server.addDocument(FooCpp, FooWithoutHeader.code(), WantDiagnostics::Yes);
+  Server.addDocument(FooCpp, FooWithoutHeader.code(), "null",
+                     WantDiagnostics::Yes);
   // Use the AST being built in above request.
   EXPECT_THAT(
       cantFail(runLocateSymbolAt(Server, FooCpp, FooWithoutHeader.point())),
