@@ -183,6 +183,13 @@ Type TypeRange::dereference_iterator(OwnerT object, ptrdiff_t index) {
 OperandRange::OperandRange(Operation *op)
     : OperandRange(op->getOpOperands().data(), op->getNumOperands()) {}
 
+/// Return the operand index of the first element of this range. The range
+/// must not be empty.
+unsigned OperandRange::getBeginOperandIndex() const {
+  assert(!empty() && "range must not be empty");
+  return base->getOperandNumber();
+}
+
 //===----------------------------------------------------------------------===//
 // ResultRange
 

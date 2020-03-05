@@ -9,6 +9,7 @@ add_mlir_dialect_library(MLIRStandardOps
 add_dependencies(MLIRStandardOps
 
   MLIRCallOpInterfacesIncGen
+  MLIRControlFlowInterfacesIncGen
   MLIREDSC
   MLIRIR
   MLIRStandardOpsIncGen

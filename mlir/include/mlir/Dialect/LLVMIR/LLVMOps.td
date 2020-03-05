@@ -14,6 +14,7 @@
 #define LLVMIR_OPS
 
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
+include "mlir/Analysis/ControlFlowInterfaces.td"
 
 class LLVM_Builder<string builder> {
   string llvmBuilder = builder;
@@ -315,7 +316,9 @@ def LLVM_FPExtOp : LLVM_CastOp<"fpext", "CreateFPExt">;
 def LLVM_FPTruncOp : LLVM_CastOp<"fptrunc", "CreateFPTrunc">;
 
 // Call-related operations.
-def LLVM_InvokeOp : LLVM_Op<"invoke", [Terminator]>,
+def LLVM_InvokeOp : LLVM_Op<"invoke", [
+                      DeclareOpInterfaceMethods<BranchOpInterface>, Terminator
+                    ]>,
                     Arguments<(ins OptionalAttr<FlatSymbolRefAttr>:$callee,
                                Variadic<LLVM_Type>)>,
                     Results<(outs Variadic<LLVM_Type>)> {
@@ -458,11 +461,13 @@ def LLVM_FreezeOp : LLVM_OneResultOp<"freeze", [SameOperandsAndResultType]>,
 }
 
 // Terminators.
-def LLVM_BrOp : LLVM_TerminatorOp<"br", []> {
+def LLVM_BrOp : LLVM_TerminatorOp<"br",
+    [DeclareOpInterfaceMethods<BranchOpInterface>]> {
   let successors = (successor AnySuccessor:$dest);
   let assemblyFormat = "$dest attr-dict";
 }
-def LLVM_CondBrOp : LLVM_TerminatorOp<"cond_br", []> {
+def LLVM_CondBrOp : LLVM_TerminatorOp<"cond_br",
+    [DeclareOpInterfaceMethods<BranchOpInterface>]> {
   let arguments = (ins LLVMI1:$condition);
   let successors = (successor AnySuccessor:$trueDest, AnySuccessor:$falseDest);
   let assemblyFormat = "$condition `,` successors attr-dict";

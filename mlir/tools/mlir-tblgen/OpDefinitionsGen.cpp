@@ -1155,8 +1155,8 @@ void OpEmitter::genOpInterfaceMethods() {
       continue;
     auto interface = opTrait->getOpInterface();
     for (auto method : interface.getMethods()) {
-      // Don't declare if the method has a body.
-      if (method.getBody())
+      // Don't declare if the method has a body or a default implementation.
+      if (method.getBody() || method.getDefaultImplementation())
         continue;
       std::string args;
       llvm::raw_string_ostream os(args);
