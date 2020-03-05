@@ -20,4 +20,6 @@ add_mlir_dialect_library(MLIRLinalgUtils
   )
 
 add_dependencies(MLIRLinalgUtils ${LIBS})
-target_link_libraries(MLIRLinalgUtils ${LIBS})
+target_link_libraries(MLIRLinalgUtils
+  PUBLIC
+  ${LIBS})

@@ -26,6 +26,7 @@ add_dependencies(MLIRSPIRV
   MLIRSPIRVTargetAndABIIncGen)
 
 target_link_libraries(MLIRSPIRV
+  PUBLIC
   MLIRIR
   MLIRParser
   MLIRSupport

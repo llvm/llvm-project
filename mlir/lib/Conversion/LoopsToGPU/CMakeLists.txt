@@ -19,4 +19,6 @@ add_mlir_conversion_library(MLIRLoopsToGPU
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Conversion/LoopsToGPU
 )
 add_dependencies(MLIRLoopsToGPU ${LIBS})
-target_link_libraries(MLIRLoopsToGPU ${LIBS})
+target_link_libraries(MLIRLoopsToGPU
+  PUBLIC
+  ${LIBS})

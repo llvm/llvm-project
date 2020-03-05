@@ -14,7 +14,7 @@ add_dependencies(
 )
 target_link_libraries(
   MLIRLoopToStandard
-
+  PUBLIC
   MLIRLoopOps
   MLIRTransforms
   LLVMCore

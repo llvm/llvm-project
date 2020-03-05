@@ -18,6 +18,7 @@ add_dependencies(MLIRGPU
   MLIRTransformUtils
   LLVMSupport)
 target_link_libraries(MLIRGPU
+  PUBLIC
   MLIREDSC
   MLIRIR
   MLIRLLVMIR

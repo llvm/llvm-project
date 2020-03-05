@@ -11,6 +11,7 @@ add_dependencies(MLIRGPUtoSPIRVTransforms
   MLIRGPUToSPIRVIncGen)
 
 target_link_libraries(MLIRGPUtoSPIRVTransforms
+  PUBLIC
   MLIRGPU
   MLIRIR
   MLIRPass

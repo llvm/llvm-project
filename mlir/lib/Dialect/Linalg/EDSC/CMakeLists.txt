@@ -18,4 +18,6 @@ add_mlir_dialect_library(MLIRLinalgEDSC
   )
 
 add_dependencies(MLIRLinalgEDSC ${LIBS})
-target_link_libraries(MLIRLinalgEDSC ${LIBS})
+target_link_libraries(MLIRLinalgEDSC
+  PUBLIC
+  ${LIBS})

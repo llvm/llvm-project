@@ -15,6 +15,7 @@ add_llvm_library(MLIRMlirOptMain
   mlir-opt.cpp
 )
 target_link_libraries(MLIRMlirOptMain
+  PUBLIC
   ${LIB_LIBS}
 )
 

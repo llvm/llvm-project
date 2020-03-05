@@ -32,6 +32,7 @@ add_dependencies(MLIRTestTransforms MLIRStandardOpsIncGen)
 add_dependencies(MLIRTestTransforms MLIRTestLinalgTransformPatternsIncGen)
 add_dependencies(MLIRTestTransforms MLIRTestVectorTransformPatternsIncGen)
 target_link_libraries(MLIRTestTransforms
+  PUBLIC
   MLIRAffineOps
   MLIRAnalysis
   MLIREDSC

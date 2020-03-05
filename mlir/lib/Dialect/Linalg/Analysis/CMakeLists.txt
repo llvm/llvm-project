@@ -15,4 +15,6 @@ add_mlir_dialect_library(MLIRLinalgAnalysis
   )
 
 add_dependencies(MLIRLinalgAnalysis ${LIBS})
-target_link_libraries(MLIRLinalgAnalysis ${LIBS})
+target_link_libraries(MLIRLinalgAnalysis
+  PUBLIC
+  ${LIBS})

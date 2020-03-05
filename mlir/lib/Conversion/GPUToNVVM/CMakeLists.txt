@@ -10,6 +10,7 @@ add_dependencies(MLIRGPUtoNVVMTransforms
   MLIRGPUToNVVMIncGen)
 
 target_link_libraries(MLIRGPUtoNVVMTransforms
+  PUBLIC
   LLVMSupport
   MLIRGPU
   MLIRLLVMIR
