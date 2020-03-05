@@ -193,15 +193,15 @@ public:
 };
 } // end anonymous namespace
 
-static unsigned getRelaxedOpcodeBranch(const MCInst &Inst, bool is16BitMode) {
+static unsigned getRelaxedOpcodeBranch(const MCInst &Inst, bool Is16BitMode) {
   unsigned Op = Inst.getOpcode();
   switch (Op) {
   default:
     return Op;
   case X86::JCC_1:
-    return (is16BitMode) ? X86::JCC_2 : X86::JCC_4;
+    return (Is16BitMode) ? X86::JCC_2 : X86::JCC_4;
   case X86::JMP_1:
-    return (is16BitMode) ? X86::JMP_2 : X86::JMP_4;
+    return (Is16BitMode) ? X86::JMP_2 : X86::JMP_4;
   }
 }
 
@@ -290,11 +290,11 @@ static unsigned getRelaxedOpcodeArith(const MCInst &Inst) {
   }
 }
 
-static unsigned getRelaxedOpcode(const MCInst &Inst, bool is16BitMode) {
+static unsigned getRelaxedOpcode(const MCInst &Inst, bool Is16BitMode) {
   unsigned R = getRelaxedOpcodeArith(Inst);
   if (R != Inst.getOpcode())
     return R;
-  return getRelaxedOpcodeBranch(Inst, is16BitMode);
+  return getRelaxedOpcodeBranch(Inst, Is16BitMode);
 }
 
 static X86::CondCode getCondFromBranch(const MCInst &MI,
@@ -717,8 +717,8 @@ void X86AsmBackend::relaxInstruction(const MCInst &Inst,
                                      const MCSubtargetInfo &STI,
                                      MCInst &Res) const {
   // The only relaxations X86 does is from a 1byte pcrel to a 4byte pcrel.
-  bool is16BitMode = STI.getFeatureBits()[X86::Mode16Bit];
-  unsigned RelaxedOp = getRelaxedOpcode(Inst, is16BitMode);
+  bool Is16BitMode = STI.getFeatureBits()[X86::Mode16Bit];
+  unsigned RelaxedOp = getRelaxedOpcode(Inst, Is16BitMode);
 
   if (RelaxedOp == Inst.getOpcode()) {
     SmallString<256> Tmp;
@@ -737,8 +737,8 @@ static bool canBeRelaxedForPadding(const MCRelaxableFragment &RF) {
   // encoding size without impacting performance.
   auto &Inst = RF.getInst();
   auto &STI = *RF.getSubtargetInfo();
-  bool is16BitMode = STI.getFeatureBits()[X86::Mode16Bit];
-  return getRelaxedOpcode(Inst, is16BitMode) != Inst.getOpcode();
+  bool Is16BitMode = STI.getFeatureBits()[X86::Mode16Bit];
+  return getRelaxedOpcode(Inst, Is16BitMode) != Inst.getOpcode();
 }
 
 bool X86AsmBackend::padInstructionEncoding(MCRelaxableFragment &RF,
