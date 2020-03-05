@@ -650,12 +650,14 @@ std::string PredefinedExpr::ComputeName(IdentKind IK, const Decl *CurrentDecl) {
       if (MC->shouldMangleDeclName(ND)) {
         SmallString<256> Buffer;
         llvm::raw_svector_ostream Out(Buffer);
+        GlobalDecl GD;
         if (const CXXConstructorDecl *CD = dyn_cast<CXXConstructorDecl>(ND))
-          MC->mangleCXXCtor(CD, Ctor_Base, Out);
+          GD = GlobalDecl(CD, Ctor_Base);
         else if (const CXXDestructorDecl *DD = dyn_cast<CXXDestructorDecl>(ND))
-          MC->mangleCXXDtor(DD, Dtor_Base, Out);
+          GD = GlobalDecl(DD, Dtor_Base);
         else
-          MC->mangleName(ND, Out);
+          GD = GlobalDecl(ND);
+        MC->mangleName(GD, Out);
 
         if (!Buffer.empty() && Buffer.front() == '\01')
           return std::string(Buffer.substr(1));
