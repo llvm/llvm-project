@@ -14,6 +14,7 @@ class TestPtrRefsObjC(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @skipUnlessDarwin
+    @expectedFailureAll(oslist=["macosx"], debug_info=["dwarf", "gmodules"], bugnumber="llvm.org/pr45112")
     def test_ptr_refs(self):
         """Test the ptr_refs tool on Darwin with Objective-C"""
         self.build()

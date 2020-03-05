@@ -19,6 +19,7 @@
 #include "mlir/IR/Module.h"
 #include "mlir/IR/Value.h"
 
+#include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
@@ -102,6 +103,11 @@ private:
 
   /// A converter for translating debug information.
   std::unique_ptr<detail::DebugTranslation> debugTranslation;
+
+  /// Builder for LLVM IR generation of OpenMP constructs.
+  std::unique_ptr<llvm::OpenMPIRBuilder> ompBuilder;
+  /// Precomputed pointer to OpenMP dialect.
+  const Dialect *ompDialect;
 
   /// Mappings between llvm.mlir.global definitions and corresponding globals.
   DenseMap<Operation *, llvm::GlobalValue *> globalsMapping;

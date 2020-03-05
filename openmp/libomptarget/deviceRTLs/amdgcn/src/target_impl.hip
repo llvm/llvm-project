@@ -47,8 +47,7 @@ DEVICE double __kmpc_impl_get_wtime() {
 
 // Warp vote function
 DEVICE __kmpc_impl_lanemask_t __kmpc_impl_activemask() {
-  // 33 is ICMP_NE from llvm/include/llvm/IR/InstrTypes.h
-  return __builtin_amdgcn_uicmp(1, 0, 33);
+  return __builtin_amdgcn_read_exec();
 }
 
 DEVICE int32_t __kmpc_impl_shfl_sync(__kmpc_impl_lanemask_t, int32_t var,

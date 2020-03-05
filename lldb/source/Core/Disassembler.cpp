@@ -199,9 +199,10 @@ bool Disassembler::Disassemble(Debugger &debugger, const ArchSpec &arch,
   if (bytes_disassembled == 0)
     return false;
 
-  return PrintInstructions(disasm_sp.get(), debugger, arch, exe_ctx,
-                           num_instructions, mixed_source_and_assembly,
-                           num_mixed_context_lines, options, strm);
+  disasm_sp->PrintInstructions(debugger, arch, exe_ctx, num_instructions,
+                               mixed_source_and_assembly,
+                               num_mixed_context_lines, options, strm);
+  return true;
 }
 
 bool Disassembler::Disassemble(Debugger &debugger, const ArchSpec &arch,
@@ -229,9 +230,10 @@ bool Disassembler::Disassemble(Debugger &debugger, const ArchSpec &arch,
   if (bytes_disassembled == 0)
     return false;
 
-  return PrintInstructions(disasm_sp.get(), debugger, arch, exe_ctx,
-                           num_instructions, mixed_source_and_assembly,
-                           num_mixed_context_lines, options, strm);
+  disasm_sp->PrintInstructions(debugger, arch, exe_ctx, num_instructions,
+                               mixed_source_and_assembly,
+                               num_mixed_context_lines, options, strm);
+  return true;
 }
 
 Disassembler::SourceLine
@@ -317,21 +319,20 @@ bool Disassembler::ElideMixedSourceAndDisassemblyLine(
   return false;
 }
 
-bool Disassembler::PrintInstructions(Disassembler *disasm_ptr,
-                                     Debugger &debugger, const ArchSpec &arch,
+void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
                                      const ExecutionContext &exe_ctx,
                                      uint32_t num_instructions,
                                      bool mixed_source_and_assembly,
                                      uint32_t num_mixed_context_lines,
                                      uint32_t options, Stream &strm) {
   // We got some things disassembled...
-  size_t num_instructions_found = disasm_ptr->GetInstructionList().GetSize();
+  size_t num_instructions_found = GetInstructionList().GetSize();
 
   if (num_instructions > 0 && num_instructions < num_instructions_found)
     num_instructions_found = num_instructions;
 
   const uint32_t max_opcode_byte_size =
-      disasm_ptr->GetInstructionList().GetMaxOpcocdeByteSize();
+      GetInstructionList().GetMaxOpcocdeByteSize();
   SymbolContext sc;
   SymbolContext prev_sc;
   AddressRange current_source_line_range;
@@ -372,8 +373,7 @@ bool Disassembler::PrintInstructions(Disassembler *disasm_ptr,
 
   size_t address_text_size = 0;
   for (size_t i = 0; i < num_instructions_found; ++i) {
-    Instruction *inst =
-        disasm_ptr->GetInstructionList().GetInstructionAtIndex(i).get();
+    Instruction *inst = GetInstructionList().GetInstructionAtIndex(i).get();
     if (inst) {
       const Address &addr = inst->GetAddress();
       ModuleSP module_sp(addr.GetModule());
@@ -422,8 +422,7 @@ bool Disassembler::PrintInstructions(Disassembler *disasm_ptr,
   previous_symbol = nullptr;
   SourceLine previous_line;
   for (size_t i = 0; i < num_instructions_found; ++i) {
-    Instruction *inst =
-        disasm_ptr->GetInstructionList().GetInstructionAtIndex(i).get();
+    Instruction *inst = GetInstructionList().GetInstructionAtIndex(i).get();
 
     if (inst) {
       const Address &addr = inst->GetAddress();
@@ -583,8 +582,6 @@ bool Disassembler::PrintInstructions(Disassembler *disasm_ptr,
       break;
     }
   }
-
-  return true;
 }
 
 bool Disassembler::Disassemble(Debugger &debugger, const ArchSpec &arch,
