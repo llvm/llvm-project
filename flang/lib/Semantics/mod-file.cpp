@@ -617,15 +617,16 @@ std::ostream &PutLower(std::ostream &os, const std::string &str) {
 }
 
 struct Temp {
-  Temp(llvm::sys::fs::file_t fd, std::string path) : fd{fd}, path{path} {}
+  Temp(int fd, std::string path) : fd{fd}, path{path} {}
   Temp(Temp &&t) : fd{std::exchange(t.fd, -1)}, path{std::move(t.path)} {}
   ~Temp() {
     if (fd >= 0) {
-      llvm::sys::fs::closeFile(fd);
+      llvm::sys::fs::file_t native{llvm::sys::fs::convertFDToNativeFile(fd)};
+      llvm::sys::fs::closeFile(native);
       llvm::sys::fs::remove(path.c_str());
     }
   }
-  llvm::sys::fs::file_t fd;
+  int fd;
   std::string path;
 };
 
@@ -639,7 +640,7 @@ static llvm::ErrorOr<Temp> MkTemp(const std::string &path) {
   CHECK(length > suffix.length() &&
       path.substr(length - suffix.length()) == suffix);
   auto prefix{path.substr(0, length - suffix.length())};
-  llvm::sys::fs::file_t fd;
+  int fd;
   llvm::SmallString<16> tempPath;
   if (std::error_code err{llvm::sys::fs::createUniqueFile(
           prefix + "%%%%%%" + suffix, fd, tempPath)}) {
