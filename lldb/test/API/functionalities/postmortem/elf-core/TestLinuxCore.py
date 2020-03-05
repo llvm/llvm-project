@@ -33,14 +33,6 @@ class LinuxCoreTestCase(TestBase):
     _mips_regions = 5
     _ppc64le_regions = 2
 
-    def setUp(self):
-        super(LinuxCoreTestCase, self).setUp()
-        self._initial_platform = lldb.DBG.GetSelectedPlatform()
-
-    def tearDown(self):
-        lldb.DBG.SetSelectedPlatform(self._initial_platform)
-        super(LinuxCoreTestCase, self).tearDown()
-
     @skipIf(triple='^mips')
     @skipIfLLVMTargetMissing("X86")
     def test_i386(self):
