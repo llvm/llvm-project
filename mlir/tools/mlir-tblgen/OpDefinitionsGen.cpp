@@ -20,6 +20,7 @@
 #include "mlir/TableGen/OpInterfaces.h"
 #include "mlir/TableGen/OpTrait.h"
 #include "mlir/TableGen/Operator.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/TableGen/Error.h"
@@ -737,7 +738,7 @@ void OpEmitter::genUseOperandAsResultTypeCollectiveParamBuilder() {
 
   // Signature
   std::string params =
-      std::string("Builder *, OperationState &") + builderOpState +
+      std::string("Builder *odsBuilder, OperationState &") + builderOpState +
       ", ValueRange operands, ArrayRef<NamedAttribute> attributes";
   auto &m = opClass.newMethod("void", "build", params, OpMethod::MP_Static);
   auto &body = m.body();
@@ -804,7 +805,7 @@ void OpEmitter::genUseOperandAsResultTypeSeparateParamBuilder() {
 
 void OpEmitter::genUseAttrAsResultTypeBuilder() {
   std::string params =
-      std::string("Builder *, OperationState &") + builderOpState +
+      std::string("Builder *odsBuilder, OperationState &") + builderOpState +
       ", ValueRange operands, ArrayRef<NamedAttribute> attributes";
   auto &m = opClass.newMethod("void", "build", params, OpMethod::MP_Static);
   auto &body = m.body();
@@ -1060,6 +1061,20 @@ void OpEmitter::genCodeForAddingArgAndRegionForBuilder(OpMethodBody &body,
   for (int i = 0, e = op.getNumOperands(); i < e; ++i) {
     body << "  " << builderOpState << ".addOperands(" << getArgumentName(op, i)
          << ");\n";
+  }
+
+  // If the operation has the operand segment size attribute, add it here.
+  if (op.getTrait("OpTrait::AttrSizedOperandSegments")) {
+    body << "  " << builderOpState
+         << ".addAttribute(\"operand_segment_sizes\", "
+            "odsBuilder->getI32VectorAttr({";
+    interleaveComma(llvm::seq<int>(0, op.getNumOperands()), body, [&](int i) {
+      if (op.getOperand(i).isVariadic())
+        body << "static_cast<int32_t>(" << getArgumentName(op, i) << ".size())";
+      else
+        body << "1";
+    });
+    body << "}));\n";
   }
 
   // Push all attributes to the result.
