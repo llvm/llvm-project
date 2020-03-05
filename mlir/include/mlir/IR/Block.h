@@ -17,6 +17,9 @@
 #include "mlir/IR/Visitors.h"
 
 namespace mlir {
+class TypeRange;
+template <typename ValueRangeT> class ValueTypeRange;
+
 /// `Block` represents an ordered list of `Operation`s.
 class Block : public IRObjectWithUseList<BlockOperand>,
               public llvm::ilist_node_with_parent<Block, Region> {
@@ -67,6 +70,9 @@ public:
 
   BlockArgListType getArguments() { return arguments; }
 
+  /// Return a range containing the types of the arguments for this block.
+  ValueTypeRange<BlockArgListType> getArgumentTypes();
+
   using args_iterator = BlockArgListType::iterator;
   using reverse_args_iterator = BlockArgListType::reverse_iterator;
   args_iterator args_begin() { return getArguments().begin(); }
@@ -85,15 +91,13 @@ public:
   BlockArgument insertArgument(args_iterator it, Type type);
 
   /// Add one argument to the argument list for each type specified in the list.
-  iterator_range<args_iterator> addArguments(ArrayRef<Type> types);
+  iterator_range<args_iterator> addArguments(TypeRange types);
 
-  // Add one value to the argument list at the specified position.
+  /// Add one value to the argument list at the specified position.
   BlockArgument insertArgument(unsigned index, Type type);
 
-  /// Erase the argument at 'index' and remove it from the argument list. If
-  /// 'updatePredTerms' is set to true, this argument is also removed from the
-  /// terminators of each predecessor to this block.
-  void eraseArgument(unsigned index, bool updatePredTerms = true);
+  /// Erase the argument at 'index' and remove it from the argument list.
+  void eraseArgument(unsigned index);
 
   unsigned getNumArguments() { return arguments.size(); }
   BlockArgument getArgument(unsigned i) { return arguments[i]; }
