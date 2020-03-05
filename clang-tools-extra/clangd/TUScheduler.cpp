@@ -1093,15 +1093,5 @@ DebouncePolicy DebouncePolicy::fixed(clock::duration T) {
   return P;
 }
 
-void TUScheduler::InvalidatedError::log(llvm::raw_ostream &OS) const {
-  switch (Policy) {
-  case InvalidateOnUpdate:
-    OS << "Task was cancelled due to a subsequent change to the file.";
-    break;
-  case NoInvalidation:
-    llvm_unreachable("Invalidated for no reason?");
-  }
-}
-
 } // namespace clangd
 } // namespace clang
