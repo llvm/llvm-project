@@ -74,7 +74,7 @@ llvm::Error GsymCreator::encode(FileWriter &O) const {
   Hdr.BaseAddress = MinAddr;
   Hdr.NumAddresses = static_cast<uint32_t>(Funcs.size());
   Hdr.StrtabOffset = 0; // We will fix this up later.
-  Hdr.StrtabOffset = 0; // We will fix this up later.
+  Hdr.StrtabSize = 0; // We will fix this up later.
   memset(Hdr.UUID, 0, sizeof(Hdr.UUID));
   if (UUID.size() > sizeof(Hdr.UUID))
     return createStringError(std::errc::invalid_argument,
