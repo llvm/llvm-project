@@ -230,27 +230,14 @@ public:
     InvalidateOnUpdate,
   };
 
-  /// Error to return when an ASTActionInvalidation policy fires.
-  class InvalidatedError : public llvm::ErrorInfo<InvalidatedError> {
-  public:
-    static char ID;
-    ASTActionInvalidation Policy;
-
-    void log(llvm::raw_ostream &OS) const override;
-    std::error_code convertToErrorCode() const override {
-      return std::make_error_code(std::errc::interrupted);
-    }
-  };
-
   /// Schedule an async read of the AST. \p Action will be called when AST is
   /// ready. The AST passed to \p Action refers to the version of \p File
   /// tracked at the time of the call, even if new updates are received before
   /// \p Action is executed.
   /// If an error occurs during processing, it is forwarded to the \p Action
   /// callback.
-  /// If the context is cancelled before the AST is ready, the callback will
-  /// receive a CancelledError. If the invalidation policy is triggered, the
-  /// callback will receive an InvalidatedError.
+  /// If the context is cancelled before the AST is ready, or the invalidation
+  /// policy is triggered, the callback will receive a CancelledError.
   void runWithAST(llvm::StringRef Name, PathRef File,
                   Callback<InputsAndAST> Action,
                   ASTActionInvalidation = NoInvalidation);
