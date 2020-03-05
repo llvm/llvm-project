@@ -7347,16 +7347,17 @@ Value *LoopVectorizationPlanner::VPCallbackILV::getOrCreateScalarValue(
   return ILV.getOrCreateScalarValue(V, Instance);
 }
 
-void VPInterleaveRecipe::print(raw_ostream &O, const Twine &Indent) const {
+void VPInterleaveRecipe::print(raw_ostream &O, const Twine &Indent,
+                               VPSlotTracker &SlotTracker) const {
   O << " +\n"
     << Indent << "\"INTERLEAVE-GROUP with factor " << IG->getFactor() << " at ";
   IG->getInsertPos()->printAsOperand(O, false);
   O << ", ";
-  getAddr()->printAsOperand(O);
+  getAddr()->printAsOperand(O, SlotTracker);
   VPValue *Mask = getMask();
   if (Mask) {
     O << ", ";
-    Mask->printAsOperand(O);
+    Mask->printAsOperand(O, SlotTracker);
   }
   O << "\\l\"";
   for (unsigned i = 0; i < IG->getFactor(); ++i)
