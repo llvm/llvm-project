@@ -185,7 +185,7 @@ TemplateNameDependence TemplateName::getDependence() const {
     D |= TemplateNameDependence::UnexpandedPack;
     break;
   case TemplateName::NameKind::OverloadedTemplate:
-    assert(false && "overloaded templates shouldn't survive to here.");
+    llvm_unreachable("overloaded templates shouldn't survive to here.");
   default:
     break;
   }
