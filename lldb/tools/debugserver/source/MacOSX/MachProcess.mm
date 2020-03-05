@@ -598,6 +598,16 @@ nub_addr_t MachProcess::GetTSDAddressForThread(
       plo_pthread_tsd_entry_size);
 }
 
+/// Determine whether this is running on macOS.
+/// Since debugserver runs on the same machine as the process, we can
+/// just look at the compilation target.
+static bool IsMacOSHost() {
+#if TARGET_OS_OSX == 1
+  return true;
+#else
+  return false;
+#endif
+}
 
 const char *MachProcess::GetDeploymentInfo(const struct load_command& lc,
                                            uint64_t load_command_address,
@@ -619,15 +629,17 @@ const char *MachProcess::GetDeploymentInfo(const struct load_command& lc,
     minor_version = (vers_cmd.sdk >> 8) & 0xffu;
     patch_version = vers_cmd.sdk & 0xffu;
 
+    // Handle the older LC_VERSION load commands, which don't
+    // distinguish between simulator and real hardware.
     switch (cmd) {
     case LC_VERSION_MIN_IPHONEOS:
-      return "ios";
+      return IsMacOSHost() ? "iossimulator": "ios";
     case LC_VERSION_MIN_MACOSX:
       return "macosx";
     case LC_VERSION_MIN_TVOS:
-      return "tvos";
+      return IsMacOSHost() ? "tvossimulator": "tvos";
     case LC_VERSION_MIN_WATCHOS:
-      return "watchos";
+      return IsMacOSHost() ? "watchossimulator" : "watchos";
     default:
       return nullptr;
     }
@@ -649,14 +661,17 @@ const char *MachProcess::GetDeploymentInfo(const struct load_command& lc,
     case PLATFORM_MACCATALYST:
       return "maccatalyst";
     case PLATFORM_IOS:
-    case PLATFORM_IOSSIMULATOR:
       return "ios";
+    case PLATFORM_IOSSIMULATOR:
+      return "iossimulator";
     case PLATFORM_TVOS:
-    case PLATFORM_TVOSSIMULATOR:
       return "tvos";
+    case PLATFORM_TVOSSIMULATOR:
+      return "tvossimulator";
     case PLATFORM_WATCHOS:
-    case PLATFORM_WATCHOSSIMULATOR:
       return "watchos";
+    case PLATFORM_WATCHOSSIMULATOR:
+      return "watchossimulator";
     case PLATFORM_BRIDGEOS:
       return "bridgeos";
     case PLATFORM_DRIVERKIT:
