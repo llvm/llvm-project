@@ -5186,6 +5186,55 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
   return Result;
 }
 
+namespace {
+/// Dependence kind for RTL.
+enum RTLDependenceKindTy {
+  DepIn = 0x01,
+  DepInOut = 0x3,
+  DepMutexInOutSet = 0x4
+};
+/// Fields ids in kmp_depend_info record.
+enum RTLDependInfoFieldsTy { BaseAddr, Len, Flags };
+} // namespace
+
+/// Translates internal dependency kind into the runtime kind.
+static RTLDependenceKindTy translateDependencyKind(OpenMPDependClauseKind K) {
+  RTLDependenceKindTy DepKind;
+  switch (K) {
+  case OMPC_DEPEND_in:
+    DepKind = DepIn;
+    break;
+  // Out and InOut dependencies must use the same code.
+  case OMPC_DEPEND_out:
+  case OMPC_DEPEND_inout:
+    DepKind = DepInOut;
+    break;
+  case OMPC_DEPEND_mutexinoutset:
+    DepKind = DepMutexInOutSet;
+    break;
+  case OMPC_DEPEND_source:
+  case OMPC_DEPEND_sink:
+  case OMPC_DEPEND_unknown:
+    llvm_unreachable("Unknown task dependence type");
+  }
+  return DepKind;
+}
+
+/// Builds kmp_depend_info, if it is not built yet, and builds flags type.
+static void getDependTypes(ASTContext &C, QualType &KmpDependInfoTy,
+                           QualType &FlagsTy) {
+  FlagsTy = C.getIntTypeForBitwidth(C.getTypeSize(C.BoolTy), /*Signed=*/false);
+  if (KmpDependInfoTy.isNull()) {
+    RecordDecl *KmpDependInfoRD = C.buildImplicitRecord("kmp_depend_info");
+    KmpDependInfoRD->startDefinition();
+    addFieldToRecordDecl(C, KmpDependInfoRD, C.getIntPtrType());
+    addFieldToRecordDecl(C, KmpDependInfoRD, C.getSizeType());
+    addFieldToRecordDecl(C, KmpDependInfoRD, FlagsTy);
+    KmpDependInfoRD->completeDefinition();
+    KmpDependInfoTy = C.getRecordType(KmpDependInfoRD);
+  }
+}
+
 Address CGOpenMPRuntime::emitDependClause(
     CodeGenFunction &CGF,
     ArrayRef<std::pair<OpenMPDependClauseKind, const Expr *>> Dependencies,
@@ -5195,28 +5244,11 @@ Address CGOpenMPRuntime::emitDependClause(
   Address DependenciesArray = Address::invalid();
   unsigned NumDependencies = Dependencies.size();
   if (NumDependencies) {
-    // Dependence kind for RTL.
-    enum RTLDependenceKindTy {
-      DepIn = 0x01,
-      DepInOut = 0x3,
-      DepMutexInOutSet = 0x4
-    };
-    enum RTLDependInfoFieldsTy { BaseAddr, Len, Flags };
-    RecordDecl *KmpDependInfoRD;
-    QualType FlagsTy =
-        C.getIntTypeForBitwidth(C.getTypeSize(C.BoolTy), /*Signed=*/false);
+    QualType FlagsTy;
+    getDependTypes(C, KmpDependInfoTy, FlagsTy);
+    RecordDecl *KmpDependInfoRD =
+        cast<RecordDecl>(KmpDependInfoTy->getAsTagDecl());
     llvm::Type *LLVMFlagsTy = CGF.ConvertTypeForMem(FlagsTy);
-    if (KmpDependInfoTy.isNull()) {
-      KmpDependInfoRD = C.buildImplicitRecord("kmp_depend_info");
-      KmpDependInfoRD->startDefinition();
-      addFieldToRecordDecl(C, KmpDependInfoRD, C.getIntPtrType());
-      addFieldToRecordDecl(C, KmpDependInfoRD, C.getSizeType());
-      addFieldToRecordDecl(C, KmpDependInfoRD, FlagsTy);
-      KmpDependInfoRD->completeDefinition();
-      KmpDependInfoTy = C.getRecordType(KmpDependInfoRD);
-    } else {
-      KmpDependInfoRD = cast<RecordDecl>(KmpDependInfoTy->getAsTagDecl());
-    }
     // Define type kmp_depend_info[<Dependencies.size()>];
     // For depobj reserve one extra element to store the number of elements.
     // It is required to handle depobj(x) update(in) construct.
@@ -5289,38 +5321,36 @@ Address CGOpenMPRuntime::emitDependClause(
           Base, *std::next(KmpDependInfoRD->field_begin(), Len));
       CGF.EmitStoreOfScalar(Size, LenLVal);
       // deps[i].flags = <Dependencies[i].first>;
-      RTLDependenceKindTy DepKind;
-      switch (Dependencies[I].first) {
-      case OMPC_DEPEND_in:
-        DepKind = DepIn;
-        break;
-      // Out and InOut dependencies must use the same code.
-      case OMPC_DEPEND_out:
-      case OMPC_DEPEND_inout:
-        DepKind = DepInOut;
-        break;
-      case OMPC_DEPEND_mutexinoutset:
-        DepKind = DepMutexInOutSet;
-        break;
-      case OMPC_DEPEND_source:
-      case OMPC_DEPEND_sink:
-      case OMPC_DEPEND_unknown:
-        llvm_unreachable("Unknown task dependence type");
-      }
+      RTLDependenceKindTy DepKind =
+          translateDependencyKind(Dependencies[I].first);
       LValue FlagsLVal = CGF.EmitLValueForField(
           Base, *std::next(KmpDependInfoRD->field_begin(), Flags));
       CGF.EmitStoreOfScalar(llvm::ConstantInt::get(LLVMFlagsTy, DepKind),
                             FlagsLVal);
     }
     DependenciesArray = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
-        CGF.Builder.CreateConstArrayGEP(DependenciesArray, 0), CGF.VoidPtrTy);
+        CGF.Builder.CreateConstArrayGEP(DependenciesArray, ForDepobj ? 1 : 0),
+        CGF.VoidPtrTy);
   }
   return DependenciesArray;
 }
 
 void CGOpenMPRuntime::emitDestroyClause(CodeGenFunction &CGF, LValue DepobjLVal,
                                         SourceLocation Loc) {
-  llvm::Value *DepObjAddr = CGF.EmitLoadOfScalar(DepobjLVal, Loc);
+  ASTContext &C = CGM.getContext();
+  QualType FlagsTy;
+  getDependTypes(C, KmpDependInfoTy, FlagsTy);
+  LValue Base = CGF.EmitLoadOfPointerLValue(
+      DepobjLVal.getAddress(CGF),
+      C.getPointerType(C.VoidPtrTy).castAs<PointerType>());
+  QualType KmpDependInfoPtrTy = C.getPointerType(KmpDependInfoTy);
+  Address Addr = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
+      Base.getAddress(CGF), CGF.ConvertTypeForMem(KmpDependInfoPtrTy));
+  llvm::Value *DepObjAddr = CGF.Builder.CreateGEP(
+      Addr.getPointer(),
+      llvm::ConstantInt::get(CGF.IntPtrTy, -1, /*isSigned=*/true));
+  DepObjAddr = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(DepObjAddr,
+                                                               CGF.VoidPtrTy);
   llvm::Value *ThreadID = getThreadID(CGF, Loc);
   // Use default allocator.
   llvm::Value *Allocator = llvm::ConstantPointerNull::get(CGF.VoidPtrTy);
