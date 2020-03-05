@@ -59,10 +59,13 @@ int main(int argc, char **argv) {
 // CHECK: store i64 8, i64* [[SZ_ADDR]],
 // CHECK: [[FLAGS_ADDR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[BASE_ADDR]], i{{.+}} 0, i{{.+}} 2
 // CHECK: store i8 3, i8* [[FLAGS_ADDR]],
-// CHECK: [[BASE_ADDR:%.+]] = getelementptr inbounds [3 x %struct.kmp_depend_info], [3 x %struct.kmp_depend_info]* [[DEP_ADDR]], i{{.+}} 0, i{{.+}} 0
+// CHECK: [[BASE_ADDR:%.+]] = getelementptr inbounds [3 x %struct.kmp_depend_info], [3 x %struct.kmp_depend_info]* [[DEP_ADDR]], i{{.+}} 0, i{{.+}} 1
 // CHECK: [[DEP:%.+]] = bitcast %struct.kmp_depend_info* [[BASE_ADDR]] to i8*
 // CHECK: store i8* [[DEP]], i8** [[MAIN_A]],
 // CHECK: [[B:%.+]] = load i8*, i8** [[B_ADDR]],
+// CHECK: [[B_BASE:%.+]] = bitcast i8* [[B]] to %struct.kmp_depend_info*
+// CHECK: [[B_REF:%.+]] = getelementptr %struct.kmp_depend_info, %struct.kmp_depend_info* [[B_BASE]], i{{.+}} -1
+// CHECK: [[B:%.+]] = bitcast %struct.kmp_depend_info* [[B_REF]] to i8*
 // CHECK: call void @__kmpc_free(i32 [[GTID]], i8* [[B]], i8* null)
 
 // CHECK-LABEL: tmain
@@ -80,10 +83,13 @@ int main(int argc, char **argv) {
 // CHECK: store i64 8, i64* [[SZ_ADDR]],
 // CHECK: [[FLAGS_ADDR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[BASE_ADDR]], i{{.+}} 0, i{{.+}} 2
 // CHECK: store i8 1, i8* [[FLAGS_ADDR]],
-// CHECK: [[BASE_ADDR:%.+]] = getelementptr inbounds [2 x %struct.kmp_depend_info], [2 x %struct.kmp_depend_info]* [[DEP_ADDR]], i{{.+}} 0, i{{.+}} 0
+// CHECK: [[BASE_ADDR:%.+]] = getelementptr inbounds [2 x %struct.kmp_depend_info], [2 x %struct.kmp_depend_info]* [[DEP_ADDR]], i{{.+}} 0, i{{.+}} 1
 // CHECK: [[DEP:%.+]] = bitcast %struct.kmp_depend_info* [[BASE_ADDR]] to i8*
 // CHECK: store i8* [[DEP]], i8** [[TMAIN_A]],
 // CHECK: [[ARGC:%.+]] = load i8*, i8** [[ARGC_ADDR]],
+// CHECK: [[ARGC_BASE:%.+]] = bitcast i8* [[ARGC]] to %struct.kmp_depend_info*
+// CHECK: [[ARGC_REF:%.+]] = getelementptr %struct.kmp_depend_info, %struct.kmp_depend_info* [[ARGC_BASE]], i{{.+}} -1
+// CHECK: [[ARGC:%.+]] = bitcast %struct.kmp_depend_info* [[ARGC_REF]] to i8*
 // CHECK: call void @__kmpc_free(i32 [[GTID]], i8* [[ARGC]], i8* null)
 
 #endif
