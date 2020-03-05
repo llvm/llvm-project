@@ -788,6 +788,27 @@ def LLVM_experimental_vector_reduce_v2_fadd : LLVM_VectorReductionV2<"fadd">;
 def LLVM_experimental_vector_reduce_v2_fmul : LLVM_VectorReductionV2<"fmul">;
 
 //
+// LLVM Matrix operations.
+//
+
+/// As specified in the LLVM MatrixBuilder:
+/// Create a llvm.matrix.multiply call, multiplying matrices LHS and RHS.
+def LLVM_MatrixMultiplyOp
+    : LLVM_OneResultOp<"intr.matrix.multiply">,
+      Arguments<(
+        ins LLVM_Type:$lhs, LLVM_Type:$rhs,
+            I32Attr:$lhs_rows, I32Attr:$lhs_columns, I32Attr:$rhs_rows)> {
+  string llvmBuilder = [{
+    llvm::MatrixBuilder<decltype(builder)> mb(builder);
+    $res = mb.CreateMatrixMultiply(
+      $lhs, $rhs, $lhs_rows.getZExtValue(), $lhs_columns.getZExtValue(),
+      $rhs_rows.getZExtValue());
+  }];
+  let assemblyFormat = "$lhs `,` $rhs attr-dict "
+    "`:` `(` type($lhs) `,` type($rhs) `)` `->` type($res)";
+}
+
+//
 // Atomic operations.
 //
 
