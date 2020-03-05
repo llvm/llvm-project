@@ -77,21 +77,10 @@ the variable `LLVM_DIR` to find the installed components.
 To get the correct LLVM libraries included in your f18 build,
 define LLVM_DIR on the cmake command line.
 ```
-LLVM=<LLVM_INSTALLATION_DIR>/lib/cmake/llvm cmake -DLLVM_DIR=$LLVM ...
+LLVM=<LLVM_BUILD_DIR>/lib/cmake/llvm cmake -DLLVM_DIR=$LLVM ...
 ```
-where `LLVM_INSTALLATION_DIR` is
-the top-level directory
-where llvm is installed.
-
-### LLVM dependency for lit Regression tests
-
-F18 has tests that use the lit framework, these tests rely on the
-presence of llvm tools as llvm-lit, FileCheck, and others.
-These tools are installed when LLVM build set:
-```
-LLVM_INSTALL_UTILS=On
-```
-to run the regression tests on f18.
+where `LLVM_BUILD_DIR` is
+the top-level directory where LLVM was built.
 
 ### Building f18 with GCC
 
