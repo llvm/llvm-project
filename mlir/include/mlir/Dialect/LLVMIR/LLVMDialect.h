@@ -14,6 +14,7 @@
 #ifndef MLIR_DIALECT_LLVMIR_LLVMDIALECT_H_
 #define MLIR_DIALECT_LLVMIR_LLVMDIALECT_H_
 
+#include "mlir/Analysis/ControlFlowInterfaces.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/Function.h"
 #include "mlir/IR/OpDefinition.h"

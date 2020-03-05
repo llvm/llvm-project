@@ -16,10 +16,13 @@
 
 include "mlir/Dialect/SPIRV/SPIRVBase.td"
 include "mlir/Analysis/CallInterfaces.td"
+include "mlir/Analysis/ControlFlowInterfaces.td"
 
 // -----
 
-def SPV_BranchOp : SPV_Op<"Branch", [InFunctionScope, Terminator]> {
+def SPV_BranchOp : SPV_Op<"Branch",[
+    DeclareOpInterfaceMethods<BranchOpInterface>, InFunctionScope,
+    Terminator]> {
   let summary = "Unconditional branch to target block.";
 
   let description = [{
@@ -75,8 +78,9 @@ def SPV_BranchOp : SPV_Op<"Branch", [InFunctionScope, Terminator]> {
 
 // -----
 
-def SPV_BranchConditionalOp : SPV_Op<"BranchConditional",
-                                     [InFunctionScope, Terminator]> {
+def SPV_BranchConditionalOp : SPV_Op<"BranchConditional", [
+    DeclareOpInterfaceMethods<BranchOpInterface>, InFunctionScope,
+    Terminator]> {
   let summary = [{
     If Condition is true, branch to true block, otherwise branch to false
     block.

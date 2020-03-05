@@ -639,6 +639,10 @@ public:
   type_range getTypes() const { return {begin(), end()}; }
   auto getType() const { return getTypes(); }
 
+  /// Return the operand index of the first element of this range. The range
+  /// must not be empty.
+  unsigned getBeginOperandIndex() const;
+
 private:
   /// See `detail::indexed_accessor_range_base` for details.
   static OpOperand *offset_base(OpOperand *object, ptrdiff_t index) {
