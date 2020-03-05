@@ -344,6 +344,8 @@ def err_analyzer_checker_option_unknown : Error<
   "checker '%0' has no option called '%1'">;
 def err_analyzer_checker_option_invalid_input : Error<
   "invalid input for checker option '%0', that expects %1">;
+def err_analyzer_checker_incompatible_analyzer_option : Error<
+  "checker cannot be enabled with analyzer option '%0' == %1">;
 
 def err_drv_invalid_hvx_length : Error<
   "-mhvx-length is not supported without a -mhvx/-mhvx= flag">;
