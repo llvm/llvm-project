@@ -354,6 +354,30 @@ TEST(MachineInstrValidTailPredication, IsCorrect) {
     case MVE_VQSHL_qru16:
     case MVE_VQSHL_qru32:
     case MVE_VQSHL_qru8:
+    case MVE_VQRSHRNbhs16:
+    case MVE_VQRSHRNbhs32:
+    case MVE_VQRSHRNbhu16:
+    case MVE_VQRSHRNbhu32:
+    case MVE_VQRSHRNths16:
+    case MVE_VQRSHRNths32:
+    case MVE_VQRSHRNthu16:
+    case MVE_VQRSHRNthu32:
+    case MVE_VQRSHRUNs16bh:
+    case MVE_VQRSHRUNs16th:
+    case MVE_VQRSHRUNs32bh:
+    case MVE_VQRSHRUNs32th:
+    case MVE_VQSHRNbhs16:
+    case MVE_VQSHRNbhs32:
+    case MVE_VQSHRNbhu16:
+    case MVE_VQSHRNbhu32:
+    case MVE_VQSHRNths16:
+    case MVE_VQSHRNths32:
+    case MVE_VQSHRNthu16:
+    case MVE_VQSHRNthu32:
+    case MVE_VQSHRUNs16bh:
+    case MVE_VQSHRUNs16th:
+    case MVE_VQSHRUNs32bh:
+    case MVE_VQSHRUNs32th:
     case MVE_VQSUB_qr_s16:
     case MVE_VQSUB_qr_s32:
     case MVE_VQSUB_qr_s8:
@@ -402,6 +426,10 @@ TEST(MachineInstrValidTailPredication, IsCorrect) {
     case MVE_VRSHR_immu16:
     case MVE_VRSHR_immu32:
     case MVE_VRSHR_immu8:
+    case MVE_VRSHRNi16bh:
+    case MVE_VRSHRNi16th:
+    case MVE_VRSHRNi32bh:
+    case MVE_VRSHRNi32th:
     case MVE_VSHL_by_vecs16:
     case MVE_VSHL_by_vecs32:
     case MVE_VSHL_by_vecs8:
@@ -423,6 +451,10 @@ TEST(MachineInstrValidTailPredication, IsCorrect) {
     case MVE_VSHR_immu16:
     case MVE_VSHR_immu32:
     case MVE_VSHR_immu8:
+    case MVE_VSHRNi16bh:
+    case MVE_VSHRNi16th:
+    case MVE_VSHRNi32bh:
+    case MVE_VSHRNi32th:
     case MVE_VSLIimm16:
     case MVE_VSLIimm32:
     case MVE_VSLIimm8:
