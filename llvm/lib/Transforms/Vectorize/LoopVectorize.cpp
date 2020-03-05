@@ -4354,7 +4354,7 @@ void InnerLoopVectorizer::widenInstruction(Instruction &I) {
     // The flag shows whether we use Intrinsic or a usual Call for vectorized
     // version of the instruction.
     // Is it beneficial to perform intrinsic call compared to lib call?
-    bool NeedToScalarize;
+    bool NeedToScalarize = false;
     unsigned CallCost = Cost->getVectorCallCost(CI, VF, NeedToScalarize);
     bool UseVectorIntrinsic =
         ID && Cost->getVectorIntrinsicCost(CI, VF) <= CallCost;
