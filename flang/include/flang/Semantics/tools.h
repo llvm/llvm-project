@@ -167,7 +167,7 @@ bool IsAssumedLengthExternalCharacterFunction(const Symbol &);
 // Is the symbol modifiable in this scope
 std::optional<parser::MessageFixedText> WhyNotModifiable(
     const Symbol &, const Scope &);
-std::unique_ptr<parser::Message> WhyNotModifiable(SourceName, const SomeExpr &,
+std::optional<parser::Message> WhyNotModifiable(SourceName, const SomeExpr &,
     const Scope &, bool vectorSubscriptIsOk = false);
 const Symbol *IsExternalInPureContext(const Symbol &, const Scope &);
 bool HasCoarray(const parser::Expr &);

@@ -329,13 +329,12 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
   }
   if (reason && scope) {
     bool vectorSubscriptIsOk{isElemental || dummyIsValue};  // 15.5.2.4(21)
-    std::unique_ptr<parser::Message> why{
-        WhyNotModifiable(messages.at(), actual, *scope, vectorSubscriptIsOk)};
-    if (why.get()) {
+    if (auto why{WhyNotModifiable(
+            messages.at(), actual, *scope, vectorSubscriptIsOk)}) {
       if (auto *msg{messages.Say(
               "Actual argument associated with %s %s must be definable"_err_en_US,
               reason, dummyName)}) {
-        msg->Attach(std::move(why));
+        msg->Attach(*why);
       }
     }
   }

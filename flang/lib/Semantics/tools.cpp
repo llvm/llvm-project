@@ -789,29 +789,23 @@ std::optional<parser::MessageFixedText> WhyNotModifiable(
   }
 }
 
-std::unique_ptr<parser::Message> WhyNotModifiable(parser::CharBlock at,
+std::optional<parser::Message> WhyNotModifiable(parser::CharBlock at,
     const SomeExpr &expr, const Scope &scope, bool vectorSubscriptIsOk) {
-  if (evaluate::IsVariable(expr)) {
-    if (auto dataRef{evaluate::ExtractDataRef(expr)}) {
-      if (!vectorSubscriptIsOk && evaluate::HasVectorSubscript(expr)) {
-        return std::make_unique<parser::Message>(
-            at, "variable has a vector subscript"_en_US);
-      } else {
-        const Symbol &symbol{dataRef->GetFirstSymbol()};
-        if (auto maybeWhy{WhyNotModifiable(symbol, scope)}) {
-          return std::make_unique<parser::Message>(symbol.name(),
-              parser::MessageFormattedText{
-                  std::move(*maybeWhy), symbol.name()});
-        }
-      }
-    } else {
-      // reference to function returning POINTER
+  if (!evaluate::IsVariable(expr)) {
+    return parser::Message{at, "Expression is not a variable"_en_US};
+  } else if (auto dataRef{evaluate::ExtractDataRef(expr)}) {
+    if (!vectorSubscriptIsOk && evaluate::HasVectorSubscript(expr)) {
+      return parser::Message{at, "Variable has a vector subscript"_en_US};
+    }
+    const Symbol &symbol{dataRef->GetFirstSymbol()};
+    if (auto maybeWhy{WhyNotModifiable(symbol, scope)}) {
+      return parser::Message{symbol.name(),
+          parser::MessageFormattedText{std::move(*maybeWhy), symbol.name()}};
     }
   } else {
-    return std::make_unique<parser::Message>(
-        at, "expression is not a variable"_en_US);
+    // reference to function returning POINTER
   }
-  return {};
+  return std::nullopt;
 }
 
 class ImageControlStmtHelper {
