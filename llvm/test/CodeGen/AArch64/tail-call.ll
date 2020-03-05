@@ -121,11 +121,10 @@ define { [3 x float] } @test_add_elem() {
 ; SDAG: fmov s2, #1.0
 ; SDAG: ret
 ; GISEL-LABEL: test_add_elem:
-; GISEL: fmov	s8, #1.00000000
+; GISEL: str	x30, [sp, #-16]!
 ; GISEL: bl get_vec2
-; GISEL: ldr	x30, [sp, #8]
-; GISEL: mov	v2.16b, v8.16b
-; GISEL: ldr	d8, [sp], #16
+; GISEL: fmov	s2, #1.0
+; GISEL: ldr	x30, [sp], #16
 ; GISEL: ret
 
   %call = tail call { [2 x float] } @get_vec2()

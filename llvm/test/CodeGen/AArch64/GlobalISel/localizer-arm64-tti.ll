@@ -19,14 +19,14 @@ define i32 @foo() {
   ; CHECK: bb.1.entry:
   ; CHECK:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
   ; CHECK:   [[GV:%[0-9]+]]:gpr(p0) = G_GLOBAL_VALUE @var1
-  ; CHECK:   [[C:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 1
-  ; CHECK:   [[C1:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 2
+  ; CHECK:   [[C:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 2
   ; CHECK:   [[GV1:%[0-9]+]]:gpr(p0) = G_GLOBAL_VALUE @var2
-  ; CHECK:   [[C2:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 3
+  ; CHECK:   [[C1:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 3
   ; CHECK:   [[GV2:%[0-9]+]]:gpr(p0) = G_GLOBAL_VALUE @var3
-  ; CHECK:   [[C3:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 0
+  ; CHECK:   [[C2:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 0
   ; CHECK:   [[LOAD:%[0-9]+]]:gpr(s32) = G_LOAD [[GV]](p0) :: (dereferenceable load 4 from @var1)
-  ; CHECK:   [[ICMP:%[0-9]+]]:gpr(s32) = G_ICMP intpred(ne), [[LOAD]](s32), [[C]]
+  ; CHECK:   [[C3:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 1
+  ; CHECK:   [[ICMP:%[0-9]+]]:gpr(s32) = G_ICMP intpred(ne), [[LOAD]](s32), [[C3]]
   ; CHECK:   [[TRUNC:%[0-9]+]]:gpr(s1) = G_TRUNC [[ICMP]](s32)
   ; CHECK:   G_BRCOND [[TRUNC]](s1), %bb.3
   ; CHECK: bb.2.if.then:
