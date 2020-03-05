@@ -308,7 +308,6 @@ static bool printFMAComments(const MCInst *MI, raw_ostream &OS) {
 
   CASE_FMA4_PACKED_RR(FMADD)
   CASE_FMA4_SCALAR_RR(FMADD)
-    RegForm = true;
     AccName = getRegName(MI->getOperand(NumOperands - 1).getReg());
     LLVM_FALLTHROUGH;
   CASE_FMA4_PACKED_RM(FMADD)
@@ -324,7 +323,6 @@ static bool printFMAComments(const MCInst *MI, raw_ostream &OS) {
 
   CASE_FMA4_PACKED_RR(FMSUB)
   CASE_FMA4_SCALAR_RR(FMSUB)
-    RegForm = true;
     AccName = getRegName(MI->getOperand(NumOperands - 1).getReg());
     LLVM_FALLTHROUGH;
   CASE_FMA4_PACKED_RM(FMSUB)
@@ -342,7 +340,6 @@ static bool printFMAComments(const MCInst *MI, raw_ostream &OS) {
 
   CASE_FMA4_PACKED_RR(FNMADD)
   CASE_FMA4_SCALAR_RR(FNMADD)
-    RegForm = true;
     AccName = getRegName(MI->getOperand(NumOperands - 1).getReg());
     LLVM_FALLTHROUGH;
   CASE_FMA4_PACKED_RM(FNMADD)
@@ -360,7 +357,6 @@ static bool printFMAComments(const MCInst *MI, raw_ostream &OS) {
 
   CASE_FMA4_PACKED_RR(FNMSUB)
   CASE_FMA4_SCALAR_RR(FNMSUB)
-    RegForm = true;
     AccName = getRegName(MI->getOperand(NumOperands - 1).getReg());
     LLVM_FALLTHROUGH;
   CASE_FMA4_PACKED_RM(FNMSUB)
@@ -379,7 +375,6 @@ static bool printFMAComments(const MCInst *MI, raw_ostream &OS) {
     break;
 
   CASE_FMA4_PACKED_RR(FMADDSUB)
-    RegForm = true;
     AccName = getRegName(MI->getOperand(NumOperands - 1).getReg());
     LLVM_FALLTHROUGH;
   CASE_FMA4_PACKED_RM(FMADDSUB)
@@ -394,7 +389,6 @@ static bool printFMAComments(const MCInst *MI, raw_ostream &OS) {
     break;
 
   CASE_FMA4_PACKED_RR(FMSUBADD)
-    RegForm = true;
     AccName = getRegName(MI->getOperand(NumOperands - 1).getReg());
     LLVM_FALLTHROUGH;
   CASE_FMA4_PACKED_RM(FMSUBADD)
