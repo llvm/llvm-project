@@ -232,6 +232,21 @@ bool Test::testStrNe(RunContext &Ctx, const char *LHS, const char *RHS,
                         llvm::StringRef(RHS), LHSStr, RHSStr, File, Line);
 }
 
+bool Test::testMatch(RunContext &Ctx, bool MatchResult, MatcherBase &Matcher,
+                     const char *LHSStr, const char *RHSStr, const char *File,
+                     unsigned long Line) {
+  if (MatchResult)
+    return true;
+
+  Ctx.markFail();
+  llvm::outs() << File << ":" << Line << ": FAILURE\n"
+               << "Failed to match " << LHSStr << " against " << RHSStr
+               << ".\n";
+  testutils::StreamWrapper OutsWrapper = testutils::outs();
+  Matcher.explainError(OutsWrapper);
+  return false;
+}
+
 bool Test::testProcessKilled(RunContext &Ctx, testutils::FunctionCaller *Func,
                              int Signal, const char *LHSStr, const char *RHSStr,
                              const char *File, unsigned long Line) {
