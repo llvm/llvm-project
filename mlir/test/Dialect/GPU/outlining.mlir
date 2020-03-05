@@ -51,6 +51,8 @@ func @launch() {
 // CHECK-NEXT: %[[BDIM:.*]] = "gpu.block_dim"() {dimension = "x"} : () -> index
 // CHECK-NEXT: = "gpu.block_dim"() {dimension = "y"} : () -> index
 // CHECK-NEXT: = "gpu.block_dim"() {dimension = "z"} : () -> index
+// CHECK-NEXT: br ^[[BLOCK:.*]]
+// CHECK-NEXT: ^[[BLOCK]]:
 // CHECK-NEXT: "use"(%[[KERNEL_ARG0]]) : (f32) -> ()
 // CHECK-NEXT: "some_op"(%[[BID]], %[[BDIM]]) : (index, index) -> ()
 // CHECK-NEXT: = load %[[KERNEL_ARG1]][%[[TID]]] : memref<?xf32, 1>
@@ -105,6 +107,28 @@ func @extra_constants(%arg0 : memref<?xf32>) {
 // CHECK-LABEL: func @extra_constants_kernel(%{{.*}}: memref<?xf32>)
 // CHECK: constant
 // CHECK: constant
+
+// -----
+
+func @multiple_uses(%arg0 : memref<?xf32>) {
+  %c1 = constant 1 : index
+  %c2 = constant 2 : index
+  // CHECK: gpu.func {{.*}} {
+  // CHECK: %[[C2:.*]] = constant 2 : index
+  // CHECK: "use1"(%[[C2]], %[[C2]])
+  // CHECK: "use2"(%[[C2]])
+  // CHECK: gpu.return
+  // CHECK: }
+  gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %c1, %grid_y = %c1,
+                                       %grid_z = %c1)
+             threads(%tx, %ty, %tz) in (%block_x = %c1, %block_y = %c1,
+	                                %block_z = %c1) {
+    "use1"(%c2, %c2) : (index, index) -> ()
+    "use2"(%c2) : (index) -> ()
+    gpu.terminator
+  }
+  return
+}
 
 // -----
 
