@@ -2652,6 +2652,13 @@ void CastOperation::CheckCStyleCast() {
     return;
   }
 
+  // Allow casting a sizeless built-in type to itself.
+  if (DestType->isSizelessBuiltinType() &&
+      Self.Context.hasSameUnqualifiedType(DestType, SrcType)) {
+    Kind = CK_NoOp;
+    return;
+  }
+
   if (!DestType->isScalarType() && !DestType->isVectorType()) {
     const RecordType *DestRecordTy = DestType->getAs<RecordType>();
 
