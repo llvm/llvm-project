@@ -43,11 +43,14 @@ namespace clangd {
 /// As we must avoid re-parsing the preamble, any information that can only
 /// be obtained during parsing must be eagerly captured and stored here.
 struct PreambleData {
-  PreambleData(PrecompiledPreamble Preamble, std::vector<Diag> Diags,
-               IncludeStructure Includes, MainFileMacros Macros,
+  PreambleData(llvm::StringRef Version, PrecompiledPreamble Preamble,
+               std::vector<Diag> Diags, IncludeStructure Includes,
+               MainFileMacros Macros,
                std::unique_ptr<PreambleFileStatusCache> StatCache,
                CanonicalIncludes CanonIncludes);
 
+  // Version of the ParseInputs this preamble was built from.
+  std::string Version;
   tooling::CompileCommand CompileCommand;
   PrecompiledPreamble Preamble;
   std::vector<Diag> Diags;

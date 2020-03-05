@@ -702,7 +702,8 @@ TEST(SemanticHighlighting, GeneratesHighlightsWhenFileChange) {
     std::atomic<int> Count = {0};
 
     void onHighlightingsReady(
-        PathRef File, std::vector<HighlightingToken> Highlightings) override {
+        PathRef File, llvm::StringRef Version,
+        std::vector<HighlightingToken> Highlightings) override {
       ++Count;
     }
   };

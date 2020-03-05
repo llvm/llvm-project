@@ -41,6 +41,21 @@
 namespace clang {
 namespace clangd {
 namespace {
+
+// LSP defines file versions as numbers that increase.
+// ClangdServer treats them as opaque and therefore uses strings instead.
+std::string encodeVersion(int64_t LSPVersion) {
+  return llvm::to_string(LSPVersion);
+}
+llvm::Optional<int64_t> decodeVersion(llvm::StringRef Encoded) {
+  int64_t Result;
+  if (llvm::to_integer(Encoded, Result, 10))
+    return Result;
+  else if (!Encoded.empty()) // Empty can be e.g. diagnostics on close.
+    elog("unexpected non-numeric version {0}", Encoded);
+  return llvm::None;
+}
+
 /// Transforms a tweak into a code action that would apply it if executed.
 /// EXPECTS: T.prepare() was called and returned true.
 CodeAction toCodeAction(const ClangdServer::TweakRef &T, const URIForFile &File,
@@ -630,8 +645,9 @@ void ClangdLSPServer::onDocumentDidOpen(
 
   const std::string &Contents = Params.textDocument.text;
 
-  DraftMgr.addDraft(File, Params.textDocument.version, Contents);
-  Server->addDocument(File, Contents, WantDiagnostics::Yes);
+  auto Version = DraftMgr.addDraft(File, Params.textDocument.version, Contents);
+  Server->addDocument(File, Contents, encodeVersion(Version),
+                      WantDiagnostics::Yes);
 }
 
 void ClangdLSPServer::onDocumentDidChange(
@@ -654,7 +670,8 @@ void ClangdLSPServer::onDocumentDidChange(
     return;
   }
 
-  Server->addDocument(File, Draft->Contents, WantDiags, Params.forceRebuild);
+  Server->addDocument(File, Draft->Contents, encodeVersion(Draft->Version),
+                      WantDiags, Params.forceRebuild);
 }
 
 void ClangdLSPServer::onFileEvent(const DidChangeWatchedFilesParams &Params) {
@@ -1347,7 +1364,8 @@ bool ClangdLSPServer::shouldRunCompletion(
 }
 
 void ClangdLSPServer::onHighlightingsReady(
-    PathRef File, std::vector<HighlightingToken> Highlightings) {
+    PathRef File, llvm::StringRef Version,
+    std::vector<HighlightingToken> Highlightings) {
   std::vector<HighlightingToken> Old;
   std::vector<HighlightingToken> HighlightingsCopy = Highlightings;
   {
@@ -1358,14 +1376,18 @@ void ClangdLSPServer::onHighlightingsReady(
   // LSP allows us to send incremental edits of highlightings. Also need to diff
   // to remove highlightings from tokens that should no longer have them.
   std::vector<LineHighlightings> Diffed = diffHighlightings(Highlightings, Old);
-  publishSemanticHighlighting(
-      {{URIForFile::canonicalize(File, /*TUPath=*/File)},
-       toSemanticHighlightingInformation(Diffed)});
+  SemanticHighlightingParams Notification;
+  Notification.TextDocument.uri =
+      URIForFile::canonicalize(File, /*TUPath=*/File);
+  Notification.TextDocument.version = decodeVersion(Version);
+  Notification.Lines = toSemanticHighlightingInformation(Diffed);
+  publishSemanticHighlighting(Notification);
 }
 
-void ClangdLSPServer::onDiagnosticsReady(PathRef File,
+void ClangdLSPServer::onDiagnosticsReady(PathRef File, llvm::StringRef Version,
                                          std::vector<Diag> Diagnostics) {
   PublishDiagnosticsParams Notification;
+  Notification.version = decodeVersion(Version);
   Notification.uri = URIForFile::canonicalize(File, /*TUPath=*/File);
   DiagnosticToReplacementMap LocalFixIts; // Temporary storage
   for (auto &Diag : Diagnostics) {
@@ -1475,8 +1497,10 @@ void ClangdLSPServer::reparseOpenedFiles(
   // Reparse only opened files that were modified.
   for (const Path &FilePath : DraftMgr.getActiveFiles())
     if (ModifiedFiles.find(FilePath) != ModifiedFiles.end())
-      Server->addDocument(FilePath, DraftMgr.getDraft(FilePath)->Contents,
-                          WantDiagnostics::Auto);
+      if (auto Draft = DraftMgr.getDraft(FilePath)) // else disappeared in race?
+        Server->addDocument(FilePath, std::move(Draft->Contents),
+                            encodeVersion(Draft->Version),
+                            WantDiagnostics::Auto);
 }
 
 } // namespace clangd

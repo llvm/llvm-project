@@ -92,8 +92,7 @@ bool fromJSON(const llvm::json::Value &Params, TextDocumentIdentifier &R) {
 
 llvm::json::Value toJSON(const VersionedTextDocumentIdentifier &R) {
   auto Result = toJSON(static_cast<const TextDocumentIdentifier &>(R));
-  if (R.version)
-    Result.getAsObject()->try_emplace("version", R.version);
+  Result.getAsObject()->try_emplace("version", R.version);
   return Result;
 }
 
@@ -547,8 +546,9 @@ bool fromJSON(const llvm::json::Value &Params, Diagnostic &R) {
 
 llvm::json::Value toJSON(const PublishDiagnosticsParams &PDP) {
   return llvm::json::Object{
-    {"uri", PDP.uri},
-    {"diagnostics", PDP.diagnostics},
+      {"uri", PDP.uri},
+      {"diagnostics", PDP.diagnostics},
+      {"version", PDP.version},
   };
 }
 
