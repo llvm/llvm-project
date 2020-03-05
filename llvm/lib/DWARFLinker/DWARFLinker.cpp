@@ -119,6 +119,37 @@ AddressesMap::~AddressesMap() {}
 
 DwarfEmitter::~DwarfEmitter() {}
 
+static Optional<StringRef> StripTemplateParameters(StringRef Name) {
+  // We are looking for template parameters to strip from Name. e.g.
+  //
+  //  operator<<B>
+  //
+  // We look for > at the end but if it does not contain any < then we
+  // have something like operator>>. We check for the operator<=> case.
+  if (!Name.endswith(">") || Name.count("<") == 0 || Name.endswith("<=>"))
+    return {};
+
+  // How many < until we have the start of the template parameters.
+  size_t NumLeftAnglesToSkip = 1;
+
+  // If we have operator<=> then we need to skip its < as well.
+  NumLeftAnglesToSkip += Name.count("<=>");
+
+  size_t RightAngleCount = Name.count('>');
+  size_t LeftAngleCount = Name.count('<');
+
+  // If we have more < than > we have operator< or operator<<
+  // we to account for their < as well.
+  if (LeftAngleCount > RightAngleCount)
+    NumLeftAnglesToSkip += LeftAngleCount - RightAngleCount;
+
+  size_t StartOfTemplate = 0;
+  while (NumLeftAnglesToSkip--)
+    StartOfTemplate = Name.find('<', StartOfTemplate) + 1;
+
+  return Name.substr(0, StartOfTemplate - 1);
+}
+
 bool DWARFLinker::DIECloner::getDIENames(const DWARFDie &Die,
                                          AttributesInfo &Info,
                                          OffsetsStringPool &StringPool,
@@ -140,10 +171,9 @@ bool DWARFLinker::DIECloner::getDIENames(const DWARFDie &Die,
       Info.Name = StringPool.getEntry(Name);
 
   if (StripTemplate && Info.Name && Info.MangledName != Info.Name) {
-    // FIXME: dsymutil compatibility. This is wrong for operator<
-    auto Split = Info.Name.getString().split('<');
-    if (!Split.second.empty())
-      Info.NameWithoutTemplate = StringPool.getEntry(Split.first);
+    StringRef Name = Info.Name.getString();
+    if (Optional<StringRef> StrippedName = StripTemplateParameters(Name))
+      Info.NameWithoutTemplate = StringPool.getEntry(*StrippedName);
   }
 
   return Info.Name || Info.MangledName;

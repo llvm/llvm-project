@@ -62,11 +62,11 @@ struct UpdateIndexCallbacks : public ParsingCallbacks {
       : FIndex(FIndex), ServerCallbacks(ServerCallbacks),
         SemanticHighlighting(SemanticHighlighting) {}
 
-  void onPreambleAST(PathRef Path, ASTContext &Ctx,
+  void onPreambleAST(PathRef Path, llvm::StringRef Version, ASTContext &Ctx,
                      std::shared_ptr<clang::Preprocessor> PP,
                      const CanonicalIncludes &CanonIncludes) override {
     if (FIndex)
-      FIndex->updatePreamble(Path, Ctx, std::move(PP), CanonIncludes);
+      FIndex->updatePreamble(Path, Version, Ctx, std::move(PP), CanonIncludes);
   }
 
   void onMainAST(PathRef Path, ParsedAST &AST, PublishFn Publish) override {
@@ -80,16 +80,19 @@ struct UpdateIndexCallbacks : public ParsingCallbacks {
 
     if (ServerCallbacks)
       Publish([&]() {
-        ServerCallbacks->onDiagnosticsReady(Path, std::move(Diagnostics));
+        ServerCallbacks->onDiagnosticsReady(Path, AST.version(),
+                                            std::move(Diagnostics));
         if (SemanticHighlighting)
-          ServerCallbacks->onHighlightingsReady(Path, std::move(Highlightings));
+          ServerCallbacks->onHighlightingsReady(Path, AST.version(),
+                                                std::move(Highlightings));
       });
   }
 
-  void onFailedAST(PathRef Path, std::vector<Diag> Diags,
-                   PublishFn Publish) override {
+  void onFailedAST(PathRef Path, llvm::StringRef Version,
+                   std::vector<Diag> Diags, PublishFn Publish) override {
     if (ServerCallbacks)
-      Publish([&]() { ServerCallbacks->onDiagnosticsReady(Path, Diags); });
+      Publish(
+          [&]() { ServerCallbacks->onDiagnosticsReady(Path, Version, Diags); });
   }
 
   void onFileUpdated(PathRef File, const TUStatus &Status) override {
@@ -169,6 +172,7 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
 }
 
 void ClangdServer::addDocument(PathRef File, llvm::StringRef Contents,
+                               llvm::StringRef Version,
                                WantDiagnostics WantDiags, bool ForceRebuild) {
   auto FS = FSProvider.getFileSystem();
 
@@ -183,6 +187,7 @@ void ClangdServer::addDocument(PathRef File, llvm::StringRef Contents,
   ParseInputs Inputs;
   Inputs.FS = FS;
   Inputs.Contents = std::string(Contents);
+  Inputs.Version = Version.str();
   Inputs.ForceRebuild = ForceRebuild;
   Inputs.Opts = std::move(Opts);
   Inputs.Index = Index;
@@ -437,7 +442,8 @@ void ClangdServer::enumerateTweaks(PathRef File, Range Sel,
     CB(std::move(Res));
   };
 
-  WorkScheduler.runWithAST("EnumerateTweaks", File, std::move(Action));
+  WorkScheduler.runWithAST("EnumerateTweaks", File, std::move(Action),
+                           TUScheduler::InvalidateOnUpdate);
 }
 
 void ClangdServer::applyTweak(PathRef File, Range Sel, StringRef TweakID,
@@ -556,7 +562,8 @@ void ClangdServer::findDocumentHighlights(
         CB(clangd::findDocumentHighlights(InpAST->AST, Pos));
       };
 
-  WorkScheduler.runWithAST("Highlights", File, std::move(Action));
+  WorkScheduler.runWithAST("Highlights", File, std::move(Action),
+                           TUScheduler::InvalidateOnUpdate);
 }
 
 void ClangdServer::findHover(PathRef File, Position Pos,
@@ -570,7 +577,8 @@ void ClangdServer::findHover(PathRef File, Position Pos,
     CB(clangd::getHover(InpAST->AST, Pos, std::move(Style), Index));
   };
 
-  WorkScheduler.runWithAST("Hover", File, std::move(Action));
+  WorkScheduler.runWithAST("Hover", File, std::move(Action),
+                           TUScheduler::InvalidateOnUpdate);
 }
 
 void ClangdServer::typeHierarchy(PathRef File, Position Pos, int Resolve,
@@ -618,7 +626,8 @@ void ClangdServer::documentSymbols(llvm::StringRef File,
           return CB(InpAST.takeError());
         CB(clangd::getDocumentSymbols(InpAST->AST));
       };
-  WorkScheduler.runWithAST("documentSymbols", File, std::move(Action));
+  WorkScheduler.runWithAST("documentSymbols", File, std::move(Action),
+                           TUScheduler::InvalidateOnUpdate);
 }
 
 void ClangdServer::findReferences(PathRef File, Position Pos, uint32_t Limit,
@@ -664,7 +673,8 @@ void ClangdServer::documentLinks(PathRef File,
           return CB(InpAST.takeError());
         CB(clangd::getDocumentLinks(InpAST->AST));
       };
-  WorkScheduler.runWithAST("DocumentLinks", File, std::move(Action));
+  WorkScheduler.runWithAST("DocumentLinks", File, std::move(Action),
+                           TUScheduler::InvalidateOnUpdate);
 }
 
 std::vector<std::pair<Path, std::size_t>>

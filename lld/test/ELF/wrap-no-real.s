@@ -18,11 +18,11 @@
 // RUN: llvm-objdump -t %t | FileCheck -check-prefix=SYM %s
 
 
-// SYM:      {{.*}}            .dynamic  00000000 .hidden _DYNAMIC
-// SYM-NEXT: 0000000000011000  *ABS*     00000000 __real_foo
-// SYM-NEXT: 0000000000011010  *ABS*     00000000 __wrap_foo
-// SYM-NEXT: {{.*}}            .text     00000000 _start
-// SYM-NEXT: 0000000000011000  *ABS*     00000000 foo
+// SYM:      {{.*}}            .dynamic 0000000000000000 .hidden _DYNAMIC
+// SYM-NEXT: 0000000000011000  *ABS*    0000000000000000 __real_foo
+// SYM-NEXT: 0000000000011010  *ABS*    0000000000000000 __wrap_foo
+// SYM-NEXT: {{.*}}            .text    0000000000000000 _start
+// SYM-NEXT: 0000000000011000  *ABS*    0000000000000000 foo
 
 .global _start
 _start:

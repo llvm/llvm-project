@@ -151,8 +151,8 @@ void update(FileIndex &M, llvm::StringRef Basename, llvm::StringRef Code) {
   File.HeaderFilename = (Basename + ".h").str();
   File.HeaderCode = std::string(Code);
   auto AST = File.build();
-  M.updatePreamble(File.Filename, AST.getASTContext(), AST.getPreprocessorPtr(),
-                   AST.getCanonicalIncludes());
+  M.updatePreamble(File.Filename, /*Version=*/"null", AST.getASTContext(),
+                   AST.getPreprocessorPtr(), AST.getCanonicalIncludes());
 }
 
 TEST(FileIndexTest, CustomizedURIScheme) {
@@ -293,7 +293,8 @@ TEST(FileIndexTest, RebuildWithPreamble) {
           const CanonicalIncludes &CanonIncludes) {
         EXPECT_FALSE(IndexUpdated) << "Expected only a single index update";
         IndexUpdated = true;
-        Index.updatePreamble(FooCpp, Ctx, std::move(PP), CanonIncludes);
+        Index.updatePreamble(FooCpp, /*Version=*/"null", Ctx, std::move(PP),
+                             CanonIncludes);
       });
   ASSERT_TRUE(IndexUpdated);
 
@@ -392,7 +393,7 @@ TEST(FileIndexTest, Relations) {
   TU.HeaderCode = "class A {}; class B : public A {};";
   auto AST = TU.build();
   FileIndex Index;
-  Index.updatePreamble(TU.Filename, AST.getASTContext(),
+  Index.updatePreamble(TU.Filename, /*Version=*/"null", AST.getASTContext(),
                        AST.getPreprocessorPtr(), AST.getCanonicalIncludes());
   SymbolID A = findSymbol(TU.headerSymbols(), "A").ID;
   uint32_t Results = 0;

@@ -52,7 +52,7 @@ void AVRInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       BuildMI(MBB, MI, DL, get(AVR::MOVWRdRr), DestReg)
           .addReg(SrcReg, getKillRegState(KillSrc));
     } else {
-      unsigned DestLo, DestHi, SrcLo, SrcHi;
+      Register DestLo, DestHi, SrcLo, SrcHi;
 
       TRI.splitReg(DestReg, DestLo, DestHi);
       TRI.splitReg(SrcReg,  SrcLo,  SrcHi);

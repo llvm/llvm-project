@@ -252,12 +252,18 @@ The SPIR-V dialect reuses standard integer, float, and vector types:
 Specification                        | Dialect
 :----------------------------------: | :-------------------------------:
 `OpTypeBool`                         | `i1`
-`OpTypeInt <bitwidth>`               | `i<bitwidth>`
 `OpTypeFloat <bitwidth>`             | `f<bitwidth>`
 `OpTypeVector <scalar-type> <count>` | `vector<<count> x <scalar-type>>`
 
-Similarly, `mlir::NoneType` can be used for SPIR-V `OpTypeVoid`; builtin
-function types can be used for SPIR-V `OpTypeFunction` types.
+For integer types, the SPIR-V dialect supports all signedness semantics
+(signless, signed, unsigned) in order to ease transformations from higher level
+dialects. However, SPIR-V spec only defines two signedness semantics state: 0
+indicates unsigned, or no signedness semantics, 1 indicates signed semantics. So
+both `iN` and `uiN` are serialized into the same `OpTypeInt N 0`. For
+deserialization, we always treat `OpTypeInt N 0` as `iN`.
+
+`mlir::NoneType` is used for SPIR-V `OpTypeVoid`; builtin function types are
+used for SPIR-V `OpTypeFunction` types.
 
 The SPIR-V dialect and defines the following dialect-specific types:
 

@@ -1,18 +1,26 @@
-# RUN: yaml2obj %s -o %t
-# RUN: llvm-objdump --syms %t > %t1
-# RUN: llvm-objdump -t     %t > %t2
-# RUN: cmp %t1 %t2
-# RUN: FileCheck %s --input-file=%t1
+# RUN: yaml2obj -D BITS=32 %s -o %t.32
+# RUN: llvm-objdump --syms %t.32 > %t.32.txt
+# RUN: llvm-objdump -t %t.32 | cmp - %t.32.txt
+# RUN: FileCheck --check-prefix=ELF32 %s --input-file=%t.32.txt
 
-# CHECK:      SYMBOL TABLE:
-# CHECK-NEXT: 0000000000001004 l     F .text     00000000 lfoo
-# CHECK-NEXT: 0000000000001008 l     O .text     00000000 lbar
-# CHECK-NEXT: 0000000000001004 g     F .text     00000000 foo
-# CHECK-NEXT: 0000000000001008 g     O .text     00000000 bar
+# RUN: yaml2obj -D BITS=64 %s -o %t.64
+# RUN: llvm-objdump --syms %t.64 | FileCheck --check-prefix=ELF64 %s
+
+# ELF32:      SYMBOL TABLE:
+# ELF32-NEXT: 00001004 l     F .text     00000000 lfoo
+# ELF32-NEXT: 00001008 l     O .text     00000000 lbar
+# ELF32-NEXT: 00001004 g     F .text     00000000 foo
+# ELF32-NEXT: 00001008 g     O .text     00000000 bar
+
+# ELF64:      SYMBOL TABLE:
+# ELF64-NEXT: 0000000000001004 l     F .text     0000000000000000 lfoo
+# ELF64-NEXT: 0000000000001008 l     O .text     0000000000000000 lbar
+# ELF64-NEXT: 0000000000001004 g     F .text     0000000000000000 foo
+# ELF64-NEXT: 0000000000001008 g     O .text     0000000000000000 bar
 
 !ELF
 FileHeader:
-  Class:           ELFCLASS64
+  Class:           ELFCLASS[[BITS]]
   Data:            ELFDATA2LSB
   Type:            ET_EXEC
   Machine:         EM_X86_64

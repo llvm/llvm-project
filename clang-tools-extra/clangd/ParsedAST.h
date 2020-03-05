@@ -48,7 +48,7 @@ public:
   /// Attempts to run Clang and store parsed AST. If \p Preamble is non-null
   /// it is reused during parsing.
   static llvm::Optional<ParsedAST>
-  build(std::unique_ptr<clang::CompilerInvocation> CI,
+  build(llvm::StringRef Version, std::unique_ptr<clang::CompilerInvocation> CI,
         llvm::ArrayRef<Diag> CompilerInvocationDiags,
         std::shared_ptr<const PreambleData> Preamble,
         std::unique_ptr<llvm::MemoryBuffer> Buffer,
@@ -101,14 +101,19 @@ public:
   /// (!) does not have tokens from the preamble.
   const syntax::TokenBuffer &getTokens() const { return Tokens; }
 
+  /// Returns the version of the ParseInputs this AST was built from.
+  llvm::StringRef version() const { return Version; }
+
 private:
-  ParsedAST(std::shared_ptr<const PreambleData> Preamble,
+  ParsedAST(llvm::StringRef Version,
+            std::shared_ptr<const PreambleData> Preamble,
             std::unique_ptr<CompilerInstance> Clang,
             std::unique_ptr<FrontendAction> Action, syntax::TokenBuffer Tokens,
             MainFileMacros Macros, std::vector<Decl *> LocalTopLevelDecls,
             std::vector<Diag> Diags, IncludeStructure Includes,
             CanonicalIncludes CanonIncludes);
 
+  std::string Version;
   // In-memory preambles must outlive the AST, it is important that this member
   // goes before Clang and Action.
   std::shared_ptr<const PreambleData> Preamble;

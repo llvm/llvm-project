@@ -507,7 +507,7 @@ struct AVRDynAllocaSR : public MachineFunctionPass {
     MachineBasicBlock::iterator MBBI = EntryMBB.begin();
     DebugLoc DL = EntryMBB.findDebugLoc(MBBI);
 
-    unsigned SPCopy =
+    Register SPCopy =
         MF.getRegInfo().createVirtualRegister(&AVR::DREGSRegClass);
 
     // Create a copy of SP in function entry before any dynallocas are

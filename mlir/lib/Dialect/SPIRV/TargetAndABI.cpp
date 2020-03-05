@@ -48,6 +48,27 @@ struct TargetEnvAttributeStorage : public AttributeStorage {
 } // namespace spirv
 } // namespace mlir
 
+spirv::TargetEnvAttr spirv::TargetEnvAttr::get(
+    spirv::Version version, ArrayRef<spirv::Extension> extensions,
+    ArrayRef<spirv::Capability> capabilities, DictionaryAttr limits) {
+  Builder b(limits.getContext());
+
+  auto versionAttr = b.getI32IntegerAttr(static_cast<uint32_t>(version));
+
+  SmallVector<Attribute, 4> extAttrs;
+  extAttrs.reserve(extensions.size());
+  for (spirv::Extension ext : extensions)
+    extAttrs.push_back(b.getStringAttr(spirv::stringifyExtension(ext)));
+
+  SmallVector<Attribute, 4> capAttrs;
+  capAttrs.reserve(capabilities.size());
+  for (spirv::Capability cap : capabilities)
+    capAttrs.push_back(b.getI32IntegerAttr(static_cast<uint32_t>(cap)));
+
+  return get(versionAttr, b.getArrayAttr(extAttrs), b.getArrayAttr(capAttrs),
+             limits);
+}
+
 spirv::TargetEnvAttr spirv::TargetEnvAttr::get(IntegerAttr version,
                                                ArrayAttr extensions,
                                                ArrayAttr capabilities,
@@ -98,8 +119,8 @@ ArrayAttr spirv::TargetEnvAttr::getCapabilitiesAttr() {
   return getImpl()->capabilities.cast<ArrayAttr>();
 }
 
-DictionaryAttr spirv::TargetEnvAttr::getResourceLimits() {
-  return getImpl()->limits.cast<DictionaryAttr>();
+spirv::ResourceLimitsAttr spirv::TargetEnvAttr::getResourceLimits() {
+  return getImpl()->limits.cast<spirv::ResourceLimitsAttr>();
 }
 
 LogicalResult spirv::TargetEnvAttr::verifyConstructionInvariants(

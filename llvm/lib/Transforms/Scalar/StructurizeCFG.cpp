@@ -34,6 +34,7 @@
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
+#include "llvm/IR/ValueHandle.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
@@ -197,6 +198,7 @@ class StructurizeCFG : public RegionPass {
   SmallVector<RegionNode *, 8> Order;
   BBSet Visited;
 
+  SmallVector<WeakVH, 8> AffectedPhis;
   BBPhiMap DeletedPhis;
   BB2BBVecMap AddedPhis;
 
@@ -231,6 +233,8 @@ class StructurizeCFG : public RegionPass {
   void addPhiValues(BasicBlock *From, BasicBlock *To);
 
   void setPhiValues();
+
+  void simplifyAffectedPhis();
 
   void killTerminator(BasicBlock *BB);
 
@@ -585,9 +589,14 @@ void StructurizeCFG::insertConditions(bool Loops) {
 void StructurizeCFG::delPhiValues(BasicBlock *From, BasicBlock *To) {
   PhiMap &Map = DeletedPhis[To];
   for (PHINode &Phi : To->phis()) {
+    bool Recorded = false;
     while (Phi.getBasicBlockIndex(From) != -1) {
       Value *Deleted = Phi.removeIncomingValue(From, false);
       Map[&Phi].push_back(std::make_pair(From, Deleted));
+      if (!Recorded) {
+        AffectedPhis.push_back(&Phi);
+        Recorded = true;
+      }
     }
   }
 }
@@ -632,28 +641,29 @@ void StructurizeCFG::setPhiValues() {
 
       for (BasicBlock *FI : From)
         Phi->setIncomingValueForBlock(FI, Updater.GetValueAtEndOfBlock(FI));
+      AffectedPhis.push_back(Phi);
     }
 
     DeletedPhis.erase(To);
   }
   assert(DeletedPhis.empty());
 
-  // Simplify any phis inserted by the SSAUpdater if possible
+  AffectedPhis.append(InsertedPhis.begin(), InsertedPhis.end());
+}
+
+void StructurizeCFG::simplifyAffectedPhis() {
   bool Changed;
   do {
     Changed = false;
-
     SimplifyQuery Q(Func->getParent()->getDataLayout());
     Q.DT = DT;
-    for (size_t i = 0; i < InsertedPhis.size(); ++i) {
-      PHINode *Phi = InsertedPhis[i];
-      if (Value *V = SimplifyInstruction(Phi, Q)) {
-        Phi->replaceAllUsesWith(V);
-        Phi->eraseFromParent();
-        InsertedPhis[i] = InsertedPhis.back();
-        InsertedPhis.pop_back();
-        i--;
-        Changed = true;
+    for (WeakVH VH : AffectedPhis) {
+      if (auto Phi = dyn_cast_or_null<PHINode>(VH)) {
+        if (auto NewValue = SimplifyInstruction(Phi, Q)) {
+          Phi->replaceAllUsesWith(NewValue);
+          Phi->eraseFromParent();
+          Changed = true;
+        }
       }
     }
   } while (Changed);
@@ -886,6 +896,7 @@ void StructurizeCFG::createFlow() {
   BasicBlock *Exit = ParentRegion->getExit();
   bool EntryDominatesExit = DT->dominates(ParentRegion->getEntry(), Exit);
 
+  AffectedPhis.clear();
   DeletedPhis.clear();
   AddedPhis.clear();
   Conditions.clear();
@@ -1044,6 +1055,7 @@ bool StructurizeCFG::runOnRegion(Region *R, RGPassManager &RGM) {
   insertConditions(false);
   insertConditions(true);
   setPhiValues();
+  simplifyAffectedPhis();
   rebuildSSA();
 
   // Cleanup

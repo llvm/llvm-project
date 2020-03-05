@@ -4,7 +4,7 @@
 # RUN: ld.lld -shared -o %t.exe %t.script %t.o
 # RUN: llvm-objdump -syms %t.exe | FileCheck %s
 
-# CHECK: .text 00000000 nonalloc_start
+# CHECK: .text 0000000000000000 nonalloc_start
 
 _start:
   nop

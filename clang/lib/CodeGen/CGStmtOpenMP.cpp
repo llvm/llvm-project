@@ -3800,7 +3800,24 @@ void CodeGenFunction::EmitOMPFlushDirective(const OMPFlushDirective &S) {
       S.getBeginLoc(), AO);
 }
 
-void CodeGenFunction::EmitOMPDepobjDirective(const OMPDepobjDirective &S) {}
+void CodeGenFunction::EmitOMPDepobjDirective(const OMPDepobjDirective &S) {
+  const auto *DO = S.getSingleClause<OMPDepobjClause>();
+  LValue DOLVal = EmitLValue(DO->getDepobj());
+  if (const auto *DC = S.getSingleClause<OMPDependClause>()) {
+    SmallVector<std::pair<OpenMPDependClauseKind, const Expr *>, 4>
+        Dependencies;
+    for (const Expr *IRef : DC->varlists())
+      Dependencies.emplace_back(DC->getDependencyKind(), IRef);
+    Address DepAddr = CGM.getOpenMPRuntime().emitDependClause(
+        *this, Dependencies, /*ForDepobj=*/true, DC->getBeginLoc());
+    EmitStoreOfScalar(DepAddr.getPointer(), DOLVal);
+    return;
+  }
+  if (const auto *DC = S.getSingleClause<OMPDestroyClause>()) {
+    CGM.getOpenMPRuntime().emitDestroyClause(*this, DOLVal, DC->getBeginLoc());
+    return;
+  }
+}
 
 void CodeGenFunction::EmitOMPDistributeLoop(const OMPLoopDirective &S,
                                             const CodeGenLoopTy &CodeGenLoop,

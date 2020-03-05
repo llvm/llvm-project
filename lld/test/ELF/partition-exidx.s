@@ -9,24 +9,24 @@
 
 // Change upper case to lower case so that we can match unwind info (which is dumped
 // in upper case) against program headers (which are dumped in lower case).
-// RUN: llvm-readelf -l --unwind %t0 | tr A-Z a-z | FileCheck %s
-// RUN: llvm-readelf -l --unwind %t1 | tr A-Z a-z | FileCheck %s
+// RUN: llvm-readelf -l --unwind %t0 | tr A-Z a-z | FileCheck --ignore-case %s
+// RUN: llvm-readelf -l --unwind %t1 | tr A-Z a-z | FileCheck --ignore-case %s
+
+// CHECK: LOAD  {{[^ ]*}} 0x{{0*}}[[TEXT_ADDR:[0-9a-f]+]] {{.*}} R E
+// CHECK: EXIDX 0x{{0*}}[[EXIDX_OFFSET:[0-9a-f]+]] {{.*}} 0x00010 0x00010 R
 
 // Each file should have one exidx section for its text section and one sentinel.
-// CHECK:      sectionoffset: 0x[[EXIDX_OFFSET:.*]]
-// CHECK-NEXT: entries [
-// CHECK-NEXT:   entry {
-// CHECK-NEXT:     functionaddress: 0x[[TEXT_ADDR:.*]]
-// CHECK-NEXT:     model: cantunwind
+// CHECK:      SectionOffset: 0x[[EXIDX_OFFSET]]
+// CHECK-NEXT: Entries [
+// CHECK-NEXT:   Entry {
+// CHECK-NEXT:     Functionaddress: 0x[[TEXT_ADDR]]
+// CHECK-NEXT:     Model: CantUnwind
 // CHECK-NEXT:   }
-// CHECK-NEXT:   entry {
-// CHECK-NEXT:     functionaddress:
-// CHECK-NEXT:     model: cantunwind
+// CHECK-NEXT:   Entry {
+// CHECK-NEXT:     FunctionAddress:
+// CHECK-NEXT:     Model: CantUnwind
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]
-
-// CHECK: load  {{[^ ]*}} 0x{{0*}}[[TEXT_ADDR]] {{.*}} r e
-// CHECK: exidx 0x{{0*}}[[EXIDX_OFFSET]] {{.*}} 0x00010 0x00010 r
 
 .section .llvm_sympart,"",%llvm_sympart
 .asciz "part1"

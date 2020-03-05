@@ -420,7 +420,10 @@ static SourceRange getTokenFileRange(SourceLocation Loc,
 }
 
 bool isInsideMainFile(SourceLocation Loc, const SourceManager &SM) {
-  return Loc.isValid() && SM.isWrittenInMainFile(SM.getExpansionLoc(Loc));
+  if (!Loc.isValid())
+    return false;
+  FileID FID = SM.getFileID(SM.getExpansionLoc(Loc));
+  return FID == SM.getMainFileID() || FID == SM.getPreambleFileID();
 }
 
 llvm::Optional<SourceRange> toHalfOpenFileRange(const SourceManager &SM,

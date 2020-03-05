@@ -301,7 +301,7 @@ define i1 @gep17() {
 
 define i1 @gep_same_base_constant_indices(i8* %a) {
 ; CHECK-LABEL: @gep_same_base_constant_indices(
-; CHECK-NEXT:    ret i1 icmp slt (i8* getelementptr (i8, i8* null, i64 1), i8* getelementptr (i8, i8* null, i64 10))
+; CHECK-NEXT:    ret i1 true
 ;
   %arrayidx1 = getelementptr inbounds i8, i8* %a, i64 1
   %arrayidx2 = getelementptr inbounds i8, i8* %a, i64 10

@@ -76,6 +76,7 @@ using Canceler = std::function<void()>;
 std::pair<Context, Canceler> cancelableTask();
 
 /// True if the current context is within a cancelable task which was cancelled.
+/// (If the context is within multiple nested tasks, true if any are cancelled).
 /// Always false if there is no active cancelable task.
 /// This isn't free (context lookup) - don't call it in a tight loop.
 bool isCancelled(const Context &Ctx = Context::current());

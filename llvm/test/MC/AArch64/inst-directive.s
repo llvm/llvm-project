@@ -30,6 +30,6 @@ aarch64_inst:
 // CHECK-OBJ-NEXT: 0000: 2040105E
 // CHECK-OBJ-NEXT: )
 
-// CHECK-SYMS-NOT: 0000000000000000         .inst.aarch64_inst              00000000 $d
-// CHECK-SYMS:     0000000000000000         .inst.aarch64_inst              00000000 $x
-// CHECK-SYMS-NOT: 0000000000000000         .inst.aarch64_inst              00000000 $d
+// CHECK-SYMS-NOT: 0000000000000000 .inst.aarch64_inst 0000000000000000 $d
+// CHECK-SYMS:     0000000000000000 .inst.aarch64_inst 0000000000000000 $x
+// CHECK-SYMS-NOT: 0000000000000000 .inst.aarch64_inst 0000000000000000 $d

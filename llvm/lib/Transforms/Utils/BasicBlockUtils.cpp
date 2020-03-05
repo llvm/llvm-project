@@ -902,9 +902,25 @@ ReturnInst *llvm::FoldReturnIntoUncondBranch(ReturnInst *RI, BasicBlock *BB,
       Pred->getInstList().insert(NewRet->getIterator(), NewBC);
       *i = NewBC;
     }
+
+    Instruction *NewEV = nullptr;
+    if (ExtractValueInst *EVI = dyn_cast<ExtractValueInst>(V)) {
+      V = EVI->getOperand(0);
+      NewEV = EVI->clone();
+      if (NewBC) {
+        NewBC->setOperand(0, NewEV);
+        Pred->getInstList().insert(NewBC->getIterator(), NewEV);
+      } else {
+        Pred->getInstList().insert(NewRet->getIterator(), NewEV);
+        *i = NewEV;
+      }
+    }
+
     if (PHINode *PN = dyn_cast<PHINode>(V)) {
       if (PN->getParent() == BB) {
-        if (NewBC)
+        if (NewEV) {
+          NewEV->setOperand(0, PN->getIncomingValueForBlock(Pred));
+        } else if (NewBC)
           NewBC->setOperand(0, PN->getIncomingValueForBlock(Pred));
         else
           *i = PN->getIncomingValueForBlock(Pred);

@@ -10,7 +10,7 @@
 # RUN: llvm-objdump -d -t --no-show-raw-insn %t.exe | FileCheck %s
 # RUN: llvm-readelf -r -s -A %t.exe | FileCheck -check-prefix=GOT %s
 
-# CHECK: {{[0-9a-f]+}}1c8  .text  00000000 foo
+# CHECK: {{[0-9a-f]+}}1c8  .text  0000000000000000 foo
 
 # CHECK:      __start:
 # CHECK-NEXT:    {{.*}}  ld      $2, -32736($gp)

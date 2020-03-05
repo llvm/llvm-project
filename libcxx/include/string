@@ -1672,6 +1672,17 @@ private:
     friend basic_string operator+<>(const basic_string&, value_type);
 };
 
+// These declarations must appear before any functions are implicitly used
+// so that they have the correct visibility specifier.
+#ifdef _LIBCPP_ABI_STRING_OPTIMIZED_EXTERNAL_INSTANTIATION
+_LIBCPP_STRING_UNSTABLE_EXTERN_TEMPLATE_LIST(_LIBCPP_EXTERN_TEMPLATE, char)
+_LIBCPP_STRING_UNSTABLE_EXTERN_TEMPLATE_LIST(_LIBCPP_EXTERN_TEMPLATE, wchar_t)
+#else
+_LIBCPP_STRING_V1_EXTERN_TEMPLATE_LIST(_LIBCPP_EXTERN_TEMPLATE, char)
+_LIBCPP_STRING_V1_EXTERN_TEMPLATE_LIST(_LIBCPP_EXTERN_TEMPLATE, wchar_t)
+#endif
+
+
 #ifndef _LIBCPP_HAS_NO_DEDUCTION_GUIDES
 template<class _InputIterator,
          class _CharT = typename iterator_traits<_InputIterator>::value_type,
@@ -1883,6 +1894,25 @@ basic_string<_CharT, _Traits, _Allocator>::basic_string(
 #endif
 }
 
+template <class _CharT, class _Traits, class _Allocator>
+void basic_string<_CharT, _Traits, _Allocator>::__init_copy_ctor_external(
+    const value_type* __s, size_type __sz) {
+  pointer __p;
+  if (__sz < __min_cap) {
+    __p = __get_short_pointer();
+    __set_short_size(__sz);
+  } else {
+    if (__sz > max_size())
+      this->__throw_length_error();
+    size_t __cap = __recommend(__sz);
+    __p = __alloc_traits::allocate(__alloc(), __cap + 1);
+    __set_long_pointer(__p);
+    __set_long_cap(__cap + 1);
+    __set_long_size(__sz);
+  }
+  traits_type::copy(_VSTD::__to_address(__p), __s, __sz + 1);
+}
+
 #ifndef _LIBCPP_CXX03_LANG
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -1901,25 +1931,6 @@ basic_string<_CharT, _Traits, _Allocator>::basic_string(basic_string&& __str)
     if (__is_long())
         __get_db()->swap(this, &__str);
 #endif
-}
-
-template <class _CharT, class _Traits, class _Allocator>
-void basic_string<_CharT, _Traits, _Allocator>::__init_copy_ctor_external(
-    const value_type* __s, size_type __sz) {
-  pointer __p;
-  if (__sz < __min_cap) {
-    __p = __get_short_pointer();
-    __set_short_size(__sz);
-  } else {
-    if (__sz > max_size())
-      this->__throw_length_error();
-    size_t __cap = __recommend(__sz);
-    __p = __alloc_traits::allocate(__alloc(), __cap + 1);
-    __set_long_pointer(__p);
-    __set_long_cap(__cap + 1);
-    __set_long_size(__sz);
-  }
-  traits_type::copy(_VSTD::__to_address(__p), __s, __sz + 1);
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -4412,14 +4423,6 @@ basic_string<_CharT, _Traits, _Allocator>::__subscriptable(const const_iterator*
 }
 
 #endif  // _LIBCPP_DEBUG_LEVEL >= 2
-
-#ifdef _LIBCPP_ABI_STRING_OPTIMIZED_EXTERNAL_INSTANTIATION
-_LIBCPP_STRING_UNSTABLE_EXTERN_TEMPLATE_LIST(_LIBCPP_EXTERN_TEMPLATE, char)
-_LIBCPP_STRING_UNSTABLE_EXTERN_TEMPLATE_LIST(_LIBCPP_EXTERN_TEMPLATE, wchar_t)
-#else
-_LIBCPP_STRING_V1_EXTERN_TEMPLATE_LIST(_LIBCPP_EXTERN_TEMPLATE, char)
-_LIBCPP_STRING_V1_EXTERN_TEMPLATE_LIST(_LIBCPP_EXTERN_TEMPLATE, wchar_t)
-#endif
 
 #if _LIBCPP_STD_VER > 11
 // Literal suffixes for basic_string [basic.string.literals]

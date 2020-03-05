@@ -61,7 +61,7 @@ def SPV_SubgroupBallotKHROp : SPV_Op<"SubgroupBallotKHR", []> {
   );
 
   let results = (outs
-    SPV_I32Vec4:$result
+    SPV_Int32Vec4:$result
   );
 
   let verifier = [{ return success(); }];

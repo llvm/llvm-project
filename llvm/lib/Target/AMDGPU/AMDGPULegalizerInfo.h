@@ -89,9 +89,14 @@ public:
   bool legalizeBuildVector(MachineInstr &MI, MachineRegisterInfo &MRI,
                            MachineIRBuilder &B) const;
 
-  Register getLiveInRegister(MachineRegisterInfo &MRI,
-                             Register Reg, LLT Ty) const;
-
+  Register getLiveInRegister(MachineIRBuilder &B, MachineRegisterInfo &MRI,
+                             Register PhyReg, LLT Ty,
+                             bool InsertLiveInCopy = true) const;
+  Register insertLiveInCopy(MachineIRBuilder &B, MachineRegisterInfo &MRI,
+                            Register LiveIn, Register PhyReg) const;
+  const ArgDescriptor *
+  getArgDescriptor(MachineIRBuilder &B,
+                   AMDGPUFunctionArgInfo::PreloadedValue ArgType) const;
   bool loadInputValue(Register DstReg, MachineIRBuilder &B,
                       const ArgDescriptor *Arg) const;
   bool legalizePreloadedArgIntrin(
@@ -162,6 +167,11 @@ public:
 
   bool legalizeAtomicIncDec(MachineInstr &MI,  MachineIRBuilder &B,
                             bool IsInc) const;
+
+  bool legalizeTrapIntrinsic(MachineInstr &MI, MachineRegisterInfo &MRI,
+                             MachineIRBuilder &B) const;
+  bool legalizeDebugTrapIntrinsic(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                  MachineIRBuilder &B) const;
 
   bool legalizeIntrinsic(MachineInstr &MI, MachineIRBuilder &B,
                          GISelChangeObserver &Observer) const override;

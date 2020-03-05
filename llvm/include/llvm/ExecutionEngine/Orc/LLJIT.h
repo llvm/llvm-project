@@ -21,6 +21,7 @@
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 #include "llvm/ExecutionEngine/Orc/ObjectTransformLayer.h"
 #include "llvm/ExecutionEngine/Orc/ThreadSafeModule.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/ThreadPool.h"
 
 namespace llvm {
@@ -137,12 +138,20 @@ public:
 
   /// Run the initializers for the given JITDylib.
   Error initialize(JITDylib &JD) {
+    DEBUG_WITH_TYPE("orc", {
+      dbgs() << "LLJIT running initializers for JITDylib \"" << JD.getName()
+             << "\"\n";
+    });
     assert(PS && "PlatformSupport must be set to run initializers.");
     return PS->initialize(JD);
   }
 
   /// Run the deinitializers for the given JITDylib.
   Error deinitialize(JITDylib &JD) {
+    DEBUG_WITH_TYPE("orc", {
+      dbgs() << "LLJIT running deinitializers for JITDylib \"" << JD.getName()
+             << "\"\n";
+    });
     assert(PS && "PlatformSupport must be set to run initializers.");
     return PS->deinitialize(JD);
   }

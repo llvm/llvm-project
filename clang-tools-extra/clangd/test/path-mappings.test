@@ -12,7 +12,6 @@
     "textDocument": {
       "uri": "file:///C:/client/bar.cpp",
       "languageId": "cpp",
-      "version": 1,
       "text": "#include \"foo.h\"\nint main(){\nreturn foo();\n}"
     }
   }
@@ -21,7 +20,8 @@
 #      CHECK:  "method": "textDocument/publishDiagnostics",
 # CHECK-NEXT:  "params": {
 # CHECK-NEXT:    "diagnostics": [],
-# CHECK-NEXT:    "uri": "file:///C:/client/bar.cpp"
+# CHECK-NEXT:    "uri": "file:///C:/client/bar.cpp",
+# CHECK-NEXT:    "version": 0
 # CHECK-NEXT:  }
 ---
 # We're editing bar.cpp, which includes foo.h, where foo.h "exists" at a server location 
@@ -47,7 +47,7 @@
 # CHECK-NEXT:      "range": {
 # CHECK-NEXT:        "end": {
 # CHECK-NEXT:          "character": {{[0-9]+}},
-# CHECK-NEXT:          "line": {{[0-9]+}} 
+# CHECK-NEXT:          "line": {{[0-9]+}}
 # CHECK-NEXT:        },
 # CHECK-NEXT:        "start": {
 # CHECK-NEXT:          "character": {{[0-9]+}},

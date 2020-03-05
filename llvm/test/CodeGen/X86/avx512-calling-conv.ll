@@ -2710,3 +2710,561 @@ define <7 x i1> @test17(<7 x i1> %a, <7 x i1> %b, <7 x i1> %c, <7 x i1> %d, <7 x
   %q = and <7 x i1> %p, %i
   ret <7 x i1> %q
 }
+
+declare void @v2i1_mem_callee(<128 x i32> %x, <2 x i1> %y)
+define void @v2i1_mem(<128 x i32> %x, <2 x i1> %y) {
+; KNL-LABEL: v2i1_mem:
+; KNL:       ## %bb.0:
+; KNL-NEXT:    subq $24, %rsp
+; KNL-NEXT:    .cfi_def_cfa_offset 32
+; KNL-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm8
+; KNL-NEXT:    vmovaps %xmm8, (%rsp)
+; KNL-NEXT:    callq _v2i1_mem_callee
+; KNL-NEXT:    addq $24, %rsp
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: v2i1_mem:
+; SKX:       ## %bb.0:
+; SKX-NEXT:    subq $24, %rsp
+; SKX-NEXT:    .cfi_def_cfa_offset 32
+; SKX-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm8
+; SKX-NEXT:    vmovaps %xmm8, (%rsp)
+; SKX-NEXT:    callq _v2i1_mem_callee
+; SKX-NEXT:    addq $24, %rsp
+; SKX-NEXT:    vzeroupper
+; SKX-NEXT:    retq
+;
+; KNL_X32-LABEL: v2i1_mem:
+; KNL_X32:       ## %bb.0:
+; KNL_X32-NEXT:    pushl %ebp
+; KNL_X32-NEXT:    .cfi_def_cfa_offset 8
+; KNL_X32-NEXT:    .cfi_offset %ebp, -8
+; KNL_X32-NEXT:    movl %esp, %ebp
+; KNL_X32-NEXT:    .cfi_def_cfa_register %ebp
+; KNL_X32-NEXT:    andl $-64, %esp
+; KNL_X32-NEXT:    subl $384, %esp ## imm = 0x180
+; KNL_X32-NEXT:    vmovaps 72(%ebp), %zmm5
+; KNL_X32-NEXT:    vmovaps 136(%ebp), %zmm6
+; KNL_X32-NEXT:    vmovaps 200(%ebp), %zmm7
+; KNL_X32-NEXT:    vmovaps 264(%ebp), %xmm4
+; KNL_X32-NEXT:    vmovaps %xmm4, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    vmovaps %zmm7, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    vmovaps %zmm6, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    vmovaps %zmm5, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    vmovaps 8(%ebp), %zmm4
+; KNL_X32-NEXT:    vmovaps %zmm4, (%esp)
+; KNL_X32-NEXT:    calll _v2i1_mem_callee
+; KNL_X32-NEXT:    movl %ebp, %esp
+; KNL_X32-NEXT:    popl %ebp
+; KNL_X32-NEXT:    retl
+  call void @v2i1_mem_callee(<128 x i32> %x, <2 x i1> %y)
+  ret void
+}
+
+declare void @v4i1_mem_callee(<128 x i32> %x, <4 x i1> %y)
+define void @v4i1_mem(<128 x i32> %x, <4 x i1> %y) {
+; KNL-LABEL: v4i1_mem:
+; KNL:       ## %bb.0:
+; KNL-NEXT:    subq $24, %rsp
+; KNL-NEXT:    .cfi_def_cfa_offset 32
+; KNL-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm8
+; KNL-NEXT:    vmovaps %xmm8, (%rsp)
+; KNL-NEXT:    callq _v4i1_mem_callee
+; KNL-NEXT:    addq $24, %rsp
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: v4i1_mem:
+; SKX:       ## %bb.0:
+; SKX-NEXT:    subq $24, %rsp
+; SKX-NEXT:    .cfi_def_cfa_offset 32
+; SKX-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm8
+; SKX-NEXT:    vmovaps %xmm8, (%rsp)
+; SKX-NEXT:    callq _v4i1_mem_callee
+; SKX-NEXT:    addq $24, %rsp
+; SKX-NEXT:    vzeroupper
+; SKX-NEXT:    retq
+;
+; KNL_X32-LABEL: v4i1_mem:
+; KNL_X32:       ## %bb.0:
+; KNL_X32-NEXT:    pushl %ebp
+; KNL_X32-NEXT:    .cfi_def_cfa_offset 8
+; KNL_X32-NEXT:    .cfi_offset %ebp, -8
+; KNL_X32-NEXT:    movl %esp, %ebp
+; KNL_X32-NEXT:    .cfi_def_cfa_register %ebp
+; KNL_X32-NEXT:    andl $-64, %esp
+; KNL_X32-NEXT:    subl $384, %esp ## imm = 0x180
+; KNL_X32-NEXT:    vmovaps 72(%ebp), %zmm5
+; KNL_X32-NEXT:    vmovaps 136(%ebp), %zmm6
+; KNL_X32-NEXT:    vmovaps 200(%ebp), %zmm7
+; KNL_X32-NEXT:    vmovaps 264(%ebp), %xmm4
+; KNL_X32-NEXT:    vmovaps %xmm4, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    vmovaps %zmm7, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    vmovaps %zmm6, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    vmovaps %zmm5, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    vmovaps 8(%ebp), %zmm4
+; KNL_X32-NEXT:    vmovaps %zmm4, (%esp)
+; KNL_X32-NEXT:    calll _v4i1_mem_callee
+; KNL_X32-NEXT:    movl %ebp, %esp
+; KNL_X32-NEXT:    popl %ebp
+; KNL_X32-NEXT:    retl
+  call void @v4i1_mem_callee(<128 x i32> %x, <4 x i1> %y)
+  ret void
+}
+
+declare void @v8i1_mem_callee(<128 x i32> %x, <8 x i1> %y)
+define void @v8i1_mem(<128 x i32> %x, <8 x i1> %y) {
+; KNL-LABEL: v8i1_mem:
+; KNL:       ## %bb.0:
+; KNL-NEXT:    subq $24, %rsp
+; KNL-NEXT:    .cfi_def_cfa_offset 32
+; KNL-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm8
+; KNL-NEXT:    vmovaps %xmm8, (%rsp)
+; KNL-NEXT:    callq _v8i1_mem_callee
+; KNL-NEXT:    addq $24, %rsp
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: v8i1_mem:
+; SKX:       ## %bb.0:
+; SKX-NEXT:    subq $24, %rsp
+; SKX-NEXT:    .cfi_def_cfa_offset 32
+; SKX-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm8
+; SKX-NEXT:    vmovaps %xmm8, (%rsp)
+; SKX-NEXT:    callq _v8i1_mem_callee
+; SKX-NEXT:    addq $24, %rsp
+; SKX-NEXT:    vzeroupper
+; SKX-NEXT:    retq
+;
+; KNL_X32-LABEL: v8i1_mem:
+; KNL_X32:       ## %bb.0:
+; KNL_X32-NEXT:    pushl %ebp
+; KNL_X32-NEXT:    .cfi_def_cfa_offset 8
+; KNL_X32-NEXT:    .cfi_offset %ebp, -8
+; KNL_X32-NEXT:    movl %esp, %ebp
+; KNL_X32-NEXT:    .cfi_def_cfa_register %ebp
+; KNL_X32-NEXT:    andl $-64, %esp
+; KNL_X32-NEXT:    subl $384, %esp ## imm = 0x180
+; KNL_X32-NEXT:    vmovaps 72(%ebp), %zmm5
+; KNL_X32-NEXT:    vmovaps 136(%ebp), %zmm6
+; KNL_X32-NEXT:    vmovaps 200(%ebp), %zmm7
+; KNL_X32-NEXT:    vmovaps 264(%ebp), %xmm4
+; KNL_X32-NEXT:    vmovaps %xmm4, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    vmovaps %zmm7, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    vmovaps %zmm6, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    vmovaps %zmm5, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    vmovaps 8(%ebp), %zmm4
+; KNL_X32-NEXT:    vmovaps %zmm4, (%esp)
+; KNL_X32-NEXT:    calll _v8i1_mem_callee
+; KNL_X32-NEXT:    movl %ebp, %esp
+; KNL_X32-NEXT:    popl %ebp
+; KNL_X32-NEXT:    retl
+  call void @v8i1_mem_callee(<128 x i32> %x, <8 x i1> %y)
+  ret void
+}
+
+declare void @v16i1_mem_callee(<128 x i32> %x, <16 x i1> %y)
+define void @v16i1_mem(<128 x i32> %x, <16 x i1> %y) {
+; KNL-LABEL: v16i1_mem:
+; KNL:       ## %bb.0:
+; KNL-NEXT:    subq $24, %rsp
+; KNL-NEXT:    .cfi_def_cfa_offset 32
+; KNL-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm8
+; KNL-NEXT:    vmovaps %xmm8, (%rsp)
+; KNL-NEXT:    callq _v16i1_mem_callee
+; KNL-NEXT:    addq $24, %rsp
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: v16i1_mem:
+; SKX:       ## %bb.0:
+; SKX-NEXT:    subq $24, %rsp
+; SKX-NEXT:    .cfi_def_cfa_offset 32
+; SKX-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm8
+; SKX-NEXT:    vmovaps %xmm8, (%rsp)
+; SKX-NEXT:    callq _v16i1_mem_callee
+; SKX-NEXT:    addq $24, %rsp
+; SKX-NEXT:    vzeroupper
+; SKX-NEXT:    retq
+;
+; KNL_X32-LABEL: v16i1_mem:
+; KNL_X32:       ## %bb.0:
+; KNL_X32-NEXT:    pushl %ebp
+; KNL_X32-NEXT:    .cfi_def_cfa_offset 8
+; KNL_X32-NEXT:    .cfi_offset %ebp, -8
+; KNL_X32-NEXT:    movl %esp, %ebp
+; KNL_X32-NEXT:    .cfi_def_cfa_register %ebp
+; KNL_X32-NEXT:    andl $-64, %esp
+; KNL_X32-NEXT:    subl $384, %esp ## imm = 0x180
+; KNL_X32-NEXT:    vmovaps 72(%ebp), %zmm5
+; KNL_X32-NEXT:    vmovaps 136(%ebp), %zmm6
+; KNL_X32-NEXT:    vmovaps 200(%ebp), %zmm7
+; KNL_X32-NEXT:    vmovaps 264(%ebp), %xmm4
+; KNL_X32-NEXT:    vmovaps %xmm4, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    vmovaps %zmm7, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    vmovaps %zmm6, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    vmovaps %zmm5, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    vmovaps 8(%ebp), %zmm4
+; KNL_X32-NEXT:    vmovaps %zmm4, (%esp)
+; KNL_X32-NEXT:    calll _v16i1_mem_callee
+; KNL_X32-NEXT:    movl %ebp, %esp
+; KNL_X32-NEXT:    popl %ebp
+; KNL_X32-NEXT:    retl
+  call void @v16i1_mem_callee(<128 x i32> %x, <16 x i1> %y)
+  ret void
+}
+
+declare void @v32i1_mem_callee(<128 x i32> %x, <32 x i1> %y)
+define void @v32i1_mem(<128 x i32> %x, <32 x i1> %y) {
+; KNL-LABEL: v32i1_mem:
+; KNL:       ## %bb.0:
+; KNL-NEXT:    pushq %rbp
+; KNL-NEXT:    .cfi_def_cfa_offset 16
+; KNL-NEXT:    .cfi_offset %rbp, -16
+; KNL-NEXT:    movq %rsp, %rbp
+; KNL-NEXT:    .cfi_def_cfa_register %rbp
+; KNL-NEXT:    andq $-32, %rsp
+; KNL-NEXT:    subq $64, %rsp
+; KNL-NEXT:    vmovaps 16(%rbp), %ymm8
+; KNL-NEXT:    vmovaps %ymm8, (%rsp)
+; KNL-NEXT:    callq _v32i1_mem_callee
+; KNL-NEXT:    movq %rbp, %rsp
+; KNL-NEXT:    popq %rbp
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: v32i1_mem:
+; SKX:       ## %bb.0:
+; SKX-NEXT:    pushq %rbp
+; SKX-NEXT:    .cfi_def_cfa_offset 16
+; SKX-NEXT:    .cfi_offset %rbp, -16
+; SKX-NEXT:    movq %rsp, %rbp
+; SKX-NEXT:    .cfi_def_cfa_register %rbp
+; SKX-NEXT:    andq $-32, %rsp
+; SKX-NEXT:    subq $64, %rsp
+; SKX-NEXT:    vmovaps 16(%rbp), %ymm8
+; SKX-NEXT:    vmovaps %ymm8, (%rsp)
+; SKX-NEXT:    callq _v32i1_mem_callee
+; SKX-NEXT:    movq %rbp, %rsp
+; SKX-NEXT:    popq %rbp
+; SKX-NEXT:    vzeroupper
+; SKX-NEXT:    retq
+;
+; KNL_X32-LABEL: v32i1_mem:
+; KNL_X32:       ## %bb.0:
+; KNL_X32-NEXT:    pushl %ebp
+; KNL_X32-NEXT:    .cfi_def_cfa_offset 8
+; KNL_X32-NEXT:    .cfi_offset %ebp, -8
+; KNL_X32-NEXT:    movl %esp, %ebp
+; KNL_X32-NEXT:    .cfi_def_cfa_register %ebp
+; KNL_X32-NEXT:    andl $-64, %esp
+; KNL_X32-NEXT:    subl $384, %esp ## imm = 0x180
+; KNL_X32-NEXT:    vmovaps 72(%ebp), %zmm5
+; KNL_X32-NEXT:    vmovaps 136(%ebp), %zmm6
+; KNL_X32-NEXT:    vmovaps 200(%ebp), %zmm7
+; KNL_X32-NEXT:    vmovaps 264(%ebp), %ymm4
+; KNL_X32-NEXT:    vmovaps %ymm4, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    vmovaps %zmm7, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    vmovaps %zmm6, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    vmovaps %zmm5, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    vmovaps 8(%ebp), %zmm4
+; KNL_X32-NEXT:    vmovaps %zmm4, (%esp)
+; KNL_X32-NEXT:    calll _v32i1_mem_callee
+; KNL_X32-NEXT:    movl %ebp, %esp
+; KNL_X32-NEXT:    popl %ebp
+; KNL_X32-NEXT:    retl
+  call void @v32i1_mem_callee(<128 x i32> %x, <32 x i1> %y)
+  ret void
+}
+
+declare void @v64i1_mem_callee(<128 x i32> %x, <64 x i1> %y)
+define void @v64i1_mem(<128 x i32> %x, <64 x i1> %y) {
+; KNL-LABEL: v64i1_mem:
+; KNL:       ## %bb.0:
+; KNL-NEXT:    subq $472, %rsp ## imm = 0x1D8
+; KNL-NEXT:    .cfi_def_cfa_offset 480
+; KNL-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
+; KNL-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
+; KNL-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
+; KNL-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
+; KNL-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
+; KNL-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
+; KNL-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
+; KNL-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
+; KNL-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
+; KNL-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
+; KNL-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
+; KNL-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
+; KNL-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
+; KNL-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
+; KNL-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
+; KNL-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
+; KNL-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
+; KNL-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
+; KNL-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
+; KNL-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
+; KNL-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
+; KNL-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
+; KNL-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
+; KNL-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
+; KNL-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
+; KNL-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
+; KNL-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
+; KNL-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
+; KNL-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
+; KNL-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
+; KNL-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
+; KNL-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
+; KNL-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
+; KNL-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
+; KNL-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
+; KNL-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
+; KNL-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
+; KNL-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
+; KNL-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
+; KNL-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
+; KNL-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
+; KNL-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
+; KNL-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
+; KNL-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
+; KNL-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
+; KNL-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
+; KNL-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
+; KNL-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
+; KNL-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
+; KNL-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
+; KNL-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
+; KNL-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
+; KNL-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
+; KNL-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
+; KNL-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
+; KNL-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
+; KNL-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
+; KNL-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    movl %eax, (%rsp)
+; KNL-NEXT:    callq _v64i1_mem_callee
+; KNL-NEXT:    addq $472, %rsp ## imm = 0x1D8
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: v64i1_mem:
+; SKX:       ## %bb.0:
+; SKX-NEXT:    pushq %rbp
+; SKX-NEXT:    .cfi_def_cfa_offset 16
+; SKX-NEXT:    .cfi_offset %rbp, -16
+; SKX-NEXT:    movq %rsp, %rbp
+; SKX-NEXT:    .cfi_def_cfa_register %rbp
+; SKX-NEXT:    andq $-64, %rsp
+; SKX-NEXT:    subq $128, %rsp
+; SKX-NEXT:    vmovaps 16(%rbp), %zmm8
+; SKX-NEXT:    vmovaps %zmm8, (%rsp)
+; SKX-NEXT:    callq _v64i1_mem_callee
+; SKX-NEXT:    movq %rbp, %rsp
+; SKX-NEXT:    popq %rbp
+; SKX-NEXT:    vzeroupper
+; SKX-NEXT:    retq
+;
+; KNL_X32-LABEL: v64i1_mem:
+; KNL_X32:       ## %bb.0:
+; KNL_X32-NEXT:    pushl %ebp
+; KNL_X32-NEXT:    .cfi_def_cfa_offset 8
+; KNL_X32-NEXT:    .cfi_offset %ebp, -8
+; KNL_X32-NEXT:    movl %esp, %ebp
+; KNL_X32-NEXT:    .cfi_def_cfa_register %ebp
+; KNL_X32-NEXT:    andl $-64, %esp
+; KNL_X32-NEXT:    subl $576, %esp ## imm = 0x240
+; KNL_X32-NEXT:    vmovaps 8(%ebp), %zmm4
+; KNL_X32-NEXT:    vmovaps 72(%ebp), %zmm5
+; KNL_X32-NEXT:    vmovaps 136(%ebp), %zmm6
+; KNL_X32-NEXT:    vmovaps 200(%ebp), %zmm7
+; KNL_X32-NEXT:    movl 516(%ebp), %eax
+; KNL_X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    movl 512(%ebp), %eax
+; KNL_X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    movl 508(%ebp), %eax
+; KNL_X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    movl 504(%ebp), %eax
+; KNL_X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    movl 500(%ebp), %eax
+; KNL_X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    movl 496(%ebp), %eax
+; KNL_X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    movl 492(%ebp), %eax
+; KNL_X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    movl 488(%ebp), %eax
+; KNL_X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    movl 484(%ebp), %eax
+; KNL_X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    movl 480(%ebp), %eax
+; KNL_X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    movl 476(%ebp), %eax
+; KNL_X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    movl 472(%ebp), %eax
+; KNL_X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    movl 468(%ebp), %eax
+; KNL_X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    movl 464(%ebp), %eax
+; KNL_X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    movl 460(%ebp), %eax
+; KNL_X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    movl 456(%ebp), %eax
+; KNL_X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    movl 452(%ebp), %eax
+; KNL_X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    movl 448(%ebp), %eax
+; KNL_X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    movl 444(%ebp), %eax
+; KNL_X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    movl 440(%ebp), %eax
+; KNL_X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    movl 436(%ebp), %eax
+; KNL_X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    movl 432(%ebp), %eax
+; KNL_X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    movl 428(%ebp), %eax
+; KNL_X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    movl 424(%ebp), %eax
+; KNL_X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    movl 420(%ebp), %eax
+; KNL_X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    movl 416(%ebp), %eax
+; KNL_X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    movl 412(%ebp), %eax
+; KNL_X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    movl 408(%ebp), %eax
+; KNL_X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    movl 404(%ebp), %eax
+; KNL_X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    movl 400(%ebp), %eax
+; KNL_X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    movl 396(%ebp), %eax
+; KNL_X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    movl 392(%ebp), %eax
+; KNL_X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    movl 388(%ebp), %eax
+; KNL_X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    movl 384(%ebp), %eax
+; KNL_X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    movl 380(%ebp), %eax
+; KNL_X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    movl 376(%ebp), %eax
+; KNL_X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    movl 372(%ebp), %eax
+; KNL_X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    movl 368(%ebp), %eax
+; KNL_X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    movl 364(%ebp), %eax
+; KNL_X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    movl 360(%ebp), %eax
+; KNL_X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    movl 356(%ebp), %eax
+; KNL_X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    movl 352(%ebp), %eax
+; KNL_X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    movl 348(%ebp), %eax
+; KNL_X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    movl 344(%ebp), %eax
+; KNL_X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    movl 340(%ebp), %eax
+; KNL_X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    movl 336(%ebp), %eax
+; KNL_X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    movl 332(%ebp), %eax
+; KNL_X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    movl 328(%ebp), %eax
+; KNL_X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    movl 324(%ebp), %eax
+; KNL_X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    movl 320(%ebp), %eax
+; KNL_X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    movl 316(%ebp), %eax
+; KNL_X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    movl 312(%ebp), %eax
+; KNL_X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    movl 308(%ebp), %eax
+; KNL_X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    movl 304(%ebp), %eax
+; KNL_X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    movl 300(%ebp), %eax
+; KNL_X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    movl 296(%ebp), %eax
+; KNL_X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    movl 292(%ebp), %eax
+; KNL_X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    movl 288(%ebp), %eax
+; KNL_X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    movl 284(%ebp), %eax
+; KNL_X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    movl 280(%ebp), %eax
+; KNL_X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    movl 276(%ebp), %eax
+; KNL_X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    movl 272(%ebp), %eax
+; KNL_X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    movl 268(%ebp), %eax
+; KNL_X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    movl 264(%ebp), %eax
+; KNL_X32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    vmovaps %zmm7, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    vmovaps %zmm6, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    vmovaps %zmm5, {{[0-9]+}}(%esp)
+; KNL_X32-NEXT:    vmovaps %zmm4, (%esp)
+; KNL_X32-NEXT:    calll _v64i1_mem_callee
+; KNL_X32-NEXT:    movl %ebp, %esp
+; KNL_X32-NEXT:    popl %ebp
+; KNL_X32-NEXT:    retl
+  call void @v64i1_mem_callee(<128 x i32> %x, <64 x i1> %y)
+  ret void
+}

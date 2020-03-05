@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Annotations.h"
+#include "Cancellation.h"
 #include "Context.h"
 #include "Diagnostics.h"
 #include "Matchers.h"
@@ -40,7 +41,15 @@ using ::testing::Pointee;
 using ::testing::UnorderedElementsAre;
 
 MATCHER_P2(TUState, State, ActionName, "") {
-  return arg.Action.S == State && arg.Action.Name == ActionName;
+  if (arg.Action.S != State) {
+    *result_listener << "state is " << arg.Action.S;
+    return false;
+  }
+  if (arg.Action.Name != ActionName) {
+    *result_listener << "name is " << arg.Action.Name;
+    return false;
+  }
+  return true;
 }
 
 TUScheduler::Options optsForTest() {
@@ -61,8 +70,15 @@ protected:
   void updateWithCallback(TUScheduler &S, PathRef File,
                           llvm::StringRef Contents, WantDiagnostics WD,
                           llvm::unique_function<void()> CB) {
+    updateWithCallback(S, File, getInputs(File, std::string(Contents)), WD,
+                       std::move(CB));
+  }
+
+  void updateWithCallback(TUScheduler &S, PathRef File, ParseInputs Inputs,
+                          WantDiagnostics WD,
+                          llvm::unique_function<void()> CB) {
     WithContextValue Ctx(llvm::make_scope_exit(std::move(CB)));
-    S.update(File, getInputs(File, std::string(Contents)), WD);
+    S.update(File, Inputs, WD);
   }
 
   static Key<llvm::unique_function<void(PathRef File, std::vector<Diag>)>>
@@ -77,8 +93,8 @@ protected:
         reportDiagnostics(File, AST.getDiagnostics(), Publish);
       }
 
-      void onFailedAST(PathRef File, std::vector<Diag> Diags,
-                       PublishFn Publish) override {
+      void onFailedAST(PathRef File, llvm::StringRef Version,
+                       std::vector<Diag> Diags, PublishFn Publish) override {
         reportDiagnostics(File, Diags, Publish);
       }
 
@@ -243,7 +259,9 @@ TEST_F(TUSchedulerTests, PreambleConsistency) {
     // Schedule two updates (A, B) and two preamble reads (stale, consistent).
     // The stale read should see A, and the consistent read should see B.
     // (We recognize the preambles by their included files).
-    updateWithCallback(S, Path, "#include <A>", WantDiagnostics::Yes, [&]() {
+    auto Inputs = getInputs(Path, "#include <A>");
+    Inputs.Version = "A";
+    updateWithCallback(S, Path, Inputs, WantDiagnostics::Yes, [&]() {
       // This callback runs in between the two preamble updates.
 
       // This blocks update B, preventing it from winning the race
@@ -256,12 +274,14 @@ TEST_F(TUSchedulerTests, PreambleConsistency) {
       // If the second read was stale, it would usually see A.
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
     });
-    S.update(Path, getInputs(Path, "#include <B>"), WantDiagnostics::Yes);
+    Inputs.Contents = "#include <B>";
+    Inputs.Version = "B";
+    S.update(Path, Inputs, WantDiagnostics::Yes);
 
     S.runWithPreamble("StaleRead", Path, TUScheduler::Stale,
                       [&](Expected<InputsAndPreamble> Pre) {
                         ASSERT_TRUE(bool(Pre));
-                        assert(bool(Pre));
+                        EXPECT_EQ(Pre->Preamble->Version, "A");
                         EXPECT_THAT(includes(Pre->Preamble),
                                     ElementsAre("<A>"));
                         InconsistentReadDone.notify();
@@ -270,6 +290,7 @@ TEST_F(TUSchedulerTests, PreambleConsistency) {
     S.runWithPreamble("ConsistentRead", Path, TUScheduler::Consistent,
                       [&](Expected<InputsAndPreamble> Pre) {
                         ASSERT_TRUE(bool(Pre));
+                        EXPECT_EQ(Pre->Preamble->Version, "B");
                         EXPECT_THAT(includes(Pre->Preamble),
                                     ElementsAre("<B>"));
                         ++CallbackCount;
@@ -346,6 +367,63 @@ TEST_F(TUSchedulerTests, Cancellation) {
       << "All reads other than R2B were cancelled";
 }
 
+TEST_F(TUSchedulerTests, Invalidation) {
+  auto Path = testPath("foo.cpp");
+  TUScheduler S(CDB, optsForTest(), captureDiags());
+  std::atomic<int> Builds(0), Actions(0);
+
+  Notification Start;
+  updateWithDiags(S, Path, "a", WantDiagnostics::Yes, [&](std::vector<Diag>) {
+    ++Builds;
+    Start.wait();
+  });
+  S.runWithAST(
+      "invalidatable", Path,
+      [&](llvm::Expected<InputsAndAST> AST) {
+        ++Actions;
+        EXPECT_FALSE(bool(AST));
+        llvm::Error E = AST.takeError();
+        EXPECT_TRUE(E.isA<CancelledError>());
+        consumeError(std::move(E));
+      },
+      TUScheduler::InvalidateOnUpdate);
+  S.runWithAST(
+      "not-invalidatable", Path,
+      [&](llvm::Expected<InputsAndAST> AST) {
+        ++Actions;
+        EXPECT_TRUE(bool(AST));
+      },
+      TUScheduler::NoInvalidation);
+  updateWithDiags(S, Path, "b", WantDiagnostics::Auto, [&](std::vector<Diag>) {
+    ++Builds;
+    ADD_FAILURE() << "Shouldn't build, all dependents invalidated";
+  });
+  S.runWithAST(
+      "invalidatable", Path,
+      [&](llvm::Expected<InputsAndAST> AST) {
+        ++Actions;
+        EXPECT_FALSE(bool(AST));
+        llvm::Error E = AST.takeError();
+        EXPECT_TRUE(E.isA<CancelledError>());
+        consumeError(std::move(E));
+      },
+      TUScheduler::InvalidateOnUpdate);
+  updateWithDiags(S, Path, "c", WantDiagnostics::Auto,
+                  [&](std::vector<Diag>) { ++Builds; });
+  S.runWithAST(
+      "invalidatable", Path,
+      [&](llvm::Expected<InputsAndAST> AST) {
+        ++Actions;
+        EXPECT_TRUE(bool(AST)) << "Shouldn't be invalidated, no update follows";
+      },
+      TUScheduler::InvalidateOnUpdate);
+  Start.notify();
+  ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
+
+  EXPECT_EQ(2, Builds.load()) << "Middle build should be skipped";
+  EXPECT_EQ(4, Actions.load()) << "All actions should run (some with error)";
+}
+
 TEST_F(TUSchedulerTests, ManyUpdates) {
   const int FilesCount = 3;
   const int UpdatesPerFile = 10;
@@ -388,6 +466,7 @@ TEST_F(TUSchedulerTests, ManyUpdates) {
         auto Inputs = getInputs(File, Contents.str());
         {
           WithContextValue WithNonce(NonceKey, ++Nonce);
+          Inputs.Version = Nonce;
           updateWithDiags(
               S, File, Inputs, WantDiagnostics::Auto,
               [File, Nonce, &Mut, &TotalUpdates](std::vector<Diag>) {
@@ -409,6 +488,8 @@ TEST_F(TUSchedulerTests, ManyUpdates) {
                 ASSERT_TRUE((bool)AST);
                 EXPECT_EQ(AST->Inputs.FS, Inputs.FS);
                 EXPECT_EQ(AST->Inputs.Contents, Inputs.Contents);
+                EXPECT_EQ(AST->Inputs.Version, Inputs.Version);
+                EXPECT_EQ(AST->AST.version(), Inputs.Version);
 
                 std::lock_guard<std::mutex> Lock(Mut);
                 ++TotalASTReads;
@@ -711,9 +792,6 @@ TEST_F(TUSchedulerTests, Run) {
 TEST_F(TUSchedulerTests, TUStatus) {
   class CaptureTUStatus : public ClangdServer::Callbacks {
   public:
-    void onDiagnosticsReady(PathRef File,
-                            std::vector<Diag> Diagnostics) override {}
-
     void onFileUpdated(PathRef File, const TUStatus &Status) override {
       std::lock_guard<std::mutex> Lock(Mutex);
       AllStatus.push_back(Status);
@@ -735,7 +813,8 @@ TEST_F(TUSchedulerTests, TUStatus) {
 
   // We schedule the following tasks in the queue:
   //   [Update] [GoToDefinition]
-  Server.addDocument(testPath("foo.cpp"), Code.code(), WantDiagnostics::Yes);
+  Server.addDocument(testPath("foo.cpp"), Code.code(), "1",
+                     WantDiagnostics::Yes);
   Server.locateSymbolAt(testPath("foo.cpp"), Code.point(),
                         [](Expected<std::vector<LocatedSymbol>> Result) {
                           ASSERT_TRUE((bool)Result);
@@ -746,9 +825,9 @@ TEST_F(TUSchedulerTests, TUStatus) {
   EXPECT_THAT(CaptureTUStatus.allStatus(),
               ElementsAre(
                   // Statuses of "Update" action.
-                  TUState(TUAction::RunningAction, "Update"),
-                  TUState(TUAction::BuildingPreamble, "Update"),
-                  TUState(TUAction::BuildingFile, "Update"),
+                  TUState(TUAction::RunningAction, "Update (1)"),
+                  TUState(TUAction::BuildingPreamble, "Update (1)"),
+                  TUState(TUAction::BuildingFile, "Update (1)"),
 
                   // Statuses of "Definitions" action
                   TUState(TUAction::RunningAction, "Definitions"),

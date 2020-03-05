@@ -38,12 +38,12 @@
 // and should not require given symbols to be resolved
 // RUN: ld.lld -shared %t -o %t2 -init=_unknown -fini=_unknown
 // RUN: llvm-readobj --symbols --dynamic-table %t2 | FileCheck --check-prefix=NOENTRY %s
-// NOENTRY: Symbols [
-// NOENTRY-NOT: Name: _unknown
-// NOENTRY: ]
 // NOENTRY: DynamicSection [
 // NOENTRY-NOT: INIT
 // NOENTRY-NOT: FINI
+// NOENTRY: ]
+// NOENTRY: Symbols [
+// NOENTRY-NOT: Name: _unknown
 // NOENTRY: ]
 
 .global _start,_init,_fini,_foo,_bar,_undef
