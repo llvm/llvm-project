@@ -115,6 +115,8 @@ public:
 
     ~SBPlatform();
 
+    static SBPlatform GetHostPlatform();
+
     bool
     IsValid () const;
 
