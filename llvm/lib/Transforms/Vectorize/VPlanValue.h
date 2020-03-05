@@ -31,6 +31,8 @@ namespace llvm {
 // Forward declarations.
 class VPUser;
 
+class VPSlotTracker;
+
 // This is the base class of the VPlan Def/Use graph, used for modeling the data
 // flow into, within and out of the VPlan. VPValues can stand for live-ins
 // coming from the input IR, instructions which VPlan will generate if executed
@@ -85,9 +87,8 @@ public:
   /// for any other purpose, as the values may change as LLVM evolves.
   unsigned getVPValueID() const { return SubclassID; }
 
-  void printAsOperand(raw_ostream &OS) const {
-    OS << "%vp" << (unsigned short)(unsigned long long)this;
-  }
+  void printAsOperand(raw_ostream &OS, VPSlotTracker &Tracker) const;
+  void print(raw_ostream &OS, VPSlotTracker &Tracker) const;
 
   unsigned getNumUsers() const { return Users.size(); }
   void addUser(VPUser &User) { Users.push_back(&User); }
@@ -178,6 +179,38 @@ public:
   operand_range operands() { return operand_range(op_begin(), op_end()); }
   const_operand_range operands() const {
     return const_operand_range(op_begin(), op_end());
+  }
+};
+class VPlan;
+class VPBasicBlock;
+class VPRegionBlock;
+
+/// This class can be used to assign consecutive numbers to all VPValues in a
+/// VPlan and allows querying the numbering for printing, similar to the
+/// ModuleSlotTracker for IR values.
+class VPSlotTracker {
+private:
+  DenseMap<const VPValue *, unsigned> Slots;
+  unsigned NextSlot = 0;
+
+  void assignSlots(const VPBlockBase *VPBB);
+  void assignSlots(const VPRegionBlock *Region);
+  void assignSlots(const VPBasicBlock *VPBB);
+  void assignSlot(const VPValue *V);
+
+  void assignSlots(const VPlan &Plan);
+
+public:
+  VPSlotTracker(const VPlan *Plan) {
+    if (Plan)
+      assignSlots(*Plan);
+  }
+
+  unsigned getSlot(const VPValue *V) const {
+    auto I = Slots.find(V);
+    if (I == Slots.end())
+      return -1;
+    return I->second;
   }
 };
 
