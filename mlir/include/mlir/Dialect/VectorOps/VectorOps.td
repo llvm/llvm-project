@@ -715,7 +715,7 @@ def Vector_ReshapeOp :
                Variadic<Index>:$output_shape,
                I64ArrayAttr:$fixed_vector_sizes,
                I32ElementsAttr:$operand_segment_sizes)>,
-    Results<(outs AnyVector)> {
+    Results<(outs AnyVector:$result)> {
   let summary = "vector reshape operation";
   let description = [{
     Reshapes its vector operand from 'input_shape' to 'output_shape' maintaining
@@ -821,6 +821,11 @@ def Vector_ReshapeOp :
     }
     static StringRef getInputShapeAttrName() { return "input_shape"; }
     static StringRef getOutputShapeAttrName() { return "output_shape"; }
+  }];
+
+  let assemblyFormat = [{
+    $vector `,` `[` $input_shape `]` `,` `[` $output_shape `]` `,`
+    $fixed_vector_sizes attr-dict `:` type($vector) `to` type($result)
   }];
 }
 

@@ -1722,7 +1722,12 @@ def SubViewOp : Std_Op<"subview", [AttrSizedOperandSegments, NoSideEffect]> {
     Variadic<Index>:$strides,
     I32ElementsAttr:$operand_segment_sizes
   );
-  let results = (outs AnyMemRef);
+  let results = (outs AnyMemRef:$result);
+
+  let assemblyFormat = [{
+    $source `[` $offsets `]` `[` $sizes `]` `[` $strides `]` attr-dict `:`
+    type($source) `to` type($result)
+  }];
 
   let builders = [
     OpBuilder<

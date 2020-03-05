@@ -963,58 +963,6 @@ static LogicalResult verify(OuterProductOp op) {
 // ReshapeOp
 //===----------------------------------------------------------------------===//
 
-static void print(OpAsmPrinter &p, ReshapeOp op) {
-  p << op.getOperationName() << " " << op.vector() << ", [" << op.input_shape()
-    << "], [" << op.output_shape() << "], " << op.fixed_vector_sizes();
-  std::array<StringRef, 2> elidedAttrs = {
-      ReshapeOp::getOperandSegmentSizeAttr(),
-      ReshapeOp::getFixedVectorSizesAttrName()};
-  p.printOptionalAttrDict(op.getAttrs(), elidedAttrs);
-  p << " : " << op.getInputVectorType() << " to " << op.getOutputVectorType();
-}
-
-// TODO(b/146516564) Consider passing number of inner vector dimensions that
-// are fixed, instead of their values in 'fixesVectorSizes' array attr.
-//
-// operation ::= ssa-id `=` `vector.reshape` ssa-use, `[` ssa-use-list `]`,
-//                          `[` ssa-use-list `]`, `[` array-attribute `]`
-//                          `:` vector-type 'to' vector-type
-//
-static ParseResult parseReshapeOp(OpAsmParser &parser, OperationState &result) {
-  OpAsmParser::OperandType inputInfo;
-  SmallVector<OpAsmParser::OperandType, 4> inputShapeInfo;
-  SmallVector<OpAsmParser::OperandType, 4> outputShapeInfo;
-  ArrayAttr fixedVectorSizesAttr;
-  StringRef attrName = ReshapeOp::getFixedVectorSizesAttrName();
-  auto indexType = parser.getBuilder().getIndexType();
-  if (parser.parseOperand(inputInfo) || parser.parseComma() ||
-      parser.parseOperandList(inputShapeInfo, OpAsmParser::Delimiter::Square) ||
-      parser.parseComma() ||
-      parser.parseOperandList(outputShapeInfo,
-                              OpAsmParser::Delimiter::Square) ||
-      parser.parseComma()) {
-    return failure();
-  }
-
-  auto builder = parser.getBuilder();
-  result.addAttribute(
-      ReshapeOp::getOperandSegmentSizeAttr(),
-      builder.getI32VectorAttr({1, static_cast<int32_t>(inputShapeInfo.size()),
-                                static_cast<int32_t>(outputShapeInfo.size())}));
-  Type inputType;
-  Type outputType;
-  return failure(
-      parser.parseAttribute(fixedVectorSizesAttr, attrName,
-                            result.attributes) ||
-      parser.parseOptionalAttrDict(result.attributes) ||
-      parser.parseColonType(inputType) ||
-      parser.resolveOperand(inputInfo, inputType, result.operands) ||
-      parser.resolveOperands(inputShapeInfo, indexType, result.operands) ||
-      parser.resolveOperands(outputShapeInfo, indexType, result.operands) ||
-      parser.parseKeywordType("to", outputType) ||
-      parser.addTypeToList(outputType, result.types));
-}
-
 static LogicalResult verify(ReshapeOp op) {
   // Verify that rank(numInputs/outputs) + numFixedVec dim matches vec rank.
   auto inputVectorType = op.getInputVectorType();

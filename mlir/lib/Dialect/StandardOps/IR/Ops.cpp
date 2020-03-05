@@ -1838,48 +1838,6 @@ void mlir::SubViewOp::build(Builder *b, OperationState &result, Type resultType,
         resultType);
 }
 
-static ParseResult parseSubViewOp(OpAsmParser &parser, OperationState &result) {
-  OpAsmParser::OperandType srcInfo;
-  SmallVector<OpAsmParser::OperandType, 4> offsetsInfo;
-  SmallVector<OpAsmParser::OperandType, 4> sizesInfo;
-  SmallVector<OpAsmParser::OperandType, 4> stridesInfo;
-  auto indexType = parser.getBuilder().getIndexType();
-  Type srcType, dstType;
-  if (parser.parseOperand(srcInfo) ||
-      parser.parseOperandList(offsetsInfo, OpAsmParser::Delimiter::Square) ||
-      parser.parseOperandList(sizesInfo, OpAsmParser::Delimiter::Square) ||
-      parser.parseOperandList(stridesInfo, OpAsmParser::Delimiter::Square)) {
-    return failure();
-  }
-
-  auto builder = parser.getBuilder();
-  result.addAttribute(
-      SubViewOp::getOperandSegmentSizeAttr(),
-      builder.getI32VectorAttr({1, static_cast<int>(offsetsInfo.size()),
-                                static_cast<int32_t>(sizesInfo.size()),
-                                static_cast<int32_t>(stridesInfo.size())}));
-
-  return failure(
-      parser.parseOptionalAttrDict(result.attributes) ||
-      parser.parseColonType(srcType) ||
-      parser.resolveOperand(srcInfo, srcType, result.operands) ||
-      parser.resolveOperands(offsetsInfo, indexType, result.operands) ||
-      parser.resolveOperands(sizesInfo, indexType, result.operands) ||
-      parser.resolveOperands(stridesInfo, indexType, result.operands) ||
-      parser.parseKeywordType("to", dstType) ||
-      parser.addTypeToList(dstType, result.types));
-}
-
-static void print(OpAsmPrinter &p, SubViewOp op) {
-  p << op.getOperationName() << ' ' << op.getOperand(0) << '[' << op.offsets()
-    << "][" << op.sizes() << "][" << op.strides() << ']';
-
-  std::array<StringRef, 1> elidedAttrs = {
-      SubViewOp::getOperandSegmentSizeAttr()};
-  p.printOptionalAttrDict(op.getAttrs(), elidedAttrs);
-  p << " : " << op.getOperand(0).getType() << " to " << op.getType();
-}
-
 static LogicalResult verify(SubViewOp op) {
   auto baseType = op.getBaseMemRefType().cast<MemRefType>();
   auto subViewType = op.getType();

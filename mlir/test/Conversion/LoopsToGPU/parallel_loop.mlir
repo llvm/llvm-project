@@ -270,17 +270,17 @@ module {
 // CHECK:             [[VAL_31:%.*]] = affine.min #[[MAP3]]([[VAL_28]]){{\[}}[[VAL_30]]]
 // CHECK:             [[VAL_32:%.*]] = dim [[VAL_0]], 1 : memref<?x?xf32, #[[MAP0]]>
 // CHECK:             [[VAL_33:%.*]] = affine.min #[[MAP4]]([[VAL_29]]){{\[}}[[VAL_32]]]
-// CHECK:             [[VAL_34:%.*]] = std.subview [[VAL_0]]{{\[}}[[VAL_28]], [[VAL_29]]]{{\[}}[[VAL_31]], [[VAL_33]]]{{\[}}[[VAL_3]], [[VAL_3]]] : memref<?x?xf32, #[[MAP0]]> to memref<?x?xf32, #[[MAP5]]>
+// CHECK:             [[VAL_34:%.*]] = subview [[VAL_0]]{{\[}}[[VAL_28]], [[VAL_29]]] {{\[}}[[VAL_31]], [[VAL_33]]] {{\[}}[[VAL_3]], [[VAL_3]]] : memref<?x?xf32, #[[MAP0]]> to memref<?x?xf32, #[[MAP5]]>
 // CHECK:             [[VAL_35:%.*]] = dim [[VAL_1]], 0 : memref<?x?xf32, #[[MAP0]]>
 // CHECK:             [[VAL_36:%.*]] = affine.min #[[MAP3]]([[VAL_28]]){{\[}}[[VAL_35]]]
 // CHECK:             [[VAL_37:%.*]] = dim [[VAL_1]], 1 : memref<?x?xf32, #[[MAP0]]>
 // CHECK:             [[VAL_38:%.*]] = affine.min #[[MAP4]]([[VAL_29]]){{\[}}[[VAL_37]]]
-// CHECK:             [[VAL_39:%.*]] = std.subview [[VAL_1]]{{\[}}[[VAL_28]], [[VAL_29]]]{{\[}}[[VAL_36]], [[VAL_38]]]{{\[}}[[VAL_3]], [[VAL_3]]] : memref<?x?xf32, #[[MAP0]]> to memref<?x?xf32, #[[MAP5]]>
+// CHECK:             [[VAL_39:%.*]] = subview [[VAL_1]]{{\[}}[[VAL_28]], [[VAL_29]]] {{\[}}[[VAL_36]], [[VAL_38]]] {{\[}}[[VAL_3]], [[VAL_3]]] : memref<?x?xf32, #[[MAP0]]> to memref<?x?xf32, #[[MAP5]]>
 // CHECK:             [[VAL_40:%.*]] = dim [[VAL_2]], 0 : memref<?x?xf32, #[[MAP0]]>
 // CHECK:             [[VAL_41:%.*]] = affine.min #[[MAP3]]([[VAL_28]]){{\[}}[[VAL_40]]]
 // CHECK:             [[VAL_42:%.*]] = dim [[VAL_2]], 1 : memref<?x?xf32, #[[MAP0]]>
 // CHECK:             [[VAL_43:%.*]] = affine.min #[[MAP4]]([[VAL_29]]){{\[}}[[VAL_42]]]
-// CHECK:             [[VAL_44:%.*]] = std.subview [[VAL_2]]{{\[}}[[VAL_28]], [[VAL_29]]]{{\[}}[[VAL_41]], [[VAL_43]]]{{\[}}[[VAL_3]], [[VAL_3]]] : memref<?x?xf32, #[[MAP0]]> to memref<?x?xf32, #[[MAP5]]>
+// CHECK:             [[VAL_44:%.*]] = subview [[VAL_2]]{{\[}}[[VAL_28]], [[VAL_29]]] {{\[}}[[VAL_41]], [[VAL_43]]] {{\[}}[[VAL_3]], [[VAL_3]]] : memref<?x?xf32, #[[MAP0]]> to memref<?x?xf32, #[[MAP5]]>
 // CHECK:             [[VAL_45:%.*]] = affine.apply #[[MAP2]]([[VAL_22]]){{\[}}[[VAL_3]], [[VAL_4]]]
 // CHECK:             [[VAL_46:%.*]] = cmpi "slt", [[VAL_45]], [[VAL_31]] : index
 // CHECK:             loop.if [[VAL_46]] {

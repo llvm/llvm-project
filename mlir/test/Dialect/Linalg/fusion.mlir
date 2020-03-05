@@ -265,17 +265,17 @@ func @f5(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
 // CHECK:  loop.for %[[I:.*]] = %{{.*}} to %[[D_0]] step %{{.*}} {
 // CHECK:    loop.for %[[J:.*]] = %{{.*}} to %[[B_1]] step %{{.*}} {
 // CHECK:      loop.for %[[K:.*]] = %{{.*}} to %[[D_1]] step %{{.*}} {
-// CHECK-DAG:    %[[D_IK:.*]] = std.subview %[[D]][%[[I]], %[[K]]]
-// CHECK-DAG:    %[[B_KJ:.*]] = std.subview %[[B]][%[[K]], %[[J]]]
-// CHECK-DAG:    %[[E_IJ:.*]] = std.subview %[[E]][%[[I]], %[[J]]]
+// CHECK-DAG:    %[[D_IK:.*]] = subview %[[D]][%[[I]], %[[K]]]
+// CHECK-DAG:    %[[B_KJ:.*]] = subview %[[B]][%[[K]], %[[J]]]
+// CHECK-DAG:    %[[E_IJ:.*]] = subview %[[E]][%[[I]], %[[J]]]
 // CHECK:        dim
-// CHECK-DAG:    %[[C_I0:.*]] = std.subview %[[C]][%[[I]], %{{.*}}]
-// CHECK-DAG:    %[[B_0K:.*]] = std.subview %[[B]][%{{.*}}, %[[K]]]
-// CHECK-DAG:    %[[D_IK_:.*]] = std.subview %[[D]][%[[I]], %[[K]]]
+// CHECK-DAG:    %[[C_I0:.*]] = subview %[[C]][%[[I]], %{{.*}}]
+// CHECK-DAG:    %[[B_0K:.*]] = subview %[[B]][%{{.*}}, %[[K]]]
+// CHECK-DAG:    %[[D_IK_:.*]] = subview %[[D]][%[[I]], %[[K]]]
 // CHECK:        dim
-// CHECK-DAG:    %[[A_I0:.*]] = std.subview %[[A]][%[[I]], %{{.*}}]
-// CHECK-DAG:    %[[B_00:.*]] = std.subview %[[B]][%{{.*}}, %{{.*}}]
-// CHECK-DAG:    %[[C_I0_:.*]] = std.subview %[[C]][%[[I]], %{{.*}}]
+// CHECK-DAG:    %[[A_I0:.*]] = subview %[[A]][%[[I]], %{{.*}}]
+// CHECK-DAG:    %[[B_00:.*]] = subview %[[B]][%{{.*}}, %{{.*}}]
+// CHECK-DAG:    %[[C_I0_:.*]] = subview %[[C]][%[[I]], %{{.*}}]
 // CHECK:        linalg.matmul(%[[A_I0]], %[[B_00]], %[[C_I0_]])
 // CHECK:        linalg.matmul(%[[C_I0]], %[[B_0K]], %[[D_IK_]])
 // CHECK:        linalg.matmul(%[[D_IK]], %[[B_KJ]], %[[E_IJ]])
