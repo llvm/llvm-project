@@ -1791,6 +1791,12 @@ public:
   /// directive.
   void emitDestroyClause(CodeGenFunction &CGF, LValue DepobjLVal,
                          SourceLocation Loc);
+
+  /// Updates the dependency kind in the specified depobj object.
+  /// \param DepobjLVal LValue for the main depobj object.
+  /// \param NewDepKind New dependency kind.
+  void emitUpdateClause(CodeGenFunction &CGF, LValue DepobjLVal,
+                        OpenMPDependClauseKind NewDepKind, SourceLocation Loc);
 };
 
 /// Class supports emissionof SIMD-only code.
