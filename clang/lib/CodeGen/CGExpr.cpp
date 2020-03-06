@@ -1483,8 +1483,11 @@ CodeGenFunction::tryEmitAsConstant(DeclRefExpr *refExpr) {
     return ConstantEmission();
 
   // Emit as a constant.
-  auto C = ConstantEmitter(*this).emitAbstract(refExpr->getLocation(),
-                                               result.Val, resultType);
+  // Try to emit as a constant.
+  llvm::Constant *C =
+      ConstantEmitter(*this).tryEmitAbstract(result.Val, resultType);
+  if (!C)
+    return ConstantEmission();
 
   // Make sure we emit a debug reference to the global variable.
   // This should probably fire even for
