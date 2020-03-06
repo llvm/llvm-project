@@ -33,6 +33,11 @@ inline bool operator==(const ExampleSymbol &LHS, const ExampleSymbol &RHS) {
          std::tie(RHS.Kind, RHS.Name, RHS.WeakDefined, RHS.ThreadLocalValue);
 }
 
+inline std::string stripWhitespace(std::string s) {
+  s.erase(std::remove_if(s.begin(), s.end(), ::isspace), s.end());
+  return s;
+}
+
 static ExampleSymbol TBDv4ExportedSymbols[] = {
     {SymbolKind::GlobalSymbol, "_symA", false, false},
     {SymbolKind::GlobalSymbol, "_symAB", false, false},
