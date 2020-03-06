@@ -1353,4 +1353,953 @@ TEST_F(GISelMITest, LibcallSimple) {
   EXPECT_EQ(LegalizerHelper::LegalizeResult::UnableToLegalize,
             Helper.libcall(*MIBFADD));
 }
+
+TEST_F(GISelMITest, LibcallSRem) {
+  setUp();
+  if (!TM)
+    return;
+
+  // Declare your legalization info
+  DefineLegalizerInfo(A, {
+    getActionDefinitionsBuilder(G_SREM).libcallFor({s32, s64, s128});
+  });
+
+  LLT S32{LLT::scalar(32)};
+  LLT S64{LLT::scalar(64)};
+  LLT S128{LLT::scalar(128)};
+  auto MIBTrunc = B.buildTrunc(S32, Copies[0]);
+  auto MIBExt = B.buildAnyExt(S128, Copies[0]);
+
+  auto MIBSRem32 =
+      B.buildInstr(TargetOpcode::G_SREM, {S32}, {MIBTrunc, MIBTrunc});
+  auto MIBSRem64 =
+      B.buildInstr(TargetOpcode::G_SREM, {S64}, {Copies[0], Copies[0]});
+  auto MIBSRem128 =
+      B.buildInstr(TargetOpcode::G_SREM, {S128}, {MIBExt, MIBExt});
+
+  AInfo Info(MF->getSubtarget());
+  DummyGISelObserver Observer;
+  LegalizerHelper Helper(*MF, Info, Observer, B);
+
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.libcall(*MIBSRem32));
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.libcall(*MIBSRem64));
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.libcall(*MIBSRem128));
+
+  auto CheckStr = R"(
+  CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY
+  CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC
+  CHECK: [[ANYEXT:%[0-9]+]]:_(s128) = G_ANYEXT
+  CHECK: $w0 = COPY [[TRUNC]]
+  CHECK: $w1 = COPY [[TRUNC]]
+  CHECK: BL &__modsi3
+  CHECK: $x0 = COPY [[COPY]]
+  CHECK: $x1 = COPY [[COPY]]
+  CHECK: BL &__moddi3
+  CHECK: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[ANYEXT]]
+  CHECK: [[UV2:%[0-9]+]]:_(s64), [[UV3:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[ANYEXT]]
+  CHECK: $x0 = COPY [[UV]]
+  CHECK: $x1 = COPY [[UV1]]
+  CHECK: $x2 = COPY [[UV2]]
+  CHECK: $x3 = COPY [[UV3]]
+  CHECK: BL &__modti3
+  )";
+
+  // Check
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
+
+TEST_F(GISelMITest, LibcallURem) {
+  setUp();
+  if (!TM)
+    return;
+
+  // Declare your legalization info
+  DefineLegalizerInfo(A, {
+    getActionDefinitionsBuilder(G_UREM).libcallFor({s32, s64, s128});
+  });
+
+  LLT S32{LLT::scalar(32)};
+  LLT S64{LLT::scalar(64)};
+  LLT S128{LLT::scalar(128)};
+  auto MIBTrunc = B.buildTrunc(S32, Copies[0]);
+  auto MIBExt = B.buildAnyExt(S128, Copies[0]);
+
+  auto MIBURem32 =
+      B.buildInstr(TargetOpcode::G_UREM, {S32}, {MIBTrunc, MIBTrunc});
+  auto MIBURem64 =
+      B.buildInstr(TargetOpcode::G_UREM, {S64}, {Copies[0], Copies[0]});
+  auto MIBURem128 =
+      B.buildInstr(TargetOpcode::G_UREM, {S128}, {MIBExt, MIBExt});
+
+  AInfo Info(MF->getSubtarget());
+  DummyGISelObserver Observer;
+  LegalizerHelper Helper(*MF, Info, Observer, B);
+
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.libcall(*MIBURem32));
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.libcall(*MIBURem64));
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.libcall(*MIBURem128));
+
+  const auto *CheckStr = R"(
+  CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY
+  CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC
+  CHECK: [[ANYEXT:%[0-9]+]]:_(s128) = G_ANYEXT
+  CHECK: $w0 = COPY [[TRUNC]]
+  CHECK: $w1 = COPY [[TRUNC]]
+  CHECK: BL &__umodsi3
+  CHECK: $x0 = COPY [[COPY]]
+  CHECK: $x1 = COPY [[COPY]]
+  CHECK: BL &__umoddi3
+  CHECK: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[ANYEXT]]
+  CHECK: [[UV2:%[0-9]+]]:_(s64), [[UV3:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[ANYEXT]]
+  CHECK: $x0 = COPY [[UV]]
+  CHECK: $x1 = COPY [[UV1]]
+  CHECK: $x2 = COPY [[UV2]]
+  CHECK: $x3 = COPY [[UV3]]
+  CHECK: BL &__umodti3
+  )";
+
+  // Check
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
+
+TEST_F(GISelMITest, LibcallCtlzZeroUndef) {
+  setUp();
+  if (!TM)
+    return;
+
+  // Declare your legalization info
+  DefineLegalizerInfo(A, {
+    getActionDefinitionsBuilder(G_CTLZ_ZERO_UNDEF)
+        .libcallFor({{s32, s32}, {s64, s64}, {s128, s128}});
+  });
+
+  LLT S32{LLT::scalar(32)};
+  LLT S64{LLT::scalar(64)};
+  LLT S128{LLT::scalar(128)};
+  auto MIBTrunc = B.buildTrunc(S32, Copies[0]);
+  auto MIBExt = B.buildAnyExt(S128, Copies[0]);
+
+  auto MIBCtlz32 =
+      B.buildInstr(TargetOpcode::G_CTLZ_ZERO_UNDEF, {S32}, {MIBTrunc});
+  auto MIBCtlz64 =
+      B.buildInstr(TargetOpcode::G_CTLZ_ZERO_UNDEF, {S64}, {Copies[0]});
+  auto MIBCtlz128 =
+      B.buildInstr(TargetOpcode::G_CTLZ_ZERO_UNDEF, {S128}, {MIBExt});
+
+  AInfo Info(MF->getSubtarget());
+  DummyGISelObserver Observer;
+  LegalizerHelper Helper(*MF, Info, Observer, B);
+
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.libcall(*MIBCtlz32));
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.libcall(*MIBCtlz64));
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.libcall(*MIBCtlz128));
+
+  const auto *CheckStr = R"(
+  CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY
+  CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC
+  CHECK: [[ANYEXT:%[0-9]+]]:_(s128) = G_ANYEXT
+  CHECK: $w0 = COPY [[TRUNC]]
+  CHECK: BL &__clzsi2
+  CHECK: $x0 = COPY [[COPY]]
+  CHECK: BL &__clzdi2
+  CHECK: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[ANYEXT]]
+  CHECK: $x0 = COPY [[UV]]
+  CHECK: $x1 = COPY [[UV1]]
+  CHECK: BL &__clzti2
+  )";
+
+  // Check
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
+
+TEST_F(GISelMITest, LibcallFAdd) {
+  setUp();
+  if (!TM)
+    return;
+
+  // Declare your legalization info
+  DefineLegalizerInfo(A, {
+    getActionDefinitionsBuilder(G_FADD).libcallFor({s32, s64, s128});
+  });
+
+  LLT S32{LLT::scalar(32)};
+  LLT S64{LLT::scalar(64)};
+  LLT S128{LLT::scalar(128)};
+  auto MIBTrunc = B.buildTrunc(S32, Copies[0]);
+  auto MIBExt = B.buildAnyExt(S128, Copies[0]);
+
+  auto MIBAdd32 =
+      B.buildInstr(TargetOpcode::G_FADD, {S32}, {MIBTrunc, MIBTrunc});
+  auto MIBAdd64 =
+      B.buildInstr(TargetOpcode::G_FADD, {S64}, {Copies[0], Copies[0]});
+  auto MIBAdd128 = B.buildInstr(TargetOpcode::G_FADD, {S128}, {MIBExt, MIBExt});
+
+  AInfo Info(MF->getSubtarget());
+  DummyGISelObserver Observer;
+  LegalizerHelper Helper(*MF, Info, Observer, B);
+
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.libcall(*MIBAdd32));
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.libcall(*MIBAdd64));
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.libcall(*MIBAdd128));
+
+  const auto *CheckStr = R"(
+  CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY
+  CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC
+  CHECK: [[ANYEXT:%[0-9]+]]:_(s128) = G_ANYEXT
+  CHECK: $s0 = COPY [[TRUNC]]
+  CHECK: $s1 = COPY [[TRUNC]]
+  CHECK: BL &__addsf3
+  CHECK: $d0 = COPY [[COPY]]
+  CHECK: $d1 = COPY [[COPY]]
+  CHECK: BL &__adddf3
+  CHECK: $q0 = COPY [[ANYEXT]]
+  CHECK: $q1 = COPY [[ANYEXT]]
+  CHECK: BL &__addtf3
+  )";
+
+  // Check
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
+
+TEST_F(GISelMITest, LibcallFSub) {
+  setUp();
+  if (!TM)
+    return;
+
+  // Declare your legalization info
+  DefineLegalizerInfo(A, {
+    getActionDefinitionsBuilder(G_FSUB).libcallFor({s32, s64, s128});
+  });
+
+  LLT S32{LLT::scalar(32)};
+  LLT S64{LLT::scalar(64)};
+  LLT S128{LLT::scalar(128)};
+  auto MIBTrunc = B.buildTrunc(S32, Copies[0]);
+  auto MIBExt = B.buildAnyExt(S128, Copies[0]);
+
+  auto MIBSub32 =
+      B.buildInstr(TargetOpcode::G_FSUB, {S32}, {MIBTrunc, MIBTrunc});
+  auto MIBSub64 =
+      B.buildInstr(TargetOpcode::G_FSUB, {S64}, {Copies[0], Copies[0]});
+  auto MIBSub128 = B.buildInstr(TargetOpcode::G_FSUB, {S128}, {MIBExt, MIBExt});
+
+  AInfo Info(MF->getSubtarget());
+  DummyGISelObserver Observer;
+  LegalizerHelper Helper(*MF, Info, Observer, B);
+
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.libcall(*MIBSub32));
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.libcall(*MIBSub64));
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.libcall(*MIBSub128));
+
+  const auto *CheckStr = R"(
+  CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY
+  CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC
+  CHECK: [[ANYEXT:%[0-9]+]]:_(s128) = G_ANYEXT
+  CHECK: $s0 = COPY [[TRUNC]]
+  CHECK: $s1 = COPY [[TRUNC]]
+  CHECK: BL &__subsf3
+  CHECK: $d0 = COPY [[COPY]]
+  CHECK: $d1 = COPY [[COPY]]
+  CHECK: BL &__subdf3
+  CHECK: $q0 = COPY [[ANYEXT]]
+  CHECK: $q1 = COPY [[ANYEXT]]
+  CHECK: BL &__subtf3
+  )";
+
+  // Check
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
+
+TEST_F(GISelMITest, LibcallFMul) {
+  setUp();
+  if (!TM)
+    return;
+
+  // Declare your legalization info
+  DefineLegalizerInfo(A, {
+    getActionDefinitionsBuilder(G_FMUL).libcallFor({s32, s64, s128});
+  });
+
+  LLT S32{LLT::scalar(32)};
+  LLT S64{LLT::scalar(64)};
+  LLT S128{LLT::scalar(128)};
+  auto MIBTrunc = B.buildTrunc(S32, Copies[0]);
+  auto MIBExt = B.buildAnyExt(S128, Copies[0]);
+
+  auto MIBMul32 =
+      B.buildInstr(TargetOpcode::G_FMUL, {S32}, {MIBTrunc, MIBTrunc});
+  auto MIBMul64 =
+      B.buildInstr(TargetOpcode::G_FMUL, {S64}, {Copies[0], Copies[0]});
+  auto MIBMul128 = B.buildInstr(TargetOpcode::G_FMUL, {S128}, {MIBExt, MIBExt});
+
+  AInfo Info(MF->getSubtarget());
+  DummyGISelObserver Observer;
+  LegalizerHelper Helper(*MF, Info, Observer, B);
+
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.libcall(*MIBMul32));
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.libcall(*MIBMul64));
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.libcall(*MIBMul128));
+
+  const auto *CheckStr = R"(
+  CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY
+  CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC
+  CHECK: [[ANYEXT:%[0-9]+]]:_(s128) = G_ANYEXT
+  CHECK: $s0 = COPY [[TRUNC]]
+  CHECK: $s1 = COPY [[TRUNC]]
+  CHECK: BL &__mulsf3
+  CHECK: $d0 = COPY [[COPY]]
+  CHECK: $d1 = COPY [[COPY]]
+  CHECK: BL &__muldf3
+  CHECK: $q0 = COPY [[ANYEXT]]
+  CHECK: $q1 = COPY [[ANYEXT]]
+  CHECK: BL &__multf3
+  )";
+
+  // Check
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
+
+TEST_F(GISelMITest, LibcallFDiv) {
+  setUp();
+  if (!TM)
+    return;
+
+  // Declare your legalization info
+  DefineLegalizerInfo(A, {
+    getActionDefinitionsBuilder(G_FDIV).libcallFor({s32, s64, s128});
+  });
+
+  LLT S32{LLT::scalar(32)};
+  LLT S64{LLT::scalar(64)};
+  LLT S128{LLT::scalar(128)};
+  auto MIBTrunc = B.buildTrunc(S32, Copies[0]);
+  auto MIBExt = B.buildAnyExt(S128, Copies[0]);
+
+  auto MIBDiv32 =
+      B.buildInstr(TargetOpcode::G_FDIV, {S32}, {MIBTrunc, MIBTrunc});
+  auto MIBDiv64 =
+      B.buildInstr(TargetOpcode::G_FDIV, {S64}, {Copies[0], Copies[0]});
+  auto MIBDiv128 = B.buildInstr(TargetOpcode::G_FDIV, {S128}, {MIBExt, MIBExt});
+
+  AInfo Info(MF->getSubtarget());
+  DummyGISelObserver Observer;
+  LegalizerHelper Helper(*MF, Info, Observer, B);
+
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.libcall(*MIBDiv32));
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.libcall(*MIBDiv64));
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.libcall(*MIBDiv128));
+
+  const auto *CheckStr = R"(
+  CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY
+  CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC
+  CHECK: [[ANYEXT:%[0-9]+]]:_(s128) = G_ANYEXT
+  CHECK: $s0 = COPY [[TRUNC]]
+  CHECK: $s1 = COPY [[TRUNC]]
+  CHECK: BL &__divsf3
+  CHECK: $d0 = COPY [[COPY]]
+  CHECK: $d1 = COPY [[COPY]]
+  CHECK: BL &__divdf3
+  CHECK: $q0 = COPY [[ANYEXT]]
+  CHECK: $q1 = COPY [[ANYEXT]]
+  CHECK: BL &__divtf3
+  )";
+
+  // Check
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
+
+TEST_F(GISelMITest, LibcallFExp) {
+  setUp();
+  if (!TM)
+    return;
+
+  // Declare your legalization info
+  DefineLegalizerInfo(A, {
+    getActionDefinitionsBuilder(G_FEXP).libcallFor({s32, s64, s128});
+  });
+
+  LLT S32{LLT::scalar(32)};
+  LLT S64{LLT::scalar(64)};
+  LLT S128{LLT::scalar(128)};
+  auto MIBTrunc = B.buildTrunc(S32, Copies[0]);
+  auto MIBExt = B.buildAnyExt(S128, Copies[0]);
+
+  auto MIBExp32 = B.buildInstr(TargetOpcode::G_FEXP, {S32}, {MIBTrunc});
+  auto MIBExp64 = B.buildInstr(TargetOpcode::G_FEXP, {S64}, {Copies[0]});
+  auto MIBExp128 = B.buildInstr(TargetOpcode::G_FEXP, {S128}, {MIBExt});
+
+  AInfo Info(MF->getSubtarget());
+  DummyGISelObserver Observer;
+  LegalizerHelper Helper(*MF, Info, Observer, B);
+
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.libcall(*MIBExp32));
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.libcall(*MIBExp64));
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.libcall(*MIBExp128));
+
+  const auto *CheckStr = R"(
+  CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY
+  CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC
+  CHECK: [[ANYEXT:%[0-9]+]]:_(s128) = G_ANYEXT
+  CHECK: $s0 = COPY [[TRUNC]]
+  CHECK: BL &expf
+  CHECK: $d0 = COPY [[COPY]]
+  CHECK: BL &exp
+  CHECK: $q0 = COPY [[ANYEXT]]
+  CHECK: BL &expl
+  )";
+
+  // Check
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
+
+TEST_F(GISelMITest, LibcallFExp2) {
+  setUp();
+  if (!TM)
+    return;
+
+  // Declare your legalization info
+  DefineLegalizerInfo(A, {
+    getActionDefinitionsBuilder(G_FEXP2).libcallFor({s32, s64, s128});
+  });
+
+  LLT S32{LLT::scalar(32)};
+  LLT S64{LLT::scalar(64)};
+  LLT S128{LLT::scalar(128)};
+  auto MIBTrunc = B.buildTrunc(S32, Copies[0]);
+  auto MIBExt = B.buildAnyExt(S128, Copies[0]);
+
+  auto MIBExp232 = B.buildInstr(TargetOpcode::G_FEXP2, {S32}, {MIBTrunc});
+  auto MIBExp264 = B.buildInstr(TargetOpcode::G_FEXP2, {S64}, {Copies[0]});
+  auto MIBExp2128 = B.buildInstr(TargetOpcode::G_FEXP2, {S128}, {MIBExt});
+
+  AInfo Info(MF->getSubtarget());
+  DummyGISelObserver Observer;
+  LegalizerHelper Helper(*MF, Info, Observer, B);
+
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.libcall(*MIBExp232));
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.libcall(*MIBExp264));
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.libcall(*MIBExp2128));
+
+  const auto *CheckStr = R"(
+  CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY
+  CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC
+  CHECK: [[ANYEXT:%[0-9]+]]:_(s128) = G_ANYEXT
+  CHECK: $s0 = COPY [[TRUNC]]
+  CHECK: BL &exp2f
+  CHECK: $d0 = COPY [[COPY]]
+  CHECK: BL &exp2
+  CHECK: $q0 = COPY [[ANYEXT]]
+  CHECK: BL &exp2l
+  )";
+
+  // Check
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
+
+TEST_F(GISelMITest, LibcallFRem) {
+  setUp();
+  if (!TM)
+    return;
+
+  // Declare your legalization info
+  DefineLegalizerInfo(A, {
+    getActionDefinitionsBuilder(G_FREM).libcallFor({s32, s64, s128});
+  });
+
+  LLT S32{LLT::scalar(32)};
+  LLT S64{LLT::scalar(64)};
+  LLT S128{LLT::scalar(128)};
+  auto MIBTrunc = B.buildTrunc(S32, Copies[0]);
+  auto MIBExt = B.buildAnyExt(S128, Copies[0]);
+
+  auto MIBFRem32 = B.buildInstr(TargetOpcode::G_FREM, {S32}, {MIBTrunc});
+  auto MIBFRem64 = B.buildInstr(TargetOpcode::G_FREM, {S64}, {Copies[0]});
+  auto MIBFRem128 = B.buildInstr(TargetOpcode::G_FREM, {S128}, {MIBExt});
+
+  AInfo Info(MF->getSubtarget());
+  DummyGISelObserver Observer;
+  LegalizerHelper Helper(*MF, Info, Observer, B);
+
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.libcall(*MIBFRem32));
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.libcall(*MIBFRem64));
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.libcall(*MIBFRem128));
+
+  const auto *CheckStr = R"(
+  CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY
+  CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC
+  CHECK: [[ANYEXT:%[0-9]+]]:_(s128) = G_ANYEXT
+  CHECK: $s0 = COPY [[TRUNC]]
+  CHECK: BL &fmodf
+  CHECK: $d0 = COPY [[COPY]]
+  CHECK: BL &fmod
+  CHECK: $q0 = COPY [[ANYEXT]]
+  CHECK: BL &fmodl
+  )";
+
+  // Check
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
+
+TEST_F(GISelMITest, LibcallFPow) {
+  setUp();
+  if (!TM)
+    return;
+
+  // Declare your legalization info
+  DefineLegalizerInfo(A, {
+    getActionDefinitionsBuilder(G_FPOW).libcallFor({s32, s64, s128});
+  });
+
+  LLT S32{LLT::scalar(32)};
+  LLT S64{LLT::scalar(64)};
+  LLT S128{LLT::scalar(128)};
+  auto MIBTrunc = B.buildTrunc(S32, Copies[0]);
+  auto MIBExt = B.buildAnyExt(S128, Copies[0]);
+
+  auto MIBPow32 = B.buildInstr(TargetOpcode::G_FPOW, {S32}, {MIBTrunc});
+  auto MIBPow64 = B.buildInstr(TargetOpcode::G_FPOW, {S64}, {Copies[0]});
+  auto MIBPow128 = B.buildInstr(TargetOpcode::G_FPOW, {S128}, {MIBExt});
+
+  AInfo Info(MF->getSubtarget());
+  DummyGISelObserver Observer;
+  LegalizerHelper Helper(*MF, Info, Observer, B);
+
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.libcall(*MIBPow32));
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.libcall(*MIBPow64));
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.libcall(*MIBPow128));
+
+  const auto *CheckStr = R"(
+  CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY
+  CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC
+  CHECK: [[ANYEXT:%[0-9]+]]:_(s128) = G_ANYEXT
+  CHECK: $s0 = COPY [[TRUNC]]
+  CHECK: BL &powf
+  CHECK: $d0 = COPY [[COPY]]
+  CHECK: BL &pow
+  CHECK: $q0 = COPY [[ANYEXT]]
+  CHECK: BL &powl
+  )";
+
+  // Check
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
+
+TEST_F(GISelMITest, LibcallFMa) {
+  setUp();
+  if (!TM)
+    return;
+
+  // Declare your legalization info
+  DefineLegalizerInfo(A, {
+    getActionDefinitionsBuilder(G_FMA).libcallFor({s32, s64, s128});
+  });
+
+  LLT S32{LLT::scalar(32)};
+  LLT S64{LLT::scalar(64)};
+  LLT S128{LLT::scalar(128)};
+  auto MIBTrunc = B.buildTrunc(S32, Copies[0]);
+  auto MIBExt = B.buildAnyExt(S128, Copies[0]);
+
+  auto MIBMa32 = B.buildInstr(TargetOpcode::G_FMA, {S32}, {MIBTrunc, MIBTrunc});
+  auto MIBMa64 =
+      B.buildInstr(TargetOpcode::G_FMA, {S64}, {Copies[0], Copies[0]});
+  auto MIBMa128 = B.buildInstr(TargetOpcode::G_FMA, {S128}, {MIBExt, MIBExt});
+
+  AInfo Info(MF->getSubtarget());
+  DummyGISelObserver Observer;
+  LegalizerHelper Helper(*MF, Info, Observer, B);
+
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.libcall(*MIBMa32));
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.libcall(*MIBMa64));
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.libcall(*MIBMa128));
+
+  const auto *CheckStr = R"(
+  CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY
+  CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC
+  CHECK: [[ANYEXT:%[0-9]+]]:_(s128) = G_ANYEXT
+  CHECK: $s0 = COPY [[TRUNC]]
+  CHECK: BL &fmaf
+  CHECK: $d0 = COPY [[COPY]]
+  CHECK: BL &fma
+  CHECK: $q0 = COPY [[ANYEXT]]
+  CHECK: BL &fmal
+  )";
+
+  // Check
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
+
+TEST_F(GISelMITest, LibcallFCeil) {
+  setUp();
+  if (!TM)
+    return;
+
+  // Declare your legalization info
+  DefineLegalizerInfo(A, {
+    getActionDefinitionsBuilder(G_FCEIL).libcallFor({s32, s64, s128});
+  });
+
+  LLT S32{LLT::scalar(32)};
+  LLT S64{LLT::scalar(64)};
+  LLT S128{LLT::scalar(128)};
+  auto MIBTrunc = B.buildTrunc(S32, Copies[0]);
+  auto MIBExt = B.buildAnyExt(S128, Copies[0]);
+
+  auto MIBCeil32 = B.buildInstr(TargetOpcode::G_FCEIL, {S32}, {MIBTrunc});
+  auto MIBCeil64 = B.buildInstr(TargetOpcode::G_FCEIL, {S64}, {Copies[0]});
+  auto MIBCeil128 = B.buildInstr(TargetOpcode::G_FCEIL, {S128}, {MIBExt});
+
+  AInfo Info(MF->getSubtarget());
+  DummyGISelObserver Observer;
+  LegalizerHelper Helper(*MF, Info, Observer, B);
+
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.libcall(*MIBCeil32));
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.libcall(*MIBCeil64));
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.libcall(*MIBCeil128));
+
+  const auto *CheckStr = R"(
+  CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY
+  CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC
+  CHECK: [[ANYEXT:%[0-9]+]]:_(s128) = G_ANYEXT
+  CHECK: $s0 = COPY [[TRUNC]]
+  CHECK: BL &ceilf
+  CHECK: $d0 = COPY [[COPY]]
+  CHECK: BL &ceil
+  CHECK: $q0 = COPY [[ANYEXT]]
+  CHECK: BL &ceill
+  )";
+
+  // Check
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
+
+TEST_F(GISelMITest, LibcallFFloor) {
+  setUp();
+  if (!TM)
+    return;
+
+  // Declare your legalization info
+  DefineLegalizerInfo(A, {
+    getActionDefinitionsBuilder(G_FFLOOR).libcallFor({s32, s64, s128});
+  });
+
+  LLT S32{LLT::scalar(32)};
+  LLT S64{LLT::scalar(64)};
+  LLT S128{LLT::scalar(128)};
+  auto MIBTrunc = B.buildTrunc(S32, Copies[0]);
+  auto MIBExt = B.buildAnyExt(S128, Copies[0]);
+
+  auto MIBFloor32 = B.buildInstr(TargetOpcode::G_FFLOOR, {S32}, {MIBTrunc});
+  auto MIBFloor64 = B.buildInstr(TargetOpcode::G_FFLOOR, {S64}, {Copies[0]});
+  auto MIBFloor128 = B.buildInstr(TargetOpcode::G_FFLOOR, {S128}, {MIBExt});
+
+  AInfo Info(MF->getSubtarget());
+  DummyGISelObserver Observer;
+  LegalizerHelper Helper(*MF, Info, Observer, B);
+
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.libcall(*MIBFloor32));
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.libcall(*MIBFloor64));
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.libcall(*MIBFloor128));
+
+  const auto *CheckStr = R"(
+  CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY
+  CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC
+  CHECK: [[ANYEXT:%[0-9]+]]:_(s128) = G_ANYEXT
+  CHECK: $s0 = COPY [[TRUNC]]
+  CHECK: BL &floorf
+  CHECK: $d0 = COPY [[COPY]]
+  CHECK: BL &floor
+  CHECK: $q0 = COPY [[ANYEXT]]
+  CHECK: BL &floorl
+  )";
+
+  // Check
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
+
+TEST_F(GISelMITest, LibcallFMinNum) {
+  setUp();
+  if (!TM)
+    return;
+
+  // Declare your legalization info
+  DefineLegalizerInfo(A, {
+    getActionDefinitionsBuilder(G_FMINNUM).libcallFor({s32, s64, s128});
+  });
+
+  LLT S32{LLT::scalar(32)};
+  LLT S64{LLT::scalar(64)};
+  LLT S128{LLT::scalar(128)};
+  auto MIBTrunc = B.buildTrunc(S32, Copies[0]);
+  auto MIBExt = B.buildAnyExt(S128, Copies[0]);
+
+  auto MIBMin32 = B.buildFMinNum(S32, MIBTrunc, MIBTrunc);
+  auto MIBMin64 = B.buildFMinNum(S64, Copies[0], Copies[0]);
+  auto MIBMin128 = B.buildFMinNum(S128, MIBExt, MIBExt);
+
+  AInfo Info(MF->getSubtarget());
+  DummyGISelObserver Observer;
+  LegalizerHelper Helper(*MF, Info, Observer, B);
+
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.libcall(*MIBMin32));
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.libcall(*MIBMin64));
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.libcall(*MIBMin128));
+
+  const auto *CheckStr = R"(
+  CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY
+  CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC
+  CHECK: [[ANYEXT:%[0-9]+]]:_(s128) = G_ANYEXT
+  CHECK: $s0 = COPY [[TRUNC]]
+  CHECK: $s1 = COPY [[TRUNC]]
+  CHECK: BL &fminf
+  CHECK: $d0 = COPY [[COPY]]
+  CHECK: $d1 = COPY [[COPY]]
+  CHECK: BL &fmin
+  CHECK: $q0 = COPY [[ANYEXT]]
+  CHECK: $q1 = COPY [[ANYEXT]]
+  CHECK: BL &fminl
+  )";
+
+  // Check
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
+
+TEST_F(GISelMITest, LibcallFMaxNum) {
+  setUp();
+  if (!TM)
+    return;
+
+  // Declare your legalization info
+  DefineLegalizerInfo(A, {
+    getActionDefinitionsBuilder(G_FMAXNUM).libcallFor({s32, s64, s128});
+  });
+
+  LLT S32{LLT::scalar(32)};
+  LLT S64{LLT::scalar(64)};
+  LLT S128{LLT::scalar(128)};
+  auto MIBTrunc = B.buildTrunc(S32, Copies[0]);
+  auto MIBExt = B.buildAnyExt(S128, Copies[0]);
+
+  auto MIBMax32 = B.buildFMaxNum(S32, MIBTrunc, MIBTrunc);
+  auto MIBMax64 = B.buildFMaxNum(S64, Copies[0], Copies[0]);
+  auto MIBMax128 = B.buildFMaxNum(S128, MIBExt, MIBExt);
+
+  AInfo Info(MF->getSubtarget());
+  DummyGISelObserver Observer;
+  LegalizerHelper Helper(*MF, Info, Observer, B);
+
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.libcall(*MIBMax32));
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.libcall(*MIBMax64));
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.libcall(*MIBMax128));
+
+  const auto *CheckStr = R"(
+  CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY
+  CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC
+  CHECK: [[ANYEXT:%[0-9]+]]:_(s128) = G_ANYEXT
+  CHECK: $s0 = COPY [[TRUNC]]
+  CHECK: $s1 = COPY [[TRUNC]]
+  CHECK: BL &fmaxf
+  CHECK: $d0 = COPY [[COPY]]
+  CHECK: $d1 = COPY [[COPY]]
+  CHECK: BL &fmax
+  CHECK: $q0 = COPY [[ANYEXT]]
+  CHECK: $q1 = COPY [[ANYEXT]]
+  CHECK: BL &fmaxl
+  )";
+
+  // Check
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
+
+TEST_F(GISelMITest, LibcallFSqrt) {
+  setUp();
+  if (!TM)
+    return;
+
+  // Declare your legalization info
+  DefineLegalizerInfo(A, {
+    getActionDefinitionsBuilder(G_FSQRT).libcallFor({s32, s64, s128});
+  });
+
+  LLT S32{LLT::scalar(32)};
+  LLT S64{LLT::scalar(64)};
+  LLT S128{LLT::scalar(128)};
+  auto MIBTrunc = B.buildTrunc(S32, Copies[0]);
+  auto MIBExt = B.buildAnyExt(S128, Copies[0]);
+
+  auto MIBSqrt32 = B.buildInstr(TargetOpcode::G_FSQRT, {S32}, {MIBTrunc});
+  auto MIBSqrt64 = B.buildInstr(TargetOpcode::G_FSQRT, {S64}, {Copies[0]});
+  auto MIBSqrt128 = B.buildInstr(TargetOpcode::G_FSQRT, {S128}, {MIBExt});
+
+  AInfo Info(MF->getSubtarget());
+  DummyGISelObserver Observer;
+  LegalizerHelper Helper(*MF, Info, Observer, B);
+
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.libcall(*MIBSqrt32));
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.libcall(*MIBSqrt64));
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.libcall(*MIBSqrt128));
+
+  const auto *CheckStr = R"(
+  CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY
+  CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC
+  CHECK: [[ANYEXT:%[0-9]+]]:_(s128) = G_ANYEXT
+  CHECK: $s0 = COPY [[TRUNC]]
+  CHECK: BL &sqrtf
+  CHECK: $d0 = COPY [[COPY]]
+  CHECK: BL &sqrt
+  CHECK: $q0 = COPY [[ANYEXT]]
+  CHECK: BL &sqrtl
+  )";
+
+  // Check
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
+
+TEST_F(GISelMITest, LibcallFRint) {
+  setUp();
+  if (!TM)
+    return;
+
+  // Declare your legalization info
+  DefineLegalizerInfo(A, {
+    getActionDefinitionsBuilder(G_FRINT).libcallFor({s32, s64, s128});
+  });
+
+  LLT S32{LLT::scalar(32)};
+  LLT S64{LLT::scalar(64)};
+  LLT S128{LLT::scalar(128)};
+  auto MIBTrunc = B.buildTrunc(S32, Copies[0]);
+  auto MIBExt = B.buildAnyExt(S128, Copies[0]);
+
+  auto MIBRint32 = B.buildInstr(TargetOpcode::G_FRINT, {S32}, {MIBTrunc});
+  auto MIBRint64 = B.buildInstr(TargetOpcode::G_FRINT, {S64}, {Copies[0]});
+  auto MIBRint128 = B.buildInstr(TargetOpcode::G_FRINT, {S128}, {MIBExt});
+
+  AInfo Info(MF->getSubtarget());
+  DummyGISelObserver Observer;
+  LegalizerHelper Helper(*MF, Info, Observer, B);
+
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.libcall(*MIBRint32));
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.libcall(*MIBRint64));
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.libcall(*MIBRint128));
+
+  const auto *CheckStr = R"(
+  CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY
+  CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC
+  CHECK: [[ANYEXT:%[0-9]+]]:_(s128) = G_ANYEXT
+  CHECK: $s0 = COPY [[TRUNC]]
+  CHECK: BL &rintf
+  CHECK: $d0 = COPY [[COPY]]
+  CHECK: BL &rint
+  CHECK: $q0 = COPY [[ANYEXT]]
+  CHECK: BL &rintl
+  )";
+
+  // Check
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
+
+TEST_F(GISelMITest, LibcallFNearbyInt) {
+  setUp();
+  if (!TM)
+    return;
+
+  // Declare your legalization info
+  DefineLegalizerInfo(A, {
+    getActionDefinitionsBuilder(G_FNEARBYINT).libcallFor({s32, s64, s128});
+  });
+
+  LLT S32{LLT::scalar(32)};
+  LLT S64{LLT::scalar(64)};
+  LLT S128{LLT::scalar(128)};
+  auto MIBTrunc = B.buildTrunc(S32, Copies[0]);
+  auto MIBExt = B.buildAnyExt(S128, Copies[0]);
+
+  auto MIBNearbyInt32 =
+      B.buildInstr(TargetOpcode::G_FNEARBYINT, {S32}, {MIBTrunc});
+  auto MIBNearbyInt64 =
+      B.buildInstr(TargetOpcode::G_FNEARBYINT, {S64}, {Copies[0]});
+  auto MIBNearbyInt128 =
+      B.buildInstr(TargetOpcode::G_FNEARBYINT, {S128}, {MIBExt});
+
+  AInfo Info(MF->getSubtarget());
+  DummyGISelObserver Observer;
+  LegalizerHelper Helper(*MF, Info, Observer, B);
+
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.libcall(*MIBNearbyInt32));
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.libcall(*MIBNearbyInt64));
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.libcall(*MIBNearbyInt128));
+
+  const auto *CheckStr = R"(
+  CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY
+  CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC
+  CHECK: [[ANYEXT:%[0-9]+]]:_(s128) = G_ANYEXT
+  CHECK: $s0 = COPY [[TRUNC]]
+  CHECK: BL &nearbyintf
+  CHECK: $d0 = COPY [[COPY]]
+  CHECK: BL &nearbyint
+  CHECK: $q0 = COPY [[ANYEXT]]
+  CHECK: BL &nearbyintl
+  )";
+
+  // Check
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
 } // namespace
