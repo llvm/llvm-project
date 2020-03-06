@@ -20,8 +20,8 @@
 #define DEFAULT_VALUE(x)
 #endif
 
-#define EXTERN_C_BEGIN IF_CPLUSPLUS(extern "C" {)
-#define EXTERN_C_END IF_CPLUSPLUS( \
+#define FORTRAN_EXTERN_C_BEGIN IF_CPLUSPLUS(extern "C" {)
+#define FORTRAN_EXTERN_C_END IF_CPLUSPLUS( \
   })
 #define NORETURN IF_CPLUSPLUS([[noreturn]])
 #define NO_ARGUMENTS IF_NOT_CPLUSPLUS(void)

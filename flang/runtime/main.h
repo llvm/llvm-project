@@ -12,8 +12,8 @@
 #include "c-or-cpp.h"
 #include "entry-names.h"
 
-EXTERN_C_BEGIN
+FORTRAN_EXTERN_C_BEGIN
 void RTNAME(ProgramStart)(int, const char *[], const char *[]);
-EXTERN_C_END
+FORTRAN_EXTERN_C_END
 
 #endif  // FORTRAN_RUNTIME_MAIN_H_
