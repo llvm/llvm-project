@@ -992,6 +992,8 @@ bool llvm::convertToDeclaration(GlobalValue &GV) {
     GV.replaceAllUsesWith(NewGV);
     return false;
   }
+  if (!GV.isImplicitDSOLocal())
+    GV.setDSOLocal(false);
   return true;
 }
 
