@@ -279,6 +279,26 @@ void timeTraceProfilerWrite(raw_pwrite_stream &OS) {
   TimeTraceProfilerInstance->Write(OS);
 }
 
+Error timeTraceProfilerWrite(StringRef PreferredFileName,
+                             StringRef FallbackFileName) {
+  assert(TimeTraceProfilerInstance != nullptr &&
+         "Profiler object can't be null");
+
+  std::string Path = PreferredFileName.str();
+  if (Path.empty()) {
+    Path = FallbackFileName == "-" ? "out" : FallbackFileName.str();
+    Path += ".time-trace";
+  }
+
+  std::error_code EC;
+  raw_fd_ostream OS(Path, EC, sys::fs::OF_Text);
+  if (EC)
+    return createStringError(EC, "Could not open " + Path);
+
+  timeTraceProfilerWrite(OS);
+  return Error::success();
+}
+
 void timeTraceProfilerBegin(StringRef Name, StringRef Detail) {
   if (TimeTraceProfilerInstance != nullptr)
     TimeTraceProfilerInstance->begin(std::string(Name),
