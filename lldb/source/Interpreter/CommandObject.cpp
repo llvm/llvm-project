@@ -267,6 +267,9 @@ void CommandObject::Cleanup() {
 }
 
 void CommandObject::HandleCompletion(CompletionRequest &request) {
+
+  m_exe_ctx = m_interpreter.GetExecutionContext();
+
   // Default implementation of WantsCompletion() is !WantsRawCommandString().
   // Subclasses who want raw command string but desire, for example, argument
   // completion should override WantsCompletion() to return true, instead.
@@ -293,6 +296,8 @@ void CommandObject::HandleCompletion(CompletionRequest &request) {
     // If we got here, the last word is not an option or an option argument.
     HandleArgumentCompletion(request, opt_element_vector);
   }
+
+  m_exe_ctx.Clear();
 }
 
 bool CommandObject::HelpTextContainsWord(llvm::StringRef search_word,
