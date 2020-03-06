@@ -118,7 +118,7 @@ StringRef DWARFUnitIndex::getColumnHeader(DWARFSectionKind DS) {
     CASE(MACINFO);
     CASE(MACRO);
   }
-  return "<unknown>";
+  return StringRef();
 }
 
 void DWARFUnitIndex::dump(raw_ostream &OS) const {
@@ -127,8 +127,14 @@ void DWARFUnitIndex::dump(raw_ostream &OS) const {
 
   Header.dump(OS);
   OS << "Index Signature         ";
-  for (unsigned i = 0; i != Header.NumColumns; ++i)
-    OS << ' ' << left_justify(getColumnHeader(ColumnKinds[i]), 24);
+  for (unsigned i = 0; i != Header.NumColumns; ++i) {
+    DWARFSectionKind Kind = ColumnKinds[i];
+    StringRef Name = getColumnHeader(Kind);
+    if (!Name.empty())
+      OS << ' ' << left_justify(Name, 24);
+    else
+      OS << format(" Unknown: %-15u", static_cast<unsigned>(Kind));
+  }
   OS << "\n----- ------------------";
   for (unsigned i = 0; i != Header.NumColumns; ++i)
     OS << " ------------------------";
