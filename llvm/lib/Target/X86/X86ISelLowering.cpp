@@ -4362,12 +4362,6 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   else
     NumBytesForCalleeToPop = 0;  // Callee pops nothing.
 
-  if (CLI.DoesNotReturn && !getTargetMachine().Options.TrapUnreachable) {
-    // No need to reset the stack after the call if the call doesn't return. To
-    // make the MI verify, we'll pretend the callee does it for us.
-    NumBytesForCalleeToPop = NumBytes;
-  }
-
   // Returns a flag for retval copy to use.
   if (!IsSibcall) {
     Chain = DAG.getCALLSEQ_END(Chain,
