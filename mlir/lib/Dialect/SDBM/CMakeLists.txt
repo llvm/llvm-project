@@ -6,4 +6,6 @@ add_mlir_dialect_library(MLIRSDBM
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/SDBM
 )
 add_dependencies(MLIRSDBM MLIRIR)
-target_link_libraries(MLIRSDBM MLIRIR)
+target_link_libraries(MLIRSDBM
+  PUBLIC
+  MLIRIR)

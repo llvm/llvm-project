@@ -15,7 +15,7 @@ add_dependencies(MLIRAffineOps
   MLIRStandardOps
   )
 target_link_libraries(MLIRAffineOps
-
+  PUBLIC
   MLIREDSC
   MLIRIR
   MLIRStandardOps

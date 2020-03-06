@@ -33,7 +33,11 @@ add_dependencies(MLIRAnalysis
   MLIRLoopOps
   )
 
-target_link_libraries(MLIRAnalysis MLIRAffineOps MLIRLoopOps)
+target_link_libraries(MLIRAnalysis
+  PUBLIC
+  MLIRAffineOps
+  MLIRLoopOps
+  )
 
 add_llvm_library(MLIRLoopAnalysis
   AffineAnalysis.cpp
@@ -53,4 +57,7 @@ add_dependencies(MLIRLoopAnalysis
   MLIRLoopOps
   )
 
-target_link_libraries(MLIRLoopAnalysis MLIRAffineOps MLIRLoopOps)
+target_link_libraries(MLIRLoopAnalysis
+  PUBLIC
+  MLIRAffineOps
+  MLIRLoopOps)

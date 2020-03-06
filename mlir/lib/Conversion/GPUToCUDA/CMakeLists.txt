@@ -12,6 +12,7 @@ endif()
 
 add_mlir_conversion_library(MLIRGPUtoCUDATransforms ${SOURCES})
 target_link_libraries(MLIRGPUtoCUDATransforms
+  PUBLIC
   MLIRGPU
   MLIRLLVMIR
   MLIRNVVMIR

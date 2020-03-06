@@ -44,6 +44,7 @@ if (MLIR_VULKAN_RUNNER_ENABLED)
   )
 
   target_link_libraries(vulkan-runtime-wrappers
+    PUBLIC
     LLVMSupport
     MLIRSPIRVSerialization
     LLVMCore

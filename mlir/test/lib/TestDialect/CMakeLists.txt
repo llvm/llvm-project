@@ -21,6 +21,7 @@ add_dependencies(MLIRTestDialect
   MLIRTypeInferOpInterfaceIncGen
 )
 target_link_libraries(MLIRTestDialect
+  PUBLIC
   MLIRDialect
   MLIRIR
   MLIRLinalgTransforms

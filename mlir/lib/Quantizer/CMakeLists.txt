@@ -17,6 +17,7 @@ add_dependencies(MLIRQuantizerSupport
                  MLIRSupport
                  MLIRStandardOps)
 target_link_libraries(MLIRQuantizerSupport
+  PUBLIC
   MLIRIR
   MLIRQuantOps
   MLIRSupport
@@ -35,6 +36,7 @@ add_dependencies(MLIRQuantizerFxpMathConfig
                  MLIRFxpMathOpsIncGen
                  MLIRQuantizerSupport)
 target_link_libraries(MLIRQuantizerFxpMathConfig
+  PUBLIC
   MLIRIR
   MLIRFxpMathOps
   MLIRQuantOps
@@ -54,6 +56,7 @@ add_dependencies(MLIRQuantizerTransforms
   MLIRQuantizerSupport
   MLIRPass)
 target_link_libraries(MLIRQuantizerTransforms
+  PUBLIC
   MLIRIR
   MLIRQuantizerFxpMathConfig
   MLIRQuantizerSupport

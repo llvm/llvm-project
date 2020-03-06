@@ -21,4 +21,6 @@ add_dependencies(MLIRLinalgOps
   MLIRLinalgStructuredOpsIncGen
   MLIRLinalgStructuredOpsInterfaceIncGen
   )
-target_link_libraries(MLIRLinalgOps ${LIBS})
+target_link_libraries(MLIRLinalgOps
+  PUBLIC
+  ${LIBS})
