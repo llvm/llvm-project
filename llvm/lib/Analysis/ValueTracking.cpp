@@ -4886,7 +4886,7 @@ static SelectPatternResult matchFastFloatClamp(CmpInst::Predicate Pred,
     if (match(FalseVal,
               m_CombineOr(m_OrdFMin(m_Specific(CmpLHS), m_APFloat(FC2)),
                           m_UnordFMin(m_Specific(CmpLHS), m_APFloat(FC2)))) &&
-        FC1->compare(*FC2) == APFloat::cmpResult::cmpLessThan)
+        *FC1 < *FC2)
       return {SPF_FMAXNUM, SPNB_RETURNS_ANY, false};
     break;
   case CmpInst::FCMP_OGT:
@@ -4896,7 +4896,7 @@ static SelectPatternResult matchFastFloatClamp(CmpInst::Predicate Pred,
     if (match(FalseVal,
               m_CombineOr(m_OrdFMax(m_Specific(CmpLHS), m_APFloat(FC2)),
                           m_UnordFMax(m_Specific(CmpLHS), m_APFloat(FC2)))) &&
-        FC1->compare(*FC2) == APFloat::cmpResult::cmpGreaterThan)
+        *FC1 > *FC2)
       return {SPF_FMINNUM, SPNB_RETURNS_ANY, false};
     break;
   default:

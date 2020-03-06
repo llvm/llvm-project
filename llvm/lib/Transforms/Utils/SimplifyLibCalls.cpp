@@ -1745,7 +1745,7 @@ Value *LibCallSimplifier::optimizePow(CallInst *Pow, IRBuilderBase &B) {
     //       be different) and it should also consider optimizing for size.
     APFloat LimF(ExpoF->getSemantics(), 33),
             ExpoA(abs(*ExpoF));
-    if (ExpoA.compare(LimF) == APFloat::cmpLessThan) {
+    if (ExpoA < LimF) {
       // This transformation applies to integer or integer+0.5 exponents only.
       // For integer+0.5, we create a sqrt(Base) call.
       Value *Sqrt = nullptr;

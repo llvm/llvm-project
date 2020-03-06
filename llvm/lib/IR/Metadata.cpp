@@ -934,7 +934,7 @@ MDNode *MDNode::getMostGenericFPMath(MDNode *A, MDNode *B) {
 
   APFloat AVal = mdconst::extract<ConstantFP>(A->getOperand(0))->getValueAPF();
   APFloat BVal = mdconst::extract<ConstantFP>(B->getOperand(0))->getValueAPF();
-  if (AVal.compare(BVal) == APFloat::cmpLessThan)
+  if (AVal < BVal)
     return A;
   return B;
 }

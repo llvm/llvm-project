@@ -8979,8 +8979,7 @@ SDValue SITargetLowering::performFPMed3ImmCombine(SelectionDAG &DAG,
     return SDValue();
 
   // Ordered >= (although NaN inputs should have folded away by now).
-  APFloat::cmpResult Cmp = K0->getValueAPF().compare(K1->getValueAPF());
-  if (Cmp == APFloat::cmpGreaterThan)
+  if (K0->getValueAPF() > K1->getValueAPF())
     return SDValue();
 
   const MachineFunction &MF = DAG.getMachineFunction();
@@ -9852,16 +9851,13 @@ SDValue SITargetLowering::performClampCombine(SDNode *N,
   const MachineFunction &MF = DCI.DAG.getMachineFunction();
   const APFloat &F = CSrc->getValueAPF();
   APFloat Zero = APFloat::getZero(F.getSemantics());
-  APFloat::cmpResult Cmp0 = F.compare(Zero);
-  if (Cmp0 == APFloat::cmpLessThan ||
-      (Cmp0 == APFloat::cmpUnordered &&
-       MF.getInfo<SIMachineFunctionInfo>()->getMode().DX10Clamp)) {
+  if (F < Zero ||
+      (F.isNaN() && MF.getInfo<SIMachineFunctionInfo>()->getMode().DX10Clamp)) {
     return DCI.DAG.getConstantFP(Zero, SDLoc(N), N->getValueType(0));
   }
 
   APFloat One(F.getSemantics(), "1.0");
-  APFloat::cmpResult Cmp1 = F.compare(One);
-  if (Cmp1 == APFloat::cmpGreaterThan)
+  if (F > One)
     return DCI.DAG.getConstantFP(One, SDLoc(N), N->getValueType(0));
 
   return SDValue(CSrc, 0);
