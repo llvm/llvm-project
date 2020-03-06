@@ -31,6 +31,8 @@ class MyResponder(MockGDBServerResponder):
         MockGDBServerResponder.__init__(self)
 
     def respond(self, packet):
+        if packet == "qProcessInfo":
+            return self.qProcessInfo()
         if packet[0:13] == "qRegisterInfo":
             return self.qRegisterInfo(packet[13:])
         return MockGDBServerResponder.respond(self, packet)
