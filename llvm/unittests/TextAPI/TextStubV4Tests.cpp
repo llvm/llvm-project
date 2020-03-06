@@ -33,6 +33,11 @@ inline bool operator==(const ExampleSymbol &LHS, const ExampleSymbol &RHS) {
          std::tie(RHS.Kind, RHS.Name, RHS.WeakDefined, RHS.ThreadLocalValue);
 }
 
+inline std::string stripWhitespace(std::string s) {
+  s.erase(std::remove_if(s.begin(), s.end(), ::isspace), s.end());
+  return s;
+}
+
 static ExampleSymbol TBDv4ExportedSymbols[] = {
     {SymbolKind::GlobalSymbol, "_symA", false, false},
     {SymbolKind::GlobalSymbol, "_symAB", false, false},
@@ -347,6 +352,28 @@ TEST(TBDv4, Target_arm_bridgeOS) {
   EXPECT_EQ(File->getPlatforms().size(), 1U);
   EXPECT_EQ(PlatformKind::bridgeOS, *File->getPlatforms().begin());
   EXPECT_EQ(ArchitectureSet(AK_armv7k), File->getArchitectures());
+}
+
+TEST(TBDv4, Target_arm_iOS) {
+  static const char tbdv4_arm64e[] = "--- !tapi-tbd\n"
+                                     "tbd-version: 4\n"
+                                     "targets: [  arm64e-ios ]\n"
+                                     "install-name: Test.dylib\n"
+                                     "...\n";
+
+  auto Result = TextAPIReader::get(MemoryBufferRef(tbdv4_arm64e, "Test.tbd"));
+  EXPECT_TRUE(!!Result);
+  auto File = std::move(Result.get());
+  EXPECT_EQ(FileType::TBD_V4, File->getFileType());
+  EXPECT_EQ(File->getPlatforms().size(), 1U);
+  EXPECT_EQ(PlatformKind::iOS, *File->getPlatforms().begin());
+  EXPECT_EQ(ArchitectureSet(AK_arm64e), File->getArchitectures());
+
+  SmallString<4096> Buffer;
+  raw_svector_ostream OS(Buffer);
+  auto WriteResult = TextAPIWriter::writeToStream(OS, *File);
+  EXPECT_TRUE(!WriteResult);
+  EXPECT_EQ(stripWhitespace(tbdv4_arm64e), stripWhitespace(Buffer.c_str()));
 }
 
 TEST(TBDv4, Target_x86_macos) {
