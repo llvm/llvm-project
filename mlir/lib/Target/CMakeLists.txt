@@ -1,4 +1,4 @@
-add_llvm_library(MLIRTargetLLVMIRModuleTranslation
+add_mlir_library(MLIRTargetLLVMIRModuleTranslation
   LLVMIR/DebugTranslation.cpp
   LLVMIR/ModuleTranslation.cpp
 
@@ -9,9 +9,15 @@ add_llvm_library(MLIRTargetLLVMIRModuleTranslation
   )
 target_link_libraries(MLIRTargetLLVMIRModuleTranslation
   PUBLIC
-  MLIRLLVMIR LLVMCore LLVMIRReader LLVMSupport LLVMTransformUtils
-  MLIRTranslation)
-add_llvm_library(MLIRTargetLLVMIR
+  MLIRLLVMIR
+  LLVMCore
+  LLVMIRReader
+  LLVMSupport
+  LLVMTransformUtils
+  MLIRTranslation
+  )
+
+add_mlir_library(MLIRTargetLLVMIR
   LLVMIR/ConvertFromLLVMIR.cpp
   LLVMIR/ConvertToLLVMIR.cpp
 
@@ -20,8 +26,10 @@ add_llvm_library(MLIRTargetLLVMIR
   )
 target_link_libraries(MLIRTargetLLVMIR
   PUBLIC
-  MLIRTargetLLVMIRModuleTranslation)
-add_llvm_library(MLIRTargetNVVMIR
+  MLIRTargetLLVMIRModuleTranslation
+  )
+
+add_mlir_library(MLIRTargetNVVMIR
   LLVMIR/ConvertToNVVMIR.cpp
 
   ADDITIONAL_HEADER_DIRS
@@ -37,7 +45,8 @@ target_link_libraries(MLIRTargetNVVMIR
   MLIRNVVMIR
   MLIRTargetLLVMIRModuleTranslation
   )
-add_llvm_library(MLIRTargetROCDLIR
+
+add_mlir_library(MLIRTargetROCDLIR
   LLVMIR/ConvertToROCDLIR.cpp
 
   ADDITIONAL_HEADER_DIRS
