@@ -2555,11 +2555,9 @@ bool llvm::isMathLibCallNoop(const CallBase *Call,
       case LibFunc_expf:
         // FIXME: These boundaries are slightly conservative.
         if (OpC->getType()->isDoubleTy())
-          return Op.compare(APFloat(-745.0)) != APFloat::cmpLessThan &&
-                 Op.compare(APFloat(709.0)) != APFloat::cmpGreaterThan;
+          return !(Op < APFloat(-745.0) || Op > APFloat(709.0));
         if (OpC->getType()->isFloatTy())
-          return Op.compare(APFloat(-103.0f)) != APFloat::cmpLessThan &&
-                 Op.compare(APFloat(88.0f)) != APFloat::cmpGreaterThan;
+          return !(Op < APFloat(-103.0f) || Op > APFloat(88.0f));
         break;
 
       case LibFunc_exp2l:
@@ -2567,11 +2565,9 @@ bool llvm::isMathLibCallNoop(const CallBase *Call,
       case LibFunc_exp2f:
         // FIXME: These boundaries are slightly conservative.
         if (OpC->getType()->isDoubleTy())
-          return Op.compare(APFloat(-1074.0)) != APFloat::cmpLessThan &&
-                 Op.compare(APFloat(1023.0)) != APFloat::cmpGreaterThan;
+          return !(Op < APFloat(-1074.0) || Op > APFloat(1023.0));
         if (OpC->getType()->isFloatTy())
-          return Op.compare(APFloat(-149.0f)) != APFloat::cmpLessThan &&
-                 Op.compare(APFloat(127.0f)) != APFloat::cmpGreaterThan;
+          return !(Op < APFloat(-149.0f) || Op > APFloat(127.0f));
         break;
 
       case LibFunc_sinl:
@@ -2601,10 +2597,8 @@ bool llvm::isMathLibCallNoop(const CallBase *Call,
       case LibFunc_acosl:
       case LibFunc_acos:
       case LibFunc_acosf:
-        return Op.compare(APFloat(Op.getSemantics(), "-1")) !=
-                   APFloat::cmpLessThan &&
-               Op.compare(APFloat(Op.getSemantics(), "1")) !=
-                   APFloat::cmpGreaterThan;
+        return !(Op < APFloat(Op.getSemantics(), "-1") ||
+                 Op > APFloat(Op.getSemantics(), "1"));
 
       case LibFunc_sinh:
       case LibFunc_cosh:
@@ -2614,11 +2608,9 @@ bool llvm::isMathLibCallNoop(const CallBase *Call,
       case LibFunc_coshl:
         // FIXME: These boundaries are slightly conservative.
         if (OpC->getType()->isDoubleTy())
-          return Op.compare(APFloat(-710.0)) != APFloat::cmpLessThan &&
-                 Op.compare(APFloat(710.0)) != APFloat::cmpGreaterThan;
+          return !(Op < APFloat(-710.0) || Op > APFloat(710.0));
         if (OpC->getType()->isFloatTy())
-          return Op.compare(APFloat(-89.0f)) != APFloat::cmpLessThan &&
-                 Op.compare(APFloat(89.0f)) != APFloat::cmpGreaterThan;
+          return !(Op < APFloat(-89.0f) || Op > APFloat(89.0f));
         break;
 
       case LibFunc_sqrtl:

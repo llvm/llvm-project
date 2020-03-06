@@ -1277,7 +1277,7 @@ inline APFloat minnum(const APFloat &A, const APFloat &B) {
     return B;
   if (B.isNaN())
     return A;
-  return (B.compare(A) == APFloat::cmpLessThan) ? B : A;
+  return B < A ? B : A;
 }
 
 /// Implements IEEE maxNum semantics. Returns the larger of the 2 arguments if
@@ -1288,7 +1288,7 @@ inline APFloat maxnum(const APFloat &A, const APFloat &B) {
     return B;
   if (B.isNaN())
     return A;
-  return (A.compare(B) == APFloat::cmpLessThan) ? B : A;
+  return A < B ? B : A;
 }
 
 /// Implements IEEE 754-2018 minimum semantics. Returns the smaller of 2
@@ -1301,7 +1301,7 @@ inline APFloat minimum(const APFloat &A, const APFloat &B) {
     return B;
   if (A.isZero() && B.isZero() && (A.isNegative() != B.isNegative()))
     return A.isNegative() ? A : B;
-  return (B.compare(A) == APFloat::cmpLessThan) ? B : A;
+  return B < A ? B : A;
 }
 
 /// Implements IEEE 754-2018 maximum semantics. Returns the larger of 2
@@ -1314,7 +1314,7 @@ inline APFloat maximum(const APFloat &A, const APFloat &B) {
     return B;
   if (A.isZero() && B.isZero() && (A.isNegative() != B.isNegative()))
     return A.isNegative() ? B : A;
-  return (A.compare(B) == APFloat::cmpLessThan) ? B : A;
+  return A < B ? B : A;
 }
 
 } // namespace llvm
