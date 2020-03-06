@@ -2932,6 +2932,71 @@ TEST(APFloatTest, operatorOverloads) {
   EXPECT_TRUE(One.bitwiseIsEqual(Two / Two));
 }
 
+TEST(APFloatTest, Comparisons) {
+  enum {MNan, MInf, MBig, MOne, MZer, PZer, POne, PBig, PInf, PNan, NumVals};
+  APFloat Vals[NumVals] = {
+    APFloat::getNaN(APFloat::IEEEsingle(), true),
+    APFloat::getInf(APFloat::IEEEsingle(), true),
+    APFloat::getLargest(APFloat::IEEEsingle(), true),
+    APFloat(APFloat::IEEEsingle(), "-0x1p+0"),
+    APFloat::getZero(APFloat::IEEEsingle(), true),
+    APFloat::getZero(APFloat::IEEEsingle(), false),
+    APFloat(APFloat::IEEEsingle(), "0x1p+0"),
+    APFloat::getLargest(APFloat::IEEEsingle(), false),
+    APFloat::getInf(APFloat::IEEEsingle(), false),
+    APFloat::getNaN(APFloat::IEEEsingle(), false),
+  };
+  using Relation = void (*)(const APFloat &, const APFloat &);
+  Relation LT = [](const APFloat &LHS, const APFloat &RHS) {
+    EXPECT_FALSE(LHS == RHS);
+    EXPECT_TRUE(LHS != RHS);
+    EXPECT_TRUE(LHS < RHS);
+    EXPECT_FALSE(LHS > RHS);
+    EXPECT_TRUE(LHS <= RHS);
+    EXPECT_FALSE(LHS >= RHS);
+  };
+  Relation EQ = [](const APFloat &LHS, const APFloat &RHS) {
+    EXPECT_TRUE(LHS == RHS);
+    EXPECT_FALSE(LHS != RHS);
+    EXPECT_FALSE(LHS < RHS);
+    EXPECT_FALSE(LHS > RHS);
+    EXPECT_TRUE(LHS <= RHS);
+    EXPECT_TRUE(LHS >= RHS);
+  };
+  Relation GT = [](const APFloat &LHS, const APFloat &RHS) {
+    EXPECT_FALSE(LHS == RHS);
+    EXPECT_TRUE(LHS != RHS);
+    EXPECT_FALSE(LHS < RHS);
+    EXPECT_TRUE(LHS > RHS);
+    EXPECT_FALSE(LHS <= RHS);
+    EXPECT_TRUE(LHS >= RHS);
+  };
+  Relation UN = [](const APFloat &LHS, const APFloat &RHS) {
+    EXPECT_FALSE(LHS == RHS);
+    EXPECT_TRUE(LHS != RHS);
+    EXPECT_FALSE(LHS < RHS);
+    EXPECT_FALSE(LHS > RHS);
+    EXPECT_FALSE(LHS <= RHS);
+    EXPECT_FALSE(LHS >= RHS);
+  };
+  Relation Relations[NumVals][NumVals] = {
+    //          -N  -I  -B  -1  -0  +0  +1  +B  +I  +N
+    /* MNan */ {UN, UN, UN, UN, UN, UN, UN, UN, UN, UN},
+    /* MInf */ {UN, EQ, LT, LT, LT, LT, LT, LT, LT, UN},
+    /* MBig */ {UN, GT, EQ, LT, LT, LT, LT, LT, LT, UN},
+    /* MOne */ {UN, GT, GT, EQ, LT, LT, LT, LT, LT, UN},
+    /* MZer */ {UN, GT, GT, GT, EQ, EQ, LT, LT, LT, UN},
+    /* PZer */ {UN, GT, GT, GT, EQ, EQ, LT, LT, LT, UN},
+    /* POne */ {UN, GT, GT, GT, GT, GT, EQ, LT, LT, UN},
+    /* PBig */ {UN, GT, GT, GT, GT, GT, GT, EQ, LT, UN},
+    /* PInf */ {UN, GT, GT, GT, GT, GT, GT, GT, EQ, UN},
+    /* PNan */ {UN, UN, UN, UN, UN, UN, UN, UN, UN, UN},
+  };
+  for (unsigned I = 0; I < NumVals; ++I)
+    for (unsigned J = 0; J < NumVals; ++J)
+      Relations[I][J](Vals[I], Vals[J]);
+}
+
 TEST(APFloatTest, abs) {
   APFloat PInf = APFloat::getInf(APFloat::IEEEsingle(), false);
   APFloat MInf = APFloat::getInf(APFloat::IEEEsingle(), true);
