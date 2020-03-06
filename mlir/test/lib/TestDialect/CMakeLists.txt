@@ -27,6 +27,7 @@ target_link_libraries(MLIRTestDialect
   MLIRIR
   MLIRLinalgTransforms
   MLIRPass
+  MLIRStandardOps
   MLIRTransforms
   MLIRTransformUtils
   LLVMSupport
