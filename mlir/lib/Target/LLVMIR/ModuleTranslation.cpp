@@ -356,7 +356,7 @@ LogicalResult ModuleTranslation::convertOperation(Operation &opInst,
   // Emit branches.  We need to look up the remapped blocks and ignore the block
   // arguments that were transformed into PHI nodes.
   if (auto brOp = dyn_cast<LLVM::BrOp>(opInst)) {
-    builder.CreateBr(blockMapping[brOp.getSuccessor(0)]);
+    builder.CreateBr(blockMapping[brOp.getSuccessor()]);
     return success();
   }
   if (auto condbrOp = dyn_cast<LLVM::CondBrOp>(opInst)) {
@@ -380,8 +380,7 @@ LogicalResult ModuleTranslation::convertOperation(Operation &opInst,
 
   if (opInst.getDialect() == ompDialect) {
     if (!ompBuilder) {
-      ompBuilder =
-          std::move(std::make_unique<llvm::OpenMPIRBuilder>(*llvmModule));
+      ompBuilder = std::make_unique<llvm::OpenMPIRBuilder>(*llvmModule);
       ompBuilder->initialize();
     }
 
@@ -502,8 +501,8 @@ static Value getPHISourceValue(Block *current, Block *pred,
          "different blocks");
 
   return condBranchOp.getSuccessor(0) == current
-             ? terminator.getSuccessorOperand(0, index)
-             : terminator.getSuccessorOperand(1, index);
+             ? condBranchOp.trueDestOperands()[index]
+             : condBranchOp.falseDestOperands()[index];
 }
 
 void ModuleTranslation::connectPHINodes(LLVMFuncOp func) {

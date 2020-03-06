@@ -16,11 +16,11 @@
 # NOBTIDYN-NOT:   0x0000000070000001 (AARCH64_BTI_PLT)
 # NOBTIDYN-NOT:   0x0000000070000003 (AARCH64_PAC_PLT)
 
-# NOBTI: 00000000000102b8 func2:
+# NOBTI: 00000000000102b8 <func2>:
 # NOBTI-NEXT:    102b8: bl      #56 <func3@plt>
 # NOBTI-NEXT:    102bc: ret
 # NOBTI: Disassembly of section .plt:
-# NOBTI: 00000000000102d0 .plt:
+# NOBTI: 00000000000102d0 <.plt>:
 # NOBTI-NEXT:    102d0: stp     x16, x30, [sp, #-16]!
 # NOBTI-NEXT:    102d4: adrp    x16, #131072
 # NOBTI-NEXT:    102d8: ldr     x17, [x16, #960]
@@ -29,7 +29,7 @@
 # NOBTI-NEXT:    102e4: nop
 # NOBTI-NEXT:    102e8: nop
 # NOBTI-NEXT:    102ec: nop
-# NOBTI: 00000000000102f0 func3@plt:
+# NOBTI: 00000000000102f0 <func3@plt>:
 # NOBTI-NEXT:    102f0: adrp    x16, #131072
 # NOBTI-NEXT:    102f4: ldr     x17, [x16, #968]
 # NOBTI-NEXT:    102f8: add     x16, x16, #968
@@ -55,13 +55,13 @@
 # BTIDYN:      0x0000000070000001 (AARCH64_BTI_PLT)
 # BTIDYN-NOT:  0x0000000070000003 (AARCH64_PAC_PLT)
 
-# BTISO: 0000000000010348 func2:
+# BTISO: 0000000000010348 <func2>:
 # BTISO-NEXT:    10348: bl      #56 <func3@plt>
 # BTISO-NEXT:           ret
-# BTISO: 0000000000010350 func3:
+# BTISO: 0000000000010350 <func3>:
 # BTISO-NEXT:    10350: ret
 # BTISO: Disassembly of section .plt:
-# BTISO: 0000000000010360 .plt:
+# BTISO: 0000000000010360 <.plt>:
 # BTISO-NEXT:    10360: bti     c
 # BTISO-NEXT:           stp     x16, x30, [sp, #-16]!
 # BTISO-NEXT:           adrp    x16, #131072
@@ -70,7 +70,7 @@
 # BTISO-NEXT:           br      x17
 # BTISO-NEXT:           nop
 # BTISO-NEXT:           nop
-# BTISO: 0000000000010380 func3@plt:
+# BTISO: 0000000000010380 <func3@plt>:
 # BTISO-NEXT:    10380: adrp    x16, #131072
 # BTISO-NEXT:           ldr     x17, [x16, #1144]
 # BTISO-NEXT:           add     x16, x16, #1144
@@ -91,11 +91,11 @@
 # RUN: llvm-objdump -d -mattr=+bti --no-show-raw-insn %t.exe | FileCheck --check-prefix=EXECBTI %s
 
 # EXECBTI: Disassembly of section .text:
-# EXECBTI: 0000000000210348 func1:
+# EXECBTI: 0000000000210348 <func1>:
 # EXECBTI-NEXT:   210348: bl    #40 <func2@plt>
 # EXECBTI-NEXT:           ret
 # EXECBTI: Disassembly of section .plt:
-# EXECBTI: 0000000000210350 .plt:
+# EXECBTI: 0000000000210350 <.plt>:
 # EXECBTI-NEXT:   210350: bti   c
 # EXECBTI-NEXT:           stp   x16, x30, [sp, #-16]!
 # EXECBTI-NEXT:           adrp  x16, #131072
@@ -104,7 +104,7 @@
 # EXECBTI-NEXT:           br    x17
 # EXECBTI-NEXT:           nop
 # EXECBTI-NEXT:           nop
-# EXECBTI: 0000000000210370 func2@plt:
+# EXECBTI: 0000000000210370 <func2@plt>:
 # EXECBTI-NEXT:   210370: bti   c
 # EXECBTI-NEXT:           adrp  x16, #131072
 # EXECBTI-NEXT:           ldr   x17, [x16, #1168]
@@ -119,11 +119,11 @@
 # RUN: llvm-objdump -d -mattr=+bti --no-show-raw-insn %tpie.exe | FileCheck --check-prefix=PIE %s
 
 # PIE: Disassembly of section .text:
-# PIE: 0000000000010348 func1:
+# PIE: 0000000000010348 <func1>:
 # PIE-NEXT:    10348: bl     #40 <func2@plt>
 # PIE-NEXT:           ret
 # PIE: Disassembly of section .plt:
-# PIE: 0000000000010350 .plt:
+# PIE: 0000000000010350 <.plt>:
 # PIE-NEXT:    10350: bti    c
 # PIE-NEXT:           stp    x16, x30, [sp, #-16]!
 # PIE-NEXT:           adrp   x16, #131072
@@ -132,7 +132,7 @@
 # PIE-NEXT:           br     x17
 # PIE-NEXT:           nop
 # PIE-NEXT:           nop
-# PIE: 0000000000010370 func2@plt:
+# PIE: 0000000000010370 <func2@plt>:
 # PIE-NEXT:    10370: bti    c
 # PIE-NEXT:           adrp   x16, #131072
 # PIE-NEXT:           ldr    x17, [x16, #1168]
@@ -148,13 +148,13 @@
 # RUN: llvm-objdump -d -mattr=+bti --no-show-raw-insn %tnobti.exe | FileCheck --check-prefix=NOEX %s
 
 # NOEX: Disassembly of section .text:
-# NOEX: 00000000002102e0 func1:
+# NOEX: 00000000002102e0 <func1>:
 # NOEX-NEXT:   2102e0: bl      #48 <func2@plt>
 # NOEX-NEXT:           ret
-# NOEX: 00000000002102e8 func3:
+# NOEX: 00000000002102e8 <func3>:
 # NOEX-NEXT:   2102e8: ret
 # NOEX: Disassembly of section .plt:
-# NOEX: 00000000002102f0 .plt:
+# NOEX: 00000000002102f0 <.plt>:
 # NOEX-NEXT:   2102f0: stp     x16, x30, [sp, #-16]!
 # NOEX-NEXT:           adrp    x16, #131072
 # NOEX-NEXT:           ldr     x17, [x16, #1024]
@@ -163,7 +163,7 @@
 # NOEX-NEXT:           nop
 # NOEX-NEXT:           nop
 # NOEX-NEXT:           nop
-# NOEX: 0000000000210310 func2@plt:
+# NOEX: 0000000000210310 <func2@plt>:
 # NOEX-NEXT:   210310: adrp    x16, #131072
 # NOEX-NEXT:           ldr     x17, [x16, #1032]
 # NOEX-NEXT:           add     x16, x16, #1032
@@ -182,13 +182,13 @@
 # RUN: llvm-objdump -d -mattr=+bti --no-show-raw-insn %tforcebti.exe | FileCheck --check-prefix=FORCE %s
 
 # FORCE: Disassembly of section .text:
-# FORCE: 0000000000210370 func1:
+# FORCE: 0000000000210370 <func1>:
 # FORCE-NEXT:   210370: bl      #48 <func2@plt>
 # FORCE-NEXT:           ret
-# FORCE: 0000000000210378 func3:
+# FORCE: 0000000000210378 <func3>:
 # FORCE-NEXT:   210378: ret
 # FORCE: Disassembly of section .plt:
-# FORCE: 0000000000210380 .plt:
+# FORCE: 0000000000210380 <.plt>:
 # FORCE-NEXT:   210380: bti     c
 # FORCE-NEXT:           stp     x16, x30, [sp, #-16]!
 # FORCE-NEXT:           adrp    x16, #131072
@@ -197,7 +197,7 @@
 # FORCE-NEXT:           br      x17
 # FORCE-NEXT:           nop
 # FORCE-NEXT:           nop
-# FORCE: 00000000002103a0 func2@plt:
+# FORCE: 00000000002103a0 <func2@plt>:
 # FORCE-NEXT:   2103a0: bti     c
 # FORCE-NEXT:           adrp    x16, #131072
 # FORCE-NEXT:           ldr     x17, [x16, #1200]

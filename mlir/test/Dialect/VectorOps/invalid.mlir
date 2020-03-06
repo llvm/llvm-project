@@ -1007,6 +1007,34 @@ func @reduce_elt_type_mismatch(%arg0: vector<16xf32>) -> i32 {
 
 // -----
 
+func @reduce_unsupported_attr(%arg0: vector<16xf32>) -> i32 {
+  // expected-error@+1 {{'vector.reduction' op attribute 'kind' failed to satisfy constraint: string attribute}}
+  %0 = vector.reduction 1234, %arg0 : vector<16xf32> into i32
+}
+
+// -----
+
+func @reduce_unsupported_third_argument(%arg0: vector<16xf32>, %arg1: f32) -> f32 {
+  // expected-error@+1 {{'vector.reduction' unsupported number of operands}}
+  %0 = vector.reduction "add", %arg0, %arg1, %arg1 : vector<16xf32> into f32
+}
+
+// -----
+
+func @reduce_unsupported_accumulator_kind(%arg0: vector<16xf32>, %arg1: f32) -> f32 {
+  // expected-error@+1 {{'vector.reduction' op no accumulator for reduction kind: min}}
+  %0 = vector.reduction "min", %arg0, %arg1 : vector<16xf32> into f32
+}
+
+// -----
+
+func @reduce_unsupported_accumulator_type(%arg0: vector<16xi32>, %arg1: i32) -> i32 {
+  // expected-error@+1 {{'vector.reduction' op no accumulator for type: 'i32'}}
+  %0 = vector.reduction "add", %arg0, %arg1 : vector<16xi32> into i32
+}
+
+// -----
+
 func @reduce_unsupported_type(%arg0: vector<16xf32>) -> f32 {
   // expected-error@+1 {{'vector.reduction' op unsupported reduction type}}
   %0 = vector.reduction "xor", %arg0 : vector<16xf32> into f32

@@ -393,6 +393,29 @@ namespace X86 {
     GS_Encoding = 0x65,
     SS_Encoding = 0x36
   };
+
+  /// Given a segment register, return the encoding of the segment override
+  /// prefix for it.
+  inline EncodingOfSegmentOverridePrefix
+  getSegmentOverridePrefixForReg(unsigned Reg) {
+    switch (Reg) {
+    default:
+      llvm_unreachable("Unknown segment register!");
+    case X86::CS:
+      return CS_Encoding;
+    case X86::DS:
+      return DS_Encoding;
+    case X86::ES:
+      return ES_Encoding;
+    case X86::FS:
+      return FS_Encoding;
+    case X86::GS:
+      return GS_Encoding;
+    case X86::SS:
+      return SS_Encoding;
+    }
+  }
+
 } // end namespace X86;
 
 /// X86II - This namespace holds all of the target specific flags that

@@ -14,7 +14,7 @@ v2:
   .quad v1   # R_MIPS_64 target v1 addend 0
 
 # SYM: SYMBOL TABLE:
-# SYM: 00000000[[V1:[0-9a-f]+]]  .data  0000000000000000 v1
+# SYM: 00000000[[V1:[0-9a-f]+]] l .data  0000000000000000 v1
 
 # SYM: Contents of section .data:
 # SYM-NEXT:  {{.*}} 00000000 00000008 00000000 [[V1]]

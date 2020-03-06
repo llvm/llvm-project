@@ -20,13 +20,13 @@
 
 # CHECK:      Disassembly of section .text:
 # CHECK-EMPTY:
-# CHECK-NEXT: __start:
+# CHECK-NEXT: <__start>:
 # CHECK-NEXT:    20000:       jal     131120
 # CHECK-NEXT:    20004:       nop
 # CHECK-EMPTY:
 # CHECK-NEXT: Disassembly of section .plt:
 # CHECK-EMPTY:
-# CHECK-NEXT: .plt:
+# CHECK-NEXT: <.plt>:
 # CHECK-NEXT:    20010:       lui     $14, 3
 # CHECK-NEXT:    20014:       ld      $25, 8($14)
 # CHECK-NEXT:    20018:       addiu   $14, $14, 8

@@ -7,23 +7,24 @@
 # RUN: llvm-readelf --notes %t1.stripped.so | FileCheck %s --check-prefix=GNU-STRIPPED --strict-whitespace --match-full-lines
 # RUN: llvm-readobj --notes %t1.stripped.so | FileCheck %s --check-prefix=LLVM-STRIPPED
 
-#      GNU:Displaying notes found at file offset 0x00000078 with length 0x00000020:
+#      GNU:Displaying notes found in: .note.ABI-tag
 # GNU-NEXT:  Owner                Data size 	Description
 # GNU-NEXT:  GNU                  0x00000010	NT_GNU_ABI_TAG (ABI version tag)
 # GNU-NEXT:    OS: Linux, ABI: 2.6.32
 
-#      GNU:Displaying notes found at file offset 0x00000098 with length 0x00000020:
+#      GNU:Displaying notes found in: .note.gnu.build-id
 # GNU-NEXT:  Owner                Data size 	Description
 # GNU-NEXT:  GNU                  0x00000010	NT_GNU_BUILD_ID (unique build ID bitstring)
 # GNU-NEXT:    Build ID: 4fcb712aa6387724a9f465a32cd8c14b
 
-#      GNU:Displaying notes found at file offset 0x000000b8 with length 0x0000001c:
+#      GNU:Displaying notes found in: .note.gnu.gold-version
 # GNU-NEXT:  Owner                Data size 	Description
 # GNU-NEXT:  GNU                  0x00000009	NT_GNU_GOLD_VERSION (gold version)
 # GNU-NEXT:    Version: gold 1.11
 
 # LLVM:      Notes [
 # LLVM-NEXT:   NoteSection {
+# LLVM-NEXT:     Name: .note.ABI-tag
 # LLVM-NEXT:     Offset: 0x78
 # LLVM-NEXT:     Size: 0x20
 # LLVM-NEXT:     Note {
@@ -35,6 +36,7 @@
 # LLVM-NEXT:     }
 # LLVM-NEXT:   }
 # LLVM-NEXT:   NoteSection {
+# LLVM-NEXT:     Name: .note.gnu.build-id
 # LLVM-NEXT:     Offset: 0x98
 # LLVM-NEXT:     Size: 0x20
 # LLVM-NEXT:     Note {
@@ -45,6 +47,7 @@
 # LLVM-NEXT:     }
 # LLVM-NEXT:   }
 # LLVM-NEXT:   NoteSection {
+# LLVM-NEXT:     Name: .note.gnu.gold-version
 # LLVM-NEXT:     Offset: 0xB8
 # LLVM-NEXT:     Size: 0x1C
 # LLVM-NEXT:     Note {
@@ -56,8 +59,10 @@
 # LLVM-NEXT:   }
 # LLVM-NEXT: ]
 
+## Note: the section name is <?> here because the section header table is not present.
 # LLVM-STRIPPED:      Notes [
 # LLVM-STRIPPED-NEXT:   NoteSection {
+# LLVM-STRIPPED-NEXT:     Name: <?>
 # LLVM-STRIPPED-NEXT:     Offset: 0x78
 # LLVM-STRIPPED-NEXT:     Size: 0x20
 # LLVM-STRIPPED-NEXT:     Note {
@@ -69,6 +74,8 @@
 # LLVM-STRIPPED-NEXT:   }
 # LLVM-STRIPPED-NEXT: ]
 
+## Note: offset and length printed instead of "found in: .note.gnu.build-id"
+## because the section header table is not present.
 #      GNU-STRIPPED:Displaying notes found at file offset 0x00000078 with length 0x00000020:
 # GNU-STRIPPED-NEXT:  Owner                Data size 	Description
 # GNU-STRIPPED-NEXT:  GNU                  0x00000010	NT_GNU_BUILD_ID (unique build ID bitstring)

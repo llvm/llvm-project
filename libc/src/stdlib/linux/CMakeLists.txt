@@ -1,0 +1,11 @@
+add_entrypoint_object(
+  _Exit
+  SRCS
+    _Exit.cpp
+  HDRS
+    ../_Exit.h
+  DEPENDS
+    sys_syscall_h
+    linux_syscall_h
+    stdlib_h
+)

@@ -25,9 +25,9 @@ foo:
 
 ; CHECK:      Disassembly of section .text:
 ; CHECK-EMPTY:
-; CHECK-NEXT: _start:
+; CHECK-NEXT: <_start>:
 ; CHECK-NEXT: 8000: {{.*}} nop
-; CHECK:      foo:
+; CHECK:      <foo>:
 ; CHECK-NEXT: 8004: {{.*}} jmp $-4
 
 ;; R_MSP430_16_BYTE

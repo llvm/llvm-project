@@ -17,6 +17,9 @@
 #undef __END_C_DECLS
 #define __END_C_DECLS }
 
+#undef _Noreturn
+#define _Noreturn [[noreturn]]
+
 #else // not __cplusplus
 
 #undef __BEGIN_C_DECLS

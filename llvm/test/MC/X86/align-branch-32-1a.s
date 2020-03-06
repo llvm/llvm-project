@@ -1,7 +1,7 @@
 # Check NOP padding is disabled before instruction that has variant symbol operand.
 # RUN: llvm-mc -filetype=obj -triple i386-unknown-unknown --x86-align-branch-boundary=32 --x86-align-branch=call %s | llvm-objdump -d  - | FileCheck %s
 
-# CHECK: 00000000 foo:
+# CHECK: 00000000 <foo>:
 # CHECK-COUNT-5:      : 64 a3 01 00 00 00                movl    %eax, %fs:1
 # CHECK:            1e: e8 fc ff ff ff                   calll   {{.*}}
 # CHECK-COUNT-4:      : 64 a3 01 00 00 00                movl    %eax, %fs:1

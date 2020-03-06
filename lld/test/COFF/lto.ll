@@ -35,7 +35,7 @@
 ; HEADERS-11: AddressOfEntryPoint: 0x1000
 ; TEXT-11: Disassembly of section .text:
 ; TEXT-11-EMPTY:
-; TEXT-11-NEXT: .text:
+; TEXT-11-NEXT: <.text>:
 ; TEXT-11-NEXT: xorl	%eax, %eax
 ; TEXT-11-NEXT: retq
 ; TEXT-11-NEXT: int3
@@ -57,7 +57,7 @@
 ; HEADERS-01: AddressOfEntryPoint: 0x1000
 ; TEXT-01: Disassembly of section .text:
 ; TEXT-01-EMPTY:
-; TEXT-01-NEXT: .text:
+; TEXT-01-NEXT: <.text>:
 ; TEXT-01-NEXT: subq	$40, %rsp
 ; TEXT-01-NEXT: callq	23
 ; TEXT-01-NEXT: xorl	%eax, %eax
@@ -84,7 +84,7 @@
 ; HEADERS-10: AddressOfEntryPoint: 0x1020
 ; TEXT-10: Disassembly of section .text:
 ; TEXT-10-EMPTY:
-; TEXT-10-NEXT: .text:
+; TEXT-10-NEXT: <.text>:
 ; TEXT-10-NEXT: retq
 ; TEXT-10-NEXT: nop
 ; TEXT-10-NEXT: nop

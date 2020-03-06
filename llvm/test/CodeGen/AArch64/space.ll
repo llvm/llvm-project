@@ -10,7 +10,7 @@ entry:
 }
 ; CHECK: // SPACE
 ; CHECK-NEXT: ret
-; DUMP-LABEL: f:
+; DUMP-LABEL: <f>:
 ; DUMP-NEXT: ret
 
 declare dso_local i64 @llvm.aarch64.space(i32, i64) local_unnamed_addr #0

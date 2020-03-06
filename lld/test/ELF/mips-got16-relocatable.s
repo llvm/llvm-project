@@ -11,7 +11,7 @@
 
 # OBJ:      Disassembly of section .text:
 # OBJ-EMPTY:
-# OBJ-NEXT: .text:
+# OBJ-NEXT: <.text>:
 # OBJ-NEXT:   lw      $25, 0($gp)
 # OBJ-NEXT:           00000000:  R_MIPS_GOT16 .data
 # OBJ-NEXT:   addiu   $4, $25, 0
@@ -22,12 +22,12 @@
 # OBJ-NEXT:           00000014:  R_MIPS_LO16  .data
 
 # SO: SYMBOL TABLE
-# SO: {{0*}}[[D1:[0-9a-f]{1,4}]] .data {{0+}} data
-# SO: {{0*}}[[D2:[0-9a-f]{1,4}]] .data {{0+}} data
+# SO: {{0*}}[[D1:[0-9a-f]{1,4}]] l .data {{0+}} data
+# SO: {{0*}}[[D2:[0-9a-f]{1,4}]] l .data {{0+}} data
 
 # SO:      Disassembly of section .text:
 # SO-EMPTY:
-# SO-NEXT: .text:
+# SO-NEXT: <.text>:
 # SO-NEXT:    lw      $25, -0x7fe8($gp)
 # SO-NEXT:    addiu   $4, $25, 0x[[D1]]
 # SO:         lw      $25, -0x7fe8($gp)

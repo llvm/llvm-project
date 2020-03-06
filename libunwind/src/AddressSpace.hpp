@@ -392,6 +392,127 @@ LocalAddressSpace::getEncodedP(pint_t &addr, pint_t end, uint8_t encoding,
   return result;
 }
 
+#ifdef __APPLE__
+#elif defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND) && defined(_LIBUNWIND_IS_BAREMETAL)
+#elif defined(_LIBUNWIND_ARM_EHABI) && defined(_LIBUNWIND_IS_BAREMETAL)
+#elif defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND) && defined(_WIN32)
+#elif defined(_LIBUNWIND_SUPPORT_SEH_UNWIND) && defined(_WIN32)
+#elif defined(_LIBUNWIND_ARM_EHABI) && defined(__BIONIC__)
+// Code inside findUnwindSections handles all these cases.
+//
+// Although the above ifdef chain is ugly, there doesn't seem to be a cleaner
+// way to handle it. The generalized boolean expression is:
+//
+//  A OR (B AND C) OR (D AND C) OR (B AND E) OR (F AND E) OR (D AND G)
+//
+// Running it through various boolean expression simplifiers gives expressions
+// that don't help at all.
+#elif defined(_LIBUNWIND_ARM_EHABI) || defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
+
+struct _LIBUNWIND_HIDDEN dl_iterate_cb_data {
+  LocalAddressSpace *addressSpace;
+  UnwindInfoSections *sects;
+  uintptr_t targetAddr;
+};
+
+int findUnwindSectionsByPhdr(struct dl_phdr_info *pinfo, size_t, void *data) {
+  auto cbdata = static_cast<dl_iterate_cb_data *>(data);
+  bool found_obj = false;
+  bool found_hdr = false;
+
+  assert(cbdata);
+  assert(cbdata->sects);
+
+  if (cbdata->targetAddr < pinfo->dlpi_addr) {
+    return false;
+  }
+
+#if !defined(Elf_Half)
+  typedef ElfW(Half) Elf_Half;
+#endif
+#if !defined(Elf_Phdr)
+  typedef ElfW(Phdr) Elf_Phdr;
+#endif
+#if !defined(Elf_Addr)
+  typedef ElfW(Addr) Elf_Addr;
+#endif
+
+  Elf_Addr image_base = pinfo->dlpi_addr;
+
+#if defined(__ANDROID__) && __ANDROID_API__ < 18
+  if (image_base == 0) {
+    // Normally, an image base of 0 indicates a non-PIE executable. On
+    // versions of Android prior to API 18, the dynamic linker reported a
+    // dlpi_addr of 0 for PIE executables. Compute the true image base
+    // using the PT_PHDR segment.
+    // See https://github.com/android/ndk/issues/505.
+    for (Elf_Half i = 0; i < pinfo->dlpi_phnum; i++) {
+      const Elf_Phdr *phdr = &pinfo->dlpi_phdr[i];
+      if (phdr->p_type == PT_PHDR) {
+        image_base = reinterpret_cast<Elf_Addr>(pinfo->dlpi_phdr) -
+          phdr->p_vaddr;
+        break;
+      }
+    }
+  }
+#endif
+
+ #if defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
+  #if !defined(_LIBUNWIND_SUPPORT_DWARF_INDEX)
+   #error "_LIBUNWIND_SUPPORT_DWARF_UNWIND requires _LIBUNWIND_SUPPORT_DWARF_INDEX on this platform."
+  #endif
+  size_t object_length;
+
+  for (Elf_Half i = 0; i < pinfo->dlpi_phnum; i++) {
+    const Elf_Phdr *phdr = &pinfo->dlpi_phdr[i];
+    if (phdr->p_type == PT_LOAD) {
+      uintptr_t begin = image_base + phdr->p_vaddr;
+      uintptr_t end = begin + phdr->p_memsz;
+      if (cbdata->targetAddr >= begin && cbdata->targetAddr < end) {
+        cbdata->sects->dso_base = begin;
+        object_length = phdr->p_memsz;
+        found_obj = true;
+      }
+    } else if (phdr->p_type == PT_GNU_EH_FRAME) {
+      EHHeaderParser<LocalAddressSpace>::EHHeaderInfo hdrInfo;
+      uintptr_t eh_frame_hdr_start = image_base + phdr->p_vaddr;
+      cbdata->sects->dwarf_index_section = eh_frame_hdr_start;
+      cbdata->sects->dwarf_index_section_length = phdr->p_memsz;
+      found_hdr = EHHeaderParser<LocalAddressSpace>::decodeEHHdr(
+          *cbdata->addressSpace, eh_frame_hdr_start, phdr->p_memsz,
+          hdrInfo);
+      if (found_hdr)
+        cbdata->sects->dwarf_section = hdrInfo.eh_frame_ptr;
+    }
+  }
+
+  if (found_obj && found_hdr) {
+    cbdata->sects->dwarf_section_length = object_length;
+    return true;
+  } else {
+    return false;
+  }
+ #else // defined(_LIBUNWIND_ARM_EHABI)
+  for (Elf_Half i = 0; i < pinfo->dlpi_phnum; i++) {
+    const Elf_Phdr *phdr = &pinfo->dlpi_phdr[i];
+    if (phdr->p_type == PT_LOAD) {
+      uintptr_t begin = image_base + phdr->p_vaddr;
+      uintptr_t end = begin + phdr->p_memsz;
+      if (cbdata->targetAddr >= begin && cbdata->targetAddr < end)
+        found_obj = true;
+    } else if (phdr->p_type == PT_ARM_EXIDX) {
+      uintptr_t exidx_start = image_base + phdr->p_vaddr;
+      cbdata->sects->arm_section = exidx_start;
+      cbdata->sects->arm_section_length = phdr->p_memsz;
+      found_hdr = true;
+    }
+  }
+  return found_obj && found_hdr;
+ #endif
+}
+#endif  // defined(_LIBUNWIND_ARM_EHABI) || defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
+
+
 inline bool LocalAddressSpace::findUnwindSections(pint_t targetAddr,
                                                   UnwindInfoSections &info) {
 #ifdef __APPLE__
@@ -483,110 +604,8 @@ inline bool LocalAddressSpace::findUnwindSections(pint_t targetAddr,
   if (info.arm_section && info.arm_section_length)
     return true;
 #elif defined(_LIBUNWIND_ARM_EHABI) || defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
-  struct dl_iterate_cb_data {
-    LocalAddressSpace *addressSpace;
-    UnwindInfoSections *sects;
-    uintptr_t targetAddr;
-  };
-
   dl_iterate_cb_data cb_data = {this, &info, targetAddr};
-  int found = dl_iterate_phdr(
-      [](struct dl_phdr_info *pinfo, size_t, void *data) -> int {
-        auto cbdata = static_cast<dl_iterate_cb_data *>(data);
-        bool found_obj = false;
-        bool found_hdr = false;
-
-        assert(cbdata);
-        assert(cbdata->sects);
-
-        if (cbdata->targetAddr < pinfo->dlpi_addr) {
-          return false;
-        }
-
-#if !defined(Elf_Half)
-        typedef ElfW(Half) Elf_Half;
-#endif
-#if !defined(Elf_Phdr)
-        typedef ElfW(Phdr) Elf_Phdr;
-#endif
-#if !defined(Elf_Addr)
-        typedef ElfW(Addr) Elf_Addr;
-#endif
-
-        Elf_Addr image_base = pinfo->dlpi_addr;
-
-#if defined(__ANDROID__) && __ANDROID_API__ < 18
-        if (image_base == 0) {
-          // Normally, an image base of 0 indicates a non-PIE executable. On
-          // versions of Android prior to API 18, the dynamic linker reported a
-          // dlpi_addr of 0 for PIE executables. Compute the true image base
-          // using the PT_PHDR segment.
-          // See https://github.com/android/ndk/issues/505.
-          for (Elf_Half i = 0; i < pinfo->dlpi_phnum; i++) {
-            const Elf_Phdr *phdr = &pinfo->dlpi_phdr[i];
-            if (phdr->p_type == PT_PHDR) {
-              image_base = reinterpret_cast<Elf_Addr>(pinfo->dlpi_phdr) -
-                  phdr->p_vaddr;
-              break;
-            }
-          }
-        }
-#endif
-
- #if defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
-  #if !defined(_LIBUNWIND_SUPPORT_DWARF_INDEX)
-   #error "_LIBUNWIND_SUPPORT_DWARF_UNWIND requires _LIBUNWIND_SUPPORT_DWARF_INDEX on this platform."
-  #endif
-        size_t object_length;
-
-        for (Elf_Half i = 0; i < pinfo->dlpi_phnum; i++) {
-          const Elf_Phdr *phdr = &pinfo->dlpi_phdr[i];
-          if (phdr->p_type == PT_LOAD) {
-            uintptr_t begin = image_base + phdr->p_vaddr;
-            uintptr_t end = begin + phdr->p_memsz;
-            if (cbdata->targetAddr >= begin && cbdata->targetAddr < end) {
-              cbdata->sects->dso_base = begin;
-              object_length = phdr->p_memsz;
-              found_obj = true;
-            }
-          } else if (phdr->p_type == PT_GNU_EH_FRAME) {
-            EHHeaderParser<LocalAddressSpace>::EHHeaderInfo hdrInfo;
-            uintptr_t eh_frame_hdr_start = image_base + phdr->p_vaddr;
-            cbdata->sects->dwarf_index_section = eh_frame_hdr_start;
-            cbdata->sects->dwarf_index_section_length = phdr->p_memsz;
-            found_hdr = EHHeaderParser<LocalAddressSpace>::decodeEHHdr(
-                *cbdata->addressSpace, eh_frame_hdr_start, phdr->p_memsz,
-                hdrInfo);
-            if (found_hdr)
-              cbdata->sects->dwarf_section = hdrInfo.eh_frame_ptr;
-          }
-        }
-
-        if (found_obj && found_hdr) {
-          cbdata->sects->dwarf_section_length = object_length;
-          return true;
-        } else {
-          return false;
-        }
- #else // defined(_LIBUNWIND_ARM_EHABI)
-        for (Elf_Half i = 0; i < pinfo->dlpi_phnum; i++) {
-          const Elf_Phdr *phdr = &pinfo->dlpi_phdr[i];
-          if (phdr->p_type == PT_LOAD) {
-            uintptr_t begin = image_base + phdr->p_vaddr;
-            uintptr_t end = begin + phdr->p_memsz;
-            if (cbdata->targetAddr >= begin && cbdata->targetAddr < end)
-              found_obj = true;
-          } else if (phdr->p_type == PT_ARM_EXIDX) {
-            uintptr_t exidx_start = image_base + phdr->p_vaddr;
-            cbdata->sects->arm_section = exidx_start;
-            cbdata->sects->arm_section_length = phdr->p_memsz;
-            found_hdr = true;
-          }
-        }
-        return found_obj && found_hdr;
- #endif
-      },
-      &cb_data);
+  int found = dl_iterate_phdr(findUnwindSectionsByPhdr, &cb_data);
   return static_cast<bool>(found);
 #endif
 

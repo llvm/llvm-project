@@ -55,7 +55,7 @@ movl $9, z
 // 16 is alignment here
 // CODE: Disassembly of section .text:
 // CODE-EMPTY:
-// CODE-NEXT: main:
+// CODE-NEXT: <main>:
 /// .bss + 0 = 0x403270
 // CODE-NEXT: 4011f0:       movl $0x5, 0x403270
 /// .bss + 16 = 0x403270 + 16 = 0x403280

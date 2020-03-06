@@ -1,7 +1,7 @@
 # Check only calls are aligned with option --x86-align-branch-boundary=32 --x86-align-branch=call
 # RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown --x86-align-branch-boundary=32 --x86-align-branch=call %p/Inputs/align-branch-64-2.s | llvm-objdump -d  - | FileCheck %s
 
-# CHECK: 0000000000000000 foo:
+# CHECK: 0000000000000000 <foo>:
 # CHECK-COUNT-3:      : 64 89 04 25 01 00 00 00          movl    %eax, %fs:1
 # CHECK-COUNT-2:      : 89 75 f4                         movl    %esi, -12(%rbp)
 # CHECK:            1e: ff e0                            jmpq    *%rax

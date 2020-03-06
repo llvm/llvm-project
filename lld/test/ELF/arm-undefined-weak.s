@@ -32,7 +32,7 @@ _start:
 
 // CHECK: Disassembly of section .text:
 // CHECK-EMPTY:
-// CHECK-NEXT: 100010b4 _start:
+// CHECK-NEXT: 100010b4 <_start>:
 // CHECK-NEXT: 100010b4: b       #-4
 // CHECK-NEXT: 100010b8: bl      #-4
 // CHECK-NEXT: 100010bc: bl      #-4

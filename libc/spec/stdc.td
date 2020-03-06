@@ -178,6 +178,17 @@ def StdC : StandardSpec<"stdc"> {
       ]
   >;
 
+  HeaderSpec StdLib = HeaderSpec<
+      "stdlib.h",
+      [], // Macros
+      [], // Types
+      [], // Enumerations
+      [
+          FunctionSpec<"abort", RetValSpec<NoReturn>, [ArgSpec<VoidType>]>,
+          FunctionSpec<"_Exit", RetValSpec<NoReturn>, [ArgSpec<IntType>]>,
+      ]
+  >;
+
   HeaderSpec Errno = HeaderSpec<
       "errno.h",
       [
@@ -278,6 +289,7 @@ def StdC : StandardSpec<"stdc"> {
     Math,
     String,
     StdIO,
+    StdLib,
     Signal,
     Threads,
   ];

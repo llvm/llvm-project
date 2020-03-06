@@ -18,14 +18,14 @@
 .long func
 
 # CHECK:      Disassembly of section .text:
-# CHECK:      .text:
+# CHECK:      <.text>:
 # CHECK-NEXT: 10188: blr
-# CHECK:      _start:
+# CHECK:      <_start>:
 # CHECK-NEXT:   bl .+12
 # CHECK-NEXT:   lis 9, 1
 # CHECK-NEXT:   addi 9, 9, 424
 # CHECK-EMPTY:
-# CHECK-NEXT: 00008000.got2.plt_pic32.func:
+# CHECK-NEXT: <00008000.got2.plt_pic32.func>:
 ## 0x10020114 = 65536*4098+276
 # CHECK-NEXT:   lwz 11, -32764(30)
 # CHECK-NEXT:   mtctr 11

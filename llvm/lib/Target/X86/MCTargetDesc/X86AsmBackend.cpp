@@ -390,22 +390,8 @@ uint8_t X86AsmBackend::determinePaddingPrefix(const MCInst &Inst) const {
   }
   }
 
-  switch (SegmentReg) {
-  case 0:
-    break;
-  case X86::CS:
-    return X86::CS_Encoding;
-  case X86::DS:
-    return X86::DS_Encoding;
-  case X86::ES:
-    return X86::ES_Encoding;
-  case X86::FS:
-    return X86::FS_Encoding;
-  case X86::GS:
-    return X86::GS_Encoding;
-  case X86::SS:
-    return X86::SS_Encoding;
-  }
+  if (SegmentReg != 0)
+    return X86::getSegmentOverridePrefixForReg(SegmentReg);
 
   if (STI.hasFeature(X86::Mode64Bit))
     return X86::CS_Encoding;

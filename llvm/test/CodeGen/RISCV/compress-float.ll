@@ -32,7 +32,7 @@
 ; instructions which also require one of the floating point extensions.
 
 define float @float_load(float *%a) #0 {
-; RV32IFDC-LABEL: float_load:
+; RV32IFDC-LABEL: <float_load>:
 ; RV32IFDC:         c.flw fa0, 0(a0)
 ; RV32IFDC-NEXT:    c.jr ra
   %1 = load volatile float, float* %a
@@ -40,7 +40,7 @@ define float @float_load(float *%a) #0 {
 }
 
 define double @double_load(double *%a) #0 {
-; RV32IFDC-LABEL: double_load:
+; RV32IFDC-LABEL: <double_load>:
 ; RV32IFDC:         c.fld fa0, 0(a0)
 ; RV32IFDC-NEXT:    c.jr ra
   %1 = load volatile double, double* %a

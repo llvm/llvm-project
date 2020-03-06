@@ -295,13 +295,6 @@ public:
 
   /// Return which operand this is in the operand list of the User.
   unsigned getOperandNumber();
-
-private:
-  /// The number of OpOperands that correspond with this block operand.
-  unsigned numSuccessorOperands = 0;
-
-  /// Allow access to 'numSuccessorOperands'.
-  friend Operation;
 };
 
 //===----------------------------------------------------------------------===//

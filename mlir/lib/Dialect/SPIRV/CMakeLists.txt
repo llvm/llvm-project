@@ -16,6 +16,7 @@ add_mlir_dialect_library(MLIRSPIRV
   )
 
 add_dependencies(MLIRSPIRV
+  MLIRControlFlowInterfacesIncGen
   MLIRSPIRVAvailabilityIncGen
   MLIRSPIRVCanonicalizationIncGen
   MLIRSPIRVEnumAvailabilityIncGen

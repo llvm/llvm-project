@@ -1621,9 +1621,8 @@ static LogicalResult verify(AffineIfOp op) {
         "symbol count must match");
 
   // Verify that the operands are valid dimension/symbols.
-  if (failed(verifyDimAndSymbolIdentifiers(
-          op, op.getOperation()->getNonSuccessorOperands(),
-          condition.getNumDims())))
+  if (failed(verifyDimAndSymbolIdentifiers(op, op.getOperands(),
+                                           condition.getNumDims())))
     return failure();
 
   // Verify that the entry of each child region does not have arguments.

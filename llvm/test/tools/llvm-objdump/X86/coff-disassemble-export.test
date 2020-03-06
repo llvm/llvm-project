@@ -1,7 +1,7 @@
 // RUN: llvm-objdump -d %p/Inputs/disassemble.dll.coff-i386 | \
 // RUN:   FileCheck %s
 
-// CHECK-LABEL: g:
+// CHECK-LABEL: <g>:
 // CHECK: calll 8 <f>
 
 // CHECK-LABEL: f:

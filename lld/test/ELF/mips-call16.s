@@ -18,7 +18,7 @@ g1:
 
 # CHECK:      Disassembly of section .text:
 # CHECK-EMPTY:
-# CHECK-NEXT: __start:
+# CHECK-NEXT: <__start>:
 # CHECK-NEXT:      {{.*}}:  lw  $8, -32744
 
 # GOT: Symbol table '.symtab'

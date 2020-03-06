@@ -67,7 +67,7 @@ a:
 // InputRelocs: R_PPC64_TLSLD           {{0+}}  a + 0
 
 // Verify that the local-dynamic sequence is relaxed to local exec.
-// Dis: _start:
+// Dis: <_start>:
 // Dis: nop
 // Dis: addis 3, 13, 0
 // Dis: nop

@@ -28,7 +28,7 @@ _start:
   bl foo
   nop
   bl bar_local
-// CHECK-LABEL: _start:
+// CHECK-LABEL: <_start>:
 // CHECK-NEXT:  100102c8:       bl .+60
 // CHECK-NEXT:  100102cc:       ld 2, 24(1)
 // CHECK-NEXT:  100102d0:       bl .-16
@@ -42,7 +42,7 @@ _diff_object:
   bl foo_not_shared
   bl foo_not_shared
   nop
-// CHECK-LABEL: _diff_object:
+// CHECK-LABEL: <_diff_object>:
 // CHECK-NEXT:  100102d4:       bl .+28
 // CHECK-NEXT:  100102d8:       bl .+24
 // CHECK-NEXT:  100102dc:       nop
@@ -51,7 +51,7 @@ _diff_object:
 .global noretbranch
 noretbranch:
   b bar_local
-// CHECK-LABEL: noretbranch:
+// CHECK-LABEL: <noretbranch>:
 // CHECK:       100102e0:        b .+67108832
 // CHECK-EMPTY:
 
@@ -60,6 +60,6 @@ noretbranch:
 last:
   bl foo
   nop
-// CHECK-LABEL: last:
+// CHECK-LABEL: <last>:
 // CHECK-NEXT:  100102e4:       bl .+32
 // CHECK-NEXT:  100102e8:       ld 2, 24(1)

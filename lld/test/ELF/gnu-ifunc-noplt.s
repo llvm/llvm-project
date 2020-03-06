@@ -23,13 +23,13 @@
 // Check that ifunc call sites still require relocation
 // DISASM: Disassembly of section .text:
 // DISASM-EMPTY:
-// DISASM-NEXT: 0000000000201320 foo:
+// DISASM-NEXT: 0000000000201320 <foo>:
 // DISASM-NEXT:   201320:      	retq
 // DISASM-EMPTY:
-// DISASM-NEXT: 0000000000201321 bar:
+// DISASM-NEXT: 0000000000201321 <bar>:
 // DISASM-NEXT:   201321:      	retq
 // DISASM-EMPTY:
-// DISASM-NEXT: 0000000000201322 _start:
+// DISASM-NEXT: 0000000000201322 <_start>:
 // DISASM-NEXT:   201322:      	callq	0 <_start+0x5>
 // DISASM-NEXT:   201327:      	callq	0 <_start+0xa>
 // DISASM-NEXT:   20132c:      	callq	31 <bar2@plt>
@@ -37,17 +37,17 @@
 // DISASM-EMPTY:
 // DISASM-NEXT: Disassembly of section .plt:
 // DISASM-EMPTY:
-// DISASM-NEXT: 0000000000201340 .plt:
+// DISASM-NEXT: 0000000000201340 <.plt>:
 // DISASM-NEXT:   201340:      	pushq	8514(%rip)
 // DISASM-NEXT:   201346:      	jmpq	*8516(%rip)
 // DISASM-NEXT:   20134c:      	nopl	(%rax)
 // DISASM-EMPTY:
-// DISASM-NEXT: 0000000000201350 bar2@plt:
+// DISASM-NEXT: 0000000000201350 <bar2@plt>:
 // DISASM-NEXT:   201350:      	jmpq	*8514(%rip)
 // DISASM-NEXT:   201356:      	pushq	$0
 // DISASM-NEXT:   20135b:      	jmp	-32 <.plt>
 // DISASM-EMPTY:
-// DISASM-NEXT: 0000000000201360 zed2@plt:
+// DISASM-NEXT: 0000000000201360 <zed2@plt>:
 // DISASM-NEXT:   201360:      	jmpq	*8506(%rip)
 // DISASM-NEXT:   201366:      	pushq	$1
 // DISASM-NEXT:   20136b:      	jmp	-48 <.plt>

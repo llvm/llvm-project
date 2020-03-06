@@ -47,11 +47,11 @@ entry:
 ;CHECK-NEXT:         .space  1
 
 
-;CHECKOBJ:      00000000 .text:
+;CHECKOBJ:      00000000 <.text>:
 ;CHECKOBJ-NEXT:        0: 38 60 00 00                    li 3, 0
 ;CHECKOBJ-NEXT:        4: 4e 80 00 20                    blr
 ;CHECKOBJ-NEXT:          ...{{[[:space:]] *}}
-;CHECKOBJ-NEXT: 00000010 .rodata:
+;CHECKOBJ-NEXT: 00000010 <.rodata>:
 ;CHECKOBJ-NEXT:        10: 40 00 00 00
 ;CHECKOBJ-NEXT:        14: 00 00 00 32
 ;CHECKOBJ-NEXT:          ...{{[[:space:]] *}}

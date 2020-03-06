@@ -408,22 +408,22 @@ void ClangASTSource::FindExternalLexicalDecls(
   if (log) {
     if (const NamedDecl *context_named_decl = dyn_cast<NamedDecl>(context_decl))
       LLDB_LOG(log,
-               "FindExternalLexicalDecls on (ASTContext*){1} '{2}' in "
-               "'{3}' (%sDecl*){4}",
+               "FindExternalLexicalDecls on (ASTContext*){0} '{1}' in "
+               "'{2}' (%sDecl*){3}",
                m_ast_context, m_clang_ast_context->getDisplayName(),
                context_named_decl->getNameAsString().c_str(),
                context_decl->getDeclKindName(),
                static_cast<const void *>(context_decl));
     else if (context_decl)
       LLDB_LOG(log,
-               "FindExternalLexicalDecls on (ASTContext*){1} '{2}' in "
-               "({3}Decl*){4}",
+               "FindExternalLexicalDecls on (ASTContext*){0} '{1}' in "
+               "({2}Decl*){3}",
                m_ast_context, m_clang_ast_context->getDisplayName(),
                context_decl->getDeclKindName(),
                static_cast<const void *>(context_decl));
     else
       LLDB_LOG(log,
-               "FindExternalLexicalDecls on (ASTContext*){1} '{2}' in a "
+               "FindExternalLexicalDecls on (ASTContext*){0} '{1}' in a "
                "NULL context",
                m_ast_context, m_clang_ast_context->getDisplayName());
   }
@@ -433,7 +433,7 @@ void ClangASTSource::FindExternalLexicalDecls(
   if (!original.Valid())
     return;
 
-  LLDB_LOG(log, "  FELD Original decl {1} (Decl*){2:x}:\n{3}",
+  LLDB_LOG(log, "  FELD Original decl {0} (Decl*){1:x}:\n{2}",
            static_cast<void *>(original.ctx),
            static_cast<void *>(original.decl),
            ClangUtil::DumpDecl(original.decl));
@@ -558,7 +558,7 @@ void ClangASTSource::FindExternalVisibleDecls(NameSearchContext &context) {
 
   if (!context.m_namespace_map->empty()) {
     if (log && log->GetVerbose())
-      LLDB_LOG(log, "  CAS::FEVD Registering namespace map {1} ({2} entries)",
+      LLDB_LOG(log, "  CAS::FEVD Registering namespace map {0} ({1} entries)",
                context.m_namespace_map.get(), context.m_namespace_map->size());
 
     NamespaceDecl *clang_namespace_decl =

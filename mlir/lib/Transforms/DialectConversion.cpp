@@ -1005,33 +1005,7 @@ ConversionPattern::matchAndRewrite(Operation *op,
   SmallVector<Value, 4> operands;
   auto &dialectRewriter = static_cast<ConversionPatternRewriter &>(rewriter);
   dialectRewriter.getImpl().remapValues(op->getOperands(), operands);
-
-  // If this operation has no successors, invoke the rewrite directly.
-  if (op->getNumSuccessors() == 0)
-    return matchAndRewrite(op, operands, dialectRewriter);
-
-  // Otherwise, we need to remap the successors.
-  SmallVector<Block *, 2> destinations;
-  destinations.reserve(op->getNumSuccessors());
-
-  SmallVector<ArrayRef<Value>, 2> operandsPerDestination;
-  unsigned firstSuccessorOperand = op->getSuccessorOperandIndex(0);
-  for (unsigned i = 0, seen = 0, e = op->getNumSuccessors(); i < e; ++i) {
-    destinations.push_back(op->getSuccessor(i));
-
-    // Lookup the successors operands.
-    unsigned n = op->getNumSuccessorOperands(i);
-    operandsPerDestination.push_back(
-        llvm::makeArrayRef(operands.data() + firstSuccessorOperand + seen, n));
-    seen += n;
-  }
-
-  // Rewrite the operation.
-  return matchAndRewrite(
-      op,
-      llvm::makeArrayRef(operands.data(),
-                         operands.data() + firstSuccessorOperand),
-      destinations, operandsPerDestination, dialectRewriter);
+  return matchAndRewrite(op, operands, dialectRewriter);
 }
 
 //===----------------------------------------------------------------------===//

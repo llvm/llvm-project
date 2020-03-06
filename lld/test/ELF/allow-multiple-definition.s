@@ -20,10 +20,10 @@
 # If flag allow-multiple-definition is enabled the first
 # meet symbol should be used.
 
-# CHECK: _bar:
+# CHECK: <_bar>:
 # CHECK-NEXT:  movl   $1, %eax
 
-# REVERT: _bar:
+# REVERT: <_bar>:
 # REVERT-NEXT: movl   $2, %eax
 
 .globl _bar

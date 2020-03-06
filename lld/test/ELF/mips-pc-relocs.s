@@ -26,8 +26,8 @@ __start:
   .data
   .word _foo+8-.                    # R_MIPS_PC32
 
-# CHECK: 00020000         .text           00000000 __start
-# CHECK: 00020020         .text           00000000 _foo
+# CHECK: 00020000 g       .text           00000000 __start
+# CHECK: 00020020 g       .text           00000000 _foo
 
 # CHECK: Contents of section .data:
 # CHECK-NEXT: 30000 ffff0028 00000000 00000000 00000000
@@ -35,7 +35,7 @@ __start:
 
 # CHECK:      Disassembly of section .text:
 # CHECK-EMPTY:
-# CHECK-NEXT: __start:
+# CHECK-NEXT: <__start>:
 # CHECK-NEXT:    20000:       lwpc    $6, 32
 #                                         ^-- (0x20020-0x20000)>>2
 # CHECK-NEXT:    20004:       beqc    $5, $6, 28

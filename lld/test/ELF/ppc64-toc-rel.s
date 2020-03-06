@@ -71,6 +71,6 @@ _start:
 # r2 stores the TOC base address. To access global_a with r3, it
 # computes the address with TOC plus an offset.
 # global_a - .TOC. = 0x100301f0 - 0x100281e8 = (1 << 16) - 32760
-# CHECK:      _start:
+# CHECK:      <_start>:
 # CHECK:      100101d0:       addis 3, 2, 1
 # CHECK-NEXT: 100101d4:       addi 3, 3, -32760

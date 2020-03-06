@@ -113,10 +113,9 @@ body:             |
   ; CHECK:   %copy:gpr32 = COPY $w0
   ; CHECK:   [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, %copy, %subreg.sub_32
   ; CHECK:   %zext:gpr64 = UBFMXri [[SUBREG_TO_REG]], 0, 31
-  ; CHECK:   [[COPY:%[0-9]+]]:gpr64all = COPY %zext
-  ; CHECK:   [[COPY1:%[0-9]+]]:gpr32all = COPY [[COPY]].sub_32
-  ; CHECK:   [[COPY2:%[0-9]+]]:gpr32 = COPY [[COPY1]]
-  ; CHECK:   TBNZW [[COPY2]], 3, %bb.1
+  ; CHECK:   [[COPY:%[0-9]+]]:gpr32all = COPY %zext.sub_32
+  ; CHECK:   [[COPY1:%[0-9]+]]:gpr32 = COPY [[COPY]]
+  ; CHECK:   TBNZW [[COPY1]], 3, %bb.1
   ; CHECK:   B %bb.0
   ; CHECK: bb.1:
   ; CHECK:   $x0 = COPY %zext

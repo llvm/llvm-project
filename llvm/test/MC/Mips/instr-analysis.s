@@ -1,19 +1,19 @@
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux %s -o - \
 # RUN:   | llvm-objdump -d - | FileCheck %s
 
-# CHECK:      foo:
+# CHECK:      <foo>:
 # CHECK-NEXT:        0:       0c 00 00 02     jal     8 <loc1>
 # CHECK-NEXT:        4:       00 00 00 00     nop
 #
-# CHECK:      loc1:
+# CHECK:      <loc1>:
 # CHECK-NEXT:        8:       0c 00 00 06     jal     24 <loc3>
 # CHECK-NEXT:        c:       00 00 00 00     nop
 #
-# CHECK:      loc2:
+# CHECK:      <loc2>:
 # CHECK-NEXT:       10:       10 00 ff fd     b       -8 <loc1>
 # CHECK-NEXT:       14:       00 00 00 00     nop
 #
-# CHECK:      loc3:
+# CHECK:      <loc3>:
 # CHECK-NEXT:       18:       10 43 ff fd     beq     $2, $3, -8 <loc2>
 # CHECK-NEXT:       1c:       00 00 00 00     nop
 # CHECK-NEXT:       20:       04 11 ff f9     bal     -24 <loc1>

@@ -6,7 +6,7 @@
 ; emitting an ELF directly.
 
 define i32 @add(i32 %a, i32 %b) nounwind {
-; CHECK-LABEL: add:
+; CHECK-LABEL: <add>:
 ; CHECK:    c.add a0, a1
 ; CHECK-NEXT:    c.jr ra
   tail call void asm sideeffect ".option norvc", ""()

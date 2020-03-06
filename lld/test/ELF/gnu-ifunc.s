@@ -91,11 +91,11 @@
 
 // DISASM: Disassembly of section .text:
 // DISASM-EMPTY:
-// DISASM-NEXT: foo:
+// DISASM-NEXT: <foo>:
 // DISASM-NEXT:  201188: {{.*}} retq
-// DISASM:      bar:
+// DISASM:      <bar>:
 // DISASM-NEXT:  201189: {{.*}} retq
-// DISASM:      _start:
+// DISASM:      <_start>:
 // DISASM-NEXT:  20118a: {{.*}} callq 33
 // DISASM-NEXT:  20118f: {{.*}} callq 44
 // DISASM-NEXT:  201194: {{.*}} movl $2097496, %edx
@@ -104,7 +104,7 @@
 // DISASM-EMPTY:
 // DISASM-NEXT: Disassembly of section .iplt:
 // DISASM-EMPTY:
-// DISASM-NEXT: .iplt:
+// DISASM-NEXT: <.iplt>:
 // DISASM-NEXT:  2011b0: {{.*}} jmpq *4122(%rip)
 // DISASM-NEXT:  2011b6: {{.*}} pushq $0
 // DISASM-NEXT:  2011bb: {{.*}} jmp -2101696

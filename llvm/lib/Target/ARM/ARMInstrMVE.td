@@ -4421,6 +4421,7 @@ class MVE_VxMOVxN<string iname, string suffix, bit bit_28, bit bit_17,
   let Inst{8} = 0b0;
   let Inst{7} = !if(!eq(bit_17, 0), 1, 0);
   let Inst{0} = 0b1;
+  let validForTailPredication = 1;
 }
 
 multiclass MVE_VxMOVxN_halves<string iname, string suffix,

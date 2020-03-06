@@ -42,12 +42,12 @@ function:
 
 // CODE: Disassembly of section .text:
 // CODE-EMPTY:
-// CODE-NEXT: _start:
+// CODE-NEXT: <_start>:
 // CODE-NEXT:    11a0:        08 30 9f e5    ldr     r3, [pc, #8]
 // CODE-NEXT:    11a4:        08 20 9f e5    ldr     r2, [pc, #8]
 // CODE-NEXT:    11a8:        03 00 8f e0    add     r0, pc, r3
 // CODE-NEXT:    11ac:        1e ff 2f e1    bx      lr
-// CODE:$d.1:
+// CODE: <$d.1>:
 // (_GLOBAL_OFFSET_TABLE_ = 0x220c) - (0x11a8 + 8) = 0x105c
 // CODE-NEXT:    11b0:        5c 10 00 00
 // (Got(function) - GotBase = 0x0

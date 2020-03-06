@@ -2690,7 +2690,9 @@ template <> void ELFDumper<ELF32LE>::printAttributes() {
     if (Contents.size() == 1)
       continue;
 
-    ARMAttributeParser(&W).parse(Contents, support::little);
+    // TODO: Print error and delete the redundant FormatVersion check above.
+    if (Error E = ARMAttributeParser(&W).parse(Contents, support::little))
+      consumeError(std::move(E));
   }
 }
 
@@ -5042,11 +5044,18 @@ static void printCoreNote(raw_ostream &OS, const CoreNote &Note) {
 
 template <class ELFT>
 void GNUStyle<ELFT>::printNotes(const ELFFile<ELFT> *Obj) {
-  auto PrintHeader = [&](const typename ELFT::Off Offset,
+  auto PrintHeader = [&](Optional<StringRef> SecName,
+                         const typename ELFT::Off Offset,
                          const typename ELFT::Addr Size) {
-    OS << "Displaying notes found at file offset " << format_hex(Offset, 10)
-       << " with length " << format_hex(Size, 10) << ":\n"
-       << "  Owner                Data size \tDescription\n";
+    OS << "Displaying notes found ";
+
+    if (SecName)
+      OS << "in: " << *SecName << "\n";
+    else
+      OS << "at file offset " << format_hex(Offset, 10) << " with length "
+         << format_hex(Size, 10) << ":\n";
+
+    OS << "  Owner                Data size \tDescription\n";
   };
 
   auto ProcessNote = [&](const Elf_Note &Note) {
@@ -5111,7 +5120,8 @@ void GNUStyle<ELFT>::printNotes(const ELFFile<ELFT> *Obj) {
     for (const auto &S : Sections) {
       if (S.sh_type != SHT_NOTE)
         continue;
-      PrintHeader(S.sh_offset, S.sh_size);
+      PrintHeader(expectedToOptional(Obj->getSectionName(&S)), S.sh_offset,
+                  S.sh_size);
       Error Err = Error::success();
       for (auto Note : Obj->notes(S, Err))
         ProcessNote(Note);
@@ -5123,7 +5133,7 @@ void GNUStyle<ELFT>::printNotes(const ELFFile<ELFT> *Obj) {
          unwrapOrError(this->FileName, Obj->program_headers())) {
       if (P.p_type != PT_NOTE)
         continue;
-      PrintHeader(P.p_offset, P.p_filesz);
+      PrintHeader(/*SecName=*/None, P.p_offset, P.p_filesz);
       Error Err = Error::success();
       for (auto Note : Obj->notes(P, Err))
         ProcessNote(Note);
@@ -6263,8 +6273,10 @@ template <class ELFT>
 void LLVMStyle<ELFT>::printNotes(const ELFFile<ELFT> *Obj) {
   ListScope L(W, "Notes");
 
-  auto PrintHeader = [&](const typename ELFT::Off Offset,
+  auto PrintHeader = [&](Optional<StringRef> SecName,
+                         const typename ELFT::Off Offset,
                          const typename ELFT::Addr Size) {
+    W.printString("Name", SecName ? *SecName : "<?>");
     W.printHex("Offset", Offset);
     W.printHex("Size", Size);
   };
@@ -6331,7 +6343,8 @@ void LLVMStyle<ELFT>::printNotes(const ELFFile<ELFT> *Obj) {
       if (S.sh_type != SHT_NOTE)
         continue;
       DictScope D(W, "NoteSection");
-      PrintHeader(S.sh_offset, S.sh_size);
+      PrintHeader(expectedToOptional(Obj->getSectionName(&S)), S.sh_offset,
+                  S.sh_size);
       Error Err = Error::success();
       for (auto Note : Obj->notes(S, Err))
         ProcessNote(Note);
@@ -6344,7 +6357,7 @@ void LLVMStyle<ELFT>::printNotes(const ELFFile<ELFT> *Obj) {
       if (P.p_type != PT_NOTE)
         continue;
       DictScope D(W, "NoteSection");
-      PrintHeader(P.p_offset, P.p_filesz);
+      PrintHeader(/*SecName=*/None, P.p_offset, P.p_filesz);
       Error Err = Error::success();
       for (auto Note : Obj->notes(P, Err))
         ProcessNote(Note);

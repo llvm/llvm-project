@@ -35,7 +35,7 @@
 // 0x2012e4 + 4317 + 7 = 0x2023C8
 // DISASM:      Disassembly of section .text:
 // DISASM-EMPTY:
-// DISASM-NEXT: main:
+// DISASM-NEXT: <main>:
 // DISASM-NEXT: 2012d0: {{.*}} movq 4329(%rip), %rax
 // DISASM-NEXT: 2012d7: {{.*}} movl %fs:(%rax), %eax
 // DISASM-NEXT: 2012da: {{.*}} movq 4327(%rip), %rax

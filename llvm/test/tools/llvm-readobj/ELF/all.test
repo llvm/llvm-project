@@ -36,7 +36,7 @@
 # GNU-ALL: Version needs section '.gnu.version_r' contains {{.*}} entries:
 # GNU-ALL: There are no section groups in this file.
 # GNU-ALL: Histogram for bucket list length (total of 1 buckets)
-# GNU-ALL: Displaying notes found at file offset {{.*}} with length {{.*}}:
+# GNU-ALL: Displaying notes found
 
 --- !ELF
 FileHeader:

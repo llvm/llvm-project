@@ -24,18 +24,18 @@ bar:
   addi   $t0,$t0,%lo(_gp_disp)
 
 # CHECK: SYMBOL TABLE:
-# CHECK: 0001100c     .text   00000000 bar
-# CHECK: 00037ff0     .got    00000000 .hidden _gp
-# CHECK: 00011000     .text   00000000 __start
+# CHECK: 0001100c l       .text   00000000 bar
+# CHECK: 00037ff0 l       .got    00000000 .hidden _gp
+# CHECK: 00011000 g       .text   00000000 __start
 
 # CHECK:      Disassembly of section .text:
 # CHECK-EMPTY:
-# CHECK-NEXT: __start:
+# CHECK-NEXT: <__start>:
 # CHECK-NEXT:  11000:       lui    $8, 2
 #                                      ^-- %hi(0x37ff0-0x11000)
 # CHECK-NEXT:  11004:       addi   $8, $8, 28656
 #                                          ^-- %lo(0x37ff0-0x11004+4)
-# CHECK:      bar:
+# CHECK:      <bar>:
 # CHECK-NEXT:  1100c:       lui    $8, 2
 #                                      ^-- %hi(0x37ff0-0x1100c)
 # CHECK-NEXT:  11010:       addi   $8, $8, 28644

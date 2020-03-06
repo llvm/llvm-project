@@ -7,8 +7,8 @@
 # RUN: llvm-objdump -d %t.out --disassemble-functions=main,foo \
 # RUN:   | FileCheck %s --check-prefixes=MAIN,FOO --implicit-check-not=somedata
 
-# FOO: foo:
-# MAIN: main:
+# FOO: <foo>:
+# MAIN: <main>:
 
 ## Unknown symbol name.
 # RUN: llvm-objdump -d %t.out --disassemble-functions=baz \

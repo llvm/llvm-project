@@ -38,12 +38,12 @@ t3_ff8_ldr:
         ret
 
 // CHECK-PRINT: detected cortex-a53-843419 erratum sequence starting at 10FF8 in unpatched output.
-// CHECK: 0000000000010ff8 t3_ff8_ldr:
+// CHECK: 0000000000010ff8 <t3_ff8_ldr>:
 // CHECK-NEXT: adrp    x0, #134217728
 // CHECK-NEXT: ldr     x1, [x1]
 // CHECK-NEXT: b       #8
 // CHECK-NEXT: ret
-// CHECK: 0000000000011008 __CortexA53843419_11000:
+// CHECK: 0000000000011008 <__CortexA53843419_11000>:
 // CHECK-NEXT: ldr     x0, [x0, #8]
 // CHECK-NEXT: b       #-8
         .section .text.04, "ax", %progbits

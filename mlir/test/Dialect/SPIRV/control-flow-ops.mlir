@@ -24,7 +24,7 @@ func @branch_argument() -> () {
 // -----
 
 func @missing_accessor() -> () {
-  // expected-error @+1 {{has incorrect number of successors: expected 1 but found 0}}
+  // expected-error @+2 {{expected block name}}
   spv.Branch
 }
 
@@ -32,7 +32,7 @@ func @missing_accessor() -> () {
 
 func @wrong_accessor_count() -> () {
   %true = spv.constant true
-  // expected-error @+1 {{incorrect number of successors: expected 1 but found 2}}
+  // expected-error @+1 {{requires 1 successor but found 2}}
   "spv.Branch"()[^one, ^two] : () -> ()
 ^one:
   spv.Return
@@ -116,8 +116,8 @@ func @wrong_condition_type() -> () {
 
 func @wrong_accessor_count() -> () {
   %true = spv.constant true
-  // expected-error @+1 {{incorrect number of successors: expected 2 but found 1}}
-  "spv.BranchConditional"(%true)[^one] : (i1) -> ()
+  // expected-error @+1 {{requires 2 successors but found 1}}
+  "spv.BranchConditional"(%true)[^one] {operand_segment_sizes = dense<[1, 0, 0]>: vector<3xi32>} : (i1) -> ()
 ^one:
   spv.Return
 ^two:
@@ -129,7 +129,8 @@ func @wrong_accessor_count() -> () {
 func @wrong_number_of_weights() -> () {
   %true = spv.constant true
   // expected-error @+1 {{must have exactly two branch weights}}
-  "spv.BranchConditional"(%true)[^one, ^two] {branch_weights = [1 : i32, 2 : i32, 3 : i32]} : (i1) -> ()
+  "spv.BranchConditional"(%true)[^one, ^two] {branch_weights = [1 : i32, 2 : i32, 3 : i32],
+                                              operand_segment_sizes = dense<[1, 0, 0]>: vector<3xi32>} : (i1) -> ()
 ^one:
   spv.Return
 ^two:

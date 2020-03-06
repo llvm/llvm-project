@@ -90,8 +90,7 @@ private:
 
       // Add branch before inserted body, into body.
       block = block->getNextNode();
-      rewriter.create<LLVM::BrOp>(loc, ArrayRef<Value>{},
-                                  llvm::makeArrayRef(block), ValueRange());
+      rewriter.create<LLVM::BrOp>(loc, ValueRange(), block);
 
       // Replace all gpu.yield ops with branch out of body.
       for (; block != split; block = block->getNextNode()) {
@@ -100,8 +99,7 @@ private:
           continue;
         rewriter.setInsertionPointToEnd(block);
         rewriter.replaceOpWithNewOp<LLVM::BrOp>(
-            terminator, ArrayRef<Value>{}, llvm::makeArrayRef(split),
-            ValueRange(terminator->getOperand(0)));
+            terminator, terminator->getOperand(0), split);
       }
 
       // Return accumulator result.
@@ -254,13 +252,10 @@ private:
     Block *continueBlock = rewriter.splitBlock(elseBlock, elseBlock->begin());
 
     rewriter.setInsertionPointToEnd(currentBlock);
-    rewriter.create<LLVM::CondBrOp>(loc, llvm::makeArrayRef(condition),
-                                    ArrayRef<Block *>{thenBlock, elseBlock});
+    rewriter.create<LLVM::CondBrOp>(loc, condition, thenBlock, elseBlock);
 
     auto addBranch = [&](ValueRange operands) {
-      rewriter.create<LLVM::BrOp>(loc, ArrayRef<Value>{},
-                                  llvm::makeArrayRef(continueBlock),
-                                  llvm::makeArrayRef(operands));
+      rewriter.create<LLVM::BrOp>(loc, operands, continueBlock);
     };
 
     rewriter.setInsertionPointToStart(thenBlock);
@@ -645,8 +640,7 @@ struct GPUReturnOpLowering : public ConvertToLLVMPattern {
   PatternMatchResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    rewriter.replaceOpWithNewOp<LLVM::ReturnOp>(op, operands,
-                                                ArrayRef<Block *>());
+    rewriter.replaceOpWithNewOp<LLVM::ReturnOp>(op, operands);
     return matchSuccess();
   }
 };

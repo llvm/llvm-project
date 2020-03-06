@@ -12,23 +12,23 @@
 
 # CHECK:      Disassembly of section .text:
 # CHECK-EMPTY:
-# CHECK-NEXT: bar:
+# CHECK-NEXT: <bar>:
 # CHECK-NEXT:   [[BAR:[0-9a-f]+]]:  jal  0x[[LOC:[0-9a-f]+]] <loc>
 # CHECK-NEXT:   {{.*}}:              nop
 #
-# CHECK:      __start:
+# CHECK:      <__start>:
 # CHECK-NEXT:   {{.*}}:       jal     0x[[BAR]] <bar>
 # CHECK-NEXT:   {{.*}}:       nop
 # CHECK-NEXT:   {{.*}}:       jal     0x[[FOO0:[0-9a-f]+]]
 #                                     ^-- gotplt[foo0]
 # CHECK-NEXT:   {{.*}}:       nop
 #
-# CHECK:      loc:
+# CHECK:      <loc>:
 # CHECK-NEXT:   [[LOC]]:      nop
 # CHECK-EMPTY:
 # CHECK-NEXT: Disassembly of section .plt:
 # CHECK-EMPTY:
-# CHECK-NEXT: .plt:
+# CHECK-NEXT: <.plt>:
 # CHECK-NEXT:   {{.*}}:       lui     $gp, 0x3
 # CHECK-NEXT:   {{.*}}:       lw      $25, {{.*}}($gp)
 # CHECK-NEXT:   {{.*}}:       addiu   $gp, $gp, {{.*}}

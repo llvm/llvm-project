@@ -4,7 +4,7 @@
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 -asm-verbose=0 < %s | FileCheck -check-prefixes=GCN,GCN-ASM,GFX10NOEND,GFX10NOEND-ASM %s
 ; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1010 -filetype=obj < %s | llvm-objdump -arch=amdgcn -mcpu=gfx1010 -disassemble - | FileCheck -check-prefixes=GCN,GCN-OBJ,GFX10NOEND,GFX10NOEND-OBJ %s
 
-; GCN:            a_kernel1:
+; GCN:            a_kernel1{{>?}}:
 ; GCN:                    s_endpgm
 ; GCN-ASM:        [[END_LABEL1:\.Lfunc_end.*]]:
 ; GCN-ASM-NEXT:           .size   a_kernel1, [[END_LABEL1]]-a_kernel1
@@ -15,7 +15,7 @@ define amdgpu_kernel void @a_kernel1() {
   ret void
 }
 
-; GCN:            a_kernel2:
+; GCN:            a_kernel2{{>?}}:
 ; GCN:                    s_endpgm
 ; GCN-ASM:        [[END_LABEL2:\.Lfunc_end.*]]:
 ; GCN-ASM-NEXT:           .size   a_kernel2, [[END_LABEL2]]-a_kernel2
@@ -30,7 +30,7 @@ define amdgpu_kernel void @a_kernel2() {
 ; GCN-ASM-NEXT:           .p2align        2
 ; GCN-ASM-NEXT:           .type   a_function,@function
 
-; GCN-NEXT:       a_function:
+; GCN-NEXT:       a_function{{>?}}:
 ; GCN:                    s_setpc_b64
 ; GCN-ASM-NEXT:   [[END_LABEL3:\.Lfunc_end.*]]:
 ; GCN-ASM-NEXT:           .size   a_function, [[END_LABEL3]]-a_function

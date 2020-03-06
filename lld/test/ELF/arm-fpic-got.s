@@ -54,11 +54,11 @@ val:
 
 // CODE: Disassembly of section .text:
 // CODE-EMPTY:
-// CODE-NEXT: _start:
+// CODE-NEXT: <_start>:
 // CODE-NEXT:   11114:       ldr     r0, [pc, #8]
 // CODE-NEXT:   11118:       ldr     r0, [pc, r0]
 // CODE-NEXT:   1111c:       ldr     r0, [r0]
 // CODE-NEXT:   11120:       bx      lr
-// CODE: $d.1:
+// CODE: <$d.1>:
 // 0x11124 + 0x1008 + 8 = 0x12128 = .got
 // CODE-NEXT:   11124:       08 10 00 00

@@ -864,7 +864,7 @@ public:
   }
 };
 
-/// Progressive lowering of ConstractionOp.
+/// Progressive lowering of ContractionOp.
 /// One:
 ///   %x = vector.contract with at least one free/batch dimension
 /// is replaced by:
@@ -1017,8 +1017,8 @@ private:
       Value zero = zeroVector(loc, lhsType, rewriter);
       Value fma = rewriter.create<vector::FMAOp>(loc, op.lhs(), op.rhs(), zero);
       StringAttr kind = rewriter.getStringAttr("add");
-      return rewriter.create<vector::ReductionV2Op>(loc, resType, kind, fma,
-                                                    op.acc());
+      return rewriter.create<vector::ReductionOp>(loc, resType, kind, fma,
+                                                  op.acc());
     }
     // Construct new iterator types and affine map array attribute.
     SmallVector<AffineMap, 4> lowIndexingMaps;
@@ -1067,9 +1067,8 @@ private:
     SmallVector<Attribute, 4> results;
     for (auto it : llvm::enumerate(iteratorTypes)) {
       int64_t idx = it.index();
-      if (idx == index) {
+      if (idx == index)
         continue;
-      }
       results.push_back(it.value());
     }
     return results;

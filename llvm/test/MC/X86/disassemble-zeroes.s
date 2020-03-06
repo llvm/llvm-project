@@ -5,7 +5,7 @@
 // This test checks that we follow these rules and can force
 // dissasembly of zero blocks with the -z and --disassemble-zeroes options.
 
-// NODISASM:       0000000000000000 main:
+// NODISASM:       0000000000000000 <main>:
 // NODISASM-NEXT:   0:  00 00               addb %al, (%rax)
 // NODISASM-NEXT:   2:  00 00               addb %al, (%rax)
 // NODISASM-NEXT:   4:  00 00               addb %al, (%rax)
@@ -13,16 +13,16 @@
 // NODISASM-NEXT:       ...
 // NODISASM-NEXT:   20: 90                  nop
 // NODISASM-NEXT:       ...
-// NODISASM:      0000000000000031 foo:
+// NODISASM:      0000000000000031 <foo>:
 // NODISASM-NEXT:   31: 00 00               addb %al, (%rax)
 // NODISASM-NEXT:   33: 00 00               addb %al, (%rax)
-// NODISASM:      0000000000000035 bar:
+// NODISASM:      0000000000000035 <bar>:
 // NODISASM-NEXT:       ...
 
 // Check that with -z we disassemble blocks of zeroes.
 // RUN: llvm-objdump -d -z %t | FileCheck %s --check-prefix=DISASM
 
-// DISASM:      0000000000000000 main:
+// DISASM:      0000000000000000 <main>:
 // DISASM-NEXT:   0: 00 00              addb %al, (%rax)
 // DISASM-NEXT:   2: 00 00              addb %al, (%rax)
 // DISASM-NEXT:   4: 00 00              addb %al, (%rax)
@@ -46,10 +46,10 @@
 // DISASM-NEXT:  2b: 00 00              addb %al, (%rax)
 // DISASM-NEXT:  2d: 00 00              addb %al, (%rax)
 // DISASM-NEXT:  2f: 00 00              addb %al, (%rax)
-// DISASM:      0000000000000031 foo:
+// DISASM:      0000000000000031 <foo>:
 // DISASM-NEXT:  31: 00 00              addb %al, (%rax)
 // DISASM-NEXT:  33: 00 00              addb %al, (%rax)
-// DISASM:      0000000000000035 bar:
+// DISASM:      0000000000000035 <bar>:
 // DISASM-NEXT:  35: 00 00              addb %al, (%rax)
 // DISASM-NEXT:  37: 00 00              addb %al, (%rax)
 // DISASM-NEXT:  39: 00 00              addb %al, (%rax)

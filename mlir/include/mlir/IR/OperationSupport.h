@@ -40,6 +40,7 @@ class Pattern;
 class Region;
 class ResultRange;
 class RewritePattern;
+class SuccessorRange;
 class Type;
 class Value;
 class ValueRange;
@@ -316,7 +317,12 @@ public:
     attributes.append(newAttributes.begin(), newAttributes.end());
   }
 
-  void addSuccessor(Block *successor, ValueRange succOperands);
+  /// Add an array of successors.
+  void addSuccessors(ArrayRef<Block *> newSuccessors) {
+    successors.append(newSuccessors.begin(), newSuccessors.end());
+  }
+  void addSuccessors(Block *successor) { successors.push_back(successor); }
+  void addSuccessors(SuccessorRange newSuccessors);
 
   /// Create a region that should be attached to the operation.  These regions
   /// can be filled in immediately without waiting for Operation to be
@@ -563,10 +569,19 @@ public:
   explicit TypeRange(OperandRange values);
   explicit TypeRange(ResultRange values);
   explicit TypeRange(ValueRange values);
+  explicit TypeRange(ArrayRef<Value> values);
+  explicit TypeRange(ArrayRef<BlockArgument> values)
+      : TypeRange(ArrayRef<Value>(values.data(), values.size())) {}
   template <typename ValueRangeT>
   TypeRange(ValueTypeRange<ValueRangeT> values)
       : TypeRange(ValueRangeT(values.begin().getCurrent(),
                               values.end().getCurrent())) {}
+  template <typename Arg,
+            typename = typename std::enable_if_t<
+                std::is_constructible<ArrayRef<Type>, Arg>::value>>
+  TypeRange(Arg &&arg) : TypeRange(ArrayRef<Type>(std::forward<Arg>(arg))) {}
+  TypeRange(std::initializer_list<Type> types)
+      : TypeRange(ArrayRef<Type>(types)) {}
 
 private:
   /// The owner of the range is either:
@@ -638,6 +653,10 @@ public:
   using type_range = ValueTypeRange<OperandRange>;
   type_range getTypes() const { return {begin(), end()}; }
   auto getType() const { return getTypes(); }
+
+  /// Return the operand index of the first element of this range. The range
+  /// must not be empty.
+  unsigned getBeginOperandIndex() const;
 
 private:
   /// See `detail::indexed_accessor_range_base` for details.

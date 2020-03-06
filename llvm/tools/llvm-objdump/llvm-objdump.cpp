@@ -1372,7 +1372,7 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
         outs() << format(Is64Bits ? "%016" PRIx64 " " : "%08" PRIx64 " ",
                          SectionAddr + Start + VMAAdjustment);
 
-      outs() << SymbolName << ":\n";
+      outs() << '<' << SymbolName << ">:\n";
 
       // Don't print raw contents of a virtual section. A virtual section
       // doesn't have any contents in the file.
@@ -1898,7 +1898,7 @@ void printSymbolTable(const ObjectFile *O, StringRef ArchiveName,
     bool Hidden = Flags & SymbolRef::SF_Hidden;
 
     char GlobLoc = ' ';
-    if (Type != SymbolRef::ST_Unknown)
+    if ((Section != O->section_end() || Absolute) && !Weak)
       GlobLoc = Global ? 'g' : 'l';
     char Debug = (Type == SymbolRef::ST_Debug || Type == SymbolRef::ST_File)
                  ? 'd' : ' ';

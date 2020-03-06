@@ -27,7 +27,7 @@ _start:
 
 // CHECK-ARM1: Disassembly of section .text:
 // CHECK-ARM1-EMPTY:
-// CHECK-ARM1-NEXT: _start:
+// CHECK-ARM1-NEXT: <_start>:
 // CHECK-ARM1-NEXT:    12000:   00 00 00 fa     blx     #0 <thumbfunc>
 // CHECK-ARM1-NEXT:    12004:   1e ff 2f e1     bx      lr
  .thumb
@@ -37,16 +37,16 @@ _start:
 thumbfunc:
  bl farthumbfunc
 
-// CHECK-THUMB1: thumbfunc:
+// CHECK-THUMB1: <thumbfunc>:
 // CHECK-THUMB1-NEXT:    12008:	00 f2 00 e8 	blx	#2097152
 // 6 Megabytes, enough to make farthumbfunc out of range of caller
 // on a v6 Arm, but not on a v7 Arm.
 
  .section .text.3, "ax", %progbits
  .space 0x200000
-// CHECK-ARM2: __ARMv5ABSLongThunk_farthumbfunc:
+// CHECK-ARM2: <__ARMv5ABSLongThunk_farthumbfunc>:
 // CHECK-ARM2-NEXT:   21200c:   04 f0 1f e5     ldr     pc, [pc, #-4]
-// CHECK-ARM2: $d:
+// CHECK-ARM2: <$d>:
 // CHECK-ARM2-NEXT:   212010:   01 30 61 00     .word   0x00613001
  .section .text.4, "ax", %progbits
  .space 0x200000
@@ -61,5 +61,5 @@ thumbfunc:
  .type farthumbfunc,%function
 farthumbfunc:
  bx lr
-// CHECK-THUMB2: farthumbfunc:
+// CHECK-THUMB2: <farthumbfunc>:
 // CHECK-THUMB2-NEXT:   613000:        70 47   bx      lr

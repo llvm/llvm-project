@@ -2,6 +2,7 @@ set(LLVM_OPTIONAL_SOURCES
   AffineAnalysis.cpp
   AffineStructures.cpp
   CallGraph.cpp
+  ControlFlowInterfaces.cpp
   Dominance.cpp
   InferTypeOpInterface.cpp
   Liveness.cpp
@@ -14,6 +15,7 @@ set(LLVM_OPTIONAL_SOURCES
 
 add_llvm_library(MLIRAnalysis
   CallGraph.cpp
+  ControlFlowInterfaces.cpp
   InferTypeOpInterface.cpp
   Liveness.cpp
   SliceAnalysis.cpp
@@ -26,6 +28,7 @@ add_llvm_library(MLIRAnalysis
 add_dependencies(MLIRAnalysis
   MLIRAffineOps
   MLIRCallOpInterfacesIncGen
+  MLIRControlFlowInterfacesIncGen
   MLIRTypeInferOpInterfaceIncGen
   MLIRLoopOps
   )
@@ -45,6 +48,7 @@ add_llvm_library(MLIRLoopAnalysis
 add_dependencies(MLIRLoopAnalysis
   MLIRAffineOps
   MLIRCallOpInterfacesIncGen
+  MLIRControlFlowInterfacesIncGen
   MLIRTypeInferOpInterfaceIncGen
   MLIRLoopOps
   )

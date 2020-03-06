@@ -74,17 +74,54 @@ static LogicalResult verify(ReductionOp op) {
   auto kind = op.kind();
   Type eltType = op.dest().getType();
   if (kind == "add" || kind == "mul" || kind == "min" || kind == "max") {
-    if (eltType.isF32() || eltType.isF64() || eltType.isSignlessInteger(32) ||
-        eltType.isSignlessInteger(64))
-      return success();
-    return op.emitOpError("unsupported reduction type");
+    if (!eltType.isF32() && !eltType.isF64() &&
+        !eltType.isSignlessInteger(32) && !eltType.isSignlessInteger(64))
+      return op.emitOpError("unsupported reduction type");
+  } else if (kind == "and" || kind == "or" || kind == "xor") {
+    if (!eltType.isSignlessInteger(32) && !eltType.isSignlessInteger(64))
+      return op.emitOpError("unsupported reduction type");
+  } else {
+    return op.emitOpError("unknown reduction kind: ") << kind;
   }
-  if (kind == "and" || kind == "or" || kind == "xor") {
-    if (eltType.isSignlessInteger(32) || eltType.isSignlessInteger(64))
-      return success();
-    return op.emitOpError("unsupported reduction type");
+
+  // Verify optional accumulator.
+  if (!op.acc().empty()) {
+    if (kind != "add" && kind != "mul")
+      return op.emitOpError("no accumulator for reduction kind: ") << kind;
+    if (!eltType.isF32() && !eltType.isF64())
+      return op.emitOpError("no accumulator for type: ") << eltType;
   }
-  return op.emitOpError("unknown reduction kind: ") << kind;
+
+  return success();
+}
+
+static ParseResult parseReductionOp(OpAsmParser &parser,
+                                    OperationState &result) {
+  SmallVector<OpAsmParser::OperandType, 2> operandsInfo;
+  Type redType;
+  Type resType;
+  Attribute attr;
+  if (parser.parseAttribute(attr, "kind", result.attributes) ||
+      parser.parseComma() || parser.parseOperandList(operandsInfo) ||
+      parser.parseColonType(redType) ||
+      parser.parseKeywordType("into", resType) ||
+      (operandsInfo.size() > 0 &&
+       parser.resolveOperand(operandsInfo[0], redType, result.operands)) ||
+      (operandsInfo.size() > 1 &&
+       parser.resolveOperand(operandsInfo[1], resType, result.operands)) ||
+      parser.addTypeToList(resType, result.types))
+    return failure();
+  if (operandsInfo.size() < 1 || operandsInfo.size() > 2)
+    return parser.emitError(parser.getNameLoc(),
+                            "unsupported number of operands");
+  return success();
+}
+
+static void print(OpAsmPrinter &p, ReductionOp op) {
+  p << op.getOperationName() << " \"" << op.kind() << "\", " << op.vector();
+  if (!op.acc().empty())
+    p << ", " << op.acc();
+  p << " : " << op.vector().getType() << " into " << op.dest().getType();
 }
 
 //===----------------------------------------------------------------------===//
@@ -962,58 +999,6 @@ static LogicalResult verify(OuterProductOp op) {
 //===----------------------------------------------------------------------===//
 // ReshapeOp
 //===----------------------------------------------------------------------===//
-
-static void print(OpAsmPrinter &p, ReshapeOp op) {
-  p << op.getOperationName() << " " << op.vector() << ", [" << op.input_shape()
-    << "], [" << op.output_shape() << "], " << op.fixed_vector_sizes();
-  std::array<StringRef, 2> elidedAttrs = {
-      ReshapeOp::getOperandSegmentSizeAttr(),
-      ReshapeOp::getFixedVectorSizesAttrName()};
-  p.printOptionalAttrDict(op.getAttrs(), elidedAttrs);
-  p << " : " << op.getInputVectorType() << " to " << op.getOutputVectorType();
-}
-
-// TODO(b/146516564) Consider passing number of inner vector dimensions that
-// are fixed, instead of their values in 'fixesVectorSizes' array attr.
-//
-// operation ::= ssa-id `=` `vector.reshape` ssa-use, `[` ssa-use-list `]`,
-//                          `[` ssa-use-list `]`, `[` array-attribute `]`
-//                          `:` vector-type 'to' vector-type
-//
-static ParseResult parseReshapeOp(OpAsmParser &parser, OperationState &result) {
-  OpAsmParser::OperandType inputInfo;
-  SmallVector<OpAsmParser::OperandType, 4> inputShapeInfo;
-  SmallVector<OpAsmParser::OperandType, 4> outputShapeInfo;
-  ArrayAttr fixedVectorSizesAttr;
-  StringRef attrName = ReshapeOp::getFixedVectorSizesAttrName();
-  auto indexType = parser.getBuilder().getIndexType();
-  if (parser.parseOperand(inputInfo) || parser.parseComma() ||
-      parser.parseOperandList(inputShapeInfo, OpAsmParser::Delimiter::Square) ||
-      parser.parseComma() ||
-      parser.parseOperandList(outputShapeInfo,
-                              OpAsmParser::Delimiter::Square) ||
-      parser.parseComma()) {
-    return failure();
-  }
-
-  auto builder = parser.getBuilder();
-  result.addAttribute(
-      ReshapeOp::getOperandSegmentSizeAttr(),
-      builder.getI32VectorAttr({1, static_cast<int32_t>(inputShapeInfo.size()),
-                                static_cast<int32_t>(outputShapeInfo.size())}));
-  Type inputType;
-  Type outputType;
-  return failure(
-      parser.parseAttribute(fixedVectorSizesAttr, attrName,
-                            result.attributes) ||
-      parser.parseOptionalAttrDict(result.attributes) ||
-      parser.parseColonType(inputType) ||
-      parser.resolveOperand(inputInfo, inputType, result.operands) ||
-      parser.resolveOperands(inputShapeInfo, indexType, result.operands) ||
-      parser.resolveOperands(outputShapeInfo, indexType, result.operands) ||
-      parser.parseKeywordType("to", outputType) ||
-      parser.addTypeToList(outputType, result.types));
-}
 
 static LogicalResult verify(ReshapeOp op) {
   // Verify that rank(numInputs/outputs) + numFixedVec dim matches vec rank.

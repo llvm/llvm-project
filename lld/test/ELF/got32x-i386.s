@@ -35,7 +35,7 @@
 # CHECK: Sections:
 # CHECK:  Name     Size     VMA
 # CHECK:  .got.plt 0000000c 00403134
-# CHECK:       _start:
+# CHECK:       <_start>:
 # CHECK-NEXT:   401115: 8b 05 {{.*}} movl 4202800, %eax
 # CHECK-NEXT:   40111b: 8b 1d {{.*}} movl 4202800, %ebx
 # CHECK-NEXT:   401121: 8b 80 {{.*}} movl -4100(%eax), %eax

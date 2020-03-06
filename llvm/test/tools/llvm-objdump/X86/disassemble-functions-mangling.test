@@ -19,17 +19,17 @@
 # RUN: llvm-objdump -C --disassemble-functions='std::allocator<wchar_t>::allocator()' %t.o 2>&1 \
 # RUN:   | FileCheck %s --check-prefix=DEMANGLED-MULTI
 
-# MANGLED: _Z3foov:
+# MANGLED: <_Z3foov>:
 # MANGLED-MISS: warning: '{{.*}}': failed to disassemble missing function foo
 
-# DEMANGLED: foo():
+# DEMANGLED: <foo()>:
 # DEMANGLED-MISS: warning: '{{.*}}': failed to disassemble missing function _Z3foov
 
-# NOMANGLE: i:
-# NOMANGLE: f:
+# NOMANGLE: <i>:
+# NOMANGLE: <f>:
 
-# DEMANGLED-MULTI: std::allocator<wchar_t>::allocator():
-# DEMANGLED-MULTI: std::allocator<wchar_t>::allocator():
+# DEMANGLED-MULTI: <std::allocator<wchar_t>::allocator()>:
+# DEMANGLED-MULTI: <std::allocator<wchar_t>::allocator()>:
 
 --- !ELF
 FileHeader:

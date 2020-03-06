@@ -485,7 +485,7 @@ class F32BRk<bits<3> f, dag outs, dag ins, string asmstr, list<dag> pattern>
 }
 
 //===----------------------------------------------------------------------===//
-// 32 bits direct mem instructions: <|1001|00fd|dddd|0000|kkkk|kkkk|kkkk|kkkk|> 
+// 32 bits direct mem instructions: <|1001|00fd|dddd|0000|kkkk|kkkk|kkkk|kkkk|>
 // f = secondary opcode = 1 bit
 // d = destination = 5 bits
 // k = constant address = 16 bits

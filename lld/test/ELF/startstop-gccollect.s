@@ -17,18 +17,18 @@
 # RUN: ld.lld %t --gc-sections -o %tout %t2.so
 # RUN: llvm-objdump -d %tout | FileCheck -check-prefix=DISASM %s
 
-# DISASM:      _start:
+# DISASM:      <_start>:
 # DISASM-NEXT:   callq   {{.*}} <__start_foo>
 # DISASM-NEXT:   callq   {{.*}} <__stop_bar>
 # DISASM-EMPTY:
 # DISASM-NEXT: Disassembly of section foo:
 # DISASM-EMPTY:
-# DISASM-NEXT: __start_foo:
+# DISASM-NEXT: <__start_foo>:
 # DISASM-NEXT:   nop
 # DISASM-EMPTY:
 # DISASM-NEXT: Disassembly of section bar:
 # DISASM-EMPTY:
-# DISASM-NEXT: bar:
+# DISASM-NEXT: <bar>:
 # DISASM-NEXT:   nop
 
 .global _start
