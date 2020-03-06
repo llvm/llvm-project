@@ -47,6 +47,7 @@
 #include "llvm/IR/PassManagerInternal.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/TypeName.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -513,7 +514,11 @@ public:
       if (!PI.runBeforePass<IRUnitT>(*P, IR))
         continue;
 
-      PreservedAnalyses PassPA = P->run(IR, AM, ExtraArgs...);
+      PreservedAnalyses PassPA;
+      {
+        TimeTraceScope TimeScope(P->name(), IR.getName());
+        PassPA = P->run(IR, AM, ExtraArgs...);
+      }
 
       // Call onto PassInstrumentation's AfterPass callbacks immediately after
       // running the pass.
@@ -1199,7 +1204,12 @@ public:
       // false).
       if (!PI.runBeforePass<Function>(Pass, F))
         continue;
-      PreservedAnalyses PassPA = Pass.run(F, FAM);
+
+      PreservedAnalyses PassPA;
+      {
+        TimeTraceScope TimeScope(Pass.name(), F.getName());
+        PassPA = Pass.run(F, FAM);
+      }
 
       PI.runAfterPass(Pass, F);
 
