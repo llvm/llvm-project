@@ -1,5 +1,3 @@
-LEVEL = ../../../make
-
 EXE=main
 SWIFT_SOURCES=main.swift
 LD_EXTRAS=-lmoda -lmodb -L$(shell pwd)
@@ -7,7 +5,7 @@ SWIFTFLAGS_EXTRAS=-I$(shell pwd)
 
 all: libmoda.dylib libmodb.dylib main
 
-include $(LEVEL)/Makefile.rules
+include Makefile.rules
 
 
 libmoda.dylib: moda.swift

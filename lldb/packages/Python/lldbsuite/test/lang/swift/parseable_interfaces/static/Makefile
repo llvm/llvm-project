@@ -1,5 +1,3 @@
-LEVEL := ../../../../make
-
 EXE := main
 SWIFT_SOURCES := main.swift
 LD_EXTRAS = -L$(BUILDDIR) -lAA -lBB -lCC
@@ -9,7 +7,7 @@ SWIFT_MODULE_CACHE_FLAGS = -module-cache-path MCP
 # setup `all` to run each of the below before building the main executable
 all: setup staticA staticB staticC clear_modules
 
-include $(LEVEL)/Makefile.rules
+include Makefile.rules
 
 setup:
 	# copy the source files into the build directory because we delete them

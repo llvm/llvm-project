@@ -1,4 +1,3 @@
-LEVEL = ../../../../make
 SWIFT_OBJC_INTEROP := 1
 # This Makefile overwrites the default rules.
 USESWIFTDRIVER := 0
@@ -9,7 +8,7 @@ all: a.out
 # This test builds an Objective-C main program that imports two Swift
 # .dylibs with conflicting ClangImporter search paths.
 
-include $(LEVEL)/Makefile.rules
+include Makefile.rules
 
 a.out: main.o
 	$(SWIFTC) $(SWIFTFLAGS) $< -lFoo -lBar -L$(shell pwd) -o $@ \

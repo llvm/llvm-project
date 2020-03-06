@@ -1,5 +1,3 @@
-LEVEL = ../../../../make
-
 SWIFT_SOURCES := main.swift
 
 # Hack to force the bridging-header.pch rule to be built before everything else.
@@ -11,7 +9,7 @@ bridging-header.pch: bridging-header.h
 
 SWIFTFLAGS_EXTRAS = -I$(BUILDDIR)/include
 
-include $(LEVEL)/Makefile.rules
+include Makefile.rules
 
 clean::
 	rm -rf bridging-header.pch

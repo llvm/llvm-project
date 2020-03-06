@@ -1,7 +1,5 @@
 # Build swift modules with debug info
 
-LEVEL=../../../../make
-
 # Don't use 'all' target.  There is a default build rule that will kick in that
 # will be wrong.  WE use 'first' so that the normal 'make' command (without
 # a target) selects the first (but not 'all') target so we avoid the undesired
@@ -10,7 +8,7 @@ first: main
 
 SWIFT_OBJC_INTEROP=1
 
-include $(LEVEL)/Makefile.rules
+include Makefile.rules
 
 # Add back the SDK settings to the swift flags.  Normally this happens
 # automatically, but since we're overriding the normal swiftc invocation,

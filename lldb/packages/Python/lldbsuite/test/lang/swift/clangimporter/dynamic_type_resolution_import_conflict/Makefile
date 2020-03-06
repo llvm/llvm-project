@@ -1,4 +1,3 @@
-LEVEL = ../../../../make
 SWIFT_SOURCES=main.swift
 SWIFT_OBJC_INTEROP := 1
 LD_EXTRAS=-lDylib -lConflict -L$(shell pwd)
@@ -6,7 +5,7 @@ SWIFTFLAGS_EXTRAS= -Xcc -I$(SRCDIR)/hidden/Bar -I. -import-objc-header $(SRCDIR)
 
 all: libDylib.dylib libConflict.dylib a.out
 
-include $(LEVEL)/Makefile.rules
+include Makefile.rules
 
 # This testcase causes the scratch context to get destroyed by a
 # conflict that is triggered via dynamic type resolution. The two

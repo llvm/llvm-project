@@ -1,5 +1,3 @@
-LEVEL := ../../../../make
-
 EXE := a.out
 SWIFT_SOURCES := main.swift
 LD_EXTRAS = -L$(BUILDDIR) -lAA -Xlinker -rpath -Xlinker $(BUILDDIR)
@@ -10,7 +8,7 @@ DYLIB_DSYM ?= NO
 # setup `all` to run each of the below before building the main executable
 all: setup sharedA clear_modules
 
-include $(LEVEL)/Makefile.rules
+include Makefile.rules
 
 setup:
 	# copy the source files into the build directory because we delete them

@@ -1,5 +1,3 @@
-LEVEL = ../../../../make
-
 MAKE_GMODULES := YES
 SWIFT_OBJC_INTEROP = 1
 SWIFT_SOURCES := main.swift
@@ -8,7 +6,7 @@ CFLAGS_EXTRAS = -I$(BUILDDIR)/include
 SWIFTFLAGS_EXTRAS = -I$(BUILDDIR)/include
 LD_EXTRAS := libLibrary.dylib
 
-include $(LEVEL)/Makefile.rules
+include Makefile.rules
 
 objc.o: libLibrary.dylib
 

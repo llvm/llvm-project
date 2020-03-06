@@ -1,8 +1,6 @@
-LEVEL = ../../../make
-
 all: a.out
 
-include $(LEVEL)/Makefile.rules
+include Makefile.rules
 
 a.out: main.swift
 	# A common use case for -debug-prefix-map is to invoke the compiler such

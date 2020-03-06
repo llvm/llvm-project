@@ -1,4 +1,3 @@
-LEVEL = ../../../../make
 SWIFT_OBJC_INTEROP := 1
 SWIFT_SOURCES := main.swift
 MAKE_DSYM := NO
@@ -14,7 +13,7 @@ all: libdylib.dylib a.out
 # but it is in a different directory. We are using a headermap to
 # switch between the two versions of "Foo.h" during build time.
 
-include $(LEVEL)/Makefile.rules
+include Makefile.rules
 
 libdylib.dylib: dylib.swift
 	$(MAKE) MAKE_DSYM=YES CC=$(CC) SWIFTC=$(SWIFTC) \

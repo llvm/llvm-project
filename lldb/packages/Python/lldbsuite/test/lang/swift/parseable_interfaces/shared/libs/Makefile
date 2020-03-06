@@ -1,5 +1,3 @@
-LEVEL = ../../../../make
-
 DYLIB_NAME := $(BASENAME)
 DYLIB_SWIFT_SOURCES := libs/$(BASENAME).swift
 
@@ -13,7 +11,7 @@ SWIFTFLAGS=-Onone -Xfrontend -serialize-debugging-options -enable-library-evolut
 # .swiftinterface loading path can be exercised.
 EXCLUDE_WRAPPED_SWIFTMODULE=1
 
-include $(LEVEL)/Makefile.rules
+include Makefile.rules
 
 clean::
 	rm -f $(BASENAME).swiftinterface

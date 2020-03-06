@@ -1,9 +1,7 @@
-LEVEL = ../../../make
-
 EXE=
 all: libmod.a.dylib libmod.b.dylib main.a main.b
 
-include $(LEVEL)/Makefile.rules
+include Makefile.rules
 
 libmod.%.dylib: mod.%.swift
 	ln -sf $< mod.swift

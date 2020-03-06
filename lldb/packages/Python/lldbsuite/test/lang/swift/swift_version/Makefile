@@ -1,5 +1,3 @@
-LEVEL = ../../../make
-
 EXE=main
 SWIFT_SOURCES=main.swift
 SWIFTFLAGS_EXTRAS= -I$(shell pwd)
@@ -7,7 +5,7 @@ LD_EXTRAS=-L$(shell pwd) -lmod5 -lmod4
 
 all: libmod5.dylib libmod4.dylib main
 
-include $(LEVEL)/Makefile.rules
+include Makefile.rules
 
 MOD5_FLAGS = -swift-version 5
 MOD4_FLAGS = -swift-version 4
