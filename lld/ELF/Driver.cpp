@@ -530,17 +530,14 @@ void LinkerDriver::main(ArrayRef<const char *> argsArr) {
   }
 
   if (config->timeTraceEnabled) {
-    // Write the result of the time trace profiler.
-    std::string path = args.getLastArgValue(OPT_time_trace_file_eq).str();
-    if (path.empty())
-      path = (config->outputFile + ".time-trace").str();
-    std::error_code ec;
-    raw_fd_ostream os(path, ec, sys::fs::OF_Text);
-    if (ec) {
-      error("cannot open " + path + ": " + ec.message());
+    if (auto E = timeTraceProfilerWrite(args.getLastArgValue(OPT_time_trace_file_eq).str(),
+                                        config->outputFile)) {
+      handleAllErrors(std::move(E), [&](const StringError &SE) {
+        error(SE.getMessage());
+      });
       return;
     }
-    timeTraceProfilerWrite(os);
+
     timeTraceProfilerCleanup();
   }
 }
