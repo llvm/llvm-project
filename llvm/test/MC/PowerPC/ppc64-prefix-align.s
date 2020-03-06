@@ -53,12 +53,12 @@ paddi 1, 2, 8589934576, 0
 addi 2, 3, 15             # 60
 # CHECK-BE:      b8:	38 43 00 0f
 # CHECK-BE-NEXT: bc:	60 00 00 00 	nop
-# CHECK-BE:      LAB1:
+# CHECK-BE:      <LAB1>:
 # CHECK-BE-NEXT: c0:	06 01 ff ff
 # CHECK-BE-NEXT: c4:	38 22 ff f0
 # CHECK-LE:      b8:	0f 00 43 38
 # CHECK-LE-NEXT: bc:	00 00 00 60 	nop
-# CHECK-LE:      LAB1:
+# CHECK-LE:      <LAB1>:
 # CHECK-LE-NEXT: c0:	ff ff 01 06
 # CHECK-LE-NEXT: c4:	f0 ff 22 38
 LAB1: paddi 1, 2, 8589934576, 0
@@ -70,12 +70,12 @@ paddi 1, 2, 8589934576, 0
 paddi 1, 2, 8589934576, 0
 addi 2, 3, 15             # 60
 # CHECK-BE:      f8:	38 43 00 0f
-# CHECK-BE:      LAB2:
+# CHECK-BE:      <LAB2>:
 # CHECK-BE-NEXT: fc:	60 00 00 00 	nop
 # CHECK-BE-NEXT: 100:	06 01 ff ff
 # CHECK-BE-NEXT: 104:	38 22 ff f0
 # CHECK-LE:      f8:	0f 00 43 38
-# CHECK-LE:      LAB2:
+# CHECK-LE:      <LAB2>:
 # CHECK-LE-NEXT: fc:	00 00 00 60 	nop
 # CHECK-LE-NEXT: 100:	ff ff 01 06
 # CHECK-LE-NEXT: 104:	f0 ff 22 38

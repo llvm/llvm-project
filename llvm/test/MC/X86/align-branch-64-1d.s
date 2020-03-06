@@ -6,7 +6,7 @@
 # RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown --x86-align-branch-boundary=32 -mcpu=x86-64 --x86-align-branch=jcc+jmp %p/Inputs/align-branch-64-1.s | llvm-objdump -d  - >%t2
 # RUN: FileCheck --input-file=%t2 %s --check-prefixes=CHECK,LONG-NOP
 
-# CHECK: 0000000000000000 foo:
+# CHECK: 0000000000000000 <foo>:
 # CHECK-COUNT-3:      : 64 89 04 25 01 00 00 00          movl    %eax, %fs:1
 # CHECK:            18: 48 39 c5                         cmpq    %rax, %rbp
 # CHECK-NEXT:       1b: 31 c0                            xorl    %eax, %eax

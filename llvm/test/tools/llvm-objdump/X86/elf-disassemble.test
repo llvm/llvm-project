@@ -5,22 +5,22 @@
 
 # CHECK:       Disassembly of section .executable:
 # CHECK-EMPTY:
-# CHECK-NEXT:  0000000000001000 .executable:
+# CHECK-NEXT:  0000000000001000 <.executable>:
 # CHECK-NEXT:         0: 90                            nop
 # ALL-EMPTY:
 # ALL-NEXT:    Disassembly of section .writable:
 # ALL-EMPTY:
-# ALL-NEXT:    0000000000002000 .writable:
+# ALL-NEXT:    0000000000002000 <.writable>:
 # ALL-NEXT:           0: c3                            retq
 # ALL-EMPTY:
 # ALL-NEXT:    Disassembly of section .readonly:
 # ALL-EMPTY:
-# ALL-NEXT:    0000000000003000 .readonly:
+# ALL-NEXT:    0000000000003000 <.readonly>:
 # ALL-NEXT:           0: 01 00                         addl    %eax, (%rax)
 # ALL-EMPTY:
 # ALL-NEXT:    Disassembly of section .nobits:
 # ALL-EMPTY:
-# ALL-NEXT:    0000000000004000 .nobits:
+# ALL-NEXT:    0000000000004000 <.nobits>:
 # ALL-NEXT:    ...
 
 --- !ELF

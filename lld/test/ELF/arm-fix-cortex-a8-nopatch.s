@@ -27,7 +27,7 @@ target:
  b.w target
  b.w target
 
-// CALLSITE1:      00012ffa target:
+// CALLSITE1:      00012ffa <target>:
 // CALLSITE1-NEXT:    12ffa:            b.w     #-4
 // CALLSITE1-NEXT:    12ffe:            b.w     #-8
 
@@ -40,7 +40,7 @@ target2:
  nop
  bl target2
 
-// CALLSITE2:      00013ffa target2:
+// CALLSITE2:      00013ffa <target2>:
 // CALLSITE2-NEXT:    13ffa:            nop
 // CALLSITE2-NEXT:    13ffc:            nop
 // CALLSITE2-NEXT:    13ffe:            bl      #-8
@@ -54,7 +54,7 @@ target3:
  nop.w
  beq.w target2
 
-// CALLSITE3:      00014ffa target3:
+// CALLSITE3:      00014ffa <target3>:
 // CALLSITE3-NEXT:    14ffa:            nop.w
 // CALLSITE3-NEXT:    14ffe:            beq.w   #-4104
 
@@ -69,10 +69,10 @@ source4:
 target4:
  nop.w
 
-// CALLSITE4:      00015ffa source4:
+// CALLSITE4:      00015ffa <source4>:
 // CALLSITE4-NEXT:    15ffa:            nop.w
 // CALLSITE4-NEXT:    15ffe:            beq.w   #0
-// CALLSITE4:      00016002 target4:
+// CALLSITE4:      00016002 <target4>:
 // CALLSITE4-NEXT:    16002:            nop.w
 
  .space 4084
@@ -89,7 +89,7 @@ target5:
 source5:
  beq.w target5
 
-// CALLSITE5:      00016ffe source5:
+// CALLSITE5:      00016ffe <source5>:
 // CALLSITE5-NEXT:    16ffe:            beq.w   #-8
 
 /// Edge case where two word sequence starts at offset 0xffc, check that
@@ -104,7 +104,7 @@ source5:
 target6:
  bl target6
 
-// CALLSITE6:      00018000 target6:
+// CALLSITE6:      00018000 <target6>:
 // CALLSITE6-NEXT:    18000:            bl      #-4
 
 /// Edge case where two word sequence starts at offset 0xffe, check that
@@ -119,5 +119,5 @@ target6:
 target7:
  bl target7
 
-// CALLSITE7:      00019002 target7:
+// CALLSITE7:      00019002 <target7>:
 // CALLSITE7:         19002:            bl      #-4

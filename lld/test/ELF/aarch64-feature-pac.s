@@ -13,11 +13,11 @@
 # RUN: llvm-readelf -x .got.plt %tno.so | FileCheck --check-prefix SOGOTPLT %s
 # RUN: llvm-readelf --dynamic-table %tno.so | FileCheck --check-prefix NOPACDYN %s
 
-# NOPAC: 00000000000102b8 func2:
+# NOPAC: 00000000000102b8 <func2>:
 # NOPAC-NEXT:    102b8: bl      #56 <func3@plt>
 # NOPAC-NEXT:           ret
 # NOPAC: Disassembly of section .plt:
-# NOPAC: 00000000000102d0 .plt:
+# NOPAC: 00000000000102d0 <.plt>:
 # NOPAC-NEXT:    102d0: stp     x16, x30, [sp, #-16]!
 # NOPAC-NEXT:           adrp    x16, #131072
 # NOPAC-NEXT:           ldr     x17, [x16, #960]
@@ -26,7 +26,7 @@
 # NOPAC-NEXT:           nop
 # NOPAC-NEXT:           nop
 # NOPAC-NEXT:           nop
-# NOPAC: 00000000000102f0 func3@plt:
+# NOPAC: 00000000000102f0 <func3@plt>:
 # NOPAC-NEXT:    102f0: adrp    x16, #131072
 # NOPAC-NEXT:           ldr     x17, [x16, #968]
 # NOPAC-NEXT:           add     x16, x16, #968
@@ -46,13 +46,13 @@
 # RUN: llvm-readelf --dynamic-table %t.so |  FileCheck --check-prefix PACDYN %s
 
 ## PAC has no effect on PLT[0], for PLT[N].
-# PACSO: 0000000000010348 func2:
+# PACSO: 0000000000010348 <func2>:
 # PACSO-NEXT:    10348:         bl      #56 <func3@plt>
 # PACSO-NEXT:                   ret
-# PACSO: 0000000000010350 func3:
+# PACSO: 0000000000010350 <func3>:
 # PACSO-NEXT:    10350:         ret
 # PACSO: Disassembly of section .plt:
-# PACSO: 0000000000010360 .plt:
+# PACSO: 0000000000010360 <.plt>:
 # PACSO-NEXT:    10360:         stp     x16, x30, [sp, #-16]!
 # PACSO-NEXT:                   adrp    x16, #131072
 # PACSO-NEXT:                   ldr     x17, [x16, #1120]
@@ -61,7 +61,7 @@
 # PACSO-NEXT:                   nop
 # PACSO-NEXT:                   nop
 # PACSO-NEXT:                   nop
-# PACSO: 0000000000010380 func3@plt:
+# PACSO: 0000000000010380 <func3@plt>:
 # PACSO-NEXT:    10380:         adrp    x16, #131072
 # PACSO-NEXT:                   ldr     x17, [x16, #1128]
 # PACSO-NEXT:                   add     x16, x16, #1128
@@ -87,13 +87,13 @@
 # RUN: llvm-objdump -d -mattr=+v8.3a --no-show-raw-insn %tpacplt.exe | FileCheck --check-prefix PACPLT %s
 
 # PACPLT: Disassembly of section .text:
-# PACPLT: 0000000000210370 func1:
+# PACPLT: 0000000000210370 <func1>:
 # PACPLT-NEXT:   210370:        bl      #48 <func2@plt>
 # PACPLT-NEXT:                  ret
-# PACPLT: 0000000000210378 func3:
+# PACPLT: 0000000000210378 <func3>:
 # PACPLT-NEXT:   210378:        ret
 # PACPLT: Disassembly of section .plt:
-# PACPLT: 0000000000210380 .plt:
+# PACPLT: 0000000000210380 <.plt>:
 # PACPLT-NEXT:   210380:        stp     x16, x30, [sp, #-16]!
 # PACPLT-NEXT:                  adrp    x16, #131072
 # PACPLT-NEXT:                  ldr     x17, [x16, #1192]
@@ -102,7 +102,7 @@
 # PACPLT-NEXT:                  nop
 # PACPLT-NEXT:                  nop
 # PACPLT-NEXT:                  nop
-# PACPLT: 00000000002103a0 func2@plt:
+# PACPLT: 00000000002103a0 <func2@plt>:
 # PACPLT-NEXT:   2103a0:        adrp    x16, #131072
 # PACPLT-NEXT:                  ldr     x17, [x16, #1200]
 # PACPLT-NEXT:                  add     x16, x16, #1200

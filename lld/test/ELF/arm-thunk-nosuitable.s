@@ -19,9 +19,9 @@ _start:
         .section .text.1, "ax", %progbits
         bx lr
 
-// CHECK: _start:
+// CHECK: <_start>:
 // CHECK-NEXT:   2110b4:        00 f0 00 80     beq.w   #0
-// CHECK: __Thumbv7ABSLongThunk_target:
+// CHECK: <__Thumbv7ABSLongThunk_target>:
 // CHECK-NEXT:   2110b8:        00 f0 01 90     b.w     #12582914
 // CHECK:        2110bc:        70 47           bx      lr
 

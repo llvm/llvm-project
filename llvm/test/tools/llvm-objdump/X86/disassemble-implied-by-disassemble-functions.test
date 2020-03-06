@@ -18,5 +18,5 @@ Symbols:
     Section: .text
 ...
 
-# CHECK: 0000000000000000 main:
+# CHECK: 0000000000000000 <main>:
 # CHECK-NEXT:        0: 90                            nop

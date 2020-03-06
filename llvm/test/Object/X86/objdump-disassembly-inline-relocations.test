@@ -37,7 +37,7 @@
 
 # MACHO-i386: file format mach-o 32-bit i386
 # MACHO-i386: Disassembly of section __TEXT,__text:
-# MACHO-i386: _main:
+# MACHO-i386: <_main>:
 # MACHO-i386:        0:       83 ec 0c                                        subl    $12, %esp
 # MACHO-i386:        3:       c7 44 24 08 00 00 00 00                         movl    $0, 8(%esp)
 # MACHO-i386:        b:       c7 04 24 24 00 00 00                            movl    $36, (%esp)
@@ -55,7 +55,7 @@
 
 # MACHO-x86-64: file format mach-o 64-bit x86-64
 # MACHO-x86-64: Disassembly of section __TEXT,__text:
-# MACHO-x86-64: _main:
+# MACHO-x86-64: <_main>:
 # MACHO-x86-64:        0:       48 83 ec 08                                     subq    $8, %rsp
 # MACHO-x86-64:        4:       c7 44 24 04 00 00 00 00                         movl    $0, 4(%rsp)
 # MACHO-x86-64:        c:       48 8d 3d 00 00 00 00                            leaq    (%rip), %rdi
@@ -74,7 +74,7 @@
 
 # ELF-i386: file format elf32-i386
 # ELF-i386: Disassembly of section .text:
-# ELF-i386: main:
+# ELF-i386: <main>:
 # ELF-i386:        0:     83 ec 0c                                        subl    $12, %esp
 # ELF-i386:        3:     c7 44 24 08 00 00 00 00                         movl    $0, 8(%esp)
 # ELF-i386:        b:     c7 04 24 00 00 00 00                            movl    $0, (%esp)
@@ -172,7 +172,7 @@ Symbols:
 
 # ELF-x86-64: file format elf64-x86-64
 # ELF-x86-64: Disassembly of section .text:
-# ELF-x86-64: main:
+# ELF-x86-64: <main>:
 # ELF-x86-64:        0:   48 83 ec 08                                     subq    $8, %rsp
 # ELF-x86-64:        4:   c7 44 24 04 00 00 00 00                         movl    $0, 4(%rsp)
 # ELF-x86-64:        c:   bf 00 00 00 00                                  movl    $0, %edi

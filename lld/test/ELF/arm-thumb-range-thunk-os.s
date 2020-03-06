@@ -44,22 +44,22 @@ _start:
  bl tfunc16
 // CHECK1: Disassembly of section .text:
 // CHECK1-EMPTY:
-// CHECK1-NEXT: _start:
+// CHECK1-NEXT: <_start>:
 // CHECK1-NEXT:   100000:       ff f0 fe ff     bl      #1048572
 // CHECK1-NEXT:   100004:       ff f3 fc d7     bl      #16777208
 // CHECK1-NEXT:   100008:       ff f2 fc d7     bl      #15728632
 
  FUNCTION 00
-// CHECK2:  tfunc00:
+// CHECK2:  <tfunc00>:
 // CHECK2-NEXT:   200000:       70 47   bx      lr
         FUNCTION 01
-// CHECK3: tfunc01:
+// CHECK3: <tfunc01>:
 // CHECK3-NEXT:   300000:       70 47   bx      lr
  FUNCTION 02
 // tfunc28 is > 16Mb away, expect a Range Thunk to be generated, to go into
 // the first of the pre-created ThunkSections.
         b.w tfunc28
-// CHECK4: tfunc02:
+// CHECK4: <tfunc02>:
 // CHECK4-NEXT:   400000:       70 47   bx      lr
 // CHECK4-NEXT:   400002:       00 f0 01 90     b.w     #12582914 <__Thumbv7ABSLongThunk_tfunc28>
  FUNCTION 03
@@ -75,19 +75,19 @@ _start:
  FUNCTION 13
  FUNCTION 14
 // Expect precreated ThunkSection here
-// CHECK5: __Thumbv7ABSLongThunk_tfunc16:
+// CHECK5: <__Thumbv7ABSLongThunk_tfunc16>:
 // CHECK5-NEXT:  1000004:       ff f1 fc bf     b.w     #2097144 <tfunc16>
-// CHECK5: __Thumbv7ABSLongThunk_tfunc28:
+// CHECK5: <__Thumbv7ABSLongThunk_tfunc28>:
 // CHECK5-NEXT:  1000008:       ff f1 fa 97     b.w     #14680052 <tfunc28>
-// CHECK5: __Thumbv7ABSLongThunk_tfunc32:
+// CHECK5: <__Thumbv7ABSLongThunk_tfunc32>:
 // CHECK5-NEXT:  100000c:       40 f2 01 0c     movw    r12, #1
 // CHECK5-NEXT:  1000010:       c0 f2 20 2c     movt    r12, #544
 // CHECK5-NEXT:  1000014:       60 47   bx      r12
-// CHECK5: __Thumbv7ABSLongThunk_tfunc33:
+// CHECK5: <__Thumbv7ABSLongThunk_tfunc33>:
 // CHECK5-NEXT:  1000016:       40 f2 01 0c     movw    r12, #1
 // CHECK5-NEXT:  100001a:       c0 f2 30 2c     movt    r12, #560
 // CHECK5-NEXT:  100001e:       60 47   bx      r12
-// CHECK5: __Thumbv7ABSLongThunk_tfunc02:
+// CHECK5: <__Thumbv7ABSLongThunk_tfunc02>:
 // CHECK5-NEXT:  1000020:       ff f7 ee 97     b.w     #-12582948 <tfunc02>
  FUNCTION 15
 // tfunc00 and tfunc01 are < 16Mb away, expect no range extension thunks
@@ -97,7 +97,7 @@ _start:
 // precreated thunk section
  bl tfunc32
  bl tfunc33
-// CHECK6:  tfunc15:
+// CHECK6:  <tfunc15>:
 // CHECK6-NEXT:  1100000:       70 47   bx      lr
 // CHECK6-NEXT:  1100002:       ff f4 fd d7     bl      #-15728646
 // CHECK6-NEXT:  1100006:       ff f5 fb d7     bl      #-14680074
@@ -107,9 +107,9 @@ _start:
  FUNCTION 17
  FUNCTION 18
 // Expect another precreated thunk section here
-// CHECK7: __Thumbv7ABSLongThunk_tfunc15:
+// CHECK7: <__Thumbv7ABSLongThunk_tfunc15>:
 // CHECK7-NEXT:  1400004:       ff f4 fc bf     b.w     #-3145736 <tfunc15>
-// CHECK7: __Thumbv7ABSLongThunk_tfunc16:
+// CHECK7: <__Thumbv7ABSLongThunk_tfunc16>:
 // CHECK7-NEXT:  1400008:       ff f5 fa bf     b.w     #-2097164 <tfunc16>
  FUNCTION 19
  FUNCTION 20
@@ -123,7 +123,7 @@ _start:
  FUNCTION 28
 // tfunc02 is > 16Mb away, expect range extension thunks in precreated thunk
 // section
-// CHECK8:  tfunc28:
+// CHECK8:  <tfunc28>:
 // CHECK8-NEXT:  1e00000:       70 47   bx      lr
 // CHECK8-NEXT:  1e00002:       00 f6 0d 90     b.w     #-14680038 <__Thumbv7ABSLongThunk_tfunc02>
 
@@ -136,7 +136,7 @@ _start:
  // precreated thunk section.
  bl tfunc15
  bl tfunc16
-// CHECK9: tfunc32:
+// CHECK9: <tfunc32>:
 // CHECK9:  2200000:    70 47   bx      lr
 // CHECK9-NEXT:  2200002:       ff f5 ff d7     bl      #-14680066
 // CHECK9-NEXT:  2200006:       ff f5 ff d7     bl      #-14680066
@@ -144,7 +144,7 @@ _start:
  FUNCTION 33
  bl tfunc15
  bl tfunc16
-// CHECK10: tfunc33:
+// CHECK10: <tfunc33>:
 // CHECK10:  2300000:   70 47   bx      lr
 // CHECK10-NEXT:  2300002:      ff f4 ff d7     bl      #-15728642
 // CHECK10-NEXT:  2300006:      ff f4 ff d7     bl      #-15728642

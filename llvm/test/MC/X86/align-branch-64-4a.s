@@ -1,7 +1,7 @@
 # Check only rets are aligned with option --x86-align-branch-boundary=32 --x86-align-branch=ret
 # RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown --x86-align-branch-boundary=32 --x86-align-branch=ret %s | llvm-objdump -d  - | FileCheck %s
 
-# CHECK: 0000000000000000 foo:
+# CHECK: 0000000000000000 <foo>:
 # CHECK-COUNT-3:      : 64 89 04 25 01 00 00 00          movl    %eax, %fs:1
 # CHECK-COUNT-2:      : 48 89 e5                         movq    %rsp, %rbp
 # CHECK:            1e: 5a                               popq    %rdx

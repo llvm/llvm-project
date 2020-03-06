@@ -63,7 +63,7 @@ _start:
 
 // CODE: Disassembly of section .text:
 // CODE-EMPTY:
-// CODE-NEXT: _start:
+// CODE-NEXT: <_start>:
 // S + A - P = 0x2303f0 + 0 - 0x21031c = 131284
 // CODE-NEXT:  21031c: adr  x1, #131284
 // Page(S + A) - Page(P) = Page(0x230400) - Page(0x210320) = 131072

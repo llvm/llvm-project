@@ -21,7 +21,7 @@
 # DIS: 00002000 g .text  00000000 __start
 # DIS:      Disassembly of section .text:
 # DIS-EMPTY:
-# DIS-NEXT: __start:
+# DIS-NEXT: <__start>:
 # DIS-NEXT:    lui   $8, 3
 # DIS-NEXT:    addi  $8, $8, 24560
 #                            ^-- (_gp - __start) & 0xffff

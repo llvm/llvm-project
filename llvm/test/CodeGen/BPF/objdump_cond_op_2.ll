@@ -8,7 +8,7 @@
 ; }
 
 define i32 @test(i32, i32) local_unnamed_addr #0 {
-; CHECK-LABEL: test:
+; CHECK-LABEL: <test>:
   %3 = icmp slt i32 %0, %1
   br i1 %3, label %4, label %13
 
@@ -16,7 +16,7 @@ define i32 @test(i32, i32) local_unnamed_addr #0 {
   br label %5
 ; CHECK: if r4 s>= r3 goto +11 <LBB0_3>
 ; CHECK: r0 = 0
-; CHECK-LABEL: LBB0_2:
+; CHECK-LABEL: <LBB0_2>:
 
 ; <label>:5:                                      ; preds = %4, %5
   %6 = phi i32 [ %9, %5 ], [ 0, %4 ]
@@ -33,7 +33,7 @@ define i32 @test(i32, i32) local_unnamed_addr #0 {
 ; <label>:13:                                     ; preds = %5, %2
   %14 = phi i32 [ 0, %2 ], [ %9, %5 ]
   ret i32 %14
-; CHECK-LABEL: LBB0_3:
+; CHECK-LABEL: <LBB0_3>:
 ; CHECK: exit
 }
 attributes #0 = { norecurse nounwind readnone }

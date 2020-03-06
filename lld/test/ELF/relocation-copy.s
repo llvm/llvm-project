@@ -56,7 +56,7 @@ movl $z, %edx
 // 16 is alignment here
 // CODE: Disassembly of section .text:
 // CODE-EMPTY:
-// CODE-NEXT: _start:
+// CODE-NEXT: <_start>:
 // CODE-NEXT:   movl $0x5, 0x203400
 // CODE-NEXT:   movl $0x7, 0x203410
 // CODE-NEXT:   movl $0x9, 0x203414

@@ -14,7 +14,7 @@
 
 # DISASM: Disassembly of section .text:
 # DISASM-EMPTY:
-# DISASM-NEXT: $x.0:
+# DISASM-NEXT: <$x.0>:
 # DISASM-NEXT:   1022c:       ldr     x8, #131176
 
 # SYM: Symbol table '.symtab'

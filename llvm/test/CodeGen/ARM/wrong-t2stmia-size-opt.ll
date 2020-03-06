@@ -20,5 +20,5 @@ define i32* @wrong-t2stmia-size-reduction(i32* %addr, i32 %val0, i32 %val1) mins
 
 ; Check that stm writes three registers.  The bug caused one of registers (LR,
 ; which invalid for Thumb1 form of STMIA instruction) to be dropped.
-; CHECK-LABEL: wrong-t2stmia-size-reduction:
+; CHECK-LABEL: <wrong-t2stmia-size-reduction>:
 ; CHECK: stm{{[^,]*}}, {{{.*,.*,.*}}}

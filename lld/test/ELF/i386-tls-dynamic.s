@@ -77,7 +77,7 @@ addl tls1@gotntpoff(%ebx),%eax
 
 # DIS:      Disassembly of section .text:
 # DIS-EMPTY:
-# DIS-NEXT: _start:
+# DIS-NEXT: <_start>:
 ## General dynamic model:
 ## -4128 and -4120 are first and second GOT entries offsets.
 ## Each one is a pair of records.

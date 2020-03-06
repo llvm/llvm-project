@@ -29,5 +29,5 @@ _start:
 
 // CHECK-PATCH:         12ffa:          nop.w
 // CHECK-PATCH-NEXT:    12ffe:          blx     #4
-// CHECK-PATCH:      00013004 __CortexA8657417_12FFE:
+// CHECK-PATCH:      00013004 <__CortexA8657417_12FFE>:
 // CHECK-PATCH-NEXT:    13004:          b       #-4104

@@ -21,17 +21,17 @@
 .option pop
   la a1, another_symbol
 
-# ASM-LABEL: .Lpcrel_hi0:
+# ASM-LABEL: .Lpcrel_hi0{{>?}}:
 # ASM-NEXT: auipc   a0, %pcrel_hi(a_symbol)
 # ASM-NEXT: addi    a0, a0, %pcrel_lo(.Lpcrel_hi0)
-# ASM-LABEL: .Lpcrel_hi1:
+# ASM-LABEL: .Lpcrel_hi1{{>?}}:
 # ASM-NEXT: auipc   a1, %pcrel_hi(another_symbol)
 # ASM-NEXT: addi    a1, a1, %pcrel_lo(.Lpcrel_hi1)
 
-# DISASM-LABEL: .Lpcrel_hi0:
+# DISASM-LABEL: <.Lpcrel_hi0>:
 # DISASM-NEXT: auipc   a0, 0
 # DISASM-NEXT: addi    a0, a0, 0
-# DISASM-LABEL:.Lpcrel_hi1:
+# DISASM-LABEL: <.Lpcrel_hi1>:
 # DISASM-NEXT: auipc   a1, 0
 # DISASM-NEXT: addi    a1, a1, 0
 
@@ -43,17 +43,17 @@
 2:auipc   a1, %pcrel_hi(another_symbol)
   addi    a1, a1, %pcrel_lo(2b)
 
-# ASM-LABEL: .Ltmp0:
+# ASM-LABEL: .Ltmp0{{>?}}:
 # ASM-NEXT: auipc   a0, %pcrel_hi(a_symbol)
 # ASM-NEXT: addi    a0, a0, %pcrel_lo(.Ltmp0)
-# ASM-LABEL: .Ltmp1:
+# ASM-LABEL: .Ltmp1{{>?}}:
 # ASM-NEXT: auipc   a1, %pcrel_hi(another_symbol)
 # ASM-NEXT: addi    a1, a1, %pcrel_lo(.Ltmp1)
 
-# DISASM-LABEL: .Ltmp0:
+# DISASM-LABEL: .Ltmp0{{>?}}:
 # DISASM-NEXT: auipc   a0, 0
 # DISASM-NEXT: addi    a0, a0, 0
-# DISASM-LABEL: .Ltmp1:
+# DISASM-LABEL: .Ltmp1{{>?}}:
 # DISASM-NEXT: auipc   a1, 0
 # DISASM-NEXT: addi    a1, a1, 0
 
@@ -66,19 +66,19 @@
 local_symbol1:
   nop
 
-# ASM-LABEL: .Lpcrel_hi2:
+# ASM-LABEL: .Lpcrel_hi2{{>?}}:
 # ASM-NEXT: auipc   a0, %pcrel_hi(a_symbol)
 # ASM-NEXT: addi    a0, a0, %pcrel_lo(.Lpcrel_hi2)
-# ASM-LABEL: .Lpcrel_hi3:
+# ASM-LABEL: .Lpcrel_hi3{{>?}}:
 # ASM-NEXT: auipc   a1, %pcrel_hi(local_symbol1)
 # ASM-NEXT: addi    a1, a1, %pcrel_lo(.Lpcrel_hi3)
 
-# DISASM-LABEL: .Lpcrel_hi2:
+# DISASM-LABEL: .Lpcrel_hi2{{>?}}:
 # DISASM-NEXT: auipc   a0, 0
 # DISASM-NEXT: addi    a0, a0, 0
 # DISASM-NORELAX-NEXT: auipc   a1, 0
 # DISASM-NORELAX-NEXT: addi    a1, a1, 8
-# DISASM-RELAX-LABEL: .Lpcrel_hi3:
+# DISASM-RELAX-LABEL: .Lpcrel_hi3{{>?}}:
 # DISASM-RELAX-NEXT: auipc   a1, 0
 # DISASM-RELAX-NEXT: addi    a1, a1, 0
 
@@ -93,18 +93,18 @@ local_symbol1:
 local_symbol2:
   nop
 
-# ASM-LABEL: .Ltmp2:
+# ASM-LABEL: .Ltmp2{{>?}}:
 # ASM-NEXT: auipc   a0, %pcrel_hi(a_symbol)
 # ASM-NEXT: addi    a0, a0, %pcrel_lo(.Ltmp2)
-# ASM-LABEL: .Ltmp3:
+# ASM-LABEL: .Ltmp3{{>?}}:
 # ASM-NEXT: auipc   a1, %pcrel_hi(local_symbol2)
 # ASM-NEXT: addi    a1, a1, %pcrel_lo(.Ltmp3)
 
-# DISASM-LABEL: .Ltmp2:
+# DISASM-LABEL: .Ltmp2{{>?}}:
 # DISASM-NEXT: auipc   a0, 0
 # DISASM-NEXT: addi    a0, a0, 0
 # DISASM-NORELAX-NEXT: auipc   a1, 0
 # DISASM-NORELAX-NEXT: addi    a1, a1, 8
-# DISASM-RELAX-LABEL: .Ltmp3:
+# DISASM-RELAX-LABEL: .Ltmp3{{>?}}:
 # DISASM-RELAX-NEXT: auipc   a1, 0
 # DISASM-RELAX-NEXT: addi    a1, a1, 0

@@ -67,7 +67,7 @@ c:
 
 // DIS:      Disassembly of section .text:
 // DIS-EMPTY:
-// DIS-NEXT: .text:
+// DIS-NEXT: <.text>:
 // DIS-NEXT:     1330: {{.+}} leaq    4457(%rip), %rdi
 // DIS-NEXT:           {{.+}} callq
 // DIS-NEXT:     133c: {{.+}} leaq    4445(%rip), %rdi

@@ -36,12 +36,12 @@ loc:
 
 # CHECK:      Disassembly of section .text:
 # CHECK-EMPTY:
-# CHECK-NEXT: __start:
+# CHECK-NEXT: <__start>:
 # CHECK-NEXT:    20100:  lui     $gp, 1
 #                                     ^-- 0x20100 - 0x28100
 #                                     ^-- 0 - 0xffff8000
 #                                     ^-- %hi(0x8000)
-# CHECK:      loc:
+# CHECK:      <loc>:
 # CHECK-NEXT:    20104:  daddiu  $gp, $gp, -32768
 #                                          ^-- 0x20100 - 0x28100
 #                                          ^-- 0 - 0xffff8000

@@ -36,7 +36,7 @@ _start:
 
 // CHECK: Disassembly of section .text:
 // CHECK-EMPTY:
-// CHECK-NEXT: 0000000010010120 _start:
+// CHECK-NEXT: 0000000010010120 <_start>:
 // CHECK-NEXT: 10010120: b       #4
 // CHECK-NEXT: 10010124: bl      #4
 // CHECK-NEXT: 10010128: b.eq    #4

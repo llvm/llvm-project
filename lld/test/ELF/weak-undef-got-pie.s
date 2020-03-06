@@ -17,6 +17,6 @@
 
 .globl _start
 _start:
-# DISASM: _start:
+# DISASM: <_start>:
 # DISASM-NEXT: movq {{.*}}(%rip), %rax
 mov foo@gotpcrel(%rip), %rax

@@ -20,7 +20,7 @@
 // 0x2023B0 - (2012e1+7) = 4296
 // DISASM:      Disassembly of section .text:
 // DISASM-EMPTY:
-// DISASM-NEXT: _start:
+// DISASM-NEXT: <_start>:
 // DISASM-NEXT:               movq %fs:0, %rax
 // DISASM-NEXT: 2012d1:       addq 4304(%rip), %rax
 // DISASM-NEXT:               movq %fs:0, %rax

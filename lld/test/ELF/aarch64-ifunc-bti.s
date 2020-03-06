@@ -11,7 +11,7 @@
 # we must use bti c.
 
 # CHECK: Disassembly of section .plt:
-# CHECK: 0000000000010380 .plt:
+# CHECK: 0000000000010380 <.plt>:
 # CHECK-NEXT:    10380:         bti     c
 # CHECK-NEXT:                   stp     x16, x30, [sp, #-16]!
 # CHECK-NEXT:                   adrp    x16, #131072
@@ -20,7 +20,7 @@
 # CHECK-NEXT:                   br      x17
 # CHECK-NEXT:                   nop
 # CHECK-NEXT:                   nop
-# CHECK: 00000000000103a0 func1@plt:
+# CHECK: 00000000000103a0 <func1@plt>:
 # CHECK-NEXT:    103a0:         bti     c
 # CHECK-NEXT:                   adrp    x16, #131072
 # CHECK-NEXT:                   ldr     x17, [x16, #1280]
@@ -30,7 +30,7 @@
 # CHECK-EMPTY:
 # CHECK: Disassembly of section .iplt:
 # CHECK-EMPTY:
-# CHECK-NEXT: 00000000000103c0 myfunc:
+# CHECK-NEXT: 00000000000103c0 <myfunc>:
 # CHECK-NEXT:    103c0:         bti     c
 # CHECK-NEXT:                   adrp    x16, #131072
 # CHECK-NEXT:                   ldr     x17, [x16, #1288]

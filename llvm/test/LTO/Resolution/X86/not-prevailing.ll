@@ -4,7 +4,7 @@
 ; RUN:   -r %t2.o,bar,x -save-temps
 
 ; Check that 'foo' and 'bar' were not inlined.
-; CHECK:      zed:
+; CHECK:      <zed>:
 ; CHECK-NEXT:  {{.*}}  pushq   %rbx
 ; CHECK-NEXT:  {{.*}}  callq   0 <zed+0x6>
 ; CHECK-NEXT:  {{.*}}  movl    %eax, %ebx

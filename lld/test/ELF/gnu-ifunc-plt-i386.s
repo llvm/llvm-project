@@ -32,11 +32,11 @@
 // Check that a PLT header is written and the ifunc entries appear last
 // DISASM: Disassembly of section .text:
 // DISASM-EMPTY:
-// DISASM-NEXT: foo:
+// DISASM-NEXT: <foo>:
 // DISASM-NEXT:    4011b4:       retl
-// DISASM:      bar:
+// DISASM:      <bar>:
 // DISASM-NEXT:    4011b5:       retl
-// DISASM:      _start:
+// DISASM:      <_start>:
 // DISASM-NEXT:    4011b6:       calll   69 <zed2+0x401200>
 // DISASM-NEXT:                  calll   80 <zed2+0x401210>
 // DISASM-NEXT:                  calll   27 <bar2@plt>
@@ -44,7 +44,7 @@
 // DISASM-EMPTY:
 // DISASM-NEXT: Disassembly of section .plt:
 // DISASM-EMPTY:
-// DISASM-NEXT: .plt:
+// DISASM-NEXT: <.plt>:
 // DISASM-NEXT:    4011d0:       pushl   4207260
 // DISASM-NEXT:                  jmpl    *4207264
 // DISASM-NEXT:                  nop
@@ -52,19 +52,19 @@
 // DISASM-NEXT:                  nop
 // DISASM-NEXT:                  nop
 // DISASM-EMPTY:
-// DISASM-NEXT:   bar2@plt:
+// DISASM-NEXT:   <bar2@plt>:
 // DISASM-NEXT:    4011e0:       jmpl    *4207268
 // DISASM-NEXT:                  pushl   $0
 // DISASM-NEXT:                  jmp     -32 <.plt>
 // DISASM-EMPTY:
-// DISASM-NEXT:   zed2@plt:
+// DISASM-NEXT:   <zed2@plt>:
 // DISASM-NEXT:    4011f0:       jmpl    *4207272
 // DISASM-NEXT:                  pushl   $8
 // DISASM-NEXT:                  jmp     -48 <.plt>
 // DISASM-EMPTY:
 // DISASM-NEXT: Disassembly of section .iplt:
 // DISASM-EMPTY:
-// DISASM-NEXT: .iplt:
+// DISASM-NEXT: <.iplt>:
 // DISASM-NEXT:                  jmpl    *4207276
 // DISASM-NEXT:                  pushl   $0
 // DISASM-NEXT:                  jmp     -64 <.plt>

@@ -42,7 +42,7 @@ needsplt:
         .section .text.07, "ax", %progbits
         .space (1024 * 1024)
 // 0x70000c + 8 + 0x60002c = 0xd00040 = preemptible@plt
-// CHECK: 0070000c __ARMV5PILongThunk_preemptible:
+// CHECK: 0070000c <__ARMV5PILongThunk_preemptible>:
 // CHECK-NEXT:   70000c:        0b 00 18 ea     b       #6291500
 
         .section .text.08, "ax", %progbits
@@ -71,25 +71,25 @@ preemptible2:
 
 // CHECK-PLT: Disassembly of section .plt:
 // CHECK-PLT-EMPTY:
-// CHECK-PLT-NEXT: 00d00020 $a:
+// CHECK-PLT-NEXT: 00d00020 <$a>:
 // CHECK-PLT-NEXT:   d00020:    04 e0 2d e5     str     lr, [sp, #-4]!
 // CHECK-PLT-NEXT:   d00024:    00 e6 8f e2     add     lr, pc, #0, #12
 // CHECK-PLT-NEXT:   d00028:    02 ea 8e e2     add     lr, lr, #8192
 // CHECK-PLT-NEXT:   d0002c:    94 f0 be e5     ldr     pc, [lr, #148]!
-// CHECK-PLT: 00d00030 $d:
+// CHECK-PLT: 00d00030 <$d>:
 // CHECK-PLT-NEXT:   d00030:    d4 d4 d4 d4     .word   0xd4d4d4d4
 // CHECK-PLT-NEXT:   d00034:    d4 d4 d4 d4     .word   0xd4d4d4d4
 // CHECK-PLT-NEXT:   d00038:    d4 d4 d4 d4     .word   0xd4d4d4d4
 // CHECK-PLT-NEXT:   d0003c:    d4 d4 d4 d4     .word   0xd4d4d4d4
-// CHECK-PLT: 00d00040 $a:
+// CHECK-PLT: 00d00040 <$a>:
 // CHECK-PLT-NEXT:   d00040:    00 c6 8f e2     add     r12, pc, #0, #12
 // CHECK-PLT-NEXT:   d00044:    02 ca 8c e2     add     r12, r12, #8192
 // CHECK-PLT-NEXT:   d00048:    7c f0 bc e5     ldr     pc, [r12, #124]!
-// CHECK-PLT: 00d0004c $d:
+// CHECK-PLT: 00d0004c <$d>:
 // CHECK-PLT-NEXT:   d0004c:    d4 d4 d4 d4     .word   0xd4d4d4d4
-// CHECK-PLT: 00d00050 $a:
+// CHECK-PLT: 00d00050 <$a>:
 // CHECK-PLT-NEXT:   d00050:    00 c6 8f e2     add     r12, pc, #0, #12
 // CHECK-PLT-NEXT:   d00054:    02 ca 8c e2     add     r12, r12, #8192
 // CHECK-PLT-NEXT:   d00058:    70 f0 bc e5     ldr     pc, [r12, #112]!
-// CHECK-PLT: 00d0005c $d:
+// CHECK-PLT: 00d0005c <$d>:
 // CHECK-PLT-NEXT:   d0005c:    d4 d4 d4 d4     .word   0xd4d4d4d4

@@ -11,8 +11,8 @@
   # In the first test, we have a label which is expected to be bound to the
   # start of the call.  For instance, we want to associate a fault on the call
   # target with some bit of higher level sementic.
-  # CHECK: labeled_call_test1:
-  # CHECK: 1f label_before
+  # CHECK-LABEL: <labeled_call_test1>:
+  # CHECK: 1f <label_before>:
   # CHECK: 1f: nop
   # CHECK: 20: callq
   .globl  labeled_call_test1
@@ -27,10 +27,10 @@ label_before:
   # In the second test, we have a label which is expected to be bound to the
   # end of the call.  For instance, we want the to associate some data with
   # the return address of the call.
-  # CHECK: labeled_call_test2:
+  # CHECK-LABEL: <labeled_call_test2>:
   # CHECK: 5a: callq
   # CHECK: 5f: nop
-  # CHECK: 60 label_after
+  # CHECK: 60 <label_after>:
   # CHECK: 60: jmp
   .globl  labeled_call_test2
   .p2align  5
@@ -45,8 +45,8 @@ label_after:
   # Our third test is like the first w/a labeled fault, but specifically to
   # a fused memory comparison.  This is the form produced by implicit null
   # checks for instance.
-  # CHECK: implicit_null_check:
-  # CHECK: 9f fault_addr
+  # CHECK-LABEL: <implicit_null_check>:
+  # CHECK: 9f <fault_addr>:
   # CHECK: 9f: nop
   # CHECK: a0: cmpq
   .globl  implicit_null_check

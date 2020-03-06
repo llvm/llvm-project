@@ -136,7 +136,7 @@ _start:
 // CHECK-NEXT:   Section: .preinit_array
 // CHECK-NEXT: }
 
-// DISASM:      _start:
+// DISASM:      <_start>:
 // DISASM-NEXT:   callq   {{.*}} <__preinit_array_start>
 // DISASM-NEXT:   callq   {{.*}} <__fini_array_start>
 // DISASM-NEXT:   callq   {{.*}} <__init_array_start>

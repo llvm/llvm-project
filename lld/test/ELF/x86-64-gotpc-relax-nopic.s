@@ -15,7 +15,7 @@
 ## 2105751 = 0x202197 (bar)
 # DISASM:      Disassembly of section .text:
 # DISASM-EMPTY:
-# DISASM-NEXT: _start:
+# DISASM-NEXT: <_start>:
 # DISASM-NEXT:   201158:       adcq  $2105751, %rax
 # DISASM-NEXT:                 addq  $2105751, %rbx
 # DISASM-NEXT:                 andq  $2105751, %rcx
@@ -57,7 +57,7 @@
 ##     0x102a + 4207 + 7 = 0x20A0
 # DISASM-PIC:      Disassembly of section .text:
 # DISASM-PIC-EMPTY:
-# DISASM-PIC-NEXT: _start:
+# DISASM-PIC-NEXT: <_start>:
 # DISASM-PIC-NEXT: 1268:       adcq  4313(%rip), %rax
 # DISASM-PIC-NEXT:             addq  4306(%rip), %rbx
 # DISASM-PIC-NEXT:             andq  4299(%rip), %rcx

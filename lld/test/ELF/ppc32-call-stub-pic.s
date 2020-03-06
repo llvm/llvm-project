@@ -32,7 +32,7 @@
 # DYN: PPC_GOT 0x20368
 
 ## .got2+0x8000-0x10004 = 0x30000+0x8000-0x10004 = 65536*2+32764
-# CHECK-LABEL: _start:
+# CHECK-LABEL: <_start>:
 # CHECK-NEXT:         bcl 20, 31, .+4
 # PIE-NEXT:    10210: mflr 30
 # PIE-NEXT:           addis 30, 30, 3
@@ -59,13 +59,13 @@
 # CHECK-EMPTY:
 
 ## -fPIC call stubs of f and g.
-# CHECK-NEXT:  00008000.got2.plt_pic32.f:
+# CHECK-NEXT:  <00008000.got2.plt_pic32.f>:
 # CHECK-NEXT:    lwz 11, 32760(30)
 # CHECK-NEXT:    mtctr 11
 # CHECK-NEXT:    bctr
 # CHECK-NEXT:    nop
 # CHECK-EMPTY:
-# CHECK-NEXT:  00008000.got2.plt_pic32.g:
+# CHECK-NEXT:  <00008000.got2.plt_pic32.g>:
 # CHECK-NEXT:    lwz 11, 32764(30)
 # CHECK-NEXT:    mtctr 11
 # CHECK-NEXT:    bctr
@@ -73,7 +73,7 @@
 # CHECK-EMPTY:
 
 ## The -fPIC call stub of h needs two instructions addis+lwz to represent the offset 65536*1-32768.
-# CHECK-NEXT:  00008000.got2.plt_pic32.h:
+# CHECK-NEXT:  <00008000.got2.plt_pic32.h>:
 # CHECK-NEXT:    addis 11, 30, 1
 # CHECK-NEXT:    lwz 11, -32768(11)
 # CHECK-NEXT:    mtctr 11
@@ -81,7 +81,7 @@
 # CHECK-EMPTY:
 
 ## -fpic call stub of f.
-# CHECK-NEXT:  00000000.plt_pic32.f:
+# CHECK-NEXT:  <00000000.plt_pic32.f>:
 # CHECK-NEXT:    addis 11, 30, 2
 # CHECK-NEXT:    lwz 11, 4(11)
 # CHECK-NEXT:    mtctr 11
@@ -91,14 +91,14 @@
 ## Another -fPIC call stub of f from another object file %t2.o
 ## .got2 may have different addresses in different object files,
 ## so the call stub cannot be shared.
-# CHECK-NEXT:  00008000.got2.plt_pic32.f:
+# CHECK-NEXT:  <00008000.got2.plt_pic32.f>:
 
 ## In Secure PLT ABI, .plt stores function pointers to first instructions of .glink
 # HEX: 0x0004036c 00010294 00010298 0001029c
 
 ## These instructions are referenced by .plt entries.
-# PIE:    00010294 .glink:
-# SHARED: 000102b4 .glink:
+# PIE:    00010294 <.glink>:
+# SHARED: 000102b4 <.glink>:
 # CHECK-NEXT: b .+12
 # CHECK-NEXT: b .+8
 # CHECK-NEXT: b .+4
