@@ -1917,6 +1917,12 @@ Instruction *InstCombiner::visitSub(BinaryOperator &I) {
       return NewSel;
   }
 
+  // (X - (X & Y))   -->   (X & ~Y)
+  if (match(Op1, m_c_And(m_Specific(Op0), m_Value(Y))) &&
+      (Op1->hasOneUse() || isa<Constant>(Y)))
+    return BinaryOperator::CreateAnd(
+        Op0, Builder.CreateNot(Y, Y->getName() + ".not"));
+
   if (Op1->hasOneUse()) {
     Value *Y = nullptr, *Z = nullptr;
     Constant *C = nullptr;
@@ -1925,11 +1931,6 @@ Instruction *InstCombiner::visitSub(BinaryOperator &I) {
     if (match(Op1, m_Sub(m_Value(Y), m_Value(Z))))
       return BinaryOperator::CreateAdd(Op0,
                                       Builder.CreateSub(Z, Y, Op1->getName()));
-
-    // (X - (X & Y))   -->   (X & ~Y)
-    if (match(Op1, m_c_And(m_Value(Y), m_Specific(Op0))))
-      return BinaryOperator::CreateAnd(Op0,
-                                  Builder.CreateNot(Y, Y->getName() + ".not"));
 
     // Subtracting -1/0 is the same as adding 1/0:
     // sub [nsw] Op0, sext(bool Y) -> add [nsw] Op0, zext(bool Y)
