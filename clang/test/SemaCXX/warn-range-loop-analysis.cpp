@@ -71,17 +71,17 @@ void test0() {
   Container<Bar&> bar_container;
 
   for (const int &x : int_non_ref_container) {}
-  // expected-warning@-1 {{loop variable 'x' is always a copy because the range of type 'Container<int>' does not return a reference}}
+  // expected-warning@-1 {{loop variable 'x' binds to a temporary value produced by a range of type 'Container<int>'}}
   // expected-note@-2 {{use non-reference type 'int'}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:18-[[@LINE-3]]:19}:""
 
   for (const double &x : int_container) {}
-  // expected-warning@-1 {{loop variable 'x' has type 'const double &' but is initialized with type 'int' resulting in a copy}}
-  // expected-note@-2 {{use non-reference type 'double' to keep the copy or type 'const int &' to prevent copying}}
+  // expected-warning@-1 {{loop variable 'x' of type 'const double &' binds to a temporary constructed from type 'int &'}}
+  // expected-note@-2 {{use non-reference type 'double' to make construction explicit or type 'const int &' to prevent copying}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:21-[[@LINE-3]]:22}:""
 
   for (const Bar x : bar_container) {}
-  // expected-warning@-1 {{loop variable 'x' of type 'const Bar' creates a copy from type 'const Bar'}}
+  // expected-warning@-1 {{loop variable 'x' creates a copy from type 'const Bar'}}
   // expected-note@-2 {{use reference type 'const Bar &' to prevent copying}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:18-[[@LINE-3]]:18}:"&"
 }
@@ -92,7 +92,7 @@ void test1() {
   for (const int &&x : A) {}
   // No warning, rvalue-reference to the temporary
   for (const int &x : A) {}
-  // expected-warning@-1 {{always a copy}}
+  // expected-warning@-1 {{binds to a temporary value produced by a range}}
   // expected-note@-2 {{'int'}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:18-[[@LINE-3]]:19}:""
   for (const int x : A) {}
@@ -107,7 +107,7 @@ void test1() {
   for (const double &&x : A) {}
   // No warning, rvalue-reference to the temporary
   for (const double &x : A) {}
-  // expected-warning@-1 {{always a copy}}
+  // expected-warning@-1 {{binds to a temporary value produced by a range}}
   // expected-note@-2 {{'double'}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:21-[[@LINE-3]]:22}:""
   for (const double x : A) {}
@@ -122,7 +122,7 @@ void test1() {
   for (const Bar &&x : A) {}
   // No warning, rvalue-reference to the temporary
   for (const Bar &x : A) {}
-  // expected-warning@-1 {{always a copy}}
+  // expected-warning@-1 {{binds to a temporary value produced by a range}}
   // expected-note@-2 {{'Bar'}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:18-[[@LINE-3]]:19}:""
   for (const Bar x : A) {}
@@ -152,16 +152,16 @@ void test2() {
   // No warning
 
   for (const double &&x : B) {}
-  // expected-warning@-1 {{resulting in a copy}}
+  // expected-warning@-1 {{binds to a temporary constructed from}}
   // expected-note-re@-2 {{'double'{{.*}}'const int &'}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:21-[[@LINE-3]]:23}:""
   for (const double &x : B) {}
-  // expected-warning@-1 {{resulting in a copy}}
+  // expected-warning@-1 {{binds to a temporary constructed from}}
   // expected-note-re@-2 {{'double'{{.*}}'const int &'}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:21-[[@LINE-3]]:22}:""
   for (const double x : B) {}
   for (double &&x : B) {}
-  // expected-warning@-1 {{resulting in a copy}}
+  // expected-warning@-1 {{binds to a temporary constructed from}}
   // expected-note-re@-2 {{'double'{{.*}}'const int &'}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:15-[[@LINE-3]]:17}:""
   //for (double &x : B) {}
@@ -170,16 +170,16 @@ void test2() {
   // No warning
 
   for (const Bar &&x : B) {}
-  // expected-warning@-1 {{resulting in a copy}}
+  // expected-warning@-1 {{binds to a temporary constructed from}}
   // expected-note@-2 {{'Bar'}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:18-[[@LINE-3]]:20}:""
   for (const Bar &x : B) {}
-  // expected-warning@-1 {{resulting in a copy}}
+  // expected-warning@-1 {{binds to a temporary constructed from}}
   // expected-note@-2 {{'Bar'}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:18-[[@LINE-3]]:19}:""
   for (const Bar x : B) {}
   for (Bar &&x : B) {}
-  // expected-warning@-1 {{resulting in a copy}}
+  // expected-warning@-1 {{binds to a temporary constructed from}}
   // expected-note@-2 {{'Bar'}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:12-[[@LINE-3]]:14}:""
   //for (Bar &x : B) {}
@@ -194,7 +194,7 @@ void test3() {
   for (const Bar &&x : C) {}
   // No warning, rvalue-reference to the temporary
   for (const Bar &x : C) {}
-  // expected-warning@-1 {{always a copy}}
+  // expected-warning@-1 {{binds to a temporary value produced by a range}}
   // expected-note@-2 {{'Bar'}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:18-[[@LINE-3]]:19}:""
   for (const Bar x : C) {}
@@ -209,7 +209,7 @@ void test3() {
   for (const int &&x : C) {}
   // No warning, rvalue-reference to the temporary
   for (const int &x : C) {}
-  // expected-warning@-1 {{always a copy}}
+  // expected-warning@-1 {{binds to a temporary value produced by a range}}
   // expected-note@-2 {{'int'}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:18-[[@LINE-3]]:19}:""
   for (const int x : C) {}
@@ -241,17 +241,17 @@ void test4() {
   // No warning
 
   for (const int &&x : D) {}
-  // expected-warning@-1 {{resulting in a copy}}
+  // expected-warning@-1 {{binds to a temporary constructed from}}
   // expected-note-re@-2 {{'int'{{.*}}'const Bar &'}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:18-[[@LINE-3]]:20}:""
   for (const int &x : D) {}
-  // expected-warning@-1 {{resulting in a copy}}
+  // expected-warning@-1 {{binds to a temporary constructed from}}
   // expected-note-re@-2 {{'int'{{.*}}'const Bar &'}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:18-[[@LINE-3]]:19}:""
   for (const int x : D) {}
   // No warning
   for (int &&x : D) {}
-  // expected-warning@-1 {{resulting in a copy}}
+  // expected-warning@-1 {{binds to a temporary constructed from}}
   // expected-note-re@-2 {{'int'{{.*}}'const Bar &'}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:12-[[@LINE-3]]:14}:""
   //for (int &x : D) {}
@@ -266,7 +266,7 @@ void test5() {
   for (const Bar &&x : E) {}
   // No warning, rvalue-reference to the temporary
   for (const Bar &x : E) {}
-  // expected-warning@-1 {{always a copy}}
+  // expected-warning@-1 {{binds to a temporary value produced by a range}}
   // expected-note@-2 {{'Bar'}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:18-[[@LINE-3]]:19}:""
   for (const Bar x : E) {}
@@ -283,17 +283,17 @@ void test6() {
   Container<Foo&> F;
 
   for (const Bar &&x : F) {}
-  // expected-warning@-1 {{resulting in a copy}}
+  // expected-warning@-1 {{binds to a temporary constructed from}}
   // expected-note-re@-2 {{'Bar'{{.*}}'const Foo &'}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:18-[[@LINE-3]]:20}:""
   for (const Bar &x : F) {}
-  // expected-warning@-1 {{resulting in a copy}}
+  // expected-warning@-1 {{binds to a temporary constructed from}}
   // expected-note-re@-2 {{'Bar'{{.*}}'const Foo &'}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:18-[[@LINE-3]]:19}:""
   for (const Bar x : F) {}
   // No warning.
   for (Bar &&x : F) {}
-  // expected-warning@-1 {{resulting in a copy}}
+  // expected-warning@-1 {{binds to a temporary constructed from}}
   // expected-note-re@-2 {{'Bar'{{.*}}'const Foo &'}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:12-[[@LINE-3]]:14}:""
   //for (Bar &x : F) {}
@@ -319,17 +319,17 @@ void test7() {
   // No warning
 
   for (const int &&x : G) {}
-  // expected-warning@-1 {{resulting in a copy}}
+  // expected-warning@-1 {{binds to a temporary constructed from}}
   // expected-note-re@-2 {{'int'{{.*}}'const double &'}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:18-[[@LINE-3]]:20}:""
   for (const int &x : G) {}
-  // expected-warning@-1 {{resulting in a copy}}
+  // expected-warning@-1 {{binds to a temporary constructed from}}
   // expected-note-re@-2 {{'int'{{.*}}'const double &'}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:18-[[@LINE-3]]:19}:""
   for (const int x : G) {}
   // No warning
   for (int &&x : G) {}
-  // expected-warning@-1 {{resulting in a copy}}
+  // expected-warning@-1 {{binds to a temporary constructed from}}
   // expected-note-re@-2 {{'int'{{.*}}'const double &'}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:12-[[@LINE-3]]:14}:""
   //for (int &x : G) {}
@@ -338,17 +338,17 @@ void test7() {
   // No warning
 
   for (const Bar &&x : G) {}
-  // expected-warning@-1 {{resulting in a copy}}
+  // expected-warning@-1 {{binds to a temporary constructed from}}
   // expected-note-re@-2 {{'Bar'{{.*}}'const double &'}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:18-[[@LINE-3]]:20}:""
   for (const Bar &x : G) {}
-  // expected-warning@-1 {{resulting in a copy}}
+  // expected-warning@-1 {{binds to a temporary constructed from}}
   // expected-note-re@-2 {{'Bar'{{.*}}'const double &'}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:18-[[@LINE-3]]:19}:""
   for (const Bar x : G) {}
   // No warning
   for (Bar &&x : G) {}
-  // expected-warning@-1 {{resulting in a copy}}
+  // expected-warning@-1 {{binds to a temporary constructed from}}
   // expected-note-re@-2 {{'Bar'{{.*}}'const double &'}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:12-[[@LINE-3]]:14}:""
   //for (Bar &x : G) {}
@@ -374,17 +374,17 @@ void test8() {
   // No warning
 
   for (const Bar &&x : H) {}
-  // expected-warning@-1 {{resulting in a copy}}
+  // expected-warning@-1 {{binds to a temporary constructed from}}
   // expected-note-re@-2 {{'Bar'{{.*}}'const Foo &'}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:18-[[@LINE-3]]:20}:""
   for (const Bar &x : H) {}
-  // expected-warning@-1 {{resulting in a copy}}
+  // expected-warning@-1 {{binds to a temporary constructed from}}
   // expected-note-re@-2 {{'Bar'{{.*}}'const Foo &'}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:18-[[@LINE-3]]:19}:""
   for (const Bar x : H) {}
   // No warning
   for (Bar &&x: H) {}
-  // expected-warning@-1 {{resulting in a copy}}
+  // expected-warning@-1 {{binds to a temporary constructed from}}
   // expected-note-re@-2 {{'Bar'{{.*}}'const Foo &'}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:12-[[@LINE-3]]:14}:""
   //for (Bar &x: H) {}
@@ -412,17 +412,17 @@ void test9() {
   // No warning
 
   for (const int &&x : I) {}
-  // expected-warning@-1 {{resulting in a copy}}
+  // expected-warning@-1 {{binds to a temporary constructed from}}
   // expected-note-re@-2 {{'int'{{.*}}'const Bar &'}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:18-[[@LINE-3]]:20}:""
   for (const int &x : I) {}
-  // expected-warning@-1 {{resulting in a copy}}
+  // expected-warning@-1 {{binds to a temporary constructed from}}
   // expected-note-re@-2 {{'int'{{.*}}'const Bar &'}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:18-[[@LINE-3]]:19}:""
   for (const int x : I) {}
   // No warning
   for (int &&x : I) {}
-  // expected-warning@-1 {{resulting in a copy}}
+  // expected-warning@-1 {{binds to a temporary constructed from}}
   // expected-note-re@-2 {{'int'{{.*}}'const Bar &'}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:12-[[@LINE-3]]:14}:""
   //for (int &x : I) {}
@@ -435,22 +435,22 @@ void test10() {
   Container<Bar> C;
 
   for (const Bar &x : C) {}
-  // expected-warning@-1 {{always a copy}}
+  // expected-warning@-1 {{binds to a temporary value produced by a range}}
   // expected-note@-2 {{'Bar'}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:18-[[@LINE-3]]:19}:""
 
   for (const Bar& x : C) {}
-  // expected-warning@-1 {{always a copy}}
+  // expected-warning@-1 {{binds to a temporary value produced by a range}}
   // expected-note@-2 {{'Bar'}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:17-[[@LINE-3]]:18}:""
 
   for (const Bar & x : C) {}
-  // expected-warning@-1 {{always a copy}}
+  // expected-warning@-1 {{binds to a temporary value produced by a range}}
   // expected-note@-2 {{'Bar'}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:18-[[@LINE-3]]:20}:""
 
   for (const Bar&x : C) {}
-  // expected-warning@-1 {{always a copy}}
+  // expected-warning@-1 {{binds to a temporary value produced by a range}}
   // expected-note@-2 {{'Bar'}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:17-[[@LINE-3]]:18}:" "
 }
@@ -461,7 +461,7 @@ void test_template_function() {
   // loops with dependent types.
   Container<Bar> C;
   for (const Bar &x : C) {}
-  // expected-warning@-1 {{always a copy}}
+  // expected-warning@-1 {{binds to a temporary value produced by a range}}
   // expected-note@-2 {{'Bar'}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:18-[[@LINE-3]]:19}:""
 
@@ -475,7 +475,7 @@ struct test_template_struct {
   static void static_member() {
     Container<Bar> C;
     for (const Bar &x : C) {}
-    // expected-warning@-1 {{always a copy}}
+    // expected-warning@-1 {{binds to a temporary value produced by a range}}
     // expected-note@-2 {{'Bar'}}
     // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:20-[[@LINE-3]]:21}:""
 
@@ -486,7 +486,7 @@ struct test_template_struct {
   void member() {
     Container<Bar> C;
     for (const Bar &x : C) {}
-    // expected-warning@-1 {{always a copy}}
+    // expected-warning@-1 {{binds to a temporary value produced by a range}}
     // expected-note@-2 {{'Bar'}}
     // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:20-[[@LINE-3]]:21}:""
 
@@ -500,7 +500,7 @@ struct test_struct_with_templated_member {
   void member() {
     Container<Bar> C;
     for (const Bar &x : C) {}
-    // expected-warning@-1 {{always a copy}}
+    // expected-warning@-1 {{binds to a temporary value produced by a range}}
     // expected-note@-2 {{'Bar'}}
     // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:20-[[@LINE-3]]:21}:""
   }
@@ -509,7 +509,7 @@ struct test_struct_with_templated_member {
   void template_member() {
     Container<Bar> C;
     for (const Bar &x : C) {}
-    // expected-warning@-1 {{always a copy}}
+    // expected-warning@-1 {{binds to a temporary value produced by a range}}
     // expected-note@-2 {{'Bar'}}
     // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:20-[[@LINE-3]]:21}:""
 
