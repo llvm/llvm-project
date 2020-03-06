@@ -1842,6 +1842,8 @@ void CommandInterpreter::HandleCompletionMatches(CompletionRequest &request) {
 
 void CommandInterpreter::HandleCompletion(CompletionRequest &request) {
 
+  UpdateExecutionContext(nullptr);
+
   // Don't complete comments, and if the line we are completing is just the
   // history repeat character, substitute the appropriate history line.
   llvm::StringRef first_arg = request.GetParsedLine().GetArgumentAtIndex(0);
