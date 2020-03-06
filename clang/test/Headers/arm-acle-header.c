@@ -6,6 +6,7 @@
 // RUN: %clang_cc1 -x c++ -triple thumbv7-windows -target-cpu cortex-a15 -fsyntax-only -ffreestanding %s
 // RUN: %clang_cc1 -x c++ -triple thumbv7-windows -target-cpu cortex-a15 -fsyntax-only -ffreestanding -fms-extensions -fms-compatibility -fms-compatibility-version=19.11 %s
 // RUN: %clang_cc1 -x c++ -triple aarch64-windows -target-cpu cortex-a53 -fsyntax-only -ffreestanding -fms-extensions -fms-compatibility -fms-compatibility-version=19.11 %s
+// RUN: %clang_cc1 -x c++ -triple arm64-apple-ios -target-cpu apple-a7 -fsyntax-only -ffreestanding -fms-extensions %s
 // expected-no-diagnostics
 
 #include <arm_acle.h>
