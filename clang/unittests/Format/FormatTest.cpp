@@ -556,6 +556,30 @@ TEST_F(FormatTest, FormatLoopsWithoutCompoundStatement) {
   verifyFormat("for (;;) /* still don't merge */\n"
                "  continue;",
                AllowsMergedLoops);
+  verifyFormat("do a++;\n"
+               "while (true);",
+               AllowsMergedLoops);
+  verifyFormat("do /* Don't merge */\n"
+               "  a++;\n"
+               "while (true);",
+               AllowsMergedLoops);
+  verifyFormat("do // Don't merge\n"
+               "  a++;\n"
+               "while (true);",
+               AllowsMergedLoops);
+  verifyFormat("do\n"
+               "  // Don't merge\n"
+               "  a++;\n"
+               "while (true);",
+               AllowsMergedLoops);
+  // Without braces labels are interpreted differently.
+  verifyFormat("{\n"
+               "  do\n"
+               "  label:\n"
+               "    a++;\n"
+               "  while (true);\n"
+               "}",
+               AllowsMergedLoops);
 }
 
 TEST_F(FormatTest, FormatShortBracedStatements) {
