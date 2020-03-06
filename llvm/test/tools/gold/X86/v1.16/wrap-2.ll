@@ -21,12 +21,12 @@
 ; Make sure that calls in foo() are not eliminated and that bar is
 ; routed to __wrap_bar and __real_bar is routed to bar.
 
-; CHECK:      foo:
+; CHECK:      <foo>:
 ; CHECK-NEXT: pushq	%rax
 ; CHECK-NEXT: callq{{.*}}<__wrap_bar>
 ; CHECK-NEXT: callq{{.*}}<bar>
 
-; THIN:      foo:
+; THIN:      <foo>:
 ; THIN-NEXT: pushq	%rax
 ; THIN-NEXT: callq{{.*}}<__wrap_bar>
 ; THIN-NEXT: popq  %rax
