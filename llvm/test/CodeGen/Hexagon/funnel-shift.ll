@@ -256,6 +256,22 @@ b0:
   ret i64 %v0
 }
 
+; CHECK-LABEL: f30:
+; CHECK: r[[R00:[0-9]+]] = combine(r0.h,r1.l)
+define i32 @f30(i32 %a0, i32 %a1) #1 {
+b0:
+  %v0 = tail call i32 @llvm.fshl.i32(i32 %a0, i32 %a1, i32 16)
+  ret i32 %v0
+}
+
+; CHECK-LABEL: f31:
+; CHECK: r[[R00:[0-9]+]] = combine(r0.h,r1.l)
+define i32 @f31(i32 %a0, i32 %a1) #1 {
+b0:
+  %v0 = tail call i32 @llvm.fshr.i32(i32 %a0, i32 %a1, i32 16)
+  ret i32 %v0
+}
+
 declare i32 @llvm.fshl.i32(i32, i32, i32) #0
 declare i32 @llvm.fshr.i32(i32, i32, i32) #0
 declare i64 @llvm.fshl.i64(i64, i64, i64) #0
