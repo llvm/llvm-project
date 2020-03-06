@@ -1131,6 +1131,20 @@ bool GDBRemoteCommunicationClient::GetDefaultThreadId(lldb::tid_t &tid) {
   return true;
 }
 
+static void ParseOSType(llvm::StringRef value, std::string &os_name,
+                        std::string &environment) {
+  if (value.equals("iossimulator") || value.equals("tvossimulator") ||
+      value.equals("watchossimulator")) {
+    environment = "simulator";
+    os_name = value.drop_back(environment.size()).str();
+  } else if (value.equals("maccatalyst")) {
+    os_name = "ios";
+    environment = "macabi";
+  } else {
+    os_name = value.str();
+  }
+}
+
 bool GDBRemoteCommunicationClient::GetHostInfo(bool force) {
   Log *log(ProcessGDBRemoteLog::GetLogIfAnyCategoryIsSet(GDBR_LOG_PROCESS));
 
@@ -1189,11 +1203,7 @@ bool GDBRemoteCommunicationClient::GetHostInfo(bool force) {
             extractor.GetHexByteString(m_os_kernel);
             ++num_keys_decoded;
           } else if (name.equals("ostype")) {
-            if (value.equals("maccatalyst")) {
-              os_name = "ios";
-              environment = "macabi";
-            } else
-              os_name = std::string(value);
+            ParseOSType(value, os_name, environment);
             ++num_keys_decoded;
           } else if (name.equals("vendor")) {
             vendor_name = std::string(value);
@@ -2053,11 +2063,7 @@ bool GDBRemoteCommunicationClient::GetCurrentProcessInfo(bool allow_lazy) {
           extractor.GetHexByteString(triple);
           ++num_keys_decoded;
         } else if (name.equals("ostype")) {
-          if (value.equals("maccatalyst")) {
-            os_name = "ios";
-            environment = "macabi";
-          } else
-            os_name = std::string(value);
+          ParseOSType(value, os_name, environment);
           ++num_keys_decoded;
         } else if (name.equals("vendor")) {
           vendor_name = std::string(value);
