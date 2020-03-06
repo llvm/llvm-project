@@ -1513,3 +1513,29 @@ define i32 @nsw_inference2(i32 %x, i32 %y) {
   %z = sub i32 %x2, %y2
   ret i32 %z
 }
+
+define i8 @test74(i8 %x, i8 %y) {
+; CHECK-LABEL: @test74(
+; CHECK-NEXT:    [[T0:%.*]] = and i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    call void @use8(i8 [[T0]])
+; CHECK-NEXT:    [[T1:%.*]] = sub i8 [[X]], [[T0]]
+; CHECK-NEXT:    ret i8 [[T1]]
+;
+  %t0 = and i8 %x, %y
+  call void @use8(i8 %t0)
+  %t1 = sub i8 %x, %t0
+  ret i8 %t1
+}
+
+define i8 @test75(i8 %x) {
+; CHECK-LABEL: @test75(
+; CHECK-NEXT:    [[T0:%.*]] = and i8 [[X:%.*]], -8
+; CHECK-NEXT:    call void @use8(i8 [[T0]])
+; CHECK-NEXT:    [[T1:%.*]] = sub i8 [[X]], [[T0]]
+; CHECK-NEXT:    ret i8 [[T1]]
+;
+  %t0 = and i8 %x, -8
+  call void @use8(i8 %t0)
+  %t1 = sub i8 %x, %t0
+  ret i8 %t1
+}
