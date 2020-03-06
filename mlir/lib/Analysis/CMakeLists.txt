@@ -24,8 +24,8 @@ add_llvm_library(MLIRAnalysis
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Analysis
-  )
-add_dependencies(MLIRAnalysis
+
+  DEPENDS
   MLIRCallOpInterfacesIncGen
   MLIRControlFlowInterfacesIncGen
   MLIRTypeInferOpInterfaceIncGen
@@ -46,8 +46,8 @@ add_llvm_library(MLIRLoopAnalysis
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Analysis
-  )
-add_dependencies(MLIRLoopAnalysis
+
+  DEPENDS
   MLIRCallOpInterfacesIncGen
   MLIRControlFlowInterfacesIncGen
   MLIRTypeInferOpInterfaceIncGen

@@ -25,17 +25,20 @@ add_llvm_library(MLIRQuantizerFxpMathConfig
   Configurations/FxpMathConfig.cpp
 
   ADDITIONAL_HEADER_DIRS
-  )
 
-add_dependencies(MLIRQuantizerFxpMathConfig
+  DEPENDS
   MLIRFxpMathOpsIncGen
   )
+
 target_link_libraries(MLIRQuantizerFxpMathConfig
   PUBLIC
   MLIRIR
   MLIRFxpMathOps
   MLIRQuantOps
   MLIRQuantizerSupport
+  MLIRStandardOps
+  MLIRSupport
+  LLVMSupport
   )
 
 # Transforms.

@@ -6,15 +6,16 @@ add_mlir_dialect_library(MLIRVectorOps
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/VectorOps
+
+  DEPENDS
+  MLIRVectorOpsIncGen
+  MLIRVectorTransformPatternsIncGen
   )
-
-add_dependencies(MLIRVectorOps MLIRVectorOpsIncGen)
-add_dependencies(MLIRVectorOps MLIRVectorTransformPatternsIncGen)
-
 target_link_libraries(MLIRVectorOps
   PUBLIC
   MLIRIR
   MLIRStandardOps
   MLIRAffineOps
   MLIRLoopOps
-  MLIRLoopAnalysis)
+  MLIRLoopAnalysis
+  )
