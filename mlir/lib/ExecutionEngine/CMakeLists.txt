@@ -6,7 +6,7 @@ set(LLVM_OPTIONAL_SOURCES
   )
 
 llvm_map_components_to_libnames(outlibs "nativecodegen" "IPO")
-add_llvm_library(MLIRExecutionEngine
+add_mlir_library(MLIRExecutionEngine
   ExecutionEngine.cpp
   OptUtils.cpp
 
