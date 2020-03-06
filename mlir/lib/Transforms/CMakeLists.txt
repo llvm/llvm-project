@@ -26,11 +26,12 @@ add_llvm_library(MLIRTransforms
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Transforms
+
+  DEPENDS
+  MLIRLoopLikeInterfaceIncGen
+  MLIRStandardOpsIncGen
   )
 
-add_dependencies(MLIRTransforms
-  MLIRLoopLikeInterfaceIncGen
-  MLIRStandardOpsIncGen)
 target_link_libraries(MLIRTransforms
   PUBLIC
   MLIRAffineOps
