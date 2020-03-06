@@ -12382,25 +12382,24 @@ multiclass avx512_dpbf16ps_rm<bits<8> opc, string OpcodeStr, SDNode OpNode,
                               X86FoldableSchedWrite sched,
                               X86VectorVTInfo _, X86VectorVTInfo src_v> {
   defm r: AVX512_maskable_3src<opc, MRMSrcReg, _, (outs _.RC:$dst),
-                           (ins _.RC:$src2, _.RC:$src3),
+                           (ins src_v.RC:$src2, src_v.RC:$src3),
                            OpcodeStr, "$src3, $src2", "$src2, $src3",
-                           (_.VT (OpNode _.RC:$src1, _.RC:$src2, _.RC:$src3))>,
+                           (_.VT (OpNode _.RC:$src1, src_v.RC:$src2, src_v.RC:$src3))>,
                            EVEX_4V, Sched<[sched]>;
 
   defm m: AVX512_maskable_3src<opc, MRMSrcMem, _, (outs _.RC:$dst),
-                               (ins _.RC:$src2, _.MemOp:$src3),
+                               (ins src_v.RC:$src2, src_v.MemOp:$src3),
                                OpcodeStr, "$src3, $src2", "$src2, $src3",
-                               (_.VT (OpNode _.RC:$src1, _.RC:$src2,
-                               (src_v.VT (bitconvert
-                               (src_v.LdFrag addr:$src3)))))>, EVEX_4V,
+                               (_.VT (OpNode _.RC:$src1, src_v.RC:$src2,
+                               (src_v.LdFrag addr:$src3)))>, EVEX_4V,
                                Sched<[sched.Folded, sched.ReadAfterFold]>;
 
   defm mb: AVX512_maskable_3src<opc, MRMSrcMem, _, (outs _.RC:$dst),
-                  (ins _.RC:$src2, _.ScalarMemOp:$src3),
+                  (ins src_v.RC:$src2, src_v.ScalarMemOp:$src3),
                   OpcodeStr,
                   !strconcat("${src3}", _.BroadcastStr,", $src2"),
                   !strconcat("$src2, ${src3}", _.BroadcastStr),
-                  (_.VT (OpNode _.RC:$src1, _.RC:$src2,
+                  (_.VT (OpNode _.RC:$src1, src_v.RC:$src2,
                   (src_v.VT (src_v.BroadcastLdFrag addr:$src3))))>,
                   EVEX_B, EVEX_4V, Sched<[sched.Folded, sched.ReadAfterFold]>;
 
