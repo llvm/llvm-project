@@ -840,7 +840,7 @@ let isCall = 1 in
 //===----------------------------------------------------------------------===//
 let isTerminator = 1,
 isReturn = 1,
-isBarrier = 1 in 
+isBarrier = 1 in
 {
   def RET : F16<0b1001010100001000,
                 (outs),
