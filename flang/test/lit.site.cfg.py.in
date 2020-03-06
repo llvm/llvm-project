@@ -24,4 +24,4 @@ import lit.llvm
 lit.llvm.initialize(lit_config, config)
 
 # Let the main config do the real work.
-lit_config.load_config(config, "@FLANG_SOURCE_DIR@/test-lit/lit.cfg.py")
+lit_config.load_config(config, "@FLANG_SOURCE_DIR@/test/lit.cfg.py")

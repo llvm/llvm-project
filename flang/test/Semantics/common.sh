@@ -10,19 +10,18 @@ function die {
   echo "$(basename $0): $*" >&2
   exit 1
 }
+if [[ $# < 3 ]]; then
+  echo "Usage: $(basename $0) <fortran-source> <f18-executable> <temp test dir>"
+  exit 1
+fi
 
-case $# in
-  (1) ;;
-  (2) F18=$2 ;;
-  (*) echo "Usage: $(basename $0) <fortran-source> [<f18-executable>]"; exit 1
-esac
-[[ -z ${F18+x} ]] && die "Path to f18 must be second argument or in F18 environment variable"
-[[ ! -f $F18 ]] && die "f18 executable not found: $F18"
 case $1 in
   (/*) src=$1 ;;
   (*) src=$(dirname $0)/$1 ;;
 esac
 USER_OPTIONS=`sed -n 's/^ *! *OPTIONS: *//p' $src`
 echo $USER_OPTIONS
-temp=`mktemp -d ./tmp.XXXXXX`
-[[ $KEEP ]] || trap "rm -rf $temp" EXIT
+F18=$2
+[[ ! -f $F18 ]] && die "f18 executable not found: $F18"
+temp=$3
+mkdir -p $temp

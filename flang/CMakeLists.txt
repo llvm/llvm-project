@@ -156,7 +156,7 @@ add_subdirectory(lib)
 add_subdirectory(runtime)
 add_subdirectory(unittests)
 add_subdirectory(tools)
-add_subdirectory(test-lit)
+add_subdirectory(test)
 
 configure_file(
   ${FLANG_SOURCE_DIR}/include/flang/Config/config.h.cmake
