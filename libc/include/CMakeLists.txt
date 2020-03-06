@@ -39,12 +39,8 @@ add_gen_header(
   threads_h
   DEF_FILE threads.h.def
   GEN_HDR threads.h
-  PARAMS
-    platform_threads=../config/${LIBC_TARGET_OS}/threads.h.in
   DEPENDS
     llvm_libc_common_h
-  DATA_FILES
-    ../config/${LIBC_TARGET_OS}/threads.h.in
 )
 
 add_gen_header(

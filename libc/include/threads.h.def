@@ -11,8 +11,6 @@
 
 #include <__llvm-libc-common.h>
 
-%%include_file(${platform_threads})
-
 %%public_api()
 
 #endif // LLVM_LIBC_THREADS_H
