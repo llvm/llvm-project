@@ -19,7 +19,7 @@ define dso_local i64 @func(i64 %blah, i64 %limit) #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[TMP0]], 7
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA:%.*]], label [[FOR_BODY_LR_PH_NEW:%.*]]
 ; CHECK:       for.body.lr.ph.new:
-; CHECK-NEXT:    [[UNROLL_ITER:%.*]] = sub i64 [[LIMIT]], [[XTRAITER]]
+; CHECK-NEXT:    [[UNROLL_ITER:%.*]] = and i64 [[LIMIT]], -8
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup.loopexit.unr-lcssa:
 ; CHECK-NEXT:    [[ADD_LCSSA_PH:%.*]] = phi i64 [ undef, [[FOR_BODY_LR_PH]] ], [ [[ADD_7:%.*]], [[FOR_BODY]] ]
@@ -66,7 +66,7 @@ define dso_local i64 @func(i64 %blah, i64 %limit) #0 {
 ; NPM-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[TMP0]], 7
 ; NPM-NEXT:    br i1 [[TMP1]], label [[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA:%.*]], label [[FOR_BODY_LR_PH_NEW:%.*]]
 ; NPM:       for.body.lr.ph.new:
-; NPM-NEXT:    [[UNROLL_ITER:%.*]] = sub i64 [[LIMIT]], [[XTRAITER]]
+; NPM-NEXT:    [[UNROLL_ITER:%.*]] = and i64 [[LIMIT]], -8
 ; NPM-NEXT:    [[AND_0:%.*]] = and i64 [[CONV]], 1
 ; NPM-NEXT:    br label [[FOR_BODY:%.*]]
 ; NPM:       for.cond.cleanup.loopexit.unr-lcssa:

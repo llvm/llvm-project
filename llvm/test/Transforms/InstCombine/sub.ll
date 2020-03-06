@@ -1531,7 +1531,7 @@ define i8 @test75(i8 %x) {
 ; CHECK-LABEL: @test75(
 ; CHECK-NEXT:    [[T0:%.*]] = and i8 [[X:%.*]], -8
 ; CHECK-NEXT:    call void @use8(i8 [[T0]])
-; CHECK-NEXT:    [[T1:%.*]] = sub i8 [[X]], [[T0]]
+; CHECK-NEXT:    [[T1:%.*]] = and i8 [[X]], 7
 ; CHECK-NEXT:    ret i8 [[T1]]
 ;
   %t0 = and i8 %x, -8
