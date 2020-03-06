@@ -15,9 +15,5 @@ target_link_libraries(MLIRFxpMathOps
   MLIRStandardOps
   )
 add_dependencies(MLIRFxpMathOps
-                 MLIRFxpMathOpsIncGen
-                 MLIRQuantOps
-                 MLIRIR
-                 MLIRPass
-                 MLIRSupport
-                 MLIRStandardOps)
+  MLIRFxpMathOpsIncGen
+  )

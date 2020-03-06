@@ -7,12 +7,8 @@ add_mlir_dialect_library(MLIRLoopOps
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/LoopOps
   )
 add_dependencies(MLIRLoopOps
-
-  MLIREDSC
   MLIRLoopLikeInterfaceIncGen
   MLIRLoopOpsIncGen
-  MLIRStandardOps
-  LLVMSupport
   )
 target_link_libraries(MLIRLoopOps
   PUBLIC
