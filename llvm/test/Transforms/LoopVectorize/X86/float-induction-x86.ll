@@ -35,7 +35,7 @@ define void @fp_iv_loop1(float* noalias nocapture %A, i32 %N) #0 {
 ; AUTO_VEC-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP1]], 96
 ; AUTO_VEC-NEXT:    br i1 [[TMP4]], label [[MIDDLE_BLOCK_UNR_LCSSA:%.*]], label [[VECTOR_PH_NEW:%.*]]
 ; AUTO_VEC:       vector.ph.new:
-; AUTO_VEC-NEXT:    [[UNROLL_ITER:%.*]] = sub nsw i64 [[TMP3]], [[XTRAITER]]
+; AUTO_VEC-NEXT:    [[UNROLL_ITER:%.*]] = and i64 [[TMP3]], 1152921504606846972
 ; AUTO_VEC-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; AUTO_VEC:       vector.body:
 ; AUTO_VEC-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH_NEW]] ], [ [[INDEX_NEXT_3:%.*]], [[VECTOR_BODY]] ]
@@ -203,7 +203,7 @@ define void @fp_iv_loop2(float* noalias nocapture %A, i32 %N) #1 {
 ; AUTO_VEC-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[TMP0]], 7
 ; AUTO_VEC-NEXT:    br i1 [[TMP1]], label [[FOR_END_LOOPEXIT_UNR_LCSSA:%.*]], label [[FOR_BODY_PREHEADER_NEW:%.*]]
 ; AUTO_VEC:       for.body.preheader.new:
-; AUTO_VEC-NEXT:    [[UNROLL_ITER:%.*]] = sub nsw i64 [[ZEXT]], [[XTRAITER]]
+; AUTO_VEC-NEXT:    [[UNROLL_ITER:%.*]] = and i64 [[ZEXT]], 4294967288
 ; AUTO_VEC-NEXT:    br label [[FOR_BODY:%.*]]
 ; AUTO_VEC:       for.body:
 ; AUTO_VEC-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[FOR_BODY_PREHEADER_NEW]] ], [ [[INDVARS_IV_NEXT_7:%.*]], [[FOR_BODY]] ]
@@ -306,7 +306,7 @@ define double @external_use_with_fast_math(double* %a, i64 %n) {
 ; AUTO_VEC-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP2]], 48
 ; AUTO_VEC-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK_UNR_LCSSA:%.*]], label [[VECTOR_PH_NEW:%.*]]
 ; AUTO_VEC:       vector.ph.new:
-; AUTO_VEC-NEXT:    [[UNROLL_ITER:%.*]] = sub nsw i64 [[TMP4]], [[XTRAITER]]
+; AUTO_VEC-NEXT:    [[UNROLL_ITER:%.*]] = and i64 [[TMP4]], 2305843009213693948
 ; AUTO_VEC-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; AUTO_VEC:       vector.body:
 ; AUTO_VEC-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH_NEW]] ], [ [[INDEX_NEXT_3:%.*]], [[VECTOR_BODY]] ]
@@ -459,7 +459,7 @@ define double @external_use_without_fast_math(double* %a, i64 %n) {
 ; AUTO_VEC-NEXT:    [[TMP2:%.*]] = icmp ult i64 [[TMP1]], 7
 ; AUTO_VEC-NEXT:    br i1 [[TMP2]], label [[FOR_END_UNR_LCSSA:%.*]], label [[ENTRY_NEW:%.*]]
 ; AUTO_VEC:       entry.new:
-; AUTO_VEC-NEXT:    [[UNROLL_ITER:%.*]] = sub nsw i64 [[SMAX]], [[XTRAITER]]
+; AUTO_VEC-NEXT:    [[UNROLL_ITER:%.*]] = and i64 [[SMAX]], 9223372036854775800
 ; AUTO_VEC-NEXT:    br label [[FOR_BODY:%.*]]
 ; AUTO_VEC:       for.body:
 ; AUTO_VEC-NEXT:    [[I:%.*]] = phi i64 [ 0, [[ENTRY_NEW]] ], [ [[I_NEXT_7:%.*]], [[FOR_BODY]] ]
