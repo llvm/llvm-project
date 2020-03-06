@@ -1,4 +1,4 @@
-//===---------------- C standard library header threads.h -----------------===//
+//===---- Implementation of the get_start_args_addr function -----*- C++ -*===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_THREADS_H
-#define LLVM_LIBC_THREADS_H
+#include <stdint.h>
 
-#include <__llvm-libc-common.h>
-
-%%include_file(${platform_threads})
-
-%%public_api()
-
-#endif // LLVM_LIBC_THREADS_H
+%%include_file(${thread_start_args})

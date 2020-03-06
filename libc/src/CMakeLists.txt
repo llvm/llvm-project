@@ -5,5 +5,6 @@ add_subdirectory(stdlib)
 add_subdirectory(string)
 # TODO: Add this target conditional to the target OS.
 add_subdirectory(sys)
+add_subdirectory(threads)
 
 add_subdirectory(__support)
