@@ -16,6 +16,7 @@ add_dependencies(MLIRStandardToSPIRVTransforms
   MLIRStandardToSPIRVIncGen)
 
 target_link_libraries(MLIRStandardToSPIRVTransforms
+  PUBLIC
   MLIRIR
   MLIRPass
   MLIRSPIRV

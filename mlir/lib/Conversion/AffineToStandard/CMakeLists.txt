@@ -15,7 +15,7 @@ add_dependencies(
 )
 target_link_libraries(
   MLIRAffineToStandard
-
+  PUBLIC
   MLIRAffineOps
   MLIRLoopOps
   MLIRPass

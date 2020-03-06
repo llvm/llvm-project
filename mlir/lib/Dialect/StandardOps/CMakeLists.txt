@@ -16,7 +16,7 @@ add_dependencies(MLIRStandardOps
   LLVMSupport
   )
 target_link_libraries(MLIRStandardOps
-
+  PUBLIC
   MLIREDSC
   MLIRIR
   LLVMSupport

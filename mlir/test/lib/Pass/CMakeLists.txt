@@ -5,6 +5,7 @@ add_llvm_library(MLIRTestPass
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Pass
   )
 target_link_libraries(MLIRTestPass
+  PUBLIC
   MLIRIR
   MLIRPass
   )

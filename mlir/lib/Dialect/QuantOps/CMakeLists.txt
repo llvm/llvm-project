@@ -20,6 +20,7 @@ add_dependencies(MLIRQuantOps
                  MLIRStandardOps)
 
 target_link_libraries(MLIRQuantOps
+  PUBLIC
   MLIRIR
   MLIRPass
   MLIRSupport

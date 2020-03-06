@@ -34,4 +34,6 @@ add_dependencies(MLIRLinalgTransforms
   ${LIBS}
   MLIRLinalgTransformPatternsIncGen
   )
-target_link_libraries(MLIRLinalgTransforms ${LIBS})
+target_link_libraries(MLIRLinalgTransforms
+  PUBLIC
+  ${LIBS})

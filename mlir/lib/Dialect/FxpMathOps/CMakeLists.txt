@@ -7,6 +7,7 @@ add_mlir_dialect_library(MLIRFxpMathOps
   )
 
 target_link_libraries(MLIRFxpMathOps
+  PUBLIC
   MLIRQuantOps
   MLIRIR
   MLIRPass

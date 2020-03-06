@@ -7,6 +7,7 @@ add_mlir_dialect_library(MLIRSPIRVTransforms
   )
 
 target_link_libraries(MLIRSPIRVTransforms
+  PUBLIC
   MLIRPass
   MLIRSPIRV
   )

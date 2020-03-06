@@ -13,4 +13,6 @@ set(LIBS
   )
 
 add_dependencies(MLIRVectorToLoops ${LIBS})
-target_link_libraries(MLIRVectorToLoops ${LIBS})
+target_link_libraries(MLIRVectorToLoops
+  PUBLIC
+  ${LIBS})

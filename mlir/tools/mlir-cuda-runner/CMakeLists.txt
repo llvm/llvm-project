@@ -31,6 +31,7 @@ if(MLIR_CUDA_RUNNER_ENABLED)
     LLVMSupport
   )
   target_link_libraries(cuda-runtime-wrappers
+    PUBLIC
     LLVMSupport
     ${CUDA_RUNTIME_LIBRARY}
   )

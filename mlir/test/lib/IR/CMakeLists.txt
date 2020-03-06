@@ -11,5 +11,6 @@ add_dependencies(MLIRTestIR
   MLIRTestDialect
   )
 target_link_libraries(MLIRTestIR
+  PUBLIC
   MLIRPass
   )
