@@ -56,6 +56,7 @@
 //===----------------------------------------------------------------------===//
 #include "llvm/CodeGen/MachineOutliner.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -1245,31 +1246,53 @@ bool MachineOutliner::outline(Module &M,
       // make sure that the ranges we yank things out of aren't wrong.
       if (MBB.getParent()->getProperties().hasProperty(
               MachineFunctionProperties::Property::TracksLiveness)) {
-        // Helper lambda for adding implicit def operands to the call
+        // The following code is to add implicit def operands to the call
         // instruction. It also updates call site information for moved
         // code.
-        auto CopyDefsAndUpdateCalls = [&CallInst](MachineInstr &MI) {
-          for (MachineOperand &MOP : MI.operands()) {
-            // Skip over anything that isn't a register.
-            if (!MOP.isReg())
-              continue;
-
-            // If it's a def, add it to the call instruction.
-            if (MOP.isDef())
-              CallInst->addOperand(MachineOperand::CreateReg(
-                  MOP.getReg(), true, /* isDef = true */
-                  true /* isImp = true */));
-          }
-          if (MI.shouldUpdateCallSiteInfo())
-            MI.getMF()->eraseCallSiteInfo(&MI);
-        };
+        SmallSet<Register, 2> UseRegs, DefRegs;
         // Copy over the defs in the outlined range.
         // First inst in outlined range <-- Anything that's defined in this
         // ...                           .. range has to be added as an
         // implicit Last inst in outlined range  <-- def to the call
         // instruction. Also remove call site information for outlined block
-        // of code.
-        std::for_each(CallInst, std::next(EndIt), CopyDefsAndUpdateCalls);
+        // of code. The exposed uses need to be copied in the outlined range.
+        for (MachineBasicBlock::reverse_iterator Iter = EndIt.getReverse(),
+             Last = std::next(CallInst.getReverse());
+             Iter != Last; Iter++) {
+          MachineInstr *MI = &*Iter;
+          for (MachineOperand &MOP : MI->operands()) {
+            // Skip over anything that isn't a register.
+            if (!MOP.isReg())
+              continue;
+
+            if (MOP.isDef()) {
+              // Introduce DefRegs set to skip the redundant register.
+              DefRegs.insert(MOP.getReg());
+              if (UseRegs.count(MOP.getReg()))
+                // Since the regiester is modeled as defined,
+                // it is not necessary to be put in use register set.
+                UseRegs.erase(MOP.getReg());
+            } else if (!MOP.isUndef()) {
+              // Any register which is not undefined should
+              // be put in the use register set.
+              UseRegs.insert(MOP.getReg());
+            }
+          }
+          if (MI->isCandidateForCallSiteEntry())
+            MI->getMF()->eraseCallSiteInfo(MI);
+        }
+
+        for (const Register &I : DefRegs)
+           // If it's a def, add it to the call instruction.
+          CallInst->addOperand(MachineOperand::CreateReg(
+                  I, true, /* isDef = true */
+                  true /* isImp = true */));
+
+        for (const Register &I : UseRegs)
+          // If it's a exposed use, add it to the call instruction.
+          CallInst->addOperand(
+              MachineOperand::CreateReg(I, false, /* isDef = false */
+                                        true /* isImp = true */));
       }
 
       // Erase from the point after where the call was inserted up to, and
