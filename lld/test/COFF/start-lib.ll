@@ -22,9 +22,10 @@
 ; RUN: lld-link -out:%t2.exe -entry:main -opt:noref -lldmap:%t2.thinlto.map \
 ; RUN:     %t.bc -start-lib %t1.bc -end-lib %t2.bc
 ; RUN: FileCheck --check-prefix=TEST2 %s < %t2.thinlto.map
-; TEST2-NOT: Name: foo
-; TEST2: bar
-; TEST2-NOT: Name: foo
+; TEST2:     Address Size Align Out In Symbol
+; TEST2-NOT:                           {{ }}foo{{$}}
+; TEST2:                               {{ }}bar{{$}}
+; TEST2-NOT:                           {{ }}foo{{$}}
 ;
 ; RUN: lld-link -out:%t3.exe -entry:main -opt:noref -lldmap:%t3.map \
 ; RUN:     %t.obj -start-lib %t1.obj %t2.obj
@@ -32,8 +33,9 @@
 ; RUN: lld-link -out:%t3.exe -entry:main -opt:noref -lldmap:%t3.thinlto.map \
 ; RUN:     %t.bc -start-lib %t1.bc %t2.bc
 ; RUN: FileCheck --check-prefix=TEST3 %s < %t3.thinlto.map
-; TEST3-NOT: foo
-; TEST3-NOT: bar
+; TEST3:     Address Size Align Out In Symbol
+; TEST3-NOT: {{ }}foo{{$}}
+; TEST3-NOT: {{ }}bar{{$}}
 
 target datalayout = "e-m:w-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-windows-msvc"
