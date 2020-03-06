@@ -3959,14 +3959,8 @@ class StmtExpr : public Expr {
   Stmt *SubStmt;
   SourceLocation LParenLoc, RParenLoc;
 public:
-  // FIXME: Does type-dependence need to be computed differently?
-  // FIXME: Do we need to compute instantiation instantiation-dependence for
-  // statements? (ugh!)
-  StmtExpr(CompoundStmt *substmt, QualType T,
-           SourceLocation lp, SourceLocation rp) :
-    Expr(StmtExprClass, T, VK_RValue, OK_Ordinary,
-         T->isDependentType(), false, false, false),
-    SubStmt(substmt), LParenLoc(lp), RParenLoc(rp) { }
+  StmtExpr(CompoundStmt *SubStmt, QualType T,
+           SourceLocation LParen, SourceLocation RParen);
 
   /// Build an empty statement expression.
   explicit StmtExpr(EmptyShell Empty) : Expr(StmtExprClass, Empty) { }
