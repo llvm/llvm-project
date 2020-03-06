@@ -66,10 +66,23 @@ void AssignmentContext::Analyze(const parser::AssignmentStmt &stmt) {
     const SomeExpr &rhs{assignment->rhs};
     auto lhsLoc{std::get<parser::Variable>(stmt.t).GetSource()};
     auto rhsLoc{std::get<parser::Expr>(stmt.t).source};
+    auto shape{evaluate::GetShape(foldingContext(), lhs)};
+    if (shape && !shape->empty() && !shape->back().has_value()) {  // C1014
+      Say(lhsLoc,
+          "Left-hand side of assignment may not be a whole assumed-size array"_err_en_US);
+    }
+    if (CheckForPureContext(lhs, rhs, rhsLoc, false)) {
+      const Scope &scope{context_.FindScope(lhsLoc)};
+      if (auto whyNot{WhyNotModifiable(lhsLoc, lhs, scope)}) {
+        if (auto *msg{Say(lhsLoc,
+                "Left-hand side of assignment is not modifiable"_err_en_US)}) {
+          msg->Attach(*whyNot);
+        }
+      }
+    }
     if (whereDepth_ > 0) {
       CheckShape(lhsLoc, &lhs);
     }
-    CheckForPureContext(lhs, rhs, rhsLoc, false);
   }
 }
 
@@ -169,7 +182,8 @@ bool AssignmentContext::CheckForPureContext(const SomeExpr &lhs,
         // ASSOCIATE(a=>x) -- check x, not a, for "a=..."
         base = dataRef ? &dataRef->GetFirstSymbol() : nullptr;
       }
-      if (!CheckDefinabilityInPureScope(messages, *base, scope, *pure)) {
+      if (base &&
+          !CheckDefinabilityInPureScope(messages, *base, scope, *pure)) {
         return false;
       }
     }

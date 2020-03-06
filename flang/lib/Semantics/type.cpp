@@ -353,13 +353,13 @@ bool ArraySpec::IsDeferredShape() const {
   });
 }
 bool ArraySpec::IsImpliedShape() const {
-  return CheckAll([](const ShapeSpec &x) { return x.ubound().isAssumed(); });
+  return !IsAssumedRank() &&
+      CheckAll([](const ShapeSpec &x) { return x.ubound().isAssumed(); });
 }
 bool ArraySpec::IsAssumedSize() const {
-  return !empty() &&
+  return !empty() && !IsAssumedRank() && back().ubound().isAssumed() &&
       std::all_of(begin(), end() - 1,
-          [](const ShapeSpec &x) { return x.ubound().isExplicit(); }) &&
-      back().ubound().isAssumed();
+          [](const ShapeSpec &x) { return x.ubound().isExplicit(); });
 }
 bool ArraySpec::IsAssumedRank() const {
   return Rank() == 1 && front().lbound().isAssumed();

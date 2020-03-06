@@ -19,7 +19,7 @@ subroutine s()
         type(*), pointer :: arg6
         !ERROR: Assumed-type argument 'arg7' cannot have the VALUE attribute
         type(*), value :: arg7
-        !ERROR: Assumed-type argument 'arg8' must be assumed shape or assumed size array
+        !ERROR: Assumed-type array argument 'arg8' must be assumed shape, assumed size, or assumed rank
         type(*), dimension(3) :: arg8
       end subroutine inner1
 end subroutine s

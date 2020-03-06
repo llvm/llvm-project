@@ -2588,10 +2588,16 @@ MaybeExpr ExpressionAnalyzer::MakeFunctionRef(
 void ArgumentAnalyzer::Analyze(const parser::Variable &x) {
   source_.ExtendToCover(x.GetSource());
   if (MaybeExpr expr{context_.Analyze(x)}) {
-    actuals_.emplace_back(std::move(*expr));
-  } else {
-    fatalErrors_ = true;
+    if (!IsConstantExpr(*expr)) {
+      actuals_.emplace_back(std::move(*expr));
+      return;
+    }
+    const Symbol *symbol{GetFirstSymbol(*expr)};
+    context_.Say(x.GetSource(),
+        "Assignment to constant '%s' is not allowed"_err_en_US,
+        symbol ? symbol->name() : x.GetSource());
   }
+  fatalErrors_ = true;
 }
 
 void ArgumentAnalyzer::Analyze(

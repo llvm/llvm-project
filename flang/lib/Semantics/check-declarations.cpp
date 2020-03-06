@@ -333,10 +333,10 @@ void CheckHelper::CheckAssumedTypeEntity(  // C709
             "Assumed-type argument '%s' cannot be a coarray"_err_en_US,
             symbol.name());
       }
-      if (details.IsArray() &&
-          !(details.IsAssumedShape() || details.IsAssumedSize())) {
-        messages_.Say("Assumed-type argument '%s' must be assumed shape"
-                      " or assumed size array"_err_en_US,
+      if (details.IsArray() && details.shape().IsExplicitShape()) {
+        messages_.Say(
+            "Assumed-type array argument 'arg8' must be assumed shape,"
+            " assumed size, or assumed rank"_err_en_US,
             symbol.name());
       }
     }

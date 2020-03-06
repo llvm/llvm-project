@@ -64,9 +64,10 @@ struct IsVariableHelper
   IsVariableHelper() : Base{*this} {}
   using Base::operator();
   Result operator()(const StaticDataObject &) const { return false; }
-  Result operator()(const Symbol &) const { return true; }
-  Result operator()(const Component &) const { return true; }
-  Result operator()(const ArrayRef &) const { return true; }
+  Result operator()(const Symbol &) const;
+  Result operator()(const Component &) const;
+  Result operator()(const ArrayRef &) const;
+  Result operator()(const Substring &) const;
   Result operator()(const CoarrayRef &) const { return true; }
   Result operator()(const ComplexPart &) const { return true; }
   Result operator()(const ProcedureDesignator &) const;
@@ -218,6 +219,9 @@ std::optional<DataRef> ExtractDataRef(const Designator<T> &d) {
         if constexpr (common::HasMember<decltype(x), decltype(DataRef::u)>) {
           return DataRef{x};
         }
+        if constexpr (std::is_same_v<std::decay_t<decltype(x)>, Substring>) {
+          return ExtractDataRef(x);
+        }
         return std::nullopt;  // w/o "else" to dodge bogus g++ 8.1 warning
       },
       d.u);
@@ -234,6 +238,7 @@ std::optional<DataRef> ExtractDataRef(const std::optional<A> &x) {
     return std::nullopt;
   }
 }
+std::optional<DataRef> ExtractDataRef(const Substring &);
 
 // Predicate: is an expression is an array element reference?
 template<typename T> bool IsArrayElement(const Expr<T> &expr) {

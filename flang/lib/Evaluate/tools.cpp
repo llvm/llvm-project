@@ -11,6 +11,7 @@
 #include "flang/Evaluate/characteristics.h"
 #include "flang/Evaluate/traverse.h"
 #include "flang/Parser/message.h"
+#include "flang/Semantics/tools.h"
 #include <algorithm>
 #include <variant>
 
@@ -37,7 +38,31 @@ Expr<SomeType> Parenthesize(Expr<SomeType> &&expr) {
       std::move(expr.u));
 }
 
+std::optional<DataRef> ExtractDataRef(const Substring &substring) {
+  return std::visit(
+      common::visitors{
+          [&](const DataRef &x) -> std::optional<DataRef> { return x; },
+          [&](const StaticDataObject::Pointer &) -> std::optional<DataRef> {
+            return std::nullopt;
+          },
+      },
+      substring.parent());
+}
+
 // IsVariable()
+
+auto IsVariableHelper::operator()(const Symbol &symbol) const -> Result {
+  return !symbol.attrs().test(semantics::Attr::PARAMETER);
+}
+auto IsVariableHelper::operator()(const Component &x) const -> Result {
+  return (*this)(x.base());
+}
+auto IsVariableHelper::operator()(const ArrayRef &x) const -> Result {
+  return (*this)(x.base());
+}
+auto IsVariableHelper::operator()(const Substring &x) const -> Result {
+  return (*this)(x.GetBaseObject());
+}
 auto IsVariableHelper::operator()(const ProcedureDesignator &x) const
     -> Result {
   const Symbol *symbol{x.GetSymbol()};
