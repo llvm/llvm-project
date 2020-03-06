@@ -8257,6 +8257,43 @@ SDValue DAGCombiner::visitFunnelShift(SDNode *N) {
       return DAG.getNode(ISD::SHL, SDLoc(N), VT, N0,
                          DAG.getConstant(IsFSHL ? ShAmt : BitWidth - ShAmt,
                                          SDLoc(N), ShAmtTy));
+
+    // fold (fshl ld1, ld0, c) -> (ld0[ofs]) iff ld0 and ld1 are consecutive.
+    // fold (fshr ld1, ld0, c) -> (ld0[ofs]) iff ld0 and ld1 are consecutive.
+    // TODO - bigendian support once we have test coverage.
+    // TODO - can we merge this with CombineConseutiveLoads/MatchLoadCombine?
+    if ((BitWidth % 8) == 0 && (ShAmt % 8) == 0 && !VT.isVector() &&
+        !DAG.getDataLayout().isBigEndian()) {
+      auto *LHS = dyn_cast<LoadSDNode>(N0);
+      auto *RHS = dyn_cast<LoadSDNode>(N1);
+      if (LHS && RHS && LHS->isSimple() && RHS->isSimple() &&
+          LHS->getAddressSpace() == RHS->getAddressSpace() &&
+          (LHS->hasOneUse() || RHS->hasOneUse()) && ISD::isNON_EXTLoad(RHS)) {
+        if (DAG.areNonVolatileConsecutiveLoads(LHS, RHS, BitWidth / 8, 1)) {
+          SDLoc DL(RHS);
+          uint64_t PtrOff =
+              IsFSHL ? (((BitWidth - ShAmt) % BitWidth) / 8) : (ShAmt / 8);
+          unsigned NewAlign = MinAlign(RHS->getAlignment(), PtrOff);
+          bool Fast = false;
+          if (TLI.allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(), VT,
+                                     RHS->getAddressSpace(), NewAlign,
+                                     RHS->getMemOperand()->getFlags(), &Fast) &&
+              Fast) {
+            SDValue NewPtr =
+                DAG.getMemBasePlusOffset(RHS->getBasePtr(), PtrOff, DL);
+            AddToWorklist(NewPtr.getNode());
+            SDValue Load = DAG.getLoad(
+                VT, DL, RHS->getChain(), NewPtr,
+                RHS->getPointerInfo().getWithOffset(PtrOff), NewAlign,
+                RHS->getMemOperand()->getFlags(), RHS->getAAInfo());
+            // Replace the old load's chain with the new load's chain.
+            WorklistRemover DeadNodes(*this);
+            DAG.ReplaceAllUsesOfValueWith(N1.getValue(1), Load.getValue(1));
+            return Load;
+          }
+        }
+      }
+    }
   }
 
   // fold fshr(undef_or_zero, N1, N2) -> lshr(N1, N2)
