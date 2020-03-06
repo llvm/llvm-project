@@ -926,8 +926,7 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache) {
   }
 #endif
 
-  // Insert Phis for all conflicts
-  // TODO: adjust naming patterns to avoid this order of iteration dependency
+  // Handle extractelement instructions and their uses.
   for (auto Pair : States) {
     Instruction *I = cast<Instruction>(Pair.first);
     BDVState State = Pair.second;
@@ -938,17 +937,40 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache) {
     // insert an extract even when we know an exact base for the instruction.
     // The problem is that we need to convert from a vector base to a scalar
     // base for the particular indice we're interested in.
-    if (State.isBase() && isa<ExtractElementInst>(I) &&
-        isa<VectorType>(State.getBaseValue()->getType())) {
-      auto *EE = cast<ExtractElementInst>(I);
-      // TODO: In many cases, the new instruction is just EE itself.  We should
-      // exploit this, but can't do it here since it would break the invariant
-      // about the BDV not being known to be a base.
-      auto *BaseInst = ExtractElementInst::Create(
-          State.getBaseValue(), EE->getIndexOperand(), "base_ee", EE);
-      BaseInst->setMetadata("is_base_value", MDNode::get(I->getContext(), {}));
-      States[I] = BDVState(BDVState::Base, BaseInst);
+    if (!State.isBase() || !isa<ExtractElementInst>(I) ||
+        !isa<VectorType>(State.getBaseValue()->getType()))
+      continue;
+    auto *EE = cast<ExtractElementInst>(I);
+    // TODO: In many cases, the new instruction is just EE itself.  We should
+    // exploit this, but can't do it here since it would break the invariant
+    // about the BDV not being known to be a base.
+    auto *BaseInst = ExtractElementInst::Create(
+        State.getBaseValue(), EE->getIndexOperand(), "base_ee", EE);
+    BaseInst->setMetadata("is_base_value", MDNode::get(I->getContext(), {}));
+    States[I] = BDVState(BDVState::Base, BaseInst);
+
+    // We need to handle uses of the extractelement that have the same vector
+    // base as well but the use is a scalar type. Since we cannot reuse the
+    // same BaseInst above (may not satisfy property that base pointer should
+    // always dominate derived pointer), we conservatively set this as conflict.
+    // Setting the base value for these conflicts is handled in the next loop
+    // which traverses States.
+    for (User *U : I->users()) {
+      auto *UseI = dyn_cast<Instruction>(U);
+      if (!UseI || !States.count(UseI))
+        continue;
+      if (!isa<VectorType>(UseI->getType()) && States[UseI] == State)
+        States[UseI] = BDVState(BDVState::Conflict);
     }
+  }
+
+  // Insert Phis for all conflicts
+  // TODO: adjust naming patterns to avoid this order of iteration dependency
+  for (auto Pair : States) {
+    Instruction *I = cast<Instruction>(Pair.first);
+    BDVState State = Pair.second;
+    assert(!isKnownBaseResult(I) && "why did it get added?");
+    assert(!State.isUnknown() && "Optimistic algorithm didn't complete!");
 
     // Since we're joining a vector and scalar base, they can never be the
     // same.  As a result, we should always see insert element having reached
