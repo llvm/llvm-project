@@ -20,6 +20,7 @@
 #include "mlir/TableGen/OpInterfaces.h"
 #include "mlir/TableGen/OpTrait.h"
 #include "mlir/TableGen/Operator.h"
+#include "mlir/TableGen/SideEffects.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Signals.h"
@@ -280,6 +281,9 @@ private:
   // Generate the OpInterface methods.
   void genOpInterfaceMethods();
 
+  // Generate the side effect interface methods.
+  void genSideEffectInterfaceMethods();
+
 private:
   // The TableGen record for this op.
   // TODO(antiagainst,zinenko): OpEmitter should not have a Record directly,
@@ -321,6 +325,7 @@ OpEmitter::OpEmitter(const Operator &op)
   genFolderDecls();
   genOpInterfaceMethods();
   generateOpFormat(op, opClass);
+  genSideEffectInterfaceMethods();
 }
 
 void OpEmitter::emitDecl(const Operator &op, raw_ostream &os) {
@@ -1157,6 +1162,75 @@ void OpEmitter::genOpInterfaceMethods() {
                         method.isStatic() ? OpMethod::MP_Static
                                           : OpMethod::MP_None,
                         /*declOnly=*/true);
+    }
+  }
+}
+
+void OpEmitter::genSideEffectInterfaceMethods() {
+  enum EffectKind { Operand, Result, Static };
+  struct EffectLocation {
+    /// The effect applied.
+    SideEffect effect;
+
+    /// The index if the kind is either operand or result.
+    unsigned index : 30;
+
+    /// The kind of the location.
+    EffectKind kind : 2;
+  };
+
+  StringMap<SmallVector<EffectLocation, 1>> interfaceEffects;
+  auto resolveDecorators = [&](Operator::var_decorator_range decorators,
+                               unsigned index, EffectKind kind) {
+    for (auto decorator : decorators)
+      if (SideEffect *effect = dyn_cast<SideEffect>(&decorator))
+        interfaceEffects[effect->getInterfaceTrait()].push_back(
+            EffectLocation{*effect, index, kind});
+  };
+
+  // Collect effects that were specified via:
+  /// Traits.
+  for (const auto &trait : op.getTraits())
+    if (const auto *opTrait = dyn_cast<tblgen::SideEffectTrait>(&trait))
+      resolveDecorators(opTrait->getEffects(), /*index=*/0, EffectKind::Static);
+  /// Operands.
+  for (unsigned i = 0, operandIt = 0, e = op.getNumArgs(); i != e; ++i) {
+    if (op.getArg(i).is<NamedTypeConstraint *>()) {
+      resolveDecorators(op.getArgDecorators(i), operandIt, EffectKind::Operand);
+      ++operandIt;
+    }
+  }
+  /// Results.
+  for (unsigned i = 0, e = op.getNumResults(); i != e; ++i)
+    resolveDecorators(op.getResultDecorators(i), i, EffectKind::Result);
+
+  for (auto &it : interfaceEffects) {
+    StringRef baseEffect = it.second.front().effect.getBaseName();
+    auto effectsParam =
+        llvm::formatv(
+            "SmallVectorImpl<SideEffects::EffectInstance<{0}>> &effects",
+            baseEffect)
+            .str();
+
+    // Generate the 'getEffects' method.
+    auto &getEffects = opClass.newMethod("void", "getEffects", effectsParam);
+    auto &body = getEffects.body();
+
+    // Add effect instances for each of the locations marked on the operation.
+    for (auto &location : it.second) {
+      if (location.kind != EffectKind::Static) {
+        body << "  for (Value value : getODS"
+             << (location.kind == EffectKind::Operand ? "Operands" : "Results")
+             << "(" << location.index << "))\n  ";
+      }
+
+      body << "  effects.emplace_back(" << location.effect.getName()
+           << "::get()";
+
+      // If the effect isn't static, it has a specific value attached to it.
+      if (location.kind != EffectKind::Static)
+        body << ", value";
+      body << ", " << location.effect.getResource() << "::get());\n";
     }
   }
 }
