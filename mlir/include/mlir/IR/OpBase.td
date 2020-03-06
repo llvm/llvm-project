@@ -1534,6 +1534,8 @@ def IsolatedFromAbove : NativeOpTrait<"IsIsolatedFromAbove">;
 def ResultsAreFloatLike : NativeOpTrait<"ResultsAreFloatLike">;
 // Op has no side effect.
 def NoSideEffect : NativeOpTrait<"HasNoSideEffect">;
+// Op has recursively computed side effects.
+def RecursiveSideEffects : NativeOpTrait<"HasRecursiveSideEffects">;
 // Op has the same operand type.
 def SameTypeOperands : NativeOpTrait<"SameTypeOperands">;
 // Op has same shape for all operands.

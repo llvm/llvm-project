@@ -7,6 +7,7 @@ add_mlir_library(MLIRIR
 
   DEPENDS
   MLIRCallOpInterfacesIncGen
+  MLIRSideEffectOpInterfacesIncGen
   MLIROpAsmInterfacesIncGen
   )
 target_link_libraries(MLIRIR
