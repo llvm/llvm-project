@@ -530,7 +530,7 @@ SymbolFileDWARF *
 SymbolFileDWARFDebugMap::GetSymbolFileAsSymbolFileDWARF(SymbolFile *sym_file) {
   if (sym_file &&
       sym_file->GetPluginName() == SymbolFileDWARF::GetPluginNameStatic())
-    return (SymbolFileDWARF *)sym_file;
+    return static_cast<SymbolFileDWARF *>(sym_file);
   return nullptr;
 }
 
