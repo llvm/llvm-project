@@ -24,6 +24,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/TimeProfiler.h"
 #include <algorithm>
 #include <cassert>
 #include <iterator>
@@ -77,7 +78,11 @@ PassManager<LazyCallGraph::SCC, CGSCCAnalysisManager, LazyCallGraph &,
     if (!PI.runBeforePass(*Pass, *C))
       continue;
 
-    PreservedAnalyses PassPA = Pass->run(*C, AM, G, UR);
+    PreservedAnalyses PassPA;
+    {
+      TimeTraceScope TimeScope(Pass->name());
+      PassPA = Pass->run(*C, AM, G, UR);
+    }
 
     if (UR.InvalidatedSCCs.count(C))
       PI.runAfterPassInvalidated<LazyCallGraph::SCC>(*Pass);

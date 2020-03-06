@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Analysis/LoopInfo.h"
 
@@ -41,7 +42,11 @@ PassManager<Loop, LoopAnalysisManager, LoopStandardAnalysisResults &,
     if (!PI.runBeforePass<Loop>(*Pass, L))
       continue;
 
-    PreservedAnalyses PassPA = Pass->run(L, AM, AR, U);
+    PreservedAnalyses PassPA;
+    {
+      TimeTraceScope TimeScope(Pass->name(), L.getName());
+      PassPA = Pass->run(L, AM, AR, U);
+    }
 
     // do not pass deleted Loop into the instrumentation
     if (U.skipCurrentLoop())
