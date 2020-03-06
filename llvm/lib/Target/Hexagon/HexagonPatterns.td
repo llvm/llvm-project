@@ -1095,7 +1095,7 @@ def Divu64_8: SDNodeXForm<imm, [{
 // Special cases:
 let AddedComplexity = 100 in {
   def: Pat<(fshl I32:$Rs, I32:$Rt, (i32 16)),
-           (A2_combine_hl I32:$Rs, I32:$Rt)>;
+           (A2_combine_lh I32:$Rs, I32:$Rt)>;
   def: Pat<(fshl I64:$Rs, I64:$Rt, IsMul8_U3:$S),
            (S2_valignib I64:$Rs, I64:$Rt, (Divu64_8 $S))>;
 }
@@ -1129,7 +1129,7 @@ def FShr64r: OutPatFrag<(ops node:$Rs, node:$Rt, node:$Ru),
 // Special cases:
 let AddedComplexity = 100 in {
   def: Pat<(fshr I32:$Rs, I32:$Rt, (i32 16)),
-           (A2_combine_hl I32:$Rs, I32:$Rt)>;
+           (A2_combine_lh I32:$Rs, I32:$Rt)>;
   def: Pat<(fshr I64:$Rs, I64:$Rt, IsMul8_U3:$S),
            (S2_valignib I64:$Rs, I64:$Rt, (Divu8 $S))>;
 }
