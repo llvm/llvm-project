@@ -1,6 +1,7 @@
 add_llvm_library(MLIRTestIR
   TestFunc.cpp
   TestMatchers.cpp
+  TestSideEffects.cpp
   TestSymbolUses.cpp
 
   ADDITIONAL_HEADER_DIRS

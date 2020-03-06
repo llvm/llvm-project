@@ -345,6 +345,56 @@ LogicalResult OpWithShapedTypeInferTypeInterfaceOp::reifyReturnTypeShapes(
   return success();
 }
 
+//===----------------------------------------------------------------------===//
+// Test SideEffect interfaces
+//===----------------------------------------------------------------------===//
+
+namespace {
+/// A test resource for side effects.
+struct TestResource : public SideEffects::Resource::Base<TestResource> {
+  StringRef getName() final { return "<Test>"; }
+};
+} // end anonymous namespace
+
+void SideEffectOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  // Check for an effects attribute on the op instance.
+  ArrayAttr effectsAttr = getAttrOfType<ArrayAttr>("effects");
+  if (!effectsAttr)
+    return;
+
+  // If there is one, it is an array of dictionary attributes that hold
+  // information on the effects of this operation.
+  for (Attribute element : effectsAttr) {
+    DictionaryAttr effectElement = element.cast<DictionaryAttr>();
+
+    // Get the specific memory effect.
+    MemoryEffects::Effect *effect =
+        llvm::StringSwitch<MemoryEffects::Effect *>(
+            effectElement.get("effect").cast<StringAttr>().getValue())
+            .Case("allocate", MemoryEffects::Allocate::get())
+            .Case("free", MemoryEffects::Free::get())
+            .Case("read", MemoryEffects::Read::get())
+            .Case("write", MemoryEffects::Write::get());
+
+    // Check for a result to affect.
+    Value value;
+    if (effectElement.get("on_result"))
+      value = getResult();
+
+    // Check for a non-default resource to use.
+    SideEffects::Resource *resource = SideEffects::DefaultResource::get();
+    if (effectElement.get("test_resource"))
+      resource = TestResource::get();
+
+    effects.emplace_back(effect, value, resource);
+  }
+}
+
+//===----------------------------------------------------------------------===//
+// Dialect Registration
+//===----------------------------------------------------------------------===//
+
 // Static initialization for Test dialect registration.
 static mlir::DialectRegistration<mlir::TestDialect> testDialect;
 
