@@ -7,4 +7,5 @@ add_mlir_library(MLIRTranslation
 target_link_libraries(MLIRTranslation
   PUBLIC
   LLVMSupport
+  MLIRIR
   )

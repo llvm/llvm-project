@@ -11,6 +11,7 @@
 
 include "mlir/IR/OpBase.td"
 include "mlir/IR/OpAsmInterface.td"
+include "mlir/IR/SideEffects.td"
 include "mlir/Analysis/ControlFlowInterfaces.td"
 include "mlir/Analysis/CallInterfaces.td"
 include "mlir/Analysis/InferTypeOpInterface.td"
@@ -1174,6 +1175,15 @@ def FormatOperandEOp : FormatOperandBase<"format_operand_e_op", [{
 def FormatSuccessorAOp : TEST_Op<"format_successor_a_op", [Terminator]> {
   let successors = (successor VariadicSuccessor<AnySuccessor>:$targets);
   let assemblyFormat = "$targets attr-dict";
+}
+
+//===----------------------------------------------------------------------===//
+// Test SideEffects
+//===----------------------------------------------------------------------===//
+
+def SideEffectOp : TEST_Op<"side_effect_op",
+    [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+  let results = (outs AnyType:$result);
 }
 
 #endif // TEST_OPS
