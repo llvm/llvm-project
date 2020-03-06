@@ -161,7 +161,7 @@ FindSymbolForSwiftObject(Process &process, RuntimeKind runtime_kind,
 }
 
 static lldb::BreakpointResolverSP
-CreateExceptionResolver(Breakpoint *bkpt, bool catch_bp, bool throw_bp) {
+CreateExceptionResolver(const lldb::BreakpointSP &bkpt, bool catch_bp, bool throw_bp) {
   BreakpointResolverSP resolver_sp;
 
   if (throw_bp)
@@ -1727,7 +1727,7 @@ llvm::Optional<Value> SwiftLanguageRuntime::GetErrorReturnLocationBeforeReturn(
 }
 
 lldb::BreakpointResolverSP
-SwiftLanguageRuntime::CreateExceptionResolver(Breakpoint *bkpt, bool catch_bp,
+SwiftLanguageRuntime::CreateExceptionResolver(const lldb::BreakpointSP &bkpt, bool catch_bp,
                                               bool throw_bp) {
   return ::CreateExceptionResolver(bkpt, catch_bp, throw_bp);
 }

@@ -202,7 +202,7 @@ public:
                                 Value::ValueType &value_type) override;
   TypeAndOrName FixUpDynamicType(const TypeAndOrName &type_and_or_name,
                                  ValueObject &static_value) override;
-  lldb::BreakpointResolverSP CreateExceptionResolver(Breakpoint *bkpt,
+  lldb::BreakpointResolverSP CreateExceptionResolver(const lldb::BreakpointSP &bkpt,
                                                      bool catch_bp,
                                                      bool throw_bp) override;
   bool CouldHaveDynamicValue(ValueObject &in_value) override;
