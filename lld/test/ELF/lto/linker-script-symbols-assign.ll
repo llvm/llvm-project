@@ -3,7 +3,7 @@
 
 ; RUN: echo "foo = 1;" > %t.script
 ; RUN: ld.lld %t.o -o %t2 --script %t.script -save-temps
-; RUN: llvm-readobj --symbols %t2.lto.o | FileCheck %s
+; RUN: llvm-nm %t2.lto.o | count 0
 
 ; CHECK-NOT: bar
 ; CHECK-NOT: foo
