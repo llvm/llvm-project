@@ -20,8 +20,7 @@ Sections:
     Info:            .text
     AddressAlign:    0x04
     Relocations:
-      - Offset:          0
-        Symbol:          .text
+      - Symbol:          .text
         Type:            R_X86_64_NONE
   - Type:            SHT_PROGBITS
     Name:            .text

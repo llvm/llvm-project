@@ -365,8 +365,7 @@
 # ELF-MIPSEL-NEXT:     EntSize:         0x0000000000000008
 # ELF-MIPSEL-NEXT:     Info:            .text
 # ELF-MIPSEL-NEXT:     Relocations:
-# ELF-MIPSEL-NEXT:       - Offset:          0x0000000000000000
-# ELF-MIPSEL-NEXT:         Symbol:          _gp_disp
+# ELF-MIPSEL-NEXT:       - Symbol:          _gp_disp
 # ELF-MIPSEL-NEXT:         Type:            R_MIPS_HI16
 # ELF-MIPSEL-NEXT:       - Offset:          0x0000000000000004
 # ELF-MIPSEL-NEXT:         Symbol:          _gp_disp
@@ -487,8 +486,7 @@
 # ELF-MIPS64EL-NEXT:     EntSize:         0x0000000000000018
 # ELF-MIPS64EL-NEXT:     Info:            .data
 # ELF-MIPS64EL-NEXT:     Relocations:
-# ELF-MIPS64EL-NEXT:       - Offset:          0
-# ELF-MIPS64EL-NEXT:         Symbol:          zed
+# ELF-MIPS64EL-NEXT:       - Symbol:          zed
 # ELF-MIPS64EL-NEXT:         Type:            R_MIPS_64
 # ELF-MIPS64EL-NEXT:   - Name:            .bss
 # ELF-MIPS64EL-NEXT:     Type:            SHT_NOBITS
