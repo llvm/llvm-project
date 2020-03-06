@@ -272,11 +272,8 @@ bool Section::ResolveContainedAddress(addr_t offset, Address &so_addr,
   so_addr.SetOffset(offset);
   so_addr.SetSection(const_cast<Section *>(this)->shared_from_this());
 
-#ifdef LLDB_CONFIGURATION_DEBUG
-  // For debug builds, ensure that there are no orphaned (i.e., moduleless)
-  // sections.
+  // Ensure that there are no orphaned (i.e., moduleless) sections.
   assert(GetModule().get());
-#endif
   return true;
 }
 
