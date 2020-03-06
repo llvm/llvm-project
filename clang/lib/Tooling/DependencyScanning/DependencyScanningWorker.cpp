@@ -122,6 +122,12 @@ public:
     Compiler.setFileManager(FileMgr);
     Compiler.createSourceManager(*FileMgr);
 
+    // Only clang -cc1 and c-index-test register the object module loader, so
+    // force it to use the raw AST format. This avoids the requirement to link
+    // against the LLVM target backends, and the object format is useless
+    // anyway for scanning as no debug info or code gets generated.
+    Compiler.getHeaderSearchOpts().ModuleFormat = "raw";
+
     // Create the dependency collector that will collect the produced
     // dependencies.
     //
