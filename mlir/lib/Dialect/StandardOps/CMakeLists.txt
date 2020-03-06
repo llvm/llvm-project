@@ -13,6 +13,7 @@ add_mlir_dialect_library(MLIRStandardOps
   )
 target_link_libraries(MLIRStandardOps
   PUBLIC
+  MLIRControlFlowAnalysis
   MLIREDSC
   MLIRIR
   LLVMSupport

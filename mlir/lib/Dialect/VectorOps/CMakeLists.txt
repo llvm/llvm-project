@@ -13,6 +13,7 @@ add_mlir_dialect_library(MLIRVectorOps
   )
 target_link_libraries(MLIRVectorOps
   PUBLIC
+  MLIREDSC
   MLIRIR
   MLIRStandardOps
   MLIRAffineOps

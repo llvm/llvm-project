@@ -15,6 +15,7 @@ target_link_libraries(MLIRLLVMIR
   LLVMCore
   LLVMSupport
   LLVMFrontendOpenMP
+  MLIRAnalysis
   MLIROpenMP
   MLIRIR
   MLIRSupport
