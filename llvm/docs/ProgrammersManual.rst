@@ -71,7 +71,7 @@ Here are some useful links:
    <http://www.sgi.com/tech/stl/stl_introduction.html>`_.
 
 #. `Bjarne Stroustrup's C++ Page
-   <http://www.research.att.com/%7Ebs/C++.html>`_.
+   <http://www.stroustrup.com/C++.html>`_.
 
 #. `Bruce Eckel's Thinking in C++, 2nd ed. Volume 2 Revision 4.0
    (even better, get the book)
