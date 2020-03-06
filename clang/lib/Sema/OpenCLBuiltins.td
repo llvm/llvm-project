@@ -742,17 +742,17 @@ let MaxVersion = CL20 in {
         def : Builtin<name, [VectorType<Half, VSize>, Size, PointerType<ConstType<Half>, AS>]>;
       }
       foreach name = ["vstore" # VSize] in {
-        def : Builtin<name, [Void, VectorType<Char, VSize>, Size, PointerType<ConstType<Char>, AS>]>;
-        def : Builtin<name, [Void, VectorType<UChar, VSize>, Size, PointerType<ConstType<UChar>, AS>]>;
-        def : Builtin<name, [Void, VectorType<Short, VSize>, Size, PointerType<ConstType<Short>, AS>]>;
-        def : Builtin<name, [Void, VectorType<UShort, VSize>, Size, PointerType<ConstType<UShort>, AS>]>;
-        def : Builtin<name, [Void, VectorType<Int, VSize>, Size, PointerType<ConstType<Int>, AS>]>;
-        def : Builtin<name, [Void, VectorType<UInt, VSize>, Size, PointerType<ConstType<UInt>, AS>]>;
-        def : Builtin<name, [Void, VectorType<Long, VSize>, Size, PointerType<ConstType<Long>, AS>]>;
-        def : Builtin<name, [Void, VectorType<ULong, VSize>, Size, PointerType<ConstType<ULong>, AS>]>;
-        def : Builtin<name, [Void, VectorType<Float, VSize>, Size, PointerType<ConstType<Float>, AS>]>;
-        def : Builtin<name, [Void, VectorType<Double, VSize>, Size, PointerType<ConstType<Double>, AS>]>;
-        def : Builtin<name, [Void, VectorType<Half, VSize>, Size, PointerType<ConstType<Half>, AS>]>;
+        def : Builtin<name, [Void, VectorType<Char, VSize>, Size, PointerType<Char, AS>]>;
+        def : Builtin<name, [Void, VectorType<UChar, VSize>, Size, PointerType<UChar, AS>]>;
+        def : Builtin<name, [Void, VectorType<Short, VSize>, Size, PointerType<Short, AS>]>;
+        def : Builtin<name, [Void, VectorType<UShort, VSize>, Size, PointerType<UShort, AS>]>;
+        def : Builtin<name, [Void, VectorType<Int, VSize>, Size, PointerType<Int, AS>]>;
+        def : Builtin<name, [Void, VectorType<UInt, VSize>, Size, PointerType<UInt, AS>]>;
+        def : Builtin<name, [Void, VectorType<Long, VSize>, Size, PointerType<Long, AS>]>;
+        def : Builtin<name, [Void, VectorType<ULong, VSize>, Size, PointerType<ULong, AS>]>;
+        def : Builtin<name, [Void, VectorType<Float, VSize>, Size, PointerType<Float, AS>]>;
+        def : Builtin<name, [Void, VectorType<Double, VSize>, Size, PointerType<Double, AS>]>;
+        def : Builtin<name, [Void, VectorType<Half, VSize>, Size, PointerType<Half, AS>]>;
       }
       foreach name = ["vloada_half" # VSize] in {
         def : Builtin<name, [VectorType<Float, VSize>, Size, PointerType<ConstType<Half>, AS>]>;
@@ -784,17 +784,17 @@ let MinVersion = CL20 in {
       def : Builtin<name, [VectorType<Half, VSize>, Size, PointerType<ConstType<Half>, GenericAS>]>;
     }
     foreach name = ["vstore" # VSize] in {
-      def : Builtin<name, [Void, VectorType<Char, VSize>, Size, PointerType<ConstType<Char>, GenericAS>]>;
-      def : Builtin<name, [Void, VectorType<UChar, VSize>, Size, PointerType<ConstType<UChar>, GenericAS>]>;
-      def : Builtin<name, [Void, VectorType<Short, VSize>, Size, PointerType<ConstType<Short>, GenericAS>]>;
-      def : Builtin<name, [Void, VectorType<UShort, VSize>, Size, PointerType<ConstType<UShort>, GenericAS>]>;
-      def : Builtin<name, [Void, VectorType<Int, VSize>, Size, PointerType<ConstType<Int>, GenericAS>]>;
-      def : Builtin<name, [Void, VectorType<UInt, VSize>, Size, PointerType<ConstType<UInt>, GenericAS>]>;
-      def : Builtin<name, [Void, VectorType<Long, VSize>, Size, PointerType<ConstType<Long>, GenericAS>]>;
-      def : Builtin<name, [Void, VectorType<ULong, VSize>, Size, PointerType<ConstType<ULong>, GenericAS>]>;
-      def : Builtin<name, [Void, VectorType<Float, VSize>, Size, PointerType<ConstType<Float>, GenericAS>]>;
-      def : Builtin<name, [Void, VectorType<Double, VSize>, Size, PointerType<ConstType<Double>, GenericAS>]>;
-      def : Builtin<name, [Void, VectorType<Half, VSize>, Size, PointerType<ConstType<Half>, GenericAS>]>;
+      def : Builtin<name, [Void, VectorType<Char, VSize>, Size, PointerType<Char, GenericAS>]>;
+      def : Builtin<name, [Void, VectorType<UChar, VSize>, Size, PointerType<UChar, GenericAS>]>;
+      def : Builtin<name, [Void, VectorType<Short, VSize>, Size, PointerType<Short, GenericAS>]>;
+      def : Builtin<name, [Void, VectorType<UShort, VSize>, Size, PointerType<UShort, GenericAS>]>;
+      def : Builtin<name, [Void, VectorType<Int, VSize>, Size, PointerType<Int, GenericAS>]>;
+      def : Builtin<name, [Void, VectorType<UInt, VSize>, Size, PointerType<UInt, GenericAS>]>;
+      def : Builtin<name, [Void, VectorType<Long, VSize>, Size, PointerType<Long, GenericAS>]>;
+      def : Builtin<name, [Void, VectorType<ULong, VSize>, Size, PointerType<ULong, GenericAS>]>;
+      def : Builtin<name, [Void, VectorType<Float, VSize>, Size, PointerType<Float, GenericAS>]>;
+      def : Builtin<name, [Void, VectorType<Double, VSize>, Size, PointerType<Double, GenericAS>]>;
+      def : Builtin<name, [Void, VectorType<Half, VSize>, Size, PointerType<Half, GenericAS>]>;
     }
     foreach name = ["vloada_half" # VSize] in {
       def : Builtin<name, [VectorType<Float, VSize>, Size, PointerType<ConstType<Half>, GenericAS>]>;
@@ -825,24 +825,21 @@ foreach VSize = [2, 3, 4, 8, 16] in {
   foreach name = ["vloada_half" # VSize] in {
     def : Builtin<name, [VectorType<Float, VSize>, Size, PointerType<ConstType<Half>, ConstantAS>]>;
   }
-  foreach rnd = ["", "_rte", "_rtz", "_rtp", "_rtn"] in {
-    foreach name = ["vstorea_half" # VSize # rnd] in {
-      def : Builtin<name, [Void, VectorType<Float, VSize>, Size, PointerType<Half, ConstantAS>]>;
-      def : Builtin<name, [Void, VectorType<Double, VSize>, Size, PointerType<Half, ConstantAS>]>;
-    }
-  }
 }
 let MaxVersion = CL20 in {
   foreach AS = [GlobalAS, LocalAS, PrivateAS] in {
     def : Builtin<"vload_half", [Float, Size, PointerType<ConstType<Half>, AS>]>;
+    def : Builtin<"vloada_half", [Float, Size, PointerType<ConstType<Half>, AS>]>;
     foreach VSize = [2, 3, 4, 8, 16] in {
       foreach name = ["vload_half" # VSize] in {
         def : Builtin<name, [VectorType<Float, VSize>, Size, PointerType<ConstType<Half>, AS>]>;
       }
     }
     foreach rnd = ["", "_rte", "_rtz", "_rtp", "_rtn"] in {
-      def : Builtin<"vstore_half" # rnd, [Void, Float, Size, PointerType<Half, AS>]>;
-      def : Builtin<"vstore_half" # rnd, [Void, Double, Size, PointerType<Half, AS>]>;
+      foreach name = ["vstore_half" # rnd, "vstorea_half" # rnd] in {
+        def : Builtin<name, [Void, Float, Size, PointerType<Half, AS>]>;
+        def : Builtin<name, [Void, Double, Size, PointerType<Half, AS>]>;
+      }
       foreach VSize = [2, 3, 4, 8, 16] in {
         foreach name = ["vstore_half" # VSize # rnd] in {
           def : Builtin<name, [Void, VectorType<Float, VSize>, Size, PointerType<Half, AS>]>;
@@ -855,14 +852,17 @@ let MaxVersion = CL20 in {
 let MinVersion = CL20 in {
   foreach AS = [GenericAS] in {
     def : Builtin<"vload_half", [Float, Size, PointerType<ConstType<Half>, AS>]>;
+    def : Builtin<"vloada_half", [Float, Size, PointerType<ConstType<Half>, AS>]>;
     foreach VSize = [2, 3, 4, 8, 16] in {
       foreach name = ["vload_half" # VSize] in {
         def : Builtin<name, [VectorType<Float, VSize>, Size, PointerType<ConstType<Half>, AS>]>;
       }
     }
     foreach rnd = ["", "_rte", "_rtz", "_rtp", "_rtn"] in {
-      def : Builtin<"vstore_half" # rnd, [Void, Float, Size, PointerType<Half, AS>]>;
-      def : Builtin<"vstore_half" # rnd, [Void, Double, Size, PointerType<Half, AS>]>;
+      foreach name = ["vstore_half" # rnd, "vstorea_half" # rnd] in {
+        def : Builtin<name, [Void, Float, Size, PointerType<Half, AS>]>;
+        def : Builtin<name, [Void, Double, Size, PointerType<Half, AS>]>;
+      }
       foreach VSize = [2, 3, 4, 8, 16] in {
         foreach name = ["vstore_half" # VSize # rnd] in {
           def : Builtin<name, [Void, VectorType<Float, VSize>, Size, PointerType<Half, AS>]>;
@@ -875,6 +875,7 @@ let MinVersion = CL20 in {
 
 foreach AS = [ConstantAS] in {
   def : Builtin<"vload_half", [Float, Size, PointerType<ConstType<Half>, AS>]>;
+  def : Builtin<"vloada_half", [Float, Size, PointerType<ConstType<Half>, AS>]>;
   foreach VSize = [2, 3, 4, 8, 16] in {
     foreach name = ["vload_half" # VSize] in {
       def : Builtin<name, [VectorType<Float, VSize>, Size, PointerType<ConstType<Half>, AS>]>;
