@@ -31,3 +31,15 @@ struct G {
 
 using gf1 = decltype(G<int, char>::foo1('a', 1, 2, 3, 4)); // expected-error{{no matching function}}
 using gf2 = decltype(G<int, char>::foo2('a', 1, 2)); // expected-error{{no matching function}}
+
+
+// Regression (bug #45102): check that instantiation works where there is no
+// TemplateTypeParmDecl
+template <typename T> using id = T;
+
+template <typename T>
+constexpr void g() {
+  id<void (T)> f;
+}
+
+static_assert((g<int>(), true));
