@@ -55,6 +55,7 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
             def A(self, packet):
                 return "E47"
 
+        self.runCmd("log enable gdb-remote packets")
         self.server.responder = MyResponder()
 
         target = self.createTarget("a.yaml")
