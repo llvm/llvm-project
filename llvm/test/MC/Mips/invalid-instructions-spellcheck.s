@@ -13,7 +13,7 @@
 
 $2, $1, $25
 
-# ALL:      error: unexpected token at start of statement
+# ALL:      error: unknown instruction
 # ALL-NEXT: $2, $1, $25
 # ALL-NEXT:  ^
 
