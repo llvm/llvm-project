@@ -144,10 +144,10 @@ std::vector<EditLineStringType> SplitLines(const EditLineStringType &input) {
   while (start < input.length()) {
     size_t end = input.find('\n', start);
     if (end == std::string::npos) {
-      result.insert(result.end(), input.substr(start));
+      result.push_back(input.substr(start));
       break;
     }
-    result.insert(result.end(), input.substr(start, end - start));
+    result.push_back(input.substr(start, end - start));
     start = end + 1;
   }
   return result;
@@ -302,19 +302,16 @@ protected:
 // Editline private methods
 
 void Editline::SetBaseLineNumber(int line_number) {
-  std::stringstream line_number_stream;
-  line_number_stream << line_number;
   m_base_line_number = line_number;
   m_line_number_digits =
-      std::max(3, (int)line_number_stream.str().length() + 1);
+      std::max<int>(3, std::to_string(line_number).length() + 1);
 }
 
 std::string Editline::PromptForIndex(int line_index) {
   bool use_line_numbers = m_multiline_enabled && m_base_line_number > 0;
   std::string prompt = m_set_prompt;
-  if (use_line_numbers && prompt.length() == 0) {
+  if (use_line_numbers && prompt.length() == 0)
     prompt = ": ";
-  }
   std::string continuation_prompt = prompt;
   if (m_set_continuation_prompt.length() > 0) {
     continuation_prompt = m_set_continuation_prompt;
@@ -429,7 +426,7 @@ void Editline::DisplayInput(int firstIndex) {
 }
 
 int Editline::CountRowsForLine(const EditLineStringType &content) {
-  auto prompt =
+  std::string prompt =
       PromptForIndex(0); // Prompt width is constant during an edit session
   int line_length = (int)(content.length() + prompt.length());
   return (line_length / m_terminal_width) + 1;
