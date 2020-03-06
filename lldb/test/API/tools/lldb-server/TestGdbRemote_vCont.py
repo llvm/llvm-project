@@ -111,9 +111,9 @@ class TestGdbRemote_vCont(gdbremote_testcase.GdbRemoteTestCaseBase):
         archs=[
             "arm",
             "aarch64"])
-    @expectedFailureAll(
+    @skipIf(
         oslist=["linux"],
-        archs=["arm"],
+        archs=["arm","aarch64"],
         bugnumber="llvm.org/pr24739")
     @skipIf(triple='^mips')
     @expectedFailureAll(oslist=["ios", "tvos", "watchos", "bridgeos"], bugnumber="rdar://27005337")
@@ -141,9 +141,9 @@ class TestGdbRemote_vCont(gdbremote_testcase.GdbRemoteTestCaseBase):
         archs=[
             "arm",
             "aarch64"])
-    @expectedFailureAll(
+    @skipIf(
         oslist=["linux"],
-        archs=["arm"],
+        archs=["arm","aarch64"],
         bugnumber="llvm.org/pr24739")
     @skipIf(triple='^mips')
     @expectedFailureAll(oslist=["ios", "tvos", "watchos", "bridgeos"], bugnumber="rdar://27005337")
