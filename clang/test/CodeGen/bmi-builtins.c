@@ -155,6 +155,12 @@ unsigned int test_bextr_u32(unsigned int __X, unsigned int __Y,
   return _bextr_u32(__X, __Y, __Z);
 }
 
+unsigned int test_bextr2_u32(unsigned int __X, unsigned int __Y) {
+  // CHECK-LABEL: test_bextr2_u32
+  // CHECK: i32 @llvm.x86.bmi.bextr.32(i32 %{{.*}}, i32 %{{.*}})
+  return _bextr2_u32(__X, __Y);
+}
+
 unsigned int test_blsi_u32(unsigned int __X) {
   // CHECK-LABEL: test_blsi_u32
   // CHECK: sub i32 0, %{{.*}}
@@ -194,6 +200,13 @@ unsigned long long test_bextr_u64(unsigned long __X, unsigned int __Y,
   // CHECK: zext i32 %{{.*}} to i64
   // CHECK: i64 @llvm.x86.bmi.bextr.64(i64 %{{.*}}, i64 %{{.*}})
   return _bextr_u64(__X, __Y, __Z);
+}
+
+unsigned long long test_bextr2_u64(unsigned long long __X,
+                                   unsigned long long __Y) {
+  // CHECK-LABEL: test_bextr2_u64
+  // CHECK: i64 @llvm.x86.bmi.bextr.64(i64 %{{.*}}, i64 %{{.*}})
+  return _bextr2_u64(__X, __Y);
 }
 
 unsigned long long test_blsi_u64(unsigned long long __X) {
