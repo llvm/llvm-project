@@ -899,7 +899,7 @@ static int ompt_tsan_initialize(ompt_function_lookup_t lookup,
     fprintf(
         stderr,
         "Warning: please export TSAN_OPTIONS='ignore_noninstrumented_modules=1' "
-        "to avoid false positive reports from the OpenMP runtime.!\n");
+        "to avoid false positive reports from the OpenMP runtime!\n");
   return 1; // success
 }
 
