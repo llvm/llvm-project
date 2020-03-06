@@ -9,13 +9,13 @@
 
 # CHECK:      Disassembly of section .text:
 # CHECK-EMPTY:
-# CHECK-NEXT: __start:
+# CHECK-NEXT: <__start>:
 # CHECK-NEXT:    lui     $2, 0
 # CHECK-NEXT:    lw      $2, -32732($2)
 # CHECK-NEXT:    lui     $2, 0
 # CHECK-NEXT:    lw      $2, -32728($2)
 #
-# CHECK:      bar:
+# CHECK:      <bar>:
 # CHECK-NEXT:    lw      $2, -32736($2)
 # CHECK-NEXT:    lw      $2, -32744($2)
 # CHECK-NEXT:    addi    $2, $2, {{.*}}

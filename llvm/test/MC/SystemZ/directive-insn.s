@@ -15,7 +15,7 @@
   .insn rie,0xec0000000076,%r1,%r2,12
 #CHECK: ec 12 00 03 00 64     cgrj %r1, %r2, 0, 0x12
   .insn rie,0xec0000000064,%r1,%r2,label.rie
-#CHECK: label.rie:
+#CHECK: <label.rie>:
 label.rie:
 
 # GAS considers this instruction's immediate operand to be PC relative.
@@ -23,7 +23,7 @@ label.rie:
   .insn ril,0xc60d00000000,%r1,12
 #CHECK: c6 18 00 00 00 03     cgrl %r1, 0x1e
   .insn ril,0xc60800000000,%r1,label.ril
-#CHECK: label.ril:
+#CHECK: <label.ril>:
 label.ril:
 
 #CHECK: c2 2b 80 00 00 00     alfi %r2, 2147483648
@@ -58,7 +58,7 @@ label.ril:
   .insn rsi,0x84000000,%r1,%r3,8
 #CHECK: 84 13 00 02           brxh %r1, %r3, 0x4a
   .insn rsi,0x84000000,%r1,%r3,label.rsi
-#CHECK: label.rsi:
+#CHECK: <label.rsi>:
 label.rsi:
 
 # RSE formats are short displacement versions of the RSY formats.

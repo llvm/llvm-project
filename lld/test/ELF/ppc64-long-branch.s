@@ -28,21 +28,21 @@
 # BRANCH-BE:      0x02002030 00000000 02002008 00000000 02002010
 # BRANCH-BE-NEXT: 0x02002040 00000000 00002008
 
-# CHECK:      _start:
+# CHECK:      <_start>:
 # CHECK-NEXT:     2000:       bl .+24
 # CHECK-NEXT:                 bl .+20
 # CHECK-NEXT:                 bl .+16
 # CHECK-NEXT:                 bl .+33554428
 
 ## &.branch_lt[0] - .TOC. = .branch_lt - (.got+0x8000) = -32760
-# CHECK:      __long_branch_high:
+# CHECK:      <__long_branch_high>:
 # CHECK-NEXT:     2018:       addis 12, 2, 0
 # CHECK-NEXT:                 ld 12, -32760(12)
 # CHECK-NEXT:                 mtctr 12
 # CHECK-NEXT:                 bctr
 
 ## &.branch_lt[1] - .TOC. = .branch_lt - (.got+0x8000) = -32752
-# CHECK:      __long_branch_:
+# CHECK:      <__long_branch_>:
 # CHECK-NEXT:     2028:       addis 12, 2, 0
 # CHECK-NEXT:                 ld 12, -32752(12)
 # CHECK-NEXT:                 mtctr 12
@@ -60,12 +60,12 @@ blr
 
 # CHECK:      Disassembly of section .text_high:
 # CHECK-EMPTY:
-# CHECK-NEXT: high:
+# CHECK-NEXT: <high>:
 # CHECK-NEXT:  2002000:       addis 2, 12, 1
 # CHECK-NEXT:                 addi 2, 2, -32728
 # CHECK-NEXT:                 bl .-33554432
 # CHECK-NEXT:                 bl .+8
-# CHECK:      __long_branch_:
+# CHECK:      <__long_branch_>:
 # CHECK-NEXT:  2002014:       addis 12, 2, 0
 # CHECK-NEXT:                 ld 12, -32744(12)
 # CHECK-NEXT:                 mtctr 12

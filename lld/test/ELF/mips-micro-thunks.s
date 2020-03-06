@@ -41,20 +41,20 @@
 # RUN: llvm-objdump -d -mattr=+micromips --no-show-raw-insn %t-el-r6.exe \
 # RUN:   | FileCheck --check-prefix=R6 %s
 
-# R2: __start:
+# R2: <__start>:
 # R2-NEXT:    20100:  jal   131336 <__microLA25Thunk_foo>
 # R2-NEXT:            nop
 
-# R2: __microLA25Thunk_foo:
+# R2: <__microLA25Thunk_foo>:
 # R2-NEXT:    20108:  lui   $25, 2
 # R2-NEXT:            j     131360 <foo>
 # R2-NEXT:            addiu $25, $25, 289
 # R2-NEXT:            nop
 
-# R6: __start:
+# R6: <__start>:
 # R6-NEXT:    20100:  balc  0 <__start>
 
-# R6: __microLA25Thunk_foo:
+# R6: <__microLA25Thunk_foo>:
 # R6-NEXT:    20104:  lui   $25, 2
 # R6-NEXT:            addiu $25, $25, 273
 # R6-NEXT:            bc    0 <__microLA25Thunk_foo+0x8>

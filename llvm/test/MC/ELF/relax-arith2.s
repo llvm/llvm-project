@@ -6,7 +6,7 @@
 bar:
 // CHECK:      Disassembly of section imul:
 // CHECK-EMPTY:
-// CHECK-NEXT: imul:
+// CHECK-NEXT: <imul>:
 // CHECK-NEXT:   0: 66 6b db 80                   imulw $-128, %bx, %bx
 // CHECK-NEXT:   4: 66 6b 1c 25 00 00 00 00 7f    imulw $127, 0, %bx
 // CHECK-NEXT:   d: 6b db 00                      imull $0, %ebx, %ebx
@@ -22,9 +22,7 @@ bar:
         imul $42, bar,  %rbx
 
 
-// CHECK:      Disassembly of section and:
-// CHECK-EMPTY:
-// CHECK-NEXT: and:
+// CHECK:      <and>:
 // CHECK-NEXT:   0: 66 83 e3 7f                   andw $127, %bx
 // CHECK-NEXT:   4: 66 83 24 25 00 00 00 00 00    andw $0, 0
 // CHECK-NEXT:   d: 83 e3 01                      andl $1, %ebx
@@ -39,9 +37,7 @@ bar:
         and  $42, %rbx
         andq $-128, bar
 
-// CHECK:      Disassembly of section or:
-// CHECK-EMPTY:
-// CHECK-NEXT: or:
+// CHECK:      <or>:
 // CHECK-NEXT:   0: 66 83 cb 00                   orw $0, %bx
 // CHECK-NEXT:   4: 66 83 0c 25 00 00 00 00 01    orw $1, 0
 // CHECK-NEXT:   d: 83 cb ff                      orl $-1, %ebx
@@ -56,9 +52,7 @@ bar:
         or  $-128, %rbx
         orq $127, bar
 
-// CHECK:      Disassembly of section xor:
-// CHECK-EMPTY:
-// CHECK-NEXT: xor:
+// CHECK:      <xor>:
 // CHECK-NEXT:   0: 66 83 f3 01                   xorw $1, %bx
 // CHECK-NEXT:   4: 66 83 34 25 00 00 00 00 ff    xorw $-1, 0
 // CHECK-NEXT:   d: 83 f3 2a                      xorl $42, %ebx
@@ -73,9 +67,7 @@ bar:
         xor  $127, %rbx
         xorq $0, bar
 
-// CHECK:      Disassembly of section add:
-// CHECK-EMPTY:
-// CHECK-NEXT: add:
+// CHECK:      <add>:
 // CHECK-NEXT:   0: 66 83 c3 ff                   addw $-1, %bx
 // CHECK-NEXT:   4: 66 83 04 25 00 00 00 00 2a    addw $42, 0
 // CHECK-NEXT:   d: 83 c3 80                      addl $-128, %ebx
@@ -92,7 +84,7 @@ bar:
 
 // CHECK:      Disassembly of section sub:
 // CHECK-EMPTY:
-// CHECK-NEXT: sub:
+// CHECK-NEXT: <sub>:
 // CHECK-NEXT:   0: 66 83 eb 2a                   subw $42, %bx
 // CHECK-NEXT:   4: 66 83 2c 25 00 00 00 00 80    subw $-128, 0
 // CHECK-NEXT:   d: 83 eb 7f                      subl $127, %ebx
@@ -109,7 +101,7 @@ bar:
 
 // CHECK:      Disassembly of section cmp:
 // CHECK-EMPTY:
-// CHECK-NEXT: cmp:
+// CHECK-NEXT: <cmp>:
 // CHECK-NEXT:   0: 66 83 fb 80                   cmpw $-128, %bx
 // CHECK-NEXT:   4: 66 83 3c 25 00 00 00 00 7f    cmpw $127, 0
 // CHECK-NEXT:   d: 83 fb 00                      cmpl $0, %ebx
@@ -126,7 +118,7 @@ bar:
 
 // CHECK:      Disassembly of section push:
 // CHECK-EMPTY:
-// CHECK-NEXT: push:
+// CHECK-NEXT: <push>:
 // CHECK-NEXT:   0: 66 6a 80                      pushw $-128
 // CHECK-NEXT:   3: 66 6a 7f                      pushw $127
 // CHECK-NEXT:   6: 6a 80                         pushq $-128

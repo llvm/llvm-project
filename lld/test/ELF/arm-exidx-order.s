@@ -55,29 +55,29 @@ f3:
 
 // CHECK: Disassembly of section .text:
 // CHECK-EMPTY:
-// CHECK: _start:
+// CHECK: <_start>:
 // CHECK-NEXT:    11124:       bx      lr
-// CHECK: f1:
+// CHECK: <f1>:
 // CHECK-NEXT:    11128:       bx      lr
-// CHECK: f2:
+// CHECK: <f2>:
 // CHECK-NEXT:    1112c:       bx      lr
-// CHECK: f3:
+// CHECK: <f3>:
 // CHECK-NEXT:    11130:       bx      lr
-// CHECK: func4:
+// CHECK: <func4>:
 // CHECK-NEXT:    11134:       bx      lr
-// CHECK: func5:
+// CHECK: <func5>:
 // CHECK-NEXT:    11138:       bx      lr
 // CHECK: Disassembly of section .func1:
 // CHECK-EMPTY:
-// CHECK-NEXT: func1:
+// CHECK-NEXT: <func1>:
 // CHECK-NEXT:    1113c:       bx      lr
 // CHECK: Disassembly of section .func2:
 // CHECK-EMPTY:
-// CHECK-NEXT: func2:
+// CHECK-NEXT: <func2>:
 // CHECK-NEXT:    11140:       bx      lr
 // CHECK: Disassembly of section .func3:
 // CHECK-EMPTY:
-// CHECK-NEXT: func3:
+// CHECK-NEXT: <func3>:
 // CHECK-NEXT:    11144:       bx      lr
 
 // Each .ARM.exidx section has two 4 byte fields
@@ -133,32 +133,32 @@ f3:
 
 // CHECK-SCRIPT: Disassembly of section .text:
 // CHECK-SCRIPT-EMPTY:
-// CHECK-SCRIPT-NEXT: func4:
+// CHECK-SCRIPT-NEXT: <func4>:
 // CHECK-SCRIPT-NEXT:    11000:       1e ff 2f e1     bx      lr
-// CHECK-SCRIPT:      func5:
+// CHECK-SCRIPT:      <func5>:
 // CHECK-SCRIPT-NEXT:    11004:       1e ff 2f e1     bx      lr
-// CHECK-SCRIPT:      _start:
+// CHECK-SCRIPT:      <_start>:
 // CHECK-SCRIPT-NEXT:    11008:       1e ff 2f e1     bx      lr
-// CHECK-SCRIPT:      f1:
+// CHECK-SCRIPT:      <f1>:
 // CHECK-SCRIPT-NEXT:    1100c:       1e ff 2f e1     bx      lr
-// CHECK-SCRIPT:      f2:
+// CHECK-SCRIPT:      <f2>:
 // CHECK-SCRIPT-NEXT:    11010:       1e ff 2f e1     bx      lr
-// CHECK-SCRIPT:      f3:
+// CHECK-SCRIPT:      <f3>:
 // CHECK-SCRIPT-NEXT:    11014:       1e ff 2f e1     bx      lr
 // CHECK-SCRIPT-EMPTY:
 // CHECK-SCRIPT-NEXT: Disassembly of section .func1:
 // CHECK-SCRIPT-EMPTY:
-// CHECK-SCRIPT-NEXT: func1:
+// CHECK-SCRIPT-NEXT: <func1>:
 // CHECK-SCRIPT-NEXT:    11018:       1e ff 2f e1     bx      lr
 // CHECK-SCRIPT-EMPTY:
 // CHECK-SCRIPT-NEXT: Disassembly of section .func2:
 // CHECK-SCRIPT-EMPTY:
-// CHECK-SCRIPT-NEXT: func2:
+// CHECK-SCRIPT-NEXT: <func2>:
 // CHECK-SCRIPT-NEXT:    1101c:       1e ff 2f e1     bx      lr
 // CHECK-SCRIPT-EMPTY:
 // CHECK-SCRIPT-NEXT: Disassembly of section .func3:
 // CHECK-SCRIPT-EMPTY:
-// CHECK-SCRIPT-NEXT: func3:
+// CHECK-SCRIPT-NEXT: <func3>:
 // CHECK-SCRIPT-NEXT:    11020:       1e ff 2f e1     bx      lr
 
 // Check that the .ARM.exidx section is sorted in order as the functions

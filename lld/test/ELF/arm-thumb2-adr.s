@@ -100,12 +100,12 @@ dat8:
 // SYMS:     Name: dat4
 // SYMS-NEXT:     Value: 0x8015
 
-// CHECK: 00008f00 target1:
+// CHECK: 00008f00 <target1>:
 // CHECK-NEXT:     8f00: bx      lr
-// CHECK: 00008f02 target2:
+// CHECK: 00008f02 <target2>:
 // CHECK-NEXT:     8f02: bx      lr
 
-// CHECK: 00009000 _start:
+// CHECK: 00009000 <_start>:
 // CHECK-NEXT:     9000: nop
 /// AlignDown(0x9002+4, 4) - 0xff2 = 0x8012
 // CHECK-NEXT:     9002: adr.w   r0, #-4082
@@ -122,7 +122,7 @@ dat8:
 /// AlignDown(0x901a+4, 4) - 0x119 = 0x8f03
 // CHECK-NEXT:     901a: adr.w   r1, #-281
 
-// CHECK: 00010000 pos:
+// CHECK: 00010000 <pos>:
 /// AlignDown(0x10000+4, 4) + 0xfd = 0x10101
 // CHECK-NEXT:    10000: adr.w   r2, #253
 // CHECK-NEXT:    10004: nop
@@ -141,10 +141,10 @@ dat8:
 /// AlignDown(0x1001e+4, 4) + 0xff7 = 0x11017 = dat5 + 8
 // CHECK-NEXT:   1001e:  adr.w  r4, #4087
 
-// CHECK: 00010100 target3:
+// CHECK: 00010100 <target3>:
 // CHECK-NEXT:    10100: bx      lr
 
-// CHECK: 00010102 target4:
+// CHECK: 00010102 <target4>:
 // CHECK-NEXT:    10102: bx      lr
 
 // SYMS:     Name: dat5

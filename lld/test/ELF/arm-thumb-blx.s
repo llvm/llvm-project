@@ -51,7 +51,7 @@ _start:
 
 // CHECK: Disassembly of section .caller:
 // CHECK-EMPTY:
-// CHECK: _start:
+// CHECK: <_start>:
 // Align(0x10000,4) - 0xff50 (65360) + 4 = 0xb4 = callee_low
 // CHECK-NEXT-THUMB:   10000:       f0 f7 58 e8     blx     #-65360
 // CHECK-NEXT-THUMB:   10004:       00 bf   nop

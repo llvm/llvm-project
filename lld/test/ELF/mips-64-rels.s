@@ -17,12 +17,12 @@
 # CHECK-NEXT:  {{[0-9a-f]+}} ffffffff fffe9014
 #                            ^-- 0x21004 - 0x37ff0 = 0xfffffffffffe9014
 
-# CHECK:      __start:
+# CHECK:      <__start>:
 # CHECK-NEXT:    21000:  lui     $gp, 0x1
 #                                     ^-- 0x21000 - 0x37ff0
 #                                     ^-- 0 - 0xffffffffffff9010
 #                                     ^-- %hi(0x16ff0)
-# CHECK:      loc:
+# CHECK:      <loc>:
 # CHECK-NEXT:    21004:  daddiu  $gp, $gp, 0x6ff0
 #                                     ^-- 0x21000 - 0x37ff0
 #                                     ^-- 0 - 0xfffffffffffe9010

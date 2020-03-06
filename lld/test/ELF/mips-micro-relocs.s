@@ -41,7 +41,7 @@
 # EL:      Contents of section .debug_info
 # EL-NEXT:  0000 11010200
 
-# ASM:      __start:
+# ASM:      <__start>:
 # ASM-NEXT:      20110:  lui     $3, 1
 # ASM-NEXT:              addiu   $3, $3, 32495
 # ASM-NEXT:              lw      $3, -32744($gp)

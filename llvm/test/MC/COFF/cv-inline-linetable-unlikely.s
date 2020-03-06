@@ -21,7 +21,7 @@
 # calls to __asan_report*, for which it is very important to have an accurate
 # stack trace.
 
-# ASM:      0000000000000000 g:
+# ASM:      0000000000000000 <g>:
 # ASM-NEXT:        0: 48 83 ec 28                   subq    $40, %rsp
 # ASM-NEXT:        4: c7 05 fc ff ff ff 00 00 00 00 movl    $0, -4(%rip)
 #  Begin inline loc (matches cv_loc below)

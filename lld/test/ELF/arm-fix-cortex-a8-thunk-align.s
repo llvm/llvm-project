@@ -22,12 +22,12 @@ thumb_target:
   b.w thumb_target
 
 /// Expect thunk and patch to be inserted here
-// CHECK:  00003004 __ThumbV7PILongThunk_arm_func:
+// CHECK:  00003004 <__ThumbV7PILongThunk_arm_func>:
 // CHECK-NEXT: 3004: movw    r12, #4088
 // CHECK-NEXT:       movt    r12, #256
 // CHECK-NEXT:       add     r12, pc
 // CHECK-NEXT:       bx      r12
-// CHECK:  00004004 __CortexA8657417_2FFE:
+// CHECK:  00004004 <__CortexA8657417_2FFE>:
 // CHECK-NEXT: 4004: b.w     #-8196
  .section .text.02
  /// Take us over thunk section spacing

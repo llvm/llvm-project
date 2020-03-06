@@ -13,7 +13,7 @@
 
 // CHECK:      Disassembly of section .plt:
 // CHECK-EMPTY:
-// CHECK-NEXT: .plt:
+// CHECK-NEXT: <.plt>:
 // CHECK-NEXT: 1300:       pushq   8498(%rip)
 // CHECK-NEXT:             movq    8499(%rip), %r11
 // CHECK-NEXT:             callq   14 <.plt+0x20>

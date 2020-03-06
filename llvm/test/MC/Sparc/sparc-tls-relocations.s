@@ -19,7 +19,7 @@
 ! REL: ]
 
 
-! OBJDUMP: foo:
+! OBJDUMP: <foo>:
 foo:
 ! Here we use two different sequences to get the address of a static TLS variable 'Local'
 ! (note - there is no intent to have valid assembler function here,

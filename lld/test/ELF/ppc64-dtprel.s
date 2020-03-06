@@ -147,7 +147,7 @@ k:
 // HEX-BE-NEXT: 4209c8 00000000 004289c8 00000000 00000000
 // HEX-BE-NEXT: 4209d8 00000000 00000000
 
-// Dis:     test:
+// Dis:     <test>:
 // Dis:      addi 4, 3, -31744
 // Dis-NEXT: lwa 4, -31744(3)
 
@@ -157,7 +157,7 @@ k:
 // #highera(k@dtprel)  --> ((0x400404 - 0x8000 + 0x8000) >> 32) & 0xffff = 0
 // #ha(k@dtprel)       --> ((0x400404 - 0x8000 + 0x8000) >> 16) & 0xffff = 64
 // #lo(k@dtprel)       --> ((0x400404 - 0x8000) & 0xffff = -31740
-// Dis:  test_adjusted:
+// Dis:  <test_adjusted>:
 // Dis:     lis 4, 0
 // Dis:     ori 4, 4, 0
 // Dis:     lis 5, 64
@@ -167,7 +167,7 @@ k:
 // #higher(k@dtprel)  --> ((0x400404 - 0x8000) >> 32) & 0xffff = 0
 // #hi(k@dtprel)      --> ((0x400404 - 0x8000) >> 16) & 0xffff = 63
 // #lo(k@dtprel)      --> ((0x400404 - 0x8000) & 0xffff = 33796
-// Dis:  test_not_adjusted:
+// Dis:  <test_not_adjusted>:
 // Dis:    lis 4, 0
 // Dis:    ori 4, 4, 0
 // Dis:    oris 4, 4, 63

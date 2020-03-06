@@ -35,7 +35,7 @@ __start:
 
 # CHECK:      Disassembly of section .text:
 # CHECK-EMPTY:
-# CHECK-NEXT: __start:
+# CHECK-NEXT: <__start>:
 # CHECK-NEXT:    20000:       lwpc    $6, 32
 #                                         ^-- (0x20020-0x20000)>>2
 # CHECK-NEXT:    20004:       beqc    $5, $6, 28

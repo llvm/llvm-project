@@ -13,7 +13,7 @@
 
 ## With -pie or -shared, create a call stub. ld.bfd produces bl .+0
 # PIC: bl .+4
-# PIC: 00000000.plt_pic32.foo:
+# PIC: <00000000.plt_pic32.foo>:
 
 .weak foo
 bl foo

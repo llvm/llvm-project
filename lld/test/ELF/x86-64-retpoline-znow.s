@@ -13,7 +13,7 @@
 
 // CHECK:      Disassembly of section .plt:
 // CHECK-EMPTY:
-// CHECK-NEXT: .plt:
+// CHECK-NEXT: <.plt>:
 // CHECK-NEXT: 12d0:       callq   11 <.plt+0x10>
 // CHECK-NEXT:             pause
 // CHECK-NEXT:             lfence

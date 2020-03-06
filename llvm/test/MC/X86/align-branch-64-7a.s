@@ -2,7 +2,7 @@
 # RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown --x86-align-branch-boundary=16 --x86-align-branch=fused+jcc --mc-relax-all %s | llvm-objdump -d  - > %t1
 # RUN: FileCheck --input-file=%t1 %s
 
-# CHECK: 0000000000000000 foo:
+# CHECK: 0000000000000000 <foo>:
 # CHECK-NEXT:       0: 55                               pushq    %rbp
 # CHECK-NEXT:       1: 48 f7 c2 02 00 00 00             testq    $2, %rdx
 # CHECK-NEXT:       8: 0f 85 f2 ff ff ff                jne      {{.*}}

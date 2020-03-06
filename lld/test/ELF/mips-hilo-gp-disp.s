@@ -30,12 +30,12 @@ bar:
 
 # CHECK:      Disassembly of section .text:
 # CHECK-EMPTY:
-# CHECK-NEXT: __start:
+# CHECK-NEXT: <__start>:
 # CHECK-NEXT:  11000:       lui    $8, 2
 #                                      ^-- %hi(0x37ff0-0x11000)
 # CHECK-NEXT:  11004:       addi   $8, $8, 28656
 #                                          ^-- %lo(0x37ff0-0x11004+4)
-# CHECK:      bar:
+# CHECK:      <bar>:
 # CHECK-NEXT:  1100c:       lui    $8, 2
 #                                      ^-- %hi(0x37ff0-0x1100c)
 # CHECK-NEXT:  11010:       addi   $8, $8, 28644

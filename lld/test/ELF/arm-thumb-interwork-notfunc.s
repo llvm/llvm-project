@@ -95,7 +95,7 @@ thumb_caller:
  blx thumb_func_with_notype
  blx thumb_func_with_explicit_notype
 
-// CHECK: 00012008 _start:
+// CHECK: 00012008 <_start>:
 // CHECK-NEXT: 12008: b       #-16
 // CHECK-NEXT: 1200c: b       #-20
 // CHECK-NEXT: 12010: b       #-24
@@ -115,7 +115,7 @@ thumb_caller:
 // CHECK-NEXT: 12048: blx     #-76
 // CHECK-NEXT: 1204c: blx     #-80
 
-// CHECK: 00012050 thumb_caller:
+// CHECK: 00012050 <thumb_caller>:
 // CHECK-NEXT: 12050: b.w     #-84
 // CHECK-NEXT: 12054: b.w     #-88
 // CHECK-NEXT: 12058: b.w     #-92

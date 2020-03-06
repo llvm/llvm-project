@@ -5,5 +5,5 @@
 
 .zerofill __DATA,__common,_data64unsigned,472,3
 // CHECK: Disassembly of section __DATA,__common:
-// CHECK: ltmp1:
+// CHECK: <ltmp1>:
 // CHECK-NEXT: ...

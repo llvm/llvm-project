@@ -1,7 +1,7 @@
 # RUN: llvm-objdump -d %p/Inputs/cfi.elf-aarch64 | FileCheck %s
 
 # CHECK: Disassembly of section .plt:
-# CHECK: __cfi_slowpath@plt:
+# CHECK: <__cfi_slowpath@plt>:
 # CHECK-NEXT: adrp      x16, {{.*}}
 # CHECK: bl {{.*}} <__cfi_slowpath@plt>
 
@@ -11,10 +11,10 @@
 # CHECK-BTI: bl {{.*}} <f1@plt>
 # CHECK-BTI: bl {{.*}} <f2@plt>
 # CHECK-BTI: Disassembly of section .plt:
-# CHECK-BTI: f1@plt:
+# CHECK-BTI: <f1@plt>:
 # CHECK-BTI-NEXT: bti   c
 # CHECK-BTI-NEXT: adrp  x16, {{.*}}
-# CHECK-BTI: f2@plt:
+# CHECK-BTI: <f2@plt>:
 # CHECK-BTI-NEXT: bti   c
 # CHECK-BTI-NEXT: adrp  x16, {{.*}}
 

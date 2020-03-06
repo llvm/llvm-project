@@ -17,7 +17,7 @@
 # }
 
 
-# ASM:      00000000 _callit:
+# ASM:      00000000 <_callit>:
 #   begin inline {
 # ASM-NEXT:        0: e8 00 00 00 00                calll   0 <_callit+0x5>
 # ASM-NEXT:        5: 85 c0                         testl   %eax, %eax

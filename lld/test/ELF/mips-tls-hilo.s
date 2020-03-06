@@ -12,7 +12,7 @@
 
 # DIS: 00000000 l    O .tdata          00000000 loc0
 
-# DIS:      __start:
+# DIS:      <__start>:
 # DIS-NEXT:    addiu   $2, $3, 0
 #                              ^-- %hi(loc0 - .tdata - 0x8000)
 # DIS-NEXT:    addiu   $2, $3, -32768

@@ -9,9 +9,9 @@
 # Match this line so the implicit check-nots don't match the path.
 # CHECK: {{^.*}}file format elf64-x86-64
 
-# CHECK:     0000000000004000 first:
-# CHECK:     0000000000004001 second:
-# CHECK:     0000000000004002 third:
+# CHECK:     0000000000004000 <first>:
+# CHECK:     0000000000004001 <second>:
+# CHECK:     0000000000004002 <third>:
 
 --- !ELF
 FileHeader:

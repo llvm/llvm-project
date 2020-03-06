@@ -7,21 +7,21 @@
 
 # COMMON:       Disassembly of section .text:
 # COMMON-EMPTY:
-# COMMON-NEXT:  0000000000000000 .text:
+# COMMON-NEXT:  0000000000000000 <.text>:
 # STOP-NEXT:           0: 90                            nop
 # COMMON-NEXT:         1: 90                            nop
 # START-NEXT:          2: 90                            nop
 # COMMON-EMPTY:
 # COMMON-NEXT:  Disassembly of section .text2:
 # COMMON-EMPTY:
-# COMMON-NEXT:  0000000000000000 .text2:
+# COMMON-NEXT:  0000000000000000 <.text2>:
 # STOP-NEXT:           0: c3                            retq
 # COMMON-NEXT:         1: c3                            retq
 # START-NEXT:          2: c3                            retq
 # STOP-EMPTY:
 # STOP-NEXT:    Disassembly of section .text3:
 # STOP-EMPTY:
-# STOP-NEXT:    0000000000000000 .text3:
+# STOP-NEXT:    0000000000000000 <.text3>:
 # STOP-NEXT:           0: cc                            int3
 # COMMON-NOT:   {{.}}
 

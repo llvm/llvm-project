@@ -20,7 +20,7 @@ main:
  adrp x8, :got:myfunc
  ldr  x8, [x8, :got_lo12:myfunc]
  ret
-# CHECK:   0000000000010284 main:
+# CHECK:   0000000000010284 <main>:
 ## myfunc's got entry = page(0x20330)-page(0x10284) + 0x330 = 65536 + 816
 # CHECK-NEXT:    10284: adrp    x8, #65536
 # CHECK-NEXT:    10288: ldr     x8, [x8, #816]
@@ -28,7 +28,7 @@ main:
 
 # CHECK: Disassembly of section .got:
 # CHECK-EMPTY:
-# CHECK-NEXT: 0000000000020330 .got:
+# CHECK-NEXT: 0000000000020330 <.got>:
 
 # CHECK-RELOCS: Relocations [
 # CHECK-RELOCS-NEXT:   Section {{.*}} .rela.dyn {

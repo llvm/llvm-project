@@ -92,17 +92,17 @@ _start:
 // sections
 // CHECK: Disassembly of section .text:
 // CHECK-EMPTY:
-// CHECK-NEXT: _start:
+// CHECK-NEXT: <_start>:
 // CHECK-NEXT:   1110c:       bl      #4 <func1>
 // CHECK-NEXT:   11110:       bl      #4 <func2>
 // CHECK-NEXT:   11114:       bx      lr
-// CHECK: func1:
+// CHECK: <func1>:
 // CHECK-NEXT:   11118:       bx      lr
-// CHECK: func2:
+// CHECK: <func2>:
 // CHECK-NEXT:   1111c:       bx      lr
-// CHECK: __gxx_personality_v0:
+// CHECK: <__gxx_personality_v0>:
 // CHECK-NEXT:   11120:       bx      lr
-// CHECK: __aeabi_unwind_cpp_pr0:
+// CHECK: <__aeabi_unwind_cpp_pr0>:
 // CHECK-NEXT:   11124:       bx      lr
 
 // GC should have removed table entries for unusedfunc1, unusedfunc2

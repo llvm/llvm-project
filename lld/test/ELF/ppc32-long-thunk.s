@@ -15,7 +15,7 @@
 
 # SEC: There are no relocations in this file.
 
-# CHECK:      _start:
+# CHECK:      <_start>:
 # CHECK-NEXT:     2000: bl .+24
 # CHECK-NEXT:           bl .+20
 # CHECK-NEXT:           bl .+16
@@ -24,21 +24,21 @@
 # PI-NEXT:              bl .+40
 
 ## high = 0x02002008 = 65536*512+8200
-# PD:         __LongThunk_high:
+# PD:         <__LongThunk_high>:
 # PD-NEXT:        2018: lis 12, 512
 # PD-NEXT:              addi 12, 12, 8200
 # PD-NEXT:              mtctr 12
 # PD-NEXT:              bctr
 
 ## .text_high+16 = 0x02002010 = 65536*512+8208
-# PD:         __LongThunk_:
+# PD:         <__LongThunk_>:
 # PD-NEXT:        2028: lis 12, 512
 # PD-NEXT:              addi 12, 12, 8208
 # PD-NEXT:              mtctr 12
 # PD-NEXT:              bctr
 
 ## high-0x2028 = 0x02002008-0x2020 = 65536*512-24
-# PI:         __LongThunk_high:
+# PI:         <__LongThunk_high>:
 # PI-NEXT:        2018: mflr 0
 # PI-NEXT:              bcl 20, 31, .+4
 # PI-NEXT:        2020: mflr 12
@@ -49,7 +49,7 @@
 # PI-NEXT:              bctr
 
 ## .text_high+16-0x2048 = 0x02002010-0x2048 = 65536*512-48
-# PI:         __LongThunk_:
+# PI:         <__LongThunk_>:
 # PI-NEXT:        2038: mflr 0
 # PI-NEXT:              bcl 20, 31, .+4
 # PI-NEXT:        2040: mflr 12
@@ -69,10 +69,10 @@ bl high
 bl .text_high+16  # Need a thunk
 blr
 
-# PD:         02002008 high:
+# PD:         02002008 <high>:
 # PD-NEXT:              bl .-33554432
 # PD-NEXT:              bl .+4
-# PD:         __LongThunk_:
+# PD:         <__LongThunk_>:
 # PD-NEXT:     2002010: lis 12, 0
 # PD-NEXT:              addi 12, 12, 8200
 # PD-NEXT:              mtctr 12

@@ -9,7 +9,7 @@ target triple = "x86_64-apple-macosx10.9.0"
 @.str1 = private unnamed_addr constant [3 x i8] c"  \00", align 1
 @.str2 = private unnamed_addr constant [6 x i8] c"%s%p:\00", align 1
 
-; CHECK: ___asan_report_error:
+; CHECK: <___asan_report_error>:
 
 ; subq instruction starts at 0x0a, so the second byte of the compact encoding
 ; (UNWIND_X86_64_FRAMELESS_STACK_SIZE in mach-o/compact_unwind_encoding.h)

@@ -23,7 +23,7 @@ _start:
  ldr    x1, [x0, #:gottprel_lo12:v]
  ret
 
-// CHECK: _start:
+// CHECK: <_start>:
 // CHECK-NEXT:   211ff8:        41 d0 3b d5     mrs     x1, TPIDR_EL0
 // CHECK-NEXT:   211ffc:        00 00 a0 d2     movz    x0, #0, lsl #16
 // CHECK-NEXT:   212000:        01 02 80 f2     movk    x1, #16
