@@ -15,6 +15,7 @@
 #define MLIR_DIALECT_STANDARDOPS_IR_OPS_H
 
 #include "mlir/Analysis/CallInterfaces.h"
+#include "mlir/Analysis/ControlFlowInterfaces.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpImplementation.h"

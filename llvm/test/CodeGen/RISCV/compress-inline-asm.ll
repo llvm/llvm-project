@@ -5,7 +5,7 @@
 @ext = external global i32
 
 define i32 @compress_test(i32 %a) {
-; CHECK-LABEL: compress_test:
+; CHECK-LABEL: <compress_test>:
 ; CHECK:    c.add a0, a1
 ; CHECK-NEXT:    c.jr ra
   %1 = load i32, i32* @ext

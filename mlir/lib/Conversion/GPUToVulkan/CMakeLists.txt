@@ -3,6 +3,7 @@ add_mlir_conversion_library(MLIRGPUtoVulkanTransforms
   )
 
 target_link_libraries(MLIRGPUtoVulkanTransforms
+  PUBLIC
   MLIRGPU
   MLIRIR
   MLIRLLVMIR

@@ -50,98 +50,140 @@ struct StreamState {
 };
 
 class StreamChecker;
+struct FnDescription;
+using FnCheck = std::function<void(const StreamChecker *, const FnDescription *,
+                                   const CallEvent &, CheckerContext &)>;
 
-using FnCheck = std::function<void(const StreamChecker *, const CallEvent &,
-                                   CheckerContext &)>;
+using ArgNoTy = unsigned int;
+static const ArgNoTy ArgNone = std::numeric_limits<ArgNoTy>::max();
 
 struct FnDescription {
+  FnCheck PreFn;
   FnCheck EvalFn;
+  ArgNoTy StreamArgNo;
 };
 
-class StreamChecker : public Checker<eval::Call,
-                                     check::DeadSymbols > {
+/// Get the value of the stream argument out of the passed call event.
+/// The call should contain a function that is described by Desc.
+SVal getStreamArg(const FnDescription *Desc, const CallEvent &Call) {
+  assert(Desc && Desc->StreamArgNo != ArgNone &&
+         "Try to get a non-existing stream argument.");
+  return Call.getArgSVal(Desc->StreamArgNo);
+}
+
+class StreamChecker
+    : public Checker<check::PreCall, eval::Call, check::DeadSymbols> {
   mutable std::unique_ptr<BuiltinBug> BT_nullfp, BT_illegalwhence,
       BT_doubleclose, BT_ResourceLeak;
 
 public:
+  void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
   bool evalCall(const CallEvent &Call, CheckerContext &C) const;
   void checkDeadSymbols(SymbolReaper &SymReaper, CheckerContext &C) const;
 
 private:
-
   CallDescriptionMap<FnDescription> FnDescriptions = {
-      {{"fopen"}, {&StreamChecker::evalFopen}},
-      {{"freopen", 3}, {&StreamChecker::evalFreopen}},
-      {{"tmpfile"}, {&StreamChecker::evalFopen}},
-      {{"fclose", 1}, {&StreamChecker::evalFclose}},
-      {{"fread", 4},
-       {std::bind(&StreamChecker::checkArgNullStream, _1, _2, _3, 3)}},
-      {{"fwrite", 4},
-       {std::bind(&StreamChecker::checkArgNullStream, _1, _2, _3, 3)}},
-      {{"fseek", 3}, {&StreamChecker::evalFseek}},
-      {{"ftell", 1},
-       {std::bind(&StreamChecker::checkArgNullStream, _1, _2, _3, 0)}},
-      {{"rewind", 1},
-       {std::bind(&StreamChecker::checkArgNullStream, _1, _2, _3, 0)}},
-      {{"fgetpos", 2},
-       {std::bind(&StreamChecker::checkArgNullStream, _1, _2, _3, 0)}},
-      {{"fsetpos", 2},
-       {std::bind(&StreamChecker::checkArgNullStream, _1, _2, _3, 0)}},
-      {{"clearerr", 1},
-       {std::bind(&StreamChecker::checkArgNullStream, _1, _2, _3, 0)}},
-      {{"feof", 1},
-       {std::bind(&StreamChecker::checkArgNullStream, _1, _2, _3, 0)}},
-      {{"ferror", 1},
-       {std::bind(&StreamChecker::checkArgNullStream, _1, _2, _3, 0)}},
-      {{"fileno", 1},
-       {std::bind(&StreamChecker::checkArgNullStream, _1, _2, _3, 0)}},
+      {{"fopen"}, {nullptr, &StreamChecker::evalFopen, ArgNone}},
+      {{"freopen", 3},
+       {&StreamChecker::preFreopen, &StreamChecker::evalFreopen, 2}},
+      {{"tmpfile"}, {nullptr, &StreamChecker::evalFopen, ArgNone}},
+      {{"fclose", 1},
+       {&StreamChecker::preFclose, &StreamChecker::evalFclose, 0}},
+      {{"fread", 4}, {&StreamChecker::preDefault, nullptr, 3}},
+      {{"fwrite", 4}, {&StreamChecker::preDefault, nullptr, 3}},
+      {{"fseek", 3}, {&StreamChecker::preFseek, nullptr, 0}},
+      {{"ftell", 1}, {&StreamChecker::preDefault, nullptr, 0}},
+      {{"rewind", 1}, {&StreamChecker::preDefault, nullptr, 0}},
+      {{"fgetpos", 2}, {&StreamChecker::preDefault, nullptr, 0}},
+      {{"fsetpos", 2}, {&StreamChecker::preDefault, nullptr, 0}},
+      {{"clearerr", 1}, {&StreamChecker::preDefault, nullptr, 0}},
+      {{"feof", 1}, {&StreamChecker::preDefault, nullptr, 0}},
+      {{"ferror", 1}, {&StreamChecker::preDefault, nullptr, 0}},
+      {{"fileno", 1}, {&StreamChecker::preDefault, nullptr, 0}},
   };
 
-  void evalFopen(const CallEvent &Call, CheckerContext &C) const;
-  void evalFreopen(const CallEvent &Call, CheckerContext &C) const;
-  void evalFclose(const CallEvent &Call, CheckerContext &C) const;
-  void evalFseek(const CallEvent &Call, CheckerContext &C) const;
-  void checkArgNullStream(const CallEvent &Call, CheckerContext &C,
-                          unsigned ArgI) const;
+  void evalFopen(const FnDescription *Desc, const CallEvent &Call,
+                 CheckerContext &C) const;
 
-  ProgramStateRef checkNullStream(SVal SV, CheckerContext &C,
-                                  ProgramStateRef State) const;
-  ProgramStateRef checkFseekWhence(SVal SV, CheckerContext &C,
-                                   ProgramStateRef State) const;
-  ProgramStateRef checkDoubleClose(const CallEvent &Call, CheckerContext &C,
-                                   ProgramStateRef State) const;
+  void preFreopen(const FnDescription *Desc, const CallEvent &Call,
+                  CheckerContext &C) const;
+  void evalFreopen(const FnDescription *Desc, const CallEvent &Call,
+                   CheckerContext &C) const;
+
+  void preFclose(const FnDescription *Desc, const CallEvent &Call,
+                 CheckerContext &C) const;
+  void evalFclose(const FnDescription *Desc, const CallEvent &Call,
+                  CheckerContext &C) const;
+
+  void preFseek(const FnDescription *Desc, const CallEvent &Call,
+                CheckerContext &C) const;
+
+  void preDefault(const FnDescription *Desc, const CallEvent &Call,
+                  CheckerContext &C) const;
+
+  /// Check that the stream (in StreamVal) is not NULL.
+  /// If it can only be NULL a fatal error is emitted and nullptr returned.
+  /// Otherwise the return value is a new state where the stream is constrained
+  /// to be non-null.
+  ProgramStateRef ensureStreamNonNull(SVal StreamVal, CheckerContext &C,
+                                      ProgramStateRef State) const;  
+
+  /// Check that the stream is not closed.
+  /// Return a state where the stream is guaranteed to not in closed state
+  /// (if data about it exists).
+  /// Generate error if the stream is provable in closed state.
+  ProgramStateRef ensureStreamNotClosed(SVal StreamVal, CheckerContext &C,
+                                        ProgramStateRef State) const;
+
+  /// Check the legality of the 'whence' argument of 'fseek'.
+  /// Generate error and return nullptr if it is found to be illegal.
+  /// Otherwise returns the state.
+  /// (State is not changed here because the "whence" value is already known.)
+  ProgramStateRef ensureFseekWhenceCorrect(SVal WhenceVal, CheckerContext &C,
+                                           ProgramStateRef State) const;  
+
+  /// Find the description data of the function called by a call event.
+  /// Returns nullptr if no function is recognized.
+  const FnDescription *lookupFn(const CallEvent &Call) const {
+    // Recognize "global C functions" with only integral or pointer arguments
+    // (and matching name) as stream functions.
+    if (!Call.isGlobalCFunction())
+      return nullptr;
+    for (auto P : Call.parameters()) {
+      QualType T = P->getType();
+      if (!T->isIntegralOrEnumerationType() && !T->isPointerType())
+        return nullptr;
+    }
+
+    return FnDescriptions.lookup(Call);
+  }  
 };
 
 } // end anonymous namespace
 
 REGISTER_MAP_WITH_PROGRAMSTATE(StreamMap, SymbolRef, StreamState)
 
+void StreamChecker::checkPreCall(const CallEvent &Call,
+                                 CheckerContext &C) const {
+  const FnDescription *Desc = lookupFn(Call);
+  if (!Desc || !Desc->PreFn)
+    return;
+
+  Desc->PreFn(this, Desc, Call, C);
+}
 
 bool StreamChecker::evalCall(const CallEvent &Call, CheckerContext &C) const {
-  const auto *FD = dyn_cast_or_null<FunctionDecl>(Call.getDecl());
-  if (!FD || FD->getKind() != Decl::Function)
+  const FnDescription *Desc = lookupFn(Call);
+  if (!Desc || !Desc->EvalFn)
     return false;
 
-  // Recognize "global C functions" with only integral or pointer arguments
-  // (and matching name) as stream functions.
-  if (!Call.isGlobalCFunction())
-    return false;
-  for (auto P : Call.parameters()) {
-    QualType T = P->getType();
-    if (!T->isIntegralOrEnumerationType() && !T->isPointerType())
-      return false;
-  }
-
-  const FnDescription *Description = FnDescriptions.lookup(Call);
-  if (!Description)
-    return false;
-
-  (Description->EvalFn)(this, Call, C);
+  Desc->EvalFn(this, Desc, Call, C);
 
   return C.isDifferent();
 }
 
-void StreamChecker::evalFopen(const CallEvent &Call, CheckerContext &C) const {
+void StreamChecker::evalFopen(const FnDescription *Desc, const CallEvent &Call,
+                              CheckerContext &C) const {
   ProgramStateRef State = C.getState();
   SValBuilder &SVB = C.getSValBuilder();
   const LocationContext *LCtx = C.getPredecessor()->getLocationContext();
@@ -170,7 +212,19 @@ void StreamChecker::evalFopen(const CallEvent &Call, CheckerContext &C) const {
   C.addTransition(StateNull);
 }
 
-void StreamChecker::evalFreopen(const CallEvent &Call,
+void StreamChecker::preFreopen(const FnDescription *Desc, const CallEvent &Call,
+                               CheckerContext &C) const {
+  // Do not allow NULL as passed stream pointer but allow a closed stream.
+  ProgramStateRef State = C.getState();
+  State = ensureStreamNonNull(getStreamArg(Desc, Call), C, State);
+  if (!State)
+    return;
+
+  C.addTransition(State);
+}
+
+void StreamChecker::evalFreopen(const FnDescription *Desc,
+                                const CallEvent &Call,
                                 CheckerContext &C) const {
   ProgramStateRef State = C.getState();
 
@@ -178,17 +232,14 @@ void StreamChecker::evalFreopen(const CallEvent &Call,
   if (!CE)
     return;
 
-  Optional<DefinedSVal> StreamVal = Call.getArgSVal(2).getAs<DefinedSVal>();
+  Optional<DefinedSVal> StreamVal =
+      getStreamArg(Desc, Call).getAs<DefinedSVal>();
   if (!StreamVal)
-    return;
-  // Do not allow NULL as passed stream pointer.
-  // This is not specified in the man page but may crash on some system.
-  State = checkNullStream(*StreamVal, C, State);
-  if (!State)
     return;
 
   SymbolRef StreamSym = StreamVal->getAsSymbol();
-  // Do not care about special values for stream ("(FILE *)0x12345"?).
+  // Do not care about concrete values for stream ("(FILE *)0x12345"?).
+  // FIXME: Are stdin, stdout, stderr such values?
   if (!StreamSym)
     return;
 
@@ -212,49 +263,71 @@ void StreamChecker::evalFreopen(const CallEvent &Call,
   C.addTransition(StateRetNull);
 }
 
-void StreamChecker::evalFclose(const CallEvent &Call, CheckerContext &C) const {
+void StreamChecker::preFclose(const FnDescription *Desc, const CallEvent &Call,
+                              CheckerContext &C) const {
   ProgramStateRef State = C.getState();
-  State = checkDoubleClose(Call, C, State);
-  if (State)
-    C.addTransition(State);
-}
-
-void StreamChecker::evalFseek(const CallEvent &Call, CheckerContext &C) const {
-  const Expr *AE2 = Call.getArgExpr(2);
-  if (!AE2)
-    return;
-
-  ProgramStateRef State = C.getState();
-
-  State = checkNullStream(Call.getArgSVal(0), C, State);
-  if (!State)
-    return;
-
-  State =
-      checkFseekWhence(State->getSVal(AE2, C.getLocationContext()), C, State);
+  State = ensureStreamNotClosed(getStreamArg(Desc, Call), C, State);
   if (!State)
     return;
 
   C.addTransition(State);
 }
 
-void StreamChecker::checkArgNullStream(const CallEvent &Call, CheckerContext &C,
-                                       unsigned ArgI) const {
+void StreamChecker::evalFclose(const FnDescription *Desc, const CallEvent &Call,
+                               CheckerContext &C) const {
   ProgramStateRef State = C.getState();
-  State = checkNullStream(Call.getArgSVal(ArgI), C, State);
-  if (State)
-    C.addTransition(State);
+  SymbolRef Sym = getStreamArg(Desc, Call).getAsSymbol();
+  if (!Sym)
+    return;
+
+  const StreamState *SS = State->get<StreamMap>(Sym);
+  if (!SS)
+    return;
+
+  // Close the File Descriptor.
+  // Regardless if the close fails or not, stream becomes "closed"
+  // and can not be used any more.
+  State = State->set<StreamMap>(Sym, StreamState::getClosed());
+
+  C.addTransition(State);
 }
 
-ProgramStateRef StreamChecker::checkNullStream(SVal SV, CheckerContext &C,
-                                               ProgramStateRef State) const {
-  Optional<DefinedSVal> DV = SV.getAs<DefinedSVal>();
-  if (!DV)
+void StreamChecker::preFseek(const FnDescription *Desc, const CallEvent &Call,
+                             CheckerContext &C) const {
+  ProgramStateRef State = C.getState();
+  SVal StreamVal = getStreamArg(Desc, Call);
+  State = ensureStreamNonNull(StreamVal, C, State);
+  if (!State)
+    return;
+  State = ensureFseekWhenceCorrect(Call.getArgSVal(2), C, State);
+  if (!State)
+    return;
+
+  C.addTransition(State);
+}
+
+void StreamChecker::preDefault(const FnDescription *Desc, const CallEvent &Call,
+                               CheckerContext &C) const {
+  ProgramStateRef State = C.getState();
+  SVal StreamVal = getStreamArg(Desc, Call);
+  State = ensureStreamNonNull(StreamVal, C, State);
+  if (!State)
+    return;
+
+  C.addTransition(State);
+}
+
+ProgramStateRef
+StreamChecker::ensureStreamNonNull(SVal StreamVal, CheckerContext &C,
+                                   ProgramStateRef State) const {
+  auto Stream = StreamVal.getAs<DefinedSVal>();
+  if (!Stream)
     return State;
 
   ConstraintManager &CM = C.getConstraintManager();
+
   ProgramStateRef StateNotNull, StateNull;
-  std::tie(StateNotNull, StateNull) = CM.assumeDual(C.getState(), *DV);
+  std::tie(StateNotNull, StateNull) = CM.assumeDual(C.getState(), *Stream);
 
   if (!StateNotNull && StateNull) {
     if (ExplodedNode *N = C.generateErrorNode(StateNull)) {
@@ -270,10 +343,41 @@ ProgramStateRef StreamChecker::checkNullStream(SVal SV, CheckerContext &C,
   return StateNotNull;
 }
 
-// Check the legality of the 'whence' argument of 'fseek'.
-ProgramStateRef StreamChecker::checkFseekWhence(SVal SV, CheckerContext &C,
-                                                ProgramStateRef State) const {
-  Optional<nonloc::ConcreteInt> CI = SV.getAs<nonloc::ConcreteInt>();
+ProgramStateRef
+StreamChecker::ensureStreamNotClosed(SVal StreamVal, CheckerContext &C,
+                                     ProgramStateRef State) const {
+  SymbolRef Sym = StreamVal.getAsSymbol();
+  if (!Sym)
+    return State;
+
+  const StreamState *SS = State->get<StreamMap>(Sym);
+  if (!SS)
+    return State;
+
+  // Check: Double close a File Descriptor could cause undefined behaviour.
+  // Conforming to man-pages
+  if (SS->isClosed()) {
+    ExplodedNode *N = C.generateErrorNode();
+    if (N) {
+      if (!BT_doubleclose)
+        BT_doubleclose.reset(new BuiltinBug(
+            this, "Double fclose", "Try to close a file Descriptor already"
+                                   " closed. Cause undefined behaviour."));
+      C.emitReport(std::make_unique<PathSensitiveBugReport>(
+          *BT_doubleclose, BT_doubleclose->getDescription(), N));
+      return nullptr;
+    }
+
+    return State;
+  }
+
+  return State;
+}
+
+ProgramStateRef
+StreamChecker::ensureFseekWhenceCorrect(SVal WhenceVal, CheckerContext &C,
+                                        ProgramStateRef State) const {
+  Optional<nonloc::ConcreteInt> CI = WhenceVal.getAs<nonloc::ConcreteInt>();
   if (!CI)
     return State;
 
@@ -295,49 +399,13 @@ ProgramStateRef StreamChecker::checkFseekWhence(SVal SV, CheckerContext &C,
   return State;
 }
 
-ProgramStateRef StreamChecker::checkDoubleClose(const CallEvent &Call,
-                                                CheckerContext &C,
-                                                ProgramStateRef State) const {
-  SymbolRef Sym = Call.getArgSVal(0).getAsSymbol();
-  if (!Sym)
-    return State;
-
-  const StreamState *SS = State->get<StreamMap>(Sym);
-
-  // If the file stream is not tracked, return.
-  if (!SS)
-    return State;
-
-  // Check: Double close a File Descriptor could cause undefined behaviour.
-  // Conforming to man-pages
-  if (SS->isClosed()) {
-    ExplodedNode *N = C.generateErrorNode();
-    if (N) {
-      if (!BT_doubleclose)
-        BT_doubleclose.reset(new BuiltinBug(
-            this, "Double fclose", "Try to close a file Descriptor already"
-                                   " closed. Cause undefined behaviour."));
-      C.emitReport(std::make_unique<PathSensitiveBugReport>(
-          *BT_doubleclose, BT_doubleclose->getDescription(), N));
-      return nullptr;
-    }
-
-    return State;
-  }
-
-  // Close the File Descriptor.
-  State = State->set<StreamMap>(Sym, StreamState::getClosed());
-
-  return State;
-}
-
 void StreamChecker::checkDeadSymbols(SymbolReaper &SymReaper,
                                      CheckerContext &C) const {
   ProgramStateRef State = C.getState();
 
   // TODO: Clean up the state.
   const StreamMapTy &Map = State->get<StreamMap>();
-  for (const auto &I: Map) {
+  for (const auto &I : Map) {
     SymbolRef Sym = I.first;
     const StreamState &SS = I.second;
     if (!SymReaper.isDead(Sym) || !SS.isOpened())
@@ -360,6 +428,4 @@ void ento::registerStreamChecker(CheckerManager &mgr) {
   mgr.registerChecker<StreamChecker>();
 }
 
-bool ento::shouldRegisterStreamChecker(const LangOptions &LO) {
-  return true;
-}
+bool ento::shouldRegisterStreamChecker(const LangOptions &LO) { return true; }

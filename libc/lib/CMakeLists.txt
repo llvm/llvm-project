@@ -18,6 +18,10 @@ add_entrypoint_library(
     sigaddset
     sigemptyset
     sigprocmask
+
+    # stdlib.h entrypoints
+    _Exit
+    abort
 )
 
 add_entrypoint_library(

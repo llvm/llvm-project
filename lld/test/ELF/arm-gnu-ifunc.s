@@ -114,11 +114,11 @@ _start:
 
 // DISASM: Disassembly of section .text:
 // DISASM-EMPTY:
-// DISASM-NEXT: foo:
+// DISASM-NEXT: <foo>:
 // DISASM-NEXT:    11104:      bx      lr
-// DISASM: bar:
+// DISASM: <bar>:
 // DISASM-NEXT:    11108:      bx      lr
-// DISASM: _start:
+// DISASM: <_start>:
 // DISASM-NEXT:    1110c:      bl      #28
 // DISASM-NEXT:    11110:      bl      #40
 // 1 * 65536 + 244 = 0x100f4 __rel_iplt_start
@@ -130,16 +130,16 @@ _start:
 // DISASM-EMPTY:
 // DISASM-NEXT: Disassembly of section .iplt:
 // DISASM-EMPTY:
-// DISASM-NEXT: $a:
+// DISASM-NEXT: <$a>:
 // DISASM-NEXT:    11130:       add     r12, pc, #0, #12
 // DISASM-NEXT:    11134:       add     r12, r12, #4096
 // DISASM-NEXT:    11138:       ldr     pc, [r12, #24]!
-// DISASM: $d:
+// DISASM: <$d>:
 // DISASM-NEXT:    1113c:       d4 d4 d4 d4     .word   0xd4d4d4d4
-// DISASM: $a:
+// DISASM: <$a>:
 // DISASM-NEXT:    11140:       add     r12, pc, #0, #12
 // DISASM-NEXT:    11144:       add     r12, r12, #4096
 // DISASM-NEXT:    11148:       ldr     pc, [r12, #12]!
-// DISASM: $d:
+// DISASM: <$d>:
 // DISASM-NEXT:    1114c:       d4 d4 d4 d4     .word   0xd4d4d4d4
 

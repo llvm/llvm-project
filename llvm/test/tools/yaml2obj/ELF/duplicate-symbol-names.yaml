@@ -90,8 +90,7 @@ Sections:
     Info: .text
     Link: .symtab
     Relocations:
-      - Offset: 0x0
-        Type:   R_X86_64_NONE
+      - Type:   R_X86_64_NONE
         Symbol: foo
       - Offset: 0x1
         Type:   R_X86_64_NONE

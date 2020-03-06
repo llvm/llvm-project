@@ -13,7 +13,7 @@
 
 TEXT: Disassembly of section .text:
 TEXT-EMPTY:
-TEXT-NEXT: .text:
+TEXT-NEXT: <.text>:
 TEXT-NEXT: subq    $40, %rsp
 TEXT-NEXT: movq    $0, %rcx
 TEXT-NEXT: leaq    8180(%rip), %rdx

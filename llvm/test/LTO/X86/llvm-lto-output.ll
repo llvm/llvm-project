@@ -9,7 +9,7 @@
 ; RUN: FileCheck --check-prefix=ASM %s < %t2
 ; RUN: llvm-lto -exported-symbol=main -filetype=obj -o %t2 %t1
 ; RUN: llvm-objdump -d %t2 | FileCheck --check-prefix=ASM %s
-; ASM: main:
+; ASM: main{{>?}}:
 ;
 
 target triple = "x86_64-unknown-linux-gnu"

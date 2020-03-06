@@ -36,7 +36,7 @@
 
 # CHECK:     Disassembly of section .text:
 # CHECK-EMPTY:
-# CHECK-NEXT: __start:
+# CHECK-NEXT: <__start>:
 # CHECK-NEXT:    20100:       jal     131412 <__LA25Thunk_foo1a>
 # CHECK-NEXT:                 nop
 # CHECK-NEXT:                 jal     131464 <__LA25Thunk_foo2>
@@ -50,47 +50,47 @@
 # CHECK-NEXT:                 jal     131408 <fnpic>
 # CHECK-NEXT:                 nop
 
-# CHECK: __LA25Thunk_fpic:
+# CHECK: <__LA25Thunk_fpic>:
 # R2:            20130:       lui     $25, 2
 # R6:            20130:       aui     $25, $zero, 2
 # CHECK-NEXT:                 j       131392 <fpic>
 # CHECK-NEXT:                 addiu   $25, $25, 320
 # CHECK-NEXT:                 nop
 
-# CHECK: fpic:
+# CHECK: <fpic>:
 # CHECK-NEXT:    20140:       nop
 
-# CHECK: fnpic:
+# CHECK: <fnpic>:
 # CHECK-NEXT:    20150:       nop
 
-# CHECK: __LA25Thunk_foo1a:
+# CHECK: <__LA25Thunk_foo1a>:
 # R2:            20154:       lui     $25, 2
 # R6:            20154:       aui     $25, $zero, 2
 # CHECK:                      j       131456 <foo1a>
 # CHECK-NEXT:                 addiu   $25, $25, 384
 # CHECK-NEXT:                 nop
 
-# CHECK: __LA25Thunk_foo1b:
+# CHECK: <__LA25Thunk_foo1b>:
 # R2:            20164:       lui     $25, 2
 # R6:                         aui     $25, $zero, 2
 # CHECK-NEXT:                 j       131460 <foo1b>
 # CHECK-NEXT:                 addiu   $25, $25, 388
 # CHECK-NEXT:                 nop
 
-# CHECK: foo1a:
+# CHECK: <foo1a>:
 # CHECK-NEXT:    20180:       nop
 
-# CHECK: foo1b:
+# CHECK: <foo1b>:
 # CHECK-NEXT:    20184:       nop
 
-# CHECK: __LA25Thunk_foo2:
+# CHECK: <__LA25Thunk_foo2>:
 # R2:            20188:       lui     $25, 2
 # R6:                         aui     $25, $zero, 2
 # CHECK-NEXT:                 j       131488 <foo2>
 # CHECK-NEXT:                 addiu   $25, $25, 416
 # CHECK-NEXT:                 nop
 
-# CHECK: foo2:
+# CHECK: <foo2>:
 # CHECK-NEXT:    201a0:       nop
 
   .text

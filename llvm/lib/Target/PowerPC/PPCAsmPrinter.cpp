@@ -1579,8 +1579,21 @@ const MCExpr *PPCAIXAsmPrinter::lowerConstant(const Constant *CV) {
   return PPCAsmPrinter::lowerConstant(CV);
 }
 
+static bool isSpecialLLVMGlobalArrayForStaticInit(const GlobalVariable *GV) {
+  return StringSwitch<bool>(GV->getName())
+      .Cases("llvm.global_ctors", "llvm.global_dtors", true)
+      .Default(false);
+}
+
 void PPCAIXAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   ValidateGV(GV);
+
+  // TODO: Update the handling of global arrays for static init when we support
+  // the ".ref" directive.
+  // Otherwise, we can skip these arrays, because the AIX linker collects
+  // static init functions simply based on their name.
+  if (isSpecialLLVMGlobalArrayForStaticInit(GV))
+    return;
 
   // Create the symbol, set its storage class.
   MCSymbolXCOFF *GVSym = cast<MCSymbolXCOFF>(getSymbol(GV));

@@ -13,13 +13,10 @@ add_mlir_dialect_library(MLIRQuantOps
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/QuantOps
   )
 add_dependencies(MLIRQuantOps
-                 MLIRIR
-                 MLIRPass
-                 MLIRQuantOpsIncGen
-                 MLIRSupport
-                 MLIRStandardOps)
-
+  MLIRQuantOpsIncGen
+  )
 target_link_libraries(MLIRQuantOps
+  PUBLIC
   MLIRIR
   MLIRPass
   MLIRSupport

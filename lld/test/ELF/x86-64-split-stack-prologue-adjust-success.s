@@ -55,7 +55,7 @@ foo:
 # For split-stack code calling split-stack code, ensure prologue v1 still
 # calls plain __morestack, and that any raw bytes written to the prologue
 # make sense.
-# CHECK: prologue1_calls_split:
+# CHECK: <prologue1_calls_split>:
 # CHECK-NEXT: cmp{{.*}}%fs:{{[^,]*}},{{.*}}%rsp
 # CHECK: jae{{.*$}}
 # CHECK-NEXT: callq{{.*}}<__morestack>
@@ -65,7 +65,7 @@ prologue1 split
 # For split-stack code calling split-stack code, ensure prologue v2 still
 # calls plain __morestack, that any raw bytes written to the prologue
 # make sense, and that the register number is preserved.
-# CHECK: prologue2_calls_splitr10:
+# CHECK: <prologue2_calls_splitr10>:
 # CHECK-NEXT: lea{{.*}} -512(%rsp),{{.*}}%r10
 # CHECK: cmp{{.*}}%fs:{{[^,]*}},{{.*}}%r{{[0-9]+}}
 # CHECK: jae{{.*}}
@@ -73,7 +73,7 @@ prologue1 split
 
 prologue2 split r10 0x200
 
-# CHECK: prologue2_calls_splitr11:
+# CHECK: <prologue2_calls_splitr11>:
 # CHECK-NEXT: lea{{.*}} -256(%rsp),{{.*}}%r11
 # CHECK: cmp{{.*}}%fs:{{[^,]*}},{{.*}}%r{{[0-9]+}}
 # CHECK: jae{{.*}}
@@ -84,7 +84,7 @@ prologue2 split r11 0x100
 # For split-stack code calling non-split-stack code, ensure prologue v1
 # calls __morestack_non_split, and that any raw bytes written to the prologue
 # make sense.
-# CHECK: prologue1_calls_non_split:
+# CHECK: <prologue1_calls_non_split>:
 # CHECK-NEXT: stc{{.*$}}
 # CHECK-NEXT: nopl{{.*$}}
 # CHECK: jae{{.*$}}
@@ -95,7 +95,7 @@ prologue1 non_split
 # For split-stack code calling non-split-stack code, ensure prologue v2
 # calls __morestack_non_split, that any raw bytes written to the prologue
 # make sense, and that the register number is preserved
-# CHECK: prologue2_calls_non_splitr10:
+# CHECK: <prologue2_calls_non_splitr10>:
 # CHECK-NEXT: lea{{.*}} -16640(%rsp),{{.*}}%r10
 # CHECK: cmp{{.*}}%fs:{{[^,]*}},{{.*}}%r10
 # CHECK: jae{{.*$}}
@@ -103,7 +103,7 @@ prologue1 non_split
 
 prologue2 non_split r10 0x100
 
-# CHECK: prologue2_calls_non_splitr11:
+# CHECK: <prologue2_calls_non_splitr11>:
 # CHECK-NEXT: lea{{.*}} -16896(%rsp),{{.*}}%r11
 # CHECK: cmp{{.*}}%fs:{{[^,]*}},{{.*}}%r11
 # CHECK: jae{{.*$}}

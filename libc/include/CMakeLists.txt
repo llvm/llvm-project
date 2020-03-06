@@ -63,6 +63,14 @@ add_gen_header(
     ../config/${LIBC_TARGET_OS}/signal.h.in
 )
 
+add_gen_header(
+  stdlib_h
+  DEF_FILE stdlib.h.def
+  GEN_HDR stdlib.h
+  DEPENDS
+    llvm_libc_common_h
+)
+
 # TODO: Not all platforms will have a include/sys directory. Add the sys
 # directory and the targets for sys/*.h files conditional to the OS requiring
 # them.

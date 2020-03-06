@@ -187,12 +187,15 @@ def Vector_ReductionOp :
   Vector_Op<"reduction", [NoSideEffect,
      PredOpTrait<"source operand and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>]>,
-    Arguments<(ins StrAttr:$kind, AnyVector:$vector)>,
+    Arguments<(ins StrAttr:$kind, AnyVector:$vector, Variadic<AnyType>:$acc)>,
     Results<(outs AnyType:$dest)> {
   let summary = "reduction operation";
   let description = [{
     Reduces an 1-D vector "horizontally" into a scalar using the given
     operation (add/mul/min/max for int/fp and and/or/xor for int only).
+    Some reductions (add/mul for fp) also allow an optional fused
+    accumulator.
+
     Note that these operations are restricted to 1-D vectors to remain
     close to the corresponding LLVM intrinsics:
 
@@ -203,34 +206,9 @@ def Vector_ReductionOp :
       %1 = vector.reduction "add", %0 : vector<16xf32> into f32
 
       %3 = vector.reduction "xor", %2 : vector<4xi32> into i32
-    ```
-  }];
-  let verifier = [{ return ::verify(*this); }];
-  let assemblyFormat = [{
-    $kind `,` $vector attr-dict `:` type($vector) `into` type($dest)
-  }];
-  let extraClassDeclaration = [{
-    VectorType getVectorType() {
-      return vector().getType().cast<VectorType>();
-    }
-  }];
-}
 
-// TODO(ajcbik): quick version with "fused" accumulator; next step
-//               will merge Reduction/ReductionV2 into one with
-//               an optional accumulator instead
-def Vector_ReductionV2Op :
-  Vector_Op<"reductionv2", [NoSideEffect]>,
-    Arguments<(ins StrAttr:$kind, VectorOf<[F32, F64]>:$vector, AnyType:$acc)>,
-    Results<(outs AnyType:$dest)> {
-  let summary = "reduction operation";
-  let description = [{
-     As vector.reduction, but with a fused accumulator (add/mul for fp only).
-  }];
-  let verifier = ?;
-  let assemblyFormat = [{
-    $kind `,` $vector `,` $acc attr-dict `:`
-      type($vector) `,` type($acc) `into` type($dest)
+      %4 = vector.reduction "mul", %0, %1 : vector<16xf32> into f32
+    ```
   }];
   let extraClassDeclaration = [{
     VectorType getVectorType() {
@@ -469,7 +447,7 @@ def Vector_FMAOp :
     to the `llvm.fma.*` intrinsic.
 
     Example:
-    
+
     ```
       %3 = vector.fma %0, %1, %2: vector<8x16xf32>
     ```
@@ -713,9 +691,8 @@ def Vector_ReshapeOp :
   Vector_Op<"reshape", [AttrSizedOperandSegments, NoSideEffect]>,
     Arguments<(ins AnyVector:$vector, Variadic<Index>:$input_shape,
                Variadic<Index>:$output_shape,
-               I64ArrayAttr:$fixed_vector_sizes,
-               I32ElementsAttr:$operand_segment_sizes)>,
-    Results<(outs AnyVector)> {
+               I64ArrayAttr:$fixed_vector_sizes)>,
+    Results<(outs AnyVector:$result)> {
   let summary = "vector reshape operation";
   let description = [{
     Reshapes its vector operand from 'input_shape' to 'output_shape' maintaining
@@ -821,6 +798,11 @@ def Vector_ReshapeOp :
     }
     static StringRef getInputShapeAttrName() { return "input_shape"; }
     static StringRef getOutputShapeAttrName() { return "output_shape"; }
+  }];
+
+  let assemblyFormat = [{
+    $vector `,` `[` $input_shape `]` `,` `[` $output_shape `]` `,`
+    $fixed_vector_sizes attr-dict `:` type($vector) `to` type($result)
   }];
 }
 

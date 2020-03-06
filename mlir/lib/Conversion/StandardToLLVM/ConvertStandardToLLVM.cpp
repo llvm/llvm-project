@@ -24,6 +24,7 @@
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/Functional.h"
+#include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/Passes.h"
 #include "mlir/Transforms/Utils.h"
@@ -32,6 +33,7 @@
 #include "llvm/IR/Type.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FormatVariadic.h"
+#include <functional>
 
 using namespace mlir;
 
@@ -1165,6 +1167,36 @@ void ValidateOpCount() {
   OpCountValidator<SourceOp, OpCount>();
 }
 
+static LogicalResult HandleMultidimensionalVectors(
+    Operation *op, ArrayRef<Value> operands, LLVMTypeConverter &typeConverter,
+    std::function<Value(LLVM::LLVMType, ValueRange)> createOperand,
+    ConversionPatternRewriter &rewriter) {
+  auto vectorType = op->getResult(0).getType().dyn_cast<VectorType>();
+  if (!vectorType)
+    return failure();
+  auto vectorTypeInfo = extractNDVectorTypeInfo(vectorType, typeConverter);
+  auto llvmVectorTy = vectorTypeInfo.llvmVectorTy;
+  auto llvmArrayTy = operands[0].getType().cast<LLVM::LLVMType>();
+  if (!llvmVectorTy || llvmArrayTy != vectorTypeInfo.llvmArrayTy)
+    return failure();
+
+  auto loc = op->getLoc();
+  Value desc = rewriter.create<LLVM::UndefOp>(loc, llvmArrayTy);
+  nDVectorIterate(vectorTypeInfo, rewriter, [&](ArrayAttr position) {
+    // For this unrolled `position` corresponding to the `linearIndex`^th
+    // element, extract operand vectors
+    SmallVector<Value, 4> extractedOperands;
+    for (auto operand : operands)
+      extractedOperands.push_back(rewriter.create<LLVM::ExtractValueOp>(
+          loc, llvmVectorTy, operand, position));
+    Value newVal = createOperand(llvmVectorTy, extractedOperands);
+    desc = rewriter.create<LLVM::InsertValueOp>(loc, llvmArrayTy, desc, newVal,
+                                                position);
+  });
+  rewriter.replaceOp(op, desc);
+  return success();
+}
+
 // Basic lowering implementation for rewriting from Standard Ops to LLVM Dialect
 // Ops for N-ary ops with one result. This supports higher-dimensional vector
 // types.
@@ -1192,7 +1224,6 @@ struct NaryOpLLVMOpLowering : public LLVMLegalizationPattern<SourceOp> {
         return this->matchFailure();
     }
 
-    auto loc = op->getLoc();
     auto llvmArrayTy = operands[0].getType().cast<LLVM::LLVMType>();
 
     if (!llvmArrayTy.isArrayTy()) {
@@ -1202,31 +1233,15 @@ struct NaryOpLLVMOpLowering : public LLVMLegalizationPattern<SourceOp> {
       return this->matchSuccess();
     }
 
-    auto vectorType = op->getResult(0).getType().dyn_cast<VectorType>();
-    if (!vectorType)
-      return this->matchFailure();
-    auto vectorTypeInfo =
-        extractNDVectorTypeInfo(vectorType, this->typeConverter);
-    auto llvmVectorTy = vectorTypeInfo.llvmVectorTy;
-    if (!llvmVectorTy || llvmArrayTy != vectorTypeInfo.llvmArrayTy)
-      return this->matchFailure();
-
-    Value desc = rewriter.create<LLVM::UndefOp>(loc, llvmArrayTy);
-    nDVectorIterate(vectorTypeInfo, rewriter, [&](ArrayAttr position) {
-      // For this unrolled `position` corresponding to the `linearIndex`^th
-      // element, extract operand vectors
-      SmallVector<Value, OpCount> extractedOperands;
-      for (unsigned i = 0; i < OpCount; ++i) {
-        extractedOperands.push_back(rewriter.create<LLVM::ExtractValueOp>(
-            loc, llvmVectorTy, operands[i], position));
-      }
-      Value newVal = rewriter.create<TargetOp>(
-          loc, llvmVectorTy, extractedOperands, op->getAttrs());
-      desc = rewriter.create<LLVM::InsertValueOp>(loc, llvmArrayTy, desc,
-                                                  newVal, position);
-    });
-    rewriter.replaceOp(op, desc);
-    return this->matchSuccess();
+    if (succeeded(HandleMultidimensionalVectors(
+            op, operands, this->typeConverter,
+            [&](LLVM::LLVMType llvmVectorTy, ValueRange operands) {
+              return rewriter.create<TargetOp>(op->getLoc(), llvmVectorTy,
+                                               operands, op->getAttrs());
+            },
+            rewriter)))
+      return this->matchSuccess();
+    return this->matchFailure();
   }
 };
 
@@ -1673,7 +1688,7 @@ struct RsqrtOpLowering : public LLVMLegalizationPattern<RsqrtOp> {
                   ConversionPatternRewriter &rewriter) const override {
     OperandAdaptor<RsqrtOp> transformed(operands);
     auto operandType =
-        transformed.operand().getType().dyn_cast_or_null<LLVM::LLVMType>();
+        transformed.operand().getType().dyn_cast<LLVM::LLVMType>();
 
     if (!operandType)
       return matchFailure();
@@ -1694,41 +1709,31 @@ struct RsqrtOpLowering : public LLVMLegalizationPattern<RsqrtOp> {
       }
       auto sqrt = rewriter.create<LLVM::SqrtOp>(loc, transformed.operand());
       rewriter.replaceOpWithNewOp<LLVM::FDivOp>(op, operandType, one, sqrt);
-      return matchSuccess();
+      return this->matchSuccess();
     }
 
     auto vectorType = resultType.dyn_cast<VectorType>();
     if (!vectorType)
       return this->matchFailure();
 
-    auto vectorTypeInfo =
-        extractNDVectorTypeInfo(vectorType, this->typeConverter);
-    auto llvmVectorTy = vectorTypeInfo.llvmVectorTy;
-    if (!llvmVectorTy || operandType != vectorTypeInfo.llvmArrayTy)
-      return this->matchFailure();
-
-    Value desc = rewriter.create<LLVM::UndefOp>(loc, operandType);
-    nDVectorIterate(vectorTypeInfo, rewriter, [&](ArrayAttr position) {
-      // For this unrolled `position` corresponding to the `linearIndex`^th
-      // element, extract operand vectors
-      auto extractedOperand = rewriter.create<LLVM::ExtractValueOp>(
-          loc, llvmVectorTy, operands[0], position);
-      auto splatAttr = SplatElementsAttr::get(
-          mlir::VectorType::get(
-              {llvmVectorTy.getUnderlyingType()->getVectorNumElements()},
-              floatType),
-          floatOne);
-      auto one =
-          rewriter.create<LLVM::ConstantOp>(loc, llvmVectorTy, splatAttr);
-      auto sqrt =
-          rewriter.create<LLVM::SqrtOp>(loc, llvmVectorTy, extractedOperand);
-      auto div = rewriter.create<LLVM::FDivOp>(loc, llvmVectorTy, one, sqrt);
-      desc = rewriter.create<LLVM::InsertValueOp>(loc, operandType, desc, div,
-                                                  position);
-    });
-    rewriter.replaceOp(op, desc);
-
-    return matchSuccess();
+    if (succeeded(HandleMultidimensionalVectors(
+            op, operands, typeConverter,
+            [&](LLVM::LLVMType llvmVectorTy, ValueRange operands) {
+              auto splatAttr = SplatElementsAttr::get(
+                  mlir::VectorType::get({llvmVectorTy.getUnderlyingType()
+                                             ->getVectorNumElements()},
+                                        floatType),
+                  floatOne);
+              auto one = rewriter.create<LLVM::ConstantOp>(loc, llvmVectorTy,
+                                                           splatAttr);
+              auto sqrt =
+                  rewriter.create<LLVM::SqrtOp>(loc, llvmVectorTy, operands[0]);
+              return rewriter.create<LLVM::FDivOp>(loc, llvmVectorTy, one,
+                                                   sqrt);
+            },
+            rewriter)))
+      return this->matchSuccess();
+    return this->matchFailure();
   }
 };
 
@@ -1745,7 +1750,7 @@ struct TanhOpLowering : public LLVMLegalizationPattern<TanhOp> {
 
     OperandAdaptor<TanhOp> transformed(operands);
     LLVMTypeT operandType =
-        transformed.operand().getType().dyn_cast_or_null<LLVM::LLVMType>();
+        transformed.operand().getType().dyn_cast<LLVM::LLVMType>();
 
     if (!operandType)
       return matchFailure();
@@ -2185,13 +2190,10 @@ struct OneToOneLLVMTerminatorLowering
   using Super = OneToOneLLVMTerminatorLowering<SourceOp, TargetOp>;
 
   PatternMatchResult
-  matchAndRewrite(Operation *op, ArrayRef<Value> properOperands,
-                  ArrayRef<Block *> destinations,
-                  ArrayRef<ArrayRef<Value>> operands,
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    SmallVector<ValueRange, 2> operandRanges(operands.begin(), operands.end());
-    rewriter.replaceOpWithNewOp<TargetOp>(op, properOperands, destinations,
-                                          operandRanges, op->getAttrs());
+    rewriter.replaceOpWithNewOp<TargetOp>(op, operands, op->getSuccessors(),
+                                          op->getAttrs());
     return this->matchSuccess();
   }
 };
@@ -2213,13 +2215,12 @@ struct ReturnOpLowering : public LLVMLegalizationPattern<ReturnOp> {
     // If ReturnOp has 0 or 1 operand, create it and return immediately.
     if (numArguments == 0) {
       rewriter.replaceOpWithNewOp<LLVM::ReturnOp>(
-          op, ArrayRef<Value>(), ArrayRef<Block *>(), op->getAttrs());
+          op, ArrayRef<Type>(), ArrayRef<Value>(), op->getAttrs());
       return matchSuccess();
     }
     if (numArguments == 1) {
       rewriter.replaceOpWithNewOp<LLVM::ReturnOp>(
-          op, ArrayRef<Value>(operands.front()), ArrayRef<Block *>(),
-          op->getAttrs());
+          op, ArrayRef<Type>(), operands.front(), op->getAttrs());
       return matchSuccess();
     }
 
@@ -2234,8 +2235,8 @@ struct ReturnOpLowering : public LLVMLegalizationPattern<ReturnOp> {
           op->getLoc(), packedType, packed, operands[i],
           rewriter.getI64ArrayAttr(i));
     }
-    rewriter.replaceOpWithNewOp<LLVM::ReturnOp>(
-        op, llvm::makeArrayRef(packed), ArrayRef<Block *>(), op->getAttrs());
+    rewriter.replaceOpWithNewOp<LLVM::ReturnOp>(op, ArrayRef<Type>(), packed,
+                                                op->getAttrs());
     return matchSuccess();
   }
 };
@@ -2742,10 +2743,8 @@ struct AtomicCmpXchgOpLowering : public LoadStoreOpLowering<AtomicRMWOp> {
     auto memRefType = atomicOp.getMemRefType();
     auto dataPtr = getDataPtr(loc, memRefType, adaptor.memref(),
                               adaptor.indices(), rewriter, getModule());
-    auto init = rewriter.create<LLVM::LoadOp>(loc, dataPtr);
-    std::array<Value, 1> brRegionOperands{init};
-    std::array<ValueRange, 1> brOperands{brRegionOperands};
-    rewriter.create<LLVM::BrOp>(loc, ArrayRef<Value>{}, loopBlock, brOperands);
+    Value init = rewriter.create<LLVM::LoadOp>(loc, dataPtr);
+    rewriter.create<LLVM::BrOp>(loc, init, loopBlock);
 
     // Prepare the body of the loop block.
     rewriter.setInsertionPointToStart(loopBlock);
@@ -2768,19 +2767,14 @@ struct AtomicCmpXchgOpLowering : public LoadStoreOpLowering<AtomicRMWOp> {
         loc, pairType, dataPtr, loopArgument, select, successOrdering,
         failureOrdering);
     // Extract the %new_loaded and %ok values from the pair.
-    auto newLoaded = rewriter.create<LLVM::ExtractValueOp>(
+    Value newLoaded = rewriter.create<LLVM::ExtractValueOp>(
         loc, valueType, cmpxchg, rewriter.getI64ArrayAttr({0}));
-    auto ok = rewriter.create<LLVM::ExtractValueOp>(
+    Value ok = rewriter.create<LLVM::ExtractValueOp>(
         loc, boolType, cmpxchg, rewriter.getI64ArrayAttr({1}));
 
     // Conditionally branch to the end or back to the loop depending on %ok.
-    std::array<Value, 1> condBrProperOperands{ok};
-    std::array<Block *, 2> condBrDestinations{endBlock, loopBlock};
-    std::array<Value, 1> condBrRegionOperands{newLoaded};
-    std::array<ValueRange, 2> condBrOperands{ArrayRef<Value>{},
-                                             condBrRegionOperands};
-    rewriter.create<LLVM::CondBrOp>(loc, condBrProperOperands,
-                                    condBrDestinations, condBrOperands);
+    rewriter.create<LLVM::CondBrOp>(loc, ok, endBlock, ArrayRef<Value>(),
+                                    loopBlock, newLoaded);
 
     // The 'result' of the atomic_rmw op is the newly loaded value.
     rewriter.replaceOp(op, {newLoaded});
@@ -2792,7 +2786,9 @@ struct AtomicCmpXchgOpLowering : public LoadStoreOpLowering<AtomicRMWOp> {
 } // namespace
 
 static void ensureDistinctSuccessors(Block &bb) {
-  auto *terminator = bb.getTerminator();
+  Operation *terminator = bb.getTerminator();
+  if (terminator->getNumSuccessors() < 2)
+    return;
 
   // Find repeated successors with arguments.
   llvm::SmallDenseMap<Block *, SmallVector<int, 4>> successorPositions;
@@ -2811,21 +2807,15 @@ static void ensureDistinctSuccessors(Block &bb) {
   // There is no need to pass arguments to the dummy block because it will be
   // dominated by the original block and can therefore use any values defined in
   // the original block.
+  OpBuilder builder(terminator->getContext());
   for (const auto &successor : successorPositions) {
-    const auto &positions = successor.second;
     // Start from the second occurrence of a block in the successor list.
-    for (auto position = std::next(positions.begin()), end = positions.end();
-         position != end; ++position) {
-      auto *dummyBlock = new Block();
-      bb.getParent()->push_back(dummyBlock);
-      auto builder = OpBuilder(dummyBlock);
-      SmallVector<Value, 8> operands(
-          terminator->getSuccessorOperands(*position));
-      builder.create<BranchOp>(terminator->getLoc(), successor.first, operands);
-      terminator->setSuccessor(dummyBlock, *position);
-      for (int i = 0, e = terminator->getNumSuccessorOperands(*position); i < e;
-           ++i)
-        terminator->eraseSuccessorOperand(*position, i);
+    for (int position : llvm::drop_begin(successor.second, 1)) {
+      Block *dummyBlock = builder.createBlock(bb.getParent());
+      terminator->setSuccessor(dummyBlock, position);
+      dummyBlock->addArguments(successor.first->getArgumentTypes());
+      builder.create<BranchOp>(terminator->getLoc(), successor.first,
+                               dummyBlock->getArguments());
     }
   }
 }

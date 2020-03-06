@@ -33,7 +33,7 @@
 //  0x202338 - (0x201276 + 2) - 4 = 4284
 //  0x202340 - (0x20127c + 2) - 4 = 4286
 
-// DISASM:      _start:
+// DISASM:      <_start>:
 // DISASM-NEXT:  201270:  {{.*}}  jmpq  *4290(%rip)
 // DISASM-NEXT:  201276:  {{.*}}  jmpq  *4284(%rip)
 // DISASM-NEXT:  20127c:  {{.*}}  jmpq  *4286(%rip)

@@ -14,7 +14,7 @@
 # CHECK: 00024008 l       .data           00000000 .hidden bar
 # CHECK: 00000000         *UND*           00000000 foo
 
-# CHECK:       __start:
+# CHECK:       <__start>:
 # CHECK-NEXT:    lw      $8, -32744($gp)
 # CHECK-NEXT:    addi    $8, $8, 8236
 # CHECK-NEXT:    lw      $8, -32732($gp)

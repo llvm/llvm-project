@@ -383,91 +383,75 @@ void LegalizerHelper::buildWidenedRemergeToDst(Register DstReg, LLT LCMTy,
 }
 
 static RTLIB::Libcall getRTLibDesc(unsigned Opcode, unsigned Size) {
+#define RTLIBCASE(LibcallPrefix)                                               \
+  do {                                                                         \
+    switch (Size) {                                                            \
+    case 32:                                                                   \
+      return RTLIB::LibcallPrefix##32;                                         \
+    case 64:                                                                   \
+      return RTLIB::LibcallPrefix##64;                                         \
+    case 128:                                                                  \
+      return RTLIB::LibcallPrefix##128;                                        \
+    default:                                                                   \
+      llvm_unreachable("unexpected size");                                     \
+    }                                                                          \
+  } while (0)
+
+  assert((Size == 32 || Size == 64 || Size == 128) && "Unsupported size");
+
   switch (Opcode) {
   case TargetOpcode::G_SDIV:
-    assert((Size == 32 || Size == 64 || Size == 128) && "Unsupported size");
-    switch (Size) {
-    case 32:
-      return RTLIB::SDIV_I32;
-    case 64:
-      return RTLIB::SDIV_I64;
-    case 128:
-      return RTLIB::SDIV_I128;
-    default:
-      llvm_unreachable("unexpected size");
-    }
+    RTLIBCASE(SDIV_I);
   case TargetOpcode::G_UDIV:
-    assert((Size == 32 || Size == 64 || Size == 128) && "Unsupported size");
-    switch (Size) {
-    case 32:
-      return RTLIB::UDIV_I32;
-    case 64:
-      return RTLIB::UDIV_I64;
-    case 128:
-      return RTLIB::UDIV_I128;
-    default:
-      llvm_unreachable("unexpected size");
-    }
+    RTLIBCASE(UDIV_I);
   case TargetOpcode::G_SREM:
-    assert((Size == 32 || Size == 64) && "Unsupported size");
-    return Size == 64 ? RTLIB::SREM_I64 : RTLIB::SREM_I32;
+    RTLIBCASE(SREM_I);
   case TargetOpcode::G_UREM:
-    assert((Size == 32 || Size == 64) && "Unsupported size");
-    return Size == 64 ? RTLIB::UREM_I64 : RTLIB::UREM_I32;
+    RTLIBCASE(UREM_I);
   case TargetOpcode::G_CTLZ_ZERO_UNDEF:
-    assert(Size == 32 && "Unsupported size");
-    return RTLIB::CTLZ_I32;
+    RTLIBCASE(CTLZ_I);
   case TargetOpcode::G_FADD:
-    assert((Size == 32 || Size == 64) && "Unsupported size");
-    return Size == 64 ? RTLIB::ADD_F64 : RTLIB::ADD_F32;
+    RTLIBCASE(ADD_F);
   case TargetOpcode::G_FSUB:
-    assert((Size == 32 || Size == 64) && "Unsupported size");
-    return Size == 64 ? RTLIB::SUB_F64 : RTLIB::SUB_F32;
+    RTLIBCASE(SUB_F);
   case TargetOpcode::G_FMUL:
-    assert((Size == 32 || Size == 64) && "Unsupported size");
-    return Size == 64 ? RTLIB::MUL_F64 : RTLIB::MUL_F32;
+    RTLIBCASE(MUL_F);
   case TargetOpcode::G_FDIV:
-    assert((Size == 32 || Size == 64) && "Unsupported size");
-    return Size == 64 ? RTLIB::DIV_F64 : RTLIB::DIV_F32;
+    RTLIBCASE(DIV_F);
   case TargetOpcode::G_FEXP:
-    assert((Size == 32 || Size == 64) && "Unsupported size");
-    return Size == 64 ? RTLIB::EXP_F64 : RTLIB::EXP_F32;
+    RTLIBCASE(EXP_F);
   case TargetOpcode::G_FEXP2:
-    assert((Size == 32 || Size == 64) && "Unsupported size");
-    return Size == 64 ? RTLIB::EXP2_F64 : RTLIB::EXP2_F32;
+    RTLIBCASE(EXP2_F);
   case TargetOpcode::G_FREM:
-    return Size == 64 ? RTLIB::REM_F64 : RTLIB::REM_F32;
+    RTLIBCASE(REM_F);
   case TargetOpcode::G_FPOW:
-    return Size == 64 ? RTLIB::POW_F64 : RTLIB::POW_F32;
+    RTLIBCASE(POW_F);
   case TargetOpcode::G_FMA:
-    assert((Size == 32 || Size == 64) && "Unsupported size");
-    return Size == 64 ? RTLIB::FMA_F64 : RTLIB::FMA_F32;
+    RTLIBCASE(FMA_F);
   case TargetOpcode::G_FSIN:
-    assert((Size == 32 || Size == 64 || Size == 128) && "Unsupported size");
-    return Size == 128 ? RTLIB::SIN_F128
-                       : Size == 64 ? RTLIB::SIN_F64 : RTLIB::SIN_F32;
+    RTLIBCASE(SIN_F);
   case TargetOpcode::G_FCOS:
-    assert((Size == 32 || Size == 64 || Size == 128) && "Unsupported size");
-    return Size == 128 ? RTLIB::COS_F128
-                       : Size == 64 ? RTLIB::COS_F64 : RTLIB::COS_F32;
+    RTLIBCASE(COS_F);
   case TargetOpcode::G_FLOG10:
-    assert((Size == 32 || Size == 64 || Size == 128) && "Unsupported size");
-    return Size == 128 ? RTLIB::LOG10_F128
-                       : Size == 64 ? RTLIB::LOG10_F64 : RTLIB::LOG10_F32;
+    RTLIBCASE(LOG10_F);
   case TargetOpcode::G_FLOG:
-    assert((Size == 32 || Size == 64 || Size == 128) && "Unsupported size");
-    return Size == 128 ? RTLIB::LOG_F128
-                       : Size == 64 ? RTLIB::LOG_F64 : RTLIB::LOG_F32;
+    RTLIBCASE(LOG_F);
   case TargetOpcode::G_FLOG2:
-    assert((Size == 32 || Size == 64 || Size == 128) && "Unsupported size");
-    return Size == 128 ? RTLIB::LOG2_F128
-                       : Size == 64 ? RTLIB::LOG2_F64 : RTLIB::LOG2_F32;
+    RTLIBCASE(LOG2_F);
   case TargetOpcode::G_FCEIL:
-    assert((Size == 32 || Size == 64) && "Unsupported size");
-    return Size == 64 ? RTLIB::CEIL_F64 : RTLIB::CEIL_F32;
+    RTLIBCASE(CEIL_F);
   case TargetOpcode::G_FFLOOR:
-    assert((Size == 32 || Size == 64) && "Unsupported size");
-    return Size == 64 ? RTLIB::FLOOR_F64 : RTLIB::FLOOR_F32;
+    RTLIBCASE(FLOOR_F);
+  case TargetOpcode::G_FMINNUM:
+    RTLIBCASE(FMIN_F);
+  case TargetOpcode::G_FMAXNUM:
+    RTLIBCASE(FMAX_F);
+  case TargetOpcode::G_FSQRT:
+    RTLIBCASE(SQRT_F);
+  case TargetOpcode::G_FRINT:
+    RTLIBCASE(RINT_F);
+  case TargetOpcode::G_FNEARBYINT:
+    RTLIBCASE(NEARBYINT_F);
   }
   llvm_unreachable("Unknown libcall function");
 }
@@ -668,9 +652,14 @@ LegalizerHelper::libcall(MachineInstr &MI) {
   case TargetOpcode::G_FEXP:
   case TargetOpcode::G_FEXP2:
   case TargetOpcode::G_FCEIL:
-  case TargetOpcode::G_FFLOOR: {
+  case TargetOpcode::G_FFLOOR:
+  case TargetOpcode::G_FMINNUM:
+  case TargetOpcode::G_FMAXNUM:
+  case TargetOpcode::G_FSQRT:
+  case TargetOpcode::G_FRINT:
+  case TargetOpcode::G_FNEARBYINT: {
     Type *HLTy = getFloatTypeForLLT(Ctx, LLTy);
-    if (!HLTy || (Size != 32 && Size != 64)) {
+    if (!HLTy || (Size != 32 && Size != 64 && Size != 128)) {
       LLVM_DEBUG(dbgs() << "No libcall available for size " << Size << ".\n");
       return UnableToLegalize;
     }

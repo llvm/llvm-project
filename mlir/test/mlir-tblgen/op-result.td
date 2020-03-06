@@ -45,7 +45,7 @@ def OpD : NS_Op<"type_attr_as_result_type", [FirstAttrDerivedResultType]> {
 }
 
 // CHECK-LABEL: OpD definitions
-// CHECK: void OpD::build(Builder *, OperationState &odsState, ValueRange operands, ArrayRef<NamedAttribute> attributes)
+// CHECK: void OpD::build(Builder *odsBuilder, OperationState &odsState, ValueRange operands, ArrayRef<NamedAttribute> attributes)
 // CHECK: odsState.addTypes({attr.second.cast<TypeAttr>().getValue()});
 
 def OpE : NS_Op<"value_attr_as_result_type", [FirstAttrDerivedResultType]> {
@@ -54,7 +54,7 @@ def OpE : NS_Op<"value_attr_as_result_type", [FirstAttrDerivedResultType]> {
 }
 
 // CHECK-LABEL: OpE definitions
-// CHECK: void OpE::build(Builder *, OperationState &odsState, ValueRange operands, ArrayRef<NamedAttribute> attributes)
+// CHECK: void OpE::build(Builder *odsBuilder, OperationState &odsState, ValueRange operands, ArrayRef<NamedAttribute> attributes)
 // CHECK: odsState.addTypes({attr.second.getType()});
 
 def OpF : NS_Op<"one_variadic_result_op", []> {

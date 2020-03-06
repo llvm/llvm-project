@@ -30,7 +30,7 @@
 ; different test file.
 
 define i32 @simple_arith(i32 %a, i32 %b) #0 {
-; RV32IC-LABEL: simple_arith:
+; RV32IC-LABEL: <simple_arith>:
 ; RV32IC:         addi a2, a0, 1
 ; RV32IC-NEXT:    c.andi a2, 11
 ; RV32IC-NEXT:    c.slli a2, 7
@@ -48,7 +48,7 @@ define i32 @simple_arith(i32 %a, i32 %b) #0 {
 }
 
 define i32 @select(i32 %a, i32 *%b) #0 {
-; RV32IC-LABEL: select:
+; RV32IC-LABEL: <select>:
 ; RV32IC:         c.lw a2, 0(a1)
 ; RV32IC-NEXT:    c.beqz a2, 4
 ; RV32IC-NEXT:    c.mv a0, a2
@@ -124,14 +124,14 @@ define i32 @select(i32 %a, i32 *%b) #0 {
 }
 
 define i32 @pos_tiny() #0 {
-; RV32IC-LABEL: pos_tiny:
+; RV32IC-LABEL: <pos_tiny>:
 ; RV32IC:         c.li a0, 18
 ; RV32IC-NEXT:    c.jr ra
   ret i32 18
 }
 
 define i32 @pos_i32() #0 {
-; RV32IC-LABEL: pos_i32:
+; RV32IC-LABEL: <pos_i32>:
 ; RV32IC:         lui a0, 423811
 ; RV32IC-NEXT:    addi a0, a0, -1297
 ; RV32IC-NEXT:    c.jr ra
@@ -139,7 +139,7 @@ define i32 @pos_i32() #0 {
 }
 
 define i32 @pos_i32_half_compressible() #0 {
-; RV32IC-LABEL: pos_i32_half_compressible:
+; RV32IC-LABEL: <pos_i32_half_compressible>:
 ; RV32IC:         lui a0, 423810
 ; RV32IC-NEXT:    c.addi  a0, 28
 ; RV32IC-NEXT:    c.jr    ra
@@ -147,14 +147,14 @@ define i32 @pos_i32_half_compressible() #0 {
 }
 
 define i32 @neg_tiny() #0 {
-; RV32IC-LABEL: neg_tiny:
+; RV32IC-LABEL: <neg_tiny>:
 ; RV32IC:       c.li a0, -19
 ; RV32IC-NEXT:  c.jr ra
   ret i32 -19
 }
 
 define i32 @neg_i32() #0 {
-; RV32IC-LABEL: neg_i32:
+; RV32IC-LABEL: <neg_i32>:
 ; RV32IC:       lui a0, 912092
 ; RV32IC-NEXT:  addi a0, a0, -273
 ; RV32IC-NEXT:  c.jr ra
@@ -162,14 +162,14 @@ define i32 @neg_i32() #0 {
 }
 
 define i32 @pos_i32_hi20_only() #0 {
-; RV32IC-LABEL: pos_i32_hi20_only:
+; RV32IC-LABEL: <pos_i32_hi20_only>:
 ; RV32IC:       c.lui a0, 16
 ; RV32IC-NEXT:  c.jr ra
   ret i32 65536
 }
 
 define i32 @neg_i32_hi20_only() #0 {
-; RV32IC-LABEL: neg_i32_hi20_only:
+; RV32IC-LABEL: <neg_i32_hi20_only>:
 ; RV32IC:       c.lui a0, 1048560
 ; RV32IC-NEXT:  c.jr ra
   ret i32 -65536

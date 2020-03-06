@@ -32,6 +32,7 @@ add_dependencies(MLIRTransforms
   MLIRLoopLikeInterfaceIncGen
   MLIRStandardOpsIncGen)
 target_link_libraries(MLIRTransforms
+  PUBLIC
   MLIRAffineOps
   MLIRAnalysis
   MLIRLoopOps

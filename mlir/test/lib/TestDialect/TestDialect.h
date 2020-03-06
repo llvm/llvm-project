@@ -15,6 +15,7 @@
 #define MLIR_TESTDIALECT_H
 
 #include "mlir/Analysis/CallInterfaces.h"
+#include "mlir/Analysis/ControlFlowInterfaces.h"
 #include "mlir/Analysis/InferTypeOpInterface.h"
 #include "mlir/Dialect/Traits.h"
 #include "mlir/IR/Dialect.h"

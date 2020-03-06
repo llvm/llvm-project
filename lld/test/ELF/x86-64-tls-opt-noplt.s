@@ -17,7 +17,7 @@
 // RELOC-NEXT:  }
 // RELOC-NEXT: ]
 
-// DISASM:      _start:
+// DISASM:      <_start>:
 
 // Table 11.5: GD -> IE Code Transition (LP64)
 // DISASM-NEXT:               movq %fs:0, %rax

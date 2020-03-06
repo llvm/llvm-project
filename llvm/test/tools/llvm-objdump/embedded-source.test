@@ -12,7 +12,7 @@
 ;   return i;
 ; }
 
-; LINE: main:
+; LINE: <main>:
 ; LINE-NEXT: ; main():
 ; LINE-NEXT: ; {{.*}}embedded-source.c:1
 ; LINE-NEXT: pushq %rbp
@@ -23,7 +23,7 @@
 ; LINE: ; {{.*}}embedded-source.c:4
 ; LINE: retq
 
-; SOURCE: main:
+; SOURCE: <main>:
 ; SOURCE-NEXT: ; int main(int argc, char *argv[]) {
 ; SOURCE-NEXT: pushq %rbp
 ; SOURCE: ; int i = 2;

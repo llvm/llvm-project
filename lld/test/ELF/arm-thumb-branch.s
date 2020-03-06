@@ -41,12 +41,12 @@ callee_high:
 
 // CHECK: Disassembly of section .callee1:
 // CHECK-EMPTY:
-// CHECK-NEXT: callee_low:
+// CHECK-NEXT: <callee_low>:
 // CHECK-NEXT:      b4:       70 47   bx      lr
 // CHECK-EMPTY:
 // CHECK-NEXT: Disassembly of section .caller:
 // CHECK-EMPTY:
-// CHECK-NEXT: _start:
+// CHECK-NEXT: <_start>:
 // CHECK-NEXT:   10000:       f0 f7 58 f8     bl      #-65360
 // CHECK-NEXT:   10004:       f0 f7 56 b8     b.w     #-65364
 // CHECK-NEXT:   10008:       30 f4 54 a8     beq.w   #-65368
@@ -61,5 +61,5 @@ callee_high:
 // CHECK-EMPTY:
 // CHECK-NEXT: Disassembly of section .callee2:
 // CHECK-EMPTY:
-// CHECK-NEXT: callee_high:
+// CHECK-NEXT: <callee_high>:
 // CHECK-NEXT:   10028:       70 47   bx      lr

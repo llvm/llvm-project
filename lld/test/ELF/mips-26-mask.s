@@ -7,7 +7,7 @@
 
 # CHECK:      Disassembly of section .text:
 # CHECK-EMPTY:
-# CHECK:      __start:
+# CHECK:      <__start>:
 # CHECK-NEXT:   [[ADDR:[0-9a-f]+]]:       jal     0x80[[ADDR]]
 
   .text

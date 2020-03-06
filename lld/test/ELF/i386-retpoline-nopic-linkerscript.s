@@ -14,7 +14,7 @@
 
 // CHECK:      Disassembly of section .plt:
 // CHECK-EMPTY:
-// CHECK-NEXT: .plt:
+// CHECK-NEXT: <.plt>:
 // CHECK-NEXT: 10:       pushl   236
 // CHECK-NEXT: 16:       pushl   %eax
 // CHECK-NEXT: 17:       movl    240, %eax

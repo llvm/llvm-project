@@ -11,4 +11,10 @@ add_mlir_dialect_library(MLIRVectorOps
 add_dependencies(MLIRVectorOps MLIRVectorOpsIncGen)
 add_dependencies(MLIRVectorOps MLIRVectorTransformPatternsIncGen)
 
-target_link_libraries(MLIRVectorOps MLIRIR MLIRStandardOps MLIRAffineOps MLIRLoopOps MLIRLoopAnalysis)
+target_link_libraries(MLIRVectorOps
+  PUBLIC
+  MLIRIR
+  MLIRStandardOps
+  MLIRAffineOps
+  MLIRLoopOps
+  MLIRLoopAnalysis)

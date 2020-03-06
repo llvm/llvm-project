@@ -41,7 +41,7 @@
 
 // DISASMSHARED:       Disassembly of section test:
 // DISASMSHARED-EMPTY:
-// DISASMSHARED-NEXT:  _start:
+// DISASMSHARED-NEXT:  <_start>:
 // (.got)[0] = 0x3388 = 13192
 // (.got)[1] = 13196
 // (.got)[2] = 13200

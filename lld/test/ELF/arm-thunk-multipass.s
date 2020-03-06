@@ -26,7 +26,7 @@ _start:
  bl target
  b.w arm_target
 // arm_target is in range but needs an interworking thunk
-// CHECK1: _start:
+// CHECK1: <_start>:
 // CHECK1-NEXT:   100002:       00 f3 06 d0     bl      #15728652
 // CHECK1-NEXT:   100006:       ff f2 ff 97     b.w     #15728638 <__Thumbv7ABSLongThunk_arm_target>
  nop
@@ -59,13 +59,13 @@ target2:
  .type arm_target, %function
 arm_target:
  bx lr
-// CHECK2: __Thumbv7ABSLongThunk_arm_target:
+// CHECK2: <__Thumbv7ABSLongThunk_arm_target>:
 // CHECK2-NEXT:  1000008:       40 f2 02 0c     movw    r12, #2
 // CHECK2-NEXT:  100000c:       c0 f2 00 1c     movt    r12, #256
 // CHECK2-NEXT:  1000010:       60 47   bx      r12
-// CHECK2: __Thumbv7ABSLongThunk_target:
+// CHECK2: <__Thumbv7ABSLongThunk_target>:
 // CHECK2-NEXT:  1000012:       ff f0 ff bf     b.w     #1048574 <target>
-// CHECK2: __Thumbv7ABSLongThunk_target2:
+// CHECK2: <__Thumbv7ABSLongThunk_target2>:
 // CHECK2-NEXT:  1000016:       ff f4 fc 97     b.w     #-15728648 <target2>
 
  .section .text.17, "ax", %progbits
@@ -85,7 +85,7 @@ target:
  nop
  nop
  bx lr
-// CHECK3: target:
+// CHECK3: <target>:
 // CHECK3-NEXT:  1100014:       ff f6 ff ff     bl      #-1048578
 // CHECK3-NEXT:  1100018:       00 bf   nop
 // CHECK3-NEXT:  110001a:       00 bf   nop

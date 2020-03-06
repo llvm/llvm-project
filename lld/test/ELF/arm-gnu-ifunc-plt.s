@@ -30,14 +30,14 @@
 
 // DISASM: Disassembly of section .text:
 // DISASM-EMPTY:
-// DISASM-NEXT: foo:
+// DISASM-NEXT: <foo>:
 // DISASM-NEXT:    111dc:       bx      lr
-// DISASM: bar:
+// DISASM: <bar>:
 // DISASM-NEXT:    111e0:       bx      lr
-// DISASM: _start:
+// DISASM: <_start>:
 // DISASM-NEXT:    111e4:       bl      #84
 // DISASM-NEXT:    111e8:       bl      #96
-// DISASM: $d.1:
+// DISASM: <$d.1>:
 // DISASM-NEXT:    111ec:       00 00 00 00     .word   0x00000000
 // DISASM-NEXT:    111f0:       04 00 00 00     .word   0x00000004
 // DISASM:         111f4:       bl      #36
@@ -45,39 +45,39 @@
 // DISASM-EMPTY:
 // DISASM-NEXT: Disassembly of section .plt:
 // DISASM-EMPTY:
-// DISASM-NEXT: $a:
+// DISASM-NEXT: <$a>:
 // DISASM-NEXT:    11200:       str     lr, [sp, #-4]!
 // DISASM-NEXT:    11204:       add     lr, pc, #0, #12
 // DISASM-NEXT:    11208:       add     lr, lr, #8192
 // DISASM-NEXT:    1120c:       ldr     pc, [lr, #236]!
-// DISASM: $d:
+// DISASM: <$d>:
 // DISASM-NEXT:    11210:       d4 d4 d4 d4     .word   0xd4d4d4d4
 // DISASM-NEXT:    11214:       d4 d4 d4 d4     .word   0xd4d4d4d4
 // DISASM-NEXT:    11218:       d4 d4 d4 d4     .word   0xd4d4d4d4
 // DISASM-NEXT:    1121c:       d4 d4 d4 d4     .word   0xd4d4d4d4
-// DISASM: $a:
+// DISASM: <$a>:
 // DISASM-NEXT:    11220:       add     r12, pc, #0, #12
 // DISASM-NEXT:    11224:       add     r12, r12, #8192
 // DISASM-NEXT:    11228:       ldr     pc, [r12, #212]!
-// DISASM: $d:
+// DISASM: <$d>:
 // DISASM-NEXT:    1122c:       d4 d4 d4 d4     .word   0xd4d4d4d4
-// DISASM: $a:
+// DISASM: <$a>:
 // DISASM-NEXT:    11230:       add     r12, pc, #0, #12
 // DISASM-NEXT:    11234:       add     r12, r12, #8192
 // DISASM-NEXT:    11238:       ldr     pc, [r12, #200]!
-// DISASM: $d:
+// DISASM: <$d>:
 // DISASM-NEXT:    1123c:       d4 d4 d4 d4     .word   0xd4d4d4d4
-// DISASM: $a:
+// DISASM: <$a>:
 // DISASM-NEXT:    11240:       add     r12, pc, #0, #12
 // DISASM-NEXT:    11244:       add     r12, r12, #4096
 // DISASM-NEXT:    11248:       ldr     pc, [r12, #160]!
-// DISASM: $d:
+// DISASM: <$d>:
 // DISASM-NEXT:    1124c:       d4 d4 d4 d4     .word   0xd4d4d4d4
-// DISASM: $a:
+// DISASM: <$a>:
 // DISASM-NEXT:    11250:       add     r12, pc, #0, #12
 // DISASM-NEXT:    11254:       add     r12, r12, #4096
 // DISASM-NEXT:    11258:       ldr     pc, [r12, #148]!
-// DISASM: $d:
+// DISASM: <$d>:
 // DISASM-NEXT:    1125c:	d4 d4 d4 d4 	.word	0xd4d4d4d4
 
 .syntax unified

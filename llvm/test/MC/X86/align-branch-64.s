@@ -14,7 +14,7 @@
   # Next couple tests are checking the edge cases on the alignment computation
 
   .text
-  # CHECK: test1:
+  # CHECK: <test1>:
   # CHECK: 20: callq
   .globl  test1
   .p2align  5
@@ -24,7 +24,7 @@ test1:
   .endr
   callq bar
 
-  # CHECK: test2:
+  # CHECK: <test2>:
   # CHECK: 60: callq
   .globl  test2
   .p2align  5
@@ -34,7 +34,7 @@ test2:
   .endr
   callq bar
 
-  # CHECK: test3:
+  # CHECK: <test3>:
   # CHECK: a0: callq
   .globl  test3
   .p2align  5
@@ -46,7 +46,7 @@ test3:
 
   # next couple check instruction type coverage
 
-  # CHECK: test_jmp:
+  # CHECK: <test_jmp>:
   # CHECK: e0: jmp
   .globl  test_jmp
   .p2align  5
@@ -56,7 +56,7 @@ test_jmp:
   .endr
   jmp bar
 
-  # CHECK: test_ret:
+  # CHECK: <test_ret>:
   # CHECK: 120: retq
   .globl  test_ret
   .p2align  5
@@ -68,7 +68,7 @@ test_ret:
 
   # check a case with a relaxable instruction
 
-  # CHECK: test_jmp_far:
+  # CHECK: <test_jmp_far>:
   # CHECK: 160: jmp
   .globl  test_jmp_far
   .p2align  5
@@ -78,7 +78,7 @@ test_jmp_far:
   .endr
   jmp baz
 
-  # CHECK: test_jcc:
+  # CHECK: <test_jcc>:
   # CHECK: 1a0: jne
   .globl  test_jcc
   .p2align  5
@@ -88,7 +88,7 @@ test_jcc:
   .endr
   jne bar
 
-  # CHECK: test_indirect:
+  # CHECK: <test_indirect>:
   # CHECK: 1e0: jmp
   .globl  test_indirect
   .p2align  5
@@ -103,7 +103,7 @@ test_indirect:
 bar:
   retq
 
-  # CHECK: test_pad_via_relax:
+  # CHECK: <test_pad_via_relax>:
   # CHECK: 200: testq
   # CHECK: 203: jne
   # CHECK: 209: int3
@@ -123,7 +123,7 @@ test_pad_via_relax:
 
   # This case looks really tempting to pad, but doing so for the call causes
   # the jmp to be misaligned.
-  # CHECK: test_pad_via_relax_neg1:
+  # CHECK: <test_pad_via_relax_neg1>:
   # CHECK: 240: int3
   # CHECK: 25a: testq
   # CHECK: 25d: jne
@@ -140,7 +140,7 @@ test_pad_via_relax_neg1:
   callq bar
 
   # Same as previous, but without fusion
-  # CHECK: test_pad_via_relax_neg2:
+  # CHECK: <test_pad_via_relax_neg2>:
   # CHECK: 280: int3
   # CHECK: 29d: jmp
   # CHECK: 29f: nop

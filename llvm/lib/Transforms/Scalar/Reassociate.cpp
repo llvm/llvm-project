@@ -1076,7 +1076,7 @@ Value *ReassociatePass::RemoveFactorFromExpression(Value *V, Value *Factor) {
         const APFloat &F1 = FC1->getValueAPF();
         APFloat F2(FC2->getValueAPF());
         F2.changeSign();
-        if (F1.compare(F2) == APFloat::cmpEqual) {
+        if (F1 == F2) {
           FoundFactor = NeedsNegate = true;
           Factors.erase(Factors.begin() + i);
           break;

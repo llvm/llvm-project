@@ -13,10 +13,10 @@ foo:
         nop
 
 // 0x22E0 - 0x1228 - 5 = 4275
-// DISASM:      bar:
+// DISASM:      <bar>:
 // DISASM-NEXT:   1228:       callq 4275
 
-// DISASM:      foo:
+// DISASM:      <foo>:
 // DISASM-NEXT:   122d:       nop
 
 // CHECK:      Name: .got

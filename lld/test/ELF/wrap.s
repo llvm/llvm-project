@@ -9,7 +9,7 @@
 // RUN: ld.lld -o %t3 %t %t2 --wrap foo --wrap foo -wrap=nosuchsym
 // RUN: llvm-objdump -d -print-imm-hex %t3 | FileCheck %s
 
-// CHECK: _start:
+// CHECK: <_start>:
 // CHECK-NEXT: movl $0x11010, %edx
 // CHECK-NEXT: movl $0x11010, %edx
 // CHECK-NEXT: movl $0x11000, %edx

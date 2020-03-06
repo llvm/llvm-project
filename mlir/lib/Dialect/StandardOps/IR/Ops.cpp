@@ -477,18 +477,25 @@ struct SimplifyBrToBlockWithSinglePred : public OpRewritePattern<BranchOp> {
 };
 } // end anonymous namespace.
 
-Block *BranchOp::getDest() { return getSuccessor(0); }
+Block *BranchOp::getDest() { return getSuccessor(); }
 
-void BranchOp::setDest(Block *block) { return setSuccessor(block, 0); }
+void BranchOp::setDest(Block *block) { return setSuccessor(block); }
 
 void BranchOp::eraseOperand(unsigned index) {
-  getOperation()->eraseSuccessorOperand(0, index);
+  getOperation()->eraseOperand(index);
 }
 
 void BranchOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
                                            MLIRContext *context) {
   results.insert<SimplifyBrToBlockWithSinglePred>(context);
 }
+
+Optional<OperandRange> BranchOp::getSuccessorOperands(unsigned index) {
+  assert(index == 0 && "invalid successor index");
+  return getOperands();
+}
+
+bool BranchOp::canEraseSuccessorOperand() { return true; }
 
 //===----------------------------------------------------------------------===//
 // CallOp
@@ -748,6 +755,13 @@ void CondBranchOp::getCanonicalizationPatterns(
     OwningRewritePatternList &results, MLIRContext *context) {
   results.insert<SimplifyConstCondBranchPred>(context);
 }
+
+Optional<OperandRange> CondBranchOp::getSuccessorOperands(unsigned index) {
+  assert(index < getNumSuccessors() && "invalid successor index");
+  return index == trueIndex ? getTrueOperands() : getFalseOperands();
+}
+
+bool CondBranchOp::canEraseSuccessorOperand() { return true; }
 
 //===----------------------------------------------------------------------===//
 // Constant*Op
@@ -1811,10 +1825,7 @@ void mlir::SubViewOp::build(Builder *b, OperationState &result, Value source,
                             ArrayRef<NamedAttribute> attrs) {
   if (!resultType)
     resultType = inferSubViewResultType(source.getType().cast<MemRefType>());
-  auto segmentAttr = b->getI32VectorAttr(
-      {1, static_cast<int>(offsets.size()), static_cast<int32_t>(sizes.size()),
-       static_cast<int32_t>(strides.size())});
-  build(b, result, resultType, source, offsets, sizes, strides, segmentAttr);
+  build(b, result, resultType, source, offsets, sizes, strides);
   result.addAttributes(attrs);
 }
 
@@ -1822,48 +1833,6 @@ void mlir::SubViewOp::build(Builder *b, OperationState &result, Type resultType,
                             Value source) {
   build(b, result, source, /*offsets=*/{}, /*sizes=*/{}, /*strides=*/{},
         resultType);
-}
-
-static ParseResult parseSubViewOp(OpAsmParser &parser, OperationState &result) {
-  OpAsmParser::OperandType srcInfo;
-  SmallVector<OpAsmParser::OperandType, 4> offsetsInfo;
-  SmallVector<OpAsmParser::OperandType, 4> sizesInfo;
-  SmallVector<OpAsmParser::OperandType, 4> stridesInfo;
-  auto indexType = parser.getBuilder().getIndexType();
-  Type srcType, dstType;
-  if (parser.parseOperand(srcInfo) ||
-      parser.parseOperandList(offsetsInfo, OpAsmParser::Delimiter::Square) ||
-      parser.parseOperandList(sizesInfo, OpAsmParser::Delimiter::Square) ||
-      parser.parseOperandList(stridesInfo, OpAsmParser::Delimiter::Square)) {
-    return failure();
-  }
-
-  auto builder = parser.getBuilder();
-  result.addAttribute(
-      SubViewOp::getOperandSegmentSizeAttr(),
-      builder.getI32VectorAttr({1, static_cast<int>(offsetsInfo.size()),
-                                static_cast<int32_t>(sizesInfo.size()),
-                                static_cast<int32_t>(stridesInfo.size())}));
-
-  return failure(
-      parser.parseOptionalAttrDict(result.attributes) ||
-      parser.parseColonType(srcType) ||
-      parser.resolveOperand(srcInfo, srcType, result.operands) ||
-      parser.resolveOperands(offsetsInfo, indexType, result.operands) ||
-      parser.resolveOperands(sizesInfo, indexType, result.operands) ||
-      parser.resolveOperands(stridesInfo, indexType, result.operands) ||
-      parser.parseKeywordType("to", dstType) ||
-      parser.addTypeToList(dstType, result.types));
-}
-
-static void print(OpAsmPrinter &p, SubViewOp op) {
-  p << op.getOperationName() << ' ' << op.getOperand(0) << '[' << op.offsets()
-    << "][" << op.sizes() << "][" << op.strides() << ']';
-
-  std::array<StringRef, 1> elidedAttrs = {
-      SubViewOp::getOperandSegmentSizeAttr()};
-  p.printOptionalAttrDict(op.getAttrs(), elidedAttrs);
-  p << " : " << op.getOperand(0).getType() << " to " << op.getType();
 }
 
 static LogicalResult verify(SubViewOp op) {

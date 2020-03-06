@@ -7,6 +7,7 @@ add_mlir_dialect_library(MLIRFxpMathOps
   )
 
 target_link_libraries(MLIRFxpMathOps
+  PUBLIC
   MLIRQuantOps
   MLIRIR
   MLIRPass
@@ -14,9 +15,5 @@ target_link_libraries(MLIRFxpMathOps
   MLIRStandardOps
   )
 add_dependencies(MLIRFxpMathOps
-                 MLIRFxpMathOpsIncGen
-                 MLIRQuantOps
-                 MLIRIR
-                 MLIRPass
-                 MLIRSupport
-                 MLIRStandardOps)
+  MLIRFxpMathOpsIncGen
+  )

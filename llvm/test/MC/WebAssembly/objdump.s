@@ -16,11 +16,11 @@ test1:
 
 # CHECK-LABEL: CODE:
 # CHECK:             # 2 functions in section.
-# CHECK-LABEL: test0:
+# CHECK-LABEL: <test0>:
 # CHECK-NEXT:        .local  f32, f64, v128, v128
 # CHECK-NEXT:       9:       20 02  local.get	2
 # CHECK-NEXT:       b:       0b     end
-# CHECK-LABEL: test1:
+# CHECK-LABEL: <test1>:
 # CHECK-NEXT:        .local  i32, i64, exnref
 # CHECK-NEXT:      14:       20 03  local.get	3
 # CHECK-NEXT:      16:       0b     end

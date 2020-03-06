@@ -33,7 +33,7 @@ int main(int argc, char **argv, char *env[]) {
   for (i = 0; i < argc; ++i) foo();
   #pragma omp target parallel for depend (source : argc) // expected-error {{expected 'in', 'out', 'inout' or 'mutexinoutset' in OpenMP clause 'depend'}}
   for (i = 0; i < argc; ++i) foo();
-  #pragma omp target parallel for depend (source) // expected-error {{expected expression}} expected-warning {{missing ':' after dependency type - ignoring}}
+  #pragma omp target parallel for depend (source) // expected-error {{expected expression}} expected-warning {{missing ':' after dependency type - ignoring}} expected-error {{expected 'in', 'out', 'inout' or 'mutexinoutset' in OpenMP clause 'depend'}}
   for (i = 0; i < argc; ++i) foo();
   #pragma omp target parallel for depend (in : argc)) // expected-warning {{extra tokens at the end of '#pragma omp target parallel for' are ignored}}
   for (i = 0; i < argc; ++i) foo();

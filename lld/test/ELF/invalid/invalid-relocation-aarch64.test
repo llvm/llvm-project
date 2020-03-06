@@ -19,11 +19,9 @@ Sections:
     Link:            .symtab
     Info:            .text
     Relocations:
-      - Offset:          0x0000000000000000
-        Symbol:          foo
+      - Symbol:          foo
         Type:            0x400
-      - Offset:          0x0000000000000000
-        Symbol:          foo
+      - Symbol:          foo
         Type:            0x401
 Symbols:
   - Name:            foo

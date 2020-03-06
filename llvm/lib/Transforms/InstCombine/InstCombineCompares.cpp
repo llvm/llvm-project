@@ -5678,7 +5678,7 @@ Instruction *InstCombiner::foldFCmpIntToFPConst(FCmpInst &I, Instruction *LHSI,
       // TODO: Can never be -0.0 and other non-representable values
       APFloat RHSRoundInt(RHS);
       RHSRoundInt.roundToIntegral(APFloat::rmNearestTiesToEven);
-      if (RHS.compare(RHSRoundInt) != APFloat::cmpEqual) {
+      if (RHS != RHSRoundInt) {
         if (P == FCmpInst::FCMP_OEQ || P == FCmpInst::FCMP_UEQ)
           return replaceInstUsesWith(I, Builder.getFalse());
 
@@ -5766,7 +5766,7 @@ Instruction *InstCombiner::foldFCmpIntToFPConst(FCmpInst &I, Instruction *LHSI,
     APFloat SMax(RHS.getSemantics());
     SMax.convertFromAPInt(APInt::getSignedMaxValue(IntWidth), true,
                           APFloat::rmNearestTiesToEven);
-    if (SMax.compare(RHS) == APFloat::cmpLessThan) {  // smax < 13123.0
+    if (SMax < RHS) { // smax < 13123.0
       if (Pred == ICmpInst::ICMP_NE  || Pred == ICmpInst::ICMP_SLT ||
           Pred == ICmpInst::ICMP_SLE)
         return replaceInstUsesWith(I, Builder.getTrue());
@@ -5778,7 +5778,7 @@ Instruction *InstCombiner::foldFCmpIntToFPConst(FCmpInst &I, Instruction *LHSI,
     APFloat UMax(RHS.getSemantics());
     UMax.convertFromAPInt(APInt::getMaxValue(IntWidth), false,
                           APFloat::rmNearestTiesToEven);
-    if (UMax.compare(RHS) == APFloat::cmpLessThan) {  // umax < 13123.0
+    if (UMax < RHS) { // umax < 13123.0
       if (Pred == ICmpInst::ICMP_NE  || Pred == ICmpInst::ICMP_ULT ||
           Pred == ICmpInst::ICMP_ULE)
         return replaceInstUsesWith(I, Builder.getTrue());
@@ -5791,7 +5791,7 @@ Instruction *InstCombiner::foldFCmpIntToFPConst(FCmpInst &I, Instruction *LHSI,
     APFloat SMin(RHS.getSemantics());
     SMin.convertFromAPInt(APInt::getSignedMinValue(IntWidth), true,
                           APFloat::rmNearestTiesToEven);
-    if (SMin.compare(RHS) == APFloat::cmpGreaterThan) { // smin > 12312.0
+    if (SMin > RHS) { // smin > 12312.0
       if (Pred == ICmpInst::ICMP_NE || Pred == ICmpInst::ICMP_SGT ||
           Pred == ICmpInst::ICMP_SGE)
         return replaceInstUsesWith(I, Builder.getTrue());
@@ -5802,7 +5802,7 @@ Instruction *InstCombiner::foldFCmpIntToFPConst(FCmpInst &I, Instruction *LHSI,
     APFloat UMin(RHS.getSemantics());
     UMin.convertFromAPInt(APInt::getMinValue(IntWidth), false,
                           APFloat::rmNearestTiesToEven);
-    if (UMin.compare(RHS) == APFloat::cmpGreaterThan) { // umin > 12312.0
+    if (UMin > RHS) { // umin > 12312.0
       if (Pred == ICmpInst::ICMP_NE || Pred == ICmpInst::ICMP_UGT ||
           Pred == ICmpInst::ICMP_UGE)
         return replaceInstUsesWith(I, Builder.getTrue());
@@ -6143,8 +6143,7 @@ Instruction *InstCombiner::visitFCmpInst(FCmpInst &I) {
       APFloat Fabs = TruncC;
       Fabs.clearSign();
       if (!Lossy &&
-          ((Fabs.compare(APFloat::getSmallestNormalized(FPSem)) !=
-            APFloat::cmpLessThan) || Fabs.isZero())) {
+          (!(Fabs < APFloat::getSmallestNormalized(FPSem)) || Fabs.isZero())) {
         Constant *NewC = ConstantFP::get(X->getType(), TruncC);
         return new FCmpInst(Pred, X, NewC, "", &I);
       }

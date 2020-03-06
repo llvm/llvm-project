@@ -428,10 +428,10 @@ public:
                          uint32_t num_mixed_context_lines, uint32_t options,
                          Stream &strm);
 
-  size_t ParseInstructions(Target &target, const AddressRange &range,
+  size_t ParseInstructions(Target &target, AddressRange range,
                            Stream *error_strm_ptr, bool prefer_file_cache);
 
-  size_t ParseInstructions(Target &target, const Address &range,
+  size_t ParseInstructions(Target &target, Address address,
                            uint32_t num_instructions, bool prefer_file_cache);
 
   virtual size_t DecodeInstructions(const Address &base_addr,

@@ -16,6 +16,7 @@ add_mlir_dialect_library(MLIRSPIRV
   )
 
 add_dependencies(MLIRSPIRV
+  MLIRControlFlowInterfacesIncGen
   MLIRSPIRVAvailabilityIncGen
   MLIRSPIRVCanonicalizationIncGen
   MLIRSPIRVEnumAvailabilityIncGen
@@ -25,6 +26,7 @@ add_dependencies(MLIRSPIRV
   MLIRSPIRVTargetAndABIIncGen)
 
 target_link_libraries(MLIRSPIRV
+  PUBLIC
   MLIRIR
   MLIRParser
   MLIRSupport

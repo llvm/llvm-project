@@ -410,7 +410,7 @@ declare i32 @bar(i32)
 
 ; DIS:      {{.*}}aix-xcoff-reloc.ll.tmp.o:   file format aixcoff-rs6000
 ; DIS:      Disassembly of section .text:
-; DIS:      00000000 .text:
+; DIS:      00000000 <.text>:
 ; DIS-NEXT:        0: 7c 08 02 a6                   mflr 0
 ; DIS-NEXT:        4: 90 01 00 08                   stw 0, 8(1)
 ; DIS-NEXT:        8: 94 21 ff c0                   stwu 1, -64(1)
@@ -429,20 +429,20 @@ declare i32 @bar(i32)
 ; DIS-NEXT:       3c: 4e 80 00 20                   blr
 
 ; DIS:      Disassembly of section .data:
-; DIS:      00000040 globalA:
+; DIS:      00000040 <globalA>:
 ; DIS-NEXT:       40: 00 00 00 01                   <unknown>
-; DIS:      00000044 globalB:
+; DIS:      00000044 <globalB>:
 ; DIS-NEXT:       44: 00 00 00 02                   <unknown>
-; DIS:      00000048 arr:
+; DIS:      00000048 <arr>:
 ; DIS-NEXT:       48: 00 00 00 03                   <unknown>
 ; DIS-NEXT:                 ...
-; DIS:      00000070 p:
+; DIS:      00000070 <p>:
 ; DIS-NEXT:       70: 00 00 00 58                   <unknown>
-; DIS:      00000074 foo:
+; DIS:      00000074 <foo>:
 ; DIS-NEXT:       74: 00 00 00 00                   <unknown>
 ; DIS-NEXT:       78: 00 00 00 80                   <unknown>
 ; DIS-NEXT:       7c: 00 00 00 00                   <unknown>
-; DIS:      00000080 globalA:
+; DIS:      00000080 <globalA>:
 ; DIS-NEXT:       80: 00 00 00 40                   <unknown>
-; DIS:      00000084 globalB:
+; DIS:      00000084 <globalB>:
 ; DIS-NEXT:       84: 00 00 00 44                   <unknown>

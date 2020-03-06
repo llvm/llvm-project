@@ -19,4 +19,6 @@ set(LIBS
   )
 
 add_dependencies(MLIRLinalgToLLVM ${LIBS})
-target_link_libraries(MLIRLinalgToLLVM ${LIBS})
+target_link_libraries(MLIRLinalgToLLVM
+  PUBLIC
+  ${LIBS})

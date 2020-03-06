@@ -14,6 +14,7 @@
 #define STANDARD_OPS
 
 include "mlir/Analysis/CallInterfaces.td"
+include "mlir/Analysis/ControlFlowInterfaces.td"
 include "mlir/IR/OpAsmInterface.td"
 
 def Std_Dialect : Dialect {
@@ -331,7 +332,8 @@ def AtomicRMWOp : Std_Op<"atomic_rmw", [
 // BranchOp
 //===----------------------------------------------------------------------===//
 
-def BranchOp : Std_Op<"br", [Terminator]> {
+def BranchOp : Std_Op<"br",
+    [DeclareOpInterfaceMethods<BranchOpInterface>, Terminator]> {
   let summary = "branch operation";
   let description = [{
     The "br" operation represents a branch operation in a function.
@@ -345,10 +347,13 @@ def BranchOp : Std_Op<"br", [Terminator]> {
       ^bb3(%3: tensor<*xf32>):
   }];
 
+  let arguments = (ins Variadic<AnyType>:$destOperands);
   let successors = (successor AnySuccessor:$dest);
 
-  let builders = [OpBuilder<"Builder *, OperationState &result, Block *dest", [{
-    result.addSuccessor(dest, llvm::None);
+  let builders = [OpBuilder<"Builder *, OperationState &result, Block *dest, "
+                            "ValueRange destOperands = {}", [{
+    result.addSuccessors(dest);
+    result.addOperands(destOperands);
   }]>];
 
   // BranchOp is fully verified by traits.
@@ -363,7 +368,9 @@ def BranchOp : Std_Op<"br", [Terminator]> {
   }];
 
   let hasCanonicalizer = 1;
-  let assemblyFormat = "$dest attr-dict";
+  let assemblyFormat = [{
+    $dest (`(` $destOperands^ `:` type($destOperands) `)`)? attr-dict
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -668,7 +675,9 @@ def CmpIOp : Std_Op<"cmpi",
 // CondBranchOp
 //===----------------------------------------------------------------------===//
 
-def CondBranchOp : Std_Op<"cond_br", [Terminator]> {
+def CondBranchOp : Std_Op<"cond_br",
+    [AttrSizedOperandSegments, DeclareOpInterfaceMethods<BranchOpInterface>,
+     Terminator]> {
   let summary = "conditional branch operation";
   let description = [{
     The "cond_br" operation represents a conditional branch operation in a
@@ -685,8 +694,23 @@ def CondBranchOp : Std_Op<"cond_br", [Terminator]> {
          ...
   }];
 
-  let arguments = (ins I1:$condition);
+  let arguments = (ins I1:$condition,
+                       Variadic<AnyType>:$trueDestOperands,
+                       Variadic<AnyType>:$falseDestOperands);
   let successors = (successor AnySuccessor:$trueDest, AnySuccessor:$falseDest);
+
+  let builders = [OpBuilder<
+    "Builder *builder, OperationState &result, Value condition,"
+    "Block *trueDest, ValueRange trueOperands,"
+    "Block *falseDest, ValueRange falseOperands", [{
+      build(builder, result, condition, trueOperands, falseOperands, trueDest,
+            falseDest);
+  }]>, OpBuilder<
+    "Builder *builder, OperationState &result, Value condition,"
+    "Block *trueDest, Block *falseDest, ValueRange falseOperands = {}", [{
+      build(builder, result, condition, trueDest, ValueRange(), falseDest,
+            falseOperands);
+  }]>];
 
   // CondBranchOp is fully verified by traits.
   let verifier = ?;
@@ -719,23 +743,13 @@ def CondBranchOp : Std_Op<"cond_br", [Terminator]> {
       setOperand(getTrueDestOperandIndex() + idx, value);
     }
 
-    operand_iterator true_operand_begin() {
-      return operand_begin() + getTrueDestOperandIndex();
-    }
-    operand_iterator true_operand_end() {
-      return true_operand_begin() + getNumTrueOperands();
-    }
-    operand_range getTrueOperands() {
-      return {true_operand_begin(), true_operand_end()};
-    }
+    operand_range getTrueOperands() { return trueDestOperands(); }
 
-    unsigned getNumTrueOperands()  {
-      return getNumSuccessorOperands(trueIndex);
-    }
+    unsigned getNumTrueOperands()  { return getTrueOperands().size(); }
 
     /// Erase the operand at 'index' from the true operand list.
     void eraseTrueOperand(unsigned index)  {
-      getOperation()->eraseSuccessorOperand(trueIndex, index);
+      eraseSuccessorOperand(trueIndex, index);
     }
 
     // Accessors for operands to the 'false' destination.
@@ -748,21 +762,13 @@ def CondBranchOp : Std_Op<"cond_br", [Terminator]> {
       setOperand(getFalseDestOperandIndex() + idx, value);
     }
 
-    operand_iterator false_operand_begin() { return true_operand_end(); }
-    operand_iterator false_operand_end() {
-      return false_operand_begin() + getNumFalseOperands();
-    }
-    operand_range getFalseOperands() {
-      return {false_operand_begin(), false_operand_end()};
-    }
+    operand_range getFalseOperands() { return falseDestOperands(); }
 
-    unsigned getNumFalseOperands() {
-      return getNumSuccessorOperands(falseIndex);
-    }
+    unsigned getNumFalseOperands() { return getFalseOperands().size(); }
 
     /// Erase the operand at 'index' from the false operand list.
     void eraseFalseOperand(unsigned index) {
-      getOperation()->eraseSuccessorOperand(falseIndex, index);
+      eraseSuccessorOperand(falseIndex, index);
     }
 
   private:
@@ -776,7 +782,12 @@ def CondBranchOp : Std_Op<"cond_br", [Terminator]> {
   }];
 
   let hasCanonicalizer = 1;
-  let assemblyFormat = "$condition `,` successors attr-dict";
+  let assemblyFormat = [{
+    $condition `,`
+    $trueDest (`(` $trueDestOperands^ `:` type($trueDestOperands) `)`)? `,`
+    $falseDest (`(` $falseDestOperands^ `:` type($falseDestOperands) `)`)?
+    attr-dict
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -1710,16 +1721,18 @@ def SubViewOp : Std_Op<"subview", [AttrSizedOperandSegments, NoSideEffect]> {
     }
   }];
 
-  // TODO(b/144779634, ravishankarm) : Use different arguments for
-  // offsets, sizes and strides.
   let arguments = (ins
     AnyMemRef:$source,
     Variadic<Index>:$offsets,
     Variadic<Index>:$sizes,
-    Variadic<Index>:$strides,
-    I32ElementsAttr:$operand_segment_sizes
+    Variadic<Index>:$strides
   );
-  let results = (outs AnyMemRef);
+  let results = (outs AnyMemRef:$result);
+
+  let assemblyFormat = [{
+    $source `[` $offsets `]` `[` $sizes `]` `[` $strides `]` attr-dict `:`
+    type($source) `to` type($result)
+  }];
 
   let builders = [
     OpBuilder<

@@ -412,10 +412,9 @@ body:             |
     ; CHECK: liveins: $x0
     ; CHECK: %base:gpr64sp = COPY $x0
     ; CHECK: %imp:gpr64 = IMPLICIT_DEF
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64all = COPY %imp
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr32all = COPY [[COPY]].sub_32
-    ; CHECK: [[COPY2:%[0-9]+]]:gpr32 = COPY [[COPY1]]
-    ; CHECK: %load:gpr64 = LDRXroW %base, [[COPY2]], 0, 1 :: (load 8)
+    ; CHECK: [[COPY:%[0-9]+]]:gpr32all = COPY %imp.sub_32
+    ; CHECK: [[COPY1:%[0-9]+]]:gpr32 = COPY [[COPY]]
+    ; CHECK: %load:gpr64 = LDRXroW %base, [[COPY1]], 0, 1 :: (load 8)
     ; CHECK: $x1 = COPY %load
     ; CHECK: RET_ReallyLR implicit $x1
     %base:gpr(p0) = COPY $x0

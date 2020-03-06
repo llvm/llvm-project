@@ -10,14 +10,9 @@ add_mlir_dialect_library(MLIRGPU
 )
 add_dependencies(MLIRGPU
   MLIRGPUOpsIncGen
-  MLIREDSC
-  MLIRIR
-  MLIRLLVMIR
-  MLIRLoopOps
-  MLIRSupport
-  MLIRTransformUtils
-  LLVMSupport)
+  )
 target_link_libraries(MLIRGPU
+  PUBLIC
   MLIREDSC
   MLIRIR
   MLIRLLVMIR

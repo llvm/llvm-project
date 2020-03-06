@@ -40,7 +40,7 @@ define i32 @f1() {
 ; beqc and bnec have the restriction that $rs < $rt.
 
 define i32 @f2(i32 %a, i32 %b) {
-; ENCODING-LABEL: f2:
+; ENCODING-LABEL: <f2>:
 ; ENCODING-NOT:   beqc $5, $4
 ; ENCODING-NOT:   bnec $5, $4
 
@@ -87,7 +87,7 @@ define i64 @f4() {
 ; beqc and bnec have the restriction that $rs < $rt.
 
 define i64 @f5(i64 %a, i64 %b) {
-; ENCODING-LABEL: f5:
+; ENCODING-LABEL: <f5>:
 ; ENCODING-NOT:   beqc $5, $4
 ; ENCODING-NOT:   bnec $5, $4
 

@@ -14,5 +14,5 @@ define void @foo() nounwind {
 ; CHECK-ELF: file format elf64-aarch64
 
 ; CHECK-ELF: Disassembly of section .text
-; CHECK-ELF-LABEL: foo:
+; CHECK-ELF-LABEL: <foo>:
 ; CHECK-ELF:    ret

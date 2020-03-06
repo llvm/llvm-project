@@ -1372,7 +1372,7 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
         outs() << format(Is64Bits ? "%016" PRIx64 " " : "%08" PRIx64 " ",
                          SectionAddr + Start + VMAAdjustment);
 
-      outs() << SymbolName << ":\n";
+      outs() << '<' << SymbolName << ">:\n";
 
       // Don't print raw contents of a virtual section. A virtual section
       // doesn't have any contents in the file.

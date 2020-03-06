@@ -4,11 +4,11 @@
 # RUN: llvm-objdump -d -no-show-raw-insn %t | FileCheck %s
 
 #0x2011a9+5 + 34 = 0x2011d0 (foo@plt)
-# CHECK:      _start:
+# CHECK:      <_start>:
 # CHECK-NEXT:  2011a9:       callq   34
 
 #Static IPLT header due to -z retpolineplt
-# CHECK:       00000000002011b0 .plt:
+# CHECK:       00000000002011b0 <.plt>:
 # CHECK-NEXT:  2011b0:       callq   11 <.plt+0x10>
 # CHECK-NEXT:  2011b5:       pause
 # CHECK-NEXT:  2011b7:       lfence

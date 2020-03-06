@@ -4588,7 +4588,7 @@ bool DoubleAPFloat::isDenormal() const {
   return getCategory() == fcNormal &&
          (Floats[0].isDenormal() || Floats[1].isDenormal() ||
           // (double)(Hi + Lo) == Hi defines a normal number.
-          Floats[0].compare(Floats[0] + Floats[1]) != cmpEqual);
+          Floats[0] != Floats[0] + Floats[1]);
 }
 
 bool DoubleAPFloat::isSmallest() const {

@@ -33,14 +33,12 @@ Sections:
     Relocations:
       ## Relocation which references ".text.foo". Check we don't suggest the
       ## section symbol for ".data", which has an empty name.
-      - Offset: 0x0
+      - Type:   R_X86_64_64
         ## .text.foo
         Symbol: 1
-        Type:   R_X86_64_64
       ## Relocation which references "foo". Check we don't suggest "for".
-      - Offset: 0x8
+      - Type:   R_X86_64_64
         Symbol: foo
-        Type:   R_X86_64_64
   - Name: .data
     Type: SHT_PROGBITS
 Symbols:

@@ -29,7 +29,7 @@
 // RELATIVE: 00001154 l       .text           00000000 patatino
 // RELATIVE: Disassembly of section .text:
 // RELATIVE-EMPTY:
-// RELATIVE: $d.0:
+// RELATIVE: <$d.0>:
 // RELATIVE:     1150:       04 00 00 00     .word   0x00000004
 
 // ABS: can't create dynamic relocation R_ARM_TARGET1 against symbol: patatino in readonly segment; recompile object files with -fPIC or pass '-Wl,-z,notext' to allow text relocations in the output

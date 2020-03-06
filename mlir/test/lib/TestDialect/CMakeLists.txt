@@ -16,10 +16,12 @@ add_llvm_library(MLIRTestDialect
   TestPatterns.cpp
 )
 add_dependencies(MLIRTestDialect
+  MLIRControlFlowInterfacesIncGen
   MLIRTestOpsIncGen
   MLIRTypeInferOpInterfaceIncGen
 )
 target_link_libraries(MLIRTestDialect
+  PUBLIC
   MLIRDialect
   MLIRIR
   MLIRLinalgTransforms

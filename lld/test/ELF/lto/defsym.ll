@@ -18,7 +18,7 @@
 ; Call to bar2() should not be inlined and should be routed to bar3()
 ; Symbol bar3 should not be eliminated
 
-; CHECK:      foo:
+; CHECK:      <foo>:
 ; CHECK-NEXT: pushq %rax
 ; CHECK-NEXT: callq
 ; CHECK-NEXT: callq{{.*}}<bar3>

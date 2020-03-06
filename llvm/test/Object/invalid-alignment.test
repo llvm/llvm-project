@@ -25,5 +25,4 @@ Sections:
     Type:            SHT_RELA
     Info:            .foo
     Relocations:
-      - Offset:          0
-        Type:            R_X86_64_NONE
+      - Type:        R_X86_64_NONE

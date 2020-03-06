@@ -47,17 +47,17 @@ Symbols:
 
 # REL:      Disassembly of section .text1:
 # REL-EMPTY:
-# REL-NEXT: 0000000000000000 .text1:
+# REL-NEXT: 0000000000000000 <.text1>:
 # REL-NEXT:        0: e8 00 00 00 00                callq   0 <.text1+0x5>
 # REL-EMPTY:
 # REL-NEXT: Disassembly of section .text2:
 # REL-EMPTY:
-# REL-NEXT: 0000000000000000 .text2:
+# REL-NEXT: 0000000000000000 <.text2>:
 # REL-NEXT:        0: e8 00 00 00 00                callq   0 <sym2>
 # REL-EMPTY:
 # REL-NEXT: Disassembly of section .text3:
 # REL-EMPTY:
-# REL-NEXT: 0000000000000000 .text3:
+# REL-NEXT: 0000000000000000 <.text3>:
 # REL-NEXT:        0: e8 00 00 00 00                callq   0 <.text3+0x5>
 
 --- !ELF

@@ -8,6 +8,7 @@ add_mlir_dialect_library(MLIRLoopOpsTransforms
   )
 
 target_link_libraries(MLIRLoopOpsTransforms
+  PUBLIC
   MLIRPass
   MLIRLoopOps
   )

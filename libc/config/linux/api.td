@@ -84,6 +84,13 @@ def StdIOAPI : PublicAPI<"stdio.h"> {
   ];
 }
 
+def StdlibAPI : PublicAPI<"stdlib.h"> {
+  let Functions = [
+    "_Exit",
+    "abort",
+  ];
+}
+
 def ErrnoAPI : PublicAPI<"errno.h"> {
   let Macros = [
     ErrnoMacro,

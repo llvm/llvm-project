@@ -295,7 +295,7 @@ struct OperationFormat {
   };
 
   OperationFormat(const Operator &op)
-      : allOperandTypes(false), allResultTypes(false) {
+      : allOperands(false), allOperandTypes(false), allResultTypes(false) {
     operandTypes.resize(op.getNumOperands(), TypeResolution());
     resultTypes.resize(op.getNumResults(), TypeResolution());
   }
@@ -307,6 +307,8 @@ struct OperationFormat {
   void genParserTypeResolution(Operator &op, OpMethodBody &body);
   /// Generate the c++ to resolve successors during parsing.
   void genParserSuccessorResolution(Operator &op, OpMethodBody &body);
+  /// Generate the c++ to handling variadic segment size traits.
+  void genParserVariadicSegmentResolution(Operator &op, OpMethodBody &body);
 
   /// Generate the operation printer from this format.
   void genPrinter(Operator &op, OpClass &opClass);
@@ -316,7 +318,7 @@ struct OperationFormat {
 
   /// A flag indicating if all operand/result types were seen. If the format
   /// contains these, it can not contain individual type resolvers.
-  bool allOperandTypes, allResultTypes;
+  bool allOperands, allOperandTypes, allResultTypes;
 
   /// A map of buildable types to indices.
   llvm::MapVector<StringRef, int, llvm::StringMap<int>> buildableTypes;
@@ -380,14 +382,10 @@ const char *const enumAttrParserCode = R"(
 ///
 /// {0}: The name of the operand.
 const char *const variadicOperandParserCode = R"(
-  llvm::SMLoc {0}OperandsLoc = parser.getCurrentLocation();
-  (void){0}OperandsLoc;
   if (parser.parseOperandList({0}Operands))
     return failure();
 )";
 const char *const operandParserCode = R"(
-  llvm::SMLoc {0}OperandsLoc = parser.getCurrentLocation();
-  (void){0}OperandsLoc;
   if (parser.parseOperand({0}RawOperands[0]))
     return failure();
 )";
@@ -420,24 +418,20 @@ const char *const functionalTypeParserCode = R"(
 ///
 /// {0}: The name for the successor list.
 const char *successorListParserCode = R"(
-  SmallVector<std::pair<Block *, SmallVector<Value, 4>>, 2> {0}Successors;
+  SmallVector<Block *, 2> {0}Successors;
   {
     Block *succ;
-    SmallVector<Value, 4> succOperands;
-    // Parse the first successor.
-    auto firstSucc = parser.parseOptionalSuccessorAndUseList(succ,
-                                                             succOperands);
+    auto firstSucc = parser.parseOptionalSuccessor(succ);
     if (firstSucc.hasValue()) {
       if (failed(*firstSucc))
         return failure();
-      {0}Successors.emplace_back(succ, succOperands);
+      {0}Successors.emplace_back(succ);
 
       // Parse any trailing successors.
       while (succeeded(parser.parseOptionalComma())) {
-        succOperands.clear();
-        if (parser.parseSuccessorAndUseList(succ, succOperands))
+        if (parser.parseSuccessor(succ))
           return failure();
-        {0}Successors.emplace_back(succ, succOperands);
+        {0}Successors.emplace_back(succ);
       }
     }
   }
@@ -448,17 +442,8 @@ const char *successorListParserCode = R"(
 /// {0}: The name of the successor.
 const char *successorParserCode = R"(
   Block *{0}Successor = nullptr;
-  SmallVector<Value, 4> {0}Operands;
-  if (parser.parseSuccessorAndUseList({0}Successor, {0}Operands))
+  if (parser.parseSuccessor({0}Successor))
     return failure();
-)";
-
-/// The code snippet used to resolve a list of parsed successors.
-///
-/// {0}: The name of the successor list.
-const char *resolveSuccessorListParserCode = R"(
-  for (auto &succAndArgs : {0}Successors)
-    result.addSuccessor(succAndArgs.first, succAndArgs.second);
 )";
 
 /// Get the name used for the type list for the given type directive operand.
@@ -507,13 +492,18 @@ static void genElementParserStorage(Element *element, OpMethodBody &body) {
       genElementParserStorage(&childElement, body);
   } else if (auto *operand = dyn_cast<OperandVariable>(element)) {
     StringRef name = operand->getVar()->name;
-    if (operand->getVar()->isVariadic())
+    if (operand->getVar()->isVariadic()) {
       body << "  SmallVector<OpAsmParser::OperandType, 4> " << name
            << "Operands;\n";
-    else
+    } else {
       body << "  OpAsmParser::OperandType " << name << "RawOperands[1];\n"
            << "  ArrayRef<OpAsmParser::OperandType> " << name << "Operands("
            << name << "RawOperands);";
+    }
+    body << llvm::formatv(
+        "  llvm::SMLoc {0}OperandsLoc = parser.getCurrentLocation();\n"
+        "  (void){0}OperandsLoc;\n",
+        name);
   } else if (auto *dir = dyn_cast<TypeDirective>(element)) {
     bool variadic = false;
     StringRef name = getTypeListName(dir->getOperand(), variadic);
@@ -654,6 +644,8 @@ void OperationFormat::genParser(Operator &op, OpClass &opClass) {
   // that they have been parsed.
   genParserTypeResolution(op, body);
   genParserSuccessorResolution(op, body);
+  genParserVariadicSegmentResolution(op, body);
+
   body << "  return success();\n";
 }
 
@@ -727,14 +719,10 @@ void OperationFormat::genParserTypeResolution(Operator &op,
   if (op.getNumOperands() == 0)
     return;
 
-  // Flag indicating if operands were dumped all together in a group.
-  bool hasAllOperands = llvm::any_of(
-      elements, [](auto &elt) { return isa<OperandsDirective>(elt.get()); });
-
   // Handle the case where all operand types are in one group.
   if (allOperandTypes) {
     // If we have all operands together, use the full operand list directly.
-    if (hasAllOperands) {
+    if (allOperands) {
       body << "  if (parser.resolveOperands(allOperands, allOperandTypes, "
               "allOperandLoc, result.operands))\n"
               "    return failure();\n";
@@ -758,7 +746,7 @@ void OperationFormat::genParserTypeResolution(Operator &op,
     return;
   }
   // Handle the case where all of the operands were grouped together.
-  if (hasAllOperands) {
+  if (allOperands) {
     body << "  if (parser.resolveOperands(allOperands, ";
 
     // Group all of the operand types together to perform the resolution all at
@@ -801,19 +789,33 @@ void OperationFormat::genParserSuccessorResolution(Operator &op,
   bool hasAllSuccessors = llvm::any_of(
       elements, [](auto &elt) { return isa<SuccessorsDirective>(elt.get()); });
   if (hasAllSuccessors) {
-    body << llvm::formatv(resolveSuccessorListParserCode, "full");
+    body << "  result.addSuccessors(fullSuccessors);\n";
     return;
   }
 
   // Otherwise, handle each successor individually.
   for (const NamedSuccessor &successor : op.getSuccessors()) {
-    if (successor.isVariadic()) {
-      body << llvm::formatv(resolveSuccessorListParserCode, successor.name);
-      continue;
-    }
+    if (successor.isVariadic())
+      body << "  result.addSuccessors(" << successor.name << "Successors);\n";
+    else
+      body << "  result.addSuccessors(" << successor.name << "Successor);\n";
+  }
+}
 
-    body << llvm::formatv("  result.addSuccessor({0}Successor, {0}Operands);\n",
-                          successor.name);
+void OperationFormat::genParserVariadicSegmentResolution(Operator &op,
+                                                         OpMethodBody &body) {
+  if (!allOperands && op.getTrait("OpTrait::AttrSizedOperandSegments")) {
+    body << "  result.addAttribute(\"operand_segment_sizes\", "
+         << "builder.getI32VectorAttr({";
+    auto interleaveFn = [&](const NamedTypeConstraint &operand) {
+      // If the operand is variadic emit the parsed size.
+      if (operand.isVariadic())
+        body << "static_cast<int32_t>(" << operand.name << "Operands.size())";
+      else
+        body << "1";
+    };
+    interleaveComma(op.getOperands(), body, interleaveFn);
+    body << "}));\n";
   }
 }
 
@@ -821,8 +823,8 @@ void OperationFormat::genParserSuccessorResolution(Operator &op,
 // PrinterGen
 
 /// Generate the printer for the 'attr-dict' directive.
-static void genAttrDictPrinter(OperationFormat &fmt, OpMethodBody &body,
-                               bool withKeyword) {
+static void genAttrDictPrinter(OperationFormat &fmt, Operator &op,
+                               OpMethodBody &body, bool withKeyword) {
   // Collect all of the attributes used in the format, these will be elided.
   SmallVector<const NamedAttribute *, 1> usedAttributes;
   for (auto &it : fmt.elements)
@@ -831,6 +833,9 @@ static void genAttrDictPrinter(OperationFormat &fmt, OpMethodBody &body,
 
   body << "  p.printOptionalAttrDict" << (withKeyword ? "WithKeyword" : "")
        << "(getAttrs(), /*elidedAttrs=*/{";
+  // Elide the variadic segment size attributes if necessary.
+  if (!fmt.allOperands && op.getTrait("OpTrait::AttrSizedOperandSegments"))
+    body << "\"operand_segment_sizes\", ";
   interleaveComma(usedAttributes, body, [&](const NamedAttribute *attr) {
     body << "\"" << attr->name << "\"";
   });
@@ -903,7 +908,7 @@ static void genElementPrinter(Element *element, OpMethodBody &body,
 
   // Emit the attribute dictionary.
   if (auto *attrDict = dyn_cast<AttrDictDirective>(element)) {
-    genAttrDictPrinter(fmt, body, attrDict->isWithKeyword());
+    genAttrDictPrinter(fmt, op, body, attrDict->isWithKeyword());
     lastWasPunctuation = false;
     return;
   }
@@ -936,28 +941,14 @@ static void genElementPrinter(Element *element, OpMethodBody &body,
     body << "  p << " << operand->getVar()->name << "();\n";
   } else if (auto *successor = dyn_cast<SuccessorVariable>(element)) {
     const NamedSuccessor *var = successor->getVar();
-    if (var->isVariadic()) {
-      body << "  {\n"
-           << "    auto succRange = " << var->name << "();\n"
-           << "    auto opSuccBegin = getOperation()->successor_begin();\n"
-           << "    int i = succRange.begin() - opSuccBegin;\n"
-           << "    int e = i + succRange.size();\n"
-           << "    interleaveComma(llvm::seq<int>(i, e), p, [&](int i) {\n"
-           << "      p.printSuccessorAndUseList(*this, i);\n"
-           << "    });\n"
-           << "  }\n";
-      return;
-    }
-
-    unsigned index = successor->getVar() - op.successor_begin();
-    body << "  p.printSuccessorAndUseList(*this, " << index << ");\n";
+    if (var->isVariadic())
+      body << "  interleaveComma(" << var->name << "(), p);\n";
+    else
+      body << "  p << " << var->name << "();\n";
   } else if (isa<OperandsDirective>(element)) {
     body << "  p << getOperation()->getOperands();\n";
   } else if (isa<SuccessorsDirective>(element)) {
-    body << "  interleaveComma(llvm::seq<int>(0, "
-            "getOperation()->getNumSuccessors()), p, [&](int i) {"
-         << "    p.printSuccessorAndUseList(*this, i);"
-         << "  });\n";
+    body << "  interleaveComma(getOperation()->getSuccessors(), p);\n";
   } else if (auto *dir = dyn_cast<TypeDirective>(element)) {
     body << "  p << ";
     genTypeOperandPrinter(dir->getOperand(), body) << ";\n";
@@ -1439,6 +1430,11 @@ LogicalResult FormatParser::parse() {
       }
     }
   }
+
+  // Check to see if we are formatting all of the operands.
+  fmt.allOperands = llvm::any_of(fmt.elements, [](auto &elt) {
+    return isa<OperandsDirective>(elt.get());
+  });
   return success();
 }
 

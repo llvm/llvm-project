@@ -1101,7 +1101,13 @@ Ownership-qualified fields of structs and unions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 A member of a struct or union may be declared to have ownership-qualified
-type, except that it may not be declared to be ``__autoreleasing``.
+type.  If the type is qualified with ``__unsafe_unretained``, the semantics
+of the containing aggregate are unchanged from the semantics of an unqualified type in a non-ARC mode.  If the type is qualified with ``__autoreleasing``, the program is ill-formed.  Otherwise, if the type is nontrivially ownership-qualified, additional rules apply.
+
+Both Objective-C and Objective-C++ support nontrivially ownership-qualified
+fields.  Due to formal differences between the standards, the formal
+treatment is different; however, the basic language model is intended to
+be the same for identical code.
 
 .. admonition:: Rationale
 
@@ -1111,7 +1117,7 @@ type, except that it may not be declared to be ``__autoreleasing``.
   usually simpler and more idiomatic to use Objective-C objects for
   secondary data structures, doing so can introduce extra allocation
   and message-send overhead, which can cause to unacceptable
-  performance.  Using structs can resolve this tension.
+  performance.  Using structs can resolve some of this tension.
 
   ``__autoreleasing`` is forbidden because it is treacherous to rely
   on autoreleases as an ownership tool outside of a function-local
@@ -1122,36 +1128,186 @@ type, except that it may not be declared to be ``__autoreleasing``.
   restriction was an undesirable short-term constraint arising from the
   complexity of adding support for non-trivial struct types to C.
 
-In Objective-C++, for the purposes of determining triviality of special
-members, nontrivially ownership-qualified types are treated as if they
-were class types with:
-- non-trivial default, copy, and move constructors,
-- non-trivial copy and move assignment operators, and
-- non-trivial destructors.
+In Objective-C++, nontrivially ownership-qualified types are treated
+for nearly all purposes as if they were class types with non-trivial
+default constructors, copy constructors, move constructors, copy assignment
+operators, move assignment operators, and destructors.  This includes the
+determination of the triviality of special members of classes with a
+non-static data member of such a type.
 
-In Objective-C, language rules have been added to cover non-trivial
-members of struct and union types.  These rules generally match the
-Objective-C++ behavior and can be summarized as follows:
+In Objective-C, the definition cannot be so succinct: because the C
+standard lacks rules for non-trivial types, those rules must first be
+developed.  They are given in the next section.  The intent is that these
+rules are largely consistent with the rules of C++ for code expressible
+in both languages.
 
-- Initializing, copying, or destroying a struct with non-trivial
-  members recursively initializes, copies or destroys those members
-  as appropriate for their type.
+Formal rules for non-trivial types in C
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-- Copying or destroying a union with non-trivial members is ill-formed.
-  (This also applies to structs containing such unions.)  It is
-  nonetheless possible to create objects of these types by
-  zero-initializing suitable memory before accessing it through the
-  union type, and they may be destroyed by ensuring that any active
-  members are reset to ``nil`` before the memory is re-used.  These
-  techniques mirror the precautions necessary when working with
-  dynamically-allocated arrays of nontrivially ownership-qualified type.
+The following are base rules which can be added to C to support
+implementation-defined non-trivial types.
+
+A type in C is said to be *non-trivial to copy*, *non-trivial to destroy*,
+or *non-trivial to default-initialize* if:
+
+- it is a struct or union containing a member whose type is non-trivial
+  to (respectively) copy, destroy, or default-initialize;
+
+- it is a qualified type whose unqualified type is non-trivial to
+  (respectively) copy, destroy, or default-initialize (for at least
+  the standard C qualifiers); or
+
+- it is an array type whose element type is non-trivial to (respectively)
+  copy, destroy, or default-initialize.
+
+A type in C is said to be *illegal to copy*, *illegal to destroy*, or
+*illegal to default-initialize* if:
+
+- it is a union which contains a member whose type is either illegal
+  or non-trivial to (respectively) copy, destroy, or initialize;
+
+- it is a qualified type whose unqualified type is illegal to
+  (respectively) copy, destroy, or default-initialize (for at least
+  the standard C qualifiers); or
+
+- it is an array type whose element type is illegal to (respectively)
+  copy, destroy, or default-initialize.
+
+No type describable under the rules of the C standard shall be either
+non-trivial or illegal to copy, destroy, or default-initialize.
+An implementation may provide additional types which have one or more
+of these properties.
+
+An expression calls for a type to be copied if it:
+
+- passes an argument of that type to a function call,
+- defines a function which declares a parameter of that type,
+- calls or defines a function which returns a value of that type,
+- assigns to an l-value of that type, or
+- converts an l-value of that type to an r-value.
+
+A program calls for a type to be destroyed if it:
+
+- passes an argument of that type to a function call,
+- defines a function which declares a parameter of that type,
+- calls or defines a function which returns a value of that type,
+- creates an object of automatic storage duration of that type,
+- assigns to an l-value of that type, or
+- converts an l-value of that type to an r-value.
+
+A program calls for a type to be default-initialized if it:
+
+- declares a variable of that type without an initializer.
+
+An expression is ill-formed if calls for a type to be copied,
+destroyed, or default-initialized and that type is illegal to
+(respectively) copy, destroy, or default-initialize.
+
+A program is ill-formed if it contains a function type specifier
+with a parameter or return type that is illegal to copy or
+destroy.  If a function type specifier would be ill-formed for this
+reason except that the parameter or return type was incomplete at
+that point in the translation unit, the program is ill-formed but
+no diagnostic is required.
+
+A ``goto`` or ``switch`` is ill-formed if it jumps into the scope of
+an object of automatic storage duration whose type is non-trivial to
+destroy.
+
+C specifies that it is generally undefined behavior to access an l-value
+if there is no object of that type at that location.  Implementations
+are often lenient about this, but non-trivial types generally require
+it to be enforced more strictly.  The following rules apply:
+
+The *static subobjects* of a type ``T`` at a location ``L`` are:
+
+  - an object of type ``T`` spanning from ``L`` to ``L + sizeof(T)``;
+
+  - if ``T`` is a struct type, then for each field ``f`` of that struct,
+    the static subobjects of ``T`` at location ``L + offsetof(T, .f)``; and
+
+  - if ``T`` is the array type ``E[N]``, then for each ``i`` satisfying
+    ``0 <= i < N``, the static subobjects of ``E`` at location
+    ``L + i * sizeof(E)``.
+
+If an l-value is converted to an r-value, then all static subobjects
+whose types are non-trivial to copy are accessed.  If an l-value is
+assigned to, or if an object of automatic storage duration goes out of
+scope, then all static subobjects of types that are non-trivial to destroy
+are accessed.
+
+A dynamic object is created at a location if an initialization initializes
+an object of that type there.  A dynamic object ceases to exist at a
+location if the memory is repurposed.  Memory is repurposed if it is
+freed or if a different dynamic object is created there, for example by
+assigning into a different union member.  An implementation may provide
+additional rules for what constitutes creating or destroying a dynamic
+object.
+
+If an object is accessed under these rules at a location where no such
+dynamic object exists, the program has undefined behavior.
+If memory for a location is repurposed while a dynamic object that is
+non-trivial to destroy exists at that location, the program has
+undefined behavior.
+
+.. admonition:: Rationale
+
+  While these rules are far less fine-grained than C++, they are
+  nonetheless sufficient to express a wide spectrum of types.
+  Types that express some sort of ownership will generally be non-trivial
+  to both copy and destroy and either non-trivial or illegal to
+  default-initialize.  Types that don't express ownership may still
+  be non-trivial to copy because of some sort of address sensitivity;
+  for example, a relative reference.  Distinguishing default
+  initialization allows types to impose policies about how they are
+  created.
+
+  These rules assume that assignment into an l-value is always a
+  modification of an existing object rather than an initialization.
+  Assignment is then a compound operation where the old value is
+  read and destroyed, if necessary, and the new value is put into
+  place.  These are the natural semantics of value propagation, where
+  all basic operations on the type come down to copies and destroys,
+  and everything else is just an optimization on top of those.
+
+  The most glaring weakness of programming with non-trivial types in C
+  is that there are no language mechanisms (akin to C++'s placement
+  ``new`` and explicit destructor calls) for explicitly creating and
+  destroying objects.  Clang should consider adding builtins for this
+  purpose, as well as for common optimizations like destructive
+  relocation.
+
+Application of the formal C rules to nontrivial ownership qualifiers
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Nontrivially ownership-qualified types are considered non-trivial
+to copy, destroy, and default-initialize.
+
+A dynamic object of nontrivially ownership-qualified type contingently
+exists at a location if the memory is filled with a zero pattern, e.g.
+by ``calloc`` or ``bzero``.  Such an object can be safely accessed in
+all of the cases above, but its memory can also be safely repurposed.
+Assigning a null pointer into an l-value of ``__weak`` or
+``__strong``-qualified type accesses the dynamic object there (and thus
+may have undefined behavior if no such object exists), but afterwards
+the object's memory is guaranteed to be filled with a zero pattern
+and thus may be either further accessed or repurposed as needed.
+The upshot is that programs may safely initialize dynamically-allocated
+memory for nontrivially ownership-qualified types by ensuring it is zero-initialized, and they may safely deinitialize memory before
+freeing it by storing ``nil`` into any ``__strong`` or ``__weak``
+references previously created in that memory.
+
+C/C++ compatibility for structs and unions with non-trivial members
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Structs and unions with non-trivial members are compatible in
-different language modes under the following conditions:
+different language modes (e.g. between Objective-C and Objective-C++,
+or between ARC and non-ARC modes) under the following conditions:
 
 - The types must be compatible ignoring ownership qualifiers according
-  to the baseline non-ARC rules.  This condition implies a pairwise
-  correspondance between fields.
+  to the baseline, non-ARC rules (e.g. C struct compatibility or C++'s
+  ODR).  This condition implies a pairwise correspondance between
+  fields.
 
   Note that an Objective-C++ class with base classes, a user-provided
   copy or move constructor, or a user-provided destructor is never

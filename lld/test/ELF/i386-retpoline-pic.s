@@ -12,7 +12,7 @@
 
 // CHECK:      Disassembly of section .plt:
 // CHECK-EMPTY:
-// CHECK-NEXT: .plt:
+// CHECK-NEXT: <.plt>:
 // CHECK-NEXT: 11d0:       pushl   4(%ebx)
 // CHECK-NEXT: 11d6:       pushl   %eax
 // CHECK-NEXT: 11d7:       movl    8(%ebx), %eax

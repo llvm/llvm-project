@@ -13,6 +13,7 @@
 #ifndef MLIR_DIALECT_SPIRV_SPIRVOPS_H_
 #define MLIR_DIALECT_SPIRV_SPIRVOPS_H_
 
+#include "mlir/Analysis/ControlFlowInterfaces.h"
 #include "mlir/Dialect/SPIRV/SPIRVTypes.h"
 #include "mlir/IR/Function.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"

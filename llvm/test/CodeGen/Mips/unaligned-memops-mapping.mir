@@ -111,13 +111,13 @@ body:             |
 
 ...
 
-# CHECK-LABEL: g:
+# CHECK-LABEL: <g>:
 # CHECK:  0: 60 24 00 00   lwl $1, 0($4)
 # CHECK:  4: 60 24 10 03   lwr $1, 3($4)
 # CHECK:  8: 60 25 80 00   swl $1, 0($5)
 # CHECK:  c: 60 25 90 03   swr $1, 3($5)
 
-# CHECK-LABEL: g2:
+# CHECK-LABEL: <g2>:
 # CHECK: 14: 60 24 64 00   lwle  $1, 0($4)
 # CHECK: 18: 60 24 66 03   lwre  $1, 3($4)
 # CHECK: 1c: 60 25 a0 00   swle  $1, 0($5)

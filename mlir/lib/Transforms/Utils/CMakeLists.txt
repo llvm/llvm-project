@@ -13,6 +13,7 @@ add_llvm_library(MLIRTransformUtils
 
 add_dependencies(MLIRTransformUtils MLIRStandardOpsIncGen)
 target_link_libraries(MLIRTransformUtils
+  PUBLIC
   MLIRAffineOps
   MLIRAnalysis
   MLIRLoopAnalysis

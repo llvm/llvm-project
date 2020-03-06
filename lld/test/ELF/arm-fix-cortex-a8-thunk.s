@@ -25,7 +25,7 @@ early:
 _start:
   beq.w far_away
 /// Thunk to far_away and state change needed, size 12-bytes goes here.
-// CHECK: 00110004 __ThumbV7PILongThunk_far_away:
+// CHECK: 00110004 <__ThumbV7PILongThunk_far_away>:
 // CHECK-NEXT: 110004: movw    r12, #65524
 // CHECK-NEXT:         movt    r12, #15
 // CHECK-NEXT:         add     r12, pc
@@ -43,14 +43,14 @@ target:
  bl target
 
 /// Expect erratum patch inserted here
-// CHECK: 00110ffa target:
+// CHECK: 00110ffa <target>:
 // CHECK-NEXT: 110ffa: nop.w
 // CHECK-NEXT:         bl      #2
-// CHECK: 00111004 __CortexA8657417_110FFE:
+// CHECK: 00111004 <__CortexA8657417_110FFE>:
 // CHECK-NEXT: 111004: b.w     #-14
 
 /// Expect range extension thunk here.
-// CHECK: 00111008 __ThumbV7PILongThunk_early:
+// CHECK: 00111008 <__ThumbV7PILongThunk_early>:
 // CHECK-NEXT: 111008: b.w     #-1048582
 
  .section .text.04, "ax", %progbits

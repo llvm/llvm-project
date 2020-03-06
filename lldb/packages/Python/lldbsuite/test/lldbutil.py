@@ -1062,7 +1062,7 @@ def print_stacktraces(process, string_buffer=False):
         return output.getvalue()
 
 
-def expect_state_changes(test, listener, process, states, timeout=5):
+def expect_state_changes(test, listener, process, states, timeout=30):
     """Listens for state changed events on the listener and makes sure they match what we
     expect. Stop-and-restart events (where GetRestartedFromEvent() returns true) are ignored."""
 

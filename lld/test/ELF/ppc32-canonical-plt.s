@@ -36,7 +36,7 @@
 
 ## Canonical PLT entry of func2.
 ## 0x1003031C = 65536*4099+796
-# CHECK:      1001022c .glink:
+# CHECK:      1001022c <.glink>:
 # CHECK-NEXT:           lis 11, 4099
 # CHECK-NEXT:           lwz 11, 796(11)
 # CHECK-NEXT:           mtctr 11

@@ -154,6 +154,28 @@ static ParseResult parseAllocaOp(OpAsmParser &parser, OperationState &result) {
 }
 
 //===----------------------------------------------------------------------===//
+// LLVM::BrOp
+//===----------------------------------------------------------------------===//
+
+Optional<OperandRange> BrOp::getSuccessorOperands(unsigned index) {
+  assert(index == 0 && "invalid successor index");
+  return getOperands();
+}
+
+bool BrOp::canEraseSuccessorOperand() { return true; }
+
+//===----------------------------------------------------------------------===//
+// LLVM::CondBrOp
+//===----------------------------------------------------------------------===//
+
+Optional<OperandRange> CondBrOp::getSuccessorOperands(unsigned index) {
+  assert(index < getNumSuccessors() && "invalid successor index");
+  return index == 0 ? trueDestOperands() : falseDestOperands();
+}
+
+bool CondBrOp::canEraseSuccessorOperand() { return true; }
+
+//===----------------------------------------------------------------------===//
 // Printing/parsing for LLVM::LoadOp.
 //===----------------------------------------------------------------------===//
 
@@ -228,9 +250,16 @@ static ParseResult parseStoreOp(OpAsmParser &parser, OperationState &result) {
   return success();
 }
 
-///===----------------------------------------------------------------------===//
-/// Verifying/Printing/Parsing for LLVM::InvokeOp.
-///===----------------------------------------------------------------------===//
+///===---------------------------------------------------------------------===//
+/// LLVM::InvokeOp
+///===---------------------------------------------------------------------===//
+
+Optional<OperandRange> InvokeOp::getSuccessorOperands(unsigned index) {
+  assert(index < getNumSuccessors() && "invalid successor index");
+  return index == 0 ? normalDestOperands() : unwindDestOperands();
+}
+
+bool InvokeOp::canEraseSuccessorOperand() { return true; }
 
 static LogicalResult verify(InvokeOp op) {
   if (op.getNumResults() > 1)
@@ -249,7 +278,7 @@ static LogicalResult verify(InvokeOp op) {
   return success();
 }
 
-static void printInvokeOp(OpAsmPrinter &p, InvokeOp &op) {
+static void printInvokeOp(OpAsmPrinter &p, InvokeOp op) {
   auto callee = op.callee();
   bool isDirect = callee.hasValue();
 
@@ -263,17 +292,16 @@ static void printInvokeOp(OpAsmPrinter &p, InvokeOp &op) {
 
   p << '(' << op.getOperands().drop_front(isDirect ? 0 : 1) << ')';
   p << " to ";
-  p.printSuccessorAndUseList(op.getOperation(), 0);
+  p.printSuccessorAndUseList(op.normalDest(), op.normalDestOperands());
   p << " unwind ";
-  p.printSuccessorAndUseList(op.getOperation(), 1);
+  p.printSuccessorAndUseList(op.unwindDest(), op.unwindDestOperands());
 
-  p.printOptionalAttrDict(op.getAttrs(), {"callee"});
-
-  SmallVector<Type, 8> argTypes(
-      llvm::drop_begin(op.getOperandTypes(), isDirect ? 0 : 1));
-
-  p << " : "
-    << FunctionType::get(argTypes, op.getResultTypes(), op.getContext());
+  p.printOptionalAttrDict(op.getAttrs(),
+                          {InvokeOp::getOperandSegmentSizeAttr(), "callee"});
+  p << " : ";
+  p.printFunctionalType(
+      llvm::drop_begin(op.getOperandTypes(), isDirect ? 0 : 1),
+      op.getResultTypes());
 }
 
 /// <operation> ::= `llvm.invoke` (function-id | ssa-use) `(` ssa-use-list `)`
@@ -287,6 +315,7 @@ static ParseResult parseInvokeOp(OpAsmParser &parser, OperationState &result) {
   llvm::SMLoc trailingTypeLoc;
   Block *normalDest, *unwindDest;
   SmallVector<Value, 4> normalOperands, unwindOperands;
+  Builder &builder = parser.getBuilder();
 
   // Parse an operand list that will, in practice, contain 0 or 1 operand.  In
   // case of an indirect call, there will be 1 operand before `(`.  In case of a
@@ -322,7 +351,6 @@ static ParseResult parseInvokeOp(OpAsmParser &parser, OperationState &result) {
       return parser.emitError(trailingTypeLoc,
                               "expected function with 0 or 1 result");
 
-    Builder &builder = parser.getBuilder();
     auto *llvmDialect =
         builder.getContext()->getRegisteredDialect<LLVM::LLVMDialect>();
     LLVM::LLVMType llvmResultType;
@@ -361,8 +389,15 @@ static ParseResult parseInvokeOp(OpAsmParser &parser, OperationState &result) {
 
     result.addTypes(llvmResultType);
   }
-  result.addSuccessor(normalDest, normalOperands);
-  result.addSuccessor(unwindDest, unwindOperands);
+  result.addSuccessors({normalDest, unwindDest});
+  result.addOperands(normalOperands);
+  result.addOperands(unwindOperands);
+
+  result.addAttribute(
+      InvokeOp::getOperandSegmentSizeAttr(),
+      builder.getI32VectorAttr({static_cast<int32_t>(operands.size()),
+                                static_cast<int32_t>(normalOperands.size()),
+                                static_cast<int32_t>(unwindOperands.size())}));
   return success();
 }
 

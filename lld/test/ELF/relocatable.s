@@ -65,13 +65,13 @@
 
 # CHECKTEXT:      Disassembly of section .text:
 # CHECKTEXT-EMPTY:
-# CHECKTEXT-NEXT: main:
+# CHECKTEXT-NEXT: <main>:
 # CHECKTEXT-NEXT: 0: c7 04 25 00 00 00 00 05 00 00 00 movl $5, 0
 # CHECKTEXT-NEXT: b: c7 04 25 00 00 00 00 07 00 00 00 movl $7, 0
-# CHECKTEXT:      foo:
+# CHECKTEXT:      <foo>:
 # CHECKTEXT-NEXT: 20: c7 04 25 00 00 00 00 01 00 00 00 movl $1, 0
 # CHECKTEXT-NEXT: 2b: c7 04 25 00 00 00 00 02 00 00 00 movl $2, 0
-# CHECKTEXT:      bar:
+# CHECKTEXT:      <bar>:
 # CHECKTEXT-NEXT: 40: c7 04 25 00 00 00 00 08 00 00 00 movl $8, 0
 # CHECKTEXT-NEXT: 4b: c7 04 25 00 00 00 00 09 00 00 00 movl $9, 0
 

@@ -12,6 +12,7 @@ add_dependencies(MLIRSPIRVSerialization
   MLIRSPIRVSerializationGen)
 
 target_link_libraries(MLIRSPIRVSerialization
+  PUBLIC
   MLIRIR
   MLIRSPIRV
   MLIRSupport

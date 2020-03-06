@@ -19,7 +19,7 @@ _label:
 # CHECK: 00020{{0*}}[[VAL:[0-9a-f]+]] l .text   00000000 _label
 # CHECK: 00020{{.*}}                  g .text   00000000 __start
 
-# CHECK:      __start:
+# CHECK:      <__start>:
 # CHECK-NEXT:  lui    $8, 0x3
 #                         ^-- %hi(__start) w/o addend
 # CHECK-NEXT:  addi   $8, $8, 0x[[VAL]]
