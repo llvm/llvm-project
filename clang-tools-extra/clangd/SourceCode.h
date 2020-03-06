@@ -250,7 +250,7 @@ llvm::StringSet<> collectWords(llvm::StringRef Content);
 ///
 /// visibleNamespaces are {"foo::", "", "a::", "b::", "foo::b::"}, not "a::b::".
 std::vector<std::string> visibleNamespaces(llvm::StringRef Code,
-                                           const format::FormatStyle &Style);
+                                           const LangOptions &LangOpts);
 
 /// Represents locations that can accept a definition.
 struct EligibleRegion {
@@ -271,7 +271,7 @@ struct EligibleRegion {
 /// \p FullyQualifiedName should not contain anonymous namespaces.
 EligibleRegion getEligiblePoints(llvm::StringRef Code,
                                  llvm::StringRef FullyQualifiedName,
-                                 const format::FormatStyle &Style);
+                                 const LangOptions &LangOpts);
 
 struct DefinedMacro {
   llvm::StringRef Name;
