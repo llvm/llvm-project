@@ -14,6 +14,7 @@ add_mlir_dialect_library(MLIRSPIRV
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/SPIRV
 
+  DEPENDS
   MLIRControlFlowInterfacesIncGen
   MLIRSPIRVAvailabilityIncGen
   MLIRSPIRVCanonicalizationIncGen
