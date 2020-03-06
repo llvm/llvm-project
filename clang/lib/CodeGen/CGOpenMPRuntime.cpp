@@ -5214,6 +5214,7 @@ static RTLDependenceKindTy translateDependencyKind(OpenMPDependClauseKind K) {
     break;
   case OMPC_DEPEND_source:
   case OMPC_DEPEND_sink:
+  case OMPC_DEPEND_depobj:
   case OMPC_DEPEND_unknown:
     llvm_unreachable("Unknown task dependence type");
   }

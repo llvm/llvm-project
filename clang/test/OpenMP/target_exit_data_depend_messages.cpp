@@ -34,7 +34,7 @@ int tmain(T argc, S **argv, R *env[]) {
   foo();
   #pragma omp target exit data map(from: i) depend (source : argc) // expected-error {{expected 'in', 'out', 'inout' or 'mutexinoutset' in OpenMP clause 'depend'}}
   foo();
-  #pragma omp target exit data map(from: i) depend (source) // expected-error {{expected expression}} expected-warning {{missing ':' after dependency type - ignoring}}
+  #pragma omp target exit data map(from: i) depend (source) // expected-error {{expected expression}} expected-warning {{missing ':' after dependency type - ignoring}} expected-error {{expected 'in', 'out', 'inout' or 'mutexinoutset' in OpenMP clause 'depend'}}
   foo();
   #pragma omp target exit data map(from: i) depend (in : argc)) // expected-warning {{extra tokens at the end of '#pragma omp target exit data' are ignored}}
   foo();
@@ -109,7 +109,7 @@ int main(int argc, char **argv, char *env[]) {
   foo();
   #pragma omp target exit data map(from: i) depend (source : argc) // expected-error {{expected 'in', 'out', 'inout' or 'mutexinoutset' in OpenMP clause 'depend'}}
   foo();
-  #pragma omp target exit data map(from: i) depend (source) // expected-error {{expected expression}} expected-warning {{missing ':' after dependency type - ignoring}}
+  #pragma omp target exit data map(from: i) depend (source) // expected-error {{expected expression}} expected-warning {{missing ':' after dependency type - ignoring}} expected-error {{expected 'in', 'out', 'inout' or 'mutexinoutset' in OpenMP clause 'depend'}}
   foo();
   #pragma omp target exit data map(from: i) depend (in : argc)) // expected-warning {{extra tokens at the end of '#pragma omp target exit data' are ignored}}
   foo();

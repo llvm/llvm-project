@@ -9633,7 +9633,7 @@ def err_omp_expected_var_name_member_expr : Error<
 def err_omp_expected_var_name_member_expr_or_array_item : Error<
   "expected variable name%select{|, data member of current class}0, array element or array section">;
 def err_omp_expected_addressable_lvalue_or_array_item : Error<
-  "expected addressable lvalue expression, array element or array section">;
+  "expected addressable lvalue expression, array element or array section%select{| of non 'omp_depend_t' type}0">;
 def err_omp_expected_named_var_member_or_array_expression: Error<
   "expected expression containing only member accesses and/or array sections based on named variables">;
 def err_omp_bit_fields_forbidden_in_clause : Error<

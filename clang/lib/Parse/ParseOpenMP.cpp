@@ -3198,9 +3198,7 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
   Data.RLoc = Tok.getLocation();
   if (!T.consumeClose())
     Data.RLoc = T.getCloseLocation();
-  return (Kind == OMPC_depend && Data.ExtraModifier != OMPC_DEPEND_unknown &&
-          Vars.empty()) ||
-         (Kind != OMPC_depend && Kind != OMPC_map && Vars.empty()) ||
+  return (Kind != OMPC_depend && Kind != OMPC_map && Vars.empty()) ||
          (MustHaveTail && !Data.TailExpr) || InvalidReductionId ||
          IsInvalidMapperModifier;
 }

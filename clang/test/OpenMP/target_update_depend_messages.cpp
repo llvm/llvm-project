@@ -33,7 +33,7 @@ int tmain(T argc, S **argv, R *env[]) {
   #pragma omp target update to(z) depend() // expected-error {{expected 'in', 'out', 'inout' or 'mutexinoutset' in OpenMP clause 'depend'}} expected-warning {{missing ':' after dependency type - ignoring}}
   #pragma omp target update to(z) depend(argc // expected-error {{expected 'in', 'out', 'inout' or 'mutexinoutset' in OpenMP clause 'depend'}} expected-warning {{missing ':' after dependency type - ignoring}} expected-error {{expected ')'}} expected-note {{to match this '('}}
   #pragma omp target update to(z) depend(source : argc) // expected-error {{expected 'in', 'out', 'inout' or 'mutexinoutset' in OpenMP clause 'depend'}}
-  #pragma omp target update to(z) depend(source) // expected-error {{expected expression}} expected-warning {{missing ':' after dependency type - ignoring}}
+  #pragma omp target update to(z) depend(source) // expected-error {{expected expression}} expected-warning {{missing ':' after dependency type - ignoring}} expected-error {{expected 'in', 'out', 'inout' or 'mutexinoutset' in OpenMP clause 'depend'}}
   #pragma omp target update to(z) depend(in : argc)) // expected-warning {{extra tokens at the end of '#pragma omp target update' are ignored}}
   #pragma omp target update to(z) depend(out: ) // expected-error {{expected expression}}
   #pragma omp target update to(z) depend(inout : foobool(argc)), depend (in, argc) // expected-error {{expected addressable lvalue expression, array element or array section}} expected-warning {{missing ':' after dependency type - ignoring}} expected-error {{expected expression}}
@@ -80,7 +80,7 @@ int main(int argc, char **argv, char *env[]) {
   #pragma omp target update to(z) depend() // expected-error {{expected 'in', 'out', 'inout' or 'mutexinoutset' in OpenMP clause 'depend'}} expected-warning {{missing ':' after dependency type - ignoring}}
   #pragma omp target update to(z) depend(argc // expected-error {{expected 'in', 'out', 'inout' or 'mutexinoutset' in OpenMP clause 'depend'}} expected-warning {{missing ':' after dependency type - ignoring}} expected-error {{expected ')'}} expected-note {{to match this '('}}
   #pragma omp target update to(z) depend(source : argc) // expected-error {{expected 'in', 'out', 'inout' or 'mutexinoutset' in OpenMP clause 'depend'}}
-  #pragma omp target update to(z) depend(source) // expected-error {{expected expression}} expected-warning {{missing ':' after dependency type - ignoring}}
+  #pragma omp target update to(z) depend(source) // expected-error {{expected expression}} expected-warning {{missing ':' after dependency type - ignoring}} expected-error {{expected 'in', 'out', 'inout' or 'mutexinoutset' in OpenMP clause 'depend'}}
   #pragma omp target update to(z) depend(in : argc)) // expected-warning {{extra tokens at the end of '#pragma omp target update' are ignored}}
   #pragma omp target update to(z) depend(out: ) // expected-error {{expected expression}}
   #pragma omp target update to(z) depend(inout : foobool(argc)), depend (in, argc) // expected-error {{expected addressable lvalue expression, array element or array section}} expected-warning {{missing ':' after dependency type - ignoring}} expected-error {{expected expression}}
