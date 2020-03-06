@@ -88,9 +88,7 @@ protected:
   void SetAllRegisterValid(bool b);
 
   bool GetRegisterIsValid(uint32_t reg) const {
-#if defined(LLDB_CONFIGURATION_DEBUG)
     assert(reg < m_reg_valid.size());
-#endif
     if (reg < m_reg_valid.size())
       return m_reg_valid[reg];
     return false;
@@ -103,9 +101,7 @@ protected:
   }
 
   void SetRegisterIsValid(uint32_t reg, bool valid) {
-#if defined(LLDB_CONFIGURATION_DEBUG)
     assert(reg < m_reg_valid.size());
-#endif
     if (reg < m_reg_valid.size())
       m_reg_valid[reg] = valid;
   }

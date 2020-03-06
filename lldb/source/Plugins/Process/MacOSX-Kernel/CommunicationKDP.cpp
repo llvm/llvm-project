@@ -77,11 +77,9 @@ bool CommunicationKDP::SendRequestAndGetReply(
   }
 
   std::lock_guard<std::recursive_mutex> guard(m_sequence_mutex);
-#ifdef LLDB_CONFIGURATION_DEBUG
   // NOTE: this only works for packets that are in native endian byte order
   assert(request_packet.GetSize() ==
          *((const uint16_t *)(request_packet.GetData() + 2)));
-#endif
   lldb::offset_t offset = 1;
   const uint32_t num_retries = 3;
   for (uint32_t i = 0; i < num_retries; ++i) {
