@@ -144,8 +144,7 @@ Sections:
     EntSize:      0x0000000000000018
     Info:         .text
     Relocations:
-      - Offset: 0x0000000000000000
-        Type:   R_AARCH64_NONE
+      - Type:   R_AARCH64_NONE
       - Offset: 0x0000000000000004
         Type:   R_AARCH64_ABS64
       - Offset: 0x0000000000000008

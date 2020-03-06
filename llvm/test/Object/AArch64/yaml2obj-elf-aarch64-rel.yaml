@@ -8,8 +8,7 @@
 # CHECK-NEXT:    EntSize:         0x0000000000000018
 # CHECK-NEXT:    Info:            .text
 # CHECK-NEXT:    Relocations:     
-# CHECK-NEXT:      - Offset:          0x0000000000000000
-# CHECK-NEXT:        Symbol:          main
+# CHECK-NEXT:      - Symbol:          main
 # CHECK-NEXT:        Type:            R_AARCH64_ABS64
 # CHECK-NEXT:      - Offset:          0x0000000000000008
 # CHECK-NEXT:        Symbol:          main
@@ -33,8 +32,7 @@ Sections:
     Info:            .text
     AddressAlign:    0x08
     Relocations:
-      - Offset:          0
-        Symbol:          main
+      - Symbol:          main
         Type:            R_AARCH64_ABS64
         Addend:          0
       - Offset:          8

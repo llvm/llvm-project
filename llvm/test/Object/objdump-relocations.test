@@ -26,8 +26,7 @@ Sections:
     Link: .symtab
     Info: .text
     Relocations:
-      - Offset: 0x0
-        Symbol: .section
+      - Symbol: .section
         Type:   R_386_32
       - Offset: 0x1
         Symbol: symbol
@@ -62,8 +61,7 @@ Sections:
     Link: .symtab
     Info: .text
     Relocations:
-      - Offset: 0x0
-        Symbol: .section
+      - Symbol: .section
         Type:   R_X86_64_32S
       - Offset: 0x1
         Symbol: symbol

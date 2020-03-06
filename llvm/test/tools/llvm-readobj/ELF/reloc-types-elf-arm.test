@@ -153,8 +153,7 @@ Sections:
     EntSize:      0x0000000000000008
     Info:         .text
     Relocations:
-      - Offset: 0x0000000000000000
-        Type:   R_ARM_NONE
+      - Type:   R_ARM_NONE
       - Offset: 0x0000000000000004
         Type:   R_ARM_PC24
       - Offset: 0x0000000000000008
