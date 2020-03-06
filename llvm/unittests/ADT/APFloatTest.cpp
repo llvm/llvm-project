@@ -2990,6 +2990,17 @@ TEST(APFloatTest, neg) {
   EXPECT_TRUE(Inf.bitwiseIsEqual(neg(NegInf)));
   EXPECT_TRUE(NegQNaN.bitwiseIsEqual(neg(QNaN)));
   EXPECT_TRUE(QNaN.bitwiseIsEqual(neg(NegQNaN)));
+
+  EXPECT_TRUE(NegOne.bitwiseIsEqual(-One));
+  EXPECT_TRUE(One.bitwiseIsEqual(-NegOne));
+  EXPECT_TRUE(NegZero.bitwiseIsEqual(-Zero));
+  EXPECT_TRUE(Zero.bitwiseIsEqual(-NegZero));
+  EXPECT_TRUE(NegInf.bitwiseIsEqual(-Inf));
+  EXPECT_TRUE(Inf.bitwiseIsEqual(-NegInf));
+  EXPECT_TRUE(NegInf.bitwiseIsEqual(-Inf));
+  EXPECT_TRUE(Inf.bitwiseIsEqual(-NegInf));
+  EXPECT_TRUE(NegQNaN.bitwiseIsEqual(-QNaN));
+  EXPECT_TRUE(QNaN.bitwiseIsEqual(-NegQNaN));
 }
 
 TEST(APFloatTest, ilogb) {
