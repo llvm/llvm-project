@@ -10,6 +10,7 @@ add_llvm_library(LLVMMLIRTableGen
   OpTrait.cpp
   Pattern.cpp
   Predicate.cpp
+  SideEffects.cpp
   Successor.cpp
   Type.cpp
 

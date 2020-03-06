@@ -107,7 +107,7 @@ class EffectOpInterfaceBase<string name, string baseEffect>
 // This class is the general base side effect class. This is used by derived
 // effect interfaces to define their effects.
 class SideEffect<EffectOpInterfaceBase interface, string effectName,
-                 string resourceName> {
+                 string resourceName> : OpVariableDecorator {
   /// The parent interface that the effect belongs to.
   string interfaceTrait = interface.trait;
 
