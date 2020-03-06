@@ -8,7 +8,6 @@
 
 #include "lldb/Target/Thread.h"
 #include "Plugins/Process/Utility/UnwindLLDB.h"
-#include "Plugins/Process/Utility/UnwindMacOSXFrameBackchain.h"
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/FormatEntity.h"
@@ -2101,35 +2100,8 @@ size_t Thread::GetStackFrameStatus(Stream &strm, uint32_t first_frame,
 }
 
 Unwind *Thread::GetUnwinder() {
-  if (!m_unwinder_up) {
-    const ArchSpec target_arch(CalculateTarget()->GetArchitecture());
-    const llvm::Triple::ArchType machine = target_arch.GetMachine();
-    switch (machine) {
-    case llvm::Triple::x86_64:
-    case llvm::Triple::x86:
-    case llvm::Triple::arm:
-    case llvm::Triple::aarch64:
-    case llvm::Triple::aarch64_32:
-    case llvm::Triple::thumb:
-    case llvm::Triple::mips:
-    case llvm::Triple::mipsel:
-    case llvm::Triple::mips64:
-    case llvm::Triple::mips64el:
-    case llvm::Triple::ppc:
-    case llvm::Triple::ppc64:
-    case llvm::Triple::ppc64le:
-    case llvm::Triple::systemz:
-    case llvm::Triple::hexagon:
-    case llvm::Triple::arc:
-      m_unwinder_up.reset(new UnwindLLDB(*this));
-      break;
-
-    default:
-      if (target_arch.GetTriple().getVendor() == llvm::Triple::Apple)
-        m_unwinder_up.reset(new UnwindMacOSXFrameBackchain(*this));
-      break;
-    }
-  }
+  if (!m_unwinder_up)
+    m_unwinder_up.reset(new UnwindLLDB(*this));
   return m_unwinder_up.get();
 }
 
