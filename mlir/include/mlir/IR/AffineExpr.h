@@ -214,9 +214,10 @@ AffineExpr getAffineBinaryOpExpr(AffineExprKind kind, AffineExpr lhs,
 /// products expression, 'localExprs' is expected to have the AffineExpr
 /// for it, and is substituted into. The ArrayRef 'eq' is expected to be in the
 /// format [dims, symbols, locals, constant term].
-AffineExpr toAffineExpr(ArrayRef<int64_t> eq, unsigned numDims,
-                        unsigned numSymbols, ArrayRef<AffineExpr> localExprs,
-                        MLIRContext *context);
+AffineExpr getAffineExprFromFlatForm(ArrayRef<int64_t> flatExprs,
+                                     unsigned numDims, unsigned numSymbols,
+                                     ArrayRef<AffineExpr> localExprs,
+                                     MLIRContext *context);
 
 raw_ostream &operator<<(raw_ostream &os, AffineExpr &expr);
 
