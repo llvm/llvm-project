@@ -368,29 +368,13 @@ CanBeUsedForElementCountPrinting(ValueObject &valobj) {
   return Status();
 }
 
-bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
-                                                 Stream *output_stream,
-                                                 Stream *error_stream,
-                                                 CommandReturnObject *result) {
-  // Don't use m_exe_ctx as this might be called asynchronously after the
-  // command object DoExecute has finished when doing multi-line expression
-  // that use an input reader...
-  ExecutionContext exe_ctx(m_interpreter.GetExecutionContext());
-
-  Target *target = exe_ctx.GetTargetPtr();
-
-  if (!target)
-    target = &GetDummyTarget();
-
-  lldb::ValueObjectSP result_valobj_sp;
-  bool keep_in_memory = true;
-  StackFrame *frame = exe_ctx.GetFramePtr();
-
+EvaluateExpressionOptions
+CommandObjectExpression::GetEvalOptions(const Target &target) {
   EvaluateExpressionOptions options;
   options.SetCoerceToId(m_varobj_options.use_objc);
   options.SetUnwindOnError(m_command_options.unwind_on_error);
   options.SetIgnoreBreakpoints(m_command_options.ignore_breakpoints);
-  options.SetKeepInMemory(keep_in_memory);
+  options.SetKeepInMemory(true);
   options.SetUseDynamic(m_varobj_options.use_dynamic);
   options.SetTryAllThreads(m_command_options.try_all_threads);
   options.SetDebug(m_command_options.debug);
@@ -413,7 +397,7 @@ bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
 
   bool auto_apply_fixits;
   if (m_command_options.auto_apply_fixits == eLazyBoolCalculate)
-    auto_apply_fixits = target->GetEnableAutoApplyFixIts();
+    auto_apply_fixits = target.GetEnableAutoApplyFixIts();
   else
     auto_apply_fixits = m_command_options.auto_apply_fixits == eLazyBoolYes;
 
@@ -432,7 +416,27 @@ bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
     options.SetTimeout(std::chrono::microseconds(m_command_options.timeout));
   else
     options.SetTimeout(llvm::None);
+  return options;
+}
 
+bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
+                                                 Stream *output_stream,
+                                                 Stream *error_stream,
+                                                 CommandReturnObject *result) {
+  // Don't use m_exe_ctx as this might be called asynchronously after the
+  // command object DoExecute has finished when doing multi-line expression
+  // that use an input reader...
+  ExecutionContext exe_ctx(m_interpreter.GetExecutionContext());
+
+  Target *target = exe_ctx.GetTargetPtr();
+
+  if (!target)
+    target = &GetDummyTarget();
+
+  lldb::ValueObjectSP result_valobj_sp;
+  StackFrame *frame = exe_ctx.GetFramePtr();
+
+  const EvaluateExpressionOptions options = GetEvalOptions(*target);
   ExpressionResults success = target->EvaluateExpression(
       expr, frame, result_valobj_sp, options, &m_fixed_expression);
 
