@@ -4476,16 +4476,11 @@ defm MOVDDUP : sse3_replicate_dfp<"movddup", SchedWriteFShuffle>;
 
 
 let Predicates = [HasAVX, NoVLX] in {
-  def : Pat<(X86Movddup (v2f64 (simple_load addr:$src))),
-            (VMOVDDUPrm addr:$src)>, Requires<[HasAVX]>;
   def : Pat<(X86Movddup (v2f64 (X86vzload64 addr:$src))),
             (VMOVDDUPrm addr:$src)>, Requires<[HasAVX]>;
 }
 
 let Predicates = [UseSSE3] in {
-  // No need for aligned memory as this only loads 64-bits.
-  def : Pat<(X86Movddup (v2f64 (simple_load addr:$src))),
-            (MOVDDUPrm addr:$src)>;
   def : Pat<(X86Movddup (v2f64 (X86vzload64 addr:$src))),
             (MOVDDUPrm addr:$src)>;
 }
@@ -7612,8 +7607,6 @@ let Predicates = [HasAVX, NoVLX] in {
 
   def : Pat<(v2f64 (X86VBroadcast v2f64:$src)),
             (VMOVDDUPrr VR128:$src)>;
-  def : Pat<(v2f64 (X86VBroadcast (v2f64 (simple_load addr:$src)))),
-            (VMOVDDUPrm addr:$src)>;
 }
 
 let Predicates = [HasAVX1Only] in {
