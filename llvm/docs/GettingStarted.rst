@@ -39,7 +39,7 @@ This is an example workflow and configuration to get and build the LLVM source:
    * Or, on windows, ``git clone --config core.autocrlf=false
      https://github.com/llvm/llvm-project.git``
 
-#. Configure and build LLVM and Clang:.
+#. Configure and build LLVM and Clang:
 
    * ``cd llvm-project``
    * ``mkdir build``
