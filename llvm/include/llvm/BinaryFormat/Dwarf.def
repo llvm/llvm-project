@@ -17,6 +17,7 @@
     defined HANDLE_DW_VIRTUALITY || defined HANDLE_DW_DEFAULTED ||             \
     defined HANDLE_DW_CC || defined HANDLE_DW_LNS || defined HANDLE_DW_LNE ||  \
     defined HANDLE_DW_LNCT || defined HANDLE_DW_MACRO ||                       \
+    defined HANDLE_MACRO_FLAG ||                                               \
     defined HANDLE_DW_RLE || defined HANDLE_DW_LLE ||                          \
     (defined HANDLE_DW_CFA && defined HANDLE_DW_CFA_PRED) ||                   \
     defined HANDLE_DW_APPLE_PROPERTY || defined HANDLE_DW_UT ||                \
@@ -85,6 +86,10 @@
 
 #ifndef HANDLE_DW_MACRO
 #define HANDLE_DW_MACRO(ID, NAME)
+#endif
+
+#ifndef HANDLE_MACRO_FLAG
+#define HANDLE_MACRO_FLAG(ID, NAME)
 #endif
 
 #ifndef HANDLE_DW_RLE
@@ -822,6 +827,11 @@ HANDLE_DW_MACRO(0x0a, import_sup)
 HANDLE_DW_MACRO(0x0b, define_strx)
 HANDLE_DW_MACRO(0x0c, undef_strx)
 
+// DWARF v5 Macro header flags.
+HANDLE_MACRO_FLAG(0x01, OFFSET_SIZE)
+HANDLE_MACRO_FLAG(0x02, DEBUG_LINE_OFFSET)
+HANDLE_MACRO_FLAG(0x04, OPCODE_OPERANDS_TABLE)
+
 // DWARF v5 Range List Entry encoding values.
 HANDLE_DW_RLE(0x00, end_of_list)
 HANDLE_DW_RLE(0x01, base_addressx)
@@ -956,6 +966,7 @@ HANDLE_DW_IDX(0x05, type_hash)
 #undef HANDLE_DW_LNE
 #undef HANDLE_DW_LNCT
 #undef HANDLE_DW_MACRO
+#undef HANDLE_MACRO_FLAG
 #undef HANDLE_DW_RLE
 #undef HANDLE_DW_LLE
 #undef HANDLE_DW_CFA
