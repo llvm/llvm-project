@@ -1301,7 +1301,7 @@ public:
     static ClassID *getEffectID() { return ClassID::getID<DerivedEffect>(); }
 
     /// 'classof' used to support llvm style cast functionality.
-    static bool classof(const Effect *effect) {
+    static bool classof(const ::mlir::SideEffects::Effect *effect) {
       return effect->getEffectID() == BaseT::getEffectID();
     }
 
