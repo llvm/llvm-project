@@ -85,6 +85,23 @@ class CommandLineCompletionTestCase(TestBase):
                               ['mips',
                                'arm64'])
 
+    def test_process_signal(self):
+        # The tab completion for "process signal"  won't work without a running process.
+        self.complete_from_to('process signal ',
+                              'process signal ')
+
+        # Test with a running process.
+        self.build()
+        self.main_source = "main.cpp"
+        self.main_source_spec = lldb.SBFileSpec(self.main_source)
+        lldbutil.run_to_source_breakpoint(self, '// Break here', self.main_source_spec)
+
+        self.complete_from_to('process signal ',
+                              'process signal SIG')
+        self.complete_from_to('process signal SIGA',
+                              ['SIGABRT',
+                               'SIGALRM'])
+
     def test_ambiguous_long_opt(self):
         self.completions_match('breakpoint modify --th',
                                ['--thread-id',
