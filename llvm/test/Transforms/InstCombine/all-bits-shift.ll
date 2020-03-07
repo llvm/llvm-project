@@ -13,33 +13,11 @@ target triple = "powerpc64-unknown-linux-gnu"
 ;   ((2072 >> (L == 0)) >> 7) & 1
 ; is always zero.
 define signext i32 @main() #1 {
-; EXPENSIVE-OFF-LABEL: @main(
-; EXPENSIVE-OFF-NEXT:  entry:
-; EXPENSIVE-OFF-NEXT:    [[TMP0:%.*]] = load i32*, i32** @b, align 8
-; EXPENSIVE-OFF-NEXT:    [[TMP1:%.*]] = load i32, i32* @a, align 4
-; EXPENSIVE-OFF-NEXT:    [[LNOT:%.*]] = icmp eq i32 [[TMP1]], 0
-; EXPENSIVE-OFF-NEXT:    [[LNOT_EXT:%.*]] = zext i1 [[LNOT]] to i32
-; EXPENSIVE-OFF-NEXT:    [[SHR_I:%.*]] = lshr i32 2072, [[LNOT_EXT]]
-; EXPENSIVE-OFF-NEXT:    [[CALL_LOBIT:%.*]] = lshr i32 [[SHR_I]], 7
-; EXPENSIVE-OFF-NEXT:    [[TMP2:%.*]] = and i32 [[CALL_LOBIT]], 1
-; EXPENSIVE-OFF-NEXT:    [[TMP3:%.*]] = load i32, i32* [[TMP0]], align 4
-; EXPENSIVE-OFF-NEXT:    [[OR:%.*]] = or i32 [[TMP2]], [[TMP3]]
-; EXPENSIVE-OFF-NEXT:    store i32 [[OR]], i32* [[TMP0]], align 4
-; EXPENSIVE-OFF-NEXT:    [[TMP4:%.*]] = load i32, i32* @a, align 4
-; EXPENSIVE-OFF-NEXT:    [[LNOT_1:%.*]] = icmp eq i32 [[TMP4]], 0
-; EXPENSIVE-OFF-NEXT:    [[LNOT_EXT_1:%.*]] = zext i1 [[LNOT_1]] to i32
-; EXPENSIVE-OFF-NEXT:    [[SHR_I_1:%.*]] = lshr i32 2072, [[LNOT_EXT_1]]
-; EXPENSIVE-OFF-NEXT:    [[CALL_LOBIT_1:%.*]] = lshr i32 [[SHR_I_1]], 7
-; EXPENSIVE-OFF-NEXT:    [[TMP5:%.*]] = and i32 [[CALL_LOBIT_1]], 1
-; EXPENSIVE-OFF-NEXT:    [[OR_1:%.*]] = or i32 [[TMP5]], [[TMP3]]
-; EXPENSIVE-OFF-NEXT:    store i32 [[OR_1]], i32* [[TMP0]], align 4
-; EXPENSIVE-OFF-NEXT:    ret i32 [[OR_1]]
-;
-; EXPENSIVE-ON-LABEL: @main(
-; EXPENSIVE-ON-NEXT:  entry:
-; EXPENSIVE-ON-NEXT:    [[TMP0:%.*]] = load i32*, i32** @b, align 8
-; EXPENSIVE-ON-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP0]], align 4
-; EXPENSIVE-ON-NEXT:    ret i32 [[TMP1]]
+; CHECK-LABEL: @main(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32*, i32** @b, align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP0]], align 4
+; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
 entry:
   %0 = load i32*, i32** @b, align 8

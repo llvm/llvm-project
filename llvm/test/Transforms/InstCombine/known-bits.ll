@@ -3,16 +3,9 @@
 ; RUN: opt -S -instcombine -expensive-combines=1 < %s | FileCheck %s --check-prefixes=CHECK,EXPENSIVE-ON
 
 define void @test_shl(i1 %x) {
-; EXPENSIVE-OFF-LABEL: @test_shl(
-; EXPENSIVE-OFF-NEXT:    [[Y:%.*]] = zext i1 [[X:%.*]] to i8
-; EXPENSIVE-OFF-NEXT:    [[Z:%.*]] = shl i8 64, [[Y]]
-; EXPENSIVE-OFF-NEXT:    [[A:%.*]] = and i8 [[Z]], 1
-; EXPENSIVE-OFF-NEXT:    call void @sink(i8 [[A]])
-; EXPENSIVE-OFF-NEXT:    ret void
-;
-; EXPENSIVE-ON-LABEL: @test_shl(
-; EXPENSIVE-ON-NEXT:    call void @sink(i8 0)
-; EXPENSIVE-ON-NEXT:    ret void
+; CHECK-LABEL: @test_shl(
+; CHECK-NEXT:    call void @sink(i8 0)
+; CHECK-NEXT:    ret void
 ;
   %y = zext i1 %x to i8
   %z = shl i8 64, %y
@@ -22,16 +15,9 @@ define void @test_shl(i1 %x) {
 }
 
 define void @test_lshr(i1 %x) {
-; EXPENSIVE-OFF-LABEL: @test_lshr(
-; EXPENSIVE-OFF-NEXT:    [[Y:%.*]] = zext i1 [[X:%.*]] to i8
-; EXPENSIVE-OFF-NEXT:    [[Z:%.*]] = lshr i8 64, [[Y]]
-; EXPENSIVE-OFF-NEXT:    [[A:%.*]] = and i8 [[Z]], 1
-; EXPENSIVE-OFF-NEXT:    call void @sink(i8 [[A]])
-; EXPENSIVE-OFF-NEXT:    ret void
-;
-; EXPENSIVE-ON-LABEL: @test_lshr(
-; EXPENSIVE-ON-NEXT:    call void @sink(i8 0)
-; EXPENSIVE-ON-NEXT:    ret void
+; CHECK-LABEL: @test_lshr(
+; CHECK-NEXT:    call void @sink(i8 0)
+; CHECK-NEXT:    ret void
 ;
   %y = zext i1 %x to i8
   %z = lshr i8 64, %y
@@ -41,16 +27,9 @@ define void @test_lshr(i1 %x) {
 }
 
 define void @test_ashr(i1 %x) {
-; EXPENSIVE-OFF-LABEL: @test_ashr(
-; EXPENSIVE-OFF-NEXT:    [[Y:%.*]] = zext i1 [[X:%.*]] to i8
-; EXPENSIVE-OFF-NEXT:    [[Z:%.*]] = ashr i8 -16, [[Y]]
-; EXPENSIVE-OFF-NEXT:    [[A:%.*]] = and i8 [[Z]], 3
-; EXPENSIVE-OFF-NEXT:    call void @sink(i8 [[A]])
-; EXPENSIVE-OFF-NEXT:    ret void
-;
-; EXPENSIVE-ON-LABEL: @test_ashr(
-; EXPENSIVE-ON-NEXT:    call void @sink(i8 0)
-; EXPENSIVE-ON-NEXT:    ret void
+; CHECK-LABEL: @test_ashr(
+; CHECK-NEXT:    call void @sink(i8 0)
+; CHECK-NEXT:    ret void
 ;
   %y = zext i1 %x to i8
   %z = ashr i8 -16, %y
@@ -60,15 +39,9 @@ define void @test_ashr(i1 %x) {
 }
 
 define void @test_udiv(i8 %x) {
-; EXPENSIVE-OFF-LABEL: @test_udiv(
-; EXPENSIVE-OFF-NEXT:    [[Y:%.*]] = udiv i8 10, [[X:%.*]]
-; EXPENSIVE-OFF-NEXT:    [[Z:%.*]] = and i8 [[Y]], 64
-; EXPENSIVE-OFF-NEXT:    call void @sink(i8 [[Z]])
-; EXPENSIVE-OFF-NEXT:    ret void
-;
-; EXPENSIVE-ON-LABEL: @test_udiv(
-; EXPENSIVE-ON-NEXT:    call void @sink(i8 0)
-; EXPENSIVE-ON-NEXT:    ret void
+; CHECK-LABEL: @test_udiv(
+; CHECK-NEXT:    call void @sink(i8 0)
+; CHECK-NEXT:    ret void
 ;
   %y = udiv i8 10, %x
   %z = and i8 %y, 64
