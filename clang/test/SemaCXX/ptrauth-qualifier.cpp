@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 -triple arm64-apple-ios -std=c++11  -fptrauth-calls -fptrauth-intrinsics -verify -fsyntax-only %s
 
 #define AQ __ptrauth(1,1,50)
+#define AQ2 __ptrauth(1,1,51)
 #define IQ __ptrauth(1,0,50)
 
 struct __attribute__((trivial_abi)) AddrDisc { // expected-warning {{'trivial_abi' cannot be applied to 'AddrDisc'}}
@@ -117,4 +118,14 @@ namespace test_union {
     *x3 = static_cast<S0 &&>(*s0); // expected-error {{cannot be assigned because its copy assignment operator is implicitly deleted}}
     *x4 = static_cast<S1 &&>(*s1); // expected-error {{cannot be assigned because its copy assignment operator is implicitly deleted}}
   }
+}
+
+bool test_composite_type0(bool c, int * AQ * a0, int * AQ * a1) {
+  auto t = c ? a0 : a1;
+  return a0 == a1;
+}
+
+bool test_composite_type1(bool c, int * AQ * a0, int * AQ2 * a1) {
+  auto t = c ? a0 : a1; // expected-error {{incompatible operand types ('int *__ptrauth(1,1,50) *' and 'int *__ptrauth(1,1,51) *')}}
+  return a0 == a1; // expected-error {{comparison of distinct pointer types ('int *__ptrauth(1,1,50) *' and 'int *__ptrauth(1,1,51) *')}}
 }
