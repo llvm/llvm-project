@@ -256,8 +256,6 @@ public:
                              getNumCols());
   }
 
-  AffineExpr toAffineExpr(unsigned idx, MLIRContext *context);
-
   /// Adds constraints (lower and upper bounds) for the specified 'affine.for'
   /// operation's Value using IR information stored in its bound maps. The
   /// right identifier is first looked up using forOp's Value. Asserts if the
