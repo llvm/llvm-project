@@ -130,6 +130,7 @@ static cl::opt<bool>
 EnableCodeSinking("instcombine-code-sinking", cl::desc("Enable code sinking"),
                                               cl::init(true));
 
+// FIXME: This option is no longer used for anything and may be removed.
 static cl::opt<bool>
 EnableExpensiveCombines("expensive-combines",
                         cl::desc("Enable expensive instruction combines"));
@@ -3480,27 +3481,6 @@ bool InstCombiner::run() {
       if (Constant *C = ConstantFoldInstruction(I, DL, &TLI)) {
         LLVM_DEBUG(dbgs() << "IC: ConstFold to: " << *C << " from: " << *I
                           << '\n');
-
-        // Add operands to the worklist.
-        replaceInstUsesWith(*I, C);
-        ++NumConstProp;
-        if (isInstructionTriviallyDead(I, &TLI))
-          eraseInstFromFunction(*I);
-        MadeIRChange = true;
-        continue;
-      }
-    }
-
-    // In general, it is possible for computeKnownBits to determine all bits in
-    // a value even when the operands are not all constants.
-    Type *Ty = I->getType();
-    if (ExpensiveCombines && !I->use_empty() && Ty->isIntOrIntVectorTy() &&
-        !isMustTailCall(I)) {
-      KnownBits Known = computeKnownBits(I, /*Depth*/0, I);
-      if (Known.isConstant()) {
-        Constant *C = ConstantInt::get(Ty, Known.getConstant());
-        LLVM_DEBUG(dbgs() << "IC: ConstFold (all bits known) to: " << *C
-                          << " from: " << *I << '\n');
 
         // Add operands to the worklist.
         replaceInstUsesWith(*I, C);
