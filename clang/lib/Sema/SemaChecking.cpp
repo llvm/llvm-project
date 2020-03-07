@@ -2169,6 +2169,8 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
       return ExprError();
     break;
   case Builtin::BI__builtin_os_log_format:
+    Cleanup.setExprNeedsCleanups(true);
+    LLVM_FALLTHROUGH;
   case Builtin::BI__builtin_os_log_format_buffer_size:
     if (SemaBuiltinOSLogFormat(TheCall))
       return ExprError();
