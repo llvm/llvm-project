@@ -1023,22 +1023,23 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::StructureComponent &sc) {
 }
 
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::CoindexedNamedObject &x) {
-  if (auto dataRef{ExtractDataRef(Analyze(x.base))}) {
+  if (auto maybeDataRef{ExtractDataRef(Analyze(x.base))}) {
+    DataRef *dataRef{&*maybeDataRef};
     std::vector<Subscript> subscripts;
     SymbolVector reversed;
     if (auto *aRef{std::get_if<ArrayRef>(&dataRef->u)}) {
       subscripts = std::move(aRef->subscript());
       reversed.push_back(aRef->GetLastSymbol());
       if (Component * component{aRef->base().UnwrapComponent()}) {
-        *dataRef = std::move(component->base());
+        dataRef = &component->base();
       } else {
-        dataRef.reset();
+        dataRef = nullptr;
       }
     }
     if (dataRef) {
       while (auto *component{std::get_if<Component>(&dataRef->u)}) {
         reversed.push_back(component->GetLastSymbol());
-        *dataRef = std::move(component->base());
+        dataRef = &component->base();
       }
       if (auto *baseSym{std::get_if<SymbolRef>(&dataRef->u)}) {
         reversed.push_back(*baseSym);
@@ -2502,7 +2503,7 @@ bool ExpressionAnalyzer::EnforceTypeConstraint(parser::CharBlock at,
     const MaybeExpr &result, TypeCategory category, bool defaultKind) {
   if (result) {
     if (auto type{result->GetType()}) {
-      if (type->category() != category) { // C885
+      if (type->category() != category) {  // C885
         Say(at, "Must have %s type, but is %s"_err_en_US,
             ToUpperCase(EnumToString(category)),
             ToUpperCase(type->AsFortran()));
