@@ -11,6 +11,7 @@ LLVM welcomes contributions of all kinds. To get started, please review the foll
 
    Contributing
    DeveloperPolicy
+   CodeReview
    SphinxQuickstartTemplate
    Phabricator
    HowToSubmitABug
@@ -23,6 +24,9 @@ LLVM welcomes contributions of all kinds. To get started, please review the foll
 
 :doc:`DeveloperPolicy`
    The LLVM project's policy towards developers and their contributions.
+
+:doc:`CodeReview`
+   The LLVM project's code-review process.
 
 :doc:`SphinxQuickstartTemplate`
   A template + tutorial for writing new Sphinx documentation. It is meant
