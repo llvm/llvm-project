@@ -288,6 +288,23 @@ void llvm::fillMapFromAssume(CallInst &AssumeCI, RetainedKnowledgeMap &Result) {
   }
 }
 
+RetainedKnowledge llvm::getKnowledgeFromOperandInAssume(CallInst &AssumeCI,
+                                                        unsigned Idx) {
+  IntrinsicInst &Assume = cast<IntrinsicInst>(AssumeCI);
+  assert(Assume.getIntrinsicID() == Intrinsic::assume &&
+         "this function is intended to be used on llvm.assume");
+  CallBase::BundleOpInfo BOI = Assume.getBundleOpInfoForOperand(Idx);
+  RetainedKnowledge Result;
+  Result.AttrKind = Attribute::getAttrKindFromName(BOI.Tag->getKey());
+  Result.WasOn = getValueFromBundleOpInfo(Assume, BOI, BOIE_WasOn);
+  if (BOI.End - BOI.Begin > BOIE_Argument)
+    Result.ArgValue =
+        cast<ConstantInt>(getValueFromBundleOpInfo(Assume, BOI, BOIE_Argument))
+            ->getZExtValue();
+
+  return Result;
+}
+
 PreservedAnalyses AssumeBuilderPass::run(Function &F,
                                          FunctionAnalysisManager &AM) {
   for (Instruction &I : instructions(F))
