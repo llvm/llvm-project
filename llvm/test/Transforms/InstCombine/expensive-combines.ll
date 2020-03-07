@@ -16,7 +16,7 @@ define void @test() {
 ;
 ; EXPENSIVE-OFF-LABEL: @test(
 ; EXPENSIVE-OFF-NEXT:    [[CALL:%.*]] = call i32 @passthru(i32 0)
-; EXPENSIVE-OFF-NEXT:    call void @sink(i32 [[CALL]])
+; EXPENSIVE-OFF-NEXT:    call void @sink(i32 0)
 ; EXPENSIVE-OFF-NEXT:    ret void
 ;
   %call = call i32 @passthru(i32 0)
