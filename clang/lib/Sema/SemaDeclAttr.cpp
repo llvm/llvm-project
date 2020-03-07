@@ -6934,6 +6934,16 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
     handleSimpleAttributeWithExclusions<HIPPinnedShadowAttr, CUDADeviceAttr,
                                         CUDAConstantAttr>(S, D, AL);
     break;
+  case ParsedAttr::AT_CUDADeviceBuiltinSurfaceType:
+    handleSimpleAttributeWithExclusions<CUDADeviceBuiltinSurfaceTypeAttr,
+                                        CUDADeviceBuiltinTextureTypeAttr>(S, D,
+                                                                          AL);
+    break;
+  case ParsedAttr::AT_CUDADeviceBuiltinTextureType:
+    handleSimpleAttributeWithExclusions<CUDADeviceBuiltinTextureTypeAttr,
+                                        CUDADeviceBuiltinSurfaceTypeAttr>(S, D,
+                                                                          AL);
+    break;
   case ParsedAttr::AT_GNUInline:
     handleGNUInlineAttr(S, D, AL);
     break;

@@ -50,7 +50,7 @@ private:
   struct VarInfo {
     llvm::GlobalVariable *Var;
     const VarDecl *D;
-    unsigned Flag;
+    DeviceVarFlags Flags;
   };
   llvm::SmallVector<VarInfo, 16> DeviceVars;
   /// Keeps track of variable containing handle of GPU binary. Populated by
@@ -124,8 +124,25 @@ public:
 
   void emitDeviceStub(CodeGenFunction &CGF, FunctionArgList &Args) override;
   void registerDeviceVar(const VarDecl *VD, llvm::GlobalVariable &Var,
-                         unsigned Flags) override {
-    DeviceVars.push_back({&Var, VD, Flags});
+                         bool Extern, bool Constant) override {
+    DeviceVars.push_back({&Var,
+                          VD,
+                          {DeviceVarFlags::Variable, Extern, Constant,
+                           /*Normalized*/ false, /*Type*/ 0}});
+  }
+  void registerDeviceSurf(const VarDecl *VD, llvm::GlobalVariable &Var,
+                          bool Extern, int Type) override {
+    DeviceVars.push_back({&Var,
+                          VD,
+                          {DeviceVarFlags::Surface, Extern, /*Constant*/ false,
+                           /*Normalized*/ false, Type}});
+  }
+  void registerDeviceTex(const VarDecl *VD, llvm::GlobalVariable &Var,
+                         bool Extern, int Type, bool Normalized) override {
+    DeviceVars.push_back({&Var,
+                          VD,
+                          {DeviceVarFlags::Texture, Extern, /*Constant*/ false,
+                           Normalized, Type}});
   }
 
   /// Creates module constructor function
@@ -431,22 +448,55 @@ llvm::Function *CGNVCUDARuntime::makeRegisterGlobalsFn() {
   llvm::FunctionCallee RegisterVar = CGM.CreateRuntimeFunction(
       llvm::FunctionType::get(IntTy, RegisterVarParams, false),
       addUnderscoredPrefixToName("RegisterVar"));
+  // void __cudaRegisterSurface(void **, const struct surfaceReference *,
+  //                            const void **, const char *, int, int);
+  llvm::FunctionCallee RegisterSurf = CGM.CreateRuntimeFunction(
+      llvm::FunctionType::get(
+          VoidTy, {VoidPtrPtrTy, VoidPtrTy, CharPtrTy, CharPtrTy, IntTy, IntTy},
+          false),
+      addUnderscoredPrefixToName("RegisterSurface"));
+  // void __cudaRegisterTexture(void **, const struct textureReference *,
+  //                            const void **, const char *, int, int, int)
+  llvm::FunctionCallee RegisterTex = CGM.CreateRuntimeFunction(
+      llvm::FunctionType::get(
+          VoidTy,
+          {VoidPtrPtrTy, VoidPtrTy, CharPtrTy, CharPtrTy, IntTy, IntTy, IntTy},
+          false),
+      addUnderscoredPrefixToName("RegisterTexture"));
   for (auto &&Info : DeviceVars) {
     llvm::GlobalVariable *Var = Info.Var;
-    unsigned Flags = Info.Flag;
     llvm::Constant *VarName = makeConstantString(getDeviceSideName(Info.D));
-    uint64_t VarSize =
-        CGM.getDataLayout().getTypeAllocSize(Var->getValueType());
-    llvm::Value *Args[] = {
-        &GpuBinaryHandlePtr,
-        Builder.CreateBitCast(Var, VoidPtrTy),
-        VarName,
-        VarName,
-        llvm::ConstantInt::get(IntTy, (Flags & ExternDeviceVar) ? 1 : 0),
-        llvm::ConstantInt::get(IntTy, VarSize),
-        llvm::ConstantInt::get(IntTy, (Flags & ConstantDeviceVar) ? 1 : 0),
-        llvm::ConstantInt::get(IntTy, 0)};
-    Builder.CreateCall(RegisterVar, Args);
+    switch (Info.Flags.Kind) {
+    case DeviceVarFlags::Variable: {
+      uint64_t VarSize =
+          CGM.getDataLayout().getTypeAllocSize(Var->getValueType());
+      llvm::Value *Args[] = {&GpuBinaryHandlePtr,
+                             Builder.CreateBitCast(Var, VoidPtrTy),
+                             VarName,
+                             VarName,
+                             llvm::ConstantInt::get(IntTy, Info.Flags.Extern),
+                             llvm::ConstantInt::get(IntTy, VarSize),
+                             llvm::ConstantInt::get(IntTy, Info.Flags.Constant),
+                             llvm::ConstantInt::get(IntTy, 0)};
+      Builder.CreateCall(RegisterVar, Args);
+      break;
+    }
+    case DeviceVarFlags::Surface:
+      Builder.CreateCall(
+          RegisterSurf,
+          {&GpuBinaryHandlePtr, Builder.CreateBitCast(Var, VoidPtrTy), VarName,
+           VarName, llvm::ConstantInt::get(IntTy, Info.Flags.SurfTexType),
+           llvm::ConstantInt::get(IntTy, Info.Flags.Extern)});
+      break;
+    case DeviceVarFlags::Texture:
+      Builder.CreateCall(
+          RegisterTex,
+          {&GpuBinaryHandlePtr, Builder.CreateBitCast(Var, VoidPtrTy), VarName,
+           VarName, llvm::ConstantInt::get(IntTy, Info.Flags.SurfTexType),
+           llvm::ConstantInt::get(IntTy, Info.Flags.Normalized),
+           llvm::ConstantInt::get(IntTy, Info.Flags.Extern)});
+      break;
+    }
   }
 
   Builder.CreateRetVoid();
