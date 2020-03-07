@@ -56,8 +56,55 @@ define float @finite_f32_no_estimate(float %f) #0 {
   ret float %call
 }
 
-define float @finite_f32_estimate(float %f) #1 {
-; SSE-LABEL: finite_f32_estimate:
+define float @finite_f32_estimate_ieee(float %f) #1 {
+; SSE-LABEL: finite_f32_estimate_ieee:
+; SSE:       # %bb.0:
+; SSE-NEXT:    rsqrtss %xmm0, %xmm1
+; SSE-NEXT:    movaps %xmm0, %xmm2
+; SSE-NEXT:    mulss %xmm1, %xmm2
+; SSE-NEXT:    movss {{.*#+}} xmm3 = mem[0],zero,zero,zero
+; SSE-NEXT:    mulss %xmm2, %xmm3
+; SSE-NEXT:    mulss %xmm1, %xmm2
+; SSE-NEXT:    addss {{.*}}(%rip), %xmm2
+; SSE-NEXT:    andps {{.*}}(%rip), %xmm0
+; SSE-NEXT:    mulss %xmm3, %xmm2
+; SSE-NEXT:    cmpltss {{.*}}(%rip), %xmm0
+; SSE-NEXT:    andnps %xmm2, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: finite_f32_estimate_ieee:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vrsqrtss %xmm0, %xmm0, %xmm1
+; AVX1-NEXT:    vmulss %xmm1, %xmm0, %xmm2
+; AVX1-NEXT:    vmulss %xmm1, %xmm2, %xmm1
+; AVX1-NEXT:    vaddss {{.*}}(%rip), %xmm1, %xmm1
+; AVX1-NEXT:    vmulss {{.*}}(%rip), %xmm2, %xmm2
+; AVX1-NEXT:    vandps {{.*}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vmulss %xmm1, %xmm2, %xmm1
+; AVX1-NEXT:    vcmpltss {{.*}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vandnps %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX512-LABEL: finite_f32_estimate_ieee:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vrsqrtss %xmm0, %xmm0, %xmm1
+; AVX512-NEXT:    vmulss %xmm1, %xmm0, %xmm2
+; AVX512-NEXT:    vfmadd213ss {{.*#+}} xmm1 = (xmm2 * xmm1) + mem
+; AVX512-NEXT:    vmulss {{.*}}(%rip), %xmm2, %xmm2
+; AVX512-NEXT:    vmulss %xmm1, %xmm2, %xmm1
+; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm2 = [NaN,NaN,NaN,NaN]
+; AVX512-NEXT:    vandps %xmm2, %xmm0, %xmm0
+; AVX512-NEXT:    vcmpltss {{.*}}(%rip), %xmm0, %k1
+; AVX512-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    vmovss %xmm0, %xmm1, %xmm1 {%k1}
+; AVX512-NEXT:    vmovaps %xmm1, %xmm0
+; AVX512-NEXT:    retq
+  %call = tail call float @__sqrtf_finite(float %f) #2
+  ret float %call
+}
+
+define float @finite_f32_estimate_daz(float %f) #4 {
+; SSE-LABEL: finite_f32_estimate_daz:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    rsqrtss %xmm0, %xmm1
 ; SSE-NEXT:    movaps %xmm0, %xmm2
@@ -72,7 +119,7 @@ define float @finite_f32_estimate(float %f) #1 {
 ; SSE-NEXT:    andnps %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: finite_f32_estimate:
+; AVX1-LABEL: finite_f32_estimate_daz:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vrsqrtss %xmm0, %xmm0, %xmm1
 ; AVX1-NEXT:    vmulss %xmm1, %xmm0, %xmm2
@@ -85,7 +132,7 @@ define float @finite_f32_estimate(float %f) #1 {
 ; AVX1-NEXT:    vandnps %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
-; AVX512-LABEL: finite_f32_estimate:
+; AVX512-LABEL: finite_f32_estimate_daz:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vrsqrtss %xmm0, %xmm0, %xmm1
 ; AVX512-NEXT:    vmulss %xmm1, %xmm0, %xmm2
@@ -516,4 +563,4 @@ attributes #0 = { "unsafe-fp-math"="true" "reciprocal-estimates"="!sqrtf,!vec-sq
 attributes #1 = { "unsafe-fp-math"="true" "reciprocal-estimates"="sqrt,vec-sqrt" }
 attributes #2 = { nounwind readnone }
 attributes #3 = { "unsafe-fp-math"="true" "reciprocal-estimates"="sqrt,vec-sqrt" "denormal-fp-math"="ieee" }
-
+attributes #4 = { "unsafe-fp-math"="true" "reciprocal-estimates"="sqrt,vec-sqrt" "denormal-fp-math"="ieee,preserve-sign" }

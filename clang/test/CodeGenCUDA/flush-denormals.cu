@@ -39,7 +39,7 @@
 extern "C" __device__ void foo() {}
 
 // FTZ: attributes #0 = {{.*}} "denormal-fp-math-f32"="preserve-sign,preserve-sign"
-// NOFTZ: attributes #0 = {{.*}} "denormal-fp-math-f32"="ieee,ieee"
+// NOFTZ-NOT: "denormal-fp-math-f32"
 
 // AMDNOFTZ: attributes #0 = {{.*}}+fp32-denormals{{.*}}+fp64-fp16-denormals
 // AMDFTZ: attributes #0 = {{.*}}+fp64-fp16-denormals{{.*}}-fp32-denormals
