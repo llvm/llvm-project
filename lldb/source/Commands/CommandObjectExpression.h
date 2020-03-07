@@ -14,7 +14,9 @@
 #include "lldb/Interpreter/OptionGroupBoolean.h"
 #include "lldb/Interpreter/OptionGroupFormat.h"
 #include "lldb/Interpreter/OptionGroupValueObjectDisplay.h"
+#include "lldb/Target/Target.h"
 #include "lldb/lldb-private-enumerations.h"
+
 namespace lldb_private {
 
 class CommandObjectExpression : public CommandObjectRaw,
@@ -64,6 +66,10 @@ protected:
                                 StringList &lines) override;
 
   bool DoExecute(llvm::StringRef command, CommandReturnObject &result) override;
+
+  /// Return the appropriate expression options used for evaluating the
+  /// expression in the given target.
+  EvaluateExpressionOptions GetEvalOptions(const Target &target);
 
   bool EvaluateExpression(llvm::StringRef expr, Stream *output_stream,
                           Stream *error_stream,
