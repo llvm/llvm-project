@@ -1176,12 +1176,12 @@ void OpEmitter::genSideEffectInterfaceMethods() {
     unsigned index : 30;
 
     /// The kind of the location.
-    EffectKind kind : 2;
+    unsigned kind : 2;
   };
 
   StringMap<SmallVector<EffectLocation, 1>> interfaceEffects;
   auto resolveDecorators = [&](Operator::var_decorator_range decorators,
-                               unsigned index, EffectKind kind) {
+                               unsigned index, unsigned kind) {
     for (auto decorator : decorators)
       if (SideEffect *effect = dyn_cast<SideEffect>(&decorator))
         interfaceEffects[effect->getInterfaceTrait()].push_back(
