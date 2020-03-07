@@ -12772,13 +12772,13 @@ static SDValue lowerShuffleAsTruncBroadcast(const SDLoc &DL, MVT VT, SDValue V0,
   assert(Subtarget.hasAVX2() &&
          "We can only lower integer broadcasts with AVX2!");
 
-  EVT EltVT = VT.getVectorElementType();
-  EVT V0VT = V0.getValueType();
+  MVT EltVT = VT.getVectorElementType();
+  MVT V0VT = V0.getSimpleValueType();
 
   assert(VT.isInteger() && "Unexpected non-integer trunc broadcast!");
   assert(V0VT.isVector() && "Unexpected non-vector vector-sized value!");
 
-  EVT V0EltVT = V0VT.getVectorElementType();
+  MVT V0EltVT = V0VT.getVectorElementType();
   if (!V0EltVT.isInteger())
     return SDValue();
 
@@ -12842,7 +12842,7 @@ static bool isSingleSHUFPSMask(ArrayRef<int> Mask) {
 static SDValue lowerShuffleOfExtractsAsVperm(const SDLoc &DL, SDValue N0,
                                              SDValue N1, ArrayRef<int> Mask,
                                              SelectionDAG &DAG) {
-  EVT VT = N0.getValueType();
+  MVT VT = N0.getSimpleValueType();
   assert((VT.is128BitVector() &&
           (VT.getScalarSizeInBits() == 32 || VT.getScalarSizeInBits() == 64)) &&
          "VPERM* family of shuffles requires 32-bit or 64-bit elements");
@@ -12855,7 +12855,7 @@ static SDValue lowerShuffleOfExtractsAsVperm(const SDLoc &DL, SDValue N0,
     return SDValue();
 
   SDValue WideVec = N0.getOperand(0);
-  EVT WideVT = WideVec.getValueType();
+  MVT WideVT = WideVec.getSimpleValueType();
   if (!WideVT.is256BitVector() || !isa<ConstantSDNode>(N0.getOperand(1)) ||
       !isa<ConstantSDNode>(N1.getOperand(1)))
     return SDValue();
@@ -13007,7 +13007,7 @@ static SDValue lowerShuffleAsBroadcast(const SDLoc &DL, MVT VT, SDValue V1,
     // Reduce the vector load and shuffle to a broadcasted scalar load.
     LoadSDNode *Ld = cast<LoadSDNode>(V);
     SDValue BaseAddr = Ld->getOperand(1);
-    EVT SVT = VT.getScalarType();
+    MVT SVT = VT.getScalarType();
     unsigned Offset = BroadcastIdx * SVT.getStoreSize();
     assert((int)(Offset * 8) == BitOffset && "Unexpected bit-offset");
     SDValue NewAddr = DAG.getMemBasePlusOffset(BaseAddr, Offset, DL);
