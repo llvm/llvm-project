@@ -977,3 +977,33 @@ define <2 x double> @negated_mag_arg_vec(<2 x double> %x) {
   %r = call arcp <2 x double> @llvm.copysign.v2f64(<2 x double> %negx, <2 x double> %x)
   ret <2 x double> %r
 }
+
+declare i32 @passthru_i32(i32 returned)
+declare i8* @passthru_p8(i8* returned)
+
+define i32 @returned_const_int_arg() {
+; CHECK-LABEL: @returned_const_int_arg(
+; CHECK-NEXT:    [[X:%.*]] = call i32 @passthru_i32(i32 42)
+; CHECK-NEXT:    ret i32 42
+;
+  %x = call i32 @passthru_i32(i32 42)
+  ret i32 %x
+}
+
+define i8* @returned_const_ptr_arg() {
+; CHECK-LABEL: @returned_const_ptr_arg(
+; CHECK-NEXT:    [[X:%.*]] = call i8* @passthru_p8(i8* null)
+; CHECK-NEXT:    ret i8* [[X]]
+;
+  %x = call i8* @passthru_p8(i8* null)
+  ret i8* %x
+}
+
+define i32 @returned_var_arg(i32 %arg) {
+; CHECK-LABEL: @returned_var_arg(
+; CHECK-NEXT:    [[X:%.*]] = call i32 @passthru_i32(i32 [[ARG:%.*]])
+; CHECK-NEXT:    ret i32 [[X]]
+;
+  %x = call i32 @passthru_i32(i32 %arg)
+  ret i32 %x
+}
