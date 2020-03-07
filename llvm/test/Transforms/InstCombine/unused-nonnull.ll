@@ -12,13 +12,8 @@ define i32 @main(i32 %argc, i8** %argv) #0 {
 ; CHECK-SAME: (i32 [[ARGC:%.*]], i8** nocapture readnone [[ARGV:%.*]]) local_unnamed_addr #0
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp slt i32 [[ARGC]], 2
-; CHECK-NEXT:    br i1 [[TMP0]], label [[DONE:%.*]], label [[DO_WORK:%.*]]
-; CHECK:       do_work:
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @compute(i8* undef, i32 [[ARGC]])
-; CHECK-NEXT:    br label [[DONE]]
-; CHECK:       done:
-; CHECK-NEXT:    [[RETVAL:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[TMP1]], [[DO_WORK]] ]
-; CHECK-NEXT:    ret i32 [[RETVAL]]
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[TMP0]], i32 0, i32 [[ARGC]]
+; CHECK-NEXT:    ret i32 [[SPEC_SELECT]]
 ;
 entry:
   %0 = getelementptr inbounds i8*, i8** %argv, i32 0

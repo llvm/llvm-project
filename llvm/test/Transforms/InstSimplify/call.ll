@@ -978,6 +978,10 @@ define <2 x double> @negated_mag_arg_vec(<2 x double> %x) {
   ret <2 x double> %r
 }
 
+; We handle the "returned" attribute only in InstCombine, because the fact
+; that this simplification may replace one call with another may cause issues
+; for call graph passes.
+
 declare i32 @passthru_i32(i32 returned)
 declare i8* @passthru_p8(i8* returned)
 
