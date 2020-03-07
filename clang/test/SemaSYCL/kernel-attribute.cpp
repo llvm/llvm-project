@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 -fsyntax-only -fsycl-is-device -verify %s
+// RUN: %clang_cc1 -std=c++11 -fsyntax-only -fsycl -fsycl-is-device -verify %s
 
 // Only function templates
 [[clang::sycl_kernel]] int gv2 = 0; // expected-warning {{'sycl_kernel' attribute only applies to function templates}}
