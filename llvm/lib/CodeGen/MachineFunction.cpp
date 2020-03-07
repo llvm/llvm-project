@@ -284,15 +284,7 @@ DenormalMode MachineFunction::getDenormalMode(const fltSemantics &FPType) const 
   // TODO: Should probably avoid the connection to the IR and store directly
   // in the MachineFunction.
   Attribute Attr = F.getFnAttribute("denormal-fp-math");
-
-  // FIXME: This should assume IEEE behavior on an unspecified
-  // attribute. However, the one current user incorrectly assumes a non-IEEE
-  // target by default.
-  StringRef Val = Attr.getValueAsString();
-  if (Val.empty())
-    return DenormalMode::getInvalid();
-
-  return parseDenormalFPAttribute(Val);
+  return parseDenormalFPAttribute(Attr.getValueAsString());
 }
 
 /// Should we be emitting segmented stack stuff for the function

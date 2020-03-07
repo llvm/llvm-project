@@ -60,9 +60,9 @@ __global__ void kernel() { lib_fn(); }
 // CHECK-SAME: convergent
 // CHECK-SAME: norecurse
 
-// FTZ: "denormal-fp-math"="ieee,ieee"
+// FTZ-NOT: "denormal-fp-math"
 // FTZ-SAME: "denormal-fp-math-f32"="preserve-sign,preserve-sign"
-// NOFTZ-SAME: "denormal-fp-math-f32"="ieee,ieee"
+// NOFTZ-NOT: "denormal-fp-math-f32"
 
 // CHECK-SAME: "no-trapping-math"="true"
 
@@ -75,11 +75,11 @@ __global__ void kernel() { lib_fn(); }
 // CHECK-SAME: convergent
 // CHECK-NOT: norecurse
 
-// FTZ-SAME: "denormal-fp-math"="ieee,ieee"
-// NOFTZ-SAME: "denormal-fp-math"="ieee,ieee"
+// FTZ-NOT: "denormal-fp-math"
+// NOFTZ-NOT: "denormal-fp-math"
 
 // FTZ-SAME: "denormal-fp-math-f32"="preserve-sign,preserve-sign"
-// NOFTZ-SAME: "denormal-fp-math-f32"="ieee,ieee"
+// NOFTZ-NOT: "denormal-fp-math-f32"
 
 // CHECK-SAME: "no-trapping-math"="true"
 
