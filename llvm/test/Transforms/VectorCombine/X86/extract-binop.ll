@@ -334,3 +334,55 @@ define float @ext0_ext3_fmul_extra_use2(<4 x float> %x) {
   %r = fmul ninf nsz float %e0, %e1
   ret float %r
 }
+
+define float @ext0_ext4_fmul_v8f32(<8 x float> %x) {
+; CHECK-LABEL: @ext0_ext4_fmul_v8f32(
+; CHECK-NEXT:    [[E0:%.*]] = extractelement <8 x float> [[X:%.*]], i32 0
+; CHECK-NEXT:    [[E1:%.*]] = extractelement <8 x float> [[X]], i32 4
+; CHECK-NEXT:    [[R:%.*]] = fadd float [[E0]], [[E1]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %e0 = extractelement <8 x float> %x, i32 0
+  %e1 = extractelement <8 x float> %x, i32 4
+  %r = fadd float %e0, %e1
+  ret float %r
+}
+
+define float @ext7_ext4_fmul_v8f32(<8 x float> %x) {
+; CHECK-LABEL: @ext7_ext4_fmul_v8f32(
+; CHECK-NEXT:    [[E0:%.*]] = extractelement <8 x float> [[X:%.*]], i32 7
+; CHECK-NEXT:    [[E1:%.*]] = extractelement <8 x float> [[X]], i32 4
+; CHECK-NEXT:    [[R:%.*]] = fadd float [[E0]], [[E1]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %e0 = extractelement <8 x float> %x, i32 7
+  %e1 = extractelement <8 x float> %x, i32 4
+  %r = fadd float %e0, %e1
+  ret float %r
+}
+
+define float @ext0_ext8_fmul_v16f32(<16 x float> %x) {
+; CHECK-LABEL: @ext0_ext8_fmul_v16f32(
+; CHECK-NEXT:    [[E0:%.*]] = extractelement <16 x float> [[X:%.*]], i32 0
+; CHECK-NEXT:    [[E1:%.*]] = extractelement <16 x float> [[X]], i32 8
+; CHECK-NEXT:    [[R:%.*]] = fadd float [[E0]], [[E1]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %e0 = extractelement <16 x float> %x, i32 0
+  %e1 = extractelement <16 x float> %x, i32 8
+  %r = fadd float %e0, %e1
+  ret float %r
+}
+
+define float @ext14_ext15_fmul_v16f32(<16 x float> %x) {
+; CHECK-LABEL: @ext14_ext15_fmul_v16f32(
+; CHECK-NEXT:    [[E0:%.*]] = extractelement <16 x float> [[X:%.*]], i32 14
+; CHECK-NEXT:    [[E1:%.*]] = extractelement <16 x float> [[X]], i32 15
+; CHECK-NEXT:    [[R:%.*]] = fadd float [[E0]], [[E1]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %e0 = extractelement <16 x float> %x, i32 14
+  %e1 = extractelement <16 x float> %x, i32 15
+  %r = fadd float %e0, %e1
+  ret float %r
+}
