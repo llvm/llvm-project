@@ -3722,9 +3722,15 @@ def warn_int_to_void_pointer_cast : Warning<
 def warn_pointer_to_int_cast : Warning<
   "cast to smaller integer type %1 from %0">,
   InGroup<PointerToIntCast>;
+def warn_pointer_to_enum_cast : Warning<
+  warn_pointer_to_int_cast.Text>,
+  InGroup<PointerToEnumCast>;
 def warn_void_pointer_to_int_cast : Warning<
   "cast to smaller integer type %1 from %0">,
   InGroup<VoidPointerToIntCast>;
+def warn_void_pointer_to_enum_cast : Warning<
+  warn_void_pointer_to_int_cast.Text>,
+  InGroup<VoidPointerToEnumCast>;
 def ext_ms_pointer_to_int_cast : ExtWarn<
   "cast to smaller integer type %1 from %0 is a Microsoft extension">,
 InGroup<MicrosoftCast>;
