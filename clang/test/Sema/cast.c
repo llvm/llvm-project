@@ -186,3 +186,23 @@ void *intToPointerCast2(X x) {
 void *intToPointerCast3() {
   return (void*)(1 + 3);
 }
+
+void voidPointerToEnumCast(VoidPtr v) {
+  (void)(X) v; // expected-warning{{cast to smaller integer type 'X' from 'VoidPtr' (aka 'void *')}}
+  // Test that casts to void* can be controlled separately
+  // from other -Wpointer-to-enum-cast warnings.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wvoid-pointer-to-enum-cast"
+  (void)(X) v; // no-warning
+#pragma clang diagnostic pop
+}
+
+void pointerToEnumCast(CharPtr v) {
+  (void)(X) v; // expected-warning{{cast to smaller integer type 'X' from 'CharPtr' (aka 'char *')}}
+  // Test that casts to void* can be controlled separately
+  // from other -Wpointer-to-enum-cast warnings.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wvoid-pointer-to-enum-cast"
+  (void)(X) v; // expected-warning{{cast to smaller integer type 'X' from 'CharPtr' (aka 'char *')}}
+#pragma clang diagnostic pop
+}
