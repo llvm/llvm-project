@@ -35074,6 +35074,31 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
     return R;
 
   switch (Opcode) {
+  case X86ISD::MOVDDUP: {
+    SDValue Src = N.getOperand(0);
+    // Turn a 128-bit MOVDDUP of a full vector load into movddup+vzload.
+    if (VT == MVT::v2f64 && Src.hasOneUse() &&
+        ISD::isNormalLoad(Src.getNode())) {
+      LoadSDNode *LN = cast<LoadSDNode>(Src);
+      // Unless the load is volatile or atomic.
+      if (LN->isSimple()) {
+        SDVTList Tys = DAG.getVTList(MVT::v2f64, MVT::Other);
+        SDValue Ops[] = { LN->getChain(), LN->getBasePtr() };
+        SDValue VZLoad =
+            DAG.getMemIntrinsicNode(X86ISD::VZEXT_LOAD, DL, Tys, Ops, MVT::f64,
+                                    LN->getPointerInfo(),
+                                    LN->getAlignment(),
+                                    LN->getMemOperand()->getFlags());
+        SDValue Movddup = DAG.getNode(X86ISD::MOVDDUP, DL, MVT::v2f64, VZLoad);
+        DCI.CombineTo(N.getNode(), Movddup);
+        DAG.ReplaceAllUsesOfValueWith(SDValue(LN, 1), VZLoad.getValue(1));
+        DCI.recursivelyDeleteUnusedNodes(LN);
+        return N; // Return N so it doesn't get rechecked!
+      }
+    }
+
+    return SDValue();
+  }
   case X86ISD::VBROADCAST: {
     SDValue Src = N.getOperand(0);
     SDValue BC = peekThroughBitcasts(Src);
@@ -35155,6 +35180,26 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
         SDValue BcastLd =
             DAG.getMemIntrinsicNode(X86ISD::VBROADCAST_LOAD, DL, Tys, Ops,
                                     LN->getMemoryVT(), LN->getMemOperand());
+        DCI.CombineTo(N.getNode(), BcastLd);
+        DAG.ReplaceAllUsesOfValueWith(SDValue(LN, 1), BcastLd.getValue(1));
+        DCI.recursivelyDeleteUnusedNodes(LN);
+        return N; // Return N so it doesn't get rechecked!
+      }
+    }
+
+    // vbroadcast(vector load X) -> vbroadcast_load
+    if (SrcVT == MVT::v2f64 && Src.hasOneUse() &&
+        ISD::isNormalLoad(Src.getNode())) {
+      LoadSDNode *LN = cast<LoadSDNode>(Src);
+      // Unless the load is volatile or atomic.
+      if (LN->isSimple()) {
+        SDVTList Tys = DAG.getVTList(VT, MVT::Other);
+        SDValue Ops[] = { LN->getChain(), LN->getBasePtr() };
+        SDValue BcastLd =
+            DAG.getMemIntrinsicNode(X86ISD::VBROADCAST_LOAD, DL, Tys, Ops,
+                                    MVT::f64, LN->getPointerInfo(),
+                                    LN->getAlignment(),
+                                    LN->getMemOperand()->getFlags());
         DCI.CombineTo(N.getNode(), BcastLd);
         DAG.ReplaceAllUsesOfValueWith(SDValue(LN, 1), BcastLd.getValue(1));
         DCI.recursivelyDeleteUnusedNodes(LN);
