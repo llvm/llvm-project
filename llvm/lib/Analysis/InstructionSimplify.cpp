@@ -5330,6 +5330,11 @@ static Value *simplifyIntrinsic(CallBase *Call, const SimplifyQuery &Q) {
 Value *llvm::SimplifyCall(CallBase *Call, const SimplifyQuery &Q) {
   Value *Callee = Call->getCalledValue();
 
+  // musttail calls can only be simplified if they are also DCEd.
+  // As we can't guarantee this here, don't simplify them.
+  if (Call->isMustTailCall())
+    return nullptr;
+
   // call undef -> undef
   // call null -> undef
   if (isa<UndefValue>(Callee) || isa<ConstantPointerNull>(Callee))
@@ -5512,6 +5517,9 @@ Value *llvm::SimplifyInstruction(Instruction *I, const SimplifyQuery &SQ,
     break;
   case Instruction::Call: {
     Result = SimplifyCall(cast<CallInst>(I), Q);
+    // Don't perform known bits simplification below for musttail calls.
+    if (cast<CallInst>(I)->isMustTailCall())
+      return Result;
     break;
   }
   case Instruction::Freeze:
