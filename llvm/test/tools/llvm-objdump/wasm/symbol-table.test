@@ -1,4 +1,4 @@
-RUN: llvm-objdump -t %p/../Inputs/trivial.obj.wasm | FileCheck %s
+RUN: llvm-objdump -t %p/Inputs/trivial.obj.wasm | FileCheck %s
 
 CHECK:      SYMBOL TABLE:
 CHECK-NEXT: 00000001 g     F CODE	main
