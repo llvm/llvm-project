@@ -519,6 +519,13 @@ static bool shouldSkipFunction(const Decl *D,
   if (VisitedAsTopLevel.count(D))
     return true;
 
+  // Skip analysis of inheriting constructors as top-level functions. These
+  // constructors don't even have a body written down in the code, so even if
+  // we find a bug, we won't be able to display it.
+  if (const auto *CD = dyn_cast<CXXConstructorDecl>(D))
+    if (CD->isInheritingConstructor())
+      return true;
+
   // We want to re-analyse the functions as top level in the following cases:
   // - The 'init' methods should be reanalyzed because
   //   ObjCNonNilReturnValueChecker assumes that '[super init]' never returns
