@@ -71,6 +71,10 @@ def WriteFClass32   : SchedWrite;    // 32-bit floating point classify
 def WriteFClass64   : SchedWrite;    // 64-bit floating point classify
 def WriteFCmp32     : SchedWrite;    // 32-bit floating point compare
 def WriteFCmp64     : SchedWrite;    // 64-bit floating point compare
+def WriteFSGNJ32    : SchedWrite;    // 32-bit floating point sign-injection
+def WriteFSGNJ64    : SchedWrite;    // 64-bit floating point sign-injection
+def WriteFMinMax32  : SchedWrite;    // 32-bit floating point min or max
+def WriteFMinMax64  : SchedWrite;    // 64-bit floating point min or max
 
 def WriteFMovF32ToI32     : SchedWrite;
 def WriteFMovI32ToF32     : SchedWrite;
@@ -89,6 +93,7 @@ def ReadJmp         : SchedRead;
 def ReadJalr        : SchedRead;
 def ReadCSR         : SchedRead;
 def ReadMemBase     : SchedRead;
+def ReadFMemBase    : SchedRead;
 def ReadStoreData   : SchedRead;
 def ReadIALU        : SchedRead;
 def ReadIALU32      : SchedRead;    // 32-bit integer ALU operations on RV64I
@@ -120,6 +125,10 @@ def ReadFSqrt32     : SchedRead;    // 32-bit floating point sqrt
 def ReadFSqrt64     : SchedRead;    // 64-bit floating point sqrt
 def ReadFCmp32      : SchedRead;
 def ReadFCmp64      : SchedRead;
+def ReadFSGNJ32     : SchedRead;
+def ReadFSGNJ64     : SchedRead;
+def ReadFMinMax32   : SchedRead;
+def ReadFMinMax64   : SchedRead;
 def ReadFCvtF32ToI32     : SchedRead;
 def ReadFCvtF32ToI64     : SchedRead;
 def ReadFCvtF64ToI32     : SchedRead;
