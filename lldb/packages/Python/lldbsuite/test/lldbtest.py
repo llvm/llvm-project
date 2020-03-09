@@ -1241,6 +1241,8 @@ class Base(unittest2.TestCase):
         arch = module.getArchitecture()
         if arch == 'amd64':
             arch = 'x86_64'
+        if arch in ['armv7l', 'armv8l'] :
+            arch = 'arm'
         return arch
 
     def getLldbArchitecture(self):
