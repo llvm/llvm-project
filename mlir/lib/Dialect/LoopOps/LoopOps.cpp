@@ -407,7 +407,7 @@ static ParseResult parseParallelOp(OpAsmParser &parser,
       parser.resolveOperands(upper, builder.getIndexType(), result.operands))
     return failure();
 
-  // Parse step value.
+  // Parse step values.
   SmallVector<OpAsmParser::OperandType, 4> steps;
   if (parser.parseKeyword("step") ||
       parser.parseOperandList(steps, ivs.size(),
@@ -415,13 +415,17 @@ static ParseResult parseParallelOp(OpAsmParser &parser,
       parser.resolveOperands(steps, builder.getIndexType(), result.operands))
     return failure();
 
-  // Parse step value.
+  // Parse init values.
   SmallVector<OpAsmParser::OperandType, 4> initVals;
   if (succeeded(parser.parseOptionalKeyword("init"))) {
     if (parser.parseOperandList(initVals, /*requiredOperandCount=*/-1,
                                 OpAsmParser::Delimiter::Paren))
       return failure();
   }
+
+  // Parse optional results in case there is a reduce.
+  if (parser.parseOptionalArrowTypeList(result.types))
+    return failure();
 
   // Now parse the body.
   Region *body = result.addRegion();
@@ -437,9 +441,8 @@ static ParseResult parseParallelOp(OpAsmParser &parser,
                                 static_cast<int32_t>(steps.size()),
                                 static_cast<int32_t>(initVals.size())}));
 
-  // Parse attributes and optional results (in case there is a reduce).
-  if (parser.parseOptionalAttrDict(result.attributes) ||
-      parser.parseOptionalColonTypeList(result.types))
+  // Parse attributes.
+  if (parser.parseOptionalAttrDict(result.attributes))
     return failure();
 
   if (!initVals.empty())
@@ -457,11 +460,10 @@ static void print(OpAsmPrinter &p, ParallelOp op) {
     << ")";
   if (!op.initVals().empty())
     p << " init (" << op.initVals() << ")";
+  p.printOptionalArrowTypeList(op.getResultTypes());
   p.printRegion(op.region(), /*printEntryBlockArgs=*/false);
   p.printOptionalAttrDict(
       op.getAttrs(), /*elidedAttrs=*/ParallelOp::getOperandSegmentSizeAttr());
-  if (!op.results().empty())
-    p << " : " << op.getResultTypes();
 }
 
 ParallelOp mlir::loop::getParallelForInductionVarOwner(Value val) {
@@ -515,15 +517,15 @@ static ParseResult parseReduceOp(OpAsmParser &parser, OperationState &result) {
       parser.parseRParen())
     return failure();
 
+  Type resultType;
+  // Parse the type of the operand (and also what reduce computes on).
+  if (parser.parseColonType(resultType) ||
+      parser.resolveOperand(operand, resultType, result.operands))
+    return failure();
+
   // Now parse the body.
   Region *body = result.addRegion();
   if (parser.parseRegion(*body, /*arguments=*/{}, /*argTypes=*/{}))
-    return failure();
-
-  // And the type of the operand (and also what reduce computes on).
-  Type resultType;
-  if (parser.parseColonType(resultType) ||
-      parser.resolveOperand(operand, resultType, result.operands))
     return failure();
 
   return success();
@@ -531,8 +533,8 @@ static ParseResult parseReduceOp(OpAsmParser &parser, OperationState &result) {
 
 static void print(OpAsmPrinter &p, ReduceOp op) {
   p << op.getOperationName() << "(" << op.operand() << ") ";
-  p.printRegion(op.reductionOperator());
   p << " : " << op.operand().getType();
+  p.printRegion(op.reductionOperator());
 }
 
 //===----------------------------------------------------------------------===//
