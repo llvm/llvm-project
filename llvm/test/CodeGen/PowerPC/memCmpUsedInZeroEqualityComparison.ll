@@ -90,27 +90,23 @@ define signext i32 @zeroEqualityTest03(i8* %x, i8* %y) {
 define signext i32 @zeroEqualityTest04() {
 ; CHECK-LABEL: zeroEqualityTest04:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addis 3, 2, .LzeroEqualityTest02.buffer1@toc@ha
-; CHECK-NEXT:    addis 4, 2, .LzeroEqualityTest02.buffer2@toc@ha
-; CHECK-NEXT:    addi 6, 3, .LzeroEqualityTest02.buffer1@toc@l
-; CHECK-NEXT:    addi 5, 4, .LzeroEqualityTest02.buffer2@toc@l
-; CHECK-NEXT:    ldbrx 3, 0, 6
-; CHECK-NEXT:    ldbrx 4, 0, 5
-; CHECK-NEXT:    cmpld 3, 4
-; CHECK-NEXT:    bne 0, .LBB3_2
+; CHECK-NEXT:    b .LBB3_2
 ; CHECK-NEXT:  # %bb.1: # %loadbb1
-; CHECK-NEXT:    li 4, 8
-; CHECK-NEXT:    ldbrx 3, 6, 4
-; CHECK-NEXT:    ldbrx 4, 5, 4
+; CHECK-NEXT:    li 3, 0
 ; CHECK-NEXT:    li 5, 0
-; CHECK-NEXT:    cmpld 3, 4
-; CHECK-NEXT:    beq 0, .LBB3_3
-; CHECK-NEXT:  .LBB3_2: # %res_block
+; CHECK-NEXT:    li 4, 0
+; CHECK-NEXT:    b .LBB3_4
+; CHECK-NEXT:  .LBB3_2:
+; CHECK-NEXT:    li 3, 1
+; CHECK-NEXT:    li 4, 3
+; CHECK-NEXT:    sldi 3, 3, 58
+; CHECK-NEXT:    sldi 4, 4, 56
+; CHECK-NEXT:  # %bb.3: # %res_block
 ; CHECK-NEXT:    cmpld 3, 4
 ; CHECK-NEXT:    li 3, 1
 ; CHECK-NEXT:    li 4, -1
 ; CHECK-NEXT:    isel 5, 4, 3, 0
-; CHECK-NEXT:  .LBB3_3: # %endblock
+; CHECK-NEXT:  .LBB3_4: # %endblock
 ; CHECK-NEXT:    extsw 3, 5
 ; CHECK-NEXT:    neg 3, 3
 ; CHECK-NEXT:    rldicl 3, 3, 1, 63
@@ -126,28 +122,20 @@ define signext i32 @zeroEqualityTest04() {
 define signext i32 @zeroEqualityTest05() {
 ; CHECK-LABEL: zeroEqualityTest05:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addis 3, 2, .LzeroEqualityTest03.buffer1@toc@ha
-; CHECK-NEXT:    addis 4, 2, .LzeroEqualityTest03.buffer2@toc@ha
-; CHECK-NEXT:    addi 6, 3, .LzeroEqualityTest03.buffer1@toc@l
-; CHECK-NEXT:    addi 5, 4, .LzeroEqualityTest03.buffer2@toc@l
-; CHECK-NEXT:    ldbrx 3, 0, 6
-; CHECK-NEXT:    ldbrx 4, 0, 5
-; CHECK-NEXT:    cmpld 3, 4
-; CHECK-NEXT:    bne 0, .LBB4_2
+; CHECK-NEXT:    li 3, 0
+; CHECK-NEXT:    li 4, 0
 ; CHECK-NEXT:  # %bb.1: # %loadbb1
-; CHECK-NEXT:    li 4, 8
-; CHECK-NEXT:    ldbrx 3, 6, 4
-; CHECK-NEXT:    ldbrx 4, 5, 4
-; CHECK-NEXT:    li 5, 0
-; CHECK-NEXT:    cmpld 3, 4
-; CHECK-NEXT:    beq 0, .LBB4_3
-; CHECK-NEXT:  .LBB4_2: # %res_block
+; CHECK-NEXT:    li 3, 0
+; CHECK-NEXT:  # %bb.2:
+; CHECK-NEXT:    lis 3, 768
+; CHECK-NEXT:    lis 4, 1024
+; CHECK-NEXT:  # %bb.3: # %res_block
 ; CHECK-NEXT:    cmpld 3, 4
 ; CHECK-NEXT:    li 3, 1
 ; CHECK-NEXT:    li 4, -1
-; CHECK-NEXT:    isel 5, 4, 3, 0
-; CHECK-NEXT:  .LBB4_3: # %endblock
-; CHECK-NEXT:    nor 3, 5, 5
+; CHECK-NEXT:    isel 3, 4, 3, 0
+; CHECK-NEXT:  # %bb.4: # %endblock
+; CHECK-NEXT:    nor 3, 3, 3
 ; CHECK-NEXT:    rlwinm 3, 3, 1, 31, 31
 ; CHECK-NEXT:    blr
   %call = tail call signext i32 @memcmp(i8* bitcast ([4 x i32]* @zeroEqualityTest03.buffer1 to i8*), i8* bitcast ([4 x i32]* @zeroEqualityTest03.buffer2 to i8*), i64 16)
