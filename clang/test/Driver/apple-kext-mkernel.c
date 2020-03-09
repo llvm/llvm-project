@@ -4,7 +4,7 @@
 // CHECK-X86: "-disable-red-zone"
 // CHECK-X86: "-fno-builtin"
 // CHECK-X86: "-fno-rtti"
-// CHECK-X86-NOT: "-fcommon"
+// CHECK-X86: "-fno-common"
 
 // RUN: %clang -target x86_64-apple-darwin10 -mkernel -### -fsyntax-only -fbuiltin -fcommon %s 2>&1 | FileCheck --check-prefix=CHECK-X86-2 %s
 
@@ -21,7 +21,7 @@
 // CHECK-ARM-NOT: "-target-feature" "+strict-align"
 // CHECK-ARM: "-fno-builtin"
 // CHECK-ARM: "-fno-rtti"
-// CHECK-ARM-NOT: "-fcommon"
+// CHECK-ARM: "-fno-common"
 
 // RUN: %clang -target x86_64-apple-darwin10 \
 // RUN:   -Werror -fno-builtin -fno-exceptions -fno-common -fno-rtti \
