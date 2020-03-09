@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/IR/KnowledgeRetention.h"
+#include "llvm/Transforms/Utils/KnowledgeRetention.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
