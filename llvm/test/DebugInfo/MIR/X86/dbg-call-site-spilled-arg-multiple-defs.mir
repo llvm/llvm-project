@@ -2,7 +2,7 @@
 # into the forwarding register has a memory operand and multiple defs.
 # The generated code was modified a bit in order to have the scenario.
 #
-# RUN: llc -debug-entry-values -start-after=machineverifier -filetype=obj %s -o - \
+# RUN: llc -emit-call-site-info -debug-entry-values -start-after=machineverifier -filetype=obj %s -o - \
 # RUN:  | llvm-dwarfdump - | FileCheck %s --implicit-check-not=DW_TAG_GNU_call_site_parameter
 #
 # Command: clang -g -O2 -Xclang -femit-debug-entry-values test.c

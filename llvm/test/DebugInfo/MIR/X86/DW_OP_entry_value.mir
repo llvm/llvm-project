@@ -1,4 +1,4 @@
-# RUN: llc -debug-entry-values -start-before=livedebugvalues -mtriple=x86_64-apple-darwin -o %t %s -filetype=obj
+# RUN: llc -emit-call-site-info -debug-entry-values -start-before=livedebugvalues -mtriple=x86_64-apple-darwin -o %t %s -filetype=obj
 # RUN: llvm-dwarfdump %t | FileCheck %s
 #
 # int global;

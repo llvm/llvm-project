@@ -1,4 +1,4 @@
-# RUN: llc -mtriple aarch64-linux-gnu -debug-entry-values -start-after=machineverifier -filetype=obj %s -o -| llvm-dwarfdump -| FileCheck %s
+# RUN: llc -emit-call-site-info -mtriple aarch64-linux-gnu -debug-entry-values -start-after=machineverifier -filetype=obj %s -o -| llvm-dwarfdump -| FileCheck %s
 # Following code is used for producing this test case. Note that
 # some of argument loading instruction are modified in order to
 # cover certain cases.

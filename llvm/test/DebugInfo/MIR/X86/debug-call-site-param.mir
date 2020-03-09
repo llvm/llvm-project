@@ -2,8 +2,8 @@
 # When the debugger tuning is set to gdb, use GNU opcodes.
 # For lldb, use the standard DWARF5 opcodes.
 
-# RUN: llc -debug-entry-values -debugger-tune=gdb -filetype=obj -mtriple=x86_64-unknown-unknown -start-after=machineverifier -o - %s | llvm-dwarfdump - | FileCheck %s -check-prefixes=CHECK-GNU
-# RUN: llc -debug-entry-values -debugger-tune=lldb -filetype=obj -mtriple=x86_64-unknown-unknown -start-after=machineverifier -o - %s | llvm-dwarfdump - | FileCheck %s -check-prefixes=CHECK-DWARF5
+# RUN: llc -emit-call-site-info -debug-entry-values -debugger-tune=gdb -filetype=obj -mtriple=x86_64-unknown-unknown -start-after=machineverifier -o - %s | llvm-dwarfdump - | FileCheck %s -check-prefixes=CHECK-GNU
+# RUN: llc -emit-call-site-info -debug-entry-values -debugger-tune=lldb -filetype=obj -mtriple=x86_64-unknown-unknown -start-after=machineverifier -o - %s | llvm-dwarfdump - | FileCheck %s -check-prefixes=CHECK-DWARF5
 #
 # extern void foo(int *a, int b, int c, int d, int e, int f);
 # extern int getVal();

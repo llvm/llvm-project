@@ -492,6 +492,7 @@ static void initTargetOptions(llvm::TargetOptions &Options,
   Options.EmitAddrsig = CodeGenOpts.Addrsig;
   Options.EnableDebugEntryValues = CodeGenOpts.EnableDebugEntryValues;
   Options.ForceDwarfFrameSection = CodeGenOpts.ForceDwarfFrameSection;
+  Options.EmitCallSiteInfo = CodeGenOpts.EmitCallSiteInfo;
 
   Options.MCOptions.SplitDwarfFile = CodeGenOpts.SplitDwarfFile;
   Options.MCOptions.MCRelaxAll = CodeGenOpts.RelaxAll;
