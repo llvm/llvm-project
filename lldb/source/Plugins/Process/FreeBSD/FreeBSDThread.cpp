@@ -26,7 +26,6 @@
 #include "Plugins/Process/Utility/RegisterContextFreeBSD_x86_64.h"
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_arm.h"
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_arm64.h"
-#include "Plugins/Process/Utility/UnwindLLDB.h"
 #include "ProcessFreeBSD.h"
 #include "ProcessMonitor.h"
 #include "RegisterContextPOSIXProcessMonitor_arm.h"
@@ -254,8 +253,7 @@ FreeBSDThread::CreateRegisterContextForFrame(lldb_private::StackFrame *frame) {
   if (concrete_frame_idx == 0)
     reg_ctx_sp = GetRegisterContext();
   else {
-    assert(GetUnwinder());
-    reg_ctx_sp = GetUnwinder()->CreateRegisterContextForFrame(frame);
+    reg_ctx_sp = GetUnwinder().CreateRegisterContextForFrame(frame);
   }
 
   return reg_ctx_sp;
@@ -273,13 +271,6 @@ lldb::addr_t FreeBSDThread::GetThreadPointer() {
 bool FreeBSDThread::CalculateStopInfo() {
   SetStopInfo(m_stop_info_sp);
   return true;
-}
-
-Unwind *FreeBSDThread::GetUnwinder() {
-  if (!m_unwinder_up)
-    m_unwinder_up.reset(new UnwindLLDB(*this));
-
-  return m_unwinder_up.get();
 }
 
 void FreeBSDThread::DidStop() {
