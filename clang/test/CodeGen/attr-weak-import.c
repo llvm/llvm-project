@@ -20,7 +20,7 @@ extern int E __attribute__((weak_import));
 
 // CHECK: @A = global i32
 // CHECK-NOT: @B =
-// CHECK: @C = global i32
+// CHECK: @C = common global i32
 // CHECK: @D = global i32
 // CHECK: @E = global i32
 

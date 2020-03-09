@@ -21,24 +21,24 @@ int __thread __attribute__((tls_model("initial-exec"))) z;
 
 // CHECK-GD: @z1 = global i32 0
 // CHECK-GD: @f.y = internal thread_local global i32 0
-// CHECK-GD: @z2 = global i32 0
+// CHECK-GD: @z2 = common global i32 0
 // CHECK-GD: @x = thread_local global i32 0
 // CHECK-GD: @z = thread_local(initialexec) global i32 0
 
 // CHECK-LD: @z1 = global i32 0
 // CHECK-LD: @f.y = internal thread_local(localdynamic) global i32 0
-// CHECK-LD: @z2 = global i32 0
+// CHECK-LD: @z2 = common global i32 0
 // CHECK-LD: @x = thread_local(localdynamic) global i32 0
 // CHECK-LD: @z = thread_local(initialexec) global i32 0
 
 // CHECK-IE: @z1 = global i32 0
 // CHECK-IE: @f.y = internal thread_local(initialexec) global i32 0
-// CHECK-IE: @z2 = global i32 0
+// CHECK-IE: @z2 = common global i32 0
 // CHECK-IE: @x = thread_local(initialexec) global i32 0
 // CHECK-IE: @z = thread_local(initialexec) global i32 0
 
 // CHECK-LE: @z1 = global i32 0
 // CHECK-LE: @f.y = internal thread_local(localexec) global i32 0
-// CHECK-LE: @z2 = global i32 0
+// CHECK-LE: @z2 = common global i32 0
 // CHECK-LE: @x = thread_local(localexec) global i32 0
 // CHECK-LE: @z = thread_local(initialexec) global i32 0
