@@ -146,5 +146,5 @@ define double @test_sqrt64_refined_ftz(double %a) #0 #1 #2 {
 }
 
 attributes #0 = { "unsafe-fp-math" = "true" }
-attributes #1 = { "denormal-fp-math-f32" = "preserve-sign" }
+attributes #1 = { "denormal-fp-math-f32" = "preserve-sign,preserve-sign" }
 attributes #2 = { "reciprocal-estimates" = "rsqrtf:1,rsqrtd:1,sqrtf:1,sqrtd:1" }
