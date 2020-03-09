@@ -836,9 +836,8 @@ void RedundantExpressionCheck::registerMatchers(MatchFinder *Finder) {
       binaryOperator(anyOf(hasOperatorName("-"), hasOperatorName("/"),
                            hasOperatorName("%"), hasOperatorName("|"),
                            hasOperatorName("&"), hasOperatorName("^"),
-                           matchers::isComparisonOperator(),
-                           hasOperatorName("&&"), hasOperatorName("||"),
-                           hasOperatorName("=")),
+                           isComparisonOperator(), hasOperatorName("&&"),
+                           hasOperatorName("||"), hasOperatorName("=")),
                      operandsAreEquivalent(),
                      // Filter noisy false positives.
                      unless(isInTemplateInstantiation()),

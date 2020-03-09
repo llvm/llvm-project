@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/Utils/KnowledgeRetention.h"
+#include "llvm/IR/KnowledgeRetention.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -286,6 +286,23 @@ void llvm::fillMapFromAssume(CallInst &AssumeCI, RetainedKnowledgeMap &Result) {
     Lookup->second.Min = std::min(Val, Lookup->second.Min);
     Lookup->second.Max = std::max(Val, Lookup->second.Max);
   }
+}
+
+RetainedKnowledge llvm::getKnowledgeFromOperandInAssume(CallInst &AssumeCI,
+                                                        unsigned Idx) {
+  IntrinsicInst &Assume = cast<IntrinsicInst>(AssumeCI);
+  assert(Assume.getIntrinsicID() == Intrinsic::assume &&
+         "this function is intended to be used on llvm.assume");
+  CallBase::BundleOpInfo BOI = Assume.getBundleOpInfoForOperand(Idx);
+  RetainedKnowledge Result;
+  Result.AttrKind = Attribute::getAttrKindFromName(BOI.Tag->getKey());
+  Result.WasOn = getValueFromBundleOpInfo(Assume, BOI, BOIE_WasOn);
+  if (BOI.End - BOI.Begin > BOIE_Argument)
+    Result.ArgValue =
+        cast<ConstantInt>(getValueFromBundleOpInfo(Assume, BOI, BOIE_Argument))
+            ->getZExtValue();
+
+  return Result;
 }
 
 PreservedAnalyses AssumeBuilderPass::run(Function &F,

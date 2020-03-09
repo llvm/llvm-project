@@ -1784,6 +1784,17 @@ uint64_t mlir::affineDataCopyGenerate(Block::iterator begin,
   return totalCopyBuffersSizeInBytes;
 }
 
+// A convenience version of affineDataCopyGenerate for all ops in the body of
+// an AffineForOp.
+uint64_t mlir::affineDataCopyGenerate(AffineForOp forOp,
+                                      const AffineCopyOptions &copyOptions,
+                                      Optional<Value> filterMemRef,
+                                      DenseSet<Operation *> &copyNests) {
+  return affineDataCopyGenerate(forOp.getBody()->begin(),
+                                std::prev(forOp.getBody()->end()), copyOptions,
+                                filterMemRef, copyNests);
+}
+
 /// Gathers all AffineForOps in 'block' at 'currLoopDepth' in 'depthToLoops'.
 static void
 gatherLoopsInBlock(Block *block, unsigned currLoopDepth,

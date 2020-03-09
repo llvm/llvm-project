@@ -71,17 +71,16 @@ define i64 @extract_any_extend_vector_inreg_v16i64(<16 x i64> %a0, i32 %a1) noun
 ; X32-AVX-NEXT:    andl $-128, %esp
 ; X32-AVX-NEXT:    subl $384, %esp # imm = 0x180
 ; X32-AVX-NEXT:    movl 40(%ebp), %ecx
-; X32-AVX-NEXT:    vpbroadcastq 32(%ebp), %ymm0
-; X32-AVX-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; X32-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; X32-AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X32-AVX-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%esp)
 ; X32-AVX-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%esp)
 ; X32-AVX-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%esp)
-; X32-AVX-NEXT:    vmovdqa %ymm0, {{[0-9]+}}(%esp)
+; X32-AVX-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%esp)
 ; X32-AVX-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%esp)
 ; X32-AVX-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%esp)
 ; X32-AVX-NEXT:    vmovaps %ymm1, (%esp)
-; X32-AVX-NEXT:    vmovdqa %ymm0, {{[0-9]+}}(%esp)
+; X32-AVX-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%esp)
 ; X32-AVX-NEXT:    leal (%ecx,%ecx), %eax
 ; X32-AVX-NEXT:    andl $31, %eax
 ; X32-AVX-NEXT:    movl 128(%esp,%eax,4), %eax

@@ -34,7 +34,7 @@ struct StreamState {
 
   bool isOpened() const { return K == Opened; }
   bool isClosed() const { return K == Closed; }
-  //bool isOpenFailed() const { return K == OpenFailed; }
+  bool isOpenFailed() const { return K == OpenFailed; }
   //bool isEscaped() const { return K == Escaped; }
 
   bool operator==(const StreamState &X) const { return K == X.K; }
@@ -74,7 +74,7 @@ SVal getStreamArg(const FnDescription *Desc, const CallEvent &Call) {
 class StreamChecker
     : public Checker<check::PreCall, eval::Call, check::DeadSymbols> {
   mutable std::unique_ptr<BuiltinBug> BT_nullfp, BT_illegalwhence,
-      BT_doubleclose, BT_ResourceLeak;
+      BT_UseAfterClose, BT_UseAfterOpenFailed, BT_ResourceLeak;
 
 public:
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
@@ -88,7 +88,7 @@ private:
        {&StreamChecker::preFreopen, &StreamChecker::evalFreopen, 2}},
       {{"tmpfile"}, {nullptr, &StreamChecker::evalFopen, ArgNone}},
       {{"fclose", 1},
-       {&StreamChecker::preFclose, &StreamChecker::evalFclose, 0}},
+       {&StreamChecker::preDefault, &StreamChecker::evalFclose, 0}},
       {{"fread", 4}, {&StreamChecker::preDefault, nullptr, 3}},
       {{"fwrite", 4}, {&StreamChecker::preDefault, nullptr, 3}},
       {{"fseek", 3}, {&StreamChecker::preFseek, nullptr, 0}},
@@ -110,8 +110,6 @@ private:
   void evalFreopen(const FnDescription *Desc, const CallEvent &Call,
                    CheckerContext &C) const;
 
-  void preFclose(const FnDescription *Desc, const CallEvent &Call,
-                 CheckerContext &C) const;
   void evalFclose(const FnDescription *Desc, const CallEvent &Call,
                   CheckerContext &C) const;
 
@@ -128,12 +126,11 @@ private:
   ProgramStateRef ensureStreamNonNull(SVal StreamVal, CheckerContext &C,
                                       ProgramStateRef State) const;  
 
-  /// Check that the stream is not closed.
-  /// Return a state where the stream is guaranteed to not in closed state
-  /// (if data about it exists).
-  /// Generate error if the stream is provable in closed state.
-  ProgramStateRef ensureStreamNotClosed(SVal StreamVal, CheckerContext &C,
-                                        ProgramStateRef State) const;
+  /// Check that the stream is the opened state.
+  /// If the stream is known to be not opened an error is generated
+  /// and nullptr returned, otherwise the original state is returned.
+  ProgramStateRef ensureStreamOpened(SVal StreamVal, CheckerContext &C,
+                                     ProgramStateRef State) const;
 
   /// Check the legality of the 'whence' argument of 'fseek'.
   /// Generate error and return nullptr if it is found to be illegal.
@@ -263,16 +260,6 @@ void StreamChecker::evalFreopen(const FnDescription *Desc,
   C.addTransition(StateRetNull);
 }
 
-void StreamChecker::preFclose(const FnDescription *Desc, const CallEvent &Call,
-                              CheckerContext &C) const {
-  ProgramStateRef State = C.getState();
-  State = ensureStreamNotClosed(getStreamArg(Desc, Call), C, State);
-  if (!State)
-    return;
-
-  C.addTransition(State);
-}
-
 void StreamChecker::evalFclose(const FnDescription *Desc, const CallEvent &Call,
                                CheckerContext &C) const {
   ProgramStateRef State = C.getState();
@@ -299,6 +286,9 @@ void StreamChecker::preFseek(const FnDescription *Desc, const CallEvent &Call,
   State = ensureStreamNonNull(StreamVal, C, State);
   if (!State)
     return;
+  State = ensureStreamOpened(StreamVal, C, State);
+  if (!State)
+    return;
   State = ensureFseekWhenceCorrect(Call.getArgSVal(2), C, State);
   if (!State)
     return;
@@ -311,6 +301,9 @@ void StreamChecker::preDefault(const FnDescription *Desc, const CallEvent &Call,
   ProgramStateRef State = C.getState();
   SVal StreamVal = getStreamArg(Desc, Call);
   State = ensureStreamNonNull(StreamVal, C, State);
+  if (!State)
+    return;
+  State = ensureStreamOpened(StreamVal, C, State);
   if (!State)
     return;
 
@@ -343,9 +336,9 @@ StreamChecker::ensureStreamNonNull(SVal StreamVal, CheckerContext &C,
   return StateNotNull;
 }
 
-ProgramStateRef
-StreamChecker::ensureStreamNotClosed(SVal StreamVal, CheckerContext &C,
-                                     ProgramStateRef State) const {
+ProgramStateRef StreamChecker::ensureStreamOpened(SVal StreamVal,
+                                                  CheckerContext &C,
+                                                  ProgramStateRef State) const {
   SymbolRef Sym = StreamVal.getAsSymbol();
   if (!Sym)
     return State;
@@ -354,20 +347,40 @@ StreamChecker::ensureStreamNotClosed(SVal StreamVal, CheckerContext &C,
   if (!SS)
     return State;
 
-  // Check: Double close a File Descriptor could cause undefined behaviour.
-  // Conforming to man-pages
   if (SS->isClosed()) {
+    // Using a stream pointer after 'fclose' causes undefined behavior
+    // according to cppreference.com .
     ExplodedNode *N = C.generateErrorNode();
     if (N) {
-      if (!BT_doubleclose)
-        BT_doubleclose.reset(new BuiltinBug(
-            this, "Double fclose", "Try to close a file Descriptor already"
-                                   " closed. Cause undefined behaviour."));
+      if (!BT_UseAfterClose)
+        BT_UseAfterClose.reset(new BuiltinBug(this, "Closed stream",
+                                              "Stream might be already closed. "
+                                              "Causes undefined behaviour."));
       C.emitReport(std::make_unique<PathSensitiveBugReport>(
-          *BT_doubleclose, BT_doubleclose->getDescription(), N));
+          *BT_UseAfterClose, BT_UseAfterClose->getDescription(), N));
       return nullptr;
     }
 
+    return State;
+  }
+
+  if (SS->isOpenFailed()) {
+    // Using a stream that has failed to open is likely to cause problems.
+    // This should usually not occur because stream pointer is NULL.
+    // But freopen can cause a state when stream pointer remains non-null but
+    // failed to open.
+    ExplodedNode *N = C.generateErrorNode();
+    if (N) {
+      if (!BT_UseAfterOpenFailed)
+        BT_UseAfterOpenFailed.reset(
+            new BuiltinBug(this, "Invalid stream",
+                           "Stream might be invalid after "
+                           "(re-)opening it has failed. "
+                           "Can cause undefined behaviour."));
+      C.emitReport(std::make_unique<PathSensitiveBugReport>(
+          *BT_UseAfterOpenFailed, BT_UseAfterOpenFailed->getDescription(), N));
+      return nullptr;
+    }
     return State;
   }
 

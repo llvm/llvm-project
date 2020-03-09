@@ -102,11 +102,17 @@ f:
 }
 
 define i1 @cmp01_v2f64(<2 x double> %x, <2 x double> %y) {
-; CHECK-LABEL: @cmp01_v2f64(
-; CHECK-NEXT:    [[X0:%.*]] = extractelement <2 x double> [[X:%.*]], i32 0
-; CHECK-NEXT:    [[Y1:%.*]] = extractelement <2 x double> [[Y:%.*]], i32 1
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oge double [[X0]], [[Y1]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; SSE-LABEL: @cmp01_v2f64(
+; SSE-NEXT:    [[X0:%.*]] = extractelement <2 x double> [[X:%.*]], i32 0
+; SSE-NEXT:    [[Y1:%.*]] = extractelement <2 x double> [[Y:%.*]], i32 1
+; SSE-NEXT:    [[CMP:%.*]] = fcmp oge double [[X0]], [[Y1]]
+; SSE-NEXT:    ret i1 [[CMP]]
+;
+; AVX-LABEL: @cmp01_v2f64(
+; AVX-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[Y:%.*]], <2 x double> undef, <2 x i32> <i32 1, i32 undef>
+; AVX-NEXT:    [[TMP2:%.*]] = fcmp oge <2 x double> [[X:%.*]], [[TMP1]]
+; AVX-NEXT:    [[TMP3:%.*]] = extractelement <2 x i1> [[TMP2]], i32 0
+; AVX-NEXT:    ret i1 [[TMP3]]
 ;
   %x0 = extractelement <2 x double> %x, i32 0
   %y1 = extractelement <2 x double> %y, i32 1
@@ -115,11 +121,17 @@ define i1 @cmp01_v2f64(<2 x double> %x, <2 x double> %y) {
 }
 
 define i1 @cmp10_v2f64(<2 x double> %x, <2 x double> %y) {
-; CHECK-LABEL: @cmp10_v2f64(
-; CHECK-NEXT:    [[X1:%.*]] = extractelement <2 x double> [[X:%.*]], i32 1
-; CHECK-NEXT:    [[Y0:%.*]] = extractelement <2 x double> [[Y:%.*]], i32 0
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ule double [[X1]], [[Y0]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; SSE-LABEL: @cmp10_v2f64(
+; SSE-NEXT:    [[X1:%.*]] = extractelement <2 x double> [[X:%.*]], i32 1
+; SSE-NEXT:    [[Y0:%.*]] = extractelement <2 x double> [[Y:%.*]], i32 0
+; SSE-NEXT:    [[CMP:%.*]] = fcmp ule double [[X1]], [[Y0]]
+; SSE-NEXT:    ret i1 [[CMP]]
+;
+; AVX-LABEL: @cmp10_v2f64(
+; AVX-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[X:%.*]], <2 x double> undef, <2 x i32> <i32 1, i32 undef>
+; AVX-NEXT:    [[TMP2:%.*]] = fcmp ule <2 x double> [[TMP1]], [[Y:%.*]]
+; AVX-NEXT:    [[TMP3:%.*]] = extractelement <2 x i1> [[TMP2]], i64 0
+; AVX-NEXT:    ret i1 [[TMP3]]
 ;
   %x1 = extractelement <2 x double> %x, i32 1
   %y0 = extractelement <2 x double> %y, i32 0
@@ -129,10 +141,10 @@ define i1 @cmp10_v2f64(<2 x double> %x, <2 x double> %y) {
 
 define i1 @cmp12_v4i32(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: @cmp12_v4i32(
-; CHECK-NEXT:    [[X1:%.*]] = extractelement <4 x i32> [[X:%.*]], i32 1
-; CHECK-NEXT:    [[Y2:%.*]] = extractelement <4 x i32> [[Y:%.*]], i32 2
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[X1]], [[Y2]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[Y:%.*]], <4 x i32> undef, <4 x i32> <i32 undef, i32 2, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt <4 x i32> [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i1> [[TMP2]], i32 1
+; CHECK-NEXT:    ret i1 [[TMP3]]
 ;
   %x1 = extractelement <4 x i32> %x, i32 1
   %y2 = extractelement <4 x i32> %y, i32 2

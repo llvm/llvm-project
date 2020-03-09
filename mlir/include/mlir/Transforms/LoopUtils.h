@@ -178,6 +178,13 @@ uint64_t affineDataCopyGenerate(Block::iterator begin, Block::iterator end,
                                 Optional<Value> filterMemRef,
                                 DenseSet<Operation *> &copyNests);
 
+/// A convenience version of affineDataCopyGenerate for all ops in the body of
+/// an AffineForOp.
+uint64_t affineDataCopyGenerate(AffineForOp forOp,
+                                const AffineCopyOptions &copyOptions,
+                                Optional<Value> filterMemRef,
+                                DenseSet<Operation *> &copyNests);
+
 /// Tile a nest of standard for loops rooted at `rootForOp` by finding such
 /// parametric tile sizes that the outer loops have a fixed number of iterations
 /// as defined in `sizes`.

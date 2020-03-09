@@ -384,6 +384,53 @@ CallBase::populateBundleOperandInfos(ArrayRef<OperandBundleDef> Bundles,
   return It;
 }
 
+CallBase::BundleOpInfo &CallBase::getBundleOpInfoForOperand(unsigned OpIdx) {
+  /// When there isn't many bundles, we do a simple linear search.
+  /// Else fallback to a binary-search that use the fact that bundles usually
+  /// have similar number of argument to get faster convergence.
+  if (bundle_op_info_end() - bundle_op_info_begin() < 8) {
+    for (auto &BOI : bundle_op_infos())
+      if (BOI.Begin <= OpIdx && OpIdx < BOI.End)
+        return BOI;
+
+    llvm_unreachable("Did not find operand bundle for operand!");
+  }
+
+  assert(OpIdx >= arg_size() && "the Idx is not in the operand bundles");
+  assert(bundle_op_info_end() - bundle_op_info_begin() > 0 &&
+         OpIdx < std::prev(bundle_op_info_end())->End &&
+         "The Idx isn't in the operand bundle");
+
+  /// We need a decimal number below and to prevent using floating point numbers
+  /// we use an intergal value multiplied by this constant.
+  constexpr unsigned NumberScaling = 1024;
+
+  bundle_op_iterator Begin = bundle_op_info_begin();
+  bundle_op_iterator End = bundle_op_info_end();
+  bundle_op_iterator Current;
+
+  while (Begin != End) {
+    unsigned ScaledOperandPerBundle =
+        NumberScaling * (std::prev(End)->End - Begin->Begin) / (End - Begin);
+    Current = Begin + (((OpIdx - Begin->Begin) * NumberScaling) /
+                       ScaledOperandPerBundle);
+    if (Current >= End)
+      Current = std::prev(End);
+    assert(Current < End && Current >= Begin &&
+           "the operand bundle doesn't cover every value in the range");
+    if (OpIdx >= Current->Begin && OpIdx < Current->End)
+      break;
+    if (OpIdx >= Current->End)
+      Begin = Current + 1;
+    else
+      End = Current;
+  }
+
+  assert(OpIdx >= Current->Begin && OpIdx < Current->End &&
+         "the operand bundle doesn't cover every value in the range");
+  return *Current;
+}
+
 //===----------------------------------------------------------------------===//
 //                        CallInst Implementation
 //===----------------------------------------------------------------------===//
