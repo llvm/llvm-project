@@ -388,7 +388,7 @@ static const ObjCCategoryDecl *getCategoryContext(const NamedDecl *D) {
   if (auto *ICD = dyn_cast<ObjCCategoryImplDecl>(D->getDeclContext()))
     return ICD->getCategoryDecl();
   return nullptr;
-};
+}
 
 void USRGenerator::VisitObjCMethodDecl(const ObjCMethodDecl *D) {
   const DeclContext *container = D->getDeclContext();
