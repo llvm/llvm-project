@@ -2157,7 +2157,21 @@ Example 1: matches a += b (matcher = binaryOperator(isAssignmentOperator()))
 Example 2: matches s1 = s2
            (matcher = cxxOperatorCallExpr(isAssignmentOperator()))
   struct S { S&amp; operator=(const S&amp;); };
-  void x() { S s1, s2; s1 = s2; })
+  void x() { S s1, s2; s1 = s2; }
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1BinaryOperator.html">BinaryOperator</a>&gt;</td><td class="name" onclick="toggle('isComparisonOperator0')"><a name="isComparisonOperator0Anchor">isComparisonOperator</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="isComparisonOperator0"><pre>Matches comparison operators.
+
+Example 1: matches a == b (matcher = binaryOperator(isComparisonOperator()))
+  if (a == b)
+    a += b;
+
+Example 2: matches s1 &lt; s2
+           (matcher = cxxOperatorCallExpr(isComparisonOperator()))
+  struct S { bool operator&lt;(const S&amp; other); };
+  void x(S s1, S s2) { bool b1 = s1 &lt; s2; }
 </pre></td></tr>
 
 
@@ -2616,7 +2630,21 @@ Example 1: matches a += b (matcher = binaryOperator(isAssignmentOperator()))
 Example 2: matches s1 = s2
            (matcher = cxxOperatorCallExpr(isAssignmentOperator()))
   struct S { S&amp; operator=(const S&amp;); };
-  void x() { S s1, s2; s1 = s2; })
+  void x() { S s1, s2; s1 = s2; }
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXOperatorCallExpr.html">CXXOperatorCallExpr</a>&gt;</td><td class="name" onclick="toggle('isComparisonOperator1')"><a name="isComparisonOperator1Anchor">isComparisonOperator</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="isComparisonOperator1"><pre>Matches comparison operators.
+
+Example 1: matches a == b (matcher = binaryOperator(isComparisonOperator()))
+  if (a == b)
+    a += b;
+
+Example 2: matches s1 &lt; s2
+           (matcher = cxxOperatorCallExpr(isComparisonOperator()))
+  struct S { bool operator&lt;(const S&amp; other); };
+  void x(S s1, S s2) { bool b1 = s1 &lt; s2; }
 </pre></td></tr>
 
 

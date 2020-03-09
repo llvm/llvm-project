@@ -118,6 +118,22 @@ public:
   }
   bool isAssignmentOp() const { return isAssignmentOp(getOperator()); }
 
+  static bool isComparisonOp(OverloadedOperatorKind Opc) {
+    switch (Opc) {
+    case OO_EqualEqual:
+    case OO_ExclaimEqual:
+    case OO_Greater:
+    case OO_GreaterEqual:
+    case OO_Less:
+    case OO_LessEqual:
+    case OO_Spaceship:
+      return true;
+    default:
+      return false;
+    }
+  }
+  bool isComparisonOp() const { return isComparisonOp(getOperator()); }
+
   /// Is this written as an infix binary operator?
   bool isInfixBinaryOp() const;
 
