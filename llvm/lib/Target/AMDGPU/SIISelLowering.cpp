@@ -928,7 +928,8 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     }
 
     Info.flags = MachineMemOperand::MODereferenceable;
-    if (Attr.hasFnAttribute(Attribute::ReadOnly)) {
+    if (Attr.hasFnAttribute(Attribute::ReadOnly) ||
+        IntrID == Intrinsic::amdgcn_raw_atomic_buffer_load) {
       Info.opc = ISD::INTRINSIC_W_CHAIN;
       // TODO: Account for dmask reducing loaded size.
       Info.memVT = memVTFromImageReturn(CI.getType());
@@ -6214,6 +6215,7 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
                                M->getMemOperand(), DAG);
   }
   case Intrinsic::amdgcn_raw_buffer_load:
+  case Intrinsic::amdgcn_raw_atomic_buffer_load:
   case Intrinsic::amdgcn_raw_buffer_load_format: {
     const bool IsFormat = IntrID == Intrinsic::amdgcn_raw_buffer_load_format;
 
