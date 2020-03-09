@@ -1,4 +1,4 @@
-# RUN: llc -start-after=livedebugvalues -filetype=obj -o - %s \
+# RUN: llc -emit-call-site-info -start-after=livedebugvalues -filetype=obj -o - %s \
 # RUN:   | llvm-dwarfdump -v - | FileCheck %s
 
 # This tests for a crash in DwarfDebug's singular DBG_VALUE range promotion when

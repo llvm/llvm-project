@@ -1,4 +1,4 @@
-# RUN: llc -debug-entry-values -run-pass=livedebugvalues -verify-machineinstrs -march=x86-64 -o - %s | FileCheck %s
+# RUN: llc -emit-call-site-info -debug-entry-values -run-pass=livedebugvalues -verify-machineinstrs -march=x86-64 -o - %s | FileCheck %s
 #
 #extern void fn2(int);
 #

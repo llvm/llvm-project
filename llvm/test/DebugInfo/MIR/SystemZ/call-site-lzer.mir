@@ -1,4 +1,4 @@
-# RUN: llc -debug-entry-values -start-after=livedebugvalues -o - %s | FileCheck %s
+# RUN: llc -emit-call-site-info -debug-entry-values -start-after=livedebugvalues -o - %s | FileCheck %s
 
 # This test would previously trigger an assertion when trying to describe the
 # call site value for callee()'s float parameter.

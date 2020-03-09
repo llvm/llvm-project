@@ -1,14 +1,14 @@
 # Test the call site encoding in DWARF5 vs GNU extensions.
 #
-# RUN: llc -dwarf-version 4 -debugger-tune=gdb -debug-entry-values -filetype=obj \
+# RUN: llc -dwarf-version 4 -debugger-tune=gdb -emit-call-site-info -debug-entry-values -filetype=obj \
 # RUN:     -mtriple=x86_64-unknown-unknown -start-after=machineverifier -o - %s  \
 # RUN:     | llvm-dwarfdump - | FileCheck %s -check-prefixes=CHECK-GNU
 #
-# RUN: llc -dwarf-version 5 -debugger-tune=lldb -debug-entry-values -filetype=obj \
+# RUN: llc -dwarf-version 5 -debugger-tune=lldb -emit-call-site-info -debug-entry-values -filetype=obj \
 # RUN:     -mtriple=x86_64-unknown-unknown -start-after=machineverifier -o - %s   \
 # RUN:     | llvm-dwarfdump - | FileCheck %s -check-prefixes=CHECK-DWARF5
 #
-# RUN: llc -dwarf-version 5 -debug-entry-values -filetype=obj \
+# RUN: llc -dwarf-version 5 -emit-call-site-info -debug-entry-values -filetype=obj \
 # RUN:     -mtriple=x86_64-unknown-unknown -start-after=machineverifier -o - %s   \
 # RUN:     | llvm-dwarfdump - | FileCheck %s -check-prefixes=CHECK-DWARF5
 #

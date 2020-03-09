@@ -1,4 +1,4 @@
-; RUN: llc -debug-entry-values %s -o - -filetype=obj \
+; RUN: llc -emit-call-site-info -debug-entry-values %s -o - -filetype=obj \
 ; RUN:   | llvm-dwarfdump -statistics - | FileCheck %s
 ;
 ; The LLVM IR file was generated on this source code by using

@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=arm-linux-gnu -debug-entry-values -run-pass if-converter %s -o -| FileCheck %s
+# RUN: llc -emit-call-site-info -mtriple=arm-linux-gnu -debug-entry-values -run-pass if-converter %s -o -| FileCheck %s
 
 # Vefify that the call site info will be updated after the optimization.
 # This test case would previously trigger an assertion when
