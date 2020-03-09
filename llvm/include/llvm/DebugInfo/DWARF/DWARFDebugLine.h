@@ -362,14 +362,16 @@ public:
 
 private:
   struct ParsingState {
-    ParsingState(struct LineTable *LT);
+    ParsingState(struct LineTable *LT, uint64_t TableOffset,
+                 function_ref<void(Error)> ErrorHandler);
 
     void resetRowAndSequence();
     void appendRowToMatrix();
 
     /// Advance the address by the \p OperationAdvance value. \returns the
     /// amount advanced by.
-    uint64_t advanceAddr(uint64_t OperationAdvance);
+    uint64_t advanceAddr(uint64_t OperationAdvance, uint8_t Opcode,
+                         uint64_t OpcodeOffset);
 
     struct AddrAndAdjustedOpcode {
       uint64_t AddrDelta;
@@ -378,7 +380,8 @@ private:
 
     /// Advance the address as required by the specified \p Opcode.
     /// \returns the amount advanced by and the calculated adjusted opcode.
-    AddrAndAdjustedOpcode advanceAddrForOpcode(uint8_t Opcode);
+    AddrAndAdjustedOpcode advanceAddrForOpcode(uint8_t Opcode,
+                                               uint64_t OpcodeOffset);
 
     struct AddrAndLineDelta {
       uint64_t Address;
@@ -387,12 +390,18 @@ private:
 
     /// Advance the line and address as required by the specified special \p
     /// Opcode. \returns the address and line delta.
-    AddrAndLineDelta handleSpecialOpcode(uint8_t Opcode);
+    AddrAndLineDelta handleSpecialOpcode(uint8_t Opcode, uint64_t OpcodeOffset);
 
     /// Line table we're currently parsing.
     struct LineTable *LineTable;
     struct Row Row;
     struct Sequence Sequence;
+
+  private:
+    uint64_t LineTableOffset;
+
+    bool ReportAdvanceAddrProblem = true;
+    function_ref<void(Error)> ErrorHandler;
   };
 
   using LineTableMapTy = std::map<uint64_t, LineTable>;
