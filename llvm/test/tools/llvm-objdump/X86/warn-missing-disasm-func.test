@@ -1,10 +1,10 @@
-## Warn if --disassemble-functions specifies an unknown symbol.
+## Warn if --disassemble-symbols specifies an unknown symbol.
 
 # RUN: yaml2obj -o %t.o %s
 # RUN: rm -f %t.a
 # RUN: llvm-ar qc %t.a %t.o %t.o
-# RUN: llvm-objdump --disassemble-functions=foo %t.o 2>&1 | FileCheck %s
-# RUN: llvm-objdump --disassemble-functions=foo %t.a 2>&1 | FileCheck %s --check-prefix=MULTI
+# RUN: llvm-objdump --disassemble-symbols=foo %t.o 2>&1 | FileCheck %s
+# RUN: llvm-objdump --disassemble-symbols=foo %t.a 2>&1 | FileCheck %s --check-prefix=MULTI
 
 --- !ELF
 FileHeader:
@@ -13,9 +13,9 @@ FileHeader:
   Type:    ET_REL
   Machine: EM_X86_64
 
-# CHECK: warning: {{.*}}: failed to disassemble missing function foo
+# CHECK: warning: {{.*}}: failed to disassemble missing symbol foo
 
 # MULTI: file format elf64-x86-64
-# MULTI: warning: {{.*}}: failed to disassemble missing function foo
+# MULTI: warning: {{.*}}: failed to disassemble missing symbol foo
 # MULTI: file format elf64-x86-64
-# MULTI: warning: {{.*}}: failed to disassemble missing function foo
+# MULTI: warning: {{.*}}: failed to disassemble missing symbol foo
