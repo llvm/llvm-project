@@ -35,10 +35,18 @@ enum class DynamicInitKind : unsigned {
 
 /// GlobalDecl - represents a global declaration. This can either be a
 /// CXXConstructorDecl and the constructor type (Base, Complete).
-/// a CXXDestructorDecl and the destructor type (Base, Complete) or
+/// a CXXDestructorDecl and the destructor type (Base, Complete),
+/// a FunctionDecl and the kernel reference type (Kernel, Stub), or
 /// a VarDecl, a FunctionDecl or a BlockDecl.
+///
+/// When a new type of GlobalDecl is added, the following places should
+/// be updated to convert a Decl* to a GlobalDecl:
+/// PredefinedExpr::ComputeName() in lib/AST/Expr.cpp.
+/// getParentOfLocalEntity() in lib/AST/ItaniumMangle.cpp
+/// ASTNameGenerator::Implementation::writeFuncOrVarName in lib/AST/Mangle.cpp
+///
 class GlobalDecl {
-  llvm::PointerIntPair<const Decl *, 2> Value;
+  llvm::PointerIntPair<const Decl *, 3> Value;
   unsigned MultiVersionIndex = 0;
 
   void Init(const Decl *D) {
@@ -55,6 +63,7 @@ public:
       : MultiVersionIndex(MVIndex) {
     Init(D);
   }
+  GlobalDecl(const NamedDecl *D) { Init(D); }
   GlobalDecl(const BlockDecl *D) { Init(D); }
   GlobalDecl(const CapturedDecl *D) { Init(D); }
   GlobalDecl(const ObjCMethodDecl *D) { Init(D); }
@@ -111,6 +120,8 @@ public:
   }
 
   void *getAsOpaquePtr() const { return Value.getOpaqueValue(); }
+
+  explicit operator bool() const { return getAsOpaquePtr(); }
 
   static GlobalDecl getFromOpaquePtr(void *P) {
     GlobalDecl GD;

@@ -864,13 +864,13 @@ public:
   /// Return a function pointer for a reference to the given function.
   /// This correctly handles weak references, but does not apply a
   /// pointer signature.
-  llvm::Constant *getRawFunctionPointer(const FunctionDecl *FD,
+  llvm::Constant *getRawFunctionPointer(GlobalDecl GD,
                                         llvm::Type *Ty = nullptr);
 
   /// Return the ABI-correct function pointer value for a reference
   /// to the given function.  This will apply a pointer signature if
   /// necessary, caching the result for the given function.
-  llvm::Constant *getFunctionPointer(const FunctionDecl *FD,
+  llvm::Constant *getFunctionPointer(GlobalDecl GD,
                                      llvm::Type *Ty = nullptr);
 
   /// Return the ABI-correct function pointer value for a reference
@@ -878,7 +878,7 @@ public:
   /// necessary, but will only cache the result if \p FD is passed.
   llvm::Constant *getFunctionPointer(llvm::Constant *pointer,
                                      QualType functionType,
-                                     const FunctionDecl *FD = nullptr);
+                                     GlobalDecl GD = GlobalDecl());
 
   llvm::Constant *getMemberFunctionPointer(const FunctionDecl *FD,
                                            llvm::Type *Ty = nullptr);
