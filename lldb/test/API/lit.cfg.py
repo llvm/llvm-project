@@ -17,8 +17,7 @@ config.suffixes = ['.py']
 
 # test_source_root: The root path where tests are located.
 # test_exec_root: The root path where tests should be run.
-config.test_source_root = os.path.join(config.lldb_src_root, 'packages',
-                                       'Python', 'lldbsuite', 'test')
+config.test_source_root = os.path.dirname(__file__)
 config.test_exec_root = config.test_source_root
 
 if 'Address' in config.llvm_use_sanitizer:
