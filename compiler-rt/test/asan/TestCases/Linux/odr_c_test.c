@@ -1,9 +1,9 @@
 // Test that we can properly report an ODR violation
 // between an instrumented global and a non-instrumented global.
 
-// RUN: %clang_asan -fcommon %s -fPIC -shared -o %dynamiclib1  -DFILE1
-// RUN: %clang_asan -fcommon %s -fPIC -shared -o %dynamiclib2  -DFILE2
-// RUN: %clang_asan -fcommon %s -fPIE %ld_flags_rpath_exe1 %ld_flags_rpath_exe2 -o %t
+// RUN: %clang_asan %s -fPIC -shared -o %dynamiclib1  -DFILE1
+// RUN: %clang_asan %s -fPIC -shared -o %dynamiclib2  -DFILE2
+// RUN: %clang_asan %s -fPIE %ld_flags_rpath_exe1 %ld_flags_rpath_exe2 -o %t
 // RUN: not %run %t 2>&1 | FileCheck %s
 //
 // CHECK: The following global variable is not properly aligned.
