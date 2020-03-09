@@ -94,7 +94,7 @@ protected:
 
   void GetFramesUpTo(uint32_t end_idx);
 
-  void GetOnlyConcreteFramesUpTo(uint32_t end_idx, Unwind *unwinder);
+  void GetOnlyConcreteFramesUpTo(uint32_t end_idx, Unwind &unwinder);
 
   void SynthesizeTailCallFrames(StackFrame &next_frame);
 
