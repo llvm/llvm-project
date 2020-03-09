@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_HEADER_FILE_EXTENSIONS_UTILS_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_HEADER_FILE_EXTENSIONS_UTILS_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_FILE_EXTENSIONS_UTILS_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_FILE_EXTENSIONS_UTILS_H
 
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
@@ -53,4 +53,4 @@ bool isFileExtension(StringRef FileName,
 } // namespace tidy
 } // namespace clang
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_HEADER_FILE_EXTENSIONS_UTILS_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_FILE_EXTENSIONS_UTILS_H
