@@ -155,7 +155,9 @@ void MCMachOStreamer::ChangeSection(MCSection *Section,
   if (SegName == "__DWARF")
     CreatedADWARFSection = true;
   else if (Created && DWARFMustBeAtTheEnd && !canGoAfterDWARF(MSec))
-    assert(!CreatedADWARFSection && "Creating regular section after DWARF");
+    assert((!CreatedADWARFSection ||
+            Section == getContext().getObjectFileInfo()->getStackMapSection())
+           && "Creating regular section after DWARF");
 
   // Output a linker-local symbol so we don't need section-relative local
   // relocations. The linker hates us when we do that.
