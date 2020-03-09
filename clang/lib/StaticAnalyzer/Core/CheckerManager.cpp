@@ -61,7 +61,8 @@ void CheckerManager::finishedCheckerRegistration() {
 }
 
 void CheckerManager::reportInvalidCheckerOptionValue(
-    const CheckerBase *C, StringRef OptionName, StringRef ExpectedValueDesc) {
+    const CheckerBase *C, StringRef OptionName,
+    StringRef ExpectedValueDesc) const {
 
   Context.getDiagnostics()
       .Report(diag::err_analyzer_checker_option_invalid_input)
@@ -249,7 +250,7 @@ void CheckerManager::runCheckersForObjCMessage(ObjCMessageVisitKind visitKind,
 }
 
 const std::vector<CheckerManager::CheckObjCMessageFunc> &
-CheckerManager::getObjCMessageCheckers(ObjCMessageVisitKind Kind) {
+CheckerManager::getObjCMessageCheckers(ObjCMessageVisitKind Kind) const {
   switch (Kind) {
   case ObjCMessageVisitKind::Pre:
     return PreObjCMessageCheckers;
