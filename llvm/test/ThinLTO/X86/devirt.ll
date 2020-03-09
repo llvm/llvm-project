@@ -47,6 +47,21 @@
 ; RUN:   -r=%t2.o,_ZTV1D,px 2>&1 | FileCheck %s --check-prefix=REMARK
 ; RUN: llvm-dis %t3.1.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-IR
 
+; Check that we're able to prevent specific function from being
+; devirtualized when running index based WPD.
+; RUN: llvm-lto2 run %t2.o -save-temps -pass-remarks=. \
+; RUN:   -whole-program-visibility \
+; RUN:   -wholeprogramdevirt-skip=_ZN1A1nEi \
+; RUN:   -o %t3 \
+; RUN:   -r=%t2.o,test,px \
+; RUN:   -r=%t2.o,_ZN1A1nEi,p \
+; RUN:   -r=%t2.o,_ZN1B1fEi,p \
+; RUN:   -r=%t2.o,_ZN1C1fEi,p \
+; RUN:   -r=%t2.o,_ZN1D1mEi,p \
+; RUN:   -r=%t2.o,_ZTV1B,px \
+; RUN:   -r=%t2.o,_ZTV1C,px \
+; RUN:   -r=%t2.o,_ZTV1D,px 2>&1 | FileCheck %s --check-prefix=SKIP
+
 ; New PM, Index based WPD
 ; RUN: llvm-lto2 run %t2.o -save-temps -use-new-pm -pass-remarks=. \
 ; RUN:   -whole-program-visibility \
@@ -109,6 +124,8 @@
 
 ; REMARK-DAG: single-impl: devirtualized a call to _ZN1A1nEi
 ; REMARK-DAG: single-impl: devirtualized a call to _ZN1D1mEi
+
+; SKIP-NOT: devirtualized a call to _ZN1A1nEi
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-grtev4-linux-gnu"
