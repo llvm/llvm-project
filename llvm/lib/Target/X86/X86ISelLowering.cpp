@@ -36400,6 +36400,23 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
           insertSubVector(UndefVec, ExtOp, 0, TLO.DAG, DL, ExtSizeInBits);
       return TLO.CombineTo(Op, Insert);
     }
+      // Vector blend by immediate.
+    case X86ISD::BLENDI: {
+      SDLoc DL(Op);
+      MVT ExtVT = VT.getSimpleVT();
+      ExtVT = MVT::getVectorVT(ExtVT.getScalarType(),
+                               ExtSizeInBits / ExtVT.getScalarSizeInBits());
+      SDValue Ext0 =
+          extractSubVector(Op.getOperand(0), 0, TLO.DAG, DL, ExtSizeInBits);
+      SDValue Ext1 =
+          extractSubVector(Op.getOperand(1), 0, TLO.DAG, DL, ExtSizeInBits);
+      SDValue ExtOp =
+          TLO.DAG.getNode(Opc, DL, ExtVT, Ext0, Ext1, Op.getOperand(2));
+      SDValue UndefVec = TLO.DAG.getUNDEF(VT);
+      SDValue Insert =
+          insertSubVector(UndefVec, ExtOp, 0, TLO.DAG, DL, ExtSizeInBits);
+      return TLO.CombineTo(Op, Insert);
+    } 
     }
   }
 
