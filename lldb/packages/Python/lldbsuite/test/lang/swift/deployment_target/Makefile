@@ -1,8 +1,6 @@
-LEVEL = ../../../make
-
 all: a.out dlopen_module
 
-include $(LEVEL)/Makefile.rules
+include Makefile.rules
 
 # This test only works on macOS 10.11+.
 

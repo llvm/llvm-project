@@ -1,9 +1,8 @@
-LEVEL = ../../../make
 SWIFT_SOURCES := main.swift
 
 all: libInvisible.dylib libLibrary.dylib a.out
 
-include $(LEVEL)/Makefile.rules
+include Makefile.rules
 LD_EXTRAS = -lLibrary -L$(BUILDDIR)
 SWIFTFLAGS_EXTRAS = -I$(BUILDDIR)
 

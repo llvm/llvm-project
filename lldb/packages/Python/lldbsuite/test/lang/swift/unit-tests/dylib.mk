@@ -1,11 +1,9 @@
-LEVEL = ../../../make
-
 all: UnitTest.xctest/Contents/MacOS/test UnitTest.xctest/Contents/Info.plist
 
 DYLIB_SWIFT_SOURCES := test.swift
 DYLIB_NAME := test
 DYLIB_ONLY := YES
-include $(LEVEL)/Makefile.rules
+include Makefile.rules
 
 UnitTest.xctest/Contents/MacOS/test: $(DYLIB_FILENAME) $(DSYM)
 	mkdir -p $(BUILDDIR)/UnitTest.xctest/Contents/MacOS

@@ -1,4 +1,3 @@
-LEVEL = ../../../../make
 SRCDIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 SWIFT_SOURCES := main.swift
 # This Makefile overwrites the default rules.
@@ -6,7 +5,7 @@ EXE := a.out
 
 all: libLibrary a.out
 
-include $(LEVEL)/Makefile.rules
+include Makefile.rules
 
 SWIFTFLAGS += -I. -Xcc -DSYNTAX_ERROR=1
 LD_EXTRAS += -lLibrary -L.

@@ -1,12 +1,10 @@
-LEVEL = ../../../../make
-
 SWIFT_SOURCES=main.swift
 SWIFTFLAGS_EXTRAS= -I.
 LD_EXTRAS=-L.
 
 all: SomeLibraryCore.swiftmodule SomeLibrary.swiftmodule a.out
 
-include $(LEVEL)/Makefile.rules
+include Makefile.rules
 
 SomeLibraryCore.swiftmodule: SomeLibraryCore.swift
 	$(MAKE) BASENAME=$(shell basename $@ .swiftmodule) \

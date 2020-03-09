@@ -1,5 +1,3 @@
-LEVEL = ../../../../make
-
 # Set the dylib variables so the rules for generating swift objects and
 # modules are active.
 DYLIB_NAME := $(BASENAME)
@@ -22,7 +20,7 @@ ARCHIVE_OBJECTS = $(strip $(DYLIB_SWIFT_SOURCES:.swift=.o))
 
 $(ARCHIVE_NAME): $(BASENAME).swiftmodule
 
-include $(LEVEL)/Makefile.rules
+include Makefile.rules
 
 # Generate only the static lib (all would generate a dylib as well).
 static_only: $(ARCHIVE_NAME)

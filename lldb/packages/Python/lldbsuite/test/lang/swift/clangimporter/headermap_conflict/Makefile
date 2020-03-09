@@ -1,4 +1,3 @@
-LEVEL = ../../../../make
 SWIFT_OBJC_INTEROP := 1
 SWIFT_SOURCES := main.swift
 SWIFTFLAGS_EXTRAS = -Xcc -I$(SRCDIR) -Xcc -I$(SRCDIR)/Bar -I.
@@ -12,7 +11,7 @@ LD_EXTRAS := -ldylib -L$(shell pwd)
 
 all: libdylib.dylib a.out
 
-include $(LEVEL)/Makefile.rules
+include Makefile.rules
 
 libdylib.dylib: dylib.swift
 	$(MAKE) MAKE_DSYM=YES CC=$(CC) SWIFTC=$(SWIFTC) \

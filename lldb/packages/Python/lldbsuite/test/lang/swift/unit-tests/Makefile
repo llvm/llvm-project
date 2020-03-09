@@ -1,10 +1,8 @@
-LEVEL = ../../../make
-
 all: dylib xctest
 C_SOURCES=xctest.c
 EXE=xctest
 
-include $(LEVEL)/Makefile.rules
+include Makefile.rules
 
 .PHONY: dylib
 dylib:

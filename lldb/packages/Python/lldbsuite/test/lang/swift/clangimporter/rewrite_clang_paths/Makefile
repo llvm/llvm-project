@@ -1,7 +1,6 @@
-LEVEL = ../../../../make
 SWIFT_OBJC_INTEROP := 1
 
-include $(LEVEL)/Makefile.rules
+include Makefile.rules
 
 BUILDDIR := $(realpath $(shell pwd))
 BOTDIR := $(BUILDDIR)/buildbot
