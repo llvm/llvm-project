@@ -687,7 +687,7 @@ foreach name = ["isfinite", "isinf", "isnan", "isnormal", "signbit"] in {
   def : Builtin<name, [GenTypeShortVecNoScalar, GenTypeHalfVecNoScalar], Attr.Const>;
 }
 foreach name = ["any", "all"] in {
-  def : Builtin<name, [Int, AIGenTypeN], Attr.Const>;
+  def : Builtin<name, [Int, SGenTypeN], Attr.Const>;
 }
 
 // --- 2 arguments ---
