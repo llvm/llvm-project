@@ -461,6 +461,18 @@ struct MustBeExecutedContextExplorer {
   }
   ///}
 
+  /// Check \p Pred on all instructions in the context.
+  ///
+  /// This method will evaluate \p Pred and return
+  /// true if \p Pred holds in every instruction.
+  bool checkForAllContext(const Instruction *PP,
+                          const function_ref<bool(const Instruction *)> &Pred) {
+    for (auto EIt = begin(PP), EEnd = end(PP); EIt != EEnd; EIt++)
+      if (!Pred(*EIt))
+        return false;
+    return true;
+  }
+
   /// Helper to look for \p I in the context of \p PP.
   ///
   /// The context is expanded until \p I was found or no more expansion is
