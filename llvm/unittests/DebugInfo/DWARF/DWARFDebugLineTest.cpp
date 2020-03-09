@@ -754,6 +754,213 @@ TEST_F(DebugLineBasicFixture, CallbackUsedForUnterminatedSequence) {
   EXPECT_EQ((*ExpectedLineTable)->Sequences.size(), 1u);
 }
 
+struct AdjustAddressFixtureBase : public CommonFixture {
+  virtual ~AdjustAddressFixtureBase() {}
+
+  // Create and update the prologue as specified by the subclass, then return
+  // the length of the table.
+  virtual uint64_t editPrologue(LineTable &LT) = 0;
+
+  virtual uint64_t getAdjustedAddr(uint64_t Base, uint64_t ConstIncrs,
+                                   uint64_t SpecialIncrs,
+                                   uint64_t AdvanceIncrs) {
+    return Base + ConstIncrs + SpecialIncrs + AdvanceIncrs;
+  }
+
+  virtual uint64_t getAdjustedLine(uint64_t Base, uint64_t Incr) {
+    return Base + Incr;
+  }
+
+  uint64_t setupNoProblemTable() {
+    LineTable &NoProblem = Gen->addLineTable();
+    NoProblem.addExtendedOpcode(9, DW_LNE_set_address,
+                                {{0xabcd, LineTable::Quad}});
+    NoProblem.addExtendedOpcode(1, DW_LNE_end_sequence, {});
+    return editPrologue(NoProblem);
+  }
+
+  uint64_t setupConstAddPcFirstTable() {
+    LineTable &ConstAddPCFirst = Gen->addLineTable();
+    ConstAddPCFirst.addExtendedOpcode(9, DW_LNE_set_address,
+                                      {{ConstAddPCAddr, LineTable::Quad}});
+    ConstAddPCFirst.addStandardOpcode(DW_LNS_const_add_pc, {});
+    ConstAddPCFirst.addStandardOpcode(DW_LNS_const_add_pc, {});
+    ConstAddPCFirst.addStandardOpcode(DW_LNS_advance_pc,
+                                      {{0x10, LineTable::ULEB}});
+    ConstAddPCFirst.addByte(0x21); // Special opcode, +1 op, +1 line.
+    ConstAddPCFirst.addExtendedOpcode(1, DW_LNE_end_sequence, {});
+    return editPrologue(ConstAddPCFirst);
+  }
+
+  uint64_t setupSpecialFirstTable() {
+    LineTable &SpecialFirst = Gen->addLineTable();
+    SpecialFirst.addExtendedOpcode(9, DW_LNE_set_address,
+                                   {{SpecialAddr, LineTable::Quad}});
+    SpecialFirst.addByte(0x22); // Special opcode, +1 op, +2 line.
+    SpecialFirst.addStandardOpcode(DW_LNS_const_add_pc, {});
+    SpecialFirst.addStandardOpcode(DW_LNS_advance_pc,
+                                   {{0x20, LineTable::ULEB}});
+    SpecialFirst.addByte(0x23); // Special opcode, +1 op, +3 line.
+    SpecialFirst.addExtendedOpcode(1, DW_LNE_end_sequence, {});
+    return editPrologue(SpecialFirst);
+  }
+
+  uint64_t setupAdvancePcFirstTable() {
+    LineTable &AdvancePCFirst = Gen->addLineTable();
+    AdvancePCFirst.addExtendedOpcode(9, DW_LNE_set_address,
+                                     {{AdvancePCAddr, LineTable::Quad}});
+    AdvancePCFirst.addStandardOpcode(DW_LNS_advance_pc,
+                                     {{0x30, LineTable::ULEB}});
+    AdvancePCFirst.addStandardOpcode(DW_LNS_const_add_pc, {});
+    AdvancePCFirst.addStandardOpcode(DW_LNS_advance_pc,
+                                     {{0x40, LineTable::ULEB}});
+    AdvancePCFirst.addByte(0x24); // Special opcode, +1 op, +4 line.
+    AdvancePCFirst.addExtendedOpcode(1, DW_LNE_end_sequence, {});
+    return editPrologue(AdvancePCFirst);
+  }
+
+  void setupTables(bool AddAdvancePCFirstTable) {
+    LineTable &Padding = Gen->addLineTable();
+    Padding.setCustomPrologue({{0, LineTable::Byte}});
+    NoProblemOffset = 1;
+
+    // Show that no warning is generated for the case where no
+    // DW_LNS_const_add_pc or special opcode is used.
+    ConstAddPCOffset = setupNoProblemTable() + NoProblemOffset;
+
+    // Show that the warning is emitted for the first DW_LNS_const_add_pc opcode
+    // and then not again.
+    SpecialOffset = setupConstAddPcFirstTable() + ConstAddPCOffset;
+
+    // Show that the warning is emitted for the first special opcode and then
+    // not again.
+    AdvancePCOffset = setupSpecialFirstTable() + SpecialOffset;
+
+    // Show that the warning is emitted for the first DW_LNS_advance_pc opcode
+    // (if requested) and then not again.
+    if (AddAdvancePCFirstTable)
+      setupAdvancePcFirstTable();
+  }
+
+  Expected<const DWARFDebugLine::LineTable *>
+  checkTable(uint64_t Offset, StringRef OpcodeType, const Twine &MsgSuffix) {
+    auto ExpectedTable = Line.getOrParseLineTable(LineData, Offset, *Context,
+                                                  nullptr, RecordRecoverable);
+    EXPECT_THAT_ERROR(std::move(Unrecoverable), Succeeded());
+    if (!IsErrorExpected) {
+      EXPECT_THAT_ERROR(std::move(Recoverable), Succeeded());
+    } else {
+      if (!ExpectedTable)
+        return ExpectedTable;
+      uint64_t ExpectedOffset = Offset +
+                                (*ExpectedTable)->Prologue.getLength() +
+                                11; // 11 == size of DW_LNE_set_address.
+      std::string OffsetHex = Twine::utohexstr(Offset).str();
+      std::string OffsetZeroes = std::string(8 - OffsetHex.size(), '0');
+      std::string ExpectedHex = Twine::utohexstr(ExpectedOffset).str();
+      std::string ExpectedZeroes = std::string(8 - ExpectedHex.size(), '0');
+      EXPECT_THAT_ERROR(
+          std::move(Recoverable),
+          FailedWithMessage(("line table program at offset 0x" + OffsetZeroes +
+                             OffsetHex + " contains a " + OpcodeType +
+                             " opcode at offset 0x" + ExpectedZeroes +
+                             ExpectedHex + ", " + MsgSuffix)
+                                .str()));
+    }
+    return ExpectedTable;
+  }
+
+  void runTest(bool CheckAdvancePC, Twine MsgSuffix) {
+    if (!setupGenerator(Version))
+      return;
+
+    setupTables(/*AddAdvancePCFirstTable=*/CheckAdvancePC);
+
+    generate();
+
+    auto ExpectedNoProblem = Line.getOrParseLineTable(
+        LineData, NoProblemOffset, *Context, nullptr, RecordRecoverable);
+    EXPECT_THAT_ERROR(std::move(Recoverable), Succeeded());
+    EXPECT_THAT_ERROR(std::move(Unrecoverable), Succeeded());
+    ASSERT_THAT_EXPECTED(ExpectedNoProblem, Succeeded());
+
+    auto ExpectedConstAddPC =
+        checkTable(ConstAddPCOffset, "DW_LNS_const_add_pc", MsgSuffix);
+    ASSERT_THAT_EXPECTED(ExpectedConstAddPC, Succeeded());
+    ASSERT_EQ((*ExpectedConstAddPC)->Rows.size(), 2u);
+    EXPECT_EQ((*ExpectedConstAddPC)->Rows[0].Address.Address,
+              getAdjustedAddr(ConstAddPCAddr, ConstIncr * 2, 0x1, 0x10));
+    EXPECT_EQ((*ExpectedConstAddPC)->Rows[0].Line, getAdjustedLine(1, 1));
+    EXPECT_THAT_ERROR(std::move(Unrecoverable), Succeeded());
+
+    auto ExpectedSpecial = checkTable(SpecialOffset, "special", MsgSuffix);
+    ASSERT_THAT_EXPECTED(ExpectedSpecial, Succeeded());
+    ASSERT_EQ((*ExpectedSpecial)->Rows.size(), 3u);
+    EXPECT_EQ((*ExpectedSpecial)->Rows[0].Address.Address,
+              getAdjustedAddr(SpecialAddr, 0, 1, 0));
+    EXPECT_EQ((*ExpectedSpecial)->Rows[0].Line, getAdjustedLine(1, 2));
+    EXPECT_EQ((*ExpectedSpecial)->Rows[1].Address.Address,
+              getAdjustedAddr(SpecialAddr, ConstIncr, 0x2, 0x20));
+    EXPECT_EQ((*ExpectedSpecial)->Rows[1].Line, getAdjustedLine(1, 5));
+    EXPECT_THAT_ERROR(std::move(Unrecoverable), Succeeded());
+
+    if (!CheckAdvancePC)
+      return;
+
+    auto ExpectedAdvancePC =
+        checkTable(AdvancePCOffset, "DW_LNS_advance_pc", MsgSuffix);
+    ASSERT_THAT_EXPECTED(ExpectedAdvancePC, Succeeded());
+    ASSERT_EQ((*ExpectedAdvancePC)->Rows.size(), 2u);
+    EXPECT_EQ((*ExpectedAdvancePC)->Rows[0].Address.Address,
+              getAdjustedAddr(AdvancePCAddr, ConstIncr, 0x1, 0x70));
+    EXPECT_EQ((*ExpectedAdvancePC)->Rows[0].Line, getAdjustedLine(1, 4));
+  }
+
+  uint64_t ConstIncr = 0x11;
+  uint64_t ConstAddPCAddr = 0x1234;
+  uint64_t SpecialAddr = 0x5678;
+  uint64_t AdvancePCAddr = 0xabcd;
+  uint64_t NoProblemOffset;
+  uint64_t ConstAddPCOffset;
+  uint64_t SpecialOffset;
+  uint64_t AdvancePCOffset;
+
+  uint16_t Version = 4;
+  bool IsErrorExpected;
+};
+
+struct MaxOpsPerInstFixture
+    : TestWithParam<std::tuple<uint16_t, uint8_t, bool>>,
+      AdjustAddressFixtureBase {
+  void SetUp() override {
+    std::tie(Version, MaxOpsPerInst, IsErrorExpected) = GetParam();
+  }
+
+  uint64_t editPrologue(LineTable &LT) override {
+    DWARFDebugLine::Prologue Prologue = LT.createBasicPrologue();
+    Prologue.MaxOpsPerInst = MaxOpsPerInst;
+    LT.setPrologue(Prologue);
+    return Prologue.TotalLength + Prologue.sizeofTotalLength();
+  }
+
+  uint8_t MaxOpsPerInst;
+};
+
+TEST_P(MaxOpsPerInstFixture, MaxOpsPerInstProblemsReportedCorrectly) {
+  runTest(/*CheckAdvancePC=*/true,
+          "but the prologue maximum_operations_per_instruction value is " +
+              Twine(unsigned(MaxOpsPerInst)) +
+              ", which is unsupported. Assuming a value of 1 instead");
+}
+
+INSTANTIATE_TEST_CASE_P(
+    MaxOpsPerInstParams, MaxOpsPerInstFixture,
+    Values(std::make_tuple(3, 0, false), // Test for version < 4 (no error).
+           std::make_tuple(4, 0, true),  // Test zero value for V4 (error).
+           std::make_tuple(4, 1, false), // Test good value for V4 (no error).
+           std::make_tuple(
+               4, 2, true)), ); // Test one higher than permitted V4 (error).
+
 TEST_F(DebugLineBasicFixture, ParserParsesCorrectly) {
   if (!setupGenerator())
     return;
