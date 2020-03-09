@@ -37,7 +37,8 @@ class Loop_Op<string mnemonic, list<OpTrait> traits = []> :
 
 def ForOp : Loop_Op<"for",
       [DeclareOpInterfaceMethods<LoopLikeOpInterface>,
-       SingleBlockImplicitTerminator<"YieldOp">]> {
+       SingleBlockImplicitTerminator<"YieldOp">,
+       RecursiveSideEffects]> {
   let summary = "for operation";
   let description = [{
     The "loop.for" operation represents a loop taking 3 SSA value as
@@ -170,7 +171,7 @@ def ForOp : Loop_Op<"for",
 }
 
 def IfOp : Loop_Op<"if",
-      [SingleBlockImplicitTerminator<"YieldOp">]> {
+      [SingleBlockImplicitTerminator<"YieldOp">, RecursiveSideEffects]> {
   let summary = "if-then-else operation";
   let description = [{
     The "loop.if" operation represents an if-then-else construct for

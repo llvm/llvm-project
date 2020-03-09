@@ -41,7 +41,7 @@ def ImplicitAffineTerminator
     : SingleBlockImplicitTerminator<"AffineTerminatorOp">;
 
 def AffineForOp : Affine_Op<"for",
-    [ImplicitAffineTerminator,
+    [ImplicitAffineTerminator, RecursiveSideEffects,
      DeclareOpInterfaceMethods<LoopLikeOpInterface>]> {
   let summary = "for operation";
   let description = [{
@@ -177,7 +177,8 @@ def AffineForOp : Affine_Op<"for",
   let hasFolder = 1;
 }
 
-def AffineIfOp : Affine_Op<"if", [ImplicitAffineTerminator]> {
+def AffineIfOp : Affine_Op<"if",
+                           [ImplicitAffineTerminator, RecursiveSideEffects]> {
   let summary = "if-then-else operation";
   let description = [{
     The "if" operation represents an if-then-else construct for conditionally
