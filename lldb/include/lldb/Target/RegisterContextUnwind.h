@@ -1,5 +1,4 @@
-//===-- RegisterContextLLDB.h --------------------------------------------*- C++
-//-*-===//
+//===-- RegisterContextUnwind.h ---------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,32 +6,33 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTLLDB_H
-#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTLLDB_H
+#ifndef LLDB_TARGET_REGISTERCONTEXTUNWIND_H
+#define LLDB_TARGET_REGISTERCONTEXTUNWIND_H
 
 #include <vector>
 
-#include "UnwindLLDB.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/RegisterNumber.h"
+#include "lldb/Target/UnwindLLDB.h"
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {
 
 class UnwindLLDB;
 
-class RegisterContextLLDB : public lldb_private::RegisterContext {
+class RegisterContextUnwind : public lldb_private::RegisterContext {
 public:
-  typedef std::shared_ptr<RegisterContextLLDB> SharedPtr;
+  typedef std::shared_ptr<RegisterContextUnwind> SharedPtr;
 
-  RegisterContextLLDB(lldb_private::Thread &thread, const SharedPtr &next_frame,
-                      lldb_private::SymbolContext &sym_ctx,
-                      uint32_t frame_number,
-                      lldb_private::UnwindLLDB &unwind_lldb);
+  RegisterContextUnwind(lldb_private::Thread &thread,
+                        const SharedPtr &next_frame,
+                        lldb_private::SymbolContext &sym_ctx,
+                        uint32_t frame_number,
+                        lldb_private::UnwindLLDB &unwind_lldb);
 
-  ~RegisterContextLLDB() override = default;
+  ~RegisterContextUnwind() override = default;
 
   void InvalidateAllRegisters() override;
 
@@ -247,13 +247,11 @@ private:
       m_registers; // where to find reg values for this frame
 
   lldb_private::UnwindLLDB &m_parent_unwind; // The UnwindLLDB that is creating
-                                             // this RegisterContextLLDB
+                                             // this RegisterContextUnwind
 
-  // For RegisterContextLLDB only
-
-  DISALLOW_COPY_AND_ASSIGN(RegisterContextLLDB);
+  DISALLOW_COPY_AND_ASSIGN(RegisterContextUnwind);
 };
 
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTLLDB_H
+#endif // LLDB_TARGET_REGISTERCONTEXTUNWIND_H
