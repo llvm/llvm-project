@@ -52,6 +52,10 @@ swiftLibrary = None
 # The overriden dwarf verison.
 dwarf_version = 0
 
+# Any overridden settings.
+# Always disable default dynamic types for testing purposes.
+settings = [('target.prefer-dynamic-value', 'no-dynamic-values')]
+
 # Path to the FileCheck testing tool. Not optional.
 filecheck = None
 

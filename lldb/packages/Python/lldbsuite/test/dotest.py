@@ -346,6 +346,14 @@ def parseOptionsAndInitTestdirs():
         # that explicitly require no debug info.
         os.environ['CFLAGS'] = '-gdwarf-{}'.format(configuration.dwarf_version)
 
+    if args.settings:
+        for setting in args.settings:
+            if not len(setting) == 1 or not setting[0].count('='):
+                logging.error('"%s" is not a setting in the form "key=value"',
+                              setting[0])
+                sys.exit(-1)
+            configuration.settings.append(setting[0].split('=', 1))
+
     if args.d:
         sys.stdout.write(
             "Suspending the process %d to wait for debugger to attach...\n" %
@@ -769,17 +777,15 @@ def visit(prefix, dir, names):
             raise
 
 
-def disabledynamics():
+def setSetting(setting, value):
     import lldb
     ci = lldb.DBG.GetCommandInterpreter()
     res = lldb.SBCommandReturnObject()
-    ci.HandleCommand(
-        "setting set target.prefer-dynamic-value no-dynamic-values",
-        res,
-        False)
+    cmd = 'setting set %s %s'%(setting, value)
+    print(cmd)
+    ci.HandleCommand(cmd, res, False)
     if not res.Succeeded():
-        raise Exception('disabling dynamic type support failed')
-
+        raise Exception('failed to run "%s"'%cmd)
 
 # ======================================== #
 #                                          #
@@ -1064,8 +1070,9 @@ def run_suite():
     # Now that we have loaded all the test cases, run the whole test suite.
     #
 
-    # Disable default dynamic types for testing purposes
-    disabledynamics()
+    # Set any user-overridden settings.
+    for key, value in configuration.settings:
+        setSetting(key, value)
 
     # Install the control-c handler.
     unittest2.signals.installHandler()
