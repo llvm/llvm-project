@@ -16288,6 +16288,10 @@ static bool captureInCapturedRegion(CapturedRegionScopeInfo *RSI,
       if (HasConst)
         DeclRefType.addConst();
     }
+    // Do not capture firstprivates in tasks.
+    if (S.isOpenMPPrivateDecl(Var, RSI->OpenMPLevel, RSI->OpenMPCaptureLevel) !=
+        OMPC_unknown)
+      return true;
     ByRef = S.isOpenMPCapturedByRef(Var, RSI->OpenMPLevel,
                                     RSI->OpenMPCaptureLevel);
   }
@@ -16517,12 +16521,14 @@ bool Sema::tryCaptureVariable(
         // just break here. Similarly, global variables that are captured in a
         // target region should not be captured outside the scope of the region.
         if (RSI->CapRegionKind == CR_OpenMP) {
-          bool IsOpenMPPrivateDecl = isOpenMPPrivateDecl(Var, RSI->OpenMPLevel);
+          OpenMPClauseKind IsOpenMPPrivateDecl = isOpenMPPrivateDecl(
+              Var, RSI->OpenMPLevel, RSI->OpenMPCaptureLevel);
           // If the variable is private (i.e. not captured) and has variably
           // modified type, we still need to capture the type for correct
           // codegen in all regions, associated with the construct. Currently,
           // it is captured in the innermost captured region only.
-          if (IsOpenMPPrivateDecl && Var->getType()->isVariablyModifiedType()) {
+          if (IsOpenMPPrivateDecl != OMPC_unknown &&
+              Var->getType()->isVariablyModifiedType()) {
             QualType QTy = Var->getType();
             if (ParmVarDecl *PVD = dyn_cast_or_null<ParmVarDecl>(Var))
               QTy = PVD->getOriginalType();
@@ -16537,7 +16543,7 @@ bool Sema::tryCaptureVariable(
             }
           }
           bool IsTargetCap =
-              !IsOpenMPPrivateDecl &&
+              IsOpenMPPrivateDecl != OMPC_private &&
               isOpenMPTargetCapturedDecl(Var, RSI->OpenMPLevel,
                                          RSI->OpenMPCaptureLevel);
           // Do not capture global if it is not privatized in outer regions.
@@ -16551,7 +16557,7 @@ bool Sema::tryCaptureVariable(
           if (IsTargetCap)
             adjustOpenMPTargetScopeIndex(FunctionScopesIndex, RSI->OpenMPLevel);
 
-          if (IsTargetCap || IsOpenMPPrivateDecl ||
+          if (IsTargetCap || IsOpenMPPrivateDecl == OMPC_private ||
               (IsGlobal && !IsGlobalCap)) {
             Nested = !IsTargetCap;
             DeclRefType = DeclRefType.getUnqualifiedType();
