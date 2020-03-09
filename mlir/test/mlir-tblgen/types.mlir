@@ -1,9 +1,9 @@
 // RUN: mlir-opt %s -split-input-file -verify-diagnostics | FileCheck %s
 
 func @correct_int_types_success() {
-  "test.int_types"() : () -> (i16, si32, ui64)
-  "test.int_types"() : () -> (si16, si32, ui64)
-  "test.int_types"() : () -> (ui16, si32, ui64)
+  "test.int_types"() : () -> (i16, si32, ui64, i8)
+  "test.int_types"() : () -> (si16, si32, ui64, ui64)
+  "test.int_types"() : () -> (ui16, si32, ui64, si128)
   return
 }
 
@@ -11,7 +11,7 @@ func @correct_int_types_success() {
 
 func @wrong_int_type_signedness_failure() {
   // expected-error @+1 {{result #1 must be 32-bit signed integer, but got 'ui32'}}
-  "test.int_types"() : () -> (ui16, ui32, ui64)
+  "test.int_types"() : () -> (ui16, ui32, ui64, si8)
   return
 }
 
@@ -19,7 +19,7 @@ func @wrong_int_type_signedness_failure() {
 
 func @wrong_int_type_signedness_failure() {
   // expected-error @+1 {{result #2 must be 64-bit unsigned integer, but got 'si64'}}
-  "test.int_types"() : () -> (ui16, si32, si64)
+  "test.int_types"() : () -> (ui16, si32, si64, ui8)
   return
 }
 
@@ -27,7 +27,15 @@ func @wrong_int_type_signedness_failure() {
 
 func @wrong_int_type_failure() {
   // expected-error @+1 {{result #0 must be 16-bit integer, but got 'f16'}}
-  "test.int_types"() : () -> (f16, si32, ui64)
+  "test.int_types"() : () -> (f16, si32, ui64, i16)
+  return
+}
+
+// -----
+
+func @wrong_int_type_failure() {
+  // expected-error @+1 {{result #3 must be integer, but got 'f64'}}
+  "test.int_types"() : () -> (i16, si32, ui64, f64)
   return
 }
 
