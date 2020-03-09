@@ -986,6 +986,7 @@ static void readConfigs(opt::InputArgList &args) {
   config->undefined = args::getStrings(args, OPT_undefined);
   config->undefinedVersion =
       args.hasFlag(OPT_undefined_version, OPT_no_undefined_version, true);
+  config->unique = args.hasArg(OPT_unique);
   config->useAndroidRelrTags = args.hasFlag(
       OPT_use_android_relr_tags, OPT_no_use_android_relr_tags, false);
   config->unresolvedSymbols = getUnresolvedSymbolPolicy(args);
