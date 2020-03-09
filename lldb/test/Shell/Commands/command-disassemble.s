@@ -52,7 +52,7 @@
 # CHECK-NEXT: command-disassemble.s.tmp[0xa] <+10>: int    $0x15
 # CHECK-NEXT: command-disassemble.s.tmp[0xc] <+12>: int    $0x16
 # CHECK-NEXT: (lldb) disassemble --address 0xdead
-# CHECK-NEXT: error: invalid frame
+# CHECK-NEXT: error: Could not find function bounds for address 0xdead
 # CHECK-NEXT: (lldb) disassemble --start-address 0x0 --count 7
 # CHECK-NEXT: command-disassemble.s.tmp`foo:
 # CHECK-NEXT: command-disassemble.s.tmp[0x0] <+0>:  int    $0x10
