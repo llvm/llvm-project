@@ -494,7 +494,11 @@ public:
       if (!PI.runBeforePass<Function>(Pass, F))
         continue;
 
-      PreservedAnalyses PassPA = Pass.run(F, FAM);
+      PreservedAnalyses PassPA;
+      {
+        TimeTraceScope TimeScope(Pass.name());
+        PassPA = Pass.run(F, FAM);
+      }
 
       PI.runAfterPass<Function>(Pass, F);
 
@@ -870,7 +874,11 @@ ModuleToPostOrderCGSCCPassAdaptor<CGSCCPassT>::run(Module &M,
           if (!PI.runBeforePass<LazyCallGraph::SCC>(Pass, *C))
             continue;
 
-          PreservedAnalyses PassPA = Pass.run(*C, CGAM, CG, UR);
+          PreservedAnalyses PassPA;
+          {
+            TimeTraceScope TimeScope(Pass.name());
+            PassPA = Pass.run(*C, CGAM, CG, UR);
+          }
 
           if (UR.InvalidatedSCCs.count(C))
             PI.runAfterPassInvalidated<LazyCallGraph::SCC>(Pass);

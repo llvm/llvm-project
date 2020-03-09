@@ -250,11 +250,14 @@ public:
   // SHT_LLVM_CALL_GRAPH_PROFILE table
   ArrayRef<Elf_CGProfile> cgProfile;
 
+  // Get cached DWARF information.
+  DWARFCache *getDwarf();
+
 private:
   void initializeSections(bool ignoreComdats);
   void initializeSymbols();
   void initializeJustSymbols();
-  void initializeDwarf();
+
   InputSectionBase *getRelocTarget(const Elf_Shdr &sec);
   InputSectionBase *createInputSection(const Elf_Shdr &sec);
   StringRef getSectionName(const Elf_Shdr &sec);
@@ -282,8 +285,8 @@ private:
   // reporting. Linker may find reasonable number of errors in a
   // single object file, so we cache debugging information in order to
   // parse it only once for each object file we link.
-  DWARFCache *dwarf;
-  llvm::once_flag initDwarfLine;
+  std::unique_ptr<DWARFCache> dwarf;
+  llvm::once_flag initDwarf;
 };
 
 // LazyObjFile is analogous to ArchiveFile in the sense that

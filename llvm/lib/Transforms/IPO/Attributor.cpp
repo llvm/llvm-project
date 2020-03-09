@@ -7798,15 +7798,15 @@ ChangeStatus Attributor::run() {
           ToBeChangedToUnreachableInsts.insert(&NormalDestBB->front());
         }
       }
+    for (Instruction *I : TerminatorsToFold) {
+      CGModifiedFunctions.insert(I->getFunction());
+      ConstantFoldTerminator(I->getParent());
+    }
     for (auto &V : ToBeChangedToUnreachableInsts)
       if (Instruction *I = dyn_cast_or_null<Instruction>(V)) {
         CGModifiedFunctions.insert(I->getFunction());
         changeToUnreachable(I, /* UseLLVMTrap */ false);
       }
-    for (Instruction *I : TerminatorsToFold) {
-      CGModifiedFunctions.insert(I->getFunction());
-      ConstantFoldTerminator(I->getParent());
-    }
 
     for (auto &V : ToBeDeletedInsts) {
       if (Instruction *I = dyn_cast_or_null<Instruction>(V)) {

@@ -14,6 +14,7 @@
 #define LLVM_CLANG_AST_MANGLE_H
 
 #include "clang/AST/Decl.h"
+#include "clang/AST/GlobalDecl.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/ABI.h"
 #include "llvm/ADT/DenseMap.h"
@@ -99,8 +100,8 @@ public:
   virtual void setDeviceMangleContext(bool) {}
 
   // FIXME: consider replacing raw_ostream & with something like SmallString &.
-  void mangleName(const NamedDecl *D, raw_ostream &);
-  virtual void mangleCXXName(const NamedDecl *D, raw_ostream &) = 0;
+  void mangleName(GlobalDecl GD, raw_ostream &);
+  virtual void mangleCXXName(GlobalDecl GD, raw_ostream &) = 0;
   virtual void mangleThunk(const CXXMethodDecl *MD,
                           const ThunkInfo &Thunk,
                           raw_ostream &) = 0;
@@ -112,10 +113,6 @@ public:
                                         raw_ostream &) = 0;
   virtual void mangleCXXRTTI(QualType T, raw_ostream &) = 0;
   virtual void mangleCXXRTTIName(QualType T, raw_ostream &) = 0;
-  virtual void mangleCXXCtor(const CXXConstructorDecl *D, CXXCtorType Type,
-                             raw_ostream &) = 0;
-  virtual void mangleCXXDtor(const CXXDestructorDecl *D, CXXDtorType Type,
-                             raw_ostream &) = 0;
   virtual void mangleStringLiteral(const StringLiteral *SL, raw_ostream &) = 0;
 
   void mangleGlobalBlock(const BlockDecl *BD,

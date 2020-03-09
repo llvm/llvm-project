@@ -1034,6 +1034,20 @@ public:
 
   ~CommandObjectProcessSignal() override = default;
 
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+    if (!m_exe_ctx.HasProcessScope() || request.GetCursorIndex() != 0)
+      return;
+
+    UnixSignalsSP signals = m_exe_ctx.GetProcessPtr()->GetUnixSignals();
+    int signo = signals->GetFirstSignalNumber();
+    while (signo != LLDB_INVALID_SIGNAL_NUMBER) {
+      request.AddCompletion(signals->GetSignalAsCString(signo), "");
+      signo = signals->GetNextSignalNumber(signo);
+    }
+  }
+
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
     Process *process = m_exe_ctx.GetProcessPtr();

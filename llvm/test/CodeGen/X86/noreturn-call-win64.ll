@@ -1,5 +1,8 @@
 ; RUN: llc < %s -mtriple=x86_64-windows-msvc | FileCheck %s
 
+%struct.MakeCleanup = type { i8 }
+%eh.ThrowInfo = type { i32, i32, i32, i32 }
+
 ; Function Attrs: noinline nounwind optnone uwtable
 define dso_local i32 @foo() {
 entry:
@@ -51,3 +54,58 @@ declare dso_local i32 @cond()
 declare dso_local void @abort1() noreturn
 declare dso_local void @abort2() noreturn
 declare dso_local void @abort3() noreturn
+
+define dso_local void @throw_exception() uwtable personality i32 (...)* @__CxxFrameHandler3 {
+entry:
+  %o = alloca %struct.MakeCleanup, align 1
+  %call = invoke i32 @cond()
+          to label %invoke.cont unwind label %ehcleanup
+
+invoke.cont:                                      ; preds = %entry
+  %cmp1 = icmp eq i32 0, %call
+  br i1 %cmp1, label %if.then, label %if.end
+
+if.then:                                          ; preds = %invoke.cont
+  invoke void @_CxxThrowException(i8* null, %eh.ThrowInfo* null)
+          to label %unreachable unwind label %ehcleanup
+
+if.end:                                           ; preds = %invoke.cont
+  %call2 = invoke i32 @cond()
+          to label %invoke.cont1 unwind label %ehcleanup
+
+invoke.cont1:                                     ; preds = %if.end
+  %cmp2 = icmp eq i32 0, %call2
+  br i1 %cmp2, label %if.then3, label %if.end4
+
+if.then3:                                         ; preds = %invoke.cont1
+  invoke void @_CxxThrowException(i8* null, %eh.ThrowInfo* null)
+          to label %unreachable unwind label %ehcleanup
+
+if.end4:                                          ; preds = %invoke.cont1
+  call void @"??1MakeCleanup@@QEAA@XZ"(%struct.MakeCleanup* nonnull %o)
+  ret void
+
+ehcleanup:                                        ; preds = %if.then3, %if.end, %if.then, %entry
+  %cp = cleanuppad within none []
+  call void @"??1MakeCleanup@@QEAA@XZ"(%struct.MakeCleanup* nonnull %o) [ "funclet"(token %cp) ]
+  cleanupret from %cp unwind to caller
+
+unreachable:                                      ; preds = %if.then3, %if.then
+  unreachable
+}
+
+declare dso_local i32 @__CxxFrameHandler3(...)
+declare dso_local void @_CxxThrowException(i8*, %eh.ThrowInfo*)
+declare dso_local void @"??1MakeCleanup@@QEAA@XZ"(%struct.MakeCleanup*)
+
+; CHECK-LABEL: throw_exception:
+; CHECK: callq cond
+; CHECK: je
+; CHECK: callq cond
+; CHECK: je
+; CHECK: retq
+; CHECK: callq _CxxThrowException
+; CHECK-NOT: {{(addq|subq) .*, %rsp}}
+; CHECK: callq _CxxThrowException
+; CHECK-NOT: {{(addq|subq) .*, %rsp}}
+; CHECK: .seh_handlerdata

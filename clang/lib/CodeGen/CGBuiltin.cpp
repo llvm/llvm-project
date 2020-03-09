@@ -1320,14 +1320,30 @@ RValue CodeGenFunction::emitBuiltinOSLogFormat(const CallExpr &E) {
     } else if (const Expr *TheExpr = Item.getExpr()) {
       ArgVal = EmitScalarExpr(TheExpr, /*Ignore*/ false);
 
-      // Check if this is a retainable type.
+      // If this is a retainable type, push a lifetime-extended cleanup to
+      // ensure the lifetime of the argument is extended to the end of the
+      // enclosing block scope.
+      // FIXME: We only have to do this if the argument is a temporary, which
+      //        gets released after the full expression.
       if (TheExpr->getType()->isObjCRetainableType()) {
         assert(getEvaluationKind(TheExpr->getType()) == TEK_Scalar &&
                "Only scalar can be a ObjC retainable type");
-        // Check if the object is constant, if not, save it in
-        // RetainableOperands.
-        if (!isa<Constant>(ArgVal))
-          RetainableOperands.push_back(ArgVal);
+        if (!isa<Constant>(ArgVal)) {
+          CleanupKind Cleanup = getARCCleanupKind();
+          QualType Ty = TheExpr->getType();
+          Address Alloca = Address::invalid();
+          Address Addr = CreateMemTemp(Ty, "os.log.arg", &Alloca);
+          ArgVal = EmitARCRetain(Ty, ArgVal);
+          Builder.CreateStore(ArgVal, Addr);
+          pushLifetimeExtendedDestroy(Cleanup, Alloca, Ty,
+                                      CodeGenFunction::destroyARCStrongPrecise,
+                                      Cleanup & EHCleanup);
+
+          // Push a clang.arc.use call to ensure ARC optimizer knows that the
+          // argument has to be alive.
+          if (CGM.getCodeGenOpts().OptimizationLevel != 0)
+            pushCleanupAfterFullExpr<CallObjCArcUse>(Cleanup, ArgVal);
+        }
       }
     } else {
       ArgVal = Builder.getInt32(Item.getConstValue().getQuantity());
@@ -1349,18 +1365,6 @@ RValue CodeGenFunction::emitBuiltinOSLogFormat(const CallExpr &E) {
   llvm::Function *F = CodeGenFunction(CGM).generateBuiltinOSLogHelperFunction(
       Layout, BufAddr.getAlignment());
   EmitCall(FI, CGCallee::forDirect(F), ReturnValueSlot(), Args);
-
-  // Push a clang.arc.use cleanup for each object in RetainableOperands. The
-  // cleanup will cause the use to appear after the final log call, keeping
-  // the object valid while it’s held in the log buffer.  Note that if there’s
-  // a release cleanup on the object, it will already be active; since
-  // cleanups are emitted in reverse order, the use will occur before the
-  // object is released.
-  if (!RetainableOperands.empty() && getLangOpts().ObjCAutoRefCount &&
-      CGM.getCodeGenOpts().OptimizationLevel != 0)
-    for (llvm::Value *Object : RetainableOperands)
-      pushFullExprCleanup<CallObjCArcUse>(getARCCleanupKind(), Object);
-
   return RValue::get(BufAddr.getPointer());
 }
 
@@ -14899,6 +14903,47 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     Value *RHS = EmitScalarExpr(E->getArg(1));
     Function *Callee = CGM.getIntrinsic(IntNo, ConvertType(E->getType()));
     return Builder.CreateCall(Callee, {LHS, RHS});
+  }
+  case WebAssembly::BI__builtin_wasm_min_s_i8x16:
+  case WebAssembly::BI__builtin_wasm_min_u_i8x16:
+  case WebAssembly::BI__builtin_wasm_max_s_i8x16:
+  case WebAssembly::BI__builtin_wasm_max_u_i8x16:
+  case WebAssembly::BI__builtin_wasm_min_s_i16x8:
+  case WebAssembly::BI__builtin_wasm_min_u_i16x8:
+  case WebAssembly::BI__builtin_wasm_max_s_i16x8:
+  case WebAssembly::BI__builtin_wasm_max_u_i16x8:
+  case WebAssembly::BI__builtin_wasm_min_s_i32x4:
+  case WebAssembly::BI__builtin_wasm_min_u_i32x4:
+  case WebAssembly::BI__builtin_wasm_max_s_i32x4:
+  case WebAssembly::BI__builtin_wasm_max_u_i32x4: {
+    Value *LHS = EmitScalarExpr(E->getArg(0));
+    Value *RHS = EmitScalarExpr(E->getArg(1));
+    Value *ICmp;
+    switch (BuiltinID) {
+    case WebAssembly::BI__builtin_wasm_min_s_i8x16:
+    case WebAssembly::BI__builtin_wasm_min_s_i16x8:
+    case WebAssembly::BI__builtin_wasm_min_s_i32x4:
+      ICmp = Builder.CreateICmpSLT(LHS, RHS);
+      break;
+    case WebAssembly::BI__builtin_wasm_min_u_i8x16:
+    case WebAssembly::BI__builtin_wasm_min_u_i16x8:
+    case WebAssembly::BI__builtin_wasm_min_u_i32x4:
+      ICmp = Builder.CreateICmpULT(LHS, RHS);
+      break;
+    case WebAssembly::BI__builtin_wasm_max_s_i8x16:
+    case WebAssembly::BI__builtin_wasm_max_s_i16x8:
+    case WebAssembly::BI__builtin_wasm_max_s_i32x4:
+      ICmp = Builder.CreateICmpSGT(LHS, RHS);
+      break;
+    case WebAssembly::BI__builtin_wasm_max_u_i8x16:
+    case WebAssembly::BI__builtin_wasm_max_u_i16x8:
+    case WebAssembly::BI__builtin_wasm_max_u_i32x4:
+      ICmp = Builder.CreateICmpUGT(LHS, RHS);
+      break;
+    default:
+      llvm_unreachable("unexpected builtin ID");
+    }
+    return Builder.CreateSelect(ICmp, LHS, RHS);
   }
   case WebAssembly::BI__builtin_wasm_avgr_u_i8x16:
   case WebAssembly::BI__builtin_wasm_avgr_u_i16x8: {

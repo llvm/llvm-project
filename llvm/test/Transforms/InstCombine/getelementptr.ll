@@ -1208,3 +1208,19 @@ define i32* @test_gep_inbounds_of_gep(i32* %base) {
   %ptr2 = getelementptr inbounds i32, i32* %ptr1, i64 4
   ret i32* %ptr2
 }
+
+%struct.f = type { i32 }
+
+@g0 = internal unnamed_addr constant %struct.f zeroinitializer, align 4
+@g1 = internal unnamed_addr constant %struct.f { i32 -1 }, align 4
+
+define i32* @PR45084(i1 %cond) {
+; CHECK-LABEL: @PR45084(
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], %struct.f* @g0, %struct.f* @g1
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [[STRUCT_F:%.*]], %struct.f* [[SEL]], i64 0, i32 0
+; CHECK-NEXT:    ret i32* [[GEP]]
+;
+  %sel = select i1 %cond, %struct.f* @g0, %struct.f* @g1
+  %gep = getelementptr inbounds %struct.f, %struct.f* %sel, i64 0, i32 0
+  ret i32* %gep
+}

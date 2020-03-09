@@ -400,6 +400,15 @@ bool DynamicLoaderDarwin::JSONImageInformationIntoImageInfo(
       else if (os_name == "maccatalyst") {
         image_infos[i].os_type = llvm::Triple::IOS;
         image_infos[i].os_env = llvm::Triple::MacABI;
+      } else if (os_name == "iossimulator") {
+        image_infos[i].os_type = llvm::Triple::IOS;
+        image_infos[i].os_env = llvm::Triple::Simulator;
+      } else if (os_name == "tvossimulator") {
+        image_infos[i].os_type = llvm::Triple::TvOS;
+        image_infos[i].os_env = llvm::Triple::Simulator;
+      } else if (os_name == "watchossimulator") {
+        image_infos[i].os_type = llvm::Triple::WatchOS;
+        image_infos[i].os_env = llvm::Triple::Simulator;
       }
     }
     if (image->HasKey("min_version_os_sdk")) {

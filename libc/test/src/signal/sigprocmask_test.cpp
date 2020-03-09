@@ -14,6 +14,7 @@
 #include "src/signal/sigemptyset.h"
 #include "src/signal/sigprocmask.h"
 
+#include "utils/UnitTest/ErrnoSetterMatcher.h"
 #include "utils/UnitTest/Test.h"
 
 class SignalTest : public __llvm_libc::testing::Test {
@@ -27,28 +28,23 @@ public:
   }
 };
 
+using __llvm_libc::testing::ErrnoSetterMatcher::Fails;
+using __llvm_libc::testing::ErrnoSetterMatcher::Succeeds;
+
 // This tests for invalid input.
 TEST_F(SignalTest, SigprocmaskInvalid) {
+  llvmlibc_errno = 0;
+
   sigset_t valid;
   // 17 and -4 are out of the range for sigprocmask's how paramater.
-  llvmlibc_errno = 0;
-  EXPECT_EQ(__llvm_libc::sigprocmask(17, &valid, nullptr), -1);
-  EXPECT_EQ(llvmlibc_errno, EINVAL);
-
-  llvmlibc_errno = 0;
-  EXPECT_EQ(__llvm_libc::sigprocmask(-4, &valid, nullptr), -1);
-  EXPECT_EQ(llvmlibc_errno, EINVAL);
+  EXPECT_THAT(__llvm_libc::sigprocmask(17, &valid, nullptr), Fails(EINVAL));
+  EXPECT_THAT(__llvm_libc::sigprocmask(-4, &valid, nullptr), Fails(EINVAL));
 
   // This pointer is out of this processes address range.
   sigset_t *invalid = reinterpret_cast<sigset_t *>(-1);
-
-  llvmlibc_errno = 0;
-  EXPECT_EQ(__llvm_libc::sigprocmask(SIG_SETMASK, invalid, nullptr), -1);
-  EXPECT_EQ(llvmlibc_errno, EFAULT);
-
-  llvmlibc_errno = 0;
-  EXPECT_EQ(__llvm_libc::sigprocmask(-4, nullptr, invalid), -1);
-  EXPECT_EQ(llvmlibc_errno, EFAULT);
+  EXPECT_THAT(__llvm_libc::sigprocmask(SIG_SETMASK, invalid, nullptr),
+              Fails(EFAULT));
+  EXPECT_THAT(__llvm_libc::sigprocmask(-4, nullptr, invalid), Fails(EFAULT));
 }
 
 // This tests that when nothing is blocked, a process gets killed and alse tests

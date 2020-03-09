@@ -383,7 +383,7 @@ ErrorOr<std::vector<std::unique_ptr<DebugMap>>> MachODebugMapParser::parse() {
 
   auto Objects = ObjectEntry->getObjectsAs<MachOObjectFile>();
   if (!Objects) {
-    return errorToErrorCode(ObjectEntry.takeError());
+    return errorToErrorCode(Objects.takeError());
   }
 
   std::vector<std::unique_ptr<DebugMap>> Results;

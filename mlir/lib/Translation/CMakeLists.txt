@@ -1,4 +1,4 @@
-add_llvm_library(MLIRTranslation
+add_mlir_library(MLIRTranslation
   Translation.cpp
 
   ADDITIONAL_HEADER_DIRS
@@ -7,4 +7,5 @@ add_llvm_library(MLIRTranslation
 target_link_libraries(MLIRTranslation
   PUBLIC
   LLVMSupport
+  MLIRIR
   )

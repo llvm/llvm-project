@@ -12,7 +12,7 @@ define <2 x i64> @test1() nounwind {
 ; X64-LABEL: test1:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl $1, %eax
-; X64-NEXT:    movq %rax, %xmm0
+; X64-NEXT:    movd %eax, %xmm0
 ; X64-NEXT:    retq
   ret <2 x i64> < i64 1, i64 0 >
 }

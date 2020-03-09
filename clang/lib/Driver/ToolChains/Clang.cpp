@@ -2548,8 +2548,13 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       ReciprocalMath = false;
       SignedZeros = true;
       // -fno_fast_math restores default denormal and fpcontract handling
-      DenormalFPMath = DefaultDenormalFPMath;
       FPContract = "";
+      DenormalFPMath = llvm::DenormalMode::getIEEE();
+
+      // FIXME: The target may have picked a non-IEEE default mode here based on
+      // -cl-denorms-are-zero. Should the target consider -fp-model interaction?
+      DenormalFP32Math = llvm::DenormalMode::getIEEE();
+
       StringRef Val = A->getValue();
       if (OFastEnabled && !Val.equals("fast")) {
           // Only -ffp-model=fast is compatible with OFast, ignore.
@@ -2724,9 +2729,10 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       SignedZeros = true;
       TrappingMath = true;
       FPExceptionBehavior = "strict";
-      // -fno_unsafe_math_optimizations restores default denormal handling
-      DenormalFPMath = DefaultDenormalFPMath;
-      DenormalFP32Math = DefaultDenormalFP32Math;
+
+      // The target may have opted to flush by default, so force IEEE.
+      DenormalFPMath = llvm::DenormalMode::getIEEE();
+      DenormalFP32Math = llvm::DenormalMode::getIEEE();
       break;
 
     case options::OPT_Ofast:
@@ -2760,18 +2766,19 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       RoundingFPMath = false;
       // -fno_fast_math restores default denormal and fpcontract handling
       DenormalFPMath = DefaultDenormalFPMath;
-      DenormalFP32Math = DefaultDenormalFP32Math;
+      DenormalFP32Math = llvm::DenormalMode::getIEEE();
       FPContract = "";
       break;
     }
     if (StrictFPModel) {
       // If -ffp-model=strict has been specified on command line but
       // subsequent options conflict then emit warning diagnostic.
-      // TODO: How should this interact with DenormalFP32Math?
       if (HonorINFs && HonorNaNs &&
         !AssociativeMath && !ReciprocalMath &&
         SignedZeros && TrappingMath && RoundingFPMath &&
-        (FPContract.equals("off") || FPContract.empty()))
+        (FPContract.equals("off") || FPContract.empty()) &&
+        DenormalFPMath == llvm::DenormalMode::getIEEE() &&
+        DenormalFP32Math == llvm::DenormalMode::getIEEE())
         // OK: Current Arg doesn't conflict with -ffp-model=strict
         ;
       else {
@@ -2817,15 +2824,16 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
   } else if (TrappingMathPresent)
     CmdArgs.push_back("-fno-trapping-math");
 
-  // TODO: Omit flag for the default IEEE instead
-  if (DenormalFPMath.isValid()) {
+  // The default is IEEE.
+  if (DenormalFPMath != llvm::DenormalMode::getIEEE()) {
     llvm::SmallString<64> DenormFlag;
     llvm::raw_svector_ostream ArgStr(DenormFlag);
     ArgStr << "-fdenormal-fp-math=" << DenormalFPMath;
     CmdArgs.push_back(Args.MakeArgString(ArgStr.str()));
   }
 
-  if (DenormalFP32Math.isValid()) {
+  // Add f32 specific denormal mode flag if it's different.
+  if (DenormalFP32Math != DenormalFPMath) {
     llvm::SmallString<64> DenormFlag;
     llvm::raw_svector_ostream ArgStr(DenormFlag);
     ArgStr << "-fdenormal-fp-math-f32=" << DenormalFP32Math;
@@ -4051,8 +4059,17 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Args.MakeArgString(NormalizedTriple));
   }
 
-  if (Args.hasFlag(options::OPT_fsycl, options::OPT_fno_sycl, false))
+  if (Args.hasFlag(options::OPT_fsycl, options::OPT_fno_sycl, false)) {
+    CmdArgs.push_back("-fsycl");
     CmdArgs.push_back("-fsycl-is-device");
+
+    if (Arg *A = Args.getLastArg(options::OPT_sycl_std_EQ)) {
+      A->render(Args, CmdArgs);
+    } else {
+      // Ensure the default version in SYCL mode is 1.2.1 (aka 2017)
+      CmdArgs.push_back("-sycl-std=2017");
+    }
+  }
 
   if (IsOpenMPDevice) {
     // We have to pass the triple of the host if compiling for an OpenMP device.

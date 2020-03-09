@@ -13,9 +13,22 @@ set(LLVM_OPTIONAL_SOURCES
   Verifier.cpp
   )
 
-add_llvm_library(MLIRAnalysis
-  CallGraph.cpp
+add_mlir_library(MLIRControlFlowAnalysis
   ControlFlowInterfaces.cpp
+
+  ADDITIONAL_HEADER_DIRS
+  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Analysis
+
+  DEPENDS
+  MLIRControlFlowInterfacesIncGen
+  )
+target_link_libraries(MLIRControlFlowAnalysis
+  PUBLIC
+  MLIRIR
+  )
+
+add_mlir_library(MLIRAnalysis
+  CallGraph.cpp
   InferTypeOpInterface.cpp
   Liveness.cpp
   SliceAnalysis.cpp
@@ -24,10 +37,9 @@ add_llvm_library(MLIRAnalysis
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Analysis
-  )
-add_dependencies(MLIRAnalysis
+
+  DEPENDS
   MLIRCallOpInterfacesIncGen
-  MLIRControlFlowInterfacesIncGen
   MLIRTypeInferOpInterfaceIncGen
   )
 
@@ -37,7 +49,7 @@ target_link_libraries(MLIRAnalysis
   MLIRLoopOps
   )
 
-add_llvm_library(MLIRLoopAnalysis
+add_mlir_library(MLIRLoopAnalysis
   AffineAnalysis.cpp
   AffineStructures.cpp
   LoopAnalysis.cpp
@@ -46,10 +58,9 @@ add_llvm_library(MLIRLoopAnalysis
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Analysis
-  )
-add_dependencies(MLIRLoopAnalysis
+
+  DEPENDS
   MLIRCallOpInterfacesIncGen
-  MLIRControlFlowInterfacesIncGen
   MLIRTypeInferOpInterfaceIncGen
   )
 

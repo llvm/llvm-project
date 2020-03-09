@@ -14,6 +14,11 @@ class TestIOSSimulator(GDBRemoteTestBase):
             self.process_ostype = process
             MockGDBServerResponder.__init__(self)
 
+        def respond(self, packet):
+            if packet == "qProcessInfo":
+                return self.qProcessInfo()
+            return MockGDBServerResponder.respond(self, packet)
+
         def qHostInfo(self):
             return "cputype:16777223;cpusubtype:8;ostype:%s;vendor:apple;os_version:10.15.4;maccatalyst_version:13.4;endian:little;ptrsize:8;"%self.host_ostype
         def qProcessInfo(self):

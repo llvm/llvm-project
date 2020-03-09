@@ -8843,11 +8843,15 @@ ConstString TypeSystemClang::DeclGetMangledName(void *opaque_decl) {
         llvm::SmallVector<char, 1024> buf;
         llvm::raw_svector_ostream llvm_ostrm(buf);
         if (llvm::isa<clang::CXXConstructorDecl>(nd)) {
-          mc->mangleCXXCtor(llvm::dyn_cast<clang::CXXConstructorDecl>(nd),
-                            Ctor_Complete, llvm_ostrm);
+          mc->mangleName(
+              clang::GlobalDecl(llvm::dyn_cast<clang::CXXConstructorDecl>(nd),
+                                Ctor_Complete),
+              llvm_ostrm);
         } else if (llvm::isa<clang::CXXDestructorDecl>(nd)) {
-          mc->mangleCXXDtor(llvm::dyn_cast<clang::CXXDestructorDecl>(nd),
-                            Dtor_Complete, llvm_ostrm);
+          mc->mangleName(
+              clang::GlobalDecl(llvm::dyn_cast<clang::CXXDestructorDecl>(nd),
+                                Dtor_Complete),
+              llvm_ostrm);
         } else {
           mc->mangleName(nd, llvm_ostrm);
         }

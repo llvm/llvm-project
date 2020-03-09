@@ -336,3 +336,17 @@ function(lldb_find_system_debugserver path)
     endif()
   endif()
 endfunction()
+
+# Removes all module flags from the current CMAKE_CXX_FLAGS. Used for
+# the Objective-C++ code in lldb which we don't want to build with modules.
+# Reasons for this are that modules with Objective-C++ would require that
+# all LLVM/Clang modules are Objective-C++ compatible (which they are likely
+# not) and we would have rebuild a second set of modules just for the few
+# Objective-C++ files in lldb (which slows down the build process).
+macro(remove_module_flags)
+  string(REGEX REPLACE "-fmodules-cache-path=[^ ]+" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+  string(REGEX REPLACE "-fmodules-local-submodule-visibility" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+  string(REGEX REPLACE "-fmodules" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+  string(REGEX REPLACE "-gmodules" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+  string(REGEX REPLACE "-fcxx-modules" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+endmacro()

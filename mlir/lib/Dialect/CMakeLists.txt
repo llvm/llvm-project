@@ -7,17 +7,16 @@ add_subdirectory(LoopOps)
 add_subdirectory(OpenMP)
 add_subdirectory(QuantOps)
 add_subdirectory(SDBM)
-add_subdirectory(Shape)
+#add_subdirectory(Shape)
 add_subdirectory(SPIRV)
 add_subdirectory(StandardOps)
 add_subdirectory(VectorOps)
-
 
 set(LLVM_OPTIONAL_SOURCES
   Traits.cpp
 )
 
-add_llvm_library(MLIRDialect
+add_mlir_library(MLIRDialect
   Traits.cpp
 
   ADDITIONAL_HEADER_DIRS
