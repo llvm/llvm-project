@@ -61,15 +61,15 @@ _Bool f(J *j) {
 // CHECK-ELF: !{{[0-9]+}} = !{i32 1, !"Objective-C Image Info Section", !"objc_imageinfo"}
 
 // CHECK-MACHO: @"_OBJC_$_CLASS_METHODS_I" = internal {{.*}}, section "__DATA, __objc_const"
-// CHECK-MACHO: @"OBJC_CLASSLIST_SUP_REFS_$_" = internal {{.*}}, section "__DATA,__objc_superrefs,regular,no_dead_strip"
+// CHECK-MACHO: @"OBJC_CLASSLIST_SUP_REFS_$_" = private {{.*}}, section "__DATA,__objc_superrefs,regular,no_dead_strip"
 // CHECK-MACHO: @OBJC_SELECTOR_REFERENCES_ = internal {{.*}}, section "__DATA,__objc_selrefs,literal_pointers,no_dead_strip"
 // CHECK-MACHO: @"OBJC_CLASSLIST_REFERENCES_$_" = internal {{.*}}, section "__DATA,__objc_classrefs,regular,no_dead_strip"
 // CHECK-MACHO: @_objc_msgSend_fixup_class = {{.*}}, section "__DATA,__objc_msgrefs,coalesced"
 // CHECK-MACHO: @"_OBJC_LABEL_PROTOCOL_$_P" = {{.*}}, section "__DATA,__objc_protolist,coalesced,no_dead_strip"
 // CHECK-MACHO: @"_OBJC_PROTOCOL_REFERENCE_$_P" = {{.*}}, section "__DATA,__objc_protorefs,coalesced,no_dead_strip"
-// CHECK-MACHO: @"OBJC_LABEL_CLASS_$" = internal {{.*}}, section "__DATA,__objc_classlist,regular,no_dead_strip"
-// CHECK-MACHO: @"OBJC_LABEL_NONLAZY_CLASS_$" = internal {{.*}}, section "__DATA,__objc_nlclslist,regular,no_dead_strip"
-// CHECK-MACHO: @"OBJC_LABEL_CATEGORY_$" = internal {{.*}}, section "__DATA,__objc_catlist,regular,no_dead_strip"
-// CHECK-MACHO: @"OBJC_LABEL_NONLAZY_CATEGORY_$" = internal {{.*}}, section "__DATA,__objc_nlcatlist,regular,no_dead_strip"
+// CHECK-MACHO: @"OBJC_LABEL_CLASS_$" = private {{.*}}, section "__DATA,__objc_classlist,regular,no_dead_strip"
+// CHECK-MACHO: @"OBJC_LABEL_NONLAZY_CLASS_$" = private {{.*}}, section "__DATA,__objc_nlclslist,regular,no_dead_strip"
+// CHECK-MACHO: @"OBJC_LABEL_CATEGORY_$" = private {{.*}}, section "__DATA,__objc_catlist,regular,no_dead_strip"
+// CHECK-MACHO: @"OBJC_LABEL_NONLAZY_CATEGORY_$" = private {{.*}}, section "__DATA,__objc_nlcatlist,regular,no_dead_strip"
 // CHECK-MACHO: !{{[0-9]+}} = !{i32 1, !"Objective-C Image Info Section", !"__DATA,__objc_imageinfo,regular,no_dead_strip"}
 
