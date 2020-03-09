@@ -367,6 +367,28 @@ private:
     void resetRowAndSequence();
     void appendRowToMatrix();
 
+    /// Advance the address by the \p OperationAdvance value. \returns the
+    /// amount advanced by.
+    uint64_t advanceAddr(uint64_t OperationAdvance);
+
+    struct AddrAndAdjustedOpcode {
+      uint64_t AddrDelta;
+      uint8_t AdjustedOpcode;
+    };
+
+    /// Advance the address as required by the specified \p Opcode.
+    /// \returns the amount advanced by and the calculated adjusted opcode.
+    AddrAndAdjustedOpcode advanceAddrForOpcode(uint8_t Opcode);
+
+    struct AddrAndLineDelta {
+      uint64_t Address;
+      int32_t Line;
+    };
+
+    /// Advance the line and address as required by the specified special \p
+    /// Opcode. \returns the address and line delta.
+    AddrAndLineDelta handleSpecialOpcode(uint8_t Opcode);
+
     /// Line table we're currently parsing.
     struct LineTable *LineTable;
     struct Row Row;
