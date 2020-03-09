@@ -41,7 +41,7 @@ void ContainerSizeEmptyCheck::registerMatchers(MatchFinder *Finder) {
 
   const auto WrongUse = anyOf(
       hasParent(binaryOperator(
-                    matchers::isComparisonOperator(),
+                    isComparisonOperator(),
                     hasEitherOperand(ignoringImpCasts(anyOf(
                         integerLiteral(equals(1)), integerLiteral(equals(0))))))
                     .bind("SizeBinaryOp")),
