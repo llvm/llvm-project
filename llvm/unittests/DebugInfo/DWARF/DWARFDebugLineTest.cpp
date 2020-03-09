@@ -961,6 +961,46 @@ INSTANTIATE_TEST_CASE_P(
            std::make_tuple(
                4, 2, true)), ); // Test one higher than permitted V4 (error).
 
+struct LineRangeFixture : TestWithParam<std::tuple<uint8_t, bool>>,
+                          AdjustAddressFixtureBase {
+  void SetUp() override { std::tie(LineRange, IsErrorExpected) = GetParam(); }
+
+  uint64_t editPrologue(LineTable &LT) override {
+    DWARFDebugLine::Prologue Prologue = LT.createBasicPrologue();
+    Prologue.LineRange = LineRange;
+    LT.setPrologue(Prologue);
+    return Prologue.TotalLength + Prologue.sizeofTotalLength();
+  }
+
+  uint64_t getAdjustedAddr(uint64_t Base, uint64_t ConstIncr,
+                           uint64_t SpecialIncr,
+                           uint64_t AdvanceIncr) override {
+    if (LineRange == 0)
+      return Base + AdvanceIncr;
+    return AdjustAddressFixtureBase::getAdjustedAddr(Base, ConstIncr,
+                                                     SpecialIncr, AdvanceIncr);
+  }
+
+  uint64_t getAdjustedLine(uint64_t Base, uint64_t Incr) override {
+    return LineRange != 0
+               ? AdjustAddressFixtureBase::getAdjustedLine(Base, Incr)
+               : Base;
+  }
+
+  uint8_t LineRange;
+};
+
+TEST_P(LineRangeFixture, LineRangeProblemsReportedCorrectly) {
+  runTest(/*CheckAdvancePC=*/false,
+          "but the prologue line_range value is 0. The address and line will "
+          "not be adjusted");
+}
+
+INSTANTIATE_TEST_CASE_P(
+    LineRangeParams, LineRangeFixture,
+    Values(std::make_tuple(0, true),       // Test zero value (error).
+           std::make_tuple(14, false)), ); // Test non-zero value (no error).
+
 TEST_F(DebugLineBasicFixture, ParserParsesCorrectly) {
   if (!setupGenerator())
     return;
