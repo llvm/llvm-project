@@ -3141,8 +3141,7 @@ llvm::Constant *CodeGenModule::GetOrCreateLLVMFunction(
       (void)OpenMPRuntime->emitDeclareVariant(GD, /*IsForDefinition=*/true);
 
     if (FD->isMultiVersion()) {
-      const auto *TA = FD->getAttr<TargetAttr>();
-      if (TA && TA->isDefaultVersion())
+      if (FD->hasAttr<TargetAttr>())
         UpdateMultiVersionNames(GD, FD);
       if (!IsForDefinition)
         return GetOrCreateMultiVersionResolver(GD, Ty, FD);
