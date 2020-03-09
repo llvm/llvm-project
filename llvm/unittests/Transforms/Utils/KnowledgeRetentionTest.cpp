@@ -10,10 +10,12 @@
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/CommandLine.h"
 #include "gtest/gtest.h"
+#include <random>
 
 using namespace llvm;
 
@@ -386,4 +388,103 @@ TEST(AssumeQueryAPI, fillMapFromAssume) {
         AssertFindExactlyAttributes(Map, Old, "");
       }));
   RunTest(Head, Tail, Tests);
+}
+
+static void RunRandTest(uint64_t Seed, int Size, int MinCount, int MaxCount,
+                        unsigned MaxValue) {
+  LLVMContext C;
+  SMDiagnostic Err;
+
+  std::random_device dev;
+  std::mt19937 Rng(Seed);
+  std::uniform_int_distribution<int> DistCount(MinCount, MaxCount);
+  std::uniform_int_distribution<unsigned> DistValue(0, MaxValue);
+  std::uniform_int_distribution<unsigned> DistAttr(0,
+                                                   Attribute::EndAttrKinds - 1);
+
+  std::unique_ptr<Module> Mod = std::make_unique<Module>("AssumeQueryAPI", C);
+  if (!Mod)
+    Err.print("AssumeQueryAPI", errs());
+
+  std::vector<Type *> TypeArgs;
+  for (int i = 0; i < (Size * 2); i++)
+    TypeArgs.push_back(Type::getInt32PtrTy(C));
+  FunctionType *FuncType =
+      FunctionType::get(Type::getVoidTy(C), TypeArgs, false);
+
+  Function *F =
+      Function::Create(FuncType, GlobalValue::ExternalLinkage, "test", &*Mod);
+  BasicBlock *BB = BasicBlock::Create(C);
+  BB->insertInto(F);
+  Instruction *Ret = ReturnInst::Create(C);
+  BB->getInstList().insert(BB->begin(), Ret);
+  Function *FnAssume = Intrinsic::getDeclaration(Mod.get(), Intrinsic::assume);
+
+  std::vector<Argument *> ShuffledArgs;
+  std::vector<bool> HasArg;
+  for (auto &Arg : F->args()) {
+    ShuffledArgs.push_back(&Arg);
+    HasArg.push_back(false);
+  }
+
+  std::shuffle(ShuffledArgs.begin(), ShuffledArgs.end(), Rng);
+
+  std::vector<OperandBundleDef> OpBundle;
+  OpBundle.reserve(Size);
+  std::vector<Value *> Args;
+  Args.reserve(2);
+  for (int i = 0; i < Size; i++) {
+    int count = DistCount(Rng);
+    int value = DistValue(Rng);
+    int attr = DistAttr(Rng);
+    std::string str;
+    raw_string_ostream ss(str);
+    ss << Attribute::getNameFromAttrKind(
+        static_cast<Attribute::AttrKind>(attr));
+    Args.clear();
+
+    if (count > 0) {
+      Args.push_back(ShuffledArgs[i]);
+      HasArg[i] = true;
+    }
+    if (count > 1)
+      Args.push_back(ConstantInt::get(Type::getInt32Ty(C), value));
+
+    OpBundle.push_back(OperandBundleDef{ss.str().c_str(), std::move(Args)});
+  }
+
+  Instruction *Assume =
+      CallInst::Create(FnAssume, ArrayRef<Value *>({ConstantInt::getTrue(C)}),
+                       std::move(OpBundle));
+  Assume->insertBefore(&F->begin()->front());
+  RetainedKnowledgeMap Map;
+  fillMapFromAssume(*cast<CallInst>(Assume), Map);
+  for (int i = 0; i < (Size * 2); i++) {
+    if (!HasArg[i])
+      continue;
+    RetainedKnowledge K =
+        getKnowledgeFromUseInAssume(&*ShuffledArgs[i]->use_begin());
+    auto LookupIt = Map.find(RetainedKnowledgeKey{K.WasOn, K.AttrKind});
+    ASSERT_TRUE(LookupIt != Map.end());
+    MinMax MM = LookupIt->second;
+    ASSERT_TRUE(MM.Min == MM.Max);
+    ASSERT_TRUE(MM.Min == K.ArgValue);
+  }
+}
+
+TEST(AssumeQueryAPI, getKnowledgeFromUseInAssume) {
+  // // For Fuzzing
+  // std::random_device dev;
+  // std::mt19937 Rng(dev());
+  // while (true) {
+  //   unsigned Seed = Rng();
+  //   dbgs() << Seed << "\n";
+  //   RunRandTest(Seed, 100000, 0, 2, 100);
+  // }
+  RunRandTest(23456, 4, 0, 2, 100);
+  RunRandTest(560987, 25, -3, 2, 100);
+
+  // Large bundles can lead to special cases. this is why this test is soo
+  // large.
+  RunRandTest(9876789, 100000, -0, 7, 100);
 }
