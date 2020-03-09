@@ -1434,7 +1434,14 @@ void __throw_bad_function_call()
 #endif
 }
 
-template<class _Fp> class _LIBCPP_TEMPLATE_VIS function; // undefined
+#if defined(_LIBCPP_CXX03_LANG) && !defined(_LIBCPP_DISABLE_DEPRECATION_WARNINGS) && __has_attribute(deprecated)
+#   define _LIBCPP_DEPRECATED_CXX03_FUNCTION \
+        __attribute__((deprecated("Using std::function in C++03 is not supported anymore. Please upgrade to C++11 or later, or use a different type")))
+#else
+#   define _LIBCPP_DEPRECATED_CXX03_FUNCTION /* nothing */
+#endif
+
+template<class _Fp> class _LIBCPP_DEPRECATED_CXX03_FUNCTION _LIBCPP_TEMPLATE_VIS function; // undefined
 
 namespace __function
 {
