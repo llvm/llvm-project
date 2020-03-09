@@ -1,4 +1,4 @@
-# RUN: llc -debug-entry-values -run-pass=none -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -emit-call-site-info -debug-entry-values -run-pass=none -verify-machineinstrs -o - %s | FileCheck %s
 
 # Verify that it is possible to read and write MIR where a callSites entry
 # points to a call residing in a bundle. The offset should point to the call

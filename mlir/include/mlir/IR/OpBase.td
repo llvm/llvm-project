@@ -486,6 +486,29 @@ class VectorOf<list<Type> allowedTypes> :
   ShapedContainerType<allowedTypes, IsVectorTypePred, "vector">;
 
 // Whether the number of elements of a vector is from the given
+// `allowedRanks` list
+class IsVectorOfRankPred<list<int> allowedRanks> :
+  And<[IsVectorTypePred,
+       Or<!foreach(allowedlength, allowedRanks,
+                   CPred<[{$_self.cast<VectorType>().getRank()
+                           == }]
+                         # allowedlength>)>]>;
+
+// Any vector where the rank is from the given `allowedRanks` list
+class VectorOfRank<list<int> allowedRanks> : Type<
+  IsVectorOfRankPred<allowedRanks>,
+  " of ranks " # StrJoinInt<allowedRanks, "/">.result>;
+
+// Any vector where the rank is from the given `allowedRanks` list and the type
+// is from the given `allowedTypes` list
+class VectorOfRankAndType<list<int> allowedRanks,
+                          list<Type> allowedTypes> : Type<
+  And<[VectorOf<allowedTypes>.predicate,
+       VectorOfRank<allowedRanks>.predicate]>,
+  VectorOf<allowedTypes>.description #
+  VectorOfRank<allowedRanks>.description>;
+
+// Whether the number of elements of a vector is from the given
 // `allowedLengths` list
 class IsVectorOfLengthPred<list<int> allowedLengths> :
   And<[IsVectorTypePred,

@@ -113,6 +113,7 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : TargetOpts(), Triple(T) {
   HasBuiltinMSVaList = false;
   IsRenderScriptTarget = false;
   HasAArch64SVETypes = false;
+  ARMCDECoprocMask = 0;
 
   // Default to no types using fpret.
   RealTypeUsesObjCFPRet = 0;

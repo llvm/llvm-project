@@ -60,14 +60,22 @@ func @std_parallel_loop(%arg0 : index, %arg1 : index, %arg2 : index,
     %max_cmp = cmpi "sge", %i0, %i1 : index
     %max = select %max_cmp, %i0, %i1 : index
     %zero = constant 0.0 : f32
-    %red = loop.parallel (%i2) = (%min) to (%max) step (%i1) init (%zero) {
+    %int_zero = constant 0 : i32
+    %red:2 = loop.parallel (%i2) = (%min) to (%max) step (%i1)
+                                      init (%zero, %int_zero) -> (f32, i32) {
       %one = constant 1.0 : f32
-      loop.reduce(%one) {
+      loop.reduce(%one) : f32 {
         ^bb0(%lhs : f32, %rhs: f32):
           %res = addf %lhs, %rhs : f32
           loop.reduce.return %res : f32
-      } : f32
-    } : f32
+      }
+      %int_one = constant 1 : i32
+      loop.reduce(%int_one) : i32 {
+        ^bb0(%lhs : i32, %rhs: i32):
+          %res = muli %lhs, %rhs : i32
+          loop.reduce.return %res : i32
+      }
+    }
   }
   return
 }
@@ -85,16 +93,24 @@ func @std_parallel_loop(%arg0 : index, %arg1 : index, %arg2 : index,
 //  CHECK-NEXT:     %[[MAX_CMP:.*]] = cmpi "sge", %[[I0]], %[[I1]] : index
 //  CHECK-NEXT:     %[[MAX:.*]] = select %[[MAX_CMP]], %[[I0]], %[[I1]] : index
 //  CHECK-NEXT:     %[[ZERO:.*]] = constant 0.000000e+00 : f32
+//  CHECK-NEXT:     %[[INT_ZERO:.*]] = constant 0 : i32
 //  CHECK-NEXT:     loop.parallel (%{{.*}}) = (%[[MIN]]) to (%[[MAX]])
-//  CHECK-SAME:           step (%[[I1]]) init (%[[ZERO]]) {
+//  CHECK-SAME:          step (%[[I1]])
+//  CHECK-SAME:          init (%[[ZERO]], %[[INT_ZERO]]) -> (f32, i32) {
 //  CHECK-NEXT:       %[[ONE:.*]] = constant 1.000000e+00 : f32
-//  CHECK-NEXT:       loop.reduce(%[[ONE]]) {
+//  CHECK-NEXT:       loop.reduce(%[[ONE]]) : f32 {
 //  CHECK-NEXT:       ^bb0(%[[LHS:.*]]: f32, %[[RHS:.*]]: f32):
 //  CHECK-NEXT:         %[[RES:.*]] = addf %[[LHS]], %[[RHS]] : f32
 //  CHECK-NEXT:         loop.reduce.return %[[RES]] : f32
-//  CHECK-NEXT:       } : f32
+//  CHECK-NEXT:       }
+//  CHECK-NEXT:       %[[INT_ONE:.*]] = constant 1 : i32
+//  CHECK-NEXT:       loop.reduce(%[[INT_ONE]]) : i32 {
+//  CHECK-NEXT:       ^bb0(%[[LHS:.*]]: i32, %[[RHS:.*]]: i32):
+//  CHECK-NEXT:         %[[RES:.*]] = muli %[[LHS]], %[[RHS]] : i32
+//  CHECK-NEXT:         loop.reduce.return %[[RES]] : i32
+//  CHECK-NEXT:       }
 //  CHECK-NEXT:       loop.yield
-//  CHECK-NEXT:     } : f32
+//  CHECK-NEXT:     }
 //  CHECK-NEXT:     loop.yield
 
 func @parallel_explicit_yield(

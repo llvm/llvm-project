@@ -459,25 +459,19 @@ bool CommandObjectDisassemble::DoExecute(Args &command,
 
   bool print_sc_header = ranges.size() > 1;
   for (AddressRange cur_range : ranges) {
-    bool success;
-    if (m_options.num_instructions != 0) {
-      success = Disassembler::Disassemble(
-          GetDebugger(), m_options.arch, plugin_name, flavor_string, m_exe_ctx,
-          cur_range.GetBaseAddress(), m_options.num_instructions,
-          m_options.show_mixed,
-          m_options.show_mixed ? m_options.num_lines_context : 0, options,
-          result.GetOutputStream());
+    Disassembler::Limit limit;
+    if (m_options.num_instructions == 0) {
+      limit = {Disassembler::Limit::Bytes, cur_range.GetByteSize()};
+      if (limit.value == 0)
+        limit.value = DEFAULT_DISASM_BYTE_SIZE;
     } else {
-      if (cur_range.GetByteSize() == 0)
-        cur_range.SetByteSize(DEFAULT_DISASM_BYTE_SIZE);
-
-      success = Disassembler::Disassemble(
-          GetDebugger(), m_options.arch, plugin_name, flavor_string, m_exe_ctx,
-          cur_range, m_options.num_instructions, m_options.show_mixed,
-          m_options.show_mixed ? m_options.num_lines_context : 0, options,
-          result.GetOutputStream());
+      limit = {Disassembler::Limit::Instructions, m_options.num_instructions};
     }
-    if (success) {
+    if (Disassembler::Disassemble(
+            GetDebugger(), m_options.arch, plugin_name, flavor_string,
+            m_exe_ctx, cur_range.GetBaseAddress(), limit, m_options.show_mixed,
+            m_options.show_mixed ? m_options.num_lines_context : 0, options,
+            result.GetOutputStream())) {
       result.SetStatus(eReturnStatusSuccessFinishResult);
     } else {
       if (m_options.symbol_containing_addr != LLDB_INVALID_ADDRESS) {

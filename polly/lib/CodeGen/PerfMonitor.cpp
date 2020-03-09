@@ -12,8 +12,8 @@
 #include "polly/CodeGen/RuntimeDebugBuilder.h"
 #include "polly/ScopInfo.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/IR/IntrinsicsX86.h"
-#include <sstream>
 
 using namespace llvm;
 using namespace polly;
@@ -82,13 +82,12 @@ static void TryRegisterGlobal(Module *M, const char *Name,
 // Generate a unique name that is usable as a LLVM name for a scop to name its
 // performance counter.
 static std::string GetScopUniqueVarname(const Scop &S) {
-  std::stringstream Name;
   std::string EntryString, ExitString;
   std::tie(EntryString, ExitString) = S.getEntryExitStr();
 
-  Name << "__polly_perf_in_" << std::string(S.getFunction().getName())
-       << "_from__" << EntryString << "__to__" << ExitString;
-  return Name.str();
+  return (Twine("__polly_perf_in_") + S.getFunction().getName() + "_from__" +
+          EntryString + "__to__" + ExitString)
+      .str();
 }
 
 void PerfMonitor::addScopCounter() {

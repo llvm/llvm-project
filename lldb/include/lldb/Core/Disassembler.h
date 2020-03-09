@@ -384,6 +384,11 @@ public:
                                                   const char *flavor,
                                                   const char *plugin_name);
 
+  struct Limit {
+    enum { Bytes, Instructions } kind;
+    lldb::addr_t value;
+  };
+
   static lldb::DisassemblerSP
   DisassembleRange(const ArchSpec &arch, const char *plugin_name,
                    const char *flavor, Target &target,
@@ -397,17 +402,8 @@ public:
 
   static bool Disassemble(Debugger &debugger, const ArchSpec &arch,
                           const char *plugin_name, const char *flavor,
-                          const ExecutionContext &exe_ctx,
-                          const AddressRange &range, uint32_t num_instructions,
-                          bool mixed_source_and_assembly,
-                          uint32_t num_mixed_context_lines, uint32_t options,
-                          Stream &strm);
-
-  static bool Disassemble(Debugger &debugger, const ArchSpec &arch,
-                          const char *plugin_name, const char *flavor,
                           const ExecutionContext &exe_ctx, const Address &start,
-                          uint32_t num_instructions,
-                          bool mixed_source_and_assembly,
+                          Limit limit, bool mixed_source_and_assembly,
                           uint32_t num_mixed_context_lines, uint32_t options,
                           Stream &strm);
 
@@ -423,16 +419,12 @@ public:
 
   void PrintInstructions(Debugger &debugger, const ArchSpec &arch,
                          const ExecutionContext &exe_ctx,
-                         uint32_t num_instructions,
                          bool mixed_source_and_assembly,
                          uint32_t num_mixed_context_lines, uint32_t options,
                          Stream &strm);
 
-  size_t ParseInstructions(Target &target, AddressRange range,
+  size_t ParseInstructions(Target &target, Address address, Limit limit,
                            Stream *error_strm_ptr, bool prefer_file_cache);
-
-  size_t ParseInstructions(Target &target, Address address,
-                           uint32_t num_instructions, bool prefer_file_cache);
 
   virtual size_t DecodeInstructions(const Address &base_addr,
                                     const DataExtractor &data,

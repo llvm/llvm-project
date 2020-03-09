@@ -272,13 +272,13 @@ def ParallelOp : Loop_Op<"parallel",
     For example:
 
     ```mlir
-       loop.parallel (%iv) = (%lb) to (%ub) step (%step) {
+       loop.parallel (%iv) = (%lb) to (%ub) step (%step) -> f32 {
          %zero = constant 0.0 : f32
-         loop.reduce(%zero) {
+         loop.reduce(%zero) : f32 {
            ^bb0(%lhs : f32, %rhs: f32):
              %res = addf %lhs, %rhs : f32
              loop.reduce.return %res : f32
-         } : f32
+         }
        }
     ```
    }];

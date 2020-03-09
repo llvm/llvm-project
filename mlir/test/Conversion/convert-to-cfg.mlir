@@ -268,14 +268,14 @@ func @simple_parallel_reduce_loop(%arg0: index, %arg1: index,
   // The continuation block has access to the (last value of) reduction.
   // CHECK: ^[[CONTINUE]]:
   // CHECK:   return %[[ITER_ARG]]
-  %0 = loop.parallel (%i) = (%arg0) to (%arg1) step (%arg2) init(%arg3) {
+  %0 = loop.parallel (%i) = (%arg0) to (%arg1) step (%arg2) init(%arg3) -> f32 {
     %cst = constant 42.0 : f32
-    loop.reduce(%cst) {
+    loop.reduce(%cst) : f32 {
     ^bb0(%lhs: f32, %rhs: f32):
       %1 = mulf %lhs, %rhs : f32
       loop.reduce.return %1 : f32
-    } : f32
-  } : f32
+    }
+  }
   return %0 : f32
 }
 
@@ -304,20 +304,20 @@ func @parallel_reduce_loop(%arg0 : index, %arg1 : index, %arg2 : index,
   %step = constant 1 : index
   %init = constant 42 : i64
   %0:2 = loop.parallel (%i0, %i1) = (%arg0, %arg1) to (%arg2, %arg3)
-                       step (%arg4, %step) init(%arg5, %init) {
+                       step (%arg4, %step) init(%arg5, %init) -> (f32, i64) {
     %cf = constant 42.0 : f32
-    loop.reduce(%cf) {
+    loop.reduce(%cf) : f32 {
     ^bb0(%lhs: f32, %rhs: f32):
       %1 = addf %lhs, %rhs : f32
       loop.reduce.return %1 : f32
-    } : f32
+    }
 
     %2 = call @generate() : () -> i64
-    loop.reduce(%2) {
+    loop.reduce(%2) : i64 {
     ^bb0(%lhs: i64, %rhs: i64):
       %3 = or %lhs, %rhs : i64
       loop.reduce.return %3 : i64
-    } : i64
-  } : f32, i64
+    }
+  }
   return %0#0, %0#1 : f32, i64
 }

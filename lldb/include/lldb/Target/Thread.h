@@ -1195,7 +1195,7 @@ protected:
 
   typedef std::vector<lldb::ThreadPlanSP> plan_stack;
 
-  virtual lldb_private::Unwind *GetUnwinder();
+  virtual Unwind &GetUnwinder();
 
   // Check to see whether the thread is still at the last breakpoint hit that
   // stopped it.

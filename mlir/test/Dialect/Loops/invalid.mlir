@@ -175,10 +175,10 @@ func @parallel_fewer_results_than_reduces(
   // expected-error@+1 {{expects number of results: 0 to be the same as number of reductions: 1}}
   loop.parallel (%i0) = (%arg0) to (%arg1) step (%arg2) {
     %c0 = constant 1.0 : f32
-    loop.reduce(%c0) {
+    loop.reduce(%c0) : f32 {
       ^bb0(%lhs: f32, %rhs: f32):
         loop.reduce.return %lhs : f32
-    } : f32
+    }
   }
   return
 }
@@ -189,8 +189,8 @@ func @parallel_more_results_than_reduces(
     %arg0 : index, %arg1 : index, %arg2 : index) {
   // expected-error@+2 {{expects number of results: 1 to be the same as number of reductions: 0}}
   %zero = constant 1.0 : f32
-  %res = loop.parallel (%i0) = (%arg0) to (%arg1) step (%arg2) init (%zero) {
-  } : f32
+  %res = loop.parallel (%i0) = (%arg0) to (%arg1) step (%arg2) init (%zero) -> f32 {
+  }
 
   return
 }
@@ -200,13 +200,12 @@ func @parallel_more_results_than_reduces(
 func @parallel_more_results_than_initial_values(
     %arg0 : index, %arg1: index, %arg2: index) {
   // expected-error@+1 {{expects number of results: 1 to be the same as number of initial values: 0}}
-  %res = loop.parallel (%i0) = (%arg0) to (%arg1) step (%arg2) {
-    loop.reduce(%arg0) {
+  %res = loop.parallel (%i0) = (%arg0) to (%arg1) step (%arg2) -> f32 {
+    loop.reduce(%arg0) : index {
       ^bb0(%lhs: index, %rhs: index):
         loop.reduce.return %lhs : index
-    } : index
-  } : f32
-  return
+    }
+  }
 }
 
 // -----
@@ -214,13 +213,14 @@ func @parallel_more_results_than_initial_values(
 func @parallel_different_types_of_results_and_reduces(
     %arg0 : index, %arg1: index, %arg2: index) {
   %zero = constant 0.0 : f32
-  %res = loop.parallel (%i0) = (%arg0) to (%arg1) step (%arg2) init (%zero) {
+  %res = loop.parallel (%i0) = (%arg0) to (%arg1)
+                                       step (%arg2) init (%zero) -> f32 {
     // expected-error@+1 {{expects type of reduce: 'index' to be the same as result type: 'f32'}}
-    loop.reduce(%arg0) {
+    loop.reduce(%arg0) : index {
       ^bb0(%lhs: index, %rhs: index):
         loop.reduce.return %lhs : index
-    } : index
-  } : f32
+    }
+  }
   return
 }
 
@@ -228,10 +228,10 @@ func @parallel_different_types_of_results_and_reduces(
 
 func @top_level_reduce(%arg0 : f32) {
   // expected-error@+1 {{expects parent op 'loop.parallel'}}
-  loop.reduce(%arg0) {
+  loop.reduce(%arg0) : f32 {
     ^bb0(%lhs : f32, %rhs : f32):
       loop.reduce.return %lhs : f32
-  } : f32
+  }
   return
 }
 
@@ -239,12 +239,13 @@ func @top_level_reduce(%arg0 : f32) {
 
 func @reduce_empty_block(%arg0 : index, %arg1 : f32) {
   %zero = constant 0.0 : f32
-  %res = loop.parallel (%i0) = (%arg0) to (%arg0) step (%arg0) init (%zero) {
+  %res = loop.parallel (%i0) = (%arg0) to (%arg0)
+                                       step (%arg0) init (%zero) -> f32 {
     // expected-error@+1 {{the block inside reduce should not be empty}}
-    loop.reduce(%arg1) {
+    loop.reduce(%arg1) : f32 {
       ^bb0(%lhs : f32, %rhs : f32):
-    } : f32
-  } : f32
+    }
+  }
   return
 }
 
@@ -252,13 +253,14 @@ func @reduce_empty_block(%arg0 : index, %arg1 : f32) {
 
 func @reduce_too_many_args(%arg0 : index, %arg1 : f32) {
   %zero = constant 0.0 : f32
-  %res = loop.parallel (%i0) = (%arg0) to (%arg0) step (%arg0) init (%zero) {
+  %res = loop.parallel (%i0) = (%arg0) to (%arg0)
+                                       step (%arg0) init (%zero) -> f32 {
     // expected-error@+1 {{expects two arguments to reduce block of type 'f32'}}
-    loop.reduce(%arg1) {
+    loop.reduce(%arg1) : f32 {
       ^bb0(%lhs : f32, %rhs : f32, %other : f32):
         loop.reduce.return %lhs : f32
-    } : f32
-  } : f32
+    }
+  }
   return
 }
 
@@ -266,13 +268,14 @@ func @reduce_too_many_args(%arg0 : index, %arg1 : f32) {
 
 func @reduce_wrong_args(%arg0 : index, %arg1 : f32) {
   %zero = constant 0.0 : f32
-  %res = loop.parallel (%i0) = (%arg0) to (%arg0) step (%arg0) init (%zero) {
+  %res = loop.parallel (%i0) = (%arg0) to (%arg0)
+                                       step (%arg0) init (%zero) -> f32 {
     // expected-error@+1 {{expects two arguments to reduce block of type 'f32'}}
-    loop.reduce(%arg1) {
+    loop.reduce(%arg1) : f32 {
       ^bb0(%lhs : f32, %rhs : i32):
         loop.reduce.return %lhs : f32
-    } : f32
-  } : f32
+    }
+  }
   return
 }
 
@@ -281,13 +284,14 @@ func @reduce_wrong_args(%arg0 : index, %arg1 : f32) {
 
 func @reduce_wrong_terminator(%arg0 : index, %arg1 : f32) {
   %zero = constant 0.0 : f32
-  %res = loop.parallel (%i0) = (%arg0) to (%arg0) step (%arg0) init (%zero) {
+  %res = loop.parallel (%i0) = (%arg0) to (%arg0)
+                                       step (%arg0) init (%zero) -> f32 {
     // expected-error@+1 {{the block inside reduce should be terminated with a 'loop.reduce.return' op}}
-    loop.reduce(%arg1) {
+    loop.reduce(%arg1) : f32 {
       ^bb0(%lhs : f32, %rhs : f32):
         loop.yield
-    } : f32
-  } : f32
+    }
+  }
   return
 }
 
@@ -295,14 +299,15 @@ func @reduce_wrong_terminator(%arg0 : index, %arg1 : f32) {
 
 func @reduceReturn_wrong_type(%arg0 : index, %arg1: f32) {
   %zero = constant 0.0 : f32
-  %res = loop.parallel (%i0) = (%arg0) to (%arg0) step (%arg0) init (%zero) {
-    loop.reduce(%arg1) {
+  %res = loop.parallel (%i0) = (%arg0) to (%arg0)
+                                       step (%arg0) init (%zero) -> f32 {
+    loop.reduce(%arg1) : f32 {
       ^bb0(%lhs : f32, %rhs : f32):
         %c0 = constant 1 : index
         // expected-error@+1 {{needs to have type 'f32' (the type of the enclosing ReduceOp)}}
         loop.reduce.return %c0 : index
-    } : f32
-  } : f32
+    }
+  }
   return
 }
 
@@ -349,7 +354,8 @@ func @std_for_operands_mismatch(%arg0 : index, %arg1 : index, %arg2 : index) {
   %s0 = constant 0.0 : f32
   %t0 = constant 1 : i32
   // expected-error@+1 {{mismatch in number of loop-carried values and defined values}}
-  %result1:3 = loop.for %i0 = %arg0 to %arg1 step %arg2 iter_args(%si = %s0, %ti = %t0) -> (f32, i32, f32) {
+  %result1:3 = loop.for %i0 = %arg0 to %arg1 step %arg2
+                    iter_args(%si = %s0, %ti = %t0) -> (f32, i32, f32) {
     %sn = addf %si, %si : f32
     %tn = addi %ti, %ti : i32
     loop.yield %sn, %tn, %sn : f32, i32, f32
@@ -364,7 +370,8 @@ func @std_for_operands_mismatch_2(%arg0 : index, %arg1 : index, %arg2 : index) {
   %t0 = constant 1 : i32
   %u0 = constant 1.0 : f32
   // expected-error@+1 {{mismatch in number of loop-carried values and defined values}}
-  %result1:2 = loop.for %i0 = %arg0 to %arg1 step %arg2 iter_args(%si = %s0, %ti = %t0, %ui = %u0) -> (f32, i32) {
+  %result1:2 = loop.for %i0 = %arg0 to %arg1 step %arg2
+                    iter_args(%si = %s0, %ti = %t0, %ui = %u0) -> (f32, i32) {
     %sn = addf %si, %si : f32
     %tn = addi %ti, %ti : i32
     %un = subf %ui, %ui : f32
@@ -379,8 +386,9 @@ func @std_for_operands_mismatch_3(%arg0 : index, %arg1 : index, %arg2 : index) {
   // expected-note@+1 {{prior use here}}
   %s0 = constant 0.0 : f32
   %t0 = constant 1.0 : f32
-  // expected-error@+1 {{expects different type than prior uses: 'i32' vs 'f32'}}
-  %result1:2 = loop.for %i0 = %arg0 to %arg1 step %arg2 iter_args(%si = %s0, %ti = %t0) -> (i32, i32) {
+  // expected-error@+2 {{expects different type than prior uses: 'i32' vs 'f32'}}
+  %result1:2 = loop.for %i0 = %arg0 to %arg1 step %arg2
+                    iter_args(%si = %s0, %ti = %t0) -> (i32, i32) {
     %sn = addf %si, %si : i32
     %tn = addf %ti, %ti : i32
     loop.yield %sn, %tn : i32, i32

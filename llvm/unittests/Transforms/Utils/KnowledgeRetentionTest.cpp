@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/IR/KnowledgeRetention.h"
+#include "llvm/Transforms/Utils/KnowledgeRetention.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/LLVMContext.h"

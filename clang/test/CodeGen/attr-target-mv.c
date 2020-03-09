@@ -47,6 +47,9 @@ void bar5() {
   fwd_decl_avx();
 }
 
+int __attribute__((target("avx"))) changed_to_mv(void) { return 0;}
+int __attribute__((target("fma4"))) changed_to_mv(void) { return 1;}
+
 // LINUX: @foo.ifunc = weak_odr ifunc i32 (), i32 ()* ()* @foo.resolver
 // LINUX: @foo_inline.ifunc = weak_odr ifunc i32 (), i32 ()* ()* @foo_inline.resolver
 // LINUX: @foo_decls.ifunc = weak_odr ifunc void (), void ()* ()* @foo_decls.resolver
@@ -193,6 +196,12 @@ void bar5() {
 // WINDOWS: call void @__cpu_indicator_init()
 // WINDOWS: call i32 @fwd_decl_avx.avx
 // WINDOWS: call i32 @fwd_decl_avx
+
+// LINUX: define i32 @changed_to_mv.avx()
+// LINUX: define i32 @changed_to_mv.fma4()
+
+// WINDOWS: define dso_local i32 @changed_to_mv.avx()
+// WINDOWS: define dso_local i32 @changed_to_mv.fma4()
 
 // LINUX: declare i32 @foo.arch_sandybridge()
 // WINDOWS: declare dso_local i32 @foo.arch_sandybridge()

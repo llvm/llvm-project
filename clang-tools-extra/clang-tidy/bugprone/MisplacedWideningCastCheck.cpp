@@ -48,8 +48,7 @@ void MisplacedWideningCastCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(callExpr(hasAnyArgument(Cast)), this);
   Finder->addMatcher(binaryOperator(hasOperatorName("="), hasRHS(Cast)), this);
   Finder->addMatcher(
-      binaryOperator(matchers::isComparisonOperator(), hasEitherOperand(Cast)),
-      this);
+      binaryOperator(isComparisonOperator(), hasEitherOperand(Cast)), this);
 }
 
 static unsigned getMaxCalculationWidth(const ASTContext &Context,
