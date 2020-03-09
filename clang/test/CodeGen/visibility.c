@@ -3,15 +3,15 @@
 // RUN: %clang_cc1 %s -triple i386-unknown-unknown -fvisibility hidden -emit-llvm -o - | FileCheck %s -check-prefix=CHECK-HIDDEN
 
 // CHECK-DEFAULT: @g_def = global i32 0
-// CHECK-DEFAULT: @g_com = common global i32 0
+// CHECK-DEFAULT: @g_com = global i32 0
 // CHECK-DEFAULT: @g_ext = external global i32
 // CHECK-DEFAULT: @g_deferred = internal global
 // CHECK-PROTECTED: @g_def = protected global i32 0
-// CHECK-PROTECTED: @g_com = common protected global i32 0
+// CHECK-PROTECTED: @g_com = protected global i32 0
 // CHECK-PROTECTED: @g_ext = external global i32
 // CHECK-PROTECTED: @g_deferred = internal global
 // CHECK-HIDDEN: @g_def = hidden global i32 0
-// CHECK-HIDDEN: @g_com = common hidden global i32 0
+// CHECK-HIDDEN: @g_com = hidden global i32 0
 // CHECK-HIDDEN: @g_ext = external global i32
 // CHECK-HIDDEN: @g_deferred = internal global
 int g_com;
