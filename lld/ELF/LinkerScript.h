@@ -126,14 +126,14 @@ enum class ConstraintKind { NoConstraint, ReadOnly, ReadWrite };
 // target memory. Instances of the struct are created by parsing the
 // MEMORY command.
 struct MemoryRegion {
-  MemoryRegion(StringRef name, uint64_t origin, uint64_t length, uint32_t flags,
+  MemoryRegion(StringRef name, Expr origin, Expr length, uint32_t flags,
                uint32_t negFlags)
       : name(std::string(name)), origin(origin), length(length), flags(flags),
         negFlags(negFlags) {}
 
   std::string name;
-  uint64_t origin;
-  uint64_t length;
+  Expr origin;
+  Expr length;
   uint32_t flags;
   uint32_t negFlags;
   uint64_t curPos = 0;

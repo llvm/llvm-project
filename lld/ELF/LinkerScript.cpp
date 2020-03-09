@@ -103,10 +103,11 @@ OutputSection *LinkerScript::getOrCreateOutputSection(StringRef name) {
 static void expandMemoryRegion(MemoryRegion *memRegion, uint64_t size,
                                StringRef regionName, StringRef secName) {
   memRegion->curPos += size;
-  uint64_t newSize = memRegion->curPos - memRegion->origin;
-  if (newSize > memRegion->length)
+  uint64_t newSize = memRegion->curPos - (memRegion->origin)().getValue();
+  uint64_t length = (memRegion->length)().getValue();
+  if (newSize > length)
     error("section '" + secName + "' will not fit in region '" + regionName +
-          "': overflowed by " + Twine(newSize - memRegion->length) + " bytes");
+          "': overflowed by " + Twine(newSize - length) + " bytes");
 }
 
 void LinkerScript::expandMemoryRegions(uint64_t size) {
@@ -1101,7 +1102,7 @@ void LinkerScript::allocateHeaders(std::vector<PhdrEntry *> &phdrs) {
 LinkerScript::AddressState::AddressState() {
   for (auto &mri : script->memoryRegions) {
     MemoryRegion *mr = mri.second;
-    mr->curPos = mr->origin;
+    mr->curPos = (mr->origin)().getValue();
   }
 }
 

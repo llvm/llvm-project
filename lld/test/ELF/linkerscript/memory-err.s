@@ -52,18 +52,21 @@
 # ERR7: {{.*}}.script:1: invalid memory region attribute
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
-# RUN: echo "MEMORY { name : ORIGIN = DATA_SEGMENT_RELRO_END; }" > %t.script
-# RUN: not ld.lld -shared -o /dev/null -T %t.script %t.o 2>&1 | FileCheck %s
-# CHECK: error: {{.*}}.script:1: unable to calculate page size
-
-# RUN: echo 'MEMORY { name : ORIGIN = CONSTANT(COMMONPAGESIZE); }' > %t.script
-# RUN: not ld.lld -shared -o /dev/null -T %t.script %t.o 2>&1 | FileCheck --check-prefix=ERR_PAGESIZE %s
-# ERR_PAGESIZE: error: {{.*}}.script:1: unable to calculate page size
-
-# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
-# RUN: echo 'MEMORY { name : ORIGIN = .; }' > %t.script
+# RUN: echo 'MEMORY { name : ORIGIN = ., LENGTH = 1 }' > %t.script
 # RUN: not ld.lld -shared -o /dev/null -T %t.script %t.o 2>&1 | FileCheck --check-prefix=ERR_DOT %s
 # ERR_DOT: error: {{.*}}.script:1: unable to get location counter value
+
+## ORIGIN/LENGTH can be simple symbolic expressions. If the expression
+## requires interaction with memory regions, it may fail.
+
+# RUN: echo 'MEMORY { ram : ORIGIN = symbol, LENGTH = 4097 } \
+# RUN: SECTIONS { \
+# RUN:   .text : { *(.text) } > ram \
+# RUN:   symbol = .; \
+# RUN:   .data : { *(.data) } > ram \
+# RUN: }' > %t.script
+# RUN: not ld.lld -T %t.script %t.o -o /dev/null 2>&1 | FileCheck --check-prefix=ERR_OVERFLOW %s
+# ERR_OVERFLOW: error: section '.text' will not fit in region 'ram': overflowed by 18446744073709547518 bytes
 
 nop
 
