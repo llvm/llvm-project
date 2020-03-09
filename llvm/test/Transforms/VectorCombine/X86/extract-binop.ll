@@ -251,14 +251,18 @@ define i8 @ext1_ext1_add_uses2(<16 x i8> %x, <16 x i8> %y) {
   ret i8 %r
 }
 
-; TODO: Different extract indexes requires a shuffle.
-
 define i8 @ext0_ext1_add(<16 x i8> %x, <16 x i8> %y) {
-; CHECK-LABEL: @ext0_ext1_add(
-; CHECK-NEXT:    [[E0:%.*]] = extractelement <16 x i8> [[X:%.*]], i32 0
-; CHECK-NEXT:    [[E1:%.*]] = extractelement <16 x i8> [[Y:%.*]], i32 1
-; CHECK-NEXT:    [[R:%.*]] = add nuw i8 [[E0]], [[E1]]
-; CHECK-NEXT:    ret i8 [[R]]
+; SSE-LABEL: @ext0_ext1_add(
+; SSE-NEXT:    [[E0:%.*]] = extractelement <16 x i8> [[X:%.*]], i32 0
+; SSE-NEXT:    [[E1:%.*]] = extractelement <16 x i8> [[Y:%.*]], i32 1
+; SSE-NEXT:    [[R:%.*]] = add nuw i8 [[E0]], [[E1]]
+; SSE-NEXT:    ret i8 [[R]]
+;
+; AVX-LABEL: @ext0_ext1_add(
+; AVX-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i8> [[Y:%.*]], <16 x i8> undef, <16 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; AVX-NEXT:    [[TMP2:%.*]] = add nuw <16 x i8> [[X:%.*]], [[TMP1]]
+; AVX-NEXT:    [[TMP3:%.*]] = extractelement <16 x i8> [[TMP2]], i32 0
+; AVX-NEXT:    ret i8 [[TMP3]]
 ;
   %e0 = extractelement <16 x i8> %x, i32 0
   %e1 = extractelement <16 x i8> %y, i32 1
@@ -267,11 +271,17 @@ define i8 @ext0_ext1_add(<16 x i8> %x, <16 x i8> %y) {
 }
 
 define i8 @ext5_ext0_add(<16 x i8> %x, <16 x i8> %y) {
-; CHECK-LABEL: @ext5_ext0_add(
-; CHECK-NEXT:    [[E0:%.*]] = extractelement <16 x i8> [[X:%.*]], i32 5
-; CHECK-NEXT:    [[E1:%.*]] = extractelement <16 x i8> [[Y:%.*]], i32 0
-; CHECK-NEXT:    [[R:%.*]] = sub nsw i8 [[E0]], [[E1]]
-; CHECK-NEXT:    ret i8 [[R]]
+; SSE-LABEL: @ext5_ext0_add(
+; SSE-NEXT:    [[E0:%.*]] = extractelement <16 x i8> [[X:%.*]], i32 5
+; SSE-NEXT:    [[E1:%.*]] = extractelement <16 x i8> [[Y:%.*]], i32 0
+; SSE-NEXT:    [[R:%.*]] = sub nsw i8 [[E0]], [[E1]]
+; SSE-NEXT:    ret i8 [[R]]
+;
+; AVX-LABEL: @ext5_ext0_add(
+; AVX-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i8> [[X:%.*]], <16 x i8> undef, <16 x i32> <i32 5, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; AVX-NEXT:    [[TMP2:%.*]] = sub nsw <16 x i8> [[TMP1]], [[Y:%.*]]
+; AVX-NEXT:    [[TMP3:%.*]] = extractelement <16 x i8> [[TMP2]], i64 0
+; AVX-NEXT:    ret i8 [[TMP3]]
 ;
   %e0 = extractelement <16 x i8> %x, i32 5
   %e1 = extractelement <16 x i8> %y, i32 0
@@ -280,11 +290,17 @@ define i8 @ext5_ext0_add(<16 x i8> %x, <16 x i8> %y) {
 }
 
 define i8 @ext1_ext6_add(<16 x i8> %x, <16 x i8> %y) {
-; CHECK-LABEL: @ext1_ext6_add(
-; CHECK-NEXT:    [[E0:%.*]] = extractelement <16 x i8> [[X:%.*]], i32 1
-; CHECK-NEXT:    [[E1:%.*]] = extractelement <16 x i8> [[Y:%.*]], i32 6
-; CHECK-NEXT:    [[R:%.*]] = and i8 [[E0]], [[E1]]
-; CHECK-NEXT:    ret i8 [[R]]
+; SSE-LABEL: @ext1_ext6_add(
+; SSE-NEXT:    [[E0:%.*]] = extractelement <16 x i8> [[X:%.*]], i32 1
+; SSE-NEXT:    [[E1:%.*]] = extractelement <16 x i8> [[Y:%.*]], i32 6
+; SSE-NEXT:    [[R:%.*]] = and i8 [[E0]], [[E1]]
+; SSE-NEXT:    ret i8 [[R]]
+;
+; AVX-LABEL: @ext1_ext6_add(
+; AVX-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i8> [[Y:%.*]], <16 x i8> undef, <16 x i32> <i32 undef, i32 6, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; AVX-NEXT:    [[TMP2:%.*]] = and <16 x i8> [[X:%.*]], [[TMP1]]
+; AVX-NEXT:    [[TMP3:%.*]] = extractelement <16 x i8> [[TMP2]], i32 1
+; AVX-NEXT:    ret i8 [[TMP3]]
 ;
   %e0 = extractelement <16 x i8> %x, i32 1
   %e1 = extractelement <16 x i8> %y, i32 6
@@ -294,10 +310,10 @@ define i8 @ext1_ext6_add(<16 x i8> %x, <16 x i8> %y) {
 
 define float @ext1_ext0_fmul(<4 x float> %x) {
 ; CHECK-LABEL: @ext1_ext0_fmul(
-; CHECK-NEXT:    [[E0:%.*]] = extractelement <4 x float> [[X:%.*]], i32 1
-; CHECK-NEXT:    [[E1:%.*]] = extractelement <4 x float> [[X]], i32 0
-; CHECK-NEXT:    [[R:%.*]] = fmul float [[E0]], [[E1]]
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[X:%.*]], <4 x float> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul <4 x float> [[TMP1]], [[X]]
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[TMP2]], i64 0
+; CHECK-NEXT:    ret float [[TMP3]]
 ;
   %e0 = extractelement <4 x float> %x, i32 1
   %e1 = extractelement <4 x float> %x, i32 0
@@ -309,9 +325,10 @@ define float @ext0_ext3_fmul_extra_use1(<4 x float> %x) {
 ; CHECK-LABEL: @ext0_ext3_fmul_extra_use1(
 ; CHECK-NEXT:    [[E0:%.*]] = extractelement <4 x float> [[X:%.*]], i32 0
 ; CHECK-NEXT:    call void @use_f32(float [[E0]])
-; CHECK-NEXT:    [[E1:%.*]] = extractelement <4 x float> [[X]], i32 3
-; CHECK-NEXT:    [[R:%.*]] = fmul nnan float [[E0]], [[E1]]
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[X]], <4 x float> undef, <4 x i32> <i32 3, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul nnan <4 x float> [[X]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[TMP2]], i32 0
+; CHECK-NEXT:    ret float [[TMP3]]
 ;
   %e0 = extractelement <4 x float> %x, i32 0
   call void @use_f32(float %e0)
@@ -336,11 +353,17 @@ define float @ext0_ext3_fmul_extra_use2(<4 x float> %x) {
 }
 
 define float @ext0_ext4_fmul_v8f32(<8 x float> %x) {
-; CHECK-LABEL: @ext0_ext4_fmul_v8f32(
-; CHECK-NEXT:    [[E0:%.*]] = extractelement <8 x float> [[X:%.*]], i32 0
-; CHECK-NEXT:    [[E1:%.*]] = extractelement <8 x float> [[X]], i32 4
-; CHECK-NEXT:    [[R:%.*]] = fadd float [[E0]], [[E1]]
-; CHECK-NEXT:    ret float [[R]]
+; SSE-LABEL: @ext0_ext4_fmul_v8f32(
+; SSE-NEXT:    [[E0:%.*]] = extractelement <8 x float> [[X:%.*]], i32 0
+; SSE-NEXT:    [[E1:%.*]] = extractelement <8 x float> [[X]], i32 4
+; SSE-NEXT:    [[R:%.*]] = fadd float [[E0]], [[E1]]
+; SSE-NEXT:    ret float [[R]]
+;
+; AVX-LABEL: @ext0_ext4_fmul_v8f32(
+; AVX-NEXT:    [[TMP1:%.*]] = shufflevector <8 x float> [[X:%.*]], <8 x float> undef, <8 x i32> <i32 4, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; AVX-NEXT:    [[TMP2:%.*]] = fadd <8 x float> [[X]], [[TMP1]]
+; AVX-NEXT:    [[TMP3:%.*]] = extractelement <8 x float> [[TMP2]], i32 0
+; AVX-NEXT:    ret float [[TMP3]]
 ;
   %e0 = extractelement <8 x float> %x, i32 0
   %e1 = extractelement <8 x float> %x, i32 4
@@ -349,11 +372,17 @@ define float @ext0_ext4_fmul_v8f32(<8 x float> %x) {
 }
 
 define float @ext7_ext4_fmul_v8f32(<8 x float> %x) {
-; CHECK-LABEL: @ext7_ext4_fmul_v8f32(
-; CHECK-NEXT:    [[E0:%.*]] = extractelement <8 x float> [[X:%.*]], i32 7
-; CHECK-NEXT:    [[E1:%.*]] = extractelement <8 x float> [[X]], i32 4
-; CHECK-NEXT:    [[R:%.*]] = fadd float [[E0]], [[E1]]
-; CHECK-NEXT:    ret float [[R]]
+; SSE-LABEL: @ext7_ext4_fmul_v8f32(
+; SSE-NEXT:    [[E0:%.*]] = extractelement <8 x float> [[X:%.*]], i32 7
+; SSE-NEXT:    [[E1:%.*]] = extractelement <8 x float> [[X]], i32 4
+; SSE-NEXT:    [[R:%.*]] = fadd float [[E0]], [[E1]]
+; SSE-NEXT:    ret float [[R]]
+;
+; AVX-LABEL: @ext7_ext4_fmul_v8f32(
+; AVX-NEXT:    [[TMP1:%.*]] = shufflevector <8 x float> [[X:%.*]], <8 x float> undef, <8 x i32> <i32 undef, i32 undef, i32 undef, i32 undef, i32 7, i32 undef, i32 undef, i32 undef>
+; AVX-NEXT:    [[TMP2:%.*]] = fadd <8 x float> [[TMP1]], [[X]]
+; AVX-NEXT:    [[TMP3:%.*]] = extractelement <8 x float> [[TMP2]], i64 4
+; AVX-NEXT:    ret float [[TMP3]]
 ;
   %e0 = extractelement <8 x float> %x, i32 7
   %e1 = extractelement <8 x float> %x, i32 4
