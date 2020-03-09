@@ -603,11 +603,27 @@ DWARFDebugLine::ParsingState::advanceAddrForOpcode(uint8_t Opcode,
                                                    uint64_t OpcodeOffset) {
   assert(Opcode == DW_LNS_const_add_pc ||
          Opcode >= LineTable->Prologue.OpcodeBase);
+  if (ReportBadLineRange && LineTable->Prologue.LineRange == 0) {
+    StringRef OpcodeName =
+        getOpcodeName(Opcode, LineTable->Prologue.OpcodeBase);
+    ErrorHandler(
+        createStringError(errc::not_supported,
+                          "line table program at offset 0x%8.8" PRIx64
+                          " contains a %s opcode at offset 0x%8.8" PRIx64
+                          ", but the prologue line_range value is 0. The "
+                          "address and line will not be adjusted",
+                          LineTableOffset, OpcodeName.data(), OpcodeOffset));
+    ReportBadLineRange = false;
+  }
+
   uint8_t OpcodeValue = Opcode;
   if (Opcode == DW_LNS_const_add_pc)
     OpcodeValue = 255;
   uint8_t AdjustedOpcode = OpcodeValue - LineTable->Prologue.OpcodeBase;
-  uint64_t OperationAdvance = AdjustedOpcode / LineTable->Prologue.LineRange;
+  uint64_t OperationAdvance =
+      LineTable->Prologue.LineRange != 0
+          ? AdjustedOpcode / LineTable->Prologue.LineRange
+          : 0;
   uint64_t AddrOffset = advanceAddr(OperationAdvance, Opcode, OpcodeOffset);
   return {AddrOffset, AdjustedOpcode};
 }
@@ -648,9 +664,11 @@ DWARFDebugLine::ParsingState::handleSpecialOpcode(uint8_t Opcode,
 
   DWARFDebugLine::ParsingState::AddrAndAdjustedOpcode AddrAdvanceResult =
       advanceAddrForOpcode(Opcode, OpcodeOffset);
-  int32_t LineOffset =
-      LineTable->Prologue.LineBase +
-      (AddrAdvanceResult.AdjustedOpcode % LineTable->Prologue.LineRange);
+  int32_t LineOffset = 0;
+  if (LineTable->Prologue.LineRange != 0)
+    LineOffset =
+        LineTable->Prologue.LineBase +
+        (AddrAdvanceResult.AdjustedOpcode % LineTable->Prologue.LineRange);
   Row.Line += LineOffset;
   return {AddrAdvanceResult.AddrDelta, LineOffset};
 }

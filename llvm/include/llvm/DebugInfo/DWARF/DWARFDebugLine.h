@@ -401,6 +401,7 @@ private:
     uint64_t LineTableOffset;
 
     bool ReportAdvanceAddrProblem = true;
+    bool ReportBadLineRange = true;
     function_ref<void(Error)> ErrorHandler;
   };
 
