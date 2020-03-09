@@ -38,6 +38,7 @@ class AArch64Subtarget final : public AArch64GenSubtargetInfo {
 public:
   enum ARMProcFamilyEnum : uint8_t {
     Others,
+    A64FX,
     AppleA7,
     AppleA10,
     AppleA11,
