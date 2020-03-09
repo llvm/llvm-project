@@ -250,3 +250,42 @@ func @full_contract2(%arg0: vector<2x3xf32>,
     : vector<2x3xf32>, vector<3x2xf32> into f32
   return %0 : f32
 }
+
+// Shape up and downcasts for 2-D vectors, for supporting conversion to
+// llvm.matrix operations
+// CHECK-LABEL: func @shape_casts
+func @shape_casts(%a: vector<2x2xf32>) -> (vector<4xf32>, vector<2x2xf32>) {
+  // CHECK: %[[cst:.*]] = constant dense<0.000000e+00> : vector<4xf32>
+  // CHECK: %[[cst22:.*]] = constant dense<0.000000e+00> : vector<2x2xf32>
+  // CHECK: %[[ex0:.*]] = vector.extract %{{.*}}[0] : vector<2x2xf32>
+  //
+  // CHECK: %[[in0:.*]] = vector.insert_strided_slice %[[ex0]], %[[cst]]
+  // CHECK-SAME: {offsets = [0], strides = [1]} : vector<2xf32> into vector<4xf32>
+  //
+  // CHECK: %[[ex1:.*]] = vector.extract %{{.*}}[1] : vector<2x2xf32>
+  //
+  // CHECK: %[[in2:.*]] = vector.insert_strided_slice %[[ex1]], %[[in0]]
+  // CHECK-SAME: {offsets = [2], strides = [1]} : vector<2xf32> into vector<4xf32>
+  //
+  %0 = vector.shape_cast %a : vector<2x2xf32> to vector<4xf32>
+  // CHECK: %[[add:.*]] = addf %[[in2]], %[[in2]] : vector<4xf32>
+  %r0 = addf %0, %0: vector<4xf32>
+  //
+  // CHECK: %[[ss0:.*]] = vector.strided_slice %[[add]]
+  // CHECK-SAME: {offsets = [0], sizes = [2], strides = [1]} :
+  // CHECK-SAME: vector<4xf32> to vector<2xf32>
+  //
+  // CHECK: %[[res0:.*]] = vector.insert %[[ss0]], %[[cst22]] [0] :
+  // CHECK-SAME: vector<2xf32> into vector<2x2xf32>
+  //
+  // CHECK: %[[s2:.*]] = vector.strided_slice %[[add]]
+  // CHECK-SAME: {offsets = [2], sizes = [2], strides = [1]} :
+  // CHECK-SAME: vector<4xf32> to vector<2xf32>
+  //
+  // CHECK: %[[res1:.*]] = vector.insert %[[s2]], %[[res0]] [1] :
+  // CHECK-SAME: vector<2xf32> into vector<2x2xf32>
+  //
+  %1 = vector.shape_cast %r0  : vector<4xf32> to vector<2x2xf32>
+  // CHECK: return %[[add]], %[[res1]] : vector<4xf32>, vector<2x2xf32>
+  return %r0, %1 : vector<4xf32>, vector<2x2xf32>
+}
