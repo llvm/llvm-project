@@ -1339,6 +1339,13 @@ struct IntegerStateBase : public AbstractState {
     handleNewAssumedValue(R.getAssumed());
   }
 
+  /// "Clamp" this state with \p R. The result is subtype dependent but it is
+  /// intended that information known in either state will be known in
+  /// this one afterwards.
+  void operator+=(const IntegerStateBase<base_t, BestState, WorstState> &R) {
+    handleNewKnownValue(R.getKnown());
+  }
+
   void operator|=(const IntegerStateBase<base_t, BestState, WorstState> &R) {
     joinOR(R.getAssumed(), R.getKnown());
   }
@@ -2291,6 +2298,13 @@ struct DerefState : AbstractState {
   DerefState operator^=(const DerefState &R) {
     DerefBytesState ^= R.DerefBytesState;
     GlobalState ^= R.GlobalState;
+    return *this;
+  }
+
+  /// See IntegerStateBase::operator+=
+  DerefState operator+=(const DerefState &R) {
+    DerefBytesState += R.DerefBytesState;
+    GlobalState += R.GlobalState;
     return *this;
   }
 
