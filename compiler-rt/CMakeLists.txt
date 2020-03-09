@@ -281,6 +281,18 @@ if(NOT COMPILER_RT_HAS_FVISIBILITY_HIDDEN_FLAG)
 endif()
 append_list_if(COMPILER_RT_HAS_FNO_LTO_FLAG -fno-lto SANITIZER_COMMON_CFLAGS)
 
+# By default do not instrument or use profdata for compiler-rt.
+if(NOT COMPILER_RT_ENABLE_PGO)
+  if(LLVM_PROFDATA_FILE AND COMPILER_RT_HAS_FNO_PROFILE_INSTR_USE_FLAG)
+    list(APPEND SANITIZER_COMMON_CFLAGS "-fno-profile-instr-use")
+  endif()
+  if(LLVM_BUILD_INSTRUMENTED MATCHES IR AND COMPILER_RT_HAS_FNO_PROFILE_GENERATE_FLAG)
+    list(APPEND SANITIZER_COMMON_CFLAGS "-fno-profile-generate")
+  elseif(LLVM_BUILD_INSTRUMENTED AND COMPILER_RT_HAS_FNO_PROFILE_INSTR_GENERATE_FLAG)
+    list(APPEND SANITIZER_COMMON_CFLAGS "-fno-profile-instr-generate")
+  endif()
+endif()
+
 # The following is a workaround for powerpc64le. This is the only architecture
 # that requires -fno-function-sections to work properly. If lacking, the ASan
 # Linux test function-sections-are-bad.cpp fails with the following error:
