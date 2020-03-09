@@ -15103,6 +15103,28 @@ getIntrinsicForHexagonNonGCCBuiltin(unsigned BuiltinID) {
   Info Infos[] = {
 #define CUSTOM_BUILTIN_MAPPING(x,s) \
   { Hexagon::BI__builtin_HEXAGON_##x, Intrinsic::hexagon_##x, s },
+    CUSTOM_BUILTIN_MAPPING(L2_loadrub_pci, 0)
+    CUSTOM_BUILTIN_MAPPING(L2_loadrb_pci, 0)
+    CUSTOM_BUILTIN_MAPPING(L2_loadruh_pci, 0)
+    CUSTOM_BUILTIN_MAPPING(L2_loadrh_pci, 0)
+    CUSTOM_BUILTIN_MAPPING(L2_loadri_pci, 0)
+    CUSTOM_BUILTIN_MAPPING(L2_loadrd_pci, 0)
+    CUSTOM_BUILTIN_MAPPING(L2_loadrub_pcr, 0)
+    CUSTOM_BUILTIN_MAPPING(L2_loadrb_pcr, 0)
+    CUSTOM_BUILTIN_MAPPING(L2_loadruh_pcr, 0)
+    CUSTOM_BUILTIN_MAPPING(L2_loadrh_pcr, 0)
+    CUSTOM_BUILTIN_MAPPING(L2_loadri_pcr, 0)
+    CUSTOM_BUILTIN_MAPPING(L2_loadrd_pcr, 0)
+    CUSTOM_BUILTIN_MAPPING(S2_storerb_pci, 0)
+    CUSTOM_BUILTIN_MAPPING(S2_storerh_pci, 0)
+    CUSTOM_BUILTIN_MAPPING(S2_storerf_pci, 0)
+    CUSTOM_BUILTIN_MAPPING(S2_storeri_pci, 0)
+    CUSTOM_BUILTIN_MAPPING(S2_storerd_pci, 0)
+    CUSTOM_BUILTIN_MAPPING(S2_storerb_pcr, 0)
+    CUSTOM_BUILTIN_MAPPING(S2_storerh_pcr, 0)
+    CUSTOM_BUILTIN_MAPPING(S2_storerf_pcr, 0)
+    CUSTOM_BUILTIN_MAPPING(S2_storeri_pcr, 0)
+    CUSTOM_BUILTIN_MAPPING(S2_storerd_pcr, 0)
     CUSTOM_BUILTIN_MAPPING(V6_vmaskedstoreq, 64)
     CUSTOM_BUILTIN_MAPPING(V6_vmaskedstorenq, 64)
     CUSTOM_BUILTIN_MAPPING(V6_vmaskedstorentq, 64)
@@ -15129,63 +15151,47 @@ getIntrinsicForHexagonNonGCCBuiltin(unsigned BuiltinID) {
 
 Value *CodeGenFunction::EmitHexagonBuiltinExpr(unsigned BuiltinID,
                                                const CallExpr *E) {
-  SmallVector<llvm::Value *, 4> Ops;
   Intrinsic::ID ID;
   unsigned VecLen;
   std::tie(ID, VecLen) = getIntrinsicForHexagonNonGCCBuiltin(BuiltinID);
 
-  auto MakeCircLd = [&](unsigned IntID, bool HasImm) {
+  auto MakeCircOp = [this, E](unsigned IntID, bool IsLoad) {
     // The base pointer is passed by address, so it needs to be loaded.
-    Address BP = EmitPointerWithAlignment(E->getArg(0));
-    BP = Address(Builder.CreateBitCast(BP.getPointer(), Int8PtrPtrTy),
-                 BP.getAlignment());
+    Address A = EmitPointerWithAlignment(E->getArg(0));
+    Address BP = Address(
+        Builder.CreateBitCast(A.getPointer(), Int8PtrPtrTy), A.getAlignment());
     llvm::Value *Base = Builder.CreateLoad(BP);
-    // Operands are Base, Increment, Modifier, Start.
-    if (HasImm)
-      Ops = { Base, EmitScalarExpr(E->getArg(1)), EmitScalarExpr(E->getArg(2)),
-              EmitScalarExpr(E->getArg(3)) };
-    else
-      Ops = { Base, EmitScalarExpr(E->getArg(1)),
-              EmitScalarExpr(E->getArg(2)) };
+    // The treatment of both loads and stores is the same: the arguments for
+    // the builtin are the same as the arguments for the intrinsic.
+    // Load:
+    //   builtin(Base, Inc, Mod, Start) -> intr(Base, Inc, Mod, Start)
+    //   builtin(Base, Mod, Start)      -> intr(Base, Mod, Start)
+    // Store:
+    //   builtin(Base, Inc, Mod, Val, Start) -> intr(Base, Inc, Mod, Val, Start)
+    //   builtin(Base, Mod, Val, Start)      -> intr(Base, Mod, Val, Start)
+    SmallVector<llvm::Value*,5> Ops = { Base };
+    for (unsigned i = 1, e = E->getNumArgs(); i != e; ++i)
+      Ops.push_back(EmitScalarExpr(E->getArg(i)));
 
     llvm::Value *Result = Builder.CreateCall(CGM.getIntrinsic(IntID), Ops);
-    llvm::Value *NewBase = Builder.CreateExtractValue(Result, 1);
-    llvm::Value *LV = Builder.CreateBitCast(EmitScalarExpr(E->getArg(0)),
-                                            NewBase->getType()->getPointerTo());
+    // The load intrinsics generate two results (Value, NewBase), stores
+    // generate one (NewBase). The new base address needs to be stored.
+    llvm::Value *NewBase = IsLoad ? Builder.CreateExtractValue(Result, 1)
+                                  : Result;
+    llvm::Value *LV = Builder.CreateBitCast(
+        EmitScalarExpr(E->getArg(0)), NewBase->getType()->getPointerTo());
     Address Dest = EmitPointerWithAlignment(E->getArg(0));
-    // The intrinsic generates two results. The new value for the base pointer
-    // needs to be stored.
-    Builder.CreateAlignedStore(NewBase, LV, Dest.getAlignment());
-    return Builder.CreateExtractValue(Result, 0);
-  };
-
-  auto MakeCircSt = [&](unsigned IntID, bool HasImm) {
-    // The base pointer is passed by address, so it needs to be loaded.
-    Address BP = EmitPointerWithAlignment(E->getArg(0));
-    BP = Address(Builder.CreateBitCast(BP.getPointer(), Int8PtrPtrTy),
-                 BP.getAlignment());
-    llvm::Value *Base = Builder.CreateLoad(BP);
-    // Operands are Base, Increment, Modifier, Value, Start.
-    if (HasImm)
-      Ops = { Base, EmitScalarExpr(E->getArg(1)), EmitScalarExpr(E->getArg(2)),
-              EmitScalarExpr(E->getArg(3)), EmitScalarExpr(E->getArg(4)) };
-    else
-      Ops = { Base, EmitScalarExpr(E->getArg(1)),
-              EmitScalarExpr(E->getArg(2)), EmitScalarExpr(E->getArg(3)) };
-
-    llvm::Value *NewBase = Builder.CreateCall(CGM.getIntrinsic(IntID), Ops);
-    llvm::Value *LV = Builder.CreateBitCast(EmitScalarExpr(E->getArg(0)),
-                                            NewBase->getType()->getPointerTo());
-    Address Dest = EmitPointerWithAlignment(E->getArg(0));
-    // The intrinsic generates one result, which is the new value for the base
-    // pointer. It needs to be stored.
-    return Builder.CreateAlignedStore(NewBase, LV, Dest.getAlignment());
+    llvm::Value *RetVal =
+        Builder.CreateAlignedStore(NewBase, LV, Dest.getAlignment());
+    if (IsLoad)
+      RetVal = Builder.CreateExtractValue(Result, 0);
+    return RetVal;
   };
 
   // Handle the conversion of bit-reverse load intrinsics to bit code.
   // The intrinsic call after this function only reads from memory and the
   // write to memory is dealt by the store instruction.
-  auto MakeBrevLd = [&](unsigned IntID, llvm::Type *DestTy) {
+  auto MakeBrevLd = [this, E](unsigned IntID, llvm::Type *DestTy) {
     // The intrinsic generates one result, which is the new value for the base
     // pointer. It needs to be returned. The result of the load instruction is
     // passed to intrinsic by address, so the value needs to be stored.
@@ -15203,9 +15209,9 @@ Value *CodeGenFunction::EmitHexagonBuiltinExpr(unsigned BuiltinID,
     // Operands are Base, Dest, Modifier.
     // The intrinsic format in LLVM IR is defined as
     // { ValueType, i8* } (i8*, i32).
-    Ops = {BaseAddress, EmitScalarExpr(E->getArg(2))};
+    llvm::Value *Result = Builder.CreateCall(
+        CGM.getIntrinsic(IntID), {BaseAddress, EmitScalarExpr(E->getArg(2))});
 
-    llvm::Value *Result = Builder.CreateCall(CGM.getIntrinsic(IntID), Ops);
     // The value needs to be stored as the variable is passed by reference.
     llvm::Value *DestVal = Builder.CreateExtractValue(Result, 0);
 
@@ -15257,49 +15263,29 @@ Value *CodeGenFunction::EmitHexagonBuiltinExpr(unsigned BuiltinID,
   }
 
   case Hexagon::BI__builtin_HEXAGON_L2_loadrub_pci:
-    return MakeCircLd(Intrinsic::hexagon_L2_loadrub_pci, /*HasImm*/true);
   case Hexagon::BI__builtin_HEXAGON_L2_loadrb_pci:
-    return MakeCircLd(Intrinsic::hexagon_L2_loadrb_pci,  /*HasImm*/true);
   case Hexagon::BI__builtin_HEXAGON_L2_loadruh_pci:
-    return MakeCircLd(Intrinsic::hexagon_L2_loadruh_pci, /*HasImm*/true);
   case Hexagon::BI__builtin_HEXAGON_L2_loadrh_pci:
-    return MakeCircLd(Intrinsic::hexagon_L2_loadrh_pci,  /*HasImm*/true);
   case Hexagon::BI__builtin_HEXAGON_L2_loadri_pci:
-    return MakeCircLd(Intrinsic::hexagon_L2_loadri_pci,  /*HasImm*/true);
   case Hexagon::BI__builtin_HEXAGON_L2_loadrd_pci:
-    return MakeCircLd(Intrinsic::hexagon_L2_loadrd_pci,  /*HasImm*/true);
   case Hexagon::BI__builtin_HEXAGON_L2_loadrub_pcr:
-    return MakeCircLd(Intrinsic::hexagon_L2_loadrub_pcr, /*HasImm*/false);
   case Hexagon::BI__builtin_HEXAGON_L2_loadrb_pcr:
-    return MakeCircLd(Intrinsic::hexagon_L2_loadrb_pcr,  /*HasImm*/false);
   case Hexagon::BI__builtin_HEXAGON_L2_loadruh_pcr:
-    return MakeCircLd(Intrinsic::hexagon_L2_loadruh_pcr, /*HasImm*/false);
   case Hexagon::BI__builtin_HEXAGON_L2_loadrh_pcr:
-    return MakeCircLd(Intrinsic::hexagon_L2_loadrh_pcr,  /*HasImm*/false);
   case Hexagon::BI__builtin_HEXAGON_L2_loadri_pcr:
-    return MakeCircLd(Intrinsic::hexagon_L2_loadri_pcr,  /*HasImm*/false);
   case Hexagon::BI__builtin_HEXAGON_L2_loadrd_pcr:
-    return MakeCircLd(Intrinsic::hexagon_L2_loadrd_pcr,  /*HasImm*/false);
+    return MakeCircOp(ID, /*IsLoad=*/true);
   case Hexagon::BI__builtin_HEXAGON_S2_storerb_pci:
-    return MakeCircSt(Intrinsic::hexagon_S2_storerb_pci, /*HasImm*/true);
   case Hexagon::BI__builtin_HEXAGON_S2_storerh_pci:
-    return MakeCircSt(Intrinsic::hexagon_S2_storerh_pci, /*HasImm*/true);
   case Hexagon::BI__builtin_HEXAGON_S2_storerf_pci:
-    return MakeCircSt(Intrinsic::hexagon_S2_storerf_pci, /*HasImm*/true);
   case Hexagon::BI__builtin_HEXAGON_S2_storeri_pci:
-    return MakeCircSt(Intrinsic::hexagon_S2_storeri_pci, /*HasImm*/true);
   case Hexagon::BI__builtin_HEXAGON_S2_storerd_pci:
-    return MakeCircSt(Intrinsic::hexagon_S2_storerd_pci, /*HasImm*/true);
   case Hexagon::BI__builtin_HEXAGON_S2_storerb_pcr:
-    return MakeCircSt(Intrinsic::hexagon_S2_storerb_pcr, /*HasImm*/false);
   case Hexagon::BI__builtin_HEXAGON_S2_storerh_pcr:
-    return MakeCircSt(Intrinsic::hexagon_S2_storerh_pcr, /*HasImm*/false);
   case Hexagon::BI__builtin_HEXAGON_S2_storerf_pcr:
-    return MakeCircSt(Intrinsic::hexagon_S2_storerf_pcr, /*HasImm*/false);
   case Hexagon::BI__builtin_HEXAGON_S2_storeri_pcr:
-    return MakeCircSt(Intrinsic::hexagon_S2_storeri_pcr, /*HasImm*/false);
   case Hexagon::BI__builtin_HEXAGON_S2_storerd_pcr:
-    return MakeCircSt(Intrinsic::hexagon_S2_storerd_pcr, /*HasImm*/false);
+    return MakeCircOp(ID, /*IsLoad=*/false);
   case Hexagon::BI__builtin_brev_ldub:
     return MakeBrevLd(Intrinsic::hexagon_L2_loadrub_pbr, Int8Ty);
   case Hexagon::BI__builtin_brev_ldb:
@@ -15312,6 +15298,7 @@ Value *CodeGenFunction::EmitHexagonBuiltinExpr(unsigned BuiltinID,
     return MakeBrevLd(Intrinsic::hexagon_L2_loadri_pbr, Int32Ty);
   case Hexagon::BI__builtin_brev_ldd:
     return MakeBrevLd(Intrinsic::hexagon_L2_loadrd_pbr, Int64Ty);
+
   default: {
     if (ID == Intrinsic::not_intrinsic)
       return nullptr;
