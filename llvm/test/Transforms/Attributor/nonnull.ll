@@ -257,8 +257,7 @@ declare void @fun3(i8*, i8*, i8*) #1
 ;   fun2(nonnull %a, %b)
 ; We can say that %a is nonnull but %b is not.
 define void @f16(i8* %a, i8 * %b, i8 %c) {
-; FIXME: missing nonnull on %a
-; ATTRIBUTOR: define void @f16(i8* %a, i8* %b, i8 %c)
+; ATTRIBUTOR: define void @f16(i8* nonnull %a, i8* %b, i8 %c)
   %cmp = icmp eq i8 %c, 0
   br i1 %cmp, label %if.then, label %if.else
 if.then:
@@ -327,8 +326,7 @@ cont2:
 ; TEST 19: Loop
 
 define void @f19(i8* %a, i8* %b, i8 %c) {
-; FIXME: missing nonnull on %b
-; ATTRIBUTOR: define void @f19(i8* %a, i8* %b, i8 %c)
+; ATTRIBUTOR: define void @f19(i8* %a, i8* nonnull %b, i8 %c)
   br label %loop.header
 loop.header:
   %cmp2 = icmp eq i8 %c, 0
@@ -658,7 +656,7 @@ hd2:
 define i32 @nonnull_exec_ctx_2(i32* %a, i32 %b) willreturn nounwind {
 ;
 ; ATTRIBUTOR-LABEL: define {{[^@]+}}@nonnull_exec_ctx_2
-; ATTRIBUTOR-SAME: (i32* [[A:%.*]], i32 [[B:%.*]])
+; ATTRIBUTOR-SAME: (i32* nonnull [[A:%.*]], i32 [[B:%.*]])
 ; ATTRIBUTOR-NEXT:  en:
 ; ATTRIBUTOR-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[B]], 0
 ; ATTRIBUTOR-NEXT:    br i1 [[TMP3]], label [[EX:%.*]], label [[HD:%.*]]
@@ -691,7 +689,7 @@ hd:
 define i32 @nonnull_exec_ctx_2b(i32* %a, i32 %b) willreturn nounwind {
 ;
 ; ATTRIBUTOR-LABEL: define {{[^@]+}}@nonnull_exec_ctx_2b
-; ATTRIBUTOR-SAME: (i32* [[A:%.*]], i32 [[B:%.*]])
+; ATTRIBUTOR-SAME: (i32* nonnull [[A:%.*]], i32 [[B:%.*]])
 ; ATTRIBUTOR-NEXT:  en:
 ; ATTRIBUTOR-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[B]], 0
 ; ATTRIBUTOR-NEXT:    br i1 [[TMP3]], label [[EX:%.*]], label [[HD:%.*]]
