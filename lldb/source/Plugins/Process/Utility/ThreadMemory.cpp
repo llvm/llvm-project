@@ -54,20 +54,14 @@ RegisterContextSP ThreadMemory::GetRegisterContext() {
 
 RegisterContextSP
 ThreadMemory::CreateRegisterContextForFrame(StackFrame *frame) {
-  RegisterContextSP reg_ctx_sp;
   uint32_t concrete_frame_idx = 0;
 
   if (frame)
     concrete_frame_idx = frame->GetConcreteFrameIndex();
 
-  if (concrete_frame_idx == 0) {
-    reg_ctx_sp = GetRegisterContext();
-  } else {
-    Unwind *unwinder = GetUnwinder();
-    if (unwinder != nullptr)
-      reg_ctx_sp = unwinder->CreateRegisterContextForFrame(frame);
-  }
-  return reg_ctx_sp;
+  if (concrete_frame_idx == 0)
+    return GetRegisterContext();
+  return GetUnwinder().CreateRegisterContextForFrame(frame);
 }
 
 bool ThreadMemory::CalculateStopInfo() {

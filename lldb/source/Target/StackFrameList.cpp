@@ -218,17 +218,14 @@ void StackFrameList::SetCurrentInlinedDepth(uint32_t new_depth) {
 }
 
 void StackFrameList::GetOnlyConcreteFramesUpTo(uint32_t end_idx,
-                                               Unwind *unwinder) {
+                                               Unwind &unwinder) {
   assert(m_thread.IsValid() && "Expected valid thread");
   assert(m_frames.size() <= end_idx && "Expected there to be frames to fill");
 
   if (end_idx < m_concrete_frames_fetched)
     return;
 
-  if (!unwinder)
-    return;
-
-  uint32_t num_frames = unwinder->GetFramesUpTo(end_idx);
+  uint32_t num_frames = unwinder.GetFramesUpTo(end_idx);
   if (num_frames <= end_idx + 1) {
     // Done unwinding.
     m_concrete_frames_fetched = UINT32_MAX;
@@ -425,7 +422,7 @@ void StackFrameList::GetFramesUpTo(uint32_t end_idx) {
   if (m_frames.size() > end_idx || GetAllFramesFetched())
     return;
 
-  Unwind *unwinder = m_thread.GetUnwinder();
+  Unwind &unwinder = m_thread.GetUnwinder();
 
   if (!m_show_inlined_frames) {
     GetOnlyConcreteFramesUpTo(end_idx, unwinder);
@@ -463,9 +460,8 @@ void StackFrameList::GetFramesUpTo(uint32_t end_idx) {
         RegisterContextSP reg_ctx_sp(m_thread.GetRegisterContext());
 
         if (reg_ctx_sp) {
-          const bool success = unwinder &&
-                               unwinder->GetFrameInfoAtIndex(
-                                   idx, cfa, pc, behaves_like_zeroth_frame);
+          const bool success = unwinder.GetFrameInfoAtIndex(
+              idx, cfa, pc, behaves_like_zeroth_frame);
           // There shouldn't be any way not to get the frame info for frame
           // 0. But if the unwinder can't make one, lets make one by hand
           // with the SP as the CFA and see if that gets any further.
@@ -484,9 +480,8 @@ void StackFrameList::GetFramesUpTo(uint32_t end_idx) {
         cfa = unwind_frame_sp->m_id.GetCallFrameAddress();
       }
     } else {
-      const bool success = unwinder &&
-                           unwinder->GetFrameInfoAtIndex(
-                               idx, cfa, pc, behaves_like_zeroth_frame);
+      const bool success =
+          unwinder.GetFrameInfoAtIndex(idx, cfa, pc, behaves_like_zeroth_frame);
       if (!success) {
         // We've gotten to the end of the stack.
         SetAllFramesFetched();
@@ -669,31 +664,28 @@ StackFrameSP StackFrameList::GetFrameAtIndex(uint32_t idx) {
       // GetFramesUpTo.
       frame_sp = m_frames[idx];
     } else {
-      Unwind *unwinder = m_thread.GetUnwinder();
-      if (unwinder) {
-        addr_t pc, cfa;
-        bool behaves_like_zeroth_frame = (idx == 0);
-        if (unwinder->GetFrameInfoAtIndex(idx, cfa, pc,
-                                          behaves_like_zeroth_frame)) {
-          const bool cfa_is_valid = true;
-          frame_sp = std::make_shared<StackFrame>(
-              m_thread.shared_from_this(), idx, idx, cfa, cfa_is_valid, pc,
-              StackFrame::Kind::Regular, behaves_like_zeroth_frame, nullptr);
+      addr_t pc, cfa;
+      bool behaves_like_zeroth_frame = (idx == 0);
+      if (m_thread.GetUnwinder().GetFrameInfoAtIndex(
+              idx, cfa, pc, behaves_like_zeroth_frame)) {
+        const bool cfa_is_valid = true;
+        frame_sp = std::make_shared<StackFrame>(
+            m_thread.shared_from_this(), idx, idx, cfa, cfa_is_valid, pc,
+            StackFrame::Kind::Regular, behaves_like_zeroth_frame, nullptr);
 
-          Function *function =
-              frame_sp->GetSymbolContext(eSymbolContextFunction).function;
-          if (function) {
-            // When we aren't showing inline functions we always use the top
-            // most function block as the scope.
-            frame_sp->SetSymbolContextScope(&function->GetBlock(false));
-          } else {
-            // Set the symbol scope from the symbol regardless if it is nullptr
-            // or valid.
-            frame_sp->SetSymbolContextScope(
-                frame_sp->GetSymbolContext(eSymbolContextSymbol).symbol);
-          }
-          SetFrameAtIndex(idx, frame_sp);
+        Function *function =
+            frame_sp->GetSymbolContext(eSymbolContextFunction).function;
+        if (function) {
+          // When we aren't showing inline functions we always use the top
+          // most function block as the scope.
+          frame_sp->SetSymbolContextScope(&function->GetBlock(false));
+        } else {
+          // Set the symbol scope from the symbol regardless if it is nullptr
+          // or valid.
+          frame_sp->SetSymbolContextScope(
+              frame_sp->GetSymbolContext(eSymbolContextSymbol).symbol);
         }
+        SetFrameAtIndex(idx, frame_sp);
       }
     }
   } else if (original_idx == 0) {
