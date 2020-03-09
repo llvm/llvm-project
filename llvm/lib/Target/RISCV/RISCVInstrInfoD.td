@@ -42,15 +42,13 @@ class FPFMADDynFrmAlias<FPFMAD_rrr_frm Inst, string OpcodeStr>
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class FPALUD_rr<bits<7> funct7, bits<3> funct3, string opcodestr>
     : RVInstR<funct7, funct3, OPC_OP_FP, (outs FPR64:$rd),
-              (ins FPR64:$rs1, FPR64:$rs2), opcodestr, "$rd, $rs1, $rs2">,
-      Sched<[WriteFALU64, ReadFALU64, ReadFALU64]>;
+              (ins FPR64:$rs1, FPR64:$rs2), opcodestr, "$rd, $rs1, $rs2">;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class FPALUD_rr_frm<bits<7> funct7, string opcodestr>
     : RVInstRFrm<funct7, OPC_OP_FP, (outs FPR64:$rd),
                 (ins FPR64:$rs1, FPR64:$rs2, frmarg:$funct3), opcodestr,
-                 "$rd, $rs1, $rs2, $funct3">,
-      Sched<[WriteFALU64, ReadFALU64, ReadFALU64]>;
+                 "$rd, $rs1, $rs2, $funct3">;
 
 class FPALUDDynFrmAlias<FPALUD_rr_frm Inst, string OpcodeStr>
     : InstAlias<OpcodeStr#" $rd, $rs1, $rs2",
@@ -72,7 +70,7 @@ let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
 def FLD : RVInstI<0b011, OPC_LOAD_FP, (outs FPR64:$rd),
                   (ins GPR:$rs1, simm12:$imm12),
                   "fld", "$rd, ${imm12}(${rs1})">,
-          Sched<[WriteFLD64, ReadMemBase]>;
+          Sched<[WriteFLD64, ReadFMemBase]>;
 
 // Operands for stores are in the order srcreg, base, offset rather than
 // reflecting the order these fields are specified in the instruction
@@ -81,7 +79,7 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in
 def FSD : RVInstS<0b011, OPC_STORE_FP, (outs),
                   (ins FPR64:$rs2, GPR:$rs1, simm12:$imm12),
                    "fsd", "$rs2, ${imm12}(${rs1})">,
-          Sched<[WriteFST64, ReadStoreData, ReadMemBase]>;
+          Sched<[WriteFST64, ReadStoreData, ReadFMemBase]>;
 
 def FMADD_D  : FPFMAD_rrr_frm<OPC_MADD, "fmadd.d">,
                Sched<[WriteFMulAdd64, ReadFMulAdd64, ReadFMulAdd64, ReadFMulAdd64]>;
@@ -96,26 +94,35 @@ def FNMADD_D : FPFMAD_rrr_frm<OPC_NMADD, "fnmadd.d">,
                Sched<[WriteFMulAdd64, ReadFMulAdd64, ReadFMulAdd64, ReadFMulAdd64]>;
 def          : FPFMADDynFrmAlias<FNMADD_D, "fnmadd.d">;
 
-def FADD_D : FPALUD_rr_frm<0b0000001, "fadd.d">;
+def FADD_D : FPALUD_rr_frm<0b0000001, "fadd.d">,
+             Sched<[WriteFALU64, ReadFALU64, ReadFALU64]>;
 def        : FPALUDDynFrmAlias<FADD_D, "fadd.d">;
-def FSUB_D : FPALUD_rr_frm<0b0000101, "fsub.d">;
+def FSUB_D : FPALUD_rr_frm<0b0000101, "fsub.d">,
+             Sched<[WriteFALU64, ReadFALU64, ReadFALU64]>;
 def        : FPALUDDynFrmAlias<FSUB_D, "fsub.d">;
-def FMUL_D : FPALUD_rr_frm<0b0001001, "fmul.d">;
+def FMUL_D : FPALUD_rr_frm<0b0001001, "fmul.d">,
+             Sched<[WriteFMul64, ReadFMul64, ReadFMul64]>;
 def        : FPALUDDynFrmAlias<FMUL_D, "fmul.d">;
-def FDIV_D : FPALUD_rr_frm<0b0001101, "fdiv.d">;
+def FDIV_D : FPALUD_rr_frm<0b0001101, "fdiv.d">,
+             Sched<[WriteFDiv64, ReadFDiv64, ReadFDiv64]>;
 def        : FPALUDDynFrmAlias<FDIV_D, "fdiv.d">;
 
 def FSQRT_D : FPUnaryOp_r_frm<0b0101101, FPR64, FPR64, "fsqrt.d">,
-              Sched<[WriteFSqrt32, ReadFSqrt32]> {
+              Sched<[WriteFSqrt64, ReadFSqrt64]> {
   let rs2 = 0b00000;
 }
 def         : FPUnaryOpDynFrmAlias<FSQRT_D, "fsqrt.d", FPR64, FPR64>;
 
-def FSGNJ_D  : FPALUD_rr<0b0010001, 0b000, "fsgnj.d">;
-def FSGNJN_D : FPALUD_rr<0b0010001, 0b001, "fsgnjn.d">;
-def FSGNJX_D : FPALUD_rr<0b0010001, 0b010, "fsgnjx.d">;
-def FMIN_D   : FPALUD_rr<0b0010101, 0b000, "fmin.d">;
-def FMAX_D   : FPALUD_rr<0b0010101, 0b001, "fmax.d">;
+def FSGNJ_D  : FPALUD_rr<0b0010001, 0b000, "fsgnj.d">,
+               Sched<[WriteFSGNJ64, ReadFSGNJ64, ReadFSGNJ64]>;
+def FSGNJN_D : FPALUD_rr<0b0010001, 0b001, "fsgnjn.d">,
+               Sched<[WriteFSGNJ64, ReadFSGNJ64, ReadFSGNJ64]>;
+def FSGNJX_D : FPALUD_rr<0b0010001, 0b010, "fsgnjx.d">,
+               Sched<[WriteFSGNJ64, ReadFSGNJ64, ReadFSGNJ64]>;
+def FMIN_D   : FPALUD_rr<0b0010101, 0b000, "fmin.d">,
+               Sched<[WriteFMinMax64, ReadFMinMax64, ReadFMinMax64]>;
+def FMAX_D   : FPALUD_rr<0b0010101, 0b001, "fmax.d">,
+               Sched<[WriteFMinMax64, ReadFMinMax64, ReadFMinMax64]>;
 
 def FCVT_S_D : FPUnaryOp_r_frm<0b0100000, FPR32, FPR64, "fcvt.s.d">,
                Sched<[WriteFCvtF64ToF32, ReadFCvtF64ToF32]> {
