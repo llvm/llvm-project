@@ -35965,9 +35965,30 @@ static SDValue combineShuffle(SDNode *N, SelectionDAG &DAG,
                                   VT.getVectorElementType(),
                                   LN->getPointerInfo(),
                                   LN->getAlignment(),
-                                  MachineMemOperand::MOLoad);
+                                  LN->getMemOperand()->getFlags());
+      DCI.CombineTo(N, VZLoad);
       DAG.ReplaceAllUsesOfValueWith(SDValue(LN, 1), VZLoad.getValue(1));
-      return VZLoad;
+      DCI.recursivelyDeleteUnusedNodes(LN);
+      return SDValue(N, 0);
+    }
+  }
+
+  // If this a VZEXT_MOVL of a VBROADCAST_LOAD, we don't need the broadcast and
+  // can just use a VZEXT_LOAD.
+  // FIXME: Is there some way to do this with SimplifyDemandedVectorElts?
+  if (N->getOpcode() == X86ISD::VZEXT_MOVL && N->getOperand(0).hasOneUse() &&
+      N->getOperand(0).getOpcode() == X86ISD::VBROADCAST_LOAD) {
+    auto *LN = cast<MemSDNode>(N->getOperand(0));
+    if (VT.getScalarSizeInBits() == LN->getMemoryVT().getSizeInBits()) {
+      SDVTList Tys = DAG.getVTList(VT, MVT::Other);
+      SDValue Ops[] = { LN->getChain(), LN->getBasePtr() };
+      SDValue VZLoad =
+          DAG.getMemIntrinsicNode(X86ISD::VZEXT_LOAD, dl, Tys, Ops,
+                                  LN->getMemoryVT(), LN->getMemOperand());
+      DCI.CombineTo(N, VZLoad);
+      DAG.ReplaceAllUsesOfValueWith(SDValue(LN, 1), VZLoad.getValue(1));
+      DCI.recursivelyDeleteUnusedNodes(LN);
+      return SDValue(N, 0);
     }
   }
 
