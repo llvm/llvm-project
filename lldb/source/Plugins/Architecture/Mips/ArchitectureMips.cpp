@@ -168,10 +168,11 @@ Instruction *ArchitectureMips::GetInstructionAtAddress(
   for (uint32_t i = 1; i <= loop_count; i++) {
     // Adjust the address to read from.
     addr.Slide(-2);
-    AddressRange range(addr, i * 2);
     uint32_t insn_size = 0;
 
-    disasm_sp->ParseInstructions(target, range, nullptr, prefer_file_cache);
+    disasm_sp->ParseInstructions(target, addr,
+                                 {Disassembler::Limit::Bytes, i * 2}, nullptr,
+                                 prefer_file_cache);
 
     uint32_t num_insns = disasm_sp->GetInstructionList().GetSize();
     if (num_insns) {
