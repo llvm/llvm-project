@@ -210,6 +210,8 @@ protected:
 
   unsigned HasAArch64SVETypes : 1;
 
+  unsigned ARMCDECoprocMask : 8;
+
   // TargetInfo Constructor.  Default initializes all fields.
   TargetInfo(const llvm::Triple &T);
 
@@ -807,6 +809,10 @@ public:
   /// Returns whether or not the AArch64 SVE built-in types are
   /// available on this target.
   bool hasAArch64SVETypes() const { return HasAArch64SVETypes; }
+
+  /// For ARM targets returns a mask defining which coprocessors are configured
+  /// as Custom Datapath.
+  uint32_t getARMCDECoprocMask() const { return ARMCDECoprocMask; }
 
   /// Returns whether the passed in string is a valid clobber in an
   /// inline asm statement.
