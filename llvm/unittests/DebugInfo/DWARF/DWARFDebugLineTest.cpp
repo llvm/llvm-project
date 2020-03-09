@@ -1001,6 +1001,41 @@ INSTANTIATE_TEST_CASE_P(
     Values(std::make_tuple(0, true),       // Test zero value (error).
            std::make_tuple(14, false)), ); // Test non-zero value (no error).
 
+struct BadMinInstLenFixture : TestWithParam<std::tuple<uint8_t, bool>>,
+                              AdjustAddressFixtureBase {
+  void SetUp() override {
+    std::tie(MinInstLength, IsErrorExpected) = GetParam();
+  }
+
+  uint64_t editPrologue(LineTable &LT) override {
+    DWARFDebugLine::Prologue Prologue = LT.createBasicPrologue();
+    Prologue.MinInstLength = MinInstLength;
+    LT.setPrologue(Prologue);
+    return Prologue.TotalLength + Prologue.sizeofTotalLength();
+  }
+
+  uint64_t getAdjustedAddr(uint64_t Base, uint64_t ConstIncr,
+                           uint64_t SpecialIncr,
+                           uint64_t AdvanceIncr) override {
+    return MinInstLength != 0 ? AdjustAddressFixtureBase::getAdjustedAddr(
+                                    Base, ConstIncr, SpecialIncr, AdvanceIncr)
+                              : Base;
+  }
+
+  uint8_t MinInstLength;
+};
+
+TEST_P(BadMinInstLenFixture, MinInstLengthProblemsReportedCorrectly) {
+  runTest(/*CheckAdvancePC=*/true,
+          "but the prologue minimum_instruction_length value is 0, which "
+          "prevents any address advancing");
+}
+
+INSTANTIATE_TEST_CASE_P(
+    BadMinInstLenParams, BadMinInstLenFixture,
+    Values(std::make_tuple(0, true),      // Test zero value (error).
+           std::make_tuple(1, false)), ); // Test non-zero value (no error).
+
 TEST_F(DebugLineBasicFixture, ParserParsesCorrectly) {
   if (!setupGenerator())
     return;

@@ -592,6 +592,14 @@ uint64_t DWARFDebugLine::ParsingState::advanceAddr(uint64_t OperationAdvance,
         ", which is unsupported. Assuming a value of 1 instead",
         LineTableOffset, OpcodeName.data(), OpcodeOffset,
         LineTable->Prologue.MaxOpsPerInst));
+  if (ReportAdvanceAddrProblem && LineTable->Prologue.MinInstLength == 0)
+    ErrorHandler(
+        createStringError(errc::invalid_argument,
+                          "line table program at offset 0x%8.8" PRIx64
+                          " contains a %s opcode at offset 0x%8.8" PRIx64
+                          ", but the prologue minimum_instruction_length value "
+                          "is 0, which prevents any address advancing",
+                          LineTableOffset, OpcodeName.data(), OpcodeOffset));
   ReportAdvanceAddrProblem = false;
   uint64_t AddrOffset = OperationAdvance * LineTable->Prologue.MinInstLength;
   Row.Address.Address += AddrOffset;
