@@ -125,7 +125,8 @@ bool MangleContext::shouldMangleDeclName(const NamedDecl *D) {
   return shouldMangleCXXName(D);
 }
 
-void MangleContext::mangleName(const NamedDecl *D, raw_ostream &Out) {
+void MangleContext::mangleName(GlobalDecl GD, raw_ostream &Out) {
+  const NamedDecl *D = cast<NamedDecl>(GD.getDecl());
   // Any decl can be declared with __asm("foo") on it, and this takes precedence
   // over all other naming in the .o file.
   if (const AsmLabelAttr *ALA = D->getAttr<AsmLabelAttr>()) {
@@ -166,7 +167,7 @@ void MangleContext::mangleName(const NamedDecl *D, raw_ostream &Out) {
     if (const ObjCMethodDecl *OMD = dyn_cast<ObjCMethodDecl>(D))
       mangleObjCMethodName(OMD, Out);
     else
-      mangleCXXName(D, Out);
+      mangleCXXName(GD, Out);
     return;
   }
 
@@ -183,7 +184,7 @@ void MangleContext::mangleName(const NamedDecl *D, raw_ostream &Out) {
   else if (const ObjCMethodDecl *OMD = dyn_cast<ObjCMethodDecl>(D))
     mangleObjCMethodName(OMD, Out);
   else
-    mangleCXXName(D, Out);
+    mangleCXXName(GD, Out);
 
   const FunctionDecl *FD = cast<FunctionDecl>(D);
   const FunctionType *FT = FD->getType()->castAs<FunctionType>();
@@ -230,7 +231,7 @@ void MangleContext::mangleCtorBlock(const CXXConstructorDecl *CD,
                                     raw_ostream &ResStream) {
   SmallString<64> Buffer;
   llvm::raw_svector_ostream Out(Buffer);
-  mangleCXXCtor(CD, CT, Out);
+  mangleName(GlobalDecl(CD, CT), Out);
   mangleFunctionBlock(*this, Buffer, BD, ResStream);
 }
 
@@ -239,7 +240,7 @@ void MangleContext::mangleDtorBlock(const CXXDestructorDecl *DD,
                                     raw_ostream &ResStream) {
   SmallString<64> Buffer;
   llvm::raw_svector_ostream Out(Buffer);
-  mangleCXXDtor(DD, DT, Out);
+  mangleName(GlobalDecl(DD, DT), Out);
   mangleFunctionBlock(*this, Buffer, BD, ResStream);
 }
 
@@ -437,12 +438,14 @@ public:
 private:
   bool writeFuncOrVarName(const NamedDecl *D, raw_ostream &OS) {
     if (MC->shouldMangleDeclName(D)) {
+      GlobalDecl GD;
       if (const auto *CtorD = dyn_cast<CXXConstructorDecl>(D))
-        MC->mangleCXXCtor(CtorD, Ctor_Complete, OS);
+        GD = GlobalDecl(CtorD, Ctor_Complete);
       else if (const auto *DtorD = dyn_cast<CXXDestructorDecl>(D))
-        MC->mangleCXXDtor(DtorD, Dtor_Complete, OS);
+        GD = GlobalDecl(DtorD, Dtor_Complete);
       else
-        MC->mangleName(D, OS);
+        GD = GlobalDecl(D);
+      MC->mangleName(GD, OS);
       return false;
     } else {
       IdentifierInfo *II = D->getIdentifier();
@@ -462,10 +465,12 @@ private:
     std::string FrontendBuf;
     llvm::raw_string_ostream FOS(FrontendBuf);
 
+    GlobalDecl GD;
     if (const auto *CD = dyn_cast_or_null<CXXConstructorDecl>(ND))
-      MC->mangleCXXCtor(CD, static_cast<CXXCtorType>(StructorType), FOS);
+      GD = GlobalDecl(CD, static_cast<CXXCtorType>(StructorType));
     else if (const auto *DD = dyn_cast_or_null<CXXDestructorDecl>(ND))
-      MC->mangleCXXDtor(DD, static_cast<CXXDtorType>(StructorType), FOS);
+      GD = GlobalDecl(DD, static_cast<CXXDtorType>(StructorType));
+    MC->mangleName(GD, FOS);
 
     std::string BackendBuf;
     llvm::raw_string_ostream BOS(BackendBuf);

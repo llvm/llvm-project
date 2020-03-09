@@ -2433,14 +2433,15 @@ static LValue EmitGlobalVarDeclLValue(CodeGenFunction &CGF,
   return LV;
 }
 
-llvm::Constant *CodeGenModule::getRawFunctionPointer(const FunctionDecl *FD,
+llvm::Constant *CodeGenModule::getRawFunctionPointer(GlobalDecl GD,
                                                      llvm::Type *Ty) {
+  const FunctionDecl *FD = cast<FunctionDecl>(GD.getDecl());
   if (FD->hasAttr<WeakRefAttr>()) {
     ConstantAddress aliasee = GetWeakRefReference(FD);
     return aliasee.getPointer();
   }
 
-  llvm::Constant *V = GetAddrOfFunction(FD, Ty);
+  llvm::Constant *V = GetAddrOfFunction(GD, Ty);
   if (!FD->hasPrototype()) {
     if (const FunctionProtoType *Proto =
             FD->getType()->getAs<FunctionProtoType>()) {
@@ -2456,9 +2457,10 @@ llvm::Constant *CodeGenModule::getRawFunctionPointer(const FunctionDecl *FD,
   return V;
 }
 
-static LValue EmitFunctionDeclLValue(CodeGenFunction &CGF,
-                                     const Expr *E, const FunctionDecl *FD) {
-  llvm::Constant *V = CGF.CGM.getFunctionPointer(FD);
+static LValue EmitFunctionDeclLValue(CodeGenFunction &CGF, const Expr *E,
+                                     GlobalDecl GD) {
+  const FunctionDecl *FD = cast<FunctionDecl>(GD.getDecl());
+  llvm::Constant *V = CGF.CGM.getFunctionPointer(GD);
   CharUnits Alignment = CGF.getContext().getDeclAlign(FD);
   return CGF.MakeAddrLValue(V, E->getType(), Alignment,
                             AlignmentSource::Decl);
@@ -4659,7 +4661,8 @@ RValue CodeGenFunction::EmitSimpleCallExpr(const CallExpr *E,
   return EmitCall(E->getCallee()->getType(), Callee, E, ReturnValue);
 }
 
-static CGCallee EmitDirectCallee(CodeGenFunction &CGF, const FunctionDecl *FD) {
+static CGCallee EmitDirectCallee(CodeGenFunction &CGF, GlobalDecl GD) {
+  const FunctionDecl *FD = cast<FunctionDecl>(GD.getDecl());
 
   if (auto builtinID = FD->getBuiltinID()) {
     // Replaceable builtin provide their own implementation of a builtin. Unless
@@ -4671,8 +4674,8 @@ static CGCallee EmitDirectCallee(CodeGenFunction &CGF, const FunctionDecl *FD) {
       return CGCallee::forBuiltin(builtinID, FD);
   }
 
-  llvm::Constant *calleePtr = CGF.CGM.getRawFunctionPointer(FD);
-  return CGCallee::forDirect(calleePtr, GlobalDecl(FD));
+  llvm::Constant *calleePtr = CGF.CGM.getRawFunctionPointer(GD);
+  return CGCallee::forDirect(calleePtr, GD);
 }
 
 static unsigned getPointerAuthKeyValue(const ASTContext &Context,
