@@ -1,4 +1,4 @@
-# RUN: llc -debug-entry-values -start-before=livedebugvalues -filetype=obj -o - %s \
+# RUN: llc -emit-call-site-info -debug-entry-values -start-before=livedebugvalues -filetype=obj -o - %s \
 # RUN:     | llvm-dwarfdump - | FileCheck %s --implicit-check-not=DW_TAG_GNU_call_site_parameter
 
 --- |

@@ -119,7 +119,8 @@ namespace llvm {
           ExplicitEmulatedTLS(false), EnableIPRA(false),
           EmitStackSizeSection(false), EnableMachineOutliner(false),
           SupportsDefaultOutlining(false), EmitAddrsig(false),
-          EnableDebugEntryValues(false), ForceDwarfFrameSection(false) {}
+          EmitCallSiteInfo(false), EnableDebugEntryValues(false),
+          ForceDwarfFrameSection(false) {}
 
     /// PrintMachineCode - This flag is enabled when the -print-machineinstrs
     /// option is specified on the command line, and should enable debugging
@@ -256,6 +257,10 @@ namespace llvm {
     /// Emit address-significance table.
     unsigned EmitAddrsig : 1;
 
+    /// The flag enables call site info production. It is used only for debug
+    /// info, and it is restricted only to optimized code. This can be used for
+    /// something else, so that should be controlled in the frontend.
+    unsigned EmitCallSiteInfo : 1;
     /// Emit debug info about parameter's entry values.
     unsigned EnableDebugEntryValues : 1;
 

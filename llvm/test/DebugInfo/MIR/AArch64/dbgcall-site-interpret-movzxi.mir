@@ -1,4 +1,4 @@
-# RUN: llc -mtriple aarch64-linux-gnu -debug-entry-values -start-after=machineverifier -filetype=obj %s -o -| llvm-dwarfdump -| FileCheck %s
+# RUN: llc -emit-call-site-info -mtriple aarch64-linux-gnu -debug-entry-values -start-after=machineverifier -filetype=obj %s -o -| llvm-dwarfdump -| FileCheck %s
 #
 # Based on the following C reproducer:
 #

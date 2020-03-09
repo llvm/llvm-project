@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=arm-linux-gnueabi -debug-entry-values -filetype=obj -start-after=machineverifier %s -o -| llvm-dwarfdump -| FileCheck %s
+# RUN: llc -emit-call-site-info -mtriple=arm-linux-gnueabi -debug-entry-values -filetype=obj -start-after=machineverifier %s -o -| llvm-dwarfdump -| FileCheck %s
 # Following code is used for producing this test case. Note that
 # some of argument loading instruction are modified in order to
 # cover certain cases.

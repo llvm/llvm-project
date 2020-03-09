@@ -1,4 +1,4 @@
-# RUN: llc -debug-entry-values -run-pass=livedebugvalues -o - %s | FileCheck %s
+# RUN: llc -emit-call-site-info -debug-entry-values -run-pass=livedebugvalues -o - %s | FileCheck %s
 
 # Based on the following C reproducer:
 #
