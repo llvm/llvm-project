@@ -1,5 +1,5 @@
 # Support.
-add_llvm_library(MLIRQuantizerSupport
+add_mlir_library(MLIRQuantizerSupport
   Support/Configuration.cpp
   Support/ConstraintAnalysisGraph.cpp
   Support/Metadata.cpp
@@ -11,12 +11,8 @@ add_llvm_library(MLIRQuantizerSupport
   ADDITIONAL_HEADER_DIRS
   )
 
-add_dependencies(MLIRQuantizerSupport
-                 MLIRIR
-                 MLIRQuantOps
-                 MLIRSupport
-                 MLIRStandardOps)
 target_link_libraries(MLIRQuantizerSupport
+  PUBLIC
   MLIRIR
   MLIRQuantOps
   MLIRSupport
@@ -25,35 +21,36 @@ target_link_libraries(MLIRQuantizerSupport
   )
 
 # Configurations.
-add_llvm_library(MLIRQuantizerFxpMathConfig
+add_mlir_library(MLIRQuantizerFxpMathConfig
   Configurations/FxpMathConfig.cpp
 
   ADDITIONAL_HEADER_DIRS
+
+  DEPENDS
+  MLIRFxpMathOpsIncGen
   )
 
-add_dependencies(MLIRQuantizerFxpMathConfig
-                 MLIRFxpMathOpsIncGen
-                 MLIRQuantizerSupport)
 target_link_libraries(MLIRQuantizerFxpMathConfig
+  PUBLIC
   MLIRIR
   MLIRFxpMathOps
   MLIRQuantOps
   MLIRQuantizerSupport
+  MLIRStandardOps
+  MLIRSupport
+  LLVMSupport
   )
 
 # Transforms.
-add_llvm_library(MLIRQuantizerTransforms
+add_mlir_library(MLIRQuantizerTransforms
   Transforms/AddDefaultStatsTestPass.cpp
   Transforms/InferQuantizedTypesPass.cpp
   Transforms/RemoveInstrumentationPass.cpp
 
   ADDITIONAL_HEADER_DIRS
   )
-add_dependencies(MLIRQuantizerTransforms
-  MLIRQuantizerFxpMathConfig
-  MLIRQuantizerSupport
-  MLIRPass)
 target_link_libraries(MLIRQuantizerTransforms
+  PUBLIC
   MLIRIR
   MLIRQuantizerFxpMathConfig
   MLIRQuantizerSupport

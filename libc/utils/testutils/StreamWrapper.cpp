@@ -23,6 +23,7 @@ template <typename T> StreamWrapper &StreamWrapper::operator<<(T t) {
   return *this;
 }
 
+template StreamWrapper &StreamWrapper::operator<<<void *>(void *t);
 template StreamWrapper &StreamWrapper::operator<<<const char *>(const char *t);
 template StreamWrapper &StreamWrapper::operator<<<char *>(char *t);
 template StreamWrapper &StreamWrapper::operator<<<char>(char t);

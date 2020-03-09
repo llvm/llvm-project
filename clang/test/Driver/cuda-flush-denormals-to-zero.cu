@@ -9,5 +9,9 @@
 
 // CPUFTZ-NOT: -fdenormal-fp-math
 
+// FTZ-NOT: -fdenormal-fp-math-f32=
 // FTZ: "-fdenormal-fp-math-f32=preserve-sign,preserve-sign"
-// NOFTZ: "-fdenormal-fp-math=ieee,ieee"
+
+// The default of ieee is omitted
+// NOFTZ-NOT: "-fdenormal-fp-math"
+// NOFTZ-NOT: "-fdenormal-fp-math-f32"

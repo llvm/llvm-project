@@ -3,24 +3,57 @@ add_mlir_dialect_library(MLIRLLVMIR
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/LLVMIR
+
+  DEPENDS
+  MLIRControlFlowInterfacesIncGen
+  MLIRLLVMOpsIncGen
+  MLIRLLVMConversionsIncGen
   )
-add_dependencies(MLIRLLVMIR MLIRControlFlowInterfacesIncGen MLIRLLVMOpsIncGen MLIRLLVMConversionsIncGen MLIROpenMP LLVMFrontendOpenMP LLVMAsmParser LLVMCore LLVMSupport)
-target_link_libraries(MLIRLLVMIR LLVMAsmParser LLVMCore LLVMSupport LLVMFrontendOpenMP MLIROpenMP MLIRIR)
+target_link_libraries(MLIRLLVMIR
+  PUBLIC
+  LLVMAsmParser
+  LLVMCore
+  LLVMSupport
+  LLVMFrontendOpenMP
+  MLIRAnalysis
+  MLIROpenMP
+  MLIRIR
+  MLIRSupport
+  )
 
 add_mlir_dialect_library(MLIRNVVMIR
   IR/NVVMDialect.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/LLVMIR
+
+  DEPENDS
+  MLIRNVVMOpsIncGen
+  MLIRNVVMConversionsIncGen
   )
-add_dependencies(MLIRNVVMIR MLIRNVVMOpsIncGen MLIRNVVMConversionsIncGen LLVMAsmParser LLVMCore LLVMSupport)
-target_link_libraries(MLIRNVVMIR LLVMAsmParser MLIRIR MLIRLLVMIR LLVMSupport LLVMCore)
+target_link_libraries(MLIRNVVMIR
+  PUBLIC
+  LLVMAsmParser
+  MLIRIR
+  MLIRLLVMIR
+  LLVMSupport
+  LLVMCore
+  )
 
 add_mlir_dialect_library(MLIRROCDLIR
   IR/ROCDLDialect.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/LLVMIR
+
+  DEPENDS
+  MLIRROCDLOpsIncGen
+  MLIRROCDLConversionsIncGen
   )
-add_dependencies(MLIRROCDLIR MLIRROCDLOpsIncGen MLIRROCDLConversionsIncGen LLVMAsmParser LLVMCore LLVMSupport)
-target_link_libraries(MLIRROCDLIR LLVMAsmParser LLVMCore LLVMSupport MLIRIR)
+target_link_libraries(MLIRROCDLIR
+  PUBLIC
+  LLVMAsmParser
+  LLVMCore
+  LLVMSupport
+  MLIRIR
+  )

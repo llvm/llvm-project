@@ -14,4 +14,6 @@ set(LIBS
   )
 
 add_dependencies(MLIRVectorToLLVM ${LIBS})
-target_link_libraries(MLIRVectorToLLVM ${LIBS})
+target_link_libraries(MLIRVectorToLLVM
+  PUBLIC
+  ${LIBS})

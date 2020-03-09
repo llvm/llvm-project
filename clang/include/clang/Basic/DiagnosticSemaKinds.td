@@ -2424,20 +2424,19 @@ def note_for_range_invalid_iterator : Note <
   "in implicit call to 'operator%select{!=|*|++}0' for iterator of type %1">;
 def note_for_range_begin_end : Note<
   "selected '%select{begin|end}0' %select{function|template }1%2 with iterator type %3">;
-def warn_for_range_const_reference_copy : Warning<
+def warn_for_range_const_ref_binds_temp_built_from_ref : Warning<
   "loop variable %0 "
-  "%diff{has type $ but is initialized with type $"
-  "|is initialized with a value of a different type}1,2 resulting in a copy">,
+  "%diff{of type $ binds to a temporary constructed from type $"
+  "|binds to a temporary constructed from a different type}1,2">,
   InGroup<RangeLoopConstruct>, DefaultIgnore;
 def note_use_type_or_non_reference : Note<
-  "use non-reference type %0 to keep the copy or type %1 to prevent copying">;
-def warn_for_range_variable_always_copy : Warning<
-  "loop variable %0 is always a copy because the range of type %1 does not "
-  "return a reference">,
+  "use non-reference type %0 to make construction explicit or type %1 to prevent copying">;
+def warn_for_range_ref_binds_ret_temp : Warning<
+  "loop variable %0 binds to a temporary value produced by a range of type %1">,
   InGroup<RangeLoopBindReference>, DefaultIgnore;
 def note_use_non_reference_type : Note<"use non-reference type %0">;
 def warn_for_range_copy : Warning<
-  "loop variable %0 of type %1 creates a copy from type %2">,
+  "loop variable %0 creates a copy from type %1">,
   InGroup<RangeLoopConstruct>, DefaultIgnore;
 def note_use_reference_type : Note<"use reference type %0 to prevent copying">;
 def err_objc_for_range_init_stmt : Error<
@@ -3669,9 +3668,15 @@ def warn_int_to_void_pointer_cast : Warning<
 def warn_pointer_to_int_cast : Warning<
   "cast to smaller integer type %1 from %0">,
   InGroup<PointerToIntCast>;
+def warn_pointer_to_enum_cast : Warning<
+  warn_pointer_to_int_cast.Text>,
+  InGroup<PointerToEnumCast>;
 def warn_void_pointer_to_int_cast : Warning<
   "cast to smaller integer type %1 from %0">,
   InGroup<VoidPointerToIntCast>;
+def warn_void_pointer_to_enum_cast : Warning<
+  warn_void_pointer_to_int_cast.Text>,
+  InGroup<VoidPointerToEnumCast>;
 def ext_ms_pointer_to_int_cast : ExtWarn<
   "cast to smaller integer type %1 from %0 is a Microsoft extension">,
 InGroup<MicrosoftCast>;
@@ -9634,7 +9639,7 @@ def err_omp_expected_var_name_member_expr : Error<
 def err_omp_expected_var_name_member_expr_or_array_item : Error<
   "expected variable name%select{|, data member of current class}0, array element or array section">;
 def err_omp_expected_addressable_lvalue_or_array_item : Error<
-  "expected addressable lvalue expression, array element or array section">;
+  "expected addressable lvalue expression, array element or array section%select{| of non 'omp_depend_t' type}0">;
 def err_omp_expected_named_var_member_or_array_expression: Error<
   "expected expression containing only member accesses and/or array sections based on named variables">;
 def err_omp_bit_fields_forbidden_in_clause : Error<

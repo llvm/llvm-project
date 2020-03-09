@@ -588,39 +588,39 @@ raw_ostream &mlir::operator<<(raw_ostream &os, AffineExpr &expr) {
 
 /// Constructs an affine expression from a flat ArrayRef. If there are local
 /// identifiers (neither dimensional nor symbolic) that appear in the sum of
-/// products expression, 'localExprs' is expected to have the AffineExpr
-/// for it, and is substituted into. The ArrayRef 'eq' is expected to be in the
-/// format [dims, symbols, locals, constant term].
-AffineExpr mlir::toAffineExpr(ArrayRef<int64_t> eq, unsigned numDims,
-                              unsigned numSymbols,
-                              ArrayRef<AffineExpr> localExprs,
-                              MLIRContext *context) {
-  // Assert expected numLocals = eq.size() - numDims - numSymbols - 1
-  assert(eq.size() - numDims - numSymbols - 1 == localExprs.size() &&
+/// products expression, `localExprs` is expected to have the AffineExpr
+/// for it, and is substituted into. The ArrayRef `flatExprs` is expected to be
+/// in the format [dims, symbols, locals, constant term].
+AffineExpr mlir::getAffineExprFromFlatForm(ArrayRef<int64_t> flatExprs,
+                                           unsigned numDims,
+                                           unsigned numSymbols,
+                                           ArrayRef<AffineExpr> localExprs,
+                                           MLIRContext *context) {
+  // Assert expected numLocals = flatExprs.size() - numDims - numSymbols - 1.
+  assert(flatExprs.size() - numDims - numSymbols - 1 == localExprs.size() &&
          "unexpected number of local expressions");
 
   auto expr = getAffineConstantExpr(0, context);
   // Dimensions and symbols.
   for (unsigned j = 0; j < numDims + numSymbols; j++) {
-    if (eq[j] == 0) {
+    if (flatExprs[j] == 0)
       continue;
-    }
     auto id = j < numDims ? getAffineDimExpr(j, context)
                           : getAffineSymbolExpr(j - numDims, context);
-    expr = expr + id * eq[j];
+    expr = expr + id * flatExprs[j];
   }
 
   // Local identifiers.
-  for (unsigned j = numDims + numSymbols, e = eq.size() - 1; j < e; j++) {
-    if (eq[j] == 0) {
+  for (unsigned j = numDims + numSymbols, e = flatExprs.size() - 1; j < e;
+       j++) {
+    if (flatExprs[j] == 0)
       continue;
-    }
-    auto term = localExprs[j - numDims - numSymbols] * eq[j];
+    auto term = localExprs[j - numDims - numSymbols] * flatExprs[j];
     expr = expr + term;
   }
 
   // Constant term.
-  int64_t constTerm = eq[eq.size() - 1];
+  int64_t constTerm = flatExprs[flatExprs.size() - 1];
   if (constTerm != 0)
     expr = expr + constTerm;
   return expr;
@@ -703,8 +703,8 @@ void SimpleAffineExprFlattener::visitModExpr(AffineBinaryOpExpr expr) {
 
   // Construct the AffineExpr form of the floordiv to store in localExprs.
   MLIRContext *context = expr.getContext();
-  auto dividendExpr =
-      toAffineExpr(floorDividend, numDims, numSymbols, localExprs, context);
+  auto dividendExpr = getAffineExprFromFlatForm(
+      floorDividend, numDims, numSymbols, localExprs, context);
   auto divisorExpr = getAffineConstantExpr(floorDivisor, context);
   auto floorDivExpr = dividendExpr.floorDiv(divisorExpr);
   int loc;
@@ -787,7 +787,8 @@ void SimpleAffineExprFlattener::visitDivExpr(AffineBinaryOpExpr expr,
   // quantifier to express its result, i.e., expr1 div expr2 is replaced
   // by a new identifier, q.
   MLIRContext *context = expr.getContext();
-  auto a = toAffineExpr(lhs, numDims, numSymbols, localExprs, context);
+  auto a =
+      getAffineExprFromFlatForm(lhs, numDims, numSymbols, localExprs, context);
   auto b = getAffineConstantExpr(divisor, context);
 
   int loc;
@@ -846,8 +847,9 @@ AffineExpr mlir::simplifyAffineExpr(AffineExpr expr, unsigned numDims,
   SimpleAffineExprFlattener flattener(numDims, numSymbols);
   flattener.walkPostOrder(expr);
   ArrayRef<int64_t> flattenedExpr = flattener.operandExprStack.back();
-  auto simplifiedExpr = toAffineExpr(flattenedExpr, numDims, numSymbols,
-                                     flattener.localExprs, expr.getContext());
+  auto simplifiedExpr =
+      getAffineExprFromFlatForm(flattenedExpr, numDims, numSymbols,
+                                flattener.localExprs, expr.getContext());
   flattener.operandExprStack.pop_back();
   assert(flattener.operandExprStack.empty());
 

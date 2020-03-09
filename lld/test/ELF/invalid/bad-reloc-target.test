@@ -17,8 +17,7 @@ Sections:
     Link:        .symtab
     Info:        0
     Relocations: 
-      - Offset:  0x0000000000000000
-        Symbol:  foo
+      - Symbol:  foo
         Type:    R_X86_64_64
 Symbols:         
   - Name:        foo
@@ -43,8 +42,7 @@ Sections:
     Link:        .symtab
     Info:        99
     Relocations: 
-      - Offset:  0x0000000000000000
-        Symbol:  foo
+      - Symbol:  foo
         Type:    R_X86_64_64
 Symbols:         
   - Name:        foo
@@ -70,6 +68,5 @@ Sections:
     Type:        SHT_RELA
     Info:        .text
     Relocations:
-      - Offset:  0x0000000000000000
-        Symbol:  255
+      - Symbol:  255
         Type:    R_X86_64_64

@@ -29,8 +29,7 @@ Sections:
   - Name:    .rela.dyn
     Type:    SHT_RELA
     Relocations:
-      - Offset: 0x0
-        Type:   R_X86_64_NONE
+      - Type:   R_X86_64_NONE
         Symbol: 0x1
   - Name: .dynamic
     Type: SHT_DYNAMIC

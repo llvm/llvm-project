@@ -3,7 +3,7 @@ set(LLVM_OPTIONAL_SOURCES
   CoreAPIs.cpp
   )
 
-add_llvm_library(MLIREDSC
+add_mlir_library(MLIREDSC
   Builders.cpp
 
   ADDITIONAL_HEADER_DIRS
@@ -16,7 +16,7 @@ target_link_libraries(MLIREDSC
   MLIRSupport
   )
 
-add_llvm_library(MLIREDSCInterface
+add_mlir_library(MLIREDSCInterface
   CoreAPIs.cpp
 
   ADDITIONAL_HEADER_DIRS

@@ -84,8 +84,7 @@ void SuspiciousStringCompareCheck::storeOptions(
 void SuspiciousStringCompareCheck::registerMatchers(MatchFinder *Finder) {
   // Match relational operators.
   const auto ComparisonUnaryOperator = unaryOperator(hasOperatorName("!"));
-  const auto ComparisonBinaryOperator =
-      binaryOperator(matchers::isComparisonOperator());
+  const auto ComparisonBinaryOperator = binaryOperator(isComparisonOperator());
   const auto ComparisonOperator =
       expr(anyOf(ComparisonUnaryOperator, ComparisonBinaryOperator));
 
@@ -143,10 +142,9 @@ void SuspiciousStringCompareCheck::registerMatchers(MatchFinder *Finder) {
 
   // Detect suspicious operator with string compare function as operand.
   Finder->addMatcher(
-      binaryOperator(
-          unless(anyOf(matchers::isComparisonOperator(), hasOperatorName("&&"),
-                       hasOperatorName("||"), hasOperatorName("="))),
-          hasEitherOperand(StringCompareCallExpr))
+      binaryOperator(unless(anyOf(isComparisonOperator(), hasOperatorName("&&"),
+                                  hasOperatorName("||"), hasOperatorName("="))),
+                     hasEitherOperand(StringCompareCallExpr))
           .bind("suspicious-operator"),
       this);
 
@@ -158,7 +156,7 @@ void SuspiciousStringCompareCheck::registerMatchers(MatchFinder *Finder) {
                 has(ignoringParenImpCasts(integerLiteral(unless(equals(0)))))),
             characterLiteral(), cxxBoolLiteral()));
 
-  Finder->addMatcher(binaryOperator(matchers::isComparisonOperator(),
+  Finder->addMatcher(binaryOperator(isComparisonOperator(),
                                     hasEitherOperand(StringCompareCallExpr),
                                     hasEitherOperand(InvalidLiteral))
                          .bind("invalid-comparison"),

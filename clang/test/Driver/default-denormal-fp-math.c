@@ -14,6 +14,6 @@
 
 // RUN: %clang -### -target x86_64-scei-ps4 -c %s -v 2>&1 | FileCheck -check-prefix=CHECK-PRESERVESIGN %s
 
-
-// CHECK-IEEE: -fdenormal-fp-math=ieee,ieee
+// Flag omitted for default
+// CHECK-IEEE-NOT: -fdenormal-fp-math
 // CHECK-PRESERVESIGN: -fdenormal-fp-math=preserve-sign,preserve-sign

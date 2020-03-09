@@ -6119,20 +6119,35 @@ bool ARMAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
   case AsmToken::LCurly:
     return parseRegisterList(Operands, !Mnemonic.startswith("clr"));
   case AsmToken::Dollar:
-  case AsmToken::Hash:
-    // #42 -> immediate.
+  case AsmToken::Hash: {
+    // #42 -> immediate
+    // $ 42 -> immediate
+    // $foo -> symbol name
+    // $42 -> symbol name
     S = Parser.getTok().getLoc();
-    Parser.Lex();
+
+    // Favor the interpretation of $-prefixed operands as symbol names.
+    // Cases where immediates are explicitly expected are handled by their
+    // specific ParseMethod implementations.
+    auto AdjacentToken = getLexer().peekTok(/*ShouldSkipSpace=*/false);
+    bool ExpectIdentifier = Parser.getTok().is(AsmToken::Dollar) &&
+                            (AdjacentToken.is(AsmToken::Identifier) ||
+                             AdjacentToken.is(AsmToken::Integer));
+    if (!ExpectIdentifier) {
+      // Token is not part of identifier. Drop leading $ or # before parsing
+      // expression.
+      Parser.Lex();
+    }
 
     if (Parser.getTok().isNot(AsmToken::Colon)) {
-      bool isNegative = Parser.getTok().is(AsmToken::Minus);
+      bool IsNegative = Parser.getTok().is(AsmToken::Minus);
       const MCExpr *ImmVal;
       if (getParser().parseExpression(ImmVal))
         return true;
       const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(ImmVal);
       if (CE) {
         int32_t Val = CE->getValue();
-        if (isNegative && Val == 0)
+        if (IsNegative && Val == 0)
           ImmVal = MCConstantExpr::create(std::numeric_limits<int32_t>::min(),
                                           getContext());
       }
@@ -6151,7 +6166,7 @@ bool ARMAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
     }
     // w/ a ':' after the '#', it's just like a plain ':'.
     LLVM_FALLTHROUGH;
-
+  }
   case AsmToken::Colon: {
     S = Parser.getTok().getLoc();
     // ":lower16:" and ":upper16:" expression prefixes

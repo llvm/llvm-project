@@ -16,6 +16,7 @@
 include "mlir/Analysis/CallInterfaces.td"
 include "mlir/Analysis/ControlFlowInterfaces.td"
 include "mlir/IR/OpAsmInterface.td"
+include "mlir/IR/SideEffects.td"
 
 def Std_Dialect : Dialect {
   let name = "std";
@@ -1052,7 +1053,9 @@ def LoadOp : Std_Op<"load",
       %3 = load %0[%1, %1] : memref<4x4xi32>
   }];
 
-  let arguments = (ins AnyMemRef:$memref, Variadic<Index>:$indices);
+  let arguments = (ins Arg<AnyMemRef, "the reference to load from",
+                           [MemRead]>:$memref,
+                       Variadic<Index>:$indices);
   let results = (outs AnyType:$result);
 
   let builders = [OpBuilder<
@@ -1563,8 +1566,10 @@ def StoreOp : Std_Op<"store",
       store %v, %A[%i, %j] : memref<4x128xf32, (d0, d1) -> (d0, d1), 0>
   }];
 
-  let arguments = (ins AnyType:$value, AnyMemRef:$memref,
-                   Variadic<Index>:$indices);
+  let arguments = (ins AnyType:$value,
+                       Arg<AnyMemRef, "the reference to store to",
+                           [MemWrite]>:$memref,
+                       Variadic<Index>:$indices);
 
   let builders = [OpBuilder<
     "Builder *, OperationState &result, Value valueToStore, Value memref", [{
@@ -1846,7 +1851,8 @@ def TensorLoadOp : Std_Op<"tensor_load",
        %12 = tensor_load %10 : memref<4x?xf32, #layout, memspace0>
   }];
 
-  let arguments = (ins AnyMemRef:$memref);
+  let arguments = (ins Arg<AnyMemRef, "the reference to load from",
+                           [MemRead]>:$memref);
   let results = (outs AnyTensor:$result);
   // TensorLoadOp is fully verified by traits.
   let verifier = ?;
@@ -1890,7 +1896,9 @@ def TensorStoreOp : Std_Op<"tensor_store",
        tensor_store %8, %10 : memref<4x?xf32, #layout, memspace0>
   }];
 
-  let arguments = (ins AnyTensor:$tensor, AnyMemRef:$memref);
+  let arguments = (ins AnyTensor:$tensor,
+                       Arg<AnyMemRef, "the reference to store to",
+                           [MemWrite]>:$memref);
   // TensorStoreOp is fully verified by traits.
   let verifier = ?;
 

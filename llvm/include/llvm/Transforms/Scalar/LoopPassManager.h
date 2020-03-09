@@ -316,7 +316,12 @@ public:
       // false).
       if (!PI.runBeforePass<Loop>(Pass, *L))
         continue;
-      PreservedAnalyses PassPA = Pass.run(*L, LAM, LAR, Updater);
+
+      PreservedAnalyses PassPA;
+      {
+        TimeTraceScope TimeScope(Pass.name());
+        PassPA = Pass.run(*L, LAM, LAR, Updater);
+      }
 
       // Do not pass deleted Loop into the instrumentation.
       if (Updater.skipCurrentLoop())

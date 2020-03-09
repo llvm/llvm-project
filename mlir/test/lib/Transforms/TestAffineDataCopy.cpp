@@ -73,9 +73,7 @@ void TestAffineDataCopy::runOnFunction() {
                                    /*tagMemorySpace=*/0,
                                    /*fastMemCapacityBytes=*/32 * 1024 * 1024UL};
   DenseSet<Operation *> copyNests;
-  affineDataCopyGenerate(loopNest.getBody()->begin(),
-                         std::prev(loopNest.getBody()->end()), copyOptions,
-                         memrefFilter, copyNests);
+  affineDataCopyGenerate(loopNest, copyOptions, memrefFilter, copyNests);
 }
 
 namespace mlir {

@@ -2777,11 +2777,16 @@ void CastOperation::CheckCStyleCast() {
       // If the result cannot be represented in the integer type, the behavior
       // is undefined. The result need not be in the range of values of any
       // integer type.
-      unsigned Diag = Self.getLangOpts().MicrosoftExt
-                          ? diag::ext_ms_pointer_to_int_cast
-                          : SrcType->isVoidPointerType()
-                                ? diag::warn_void_pointer_to_int_cast
-                                : diag::warn_pointer_to_int_cast;
+      unsigned Diag;
+      if (Self.getLangOpts().MicrosoftExt)
+        Diag = diag::ext_ms_pointer_to_int_cast;
+      else if (SrcType->isVoidPointerType())
+        Diag = DestType->isEnumeralType() ? diag::warn_void_pointer_to_enum_cast
+                                          : diag::warn_void_pointer_to_int_cast;
+      else if (DestType->isEnumeralType())
+        Diag = diag::warn_pointer_to_enum_cast;
+      else
+        Diag = diag::warn_pointer_to_int_cast;
       Self.Diag(OpRange.getBegin(), Diag) << SrcType << DestType << OpRange;
     }
   }

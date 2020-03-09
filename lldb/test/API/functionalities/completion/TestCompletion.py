@@ -43,9 +43,10 @@ class CommandLineCompletionTestCase(TestBase):
         (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(self,
                                           '// Break here', self.main_source_spec)
         self.assertEquals(process.GetState(), lldb.eStateStopped)
-        # FIXME: This pulls in the debug information to make the completions work,
-        # but the completions should also work without.
-        self.runCmd("frame variable fooo")
+        
+        # Since CommandInterpreter has been corrected to update the current execution 
+        # context at the beginning of HandleCompletion, we're here explicitly testing  
+        # the scenario where "frame var" is completed without any preceding commands.
 
         self.complete_from_to('frame variable fo',
                               'frame variable fooo')
@@ -83,6 +84,23 @@ class CommandLineCompletionTestCase(TestBase):
         self.complete_from_to('process launch --arch ',
                               ['mips',
                                'arm64'])
+
+    def test_process_signal(self):
+        # The tab completion for "process signal"  won't work without a running process.
+        self.complete_from_to('process signal ',
+                              'process signal ')
+
+        # Test with a running process.
+        self.build()
+        self.main_source = "main.cpp"
+        self.main_source_spec = lldb.SBFileSpec(self.main_source)
+        lldbutil.run_to_source_breakpoint(self, '// Break here', self.main_source_spec)
+
+        self.complete_from_to('process signal ',
+                              'process signal SIG')
+        self.complete_from_to('process signal SIGA',
+                              ['SIGABRT',
+                               'SIGALRM'])
 
     def test_ambiguous_long_opt(self):
         self.completions_match('breakpoint modify --th',

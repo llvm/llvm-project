@@ -3617,9 +3617,9 @@ static Value *SimplifyFCmpInst(unsigned Predicate, Value *LHS, Value *RHS,
     // Check comparison of [minnum/maxnum with constant] with other constant.
     const APFloat *C2;
     if ((match(LHS, m_Intrinsic<Intrinsic::minnum>(m_Value(), m_APFloat(C2))) &&
-         C2->compare(*C) == APFloat::cmpLessThan) ||
+         *C2 < *C) ||
         (match(LHS, m_Intrinsic<Intrinsic::maxnum>(m_Value(), m_APFloat(C2))) &&
-         C2->compare(*C) == APFloat::cmpGreaterThan)) {
+         *C2 > *C)) {
       bool IsMaxNum =
           cast<IntrinsicInst>(LHS)->getIntrinsicID() == Intrinsic::maxnum;
       // The ordered relationship and minnum/maxnum guarantee that we do not

@@ -93,6 +93,28 @@ using RetainedKnowledgeMap = DenseMap<RetainedKnowledgeKey, MinMax>;
 /// If the IR changes the map will be outdated.
 void fillMapFromAssume(CallInst &AssumeCI, RetainedKnowledgeMap &Result);
 
+/// Represent one information held inside an operand bundle of an llvm.assume.
+/// AttrKind is the property that hold.
+/// WasOn if not null is that Value for which AttrKind holds.
+/// ArgValue is optionally an argument.
+struct RetainedKnowledge {
+  Attribute::AttrKind AttrKind = Attribute::None;
+  Value *WasOn = nullptr;
+  unsigned ArgValue = 0;
+};
+
+/// Retreive the information help by Assume on the operand at index Idx.
+/// Assume should be an llvm.assume and Idx should be in the operand bundle.
+RetainedKnowledge getKnowledgeFromOperandInAssume(CallInst &Assume,
+                                                  unsigned Idx);
+
+/// Retreive the information help by the Use U of an llvm.assume. the use should
+/// be in the operand bundle.
+inline RetainedKnowledge getKnowledgeFromUseInAssume(const Use *U) {
+  return getKnowledgeFromOperandInAssume(*cast<CallInst>(U->getUser()),
+                                         U->getOperandNo());
+}
+
 //===----------------------------------------------------------------------===//
 // Utilities for testing
 //===----------------------------------------------------------------------===//

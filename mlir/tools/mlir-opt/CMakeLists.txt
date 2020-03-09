@@ -4,6 +4,7 @@ set(LLVM_OPTIONAL_SOURCES
 
 set(LIB_LIBS
   MLIRAnalysis
+  MLIRIR
   MLIRLLVMIR
   MLIROptLib
   MLIRParser
@@ -15,6 +16,7 @@ add_llvm_library(MLIRMlirOptMain
   mlir-opt.cpp
 )
 target_link_libraries(MLIRMlirOptMain
+  PUBLIC
   ${LIB_LIBS}
 )
 

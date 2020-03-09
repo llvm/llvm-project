@@ -21,7 +21,8 @@ void foo() {}
 template <class T>
 T tmain(T argc) {
   static T a;
-#pragma omp depobj(a) depend(in:argc)
+  void *argv;
+#pragma omp depobj(a) depend(in:argv)
 #pragma omp depobj(argc) destroy
 #pragma omp depobj(argc) update(inout)
   return argc;

@@ -22,6 +22,7 @@
 #include "Symbols.h"
 #include "Target.h"
 #include "Writer.h"
+#include "lld/Common/DWARF.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
 #include "lld/Common/Strings.h"
@@ -2821,14 +2822,14 @@ template <class ELFT> GdbIndexSection *GdbIndexSection::create() {
   std::vector<std::vector<NameAttrEntry>> nameAttrs(sections.size());
 
   parallelForEachN(0, sections.size(), [&](size_t i) {
-    ObjFile<ELFT> *file = sections[i]->getFile<ELFT>();
-    DWARFContext dwarf(std::make_unique<LLDDwarfObj<ELFT>>(file));
+    DWARFContext *dwarf =
+        sections[i]->getFile<ELFT>()->getDwarf()->getContext();
 
     chunks[i].sec = sections[i];
-    chunks[i].compilationUnits = readCuList(dwarf);
-    chunks[i].addressAreas = readAddressAreas(dwarf, sections[i]);
+    chunks[i].compilationUnits = readCuList(*dwarf);
+    chunks[i].addressAreas = readAddressAreas(*dwarf, sections[i]);
     nameAttrs[i] = readPubNamesAndTypes<ELFT>(
-        static_cast<const LLDDwarfObj<ELFT> &>(dwarf.getDWARFObj()),
+        static_cast<const LLDDwarfObj<ELFT> &>(dwarf->getDWARFObj()),
         chunks[i].compilationUnits);
   });
 

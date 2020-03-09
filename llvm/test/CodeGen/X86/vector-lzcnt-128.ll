@@ -1667,19 +1667,19 @@ define <2 x i64> @foldv2i64() nounwind {
 ; SSE-LABEL: foldv2i64:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movl $55, %eax
-; SSE-NEXT:    movq %rax, %xmm0
+; SSE-NEXT:    movd %eax, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; NOBW-LABEL: foldv2i64:
 ; NOBW:       # %bb.0:
 ; NOBW-NEXT:    movl $55, %eax
-; NOBW-NEXT:    vmovq %rax, %xmm0
+; NOBW-NEXT:    vmovd %eax, %xmm0
 ; NOBW-NEXT:    retq
 ;
 ; AVX512VLBWDQ-LABEL: foldv2i64:
 ; AVX512VLBWDQ:       # %bb.0:
 ; AVX512VLBWDQ-NEXT:    movl $55, %eax
-; AVX512VLBWDQ-NEXT:    vmovq %rax, %xmm0
+; AVX512VLBWDQ-NEXT:    vmovd %eax, %xmm0
 ; AVX512VLBWDQ-NEXT:    retq
 ;
 ; X32-SSE-LABEL: foldv2i64:
@@ -1695,19 +1695,19 @@ define <2 x i64> @foldv2i64u() nounwind {
 ; SSE-LABEL: foldv2i64u:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movl $55, %eax
-; SSE-NEXT:    movq %rax, %xmm0
+; SSE-NEXT:    movd %eax, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; NOBW-LABEL: foldv2i64u:
 ; NOBW:       # %bb.0:
 ; NOBW-NEXT:    movl $55, %eax
-; NOBW-NEXT:    vmovq %rax, %xmm0
+; NOBW-NEXT:    vmovd %eax, %xmm0
 ; NOBW-NEXT:    retq
 ;
 ; AVX512VLBWDQ-LABEL: foldv2i64u:
 ; AVX512VLBWDQ:       # %bb.0:
 ; AVX512VLBWDQ-NEXT:    movl $55, %eax
-; AVX512VLBWDQ-NEXT:    vmovq %rax, %xmm0
+; AVX512VLBWDQ-NEXT:    vmovd %eax, %xmm0
 ; AVX512VLBWDQ-NEXT:    retq
 ;
 ; X32-SSE-LABEL: foldv2i64u:

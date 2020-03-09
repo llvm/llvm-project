@@ -109,6 +109,15 @@ StringRef tblgen::Operator::getResultName(int index) const {
   return results->getArgNameStr(index);
 }
 
+auto tblgen::Operator::getResultDecorators(int index) const
+    -> var_decorator_range {
+  Record *result =
+      cast<DefInit>(def.getValueAsDag("results")->getArg(index))->getDef();
+  if (!result->isSubClassOf("OpVariable"))
+    return var_decorator_range(nullptr, nullptr);
+  return *result->getValueAsListInit("decorators");
+}
+
 unsigned tblgen::Operator::getNumVariadicResults() const {
   return std::count_if(
       results.begin(), results.end(),
@@ -136,6 +145,15 @@ tblgen::Operator::arg_range tblgen::Operator::getArgs() const {
 StringRef tblgen::Operator::getArgName(int index) const {
   DagInit *argumentValues = def.getValueAsDag("arguments");
   return argumentValues->getArgName(index)->getValue();
+}
+
+auto tblgen::Operator::getArgDecorators(int index) const
+    -> var_decorator_range {
+  Record *arg =
+      cast<DefInit>(def.getValueAsDag("arguments")->getArg(index))->getDef();
+  if (!arg->isSubClassOf("OpVariable"))
+    return var_decorator_range(nullptr, nullptr);
+  return *arg->getValueAsListInit("decorators");
 }
 
 const tblgen::OpTrait *tblgen::Operator::getTrait(StringRef trait) const {
@@ -226,6 +244,7 @@ void tblgen::Operator::populateOpStructure() {
   auto typeConstraintClass = recordKeeper.getClass("TypeConstraint");
   auto attrClass = recordKeeper.getClass("Attr");
   auto derivedAttrClass = recordKeeper.getClass("DerivedAttr");
+  auto opVarClass = recordKeeper.getClass("OpVariable");
   numNativeAttributes = 0;
 
   DagInit *argumentValues = def.getValueAsDag("arguments");
@@ -240,10 +259,12 @@ void tblgen::Operator::populateOpStructure() {
       PrintFatalError(def.getLoc(),
                       Twine("undefined type for argument #") + Twine(i));
     Record *argDef = argDefInit->getDef();
+    if (argDef->isSubClassOf(opVarClass))
+      argDef = argDef->getValueAsDef("constraint");
 
     if (argDef->isSubClassOf(typeConstraintClass)) {
       operands.push_back(
-          NamedTypeConstraint{givenName, TypeConstraint(argDefInit)});
+          NamedTypeConstraint{givenName, TypeConstraint(argDef)});
     } else if (argDef->isSubClassOf(attrClass)) {
       if (givenName.empty())
         PrintFatalError(argDef->getLoc(), "attributes must be named");
@@ -285,6 +306,8 @@ void tblgen::Operator::populateOpStructure() {
   int operandIndex = 0, attrIndex = 0;
   for (unsigned i = 0; i != numArgs; ++i) {
     Record *argDef = dyn_cast<DefInit>(argumentValues->getArg(i))->getDef();
+    if (argDef->isSubClassOf(opVarClass))
+      argDef = argDef->getValueAsDef("constraint");
 
     if (argDef->isSubClassOf(typeConstraintClass)) {
       arguments.emplace_back(&operands[operandIndex++]);
@@ -303,11 +326,14 @@ void tblgen::Operator::populateOpStructure() {
   // Handle results.
   for (unsigned i = 0, e = resultsDag->getNumArgs(); i < e; ++i) {
     auto name = resultsDag->getArgNameStr(i);
-    auto *resultDef = dyn_cast<DefInit>(resultsDag->getArg(i));
-    if (!resultDef) {
+    auto *resultInit = dyn_cast<DefInit>(resultsDag->getArg(i));
+    if (!resultInit) {
       PrintFatalError(def.getLoc(),
                       Twine("undefined type for result #") + Twine(i));
     }
+    auto *resultDef = resultInit->getDef();
+    if (resultDef->isSubClassOf(opVarClass))
+      resultDef = resultDef->getValueAsDef("constraint");
     results.push_back({name, TypeConstraint(resultDef)});
   }
 
@@ -393,4 +419,9 @@ void tblgen::Operator::print(llvm::raw_ostream &os) const {
     else
       os << "[operand] " << arg.get<NamedTypeConstraint *>()->name << '\n';
   }
+}
+
+auto tblgen::Operator::VariableDecoratorIterator::unwrap(llvm::Init *init)
+    -> VariableDecorator {
+  return VariableDecorator(cast<llvm::DefInit>(init)->getDef());
 }

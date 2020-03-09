@@ -908,7 +908,7 @@ class Sema;
   private:
     friend class OverloadCandidateSet;
     OverloadCandidate()
-        : IsADLCandidate(CallExpr::NotADL), RewriteKind(CRK_None) {}
+        : IsSurrogate(false), IsADLCandidate(CallExpr::NotADL), RewriteKind(CRK_None) {}
   };
 
   /// OverloadCandidateSet - A set of overload candidates, used in C++

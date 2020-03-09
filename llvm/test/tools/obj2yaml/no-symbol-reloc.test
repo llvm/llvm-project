@@ -19,8 +19,7 @@
 # CHECK-NEXT:     EntSize: 0x0000000000000018
 # CHECK-NEXT:     Info:    .text
 # CHECK-NEXT:     Relocations:
-# CHECK-NEXT:       - Offset: 0x0000000000000000
-# CHECK-NEXT:         Type:   R_X86_64_NONE
+# CHECK-NEXT:       - Type:   R_X86_64_NONE
 # CHECK-NEXT:       - Offset: 0x0000000000000004
 # CHECK-NEXT:         Type:   R_X86_64_NONE
 # CHECK-NEXT: ...
@@ -39,8 +38,7 @@ Sections:
     Type:  SHT_RELA
     Info:  .text
     Relocations:
-      - Offset: 0x0
-        Type:   R_X86_64_NONE
+      - Type:   R_X86_64_NONE
       - Offset: 0x4
         Type:   R_X86_64_NONE
         Symbol: 0

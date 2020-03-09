@@ -98,7 +98,33 @@ export function activate(context: vscode.ExtensionContext) {
         },
         initializationOptions: { clangdFileStatus: true },
         // Do not switch to output window when clangd returns output
-        revealOutputChannelOn: vscodelc.RevealOutputChannelOn.Never
+        revealOutputChannelOn: vscodelc.RevealOutputChannelOn.Never,
+
+        // We hack up the completion items a bit to prevent VSCode from re-ranking them
+        // and throwing away all our delicious signals like type information.
+        //
+        // VSCode sorts by (fuzzymatch(prefix, item.filterText), item.sortText)
+        // By adding the prefix to the beginning of the filterText, we get a perfect
+        // fuzzymatch score for every item.
+        // The sortText (which reflects clangd ranking) breaks the tie.
+        //
+        // We also have to mark the list as incomplete to force retrieving new rankings.
+        // See https://github.com/microsoft/language-server-protocol/issues/898
+        middleware: {
+          provideCompletionItem: async (document, position, context, token, next) => {
+            // Get the incomplete identifier before the cursor.
+            let word = document.getWordRangeAtPosition(position);
+            let prefix = word && document.getText(new vscode.Range(word.start, position));
+            
+            let list = await next(document, position, context, token);
+            let items = (Array.isArray(list) ? list : list.items).map(item => {
+              if (prefix)
+                item.filterText = prefix + "_" + item.filterText;
+              return item;
+            })
+            return new vscode.CompletionList(items, /*isIncomplete=*/true);
+          }
+        },
     };
 
   const clangdClient = new ClangdLanguageClient('Clang Language Server',

@@ -2162,7 +2162,7 @@ namespace {
     // The deduced type itself.
     TemplateTypeParmDecl *VisitTemplateTypeParmType(
         const TemplateTypeParmType *T) {
-      if (!T->getDecl()->isImplicit())
+      if (!T->getDecl() || !T->getDecl()->isImplicit())
         return nullptr;
       return T->getDecl();
     }

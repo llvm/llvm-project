@@ -338,6 +338,90 @@ i8x16 sub_saturate_u_i8x16(i8x16 x, i8x16 y) {
   // WEBASSEMBLY-NEXT: ret
 }
 
+i8x16 min_s_i8x16(i8x16 x, i8x16 y) {
+  return __builtin_wasm_min_s_i8x16(x, y);
+  // WEBASSEMBLY: %0 = icmp slt <16 x i8> %x, %y
+  // WEBASSEMBLY-NEXT: %1 = select <16 x i1> %0, <16 x i8> %x, <16 x i8> %y
+  // WEBASSEMBLY-NEXT: ret <16 x i8> %1
+}
+
+i8x16 min_u_i8x16(i8x16 x, i8x16 y) {
+  return __builtin_wasm_min_u_i8x16(x, y);
+  // WEBASSEMBLY: %0 = icmp ult <16 x i8> %x, %y
+  // WEBASSEMBLY-NEXT: %1 = select <16 x i1> %0, <16 x i8> %x, <16 x i8> %y
+  // WEBASSEMBLY-NEXT: ret <16 x i8> %1
+}
+
+i8x16 max_s_i8x16(i8x16 x, i8x16 y) {
+  return __builtin_wasm_max_s_i8x16(x, y);
+  // WEBASSEMBLY: %0 = icmp sgt <16 x i8> %x, %y
+  // WEBASSEMBLY-NEXT: %1 = select <16 x i1> %0, <16 x i8> %x, <16 x i8> %y
+  // WEBASSEMBLY-NEXT: ret <16 x i8> %1
+}
+
+i8x16 max_u_i8x16(i8x16 x, i8x16 y) {
+  return __builtin_wasm_max_u_i8x16(x, y);
+  // WEBASSEMBLY: %0 = icmp ugt <16 x i8> %x, %y
+  // WEBASSEMBLY-NEXT: %1 = select <16 x i1> %0, <16 x i8> %x, <16 x i8> %y
+  // WEBASSEMBLY-NEXT: ret <16 x i8> %1
+}
+
+i16x8 min_s_i16x8(i16x8 x, i16x8 y) {
+  return __builtin_wasm_min_s_i16x8(x, y);
+  // WEBASSEMBLY: %0 = icmp slt <8 x i16> %x, %y
+  // WEBASSEMBLY-NEXT: %1 = select <8 x i1> %0, <8 x i16> %x, <8 x i16> %y
+  // WEBASSEMBLY-NEXT: ret <8 x i16> %1
+}
+
+i16x8 min_u_i16x8(i16x8 x, i16x8 y) {
+  return __builtin_wasm_min_u_i16x8(x, y);
+  // WEBASSEMBLY: %0 = icmp ult <8 x i16> %x, %y
+  // WEBASSEMBLY-NEXT: %1 = select <8 x i1> %0, <8 x i16> %x, <8 x i16> %y
+  // WEBASSEMBLY-NEXT: ret <8 x i16> %1
+}
+
+i16x8 max_s_i16x8(i16x8 x, i16x8 y) {
+  return __builtin_wasm_max_s_i16x8(x, y);
+  // WEBASSEMBLY: %0 = icmp sgt <8 x i16> %x, %y
+  // WEBASSEMBLY-NEXT: %1 = select <8 x i1> %0, <8 x i16> %x, <8 x i16> %y
+  // WEBASSEMBLY-NEXT: ret <8 x i16> %1
+}
+
+i16x8 max_u_i16x8(i16x8 x, i16x8 y) {
+  return __builtin_wasm_max_u_i16x8(x, y);
+  // WEBASSEMBLY: %0 = icmp ugt <8 x i16> %x, %y
+  // WEBASSEMBLY-NEXT: %1 = select <8 x i1> %0, <8 x i16> %x, <8 x i16> %y
+  // WEBASSEMBLY-NEXT: ret <8 x i16> %1
+}
+
+i32x4 min_s_i32x4(i32x4 x, i32x4 y) {
+  return __builtin_wasm_min_s_i32x4(x, y);
+  // WEBASSEMBLY: %0 = icmp slt <4 x i32> %x, %y
+  // WEBASSEMBLY-NEXT: %1 = select <4 x i1> %0, <4 x i32> %x, <4 x i32> %y
+  // WEBASSEMBLY-NEXT: ret <4 x i32> %1
+}
+
+i32x4 min_u_i32x4(i32x4 x, i32x4 y) {
+  return __builtin_wasm_min_u_i32x4(x, y);
+  // WEBASSEMBLY: %0 = icmp ult <4 x i32> %x, %y
+  // WEBASSEMBLY-NEXT: %1 = select <4 x i1> %0, <4 x i32> %x, <4 x i32> %y
+  // WEBASSEMBLY-NEXT: ret <4 x i32> %1
+}
+
+i32x4 max_s_i32x4(i32x4 x, i32x4 y) {
+  return __builtin_wasm_max_s_i32x4(x, y);
+  // WEBASSEMBLY: %0 = icmp sgt <4 x i32> %x, %y
+  // WEBASSEMBLY-NEXT: %1 = select <4 x i1> %0, <4 x i32> %x, <4 x i32> %y
+  // WEBASSEMBLY-NEXT: ret <4 x i32> %1
+}
+
+i32x4 max_u_i32x4(i32x4 x, i32x4 y) {
+  return __builtin_wasm_max_u_i32x4(x, y);
+  // WEBASSEMBLY: %0 = icmp ugt <4 x i32> %x, %y
+  // WEBASSEMBLY-NEXT: %1 = select <4 x i1> %0, <4 x i32> %x, <4 x i32> %y
+  // WEBASSEMBLY-NEXT: ret <4 x i32> %1
+}
+
 i16x8 sub_saturate_s_i16x8(i16x8 x, i16x8 y) {
   return __builtin_wasm_sub_saturate_s_i16x8(x, y);
   // WEBASSEMBLY: call <8 x i16> @llvm.wasm.sub.saturate.signed.v8i16(

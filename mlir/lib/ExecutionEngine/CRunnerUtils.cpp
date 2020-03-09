@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/ExecutionEngine/CRunnerUtils.h"
+
 #include <cinttypes>
 #include <cstdio>
 

@@ -1534,6 +1534,8 @@ def IsolatedFromAbove : NativeOpTrait<"IsIsolatedFromAbove">;
 def ResultsAreFloatLike : NativeOpTrait<"ResultsAreFloatLike">;
 // Op has no side effect.
 def NoSideEffect : NativeOpTrait<"HasNoSideEffect">;
+// Op has recursively computed side effects.
+def RecursiveSideEffects : NativeOpTrait<"HasRecursiveSideEffects">;
 // Op has the same operand type.
 def SameTypeOperands : NativeOpTrait<"SameTypeOperands">;
 // Op has same shape for all operands.
@@ -1709,6 +1711,29 @@ class OpBuilder<string p, code b = ""> {
   string params = p;
   code body = b;
 }
+
+// A base decorator class that may optionally be added to OpVariables.
+class OpVariableDecorator;
+
+// Class for providing additional information on the variables, i.e. arguments
+// and results, of an operation.
+class OpVariable<Constraint varConstraint, string desc = "",
+                 list<OpVariableDecorator> varDecorators = []> {
+  // The constraint, either attribute or type, of the argument.
+  Constraint constraint = varConstraint;
+
+  // A description for the argument.
+  string description = desc;
+
+  // The list of decorators for this variable, e.g. side effects.
+  list<OpVariableDecorator> decorators = varDecorators;
+}
+class Arg<Constraint constraint, string desc = "",
+          list<OpVariableDecorator> decorators = []>
+  : OpVariable<constraint, desc, decorators>;
+class Res<Constraint constraint, string desc = "",
+          list<OpVariableDecorator> decorators = []>
+  : OpVariable<constraint, desc, decorators>;
 
 // Base class for all ops.
 class Op<Dialect dialect, string mnemonic, list<OpTrait> props = []> {
