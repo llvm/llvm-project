@@ -218,8 +218,7 @@ body:             |
     ; MIPS32: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load 4 from %ir.px)
     ; MIPS32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 31
     ; MIPS32: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; MIPS32: [[COPY1:%[0-9]+]]:_(s32) = COPY [[C]](s32)
-    ; MIPS32: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[LOAD]], [[COPY1]](s32)
+    ; MIPS32: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[LOAD]], [[C]](s32)
     ; MIPS32: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[LOAD]](s32), [[ASHR]](s32)
     ; MIPS32: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[MV]](s64)
     ; MIPS32: $v0 = COPY [[UV]](s32)
