@@ -30,7 +30,6 @@ def MIMFMARead  : SchedRead;
 // Vector ALU instructions
 def Write32Bit         : SchedWrite;
 def WriteQuarterRate32 : SchedWrite;
-def WriteFullOrQuarterRate32 : SchedWrite;
 
 def WriteFloatFMA   : SchedWrite;
 
