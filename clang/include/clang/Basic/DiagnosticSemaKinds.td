@@ -1780,6 +1780,11 @@ def note_due_to_dllexported_class : Note<
 def err_illegal_union_or_anon_struct_member : Error<
   "%select{anonymous struct|union}0 member %1 has a non-trivial "
   "%sub{select_special_member_kind}2">;
+
+def warn_frame_address : Warning<
+  "calling '%0' with a nonzero argument is unsafe">,
+  InGroup<FrameAddress>, DefaultIgnore;
+
 def warn_cxx98_compat_nontrivial_union_or_anon_struct_member : Warning<
   "%select{anonymous struct|union}0 member %1 with a non-trivial "
   "%sub{select_special_member_kind}2 is incompatible with C++98">,
