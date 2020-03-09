@@ -29,6 +29,7 @@ add_llvm_component_library(LLVMCore
   Instruction.cpp
   Instructions.cpp
   IntrinsicInst.cpp
+  KnowledgeRetention.cpp
   LLVMContext.cpp
   LLVMContextImpl.cpp
   LLVMRemarkStreamer.cpp
