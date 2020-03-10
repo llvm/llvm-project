@@ -53,6 +53,10 @@ function(check_cxx_section_exists section output)
     endif()
   endforeach()
 
+  # Strip quotes from the compile command, as the compiler is not expecting
+  # quoted arguments (potential quotes added from D62063).
+  string(REPLACE "\"" "" test_compile_command "${test_compile_command}")
+
   string(REPLACE " " ";" test_compile_command "${test_compile_command}")
 
   execute_process(
@@ -61,6 +65,12 @@ function(check_cxx_section_exists section output)
     OUTPUT_VARIABLE TEST_OUTPUT
     ERROR_VARIABLE TEST_ERROR
   )
+
+  # Explicitly throw a fatal error message if test_compile_command fails.
+  if(TEST_RESULT)
+    message(FATAL_ERROR "${TEST_ERROR}")
+    return()
+  endif()
 
   execute_process(
     COMMAND ${CMAKE_OBJDUMP} -h "${TARGET_NAME}/CheckSectionExists.o"
