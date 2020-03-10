@@ -24,14 +24,10 @@ declare double @llvm.minnum.f64(double, double)
 
 define void @fminnum_2f64() #0 {
 ; CHECK-LABEL: @fminnum_2f64(
-; CHECK-NEXT:    [[A0:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @srcA64, i32 0, i64 0), align 8
-; CHECK-NEXT:    [[A1:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @srcA64, i32 0, i64 1), align 8
-; CHECK-NEXT:    [[B0:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @srcB64, i32 0, i64 0), align 8
-; CHECK-NEXT:    [[B1:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @srcB64, i32 0, i64 1), align 8
-; CHECK-NEXT:    [[FMINNUM0:%.*]] = call double @llvm.minnum.f64(double [[A0]], double [[B0]])
-; CHECK-NEXT:    [[FMINNUM1:%.*]] = call double @llvm.minnum.f64(double [[A1]], double [[B1]])
-; CHECK-NEXT:    store double [[FMINNUM0]], double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 0), align 8
-; CHECK-NEXT:    store double [[FMINNUM1]], double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 1), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, <2 x double>* bitcast ([8 x double]* @srcA64 to <2 x double>*), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, <2 x double>* bitcast ([8 x double]* @srcB64 to <2 x double>*), align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x double> @llvm.minnum.v2f64(<2 x double> [[TMP1]], <2 x double> [[TMP2]])
+; CHECK-NEXT:    store <2 x double> [[TMP3]], <2 x double>* bitcast ([8 x double]* @dst64 to <2 x double>*), align 8
 ; CHECK-NEXT:    ret void
 ;
   %a0 = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @srcA64, i32 0, i64 0), align 8
@@ -46,24 +42,23 @@ define void @fminnum_2f64() #0 {
 }
 
 define void @fminnum_4f64() #0 {
-; CHECK-LABEL: @fminnum_4f64(
-; CHECK-NEXT:    [[A0:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @srcA64, i32 0, i64 0), align 8
-; CHECK-NEXT:    [[A1:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @srcA64, i32 0, i64 1), align 8
-; CHECK-NEXT:    [[A2:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @srcA64, i32 0, i64 2), align 8
-; CHECK-NEXT:    [[A3:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @srcA64, i32 0, i64 3), align 8
-; CHECK-NEXT:    [[B0:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @srcB64, i32 0, i64 0), align 8
-; CHECK-NEXT:    [[B1:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @srcB64, i32 0, i64 1), align 8
-; CHECK-NEXT:    [[B2:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @srcB64, i32 0, i64 2), align 8
-; CHECK-NEXT:    [[B3:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @srcB64, i32 0, i64 3), align 8
-; CHECK-NEXT:    [[FMINNUM0:%.*]] = call double @llvm.minnum.f64(double [[A0]], double [[B0]])
-; CHECK-NEXT:    [[FMINNUM1:%.*]] = call double @llvm.minnum.f64(double [[A1]], double [[B1]])
-; CHECK-NEXT:    [[FMINNUM2:%.*]] = call double @llvm.minnum.f64(double [[A2]], double [[B2]])
-; CHECK-NEXT:    [[FMINNUM3:%.*]] = call double @llvm.minnum.f64(double [[A3]], double [[B3]])
-; CHECK-NEXT:    store double [[FMINNUM0]], double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 0), align 8
-; CHECK-NEXT:    store double [[FMINNUM1]], double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 1), align 8
-; CHECK-NEXT:    store double [[FMINNUM2]], double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 2), align 8
-; CHECK-NEXT:    store double [[FMINNUM3]], double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 3), align 8
-; CHECK-NEXT:    ret void
+; SSE-LABEL: @fminnum_4f64(
+; SSE-NEXT:    [[TMP1:%.*]] = load <2 x double>, <2 x double>* bitcast ([8 x double]* @srcA64 to <2 x double>*), align 8
+; SSE-NEXT:    [[TMP2:%.*]] = load <2 x double>, <2 x double>* bitcast (double* getelementptr inbounds ([8 x double], [8 x double]* @srcA64, i32 0, i64 2) to <2 x double>*), align 8
+; SSE-NEXT:    [[TMP3:%.*]] = load <2 x double>, <2 x double>* bitcast ([8 x double]* @srcB64 to <2 x double>*), align 8
+; SSE-NEXT:    [[TMP4:%.*]] = load <2 x double>, <2 x double>* bitcast (double* getelementptr inbounds ([8 x double], [8 x double]* @srcB64, i32 0, i64 2) to <2 x double>*), align 8
+; SSE-NEXT:    [[TMP5:%.*]] = call <2 x double> @llvm.minnum.v2f64(<2 x double> [[TMP1]], <2 x double> [[TMP3]])
+; SSE-NEXT:    [[TMP6:%.*]] = call <2 x double> @llvm.minnum.v2f64(<2 x double> [[TMP2]], <2 x double> [[TMP4]])
+; SSE-NEXT:    store <2 x double> [[TMP5]], <2 x double>* bitcast ([8 x double]* @dst64 to <2 x double>*), align 8
+; SSE-NEXT:    store <2 x double> [[TMP6]], <2 x double>* bitcast (double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 2) to <2 x double>*), align 8
+; SSE-NEXT:    ret void
+;
+; AVX-LABEL: @fminnum_4f64(
+; AVX-NEXT:    [[TMP1:%.*]] = load <4 x double>, <4 x double>* bitcast ([8 x double]* @srcA64 to <4 x double>*), align 8
+; AVX-NEXT:    [[TMP2:%.*]] = load <4 x double>, <4 x double>* bitcast ([8 x double]* @srcB64 to <4 x double>*), align 8
+; AVX-NEXT:    [[TMP3:%.*]] = call <4 x double> @llvm.minnum.v4f64(<4 x double> [[TMP1]], <4 x double> [[TMP2]])
+; AVX-NEXT:    store <4 x double> [[TMP3]], <4 x double>* bitcast ([8 x double]* @dst64 to <4 x double>*), align 8
+; AVX-NEXT:    ret void
 ;
   %a0 = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @srcA64, i32 0, i64 0), align 8
   %a1 = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @srcA64, i32 0, i64 1), align 8
@@ -85,40 +80,42 @@ define void @fminnum_4f64() #0 {
 }
 
 define void @fminnum_8f64() #0 {
-; CHECK-LABEL: @fminnum_8f64(
-; CHECK-NEXT:    [[A0:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @srcA64, i32 0, i64 0), align 4
-; CHECK-NEXT:    [[A1:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @srcA64, i32 0, i64 1), align 4
-; CHECK-NEXT:    [[A2:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @srcA64, i32 0, i64 2), align 4
-; CHECK-NEXT:    [[A3:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @srcA64, i32 0, i64 3), align 4
-; CHECK-NEXT:    [[A4:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @srcA64, i32 0, i64 4), align 4
-; CHECK-NEXT:    [[A5:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @srcA64, i32 0, i64 5), align 4
-; CHECK-NEXT:    [[A6:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @srcA64, i32 0, i64 6), align 4
-; CHECK-NEXT:    [[A7:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @srcA64, i32 0, i64 7), align 4
-; CHECK-NEXT:    [[B0:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @srcB64, i32 0, i64 0), align 4
-; CHECK-NEXT:    [[B1:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @srcB64, i32 0, i64 1), align 4
-; CHECK-NEXT:    [[B2:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @srcB64, i32 0, i64 2), align 4
-; CHECK-NEXT:    [[B3:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @srcB64, i32 0, i64 3), align 4
-; CHECK-NEXT:    [[B4:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @srcB64, i32 0, i64 4), align 4
-; CHECK-NEXT:    [[B5:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @srcB64, i32 0, i64 5), align 4
-; CHECK-NEXT:    [[B6:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @srcB64, i32 0, i64 6), align 4
-; CHECK-NEXT:    [[B7:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @srcB64, i32 0, i64 7), align 4
-; CHECK-NEXT:    [[FMINNUM0:%.*]] = call double @llvm.minnum.f64(double [[A0]], double [[B0]])
-; CHECK-NEXT:    [[FMINNUM1:%.*]] = call double @llvm.minnum.f64(double [[A1]], double [[B1]])
-; CHECK-NEXT:    [[FMINNUM2:%.*]] = call double @llvm.minnum.f64(double [[A2]], double [[B2]])
-; CHECK-NEXT:    [[FMINNUM3:%.*]] = call double @llvm.minnum.f64(double [[A3]], double [[B3]])
-; CHECK-NEXT:    [[FMINNUM4:%.*]] = call double @llvm.minnum.f64(double [[A4]], double [[B4]])
-; CHECK-NEXT:    [[FMINNUM5:%.*]] = call double @llvm.minnum.f64(double [[A5]], double [[B5]])
-; CHECK-NEXT:    [[FMINNUM6:%.*]] = call double @llvm.minnum.f64(double [[A6]], double [[B6]])
-; CHECK-NEXT:    [[FMINNUM7:%.*]] = call double @llvm.minnum.f64(double [[A7]], double [[B7]])
-; CHECK-NEXT:    store double [[FMINNUM0]], double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 0), align 4
-; CHECK-NEXT:    store double [[FMINNUM1]], double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 1), align 4
-; CHECK-NEXT:    store double [[FMINNUM2]], double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 2), align 4
-; CHECK-NEXT:    store double [[FMINNUM3]], double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 3), align 4
-; CHECK-NEXT:    store double [[FMINNUM4]], double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 4), align 4
-; CHECK-NEXT:    store double [[FMINNUM5]], double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 5), align 4
-; CHECK-NEXT:    store double [[FMINNUM6]], double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 6), align 4
-; CHECK-NEXT:    store double [[FMINNUM7]], double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 7), align 4
-; CHECK-NEXT:    ret void
+; SSE-LABEL: @fminnum_8f64(
+; SSE-NEXT:    [[TMP1:%.*]] = load <2 x double>, <2 x double>* bitcast ([8 x double]* @srcA64 to <2 x double>*), align 4
+; SSE-NEXT:    [[TMP2:%.*]] = load <2 x double>, <2 x double>* bitcast (double* getelementptr inbounds ([8 x double], [8 x double]* @srcA64, i32 0, i64 2) to <2 x double>*), align 4
+; SSE-NEXT:    [[TMP3:%.*]] = load <2 x double>, <2 x double>* bitcast (double* getelementptr inbounds ([8 x double], [8 x double]* @srcA64, i32 0, i64 4) to <2 x double>*), align 4
+; SSE-NEXT:    [[TMP4:%.*]] = load <2 x double>, <2 x double>* bitcast (double* getelementptr inbounds ([8 x double], [8 x double]* @srcA64, i32 0, i64 6) to <2 x double>*), align 4
+; SSE-NEXT:    [[TMP5:%.*]] = load <2 x double>, <2 x double>* bitcast ([8 x double]* @srcB64 to <2 x double>*), align 4
+; SSE-NEXT:    [[TMP6:%.*]] = load <2 x double>, <2 x double>* bitcast (double* getelementptr inbounds ([8 x double], [8 x double]* @srcB64, i32 0, i64 2) to <2 x double>*), align 4
+; SSE-NEXT:    [[TMP7:%.*]] = load <2 x double>, <2 x double>* bitcast (double* getelementptr inbounds ([8 x double], [8 x double]* @srcB64, i32 0, i64 4) to <2 x double>*), align 4
+; SSE-NEXT:    [[TMP8:%.*]] = load <2 x double>, <2 x double>* bitcast (double* getelementptr inbounds ([8 x double], [8 x double]* @srcB64, i32 0, i64 6) to <2 x double>*), align 4
+; SSE-NEXT:    [[TMP9:%.*]] = call <2 x double> @llvm.minnum.v2f64(<2 x double> [[TMP1]], <2 x double> [[TMP5]])
+; SSE-NEXT:    [[TMP10:%.*]] = call <2 x double> @llvm.minnum.v2f64(<2 x double> [[TMP2]], <2 x double> [[TMP6]])
+; SSE-NEXT:    [[TMP11:%.*]] = call <2 x double> @llvm.minnum.v2f64(<2 x double> [[TMP3]], <2 x double> [[TMP7]])
+; SSE-NEXT:    [[TMP12:%.*]] = call <2 x double> @llvm.minnum.v2f64(<2 x double> [[TMP4]], <2 x double> [[TMP8]])
+; SSE-NEXT:    store <2 x double> [[TMP9]], <2 x double>* bitcast ([8 x double]* @dst64 to <2 x double>*), align 4
+; SSE-NEXT:    store <2 x double> [[TMP10]], <2 x double>* bitcast (double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 2) to <2 x double>*), align 4
+; SSE-NEXT:    store <2 x double> [[TMP11]], <2 x double>* bitcast (double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 4) to <2 x double>*), align 4
+; SSE-NEXT:    store <2 x double> [[TMP12]], <2 x double>* bitcast (double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 6) to <2 x double>*), align 4
+; SSE-NEXT:    ret void
+;
+; AVX256-LABEL: @fminnum_8f64(
+; AVX256-NEXT:    [[TMP1:%.*]] = load <4 x double>, <4 x double>* bitcast ([8 x double]* @srcA64 to <4 x double>*), align 4
+; AVX256-NEXT:    [[TMP2:%.*]] = load <4 x double>, <4 x double>* bitcast (double* getelementptr inbounds ([8 x double], [8 x double]* @srcA64, i32 0, i64 4) to <4 x double>*), align 4
+; AVX256-NEXT:    [[TMP3:%.*]] = load <4 x double>, <4 x double>* bitcast ([8 x double]* @srcB64 to <4 x double>*), align 4
+; AVX256-NEXT:    [[TMP4:%.*]] = load <4 x double>, <4 x double>* bitcast (double* getelementptr inbounds ([8 x double], [8 x double]* @srcB64, i32 0, i64 4) to <4 x double>*), align 4
+; AVX256-NEXT:    [[TMP5:%.*]] = call <4 x double> @llvm.minnum.v4f64(<4 x double> [[TMP1]], <4 x double> [[TMP3]])
+; AVX256-NEXT:    [[TMP6:%.*]] = call <4 x double> @llvm.minnum.v4f64(<4 x double> [[TMP2]], <4 x double> [[TMP4]])
+; AVX256-NEXT:    store <4 x double> [[TMP5]], <4 x double>* bitcast ([8 x double]* @dst64 to <4 x double>*), align 4
+; AVX256-NEXT:    store <4 x double> [[TMP6]], <4 x double>* bitcast (double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 4) to <4 x double>*), align 4
+; AVX256-NEXT:    ret void
+;
+; AVX512-LABEL: @fminnum_8f64(
+; AVX512-NEXT:    [[TMP1:%.*]] = load <8 x double>, <8 x double>* bitcast ([8 x double]* @srcA64 to <8 x double>*), align 4
+; AVX512-NEXT:    [[TMP2:%.*]] = load <8 x double>, <8 x double>* bitcast ([8 x double]* @srcB64 to <8 x double>*), align 4
+; AVX512-NEXT:    [[TMP3:%.*]] = call <8 x double> @llvm.minnum.v8f64(<8 x double> [[TMP1]], <8 x double> [[TMP2]])
+; AVX512-NEXT:    store <8 x double> [[TMP3]], <8 x double>* bitcast ([8 x double]* @dst64 to <8 x double>*), align 4
+; AVX512-NEXT:    ret void
 ;
   %a0 = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @srcA64, i32 0, i64 0), align 4
   %a1 = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @srcA64, i32 0, i64 1), align 4
@@ -157,22 +154,10 @@ define void @fminnum_8f64() #0 {
 
 define void @fminnum_4f32() #0 {
 ; CHECK-LABEL: @fminnum_4f32(
-; CHECK-NEXT:    [[A0:%.*]] = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @srcA32, i32 0, i64 0), align 4
-; CHECK-NEXT:    [[A1:%.*]] = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @srcA32, i32 0, i64 1), align 4
-; CHECK-NEXT:    [[A2:%.*]] = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @srcA32, i32 0, i64 2), align 4
-; CHECK-NEXT:    [[A3:%.*]] = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @srcA32, i32 0, i64 3), align 4
-; CHECK-NEXT:    [[B0:%.*]] = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @srcB32, i32 0, i64 0), align 4
-; CHECK-NEXT:    [[B1:%.*]] = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @srcB32, i32 0, i64 1), align 4
-; CHECK-NEXT:    [[B2:%.*]] = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @srcB32, i32 0, i64 2), align 4
-; CHECK-NEXT:    [[B3:%.*]] = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @srcB32, i32 0, i64 3), align 4
-; CHECK-NEXT:    [[FMINNUM0:%.*]] = call float @llvm.minnum.f32(float [[A0]], float [[B0]])
-; CHECK-NEXT:    [[FMINNUM1:%.*]] = call float @llvm.minnum.f32(float [[A1]], float [[B1]])
-; CHECK-NEXT:    [[FMINNUM2:%.*]] = call float @llvm.minnum.f32(float [[A2]], float [[B2]])
-; CHECK-NEXT:    [[FMINNUM3:%.*]] = call float @llvm.minnum.f32(float [[A3]], float [[B3]])
-; CHECK-NEXT:    store float [[FMINNUM0]], float* getelementptr inbounds ([16 x float], [16 x float]* @dst32, i32 0, i64 0), align 4
-; CHECK-NEXT:    store float [[FMINNUM1]], float* getelementptr inbounds ([16 x float], [16 x float]* @dst32, i32 0, i64 1), align 4
-; CHECK-NEXT:    store float [[FMINNUM2]], float* getelementptr inbounds ([16 x float], [16 x float]* @dst32, i32 0, i64 2), align 4
-; CHECK-NEXT:    store float [[FMINNUM3]], float* getelementptr inbounds ([16 x float], [16 x float]* @dst32, i32 0, i64 3), align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, <4 x float>* bitcast ([16 x float]* @srcA32 to <4 x float>*), align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, <4 x float>* bitcast ([16 x float]* @srcB32 to <4 x float>*), align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = call <4 x float> @llvm.minnum.v4f32(<4 x float> [[TMP1]], <4 x float> [[TMP2]])
+; CHECK-NEXT:    store <4 x float> [[TMP3]], <4 x float>* bitcast ([16 x float]* @dst32 to <4 x float>*), align 4
 ; CHECK-NEXT:    ret void
 ;
   %a0 = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @srcA32, i32 0, i64 0), align 4
@@ -195,40 +180,23 @@ define void @fminnum_4f32() #0 {
 }
 
 define void @fminnum_8f32() #0 {
-; CHECK-LABEL: @fminnum_8f32(
-; CHECK-NEXT:    [[A0:%.*]] = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @srcA32, i32 0, i64 0), align 4
-; CHECK-NEXT:    [[A1:%.*]] = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @srcA32, i32 0, i64 1), align 4
-; CHECK-NEXT:    [[A2:%.*]] = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @srcA32, i32 0, i64 2), align 4
-; CHECK-NEXT:    [[A3:%.*]] = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @srcA32, i32 0, i64 3), align 4
-; CHECK-NEXT:    [[A4:%.*]] = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @srcA32, i32 0, i64 4), align 4
-; CHECK-NEXT:    [[A5:%.*]] = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @srcA32, i32 0, i64 5), align 4
-; CHECK-NEXT:    [[A6:%.*]] = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @srcA32, i32 0, i64 6), align 4
-; CHECK-NEXT:    [[A7:%.*]] = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @srcA32, i32 0, i64 7), align 4
-; CHECK-NEXT:    [[B0:%.*]] = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @srcB32, i32 0, i64 0), align 4
-; CHECK-NEXT:    [[B1:%.*]] = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @srcB32, i32 0, i64 1), align 4
-; CHECK-NEXT:    [[B2:%.*]] = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @srcB32, i32 0, i64 2), align 4
-; CHECK-NEXT:    [[B3:%.*]] = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @srcB32, i32 0, i64 3), align 4
-; CHECK-NEXT:    [[B4:%.*]] = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @srcB32, i32 0, i64 4), align 4
-; CHECK-NEXT:    [[B5:%.*]] = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @srcB32, i32 0, i64 5), align 4
-; CHECK-NEXT:    [[B6:%.*]] = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @srcB32, i32 0, i64 6), align 4
-; CHECK-NEXT:    [[B7:%.*]] = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @srcB32, i32 0, i64 7), align 4
-; CHECK-NEXT:    [[FMINNUM0:%.*]] = call float @llvm.minnum.f32(float [[A0]], float [[B0]])
-; CHECK-NEXT:    [[FMINNUM1:%.*]] = call float @llvm.minnum.f32(float [[A1]], float [[B1]])
-; CHECK-NEXT:    [[FMINNUM2:%.*]] = call float @llvm.minnum.f32(float [[A2]], float [[B2]])
-; CHECK-NEXT:    [[FMINNUM3:%.*]] = call float @llvm.minnum.f32(float [[A3]], float [[B3]])
-; CHECK-NEXT:    [[FMINNUM4:%.*]] = call float @llvm.minnum.f32(float [[A4]], float [[B4]])
-; CHECK-NEXT:    [[FMINNUM5:%.*]] = call float @llvm.minnum.f32(float [[A5]], float [[B5]])
-; CHECK-NEXT:    [[FMINNUM6:%.*]] = call float @llvm.minnum.f32(float [[A6]], float [[B6]])
-; CHECK-NEXT:    [[FMINNUM7:%.*]] = call float @llvm.minnum.f32(float [[A7]], float [[B7]])
-; CHECK-NEXT:    store float [[FMINNUM0]], float* getelementptr inbounds ([16 x float], [16 x float]* @dst32, i32 0, i64 0), align 4
-; CHECK-NEXT:    store float [[FMINNUM1]], float* getelementptr inbounds ([16 x float], [16 x float]* @dst32, i32 0, i64 1), align 4
-; CHECK-NEXT:    store float [[FMINNUM2]], float* getelementptr inbounds ([16 x float], [16 x float]* @dst32, i32 0, i64 2), align 4
-; CHECK-NEXT:    store float [[FMINNUM3]], float* getelementptr inbounds ([16 x float], [16 x float]* @dst32, i32 0, i64 3), align 4
-; CHECK-NEXT:    store float [[FMINNUM4]], float* getelementptr inbounds ([16 x float], [16 x float]* @dst32, i32 0, i64 4), align 4
-; CHECK-NEXT:    store float [[FMINNUM5]], float* getelementptr inbounds ([16 x float], [16 x float]* @dst32, i32 0, i64 5), align 4
-; CHECK-NEXT:    store float [[FMINNUM6]], float* getelementptr inbounds ([16 x float], [16 x float]* @dst32, i32 0, i64 6), align 4
-; CHECK-NEXT:    store float [[FMINNUM7]], float* getelementptr inbounds ([16 x float], [16 x float]* @dst32, i32 0, i64 7), align 4
-; CHECK-NEXT:    ret void
+; SSE-LABEL: @fminnum_8f32(
+; SSE-NEXT:    [[TMP1:%.*]] = load <4 x float>, <4 x float>* bitcast ([16 x float]* @srcA32 to <4 x float>*), align 4
+; SSE-NEXT:    [[TMP2:%.*]] = load <4 x float>, <4 x float>* bitcast (float* getelementptr inbounds ([16 x float], [16 x float]* @srcA32, i32 0, i64 4) to <4 x float>*), align 4
+; SSE-NEXT:    [[TMP3:%.*]] = load <4 x float>, <4 x float>* bitcast ([16 x float]* @srcB32 to <4 x float>*), align 4
+; SSE-NEXT:    [[TMP4:%.*]] = load <4 x float>, <4 x float>* bitcast (float* getelementptr inbounds ([16 x float], [16 x float]* @srcB32, i32 0, i64 4) to <4 x float>*), align 4
+; SSE-NEXT:    [[TMP5:%.*]] = call <4 x float> @llvm.minnum.v4f32(<4 x float> [[TMP1]], <4 x float> [[TMP3]])
+; SSE-NEXT:    [[TMP6:%.*]] = call <4 x float> @llvm.minnum.v4f32(<4 x float> [[TMP2]], <4 x float> [[TMP4]])
+; SSE-NEXT:    store <4 x float> [[TMP5]], <4 x float>* bitcast ([16 x float]* @dst32 to <4 x float>*), align 4
+; SSE-NEXT:    store <4 x float> [[TMP6]], <4 x float>* bitcast (float* getelementptr inbounds ([16 x float], [16 x float]* @dst32, i32 0, i64 4) to <4 x float>*), align 4
+; SSE-NEXT:    ret void
+;
+; AVX-LABEL: @fminnum_8f32(
+; AVX-NEXT:    [[TMP1:%.*]] = load <8 x float>, <8 x float>* bitcast ([16 x float]* @srcA32 to <8 x float>*), align 4
+; AVX-NEXT:    [[TMP2:%.*]] = load <8 x float>, <8 x float>* bitcast ([16 x float]* @srcB32 to <8 x float>*), align 4
+; AVX-NEXT:    [[TMP3:%.*]] = call <8 x float> @llvm.minnum.v8f32(<8 x float> [[TMP1]], <8 x float> [[TMP2]])
+; AVX-NEXT:    store <8 x float> [[TMP3]], <8 x float>* bitcast ([16 x float]* @dst32 to <8 x float>*), align 4
+; AVX-NEXT:    ret void
 ;
   %a0 = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @srcA32, i32 0, i64 0), align 4
   %a1 = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @srcA32, i32 0, i64 1), align 4
@@ -266,72 +234,42 @@ define void @fminnum_8f32() #0 {
 }
 
 define void @fminnum_16f32() #0 {
-; CHECK-LABEL: @fminnum_16f32(
-; CHECK-NEXT:    [[A0:%.*]] = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @srcA32, i32 0, i64 0), align 4
-; CHECK-NEXT:    [[A1:%.*]] = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @srcA32, i32 0, i64 1), align 4
-; CHECK-NEXT:    [[A2:%.*]] = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @srcA32, i32 0, i64 2), align 4
-; CHECK-NEXT:    [[A3:%.*]] = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @srcA32, i32 0, i64 3), align 4
-; CHECK-NEXT:    [[A4:%.*]] = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @srcA32, i32 0, i64 4), align 4
-; CHECK-NEXT:    [[A5:%.*]] = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @srcA32, i32 0, i64 5), align 4
-; CHECK-NEXT:    [[A6:%.*]] = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @srcA32, i32 0, i64 6), align 4
-; CHECK-NEXT:    [[A7:%.*]] = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @srcA32, i32 0, i64 7), align 4
-; CHECK-NEXT:    [[A8:%.*]] = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @srcA32, i32 0, i64 8), align 4
-; CHECK-NEXT:    [[A9:%.*]] = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @srcA32, i32 0, i64 9), align 4
-; CHECK-NEXT:    [[A10:%.*]] = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @srcA32, i32 0, i64 10), align 4
-; CHECK-NEXT:    [[A11:%.*]] = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @srcA32, i32 0, i64 11), align 4
-; CHECK-NEXT:    [[A12:%.*]] = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @srcA32, i32 0, i64 12), align 4
-; CHECK-NEXT:    [[A13:%.*]] = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @srcA32, i32 0, i64 13), align 4
-; CHECK-NEXT:    [[A14:%.*]] = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @srcA32, i32 0, i64 14), align 4
-; CHECK-NEXT:    [[A15:%.*]] = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @srcA32, i32 0, i64 15), align 4
-; CHECK-NEXT:    [[B0:%.*]] = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @srcB32, i32 0, i64 0), align 4
-; CHECK-NEXT:    [[B1:%.*]] = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @srcB32, i32 0, i64 1), align 4
-; CHECK-NEXT:    [[B2:%.*]] = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @srcB32, i32 0, i64 2), align 4
-; CHECK-NEXT:    [[B3:%.*]] = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @srcB32, i32 0, i64 3), align 4
-; CHECK-NEXT:    [[B4:%.*]] = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @srcB32, i32 0, i64 4), align 4
-; CHECK-NEXT:    [[B5:%.*]] = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @srcB32, i32 0, i64 5), align 4
-; CHECK-NEXT:    [[B6:%.*]] = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @srcB32, i32 0, i64 6), align 4
-; CHECK-NEXT:    [[B7:%.*]] = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @srcB32, i32 0, i64 7), align 4
-; CHECK-NEXT:    [[B8:%.*]] = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @srcB32, i32 0, i64 8), align 4
-; CHECK-NEXT:    [[B9:%.*]] = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @srcB32, i32 0, i64 9), align 4
-; CHECK-NEXT:    [[B10:%.*]] = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @srcB32, i32 0, i64 10), align 4
-; CHECK-NEXT:    [[B11:%.*]] = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @srcB32, i32 0, i64 11), align 4
-; CHECK-NEXT:    [[B12:%.*]] = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @srcB32, i32 0, i64 12), align 4
-; CHECK-NEXT:    [[B13:%.*]] = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @srcB32, i32 0, i64 13), align 4
-; CHECK-NEXT:    [[B14:%.*]] = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @srcB32, i32 0, i64 14), align 4
-; CHECK-NEXT:    [[B15:%.*]] = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @srcB32, i32 0, i64 15), align 4
-; CHECK-NEXT:    [[FMINNUM0:%.*]] = call float @llvm.minnum.f32(float [[A0]], float [[B0]])
-; CHECK-NEXT:    [[FMINNUM1:%.*]] = call float @llvm.minnum.f32(float [[A1]], float [[B1]])
-; CHECK-NEXT:    [[FMINNUM2:%.*]] = call float @llvm.minnum.f32(float [[A2]], float [[B2]])
-; CHECK-NEXT:    [[FMINNUM3:%.*]] = call float @llvm.minnum.f32(float [[A3]], float [[B3]])
-; CHECK-NEXT:    [[FMINNUM4:%.*]] = call float @llvm.minnum.f32(float [[A4]], float [[B4]])
-; CHECK-NEXT:    [[FMINNUM5:%.*]] = call float @llvm.minnum.f32(float [[A5]], float [[B5]])
-; CHECK-NEXT:    [[FMINNUM6:%.*]] = call float @llvm.minnum.f32(float [[A6]], float [[B6]])
-; CHECK-NEXT:    [[FMINNUM7:%.*]] = call float @llvm.minnum.f32(float [[A7]], float [[B7]])
-; CHECK-NEXT:    [[FMINNUM8:%.*]] = call float @llvm.minnum.f32(float [[A8]], float [[B8]])
-; CHECK-NEXT:    [[FMINNUM9:%.*]] = call float @llvm.minnum.f32(float [[A9]], float [[B9]])
-; CHECK-NEXT:    [[FMINNUM10:%.*]] = call float @llvm.minnum.f32(float [[A10]], float [[B10]])
-; CHECK-NEXT:    [[FMINNUM11:%.*]] = call float @llvm.minnum.f32(float [[A11]], float [[B11]])
-; CHECK-NEXT:    [[FMINNUM12:%.*]] = call float @llvm.minnum.f32(float [[A12]], float [[B12]])
-; CHECK-NEXT:    [[FMINNUM13:%.*]] = call float @llvm.minnum.f32(float [[A13]], float [[B13]])
-; CHECK-NEXT:    [[FMINNUM14:%.*]] = call float @llvm.minnum.f32(float [[A14]], float [[B14]])
-; CHECK-NEXT:    [[FMINNUM15:%.*]] = call float @llvm.minnum.f32(float [[A15]], float [[B15]])
-; CHECK-NEXT:    store float [[FMINNUM0]], float* getelementptr inbounds ([16 x float], [16 x float]* @dst32, i32 0, i64 0), align 4
-; CHECK-NEXT:    store float [[FMINNUM1]], float* getelementptr inbounds ([16 x float], [16 x float]* @dst32, i32 0, i64 1), align 4
-; CHECK-NEXT:    store float [[FMINNUM2]], float* getelementptr inbounds ([16 x float], [16 x float]* @dst32, i32 0, i64 2), align 4
-; CHECK-NEXT:    store float [[FMINNUM3]], float* getelementptr inbounds ([16 x float], [16 x float]* @dst32, i32 0, i64 3), align 4
-; CHECK-NEXT:    store float [[FMINNUM4]], float* getelementptr inbounds ([16 x float], [16 x float]* @dst32, i32 0, i64 4), align 4
-; CHECK-NEXT:    store float [[FMINNUM5]], float* getelementptr inbounds ([16 x float], [16 x float]* @dst32, i32 0, i64 5), align 4
-; CHECK-NEXT:    store float [[FMINNUM6]], float* getelementptr inbounds ([16 x float], [16 x float]* @dst32, i32 0, i64 6), align 4
-; CHECK-NEXT:    store float [[FMINNUM7]], float* getelementptr inbounds ([16 x float], [16 x float]* @dst32, i32 0, i64 7), align 4
-; CHECK-NEXT:    store float [[FMINNUM8]], float* getelementptr inbounds ([16 x float], [16 x float]* @dst32, i32 0, i64 8), align 4
-; CHECK-NEXT:    store float [[FMINNUM9]], float* getelementptr inbounds ([16 x float], [16 x float]* @dst32, i32 0, i64 9), align 4
-; CHECK-NEXT:    store float [[FMINNUM10]], float* getelementptr inbounds ([16 x float], [16 x float]* @dst32, i32 0, i64 10), align 4
-; CHECK-NEXT:    store float [[FMINNUM11]], float* getelementptr inbounds ([16 x float], [16 x float]* @dst32, i32 0, i64 11), align 4
-; CHECK-NEXT:    store float [[FMINNUM12]], float* getelementptr inbounds ([16 x float], [16 x float]* @dst32, i32 0, i64 12), align 4
-; CHECK-NEXT:    store float [[FMINNUM13]], float* getelementptr inbounds ([16 x float], [16 x float]* @dst32, i32 0, i64 13), align 4
-; CHECK-NEXT:    store float [[FMINNUM14]], float* getelementptr inbounds ([16 x float], [16 x float]* @dst32, i32 0, i64 14), align 4
-; CHECK-NEXT:    store float [[FMINNUM15]], float* getelementptr inbounds ([16 x float], [16 x float]* @dst32, i32 0, i64 15), align 4
-; CHECK-NEXT:    ret void
+; SSE-LABEL: @fminnum_16f32(
+; SSE-NEXT:    [[TMP1:%.*]] = load <4 x float>, <4 x float>* bitcast ([16 x float]* @srcA32 to <4 x float>*), align 4
+; SSE-NEXT:    [[TMP2:%.*]] = load <4 x float>, <4 x float>* bitcast (float* getelementptr inbounds ([16 x float], [16 x float]* @srcA32, i32 0, i64 4) to <4 x float>*), align 4
+; SSE-NEXT:    [[TMP3:%.*]] = load <4 x float>, <4 x float>* bitcast (float* getelementptr inbounds ([16 x float], [16 x float]* @srcA32, i32 0, i64 8) to <4 x float>*), align 4
+; SSE-NEXT:    [[TMP4:%.*]] = load <4 x float>, <4 x float>* bitcast (float* getelementptr inbounds ([16 x float], [16 x float]* @srcA32, i32 0, i64 12) to <4 x float>*), align 4
+; SSE-NEXT:    [[TMP5:%.*]] = load <4 x float>, <4 x float>* bitcast ([16 x float]* @srcB32 to <4 x float>*), align 4
+; SSE-NEXT:    [[TMP6:%.*]] = load <4 x float>, <4 x float>* bitcast (float* getelementptr inbounds ([16 x float], [16 x float]* @srcB32, i32 0, i64 4) to <4 x float>*), align 4
+; SSE-NEXT:    [[TMP7:%.*]] = load <4 x float>, <4 x float>* bitcast (float* getelementptr inbounds ([16 x float], [16 x float]* @srcB32, i32 0, i64 8) to <4 x float>*), align 4
+; SSE-NEXT:    [[TMP8:%.*]] = load <4 x float>, <4 x float>* bitcast (float* getelementptr inbounds ([16 x float], [16 x float]* @srcB32, i32 0, i64 12) to <4 x float>*), align 4
+; SSE-NEXT:    [[TMP9:%.*]] = call <4 x float> @llvm.minnum.v4f32(<4 x float> [[TMP1]], <4 x float> [[TMP5]])
+; SSE-NEXT:    [[TMP10:%.*]] = call <4 x float> @llvm.minnum.v4f32(<4 x float> [[TMP2]], <4 x float> [[TMP6]])
+; SSE-NEXT:    [[TMP11:%.*]] = call <4 x float> @llvm.minnum.v4f32(<4 x float> [[TMP3]], <4 x float> [[TMP7]])
+; SSE-NEXT:    [[TMP12:%.*]] = call <4 x float> @llvm.minnum.v4f32(<4 x float> [[TMP4]], <4 x float> [[TMP8]])
+; SSE-NEXT:    store <4 x float> [[TMP9]], <4 x float>* bitcast ([16 x float]* @dst32 to <4 x float>*), align 4
+; SSE-NEXT:    store <4 x float> [[TMP10]], <4 x float>* bitcast (float* getelementptr inbounds ([16 x float], [16 x float]* @dst32, i32 0, i64 4) to <4 x float>*), align 4
+; SSE-NEXT:    store <4 x float> [[TMP11]], <4 x float>* bitcast (float* getelementptr inbounds ([16 x float], [16 x float]* @dst32, i32 0, i64 8) to <4 x float>*), align 4
+; SSE-NEXT:    store <4 x float> [[TMP12]], <4 x float>* bitcast (float* getelementptr inbounds ([16 x float], [16 x float]* @dst32, i32 0, i64 12) to <4 x float>*), align 4
+; SSE-NEXT:    ret void
+;
+; AVX256-LABEL: @fminnum_16f32(
+; AVX256-NEXT:    [[TMP1:%.*]] = load <8 x float>, <8 x float>* bitcast ([16 x float]* @srcA32 to <8 x float>*), align 4
+; AVX256-NEXT:    [[TMP2:%.*]] = load <8 x float>, <8 x float>* bitcast (float* getelementptr inbounds ([16 x float], [16 x float]* @srcA32, i32 0, i64 8) to <8 x float>*), align 4
+; AVX256-NEXT:    [[TMP3:%.*]] = load <8 x float>, <8 x float>* bitcast ([16 x float]* @srcB32 to <8 x float>*), align 4
+; AVX256-NEXT:    [[TMP4:%.*]] = load <8 x float>, <8 x float>* bitcast (float* getelementptr inbounds ([16 x float], [16 x float]* @srcB32, i32 0, i64 8) to <8 x float>*), align 4
+; AVX256-NEXT:    [[TMP5:%.*]] = call <8 x float> @llvm.minnum.v8f32(<8 x float> [[TMP1]], <8 x float> [[TMP3]])
+; AVX256-NEXT:    [[TMP6:%.*]] = call <8 x float> @llvm.minnum.v8f32(<8 x float> [[TMP2]], <8 x float> [[TMP4]])
+; AVX256-NEXT:    store <8 x float> [[TMP5]], <8 x float>* bitcast ([16 x float]* @dst32 to <8 x float>*), align 4
+; AVX256-NEXT:    store <8 x float> [[TMP6]], <8 x float>* bitcast (float* getelementptr inbounds ([16 x float], [16 x float]* @dst32, i32 0, i64 8) to <8 x float>*), align 4
+; AVX256-NEXT:    ret void
+;
+; AVX512-LABEL: @fminnum_16f32(
+; AVX512-NEXT:    [[TMP1:%.*]] = load <16 x float>, <16 x float>* bitcast ([16 x float]* @srcA32 to <16 x float>*), align 4
+; AVX512-NEXT:    [[TMP2:%.*]] = load <16 x float>, <16 x float>* bitcast ([16 x float]* @srcB32 to <16 x float>*), align 4
+; AVX512-NEXT:    [[TMP3:%.*]] = call <16 x float> @llvm.minnum.v16f32(<16 x float> [[TMP1]], <16 x float> [[TMP2]])
+; AVX512-NEXT:    store <16 x float> [[TMP3]], <16 x float>* bitcast ([16 x float]* @dst32 to <16 x float>*), align 4
+; AVX512-NEXT:    ret void
 ;
   %a0  = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @srcA32, i32 0, i64  0), align 4
   %a1  = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @srcA32, i32 0, i64  1), align 4

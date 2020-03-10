@@ -1951,6 +1951,14 @@ int X86TTIImpl::getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
     { ISD::UADDSAT,    MVT::v2i64,   3 }, // not + pminuq + paddq
     { ISD::UADDSAT,    MVT::v4i64,   3 }, // not + pminuq + paddq
     { ISD::UADDSAT,    MVT::v8i64,   3 }, // not + pminuq + paddq
+    { ISD::FMAXNUM,    MVT::f32,     2 },
+    { ISD::FMAXNUM,    MVT::v4f32,   2 },
+    { ISD::FMAXNUM,    MVT::v8f32,   2 },
+    { ISD::FMAXNUM,    MVT::v16f32,  2 },
+    { ISD::FMAXNUM,    MVT::f64,     2 },
+    { ISD::FMAXNUM,    MVT::v2f64,   2 },
+    { ISD::FMAXNUM,    MVT::v4f64,   2 },
+    { ISD::FMAXNUM,    MVT::v8f64,   2 },
   };
   static const CostTblEntry XOPCostTbl[] = {
     { ISD::BITREVERSE, MVT::v4i64,   4 },
@@ -2033,6 +2041,12 @@ int X86TTIImpl::getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
     { ISD::USUBSAT,    MVT::v16i16,  4 }, // 2 x 128-bit Op + extract/insert
     { ISD::USUBSAT,    MVT::v32i8,   4 }, // 2 x 128-bit Op + extract/insert
     { ISD::USUBSAT,    MVT::v8i32,   6 }, // 2 x 128-bit Op + extract/insert
+    { ISD::FMAXNUM,    MVT::f32,     3 },
+    { ISD::FMAXNUM,    MVT::v4f32,   3 },
+    { ISD::FMAXNUM,    MVT::v8f32,   5 },
+    { ISD::FMAXNUM,    MVT::f64,     3 },
+    { ISD::FMAXNUM,    MVT::v2f64,   3 },
+    { ISD::FMAXNUM,    MVT::v4f64,   5 },
     { ISD::FSQRT,      MVT::f32,    14 }, // SNB from http://www.agner.org/
     { ISD::FSQRT,      MVT::v4f32,  14 }, // SNB from http://www.agner.org/
     { ISD::FSQRT,      MVT::v8f32,  28 }, // SNB from http://www.agner.org/
@@ -2107,10 +2121,14 @@ int X86TTIImpl::getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
     { ISD::UADDSAT,    MVT::v16i8,   1 },
     { ISD::USUBSAT,    MVT::v8i16,   1 },
     { ISD::USUBSAT,    MVT::v16i8,   1 },
+    { ISD::FMAXNUM,    MVT::f64,     4 },
+    { ISD::FMAXNUM,    MVT::v2f64,   4 },
     { ISD::FSQRT,      MVT::f64,    32 }, // Nehalem from http://www.agner.org/
     { ISD::FSQRT,      MVT::v2f64,  32 }, // Nehalem from http://www.agner.org/
   };
   static const CostTblEntry SSE1CostTbl[] = {
+    { ISD::FMAXNUM,    MVT::f32,     4 },
+    { ISD::FMAXNUM,    MVT::v4f32,   4 },
     { ISD::FSQRT,      MVT::f32,    28 }, // Pentium III from http://www.agner.org/
     { ISD::FSQRT,      MVT::v4f32,  56 }, // Pentium III from http://www.agner.org/
   };
@@ -2174,6 +2192,11 @@ int X86TTIImpl::getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
     break;
   case Intrinsic::cttz:
     ISD = ISD::CTTZ;
+    break;
+  case Intrinsic::maxnum:
+  case Intrinsic::minnum:
+    // FMINNUM has same costs so don't duplicate.
+    ISD = ISD::FMAXNUM;
     break;
   case Intrinsic::sadd_sat:
     ISD = ISD::SADDSAT;
