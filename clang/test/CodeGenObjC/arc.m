@@ -1557,6 +1557,43 @@ void test71(void) {
   getAggDtor();
 }
 
+// Check that no extra release calls are emitted to detruct the compond literal.
+
+// CHECK: define void @test72(i8* %[[A:.*]], i8* %[[B:.*]])
+// CHECK: %[[A_ADDR:.*]] = alloca i8*, align 8
+// CHECK: %[[B_ADDR:.*]] = alloca i8*, align 8
+// CHECK: %[[T:.*]] = alloca [2 x i8*], align 16
+// CHECK: %[[V0:.*]] = call i8* @llvm.objc.retain(i8* %[[A]])
+// CHECK: %[[V1:.*]] = call i8* @llvm.objc.retain(i8* %[[B]]) #2
+// CHECK: %[[ARRAYINIT_BEGIN:.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* %[[T]], i64 0, i64 0
+// CHECK: %[[V3:.*]] = load i8*, i8** %[[A_ADDR]], align 8, !tbaa !7
+// CHECK: %[[V4:.*]] = call i8* @llvm.objc.retain(i8* %[[V3]]) #2
+// CHECK: store i8* %[[V4]], i8** %[[ARRAYINIT_BEGIN]], align 8, !tbaa !7
+// CHECK: %[[ARRAYINIT_ELEMENT:.*]] = getelementptr inbounds i8*, i8** %[[ARRAYINIT_BEGIN]], i64 1
+// CHECK: %[[V5:.*]] = load i8*, i8** %[[B_ADDR]], align 8, !tbaa !7
+// CHECK: %[[V6:.*]] = call i8* @llvm.objc.retain(i8* %[[V5]]) #2
+// CHECK: store i8* %[[V6]], i8** %[[ARRAYINIT_ELEMENT]], align 8, !tbaa !7
+// CHECK: %[[ARRAY_BEGIN:.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* %[[T]], i32 0, i32 0
+// CHECK: %[[V7:.*]] = getelementptr inbounds i8*, i8** %[[ARRAY_BEGIN]], i64 2
+
+// CHECK-NOT: call void @llvm.objc.release
+
+// CHECK: %[[ARRAYDESTROY_ELEMENTPAST:.*]] = phi i8** [ %[[V7]], %{{.*}} ], [ %[[ARRAYDESTROY_ELEMENT:.*]], %{{.*}} ]
+// CHECK: %[[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds i8*, i8** %[[ARRAYDESTROY_ELEMENTPAST]], i64 -1
+// CHECK: %[[V8:.*]] = load i8*, i8** %[[ARRAYDESTROY_ELEMENT]], align 8
+// CHECK: call void @llvm.objc.release(i8* %[[V8]]) #2, !clang.imprecise_release !10
+
+// CHECK-NOT: call void @llvm.objc.release
+
+// CHECK: %[[V10:.*]] = load i8*, i8** %[[B_ADDR]], align 8
+// CHECK: call void @llvm.objc.release(i8* %[[V10]]) #2, !clang.imprecise_release !10
+// CHECK: %[[V11:.*]] = load i8*, i8** %[[A_ADDR]], align 8
+// CHECK: call void @llvm.objc.release(i8* %[[V11]]) #2, !clang.imprecise_release !10
+
+void test72(id a, id b) {
+  __strong id t[] = (__strong id[]){a, b};
+}
+
 // ARC-ALIEN: attributes [[NLB]] = { nonlazybind }
 // ARC-NATIVE: attributes [[NLB]] = { nonlazybind }
 // CHECK: attributes [[NUW]] = { nounwind }

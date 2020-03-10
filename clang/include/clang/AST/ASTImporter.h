@@ -16,6 +16,7 @@
 
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclarationName.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/TemplateName.h"
 #include "clang/AST/Type.h"
@@ -348,6 +349,10 @@ class TypeSourceInfo;
         To = *ToOrErr;
       return ToOrErr.takeError();
     }
+
+    /// Import cleanup objects owned by ExprWithCleanup.
+    llvm::Expected<ExprWithCleanups::CleanupObject>
+    Import(ExprWithCleanups::CleanupObject From);
 
     /// Import the given type from the "from" context into the "to"
     /// context. A null type is imported as a null type (no error).

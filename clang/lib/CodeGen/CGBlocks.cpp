@@ -868,13 +868,13 @@ static void enterBlockScope(CodeGenFunction &CGF, BlockDecl *block) {
 }
 
 /// Enter a full-expression with a non-trivial number of objects to
-/// clean up.  This is in this file because, at the moment, the only
-/// kind of cleanup object is a BlockDecl*.
+/// clean up.
 void CodeGenFunction::enterNonTrivialFullExpression(const FullExpr *E) {
   if (const auto EWC = dyn_cast<ExprWithCleanups>(E)) {
     assert(EWC->getNumObjects() != 0);
     for (const ExprWithCleanups::CleanupObject &C : EWC->getObjects())
-      enterBlockScope(*this, C);
+      if (auto *BD = C.dyn_cast<BlockDecl *>())
+        enterBlockScope(*this, BD);
   }
 }
 
