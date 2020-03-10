@@ -5159,15 +5159,18 @@ void CGObjCCommonMac::EmitImageInfo() {
   Mod.addModuleFlag(llvm::Module::Error, "Objective-C Image Info Section",
                     llvm::MDString::get(VMContext, Section));
 
+  auto Int8Ty = llvm::Type::getInt8Ty(VMContext);
   if (CGM.getLangOpts().getGC() == LangOptions::NonGC) {
     // Non-GC overrides those files which specify GC.
-    Mod.addModuleFlag(llvm::Module::Override,
-                      "Objective-C Garbage Collection", (uint32_t)0);
+    Mod.addModuleFlag(llvm::Module::Error,
+                      "Objective-C Garbage Collection",
+                      llvm::ConstantInt::get(Int8Ty,0));
   } else {
     // Add the ObjC garbage collection value.
     Mod.addModuleFlag(llvm::Module::Error,
                       "Objective-C Garbage Collection",
-                      eImageInfo_GarbageCollected);
+                      llvm::ConstantInt::get(Int8Ty,
+                        (uint8_t)eImageInfo_GarbageCollected));
 
     if (CGM.getLangOpts().getGC() == LangOptions::GCOnly) {
       // Add the ObjC GC Only value.
@@ -5178,7 +5181,7 @@ void CGObjCCommonMac::EmitImageInfo() {
       llvm::Metadata *Ops[2] = {
           llvm::MDString::get(VMContext, "Objective-C Garbage Collection"),
           llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
-              llvm::Type::getInt32Ty(VMContext), eImageInfo_GarbageCollected))};
+              Int8Ty, eImageInfo_GarbageCollected))};
       Mod.addModuleFlag(llvm::Module::Require, "Objective-C GC Only",
                         llvm::MDNode::get(VMContext, Ops));
     }
