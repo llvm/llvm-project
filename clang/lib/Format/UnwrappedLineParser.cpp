@@ -1677,7 +1677,10 @@ bool UnwrappedLineParser::parseBracedList(bool ContinueOnSemicolons,
       }
       break;
     case tok::l_square:
-      tryToParseLambda();
+      if (Style.isCSharp())
+        parseSquare();
+      else
+        tryToParseLambda();
       break;
     case tok::l_paren:
       parseParens();
