@@ -35171,6 +35171,28 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
       return N; // Return N so it doesn't get rechecked!
     }
 
+    // Due to isTypeDesirableForOp, we won't always shrink a load truncated to
+    // i16. So shrink it ourselves if we can make a broadcast_load.
+    if (SrcVT == MVT::i16 && Src.getOpcode() == ISD::TRUNCATE &&
+        Src.hasOneUse() && ISD::isNormalLoad(Src.getOperand(0).getNode()) &&
+        Src.getOperand(0).hasOneUse()) {
+      assert(Subtarget.hasAVX2() && "Expected AVX2");
+      LoadSDNode *LN = cast<LoadSDNode>(Src.getOperand(0));
+      if (LN->isSimple()) {
+        SDVTList Tys = DAG.getVTList(VT, MVT::Other);
+        SDValue Ops[] = { LN->getChain(), LN->getBasePtr() };
+        SDValue BcastLd =
+            DAG.getMemIntrinsicNode(X86ISD::VBROADCAST_LOAD, DL, Tys, Ops,
+                                    MVT::i16, LN->getPointerInfo(),
+                                    LN->getAlignment(),
+                                    LN->getMemOperand()->getFlags());
+        DCI.CombineTo(N.getNode(), BcastLd);
+        DAG.ReplaceAllUsesOfValueWith(SDValue(LN, 1), BcastLd.getValue(1));
+        DCI.recursivelyDeleteUnusedNodes(LN);
+        return N; // Return N so it doesn't get rechecked!
+      }
+    }
+
     // vbroadcast(vzload X) -> vbroadcast_load X
     if (Src.getOpcode() == X86ISD::VZEXT_LOAD && Src.hasOneUse()) {
       MemSDNode *LN = cast<MemIntrinsicSDNode>(Src);
