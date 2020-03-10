@@ -11303,7 +11303,7 @@ TreeTransform<Derived>::TransformRequiresExpr(RequiresExpr *E) {
       SemaRef, Sema::ExpressionEvaluationContext::Unevaluated);
 
   RequiresExprBodyDecl *Body = RequiresExprBodyDecl::Create(
-      getSema().Context, E->getBody()->getDeclContext(),
+      getSema().Context, getSema().CurContext,
       E->getBody()->getBeginLoc());
 
   Sema::ContextRAII SavedContext(getSema(), Body, /*NewThisContext*/false);
