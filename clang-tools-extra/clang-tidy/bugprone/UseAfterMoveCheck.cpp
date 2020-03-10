@@ -276,13 +276,11 @@ void UseAfterMoveFinder::getDeclRefs(
                               .bind("declref");
 
     addDeclRefs(match(findAll(DeclRefMatcher), *S->getStmt(), *Context));
-    addDeclRefs(match(
-        findAll(cxxOperatorCallExpr(anyOf(hasOverloadedOperatorName("*"),
-                                          hasOverloadedOperatorName("->"),
-                                          hasOverloadedOperatorName("[]")),
-                                    hasArgument(0, DeclRefMatcher))
-                    .bind("operator")),
-        *S->getStmt(), *Context));
+    addDeclRefs(match(findAll(cxxOperatorCallExpr(
+                                  hasAnyOverloadedOperatorName("*", "->", "[]"),
+                                  hasArgument(0, DeclRefMatcher))
+                                  .bind("operator")),
+                      *S->getStmt(), *Context));
   }
 }
 

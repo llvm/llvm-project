@@ -85,8 +85,7 @@ void ContainerSizeEmptyCheck::registerMatchers(MatchFinder *Finder) {
             expr(hasType(ValidContainer)).bind("STLObject"));
   Finder->addMatcher(
       cxxOperatorCallExpr(
-          anyOf(hasOverloadedOperatorName("=="),
-                hasOverloadedOperatorName("!=")),
+          hasAnyOverloadedOperatorName("==", "!="),
           anyOf(allOf(hasArgument(0, WrongComparend), hasArgument(1, STLArg)),
                 allOf(hasArgument(0, STLArg), hasArgument(1, WrongComparend))),
           unless(hasAncestor(

@@ -116,9 +116,8 @@ void SuspiciousStringCompareCheck::registerMatchers(MatchFinder *Finder) {
                    whileStmt(hasCondition(StringCompareCallExpr)),
                    doStmt(hasCondition(StringCompareCallExpr)),
                    forStmt(hasCondition(StringCompareCallExpr)),
-                   binaryOperator(
-                       anyOf(hasOperatorName("&&"), hasOperatorName("||")),
-                       hasEitherOperand(StringCompareCallExpr))))
+                   binaryOperator(hasAnyOperatorName("&&", "||"),
+                                  hasEitherOperand(StringCompareCallExpr))))
             .bind("missing-comparison"),
         this);
   }

@@ -19,15 +19,11 @@ namespace bugprone {
 void IntegerDivisionCheck::registerMatchers(MatchFinder *Finder) {
   const auto IntType = hasType(isInteger());
 
-  const auto BinaryOperators = binaryOperator(anyOf(
-      hasOperatorName("%"), hasOperatorName("<<"), hasOperatorName(">>"),
-      hasOperatorName("<<"), hasOperatorName("^"), hasOperatorName("|"),
-      hasOperatorName("&"), hasOperatorName("||"), hasOperatorName("&&"),
-      hasOperatorName("<"), hasOperatorName(">"), hasOperatorName("<="),
-      hasOperatorName(">="), hasOperatorName("=="), hasOperatorName("!=")));
+  const auto BinaryOperators = binaryOperator(
+      hasAnyOperatorName("%", "<<", ">>", "<<", "^", "|", "&", "||", "&&", "<",
+                         ">", "<=", ">=", "==", "!="));
 
-  const auto UnaryOperators =
-      unaryOperator(anyOf(hasOperatorName("~"), hasOperatorName("!")));
+  const auto UnaryOperators = unaryOperator(hasAnyOperatorName("~", "!"));
 
   const auto Exceptions =
       anyOf(BinaryOperators, conditionalOperator(), binaryConditionalOperator(),
