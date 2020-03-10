@@ -401,9 +401,10 @@ body:             |
     ; CHECK-LABEL: name: test_unmerge_values_s8_of_trunc_v4s16_concat_vectors_v2s32_v2s32
     ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
     ; CHECK: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr2_vgpr3
-    ; CHECK: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s32>) = G_CONCAT_VECTORS [[COPY]](<2 x s32>), [[COPY1]](<2 x s32>)
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(<4 x s16>) = G_TRUNC [[CONCAT_VECTORS]](<4 x s32>)
-    ; CHECK: [[UV:%[0-9]+]]:_(s8), [[UV1:%[0-9]+]]:_(s8), [[UV2:%[0-9]+]]:_(s8), [[UV3:%[0-9]+]]:_(s8), [[UV4:%[0-9]+]]:_(s8), [[UV5:%[0-9]+]]:_(s8), [[UV6:%[0-9]+]]:_(s8), [[UV7:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[TRUNC]](<4 x s16>)
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(<2 x s16>) = G_TRUNC [[COPY]](<2 x s32>)
+    ; CHECK: [[TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_TRUNC [[COPY1]](<2 x s32>)
+    ; CHECK: [[UV:%[0-9]+]]:_(s8), [[UV1:%[0-9]+]]:_(s8), [[UV2:%[0-9]+]]:_(s8), [[UV3:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[TRUNC]](<2 x s16>)
+    ; CHECK: [[UV4:%[0-9]+]]:_(s8), [[UV5:%[0-9]+]]:_(s8), [[UV6:%[0-9]+]]:_(s8), [[UV7:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[TRUNC1]](<2 x s16>)
     ; CHECK: S_ENDPGM 0, implicit [[UV]](s8), implicit [[UV1]](s8), implicit [[UV2]](s8), implicit [[UV3]](s8), implicit [[UV4]](s8), implicit [[UV5]](s8), implicit [[UV6]](s8), implicit [[UV7]](s8)
     %0:_(<2 x s32>) = COPY $vgpr0_vgpr1
     %1:_(<2 x s32>) = COPY $vgpr2_vgpr3
@@ -449,9 +450,12 @@ body:             |
     ; CHECK: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr2_vgpr3
     ; CHECK: [[COPY2:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr4_vgpr5
     ; CHECK: [[COPY3:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr6_vgpr7
-    ; CHECK: [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x s32>) = G_CONCAT_VECTORS [[COPY]](<2 x s32>), [[COPY1]](<2 x s32>), [[COPY2]](<2 x s32>), [[COPY3]](<2 x s32>)
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(<8 x s16>) = G_TRUNC [[CONCAT_VECTORS]](<8 x s32>)
-    ; CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[TRUNC]](<8 x s16>)
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(<2 x s16>) = G_TRUNC [[COPY]](<2 x s32>)
+    ; CHECK: [[TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_TRUNC [[COPY1]](<2 x s32>)
+    ; CHECK: [[TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_TRUNC [[COPY2]](<2 x s32>)
+    ; CHECK: [[TRUNC3:%[0-9]+]]:_(<2 x s16>) = G_TRUNC [[COPY3]](<2 x s32>)
+    ; CHECK: [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x s16>) = G_CONCAT_VECTORS [[TRUNC]](<2 x s16>), [[TRUNC1]](<2 x s16>), [[TRUNC2]](<2 x s16>), [[TRUNC3]](<2 x s16>)
+    ; CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<8 x s16>)
     ; CHECK: S_ENDPGM 0, implicit [[UV]](s32), implicit [[UV1]](s32), implicit [[UV2]](s32), implicit [[UV3]](s32)
     %0:_(<2 x s32>) = COPY $vgpr0_vgpr1
     %1:_(<2 x s32>) = COPY $vgpr2_vgpr3
@@ -472,9 +476,12 @@ body:             |
     ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; CHECK: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(<4 x s16>) = G_TRUNC [[BUILD_VECTOR]](<4 x s32>)
-    ; CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[TRUNC]](<4 x s16>)
+    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32)
+    ; CHECK: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY2]](s32), [[COPY3]](s32)
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(<2 x s16>) = G_TRUNC [[BUILD_VECTOR]](<2 x s32>)
+    ; CHECK: [[TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_TRUNC [[BUILD_VECTOR1]](<2 x s32>)
+    ; CHECK: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[TRUNC]](<2 x s16>), [[TRUNC1]](<2 x s16>)
+    ; CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<4 x s16>)
     ; CHECK: S_ENDPGM 0, implicit [[UV]](s32), implicit [[UV1]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1

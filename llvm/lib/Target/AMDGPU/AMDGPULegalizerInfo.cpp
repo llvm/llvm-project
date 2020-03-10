@@ -485,6 +485,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .lower();
 
   getActionDefinitionsBuilder(G_TRUNC)
+    .clampMaxNumElements(0, S16, 2)
     .alwaysLegal();
 
   getActionDefinitionsBuilder({G_SEXT, G_ZEXT, G_ANYEXT})

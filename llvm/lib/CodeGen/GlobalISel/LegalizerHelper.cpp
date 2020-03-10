@@ -2492,6 +2492,9 @@ LegalizerHelper::LegalizeResult LegalizerHelper::fewerElementsVectorImplicitDef(
   return Legalized;
 }
 
+// Handles operands with different types, but all must have the same number of
+// elements. There will be multiple type indexes. NarrowTy is expected to have
+// the result element type.
 LegalizerHelper::LegalizeResult
 LegalizerHelper::fewerElementsVectorBasic(MachineInstr &MI, unsigned TypeIdx,
                                           LLT NarrowTy) {
@@ -2507,16 +2510,22 @@ LegalizerHelper::fewerElementsVectorBasic(MachineInstr &MI, unsigned TypeIdx,
   SmallVector<Register, 8> ExtractedRegs[3];
   SmallVector<Register, 8> Parts;
 
+  unsigned NarrowElts = NarrowTy.isVector() ? NarrowTy.getNumElements() : 1;
+
   // Break down all the sources into NarrowTy pieces we can operate on. This may
   // involve creating merges to a wider type, padded with undef.
   for (int I = 0; I != NumOps; ++I) {
     Register SrcReg =  MI.getOperand(I + 1).getReg();
     LLT SrcTy = MRI.getType(SrcReg);
-    LLT GCDTy = extractGCDType(ExtractedRegs[I], SrcTy, NarrowTy, SrcReg);
+
+    // Each operand may have its own type, but only the number of elements
+    // matters.
+    LLT OpNarrowTy = LLT::scalarOrVector(NarrowElts, SrcTy.getScalarType());
+    LLT GCDTy = extractGCDType(ExtractedRegs[I], SrcTy, OpNarrowTy, SrcReg);
 
     // Build a sequence of NarrowTy pieces in ExtractedRegs for this operand.
-    buildLCMMergePieces(SrcTy, NarrowTy, GCDTy, ExtractedRegs[I],
-                        TargetOpcode::G_ANYEXT);
+    buildLCMMergePieces(SrcTy, OpNarrowTy, GCDTy,
+                        ExtractedRegs[I], TargetOpcode::G_ANYEXT);
   }
 
   SmallVector<Register, 8> ResultRegs;
@@ -2525,7 +2534,10 @@ LegalizerHelper::fewerElementsVectorBasic(MachineInstr &MI, unsigned TypeIdx,
   SmallVector<SrcOp, 4> InputRegs(NumOps, Register());
 
   int NumParts = ExtractedRegs[0].size();
-  const unsigned DstSize = MRI.getType(DstReg).getSizeInBits();
+  const LLT DstTy = MRI.getType(DstReg);
+  const unsigned DstSize = DstTy.getSizeInBits();
+  LLT DstLCMTy = getLCMType(DstTy, NarrowTy);
+
   const unsigned NarrowSize = NarrowTy.getSizeInBits();
 
   // We widened the source registers to satisfy merge/unmerge size
@@ -2548,9 +2560,7 @@ LegalizerHelper::fewerElementsVectorBasic(MachineInstr &MI, unsigned TypeIdx,
     ResultRegs.append(NumUndefParts, MIRBuilder.buildUndef(NarrowTy).getReg(0));
 
   // Extract the possibly padded result to the original result register.
-  LLT DstTy = MRI.getType(DstReg);
-  LLT LCMTy = getLCMType(DstTy, NarrowTy);
-  buildWidenedRemergeToDst(DstReg, LCMTy, ResultRegs);
+  buildWidenedRemergeToDst(DstReg, DstLCMTy, ResultRegs);
 
   MI.eraseFromParent();
   return Legalized;
@@ -3123,6 +3133,7 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
   switch (MI.getOpcode()) {
   case G_IMPLICIT_DEF:
     return fewerElementsVectorImplicitDef(MI, TypeIdx, NarrowTy);
+  case G_TRUNC:
   case G_AND:
   case G_OR:
   case G_XOR:
