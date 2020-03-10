@@ -11296,6 +11296,9 @@ static SDValue performIntrinsicCombine(SDNode *N,
     return LowerSVEIntrinsicDUP(N, DAG);
   case Intrinsic::aarch64_sve_ext:
     return LowerSVEIntrinsicEXT(N, DAG);
+  case Intrinsic::aarch64_sve_sel:
+    return DAG.getNode(ISD::VSELECT, SDLoc(N), N->getValueType(0),
+                       N->getOperand(1), N->getOperand(2), N->getOperand(3));
   case Intrinsic::aarch64_sve_cmpeq_wide:
     return tryConvertSVEWideCompare(N, Intrinsic::aarch64_sve_cmpeq,
                                     false, DCI, DAG);
