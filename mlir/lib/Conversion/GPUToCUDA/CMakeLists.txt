@@ -8,14 +8,17 @@ set(SOURCES
 
 if (MLIR_CUDA_CONVERSIONS_ENABLED)
  list(APPEND SOURCES "ConvertKernelFuncToCubin.cpp")
+  set(NVPTX_LIBS
+    LLVMNVPTXCodeGen
+    LLVMNVPTXDesc
+    LLVMNVPTXInfo
+  )
 endif()
 
 add_mlir_conversion_library(MLIRGPUtoCUDATransforms ${SOURCES})
 target_link_libraries(MLIRGPUtoCUDATransforms
   PUBLIC
-  LLVMNVPTXCodeGen
-  LLVMNVPTXDesc
-  LLVMNVPTXInfo
+  ${NVPTX_LIBS}
   LLVMCore
   LLVMMC
   LLVMSupport
