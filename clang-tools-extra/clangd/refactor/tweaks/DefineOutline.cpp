@@ -284,10 +284,10 @@ struct InsertionPoint {
 // should also try to follow ordering of declarations. For example, if decls
 // come in order `foo, bar, baz` then this function should return some point
 // between foo and baz for inserting bar.
-llvm::Expected<InsertionPoint>
-getInsertionPoint(llvm::StringRef Contents, llvm::StringRef QualifiedName,
-                  const format::FormatStyle &Style) {
-  auto Region = getEligiblePoints(Contents, QualifiedName, Style);
+llvm::Expected<InsertionPoint> getInsertionPoint(llvm::StringRef Contents,
+                                                 llvm::StringRef QualifiedName,
+                                                 const LangOptions &LangOpts) {
+  auto Region = getEligiblePoints(Contents, QualifiedName, LangOpts);
 
   assert(!Region.EligiblePoints.empty());
   // FIXME: This selection can be made smarter by looking at the definition
@@ -416,9 +416,10 @@ public:
       return llvm::createStringError(Buffer.getError(),
                                      Buffer.getError().message());
     auto Contents = Buffer->get()->getBuffer();
-    auto InsertionPoint =
-        getInsertionPoint(Contents, Source->getQualifiedNameAsString(),
-                          getFormatStyleForFile(*CCFile, Contents, &FS));
+    auto LangOpts = format::getFormattingLangOpts(
+        getFormatStyleForFile(*CCFile, Contents, &FS));
+    auto InsertionPoint = getInsertionPoint(
+        Contents, Source->getQualifiedNameAsString(), LangOpts);
     if (!InsertionPoint)
       return InsertionPoint.takeError();
 

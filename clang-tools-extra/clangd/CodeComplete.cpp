@@ -1373,8 +1373,8 @@ public:
     //  - accessible scopes are determined heuristically.
     //  - all-scopes query if no qualifier was typed (and it's allowed).
     SpecifiedScope Scopes;
-    Scopes.AccessibleScopes =
-        visibleNamespaces(Content.take_front(Offset), Style);
+    Scopes.AccessibleScopes = visibleNamespaces(
+        Content.take_front(Offset), format::getFormattingLangOpts(Style));
     for (std::string &S : Scopes.AccessibleScopes)
       if (!S.empty())
         S.append("::"); // visibleNamespaces doesn't include trailing ::.

@@ -416,7 +416,8 @@ TEST(SourceCodeTests, VisibleNamespaces) {
   };
   for (const auto &Case : Cases) {
     EXPECT_EQ(Case.second,
-              visibleNamespaces(Case.first, format::getLLVMStyle()))
+              visibleNamespaces(Case.first, format::getFormattingLangOpts(
+                                                format::getLLVMStyle())))
         << Case.first;
   }
 }
@@ -639,8 +640,9 @@ TEST(SourceCodeTests, GetEligiblePoints) {
   for (auto Case : Cases) {
     Annotations Test(Case.Code);
 
-    auto Res = getEligiblePoints(Test.code(), Case.FullyQualifiedName,
-                                 format::getLLVMStyle());
+    auto Res = getEligiblePoints(
+        Test.code(), Case.FullyQualifiedName,
+        format::getFormattingLangOpts(format::getLLVMStyle()));
     EXPECT_THAT(Res.EligiblePoints, testing::ElementsAreArray(Test.points()))
         << Test.code();
     EXPECT_EQ(Res.EnclosingNamespace, Case.EnclosingNamespace) << Test.code();
