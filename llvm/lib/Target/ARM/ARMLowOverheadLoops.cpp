@@ -508,12 +508,22 @@ bool LowOverheadLoop::ValidateTailPredicate(MachineInstr *StartInsertPt) {
   return true;
 }
 
+static bool isVectorPredicated(MachineInstr *MI) {
+  int PIdx = llvm::findFirstVPTPredOperandIdx(*MI);
+  return PIdx != -1 && MI->getOperand(PIdx + 1).getReg() == ARM::VPR;
+}
+
+static bool isRegInClass(const MachineOperand &MO,
+                         const TargetRegisterClass *Class) {
+  return MO.isReg() && MO.getReg() && Class->contains(MO.getReg());
+}
+
 bool LowOverheadLoop::ValidateLiveOuts() const {
   // Collect Q-regs that are live in the exit blocks. We don't collect scalars
   // because they won't be affected by lane predication.
   const TargetRegisterClass *QPRs = TRI.getRegClass(ARM::MQPRRegClassID);
   SmallSet<Register, 2> LiveOuts;
-  SmallVector<MachineBasicBlock*, 2> ExitBlocks;
+  SmallVector<MachineBasicBlock *, 2> ExitBlocks;
   ML.getExitBlocks(ExitBlocks);
   for (auto *MBB : ExitBlocks)
     for (const MachineBasicBlock::RegisterMaskPair &RegMask : MBB->liveins())
@@ -521,7 +531,8 @@ bool LowOverheadLoop::ValidateLiveOuts() const {
         LiveOuts.insert(RegMask.PhysReg);
 
   // Collect the instructions in the loop body that define the live-out values.
-  SmallPtrSet<MachineInstr*, 2> LiveMIs;
+  SmallPtrSet<MachineInstr *, 2> LiveMIs;
+  assert(ML.getNumBlocks() == 1 && "Expected single block loop!");
   MachineBasicBlock *MBB = ML.getHeader();
   for (auto Reg : LiveOuts)
     if (auto *MI = RDA.getLocalLiveOutMIDef(MBB, Reg))
@@ -534,12 +545,98 @@ bool LowOverheadLoop::ValidateLiveOuts() const {
   // equivalent when we perform the predication transformation; so we know that
   // any VPT predicated instruction is predicated upon VCTP. Any live-out
   // instruction needs to be predicated, so check this here.
-  for (auto *MI : LiveMIs) {
-    int PIdx = llvm::findFirstVPTPredOperandIdx(*MI);
-    if (PIdx == -1 || MI->getOperand(PIdx+1).getReg() != ARM::VPR)
+  for (auto *MI : LiveMIs)
+    if (!isVectorPredicated(MI))
       return false;
+
+  // We want to find out if the tail-predicated version of this loop will
+  // produce the same values as the loop in its original form. For this to
+  // be true, the newly inserted implicit predication must not change the
+  // the (observable) results.
+  // We're doing this because many instructions in the loop will not be
+  // predicated and so the conversion from VPT predication to tail-predication
+  // can result in different values being produced; due to the tail-predication
+  // preventing many instructions from updating their falsely predicated
+  // lanes. This analysis assumes that all the instructions perform lane-wise
+  // operations and don't perform any exchanges.
+  // A masked load, whether through VPT or tail predication, will write zeros
+  // to any of the falsely predicated bytes. So, from the loads, we know that
+  // the false lanes are zeroed and here we're trying to track that those false
+  // lanes remain zero, or where they change, the differences are masked away
+  // by their user(s).
+  // All MVE loads and stores have to be predicated, so we know that any load
+  // operands, or stored results are equivalent already. Other explicitly
+  // predicated instructions will perform the same operation in the original
+  // loop and the tail-predicated form too. Because of this, we can insert
+  // loads, stores and other predicated instructions into our KnownFalseZeros
+  // set and build from there.
+  SetVector<MachineInstr *> UnknownFalseLanes;
+  SmallPtrSet<MachineInstr *, 4> KnownFalseZeros;
+  for (auto &MI : *MBB) {
+    const MCInstrDesc &MCID = MI.getDesc();
+    uint64_t Flags = MCID.TSFlags;
+    if ((Flags & ARMII::DomainMask) != ARMII::DomainMVE)
+      continue;
+
+    if (isVectorPredicated(&MI)) {
+      KnownFalseZeros.insert(&MI);
+      continue;
+    }
+
+    if (MI.getNumDefs() == 0)
+      continue;
+
+    // Only evaluate instructions which produce a single value.
+    assert((MI.getNumDefs() == 1 && MI.defs().begin()->isReg()) &&
+           "Expected no more than one register def");
+
+    Register DefReg = MI.defs().begin()->getReg();
+    for (auto &MO : MI.operands()) {
+      if (!isRegInClass(MO, QPRs) || !MO.isUse() || MO.getReg() != DefReg)
+        continue;
+
+      // If this instruction overwrites one of its operands, and that register
+      // has known lanes, then this instruction also has known predicated false
+      // lanes.
+      if (auto *OpDef = RDA.getMIOperand(&MI, MO)) {
+        if (KnownFalseZeros.count(OpDef)) {
+          KnownFalseZeros.insert(&MI);
+          break;
+        }
+      }
+    }
+    if (!KnownFalseZeros.count(&MI))
+      UnknownFalseLanes.insert(&MI);
   }
 
+  auto HasKnownUsers = [this](MachineInstr *MI, const MachineOperand &MO,
+                              SmallPtrSetImpl<MachineInstr *> &Knowns) {
+    SmallPtrSet<MachineInstr *, 2> Uses;
+    RDA.getGlobalUses(MI, MO.getReg(), Uses);
+    for (auto *Use : Uses) {
+      if (Use != MI && !Knowns.count(Use))
+        return false;
+    }
+    return true;
+  };
+
+  // Now for all the unknown values, see if they're only consumed by known
+  // instructions. Visit in reverse so that we can start at the values being
+  // stored and then we can work towards the leaves, hopefully adding more
+  // instructions to KnownFalseZeros.
+  for (auto *MI : reverse(UnknownFalseLanes)) {
+    for (auto &MO : MI->operands()) {
+      if (!isRegInClass(MO, QPRs) || !MO.isDef())
+        continue;
+      if (!HasKnownUsers(MI, MO, KnownFalseZeros)) {
+        LLVM_DEBUG(dbgs() << "ARM Loops: Found an unknown def of : "
+                          << TRI.getRegAsmName(MO.getReg()) << " at " << *MI);
+        return false;
+      }
+    }
+    // Any unknown false lanes have been masked away by the user(s).
+    KnownFalseZeros.insert(MI);
+  }
   return true;
 }
 
