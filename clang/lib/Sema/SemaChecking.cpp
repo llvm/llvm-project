@@ -2094,6 +2094,7 @@ bool Sema::CheckARMCoprocessorImmediate(const Expr *CoprocArg, bool WantCDE) {
 
   llvm::APSInt CoprocNoAP;
   bool IsICE = CoprocArg->isIntegerConstantExpr(CoprocNoAP, Context);
+  (void)IsICE;
   assert(IsICE && "Coprocossor immediate is not a constant expression");
   int64_t CoprocNo = CoprocNoAP.getExtValue();
   assert(CoprocNo >= 0 && "Coprocessor immediate must be non-negative");
