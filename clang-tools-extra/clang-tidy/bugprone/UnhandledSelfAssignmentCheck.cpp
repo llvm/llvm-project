@@ -40,9 +40,9 @@ void UnhandledSelfAssignmentCheck::registerMatchers(MatchFinder *Finder) {
 
   // Self-check: Code compares something with 'this' pointer. We don't check
   // whether it is actually the parameter what we compare.
-  const auto HasNoSelfCheck = cxxMethodDecl(unless(hasDescendant(
-      binaryOperator(anyOf(hasOperatorName("=="), hasOperatorName("!=")),
-                     has(ignoringParenCasts(cxxThisExpr()))))));
+  const auto HasNoSelfCheck = cxxMethodDecl(unless(
+      hasDescendant(binaryOperator(hasAnyOperatorName("==", "!="),
+                                   has(ignoringParenCasts(cxxThisExpr()))))));
 
   // Both copy-and-swap and copy-and-move method creates a copy first and
   // assign it to 'this' with swap or move.

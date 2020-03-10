@@ -29,9 +29,7 @@ void MisplacedWideningCastCheck::storeOptions(
 
 void MisplacedWideningCastCheck::registerMatchers(MatchFinder *Finder) {
   const auto Calc =
-      expr(anyOf(binaryOperator(
-                     anyOf(hasOperatorName("+"), hasOperatorName("-"),
-                           hasOperatorName("*"), hasOperatorName("<<"))),
+      expr(anyOf(binaryOperator(hasAnyOperatorName("+", "-", "*", "<<")),
                  unaryOperator(hasOperatorName("~"))),
            hasType(isInteger()))
           .bind("Calc");

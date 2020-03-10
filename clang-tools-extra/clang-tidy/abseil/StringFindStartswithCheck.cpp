@@ -50,7 +50,7 @@ void StringFindStartswithCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       // Match [=!]= with a zero on one side and a string.find on the other.
       binaryOperator(
-          anyOf(hasOperatorName("=="), hasOperatorName("!=")),
+          hasAnyOperatorName("==", "!="),
           hasEitherOperand(ignoringParenImpCasts(ZeroLiteral)),
           hasEitherOperand(ignoringParenImpCasts(StringFind.bind("findexpr"))))
           .bind("expr"),

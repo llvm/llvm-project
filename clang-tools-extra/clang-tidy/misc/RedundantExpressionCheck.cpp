@@ -532,14 +532,12 @@ static bool retrieveSymbolicExpr(const MatchFinder::MatchResult &Result,
 static ast_matchers::internal::Matcher<Expr>
 matchBinOpIntegerConstantExpr(StringRef Id) {
   const auto BinOpCstExpr =
-      expr(
-          anyOf(binaryOperator(anyOf(hasOperatorName("+"), hasOperatorName("|"),
-                                     hasOperatorName("&")),
-                               hasEitherOperand(matchSymbolicExpr(Id)),
-                               hasEitherOperand(matchIntegerConstantExpr(Id))),
-                binaryOperator(hasOperatorName("-"),
-                               hasLHS(matchSymbolicExpr(Id)),
-                               hasRHS(matchIntegerConstantExpr(Id)))))
+      expr(anyOf(binaryOperator(hasAnyOperatorName("+", "|", "&"),
+                                hasEitherOperand(matchSymbolicExpr(Id)),
+                                hasEitherOperand(matchIntegerConstantExpr(Id))),
+                 binaryOperator(hasOperatorName("-"),
+                                hasLHS(matchSymbolicExpr(Id)),
+                                hasRHS(matchIntegerConstantExpr(Id)))))
           .bind(Id);
   return ignoringParenImpCasts(BinOpCstExpr);
 }
@@ -594,10 +592,7 @@ matchRelationalIntegerConstantExpr(StringRef Id) {
 
   const auto OverloadedOperatorExpr =
       cxxOperatorCallExpr(
-          anyOf(hasOverloadedOperatorName("=="),
-                hasOverloadedOperatorName("!="), hasOverloadedOperatorName("<"),
-                hasOverloadedOperatorName("<="), hasOverloadedOperatorName(">"),
-                hasOverloadedOperatorName(">=")),
+          hasAnyOverloadedOperatorName("==", "!=", "<", "<=", ">", ">="),
           // Filter noisy false positives.
           unless(isMacro()), unless(isInTemplateInstantiation()))
           .bind(OverloadId);
@@ -833,11 +828,9 @@ void RedundantExpressionCheck::registerMatchers(MatchFinder *Finder) {
 
   // Binary with equivalent operands, like (X != 2 && X != 2).
   Finder->addMatcher(
-      binaryOperator(anyOf(hasOperatorName("-"), hasOperatorName("/"),
-                           hasOperatorName("%"), hasOperatorName("|"),
-                           hasOperatorName("&"), hasOperatorName("^"),
-                           isComparisonOperator(), hasOperatorName("&&"),
-                           hasOperatorName("||"), hasOperatorName("=")),
+      binaryOperator(anyOf(isComparisonOperator(),
+                           hasAnyOperatorName("-", "/", "%", "|", "&", "^",
+                                              "&&", "||", "=")),
                      operandsAreEquivalent(),
                      // Filter noisy false positives.
                      unless(isInTemplateInstantiation()),
@@ -852,9 +845,7 @@ void RedundantExpressionCheck::registerMatchers(MatchFinder *Finder) {
   // Logical or bitwise operator with equivalent nested operands, like (X && Y
   // && X) or (X && (Y && X))
   Finder->addMatcher(
-      binaryOperator(anyOf(hasOperatorName("|"), hasOperatorName("&"),
-                           hasOperatorName("||"), hasOperatorName("&&"),
-                           hasOperatorName("^")),
+      binaryOperator(hasAnyOperatorName("|", "&", "||", "&&", "^"),
                      nestedOperandsAreEquivalent(),
                      // Filter noisy false positives.
                      unless(isInTemplateInstantiation()),
@@ -873,30 +864,20 @@ void RedundantExpressionCheck::registerMatchers(MatchFinder *Finder) {
                      this);
 
   // Overloaded operators with equivalent operands.
-  Finder->addMatcher(
-      cxxOperatorCallExpr(
-          anyOf(
-              hasOverloadedOperatorName("-"), hasOverloadedOperatorName("/"),
-              hasOverloadedOperatorName("%"), hasOverloadedOperatorName("|"),
-              hasOverloadedOperatorName("&"), hasOverloadedOperatorName("^"),
-              hasOverloadedOperatorName("=="), hasOverloadedOperatorName("!="),
-              hasOverloadedOperatorName("<"), hasOverloadedOperatorName("<="),
-              hasOverloadedOperatorName(">"), hasOverloadedOperatorName(">="),
-              hasOverloadedOperatorName("&&"), hasOverloadedOperatorName("||"),
-              hasOverloadedOperatorName("=")),
-          parametersAreEquivalent(),
-          // Filter noisy false positives.
-          unless(isMacro()), unless(isInTemplateInstantiation()))
-          .bind("call"),
-      this);
+  Finder->addMatcher(cxxOperatorCallExpr(
+                         hasAnyOverloadedOperatorName(
+                             "-", "/", "%", "|", "&", "^", "==", "!=", "<",
+                             "<=", ">", ">=", "&&", "||", "="),
+                         parametersAreEquivalent(),
+                         // Filter noisy false positives.
+                         unless(isMacro()), unless(isInTemplateInstantiation()))
+                         .bind("call"),
+                     this);
 
   // Overloaded operators with equivalent operands.
   Finder->addMatcher(
       cxxOperatorCallExpr(
-          anyOf(hasOverloadedOperatorName("|"), hasOverloadedOperatorName("&"),
-                hasOverloadedOperatorName("||"),
-                hasOverloadedOperatorName("&&"),
-                hasOverloadedOperatorName("^")),
+          hasAnyOverloadedOperatorName("|", "&", "||", "&&", "^"),
           nestedParametersAreEquivalent(), argumentCountIs(2),
           // Filter noisy false positives.
           unless(isMacro()), unless(isInTemplateInstantiation()))
@@ -910,9 +891,8 @@ void RedundantExpressionCheck::registerMatchers(MatchFinder *Finder) {
           has(unaryOperator(
                   hasOperatorName("!"),
                   hasUnaryOperand(ignoringParenImpCasts(binaryOperator(
-                      anyOf(hasOperatorName("|"), hasOperatorName("&")),
-                      hasLHS(anyOf(binaryOperator(anyOf(hasOperatorName("|"),
-                                                        hasOperatorName("&"))),
+                      hasAnyOperatorName("|", "&"),
+                      hasLHS(anyOf(binaryOperator(hasAnyOperatorName("|", "&")),
                                    integerLiteral())),
                       hasRHS(integerLiteral())))))
                   .bind("logical-bitwise-confusion"))),
@@ -971,13 +951,13 @@ void RedundantExpressionCheck::registerMatchers(MatchFinder *Finder) {
   // Match expressions like: x < 2 && x > 2.
   const auto ComparisonLeft = matchRelationalIntegerConstantExpr("lhs");
   const auto ComparisonRight = matchRelationalIntegerConstantExpr("rhs");
-  Finder->addMatcher(
-      binaryOperator(anyOf(hasOperatorName("||"), hasOperatorName("&&")),
-                     hasLHS(ComparisonLeft), hasRHS(ComparisonRight),
-                     // Already reported as redundant.
-                     unless(operandsAreEquivalent()))
-          .bind("comparisons-of-symbol-and-const"),
-      this);
+  Finder->addMatcher(binaryOperator(hasAnyOperatorName("||", "&&"),
+                                    hasLHS(ComparisonLeft),
+                                    hasRHS(ComparisonRight),
+                                    // Already reported as redundant.
+                                    unless(operandsAreEquivalent()))
+                         .bind("comparisons-of-symbol-and-const"),
+                     this);
 }
 
 void RedundantExpressionCheck::checkArithmeticExpr(

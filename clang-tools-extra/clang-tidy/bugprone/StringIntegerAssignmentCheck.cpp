@@ -20,8 +20,7 @@ namespace bugprone {
 void StringIntegerAssignmentCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       cxxOperatorCallExpr(
-          anyOf(hasOverloadedOperatorName("="),
-                hasOverloadedOperatorName("+=")),
+          hasAnyOverloadedOperatorName("=", "+="),
           callee(cxxMethodDecl(ofClass(classTemplateSpecializationDecl(
               hasName("::std::basic_string"),
               hasTemplateArgument(0, refersToType(hasCanonicalType(
