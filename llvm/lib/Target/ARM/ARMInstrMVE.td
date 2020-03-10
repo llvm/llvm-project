@@ -3417,6 +3417,7 @@ class MVE_VADDSUBFMA_fp<string iname, string suffix, bit size, bit bit_4,
   let Inst{8} = bit_8;
   let Inst{7} = Qn{3};
   let Inst{4} = bit_4;
+  let validForTailPredication = 1;
 }
 
 def MVE_VFMAf32 : MVE_VADDSUBFMA_fp<"vfma", "f32", 0b0, 0b1, 0b0, 0b0,
