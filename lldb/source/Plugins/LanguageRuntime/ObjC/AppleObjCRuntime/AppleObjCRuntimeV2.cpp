@@ -2479,7 +2479,7 @@ bool AppleObjCRuntimeV2::NonPointerISACache::EvaluateNonPointerISA(
     ObjCISA isa, ObjCISA &ret_isa) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
 
-  LLDB_LOGF(log, "AOCRT::NPI Evalulate(isa = 0x%" PRIx64 ")", (uint64_t)isa);
+  LLDB_LOGF(log, "AOCRT::NPI Evaluate(isa = 0x%" PRIx64 ")", (uint64_t)isa);
 
   if ((isa & ~m_objc_debug_isa_class_mask) == 0)
     return false;
@@ -2560,7 +2560,7 @@ bool AppleObjCRuntimeV2::NonPointerISACache::EvaluateNonPointerISA(
       if (index > m_indexed_isa_cache.size())
         return false;
 
-      LLDB_LOGF(log, "AOCRT::NPI Evalulate(ret_isa = 0x%" PRIx64 ")",
+      LLDB_LOGF(log, "AOCRT::NPI Evaluate(ret_isa = 0x%" PRIx64 ")",
                 (uint64_t)m_indexed_isa_cache[index]);
 
       ret_isa = m_indexed_isa_cache[index];
