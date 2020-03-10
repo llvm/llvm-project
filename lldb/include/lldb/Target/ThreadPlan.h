@@ -369,13 +369,11 @@ public:
   ///
   /// \return
   ///   A  pointer to the thread plan's owning thread.
-  Thread &GetThread() { return m_thread; }
+  Thread &GetThread();
 
-  const Thread &GetThread() const { return m_thread; }
+  Target &GetTarget() { return m_process.GetTarget(); }
 
-  Target &GetTarget() { return m_thread.GetProcess()->GetTarget(); }
-
-  const Target &GetTarget() const { return m_thread.GetProcess()->GetTarget(); }
+  const Target &GetTarget() const { return m_process.GetTarget(); }
 
   /// Print a description of this thread to the stream \a s.
   /// \a thread.
@@ -464,7 +462,7 @@ public:
   // Also sets the plans to private and not master plans.  A plan pushed by 
   // another thread plan is never either of the above.
   void PushPlan(lldb::ThreadPlanSP &thread_plan_sp) {
-    m_thread.PushPlan(thread_plan_sp);
+    GetThread().PushPlan(thread_plan_sp);
     thread_plan_sp->SetPrivate(false);
     thread_plan_sp->SetIsMasterPlan(false);
   }
@@ -497,7 +495,9 @@ public:
   // original stop reason so that stopping and calling a few functions won't
   // lose the history of the run. This call can be implemented to get you back
   // to the real stop info.
-  virtual lldb::StopInfoSP GetRealStopInfo() { return m_thread.GetStopInfo(); }
+  virtual lldb::StopInfoSP GetRealStopInfo() { 
+    return GetThread().GetStopInfo();
+  }
 
   // If the completion of the thread plan stepped out of a function, the return
   // value of the function might have been captured by the thread plan
@@ -560,17 +560,17 @@ protected:
   // This is mostly a formal requirement, it allows us to make the Thread's
   // GetPreviousPlan protected, but only friend ThreadPlan to thread.
 
-  ThreadPlan *GetPreviousPlan() { return m_thread.GetPreviousPlan(this); }
+  ThreadPlan *GetPreviousPlan() { return GetThread().GetPreviousPlan(this); }
 
   // This forwards the private Thread::GetPrivateStopInfo which is generally
   // what ThreadPlan's need to know.
 
   lldb::StopInfoSP GetPrivateStopInfo() {
-    return m_thread.GetPrivateStopInfo();
+    return GetThread().GetPrivateStopInfo();
   }
 
   void SetStopInfo(lldb::StopInfoSP stop_reason_sp) {
-    m_thread.SetStopInfo(stop_reason_sp);
+    GetThread().SetStopInfo(stop_reason_sp);
   }
 
   void CachePlanExplainsStop(bool does_explain) {
@@ -586,7 +586,8 @@ protected:
   bool IsUsuallyUnexplainedStopReason(lldb::StopReason);
 
   Status m_status;
-  Thread &m_thread;
+  Process &m_process;
+  lldb::tid_t m_tid;
   Vote m_stop_vote;
   Vote m_run_vote;
   bool m_takes_iteration_count;
@@ -597,6 +598,7 @@ private:
   // For ThreadPlan only
   static lldb::user_id_t GetNextID();
 
+  Thread *m_thread;
   ThreadPlanKind m_kind;
   std::string m_name;
   std::recursive_mutex m_plan_complete_mutex;

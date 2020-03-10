@@ -21,9 +21,10 @@ using namespace lldb_private;
 // ThreadPlan constructor
 ThreadPlan::ThreadPlan(ThreadPlanKind kind, const char *name, Thread &thread,
                        Vote stop_vote, Vote run_vote)
-    : m_thread(thread), m_stop_vote(stop_vote), m_run_vote(run_vote),
+    : m_process(*thread.GetProcess().get()), m_tid(thread.GetID()), 
+      m_stop_vote(stop_vote), m_run_vote(run_vote),
       m_takes_iteration_count(false), m_could_not_resolve_hw_bp(false),
-      m_kind(kind), m_name(name), m_plan_complete_mutex(),
+      m_kind(kind), m_thread(&thread), m_name(name), m_plan_complete_mutex(),
       m_cached_plan_explains_stop(eLazyBoolCalculate), m_plan_complete(false),
       m_plan_private(false), m_okay_to_discard(true), m_is_master_plan(false),
       m_plan_succeeded(true) {
@@ -32,6 +33,15 @@ ThreadPlan::ThreadPlan(ThreadPlanKind kind, const char *name, Thread &thread,
 
 // Destructor
 ThreadPlan::~ThreadPlan() = default;
+
+Thread &ThreadPlan::GetThread() {
+  if (m_thread)
+    return *m_thread;
+    
+  ThreadSP thread_sp = m_process.GetThreadList().FindThreadByID(m_tid);
+  m_thread = thread_sp.get();
+  return *m_thread;
+}
 
 bool ThreadPlan::PlanExplainsStop(Event *event_ptr) {
   if (m_cached_plan_explains_stop == eLazyBoolCalculate) {
@@ -103,7 +113,7 @@ bool ThreadPlan::WillResume(StateType resume_state, bool current_plan) {
     Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
 
     if (log) {
-      RegisterContext *reg_ctx = m_thread.GetRegisterContext().get();
+      RegisterContext *reg_ctx = GetThread().GetRegisterContext().get();
       assert(reg_ctx);
       addr_t pc = reg_ctx->GetPC();
       addr_t sp = reg_ctx->GetSP();
@@ -113,8 +123,8 @@ bool ThreadPlan::WillResume(StateType resume_state, bool current_plan) {
           "%s Thread #%u (0x%p): tid = 0x%4.4" PRIx64 ", pc = 0x%8.8" PRIx64
           ", sp = 0x%8.8" PRIx64 ", fp = 0x%8.8" PRIx64 ", "
           "plan = '%s', state = %s, stop others = %d",
-          __FUNCTION__, m_thread.GetIndexID(), static_cast<void *>(&m_thread),
-          m_thread.GetID(), static_cast<uint64_t>(pc),
+          __FUNCTION__, GetThread().GetIndexID(), 
+          static_cast<void *>(&GetThread()), m_tid, static_cast<uint64_t>(pc),
           static_cast<uint64_t>(sp), static_cast<uint64_t>(fp), m_name.c_str(),
           StateAsCString(resume_state), StopOthers());
     }
@@ -174,14 +184,13 @@ bool ThreadPlanNull::ValidatePlan(Stream *error) {
   fprintf(stderr,
           "error: %s called on thread that has been destroyed (tid = 0x%" PRIx64
           ", ptid = 0x%" PRIx64 ")",
-          LLVM_PRETTY_FUNCTION, m_thread.GetID(), m_thread.GetProtocolID());
+          LLVM_PRETTY_FUNCTION, m_tid, GetThread().GetProtocolID());
 #else
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_THREAD));
   if (log)
     log->Error("%s called on thread that has been destroyed (tid = 0x%" PRIx64
                ", ptid = 0x%" PRIx64 ")",
-               LLVM_PRETTY_FUNCTION, m_thread.GetID(),
-               m_thread.GetProtocolID());
+               LLVM_PRETTY_FUNCTION, m_tid, GetThread().GetProtocolID());
 #endif
   return true;
 }
@@ -191,14 +200,13 @@ bool ThreadPlanNull::ShouldStop(Event *event_ptr) {
   fprintf(stderr,
           "error: %s called on thread that has been destroyed (tid = 0x%" PRIx64
           ", ptid = 0x%" PRIx64 ")",
-          LLVM_PRETTY_FUNCTION, m_thread.GetID(), m_thread.GetProtocolID());
+          LLVM_PRETTY_FUNCTION, m_tid, GetThread().GetProtocolID());
 #else
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_THREAD));
   if (log)
     log->Error("%s called on thread that has been destroyed (tid = 0x%" PRIx64
                ", ptid = 0x%" PRIx64 ")",
-               LLVM_PRETTY_FUNCTION, m_thread.GetID(),
-               m_thread.GetProtocolID());
+               LLVM_PRETTY_FUNCTION, m_tid, GetThread().GetProtocolID());
 #endif
   return true;
 }
@@ -208,14 +216,13 @@ bool ThreadPlanNull::WillStop() {
   fprintf(stderr,
           "error: %s called on thread that has been destroyed (tid = 0x%" PRIx64
           ", ptid = 0x%" PRIx64 ")",
-          LLVM_PRETTY_FUNCTION, m_thread.GetID(), m_thread.GetProtocolID());
+          LLVM_PRETTY_FUNCTION, m_tid, GetThread().GetProtocolID());
 #else
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_THREAD));
   if (log)
     log->Error("%s called on thread that has been destroyed (tid = 0x%" PRIx64
                ", ptid = 0x%" PRIx64 ")",
-               LLVM_PRETTY_FUNCTION, m_thread.GetID(),
-               m_thread.GetProtocolID());
+               LLVM_PRETTY_FUNCTION, m_tid, GetThread().GetProtocolID());
 #endif
   return true;
 }
@@ -231,8 +238,7 @@ bool ThreadPlanNull::DoPlanExplainsStop(Event *event_ptr) {
   if (log)
     log->Error("%s called on thread that has been destroyed (tid = 0x%" PRIx64
                ", ptid = 0x%" PRIx64 ")",
-               LLVM_PRETTY_FUNCTION, m_thread.GetID(),
-               m_thread.GetProtocolID());
+               LLVM_PRETTY_FUNCTION, m_tid, GetThread().GetProtocolID());
 #endif
   return true;
 }
@@ -244,14 +250,13 @@ bool ThreadPlanNull::MischiefManaged() {
   fprintf(stderr,
           "error: %s called on thread that has been destroyed (tid = 0x%" PRIx64
           ", ptid = 0x%" PRIx64 ")",
-          LLVM_PRETTY_FUNCTION, m_thread.GetID(), m_thread.GetProtocolID());
+          LLVM_PRETTY_FUNCTION, m_tid, GetThread().GetProtocolID());
 #else
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_THREAD));
   if (log)
     log->Error("%s called on thread that has been destroyed (tid = 0x%" PRIx64
                ", ptid = 0x%" PRIx64 ")",
-               LLVM_PRETTY_FUNCTION, m_thread.GetID(),
-               m_thread.GetProtocolID());
+               LLVM_PRETTY_FUNCTION, m_tid, GetThread().GetProtocolID());
 #endif
   return false;
 }
@@ -262,14 +267,13 @@ lldb::StateType ThreadPlanNull::GetPlanRunState() {
   fprintf(stderr,
           "error: %s called on thread that has been destroyed (tid = 0x%" PRIx64
           ", ptid = 0x%" PRIx64 ")",
-          LLVM_PRETTY_FUNCTION, m_thread.GetID(), m_thread.GetProtocolID());
+          LLVM_PRETTY_FUNCTION, m_tid, GetThread().GetProtocolID());
 #else
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_THREAD));
   if (log)
     log->Error("%s called on thread that has been destroyed (tid = 0x%" PRIx64
                ", ptid = 0x%" PRIx64 ")",
-               LLVM_PRETTY_FUNCTION, m_thread.GetID(),
-               m_thread.GetProtocolID());
+               LLVM_PRETTY_FUNCTION, m_tid, GetThread().GetProtocolID());
 #endif
   return eStateRunning;
 }
