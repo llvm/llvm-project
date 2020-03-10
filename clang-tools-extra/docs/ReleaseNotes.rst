@@ -98,7 +98,7 @@ New checks
 
   Finds recursive functions and diagnoses them.
 
-- New :doc:`bugprone-suspicious-includei
+- New :doc:`bugprone-suspicious-include
   <clang-tidy/checks/bugprone-suspicious-include>` check.
 
   Finds includes that appear to be referring to implementation files (which
