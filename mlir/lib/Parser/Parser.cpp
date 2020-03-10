@@ -3068,14 +3068,16 @@ AffineParser::parseAffineMapOfSSAIds(AffineMap &map,
   };
 
   // Parse a multi-dimensional affine expression (a comma-separated list of
-  // 1-d affine expressions); the list cannot be empty. Grammar:
-  // multi-dim-affine-expr ::= `(` affine-expr (`,` affine-expr)* `)
+  // 1-d affine expressions); the list can be empty. Grammar:
+  // multi-dim-affine-expr ::= `(` `)`
+  //                         | `(` affine-expr (`,` affine-expr)* `)`
   if (parseCommaSeparatedListUntil(rightToken, parseElt,
                                    /*allowEmptyList=*/true))
     return failure();
   // Parsed a valid affine map.
   if (exprs.empty())
-    map = AffineMap::get(getContext());
+    map = AffineMap::get(numDimOperands, dimsAndSymbols.size() - numDimOperands,
+                         getContext());
   else
     map = AffineMap::get(numDimOperands, dimsAndSymbols.size() - numDimOperands,
                          exprs);
@@ -3101,13 +3103,14 @@ AffineMap AffineParser::parseAffineMapRange(unsigned numDims,
   };
 
   // Parse a multi-dimensional affine expression (a comma-separated list of
-  // 1-d affine expressions); the list cannot be empty. Grammar:
-  // multi-dim-affine-expr ::= `(` affine-expr (`,` affine-expr)* `)
+  // 1-d affine expressions). Grammar:
+  // multi-dim-affine-expr ::= `(` `)`
+  //                         | `(` affine-expr (`,` affine-expr)* `)`
   if (parseCommaSeparatedListUntil(Token::r_paren, parseElt, true))
     return AffineMap();
 
   if (exprs.empty())
-    return AffineMap::get(getContext());
+    return AffineMap::get(numDims, numSymbols, getContext());
 
   // Parsed a valid affine map.
   return AffineMap::get(numDims, numSymbols, exprs);

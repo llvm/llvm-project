@@ -356,15 +356,9 @@ static LogicalResult verifyGenericOp(GenericOpType op) {
              << idx << " to have " << nLoops
              << " dim(s) to match the number of loops";
 
-    if (m.getNumResults() == 1 && view.getRank() == 0) {
-      auto cst = m.getResult(0).template dyn_cast<AffineConstantExpr>();
-      if (!cst || cst.getValue() != 0)
-        return op.emitOpError("expected indexing_map #")
-               << idx << " to be 0 to match 0-D view: " << view;
-    } else if (m.getNumResults() != view.getRank()) {
+    if (m.getNumResults() != view.getRank())
       return op.emitOpError("expected indexing_map #")
              << idx << " results to match view rank: " << view;
-    }
   }
 
   auto concatMap = concatAffineMaps(indexingMaps);
@@ -886,7 +880,7 @@ AffineMap mlir::linalg::extractOrIdentityMap(Optional<AffineMap> maybeMap,
   if (maybeMap)
     return maybeMap.getValue();
   if (rank == 0)
-    return AffineMap();
+    return AffineMap::get(context);
   return AffineMap::getMultiDimIdentityMap(rank, context);
 }
 

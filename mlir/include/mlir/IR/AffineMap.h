@@ -44,6 +44,11 @@ public:
   /// Returns a zero result affine map with no dimensions or symbols: () -> ().
   static AffineMap get(MLIRContext *context);
 
+  /// Returns a zero result affine map with `dimCount` dimensions and
+  /// `symbolCount` symbols, e.g.: `(...) -> ()`.
+  static AffineMap get(unsigned dimCount, unsigned symbolCount,
+                       MLIRContext *context);
+
   static AffineMap get(unsigned dimCount, unsigned symbolCount,
                        ArrayRef<AffineExpr> results);
 
@@ -275,8 +280,7 @@ inline raw_ostream &operator<<(raw_ostream &os, AffineMap map) {
 namespace llvm {
 
 // AffineExpr hash just like pointers
-template <>
-struct DenseMapInfo<mlir::AffineMap> {
+template <> struct DenseMapInfo<mlir::AffineMap> {
   static mlir::AffineMap getEmptyKey() {
     auto pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
     return mlir::AffineMap(static_cast<mlir::AffineMap::ImplType *>(pointer));

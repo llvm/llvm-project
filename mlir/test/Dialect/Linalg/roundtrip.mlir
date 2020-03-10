@@ -346,7 +346,7 @@ func @indexed_generic_with_tensor_input_and_output(
 // -----
 
 #broadcast_access = [
-  affine_map<(i, j) -> (0)>,
+  affine_map<(i, j) -> ()>,
   affine_map<(i, j) -> (i, j)>
 ]
 
