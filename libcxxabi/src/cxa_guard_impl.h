@@ -195,7 +195,7 @@ public:
 public:
   /// base_address - the address of the original guard object.
   void* const base_address;
-  /// The address of the guord byte at offset 0.
+  /// The address of the guard byte at offset 0.
   uint8_t* const guard_byte_address;
   /// The address of the byte used by the implementation during initialization.
   uint8_t* const init_byte_address;
