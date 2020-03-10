@@ -2,6 +2,7 @@ set(LLVM_OPTIONAL_SOURCES
   CallInterfaces.cpp
   ControlFlowInterfaces.cpp
   InferTypeOpInterface.cpp
+  SideEffects.cpp
   )
 
 add_llvm_library(MLIRCallInterfaces
@@ -42,6 +43,20 @@ add_dependencies(MLIRInferTypeOpInterface
   MLIRInferTypeOpInterfaceIncGen
   )
 target_link_libraries(MLIRInferTypeOpInterface
+  PUBLIC
+  MLIRIR
+  )
+
+add_llvm_library(MLIRSideEffects
+  SideEffects.cpp
+
+  ADDITIONAL_HEADER_DIRS
+  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Interfaces
+  )
+add_dependencies(MLIRSideEffects
+  MLIRSideEffectOpInterfacesIncGen
+  )
+target_link_libraries(MLIRSideEffects
   PUBLIC
   MLIRIR
   )

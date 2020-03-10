@@ -28,6 +28,7 @@ target_link_libraries(MLIRSPIRV
   MLIRControlFlowInterfaces
   MLIRIR
   MLIRParser
+  MLIRSideEffects
   MLIRSupport
   MLIRTransforms
   )

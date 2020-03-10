@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_IR_SIDEEFFECTS
-#define MLIR_IR_SIDEEFFECTS
+#ifndef MLIR_INTERFACES_SIDEEFFECTS
+#define MLIR_INTERFACES_SIDEEFFECTS
 
 include "mlir/IR/OpBase.td"
 
@@ -188,4 +188,4 @@ class MemWrite<string resourceName>
   : MemoryEffect<"MemoryEffects::Write", resourceName>;
 def MemWrite : MemWrite<"">;
 
-#endif // MLIR_IR_SIDEEFFECTS
+#endif // MLIR_INTERFACES_SIDEEFFECTS
