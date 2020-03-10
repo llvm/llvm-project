@@ -2,7 +2,7 @@
 // RUN: FileCheck --check-prefixes=CHECK,ALL %s
 
 // RUN: not llvm-mc -triple aarch64-none-linux-gnu -show-encoding %s -o - > %t.1 2>%t.2
-// RUN: FileCheck --check-prefixes=ALL %s < %t.1
+// RUN: FileCheck --check-prefixes=NO83,ALL %s < %t.1
 // RUN: FileCheck --check-prefix=CHECK-REQ %s < %t.2
 
 // ALL: .text
@@ -98,56 +98,43 @@
 // ALL-EMPTY:
   paciasp
 // CHECK-NEXT: paciasp        // encoding: [0x3f,0x23,0x03,0xd5]
-// CHECK-REQ: error: instruction requires: pa
-// CHECK-REQ-NEXT: paciasp
+// NO83-NEXT: hint #25        // encoding: [0x3f,0x23,0x03,0xd5]
   autiasp
 // CHECK-NEXT: autiasp        // encoding: [0xbf,0x23,0x03,0xd5]
-// CHECK-REQ: error: instruction requires: pa
-// CHECK-REQ-NEXT: autiasp
+// NO83-NEXT: hint #29        // encoding: [0xbf,0x23,0x03,0xd5]
   paciaz
 // CHECK-NEXT: paciaz         // encoding: [0x1f,0x23,0x03,0xd5]
-// CHECK-REQ: error: instruction requires: pa
-// CHECK-REQ-NEXT: paciaz
+// NO83-NEXT: hint #24        // encoding: [0x1f,0x23,0x03,0xd5]
   autiaz
 // CHECK-NEXT: autiaz         // encoding: [0x9f,0x23,0x03,0xd5]
-// CHECK-REQ: error: instruction requires: pa
-// CHECK-REQ-NEXT: autiaz
+// NO83-NEXT: hint #28        // encoding: [0x9f,0x23,0x03,0xd5]
   pacia1716
 // CHECK-NEXT: pacia1716      // encoding: [0x1f,0x21,0x03,0xd5]
-// CHECK-REQ: error: instruction requires: pa
-// CHECK-REQ-NEXT: pacia1716
+// NO83-NEXT: hint #8         // encoding: [0x1f,0x21,0x03,0xd5]
   autia1716
 // CHECK-NEXT: autia1716      // encoding: [0x9f,0x21,0x03,0xd5]
-// CHECK-REQ: error: instruction requires: pa
-// CHECK-REQ-NEXT: autia1716
+// NO83-NEXT: hint #12        // encoding: [0x9f,0x21,0x03,0xd5]
   pacibsp
 // CHECK-NEXT: pacibsp        // encoding: [0x7f,0x23,0x03,0xd5]
-// CHECK-REQ: error: instruction requires: pa
-// CHECK-REQ-NEXT: pacibsp
+// NO83-NEXT: hint #27        // encoding: [0x7f,0x23,0x03,0xd5]
   autibsp
 // CHECK-NEXT: autibsp        // encoding: [0xff,0x23,0x03,0xd5]
-// CHECK-REQ: error: instruction requires: pa
-// CHECK-REQ-NEXT: autibsp
+// NO83-NEXT: hint #31        // encoding: [0xff,0x23,0x03,0xd5]
   pacibz
 // CHECK-NEXT: pacibz         // encoding: [0x5f,0x23,0x03,0xd5]
-// CHECK-REQ: error: instruction requires: pa
-// CHECK-REQ-NEXT: pacibz
+// NO83-NEXT: hint #26        // encoding: [0x5f,0x23,0x03,0xd5]
   autibz
 // CHECK-NEXT: autibz         // encoding: [0xdf,0x23,0x03,0xd5]
-// CHECK-REQ: error: instruction requires: pa
-// CHECK-REQ-NEXT: autibz
+// NO83-NEXT: hint #30        // encoding: [0xdf,0x23,0x03,0xd5]
   pacib1716
 // CHECK-NEXT: pacib1716      // encoding: [0x5f,0x21,0x03,0xd5]
-// CHECK-REQ: error: instruction requires: pa
-// CHECK-REQ-NEXT: pacib1716
+// NO83-NEXT: hint #10        // encoding: [0x5f,0x21,0x03,0xd5]
   autib1716
 // CHECK-NEXT: autib1716      // encoding: [0xdf,0x21,0x03,0xd5]
-// CHECK-REQ: error: instruction requires: pa
-// CHECK-REQ-NEXT: autib1716
+// NO83-NEXT: hint #14        // encoding: [0xdf,0x21,0x03,0xd5]
   xpaclri
 // CHECK-NEXT: xpaclri        // encoding: [0xff,0x20,0x03,0xd5]
-// CHECK-REQ: error: instruction requires: pa
-// CHECK-REQ-NEXT: xpaclri
+// NO83-NEXT: hint #7         // encoding: [0xff,0x20,0x03,0xd5]
 
 // ALL-EMPTY:
   pacia x0, x1

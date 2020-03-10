@@ -915,10 +915,28 @@ let Uses = [LR], Defs = [LR], CRm = 0b0000 in {
   def XPACLRI   : SystemNoOperands<0b111, "hint\t#7">;
 }
 
+// In order to be able to write readable assembly, LLVM should accept assembly
+// inputs that use pointer authentication mnemonics, even with PA disabled.
+// However, in order to be compatible with other assemblers (e.g. GAS), LLVM
+// should not emit these mnemonics unless PA is enabled.
+def : InstAlias<"paciaz", (PACIAZ), 0>;
+def : InstAlias<"pacibz", (PACIBZ), 0>;
+def : InstAlias<"autiaz", (AUTIAZ), 0>;
+def : InstAlias<"autibz", (AUTIBZ), 0>;
+def : InstAlias<"paciasp", (PACIASP), 0>;
+def : InstAlias<"pacibsp", (PACIBSP), 0>;
+def : InstAlias<"autiasp", (AUTIASP), 0>;
+def : InstAlias<"autibsp", (AUTIBSP), 0>;
+def : InstAlias<"pacia1716", (PACIA1716), 0>;
+def : InstAlias<"pacib1716", (PACIB1716), 0>;
+def : InstAlias<"autia1716", (AUTIA1716), 0>;
+def : InstAlias<"autib1716", (AUTIB1716), 0>;
+def : InstAlias<"xpaclri", (XPACLRI), 0>;
+
 // These pointer authentication instructions require armv8.3a
 let Predicates = [HasPA] in {
 
-  // When compiling with PA, there is a better mnemonic for these instructions.
+  // When PA is enabled, a better mnemonic should be emitted.
   def : InstAlias<"paciaz", (PACIAZ), 1>;
   def : InstAlias<"pacibz", (PACIBZ), 1>;
   def : InstAlias<"autiaz", (AUTIAZ), 1>;
