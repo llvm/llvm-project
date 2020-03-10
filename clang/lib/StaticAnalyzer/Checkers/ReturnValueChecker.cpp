@@ -99,7 +99,7 @@ void ReturnValueChecker::checkPostCall(const CallEvent &Call,
 
   std::string Name = getName(Call);
   const NoteTag *CallTag = C.getNoteTag(
-      [Name, ExpectedValue](BugReport &) -> std::string {
+      [Name, ExpectedValue](PathSensitiveBugReport &) -> std::string {
         SmallString<128> Msg;
         llvm::raw_svector_ostream Out(Msg);
 

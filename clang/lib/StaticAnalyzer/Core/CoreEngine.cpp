@@ -221,7 +221,7 @@ void CoreEngine::HandleBlockEdge(const BlockEdge &L, ExplodedNode *Pred) {
   if (L.getSrc()->getTerminator().isVirtualBaseBranch() &&
       L.getDst() == *L.getSrc()->succ_begin()) {
     ProgramPoint P = L.withTag(getNoteTags().makeNoteTag(
-        [](BugReporterContext &, BugReport &) -> std::string {
+        [](BugReporterContext &, PathSensitiveBugReport &) -> std::string {
           // TODO: Just call out the name of the most derived class
           // when we know it.
           return "Virtual base initialization skipped because "
