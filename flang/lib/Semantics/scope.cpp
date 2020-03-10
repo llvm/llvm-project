@@ -91,6 +91,25 @@ Symbol *Scope::FindComponent(SourceName name) const {
   }
 }
 
+std::optional<SourceName> Scope::GetName() const {
+  if (const auto *sym{GetSymbol()}) {
+    return sym->name();
+  } else {
+    return std::nullopt;
+  }
+}
+
+bool Scope::Contains(const Scope &that) const {
+  for (const Scope *scope{&that};; scope = &scope->parent()) {
+    if (*scope == *this) {
+      return true;
+    }
+    if (scope->IsGlobal()) {
+      return false;
+    }
+  }
+}
+
 const std::list<EquivalenceSet> &Scope::equivalenceSets() const {
   return equivalenceSets_;
 }
@@ -244,8 +263,7 @@ Scope *Scope::FindScope(parser::CharBlock source) {
 }
 
 void Scope::AddSourceRange(const parser::CharBlock &source) {
-  for (auto *scope = this; !scope->IsGlobal();
-       scope = &scope->parent()) {
+  for (auto *scope = this; !scope->IsGlobal(); scope = &scope->parent()) {
     scope->sourceRange_.ExtendToCover(source);
   }
 }

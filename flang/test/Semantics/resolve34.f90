@@ -98,11 +98,16 @@ module m8
     integer :: i1
     integer, private :: i2
   end type
+  type(t) :: y
+  integer :: a(1)
 contains
   subroutine s0
     type(t) :: x
     x = t(i1=2, i2=5)  !OK
   end
+  subroutine s1
+    a = [y%i2]  !OK
+  end subroutine
 end
 subroutine s8
   use m8
@@ -111,6 +116,8 @@ subroutine s8
   x = t(2, 5)
   !ERROR: PRIVATE component 'i2' is only accessible within module 'm8'
   x = t(i1=2, i2=5)
+  !ERROR: PRIVATE component 'i2' is only accessible within module 'm8'
+  a = [y%i2]
 end
 
 ! 7.5.4.8(2)

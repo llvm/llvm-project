@@ -960,7 +960,7 @@ std::optional<parser::MessageFormattedText> CheckAccessibleComponent(
   CHECK(symbol.owner().IsDerivedType());  // symbol must be a component
   if (symbol.attrs().test(Attr::PRIVATE)) {
     if (const Scope * moduleScope{FindModuleContaining(symbol.owner())}) {
-      if (!moduleScope->sourceRange().Contains(scope.sourceRange())) {
+      if (!moduleScope->Contains(scope)) {
         return parser::MessageFormattedText{
             "PRIVATE component '%s' is only accessible within module '%s'"_err_en_US,
             symbol.name(), moduleScope->GetName().value()};
