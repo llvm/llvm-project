@@ -726,10 +726,8 @@ define void @dyn_insertelement_v8f64_const_s_v_v(double %val, i32 %idx) {
 ; GPRIDX:       ; %bb.0: ; %entry
 ; GPRIDX-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GPRIDX-NEXT:    s_mov_b32 s18, 0
+; GPRIDX-NEXT:    s_mov_b64 s[4:5], 1.0
 ; GPRIDX-NEXT:    s_mov_b32 s19, 0x40200000
-; GPRIDX-NEXT:    buffer_store_dword v32, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
-; GPRIDX-NEXT:    buffer_store_dword v33, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
-; GPRIDX-NEXT:    buffer_store_dword v34, off, s[0:3], s32 ; 4-byte Folded Spill
 ; GPRIDX-NEXT:    s_mov_b32 s17, 0x401c0000
 ; GPRIDX-NEXT:    s_mov_b32 s16, s18
 ; GPRIDX-NEXT:    s_mov_b32 s15, 0x40180000
@@ -740,59 +738,61 @@ define void @dyn_insertelement_v8f64_const_s_v_v(double %val, i32 %idx) {
 ; GPRIDX-NEXT:    s_mov_b32 s9, 0x40080000
 ; GPRIDX-NEXT:    s_mov_b32 s8, s18
 ; GPRIDX-NEXT:    s_mov_b64 s[6:7], 2.0
-; GPRIDX-NEXT:    s_mov_b64 s[4:5], 1.0
-; GPRIDX-NEXT:    v_mov_b32_e32 v34, s19
-; GPRIDX-NEXT:    v_mov_b32_e32 v33, s18
-; GPRIDX-NEXT:    v_mov_b32_e32 v32, s17
-; GPRIDX-NEXT:    v_mov_b32_e32 v31, s16
-; GPRIDX-NEXT:    v_mov_b32_e32 v30, s15
-; GPRIDX-NEXT:    v_mov_b32_e32 v29, s14
-; GPRIDX-NEXT:    v_mov_b32_e32 v28, s13
-; GPRIDX-NEXT:    v_mov_b32_e32 v27, s12
-; GPRIDX-NEXT:    v_mov_b32_e32 v26, s11
-; GPRIDX-NEXT:    v_mov_b32_e32 v25, s10
-; GPRIDX-NEXT:    v_mov_b32_e32 v24, s9
-; GPRIDX-NEXT:    v_mov_b32_e32 v23, s8
-; GPRIDX-NEXT:    v_mov_b32_e32 v22, s7
-; GPRIDX-NEXT:    v_mov_b32_e32 v21, s6
-; GPRIDX-NEXT:    v_mov_b32_e32 v20, s5
-; GPRIDX-NEXT:    v_mov_b32_e32 v19, s4
+; GPRIDX-NEXT:    v_mov_b32_e32 v3, s4
+; GPRIDX-NEXT:    v_mov_b32_e32 v4, s5
+; GPRIDX-NEXT:    v_mov_b32_e32 v5, s6
+; GPRIDX-NEXT:    v_mov_b32_e32 v6, s7
+; GPRIDX-NEXT:    v_mov_b32_e32 v7, s8
+; GPRIDX-NEXT:    v_mov_b32_e32 v8, s9
+; GPRIDX-NEXT:    v_mov_b32_e32 v9, s10
+; GPRIDX-NEXT:    v_mov_b32_e32 v10, s11
+; GPRIDX-NEXT:    v_mov_b32_e32 v11, s12
+; GPRIDX-NEXT:    v_mov_b32_e32 v12, s13
+; GPRIDX-NEXT:    v_mov_b32_e32 v13, s14
+; GPRIDX-NEXT:    v_mov_b32_e32 v14, s15
+; GPRIDX-NEXT:    v_mov_b32_e32 v15, s16
+; GPRIDX-NEXT:    v_mov_b32_e32 v16, s17
+; GPRIDX-NEXT:    v_mov_b32_e32 v17, s18
+; GPRIDX-NEXT:    v_mov_b32_e32 v18, s19
 ; GPRIDX-NEXT:    s_mov_b64 s[4:5], exec
+; GPRIDX-NEXT:    buffer_store_dword v32, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
+; GPRIDX-NEXT:    buffer_store_dword v33, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
+; GPRIDX-NEXT:    buffer_store_dword v34, off, s[0:3], s32 ; 4-byte Folded Spill
 ; GPRIDX-NEXT:  BB13_1: ; =>This Inner Loop Header: Depth=1
 ; GPRIDX-NEXT:    v_readfirstlane_b32 s6, v2
 ; GPRIDX-NEXT:    s_lshl_b32 s7, s6, 1
 ; GPRIDX-NEXT:    v_cmp_eq_u32_e32 vcc, s6, v2
 ; GPRIDX-NEXT:    s_set_gpr_idx_on s7, gpr_idx(DST)
-; GPRIDX-NEXT:    v_mov_b32_e32 v3, v19
-; GPRIDX-NEXT:    v_mov_b32_e32 v4, v20
-; GPRIDX-NEXT:    v_mov_b32_e32 v5, v21
-; GPRIDX-NEXT:    v_mov_b32_e32 v6, v22
-; GPRIDX-NEXT:    v_mov_b32_e32 v7, v23
-; GPRIDX-NEXT:    v_mov_b32_e32 v8, v24
-; GPRIDX-NEXT:    v_mov_b32_e32 v9, v25
-; GPRIDX-NEXT:    v_mov_b32_e32 v10, v26
-; GPRIDX-NEXT:    v_mov_b32_e32 v11, v27
-; GPRIDX-NEXT:    v_mov_b32_e32 v12, v28
-; GPRIDX-NEXT:    v_mov_b32_e32 v13, v29
-; GPRIDX-NEXT:    v_mov_b32_e32 v14, v30
-; GPRIDX-NEXT:    v_mov_b32_e32 v15, v31
-; GPRIDX-NEXT:    v_mov_b32_e32 v16, v32
-; GPRIDX-NEXT:    v_mov_b32_e32 v17, v33
-; GPRIDX-NEXT:    v_mov_b32_e32 v18, v34
-; GPRIDX-NEXT:    v_mov_b32_e32 v3, v0
+; GPRIDX-NEXT:    v_mov_b32_e32 v34, v18
+; GPRIDX-NEXT:    v_mov_b32_e32 v33, v17
+; GPRIDX-NEXT:    v_mov_b32_e32 v32, v16
+; GPRIDX-NEXT:    v_mov_b32_e32 v31, v15
+; GPRIDX-NEXT:    v_mov_b32_e32 v30, v14
+; GPRIDX-NEXT:    v_mov_b32_e32 v29, v13
+; GPRIDX-NEXT:    v_mov_b32_e32 v28, v12
+; GPRIDX-NEXT:    v_mov_b32_e32 v27, v11
+; GPRIDX-NEXT:    v_mov_b32_e32 v26, v10
+; GPRIDX-NEXT:    v_mov_b32_e32 v25, v9
+; GPRIDX-NEXT:    v_mov_b32_e32 v24, v8
+; GPRIDX-NEXT:    v_mov_b32_e32 v23, v7
+; GPRIDX-NEXT:    v_mov_b32_e32 v22, v6
+; GPRIDX-NEXT:    v_mov_b32_e32 v21, v5
+; GPRIDX-NEXT:    v_mov_b32_e32 v20, v4
+; GPRIDX-NEXT:    v_mov_b32_e32 v19, v3
+; GPRIDX-NEXT:    v_mov_b32_e32 v19, v0
 ; GPRIDX-NEXT:    s_set_gpr_idx_off
 ; GPRIDX-NEXT:    s_set_gpr_idx_on s7, gpr_idx(DST)
-; GPRIDX-NEXT:    v_mov_b32_e32 v4, v1
+; GPRIDX-NEXT:    v_mov_b32_e32 v20, v1
 ; GPRIDX-NEXT:    s_set_gpr_idx_off
 ; GPRIDX-NEXT:    s_and_saveexec_b64 vcc, vcc
 ; GPRIDX-NEXT:    s_xor_b64 exec, exec, vcc
 ; GPRIDX-NEXT:    s_cbranch_execnz BB13_1
 ; GPRIDX-NEXT:  ; %bb.2:
 ; GPRIDX-NEXT:    s_mov_b64 exec, s[4:5]
-; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[3:6], off
-; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[7:10], off
-; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[11:14], off
-; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[15:18], off
+; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[19:22], off
+; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[23:26], off
+; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[27:30], off
+; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[31:34], off
 ; GPRIDX-NEXT:    buffer_load_dword v34, off, s[0:3], s32 ; 4-byte Folded Reload
 ; GPRIDX-NEXT:    buffer_load_dword v33, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; GPRIDX-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:8 ; 4-byte Folded Reload
@@ -906,58 +906,58 @@ define amdgpu_ps void @dyn_insertelement_v8f64_s_s_v(<8 x double> inreg %vec, do
 ; GPRIDX-NEXT:    s_mov_b32 s10, s12
 ; GPRIDX-NEXT:    s_mov_b32 s12, s14
 ; GPRIDX-NEXT:    s_mov_b32 s14, s16
-; GPRIDX-NEXT:    v_mov_b32_e32 v32, s15
-; GPRIDX-NEXT:    v_mov_b32_e32 v31, s14
-; GPRIDX-NEXT:    v_mov_b32_e32 v30, s13
-; GPRIDX-NEXT:    v_mov_b32_e32 v29, s12
-; GPRIDX-NEXT:    v_mov_b32_e32 v28, s11
-; GPRIDX-NEXT:    v_mov_b32_e32 v27, s10
-; GPRIDX-NEXT:    v_mov_b32_e32 v26, s9
-; GPRIDX-NEXT:    v_mov_b32_e32 v25, s8
-; GPRIDX-NEXT:    v_mov_b32_e32 v24, s7
-; GPRIDX-NEXT:    v_mov_b32_e32 v23, s6
-; GPRIDX-NEXT:    v_mov_b32_e32 v22, s5
-; GPRIDX-NEXT:    v_mov_b32_e32 v21, s4
-; GPRIDX-NEXT:    v_mov_b32_e32 v20, s3
-; GPRIDX-NEXT:    v_mov_b32_e32 v19, s2
-; GPRIDX-NEXT:    v_mov_b32_e32 v18, s1
-; GPRIDX-NEXT:    v_mov_b32_e32 v17, s0
+; GPRIDX-NEXT:    v_mov_b32_e32 v16, s15
+; GPRIDX-NEXT:    v_mov_b32_e32 v15, s14
+; GPRIDX-NEXT:    v_mov_b32_e32 v14, s13
+; GPRIDX-NEXT:    v_mov_b32_e32 v13, s12
+; GPRIDX-NEXT:    v_mov_b32_e32 v12, s11
+; GPRIDX-NEXT:    v_mov_b32_e32 v11, s10
+; GPRIDX-NEXT:    v_mov_b32_e32 v10, s9
+; GPRIDX-NEXT:    v_mov_b32_e32 v9, s8
+; GPRIDX-NEXT:    v_mov_b32_e32 v8, s7
+; GPRIDX-NEXT:    v_mov_b32_e32 v7, s6
+; GPRIDX-NEXT:    v_mov_b32_e32 v6, s5
+; GPRIDX-NEXT:    v_mov_b32_e32 v5, s4
+; GPRIDX-NEXT:    v_mov_b32_e32 v4, s3
+; GPRIDX-NEXT:    v_mov_b32_e32 v3, s2
+; GPRIDX-NEXT:    v_mov_b32_e32 v2, s1
+; GPRIDX-NEXT:    v_mov_b32_e32 v1, s0
 ; GPRIDX-NEXT:    s_mov_b64 s[0:1], exec
 ; GPRIDX-NEXT:  BB14_1: ; =>This Inner Loop Header: Depth=1
 ; GPRIDX-NEXT:    v_readfirstlane_b32 s2, v0
 ; GPRIDX-NEXT:    s_lshl_b32 s3, s2, 1
 ; GPRIDX-NEXT:    v_cmp_eq_u32_e32 vcc, s2, v0
 ; GPRIDX-NEXT:    s_set_gpr_idx_on s3, gpr_idx(DST)
-; GPRIDX-NEXT:    v_mov_b32_e32 v1, v17
-; GPRIDX-NEXT:    v_mov_b32_e32 v2, v18
-; GPRIDX-NEXT:    v_mov_b32_e32 v3, v19
-; GPRIDX-NEXT:    v_mov_b32_e32 v4, v20
-; GPRIDX-NEXT:    v_mov_b32_e32 v5, v21
-; GPRIDX-NEXT:    v_mov_b32_e32 v6, v22
-; GPRIDX-NEXT:    v_mov_b32_e32 v7, v23
-; GPRIDX-NEXT:    v_mov_b32_e32 v8, v24
-; GPRIDX-NEXT:    v_mov_b32_e32 v9, v25
-; GPRIDX-NEXT:    v_mov_b32_e32 v10, v26
-; GPRIDX-NEXT:    v_mov_b32_e32 v11, v27
-; GPRIDX-NEXT:    v_mov_b32_e32 v12, v28
-; GPRIDX-NEXT:    v_mov_b32_e32 v13, v29
-; GPRIDX-NEXT:    v_mov_b32_e32 v14, v30
-; GPRIDX-NEXT:    v_mov_b32_e32 v15, v31
-; GPRIDX-NEXT:    v_mov_b32_e32 v16, v32
-; GPRIDX-NEXT:    v_mov_b32_e32 v1, s18
+; GPRIDX-NEXT:    v_mov_b32_e32 v32, v16
+; GPRIDX-NEXT:    v_mov_b32_e32 v31, v15
+; GPRIDX-NEXT:    v_mov_b32_e32 v30, v14
+; GPRIDX-NEXT:    v_mov_b32_e32 v29, v13
+; GPRIDX-NEXT:    v_mov_b32_e32 v28, v12
+; GPRIDX-NEXT:    v_mov_b32_e32 v27, v11
+; GPRIDX-NEXT:    v_mov_b32_e32 v26, v10
+; GPRIDX-NEXT:    v_mov_b32_e32 v25, v9
+; GPRIDX-NEXT:    v_mov_b32_e32 v24, v8
+; GPRIDX-NEXT:    v_mov_b32_e32 v23, v7
+; GPRIDX-NEXT:    v_mov_b32_e32 v22, v6
+; GPRIDX-NEXT:    v_mov_b32_e32 v21, v5
+; GPRIDX-NEXT:    v_mov_b32_e32 v20, v4
+; GPRIDX-NEXT:    v_mov_b32_e32 v19, v3
+; GPRIDX-NEXT:    v_mov_b32_e32 v18, v2
+; GPRIDX-NEXT:    v_mov_b32_e32 v17, v1
+; GPRIDX-NEXT:    v_mov_b32_e32 v17, s18
 ; GPRIDX-NEXT:    s_set_gpr_idx_off
 ; GPRIDX-NEXT:    s_set_gpr_idx_on s3, gpr_idx(DST)
-; GPRIDX-NEXT:    v_mov_b32_e32 v2, s19
+; GPRIDX-NEXT:    v_mov_b32_e32 v18, s19
 ; GPRIDX-NEXT:    s_set_gpr_idx_off
 ; GPRIDX-NEXT:    s_and_saveexec_b64 vcc, vcc
 ; GPRIDX-NEXT:    s_xor_b64 exec, exec, vcc
 ; GPRIDX-NEXT:    s_cbranch_execnz BB14_1
 ; GPRIDX-NEXT:  ; %bb.2:
 ; GPRIDX-NEXT:    s_mov_b64 exec, s[0:1]
-; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[1:4], off
-; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[5:8], off
-; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[9:12], off
-; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[13:16], off
+; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[17:20], off
+; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[21:24], off
+; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[25:28], off
+; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[29:32], off
 ; GPRIDX-NEXT:    s_endpgm
 ;
 ; MOVREL-LABEL: dyn_insertelement_v8f64_s_s_v:
@@ -1204,58 +1204,58 @@ define amdgpu_ps void @dyn_insertelement_v8f64_s_v_v(<8 x double> inreg %vec, do
 ; GPRIDX-NEXT:    s_mov_b32 s10, s12
 ; GPRIDX-NEXT:    s_mov_b32 s12, s14
 ; GPRIDX-NEXT:    s_mov_b32 s14, s16
-; GPRIDX-NEXT:    v_mov_b32_e32 v34, s15
-; GPRIDX-NEXT:    v_mov_b32_e32 v33, s14
-; GPRIDX-NEXT:    v_mov_b32_e32 v32, s13
-; GPRIDX-NEXT:    v_mov_b32_e32 v31, s12
-; GPRIDX-NEXT:    v_mov_b32_e32 v30, s11
-; GPRIDX-NEXT:    v_mov_b32_e32 v29, s10
-; GPRIDX-NEXT:    v_mov_b32_e32 v28, s9
-; GPRIDX-NEXT:    v_mov_b32_e32 v27, s8
-; GPRIDX-NEXT:    v_mov_b32_e32 v26, s7
-; GPRIDX-NEXT:    v_mov_b32_e32 v25, s6
-; GPRIDX-NEXT:    v_mov_b32_e32 v24, s5
-; GPRIDX-NEXT:    v_mov_b32_e32 v23, s4
-; GPRIDX-NEXT:    v_mov_b32_e32 v22, s3
-; GPRIDX-NEXT:    v_mov_b32_e32 v21, s2
-; GPRIDX-NEXT:    v_mov_b32_e32 v20, s1
-; GPRIDX-NEXT:    v_mov_b32_e32 v19, s0
+; GPRIDX-NEXT:    v_mov_b32_e32 v18, s15
+; GPRIDX-NEXT:    v_mov_b32_e32 v17, s14
+; GPRIDX-NEXT:    v_mov_b32_e32 v16, s13
+; GPRIDX-NEXT:    v_mov_b32_e32 v15, s12
+; GPRIDX-NEXT:    v_mov_b32_e32 v14, s11
+; GPRIDX-NEXT:    v_mov_b32_e32 v13, s10
+; GPRIDX-NEXT:    v_mov_b32_e32 v12, s9
+; GPRIDX-NEXT:    v_mov_b32_e32 v11, s8
+; GPRIDX-NEXT:    v_mov_b32_e32 v10, s7
+; GPRIDX-NEXT:    v_mov_b32_e32 v9, s6
+; GPRIDX-NEXT:    v_mov_b32_e32 v8, s5
+; GPRIDX-NEXT:    v_mov_b32_e32 v7, s4
+; GPRIDX-NEXT:    v_mov_b32_e32 v6, s3
+; GPRIDX-NEXT:    v_mov_b32_e32 v5, s2
+; GPRIDX-NEXT:    v_mov_b32_e32 v4, s1
+; GPRIDX-NEXT:    v_mov_b32_e32 v3, s0
 ; GPRIDX-NEXT:    s_mov_b64 s[0:1], exec
 ; GPRIDX-NEXT:  BB17_1: ; =>This Inner Loop Header: Depth=1
 ; GPRIDX-NEXT:    v_readfirstlane_b32 s2, v2
 ; GPRIDX-NEXT:    s_lshl_b32 s3, s2, 1
 ; GPRIDX-NEXT:    v_cmp_eq_u32_e32 vcc, s2, v2
 ; GPRIDX-NEXT:    s_set_gpr_idx_on s3, gpr_idx(DST)
-; GPRIDX-NEXT:    v_mov_b32_e32 v3, v19
-; GPRIDX-NEXT:    v_mov_b32_e32 v4, v20
-; GPRIDX-NEXT:    v_mov_b32_e32 v5, v21
-; GPRIDX-NEXT:    v_mov_b32_e32 v6, v22
-; GPRIDX-NEXT:    v_mov_b32_e32 v7, v23
-; GPRIDX-NEXT:    v_mov_b32_e32 v8, v24
-; GPRIDX-NEXT:    v_mov_b32_e32 v9, v25
-; GPRIDX-NEXT:    v_mov_b32_e32 v10, v26
-; GPRIDX-NEXT:    v_mov_b32_e32 v11, v27
-; GPRIDX-NEXT:    v_mov_b32_e32 v12, v28
-; GPRIDX-NEXT:    v_mov_b32_e32 v13, v29
-; GPRIDX-NEXT:    v_mov_b32_e32 v14, v30
-; GPRIDX-NEXT:    v_mov_b32_e32 v15, v31
-; GPRIDX-NEXT:    v_mov_b32_e32 v16, v32
-; GPRIDX-NEXT:    v_mov_b32_e32 v17, v33
-; GPRIDX-NEXT:    v_mov_b32_e32 v18, v34
-; GPRIDX-NEXT:    v_mov_b32_e32 v3, v0
+; GPRIDX-NEXT:    v_mov_b32_e32 v34, v18
+; GPRIDX-NEXT:    v_mov_b32_e32 v33, v17
+; GPRIDX-NEXT:    v_mov_b32_e32 v32, v16
+; GPRIDX-NEXT:    v_mov_b32_e32 v31, v15
+; GPRIDX-NEXT:    v_mov_b32_e32 v30, v14
+; GPRIDX-NEXT:    v_mov_b32_e32 v29, v13
+; GPRIDX-NEXT:    v_mov_b32_e32 v28, v12
+; GPRIDX-NEXT:    v_mov_b32_e32 v27, v11
+; GPRIDX-NEXT:    v_mov_b32_e32 v26, v10
+; GPRIDX-NEXT:    v_mov_b32_e32 v25, v9
+; GPRIDX-NEXT:    v_mov_b32_e32 v24, v8
+; GPRIDX-NEXT:    v_mov_b32_e32 v23, v7
+; GPRIDX-NEXT:    v_mov_b32_e32 v22, v6
+; GPRIDX-NEXT:    v_mov_b32_e32 v21, v5
+; GPRIDX-NEXT:    v_mov_b32_e32 v20, v4
+; GPRIDX-NEXT:    v_mov_b32_e32 v19, v3
+; GPRIDX-NEXT:    v_mov_b32_e32 v19, v0
 ; GPRIDX-NEXT:    s_set_gpr_idx_off
 ; GPRIDX-NEXT:    s_set_gpr_idx_on s3, gpr_idx(DST)
-; GPRIDX-NEXT:    v_mov_b32_e32 v4, v1
+; GPRIDX-NEXT:    v_mov_b32_e32 v20, v1
 ; GPRIDX-NEXT:    s_set_gpr_idx_off
 ; GPRIDX-NEXT:    s_and_saveexec_b64 vcc, vcc
 ; GPRIDX-NEXT:    s_xor_b64 exec, exec, vcc
 ; GPRIDX-NEXT:    s_cbranch_execnz BB17_1
 ; GPRIDX-NEXT:  ; %bb.2:
 ; GPRIDX-NEXT:    s_mov_b64 exec, s[0:1]
-; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[3:6], off
-; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[7:10], off
-; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[11:14], off
-; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[15:18], off
+; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[19:22], off
+; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[23:26], off
+; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[27:30], off
+; GPRIDX-NEXT:    global_store_dwordx4 v[0:1], v[31:34], off
 ; GPRIDX-NEXT:    s_endpgm
 ;
 ; MOVREL-LABEL: dyn_insertelement_v8f64_s_v_v:

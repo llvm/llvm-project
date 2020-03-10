@@ -343,7 +343,7 @@ define amdgpu_ps <4 x float> @test_remove_waterfall_multi_rl(<8 x i32> addrspace
 
 ; GCN-LABEL: {{^}}test_keep_waterfall_multi_rl:
 ; GCN: {{^}}BB9_1:
-; GCN: v_readfirstlane_b32 s[[FIRSTVAL:[0-9]+]], v5
+; GCN: v_readfirstlane_b32 s[[FIRSTVAL:[0-9]+]], v0
 ; GCN: s_add_u32 s[[NONUSTART:[0-9]+]], s0, s[[FIRSTVAL]]
 ; GCN: s_addc_u32 s[[NONUEND:[0-9]+]], s1, s{{[0-9]+}}
 ; GCN-DAG: s_load_dwordx8 s{{\[}}[[RSRCSTART:[0-9]+]]:[[RSRCEND:[0-9]+]]{{\]}}, s{{\[}}[[NONUSTART]]:[[NONUEND]]{{\]}}
