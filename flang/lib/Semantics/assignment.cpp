@@ -73,7 +73,7 @@ void AssignmentContext::Analyze(const parser::AssignmentStmt &stmt) {
     }
     if (CheckForPureContext(lhs, rhs, rhsLoc, false)) {
       const Scope &scope{context_.FindScope(lhsLoc)};
-      if (auto whyNot{WhyNotModifiable(lhsLoc, lhs, scope)}) {
+      if (auto whyNot{WhyNotModifiable(lhsLoc, lhs, scope, true)}) {
         if (auto *msg{Say(lhsLoc,
                 "Left-hand side of assignment is not modifiable"_err_en_US)}) {
           msg->Attach(*whyNot);

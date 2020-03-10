@@ -108,3 +108,8 @@ contains
     x%i = [1, 2, 3]
   end
 end
+
+subroutine s7
+  integer :: a(10), v(10)
+  a(v(:)) = 1  ! vector subscript is ok
+end
