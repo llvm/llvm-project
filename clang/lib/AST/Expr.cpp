@@ -4101,53 +4101,6 @@ void ExtVectorElementExpr::getEncodedElementAccess(
   }
 }
 
-StmtExpr::StmtExpr(CompoundStmt *SubStmt, QualType T, SourceLocation LParen,
-                   SourceLocation RParen)
-    : Expr(StmtExprClass, T, VK_RValue, OK_Ordinary, T->isDependentType(),
-           false, false, false),
-      SubStmt(SubStmt), LParenLoc(LParen), RParenLoc(RParen) {
-  llvm::SmallVector<Stmt*, 16> Queue(1, SubStmt);
-  while (!Queue.empty()) {
-    Stmt *S = Queue.pop_back_val();
-    if (!S)
-      continue;
-
-    // If any subexpression is dependent, the statement expression is dependent
-    // in the same way.
-    if (Expr *E = dyn_cast<Expr>(S)) {
-      addDependence(E->getDependence());
-      continue;
-    }
-
-    // FIXME: Need to properly compute whether DeclStmts contain unexpanded
-    // parameter packs.
-    if (DeclStmt *DS = dyn_cast<DeclStmt>(S)) {
-      for (Decl *D : DS->decls()) {
-        // If any contained declaration is in a dependent context, then it
-        // needs to be instantiated, so the statement expression itself is
-        // instantiation-dependent.
-        //
-        // Note that we don't need to worry about the case where the context is
-        // non-dependent but contains dependent entities here (eg, inside a
-        // variable template or alias template): that can only happen at file
-        // scope, where statement expressions are prohibited.
-        if (D->getLexicalDeclContext()->isDependentContext())
-          addDependence(ExprDependence::Instantiation);
-
-        // If any contained variable declaration has a dependent type, we can't
-        // evaluate that declaration.
-        if (auto *VD = dyn_cast<VarDecl>(D))
-          if (VD->getType()->isDependentType())
-            addDependence(ExprDependence::Value);
-      }
-    }
-
-    // Recurse to substatements.
-    // FIXME: Should we skip the unchosen side of 'if constexpr' if known?
-    Queue.insert(Queue.end(), S->child_begin(), S->child_end());
-  }
-}
-
 ShuffleVectorExpr::ShuffleVectorExpr(const ASTContext &C, ArrayRef<Expr*> args,
                                      QualType Type, SourceLocation BLoc,
                                      SourceLocation RP)

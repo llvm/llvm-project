@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++2a %s
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
 
 // PR5908
 template <typename Iterator>
@@ -106,43 +107,4 @@ namespace PR18152 {
     static const int n = {N};
   };
   template struct A<0>;
-}
-
-template<typename T> void stmt_expr_1() {
-  // GCC doesn't check this: it appears to treat statement-expressions as being
-  // value-dependent if they appear in a dependent context, regardless of their
-  // contents.
-  static_assert( ({ false; }), "" ); // expected-error {{failed}}
-}
-void stmt_expr_2() {
-  static_assert( ({ false; }), "" ); // expected-error {{failed}}
-}
-
-namespace PR45083 {
-  struct A { bool x; };
-
-  template<typename> struct B : A {
-    void f() {
-      const int n = ({ if (x) {} 0; });
-    }
-  };
-
-  template void B<int>::f();
-
-  template<typename> void f() {
-    decltype(({})) x; // expected-error {{incomplete type}}
-  }
-  template void f<int>();
-
-  template<typename> auto g() {
-    auto c = [](auto, int) -> decltype(({})) {};
-    using T = decltype(c(0.0, 0));
-    using T = void;
-    return c(0, 0);
-  }
-  using U = decltype(g<int>()); // expected-note {{previous}}
-  using U = float; // expected-error {{different types ('float' vs 'decltype(g<int>())' (aka 'void'))}}
-
-  void h(auto a, decltype(g<char>())*) {} // expected-note {{previous}}
-  void h(auto a, void*) {} // expected-error {{redefinition}}
 }
