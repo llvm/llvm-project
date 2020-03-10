@@ -1216,8 +1216,7 @@ define i32* @test_gep_inbounds_of_gep(i32* %base) {
 
 define i32* @PR45084(i1 %cond) {
 ; CHECK-LABEL: @PR45084(
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], %struct.f* @g0, %struct.f* @g1, !prof !0
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [[STRUCT_F:%.*]], %struct.f* [[SEL]], i64 0, i32 0
+; CHECK-NEXT:    [[GEP:%.*]] = select i1 [[COND:%.*]], i32* getelementptr inbounds (%struct.f, %struct.f* @g0, i64 0, i32 0), i32* getelementptr inbounds (%struct.f, %struct.f* @g1, i64 0, i32 0), !prof !0
 ; CHECK-NEXT:    ret i32* [[GEP]]
 ;
   %sel = select i1 %cond, %struct.f* @g0, %struct.f* @g1, !prof !0
@@ -1229,7 +1228,7 @@ define i32* @PR45084_extra_use(i1 %cond, %struct.f** %p) {
 ; CHECK-LABEL: @PR45084_extra_use(
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], %struct.f* @g0, %struct.f* @g1
 ; CHECK-NEXT:    store %struct.f* [[SEL]], %struct.f** [[P:%.*]], align 8
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [[STRUCT_F:%.*]], %struct.f* [[SEL]], i64 0, i32 0
+; CHECK-NEXT:    [[GEP:%.*]] = select i1 [[COND]], i32* getelementptr inbounds (%struct.f, %struct.f* @g0, i64 0, i32 0), i32* getelementptr inbounds (%struct.f, %struct.f* @g1, i64 0, i32 0)
 ; CHECK-NEXT:    ret i32* [[GEP]]
 ;
   %sel = select i1 %cond, %struct.f* @g0, %struct.f* @g1
