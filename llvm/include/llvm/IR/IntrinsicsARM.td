@@ -1243,4 +1243,11 @@ def int_arm_mve_vqmovn_predicated: Intrinsic<[llvm_anyvector_ty],
     llvm_i32_ty /* unsigned output */, llvm_i32_ty /* unsigned input */,
     llvm_i32_ty /* top half */, llvm_anyvector_ty /* pred */], [IntrNoMem]>;
 
+// CDE (Custom Datapath Extension)
+
+def int_arm_cde_cx1: Intrinsic<
+  [llvm_i32_ty],
+  [llvm_i32_ty /* coproc */, llvm_i32_ty /* imm */],
+  [IntrNoMem, ImmArg<0>, ImmArg<1>]>;
+
 } // end TargetPrefix

@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: clang
+// REQUIRES: clang || apple-clang
 // XFAIL: *
 
 // This tests is meant to demonstrate an existing ABI bug between the

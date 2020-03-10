@@ -35,9 +35,7 @@ define void @test2(i32 signext %x, i64 %v) #0 {
 
 define signext i32 @test3(i32 signext %x, i1 %y) #0 {
 ; CHECK-LABEL: @test3(
-; CHECK-NEXT:    [[P:%.*]] = select i1 [[Y:%.*]], [1 x i32]* @f.a, [1 x i32]* @f.b
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [1 x i32], [1 x i32]* [[P]], i64 0, i64 0
-; CHECK-NEXT:    [[R:%.*]] = load i32, i32* [[TMP1]], align 4
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[Y:%.*]], i32 12, i32 55
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %idxprom = sext i32 %x to i64

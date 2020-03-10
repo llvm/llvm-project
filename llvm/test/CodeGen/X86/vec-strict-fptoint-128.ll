@@ -687,15 +687,12 @@ define <2 x i64> @strict_vector_fptosi_v2f32_to_v2i64(<2 x float> %a) #0 {
 ;
 ; AVX512DQ-32-LABEL: strict_vector_fptosi_v2f32_to_v2i64:
 ; AVX512DQ-32:       # %bb.0:
-; AVX512DQ-32-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX512DQ-32-NEXT:    vblendps {{.*#+}} xmm1 = xmm0[0],xmm1[1,2,3]
+; AVX512DQ-32-NEXT:    vinsertps {{.*#+}} xmm1 = xmm0[1],zero,zero,zero
 ; AVX512DQ-32-NEXT:    vcvttps2qq %ymm1, %zmm1
-; AVX512DQ-32-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[1],zero,zero,zero
+; AVX512DQ-32-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; AVX512DQ-32-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3]
 ; AVX512DQ-32-NEXT:    vcvttps2qq %ymm0, %zmm0
-; AVX512DQ-32-NEXT:    vmovd %xmm0, %eax
-; AVX512DQ-32-NEXT:    vpinsrd $2, %eax, %xmm1, %xmm1
-; AVX512DQ-32-NEXT:    vpextrd $1, %xmm0, %eax
-; AVX512DQ-32-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm0
+; AVX512DQ-32-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; AVX512DQ-32-NEXT:    vzeroupper
 ; AVX512DQ-32-NEXT:    retl
 ;
@@ -1021,15 +1018,12 @@ define <2 x i64> @strict_vector_fptoui_v2f32_to_v2i64(<2 x float> %a) #0 {
 ;
 ; AVX512DQ-32-LABEL: strict_vector_fptoui_v2f32_to_v2i64:
 ; AVX512DQ-32:       # %bb.0:
-; AVX512DQ-32-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX512DQ-32-NEXT:    vblendps {{.*#+}} xmm1 = xmm0[0],xmm1[1,2,3]
+; AVX512DQ-32-NEXT:    vinsertps {{.*#+}} xmm1 = xmm0[1],zero,zero,zero
 ; AVX512DQ-32-NEXT:    vcvttps2uqq %ymm1, %zmm1
-; AVX512DQ-32-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[1],zero,zero,zero
+; AVX512DQ-32-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; AVX512DQ-32-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3]
 ; AVX512DQ-32-NEXT:    vcvttps2uqq %ymm0, %zmm0
-; AVX512DQ-32-NEXT:    vmovd %xmm0, %eax
-; AVX512DQ-32-NEXT:    vpinsrd $2, %eax, %xmm1, %xmm1
-; AVX512DQ-32-NEXT:    vpextrd $1, %xmm0, %eax
-; AVX512DQ-32-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm0
+; AVX512DQ-32-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; AVX512DQ-32-NEXT:    vzeroupper
 ; AVX512DQ-32-NEXT:    retl
 ;

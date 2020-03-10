@@ -726,7 +726,8 @@ public:
 class NoteTag : public ProgramPointTag {
 public:
   using Callback =
-      std::function<std::string(BugReporterContext &, BugReport &)>;
+      std::function<std::string(BugReporterContext &,
+                                PathSensitiveBugReport &)>;
 
 private:
   static int Kind;
@@ -743,7 +744,7 @@ public:
   }
 
   Optional<std::string> generateMessage(BugReporterContext &BRC,
-                                        BugReport &R) const {
+                                        PathSensitiveBugReport &R) const {
     std::string Msg = Cb(BRC, R);
     if (Msg.empty())
       return None;

@@ -486,6 +486,7 @@ private:
                                   const AbiTagList *AdditionalAbiTags);
   void mangleSourceName(const IdentifierInfo *II);
   void mangleRegCallName(const IdentifierInfo *II);
+  void mangleDeviceStubName(const IdentifierInfo *II);
   void mangleSourceNameWithAbiTags(
       const NamedDecl *ND, const AbiTagList *AdditionalAbiTags = nullptr);
   void mangleLocalName(GlobalDecl GD,
@@ -1313,7 +1314,12 @@ void CXXNameMangler::mangleUnqualifiedName(GlobalDecl GD,
       bool IsRegCall = FD &&
                        FD->getType()->castAs<FunctionType>()->getCallConv() ==
                            clang::CC_X86RegCall;
-      if (IsRegCall)
+      bool IsDeviceStub =
+          FD && FD->hasAttr<CUDAGlobalAttr>() &&
+          GD.getKernelReferenceKind() == KernelReferenceKind::Stub;
+      if (IsDeviceStub)
+        mangleDeviceStubName(II);
+      else if (IsRegCall)
         mangleRegCallName(II);
       else
         mangleSourceName(II);
@@ -1502,6 +1508,14 @@ void CXXNameMangler::mangleRegCallName(const IdentifierInfo *II) {
       << II->getName();
 }
 
+void CXXNameMangler::mangleDeviceStubName(const IdentifierInfo *II) {
+  // <source-name> ::= <positive length number> __device_stub__ <identifier>
+  // <number> ::= [n] <non-negative decimal integer>
+  // <identifier> ::= <unqualified source code identifier>
+  Out << II->getLength() + sizeof("__device_stub__") - 1 << "__device_stub__"
+      << II->getName();
+}
+
 void CXXNameMangler::mangleSourceName(const IdentifierInfo *II) {
   // <source-name> ::= <positive length number> <identifier>
   // <number> ::= [n] <non-negative decimal integer>
@@ -1565,8 +1579,14 @@ static GlobalDecl getParentOfLocalEntity(const DeclContext *DC) {
     GD = GlobalDecl(CD, Ctor_Complete);
   else if (auto *DD = dyn_cast<CXXDestructorDecl>(DC))
     GD = GlobalDecl(DD, Dtor_Complete);
-  else
-    GD = GlobalDecl(cast<FunctionDecl>(DC));
+  else {
+    auto *FD = cast<FunctionDecl>(DC);
+    // Local variables can only exist in real kernels.
+    if (FD->hasAttr<CUDAGlobalAttr>())
+      GD = GlobalDecl(FD, KernelReferenceKind::Kernel);
+    else
+      GD = GlobalDecl(FD);
+  }
   return GD;
 }
 

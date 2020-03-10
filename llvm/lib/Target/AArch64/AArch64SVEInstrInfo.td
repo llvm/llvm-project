@@ -917,6 +917,24 @@ multiclass sve_prefetch<SDPatternOperator prefetch, ValueType PredTy, Instructio
   defm ADR_LSL_ZZZ_S  : sve_int_bin_cons_misc_0_a_32_lsl<0b10, "adr">;
   defm ADR_LSL_ZZZ_D  : sve_int_bin_cons_misc_0_a_64_lsl<0b11, "adr">;
 
+  def : Pat<(nxv4i32 (int_aarch64_sve_adrb nxv4i32:$Op1, nxv4i32:$Op2)),
+            (ADR_LSL_ZZZ_S_0 $Op1, $Op2)>;
+  def : Pat<(nxv4i32 (int_aarch64_sve_adrh nxv4i32:$Op1, nxv4i32:$Op2)),
+            (ADR_LSL_ZZZ_S_1 $Op1, $Op2)>;
+  def : Pat<(nxv4i32 (int_aarch64_sve_adrw nxv4i32:$Op1, nxv4i32:$Op2)),
+            (ADR_LSL_ZZZ_S_2 $Op1, $Op2)>;
+  def : Pat<(nxv4i32 (int_aarch64_sve_adrd nxv4i32:$Op1, nxv4i32:$Op2)),
+            (ADR_LSL_ZZZ_S_3 $Op1, $Op2)>;
+
+  def : Pat<(nxv2i64 (int_aarch64_sve_adrb nxv2i64:$Op1, nxv2i64:$Op2)),
+            (ADR_LSL_ZZZ_D_0 $Op1, $Op2)>;
+  def : Pat<(nxv2i64 (int_aarch64_sve_adrh nxv2i64:$Op1, nxv2i64:$Op2)),
+            (ADR_LSL_ZZZ_D_1 $Op1, $Op2)>;
+  def : Pat<(nxv2i64 (int_aarch64_sve_adrw nxv2i64:$Op1, nxv2i64:$Op2)),
+            (ADR_LSL_ZZZ_D_2 $Op1, $Op2)>;
+  def : Pat<(nxv2i64 (int_aarch64_sve_adrd nxv2i64:$Op1, nxv2i64:$Op2)),
+            (ADR_LSL_ZZZ_D_3 $Op1, $Op2)>;
+
   defm TBL_ZZZ  : sve_int_perm_tbl<"tbl", AArch64tbl>;
 
   defm ZIP1_ZZZ : sve_int_perm_bin_perm_zz<0b000, "zip1", AArch64zip1>;

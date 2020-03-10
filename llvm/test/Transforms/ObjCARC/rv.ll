@@ -77,7 +77,7 @@ define void @test2() {
 ; CHECK-NEXT: ret i8* %call
 define i8* @test3() {
 entry:
-  %call = call i8* @returner()
+  %call = tail call i8* @returner()
   %0 = call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* %call) nounwind
   %1 = call i8* @llvm.objc.autoreleaseReturnValue(i8* %0) nounwind
   ret i8* %1
@@ -385,6 +385,20 @@ bb3:
   %retval = phi i32* [ %v0, %bb1 ], [ %v2, %bb2 ]
   %v4 = tail call i8* @llvm.objc.autoreleaseReturnValue(i8* %phival)
   ret i32* %retval
+}
+
+; Don't eliminate the retainRV/autoreleaseRV pair if the call isn't a tail call.
+
+; CHECK-LABEL: define i8* @test28(
+; CHECK: call i8* @returner()
+; CHECK: call i8* @llvm.objc.retainAutoreleasedReturnValue(
+; CHECK: call i8* @llvm.objc.autoreleaseReturnValue(
+define i8* @test28() {
+entry:
+  %call = call i8* @returner()
+  %0 = call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* %call) nounwind
+  %1 = call i8* @llvm.objc.autoreleaseReturnValue(i8* %0) nounwind
+  ret i8* %1
 }
 
 !0 = !{}

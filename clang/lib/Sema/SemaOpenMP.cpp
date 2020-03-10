@@ -6884,7 +6884,7 @@ Expr *OpenMPIterationSpaceChecker::buildOrderedLoopData(
     // Upper - Lower
     Expr *Upper = TestIsLessOp.getValue()
                       ? Cnt
-                      : tryBuildCapture(SemaRef, UB, Captures).get();
+                      : tryBuildCapture(SemaRef, LB, Captures).get();
     Expr *Lower = TestIsLessOp.getValue()
                       ? tryBuildCapture(SemaRef, LB, Captures).get()
                       : Cnt;

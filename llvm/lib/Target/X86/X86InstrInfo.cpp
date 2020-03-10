@@ -135,6 +135,491 @@ X86InstrInfo::isCoalescableExtInstr(const MachineInstr &MI,
   return false;
 }
 
+bool X86InstrInfo::isDataInvariant(MachineInstr &MI) {
+  switch (MI.getOpcode()) {
+  default:
+    // By default, assume that the instruction is not data invariant.
+    return false;
+
+    // Some target-independent operations that trivially lower to data-invariant
+    // instructions.
+  case TargetOpcode::COPY:
+  case TargetOpcode::INSERT_SUBREG:
+  case TargetOpcode::SUBREG_TO_REG:
+    return true;
+
+  // On x86 it is believed that imul is constant time w.r.t. the loaded data.
+  // However, they set flags and are perhaps the most surprisingly constant
+  // time operations so we call them out here separately.
+  case X86::IMUL16rr:
+  case X86::IMUL16rri8:
+  case X86::IMUL16rri:
+  case X86::IMUL32rr:
+  case X86::IMUL32rri8:
+  case X86::IMUL32rri:
+  case X86::IMUL64rr:
+  case X86::IMUL64rri32:
+  case X86::IMUL64rri8:
+
+  // Bit scanning and counting instructions that are somewhat surprisingly
+  // constant time as they scan across bits and do other fairly complex
+  // operations like popcnt, but are believed to be constant time on x86.
+  // However, these set flags.
+  case X86::BSF16rr:
+  case X86::BSF32rr:
+  case X86::BSF64rr:
+  case X86::BSR16rr:
+  case X86::BSR32rr:
+  case X86::BSR64rr:
+  case X86::LZCNT16rr:
+  case X86::LZCNT32rr:
+  case X86::LZCNT64rr:
+  case X86::POPCNT16rr:
+  case X86::POPCNT32rr:
+  case X86::POPCNT64rr:
+  case X86::TZCNT16rr:
+  case X86::TZCNT32rr:
+  case X86::TZCNT64rr:
+
+  // Bit manipulation instructions are effectively combinations of basic
+  // arithmetic ops, and should still execute in constant time. These also
+  // set flags.
+  case X86::BLCFILL32rr:
+  case X86::BLCFILL64rr:
+  case X86::BLCI32rr:
+  case X86::BLCI64rr:
+  case X86::BLCIC32rr:
+  case X86::BLCIC64rr:
+  case X86::BLCMSK32rr:
+  case X86::BLCMSK64rr:
+  case X86::BLCS32rr:
+  case X86::BLCS64rr:
+  case X86::BLSFILL32rr:
+  case X86::BLSFILL64rr:
+  case X86::BLSI32rr:
+  case X86::BLSI64rr:
+  case X86::BLSIC32rr:
+  case X86::BLSIC64rr:
+  case X86::BLSMSK32rr:
+  case X86::BLSMSK64rr:
+  case X86::BLSR32rr:
+  case X86::BLSR64rr:
+  case X86::TZMSK32rr:
+  case X86::TZMSK64rr:
+
+  // Bit extracting and clearing instructions should execute in constant time,
+  // and set flags.
+  case X86::BEXTR32rr:
+  case X86::BEXTR64rr:
+  case X86::BEXTRI32ri:
+  case X86::BEXTRI64ri:
+  case X86::BZHI32rr:
+  case X86::BZHI64rr:
+
+  // Shift and rotate.
+  case X86::ROL8r1:
+  case X86::ROL16r1:
+  case X86::ROL32r1:
+  case X86::ROL64r1:
+  case X86::ROL8rCL:
+  case X86::ROL16rCL:
+  case X86::ROL32rCL:
+  case X86::ROL64rCL:
+  case X86::ROL8ri:
+  case X86::ROL16ri:
+  case X86::ROL32ri:
+  case X86::ROL64ri:
+  case X86::ROR8r1:
+  case X86::ROR16r1:
+  case X86::ROR32r1:
+  case X86::ROR64r1:
+  case X86::ROR8rCL:
+  case X86::ROR16rCL:
+  case X86::ROR32rCL:
+  case X86::ROR64rCL:
+  case X86::ROR8ri:
+  case X86::ROR16ri:
+  case X86::ROR32ri:
+  case X86::ROR64ri:
+  case X86::SAR8r1:
+  case X86::SAR16r1:
+  case X86::SAR32r1:
+  case X86::SAR64r1:
+  case X86::SAR8rCL:
+  case X86::SAR16rCL:
+  case X86::SAR32rCL:
+  case X86::SAR64rCL:
+  case X86::SAR8ri:
+  case X86::SAR16ri:
+  case X86::SAR32ri:
+  case X86::SAR64ri:
+  case X86::SHL8r1:
+  case X86::SHL16r1:
+  case X86::SHL32r1:
+  case X86::SHL64r1:
+  case X86::SHL8rCL:
+  case X86::SHL16rCL:
+  case X86::SHL32rCL:
+  case X86::SHL64rCL:
+  case X86::SHL8ri:
+  case X86::SHL16ri:
+  case X86::SHL32ri:
+  case X86::SHL64ri:
+  case X86::SHR8r1:
+  case X86::SHR16r1:
+  case X86::SHR32r1:
+  case X86::SHR64r1:
+  case X86::SHR8rCL:
+  case X86::SHR16rCL:
+  case X86::SHR32rCL:
+  case X86::SHR64rCL:
+  case X86::SHR8ri:
+  case X86::SHR16ri:
+  case X86::SHR32ri:
+  case X86::SHR64ri:
+  case X86::SHLD16rrCL:
+  case X86::SHLD32rrCL:
+  case X86::SHLD64rrCL:
+  case X86::SHLD16rri8:
+  case X86::SHLD32rri8:
+  case X86::SHLD64rri8:
+  case X86::SHRD16rrCL:
+  case X86::SHRD32rrCL:
+  case X86::SHRD64rrCL:
+  case X86::SHRD16rri8:
+  case X86::SHRD32rri8:
+  case X86::SHRD64rri8:
+
+  // Basic arithmetic is constant time on the input but does set flags.
+  case X86::ADC8rr:
+  case X86::ADC8ri:
+  case X86::ADC16rr:
+  case X86::ADC16ri:
+  case X86::ADC16ri8:
+  case X86::ADC32rr:
+  case X86::ADC32ri:
+  case X86::ADC32ri8:
+  case X86::ADC64rr:
+  case X86::ADC64ri8:
+  case X86::ADC64ri32:
+  case X86::ADD8rr:
+  case X86::ADD8ri:
+  case X86::ADD16rr:
+  case X86::ADD16ri:
+  case X86::ADD16ri8:
+  case X86::ADD32rr:
+  case X86::ADD32ri:
+  case X86::ADD32ri8:
+  case X86::ADD64rr:
+  case X86::ADD64ri8:
+  case X86::ADD64ri32:
+  case X86::AND8rr:
+  case X86::AND8ri:
+  case X86::AND16rr:
+  case X86::AND16ri:
+  case X86::AND16ri8:
+  case X86::AND32rr:
+  case X86::AND32ri:
+  case X86::AND32ri8:
+  case X86::AND64rr:
+  case X86::AND64ri8:
+  case X86::AND64ri32:
+  case X86::OR8rr:
+  case X86::OR8ri:
+  case X86::OR16rr:
+  case X86::OR16ri:
+  case X86::OR16ri8:
+  case X86::OR32rr:
+  case X86::OR32ri:
+  case X86::OR32ri8:
+  case X86::OR64rr:
+  case X86::OR64ri8:
+  case X86::OR64ri32:
+  case X86::SBB8rr:
+  case X86::SBB8ri:
+  case X86::SBB16rr:
+  case X86::SBB16ri:
+  case X86::SBB16ri8:
+  case X86::SBB32rr:
+  case X86::SBB32ri:
+  case X86::SBB32ri8:
+  case X86::SBB64rr:
+  case X86::SBB64ri8:
+  case X86::SBB64ri32:
+  case X86::SUB8rr:
+  case X86::SUB8ri:
+  case X86::SUB16rr:
+  case X86::SUB16ri:
+  case X86::SUB16ri8:
+  case X86::SUB32rr:
+  case X86::SUB32ri:
+  case X86::SUB32ri8:
+  case X86::SUB64rr:
+  case X86::SUB64ri8:
+  case X86::SUB64ri32:
+  case X86::XOR8rr:
+  case X86::XOR8ri:
+  case X86::XOR16rr:
+  case X86::XOR16ri:
+  case X86::XOR16ri8:
+  case X86::XOR32rr:
+  case X86::XOR32ri:
+  case X86::XOR32ri8:
+  case X86::XOR64rr:
+  case X86::XOR64ri8:
+  case X86::XOR64ri32:
+  // Arithmetic with just 32-bit and 64-bit variants and no immediates.
+  case X86::ADCX32rr:
+  case X86::ADCX64rr:
+  case X86::ADOX32rr:
+  case X86::ADOX64rr:
+  case X86::ANDN32rr:
+  case X86::ANDN64rr:
+  // Unary arithmetic operations.
+  case X86::DEC8r:
+  case X86::DEC16r:
+  case X86::DEC32r:
+  case X86::DEC64r:
+  case X86::INC8r:
+  case X86::INC16r:
+  case X86::INC32r:
+  case X86::INC64r:
+  case X86::NEG8r:
+  case X86::NEG16r:
+  case X86::NEG32r:
+  case X86::NEG64r:
+
+  // Unlike other arithmetic, NOT doesn't set EFLAGS.
+  case X86::NOT8r:
+  case X86::NOT16r:
+  case X86::NOT32r:
+  case X86::NOT64r:
+
+  // Various move instructions used to zero or sign extend things. Note that we
+  // intentionally don't support the _NOREX variants as we can't handle that
+  // register constraint anyways.
+  case X86::MOVSX16rr8:
+  case X86::MOVSX32rr8:
+  case X86::MOVSX32rr16:
+  case X86::MOVSX64rr8:
+  case X86::MOVSX64rr16:
+  case X86::MOVSX64rr32:
+  case X86::MOVZX16rr8:
+  case X86::MOVZX32rr8:
+  case X86::MOVZX32rr16:
+  case X86::MOVZX64rr8:
+  case X86::MOVZX64rr16:
+  case X86::MOV32rr:
+
+  // Arithmetic instructions that are both constant time and don't set flags.
+  case X86::RORX32ri:
+  case X86::RORX64ri:
+  case X86::SARX32rr:
+  case X86::SARX64rr:
+  case X86::SHLX32rr:
+  case X86::SHLX64rr:
+  case X86::SHRX32rr:
+  case X86::SHRX64rr:
+
+  // LEA doesn't actually access memory, and its arithmetic is constant time.
+  case X86::LEA16r:
+  case X86::LEA32r:
+  case X86::LEA64_32r:
+  case X86::LEA64r:
+    return true;
+  }
+}
+
+bool X86InstrInfo::isDataInvariantLoad(MachineInstr &MI) {
+  switch (MI.getOpcode()) {
+  default:
+    // By default, assume that the load will immediately leak.
+    return false;
+
+  // On x86 it is believed that imul is constant time w.r.t. the loaded data.
+  // However, they set flags and are perhaps the most surprisingly constant
+  // time operations so we call them out here separately.
+  case X86::IMUL16rm:
+  case X86::IMUL16rmi8:
+  case X86::IMUL16rmi:
+  case X86::IMUL32rm:
+  case X86::IMUL32rmi8:
+  case X86::IMUL32rmi:
+  case X86::IMUL64rm:
+  case X86::IMUL64rmi32:
+  case X86::IMUL64rmi8:
+
+  // Bit scanning and counting instructions that are somewhat surprisingly
+  // constant time as they scan across bits and do other fairly complex
+  // operations like popcnt, but are believed to be constant time on x86.
+  // However, these set flags.
+  case X86::BSF16rm:
+  case X86::BSF32rm:
+  case X86::BSF64rm:
+  case X86::BSR16rm:
+  case X86::BSR32rm:
+  case X86::BSR64rm:
+  case X86::LZCNT16rm:
+  case X86::LZCNT32rm:
+  case X86::LZCNT64rm:
+  case X86::POPCNT16rm:
+  case X86::POPCNT32rm:
+  case X86::POPCNT64rm:
+  case X86::TZCNT16rm:
+  case X86::TZCNT32rm:
+  case X86::TZCNT64rm:
+
+  // Bit manipulation instructions are effectively combinations of basic
+  // arithmetic ops, and should still execute in constant time. These also
+  // set flags.
+  case X86::BLCFILL32rm:
+  case X86::BLCFILL64rm:
+  case X86::BLCI32rm:
+  case X86::BLCI64rm:
+  case X86::BLCIC32rm:
+  case X86::BLCIC64rm:
+  case X86::BLCMSK32rm:
+  case X86::BLCMSK64rm:
+  case X86::BLCS32rm:
+  case X86::BLCS64rm:
+  case X86::BLSFILL32rm:
+  case X86::BLSFILL64rm:
+  case X86::BLSI32rm:
+  case X86::BLSI64rm:
+  case X86::BLSIC32rm:
+  case X86::BLSIC64rm:
+  case X86::BLSMSK32rm:
+  case X86::BLSMSK64rm:
+  case X86::BLSR32rm:
+  case X86::BLSR64rm:
+  case X86::TZMSK32rm:
+  case X86::TZMSK64rm:
+
+  // Bit extracting and clearing instructions should execute in constant time,
+  // and set flags.
+  case X86::BEXTR32rm:
+  case X86::BEXTR64rm:
+  case X86::BEXTRI32mi:
+  case X86::BEXTRI64mi:
+  case X86::BZHI32rm:
+  case X86::BZHI64rm:
+
+  // Basic arithmetic is constant time on the input but does set flags.
+  case X86::ADC8rm:
+  case X86::ADC16rm:
+  case X86::ADC32rm:
+  case X86::ADC64rm:
+  case X86::ADCX32rm:
+  case X86::ADCX64rm:
+  case X86::ADD8rm:
+  case X86::ADD16rm:
+  case X86::ADD32rm:
+  case X86::ADD64rm:
+  case X86::ADOX32rm:
+  case X86::ADOX64rm:
+  case X86::AND8rm:
+  case X86::AND16rm:
+  case X86::AND32rm:
+  case X86::AND64rm:
+  case X86::ANDN32rm:
+  case X86::ANDN64rm:
+  case X86::OR8rm:
+  case X86::OR16rm:
+  case X86::OR32rm:
+  case X86::OR64rm:
+  case X86::SBB8rm:
+  case X86::SBB16rm:
+  case X86::SBB32rm:
+  case X86::SBB64rm:
+  case X86::SUB8rm:
+  case X86::SUB16rm:
+  case X86::SUB32rm:
+  case X86::SUB64rm:
+  case X86::XOR8rm:
+  case X86::XOR16rm:
+  case X86::XOR32rm:
+  case X86::XOR64rm:
+
+  // Integer multiply w/o affecting flags is still believed to be constant
+  // time on x86. Called out separately as this is among the most surprising
+  // instructions to exhibit that behavior.
+  case X86::MULX32rm:
+  case X86::MULX64rm:
+
+  // Arithmetic instructions that are both constant time and don't set flags.
+  case X86::RORX32mi:
+  case X86::RORX64mi:
+  case X86::SARX32rm:
+  case X86::SARX64rm:
+  case X86::SHLX32rm:
+  case X86::SHLX64rm:
+  case X86::SHRX32rm:
+  case X86::SHRX64rm:
+
+  // Conversions are believed to be constant time and don't set flags.
+  case X86::CVTTSD2SI64rm:
+  case X86::VCVTTSD2SI64rm:
+  case X86::VCVTTSD2SI64Zrm:
+  case X86::CVTTSD2SIrm:
+  case X86::VCVTTSD2SIrm:
+  case X86::VCVTTSD2SIZrm:
+  case X86::CVTTSS2SI64rm:
+  case X86::VCVTTSS2SI64rm:
+  case X86::VCVTTSS2SI64Zrm:
+  case X86::CVTTSS2SIrm:
+  case X86::VCVTTSS2SIrm:
+  case X86::VCVTTSS2SIZrm:
+  case X86::CVTSI2SDrm:
+  case X86::VCVTSI2SDrm:
+  case X86::VCVTSI2SDZrm:
+  case X86::CVTSI2SSrm:
+  case X86::VCVTSI2SSrm:
+  case X86::VCVTSI2SSZrm:
+  case X86::CVTSI642SDrm:
+  case X86::VCVTSI642SDrm:
+  case X86::VCVTSI642SDZrm:
+  case X86::CVTSI642SSrm:
+  case X86::VCVTSI642SSrm:
+  case X86::VCVTSI642SSZrm:
+  case X86::CVTSS2SDrm:
+  case X86::VCVTSS2SDrm:
+  case X86::VCVTSS2SDZrm:
+  case X86::CVTSD2SSrm:
+  case X86::VCVTSD2SSrm:
+  case X86::VCVTSD2SSZrm:
+  // AVX512 added unsigned integer conversions.
+  case X86::VCVTTSD2USI64Zrm:
+  case X86::VCVTTSD2USIZrm:
+  case X86::VCVTTSS2USI64Zrm:
+  case X86::VCVTTSS2USIZrm:
+  case X86::VCVTUSI2SDZrm:
+  case X86::VCVTUSI642SDZrm:
+  case X86::VCVTUSI2SSZrm:
+  case X86::VCVTUSI642SSZrm:
+
+  // Loads to register don't set flags.
+  case X86::MOV8rm:
+  case X86::MOV8rm_NOREX:
+  case X86::MOV16rm:
+  case X86::MOV32rm:
+  case X86::MOV64rm:
+  case X86::MOVSX16rm8:
+  case X86::MOVSX32rm16:
+  case X86::MOVSX32rm8:
+  case X86::MOVSX32rm8_NOREX:
+  case X86::MOVSX64rm16:
+  case X86::MOVSX64rm32:
+  case X86::MOVSX64rm8:
+  case X86::MOVZX16rm8:
+  case X86::MOVZX32rm16:
+  case X86::MOVZX32rm8:
+  case X86::MOVZX32rm8_NOREX:
+  case X86::MOVZX64rm16:
+  case X86::MOVZX64rm8:
+    return true;
+  }
+}
+
 int X86InstrInfo::getSPAdjust(const MachineInstr &MI) const {
   const MachineFunction *MF = MI.getParent()->getParent();
   const TargetFrameLowering *TFI = MF->getSubtarget().getFrameLowering();

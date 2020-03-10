@@ -117,7 +117,7 @@ private:
 
   void emitDeviceStubBodyLegacy(CodeGenFunction &CGF, FunctionArgList &Args);
   void emitDeviceStubBodyNew(CodeGenFunction &CGF, FunctionArgList &Args);
-  std::string getDeviceSideName(const Decl *ND);
+  std::string getDeviceSideName(const NamedDecl *ND) override;
 
 public:
   CGNVCUDARuntime(CodeGenModule &CGM);
@@ -132,8 +132,6 @@ public:
   llvm::Function *makeModuleCtorFunction() override;
   /// Creates module destructor function
   llvm::Function *makeModuleDtorFunction() override;
-  /// Construct and return the stub name of a kernel.
-  std::string getDeviceStubName(llvm::StringRef Name) const override;
 };
 
 }
@@ -208,13 +206,18 @@ llvm::FunctionType *CGNVCUDARuntime::getRegisterLinkedBinaryFnTy() const {
   return llvm::FunctionType::get(VoidTy, Params, false);
 }
 
-std::string CGNVCUDARuntime::getDeviceSideName(const Decl *D) {
-  auto *ND = cast<const NamedDecl>(D);
+std::string CGNVCUDARuntime::getDeviceSideName(const NamedDecl *ND) {
+  GlobalDecl GD;
+  // D could be either a kernel or a variable.
+  if (auto *FD = dyn_cast<FunctionDecl>(ND))
+    GD = GlobalDecl(FD, KernelReferenceKind::Kernel);
+  else
+    GD = GlobalDecl(ND);
   std::string DeviceSideName;
   if (DeviceMC->shouldMangleDeclName(ND)) {
     SmallString<256> Buffer;
     llvm::raw_svector_ostream Out(Buffer);
-    DeviceMC->mangleName(ND, Out);
+    DeviceMC->mangleName(GD, Out);
     DeviceSideName = std::string(Out.str());
   } else
     DeviceSideName = std::string(ND->getIdentifier()->getName());
@@ -223,21 +226,6 @@ std::string CGNVCUDARuntime::getDeviceSideName(const Decl *D) {
 
 void CGNVCUDARuntime::emitDeviceStub(CodeGenFunction &CGF,
                                      FunctionArgList &Args) {
-  // Ensure either we have different ABIs between host and device compilations,
-  // says host compilation following MSVC ABI but device compilation follows
-  // Itanium C++ ABI or, if they follow the same ABI, kernel names after
-  // mangling should be the same after name stubbing. The later checking is
-  // very important as the device kernel name being mangled in host-compilation
-  // is used to resolve the device binaries to be executed. Inconsistent naming
-  // result in undefined behavior. Even though we cannot check that naming
-  // directly between host- and device-compilations, the host- and
-  // device-mangling in host compilation could help catching certain ones.
-  assert((CGF.CGM.getContext().getAuxTargetInfo() &&
-          (CGF.CGM.getContext().getAuxTargetInfo()->getCXXABI() !=
-           CGF.CGM.getContext().getTargetInfo().getCXXABI())) ||
-         getDeviceStubName(getDeviceSideName(CGF.CurFuncDecl)) ==
-             CGF.CurFn->getName());
-
   EmittedKernels.push_back({CGF.CurFn, CGF.CurFuncDecl});
   if (CudaFeatureEnabled(CGM.getTarget().getSDKVersion(),
                          CudaFeature::CUDA_USES_NEW_LAUNCH) ||
@@ -422,7 +410,8 @@ llvm::Function *CGNVCUDARuntime::makeRegisterGlobalsFn() {
   // each emitted kernel.
   llvm::Argument &GpuBinaryHandlePtr = *RegisterKernelsFunc->arg_begin();
   for (auto &&I : EmittedKernels) {
-    llvm::Constant *KernelName = makeConstantString(getDeviceSideName(I.D));
+    llvm::Constant *KernelName =
+        makeConstantString(getDeviceSideName(cast<NamedDecl>(I.D)));
     llvm::Constant *NullPtr = llvm::ConstantPointerNull::get(VoidPtrTy);
     llvm::Value *Args[] = {
         &GpuBinaryHandlePtr,
@@ -799,12 +788,6 @@ llvm::Function *CGNVCUDARuntime::makeModuleDtorFunction() {
   }
   DtorBuilder.CreateRetVoid();
   return ModuleDtorFunc;
-}
-
-std::string CGNVCUDARuntime::getDeviceStubName(llvm::StringRef Name) const {
-  if (!CGM.getLangOpts().HIP)
-    return std::string(Name);
-  return (Name + ".stub").str();
 }
 
 CGCUDARuntime *CodeGen::CreateNVCUDARuntime(CodeGenModule &CGM) {

@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "lldb/Target/UnwindLLDB.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Symbol/FuncUnwinders.h"
 #include "lldb/Symbol/Function.h"
@@ -13,12 +14,10 @@
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/RegisterContextUnwind.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/Log.h"
-
-#include "RegisterContextLLDB.h"
-#include "UnwindLLDB.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -77,7 +76,7 @@ bool UnwindLLDB::AddFirstFrame() {
 
   // First, set up the 0th (initial) frame
   CursorSP first_cursor_sp(new Cursor());
-  RegisterContextLLDBSP reg_ctx_sp(new RegisterContextLLDB(
+  RegisterContextLLDBSP reg_ctx_sp(new RegisterContextUnwind(
       m_thread, RegisterContextLLDBSP(), first_cursor_sp->sctx, 0, *this));
   if (reg_ctx_sp.get() == nullptr)
     goto unwind_done;
@@ -126,7 +125,7 @@ UnwindLLDB::CursorSP UnwindLLDB::GetOneMoreFrame(ABI *abi) {
   uint32_t cur_idx = m_frames.size();
 
   CursorSP cursor_sp(new Cursor());
-  RegisterContextLLDBSP reg_ctx_sp(new RegisterContextLLDB(
+  RegisterContextLLDBSP reg_ctx_sp(new RegisterContextUnwind(
       m_thread, prev_frame->reg_ctx_lldb_sp, cursor_sp->sctx, cur_idx, *this));
 
   uint64_t max_stack_depth = m_thread.GetMaxBacktraceDepth();
@@ -148,7 +147,7 @@ UnwindLLDB::CursorSP UnwindLLDB::GetOneMoreFrame(ABI *abi) {
   }
 
   if (reg_ctx_sp.get() == nullptr) {
-    // If the RegisterContextLLDB has a fallback UnwindPlan, it will switch to
+    // If the RegisterContextUnwind has a fallback UnwindPlan, it will switch to
     // that and return true.  Subsequent calls to TryFallbackUnwindPlan() will
     // return false.
     if (prev_frame->reg_ctx_lldb_sp->TryFallbackUnwindPlan()) {
@@ -187,7 +186,7 @@ UnwindLLDB::CursorSP UnwindLLDB::GetOneMoreFrame(ABI *abi) {
     return nullptr;
   }
   if (!reg_ctx_sp->GetCFA(cursor_sp->cfa)) {
-    // If the RegisterContextLLDB has a fallback UnwindPlan, it will switch to
+    // If the RegisterContextUnwind has a fallback UnwindPlan, it will switch to
     // that and return true.  Subsequent calls to TryFallbackUnwindPlan() will
     // return false.
     if (prev_frame->reg_ctx_lldb_sp->TryFallbackUnwindPlan()) {
@@ -243,7 +242,7 @@ UnwindLLDB::CursorSP UnwindLLDB::GetOneMoreFrame(ABI *abi) {
     }
   }
   if (!reg_ctx_sp->ReadPC(cursor_sp->start_pc)) {
-    // If the RegisterContextLLDB has a fallback UnwindPlan, it will switch to
+    // If the RegisterContextUnwind has a fallback UnwindPlan, it will switch to
     // that and return true.  Subsequent calls to TryFallbackUnwindPlan() will
     // return false.
     if (prev_frame->reg_ctx_lldb_sp->TryFallbackUnwindPlan()) {
@@ -262,7 +261,7 @@ UnwindLLDB::CursorSP UnwindLLDB::GetOneMoreFrame(ABI *abi) {
     return nullptr;
   }
   if (abi && !abi->CodeAddressIsValid(cursor_sp->start_pc)) {
-    // If the RegisterContextLLDB has a fallback UnwindPlan, it will switch to
+    // If the RegisterContextUnwind has a fallback UnwindPlan, it will switch to
     // that and return true.  Subsequent calls to TryFallbackUnwindPlan() will
     // return false.
     if (prev_frame->reg_ctx_lldb_sp->TryFallbackUnwindPlan()) {

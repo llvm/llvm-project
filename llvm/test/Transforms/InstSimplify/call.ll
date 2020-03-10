@@ -993,7 +993,7 @@ define i32 @returned_const_int_arg() {
 define i8* @returned_const_ptr_arg() {
 ; CHECK-LABEL: @returned_const_ptr_arg(
 ; CHECK-NEXT:    [[X:%.*]] = call i8* @passthru_p8(i8* null)
-; CHECK-NEXT:    ret i8* [[X]]
+; CHECK-NEXT:    ret i8* null
 ;
   %x = call i8* @passthru_p8(i8* null)
   ret i8* %x
@@ -1002,8 +1002,35 @@ define i8* @returned_const_ptr_arg() {
 define i32 @returned_var_arg(i32 %arg) {
 ; CHECK-LABEL: @returned_var_arg(
 ; CHECK-NEXT:    [[X:%.*]] = call i32 @passthru_i32(i32 [[ARG:%.*]])
-; CHECK-NEXT:    ret i32 [[X]]
+; CHECK-NEXT:    ret i32 [[ARG]]
 ;
   %x = call i32 @passthru_i32(i32 %arg)
+  ret i32 %x
+}
+
+define i32 @returned_const_int_arg_musttail(i32 %arg) {
+; CHECK-LABEL: @returned_const_int_arg_musttail(
+; CHECK-NEXT:    [[X:%.*]] = musttail call i32 @passthru_i32(i32 42)
+; CHECK-NEXT:    ret i32 [[X]]
+;
+  %x = musttail call i32 @passthru_i32(i32 42)
+  ret i32 %x
+}
+
+define i32 @returned_var_arg_musttail(i32 %arg) {
+; CHECK-LABEL: @returned_var_arg_musttail(
+; CHECK-NEXT:    [[X:%.*]] = musttail call i32 @passthru_i32(i32 [[ARG:%.*]])
+; CHECK-NEXT:    ret i32 [[X]]
+;
+  %x = musttail call i32 @passthru_i32(i32 %arg)
+  ret i32 %x
+}
+
+define i32 @call_undef_musttail() {
+; CHECK-LABEL: @call_undef_musttail(
+; CHECK-NEXT:    [[X:%.*]] = musttail call i32 undef()
+; CHECK-NEXT:    ret i32 [[X]]
+;
+  %x = musttail call i32 undef()
   ret i32 %x
 }

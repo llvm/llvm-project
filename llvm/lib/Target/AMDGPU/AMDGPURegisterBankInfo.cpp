@@ -2080,7 +2080,8 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
   case AMDGPU::G_MUL: {
     Register DstReg = MI.getOperand(0).getReg();
     LLT DstTy = MRI.getType(DstReg);
-    if (DstTy != LLT::scalar(16))
+    const LLT S32 = LLT::scalar(32);
+    if (DstTy == S32)
       break;
 
     const RegisterBank *DstBank =
@@ -2089,15 +2090,34 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       break;
 
     // 16-bit operations are VALU only, but can be promoted to 32-bit SALU.
+    // Packed 16-bit operations need to be scalarized and promoted.
+
     MachineFunction *MF = MI.getParent()->getParent();
     MachineIRBuilder B(MI);
     ApplyRegBankMapping ApplySALU(*this, MRI, &AMDGPU::SGPRRegBank);
     GISelObserverWrapper Observer(&ApplySALU);
-    LegalizerHelper Helper(*MF, Observer, B);
 
-    if (Helper.widenScalar(MI, 0, LLT::scalar(32)) !=
-        LegalizerHelper::Legalized)
-      llvm_unreachable("widen scalar should have succeeded");
+    if (DstTy.isVector()) {
+      B.setChangeObserver(Observer);
+
+      Register WideSrc0Lo, WideSrc0Hi;
+      Register WideSrc1Lo, WideSrc1Hi;
+
+      std::tie(WideSrc0Lo, WideSrc0Hi)
+        = unpackV2S16ToS32(B, MI.getOperand(1).getReg(), AMDGPU::G_ANYEXT);
+      std::tie(WideSrc1Lo, WideSrc1Hi)
+        = unpackV2S16ToS32(B, MI.getOperand(2).getReg(), AMDGPU::G_ANYEXT);
+      auto Lo = B.buildInstr(MI.getOpcode(), {S32}, {WideSrc0Lo, WideSrc1Lo});
+      auto Hi = B.buildInstr(MI.getOpcode(), {S32}, {WideSrc0Hi, WideSrc1Hi});
+      B.buildBuildVectorTrunc(DstReg, {Lo.getReg(0), Hi.getReg(0)});
+      MI.eraseFromParent();
+    } else {
+      LegalizerHelper Helper(*MF, Observer, B);
+
+      if (Helper.widenScalar(MI, 0, S32) != LegalizerHelper::Legalized)
+        llvm_unreachable("widen scalar should have succeeded");
+    }
+
     return;
   }
   case AMDGPU::G_SMIN:

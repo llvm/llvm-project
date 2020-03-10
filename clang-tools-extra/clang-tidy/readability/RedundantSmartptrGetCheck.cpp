@@ -81,7 +81,7 @@ void registerMatchersForGetEquals(MatchFinder *Finder,
 
   // Matches against nullptr.
   Finder->addMatcher(
-      binaryOperator(anyOf(hasOperatorName("=="), hasOperatorName("!=")),
+      binaryOperator(hasAnyOperatorName("==", "!="),
                      hasEitherOperand(ignoringImpCasts(
                          anyOf(cxxNullPtrLiteralExpr(), gnuNullExpr(),
                                integerLiteral(equals(0))))),

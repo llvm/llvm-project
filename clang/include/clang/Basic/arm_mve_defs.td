@@ -476,9 +476,16 @@ class Intrinsic<Type ret_, dag args_, dag codegen_> {
   // True if the builtin has to avoid evaluating its arguments.
   bit nonEvaluating = 0;
 
+  // True if the intrinsic needs only the C header part (no codegen, semantic
+  // checks, etc). Used for redeclaring MVE intrinsics in the arm_cde.h header.
+  bit headerOnly = 0;
+
   // Use to override the suffix letter to make e.g.vfooq_p16
   // with an override suffix letter of "p".
   string overrideKindLetter = "";
+
+  // Name of the architecture extension, used in the Clang builtin name
+  string builtinExtension = "mve";
 }
 
 // Sometimes you have to use two separate Intrinsic declarations to
@@ -553,6 +560,7 @@ multiclass IntrinsicMXNameOverride<Type rettype, dag arguments, dag cg,
 // instead of having to repeat a long list every time.
 
 def T {
+  list<Type> None = [Void];
   list<Type> Signed = [s8, s16, s32];
   list<Type> Unsigned = [u8, u16, u32];
   list<Type> Int = Signed # Unsigned;

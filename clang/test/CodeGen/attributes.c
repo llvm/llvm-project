@@ -20,7 +20,7 @@ int t18 = 1;
 // CHECK: @t16 = extern_weak global i32
 extern int t16 __attribute__((weak_import));
 
-// CHECK: @t6 = common protected global i32 0
+// CHECK: @t6 = protected global i32 0
 int t6 __attribute__((visibility("protected")));
 
 // CHECK: @t12 = global i32 0, section "SECT"

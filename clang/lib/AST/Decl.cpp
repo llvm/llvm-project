@@ -3148,8 +3148,8 @@ FunctionDecl *FunctionDecl::getCanonicalDecl() { return getFirstDecl(); }
 unsigned FunctionDecl::getBuiltinID(bool ConsiderWrapperFunctions) const {
   unsigned BuiltinID;
 
-  if (const auto *AMAA = getAttr<ArmMveAliasAttr>()) {
-    BuiltinID = AMAA->getBuiltinName()->getBuiltinID();
+  if (const auto *ABAA = getAttr<ArmBuiltinAliasAttr>()) {
+    BuiltinID = ABAA->getBuiltinName()->getBuiltinID();
   } else {
     if (!getIdentifier())
       return 0;
@@ -3181,7 +3181,7 @@ unsigned FunctionDecl::getBuiltinID(bool ConsiderWrapperFunctions) const {
   // If the function is marked "overloadable", it has a different mangled name
   // and is not the C library function.
   if (!ConsiderWrapperFunctions && hasAttr<OverloadableAttr>() &&
-      !hasAttr<ArmMveAliasAttr>())
+      !hasAttr<ArmBuiltinAliasAttr>())
     return 0;
 
   if (!Context.BuiltinInfo.isPredefinedLibFunction(BuiltinID))

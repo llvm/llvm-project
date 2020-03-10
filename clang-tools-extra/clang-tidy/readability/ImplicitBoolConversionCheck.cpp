@@ -293,12 +293,11 @@ void ImplicitBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
           .bind("implicitCastToBool"),
       this);
 
-  auto boolComparison = binaryOperator(
-      anyOf(hasOperatorName("=="), hasOperatorName("!=")),
-      hasLHS(implicitCastFromBool), hasRHS(implicitCastFromBool));
-  auto boolOpAssignment =
-      binaryOperator(anyOf(hasOperatorName("|="), hasOperatorName("&=")),
-                     hasLHS(expr(hasType(booleanType()))));
+  auto boolComparison = binaryOperator(hasAnyOperatorName("==", "!="),
+                                       hasLHS(implicitCastFromBool),
+                                       hasRHS(implicitCastFromBool));
+  auto boolOpAssignment = binaryOperator(hasAnyOperatorName("|=", "&="),
+                                         hasLHS(expr(hasType(booleanType()))));
   auto bitfieldAssignment = binaryOperator(
       hasLHS(memberExpr(hasDeclaration(fieldDecl(hasBitWidth(1))))));
   auto bitfieldConstruct = cxxConstructorDecl(hasDescendant(cxxCtorInitializer(

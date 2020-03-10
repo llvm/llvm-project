@@ -617,6 +617,17 @@ bool AMDGPUTargetLowering::allUsesHaveSourceMods(const SDNode *N,
   return true;
 }
 
+EVT AMDGPUTargetLowering::getTypeForExtReturn(LLVMContext &Context, EVT VT,
+                                              ISD::NodeType ExtendKind) const {
+  assert(!VT.isVector() && "only scalar expected");
+
+  // Round to the next multiple of 32-bits.
+  unsigned Size = VT.getSizeInBits();
+  if (Size <= 32)
+    return MVT::i32;
+  return EVT::getIntegerVT(Context, 32 * ((Size + 31) / 32));
+}
+
 MVT AMDGPUTargetLowering::getVectorIdxTy(const DataLayout &) const {
   return MVT::i32;
 }

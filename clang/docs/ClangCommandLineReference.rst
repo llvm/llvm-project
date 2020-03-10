@@ -1307,6 +1307,10 @@ Use colors in diagnostics
 
 .. option:: -fcommon, -fno-common
 
+Place definitions of variables with no storage class and no initializer
+(tentative definitions) in a common block, instead of generating individual
+zero-initialized definitions (default -fno-common).
+
 .. option:: -fcompile-resource=<arg>, --resource <arg>, --resource=<arg>
 
 .. option:: -fconstant-cfstrings, -fno-constant-cfstrings

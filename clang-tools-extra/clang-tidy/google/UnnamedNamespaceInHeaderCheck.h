@@ -10,7 +10,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_GOOGLE_UNNAMEDNAMESPACEINHEADERCHECK_H
 
 #include "../ClangTidyCheck.h"
-#include "../utils/HeaderFileExtensionsUtils.h"
+#include "../utils/FileExtensionsUtils.h"
 
 namespace clang {
 namespace tidy {
@@ -20,11 +20,12 @@ namespace build {
 /// Finds anonymous namespaces in headers.
 ///
 /// The check supports these options:
-///   - `HeaderFileExtensions`: a comma-separated list of filename extensions of
-///     header files (The filename extensions should not contain "." prefix).
-///     "h,hh,hpp,hxx" by default.
+///   - `HeaderFileExtensions`: a semicolon-separated list of filename
+///     extensions of header files (The filename extensions should not contain
+///     "." prefix). ";h;hh;hpp;hxx" by default.
+///
 ///     For extension-less header files, using an empty string or leaving an
-///     empty string between "," if there are other filename extensions.
+///     empty string between ";" if there are other filename extensions.
 ///
 /// https://google.github.io/styleguide/cppguide.html#Namespaces
 ///
@@ -41,7 +42,7 @@ public:
 
 private:
   const std::string RawStringHeaderFileExtensions;
-  utils::HeaderFileExtensionsSet HeaderFileExtensions;
+  utils::FileExtensionsSet HeaderFileExtensions;
 };
 
 } // namespace build

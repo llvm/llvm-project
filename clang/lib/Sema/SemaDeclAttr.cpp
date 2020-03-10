@@ -4937,13 +4937,47 @@ static void handlePatchableFunctionEntryAttr(Sema &S, Decl *D,
                  PatchableFunctionEntryAttr(S.Context, AL, Count, Offset));
 }
 
-static bool ArmMveAliasValid(unsigned BuiltinID, StringRef AliasName) {
+namespace {
+struct IntrinToName {
+  uint32_t Id;
+  int32_t FullName;
+  int32_t ShortName;
+};
+} // unnamed namespace
+
+static bool ArmBuiltinAliasValid(unsigned BuiltinID, StringRef AliasName,
+                                 ArrayRef<IntrinToName> Map,
+                                 const char *IntrinNames) {
   if (AliasName.startswith("__arm_"))
     AliasName = AliasName.substr(6);
-#include "clang/Basic/arm_mve_builtin_aliases.inc"
+  const IntrinToName *It = std::lower_bound(
+      Map.begin(), Map.end(), BuiltinID,
+      [](const IntrinToName &L, unsigned Id) { return L.Id < Id; });
+  if (It == Map.end() || It->Id != BuiltinID)
+    return false;
+  StringRef FullName(&IntrinNames[It->FullName]);
+  if (AliasName == FullName)
+    return true;
+  if (It->ShortName == -1)
+    return false;
+  StringRef ShortName(&IntrinNames[It->ShortName]);
+  return AliasName == ShortName;
 }
 
-static void handleArmMveAliasAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+static bool ArmMveAliasValid(unsigned BuiltinID, StringRef AliasName) {
+#include "clang/Basic/arm_mve_builtin_aliases.inc"
+  // The included file defines:
+  // - ArrayRef<IntrinToName> Map
+  // - const char IntrinNames[]
+  return ArmBuiltinAliasValid(BuiltinID, AliasName, Map, IntrinNames);
+}
+
+static bool ArmCdeAliasValid(unsigned BuiltinID, StringRef AliasName) {
+#include "clang/Basic/arm_cde_builtin_aliases.inc"
+  return ArmBuiltinAliasValid(BuiltinID, AliasName, Map, IntrinNames);
+}
+
+static void handleArmBuiltinAliasAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (!AL.isArgIdent(0)) {
     S.Diag(AL.getLoc(), diag::err_attribute_argument_n_type)
         << AL << 1 << AANT_ArgumentIdentifier;
@@ -4952,14 +4986,15 @@ static void handleArmMveAliasAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
   IdentifierInfo *Ident = AL.getArgAsIdent(0)->Ident;
   unsigned BuiltinID = Ident->getBuiltinID();
+  StringRef AliasName = cast<FunctionDecl>(D)->getIdentifier()->getName();
 
-  if (!ArmMveAliasValid(BuiltinID,
-                        cast<FunctionDecl>(D)->getIdentifier()->getName())) {
-    S.Diag(AL.getLoc(), diag::err_attribute_arm_mve_alias);
+  if (!ArmMveAliasValid(BuiltinID, AliasName) &&
+      !ArmCdeAliasValid(BuiltinID, AliasName)) {
+    S.Diag(AL.getLoc(), diag::err_attribute_arm_builtin_alias);
     return;
   }
 
-  D->addAttr(::new (S.Context) ArmMveAliasAttr(S.Context, AL, Ident));
+  D->addAttr(::new (S.Context) ArmBuiltinAliasAttr(S.Context, AL, Ident));
 }
 
 //===----------------------------------------------------------------------===//
@@ -7441,8 +7476,8 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
     handleMSAllocatorAttr(S, D, AL);
     break;
 
-  case ParsedAttr::AT_ArmMveAlias:
-    handleArmMveAliasAttr(S, D, AL);
+  case ParsedAttr::AT_ArmBuiltinAlias:
+    handleArmBuiltinAliasAttr(S, D, AL);
     break;
 
   case ParsedAttr::AT_AcquireHandle:

@@ -670,12 +670,12 @@ class HasOverloadedOperatorNameMatcher : public SingleNodeMatcherInterface<T> {
   static_assert(std::is_same<T, CXXOperatorCallExpr>::value ||
                 std::is_base_of<FunctionDecl, T>::value,
                 "unsupported class for matcher");
-  static_assert(std::is_same<ArgT, StringRef>::value,
-                "argument type must be StringRef");
+  static_assert(std::is_same<ArgT, std::vector<std::string>>::value,
+                "argument type must be std::vector<std::string>");
 
 public:
-  explicit HasOverloadedOperatorNameMatcher(const StringRef Name)
-      : SingleNodeMatcherInterface<T>(), Name(Name) {}
+  explicit HasOverloadedOperatorNameMatcher(std::vector<std::string> Names)
+      : SingleNodeMatcherInterface<T>(), Names(std::move(Names)) {}
 
   bool matchesNode(const T &Node) const override {
     return matchesSpecialized(Node);
@@ -687,17 +687,18 @@ private:
   /// so this function returns true if the call is to an operator of the given
   /// name.
   bool matchesSpecialized(const CXXOperatorCallExpr &Node) const {
-    return getOperatorSpelling(Node.getOperator()) == Name;
+    return llvm::is_contained(Names, getOperatorSpelling(Node.getOperator()));
   }
 
   /// Returns true only if CXXMethodDecl represents an overloaded
   /// operator and has the given operator name.
   bool matchesSpecialized(const FunctionDecl &Node) const {
     return Node.isOverloadedOperator() &&
-           getOperatorSpelling(Node.getOverloadedOperator()) == Name;
+           llvm::is_contained(
+               Names, getOperatorSpelling(Node.getOverloadedOperator()));
   }
 
-  std::string Name;
+  const std::vector<std::string> Names;
 };
 
 /// Matches named declarations with a specific name.
@@ -1898,6 +1899,13 @@ using HasOpNameMatcher =
                                  void(TypeList<BinaryOperator, UnaryOperator>)>;
 
 HasOpNameMatcher hasAnyOperatorNameFunc(ArrayRef<const StringRef *> NameRefs);
+
+using HasOverloadOpNameMatcher = PolymorphicMatcherWithParam1<
+    HasOverloadedOperatorNameMatcher, std::vector<std::string>,
+    void(TypeList<CXXOperatorCallExpr, FunctionDecl>)>;
+
+HasOverloadOpNameMatcher
+hasAnyOverloadedOperatorNameFunc(ArrayRef<const StringRef *> NameRefs);
 
 } // namespace internal
 

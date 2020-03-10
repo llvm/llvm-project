@@ -314,7 +314,7 @@ Now that we have all of our simple expression-parsing logic in place, we
 can define a helper function to wrap it together into one entry point.
 We call this class of expressions "primary" expressions, for reasons
 that will become more clear `later in the
-tutorial <LangImpl6.html#user-defined-unary-operators>`_. In order to parse an arbitrary
+tutorial <LangImpl06.html#user-defined-unary-operators>`_. In order to parse an arbitrary
 primary expression, we need to determine what sort of expression it is:
 
 .. code-block:: c++

@@ -685,7 +685,9 @@ void LinkerScript::addOrphanSections() {
       orphanSections.push_back(s);
 
       StringRef name = getOutputSectionName(s);
-      if (OutputSection *sec = findByName(sectionCommands, name)) {
+      if (config->unique) {
+        v.push_back(createSection(s, name));
+      } else if (OutputSection *sec = findByName(sectionCommands, name)) {
         sec->recordSection(s);
       } else {
         if (OutputSection *os = addInputSec(map, s, name))

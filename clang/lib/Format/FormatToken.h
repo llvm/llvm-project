@@ -509,6 +509,9 @@ struct FormatToken {
   /// Returns \c true if this tokens starts a block-type list, i.e. a
   /// list that should be indented with a block indent.
   bool opensBlockOrBlockTypeList(const FormatStyle &Style) const {
+    // C# Does not indent object initialisers as continuations.
+    if (is(tok::l_brace) && BlockKind == BK_BracedInit && Style.isCSharp())
+      return true;
     if (is(TT_TemplateString) && opensScope())
       return true;
     return is(TT_ArrayInitializerLSquare) || is(TT_ProtoExtensionLSquare) ||

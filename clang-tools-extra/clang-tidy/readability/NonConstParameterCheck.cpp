@@ -28,8 +28,7 @@ void NonConstParameterCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(declRefExpr().bind("Ref"), this);
 
   // Analyse parameter usage in function.
-  Finder->addMatcher(stmt(anyOf(unaryOperator(anyOf(hasOperatorName("++"),
-                                                    hasOperatorName("--"))),
+  Finder->addMatcher(stmt(anyOf(unaryOperator(hasAnyOperatorName("++", "--")),
                                 binaryOperator(), callExpr(), returnStmt(),
                                 cxxConstructExpr()))
                          .bind("Mark"),

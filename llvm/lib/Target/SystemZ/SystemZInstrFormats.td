@@ -2807,6 +2807,10 @@ class CondUnaryRSY<string mnemonic, bits<16> opcode,
   let mayLoad = 1;
   let AccessBytes = bytes;
   let CCMaskLast = 1;
+  let OpKey = mnemonic#"r"#cls;
+  let OpType = "mem";
+  let MemKey = mnemonic#cls;
+  let MemType = "target";
 }
 
 // Like CondUnaryRSY, but used for the raw assembly form.  The condition-code
@@ -3211,6 +3215,8 @@ class CondBinaryRRF<string mnemonic, bits<16> opcode, RegisterOperand cls1,
   let CCMaskLast = 1;
   let NumOpsKey = !subst("loc", "sel", mnemonic);
   let NumOpsValue = "2";
+  let OpKey = mnemonic#cls1;
+  let OpType = "reg";
 }
 
 // Like CondBinaryRRF, but used for the raw assembly form.  The condition-code
@@ -3252,6 +3258,8 @@ class CondBinaryRRFa<string mnemonic, bits<16> opcode, RegisterOperand cls1,
   let CCMaskLast = 1;
   let NumOpsKey = mnemonic;
   let NumOpsValue = "3";
+  let OpKey = mnemonic#cls1;
+  let OpType = "reg";
 }
 
 // Like CondBinaryRRFa, but used for the raw assembly form.  The condition-code
@@ -4775,6 +4783,20 @@ class MemFoldPseudo<string mnemonic, RegisterOperand cls, bits<5> bytes,
     let hasNoSchedulingInfo = 1;
 }
 
+// Same as MemFoldPseudo but for Load On Condition with CC operands.
+class MemFoldPseudo_CondMove<string mnemonic, RegisterOperand cls, bits<5> bytes,
+                             AddressingMode mode>
+  : Pseudo<(outs cls:$R1),
+           (ins cls:$R2, mode:$XBD2, cond4:$valid, cond4:$M3), []> {
+    let OpKey = !subst("loc", "sel", mnemonic)#"r"#cls;
+    let OpType = "mem";
+    let MemKey = mnemonic#cls;
+    let MemType = "pseudo";
+    let mayLoad = 1;
+    let AccessBytes = bytes;
+    let hasNoSchedulingInfo = 1;
+}
+
 // Like CompareRI, but expanded after RA depending on the choice of register.
 class CompareRIPseudo<SDPatternOperator operator, RegisterOperand cls,
                       ImmOpWithPattern imm>
@@ -4813,6 +4835,8 @@ class CondBinaryRRFPseudo<string mnemonic, RegisterOperand cls1,
   let CCMaskLast = 1;
   let NumOpsKey = !subst("loc", "sel", mnemonic);
   let NumOpsValue = "2";
+  let OpKey = mnemonic#cls1;
+  let OpType = "reg";
 }
 
 // Like CondBinaryRRFa, but expanded after RA depending on the choice of
@@ -4826,6 +4850,8 @@ class CondBinaryRRFaPseudo<string mnemonic, RegisterOperand cls1,
   let CCMaskLast = 1;
   let NumOpsKey = mnemonic;
   let NumOpsValue = "3";
+  let OpKey = mnemonic#cls1;
+  let OpType = "reg";
 }
 
 // Like CondBinaryRIE, but expanded after RA depending on the choice of
@@ -4842,8 +4868,9 @@ class CondBinaryRIEPseudo<RegisterOperand cls, ImmOpWithPattern imm>
 
 // Like CondUnaryRSY, but expanded after RA depending on the choice of
 // register.
-class CondUnaryRSYPseudo<SDPatternOperator operator, RegisterOperand cls,
-                         bits<5> bytes, AddressingMode mode = bdaddr20only>
+class CondUnaryRSYPseudo<string mnemonic, SDPatternOperator operator,
+                         RegisterOperand cls, bits<5> bytes,
+                         AddressingMode mode = bdaddr20only>
   : Pseudo<(outs cls:$R1),
            (ins cls:$R1src, mode:$BD2, cond4:$valid, cond4:$R3),
            [(set cls:$R1,
@@ -4854,6 +4881,10 @@ class CondUnaryRSYPseudo<SDPatternOperator operator, RegisterOperand cls,
   let mayLoad = 1;
   let AccessBytes = bytes;
   let CCMaskLast = 1;
+  let OpKey = mnemonic#"r"#cls;
+  let OpType = "mem";
+  let MemKey = mnemonic#cls;
+  let MemType = "target";
 }
 
 // Like CondStoreRSY, but expanded after RA depending on the choice of
@@ -5064,6 +5095,22 @@ multiclass BinaryRXPairAndPseudo<string mnemonic, bits<8> rxOpcode,
                          bytes, bdxaddr20pair>;
   }
   def _MemFoldPseudo : MemFoldPseudo<mnemonic, cls, bytes, bdxaddr12pair>;
+}
+
+multiclass CondUnaryRSYPairAndMemFold<string mnemonic, bits<16> opcode,
+                                      SDPatternOperator operator,
+                                      RegisterOperand cls, bits<5> bytes,
+                                      AddressingMode mode = bdaddr20only> {
+  defm "" : CondUnaryRSYPair<mnemonic, opcode, operator, cls, bytes, mode>;
+  def _MemFoldPseudo : MemFoldPseudo_CondMove<mnemonic, cls, bytes, mode>;
+}
+
+multiclass CondUnaryRSYPseudoAndMemFold<string mnemonic,
+                                        SDPatternOperator operator,
+                                        RegisterOperand cls, bits<5> bytes,
+                                        AddressingMode mode = bdaddr20only> {
+  def "" : CondUnaryRSYPseudo<mnemonic, operator, cls, bytes, mode>;
+  def _MemFoldPseudo : MemFoldPseudo_CondMove<mnemonic, cls, bytes, mode>;
 }
 
 // Define an instruction that operates on two fixed-length blocks of memory,

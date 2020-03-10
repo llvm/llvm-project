@@ -613,10 +613,18 @@ let SubtargetPredicate = isGFX9Plus in {
   def S_PACK_HH_B32_B16 : SOP2_32<"s_pack_hh_b32_b16">;
 
   let Defs = [SCC] in {
-    def S_LSHL1_ADD_U32 : SOP2_32<"s_lshl1_add_u32">;
-    def S_LSHL2_ADD_U32 : SOP2_32<"s_lshl2_add_u32">;
-    def S_LSHL3_ADD_U32 : SOP2_32<"s_lshl3_add_u32">;
-    def S_LSHL4_ADD_U32 : SOP2_32<"s_lshl4_add_u32">;
+    def S_LSHL1_ADD_U32 : SOP2_32<"s_lshl1_add_u32",
+      [(set i32:$sdst, (shl1_add SSrc_b32:$src0, SSrc_b32:$src1))]
+    >;
+    def S_LSHL2_ADD_U32 : SOP2_32<"s_lshl2_add_u32",
+      [(set i32:$sdst, (shl2_add SSrc_b32:$src0, SSrc_b32:$src1))]
+    >;
+    def S_LSHL3_ADD_U32 : SOP2_32<"s_lshl3_add_u32",
+      [(set i32:$sdst, (shl3_add SSrc_b32:$src0, SSrc_b32:$src1))]
+    >;
+    def S_LSHL4_ADD_U32 : SOP2_32<"s_lshl4_add_u32",
+      [(set i32:$sdst, (shl4_add SSrc_b32:$src0, SSrc_b32:$src1))]
+    >;
   } // End Defs = [SCC]
 
   let isCommutable = 1 in {

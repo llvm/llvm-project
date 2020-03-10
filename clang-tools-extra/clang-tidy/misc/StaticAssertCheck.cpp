@@ -38,7 +38,7 @@ void StaticAssertCheck::registerMatchers(MatchFinder *Finder) {
                          .bind("castExpr")));
   auto AssertExprRoot = anyOf(
       binaryOperator(
-          anyOf(hasOperatorName("&&"), hasOperatorName("==")),
+          hasAnyOperatorName("&&", "=="),
           hasEitherOperand(ignoringImpCasts(stringLiteral().bind("assertMSG"))),
           anyOf(binaryOperator(hasEitherOperand(IsAlwaysFalseWithCast)),
                 anything()))
