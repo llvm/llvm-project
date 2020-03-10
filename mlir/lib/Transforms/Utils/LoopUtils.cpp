@@ -1797,6 +1797,28 @@ uint64_t mlir::affineDataCopyGenerate(AffineForOp forOp,
                                 filterMemRef, copyNests);
 }
 
+LogicalResult mlir::generateCopyForMemRegion(
+    const MemRefRegion &memrefRegion, Operation *analyzedOp,
+    const AffineCopyOptions &copyOptions, CopyGenerateResult &result) {
+  Block *block = analyzedOp->getBlock();
+  auto begin = analyzedOp->getIterator();
+  auto end = std::next(begin);
+  DenseMap<Value, Value> fastBufferMap;
+  DenseSet<Operation *> copyNests;
+
+  auto err = generateCopy(memrefRegion, block, begin, end, block, begin, end,
+                          copyOptions, fastBufferMap, copyNests,
+                          &result.sizeInBytes, &begin, &end);
+  if (failed(err))
+    return err;
+
+  result.alloc =
+      fastBufferMap.find(memrefRegion.memref)->second.getDefiningOp();
+  assert(copyNests.size() <= 1 && "At most one copy nest is expected.");
+  result.copyNest = copyNests.empty() ? nullptr : *copyNests.begin();
+  return success();
+}
+
 /// Gathers all AffineForOps in 'block' at 'currLoopDepth' in 'depthToLoops'.
 static void
 gatherLoopsInBlock(Block *block, unsigned currLoopDepth,
