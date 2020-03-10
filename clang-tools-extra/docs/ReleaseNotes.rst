@@ -134,7 +134,7 @@ Renamed checks
 ^^^^^^^^^^^^^^
 
 - The 'fuchsia-restrict-system-headers' check was renamed to :doc:`portability-restrict-system-includes
-  <clang-tidy/checks/portability-restrict-system-includes>
+  <clang-tidy/checks/portability-restrict-system-includes>`
 
 Improvements to include-fixer
 -----------------------------
