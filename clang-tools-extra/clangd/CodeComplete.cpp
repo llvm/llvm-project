@@ -1776,8 +1776,7 @@ SignatureHelp signatureHelp(PathRef FileName,
   Options.IncludeBriefComments = false;
   IncludeStructure PreambleInclusions; // Unused for signatureHelp
   semaCodeComplete(
-      std::make_unique<SignatureHelpCollector>(Options, Index, Result),
-      Options,
+      std::make_unique<SignatureHelpCollector>(Options, Index, Result), Options,
       {FileName, Command, Preamble, Contents, *Offset, std::move(VFS)});
   return Result;
 }
