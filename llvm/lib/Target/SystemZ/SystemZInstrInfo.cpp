@@ -1150,14 +1150,31 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
   // commutable, try to change <INSN>R into <INSN>.
   unsigned NumOps = MI.getNumExplicitOperands();
   int MemOpcode = SystemZ::getMemOpcode(Opcode);
+  if (MemOpcode == -1)
+    return nullptr;
+
+  // Try to swap compare operands if possible.
+  bool NeedsCommute = false;
+  if ((MI.getOpcode() == SystemZ::CR || MI.getOpcode() == SystemZ::CGR ||
+       MI.getOpcode() == SystemZ::CLR || MI.getOpcode() == SystemZ::CLGR) &&
+      OpNum == 0 && prepareCompareSwapOperands(MI))
+    NeedsCommute = true;
+
+  bool CCOperands = false;
+  if (MI.getOpcode() == SystemZ::LOCRMux || MI.getOpcode() == SystemZ::LOCGR ||
+      MI.getOpcode() == SystemZ::SELRMux || MI.getOpcode() == SystemZ::SELGR) {
+    assert(MI.getNumOperands() == 6 && NumOps == 5 &&
+           "LOCR/SELR instruction operands corrupt?");
+    NumOps -= 2;
+    CCOperands = true;
+  }
 
   // See if this is a 3-address instruction that is convertible to 2-address
   // and suitable for folding below.  Only try this with virtual registers
   // and a provided VRM (during regalloc).
-  bool NeedsCommute = false;
-  if (SystemZ::getTwoOperandOpcode(Opcode) != -1 && MemOpcode != -1) {
+  if (SystemZ::getTwoOperandOpcode(Opcode) != -1) {
     if (VRM == nullptr)
-      MemOpcode = -1;
+      return nullptr;
     else {
       assert(NumOps == 3 && "Expected two source registers.");
       Register DstReg = MI.getOperand(0).getReg();
@@ -1172,32 +1189,42 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
           DstPhys == VRM->getPhys(SrcReg))
         NeedsCommute = (OpNum == 1);
       else
-        MemOpcode = -1;
+        return nullptr;
     }
   }
 
-  if (MemOpcode >= 0) {
-    if ((OpNum == NumOps - 1) || NeedsCommute) {
-      const MCInstrDesc &MemDesc = get(MemOpcode);
-      uint64_t AccessBytes = SystemZII::getAccessSize(MemDesc.TSFlags);
-      assert(AccessBytes != 0 && "Size of access should be known");
-      assert(AccessBytes <= Size && "Access outside the frame index");
-      uint64_t Offset = Size - AccessBytes;
-      MachineInstrBuilder MIB = BuildMI(*InsertPt->getParent(), InsertPt,
-                                        MI.getDebugLoc(), get(MemOpcode));
+  if ((OpNum == NumOps - 1) || NeedsCommute) {
+    const MCInstrDesc &MemDesc = get(MemOpcode);
+    uint64_t AccessBytes = SystemZII::getAccessSize(MemDesc.TSFlags);
+    assert(AccessBytes != 0 && "Size of access should be known");
+    assert(AccessBytes <= Size && "Access outside the frame index");
+    uint64_t Offset = Size - AccessBytes;
+    MachineInstrBuilder MIB = BuildMI(*InsertPt->getParent(), InsertPt,
+                                      MI.getDebugLoc(), get(MemOpcode));
+    if (MI.isCompare()) {
+      assert(NumOps == 2 && "Expected 2 register operands for a compare.");
+      MIB.add(MI.getOperand(NeedsCommute ? 1 : 0));
+    }
+    else {
       MIB.add(MI.getOperand(0));
       if (NeedsCommute)
         MIB.add(MI.getOperand(2));
       else
         for (unsigned I = 1; I < OpNum; ++I)
           MIB.add(MI.getOperand(I));
-      MIB.addFrameIndex(FrameIndex).addImm(Offset);
-      if (MemDesc.TSFlags & SystemZII::HasIndex)
-        MIB.addReg(0);
-      transferDeadCC(&MI, MIB);
-      transferMIFlag(&MI, MIB, MachineInstr::NoSWrap);
-      return MIB;
     }
+    MIB.addFrameIndex(FrameIndex).addImm(Offset);
+    if (MemDesc.TSFlags & SystemZII::HasIndex)
+      MIB.addReg(0);
+    if (CCOperands) {
+      unsigned CCValid = MI.getOperand(NumOps).getImm();
+      unsigned CCMask = MI.getOperand(NumOps + 1).getImm();
+      MIB.addImm(CCValid);
+      MIB.addImm(NeedsCommute ? CCMask ^ CCValid : CCMask);
+    }
+    transferDeadCC(&MI, MIB);
+    transferMIFlag(&MI, MIB, MachineInstr::NoSWrap);
+    return MIB;
   }
 
   return nullptr;
@@ -1704,6 +1731,56 @@ unsigned SystemZInstrInfo::getFusedCompare(unsigned Opcode,
     }
   }
   return 0;
+}
+
+bool SystemZInstrInfo::
+prepareCompareSwapOperands(MachineBasicBlock::iterator const MBBI) const {
+  assert(MBBI->isCompare() && MBBI->getOperand(0).isReg() &&
+         MBBI->getOperand(1).isReg() && !MBBI->mayLoad() &&
+         "Not a compare reg/reg.");
+
+  MachineBasicBlock *MBB = MBBI->getParent();
+  bool CCLive = true;
+  SmallVector<MachineInstr *, 4> CCUsers;
+  for (MachineBasicBlock::iterator Itr = std::next(MBBI);
+       Itr != MBB->end(); ++Itr) {
+    if (Itr->readsRegister(SystemZ::CC)) {
+      unsigned Flags = Itr->getDesc().TSFlags;
+      if ((Flags & SystemZII::CCMaskFirst) || (Flags & SystemZII::CCMaskLast))
+        CCUsers.push_back(&*Itr);
+      else
+        return false;
+    }
+    if (Itr->definesRegister(SystemZ::CC)) {
+      CCLive = false;
+      break;
+    }
+  }
+  if (CCLive) {
+    LivePhysRegs LiveRegs(*MBB->getParent()->getSubtarget().getRegisterInfo());
+    LiveRegs.addLiveOuts(*MBB);
+    if (LiveRegs.contains(SystemZ::CC))
+      return false;
+  }
+
+  // Update all CC users.
+  for (unsigned Idx = 0; Idx < CCUsers.size(); ++Idx) {
+    unsigned Flags = CCUsers[Idx]->getDesc().TSFlags;
+    unsigned FirstOpNum = ((Flags & SystemZII::CCMaskFirst) ?
+                           0 : CCUsers[Idx]->getNumExplicitOperands() - 2);
+    MachineOperand &CCMaskMO = CCUsers[Idx]->getOperand(FirstOpNum + 1);
+    unsigned NewCCMask = SystemZ::reverseCCMask(CCMaskMO.getImm());
+    CCMaskMO.setImm(NewCCMask);
+  }
+
+  return true;
+}
+
+unsigned SystemZ::reverseCCMask(unsigned CCMask) {
+  return ((CCMask & SystemZ::CCMASK_CMP_EQ) |
+          (CCMask & SystemZ::CCMASK_CMP_GT ? SystemZ::CCMASK_CMP_LT : 0) |
+          (CCMask & SystemZ::CCMASK_CMP_LT ? SystemZ::CCMASK_CMP_GT : 0) |
+          (CCMask & SystemZ::CCMASK_CMP_UO));
 }
 
 unsigned SystemZInstrInfo::getLoadAndTrap(unsigned Opcode) const {
