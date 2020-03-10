@@ -230,11 +230,11 @@ class VSCodeTestCaseBase(TestBase):
     def continue_to_exit(self, exitCode=0):
         self.vscode.request_continue()
         stopped_events = self.vscode.wait_for_stopped()
-        self.assertTrue(len(stopped_events) == 1,
-                        "expecting single 'exited' event")
-        self.assertTrue(stopped_events[0]['event'] == 'exited',
+        self.assertEquals(len(stopped_events), 1,
+                        "stopped_events = {}".format(stopped_events))
+        self.assertEquals(stopped_events[0]['event'], 'exited',
                         'make sure program ran to completion')
-        self.assertTrue(stopped_events[0]['body']['exitCode'] == exitCode,
+        self.assertEquals(stopped_events[0]['body']['exitCode'], exitCode,
                         'exitCode == %i' % (exitCode))
 
     def attach(self, program=None, pid=None, waitFor=None, trace=None,
