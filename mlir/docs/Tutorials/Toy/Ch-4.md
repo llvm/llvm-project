@@ -108,7 +108,7 @@ To add this interface we just need to include the definition into our operation
 specification file (`Ops.td`):
 
 ```tablegen
-include "mlir/Analysis/CallInterfaces.td"
+include "mlir/Interfaces/CallInterfaces.td"
 ```
 
 and add it to the traits list of `GenericCallOp`:

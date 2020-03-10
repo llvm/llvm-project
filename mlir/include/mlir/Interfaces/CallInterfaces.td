@@ -1,4 +1,4 @@
-//===- CallInterfaces.td - Call Interfaces for ops -*- tablegen ---------*-===//
+//===- CallInterfaces.td - Call Interfaces for ops ---------*- tablegen -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_CALLINTERFACES
-#define MLIR_CALLINTERFACES
+#ifndef MLIR_INTERFACES_CALLINTERFACES
+#define MLIR_INTERFACES_CALLINTERFACES
 
 include "mlir/IR/OpBase.td"
 
@@ -87,4 +87,4 @@ def CallableOpInterface : OpInterface<"CallableOpInterface"> {
   ];
 }
 
-#endif // MLIR_CALLINTERFACES
+#endif // MLIR_INTERFACES_CALLINTERFACES

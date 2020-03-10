@@ -7,11 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Transforms/RegionUtils.h"
-#include "mlir/Analysis/ControlFlowInterfaces.h"
 #include "mlir/IR/Block.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/RegionGraphTraits.h"
 #include "mlir/IR/Value.h"
+#include "mlir/Interfaces/ControlFlowInterfaces.h"
 
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/PostOrderIterator.h"

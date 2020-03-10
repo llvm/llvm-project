@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_ANALYSIS_CALLINTERFACES_H
-#define MLIR_ANALYSIS_CALLINTERFACES_H
+#ifndef MLIR_INTERFACES_CALLINTERFACES_H
+#define MLIR_INTERFACES_CALLINTERFACES_H
 
 #include "mlir/IR/SymbolTable.h"
 #include "llvm/ADT/PointerUnion.h"
@@ -24,7 +24,7 @@ struct CallInterfaceCallable : public PointerUnion<SymbolRefAttr, Value> {
   using PointerUnion<SymbolRefAttr, Value>::PointerUnion;
 };
 
-#include "mlir/Analysis/CallInterfaces.h.inc"
+#include "mlir/Interfaces/CallInterfaces.h.inc"
 } // end namespace mlir
 
-#endif // MLIR_ANALYSIS_CALLINTERFACES_H
+#endif // MLIR_INTERFACES_CALLINTERFACES_H
