@@ -726,8 +726,10 @@ void ThreadList::Update(ThreadList &rhs) {
           break;
         }
       }
-      if (!thread_is_alive)
+      if (!thread_is_alive) {
         (*rhs_pos)->DestroyThread();
+        m_process->RemoveThreadPlansForTID((*rhs_pos)->GetID());
+      }
     }
   }
 }
