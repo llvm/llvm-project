@@ -1512,6 +1512,10 @@ private:
   /// Emits target specific Metadata for global declarations.
   void EmitTargetMetadata();
 
+  /// Emit the module flag metadata used to pass options controlling the
+  /// the backend to LLVM.
+  void EmitBackendOptionsMetadata(const CodeGenOptions CodeGenOpts);
+
   /// Emits OpenCL specific Metadata e.g. OpenCL version.
   void EmitOpenCLMetadata();
 
