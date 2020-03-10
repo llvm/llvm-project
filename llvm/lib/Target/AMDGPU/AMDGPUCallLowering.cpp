@@ -153,10 +153,26 @@ AMDGPUCallLowering::AMDGPUCallLowering(const AMDGPUTargetLowering &TLI)
   : CallLowering(&TLI) {
 }
 
+// FIXME: Compatability shim
+static ISD::NodeType extOpcodeToISDExtOpcode(unsigned MIOpc) {
+  switch (MIOpc) {
+  case TargetOpcode::G_SEXT:
+    return ISD::SIGN_EXTEND;
+  case TargetOpcode::G_ZEXT:
+    return ISD::ZERO_EXTEND;
+  case TargetOpcode::G_ANYEXT:
+    return ISD::ANY_EXTEND;
+  default:
+    llvm_unreachable("not an extend opcode");
+  }
+}
+
 void AMDGPUCallLowering::splitToValueTypes(
-    const ArgInfo &OrigArg, SmallVectorImpl<ArgInfo> &SplitArgs,
-    const DataLayout &DL, MachineRegisterInfo &MRI, CallingConv::ID CallConv,
-    SplitArgTy PerformArgSplit) const {
+  MachineIRBuilder &B,
+  const ArgInfo &OrigArg, unsigned OrigArgIdx,
+  SmallVectorImpl<ArgInfo> &SplitArgs,
+  const DataLayout &DL, CallingConv::ID CallConv,
+  SplitArgTy PerformArgSplit) const {
   const SITargetLowering &TLI = *getTLI<SITargetLowering>();
   LLVMContext &Ctx = OrigArg.Ty->getContext();
 
@@ -170,28 +186,46 @@ void AMDGPUCallLowering::splitToValueTypes(
 
   int SplitIdx = 0;
   for (EVT VT : SplitVTs) {
-    unsigned NumParts = TLI.getNumRegistersForCallingConv(Ctx, CallConv, VT);
+    Register Reg = OrigArg.Regs[SplitIdx];
     Type *Ty = VT.getTypeForEVT(Ctx);
+    LLT LLTy = getLLTForType(*Ty, DL);
 
+    if (OrigArgIdx == AttributeList::ReturnIndex && VT.isScalarInteger()) {
+      unsigned ExtendOp = TargetOpcode::G_ANYEXT;
+      if (OrigArg.Flags[0].isSExt()) {
+        assert(OrigArg.Regs.size() == 1 && "expect only simple return values");
+        ExtendOp = TargetOpcode::G_SEXT;
+      } else if (OrigArg.Flags[0].isZExt()) {
+        assert(OrigArg.Regs.size() == 1 && "expect only simple return values");
+        ExtendOp = TargetOpcode::G_ZEXT;
+      }
 
+      EVT ExtVT = TLI.getTypeForExtReturn(Ctx, VT,
+                                          extOpcodeToISDExtOpcode(ExtendOp));
+      if (ExtVT != VT) {
+        VT = ExtVT;
+        Ty = ExtVT.getTypeForEVT(Ctx);
+        LLTy = getLLTForType(*Ty, DL);
+        Reg = B.buildInstr(ExtendOp, {LLTy}, {Reg}).getReg(0);
+      }
+    }
+
+    unsigned NumParts = TLI.getNumRegistersForCallingConv(Ctx, CallConv, VT);
+    MVT RegVT = TLI.getRegisterTypeForCallingConv(Ctx, CallConv, VT);
 
     if (NumParts == 1) {
       // No splitting to do, but we want to replace the original type (e.g. [1 x
       // double] -> double).
-      SplitArgs.emplace_back(OrigArg.Regs[SplitIdx], Ty,
-                             OrigArg.Flags, OrigArg.IsFixed);
+      SplitArgs.emplace_back(Reg, Ty, OrigArg.Flags, OrigArg.IsFixed);
 
       ++SplitIdx;
       continue;
     }
 
-    LLT LLTy = getLLTForType(*Ty, DL);
-
     SmallVector<Register, 8> SplitRegs;
-
-    EVT PartVT = TLI.getRegisterTypeForCallingConv(Ctx, CallConv, VT);
-    Type *PartTy = PartVT.getTypeForEVT(Ctx);
+    Type *PartTy = EVT(RegVT).getTypeForEVT(Ctx);
     LLT PartLLT = getLLTForType(*PartTy, DL);
+    MachineRegisterInfo &MRI = *B.getMRI();
 
     // FIXME: Should we be reporting all of the part registers for a single
     // argument, and let handleAssignments take care of the repacking?
@@ -201,7 +235,7 @@ void AMDGPUCallLowering::splitToValueTypes(
       SplitArgs.emplace_back(ArrayRef<Register>(PartReg), PartTy, OrigArg.Flags);
     }
 
-    PerformArgSplit(SplitRegs, LLTy, PartLLT, SplitIdx);
+    PerformArgSplit(SplitRegs, Reg, LLTy, PartLLT, SplitIdx);
 
     ++SplitIdx;
   }
@@ -221,6 +255,7 @@ static LLT getMultipleType(LLT OrigTy, int Factor) {
 static void unpackRegsToOrigType(MachineIRBuilder &B,
                                  ArrayRef<Register> DstRegs,
                                  Register SrcReg,
+                                 const CallLowering::ArgInfo &Info,
                                  LLT SrcTy,
                                  LLT PartTy) {
   assert(DstRegs.size() > 1 && "Nothing to unpack");
@@ -266,24 +301,26 @@ bool AMDGPUCallLowering::lowerReturnVal(MachineIRBuilder &B,
   auto &MF = B.getMF();
   const auto &F = MF.getFunction();
   const DataLayout &DL = MF.getDataLayout();
+  MachineRegisterInfo *MRI = B.getMRI();
 
   CallingConv::ID CC = F.getCallingConv();
   const SITargetLowering &TLI = *getTLI<SITargetLowering>();
-  MachineRegisterInfo &MRI = MF.getRegInfo();
 
   ArgInfo OrigRetInfo(VRegs, Val->getType());
   setArgFlags(OrigRetInfo, AttributeList::ReturnIndex, DL, F);
   SmallVector<ArgInfo, 4> SplitRetInfos;
 
   splitToValueTypes(
-    OrigRetInfo, SplitRetInfos, DL, MRI, CC,
-    [&](ArrayRef<Register> Regs, LLT LLTy, LLT PartLLT, int VTSplitIdx) {
-      unpackRegsToOrigType(B, Regs, VRegs[VTSplitIdx], LLTy, PartLLT);
+    B, OrigRetInfo, AttributeList::ReturnIndex, SplitRetInfos, DL, CC,
+    [&](ArrayRef<Register> Regs, Register SrcReg, LLT LLTy, LLT PartLLT,
+        int VTSplitIdx) {
+      unpackRegsToOrigType(B, Regs, SrcReg,
+                           SplitRetInfos[VTSplitIdx],
+                           LLTy, PartLLT);
     });
 
   CCAssignFn *AssignFn = TLI.CCAssignFnForReturn(CC, F.isVarArg());
-
-  OutgoingValueHandler RetHandler(B, MF.getRegInfo(), Ret, AssignFn);
+  OutgoingValueHandler RetHandler(B, *MRI, Ret, AssignFn);
   return handleAssignments(B, SplitRetInfos, RetHandler);
 }
 
@@ -308,7 +345,7 @@ bool AMDGPUCallLowering::lowerReturn(MachineIRBuilder &B,
     return true;
   }
 
-  auto const &ST = B.getMF().getSubtarget<GCNSubtarget>();
+  auto const &ST = MF.getSubtarget<GCNSubtarget>();
 
   unsigned ReturnOpc =
       IsShader ? AMDGPU::SI_RETURN_TO_EPILOG : AMDGPU::S_SETPC_B64_return;
@@ -663,13 +700,16 @@ bool AMDGPUCallLowering::lowerFormalArguments(
     }
 
     ArgInfo OrigArg(VRegs[Idx], Arg.getType());
-    setArgFlags(OrigArg, Idx + AttributeList::FirstArgIndex, DL, F);
+    const unsigned OrigArgIdx = Idx + AttributeList::FirstArgIndex;
+    setArgFlags(OrigArg, OrigArgIdx, DL, F);
 
     splitToValueTypes(
-      OrigArg, SplitArgs, DL, MRI, CC,
+      B, OrigArg, OrigArgIdx, SplitArgs, DL, CC,
       // FIXME: We should probably be passing multiple registers to
       // handleAssignments to do this
-      [&](ArrayRef<Register> Regs, LLT LLTy, LLT PartLLT, int VTSplitIdx) {
+      [&](ArrayRef<Register> Regs, Register DstReg,
+          LLT LLTy, LLT PartLLT, int VTSplitIdx) {
+        assert(DstReg == VRegs[Idx][VTSplitIdx]);
         packSplitRegsToOrigType(B, VRegs[Idx][VTSplitIdx], Regs,
                                 LLTy, PartLLT);
       });
