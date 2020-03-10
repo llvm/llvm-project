@@ -1881,6 +1881,9 @@ namespace serialization {
       CTOR_INITIALIZER_INDIRECT_MEMBER
     };
 
+    /// Kinds of cleanup objects owned by ExprWithCleanups.
+    enum CleanupObjectKind { COK_Block, COK_CompoundLiteral };
+
     /// Describes the redeclarations of a declaration.
     struct LocalRedeclarationsInfo {
       // The ID of the first declaration

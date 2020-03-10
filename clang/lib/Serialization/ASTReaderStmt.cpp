@@ -1819,9 +1819,17 @@ void ASTStmtReader::VisitExprWithCleanups(ExprWithCleanups *E) {
 
   unsigned NumObjects = Record.readInt();
   assert(NumObjects == E->getNumObjects());
-  for (unsigned i = 0; i != NumObjects; ++i)
-    E->getTrailingObjects<BlockDecl *>()[i] =
-        readDeclAs<BlockDecl>();
+  for (unsigned i = 0; i != NumObjects; ++i) {
+    unsigned CleanupKind = Record.readInt();
+    ExprWithCleanups::CleanupObject Obj;
+    if (CleanupKind == COK_Block)
+      Obj = readDeclAs<BlockDecl>();
+    else if (CleanupKind == COK_CompoundLiteral)
+      Obj = cast<CompoundLiteralExpr>(Record.readSubExpr());
+    else
+      llvm_unreachable("unexpected cleanup object type");
+    E->getTrailingObjects<ExprWithCleanups::CleanupObject>()[i] = Obj;
+  }
 
   E->ExprWithCleanupsBits.CleanupsHaveSideEffects = Record.readInt();
   E->SubExpr = Record.readSubExpr();

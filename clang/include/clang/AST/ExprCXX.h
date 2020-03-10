@@ -3321,13 +3321,15 @@ public:
 /// literal is the extent of the enclosing scope.
 class ExprWithCleanups final
     : public FullExpr,
-      private llvm::TrailingObjects<ExprWithCleanups, BlockDecl *> {
+      private llvm::TrailingObjects<
+          ExprWithCleanups,
+          llvm::PointerUnion<BlockDecl *, CompoundLiteralExpr *>> {
 public:
   /// The type of objects that are kept in the cleanup.
-  /// It's useful to remember the set of blocks;  we could also
-  /// remember the set of temporaries, but there's currently
-  /// no need.
-  using CleanupObject = BlockDecl *;
+  /// It's useful to remember the set of blocks and block-scoped compound
+  /// literals; we could also remember the set of temporaries, but there's
+  /// currently no need.
+  using CleanupObject = llvm::PointerUnion<BlockDecl *, CompoundLiteralExpr *>;
 
 private:
   friend class ASTStmtReader;
