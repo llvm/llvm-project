@@ -23,7 +23,6 @@ add_toy_chapter(toyc-ch7
   ToyCh7ShapeInferenceInterfaceIncGen
   ToyCh7OpsIncGen
   ToyCh7CombineIncGen
-  MLIRCallOpInterfacesIncGen
   )
 
 include_directories(include/)
@@ -36,6 +35,7 @@ target_link_libraries(toyc-ch7
     ${dialect_libs}
     ${conversion_libs}
     MLIRAnalysis
+    MLIRCallInterfaces
     MLIRExecutionEngine
     MLIRIR
     MLIRParser

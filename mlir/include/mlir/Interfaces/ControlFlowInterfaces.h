@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_ANALYSIS_CONTROLFLOWINTERFACES_H
-#define MLIR_ANALYSIS_CONTROLFLOWINTERFACES_H
+#ifndef MLIR_INTERFACES_CONTROLFLOWINTERFACES_H
+#define MLIR_INTERFACES_CONTROLFLOWINTERFACES_H
 
 #include "mlir/IR/OpDefinition.h"
 
@@ -37,7 +37,7 @@ LogicalResult verifyBranchSuccessorOperands(Operation *op, unsigned succNo,
                                             Optional<OperandRange> operands);
 } // namespace detail
 
-#include "mlir/Analysis/ControlFlowInterfaces.h.inc"
+#include "mlir/Interfaces/ControlFlowInterfaces.h.inc"
 } // end namespace mlir
 
-#endif // MLIR_ANALYSIS_CONTROLFLOWINTERFACES_H
+#endif // MLIR_INTERFACES_CONTROLFLOWINTERFACES_H
