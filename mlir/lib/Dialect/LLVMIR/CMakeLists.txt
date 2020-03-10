@@ -18,6 +18,7 @@ target_link_libraries(MLIRLLVMIR
   MLIRControlFlowInterfaces
   MLIROpenMP
   MLIRIR
+  MLIRSideEffects
   MLIRSupport
   )
 
@@ -36,6 +37,7 @@ target_link_libraries(MLIRNVVMIR
   LLVMAsmParser
   MLIRIR
   MLIRLLVMIR
+  MLIRSideEffects
   LLVMSupport
   LLVMCore
   )
@@ -56,4 +58,5 @@ target_link_libraries(MLIRROCDLIR
   LLVMCore
   LLVMSupport
   MLIRIR
+  MLIRSideEffects
   )

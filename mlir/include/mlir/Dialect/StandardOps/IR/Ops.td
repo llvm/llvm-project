@@ -16,7 +16,7 @@
 include "mlir/Interfaces/CallInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/IR/OpAsmInterface.td"
-include "mlir/IR/SideEffects.td"
+include "mlir/Interfaces/SideEffects.td"
 
 def Std_Dialect : Dialect {
   let name = "std";

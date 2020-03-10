@@ -1,6 +1,6 @@
 // RUN: mlir-tblgen -gen-op-defs -I %S/../../include %s | FileCheck %s
 
-include "mlir/IR/SideEffects.td"
+include "mlir/Interfaces/SideEffects.td"
 
 def TEST_Dialect : Dialect {
   let name = "test";
