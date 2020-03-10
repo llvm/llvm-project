@@ -1,11 +1,11 @@
 // RUN: rm -rf %T/Headers
 // RUN: mkdir %T/Headers
-// RUN: cp -r %S/Inputs/fuchsia-restrict-system-includes %T/Headers/fuchsia-restrict-system-includes
-// RUN: %check_clang_tidy -std=c++11 %s fuchsia-restrict-system-includes %t \
-// RUN:   -- -config="{CheckOptions: [{key: fuchsia-restrict-system-includes.Includes, value: 'transitive.h,s.h'}]}" \
+// RUN: cp -r %S/Inputs/portability-restrict-system-includes %T/Headers/portability-restrict-system-includes
+// RUN: %check_clang_tidy -std=c++11 %s portability-restrict-system-includes %t \
+// RUN:   -- -config="{CheckOptions: [{key: portability-restrict-system-includes.Includes, value: 'transitive.h,s.h'}]}" \
 // RUN:   -system-headers -header-filter=.* \
-// RUN:   -- -I %T/Headers/fuchsia-restrict-system-includes -isystem %T/Headers/fuchsia-restrict-system-includes/system
-// RUN: FileCheck -input-file=%T/Headers/fuchsia-restrict-system-includes/transitive2.h %s -check-prefix=CHECK-FIXES
+// RUN:   -- -I %T/Headers/portability-restrict-system-includes -isystem %T/Headers/portability-restrict-system-includes/system
+// RUN: FileCheck -input-file=%T/Headers/portability-restrict-system-includes/transitive2.h %s -check-prefix=CHECK-FIXES
 // RUN: rm -rf %T/Headers
 // FIXME: Make the test work in all language modes.
 
