@@ -1,4 +1,4 @@
-# RUN: llc -emit-call-site-info -debug-entry-values -start-after=machineverifier -filetype=obj %s -o -| llvm-dwarfdump -| FileCheck %s
+# RUN: llc -emit-call-site-info -start-after=machineverifier -filetype=obj %s -o -| llvm-dwarfdump -| FileCheck %s
 # CHECK:        DW_TAG_GNU_call_site
 # CHECK-NEXT:     DW_AT_abstract_origin {{.*}} "foo")
 # CHECK-NEXT:     DW_AT_low_pc {{.*}}

@@ -1,4 +1,4 @@
-; RUN: llc -O1 -emit-call-site-info -debug-entry-values -filetype=obj -o - %s | llvm-dwarfdump - | FileCheck %s
+; RUN: llc -emit-call-site-info -O1 -filetype=obj -o - %s | llvm-dwarfdump - | FileCheck %s
 
 ; Verify that the 64-bit call site immediates are not truncated.
 ;
