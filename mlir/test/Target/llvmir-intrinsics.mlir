@@ -136,7 +136,7 @@ llvm.func @matrix_intrinsics(%A: !llvm<"<64 x float>">, %B: !llvm<"<48 x float>"
                              %ptr: !llvm<"float*">, %stride: !llvm.i32) {
   // CHECK: call <12 x float> @llvm.matrix.multiply.v12f32.v64f32.v48f32(<64 x float> %0, <48 x float> %1, i32 4, i32 16, i32 3)
   %C = llvm.intr.matrix.multiply %A, %B
-    { lhs_rows = 4: i32, lhs_columns = 16: i32 , rhs_rows = 3: i32} :
+    { lhs_rows = 4: i32, lhs_columns = 16: i32 , rhs_columns = 3: i32} :
     (!llvm<"<64 x float>">, !llvm<"<48 x float>">) -> !llvm<"<12 x float>">
   // CHECK: call <48 x float> @llvm.matrix.transpose.v48f32(<48 x float> %1, i32 3, i32 16)
   %D = llvm.intr.matrix.transpose %B { rows = 3: i32, columns = 16: i32} :

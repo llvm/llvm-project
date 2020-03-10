@@ -15,6 +15,12 @@ class LLVMTypeConverter;
 class ModuleOp;
 template <typename T> class OpPassBase;
 
+/// Collect a set of patterns to convert from Vector contractions to LLVM Matrix
+/// Intrinsics. To lower to assembly, the LLVM flag -lower-matrix-intrinsics
+/// will be needed when invoking LLVM.
+void populateVectorToLLVMMatrixConversionPatterns(
+    LLVMTypeConverter &converter, OwningRewritePatternList &patterns);
+
 /// Collect a set of patterns to convert from the Vector dialect to LLVM.
 void populateVectorToLLVMConversionPatterns(LLVMTypeConverter &converter,
                                             OwningRewritePatternList &patterns);
