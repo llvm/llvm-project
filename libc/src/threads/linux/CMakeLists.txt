@@ -50,3 +50,40 @@ add_entrypoint_object(
     threads_h
     threads_utils
 )
+
+add_entrypoint_object(
+  mtx_init
+  SRCS
+    mtx_init.cpp
+  HDRS
+    ../mtx_init.h
+  DEPENDS
+    threads_h
+    threads_utils
+)
+
+add_entrypoint_object(
+  mtx_lock
+  SRCS
+    mtx_lock.cpp
+  HDRS
+    ../mtx_lock.h
+  DEPENDS
+    linux_syscall_h
+    sys_syscall_h
+    threads_h
+    threads_utils
+)
+
+add_entrypoint_object(
+  mtx_unlock
+  SRCS
+    mtx_unlock.cpp
+  HDRS
+    ../mtx_unlock.h
+  DEPENDS
+    linux_syscall_h
+    sys_syscall_h
+    threads_h
+    threads_utils
+)

@@ -153,12 +153,22 @@ def SignalAPI : PublicAPI<"signal.h"> {
   ];
 }
 
+def MtxT : TypeDecl<"mtx_t"> {
+  let Decl = [{
+    typedef struct {
+      unsigned char __internal_data[4];
+      int __mtx_type;
+    } mtx_t;
+  }];
+}
+
 def ThreadStartT : TypeDecl<"thrd_start_t"> {
   let Decl = "typedef int (*thrd_start_t)(void *);";
 }
 
 def ThreadsAPI : PublicAPI<"threads.h"> {
   let TypeDeclarations = [
+    MtxT,
     ThreadStartT,
   ];
 
@@ -174,6 +184,9 @@ def ThreadsAPI : PublicAPI<"threads.h"> {
   ];
 
   let Functions = [
+    "mtx_init",
+    "mtx_lock",
+    "mtx_unlock",
     "thrd_create",
     "thrd_join",
   ];
