@@ -2080,7 +2080,8 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
   case AMDGPU::G_MUL: {
     Register DstReg = MI.getOperand(0).getReg();
     LLT DstTy = MRI.getType(DstReg);
-    if (DstTy != LLT::scalar(16))
+    const LLT S32 = LLT::scalar(32);
+    if (DstTy == S32)
       break;
 
     const RegisterBank *DstBank =
@@ -2089,15 +2090,30 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       break;
 
     // 16-bit operations are VALU only, but can be promoted to 32-bit SALU.
+    // Packed 16-bit operations need to be scalarized and promoted.
+
     MachineFunction *MF = MI.getParent()->getParent();
     MachineIRBuilder B(MI);
     ApplyRegBankMapping ApplySALU(*this, MRI, &AMDGPU::SGPRRegBank);
     GISelObserverWrapper Observer(&ApplySALU);
     LegalizerHelper Helper(*MF, Observer, B);
 
-    if (Helper.widenScalar(MI, 0, LLT::scalar(32)) !=
-        LegalizerHelper::Legalized)
-      llvm_unreachable("widen scalar should have succeeded");
+    if (DstTy.isVector()) {
+      // FIXME: Multi-step legalization is awkward here. We're relying on the
+      // fact that widenScalar leaves the instruction in place in this case, and
+      // we have to do it in this order.
+      if (Helper.widenScalar(MI, 0, LLT::vector(2, 32)) !=
+          LegalizerHelper::Legalized)
+        llvm_unreachable("widen scalar should have succeeded");
+
+      if (Helper.fewerElementsVector(MI, 0, S32) != LegalizerHelper::Legalized)
+        llvm_unreachable("fewerElementsVector should have succeeded");
+
+    } else {
+      if (Helper.widenScalar(MI, 0, S32) != LegalizerHelper::Legalized)
+        llvm_unreachable("widen scalar should have succeeded");
+    }
+
     return;
   }
   case AMDGPU::G_SMIN:
