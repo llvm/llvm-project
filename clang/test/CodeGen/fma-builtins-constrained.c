@@ -66,10 +66,10 @@ __m128d test_mm_fmsub_pd(__m128d a, __m128d b, __m128d c) {
 
 __m128 test_mm_fmsub_ss(__m128 a, __m128 b, __m128 c) {
   // COMMON-LABEL: test_mm_fmsub_ss
-  // COMMONIR: [[NEG:%.+]] = fneg <4 x float> %{{.+}}
   // COMMONIR: extractelement <4 x float> %{{.*}}, i64 0
   // COMMONIR: extractelement <4 x float> %{{.*}}, i64 0
   // COMMONIR: extractelement <4 x float> %{{.*}}, i64 0
+  // COMMONIR: [[NEG:%.+]] = fneg float %{{.+}}
   // UNCONSTRAINED: call float @llvm.fma.f32(float %{{.*}}, float %{{.*}}, float %{{.*}})
   // CONSTRAINED: call float @llvm.experimental.constrained.fma.f32(float %{{.*}}, float %{{.*}}, float %{{.*}}, metadata !{{.*}})
   // CHECK-ASM: vfmsub213ss
@@ -79,10 +79,10 @@ __m128 test_mm_fmsub_ss(__m128 a, __m128 b, __m128 c) {
 
 __m128d test_mm_fmsub_sd(__m128d a, __m128d b, __m128d c) {
   // COMMON-LABEL: test_mm_fmsub_sd
-  // COMMONIR: [[NEG:%.+]] = fneg <2 x double> %{{.+}}
   // COMMONIR: extractelement <2 x double> %{{.*}}, i64 0
   // COMMONIR: extractelement <2 x double> %{{.*}}, i64 0
   // COMMONIR: extractelement <2 x double> %{{.*}}, i64 0
+  // COMMONIR: [[NEG:%.+]] = fneg double %{{.+}}
   // UNCONSTRAINED: call double @llvm.fma.f64(double %{{.*}}, double %{{.*}}, double %{{.*}})
   // CONSTRAINED: call double @llvm.experimental.constrained.fma.f64(double %{{.*}}, double %{{.*}}, double %{{.*}}, metadata !{{.*}})
   // CHECK-ASM: vfmsub213sd
@@ -110,9 +110,9 @@ __m128d test_mm_fnmadd_pd(__m128d a, __m128d b, __m128d c) {
 
 __m128 test_mm_fnmadd_ss(__m128 a, __m128 b, __m128 c) {
   // COMMON-LABEL: test_mm_fnmadd_ss
-  // COMMONIR: [[NEG:%.+]] = fneg <4 x float> %{{.+}}
   // COMMONIR: extractelement <4 x float> %{{.*}}, i64 0
   // COMMONIR: extractelement <4 x float> %{{.*}}, i64 0
+  // COMMONIR: [[NEG:%.+]] = fneg float %{{.+}}
   // COMMONIR: extractelement <4 x float> %{{.*}}, i64 0
   // UNCONSTRAINED: call float @llvm.fma.f32(float %{{.*}}, float %{{.*}}, float %{{.*}})
   // CONSTRAINED: call float @llvm.experimental.constrained.fma.f32(float %{{.*}}, float %{{.*}}, float %{{.*}}, metadata !{{.*}})
@@ -123,9 +123,9 @@ __m128 test_mm_fnmadd_ss(__m128 a, __m128 b, __m128 c) {
 
 __m128d test_mm_fnmadd_sd(__m128d a, __m128d b, __m128d c) {
   // COMMON-LABEL: test_mm_fnmadd_sd
-  // COMMONIR: [[NEG:%.+]] = fneg <2 x double> %{{.+}}
   // COMMONIR: extractelement <2 x double> %{{.*}}, i64 0
   // COMMONIR: extractelement <2 x double> %{{.*}}, i64 0
+  // COMMONIR: [[NEG:%.+]] = fneg double %{{.+}}
   // COMMONIR: extractelement <2 x double> %{{.*}}, i64 0
   // UNCONSTRAINED: call double @llvm.fma.f64(double %{{.*}}, double %{{.*}}, double %{{.*}})
   // CONSTRAINED: call double @llvm.experimental.constrained.fma.f64(double %{{.*}}, double %{{.*}}, double %{{.*}}, metadata !{{.*}})
@@ -156,11 +156,11 @@ __m128d test_mm_fnmsub_pd(__m128d a, __m128d b, __m128d c) {
 
 __m128 test_mm_fnmsub_ss(__m128 a, __m128 b, __m128 c) {
   // COMMON-LABEL: test_mm_fnmsub_ss
-  // COMMONIR: [[NEG:%.+]] = fneg <4 x float> %{{.+}}
-  // COMMONIR: [[NEG2:%.+]] = fneg <4 x float> %{{.+}}
   // COMMONIR: extractelement <4 x float> %{{.*}}, i64 0
   // COMMONIR: extractelement <4 x float> %{{.*}}, i64 0
+  // COMMONIR: [[NEG:%.+]] = fneg float %{{.+}}
   // COMMONIR: extractelement <4 x float> %{{.*}}, i64 0
+  // COMMONIR: [[NEG2:%.+]] = fneg float %{{.+}}
   // UNCONSTRAINED: call float @llvm.fma.f32(float %{{.*}}, float %{{.*}}, float %{{.*}})
   // CONSTRAINED: call float @llvm.experimental.constrained.fma.f32(float %{{.*}}, float %{{.*}}, float %{{.*}}, metadata !{{.*}})
   // CHECK-ASM: vfnmsub213ss
@@ -170,11 +170,11 @@ __m128 test_mm_fnmsub_ss(__m128 a, __m128 b, __m128 c) {
 
 __m128d test_mm_fnmsub_sd(__m128d a, __m128d b, __m128d c) {
   // COMMON-LABEL: test_mm_fnmsub_sd
-  // COMMONIR: [[NEG:%.+]] = fneg <2 x double> %{{.+}}
-  // COMMONIR: [[NEG2:%.+]] = fneg <2 x double> %{{.+}}
   // COMMONIR: extractelement <2 x double> %{{.*}}, i64 0
   // COMMONIR: extractelement <2 x double> %{{.*}}, i64 0
+  // COMMONIR: [[NEG:%.+]] = fneg double %{{.+}}
   // COMMONIR: extractelement <2 x double> %{{.*}}, i64 0
+  // COMMONIR: [[NEG2:%.+]] = fneg double %{{.+}}
   // UNCONSTRAINED: call double @llvm.fma.f64(double %{{.*}}, double %{{.*}}, double %{{.*}})
   // CONSTRAINED: call double @llvm.experimental.constrained.fma.f64(double %{{.*}}, double %{{.*}}, double %{{.*}}, metadata !{{.*}})
   // CHECK-ASM: vfnmsub213sd

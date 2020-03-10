@@ -63,6 +63,9 @@ static bool cheapToScalarize(Value *V, bool IsConstantExtractIndex) {
   if (match(V, m_OneUse(m_Load(m_Value()))))
     return true;
 
+  if (match(V, m_OneUse(m_UnOp())))
+    return true;
+
   Value *V0, *V1;
   if (match(V, m_OneUse(m_BinOp(m_Value(V0), m_Value(V1)))))
     if (cheapToScalarize(V0, IsConstantExtractIndex) ||
@@ -371,6 +374,16 @@ Instruction *InstCombiner::visitExtractElementInst(ExtractElementInst &EI) {
     if (auto *Phi = dyn_cast<PHINode>(SrcVec))
       if (Instruction *ScalarPHI = scalarizePHI(EI, Phi))
         return ScalarPHI;
+  }
+
+  // TODO come up with a n-ary matcher that subsumes both unary and
+  // binary matchers.
+  UnaryOperator *UO;
+  if (match(SrcVec, m_UnOp(UO)) && cheapToScalarize(SrcVec, IndexC)) {
+    // extelt (unop X), Index --> unop (extelt X, Index)
+    Value *X = UO->getOperand(0);
+    Value *E = Builder.CreateExtractElement(X, Index);
+    return UnaryOperator::CreateWithCopiedFlags(UO->getOpcode(), E, UO);
   }
 
   BinaryOperator *BO;

@@ -38,7 +38,7 @@ define float @test3(float %x, float %y) nounwind  {
 
 define float @test4(float %x) nounwind  {
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:    [[T34:%.*]] = fsub float -0.000000e+00, [[X:%.*]]
+; CHECK-NEXT:    [[T34:%.*]] = fneg float [[X:%.*]]
 ; CHECK-NEXT:    ret float [[T34]]
 ;
   %t1 = fpext float %x to double

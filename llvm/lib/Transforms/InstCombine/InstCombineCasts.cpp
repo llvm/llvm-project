@@ -1634,10 +1634,6 @@ Instruction *InstCombiner::visitFPTrunc(FPTruncInst &FPT) {
     if (match(Op, m_FNeg(m_Value(X)))) {
       Value *InnerTrunc = Builder.CreateFPTrunc(X, Ty);
 
-      // FIXME: Once we're sure that unary FNeg optimizations are on par with
-      // binary FNeg, this should always return a unary operator.
-      if (isa<BinaryOperator>(Op))
-        return UnaryOperator::CreateFNegFMF(InnerTrunc, Op);
       return UnaryOperator::CreateFNegFMF(InnerTrunc, Op);
     }
 

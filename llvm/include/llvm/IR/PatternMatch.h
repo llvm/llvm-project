@@ -71,6 +71,11 @@ template <typename Class> struct class_match {
 /// Match an arbitrary value and ignore it.
 inline class_match<Value> m_Value() { return class_match<Value>(); }
 
+/// Match an arbitrary unary operation and ignore it.
+inline class_match<UnaryOperator> m_UnOp() {
+  return class_match<UnaryOperator>();
+}
+
 /// Match an arbitrary binary operation and ignore it.
 inline class_match<BinaryOperator> m_BinOp() {
   return class_match<BinaryOperator>();
@@ -614,6 +619,8 @@ inline bind_ty<const Value> m_Value(const Value *&V) { return V; }
 
 /// Match an instruction, capturing it if we match.
 inline bind_ty<Instruction> m_Instruction(Instruction *&I) { return I; }
+/// Match a unary operator, capturing it if we match.
+inline bind_ty<UnaryOperator> m_UnOp(UnaryOperator *&I) { return I; }
 /// Match a binary operator, capturing it if we match.
 inline bind_ty<BinaryOperator> m_BinOp(BinaryOperator *&I) { return I; }
 /// Match a with overflow intrinsic, capturing it if we match.
@@ -783,6 +790,26 @@ struct AnyBinaryOp_match {
 template <typename LHS, typename RHS>
 inline AnyBinaryOp_match<LHS, RHS> m_BinOp(const LHS &L, const RHS &R) {
   return AnyBinaryOp_match<LHS, RHS>(L, R);
+}
+
+//===----------------------------------------------------------------------===//
+// Matcher for any unary operator.
+// TODO fuse unary, binary matcher into n-ary matcher
+//
+template <typename OP_t> struct AnyUnaryOp_match {
+  OP_t X;
+
+  AnyUnaryOp_match(const OP_t &X) : X(X) {}
+
+  template <typename OpTy> bool match(OpTy *V) {
+    if (auto *I = dyn_cast<UnaryOperator>(V))
+      return X.match(I->getOperand(0));
+    return false;
+  }
+};
+
+template <typename OP_t> inline AnyUnaryOp_match<OP_t> m_UnOp(const OP_t &X) {
+  return AnyUnaryOp_match<OP_t>(X);
 }
 
 //===----------------------------------------------------------------------===//
