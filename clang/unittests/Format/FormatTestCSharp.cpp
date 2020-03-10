@@ -650,8 +650,15 @@ TEST_F(FormatTestCSharp, CSharpArraySubscripts) {
   FormatStyle Style = getGoogleStyle(FormatStyle::LK_CSharp);
 
   // Do not format array subscript operators as attributes.
-  verifyFormat(R"(if (someThings[index].Contains(myThing)) {)", Style);
-  verifyFormat(R"(if (someThings[i][j][k].Contains(myThing)) {)", Style);
+  verifyFormat(R"(//
+if (someThings[index].Contains(myThing)) {
+})",
+               Style);
+
+  verifyFormat(R"(//
+if (someThings[i][j][k].Contains(myThing)) {
+})",
+               Style);
 }
 
 } // namespace format
