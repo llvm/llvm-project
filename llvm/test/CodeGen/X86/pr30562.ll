@@ -6,20 +6,18 @@ define i32 @foo(i64* nocapture %perm, i32 %n) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl %esi, %eax
-; CHECK-NEXT:    movl $1, %ecx
-; CHECK-NEXT:    movq %rcx, %xmm0
-; CHECK-NEXT:    pslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2,3,4,5,6,7]
+; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0]
 ; CHECK-NEXT:    movl %esi, %ecx
 ; CHECK-NEXT:    andl $1, %ecx
-; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = [2,3]
+; CHECK-NEXT:    movaps {{.*#+}} xmm1 = [2,3]
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB0_1: # %body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq -24(%rsp,%rcx,8), %rdx
-; CHECK-NEXT:    movdqu %xmm0, (%rdi,%rdx,8)
+; CHECK-NEXT:    movups %xmm0, (%rdi,%rdx,8)
 ; CHECK-NEXT:    testq %rdx, %rdx
-; CHECK-NEXT:    movdqa %xmm1, %xmm0
+; CHECK-NEXT:    movaps %xmm1, %xmm0
 ; CHECK-NEXT:    jne .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %exit
 ; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
