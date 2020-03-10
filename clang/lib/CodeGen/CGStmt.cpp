@@ -199,6 +199,9 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
   case Stmt::CXXForRangeStmtClass:
     EmitCXXForRangeStmt(cast<CXXForRangeStmt>(*S), Attrs);
     break;
+  case Stmt::CXXForallRangeStmtClass:
+    EmitCXXForallRangeStmt(cast<CXXForallRangeStmt>(*S), Attrs);
+    break;
   case Stmt::SEHTryStmtClass:
     EmitSEHTryStmt(cast<SEHTryStmt>(*S));
     break;

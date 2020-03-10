@@ -40,6 +40,7 @@
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Utils/SanitizerStats.h"
+#include "llvm/IR/ValueMap.h"
 
 namespace llvm {
 class BasicBlock;
@@ -3181,10 +3182,15 @@ public:
                        ArrayRef<const Attr *> Attrs = None);
   LValue EmitCilkSpawnExprLValue(const CilkSpawnExpr *E);
 
+  void EmitDetachBlock(const DeclStmt *DS, llvm::ValueMap<llvm::Value*, llvm::AllocaInst *> &VM);
+  void ReplaceAllUsesInCurrentBlock(llvm::ValueMap<llvm::Value*, llvm::AllocaInst *> &VM);
+
   void EmitSpawnStmt(const SpawnStmt &S);
   void EmitSyncStmt(const SyncStmt &S);
   void EmitForallStmt(const ForallStmt &S,
                        ArrayRef<const Attr *> Attrs = None);
+  void EmitCXXForallRangeStmt(const CXXForallRangeStmt &S,
+                           ArrayRef<const Attr *> Attrs = None);
 
   void EmitObjCForCollectionStmt(const ObjCForCollectionStmt &S);
   void EmitObjCAtTryStmt(const ObjCAtTryStmt &S);
