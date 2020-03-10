@@ -35,7 +35,7 @@ define amdgpu_kernel void @mad_f32_imm_a(
 
 ; GCN-LABEL: {{^}}mad_f32_imm_b:
 ; GCN: v_mov_b32_e32 [[KB:v[0-9]+]], 0x41000000
-; GCN:  v_ma{{[dc]}}_f32 {{v[0-9]+}}, {{[vs][0-9]+}}, [[KB]],
+; GCN: v_mac_f32_e32 {{v[0-9]+}}, {{[s][0-9]+}}, [[KB]]
 define amdgpu_kernel void @mad_f32_imm_b(
     float addrspace(1)* %r,
     float addrspace(1)* %a,
@@ -48,8 +48,11 @@ define amdgpu_kernel void @mad_f32_imm_b(
 }
 
 ; GCN-LABEL: {{^}}mad_f32_imm_c:
-; GCN: v_mov_b32_e32 [[KC:v[0-9]+]], 0x41000000
-; GCN:  v_ma{{[dc]}}_f32 {{v[0-9]+}}, {{[vs][0-9]+}}, {{v[0-9]+}}, [[KC]]{{$}}
+; GCN: v_mov_b32_e32 [[C:v[0-9]+]], 0x41000000
+; GCN: s_load_dword [[A:s[0-9]+]]
+; GCN: s_load_dword [[B:s[0-9]+]]
+; GCN: v_mov_b32_e32 [[VB:v[0-9]+]], [[B]]
+; GCN: v_mac_f32_e32 [[C]], {{s[0-9]+}}, [[VB]]{{$}}
 define amdgpu_kernel void @mad_f32_imm_c(
     float addrspace(1)* %r,
     float addrspace(1)* %a,
