@@ -33,9 +33,16 @@ bool isSpellingLocInHeaderFile(SourceLocation Loc, SourceManager &SM,
 }
 
 bool parseFileExtensions(StringRef AllFileExtensions,
-                         FileExtensionsSet &FileExtensions, char Delimiter) {
+                         FileExtensionsSet &FileExtensions,
+                         StringRef Delimiters) {
   SmallVector<StringRef, 5> Suffixes;
-  AllFileExtensions.split(Suffixes, Delimiter);
+  for (char Delimiter : Delimiters) {
+    if (AllFileExtensions.contains(Delimiter)) {
+      AllFileExtensions.split(Suffixes, Delimiter);
+      break;
+    }
+  }
+
   FileExtensions.clear();
   for (StringRef Suffix : Suffixes) {
     StringRef Extension = Suffix.trim();
