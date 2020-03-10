@@ -46,13 +46,6 @@ static bool equalIterationSpaces(ParallelOp firstPloop,
          matchOperands(firstPloop.step(), secondPloop.step());
 }
 
-/// Returns true if the defining operation for the memref is inside the body
-/// of parallel loop.
-bool isDefinedInPloopBody(Value memref, ParallelOp ploop) {
-  auto *memrefDef = memref.getDefiningOp();
-  return memrefDef && ploop.getOperation()->isAncestor(memrefDef);
-}
-
 /// Checks if the parallel loops have mixed access to the same buffers. Returns
 /// `true` if the first parallel loop writes to the same indices that the second
 /// loop reads.
