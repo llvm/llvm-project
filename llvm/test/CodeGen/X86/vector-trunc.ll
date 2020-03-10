@@ -1842,7 +1842,8 @@ define <8 x i16> @PR32160(<8 x i32> %x) {
 ;
 ; AVX2-SLOW-LABEL: PR32160:
 ; AVX2-SLOW:       # %bb.0:
-; AVX2-SLOW-NEXT:    vpunpckhwd {{.*#+}} xmm0 = xmm0[4,4,5,5,6,6,7,7]
+; AVX2-SLOW-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
+; AVX2-SLOW-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[2,2,2,3,4,5,6,7]
 ; AVX2-SLOW-NEXT:    vpbroadcastd %xmm0, %xmm0
 ; AVX2-SLOW-NEXT:    vzeroupper
 ; AVX2-SLOW-NEXT:    retq
