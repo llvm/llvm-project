@@ -32,7 +32,8 @@ def IntTypesOp : TEST_Op<"int_types"> {
   let results = (outs
     AnyI16:$any_i16,
     SI32:$si32,
-    UI64:$ui64
+    UI64:$ui64,
+    AnyInteger:$any_int
   );
 }
 
