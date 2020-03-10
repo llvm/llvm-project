@@ -37,7 +37,6 @@ add_clang_library(clangTidyBugproneModule
   StringIntegerAssignmentCheck.cpp
   StringLiteralWithEmbeddedNulCheck.cpp
   SuspiciousEnumUsageCheck.cpp
-  SuspiciousIncludeCheck.cpp
   SuspiciousMemsetUsageCheck.cpp
   SuspiciousMissingCommaCheck.cpp
   SuspiciousSemicolonCheck.cpp
