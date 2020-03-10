@@ -2043,6 +2043,82 @@ define <4 x float> @broadcast_v4f32_0101_from_v2f32(<2 x float>* %x) {
   ret <4 x float> %2
 }
 
+define <4 x i32> @extract3_insert0_v4i32_7123(<4 x i32> %a0, <4 x i32> %a1) {
+; SSE2-LABEL: extract3_insert0_v4i32_7123:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[3,1,2,3]
+; SSE2-NEXT:    movd %xmm1, %eax
+; SSE2-NEXT:    movd %eax, %xmm1
+; SSE2-NEXT:    movss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; SSE2-NEXT:    retq
+;
+; SSE3-LABEL: extract3_insert0_v4i32_7123:
+; SSE3:       # %bb.0:
+; SSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[3,1,2,3]
+; SSE3-NEXT:    movd %xmm1, %eax
+; SSE3-NEXT:    movd %eax, %xmm1
+; SSE3-NEXT:    movss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; SSE3-NEXT:    retq
+;
+; SSSE3-LABEL: extract3_insert0_v4i32_7123:
+; SSSE3:       # %bb.0:
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[3,1,2,3]
+; SSSE3-NEXT:    movd %xmm1, %eax
+; SSSE3-NEXT:    movd %eax, %xmm1
+; SSSE3-NEXT:    movss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; SSSE3-NEXT:    retq
+;
+; SSE41-LABEL: extract3_insert0_v4i32_7123:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    extractps $3, %xmm1, %eax
+; SSE41-NEXT:    pinsrd $0, %eax, %xmm0
+; SSE41-NEXT:    retq
+;
+; AVX-LABEL: extract3_insert0_v4i32_7123:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vextractps $3, %xmm1, %eax
+; AVX-NEXT:    vpinsrd $0, %eax, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %1 = extractelement <4 x i32> %a1, i32 3
+  %2 = insertelement <4 x i32> %a0, i32 %1, i32 0
+  ret <4 x i32> %2
+}
+
+define <4 x i32> @extract3_insert3_v4i32_0127(<4 x i32> %a0, <4 x i32> %a1) {
+; SSE2-LABEL: extract3_insert3_v4i32_0127:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,3],xmm0[2,0]
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,0]
+; SSE2-NEXT:    retq
+;
+; SSE3-LABEL: extract3_insert3_v4i32_0127:
+; SSE3:       # %bb.0:
+; SSE3-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,3],xmm0[2,0]
+; SSE3-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,0]
+; SSE3-NEXT:    retq
+;
+; SSSE3-LABEL: extract3_insert3_v4i32_0127:
+; SSSE3:       # %bb.0:
+; SSSE3-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,3],xmm0[2,0]
+; SSSE3-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,0]
+; SSSE3-NEXT:    retq
+;
+; SSE41-LABEL: extract3_insert3_v4i32_0127:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    extractps $3, %xmm1, %eax
+; SSE41-NEXT:    pinsrd $3, %eax, %xmm0
+; SSE41-NEXT:    retq
+;
+; AVX-LABEL: extract3_insert3_v4i32_0127:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vextractps $3, %xmm1, %eax
+; AVX-NEXT:    vpinsrd $3, %eax, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %1 = extractelement <4 x i32> %a1, i32 3
+  %2 = insertelement <4 x i32> %a0, i32 %1, i32 3
+  ret <4 x i32> %2
+}
+
 define <4 x i32> @insert_reg_and_zero_v4i32(i32 %a) {
 ; SSE-LABEL: insert_reg_and_zero_v4i32:
 ; SSE:       # %bb.0:
