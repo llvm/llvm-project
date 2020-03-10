@@ -768,6 +768,7 @@ void ASTStmtReader::VisitConceptSpecializationExpr(
   E->TemplateKWLoc = Record.readSourceLocation();
   E->ConceptName = Record.readDeclarationNameInfo();
   E->NamedConcept = readDeclAs<ConceptDecl>();
+  E->FoundDecl = Record.readDeclAs<NamedDecl>();
   E->ArgsAsWritten = Record.readASTTemplateArgumentListInfo();
   llvm::SmallVector<TemplateArgument, 4> Args;
   for (unsigned I = 0; I < NumTemplateArgs; ++I)
