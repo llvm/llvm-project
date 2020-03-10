@@ -1184,9 +1184,9 @@ define <16 x i16> @constant_shift_v16i16(<16 x i16> %a) nounwind {
 ; AVX2-LABEL: constant_shift_v16i16:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpmulhw {{.*}}(%rip), %ymm0, %ymm1
-; AVX2-NEXT:    vpblendw {{.*#+}} ymm2 = ymm0[0],ymm1[1,2,3,4,5,6,7],ymm0[8],ymm1[9,10,11,12,13,14,15]
+; AVX2-NEXT:    vpblendw {{.*#+}} xmm2 = xmm0[0],xmm1[1,2,3,4,5,6,7]
 ; AVX2-NEXT:    vpsraw $1, %xmm0, %xmm0
-; AVX2-NEXT:    vpblendw {{.*#+}} ymm0 = ymm2[0],ymm0[1],ymm2[2,3,4,5,6,7,8],ymm0[9],ymm2[10,11,12,13,14,15]
+; AVX2-NEXT:    vpblendw {{.*#+}} xmm0 = xmm2[0],xmm0[1],xmm2[2,3,4,5,6,7]
 ; AVX2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
 ; AVX2-NEXT:    retq
 ;
@@ -1247,9 +1247,9 @@ define <16 x i16> @constant_shift_v16i16(<16 x i16> %a) nounwind {
 ; X32-AVX2-LABEL: constant_shift_v16i16:
 ; X32-AVX2:       # %bb.0:
 ; X32-AVX2-NEXT:    vpmulhw {{\.LCPI.*}}, %ymm0, %ymm1
-; X32-AVX2-NEXT:    vpblendw {{.*#+}} ymm2 = ymm0[0],ymm1[1,2,3,4,5,6,7],ymm0[8],ymm1[9,10,11,12,13,14,15]
+; X32-AVX2-NEXT:    vpblendw {{.*#+}} xmm2 = xmm0[0],xmm1[1,2,3,4,5,6,7]
 ; X32-AVX2-NEXT:    vpsraw $1, %xmm0, %xmm0
-; X32-AVX2-NEXT:    vpblendw {{.*#+}} ymm0 = ymm2[0],ymm0[1],ymm2[2,3,4,5,6,7,8],ymm0[9],ymm2[10,11,12,13,14,15]
+; X32-AVX2-NEXT:    vpblendw {{.*#+}} xmm0 = xmm2[0],xmm0[1],xmm2[2,3,4,5,6,7]
 ; X32-AVX2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
 ; X32-AVX2-NEXT:    retl
   %shift = ashr <16 x i16> %a, <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15>
