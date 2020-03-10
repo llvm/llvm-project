@@ -1,4 +1,4 @@
-//===--- RestrictSystemIncludesCheck.cpp - clang-tidy----------------------===//
+//===--- RestrictSystemIncludesCheck.cpp - clang-tidy ---------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,7 +18,7 @@
 
 namespace clang {
 namespace tidy {
-namespace fuchsia {
+namespace portability {
 
 class RestrictedIncludesPPCallbacks : public PPCallbacks {
 public:
@@ -111,6 +111,6 @@ void RestrictSystemIncludesCheck::storeOptions(
   Options.store(Opts, "Includes", AllowedIncludes);
 }
 
-} // namespace fuchsia
+} // namespace portability
 } // namespace tidy
 } // namespace clang
