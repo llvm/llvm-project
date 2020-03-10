@@ -10,7 +10,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_GOOGLE_GLOBALNAMESINHEADERSCHECK_H
 
 #include "../ClangTidyCheck.h"
-#include "../utils/HeaderFileExtensionsUtils.h"
+#include "../utils/FileExtensionsUtils.h"
 
 namespace clang {
 namespace tidy {
@@ -35,7 +35,7 @@ public:
 
 private:
   const std::string RawStringHeaderFileExtensions;
-  utils::HeaderFileExtensionsSet HeaderFileExtensions;
+  utils::FileExtensionsSet HeaderFileExtensions;
 };
 
 } // namespace readability

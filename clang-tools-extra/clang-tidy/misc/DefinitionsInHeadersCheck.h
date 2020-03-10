@@ -10,7 +10,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_DEFINITIONS_IN_HEADERS_H
 
 #include "../ClangTidyCheck.h"
-#include "../utils/HeaderFileExtensionsUtils.h"
+#include "../utils/FileExtensionsUtils.h"
 
 namespace clang {
 namespace tidy {
@@ -43,7 +43,7 @@ public:
 private:
   const bool UseHeaderFileExtension;
   const std::string RawStringHeaderFileExtensions;
-  utils::HeaderFileExtensionsSet HeaderFileExtensions;
+  utils::FileExtensionsSet HeaderFileExtensions;
 };
 
 } // namespace misc
