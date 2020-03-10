@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 -Wuninitialized -verify %s
+// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -std=c++11 -Wuninitialized -verify %s
 
 // test1: Expect no diagnostics
 int test1(int x) {
