@@ -1434,8 +1434,6 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapDynamic(
 
     Value return_value;
     return_value.SetValueType(Value::eValueTypeScalar);
-    // return_value.SetContext (Value::eContextTypeClangType,
-    // clang_uint32_t_type);
     return_value.SetCompilerType(clang_uint32_t_type);
     return_value.GetScalar() = 0;
 
@@ -1660,13 +1658,11 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapSharedCache() {
     // Next make the function caller for our implementation utility function.
     Value value;
     value.SetValueType(Value::eValueTypeScalar);
-    // value.SetContext (Value::eContextTypeClangType, clang_void_pointer_type);
     value.SetCompilerType(clang_void_pointer_type);
     arguments.PushValue(value);
     arguments.PushValue(value);
 
     value.SetValueType(Value::eValueTypeScalar);
-    // value.SetContext (Value::eContextTypeClangType, clang_uint32_t_type);
     value.SetCompilerType(clang_uint32_t_type);
     arguments.PushValue(value);
     arguments.PushValue(value);
@@ -1732,8 +1728,6 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapSharedCache() {
 
     Value return_value;
     return_value.SetValueType(Value::eValueTypeScalar);
-    // return_value.SetContext (Value::eContextTypeClangType,
-    // clang_uint32_t_type);
     return_value.SetCompilerType(clang_uint32_t_type);
     return_value.GetScalar() = 0;
 
