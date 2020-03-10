@@ -18,8 +18,7 @@ namespace tidy {
 namespace cert {
 
 void PostfixOperatorCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(functionDecl(anyOf(hasOverloadedOperatorName("++"),
-                                        hasOverloadedOperatorName("--")),
+  Finder->addMatcher(functionDecl(hasAnyOverloadedOperatorName("++", "--"),
                                   unless(isInstantiated()))
                          .bind("decl"),
                      this);

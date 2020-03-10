@@ -28,8 +28,7 @@ void MisplacedPointerArithmeticInAllocCheck::registerMatchers(
               hasInitializer(ignoringParenImpCasts(
                   declRefExpr(hasDeclaration(AllocFunc)))));
 
-  const auto AdditiveOperator =
-      binaryOperator(anyOf(hasOperatorName("+"), hasOperatorName("-")));
+  const auto AdditiveOperator = binaryOperator(hasAnyOperatorName("+", "-"));
 
   const auto IntExpr = expr(hasType(isInteger()));
 
