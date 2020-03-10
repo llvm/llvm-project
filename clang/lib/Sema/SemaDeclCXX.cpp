@@ -16390,9 +16390,16 @@ void Sema::SetDeclDeleted(Decl *Dcl, SourceLocation DelLoc) {
       Diag(Prev->getLocation().isInvalid() ? DelLoc : Prev->getLocation(),
            Prev->isImplicit() ? diag::note_previous_implicit_declaration
                               : diag::note_previous_declaration);
+      // We can't recover from this; the declaration might have already
+      // been used.
+      Fn->setInvalidDecl();
+      return;
     }
-    // If the declaration wasn't the first, we delete the function anyway for
-    // recovery.
+
+    // To maintain the invariant that functions are only deleted on their first
+    // declaration, mark the implicitly-instantiated declaration of the
+    // explicitly-specialized function as deleted instead of marking the
+    // instantiated redeclaration.
     Fn = Fn->getCanonicalDecl();
   }
 
