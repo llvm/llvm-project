@@ -663,8 +663,7 @@ Value *FAddCombine::createFSub(Value *Opnd0, Value *Opnd1) {
 }
 
 Value *FAddCombine::createFNeg(Value *V) {
-  Value *Zero = cast<Value>(ConstantFP::getZeroValueForNegation(V->getType()));
-  Value *NewV = createFSub(Zero, V);
+  Value *NewV = Builder.CreateFNeg(V);
   if (Instruction *I = dyn_cast<Instruction>(NewV))
     createInstPostProc(I, true); // fneg's don't receive instruction numbers.
   return NewV;
@@ -724,8 +723,6 @@ unsigned FAddCombine::calcInstrNumber(const AddendVect &Opnds) {
     if (!CE.isMinusOne() && !CE.isOne())
       InstrNeeded++;
   }
-  if (NegOpndNum == OpndNum)
-    InstrNeeded++;
   return InstrNeeded;
 }
 
@@ -2133,10 +2130,15 @@ Instruction *InstCombiner::visitFSub(BinaryOperator &I) {
     return X;
 
   // Subtraction from -0.0 is the canonical form of fneg.
-  // fsub nsz 0, X ==> fsub nsz -0.0, X
-  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
-  if (I.hasNoSignedZeros() && match(Op0, m_PosZeroFP()))
-    return UnaryOperator::CreateFNegFMF(Op1, &I);
+  // fsub -0.0, X ==> fneg X
+  // fsub nsz 0.0, X ==> fneg nsz X
+  //
+  // FIXME This matcher does not respect FTZ or DAZ yet:
+  // fsub -0.0, Denorm ==> +-0
+  // fneg Denorm ==> -Denorm
+  Value *Op;
+  if (match(&I, m_FNeg(m_Value(Op))))
+    return UnaryOperator::CreateFNegFMF(Op, &I);
 
   if (Instruction *X = foldFNegIntoConstant(I))
     return X;
@@ -2147,6 +2149,7 @@ Instruction *InstCombiner::visitFSub(BinaryOperator &I) {
   Value *X, *Y;
   Constant *C;
 
+  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
   // If Op0 is not -0.0 or we can ignore -0.0: Z - (X - Y) --> Z + (Y - X)
   // Canonicalize to fadd to make analysis easier.
   // This can also help codegen because fadd is commutative.

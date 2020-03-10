@@ -516,7 +516,7 @@ define <2 x float> @div_constant_dividend3(<2 x float> %x) {
 
 define double @fdiv_fneg1(double %x, double %y) {
 ; CHECK-LABEL: @fdiv_fneg1(
-; CHECK-NEXT:    [[NEG:%.*]] = fsub double -0.000000e+00, [[X:%.*]]
+; CHECK-NEXT:    [[NEG:%.*]] = fneg double [[X:%.*]]
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv double [[NEG]], [[Y:%.*]]
 ; CHECK-NEXT:    ret double [[DIV]]
 ;
@@ -538,7 +538,7 @@ define double @fdiv_unary_fneg1(double %x, double %y) {
 
 define <2 x float> @fdiv_fneg2(<2 x float> %x, <2 x float> %y) {
 ; CHECK-LABEL: @fdiv_fneg2(
-; CHECK-NEXT:    [[NEG:%.*]] = fsub <2 x float> <float -0.000000e+00, float -0.000000e+00>, [[X:%.*]]
+; CHECK-NEXT:    [[NEG:%.*]] = fneg <2 x float> [[X:%.*]]
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv <2 x float> [[Y:%.*]], [[NEG]]
 ; CHECK-NEXT:    ret <2 x float> [[DIV]]
 ;
@@ -560,7 +560,7 @@ define <2 x float> @fdiv_unary_fneg2(<2 x float> %x, <2 x float> %y) {
 
 define float @fdiv_fneg1_extra_use(float %x, float %y) {
 ; CHECK-LABEL: @fdiv_fneg1_extra_use(
-; CHECK-NEXT:    [[NEG:%.*]] = fsub float -0.000000e+00, [[X:%.*]]
+; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[X:%.*]]
 ; CHECK-NEXT:    call void @use_f32(float [[NEG]])
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv float [[NEG]], [[Y:%.*]]
 ; CHECK-NEXT:    ret float [[DIV]]
