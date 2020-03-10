@@ -1426,10 +1426,6 @@ multiclass avx512_subvec_broadcast_rm_dq<bits<8> opc, string OpcodeStr,
 let Predicates = [HasVLX, HasBWI] in {
   // loadi16 is tricky to fold, because !isTypeDesirableForOp, justifiably.
   // This means we'll encounter truncated i32 loads; match that here.
-  def : Pat<(v8i16 (X86VBroadcast (i16 (trunc (i32 (load addr:$src)))))),
-            (VPBROADCASTWZ128rm addr:$src)>;
-  def : Pat<(v16i16 (X86VBroadcast (i16 (trunc (i32 (load addr:$src)))))),
-            (VPBROADCASTWZ256rm addr:$src)>;
   def : Pat<(v8i16 (X86VBroadcast
               (i16 (trunc (i32 (extloadi16 addr:$src)))))),
             (VPBROADCASTWZ128rm addr:$src)>;
@@ -1446,8 +1442,6 @@ let Predicates = [HasVLX, HasBWI] in {
 let Predicates = [HasBWI] in {
   // loadi16 is tricky to fold, because !isTypeDesirableForOp, justifiably.
   // This means we'll encounter truncated i32 loads; match that here.
-  def : Pat<(v32i16 (X86VBroadcast (i16 (trunc (i32 (load addr:$src)))))),
-            (VPBROADCASTWZrm addr:$src)>;
   def : Pat<(v32i16 (X86VBroadcast
               (i16 (trunc (i32 (extloadi16 addr:$src)))))),
             (VPBROADCASTWZrm addr:$src)>;

@@ -1207,7 +1207,8 @@ AppleObjCRuntimeV2::GetClassDescriptor(ValueObject &valobj) {
         if (isa != LLDB_INVALID_ADDRESS) {
           objc_class_sp = GetClassDescriptorFromISA(isa);
           if (isa && !objc_class_sp) {
-            Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
+            Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PROCESS |
+                                              LIBLLDB_LOG_TYPES));
             LLDB_LOGF(log,
                       "0x%" PRIx64
                       ": AppleObjCRuntimeV2::GetClassDescriptor() ISA was "
@@ -1433,8 +1434,6 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapDynamic(
 
     Value return_value;
     return_value.SetValueType(Value::eValueTypeScalar);
-    // return_value.SetContext (Value::eContextTypeClangType,
-    // clang_uint32_t_type);
     return_value.SetCompilerType(clang_uint32_t_type);
     return_value.GetScalar() = 0;
 
@@ -1659,13 +1658,11 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapSharedCache() {
     // Next make the function caller for our implementation utility function.
     Value value;
     value.SetValueType(Value::eValueTypeScalar);
-    // value.SetContext (Value::eContextTypeClangType, clang_void_pointer_type);
     value.SetCompilerType(clang_void_pointer_type);
     arguments.PushValue(value);
     arguments.PushValue(value);
 
     value.SetValueType(Value::eValueTypeScalar);
-    // value.SetContext (Value::eContextTypeClangType, clang_uint32_t_type);
     value.SetCompilerType(clang_uint32_t_type);
     arguments.PushValue(value);
     arguments.PushValue(value);
@@ -1731,8 +1728,6 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapSharedCache() {
 
     Value return_value;
     return_value.SetValueType(Value::eValueTypeScalar);
-    // return_value.SetContext (Value::eContextTypeClangType,
-    // clang_uint32_t_type);
     return_value.SetCompilerType(clang_uint32_t_type);
     return_value.GetScalar() = 0;
 
@@ -2476,7 +2471,7 @@ bool AppleObjCRuntimeV2::NonPointerISACache::EvaluateNonPointerISA(
     ObjCISA isa, ObjCISA &ret_isa) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
 
-  LLDB_LOGF(log, "AOCRT::NPI Evalulate(isa = 0x%" PRIx64 ")", (uint64_t)isa);
+  LLDB_LOGF(log, "AOCRT::NPI Evaluate(isa = 0x%" PRIx64 ")", (uint64_t)isa);
 
   if ((isa & ~m_objc_debug_isa_class_mask) == 0)
     return false;
@@ -2557,7 +2552,7 @@ bool AppleObjCRuntimeV2::NonPointerISACache::EvaluateNonPointerISA(
       if (index > m_indexed_isa_cache.size())
         return false;
 
-      LLDB_LOGF(log, "AOCRT::NPI Evalulate(ret_isa = 0x%" PRIx64 ")",
+      LLDB_LOGF(log, "AOCRT::NPI Evaluate(ret_isa = 0x%" PRIx64 ")",
                 (uint64_t)m_indexed_isa_cache[index]);
 
       ret_isa = m_indexed_isa_cache[index];

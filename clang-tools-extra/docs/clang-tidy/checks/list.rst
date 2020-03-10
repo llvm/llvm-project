@@ -80,6 +80,7 @@ Clang-Tidy Checks
    `bugprone-string-integer-assignment <bugprone-string-integer-assignment.html>`_, "Yes"
    `bugprone-string-literal-with-embedded-nul <bugprone-string-literal-with-embedded-nul.html>`_,
    `bugprone-suspicious-enum-usage <bugprone-suspicious-enum-usage.html>`_,
+   `bugprone-suspicious-include <bugprone-suspicious-include.html>`_,
    `bugprone-suspicious-memset-usage <bugprone-suspicious-memset-usage.html>`_, "Yes"
    `bugprone-suspicious-missing-comma <bugprone-suspicious-missing-comma.html>`_,
    `bugprone-suspicious-semicolon <bugprone-suspicious-semicolon.html>`_, "Yes"

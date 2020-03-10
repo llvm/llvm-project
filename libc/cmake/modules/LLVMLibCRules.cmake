@@ -105,13 +105,14 @@ set(ENTRYPOINT_OBJ_TARGET_TYPE "ENTRYPOINT_OBJ")
 #       SRCS <list of .cpp files>
 #       HDRS <list of .h files>
 #       DEPENDS <list of dependencies>
+#       COMPILE_OPTIONS <list of special compile options for this target>
 #     )
 function(add_entrypoint_object target_name)
   cmake_parse_arguments(
     "ADD_ENTRYPOINT_OBJ"
     "REDIRECTED" # Optional argument
     "NAME" # Single value arguments
-    "SRCS;HDRS;DEPENDS"  # Multi value arguments
+    "SRCS;HDRS;DEPENDS;COMPILE_OPTIONS"  # Multi value arguments
     ${ARGN}
   )
   if(NOT ADD_ENTRYPOINT_OBJ_SRCS)
@@ -153,6 +154,12 @@ function(add_entrypoint_object target_name)
     add_dependencies(
       ${target_name}_objects
       ${ADD_ENTRYPOINT_OBJ_DEPENDS}
+    )
+  endif()
+  if(ADD_ENTRYPOINT_OBJ_COMPILE_OPTIONS)
+    target_compile_options(
+      ${target_name}_objects
+      PRIVATE ${ADD_ENTRYPOINT_OBJ_COMPILE_OPTIONS}
     )
   endif()
 

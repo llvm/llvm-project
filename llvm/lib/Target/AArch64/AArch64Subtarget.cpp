@@ -88,6 +88,11 @@ void AArch64Subtarget::initializeProperties() {
   case CortexA76:
     PrefFunctionLogAlignment = 4;
     break;
+  case A64FX:
+    CacheLineSize = 256;
+    PrefFunctionLogAlignment = 5;
+    PrefLoopLogAlignment = 5;
+    break;
   case AppleA7:
   case AppleA10:
   case AppleA11:

@@ -507,8 +507,10 @@ void DWARFDebugLine::LineTable::clear() {
   Sequences.clear();
 }
 
-DWARFDebugLine::ParsingState::ParsingState(struct LineTable *LT)
-    : LineTable(LT) {
+DWARFDebugLine::ParsingState::ParsingState(
+    struct LineTable *LT, uint64_t TableOffset,
+    function_ref<void(Error)> ErrorHandler)
+    : LineTable(LT), LineTableOffset(TableOffset), ErrorHandler(ErrorHandler) {
   resetRowAndSequence();
 }
 
@@ -566,6 +568,119 @@ Expected<const DWARFDebugLine::LineTable *> DWARFDebugLine::getOrParseLineTable(
   return LT;
 }
 
+static StringRef getOpcodeName(uint8_t Opcode, uint8_t OpcodeBase) {
+  assert(Opcode != 0);
+  if (Opcode < OpcodeBase)
+    return LNStandardString(Opcode);
+  return "special";
+}
+
+uint64_t DWARFDebugLine::ParsingState::advanceAddr(uint64_t OperationAdvance,
+                                                   uint8_t Opcode,
+                                                   uint64_t OpcodeOffset) {
+  StringRef OpcodeName = getOpcodeName(Opcode, LineTable->Prologue.OpcodeBase);
+  // For versions less than 4, the MaxOpsPerInst member is set to 0, as the
+  // maximum_operations_per_instruction field wasn't introduced until DWARFv4.
+  // Don't warn about bad values in this situation.
+  if (ReportAdvanceAddrProblem && LineTable->Prologue.getVersion() >= 4 &&
+      LineTable->Prologue.MaxOpsPerInst != 1)
+    ErrorHandler(createStringError(
+        errc::not_supported,
+        "line table program at offset 0x%8.8" PRIx64
+        " contains a %s opcode at offset 0x%8.8" PRIx64
+        ", but the prologue maximum_operations_per_instruction value is %" PRId8
+        ", which is unsupported. Assuming a value of 1 instead",
+        LineTableOffset, OpcodeName.data(), OpcodeOffset,
+        LineTable->Prologue.MaxOpsPerInst));
+  if (ReportAdvanceAddrProblem && LineTable->Prologue.MinInstLength == 0)
+    ErrorHandler(
+        createStringError(errc::invalid_argument,
+                          "line table program at offset 0x%8.8" PRIx64
+                          " contains a %s opcode at offset 0x%8.8" PRIx64
+                          ", but the prologue minimum_instruction_length value "
+                          "is 0, which prevents any address advancing",
+                          LineTableOffset, OpcodeName.data(), OpcodeOffset));
+  ReportAdvanceAddrProblem = false;
+  uint64_t AddrOffset = OperationAdvance * LineTable->Prologue.MinInstLength;
+  Row.Address.Address += AddrOffset;
+  return AddrOffset;
+}
+
+DWARFDebugLine::ParsingState::AddrAndAdjustedOpcode
+DWARFDebugLine::ParsingState::advanceAddrForOpcode(uint8_t Opcode,
+                                                   uint64_t OpcodeOffset) {
+  assert(Opcode == DW_LNS_const_add_pc ||
+         Opcode >= LineTable->Prologue.OpcodeBase);
+  if (ReportBadLineRange && LineTable->Prologue.LineRange == 0) {
+    StringRef OpcodeName =
+        getOpcodeName(Opcode, LineTable->Prologue.OpcodeBase);
+    ErrorHandler(
+        createStringError(errc::not_supported,
+                          "line table program at offset 0x%8.8" PRIx64
+                          " contains a %s opcode at offset 0x%8.8" PRIx64
+                          ", but the prologue line_range value is 0. The "
+                          "address and line will not be adjusted",
+                          LineTableOffset, OpcodeName.data(), OpcodeOffset));
+    ReportBadLineRange = false;
+  }
+
+  uint8_t OpcodeValue = Opcode;
+  if (Opcode == DW_LNS_const_add_pc)
+    OpcodeValue = 255;
+  uint8_t AdjustedOpcode = OpcodeValue - LineTable->Prologue.OpcodeBase;
+  uint64_t OperationAdvance =
+      LineTable->Prologue.LineRange != 0
+          ? AdjustedOpcode / LineTable->Prologue.LineRange
+          : 0;
+  uint64_t AddrOffset = advanceAddr(OperationAdvance, Opcode, OpcodeOffset);
+  return {AddrOffset, AdjustedOpcode};
+}
+
+DWARFDebugLine::ParsingState::AddrAndLineDelta
+DWARFDebugLine::ParsingState::handleSpecialOpcode(uint8_t Opcode,
+                                                  uint64_t OpcodeOffset) {
+  // A special opcode value is chosen based on the amount that needs
+  // to be added to the line and address registers. The maximum line
+  // increment for a special opcode is the value of the line_base
+  // field in the header, plus the value of the line_range field,
+  // minus 1 (line base + line range - 1). If the desired line
+  // increment is greater than the maximum line increment, a standard
+  // opcode must be used instead of a special opcode. The "address
+  // advance" is calculated by dividing the desired address increment
+  // by the minimum_instruction_length field from the header. The
+  // special opcode is then calculated using the following formula:
+  //
+  //  opcode = (desired line increment - line_base) +
+  //           (line_range * address advance) + opcode_base
+  //
+  // If the resulting opcode is greater than 255, a standard opcode
+  // must be used instead.
+  //
+  // To decode a special opcode, subtract the opcode_base from the
+  // opcode itself to give the adjusted opcode. The amount to
+  // increment the address register is the result of the adjusted
+  // opcode divided by the line_range multiplied by the
+  // minimum_instruction_length field from the header. That is:
+  //
+  //  address increment = (adjusted opcode / line_range) *
+  //                      minimum_instruction_length
+  //
+  // The amount to increment the line register is the line_base plus
+  // the result of the adjusted opcode modulo the line_range. That is:
+  //
+  // line increment = line_base + (adjusted opcode % line_range)
+
+  DWARFDebugLine::ParsingState::AddrAndAdjustedOpcode AddrAdvanceResult =
+      advanceAddrForOpcode(Opcode, OpcodeOffset);
+  int32_t LineOffset = 0;
+  if (LineTable->Prologue.LineRange != 0)
+    LineOffset =
+        LineTable->Prologue.LineBase +
+        (AddrAdvanceResult.AdjustedOpcode % LineTable->Prologue.LineRange);
+  Row.Line += LineOffset;
+  return {AddrAdvanceResult.AddrDelta, LineOffset};
+}
+
 Error DWARFDebugLine::LineTable::parse(
     DWARFDataExtractor &DebugLineData, uint64_t *OffsetPtr,
     const DWARFContext &Ctx, const DWARFUnit *U,
@@ -612,12 +727,13 @@ Error DWARFDebugLine::LineTable::parse(
     assert(Prologue.getAddressSize() == 0 ||
            Prologue.getAddressSize() == DebugLineData.getAddressSize());
 
-  ParsingState State(this);
+  ParsingState State(this, DebugLineOffset, RecoverableErrorHandler);
 
   while (*OffsetPtr < EndOffset) {
     if (OS)
       *OS << format("0x%08.08" PRIx64 ": ", *OffsetPtr);
 
+    uint64_t OpcodeOffset = *OffsetPtr;
     uint8_t Opcode = DebugLineData.getU8(OffsetPtr);
 
     if (OS)
@@ -792,9 +908,8 @@ Error DWARFDebugLine::LineTable::parse(
         // min_inst_length field of the prologue, and adds the
         // result to the address register of the state machine.
         {
-          uint64_t AddrOffset =
-              DebugLineData.getULEB128(OffsetPtr) * Prologue.MinInstLength;
-          State.Row.Address.Address += AddrOffset;
+          uint64_t AddrOffset = State.advanceAddr(
+              DebugLineData.getULEB128(OffsetPtr), Opcode, OpcodeOffset);
           if (OS)
             *OS << " (" << AddrOffset << ")";
         }
@@ -849,13 +964,10 @@ Error DWARFDebugLine::LineTable::parse(
         // than twice that range will it need to use both DW_LNS_advance_pc
         // and a special opcode, requiring three or more bytes.
         {
-          uint8_t AdjustOpcode = 255 - Prologue.OpcodeBase;
           uint64_t AddrOffset =
-              (AdjustOpcode / Prologue.LineRange) * Prologue.MinInstLength;
-          State.Row.Address.Address += AddrOffset;
+              State.advanceAddrForOpcode(Opcode, OpcodeOffset).AddrDelta;
           if (OS)
-            *OS
-                << format(" (0x%16.16" PRIx64 ")", AddrOffset);
+            *OS << format(" (0x%16.16" PRIx64 ")", AddrOffset);
         }
         break;
 
@@ -915,49 +1027,12 @@ Error DWARFDebugLine::LineTable::parse(
         break;
       }
     } else {
-      // Special Opcodes
-
-      // A special opcode value is chosen based on the amount that needs
-      // to be added to the line and address registers. The maximum line
-      // increment for a special opcode is the value of the line_base
-      // field in the header, plus the value of the line_range field,
-      // minus 1 (line base + line range - 1). If the desired line
-      // increment is greater than the maximum line increment, a standard
-      // opcode must be used instead of a special opcode. The "address
-      // advance" is calculated by dividing the desired address increment
-      // by the minimum_instruction_length field from the header. The
-      // special opcode is then calculated using the following formula:
-      //
-      //  opcode = (desired line increment - line_base) +
-      //           (line_range * address advance) + opcode_base
-      //
-      // If the resulting opcode is greater than 255, a standard opcode
-      // must be used instead.
-      //
-      // To decode a special opcode, subtract the opcode_base from the
-      // opcode itself to give the adjusted opcode. The amount to
-      // increment the address register is the result of the adjusted
-      // opcode divided by the line_range multiplied by the
-      // minimum_instruction_length field from the header. That is:
-      //
-      //  address increment = (adjusted opcode / line_range) *
-      //                      minimum_instruction_length
-      //
-      // The amount to increment the line register is the line_base plus
-      // the result of the adjusted opcode modulo the line_range. That is:
-      //
-      // line increment = line_base + (adjusted opcode % line_range)
-
-      uint8_t AdjustOpcode = Opcode - Prologue.OpcodeBase;
-      uint64_t AddrOffset =
-          (AdjustOpcode / Prologue.LineRange) * Prologue.MinInstLength;
-      int32_t LineOffset =
-          Prologue.LineBase + (AdjustOpcode % Prologue.LineRange);
-      State.Row.Line += LineOffset;
-      State.Row.Address.Address += AddrOffset;
+      // Special Opcodes.
+      ParsingState::AddrAndLineDelta Delta =
+          State.handleSpecialOpcode(Opcode, OpcodeOffset);
 
       if (OS) {
-        *OS << "address += " << AddrOffset << ",  line += " << LineOffset
+        *OS << "address += " << Delta.Address << ",  line += " << Delta.Line
             << "\n";
         OS->indent(12);
         State.Row.dump(*OS);

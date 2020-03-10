@@ -1,4 +1,6 @@
-# RUN: llc -debug-entry-values -start-after=livedebugvalues -o - %s | FileCheck %s
+# We do not support the call site info for the target now, so we use the experimental option (-emit-call-site-info -debug-entry-values).
+
+# RUN: llc -emit-call-site-info -debug-entry-values -start-after=livedebugvalues -o - %s | FileCheck %s
 
 # This test would previously trigger an assertion when trying to describe the
 # call site value for callee()'s float parameter.

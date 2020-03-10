@@ -231,10 +231,7 @@ void SizeofExpressionCheck::registerMatchers(MatchFinder *Finder) {
 
   Finder->addMatcher(
       binaryOperator(
-          anyOf(hasOperatorName("=="), hasOperatorName("!="),
-                hasOperatorName("<"), hasOperatorName("<="),
-                hasOperatorName(">"), hasOperatorName(">="),
-                hasOperatorName("+"), hasOperatorName("-")),
+          hasAnyOperatorName("==", "!=", "<", "<=", ">", ">=", "+", "-"),
           hasEitherOperand(expr(anyOf(
               ignoringParenImpCasts(SizeOfExpr),
               ignoringParenImpCasts(binaryOperator(

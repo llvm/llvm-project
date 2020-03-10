@@ -30,7 +30,6 @@
 
 #include "llvm/CodeGen/RegAllocPBQP.h"
 #include "RegisterCoalescer.h"
-#include "Spiller.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
@@ -58,6 +57,7 @@
 #include "llvm/CodeGen/PBQPRAConstraint.h"
 #include "llvm/CodeGen/RegAllocRegistry.h"
 #include "llvm/CodeGen/SlotIndexes.h"
+#include "llvm/CodeGen/Spiller.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGen/VirtRegMap.h"

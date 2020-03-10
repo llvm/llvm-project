@@ -13,19 +13,19 @@
 // HOST-NOT: %struct.T.coerce
 
 // CHECK: define amdgpu_kernel void  @_Z7kernel1Pi(i32 addrspace(1)* %x.coerce)
-// HOST: define void @_Z7kernel1Pi.stub(i32* %x)
+// HOST: define void @_Z22__device_stub__kernel1Pi(i32* %x)
 __global__ void kernel1(int *x) {
   x[0]++;
 }
 
 // CHECK: define amdgpu_kernel void  @_Z7kernel2Ri(i32 addrspace(1)* dereferenceable(4) %x.coerce)
-// HOST: define void @_Z7kernel2Ri.stub(i32* dereferenceable(4) %x)
+// HOST: define void @_Z22__device_stub__kernel2Ri(i32* dereferenceable(4) %x)
 __global__ void kernel2(int &x) {
   x++;
 }
 
 // CHECK: define amdgpu_kernel void  @_Z7kernel3PU3AS2iPU3AS1i(i32 addrspace(2)* %x, i32 addrspace(1)* %y)
-// HOST: define void @_Z7kernel3PU3AS2iPU3AS1i.stub(i32 addrspace(2)* %x, i32 addrspace(1)* %y)
+// HOST: define void @_Z22__device_stub__kernel3PU3AS2iPU3AS1i(i32 addrspace(2)* %x, i32 addrspace(1)* %y)
 __global__ void kernel3(__attribute__((address_space(2))) int *x,
                         __attribute__((address_space(1))) int *y) {
   y[0] = x[0];
@@ -43,7 +43,7 @@ struct S {
 // `by-val` struct will be coerced into a similar struct with all generic
 // pointers lowerd into global ones.
 // CHECK: define amdgpu_kernel void @_Z7kernel41S(%struct.S.coerce %s.coerce)
-// HOST: define void @_Z7kernel41S.stub(i32* %s.coerce0, float* %s.coerce1)
+// HOST: define void @_Z22__device_stub__kernel41S(i32* %s.coerce0, float* %s.coerce1)
 __global__ void kernel4(struct S s) {
   s.x[0]++;
   s.y[0] += 1.f;
@@ -51,7 +51,7 @@ __global__ void kernel4(struct S s) {
 
 // If a pointer to struct is passed, only the pointer itself is coerced into the global one.
 // CHECK: define amdgpu_kernel void @_Z7kernel5P1S(%struct.S addrspace(1)* %s.coerce)
-// HOST: define void @_Z7kernel5P1S.stub(%struct.S* %s)
+// HOST: define void @_Z22__device_stub__kernel5P1S(%struct.S* %s)
 __global__ void kernel5(struct S *s) {
   s->x[0]++;
   s->y[0] += 1.f;
@@ -62,7 +62,7 @@ struct T {
 };
 // `by-val` array is also coerced.
 // CHECK: define amdgpu_kernel void @_Z7kernel61T(%struct.T.coerce %t.coerce)
-// HOST: define void @_Z7kernel61T.stub(float* %t.coerce0, float* %t.coerce1)
+// HOST: define void @_Z22__device_stub__kernel61T(float* %t.coerce0, float* %t.coerce1)
 __global__ void kernel6(struct T t) {
   t.x[0][0] += 1.f;
   t.x[1][0] += 2.f;

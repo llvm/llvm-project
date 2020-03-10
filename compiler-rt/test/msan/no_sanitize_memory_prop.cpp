@@ -9,6 +9,7 @@
 #include <stdio.h>
 
 __attribute__((noinline))
+__attribute__((weak))
 __attribute__((no_sanitize_memory))
 int f(int x) {
   return x;

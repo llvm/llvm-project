@@ -789,7 +789,7 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   llvm::Triple T(TargetOpts.Triple);
   if (Opts.OptimizationLevel > 0 && Opts.hasReducedDebugInfo() &&
       llvm::is_contained(DebugEntryValueArchs, T.getArch()))
-    Opts.EnableDebugEntryValues = Args.hasArg(OPT_femit_debug_entry_values);
+    Opts.EmitCallSiteInfo = true;
 
   Opts.DisableO0ImplyOptNone = Args.hasArg(OPT_disable_O0_optnone);
   Opts.DisableRedZone = Args.hasArg(OPT_disable_red_zone);
@@ -809,7 +809,7 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.RecordCommandLine =
       std::string(Args.getLastArgValue(OPT_record_command_line));
   Opts.MergeAllConstants = Args.hasArg(OPT_fmerge_all_constants);
-  Opts.NoCommon = Args.hasArg(OPT_fno_common);
+  Opts.NoCommon = !Args.hasArg(OPT_fcommon);
   Opts.NoInlineLineTables = Args.hasArg(OPT_gno_inline_line_tables);
   Opts.NoImplicitFloat = Args.hasArg(OPT_no_implicit_float);
   Opts.OptimizeSize = getOptimizationLevelSize(Args);

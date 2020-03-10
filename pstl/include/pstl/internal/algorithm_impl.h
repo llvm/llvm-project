@@ -272,20 +272,20 @@ __pattern_walk2(_ExecutionPolicy&& __exec, _ForwardIterator1 __first1, _ForwardI
 template <class _ExecutionPolicy, class _ForwardIterator1, class _Size, class _ForwardIterator2, class _Function,
           class _IsVector>
 _ForwardIterator2
-__pattern_walk2_n(_ExecutionPolicy&&, _ForwardIterator1 __first1, _Size n, _ForwardIterator2 __first2, _Function f,
+__pattern_walk2_n(_ExecutionPolicy&&, _ForwardIterator1 __first1, _Size __n, _ForwardIterator2 __first2, _Function __f,
                   _IsVector is_vector, /*parallel=*/std::false_type) noexcept
 {
-    return __internal::__brick_walk2_n(__first1, n, __first2, f, is_vector);
+    return __internal::__brick_walk2_n(__first1, __n, __first2, __f, is_vector);
 }
 
 template <class _ExecutionPolicy, class _RandomAccessIterator1, class _Size, class _RandomAccessIterator2,
           class _Function, class _IsVector>
 _RandomAccessIterator2
-__pattern_walk2_n(_ExecutionPolicy&& __exec, _RandomAccessIterator1 __first1, _Size n, _RandomAccessIterator2 __first2,
-                  _Function f, _IsVector is_vector, /*parallel=*/std::true_type)
+__pattern_walk2_n(_ExecutionPolicy&& __exec, _RandomAccessIterator1 __first1, _Size __n, _RandomAccessIterator2 __first2,
+                  _Function __f, _IsVector __is_vector, /*parallel=*/std::true_type)
 {
-    return __internal::__pattern_walk2(std::forward<_ExecutionPolicy>(__exec), __first1, __first1 + n, __first2, f,
-                                       is_vector, std::true_type());
+    return __internal::__pattern_walk2(std::forward<_ExecutionPolicy>(__exec), __first1, __first1 + __n, __first2, __f,
+                                       __is_vector, std::true_type());
 }
 
 template <class _ExecutionPolicy, class _ForwardIterator1, class _ForwardIterator2, class _Brick>

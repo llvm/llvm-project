@@ -896,6 +896,23 @@ public:
 /// Represents a call to a C++ inherited constructor.
 ///
 /// Example: \c class T : public S { using S::S; }; T(1);
+///
+// Note, it is difficult to model the parameters. This is one of the reasons
+// why we skip analysis of inheriting constructors as top-level functions.
+// CXXInheritedCtorInitExpr doesn't take arguments and doesn't model parameter
+// initialization because there is none: the arguments in the outer
+// CXXConstructExpr directly initialize the parameters of the base class
+// constructor, and no copies are made. (Making a copy of the parameter is
+// incorrect, at least if it's done in an observable way.) The derived class
+// constructor doesn't even exist in the formal model.
+/// E.g., in:
+///
+/// struct X { X *p = this; ~X() {} };
+/// struct A { A(X x) : b(x.p == &x) {} bool b; };
+/// struct B : A { using A::A; };
+/// B b = X{};
+///
+/// ... b.b is initialized to true.
 class CXXInheritedConstructorCall : public AnyCXXConstructorCall {
   friend class CallEventManager;
 

@@ -82,6 +82,13 @@ New checks
 
   Checks for usages of identifiers reserved for use by the implementation.
 
+- New :doc:`bugprone-suspicious-include
+  <clang-tidy/checks/bugprone-suspicious-include>` check.
+
+  Finds cases where an include refers to what appears to be an implementation
+  file, which often leads to hard-to-track-down ODR violations, and diagnoses
+  them.
+
 - New :doc:`cert-oop57-cpp
   <clang-tidy/checks/cert-oop57-cpp>` check.
 
@@ -124,6 +131,11 @@ Changes in existing checks
   `StringNames` option enabling its application to custom string classes. The
   check now detects in class initializers and constructor initializers which
   are deemed to be redundant.
+
+- Checks supporting the ``HeaderFileExtensions`` flag now support ``;`` as a
+  delimiter in addition to ``,``, with the latter being deprecated as of this
+  release. This simplifies how one specifies the options on the command line:
+  ``--config="{CheckOptions: [{ key: HeaderFileExtensions, value: h;;hpp;hxx }]}"``
 
 Renamed checks
 ^^^^^^^^^^^^^^

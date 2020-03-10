@@ -230,6 +230,7 @@ class WrapTerminatorInst<SOP_Pseudo base_inst> : SPseudoInstSI<
   let hasSideEffects = base_inst.hasSideEffects;
   let UseNamedOperandTable = base_inst.UseNamedOperandTable;
   let CodeSize = base_inst.CodeSize;
+  let SchedRW = base_inst.SchedRW;
 }
 
 let WaveSizePredicate = isWave64 in {

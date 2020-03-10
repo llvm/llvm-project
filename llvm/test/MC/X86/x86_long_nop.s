@@ -15,6 +15,16 @@
 # RUN: llvm-mc -filetype=obj -arch=x86 -triple=i686-pc-linux-gnu %s -mcpu=znver1 | llvm-objdump -d -no-show-raw-insn - | FileCheck %s --check-prefix=LNOP15
 # RUN: llvm-mc -filetype=obj -arch=x86 -triple=x86_64-pc-linux-gnu -mcpu=znver2 %s | llvm-objdump -d -no-show-raw-insn - | FileCheck %s --check-prefix=LNOP15
 # RUN: llvm-mc -filetype=obj -arch=x86 -triple=i686-pc-linux-gnu %s -mcpu=znver2 | llvm-objdump -d -no-show-raw-insn - | FileCheck %s --check-prefix=LNOP15
+# RUN: llvm-mc -filetype=obj -arch=x86 -triple=i686-pc-linux-gnu -mcpu=nehalem %s | llvm-objdump -d -no-show-raw-insn - | FileCheck --check-prefix=LNOP10 %s
+# RUN: llvm-mc -filetype=obj -arch=x86 -triple=i686-pc-linux-gnu -mcpu=westmere %s | llvm-objdump -d -no-show-raw-insn - | FileCheck --check-prefix=LNOP10 %s
+# RUN: llvm-mc -filetype=obj -arch=x86 -triple=i686-pc-linux-gnu -mcpu=sandybridge %s | llvm-objdump -d -no-show-raw-insn - | FileCheck --check-prefix=LNOP10 %s
+# RUN: llvm-mc -filetype=obj -arch=x86 -triple=i686-pc-linux-gnu -mcpu=ivybridge %s | llvm-objdump -d -no-show-raw-insn - | FileCheck --check-prefix=LNOP10 %s
+# RUN: llvm-mc -filetype=obj -arch=x86 -triple=i686-pc-linux-gnu -mcpu=haswell %s | llvm-objdump -d -no-show-raw-insn - | FileCheck --check-prefix=LNOP10 %s
+# RUN: llvm-mc -filetype=obj -arch=x86 -triple=i686-pc-linux-gnu -mcpu=broadwell %s | llvm-objdump -d -no-show-raw-insn - | FileCheck --check-prefix=LNOP10 %s
+# RUN: llvm-mc -filetype=obj -arch=x86 -triple=i686-pc-linux-gnu -mcpu=skylake %s | llvm-objdump -d -no-show-raw-insn - | FileCheck --check-prefix=LNOP10 %s
+# RUN: llvm-mc -filetype=obj -arch=x86 -triple=i686-pc-linux-gnu -mcpu=skx %s | llvm-objdump -d -no-show-raw-insn - | FileCheck --check-prefix=LNOP10 %s
+# RUN: llvm-mc -filetype=obj -arch=x86 -triple=i686-pc-linux-gnu -mcpu=knl %s | llvm-objdump -d -no-show-raw-insn - | FileCheck --check-prefix=LNOP10 %s
+# RUN: llvm-mc -filetype=obj -arch=x86 -triple=i686-pc-linux-gnu -mcpu=knm %s | llvm-objdump -d -no-show-raw-insn - | FileCheck --check-prefix=LNOP10 %s
 
 # Ensure alignment directives also emit sequences of 10, 11 and 15-byte NOPs on processors
 # capable of using long NOPs.

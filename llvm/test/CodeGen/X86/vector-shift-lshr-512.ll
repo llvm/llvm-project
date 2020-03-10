@@ -209,10 +209,10 @@ define <32 x i16> @constant_shift_v32i16(<32 x i16> %a) nounwind {
 ; AVX512DQ-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
 ; AVX512DQ-NEXT:    vmovdqa {{.*#+}} ymm2 = <u,32768,16384,8192,4096,2048,1024,512,256,128,64,32,16,8,4,2>
 ; AVX512DQ-NEXT:    vpmulhuw %ymm2, %ymm1, %ymm3
-; AVX512DQ-NEXT:    vpblendw {{.*#+}} ymm1 = ymm1[0],ymm3[1,2,3,4,5,6,7],ymm1[8],ymm3[9,10,11,12,13,14,15]
+; AVX512DQ-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0],xmm3[1,2,3,4,5,6,7]
 ; AVX512DQ-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm3[4,5,6,7]
 ; AVX512DQ-NEXT:    vpmulhuw %ymm2, %ymm0, %ymm2
-; AVX512DQ-NEXT:    vpblendw {{.*#+}} ymm0 = ymm0[0],ymm2[1,2,3,4,5,6,7],ymm0[8],ymm2[9,10,11,12,13,14,15]
+; AVX512DQ-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3,4,5,6,7]
 ; AVX512DQ-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm2[4,5,6,7]
 ; AVX512DQ-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
 ; AVX512DQ-NEXT:    retq

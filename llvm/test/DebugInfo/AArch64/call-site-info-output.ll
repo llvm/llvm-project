@@ -1,4 +1,4 @@
-; RUN: llc -mtriple aarch64-linux-gnu -debug-entry-values %s -o - -stop-before=finalize-isel | FileCheck %s
+; RUN: llc -emit-call-site-info -mtriple aarch64-linux-gnu -debug-entry-values %s -o - -stop-before=finalize-isel | FileCheck %s
 ; Verify that Selection DAG knows how to recognize simple function parameter forwarding registers.
 ; Produced from:
 ; extern int fn1(int,int,int);

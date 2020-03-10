@@ -315,7 +315,7 @@ class AnyTypeOf<list<Type> allowedTypes, string description = ""> : Type<
 // Integer types.
 
 // Any integer type irrespective of its width and signedness semantics.
-def AnyInteger : Type<CPred<"$_self.isInteger()">, "integer">;
+def AnyInteger : Type<CPred<"$_self.isa<IntegerType>()">, "integer">;
 
 // Any integer type (regardless of signedness semantics) of a specific width.
 class AnyI<int width>
@@ -484,6 +484,29 @@ class HasAnyRankOfPred<list<int> ranks> : And<[
 
 class VectorOf<list<Type> allowedTypes> :
   ShapedContainerType<allowedTypes, IsVectorTypePred, "vector">;
+
+// Whether the number of elements of a vector is from the given
+// `allowedRanks` list
+class IsVectorOfRankPred<list<int> allowedRanks> :
+  And<[IsVectorTypePred,
+       Or<!foreach(allowedlength, allowedRanks,
+                   CPred<[{$_self.cast<VectorType>().getRank()
+                           == }]
+                         # allowedlength>)>]>;
+
+// Any vector where the rank is from the given `allowedRanks` list
+class VectorOfRank<list<int> allowedRanks> : Type<
+  IsVectorOfRankPred<allowedRanks>,
+  " of ranks " # StrJoinInt<allowedRanks, "/">.result>;
+
+// Any vector where the rank is from the given `allowedRanks` list and the type
+// is from the given `allowedTypes` list
+class VectorOfRankAndType<list<int> allowedRanks,
+                          list<Type> allowedTypes> : Type<
+  And<[VectorOf<allowedTypes>.predicate,
+       VectorOfRank<allowedRanks>.predicate]>,
+  VectorOf<allowedTypes>.description #
+  VectorOfRank<allowedRanks>.description>;
 
 // Whether the number of elements of a vector is from the given
 // `allowedLengths` list

@@ -2749,13 +2749,29 @@ AST_MATCHER_P(NamedDecl, matchesName, std::string, RegExp) {
 ///
 /// Usable as: Matcher<CXXOperatorCallExpr>, Matcher<FunctionDecl>
 inline internal::PolymorphicMatcherWithParam1<
-    internal::HasOverloadedOperatorNameMatcher, StringRef,
+    internal::HasOverloadedOperatorNameMatcher, std::vector<std::string>,
     AST_POLYMORPHIC_SUPPORTED_TYPES(CXXOperatorCallExpr, FunctionDecl)>
 hasOverloadedOperatorName(StringRef Name) {
   return internal::PolymorphicMatcherWithParam1<
-      internal::HasOverloadedOperatorNameMatcher, StringRef,
-      AST_POLYMORPHIC_SUPPORTED_TYPES(CXXOperatorCallExpr, FunctionDecl)>(Name);
+      internal::HasOverloadedOperatorNameMatcher, std::vector<std::string>,
+      AST_POLYMORPHIC_SUPPORTED_TYPES(CXXOperatorCallExpr, FunctionDecl)>(
+      {std::string(Name)});
 }
+
+/// Matches overloaded operator names.
+///
+/// Matches overloaded operator names specified in strings without the
+/// "operator" prefix: e.g. "<<".
+///
+///   hasAnyOverloadesOperatorName("+", "-")
+/// Is equivalent to
+///   anyOf(hasOverloadedOperatorName("+"), hasOverloadedOperatorName("-"))
+extern const internal::VariadicFunction<
+    internal::PolymorphicMatcherWithParam1<
+        internal::HasOverloadedOperatorNameMatcher, std::vector<std::string>,
+        AST_POLYMORPHIC_SUPPORTED_TYPES(CXXOperatorCallExpr, FunctionDecl)>,
+    StringRef, internal::hasAnyOverloadedOperatorNameFunc>
+    hasAnyOverloadedOperatorName;
 
 /// Matches C++ classes that are directly or indirectly derived from a class
 /// matching \c Base, or Objective-C classes that directly or indirectly

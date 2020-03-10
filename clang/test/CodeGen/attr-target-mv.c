@@ -47,6 +47,18 @@ void bar5() {
   fwd_decl_avx();
 }
 
+int __attribute__((target("avx"))) changed_to_mv(void) { return 0;}
+int __attribute__((target("fma4"))) changed_to_mv(void) { return 1;}
+
+__attribute__((target("default"), used)) inline void foo_used(int i, double d) {}
+__attribute__((target("avx,sse4.2"))) inline void foo_used(int i, double d) {}
+
+__attribute__((target("default"))) inline void foo_used2(int i, double d) {}
+__attribute__((target("avx,sse4.2"), used)) inline void foo_used2(int i, double d) {}
+
+// LINUX: @llvm.used = appending global [2 x i8*] [i8* bitcast (void (i32, double)* @foo_used to i8*), i8* bitcast (void (i32, double)* @foo_used2.avx_sse4.2 to i8*)], section "llvm.metadata"
+// WINDOWS: @llvm.used = appending global [2 x i8*] [i8* bitcast (void (i32, double)* @foo_used to i8*), i8* bitcast (void (i32, double)* @foo_used2.avx_sse4.2 to i8*)], section "llvm.metadata"
+
 // LINUX: @foo.ifunc = weak_odr ifunc i32 (), i32 ()* ()* @foo.resolver
 // LINUX: @foo_inline.ifunc = weak_odr ifunc i32 (), i32 ()* ()* @foo_inline.resolver
 // LINUX: @foo_decls.ifunc = weak_odr ifunc void (), void ()* ()* @foo_decls.resolver
@@ -193,6 +205,22 @@ void bar5() {
 // WINDOWS: call void @__cpu_indicator_init()
 // WINDOWS: call i32 @fwd_decl_avx.avx
 // WINDOWS: call i32 @fwd_decl_avx
+
+// LINUX: define i32 @changed_to_mv.avx()
+// LINUX: define i32 @changed_to_mv.fma4()
+
+// WINDOWS: define dso_local i32 @changed_to_mv.avx()
+// WINDOWS: define dso_local i32 @changed_to_mv.fma4()
+
+// LINUX: define linkonce void @foo_used(i32 %{{.*}}, double %{{.*}})
+// LINUX-NOT: @foo_used.avx_sse4.2(
+// LINUX-NOT: @foo_used2(
+// LINUX: define linkonce void @foo_used2.avx_sse4.2(i32 %{{.*}}, double %{{.*}})
+
+// WINDOWS: define linkonce_odr dso_local void @foo_used(i32 %{{.*}}, double %{{.*}})
+// WINDOWS-NOT: @foo_used.avx_sse4.2(
+// WINDOWS-NOT: @foo_used2(
+// WINDOWS: define linkonce_odr dso_local void @foo_used2.avx_sse4.2(i32 %{{.*}}, double %{{.*}})
 
 // LINUX: declare i32 @foo.arch_sandybridge()
 // WINDOWS: declare dso_local i32 @foo.arch_sandybridge()

@@ -4059,7 +4059,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     } else if (VA.isRegLoc()) {
       RegsToPass.push_back(std::make_pair(VA.getLocReg(), Arg));
       const TargetOptions &Options = DAG.getTarget().Options;
-      if (Options.EnableDebugEntryValues)
+      if (Options.EmitCallSiteInfo)
         CSInfo.emplace_back(VA.getLocReg(), I);
       if (isVarArg && IsWin64) {
         // Win64 ABI requires argument XMM reg to be copied to the corresponding
@@ -35171,6 +35171,28 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
       return N; // Return N so it doesn't get rechecked!
     }
 
+    // Due to isTypeDesirableForOp, we won't always shrink a load truncated to
+    // i16. So shrink it ourselves if we can make a broadcast_load.
+    if (SrcVT == MVT::i16 && Src.getOpcode() == ISD::TRUNCATE &&
+        Src.hasOneUse() && ISD::isNormalLoad(Src.getOperand(0).getNode()) &&
+        Src.getOperand(0).hasOneUse()) {
+      assert(Subtarget.hasAVX2() && "Expected AVX2");
+      LoadSDNode *LN = cast<LoadSDNode>(Src.getOperand(0));
+      if (LN->isSimple()) {
+        SDVTList Tys = DAG.getVTList(VT, MVT::Other);
+        SDValue Ops[] = { LN->getChain(), LN->getBasePtr() };
+        SDValue BcastLd =
+            DAG.getMemIntrinsicNode(X86ISD::VBROADCAST_LOAD, DL, Tys, Ops,
+                                    MVT::i16, LN->getPointerInfo(),
+                                    LN->getAlignment(),
+                                    LN->getMemOperand()->getFlags());
+        DCI.CombineTo(N.getNode(), BcastLd);
+        DAG.ReplaceAllUsesOfValueWith(SDValue(LN, 1), BcastLd.getValue(1));
+        DCI.recursivelyDeleteUnusedNodes(LN);
+        return N; // Return N so it doesn't get rechecked!
+      }
+    }
+
     // vbroadcast(vzload X) -> vbroadcast_load X
     if (Src.getOpcode() == X86ISD::VZEXT_LOAD && Src.hasOneUse()) {
       MemSDNode *LN = cast<MemIntrinsicSDNode>(Src);
@@ -36400,6 +36422,23 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
           insertSubVector(UndefVec, ExtOp, 0, TLO.DAG, DL, ExtSizeInBits);
       return TLO.CombineTo(Op, Insert);
     }
+      // Vector blend by immediate.
+    case X86ISD::BLENDI: {
+      SDLoc DL(Op);
+      MVT ExtVT = VT.getSimpleVT();
+      ExtVT = MVT::getVectorVT(ExtVT.getScalarType(),
+                               ExtSizeInBits / ExtVT.getScalarSizeInBits());
+      SDValue Ext0 =
+          extractSubVector(Op.getOperand(0), 0, TLO.DAG, DL, ExtSizeInBits);
+      SDValue Ext1 =
+          extractSubVector(Op.getOperand(1), 0, TLO.DAG, DL, ExtSizeInBits);
+      SDValue ExtOp =
+          TLO.DAG.getNode(Opc, DL, ExtVT, Ext0, Ext1, Op.getOperand(2));
+      SDValue UndefVec = TLO.DAG.getUNDEF(VT);
+      SDValue Insert =
+          insertSubVector(UndefVec, ExtOp, 0, TLO.DAG, DL, ExtSizeInBits);
+      return TLO.CombineTo(Op, Insert);
+    } 
     }
   }
 
@@ -44278,6 +44317,21 @@ combineToExtendBoolVectorInReg(SDNode *N, SelectionDAG &DAG,
 
     for (unsigned i = 0; i != Scale; ++i)
       ShuffleMask.append(EltSizeInBits, i);
+    Vec = DAG.getVectorShuffle(VT, DL, Vec, Vec, ShuffleMask);
+  } else if (Subtarget.hasAVX2() && NumElts < EltSizeInBits &&
+             (SclVT == MVT::i8 || SclVT == MVT::i16 || SclVT == MVT::i32)) {
+    // If we have register broadcast instructions, use the scalar size as the
+    // element type for the shuffle. Then cast to the wider element type. The
+    // widened bits won't be used, and this might allow the use of a broadcast
+    // load.
+    assert((EltSizeInBits % NumElts) == 0 && "Unexpected integer scale");
+    unsigned Scale = EltSizeInBits / NumElts;
+    EVT BroadcastVT =
+        EVT::getVectorVT(*DAG.getContext(), SclVT, NumElts * Scale);
+    Vec = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, BroadcastVT, N00);
+    ShuffleMask.append(NumElts * Scale, 0);
+    Vec = DAG.getVectorShuffle(BroadcastVT, DL, Vec, Vec, ShuffleMask);
+    Vec = DAG.getBitcast(VT, Vec);
   } else {
     // For smaller scalar integers, we can simply any-extend it to the vector
     // element size (we don't care about the upper bits) and broadcast it to all
@@ -44285,8 +44339,8 @@ combineToExtendBoolVectorInReg(SDNode *N, SelectionDAG &DAG,
     SDValue Scl = DAG.getAnyExtOrTrunc(N00, DL, SVT);
     Vec = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VT, Scl);
     ShuffleMask.append(NumElts, 0);
+    Vec = DAG.getVectorShuffle(VT, DL, Vec, Vec, ShuffleMask);
   }
-  Vec = DAG.getVectorShuffle(VT, DL, Vec, Vec, ShuffleMask);
 
   // Now, mask the relevant bit in each element.
   SmallVector<SDValue, 32> Bits;

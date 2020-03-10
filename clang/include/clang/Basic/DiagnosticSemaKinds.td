@@ -1780,6 +1780,11 @@ def note_due_to_dllexported_class : Note<
 def err_illegal_union_or_anon_struct_member : Error<
   "%select{anonymous struct|union}0 member %1 has a non-trivial "
   "%sub{select_special_member_kind}2">;
+
+def warn_frame_address : Warning<
+  "calling '%0' with a nonzero argument is unsafe">,
+  InGroup<FrameAddress>, DefaultIgnore;
+
 def warn_cxx98_compat_nontrivial_union_or_anon_struct_member : Warning<
   "%select{anonymous struct|union}0 member %1 with a non-trivial "
   "%sub{select_special_member_kind}2 is incompatible with C++98">,
@@ -3677,9 +3682,6 @@ def warn_void_pointer_to_int_cast : Warning<
 def warn_void_pointer_to_enum_cast : Warning<
   warn_void_pointer_to_int_cast.Text>,
   InGroup<VoidPointerToEnumCast>;
-def ext_ms_pointer_to_int_cast : ExtWarn<
-  "cast to smaller integer type %1 from %0 is a Microsoft extension">,
-InGroup<MicrosoftCast>;
 
 def warn_attribute_ignored_for_field_of_type : Warning<
   "%0 attribute ignored for field of type %1">,

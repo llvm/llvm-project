@@ -275,9 +275,15 @@ static cl::opt<bool>
     EnableAddrsig("addrsig", cl::desc("Emit an address-significance table"),
                   cl::init(false));
 
+static cl::opt<bool> EmitCallSiteInfo(
+    "emit-call-site-info",
+    cl::desc(
+        "Emit call site debug information, if debug information is enabled."),
+    cl::init(false));
+
 static cl::opt<bool>
     EnableDebugEntryValues("debug-entry-values",
-                           cl::desc("Emit debug info about parameter's entry values"),
+                           cl::desc("Enable debug info for the debug entry values"),
                            cl::init(false));
 
 static cl::opt<bool>
@@ -315,6 +321,7 @@ static TargetOptions InitTargetOptionsFromCodeGenFlags() {
   Options.ExceptionModel = ExceptionModel;
   Options.EmitStackSizeSection = EnableStackSizeSection;
   Options.EmitAddrsig = EnableAddrsig;
+  Options.EmitCallSiteInfo = EmitCallSiteInfo;
   Options.EnableDebugEntryValues = EnableDebugEntryValues;
   Options.ForceDwarfFrameSection = ForceDwarfFrameSection;
 

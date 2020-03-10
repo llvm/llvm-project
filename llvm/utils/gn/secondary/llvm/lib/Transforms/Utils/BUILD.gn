@@ -36,6 +36,7 @@ static_library("Utils") {
     "InlineFunction.cpp",
     "InstructionNamer.cpp",
     "IntegerDivision.cpp",
+    "KnowledgeRetention.cpp",
     "LCSSA.cpp",
     "LibCallsShrinkWrap.cpp",
     "Local.cpp",

@@ -163,6 +163,30 @@ static void updateStat(GraphRenderer::TimeStat &S, int64_t L) {
   S.Sum += L;
 }
 
+// Labels in a DOT graph must be legal XML strings so it's necessary to escape
+// certain characters.
+static std::string escapeString(StringRef Label) {
+  std::string Str;
+  Str.reserve(Label.size());
+  for (const auto C : Label) {
+    switch (C) {
+    case '&':
+      Str.append("&amp;");
+      break;
+    case '<':
+      Str.append("&lt;");
+      break;
+    case '>':
+      Str.append("&gt;");
+      break;
+    default:
+      Str.push_back(C);
+      break;
+    }
+  }
+  return Str;
+}
+
 // Evaluates an XRay record and performs accounting on it.
 //
 // If the record is an ENTER record it pushes the FuncID and TSC onto a
@@ -398,8 +422,9 @@ void GraphRenderer::exportGraphAsDOT(raw_ostream &OS, StatType ET, StatType EC,
     if (V.first == 0)
       continue;
     OS << "F" << V.first << " [label=\"" << (VT != StatType::NONE ? "{" : "")
-       << (VA.SymbolName.size() > 40 ? VA.SymbolName.substr(0, 40) + "..."
-                                     : VA.SymbolName);
+       << escapeString(VA.SymbolName.size() > 40
+                           ? VA.SymbolName.substr(0, 40) + "..."
+                           : VA.SymbolName);
     if (VT != StatType::NONE)
       OS << "|" << VA.S.getString(VT) << "}\"";
     else

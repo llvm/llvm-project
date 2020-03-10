@@ -3809,7 +3809,7 @@ void CodeGenFunction::EmitOMPDepobjDirective(const OMPDepobjDirective &S) {
     for (const Expr *IRef : DC->varlists())
       Dependencies.emplace_back(DC->getDependencyKind(), IRef);
     Address DepAddr = CGM.getOpenMPRuntime().emitDependClause(
-        *this, Dependencies, /*ForDepobj=*/true, DC->getBeginLoc());
+        *this, Dependencies, /*ForDepobj=*/true, DC->getBeginLoc()).second;
     EmitStoreOfScalar(DepAddr.getPointer(), DOLVal);
     return;
   }
