@@ -91,7 +91,8 @@ affine-expr ::= `(` affine-expr `)`
               | bare-id
               | `-`? integer-literal
 
-multi-dim-affine-expr ::= `(` affine-expr (`,` affine-expr)* `)`
+multi-dim-affine-expr ::= `(` `)`
+                        | `(` affine-expr (`,` affine-expr)* `)`
 ```
 
 `ceildiv` is the ceiling function which maps the result of the division of its

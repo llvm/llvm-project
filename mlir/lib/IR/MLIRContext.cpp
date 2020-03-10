@@ -612,6 +612,11 @@ AffineMap AffineMap::get(MLIRContext *context) {
 }
 
 AffineMap AffineMap::get(unsigned dimCount, unsigned symbolCount,
+                         MLIRContext *context) {
+  return getImpl(dimCount, /*symbolCount=*/0, /*results=*/{}, context);
+}
+
+AffineMap AffineMap::get(unsigned dimCount, unsigned symbolCount,
                          ArrayRef<AffineExpr> results) {
   // The number of results can't be zero.
   assert(!results.empty());
