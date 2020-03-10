@@ -132,15 +132,24 @@ llvm.func @vector_reductions(%arg0: !llvm.float, %arg1: !llvm<"<8 x float>">, %a
 
 // CHECK-LABEL: @matrix_intrinsics
 //                                       4x16                       16x3
-llvm.func @matrix_intrinsics(%A: !llvm<"<64 x float>">, %B: !llvm<"<48 x float>">)
-//           4x3
-  -> !llvm<"<12 x float>">
-{
+llvm.func @matrix_intrinsics(%A: !llvm<"<64 x float>">, %B: !llvm<"<48 x float>">,
+                             %ptr: !llvm<"float*">, %stride: !llvm.i32) {
   // CHECK: call <12 x float> @llvm.matrix.multiply.v12f32.v64f32.v48f32(<64 x float> %0, <48 x float> %1, i32 4, i32 16, i32 3)
   %C = llvm.intr.matrix.multiply %A, %B
     { lhs_rows = 4: i32, lhs_columns = 16: i32 , rhs_rows = 3: i32} :
     (!llvm<"<64 x float>">, !llvm<"<48 x float>">) -> !llvm<"<12 x float>">
-  llvm.return %C: !llvm<"<12 x float>">
+  // CHECK: call <48 x float> @llvm.matrix.transpose.v48f32(<48 x float> %1, i32 3, i32 16)
+  %D = llvm.intr.matrix.transpose %B { rows = 3: i32, columns = 16: i32} :
+    !llvm<"<48 x float>"> into !llvm<"<48 x float>">
+  // CHECK: call <48 x float> @llvm.matrix.columnwise.load.v48f32.p0f32(float* %2, i32 %3, i32 3, i32 16)
+  %E = llvm.intr.matrix.columnwise.load %ptr, <stride=%stride>
+    { rows = 3: i32, columns = 16: i32} :
+    !llvm<"<48 x float>"> from !llvm<"float*"> stride !llvm.i32
+  // CHECK: call void @llvm.matrix.columnwise.store.v48f32.p0f32(<48 x float> %7, float* %2, i32 %3, i32 3, i32 16)
+  llvm.intr.matrix.columnwise.store %E, %ptr, <stride=%stride>
+    { rows = 3: i32, columns = 16: i32} :
+    !llvm<"<48 x float>"> to !llvm<"float*"> stride !llvm.i32
+  llvm.return
 }
 
 // Check that intrinsics are declared with appropriate types.
@@ -167,3 +176,6 @@ llvm.func @matrix_intrinsics(%A: !llvm<"<64 x float>">, %B: !llvm<"<48 x float>"
 // CHECK-DAG: declare <8 x float> @llvm.cos.v8f32(<8 x float>) #0
 // CHECK-DAG: declare float @llvm.copysign.f32(float, float)
 // CHECK-DAG: declare <12 x float> @llvm.matrix.multiply.v12f32.v64f32.v48f32(<64 x float>, <48 x float>, i32 immarg, i32 immarg, i32 immarg)
+// CHECK-DAG: declare <48 x float> @llvm.matrix.transpose.v48f32(<48 x float>, i32 immarg, i32 immarg)
+// CHECK-DAG: declare <48 x float> @llvm.matrix.columnwise.load.v48f32.p0f32(float*, i32, i32 immarg, i32 immarg)
+// CHECK-DAG: declare void @llvm.matrix.columnwise.store.v48f32.p0f32(<48 x float>, float* writeonly, i32, i32 immarg, i32 immarg)
