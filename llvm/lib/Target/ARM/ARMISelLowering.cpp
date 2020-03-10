@@ -1420,12 +1420,16 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
   }
 
   if (Subtarget->hasNEON()) {
-    // vmin and vmax aren't available in a scalar form, so we use
-    // a NEON instruction with an undef lane instead.
-    setOperationAction(ISD::FMINIMUM, MVT::f16, Legal);
-    setOperationAction(ISD::FMAXIMUM, MVT::f16, Legal);
-    setOperationAction(ISD::FMINIMUM, MVT::f32, Legal);
-    setOperationAction(ISD::FMAXIMUM, MVT::f32, Legal);
+    // vmin and vmax aren't available in a scalar form, so we can use
+    // a NEON instruction with an undef lane instead.  This has a performance
+    // penalty on some cores, so we don't do this unless we have been
+    // asked to by the core tuning model.
+    if (Subtarget->useNEONForSinglePrecisionFP()) {
+      setOperationAction(ISD::FMINIMUM, MVT::f32, Legal);
+      setOperationAction(ISD::FMAXIMUM, MVT::f32, Legal);
+      setOperationAction(ISD::FMINIMUM, MVT::f16, Legal);
+      setOperationAction(ISD::FMAXIMUM, MVT::f16, Legal);
+    }
     setOperationAction(ISD::FMINIMUM, MVT::v2f32, Legal);
     setOperationAction(ISD::FMAXIMUM, MVT::v2f32, Legal);
     setOperationAction(ISD::FMINIMUM, MVT::v4f32, Legal);
