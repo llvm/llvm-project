@@ -139,7 +139,28 @@ define amdgpu_ps void @struct_buffer_store_format_f32__sgpr_val__vgpr_rsrc__sgpr
   ret void
 }
 
+define amdgpu_ps void @struct_buffer_store_format_i32__vgpr_val__sgpr_rsrc__vgpr_vindex__vgpr_voffset__sgpr_soffset(i32 %val, <4 x i32> inreg %rsrc, i32 %vindex, i32 %voffset, i32 inreg %soffset) {
+  ; CHECK-LABEL: name: struct_buffer_store_format_i32__vgpr_val__sgpr_rsrc__vgpr_vindex__vgpr_voffset__sgpr_soffset
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $vgpr0, $vgpr1, $vgpr2
+  ; CHECK:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+  ; CHECK:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr2
+  ; CHECK:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr3
+  ; CHECK:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr4
+  ; CHECK:   [[COPY4:%[0-9]+]]:sreg_32 = COPY $sgpr5
+  ; CHECK:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+  ; CHECK:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+  ; CHECK:   [[COPY7:%[0-9]+]]:sreg_32 = COPY $sgpr6
+  ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY4]], %subreg.sub3
+  ; CHECK:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY6]], %subreg.sub1
+  ; CHECK:   BUFFER_STORE_FORMAT_X_BOTHEN_exact [[COPY]], [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY7]], 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 4 into custom "TargetCustom7", align 1, addrspace 4)
+  ; CHECK:   S_ENDPGM 0
+  call void @llvm.amdgcn.struct.buffer.store.format.i32(i32 %val, <4 x i32> %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 0)
+  ret void
+}
+
 declare void @llvm.amdgcn.struct.buffer.store.format.f32(float, <4 x i32>, i32, i32, i32, i32 immarg)
 declare void @llvm.amdgcn.struct.buffer.store.format.v2f32(<2 x float>, <4 x i32>, i32, i32, i32, i32 immarg)
 declare void @llvm.amdgcn.struct.buffer.store.format.v3f32(<3 x float>, <4 x i32>, i32, i32, i32, i32 immarg)
 declare void @llvm.amdgcn.struct.buffer.store.format.v4f32(<4 x float>, <4 x i32>, i32, i32, i32, i32 immarg)
+declare void @llvm.amdgcn.struct.buffer.store.format.i32(i32, <4 x i32>, i32, i32, i32, i32 immarg)
