@@ -27,9 +27,9 @@ module attributes {gpu.container_module} {
     %arg3 = memref_cast %arg0 : memref<8xf32> to memref<?xf32>
     %arg4 = memref_cast %arg1 : memref<8xf32> to memref<?xf32>
     %arg5 = memref_cast %arg2 : memref<8xf32> to memref<?xf32>
-    call @setResourceData(%0, %0, %arg3, %value1) : (i32, i32, memref<?xf32>, f32) -> ()
-    call @setResourceData(%0, %1, %arg4, %value2) : (i32, i32, memref<?xf32>, f32) -> ()
-    call @setResourceData(%0, %2, %arg5, %value0) : (i32, i32, memref<?xf32>, f32) -> ()
+    call @fillResource1DFloat(%arg3, %value1) : (memref<?xf32>, f32) -> ()
+    call @fillResource1DFloat(%arg4, %value2) : (memref<?xf32>, f32) -> ()
+    call @fillResource1DFloat(%arg5, %value0) : (memref<?xf32>, f32) -> ()
 
     %cst1 = constant 1 : index
     %cst8 = constant 8 : index
@@ -39,7 +39,7 @@ module attributes {gpu.container_module} {
     call @print_memref_f32(%arg6) : (memref<*xf32>) -> ()
     return
   }
-  func @setResourceData(%0 : i32, %1 : i32, %2 : memref<?xf32>, %4 : f32)
+  func @fillResource1DFloat(%0 : memref<?xf32>, %1 : f32)
   func @print_memref_f32(%ptr : memref<*xf32>)
 }
 
