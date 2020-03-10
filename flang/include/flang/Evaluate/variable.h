@@ -43,27 +43,12 @@ using SymbolVector = std::vector<SymbolRef>;
 struct DataRef;
 template<typename T> struct Variable;
 
-bool AreSameSymbol(const Symbol &, const Symbol &);
-
-// Implements operator==() for a union type, using special case handling
-// for Symbol references.
-template<typename A> bool TestVariableEquality(const A &x, const A &y) {
-  const SymbolRef *xSymbol{std::get_if<SymbolRef>(&x.u)};
-  if (const SymbolRef * ySymbol{std::get_if<SymbolRef>(&y.u)}) {
-    return xSymbol && AreSameSymbol(*xSymbol, *ySymbol);
-  } else {
-    return x.u == y.u;
-  }
-}
-
 // Reference a base object in memory.  This can be a Fortran symbol,
 // static data (e.g., CHARACTER literal), or compiler-created temporary.
 struct BaseObject {
-  CLASS_BOILERPLATE(BaseObject)
-  UNION_CONSTRUCTORS(BaseObject)
+  EVALUATE_UNION_CLASS_BOILERPLATE(BaseObject)
   int Rank() const;
   std::optional<Expr<SubscriptInteger>> LEN() const;
-  bool operator==(const BaseObject &) const;
   std::ostream &AsFortran(std::ostream &) const;
   const Symbol *symbol() const {
     if (const auto *result{std::get_if<SymbolRef>(&u)}) {
@@ -296,10 +281,7 @@ private:
 // a terminal substring range or complex component designator; use
 // R901 designator for that.
 struct DataRef {
-  CLASS_BOILERPLATE(DataRef)
-  UNION_CONSTRUCTORS(DataRef)
-
-  bool operator==(const DataRef &) const;
+  EVALUATE_UNION_CLASS_BOILERPLATE(DataRef)
   int Rank() const;
   const Symbol &GetFirstSymbol() const;
   const Symbol &GetLastSymbol() const;
@@ -395,15 +377,11 @@ public:
   using Result = T;
   static_assert(
       IsSpecificIntrinsicType<Result> || std::is_same_v<Result, SomeDerived>);
-  CLASS_BOILERPLATE(Designator)
-  UNION_CONSTRUCTORS(Designator)
+  EVALUATE_UNION_CLASS_BOILERPLATE(Designator)
   Designator(const DataRef &that) : u{common::CopyVariant<Variant>(that.u)} {}
   Designator(DataRef &&that)
     : u{common::MoveVariant<Variant>(std::move(that.u))} {}
 
-  bool operator==(const Designator &that) const {
-    return TestVariableEquality(*this, that);
-  }
   std::optional<DynamicType> GetType() const;
   int Rank() const;
   BaseObject GetBaseObject() const;

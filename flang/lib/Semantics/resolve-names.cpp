@@ -3618,7 +3618,7 @@ void DeclarationVisitor::Post(const parser::TypeBoundProcedurePart &) {
   // track specifics seen for the current generic to detect duplicates:
   const Symbol *currGeneric{nullptr};
   std::set<SourceName> specifics;
-  for (const auto [generic, bindingName] : genericBindings_) {
+  for (const auto &[generic, bindingName] : genericBindings_) {
     if (generic != currGeneric) {
       currGeneric = generic;
       specifics.clear();

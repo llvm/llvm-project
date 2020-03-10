@@ -818,7 +818,7 @@ LabeledStatementInfoTuplePOD GetLabel(
 void CheckBranchesIntoDoBody(const SourceStmtList &branches,
     const TargetStmtMap &labels, const IndexList &loopBodies,
     SemanticsContext &context) {
-  for (const auto branch : branches) {
+  for (const auto &branch : branches) {
     const auto &label{branch.parserLabel};
     auto branchTarget{GetLabel(labels, label)};
     if (HasScope(branchTarget.proxyForScope)) {
@@ -870,7 +870,7 @@ void CheckLabelDoConstraints(const SourceStmtList &dos,
     const SourceStmtList &branches, const TargetStmtMap &labels,
     const std::vector<ProxyForScope> &scopes, SemanticsContext &context) {
   IndexList loopBodies;
-  for (const auto stmt : dos) {
+  for (const auto &stmt : dos) {
     const auto &label{stmt.parserLabel};
     const auto &scope{stmt.proxyForScope};
     const auto &position{stmt.parserCharBlock};
@@ -924,7 +924,7 @@ void CheckLabelDoConstraints(const SourceStmtList &dos,
 void CheckScopeConstraints(const SourceStmtList &stmts,
     const TargetStmtMap &labels, const std::vector<ProxyForScope> &scopes,
     SemanticsContext &context) {
-  for (const auto stmt : stmts) {
+  for (const auto &stmt : stmts) {
     const auto &label{stmt.parserLabel};
     const auto &scope{stmt.proxyForScope};
     const auto &position{stmt.parserCharBlock};
@@ -943,7 +943,7 @@ void CheckScopeConstraints(const SourceStmtList &stmts,
 
 void CheckBranchTargetConstraints(const SourceStmtList &stmts,
     const TargetStmtMap &labels, SemanticsContext &context) {
-  for (const auto stmt : stmts) {
+  for (const auto &stmt : stmts) {
     const auto &label{stmt.parserLabel};
     auto branchTarget{GetLabel(labels, label)};
     if (HasScope(branchTarget.proxyForScope)) {
@@ -981,7 +981,7 @@ void CheckBranchConstraints(const SourceStmtList &branches,
 
 void CheckDataXferTargetConstraints(const SourceStmtList &stmts,
     const TargetStmtMap &labels, SemanticsContext &context) {
-  for (const auto stmt : stmts) {
+  for (const auto &stmt : stmts) {
     const auto &label{stmt.parserLabel};
     auto ioTarget{GetLabel(labels, label)};
     if (HasScope(ioTarget.proxyForScope)) {

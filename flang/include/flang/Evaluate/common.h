@@ -195,7 +195,7 @@ using HostUnsignedInt =
 #define EVALUATE_UNION_CLASS_BOILERPLATE(t) \
   CLASS_BOILERPLATE(t) \
   UNION_CONSTRUCTORS(t) \
-  bool operator==(const t &that) const { return u == that.u; }
+  bool operator==(const t &) const;
 
 // Forward definition of Expr<> so that it can be indirectly used in its own
 // definition

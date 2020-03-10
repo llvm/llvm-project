@@ -780,7 +780,6 @@ using TypelessExpression = std::variant<BOZLiteralConstant, NullPointer,
 template<> class Expr<SomeType> : public ExpressionBase<SomeType> {
 public:
   using Result = SomeType;
-
   EVALUATE_UNION_CLASS_BOILERPLATE(Expr)
 
   // Owning references to these generic expressions can appear in other

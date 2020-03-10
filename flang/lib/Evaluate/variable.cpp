@@ -601,7 +601,7 @@ NamedEntity CoarrayRef::GetBase() const { return AsNamedEntity(base_); }
 // For the purposes of comparing type parameter expressions while
 // testing the compatibility of procedure characteristics, two
 // object dummy arguments with the same name are considered equal.
-bool AreSameSymbol(const Symbol &x, const Symbol &y) {
+static bool AreSameSymbol(const Symbol &x, const Symbol &y) {
   if (&x == &y) {
     return true;
   }
@@ -613,6 +613,17 @@ bool AreSameSymbol(const Symbol &x, const Symbol &y) {
     }
   }
   return false;
+}
+
+// Implements operator==() for a union type, using special case handling
+// for Symbol references.
+template<typename A> static bool TestVariableEquality(const A &x, const A &y) {
+  const SymbolRef *xSymbol{std::get_if<SymbolRef>(&x.u)};
+  if (const SymbolRef * ySymbol{std::get_if<SymbolRef>(&y.u)}) {
+    return xSymbol && AreSameSymbol(*xSymbol, *ySymbol);
+  } else {
+    return x.u == y.u;
+  }
 }
 
 bool BaseObject::operator==(const BaseObject &that) const {
@@ -638,6 +649,7 @@ bool Triplet::operator==(const Triplet &that) const {
   return lower_ == that.lower_ && upper_ == that.upper_ &&
       stride_ == that.stride_;
 }
+bool Subscript::operator==(const Subscript &that) const { return u == that.u; }
 bool ArrayRef::operator==(const ArrayRef &that) const {
   return base_ == that.base_ && subscript_ == that.subscript_;
 }
@@ -658,6 +670,14 @@ bool ComplexPart::operator==(const ComplexPart &that) const {
 }
 bool ProcedureRef::operator==(const ProcedureRef &that) const {
   return proc_ == that.proc_ && arguments_ == that.arguments_;
+}
+template<typename T>
+bool Designator<T>::operator==(const Designator<T> &that) const {
+  return TestVariableEquality(*this, that);
+}
+template<typename T>
+bool Variable<T>::operator==(const Variable<T> &that) const {
+  return u == that.u;
 }
 bool DescriptorInquiry::operator==(const DescriptorInquiry &that) const {
   return field_ == that.field_ && base_ == that.base_ &&

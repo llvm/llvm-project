@@ -45,8 +45,15 @@ public:
   type &get() const noexcept { return *p_; }
   type *operator->() const { return p_; }
   type &operator*() const { return *p_; }
-  bool operator==(Reference that) const { return *p_ == *that.p_; }
-  bool operator!=(Reference that) const { return *p_ != *that.p_; }
+
+  bool operator==(std::add_const_t<A> &that) const {
+    return p_ == &that || *p_ == that;
+  }
+  bool operator!=(std::add_const_t<A> &that) const { return !(*this == that); }
+  bool operator==(const Reference &that) const {
+    return p_ == that.p_ || *this == *that.p_;
+  }
+  bool operator!=(const Reference &that) const { return !(*this == that); }
 
 private:
   type *p_;  // never null

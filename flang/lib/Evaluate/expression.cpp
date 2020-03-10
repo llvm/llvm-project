@@ -101,7 +101,7 @@ template<typename A> int ExpressionBase<A>::Rank() const {
       derived().u);
 }
 
-// Equality testing for classes without EVALUATE_UNION_CLASS_BOILERPLATE()
+// Equality testing
 
 bool ImpliedDoIndex::operator==(const ImpliedDoIndex &that) const {
   return name == that.name;
@@ -112,6 +112,12 @@ bool ImpliedDo<T>::operator==(const ImpliedDo<T> &that) const {
   return name_ == that.name_ && lower_ == that.lower_ &&
       upper_ == that.upper_ && stride_ == that.stride_ &&
       values_ == that.values_;
+}
+
+template<typename T>
+bool ArrayConstructorValue<T>::operator==(
+    const ArrayConstructorValue<T> &that) const {
+  return u == that.u;
 }
 
 template<typename R>
@@ -144,6 +150,57 @@ StructureConstructor::StructureConstructor(
 
 bool StructureConstructor::operator==(const StructureConstructor &that) const {
   return result_ == that.result_ && values_ == that.values_;
+}
+
+bool Relational<SomeType>::operator==(const Relational<SomeType> &that) const {
+  return u == that.u;
+}
+
+template<int KIND>
+bool Expr<Type<TypeCategory::Integer, KIND>>::operator==(
+    const Expr<Type<TypeCategory::Integer, KIND>> &that) const {
+  return u == that.u;
+}
+
+template<int KIND>
+bool Expr<Type<TypeCategory::Real, KIND>>::operator==(
+    const Expr<Type<TypeCategory::Real, KIND>> &that) const {
+  return u == that.u;
+}
+
+template<int KIND>
+bool Expr<Type<TypeCategory::Complex, KIND>>::operator==(
+    const Expr<Type<TypeCategory::Complex, KIND>> &that) const {
+  return u == that.u;
+}
+
+template<int KIND>
+bool Expr<Type<TypeCategory::Logical, KIND>>::operator==(
+    const Expr<Type<TypeCategory::Logical, KIND>> &that) const {
+  return u == that.u;
+}
+
+template<int KIND>
+bool Expr<Type<TypeCategory::Character, KIND>>::operator==(
+    const Expr<Type<TypeCategory::Character, KIND>> &that) const {
+  return u == that.u;
+}
+
+template<TypeCategory CAT>
+bool Expr<SomeKind<CAT>>::operator==(const Expr<SomeKind<CAT>> &that) const {
+  return u == that.u;
+}
+
+bool Expr<SomeDerived>::operator==(const Expr<SomeDerived> &that) const {
+  return u == that.u;
+}
+
+bool Expr<SomeCharacter>::operator==(const Expr<SomeCharacter> &that) const {
+  return u == that.u;
+}
+
+bool Expr<SomeType>::operator==(const Expr<SomeType> &that) const {
+  return u == that.u;
 }
 
 DynamicType StructureConstructor::GetType() const { return result_.GetType(); }

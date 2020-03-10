@@ -79,6 +79,10 @@ bool SpecificIntrinsic::operator==(const SpecificIntrinsic &that) const {
 ProcedureDesignator::ProcedureDesignator(Component &&c)
   : u{common::CopyableIndirection<Component>::Make(std::move(c))} {}
 
+bool ProcedureDesignator::operator==(const ProcedureDesignator &that) const {
+  return u == that.u;
+}
+
 std::optional<DynamicType> ProcedureDesignator::GetType() const {
   if (const auto *intrinsic{std::get_if<SpecificIntrinsic>(&u)}) {
     if (const auto &result{intrinsic->characteristics.value().functionResult}) {

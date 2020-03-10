@@ -25,11 +25,18 @@ namespace Fortran::common {
 class UnsignedInt128 {
 public:
   constexpr UnsignedInt128() {}
-  constexpr UnsignedInt128(std::uint64_t n) : low_{n} {}
-  constexpr UnsignedInt128(std::int64_t n)
+  // This means of definition provides some portability for
+  // "size_t" operands.
+  constexpr UnsignedInt128(unsigned n) : low_{n} {}
+  constexpr UnsignedInt128(unsigned long n) : low_{n} {}
+  constexpr UnsignedInt128(unsigned long long n) : low_{n} {}
+  constexpr UnsignedInt128(int n)
     : low_{static_cast<std::uint64_t>(n)}, high_{-static_cast<std::uint64_t>(
                                                n < 0)} {}
-  constexpr UnsignedInt128(int n)
+  constexpr UnsignedInt128(long n)
+    : low_{static_cast<std::uint64_t>(n)}, high_{-static_cast<std::uint64_t>(
+                                               n < 0)} {}
+  constexpr UnsignedInt128(long long n)
     : low_{static_cast<std::uint64_t>(n)}, high_{-static_cast<std::uint64_t>(
                                                n < 0)} {}
   constexpr UnsignedInt128(const UnsignedInt128 &) = default;
