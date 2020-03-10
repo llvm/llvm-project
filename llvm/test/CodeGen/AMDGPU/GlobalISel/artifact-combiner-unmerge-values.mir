@@ -310,10 +310,15 @@ body:             |
     ; CHECK-LABEL: name: test_unmerge_values_s32_of_trunc_concat_vectors_v2s64_v2s64
     ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     ; CHECK: [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr4_vgpr5_vgpr6_vgpr7
-    ; CHECK: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s64>) = G_CONCAT_VECTORS [[COPY]](<2 x s64>), [[COPY1]](<2 x s64>)
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(<4 x s32>) = G_TRUNC [[CONCAT_VECTORS]](<4 x s64>)
-    ; CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[TRUNC]](<4 x s32>)
-    ; CHECK: S_ENDPGM 0, implicit [[UV]](s32), implicit [[UV1]](s32), implicit [[UV2]](s32), implicit [[UV3]](s32)
+    ; CHECK: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](<2 x s64>)
+    ; CHECK: [[UV2:%[0-9]+]]:_(s64), [[UV3:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY1]](<2 x s64>)
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[UV]](s64)
+    ; CHECK: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[UV1]](s64)
+    ; CHECK: [[TRUNC2:%[0-9]+]]:_(s32) = G_TRUNC [[UV2]](s64)
+    ; CHECK: [[TRUNC3:%[0-9]+]]:_(s32) = G_TRUNC [[UV3]](s64)
+    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[TRUNC]](s32), [[TRUNC1]](s32), [[TRUNC2]](s32), [[TRUNC3]](s32)
+    ; CHECK: [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<4 x s32>)
+    ; CHECK: S_ENDPGM 0, implicit [[UV4]](s32), implicit [[UV5]](s32), implicit [[UV6]](s32), implicit [[UV7]](s32)
     %0:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     %1:_(<2 x s64>) = COPY $vgpr4_vgpr5_vgpr6_vgpr7
     %2:_(<4 x s64>) = G_CONCAT_VECTORS %0, %1
