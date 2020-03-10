@@ -244,6 +244,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(hasAnyDeclaration);
   REGISTER_MATCHER(hasAnyName);
   REGISTER_MATCHER(hasAnyOperatorName);
+  REGISTER_MATCHER(hasAnyOverloadedOperatorName);
   REGISTER_MATCHER(hasAnyParameter);
   REGISTER_MATCHER(hasAnyPlacementArg);
   REGISTER_MATCHER(hasAnySelector);
