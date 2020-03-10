@@ -21,13 +21,13 @@ void __asan_set_shadow_f3(size_t addr, size_t size);
 void __asan_set_shadow_f5(size_t addr, size_t size);
 void __asan_set_shadow_f8(size_t addr, size_t size);
 
-char a __attribute__((aligned(8)));
+char* a;
 
 void f(long arg) {
   size_t shadow_offset;
   size_t shadow_scale;
   __asan_get_shadow_mapping(&shadow_scale, &shadow_offset);
-  size_t addr = (((size_t)&a) >> shadow_scale) + shadow_offset;
+  size_t addr = (((size_t)a) >> shadow_scale) + shadow_offset;
 
   switch (arg) {
   // X00-NOT: AddressSanitizer
@@ -61,9 +61,10 @@ void f(long arg) {
 int main(int argc, char **argv) {
   assert(argc > 1);
 
+  a = malloc(8);
   long arg = strtol(argv[1], 0, 16);
   f(arg);
-  a = 1;
+  *a = 1;
   printf("PASS\n");
   return 0;
 }

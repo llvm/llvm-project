@@ -7,7 +7,7 @@ union {int a[4]; __attribute((aligned(16))) float b[4];} b;
 // CHECK: @b = {{.*}}zeroinitializer, align 16
 
 long long int test5[1024];
-// CHECK-DAG: @test5 = common global [1024 x i64] zeroinitializer, align 8
+// CHECK-DAG: @test5 = global [1024 x i64] zeroinitializer, align 8
 
 // PR5279 - Reduced alignment on typedef.
 typedef int myint __attribute__((aligned(1)));

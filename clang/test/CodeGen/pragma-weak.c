@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -emit-llvm %s -o - -verify | FileCheck %s
 
 // CHECK: @weakvar = weak global
-// CHECK: @__weakvar_alias = common global
+// CHECK: @__weakvar_alias = global
 // CHECK: @correct_linkage = weak global
 
 
