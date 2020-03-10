@@ -4317,7 +4317,7 @@ ASTFileSignature ASTWriter::WriteAST(Sema &SemaRef,
   WritingAST = false;
   if (ShouldCacheASTInMemory) {
     // Construct MemoryBuffer and update buffer manager.
-    ModuleCache.addFinalPCM(OutputFile,
+    ModuleCache.addBuiltPCM(OutputFile,
                             llvm::MemoryBuffer::getMemBufferCopy(
                                 StringRef(Buffer.begin(), Buffer.size())));
   }
