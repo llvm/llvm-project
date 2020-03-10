@@ -551,15 +551,6 @@ private Transformer _transformer = new X.Y {
   Scaler = (Shape shape) => { return new Transform.Resize(shape, 0.1); },
 };)",
                Style);
-
-  // Dictionary initialisation.
-  verifyFormat(R"(//
-var myDict = new Dictionary<string, string> {
-  ["name"] = _donald,
-  ["age"] = Convert.ToString(DateTime.Today.Year - 1934),
-  ["type"] = _duck,
-};)",
-               Style);
 }
 
 TEST_F(FormatTestCSharp, CSharpNamedArguments) {
