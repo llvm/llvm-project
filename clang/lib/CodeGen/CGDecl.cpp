@@ -297,7 +297,7 @@ llvm::Constant *CodeGenModule::getOrCreateStaticVarDecl(
   else if (const auto *DD = dyn_cast<CXXDestructorDecl>(DC))
     GD = GlobalDecl(DD, Dtor_Base);
   else if (const auto *FD = dyn_cast<FunctionDecl>(DC))
-    GD = GlobalDecl(FD);
+    GD = getGlobalDecl(FD);
   else {
     // Don't do anything for Obj-C method decls or global closures. We should
     // never defer them.
