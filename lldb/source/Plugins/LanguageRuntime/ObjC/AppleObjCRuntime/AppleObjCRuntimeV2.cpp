@@ -1207,7 +1207,8 @@ AppleObjCRuntimeV2::GetClassDescriptor(ValueObject &valobj) {
         if (isa != LLDB_INVALID_ADDRESS) {
           objc_class_sp = GetClassDescriptorFromISA(isa);
           if (isa && !objc_class_sp) {
-            Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
+            Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PROCESS |
+                                              LIBLLDB_LOG_TYPES));
             LLDB_LOGF(log,
                       "0x%" PRIx64
                       ": AppleObjCRuntimeV2::GetClassDescriptor() ISA was "
