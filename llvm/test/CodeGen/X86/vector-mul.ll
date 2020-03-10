@@ -1531,9 +1531,7 @@ define <2 x i64> @mul_v2i64_0_1(<2 x i64> %a0) nounwind {
 ;
 ; X64-LABEL: mul_v2i64_0_1:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl $1, %eax
-; X64-NEXT:    movq %rax, %xmm1
-; X64-NEXT:    pslldq {{.*#+}} xmm1 = zero,zero,zero,zero,zero,zero,zero,zero,xmm1[0,1,2,3,4,5,6,7]
+; X64-NEXT:    movdqa {{.*#+}} xmm1 = [0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0]
 ; X64-NEXT:    movdqa %xmm0, %xmm2
 ; X64-NEXT:    pmuludq %xmm1, %xmm2
 ; X64-NEXT:    psrlq $32, %xmm0
@@ -1544,9 +1542,7 @@ define <2 x i64> @mul_v2i64_0_1(<2 x i64> %a0) nounwind {
 ;
 ; X64-XOP-LABEL: mul_v2i64_0_1:
 ; X64-XOP:       # %bb.0:
-; X64-XOP-NEXT:    movl $1, %eax
-; X64-XOP-NEXT:    vmovq %rax, %xmm1
-; X64-XOP-NEXT:    vpslldq {{.*#+}} xmm1 = zero,zero,zero,zero,zero,zero,zero,zero,xmm1[0,1,2,3,4,5,6,7]
+; X64-XOP-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0]
 ; X64-XOP-NEXT:    vpmuludq %xmm1, %xmm0, %xmm2
 ; X64-XOP-NEXT:    vpsrlq $32, %xmm0, %xmm0
 ; X64-XOP-NEXT:    vpmuludq %xmm1, %xmm0, %xmm0
@@ -1556,9 +1552,7 @@ define <2 x i64> @mul_v2i64_0_1(<2 x i64> %a0) nounwind {
 ;
 ; X64-AVX2-LABEL: mul_v2i64_0_1:
 ; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    movl $1, %eax
-; X64-AVX2-NEXT:    vmovq %rax, %xmm1
-; X64-AVX2-NEXT:    vpslldq {{.*#+}} xmm1 = zero,zero,zero,zero,zero,zero,zero,zero,xmm1[0,1,2,3,4,5,6,7]
+; X64-AVX2-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0]
 ; X64-AVX2-NEXT:    vpmuludq %xmm1, %xmm0, %xmm2
 ; X64-AVX2-NEXT:    vpsrlq $32, %xmm0, %xmm0
 ; X64-AVX2-NEXT:    vpmuludq %xmm1, %xmm0, %xmm0
@@ -1568,10 +1562,7 @@ define <2 x i64> @mul_v2i64_0_1(<2 x i64> %a0) nounwind {
 ;
 ; X64-AVX512DQ-LABEL: mul_v2i64_0_1:
 ; X64-AVX512DQ:       # %bb.0:
-; X64-AVX512DQ-NEXT:    movl $1, %eax
-; X64-AVX512DQ-NEXT:    vmovq %rax, %xmm1
-; X64-AVX512DQ-NEXT:    vpslldq {{.*#+}} xmm1 = zero,zero,zero,zero,zero,zero,zero,zero,xmm1[0,1,2,3,4,5,6,7]
-; X64-AVX512DQ-NEXT:    vpmullq %xmm1, %xmm0, %xmm0
+; X64-AVX512DQ-NEXT:    vpmullq {{.*}}(%rip), %xmm0, %xmm0
 ; X64-AVX512DQ-NEXT:    retq
   %1 = mul <2 x i64> %a0, <i64 0, i64 1>
   ret <2 x i64> %1
@@ -1595,62 +1586,45 @@ define <2 x i64> @mul_v2i64_neg_0_1(<2 x i64> %a0) nounwind {
 ;
 ; X64-LABEL: mul_v2i64_neg_0_1:
 ; X64:       # %bb.0:
-; X64-NEXT:    movdqa %xmm0, %xmm1
-; X64-NEXT:    psrlq $32, %xmm1
-; X64-NEXT:    movq $-1, %rax
-; X64-NEXT:    movq %rax, %xmm2
-; X64-NEXT:    pslldq {{.*#+}} xmm2 = zero,zero,zero,zero,zero,zero,zero,zero,xmm2[0,1,2,3,4,5,6,7]
-; X64-NEXT:    pmuludq %xmm2, %xmm1
-; X64-NEXT:    movl $4294967295, %eax # imm = 0xFFFFFFFF
-; X64-NEXT:    movq %rax, %xmm3
-; X64-NEXT:    pslldq {{.*#+}} xmm3 = zero,zero,zero,zero,zero,zero,zero,zero,xmm3[0,1,2,3,4,5,6,7]
-; X64-NEXT:    pmuludq %xmm0, %xmm3
-; X64-NEXT:    paddq %xmm1, %xmm3
-; X64-NEXT:    psllq $32, %xmm3
-; X64-NEXT:    pmuludq %xmm2, %xmm0
+; X64-NEXT:    movdqa {{.*#+}} xmm1 = [0,0,0,0,0,0,0,0,255,255,255,255,255,255,255,255]
+; X64-NEXT:    movdqa %xmm0, %xmm2
+; X64-NEXT:    pmuludq %xmm1, %xmm2
+; X64-NEXT:    movdqa %xmm0, %xmm3
+; X64-NEXT:    psrlq $32, %xmm3
+; X64-NEXT:    pmuludq %xmm1, %xmm3
+; X64-NEXT:    pmuludq {{.*}}(%rip), %xmm0
 ; X64-NEXT:    paddq %xmm3, %xmm0
+; X64-NEXT:    psllq $32, %xmm0
+; X64-NEXT:    paddq %xmm2, %xmm0
 ; X64-NEXT:    retq
 ;
 ; X64-XOP-LABEL: mul_v2i64_neg_0_1:
 ; X64-XOP:       # %bb.0:
-; X64-XOP-NEXT:    vpsrlq $32, %xmm0, %xmm1
-; X64-XOP-NEXT:    movq $-1, %rax
-; X64-XOP-NEXT:    vmovq %rax, %xmm2
-; X64-XOP-NEXT:    vpslldq {{.*#+}} xmm2 = zero,zero,zero,zero,zero,zero,zero,zero,xmm2[0,1,2,3,4,5,6,7]
-; X64-XOP-NEXT:    vpmuludq %xmm2, %xmm1, %xmm1
-; X64-XOP-NEXT:    movl $4294967295, %eax # imm = 0xFFFFFFFF
-; X64-XOP-NEXT:    vmovq %rax, %xmm3
-; X64-XOP-NEXT:    vpslldq {{.*#+}} xmm3 = zero,zero,zero,zero,zero,zero,zero,zero,xmm3[0,1,2,3,4,5,6,7]
-; X64-XOP-NEXT:    vpmuludq %xmm3, %xmm0, %xmm3
-; X64-XOP-NEXT:    vpaddq %xmm1, %xmm3, %xmm1
-; X64-XOP-NEXT:    vpsllq $32, %xmm1, %xmm1
-; X64-XOP-NEXT:    vpmuludq %xmm2, %xmm0, %xmm0
+; X64-XOP-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,0,0,0,0,0,0,0,255,255,255,255,255,255,255,255]
+; X64-XOP-NEXT:    vpmuludq %xmm1, %xmm0, %xmm2
+; X64-XOP-NEXT:    vpsrlq $32, %xmm0, %xmm3
+; X64-XOP-NEXT:    vpmuludq %xmm1, %xmm3, %xmm1
+; X64-XOP-NEXT:    vpmuludq {{.*}}(%rip), %xmm0, %xmm0
 ; X64-XOP-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
+; X64-XOP-NEXT:    vpsllq $32, %xmm0, %xmm0
+; X64-XOP-NEXT:    vpaddq %xmm0, %xmm2, %xmm0
 ; X64-XOP-NEXT:    retq
 ;
 ; X64-AVX2-LABEL: mul_v2i64_neg_0_1:
 ; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    vpsrlq $32, %xmm0, %xmm1
-; X64-AVX2-NEXT:    movq $-1, %rax
-; X64-AVX2-NEXT:    vmovq %rax, %xmm2
-; X64-AVX2-NEXT:    vpslldq {{.*#+}} xmm2 = zero,zero,zero,zero,zero,zero,zero,zero,xmm2[0,1,2,3,4,5,6,7]
-; X64-AVX2-NEXT:    vpmuludq %xmm2, %xmm1, %xmm1
-; X64-AVX2-NEXT:    movl $4294967295, %eax # imm = 0xFFFFFFFF
-; X64-AVX2-NEXT:    vmovq %rax, %xmm3
-; X64-AVX2-NEXT:    vpslldq {{.*#+}} xmm3 = zero,zero,zero,zero,zero,zero,zero,zero,xmm3[0,1,2,3,4,5,6,7]
-; X64-AVX2-NEXT:    vpmuludq %xmm3, %xmm0, %xmm3
-; X64-AVX2-NEXT:    vpaddq %xmm1, %xmm3, %xmm1
-; X64-AVX2-NEXT:    vpsllq $32, %xmm1, %xmm1
-; X64-AVX2-NEXT:    vpmuludq %xmm2, %xmm0, %xmm0
+; X64-AVX2-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,0,0,0,0,0,0,0,255,255,255,255,255,255,255,255]
+; X64-AVX2-NEXT:    vpmuludq %xmm1, %xmm0, %xmm2
+; X64-AVX2-NEXT:    vpsrlq $32, %xmm0, %xmm3
+; X64-AVX2-NEXT:    vpmuludq %xmm1, %xmm3, %xmm1
+; X64-AVX2-NEXT:    vpmuludq {{.*}}(%rip), %xmm0, %xmm0
 ; X64-AVX2-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
+; X64-AVX2-NEXT:    vpsllq $32, %xmm0, %xmm0
+; X64-AVX2-NEXT:    vpaddq %xmm0, %xmm2, %xmm0
 ; X64-AVX2-NEXT:    retq
 ;
 ; X64-AVX512DQ-LABEL: mul_v2i64_neg_0_1:
 ; X64-AVX512DQ:       # %bb.0:
-; X64-AVX512DQ-NEXT:    movq $-1, %rax
-; X64-AVX512DQ-NEXT:    vmovq %rax, %xmm1
-; X64-AVX512DQ-NEXT:    vpslldq {{.*#+}} xmm1 = zero,zero,zero,zero,zero,zero,zero,zero,xmm1[0,1,2,3,4,5,6,7]
-; X64-AVX512DQ-NEXT:    vpmullq %xmm1, %xmm0, %xmm0
+; X64-AVX512DQ-NEXT:    vpmullq {{.*}}(%rip), %xmm0, %xmm0
 ; X64-AVX512DQ-NEXT:    retq
   %1 = mul <2 x i64> %a0, <i64 0, i64 -1>
   ret <2 x i64> %1
@@ -1674,48 +1648,40 @@ define <2 x i64> @mul_v2i64_15_neg_63(<2 x i64> %a0) nounwind {
 ;
 ; X64-LABEL: mul_v2i64_15_neg_63:
 ; X64:       # %bb.0:
-; X64-NEXT:    movdqa %xmm0, %xmm1
-; X64-NEXT:    psrlq $32, %xmm1
-; X64-NEXT:    movdqa {{.*#+}} xmm2 = [15,18446744073709551553]
-; X64-NEXT:    pmuludq %xmm2, %xmm1
-; X64-NEXT:    movl $4294967295, %eax # imm = 0xFFFFFFFF
-; X64-NEXT:    movq %rax, %xmm3
-; X64-NEXT:    pslldq {{.*#+}} xmm3 = zero,zero,zero,zero,zero,zero,zero,zero,xmm3[0,1,2,3,4,5,6,7]
-; X64-NEXT:    pmuludq %xmm0, %xmm3
-; X64-NEXT:    paddq %xmm1, %xmm3
-; X64-NEXT:    psllq $32, %xmm3
-; X64-NEXT:    pmuludq %xmm2, %xmm0
+; X64-NEXT:    movdqa {{.*#+}} xmm1 = [15,18446744073709551553]
+; X64-NEXT:    movdqa %xmm0, %xmm2
+; X64-NEXT:    pmuludq %xmm1, %xmm2
+; X64-NEXT:    movdqa %xmm0, %xmm3
+; X64-NEXT:    psrlq $32, %xmm3
+; X64-NEXT:    pmuludq %xmm1, %xmm3
+; X64-NEXT:    pmuludq {{.*}}(%rip), %xmm0
 ; X64-NEXT:    paddq %xmm3, %xmm0
+; X64-NEXT:    psllq $32, %xmm0
+; X64-NEXT:    paddq %xmm2, %xmm0
 ; X64-NEXT:    retq
 ;
 ; X64-XOP-LABEL: mul_v2i64_15_neg_63:
 ; X64-XOP:       # %bb.0:
-; X64-XOP-NEXT:    vpsrlq $32, %xmm0, %xmm1
-; X64-XOP-NEXT:    vmovdqa {{.*#+}} xmm2 = [15,18446744073709551553]
-; X64-XOP-NEXT:    vpmuludq %xmm2, %xmm1, %xmm1
-; X64-XOP-NEXT:    movl $4294967295, %eax # imm = 0xFFFFFFFF
-; X64-XOP-NEXT:    vmovq %rax, %xmm3
-; X64-XOP-NEXT:    vpslldq {{.*#+}} xmm3 = zero,zero,zero,zero,zero,zero,zero,zero,xmm3[0,1,2,3,4,5,6,7]
-; X64-XOP-NEXT:    vpmuludq %xmm3, %xmm0, %xmm3
-; X64-XOP-NEXT:    vpaddq %xmm1, %xmm3, %xmm1
-; X64-XOP-NEXT:    vpsllq $32, %xmm1, %xmm1
-; X64-XOP-NEXT:    vpmuludq %xmm2, %xmm0, %xmm0
+; X64-XOP-NEXT:    vmovdqa {{.*#+}} xmm1 = [15,18446744073709551553]
+; X64-XOP-NEXT:    vpmuludq %xmm1, %xmm0, %xmm2
+; X64-XOP-NEXT:    vpsrlq $32, %xmm0, %xmm3
+; X64-XOP-NEXT:    vpmuludq %xmm1, %xmm3, %xmm1
+; X64-XOP-NEXT:    vpmuludq {{.*}}(%rip), %xmm0, %xmm0
 ; X64-XOP-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
+; X64-XOP-NEXT:    vpsllq $32, %xmm0, %xmm0
+; X64-XOP-NEXT:    vpaddq %xmm0, %xmm2, %xmm0
 ; X64-XOP-NEXT:    retq
 ;
 ; X64-AVX2-LABEL: mul_v2i64_15_neg_63:
 ; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    vpsrlq $32, %xmm0, %xmm1
-; X64-AVX2-NEXT:    vmovdqa {{.*#+}} xmm2 = [15,18446744073709551553]
-; X64-AVX2-NEXT:    vpmuludq %xmm2, %xmm1, %xmm1
-; X64-AVX2-NEXT:    movl $4294967295, %eax # imm = 0xFFFFFFFF
-; X64-AVX2-NEXT:    vmovq %rax, %xmm3
-; X64-AVX2-NEXT:    vpslldq {{.*#+}} xmm3 = zero,zero,zero,zero,zero,zero,zero,zero,xmm3[0,1,2,3,4,5,6,7]
-; X64-AVX2-NEXT:    vpmuludq %xmm3, %xmm0, %xmm3
-; X64-AVX2-NEXT:    vpaddq %xmm1, %xmm3, %xmm1
-; X64-AVX2-NEXT:    vpsllq $32, %xmm1, %xmm1
-; X64-AVX2-NEXT:    vpmuludq %xmm2, %xmm0, %xmm0
+; X64-AVX2-NEXT:    vmovdqa {{.*#+}} xmm1 = [15,18446744073709551553]
+; X64-AVX2-NEXT:    vpmuludq %xmm1, %xmm0, %xmm2
+; X64-AVX2-NEXT:    vpsrlq $32, %xmm0, %xmm3
+; X64-AVX2-NEXT:    vpmuludq %xmm1, %xmm3, %xmm1
+; X64-AVX2-NEXT:    vpmuludq {{.*}}(%rip), %xmm0, %xmm0
 ; X64-AVX2-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
+; X64-AVX2-NEXT:    vpsllq $32, %xmm0, %xmm0
+; X64-AVX2-NEXT:    vpaddq %xmm0, %xmm2, %xmm0
 ; X64-AVX2-NEXT:    retq
 ;
 ; X64-AVX512DQ-LABEL: mul_v2i64_15_neg_63:
