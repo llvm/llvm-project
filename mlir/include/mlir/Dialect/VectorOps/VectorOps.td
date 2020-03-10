@@ -1091,7 +1091,12 @@ def Vector_ShapeCastOp :
     described above is applied to each source/result tuple element pair.
 
     It is currently assumed that this operation does not require moving data,
-    and that it will be canonicalized away before lowering vector operations.
+    and that it will be folded away before lowering vector operations.
+
+    There is an exception to the folding expectation when targeting
+    llvm.intr.matrix operations. We need a type conversion back and forth from a
+    2-D MLIR vector to a 1-D flattened LLVM vector.shape_cast lowering to LLVM
+    is supported in that particular case, for now.
 
     Examples:
 
@@ -1107,6 +1112,14 @@ def Vector_ShapeCastOp :
     %5 = vector.shape_cast %4 : tuple<vector<3x4x2xf32>, vector<3x3x2xf32>> to
                                 tuple<vector<12x2xf32>, vector<9x2xf32>>
     ```
+  }];
+  let extraClassDeclaration = [{
+    VectorType getSourceVectorType() {
+      return source().getType().cast<VectorType>();
+    }
+    VectorType getResultVectorType() {
+      return getResult().getType().cast<VectorType>();
+    }
   }];
   let assemblyFormat = "$source attr-dict `:` type($source) `to` type($result)";
 }
