@@ -1007,3 +1007,30 @@ define i32 @returned_var_arg(i32 %arg) {
   %x = call i32 @passthru_i32(i32 %arg)
   ret i32 %x
 }
+
+define i32 @returned_const_int_arg_musttail(i32 %arg) {
+; CHECK-LABEL: @returned_const_int_arg_musttail(
+; CHECK-NEXT:    [[X:%.*]] = musttail call i32 @passthru_i32(i32 42)
+; CHECK-NEXT:    ret i32 [[X]]
+;
+  %x = musttail call i32 @passthru_i32(i32 42)
+  ret i32 %x
+}
+
+define i32 @returned_var_arg_musttail(i32 %arg) {
+; CHECK-LABEL: @returned_var_arg_musttail(
+; CHECK-NEXT:    [[X:%.*]] = musttail call i32 @passthru_i32(i32 [[ARG:%.*]])
+; CHECK-NEXT:    ret i32 [[X]]
+;
+  %x = musttail call i32 @passthru_i32(i32 %arg)
+  ret i32 %x
+}
+
+define i32 @call_undef_musttail() {
+; CHECK-LABEL: @call_undef_musttail(
+; CHECK-NEXT:    [[X:%.*]] = musttail call i32 undef()
+; CHECK-NEXT:    ret i32 [[X]]
+;
+  %x = musttail call i32 undef()
+  ret i32 %x
+}
