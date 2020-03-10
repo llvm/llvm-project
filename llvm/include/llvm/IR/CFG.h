@@ -103,7 +103,7 @@ using pred_iterator = PredIterator<BasicBlock, Value::user_iterator>;
 using const_pred_iterator =
     PredIterator<const BasicBlock, Value::const_user_iterator>;
 using pred_range = iterator_range<pred_iterator>;
-using pred_const_range = iterator_range<const_pred_iterator>;
+using const_pred_range = iterator_range<const_pred_iterator>;
 
 inline pred_iterator pred_begin(BasicBlock *BB) { return pred_iterator(BB); }
 inline const_pred_iterator pred_begin(const BasicBlock *BB) {
@@ -124,8 +124,8 @@ inline unsigned pred_size(const BasicBlock *BB) {
 inline pred_range predecessors(BasicBlock *BB) {
   return pred_range(pred_begin(BB), pred_end(BB));
 }
-inline pred_const_range predecessors(const BasicBlock *BB) {
-  return pred_const_range(pred_begin(BB), pred_end(BB));
+inline const_pred_range predecessors(const BasicBlock *BB) {
+  return const_pred_range(pred_begin(BB), pred_end(BB));
 }
 
 //===----------------------------------------------------------------------===//
