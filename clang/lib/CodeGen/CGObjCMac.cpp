@@ -6247,11 +6247,9 @@ void CGObjCNonFragileABIMac::AddModuleClassList(
   assert((!CGM.getTriple().isOSBinFormatMachO() ||
           SectionName.startswith("__DATA")) &&
          "SectionName expected to start with __DATA on MachO");
-  llvm::GlobalValue::LinkageTypes LT =
-      getLinkageTypeForObjCMetadata(CGM, SectionName);
-  llvm::GlobalVariable *GV =
-    new llvm::GlobalVariable(CGM.getModule(), Init->getType(), false, LT, Init,
-                             SymbolName);
+  llvm::GlobalVariable *GV = new llvm::GlobalVariable(
+      CGM.getModule(), Init->getType(), false,
+      llvm::GlobalValue::PrivateLinkage, Init, SymbolName);
   GV->setAlignment(
       llvm::Align(CGM.getDataLayout().getABITypeAlignment(Init->getType())));
   GV->setSection(SectionName);
@@ -7551,10 +7549,9 @@ CGObjCNonFragileABIMac::EmitSuperClassRef(CodeGenFunction &CGF,
     llvm::Constant *ClassGV = GetClassGlobalForClassRef(ID);
     std::string SectionName =
         GetSectionName("__objc_superrefs", "regular,no_dead_strip");
-    Entry = new llvm::GlobalVariable(
-        CGM.getModule(), ClassGV->getType(), false,
-        getLinkageTypeForObjCMetadata(CGM, SectionName), ClassGV,
-        "OBJC_CLASSLIST_SUP_REFS_$_");
+    Entry = new llvm::GlobalVariable(CGM.getModule(), ClassGV->getType(), false,
+                                     llvm::GlobalValue::PrivateLinkage, ClassGV,
+                                     "OBJC_CLASSLIST_SUP_REFS_$_");
     Entry->setAlignment(CGF.getPointerAlign().getAsAlign());
     Entry->setSection(SectionName);
     CGM.addCompilerUsedGlobal(Entry);
@@ -7575,10 +7572,9 @@ llvm::Value *CGObjCNonFragileABIMac::EmitMetaClassRef(CodeGenFunction &CGF,
     auto MetaClassGV = GetClassGlobal(ID, /*metaclass*/ true, NotForDefinition);
     std::string SectionName =
         GetSectionName("__objc_superrefs", "regular,no_dead_strip");
-    Entry = new llvm::GlobalVariable(
-        CGM.getModule(), ObjCTypes.ClassnfABIPtrTy, false,
-        getLinkageTypeForObjCMetadata(CGM, SectionName), MetaClassGV,
-        "OBJC_CLASSLIST_SUP_REFS_$_");
+    Entry = new llvm::GlobalVariable(CGM.getModule(), ObjCTypes.ClassnfABIPtrTy,
+                                     false, llvm::GlobalValue::PrivateLinkage,
+                                     MetaClassGV, "OBJC_CLASSLIST_SUP_REFS_$_");
     Entry->setAlignment(Align.getAsAlign());
     Entry->setSection(SectionName);
     CGM.addCompilerUsedGlobal(Entry);
