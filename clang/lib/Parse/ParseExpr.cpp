@@ -2678,7 +2678,8 @@ Parser::ParseParenExpression(ParenParseOption &ExprType, bool stopIfCastExpr,
 
       // If the substmt parsed correctly, build the AST node.
       if (!Stmt.isInvalid()) {
-        Result = Actions.ActOnStmtExpr(OpenLoc, Stmt.get(), Tok.getLocation());
+        Result = Actions.ActOnStmtExpr(getCurScope(), OpenLoc, Stmt.get(),
+                                       Tok.getLocation());
       } else {
         Actions.ActOnStmtExprError();
       }
