@@ -4225,7 +4225,8 @@ CGObjCCommonMac::CreateCStringLiteral(StringRef Name, ObjCLabelType Type,
                          : "__TEXT,__cstring,cstring_literals";
     break;
   case ObjCLabelType::PropertyName:
-    Section = "__TEXT,__cstring,cstring_literals";
+    Section = NonFragile ? "__TEXT,__objc_methname,cstring_literals"
+                         : "__TEXT,__cstring,cstring_literals";
     break;
   }
 
