@@ -373,7 +373,7 @@ private:
     if (Tok.Previous && Tok.Previous->is(tok::identifier))
       return false;
 
-    // Chains [] in of `identifier[i][j][k]` are not attributes.
+    // Chains of [] in `identifier[i][j][k]` are not attributes.
     if (Tok.Previous && Tok.Previous->is(tok::r_square)) {
       auto *MatchingParen = Tok.Previous->MatchingParen;
       if (!MatchingParen || MatchingParen->is(TT_ArraySubscriptLSquare))
