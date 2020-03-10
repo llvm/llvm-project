@@ -4894,11 +4894,11 @@ When the Owner's lifetime ends, it will consider the Pointer to be dangling.
 }];
 }
 
-def ArmMveAliasDocs : Documentation {
+def ArmBuiltinAliasDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
-This attribute is used in the implementation of the ACLE intrinsics
-for the Arm MVE instruction set. It allows the intrinsic functions to
+This attribute is used in the implementation of the ACLE intrinsics.
+It allows the intrinsic functions to
 be declared using the names defined in ACLE, and still be recognized
 as clang builtins equivalent to the underlying name. For example,
 ``arm_mve.h`` declares the function ``vaddq_u32`` with
@@ -4909,8 +4909,8 @@ recognized as that clang builtin, and in the latter case, the choice
 of which builtin to identify the function as can be deferred until
 after overload resolution.
 
-This attribute can only be used to set up the aliases for the MVE
-intrinsic functions; it is intended for use only inside ``arm_mve.h``,
+This attribute can only be used to set up the aliases for certain Arm
+intrinsic functions; it is intended for use only inside ``arm_*.h``
 and is not a general mechanism for declaring arbitrary aliases for
 clang builtin functions.
   }];

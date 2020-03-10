@@ -70,6 +70,11 @@ enum ActionType {
   GenArmMveBuiltinSema,
   GenArmMveBuiltinCG,
   GenArmMveBuiltinAliases,
+  GenArmCdeHeader,
+  GenArmCdeBuiltinDef,
+  GenArmCdeBuiltinSema,
+  GenArmCdeBuiltinCG,
+  GenArmCdeBuiltinAliases,
   GenAttrDocs,
   GenDiagDocs,
   GenOptDocs,
@@ -190,6 +195,16 @@ cl::opt<ActionType> Action(
                    "Generate ARM MVE builtin code-generator for clang"),
         clEnumValN(GenArmMveBuiltinAliases, "gen-arm-mve-builtin-aliases",
                    "Generate list of valid ARM MVE builtin aliases for clang"),
+        clEnumValN(GenArmCdeHeader, "gen-arm-cde-header",
+                   "Generate arm_cde.h for clang"),
+        clEnumValN(GenArmCdeBuiltinDef, "gen-arm-cde-builtin-def",
+                   "Generate ARM CDE builtin definitions for clang"),
+        clEnumValN(GenArmCdeBuiltinSema, "gen-arm-cde-builtin-sema",
+                   "Generate ARM CDE builtin sema checks for clang"),
+        clEnumValN(GenArmCdeBuiltinCG, "gen-arm-cde-builtin-codegen",
+                   "Generate ARM CDE builtin code-generator for clang"),
+        clEnumValN(GenArmCdeBuiltinAliases, "gen-arm-cde-builtin-aliases",
+                   "Generate list of valid ARM CDE builtin aliases for clang"),
         clEnumValN(GenAttrDocs, "gen-attr-docs",
                    "Generate attribute documentation"),
         clEnumValN(GenDiagDocs, "gen-diag-docs",
@@ -350,6 +365,21 @@ bool ClangTableGenMain(raw_ostream &OS, RecordKeeper &Records) {
     break;
   case GenArmMveBuiltinAliases:
     EmitMveBuiltinAliases(Records, OS);
+    break;
+  case GenArmCdeHeader:
+    EmitCdeHeader(Records, OS);
+    break;
+  case GenArmCdeBuiltinDef:
+    EmitCdeBuiltinDef(Records, OS);
+    break;
+  case GenArmCdeBuiltinSema:
+    EmitCdeBuiltinSema(Records, OS);
+    break;
+  case GenArmCdeBuiltinCG:
+    EmitCdeBuiltinCG(Records, OS);
+    break;
+  case GenArmCdeBuiltinAliases:
+    EmitCdeBuiltinAliases(Records, OS);
     break;
   case GenAttrDocs:
     EmitClangAttrDocs(Records, OS);
