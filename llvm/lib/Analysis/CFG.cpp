@@ -31,16 +31,16 @@ void llvm::FindFunctionBackedges(const Function &F,
     return;
 
   SmallPtrSet<const BasicBlock*, 8> Visited;
-  SmallVector<std::pair<const BasicBlock*, succ_const_iterator>, 8> VisitStack;
+  SmallVector<std::pair<const BasicBlock *, const_succ_iterator>, 8> VisitStack;
   SmallPtrSet<const BasicBlock*, 8> InStack;
 
   Visited.insert(BB);
   VisitStack.push_back(std::make_pair(BB, succ_begin(BB)));
   InStack.insert(BB);
   do {
-    std::pair<const BasicBlock*, succ_const_iterator> &Top = VisitStack.back();
+    std::pair<const BasicBlock *, const_succ_iterator> &Top = VisitStack.back();
     const BasicBlock *ParentBB = Top.first;
-    succ_const_iterator &I = Top.second;
+    const_succ_iterator &I = Top.second;
 
     bool FoundNew = false;
     while (I != succ_end(ParentBB)) {

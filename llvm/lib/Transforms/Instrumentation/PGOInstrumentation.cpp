@@ -1795,7 +1795,7 @@ void setIrrLoopHeaderMetadata(Module *M, Instruction *TI, uint64_t Count) {
 
 template <> struct GraphTraits<PGOUseFunc *> {
   using NodeRef = const BasicBlock *;
-  using ChildIteratorType = succ_const_iterator;
+  using ChildIteratorType = const_succ_iterator;
   using nodes_iterator = pointer_iterator<Function::const_iterator>;
 
   static NodeRef getEntryNode(const PGOUseFunc *G) {
