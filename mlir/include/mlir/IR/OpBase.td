@@ -315,7 +315,7 @@ class AnyTypeOf<list<Type> allowedTypes, string description = ""> : Type<
 // Integer types.
 
 // Any integer type irrespective of its width and signedness semantics.
-def AnyInteger : Type<CPred<"$_self.isInteger()">, "integer">;
+def AnyInteger : Type<CPred<"$_self.isa<IntegerType>()">, "integer">;
 
 // Any integer type (regardless of signedness semantics) of a specific width.
 class AnyI<int width>
