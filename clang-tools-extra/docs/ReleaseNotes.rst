@@ -82,6 +82,13 @@ New checks
 
   Checks for usages of identifiers reserved for use by the implementation.
 
+- New :doc:`bugprone-suspicious-include
+  <clang-tidy/checks/bugprone-suspicious-include>` check.
+
+  Finds cases where an include refers to what appears to be an implementation
+  file, which often leads to hard-to-track-down ODR violations, and diagnoses
+  them.
+
 - New :doc:`cert-oop57-cpp
   <clang-tidy/checks/cert-oop57-cpp>` check.
 
@@ -97,12 +104,6 @@ New checks
   <clang-tidy/checks/misc-no-recursion>` check.
 
   Finds recursive functions and diagnoses them.
-
-- New :doc:`bugprone-suspicious-include
-  <clang-tidy/checks/bugprone-suspicious-include>` check.
-
-  Finds includes that appear to be referring to implementation files (which
-  tends to cause ODR violations), and diagnoses them.
 
 New check aliases
 ^^^^^^^^^^^^^^^^^
