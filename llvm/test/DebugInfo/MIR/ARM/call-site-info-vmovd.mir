@@ -1,4 +1,4 @@
-# RUN: llc -O1 -emit-call-site-info -debug-entry-values -filetype=obj -mtriple thumbv7em-apple-unknown-macho -start-after=machineverifier %s -o %t.o
+# RUN: llc -O1 -emit-call-site-info -filetype=obj -mtriple thumbv7em-apple-unknown-macho -start-after=machineverifier %s -o %t.o
 # RUN: llvm-dwarfdump %t.o | FileCheck %s
 
 # Crash test, reduced from:

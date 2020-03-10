@@ -1,4 +1,6 @@
-# RUN: llc -mtriple hexagon -emit-call-site-info -debug-entry-values -start-after=machineverifier -filetype=obj %s -o - | llvm-dwarfdump - | FileCheck %s
+# We do not support the call site info for the target now, so we use the experimental option (-emit-call-site-info -debug-entry-values).
+
+# RUN: llc -emit-call-site-info -debug-entry-values -mtriple hexagon -start-after=machineverifier -filetype=obj %s -o - | llvm-dwarfdump - | FileCheck %s
 
 # Based on the following C reproducer:
 #

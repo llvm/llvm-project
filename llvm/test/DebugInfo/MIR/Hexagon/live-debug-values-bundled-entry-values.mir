@@ -1,3 +1,5 @@
+# We do not support the call site info for the target now, so we use the experimental option (-emit-call-site-info -debug-entry-values).
+
 # RUN: llc -emit-call-site-info -debug-entry-values -run-pass=livedebugvalues -o - %s | FileCheck %s
 
 # Verify that the entry values for the input parameters are inserted after the
