@@ -182,15 +182,20 @@ static void packFunctionArguments(Module *module) {
   }
 }
 
-ExecutionEngine::ExecutionEngine(bool enableObjectCache)
-    : cache(enableObjectCache ? nullptr : new SimpleObjectCache()),
-      gdbListener(llvm::JITEventListener::createGDBRegistrationListener()) {}
+ExecutionEngine::ExecutionEngine(bool enableObjectCache,
+                                 bool enableGDBNotificationListener)
+    : cache(enableObjectCache ? new SimpleObjectCache() : nullptr),
+      gdbListener(enableGDBNotificationListener
+                      ? llvm::JITEventListener::createGDBRegistrationListener()
+                      : nullptr) {}
 
 Expected<std::unique_ptr<ExecutionEngine>> ExecutionEngine::create(
     ModuleOp m, std::function<Error(llvm::Module *)> transformer,
     Optional<llvm::CodeGenOpt::Level> jitCodeGenOptLevel,
-    ArrayRef<StringRef> sharedLibPaths, bool enableObjectCache) {
-  auto engine = std::make_unique<ExecutionEngine>(enableObjectCache);
+    ArrayRef<StringRef> sharedLibPaths, bool enableObjectCache,
+    bool enableGDBNotificationListener) {
+  auto engine = std::make_unique<ExecutionEngine>(
+      enableObjectCache, enableGDBNotificationListener);
 
   std::unique_ptr<llvm::LLVMContext> ctx(new llvm::LLVMContext);
   auto llvmModule = translateModuleToLLVMIR(m);
@@ -228,9 +233,11 @@ Expected<std::unique_ptr<ExecutionEngine>> ExecutionEngine::create(
         [engine = engine.get()](
             llvm::orc::VModuleKey, const llvm::object::ObjectFile &object,
             const llvm::RuntimeDyld::LoadedObjectInfo &objectInfo) {
-          uint64_t key = static_cast<uint64_t>(
-              reinterpret_cast<uintptr_t>(object.getData().data()));
-          engine->gdbListener->notifyObjectLoaded(key, object, objectInfo);
+          if (engine->gdbListener) {
+            uint64_t key = static_cast<uint64_t>(
+                reinterpret_cast<uintptr_t>(object.getData().data()));
+            engine->gdbListener->notifyObjectLoaded(key, object, objectInfo);
+          }
         });
 
     // Resolve symbols from shared libraries.
