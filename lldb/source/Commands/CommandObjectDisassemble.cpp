@@ -214,6 +214,165 @@ CommandObjectDisassemble::CommandObjectDisassemble(
 
 CommandObjectDisassemble::~CommandObjectDisassemble() = default;
 
+llvm::Expected<std::vector<AddressRange>>
+CommandObjectDisassemble::GetContainingAddressRanges() {
+  std::vector<AddressRange> ranges;
+  const auto &get_range = [&](Address addr) {
+    ModuleSP module_sp(addr.GetModule());
+    SymbolContext sc;
+    bool resolve_tail_call_address = true;
+    addr.GetModule()->ResolveSymbolContextForAddress(
+        addr, eSymbolContextEverything, sc, resolve_tail_call_address);
+    if (sc.function || sc.symbol) {
+      AddressRange range;
+      sc.GetAddressRange(eSymbolContextFunction | eSymbolContextSymbol, 0,
+                         false, range);
+      ranges.push_back(range);
+    }
+  };
+
+  Target &target = GetSelectedTarget();
+  if (!target.GetSectionLoadList().IsEmpty()) {
+    Address symbol_containing_address;
+    if (target.GetSectionLoadList().ResolveLoadAddress(
+            m_options.symbol_containing_addr, symbol_containing_address)) {
+      get_range(symbol_containing_address);
+    }
+  } else {
+    for (lldb::ModuleSP module_sp : target.GetImages().Modules()) {
+      Address file_address;
+      if (module_sp->ResolveFileAddress(m_options.symbol_containing_addr,
+                                        file_address)) {
+        get_range(file_address);
+      }
+    }
+  }
+
+  if (ranges.empty()) {
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
+        "Could not find function bounds for address 0x%" PRIx64,
+        m_options.symbol_containing_addr);
+  }
+  return ranges;
+}
+
+llvm::Expected<std::vector<AddressRange>>
+CommandObjectDisassemble::GetCurrentFunctionRanges() {
+  StackFrame *frame = m_exe_ctx.GetFramePtr();
+  if (!frame) {
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "Cannot disassemble around the current "
+                                   "function without a selected frame.\n");
+  }
+  SymbolContext sc(
+      frame->GetSymbolContext(eSymbolContextFunction | eSymbolContextSymbol));
+  AddressRange range;
+  if (sc.function)
+    range = sc.function->GetAddressRange();
+  else if (sc.symbol && sc.symbol->ValueIsAddress()) {
+    range = {sc.symbol->GetAddress(), sc.symbol->GetByteSize()};
+  } else
+    range = {frame->GetFrameCodeAddress(), DEFAULT_DISASM_BYTE_SIZE};
+
+  return std::vector<AddressRange>{range};
+}
+
+llvm::Expected<std::vector<AddressRange>>
+CommandObjectDisassemble::GetCurrentLineRanges() {
+  StackFrame *frame = m_exe_ctx.GetFramePtr();
+  if (!frame) {
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "Cannot disassemble around the current "
+                                   "line without a selected frame.\n");
+  }
+
+  LineEntry pc_line_entry(
+      frame->GetSymbolContext(eSymbolContextLineEntry).line_entry);
+  if (pc_line_entry.IsValid())
+    return std::vector<AddressRange>{pc_line_entry.range};
+
+  // No line entry, so just disassemble around the current pc
+  m_options.show_mixed = false;
+  return GetPCRanges();
+}
+
+llvm::Expected<std::vector<AddressRange>>
+CommandObjectDisassemble::GetNameRanges() {
+  ConstString name(m_options.func_name.c_str());
+  const bool include_symbols = true;
+  const bool include_inlines = true;
+
+  // Find functions matching the given name.
+  SymbolContextList sc_list;
+  GetSelectedTarget().GetImages().FindFunctions(
+      name, eFunctionNameTypeAuto, include_symbols, include_inlines, sc_list);
+
+  std::vector<AddressRange> ranges;
+  AddressRange range;
+  const uint32_t scope =
+      eSymbolContextBlock | eSymbolContextFunction | eSymbolContextSymbol;
+  const bool use_inline_block_range = true;
+  for (SymbolContext sc : sc_list.SymbolContexts()) {
+    for (uint32_t range_idx = 0;
+         sc.GetAddressRange(scope, range_idx, use_inline_block_range, range);
+         ++range_idx) {
+      ranges.push_back(range);
+    }
+  }
+  if (ranges.empty()) {
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "Unable to find symbol with name '%s'.\n",
+                                   name.GetCString());
+  }
+  return ranges;
+}
+
+llvm::Expected<std::vector<AddressRange>>
+CommandObjectDisassemble::GetPCRanges() {
+  StackFrame *frame = m_exe_ctx.GetFramePtr();
+  if (!frame) {
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "Cannot disassemble around the current "
+                                   "PC without a selected frame.\n");
+  }
+
+  if (m_options.num_instructions == 0) {
+    // Disassembling at the PC always disassembles some number of
+    // instructions (not the whole function).
+    m_options.num_instructions = DEFAULT_DISASM_NUM_INS;
+  }
+  return std::vector<AddressRange>{{frame->GetFrameCodeAddress(), 0}};
+}
+
+llvm::Expected<std::vector<AddressRange>>
+CommandObjectDisassemble::GetStartEndAddressRanges() {
+  addr_t size = 0;
+  if (m_options.end_addr != LLDB_INVALID_ADDRESS) {
+    if (m_options.end_addr <= m_options.start_addr) {
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "End address before start address.");
+    }
+    size = m_options.end_addr - m_options.start_addr;
+  }
+  return std::vector<AddressRange>{{Address(m_options.start_addr), size}};
+}
+
+llvm::Expected<std::vector<AddressRange>>
+CommandObjectDisassemble::GetRangesForSelectedMode() {
+  if (m_options.symbol_containing_addr != LLDB_INVALID_ADDRESS)
+    return CommandObjectDisassemble::GetContainingAddressRanges();
+  if (m_options.current_function)
+    return CommandObjectDisassemble::GetCurrentFunctionRanges();
+  if (m_options.frame_line)
+    return CommandObjectDisassemble::GetCurrentLineRanges();
+  if (!m_options.func_name.empty())
+    return CommandObjectDisassemble::GetNameRanges();
+  if (m_options.start_addr != LLDB_INVALID_ADDRESS)
+    return CommandObjectDisassemble::GetStartEndAddressRanges();
+  return CommandObjectDisassemble::GetPCRanges();
+}
+
 bool CommandObjectDisassemble::DoExecute(Args &command,
                                          CommandReturnObject &result) {
   Target *target = &GetSelectedTarget();
@@ -281,184 +440,15 @@ bool CommandObjectDisassemble::DoExecute(Args &command,
   if (m_options.raw)
     options |= Disassembler::eOptionRawOuput;
 
-  std::vector<AddressRange> ranges;
-  if (!m_options.func_name.empty()) {
-    ConstString name(m_options.func_name.c_str());
-    const bool include_symbols = true;
-    const bool include_inlines = true;
-
-    // Find functions matching the given name.
-    SymbolContextList sc_list;
-    target->GetImages().FindFunctions(
-        name, eFunctionNameTypeAuto, include_symbols, include_inlines, sc_list);
-
-    AddressRange range;
-    const uint32_t scope =
-        eSymbolContextBlock | eSymbolContextFunction | eSymbolContextSymbol;
-    const bool use_inline_block_range = true;
-    for (SymbolContext sc : sc_list.SymbolContexts()) {
-      for (uint32_t range_idx = 0;
-           sc.GetAddressRange(scope, range_idx, use_inline_block_range, range);
-           ++range_idx) {
-        ranges.push_back(range);
-      }
-    }
-    if (ranges.empty()) {
-      result.AppendErrorWithFormat("Unable to find symbol with name '%s'.\n",
-                                   name.GetCString());
-      result.SetStatus(eReturnStatusFailed);
-      return result.Succeeded();
-    }
-  } else {
-    AddressRange range;
-    StackFrame *frame = m_exe_ctx.GetFramePtr();
-    if (m_options.frame_line) {
-      if (frame == nullptr) {
-        result.AppendError("Cannot disassemble around the current line without "
-                           "a selected frame.\n");
-        result.SetStatus(eReturnStatusFailed);
-        return false;
-      }
-      LineEntry pc_line_entry(
-          frame->GetSymbolContext(eSymbolContextLineEntry).line_entry);
-      if (pc_line_entry.IsValid()) {
-        range = pc_line_entry.range;
-      } else {
-        m_options.at_pc =
-            true; // No line entry, so just disassemble around the current pc
-        m_options.show_mixed = false;
-      }
-    } else if (m_options.current_function) {
-      if (frame == nullptr) {
-        result.AppendError("Cannot disassemble around the current function "
-                           "without a selected frame.\n");
-        result.SetStatus(eReturnStatusFailed);
-        return false;
-      }
-      Symbol *symbol = frame->GetSymbolContext(eSymbolContextSymbol).symbol;
-      if (symbol) {
-        range.GetBaseAddress() = symbol->GetAddress();
-        range.SetByteSize(symbol->GetByteSize());
-      }
-    }
-
-    // Did the "m_options.frame_line" find a valid range already? If so skip
-    // the rest...
-    if (range.GetByteSize() == 0) {
-      if (m_options.at_pc) {
-        if (frame == nullptr) {
-          result.AppendError("Cannot disassemble around the current PC without "
-                             "a selected frame.\n");
-          result.SetStatus(eReturnStatusFailed);
-          return false;
-        }
-        range.GetBaseAddress() = frame->GetFrameCodeAddress();
-        if (m_options.num_instructions == 0) {
-          // Disassembling at the PC always disassembles some number of
-          // instructions (not the whole function).
-          m_options.num_instructions = DEFAULT_DISASM_NUM_INS;
-        }
-        ranges.push_back(range);
-      } else {
-        range.GetBaseAddress().SetOffset(m_options.start_addr);
-        if (range.GetBaseAddress().IsValid()) {
-          if (m_options.end_addr != LLDB_INVALID_ADDRESS) {
-            if (m_options.end_addr <= m_options.start_addr) {
-              result.AppendErrorWithFormat(
-                  "End address before start address.\n");
-              result.SetStatus(eReturnStatusFailed);
-              return false;
-            }
-            range.SetByteSize(m_options.end_addr - m_options.start_addr);
-          }
-          ranges.push_back(range);
-        } else {
-          if (m_options.symbol_containing_addr != LLDB_INVALID_ADDRESS &&
-              target) {
-            if (!target->GetSectionLoadList().IsEmpty()) {
-              bool failed = false;
-              Address symbol_containing_address;
-              if (target->GetSectionLoadList().ResolveLoadAddress(
-                      m_options.symbol_containing_addr,
-                      symbol_containing_address)) {
-                ModuleSP module_sp(symbol_containing_address.GetModule());
-                SymbolContext sc;
-                bool resolve_tail_call_address = true; // PC can be one past the
-                                                       // address range of the
-                                                       // function.
-                module_sp->ResolveSymbolContextForAddress(
-                    symbol_containing_address, eSymbolContextEverything, sc,
-                    resolve_tail_call_address);
-                if (sc.function || sc.symbol) {
-                  sc.GetAddressRange(eSymbolContextFunction |
-                                         eSymbolContextSymbol,
-                                     0, false, range);
-                } else {
-                  failed = true;
-                }
-              } else {
-                failed = true;
-              }
-              if (failed) {
-                result.AppendErrorWithFormat(
-                    "Could not find function bounds for address 0x%" PRIx64
-                    "\n",
-                    m_options.symbol_containing_addr);
-                result.SetStatus(eReturnStatusFailed);
-                return false;
-              }
-              ranges.push_back(range);
-            } else {
-              for (lldb::ModuleSP module_sp : target->GetImages().Modules()) {
-                lldb::addr_t file_addr = m_options.symbol_containing_addr;
-                Address file_address;
-                if (module_sp->ResolveFileAddress(file_addr, file_address)) {
-                  SymbolContext sc;
-                  bool resolve_tail_call_address = true; // PC can be one past
-                                                         // the address range of
-                                                         // the function.
-                  module_sp->ResolveSymbolContextForAddress(
-                      file_address, eSymbolContextEverything, sc,
-                      resolve_tail_call_address);
-                  if (sc.function || sc.symbol) {
-                    sc.GetAddressRange(eSymbolContextFunction |
-                                           eSymbolContextSymbol,
-                                       0, false, range);
-                    ranges.push_back(range);
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    } else
-      ranges.push_back(range);
-
-    if (ranges.empty()) {
-      // The default action is to disassemble the current frame function.
-      if (frame) {
-        SymbolContext sc(frame->GetSymbolContext(eSymbolContextFunction |
-                                                 eSymbolContextSymbol));
-        if (sc.function)
-          range = sc.function->GetAddressRange();
-        else if (sc.symbol && sc.symbol->ValueIsAddress()) {
-          range.GetBaseAddress() = sc.symbol->GetAddress();
-          range.SetByteSize(sc.symbol->GetByteSize());
-        } else
-          range.GetBaseAddress() = frame->GetFrameCodeAddress();
-      }
-      if (!range.GetBaseAddress().IsValid()) {
-        result.AppendError("invalid frame");
-        result.SetStatus(eReturnStatusFailed);
-        return false;
-      }
-      ranges.push_back(range);
-    }
+  llvm::Expected<std::vector<AddressRange>> ranges = GetRangesForSelectedMode();
+  if (!ranges) {
+    result.AppendError(toString(ranges.takeError()));
+    result.SetStatus(eReturnStatusFailed);
+    return result.Succeeded();
   }
 
-  bool print_sc_header = ranges.size() > 1;
-  for (AddressRange cur_range : ranges) {
+  bool print_sc_header = ranges->size() > 1;
+  for (AddressRange cur_range : *ranges) {
     Disassembler::Limit limit;
     if (m_options.num_instructions == 0) {
       limit = {Disassembler::Limit::Bytes, cur_range.GetByteSize()};
