@@ -34,11 +34,16 @@ bool isSpellingLocInHeaderFile(SourceLocation Loc, SourceManager &SM,
 
 /// Returns recommended default value for the list of header file
 /// extensions.
-inline StringRef defaultHeaderFileExtensions() { return ",h,hh,hpp,hxx"; }
+inline StringRef defaultHeaderFileExtensions() { return ";h;hh;hpp;hxx"; }
+
+/// Returns recommended default value for the list of file extension
+/// delimiters.
+inline StringRef defaultFileExtensionDelimiters() { return ",;"; }
 
 /// Parses header file extensions from a semicolon-separated list.
 bool parseFileExtensions(StringRef AllFileExtensions,
-                         FileExtensionsSet &FileExtensions, char Delimiter);
+                         FileExtensionsSet &FileExtensions,
+                         StringRef Delimiters);
 
 /// Decides whether a file has one of the specified file extensions.
 bool isFileExtension(StringRef FileName,
