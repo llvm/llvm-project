@@ -1203,6 +1203,8 @@ X86SpeculativeLoadHardeningPass::tracePredStateThroughIndirectBranches(
 /// Returns true if the instruction has no behavior (specified or otherwise)
 /// that is based on the value of any of its register operands
 ///
+/// Instructions are considered data invariant even if they set EFLAGS.
+///
 /// A classical example of something that is inherently not data invariant is an
 /// indirect jump -- the destination is loaded into icache based on the bits set
 /// in the jump destination register.
@@ -1347,19 +1349,6 @@ static bool isDataInvariant(MachineInstr &MI) {
   case X86::DEC8r: case X86::DEC16r: case X86::DEC32r: case X86::DEC64r:
   case X86::INC8r: case X86::INC16r: case X86::INC32r: case X86::INC64r:
   case X86::NEG8r: case X86::NEG16r: case X86::NEG32r: case X86::NEG64r:
-    // Check whether the EFLAGS implicit-def is dead. We assume that this will
-    // always find the implicit-def because this code should only be reached
-    // for instructions that do in fact implicitly def this.
-    if (!MI.findRegisterDefOperand(X86::EFLAGS)->isDead()) {
-      // If we would clobber EFLAGS that are used, just bail for now.
-      LLVM_DEBUG(dbgs() << "    Unable to harden post-load due to EFLAGS: ";
-                 MI.dump(); dbgs() << "\n");
-      return false;
-    }
-
-    // Otherwise, fallthrough to handle these the same as instructions that
-    // don't set EFLAGS.
-    LLVM_FALLTHROUGH;
 
   // Unlike other arithmetic, NOT doesn't set EFLAGS.
   case X86::NOT8r: case X86::NOT16r: case X86::NOT32r: case X86::NOT64r:
@@ -1401,6 +1390,8 @@ static bool isDataInvariant(MachineInstr &MI) {
 /// For example, if the latency of the instruction is dependent on the
 /// particular bits set in any of the registers *or* any of the bits loaded from
 /// memory.
+///
+/// Instructions are considered data invariant even if they set EFLAGS.
 ///
 /// A classical example of something that is inherently not data invariant is an
 /// indirect jump -- the destination is loaded into icache based on the bits set
@@ -1516,19 +1507,6 @@ static bool isDataInvariantLoad(MachineInstr &MI) {
   case X86::XOR16rm:
   case X86::XOR32rm:
   case X86::XOR64rm:
-    // Check whether the EFLAGS implicit-def is dead. We assume that this will
-    // always find the implicit-def because this code should only be reached
-    // for instructions that do in fact implicitly def this.
-    if (!MI.findRegisterDefOperand(X86::EFLAGS)->isDead()) {
-      // If we would clobber EFLAGS that are used, just bail for now.
-      LLVM_DEBUG(dbgs() << "    Unable to harden post-load due to EFLAGS: ";
-                 MI.dump(); dbgs() << "\n");
-      return false;
-    }
-
-    // Otherwise, fallthrough to handle these the same as instructions that
-    // don't set EFLAGS.
-    LLVM_FALLTHROUGH;
 
   // Integer multiply w/o affecting flags is still believed to be constant
   // time on x86. Called out separately as this is among the most surprising
