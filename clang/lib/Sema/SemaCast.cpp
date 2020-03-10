@@ -2788,9 +2788,7 @@ void CastOperation::CheckCStyleCast() {
       // is undefined. The result need not be in the range of values of any
       // integer type.
       unsigned Diag;
-      if (Self.getLangOpts().MicrosoftExt)
-        Diag = diag::ext_ms_pointer_to_int_cast;
-      else if (SrcType->isVoidPointerType())
+      if (SrcType->isVoidPointerType())
         Diag = DestType->isEnumeralType() ? diag::warn_void_pointer_to_enum_cast
                                           : diag::warn_void_pointer_to_int_cast;
       else if (DestType->isEnumeralType())
