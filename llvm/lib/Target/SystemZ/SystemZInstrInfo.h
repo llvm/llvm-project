@@ -155,6 +155,10 @@ enum FusedCompareType {
 namespace SystemZ {
 int getTwoOperandOpcode(uint16_t Opcode);
 int getTargetMemOpcode(uint16_t Opcode);
+
+// Return a version of comparison CC mask CCMask in which the LT and GT
+// actions are swapped.
+unsigned reverseCCMask(unsigned CCMask);
 }
 
 class SystemZInstrInfo : public SystemZGenInstrInfo {
@@ -313,6 +317,12 @@ public:
   unsigned getFusedCompare(unsigned Opcode,
                            SystemZII::FusedCompareType Type,
                            const MachineInstr *MI = nullptr) const;
+
+  // Try to find all CC users of the compare instruction (MBBI) and update
+  // all of them to maintain equivalent behavior after swapping the compare
+  // operands. Return false if not all users can be conclusively found and
+  // handled. The compare instruction is *not* changed.
+  bool prepareCompareSwapOperands(MachineBasicBlock::iterator MBBI) const;
 
   // If Opcode is a LOAD opcode for with an associated LOAD AND TRAP
   // operation exists, returh the opcode for the latter, otherwise return 0.
