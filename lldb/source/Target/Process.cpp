@@ -60,6 +60,7 @@
 #include "lldb/Target/ThreadPlan.h"
 #include "lldb/Target/ThreadPlanBase.h"
 #include "lldb/Target/ThreadPlanCallFunction.h"
+#include "lldb/Target/ThreadPlanStack.h"
 #include "lldb/Target/UnixSignals.h"
 #include "lldb/Utility/Event.h"
 #include "lldb/Utility/Log.h"
@@ -600,6 +601,7 @@ void Process::Finalize() {
   m_system_runtime_up.reset();
   m_dyld_up.reset();
   m_jit_loaders_up.reset();
+  m_thread_plans.Clear();
   m_thread_list_real.Destroy();
   m_thread_list.Destroy();
   m_extended_thread_list.Destroy();
@@ -1250,6 +1252,20 @@ void Process::UpdateThreadListIfNeeded() {
       }
     }
   }
+}
+
+ThreadPlanStack *Process::FindThreadPlans(lldb::tid_t tid) {
+  return m_thread_plans.Find(tid);
+}
+
+void Process::AddThreadPlansForThread(Thread &thread) {
+  if (m_thread_plans.Find(thread.GetID()))
+    return;
+  m_thread_plans.AddThread(thread);
+}
+
+void Process::RemoveThreadPlansForTID(lldb::tid_t tid) {
+  m_thread_plans.RemoveTID(tid);
 }
 
 void Process::UpdateQueueListIfNeeded() {
@@ -3231,6 +3247,10 @@ Status Process::Detach(bool keep_stopped) {
 }
 
 Status Process::Destroy(bool force_kill) {
+  // If we've already called Process::Finalize then there's nothing useful to
+  // be done here.  Finalize has actually called Destroy already.
+  if (m_finalize_called)
+    return {};
 
   // Tell ourselves we are in the process of destroying the process, so that we
   // don't do any unnecessary work that might hinder the destruction.  Remember

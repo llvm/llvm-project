@@ -37,6 +37,7 @@
 #include "lldb/Target/Memory.h"
 #include "lldb/Target/QueueList.h"
 #include "lldb/Target/ThreadList.h"
+#include "lldb/Target/ThreadPlanStack.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/Event.h"
@@ -2197,6 +2198,19 @@ public:
   }
 
   void SetDynamicCheckers(DynamicCheckerFunctions *dynamic_checkers);
+  
+  /// Find the thread plan stack associated with thread with \a tid.
+  ///
+  /// \param[in] tid
+  ///     The tid whose Plan Stack we are seeking..
+  ///
+  /// \return
+  ///     Returns a ThreadPlan if the TID is found or nullptr if not.
+  ThreadPlanStack *FindThreadPlans(lldb::tid_t tid);
+  
+  void AddThreadPlansForThread(Thread &thread);
+  
+  void RemoveThreadPlansForTID(lldb::tid_t tid);
 
   /// Call this to set the lldb in the mode where it breaks on new thread
   /// creations, and then auto-restarts.  This is useful when you are trying
@@ -2533,7 +2547,7 @@ protected:
     virtual EventActionResult HandleBeingInterrupted() = 0;
     virtual const char *GetExitString() = 0;
     void RequestResume() { m_process->m_resume_requested = true; }
-
+    
   protected:
     Process *m_process;
   };
@@ -2667,6 +2681,10 @@ protected:
                             ///see them. This is usually the same as
   ///< m_thread_list_real, but might be different if there is an OS plug-in
   ///creating memory threads
+  ThreadPlanStackMap m_thread_plans; ///< This is the list of thread plans for
+                                     /// threads in m_thread_list, as well as
+                                     /// threads we knew existed, but haven't
+                                     /// determined that they have died yet.
   ThreadList m_extended_thread_list; ///< Owner for extended threads that may be
                                      ///generated, cleared on natural stops
   uint32_t m_extended_thread_stop_id; ///< The natural stop id when
