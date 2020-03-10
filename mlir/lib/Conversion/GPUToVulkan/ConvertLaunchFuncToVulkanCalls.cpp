@@ -128,8 +128,8 @@ struct VulkanLaunchOpOperandAdaptor {
     // 2. Offset.
     // 3. Size in dim 0.
     // 4. Stride in dim 0.
-    return {operands[numConfigOps + index * loweredMemRefNumOps1D],
-            operands[numConfigOps + index * loweredMemRefNumOps1D + 3]};
+    auto offset = numConfigOps + index * loweredMemRefNumOps1D;
+    return std::make_tuple(operands[offset], operands[offset + 3]);
   }
 
   /// Returns the number of resources assuming all operands lowered from
