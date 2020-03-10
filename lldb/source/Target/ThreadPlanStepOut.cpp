@@ -47,13 +47,11 @@ ThreadPlanStepOut::ThreadPlanStepOut(
   SetFlagsToDefault();
   SetupAvoidNoDebug(step_out_avoids_code_without_debug_info);
 
-  m_step_from_insn = m_thread.GetRegisterContext()->GetPC(0);
+  m_step_from_insn = thread.GetRegisterContext()->GetPC(0);
 
   uint32_t return_frame_index = frame_idx + 1;
-  StackFrameSP return_frame_sp(
-      m_thread.GetStackFrameAtIndex(return_frame_index));
-  StackFrameSP immediate_return_from_sp(
-      m_thread.GetStackFrameAtIndex(frame_idx));
+  StackFrameSP return_frame_sp(thread.GetStackFrameAtIndex(return_frame_index));
+  StackFrameSP immediate_return_from_sp(thread.GetStackFrameAtIndex(frame_idx));
 
   if (!return_frame_sp || !immediate_return_from_sp)
     return; // we can't do anything here.  ValidatePlan() will return false.
@@ -63,7 +61,7 @@ ThreadPlanStepOut::ThreadPlanStepOut(
     m_stepped_past_frames.push_back(return_frame_sp);
 
     ++return_frame_index;
-    return_frame_sp = m_thread.GetStackFrameAtIndex(return_frame_index);
+    return_frame_sp = thread.GetStackFrameAtIndex(return_frame_index);
 
     // We never expect to see an artificial frame without a regular ancestor.
     // If this happens, log the issue and defensively refuse to step out.
@@ -85,7 +83,7 @@ ThreadPlanStepOut::ThreadPlanStepOut(
       // First queue a plan that gets us to this inlined frame, and when we get
       // there we'll queue a second plan that walks us out of this frame.
       m_step_out_to_inline_plan_sp = std::make_shared<ThreadPlanStepOut>(
-          m_thread, nullptr, false, stop_others, eVoteNoOpinion, eVoteNoOpinion,
+          thread, nullptr, false, stop_others, eVoteNoOpinion, eVoteNoOpinion,
           frame_idx - 1, eLazyBoolNo, continue_to_next_branch);
       static_cast<ThreadPlanStepOut *>(m_step_out_to_inline_plan_sp.get())
           ->SetShouldStopHereCallbacks(nullptr, nullptr);
@@ -114,22 +112,19 @@ ThreadPlanStepOut::ThreadPlanStepOut(
         range = return_address_sc.line_entry.GetSameLineContiguousAddressRange(
             include_inlined_functions);
         if (range.GetByteSize() > 0) {
-          return_address =
-              m_thread.GetProcess()->AdvanceAddressToNextBranchInstruction(
-                  return_address, range);
+          return_address = m_process.AdvanceAddressToNextBranchInstruction(
+              return_address, range);
         }
       }
     }
-    m_return_addr =
-        return_address.GetLoadAddress(&m_thread.GetProcess()->GetTarget());
+    m_return_addr = return_address.GetLoadAddress(&m_process.GetTarget());
 
     if (m_return_addr == LLDB_INVALID_ADDRESS)
       return;
 
     // Perform some additional validation on the return address.
     uint32_t permissions = 0;
-    if (!m_thread.GetProcess()->GetLoadAddressPermissions(m_return_addr,
-                                                          permissions)) {
+    if (!m_process.GetLoadAddressPermissions(m_return_addr, permissions)) {
       LLDB_LOGF(log, "ThreadPlanStepOut(%p): Return address (0x%" PRIx64
                 ") permissions not found.", static_cast<void *>(this),
                 m_return_addr);
@@ -142,14 +137,13 @@ ThreadPlanStepOut::ThreadPlanStepOut(
       return;
     }
 
-    Breakpoint *return_bp = m_thread.CalculateTarget()
-                                ->CreateBreakpoint(m_return_addr, true, false)
-                                .get();
+    Breakpoint *return_bp = 
+        GetTarget().CreateBreakpoint(m_return_addr, true, false).get();
 
     if (return_bp != nullptr) {
       if (return_bp->IsHardware() && !return_bp->HasResolvedLocations())
         m_could_not_resolve_hw_bp = true;
-      return_bp->SetThreadID(m_thread.GetID());
+      return_bp->SetThreadID(m_tid);
       m_return_bp_id = return_bp->GetID();
       return_bp->SetBreakpointKind("step-out");
     }
@@ -175,7 +169,7 @@ void ThreadPlanStepOut::SetupAvoidNoDebug(
     avoid_nodebug = false;
     break;
   case eLazyBoolCalculate:
-    avoid_nodebug = m_thread.GetStepOutAvoidsNoDebug();
+    avoid_nodebug = GetThread().GetStepOutAvoidsNoDebug();
     break;
   }
   if (avoid_nodebug)
@@ -185,15 +179,16 @@ void ThreadPlanStepOut::SetupAvoidNoDebug(
 }
 
 void ThreadPlanStepOut::DidPush() {
+  Thread &thread = GetThread();
   if (m_step_out_to_inline_plan_sp)
-    m_thread.QueueThreadPlan(m_step_out_to_inline_plan_sp, false);
+    thread.QueueThreadPlan(m_step_out_to_inline_plan_sp, false);
   else if (m_step_through_inline_plan_sp)
-    m_thread.QueueThreadPlan(m_step_through_inline_plan_sp, false);
+    thread.QueueThreadPlan(m_step_through_inline_plan_sp, false);
 }
 
 ThreadPlanStepOut::~ThreadPlanStepOut() {
   if (m_return_bp_id != LLDB_INVALID_BREAK_ID)
-    m_thread.CalculateTarget()->RemoveBreakpointByID(m_return_bp_id);
+    GetThread().CalculateTarget()->RemoveBreakpointByID(m_return_bp_id);
 }
 
 void ThreadPlanStepOut::GetDescription(Stream *s,
@@ -293,12 +288,12 @@ bool ThreadPlanStepOut::DoPlanExplainsStop(Event *event_ptr) {
       // If this is OUR breakpoint, we're fine, otherwise we don't know why
       // this happened...
       BreakpointSiteSP site_sp(
-          m_thread.GetProcess()->GetBreakpointSiteList().FindByID(
-              stop_info_sp->GetValue()));
+          m_process.GetBreakpointSiteList().FindByID(stop_info_sp->GetValue()));
       if (site_sp && site_sp->IsBreakpointAtThisSite(m_return_bp_id)) {
         bool done;
 
-        StackID frame_zero_id = m_thread.GetStackFrameAtIndex(0)->GetStackID();
+        StackID frame_zero_id =
+            GetThread().GetStackFrameAtIndex(0)->GetStackID();
 
         if (m_step_out_to_id == frame_zero_id)
           done = true;
@@ -365,7 +360,7 @@ bool ThreadPlanStepOut::ShouldStop(Event *event_ptr) {
   }
 
   if (!done) {
-    StackID frame_zero_id = m_thread.GetStackFrameAtIndex(0)->GetStackID();
+    StackID frame_zero_id = GetThread().GetStackFrameAtIndex(0)->GetStackID();
     done = !(frame_zero_id < m_step_out_to_id);
   }
 
@@ -399,8 +394,7 @@ bool ThreadPlanStepOut::DoWillResume(StateType resume_state,
     return false;
 
   if (current_plan) {
-    Breakpoint *return_bp =
-        m_thread.CalculateTarget()->GetBreakpointByID(m_return_bp_id).get();
+    Breakpoint *return_bp = GetTarget().GetBreakpointByID(m_return_bp_id).get();
     if (return_bp != nullptr)
       return_bp->SetEnabled(true);
   }
@@ -409,8 +403,7 @@ bool ThreadPlanStepOut::DoWillResume(StateType resume_state,
 
 bool ThreadPlanStepOut::WillStop() {
   if (m_return_bp_id != LLDB_INVALID_BREAK_ID) {
-    Breakpoint *return_bp =
-        m_thread.CalculateTarget()->GetBreakpointByID(m_return_bp_id).get();
+    Breakpoint *return_bp = GetTarget().GetBreakpointByID(m_return_bp_id).get();
     if (return_bp != nullptr)
       return_bp->SetEnabled(false);
   }
@@ -431,7 +424,7 @@ bool ThreadPlanStepOut::MischiefManaged() {
     if (log)
       LLDB_LOGF(log, "Completed step out plan.");
     if (m_return_bp_id != LLDB_INVALID_BREAK_ID) {
-      m_thread.CalculateTarget()->RemoveBreakpointByID(m_return_bp_id);
+      GetTarget().RemoveBreakpointByID(m_return_bp_id);
       m_return_bp_id = LLDB_INVALID_BREAK_ID;
     }
 
@@ -446,7 +439,8 @@ bool ThreadPlanStepOut::QueueInlinedStepPlan(bool queue_now) {
   // Now figure out the range of this inlined block, and set up a "step through
   // range" plan for that.  If we've been provided with a context, then use the
   // block in that context.
-  StackFrameSP immediate_return_from_sp(m_thread.GetStackFrameAtIndex(0));
+  Thread &thread = GetThread();
+  StackFrameSP immediate_return_from_sp(thread.GetStackFrameAtIndex(0));
   if (!immediate_return_from_sp)
     return false;
 
@@ -473,7 +467,7 @@ bool ThreadPlanStepOut::QueueInlinedStepPlan(bool queue_now) {
 
         m_step_through_inline_plan_sp =
             std::make_shared<ThreadPlanStepOverRange>(
-                m_thread, inline_range, inlined_sc, run_mode, avoid_no_debug);
+                thread, inline_range, inlined_sc, run_mode, avoid_no_debug);
         ThreadPlanStepOverRange *step_through_inline_plan_ptr =
             static_cast<ThreadPlanStepOverRange *>(
                 m_step_through_inline_plan_sp.get());
@@ -493,7 +487,7 @@ bool ThreadPlanStepOut::QueueInlinedStepPlan(bool queue_now) {
         }
 
         if (queue_now)
-          m_thread.QueueThreadPlan(m_step_through_inline_plan_sp, false);
+          thread.QueueThreadPlan(m_step_through_inline_plan_sp, false);
         return true;
       }
     }
@@ -514,10 +508,10 @@ void ThreadPlanStepOut::CalculateReturnValue() {
         m_immediate_step_from_function->GetCompilerType()
             .GetFunctionReturnType();
     if (return_compiler_type) {
-      lldb::ABISP abi_sp = m_thread.GetProcess()->GetABI();
+      lldb::ABISP abi_sp = m_process.GetABI();
       if (abi_sp)
         m_return_valobj_sp =
-            abi_sp->GetReturnValueObject(m_thread, return_compiler_type);
+            abi_sp->GetReturnValueObject(GetThread(), return_compiler_type);
     }
   }
 }
@@ -526,6 +520,6 @@ bool ThreadPlanStepOut::IsPlanStale() {
   // If we are still lower on the stack than the frame we are returning to,
   // then there's something for us to do.  Otherwise, we're stale.
 
-  StackID frame_zero_id = m_thread.GetStackFrameAtIndex(0)->GetStackID();
+  StackID frame_zero_id = GetThread().GetStackFrameAtIndex(0)->GetStackID();
   return !(frame_zero_id < m_step_out_to_id);
 }
