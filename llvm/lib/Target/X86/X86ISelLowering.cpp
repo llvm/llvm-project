@@ -44278,6 +44278,21 @@ combineToExtendBoolVectorInReg(SDNode *N, SelectionDAG &DAG,
 
     for (unsigned i = 0; i != Scale; ++i)
       ShuffleMask.append(EltSizeInBits, i);
+    Vec = DAG.getVectorShuffle(VT, DL, Vec, Vec, ShuffleMask);
+  } else if (Subtarget.hasAVX2() && NumElts < EltSizeInBits &&
+             (SclVT == MVT::i8 || SclVT == MVT::i16 || SclVT == MVT::i32)) {
+    // If we have register broadcast instructions, use the scalar size as the
+    // element type for the shuffle. Then cast to the wider element type. The
+    // widened bits won't be used, and this might allow the use of a broadcast
+    // load.
+    assert((EltSizeInBits % NumElts) == 0 && "Unexpected integer scale");
+    unsigned Scale = EltSizeInBits / NumElts;
+    EVT BroadcastVT =
+        EVT::getVectorVT(*DAG.getContext(), SclVT, NumElts * Scale);
+    Vec = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, BroadcastVT, N00);
+    ShuffleMask.append(NumElts * Scale, 0);
+    Vec = DAG.getVectorShuffle(BroadcastVT, DL, Vec, Vec, ShuffleMask);
+    Vec = DAG.getBitcast(VT, Vec);
   } else {
     // For smaller scalar integers, we can simply any-extend it to the vector
     // element size (we don't care about the upper bits) and broadcast it to all
@@ -44285,8 +44300,8 @@ combineToExtendBoolVectorInReg(SDNode *N, SelectionDAG &DAG,
     SDValue Scl = DAG.getAnyExtOrTrunc(N00, DL, SVT);
     Vec = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VT, Scl);
     ShuffleMask.append(NumElts, 0);
+    Vec = DAG.getVectorShuffle(VT, DL, Vec, Vec, ShuffleMask);
   }
-  Vec = DAG.getVectorShuffle(VT, DL, Vec, Vec, ShuffleMask);
 
   // Now, mask the relevant bit in each element.
   SmallVector<SDValue, 32> Bits;
