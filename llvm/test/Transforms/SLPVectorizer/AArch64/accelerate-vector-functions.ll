@@ -8,23 +8,20 @@ target triple = "arm64-apple-ios14.0.0"
 declare float @llvm.sin.f32(float) #1
 
 
-; FIXME: Accelerate provides sin() for <4 x float>
+; Accelerate provides sin() for <4 x float>
 define <4 x float> @sin_4x(<4 x float>* %a) {
 ; CHECK-LABEL: @sin_4x(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, <4 x float>* [[A:%.*]], align 16
-; CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <4 x float> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast float @llvm.sin.f32(float [[VECEXT]])
-; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <4 x float> undef, float [[TMP1]], i32 0
-; CHECK-NEXT:    [[VECEXT_1:%.*]] = extractelement <4 x float> [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call fast float @llvm.sin.f32(float [[VECEXT_1]])
-; CHECK-NEXT:    [[VECINS_1:%.*]] = insertelement <4 x float> [[VECINS]], float [[TMP2]], i32 1
-; CHECK-NEXT:    [[VECEXT_2:%.*]] = extractelement <4 x float> [[TMP0]], i32 2
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call fast float @llvm.sin.f32(float [[VECEXT_2]])
-; CHECK-NEXT:    [[VECINS_2:%.*]] = insertelement <4 x float> [[VECINS_1]], float [[TMP3]], i32 2
-; CHECK-NEXT:    [[VECEXT_3:%.*]] = extractelement <4 x float> [[TMP0]], i32 3
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call fast float @llvm.sin.f32(float [[VECEXT_3]])
-; CHECK-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x float> [[VECINS_2]], float [[TMP4]], i32 3
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @vsinf(<4 x float> [[TMP0]])
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[TMP1]], i32 0
+; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <4 x float> undef, float [[TMP2]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[TMP1]], i32 1
+; CHECK-NEXT:    [[VECINS_1:%.*]] = insertelement <4 x float> [[VECINS]], float [[TMP3]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[TMP1]], i32 2
+; CHECK-NEXT:    [[VECINS_2:%.*]] = insertelement <4 x float> [[VECINS_1]], float [[TMP4]], i32 2
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x float> [[TMP1]], i32 3
+; CHECK-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x float> [[VECINS_2]], float [[TMP5]], i32 3
 ; CHECK-NEXT:    ret <4 x float> [[VECINS_3]]
 ;
 ; NOACCELERATE-LABEL: @sin_4x(
@@ -67,10 +64,10 @@ define <2 x float> @sin_2x(<2 x float>* %a) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x float>, <2 x float>* [[A:%.*]], align 16
 ; CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <2 x float> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast float @llvm.sin.f32(float [[VECEXT]])
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast float @llvm.sin.f32(float [[VECEXT]]) #1
 ; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <2 x float> undef, float [[TMP1]], i32 0
 ; CHECK-NEXT:    [[VECEXT_1:%.*]] = extractelement <2 x float> [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call fast float @llvm.sin.f32(float [[VECEXT_1]])
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call fast float @llvm.sin.f32(float [[VECEXT_1]]) #1
 ; CHECK-NEXT:    [[VECINS_1:%.*]] = insertelement <2 x float> [[VECINS]], float [[TMP2]], i32 1
 ; CHECK-NEXT:    ret <2 x float> [[VECINS_1]]
 ;
@@ -99,23 +96,20 @@ entry:
 
 declare float @llvm.cos.f32(float) #1
 
-; FIXME: Accelerate provides cos() for <4 x float>
+; Accelerate provides cos() for <4 x float>
 define <4 x float> @cos_4x(<4 x float>* %a) {
 ; CHECK-LABEL: @cos_4x(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, <4 x float>* [[A:%.*]], align 16
-; CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <4 x float> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast float @llvm.cos.f32(float [[VECEXT]])
-; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <4 x float> undef, float [[TMP1]], i32 0
-; CHECK-NEXT:    [[VECEXT_1:%.*]] = extractelement <4 x float> [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call fast float @llvm.cos.f32(float [[VECEXT_1]])
-; CHECK-NEXT:    [[VECINS_1:%.*]] = insertelement <4 x float> [[VECINS]], float [[TMP2]], i32 1
-; CHECK-NEXT:    [[VECEXT_2:%.*]] = extractelement <4 x float> [[TMP0]], i32 2
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call fast float @llvm.cos.f32(float [[VECEXT_2]])
-; CHECK-NEXT:    [[VECINS_2:%.*]] = insertelement <4 x float> [[VECINS_1]], float [[TMP3]], i32 2
-; CHECK-NEXT:    [[VECEXT_3:%.*]] = extractelement <4 x float> [[TMP0]], i32 3
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call fast float @llvm.cos.f32(float [[VECEXT_3]])
-; CHECK-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x float> [[VECINS_2]], float [[TMP4]], i32 3
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @vcosf(<4 x float> [[TMP0]])
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[TMP1]], i32 0
+; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <4 x float> undef, float [[TMP2]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[TMP1]], i32 1
+; CHECK-NEXT:    [[VECINS_1:%.*]] = insertelement <4 x float> [[VECINS]], float [[TMP3]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[TMP1]], i32 2
+; CHECK-NEXT:    [[VECINS_2:%.*]] = insertelement <4 x float> [[VECINS_1]], float [[TMP4]], i32 2
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x float> [[TMP1]], i32 3
+; CHECK-NEXT:    [[VECINS_3:%.*]] = insertelement <4 x float> [[VECINS_2]], float [[TMP5]], i32 3
 ; CHECK-NEXT:    ret <4 x float> [[VECINS_3]]
 ;
 ; NOACCELERATE-LABEL: @cos_4x(
@@ -158,10 +152,10 @@ define <2 x float> @cos_2x(<2 x float>* %a) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x float>, <2 x float>* [[A:%.*]], align 16
 ; CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <2 x float> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast float @llvm.cos.f32(float [[VECEXT]])
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast float @llvm.cos.f32(float [[VECEXT]]) #2
 ; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <2 x float> undef, float [[TMP1]], i32 0
 ; CHECK-NEXT:    [[VECEXT_1:%.*]] = extractelement <2 x float> [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call fast float @llvm.cos.f32(float [[VECEXT_1]])
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call fast float @llvm.cos.f32(float [[VECEXT_1]]) #2
 ; CHECK-NEXT:    [[VECINS_1:%.*]] = insertelement <2 x float> [[VECINS]], float [[TMP2]], i32 1
 ; CHECK-NEXT:    ret <2 x float> [[VECINS_1]]
 ;
