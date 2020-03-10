@@ -256,6 +256,13 @@ MaybeExtentExpr GetExtent(
         }
       }
     }
+  } else if (const auto *assoc{
+                 symbol.detailsIf<semantics::AssocEntityDetails>()}) {
+    if (auto shape{GetShape(context, assoc->expr())}) {
+      if (dimension < static_cast<int>(shape->size())) {
+        return std::move(shape->at(dimension));
+      }
+    }
   }
   return std::nullopt;
 }
@@ -314,6 +321,13 @@ MaybeExtentExpr GetUpperBound(
               GetLowerBound(context, base, dimension),
               GetExtent(context, base, dimension));
         }
+      }
+    }
+  } else if (const auto *assoc{
+                 symbol.detailsIf<semantics::AssocEntityDetails>()}) {
+    if (auto shape{GetShape(context, assoc->expr())}) {
+      if (dimension < static_cast<int>(shape->size())) {
+        return std::move(shape->at(dimension));
       }
     }
   }
