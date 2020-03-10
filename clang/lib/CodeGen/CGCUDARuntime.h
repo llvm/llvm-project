@@ -25,6 +25,7 @@ class GlobalVariable;
 namespace clang {
 
 class CUDAKernelCallExpr;
+class NamedDecl;
 class VarDecl;
 
 namespace CodeGen {
@@ -66,8 +67,9 @@ public:
   /// Must be called after ModuleCtorFunction
   virtual llvm::Function *makeModuleDtorFunction() = 0;
 
-  /// Construct and return the stub name of a kernel.
-  virtual std::string getDeviceStubName(llvm::StringRef Name) const = 0;
+  /// Returns function or variable name on device side even if the current
+  /// compilation is for host.
+  virtual std::string getDeviceSideName(const NamedDecl *ND) = 0;
 };
 
 /// Creates an instance of a CUDA runtime class.
