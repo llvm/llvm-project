@@ -12,7 +12,6 @@
 
 #include "mlir/Dialect/SPIRV/SPIRVOps.h"
 
-#include "mlir/Analysis/CallInterfaces.h"
 #include "mlir/Dialect/SPIRV/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/SPIRVTypes.h"
 #include "mlir/IR/Builders.h"
@@ -20,6 +19,7 @@
 #include "mlir/IR/FunctionImplementation.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/StandardTypes.h"
+#include "mlir/Interfaces/CallInterfaces.h"
 #include "mlir/Support/StringExtras.h"
 #include "llvm/ADT/bit.h"
 

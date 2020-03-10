@@ -1,4 +1,4 @@
-//===- ControlFlowInterfaces.h - ControlFlow Interfaces -------------------===//
+//===- ControlFlowInterfaces.cpp - ControlFlow Interfaces -----------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Analysis/ControlFlowInterfaces.h"
+#include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/IR/StandardTypes.h"
 
 using namespace mlir;
@@ -15,7 +15,7 @@ using namespace mlir;
 // ControlFlowInterfaces
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Analysis/ControlFlowInterfaces.cpp.inc"
+#include "mlir/Interfaces/ControlFlowInterfaces.cpp.inc"
 
 //===----------------------------------------------------------------------===//
 // BranchOpInterface

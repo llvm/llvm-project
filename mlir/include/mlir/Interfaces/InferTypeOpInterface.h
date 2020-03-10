@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_ANALYSIS_INFERTYPEOPINTERFACE_H_
-#define MLIR_ANALYSIS_INFERTYPEOPINTERFACE_H_
+#ifndef MLIR_INTERFACES_INFERTYPEOPINTERFACE_H_
+#define MLIR_INTERFACES_INFERTYPEOPINTERFACE_H_
 
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
@@ -94,7 +94,7 @@ LogicalResult inferReturnTensorTypes(
 LogicalResult verifyInferredResultTypes(Operation *op);
 } // namespace detail
 
-#include "mlir/Analysis/InferTypeOpInterface.h.inc"
+#include "mlir/Interfaces/InferTypeOpInterface.h.inc"
 
 namespace OpTrait {
 
@@ -118,4 +118,4 @@ public:
 } // namespace OpTrait
 } // namespace mlir
 
-#endif // MLIR_ANALYSIS_INFERTYPEOPINTERFACE_H_
+#endif // MLIR_INTERFACES_INFERTYPEOPINTERFACE_H_

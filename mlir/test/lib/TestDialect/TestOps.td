@@ -12,9 +12,9 @@
 include "mlir/IR/OpBase.td"
 include "mlir/IR/OpAsmInterface.td"
 include "mlir/IR/SideEffects.td"
-include "mlir/Analysis/ControlFlowInterfaces.td"
-include "mlir/Analysis/CallInterfaces.td"
-include "mlir/Analysis/InferTypeOpInterface.td"
+include "mlir/Interfaces/CallInterfaces.td"
+include "mlir/Interfaces/ControlFlowInterfaces.td"
+include "mlir/Interfaces/InferTypeOpInterface.td"
 
 def TEST_Dialect : Dialect {
   let name = "test";

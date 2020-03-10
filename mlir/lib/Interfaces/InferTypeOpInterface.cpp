@@ -11,14 +11,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Analysis/InferTypeOpInterface.h"
+#include "mlir/Interfaces/InferTypeOpInterface.h"
 
 #include "mlir/IR/StandardTypes.h"
 
 using namespace mlir;
 
 namespace mlir {
-#include "mlir/Analysis/InferTypeOpInterface.cpp.inc"
+#include "mlir/Interfaces/InferTypeOpInterface.cpp.inc"
 } // namespace mlir
 
 LogicalResult mlir::detail::inferReturnTensorTypes(

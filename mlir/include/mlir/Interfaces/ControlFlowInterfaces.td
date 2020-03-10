@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_ANALYSIS_CONTROLFLOWINTERFACES
-#define MLIR_ANALYSIS_CONTROLFLOWINTERFACES
+#ifndef MLIR_INTERFACES_CONTROLFLOWINTERFACES
+#define MLIR_INTERFACES_CONTROLFLOWINTERFACES
 
 include "mlir/IR/OpBase.td"
 
@@ -82,4 +82,4 @@ def BranchOpInterface : OpInterface<"BranchOpInterface"> {
   }];
 }
 
-#endif // MLIR_ANALYSIS_CONTROLFLOWINTERFACES
+#endif // MLIR_INTERFACES_CONTROLFLOWINTERFACES

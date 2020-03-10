@@ -15,7 +15,6 @@ add_mlir_dialect_library(MLIRSPIRV
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/SPIRV
 
   DEPENDS
-  MLIRControlFlowInterfacesIncGen
   MLIRSPIRVAvailabilityIncGen
   MLIRSPIRVCanonicalizationIncGen
   MLIRSPIRVEnumAvailabilityIncGen
@@ -26,6 +25,7 @@ add_mlir_dialect_library(MLIRSPIRV
   )
 target_link_libraries(MLIRSPIRV
   PUBLIC
+  MLIRControlFlowInterfaces
   MLIRIR
   MLIRParser
   MLIRSupport

@@ -14,7 +14,7 @@
 #define LLVMIR_OPS
 
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
-include "mlir/Analysis/ControlFlowInterfaces.td"
+include "mlir/Interfaces/ControlFlowInterfaces.td"
 
 class LLVM_Builder<string builder> {
   string llvmBuilder = builder;
