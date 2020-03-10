@@ -800,6 +800,18 @@
 // CHECK-V81M-MVE-NODSP-NOT: #define __ARM_FEATURE_MVE
 // CHECK-V81M-MVE-NODSP-NOT: #define __ARM_FEATURE_DSP
 
+// Test CDE (Custom Datapath Extension) feature test macros
+
+// RUN: %clang -target arm-arm-none-eabi -march=armv8m.main -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-V8M-NOCDE %s
+// CHECK-V8M-NOCDE-NOT: #define __ARM_FEATURE_CDE
+// CHECK-V8M-NOCDE-NOT: #define __ARM_FEATURE_CDE_COPROC
+// RUN: %clang -target arm-arm-none-eabi -march=armv8m.main+cdecp0+cdecp1+cdecp7 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-V8M-CDE-MASK1 %s
+// CHECK-V8M-CDE-MASK1: #define __ARM_FEATURE_CDE 1
+// CHECK-V8M-CDE-MASK1: #define __ARM_FEATURE_CDE_COPROC 0x83
+// RUN: %clang -target arm-arm-none-eabi -march=armv8m.main+cdecp0+cdecp1+cdecp2+cdecp3+cdecp4+cdecp5+cdecp6+cdecp7 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-V8M-CDE-MASK2 %s
+// CHECK-V8M-CDE-MASK2: #define __ARM_FEATURE_CDE 1
+// CHECK-V8M-CDE-MASK2: #define __ARM_FEATURE_CDE_COPROC 0xff
+
 // RUN: %clang -target armv8.1a-none-none-eabi -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-V81A %s
 // CHECK-V81A: #define __ARM_ARCH 8
 // CHECK-V81A: #define __ARM_ARCH_8_1A__ 1

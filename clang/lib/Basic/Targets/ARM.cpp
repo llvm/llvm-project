@@ -154,6 +154,8 @@ bool ARMTargetInfo::hasMVEFloat() const {
   return hasMVE() && (MVE & MVE_FP);
 }
 
+bool ARMTargetInfo::hasCDE() const { return getARMCDECoprocMask() != 0; }
+
 bool ARMTargetInfo::isThumb() const {
   return ArchISA == llvm::ARM::ISAKind::THUMB;
 }
@@ -422,6 +424,7 @@ bool ARMTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   HWDiv = 0;
   DotProd = 0;
   HasFloat16 = true;
+  ARMCDECoprocMask = 0;
 
   // This does not diagnose illegal cases like having both
   // "+vfpv2" and "+vfpv3" or having "+neon" and "-fp64".
@@ -486,6 +489,10 @@ bool ARMTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       FPU |= FPARMV8;
       MVE |= MVE_INT | MVE_FP;
       HW_FP |= HW_FP_SP | HW_FP_HP;
+    } else if (Feature.size() == strlen("+cdecp0") && Feature >= "+cdecp0" &&
+               Feature <= "+cdecp7") {
+      unsigned Coproc = Feature.back() - '0';
+      ARMCDECoprocMask |= (1U << Coproc);
     }
   }
 
@@ -756,6 +763,12 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
 
   if (hasMVE()) {
     Builder.defineMacro("__ARM_FEATURE_MVE", hasMVEFloat() ? "3" : "1");
+  }
+
+  if (hasCDE()) {
+    Builder.defineMacro("__ARM_FEATURE_CDE", "1");
+    Builder.defineMacro("__ARM_FEATURE_CDE_COPROC",
+                        "0x" + Twine::utohexstr(getARMCDECoprocMask()));
   }
 
   Builder.defineMacro("__ARM_SIZEOF_WCHAR_T",
