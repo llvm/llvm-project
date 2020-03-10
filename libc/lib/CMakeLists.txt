@@ -24,6 +24,9 @@ add_entrypoint_library(
     abort
 
     # threads.h entrypoints
+    mtx_init
+    mtx_lock
+    mtx_unlock
     thrd_create
     thrd_join
 )
