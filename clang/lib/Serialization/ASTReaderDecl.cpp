@@ -2867,7 +2867,8 @@ uint64_t ASTReader::getGlobalBitOffset(ModuleFile &M, uint32_t LocalOffset) {
   return LocalOffset + M.GlobalBitOffset;
 }
 
-static bool isSameTemplateParameterList(const TemplateParameterList *X,
+static bool isSameTemplateParameterList(const ASTContext &C,
+                                        const TemplateParameterList *X,
                                         const TemplateParameterList *Y);
 
 /// Determine whether two template parameters are similar enough
@@ -2879,7 +2880,32 @@ static bool isSameTemplateParameter(const NamedDecl *X,
 
   if (const auto *TX = dyn_cast<TemplateTypeParmDecl>(X)) {
     const auto *TY = cast<TemplateTypeParmDecl>(Y);
-    return TX->isParameterPack() == TY->isParameterPack();
+    if (TX->isParameterPack() != TY->isParameterPack())
+      return false;
+    if (TX->hasTypeConstraint() != TY->hasTypeConstraint())
+      return false;
+    if (TX->hasTypeConstraint()) {
+      const TypeConstraint *TXTC = TX->getTypeConstraint();
+      const TypeConstraint *TYTC = TY->getTypeConstraint();
+      if (TXTC->getNamedConcept() != TYTC->getNamedConcept())
+        return false;
+      if (TXTC->hasExplicitTemplateArgs() != TYTC->hasExplicitTemplateArgs())
+        return false;
+      if (TXTC->hasExplicitTemplateArgs()) {
+        const auto *TXTCArgs = TXTC->getTemplateArgsAsWritten();
+        const auto *TYTCArgs = TYTC->getTemplateArgsAsWritten();
+        if (TXTCArgs->NumTemplateArgs != TYTCArgs->NumTemplateArgs)
+          return false;
+        llvm::FoldingSetNodeID XID, YID;
+        for (const auto &ArgLoc : TXTCArgs->arguments())
+          ArgLoc.getArgument().Profile(XID, X->getASTContext());
+        for (const auto &ArgLoc : TYTCArgs->arguments())
+          ArgLoc.getArgument().Profile(YID, Y->getASTContext());
+        if (XID != YID)
+          return false;
+      }
+    }
+    return true;
   }
 
   if (const auto *TX = dyn_cast<NonTypeTemplateParmDecl>(X)) {
@@ -2891,7 +2917,8 @@ static bool isSameTemplateParameter(const NamedDecl *X,
   const auto *TX = cast<TemplateTemplateParmDecl>(X);
   const auto *TY = cast<TemplateTemplateParmDecl>(Y);
   return TX->isParameterPack() == TY->isParameterPack() &&
-         isSameTemplateParameterList(TX->getTemplateParameters(),
+         isSameTemplateParameterList(TX->getASTContext(),
+                                     TX->getTemplateParameters(),
                                      TY->getTemplateParameters());
 }
 
@@ -2944,7 +2971,8 @@ static bool isSameQualifier(const NestedNameSpecifier *X,
 
 /// Determine whether two template parameter lists are similar enough
 /// that they may be used in declarations of the same template.
-static bool isSameTemplateParameterList(const TemplateParameterList *X,
+static bool isSameTemplateParameterList(const ASTContext &C,
+                                        const TemplateParameterList *X,
                                         const TemplateParameterList *Y) {
   if (X->size() != Y->size())
     return false;
@@ -2952,6 +2980,18 @@ static bool isSameTemplateParameterList(const TemplateParameterList *X,
   for (unsigned I = 0, N = X->size(); I != N; ++I)
     if (!isSameTemplateParameter(X->getParam(I), Y->getParam(I)))
       return false;
+
+  const Expr *XRC = X->getRequiresClause();
+  const Expr *YRC = Y->getRequiresClause();
+  if (!XRC != !YRC)
+    return false;
+  if (XRC) {
+    llvm::FoldingSetNodeID XRCID, YRCID;
+    XRC->Profile(XRCID, C, /*Canonical=*/true);
+    YRC->Profile(YRCID, C, /*Canonical=*/true);
+    if (XRCID != YRCID)
+      return false;
+  }
 
   return true;
 }
@@ -2989,7 +3029,7 @@ static bool hasSameOverloadableAttrs(const FunctionDecl *A,
   return true;
 }
 
-/// Determine whether the two declarations refer to the same entity.
+/// Determine whether the two declarations refer to the same entity.pr
 static bool isSameEntity(NamedDecl *X, NamedDecl *Y) {
   assert(X->getDeclName() == Y->getDeclName() && "Declaration name mismatch!");
 
@@ -3064,6 +3104,19 @@ static bool isSameEntity(NamedDecl *X, NamedDecl *Y) {
     }
 
     ASTContext &C = FuncX->getASTContext();
+
+    const Expr *XRC = FuncX->getTrailingRequiresClause();
+    const Expr *YRC = FuncY->getTrailingRequiresClause();
+    if (!XRC != !YRC)
+      return false;
+    if (XRC) {
+      llvm::FoldingSetNodeID XRCID, YRCID;
+      XRC->Profile(XRCID, C, /*Canonical=*/true);
+      YRC->Profile(YRCID, C, /*Canonical=*/true);
+      if (XRCID != YRCID)
+        return false;
+    }
+
     auto GetTypeAsWritten = [](const FunctionDecl *FD) {
       // Map to the first declaration that we've already merged into this one.
       // The TSI of redeclarations might not match (due to calling conventions
@@ -3087,6 +3140,7 @@ static bool isSameEntity(NamedDecl *X, NamedDecl *Y) {
         return true;
       return false;
     }
+
     return FuncX->getLinkageInternal() == FuncY->getLinkageInternal() &&
            hasSameOverloadableAttrs(FuncX, FuncY);
   }
@@ -3126,7 +3180,8 @@ static bool isSameEntity(NamedDecl *X, NamedDecl *Y) {
     const auto *TemplateY = cast<TemplateDecl>(Y);
     return isSameEntity(TemplateX->getTemplatedDecl(),
                         TemplateY->getTemplatedDecl()) &&
-           isSameTemplateParameterList(TemplateX->getTemplateParameters(),
+           isSameTemplateParameterList(TemplateX->getASTContext(),
+                                       TemplateX->getTemplateParameters(),
                                        TemplateY->getTemplateParameters());
   }
 
