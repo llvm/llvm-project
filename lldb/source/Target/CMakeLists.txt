@@ -47,6 +47,7 @@ add_lldb_library(lldbTarget
   QueueItem.cpp
   QueueList.cpp
   RegisterContext.cpp
+  RegisterContextUnwind.cpp
   RegisterNumber.cpp
   RemoteAwarePlatform.cpp
   SectionLoadHistory.cpp
@@ -87,6 +88,7 @@ add_lldb_library(lldbTarget
   ThreadSpec.cpp
   UnixSignals.cpp
   UnwindAssembly.cpp
+  UnwindLLDB.cpp
 
   ${SWIFT_SOURCES}
 
