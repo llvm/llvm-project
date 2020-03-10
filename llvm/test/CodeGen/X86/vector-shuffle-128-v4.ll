@@ -2105,14 +2105,12 @@ define <4 x i32> @extract3_insert3_v4i32_0127(<4 x i32> %a0, <4 x i32> %a1) {
 ;
 ; SSE41-LABEL: extract3_insert3_v4i32_0127:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    extractps $3, %xmm1, %eax
-; SSE41-NEXT:    pinsrd $3, %eax, %xmm0
+; SSE41-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[3]
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: extract3_insert3_v4i32_0127:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vextractps $3, %xmm1, %eax
-; AVX-NEXT:    vpinsrd $3, %eax, %xmm0, %xmm0
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[3]
 ; AVX-NEXT:    retq
   %1 = extractelement <4 x i32> %a1, i32 3
   %2 = insertelement <4 x i32> %a0, i32 %1, i32 3

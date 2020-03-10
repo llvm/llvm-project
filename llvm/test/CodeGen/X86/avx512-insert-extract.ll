@@ -48,10 +48,9 @@ define <16 x float> @test3(<16 x float> %x) nounwind {
 define <8 x i64> @test4(<8 x i64> %x) nounwind {
 ; CHECK-LABEL: test4:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vextracti32x4 $2, %zmm0, %xmm1
-; CHECK-NEXT:    vmovq %xmm1, %rax
-; CHECK-NEXT:    vpinsrq $1, %rax, %xmm0, %xmm1
-; CHECK-NEXT:    vinserti32x4 $0, %xmm1, %zmm0, %zmm0
+; CHECK-NEXT:    vextractf32x4 $2, %zmm0, %xmm1
+; CHECK-NEXT:    vmovlhps {{.*#+}} xmm1 = xmm0[0],xmm1[0]
+; CHECK-NEXT:    vinsertf32x4 $0, %xmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    retq
   %eee = extractelement <8 x i64> %x, i32 4
   %rrr2 = insertelement <8 x i64> %x, i64 %eee, i32 1
