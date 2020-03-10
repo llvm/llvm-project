@@ -1787,8 +1787,11 @@ Instruction *InstCombiner::foldIntrinsicWithOverflowCommon(IntrinsicInst *II) {
 /// instructions. For normal calls, it allows visitCallBase to do the heavy
 /// lifting.
 Instruction *InstCombiner::visitCallInst(CallInst &CI) {
-  if (Value *V = SimplifyCall(&CI, SQ.getWithInstruction(&CI)))
-    return replaceInstUsesWith(CI, V);
+  // Don't try to simplify calls without uses. It will not do anything useful,
+  // but will result in the following folds being skipped.
+  if (!CI.use_empty())
+    if (Value *V = SimplifyCall(&CI, SQ.getWithInstruction(&CI)))
+      return replaceInstUsesWith(CI, V);
 
   if (isFreeCall(&CI, &TLI))
     return visitFree(CI);
