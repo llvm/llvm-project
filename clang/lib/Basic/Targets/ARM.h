@@ -108,6 +108,7 @@ class LLVM_LIBRARY_VISIBILITY ARMTargetInfo : public TargetInfo {
   bool supportsThumb2() const;
   bool hasMVE() const;
   bool hasMVEFloat() const;
+  bool hasCDE() const;
 
   StringRef getCPUAttr() const;
   StringRef getCPUProfile() const;
