@@ -588,6 +588,18 @@ protected:
     unsigned Kind : 2;
   };
 
+  class StmtExprBitfields {
+    friend class ASTStmtReader;
+    friend class StmtExpr;
+
+    unsigned : NumExprBits;
+
+    /// The number of levels of template parameters enclosing this statement
+    /// expression. Used to determine if a statement expression remains
+    /// dependent after instantiation.
+    unsigned TemplateDepth;
+  };
+
   //===--- C++ Expression bitfields classes ---===//
 
   class CXXOperatorCallExprBitfields {
@@ -995,6 +1007,9 @@ protected:
     GenericSelectionExprBitfields GenericSelectionExprBits;
     PseudoObjectExprBitfields PseudoObjectExprBits;
     SourceLocExprBitfields SourceLocExprBits;
+
+    // GNU Extensions.
+    StmtExprBitfields StmtExprBits;
 
     // C++ Expressions
     CXXOperatorCallExprBitfields CXXOperatorCallExprBits;

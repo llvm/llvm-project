@@ -922,6 +922,10 @@ namespace {
       this->Entity = Entity;
     }
 
+    unsigned TransformTemplateDepth(unsigned Depth) {
+      return TemplateArgs.getNewDepth(Depth);
+    }
+
     bool TryExpandParameterPacks(SourceLocation EllipsisLoc,
                                  SourceRange PatternRange,
                                  ArrayRef<UnexpandedParameterPack> Unexpanded,

@@ -620,12 +620,31 @@ public:
   /// function, block, and method scopes that are currently active.
   SmallVector<sema::FunctionScopeInfo *, 4> FunctionScopes;
 
+  /// The index of the first FunctionScope that corresponds to the current
+  /// context.
+  unsigned FunctionScopesStart = 0;
+
+  ArrayRef<sema::FunctionScopeInfo*> getFunctionScopes() const {
+    return llvm::makeArrayRef(FunctionScopes.begin() + FunctionScopesStart,
+                              FunctionScopes.end());
+  }
+
   /// Stack containing information needed when in C++2a an 'auto' is encountered
   /// in a function declaration parameter type specifier in order to invent a
   /// corresponding template parameter in the enclosing abbreviated function
   /// template. This information is also present in LambdaScopeInfo, stored in
   /// the FunctionScopes stack.
   SmallVector<InventedTemplateParameterInfo, 4> InventedParameterInfos;
+
+  /// The index of the first InventedParameterInfo that refers to the current
+  /// context.
+  unsigned InventedParameterInfosStart = 0;
+
+  ArrayRef<InventedTemplateParameterInfo> getInventedParameterInfos() const {
+    return llvm::makeArrayRef(InventedParameterInfos.begin() +
+                                  InventedParameterInfosStart,
+                              InventedParameterInfos.end());
+  }
 
   typedef LazyVector<TypedefNameDecl *, ExternalSemaSource,
                      &ExternalSemaSource::ReadExtVectorDecls, 2, 2>
@@ -800,17 +819,24 @@ public:
     DeclContext *SavedContext;
     ProcessingContextState SavedContextState;
     QualType SavedCXXThisTypeOverride;
+    unsigned SavedFunctionScopesStart;
+    unsigned SavedInventedParameterInfosStart;
 
   public:
     ContextRAII(Sema &S, DeclContext *ContextToPush, bool NewThisContext = true)
       : S(S), SavedContext(S.CurContext),
         SavedContextState(S.DelayedDiagnostics.pushUndelayed()),
-        SavedCXXThisTypeOverride(S.CXXThisTypeOverride)
+        SavedCXXThisTypeOverride(S.CXXThisTypeOverride),
+        SavedFunctionScopesStart(S.FunctionScopesStart),
+        SavedInventedParameterInfosStart(S.InventedParameterInfosStart)
     {
       assert(ContextToPush && "pushing null context");
       S.CurContext = ContextToPush;
       if (NewThisContext)
         S.CXXThisTypeOverride = QualType();
+      // Any saved FunctionScopes do not refer to this context.
+      S.FunctionScopesStart = S.FunctionScopes.size();
+      S.InventedParameterInfosStart = S.InventedParameterInfos.size();
     }
 
     void pop() {
@@ -818,6 +844,8 @@ public:
       S.CurContext = SavedContext;
       S.DelayedDiagnostics.popUndelayed(SavedContextState);
       S.CXXThisTypeOverride = SavedCXXThisTypeOverride;
+      S.FunctionScopesStart = SavedFunctionScopesStart;
+      S.InventedParameterInfosStart = SavedInventedParameterInfosStart;
       SavedContext = nullptr;
     }
 
@@ -4923,8 +4951,10 @@ public:
                             LabelDecl *TheDecl);
 
   void ActOnStartStmtExpr();
-  ExprResult ActOnStmtExpr(SourceLocation LPLoc, Stmt *SubStmt,
-                           SourceLocation RPLoc); // "({..})"
+  ExprResult ActOnStmtExpr(Scope *S, SourceLocation LPLoc, Stmt *SubStmt,
+                           SourceLocation RPLoc);
+  ExprResult BuildStmtExpr(SourceLocation LPLoc, Stmt *SubStmt,
+                           SourceLocation RPLoc, unsigned TemplateDepth);
   // Handle the final expression in a statement expression.
   ExprResult ActOnStmtExprResult(ExprResult E);
   void ActOnStmtExprError();
@@ -11923,6 +11953,13 @@ public:
       DC = CatD->getClassInterface();
     return DC;
   }
+
+  /// Determine the number of levels of enclosing template parameters. This is
+  /// only usable while parsing. Note that this does not include dependent
+  /// contexts in which no template parameters have yet been declared, such as
+  /// in a terse function template or generic lambda before the first 'auto' is
+  /// encountered.
+  unsigned getTemplateDepth(Scope *S) const;
 
   /// To be used for checking whether the arguments being passed to
   /// function exceeds the number of parameters expected for it.

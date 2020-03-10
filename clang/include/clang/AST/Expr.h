@@ -3955,14 +3955,18 @@ class StmtExpr : public Expr {
   Stmt *SubStmt;
   SourceLocation LParenLoc, RParenLoc;
 public:
-  // FIXME: Does type-dependence need to be computed differently?
-  // FIXME: Do we need to compute instantiation instantiation-dependence for
-  // statements? (ugh!)
-  StmtExpr(CompoundStmt *substmt, QualType T,
-           SourceLocation lp, SourceLocation rp) :
-    Expr(StmtExprClass, T, VK_RValue, OK_Ordinary,
-         T->isDependentType(), false, false, false),
-    SubStmt(substmt), LParenLoc(lp), RParenLoc(rp) { }
+  StmtExpr(CompoundStmt *SubStmt, QualType T, SourceLocation LParenLoc,
+           SourceLocation RParenLoc, unsigned TemplateDepth)
+      : // We treat a statement-expression in a dependent context as
+        // always being value- and instantiation-dependent. This matches the
+        // behavior of lambda-expressions and GCC.
+        Expr(StmtExprClass, T, VK_RValue, OK_Ordinary, T->isDependentType(),
+             TemplateDepth != 0, TemplateDepth != 0, false),
+        SubStmt(SubStmt), LParenLoc(LParenLoc), RParenLoc(RParenLoc) {
+    // FIXME: A templated statement expression should have an associated
+    // DeclContext so that nested declarations always have a dependent context.
+    StmtExprBits.TemplateDepth = TemplateDepth;
+  }
 
   /// Build an empty statement expression.
   explicit StmtExpr(EmptyShell Empty) : Expr(StmtExprClass, Empty) { }
@@ -3978,6 +3982,8 @@ public:
   void setLParenLoc(SourceLocation L) { LParenLoc = L; }
   SourceLocation getRParenLoc() const { return RParenLoc; }
   void setRParenLoc(SourceLocation L) { RParenLoc = L; }
+
+  unsigned getTemplateDepth() const { return StmtExprBits.TemplateDepth; }
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == StmtExprClass;

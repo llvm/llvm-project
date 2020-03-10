@@ -6724,8 +6724,9 @@ ExpectedStmt ASTNodeImporter::VisitStmtExpr(StmtExpr *E) {
   SourceLocation ToLParenLoc, ToRParenLoc;
   std::tie(ToSubStmt, ToType, ToLParenLoc, ToRParenLoc) = *Imp;
 
-  return new (Importer.getToContext()) StmtExpr(
-      ToSubStmt, ToType, ToLParenLoc, ToRParenLoc);
+  return new (Importer.getToContext())
+      StmtExpr(ToSubStmt, ToType, ToLParenLoc, ToRParenLoc,
+               E->getTemplateDepth());
 }
 
 ExpectedStmt ASTNodeImporter::VisitUnaryOperator(UnaryOperator *E) {
