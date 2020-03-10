@@ -105,6 +105,8 @@ func @invariant_affine_if() {
   // CHECK: %0 = alloc() : memref<10xf32>
   // CHECK-NEXT: %[[CST:.*]] = constant 8.000000e+00 : f32
   // CHECK-NEXT: affine.for %[[ARG:.*]] = 0 to 10 {
+  // CHECK-NEXT: }
+  // CHECK-NEXT: affine.for %[[ARG:.*]] = 0 to 10 {
   // CHECK-NEXT: affine.if #set0(%[[ARG]], %[[ARG]]) {
   // CHECK-NEXT: addf %[[CST]], %[[CST]] : f32
   // CHECK-NEXT: }
