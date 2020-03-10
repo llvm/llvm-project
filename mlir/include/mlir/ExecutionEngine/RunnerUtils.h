@@ -211,6 +211,8 @@ _mlir_ciface_print_memref_i8(UnrankedMemRefType<int8_t> *M);
 extern "C" MLIR_RUNNERUTILS_EXPORT void
 _mlir_ciface_print_memref_f32(UnrankedMemRefType<float> *M);
 
+extern "C" MLIR_RUNNERUTILS_EXPORT void print_memref_i32(int64_t rank,
+                                                         void *ptr);
 extern "C" MLIR_RUNNERUTILS_EXPORT void print_memref_f32(int64_t rank,
                                                          void *ptr);
 
