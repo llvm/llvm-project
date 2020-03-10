@@ -73,6 +73,15 @@ public:
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override;
 
+  llvm::Expected<std::vector<AddressRange>> GetRangesForSelectedMode();
+
+  llvm::Expected<std::vector<AddressRange>> GetContainingAddressRanges();
+  llvm::Expected<std::vector<AddressRange>> GetCurrentFunctionRanges();
+  llvm::Expected<std::vector<AddressRange>> GetCurrentLineRanges();
+  llvm::Expected<std::vector<AddressRange>> GetNameRanges();
+  llvm::Expected<std::vector<AddressRange>> GetPCRanges();
+  llvm::Expected<std::vector<AddressRange>> GetStartEndAddressRanges();
+
   CommandOptions m_options;
 };
 
