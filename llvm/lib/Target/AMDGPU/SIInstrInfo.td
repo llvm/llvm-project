@@ -630,6 +630,16 @@ def add_ctpop : PatFrag <
   (add (ctpop $src0), $src1)
 >;
 
+foreach I = 1-4 in {
+def shl#I#_add : PatFrag <
+  (ops node:$src0, node:$src1),
+  (add (shl_oneuse $src0, (i32 I)), $src1)> {
+  // FIXME: Poor substitute for disabling pattern in SelectionDAG
+  let PredicateCode = [{return false;}];
+  let GISelPredicateCode = [{return true;}];
+}
+}
+
 multiclass SIAtomicM0Glue2 <string op_name, bit is_amdgpu = 0,
                             SDTypeProfile tc = SDTAtomic2,
                             bit IsInt = 1> {
