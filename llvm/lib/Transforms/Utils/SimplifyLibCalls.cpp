@@ -138,28 +138,6 @@ static Value *convertStrToNumber(CallInst *CI, StringRef &Str, int64_t Base) {
   return ConstantInt::get(CI->getType(), Result);
 }
 
-static bool isLocallyOpenedFile(Value *File, CallInst *CI,
-                                const TargetLibraryInfo *TLI) {
-  CallInst *FOpen = dyn_cast<CallInst>(File);
-  if (!FOpen)
-    return false;
-
-  Function *InnerCallee = FOpen->getCalledFunction();
-  if (!InnerCallee)
-    return false;
-
-  LibFunc Func;
-  if (!TLI->getLibFunc(*InnerCallee, Func) || !TLI->has(Func) ||
-      Func != LibFunc_fopen)
-    return false;
-
-  inferLibFuncAttributes(*CI->getCalledFunction(), *TLI);
-  if (PointerMayBeCaptured(File, true, true))
-    return false;
-
-  return true;
-}
-
 static bool isOnlyUsedInComparisonWithZero(Value *V) {
   for (User *U : V->users()) {
     if (ICmpInst *IC = dyn_cast<ICmpInst>(U))
@@ -2754,11 +2732,6 @@ Value *LibCallSimplifier::optimizeFWrite(CallInst *CI, IRBuilderBase &B) {
     }
   }
 
-  if (isLocallyOpenedFile(CI->getArgOperand(3), CI, TLI))
-    return emitFWriteUnlocked(CI->getArgOperand(0), CI->getArgOperand(1),
-                              CI->getArgOperand(2), CI->getArgOperand(3), B, DL,
-                              TLI);
-
   return nullptr;
 }
 
@@ -2773,15 +2746,9 @@ Value *LibCallSimplifier::optimizeFPuts(CallInst *CI, IRBuilderBase &B) {
   if (OptForSize)
     return nullptr;
 
-  // Check if has any use
-  if (!CI->use_empty()) {
-    if (isLocallyOpenedFile(CI->getArgOperand(1), CI, TLI))
-      return emitFPutSUnlocked(CI->getArgOperand(0), CI->getArgOperand(1), B,
-                               TLI);
-    else
-      // We can't optimize if return value is used.
-      return nullptr;
-  }
+  // We can't optimize if return value is used.
+  if (!CI->use_empty())
+    return nullptr;
 
   // fputs(s,F) --> fwrite(s,strlen(s),1,F)
   uint64_t Len = GetStringLength(CI->getArgOperand(0));
@@ -2793,40 +2760,6 @@ Value *LibCallSimplifier::optimizeFPuts(CallInst *CI, IRBuilderBase &B) {
       CI->getArgOperand(0),
       ConstantInt::get(DL.getIntPtrType(CI->getContext()), Len - 1),
       CI->getArgOperand(1), B, DL, TLI);
-}
-
-Value *LibCallSimplifier::optimizeFPutc(CallInst *CI, IRBuilderBase &B) {
-  optimizeErrorReporting(CI, B, 1);
-
-  if (isLocallyOpenedFile(CI->getArgOperand(1), CI, TLI))
-    return emitFPutCUnlocked(CI->getArgOperand(0), CI->getArgOperand(1), B,
-                             TLI);
-
-  return nullptr;
-}
-
-Value *LibCallSimplifier::optimizeFGetc(CallInst *CI, IRBuilderBase &B) {
-  if (isLocallyOpenedFile(CI->getArgOperand(0), CI, TLI))
-    return emitFGetCUnlocked(CI->getArgOperand(0), B, TLI);
-
-  return nullptr;
-}
-
-Value *LibCallSimplifier::optimizeFGets(CallInst *CI, IRBuilderBase &B) {
-  if (isLocallyOpenedFile(CI->getArgOperand(2), CI, TLI))
-    return emitFGetSUnlocked(CI->getArgOperand(0), CI->getArgOperand(1),
-                             CI->getArgOperand(2), B, TLI);
-
-  return nullptr;
-}
-
-Value *LibCallSimplifier::optimizeFRead(CallInst *CI, IRBuilderBase &B) {
-  if (isLocallyOpenedFile(CI->getArgOperand(3), CI, TLI))
-    return emitFReadUnlocked(CI->getArgOperand(0), CI->getArgOperand(1),
-                             CI->getArgOperand(2), CI->getArgOperand(3), B, DL,
-                             TLI);
-
-  return nullptr;
 }
 
 Value *LibCallSimplifier::optimizePuts(CallInst *CI, IRBuilderBase &B) {
@@ -3162,16 +3095,8 @@ Value *LibCallSimplifier::optimizeCall(CallInst *CI, IRBuilderBase &Builder) {
       return optimizeFPrintF(CI, Builder);
     case LibFunc_fwrite:
       return optimizeFWrite(CI, Builder);
-    case LibFunc_fread:
-      return optimizeFRead(CI, Builder);
     case LibFunc_fputs:
       return optimizeFPuts(CI, Builder);
-    case LibFunc_fgets:
-      return optimizeFGets(CI, Builder);
-    case LibFunc_fputc:
-      return optimizeFPutc(CI, Builder);
-    case LibFunc_fgetc:
-      return optimizeFGetc(CI, Builder);
     case LibFunc_puts:
       return optimizePuts(CI, Builder);
     case LibFunc_perror:
