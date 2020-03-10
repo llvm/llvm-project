@@ -382,8 +382,8 @@ void FuchsiaHandleChecker::checkPostCall(const CallEvent &Call,
   }
   const NoteTag *T = nullptr;
   if (!Notes.empty()) {
-    T = C.getNoteTag(
-        [this, Notes{std::move(Notes)}](BugReport &BR) -> std::string {
+    T = C.getNoteTag([this, Notes{std::move(Notes)}](
+                         PathSensitiveBugReport &BR) -> std::string {
           if (&BR.getBugType() != &UseAfterReleaseBugType &&
               &BR.getBugType() != &LeakBugType &&
               &BR.getBugType() != &DoubleReleaseBugType)

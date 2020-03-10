@@ -33868,24 +33868,46 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
   // TODO - handle 128/256-bit lane shuffles of 512-bit vectors.
 
   // Handle 128-bit lane shuffles of 256-bit vectors.
-  // If we have AVX2, prefer to use VPERMQ/VPERMPD for unary shuffles unless
-  // we need to use the zeroing feature.
-  // TODO - this should support binary shuffles.
-  if (UnaryShuffle && RootVT.is256BitVector() && NumBaseMaskElts == 2 &&
-      !(Subtarget.hasAVX2() && BaseMask[0] >= -1 && BaseMask[1] >= -1) &&
-      !isSequentialOrUndefOrZeroInRange(BaseMask, 0, 2, 0)) {
+  if (RootVT.is256BitVector() && NumBaseMaskElts == 2) {
     if (Depth == 0 && Root.getOpcode() == X86ISD::VPERM2X128)
       return SDValue(); // Nothing to do!
     MVT ShuffleVT = (FloatDomain ? MVT::v4f64 : MVT::v4i64);
-    unsigned PermMask = 0;
-    PermMask |= ((BaseMask[0] < 0 ? 0x8 : (BaseMask[0] & 1)) << 0);
-    PermMask |= ((BaseMask[1] < 0 ? 0x8 : (BaseMask[1] & 1)) << 4);
 
-    Res = DAG.getBitcast(ShuffleVT, V1);
-    Res = DAG.getNode(X86ISD::VPERM2X128, DL, ShuffleVT, Res,
-                      DAG.getUNDEF(ShuffleVT),
-                      DAG.getTargetConstant(PermMask, DL, MVT::i8));
-    return DAG.getBitcast(RootVT, Res);
+    // If we have AVX2, prefer to use VPERMQ/VPERMPD for unary shuffles unless
+    // we need to use the zeroing feature.
+    if (UnaryShuffle &&
+        !(Subtarget.hasAVX2() && isUndefOrInRange(BaseMask, 0, 2)) &&
+        !isSequentialOrUndefOrZeroInRange(BaseMask, 0, 2, 0)) {
+      unsigned PermMask = 0;
+      PermMask |= ((BaseMask[0] < 0 ? 0x8 : (BaseMask[0] & 1)) << 0);
+      PermMask |= ((BaseMask[1] < 0 ? 0x8 : (BaseMask[1] & 1)) << 4);
+
+      Res = DAG.getBitcast(ShuffleVT, V1);
+      Res = DAG.getNode(X86ISD::VPERM2X128, DL, ShuffleVT, Res,
+                        DAG.getUNDEF(ShuffleVT),
+                        DAG.getTargetConstant(PermMask, DL, MVT::i8));
+      return DAG.getBitcast(RootVT, Res);
+    }
+
+    // TODO - handle AVX512VL cases with X86ISD::SHUF128.
+    if (!UnaryShuffle && !IsEVEXShuffle) {
+      assert(llvm::all_of(BaseMask, [](int M) { return 0 <= M && M < 4; }) &&
+             "Unexpected shuffle sentinel value");
+      // Prefer blends to X86ISD::VPERM2X128.
+      if (!((BaseMask[0] == 0 && BaseMask[1] == 3) ||
+            (BaseMask[0] == 2 && BaseMask[1] == 1))) {
+        unsigned PermMask = 0;
+        PermMask |= ((BaseMask[0] & 3) << 0);
+        PermMask |= ((BaseMask[1] & 3) << 4);
+
+        Res = DAG.getNode(
+            X86ISD::VPERM2X128, DL, ShuffleVT,
+            DAG.getBitcast(ShuffleVT, isInRange(BaseMask[0], 0, 2) ? V1 : V2),
+            DAG.getBitcast(ShuffleVT, isInRange(BaseMask[1], 0, 2) ? V1 : V2),
+            DAG.getTargetConstant(PermMask, DL, MVT::i8));
+        return DAG.getBitcast(RootVT, Res);
+      }
+    }
   }
 
   // For masks that have been widened to 128-bit elements or more,

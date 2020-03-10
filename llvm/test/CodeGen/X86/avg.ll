@@ -377,21 +377,21 @@ define void @avg_v48i8(<48 x i8>* %a, <48 x i8>* %b) nounwind {
 ;
 ; AVX2-LABEL: avg_v48i8:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpbroadcastq 8(%rdi), %xmm0
+; AVX2-NEXT:    vpbroadcastq 24(%rdi), %xmm0
 ; AVX2-NEXT:    vpmovzxbd {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
 ; AVX2-NEXT:    vpmovzxbd {{.*#+}} ymm1 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero,mem[4],zero,zero,zero,mem[5],zero,zero,zero,mem[6],zero,zero,zero,mem[7],zero,zero,zero
-; AVX2-NEXT:    vpbroadcastq 24(%rdi), %xmm2
+; AVX2-NEXT:    vpbroadcastq 8(%rdi), %xmm2
 ; AVX2-NEXT:    vpmovzxbd {{.*#+}} ymm2 = xmm2[0],zero,zero,zero,xmm2[1],zero,zero,zero,xmm2[2],zero,zero,zero,xmm2[3],zero,zero,zero,xmm2[4],zero,zero,zero,xmm2[5],zero,zero,zero,xmm2[6],zero,zero,zero,xmm2[7],zero,zero,zero
 ; AVX2-NEXT:    vpmovzxbd {{.*#+}} ymm3 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero,mem[4],zero,zero,zero,mem[5],zero,zero,zero,mem[6],zero,zero,zero,mem[7],zero,zero,zero
 ; AVX2-NEXT:    vpbroadcastq 40(%rdi), %xmm4
 ; AVX2-NEXT:    vpmovzxbd {{.*#+}} ymm4 = xmm4[0],zero,zero,zero,xmm4[1],zero,zero,zero,xmm4[2],zero,zero,zero,xmm4[3],zero,zero,zero,xmm4[4],zero,zero,zero,xmm4[5],zero,zero,zero,xmm4[6],zero,zero,zero,xmm4[7],zero,zero,zero
 ; AVX2-NEXT:    vpmovzxbd {{.*#+}} ymm5 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero,mem[4],zero,zero,zero,mem[5],zero,zero,zero,mem[6],zero,zero,zero,mem[7],zero,zero,zero
-; AVX2-NEXT:    vpbroadcastq 8(%rsi), %xmm6
+; AVX2-NEXT:    vpbroadcastq 24(%rsi), %xmm6
 ; AVX2-NEXT:    vpmovzxbd {{.*#+}} ymm6 = xmm6[0],zero,zero,zero,xmm6[1],zero,zero,zero,xmm6[2],zero,zero,zero,xmm6[3],zero,zero,zero,xmm6[4],zero,zero,zero,xmm6[5],zero,zero,zero,xmm6[6],zero,zero,zero,xmm6[7],zero,zero,zero
 ; AVX2-NEXT:    vpaddd %ymm6, %ymm0, %ymm0
 ; AVX2-NEXT:    vpmovzxbd {{.*#+}} ymm6 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero,mem[4],zero,zero,zero,mem[5],zero,zero,zero,mem[6],zero,zero,zero,mem[7],zero,zero,zero
 ; AVX2-NEXT:    vpaddd %ymm6, %ymm1, %ymm1
-; AVX2-NEXT:    vpbroadcastq 24(%rsi), %xmm6
+; AVX2-NEXT:    vpbroadcastq 8(%rsi), %xmm6
 ; AVX2-NEXT:    vpmovzxbd {{.*#+}} ymm6 = xmm6[0],zero,zero,zero,xmm6[1],zero,zero,zero,xmm6[2],zero,zero,zero,xmm6[3],zero,zero,zero,xmm6[4],zero,zero,zero,xmm6[5],zero,zero,zero,xmm6[6],zero,zero,zero,xmm6[7],zero,zero,zero
 ; AVX2-NEXT:    vpaddd %ymm6, %ymm2, %ymm2
 ; AVX2-NEXT:    vpmovzxbd {{.*#+}} ymm6 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero,mem[4],zero,zero,zero,mem[5],zero,zero,zero,mem[6],zero,zero,zero,mem[7],zero,zero,zero
@@ -423,10 +423,9 @@ define void @avg_v48i8(<48 x i8>* %a, <48 x i8>* %b) nounwind {
 ; AVX2-NEXT:    vinserti128 $1, %xmm2, %ymm3, %ymm2
 ; AVX2-NEXT:    vpackusdw %ymm6, %ymm2, %ymm2
 ; AVX2-NEXT:    vpand %ymm1, %ymm2, %ymm2
-; AVX2-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm3
-; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; AVX2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm2[4,5,6,7]
-; AVX2-NEXT:    vpackuswb %ymm0, %ymm3, %ymm0
+; AVX2-NEXT:    vperm2i128 {{.*#+}} ymm3 = ymm2[2,3],ymm0[2,3]
+; AVX2-NEXT:    vinserti128 $1, %xmm0, %ymm2, %ymm0
+; AVX2-NEXT:    vpackuswb %ymm3, %ymm0, %ymm0
 ; AVX2-NEXT:    vperm2i128 {{.*#+}} ymm2 = ymm5[2,3],ymm4[2,3]
 ; AVX2-NEXT:    vinserti128 $1, %xmm4, %ymm5, %ymm3
 ; AVX2-NEXT:    vpackusdw %ymm2, %ymm3, %ymm2
