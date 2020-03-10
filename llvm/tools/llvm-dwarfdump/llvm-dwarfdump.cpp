@@ -278,8 +278,8 @@ static bool filterArch(ObjectFile &Obj) {
   return false;
 }
 
-using HandlerFn = std::function<bool(ObjectFile &, DWARFContext &DICtx, Twine,
-                                     raw_ostream &)>;
+using HandlerFn = std::function<bool(ObjectFile &, DWARFContext &DICtx,
+                                     const Twine &, raw_ostream &)>;
 
 /// Print only DIEs that have a certain name.
 static bool filterByName(const StringSet<> &Names, DWARFDie Die,
@@ -411,10 +411,10 @@ static bool lookup(ObjectFile &Obj, DWARFContext &DICtx, uint64_t Address,
 }
 
 bool collectStatsForObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
-                               Twine Filename, raw_ostream &OS);
+                               const Twine &Filename, raw_ostream &OS);
 
-static bool dumpObjectFile(ObjectFile &Obj, DWARFContext &DICtx, Twine Filename,
-                           raw_ostream &OS) {
+static bool dumpObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
+                           const Twine &Filename, raw_ostream &OS) {
   logAllUnhandledErrors(DICtx.loadRegisterInfo(Obj), errs(),
                         Filename.str() + ": ");
   // The UUID dump already contains all the same information.
@@ -448,7 +448,7 @@ static bool dumpObjectFile(ObjectFile &Obj, DWARFContext &DICtx, Twine Filename,
 }
 
 static bool verifyObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
-                             Twine Filename, raw_ostream &OS) {
+                             const Twine &Filename, raw_ostream &OS) {
   // Verify the DWARF and exit with non-zero exit status if verification
   // fails.
   raw_ostream &stream = Quiet ? nulls() : OS;
