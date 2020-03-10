@@ -836,12 +836,12 @@ def LLVM_MatrixMultiplyOp
     : LLVM_OneResultOp<"intr.matrix.multiply">,
       Arguments<(
         ins LLVM_Type:$lhs, LLVM_Type:$rhs,
-            I32Attr:$lhs_rows, I32Attr:$lhs_columns, I32Attr:$rhs_rows)> {
+            I32Attr:$lhs_rows, I32Attr:$lhs_columns, I32Attr:$rhs_columns)> {
   string llvmBuilder = [{
     llvm::MatrixBuilder<decltype(builder)> mb(builder);
     $res = mb.CreateMatrixMultiply(
       $lhs, $rhs, $lhs_rows.getZExtValue(), $lhs_columns.getZExtValue(),
-      $rhs_rows.getZExtValue());
+      $rhs_columns.getZExtValue());
   }];
   let assemblyFormat = "$lhs `,` $rhs attr-dict "
     "`:` `(` type($lhs) `,` type($rhs) `)` `->` type($res)";
