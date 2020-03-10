@@ -24,8 +24,8 @@ GlobalNamesInHeadersCheck::GlobalNamesInHeadersCheck(StringRef Name,
     : ClangTidyCheck(Name, Context),
       RawStringHeaderFileExtensions(Options.getLocalOrGlobal(
           "HeaderFileExtensions", utils::defaultHeaderFileExtensions())) {
-  if (!utils::parseHeaderFileExtensions(RawStringHeaderFileExtensions,
-                                        HeaderFileExtensions, ',')) {
+  if (!utils::parseFileExtensions(RawStringHeaderFileExtensions,
+                                  HeaderFileExtensions, ',')) {
     llvm::errs() << "Invalid header file extension: "
                  << RawStringHeaderFileExtensions << "\n";
   }

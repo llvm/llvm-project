@@ -1,4 +1,4 @@
-//===--- HeaderFileExtensionsUtils.h - clang-tidy----------------*- C++ -*-===//
+//===--- FileExtensionsUtils.h - clang-tidy --------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,35 +18,31 @@ namespace clang {
 namespace tidy {
 namespace utils {
 
-typedef llvm::SmallSet<llvm::StringRef, 5> HeaderFileExtensionsSet;
+typedef llvm::SmallSet<llvm::StringRef, 5> FileExtensionsSet;
 
 /// Checks whether expansion location of \p Loc is in header file.
-bool isExpansionLocInHeaderFile(
-    SourceLocation Loc, const SourceManager &SM,
-    const HeaderFileExtensionsSet &HeaderFileExtensions);
+bool isExpansionLocInHeaderFile(SourceLocation Loc, const SourceManager &SM,
+                                const FileExtensionsSet &HeaderFileExtensions);
 
 /// Checks whether presumed location of \p Loc is in header file.
-bool isPresumedLocInHeaderFile(
-    SourceLocation Loc, SourceManager &SM,
-    const HeaderFileExtensionsSet &HeaderFileExtensions);
+bool isPresumedLocInHeaderFile(SourceLocation Loc, SourceManager &SM,
+                               const FileExtensionsSet &HeaderFileExtensions);
 
 /// Checks whether spelling location of \p Loc is in header file.
-bool isSpellingLocInHeaderFile(
-    SourceLocation Loc, SourceManager &SM,
-    const HeaderFileExtensionsSet &HeaderFileExtensions);
+bool isSpellingLocInHeaderFile(SourceLocation Loc, SourceManager &SM,
+                               const FileExtensionsSet &HeaderFileExtensions);
 
 /// Returns recommended default value for the list of header file
 /// extensions.
 inline StringRef defaultHeaderFileExtensions() { return ",h,hh,hpp,hxx"; }
 
 /// Parses header file extensions from a semicolon-separated list.
-bool parseHeaderFileExtensions(StringRef AllHeaderFileExtensions,
-                               HeaderFileExtensionsSet &HeaderFileExtensions,
-                               char delimiter);
+bool parseFileExtensions(StringRef AllFileExtensions,
+                         FileExtensionsSet &FileExtensions, char Delimiter);
 
-/// Decides whether a file has a header file extension.
-bool isHeaderFileExtension(StringRef FileName,
-                           const HeaderFileExtensionsSet &HeaderFileExtensions);
+/// Decides whether a file has one of the specified file extensions.
+bool isFileExtension(StringRef FileName,
+                     const FileExtensionsSet &FileExtensions);
 
 } // namespace utils
 } // namespace tidy
