@@ -137,16 +137,6 @@ LogicalResult mlir::getFlattenedAffineExprs(
                                    localVarCst);
 }
 
-MutableIntegerSet::MutableIntegerSet(IntegerSet set, MLIRContext *context)
-    : numDims(set.getNumDims()), numSymbols(set.getNumSymbols()) {
-  // TODO(bondhugula)
-}
-
-// Universal set.
-MutableIntegerSet::MutableIntegerSet(unsigned numDims, unsigned numSymbols,
-                                     MLIRContext *context)
-    : numDims(numDims), numSymbols(numSymbols) {}
-
 //===----------------------------------------------------------------------===//
 // FlatAffineConstraints.
 //===----------------------------------------------------------------------===//
