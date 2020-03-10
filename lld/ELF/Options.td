@@ -374,6 +374,8 @@ defm undefined: Eq<"undefined", "Force undefined symbol during linking">,
 defm undefined_glob: Eq<"undefined-glob", "Force undefined symbol during linking">,
   MetaVarName<"<pattern>">;
 
+def unique: F<"unique">, HelpText<"Creates a separate output section for every orphan input section">;
+
 defm unresolved_symbols:
   Eq<"unresolved-symbols", "Determine how to handle unresolved symbols">;
 
