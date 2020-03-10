@@ -64,6 +64,9 @@ static llvm::cl::opt<std::string>
           llvm::cl::desc("The language to parse (default: c++)"),
           llvm::cl::init("c++"));
 
+static llvm::cl::opt<bool> ObjCARC("objc-arc", llvm::cl::init(false),
+                                   llvm::cl::desc("Emable ObjC ARC"));
+
 static llvm::cl::opt<bool> DumpAST("dump-ast", llvm::cl::init(false),
                                    llvm::cl::desc("Dump combined AST"));
 
@@ -183,6 +186,8 @@ std::unique_ptr<CompilerInstance> BuildCompilerInstance() {
       Inv->getLangOpts()->ObjC = 1;
     }
   }
+  Inv->getLangOpts()->ObjCAutoRefCount = ObjCARC;
+
   Inv->getLangOpts()->Bool = true;
   Inv->getLangOpts()->WChar = true;
   Inv->getLangOpts()->Blocks = true;

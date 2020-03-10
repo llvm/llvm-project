@@ -659,7 +659,21 @@ AggExprEmitter::VisitCompoundLiteralExpr(CompoundLiteralExpr *E) {
   }
 
   AggValueSlot Slot = EnsureSlot(E->getType());
+
+  // Block-scope compound literals are destroyed at the end of the enclosing
+  // scope in C.
+  bool Destruct =
+      !CGF.getLangOpts().CPlusPlus && !Slot.isExternallyDestructed();
+  if (Destruct)
+    Slot.setExternallyDestructed();
+
   CGF.EmitAggExpr(E->getInitializer(), Slot);
+
+  if (Destruct)
+    if (QualType::DestructionKind DtorKind = E->getType().isDestructedType())
+      CGF.pushLifetimeExtendedDestroy(
+          CGF.getCleanupKind(DtorKind), Slot.getAddress(), E->getType(),
+          CGF.getDestroyer(DtorKind), DtorKind & EHCleanup);
 }
 
 /// Attempt to look through various unimportant expressions to find a

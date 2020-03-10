@@ -5543,6 +5543,8 @@ def note_enters_block_captures_weak : Note<
 def note_enters_block_captures_non_trivial_c_struct : Note<
   "jump enters lifetime of block which captures a C struct that is non-trivial "
   "to destroy">;
+def note_enters_compound_literal_scope : Note<
+  "jump enters lifetime of a compound literal that is non-trivial to destruct">;
 
 def note_exits_cleanup : Note<
   "jump exits scope of variable with __attribute__((cleanup))">;
@@ -5586,6 +5588,8 @@ def note_exits_block_captures_weak : Note<
 def note_exits_block_captures_non_trivial_c_struct : Note<
   "jump exits lifetime of block which captures a C struct that is non-trivial "
   "to destroy">;
+def note_exits_compound_literal_scope : Note<
+  "jump exits lifetime of a compound literal that is non-trivial to destruct">;
 
 def err_func_returning_qualified_void : ExtWarn<
   "function cannot return qualified void type %0">,

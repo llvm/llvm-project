@@ -6251,13 +6251,23 @@ Sema::BuildCompoundLiteralExpr(SourceLocation LParenLoc, TypeSourceInfo *TInfo,
     return ExprError();
   }
 
-  // Compound literals that have automatic storage duration are destroyed at
-  // the end of the scope. Emit diagnostics if it is or contains a C union type
-  // that is non-trivial to destruct.
-  if (!isFileScope)
+  if (!isFileScope && !getLangOpts().CPlusPlus) {
+    // Compound literals that have automatic storage duration are destroyed at
+    // the end of the scope in C; in C++, they're just temporaries.
+
+    // Emit diagnostics if it is or contains a C union type that is non-trivial
+    // to destruct.
     if (E->getType().hasNonTrivialToPrimitiveDestructCUnion())
       checkNonTrivialCUnion(E->getType(), E->getExprLoc(),
                             NTCUC_CompoundLiteral, NTCUK_Destruct);
+
+    // Diagnose jumps that enter or exit the lifetime of the compound literal.
+    if (literalType.isDestructedType()) {
+      Cleanup.setExprNeedsCleanups(true);
+      ExprCleanupObjects.push_back(E);
+      getCurFunction()->setHasBranchProtectedScope();
+    }
+  }
 
   if (E->getType().hasNonTrivialToPrimitiveDefaultInitializeCUnion() ||
       E->getType().hasNonTrivialToPrimitiveCopyCUnion())

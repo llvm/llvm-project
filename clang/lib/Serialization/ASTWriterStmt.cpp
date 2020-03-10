@@ -1721,8 +1721,15 @@ void ASTStmtWriter::VisitCXXPseudoDestructorExpr(CXXPseudoDestructorExpr *E) {
 void ASTStmtWriter::VisitExprWithCleanups(ExprWithCleanups *E) {
   VisitExpr(E);
   Record.push_back(E->getNumObjects());
-  for (unsigned i = 0, e = E->getNumObjects(); i != e; ++i)
-    Record.AddDeclRef(E->getObject(i));
+  for (auto &Obj : E->getObjects()) {
+    if (auto *BD = Obj.dyn_cast<BlockDecl *>()) {
+      Record.push_back(serialization::COK_Block);
+      Record.AddDeclRef(BD);
+    } else if (auto *CLE = Obj.dyn_cast<CompoundLiteralExpr *>()) {
+      Record.push_back(serialization::COK_CompoundLiteral);
+      Record.AddStmt(CLE);
+    }
+  }
 
   Record.push_back(E->cleanupsHaveSideEffects());
   Record.AddStmt(E->getSubExpr());

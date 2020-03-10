@@ -448,6 +448,23 @@ void TextNodeDumper::dumpAccessSpecifier(AccessSpecifier AS) {
   }
 }
 
+void TextNodeDumper::dumpCleanupObject(
+    const ExprWithCleanups::CleanupObject &C) {
+  if (auto *BD = C.dyn_cast<BlockDecl *>())
+    dumpDeclRef(BD, "cleanup");
+  else if (auto *CLE = C.dyn_cast<CompoundLiteralExpr *>())
+    AddChild([=] {
+      OS << "cleanup ";
+      {
+        ColorScope Color(OS, ShowColors, StmtColor);
+        OS << CLE->getStmtClassName();
+      }
+      dumpPointer(CLE);
+    });
+  else
+    llvm_unreachable("unexpected cleanup type");
+}
+
 void TextNodeDumper::dumpDeclRef(const Decl *D, StringRef Label) {
   if (!D)
     return;
@@ -950,7 +967,7 @@ void TextNodeDumper::VisitMaterializeTemporaryExpr(
 
 void TextNodeDumper::VisitExprWithCleanups(const ExprWithCleanups *Node) {
   for (unsigned i = 0, e = Node->getNumObjects(); i != e; ++i)
-    dumpDeclRef(Node->getObject(i), "cleanup");
+    dumpCleanupObject(Node->getObject(i));
 }
 
 void TextNodeDumper::VisitSizeOfPackExpr(const SizeOfPackExpr *Node) {
