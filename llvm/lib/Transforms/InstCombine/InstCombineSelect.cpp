@@ -338,11 +338,7 @@ Instruction *InstCombiner::foldSelectOpOp(SelectInst &SI, Instruction *TI,
   if (match(TI, m_FNeg(m_Value(X))) && match(FI, m_FNeg(m_Value(Y))) &&
       (TI->hasOneUse() || FI->hasOneUse())) {
     Value *NewSel = Builder.CreateSelect(Cond, X, Y, SI.getName() + ".v", &SI);
-    // TODO: Remove the hack for the binop form when the unary op is optimized
-    //       properly with all IR passes.
-    if (TI->getOpcode() != Instruction::FNeg)
-      return UnaryOperator::CreateFNegFMF(NewSel, cast<BinaryOperator>(TI));
-    return UnaryOperator::CreateFNeg(NewSel);
+    return UnaryOperator::CreateFNegFMF(NewSel, TI);
   }
 
   // Only handle binary operators (including two-operand getelementptr) with
