@@ -12,3 +12,8 @@ set(LLVM_TARGET_DEFINITIONS InferTypeOpInterface.td)
 mlir_tablegen(InferTypeOpInterface.h.inc -gen-op-interface-decls)
 mlir_tablegen(InferTypeOpInterface.cpp.inc -gen-op-interface-defs)
 add_public_tablegen_target(MLIRInferTypeOpInterfaceIncGen)
+
+set(LLVM_TARGET_DEFINITIONS SideEffects.td)
+mlir_tablegen(SideEffectInterfaces.h.inc -gen-op-interface-decls)
+mlir_tablegen(SideEffectInterfaces.cpp.inc -gen-op-interface-defs)
+add_public_tablegen_target(MLIRSideEffectOpInterfacesIncGen)

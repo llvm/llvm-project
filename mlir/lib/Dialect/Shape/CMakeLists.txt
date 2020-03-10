@@ -8,4 +8,5 @@ add_mlir_dialect_library(MLIRShape
 add_dependencies(MLIRShape MLIRShapeOpsIncGen LLVMSupport)
 target_link_libraries(MLIRShape
   PUBLIC
+  MLIRSideEffects
   LLVMSupport)

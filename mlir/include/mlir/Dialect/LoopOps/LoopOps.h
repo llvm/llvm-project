@@ -17,6 +17,7 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
+#include "mlir/Interfaces/SideEffects.h"
 #include "mlir/Transforms/LoopLikeInterface.h"
 
 namespace mlir {
