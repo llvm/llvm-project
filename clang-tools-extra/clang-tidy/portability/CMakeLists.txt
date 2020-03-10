@@ -2,6 +2,7 @@ set(LLVM_LINK_COMPONENTS support)
 
 add_clang_library(clangTidyPortabilityModule
   PortabilityTidyModule.cpp
+  RestrictSystemIncludesCheck.cpp
   SIMDIntrinsicsCheck.cpp
 
   LINK_LIBS

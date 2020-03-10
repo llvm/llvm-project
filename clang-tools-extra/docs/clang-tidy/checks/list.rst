@@ -155,7 +155,6 @@ Clang-Tidy Checks
    `fuchsia-default-arguments-declarations <fuchsia-default-arguments-declarations.html>`_, "Yes"
    `fuchsia-multiple-inheritance <fuchsia-multiple-inheritance.html>`_,
    `fuchsia-overloaded-operator <fuchsia-overloaded-operator.html>`_,
-   `fuchsia-restrict-system-includes <fuchsia-restrict-system-includes.html>`_, "Yes"
    `fuchsia-statically-constructed-objects <fuchsia-statically-constructed-objects.html>`_,
    `fuchsia-trailing-return <fuchsia-trailing-return.html>`_,
    `fuchsia-virtual-inheritance <fuchsia-virtual-inheritance.html>`_,
@@ -256,6 +255,7 @@ Clang-Tidy Checks
    `performance-type-promotion-in-math-fn <performance-type-promotion-in-math-fn.html>`_, "Yes"
    `performance-unnecessary-copy-initialization <performance-unnecessary-copy-initialization.html>`_,
    `performance-unnecessary-value-param <performance-unnecessary-value-param.html>`_, "Yes"
+   `portability-restrict-system-includes <portability-restrict-system-includes.html>`_, "Yes"
    `portability-simd-intrinsics <portability-simd-intrinsics.html>`_,
    `readability-avoid-const-params-in-decls <readability-avoid-const-params-in-decls.html>`_,
    `readability-braces-around-statements <readability-braces-around-statements.html>`_, "Yes"
