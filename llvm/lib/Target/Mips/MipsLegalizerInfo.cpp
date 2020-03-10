@@ -26,7 +26,7 @@ struct TypesAndMemOps {
 
 // Assumes power of 2 memory size. Subtargets that have only naturally-aligned
 // memory access need to perform additional legalization here.
-bool isUnalignedMemmoryAccess(uint64_t MemSize, uint64_t AlignInBits) {
+static bool isUnalignedMemmoryAccess(uint64_t MemSize, uint64_t AlignInBits) {
   assert(isPowerOf2_64(MemSize) && "Expected power of 2 memory size");
   assert(isPowerOf2_64(AlignInBits) && "Expected power of 2 align");
   if (MemSize > AlignInBits)
