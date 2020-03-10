@@ -480,6 +480,44 @@ TEST_FUNC(zero_and_std_sign_extendi_op_i1_to_i8) {
   f.erase();
 }
 
+TEST_FUNC(operator_or) {
+  auto i1Type = IntegerType::get(/*width=*/1, &globalContext());
+  auto f = makeFunction("operator_or", {}, {i1Type, i1Type});
+
+  OpBuilder builder(f.getBody());
+  ScopedContext scope(builder, f.getLoc());
+
+  using op::operator||;
+  ValueHandle lhs(f.getArgument(0));
+  ValueHandle rhs(f.getArgument(1));
+  lhs || rhs;
+
+  // CHECK-LABEL: @operator_or
+  //       CHECK: [[ARG0:%.*]]: i1, [[ARG1:%.*]]: i1
+  //       CHECK: or [[ARG0]], [[ARG1]]
+  f.print(llvm::outs());
+  f.erase();
+}
+
+TEST_FUNC(operator_and) {
+  auto i1Type = IntegerType::get(/*width=*/1, &globalContext());
+  auto f = makeFunction("operator_and", {}, {i1Type, i1Type});
+
+  OpBuilder builder(f.getBody());
+  ScopedContext scope(builder, f.getLoc());
+
+  using op::operator&&;
+  ValueHandle lhs(f.getArgument(0));
+  ValueHandle rhs(f.getArgument(1));
+  lhs &&rhs;
+
+  // CHECK-LABEL: @operator_and
+  //       CHECK: [[ARG0:%.*]]: i1, [[ARG1:%.*]]: i1
+  //       CHECK: and [[ARG0]], [[ARG1]]
+  f.print(llvm::outs());
+  f.erase();
+}
+
 TEST_FUNC(select_op_i32) {
   using namespace edsc::op;
   auto indexType = IndexType::get(&globalContext());
