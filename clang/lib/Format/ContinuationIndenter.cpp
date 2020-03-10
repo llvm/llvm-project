@@ -1047,9 +1047,6 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
   if (NextNonComment->is(TT_ArraySubscriptLSquare)) {
     if (State.Stack.back().StartOfArraySubscripts != 0)
       return State.Stack.back().StartOfArraySubscripts;
-    else if (Style.isCSharp()) // C# allows `["key"] = value` inside object
-                               // initializers.
-      return State.Stack.back().Indent;
     return ContinuationIndent;
   }
 
