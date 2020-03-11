@@ -208,6 +208,14 @@ bool Attribute::doesAttrKindHaveArgument(Attribute::AttrKind AttrKind) {
          AttrKind == Attribute::DereferenceableOrNull;
 }
 
+bool Attribute::isExistingAttribute(StringRef Name) {
+  return StringSwitch<bool>(Name)
+#define GET_ATTR_NAMES
+#define ATTRIBUTE_ALL(ENUM_NAME, DISPLAY_NAME) .Case(#DISPLAY_NAME, true)
+#include "llvm/IR/Attributes.inc"
+      .Default(false);
+}
+
 //===----------------------------------------------------------------------===//
 // Attribute Accessor Methods
 //===----------------------------------------------------------------------===//

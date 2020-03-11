@@ -4320,6 +4320,29 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   switch (ID) {
   default:
     break;
+  case Intrinsic::assume: {
+    for (auto &Elem : Call.bundle_op_infos()) {
+      Assert(Attribute::isExistingAttribute(Elem.Tag->getKey()),
+             "tags must be valid attribute names");
+      Assert(Elem.End - Elem.Begin <= 2, "to many arguments");
+      Attribute::AttrKind Kind =
+          Attribute::getAttrKindFromName(Elem.Tag->getKey());
+      if (Kind == Attribute::None)
+        break;
+      if (Attribute::doesAttrKindHaveArgument(Kind)) {
+        Assert(Elem.End - Elem.Begin == 2,
+               "this attribute should have 2 arguments");
+        Assert(isa<ConstantInt>(Call.getOperand(Elem.Begin + 1)),
+               "the second argument should be a constant integral value");
+      } else if (isFuncOnlyAttr(Kind)) {
+        Assert((Elem.End - Elem.Begin) == 0, "this attribute has no argument");
+      } else if (!isFuncOrArgAttr(Kind)) {
+        Assert((Elem.End - Elem.Begin) == 1,
+               "this attribute should have one argument");
+      }
+    }
+    break;
+  }
   case Intrinsic::coro_id: {
     auto *InfoArg = Call.getArgOperand(3)->stripPointerCasts();
     if (isa<ConstantPointerNull>(InfoArg))
