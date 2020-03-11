@@ -7191,6 +7191,26 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, bool &ModifiedDT) {
     return false;
   }
 
+  if (FreezeInst *FI = dyn_cast<FreezeInst>(I)) {
+    // br(freeze(icmp a, const)) -> br(icmp (freeze a), const)
+    // This helps generate efficient conditional jumps.
+    if (ICmpInst *II = dyn_cast<ICmpInst>(FI->getOperand(0))) {
+      auto Op0 = II->getOperand(0), Op1 = II->getOperand(1);
+      bool Const0 = isa<ConstantInt>(Op0), Const1 = isa<ConstantInt>(Op1);
+      if (II->hasOneUse() && (Const0 || Const1)) {
+        if (!Const0 || !Const1) {
+          auto *F = new FreezeInst(Const0 ? Op1 : Op0, "", II);
+          F->takeName(FI);
+          II->setOperand(Const0 ? 1 : 0, F);
+        }
+        FI->replaceAllUsesWith(II);
+        FI->eraseFromParent();
+        return true;
+      }
+    }
+    return false;
+  }
+
   if (tryToSinkFreeOperands(I))
     return true;
 
