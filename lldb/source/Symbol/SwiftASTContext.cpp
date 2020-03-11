@@ -5134,6 +5134,13 @@ bool SwiftASTContext::DeclContextIsClassMethod(
 ////////////////////
 ///////////
 
+#ifndef NDEBUG
+bool SwiftASTContext::Verify(lldb::opaque_compiler_type_t type) {
+  // Check that type is a Swift type and belongs this AST context.
+  return !type || ToCompilerType(GetSwiftType(type)).GetTypeSystem() == this;
+}
+#endif
+
 bool SwiftASTContext::IsArrayType(void *type, CompilerType *element_type_ptr,
                                   uint64_t *size, bool *is_incomplete) {
   VALID_OR_RETURN(false);

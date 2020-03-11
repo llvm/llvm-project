@@ -421,6 +421,10 @@ public:
 
   // Tests
 
+#ifndef NDEBUG
+  bool Verify(lldb::opaque_compiler_type_t type) override;
+#endif
+  
   bool IsArrayType(void *type, CompilerType *element_type, uint64_t *size,
                    bool *is_incomplete) override;
 
