@@ -253,10 +253,6 @@ clang-format
           bar();
         });
 
-- The command line argument `-style=<string>` has been extended so that a specific
-  format file at location <format_file_path> can be selected. This is supported
-  via the syntax: `-style=file:<format_file_path>`.
-
 libclang
 --------
 
