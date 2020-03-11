@@ -19,6 +19,11 @@ __tsan_mutex_pre_signal
 __tsan_mutex_post_signal
 __tsan_mutex_pre_divert
 __tsan_mutex_post_divert
+__tsan_get_current_fiber
+__tsan_create_fiber
+__tsan_destroy_fiber
+__tsan_switch_to_fiber
+__tsan_set_fiber_name
 __ubsan_*
 Annotate*
 WTFAnnotate*
