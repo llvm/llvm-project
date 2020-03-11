@@ -207,10 +207,13 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
   // Funnel shifts.
   for (auto ShiftOp : {ISD::FSHL, ISD::FSHR}) {
+    // For slow shld targets we only lower for code size.
+    LegalizeAction ShiftDoubleAction = Subtarget.isSHLDSlow() ? Custom : Legal;
+
     setOperationAction(ShiftOp             , MVT::i16  , Custom);
-    setOperationAction(ShiftOp             , MVT::i32  , Custom);
+    setOperationAction(ShiftOp             , MVT::i32  , ShiftDoubleAction);
     if (Subtarget.is64Bit())
-      setOperationAction(ShiftOp           , MVT::i64  , Custom);
+      setOperationAction(ShiftOp           , MVT::i64  , ShiftDoubleAction);
   }
 
   if (!Subtarget.useSoftFloat()) {
@@ -18860,16 +18863,15 @@ static SDValue LowerFunnelShift(SDValue Op, const X86Subtarget &Subtarget,
   if (!OptForSize && Subtarget.isSHLDSlow())
     return SDValue();
 
-  if (IsFSHR)
-    std::swap(Op0, Op1);
-
   // i16 needs to modulo the shift amount, but i32/i64 have implicit modulo.
-  if (VT == MVT::i16)
+  if (VT == MVT::i16) {
     Amt = DAG.getNode(ISD::AND, DL, Amt.getValueType(), Amt,
                       DAG.getConstant(15, DL, Amt.getValueType()));
+    unsigned FSHOp = (IsFSHR ? X86ISD::FSHR : X86ISD::FSHL);
+    return DAG.getNode(FSHOp, DL, VT, Op0, Op1, Amt);
+  }
 
-  unsigned SHDOp = (IsFSHR ? X86ISD::SHRD : X86ISD::SHLD);
-  return DAG.getNode(SHDOp, DL, VT, Op0, Op1, Amt);
+  return Op;
 }
 
 // Try to use a packed vector operation to handle i64 on 32-bit targets when
@@ -29963,8 +29965,8 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
 #define NODE_NAME_CASE(NODE) case X86ISD::NODE: return "X86ISD::" #NODE;
   NODE_NAME_CASE(BSF)
   NODE_NAME_CASE(BSR)
-  NODE_NAME_CASE(SHLD)
-  NODE_NAME_CASE(SHRD)
+  NODE_NAME_CASE(FSHL)
+  NODE_NAME_CASE(FSHR)
   NODE_NAME_CASE(FAND)
   NODE_NAME_CASE(FANDN)
   NODE_NAME_CASE(FOR)

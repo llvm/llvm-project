@@ -582,16 +582,9 @@ define i32 @combine_fshr_load_i32(i32* %p) nounwind {
 define i64 @combine_fshr_load_i64(i64* %p) nounwind {
 ; X86-FAST-LABEL: combine_fshr_load_i64:
 ; X86-FAST:       # %bb.0:
-; X86-FAST-NEXT:    pushl %esi
-; X86-FAST-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-FAST-NEXT:    movzbl 11(%eax), %ecx
-; X86-FAST-NEXT:    movl 12(%eax), %esi
-; X86-FAST-NEXT:    movl 16(%eax), %edx
-; X86-FAST-NEXT:    shldl $8, %esi, %edx
-; X86-FAST-NEXT:    movl %esi, %eax
-; X86-FAST-NEXT:    shll $8, %eax
-; X86-FAST-NEXT:    orl %ecx, %eax
-; X86-FAST-NEXT:    popl %esi
+; X86-FAST-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-FAST-NEXT:    movl 11(%ecx), %eax
+; X86-FAST-NEXT:    movl 15(%ecx), %edx
 ; X86-FAST-NEXT:    retl
 ;
 ; X86-SLOW-LABEL: combine_fshr_load_i64:

@@ -143,8 +143,8 @@ def X86MFence : SDNode<"X86ISD::MFENCE", SDT_X86MEMBARRIER,
 
 def X86bsf     : SDNode<"X86ISD::BSF",      SDTUnaryArithWithFlags>;
 def X86bsr     : SDNode<"X86ISD::BSR",      SDTUnaryArithWithFlags>;
-def X86shld    : SDNode<"X86ISD::SHLD",     SDTIntShiftDOp>;
-def X86shrd    : SDNode<"X86ISD::SHRD",     SDTIntShiftDOp>;
+def X86fshl    : SDNode<"X86ISD::FSHL",     SDTIntShiftDOp>;
+def X86fshr    : SDNode<"X86ISD::FSHR",     SDTIntShiftDOp>;
 
 def X86cmp     : SDNode<"X86ISD::CMP" ,     SDTX86CmpTest>;
 def X86fcmp    : SDNode<"X86ISD::FCMP",     SDTX86FCmp>;
