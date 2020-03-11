@@ -11,9 +11,9 @@
 
 #include "clang/Basic/LLVM.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/SetVector.h"
 #include <cstddef>
 #include <vector>
 
