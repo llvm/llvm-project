@@ -5901,39 +5901,19 @@ body: |
     ; SI-LABEL: name: test_store_global_v11s16_align4
     ; SI: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; SI: [[DEF:%[0-9]+]]:_(<11 x s16>) = G_IMPLICIT_DEF
-    ; SI: [[EXTRACT:%[0-9]+]]:_(<8 x s16>) = G_EXTRACT [[DEF]](<11 x s16>), 0
-    ; SI: [[EXTRACT1:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[DEF]](<11 x s16>), 128
-    ; SI: G_STORE [[EXTRACT]](<8 x s16>), [[COPY]](p1) :: (store 16, addrspace 1)
-    ; SI: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-    ; SI: [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C]](s64)
-    ; SI: G_STORE [[EXTRACT1]](<3 x s16>), [[PTR_ADD]](p1) :: (store 6, align 16, addrspace 1)
+    ; SI: G_STORE [[DEF]](<11 x s16>), [[COPY]](p1) :: (store 20, align 16, addrspace 1)
     ; CI-LABEL: name: test_store_global_v11s16_align4
     ; CI: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; CI: [[DEF:%[0-9]+]]:_(<11 x s16>) = G_IMPLICIT_DEF
-    ; CI: [[EXTRACT:%[0-9]+]]:_(<8 x s16>) = G_EXTRACT [[DEF]](<11 x s16>), 0
-    ; CI: [[EXTRACT1:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[DEF]](<11 x s16>), 128
-    ; CI: G_STORE [[EXTRACT]](<8 x s16>), [[COPY]](p1) :: (store 16, addrspace 1)
-    ; CI: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-    ; CI: [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C]](s64)
-    ; CI: G_STORE [[EXTRACT1]](<3 x s16>), [[PTR_ADD]](p1) :: (store 6, align 16, addrspace 1)
+    ; CI: G_STORE [[DEF]](<11 x s16>), [[COPY]](p1) :: (store 20, align 16, addrspace 1)
     ; VI-LABEL: name: test_store_global_v11s16_align4
     ; VI: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; VI: [[DEF:%[0-9]+]]:_(<11 x s16>) = G_IMPLICIT_DEF
-    ; VI: [[EXTRACT:%[0-9]+]]:_(<8 x s16>) = G_EXTRACT [[DEF]](<11 x s16>), 0
-    ; VI: [[EXTRACT1:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[DEF]](<11 x s16>), 128
-    ; VI: G_STORE [[EXTRACT]](<8 x s16>), [[COPY]](p1) :: (store 16, addrspace 1)
-    ; VI: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-    ; VI: [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C]](s64)
-    ; VI: G_STORE [[EXTRACT1]](<3 x s16>), [[PTR_ADD]](p1) :: (store 6, align 16, addrspace 1)
+    ; VI: G_STORE [[DEF]](<11 x s16>), [[COPY]](p1) :: (store 20, align 16, addrspace 1)
     ; GFX9-LABEL: name: test_store_global_v11s16_align4
     ; GFX9: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; GFX9: [[DEF:%[0-9]+]]:_(<11 x s16>) = G_IMPLICIT_DEF
-    ; GFX9: [[EXTRACT:%[0-9]+]]:_(<8 x s16>) = G_EXTRACT [[DEF]](<11 x s16>), 0
-    ; GFX9: [[EXTRACT1:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[DEF]](<11 x s16>), 128
-    ; GFX9: G_STORE [[EXTRACT]](<8 x s16>), [[COPY]](p1) :: (store 16, addrspace 1)
-    ; GFX9: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-    ; GFX9: [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C]](s64)
-    ; GFX9: G_STORE [[EXTRACT1]](<3 x s16>), [[PTR_ADD]](p1) :: (store 6, align 16, addrspace 1)
+    ; GFX9: G_STORE [[DEF]](<11 x s16>), [[COPY]](p1) :: (store 20, align 16, addrspace 1)
     %0:_(p1) = COPY $vgpr0_vgpr1
     %1:_(<11 x s16>) = G_IMPLICIT_DEF
     G_STORE %1, %0 :: (store 20, align 16, addrspace 1)
@@ -5947,72 +5927,20 @@ body: |
 
     ; SI-LABEL: name: test_store_global_v12s16_align4
     ; SI: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; SI: [[DEF:%[0-9]+]]:_(<12 x s32>) = G_IMPLICIT_DEF
-    ; SI: [[UV:%[0-9]+]]:_(<2 x s32>), [[UV1:%[0-9]+]]:_(<2 x s32>), [[UV2:%[0-9]+]]:_(<2 x s32>), [[UV3:%[0-9]+]]:_(<2 x s32>), [[UV4:%[0-9]+]]:_(<2 x s32>), [[UV5:%[0-9]+]]:_(<2 x s32>) = G_UNMERGE_VALUES [[DEF]](<12 x s32>)
-    ; SI: [[TRUNC:%[0-9]+]]:_(<2 x s16>) = G_TRUNC [[UV]](<2 x s32>)
-    ; SI: [[TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_TRUNC [[UV1]](<2 x s32>)
-    ; SI: [[TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_TRUNC [[UV2]](<2 x s32>)
-    ; SI: [[TRUNC3:%[0-9]+]]:_(<2 x s16>) = G_TRUNC [[UV3]](<2 x s32>)
-    ; SI: [[TRUNC4:%[0-9]+]]:_(<2 x s16>) = G_TRUNC [[UV4]](<2 x s32>)
-    ; SI: [[TRUNC5:%[0-9]+]]:_(<2 x s16>) = G_TRUNC [[UV5]](<2 x s32>)
-    ; SI: [[CONCAT_VECTORS:%[0-9]+]]:_(<12 x s16>) = G_CONCAT_VECTORS [[TRUNC]](<2 x s16>), [[TRUNC1]](<2 x s16>), [[TRUNC2]](<2 x s16>), [[TRUNC3]](<2 x s16>), [[TRUNC4]](<2 x s16>), [[TRUNC5]](<2 x s16>)
-    ; SI: [[EXTRACT:%[0-9]+]]:_(<8 x s16>) = G_EXTRACT [[CONCAT_VECTORS]](<12 x s16>), 0
-    ; SI: [[EXTRACT1:%[0-9]+]]:_(<4 x s16>) = G_EXTRACT [[CONCAT_VECTORS]](<12 x s16>), 128
-    ; SI: G_STORE [[EXTRACT]](<8 x s16>), [[COPY]](p1) :: (store 16, addrspace 1)
-    ; SI: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-    ; SI: [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C]](s64)
-    ; SI: G_STORE [[EXTRACT1]](<4 x s16>), [[PTR_ADD]](p1) :: (store 8, align 16, addrspace 1)
+    ; SI: [[DEF:%[0-9]+]]:_(<12 x s16>) = G_IMPLICIT_DEF
+    ; SI: G_STORE [[DEF]](<12 x s16>), [[COPY]](p1) :: (store 20, align 16, addrspace 1)
     ; CI-LABEL: name: test_store_global_v12s16_align4
     ; CI: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; CI: [[DEF:%[0-9]+]]:_(<12 x s32>) = G_IMPLICIT_DEF
-    ; CI: [[UV:%[0-9]+]]:_(<2 x s32>), [[UV1:%[0-9]+]]:_(<2 x s32>), [[UV2:%[0-9]+]]:_(<2 x s32>), [[UV3:%[0-9]+]]:_(<2 x s32>), [[UV4:%[0-9]+]]:_(<2 x s32>), [[UV5:%[0-9]+]]:_(<2 x s32>) = G_UNMERGE_VALUES [[DEF]](<12 x s32>)
-    ; CI: [[TRUNC:%[0-9]+]]:_(<2 x s16>) = G_TRUNC [[UV]](<2 x s32>)
-    ; CI: [[TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_TRUNC [[UV1]](<2 x s32>)
-    ; CI: [[TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_TRUNC [[UV2]](<2 x s32>)
-    ; CI: [[TRUNC3:%[0-9]+]]:_(<2 x s16>) = G_TRUNC [[UV3]](<2 x s32>)
-    ; CI: [[TRUNC4:%[0-9]+]]:_(<2 x s16>) = G_TRUNC [[UV4]](<2 x s32>)
-    ; CI: [[TRUNC5:%[0-9]+]]:_(<2 x s16>) = G_TRUNC [[UV5]](<2 x s32>)
-    ; CI: [[CONCAT_VECTORS:%[0-9]+]]:_(<12 x s16>) = G_CONCAT_VECTORS [[TRUNC]](<2 x s16>), [[TRUNC1]](<2 x s16>), [[TRUNC2]](<2 x s16>), [[TRUNC3]](<2 x s16>), [[TRUNC4]](<2 x s16>), [[TRUNC5]](<2 x s16>)
-    ; CI: [[EXTRACT:%[0-9]+]]:_(<8 x s16>) = G_EXTRACT [[CONCAT_VECTORS]](<12 x s16>), 0
-    ; CI: [[EXTRACT1:%[0-9]+]]:_(<4 x s16>) = G_EXTRACT [[CONCAT_VECTORS]](<12 x s16>), 128
-    ; CI: G_STORE [[EXTRACT]](<8 x s16>), [[COPY]](p1) :: (store 16, addrspace 1)
-    ; CI: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-    ; CI: [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C]](s64)
-    ; CI: G_STORE [[EXTRACT1]](<4 x s16>), [[PTR_ADD]](p1) :: (store 8, align 16, addrspace 1)
+    ; CI: [[DEF:%[0-9]+]]:_(<12 x s16>) = G_IMPLICIT_DEF
+    ; CI: G_STORE [[DEF]](<12 x s16>), [[COPY]](p1) :: (store 20, align 16, addrspace 1)
     ; VI-LABEL: name: test_store_global_v12s16_align4
     ; VI: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; VI: [[DEF:%[0-9]+]]:_(<12 x s32>) = G_IMPLICIT_DEF
-    ; VI: [[UV:%[0-9]+]]:_(<2 x s32>), [[UV1:%[0-9]+]]:_(<2 x s32>), [[UV2:%[0-9]+]]:_(<2 x s32>), [[UV3:%[0-9]+]]:_(<2 x s32>), [[UV4:%[0-9]+]]:_(<2 x s32>), [[UV5:%[0-9]+]]:_(<2 x s32>) = G_UNMERGE_VALUES [[DEF]](<12 x s32>)
-    ; VI: [[TRUNC:%[0-9]+]]:_(<2 x s16>) = G_TRUNC [[UV]](<2 x s32>)
-    ; VI: [[TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_TRUNC [[UV1]](<2 x s32>)
-    ; VI: [[TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_TRUNC [[UV2]](<2 x s32>)
-    ; VI: [[TRUNC3:%[0-9]+]]:_(<2 x s16>) = G_TRUNC [[UV3]](<2 x s32>)
-    ; VI: [[TRUNC4:%[0-9]+]]:_(<2 x s16>) = G_TRUNC [[UV4]](<2 x s32>)
-    ; VI: [[TRUNC5:%[0-9]+]]:_(<2 x s16>) = G_TRUNC [[UV5]](<2 x s32>)
-    ; VI: [[CONCAT_VECTORS:%[0-9]+]]:_(<12 x s16>) = G_CONCAT_VECTORS [[TRUNC]](<2 x s16>), [[TRUNC1]](<2 x s16>), [[TRUNC2]](<2 x s16>), [[TRUNC3]](<2 x s16>), [[TRUNC4]](<2 x s16>), [[TRUNC5]](<2 x s16>)
-    ; VI: [[EXTRACT:%[0-9]+]]:_(<8 x s16>) = G_EXTRACT [[CONCAT_VECTORS]](<12 x s16>), 0
-    ; VI: [[EXTRACT1:%[0-9]+]]:_(<4 x s16>) = G_EXTRACT [[CONCAT_VECTORS]](<12 x s16>), 128
-    ; VI: G_STORE [[EXTRACT]](<8 x s16>), [[COPY]](p1) :: (store 16, addrspace 1)
-    ; VI: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-    ; VI: [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C]](s64)
-    ; VI: G_STORE [[EXTRACT1]](<4 x s16>), [[PTR_ADD]](p1) :: (store 8, align 16, addrspace 1)
+    ; VI: [[DEF:%[0-9]+]]:_(<12 x s16>) = G_IMPLICIT_DEF
+    ; VI: G_STORE [[DEF]](<12 x s16>), [[COPY]](p1) :: (store 20, align 16, addrspace 1)
     ; GFX9-LABEL: name: test_store_global_v12s16_align4
     ; GFX9: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GFX9: [[DEF:%[0-9]+]]:_(<12 x s32>) = G_IMPLICIT_DEF
-    ; GFX9: [[UV:%[0-9]+]]:_(<2 x s32>), [[UV1:%[0-9]+]]:_(<2 x s32>), [[UV2:%[0-9]+]]:_(<2 x s32>), [[UV3:%[0-9]+]]:_(<2 x s32>), [[UV4:%[0-9]+]]:_(<2 x s32>), [[UV5:%[0-9]+]]:_(<2 x s32>) = G_UNMERGE_VALUES [[DEF]](<12 x s32>)
-    ; GFX9: [[TRUNC:%[0-9]+]]:_(<2 x s16>) = G_TRUNC [[UV]](<2 x s32>)
-    ; GFX9: [[TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_TRUNC [[UV1]](<2 x s32>)
-    ; GFX9: [[TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_TRUNC [[UV2]](<2 x s32>)
-    ; GFX9: [[TRUNC3:%[0-9]+]]:_(<2 x s16>) = G_TRUNC [[UV3]](<2 x s32>)
-    ; GFX9: [[TRUNC4:%[0-9]+]]:_(<2 x s16>) = G_TRUNC [[UV4]](<2 x s32>)
-    ; GFX9: [[TRUNC5:%[0-9]+]]:_(<2 x s16>) = G_TRUNC [[UV5]](<2 x s32>)
-    ; GFX9: [[CONCAT_VECTORS:%[0-9]+]]:_(<12 x s16>) = G_CONCAT_VECTORS [[TRUNC]](<2 x s16>), [[TRUNC1]](<2 x s16>), [[TRUNC2]](<2 x s16>), [[TRUNC3]](<2 x s16>), [[TRUNC4]](<2 x s16>), [[TRUNC5]](<2 x s16>)
-    ; GFX9: [[EXTRACT:%[0-9]+]]:_(<8 x s16>) = G_EXTRACT [[CONCAT_VECTORS]](<12 x s16>), 0
-    ; GFX9: [[EXTRACT1:%[0-9]+]]:_(<4 x s16>) = G_EXTRACT [[CONCAT_VECTORS]](<12 x s16>), 128
-    ; GFX9: G_STORE [[EXTRACT]](<8 x s16>), [[COPY]](p1) :: (store 16, addrspace 1)
-    ; GFX9: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-    ; GFX9: [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C]](s64)
-    ; GFX9: G_STORE [[EXTRACT1]](<4 x s16>), [[PTR_ADD]](p1) :: (store 8, align 16, addrspace 1)
+    ; GFX9: [[DEF:%[0-9]+]]:_(<12 x s16>) = G_IMPLICIT_DEF
+    ; GFX9: G_STORE [[DEF]](<12 x s16>), [[COPY]](p1) :: (store 20, align 16, addrspace 1)
     %0:_(p1) = COPY $vgpr0_vgpr1
     %1:_(<12 x s16>) = G_IMPLICIT_DEF
     G_STORE %1, %0 :: (store 20, align 16, addrspace 1)
