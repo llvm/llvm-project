@@ -303,7 +303,7 @@ HashedCollectionConfig::StorageObjectAtAddress(
     return nullptr;
 
   CompilerType rawStorage_type =
-      ast_ctx->GetTypeFromMangledTypename(m_nativeStorageRoot_mangled, error);
+      ast_ctx->GetTypeFromMangledTypename(m_nativeStorageRoot_mangled);
   if (!rawStorage_type.IsValid())
     return nullptr;
 
@@ -443,8 +443,8 @@ NativeHashedStorageHandler::NativeHashedStorageHandler(
   if (value_type) {
     auto value_type_stride = value_type.GetByteStride(m_process);
     m_value_stride = value_type_stride ? *value_type_stride : 0;
-    if (SwiftASTContext *swift_ast =
-            llvm::dyn_cast_or_null<SwiftASTContext>(key_type.GetTypeSystem())) {
+    if (TypeSystemSwift *swift_ast =
+            llvm::dyn_cast_or_null<TypeSystemSwift>(key_type.GetTypeSystem())) {
       auto scratch_ctx_reader = nativeStorage_sp->GetScratchSwiftASTContext();
       auto scratch_ctx = scratch_ctx_reader.get();
       if (!scratch_ctx)

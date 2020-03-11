@@ -30,7 +30,7 @@ bool lldb_private::formatters::swift::SwiftMetatype_SummaryProvider(
   if (metadata_ptr == LLDB_INVALID_ADDRESS || metadata_ptr == 0) {
     CompilerType compiler_metatype_type(valobj.GetCompilerType());
     CompilerType instancetype =
-      SwiftASTContext::GetInstanceType(compiler_metatype_type);
+      TypeSystemSwift::GetInstanceType(compiler_metatype_type);
 
     const char *ptr = instancetype.GetDisplayTypeName().AsCString(nullptr);
     if (ptr && *ptr) {

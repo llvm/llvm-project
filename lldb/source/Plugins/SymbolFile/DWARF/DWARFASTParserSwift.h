@@ -56,11 +56,6 @@ public:
       lldb_private::CompilerDeclContext decl_context) override {}
 
 protected:
-  /// Use the -gmodules DWARF info to quickly find the correct clang type.
-  void GetClangType(lldb_private::CompileUnit &comp_unit, const DWARFDIE &die,
-                    llvm::StringRef mangled_name,
-                    lldb_private::TypeMap &clang_types) const;
-
   lldb_private::SwiftASTContext &m_ast;
 };
 

@@ -60,7 +60,8 @@ void ClangPersistentVariables::RemovePersistentVariable(
 
   bool is_error = false;
 
-  if (llvm::isa<SwiftASTContext>(variable->GetCompilerType().GetTypeSystem())) {
+  if (variable->GetCompilerType().GetTypeSystem()->SupportsLanguage(
+          lldb::eLanguageTypeSwift)) {
     switch (*name) {
     case 'R':
       break;

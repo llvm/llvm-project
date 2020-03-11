@@ -33,8 +33,8 @@ static clang::EnumDecl *GetAsEnumDecl(CompilerType swift_type) {
   if (!swift_type)
     return nullptr;
 
-  SwiftASTContext *swift_ast_ctx =
-      llvm::dyn_cast_or_null<SwiftASTContext>(swift_type.GetTypeSystem());
+  TypeSystemSwift *swift_ast_ctx =
+      llvm::dyn_cast_or_null<TypeSystemSwift>(swift_type.GetTypeSystem());
   if (!swift_ast_ctx)
     return nullptr;
 
@@ -90,6 +90,9 @@ void lldb_private::formatters::swift::SwiftOptionSetSummaryProvider::
   if (!enum_decl)
     return;
 
+  if (auto *ts = llvm::dyn_cast_or_null<TypeSystemSwiftTypeRef>(
+          m_type.GetTypeSystem()))
+    m_type = ts->ReconstructType(m_type);
   SwiftASTContext *swift_ast_ctx =
       llvm::dyn_cast_or_null<SwiftASTContext>(m_type.GetTypeSystem());
   ::swift::ClangImporter *clang_importer = swift_ast_ctx->GetClangImporter();

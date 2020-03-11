@@ -779,8 +779,8 @@ SwiftLanguage::GetHardcodedSynthetics() {
               bool is_imported = false;
 
               if (type.IsValid()) {
-                SwiftASTContext *swift_ast_ctx =
-                    llvm::dyn_cast_or_null<SwiftASTContext>(
+                TypeSystemSwift *swift_ast_ctx =
+                    llvm::dyn_cast_or_null<TypeSystemSwift>(
                         type.GetTypeSystem());
                 if (swift_ast_ctx &&
                     swift_ast_ctx->IsImportedType(type, nullptr))
@@ -1140,8 +1140,8 @@ std::unique_ptr<Language::TypeScavenger> SwiftLanguage::GetTypeScavenger() {
 
           if (as_type.hasValue() && as_type.getValue()) {
             TypeSystem *type_system = as_type->GetTypeSystem();
-            if (SwiftASTContext *swift_ast_ctx =
-                    llvm::dyn_cast_or_null<SwiftASTContext>(type_system))
+            if (TypeSystemSwift *swift_ast_ctx =
+                    llvm::dyn_cast_or_null<TypeSystemSwift>(type_system))
               swift_ast_ctx->DumpTypeDescription(as_type->GetOpaqueQualType(),
                                                  &stream,
                                                  print_help_if_available, true);
@@ -1201,10 +1201,9 @@ std::unique_ptr<Language::TypeScavenger> SwiftLanguage::GetTypeScavenger() {
                 ConstString cs_input{input};
                 Mangled mangled(cs_input);
                 if (mangled.GuessLanguage() == eLanguageTypeSwift) {
-                  Status error;
                   auto candidate =
-                      ast_ctx->GetTypeFromMangledTypename(cs_input, error);
-                  if (candidate.IsValid() && error.Success())
+                      ast_ctx->GetTypeFromMangledTypename(cs_input);
+                  if (candidate.IsValid())
                     results.insert(candidate);
                 }
               }
@@ -1236,7 +1235,7 @@ std::unique_ptr<Language::TypeScavenger> SwiftLanguage::GetTypeScavenger() {
                   CompilerType result_type(result_sp->GetCompilerType());
                   if (Flags(result_type.GetTypeInfo())
                           .AllSet(eTypeIsSwift | eTypeIsMetatype))
-                    result_type = SwiftASTContext::GetInstanceType(result_type);
+                    result_type = TypeSystemSwift::GetInstanceType(result_type);
                   results.insert(TypeOrDecl(result_type));
                 }
               }
@@ -1463,7 +1462,7 @@ LazyBool SwiftLanguage::IsLogicalTrue(ValueObject &valobj, Status &error) {
   auto swift_ty = GetCanonicalSwiftType(valobj.GetCompilerType());
   CompilerType valobj_type = ToCompilerType(swift_ty);
   Flags type_flags(valobj_type.GetTypeInfo());
-  if (llvm::isa<SwiftASTContext>(valobj_type.GetTypeSystem())) {
+  if (llvm::isa<TypeSystemSwift>(valobj_type.GetTypeSystem())) {
     if (type_flags.AllSet(eTypeIsStructUnion) &&
         valobj_type.GetTypeName() == g_SwiftBool) {
       ValueObjectSP your_value_sp(valobj.GetChildMemberWithName(g_value, true));

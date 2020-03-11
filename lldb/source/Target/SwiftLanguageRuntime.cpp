@@ -721,7 +721,7 @@ static bool GetObjectDescription_ObjectCopy(SwiftLanguageRuntimeImpl *runtime,
   auto frame_sp =
       process.GetThreadList().GetSelectedThread()->GetSelectedFrame();
   auto *swift_ast_ctx =
-      llvm::dyn_cast_or_null<SwiftASTContext>(static_type.GetTypeSystem());
+      llvm::dyn_cast_or_null<TypeSystemSwift>(static_type.GetTypeSystem());
   if (swift_ast_ctx) {
     SwiftASTContextLock lock(GetSwiftExeCtx(object));
     static_type = runtime->DoArchetypeBindingForType(*frame_sp, static_type);
@@ -874,7 +874,7 @@ static bool IsSwiftResultVariable(ConstString name) {
 
 static bool IsSwiftReferenceType(ValueObject &object) {
   CompilerType object_type(object.GetCompilerType());
-  if (llvm::dyn_cast_or_null<SwiftASTContext>(object_type.GetTypeSystem())) {
+  if (llvm::dyn_cast_or_null<TypeSystemSwift>(object_type.GetTypeSystem())) {
     Flags type_flags(object_type.GetTypeInfo());
     if (type_flags.AllSet(eTypeIsClass | eTypeHasValue |
                           eTypeInstanceIsPointer))
@@ -940,7 +940,7 @@ void SwiftLanguageRuntime::FindFunctionPointersInCall(
       auto swift_ast = target.GetScratchSwiftASTContext(error, frame);
       if (swift_ast) {
         CompilerType function_type = swift_ast->GetTypeFromMangledTypename(
-            mangled_name.GetMangledName(), error);
+            mangled_name.GetMangledName());
         if (error.Success()) {
           if (function_type.IsFunctionType()) {
             // FIXME: For now we only check the first argument since
@@ -1063,7 +1063,7 @@ ValueObjectSP SwiftLanguageRuntime::CalculateErrorValueObjectFromValue(
     return error_valobj_sp;
 
   auto *ast_context =
-      llvm::dyn_cast_or_null<SwiftASTContext>(&*type_system_or_err);
+      llvm::dyn_cast_or_null<TypeSystemSwift>(&*type_system_or_err);
   if (!ast_context)
     return error_valobj_sp;
 
@@ -1477,9 +1477,8 @@ SwiftLanguageRuntimeImpl::GetBridgedSyntheticChildProvider(
       new ProjectionSyntheticChildren::TypeProjectionUP::element_type());
 
   if (auto swift_ast_ctx = valobj.GetScratchSwiftASTContext()) {
-    Status error;
     CompilerType swift_type =
-        swift_ast_ctx->GetTypeFromMangledTypename(type_name, error);
+        swift_ast_ctx->GetTypeFromMangledTypename(type_name);
 
     if (swift_type.IsValid()) {
       ExecutionContext exe_ctx(m_process);

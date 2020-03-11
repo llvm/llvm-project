@@ -116,8 +116,8 @@ public:
 protected:
   // Classes that inherit from SwiftLanguageRuntime can see and modify these
   Value::ValueType GetValueType(Value::ValueType static_value_type,
-                                const CompilerType &static_type,
-                                const CompilerType &dynamic_type,
+                                CompilerType static_type,
+                                CompilerType dynamic_type,
                                 bool is_indirect_enum_case);
 
   bool GetDynamicTypeAndAddress_Class(
