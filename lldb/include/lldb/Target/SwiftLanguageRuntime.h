@@ -53,14 +53,10 @@ class TypeBase;
 
 namespace lldb_private {
 
-/// Statically cast an opaque type to a Swift type.
-swift::Type GetSwiftType(void *opaque_ptr);
-/// Statically cast an opaque type to a Swift type and get its canonical form.
-swift::CanType GetCanonicalSwiftType(void *opaque_ptr);
 /// Statically cast a CompilerType to a Swift type.
-swift::Type GetSwiftType(const CompilerType &type);
+swift::Type GetSwiftType(CompilerType type);
 /// Statically cast a CompilerType to a Swift type and get its canonical form.
-swift::CanType GetCanonicalSwiftType(const CompilerType &type);
+swift::CanType GetCanonicalSwiftType(CompilerType type);
 
 class SwiftLanguageRuntimeStub;
 class SwiftLanguageRuntimeImpl;

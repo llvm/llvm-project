@@ -431,7 +431,6 @@ bool ValueObjectDynamicValue::DynamicValueTypeInfoNeedsUpdate() {
   if (!m_dynamic_type_info.HasType())
     return false;
 
-  auto *cached_ctx =
-      static_cast<SwiftASTContext *>(m_value.GetCompilerType().GetTypeSystem());
+  auto *cached_ctx = m_value.GetCompilerType().GetTypeSystem();
   return cached_ctx == GetScratchSwiftASTContext().get();
 }

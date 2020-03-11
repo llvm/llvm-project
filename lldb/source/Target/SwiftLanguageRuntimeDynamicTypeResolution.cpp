@@ -34,21 +34,22 @@ using namespace lldb;
 using namespace lldb_private;
 
 namespace lldb_private {
-swift::Type GetSwiftType(void *opaque_ptr) {
-  return reinterpret_cast<swift::TypeBase *>(opaque_ptr);
+swift::Type GetSwiftType(CompilerType type) {
+  auto *ts = type.GetTypeSystem();
+  if (auto *tr = llvm::dyn_cast_or_null<TypeSystemSwiftTypeRef>(ts))
+    return tr->GetSwiftType(type);
+  if (auto *ast = llvm::dyn_cast_or_null<SwiftASTContext>(ts))
+    return ast->GetSwiftType(type);
+  return {};
 }
 
-swift::CanType GetCanonicalSwiftType(void *opaque_ptr) {
-  return reinterpret_cast<swift::TypeBase *>(opaque_ptr)->getCanonicalType();
-}
-
-swift::CanType GetCanonicalSwiftType(const CompilerType &type) {
-  return GetCanonicalSwiftType(
-      reinterpret_cast<void *>(type.GetOpaqueQualType()));
-}
-
-swift::Type GetSwiftType(const CompilerType &type) {
-  return GetSwiftType(reinterpret_cast<void *>(type.GetOpaqueQualType()));
+swift::CanType GetCanonicalSwiftType(CompilerType type) {
+  auto *ts = type.GetTypeSystem();
+  if (auto *tr = llvm::dyn_cast_or_null<TypeSystemSwiftTypeRef>(ts))
+    return tr->GetSwiftType(type)->getCanonicalType();
+  if (auto *ast = llvm::dyn_cast_or_null<SwiftASTContext>(ts))
+    return ast->GetSwiftType(type)->getCanonicalType();
+  return swift::CanType();
 }
 
 static lldb::addr_t
@@ -621,6 +622,10 @@ llvm::Optional<uint64_t> SwiftLanguageRuntimeImpl::GetMemberVariableOffset(
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
   // Using the module context for RemoteAST is cheaper bit only safe
   // when there is no dynamic type resolution involved.
+  if (auto *ts = llvm::dyn_cast_or_null<TypeSystemSwiftTypeRef>(
+          instance_type.GetTypeSystem()))
+    instance_type = ts->ReconstructType(instance_type);
+
   auto *module_ctx =
       llvm::dyn_cast_or_null<SwiftASTContext>(instance_type.GetTypeSystem());
   if (!module_ctx || module_ctx->HasFatalErrors())
@@ -1285,8 +1290,8 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_IndirectEnumCase(
 //  we're pointing to us..."
 // See inlined comments for exceptions to this general rule.
 Value::ValueType SwiftLanguageRuntimeImpl::GetValueType(
-    Value::ValueType static_value_type, const CompilerType &static_type,
-    const CompilerType &dynamic_type, bool is_indirect_enum_case) {
+    Value::ValueType static_value_type, CompilerType static_type,
+    CompilerType dynamic_type, bool is_indirect_enum_case) {
   Flags static_type_flags(static_type.GetTypeInfo());
   Flags dynamic_type_flags(dynamic_type.GetTypeInfo());
 
@@ -1295,15 +1300,19 @@ Value::ValueType SwiftLanguageRuntimeImpl::GetValueType(
     // object is a struct? (for a class, it's easy)
     if (static_type_flags.AllSet(eTypeIsSwift | eTypeIsProtocol) &&
         dynamic_type_flags.AnySet(eTypeIsStructUnion | eTypeIsEnumeration)) {
-      SwiftASTContext *swift_ast_ctx =
-          llvm::dyn_cast_or_null<SwiftASTContext>(static_type.GetTypeSystem());
-
-      if (swift_ast_ctx && swift_ast_ctx->IsErrorType(static_type)) {
+      if (auto *ts = llvm::dyn_cast_or_null<TypeSystemSwiftTypeRef>(
+              static_type.GetTypeSystem()))
+        static_type = ts->ReconstructType(static_type);
+      TypeSystemSwift *swift_ast_ctx =
+          llvm::dyn_cast_or_null<TypeSystemSwift>(static_type.GetTypeSystem());
+      if (!swift_ast_ctx)
+        return {};
+      if (swift_ast_ctx->IsErrorType(static_type)) {
         // ErrorType values are always a pointer
         return Value::eValueTypeLoadAddress;
       }
 
-      switch (SwiftASTContext::GetAllocationStrategy(dynamic_type)) {
+      switch (swift_ast_ctx->GetAllocationStrategy(dynamic_type)) {
       case SwiftASTContext::TypeAllocationStrategy::eDynamic:
       case SwiftASTContext::TypeAllocationStrategy::eUnknown:
         break;
@@ -1402,14 +1411,13 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_ClangType(
   }
 
   // Import the remangled dynamic name into the scratch context.
-  Status error;
   assert(IsScratchContextLocked(in_value.GetTargetSP()) &&
          "Swift scratch context not locked ahead of dynamic type resolution");
   auto scratch_ctx = in_value.GetScratchSwiftASTContext();
   if (!scratch_ctx)
     return false;
   CompilerType swift_type =
-      scratch_ctx->GetTypeFromMangledTypename(ConstString(remangled), error);
+      scratch_ctx->GetTypeFromMangledTypename(ConstString(remangled));
 
   // Roll back the ObjC dynamic type resolution.
   if (!swift_type)
@@ -1593,6 +1601,8 @@ bool SwiftLanguageRuntime::IsTaggedPointer(lldb::addr_t addr,
   if (!m_process)
     return false;
   swift::CanType swift_can_type = GetCanonicalSwiftType(type);
+  if (!swift_can_type)
+    return false;
   switch (swift_can_type->getKind()) {
   case swift::TypeKind::UnownedStorage: {
     Target &target = m_process->GetTarget();

@@ -1134,7 +1134,7 @@ bool SwiftASTManipulator::AddExternalVariables(
       // The access pattern for these types is the same as for the referent
       // type, so it is fine to
       // just strip it off.
-      SwiftASTContext *swift_ast_ctx = llvm::dyn_cast_or_null<SwiftASTContext>(
+      auto *swift_ast_ctx = llvm::dyn_cast_or_null<TypeSystemSwift>(
           variable.m_type.GetTypeSystem());
 
       CompilerType referent_type;

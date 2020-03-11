@@ -108,7 +108,7 @@ class TestSwiftInterfaceDSYM(TestBase):
 
         # We should not find a type for x.
         var = self.frame().FindVariable("x")
-        self.assertFalse(var.GetTypeName())
+        self.assertEqual(var.GetTypeName(), "<invalid>")
 
     @swiftTest
     @skipIf(archs=no_match("x86_64"))
