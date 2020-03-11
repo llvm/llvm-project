@@ -1509,9 +1509,12 @@ def err_deleted_decl_not_first : Error<
 
 def err_deleted_override : Error<
   "deleted function %0 cannot override a non-deleted function">;
-
 def err_non_deleted_override : Error<
   "non-deleted function %0 cannot override a deleted function">;
+def err_consteval_override : Error<
+  "consteval function %0 cannot override a non-consteval function">;
+def err_non_consteval_override : Error<
+  "non-consteval function %0 cannot override a consteval function">;
 
 def warn_weak_vtable : Warning<
   "%0 has no out-of-line virtual method definitions; its vtable will be "

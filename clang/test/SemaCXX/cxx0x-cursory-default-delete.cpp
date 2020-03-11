@@ -211,3 +211,9 @@ struct DeletedMemberTemplateTooLate {
 };
 template<typename T> void DeletedMemberTemplateTooLate::f() = delete; // expected-error {{must be first decl}} expected-note {{substitution failure}}
 void use_member_template_deleted_too_late() { DeletedMemberTemplateTooLate::f<int>(); } // expected-error {{no matching function}}
+
+namespace deleted_overrides_deleted {
+  struct A { virtual void f() = delete; };
+  template<typename T> struct B : A { virtual void f() = delete; };
+  template struct B<int>;
+}

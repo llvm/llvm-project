@@ -389,3 +389,55 @@ void test() {
 }
 
 }
+
+namespace std {
+  struct strong_ordering {
+    int n;
+    static const strong_ordering less, equal, greater;
+  };
+  constexpr strong_ordering strong_ordering::less = {-1};
+  constexpr strong_ordering strong_ordering::equal = {0};
+  constexpr strong_ordering strong_ordering::greater = {1};
+  constexpr bool operator!=(strong_ordering, int);
+}
+
+namespace override {
+  struct A {
+    virtual consteval void f(); // expected-note {{overridden}}
+    virtual void g(); // expected-note {{overridden}}
+  };
+  struct B : A {
+    consteval void f();
+    void g();
+  };
+  struct C : A {
+    void f(); // expected-error {{non-consteval function 'f' cannot override a consteval function}}
+    consteval void g(); // expected-error {{consteval function 'g' cannot override a non-consteval function}}
+  };
+
+  namespace implicit_equals_1 {
+    struct Y;
+    struct X {
+      std::strong_ordering operator<=>(const X&) const;
+      constexpr bool operator==(const X&) const;
+      virtual consteval bool operator==(const Y&) const; // expected-note {{here}}
+    };
+    struct Y : X {
+      std::strong_ordering operator<=>(const Y&) const = default;
+      // expected-error@-1 {{non-consteval function 'operator==' cannot override a consteval function}}
+    };
+  }
+
+  namespace implicit_equals_2 {
+    struct Y;
+    struct X {
+      constexpr std::strong_ordering operator<=>(const X&) const;
+      constexpr bool operator==(const X&) const;
+      virtual bool operator==(const Y&) const; // expected-note {{here}}
+    };
+    struct Y : X {
+      consteval std::strong_ordering operator<=>(const Y&) const = default;
+      // expected-error@-1 {{consteval function 'operator==' cannot override a non-consteval function}}
+    };
+  }
+}
