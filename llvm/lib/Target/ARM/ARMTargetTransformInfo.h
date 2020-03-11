@@ -222,7 +222,8 @@ public:
                                  bool UseMaskForGaps = false);
 
   unsigned getGatherScatterOpCost(unsigned Opcode, Type *DataTy, Value *Ptr,
-                                  bool VariableMask, unsigned Alignment);
+                                  bool VariableMask, unsigned Alignment,
+                                  const Instruction *I = nullptr);
 
   bool isLoweredToCall(const Function *F);
   bool isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
