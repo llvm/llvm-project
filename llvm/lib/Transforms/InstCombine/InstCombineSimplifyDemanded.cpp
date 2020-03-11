@@ -454,6 +454,26 @@ Value *InstCombiner::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
     break;
   }
   case Instruction::Add:
+    if ((DemandedMask & 1) == 0) {
+      // If we do not need the low bit, try to convert bool math to logic:
+      //   add iN (zext i1 X), (sext i1 Y) --> sext (~X & Y) to iN
+      // Truth table for inputs and output signbits:
+      //       X:0 | X:1
+      //      ----------
+      // Y:0  |  0 | 0 |
+      // Y:1  | -1 | 0 |
+      //      ----------
+      Value *X, *Y;
+      if (match(I, m_c_Add(m_OneUse(m_ZExt(m_Value(X))),
+                           m_OneUse(m_SExt(m_Value(Y))))) &&
+          X->getType()->isIntOrIntVectorTy(1) && X->getType() == Y->getType()) {
+        IRBuilderBase::InsertPointGuard Guard(Builder);
+        Builder.SetInsertPoint(I);
+        Value *AndNot = Builder.CreateAnd(Builder.CreateNot(X), Y);
+        return Builder.CreateSExt(AndNot, VTy);
+      }
+    }
+    LLVM_FALLTHROUGH;
   case Instruction::Sub: {
     /// If the high-bits of an ADD/SUB are not demanded, then we do not care
     /// about the high bits of the operands.
