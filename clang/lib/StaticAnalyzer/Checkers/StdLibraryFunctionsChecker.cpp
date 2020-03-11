@@ -500,7 +500,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
   // or long long, so three summary variants would be enough).
   // Of course, function variants are also useful for C++ overloads.
   const QualType
-      Irrelevant; // A placeholder, whenever we do not care about the type.
+      Irrelevant{}; // A placeholder, whenever we do not care about the type.
   const QualType IntTy = ACtx.IntTy;
   const QualType LongTy = ACtx.LongTy;
   const QualType LongLongTy = ACtx.LongLongTy;
