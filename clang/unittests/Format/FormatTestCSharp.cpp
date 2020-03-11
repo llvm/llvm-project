@@ -627,6 +627,8 @@ TEST_F(FormatTestCSharp, CSharpSpaces) {
   verifyFormat(R"(taskContext.Factory.Run(async () => doThing(args);)", Style);
   verifyFormat(R"(catch (TestException) when (innerFinallyExecuted))", Style);
   verifyFormat(R"(private float[,] Values;)", Style);
+  verifyFormat(R"(Result this[Index x] => Foo(x);)", Style);
+  verifyFormat(R"(class ItemFactory<T> where T : new() {})", Style);
 
   Style.SpacesInSquareBrackets = true;
   verifyFormat(R"(private float[ , ] Values;)", Style);
