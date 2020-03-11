@@ -491,15 +491,15 @@ define i64 @const_shift_i64(i64 %x, i64 %y) nounwind {
 ; X86-SLOW:       # %bb.0:
 ; X86-SLOW-NEXT:    pushl %esi
 ; X86-SLOW-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-SLOW-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SLOW-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SLOW-NEXT:    movl %ecx, %esi
-; X86-SLOW-NEXT:    shll $25, %esi
-; X86-SLOW-NEXT:    shrl $7, %eax
-; X86-SLOW-NEXT:    orl %esi, %eax
+; X86-SLOW-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-SLOW-NEXT:    shrl $7, %ecx
+; X86-SLOW-NEXT:    movl %esi, %eax
+; X86-SLOW-NEXT:    shll $25, %eax
+; X86-SLOW-NEXT:    orl %ecx, %eax
+; X86-SLOW-NEXT:    shrl $7, %esi
 ; X86-SLOW-NEXT:    shll $25, %edx
-; X86-SLOW-NEXT:    orl %ecx, %edx
+; X86-SLOW-NEXT:    orl %esi, %edx
 ; X86-SLOW-NEXT:    popl %esi
 ; X86-SLOW-NEXT:    retl
 ;
@@ -580,28 +580,12 @@ define i32 @combine_fshr_load_i32(i32* %p) nounwind {
 }
 
 define i64 @combine_fshr_load_i64(i64* %p) nounwind {
-; X86-FAST-LABEL: combine_fshr_load_i64:
-; X86-FAST:       # %bb.0:
-; X86-FAST-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-FAST-NEXT:    movl 11(%ecx), %eax
-; X86-FAST-NEXT:    movl 15(%ecx), %edx
-; X86-FAST-NEXT:    retl
-;
-; X86-SLOW-LABEL: combine_fshr_load_i64:
-; X86-SLOW:       # %bb.0:
-; X86-SLOW-NEXT:    pushl %esi
-; X86-SLOW-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SLOW-NEXT:    movzbl 11(%eax), %ecx
-; X86-SLOW-NEXT:    movl 12(%eax), %esi
-; X86-SLOW-NEXT:    movl 16(%eax), %edx
-; X86-SLOW-NEXT:    movl %esi, %eax
-; X86-SLOW-NEXT:    shll $8, %eax
-; X86-SLOW-NEXT:    orl %ecx, %eax
-; X86-SLOW-NEXT:    shrl $24, %esi
-; X86-SLOW-NEXT:    shll $8, %edx
-; X86-SLOW-NEXT:    orl %esi, %edx
-; X86-SLOW-NEXT:    popl %esi
-; X86-SLOW-NEXT:    retl
+; X86-LABEL: combine_fshr_load_i64:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl 11(%ecx), %eax
+; X86-NEXT:    movl 15(%ecx), %edx
+; X86-NEXT:    retl
 ;
 ; X64-LABEL: combine_fshr_load_i64:
 ; X64:       # %bb.0:

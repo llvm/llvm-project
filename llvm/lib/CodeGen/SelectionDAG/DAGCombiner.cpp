@@ -6321,17 +6321,20 @@ SDValue DAGCombiner::MatchRotatePosNeg(SDValue Shifted, SDValue Pos,
 
 // MatchRotate - Handle an 'or' of two operands.  If this is one of the many
 // idioms for rotate, and if the target supports rotation instructions, generate
-// a rot[lr].
+// a rot[lr]. This also matches funnel shift patterns, similar to rotation but
+// with different shifted sources.
 SDValue DAGCombiner::MatchRotate(SDValue LHS, SDValue RHS, const SDLoc &DL) {
   // Must be a legal type.  Expanded 'n promoted things won't work with rotates.
   EVT VT = LHS.getValueType();
   if (!TLI.isTypeLegal(VT))
     return SDValue();
 
-  // The target must have at least one rotate flavor.
+  // The target must have at least one rotate/funnel flavor.
   bool HasROTL = hasOperation(ISD::ROTL, VT);
   bool HasROTR = hasOperation(ISD::ROTR, VT);
-  if (!HasROTL && !HasROTR)
+  bool HasFSHL = hasOperation(ISD::FSHL, VT);
+  bool HasFSHR = hasOperation(ISD::FSHR, VT);
+  if (!HasROTL && !HasROTR && !HasFSHL && !HasFSHR)
     return SDValue();
 
   // Check for truncated rotate.
@@ -6381,11 +6384,12 @@ SDValue DAGCombiner::MatchRotate(SDValue LHS, SDValue RHS, const SDLoc &DL) {
 
   // At this point we've matched or extracted a shift op on each side.
 
-  if (LHSShift.getOperand(0) != RHSShift.getOperand(0))
-    return SDValue(); // Not shifting the same value.
-
   if (LHSShift.getOpcode() == RHSShift.getOpcode())
     return SDValue(); // Shifts must disagree.
+
+  bool IsRotate = LHSShift.getOperand(0) == RHSShift.getOperand(0);
+  if (!IsRotate && !(HasFSHL || HasFSHR))
+    return SDValue(); // Requires funnel shift support.
 
   // Canonicalize shl to left side in a shl/srl pair.
   if (RHSShift.getOpcode() == ISD::SHL) {
@@ -6402,13 +6406,21 @@ SDValue DAGCombiner::MatchRotate(SDValue LHS, SDValue RHS, const SDLoc &DL) {
 
   // fold (or (shl x, C1), (srl x, C2)) -> (rotl x, C1)
   // fold (or (shl x, C1), (srl x, C2)) -> (rotr x, C2)
+  // fold (or (shl x, C1), (srl y, C2)) -> (fshl x, y, C1)
+  // fold (or (shl x, C1), (srl y, C2)) -> (fshr x, y, C2)
+  // iff C1+C2 == EltSizeInBits
   auto MatchRotateSum = [EltSizeInBits](ConstantSDNode *LHS,
                                         ConstantSDNode *RHS) {
     return (LHS->getAPIntValue() + RHS->getAPIntValue()) == EltSizeInBits;
   };
   if (ISD::matchBinaryPredicate(LHSShiftAmt, RHSShiftAmt, MatchRotateSum)) {
-    SDValue Rot = DAG.getNode(HasROTL ? ISD::ROTL : ISD::ROTR, DL, VT,
-                              LHSShiftArg, HasROTL ? LHSShiftAmt : RHSShiftAmt);
+    SDValue Res;
+    if (IsRotate && (HasROTL || HasROTR))
+      Res = DAG.getNode(HasROTL ? ISD::ROTL : ISD::ROTR, DL, VT, LHSShiftArg,
+                        HasROTL ? LHSShiftAmt : RHSShiftAmt);
+    else
+      Res = DAG.getNode(HasFSHL ? ISD::FSHL : ISD::FSHR, DL, VT, LHSShiftArg,
+                        RHSShiftArg, HasFSHL ? LHSShiftAmt : RHSShiftAmt);
 
     // If there is an AND of either shifted operand, apply it to the result.
     if (LHSMask.getNode() || RHSMask.getNode()) {
@@ -6426,11 +6438,15 @@ SDValue DAGCombiner::MatchRotate(SDValue LHS, SDValue RHS, const SDLoc &DL) {
                            DAG.getNode(ISD::OR, DL, VT, RHSMask, LHSBits));
       }
 
-      Rot = DAG.getNode(ISD::AND, DL, VT, Rot, Mask);
+      Res = DAG.getNode(ISD::AND, DL, VT, Res, Mask);
     }
 
-    return Rot;
+    return Res;
   }
+
+  // TODO: Handle variable funnel shifts.
+  if (!IsRotate)
+    return SDValue();
 
   // If there is a mask here, and we have a variable shift, we can't be sure
   // that we're masking out the right stuff.
