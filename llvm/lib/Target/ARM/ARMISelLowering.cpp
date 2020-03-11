@@ -14325,8 +14325,16 @@ SDValue ARMTargetLowering::PerformIntrinsicCombine(SDNode *N,
     // No immediate versions of these to check for.
     break;
 
+  case Intrinsic::arm_mve_vqdmlah:
+  case Intrinsic::arm_mve_vqdmlash:
+  case Intrinsic::arm_mve_vqrdmlah:
+  case Intrinsic::arm_mve_vqrdmlash:
   case Intrinsic::arm_mve_vmla_n_predicated:
-  case Intrinsic::arm_mve_vmlas_n_predicated: {
+  case Intrinsic::arm_mve_vmlas_n_predicated:
+  case Intrinsic::arm_mve_vqdmlah_predicated:
+  case Intrinsic::arm_mve_vqdmlash_predicated:
+  case Intrinsic::arm_mve_vqrdmlah_predicated:
+  case Intrinsic::arm_mve_vqrdmlash_predicated: {
     // These intrinsics all take an i32 scalar operand which is narrowed to the
     // size of a single lane of the vector type they return. So we don't need
     // any bits of that operand above that point, which allows us to eliminate
