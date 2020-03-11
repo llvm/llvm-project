@@ -53,6 +53,8 @@ std::optional<ConstantSubscripts> AsConstantExtents(
 
 inline int GetRank(const Shape &s) { return static_cast<int>(s.size()); }
 
+template<typename A> std::optional<Shape> GetShape(FoldingContext &, const A &);
+
 // The dimension argument to these inquiries is zero-based,
 // unlike the DIM= arguments to many intrinsics.
 ExtentExpr GetLowerBound(FoldingContext &, const NamedEntity &, int dimension);
@@ -80,16 +82,13 @@ MaybeExtentExpr GetSize(Shape &&);
 // Utility predicate: does an expression reference any implied DO index?
 bool ContainsAnyImpliedDoIndex(const ExtentExpr &);
 
-// GetShape()
-template<typename A> std::optional<Shape> GetShape(FoldingContext &, const A &);
-
 class GetShapeHelper
   : public AnyTraverse<GetShapeHelper, std::optional<Shape>> {
 public:
   using Result = std::optional<Shape>;
   using Base = AnyTraverse<GetShapeHelper, Result>;
   using Base::operator();
-  GetShapeHelper(FoldingContext &c) : Base{*this}, context_{c} {}
+  explicit GetShapeHelper(FoldingContext &c) : Base{*this}, context_{c} {}
 
   Result operator()(const ImpliedDoIndex &) const { return Scalar(); }
   Result operator()(const DescriptorInquiry &) const { return Scalar(); }

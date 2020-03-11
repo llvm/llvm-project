@@ -177,52 +177,84 @@ bool ContainsAnyImpliedDoIndex(const ExtentExpr &expr) {
   return MyVisitor{}(expr);
 }
 
-ExtentExpr GetLowerBound(
-    FoldingContext &context, const NamedEntity &base, int dimension) {
-  const Symbol &symbol{ResolveAssociations(base.GetLastSymbol())};
+// Determines lower bound on a dimension.  This can be other than 1 only
+// for a reference to a whole array object or component. (See LBOUND, 16.9.109).
+// ASSOCIATE construct entities may require tranversal of their referents.
+class GetLowerBoundHelper : public Traverse<GetLowerBoundHelper, ExtentExpr> {
+public:
+  using Result = ExtentExpr;
+  using Base = Traverse<GetLowerBoundHelper, ExtentExpr>;
+  using Base::operator();
+  GetLowerBoundHelper(FoldingContext &c, int d)
+    : Base{*this}, context_{c}, dimension_{d} {}
+  static ExtentExpr Default() { return ExtentExpr{1}; }
+  static ExtentExpr Combine(Result &&, Result &&) { return Default(); }
+  ExtentExpr operator()(const Symbol &);
+  ExtentExpr operator()(const Component &);
+
+private:
+  FoldingContext &context_;
+  int dimension_;
+};
+
+auto GetLowerBoundHelper::operator()(const Symbol &symbol0) -> Result {
+  const Symbol &symbol{symbol0.GetUltimate()};
   if (const auto *details{symbol.detailsIf<semantics::ObjectEntityDetails>()}) {
     int j{0};
     for (const auto &shapeSpec : details->shape()) {
-      if (j++ == dimension) {
+      if (j++ == dimension_) {
         if (const auto &bound{shapeSpec.lbound().GetExplicit()}) {
-          return Fold(context, common::Clone(*bound));
+          return Fold(context_, common::Clone(*bound));
         } else if (semantics::IsDescriptor(symbol)) {
-          return ExtentExpr{DescriptorInquiry{
-              base, DescriptorInquiry::Field::LowerBound, dimension}};
+          return ExtentExpr{DescriptorInquiry{NamedEntity{symbol0},
+              DescriptorInquiry::Field::LowerBound, dimension_}};
         } else {
           break;
         }
       }
     }
+  } else if (const auto *assoc{
+                 symbol.detailsIf<semantics::AssocEntityDetails>()}) {
+    return (*this)(assoc->expr());
   }
-  // When we don't know that we don't know the lower bound at compilation
-  // time, then we do know it, and it's one.  (See LBOUND, 16.9.109).
-  return ExtentExpr{1};
+  return Default();
+}
+
+auto GetLowerBoundHelper::operator()(const Component &component) -> Result {
+  if (component.base().Rank() == 0) {
+    const Symbol &symbol{component.GetLastSymbol().GetUltimate()};
+    if (const auto *details{
+            symbol.detailsIf<semantics::ObjectEntityDetails>()}) {
+      int j{0};
+      for (const auto &shapeSpec : details->shape()) {
+        if (j++ == dimension_) {
+          if (const auto &bound{shapeSpec.lbound().GetExplicit()}) {
+            return Fold(context_, common::Clone(*bound));
+          } else if (semantics::IsDescriptor(symbol)) {
+            return ExtentExpr{
+                DescriptorInquiry{NamedEntity{common::Clone(component)},
+                    DescriptorInquiry::Field::LowerBound, dimension_}};
+          } else {
+            break;
+          }
+        }
+      }
+    }
+  }
+  return Default();
+}
+
+ExtentExpr GetLowerBound(
+    FoldingContext &context, const NamedEntity &base, int dimension) {
+  return GetLowerBoundHelper{context, dimension}(base);
 }
 
 Shape GetLowerBounds(FoldingContext &context, const NamedEntity &base) {
-  const Symbol &symbol{ResolveAssociations(base.GetLastSymbol())};
   Shape result;
-  if (const auto *details{symbol.detailsIf<semantics::ObjectEntityDetails>()}) {
-    int dim{0};
-    for (const auto &shapeSpec : details->shape()) {
-      if (const auto &bound{shapeSpec.lbound().GetExplicit()}) {
-        result.emplace_back(Fold(context, common::Clone(*bound)));
-      } else if (semantics::IsDescriptor(symbol)) {
-        result.emplace_back(ExtentExpr{DescriptorInquiry{
-            base, DescriptorInquiry::Field::LowerBound, dim}});
-      } else {
-        result.emplace_back(std::nullopt);
-      }
-      ++dim;
-    }
-  } else {
-    int rank{base.Rank()};
-    for (int dim{0}; dim < rank; ++dim) {
-      result.emplace_back(ExtentExpr{1});
-    }
+  int rank{base.Rank()};
+  for (int dim{0}; dim < rank; ++dim) {
+    result.emplace_back(GetLowerBound(context, base, dim));
   }
-  CHECK(GetRank(result) == symbol.Rank());
   return result;
 }
 
@@ -327,7 +359,9 @@ MaybeExtentExpr GetUpperBound(
                  symbol.detailsIf<semantics::AssocEntityDetails>()}) {
     if (auto shape{GetShape(context, assoc->expr())}) {
       if (dimension < static_cast<int>(shape->size())) {
-        return std::move(shape->at(dimension));
+        return ComputeUpperBound(context,
+            GetLowerBound(context, base, dimension),
+            std::move(shape->at(dimension)));
       }
     }
   }
