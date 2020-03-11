@@ -1238,10 +1238,23 @@ SDValue AMDGPUTargetLowering::LowerGlobalAddress(AMDGPUMachineFunction* MFI,
   if (G->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS ||
       G->getAddressSpace() == AMDGPUAS::REGION_ADDRESS) {
     if (!MFI->isEntryFunction()) {
+      SDLoc DL(Op);
       const Function &Fn = DAG.getMachineFunction().getFunction();
       DiagnosticInfoUnsupported BadLDSDecl(
-        Fn, "local memory global used by non-kernel function", SDLoc(Op).getDebugLoc());
+        Fn, "local memory global used by non-kernel function",
+        DL.getDebugLoc(), DS_Warning);
       DAG.getContext()->diagnose(BadLDSDecl);
+
+      // We currently don't have a way to correctly allocate LDS objects that
+      // aren't directly associated with a kernel. We do force inlining of
+      // functions that use local objects. However, if these dead functions are
+      // not eliminated, we don't want a compile time error. Just emit a warning
+      // and a trap, since there should be no callable path here.
+      SDValue Trap = DAG.getNode(ISD::TRAP, DL, MVT::Other, DAG.getEntryNode());
+      SDValue OutputChain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other,
+                                        Trap, DAG.getRoot());
+      DAG.setRoot(OutputChain);
+      return DAG.getUNDEF(Op.getValueType());
     }
 
     // XXX: What does the value of G->getOffset() mean?
