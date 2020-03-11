@@ -8,3 +8,8 @@
 //
 // CHECK: clang{{.*}}" "-cc1" {{.*}} "-fcuda-is-device"
 // CHECK-SAME: "--gpu-max-threads-per-block=1024"
+
+// RUN: %clang -### -x hip -target x86_64-pc-windows-msvc -fms-extensions \
+// RUN:   -mllvm -amdgpu-early-inline-all=true  %s 2>&1 | \
+// RUN:   FileCheck -check-prefix=MLLVM %s
+// MLLVM-NOT: "-mllvm"{{.*}}"-amdgpu-early-inline-all=true"{{.*}}"-mllvm"{{.*}}"-amdgpu-early-inline-all=true"
