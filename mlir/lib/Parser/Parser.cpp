@@ -1642,7 +1642,7 @@ Attribute Parser::parseAttribute(Type type) {
 ///
 ///   attribute-dict ::= `{` `}`
 ///                    | `{` attribute-entry (`,` attribute-entry)* `}`
-///   attribute-entry ::= bare-id `=` attribute-value
+///   attribute-entry ::= (bare-id | string-literal) `=` attribute-value
 ///
 ParseResult
 Parser::parseAttributeDict(SmallVectorImpl<NamedAttribute> &attributes) {
@@ -1650,17 +1650,21 @@ Parser::parseAttributeDict(SmallVectorImpl<NamedAttribute> &attributes) {
     return failure();
 
   auto parseElt = [&]() -> ParseResult {
-    // We allow keywords as attribute names.
-    if (getToken().isNot(Token::bare_identifier, Token::inttype) &&
-        !getToken().isKeyword())
+    // The name of an attribute can either be a bare identifier, or a string.
+    Optional<Identifier> nameId;
+    if (getToken().is(Token::string))
+      nameId = builder.getIdentifier(getToken().getStringValue());
+    else if (getToken().isAny(Token::bare_identifier, Token::inttype) ||
+             getToken().isKeyword())
+      nameId = builder.getIdentifier(getTokenSpelling());
+    else
       return emitError("expected attribute name");
-    Identifier nameId = builder.getIdentifier(getTokenSpelling());
     consumeToken();
 
     // Try to parse the '=' for the attribute value.
     if (!consumeIf(Token::equal)) {
       // If there is no '=', we treat this as a unit attribute.
-      attributes.push_back({nameId, builder.getUnitAttr()});
+      attributes.push_back({*nameId, builder.getUnitAttr()});
       return success();
     }
 
@@ -1668,7 +1672,7 @@ Parser::parseAttributeDict(SmallVectorImpl<NamedAttribute> &attributes) {
     if (!attr)
       return failure();
 
-    attributes.push_back({nameId, attr});
+    attributes.push_back({*nameId, attr});
     return success();
   };
 
