@@ -5137,7 +5137,7 @@ bool SwiftASTContext::DeclContextIsClassMethod(
 #ifndef NDEBUG
 bool SwiftASTContext::Verify(lldb::opaque_compiler_type_t type) {
   // Check that type is a Swift type and belongs this AST context.
-  return !type || ToCompilerType(GetSwiftType(type)).GetTypeSystem() == this;
+  return !type || &GetSwiftType(type)->getASTContext() == GetASTContext();
 }
 #endif
 
