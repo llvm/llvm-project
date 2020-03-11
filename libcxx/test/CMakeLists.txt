@@ -113,8 +113,6 @@ if (LIBCXX_INCLUDE_TESTS)
     "Running libcxx tests"
     ${CMAKE_CURRENT_BINARY_DIR}
     DEPENDS cxx ${LIBCXX_TEST_DEPS})
-
-  add_custom_target(check-libcxx DEPENDS check-cxx)
 endif()
 
 if (LIBCXX_GENERATE_COVERAGE)
