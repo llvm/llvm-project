@@ -519,36 +519,6 @@ static bool isRegInClass(const MachineOperand &MO,
 }
 
 bool LowOverheadLoop::ValidateLiveOuts() const {
-  // Collect Q-regs that are live in the exit blocks. We don't collect scalars
-  // because they won't be affected by lane predication.
-  const TargetRegisterClass *QPRs = TRI.getRegClass(ARM::MQPRRegClassID);
-  SmallSet<Register, 2> LiveOuts;
-  SmallVector<MachineBasicBlock *, 2> ExitBlocks;
-  ML.getExitBlocks(ExitBlocks);
-  for (auto *MBB : ExitBlocks)
-    for (const MachineBasicBlock::RegisterMaskPair &RegMask : MBB->liveins())
-      if (QPRs->contains(RegMask.PhysReg))
-        LiveOuts.insert(RegMask.PhysReg);
-
-  // Collect the instructions in the loop body that define the live-out values.
-  SmallPtrSet<MachineInstr *, 2> LiveMIs;
-  assert(ML.getNumBlocks() == 1 && "Expected single block loop!");
-  MachineBasicBlock *MBB = ML.getHeader();
-  for (auto Reg : LiveOuts)
-    if (auto *MI = RDA.getLocalLiveOutMIDef(MBB, Reg))
-      LiveMIs.insert(MI);
-
-  LLVM_DEBUG(dbgs() << "ARM Loops: Found loop live-outs:\n";
-             for (auto *MI : LiveMIs)
-               dbgs() << " - " << *MI);
-  // We've already validated that any VPT predication within the loop will be
-  // equivalent when we perform the predication transformation; so we know that
-  // any VPT predicated instruction is predicated upon VCTP. Any live-out
-  // instruction needs to be predicated, so check this here.
-  for (auto *MI : LiveMIs)
-    if (!isVectorPredicated(MI))
-      return false;
-
   // We want to find out if the tail-predicated version of this loop will
   // produce the same values as the loop in its original form. For this to
   // be true, the newly inserted implicit predication must not change the
@@ -570,8 +540,10 @@ bool LowOverheadLoop::ValidateLiveOuts() const {
   // loop and the tail-predicated form too. Because of this, we can insert
   // loads, stores and other predicated instructions into our KnownFalseZeros
   // set and build from there.
+  const TargetRegisterClass *QPRs = TRI.getRegClass(ARM::MQPRRegClassID);
   SetVector<MachineInstr *> UnknownFalseLanes;
   SmallPtrSet<MachineInstr *, 4> KnownFalseZeros;
+  MachineBasicBlock *MBB = ML.getHeader();
   for (auto &MI : *MBB) {
     const MCInstrDesc &MCID = MI.getDesc();
     uint64_t Flags = MCID.TSFlags;
@@ -637,6 +609,35 @@ bool LowOverheadLoop::ValidateLiveOuts() const {
     // Any unknown false lanes have been masked away by the user(s).
     KnownFalseZeros.insert(MI);
   }
+
+  // Collect Q-regs that are live in the exit blocks. We don't collect scalars
+  // because they won't be affected by lane predication.
+  SmallSet<Register, 2> LiveOuts;
+  SmallVector<MachineBasicBlock *, 2> ExitBlocks;
+  ML.getExitBlocks(ExitBlocks);
+  for (auto *MBB : ExitBlocks)
+    for (const MachineBasicBlock::RegisterMaskPair &RegMask : MBB->liveins())
+      if (QPRs->contains(RegMask.PhysReg))
+        LiveOuts.insert(RegMask.PhysReg);
+
+  // Collect the instructions in the loop body that define the live-out values.
+  SmallPtrSet<MachineInstr *, 2> LiveMIs;
+  assert(ML.getNumBlocks() == 1 && "Expected single block loop!");
+  for (auto Reg : LiveOuts)
+    if (auto *MI = RDA.getLocalLiveOutMIDef(MBB, Reg))
+      LiveMIs.insert(MI);
+
+  LLVM_DEBUG(dbgs() << "ARM Loops: Found loop live-outs:\n";
+             for (auto *MI : LiveMIs)
+               dbgs() << " - " << *MI);
+  // We've already validated that any VPT predication within the loop will be
+  // equivalent when we perform the predication transformation; so we know that
+  // any VPT predicated instruction is predicated upon VCTP. Any live-out
+  // instruction needs to be predicated, so check this here.
+  for (auto *MI : LiveMIs)
+    if (!isVectorPredicated(MI))
+      return false;
+
   return true;
 }
 
