@@ -560,6 +560,10 @@ MaterializationResponsibility::delegate(const SymbolNameSet &Symbols,
 
 void MaterializationResponsibility::addDependencies(
     const SymbolStringPtr &Name, const SymbolDependenceMap &Dependencies) {
+  LLVM_DEBUG({
+    dbgs() << "Adding dependencies for " << Name << ": " << Dependencies
+           << "\n";
+  });
   assert(SymbolFlags.count(Name) &&
          "Symbol not covered by this MaterializationResponsibility instance");
   JD.addDependencies(Name, Dependencies);
@@ -567,6 +571,10 @@ void MaterializationResponsibility::addDependencies(
 
 void MaterializationResponsibility::addDependenciesForAll(
     const SymbolDependenceMap &Dependencies) {
+  LLVM_DEBUG({
+    dbgs() << "Adding dependencies for all symbols in " << SymbolFlags << ": "
+           << Dependencies << "\n";
+  });
   for (auto &KV : SymbolFlags)
     JD.addDependencies(KV.first, Dependencies);
 }
