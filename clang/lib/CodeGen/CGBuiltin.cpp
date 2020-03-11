@@ -1325,7 +1325,8 @@ RValue CodeGenFunction::emitBuiltinOSLogFormat(const CallExpr &E) {
       // enclosing block scope.
       // FIXME: We only have to do this if the argument is a temporary, which
       //        gets released after the full expression.
-      if (TheExpr->getType()->isObjCRetainableType()) {
+      if (TheExpr->getType()->isObjCRetainableType() &&
+          getLangOpts().ObjCAutoRefCount) {
         assert(getEvaluationKind(TheExpr->getType()) == TEK_Scalar &&
                "Only scalar can be a ObjC retainable type");
         if (!isa<Constant>(ArgVal)) {
