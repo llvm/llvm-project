@@ -652,6 +652,10 @@ public class A {
 
   verifyFormat(R"(int?[] arr = new int?[10];)",
                Style); // An array of a nullable type.
+
+  verifyFormat(R"(var x = (int?)y;)", Style); // Cast to a nullable type.
+
+  verifyFormat(R"(var x = new MyContainer<int?>();)", Style); // Generics.
 }
 
 TEST_F(FormatTestCSharp, CSharpArraySubscripts) {
