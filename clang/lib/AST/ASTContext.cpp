@@ -56,6 +56,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/Linkage.h"
+#include "clang/Basic/Module.h"
 #include "clang/Basic/ObjCRuntime.h"
 #include "clang/Basic/SanitizerBlacklist.h"
 #include "clang/Basic/SourceLocation.h"
@@ -1104,6 +1105,15 @@ void ASTContext::deduplicateMergedDefinitonsFor(NamedDecl *ND) {
   Merged.erase(std::remove(Merged.begin(), Merged.end(), nullptr), Merged.end());
 }
 
+ArrayRef<Module *>
+ASTContext::getModulesWithMergedDefinition(const NamedDecl *Def) {
+  auto MergedIt =
+      MergedDefModules.find(cast<NamedDecl>(Def->getCanonicalDecl()));
+  if (MergedIt == MergedDefModules.end())
+    return None;
+  return MergedIt->second;
+}
+
 void ASTContext::PerModuleInitializers::resolve(ASTContext &Ctx) {
   if (LazyInitializers.empty())
     return;
@@ -1607,7 +1617,7 @@ void ASTContext::getOverriddenMethods(
 }
 
 void ASTContext::addedLocalImportDecl(ImportDecl *Import) {
-  assert(!Import->NextLocalImport && "Import declaration already in the chain");
+  assert(!Import->getNextLocalImport() && "Import declaration already in the chain");
   assert(!Import->isFromASTFile() && "Non-local import declaration");
   if (!FirstLocalImport) {
     FirstLocalImport = Import;
@@ -1615,7 +1625,7 @@ void ASTContext::addedLocalImportDecl(ImportDecl *Import) {
     return;
   }
 
-  LastLocalImport->NextLocalImport = Import;
+  LastLocalImport->setNextLocalImport(Import);
   LastLocalImport = Import;
 }
 

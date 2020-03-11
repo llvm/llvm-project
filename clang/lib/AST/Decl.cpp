@@ -4896,7 +4896,8 @@ static unsigned getNumModuleIdentifiers(Module *Mod) {
 ImportDecl::ImportDecl(DeclContext *DC, SourceLocation StartLoc,
                        Module *Imported,
                        ArrayRef<SourceLocation> IdentifierLocs)
-  : Decl(Import, DC, StartLoc), ImportedAndComplete(Imported, true) {
+    : Decl(Import, DC, StartLoc), ImportedModule(Imported),
+      NextLocalImportAndComplete(nullptr, true) {
   assert(getNumModuleIdentifiers(Imported) == IdentifierLocs.size());
   auto *StoredLocs = getTrailingObjects<SourceLocation>();
   std::uninitialized_copy(IdentifierLocs.begin(), IdentifierLocs.end(),
@@ -4905,7 +4906,8 @@ ImportDecl::ImportDecl(DeclContext *DC, SourceLocation StartLoc,
 
 ImportDecl::ImportDecl(DeclContext *DC, SourceLocation StartLoc,
                        Module *Imported, SourceLocation EndLoc)
-  : Decl(Import, DC, StartLoc), ImportedAndComplete(Imported, false) {
+    : Decl(Import, DC, StartLoc), ImportedModule(Imported),
+      NextLocalImportAndComplete(nullptr, false) {
   *getTrailingObjects<SourceLocation>() = EndLoc;
 }
 
@@ -4934,7 +4936,7 @@ ImportDecl *ImportDecl::CreateDeserialized(ASTContext &C, unsigned ID,
 }
 
 ArrayRef<SourceLocation> ImportDecl::getIdentifierLocs() const {
-  if (!ImportedAndComplete.getInt())
+  if (!isImportComplete())
     return None;
 
   const auto *StoredLocs = getTrailingObjects<SourceLocation>();
@@ -4943,7 +4945,7 @@ ArrayRef<SourceLocation> ImportDecl::getIdentifierLocs() const {
 }
 
 SourceRange ImportDecl::getSourceRange() const {
-  if (!ImportedAndComplete.getInt())
+  if (!isImportComplete())
     return SourceRange(getLocation(), *getTrailingObjects<SourceLocation>());
 
   return SourceRange(getLocation(), getIdentifierLocs().back());

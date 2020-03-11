@@ -2439,9 +2439,8 @@ llvm::DIType *CGDebugInfo::CreateType(const ObjCInterfaceType *Ty,
   return CreateTypeDefinition(Ty, Unit);
 }
 
-llvm::DIModule *
-CGDebugInfo::getOrCreateModuleRef(ExternalASTSource::ASTSourceDescriptor Mod,
-                                  bool CreateSkeletonCU) {
+llvm::DIModule *CGDebugInfo::getOrCreateModuleRef(ASTSourceDescriptor Mod,
+                                                  bool CreateSkeletonCU) {
   // Use the Module pointer as the key into the cache. This is a
   // nullptr if the "Module" is a PCH, which is safe because we don't
   // support chained PCH debug info, so there can only be a single PCH.
@@ -2506,9 +2505,8 @@ CGDebugInfo::getOrCreateModuleRef(ExternalASTSource::ASTSourceDescriptor Mod,
 
   llvm::DIModule *Parent =
       IsRootModule ? nullptr
-                   : getOrCreateModuleRef(
-                         ExternalASTSource::ASTSourceDescriptor(*M->Parent),
-                         CreateSkeletonCU);
+                   : getOrCreateModuleRef(ASTSourceDescriptor(*M->Parent),
+                                          CreateSkeletonCU);
   llvm::DIModule *DIMod =
       DBuilder.createModule(Parent, Mod.getModuleName(), ConfigMacros,
                             Mod.getPath());
@@ -3065,7 +3063,7 @@ llvm::DIModule *CGDebugInfo::getParentModuleOrNull(const Decl *D) {
     // option.
     if (Module *M = D->getOwningModule()) {
       // This is a (sub-)module.
-      auto Info = ExternalASTSource::ASTSourceDescriptor(*M);
+      auto Info = ASTSourceDescriptor(*M);
       return getOrCreateModuleRef(Info, /*SkeletonCU=*/false);
     } else {
       // This the precompiled header being built.
@@ -4723,7 +4721,7 @@ void CGDebugInfo::EmitImportDecl(const ImportDecl &ID) {
   if (CGM.getCodeGenOpts().getDebuggerTuning() != llvm::DebuggerKind::LLDB)
     return;
   if (Module *M = ID.getImportedModule()) {
-    auto Info = ExternalASTSource::ASTSourceDescriptor(*M);
+    auto Info = ASTSourceDescriptor(*M);
     auto Loc = ID.getLocation();
     DBuilder.createImportedDeclaration(
         getCurrentContextDescriptor(cast<Decl>(ID.getDeclContext())),
