@@ -1887,7 +1887,8 @@ unsigned X86TTIImpl::getAtomicMemIntrinsicMaxElementSize() const { return 16; }
 
 int X86TTIImpl::getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
                                       ArrayRef<Type *> Tys, FastMathFlags FMF,
-                                      unsigned ScalarizationCostPassed) {
+                                      unsigned ScalarizationCostPassed,
+                                      const Instruction *I) {
   // Costs should match the codegen from:
   // BITREVERSE: llvm\test\CodeGen\X86\vector-bitreverse.ll
   // BSWAP: llvm\test\CodeGen\X86\bswap-vector.ll
@@ -2309,12 +2310,13 @@ int X86TTIImpl::getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
       return LT.first * Entry->Cost;
   }
 
-  return BaseT::getIntrinsicInstrCost(IID, RetTy, Tys, FMF, ScalarizationCostPassed);
+  return BaseT::getIntrinsicInstrCost(IID, RetTy, Tys, FMF,
+                                      ScalarizationCostPassed, I);
 }
 
 int X86TTIImpl::getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
                                       ArrayRef<Value *> Args, FastMathFlags FMF,
-                                      unsigned VF) {
+                                      unsigned VF, const Instruction *I) {
   static const CostTblEntry AVX512CostTbl[] = {
     { ISD::ROTL,       MVT::v8i64,   1 },
     { ISD::ROTL,       MVT::v4i64,   1 },
@@ -2404,7 +2406,7 @@ int X86TTIImpl::getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
       return LT.first * Entry->Cost;
   }
 
-  return BaseT::getIntrinsicInstrCost(IID, RetTy, Args, FMF, VF);
+  return BaseT::getIntrinsicInstrCost(IID, RetTy, Args, FMF, VF, I);
 }
 
 int X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index) {
@@ -3354,7 +3356,8 @@ int X86TTIImpl::getGSScalarCost(unsigned Opcode, Type *SrcVTy,
 /// Calculate the cost of Gather / Scatter operation
 int X86TTIImpl::getGatherScatterOpCost(unsigned Opcode, Type *SrcVTy,
                                        Value *Ptr, bool VariableMask,
-                                       unsigned Alignment) {
+                                       unsigned Alignment,
+                                       const Instruction *I = nullptr) {
   assert(SrcVTy->isVectorTy() && "Unexpected data type for Gather/Scatter");
   unsigned VF = SrcVTy->getVectorNumElements();
   PointerType *PtrTy = dyn_cast<PointerType>(Ptr->getType());

@@ -1072,7 +1072,8 @@ public:
   /// Get intrinsic cost based on arguments.
   unsigned getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
                                  ArrayRef<Value *> Args, FastMathFlags FMF,
-                                 unsigned VF = 1) {
+                                 unsigned VF = 1,
+                                 const Instruction *I = nullptr) {
     unsigned RetVF = (RetTy->isVectorTy() ? RetTy->getVectorNumElements() : 1);
     assert((RetVF == 1 || VF == 1) && "VF > 1 and RetVF is a vector type");
     auto *ConcreteTTI = static_cast<T *>(this);
@@ -1109,16 +1110,17 @@ public:
       Value *Mask = Args[3];
       bool VarMask = !isa<Constant>(Mask);
       unsigned Alignment = cast<ConstantInt>(Args[2])->getZExtValue();
-      return ConcreteTTI->getGatherScatterOpCost(
-          Instruction::Store, Args[0]->getType(), Args[1], VarMask, Alignment);
+      return ConcreteTTI->getGatherScatterOpCost(Instruction::Store,
+                                                 Args[0]->getType(), Args[1],
+                                                 VarMask, Alignment, I);
     }
     case Intrinsic::masked_gather: {
       assert(VF == 1 && "Can't vectorize types here.");
       Value *Mask = Args[2];
       bool VarMask = !isa<Constant>(Mask);
       unsigned Alignment = cast<ConstantInt>(Args[1])->getZExtValue();
-      return ConcreteTTI->getGatherScatterOpCost(Instruction::Load, RetTy,
-                                                 Args[0], VarMask, Alignment);
+      return ConcreteTTI->getGatherScatterOpCost(
+          Instruction::Load, RetTy, Args[0], VarMask, Alignment, I);
     }
     case Intrinsic::experimental_vector_reduce_add:
     case Intrinsic::experimental_vector_reduce_mul:
@@ -1180,7 +1182,8 @@ public:
   /// based on types.
   unsigned getIntrinsicInstrCost(
       Intrinsic::ID IID, Type *RetTy, ArrayRef<Type *> Tys, FastMathFlags FMF,
-      unsigned ScalarizationCostPassed = std::numeric_limits<unsigned>::max()) {
+      unsigned ScalarizationCostPassed = std::numeric_limits<unsigned>::max(),
+      const Instruction *I = nullptr) {
     auto *ConcreteTTI = static_cast<T *>(this);
 
     SmallVector<unsigned, 2> ISDs;
