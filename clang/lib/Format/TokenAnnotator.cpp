@@ -131,7 +131,7 @@ private:
       }
       if (CurrentToken->isOneOf(tok::r_paren, tok::r_square, tok::r_brace) ||
           (CurrentToken->isOneOf(tok::colon, tok::question) && InExprContext &&
-           Style.Language != FormatStyle::LK_Proto &&
+           !Style.isCSharp() && Style.Language != FormatStyle::LK_Proto &&
            Style.Language != FormatStyle::LK_TextProto))
         return false;
       // If a && or || is found and interpreted as a binary operator, this set
@@ -1013,12 +1013,13 @@ private:
           Style.Language == FormatStyle::LK_JavaScript)
         break;
       if (Style.isCSharp()) {
-        // `Type? name;` and `Type? name =` can only be nullable types.
+        // `Type?)`, `Type?>`, `Type? name;` and `Type? name =` can only be
+        // nullable types.
         // Line.MustBeDeclaration will be true for `Type? name;`.
-        if (!Contexts.back().IsExpression &&
-            (Line.MustBeDeclaration ||
-             (Tok->Next && Tok->Next->is(tok::identifier) && Tok->Next->Next &&
-              Tok->Next->Next->is(tok::equal)))) {
+        if ((!Contexts.back().IsExpression && Line.MustBeDeclaration) ||
+            (Tok->Next && Tok->Next->isOneOf(tok::r_paren, tok::greater)) ||
+            (Tok->Next && Tok->Next->is(tok::identifier) && Tok->Next->Next &&
+             Tok->Next->Next->is(tok::equal))) {
           Tok->Type = TT_CSharpNullable;
           break;
         }
@@ -2969,9 +2970,9 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     if (Right.is(TT_CSharpNullable))
       return false;
 
-    // Require space after ? in nullable types.
+    // Require space after ? in nullable types except in generics and casts.
     if (Left.is(TT_CSharpNullable))
-      return true;
+      return !Right.isOneOf(TT_TemplateCloser, tok::r_paren);
 
     // No space before or after '?.'.
     if (Left.is(TT_CSharpNullConditional) || Right.is(TT_CSharpNullConditional))
