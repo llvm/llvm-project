@@ -308,7 +308,7 @@ findOccurrencesOutsideFile(const NamedDecl &RenameDecl,
   // Absolute file path => rename occurrences in that file.
   llvm::StringMap<std::vector<Range>> AffectedFiles;
   bool HasMore = Index.refs(RQuest, [&](const Ref &R) {
-    if (AffectedFiles.size() > MaxLimitFiles)
+    if (AffectedFiles.size() >= MaxLimitFiles)
       return;
     if ((R.Kind & RefKind::Spelled) == RefKind::Unknown)
       return;
@@ -318,7 +318,7 @@ findOccurrencesOutsideFile(const NamedDecl &RenameDecl,
     }
   });
 
-  if (AffectedFiles.size() > MaxLimitFiles)
+  if (AffectedFiles.size() >= MaxLimitFiles)
     return llvm::make_error<llvm::StringError>(
         llvm::formatv("The number of affected files exceeds the max limit {0}",
                       MaxLimitFiles),
@@ -521,7 +521,7 @@ llvm::Expected<FileEdits> rename(const RenameInputs &RInputs) {
     auto OtherFilesEdits = renameOutsideFile(
         RenameDecl, RInputs.MainFilePath, RInputs.NewName, *RInputs.Index,
         Opts.LimitFiles == 0 ? std::numeric_limits<size_t>::max()
-                             : Opts.LimitFiles - 1,
+                             : Opts.LimitFiles,
         GetFileContent);
     if (!OtherFilesEdits)
       return OtherFilesEdits.takeError();
