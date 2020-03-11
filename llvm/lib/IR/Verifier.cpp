@@ -4322,7 +4322,8 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     break;
   case Intrinsic::assume: {
     for (auto &Elem : Call.bundle_op_infos()) {
-      Assert(Attribute::isExistingAttribute(Elem.Tag->getKey()),
+      Assert(Elem.Tag->getKey() == "ignore" ||
+                 Attribute::isExistingAttribute(Elem.Tag->getKey()),
              "tags must be valid attribute names");
       Assert(Elem.End - Elem.Begin <= 2, "to many arguments");
       Attribute::AttrKind Kind =

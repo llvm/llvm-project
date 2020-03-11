@@ -2119,8 +2119,9 @@ An assume operand bundle has the form:
 
       "<tag>"([ <holds for value> [, <attribute argument>] ])
 
-* The tag of the operand bundle is the name of attribute that can be assumed
-  to hold.
+* The tag of the operand bundle is usually the name of attribute that can be
+  assumed to hold. It can also be `ignore`, this tag doesn't contain any
+  information and should be ignored.
 * The first argument if present is the value for which the attribute hold.
 * The second argument if present is an argument of the attribute.
 

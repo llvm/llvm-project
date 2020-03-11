@@ -197,51 +197,27 @@ bool llvm::hasAttributeInAssume(CallInst &AssumeCI, Value *IsOn,
   if (Assume.bundle_op_infos().empty())
     return false;
 
-  CallInst::bundle_op_iterator Lookup;
-
-  /// The right attribute can be found by binary search. After this finding the
-  /// right WasOn needs to be done via linear search.
-  /// Element have been ordered by argument value so the first we find is the
-  /// one we need.
-  if (AQR == AssumeQuery::Lowest)
-    Lookup =
-        llvm::lower_bound(Assume.bundle_op_infos(), AttrName,
-                          [](const CallBase::BundleOpInfo &BOI, StringRef RHS) {
-                            return BOI.Tag->getKey() < RHS;
-                          });
-  else
-    Lookup = std::prev(
-        llvm::upper_bound(Assume.bundle_op_infos(), AttrName,
-                          [](StringRef LHS, const CallBase::BundleOpInfo &BOI) {
-                            return LHS < BOI.Tag->getKey();
-                          }));
-
-  if (Lookup == Assume.bundle_op_info_end() ||
-      Lookup->Tag->getKey() != AttrName)
-    return false;
-  if (IsOn) {
-    assert((Lookup->End - Lookup->Begin > BOIE_WasOn) &&
-           "missing argument of attribute");
-    while (true) {
-      if (Lookup == Assume.bundle_op_info_end() ||
-          Lookup->Tag->getKey() != AttrName)
-        return false;
-      if (getValueFromBundleOpInfo(Assume, *Lookup, BOIE_WasOn) == IsOn)
-        break;
-      if (AQR == AssumeQuery::Highest &&
-          Lookup == Assume.bundle_op_info_begin())
-        return false;
-      Lookup = Lookup + (AQR == AssumeQuery::Lowest ? 1 : -1);
+  auto Loop = [&](auto &&Range) {
+    for (auto &BOI : Range) {
+      if (BOI.Tag->getKey() != AttrName)
+        continue;
+      if (IsOn && (BOI.End - BOI.Begin <= BOIE_WasOn ||
+                   IsOn != getValueFromBundleOpInfo(Assume, BOI, BOIE_WasOn)))
+        continue;
+      if (ArgVal) {
+        assert(BOI.End - BOI.Begin > BOIE_Argument);
+        *ArgVal = cast<ConstantInt>(
+                      getValueFromBundleOpInfo(Assume, BOI, BOIE_Argument))
+                      ->getZExtValue();
+      }
+      return true;
     }
-  }
+    return false;
+  };
 
-  if (Lookup->End - Lookup->Begin < BOIE_Argument)
-    return true;
-  if (ArgVal)
-    *ArgVal = cast<ConstantInt>(
-                  getValueFromBundleOpInfo(Assume, *Lookup, BOIE_Argument))
-                  ->getZExtValue();
-  return true;
+  if (AQR == AssumeQuery::Lowest)
+    return Loop(Assume.bundle_op_infos());
+  return Loop(reverse(Assume.bundle_op_infos()));
 }
 
 void llvm::fillMapFromAssume(CallInst &AssumeCI, RetainedKnowledgeMap &Result) {
