@@ -16,7 +16,7 @@
 
 module attributes {
   spv.target_env = #spv.target_env<
-    V_1_3, [], [Shader, GroupNonUniformArithmetic],
+    #spv.vce<v1.3, [Shader, GroupNonUniformArithmetic], []>,
     {
       max_compute_workgroup_invocations = 128 : i32,
       max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>
@@ -78,7 +78,7 @@ func @single_workgroup_reduction(%input: memref<16xi32>, %output: memref<1xi32>)
 
 module attributes {
   spv.target_env = #spv.target_env<
-    V_1_3, [], [Shader, GroupNonUniformArithmetic],
+    #spv.vce<v1.3, [Shader, GroupNonUniformArithmetic], []>,
     {
       max_compute_workgroup_invocations = 128 : i32,
       max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>
@@ -111,7 +111,7 @@ func @single_workgroup_reduction(%input: memref<16xi32>, %output: memref<1xi32>)
 
 module attributes {
   spv.target_env = #spv.target_env<
-    V_1_3, [], [Shader, GroupNonUniformArithmetic],
+    #spv.vce<v1.3, [Shader, GroupNonUniformArithmetic], []>,
     {
       max_compute_workgroup_invocations = 128 : i32,
       max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>
@@ -146,7 +146,7 @@ func @single_workgroup_reduction(%input: memref<16xi32>, %output: memref<1xi32>)
 
 module attributes {
   spv.target_env = #spv.target_env<
-    V_1_3, [], [Shader, GroupNonUniformArithmetic],
+    #spv.vce<v1.3, [Shader, GroupNonUniformArithmetic], []>,
     {
       max_compute_workgroup_invocations = 128 : i32,
       max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>
