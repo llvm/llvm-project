@@ -12,6 +12,7 @@
 
 #include "llvm/Object/ArchiveWriter.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/IR/LLVMContext.h"
