@@ -763,9 +763,6 @@ namespace {
 bool IsDirectory(const FileSpec &spec) {
   return llvm::sys::fs::is_directory(spec.GetPath());
 }
-bool IsRegularFile(const FileSpec &spec) {
-  return llvm::sys::fs::is_regular_file(spec.GetPath());
-}
 } // namespace
 
 llvm::LLVMContext &SwiftASTContext::GetGlobalLLVMContext() {
