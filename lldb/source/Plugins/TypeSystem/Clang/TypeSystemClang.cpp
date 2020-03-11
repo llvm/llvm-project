@@ -2532,6 +2532,12 @@ ConvertAccessTypeToObjCIvarAccessControl(AccessType access) {
 
 // Tests
 
+#ifndef NDEBUG
+bool TypeSystemClang::Verify(lldb::opaque_compiler_type_t type) {
+  return !type || llvm::isa<clang::Type>(GetQualType(type).getTypePtr());
+}
+#endif
+
 bool TypeSystemClang::IsAggregateType(lldb::opaque_compiler_type_t type) {
   clang::QualType qual_type(RemoveWrappingTypes(GetCanonicalQualType(type)));
 
