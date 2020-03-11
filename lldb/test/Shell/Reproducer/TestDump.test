@@ -24,3 +24,11 @@
 # GDB: read packet: $OK#9a
 
 # RUN: %lldb --replay %t.repro | FileCheck %s --check-prefix FILES
+
+# RUN: rm %t.repro/gdb-remote.yaml
+# RUN: %lldb -b -o 'reproducer dump -p gdb -f %t.repro' 2>&1 | FileCheck %s --check-prefix GDB-ERROR
+# GDB-ERROR: error: Unable to create GDB loader.
+
+# RUN: rm %t.repro/command-interpreter.yaml
+# RUN: %lldb -b -o 'reproducer dump -p commands -f %t.repro' 2>&1 | FileCheck %s --check-prefix COMMANDS-ERROR
+# COMMANDS-ERROR: error: Unable to create command loader.
