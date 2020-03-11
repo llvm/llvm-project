@@ -24,6 +24,10 @@ try to find the ``.clang-format`` file located in the closest parent directory
 of the input file. When the standard input is used, the search is started from
 the current directory.
 
+When using ``-style=file:<format_file_path>, :program:`clang-format` for 
+each input file will use the format file located at `<format_file_path>`.
+The path may be absolute or relative to the working directory.
+
 The ``.clang-format`` file uses YAML format:
 
 .. code-block:: yaml
