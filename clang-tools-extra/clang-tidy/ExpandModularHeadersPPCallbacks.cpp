@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ExpandModularHeadersPPCallbacks.h"
+#include "clang/Basic/FileManager.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Serialization/ASTReader.h"

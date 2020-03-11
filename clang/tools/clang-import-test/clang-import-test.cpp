@@ -11,6 +11,7 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/ExternalASTMerger.h"
 #include "clang/Basic/Builtins.h"
+#include "clang/Basic/FileManager.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/TargetInfo.h"
