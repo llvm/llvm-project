@@ -1,6 +1,7 @@
 set(LLVM_OPTIONAL_SOURCES
   CallInterfaces.cpp
   ControlFlowInterfaces.cpp
+  DerivedAttributeOpInterface.cpp
   InferTypeOpInterface.cpp
   SideEffects.cpp
   )
@@ -29,6 +30,20 @@ add_dependencies(MLIRControlFlowInterfaces
   MLIRControlFlowInterfacesIncGen
   )
 target_link_libraries(MLIRControlFlowInterfaces
+  PUBLIC
+  MLIRIR
+  )
+
+add_llvm_library(MLIRDerivedAttributeOpInterface
+  DerivedAttributeOpInterface.cpp
+
+  ADDITIONAL_HEADER_DIRS
+  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Interfaces
+  )
+add_dependencies(MLIRDerivedAttributeOpInterface
+  MLIRDerivedAttributeOpInterfaceIncGen
+  )
+target_link_libraries(MLIRDerivedAttributeOpInterface
   PUBLIC
   MLIRIR
   )
