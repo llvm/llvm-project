@@ -1,10 +1,10 @@
 // RUN: %check_clang_tidy %s portability-restrict-system-includes %t \
-// RUN:     -- -config="{CheckOptions: [{key: portability-restrict-system-includes.Includes, value: '-*,stdio.h'}]}"
+// RUN:     -- -config="{CheckOptions: [{key: portability-restrict-system-includes.Includes, value: '-*,stddef.h'}]}"
 
-// Test allow-list functionality: disallow all but stdio.h.
+// Test allow-list functionality: disallow all but stddef.h.
 
-#include <stdio.h>
-#include <stdlib.h>
-// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: system include stdlib.h not allowed
-#include <string.h>
-// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: system include string.h not allowed
+#include <stddef.h>
+#include <stdint.h>
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: system include stdint.h not allowed
+#include <float.h>
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: system include float.h not allowed

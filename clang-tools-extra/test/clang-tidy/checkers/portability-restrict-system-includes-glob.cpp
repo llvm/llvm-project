@@ -4,7 +4,7 @@
 // Test glob functionality: disallow all headers except those that match
 // pattern "std*.h".
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: system include string.h not allowed
+#include <stddef.h>
+#include <stdint.h>
+#include <float.h>
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: system include float.h not allowed
