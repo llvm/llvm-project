@@ -892,6 +892,7 @@ protected:
   void printOptionalAttrDict(ArrayRef<NamedAttribute> attrs,
                              ArrayRef<StringRef> elidedAttrs = {},
                              bool withKeyword = false);
+  void printNamedAttribute(NamedAttribute attr);
   void printTrailingLocation(Location loc);
   void printLocationInternal(LocationAttr loc, bool pretty = false);
 
@@ -1244,16 +1245,7 @@ void ModulePrinter::printAttribute(Attribute attr,
   case StandardAttributes::Dictionary:
     os << '{';
     interleaveComma(attr.cast<DictionaryAttr>().getValue(),
-                    [&](NamedAttribute attr) {
-                      os << attr.first;
-
-                      // The value of a UnitAttr is elided within a dictionary.
-                      if (attr.second.isa<UnitAttr>())
-                        return;
-
-                      os << " = ";
-                      printAttribute(attr.second);
-                    });
+                    [&](NamedAttribute attr) { printNamedAttribute(attr); });
     os << '}';
     break;
   case StandardAttributes::Integer: {
@@ -1618,17 +1610,26 @@ void ModulePrinter::printOptionalAttrDict(ArrayRef<NamedAttribute> attrs,
 
   // Otherwise, print them all out in braces.
   os << " {";
-  interleaveComma(filteredAttrs, [&](NamedAttribute attr) {
-    os << attr.first;
-
-    // Pretty printing elides the attribute value for unit attributes.
-    if (attr.second.isa<UnitAttr>())
-      return;
-
-    os << " = ";
-    printAttribute(attr.second);
-  });
+  interleaveComma(filteredAttrs,
+                  [&](NamedAttribute attr) { printNamedAttribute(attr); });
   os << '}';
+}
+
+void ModulePrinter::printNamedAttribute(NamedAttribute attr) {
+  if (isBareIdentifier(attr.first)) {
+    os << attr.first;
+  } else {
+    os << '"';
+    printEscapedString(attr.first.strref(), os);
+    os << '"';
+  }
+
+  // Pretty printing elides the attribute value for unit attributes.
+  if (attr.second.isa<UnitAttr>())
+    return;
+
+  os << " = ";
+  printAttribute(attr.second);
 }
 
 //===----------------------------------------------------------------------===//
