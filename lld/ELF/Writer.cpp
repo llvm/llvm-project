@@ -1638,16 +1638,14 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
     }
   }
 
-  // If a SECTIONS command is given, addrExpr, if set, is the specified output
-  // section address. Warn if the computed value is different from the actual
-  // address.
-  if (!script->hasSectionsCommand)
-    return;
-  for (auto changed : script->changedSectionAddresses) {
-    const OutputSection *os = changed.first;
-    warn("start of section " + os->name + " changes from 0x" +
-         utohexstr(changed.second) + " to 0x" + utohexstr(os->addr));
-  }
+  // If addrExpr is set, the address may not be a multiple of the alignment.
+  // Warn because this is error-prone.
+  for (BaseCommand *cmd : script->sectionCommands)
+    if (auto *os = dyn_cast<OutputSection>(cmd))
+      if (os->addr % os->alignment != 0)
+        warn("address (0x" + Twine::utohexstr(os->addr) + ") of section " +
+             os->name + " is not a multiple of alignment (" +
+             Twine(os->alignment) + ")");
 }
 
 static void finalizeSynthetic(SyntheticSection *sec) {
