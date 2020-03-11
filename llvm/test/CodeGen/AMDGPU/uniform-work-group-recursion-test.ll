@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=amdgcn-amd- -amdgpu-annotate-kernel-features %s | FileCheck %s 
+; RUN: opt -S -mtriple=amdgcn-amd- -amdgpu-annotate-kernel-features %s | FileCheck %s
 
 ; Test to ensure recursive functions exhibit proper behaviour
 ; Test to generate fibonacci numbers
@@ -25,7 +25,7 @@ exit:
   ret i32 1
 }
 
-; CHECK: define amdgpu_kernel void @kernel(i32 addrspace(1)* %m) #[[FIB]] {
+; CHECK: define amdgpu_kernel void @kernel(i32 addrspace(1)* %m) #[[KERNEL:[0-9]+]] {
 define amdgpu_kernel void @kernel(i32 addrspace(1)* %m) #1 {
   %r = call i32 @fib(i32 5)
   store i32 %r, i32 addrspace(1)* %m
@@ -35,3 +35,4 @@ define amdgpu_kernel void @kernel(i32 addrspace(1)* %m) #1 {
 attributes #1 = { "uniform-work-group-size"="true" }
 
 ; CHECK: attributes #[[FIB]] = { "uniform-work-group-size"="true" }
+; CHECK: attributes #[[KERNEL]] = { "amdgpu-calls" "uniform-work-group-size"="true" }

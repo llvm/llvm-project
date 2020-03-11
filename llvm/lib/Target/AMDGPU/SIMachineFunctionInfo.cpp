@@ -54,6 +54,11 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
 
   Occupancy = ST.computeOccupancy(MF, getLDSSize());
   CallingConv::ID CC = F.getCallingConv();
+  const MachineFrameInfo &FrameInfo = MF.getFrameInfo();
+
+  // FIXME: Should have analysis or something rather than attribute to detect
+  // calls.
+  const bool HasCalls = FrameInfo.hasCalls() || F.hasFnAttribute("amdgpu-calls");
 
   if (CC == CallingConv::AMDGPU_KERNEL || CC == CallingConv::SPIR_KERNEL) {
     if (!F.arg_empty())
@@ -107,7 +112,6 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
   if (F.hasFnAttribute("amdgpu-work-item-id-z"))
     WorkItemIDZ = true;
 
-  const MachineFrameInfo &FrameInfo = MF.getFrameInfo();
   bool HasStackObjects = FrameInfo.hasStackObjects();
 
   if (isEntryFunction()) {
@@ -158,7 +162,7 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
     };
     // TODO: This could be refined a lot. The attribute is a poor way of
     // detecting calls that may require it before argument lowering.
-    if (hasNonSpillStackObjects() || F.hasFnAttribute("amdgpu-flat-scratch"))
+    if (HasCalls || hasNonSpillStackObjects())
       FlatScratchInit = true;
   }
 
