@@ -1163,6 +1163,10 @@ func @"\"_string_symbol_reference\""() {
   return
 }
 
+// CHECK-LABEL: func @string_attr_name
+// CHECK-SAME: {"0 . 0", nested = {"0 . 0"}}
+func @string_attr_name() attributes {"0 . 0", nested = {"0 . 0"}}
+
 // CHECK-LABEL: func @nested_reference
 // CHECK: ref = @some_symbol::@some_nested_symbol
 func @nested_reference() attributes {test.ref = @some_symbol::@some_nested_symbol }

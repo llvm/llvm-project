@@ -1156,7 +1156,8 @@ attribute-dict ::= `{` `}`
 attribute-entry ::= dialect-attribute-entry | dependent-attribute-entry
 dialect-attribute-entry ::= dialect-namespace `.` bare-id `=` attribute-value
 dependent-attribute-entry ::= dependent-attribute-name `=` attribute-value
-dependent-attribute-name ::= (letter|[_]) (letter|digit|[_$])*
+dependent-attribute-name ::= ((letter|[_]) (letter|digit|[_$])*)
+                           | string-literal
 ```
 
 Attributes are the mechanism for specifying constant data on operations in
