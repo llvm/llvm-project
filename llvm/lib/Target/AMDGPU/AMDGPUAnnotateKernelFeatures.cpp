@@ -71,7 +71,8 @@ public:
   static bool visitConstantExpr(const ConstantExpr *CE);
   static bool visitConstantExprsRecursively(
     const Constant *EntryC,
-    SmallPtrSet<const Constant *, 8> &ConstantExprVisited);
+    SmallPtrSet<const Constant *, 8> &ConstantExprVisited, bool IsFunc,
+    bool HasApertureRegs);
 };
 
 } // end anonymous namespace
@@ -93,6 +94,14 @@ static bool castRequiresQueuePtr(const AddrSpaceCastInst *ASC) {
   return castRequiresQueuePtr(ASC->getSrcAddressSpace());
 }
 
+static bool isDSAddress(const Constant *C) {
+  const GlobalValue *GV = dyn_cast<GlobalValue>(C);
+  if (!GV)
+    return false;
+  unsigned AS = GV->getAddressSpace();
+  return AS == AMDGPUAS::LOCAL_ADDRESS || AS == AMDGPUAS::REGION_ADDRESS;
+}
+
 bool AMDGPUAnnotateKernelFeatures::visitConstantExpr(const ConstantExpr *CE) {
   if (CE->getOpcode() == Instruction::AddrSpaceCast) {
     unsigned SrcAS = CE->getOperand(0)->getType()->getPointerAddressSpace();
@@ -104,7 +113,8 @@ bool AMDGPUAnnotateKernelFeatures::visitConstantExpr(const ConstantExpr *CE) {
 
 bool AMDGPUAnnotateKernelFeatures::visitConstantExprsRecursively(
   const Constant *EntryC,
-  SmallPtrSet<const Constant *, 8> &ConstantExprVisited) {
+  SmallPtrSet<const Constant *, 8> &ConstantExprVisited,
+  bool IsFunc, bool HasApertureRegs) {
 
   if (!ConstantExprVisited.insert(EntryC).second)
     return false;
@@ -115,9 +125,13 @@ bool AMDGPUAnnotateKernelFeatures::visitConstantExprsRecursively(
   while (!Stack.empty()) {
     const Constant *C = Stack.pop_back_val();
 
+    // We need to trap on DS globals in non-entry functions.
+    if (IsFunc && isDSAddress(C))
+      return true;
+
     // Check this constant expression.
     if (const auto *CE = dyn_cast<ConstantExpr>(C)) {
-      if (visitConstantExpr(CE))
+      if (!HasApertureRegs && visitConstantExpr(CE))
         return true;
     }
 
@@ -301,11 +315,11 @@ bool AMDGPUAnnotateKernelFeatures::addFeatureAttributes(Function &F) {
         }
       }
 
-      if (NeedQueuePtr || HasApertureRegs)
+      if (NeedQueuePtr || (!IsFunc && HasApertureRegs))
         continue;
 
       if (const AddrSpaceCastInst *ASC = dyn_cast<AddrSpaceCastInst>(&I)) {
-        if (castRequiresQueuePtr(ASC)) {
+        if (!HasApertureRegs && castRequiresQueuePtr(ASC)) {
           NeedQueuePtr = true;
           continue;
         }
@@ -316,7 +330,8 @@ bool AMDGPUAnnotateKernelFeatures::addFeatureAttributes(Function &F) {
         if (!OpC)
           continue;
 
-        if (visitConstantExprsRecursively(OpC, ConstantExprVisited)) {
+        if (visitConstantExprsRecursively(OpC, ConstantExprVisited, IsFunc,
+                                          HasApertureRegs)) {
           NeedQueuePtr = true;
           break;
         }
