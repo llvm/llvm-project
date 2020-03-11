@@ -32,6 +32,8 @@ static const char ThinArchiveWithMember[] = "!<thin>\n"        // Global header
                                             "9999999999"       // Size
                                             "`\n";
 
+static const uint64_t MemberSize = 9999999999ull;
+
 struct ArchiveTestsFixture : Test {
   Expected<Archive::child_iterator> createChild(StringRef Src) {
     MemoryBufferRef Source(Src, "archive");
@@ -51,12 +53,17 @@ struct ArchiveTestsFixture : Test {
 };
 
 TEST_F(ArchiveTestsFixture, ArchiveChildGetSizeRegularArchive) {
+  // This test relies on a StringRef being able to hold the appropriate amount
+  // of data.
+  if (std::numeric_limits<StringRef::size_type>::max() < MemberSize)
+    return;
+
   auto Child = createChild(ArchiveWithMember);
   ASSERT_THAT_EXPECTED(Child, Succeeded());
 
   Expected<uint64_t> Size = (*Child)->getSize();
   ASSERT_THAT_EXPECTED(Size, Succeeded());
-  EXPECT_EQ(9999999999u, *Size);
+  EXPECT_EQ(MemberSize, *Size);
 }
 
 TEST_F(ArchiveTestsFixture, ArchiveChildGetSizeThinArchive) {
@@ -65,10 +72,15 @@ TEST_F(ArchiveTestsFixture, ArchiveChildGetSizeThinArchive) {
 
   Expected<uint64_t> Size = (*Child)->getSize();
   ASSERT_THAT_EXPECTED(Size, Succeeded());
-  EXPECT_EQ(9999999999u, *Size);
+  EXPECT_EQ(MemberSize, *Size);
 }
 
 TEST_F(ArchiveTestsFixture, ArchiveChildGetBuffer) {
+  // This test relies on a StringRef being able to hold the appropriate amount
+  // of data.
+  if (std::numeric_limits<StringRef::size_type>::max() < MemberSize)
+    return;
+
   auto Child = createChild(ArchiveWithMember);
   ASSERT_THAT_EXPECTED(Child, Succeeded());
 
@@ -76,6 +88,6 @@ TEST_F(ArchiveTestsFixture, ArchiveChildGetBuffer) {
   // Cannot use ASSERT_THAT_EXPECTED, as that will attempt to print the
   // StringRef (which has an invalid size).
   ASSERT_TRUE((bool)Buffer);
-  EXPECT_EQ(9999999999u, Buffer->size());
+  EXPECT_EQ(MemberSize, Buffer->size());
   EXPECT_EQ(ArchiveWithMember + sizeof(ArchiveWithMember) - 1, Buffer->data());
 }
