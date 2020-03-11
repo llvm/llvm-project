@@ -4220,10 +4220,10 @@ Value *llvm::SimplifyInsertElementInst(Value *Vec, Value *Val, Value *Idx,
   if (VecC && ValC && IdxC)
     return ConstantFoldInsertElementInstruction(VecC, ValC, IdxC);
 
-  // Fold into undef if index is out of bounds.
+  // For fixed-length vector, fold into undef if index is out of bounds.
   if (auto *CI = dyn_cast<ConstantInt>(Idx)) {
-    uint64_t NumElements = cast<VectorType>(Vec->getType())->getNumElements();
-    if (CI->uge(NumElements))
+    if (!Vec->getType()->getVectorIsScalable() &&
+        CI->uge(Vec->getType()->getVectorNumElements()))
       return UndefValue::get(Vec->getType());
   }
 
@@ -4294,8 +4294,9 @@ static Value *SimplifyExtractElementInst(Value *Vec, Value *Idx, const SimplifyQ
   // If extracting a specified index from the vector, see if we can recursively
   // find a previously computed scalar that was inserted into the vector.
   if (auto *IdxC = dyn_cast<ConstantInt>(Idx)) {
-    if (IdxC->getValue().uge(Vec->getType()->getVectorNumElements()))
-      // definitely out of bounds, thus undefined result
+    // For fixed-length vector, fold into undef if index is out of bounds.
+    if (!Vec->getType()->getVectorIsScalable() &&
+        IdxC->getValue().uge(Vec->getType()->getVectorNumElements()))
       return UndefValue::get(Vec->getType()->getVectorElementType());
     if (Value *Elt = findScalarElement(Vec, IdxC->getZExtValue()))
       return Elt;
