@@ -2930,6 +2930,14 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     // interpolated strings. Interpolated strings are merged into a single token
     // so cannot have spaces inserted by this function.
 
+    // No space between 'this' and '['
+    if (Left.is(tok::kw_this) && Right.is(tok::l_square))
+      return false;
+
+    // No space between 'new' and '('
+    if (Left.is(tok::kw_new) && Right.is(tok::l_paren))
+      return false;
+
     // Space before { (including space within '{ {').
     if (Right.is(tok::l_brace))
       return true;
