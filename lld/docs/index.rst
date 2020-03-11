@@ -176,3 +176,4 @@ document soon.
    missingkeyfunction
    Partitions
    ReleaseNotes
+   ELF/linker_script
