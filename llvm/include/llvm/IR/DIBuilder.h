@@ -136,6 +136,8 @@ namespace llvm {
     /// \param NameTableKind  Whether to emit .debug_gnu_pubnames,
     ///                      .debug_pubnames, or no pubnames at all.
     /// \param SysRoot       The clang system root (value of -isysroot).
+    /// \param SDK           The SDK name. On Darwin, this is the last component
+    ///                      of the sysroot.
     DICompileUnit *
     createCompileUnit(unsigned Lang, DIFile *File, StringRef Producer,
                       bool isOptimized, StringRef Flags, unsigned RV,
@@ -146,7 +148,8 @@ namespace llvm {
                       bool DebugInfoForProfiling = false,
                       DICompileUnit::DebugNameTableKind NameTableKind =
                           DICompileUnit::DebugNameTableKind::Default,
-                      bool RangesBaseAddress = false, StringRef SysRoot = {});
+                      bool RangesBaseAddress = false, StringRef SysRoot = {},
+                      StringRef SDK = {});
 
     /// Create a file descriptor to hold debugging information for a file.
     /// \param Filename  File name.
