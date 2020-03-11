@@ -2942,6 +2942,18 @@ def SPV_SamplerUseAttr:
       [SPV_ISUI_SamplerUnknown, SPV_ISUI_NeedSampler, SPV_ISUI_NoSampler]>;
 
 //===----------------------------------------------------------------------===//
+// SPIR-V attribute definitions
+//===----------------------------------------------------------------------===//
+
+def SPV_VerCapExtAttr : Attr<
+    CPred<"$_self.isa<::mlir::spirv::VerCapExtAttr>()">,
+    "version-capability-extension attribute"> {
+  let storageType = "::mlir::spirv::VerCapExtAttr";
+  let returnType = "::mlir::spirv::VerCapExtAttr";
+  let convertFromStorage = "$_self";
+}
+
+//===----------------------------------------------------------------------===//
 // SPIR-V type definitions
 //===----------------------------------------------------------------------===//
 

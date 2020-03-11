@@ -148,7 +148,7 @@ func @subgroup_ballot_missing_extension(%predicate: i1) -> vector<4xi32> attribu
 func @module_suitable_extension1() attributes {
   spv.target_env = #spv.target_env<#spv.vce<v1.0, [VulkanMemoryModel, PhysicalStorageBufferAddresses], [SPV_KHR_vulkan_memory_model, SPV_EXT_physical_storage_buffer]>, {max_compute_workgroup_invocations = 128 : i32, max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
 } {
-  // CHECK: spv.module "PhysicalStorageBuffer64" "Vulkan"
+  // CHECK: spv.module PhysicalStorageBuffer64 Vulkan
   "test.convert_to_module_op"() : () ->()
   return
 }
@@ -157,7 +157,7 @@ func @module_suitable_extension1() attributes {
 func @module_suitable_extension2() attributes {
   spv.target_env = #spv.target_env<#spv.vce<v1.0, [VulkanMemoryModel, PhysicalStorageBufferAddresses], [SPV_KHR_vulkan_memory_model, SPV_KHR_physical_storage_buffer]>, {max_compute_workgroup_invocations = 128 : i32, max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
 } {
-  // CHECK: spv.module "PhysicalStorageBuffer64" "Vulkan"
+  // CHECK: spv.module PhysicalStorageBuffer64 Vulkan
   "test.convert_to_module_op"() : () -> ()
   return
 }
@@ -185,7 +185,7 @@ func @module_implied_extension() attributes {
   // Version 1.5 implies SPV_KHR_vulkan_memory_model and SPV_KHR_physical_storage_buffer.
   spv.target_env = #spv.target_env<#spv.vce<v1.5, [VulkanMemoryModel, PhysicalStorageBufferAddresses], []>, {max_compute_workgroup_invocations = 128 : i32, max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
 } {
-  // CHECK: spv.module "PhysicalStorageBuffer64" "Vulkan"
+  // CHECK: spv.module PhysicalStorageBuffer64 Vulkan
   "test.convert_to_module_op"() : () -> ()
   return
 }

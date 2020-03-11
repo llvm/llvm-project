@@ -2,7 +2,7 @@
 
 module attributes {gpu.container_module} {
   gpu.module @kernels {
-    // CHECK:       spv.module "Logical" "GLSL450" {
+    // CHECK:       spv.module Logical GLSL450 {
     // CHECK-LABEL: spv.func @basic_module_structure
     // CHECK-SAME: {{%.*}}: f32 {spv.interface_var_abi = {binding = 0 : i32, descriptor_set = 0 : i32, storage_class = 12 : i32{{[}][}]}}
     // CHECK-SAME: {{%.*}}: !spv.ptr<!spv.struct<!spv.array<12 x f32 [4]> [0]>, StorageBuffer> {spv.interface_var_abi = {binding = 1 : i32, descriptor_set = 0 : i32, storage_class = 12 : i32{{[}][}]}}
@@ -12,7 +12,6 @@ module attributes {gpu.container_module} {
       // CHECK: spv.Return
       gpu.return
     }
-    // CHECK: attributes {capabilities = ["Shader"], extensions = ["SPV_KHR_storage_buffer_storage_class"]}
   }
 
   func @main() {

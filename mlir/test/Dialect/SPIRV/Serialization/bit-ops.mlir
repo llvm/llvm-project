@@ -1,6 +1,6 @@
 // RUN: mlir-translate -test-spirv-roundtrip -split-input-file %s | FileCheck %s
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
   spv.func @bitcount(%arg: i32) -> i32 "None" {
     // CHECK: spv.BitCount {{%.*}} : i32
     %0 = spv.BitCount %arg : i32

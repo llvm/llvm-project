@@ -150,7 +150,7 @@ void UpdateVCEPass::runOnOperation() {
   auto triple = spirv::VerCapExtAttr::get(
       deducedVersion, deducedCapabilities.getArrayRef(),
       deducedExtensions.getArrayRef(), &getContext());
-  module.setAttr("vce_triple", triple);
+  module.setAttr(spirv::ModuleOp::getVCETripleAttrName(), triple);
 }
 
 std::unique_ptr<OpPassBase<spirv::ModuleOp>>
