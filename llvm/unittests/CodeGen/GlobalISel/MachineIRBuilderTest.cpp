@@ -362,3 +362,39 @@ TEST_F(GISelMITest, BuildMerge) {
 
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
+
+TEST_F(GISelMITest, BuildAddoSubo) {
+  setUp();
+  if (!TM)
+    return;
+
+  LLT S1 = LLT::scalar(1);
+  LLT S64 = LLT::scalar(64);
+  SmallVector<Register, 4> Copies;
+  collectCopies(Copies, MF);
+
+  auto UAddo = B.buildUAddo(S64, S1, Copies[0], Copies[1]);
+  auto USubo = B.buildUSubo(S64, S1, Copies[0], Copies[1]);
+  auto SAddo = B.buildSAddo(S64, S1, Copies[0], Copies[1]);
+  auto SSubo = B.buildSSubo(S64, S1, Copies[0], Copies[1]);
+
+  B.buildUAdde(S64, S1, Copies[0], Copies[1], UAddo.getReg(1));
+  B.buildUSube(S64, S1, Copies[0], Copies[1], USubo.getReg(1));
+  B.buildSAdde(S64, S1, Copies[0], Copies[1], SAddo.getReg(1));
+  B.buildSSube(S64, S1, Copies[0], Copies[1], SSubo.getReg(1));
+
+  auto CheckStr = R"(
+  ; CHECK: [[COPY0:%[0-9]+]]:_(s64) = COPY $x0
+  ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+  ; CHECK: [[UADDO:%[0-9]+]]:_(s64), [[UADDO_FLAG:%[0-9]+]]:_(s1) = G_UADDO [[COPY0]]:_, [[COPY1]]:_
+  ; CHECK: [[USUBO:%[0-9]+]]:_(s64), [[USUBO_FLAG:%[0-9]+]]:_(s1) = G_USUBO [[COPY0]]:_, [[COPY1]]:_
+  ; CHECK: [[SADDO:%[0-9]+]]:_(s64), [[SADDO_FLAG:%[0-9]+]]:_(s1) = G_SADDO [[COPY0]]:_, [[COPY1]]:_
+  ; CHECK: [[SSUBO:%[0-9]+]]:_(s64), [[SSUBO_FLAG:%[0-9]+]]:_(s1) = G_SSUBO [[COPY0]]:_, [[COPY1]]:_
+  ; CHECK: [[UADDE:%[0-9]+]]:_(s64), [[UADDE_FLAG:%[0-9]+]]:_(s1) = G_UADDE [[COPY0]]:_, [[COPY1]]:_, [[UADDO_FLAG]]
+  ; CHECK: [[USUBE:%[0-9]+]]:_(s64), [[USUBE_FLAG:%[0-9]+]]:_(s1) = G_USUBE [[COPY0]]:_, [[COPY1]]:_, [[USUBO_FLAG]]
+  ; CHECK: [[SADDE:%[0-9]+]]:_(s64), [[SADDE_FLAG:%[0-9]+]]:_(s1) = G_SADDE [[COPY0]]:_, [[COPY1]]:_, [[SADDO_FLAG]]
+  ; CHECK: [[SSUBE:%[0-9]+]]:_(s64), [[SSUBE_FLAG:%[0-9]+]]:_(s1) = G_SSUBE [[COPY0]]:_, [[COPY1]]:_, [[SSUBO_FLAG]]
+  )";
+
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
