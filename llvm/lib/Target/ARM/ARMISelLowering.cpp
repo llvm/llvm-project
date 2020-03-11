@@ -911,7 +911,6 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::FMA, MVT::v4f32, Expand);
     }
 
-    setTargetDAGCombine(ISD::INTRINSIC_WO_CHAIN);
     setTargetDAGCombine(ISD::SHL);
     setTargetDAGCombine(ISD::SRL);
     setTargetDAGCombine(ISD::SRA);
@@ -939,6 +938,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     setTargetDAGCombine(ISD::SIGN_EXTEND);
     setTargetDAGCombine(ISD::ZERO_EXTEND);
     setTargetDAGCombine(ISD::ANY_EXTEND);
+    setTargetDAGCombine(ISD::INTRINSIC_WO_CHAIN);
     setTargetDAGCombine(ISD::INTRINSIC_W_CHAIN);
     setTargetDAGCombine(ISD::INTRINSIC_VOID);
     setTargetDAGCombine(ISD::VECREDUCE_ADD);
@@ -14173,7 +14173,9 @@ static SDValue PerformLongShiftCombine(SDNode *N, SelectionDAG &DAG) {
 }
 
 /// PerformIntrinsicCombine - ARM-specific DAG combining for intrinsics.
-static SDValue PerformIntrinsicCombine(SDNode *N, SelectionDAG &DAG) {
+SDValue ARMTargetLowering::PerformIntrinsicCombine(SDNode *N,
+                                                   DAGCombinerInfo &DCI) const {
+  SelectionDAG &DAG = DCI.DAG;
   unsigned IntNo = cast<ConstantSDNode>(N->getOperand(0))->getZExtValue();
   switch (IntNo) {
   default:
@@ -14322,6 +14324,19 @@ static SDValue PerformIntrinsicCombine(SDNode *N, SelectionDAG &DAG) {
   case Intrinsic::arm_neon_vqrshiftu:
     // No immediate versions of these to check for.
     break;
+
+  case Intrinsic::arm_mve_vmla_n_predicated:
+  case Intrinsic::arm_mve_vmlas_n_predicated: {
+    // These intrinsics all take an i32 scalar operand which is narrowed to the
+    // size of a single lane of the vector type they return. So we don't need
+    // any bits of that operand above that point, which allows us to eliminate
+    // uxth/sxth.
+    unsigned BitWidth = N->getValueType(0).getScalarSizeInBits();
+    APInt DemandedMask = APInt::getLowBitsSet(32, BitWidth);
+    if (SimplifyDemandedBits(N->getOperand(3), DemandedMask, DCI))
+      return SDValue();
+    break;
+  }
   }
 
   return SDValue();
@@ -15041,7 +15056,8 @@ SDValue ARMTargetLowering::PerformDAGCombine(SDNode *N,
     return PerformVCVTCombine(N, DCI.DAG, Subtarget);
   case ISD::FDIV:
     return PerformVDIVCombine(N, DCI.DAG, Subtarget);
-  case ISD::INTRINSIC_WO_CHAIN: return PerformIntrinsicCombine(N, DCI.DAG);
+  case ISD::INTRINSIC_WO_CHAIN:
+    return PerformIntrinsicCombine(N, DCI);
   case ISD::SHL:
   case ISD::SRA:
   case ISD::SRL:

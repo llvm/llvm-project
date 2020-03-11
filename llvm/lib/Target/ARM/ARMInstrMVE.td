@@ -5152,47 +5152,48 @@ class MVE_VFMAMLA_qr<string iname, string suffix,
   let validForTailPredication = 1;
 }
 
-def MVE_VMLA_qr_s8     : MVE_VFMAMLA_qr<"vmla",  "s8",  0b0, 0b00, 0b0>;
-def MVE_VMLA_qr_s16    : MVE_VFMAMLA_qr<"vmla",  "s16", 0b0, 0b01, 0b0>;
-def MVE_VMLA_qr_s32    : MVE_VFMAMLA_qr<"vmla",  "s32", 0b0, 0b10, 0b0>;
-def MVE_VMLA_qr_u8     : MVE_VFMAMLA_qr<"vmla",  "u8",  0b1, 0b00, 0b0>;
-def MVE_VMLA_qr_u16    : MVE_VFMAMLA_qr<"vmla",  "u16", 0b1, 0b01, 0b0>;
-def MVE_VMLA_qr_u32    : MVE_VFMAMLA_qr<"vmla",  "u32", 0b1, 0b10, 0b0>;
+multiclass MVE_VMLA_qr_multi<string iname, MVEVectorVTInfo VTI,
+                             bit scalar_addend> {
+  def "": MVE_VFMAMLA_qr<iname, VTI.Suffix, VTI.Unsigned, VTI.Size,
+                         scalar_addend>;
+  defvar Inst = !cast<Instruction>(NAME);
+  defvar pred_int = !cast<Intrinsic>("int_arm_mve_" # iname # "_n_predicated");
+  defvar v1   = (VTI.Vec MQPR:$v1);
+  defvar v2   = (VTI.Vec MQPR:$v2);
+  defvar vs   = (VTI.Vec (ARMvdup rGPR:$s));
+  defvar s    = (i32 rGPR:$s);
+  defvar pred = (VTI.Pred VCCR:$pred);
 
-def MVE_VMLAS_qr_s8    : MVE_VFMAMLA_qr<"vmlas", "s8",  0b0, 0b00, 0b1>;
-def MVE_VMLAS_qr_s16   : MVE_VFMAMLA_qr<"vmlas", "s16", 0b0, 0b01, 0b1>;
-def MVE_VMLAS_qr_s32   : MVE_VFMAMLA_qr<"vmlas", "s32", 0b0, 0b10, 0b1>;
-def MVE_VMLAS_qr_u8    : MVE_VFMAMLA_qr<"vmlas", "u8",  0b1, 0b00, 0b1>;
-def MVE_VMLAS_qr_u16   : MVE_VFMAMLA_qr<"vmlas", "u16", 0b1, 0b01, 0b1>;
-def MVE_VMLAS_qr_u32   : MVE_VFMAMLA_qr<"vmlas", "u32", 0b1, 0b10, 0b1>;
+  // The signed and unsigned variants of this instruction have different
+  // encodings, but they're functionally identical. For the sake of
+  // determinism, we generate only the unsigned variant.
+  if VTI.Unsigned then let Predicates = [HasMVEInt] in {
+    if scalar_addend then {
+      def : Pat<(VTI.Vec (add (mul v1, v2), vs)),
+                (VTI.Vec (Inst v1, v2, s))>;
+    } else {
+      def : Pat<(VTI.Vec (add (mul v2, vs), v1)),
+                (VTI.Vec (Inst v1, v2, s))>;
+    }
 
-let Predicates = [HasMVEInt] in {
-  def : Pat<(v4i32 (add (v4i32 MQPR:$src1),
-                        (v4i32 (mul (v4i32 MQPR:$src2),
-                                    (v4i32 (ARMvdup (i32 rGPR:$x))))))),
-            (v4i32 (MVE_VMLA_qr_u32 $src1, $src2, $x))>;
-  def : Pat<(v8i16 (add (v8i16 MQPR:$src1),
-                        (v8i16 (mul (v8i16 MQPR:$src2),
-                                    (v8i16 (ARMvdup (i32 rGPR:$x))))))),
-            (v8i16 (MVE_VMLA_qr_u16 $src1, $src2, $x))>;
-  def : Pat<(v16i8 (add (v16i8 MQPR:$src1),
-                        (v16i8 (mul (v16i8 MQPR:$src2),
-                                    (v16i8 (ARMvdup (i32 rGPR:$x))))))),
-            (v16i8 (MVE_VMLA_qr_u8 $src1, $src2, $x))>;
-
-  def : Pat<(v4i32 (add (v4i32 (ARMvdup (i32 rGPR:$x))),
-                        (v4i32 (mul (v4i32 MQPR:$src1),
-                                    (v4i32 MQPR:$src2))))),
-            (v4i32 (MVE_VMLAS_qr_u32 $src1, $src2, $x))>;
-  def : Pat<(v8i16 (add (v8i16 (ARMvdup (i32 rGPR:$x))),
-                        (v8i16 (mul (v8i16 MQPR:$src1),
-                                    (v8i16 MQPR:$src2))))),
-            (v8i16 (MVE_VMLAS_qr_u16 $src1, $src2, $x))>;
-  def : Pat<(v16i8 (add (v16i8 (ARMvdup (i32 rGPR:$x))),
-                        (v16i8 (mul (v16i8 MQPR:$src1),
-                                    (v16i8 MQPR:$src2))))),
-            (v16i8 (MVE_VMLAS_qr_u8 $src1, $src2, $x))>;
+    def : Pat<(VTI.Vec (pred_int v1, v2, s, pred)),
+              (VTI.Vec (Inst v1, v2, s, ARMVCCThen, pred))>;
+  }
 }
+
+defm MVE_VMLA_qr_s8   : MVE_VMLA_qr_multi<"vmla", MVE_v16s8, 0b0>;
+defm MVE_VMLA_qr_s16  : MVE_VMLA_qr_multi<"vmla", MVE_v8s16, 0b0>;
+defm MVE_VMLA_qr_s32  : MVE_VMLA_qr_multi<"vmla", MVE_v4s32, 0b0>;
+defm MVE_VMLA_qr_u8   : MVE_VMLA_qr_multi<"vmla", MVE_v16u8, 0b0>;
+defm MVE_VMLA_qr_u16  : MVE_VMLA_qr_multi<"vmla", MVE_v8u16, 0b0>;
+defm MVE_VMLA_qr_u32  : MVE_VMLA_qr_multi<"vmla", MVE_v4u32, 0b0>;
+
+defm MVE_VMLAS_qr_s8  : MVE_VMLA_qr_multi<"vmlas", MVE_v16s8, 0b1>;
+defm MVE_VMLAS_qr_s16 : MVE_VMLA_qr_multi<"vmlas", MVE_v8s16, 0b1>;
+defm MVE_VMLAS_qr_s32 : MVE_VMLA_qr_multi<"vmlas", MVE_v4s32, 0b1>;
+defm MVE_VMLAS_qr_u8  : MVE_VMLA_qr_multi<"vmlas", MVE_v16u8, 0b1>;
+defm MVE_VMLAS_qr_u16 : MVE_VMLA_qr_multi<"vmlas", MVE_v8u16, 0b1>;
+defm MVE_VMLAS_qr_u32 : MVE_VMLA_qr_multi<"vmlas", MVE_v4u32, 0b1>;
 
 multiclass MVE_VFMA_qr_multi<string iname, MVEVectorVTInfo VTI,
                              bit scalar_addend> {
