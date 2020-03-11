@@ -1525,6 +1525,124 @@ TEST(APFloatTest, roundToIntegral) {
   P = APFloat::getInf(APFloat::IEEEdouble(), true);
   P.roundToIntegral(APFloat::rmTowardZero);
   EXPECT_TRUE(std::isinf(P.convertToDouble()) && P.convertToDouble() < 0.0);
+
+  APFloat::opStatus St;
+
+  P = APFloat::getNaN(APFloat::IEEEdouble());
+  St = P.roundToIntegral(APFloat::rmTowardZero);
+  EXPECT_TRUE(P.isNaN());
+  EXPECT_FALSE(P.isNegative());
+  EXPECT_EQ(APFloat::opOK, St);
+
+  P = APFloat::getNaN(APFloat::IEEEdouble(), true);
+  St = P.roundToIntegral(APFloat::rmTowardZero);
+  EXPECT_TRUE(P.isNaN());
+  EXPECT_TRUE(P.isNegative());
+  EXPECT_EQ(APFloat::opOK, St);
+
+  P = APFloat::getSNaN(APFloat::IEEEdouble());
+  St = P.roundToIntegral(APFloat::rmTowardZero);
+  EXPECT_TRUE(P.isNaN());
+  EXPECT_FALSE(P.isSignaling());
+  EXPECT_FALSE(P.isNegative());
+  EXPECT_EQ(APFloat::opInvalidOp, St);
+
+  P = APFloat::getSNaN(APFloat::IEEEdouble(), true);
+  St = P.roundToIntegral(APFloat::rmTowardZero);
+  EXPECT_TRUE(P.isNaN());
+  EXPECT_FALSE(P.isSignaling());
+  EXPECT_TRUE(P.isNegative());
+  EXPECT_EQ(APFloat::opInvalidOp, St);
+
+  P = APFloat::getInf(APFloat::IEEEdouble());
+  St = P.roundToIntegral(APFloat::rmTowardZero);
+  EXPECT_TRUE(P.isInfinity());
+  EXPECT_FALSE(P.isNegative());
+  EXPECT_EQ(APFloat::opOK, St);
+
+  P = APFloat::getInf(APFloat::IEEEdouble(), true);
+  St = P.roundToIntegral(APFloat::rmTowardZero);
+  EXPECT_TRUE(P.isInfinity());
+  EXPECT_TRUE(P.isNegative());
+  EXPECT_EQ(APFloat::opOK, St);
+
+  P = APFloat::getZero(APFloat::IEEEdouble(), false);
+  St = P.roundToIntegral(APFloat::rmTowardZero);
+  EXPECT_TRUE(P.isZero());
+  EXPECT_FALSE(P.isNegative());
+  EXPECT_EQ(APFloat::opOK, St);
+
+  P = APFloat::getZero(APFloat::IEEEdouble(), false);
+  St = P.roundToIntegral(APFloat::rmTowardNegative);
+  EXPECT_TRUE(P.isZero());
+  EXPECT_FALSE(P.isNegative());
+  EXPECT_EQ(APFloat::opOK, St);
+
+  P = APFloat::getZero(APFloat::IEEEdouble(), true);
+  St = P.roundToIntegral(APFloat::rmTowardZero);
+  EXPECT_TRUE(P.isZero());
+  EXPECT_TRUE(P.isNegative());
+  EXPECT_EQ(APFloat::opOK, St);
+
+  P = APFloat::getZero(APFloat::IEEEdouble(), true);
+  St = P.roundToIntegral(APFloat::rmTowardNegative);
+  EXPECT_TRUE(P.isZero());
+  EXPECT_TRUE(P.isNegative());
+  EXPECT_EQ(APFloat::opOK, St);
+
+  P = APFloat(1E-100);
+  St = P.roundToIntegral(APFloat::rmTowardNegative);
+  EXPECT_TRUE(P.isZero());
+  EXPECT_FALSE(P.isNegative());
+  EXPECT_EQ(APFloat::opInexact, St);
+
+  P = APFloat(1E-100);
+  St = P.roundToIntegral(APFloat::rmTowardPositive);
+  EXPECT_EQ(1.0, P.convertToDouble());
+  EXPECT_FALSE(P.isNegative());
+  EXPECT_EQ(APFloat::opInexact, St);
+
+  P = APFloat(-1E-100);
+  St = P.roundToIntegral(APFloat::rmTowardNegative);
+  EXPECT_TRUE(P.isNegative());
+  EXPECT_EQ(-1.0, P.convertToDouble());
+  EXPECT_EQ(APFloat::opInexact, St);
+
+  P = APFloat(-1E-100);
+  St = P.roundToIntegral(APFloat::rmTowardPositive);
+  EXPECT_TRUE(P.isZero());
+  EXPECT_TRUE(P.isNegative());
+  EXPECT_EQ(APFloat::opInexact, St);
+
+  P = APFloat(10.0);
+  St = P.roundToIntegral(APFloat::rmTowardZero);
+  EXPECT_EQ(10.0, P.convertToDouble());
+  EXPECT_EQ(APFloat::opOK, St);
+
+  P = APFloat(10.5);
+  St = P.roundToIntegral(APFloat::rmTowardZero);
+  EXPECT_EQ(10.0, P.convertToDouble());
+  EXPECT_EQ(APFloat::opInexact, St);
+
+  P = APFloat(10.5);
+  St = P.roundToIntegral(APFloat::rmTowardPositive);
+  EXPECT_EQ(11.0, P.convertToDouble());
+  EXPECT_EQ(APFloat::opInexact, St);
+
+  P = APFloat(10.5);
+  St = P.roundToIntegral(APFloat::rmTowardNegative);
+  EXPECT_EQ(10.0, P.convertToDouble());
+  EXPECT_EQ(APFloat::opInexact, St);
+
+  P = APFloat(10.5);
+  St = P.roundToIntegral(APFloat::rmNearestTiesToAway);
+  EXPECT_EQ(11.0, P.convertToDouble());
+  EXPECT_EQ(APFloat::opInexact, St);
+
+  P = APFloat(10.5);
+  St = P.roundToIntegral(APFloat::rmNearestTiesToEven);
+  EXPECT_EQ(10.0, P.convertToDouble());
+  EXPECT_EQ(APFloat::opInexact, St);
 }
 
 TEST(APFloatTest, isInteger) {
