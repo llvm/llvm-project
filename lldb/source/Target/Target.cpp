@@ -117,6 +117,8 @@ Target::Target(Debugger &debugger, const ArchSpec &target_arch,
              target_arch.GetArchitectureName(),
              target_arch.GetTriple().getTriple().c_str());
   }
+
+  UpdateLaunchInfoFromProperties();
 }
 
 Target::~Target() {
@@ -3799,18 +3801,6 @@ TargetProperties::TargetProperties(Target *target)
         ConstString("Experimental settings - setting these won't produce "
                     "errors if the setting is not present."),
         true, m_experimental_properties_up->GetValueProperties());
-
-    // Update m_launch_info once it was created
-    Arg0ValueChangedCallback(this, nullptr);
-    RunArgsValueChangedCallback(this, nullptr);
-    // EnvVarsValueChangedCallback(this, nullptr); // FIXME: cause segfault in
-    // Target::GetPlatform()
-    InputPathValueChangedCallback(this, nullptr);
-    OutputPathValueChangedCallback(this, nullptr);
-    ErrorPathValueChangedCallback(this, nullptr);
-    DetachOnErrorValueChangedCallback(this, nullptr);
-    DisableASLRValueChangedCallback(this, nullptr);
-    DisableSTDIOValueChangedCallback(this, nullptr);
   } else {
     m_collection_sp =
         std::make_shared<TargetOptionValueProperties>(ConstString("target"));
@@ -3828,6 +3818,18 @@ TargetProperties::TargetProperties(Target *target)
 }
 
 TargetProperties::~TargetProperties() = default;
+
+void TargetProperties::UpdateLaunchInfoFromProperties() {
+  Arg0ValueChangedCallback(this, nullptr);
+  RunArgsValueChangedCallback(this, nullptr);
+  EnvVarsValueChangedCallback(this, nullptr);
+  InputPathValueChangedCallback(this, nullptr);
+  OutputPathValueChangedCallback(this, nullptr);
+  ErrorPathValueChangedCallback(this, nullptr);
+  DetachOnErrorValueChangedCallback(this, nullptr);
+  DisableASLRValueChangedCallback(this, nullptr);
+  DisableSTDIOValueChangedCallback(this, nullptr);
+}
 
 bool TargetProperties::GetInjectLocalVariables(
     ExecutionContext *exe_ctx) const {
