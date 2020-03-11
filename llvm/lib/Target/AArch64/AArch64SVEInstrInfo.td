@@ -1975,8 +1975,8 @@ let Predicates = [HasSVE2] in {
   defm WHILEHI_PXX : sve_int_while8_rr<0b101, "whilehi", int_aarch64_sve_whilehi>;
 
   // SVE2 pointer conflict compare
-  defm WHILEWR_PXX : sve2_int_while_rr<0b0, "whilewr">;
-  defm WHILERW_PXX : sve2_int_while_rr<0b1, "whilerw">;
+  defm WHILEWR_PXX : sve2_int_while_rr<0b0, "whilewr", "int_aarch64_sve_whilewr">;
+  defm WHILERW_PXX : sve2_int_while_rr<0b1, "whilerw", "int_aarch64_sve_whilerw">;
 }
 
 let Predicates = [HasSVE2AES] in {
