@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,ALL %s
+; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs -amdgpu-remove-redundant-endcf < %s | FileCheck -enable-var-scope -check-prefixes=GCN,ALL %s
 ; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs -amdgpu-opt-exec-mask-pre-ra=0 < %s | FileCheck -enable-var-scope -check-prefixes=DISABLED,ALL %s
 
 ; ALL-LABEL: {{^}}simple_nested_if:

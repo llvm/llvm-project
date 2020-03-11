@@ -31,6 +31,10 @@ using namespace llvm;
 
 #define DEBUG_TYPE "si-optimize-exec-masking-pre-ra"
 
+static cl::opt<bool>
+RemoveRedundantEndcf("amdgpu-remove-redundant-endcf",
+    cl::init(false), cl::ReallyHidden);
+
 namespace {
 
 class SIOptimizeExecMaskingPreRA : public MachineFunctionPass {
@@ -379,7 +383,13 @@ bool SIOptimizeExecMaskingPreRA::runOnMachineFunction(MachineFunction &MF) {
       continue;
     }
 
+    if (!RemoveRedundantEndcf)
+      continue;
+
     // Try to collapse adjacent endifs.
+    // The assumption is that conditional regions are perfectly nested and
+    // a mask restored at the exit from the inner block will be completely
+    // covered by a mask restored in the outer.
     auto E = MBB.end();
     auto Lead = skipDebugInstructionsForward(MBB.begin(), E);
     if (MBB.succ_size() != 1 || Lead == E || !isEndCF(*Lead, TRI, ST))
