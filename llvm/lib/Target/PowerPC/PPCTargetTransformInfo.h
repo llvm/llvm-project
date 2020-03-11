@@ -111,10 +111,12 @@ public:
                                  bool UseMaskForCond = false,
                                  bool UseMaskForGaps = false);
   unsigned getIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
-            ArrayRef<Value*> Args, FastMathFlags FMF, unsigned VF);
+                                 ArrayRef<Value *> Args, FastMathFlags FMF,
+                                 unsigned VF, const Instruction *I = nullptr);
   unsigned getIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
-            ArrayRef<Type*> Tys, FastMathFlags FMF,
-            unsigned ScalarizationCostPassed = UINT_MAX);
+                                 ArrayRef<Type *> Tys, FastMathFlags FMF,
+                                 unsigned ScalarizationCostPassed = UINT_MAX,
+                                 const Instruction *I = nullptr);
 
   /// @}
 };

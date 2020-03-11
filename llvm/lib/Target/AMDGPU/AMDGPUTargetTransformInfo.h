@@ -219,15 +219,16 @@ public:
                                  Type *Ty,
                                  bool IsPairwise);
   template <typename T>
-  int getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
-                            ArrayRef<T *> Args, FastMathFlags FMF,
-                            unsigned VF);
+  int getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy, ArrayRef<T *> Args,
+                            FastMathFlags FMF, unsigned VF,
+                            const Instruction *I = nullptr);
   int getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
                             ArrayRef<Type *> Tys, FastMathFlags FMF,
-                            unsigned ScalarizationCostPassed = UINT_MAX);
+                            unsigned ScalarizationCostPassed = UINT_MAX,
+                            const Instruction *I = nullptr);
   int getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
                             ArrayRef<Value *> Args, FastMathFlags FMF,
-                            unsigned VF = 1);
+                            unsigned VF = 1, const Instruction *I = nullptr);
   int getMinMaxReductionCost(Type *Ty, Type *CondTy,
                              bool IsPairwiseForm,
                              bool IsUnsigned);

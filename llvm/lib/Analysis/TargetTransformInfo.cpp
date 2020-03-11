@@ -674,9 +674,10 @@ int TargetTransformInfo::getMaskedMemoryOpCost(unsigned Opcode, Type *Src,
 
 int TargetTransformInfo::getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
                                                 Value *Ptr, bool VariableMask,
-                                                unsigned Alignment) const {
+                                                unsigned Alignment,
+                                                const Instruction *I) const {
   int Cost = TTIImpl->getGatherScatterOpCost(Opcode, DataTy, Ptr, VariableMask,
-                                             Alignment);
+                                             Alignment, I);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }
@@ -694,17 +695,21 @@ int TargetTransformInfo::getInterleavedMemoryOpCost(
 }
 
 int TargetTransformInfo::getIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
-                                    ArrayRef<Type *> Tys, FastMathFlags FMF,
-                                    unsigned ScalarizationCostPassed) const {
+                                               ArrayRef<Type *> Tys,
+                                               FastMathFlags FMF,
+                                               unsigned ScalarizationCostPassed,
+                                               const Instruction *I) const {
   int Cost = TTIImpl->getIntrinsicInstrCost(ID, RetTy, Tys, FMF,
-                                            ScalarizationCostPassed);
+                                            ScalarizationCostPassed, I);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }
 
 int TargetTransformInfo::getIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
-           ArrayRef<Value *> Args, FastMathFlags FMF, unsigned VF) const {
-  int Cost = TTIImpl->getIntrinsicInstrCost(ID, RetTy, Args, FMF, VF);
+                                               ArrayRef<Value *> Args,
+                                               FastMathFlags FMF, unsigned VF,
+                                               const Instruction *I) const {
+  int Cost = TTIImpl->getIntrinsicInstrCost(ID, RetTy, Args, FMF, VF, I);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }
@@ -1339,8 +1344,8 @@ int TargetTransformInfo::getInstructionThroughput(const Instruction *I) const {
       if (auto *FPMO = dyn_cast<FPMathOperator>(II))
         FMF = FPMO->getFastMathFlags();
 
-      return getIntrinsicInstrCost(II->getIntrinsicID(), II->getType(),
-                                        Args, FMF);
+      return getIntrinsicInstrCost(II->getIntrinsicID(), II->getType(), Args,
+                                   FMF, 1, II);
     }
     return -1;
   default:

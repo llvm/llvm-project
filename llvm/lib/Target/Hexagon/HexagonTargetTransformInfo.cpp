@@ -131,19 +131,23 @@ unsigned HexagonTTIImpl::getCallInstrCost(Function *F, Type *RetTy,
 }
 
 unsigned HexagonTTIImpl::getIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
-      ArrayRef<Value*> Args, FastMathFlags FMF, unsigned VF) {
-  return BaseT::getIntrinsicInstrCost(ID, RetTy, Args, FMF, VF);
+                                               ArrayRef<Value *> Args,
+                                               FastMathFlags FMF, unsigned VF,
+                                               const Instruction *I) {
+  return BaseT::getIntrinsicInstrCost(ID, RetTy, Args, FMF, VF, I);
 }
 
 unsigned HexagonTTIImpl::getIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
-      ArrayRef<Type*> Tys, FastMathFlags FMF,
-      unsigned ScalarizationCostPassed) {
+                                               ArrayRef<Type *> Tys,
+                                               FastMathFlags FMF,
+                                               unsigned ScalarizationCostPassed,
+                                               const Instruction *I) {
   if (ID == Intrinsic::bswap) {
     std::pair<int, MVT> LT = TLI.getTypeLegalizationCost(DL, RetTy);
     return LT.first + 2;
   }
   return BaseT::getIntrinsicInstrCost(ID, RetTy, Tys, FMF,
-                                      ScalarizationCostPassed);
+                                      ScalarizationCostPassed, I);
 }
 
 unsigned HexagonTTIImpl::getAddressComputationCost(Type *Tp,
@@ -209,9 +213,11 @@ unsigned HexagonTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp,
 }
 
 unsigned HexagonTTIImpl::getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
-      Value *Ptr, bool VariableMask, unsigned Alignment) {
+                                                Value *Ptr, bool VariableMask,
+                                                unsigned Alignment,
+                                                const Instruction *I) {
   return BaseT::getGatherScatterOpCost(Opcode, DataTy, Ptr, VariableMask,
-                                       Alignment);
+                                       Alignment, I);
 }
 
 unsigned HexagonTTIImpl::getInterleavedMemoryOpCost(unsigned Opcode,
