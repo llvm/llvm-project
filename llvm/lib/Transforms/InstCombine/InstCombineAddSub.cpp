@@ -1044,8 +1044,7 @@ Value *InstCombiner::SimplifyAddWithRemainder(BinaryOperator &I) {
       // Match RemOpV = X / C0
       if (MatchDiv(RemOpV, DivOpV, DivOpC, IsSigned) && X == DivOpV &&
           C0 == DivOpC && !MulWillOverflow(C0, C1, IsSigned)) {
-        Value *NewDivisor =
-            ConstantInt::get(X->getType()->getContext(), C0 * C1);
+        Value *NewDivisor = ConstantInt::get(X->getType(), C0 * C1);
         return IsSigned ? Builder.CreateSRem(X, NewDivisor, "srem")
                         : Builder.CreateURem(X, NewDivisor, "urem");
       }
