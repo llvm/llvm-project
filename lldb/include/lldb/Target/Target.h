@@ -207,6 +207,8 @@ public:
 
   bool GetRequireHardwareBreakpoints() const;
 
+  void UpdateLaunchInfoFromProperties();
+
 private:
   // Callbacks for m_launch_info.
   static void Arg0ValueChangedCallback(void *target_property_ptr,
