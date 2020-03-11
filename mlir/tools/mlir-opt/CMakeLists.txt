@@ -2,24 +2,6 @@ set(LLVM_OPTIONAL_SOURCES
   null.cpp
 )
 
-set(LIB_LIBS
-  MLIRAnalysis
-  MLIRIR
-  MLIRLLVMIR
-  MLIROptLib
-  MLIRParser
-  MLIRPass
-  MLIRTransforms
-  MLIRSupport
-)
-add_llvm_library(MLIRMlirOptMain
-  mlir-opt.cpp
-)
-target_link_libraries(MLIRMlirOptMain
-  PUBLIC
-  ${LIB_LIBS}
-)
-
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 get_property(conversion_libs GLOBAL PROPERTY MLIR_CONVERSION_LIBS)
 set(LIBS
@@ -51,6 +33,14 @@ set(LIBS
   LLVMSupport
   LLVMCore
   LLVMAsmParser
+  )
+
+add_llvm_library(MLIRMlirOptMain
+  mlir-opt.cpp
+)
+target_link_libraries(MLIRMlirOptMain
+  PUBLIC
+  ${LIBS}
 )
 
 add_llvm_tool(mlir-opt
