@@ -14912,61 +14912,6 @@ TEST(FormatStyle, GetStyleOfFile) {
   auto StyleTd = getStyle("file", "x.td", "llvm", "", &FS);
   ASSERT_TRUE((bool)StyleTd);
   ASSERT_EQ(*StyleTd, getLLVMStyle(FormatStyle::LK_TableGen));
-
-  // Test 9: explicit format file in parent directory.
-  ASSERT_TRUE(
-      FS.addFile("/e/.clang-format", 0,
-                 llvm::MemoryBuffer::getMemBuffer("BasedOnStyle: LLVM")));
-  ASSERT_TRUE(
-      FS.addFile("/e/explicit.clang-format", 0,
-                 llvm::MemoryBuffer::getMemBuffer("BasedOnStyle: Google")));
-  ASSERT_TRUE(FS.addFile("/e/sub/sub/sub/test.cpp", 0,
-                         llvm::MemoryBuffer::getMemBuffer("int i;")));
-  auto Style8 = getStyle("file:/e/explicit.clang-format",
-                         "/e/sub/sub/sub/test.cpp", "LLVM", "", &FS);
-  ASSERT_TRUE((bool)Style8);
-  ASSERT_EQ(*Style8, getGoogleStyle());
-
-  // Test 10: relative pah to a format file
-  ASSERT_TRUE(
-      FS.addFile("../../e/explicit.clang-format", 0,
-                 llvm::MemoryBuffer::getMemBuffer("BasedOnStyle: Google")));
-  auto Style9 = getStyle("file:../../e/explicit.clang-format",
-                         "/e/sub/sub/sub/test.cpp", "LLVM", "", &FS);
-  ASSERT_TRUE((bool)Style9);
-  ASSERT_EQ(*Style9, getGoogleStyle());
-
-  // Test 11: missing explicit format file
-  auto Style10 = getStyle("file:/e/missing.clang-format",
-                          "/e/sub/sub/sub/test.cpp", "LLVM", "", &FS);
-  ASSERT_FALSE((bool)Style10);
-  llvm::consumeError(Style10.takeError());
-
-  // Test 12: format file from the filesystem
-  SmallString<128> FormatFilePath;
-  std::error_code ECF = llvm::sys::fs::createTemporaryFile(
-      "FormatFileTest", "tpl", FormatFilePath);
-  EXPECT_FALSE((bool)ECF);
-  llvm::raw_fd_ostream FormatFileTest(FormatFilePath, ECF);
-  EXPECT_FALSE((bool)ECF);
-  FormatFileTest << "BasedOnStyle: Google\n";
-  FormatFileTest.close();
-
-  SmallString<128> TestFilePath;
-  std::error_code ECT =
-      llvm::sys::fs::createTemporaryFile("CodeFileTest", "cc", TestFilePath);
-  EXPECT_FALSE((bool)ECT);
-  llvm::raw_fd_ostream CodeFileTest(TestFilePath, ECT);
-  CodeFileTest << "int i;\n";
-  CodeFileTest.close();
-
-  std::string format_file_arg = std::string("file:") + FormatFilePath.c_str();
-  auto Style11 = getStyle(format_file_arg, TestFilePath, "LLVM", "", nullptr);
-
-  llvm::sys::fs::remove(FormatFilePath.c_str());
-  llvm::sys::fs::remove(TestFilePath.c_str());
-  ASSERT_TRUE((bool)Style11);
-  ASSERT_EQ(*Style11, getGoogleStyle());
 }
 
 TEST_F(ReplacementTest, FormatCodeAfterReplacements) {
