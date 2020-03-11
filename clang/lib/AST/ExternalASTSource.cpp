@@ -15,6 +15,7 @@
 #include "clang/AST/ExternalASTSource.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclarationName.h"
+#include "clang/Basic/FileManager.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/Module.h"
