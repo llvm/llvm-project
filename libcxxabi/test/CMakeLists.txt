@@ -81,6 +81,3 @@ add_lit_testsuite(check-cxxabi "Running libcxxabi tests"
   ${CMAKE_CURRENT_BINARY_DIR}
   DEPENDS ${LIBCXXABI_TEST_DEPS}
   )
-
-# TODO: This is a legacy target name and should be removed at some point.
-add_custom_target(check-libcxxabi DEPENDS check-cxxabi)
