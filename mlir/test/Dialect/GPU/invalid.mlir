@@ -255,14 +255,6 @@ func @reduce_invalid_op(%arg0 : f32) {
 
 // -----
 
-func @reduce_invalid_op_type(%arg0 : f32) {
-  // expected-error@+1 {{`and` accumulator is only compatible with Integer type}}
-  %res = "gpu.all_reduce"(%arg0) ({}) {op = "and"} : (f32) -> (f32)
-  return
-}
-
-// -----
-
 func @reduce_incorrect_region_arguments(%arg0 : f32) {
   // expected-error@+1 {{expected two region arguments}}
   %res = "gpu.all_reduce"(%arg0) ({
