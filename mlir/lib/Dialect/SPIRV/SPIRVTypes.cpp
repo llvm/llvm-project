@@ -57,6 +57,7 @@ ArrayRef<Extension> spirv::getImpliedExtensions(Version version) {
   default:
     return {};
   case Version::V_1_3: {
+    // The following manual ArrayRef constructor call is to satisfy GCC 5.
     static const Extension exts[] = {V_1_3_IMPLIED_EXTS};
     return ArrayRef<Extension>(exts, llvm::array_lengthof(exts));
   }
@@ -142,6 +143,17 @@ bool ArrayType::hasLayout() const { return getImpl()->layoutInfo; }
 
 uint64_t ArrayType::getArrayStride() const { return getImpl()->layoutInfo; }
 
+void ArrayType::getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
+                              Optional<StorageClass> storage) {
+  getElementType().cast<SPIRVType>().getExtensions(extensions, storage);
+}
+
+void ArrayType::getCapabilities(
+    SPIRVType::CapabilityArrayRefVector &capabilities,
+    Optional<StorageClass> storage) {
+  getElementType().cast<SPIRVType>().getCapabilities(capabilities, storage);
+}
+
 //===----------------------------------------------------------------------===//
 // CompositeType
 //===----------------------------------------------------------------------===//
@@ -184,6 +196,50 @@ unsigned CompositeType::getNumElements() const {
     return cast<StructType>().getNumElements();
   case StandardTypes::Vector:
     return cast<VectorType>().getNumElements();
+  default:
+    llvm_unreachable("invalid composite type");
+  }
+}
+
+void CompositeType::getExtensions(
+    SPIRVType::ExtensionArrayRefVector &extensions,
+    Optional<StorageClass> storage) {
+  switch (getKind()) {
+  case spirv::TypeKind::Array:
+    cast<ArrayType>().getExtensions(extensions, storage);
+    break;
+  case spirv::TypeKind::RuntimeArray:
+    cast<ArrayType>().getExtensions(extensions, storage);
+    break;
+  case spirv::TypeKind::Struct:
+    cast<StructType>().getExtensions(extensions, storage);
+    break;
+  case StandardTypes::Vector:
+    cast<VectorType>().getElementType().cast<ScalarType>().getExtensions(
+        extensions, storage);
+    break;
+  default:
+    llvm_unreachable("invalid composite type");
+  }
+}
+
+void CompositeType::getCapabilities(
+    SPIRVType::CapabilityArrayRefVector &capabilities,
+    Optional<StorageClass> storage) {
+  switch (getKind()) {
+  case spirv::TypeKind::Array:
+    cast<ArrayType>().getCapabilities(capabilities, storage);
+    break;
+  case spirv::TypeKind::RuntimeArray:
+    cast<ArrayType>().getCapabilities(capabilities, storage);
+    break;
+  case spirv::TypeKind::Struct:
+    cast<StructType>().getCapabilities(capabilities, storage);
+    break;
+  case StandardTypes::Vector:
+    cast<VectorType>().getElementType().cast<ScalarType>().getCapabilities(
+        capabilities, storage);
+    break;
   default:
     llvm_unreachable("invalid composite type");
   }
@@ -372,6 +428,20 @@ ImageFormat ImageType::getImageFormat() const {
   return getImpl()->getImageFormat();
 }
 
+void ImageType::getExtensions(SPIRVType::ExtensionArrayRefVector &,
+                              Optional<StorageClass>) {
+  // Image types do not require extra extensions thus far.
+}
+
+void ImageType::getCapabilities(
+    SPIRVType::CapabilityArrayRefVector &capabilities, Optional<StorageClass>) {
+  if (auto dimCaps = spirv::getCapabilities(getDim()))
+    capabilities.push_back(*dimCaps);
+
+  if (auto fmtCaps = spirv::getCapabilities(getImageFormat()))
+    capabilities.push_back(*fmtCaps);
+}
+
 //===----------------------------------------------------------------------===//
 // PointerType
 //===----------------------------------------------------------------------===//
@@ -413,6 +483,35 @@ StorageClass PointerType::getStorageClass() const {
   return getImpl()->getStorageClass();
 }
 
+void PointerType::getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
+                                Optional<StorageClass> storage) {
+  if (storage)
+    assert(*storage == getStorageClass() && "inconsistent storage class!");
+
+  // Use this pointer type's storage class because this pointer indicates we are
+  // using the pointee type in that specific storage class.
+  getPointeeType().cast<SPIRVType>().getExtensions(extensions,
+                                                   getStorageClass());
+
+  if (auto scExts = spirv::getExtensions(getStorageClass()))
+    extensions.push_back(*scExts);
+}
+
+void PointerType::getCapabilities(
+    SPIRVType::CapabilityArrayRefVector &capabilities,
+    Optional<StorageClass> storage) {
+  if (storage)
+    assert(*storage == getStorageClass() && "inconsistent storage class!");
+
+  // Use this pointer type's storage class because this pointer indicates we are
+  // using the pointee type in that specific storage class.
+  getPointeeType().cast<SPIRVType>().getCapabilities(capabilities,
+                                                     getStorageClass());
+
+  if (auto scCaps = spirv::getCapabilities(getStorageClass()))
+    capabilities.push_back(*scCaps);
+}
+
 //===----------------------------------------------------------------------===//
 // RuntimeArrayType
 //===----------------------------------------------------------------------===//
@@ -439,6 +538,181 @@ RuntimeArrayType RuntimeArrayType::get(Type elementType) {
 }
 
 Type RuntimeArrayType::getElementType() const { return getImpl()->elementType; }
+
+void RuntimeArrayType::getExtensions(
+    SPIRVType::ExtensionArrayRefVector &extensions,
+    Optional<StorageClass> storage) {
+  getElementType().cast<SPIRVType>().getExtensions(extensions, storage);
+}
+
+void RuntimeArrayType::getCapabilities(
+    SPIRVType::CapabilityArrayRefVector &capabilities,
+    Optional<StorageClass> storage) {
+  {
+    static const Capability caps[] = {Capability::Shader};
+    ArrayRef<Capability> ref(caps, llvm::array_lengthof(caps));
+    capabilities.push_back(ref);
+  }
+  getElementType().cast<SPIRVType>().getCapabilities(capabilities, storage);
+}
+
+//===----------------------------------------------------------------------===//
+// ScalarType
+//===----------------------------------------------------------------------===//
+
+bool ScalarType::classof(Type type) { return type.isIntOrFloat(); }
+
+void ScalarType::getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
+                               Optional<StorageClass> storage) {
+  // 8- or 16-bit integer/floating-point numbers will require extra extensions
+  // to appear in interface storage classes. See SPV_KHR_16bit_storage and
+  // SPV_KHR_8bit_storage for more details.
+  if (!storage)
+    return;
+
+  switch (*storage) {
+  case StorageClass::PushConstant:
+  case StorageClass::StorageBuffer:
+  case StorageClass::Uniform:
+    if (getIntOrFloatBitWidth() == 8) {
+      static const Extension exts[] = {Extension::SPV_KHR_8bit_storage};
+      ArrayRef<Extension> ref(exts, llvm::array_lengthof(exts));
+      extensions.push_back(ref);
+    }
+    LLVM_FALLTHROUGH;
+  case StorageClass::Input:
+  case StorageClass::Output:
+    if (getIntOrFloatBitWidth() == 16) {
+      static const Extension exts[] = {Extension::SPV_KHR_16bit_storage};
+      ArrayRef<Extension> ref(exts, llvm::array_lengthof(exts));
+      extensions.push_back(ref);
+    }
+    break;
+  default:
+    break;
+  }
+}
+
+void ScalarType::getCapabilities(
+    SPIRVType::CapabilityArrayRefVector &capabilities,
+    Optional<StorageClass> storage) {
+  unsigned bitwidth = getIntOrFloatBitWidth();
+
+  // 8- or 16-bit integer/floating-point numbers will require extra capabilities
+  // to appear in interface storage classes. See SPV_KHR_16bit_storage and
+  // SPV_KHR_8bit_storage for more details.
+
+#define STORAGE_CASE(storage, cap8, cap16)                                     \
+  case StorageClass::storage: {                                                \
+    if (bitwidth == 8) {                                                       \
+      static const Capability caps[] = {Capability::cap8};                     \
+      ArrayRef<Capability> ref(caps, llvm::array_lengthof(caps));              \
+      capabilities.push_back(ref);                                             \
+    } else if (bitwidth == 16) {                                               \
+      static const Capability caps[] = {Capability::cap16};                    \
+      ArrayRef<Capability> ref(caps, llvm::array_lengthof(caps));              \
+      capabilities.push_back(ref);                                             \
+    }                                                                          \
+  } break
+
+  if (storage) {
+    switch (*storage) {
+      STORAGE_CASE(PushConstant, StoragePushConstant8, StoragePushConstant16);
+      STORAGE_CASE(StorageBuffer, StorageBuffer8BitAccess,
+                   StorageBuffer16BitAccess);
+      STORAGE_CASE(Uniform, UniformAndStorageBuffer8BitAccess,
+                   StorageUniform16);
+    case StorageClass::Input:
+    case StorageClass::Output:
+      if (bitwidth == 16) {
+        static const Capability caps[] = {Capability::StorageInputOutput16};
+        ArrayRef<Capability> ref(caps, llvm::array_lengthof(caps));
+        capabilities.push_back(ref);
+      }
+      break;
+    default:
+      break;
+    }
+    return;
+  }
+#undef STORAGE_CASE
+
+  // For other non-interface storage classes, require a different set of
+  // capabilities for special bitwidths.
+
+#define WIDTH_CASE(type, width)                                                \
+  case width: {                                                                \
+    static const Capability caps[] = {Capability::type##width};                \
+    ArrayRef<Capability> ref(caps, llvm::array_lengthof(caps));                \
+    capabilities.push_back(ref);                                               \
+  } break
+
+  if (auto intType = dyn_cast<IntegerType>()) {
+    switch (bitwidth) {
+    case 32:
+    case 1:
+      break;
+      WIDTH_CASE(Int, 8);
+      WIDTH_CASE(Int, 16);
+      WIDTH_CASE(Int, 64);
+    default:
+      llvm_unreachable("invalid bitwidth to getCapabilities");
+    }
+  } else {
+    assert(isa<FloatType>());
+    switch (bitwidth) {
+    case 32:
+      break;
+      WIDTH_CASE(Float, 16);
+      WIDTH_CASE(Float, 64);
+    default:
+      llvm_unreachable("invalid bitwidth to getCapabilities");
+    }
+  }
+
+#undef WIDTH_CASE
+}
+
+//===----------------------------------------------------------------------===//
+// SPIRVType
+//===----------------------------------------------------------------------===//
+
+bool SPIRVType::classof(Type type) {
+  return type.isa<ScalarType>() || type.isa<VectorType>() ||
+         (type.getKind() >= Type::FIRST_SPIRV_TYPE &&
+          type.getKind() <= TypeKind::LAST_SPIRV_TYPE);
+}
+
+void SPIRVType::getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
+                              Optional<StorageClass> storage) {
+  if (auto scalarType = dyn_cast<ScalarType>()) {
+    scalarType.getExtensions(extensions, storage);
+  } else if (auto compositeType = dyn_cast<CompositeType>()) {
+    compositeType.getExtensions(extensions, storage);
+  } else if (auto ptrType = dyn_cast<PointerType>()) {
+    ptrType.getExtensions(extensions, storage);
+  } else if (auto imageType = dyn_cast<ImageType>()) {
+    imageType.getExtensions(extensions, storage);
+  } else {
+    llvm_unreachable("invalid SPIR-V Type to getExtensions");
+  }
+}
+
+void SPIRVType::getCapabilities(
+    SPIRVType::CapabilityArrayRefVector &capabilities,
+    Optional<StorageClass> storage) {
+  if (auto scalarType = dyn_cast<ScalarType>()) {
+    scalarType.getCapabilities(capabilities, storage);
+  } else if (auto compositeType = dyn_cast<CompositeType>()) {
+    compositeType.getCapabilities(capabilities, storage);
+  } else if (auto ptrType = dyn_cast<PointerType>()) {
+    ptrType.getCapabilities(capabilities, storage);
+  } else if (auto imageType = dyn_cast<ImageType>()) {
+    imageType.getCapabilities(capabilities, storage);
+  } else {
+    llvm_unreachable("invalid SPIR-V Type to getCapabilities");
+  }
+}
 
 //===----------------------------------------------------------------------===//
 // StructType
@@ -540,18 +814,18 @@ unsigned StructType::getNumElements() const {
 }
 
 Type StructType::getElementType(unsigned index) const {
-  assert(
-      getNumElements() > index &&
-      "element index is more than number of members of the SPIR-V StructType");
+  assert(getNumElements() > index && "member index out of range");
   return getImpl()->memberTypes[index];
+}
+
+StructType::ElementTypeRange StructType::getElementTypes() const {
+  return ElementTypeRange(getImpl()->memberTypes, getNumElements());
 }
 
 bool StructType::hasLayout() const { return getImpl()->layoutInfo; }
 
 uint64_t StructType::getOffset(unsigned index) const {
-  assert(
-      getNumElements() > index &&
-      "element index is more than number of members of the SPIR-V StructType");
+  assert(getNumElements() > index && "member index out of range");
   return getImpl()->layoutInfo[index];
 }
 
@@ -578,4 +852,17 @@ void StructType::getMemberDecorations(
       return;
     }
   }
+}
+
+void StructType::getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
+                               Optional<StorageClass> storage) {
+  for (Type elementType : getElementTypes())
+    elementType.cast<SPIRVType>().getExtensions(extensions, storage);
+}
+
+void StructType::getCapabilities(
+    SPIRVType::CapabilityArrayRefVector &capabilities,
+    Optional<StorageClass> storage) {
+  for (Type elementType : getElementTypes())
+    elementType.cast<SPIRVType>().getCapabilities(capabilities, storage);
 }
