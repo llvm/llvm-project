@@ -16,7 +16,4 @@ target_link_libraries(mlir-cpu-runner PRIVATE
   MLIRSupport
   LLVMCore
   LLVMSupport
-  LLVMX86CodeGen
-  LLVMX86Desc
-  LLVMX86Info
   )
