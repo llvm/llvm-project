@@ -3035,6 +3035,12 @@ LegalizerHelper::reduceLoadStoreWidth(MachineInstr &MI, unsigned TypeIdx,
   Register AddrReg = MI.getOperand(1).getReg();
   LLT ValTy = MRI.getType(ValReg);
 
+  // FIXME: Do we need a distinct NarrowMemory legalize action?
+  if (ValTy.getSizeInBits() != 8 * MMO->getSize()) {
+    LLVM_DEBUG(dbgs() << "Can't narrow extload/truncstore\n");
+    return UnableToLegalize;
+  }
+
   int NumParts = -1;
   int NumLeftover = -1;
   LLT LeftoverTy;
