@@ -38,7 +38,7 @@ int llvm_test_dibuilder(void) {
 
   LLVMMetadataRef CompileUnit = LLVMDIBuilderCreateCompileUnit(
       DIB, LLVMDWARFSourceLanguageC, File, "llvm-c-test", 11, 0, NULL, 0, 0,
-      NULL, 0, LLVMDWARFEmissionFull, 0, 0, 0, "/", 1);
+      NULL, 0, LLVMDWARFEmissionFull, 0, 0, 0, "/", 1, "", 0);
 
   LLVMMetadataRef Module =
     LLVMDIBuilderCreateModule(DIB, CompileUnit,

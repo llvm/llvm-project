@@ -118,6 +118,7 @@ type DICompileUnit struct {
 	Flags          string
 	RuntimeVersion int
 	SysRoot        string
+	SDK            string
 }
 
 // CreateCompileUnit creates compile unit debug metadata.
@@ -132,6 +133,8 @@ func (d *DIBuilder) CreateCompileUnit(cu DICompileUnit) Metadata {
 	defer C.free(unsafe.Pointer(flags))
 	sysroot := C.CString(cu.SysRoot)
 	defer C.free(unsafe.Pointer(sysroot))
+	sdk := C.CString(cu.SDK)
+	defer C.free(unsafe.Pointer(sdk))
 	result := C.LLVMDIBuilderCreateCompileUnit(
 		d.ref,
 		C.LLVMDWARFSourceLanguage(cu.Language),
@@ -146,6 +149,7 @@ func (d *DIBuilder) CreateCompileUnit(cu DICompileUnit) Metadata {
 		/*SplitDebugInlining*/ C.LLVMBool(boolToCInt(true)),
 		/*DebugInfoForProfiling*/ C.LLVMBool(boolToCInt(false)),
 		sysroot, C.size_t(len(cu.SysRoot)),
+                sdk, C.size_t(len(cu.SDK)),
 	)
 	return Metadata{C: result}
 }
