@@ -56,7 +56,7 @@ TEST_F(ArchiveTestsFixture, ArchiveChildGetSizeRegularArchive) {
 
   Expected<uint64_t> Size = (*Child)->getSize();
   ASSERT_THAT_EXPECTED(Size, Succeeded());
-  EXPECT_EQ(9999999999, *Size);
+  EXPECT_EQ(9999999999u, *Size);
 }
 
 TEST_F(ArchiveTestsFixture, ArchiveChildGetSizeThinArchive) {
@@ -65,7 +65,7 @@ TEST_F(ArchiveTestsFixture, ArchiveChildGetSizeThinArchive) {
 
   Expected<uint64_t> Size = (*Child)->getSize();
   ASSERT_THAT_EXPECTED(Size, Succeeded());
-  EXPECT_EQ(9999999999, *Size);
+  EXPECT_EQ(9999999999u, *Size);
 }
 
 TEST_F(ArchiveTestsFixture, ArchiveChildGetBuffer) {
@@ -76,6 +76,6 @@ TEST_F(ArchiveTestsFixture, ArchiveChildGetBuffer) {
   // Cannot use ASSERT_THAT_EXPECTED, as that will attempt to print the
   // StringRef (which has an invalid size).
   ASSERT_TRUE((bool)Buffer);
-  EXPECT_EQ(9999999999, Buffer->size());
+  EXPECT_EQ(9999999999u, Buffer->size());
   EXPECT_EQ(ArchiveWithMember + sizeof(ArchiveWithMember) - 1, Buffer->data());
 }
