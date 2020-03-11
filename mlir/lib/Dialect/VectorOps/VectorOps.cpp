@@ -302,13 +302,8 @@ static LogicalResult verify(ContractionOp op) {
              << index << " to have no symbols";
     auto vectorType = op.getOperand(index).getType().dyn_cast<VectorType>();
     unsigned rank = vectorType ? vectorType.getShape().size() : 0;
-    // Since (...) -> () is parsed into an empty map, we need to add
-    // a special case for this situation: continue the verification
-    // of an empty map if the resulting rank is indeed zero, i.e. this
-    // is a reduction into a scalar.
-    if (map.getNumDims() == 0 && map.getNumResults() == 0 && rank == 0)
-      continue;
     // Verify that the map has the right number of inputs, outputs, and indices.
+    // This also correctly accounts for (..) -> () for rank-0 results.
     if (map.getNumDims() != numIterators)
       return op.emitOpError("expected indexing map ")
              << index << " to have " << numIterators << " number of inputs";
