@@ -28,6 +28,7 @@ struct MemRefRegion;
 
 namespace loop {
 class ForOp;
+class ParallelOp;
 } // end namespace loop
 
 /// Unrolls this for operation completely if the trip count is known to be
@@ -225,6 +226,12 @@ TileLoops extractFixedOuterLoops(loop::ForOp rootFOrOp,
 /// `loops` contains a list of perfectly nested loops with bounds and steps
 /// independent of any loop induction variable involved in the nest.
 void coalesceLoops(MutableArrayRef<loop::ForOp> loops);
+
+/// Take the ParallelLoop and for each set of dimension indices, combine them
+/// into a single dimension. combinedDimensions must contain each index into
+/// loops exactly once.
+void collapsePLoops(loop::ParallelOp loops,
+                    ArrayRef<std::vector<unsigned>> combinedDimensions);
 
 /// Maps `forOp` for execution on a parallel grid of virtual `processorIds` of
 /// size given by `numProcessors`. This is achieved by embedding the SSA values
