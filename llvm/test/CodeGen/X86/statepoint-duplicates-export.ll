@@ -44,19 +44,16 @@ next:
 define i1 @test2(i32 addrspace(1)* %arg) gc "statepoint-example" {
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    subq $24, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    movq %rdi, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    movq %rdi, (%rsp)
 ; CHECK-NEXT:    callq func
 ; CHECK-NEXT:  .Ltmp2:
-; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; CHECK-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    callq func
 ; CHECK-NEXT:  .Ltmp3:
-; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; CHECK-NEXT:    orq {{[0-9]+}}(%rsp), %rax
+; CHECK-NEXT:    cmpq $0, (%rsp)
 ; CHECK-NEXT:    sete %al
-; CHECK-NEXT:    addq $24, %rsp
+; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 entry:

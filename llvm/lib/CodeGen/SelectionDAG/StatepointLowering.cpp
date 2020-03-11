@@ -973,10 +973,13 @@ void SelectionDAGBuilder::visitGCRelocate(const GCRelocateInst &Relocate) {
   unsigned Index = *DerivedPtrLocation;
   SDValue SpillSlot = DAG.getTargetFrameIndex(Index, getFrameIndexTy());
 
-  // Note: We know all of these reloads are independent, but don't bother to
-  // exploit that chain wise.  DAGCombine will happily do so as needed, so
-  // doing it here would be a small compile time win at most.
-  SDValue Chain = getRoot();
+  // All the reloads are independent and are reading memory only modified by
+  // statepoints (i.e. no other aliasing stores); informing SelectionDAG of
+  // this this let's CSE kick in for free and allows reordering of instructions
+  // if possible.  The lowering for statepoint sets the root, so this is
+  // ordering all reloads with the either a) the statepoint node itself, or b)
+  // the entry of the current block for an invoke statepoint.
+  const SDValue Chain = DAG.getRoot(); // != Builder.getRoot()
 
   auto &MF = DAG.getMachineFunction();
   auto &MFI = MF.getFrameInfo();
@@ -991,8 +994,7 @@ void SelectionDAGBuilder::visitGCRelocate(const GCRelocateInst &Relocate) {
 
   SDValue SpillLoad = DAG.getLoad(LoadVT, getCurSDLoc(), Chain,
                                   SpillSlot, LoadMMO);
-
-  DAG.setRoot(SpillLoad.getValue(1));
+  PendingLoads.push_back(SpillLoad.getValue(1));
 
   assert(SpillLoad.getNode());
   setValue(&Relocate, SpillLoad);
