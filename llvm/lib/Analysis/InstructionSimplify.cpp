@@ -707,9 +707,8 @@ static Constant *stripAndComputeConstantOffsets(const DataLayout &DL, Value *&V,
   Offset = Offset.sextOrTrunc(IntIdxTy->getIntegerBitWidth());
 
   Constant *OffsetIntPtr = ConstantInt::get(IntIdxTy, Offset);
-  if (V->getType()->isVectorTy())
-    return ConstantVector::getSplat(V->getType()->getVectorNumElements(),
-                                    OffsetIntPtr);
+  if (VectorType *VecTy = dyn_cast<VectorType>(V->getType()))
+    return ConstantVector::getSplat(VecTy->getElementCount(), OffsetIntPtr);
   return OffsetIntPtr;
 }
 

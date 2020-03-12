@@ -2229,8 +2229,7 @@ Constant *llvm::ConstantFoldGetElementPtr(Type *PointeeTy, Constant *C,
   Constant *Idx0 = cast<Constant>(Idxs[0]);
   if (Idxs.size() == 1 && (Idx0->isNullValue() || isa<UndefValue>(Idx0)))
     return GEPTy->isVectorTy() && !C->getType()->isVectorTy()
-               ? ConstantVector::getSplat(
-                     cast<VectorType>(GEPTy)->getNumElements(), C)
+               ? ConstantVector::getSplat(GEPTy->getVectorElementCount(), C)
                : C;
 
   if (C->isNullValue()) {

@@ -774,7 +774,7 @@ Instruction *InstCombiner::FoldShiftByConstant(Value *Op0, Constant *Op1,
           APInt Bits = APInt::getHighBitsSet(TypeBits, TypeBits - Op1Val);
           Constant *Mask = ConstantInt::get(I.getContext(), Bits);
           if (VectorType *VT = dyn_cast<VectorType>(X->getType()))
-            Mask = ConstantVector::getSplat(VT->getNumElements(), Mask);
+            Mask = ConstantVector::getSplat(VT->getElementCount(), Mask);
           return BinaryOperator::CreateAnd(X, Mask);
         }
 
@@ -809,7 +809,7 @@ Instruction *InstCombiner::FoldShiftByConstant(Value *Op0, Constant *Op1,
           APInt Bits = APInt::getHighBitsSet(TypeBits, TypeBits - Op1Val);
           Constant *Mask = ConstantInt::get(I.getContext(), Bits);
           if (VectorType *VT = dyn_cast<VectorType>(X->getType()))
-            Mask = ConstantVector::getSplat(VT->getNumElements(), Mask);
+            Mask = ConstantVector::getSplat(VT->getElementCount(), Mask);
           return BinaryOperator::CreateAnd(X, Mask);
         }
 

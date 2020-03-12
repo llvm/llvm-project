@@ -4568,8 +4568,8 @@ static llvm::VectorType *GetFloatNeonType(CodeGenFunction *CGF,
 }
 
 Value *CodeGenFunction::EmitNeonSplat(Value *V, Constant *C) {
-  unsigned nElts = V->getType()->getVectorNumElements();
-  Value* SV = llvm::ConstantVector::getSplat(nElts, C);
+  ElementCount EC = V->getType()->getVectorElementCount();
+  Value *SV = llvm::ConstantVector::getSplat(EC, C);
   return Builder.CreateShuffleVector(V, V, SV, "lane");
 }
 
@@ -8773,7 +8773,7 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
       llvm::VectorType::get(VTy->getElementType(), VTy->getNumElements() / 2) :
       VTy;
     llvm::Constant *cst = cast<Constant>(Ops[3]);
-    Value *SV = llvm::ConstantVector::getSplat(VTy->getNumElements(), cst);
+    Value *SV = llvm::ConstantVector::getSplat(VTy->getElementCount(), cst);
     Ops[1] = Builder.CreateBitCast(Ops[1], SourceTy);
     Ops[1] = Builder.CreateShuffleVector(Ops[1], Ops[1], SV, "lane");
 
@@ -8802,7 +8802,7 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     llvm::Type *STy = llvm::VectorType::get(VTy->getElementType(),
                                             VTy->getNumElements() * 2);
     Ops[2] = Builder.CreateBitCast(Ops[2], STy);
-    Value* SV = llvm::ConstantVector::getSplat(VTy->getNumElements(),
+    Value *SV = llvm::ConstantVector::getSplat(VTy->getElementCount(),
                                                cast<ConstantInt>(Ops[3]));
     Ops[2] = Builder.CreateShuffleVector(Ops[2], Ops[2], SV, "lane");
 
