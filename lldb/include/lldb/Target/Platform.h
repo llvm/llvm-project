@@ -50,6 +50,9 @@ public:
 
   FileSpec GetModuleCacheDirectory() const;
   bool SetModuleCacheDirectory(const FileSpec &dir_spec);
+
+private:
+  void SetDefaultModuleCacheDirectory(const FileSpec &dir_spec);
 };
 
 typedef std::shared_ptr<PlatformProperties> PlatformPropertiesSP;
