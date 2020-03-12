@@ -46,7 +46,6 @@ body:             |
   ; GCN:   BUFFER_STORE_DWORD_ADDR64 [[V_MOV_B32_e32_]], %7, %4, 0, 4, 0, 0, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
   ; GCN: bb.3:
   ; GCN:   successors: %bb.4(0x80000000)
-  ; GCN:   $exec = S_OR_B64 $exec, [[COPY4]], implicit-def $scc
   ; GCN:   DBG_VALUE
   ; GCN: bb.4:
   ; GCN:   $exec = S_OR_B64 $exec, [[COPY2]], implicit-def $scc
@@ -146,7 +145,6 @@ body:             |
   ; GCN:   BUFFER_STORE_DWORD_ADDR64 [[V_MOV_B32_e32_]], %7, %4, 0, 4, 0, 0, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
   ; GCN: bb.3:
   ; GCN:   successors: %bb.4(0x80000000)
-  ; GCN:   $exec = S_OR_B64 $exec, [[COPY4]], implicit-def $scc
   ; GCN: bb.4:
   ; GCN:   successors: %bb.5(0x80000000)
   ; GCN: bb.5:
@@ -246,7 +244,6 @@ body:             |
   ; GCN:   BUFFER_STORE_DWORD_ADDR64 [[V_MOV_B32_e32_]], %7, %4, 0, 4, 0, 0, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
   ; GCN: bb.3:
   ; GCN:   successors: %bb.4(0x80000000)
-  ; GCN:   $exec = S_OR_B64 $exec, [[COPY4]], implicit-def $scc
   ; GCN: bb.4:
   ; GCN:   successors: %bb.5(0x80000000)
   ; GCN:   DBG_VALUE
@@ -347,7 +344,6 @@ body:             |
   ; GCN:   BUFFER_STORE_DWORD_ADDR64 [[V_MOV_B32_e32_]], %7, %4, 0, 4, 0, 0, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
   ; GCN: bb.3:
   ; GCN:   successors: %bb.4(0x80000000)
-  ; GCN:   $exec = S_OR_B64 $exec, [[COPY4]], implicit-def $scc
   ; GCN:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GCN:   [[S_BREV_B32_:%[0-9]+]]:sgpr_32 = S_BREV_B32 [[DEF]]
   ; GCN:   KILL [[DEF]]
@@ -450,7 +446,6 @@ body:             |
   ; GCN:   BUFFER_STORE_DWORD_ADDR64 [[V_MOV_B32_e32_]], %7, %4, 0, 4, 0, 0, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
   ; GCN: bb.3:
   ; GCN:   successors: %bb.4(0x80000000)
-  ; GCN:   $exec = S_OR_B64 $exec, [[COPY4]], implicit-def $scc
   ; GCN:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GCN:   [[S_BREV_B32_:%[0-9]+]]:sgpr_32 = S_BREV_B32 [[DEF]]
   ; GCN:   KILL [[DEF]]
@@ -749,7 +744,6 @@ body:             |
   ; GCN:   BUFFER_STORE_DWORD_ADDR64 [[V_MOV_B32_e32_]], %7, %4, 0, 4, 0, 0, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
   ; GCN: bb.3:
   ; GCN:   successors: %bb.5(0x80000000)
-  ; GCN:   $exec = S_OR_B64 $exec, [[COPY4]], implicit-def $scc
   ; GCN:   S_BRANCH %bb.5
   ; GCN: bb.4:
   ; GCN:   $exec = S_OR_B64 $exec, [[COPY2]], implicit-def $scc
