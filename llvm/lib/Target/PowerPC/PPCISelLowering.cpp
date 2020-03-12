@@ -8151,8 +8151,10 @@ SDValue PPCTargetLowering::LowerINT_TO_FP(SDValue Op,
                                  SINT, DAG.getConstant(53, dl, MVT::i32));
       Cond = DAG.getNode(ISD::ADD, dl, MVT::i64,
                          Cond, DAG.getConstant(1, dl, MVT::i64));
-      Cond = DAG.getSetCC(dl, MVT::i32,
-                          Cond, DAG.getConstant(1, dl, MVT::i64), ISD::SETUGT);
+      Cond = DAG.getSetCC(
+          dl,
+          getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), MVT::i64),
+          Cond, DAG.getConstant(1, dl, MVT::i64), ISD::SETUGT);
 
       SINT = DAG.getNode(ISD::SELECT, dl, MVT::i64, Cond, Round, SINT);
     }
