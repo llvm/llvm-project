@@ -2746,26 +2746,6 @@ void x() {
   EXPECT_TRUE(matchesWithOpenMP(Source1, Matcher));
 }
 
-TEST(Stmt, isOMPStructuredBlock) {
-  const std::string Source0 = R"(
-void x() {
-#pragma omp parallel
-;
-})";
-  EXPECT_TRUE(
-      matchesWithOpenMP(Source0, stmt(nullStmt(), isOMPStructuredBlock())));
-
-  const std::string Source1 = R"(
-void x() {
-#pragma omp parallel
-{;}
-})";
-  EXPECT_TRUE(
-      notMatchesWithOpenMP(Source1, stmt(nullStmt(), isOMPStructuredBlock())));
-  EXPECT_TRUE(
-      matchesWithOpenMP(Source1, stmt(compoundStmt(), isOMPStructuredBlock())));
-}
-
 TEST(OMPExecutableDirective, hasStructuredBlock) {
   const std::string Source0 = R"(
 void x() {

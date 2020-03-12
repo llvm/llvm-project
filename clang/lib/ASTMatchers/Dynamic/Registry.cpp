@@ -398,7 +398,6 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(isNoReturn);
   REGISTER_MATCHER(isNoThrow);
   REGISTER_MATCHER(isNoneKind);
-  REGISTER_MATCHER(isOMPStructuredBlock);
   REGISTER_MATCHER(isOverride);
   REGISTER_MATCHER(isPrivate);
   REGISTER_MATCHER(isProtected);
