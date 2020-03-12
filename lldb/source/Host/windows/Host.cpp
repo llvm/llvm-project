@@ -133,7 +133,7 @@ FileSpec Host::GetModuleFileSpecForHostAddress(const void *host_addr) {
 
 uint32_t Host::FindProcesses(const ProcessInstanceInfoMatch &match_info,
                              ProcessInstanceInfoList &process_infos) {
-  process_infos.Clear();
+  process_infos.clear();
 
   AutoHandle snapshot(CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0));
   if (!snapshot.IsValid())
