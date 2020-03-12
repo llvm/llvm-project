@@ -169,7 +169,6 @@ class ProcessAttachInfo;
 class ProcessModID;
 class ProcessInfo;
 class ProcessInstanceInfo;
-class ProcessInstanceInfoList;
 class ProcessInstanceInfoMatch;
 class ProcessLaunchInfo;
 class Property;

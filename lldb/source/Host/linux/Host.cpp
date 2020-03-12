@@ -262,14 +262,14 @@ uint32_t Host::FindProcesses(const ProcessInstanceInfoMatch &match_info,
         continue;
 
       if (match_info.Matches(process_info)) {
-        process_infos.Append(process_info);
+        process_infos.push_back(process_info);
       }
     }
 
     closedir(dirproc);
   }
 
-  return process_infos.GetSize();
+  return process_infos.size();
 }
 
 bool Host::FindProcessThreads(const lldb::pid_t pid, TidMap &tids_to_attach) {

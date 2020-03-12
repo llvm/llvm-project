@@ -660,11 +660,11 @@ uint32_t Host::FindProcesses(const ProcessInstanceInfoMatch &match_info,
     if (GetMacOSXProcessCPUType(process_info)) {
       if (GetMacOSXProcessArgs(&match_info, process_info)) {
         if (match_info.Matches(process_info))
-          process_infos.Append(process_info);
+          process_infos.push_back(process_info);
       }
     }
   }
-  return process_infos.GetSize();
+  return process_infos.size();
 }
 
 bool Host::GetProcessInfo(lldb::pid_t pid, ProcessInstanceInfo &process_info) {
