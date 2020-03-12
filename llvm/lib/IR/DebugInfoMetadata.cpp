@@ -522,17 +522,24 @@ DICompileUnit *DICompileUnit::getImpl(
     unsigned EmissionKind, Metadata *EnumTypes, Metadata *RetainedTypes,
     Metadata *GlobalVariables, Metadata *ImportedEntities, Metadata *Macros,
     uint64_t DWOId, bool SplitDebugInlining, bool DebugInfoForProfiling,
-    unsigned NameTableKind, bool RangesBaseAddress, StorageType Storage,
-    bool ShouldCreate) {
+    unsigned NameTableKind, bool RangesBaseAddress, MDString *SysRoot,
+    MDString *SDK, StorageType Storage, bool ShouldCreate) {
   assert(Storage != Uniqued && "Cannot unique DICompileUnit");
   assert(isCanonical(Producer) && "Expected canonical MDString");
   assert(isCanonical(Flags) && "Expected canonical MDString");
   assert(isCanonical(SplitDebugFilename) && "Expected canonical MDString");
 
-  Metadata *Ops[] = {
-      File,      Producer,      Flags,           SplitDebugFilename,
-      EnumTypes, RetainedTypes, GlobalVariables, ImportedEntities,
-      Macros};
+  Metadata *Ops[] = {File,
+                     Producer,
+                     Flags,
+                     SplitDebugFilename,
+                     EnumTypes,
+                     RetainedTypes,
+                     GlobalVariables,
+                     ImportedEntities,
+                     Macros,
+                     SysRoot,
+                     SDK};
   return storeImpl(new (array_lengthof(Ops)) DICompileUnit(
                        Context, Storage, SourceLanguage, IsOptimized,
                        RuntimeVersion, EmissionKind, DWOId, SplitDebugInlining,
@@ -717,12 +724,12 @@ DICommonBlock *DICommonBlock::getImpl(LLVMContext &Context, Metadata *Scope,
 
 DIModule *DIModule::getImpl(LLVMContext &Context, Metadata *Scope,
                             MDString *Name, MDString *ConfigurationMacros,
-                            MDString *IncludePath, MDString *SysRoot,
-                            StorageType Storage, bool ShouldCreate) {
+                            MDString *IncludePath, StorageType Storage,
+                            bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");
-  DEFINE_GETIMPL_LOOKUP(
-      DIModule, (Scope, Name, ConfigurationMacros, IncludePath, SysRoot));
-  Metadata *Ops[] = {Scope, Name, ConfigurationMacros, IncludePath, SysRoot};
+  DEFINE_GETIMPL_LOOKUP(DIModule,
+                        (Scope, Name, ConfigurationMacros, IncludePath));
+  Metadata *Ops[] = {Scope, Name, ConfigurationMacros, IncludePath};
   DEFINE_GETIMPL_STORE_NO_CONSTRUCTOR_ARGS(DIModule, Ops);
 }
 

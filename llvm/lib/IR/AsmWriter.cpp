@@ -1951,6 +1951,8 @@ static void writeDICompileUnit(raw_ostream &Out, const DICompileUnit *N,
                     false);
   Printer.printNameTableKind("nameTableKind", N->getNameTableKind());
   Printer.printBool("rangesBaseAddress", N->getRangesBaseAddress(), false);
+  Printer.printString("sysroot", N->getSysRoot());
+  Printer.printString("sdk", N->getSDK());
   Out << ")";
 }
 
@@ -2063,7 +2065,6 @@ static void writeDIModule(raw_ostream &Out, const DIModule *N,
   Printer.printString("name", N->getName());
   Printer.printString("configMacros", N->getConfigurationMacros());
   Printer.printString("includePath", N->getIncludePath());
-  Printer.printString("sysroot", N->getSysRoot());
   Out << ")";
 }
 
