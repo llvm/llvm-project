@@ -1,4 +1,4 @@
-; RUN: llc  -verify-machineinstrs < %s | fgrep -A 10000 .llvm_stackmaps | wc -l | FileCheck %s
+; RUN: llc  -verify-machineinstrs < %s | grep -F -A 10000 .llvm_stackmaps | wc -l | FileCheck %s
 
 ; Without removal of duplicate entries, the size is 62 lines
 ; CHECK: 50
