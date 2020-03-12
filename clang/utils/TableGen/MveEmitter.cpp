@@ -1874,7 +1874,7 @@ void MveEmitter::EmitHeader(raw_ostream &OS) {
         // match your call".
 
         OS << "static __inline__ __attribute__(("
-           << (Polymorphic ? "overloadable, " : "")
+           << (Polymorphic ? "__overloadable__, " : "")
            << "__clang_arm_builtin_alias(__builtin_arm_mve_" << Int.fullName()
            << ")))\n"
            << RetTypeName << FunctionName << "(" << ArgTypesString << ");\n";
@@ -2041,7 +2041,7 @@ void CdeEmitter::EmitHeader(raw_ostream &OS) {
       // Emit the actual declaration. See MveEmitter::EmitHeader for detailed
       // comments
       OS << "static __inline__ __attribute__(("
-         << (Polymorphic ? "overloadable, " : "")
+         << (Polymorphic ? "__overloadable__, " : "")
          << "__clang_arm_builtin_alias(__builtin_arm_" << Int.builtinExtension()
          << "_" << Int.fullName() << ")))\n"
          << RetTypeName << FunctionName << "(" << ArgTypesString << ");\n";
