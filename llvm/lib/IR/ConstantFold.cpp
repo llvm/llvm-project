@@ -1840,7 +1840,7 @@ Constant *llvm::ConstantFoldCompareInstruction(unsigned short pred,
   Type *ResultTy;
   if (VectorType *VT = dyn_cast<VectorType>(C1->getType()))
     ResultTy = VectorType::get(Type::getInt1Ty(C1->getContext()),
-                               VT->getNumElements());
+                               VT->getElementCount());
   else
     ResultTy = Type::getInt1Ty(C1->getContext());
 
@@ -1971,6 +1971,11 @@ Constant *llvm::ConstantFoldCompareInstruction(unsigned short pred,
                                         R==APFloat::cmpEqual);
     }
   } else if (C1->getType()->isVectorTy()) {
+    // Do not iterate on scalable vector. The number of elements is unknown at
+    // compile-time.
+    if (C1->getType()->getVectorIsScalable())
+      return nullptr;
+
     // If we can constant fold the comparison of each element, constant fold
     // the whole vector comparison.
     SmallVector<Constant*, 4> ResElts;
