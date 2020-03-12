@@ -1891,6 +1891,10 @@ public:
     return *TemplateArgs;
   }
 
+  void setTemplateArgs(TemplateArgumentList *Args) {
+    TemplateArgs = Args;
+  }
+
   /// Determine the kind of specialization that this
   /// declaration represents.
   TemplateSpecializationKind getSpecializationKind() const {
