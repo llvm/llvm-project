@@ -452,6 +452,11 @@ struct _LIBUNWIND_HIDDEN dl_iterate_cb_data {
     #error "_LIBUNWIND_SUPPORT_DWARF_UNWIND requires _LIBUNWIND_SUPPORT_DWARF_INDEX on this platform."
   #endif
 
+#include "FrameHeaderCache.hpp"
+
+// There should be just one of these per process.
+static FrameHeaderCache ProcessFrameHeaderCache;
+
 static bool checkAddrInSegment(const Elf_Phdr *phdr, size_t image_base,
                                dl_iterate_cb_data *cbdata) {
   if (phdr->p_type == PT_LOAD) {
@@ -466,10 +471,13 @@ static bool checkAddrInSegment(const Elf_Phdr *phdr, size_t image_base,
   return false;
 }
 
-int findUnwindSectionsByPhdr(struct dl_phdr_info *pinfo, size_t, void *data) {
+int findUnwindSectionsByPhdr(struct dl_phdr_info *pinfo, size_t pinfo_size,
+                             void *data) {
   auto cbdata = static_cast<dl_iterate_cb_data *>(data);
   if (pinfo->dlpi_phnum == 0 || cbdata->targetAddr < pinfo->dlpi_addr)
     return 0;
+  if (ProcessFrameHeaderCache.find(pinfo, pinfo_size, data))
+    return 1;
 
   Elf_Addr image_base = calculateImageBase(pinfo);
   bool found_obj = false;
@@ -496,8 +504,10 @@ int findUnwindSectionsByPhdr(struct dl_phdr_info *pinfo, size_t, void *data) {
     } else if (!found_obj) {
       found_obj = checkAddrInSegment(phdr, image_base, cbdata);
     }
-    if (found_obj && found_hdr)
+    if (found_obj && found_hdr) {
+      ProcessFrameHeaderCache.add(cbdata->sects);
       return 1;
+    }
   }
   cbdata->sects->dwarf_section_length = 0;
   return 0;
