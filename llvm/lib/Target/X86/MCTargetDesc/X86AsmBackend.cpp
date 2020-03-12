@@ -924,7 +924,7 @@ bool X86AsmBackend::writeNopData(raw_ostream &OS, uint64_t Count) const {
   // 15-bytes is the longest single NOP instruction, but 10-bytes is
   // commonly the longest that can be efficiently decoded.
   uint64_t MaxNopLength = 10;
-  if (STI.getFeatureBits()[X86::ProcIntelSLM])
+  if (STI.getFeatureBits()[X86::FeatureFast7ByteNOP])
     MaxNopLength = 7;
   else if (STI.getFeatureBits()[X86::FeatureFast15ByteNOP])
     MaxNopLength = 15;

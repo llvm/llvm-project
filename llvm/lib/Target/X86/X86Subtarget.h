@@ -258,6 +258,10 @@ protected:
   bool InsertVZEROUPPER = false;
 
   /// True if there is no performance penalty for writing NOPs with up to
+  /// 7 bytes.
+  bool HasFast7ByteNOP = false;
+
+  /// True if there is no performance penalty for writing NOPs with up to
   /// 11 bytes.
   bool HasFast11ByteNOP = false;
 
