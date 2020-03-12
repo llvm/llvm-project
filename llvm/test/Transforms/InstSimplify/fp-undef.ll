@@ -179,23 +179,17 @@ define double @fadd_ninf_nan_op1(double %x) {
   ret double %r
 }
 
-; TODO: Should simplify to undef.
-
 define double @fdiv_ninf_inf_op0(double %x) {
 ; CHECK-LABEL: @fdiv_ninf_inf_op0(
-; CHECK-NEXT:    [[R:%.*]] = fdiv ninf double 0x7FF0000000000000, [[X:%.*]]
-; CHECK-NEXT:    ret double [[R]]
+; CHECK-NEXT:    ret double undef
 ;
   %r = fdiv ninf double 0x7ff0000000000000, %x
   ret double %r
 }
 
-; TODO: Should simplify to undef.
-
 define double @fadd_ninf_inf_op1(double %x) {
 ; CHECK-LABEL: @fadd_ninf_inf_op1(
-; CHECK-NEXT:    [[R:%.*]] = fadd ninf double [[X:%.*]], 0xFFF0000000000000
-; CHECK-NEXT:    ret double [[R]]
+; CHECK-NEXT:    ret double undef
 ;
   %r = fadd ninf double %x, 0xfff0000000000000
   ret double %r

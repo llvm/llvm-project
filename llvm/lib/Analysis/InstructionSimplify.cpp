@@ -4603,9 +4603,22 @@ static Constant *propagateNaN(Constant *In) {
 /// Perform folds that are common to any floating-point operation. This implies
 /// transforms based on undef/NaN because the operation itself makes no
 /// difference to the result.
-static Constant *simplifyFPOp(ArrayRef<Value *> Ops) {
+static Constant *simplifyFPOp(ArrayRef<Value *> Ops,
+                              FastMathFlags FMF = FastMathFlags()) {
   for (Value *V : Ops) {
-    if (match(V, m_Undef()) || match(V, m_NaN()))
+    bool IsNan = match(V, m_NaN());
+    bool IsInf = match(V, m_Inf());
+    bool IsUndef = match(V, m_Undef());
+
+    // If this operation has 'nnan' or 'ninf' and at least 1 disallowed operand
+    // (TODO: an undef operand can be chosen to be Nan/Inf), then the result of
+    // this operation is poison. That result can be relaxed to undef.
+    if (FMF.noNaNs() && IsNan)
+      return UndefValue::get(V->getType());
+    if (FMF.noInfs() && IsInf)
+      return UndefValue::get(V->getType());
+
+    if (IsUndef || IsNan)
       return propagateNaN(cast<Constant>(V));
   }
   return nullptr;
@@ -4618,7 +4631,7 @@ static Value *SimplifyFAddInst(Value *Op0, Value *Op1, FastMathFlags FMF,
   if (Constant *C = foldOrCommuteConstant(Instruction::FAdd, Op0, Op1, Q))
     return C;
 
-  if (Constant *C = simplifyFPOp({Op0, Op1}))
+  if (Constant *C = simplifyFPOp({Op0, Op1}, FMF))
     return C;
 
   // fadd X, -0 ==> X
@@ -4665,7 +4678,7 @@ static Value *SimplifyFSubInst(Value *Op0, Value *Op1, FastMathFlags FMF,
   if (Constant *C = foldOrCommuteConstant(Instruction::FSub, Op0, Op1, Q))
     return C;
 
-  if (Constant *C = simplifyFPOp({Op0, Op1}))
+  if (Constant *C = simplifyFPOp({Op0, Op1}, FMF))
     return C;
 
   // fsub X, +0 ==> X
@@ -4707,7 +4720,7 @@ static Value *SimplifyFSubInst(Value *Op0, Value *Op1, FastMathFlags FMF,
 
 static Value *SimplifyFMAFMul(Value *Op0, Value *Op1, FastMathFlags FMF,
                               const SimplifyQuery &Q, unsigned MaxRecurse) {
-  if (Constant *C = simplifyFPOp({Op0, Op1}))
+  if (Constant *C = simplifyFPOp({Op0, Op1}, FMF))
     return C;
 
   // fmul X, 1.0 ==> X
@@ -4774,7 +4787,7 @@ static Value *SimplifyFDivInst(Value *Op0, Value *Op1, FastMathFlags FMF,
   if (Constant *C = foldOrCommuteConstant(Instruction::FDiv, Op0, Op1, Q))
     return C;
 
-  if (Constant *C = simplifyFPOp({Op0, Op1}))
+  if (Constant *C = simplifyFPOp({Op0, Op1}, FMF))
     return C;
 
   // X / 1.0 -> X
@@ -4819,7 +4832,7 @@ static Value *SimplifyFRemInst(Value *Op0, Value *Op1, FastMathFlags FMF,
   if (Constant *C = foldOrCommuteConstant(Instruction::FRem, Op0, Op1, Q))
     return C;
 
-  if (Constant *C = simplifyFPOp({Op0, Op1}))
+  if (Constant *C = simplifyFPOp({Op0, Op1}, FMF))
     return C;
 
   // Unlike fdiv, the result of frem always matches the sign of the dividend.
