@@ -5379,8 +5379,9 @@ static Instruction *foldVectorCmp(CmpInst &Cmp,
   if (ScalarC && ScalarM) {
     // We allow undefs in matching, but this transform removes those for safety.
     // Demanded elements analysis should be able to recover some/all of that.
-    C = ConstantVector::getSplat(V1Ty->getVectorNumElements(), ScalarC);
-    M = ConstantVector::getSplat(M->getType()->getVectorNumElements(), ScalarM);
+    C = ConstantVector::getSplat(V1Ty->getVectorElementCount(), ScalarC);
+    M = ConstantVector::getSplat(M->getType()->getVectorElementCount(),
+                                 ScalarM);
     Value *NewCmp = IsFP ? Builder.CreateFCmp(Pred, V1, C)
                          : Builder.CreateICmp(Pred, V1, C);
     return new ShuffleVectorInst(NewCmp, UndefValue::get(NewCmp->getType()), M);
