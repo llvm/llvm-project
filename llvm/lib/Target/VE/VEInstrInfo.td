@@ -475,65 +475,6 @@ multiclass RRIm<string opcStr, bits<8>opc,
   }
 }
 
-// Multiclass for RR type instructions without dag pattern
-//   Used by sra.w.zx, sla.w.zx, and others
-
-multiclass RRINDm<string opcStr, bits<8>opc,
-               RegisterClass RC, ValueType Ty, Operand immOp, Operand immOp2> {
-  def rr : RR<
-    opc, (outs RC:$sx), (ins RC:$sz, I32:$sy),
-    !strconcat(opcStr, " $sx, $sz, $sy")> {
-    let cy = 1;
-    let cz = 1;
-    let hasSideEffects = 0;
-  }
-  def ri : RR<
-    opc, (outs RC:$sx), (ins RC:$sz, immOp:$sy),
-    !strconcat(opcStr, " $sx, $sz, $sy")> {
-    let cy = 0;
-    let cz = 1;
-    let hasSideEffects = 0;
-  }
-  def rm0 : RR<
-    opc, (outs RC:$sx), (ins immOp2:$sz, I32:$sy),
-    !strconcat(opcStr, " $sx, (${sz})0, $sy")> {
-    let cy = 1;
-    let cz = 0;
-    let sz{6} = 1;
-    let hasSideEffects = 0;
-  }
-  def rm1 : RR<
-    opc, (outs RC:$sx), (ins immOp2:$sz, I32:$sy),
-    !strconcat(opcStr, " $sx, (${sz})1, $sy")> {
-    let cy = 1;
-    let cz = 0;
-    let hasSideEffects = 0;
-  }
-  def im0 : RR<
-    opc, (outs RC:$sx), (ins immOp2:$sz, immOp:$sy),
-    !strconcat(opcStr, " $sx, (${sz})0, $sy")> {
-    let cy = 0;
-    let cz = 0;
-    let sz{6} = 1;
-    let hasSideEffects = 0;
-  }
-  def im1 : RR<
-    opc, (outs RC:$sx), (ins immOp2:$sz, immOp:$sy),
-    !strconcat(opcStr, " $sx, (${sz})1, $sy")> {
-    let cy = 0;
-    let cz = 0;
-    let hasSideEffects = 0;
-  }
-  def zi : RR<
-    opc, (outs RC:$sx), (ins immOp:$sy),
-    !strconcat(opcStr, " $sx, $sy")> {
-    let cy = 0;
-    let cz = 0;
-    let sz = 0;
-    let hasSideEffects = 0;
-  }
-}
-
 // Multiclass for RR type instructions
 //   Used by cmov instruction
 
@@ -837,14 +778,14 @@ defm SRAX : RRIm<"sra.l", 0x77, I64, i64, simm7Op32, uimm6Op64, sra>;
 let cx = 0 in
 defm SRA : RRIm<"sra.w.sx", 0x76, I32, i32, simm7Op32, uimm6Op32, sra>;
 let cx = 1 in
-defm SRAU : RRINDm<"sra.w.zx", 0x76, I32, i32, simm7Op32, uimm6Op32>;
+defm SRAU : RRIm<"sra.w.zx", 0x76, I32, i32, simm7Op32, uimm6Op32>;
 
 let cx = 0 in
 defm SLL : RRIm<"sll", 0x65, I64, i64, simm7Op32, uimm6Op64, shl>;
 let cx = 0 in
 defm SLA : RRIm<"sla.w.sx", 0x66, I32, i32, simm7Op32, uimm6Op32, shl>;
 let cx = 1 in
-defm SLAU : RRINDm<"sla.w.zx", 0x66, I32, i32, simm7Op32, uimm6Op32>;
+defm SLAU : RRIm<"sla.w.zx", 0x66, I32, i32, simm7Op32, uimm6Op32>;
 let cx = 0 in
 defm SRL : RRIm<"srl", 0x75, I64, i64, simm7Op32, uimm6Op64, srl>;
 
