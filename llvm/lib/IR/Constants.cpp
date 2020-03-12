@@ -2175,7 +2175,7 @@ Constant *ConstantExpr::getICmp(unsigned short pred, Constant *LHS,
 
   Type *ResultTy = Type::getInt1Ty(LHS->getContext());
   if (VectorType *VT = dyn_cast<VectorType>(LHS->getType()))
-    ResultTy = VectorType::get(ResultTy, VT->getNumElements());
+    ResultTy = VectorType::get(ResultTy, VT->getElementCount());
 
   LLVMContextImpl *pImpl = LHS->getType()->getContext().pImpl;
   return pImpl->ExprConstants.getOrCreate(ResultTy, Key);
@@ -2200,7 +2200,7 @@ Constant *ConstantExpr::getFCmp(unsigned short pred, Constant *LHS,
 
   Type *ResultTy = Type::getInt1Ty(LHS->getContext());
   if (VectorType *VT = dyn_cast<VectorType>(LHS->getType()))
-    ResultTy = VectorType::get(ResultTy, VT->getNumElements());
+    ResultTy = VectorType::get(ResultTy, VT->getElementCount());
 
   LLVMContextImpl *pImpl = LHS->getType()->getContext().pImpl;
   return pImpl->ExprConstants.getOrCreate(ResultTy, Key);
