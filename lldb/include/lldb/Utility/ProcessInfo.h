@@ -155,41 +155,7 @@ protected:
   lldb::pid_t m_parent_pid;
 };
 
-class ProcessInstanceInfoList {
-public:
-  ProcessInstanceInfoList() = default;
-
-  void Clear() { m_infos.clear(); }
-
-  size_t GetSize() { return m_infos.size(); }
-
-  void Append(const ProcessInstanceInfo &info) { m_infos.push_back(info); }
-
-  llvm::StringRef GetProcessNameAtIndex(size_t idx) {
-    return ((idx < m_infos.size()) ? m_infos[idx].GetNameAsStringRef() : "");
-  }
-
-  lldb::pid_t GetProcessIDAtIndex(size_t idx) {
-    return ((idx < m_infos.size()) ? m_infos[idx].GetProcessID() : 0);
-  }
-
-  bool GetInfoAtIndex(size_t idx, ProcessInstanceInfo &info) {
-    if (idx < m_infos.size()) {
-      info = m_infos[idx];
-      return true;
-    }
-    return false;
-  }
-
-  // You must ensure "idx" is valid before calling this function
-  const ProcessInstanceInfo &GetProcessInfoAtIndex(size_t idx) const {
-    assert(idx < m_infos.size());
-    return m_infos[idx];
-  }
-
-protected:
-  std::vector<ProcessInstanceInfo> m_infos;
-};
+typedef std::vector<ProcessInstanceInfo> ProcessInstanceInfoList;
 
 // ProcessInstanceInfoMatch
 //

@@ -366,13 +366,12 @@ PlatformiOSSimulator::FindProcesses(const ProcessInstanceInfoMatch &match_info,
 
   // Now we filter them down to only the iOS triples
   for (uint32_t i = 0; i < n; ++i) {
-    const ProcessInstanceInfo &proc_info =
-        all_osx_process_infos.GetProcessInfoAtIndex(i);
+    const ProcessInstanceInfo &proc_info = all_osx_process_infos[i];
     if (proc_info.GetArchitecture().GetTriple().getOS() == llvm::Triple::IOS) {
-      process_infos.Append(proc_info);
+      process_infos.push_back(proc_info);
     }
   }
-  return process_infos.GetSize();
+  return process_infos.size();
 }
 
 bool PlatformiOSSimulator::GetSupportedArchitectureAtIndex(uint32_t idx,
