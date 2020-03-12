@@ -817,6 +817,7 @@ public:
   }
 };
 
+// TODO(ajcbik): remove this rule once LinAlg tests are cleaned up
 class VectorOuterProductOpConversion : public ConvertToLLVMPattern {
 public:
   explicit VectorOuterProductOpConversion(MLIRContext *context,
@@ -1176,7 +1177,7 @@ struct LowerVectorToLLVMPass : public ModulePass<LowerVectorToLLVMPass> {
 } // namespace
 
 void LowerVectorToLLVMPass::runOnModule() {
-  // Perform progressive lowering of operations on "slices" and
+  // Perform progressive lowering of operations on slices and
   // all contraction operations. Also applies folding and DCE.
   {
     OwningRewritePatternList patterns;
