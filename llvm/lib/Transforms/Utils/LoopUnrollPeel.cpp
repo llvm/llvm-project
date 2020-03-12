@@ -262,10 +262,9 @@ static unsigned countToEliminateCompares(Loop &L, unsigned MaxPeelCount,
     // iteration. See if that makes !Pred become unknown again.
     if (ICmpInst::isEquality(Pred) &&
         !SE.isKnownPredicate(ICmpInst::getInversePredicate(Pred), NextIterVal,
-                             RightSCEV)) {
-      assert(!SE.isKnownPredicate(Pred, IterVal, RightSCEV) &&
-             SE.isKnownPredicate(Pred, NextIterVal, RightSCEV) &&
-             "Expected Pred to go from known to unknown.");
+                             RightSCEV) &&
+        !SE.isKnownPredicate(Pred, IterVal, RightSCEV) &&
+        SE.isKnownPredicate(Pred, NextIterVal, RightSCEV)) {
       if (!CanPeelOneMoreIteration())
         continue; // Need to peel one more iteration, but can't. Give up.
       PeelOneMoreIteration(); // Great!
