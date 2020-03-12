@@ -25,21 +25,17 @@ static void RunTest(
     StringRef Head, StringRef Tail,
     std::vector<std::pair<StringRef, llvm::function_ref<void(Instruction *)>>>
         &Tests) {
-  std::string IR;
-  IR.append(Head.begin(), Head.end());
-  for (auto &Elem : Tests)
+  for (auto &Elem : Tests) {
+    std::string IR;
+    IR.append(Head.begin(), Head.end());
     IR.append(Elem.first.begin(), Elem.first.end());
-  IR.append(Tail.begin(), Tail.end());
-  LLVMContext C;
-  SMDiagnostic Err;
-  std::unique_ptr<Module> Mod = parseAssemblyString(IR, Err, C);
-  if (!Mod)
-    Err.print("AssumeQueryAPI", errs());
-  unsigned Idx = 0;
-  for (Instruction &I : (*Mod->getFunction("test")->begin())) {
-    if (Idx < Tests.size())
-      Tests[Idx].second(&I);
-    Idx++;
+    IR.append(Tail.begin(), Tail.end());
+    LLVMContext C;
+    SMDiagnostic Err;
+    std::unique_ptr<Module> Mod = parseAssemblyString(IR, Err, C);
+    if (!Mod)
+      Err.print("AssumeQueryAPI", errs());
+    Elem.second(&*(Mod->getFunction("test")->begin()->begin()));
   }
 }
 
@@ -199,7 +195,29 @@ TEST(AssumeQueryAPI, hasAttributeInAssume) {
                                Attribute::AttrKind::Dereferenceable, 12, true);
       }));
 
-  /// Keep this test last as it modifies the function.
+  Tests.push_back(std::make_pair(
+      "call void @func1(i32* readnone align 32 "
+      "dereferenceable(48) noalias %P, i32* "
+      "align 8 dereferenceable(28) %P1, i32* align 64 "
+      "dereferenceable(4) "
+      "%P2, i32* nonnull align 16 dereferenceable(12) %P3)\n",
+      [](Instruction *I) {
+        CallInst *Assume = BuildAssumeFromInst(I);
+        Assume->insertBefore(I);
+        I->getOperand(1)->dropDroppableUses();
+        I->getOperand(2)->dropDroppableUses();
+        I->getOperand(3)->dropDroppableUses();
+        AssertMatchesExactlyAttributes(
+            Assume, I->getOperand(0),
+            "(readnone|align|dereferenceable|noalias)");
+        AssertMatchesExactlyAttributes(Assume, I->getOperand(1), "");
+        AssertMatchesExactlyAttributes(Assume, I->getOperand(2), "");
+        AssertMatchesExactlyAttributes(Assume, I->getOperand(3), "");
+        AssertHasTheRightValue(Assume, I->getOperand(0),
+                               Attribute::AttrKind::Alignment, 32, true);
+        AssertHasTheRightValue(Assume, I->getOperand(0),
+                               Attribute::AttrKind::Dereferenceable, 48, true);
+      }));
   Tests.push_back(std::make_pair(
       "call void @func(i32* nonnull align 4 dereferenceable(16) %P, i32* align "
       "8 noalias %P1)\n",
