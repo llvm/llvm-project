@@ -88,6 +88,15 @@ add_definitions(${LLVM_DEFINITIONS})
 set(LLVM_EXTERNAL_LIT ${LLVM_TOOLS_BINARY_DIR}/llvm-lit CACHE STRING "Command used to spawn lit")
 
 if(LINK_WITH_FIR)
+  include(TableGen)
+  include(AddMLIR)
+  find_program(MLIR_TABLEGEN_EXE "mlir-tblgen" ${LLVM_TOOLS_BINARY_DIR}
+  NO_DEFAULT_PATH)
+  # tco tool and FIR lib output directories
+  set(LLVM_RUNTIME_OUTPUT_INTDIR ${CMAKE_BINARY_DIR}/bin)
+  set(LLVM_LIBRARY_OUTPUT_INTDIR ${CMAKE_BINARY_DIR}/lib)
+  # Always build tco tool
+  set(LLVM_BUILD_TOOLS ON)
   message(STATUS "Linking driver with FIR and LLVM")
   llvm_map_components_to_libnames(LLVM_COMMON_LIBS support)
   message(STATUS "LLVM libraries: ${LLVM_COMMON_LIBS}")

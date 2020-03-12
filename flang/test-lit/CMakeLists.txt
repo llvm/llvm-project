@@ -16,6 +16,11 @@ set(FLANG_TEST_PARAMS
 set(FLANG_TEST_DEPENDS
   f18
 )
+
+if (LINK_WITH_FIR)
+  list(APPEND FLANG_TEST_DEPENDS tco)
+endif()
+
 add_lit_testsuite(check-all "Running the Flang regression tests"
   ${CMAKE_CURRENT_BINARY_DIR}
   PARAMS ${FLANG_TEST_PARAMS}
