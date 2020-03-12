@@ -3,6 +3,10 @@
 // Note: %s must be preceded by --, otherwise it may be interpreted as a
 // command-line option, e.g. on Mac where %s is commonly under /Users.
 
+// REQUIRES: clang-driver
+// REQUIRES: x86-registered-target
+// REQUIRES: nvptx-registered-target
+
 // -stack-protector should not be passed to device-side CUDA compilation
 // RUN: %clang_cl -### -nocudalib -nocudainc -- %s 2>&1 | FileCheck -check-prefix=GS-default %s
 // GS-default: "-cc1" "-triple" "nvptx64-nvidia-cuda"
