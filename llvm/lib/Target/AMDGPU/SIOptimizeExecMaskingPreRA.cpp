@@ -7,15 +7,8 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// This pass removes redundant S_OR_B64 instructions enabling lanes in
-/// the exec. If two SI_END_CF (lowered as S_OR_B64) come together without any
-/// vector instructions between them we can only keep outer SI_END_CF, given
-/// that CFG is structured and exec bits of the outer end statement are always
-/// not less than exec bit of the inner one.
-///
-/// This needs to be done before the RA to eliminate saved exec bits registers
-/// but after register coalescer to have no vector registers copies in between
-/// of different end cf statements.
+/// This pass performs exec mask handling peephole optimizations which needs
+/// to be done before register allocation to reduce register pressure.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -31,10 +24,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "si-optimize-exec-masking-pre-ra"
 
-static cl::opt<bool>
-RemoveRedundantEndcf("amdgpu-remove-redundant-endcf",
-    cl::init(false), cl::ReallyHidden);
-
 namespace {
 
 class SIOptimizeExecMaskingPreRA : public MachineFunctionPass {
@@ -42,14 +31,6 @@ private:
   const SIRegisterInfo *TRI;
   const SIInstrInfo *TII;
   MachineRegisterInfo *MRI;
-
-public:
-  MachineBasicBlock::iterator skipIgnoreExecInsts(
-    MachineBasicBlock::iterator I, MachineBasicBlock::iterator E) const;
-
-    MachineBasicBlock::iterator skipIgnoreExecInstsTrivialSucc(
-      MachineBasicBlock *&MBB,
-      MachineBasicBlock::iterator It) const;
 
 public:
   static char ID;
@@ -87,17 +68,6 @@ FunctionPass *llvm::createSIOptimizeExecMaskingPreRAPass() {
   return new SIOptimizeExecMaskingPreRA();
 }
 
-static bool isEndCF(const MachineInstr &MI, const SIRegisterInfo *TRI,
-                    const GCNSubtarget &ST) {
-  if (ST.isWave32()) {
-    return MI.getOpcode() == AMDGPU::S_OR_B32 &&
-           MI.modifiesRegister(AMDGPU::EXEC_LO, TRI);
-  }
-
-  return MI.getOpcode() == AMDGPU::S_OR_B64 &&
-         MI.modifiesRegister(AMDGPU::EXEC, TRI);
-}
-
 static bool isFullExecCopy(const MachineInstr& MI, const GCNSubtarget& ST) {
   unsigned Exec = ST.isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
 
@@ -108,71 +78,6 @@ static bool isFullExecCopy(const MachineInstr& MI, const GCNSubtarget& ST) {
 
   return false;
 }
-
-static unsigned getOrNonExecReg(const MachineInstr &MI,
-                                const SIInstrInfo &TII,
-                                const GCNSubtarget& ST) {
-  unsigned Exec = ST.isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
-  auto Op = TII.getNamedOperand(MI, AMDGPU::OpName::src1);
-  if (Op->isReg() && Op->getReg() != Exec)
-     return Op->getReg();
-  Op = TII.getNamedOperand(MI, AMDGPU::OpName::src0);
-  if (Op->isReg() && Op->getReg() != Exec)
-     return Op->getReg();
-  return AMDGPU::NoRegister;
-}
-
-static MachineInstr* getOrExecSource(const MachineInstr &MI,
-                                     const SIInstrInfo &TII,
-                                     const MachineRegisterInfo &MRI,
-                                     const GCNSubtarget& ST) {
-  auto SavedExec = getOrNonExecReg(MI, TII, ST);
-  if (SavedExec == AMDGPU::NoRegister)
-    return nullptr;
-  auto SaveExecInst = MRI.getUniqueVRegDef(SavedExec);
-  if (!SaveExecInst || !isFullExecCopy(*SaveExecInst, ST))
-    return nullptr;
-  return SaveExecInst;
-}
-
-/// Skip over instructions that don't care about the exec mask.
-MachineBasicBlock::iterator SIOptimizeExecMaskingPreRA::skipIgnoreExecInsts(
-  MachineBasicBlock::iterator I, MachineBasicBlock::iterator E) const {
-  for ( ; I != E; ++I) {
-    if (TII->mayReadEXEC(*MRI, *I))
-      break;
-  }
-
-  return I;
-}
-
-// Skip to the next instruction, ignoring debug instructions, and trivial block
-// boundaries (blocks that have one (typically fallthrough) successor, and the
-// successor has one predecessor.
-MachineBasicBlock::iterator
-SIOptimizeExecMaskingPreRA::skipIgnoreExecInstsTrivialSucc(
-  MachineBasicBlock *&MBB,
-  MachineBasicBlock::iterator It) const {
-
-  do {
-    It = skipIgnoreExecInsts(It, MBB->end());
-    if (It != MBB->end() || MBB->succ_size() != 1)
-      break;
-
-    // If there is one trivial successor, advance to the next block.
-    MachineBasicBlock *Succ = *MBB->succ_begin();
-
-    // TODO: Is this really necessary?
-    if (!MBB->isLayoutSuccessor(Succ))
-      break;
-
-    It = Succ->begin();
-    MBB = Succ;
-  } while (true);
-
-  return It;
-}
-
 
 // Optimize sequence
 //    %sel = V_CNDMASK_B32_e64 0, 1, %cc
@@ -383,63 +288,30 @@ bool SIOptimizeExecMaskingPreRA::runOnMachineFunction(MachineFunction &MF) {
       continue;
     }
 
-    if (!RemoveRedundantEndcf)
-      continue;
+    // If the only user of a logical operation is move to exec, fold it now
+    // to prevent forming of saveexec. I.e:
+    //
+    //    %0:sreg_64 = COPY $exec
+    //    %1:sreg_64 = S_AND_B64 %0:sreg_64, %2:sreg_64
+    // =>
+    //    %1 = S_AND_B64 $exec, %2:sreg_64
+    unsigned ScanThreshold = 10;
+    for (auto I = MBB.rbegin(), E = MBB.rend(); I != E
+         && ScanThreshold--; ++I) {
+      if (!isFullExecCopy(*I, ST))
+        continue;
 
-    // Try to collapse adjacent endifs.
-    // The assumption is that conditional regions are perfectly nested and
-    // a mask restored at the exit from the inner block will be completely
-    // covered by a mask restored in the outer.
-    auto E = MBB.end();
-    auto Lead = skipDebugInstructionsForward(MBB.begin(), E);
-    if (MBB.succ_size() != 1 || Lead == E || !isEndCF(*Lead, TRI, ST))
-      continue;
-
-    MachineBasicBlock *TmpMBB = &MBB;
-    auto NextLead = skipIgnoreExecInstsTrivialSucc(TmpMBB, std::next(Lead));
-    if (NextLead == TmpMBB->end() || !isEndCF(*NextLead, TRI, ST) ||
-        !getOrExecSource(*NextLead, *TII, MRI, ST))
-      continue;
-
-    LLVM_DEBUG(dbgs() << "Redundant EXEC = S_OR_B64 found: " << *Lead << '\n');
-
-    auto SaveExec = getOrExecSource(*Lead, *TII, MRI, ST);
-    unsigned SaveExecReg = getOrNonExecReg(*Lead, *TII, ST);
-    for (auto &Op : Lead->operands()) {
-      if (Op.isReg())
-        RecalcRegs.insert(Op.getReg());
-    }
-
-    LIS->RemoveMachineInstrFromMaps(*Lead);
-    Lead->eraseFromParent();
-    if (SaveExecReg) {
-      LIS->removeInterval(SaveExecReg);
-      LIS->createAndComputeVirtRegInterval(SaveExecReg);
-    }
-
-    Changed = true;
-
-    // If the only use of saved exec in the removed instruction is S_AND_B64
-    // fold the copy now.
-    if (!SaveExec || !SaveExec->isFullCopy())
-      continue;
-
-    Register SavedExec = SaveExec->getOperand(0).getReg();
-    bool SafeToReplace = true;
-    for (auto& U : MRI.use_nodbg_instructions(SavedExec)) {
-      if (U.getParent() != SaveExec->getParent()) {
-        SafeToReplace = false;
-        break;
+      Register SavedExec = I->getOperand(0).getReg();
+      if (SavedExec.isVirtual() && MRI.hasOneNonDBGUse(SavedExec) &&
+          MRI.use_instr_nodbg_begin(SavedExec)->getParent() == I->getParent()) {
+        LLVM_DEBUG(dbgs() << "Redundant EXEC COPY: " << *I << '\n');
+        LIS->RemoveMachineInstrFromMaps(*I);
+        I->eraseFromParent();
+        MRI.replaceRegWith(SavedExec, Exec);
+        LIS->removeInterval(SavedExec);
+        Changed = true;
       }
-
-      LLVM_DEBUG(dbgs() << "Redundant EXEC COPY: " << *SaveExec << '\n');
-    }
-
-    if (SafeToReplace) {
-      LIS->RemoveMachineInstrFromMaps(*SaveExec);
-      SaveExec->eraseFromParent();
-      MRI.replaceRegWith(SavedExec, Exec);
-      LIS->removeInterval(SavedExec);
+      break;
     }
   }
 

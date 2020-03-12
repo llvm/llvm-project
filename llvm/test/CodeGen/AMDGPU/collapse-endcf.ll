@@ -3,10 +3,7 @@
 ; GCN-LABEL: {{^}}simple_nested_if:
 ; GCN:      s_and_saveexec_b64 [[SAVEEXEC:s\[[0-9:]+\]]]
 ; GCN-NEXT: s_cbranch_execz [[ENDIF:BB[0-9_]+]]
-
-; TODO: this does not need to save exec, just perform the and.
-; GCN:      s_and_saveexec_b64 s[{{[0-9:]+}}], vcc
-
+; GCN:      s_and_b64 exec, exec, vcc
 ; GCN-NEXT: s_cbranch_execz [[ENDIF]]
 ; GCN-NEXT: ; %bb.{{[0-9]+}}:
 ; GCN:      store_dword
@@ -145,7 +142,7 @@ bb.outer.end:                                        ; preds = %bb, %bb.then, %b
 ; GCN-NEXT: s_cbranch_execz [[ENDIF_OUTER:BB[0-9_]+]]
 ; GCN-NEXT: ; %bb.{{[0-9]+}}:
 ; GCN:      store_dword
-; GCN-NEXT: s_and_saveexec_b64 [[SAVEEXEC_INNER_IF_OUTER_THEN:s\[[0-9:]+\]]]
+; GCN-NEXT: s_and_b64 exec, exec,
 ; GCN-NEXT: s_cbranch_execz [[FLOW1:BB[0-9_]+]]
 ; GCN-NEXT: ; %bb.{{[0-9]+}}:
 ; GCN:      store_dword
@@ -217,7 +214,10 @@ bb.end:                                           ; preds = %bb.then, %bb
 
 ; GCN-LABEL: {{^}}scc_liveness:
 
-; GCN: %bb10
+; GCN: [[BB1_OUTER_LOOP:BB[0-9]+_[0-9]+]]:
+; GCN: s_or_b64 exec, exec, [[SAVEEXEC_OUTER:s\[[0-9:]+\]]]
+;
+; GCN: [[BB1_INNER_LOOP:BB[0-9]+_[0-9]+]]:
 ; GCN: s_or_b64 exec, exec, s{{\[[0-9]+:[0-9]+\]}}
 ; GCN: s_andn2_b64
 ; GCN-NEXT: s_cbranch_execz
@@ -228,8 +228,8 @@ bb.end:                                           ; preds = %bb.then, %bb
 
 ; GCN: buffer_load_dword v{{[0-9]+}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}} offen
 
-; TODO: this does not need to save exec, just perform the and.
-; GCN:      s_and_saveexec_b64 s[{{[0-9:]+}}], {{vcc|s\[[0-9:]+\]}}
+; GCN: s_and_saveexec_b64 [[SAVEEXEC_OUTER]], {{vcc|s\[[0-9:]+\]}}
+; GCN-NEXT: s_cbranch_execz [[BB1_OUTER_LOOP]]
 
 ; GCN-NOT: s_or_b64 exec, exec
 
