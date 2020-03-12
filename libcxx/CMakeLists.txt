@@ -1,6 +1,10 @@
 # See https://libcxx.llvm.org/docs/BuildingLibcxx.html for instructions on how
 # to build libcxx with CMake.
 
+if (NOT IS_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/../libcxxabi")
+  message(FATAL_ERROR "libc++ now requires being built in a monorepo layout with libcxxabi available")
+endif()
+
 #===============================================================================
 # Setup Project
 #===============================================================================
