@@ -18,6 +18,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/YAMLTraits.h"
 
 #include <stddef.h>
 #include <stdint.h>
@@ -397,6 +398,8 @@ public:
   ConstString GetLastPathComponent() const;
 
 protected:
+  friend struct llvm::yaml::MappingTraits<FileSpec>;
+
   // Convenience method for setting the file without changing the style.
   void SetFile(llvm::StringRef path);
 
@@ -410,6 +413,8 @@ protected:
 /// Dump a FileSpec object to a stream
 Stream &operator<<(Stream &s, const FileSpec &f);
 
+/// Prevent ODR violations with traits for llvm::sys::path::Style.
+LLVM_YAML_STRONG_TYPEDEF(FileSpec::Style, FileSpecStyle)
 } // namespace lldb_private
 
 namespace llvm {
@@ -436,6 +441,16 @@ template <> struct format_provider<lldb_private::FileSpec> {
   static void format(const lldb_private::FileSpec &F, llvm::raw_ostream &Stream,
                      StringRef Style);
 };
+
+namespace yaml {
+template <> struct ScalarEnumerationTraits<lldb_private::FileSpecStyle> {
+  static void enumeration(IO &io, lldb_private::FileSpecStyle &style);
+};
+
+template <> struct MappingTraits<lldb_private::FileSpec> {
+  static void mapping(IO &io, lldb_private::FileSpec &f);
+};
+} // namespace yaml
 } // namespace llvm
 
 #endif // LLDB_UTILITY_FILESPEC_H
