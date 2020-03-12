@@ -2812,6 +2812,8 @@ struct AANoAliasCallSiteArgument final : AANoAliasImpl {
       return false;
     }
 
+    A.recordDependence(NoAliasAA, *this, DepClassTy::OPTIONAL);
+
     const IRPosition &VIRP = IRPosition::value(getAssociatedValue());
     auto &NoCaptureAA =
         A.getAAFor<AANoCapture>(*this, VIRP, /* TrackDependence */ false);
