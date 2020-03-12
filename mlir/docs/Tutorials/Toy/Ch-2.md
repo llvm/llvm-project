@@ -206,9 +206,7 @@ class ConstantOp : public mlir::Op<ConstantOp,
                      /// The ConstantOp takes no inputs.
                      mlir::OpTrait::ZeroOperands,
                      /// The ConstantOp returns a single result.
-                     mlir::OpTrait::OneResult,
-                     /// The ConstantOp is pure and has no visible side-effects.
-                     mlir::OpTrait::HasNoSideEffect> {
+                     mlir::OpTrait::OneResult> {
 
  public:
   /// Inherit the constructors from the base Op class.
@@ -335,15 +333,13 @@ operation.
 We define a toy operation by inheriting from our base 'Toy_Op' class above. Here
 we provide the mnemonic and a list of traits for the operation. The
 [mnemonic](../../OpDefinitions.md#operation-name) here matches the one given in
-`ConstantOp::getOperationName` without the dialect prefix; `toy.`. The constant
-operation here is also marked as 'NoSideEffect'. This is an ODS trait, and
-matches one-to-one with the trait we providing when defining `ConstantOp`:
-`mlir::OpTrait::HasNoSideEffect`. Missing here from our C++ definition are the
-`ZeroOperands` and `OneResult` traits; these will be automatically inferred
-based upon the `arguments` and `results` fields we define later.
+`ConstantOp::getOperationName` without the dialect prefix; `toy.`. Missing here
+from our C++ definition are the `ZeroOperands` and `OneResult` traits; these
+will be automatically inferred based upon the `arguments` and `results` fields
+we define later.
 
 ```tablegen
-def ConstantOp : Toy_Op<"constant", [NoSideEffect]> {
+def ConstantOp : Toy_Op<"constant"> {
 }
 ```
 
@@ -369,7 +365,7 @@ values. The results correspond to a set of types for the values produced by the
 operation:
 
 ```tablegen
-def ConstantOp : Toy_Op<"constant", [NoSideEffect]> {
+def ConstantOp : Toy_Op<"constant"> {
   // The constant operation takes an attribute as the only input.
   // `F64ElementsAttr` corresponds to a 64-bit floating-point ElementsAttr.
   let arguments = (ins F64ElementsAttr:$value);
@@ -394,7 +390,7 @@ for users of the dialect and can even be used to auto-generate Markdown
 documents.
 
 ```tablegen
-def ConstantOp : Toy_Op<"constant", [NoSideEffect]> {
+def ConstantOp : Toy_Op<"constant"> {
   // Provide a summary and description for this operation. This can be used to
   // auto-generate documentation of the operations within our dialect.
   let summary = "constant operation";
@@ -432,7 +428,7 @@ as part of `ConstantOp::verify`. This blob can assume that all of the other
 invariants of the operation have already been verified:
 
 ```tablegen
-def ConstantOp : Toy_Op<"constant", [NoSideEffect]> {
+def ConstantOp : Toy_Op<"constant"> {
   // Provide a summary and description for this operation. This can be used to
   // auto-generate documentation of the operations within our dialect.
   let summary = "constant operation";
@@ -472,7 +468,7 @@ of C++ parameters, as well as an optional code block that can be used to specify
 the implementation inline.
 
 ```tablegen
-def ConstantOp : Toy_Op<"constant", [NoSideEffect]> {
+def ConstantOp : Toy_Op<"constant"> {
   ...
 
   // Add custom build methods for the constant operation. These methods populate

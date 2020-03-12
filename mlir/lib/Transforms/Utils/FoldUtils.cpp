@@ -126,6 +126,12 @@ void OperationFolder::notifyRemoval(Operation *op) {
   referencedDialects.erase(it);
 }
 
+/// Clear out any constants cached inside of the folder.
+void OperationFolder::clear() {
+  foldScopes.clear();
+  referencedDialects.clear();
+}
+
 /// Tries to perform folding on the given `op`. If successful, populates
 /// `results` with the results of the folding.
 LogicalResult OperationFolder::tryToFold(

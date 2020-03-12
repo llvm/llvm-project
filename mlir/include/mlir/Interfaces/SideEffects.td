@@ -98,6 +98,13 @@ class EffectOpInterfaceBase<string name, string baseEffect>
       getEffects(effects);
       return effects.empty();
     }
+
+    /// Returns if the given operation has no effects for this interface.
+    static bool hasNoEffect(Operation *op) {
+      if (auto interface = dyn_cast<}] # name # [{>(op))
+        return interface.hasNoEffect();
+      return op->hasTrait<OpTrait::HasRecursiveSideEffects>();
+    }
   }];
 
   // The base effect name of this interface.
@@ -108,11 +115,8 @@ class EffectOpInterfaceBase<string name, string baseEffect>
 // effect interfaces to define their effects.
 class SideEffect<EffectOpInterfaceBase interface, string effectName,
                  string resourceName> : OpVariableDecorator {
-  /// The parent interface that the effect belongs to.
-  string interfaceTrait = interface.trait;
-
   /// The name of the base effects class.
-  string baseEffect = interface.baseEffectName;
+  string baseEffectName = interface.baseEffectName;
 
   /// The derived effect that is being applied.
   string effect = effectName;
@@ -127,6 +131,9 @@ class SideEffectsTraitBase<EffectOpInterfaceBase parentInterface,
     : OpInterfaceTrait<""> {
   /// The name of the interface trait to use.
   let trait = parentInterface.trait;
+
+  /// The name of the base effects class.
+  string baseEffectName = parentInterface.baseEffectName;
 
   /// The derived effects being applied.
   list<SideEffect> effects = staticEffects;
@@ -193,7 +200,7 @@ def MemWrite : MemWrite<"">;
 //===----------------------------------------------------------------------===//
 
 // Op has no side effect.
-def NoSideEffect : NativeOpTrait<"HasNoSideEffect">;
+def NoSideEffect : MemoryEffects<[]>;
 // Op has recursively computed side effects.
 def RecursiveSideEffects : NativeOpTrait<"HasRecursiveSideEffects">;
 

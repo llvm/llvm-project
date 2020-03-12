@@ -1184,15 +1184,21 @@ void OpEmitter::genSideEffectInterfaceMethods() {
                                unsigned index, unsigned kind) {
     for (auto decorator : decorators)
       if (SideEffect *effect = dyn_cast<SideEffect>(&decorator))
-        interfaceEffects[effect->getInterfaceTrait()].push_back(
+        interfaceEffects[effect->getBaseEffectName()].push_back(
             EffectLocation{*effect, index, kind});
   };
 
   // Collect effects that were specified via:
   /// Traits.
-  for (const auto &trait : op.getTraits())
-    if (const auto *opTrait = dyn_cast<tblgen::SideEffectTrait>(&trait))
-      resolveDecorators(opTrait->getEffects(), /*index=*/0, EffectKind::Static);
+  for (const auto &trait : op.getTraits()) {
+    const auto *opTrait = dyn_cast<tblgen::SideEffectTrait>(&trait);
+    if (!opTrait)
+      continue;
+    auto &effects = interfaceEffects[opTrait->getBaseEffectName()];
+    for (auto decorator : opTrait->getEffects())
+      effects.push_back(EffectLocation{cast<SideEffect>(decorator),
+                                       /*index=*/0, EffectKind::Static});
+  }
   /// Operands.
   for (unsigned i = 0, operandIt = 0, e = op.getNumArgs(); i != e; ++i) {
     if (op.getArg(i).is<NamedTypeConstraint *>()) {
@@ -1205,11 +1211,10 @@ void OpEmitter::genSideEffectInterfaceMethods() {
     resolveDecorators(op.getResultDecorators(i), i, EffectKind::Result);
 
   for (auto &it : interfaceEffects) {
-    StringRef baseEffect = it.second.front().effect.getBaseName();
     auto effectsParam =
         llvm::formatv(
             "SmallVectorImpl<SideEffects::EffectInstance<{0}>> &effects",
-            baseEffect)
+            it.first())
             .str();
 
     // Generate the 'getEffects' method.

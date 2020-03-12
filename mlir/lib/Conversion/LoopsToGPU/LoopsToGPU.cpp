@@ -797,7 +797,9 @@ ParallelToGpuLaunchLowering::matchAndRewrite(ParallelOp parallelOp,
       Operation *clone = rewriter.clone(*op, cloningMap);
       cloningMap.map(op->getResults(), clone->getResults());
       // Check for side effects.
-      seenSideeffects |= !clone->hasNoSideEffect();
+      // TODO: Handle region side effects properly.
+      seenSideeffects |= !MemoryEffectOpInterface::hasNoEffect(clone) ||
+                         clone->getNumRegions() != 0;
       // If we are no longer in the innermost scope, sideeffects are disallowed.
       if (seenSideeffects && leftNestingScope)
         return matchFailure();
