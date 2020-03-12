@@ -340,11 +340,11 @@ def ReduceOp : Loop_Op<"reduce", [HasParent<"ParallelOp">]> {
 
     ```mlir
       %operand = constant 1.0 : f32
-      loop.reduce(%operand) {
+      loop.reduce(%operand) -> f32 {
         ^bb0(%lhs : f32, %rhs: f32):
           %res = addf %lhs, %rhs : f32
           loop.reduce.return %res : f32
-      } : f32
+      }
     ```
 
   }];
