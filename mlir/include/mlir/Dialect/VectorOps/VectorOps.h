@@ -55,9 +55,13 @@ void populateVectorToVectorTransformationPatterns(
 void populateVectorSlicesLoweringPatterns(OwningRewritePatternList &patterns,
                                           MLIRContext *context);
 
-/// Collect a set of vector contraction transformation patterns
-/// that express all vector.contract ops in terms of more elementary
-/// extraction and reduction ops.
+/// Collect a set of transformation patterns that are related to contracting
+/// or expanding vector operations:
+///   ContractionOpLowering,
+///   ShapeCastOp2DDownCastRewritePattern, ShapeCastOp2DUpCastRewritePattern
+///   OuterproductOpLowering
+/// These transformation express higher level vector ops in terms of more
+/// elementary extraction, insertion, reduction, product, and broadcast ops.
 void populateVectorContractLoweringPatterns(OwningRewritePatternList &patterns,
                                             MLIRContext *context);
 
