@@ -2558,9 +2558,8 @@ void CGObjCCommonMac::BuildRCRecordLayout(const llvm::StructLayout *RecLayout,
       }
       if (FQT->isRecordType() && ElCount) {
         int OldIndex = RunSkipBlockVars.size() - 1;
-        const RecordType *RT = FQT->getAs<RecordType>();
-        BuildRCBlockVarRecordLayout(RT, BytePos + FieldOffset,
-                                    HasUnion);
+        auto *RT = FQT->castAs<RecordType>();
+        BuildRCBlockVarRecordLayout(RT, BytePos + FieldOffset, HasUnion);
 
         // Replicate layout information for each array element. Note that
         // one element is already done.
