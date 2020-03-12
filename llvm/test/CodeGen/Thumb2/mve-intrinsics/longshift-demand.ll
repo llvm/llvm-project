@@ -7,8 +7,7 @@ declare {i32, i32} @llvm.arm.mve.lsll(i32, i32, i32)
 define i32 @ashr_demand_bottom3(i64 %X) {
 ; CHECK-LABEL: ashr_demand_bottom3:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    movs r2, #3
-; CHECK-NEXT:    asrl r0, r1, r2
+; CHECK-NEXT:    asrl r0, r1, #3
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = lshr i64 %X, 32
@@ -28,8 +27,7 @@ entry:
 define i32 @lsll_demand_bottom3(i64 %X) {
 ; CHECK-LABEL: lsll_demand_bottom3:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    movs r2, #3
-; CHECK-NEXT:    lsll r0, r1, r2
+; CHECK-NEXT:    lsll r0, r1, #3
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = lshr i64 %X, 32
@@ -49,8 +47,7 @@ entry:
 define i32 @ashr_demand_bottomm3(i64 %X) {
 ; CHECK-LABEL: ashr_demand_bottomm3:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    mvn r2, #2
-; CHECK-NEXT:    asrl r0, r1, r2
+; CHECK-NEXT:    lsll r0, r1, #3
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = lshr i64 %X, 32
@@ -70,8 +67,7 @@ entry:
 define i32 @lsll_demand_bottomm3(i64 %X) {
 ; CHECK-LABEL: lsll_demand_bottomm3:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    mvn r2, #2
-; CHECK-NEXT:    lsll r0, r1, r2
+; CHECK-NEXT:    lsrl r0, r1, #3
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = lshr i64 %X, 32
@@ -92,8 +88,7 @@ entry:
 define i32 @ashr_demand_bottom31(i64 %X) {
 ; CHECK-LABEL: ashr_demand_bottom31:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    movs r2, #31
-; CHECK-NEXT:    asrl r0, r1, r2
+; CHECK-NEXT:    asrl r0, r1, #31
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = lshr i64 %X, 32
@@ -113,8 +108,7 @@ entry:
 define i32 @lsll_demand_bottom31(i64 %X) {
 ; CHECK-LABEL: lsll_demand_bottom31:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    movs r2, #31
-; CHECK-NEXT:    lsll r0, r1, r2
+; CHECK-NEXT:    lsll r0, r1, #31
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = lshr i64 %X, 32
@@ -134,8 +128,7 @@ entry:
 define i32 @ashr_demand_bottomm31(i64 %X) {
 ; CHECK-LABEL: ashr_demand_bottomm31:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    mvn r2, #30
-; CHECK-NEXT:    asrl r0, r1, r2
+; CHECK-NEXT:    lsll r0, r1, #31
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = lshr i64 %X, 32
@@ -155,8 +148,7 @@ entry:
 define i32 @lsll_demand_bottomm31(i64 %X) {
 ; CHECK-LABEL: lsll_demand_bottomm31:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    mvn r2, #30
-; CHECK-NEXT:    lsll r0, r1, r2
+; CHECK-NEXT:    lsrl r0, r1, #31
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = lshr i64 %X, 32
@@ -177,8 +169,7 @@ entry:
 define i32 @ashr_demand_bottom32(i64 %X) {
 ; CHECK-LABEL: ashr_demand_bottom32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    movs r2, #32
-; CHECK-NEXT:    asrl r0, r1, r2
+; CHECK-NEXT:    asrl r0, r1, #32
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = lshr i64 %X, 32
@@ -198,8 +189,7 @@ entry:
 define i32 @lsll_demand_bottom32(i64 %X) {
 ; CHECK-LABEL: lsll_demand_bottom32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    movs r2, #32
-; CHECK-NEXT:    lsll r0, r1, r2
+; CHECK-NEXT:    lsll r0, r1, #32
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = lshr i64 %X, 32
@@ -219,8 +209,7 @@ entry:
 define i32 @ashr_demand_bottomm32(i64 %X) {
 ; CHECK-LABEL: ashr_demand_bottomm32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    mvn r2, #31
-; CHECK-NEXT:    asrl r0, r1, r2
+; CHECK-NEXT:    lsll r0, r1, #32
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = lshr i64 %X, 32
@@ -240,8 +229,7 @@ entry:
 define i32 @lsll_demand_bottomm32(i64 %X) {
 ; CHECK-LABEL: lsll_demand_bottomm32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    mvn r2, #31
-; CHECK-NEXT:    lsll r0, r1, r2
+; CHECK-NEXT:    lsrl r0, r1, #32
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = lshr i64 %X, 32
@@ -352,8 +340,7 @@ entry:
 define i32 @ashr_demand_top3(i64 %X) {
 ; CHECK-LABEL: ashr_demand_top3:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    movs r2, #3
-; CHECK-NEXT:    asrl r0, r1, r2
+; CHECK-NEXT:    asrl r0, r1, #3
 ; CHECK-NEXT:    mov r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
@@ -375,8 +362,7 @@ entry:
 define i32 @lsll_demand_top3(i64 %X) {
 ; CHECK-LABEL: lsll_demand_top3:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    movs r2, #3
-; CHECK-NEXT:    lsll r0, r1, r2
+; CHECK-NEXT:    lsll r0, r1, #3
 ; CHECK-NEXT:    mov r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
@@ -398,8 +384,7 @@ entry:
 define i32 @ashr_demand_topm3(i64 %X) {
 ; CHECK-LABEL: ashr_demand_topm3:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    mvn r2, #2
-; CHECK-NEXT:    asrl r0, r1, r2
+; CHECK-NEXT:    lsll r0, r1, #3
 ; CHECK-NEXT:    mov r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
@@ -421,8 +406,7 @@ entry:
 define i32 @lsll_demand_topm3(i64 %X) {
 ; CHECK-LABEL: lsll_demand_topm3:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    mvn r2, #2
-; CHECK-NEXT:    lsll r0, r1, r2
+; CHECK-NEXT:    lsrl r0, r1, #3
 ; CHECK-NEXT:    mov r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
@@ -445,8 +429,7 @@ entry:
 define i32 @ashr_demand_top31(i64 %X) {
 ; CHECK-LABEL: ashr_demand_top31:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    movs r2, #31
-; CHECK-NEXT:    asrl r0, r1, r2
+; CHECK-NEXT:    asrl r0, r1, #31
 ; CHECK-NEXT:    mov r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
@@ -468,8 +451,7 @@ entry:
 define i32 @lsll_demand_top31(i64 %X) {
 ; CHECK-LABEL: lsll_demand_top31:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    movs r2, #31
-; CHECK-NEXT:    lsll r0, r1, r2
+; CHECK-NEXT:    lsll r0, r1, #31
 ; CHECK-NEXT:    mov r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
@@ -491,8 +473,7 @@ entry:
 define i32 @ashr_demand_topm31(i64 %X) {
 ; CHECK-LABEL: ashr_demand_topm31:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    mvn r2, #30
-; CHECK-NEXT:    asrl r0, r1, r2
+; CHECK-NEXT:    lsll r0, r1, #31
 ; CHECK-NEXT:    mov r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
@@ -514,8 +495,7 @@ entry:
 define i32 @lsll_demand_topm31(i64 %X) {
 ; CHECK-LABEL: lsll_demand_topm31:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    mvn r2, #30
-; CHECK-NEXT:    lsll r0, r1, r2
+; CHECK-NEXT:    lsrl r0, r1, #31
 ; CHECK-NEXT:    mov r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
@@ -538,8 +518,7 @@ entry:
 define i32 @ashr_demand_top32(i64 %X) {
 ; CHECK-LABEL: ashr_demand_top32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    movs r2, #32
-; CHECK-NEXT:    asrl r0, r1, r2
+; CHECK-NEXT:    asrl r0, r1, #32
 ; CHECK-NEXT:    mov r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
@@ -561,8 +540,7 @@ entry:
 define i32 @lsll_demand_top32(i64 %X) {
 ; CHECK-LABEL: lsll_demand_top32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    movs r2, #32
-; CHECK-NEXT:    lsll r0, r1, r2
+; CHECK-NEXT:    lsll r0, r1, #32
 ; CHECK-NEXT:    mov r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
@@ -584,8 +562,7 @@ entry:
 define i32 @ashr_demand_topm32(i64 %X) {
 ; CHECK-LABEL: ashr_demand_topm32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    mvn r2, #31
-; CHECK-NEXT:    asrl r0, r1, r2
+; CHECK-NEXT:    lsll r0, r1, #32
 ; CHECK-NEXT:    mov r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
@@ -607,8 +584,7 @@ entry:
 define i32 @lsll_demand_topm32(i64 %X) {
 ; CHECK-LABEL: lsll_demand_topm32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    mvn r2, #31
-; CHECK-NEXT:    lsll r0, r1, r2
+; CHECK-NEXT:    lsrl r0, r1, #32
 ; CHECK-NEXT:    mov r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
@@ -725,8 +701,7 @@ entry:
 define i32 @ashr_demand_bottommask3(i64 %X) {
 ; CHECK-LABEL: ashr_demand_bottommask3:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    movs r2, #3
-; CHECK-NEXT:    asrl r0, r1, r2
+; CHECK-NEXT:    asrl r0, r1, #3
 ; CHECK-NEXT:    bic r0, r0, #1
 ; CHECK-NEXT:    bx lr
 entry:
@@ -748,8 +723,7 @@ entry:
 define i32 @lsll_demand_bottommask3(i64 %X) {
 ; CHECK-LABEL: lsll_demand_bottommask3:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    movs r2, #3
-; CHECK-NEXT:    lsll r0, r1, r2
+; CHECK-NEXT:    lsll r0, r1, #3
 ; CHECK-NEXT:    bic r0, r0, #1
 ; CHECK-NEXT:    bx lr
 entry:
@@ -771,8 +745,7 @@ entry:
 define i32 @ashr_demand_bottommaskm3(i64 %X) {
 ; CHECK-LABEL: ashr_demand_bottommaskm3:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    mvn r2, #2
-; CHECK-NEXT:    asrl r0, r1, r2
+; CHECK-NEXT:    lsll r0, r1, #3
 ; CHECK-NEXT:    bic r0, r0, #1
 ; CHECK-NEXT:    bx lr
 entry:
@@ -794,8 +767,7 @@ entry:
 define i32 @lsll_demand_bottommaskm3(i64 %X) {
 ; CHECK-LABEL: lsll_demand_bottommaskm3:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    mvn r2, #2
-; CHECK-NEXT:    lsll r0, r1, r2
+; CHECK-NEXT:    lsrl r0, r1, #3
 ; CHECK-NEXT:    bic r0, r0, #1
 ; CHECK-NEXT:    bx lr
 entry:
@@ -818,8 +790,7 @@ entry:
 define i32 @ashr_demand_bottommask32(i64 %X) {
 ; CHECK-LABEL: ashr_demand_bottommask32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    movs r2, #32
-; CHECK-NEXT:    asrl r0, r1, r2
+; CHECK-NEXT:    asrl r0, r1, #32
 ; CHECK-NEXT:    bic r0, r0, #1
 ; CHECK-NEXT:    bx lr
 entry:
@@ -841,8 +812,7 @@ entry:
 define i32 @lsll_demand_bottommask32(i64 %X) {
 ; CHECK-LABEL: lsll_demand_bottommask32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    movs r2, #32
-; CHECK-NEXT:    lsll r0, r1, r2
+; CHECK-NEXT:    lsll r0, r1, #32
 ; CHECK-NEXT:    bic r0, r0, #1
 ; CHECK-NEXT:    bx lr
 entry:
@@ -864,8 +834,7 @@ entry:
 define i32 @ashr_demand_bottommaskm32(i64 %X) {
 ; CHECK-LABEL: ashr_demand_bottommaskm32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    mvn r2, #31
-; CHECK-NEXT:    asrl r0, r1, r2
+; CHECK-NEXT:    lsll r0, r1, #32
 ; CHECK-NEXT:    bic r0, r0, #1
 ; CHECK-NEXT:    bx lr
 entry:
@@ -887,8 +856,7 @@ entry:
 define i32 @lsll_demand_bottommaskm32(i64 %X) {
 ; CHECK-LABEL: lsll_demand_bottommaskm32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    mvn r2, #31
-; CHECK-NEXT:    lsll r0, r1, r2
+; CHECK-NEXT:    lsrl r0, r1, #32
 ; CHECK-NEXT:    bic r0, r0, #1
 ; CHECK-NEXT:    bx lr
 entry:

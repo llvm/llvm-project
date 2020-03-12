@@ -4681,12 +4681,6 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
     case Intrinsic::arm_mve_sqrshrl:
       SelectMVE_LongShift(N, ARM::MVE_SQRSHRL, false, true);
       return;
-    case Intrinsic::arm_mve_lsll:
-      SelectMVE_LongShift(N, ARM::MVE_LSLLr, false, false);
-      return;
-    case Intrinsic::arm_mve_asrl:
-      SelectMVE_LongShift(N, ARM::MVE_ASRLr, false, false);
-      return;
 
     case Intrinsic::arm_mve_vadc:
     case Intrinsic::arm_mve_vadc_predicated:
