@@ -4604,13 +4604,10 @@ static Constant *propagateNaN(Constant *In) {
 /// transforms based on undef/NaN because the operation itself makes no
 /// difference to the result.
 static Constant *simplifyFPOp(ArrayRef<Value *> Ops) {
-  if (any_of(Ops, [](Value *V) { return isa<UndefValue>(V); }))
-    return ConstantFP::getNaN(Ops[0]->getType());
-
-  for (Value *V : Ops)
-    if (match(V, m_NaN()))
+  for (Value *V : Ops) {
+    if (match(V, m_Undef()) || match(V, m_NaN()))
       return propagateNaN(cast<Constant>(V));
-
+  }
   return nullptr;
 }
 
