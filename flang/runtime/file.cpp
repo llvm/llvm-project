@@ -13,13 +13,47 @@
 #include <cstring>
 #include <fcntl.h>
 #include <stdlib.h>
+#ifdef _WIN32
+#include <io.h>
+#include <windows.h>
+#else
 #include <unistd.h>
+#endif
 
 namespace Fortran::runtime::io {
 
 void OpenFile::set_path(OwningPtr<char> &&path, std::size_t bytes) {
   path_ = std::move(path);
   pathLength_ = bytes;
+}
+
+static int openfile_mkstemp(IoErrorHandler &handler) {
+#ifdef _WIN32
+  const unsigned int uUnique{0};
+  // GetTempFileNameA needs a directory name < MAX_PATH-14 characters in length.
+  // https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-gettempfilenamea
+  char tempDirName[MAX_PATH - 14];
+  char tempFileName[MAX_PATH];
+  unsigned long nBufferLength{sizeof(tempDirName)};
+  nBufferLength = ::GetTempPathA(nBufferLength, tempDirName);
+  if (nBufferLength > sizeof(tempDirName) || nBufferLength == 0) {
+    return -1;
+  }
+  if (::GetTempFileNameA(tempDirName, "Fortran", uUnique, tempFileName) == 0) {
+    return -1;
+  }
+  int fd{::_open(tempFileName, _O_CREAT | _O_TEMPORARY, _S_IREAD | _S_IWRITE)};
+#else
+  char path[]{"/tmp/Fortran-Scratch-XXXXXX"};
+  int fd{::mkstemp(path)};
+#endif
+  if (fd < 0) {
+    handler.SignalErrno();
+  }
+#ifndef _WIN32
+  ::unlink(path);
+#endif
+  return fd;
 }
 
 void OpenFile::Open(
@@ -37,14 +71,7 @@ void OpenFile::Open(
       handler.SignalError("FILE= must not appear with STATUS='SCRATCH'");
       path_.reset();
     }
-    {
-      char path[]{"/tmp/Fortran-Scratch-XXXXXX"};
-      fd_ = ::mkstemp(path);
-      if (fd_ < 0) {
-        handler.SignalErrno();
-      }
-      ::unlink(path);
-    }
+    fd_ = openfile_mkstemp(handler);
     return;
   case OpenStatus::Replace: flags |= O_CREAT | O_TRUNC; break;
   case OpenStatus::Unknown:
@@ -173,10 +200,18 @@ std::size_t OpenFile::Write(FileOffset at, const char *buffer,
   return put;
 }
 
+inline static int openfile_ftruncate(int fd, OpenFile::FileOffset at) {
+#ifdef _WIN32
+  return !::_chsize(fd, at);
+#else
+  return ::ftruncate(fd, at);
+#endif
+}
+
 void OpenFile::Truncate(FileOffset at, IoErrorHandler &handler) {
   CheckOpen(handler);
   if (!knownSize_ || *knownSize_ != at) {
-    if (::ftruncate(fd_, at) != 0) {
+    if (openfile_ftruncate(fd_, at) != 0) {
       handler.SignalErrno();
     }
     knownSize_ = at;
