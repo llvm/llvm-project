@@ -491,9 +491,7 @@ static void tileLinalgOps(FuncOp f, ArrayRef<int64_t> tileSizes) {
       op.erase();
   });
   f.walk([](LinalgOp op) {
-    if (!op.getOperation()->hasNoSideEffect())
-      return;
-    if (op.getOperation()->use_empty())
+    if (isOpTriviallyDead(op))
       op.erase();
   });
 }

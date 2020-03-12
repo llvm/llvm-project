@@ -25,3 +25,70 @@ bool MemoryEffects::Effect::classof(const SideEffects::Effect *effect) {
   return isa<Allocate>(effect) || isa<Free>(effect) || isa<Read>(effect) ||
          isa<Write>(effect);
 }
+
+//===----------------------------------------------------------------------===//
+// SideEffect Utilities
+//===----------------------------------------------------------------------===//
+
+bool mlir::isOpTriviallyDead(Operation *op) {
+  return op->use_empty() && wouldOpBeTriviallyDead(op);
+}
+
+/// Internal implementation of `mlir::wouldOpBeTriviallyDead` that also
+/// considers terminator operations as dead if they have no side effects. This
+/// allows for marking region operations as trivially dead without always being
+/// conservative of terminators.
+static bool wouldOpBeTriviallyDeadImpl(Operation *rootOp) {
+  // The set of operations to consider when checking for side effects.
+  SmallVector<Operation *, 1> effectingOps(1, rootOp);
+  while (!effectingOps.empty()) {
+    Operation *op = effectingOps.pop_back_val();
+
+    // If the operation has recursive effects, push all of the nested operations
+    // on to the stack to consider.
+    bool hasRecursiveEffects = op->hasTrait<OpTrait::HasRecursiveSideEffects>();
+    if (hasRecursiveEffects) {
+      for (Region &region : op->getRegions()) {
+        for (auto &block : region) {
+          for (auto &nestedOp : block)
+            effectingOps.push_back(&nestedOp);
+        }
+      }
+    }
+
+    // If the op has memory effects, try to characterize them to see if the op
+    // is trivially dead here.
+    if (auto effectInterface = dyn_cast<MemoryEffectOpInterface>(op)) {
+      // Check to see if this op either has no effects, or only allocates/reads
+      // memory.
+      SmallVector<MemoryEffects::EffectInstance, 1> effects;
+      effectInterface.getEffects(effects);
+      if (!llvm::all_of(effects, [](const auto &it) {
+            return isa<MemoryEffects::Read>(it.getEffect()) ||
+                   isa<MemoryEffects::Allocate>(it.getEffect());
+          })) {
+        return false;
+      }
+      continue;
+
+      // Otherwise, if the op has recursive side effects we can treat the
+      // operation itself as having no effects.
+    } else if (hasRecursiveEffects) {
+      continue;
+    }
+
+    // If there were no effect interfaces, we treat this op as conservatively
+    // having effects.
+    return false;
+  }
+
+  // If we get here, none of the operations had effects that prevented marking
+  // 'op' as dead.
+  return true;
+}
+
+bool mlir::wouldOpBeTriviallyDead(Operation *op) {
+  if (!op->isKnownNonTerminator())
+    return false;
+  return wouldOpBeTriviallyDeadImpl(op);
+}

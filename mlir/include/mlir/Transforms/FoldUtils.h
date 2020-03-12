@@ -106,6 +106,9 @@ public:
     return op;
   }
 
+  /// Clear out any constants cached inside of the folder.
+  void clear();
+
 private:
   /// This map keeps track of uniqued constants by dialect, attribute, and type.
   /// A constant operation materializes an attribute with a type. Dialects may

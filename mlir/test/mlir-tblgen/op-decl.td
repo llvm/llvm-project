@@ -10,9 +10,9 @@ def Test_Dialect : Dialect {
 class NS_Op<string mnemonic, list<OpTrait> traits> :
     Op<Test_Dialect, mnemonic, traits>;
 
-// NoSideEffect trait is included twice to ensure it gets uniqued during
+// IsolatedFromAbove trait is included twice to ensure it gets uniqued during
 // emission.
-def NS_AOp : NS_Op<"a_op", [NoSideEffect, NoSideEffect]> {
+def NS_AOp : NS_Op<"a_op", [IsolatedFromAbove, IsolatedFromAbove]> {
   let arguments = (ins
     I32:$a,
     Variadic<F32>:$b,
@@ -55,7 +55,8 @@ def NS_AOp : NS_Op<"a_op", [NoSideEffect, NoSideEffect]> {
 // CHECK:   ArrayRef<Value> tblgen_operands;
 // CHECK: };
 
-// CHECK: class AOp : public Op<AOp, OpTrait::AtLeastNResults<1>::Impl, OpTrait::ZeroSuccessor, OpTrait::AtLeastNOperands<1>::Impl, OpTrait::HasNoSideEffect
+// CHECK: class AOp : public Op<AOp, OpTrait::AtLeastNResults<1>::Impl, OpTrait::ZeroSuccessor, OpTrait::AtLeastNOperands<1>::Impl, OpTrait::IsIsolatedFromAbove
+// CHECK-NOT: OpTrait::IsIsolatedFromAbove
 // CHECK: public:
 // CHECK:   using Op::Op;
 // CHECK:   using OperandAdaptor = AOpOperandAdaptor;

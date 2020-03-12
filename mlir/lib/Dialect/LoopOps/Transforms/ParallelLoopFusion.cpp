@@ -132,13 +132,13 @@ static void fuseIfLegal(ParallelOp firstPloop, ParallelOp secondPloop,
 void mlir::loop::naivelyFuseParallelOps(Region &region) {
   OpBuilder b(region);
   // Consider every single block and attempt to fuse adjacent loops.
-  for (auto &block : region.getBlocks()) {
+  for (auto &block : region) {
     SmallVector<SmallVector<ParallelOp, 8>, 1> ploopChains{{}};
     // Not using `walk()` to traverse only top-level parallel loops and also
     // make sure that there are no side-effecting ops between the parallel
     // loops.
     bool noSideEffects = true;
-    for (auto &op : block.getOperations()) {
+    for (auto &op : block) {
       if (auto ploop = dyn_cast<ParallelOp>(op)) {
         if (noSideEffects) {
           ploopChains.back().push_back(ploop);
@@ -148,7 +148,9 @@ void mlir::loop::naivelyFuseParallelOps(Region &region) {
         }
         continue;
       }
-      noSideEffects &= op.hasNoSideEffect();
+      // TODO: Handle region side effects properly.
+      noSideEffects &=
+          MemoryEffectOpInterface::hasNoEffect(&op) && op.getNumRegions() == 0;
     }
     for (ArrayRef<ParallelOp> ploops : ploopChains) {
       for (int i = 0, e = ploops.size(); i + 1 < e; ++i)
