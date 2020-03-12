@@ -9501,12 +9501,13 @@ SDValue SelectionDAG::WidenVector(const SDValue &N, const SDLoc &DL) {
 
 void SelectionDAG::ExtractVectorElements(SDValue Op,
                                          SmallVectorImpl<SDValue> &Args,
-                                         unsigned Start, unsigned Count) {
+                                         unsigned Start, unsigned Count,
+                                         EVT EltVT) {
   EVT VT = Op.getValueType();
   if (Count == 0)
     Count = VT.getVectorNumElements();
-
-  EVT EltVT = VT.getVectorElementType();
+  if (EltVT == EVT())
+    EltVT = VT.getVectorElementType();
   SDLoc SL(Op);
   for (unsigned i = Start, e = Start + Count; i != e; ++i) {
     Args.push_back(getNode(ISD::EXTRACT_VECTOR_ELT, SL, EltVT, Op,
