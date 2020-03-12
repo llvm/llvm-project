@@ -13,8 +13,8 @@
 #ifndef VECTOR_OPS
 #define VECTOR_OPS
 
-include "mlir/IR/OpBase.td"
 include "mlir/Dialect/AffineOps/AffineOpsBase.td"
+include "mlir/Interfaces/SideEffects.td"
 
 def Vector_Dialect : Dialect {
   let name = "vector";

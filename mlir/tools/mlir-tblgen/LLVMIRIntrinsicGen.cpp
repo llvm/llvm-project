@@ -225,7 +225,8 @@ static bool emitIntrinsic(const llvm::Record &record, llvm::raw_ostream &os) {
 static bool emitIntrinsics(const llvm::RecordKeeper &records,
                            llvm::raw_ostream &os) {
   llvm::emitSourceFileHeader("Operations for LLVM intrinsics", os);
-  os << "include \"mlir/Dialect/LLVMIR/LLVMOpBase.td\"\n\n";
+  os << "include \"mlir/Dialect/LLVMIR/LLVMOpBase.td\"\n";
+  os << "include \"mlir/Interfaces/SideEffects.td\"\n\n";
 
   auto defs = records.getAllDerivedDefinitions("Intrinsic");
   for (const llvm::Record *r : defs) {
