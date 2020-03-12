@@ -2526,9 +2526,10 @@ public:
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
-  ExprResult RebuildStmtExpr(SourceLocation LParenLoc, Stmt *SubStmt,
-                             SourceLocation RParenLoc) {
-    return getSema().ActOnStmtExpr(nullptr, LParenLoc, SubStmt, RParenLoc);
+  ExprResult RebuildStmtExpr(SourceLocation LParenLoc,
+                                   Stmt *SubStmt,
+                                   SourceLocation RParenLoc) {
+    return getSema().ActOnStmtExpr(LParenLoc, SubStmt, RParenLoc);
   }
 
   /// Build a new __builtin_choose_expr expression.
@@ -11800,8 +11801,6 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
     NewTrailingRequiresClause = getDerived().TransformExpr(TRC);
 
   // Create the local class that will describe the lambda.
-  // FIXME: KnownDependent below is wrong when substituting inside a templated
-  // context that isn't a DeclContext (such as a variable template).
   CXXRecordDecl *OldClass = E->getLambdaClass();
   CXXRecordDecl *Class
     = getSema().createLambdaClosureType(E->getIntroducerRange(),

@@ -3955,14 +3955,14 @@ class StmtExpr : public Expr {
   Stmt *SubStmt;
   SourceLocation LParenLoc, RParenLoc;
 public:
+  // FIXME: Does type-dependence need to be computed differently?
+  // FIXME: Do we need to compute instantiation instantiation-dependence for
+  // statements? (ugh!)
   StmtExpr(CompoundStmt *substmt, QualType T,
-           SourceLocation lp, SourceLocation rp, bool InDependentContext) :
-    // Note: we treat a statement-expression in a dependent context as always
-    // being value- and instantiation-dependent. This matches the behavior of
-    // lambda-expressions and GCC.
+           SourceLocation lp, SourceLocation rp) :
     Expr(StmtExprClass, T, VK_RValue, OK_Ordinary,
-         T->isDependentType(), InDependentContext, InDependentContext, false),
-    SubStmt(substmt), LParenLoc(lp), RParenLoc(rp) {}
+         T->isDependentType(), false, false, false),
+    SubStmt(substmt), LParenLoc(lp), RParenLoc(rp) { }
 
   /// Build an empty statement expression.
   explicit StmtExpr(EmptyShell Empty) : Expr(StmtExprClass, Empty) { }
