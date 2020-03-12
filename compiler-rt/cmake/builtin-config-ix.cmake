@@ -39,7 +39,7 @@ set(WASM32 wasm32)
 set(WASM64 wasm64)
 
 if(APPLE)
-  set(ARM64 arm64)
+  set(ARM64 arm64 arm64e)
   set(ARM32 armv7 armv7k armv7s)
   set(X86_64 x86_64 x86_64h)
 endif()
