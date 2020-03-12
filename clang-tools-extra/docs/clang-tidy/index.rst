@@ -68,6 +68,7 @@ Name prefix            Description
 ``google-``            Checks related to Google coding conventions.
 ``hicpp-``             Checks related to High Integrity C++ Coding Standard.
 ``llvm-``              Checks related to the LLVM coding conventions.
+``llvmlibc-``          Checks related to the LLVM-libc coding standards.
 ``misc-``              Checks that we didn't have a better category for.
 ``modernize-``         Checks that advocate usage of modern (currently "modern"
                        means "C++11") language constructs.
