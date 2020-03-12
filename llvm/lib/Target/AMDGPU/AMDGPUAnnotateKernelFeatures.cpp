@@ -277,7 +277,6 @@ bool AMDGPUAnnotateKernelFeatures::propagateUniformWorkGroupAttribute(
 
 bool AMDGPUAnnotateKernelFeatures::addFeatureAttributes(Function &F) {
   const GCNSubtarget &ST = TM->getSubtarget<GCNSubtarget>(F);
-  bool HasFlat = ST.hasFlatAddressSpace();
   bool HasApertureRegs = ST.hasApertureRegs();
   SmallPtrSet<const Constant *, 8> ConstantExprVisited;
 
@@ -347,8 +346,8 @@ bool AMDGPUAnnotateKernelFeatures::addFeatureAttributes(Function &F) {
   // TODO: We could refine this to captured pointers that could possibly be
   // accessed by flat instructions. For now this is mostly a poor way of
   // estimating whether there are calls before argument lowering.
-  if (HasFlat && !IsFunc && HaveCall) {
-    F.addFnAttr("amdgpu-flat-scratch");
+  if (!IsFunc && HaveCall) {
+    F.addFnAttr("amdgpu-calls");
     Changed = true;
   }
 
