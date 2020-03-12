@@ -611,9 +611,15 @@ void CGDebugInfo::CreateCompileUnit() {
       remapDIPath(MainFileName), remapDIPath(getCurrentDirname()), CSInfo,
       getSource(SM, SM.getMainFileID()));
 
-  StringRef Sysroot;
-  if (CGM.getCodeGenOpts().getDebuggerTuning() == llvm::DebuggerKind::LLDB)
+  StringRef Sysroot, SDK;
+  if (CGM.getCodeGenOpts().getDebuggerTuning() == llvm::DebuggerKind::LLDB) {
     Sysroot = CGM.getHeaderSearchOpts().Sysroot;
+    auto B = llvm::sys::path::rbegin(Sysroot);
+    auto E = llvm::sys::path::rend(Sysroot);
+    auto It = std::find_if(B, E, [](auto SDK) { return SDK.endswith(".sdk"); });
+    if (It != E)
+      SDK = *It;
+  }
 
   // Create new compile unit.
   TheCU = DBuilder.createCompileUnit(
@@ -625,7 +631,7 @@ void CGDebugInfo::CreateCompileUnit() {
           ? llvm::DICompileUnit::DebugNameTableKind::None
           : static_cast<llvm::DICompileUnit::DebugNameTableKind>(
                 CGOpts.DebugNameTable),
-      CGOpts.DebugRangesBaseAddress, Sysroot);
+      CGOpts.DebugRangesBaseAddress, Sysroot, SDK);
 }
 
 llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
