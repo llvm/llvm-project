@@ -17,6 +17,20 @@ static svint8_t *static_int8_ptr;
 typedef svint8_t int8_typedef;
 typedef svint8_t *int8_ptr_typedef;
 
+int sizeof_int8 = sizeof(svint8_t);             // expected-error {{invalid application of 'sizeof' to sizeless type 'svint8_t'}}
+int sizeof_int8_var = sizeof(*extern_int8_ptr); // expected-error {{invalid application of 'sizeof' to sizeless type 'svint8_t'}}
+int sizeof_int8_var_ptr = sizeof(extern_int8_ptr);
+
+#if __cplusplus >= 201103L
+int alignof_int8 = alignof(svint8_t);                // expected-error {{invalid application of 'alignof' to sizeless type 'svint8_t'}}
+int alignof_int8_var = alignof(*extern_int8_ptr);    // expected-error {{invalid application of 'alignof' to sizeless type 'svint8_t'}} expected-warning {{GNU extension}}
+int alignof_int8_var_ptr = alignof(extern_int8_ptr); // expected-warning {{GNU extension}}
+#else
+int alignof_int8 = _Alignof(svint8_t);                // expected-error {{invalid application of 'alignof' to sizeless type 'svint8_t'}}
+int alignof_int8_var = _Alignof(*extern_int8_ptr);    // expected-error {{invalid application of 'alignof' to sizeless type 'svint8_t'}} expected-warning {{GNU extension}}
+int alignof_int8_var_ptr = _Alignof(extern_int8_ptr); // expected-warning {{GNU extension}}
+#endif
+
 void pass_int8(svint8_t); // expected-note {{no known conversion}}
 
 svint8_t return_int8();
@@ -46,6 +60,8 @@ struct incomplete_struct *incomplete_ptr;
 void func(int sel) {
   svint8_t local_int8;
   svint16_t local_int16;
+
+  int _Alignas(svint8_t) aligned_int; // expected-error {{invalid application of 'alignof' to sizeless type 'svint8_t'}}
 
   // Using pointers to sizeless data isn't wrong here, but because the
   // type is incomplete, it doesn't provide any alignment guarantees.
