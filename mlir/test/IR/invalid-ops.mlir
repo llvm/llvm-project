@@ -58,7 +58,7 @@ func @constant_wrong_type() {
 func @affine_apply_no_map() {
 ^bb0:
   %i = constant 0 : index
-  %x = "affine.apply" (%i) { } : (index) -> (index) //  expected-error {{'affine.apply' op requires an affine map}}
+  %x = "affine.apply" (%i) { } : (index) -> (index) //  expected-error {{'affine.apply' op requires attribute 'map'}}
   return
 }
 
