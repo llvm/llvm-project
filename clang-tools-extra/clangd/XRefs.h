@@ -49,6 +49,21 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &, const LocatedSymbol &);
 std::vector<LocatedSymbol> locateSymbolAt(ParsedAST &AST, Position Pos,
                                           const SymbolIndex *Index = nullptr);
 
+// Tries to provide a textual fallback for locating a symbol referenced at
+// a location, by looking up the word under the cursor as a symbol name in the
+// index. The aim is to pick up references to symbols in contexts where
+// AST-based resolution does not work, such as comments, strings, and PP
+// disabled regions. The implementation takes a number of measures to avoid
+// false positives, such as looking for some signal that the word at the
+// given location is likely to be an identifier. The function does not
+// currently return results for locations that end up as real expanded
+// tokens, although this may be relaxed for e.g. dependent code in the future.
+// (This is for internal use by locateSymbolAt, and is exposed for testing).
+std::vector<LocatedSymbol>
+locateSymbolNamedTextuallyAt(ParsedAST &AST, const SymbolIndex *Index,
+                             SourceLocation Loc,
+                             const std::string &MainFilePath);
+
 /// Get all document links
 std::vector<DocumentLink> getDocumentLinks(ParsedAST &AST);
 

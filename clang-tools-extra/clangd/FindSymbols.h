@@ -21,9 +21,13 @@ namespace clangd {
 class ParsedAST;
 class SymbolIndex;
 
+/// Helper function for deriving an LSP Location from an index SymbolLocation.
+llvm::Expected<Location> indexToLSPLocation(const SymbolLocation &Loc,
+                                            llvm::StringRef TUPath);
+
 /// Helper function for deriving an LSP Location for a Symbol.
 llvm::Expected<Location> symbolToLocation(const Symbol &Sym,
-                                          llvm::StringRef HintPath);
+                                          llvm::StringRef TUPath);
 
 /// Searches for the symbols matching \p Query. The syntax of \p Query can be
 /// the non-qualified name or fully qualified of a symbol. For example,

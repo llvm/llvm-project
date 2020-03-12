@@ -13,6 +13,7 @@
 #include "Logger.h"
 #include "ParsedAST.h"
 #include "Protocol.h"
+#include "Quality.h"
 #include "Selection.h"
 #include "SourceCode.h"
 #include "URI.h"
@@ -28,6 +29,7 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/Type.h"
+#include "clang/Basic/CharInfo.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
@@ -173,12 +175,10 @@ llvm::Optional<Location> makeLocation(const ASTContext &AST, SourceLocation Loc,
   return L;
 }
 
-} // namespace
-
 // Treat #included files as symbols, to enable go-to-definition on them.
-static llvm::Optional<LocatedSymbol>
-locateFileReferent(const Position &Pos, ParsedAST &AST,
-                   llvm::StringRef MainFilePath) {
+llvm::Optional<LocatedSymbol> locateFileReferent(const Position &Pos,
+                                                 ParsedAST &AST,
+                                                 llvm::StringRef MainFilePath) {
   for (auto &Inc : AST.getIncludeStructure().MainFileIncludes) {
     if (!Inc.Resolved.empty() && Inc.R.start.line == Pos.line) {
       LocatedSymbol File;
@@ -195,7 +195,7 @@ locateFileReferent(const Position &Pos, ParsedAST &AST,
 
 // Macros are simple: there's no declaration/definition distinction.
 // As a consequence, there's no need to look them up in the index either.
-static llvm::Optional<LocatedSymbol>
+llvm::Optional<LocatedSymbol>
 locateMacroReferent(const syntax::Token &TouchedIdentifier, ParsedAST &AST,
                     llvm::StringRef MainFilePath) {
   if (auto M = locateMacroAt(TouchedIdentifier, AST.getPreprocessor())) {
@@ -215,7 +215,7 @@ locateMacroReferent(const syntax::Token &TouchedIdentifier, ParsedAST &AST,
 // The AST contains at least a declaration, maybe a definition.
 // These are up-to-date, and so generally preferred over index results.
 // We perform a single batch index lookup to find additional definitions.
-static std::vector<LocatedSymbol>
+std::vector<LocatedSymbol>
 locateASTReferent(SourceLocation CurLoc, const syntax::Token *TouchedIdentifier,
                   ParsedAST &AST, llvm::StringRef MainFilePath,
                   const SymbolIndex *Index) {
@@ -316,6 +316,160 @@ locateASTReferent(SourceLocation CurLoc, const syntax::Token *TouchedIdentifier,
   return Result;
 }
 
+llvm::StringRef wordTouching(llvm::StringRef Code, unsigned Offset) {
+  unsigned B = Offset, E = Offset;
+  while (B > 0 && isIdentifierBody(Code[B - 1]))
+    --B;
+  while (E < Code.size() && isIdentifierBody(Code[E]))
+    ++E;
+  return Code.slice(B, E);
+}
+
+bool isLikelyToBeIdentifier(StringRef Word) {
+  // Word contains underscore.
+  // This handles things like snake_case and MACRO_CASE.
+  if (Word.contains('_')) {
+    return true;
+  }
+  // Word contains capital letter other than at beginning.
+  // This handles things like lowerCamel and UpperCamel.
+  // The check for also containing a lowercase letter is to rule out
+  // initialisms like "HTTP".
+  bool HasLower = Word.find_if(clang::isLowercase) != StringRef::npos;
+  bool HasUpper = Word.substr(1).find_if(clang::isUppercase) != StringRef::npos;
+  if (HasLower && HasUpper) {
+    return true;
+  }
+  // FIXME: There are other signals we could listen for.
+  // Some of these require inspecting the surroundings of the word as well.
+  //   - mid-sentence Capitalization
+  //   - markup like quotes / backticks / brackets / "\p"
+  //   - word has a qualifier (foo::bar)
+  return false;
+}
+
+bool tokenSurvivedPreprocessing(SourceLocation Loc,
+                                const syntax::TokenBuffer &TB) {
+  auto WordExpandedTokens =
+      TB.expandedTokens(TB.sourceManager().getMacroArgExpandedLocation(Loc));
+  return !WordExpandedTokens.empty();
+}
+
+} // namespace
+
+std::vector<LocatedSymbol>
+locateSymbolNamedTextuallyAt(ParsedAST &AST, const SymbolIndex *Index,
+                             SourceLocation Loc,
+                             const std::string &MainFilePath) {
+  const auto &SM = AST.getSourceManager();
+
+  // Get the raw word at the specified location.
+  unsigned Pos;
+  FileID File;
+  std::tie(File, Pos) = SM.getDecomposedLoc(Loc);
+  llvm::StringRef Code = SM.getBufferData(File);
+  llvm::StringRef Word = wordTouching(Code, Pos);
+  if (Word.empty())
+    return {};
+  unsigned WordOffset = Word.data() - Code.data();
+  SourceLocation WordStart = SM.getComposedLoc(File, WordOffset);
+
+  // Do not consider tokens that survived preprocessing.
+  // We are erring on the safe side here, as a user may expect to get
+  // accurate (as opposed to textual-heuristic) results for such tokens.
+  // FIXME: Relax this for dependent code.
+  if (tokenSurvivedPreprocessing(WordStart, AST.getTokens()))
+    return {};
+
+  // Additionally filter for signals that the word is likely to be an
+  // identifier. This avoids triggering on e.g. random words in a comment.
+  if (!isLikelyToBeIdentifier(Word))
+    return {};
+
+  // Look up the selected word in the index.
+  FuzzyFindRequest Req;
+  Req.Query = Word.str();
+  Req.ProximityPaths = {MainFilePath};
+  Req.Scopes = visibleNamespaces(Code.take_front(Pos), AST.getLangOpts());
+  // FIXME: For extra strictness, consider AnyScope=false.
+  Req.AnyScope = true;
+  // We limit the results to 3 further below. This limit is to avoid fetching
+  // too much data, while still likely having enough for 3 results to remain
+  // after additional filtering.
+  Req.Limit = 10;
+  bool TooMany = false;
+  using ScoredLocatedSymbol = std::pair<float, LocatedSymbol>;
+  std::vector<ScoredLocatedSymbol> ScoredResults;
+  Index->fuzzyFind(Req, [&](const Symbol &Sym) {
+    // Only consider exact name matches, including case.
+    // This is to avoid too many false positives.
+    // We could relax this in the future (e.g. to allow for typos) if we make
+    // the query more accurate by other means.
+    if (Sym.Name != Word)
+      return;
+
+    // Exclude constructor results. They have the same name as the class,
+    // but we don't have enough context to prefer them over the class.
+    if (Sym.SymInfo.Kind == index::SymbolKind::Constructor)
+      return;
+
+    auto MaybeDeclLoc =
+        indexToLSPLocation(Sym.CanonicalDeclaration, MainFilePath);
+    if (!MaybeDeclLoc) {
+      log("locateSymbolNamedTextuallyAt: {0}", MaybeDeclLoc.takeError());
+      return;
+    }
+    Location DeclLoc = *MaybeDeclLoc;
+    Location DefLoc;
+    if (Sym.Definition) {
+      auto MaybeDefLoc = indexToLSPLocation(Sym.Definition, MainFilePath);
+      if (!MaybeDefLoc) {
+        log("locateSymbolNamedTextuallyAt: {0}", MaybeDefLoc.takeError());
+        return;
+      }
+      DefLoc = *MaybeDefLoc;
+    }
+
+    if (ScoredResults.size() >= 3) {
+      // If we have more than 3 results, don't return anything,
+      // as confidence is too low.
+      // FIXME: Alternatively, try a stricter query?
+      TooMany = true;
+      return;
+    }
+
+    LocatedSymbol Located;
+    Located.Name = (Sym.Name + Sym.TemplateSpecializationArgs).str();
+    Located.PreferredDeclaration = bool(Sym.Definition) ? DefLoc : DeclLoc;
+    Located.Definition = DefLoc;
+
+    SymbolQualitySignals Quality;
+    Quality.merge(Sym);
+    SymbolRelevanceSignals Relevance;
+    Relevance.Name = Sym.Name;
+    Relevance.Query = SymbolRelevanceSignals::Generic;
+    Relevance.merge(Sym);
+    auto Score =
+        evaluateSymbolAndRelevance(Quality.evaluate(), Relevance.evaluate());
+    dlog("locateSymbolNamedTextuallyAt: {0}{1} = {2}\n{3}{4}\n", Sym.Scope,
+         Sym.Name, Score, Quality, Relevance);
+
+    ScoredResults.push_back({Score, std::move(Located)});
+  });
+
+  if (TooMany)
+    return {};
+
+  llvm::sort(ScoredResults,
+             [](const ScoredLocatedSymbol &A, const ScoredLocatedSymbol &B) {
+               return A.first > B.first;
+             });
+  std::vector<LocatedSymbol> Results;
+  for (auto &Res : std::move(ScoredResults))
+    Results.push_back(std::move(Res.second));
+  return Results;
+}
+
 std::vector<LocatedSymbol> locateSymbolAt(ParsedAST &AST, Position Pos,
                                           const SymbolIndex *Index) {
   const auto &SM = AST.getSourceManager();
@@ -346,8 +500,12 @@ std::vector<LocatedSymbol> locateSymbolAt(ParsedAST &AST, Position Pos,
       // expansion.)
       return {*std::move(Macro)};
 
-  return locateASTReferent(*CurLoc, TouchedIdentifier, AST, *MainFilePath,
-                           Index);
+  auto ASTResults =
+      locateASTReferent(*CurLoc, TouchedIdentifier, AST, *MainFilePath, Index);
+  if (!ASTResults.empty())
+    return ASTResults;
+
+  return locateSymbolNamedTextuallyAt(AST, Index, *CurLoc, *MainFilePath);
 }
 
 std::vector<DocumentLink> getDocumentLinks(ParsedAST &AST) {
