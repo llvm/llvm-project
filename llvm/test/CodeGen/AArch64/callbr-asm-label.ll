@@ -6,18 +6,18 @@ define i32 @test1() {
 ; CHECK-LABEL: test1:
 ; CHECK:         .word b
 ; CHECK-NEXT:    .word .Ltmp0
+; CHECK-LABEL: .LBB0_1: // %cleanup
 ; CHECK-LABEL: .Ltmp0:
-; CHECK-LABEL: .LBB0_1: // %l_yes
-; CHECK-LABEL: .LBB0_2: // %cleanup
+; CHECK-LABEL: .LBB0_2: // %indirect
 entry:
-  callbr void asm sideeffect "1:\0A\09.word b, ${0:l}\0A\09", "X"(i8* blockaddress(@test1, %l_yes))
-          to label %cleanup [label %l_yes]
+  callbr void asm sideeffect "1:\0A\09.word b, ${0:l}\0A\09", "X"(i8* blockaddress(@test1, %indirect))
+          to label %cleanup [label %indirect]
 
-l_yes:
+indirect:
   br label %cleanup
 
 cleanup:
-  %retval.0 = phi i32 [ 1, %l_yes ], [ 0, %entry ]
+  %retval.0 = phi i32 [ 1, %indirect ], [ 0, %entry ]
   ret i32 %retval.0
 }
 
