@@ -36,7 +36,9 @@ target_link_libraries(MLIRExecutionEngine
   ${outlibs})
 
 add_llvm_library(mlir_c_runner_utils SHARED CRunnerUtils.cpp)
+set_property(TARGET mlir_c_runner_utils PROPERTY CXX_STANDARD 11)
 add_llvm_library(mlir_c_runner_utils_static CRunnerUtils.cpp)
+set_property(TARGET mlir_c_runner_utils_static PROPERTY CXX_STANDARD 11)
 target_compile_definitions(mlir_c_runner_utils PRIVATE mlir_c_runner_utils_EXPORTS)
 
 add_llvm_library(mlir_runner_utils SHARED RunnerUtils.cpp)
