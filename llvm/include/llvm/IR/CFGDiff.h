@@ -17,7 +17,6 @@
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
-#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/Support/CFGUpdate.h"
 #include "llvm/Support/type_traits.h"
@@ -83,7 +82,7 @@ template <typename NodePtr, bool InverseGraph = false> class GraphDiff {
   UpdateMapType SuccDelete;
   UpdateMapType PredInsert;
   UpdateMapType PredDelete;
-  // Using a singleton empty vector for all BasicBlock requests with no
+  // Using a singleton empty vector for all node requests with no
   // children.
   SmallVector<NodePtr, 1> Empty;
 
@@ -160,7 +159,7 @@ template <typename GraphT, bool InverseGraph = false, bool InverseEdge = false,
 struct CFGViewChildren {
   using DataRef = const GraphDiff<typename GT::NodeRef, InverseGraph> *;
   using RawNodeRef = typename GT::NodeRef;
-  using NodeRef = std::pair<DataRef, BasicBlock *>;
+  using NodeRef = std::pair<DataRef, RawNodeRef>;
 
   using ExistingChildIterator =
       WrappedPairNodeDataIterator<typename GT::ChildIteratorType, NodeRef,
