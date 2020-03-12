@@ -1555,10 +1555,6 @@ def FunctionLike : NativeOpTrait<"FunctionLike">;
 def IsolatedFromAbove : NativeOpTrait<"IsIsolatedFromAbove">;
 // Op results are float or vectors/tensors thereof.
 def ResultsAreFloatLike : NativeOpTrait<"ResultsAreFloatLike">;
-// Op has no side effect.
-def NoSideEffect : NativeOpTrait<"HasNoSideEffect">;
-// Op has recursively computed side effects.
-def RecursiveSideEffects : NativeOpTrait<"HasRecursiveSideEffects">;
 // Op has the same operand type.
 def SameTypeOperands : NativeOpTrait<"SameTypeOperands">;
 // Op has same shape for all operands.

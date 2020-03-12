@@ -15,6 +15,7 @@
 
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
+include "mlir/Interfaces/SideEffects.td"
 
 class LLVM_Builder<string builder> {
   string llvmBuilder = builder;

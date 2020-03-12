@@ -13,8 +13,8 @@
 #ifndef GPU_OPS
 #define GPU_OPS
 
-include "mlir/IR/OpBase.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
+include "mlir/Interfaces/SideEffects.td"
 
 // Type constraint accepting standard integers, indices and wrapped LLVM integer
 // types.

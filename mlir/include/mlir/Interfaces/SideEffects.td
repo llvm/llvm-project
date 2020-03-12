@@ -188,4 +188,13 @@ class MemWrite<string resourceName>
   : MemoryEffect<"MemoryEffects::Write", resourceName>;
 def MemWrite : MemWrite<"">;
 
+//===----------------------------------------------------------------------===//
+// Effect Traits
+//===----------------------------------------------------------------------===//
+
+// Op has no side effect.
+def NoSideEffect : NativeOpTrait<"HasNoSideEffect">;
+// Op has recursively computed side effects.
+def RecursiveSideEffects : NativeOpTrait<"HasRecursiveSideEffects">;
+
 #endif // MLIR_INTERFACES_SIDEEFFECTS
