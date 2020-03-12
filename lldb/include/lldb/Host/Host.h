@@ -27,8 +27,8 @@ namespace lldb_private {
 class FileAction;
 class ProcessLaunchInfo;
 class ProcessInstanceInfo;
-class ProcessInstanceInfoList;
 class ProcessInstanceInfoMatch;
+typedef std::vector<ProcessInstanceInfo> ProcessInstanceInfoList;
 
 // Exit Type for inferior processes
 struct WaitStatus {

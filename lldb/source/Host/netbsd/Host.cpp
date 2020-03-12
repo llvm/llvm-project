@@ -219,8 +219,8 @@ uint32_t Host::FindProcesses(const ProcessInstanceInfoMatch &match_info,
     // list if a process with given identifier is already registered there.
     if (proc_kinfo[i].p_nlwps > 1) {
       bool already_registered = false;
-      for (size_t pi = 0; pi < process_infos.GetSize(); pi++) {
-        if (process_infos.GetProcessIDAtIndex(pi) == proc_kinfo[i].p_pid) {
+      for (size_t pi = 0; pi < process_infos.size(); pi++) {
+        if (process_infos[pi].GetProcessID() == proc_kinfo[i].p_pid) {
           already_registered = true;
           break;
         }
@@ -241,13 +241,13 @@ uint32_t Host::FindProcesses(const ProcessInstanceInfoMatch &match_info,
         GetNetBSDProcessArgs(&match_info, process_info)) {
       GetNetBSDProcessCPUType(process_info);
       if (match_info.Matches(process_info))
-        process_infos.Append(process_info);
+        process_infos.push_back(process_info);
     }
   }
 
   kvm_close(kdp); /* XXX: we don't check for error here */
 
-  return process_infos.GetSize();
+  return process_infos.size();
 }
 
 bool Host::GetProcessInfo(lldb::pid_t pid, ProcessInstanceInfo &process_info) {
