@@ -333,6 +333,9 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SUBE, VT, Legal);
   }
 
+  // The hardware supports 32-bit FSHR, but not FSHL.
+  setOperationAction(ISD::FSHR, MVT::i32, Legal);
+
   // The hardware supports 32-bit ROTR, but not ROTL.
   setOperationAction(ISD::ROTL, MVT::i32, Expand);
   setOperationAction(ISD::ROTL, MVT::i64, Expand);

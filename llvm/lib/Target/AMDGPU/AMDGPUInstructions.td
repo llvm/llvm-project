@@ -736,6 +736,12 @@ multiclass BFEPattern <Instruction UBFE, Instruction SBFE, Instruction MOV> {
   >;
 }
 
+// fshr pattern
+class FSHRPattern <Instruction BIT_ALIGN> : AMDGPUPat <
+  (fshr i32:$src0, i32:$src1, i32:$src2),
+  (BIT_ALIGN $src0, $src1, $src2)
+>;
+
 // rotr pattern
 class ROTRPattern <Instruction BIT_ALIGN> : AMDGPUPat <
   (rotr i32:$src0, i32:$src1),

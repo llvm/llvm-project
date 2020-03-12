@@ -83,9 +83,7 @@ define i128 @v_shl_i128_vk(i128 %lhs) {
 ; GCN-LABEL: v_shl_i128_vk:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_lshrrev_b32_e32 v4, 15, v1
-; GCN-NEXT:    v_lshlrev_b32_e32 v5, 17, v2
-; GCN-NEXT:    v_or_b32_e32 v4, v5, v4
+; GCN-NEXT:    v_alignbit_b32 v4, v2, v1, 15
 ; GCN-NEXT:    v_alignbit_b32 v1, v1, v0, 15
 ; GCN-NEXT:    v_alignbit_b32 v3, v3, v2, 15
 ; GCN-NEXT:    v_lshlrev_b32_e32 v0, 17, v0
@@ -113,9 +111,7 @@ define i128 @v_ashr_i128_vk(i128 %lhs) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_ashr_i64 v[4:5], v[2:3], 33
-; GCN-NEXT:    v_lshlrev_b32_e32 v0, 31, v2
-; GCN-NEXT:    v_lshrrev_b32_e32 v1, 1, v1
-; GCN-NEXT:    v_or_b32_e32 v0, v1, v0
+; GCN-NEXT:    v_alignbit_b32 v0, v2, v1, 1
 ; GCN-NEXT:    v_alignbit_b32 v1, v3, v2, 1
 ; GCN-NEXT:    v_mov_b32_e32 v2, v4
 ; GCN-NEXT:    v_mov_b32_e32 v3, v5
