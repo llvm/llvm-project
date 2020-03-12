@@ -156,10 +156,10 @@ uint32_t Host::FindProcesses(const ProcessInstanceInfoMatch &match_info,
       GetProcessExecutableAndTriple(handle, process);
 
       if (match_info.MatchAllProcesses() || match_info.Matches(process))
-        process_infos.Append(process);
+        process_infos.push_back(process);
     } while (Process32NextW(snapshot.get(), &pe));
   }
-  return process_infos.GetSize();
+  return process_infos.size();
 }
 
 bool Host::GetProcessInfo(lldb::pid_t pid, ProcessInstanceInfo &process_info) {

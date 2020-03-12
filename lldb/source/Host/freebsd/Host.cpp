@@ -195,10 +195,10 @@ uint32_t Host::FindProcesses(const ProcessInstanceInfoMatch &match_info,
     bool already_registered = false;
     for (uint32_t pi = 0;
          !already_registered && (const int)kinfo.ki_numthreads > 1 &&
-         pi < (const uint32_t)process_infos.GetSize();
+         pi < (const uint32_t)process_infos.size();
          pi++)
       already_registered =
-          (process_infos.GetProcessIDAtIndex(pi) == (uint32_t)kinfo.ki_pid);
+          (process_infos[pi].GetProcessID() == (uint32_t)kinfo.ki_pid);
 
     if (already_registered)
       continue;
@@ -216,11 +216,11 @@ uint32_t Host::FindProcesses(const ProcessInstanceInfoMatch &match_info,
         GetFreeBSDProcessArgs(&match_info, process_info)) {
       GetFreeBSDProcessCPUType(process_info);
       if (match_info.Matches(process_info))
-        process_infos.Append(process_info);
+        process_infos.push_back(process_info);
     }
   }
 
-  return process_infos.GetSize();
+  return process_infos.size();
 }
 
 bool Host::GetProcessInfo(lldb::pid_t pid, ProcessInstanceInfo &process_info) {
