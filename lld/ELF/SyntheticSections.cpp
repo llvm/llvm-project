@@ -2822,14 +2822,16 @@ template <class ELFT> GdbIndexSection *GdbIndexSection::create() {
   std::vector<std::vector<NameAttrEntry>> nameAttrs(sections.size());
 
   parallelForEachN(0, sections.size(), [&](size_t i) {
-    DWARFContext *dwarf =
-        sections[i]->getFile<ELFT>()->getDwarf()->getContext();
+    // To keep memory usage low, we don't want to keep cached DWARFContext, so
+    // avoid getDwarf() here.
+    ObjFile<ELFT> *file = sections[i]->getFile<ELFT>();
+    DWARFContext dwarf(std::make_unique<LLDDwarfObj<ELFT>>(file));
 
     chunks[i].sec = sections[i];
-    chunks[i].compilationUnits = readCuList(*dwarf);
-    chunks[i].addressAreas = readAddressAreas(*dwarf, sections[i]);
+    chunks[i].compilationUnits = readCuList(dwarf);
+    chunks[i].addressAreas = readAddressAreas(dwarf, sections[i]);
     nameAttrs[i] = readPubNamesAndTypes<ELFT>(
-        static_cast<const LLDDwarfObj<ELFT> &>(dwarf->getDWARFObj()),
+        static_cast<const LLDDwarfObj<ELFT> &>(dwarf.getDWARFObj()),
         chunks[i].compilationUnits);
   });
 
