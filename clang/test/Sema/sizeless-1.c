@@ -5,6 +5,10 @@
 typedef __SVInt8_t svint8_t;
 typedef __SVInt16_t svint16_t;
 
+svint8_t global_int8;          // expected-error {{non-local variable with sizeless type 'svint8_t'}}
+extern svint8_t extern_int8;   // expected-error {{non-local variable with sizeless type 'svint8_t'}}
+static svint8_t static_int8;   // expected-error {{non-local variable with sizeless type 'svint8_t'}}
+__thread svint8_t thread_int8; // expected-error {{non-local variable with sizeless type 'svint8_t'}}
 svint8_t *global_int8_ptr;
 extern svint8_t *extern_int8_ptr;
 static svint8_t *static_int8_ptr;
@@ -48,6 +52,8 @@ void unused() {
 struct incomplete_struct *incomplete_ptr;
 
 void func(int sel) {
+  static svint8_t static_int8; // expected-error {{non-local variable with sizeless type 'svint8_t'}}
+
   svint8_t local_int8;
   svint16_t local_int16;
 
