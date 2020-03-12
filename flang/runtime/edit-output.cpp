@@ -9,6 +9,7 @@
 #include "edit-output.h"
 #include "flang/Common/uint128.h"
 #include "flang/Common/unsigned-const-division.h"
+#include <algorithm>
 
 namespace Fortran::runtime::io {
 

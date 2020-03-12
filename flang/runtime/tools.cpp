@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "tools.h"
+#include <algorithm>
 #include <cstring>
 
 namespace Fortran::runtime {
