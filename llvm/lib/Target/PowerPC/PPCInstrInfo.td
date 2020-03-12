@@ -3040,43 +3040,43 @@ defm FSELS : AForm_1r<63, 23,
                       (outs f4rc:$FRT), (ins f8rc:$FRA, f4rc:$FRC, f4rc:$FRB),
                       "fsel", "$FRT, $FRA, $FRC, $FRB", IIC_FPGeneral,
                       [(set f32:$FRT, (PPCfsel f64:$FRA, f32:$FRC, f32:$FRB))]>;
-let Uses = [RM] in {
+let Uses = [RM], mayRaiseFPException = 1 in {
   let isCommutable = 1 in {
   defm FADD  : AForm_2r<63, 21,
                         (outs f8rc:$FRT), (ins f8rc:$FRA, f8rc:$FRB),
                         "fadd", "$FRT, $FRA, $FRB", IIC_FPAddSub,
-                        [(set f64:$FRT, (fadd f64:$FRA, f64:$FRB))]>;
+                        [(set f64:$FRT, (any_fadd f64:$FRA, f64:$FRB))]>;
   defm FADDS : AForm_2r<59, 21,
                         (outs f4rc:$FRT), (ins f4rc:$FRA, f4rc:$FRB),
                         "fadds", "$FRT, $FRA, $FRB", IIC_FPGeneral,
-                        [(set f32:$FRT, (fadd f32:$FRA, f32:$FRB))]>;
+                        [(set f32:$FRT, (any_fadd f32:$FRA, f32:$FRB))]>;
   } // isCommutable
   defm FDIV  : AForm_2r<63, 18,
                         (outs f8rc:$FRT), (ins f8rc:$FRA, f8rc:$FRB),
                         "fdiv", "$FRT, $FRA, $FRB", IIC_FPDivD,
-                        [(set f64:$FRT, (fdiv f64:$FRA, f64:$FRB))]>;
+                        [(set f64:$FRT, (any_fdiv f64:$FRA, f64:$FRB))]>;
   defm FDIVS : AForm_2r<59, 18,
                         (outs f4rc:$FRT), (ins f4rc:$FRA, f4rc:$FRB),
                         "fdivs", "$FRT, $FRA, $FRB", IIC_FPDivS,
-                        [(set f32:$FRT, (fdiv f32:$FRA, f32:$FRB))]>;
+                        [(set f32:$FRT, (any_fdiv f32:$FRA, f32:$FRB))]>;
   let isCommutable = 1 in {
   defm FMUL  : AForm_3r<63, 25,
                         (outs f8rc:$FRT), (ins f8rc:$FRA, f8rc:$FRC),
                         "fmul", "$FRT, $FRA, $FRC", IIC_FPFused,
-                        [(set f64:$FRT, (fmul f64:$FRA, f64:$FRC))]>;
+                        [(set f64:$FRT, (any_fmul f64:$FRA, f64:$FRC))]>;
   defm FMULS : AForm_3r<59, 25,
                         (outs f4rc:$FRT), (ins f4rc:$FRA, f4rc:$FRC),
                         "fmuls", "$FRT, $FRA, $FRC", IIC_FPGeneral,
-                        [(set f32:$FRT, (fmul f32:$FRA, f32:$FRC))]>;
+                        [(set f32:$FRT, (any_fmul f32:$FRA, f32:$FRC))]>;
   } // isCommutable
   defm FSUB  : AForm_2r<63, 20,
                         (outs f8rc:$FRT), (ins f8rc:$FRA, f8rc:$FRB),
                         "fsub", "$FRT, $FRA, $FRB", IIC_FPAddSub,
-                        [(set f64:$FRT, (fsub f64:$FRA, f64:$FRB))]>;
+                        [(set f64:$FRT, (any_fsub f64:$FRA, f64:$FRB))]>;
   defm FSUBS : AForm_2r<59, 20,
                         (outs f4rc:$FRT), (ins f4rc:$FRA, f4rc:$FRB),
                         "fsubs", "$FRT, $FRA, $FRB", IIC_FPGeneral,
-                        [(set f32:$FRT, (fsub f32:$FRA, f32:$FRB))]>;
+                        [(set f32:$FRT, (any_fsub f32:$FRA, f32:$FRB))]>;
   }
 }
 
