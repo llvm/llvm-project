@@ -5091,12 +5091,6 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
   if (ErrorFound)
     return StmtError();
 
-  if (!(Res.getAs<OMPExecutableDirective>()->isStandaloneDirective())) {
-    Res.getAs<OMPExecutableDirective>()
-        ->getStructuredBlock()
-        ->setIsOMPStructuredBlock(true);
-  }
-
   if (!CurContext->isDependentContext() &&
       isOpenMPTargetExecutionDirective(Kind) &&
       !(DSAStack->hasRequiresDeclWithClause<OMPUnifiedSharedMemoryClause>() ||
