@@ -164,7 +164,8 @@ bool GreedyPatternRewriteDriver::simplify(MutableArrayRef<Region> regions,
 
       // If the operation has no side effects, and no users, then it is
       // trivially dead - remove it.
-      if (op->hasNoSideEffect() && op->use_empty()) {
+      if (op->isKnownNonTerminator() && op->hasNoSideEffect() &&
+          op->use_empty()) {
         // Be careful to update bookkeeping.
         notifyOperationRemoved(op);
         op->erase();

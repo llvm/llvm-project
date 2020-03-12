@@ -334,7 +334,7 @@ def AtomicRMWOp : Std_Op<"atomic_rmw", [
 //===----------------------------------------------------------------------===//
 
 def BranchOp : Std_Op<"br",
-    [DeclareOpInterfaceMethods<BranchOpInterface>, Terminator]> {
+    [DeclareOpInterfaceMethods<BranchOpInterface>, NoSideEffect, Terminator]> {
   let summary = "branch operation";
   let description = [{
     The "br" operation represents a branch operation in a function.
@@ -678,7 +678,7 @@ def CmpIOp : Std_Op<"cmpi",
 
 def CondBranchOp : Std_Op<"cond_br",
     [AttrSizedOperandSegments, DeclareOpInterfaceMethods<BranchOpInterface>,
-     Terminator]> {
+     NoSideEffect, Terminator]> {
   let summary = "conditional branch operation";
   let description = [{
     The "cond_br" operation represents a conditional branch operation in a
@@ -1288,7 +1288,8 @@ def RemFOp : FloatArithmeticOp<"remf"> {
 // ReturnOp
 //===----------------------------------------------------------------------===//
 
-def ReturnOp : Std_Op<"return", [Terminator, HasParent<"FuncOp">]> {
+def ReturnOp : Std_Op<"return", [NoSideEffect, HasParent<"FuncOp">,
+                                 Terminator]> {
   let summary = "return operation";
   let description = [{
     The "return" operation represents a return operation within a function.

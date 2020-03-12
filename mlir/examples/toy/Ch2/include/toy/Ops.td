@@ -190,7 +190,8 @@ def ReshapeOp : Toy_Op<"reshape"> {
   }];
 }
 
-def ReturnOp : Toy_Op<"return", [Terminator, HasParent<"FuncOp">]> {
+def ReturnOp : Toy_Op<"return", [NoSideEffect, HasParent<"FuncOp">,
+                                 Terminator]> {
   let summary = "return operation";
   let description = [{
     The "return" operation represents a return operation within a function.

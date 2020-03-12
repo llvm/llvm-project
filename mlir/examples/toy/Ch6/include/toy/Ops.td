@@ -219,7 +219,8 @@ def ReshapeOp : Toy_Op<"reshape", [NoSideEffect]> {
   let results = (outs StaticShapeTensorOf<[F64]>);
 }
 
-def ReturnOp : Toy_Op<"return", [Terminator, HasParent<"FuncOp">]> {
+def ReturnOp : Toy_Op<"return", [NoSideEffect, HasParent<"FuncOp">,
+                                 Terminator]> {
   let summary = "return operation";
   let description = [{
     The "return" operation represents a return operation within a function.

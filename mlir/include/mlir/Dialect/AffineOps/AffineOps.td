@@ -433,7 +433,7 @@ def AffinePrefetchOp : Affine_Op<"prefetch"> {
 }
 
 def AffineTerminatorOp :
-    Affine_Op<"terminator", [Terminator]> {
+    Affine_Op<"terminator", [NoSideEffect, Terminator]> {
   let summary = "affine terminator operation";
   let description = [{
     Affine terminator is a special terminator operation for blocks inside affine
