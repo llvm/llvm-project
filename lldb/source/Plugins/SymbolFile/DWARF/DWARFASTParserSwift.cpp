@@ -64,7 +64,8 @@ lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
   Declaration decl;
   ConstString mangled_name;
   ConstString name;
-  bool is_clang_type = false;
+  ConstString preferred_name;
+
   llvm::Optional<uint64_t> dwarf_byte_size;
 
   DWARFAttributes attributes;
@@ -112,27 +113,39 @@ lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
     }
   }
 
+  // Helper to retrieve the DW_AT_type as a lldb::TypeSP.
+  auto get_type = [&](DWARFDIE die) -> TypeSP {
+    if (DWARFDIE type_die = die.GetAttributeValueAsReferenceDIE(DW_AT_type))
+      return ParseTypeFromDWARF(sc, type_die, type_is_new_ptr);
+    return {};
+  };
+
   if (!name && !mangled_name && die.Tag() == DW_TAG_structure_type) {
-    DWARFDIE type_die =
-      die.GetFirstChild().GetAttributeValueAsReferenceDIE(DW_AT_type);
     // This is a sized container for a bound generic.
-    return ParseTypeFromDWARF(sc, type_die, type_is_new_ptr);
+    return get_type(die.GetFirstChild());
   }
 
   if (!mangled_name && name) {
     if (name.GetStringRef().equals("$swift.fixedbuffer")) {
-      DWARFDIE type_die =
-          die.GetFirstChild().GetAttributeValueAsReferenceDIE(DW_AT_type);
-      if (auto wrapped_type =
-          ParseTypeFromDWARF(sc, type_die, type_is_new_ptr)) {
+      if (auto wrapped_type = get_type(die.GetFirstChild())) {
         // Create a unique pointer for the type + fixed buffer flag.
         type_sp.reset(new Type(*wrapped_type));
         type_sp->SetSwiftFixedValueBuffer(true);
         return type_sp;
       }
     }
-    if (SwiftLanguageRuntime::IsSwiftMangledName(name.GetCString()))
+    if (SwiftLanguageRuntime::IsSwiftMangledName(name.GetCString())) {
       mangled_name = name;
+      if (die.Tag() == DW_TAG_typedef)
+        if (TypeSP desugared_type = get_type(die)) {
+          // For a typedef, store the once desugared type as the name.
+          CompilerType type = desugared_type->GetForwardCompilerType();
+          if (auto swift_ast_ctx =
+                  llvm::dyn_cast_or_null<TypeSystemSwift>(type.GetTypeSystem()))
+            preferred_name =
+                swift_ast_ctx->GetMangledTypeName(type.GetOpaqueQualType());
+        }
+    }
   }
 
   if (mangled_name) {
@@ -145,69 +158,17 @@ lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
     die.GetDWARF()->GetDIEToType()[die.GetDIE()] = DIE_IS_BEING_PARSED;
 
     // Try to import the type from one of the loaded Swift modules.
-    compiler_type = m_ast.GetTypeFromMangledTypename(mangled_name, error);
-  }
-
-  ConstString preferred_name;
-  if (!compiler_type &&
-      swift::Demangle::isObjCSymbol(mangled_name.GetStringRef())) {
-    // When we failed to look up the type because no .swiftmodule is
-    // present or it couldn't be read, fall back to presenting objects
-    // that look like they might be come from Objective-C (or C) as
-    // Clang types. LLDB's Objective-C part is very robust against
-    // malformed object pointers, so this isn't very risky.
-    auto type_system_or_err = sc.module_sp->GetTypeSystemForLanguage(eLanguageTypeObjC);
-    if (!type_system_or_err) {
-      llvm::consumeError(type_system_or_err.takeError());
-      return nullptr;
-    }
-
-    if (auto *clang_ctx = llvm::dyn_cast_or_null<TypeSystemClang>(&*type_system_or_err)) {
-      DWARFASTParserClang *clang_ast_parser =
-          static_cast<DWARFASTParserClang *>(clang_ctx->GetDWARFParser());
-      TypeMap clang_types;
-      GetClangType(*sc.comp_unit, die, mangled_name.GetStringRef(), clang_types);
-
-      // Import the Clang type into the Clang context.
-      if (!compiler_type && clang_types.GetSize())
-        if (TypeSP clang_type_sp = clang_types.GetTypeAtIndex(0))
-          if (clang_type_sp) {
-            is_clang_type = true;
-            compiler_type = clang_ast_parser->GetClangASTImporter().CopyType(
-                *clang_ctx, clang_type_sp->GetForwardCompilerType());
-            // Swift doesn't know pointers. Convert top-level
-            // Objective-C object types to object pointers for Clang.
-            auto clang_type = clang::QualType::getFromOpaquePtr(
-                compiler_type.GetOpaqueQualType());
-            if (clang_type->isObjCObjectOrInterfaceType())
-              compiler_type = compiler_type.GetPointerType();
-          }
-
-      // Fall back to (id), which is not necessarily correct.
-      if (!compiler_type) {
-        is_clang_type = true;
-        compiler_type = clang_ctx->GetBasicType(eBasicTypeObjCID);
-        // Stash away the mangled name for resolving it through
-        // the Objective-C runtime later.
-        preferred_name = mangled_name;
-      }
-    }
+    if (SwiftLanguageRuntime::IsSwiftMangledName(mangled_name.GetCString()))
+      compiler_type = m_ast.GetTypeFromMangledTypename(mangled_name);
   }
 
   if (!compiler_type && name) {
     // Handle Archetypes, which are typedefs to RawPointerType.
-    if (GetTypedefName(die).startswith("$sBp")) {
-      swift::ASTContext *swift_ast_ctx = m_ast.GetASTContext();
-      if (!swift_ast_ctx) {
-        Log *log(LogChannelDWARF::GetLogIfAny(DWARF_LOG_TYPE_COMPLETION |
-                                              DWARF_LOG_LOOKUPS));
-        if (log)
-          log->Printf("Empty Swift AST context while looking up %s.",
-                      name.AsCString());
-        return {};
-      }
+    llvm::StringRef typedef_name = GetTypedefName(die);
+    if (typedef_name.startswith("$sBp")) {
       preferred_name = name;
-      compiler_type = ToCompilerType({swift_ast_ctx->TheRawPointerType});
+      compiler_type =
+          m_ast.GetTypeFromMangledTypename(ConstString(typedef_name));
     }
   }
 
@@ -230,13 +191,10 @@ lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
     type_sp = TypeSP(new Type(
         die.GetID(), die.GetDWARF(),
         preferred_name ? preferred_name : compiler_type.GetTypeName(),
-        is_clang_type ? dwarf_byte_size
-                      : compiler_type.GetByteSize(nullptr),
-        NULL, LLDB_INVALID_UID, Type::eEncodingIsUID, &decl, compiler_type,
-        is_clang_type ? Type::ResolveState::Forward : Type::ResolveState::Full));
-    // FIXME: This ought to work lazily, too.
-    if (is_clang_type)
-      type_sp->GetFullCompilerType();
+        // We don't have an exe_scope here by design, so we need to
+        // read the size from DWARF.
+        dwarf_byte_size, nullptr, LLDB_INVALID_UID, Type::eEncodingIsUID, &decl,
+        compiler_type, Type::ResolveState::Full));
   }
 
   // Cache this type.
@@ -246,55 +204,6 @@ lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
   die.GetDWARF()->GetDIEToType()[die.GetDIE()] = type_sp.get();
 
   return type_sp;
-}
-
-void DWARFASTParserSwift::GetClangType(lldb_private::CompileUnit &comp_unit,
-                                       const DWARFDIE &die,
-                                       llvm::StringRef mangled_name,
-                                       TypeMap &clang_types) const {
-  llvm::SmallVector<CompilerContext, 4> decl_context;
-  die.GetDeclContext(decl_context);
-  if (!decl_context.size())
-    return;
-
-  // Typedefs don't have a DW_AT_linkage_name, so their DW_AT_name is the
-  // mangled. Get the unmangled name.
-  auto fixup_typedef = [&mangled_name, &decl_context]() {
-    using namespace swift::Demangle;
-    Context Ctx;
-    NodePointer node = Ctx.demangleSymbolAsNode(mangled_name);
-    if (!node || node->getNumChildren() != 1 ||
-        node->getKind() != Node::Kind::Global)
-      return;
-    node = node->getFirstChild();
-    if (node->getNumChildren() != 1 ||
-        node->getKind() != Node::Kind::TypeMangling)
-      return;
-    node = node->getFirstChild();
-    if (node->getNumChildren() != 1 || node->getKind() != Node::Kind::Type)
-      return;
-    node = node->getFirstChild();
-    if (node->getKind() != Node::Kind::TypeAlias)
-      return;
-    for (NodePointer child : *node)
-      if (child->getKind() == Node::Kind::Identifier && child->hasText()) {
-        decl_context.back().kind = CompilerContextKind::Typedef;
-        decl_context.back().name = ConstString(child->getText());
-        return;
-      }
-  };
-  fixup_typedef();
-
-  auto &sym_file = die.GetCU()->GetSymbolFileDWARF();
-  sym_file.UpdateExternalModuleListIfNeeded();
-
-  // The Swift projection of all Clang type is a struct; search every kind.
-  decl_context.back().kind = CompilerContextKind::AnyType;
-  LanguageSet clang_languages = TypeSystemClang::GetSupportedLanguagesForTypes();
-  // Search any modules referenced by DWARF.
-  llvm::DenseSet<SymbolFile *> searched_symbol_files;
-  sym_file.FindTypes(decl_context, clang_languages, searched_symbol_files,
-                     clang_types);
 }
 
 Function *DWARFASTParserSwift::ParseFunctionFromDWARF(

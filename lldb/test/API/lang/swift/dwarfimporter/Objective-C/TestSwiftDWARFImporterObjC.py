@@ -55,11 +55,11 @@ class TestSwiftDWARFImporterObjC(lldbtest.TestBase):
 
         self.expect("target var swiftChild", substrs=["ObjCClass",
                                                       "private_ivar", "42"])
-        # This is a Clang type, since Clang doesn't generate DWARF for protocols.
-        self.expect("target var -d no-dyn proto", substrs=["(id)", "proto"])
-        # This is a Swift type.
-        self.expect("target var -d run proto", substrs=["(ProtoImpl)", "proto"])
-        self.expect("target var -O proto", substrs=["<ProtoImpl"])
+        # swift-lldb 5.2 would present this as a native Clang type,
+        # this capability was lost. But it wasn't particularly useful either.
+        #self.expect("target var -d no-dyn proto", substrs=["(id)", "proto"])
+        #self.expect("target var -d run proto", substrs=["(ProtoImpl)", "proto"])
+        #self.expect("target var -O proto", substrs=["<ProtoImpl"])
 
     @skipUnlessDarwin
     @swiftTest

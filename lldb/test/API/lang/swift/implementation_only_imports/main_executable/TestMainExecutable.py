@@ -87,7 +87,7 @@ class TestMainExecutable(TestBase):
         # even have library evolution support enabled. Just make sure we don't
         # crash.
         self.expect("fr var", substrs=[
-            "value = <could not resolve type>",
+            "value =",
 #            "container = {}",
             "simple = 1"])
 

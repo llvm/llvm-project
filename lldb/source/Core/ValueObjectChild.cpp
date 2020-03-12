@@ -172,9 +172,10 @@ bool ValueObjectChild::UpdateValue() {
             // BEGIN SWIFT MOD
             // We need to detect when we cross TypeSystem boundaries,
             // e.g. when we try to print Obj-C fields of a Swift object.
-            if (llvm::isa<SwiftASTContext>(
-                    parent->GetCompilerType().GetTypeSystem()) &&
-                llvm::isa<SwiftASTContext>(GetCompilerType().GetTypeSystem()))
+            if (parent->GetCompilerType().GetTypeSystem()->SupportsLanguage(
+                    lldb::eLanguageTypeSwift) &&
+                GetCompilerType().GetTypeSystem()->SupportsLanguage(
+                    lldb::eLanguageTypeSwift))
               m_value.SetValueType(is_instance_ptr_base
                                        ? Value::eValueTypeScalar
                                        : Value::eValueTypeLoadAddress);

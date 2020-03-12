@@ -85,7 +85,7 @@ void SwiftUserExpression::DidFinishExecuting() {
 
 static CompilerType GetConcreteType(ExecutionContext &exe_ctx,
                                     StackFrame *frame, CompilerType type) {
-  auto swift_type = GetSwiftType(type.GetOpaqueQualType());
+  auto swift_type = GetSwiftType(type);
   StreamString type_name;
   if (SwiftLanguageRuntime::GetAbstractTypeName(type_name, swift_type)) {
     auto *runtime = SwiftLanguageRuntime::Get(exe_ctx.GetProcessPtr());
@@ -225,7 +225,7 @@ void SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
   Flags self_type_flags(self_type.GetTypeInfo());
 
   if (self_type_flags.AllSet(lldb::eTypeIsSwift | lldb::eTypeIsMetatype)) {
-    self_type = SwiftASTContext::GetInstanceType(self_type);
+    self_type = TypeSystemSwift::GetInstanceType(self_type);
     self_type_flags = self_type.GetTypeInfo();
     if (self_type_flags.Test(lldb::eTypeIsClass))
       m_is_class = true;
@@ -241,8 +241,7 @@ void SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
   swift::Type object_type = GetSwiftType(self_type);
   if (object_type.getPointer() &&
       (object_type.getPointer() != self_type.GetOpaqueQualType()))
-    self_type =
-        CompilerType(self_type.GetTypeSystem(), object_type.getPointer());
+    self_type = ToCompilerType(object_type.getPointer());
 
   // Handle weak self.
   if (auto *ref_type = llvm::dyn_cast<swift::ReferenceStorageType>(
@@ -527,8 +526,8 @@ lldb::ExpressionVariableSP SwiftUserExpression::GetResultAfterDematerialization(
   if (in_error_sp) {
     bool error_is_valid = false;
 
-    if (llvm::isa<SwiftASTContext>(
-            in_error_sp->GetCompilerType().GetTypeSystem())) {
+    if (in_error_sp->GetCompilerType().GetTypeSystem()->SupportsLanguage(
+            lldb::eLanguageTypeSwift)) {
       lldb::ValueObjectSP val_sp = in_error_sp->GetValueObject();
       if (val_sp) {
         if (exe_scope) {

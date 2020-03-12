@@ -156,32 +156,8 @@ public:
 
 static CompilerType ImportType(SwiftASTContextForExpressions &target_context,
                                CompilerType source_type) {
-  SwiftASTContext *swift_ast_ctx =
-      llvm::dyn_cast_or_null<SwiftASTContext>(source_type.GetTypeSystem());
-
-  if (swift_ast_ctx == nullptr)
-    return CompilerType();
-
-  if (swift_ast_ctx == &target_context)
-    return source_type;
-
   Status error, mangled_error;
-  CompilerType target_type;
-
-  // First try to get the type by using the mangled name. That will
-  // save the mangling step ImportType would have to do:
-
-  ConstString type_name = source_type.GetTypeName();
-  ConstString mangled_counterpart;
-  bool found_counterpart = type_name.GetMangledCounterpart(mangled_counterpart);
-  if (found_counterpart)
-    target_type = target_context.GetTypeFromMangledTypename(mangled_counterpart,
-                                                            mangled_error);
-
-  if (!target_type.IsValid())
-    target_type = target_context.ImportType(source_type, error);
-
-  return target_type;
+  return target_context.ImportType(source_type, error);
 }
 
 namespace {
@@ -532,7 +508,7 @@ AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
   }
 
   if (!self_type.IsValid() ||
-      !llvm::isa<SwiftASTContext>(self_type.GetTypeSystem()))
+      !self_type.GetTypeSystem()->SupportsLanguage(lldb::eLanguageTypeSwift))
     return;
 
   // Import before getting the unbound version, because the unbound
@@ -553,13 +529,13 @@ AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
   // This might be a referenced type, in which case we really want to
   // extend the referent:
   imported_self_type =
-      llvm::cast<SwiftASTContext>(imported_self_type.GetTypeSystem())
+      llvm::cast<TypeSystemSwift>(imported_self_type.GetTypeSystem())
           ->GetReferentType(imported_self_type);
 
   // If we are extending a generic class it's going to be a metatype,
   // and we have to grab the instance type:
   imported_self_type =
-      llvm::cast<SwiftASTContext>(imported_self_type.GetTypeSystem())
+      llvm::cast<TypeSystemSwift>(imported_self_type.GetTypeSystem())
           ->GetInstanceType(imported_self_type.GetOpaqueQualType());
 
   Flags imported_self_type_flags(imported_self_type.GetTypeInfo());
@@ -569,8 +545,7 @@ AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
 
   if (object_type.getPointer() &&
       (object_type.getPointer() != imported_self_type.GetOpaqueQualType()))
-    imported_self_type = CompilerType(imported_self_type.GetTypeSystem(),
-                                      object_type.getPointer());
+    imported_self_type = ToCompilerType(object_type.getPointer());
 
   // If 'self' is a weak storage type, it must be an optional.  Look
   // through it and unpack the argument of "optional".
@@ -592,8 +567,7 @@ AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
     if (!self_class_type)
       return;
 
-    imported_self_type =
-        CompilerType(imported_self_type.GetTypeSystem(), self_class_type);
+    imported_self_type = ToCompilerType(self_class_type);
   }
 
   imported_self_type_flags.Reset(imported_self_type.GetTypeInfo());
@@ -666,7 +640,7 @@ static void AddVariableInfo(
   if (!var_type.IsValid())
     return;
 
-  if (!llvm::isa<SwiftASTContext>(var_type.GetTypeSystem()))
+  if (!var_type.GetTypeSystem()->SupportsLanguage(lldb::eLanguageTypeSwift))
     return;
 
   Status error;
@@ -819,7 +793,7 @@ static void ResolveSpecialNames(
     if (!var_type.IsValid())
       continue;
 
-    if (!llvm::isa<SwiftASTContext>(var_type.GetTypeSystem()))
+    if (!var_type.GetTypeSystem()->SupportsLanguage(lldb::eLanguageTypeSwift))
       continue;
 
     CompilerType target_type;
@@ -1005,7 +979,7 @@ MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
       CompilerType actual_type(variable.GetType());
       auto orig_swift_type = GetSwiftType(actual_type);
       auto *swift_type = orig_swift_type->mapTypeOutOfContext().getPointer();
-      actual_type.SetCompilerType(actual_type.GetTypeSystem(), swift_type);
+      actual_type = ToCompilerType(swift_type);
       lldb::StackFrameSP stack_frame_sp = stack_frame_wp.lock();
       if (swift_type->hasTypeParameter()) {
         if (stack_frame_sp && stack_frame_sp->GetThread() &&
@@ -1029,8 +1003,7 @@ MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
           }
           return t;
       });
-      actual_type.SetCompilerType(actual_type.GetTypeSystem(),
-                                  transformed_type.getPointer());
+      actual_type = ToCompilerType(transformed_type.getPointer());
 
       if (is_result)
         offset = materializer.AddResultVariable(
