@@ -1,0 +1,83 @@
+# RUN: llc -mtriple powerpc64le-unknown-linux-gnu -run-pass=ppc-early-ret -o \
+# RUN:   - %s -verify-machineinstrs | FileCheck %s
+
+---
+name:            testBCLRn
+body:             |
+  bb.0.entry:
+    successors: %bb.3(0x20000000), %bb.1(0x60000000)
+    liveins: $f1, $f2, $f3, $f4, $v2, $v3
+
+    renamable $cr0 = FCMPUS killed renamable $f3, killed renamable $f4
+    BCn killed renamable $cr0eq, %bb.3
+
+  bb.1.entry:
+    successors: %bb.2(0x80000000)
+    liveins: $f1, $f2, $v2, $v3
+
+    renamable $cr0 = FCMPUS killed renamable $f1, killed renamable $f2
+    BCLR killed renamable $cr0eq, implicit $lr, implicit $rm, implicit killed $v2
+
+  bb.2:
+    successors: %bb.3(0x80000000)
+    liveins: $v3
+
+    $v2 = VOR killed $v3, $v3
+
+  bb.3:
+    liveins: $v2
+
+    BLR implicit $lr, implicit $rm, implicit killed $v2
+
+  ; CHECK-LABEL: name: testBCLRn
+  ; CHECK: bb.0.entry:
+  ; CHECK:   renamable $cr0 = FCMPUS killed renamable $f3, killed renamable $f4
+  ; CHECK:   BCLRn $cr0eq, implicit $lr, implicit $rm, implicit killed $v2
+  ; CHECK: bb.1.entry:
+  ; CHECK:   renamable $cr0 = FCMPUS killed renamable $f1, killed renamable $f2
+  ; CHECK:   BCLR killed renamable $cr0eq, implicit $lr, implicit $rm, implicit killed $v2
+  ; CHECK: bb.2:
+  ; CHECK:   $v2 = VOR killed $v3, $v3
+  ; CHECK:   BLR implicit $lr, implicit $rm, implicit killed $v2
+...
+
+
+---
+name:            testBCLR
+body:             |
+  bb.0.entry:
+    successors: %bb.3(0x20000000), %bb.1(0x60000000)
+    liveins: $f1, $f2, $f3, $f4, $v2, $v3
+
+    renamable $cr0 = FCMPUS killed renamable $f3, killed renamable $f4
+    BC killed renamable $cr0eq, %bb.3
+
+  bb.1.entry:
+    successors: %bb.2(0x80000000)
+    liveins: $f1, $f2, $v2, $v3
+
+    renamable $cr0 = FCMPUS killed renamable $f1, killed renamable $f2
+    BCLRn killed renamable $cr0eq, implicit $lr, implicit $rm, implicit killed $v2
+
+  bb.2:
+    successors: %bb.3(0x80000000)
+    liveins: $v3
+
+    $v2 = VOR killed $v3, $v3
+
+  bb.3:
+    liveins: $v2
+
+    BLR implicit $lr, implicit $rm, implicit killed $v2
+
+  ; CHECK-LABEL: name: testBCLR
+  ; CHECK: bb.0.entry:
+  ; CHECK:   renamable $cr0 = FCMPUS killed renamable $f3, killed renamable $f4
+  ; CHECK:   BCLR $cr0eq, implicit $lr, implicit $rm, implicit $lr, implicit $rm, implicit killed $v2
+  ; CHECK: bb.1.entry:
+  ; CHECK:   renamable $cr0 = FCMPUS killed renamable $f1, killed renamable $f2
+  ; CHECK:   BCLRn killed renamable $cr0eq, implicit $lr, implicit $rm, implicit killed $v2
+  ; CHECK: bb.2:
+  ; CHECK:   $v2 = VOR killed $v3, $v3
+  ; CHECK:   BLR implicit $lr, implicit $rm, implicit killed $v2
+...
