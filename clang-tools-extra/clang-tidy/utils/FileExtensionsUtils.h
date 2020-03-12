@@ -11,6 +11,7 @@
 
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringRef.h"
 
@@ -36,6 +37,12 @@ bool isSpellingLocInHeaderFile(SourceLocation Loc, SourceManager &SM,
 /// extensions.
 inline StringRef defaultHeaderFileExtensions() { return ";h;hh;hpp;hxx"; }
 
+/// Returns recommended default value for the list of implementaiton file
+/// extensions.
+inline StringRef defaultImplementationFileExtensions() {
+  return "c;cc;cpp;cxx";
+}
+
 /// Returns recommended default value for the list of file extension
 /// delimiters.
 inline StringRef defaultFileExtensionDelimiters() { return ",;"; }
@@ -44,6 +51,11 @@ inline StringRef defaultFileExtensionDelimiters() { return ",;"; }
 bool parseFileExtensions(StringRef AllFileExtensions,
                          FileExtensionsSet &FileExtensions,
                          StringRef Delimiters);
+
+/// Decides whether a file has a header file extension.
+/// Returns the file extension, if included in the provided set.
+llvm::Optional<StringRef>
+getFileExtension(StringRef FileName, const FileExtensionsSet &FileExtensions);
 
 /// Decides whether a file has one of the specified file extensions.
 bool isFileExtension(StringRef FileName,
