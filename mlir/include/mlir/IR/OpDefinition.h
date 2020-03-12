@@ -902,6 +902,25 @@ public:
   }
 };
 
+/// This class provides the API for a sub-set of ops that are known to be
+/// constant-like. These are non-side effecting operations with one result and
+/// zero operands that can always be folded to a specific attribute value.
+template <typename ConcreteType>
+class ConstantLike : public TraitBase<ConcreteType, ConstantLike> {
+public:
+  static LogicalResult verifyTrait(Operation *op) {
+    static_assert(ConcreteType::template hasTrait<OneResult>(),
+                  "expected operation to produce one result");
+    static_assert(ConcreteType::template hasTrait<ZeroOperands>(),
+                  "expected operation to take zero operands");
+    // TODO: We should verify that the operation can always be folded, but this
+    // requires that the attributes of the op already be verified. We should add
+    // support for verifying traits "after" the operation to enable this use
+    // case.
+    return success();
+  }
+};
+
 /// This class provides the API for ops that are known to be isolated from
 /// above.
 template <typename ConcreteType>

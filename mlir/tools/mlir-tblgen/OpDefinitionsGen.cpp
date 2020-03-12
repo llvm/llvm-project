@@ -1523,14 +1523,6 @@ void OpEmitter::genTraits() {
   unsigned numVariadicSuccessors = op.getNumVariadicSuccessors();
   addSizeCountTrait(opClass, "Successor", numSuccessors, numVariadicSuccessors);
 
-  // Add the native and interface traits.
-  for (const auto &trait : op.getTraits()) {
-    if (auto opTrait = dyn_cast<tblgen::NativeOpTrait>(&trait))
-      opClass.addTrait(opTrait->getTrait());
-    else if (auto opTrait = dyn_cast<tblgen::InterfaceOpTrait>(&trait))
-      opClass.addTrait(opTrait->getTrait());
-  }
-
   // Add variadic size trait and normal op traits.
   int numOperands = op.getNumOperands();
   int numVariadicOperands = op.getNumVariadicOperands();
@@ -1554,6 +1546,14 @@ void OpEmitter::genTraits() {
       opClass.addTrait("OpTrait::NOperands<" + Twine(numOperands) + ">::Impl");
       break;
     }
+  }
+
+  // Add the native and interface traits.
+  for (const auto &trait : op.getTraits()) {
+    if (auto opTrait = dyn_cast<tblgen::NativeOpTrait>(&trait))
+      opClass.addTrait(opTrait->getTrait());
+    else if (auto opTrait = dyn_cast<tblgen::InterfaceOpTrait>(&trait))
+      opClass.addTrait(opTrait->getTrait());
   }
 }
 
