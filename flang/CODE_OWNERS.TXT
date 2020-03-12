@@ -15,4 +15,4 @@ D: Anything not covered by others
 
 N: Eric Schweitz
 E: eschweitz@nvidia.com
-D: FIR (lib/Fir), Fortran lowering (lib/Lower)
+D: FIR (lib/Optimizer), Fortran lowering (lib/Lower)
