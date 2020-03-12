@@ -9,9 +9,10 @@
 #ifndef liblldb_ConstString_h_
 #define liblldb_ConstString_h_
 
-#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/YAMLTraits.h"
 
 #include <stddef.h>
 
@@ -481,6 +482,16 @@ template <> struct DenseMapInfo<lldb_private::ConstString> {
   }
 };
 /// \}
-}
+
+namespace yaml {
+template <> struct ScalarTraits<lldb_private::ConstString> {
+  static void output(const lldb_private::ConstString &, void *, raw_ostream &);
+  static StringRef input(StringRef, void *, lldb_private::ConstString &);
+  static QuotingType mustQuote(StringRef S) { return QuotingType::Double; }
+};
+} // namespace yaml
+} // namespace llvm
+
+LLVM_YAML_IS_SEQUENCE_VECTOR(lldb_private::ConstString)
 
 #endif // liblldb_ConstString_h_
