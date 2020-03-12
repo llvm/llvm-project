@@ -113,7 +113,8 @@ llvm::Constant *ModuleTranslation::getLLVMConstant(llvm::Type *llvmType,
     if (!child)
       return nullptr;
     if (llvmType->isVectorTy())
-      return llvm::ConstantVector::getSplat(numElements, child);
+      return llvm::ConstantVector::getSplat(
+          llvm::ElementCount(numElements, /*Scalable=*/false), child);
     if (llvmType->isArrayTy()) {
       auto arrayType = llvm::ArrayType::get(elementType, numElements);
       SmallVector<llvm::Constant *, 8> constants(numElements, child);
