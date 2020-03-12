@@ -439,7 +439,8 @@ def GPU_LaunchOp : GPU_Op<"launch">,
   let verifier = [{ return ::verify(*this); }];
 }
 
-def GPU_ReturnOp : GPU_Op<"return", [HasParent<"GPUFuncOp">, Terminator]>,
+def GPU_ReturnOp : GPU_Op<"return", [HasParent<"GPUFuncOp">, NoSideEffect,
+                                     Terminator]>,
     Arguments<(ins Variadic<AnyType>:$operands)>, Results<(outs)> {
   let summary = "Terminator for GPU functions.";
   let description = [{
@@ -455,7 +456,8 @@ def GPU_ReturnOp : GPU_Op<"return", [HasParent<"GPUFuncOp">, Terminator]>,
   let verifier = [{ return ::verify(*this); }];
 }
 
-def GPU_TerminatorOp : GPU_Op<"terminator", [HasParent<"LaunchOp">, Terminator]>,
+def GPU_TerminatorOp : GPU_Op<"terminator", [HasParent<"LaunchOp">,
+                                             NoSideEffect, Terminator]>,
     Arguments<(ins)>, Results<(outs)> {
   let summary = "Terminator for GPU launch regions.";
   let description = [{
@@ -468,7 +470,7 @@ def GPU_TerminatorOp : GPU_Op<"terminator", [HasParent<"LaunchOp">, Terminator]>
   let printer = [{ p << getOperationName(); }];
 }
 
-def GPU_YieldOp : GPU_Op<"yield", [Terminator]>,
+def GPU_YieldOp : GPU_Op<"yield", [NoSideEffect, Terminator]>,
     Arguments<(ins Variadic<AnyType>:$values)> {
   let summary = "GPU yield operation";
   let description = [{

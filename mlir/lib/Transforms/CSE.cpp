@@ -123,6 +123,10 @@ private:
 
 /// Attempt to eliminate a redundant operation.
 LogicalResult CSE::simplifyOperation(ScopedMapTy &knownValues, Operation *op) {
+  // Don't simplify terminator operations.
+  if (op->isKnownTerminator())
+    return failure();
+
   // Don't simplify operations with nested blocks. We don't currently model
   // equality comparisons correctly among other things. It is also unclear
   // whether we would want to CSE such operations.

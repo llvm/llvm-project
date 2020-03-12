@@ -21,7 +21,7 @@ include "mlir/Interfaces/ControlFlowInterfaces.td"
 // -----
 
 def SPV_BranchOp : SPV_Op<"Branch", [
-    DeclareOpInterfaceMethods<BranchOpInterface>, InFunctionScope,
+    DeclareOpInterfaceMethods<BranchOpInterface>, InFunctionScope, NoSideEffect,
     Terminator]> {
   let summary = "Unconditional branch to target block.";
 
@@ -83,7 +83,7 @@ def SPV_BranchOp : SPV_Op<"Branch", [
 
 def SPV_BranchConditionalOp : SPV_Op<"BranchConditional", [
     AttrSizedOperandSegments, DeclareOpInterfaceMethods<BranchOpInterface>,
-    InFunctionScope, Terminator]> {
+    InFunctionScope, NoSideEffect, Terminator]> {
   let summary = [{
     If Condition is true, branch to true block, otherwise branch to false
     block.
@@ -316,7 +316,7 @@ def SPV_LoopOp : SPV_Op<"loop", [InFunctionScope]> {
 
 // -----
 
-def SPV_MergeOp : SPV_Op<"_merge", [Terminator]> {
+def SPV_MergeOp : SPV_Op<"_merge", [NoSideEffect, Terminator]> {
   let summary = "A special terminator for merging a structured selection/loop.";
 
   let description = [{
@@ -340,7 +340,8 @@ def SPV_MergeOp : SPV_Op<"_merge", [Terminator]> {
 
 // -----
 
-def SPV_ReturnOp : SPV_Op<"Return", [InFunctionScope, Terminator]> {
+def SPV_ReturnOp : SPV_Op<"Return", [InFunctionScope, NoSideEffect,
+                                     Terminator]> {
   let summary = "Return with no value from a function with void return type.";
 
   let description = [{
@@ -384,7 +385,8 @@ def SPV_UnreachableOp : SPV_Op<"Unreachable", [InFunctionScope, Terminator]> {
 
 // -----
 
-def SPV_ReturnValueOp : SPV_Op<"ReturnValue", [InFunctionScope, Terminator]> {
+def SPV_ReturnValueOp : SPV_Op<"ReturnValue", [InFunctionScope, NoSideEffect,
+                                               Terminator]> {
   let summary = "Return a value from a function.";
 
   let description = [{
