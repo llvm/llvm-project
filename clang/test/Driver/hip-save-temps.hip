@@ -4,22 +4,22 @@
 
 // -fno-gpu-rdc without -o
 // RUN: %clang -### -target x86_64-linux-gnu -nogpulib -save-temps \
-// RUN:   -x hip --cuda-gpu-arch=gfx900 %s 2>&1 | \
+// RUN:   --cuda-gpu-arch=gfx900 %s 2>&1 | \
 // RUN:   FileCheck -check-prefixes=CHECK,NORDC,NOUT %s
 
 // -fno-gpu-rdc with -o
 // RUN: %clang -### -target x86_64-linux-gnu -nogpulib -save-temps \
-// RUN:   -o executable -x hip --cuda-gpu-arch=gfx900 %s 2>&1 | \
+// RUN:   -o executable --cuda-gpu-arch=gfx900 %s 2>&1 | \
 // RUN:   FileCheck -check-prefixes=CHECK,NORDC,WOUT %s
 
 // -fgpu-rdc without -o
 // RUN: %clang -### -target x86_64-linux-gnu -nogpulib -save-temps \
-// RUN:   -fgpu-rdc -x hip --cuda-gpu-arch=gfx900 %s 2>&1 | \
+// RUN:   -fgpu-rdc --cuda-gpu-arch=gfx900 %s 2>&1 | \
 // RUN:   FileCheck -check-prefixes=CHECK,RDC,RDC-NOUT,NOUT %s
 
 // -fgpu-rdc with -o
 // RUN: %clang -### -target x86_64-linux-gnu -nogpulib -save-temps \
-// RUN:   -o executable -fgpu-rdc -x hip --cuda-gpu-arch=gfx900 %s 2>&1 | \
+// RUN:   -o executable -fgpu-rdc --cuda-gpu-arch=gfx900 %s 2>&1 | \
 // RUN:   FileCheck -check-prefixes=CHECK,RDC,RDC-WOUT,WOUT %s
 
 // CHECK: {{.*}}clang{{.*}}"-o" "hip-save-temps-hip-amdgcn-amd-amdhsa-gfx900.cui"
