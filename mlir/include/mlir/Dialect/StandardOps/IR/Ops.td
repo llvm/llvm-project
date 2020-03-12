@@ -796,7 +796,7 @@ def CondBranchOp : Std_Op<"cond_br",
 //===----------------------------------------------------------------------===//
 
 def ConstantOp : Std_Op<"constant",
-    [NoSideEffect, DeclareOpInterfaceMethods<OpAsmOpInterface>]> {
+    [ConstantLike, NoSideEffect, DeclareOpInterfaceMethods<OpAsmOpInterface>]> {
   let summary = "constant";
 
   let arguments = (ins AnyAttr:$value);

@@ -1549,6 +1549,8 @@ def ResultsBroadcastableShape :
 def Broadcastable : NativeOpTrait<"ResultsBroadcastableShape">;
 // X op Y == Y op X
 def Commutative  : NativeOpTrait<"IsCommutative">;
+// Op behaves like a constant.
+def ConstantLike : NativeOpTrait<"ConstantLike">;
 // Op behaves like a function.
 def FunctionLike : NativeOpTrait<"FunctionLike">;
 // Op is isolated from above.

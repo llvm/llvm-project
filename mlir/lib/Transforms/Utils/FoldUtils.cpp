@@ -57,7 +57,7 @@ static Operation *materializeConstant(Dialect *dialect, OpBuilder &builder,
   // Ask the dialect to materialize a constant operation for this value.
   if (auto *constOp = dialect->materializeConstant(builder, value, type, loc)) {
     assert(insertPt == builder.getInsertionPoint());
-    assert(matchPattern(constOp, m_Constant(&value)));
+    assert(matchPattern(constOp, m_Constant()));
     return constOp;
   }
 

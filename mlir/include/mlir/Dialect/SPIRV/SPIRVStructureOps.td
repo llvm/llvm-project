@@ -67,7 +67,7 @@ def SPV_AddressOfOp : SPV_Op<"_address_of", [InFunctionScope, NoSideEffect]> {
 
 // -----
 
-def SPV_ConstantOp : SPV_Op<"constant", [NoSideEffect]> {
+def SPV_ConstantOp : SPV_Op<"constant", [ConstantLike, NoSideEffect]> {
   let summary = "The op that declares a SPIR-V normal constant";
 
   let description = [{

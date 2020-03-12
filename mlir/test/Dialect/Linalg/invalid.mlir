@@ -454,7 +454,7 @@ func @generic_result_tensor_type(%arg0: memref<?xf32, affine_map<(i)[off]->(off 
 // -----
 
 func @generic_fun_result_0_element_type(%arg0: memref<?xf32>) {
-  // expected-error @+1 {{'linalg.dot' op expected 3 or more operands}}
+  // expected-error @+1 {{'linalg.dot' op expected 3 operands, but found 2}}
   linalg.dot(%arg0, %arg0): memref<?xf32>, memref<?xf32>
 }
 
