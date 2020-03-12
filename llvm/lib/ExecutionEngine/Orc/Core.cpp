@@ -1001,15 +1001,17 @@ void JITDylib::addDependencies(const SymbolStringPtr &Name,
       // Check the sym entry for the dependency.
       auto OtherSymI = OtherJITDylib.Symbols.find(OtherSymbol);
 
-#ifndef NDEBUG
       // Assert that this symbol exists and has not reached the ready state
       // already.
       assert(OtherSymI != OtherJITDylib.Symbols.end() &&
-             (OtherSymI->second.getState() < SymbolState::Ready &&
-              "Dependency on emitted/ready symbol"));
-#endif
+             "Dependency on unknown symbol");
 
       auto &OtherSymEntry = OtherSymI->second;
+
+      // If the other symbol is already in the Ready state then there's no
+      // dependency to add.
+      if (OtherSymEntry.getState() == SymbolState::Ready)
+        continue;
 
       // If the dependency is in an error state then note this and continue,
       // we will move this symbol to the error state below.
