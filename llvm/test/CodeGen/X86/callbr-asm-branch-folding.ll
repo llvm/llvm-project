@@ -24,17 +24,8 @@ define void @n(i32* %o, i32 %p, i32 %u) nounwind {
 ; CHECK-NEXT:    movq %r15, %rdi
 ; CHECK-NEXT:    callq l
 ; CHECK-NEXT:    testl %eax, %eax
-; CHECK-NEXT:    je .LBB0_1
-; CHECK-NEXT:  .LBB0_10: # %cleanup
-; CHECK-NEXT:    addq $8, %rsp
-; CHECK-NEXT:    popq %rbx
-; CHECK-NEXT:    popq %r12
-; CHECK-NEXT:    popq %r13
-; CHECK-NEXT:    popq %r14
-; CHECK-NEXT:    popq %r15
-; CHECK-NEXT:    popq %rbp
-; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB0_1: # %if.end
+; CHECK-NEXT:    jne .LBB0_10
+; CHECK-NEXT:  # %bb.1: # %if.end
 ; CHECK-NEXT:    movl %ebx, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    cmpl $0, {{.*}}(%rip)
 ; CHECK-NEXT:    # implicit-def: $ebx
@@ -82,7 +73,15 @@ define void @n(i32* %o, i32 %p, i32 %u) nounwind {
 ; CHECK-NEXT:    jmp k # TAILCALL
 ; CHECK-NEXT:  .LBB0_9: # %if.else
 ; CHECK-NEXT:    incq 0
-; CHECK-NEXT:    jmp .LBB0_10
+; CHECK-NEXT:  .LBB0_10: # %cleanup
+; CHECK-NEXT:    addq $8, %rsp
+; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    popq %r12
+; CHECK-NEXT:    popq %r13
+; CHECK-NEXT:    popq %r14
+; CHECK-NEXT:    popq %r15
+; CHECK-NEXT:    popq %rbp
+; CHECK-NEXT:    retq
 entry:
   %call = tail call i32 @c()
   %call1 = tail call i32 @l(i32* %o)
