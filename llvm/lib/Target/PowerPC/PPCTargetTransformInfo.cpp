@@ -217,8 +217,8 @@ unsigned PPCTTIImpl::getUserCost(const User *U,
   return BaseT::getUserCost(U, Operands);
 }
 
-bool PPCTTIImpl::mightUseCTR(BasicBlock *BB,
-                             TargetLibraryInfo *LibInfo) {
+bool PPCTTIImpl::mightUseCTR(BasicBlock *BB, TargetLibraryInfo *LibInfo,
+                             SmallPtrSetImpl<const Value *> &Visited) {
   const PPCTargetMachine &TM = ST->getTargetMachine();
 
   // Loop through the inline asm constraints and look for something that
@@ -237,8 +237,11 @@ bool PPCTTIImpl::mightUseCTR(BasicBlock *BB,
 
   // Determining the address of a TLS variable results in a function call in
   // certain TLS models.
-  std::function<bool(const Value*)> memAddrUsesCTR =
-    [&memAddrUsesCTR, &TM](const Value *MemAddr) -> bool {
+  std::function<bool(const Value *)> memAddrUsesCTR =
+      [&memAddrUsesCTR, &TM, &Visited](const Value *MemAddr) -> bool {
+    // No need to traverse again if we already checked this operand.
+    if (!Visited.insert(MemAddr).second)
+      return false;
     const auto *GV = dyn_cast<GlobalValue>(MemAddr);
     if (!GV) {
       // Recurse to check for constants that refer to TLS global variables.
@@ -502,9 +505,10 @@ bool PPCTTIImpl::isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
 
   // We don't want to spill/restore the counter register, and so we don't
   // want to use the counter register if the loop contains calls.
+  SmallPtrSet<const Value *, 4> Visited;
   for (Loop::block_iterator I = L->block_begin(), IE = L->block_end();
        I != IE; ++I)
-    if (mightUseCTR(*I, LibInfo))
+    if (mightUseCTR(*I, LibInfo, Visited))
       return false;
 
   SmallVector<BasicBlock*, 4> ExitingBlocks;
