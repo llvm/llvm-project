@@ -2509,7 +2509,7 @@ llvm::DIModule *CGDebugInfo::getOrCreateModuleRef(ASTSourceDescriptor Mod,
                                           CreateSkeletonCU);
   llvm::DIModule *DIMod =
       DBuilder.createModule(Parent, Mod.getModuleName(), ConfigMacros,
-                            Mod.getPath());
+                            Mod.getPath(), M ? M->APINotesFile : "");
   ModuleCache[M].reset(DIMod);
   return DIMod;
 }
