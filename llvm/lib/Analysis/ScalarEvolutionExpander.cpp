@@ -2173,7 +2173,7 @@ bool SCEVExpander::isHighCostExpansionHelper(
     }
     const SCEV *Op = CastExpr->getOperand();
     BudgetRemaining -=
-        TTI.getOperationCost(Opcode, S->getType(), Op->getType());
+        TTI.getCastInstrCost(Opcode, S->getType(), Op->getType());
     return isHighCostExpansionHelper(Op, L, At, BudgetRemaining, TTI,
                                      Processed);
   }
@@ -2184,7 +2184,7 @@ bool SCEVExpander::isHighCostExpansionHelper(
     if (auto *SC = dyn_cast<SCEVConstant>(UDivExpr->getRHS())) {
       if (SC->getAPInt().isPowerOf2()) {
         BudgetRemaining -=
-            TTI.getOperationCost(Instruction::LShr, S->getType());
+            TTI.getArithmeticInstrCost(Instruction::LShr, S->getType());
         // Note that we don't count the cost of RHS, because it is a constant,
         // and we consider those to be free. But if that changes, we would need
         // to log2() it first before calling isHighCostExpansionHelper().
@@ -2206,7 +2206,8 @@ bool SCEVExpander::isHighCostExpansionHelper(
       return false; // Consider it to be free.
 
     // Need to count the cost of this UDiv.
-    BudgetRemaining -= TTI.getOperationCost(Instruction::UDiv, S->getType());
+    BudgetRemaining -=
+        TTI.getArithmeticInstrCost(Instruction::UDiv, S->getType());
     return isHighCostExpansionHelper(UDivExpr->getLHS(), L, At, BudgetRemaining,
                                      TTI, Processed) ||
            isHighCostExpansionHelper(UDivExpr->getRHS(), L, At, BudgetRemaining,
@@ -2219,8 +2220,8 @@ bool SCEVExpander::isHighCostExpansionHelper(
     assert(NAry->getNumOperands() >= 2 &&
            "Polynomial should be at least linear");
 
-    int AddCost = TTI.getOperationCost(Instruction::Add, OpType);
-    int MulCost = TTI.getOperationCost(Instruction::Mul, OpType);
+    int AddCost = TTI.getArithmeticInstrCost(Instruction::Add, OpType);
+    int MulCost = TTI.getArithmeticInstrCost(Instruction::Mul, OpType);
 
     // In this polynominal, we may have some zero operands, and we shouldn't
     // really charge for those. So how many non-zero coeffients are there?
@@ -2277,20 +2278,22 @@ bool SCEVExpander::isHighCostExpansionHelper(
     int PairCost;
     switch (S->getSCEVType()) {
     case scAddExpr:
-      PairCost = TTI.getOperationCost(Instruction::Add, OpType);
+      PairCost = TTI.getArithmeticInstrCost(Instruction::Add, OpType);
       break;
     case scMulExpr:
       // TODO: this is a very pessimistic cost modelling for Mul,
       // because of Bin Pow algorithm actually used by the expander,
       // see SCEVExpander::visitMulExpr(), ExpandOpBinPowN().
-      PairCost = TTI.getOperationCost(Instruction::Mul, OpType);
+      PairCost = TTI.getArithmeticInstrCost(Instruction::Mul, OpType);
       break;
     case scSMaxExpr:
     case scUMaxExpr:
     case scSMinExpr:
     case scUMinExpr:
-      PairCost = TTI.getOperationCost(Instruction::ICmp, OpType) +
-                 TTI.getOperationCost(Instruction::Select, OpType);
+      PairCost = TTI.getCmpSelInstrCost(Instruction::ICmp, OpType,
+                                        CmpInst::makeCmpResultType(OpType)) +
+                 TTI.getCmpSelInstrCost(Instruction::Select, OpType,
+                                        CmpInst::makeCmpResultType(OpType));
       break;
     default:
       llvm_unreachable("There are no other variants here.");
