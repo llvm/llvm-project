@@ -208,8 +208,7 @@ define arm_aapcs_vfpcc <8 x half> @vfmar16(<8 x half> %src1, <8 x half> %src2, f
 ; CHECK-MVE-VMLA:       @ %bb.0: @ %entry
 ; CHECK-MVE-VMLA-NEXT:    vcvtb.f16.f32 s8, s8
 ; CHECK-MVE-VMLA-NEXT:    vmov r0, s8
-; CHECK-MVE-VMLA-NEXT:    vdup.16 q2, r0
-; CHECK-MVE-VMLA-NEXT:    vfma.f16 q0, q1, q2
+; CHECK-MVE-VMLA-NEXT:    vfma.f16 q0, q1, r0
 ; CHECK-MVE-VMLA-NEXT:    bx lr
 ;
 ; CHECK-MVE-LABEL: vfmar16:
@@ -275,9 +274,7 @@ define arm_aapcs_vfpcc <8 x half> @vfma16(<8 x half> %src1, <8 x half> %src2, fl
 ; CHECK-MVE-VMLA:       @ %bb.0: @ %entry
 ; CHECK-MVE-VMLA-NEXT:    vcvtb.f16.f32 s8, s8
 ; CHECK-MVE-VMLA-NEXT:    vmov r0, s8
-; CHECK-MVE-VMLA-NEXT:    vdup.16 q2, r0
-; CHECK-MVE-VMLA-NEXT:    vfma.f16 q2, q0, q1
-; CHECK-MVE-VMLA-NEXT:    vmov q0, q2
+; CHECK-MVE-VMLA-NEXT:    vfmas.f16 q0, q1, r0
 ; CHECK-MVE-VMLA-NEXT:    bx lr
 ;
 ; CHECK-MVE-LABEL: vfma16:
@@ -419,8 +416,7 @@ define arm_aapcs_vfpcc <4 x float> @vfmar32(<4 x float> %src1, <4 x float> %src2
 ; CHECK-MVE-VMLA-LABEL: vfmar32:
 ; CHECK-MVE-VMLA:       @ %bb.0: @ %entry
 ; CHECK-MVE-VMLA-NEXT:    vmov r0, s8
-; CHECK-MVE-VMLA-NEXT:    vdup.32 q2, r0
-; CHECK-MVE-VMLA-NEXT:    vfma.f32 q0, q1, q2
+; CHECK-MVE-VMLA-NEXT:    vfma.f32 q0, q1, r0
 ; CHECK-MVE-VMLA-NEXT:    bx lr
 ;
 ; CHECK-MVE-LABEL: vfmar32:
@@ -449,9 +445,7 @@ define arm_aapcs_vfpcc <4 x float> @vfmas32(<4 x float> %src1, <4 x float> %src2
 ; CHECK-MVE-VMLA-LABEL: vfmas32:
 ; CHECK-MVE-VMLA:       @ %bb.0: @ %entry
 ; CHECK-MVE-VMLA-NEXT:    vmov r0, s8
-; CHECK-MVE-VMLA-NEXT:    vdup.32 q2, r0
-; CHECK-MVE-VMLA-NEXT:    vfma.f32 q2, q0, q1
-; CHECK-MVE-VMLA-NEXT:    vmov q0, q2
+; CHECK-MVE-VMLA-NEXT:    vfmas.f32 q0, q1, r0
 ; CHECK-MVE-VMLA-NEXT:    bx lr
 ;
 ; CHECK-MVE-LABEL: vfmas32:
