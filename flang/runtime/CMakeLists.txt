@@ -6,6 +6,26 @@
 #
 #===------------------------------------------------------------------------===#
 
+include(CheckCXXSymbolExists)
+include(CheckCXXSourceCompiles)
+check_cxx_symbol_exists(strerror string.h HAVE_STRERROR)
+check_cxx_symbol_exists(strerror_r string.h HAVE_STRERROR_R)
+# Can't use symbol exists here as the function is overloaded in C++
+check_cxx_source_compiles(
+  "#include <string.h>
+   int main() {
+     char buf[4096];
+     return strerror_s(buf, 4096, 0);
+   }
+  "
+  HAVE_DECL_STRERROR_S)
+
+if (NOT (HAVE_STRERROR OR HAVE_STRERROR_R OR HAVE_DECL_STRERROR_S))
+  message(FATAL_ERROR "None of strerror, strerror_r, strerror_s found.")
+endif()
+
+configure_file(config.h.cmake config.h)
+
 add_library(FortranRuntime
   ISO_Fortran_binding.cpp
   buffer.cpp
@@ -31,6 +51,10 @@ add_library(FortranRuntime
   type-code.cpp
   unit.cpp
   unit-map.cpp
+)
+
+target_include_directories(FortranRuntime
+  PRIVATE ${CMAKE_CURRENT_BINARY_DIR}
 )
 
 target_link_libraries(FortranRuntime
