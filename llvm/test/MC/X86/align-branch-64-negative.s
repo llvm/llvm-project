@@ -24,31 +24,13 @@ labeled_call_test1:
 label_before:
   callq bar
 
-  # In the second test, we have a label which is expected to be bound to the
-  # end of the call.  For instance, we want the to associate some data with
-  # the return address of the call.
-  # CHECK-LABEL: <labeled_call_test2>:
-  # CHECK: 5a: callq
-  # CHECK: 5f: nop
-  # CHECK: 60 <label_after>:
-  # CHECK: 60: jmp
-  .globl  labeled_call_test2
-  .p2align  5
-labeled_call_test2:
-  .rept 26
-  int3
-  .endr
-  callq bar
-label_after:
-  jmp bar
-
-  # Our third test is like the first w/a labeled fault, but specifically to
+  # Our second test is like the first w/a labeled fault, but specifically to
   # a fused memory comparison.  This is the form produced by implicit null
   # checks for instance.
   # CHECK-LABEL: <implicit_null_check>:
-  # CHECK: 9f <fault_addr>:
-  # CHECK: 9f: nop
-  # CHECK: a0: cmpq
+  # CHECK: 5f <fault_addr>:
+  # CHECK: 5f: nop
+  # CHECK: 60: cmpq
   .globl  implicit_null_check
   .p2align  5
 implicit_null_check:
