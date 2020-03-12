@@ -444,6 +444,34 @@ public:
   /// This is logically equivalent to getNumUses() >= N.
   bool hasNUsesOrMore(unsigned N) const;
 
+  /// Return true if there is exactly one user of this value that cannot be
+  /// dropped.
+  ///
+  /// This is specialized because it is a common request and does not require
+  /// traversing the whole use list.
+  Use *getSingleUndroppableUse();
+
+  /// Return true if there this value.
+  ///
+  /// This is specialized because it is a common request and does not require
+  /// traversing the whole use list.
+  bool hasNUndroppableUses(unsigned N) const;
+
+  /// Return true if this value has N users or more.
+  ///
+  /// This is logically equivalent to getNumUses() >= N.
+  bool hasNUndroppableUsesOrMore(unsigned N) const;
+
+  /// Remove every uses that can safely be removed.
+  ///
+  /// This will remove for example uses in llvm.assume.
+  /// This should be used when performing want to perform a tranformation but
+  /// some Droppable uses pervent it.
+  /// This function optionally takes a filter to only remove some droppable
+  /// uses.
+  void dropDroppableUses(llvm::function_ref<bool(const Use *)> ShouldDrop =
+                             [](const Use *) { return true; });
+
   /// Check if this value is used in the specified basic block.
   bool isUsedInBasicBlock(const BasicBlock *BB) const;
 
