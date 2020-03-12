@@ -429,7 +429,7 @@ define float @fail1(float %f1, float %f2) {
 define double @fail2(double %f1, double %f2) {
 ; CHECK-LABEL: @fail2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fadd fast double [[F2:%.*]], [[F2]]
-; CHECK-NEXT:    [[TMP2:%.*]] = fsub fast double -0.000000e+00, [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = fneg fast double [[TMP1]]
 ; CHECK-NEXT:    ret double [[TMP2]]
 ;
   %t1 = fsub fast double %f1, %f2

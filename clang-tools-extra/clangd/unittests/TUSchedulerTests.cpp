@@ -367,6 +367,30 @@ TEST_F(TUSchedulerTests, Cancellation) {
       << "All reads other than R2B were cancelled";
 }
 
+TEST_F(TUSchedulerTests, InvalidationNoCrash) {
+  auto Path = testPath("foo.cpp");
+  TUScheduler S(CDB, optsForTest(), captureDiags());
+
+  Notification StartedRunning;
+  Notification ScheduledChange;
+  // We expect invalidation logic to not crash by trying to invalidate a running
+  // request.
+  S.update(Path, getInputs(Path, ""), WantDiagnostics::Auto);
+  ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
+  S.runWithAST(
+      "invalidatable-but-running", Path,
+      [&](llvm::Expected<InputsAndAST> AST) {
+        StartedRunning.notify();
+        ScheduledChange.wait();
+        ASSERT_TRUE(bool(AST));
+      },
+      TUScheduler::InvalidateOnUpdate);
+  StartedRunning.wait();
+  S.update(Path, getInputs(Path, ""), WantDiagnostics::Auto);
+  ScheduledChange.notify();
+  ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
+}
+
 TEST_F(TUSchedulerTests, Invalidation) {
   auto Path = testPath("foo.cpp");
   TUScheduler S(CDB, optsForTest(), captureDiags());

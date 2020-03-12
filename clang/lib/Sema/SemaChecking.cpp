@@ -2070,6 +2070,45 @@ bool Sema::CheckMVEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   }
 }
 
+bool Sema::CheckCDEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
+  bool Err = false;
+  switch (BuiltinID) {
+  default:
+    return false;
+#include "clang/Basic/arm_cde_builtin_sema.inc"
+  }
+
+  if (Err)
+    return true;
+
+  return CheckARMCoprocessorImmediate(TheCall->getArg(0), /*WantCDE*/ true);
+}
+
+bool Sema::CheckARMCoprocessorImmediate(const Expr *CoprocArg, bool WantCDE) {
+  if (isConstantEvaluated())
+    return false;
+
+  // We can't check the value of a dependent argument.
+  if (CoprocArg->isTypeDependent() || CoprocArg->isValueDependent())
+    return false;
+
+  llvm::APSInt CoprocNoAP;
+  bool IsICE = CoprocArg->isIntegerConstantExpr(CoprocNoAP, Context);
+  (void)IsICE;
+  assert(IsICE && "Coprocossor immediate is not a constant expression");
+  int64_t CoprocNo = CoprocNoAP.getExtValue();
+  assert(CoprocNo >= 0 && "Coprocessor immediate must be non-negative");
+
+  uint32_t CDECoprocMask = Context.getTargetInfo().getARMCDECoprocMask();
+  bool IsCDECoproc = CoprocNo <= 7 && (CDECoprocMask & (1 << CoprocNo));
+
+  if (IsCDECoproc != WantCDE)
+    return Diag(CoprocArg->getBeginLoc(), diag::err_arm_invalid_coproc)
+           << (int)CoprocNo << (int)WantCDE << CoprocArg->getSourceRange();
+
+  return false;
+}
+
 bool Sema::CheckARMBuiltinExclusiveCall(unsigned BuiltinID, CallExpr *TheCall,
                                         unsigned MaxWidth) {
   assert((BuiltinID == ARM::BI__builtin_arm_ldrex ||
@@ -2212,6 +2251,8 @@ bool Sema::CheckARMBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     return true;
   if (CheckMVEBuiltinFunctionCall(BuiltinID, TheCall))
     return true;
+  if (CheckCDEBuiltinFunctionCall(BuiltinID, TheCall))
+    return true;
 
   // For intrinsics which take an immediate value as part of the instruction,
   // range check them here.
@@ -2234,6 +2275,26 @@ bool Sema::CheckARMBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   case ARM::BI__builtin_arm_isb:
   case ARM::BI__builtin_arm_dbg:
     return SemaBuiltinConstantArgRange(TheCall, 0, 0, 15);
+  case ARM::BI__builtin_arm_cdp:
+  case ARM::BI__builtin_arm_cdp2:
+  case ARM::BI__builtin_arm_mcr:
+  case ARM::BI__builtin_arm_mcr2:
+  case ARM::BI__builtin_arm_mrc:
+  case ARM::BI__builtin_arm_mrc2:
+  case ARM::BI__builtin_arm_mcrr:
+  case ARM::BI__builtin_arm_mcrr2:
+  case ARM::BI__builtin_arm_mrrc:
+  case ARM::BI__builtin_arm_mrrc2:
+  case ARM::BI__builtin_arm_ldc:
+  case ARM::BI__builtin_arm_ldcl:
+  case ARM::BI__builtin_arm_ldc2:
+  case ARM::BI__builtin_arm_ldc2l:
+  case ARM::BI__builtin_arm_stc:
+  case ARM::BI__builtin_arm_stcl:
+  case ARM::BI__builtin_arm_stc2:
+  case ARM::BI__builtin_arm_stc2l:
+    return SemaBuiltinConstantArgRange(TheCall, 0, 0, 15) ||
+           CheckARMCoprocessorImmediate(TheCall->getArg(0), /*WantCDE*/ false);
   }
 }
 

@@ -21,23 +21,23 @@ char ReachingDefAnalysis::ID = 0;
 INITIALIZE_PASS(ReachingDefAnalysis, DEBUG_TYPE, "ReachingDefAnalysis", false,
                 true)
 
-bool isValidReg(const MachineOperand &MO) {
+static bool isValidReg(const MachineOperand &MO) {
   return MO.isReg() && MO.getReg();
 }
 
-bool isValidRegUse(const MachineOperand &MO) {
+static bool isValidRegUse(const MachineOperand &MO) {
   return isValidReg(MO) && MO.isUse();
 }
 
-bool isValidRegUseOf(const MachineOperand &MO, int PhysReg) {
+static bool isValidRegUseOf(const MachineOperand &MO, int PhysReg) {
   return isValidRegUse(MO) && MO.getReg() == PhysReg;
 }
 
-bool isValidRegDef(const MachineOperand &MO) {
+static bool isValidRegDef(const MachineOperand &MO) {
   return isValidReg(MO) && MO.isDef();
 }
 
-bool isValidRegDefOf(const MachineOperand &MO, int PhysReg) {
+static bool isValidRegDefOf(const MachineOperand &MO, int PhysReg) {
   return isValidRegDef(MO) && MO.getReg() == PhysReg;
 }
 

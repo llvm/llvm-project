@@ -59,6 +59,18 @@ struct OutgoingValueHandler : public CallLowering::ValueHandler {
     } else
       ExtReg = extendRegister(ValVReg, VA);
 
+    // If this is a scalar return, insert a readfirstlane just in case the value
+    // ends up in a VGPR.
+    // FIXME: Assert this is a shader return.
+    const SIRegisterInfo *TRI
+      = static_cast<const SIRegisterInfo *>(MRI.getTargetRegisterInfo());
+    if (TRI->isSGPRReg(MRI, PhysReg)) {
+      auto ToSGPR = MIRBuilder.buildIntrinsic(Intrinsic::amdgcn_readfirstlane,
+                                              {MRI.getType(ExtReg)}, false)
+        .addReg(ExtReg);
+      ExtReg = ToSGPR.getReg(0);
+    }
+
     MIRBuilder.buildCopy(PhysReg, ExtReg);
     MIB.addUse(PhysReg, RegState::Implicit);
   }

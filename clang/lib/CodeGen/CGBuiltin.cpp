@@ -6538,6 +6538,9 @@ Value *CodeGenFunction::EmitARMBuiltinExpr(unsigned BuiltinID,
   // Deal with MVE builtins
   if (Value *Result = EmitARMMVEBuiltinExpr(BuiltinID, E, ReturnValue, Arch))
     return Result;
+  // Handle CDE builtins
+  if (Value *Result = EmitARMCDEBuiltinExpr(BuiltinID, E, ReturnValue, Arch))
+    return Result;
 
   // Find out if any arguments are required to be integer constant
   // expressions.
@@ -7210,6 +7213,17 @@ Value *CodeGenFunction::EmitARMMVEBuiltinExpr(unsigned BuiltinID,
   }
   }
   llvm_unreachable("unknown custom codegen type.");
+}
+
+Value *CodeGenFunction::EmitARMCDEBuiltinExpr(unsigned BuiltinID,
+                                              const CallExpr *E,
+                                              ReturnValueSlot ReturnValue,
+                                              llvm::Triple::ArchType Arch) {
+  switch (BuiltinID) {
+  default:
+    return nullptr;
+#include "clang/Basic/arm_cde_builtin_cg.inc"
+  }
 }
 
 static Value *EmitAArch64TblBuiltinExpr(CodeGenFunction &CGF, unsigned BuiltinID,

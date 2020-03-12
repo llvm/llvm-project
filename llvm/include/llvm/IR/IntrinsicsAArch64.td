@@ -1286,6 +1286,15 @@ def int_aarch64_sve_dup : AdvSIMD_SVE_DUP_Intrinsic;
 def int_aarch64_sve_index : AdvSIMD_SVE_Index_Intrinsic;
 
 //
+// Address calculation
+//
+
+def int_aarch64_sve_adrb : AdvSIMD_2VectorArg_Intrinsic;
+def int_aarch64_sve_adrh : AdvSIMD_2VectorArg_Intrinsic;
+def int_aarch64_sve_adrw : AdvSIMD_2VectorArg_Intrinsic;
+def int_aarch64_sve_adrd : AdvSIMD_2VectorArg_Intrinsic;
+
+//
 // Integer arithmetic
 //
 

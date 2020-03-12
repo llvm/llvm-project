@@ -53,20 +53,13 @@ bool parseFileExtensions(StringRef AllFileExtensions,
   return true;
 }
 
-llvm::Optional<StringRef>
-getFileExtension(StringRef FileName, const FileExtensionsSet &FileExtensions) {
-  StringRef Extension = llvm::sys::path::extension(FileName);
-  if (Extension.empty())
-    return llvm::None;
-  // Skip "." prefix.
-  if (!FileExtensions.count(Extension.substr(1)))
-    return llvm::None;
-  return Extension;
-}
-
 bool isFileExtension(StringRef FileName,
                      const FileExtensionsSet &FileExtensions) {
-  return getFileExtension(FileName, FileExtensions).hasValue();
+  StringRef Extension = llvm::sys::path::extension(FileName);
+  if (Extension.empty())
+    return false;
+  // Skip "." prefix.
+  return FileExtensions.count(Extension.substr(1)) > 0;
 }
 
 } // namespace utils

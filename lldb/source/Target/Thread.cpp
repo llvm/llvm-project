@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Target/Thread.h"
-#include "Plugins/Process/Utility/UnwindLLDB.h"
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/FormatEntity.h"
@@ -42,7 +41,7 @@
 #include "lldb/Target/ThreadPlanStepThrough.h"
 #include "lldb/Target/ThreadPlanStepUntil.h"
 #include "lldb/Target/ThreadSpec.h"
-#include "lldb/Target/Unwind.h"
+#include "lldb/Target/UnwindLLDB.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/State.h"

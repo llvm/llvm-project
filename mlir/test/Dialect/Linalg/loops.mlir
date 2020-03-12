@@ -360,7 +360,7 @@ func @indexed_generic_region(
 // -----
 
 #broadcast_access = [
-  affine_map<(i, j) -> (0)>,
+  affine_map<(i, j) -> ()>,
   affine_map<(i, j) -> (i, j)>
 ]
 
@@ -414,7 +414,7 @@ func @indexed_generic_op_zero_rank(%arg0: memref<i32>, %arg1: memref<3x4xi32>)
 
 #reduce_1D_access = [
   affine_map<(i) -> (i)>,
-  affine_map<(i) -> (0)>
+  affine_map<(i) -> ()>
 ]
 
 #trait_reduce_1D = {
@@ -446,8 +446,8 @@ func @generic_op_1D_reduce(%arg0: memref<?xf32>, %arg1: memref<f32>)
 
 #reduce_init_1D_access = [
   affine_map<(i) -> (i)>,
-  affine_map<(i) -> (0)>,
-  affine_map<(i) -> (0)>
+  affine_map<(i) -> ()>,
+  affine_map<(i) -> ()>
 ]
 
 #trait_reduce_init_1D = {

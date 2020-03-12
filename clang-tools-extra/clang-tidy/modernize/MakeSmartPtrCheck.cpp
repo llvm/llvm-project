@@ -429,11 +429,9 @@ void MakeSmartPtrCheck::insertHeader(DiagnosticBuilder &Diag, FileID FD) {
   if (MakeSmartPtrFunctionHeader.empty()) {
     return;
   }
-  if (auto IncludeFixit = Inserter->CreateIncludeInsertion(
-          FD, MakeSmartPtrFunctionHeader,
-          /*IsAngled=*/MakeSmartPtrFunctionHeader == StdMemoryHeader)) {
-    Diag << *IncludeFixit;
-  }
+  Diag << Inserter->CreateIncludeInsertion(
+      FD, MakeSmartPtrFunctionHeader,
+      /*IsAngled=*/MakeSmartPtrFunctionHeader == StdMemoryHeader);
 }
 
 } // namespace modernize

@@ -307,25 +307,17 @@ define i32 @load_partial_illegal_type() {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movzwl {{.*}}(%rip), %eax
 ; SSE2-NEXT:    movd %eax, %xmm0
-; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; SSE2-NEXT:    pand %xmm1, %xmm0
-; SSE2-NEXT:    movl $2, %eax
-; SSE2-NEXT:    movd %eax, %xmm2
-; SSE2-NEXT:    pslld $16, %xmm2
-; SSE2-NEXT:    pandn %xmm2, %xmm1
-; SSE2-NEXT:    por %xmm0, %xmm1
-; SSE2-NEXT:    movd %xmm1, %eax
+; SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    por {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: load_partial_illegal_type:
 ; SSSE3:       # %bb.0:
 ; SSSE3-NEXT:    movzwl {{.*}}(%rip), %eax
 ; SSSE3-NEXT:    movd %eax, %xmm0
-; SSSE3-NEXT:    movl $2, %eax
-; SSSE3-NEXT:    movd %eax, %xmm1
-; SSSE3-NEXT:    pshufb {{.*#+}} xmm1 = zero,zero,xmm1[0],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,1],zero,xmm0[3,4,5,6,7,8,9,10,11,12,13,14,15]
-; SSSE3-NEXT:    por %xmm1, %xmm0
+; SSSE3-NEXT:    por {{.*}}(%rip), %xmm0
 ; SSSE3-NEXT:    movd %xmm0, %eax
 ; SSSE3-NEXT:    retq
 ;

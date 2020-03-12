@@ -6,7 +6,7 @@
 define float @test1(float %x, float %y) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:    [[T1:%.*]] = fsub float [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[T2:%.*]] = fsub float -0.000000e+00, [[T1]]
+; CHECK-NEXT:    [[T2:%.*]] = fneg float [[T1]]
 ; CHECK-NEXT:    ret float [[T2]]
 ;
   %t1 = fsub float %x, %y
@@ -58,7 +58,7 @@ declare void @use2(float, double)
 define float @neg_sub_nsz_extra_use(float %x, float %y) {
 ; CHECK-LABEL: @neg_sub_nsz_extra_use(
 ; CHECK-NEXT:    [[T1:%.*]] = fsub float [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[T2:%.*]] = fsub nsz float -0.000000e+00, [[T1]]
+; CHECK-NEXT:    [[T2:%.*]] = fneg nsz float [[T1]]
 ; CHECK-NEXT:    call void @use(float [[T1]])
 ; CHECK-NEXT:    ret float [[T2]]
 ;
@@ -296,7 +296,7 @@ define double @unary_neg_ext_op1_fast(float %a, double %b) {
 
 define float @neg_ext_op1_extra_use(half %a, float %b) {
 ; CHECK-LABEL: @neg_ext_op1_extra_use(
-; CHECK-NEXT:    [[T1:%.*]] = fsub half 0xH8000, [[A:%.*]]
+; CHECK-NEXT:    [[T1:%.*]] = fneg half [[A:%.*]]
 ; CHECK-NEXT:    [[T2:%.*]] = fpext half [[T1]] to float
 ; CHECK-NEXT:    [[T3:%.*]] = fsub float [[B:%.*]], [[T2]]
 ; CHECK-NEXT:    call void @use(float [[T2]])
@@ -362,7 +362,7 @@ define float @unary_neg_trunc_op1_extra_use(double %a, float %b) {
 
 define float @neg_trunc_op1_extra_uses(double %a, float %b) {
 ; CHECK-LABEL: @neg_trunc_op1_extra_uses(
-; CHECK-NEXT:    [[T1:%.*]] = fsub double -0.000000e+00, [[A:%.*]]
+; CHECK-NEXT:    [[T1:%.*]] = fneg double [[A:%.*]]
 ; CHECK-NEXT:    [[T2:%.*]] = fptrunc double [[T1]] to float
 ; CHECK-NEXT:    [[T3:%.*]] = fsub float [[B:%.*]], [[T2]]
 ; CHECK-NEXT:    call void @use2(float [[T2]], double [[T1]])
@@ -454,7 +454,7 @@ define double @fsub_fmul_fneg2(double %x, double %y, double %z) {
 
 define float @fsub_fdiv_fneg1_extra_use(float %x, float %y, float %z) {
 ; CHECK-LABEL: @fsub_fdiv_fneg1_extra_use(
-; CHECK-NEXT:    [[NEG:%.*]] = fsub float -0.000000e+00, [[X:%.*]]
+; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[X:%.*]]
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv float [[NEG]], [[Y:%.*]]
 ; CHECK-NEXT:    call void @use(float [[DIV]])
 ; CHECK-NEXT:    [[R:%.*]] = fsub float [[Z:%.*]], [[DIV]]
@@ -469,7 +469,7 @@ define float @fsub_fdiv_fneg1_extra_use(float %x, float %y, float %z) {
 
 define float @fsub_fdiv_fneg2_extra_use(float %x, float %y, float %z) {
 ; CHECK-LABEL: @fsub_fdiv_fneg2_extra_use(
-; CHECK-NEXT:    [[NEG:%.*]] = fsub float -0.000000e+00, [[X:%.*]]
+; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[X:%.*]]
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv float [[Y:%.*]], [[NEG]]
 ; CHECK-NEXT:    call void @use(float [[DIV]])
 ; CHECK-NEXT:    [[R:%.*]] = fsub float [[Z:%.*]], [[DIV]]
@@ -486,7 +486,7 @@ declare void @use_vec(<2 x float>)
 
 define <2 x float> @fsub_fmul_fneg1_extra_use(<2 x float> %x, <2 x float> %y, <2 x float> %z) {
 ; CHECK-LABEL: @fsub_fmul_fneg1_extra_use(
-; CHECK-NEXT:    [[NEG:%.*]] = fsub <2 x float> <float -0.000000e+00, float -0.000000e+00>, [[X:%.*]]
+; CHECK-NEXT:    [[NEG:%.*]] = fneg <2 x float> [[X:%.*]]
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul <2 x float> [[NEG]], [[Y:%.*]]
 ; CHECK-NEXT:    call void @use_vec(<2 x float> [[MUL]])
 ; CHECK-NEXT:    [[R:%.*]] = fsub <2 x float> [[Z:%.*]], [[MUL]]
@@ -501,7 +501,7 @@ define <2 x float> @fsub_fmul_fneg1_extra_use(<2 x float> %x, <2 x float> %y, <2
 
 define float @fsub_fmul_fneg2_extra_use(float %x, float %y, float %z) {
 ; CHECK-LABEL: @fsub_fmul_fneg2_extra_use(
-; CHECK-NEXT:    [[NEG:%.*]] = fsub float -0.000000e+00, [[X:%.*]]
+; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[X:%.*]]
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[NEG]], [[Y:%.*]]
 ; CHECK-NEXT:    call void @use(float [[MUL]])
 ; CHECK-NEXT:    [[R:%.*]] = fsub float [[Z:%.*]], [[MUL]]
@@ -516,7 +516,7 @@ define float @fsub_fmul_fneg2_extra_use(float %x, float %y, float %z) {
 
 define float @fsub_fdiv_fneg1_extra_use2(float %x, float %y, float %z) {
 ; CHECK-LABEL: @fsub_fdiv_fneg1_extra_use2(
-; CHECK-NEXT:    [[NEG:%.*]] = fsub float -0.000000e+00, [[X:%.*]]
+; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[X:%.*]]
 ; CHECK-NEXT:    call void @use(float [[NEG]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = fdiv float [[X]], [[Y:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = fadd float [[TMP1]], [[Z:%.*]]
@@ -531,7 +531,7 @@ define float @fsub_fdiv_fneg1_extra_use2(float %x, float %y, float %z) {
 
 define float @fsub_fdiv_fneg2_extra_use2(float %x, float %y, float %z) {
 ; CHECK-LABEL: @fsub_fdiv_fneg2_extra_use2(
-; CHECK-NEXT:    [[NEG:%.*]] = fsub float -0.000000e+00, [[X:%.*]]
+; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[X:%.*]]
 ; CHECK-NEXT:    call void @use(float [[NEG]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = fdiv float [[Y:%.*]], [[X]]
 ; CHECK-NEXT:    [[R:%.*]] = fadd float [[TMP1]], [[Z:%.*]]
@@ -546,7 +546,7 @@ define float @fsub_fdiv_fneg2_extra_use2(float %x, float %y, float %z) {
 
 define <2 x float> @fsub_fmul_fneg1_extra_use2(<2 x float> %x, <2 x float> %y, <2 x float> %z) {
 ; CHECK-LABEL: @fsub_fmul_fneg1_extra_use2(
-; CHECK-NEXT:    [[NEG:%.*]] = fsub <2 x float> <float -0.000000e+00, float -0.000000e+00>, [[X:%.*]]
+; CHECK-NEXT:    [[NEG:%.*]] = fneg <2 x float> [[X:%.*]]
 ; CHECK-NEXT:    call void @use_vec(<2 x float> [[NEG]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = fmul <2 x float> [[X]], [[Y:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = fadd <2 x float> [[TMP1]], [[Z:%.*]]
@@ -561,7 +561,7 @@ define <2 x float> @fsub_fmul_fneg1_extra_use2(<2 x float> %x, <2 x float> %y, <
 
 define float @fsub_fmul_fneg2_extra_use2(float %x, float %y, float %z) {
 ; CHECK-LABEL: @fsub_fmul_fneg2_extra_use2(
-; CHECK-NEXT:    [[NEG:%.*]] = fsub float -0.000000e+00, [[X:%.*]]
+; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[X:%.*]]
 ; CHECK-NEXT:    call void @use(float [[NEG]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = fmul float [[X]], [[Y:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = fadd float [[TMP1]], [[Z:%.*]]
@@ -576,7 +576,7 @@ define float @fsub_fmul_fneg2_extra_use2(float %x, float %y, float %z) {
 
 define float @fsub_fdiv_fneg1_extra_use3(float %x, float %y, float %z) {
 ; CHECK-LABEL: @fsub_fdiv_fneg1_extra_use3(
-; CHECK-NEXT:    [[NEG:%.*]] = fsub float -0.000000e+00, [[X:%.*]]
+; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[X:%.*]]
 ; CHECK-NEXT:    call void @use(float [[NEG]])
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv float [[NEG]], [[Y:%.*]]
 ; CHECK-NEXT:    call void @use(float [[DIV]])
@@ -593,7 +593,7 @@ define float @fsub_fdiv_fneg1_extra_use3(float %x, float %y, float %z) {
 
 define float @fsub_fdiv_fneg2_extra_use3(float %x, float %y, float %z) {
 ; CHECK-LABEL: @fsub_fdiv_fneg2_extra_use3(
-; CHECK-NEXT:    [[NEG:%.*]] = fsub float -0.000000e+00, [[X:%.*]]
+; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[X:%.*]]
 ; CHECK-NEXT:    call void @use(float [[NEG]])
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv float [[Y:%.*]], [[NEG]]
 ; CHECK-NEXT:    call void @use(float [[DIV]])
@@ -610,7 +610,7 @@ define float @fsub_fdiv_fneg2_extra_use3(float %x, float %y, float %z) {
 
 define <2 x float> @fsub_fmul_fneg1_extra_use3(<2 x float> %x, <2 x float> %y, <2 x float> %z) {
 ; CHECK-LABEL: @fsub_fmul_fneg1_extra_use3(
-; CHECK-NEXT:    [[NEG:%.*]] = fsub <2 x float> <float -0.000000e+00, float -0.000000e+00>, [[X:%.*]]
+; CHECK-NEXT:    [[NEG:%.*]] = fneg <2 x float> [[X:%.*]]
 ; CHECK-NEXT:    call void @use_vec(<2 x float> [[NEG]])
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul <2 x float> [[NEG]], [[Y:%.*]]
 ; CHECK-NEXT:    call void @use_vec(<2 x float> [[MUL]])
@@ -627,7 +627,7 @@ define <2 x float> @fsub_fmul_fneg1_extra_use3(<2 x float> %x, <2 x float> %y, <
 
 define float @fsub_fmul_fneg2_extra_use3(float %x, float %y, float %z) {
 ; CHECK-LABEL: @fsub_fmul_fneg2_extra_use3(
-; CHECK-NEXT:    [[NEG:%.*]] = fsub float -0.000000e+00, [[X:%.*]]
+; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[X:%.*]]
 ; CHECK-NEXT:    call void @use(float [[NEG]])
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[NEG]], [[Y:%.*]]
 ; CHECK-NEXT:    call void @use(float [[MUL]])
@@ -753,9 +753,9 @@ define float @fake_fneg_fsub_fast(float %x, float %y) {
 
 define float @fake_fneg_fsub_fast_extra_use(float %x, float %y) {
 ; CHECK-LABEL: @fake_fneg_fsub_fast_extra_use(
-; CHECK-NEXT:    [[NEGX:%.*]] = fsub float -0.000000e+00, [[X:%.*]]
+; CHECK-NEXT:    [[NEGX:%.*]] = fneg float [[X:%.*]]
 ; CHECK-NEXT:    call void @use(float [[NEGX]])
-; CHECK-NEXT:    [[SUB:%.*]] = fsub fast float [[NEGX]], [[Y:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = fsub fast float [[NEGX:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret float [[SUB]]
 ;
   %negx = fsub float -0.0, %x

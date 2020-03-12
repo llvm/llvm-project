@@ -367,10 +367,10 @@ define void @test16(i16* nocapture readonly %sums, i32 signext %delta, i32 signe
 ; CHECK-NEXT:    vsplth v2, v2, 3
 ; CHECK-NEXT:    addis r3, r2, .LCPI3_0@toc@ha
 ; CHECK-NEXT:    addi r3, r3, .LCPI3_0@toc@l
-; CHECK-NEXT:    vmrglh v4, v3, v4
 ; CHECK-NEXT:    vmrglh v2, v3, v2
-; CHECK-NEXT:    vsplth v3, v3, 7
-; CHECK-NEXT:    vmrglw v3, v4, v3
+; CHECK-NEXT:    vmrglh v3, v3, v4
+; CHECK-NEXT:    xxlxor v4, v4, v4
+; CHECK-NEXT:    vmrglw v3, v3, v4
 ; CHECK-NEXT:    lxvx v4, 0, r3
 ; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    vperm v2, v2, v3, v4

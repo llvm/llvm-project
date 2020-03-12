@@ -96,10 +96,8 @@ void InitVariablesCheck::check(const MatchFinder::MatchResult &Result) {
                    MatchedDecl->getName().size()),
                InitializationString);
     if (AddMathInclude) {
-      auto IncludeHint = IncludeInserter->CreateIncludeInsertion(
+      Diagnostic << IncludeInserter->CreateIncludeInsertion(
           Source.getFileID(MatchedDecl->getBeginLoc()), MathHeader, false);
-      if (IncludeHint)
-        Diagnostic << *IncludeHint;
     }
   }
 }

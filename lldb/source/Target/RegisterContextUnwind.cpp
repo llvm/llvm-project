@@ -1,4 +1,4 @@
-//===-- RegisterContextLLDB.cpp -------------------------------------------===//
+//===-- RegisterContextUnwind.cpp -----------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "lldb/Target/RegisterContextUnwind.h"
 #include "lldb/Core/Address.h"
 #include "lldb/Core/AddressRange.h"
 #include "lldb/Core/Module.h"
@@ -34,8 +35,6 @@
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/lldb-private.h"
 
-#include "RegisterContextLLDB.h"
-
 #include <memory>
 
 using namespace lldb;
@@ -49,11 +48,11 @@ static ConstString GetSymbolOrFunctionName(const SymbolContext &sym_ctx) {
   return ConstString();
 }
 
-RegisterContextLLDB::RegisterContextLLDB(Thread &thread,
-                                         const SharedPtr &next_frame,
-                                         SymbolContext &sym_ctx,
-                                         uint32_t frame_number,
-                                         UnwindLLDB &unwind_lldb)
+RegisterContextUnwind::RegisterContextUnwind(Thread &thread,
+                                             const SharedPtr &next_frame,
+                                             SymbolContext &sym_ctx,
+                                             uint32_t frame_number,
+                                             UnwindLLDB &unwind_lldb)
     : RegisterContext(thread, frame_number), m_thread(thread),
       m_fast_unwind_plan_sp(), m_full_unwind_plan_sp(),
       m_fallback_unwind_plan_sp(), m_all_registers_available(false),
@@ -79,7 +78,7 @@ RegisterContextLLDB::RegisterContextLLDB(Thread &thread,
   }
 }
 
-bool RegisterContextLLDB::IsUnwindPlanValidForCurrentPC(
+bool RegisterContextUnwind::IsUnwindPlanValidForCurrentPC(
     lldb::UnwindPlanSP unwind_plan_sp, int &valid_pc_offset) {
   if (!unwind_plan_sp)
     return false;
@@ -107,10 +106,10 @@ bool RegisterContextLLDB::IsUnwindPlanValidForCurrentPC(
   return false;
 }
 
-// Initialize a RegisterContextLLDB which is the first frame of a stack -- the
+// Initialize a RegisterContextUnwind which is the first frame of a stack -- the
 // zeroth frame or currently executing frame.
 
-void RegisterContextLLDB::InitializeZerothFrame() {
+void RegisterContextUnwind::InitializeZerothFrame() {
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_UNWIND));
   ExecutionContext exe_ctx(m_thread.shared_from_this());
   RegisterContextSP reg_ctx_sp = m_thread.GetRegisterContext();
@@ -260,10 +259,10 @@ void RegisterContextLLDB::InitializeZerothFrame() {
                m_full_unwind_plan_sp->GetSourceName().GetCString());
 }
 
-// Initialize a RegisterContextLLDB for the non-zeroth frame -- rely on the
-// RegisterContextLLDB "below" it to provide things like its current pc value.
+// Initialize a RegisterContextUnwind for the non-zeroth frame -- rely on the
+// RegisterContextUnwind "below" it to provide things like its current pc value.
 
-void RegisterContextLLDB::InitializeNonZerothFrame() {
+void RegisterContextUnwind::InitializeNonZerothFrame() {
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_UNWIND));
   if (IsFrameZero()) {
     m_frame_type = eNotAValidFrame;
@@ -595,7 +594,7 @@ void RegisterContextLLDB::InitializeNonZerothFrame() {
                (uint64_t)m_afa);
 }
 
-bool RegisterContextLLDB::CheckIfLoopingStack() {
+bool RegisterContextUnwind::CheckIfLoopingStack() {
   // If we have a bad stack setup, we can get the same CFA value multiple times
   // -- or even more devious, we can actually oscillate between two CFA values.
   // Detect that here and break out to avoid a possible infinite loop in lldb
@@ -609,9 +608,10 @@ bool RegisterContextLLDB::CheckIfLoopingStack() {
   // can have arbitrary number of frames with the same CFA, but more then 2 is
   // very very unlikely)
 
-  RegisterContextLLDB::SharedPtr next_frame = GetNextFrame();
+  RegisterContextUnwind::SharedPtr next_frame = GetNextFrame();
   if (next_frame) {
-    RegisterContextLLDB::SharedPtr next_next_frame = next_frame->GetNextFrame();
+    RegisterContextUnwind::SharedPtr next_next_frame =
+        next_frame->GetNextFrame();
     addr_t next_next_frame_cfa = LLDB_INVALID_ADDRESS;
     if (next_next_frame && next_next_frame->GetCFA(next_next_frame_cfa)) {
       if (next_next_frame_cfa == m_cfa) {
@@ -623,7 +623,7 @@ bool RegisterContextLLDB::CheckIfLoopingStack() {
   return false;
 }
 
-bool RegisterContextLLDB::IsFrameZero() const { return m_frame_number == 0; }
+bool RegisterContextUnwind::IsFrameZero() const { return m_frame_number == 0; }
 
 // Find a fast unwind plan for this frame, if possible.
 //
@@ -636,7 +636,7 @@ bool RegisterContextLLDB::IsFrameZero() const { return m_frame_number == 0; }
 //   4. m_current_offset_backed_up_one should have the current byte offset into
 //   the function, maybe backed up by 1, -1 if unknown
 
-UnwindPlanSP RegisterContextLLDB::GetFastUnwindPlanForFrame() {
+UnwindPlanSP RegisterContextUnwind::GetFastUnwindPlanForFrame() {
   UnwindPlanSP unwind_plan_sp;
   ModuleSP pc_module_sp(m_current_pc.GetModule());
 
@@ -687,7 +687,7 @@ UnwindPlanSP RegisterContextLLDB::GetFastUnwindPlanForFrame() {
 //   4. m_current_offset_backed_up_one should have the current byte offset into
 //   the function, maybe backed up by 1, -1 if unknown
 
-UnwindPlanSP RegisterContextLLDB::GetFullUnwindPlanForFrame() {
+UnwindPlanSP RegisterContextUnwind::GetFullUnwindPlanForFrame() {
   UnwindPlanSP unwind_plan_sp;
   UnwindPlanSP arch_default_unwind_plan_sp;
   ExecutionContext exe_ctx(m_thread.shared_from_this());
@@ -967,33 +967,33 @@ UnwindPlanSP RegisterContextLLDB::GetFullUnwindPlanForFrame() {
   return arch_default_unwind_plan_sp;
 }
 
-void RegisterContextLLDB::InvalidateAllRegisters() {
+void RegisterContextUnwind::InvalidateAllRegisters() {
   m_frame_type = eNotAValidFrame;
 }
 
-size_t RegisterContextLLDB::GetRegisterCount() {
+size_t RegisterContextUnwind::GetRegisterCount() {
   return m_thread.GetRegisterContext()->GetRegisterCount();
 }
 
-const RegisterInfo *RegisterContextLLDB::GetRegisterInfoAtIndex(size_t reg) {
+const RegisterInfo *RegisterContextUnwind::GetRegisterInfoAtIndex(size_t reg) {
   return m_thread.GetRegisterContext()->GetRegisterInfoAtIndex(reg);
 }
 
-size_t RegisterContextLLDB::GetRegisterSetCount() {
+size_t RegisterContextUnwind::GetRegisterSetCount() {
   return m_thread.GetRegisterContext()->GetRegisterSetCount();
 }
 
-const RegisterSet *RegisterContextLLDB::GetRegisterSet(size_t reg_set) {
+const RegisterSet *RegisterContextUnwind::GetRegisterSet(size_t reg_set) {
   return m_thread.GetRegisterContext()->GetRegisterSet(reg_set);
 }
 
-uint32_t RegisterContextLLDB::ConvertRegisterKindToRegisterNumber(
+uint32_t RegisterContextUnwind::ConvertRegisterKindToRegisterNumber(
     lldb::RegisterKind kind, uint32_t num) {
   return m_thread.GetRegisterContext()->ConvertRegisterKindToRegisterNumber(
       kind, num);
 }
 
-bool RegisterContextLLDB::ReadRegisterValueFromRegisterLocation(
+bool RegisterContextUnwind::ReadRegisterValueFromRegisterLocation(
     lldb_private::UnwindLLDB::RegisterLocation regloc,
     const RegisterInfo *reg_info, RegisterValue &value) {
   if (!IsValid())
@@ -1046,7 +1046,7 @@ bool RegisterContextLLDB::ReadRegisterValueFromRegisterLocation(
   return success;
 }
 
-bool RegisterContextLLDB::WriteRegisterValueToRegisterLocation(
+bool RegisterContextUnwind::WriteRegisterValueToRegisterLocation(
     lldb_private::UnwindLLDB::RegisterLocation regloc,
     const RegisterInfo *reg_info, const RegisterValue &value) {
   if (!IsValid())
@@ -1088,7 +1088,7 @@ bool RegisterContextLLDB::WriteRegisterValueToRegisterLocation(
   return success;
 }
 
-bool RegisterContextLLDB::IsValid() const {
+bool RegisterContextUnwind::IsValid() const {
   return m_frame_type != eNotAValidFrame;
 }
 
@@ -1098,7 +1098,7 @@ bool RegisterContextLLDB::IsValid() const {
 // below this frame failed" versus "we successfully completed the stack walk"
 // so this method helps to disambiguate that.
 
-bool RegisterContextLLDB::IsTrapHandlerFrame() const {
+bool RegisterContextUnwind::IsTrapHandlerFrame() const {
   return m_frame_type == eTrapHandlerFrame;
 }
 
@@ -1110,11 +1110,11 @@ bool RegisterContextLLDB::IsTrapHandlerFrame() const {
 // we're displaying bad data and we may have skipped one frame of their real
 // program in the process of getting back on track.
 
-bool RegisterContextLLDB::IsSkipFrame() const {
+bool RegisterContextUnwind::IsSkipFrame() const {
   return m_frame_type == eSkipFrame;
 }
 
-bool RegisterContextLLDB::IsTrapHandlerSymbol(
+bool RegisterContextUnwind::IsTrapHandlerSymbol(
     lldb_private::Process *process,
     const lldb_private::SymbolContext &m_sym_ctx) const {
   PlatformSP platform_sp(process->GetTarget().GetPlatform());
@@ -1144,7 +1144,7 @@ bool RegisterContextLLDB::IsTrapHandlerSymbol(
 // frame)'s register value?
 
 enum UnwindLLDB::RegisterSearchResult
-RegisterContextLLDB::SavedLocationForRegister(
+RegisterContextUnwind::SavedLocationForRegister(
     uint32_t lldb_regnum, lldb_private::UnwindLLDB::RegisterLocation &regloc) {
   RegisterNumber regnum(m_thread, eRegisterKindLLDB, lldb_regnum);
 
@@ -1579,7 +1579,7 @@ RegisterContextLLDB::SavedLocationForRegister(
 // Often in these cases, if we just do a dumb stack walk we'll get past this
 // tricky frame and our usual techniques can continue to be used.
 
-bool RegisterContextLLDB::TryFallbackUnwindPlan() {
+bool RegisterContextUnwind::TryFallbackUnwindPlan() {
   if (m_fallback_unwind_plan_sp.get() == nullptr)
     return false;
 
@@ -1709,7 +1709,7 @@ bool RegisterContextLLDB::TryFallbackUnwindPlan() {
   return true;
 }
 
-bool RegisterContextLLDB::ForceSwitchToFallbackUnwindPlan() {
+bool RegisterContextUnwind::ForceSwitchToFallbackUnwindPlan() {
   if (m_fallback_unwind_plan_sp.get() == nullptr)
     return false;
 
@@ -1756,7 +1756,7 @@ bool RegisterContextLLDB::ForceSwitchToFallbackUnwindPlan() {
   return false;
 }
 
-void RegisterContextLLDB::PropagateTrapHandlerFlagFromUnwindPlan(
+void RegisterContextUnwind::PropagateTrapHandlerFlagFromUnwindPlan(
     lldb::UnwindPlanSP unwind_plan) {
   if (unwind_plan->GetUnwindPlanForSignalTrap() != eLazyBoolYes) {
     // Unwind plan does not indicate trap handler.  Do nothing.  We may
@@ -1803,7 +1803,7 @@ void RegisterContextLLDB::PropagateTrapHandlerFlagFromUnwindPlan(
   }
 }
 
-bool RegisterContextLLDB::ReadFrameAddress(
+bool RegisterContextUnwind::ReadFrameAddress(
     lldb::RegisterKind row_register_kind, UnwindPlan::Row::FAValue &fa,
     addr_t &address) {
   RegisterValue reg_value;
@@ -1922,7 +1922,7 @@ bool RegisterContextLLDB::ReadFrameAddress(
   return false;
 }
 
-lldb::addr_t RegisterContextLLDB::GetReturnAddressHint(int32_t plan_offset) {
+lldb::addr_t RegisterContextUnwind::GetReturnAddressHint(int32_t plan_offset) {
   addr_t hint;
   if (!ReadGPRValue(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_SP, hint))
     return LLDB_INVALID_ADDRESS;
@@ -1963,8 +1963,8 @@ lldb::addr_t RegisterContextLLDB::GetReturnAddressHint(int32_t plan_offset) {
 //  value for frame 1, we need to ask
 //  where frame 0 (the "next" frame) saved that and retrieve the value.
 
-bool RegisterContextLLDB::ReadGPRValue(lldb::RegisterKind register_kind,
-                                       uint32_t regnum, addr_t &value) {
+bool RegisterContextUnwind::ReadGPRValue(lldb::RegisterKind register_kind,
+                                         uint32_t regnum, addr_t &value) {
   if (!IsValid())
     return false;
 
@@ -2012,16 +2012,16 @@ bool RegisterContextLLDB::ReadGPRValue(lldb::RegisterKind register_kind,
   return false;
 }
 
-bool RegisterContextLLDB::ReadGPRValue(const RegisterNumber &regnum,
-                                       addr_t &value) {
+bool RegisterContextUnwind::ReadGPRValue(const RegisterNumber &regnum,
+                                         addr_t &value) {
   return ReadGPRValue(regnum.GetRegisterKind(), regnum.GetRegisterNumber(),
                       value);
 }
 
 // Find the value of a register in THIS frame
 
-bool RegisterContextLLDB::ReadRegister(const RegisterInfo *reg_info,
-                                       RegisterValue &value) {
+bool RegisterContextUnwind::ReadRegister(const RegisterInfo *reg_info,
+                                         RegisterValue &value) {
   if (!IsValid())
     return false;
 
@@ -2051,8 +2051,8 @@ bool RegisterContextLLDB::ReadRegister(const RegisterInfo *reg_info,
   return ReadRegisterValueFromRegisterLocation(regloc, reg_info, value);
 }
 
-bool RegisterContextLLDB::WriteRegister(const RegisterInfo *reg_info,
-                                        const RegisterValue &value) {
+bool RegisterContextUnwind::WriteRegister(const RegisterInfo *reg_info,
+                                          const RegisterValue &value) {
   if (!IsValid())
     return false;
 
@@ -2077,19 +2077,19 @@ bool RegisterContextLLDB::WriteRegister(const RegisterInfo *reg_info,
 }
 
 // Don't need to implement this one
-bool RegisterContextLLDB::ReadAllRegisterValues(lldb::DataBufferSP &data_sp) {
+bool RegisterContextUnwind::ReadAllRegisterValues(lldb::DataBufferSP &data_sp) {
   return false;
 }
 
 // Don't need to implement this one
-bool RegisterContextLLDB::WriteAllRegisterValues(
+bool RegisterContextUnwind::WriteAllRegisterValues(
     const lldb::DataBufferSP &data_sp) {
   return false;
 }
 
 // Retrieve the pc value for THIS from
 
-bool RegisterContextLLDB::GetCFA(addr_t &cfa) {
+bool RegisterContextUnwind::GetCFA(addr_t &cfa) {
   if (!IsValid()) {
     return false;
   }
@@ -2100,21 +2100,21 @@ bool RegisterContextLLDB::GetCFA(addr_t &cfa) {
   return true;
 }
 
-RegisterContextLLDB::SharedPtr RegisterContextLLDB::GetNextFrame() const {
-  RegisterContextLLDB::SharedPtr regctx;
+RegisterContextUnwind::SharedPtr RegisterContextUnwind::GetNextFrame() const {
+  RegisterContextUnwind::SharedPtr regctx;
   if (m_frame_number == 0)
     return regctx;
   return m_parent_unwind.GetRegisterContextForFrameNum(m_frame_number - 1);
 }
 
-RegisterContextLLDB::SharedPtr RegisterContextLLDB::GetPrevFrame() const {
-  RegisterContextLLDB::SharedPtr regctx;
+RegisterContextUnwind::SharedPtr RegisterContextUnwind::GetPrevFrame() const {
+  RegisterContextUnwind::SharedPtr regctx;
   return m_parent_unwind.GetRegisterContextForFrameNum(m_frame_number + 1);
 }
 
 // Retrieve the address of the start of the function of THIS frame
 
-bool RegisterContextLLDB::GetStartPC(addr_t &start_pc) {
+bool RegisterContextUnwind::GetStartPC(addr_t &start_pc) {
   if (!IsValid())
     return false;
 
@@ -2138,7 +2138,7 @@ bool RegisterContextLLDB::GetStartPC(addr_t &start_pc) {
 
 // Retrieve the current pc value for THIS frame, as saved by the NEXT frame.
 
-bool RegisterContextLLDB::ReadPC(addr_t &pc) {
+bool RegisterContextUnwind::ReadPC(addr_t &pc) {
   if (!IsValid())
     return false;
 
@@ -2170,7 +2170,7 @@ bool RegisterContextLLDB::ReadPC(addr_t &pc) {
   }
 }
 
-void RegisterContextLLDB::UnwindLogMsg(const char *fmt, ...) {
+void RegisterContextUnwind::UnwindLogMsg(const char *fmt, ...) {
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_UNWIND));
   if (log) {
     va_list args;
@@ -2192,7 +2192,7 @@ void RegisterContextLLDB::UnwindLogMsg(const char *fmt, ...) {
   }
 }
 
-void RegisterContextLLDB::UnwindLogMsgVerbose(const char *fmt, ...) {
+void RegisterContextUnwind::UnwindLogMsgVerbose(const char *fmt, ...) {
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_UNWIND));
   if (log && log->GetVerbose()) {
     va_list args;

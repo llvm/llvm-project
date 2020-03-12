@@ -187,20 +187,10 @@ namespace llvm {
   Value *emitFPutC(Value *Char, Value *File, IRBuilderBase &B,
                    const TargetLibraryInfo *TLI);
 
-  /// Emit a call to the fputc_unlocked function. This assumes that Char is an
-  /// i32, and File is a pointer to FILE.
-  Value *emitFPutCUnlocked(Value *Char, Value *File, IRBuilderBase &B,
-                           const TargetLibraryInfo *TLI);
-
   /// Emit a call to the fputs function. Str is required to be a pointer and
   /// File is a pointer to FILE.
   Value *emitFPutS(Value *Str, Value *File, IRBuilderBase &B,
                    const TargetLibraryInfo *TLI);
-
-  /// Emit a call to the fputs_unlocked function. Str is required to be a
-  /// pointer and File is a pointer to FILE.
-  Value *emitFPutSUnlocked(Value *Str, Value *File, IRBuilderBase &B,
-                           const TargetLibraryInfo *TLI);
 
   /// Emit a call to the fwrite function. This assumes that Ptr is a pointer,
   /// Size is an 'intptr_t', and File is a pointer to FILE.
@@ -214,27 +204,6 @@ namespace llvm {
   /// Emit a call to the calloc function.
   Value *emitCalloc(Value *Num, Value *Size, const AttributeList &Attrs,
                     IRBuilderBase &B, const TargetLibraryInfo &TLI);
-
-  /// Emit a call to the fwrite_unlocked function. This assumes that Ptr is a
-  /// pointer, Size is an 'intptr_t', N is nmemb and File is a pointer to FILE.
-  Value *emitFWriteUnlocked(Value *Ptr, Value *Size, Value *N, Value *File,
-                            IRBuilderBase &B, const DataLayout &DL,
-                            const TargetLibraryInfo *TLI);
-
-  /// Emit a call to the fgetc_unlocked function. File is a pointer to FILE.
-  Value *emitFGetCUnlocked(Value *File, IRBuilderBase &B,
-                           const TargetLibraryInfo *TLI);
-
-  /// Emit a call to the fgets_unlocked function. Str is required to be a
-  /// pointer, Size is an i32 and File is a pointer to FILE.
-  Value *emitFGetSUnlocked(Value *Str, Value *Size, Value *File,
-                           IRBuilderBase &B, const TargetLibraryInfo *TLI);
-
-  /// Emit a call to the fread_unlocked function. This assumes that Ptr is a
-  /// pointer, Size is an 'intptr_t', N is nmemb and File is a pointer to FILE.
-  Value *emitFReadUnlocked(Value *Ptr, Value *Size, Value *N, Value *File,
-                           IRBuilderBase &B, const DataLayout &DL,
-                           const TargetLibraryInfo *TLI);
 }
 
 #endif

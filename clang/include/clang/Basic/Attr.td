@@ -622,11 +622,11 @@ def Alias : Attr {
   let Documentation = [Undocumented];
 }
 
-def ArmMveAlias : InheritableAttr, TargetSpecificAttr<TargetARM> {
-  let Spellings = [Clang<"__clang_arm_mve_alias">];
+def ArmBuiltinAlias : InheritableAttr, TargetSpecificAttr<TargetARM> {
+  let Spellings = [Clang<"__clang_arm_builtin_alias">];
   let Args = [IdentifierArgument<"BuiltinName">];
   let Subjects = SubjectList<[Function], ErrorDiag>;
-  let Documentation = [ArmMveAliasDocs];
+  let Documentation = [ArmBuiltinAliasDocs];
 }
 
 def Aligned : InheritableAttr {

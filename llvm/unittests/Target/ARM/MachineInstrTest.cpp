@@ -145,6 +145,10 @@ TEST(MachineInstrValidTailPredication, IsCorrect) {
     case MVE_VFMA_qr_Sf32:
     case MVE_VFMA_qr_f16:
     case MVE_VFMA_qr_f32:
+    case MVE_VFMAf16:
+    case MVE_VFMAf32:
+    case MVE_VFMSf16:
+    case MVE_VFMSf32:
     case MVE_VMAXAs16:
     case MVE_VMAXAs32:
     case MVE_VMAXAs8:
