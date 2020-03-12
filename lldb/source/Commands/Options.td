@@ -39,6 +39,11 @@ let Command = "settings read" in {
     Desc<"The file from which to read the settings.">;
 }
 
+let Command = "settings clear" in {
+  def setclear_all : Option<"all", "a">,
+    Desc<"Clear all settings.">;
+}
+
 let Command = "breakpoint list" in {
   // FIXME: We need to add an "internal" command, and then add this sort of
   // thing to it. But I need to see it for now, and don't want to wait.
