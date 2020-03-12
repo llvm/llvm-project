@@ -5,8 +5,8 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define void @f1(i32 %a) {
 ; CHECK-LABEL: @f1(
-; CHECK-NEXT:    [[FR1:%.*]] = freeze i32 [[A:%.*]]
-; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[FR1]], 0
+; CHECK-NEXT:    [[FR:%.*]] = freeze i32 [[A:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[FR]], 0
 ; CHECK-NEXT:    br i1 [[C]], label [[A:%.*]], label [[B:%.*]]
 ; CHECK:       A:
 ; CHECK-NEXT:    call void @g1()
@@ -28,8 +28,8 @@ B:
 
 define void @f2(i32 %a) {
 ; CHECK-LABEL: @f2(
-; CHECK-NEXT:    [[FR1:%.*]] = freeze i32 [[A:%.*]]
-; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 0, [[FR1]]
+; CHECK-NEXT:    [[FR:%.*]] = freeze i32 [[A:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 0, [[FR]]
 ; CHECK-NEXT:    br i1 [[C]], label [[A:%.*]], label [[B:%.*]]
 ; CHECK:       A:
 ; CHECK-NEXT:    call void @g1()
