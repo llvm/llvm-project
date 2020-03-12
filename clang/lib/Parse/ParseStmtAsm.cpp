@@ -349,31 +349,13 @@ static bool buildMSAsmString(Preprocessor &PP, SourceLocation AsmLoc,
   return false;
 }
 
-/// isTypeQualifier - Return true if the current token could be the
-/// start of a type-qualifier-list.
-static bool isTypeQualifier(const Token &Tok) {
-  switch (Tok.getKind()) {
-  default: return false;
-  // type-qualifier
-  case tok::kw_const:
-  case tok::kw_volatile:
-  case tok::kw_restrict:
-  case tok::kw___private:
-  case tok::kw___local:
-  case tok::kw___global:
-  case tok::kw___constant:
-  case tok::kw___generic:
-  case tok::kw___read_only:
-  case tok::kw___read_write:
-  case tok::kw___write_only:
-    return true;
-  }
+// Determine if this is a GCC-style asm statement.
+bool Parser::isGCCAsmStatement(const Token &TokAfterAsm) const {
+  return TokAfterAsm.is(tok::l_paren) || isGNUAsmQualifier(TokAfterAsm);
 }
 
-// Determine if this is a GCC-style asm statement.
-static bool isGCCAsmStatement(const Token &TokAfterAsm) {
-  return TokAfterAsm.is(tok::l_paren) || TokAfterAsm.is(tok::kw_goto) ||
-         isTypeQualifier(TokAfterAsm);
+bool Parser::isGNUAsmQualifier(const Token &TokAfterAsm) const {
+  return getGNUAsmQualifier(TokAfterAsm) != GNUAsmQualifiers::AQ_unspecified;
 }
 
 /// ParseMicrosoftAsmStatement. When -fms-extensions/-fasm-blocks is enabled,
@@ -684,13 +666,41 @@ StmtResult Parser::ParseMicrosoftAsmStatement(SourceLocation AsmLoc) {
                                 ClobberRefs, Exprs, EndLoc);
 }
 
+/// parseGNUAsmQualifierListOpt - Parse a GNU extended asm qualifier list.
+///       asm-qualifier:
+///         volatile
+///         inline
+///         goto
+///
+///       asm-qualifier-list:
+///         asm-qualifier
+///         asm-qualifier-list asm-qualifier
+bool Parser::parseGNUAsmQualifierListOpt(GNUAsmQualifiers &AQ) {
+  while (1) {
+    const GNUAsmQualifiers::AQ A = getGNUAsmQualifier(Tok);
+    if (A == GNUAsmQualifiers::AQ_unspecified) {
+      if (Tok.isNot(tok::l_paren)) {
+        Diag(Tok.getLocation(), diag::err_asm_qualifier_ignored);
+        SkipUntil(tok::r_paren, StopAtSemi);
+        return true;
+      }
+      return false;
+    }
+    if (AQ.setAsmQualifier(A))
+      Diag(Tok.getLocation(), diag::err_asm_duplicate_qual)
+          << GNUAsmQualifiers::getQualifierName(A);
+    ConsumeToken();
+  }
+  return false;
+}
+
 /// ParseAsmStatement - Parse a GNU extended asm statement.
 ///       asm-statement:
 ///         gnu-asm-statement
 ///         ms-asm-statement
 ///
 /// [GNU] gnu-asm-statement:
-///         'asm' type-qualifier[opt] '(' asm-argument ')' ';'
+///         'asm' asm-qualifier-list[opt] '(' asm-argument ')' ';'
 ///
 /// [GNU] asm-argument:
 ///         asm-string-literal
@@ -712,34 +722,11 @@ StmtResult Parser::ParseAsmStatement(bool &msAsm) {
     return ParseMicrosoftAsmStatement(AsmLoc);
   }
 
-  DeclSpec DS(AttrFactory);
   SourceLocation Loc = Tok.getLocation();
-  ParseTypeQualifierListOpt(DS, AR_VendorAttributesParsed);
-
-  // GNU asms accept, but warn, about type-qualifiers other than volatile.
-  if (DS.getTypeQualifiers() & DeclSpec::TQ_const)
-    Diag(Loc, diag::warn_asm_qualifier_ignored) << "const";
-  if (DS.getTypeQualifiers() & DeclSpec::TQ_restrict)
-    Diag(Loc, diag::warn_asm_qualifier_ignored) << "restrict";
-  // FIXME: Once GCC supports _Atomic, check whether it permits it here.
-  if (DS.getTypeQualifiers() & DeclSpec::TQ_atomic)
-    Diag(Loc, diag::warn_asm_qualifier_ignored) << "_Atomic";
-
-  // Remember if this was a volatile asm.
-  bool isVolatile = DS.getTypeQualifiers() & DeclSpec::TQ_volatile;
-  // Remember if this was a goto asm.
-  bool isGotoAsm = false;
-
-  if (Tok.is(tok::kw_goto)) {
-    isGotoAsm = true;
-    ConsumeToken();
-  }
-
-  if (Tok.isNot(tok::l_paren)) {
-    Diag(Tok, diag::err_expected_lparen_after) << "asm";
-    SkipUntil(tok::r_paren, StopAtSemi);
+  GNUAsmQualifiers GAQ;
+  if (parseGNUAsmQualifierListOpt(GAQ))
     return StmtError();
-  }
+
   BalancedDelimiterTracker T(*this, tok::l_paren);
   T.consumeOpen();
 
@@ -767,11 +754,10 @@ StmtResult Parser::ParseAsmStatement(bool &msAsm) {
   if (Tok.is(tok::r_paren)) {
     // We have a simple asm expression like 'asm("foo")'.
     T.consumeClose();
-    return Actions.ActOnGCCAsmStmt(AsmLoc, /*isSimple*/ true, isVolatile,
-                                   /*NumOutputs*/ 0, /*NumInputs*/ 0, nullptr,
-                                   Constraints, Exprs, AsmString.get(),
-                                   Clobbers, /*NumLabels*/ 0,
-                                   T.getCloseLocation());
+    return Actions.ActOnGCCAsmStmt(
+        AsmLoc, /*isSimple*/ true, GAQ.isVolatile(),
+        /*NumOutputs*/ 0, /*NumInputs*/ 0, nullptr, Constraints, Exprs,
+        AsmString.get(), Clobbers, /*NumLabels*/ 0, T.getCloseLocation());
   }
 
   // Parse Outputs, if present.
@@ -829,7 +815,7 @@ StmtResult Parser::ParseAsmStatement(bool &msAsm) {
       }
     }
   }
-  if (!isGotoAsm && (Tok.isNot(tok::r_paren) || AteExtraColon)) {
+  if (!GAQ.isGoto() && (Tok.isNot(tok::r_paren) || AteExtraColon)) {
     Diag(Tok, diag::err_expected) << tok::r_paren;
     SkipUntil(tok::r_paren, StopAtSemi);
     return StmtError();
@@ -862,16 +848,16 @@ StmtResult Parser::ParseAsmStatement(bool &msAsm) {
       if (!TryConsumeToken(tok::comma))
         break;
     }
-  } else if (isGotoAsm) {
+  } else if (GAQ.isGoto()) {
     Diag(Tok, diag::err_expected) << tok::colon;
     SkipUntil(tok::r_paren, StopAtSemi);
     return StmtError();
   }
   T.consumeClose();
-  return Actions.ActOnGCCAsmStmt(
-      AsmLoc, false, isVolatile, NumOutputs, NumInputs, Names.data(),
-      Constraints, Exprs, AsmString.get(), Clobbers, NumLabels,
-      T.getCloseLocation());
+  return Actions.ActOnGCCAsmStmt(AsmLoc, false, GAQ.isVolatile(), NumOutputs,
+                                 NumInputs, Names.data(), Constraints, Exprs,
+                                 AsmString.get(), Clobbers, NumLabels,
+                                 T.getCloseLocation());
 }
 
 /// ParseAsmOperands - Parse the asm-operands production as used by
@@ -941,4 +927,29 @@ bool Parser::ParseAsmOperandsOpt(SmallVectorImpl<IdentifierInfo *> &Names,
     if (!TryConsumeToken(tok::comma))
       return false;
   }
+}
+
+const char *Parser::GNUAsmQualifiers::getQualifierName(AQ Qualifier) {
+  switch (Qualifier) {
+    case AQ_volatile: return "volatile";
+    case AQ_inline: return "inline";
+    case AQ_goto: return "goto";
+    case AQ_unspecified: return "unspecified";
+  }
+  llvm_unreachable("Unkown GNUAsmQualifier");
+}
+
+Parser::GNUAsmQualifiers::AQ
+Parser::getGNUAsmQualifier(const Token &Tok) const {
+  switch (Tok.getKind()) {
+    case tok::kw_volatile: return GNUAsmQualifiers::AQ_volatile;
+    case tok::kw_inline: return GNUAsmQualifiers::AQ_inline;
+    case tok::kw_goto: return GNUAsmQualifiers::AQ_goto;
+    default: return GNUAsmQualifiers::AQ_unspecified;
+  }
+}
+bool Parser::GNUAsmQualifiers::setAsmQualifier(AQ Qualifier) {
+  bool IsDuplicate = Qualifiers & Qualifier;
+  Qualifiers |= Qualifier;
+  return IsDuplicate;
 }

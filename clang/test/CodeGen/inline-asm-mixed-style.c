@@ -14,11 +14,6 @@ void f() {
   // CHECK: movl    %ebx, %eax
   // CHECK: movl    %ecx, %edx
 
-  __asm mov eax, ebx
-  __asm const ("movl %ecx, %edx"); // expected-warning {{ignored const qualifier on asm}} 
-  // CHECK: movl    %ebx, %eax
-  // CHECK: movl    %ecx, %edx
-
   __asm volatile goto ("movl %ecx, %edx");
   // CHECK: movl    %ecx, %edx
 
