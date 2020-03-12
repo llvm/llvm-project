@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 def SVE8BitLslImm : ComplexPattern<i32, 2, "SelectSVE8BitLslImm", [imm]>;
+def SVELShiftImm64 : ComplexPattern<i32, 1, "SelectSVEShiftImm64<0, 64>", []>;
 
 // Non-faulting loads - node definitions
 //
@@ -139,7 +140,6 @@ def index_vector : SDNode<"AArch64ISD::INDEX_VECTOR", SDT_IndexVector, []>;
 def reinterpret_cast : SDNode<"AArch64ISD::REINTERPRET_CAST", SDTUnaryOp>;
 
 let Predicates = [HasSVE] in {
-
   defm RDFFR_PPz  : sve_int_rdffr_pred<0b0, "rdffr", int_aarch64_sve_rdffr_z>;
   def  RDFFRS_PPz : sve_int_rdffr_pred<0b1, "rdffrs">;
   defm RDFFR_P    : sve_int_rdffr_unpred<"rdffr", int_aarch64_sve_rdffr>;
@@ -1108,9 +1108,23 @@ multiclass sve_prefetch<SDPatternOperator prefetch, ValueType PredTy, Instructio
   defm INDEX_II : sve_int_index_ii<"index", index_vector>;
 
   // Unpredicated shifts
-  defm ASR_ZZI : sve_int_bin_cons_shift_imm_right<0b00, "asr">;
-  defm LSR_ZZI : sve_int_bin_cons_shift_imm_right<0b01, "lsr">;
-  defm LSL_ZZI : sve_int_bin_cons_shift_imm_left< 0b11, "lsl">;
+  defm ASR_ZZI : sve_int_bin_cons_shift_imm_right<0b00, "asr", sra>;
+  defm LSR_ZZI : sve_int_bin_cons_shift_imm_right<0b01, "lsr", srl>;
+  defm LSL_ZZI : sve_int_bin_cons_shift_imm_left< 0b11, "lsl", shl>;
+
+  // Patterns for unpredicated left shift by immediate
+  def : Pat<(nxv16i8 (shl (nxv16i8 ZPR:$Zs1),
+                          (nxv16i8 (AArch64dup (vecshiftL8:$imm))))),
+            (LSL_ZZI_B ZPR:$Zs1, vecshiftL8:$imm)>;
+  def : Pat<(nxv8i16 (shl (nxv8i16 ZPR:$Zs1),
+                          (nxv8i16 (AArch64dup (vecshiftL16:$imm))))),
+            (LSL_ZZI_H ZPR:$Zs1, vecshiftL16:$imm)>;
+  def : Pat<(nxv4i32 (shl (nxv4i32 ZPR:$Zs1),
+                          (nxv4i32 (AArch64dup (vecshiftL32:$imm))))),
+            (LSL_ZZI_S ZPR:$Zs1, vecshiftL32:$imm)>;
+  def : Pat<(nxv2i64 (shl (nxv2i64 ZPR:$Zs1),
+                          (nxv2i64 (AArch64dup (i64 (SVELShiftImm64 i32:$imm)))))),
+            (LSL_ZZI_D ZPR:$Zs1, vecshiftL64:$imm)>;
 
   defm ASR_WIDE_ZZZ : sve_int_bin_cons_shift_wide<0b00, "asr">;
   defm LSR_WIDE_ZZZ : sve_int_bin_cons_shift_wide<0b01, "lsr">;
