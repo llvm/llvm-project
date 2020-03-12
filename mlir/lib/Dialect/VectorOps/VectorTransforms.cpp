@@ -1077,6 +1077,7 @@ private:
   // Helper to construct an affine map with one index removed.
   static AffineMap adjustMap(AffineMap map, int64_t index,
                              PatternRewriter &rewriter) {
+    auto *ctx = rewriter.getContext();
     SmallVector<AffineExpr, 4> results;
     for (int64_t i = 0, e = map.getNumResults(); i < e; ++i) {
       int64_t idx = map.getResult(i).cast<AffineDimExpr>().getPosition();
@@ -1084,13 +1085,11 @@ private:
         continue;
       // Re-insert remaining indices, but renamed when occurring
       // after the removed index.
-      auto targetExpr =
-          getAffineDimExpr(idx < index ? idx : idx - 1, rewriter.getContext());
+      auto targetExpr = getAffineDimExpr(idx < index ? idx : idx - 1, ctx);
       results.push_back(targetExpr);
     }
-    // Since (...) -> () cannot be represented properly,
-    // we resort to an empty map when this situation happens.
-    return results.empty() ? AffineMap::get(rewriter.getContext())
+    // The (...) -> () affine map has its own factory method.
+    return results.empty() ? AffineMap::get(map.getNumDims() - 1, 0, ctx)
                            : AffineMap::get(map.getNumDims() - 1, 0, results);
   }
 
