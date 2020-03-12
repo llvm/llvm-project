@@ -164,7 +164,12 @@ Parse tree entities should be viewed as values, not objects; their
 addresses should not be abused for purposes of identification.  They are
 assembled with C++ move semantics during parse tree construction.
 Their default and copy constructors are deliberately deleted in their
-declarations.
+declarations. 
+
+The std::list<> data type is used in the parse tree to reliably store pointers
+to other relevant entries in the tree. Since the tree lists are moved and
+spliced at certain points std::list<> provides the necessary guarantee of the
+stability of pointers into these lists.
 
 There is a general purpose library by means of which parse trees may
 be traversed.
