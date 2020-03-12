@@ -105,19 +105,18 @@ class TestAppleSimulatorOSType(gdbremote_testcase.GdbRemoteTestCaseBase):
     @skipIfRemote
     def test_simulator_ostype_ios(self):
         self.check_simulator_ostype(sdk='iphonesimulator',
-                                    platform='iossimulator')
+                                    platform='ios')
 
     @apple_simulator_test('appletv')
     @debugserver_test
     @skipIfRemote
     def test_simulator_ostype_tvos(self):
         self.check_simulator_ostype(sdk='appletvsimulator',
-                                    platform='tvossimulator')
+                                    platform='tvos')
 
     @apple_simulator_test('watch')
     @debugserver_test
     @skipIfRemote
     def test_simulator_ostype_watchos(self):
         self.check_simulator_ostype(sdk='watchsimulator',
-                                    platform='watchossimulator',
-                                    arch='i386')
+                                    platform='watchos', arch='i386')
