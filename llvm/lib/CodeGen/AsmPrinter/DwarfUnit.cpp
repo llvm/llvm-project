@@ -1142,6 +1142,8 @@ DIE *DwarfUnit::getOrCreateModule(const DIModule *M) {
               M->getConfigurationMacros());
   if (!M->getIncludePath().empty())
     addString(MDie, dwarf::DW_AT_LLVM_include_path, M->getIncludePath());
+  if (!M->getAPINotesFile().empty())
+    addString(MDie, dwarf::DW_AT_LLVM_apinotes, M->getAPINotesFile());
 
   return &MDie;
 }
