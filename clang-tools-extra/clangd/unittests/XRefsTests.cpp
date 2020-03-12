@@ -1087,65 +1087,77 @@ TEST(LocateSymbol, TextualDependent) {
 
 TEST(LocateSymbol, Alias) {
   const char *Tests[] = {
-    R"cpp(
+      R"cpp(
       template <class T> struct function {};
       template <class T> using [[callback]] = function<T()>;
 
       c^allback<int> foo;
     )cpp",
 
-    // triggered on non-definition of a renaming alias: should not give any
-    // underlying decls.
-    R"cpp(
+      // triggered on non-definition of a renaming alias: should not give any
+      // underlying decls.
+      R"cpp(
       class Foo {};
       typedef Foo [[Bar]];
 
       B^ar b;
     )cpp",
-    R"cpp(
+      R"cpp(
       class Foo {};
       using [[Bar]] = Foo; // definition
       Ba^r b;
     )cpp",
 
-    // triggered on the underlying decl of a renaming alias.
-    R"cpp(
+      // triggered on the underlying decl of a renaming alias.
+      R"cpp(
       class [[Foo]];
       using Bar = Fo^o;
     )cpp",
 
-    // triggered on definition of a non-renaming alias: should give underlying
-    // decls.
-    R"cpp(
+      // triggered on definition of a non-renaming alias: should give underlying
+      // decls.
+      R"cpp(
       namespace ns { class [[Foo]] {}; }
       using ns::F^oo;
     )cpp",
 
-    R"cpp(
+      R"cpp(
       namespace ns { int [[x]](char); int [[x]](double); }
       using ns::^x;
     )cpp",
 
-    R"cpp(
+      R"cpp(
       namespace ns { int [[x]](char); int x(double); }
       using ns::x;
       int y = ^x('a');
     )cpp",
 
-    R"cpp(
+      R"cpp(
       namespace ns { class [[Foo]] {}; }
       using ns::Foo;
       F^oo f;
     )cpp",
 
-    // other cases that don't matter much.
-    R"cpp(
+      // other cases that don't matter much.
+      R"cpp(
       class Foo {};
       typedef Foo [[Ba^r]];
     )cpp",
-    R"cpp(
+      R"cpp(
       class Foo {};
       using [[B^ar]] = Foo;
+    )cpp",
+
+      // Member of dependent base
+      R"cpp(
+      template <typename T>
+      struct Base {
+        void [[waldo]]() {}
+      };
+      template <typename T>
+      struct Derived : Base<T> {
+        using Base<T>::w^aldo;
+      };
     )cpp",
   };
 

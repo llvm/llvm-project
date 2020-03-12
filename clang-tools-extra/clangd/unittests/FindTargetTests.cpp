@@ -207,6 +207,19 @@ TEST_F(TargetDeclTest, UsingDecl) {
   )cpp";
   EXPECT_DECLS("MemberExpr", {"using X::foo", Rel::Alias},
                {"int foo()", Rel::Underlying});
+
+  Code = R"cpp(
+      template <typename T>
+      struct Base {
+        void waldo() {}
+      };
+      template <typename T>
+      struct Derived : Base<T> {
+        using Base<T>::[[waldo]];
+      };
+    )cpp";
+  EXPECT_DECLS("UnresolvedUsingValueDecl", {"using Base<T>::waldo", Rel::Alias},
+               {"void waldo()", Rel::Underlying});
 }
 
 TEST_F(TargetDeclTest, ConstructorInitList) {
