@@ -840,7 +840,6 @@ SelectionDAGBuilder::LowerStatepoint(ImmutableStatepoint ISP,
   for (const GCRelocateInst *Relocate : ISP.getRelocates()) {
     SI.GCRelocates.push_back(Relocate);
 
-    SDValue BaseSD = getValue(Relocate->getBasePtr());
     SDValue DerivedSD = getValue(Relocate->getDerivedPtr());
     if (Seen.insert(DerivedSD).second) {
       SI.Bases.push_back(Relocate->getBasePtr());
