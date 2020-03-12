@@ -24,7 +24,7 @@
 ; CHECK-NEXT: !FooType = !{!28}
 ; CHECK-NEXT: !EnumTest = !{!3}
 
-; CHECK:      !0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: "llvm-c-test", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, globals: !11, imports: !19, macros: !23, splitDebugInlining: false)
+; CHECK:      !0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: "llvm-c-test", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, globals: !11, imports: !19, macros: !23, splitDebugInlining: false, sysroot: "/")
 ; CHECK-NEXT: !1 = !DIFile(filename: "debuginfo.c", directory: ".")
 ; CHECK-NEXT: !2 = !{!3}
 ; CHECK-NEXT: !3 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "EnumTest", scope: !4, file: !1, baseType: !6, size: 64, elements: !7)

@@ -1243,22 +1243,6 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     if (Tag >= 1u << 16 || Version != 0)
       return error("Invalid record");
 
-    // Deprecated internal hack to support serializing MDModule.
-    // This node has since been deleted.
-    // Upgrading this node is not officially supported.  This code
-    // may be removed in the future.
-    if (Tag == dwarf::DW_TAG_module) {
-      if (Record.size() != 6)
-        return error("Invalid record");
-
-      MetadataList.assignValue(
-          GET_OR_DISTINCT(DIModule, (Context, getMDOrNull(Record[4]),
-                                     getMDString(Record[5]), nullptr, nullptr,
-                                     nullptr)),
-          NextMetadataNo++);
-      break;
-    }
-
     auto *Header = getMDString(Record[3]);
     SmallVector<Metadata *, 8> DwarfOps;
     for (unsigned I = 4, E = Record.size(); I != E; ++I)
@@ -1437,15 +1421,14 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
   }
 
   case bitc::METADATA_MODULE: {
-    if (Record.size() != 6)
+    if (Record.size() < 5 || Record.size() > 6)
       return error("Invalid record");
 
     IsDistinct = Record[0];
     MetadataList.assignValue(
-        GET_OR_DISTINCT(DIModule,
-                        (Context, getMDOrNull(Record[1]),
-                         getMDString(Record[2]), getMDString(Record[3]),
-                         getMDString(Record[4]), getMDString(Record[5]))),
+        GET_OR_DISTINCT(
+            DIModule, (Context, getMDOrNull(Record[1]), getMDString(Record[2]),
+                       getMDString(Record[3]), getMDString(Record[4]))),
         NextMetadataNo);
     NextMetadataNo++;
     break;
@@ -1476,7 +1459,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     break;
   }
   case bitc::METADATA_COMPILE_UNIT: {
-    if (Record.size() < 14 || Record.size() > 19)
+    if (Record.size() < 14 || Record.size() > 22)
       return error("Invalid record");
 
     // Ignore Record[0], which indicates whether this compile unit is
@@ -1492,7 +1475,10 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
         Record.size() <= 16 ? true : Record[16],
         Record.size() <= 17 ? false : Record[17],
         Record.size() <= 18 ? 0 : Record[18],
-        Record.size() <= 19 ? 0 : Record[19]);
+        false, // FIXME: https://reviews.llvm.org/rGc51b45e32ef7f35c11891f60871aa9c2c04cd991
+               // Record.size() <= 19 ? 0 : Record[19],
+        Record.size() <= 20 ? nullptr : getMDString(Record[20]),
+        Record.size() <= 21 ? nullptr : getMDString(Record[21]));
 
     MetadataList.assignValue(CU, NextMetadataNo);
     NextMetadataNo++;
