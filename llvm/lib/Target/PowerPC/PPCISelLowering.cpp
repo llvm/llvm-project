@@ -6990,56 +6990,76 @@ SDValue PPCTargetLowering::LowerFormalArguments_AIX(
   MachineFunction &MF = DAG.getMachineFunction();
   CCState CCInfo(CallConv, isVarArg, MF, ArgLocs, *DAG.getContext());
 
+  const EVT PtrVT = getPointerTy(MF.getDataLayout());
   // Reserve space for the linkage area on the stack.
   const unsigned LinkageSize = Subtarget.getFrameLowering()->getLinkageSize();
-  // On AIX a minimum of 8 words is saved to the parameter save area.
-  const unsigned MinParameterSaveArea = 8 * PtrByteSize;
-  CCInfo.AllocateStack(LinkageSize + MinParameterSaveArea, PtrByteSize);
+  CCInfo.AllocateStack(LinkageSize, PtrByteSize);
   CCInfo.AnalyzeFormalArguments(Ins, CC_AIX);
 
   for (CCValAssign &VA : ArgLocs) {
-
-    if (VA.isMemLoc()) {
-      // For compatibility with the AIX XL compiler, the float args in the
-      // parameter save area are initialized even if the argument is available
-      // in register.  The caller is required to initialize both the register
-      // and memory, however, the callee can choose to expect it in either.  The
-      // memloc is dismissed here because the argument is retrieved from the
-      // register.
-      if (VA.needsCustom())
-        continue;
-      report_fatal_error(
-          "Handling of formal arguments on the stack is unimplemented!");
-    }
-
-    assert(VA.isRegLoc() && "Unexpected argument location.");
-
     EVT ValVT = VA.getValVT();
     MVT LocVT = VA.getLocVT();
-    MVT::SimpleValueType SVT = ValVT.getSimpleVT().SimpleTy;
-    unsigned VReg =
-        MF.addLiveIn(VA.getLocReg(), getRegClassForSVT(SVT, IsPPC64));
-    SDValue ArgValue = DAG.getCopyFromReg(Chain, dl, VReg, LocVT);
-    if (ValVT.isScalarInteger() &&
-        (ValVT.getSizeInBits() < LocVT.getSizeInBits())) {
-      ISD::ArgFlagsTy Flags = Ins[VA.getValNo()].Flags;
-      ArgValue =
-          truncateScalarIntegerArg(Flags, ValVT, DAG, ArgValue, LocVT, dl);
+    ISD::ArgFlagsTy Flags = Ins[VA.getValNo()].Flags;
+    assert(!Flags.isByVal() &&
+           "Passing structure by value is unimplemented for formal arguments.");
+    assert((VA.isRegLoc() || VA.isMemLoc()) &&
+           "Unexpected location for function call argument.");
+
+    // For compatibility with the AIX XL compiler, the float args in the
+    // parameter save area are initialized even if the argument is available
+    // in register.  The caller is required to initialize both the register
+    // and memory, however, the callee can choose to expect it in either.
+    // The memloc is dismissed here because the argument is retrieved from
+    // the register.
+    if (VA.isMemLoc() && VA.needsCustom())
+      continue;
+
+    if (VA.isRegLoc()) {
+      MVT::SimpleValueType SVT = ValVT.getSimpleVT().SimpleTy;
+      unsigned VReg =
+          MF.addLiveIn(VA.getLocReg(), getRegClassForSVT(SVT, IsPPC64));
+      SDValue ArgValue = DAG.getCopyFromReg(Chain, dl, VReg, LocVT);
+      if (ValVT.isScalarInteger() &&
+          (ValVT.getSizeInBits() < LocVT.getSizeInBits())) {
+        ArgValue =
+            truncateScalarIntegerArg(Flags, ValVT, DAG, ArgValue, LocVT, dl);
+      }
+      InVals.push_back(ArgValue);
+      continue;
     }
+
+    const unsigned LocSize = LocVT.getStoreSize();
+    const unsigned ValSize = ValVT.getStoreSize();
+    assert((ValSize <= LocSize) && "Object size is larger than size of MemLoc");
+    int CurArgOffset = VA.getLocMemOffset();
+    // Objects are right-justified because AIX is big-endian.
+    if (LocSize > ValSize)
+      CurArgOffset += LocSize - ValSize;
+    MachineFrameInfo &MFI = MF.getFrameInfo();
+    // Potential tail calls could cause overwriting of argument stack slots.
+    const bool IsImmutable =
+        !(getTargetMachine().Options.GuaranteedTailCallOpt &&
+          (CallConv == CallingConv::Fast));
+    int FI = MFI.CreateFixedObject(ValSize, CurArgOffset, IsImmutable);
+    SDValue FIN = DAG.getFrameIndex(FI, PtrVT);
+    SDValue ArgValue = DAG.getLoad(ValVT, dl, Chain, FIN, MachinePointerInfo());
     InVals.push_back(ArgValue);
   }
 
+  // On AIX a minimum of 8 words is saved to the parameter save area.
+  const unsigned MinParameterSaveArea = 8 * PtrByteSize;
   // Area that is at least reserved in the caller of this function.
-  unsigned MinReservedArea = CCInfo.getNextStackOffset();
+  unsigned CallerReservedArea =
+      std::max(CCInfo.getNextStackOffset(), LinkageSize + MinParameterSaveArea);
 
   // Set the size that is at least reserved in caller of this function. Tail
   // call optimized function's reserved stack space needs to be aligned so
   // that taking the difference between two stack areas will result in an
   // aligned stack.
-  MinReservedArea =
-      EnsureStackAlignment(Subtarget.getFrameLowering(), MinReservedArea);
+  CallerReservedArea =
+      EnsureStackAlignment(Subtarget.getFrameLowering(), CallerReservedArea);
   PPCFunctionInfo *FuncInfo = MF.getInfo<PPCFunctionInfo>();
-  FuncInfo->setMinReservedArea(MinReservedArea);
+  FuncInfo->setMinReservedArea(CallerReservedArea);
 
   return Chain;
 }
