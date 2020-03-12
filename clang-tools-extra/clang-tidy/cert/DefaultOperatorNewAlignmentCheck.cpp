@@ -9,6 +9,7 @@
 #include "DefaultOperatorNewAlignmentCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Basic/TargetInfo.h"
 
 using namespace clang::ast_matchers;
 
