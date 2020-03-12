@@ -251,6 +251,50 @@ func @full_contract2(%arg0: vector<2x3xf32>,
   return %0 : f32
 }
 
+// CHECK-LABEL: func @outerproduct_noacc
+// CHECK-SAME: %[[A:.*0]]: vector<2xf32>,
+// CHECK-SAME: %[[B:.*1]]: vector<3xf32>
+// CHECK:      %[[C0:.*]] = constant dense<0.000000e+00> : vector<2x3xf32>
+// CHECK:      %[[T0:.*]] = vector.extract %[[A]][0] : vector<2xf32>
+// CHECK:      %[[T1:.*]] = vector.broadcast %[[T0]] : f32 to vector<3xf32>
+// CHECK:      %[[T2:.*]] = mulf %[[T1]], %[[B]] : vector<3xf32>
+// CHECK:      %[[T3:.*]] = vector.insert %[[T2]], %[[C0]] [0] : vector<3xf32> into vector<2x3xf32>
+// CHECK:      %[[T4:.*]] = vector.extract %[[A]][1] : vector<2xf32>
+// CHECK:      %[[T5:.*]] = vector.broadcast %[[T4]] : f32 to vector<3xf32>
+// CHECK:      %[[T6:.*]] = mulf %[[T5]], %[[B]] : vector<3xf32>
+// CHECK:      %[[T7:.*]] = vector.insert %[[T6]], %[[T3]] [1] : vector<3xf32> into vector<2x3xf32>
+// CHECK:      return %[[T7]] : vector<2x3xf32>
+
+func @outerproduct_noacc(%arg0: vector<2xf32>,
+                         %arg1: vector<3xf32>) -> vector<2x3xf32> {
+  %0 = vector.outerproduct %arg0, %arg1 : vector<2xf32>, vector<3xf32>
+  return %0: vector<2x3xf32>
+}
+
+// CHECK-LABEL: func @outerproduct_acc
+// CHECK-SAME: %[[A:.*0]]: vector<2xf32>,
+// CHECK-SAME: %[[B:.*1]]: vector<3xf32>,
+// CHECK-SAME: %[[C:.*2]]: vector<2x3xf32>
+// CHECK:      %[[C0:.*]] = constant dense<0.000000e+00> : vector<2x3xf32>
+// CHECK:      %[[T0:.*]] = vector.extract %[[A]][0] : vector<2xf32>
+// CHECK:      %[[T1:.*]] = vector.broadcast %[[T0]] : f32 to vector<3xf32>
+// CHECK:      %[[T2:.*]] = vector.extract %[[C]][0] : vector<2x3xf32>
+// CHECK:      %[[T3:.*]] = vector.fma %[[T1]], %[[B]], %[[T2]] : vector<3xf32>
+// CHECK:      %[[T4:.*]] = vector.insert %[[T3]], %[[C0]] [0] : vector<3xf32> into vector<2x3xf32>
+// CHECK:      %[[T5:.*]] = vector.extract %[[A]][1] : vector<2xf32>
+// CHECK:      %[[T6:.*]] = vector.broadcast %[[T5]] : f32 to vector<3xf32>
+// CHECK:      %[[T7:.*]] = vector.extract %[[C]][1] : vector<2x3xf32>
+// CHECK:      %[[T8:.*]] = vector.fma %[[T6]], %[[B]], %[[T7]] : vector<3xf32>
+// CHECK:      %[[T9:.*]] = vector.insert %[[T8]], %[[T4]] [1] : vector<3xf32> into vector<2x3xf32>
+// CHECK:      return %[[T9]] : vector<2x3xf32>
+
+func @outerproduct_acc(%arg0: vector<2xf32>,
+                       %arg1: vector<3xf32>,
+                       %arg2: vector<2x3xf32>) -> vector<2x3xf32> {
+  %0 = vector.outerproduct %arg0, %arg1, %arg2 : vector<2xf32>, vector<3xf32>
+  return %0: vector<2x3xf32>
+}
+
 // Shape up and downcasts for 2-D vectors, for supporting conversion to
 // llvm.matrix operations
 // CHECK-LABEL: func @shape_casts
