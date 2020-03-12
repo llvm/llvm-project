@@ -1034,6 +1034,9 @@ void Verifier::visitDIFile(const DIFile &N) {
     case DIFile::CSK_SHA1:
       Size = 40;
       break;
+    case DIFile::CSK_SHA256:
+      Size = 64;
+      break;
     }
     AssertDI(Checksum->Value.size() == Size, "invalid checksum length", &N);
     AssertDI(Checksum->Value.find_if_not(llvm::isHexDigit) == StringRef::npos,
