@@ -595,6 +595,12 @@ template <class ELFT> void Writer<ELFT>::run() {
     for (OutputSection *sec : outputSections)
       sec->addr = 0;
 
+  // Handle --print-map(-M)/--Map and --cref. Dump them before checkSections()
+  // because the files may be useful in case checkSections() or openFile()
+  // fails, for example, due to an erroneous file size.
+  writeMapFile();
+  writeCrossReferenceTable();
+
   if (config->checkSections)
     checkSections();
 
@@ -618,12 +624,6 @@ template <class ELFT> void Writer<ELFT>::run() {
   // Backfill .note.gnu.build-id section content. This is done at last
   // because the content is usually a hash value of the entire output file.
   writeBuildId();
-  if (errorCount())
-    return;
-
-  // Handle -Map and -cref options.
-  writeMapFile();
-  writeCrossReferenceTable();
   if (errorCount())
     return;
 
