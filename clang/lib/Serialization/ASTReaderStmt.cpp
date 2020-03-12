@@ -102,7 +102,7 @@ namespace clang {
 
     /// The number of record fields required for the Stmt class
     /// itself.
-    static const unsigned NumStmtFields = 1;
+    static const unsigned NumStmtFields = 0;
 
     /// The number of record fields required for the Expr class
     /// itself.
@@ -138,7 +138,6 @@ void ASTStmtReader::ReadTemplateKWAndArgsInfo(ASTTemplateKWAndArgsInfo &Args,
 }
 
 void ASTStmtReader::VisitStmt(Stmt *S) {
-  S->setIsOMPStructuredBlock(Record.readInt());
   assert(Record.getIdx() == NumStmtFields && "Incorrect statement field count");
 }
 

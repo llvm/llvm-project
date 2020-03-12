@@ -123,9 +123,6 @@ void TextNodeDumper::Visit(const Stmt *Node) {
   dumpPointer(Node);
   dumpSourceRange(Node->getSourceRange());
 
-  if (Node->isOMPStructuredBlock())
-    OS << " openmp_structured_block";
-
   if (const auto *E = dyn_cast<Expr>(Node)) {
     dumpType(E->getType());
 

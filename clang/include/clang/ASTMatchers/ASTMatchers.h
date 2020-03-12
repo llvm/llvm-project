@@ -7016,19 +7016,6 @@ AST_MATCHER(OMPExecutableDirective, isStandaloneDirective) {
   return Node.isStandaloneDirective();
 }
 
-/// Matches the Stmt AST node that is marked as being the structured-block
-/// of an OpenMP executable directive.
-///
-/// Given
-///
-/// \code
-///    #pragma omp parallel
-///    {}
-/// \endcode
-///
-/// ``stmt(isOMPStructuredBlock()))`` matches ``{}``.
-AST_MATCHER(Stmt, isOMPStructuredBlock) { return Node.isOMPStructuredBlock(); }
-
 /// Matches the structured-block of the OpenMP executable directive
 ///
 /// Prerequisite: the executable directive must not be standalone directive.
