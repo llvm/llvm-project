@@ -213,53 +213,53 @@ let hasSideEffects = 0 in { // VSX instructions don't have side effects.
     }
   } // mayStore
 
-  let Uses = [RM] in {
+  let Uses = [RM], mayRaiseFPException = 1 in {
   // Add/Mul Instructions
   let isCommutable = 1 in {
     def XSADDDP : XX3Form<60, 32,
                           (outs vsfrc:$XT), (ins vsfrc:$XA, vsfrc:$XB),
                           "xsadddp $XT, $XA, $XB", IIC_VecFP,
-                          [(set f64:$XT, (fadd f64:$XA, f64:$XB))]>;
+                          [(set f64:$XT, (any_fadd f64:$XA, f64:$XB))]>;
     def XSMULDP : XX3Form<60, 48,
                           (outs vsfrc:$XT), (ins vsfrc:$XA, vsfrc:$XB),
                           "xsmuldp $XT, $XA, $XB", IIC_VecFP,
-                          [(set f64:$XT, (fmul f64:$XA, f64:$XB))]>;
+                          [(set f64:$XT, (any_fmul f64:$XA, f64:$XB))]>;
 
     def XVADDDP : XX3Form<60, 96,
                           (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB),
                           "xvadddp $XT, $XA, $XB", IIC_VecFP,
-                          [(set v2f64:$XT, (fadd v2f64:$XA, v2f64:$XB))]>;
+                          [(set v2f64:$XT, (any_fadd v2f64:$XA, v2f64:$XB))]>;
 
     def XVADDSP : XX3Form<60, 64,
                           (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB),
                           "xvaddsp $XT, $XA, $XB", IIC_VecFP,
-                          [(set v4f32:$XT, (fadd v4f32:$XA, v4f32:$XB))]>;
+                          [(set v4f32:$XT, (any_fadd v4f32:$XA, v4f32:$XB))]>;
 
     def XVMULDP : XX3Form<60, 112,
                           (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB),
                           "xvmuldp $XT, $XA, $XB", IIC_VecFP,
-                          [(set v2f64:$XT, (fmul v2f64:$XA, v2f64:$XB))]>;
+                          [(set v2f64:$XT, (any_fmul v2f64:$XA, v2f64:$XB))]>;
 
     def XVMULSP : XX3Form<60, 80,
                           (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB),
                           "xvmulsp $XT, $XA, $XB", IIC_VecFP,
-                          [(set v4f32:$XT, (fmul v4f32:$XA, v4f32:$XB))]>;
+                          [(set v4f32:$XT, (any_fmul v4f32:$XA, v4f32:$XB))]>;
   }
 
   // Subtract Instructions
   def XSSUBDP : XX3Form<60, 40,
                         (outs vsfrc:$XT), (ins vsfrc:$XA, vsfrc:$XB),
                         "xssubdp $XT, $XA, $XB", IIC_VecFP,
-                        [(set f64:$XT, (fsub f64:$XA, f64:$XB))]>;
+                        [(set f64:$XT, (any_fsub f64:$XA, f64:$XB))]>;
 
   def XVSUBDP : XX3Form<60, 104,
                         (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB),
                         "xvsubdp $XT, $XA, $XB", IIC_VecFP,
-                        [(set v2f64:$XT, (fsub v2f64:$XA, v2f64:$XB))]>;
+                        [(set v2f64:$XT, (any_fsub v2f64:$XA, v2f64:$XB))]>;
   def XVSUBSP : XX3Form<60, 72,
                         (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB),
                         "xvsubsp $XT, $XA, $XB", IIC_VecFP,
-                        [(set v4f32:$XT, (fsub v4f32:$XA, v4f32:$XB))]>;
+                        [(set v4f32:$XT, (any_fsub v4f32:$XA, v4f32:$XB))]>;
 
   // FMA Instructions
   let BaseName = "XSMADDADP" in {
@@ -458,7 +458,7 @@ let hasSideEffects = 0 in { // VSX instructions don't have side effects.
   def XSDIVDP : XX3Form<60, 56,
                         (outs vsfrc:$XT), (ins vsfrc:$XA, vsfrc:$XB),
                         "xsdivdp $XT, $XA, $XB", IIC_FPDivD,
-                        [(set f64:$XT, (fdiv f64:$XA, f64:$XB))]>;
+                        [(set f64:$XT, (any_fdiv f64:$XA, f64:$XB))]>;
   def XSSQRTDP : XX2Form<60, 75,
                         (outs vsfrc:$XT), (ins vsfrc:$XB),
                         "xssqrtdp $XT, $XB", IIC_FPSqrtD,
@@ -483,11 +483,11 @@ let hasSideEffects = 0 in { // VSX instructions don't have side effects.
   def XVDIVDP : XX3Form<60, 120,
                         (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB),
                         "xvdivdp $XT, $XA, $XB", IIC_FPDivD,
-                        [(set v2f64:$XT, (fdiv v2f64:$XA, v2f64:$XB))]>;
+                        [(set v2f64:$XT, (any_fdiv v2f64:$XA, v2f64:$XB))]>;
   def XVDIVSP : XX3Form<60, 88,
                         (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB),
                         "xvdivsp $XT, $XA, $XB", IIC_FPDivS,
-                        [(set v4f32:$XT, (fdiv v4f32:$XA, v4f32:$XB))]>;
+                        [(set v4f32:$XT, (any_fdiv v4f32:$XA, v4f32:$XB))]>;
 
   def XVSQRTDP : XX2Form<60, 203,
                         (outs vsrc:$XT), (ins vsrc:$XB),
@@ -835,7 +835,7 @@ let hasSideEffects = 0 in { // VSX instructions don't have side effects.
                         [(set vsrc:$XT,
                               (int_ppc_vsx_xvminsp vsrc:$XA, vsrc:$XB))]>;
   } // isCommutable
-} // Uses = [RM]
+} // Uses = [RM], mayRaiseFPException
 
   // Logical Instructions
   let isCommutable = 1 in
@@ -1451,24 +1451,26 @@ let AddedComplexity = 400 in { // Prefer VSX patterns over non-VSX patterns.
             (SELECT_VSSRC (CRXOR $lhs, $rhs), $tval, $fval)>;
 
   // VSX Elementary Scalar FP arithmetic (SP)
+  let mayRaiseFPException = 1 in {
   let isCommutable = 1 in {
     def XSADDSP : XX3Form<60, 0,
                           (outs vssrc:$XT), (ins vssrc:$XA, vssrc:$XB),
                           "xsaddsp $XT, $XA, $XB", IIC_VecFP,
-                          [(set f32:$XT, (fadd f32:$XA, f32:$XB))]>;
+                          [(set f32:$XT, (any_fadd f32:$XA, f32:$XB))]>;
     def XSMULSP : XX3Form<60, 16,
                           (outs vssrc:$XT), (ins vssrc:$XA, vssrc:$XB),
                           "xsmulsp $XT, $XA, $XB", IIC_VecFP,
-                          [(set f32:$XT, (fmul f32:$XA, f32:$XB))]>;
+                          [(set f32:$XT, (any_fmul f32:$XA, f32:$XB))]>;
   } // isCommutable
   def XSSUBSP : XX3Form<60, 8,
                         (outs vssrc:$XT), (ins vssrc:$XA, vssrc:$XB),
                         "xssubsp $XT, $XA, $XB", IIC_VecFP,
-                        [(set f32:$XT, (fsub f32:$XA, f32:$XB))]>;
+                        [(set f32:$XT, (any_fsub f32:$XA, f32:$XB))]>;
   def XSDIVSP : XX3Form<60, 24,
                         (outs vssrc:$XT), (ins vssrc:$XA, vssrc:$XB),
                         "xsdivsp $XT, $XA, $XB", IIC_FPDivS,
-                        [(set f32:$XT, (fdiv f32:$XA, f32:$XB))]>;
+                        [(set f32:$XT, (any_fdiv f32:$XA, f32:$XB))]>;
+  } // mayRaiseFPException
   def XSRESP : XX2Form<60, 26,
                         (outs vssrc:$XT), (ins vssrc:$XB),
                         "xsresp $XT, $XB", IIC_VecFP,
@@ -2678,16 +2680,18 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
   // Quad-Precision Scalar Floating-Point Arithmetic Instructions:
 
   // Add/Divide/Multiply/Subtract
+  let mayRaiseFPException = 1 in {
   let isCommutable = 1 in {
   def XSADDQP   : X_VT5_VA5_VB5   <63,   4, "xsaddqp",
-                                   [(set f128:$vT, (fadd f128:$vA, f128:$vB))]>;
+                                   [(set f128:$vT, (any_fadd f128:$vA, f128:$vB))]>;
   def XSMULQP   : X_VT5_VA5_VB5   <63,  36, "xsmulqp",
-                                   [(set f128:$vT, (fmul f128:$vA, f128:$vB))]>;
+                                   [(set f128:$vT, (any_fmul f128:$vA, f128:$vB))]>;
   }
   def XSSUBQP   : X_VT5_VA5_VB5   <63, 516, "xssubqp" ,
-                                   [(set f128:$vT, (fsub f128:$vA, f128:$vB))]>;
+                                   [(set f128:$vT, (any_fsub f128:$vA, f128:$vB))]>;
   def XSDIVQP   : X_VT5_VA5_VB5   <63, 548, "xsdivqp",
-                                   [(set f128:$vT, (fdiv f128:$vA, f128:$vB))]>;
+                                   [(set f128:$vT, (any_fdiv f128:$vA, f128:$vB))]>;
+  } // mayRaiseFPException
   // Square-Root
   def XSSQRTQP  : X_VT5_XO5_VB5   <63, 27, 804, "xssqrtqp",
                                    [(set f128:$vT, (fsqrt f128:$vB))]>;
