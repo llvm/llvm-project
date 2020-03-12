@@ -85,7 +85,7 @@ define float @frem_undef_op1(float %x) {
 
 define float @fadd_undef_op0_nnan(float %x) {
 ; CHECK-LABEL: @fadd_undef_op0_nnan(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float undef
 ;
   %r = fadd nnan float undef, %x
   ret float %r
@@ -93,7 +93,7 @@ define float @fadd_undef_op0_nnan(float %x) {
 
 define float @fadd_undef_op1_fast(float %x) {
 ; CHECK-LABEL: @fadd_undef_op1_fast(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float undef
 ;
   %r = fadd fast float %x, undef
   ret float %r
@@ -101,7 +101,7 @@ define float @fadd_undef_op1_fast(float %x) {
 
 define float @fsub_undef_op0_fast(float %x) {
 ; CHECK-LABEL: @fsub_undef_op0_fast(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float undef
 ;
   %r = fsub fast float undef, %x
   ret float %r
@@ -109,7 +109,7 @@ define float @fsub_undef_op0_fast(float %x) {
 
 define float @fsub_undef_op1_nnan(float %x) {
 ; CHECK-LABEL: @fsub_undef_op1_nnan(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float undef
 ;
   %r = fsub nnan float %x, undef
   ret float %r
@@ -117,7 +117,7 @@ define float @fsub_undef_op1_nnan(float %x) {
 
 define float @fmul_undef_op0_nnan(float %x) {
 ; CHECK-LABEL: @fmul_undef_op0_nnan(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float undef
 ;
   %r = fmul nnan float undef, %x
   ret float %r
@@ -125,7 +125,7 @@ define float @fmul_undef_op0_nnan(float %x) {
 
 define float @fmul_undef_op1_fast(float %x) {
 ; CHECK-LABEL: @fmul_undef_op1_fast(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float undef
 ;
   %r = fmul fast float %x, undef
   ret float %r
@@ -133,7 +133,7 @@ define float @fmul_undef_op1_fast(float %x) {
 
 define float @fdiv_undef_op0_fast(float %x) {
 ; CHECK-LABEL: @fdiv_undef_op0_fast(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float undef
 ;
   %r = fdiv fast float undef, %x
   ret float %r
@@ -141,7 +141,7 @@ define float @fdiv_undef_op0_fast(float %x) {
 
 define float @fdiv_undef_op1_nnan(float %x) {
 ; CHECK-LABEL: @fdiv_undef_op1_nnan(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float undef
 ;
   %r = fdiv nnan float %x, undef
   ret float %r
@@ -149,7 +149,7 @@ define float @fdiv_undef_op1_nnan(float %x) {
 
 define float @frem_undef_op0_nnan(float %x) {
 ; CHECK-LABEL: @frem_undef_op0_nnan(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float undef
 ;
   %r = frem nnan float undef, %x
   ret float %r
@@ -157,7 +157,7 @@ define float @frem_undef_op0_nnan(float %x) {
 
 define float @frem_undef_op1_fast(float %x) {
 ; CHECK-LABEL: @frem_undef_op1_fast(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float undef
 ;
   %r = frem fast float %x, undef
   ret float %r
