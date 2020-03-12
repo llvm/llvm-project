@@ -123,7 +123,7 @@ public:
   /// for the current module.
   ///
   /// \returns true if API notes were successfully loaded, \c false otherwise.
-  bool loadCurrentModuleAPINotes(const Module *module,
+  bool loadCurrentModuleAPINotes(Module *module,
                                  bool lookInModule,
                                  ArrayRef<std::string> searchPaths);
 
