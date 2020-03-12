@@ -2302,4 +2302,43 @@ TEST_F(GISelMITest, LibcallFNearbyInt) {
   // Check
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
+
+TEST_F(GISelMITest, NarrowScalarExtract) {
+  setUp();
+  if (!TM)
+    return;
+
+  // Declare your legalization info
+  DefineLegalizerInfo(A, {
+    getActionDefinitionsBuilder(G_UNMERGE_VALUES).legalFor({{s32, s64}});
+    getActionDefinitionsBuilder(G_EXTRACT).legalFor({{s16, s32}});
+  });
+
+  LLT S16{LLT::scalar(16)};
+  LLT S32{LLT::scalar(32)};
+
+  auto MIBExtractS32 = B.buildExtract(S32, Copies[1], 32);
+  auto MIBExtractS16 = B.buildExtract(S16, Copies[1], 0);
+
+  AInfo Info(MF->getSubtarget());
+  DummyGISelObserver Observer;
+  LegalizerHelper Helper(*MF, Info, Observer, B);
+
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.narrowScalar(*MIBExtractS32, 1, S32));
+
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.narrowScalar(*MIBExtractS16, 1, S32));
+
+  const auto *CheckStr = R"(
+  CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES
+  CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY [[UV1]]
+  CHECK: [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES
+  CHECK: [[EXTR:%[0-9]+]]:_(s16) = G_EXTRACT [[UV3]]:_(s32), 0
+  CHECK: [[COPY:%[0-9]+]]:_(s16) = COPY [[EXTR]]
+  )";
+
+  // Check
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
 } // namespace
