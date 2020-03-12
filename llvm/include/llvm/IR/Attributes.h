@@ -116,6 +116,10 @@ public:
   /// Return true if and only if the attribute has an Argument.
   static bool doesAttrKindHaveArgument(Attribute::AttrKind AttrKind);
 
+  /// Return true if the provided string matches the IR name of an attribute.
+  /// example: "noalias" return true but not "NoAlias"
+  static bool isExistingAttribute(StringRef Name);
+
   //===--------------------------------------------------------------------===//
   // Attribute Accessors
   //===--------------------------------------------------------------------===//
