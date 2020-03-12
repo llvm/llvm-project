@@ -7739,37 +7739,26 @@ bool SwiftASTContext::GetSelectedEnumCase(const CompilerType &type,
                                           ConstString *name, bool *has_payload,
                                           CompilerType *payload,
                                           bool *is_indirect) {
-  if (auto ast =
-          llvm::dyn_cast_or_null<SwiftASTContext>(type.GetTypeSystem())) {
-    swift::CanType swift_can_type(GetCanonicalSwiftType(type));
-
-    const swift::TypeKind type_kind = swift_can_type->getKind();
-    switch (type_kind) {
-    default:
-      break;
-    case swift::TypeKind::Enum:
-    case swift::TypeKind::BoundGenericEnum: {
-      SwiftEnumDescriptor *cached_enum_info =
-          ast->GetCachedEnumInfo(swift_can_type.getPointer());
-      if (cached_enum_info) {
-        auto enum_elem_info = cached_enum_info->GetElementFromData(data, true);
-        if (enum_elem_info) {
-          if (name)
-            *name = enum_elem_info->name;
-          if (has_payload)
-            *has_payload = enum_elem_info->has_payload;
-          if (payload)
-            *payload = enum_elem_info->payload_type;
-          if (is_indirect)
-            *is_indirect = enum_elem_info->is_indirect;
-          return true;
-        }
-      }
-    } break;
-    }
-  }
-
-  return false;
+  auto ast = llvm::dyn_cast_or_null<SwiftASTContext>(type.GetTypeSystem());
+  if (!ast)
+    return false;
+  swift::CanType swift_can_type(GetCanonicalSwiftType(type));
+  SwiftEnumDescriptor *cached_enum_info =
+      ast->GetCachedEnumInfo(swift_can_type.getPointer());
+  if (!cached_enum_info)
+    return false;
+  auto enum_elem_info = cached_enum_info->GetElementFromData(data, true);
+  if (!enum_elem_info)
+    return false;
+  if (name)
+    *name = enum_elem_info->name;
+  if (has_payload)
+    *has_payload = enum_elem_info->has_payload;
+  if (payload)
+    *payload = enum_elem_info->payload_type;
+  if (is_indirect)
+    *is_indirect = enum_elem_info->is_indirect;
+  return true;
 }
 
 lldb::GenericKind SwiftASTContext::GetGenericArgumentKind(void *type,
