@@ -29,7 +29,7 @@ namespace llvm {
 
 AVRSubtarget::AVRSubtarget(const Triple &TT, const std::string &CPU,
                            const std::string &FS, const AVRTargetMachine &TM)
-    : AVRGenSubtargetInfo(TT, CPU, FS), InstrInfo(), FrameLowering(),
+    : AVRGenSubtargetInfo(TT, CPU, FS), ELFArch(0), InstrInfo(), FrameLowering(),
       TLInfo(TM, initializeSubtargetDependencies(CPU, FS, TM)), TSInfo(),
 
       // Subtarget features
@@ -38,7 +38,7 @@ AVRSubtarget::AVRSubtarget(const Triple &TT, const std::string &CPU,
       m_hasMOVW(false), m_hasLPM(false), m_hasLPMX(false),  m_hasELPM(false),
       m_hasELPMX(false), m_hasSPM(false), m_hasSPMX(false), m_hasDES(false),
       m_supportsRMW(false), m_supportsMultiplication(false), m_hasBREAK(false),
-      m_hasTinyEncoding(false), ELFArch(false), m_FeatureSetDummy(false) {
+      m_hasTinyEncoding(false), m_FeatureSetDummy(false) {
   // Parse features string.
   ParseSubtargetFeatures(CPU, FS);
 }

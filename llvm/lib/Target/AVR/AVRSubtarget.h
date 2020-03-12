@@ -81,6 +81,10 @@ public:
   }
 
 private:
+
+  /// The ELF e_flags architecture.
+  unsigned ELFArch;
+
   AVRInstrInfo InstrInfo;
   AVRFrameLowering FrameLowering;
   AVRTargetLowering TLInfo;
@@ -106,9 +110,6 @@ private:
   bool m_supportsMultiplication;
   bool m_hasBREAK;
   bool m_hasTinyEncoding;
-
-  /// The ELF e_flags architecture.
-  unsigned ELFArch;
 
   // Dummy member, used by FeatureSet's. We cannot have a SubtargetFeature with
   // no variable, so we instead bind pseudo features to this variable.
