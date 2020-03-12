@@ -8,6 +8,11 @@ mlir_tablegen(ControlFlowInterfaces.h.inc -gen-op-interface-decls)
 mlir_tablegen(ControlFlowInterfaces.cpp.inc -gen-op-interface-defs)
 add_public_tablegen_target(MLIRControlFlowInterfacesIncGen)
 
+set(LLVM_TARGET_DEFINITIONS DerivedAttributeOpInterface.td)
+mlir_tablegen(DerivedAttributeOpInterface.h.inc -gen-op-interface-decls)
+mlir_tablegen(DerivedAttributeOpInterface.cpp.inc -gen-op-interface-defs)
+add_public_tablegen_target(MLIRDerivedAttributeOpInterfaceIncGen)
+
 set(LLVM_TARGET_DEFINITIONS InferTypeOpInterface.td)
 mlir_tablegen(InferTypeOpInterface.h.inc -gen-op-interface-decls)
 mlir_tablegen(InferTypeOpInterface.cpp.inc -gen-op-interface-defs)
