@@ -87,7 +87,7 @@
 
 ; NM: T f
 ; NM2: T {{f|g}}
-; FORMAT: Format: ELF64-x86-64
+; FORMAT: Format: elf64-x86-64
 
 ; The backend index for this module contains summaries from itself and
 ; Inputs/thinlto.ll, as it imports from the latter.

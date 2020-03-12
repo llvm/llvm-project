@@ -554,7 +554,7 @@ void RuntimeDyldELF::setMipsABI(const ObjectFile &Obj) {
     IsMipsO32ABI = AbiVariant & ELF::EF_MIPS_ABI_O32;
     IsMipsN32ABI = AbiVariant & ELF::EF_MIPS_ABI2;
   }
-  IsMipsN64ABI = Obj.getFileFormatName().equals("ELF64-mips");
+  IsMipsN64ABI = Obj.getFileFormatName().equals("elf64-mips");
 }
 
 // Return the .TOC. section and offset.
