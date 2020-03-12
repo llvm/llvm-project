@@ -445,8 +445,6 @@ func @dim_op_fold(%arg0: index, %arg1: index, %arg2: index, %BUF: memref<?xi8>, 
       }
     }
   }
-  // CHECK-NEXT: %c0 = constant 0 : index
-  // CHECK-NEXT: %c1 = constant 1 : index
   // CHECK-NEXT: affine.for %arg7 = 0 to %arg2 {
   // CHECK-NEXT:   affine.for %arg8 = 0 to %arg0 {
   // CHECK-NEXT:     affine.for %arg9 = %arg0 to %arg0 {
@@ -468,9 +466,7 @@ func @dim_op_fold(%arg0: index, %arg1: index, %arg2: index, %BUF: memref<?xi8>, 
       }
     }
   }
-  // CHECK: loop.for %{{.*}} = %c0 to %[[M]] step %c1 {
-  // CHECK:   loop.for %arg8 = %c0 to %[[N]] step %c1 {
-  // CHECK:     loop.for %arg9 = %c0 to %[[K]] step %c1 {
+  // CHECK-NEXT: return
   return
 }
 

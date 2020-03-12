@@ -49,15 +49,17 @@ static bool canBeHoisted(Operation *op,
   if (auto memInterface = dyn_cast<MemoryEffectOpInterface>(op)) {
     if (!memInterface.hasNoEffect())
       return false;
-  } else if (!op->hasNoSideEffect() &&
-             !op->hasTrait<OpTrait::HasRecursiveSideEffects>()) {
+    // If the operation doesn't have side effects and it doesn't recursively
+    // have side effects, it can always be hoisted.
+    if (!op->hasTrait<OpTrait::HasRecursiveSideEffects>())
+      return true;
+
+    // Otherwise, if the operation doesn't provide the memory effect interface
+    // and it doesn't have recursive side effects we treat it conservatively as
+    // side-effecting.
+  } else if (!op->hasTrait<OpTrait::HasRecursiveSideEffects>()) {
     return false;
   }
-
-  // If the operation doesn't have side effects and it doesn't recursively
-  // have side effects, it can always be hoisted.
-  if (!op->hasTrait<OpTrait::HasRecursiveSideEffects>())
-    return true;
 
   // Recurse into the regions for this op and check whether the contained ops
   // can be hoisted.

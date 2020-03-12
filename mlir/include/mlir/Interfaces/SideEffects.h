@@ -163,15 +163,6 @@ private:
 //===----------------------------------------------------------------------===//
 
 namespace OpTrait {
-/// This trait indicates that an operation never has side effects.
-template <typename ConcreteType>
-class HasNoSideEffect : public TraitBase<ConcreteType, HasNoSideEffect> {
-public:
-  static AbstractOperation::OperationProperties getTraitProperties() {
-    return static_cast<AbstractOperation::OperationProperties>(
-        OperationProperty::NoSideEffect);
-  }
-};
 /// This trait indicates that the side effects of an operation includes the
 /// effects of operations nested within its regions. If the operation has no
 /// derived effects interfaces, the operation itself can be assumed to have no
@@ -221,9 +212,23 @@ struct Write : public Effect::Base<Write> {};
 
 //===----------------------------------------------------------------------===//
 // SideEffect Interfaces
+//===----------------------------------------------------------------------===//
 
 /// Include the definitions of the side effect interfaces.
 #include "mlir/Interfaces/SideEffectInterfaces.h.inc"
+
+//===----------------------------------------------------------------------===//
+// SideEffect Utilities
+//===----------------------------------------------------------------------===//
+
+/// Return true if the given operation is unused, and has no side effects on
+/// memory that prevent erasing.
+bool isOpTriviallyDead(Operation *op);
+
+/// Return true if the given operation would be dead if unused, and has no side
+/// effects on memory that would prevent erasing. This is equivalent to checking
+/// `isOpTriviallyDead` if `op` was unused.
+bool wouldOpBeTriviallyDead(Operation *op);
 
 } // end namespace mlir
 
