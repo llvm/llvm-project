@@ -26,6 +26,7 @@
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/OptionParser.h"
+#include "lldb/Interpreter/OptionValueFileSpec.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Interpreter/Property.h"
 #include "lldb/Symbol/ObjectFile.h"
@@ -93,6 +94,7 @@ PlatformProperties::PlatformProperties() {
   module_cache_dir = FileSpec(user_home_dir.c_str());
   module_cache_dir.AppendPathComponent(".lldb");
   module_cache_dir.AppendPathComponent("module_cache");
+  SetDefaultModuleCacheDirectory(module_cache_dir);
   SetModuleCacheDirectory(module_cache_dir);
 }
 
@@ -115,6 +117,14 @@ FileSpec PlatformProperties::GetModuleCacheDirectory() const {
 bool PlatformProperties::SetModuleCacheDirectory(const FileSpec &dir_spec) {
   return m_collection_sp->SetPropertyAtIndexAsFileSpec(
       nullptr, ePropertyModuleCacheDirectory, dir_spec);
+}
+
+void PlatformProperties::SetDefaultModuleCacheDirectory(
+    const FileSpec &dir_spec) {
+  auto f_spec_opt = m_collection_sp->GetPropertyAtIndexAsOptionValueFileSpec(
+        nullptr, false, ePropertyModuleCacheDirectory);
+  assert(f_spec_opt);
+  f_spec_opt->SetDefaultValue(dir_spec);
 }
 
 /// Get the native host platform plug-in.
