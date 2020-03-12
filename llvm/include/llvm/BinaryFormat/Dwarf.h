@@ -470,6 +470,7 @@ StringRef ArrayOrderString(unsigned Order);
 StringRef LNStandardString(unsigned Standard);
 StringRef LNExtendedString(unsigned Encoding);
 StringRef MacinfoString(unsigned Encoding);
+StringRef MacroString(unsigned Encoding);
 StringRef RangeListEncodingString(unsigned Encoding);
 StringRef LocListEncodingString(unsigned Encoding);
 StringRef CallFrameString(unsigned Encoding, Triple::ArchType Arch);
@@ -498,6 +499,7 @@ unsigned getLanguage(StringRef LanguageString);
 unsigned getCallingConvention(StringRef LanguageString);
 unsigned getAttributeEncoding(StringRef EncodingString);
 unsigned getMacinfo(StringRef MacinfoString);
+unsigned getMacro(StringRef MacroString);
 /// @}
 
 /// \defgroup DwarfConstantsVersioning Dwarf version for constants

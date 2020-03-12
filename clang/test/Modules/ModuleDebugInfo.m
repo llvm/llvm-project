@@ -7,9 +7,10 @@
 // RUN: rm -rf %t
 // RUN: %clang_cc1 -x objective-c -fmodules -fmodule-format=obj \
 // RUN:   -fimplicit-module-maps -DMODULES -fmodules-cache-path=%t %s \
-// RUN:   -I %S/Inputs -I %t -emit-llvm -o %t.ll \
+// RUN:   -fapinotes-modules -I %S/Inputs -I %t -emit-llvm -o %t.ll \
 // RUN:   -mllvm -debug-only=pchcontainer &>%t-mod.ll
 // RUN: cat %t-mod.ll | FileCheck %s
+// RUN: cat %t-mod.ll | FileCheck %s --check-prefix=CHECK-MOD
 // RUN: cat %t-mod.ll | FileCheck %s --check-prefix=CHECK2
 
 // PCH:
@@ -31,6 +32,8 @@
 // CHECK: !DICompositeType(tag: DW_TAG_enumeration_type,
 // CHECK-SAME:             scope: ![[MODULE:[0-9]+]],
 // CHECK: ![[MODULE]] = !DIModule(scope: null, name: "DebugObjC
+// CHECK-MOD:  !DIModule(scope: null, name: "DebugObjC
+// CHECK-MOD-SAME:       apinotes: {{.*}}DebugObjC.apinotes")
 
 // CHECK: ![[TD_ENUM:.*]] = !DICompositeType(tag: DW_TAG_enumeration_type,
 // CHECK-NOT:              name:
