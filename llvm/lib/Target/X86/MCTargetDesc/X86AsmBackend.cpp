@@ -332,6 +332,11 @@ static bool isRIPRelative(const MCInst &MI, const MCInstrInfo &MCII) {
   return (BaseReg == X86::RIP);
 }
 
+/// Check if the instruction is a prefix.
+static bool isPrefix(const MCInst &MI, const MCInstrInfo &MCII) {
+  return X86II::isPrefix(MCII.get(MI.getOpcode()).TSFlags);
+}
+
 /// Check if the instruction is valid as the first instruction in macro fusion.
 static bool isFirstMacroFusibleInst(const MCInst &Inst,
                                     const MCInstrInfo &MCII) {
@@ -503,6 +508,11 @@ void X86AsmBackend::alignBranchesBegin(MCObjectStreamer &OS,
   if (hasInterruptDelaySlot(PrevInst))
     // If this instruction follows an interrupt enabling instruction with a one
     // instruction delay, inserting a nop would change behavior.
+    return;
+
+  if (isPrefix(PrevInst, *MCII))
+    // If this instruction follows a prefix, inserting a nop would change
+    // semantic.
     return;
 
   if (!isMacroFused(PrevInst, Inst))
