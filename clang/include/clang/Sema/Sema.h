@@ -9858,6 +9858,13 @@ public:
   bool isOpenMPTargetCapturedDecl(const ValueDecl *D, unsigned Level,
                                   unsigned CaptureLevel) const;
 
+  /// Check if the specified global variable must be captured  by outer capture
+  /// regions.
+  /// \param Level Relative level of nested OpenMP construct for that
+  /// the check is performed.
+  bool isOpenMPGlobalCapturedDecl(ValueDecl *D, unsigned Level,
+                                  unsigned CaptureLevel) const;
+
   ExprResult PerformOpenMPImplicitIntegerConversion(SourceLocation OpLoc,
                                                     Expr *Op);
   /// Called on start of new data sharing attribute block.
