@@ -162,6 +162,46 @@ let pnt = PNT_NType in {
 }
 }
 
+multiclass FMA<bit add> {
+  // FMS instructions are defined in the ArmARM as if they negate the
+  // second multiply input.
+  defvar m2_cg = !if(add, (id $m2), (fneg $m2));
+
+  defvar unpred_cg = (IRIntBase<"fma", [Vector]> $m1, m2_cg, $addend);
+  defvar pred_cg   = (IRInt<"fma_predicated", [Vector, Predicate]>
+                          $m1, m2_cg, $addend, $pred);
+
+  def q: Intrinsic<Vector, (args Vector:$addend, Vector:$m1, Vector:$m2),
+                   unpred_cg>;
+
+  def q_m: Intrinsic<Vector, (args Vector:$addend, Vector:$m1, Vector:$m2,
+                                   Predicate:$pred), pred_cg>;
+
+  // Only FMA has the vector/scalar variants, not FMS
+  if add then let pnt = PNT_NType in {
+
+    def q_n: Intrinsic<Vector, (args Vector:$addend, Vector:$m1,
+                                     unpromoted<Scalar>:$m2_s),
+                     (seq (splat $m2_s):$m2, unpred_cg)>;
+    def sq_n: Intrinsic<Vector, (args Vector:$m1, Vector:$m2,
+                                      unpromoted<Scalar>:$addend_s),
+                        (seq (splat $addend_s):$addend, unpred_cg)>;
+    def q_m_n: Intrinsic<Vector, (args Vector:$addend, Vector:$m1,
+                                       unpromoted<Scalar>:$m2_s,
+                                       Predicate:$pred),
+                         (seq (splat $m2_s):$m2, pred_cg)>;
+    def sq_m_n: Intrinsic<Vector, (args Vector:$m1, Vector:$m2,
+                                        unpromoted<Scalar>:$addend_s,
+                                        Predicate:$pred),
+                          (seq (splat $addend_s):$addend, pred_cg)>;
+  }
+}
+
+let params = T.Float in {
+  defm vfma: FMA<1>;
+  defm vfms: FMA<0>;
+}
+
 let params = !listconcat(T.Int16, T.Int32) in {
   let pnt = PNT_None in {
     def vmvnq_n: Intrinsic<Vector, (args imm_simd_vmvn:$imm),

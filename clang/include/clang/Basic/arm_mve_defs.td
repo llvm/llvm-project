@@ -133,6 +133,18 @@ def unzip: CGHelperFn<"VectorUnzip"> {
 }
 def zip: CGHelperFn<"VectorZip">;
 
+// Trivial 'codegen' function that just returns its argument. Useful
+// for wrapping up a variable name like $foo into a thing you can pass
+// around as type 'dag'.
+def id: IRBuilderBase {
+  // All the other cases of IRBuilderBase use 'prefix' to specify a function
+  // call, including the open parenthesis. MveEmitter puts the closing paren on
+  // the end. So if we _just_ specify an open paren with no function name
+  // before it, then the generated C++ code will simply wrap the input value in
+  // parentheses, returning it unchanged.
+  let prefix = "(";
+}
+
 // Helper for making boolean flags in IR
 def i1: IRBuilderBase {
   let prefix = "llvm::ConstantInt::get(Builder.getInt1Ty(), ";
