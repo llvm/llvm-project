@@ -259,3 +259,275 @@ entry:
   store i192 %bf.clear4, i192* %0, align 8
   ret void
 }
+
+
+define i32 @ashr_demand_bottom3(i64 %x) {
+; CHECK-MVE-LABEL: ashr_demand_bottom3:
+; CHECK-MVE:       @ %bb.0: @ %entry
+; CHECK-MVE-NEXT:    lsrl r0, r1, #3
+; CHECK-MVE-NEXT:    bx lr
+;
+; CHECK-NON-MVE-LABEL: ashr_demand_bottom3:
+; CHECK-NON-MVE:       @ %bb.0: @ %entry
+; CHECK-NON-MVE-NEXT:    lsrs r0, r0, #3
+; CHECK-NON-MVE-NEXT:    orr.w r0, r0, r1, lsl #29
+; CHECK-NON-MVE-NEXT:    bx lr
+entry:
+  %shr = ashr i64 %x, 3
+  %t = trunc i64 %shr to i32
+  ret i32 %t
+}
+
+define i32 @lshr_demand_bottom3(i64 %x) {
+; CHECK-MVE-LABEL: lshr_demand_bottom3:
+; CHECK-MVE:       @ %bb.0: @ %entry
+; CHECK-MVE-NEXT:    lsrl r0, r1, #3
+; CHECK-MVE-NEXT:    bx lr
+;
+; CHECK-NON-MVE-LABEL: lshr_demand_bottom3:
+; CHECK-NON-MVE:       @ %bb.0: @ %entry
+; CHECK-NON-MVE-NEXT:    lsrs r0, r0, #3
+; CHECK-NON-MVE-NEXT:    orr.w r0, r0, r1, lsl #29
+; CHECK-NON-MVE-NEXT:    bx lr
+entry:
+  %shr = lshr i64 %x, 3
+  %t = trunc i64 %shr to i32
+  ret i32 %t
+}
+
+define i32 @lsl_demand_bottom3(i64 %x) {
+; CHECK-LABEL: lsl_demand_bottom3:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    lsls r0, r0, #3
+; CHECK-NEXT:    bx lr
+entry:
+  %shr = shl i64 %x, 3
+  %t = trunc i64 %shr to i32
+  ret i32 %t
+}
+
+
+define i32 @ashr_demand_bottom31(i64 %x) {
+; CHECK-MVE-LABEL: ashr_demand_bottom31:
+; CHECK-MVE:       @ %bb.0: @ %entry
+; CHECK-MVE-NEXT:    lsrl r0, r1, #31
+; CHECK-MVE-NEXT:    bx lr
+;
+; CHECK-NON-MVE-LABEL: ashr_demand_bottom31:
+; CHECK-NON-MVE:       @ %bb.0: @ %entry
+; CHECK-NON-MVE-NEXT:    lsrs r0, r0, #31
+; CHECK-NON-MVE-NEXT:    orr.w r0, r0, r1, lsl #1
+; CHECK-NON-MVE-NEXT:    bx lr
+entry:
+  %shr = ashr i64 %x, 31
+  %t = trunc i64 %shr to i32
+  ret i32 %t
+}
+
+define i32 @lshr_demand_bottom31(i64 %x) {
+; CHECK-MVE-LABEL: lshr_demand_bottom31:
+; CHECK-MVE:       @ %bb.0: @ %entry
+; CHECK-MVE-NEXT:    lsrl r0, r1, #31
+; CHECK-MVE-NEXT:    bx lr
+;
+; CHECK-NON-MVE-LABEL: lshr_demand_bottom31:
+; CHECK-NON-MVE:       @ %bb.0: @ %entry
+; CHECK-NON-MVE-NEXT:    lsrs r0, r0, #31
+; CHECK-NON-MVE-NEXT:    orr.w r0, r0, r1, lsl #1
+; CHECK-NON-MVE-NEXT:    bx lr
+entry:
+  %shr = lshr i64 %x, 31
+  %t = trunc i64 %shr to i32
+  ret i32 %t
+}
+
+define i32 @lsl_demand_bottom31(i64 %x) {
+; CHECK-LABEL: lsl_demand_bottom31:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    lsls r0, r0, #31
+; CHECK-NEXT:    bx lr
+entry:
+  %shr = shl i64 %x, 31
+  %t = trunc i64 %shr to i32
+  ret i32 %t
+}
+
+
+define i32 @ashr_demand_bottom32(i64 %x) {
+; CHECK-LABEL: ashr_demand_bottom32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    mov r0, r1
+; CHECK-NEXT:    bx lr
+entry:
+  %shr = ashr i64 %x, 32
+  %t = trunc i64 %shr to i32
+  ret i32 %t
+}
+
+define i32 @lshr_demand_bottom32(i64 %x) {
+; CHECK-LABEL: lshr_demand_bottom32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    mov r0, r1
+; CHECK-NEXT:    bx lr
+entry:
+  %shr = lshr i64 %x, 32
+  %t = trunc i64 %shr to i32
+  ret i32 %t
+}
+
+define i32 @lsl_demand_bottom32(i64 %x) {
+; CHECK-LABEL: lsl_demand_bottom32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    movs r0, #0
+; CHECK-NEXT:    bx lr
+entry:
+  %shr = shl i64 %x, 32
+  %t = trunc i64 %shr to i32
+  ret i32 %t
+}
+
+
+define i32 @ashr_demand_bottom44(i64 %x) {
+; CHECK-LABEL: ashr_demand_bottom44:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    asrs r0, r1, #12
+; CHECK-NEXT:    bx lr
+entry:
+  %shr = ashr i64 %x, 44
+  %t = trunc i64 %shr to i32
+  ret i32 %t
+}
+
+define i32 @lshr_demand_bottom44(i64 %x) {
+; CHECK-LABEL: lshr_demand_bottom44:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    lsrs r0, r1, #12
+; CHECK-NEXT:    bx lr
+entry:
+  %shr = lshr i64 %x, 44
+  %t = trunc i64 %shr to i32
+  ret i32 %t
+}
+
+define i32 @lsl_demand_bottom44(i64 %x) {
+; CHECK-LABEL: lsl_demand_bottom44:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    movs r0, #0
+; CHECK-NEXT:    bx lr
+entry:
+  %shr = shl i64 %x, 44
+  %t = trunc i64 %shr to i32
+  ret i32 %t
+}
+
+
+define i32 @ashr_demand_bottommask(i64 %x) {
+; CHECK-MVE-LABEL: ashr_demand_bottommask:
+; CHECK-MVE:       @ %bb.0: @ %entry
+; CHECK-MVE-NEXT:    lsrl r0, r1, #31
+; CHECK-MVE-NEXT:    bic r0, r0, #1
+; CHECK-MVE-NEXT:    bx lr
+;
+; CHECK-NON-MVE-LABEL: ashr_demand_bottommask:
+; CHECK-NON-MVE:       @ %bb.0: @ %entry
+; CHECK-NON-MVE-NEXT:    lsls r0, r1, #1
+; CHECK-NON-MVE-NEXT:    bx lr
+entry:
+  %shr = ashr i64 %x, 31
+  %t = trunc i64 %shr to i32
+  %a = and i32 %t, -2
+  ret i32 %a
+}
+
+define i32 @lshr_demand_bottommask(i64 %x) {
+; CHECK-MVE-LABEL: lshr_demand_bottommask:
+; CHECK-MVE:       @ %bb.0: @ %entry
+; CHECK-MVE-NEXT:    lsrl r0, r1, #31
+; CHECK-MVE-NEXT:    bic r0, r0, #1
+; CHECK-MVE-NEXT:    bx lr
+;
+; CHECK-NON-MVE-LABEL: lshr_demand_bottommask:
+; CHECK-NON-MVE:       @ %bb.0: @ %entry
+; CHECK-NON-MVE-NEXT:    lsls r0, r1, #1
+; CHECK-NON-MVE-NEXT:    bx lr
+entry:
+  %shr = lshr i64 %x, 31
+  %t = trunc i64 %shr to i32
+  %a = and i32 %t, -2
+  ret i32 %a
+}
+
+define i32 @lsl_demand_bottommask(i64 %x) {
+; CHECK-LABEL: lsl_demand_bottommask:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    lsls r0, r0, #31
+; CHECK-NEXT:    bx lr
+entry:
+  %shr = shl i64 %x, 31
+  %t = trunc i64 %shr to i32
+  %a = and i32 %t, -2
+  ret i32 %a
+}
+
+define i32 @ashr_demand_bottommask2(i64 %x) {
+; CHECK-MVE-LABEL: ashr_demand_bottommask2:
+; CHECK-MVE:       @ %bb.0: @ %entry
+; CHECK-MVE-NEXT:    lsrl r0, r1, #31
+; CHECK-MVE-NEXT:    bic r0, r0, #3
+; CHECK-MVE-NEXT:    bx lr
+;
+; CHECK-NON-MVE-LABEL: ashr_demand_bottommask2:
+; CHECK-NON-MVE:       @ %bb.0: @ %entry
+; CHECK-NON-MVE-NEXT:    mvn r0, #2
+; CHECK-NON-MVE-NEXT:    and.w r0, r0, r1, lsl #1
+; CHECK-NON-MVE-NEXT:    bx lr
+entry:
+  %shr = ashr i64 %x, 31
+  %t = trunc i64 %shr to i32
+  %a = and i32 %t, -4
+  ret i32 %a
+}
+
+define i32 @lshr_demand_bottommask2(i64 %x) {
+; CHECK-MVE-LABEL: lshr_demand_bottommask2:
+; CHECK-MVE:       @ %bb.0: @ %entry
+; CHECK-MVE-NEXT:    lsrl r0, r1, #31
+; CHECK-MVE-NEXT:    bic r0, r0, #3
+; CHECK-MVE-NEXT:    bx lr
+;
+; CHECK-NON-MVE-LABEL: lshr_demand_bottommask2:
+; CHECK-NON-MVE:       @ %bb.0: @ %entry
+; CHECK-NON-MVE-NEXT:    mvn r0, #2
+; CHECK-NON-MVE-NEXT:    and.w r0, r0, r1, lsl #1
+; CHECK-NON-MVE-NEXT:    bx lr
+entry:
+  %shr = lshr i64 %x, 31
+  %t = trunc i64 %shr to i32
+  %a = and i32 %t, -4
+  ret i32 %a
+}
+
+define i32 @lsl_demand_bottommask2(i64 %x) {
+; CHECK-LABEL: lsl_demand_bottommask2:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    lsls r0, r0, #31
+; CHECK-NEXT:    bx lr
+entry:
+  %shr = shl i64 %x, 31
+  %t = trunc i64 %shr to i32
+  %a = and i32 %t, -4
+  ret i32 %a
+}
+
+define i32 @lsl_demand_topmask(i64 %x) {
+; CHECK-LABEL: lsl_demand_topmask:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    ubfx r0, r0, #1, #28
+; CHECK-NEXT:    bx lr
+entry:
+  %sh = shl i64 %x, 31
+  %a = and i64 %sh, 1152921500311879680 ;0x0fffffff00000000
+  %l = ashr i64 %a, 32
+  %t = trunc i64 %l to i32
+  ret i32 %t
+}
