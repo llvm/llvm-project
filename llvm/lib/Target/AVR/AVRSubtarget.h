@@ -85,11 +85,6 @@ private:
   /// The ELF e_flags architecture.
   unsigned ELFArch;
 
-  AVRInstrInfo InstrInfo;
-  AVRFrameLowering FrameLowering;
-  AVRTargetLowering TLInfo;
-  AVRSelectionDAGInfo TSInfo;
-
   // Subtarget feature settings
   // See AVR.td for details.
   bool m_hasSRAM;
@@ -114,6 +109,11 @@ private:
   // Dummy member, used by FeatureSet's. We cannot have a SubtargetFeature with
   // no variable, so we instead bind pseudo features to this variable.
   bool m_FeatureSetDummy;
+
+  AVRInstrInfo InstrInfo;
+  AVRFrameLowering FrameLowering;
+  AVRTargetLowering TLInfo;
+  AVRSelectionDAGInfo TSInfo;
 };
 
 } // end namespace llvm
