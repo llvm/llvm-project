@@ -344,5 +344,5 @@ TEST_F(SymbolFileDWARFTests, ParseArangesNonzeroSegmentSize) {
   EXPECT_TRUE(bool(error));
   EXPECT_EQ("segmented arange entries are not supported",
             llvm::toString(std::move(error)));
-  EXPECT_EQ(off, 12); // Parser should read no further than the segment size
+  EXPECT_EQ(off, 12U); // Parser should read no further than the segment size
 }
