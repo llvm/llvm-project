@@ -288,12 +288,15 @@ LLVMDIBuilderCreateFile(LLVMDIBuilderRef Builder, const char *Filename,
  * \param ConfigMacrosLen The length of the C string passed to \c ConfigMacros.
  * \param IncludePath     The path to the module map file.
  * \param IncludePathLen  The length of the C string passed to \c IncludePath.
+ * \param APINotesFile    The path to an API notes file for the module.
+ * \param APINotesFileLen The length of the C string passed to \c APINotestFile.
  */
 LLVMMetadataRef
 LLVMDIBuilderCreateModule(LLVMDIBuilderRef Builder, LLVMMetadataRef ParentScope,
                           const char *Name, size_t NameLen,
                           const char *ConfigMacros, size_t ConfigMacrosLen,
-                          const char *IncludePath, size_t IncludePathLen);
+                          const char *IncludePath, size_t IncludePathLen,
+                          const char *APINotestFile, size_t APINotestFileLen);
 
 /**
  * Creates a new descriptor for a namespace with the specified parent scope.
