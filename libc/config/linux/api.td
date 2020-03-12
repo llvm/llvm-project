@@ -18,6 +18,35 @@ def OffT : TypeDecl<"off_t"> {
   }];
 }
 
+def AssertMacro : MacroDef<"assert"> {
+  let Defn = [{
+    #undef assert
+
+    #ifdef NDEBUG
+    #define assert(e) (void)0
+    #else
+
+    #ifdef __cplusplus
+    extern "C"
+    #endif
+    _Noreturn void __assert_fail(const char *, const char *, unsigned, const char *);
+
+    #define assert(e)  \
+      ((e) ? (void)0 : __assert_fail(#e, __FILE__, __LINE__, __PRETTY_FUNCTION__))
+
+    #endif
+  }];
+}
+
+def StaticAssertMacro : MacroDef<"static_assert"> {
+  let Defn = [{
+    #ifndef __cplusplus
+    #undef static_assert
+    #define static_assert _Static_assert
+    #endif
+  }];
+}
+
 def NullMacro : MacroDef<"NULL"> {
   let Defn = [{
     #define __need_NULL
@@ -33,6 +62,13 @@ def ErrnoMacro : MacroDef<"errno"> {
     int *__errno_location();
     #define errno (*__errno_location())
   }];
+}
+
+def AssertAPI : PublicAPI<"assert.h"> {
+  let Macros = [
+    AssertMacro,
+    StaticAssertMacro,
+  ];
 }
 
 def MathAPI : PublicAPI<"math.h"> {
