@@ -40,9 +40,7 @@ define internal i32 @test1_k(i8 %h, i32 %i) {
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[TMP0]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = inttoptr i64 [[CONV]] to %t1*
 ; CHECK-NEXT:    [[CALL:%.*]] = call i1 @test1_g(%t1* [[TMP1]], i32 0)
-; CHECK-NEXT:    [[FROMBOOL_1:%.*]] = zext i1 false to i8
-; CHECK-NEXT:    [[TOBOOL_1:%.*]] = trunc i8 [[FROMBOOL_1]] to i1
-; CHECK-NEXT:    call void @use.1(i1 [[TOBOOL_1]])
+; CHECK-NEXT:    call void @use.1(i1 false)
 ; CHECK-NEXT:    ret i32 undef
 ;
 entry:
@@ -119,9 +117,7 @@ define internal i32 @test2_k(i8 %h, i32 %i) {
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[TMP0]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = inttoptr i64 [[CONV]] to %t1*
 ; CHECK-NEXT:    [[CALL:%.*]] = call i1 @test3_g(%t1* [[TMP1]], i32 0)
-; CHECK-NEXT:    [[FROMBOOL:%.*]] = icmp slt i1 false, true
-; CHECK-NEXT:    [[ADD:%.*]] = add i1 [[FROMBOOL]], [[FROMBOOL]]
-; CHECK-NEXT:    call void @use.1(i1 [[FROMBOOL]])
+; CHECK-NEXT:    call void @use.1(i1 false)
 ; CHECK-NEXT:    ret i32 undef
 ;
 entry:
@@ -393,7 +389,6 @@ define void @test3() {
 ; CHECK-NEXT:    [[CMP25474:%.*]] = icmp sgt i32 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[CMP25474]], label [[FOR_BODY:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[DIV30:%.*]] = sdiv i32 0, [[SUB19]]
 ; CHECK-NEXT:    ret void
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
