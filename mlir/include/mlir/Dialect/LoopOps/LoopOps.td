@@ -41,9 +41,9 @@ def ForOp : Loop_Op<"for",
        RecursiveSideEffects]> {
   let summary = "for operation";
   let description = [{
-    The "loop.for" operation represents a loop taking 3 SSA value as
-    operands that represent the lower bound, upper bound and step respectively.
-    The operation defines an SSA value for its induction variable. It has one
+    The "loop.for" operation represents a loop taking 3 SSA value as operands
+    that represent the lower bound, upper bound and step respectively.  The
+    operation defines an SSA value for its induction variable. It has one
     region capturing the loop body. The induction variable is represented as an
     argument of this region. This SSA value always has type index, which is the
     size of the machine word. The step is a value of type index, required to be
@@ -53,8 +53,8 @@ def ForOp : Loop_Op<"for",
 
     The body region must contain exactly one block that terminates with
     "loop.yield".  Calling ForOp::build will create such a region and insert
-    the terminator implicitly if none is defined, so will the parsing even
-    in cases when it is absent from the custom format. For example:
+    the terminator implicitly if none is defined, so will the parsing even in
+    cases when it is absent from the custom format. For example:
 
     ```mlir
        loop.for %iv = %lb to %ub step %step {
@@ -98,8 +98,8 @@ def ForOp : Loop_Op<"for",
     The number and types of the "loop.for" results must match the initial
     values in the "iter_args" binding and the yield operands.
 
-    Another example with a nested "loop.if" (see "loop.if" for details)
-    to perform conditional reduction:
+    Another example with a nested "loop.if" (see "loop.if" for details) to
+    perform conditional reduction:
 
     ```mlir
     func @conditional_reduce(%buffer: memref<1024xf32>, %lb: index,
@@ -202,10 +202,10 @@ def IfOp : Loop_Op<"if",
     ```
 
     "loop.if" regions are always terminated with "loop.yield". If "loop.if"
-    defines no values, the "loop.yield" can be left out, and will be
-    inserted implicitly. Otherwise, it must be explicit.
-    Also, if "loop.if" defines one or more values, the 'else' block cannot
-    be omitted.
+    defines no values, the "loop.yield" can be left out, and will be inserted
+    implicitly. Otherwise, it must be explicit.
+    Also, if "loop.if" defines one or more values, the 'else' block cannot be
+    omitted.
 
     For example:
     ```mlir
@@ -262,10 +262,10 @@ def ParallelOp : Loop_Op<"parallel",
     individual iterations into a single result. This is modeled using the
     loop.reduce operation (see loop.reduce for details). Each result of a
     loop.parallel operation is associated with an initial value operand and
-    reduce operation that is an immediate child. Reductions are matched to result
-    and initial values in order of their appearance in the body. Consequently,
-    we require that the body region has the same number of results and initial
-    values as it has reduce operations.
+    reduce operation that is an immediate child. Reductions are matched to
+    result and initial values in order of their appearance in the body.
+    Consequently, we require that the body region has the same number of
+    results and initial values as it has reduce operations.
 
     The body region must contain exactly one block that terminates with
     "loop.yield" without operands. Parsing ParallelOp will create such a region
@@ -323,10 +323,10 @@ def ReduceOp : Loop_Op<"reduce", [HasParent<"ParallelOp">]> {
     "loop.parallel" and is associated with a result value of its parent
     operation.
 
-    Association is in the order of appearance in the body where the first result
-    of a parallel loop operation corresponds to the first "loop.reduce" in the
-    operation's body region. The reduce operation takes a single operand, which
-    is the value to be used in the reduction.
+    Association is in the order of appearance in the body where the first
+    result of a parallel loop operation corresponds to the first "loop.reduce"
+    in the operation's body region. The reduce operation takes a single
+    operand, which is the value to be used in the reduction.
 
     The reduce operation contains a region whose entry block expects two
     arguments of the same type as the operand. As the iteration order of the
@@ -340,7 +340,7 @@ def ReduceOp : Loop_Op<"reduce", [HasParent<"ParallelOp">]> {
 
     ```mlir
       %operand = constant 1.0 : f32
-      loop.reduce(%operand) -> f32 {
+      loop.reduce(%operand) : f32 {
         ^bb0(%lhs : f32, %rhs: f32):
           %res = addf %lhs, %rhs : f32
           loop.reduce.return %res : f32
@@ -380,14 +380,14 @@ def YieldOp : Loop_Op<"yield", [Terminator]> {
   let summary = "loop yield and termination operation";
   let description = [{
     "loop.yield" yields an SSA value from a loop dialect op region and
-    terminates the regions. The semantics of how the values are yielded
-    is defined by the parent operation.
+    terminates the regions. The semantics of how the values are yielded is
+    defined by the parent operation.
     If "loop.yield" has any operands, the operands must match the parent
     operation's results.
     If the parent operation defines no values, then the "loop.yield" may be
     left out in the custom syntax and the builders will insert one implicitly.
-    Otherwise, it has to be present in the syntax to indicate which values
-    are yielded.
+    Otherwise, it has to be present in the syntax to indicate which values are
+    yielded.
   }];
 
   let arguments = (ins Variadic<AnyType>:$results);
