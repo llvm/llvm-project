@@ -1361,25 +1361,23 @@ ObjCMethodDecl::findPropertyDecl(bool CheckOverrides) const {
         return Found;
     } else {
       // Determine whether the container is a class.
-      ClassDecl = dyn_cast<ObjCInterfaceDecl>(Container);
+      ClassDecl = cast<ObjCInterfaceDecl>(Container);
     }
+    assert(ClassDecl && "Failed to find main class");
 
     // If we have a class, check its visible extensions.
-    if (ClassDecl) {
-      for (const auto *Ext : ClassDecl->visible_extensions()) {
-        if (Ext == Container)
-          continue;
-
-        if (const auto *Found = findMatchingProperty(Ext))
-          return Found;
-      }
+    for (const auto *Ext : ClassDecl->visible_extensions()) {
+      if (Ext == Container)
+        continue;
+      if (const auto *Found = findMatchingProperty(Ext))
+        return Found;
     }
 
     assert(isSynthesizedAccessorStub() && "expected an accessor stub");
+
     for (const auto *Cat : ClassDecl->known_categories()) {
       if (Cat == Container)
         continue;
-
       if (const auto *Found = findMatchingProperty(Cat))
         return Found;
     }
