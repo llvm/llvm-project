@@ -39,7 +39,9 @@ public:
   ///
   /// \see lldb_private::TypeSystemClang::GetType(clang::QualType)
   CompilerType(TypeSystem *type_system, lldb::opaque_compiler_type_t type)
-      : m_type(type), m_type_system(type_system) {}
+      : m_type(type), m_type_system(type_system) {
+    assert(Verify() && "verification failed");
+  }
 
   CompilerType(const CompilerType &rhs)
       : m_type(rhs.m_type), m_type_system(rhs.m_type_system) {}
@@ -380,6 +382,13 @@ public:
   }
 
 private:
+#ifndef NDEBUG
+  /// If the type is valid, ask the TypeSystem to verify the integrity
+  /// of the type to catch CompilerTypes that mix and match invalid
+  /// TypeSystem/Opaque type pairs.
+  bool Verify() const;
+#endif
+
   lldb::opaque_compiler_type_t m_type = nullptr;
   TypeSystem *m_type_system = nullptr;
 };
