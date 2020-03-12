@@ -1529,13 +1529,13 @@ ExprResult Parser::ParseSimpleAsm(bool ForAsmLabel, SourceLocation *EndLoc) {
   assert(Tok.is(tok::kw_asm) && "Not an asm!");
   SourceLocation Loc = ConsumeToken();
 
-  if (Tok.is(tok::kw_volatile)) {
-    // Remove from the end of 'asm' to the end of 'volatile'.
+  if (isGNUAsmQualifier(Tok)) {
+    // Remove from the end of 'asm' to the end of the asm qualifier.
     SourceRange RemovalRange(PP.getLocForEndOfToken(Loc),
                              PP.getLocForEndOfToken(Tok.getLocation()));
-
-    Diag(Tok, diag::warn_file_asm_volatile)
-      << FixItHint::CreateRemoval(RemovalRange);
+    Diag(Tok, diag::err_global_asm_qualifier_ignored)
+        << GNUAsmQualifiers::getQualifierName(getGNUAsmQualifier(Tok))
+        << FixItHint::CreateRemoval(RemovalRange);
     ConsumeToken();
   }
 
