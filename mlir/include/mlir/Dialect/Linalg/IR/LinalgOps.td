@@ -15,6 +15,7 @@
 
 include "mlir/Dialect/AffineOps/AffineOpsBase.td"
 include "mlir/Dialect/Linalg/IR/LinalgBase.td"
+include "mlir/Interfaces/SideEffects.td"
 
 // Base class for Linalg dialect ops that do not correspond to library calls.
 class Linalg_Op<string mnemonic, list<OpTrait> traits = []> :

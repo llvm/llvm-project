@@ -17,6 +17,7 @@
 include "mlir/Dialect/SPIRV/SPIRVBase.td"
 include "mlir/Interfaces/CallInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
+include "mlir/Interfaces/SideEffects.td"
 
 // -----
 

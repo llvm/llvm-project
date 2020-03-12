@@ -13,9 +13,9 @@
 #ifndef STANDARD_OPS
 #define STANDARD_OPS
 
+include "mlir/IR/OpAsmInterface.td"
 include "mlir/Interfaces/CallInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
-include "mlir/IR/OpAsmInterface.td"
 include "mlir/Interfaces/SideEffects.td"
 
 def Std_Dialect : Dialect {

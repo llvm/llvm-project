@@ -13,7 +13,7 @@
 #ifndef LOOP_OPS
 #define LOOP_OPS
 
-include "mlir/IR/OpBase.td"
+include "mlir/Interfaces/SideEffects.td"
 include "mlir/Transforms/LoopLikeInterface.td"
 
 def Loop_Dialect : Dialect {
