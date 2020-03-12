@@ -399,7 +399,7 @@ LogicalResult OpBuilder::tryFold(Operation *op,
         cst->erase();
       return cleanupFailure();
     }
-    assert(matchPattern(constOp, m_Constant(&attr)));
+    assert(matchPattern(constOp, m_Constant()));
 
     generatedConstants.push_back(constOp);
     results.push_back(constOp->getResult(0));
