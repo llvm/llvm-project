@@ -3703,10 +3703,12 @@ LegalizerHelper::narrowScalarExtract(MachineInstr &MI, unsigned TypeIdx,
   }
 
   Register DstReg = MI.getOperand(0).getReg();
-  if(MRI.getType(DstReg).isVector())
+  if (MRI.getType(DstReg).isVector())
     MIRBuilder.buildBuildVector(DstReg, DstRegs);
-  else
+  else if (DstRegs.size() > 1)
     MIRBuilder.buildMerge(DstReg, DstRegs);
+  else
+    MIRBuilder.buildCopy(DstReg, DstRegs[0]);
   MI.eraseFromParent();
   return Legalized;
 }
