@@ -94,7 +94,40 @@ public:
 
   const char *GetEnvironmentEntryAtIndex(uint32_t idx);
 
+  /// Update this object with the given environment variables.
+  ///
+  /// If append is false, the provided environment will replace the existing
+  /// environment. Otherwise, existing values will be updated of left untouched
+  /// accordingly.
+  ///
+  /// \param [in] envp
+  ///     The new environment variables as a list of strings with the following
+  ///     format
+  ///         name=value
+  ///
+  /// \param [in] append
+  ///     Flag that controls whether to replace the existing environment.
   void SetEnvironmentEntries(const char **envp, bool append);
+
+  /// Update this object with the given environment variables.
+  ///
+  /// If append is false, the provided environment will replace the existing
+  /// environment. Otherwise, existing values will be updated of left untouched
+  /// accordingly.
+  ///
+  /// \param [in] env
+  ///     The new environment variables.
+  ///
+  /// \param [in] append
+  ///     Flag that controls whether to replace the existing environment.
+  void SetEnvironment(const SBEnvironment &env, bool append);
+
+  /// Return the environment variables of this object.
+  ///
+  /// \return
+  ///     An lldb::SBEnvironment object which is a copy of the SBLaunchInfo's
+  ///     environment.
+  SBEnvironment GetEnvironment();
 
   void Clear();
 
