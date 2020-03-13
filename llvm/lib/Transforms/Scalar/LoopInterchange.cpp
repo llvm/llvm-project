@@ -412,7 +412,6 @@ public:
 
 private:
   bool adjustLoopLinks();
-  void adjustLoopPreheaders();
   bool adjustLoopBranches();
 
   Loop *OuterLoop;
@@ -580,6 +579,12 @@ struct LoopInterchange : public LoopPass {
     LIT.transform();
     LLVM_DEBUG(dbgs() << "Loops interchanged.\n");
     LoopsInterchanged++;
+
+    assert(InnerLoop->isLCSSAForm(*DT) &&
+           "Inner loop not left in LCSSA form after loop interchange!");
+    assert(OuterLoop->isLCSSAForm(*DT) &&
+           "Outer loop not left in LCSSA form after loop interchange!");
+
     return true;
   }
 };
@@ -1319,6 +1324,23 @@ static void moveBBContents(BasicBlock *FromBB, Instruction *InsertBefore) {
                 FromBB->getTerminator()->getIterator());
 }
 
+/// Swap instructions between \p BB1 and \p BB2 but keep terminators intact.
+static void swapBBContents(BasicBlock *BB1, BasicBlock *BB2) {
+  // Save all non-terminator instructions of BB1 into TempInstrs and unlink them
+  // from BB1 afterwards.
+  auto Iter = map_range(*BB1, [](Instruction &I) { return &I; });
+  SmallVector<Instruction *, 4> TempInstrs(Iter.begin(), std::prev(Iter.end()));
+  for (Instruction *I : TempInstrs)
+    I->removeFromParent();
+
+  // Move instructions from BB2 to BB1.
+  moveBBContents(BB2, BB1->getTerminator());
+
+  // Move instructions from TempInstrs to BB2.
+  for (Instruction *I : TempInstrs)
+    I->insertBefore(BB2->getTerminator());
+}
+
 // Update BI to jump to NewBB instead of OldBB. Records updates to the
 // dominator tree in DTUpdates. If \p MustUpdateOnce is true, assert that
 // \p OldBB  is exactly once in BI's successor list.
@@ -1578,30 +1600,17 @@ bool LoopInterchangeTransform::adjustLoopBranches() {
   return true;
 }
 
-void LoopInterchangeTransform::adjustLoopPreheaders() {
-  // We have interchanged the preheaders so we need to interchange the data in
-  // the preheader as well.
-  // This is because the content of inner preheader was previously executed
-  // inside the outer loop.
-  BasicBlock *OuterLoopPreHeader = OuterLoop->getLoopPreheader();
-  BasicBlock *InnerLoopPreHeader = InnerLoop->getLoopPreheader();
-  BasicBlock *OuterLoopHeader = OuterLoop->getHeader();
-  BranchInst *InnerTermBI =
-      cast<BranchInst>(InnerLoopPreHeader->getTerminator());
-
-  // These instructions should now be executed inside the loop.
-  // Move instruction into a new block after outer header.
-  moveBBContents(InnerLoopPreHeader, OuterLoopHeader->getTerminator());
-  // These instructions were not executed previously in the loop so move them to
-  // the older inner loop preheader.
-  moveBBContents(OuterLoopPreHeader, InnerTermBI);
-}
-
 bool LoopInterchangeTransform::adjustLoopLinks() {
   // Adjust all branches in the inner and outer loop.
   bool Changed = adjustLoopBranches();
-  if (Changed)
-    adjustLoopPreheaders();
+  if (Changed) {
+    // We have interchanged the preheaders so we need to interchange the data in
+    // the preheaders as well. This is because the content of the inner
+    // preheader was previously executed inside the outer loop.
+    BasicBlock *OuterLoopPreHeader = OuterLoop->getLoopPreheader();
+    BasicBlock *InnerLoopPreHeader = InnerLoop->getLoopPreheader();
+    swapBBContents(OuterLoopPreHeader, InnerLoopPreHeader);
+  }
   return Changed;
 }
 
