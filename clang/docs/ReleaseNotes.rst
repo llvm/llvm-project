@@ -78,7 +78,7 @@ Improvements to Clang's diagnostics
 
 - ``-Wbitwise-op-parentheses`` and ``-Wlogical-op-parentheses`` are disabled by default.
 
-- The new warnings ``Wc99-designator`` and ``-Wreorder-init-list`` warn about
+- The new warnings ``-Wc99-designator`` and ``-Wreorder-init-list`` warn about
   uses of C99 initializers in C++ mode for cases that are valid in C99 but not
   in C++20.
 
