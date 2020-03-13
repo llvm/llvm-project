@@ -376,13 +376,10 @@ PatternMatchResult GPUFuncOpConversion::matchAndRewrite(
 PatternMatchResult GPUModuleConversion::matchAndRewrite(
     gpu::GPUModuleOp moduleOp, ArrayRef<Value> operands,
     ConversionPatternRewriter &rewriter) const {
-  // TODO : Generalize this to account for different extensions,
-  // capabilities, extended_instruction_sets, other addressing models
-  // and memory models.
   auto spvModule = rewriter.create<spirv::ModuleOp>(
       moduleOp.getLoc(), spirv::AddressingModel::Logical,
-      spirv::MemoryModel::GLSL450, spirv::Capability::Shader,
-      spirv::Extension::SPV_KHR_storage_buffer_storage_class);
+      spirv::MemoryModel::GLSL450);
+
   // Move the region from the module op into the SPIR-V module.
   Region &spvModuleRegion = spvModule.body();
   rewriter.inlineRegionBefore(moduleOp.body(), spvModuleRegion,

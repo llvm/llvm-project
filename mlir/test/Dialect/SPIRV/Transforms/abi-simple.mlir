@@ -1,7 +1,7 @@
 // RUN: mlir-opt -spirv-lower-abi-attrs -verify-diagnostics %s -o - | FileCheck %s
 
 // CHECK-LABEL: spv.module
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
   // CHECK-DAG:    spv.globalVariable [[VAR0:@.*]] bind(0, 0) : !spv.ptr<!spv.struct<f32 [0]>, StorageBuffer>
   // CHECK-DAG:    spv.globalVariable [[VAR1:@.*]] bind(0, 1) : !spv.ptr<!spv.struct<!spv.array<12 x f32 [4]> [0]>, StorageBuffer>
   // CHECK:    spv.func [[FN:@.*]]()
@@ -24,4 +24,4 @@ spv.module "Logical" "GLSL450" {
   }
   // CHECK: spv.EntryPoint "GLCompute" [[FN]]
   // CHECK: spv.ExecutionMode [[FN]] "LocalSize", 32, 1, 1
-} attributes {capabilities = ["Shader"], extensions = ["SPV_KHR_storage_buffer_storage_class"]}
+}

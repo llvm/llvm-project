@@ -13,6 +13,7 @@
 #include "mlir/Dialect/SPIRV/Serialization.h"
 
 #include "mlir/ADT/TypeSwitch.h"
+#include "mlir/Dialect/SPIRV/SPIRVAttributes.h"
 #include "mlir/Dialect/SPIRV/SPIRVBinaryUtils.h"
 #include "mlir/Dialect/SPIRV/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/SPIRVOps.h"
@@ -490,7 +491,7 @@ void Serializer::collect(SmallVectorImpl<uint32_t> &binary) {
   binary.clear();
   binary.reserve(moduleSize);
 
-  spirv::appendModuleHeader(binary, nextID);
+  spirv::appendModuleHeader(binary, module.vce_triple()->getVersion(), nextID);
   binary.append(capabilities.begin(), capabilities.end());
   binary.append(extensions.begin(), extensions.end());
   binary.append(extendedSets.begin(), extendedSets.end());
@@ -536,28 +537,16 @@ uint32_t Serializer::getOrCreateFunctionID(StringRef fnName) {
 }
 
 void Serializer::processCapability() {
-  auto caps = module.getAttrOfType<ArrayAttr>("capabilities");
-  if (!caps)
-    return;
-
-  for (auto cap : caps.getValue()) {
-    auto capStr = cap.cast<StringAttr>().getValue();
-    auto capVal = spirv::symbolizeCapability(capStr);
+  for (auto cap : module.vce_triple()->getCapabilities())
     encodeInstructionInto(capabilities, spirv::Opcode::OpCapability,
-                          {static_cast<uint32_t>(*capVal)});
-  }
+                          {static_cast<uint32_t>(cap)});
 }
 
 void Serializer::processExtension() {
-  auto exts = module.getAttrOfType<ArrayAttr>("extensions");
-  if (!exts)
-    return;
-
-  SmallVector<uint32_t, 16> extName;
-  for (auto ext : exts.getValue()) {
-    auto extStr = ext.cast<StringAttr>().getValue();
+  llvm::SmallVector<uint32_t, 16> extName;
+  for (spirv::Extension ext : module.vce_triple()->getExtensions()) {
     extName.clear();
-    spirv::encodeStringLiteralInto(extName, extStr);
+    spirv::encodeStringLiteralInto(extName, spirv::stringifyExtension(ext));
     encodeInstructionInto(extensions, spirv::Opcode::OpExtension, extName);
   }
 }
@@ -1812,6 +1801,10 @@ LogicalResult Serializer::emitDecoration(uint32_t target,
 
 LogicalResult spirv::serialize(spirv::ModuleOp module,
                                SmallVectorImpl<uint32_t> &binary) {
+  if (!module.vce_triple().hasValue())
+    return module.emitError(
+        "module must have 'vce_triple' attribute to be serializeable");
+
   Serializer serializer(module);
 
   if (failed(serializer.serialize()))

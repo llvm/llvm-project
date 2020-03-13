@@ -1,6 +1,6 @@
 // RUN: mlir-opt -decorate-spirv-composite-type-layout -split-input-file -verify-diagnostics %s -o - | FileCheck %s
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
   // CHECK: spv.globalVariable @var0 bind(0, 1) : !spv.ptr<!spv.struct<i32 [0], !spv.struct<f32 [0], i32 [4]> [4], f32 [12]>, Uniform>
   spv.globalVariable @var0 bind(0,1) : !spv.ptr<!spv.struct<i32, !spv.struct<f32, i32>, f32>, Uniform>
 
@@ -31,7 +31,7 @@ spv.module "Logical" "GLSL450" {
 
 // -----
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
   // CHECK: spv.globalVariable @var0 : !spv.ptr<!spv.struct<!spv.struct<!spv.struct<!spv.struct<!spv.struct<i1 [0], i1 [1], f64 [8]> [0], i1 [16]> [0], i1 [24]> [0], i1 [32]> [0], i1 [40]>, Uniform>
   spv.globalVariable @var0 : !spv.ptr<!spv.struct<!spv.struct<!spv.struct<!spv.struct<!spv.struct<i1, i1, f64>, i1>, i1>, i1>, i1>, Uniform>
 
@@ -59,7 +59,7 @@ spv.module "Logical" "GLSL450" {
 
 // -----
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
   // CHECK: spv.globalVariable @var0 : !spv.ptr<!spv.struct<vector<2xi32> [0], f32 [8]>, StorageBuffer>
   spv.globalVariable @var0 : !spv.ptr<!spv.struct<vector<2xi32>, f32>, StorageBuffer>
 
@@ -72,7 +72,7 @@ spv.module "Logical" "GLSL450" {
 
 // -----
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
   // CHECK: spv.globalVariable @emptyStructAsMember : !spv.ptr<!spv.struct<!spv.struct<> [0]>, StorageBuffer>
   spv.globalVariable @emptyStructAsMember : !spv.ptr<!spv.struct<!spv.struct<>>, StorageBuffer>
 
@@ -91,7 +91,7 @@ spv.module "Logical" "GLSL450" {
 
 // -----
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
   // CHECK: spv.globalVariable @var0 : !spv.ptr<!spv.struct<i32 [0]>, PushConstant>
   spv.globalVariable @var0 : !spv.ptr<!spv.struct<i32>, PushConstant>
   // CHECK: spv.globalVariable @var1 : !spv.ptr<!spv.struct<i32 [0]>, PhysicalStorageBuffer>
