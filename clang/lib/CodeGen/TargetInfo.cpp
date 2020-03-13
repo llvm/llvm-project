@@ -8091,6 +8091,10 @@ void AMDGPUTargetCodeGenInfo::setTargetAttributes(
       (M.getTriple().getOS() == llvm::Triple::AMDHSA))
     F->addFnAttr("amdgpu-implicitarg-num-bytes", "56");
 
+  if (IsHIPKernel)
+    F->addFnAttr("uniform-work-group-size", "true");
+
+
   const auto *FlatWGS = FD->getAttr<AMDGPUFlatWorkGroupSizeAttr>();
   if (ReqdWGS || FlatWGS) {
     unsigned Min = 0;
