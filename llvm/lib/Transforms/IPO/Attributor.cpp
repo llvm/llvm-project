@@ -1232,7 +1232,7 @@ public:
       }
     }
 
-    if (!F->hasExactDefinition())
+    if (!A.isFunctionIPOAmendable(*F))
       indicatePessimisticFixpoint();
   }
 
@@ -2512,7 +2512,7 @@ static bool containsCycle(Function &F) {
 // FIXME: Any cycle is regarded as endless loop for now.
 //        We have to allow some patterns.
 static bool containsPossiblyEndlessLoop(Function *F) {
-  return !F || !F->hasExactDefinition() || containsCycle(*F);
+  return containsCycle(*F);
 }
 
 struct AAWillReturnImpl : public AAWillReturn {
@@ -2523,7 +2523,7 @@ struct AAWillReturnImpl : public AAWillReturn {
     AAWillReturn::initialize(A);
 
     Function *F = getAssociatedFunction();
-    if (containsPossiblyEndlessLoop(F))
+    if (!F || !A.isFunctionIPOAmendable(*F) || containsPossiblyEndlessLoop(F))
       indicatePessimisticFixpoint();
   }
 
@@ -3065,7 +3065,7 @@ struct AAIsDeadArgument : public AAIsDeadFloating {
 
   /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
-    if (!getAssociatedFunction()->hasExactDefinition())
+    if (!A.isFunctionIPOAmendable(*getAssociatedFunction()))
       indicatePessimisticFixpoint();
   }
 
@@ -3616,8 +3616,8 @@ struct AADereferenceableImpl : AADereferenceable {
 
     const IRPosition &IRP = this->getIRPosition();
     bool IsFnInterface = IRP.isFnInterfaceKind();
-    const Function *FnScope = IRP.getAnchorScope();
-    if (IsFnInterface && (!FnScope || !FnScope->hasExactDefinition()))
+    Function *FnScope = IRP.getAnchorScope();
+    if (IsFnInterface && (!FnScope || !A.isFunctionIPOAmendable(*FnScope)))
       indicatePessimisticFixpoint();
   }
 
@@ -3899,7 +3899,7 @@ struct AAAlignImpl : AAAlign {
 
     if (getIRPosition().isFnInterfaceKind() &&
         (!getAssociatedFunction() ||
-         !getAssociatedFunction()->hasExactDefinition()))
+         !A.isFunctionIPOAmendable(*getAssociatedFunction())))
       indicatePessimisticFixpoint();
   }
 
@@ -4156,7 +4156,7 @@ struct AANoCaptureImpl : public AANoCapture {
     }
     Function *AnchorScope = getAnchorScope();
     if (isFnInterfaceKind() &&
-        (!AnchorScope || !AnchorScope->hasExactDefinition())) {
+        (!AnchorScope || !A.isFunctionIPOAmendable(*AnchorScope))) {
       indicatePessimisticFixpoint();
       return;
     }
@@ -5888,7 +5888,7 @@ struct AAMemoryBehaviorArgument : AAMemoryBehaviorFloating {
 
     // Initialize the use vector with all direct uses of the associated value.
     Argument *Arg = getAssociatedArgument();
-    if (!Arg || !Arg->getParent()->hasExactDefinition()) {
+    if (!Arg || !A.isFunctionIPOAmendable(*(Arg->getParent()))) {
       indicatePessimisticFixpoint();
     } else {
       // Initialize the use vector with all direct uses of the associated value.
@@ -6016,7 +6016,7 @@ struct AAMemoryBehaviorCallSite final : AAMemoryBehaviorImpl {
   void initialize(Attributor &A) override {
     AAMemoryBehaviorImpl::initialize(A);
     Function *F = getAssociatedFunction();
-    if (!F || !F->hasExactDefinition())
+    if (!F || !A.isFunctionIPOAmendable(*F))
       indicatePessimisticFixpoint();
   }
 
@@ -6703,7 +6703,7 @@ struct AAMemoryLocationCallSite final : AAMemoryLocationImpl {
   void initialize(Attributor &A) override {
     AAMemoryLocationImpl::initialize(A);
     Function *F = getAssociatedFunction();
-    if (!F || !F->hasExactDefinition())
+    if (!F || !A.isFunctionIPOAmendable(*F))
       indicatePessimisticFixpoint();
   }
 
@@ -8293,6 +8293,10 @@ void Attributor::initializeInformationCache(Function &F) {
     if (I.mayReadOrWriteMemory())
       ReadOrWriteInsts.push_back(&I);
   }
+
+  if (F.hasFnAttribute(Attribute::AlwaysInline) &&
+      isInlineViable(F).isSuccess())
+    InfoCache.InlineableFunctions.insert(&F);
 }
 
 void Attributor::recordDependence(const AbstractAttribute &FromAA,
