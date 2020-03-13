@@ -43,7 +43,7 @@ namespace clangd {
 /// As we must avoid re-parsing the preamble, any information that can only
 /// be obtained during parsing must be eagerly captured and stored here.
 struct PreambleData {
-  PreambleData(llvm::StringRef Version, PrecompiledPreamble Preamble,
+  PreambleData(const ParseInputs &Inputs, PrecompiledPreamble Preamble,
                std::vector<Diag> Diags, IncludeStructure Includes,
                MainFileMacros Macros,
                std::unique_ptr<PreambleFileStatusCache> StatCache,
@@ -80,7 +80,6 @@ using PreambleParsedCallback =
 std::shared_ptr<const PreambleData>
 buildPreamble(PathRef FileName, CompilerInvocation &CI,
               std::shared_ptr<const PreambleData> OldPreamble,
-              const tooling::CompileCommand &OldCompileCommand,
               const ParseInputs &Inputs, bool StoreInMemory,
               PreambleParsedCallback PreambleCallback);
 

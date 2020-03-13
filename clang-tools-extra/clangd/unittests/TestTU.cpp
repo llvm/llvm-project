@@ -67,8 +67,7 @@ ParsedAST TestTU::build() const {
   assert(CI && "Failed to build compilation invocation.");
   auto Preamble =
       buildPreamble(FullFilename, *CI,
-                    /*OldPreamble=*/nullptr,
-                    /*OldCompileCommand=*/Inputs.CompileCommand, Inputs,
+                    /*OldPreamble=*/nullptr, Inputs,
                     /*StoreInMemory=*/true, /*PreambleCallback=*/nullptr);
   auto AST =
       buildAST(FullFilename, std::move(CI), Diags.take(), Inputs, Preamble);
