@@ -1724,8 +1724,10 @@ void SITargetLowering::allocateSpecialInputSGPRs(
   if (Info.hasQueuePtr())
     ArgInfo.QueuePtr = allocateSGPR64Input(CCInfo);
 
-  if (Info.hasKernargSegmentPtr())
-    ArgInfo.KernargSegmentPtr = allocateSGPR64Input(CCInfo);
+  // Implicit arg ptr takes the place of the kernarg segment pointer. This is a
+  // constant offset from the kernarg segment.
+  if (Info.hasImplicitArgPtr())
+    ArgInfo.ImplicitArgPtr = allocateSGPR64Input(CCInfo);
 
   if (Info.hasDispatchID())
     ArgInfo.DispatchID = allocateSGPR64Input(CCInfo);
@@ -1740,9 +1742,6 @@ void SITargetLowering::allocateSpecialInputSGPRs(
 
   if (Info.hasWorkGroupIDZ())
     ArgInfo.WorkGroupIDZ = allocateSGPR32Input(CCInfo);
-
-  if (Info.hasImplicitArgPtr())
-    ArgInfo.ImplicitArgPtr = allocateSGPR64Input(CCInfo);
 }
 
 // Allocate special inputs passed in user SGPRs.
@@ -2448,12 +2447,11 @@ void SITargetLowering::passSpecialInputs(
   AMDGPUFunctionArgInfo::PreloadedValue InputRegs[] = {
     AMDGPUFunctionArgInfo::DISPATCH_PTR,
     AMDGPUFunctionArgInfo::QUEUE_PTR,
-    AMDGPUFunctionArgInfo::KERNARG_SEGMENT_PTR,
+    AMDGPUFunctionArgInfo::IMPLICIT_ARG_PTR,
     AMDGPUFunctionArgInfo::DISPATCH_ID,
     AMDGPUFunctionArgInfo::WORKGROUP_ID_X,
     AMDGPUFunctionArgInfo::WORKGROUP_ID_Y,
-    AMDGPUFunctionArgInfo::WORKGROUP_ID_Z,
-    AMDGPUFunctionArgInfo::IMPLICIT_ARG_PTR
+    AMDGPUFunctionArgInfo::WORKGROUP_ID_Z
   };
 
   for (auto InputID : InputRegs) {
@@ -5735,6 +5733,11 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                              AMDGPUFunctionArgInfo::IMPLICIT_ARG_PTR);
   }
   case Intrinsic::amdgcn_kernarg_segment_ptr: {
+    if (!AMDGPU::isKernel(MF.getFunction().getCallingConv())) {
+      // This only makes sense to call in a kernel, so just lower to null.
+      return DAG.getConstant(0, DL, VT);
+    }
+
     return getPreloadedValue(DAG, *MFI, VT,
                              AMDGPUFunctionArgInfo::KERNARG_SEGMENT_PTR);
   }
