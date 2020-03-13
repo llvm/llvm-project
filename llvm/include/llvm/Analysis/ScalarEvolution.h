@@ -1899,7 +1899,7 @@ private:
   /// otherwise.  The second component is the `FoldingSetNodeID` that was
   /// constructed to look up the SCEV and the third component is the insertion
   /// point.
-  std::tuple<const SCEV *, FoldingSetNodeID, void *>
+  std::tuple<SCEV *, FoldingSetNodeID, void *>
   findExistingSCEVInCache(int SCEVType, ArrayRef<const SCEV *> Ops);
 
   FoldingSet<SCEV> UniqueSCEVs;
