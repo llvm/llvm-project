@@ -30,6 +30,7 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
+#include "llvm/Support/BuryPointer.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -491,6 +492,7 @@ int main(int argc_, const char **argv_) {
 
   std::unique_ptr<Compilation> C(TheDriver.BuildCompilation(argv));
   int Res = 1;
+  bool IsCrash = false;
   if (C && !C->containsError()) {
     SmallVector<std::pair<int, const Command *>, 4> FailingCommands;
     Res = TheDriver.ExecuteCompilation(*C, FailingCommands);
@@ -517,11 +519,11 @@ int main(int argc_, const char **argv_) {
       // If result status is 70, then the driver command reported a fatal error.
       // On Windows, abort will return an exit code of 3.  In these cases,
       // generate additional diagnostic information if possible.
-      bool DiagnoseCrash = CommandRes < 0 || CommandRes == 70;
+      IsCrash = CommandRes < 0 || CommandRes == 70;
 #ifdef _WIN32
-      DiagnoseCrash |= CommandRes == 3;
+      IsCrash |= CommandRes == 3;
 #endif
-      if (DiagnoseCrash) {
+      if (IsCrash) {
         TheDriver.generateCompilationDiagnostics(*C, *FailingCommand);
         break;
       }
@@ -530,10 +532,16 @@ int main(int argc_, const char **argv_) {
 
   Diags.getClient()->finish();
 
-  // If any timers were active but haven't been destroyed yet, print their
-  // results now.  This happens in -disable-free mode.
-  llvm::TimerGroup::printAll(llvm::errs());
-  llvm::TimerGroup::clearAll();
+  if (!UseNewCC1Process && IsCrash) {
+    // When crashing in -fintegrated-cc1 mode, bury the timer pointers, because
+    // the internal linked list might point to already released stack frames.
+    llvm::BuryPointer(llvm::TimerGroup::aquireDefaultGroup());
+  } else {
+    // If any timers were active but haven't been destroyed yet, print their
+    // results now.  This happens in -disable-free mode.
+    llvm::TimerGroup::printAll(llvm::errs());
+    llvm::TimerGroup::clearAll();
+  }
 
 #ifdef _WIN32
   // Exit status should not be negative on Win32, unless abnormal termination.
