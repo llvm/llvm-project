@@ -349,7 +349,8 @@ def parseOptionsAndInitTestdirs():
                 logging.error('"%s" is not a setting in the form "key=value"',
                               setting[0])
                 sys.exit(-1)
-            configuration.settings.append(setting[0].split('=', 1))
+            setting_list = setting[0].split('=', 1)
+            configuration.settings.append((setting_list[0], setting_list[1]))
 
     if args.d:
         sys.stdout.write(
