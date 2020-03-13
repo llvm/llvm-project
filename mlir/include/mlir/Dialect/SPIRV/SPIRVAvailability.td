@@ -47,6 +47,9 @@ class Availability {
 
   // The following are fields for a concrete availability instance.
 
+  // The code for preparing a concrete instance. This should be C++ statements
+  // and will be generated before the `mergeAction` logic.
+  code instancePreparation = "";
   // The availability requirement carried by a concrete instance.
   string instance = ?;
 }
