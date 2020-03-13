@@ -71,6 +71,11 @@ public:
   template <typename CreateFunc>
   TypeIndex insertRecordAs(GloballyHashedType Hash, size_t RecordSize,
                            CreateFunc Create) {
+    assert(RecordSize < UINT32_MAX && "Record too big");
+    assert(RecordSize % 4 == 0 &&
+           "RecordSize is not a multiple of 4 bytes which will cause "
+           "misalignment in the output TPI stream!");
+
     auto Result = HashedRecords.try_emplace(Hash, nextTypeIndex());
 
     if (LLVM_UNLIKELY(Result.second /*inserted*/ ||
