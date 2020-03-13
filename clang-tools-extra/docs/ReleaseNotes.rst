@@ -75,6 +75,10 @@ New module
 
 New checks
 ^^^^^^^^^^
+- New :doc:`cppcoreguidelines-avoid-non-const-global-variables
+  <clang-tidy/checks/cppcoreguidelines-avoid-non-const-global-variables>` check.
+  Finds non-const global variables as described in check I.2 of C++ Core
+  Guidelines.
 
 - New :doc:`bugprone-misplaced-pointer-arithmetic-in-alloc
   <clang-tidy/checks/bugprone-misplaced-pointer-arithmetic-in-alloc>` check.
