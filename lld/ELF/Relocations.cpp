@@ -1980,6 +1980,44 @@ bool ThunkCreator::createThunks(ArrayRef<OutputSection *> outputSections) {
   return addressesChanged;
 }
 
+// The following aid in the conversion of call x@GDPLT to call __tls_get_addr
+// hexagonNeedsTLSSymbol scans for relocations would require a call to
+// __tls_get_addr.
+// hexagonTLSSymbolUpdate rebinds the relocation to __tls_get_addr.
+bool hexagonNeedsTLSSymbol(ArrayRef<OutputSection *> outputSections) {
+  bool needTlsSymbol = false;
+  forEachInputSectionDescription(
+      outputSections, [&](OutputSection *os, InputSectionDescription *isd) {
+        for (InputSection *isec : isd->sections)
+          for (Relocation &rel : isec->relocations)
+            if (rel.sym->type == llvm::ELF::STT_TLS && rel.expr == R_PLT_PC) {
+              needTlsSymbol = true;
+              return;
+            }
+      });
+  return needTlsSymbol;
+}
+
+void hexagonTLSSymbolUpdate(ArrayRef<OutputSection *> outputSections) {
+  Symbol *sym = symtab->find("__tls_get_addr");
+  if (!sym)
+    return;
+  bool needEntry = true;
+  forEachInputSectionDescription(
+      outputSections, [&](OutputSection *os, InputSectionDescription *isd) {
+        for (InputSection *isec : isd->sections)
+          for (Relocation &rel : isec->relocations)
+            if (rel.sym->type == llvm::ELF::STT_TLS && rel.expr == R_PLT_PC) {
+              if (needEntry) {
+                addPltEntry(in.plt, in.gotPlt, in.relaPlt, target->pltRel,
+                            *sym);
+                needEntry = false;
+              }
+              rel.sym = sym;
+            }
+      });
+}
+
 template void scanRelocations<ELF32LE>(InputSectionBase &);
 template void scanRelocations<ELF32BE>(InputSectionBase &);
 template void scanRelocations<ELF64LE>(InputSectionBase &);
