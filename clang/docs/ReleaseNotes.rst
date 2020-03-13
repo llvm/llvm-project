@@ -78,6 +78,28 @@ Improvements to Clang's diagnostics
 
 - ``-Wbitwise-op-parentheses`` and ``-Wlogical-op-parentheses`` are disabled by default.
 
+- The new warnings ``Wc99-designator`` and ``-Wreorder-init-list`` warn about
+  uses of C99 initializers in C++ mode for cases that are valid in C99 but not
+  in C++20.
+
+- The new warning ``-Wsizeof-array-div`` catches cases like
+  ``int arr[10]; ...sizeof(arr) / sizeof(short)...``
+  (should be ``sizeof(arr) / sizeof(int)``), and the existing warning
+  ``-Wsizeof-pointer-div`` catches more cases.
+
+- The new warning ``-Wxor-used-as-pow`` warns on cases where it looks like
+  the xor operator ``^`` is used to be mean exponentiation, e.g. ``2 ^ 16``.
+
+- The new warning ``-Wfinal-dtor-non-final-class`` warns on classes that
+  have a final destructor but aren't themselves marked final.
+
+- ``-Wextra`` now enables ``-Wdeprecated-copy``. The warning deprecates
+  move and copy constructors in classes where an explicit destructor is
+  declared. This is for compatibility with GCC 9, and forward looking
+  for a change that's being considered for C++23. You can disable it with
+  ``-Wno-deprecated-copy``.
+
+
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
