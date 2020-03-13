@@ -158,6 +158,8 @@ protected:
   /// getMangledName - Get mangled name.
   std::string getMangledName(const GlobalValue *GV);
 
+  std::string ErrMsg;
+
 public:
   /// lock - This lock protects the ExecutionEngine and MCJIT classes. It must
   /// be held while changing the internal state of any of those classes.
@@ -275,7 +277,19 @@ public:
   /// object have been relocated using mapSectionAddress.  When this method is
   /// called the MCJIT execution engine will reapply relocations for a loaded
   /// object.  This method has no effect for the interpeter.
+  ///
+  /// Returns true on success, false on failure. Error messages can be retrieved
+  /// by calling getError();
   virtual void finalizeObject() {}
+
+  /// Returns true if an error has been recorded.
+  bool hasError() const { return !ErrMsg.empty(); }
+
+  /// Clear the error message.
+  void clearErrorMessage() { ErrMsg.clear(); }
+
+  /// Returns the most recent error message.
+  const std::string &getErrorMessage() const { return ErrMsg; }
 
   /// runStaticConstructorsDestructors - This method is used to execute all of
   /// the static constructors or destructors for a program.
