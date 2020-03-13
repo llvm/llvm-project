@@ -16229,6 +16229,35 @@ ARMTargetLowering::targetShrinkDemandedConstant(SDValue Op,
   return false;
 }
 
+bool ARMTargetLowering::SimplifyDemandedBitsForTargetNode(
+    SDValue Op, const APInt &OriginalDemandedBits,
+    const APInt &OriginalDemandedElts, KnownBits &Known, TargetLoweringOpt &TLO,
+    unsigned Depth) const {
+  unsigned Opc = Op.getOpcode();
+
+  switch (Opc) {
+  case ARMISD::ASRL:
+  case ARMISD::LSRL: {
+    // If this is result 0 and the other result is unused, see if the demand
+    // bits allow us to shrink this long shift into a standard small shift in
+    // the opposite direction.
+    if (Op.getResNo() == 0 && !Op->hasAnyUseOfValue(1) &&
+        isa<ConstantSDNode>(Op->getOperand(2))) {
+      unsigned ShAmt = Op->getConstantOperandVal(2);
+      if (ShAmt < 32 && OriginalDemandedBits.isSubsetOf(
+                            APInt::getAllOnesValue(32) << (32 - ShAmt)))
+        return TLO.CombineTo(
+            Op, TLO.DAG.getNode(
+                    ISD::SHL, SDLoc(Op), MVT::i32, Op.getOperand(1),
+                    TLO.DAG.getConstant(32 - ShAmt, SDLoc(Op), MVT::i32)));
+    }
+    break;
+  }
+  }
+
+  return TargetLowering::SimplifyDemandedBitsForTargetNode(
+      Op, OriginalDemandedBits, OriginalDemandedElts, Known, TLO, Depth);
+}
 
 //===----------------------------------------------------------------------===//
 //                           ARM Inline Assembly Support
