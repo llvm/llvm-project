@@ -74,6 +74,10 @@ using namespace llvm;
 
 #define DEBUG_TYPE "si-lower-control-flow"
 
+static cl::opt<bool>
+RemoveRedundantEndcf("amdgpu-remove-redundant-endcf",
+    cl::init(false), cl::ReallyHidden);
+
 namespace {
 
 class SILowerControlFlow : public MachineFunctionPass {
@@ -444,14 +448,17 @@ void SILowerControlFlow::emitEndCf(MachineInstr &MI) {
 
   // If the only instruction immediately following this END_CF is an another
   // END_CF in the only successor we can avoid emitting exec mask restore here.
-  auto Next = skipIgnoreExecInstsTrivialSucc(MBB, std::next(MI.getIterator()));
-  if (Next != MBB.end() && (Next->getOpcode() == AMDGPU::SI_END_CF ||
-                            LoweredEndCf.count(&*Next))) {
-    LLVM_DEBUG(dbgs() << "Skip redundant "; MI.dump());
-    if (LIS)
-      LIS->RemoveMachineInstrFromMaps(MI);
-    MI.eraseFromParent();
-    return;
+  if (RemoveRedundantEndcf) {
+    auto Next =
+      skipIgnoreExecInstsTrivialSucc(MBB, std::next(MI.getIterator()));
+    if (Next != MBB.end() && (Next->getOpcode() == AMDGPU::SI_END_CF ||
+                              LoweredEndCf.count(&*Next))) {
+      LLVM_DEBUG(dbgs() << "Skip redundant "; MI.dump());
+      if (LIS)
+        LIS->RemoveMachineInstrFromMaps(MI);
+      MI.eraseFromParent();
+      return;
+    }
   }
 
   MachineBasicBlock::iterator InsPt =
