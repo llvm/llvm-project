@@ -28,6 +28,7 @@
 #include "llvm/Analysis/LazyValueInfo.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
+#include "llvm/Analysis/MustExecute.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Argument.h"
@@ -36,9 +37,9 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/NoFolder.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/IR/NoFolder.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -2491,28 +2492,34 @@ struct AAUndefinedBehaviorFunction final : AAUndefinedBehaviorImpl {
 
 /// ------------------------ Will-Return Attributes ----------------------------
 
-// Helper function that checks whether a function has any cycle.
-// TODO: Replace with more efficent code
-static bool containsCycle(Function &F) {
-  SmallPtrSet<BasicBlock *, 32> Visited;
-
-  // Traverse BB by dfs and check whether successor is already visited.
-  for (BasicBlock *BB : depth_first(&F)) {
-    Visited.insert(BB);
-    for (auto *SuccBB : successors(BB)) {
-      if (Visited.count(SuccBB))
+// Helper function that checks whether a function has any cycle which we don't
+// know if it is bounded or not.
+// Loops with maximum trip count are considered bounded, any other cycle not.
+static bool mayContainUnboundedCycle(Function &F, Attributor &A) {
+  ScalarEvolution *SE =
+      A.getInfoCache().getAnalysisResultForFunction<ScalarEvolutionAnalysis>(F);
+  LoopInfo *LI = A.getInfoCache().getAnalysisResultForFunction<LoopAnalysis>(F);
+  // If either SCEV or LoopInfo is not available for the function then we assume
+  // any cycle to be unbounded cycle.
+  // We use scc_iterator which uses Tarjan algorithm to find all the maximal
+  // SCCs.To detect if there's a cycle, we only need to find the maximal ones.
+  if (!SE || !LI) {
+    for (scc_iterator<Function *> SCCI = scc_begin(&F); !SCCI.isAtEnd(); ++SCCI)
+      if (SCCI.hasCycle())
         return true;
-    }
+    return false;
+  }
+
+  // If there's irreducible control, the function may contain non-loop cycles.
+  if (mayContainIrreducibleControl(F, LI))
+    return true;
+
+  // Any loop that does not have a max trip count is considered unbounded cycle.
+  for (auto *L : LI->getLoopsInPreorder()) {
+    if (!SE->getSmallConstantMaxTripCount(L))
+      return true;
   }
   return false;
-}
-
-// Helper function that checks the function have a loop which might become an
-// endless loop
-// FIXME: Any cycle is regarded as endless loop for now.
-//        We have to allow some patterns.
-static bool containsPossiblyEndlessLoop(Function *F) {
-  return containsCycle(*F);
 }
 
 struct AAWillReturnImpl : public AAWillReturn {
@@ -2523,7 +2530,7 @@ struct AAWillReturnImpl : public AAWillReturn {
     AAWillReturn::initialize(A);
 
     Function *F = getAssociatedFunction();
-    if (!F || !A.isFunctionIPOAmendable(*F) || containsPossiblyEndlessLoop(F))
+    if (!F || !A.isFunctionIPOAmendable(*F) || mayContainUnboundedCycle(*F, A))
       indicatePessimisticFixpoint();
   }
 
