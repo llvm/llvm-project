@@ -85,10 +85,6 @@ namespace llvm {
     /// VSFRC that is sign-extended from ByteWidth to a 64-byte integer.
     VEXTS,
 
-    /// SExtVElems, takes an input vector of a smaller type and sign
-    /// extends to an output vector of a larger type.
-    SExtVElems,
-
     /// Reciprocal estimate instructions (unary FP ops).
     FRE,
     FRSQRTE,
