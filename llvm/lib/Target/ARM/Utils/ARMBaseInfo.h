@@ -91,25 +91,35 @@ namespace ARMVCC {
     Then,
     Else
   };
+} // namespace ARMVCC
 
-  enum VPTMaskValue {
-    T     =  8, // 0b1000
-    TT    =  4, // 0b0100
-    TE    = 12, // 0b1100
-    TTT   =  2, // 0b0010
-    TTE   =  6, // 0b0110
-    TEE   = 10, // 0b1010
-    TET   = 14, // 0b1110
-    TTTT  =  1, // 0b0001
-    TTTE  =  3, // 0b0011
-    TTEE  =  5, // 0b0101
-    TTET  =  7, // 0b0111
-    TEEE  =  9, // 0b1001
-    TEET  = 11, // 0b1011
-    TETT  = 13, // 0b1101
-    TETE  = 15  // 0b1111
+namespace ARM {
+  /// Mask values for IT and VPT Blocks, to be used by MCOperands.
+  /// Note that this is different from the "real" encoding used by the
+  /// instructions. In this encoding, the lowest set bit indicates the end of
+  /// the encoding, and above that, "1" indicates an else, while "0" indicates
+  /// a then.
+  ///   Tx = x100
+  ///   Txy = xy10
+  ///   Txyz = xyz1
+  enum class PredBlockMask {
+    T = 0b1000,
+    TT = 0b0100,
+    TE = 0b1100,
+    TTT = 0b0010,
+    TTE = 0b0110,
+    TEE = 0b1110,
+    TET = 0b1010,
+    TTTT = 0b0001,
+    TTTE = 0b0011,
+    TTEE = 0b0111,
+    TTET = 0b0101,
+    TEEE = 0b1111,
+    TEET = 0b1101,
+    TETT = 0b1001,
+    TETE = 0b1011
   };
-}
+} // namespace ARM
 
 inline static const char *ARMVPTPredToString(ARMVCC::VPTCodes CC) {
   switch (CC) {
