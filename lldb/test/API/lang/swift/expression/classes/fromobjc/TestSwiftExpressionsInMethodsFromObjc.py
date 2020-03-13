@@ -39,6 +39,8 @@ class TestExpressionsInSwiftMethodsFromObjC(TestBase):
             expression, expected_result, answer)
         self.assertTrue(answer == expected_result, report_str)
 
+    @skipIf(bugnumber="rdar://60396797", # should work but crashes.
+            setting=('symbols.use-swift-clangimporter', 'false'))
     @skipUnlessDarwin
     @swiftTest
     def test_swift_expressions_from_objc(self):

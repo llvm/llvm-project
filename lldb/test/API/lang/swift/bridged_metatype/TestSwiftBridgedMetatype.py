@@ -16,6 +16,9 @@ class TestSwiftBridgedMetatype(TestBase):
     def setUp(self):
         TestBase.setUp(self)
 
+    @expectedFailureAll(bugnumber="rdar://60396797",
+                        oslist=lldbplatform.darwin_all,
+                        setting=('symbols.use-swift-clangimporter', 'false'))
     @swiftTest
     def test_swift_bridged_metatype(self):
         """Test the formatting of bridged Swift metatypes"""
