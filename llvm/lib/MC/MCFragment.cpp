@@ -394,6 +394,7 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
     OS << "\n       ";
     OS << " Inst:";
     F->getInst().dump_pretty(OS);
+    OS << " (" << F->getContents().size() << " bytes)";
     break;
   }
   case MCFragment::FT_Org:  {
