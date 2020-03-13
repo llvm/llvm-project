@@ -1,4 +1,4 @@
-# RUN: llc -run-pass=livedebugvalues -march=x86-64 -o - %s | FileCheck %s
+# RUN: llc -emit-call-site-info -debug-entry-values -run-pass=livedebugvalues -march=x86-64 -o - %s | FileCheck %s
 #
 #extern void fn1 (int, int, int);
 #__attribute__((noinline))
@@ -110,6 +110,15 @@
 ---
 name:            fn2
 alignment:       16
+callSites:
+  - { bb: 0, offset: 20, fwdArgRegs:
+      - { arg: 0, reg: '$edi' }
+      - { arg: 1, reg: '$esi' }
+      - { arg: 2, reg: '$edx' } }
+  - { bb: 3, offset: 2, fwdArgRegs:
+      - { arg: 0, reg: '$edi' }
+      - { arg: 1, reg: '$esi' }
+      - { arg: 2, reg: '$edx' } }
 body:             |
   bb.0.entry:
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
