@@ -79,7 +79,7 @@ TEST(Decl, AsmLabelAttr) {
          "Expected target to have a global prefix");
   DiagnosticsEngine &Diags = AST->getDiagnostics();
 
-  auto *DeclS =
+  const auto *DeclS =
       selectFirst<CXXRecordDecl>("d", match(cxxRecordDecl().bind("d"), Ctx));
   NamedDecl *DeclF = *DeclS->method_begin();
   NamedDecl *DeclG = *(++DeclS->method_begin());
