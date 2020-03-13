@@ -2198,39 +2198,39 @@ private:
 public:
     typedef _Tp element_type;
 
-    _LIBCPP_INLINE_VISIBILITY explicit auto_ptr(_Tp* __p = 0) throw() : __ptr_(__p) {}
-    _LIBCPP_INLINE_VISIBILITY auto_ptr(auto_ptr& __p) throw() : __ptr_(__p.release()) {}
-    template<class _Up> _LIBCPP_INLINE_VISIBILITY auto_ptr(auto_ptr<_Up>& __p) throw()
+    _LIBCPP_INLINE_VISIBILITY explicit auto_ptr(_Tp* __p = 0) _NOEXCEPT : __ptr_(__p) {}
+    _LIBCPP_INLINE_VISIBILITY auto_ptr(auto_ptr& __p) _NOEXCEPT : __ptr_(__p.release()) {}
+    template<class _Up> _LIBCPP_INLINE_VISIBILITY auto_ptr(auto_ptr<_Up>& __p) _NOEXCEPT
         : __ptr_(__p.release()) {}
-    _LIBCPP_INLINE_VISIBILITY auto_ptr& operator=(auto_ptr& __p) throw()
+    _LIBCPP_INLINE_VISIBILITY auto_ptr& operator=(auto_ptr& __p) _NOEXCEPT
         {reset(__p.release()); return *this;}
-    template<class _Up> _LIBCPP_INLINE_VISIBILITY auto_ptr& operator=(auto_ptr<_Up>& __p) throw()
+    template<class _Up> _LIBCPP_INLINE_VISIBILITY auto_ptr& operator=(auto_ptr<_Up>& __p) _NOEXCEPT
         {reset(__p.release()); return *this;}
-    _LIBCPP_INLINE_VISIBILITY auto_ptr& operator=(auto_ptr_ref<_Tp> __p) throw()
+    _LIBCPP_INLINE_VISIBILITY auto_ptr& operator=(auto_ptr_ref<_Tp> __p) _NOEXCEPT
         {reset(__p.__ptr_); return *this;}
-    _LIBCPP_INLINE_VISIBILITY ~auto_ptr() throw() {delete __ptr_;}
+    _LIBCPP_INLINE_VISIBILITY ~auto_ptr() _NOEXCEPT {delete __ptr_;}
 
-    _LIBCPP_INLINE_VISIBILITY _Tp& operator*() const throw()
+    _LIBCPP_INLINE_VISIBILITY _Tp& operator*() const _NOEXCEPT
         {return *__ptr_;}
-    _LIBCPP_INLINE_VISIBILITY _Tp* operator->() const throw() {return __ptr_;}
-    _LIBCPP_INLINE_VISIBILITY _Tp* get() const throw() {return __ptr_;}
-    _LIBCPP_INLINE_VISIBILITY _Tp* release() throw()
+    _LIBCPP_INLINE_VISIBILITY _Tp* operator->() const _NOEXCEPT {return __ptr_;}
+    _LIBCPP_INLINE_VISIBILITY _Tp* get() const _NOEXCEPT {return __ptr_;}
+    _LIBCPP_INLINE_VISIBILITY _Tp* release() _NOEXCEPT
     {
         _Tp* __t = __ptr_;
         __ptr_ = 0;
         return __t;
     }
-    _LIBCPP_INLINE_VISIBILITY void reset(_Tp* __p = 0) throw()
+    _LIBCPP_INLINE_VISIBILITY void reset(_Tp* __p = 0) _NOEXCEPT
     {
         if (__ptr_ != __p)
             delete __ptr_;
         __ptr_ = __p;
     }
 
-    _LIBCPP_INLINE_VISIBILITY auto_ptr(auto_ptr_ref<_Tp> __p) throw() : __ptr_(__p.__ptr_) {}
-    template<class _Up> _LIBCPP_INLINE_VISIBILITY operator auto_ptr_ref<_Up>() throw()
+    _LIBCPP_INLINE_VISIBILITY auto_ptr(auto_ptr_ref<_Tp> __p) _NOEXCEPT : __ptr_(__p.__ptr_) {}
+    template<class _Up> _LIBCPP_INLINE_VISIBILITY operator auto_ptr_ref<_Up>() _NOEXCEPT
         {auto_ptr_ref<_Up> __t; __t.__ptr_ = release(); return __t;}
-    template<class _Up> _LIBCPP_INLINE_VISIBILITY operator auto_ptr<_Up>() throw()
+    template<class _Up> _LIBCPP_INLINE_VISIBILITY operator auto_ptr<_Up>() _NOEXCEPT
         {return auto_ptr<_Up>(release());}
 };
 
@@ -3457,6 +3457,8 @@ class _LIBCPP_EXCEPTION_ABI bad_weak_ptr
     : public std::exception
 {
 public:
+    bad_weak_ptr() _NOEXCEPT = default;
+    bad_weak_ptr(const bad_weak_ptr&) _NOEXCEPT = default;
     virtual ~bad_weak_ptr() _NOEXCEPT;
     virtual const char* what() const  _NOEXCEPT;
 };

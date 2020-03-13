@@ -319,6 +319,7 @@ class _LIBCPP_EXCEPTION_ABI bad_cast
 {
  public:
   bad_cast() _NOEXCEPT;
+  bad_cast(const bad_cast&) _NOEXCEPT = default;
   virtual ~bad_cast() _NOEXCEPT;
   virtual const char* what() const _NOEXCEPT;
 };
