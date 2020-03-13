@@ -3,27 +3,15 @@
 ; RUN: llc --verify-machineinstrs -mtriple=thumbv8.1m.main-none-eabi -mattr=+dsp %s -o - | FileCheck %s -check-prefix=CHECK --check-prefix=CHECK-NOMVE
 
 define void @test1(i32* %p0, i32 *%p1, i32 *%p2, i32 *%pDst) {
-; CHECK-MVE-LABEL: test1:
-; CHECK-MVE:       @ %bb.0: @ %entry
-; CHECK-MVE-NEXT:    ldr r1, [r1]
-; CHECK-MVE-NEXT:    ldr r2, [r2]
-; CHECK-MVE-NEXT:    ldr r0, [r0]
-; CHECK-MVE-NEXT:    smull r2, r1, r2, r1
-; CHECK-MVE-NEXT:    lsrl r2, r1, #31
-; CHECK-MVE-NEXT:    bic r1, r2, #1
-; CHECK-MVE-NEXT:    add r0, r1
-; CHECK-MVE-NEXT:    str r0, [r3]
-; CHECK-MVE-NEXT:    bx lr
-;
-; CHECK-NOMVE-LABEL: test1:
-; CHECK-NOMVE:       @ %bb.0: @ %entry
-; CHECK-NOMVE-NEXT:    ldr r1, [r1]
-; CHECK-NOMVE-NEXT:    ldr r2, [r2]
-; CHECK-NOMVE-NEXT:    ldr r0, [r0]
-; CHECK-NOMVE-NEXT:    smmul r1, r2, r1
-; CHECK-NOMVE-NEXT:    add.w r0, r0, r1, lsl #1
-; CHECK-NOMVE-NEXT:    str r0, [r3]
-; CHECK-NOMVE-NEXT:    bx lr
+; CHECK-LABEL: test1:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    ldr r1, [r1]
+; CHECK-NEXT:    ldr r2, [r2]
+; CHECK-NEXT:    ldr r0, [r0]
+; CHECK-NEXT:    smmul r1, r2, r1
+; CHECK-NEXT:    add.w r0, r0, r1, lsl #1
+; CHECK-NEXT:    str r0, [r3]
+; CHECK-NEXT:    bx lr
 entry:
   %l3 = load i32, i32* %p0, align 4
   %l4 = load i32, i32* %p1, align 4
