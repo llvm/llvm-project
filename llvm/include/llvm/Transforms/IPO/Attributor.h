@@ -103,6 +103,7 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/CallGraph.h"
+#include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/MustExecute.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -636,6 +637,9 @@ private:
   /// The underlying CGSCC, or null if not available.
   SetVector<Function *> *CGSCC;
 
+  /// Set of inlineable functions
+  SmallPtrSet<const Function *, 8> InlineableFunctions;
+
   /// Give the Attributor access to the members so
   /// Attributor::identifyDefaultAbstractAttributes(...) can initialize them.
   friend struct Attributor;
@@ -788,6 +792,14 @@ struct Attributor {
   /// This method needs to be called for all function that might be looked at
   /// through the information cache interface *prior* to looking at them.
   void initializeInformationCache(Function &F);
+
+  /// Determine whether the function \p F is IPO amendable
+  ///
+  /// If a function is exactly defined or it has alwaysinline attribute
+  /// and is viable to be inlined, we say it is IPO amendable
+  bool isFunctionIPOAmendable(const Function &F) {
+    return F.hasExactDefinition() || InfoCache.InlineableFunctions.count(&F);
+  }
 
   /// Mark the internal function \p F as live.
   ///
@@ -1719,7 +1731,7 @@ struct IRAttribute : public IRPosition, public Base {
     // TODO: We could always determine abstract attributes and if sufficient
     //       information was found we could duplicate the functions that do not
     //       have an exact definition.
-    if (IsFnInterface && (!FnScope || !FnScope->hasExactDefinition()))
+    if (IsFnInterface && (!FnScope || !A.isFunctionIPOAmendable(*FnScope)))
       this->getState().indicatePessimisticFixpoint();
   }
 
@@ -2762,7 +2774,8 @@ struct AAValueConstantRange : public IntegerRangeState,
   /// Return an assumed constant for the assocaited value a program point \p
   /// CtxI.
   Optional<ConstantInt *>
-  getAssumedConstantInt(Attributor &A, const Instruction *CtxI = nullptr) const {
+  getAssumedConstantInt(Attributor &A,
+                        const Instruction *CtxI = nullptr) const {
     ConstantRange RangeV = getAssumedConstantRange(A, CtxI);
     if (auto *C = RangeV.getSingleElement())
       return cast<ConstantInt>(
