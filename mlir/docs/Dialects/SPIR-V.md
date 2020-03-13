@@ -792,9 +792,11 @@ spv.target_env = #spv.target_env<
 } { ... }
 ```
 
-Dialect conversion framework will utilize the information in `spv.target_env`
-to properly filter out patterns and ops not available in the target execution
-environment.
+Dialect conversion framework will utilize the information in `spv.target_env` to
+properly filter out patterns and ops not available in the target execution
+environment. When targeting SPIR-V, one needs to create a
+[`SPIRVConversionTarget`](#spirvconversiontarget) by providing such an
+attribute.
 
 ## Shader interface (ABI)
 
@@ -930,6 +932,10 @@ The `mlir::spirv::SPIRVConversionTarget` class derives from the
 target satisfying a given [`spv.target_env`](#target-environment). It registers
 proper hooks to check the dynamic legality of SPIR-V ops. Users can further
 register other legality constraints into the returned `SPIRVConversionTarget`.
+
+`spirv::lookupTargetEnvOrDefault()` is a handy utility function to query an
+`spv.target_env` attached in the input IR or use the feault to construct a
+`SPIRVConversionTarget`.
 
 ### `SPIRVTypeConverter`
 

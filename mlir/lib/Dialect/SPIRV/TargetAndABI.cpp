@@ -11,6 +11,7 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/FunctionSupport.h"
 #include "mlir/IR/Operation.h"
+#include "mlir/IR/SymbolTable.h"
 
 using namespace mlir;
 
@@ -294,8 +295,18 @@ spirv::TargetEnvAttr spirv::getDefaultTargetEnv(MLIRContext *context) {
 }
 
 spirv::TargetEnvAttr spirv::lookupTargetEnvOrDefault(Operation *op) {
-  if (auto attr = op->getAttrOfType<spirv::TargetEnvAttr>(
-          spirv::getTargetEnvAttrName()))
-    return attr;
+  Operation *symTable = op;
+  while (symTable) {
+    symTable = SymbolTable::getNearestSymbolTable(symTable);
+    if (!symTable)
+      break;
+
+    if (auto attr = symTable->getAttrOfType<spirv::TargetEnvAttr>(
+            spirv::getTargetEnvAttrName()))
+      return attr;
+
+    symTable = symTable->getParentOp();
+  }
+
   return getDefaultTargetEnv(op->getContext());
 }
