@@ -10,6 +10,7 @@ unittest("ASTTests") {
     "//clang/lib/Frontend",
     "//clang/lib/Tooling",
     "//llvm/lib/Support",
+    "//llvm/lib/Testing/Support",
   ]
   sources = [
     "ASTContextParentMapTest.cpp",
