@@ -32,15 +32,70 @@ enum class Version : uint32_t;
 
 namespace detail {
 struct TargetEnvAttributeStorage;
+struct VerCapExtAttributeStorage;
 } // namespace detail
 
 /// SPIR-V dialect-specific attribute kinds.
 // TODO(antiagainst): move to a more suitable place if we have more attributes.
 namespace AttrKind {
 enum Kind {
-  TargetEnv = Attribute::FIRST_SPIRV_ATTR,
+  TargetEnv = Attribute::FIRST_SPIRV_ATTR, /// Target environment
+  VerCapExt, /// (version, extension, capability) triple
 };
 } // namespace AttrKind
+
+/// An attribute that specifies the SPIR-V (version, capabilities, extensions)
+/// triple.
+class VerCapExtAttr
+    : public Attribute::AttrBase<VerCapExtAttr, Attribute,
+                                 detail::VerCapExtAttributeStorage> {
+public:
+  using Base::Base;
+
+  /// Gets a VerCapExtAttr instance.
+  static VerCapExtAttr get(Version version, ArrayRef<Capability> capabilities,
+                           ArrayRef<Extension> extensions,
+                           MLIRContext *context);
+  static VerCapExtAttr get(IntegerAttr version, ArrayAttr capabilities,
+                           ArrayAttr extensions);
+
+  /// Returns the attribute kind's name (without the 'spv.' prefix).
+  static StringRef getKindName();
+
+  /// Returns the version.
+  Version getVersion();
+
+  struct ext_iterator final
+      : public llvm::mapped_iterator<ArrayAttr::iterator,
+                                     Extension (*)(Attribute)> {
+    explicit ext_iterator(ArrayAttr::iterator it);
+  };
+  using ext_range = llvm::iterator_range<ext_iterator>;
+
+  /// Returns the extensions.
+  ext_range getExtensions();
+  /// Returns the extensions as a string array attribute.
+  ArrayAttr getExtensionsAttr();
+
+  struct cap_iterator final
+      : public llvm::mapped_iterator<ArrayAttr::iterator,
+                                     Capability (*)(Attribute)> {
+    explicit cap_iterator(ArrayAttr::iterator it);
+  };
+  using cap_range = llvm::iterator_range<cap_iterator>;
+
+  /// Returns the capabilities.
+  cap_range getCapabilities();
+  /// Returns the capabilities as an integer array attribute.
+  ArrayAttr getCapabilitiesAttr();
+
+  static bool kindof(unsigned kind) { return kind == AttrKind::VerCapExt; }
+
+  static LogicalResult verifyConstructionInvariants(Location loc,
+                                                    IntegerAttr version,
+                                                    ArrayAttr capabilities,
+                                                    ArrayAttr extensions);
+};
 
 /// An attribute that specifies the target version, allowed extensions and
 /// capabilities, and resource limits. These information describles a SPIR-V
@@ -52,39 +107,24 @@ public:
   using Base::Base;
 
   /// Gets a TargetEnvAttr instance.
-  static TargetEnvAttr get(Version version, ArrayRef<Extension> extensions,
-                           ArrayRef<Capability> capabilities,
-                           DictionaryAttr limits);
-  static TargetEnvAttr get(IntegerAttr version, ArrayAttr extensions,
-                           ArrayAttr capabilities, DictionaryAttr limits);
+  static TargetEnvAttr get(VerCapExtAttr triple, DictionaryAttr limits);
 
   /// Returns the attribute kind's name (without the 'spv.' prefix).
   static StringRef getKindName();
 
+  /// Returns the (version, capabilities, extensions) triple attribute.
+  VerCapExtAttr getTripleAttr();
+
   /// Returns the target version.
   Version getVersion();
 
-  struct ext_iterator final
-      : public llvm::mapped_iterator<ArrayAttr::iterator,
-                                     Extension (*)(Attribute)> {
-    explicit ext_iterator(ArrayAttr::iterator it);
-  };
-  using ext_range = llvm::iterator_range<ext_iterator>;
-
   /// Returns the target extensions.
-  ext_range getExtensions();
+  VerCapExtAttr::ext_range getExtensions();
   /// Returns the target extensions as a string array attribute.
   ArrayAttr getExtensionsAttr();
 
-  struct cap_iterator final
-      : public llvm::mapped_iterator<ArrayAttr::iterator,
-                                     Capability (*)(Attribute)> {
-    explicit cap_iterator(ArrayAttr::iterator it);
-  };
-  using cap_range = llvm::iterator_range<cap_iterator>;
-
   /// Returns the target capabilities.
-  cap_range getCapabilities();
+  VerCapExtAttr::cap_range getCapabilities();
   /// Returns the target capabilities as an integer array attribute.
   ArrayAttr getCapabilitiesAttr();
 
@@ -94,9 +134,7 @@ public:
   static bool kindof(unsigned kind) { return kind == AttrKind::TargetEnv; }
 
   static LogicalResult verifyConstructionInvariants(Location loc,
-                                                    IntegerAttr version,
-                                                    ArrayAttr extensions,
-                                                    ArrayAttr capabilities,
+                                                    VerCapExtAttr triple,
                                                     DictionaryAttr limits);
 };
 
