@@ -102,6 +102,12 @@ public:
   }
 
   const C *operator->() const { return &**this; }
+
+  // Extract the instance, leaving the ManagedStatic uninitialized. The
+  // user is then responsible for the lifetime of the returned instance.
+  C *claim() {
+    return static_cast<C *>(Ptr.exchange(nullptr));
+  }
 };
 
 /// llvm_shutdown - Deallocate and destroy all ManagedStatic variables.
