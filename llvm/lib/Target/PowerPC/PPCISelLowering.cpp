@@ -1430,7 +1430,6 @@ const char *PPCTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case PPCISD::LXSIZX:          return "PPCISD::LXSIZX";
   case PPCISD::STXSIX:          return "PPCISD::STXSIX";
   case PPCISD::VEXTS:           return "PPCISD::VEXTS";
-  case PPCISD::SExtVElems:      return "PPCISD::SExtVElems";
   case PPCISD::LXVD2X:          return "PPCISD::LXVD2X";
   case PPCISD::STXVD2X:         return "PPCISD::STXVD2X";
   case PPCISD::LOAD_VEC_BE:     return "PPCISD::LOAD_VEC_BE";
@@ -8051,16 +8050,19 @@ SDValue PPCTargetLowering::LowerINT_TO_FPVector(SDValue Op, SelectionDAG &DAG,
   SDValue ShuffleSrc2 =
       SignedConv ? DAG.getUNDEF(WideVT) : DAG.getConstant(0, dl, WideVT);
   SDValue Arrange = DAG.getVectorShuffle(WideVT, dl, Wide, ShuffleSrc2, ShuffV);
-  unsigned ExtendOp =
-      SignedConv ? (unsigned)PPCISD::SExtVElems : (unsigned)ISD::BITCAST;
 
   SDValue Extend;
-  if (!Subtarget.hasP9Altivec() && SignedConv) {
+  if (SignedConv) {
     Arrange = DAG.getBitcast(IntermediateVT, Arrange);
+    EVT ExtVT = Op.getOperand(0).getValueType();
+    if (Subtarget.hasP9Altivec())
+      ExtVT = EVT::getVectorVT(*DAG.getContext(), WideVT.getVectorElementType(),
+                               IntermediateVT.getVectorNumElements());
+
     Extend = DAG.getNode(ISD::SIGN_EXTEND_INREG, dl, IntermediateVT, Arrange,
-                         DAG.getValueType(Op.getOperand(0).getValueType()));
+                         DAG.getValueType(ExtVT));
   } else
-    Extend = DAG.getNode(ExtendOp, dl, IntermediateVT, Arrange);
+    Extend = DAG.getNode(ISD::BITCAST, dl, IntermediateVT, Arrange);
 
   return DAG.getNode(Opc, dl, Op.getValueType(), Extend);
 }
@@ -13171,15 +13173,20 @@ static SDValue addShuffleForVecExtend(SDNode *N, SelectionDAG &DAG,
       DAG.getVectorShuffle(Input.getValueType(), dl, Input,
                            DAG.getUNDEF(Input.getValueType()), ShuffleMask);
 
-  EVT Ty = N->getValueType(0);
-  SDValue BV = DAG.getNode(PPCISD::SExtVElems, dl, Ty, Shuffle);
-  return BV;
+  EVT VT = N->getValueType(0);
+  SDValue Conv = DAG.getBitcast(VT, Shuffle);
+
+  EVT ExtVT = EVT::getVectorVT(*DAG.getContext(),
+                               Input.getValueType().getVectorElementType(),
+                               VT.getVectorNumElements());
+  return DAG.getNode(ISD::SIGN_EXTEND_INREG, dl, VT, Conv,
+                     DAG.getValueType(ExtVT));
 }
 
 // Look for build vector patterns where input operands come from sign
 // extended vector_extract elements of specific indices. If the correct indices
-// aren't used, add a vector shuffle to fix up the indices and create a new
-// PPCISD:SExtVElems node which selects the vector sign extend instructions
+// aren't used, add a vector shuffle to fix up the indices and create
+// SIGN_EXTEND_INREG node which selects the vector sign extend instructions
 // during instruction selection.
 static SDValue combineBVOfVecSExt(SDNode *N, SelectionDAG &DAG) {
   // This array encodes the indices that the vector sign extend instructions

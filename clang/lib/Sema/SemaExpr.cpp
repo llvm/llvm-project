@@ -16523,13 +16523,19 @@ bool Sema::tryCaptureVariable(
               !IsOpenMPPrivateDecl &&
               isOpenMPTargetCapturedDecl(Var, RSI->OpenMPLevel,
                                          RSI->OpenMPCaptureLevel);
+          // Do not capture global if it is not privatized in outer regions.
+          bool IsGlobalCap =
+              IsGlobal && isOpenMPGlobalCapturedDecl(Var, RSI->OpenMPLevel,
+                                                     RSI->OpenMPCaptureLevel);
+
           // When we detect target captures we are looking from inside the
           // target region, therefore we need to propagate the capture from the
           // enclosing region. Therefore, the capture is not initially nested.
           if (IsTargetCap)
             adjustOpenMPTargetScopeIndex(FunctionScopesIndex, RSI->OpenMPLevel);
 
-          if (IsTargetCap || IsOpenMPPrivateDecl) {
+          if (IsTargetCap || IsOpenMPPrivateDecl ||
+              (IsGlobal && !IsGlobalCap)) {
             Nested = !IsTargetCap;
             DeclRefType = DeclRefType.getUnqualifiedType();
             CaptureType = Context.getLValueReferenceType(DeclRefType);

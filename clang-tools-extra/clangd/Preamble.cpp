@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Preamble.h"
+#include "Compiler.h"
 #include "Logger.h"
 #include "Trace.h"
 #include "clang/Basic/SourceLocation.h"
@@ -75,13 +76,14 @@ private:
 
 } // namespace
 
-PreambleData::PreambleData(llvm::StringRef Version,
+PreambleData::PreambleData(const ParseInputs &Inputs,
                            PrecompiledPreamble Preamble,
                            std::vector<Diag> Diags, IncludeStructure Includes,
                            MainFileMacros Macros,
                            std::unique_ptr<PreambleFileStatusCache> StatCache,
                            CanonicalIncludes CanonIncludes)
-    : Version(Version), Preamble(std::move(Preamble)), Diags(std::move(Diags)),
+    : Version(Inputs.Version), CompileCommand(Inputs.CompileCommand),
+      Preamble(std::move(Preamble)), Diags(std::move(Diags)),
       Includes(std::move(Includes)), Macros(std::move(Macros)),
       StatCache(std::move(StatCache)), CanonIncludes(std::move(CanonIncludes)) {
 }
@@ -89,7 +91,6 @@ PreambleData::PreambleData(llvm::StringRef Version,
 std::shared_ptr<const PreambleData>
 buildPreamble(PathRef FileName, CompilerInvocation &CI,
               std::shared_ptr<const PreambleData> OldPreamble,
-              const tooling::CompileCommand &OldCompileCommand,
               const ParseInputs &Inputs, bool StoreInMemory,
               PreambleParsedCallback PreambleCallback) {
   // Note that we don't need to copy the input contents, preamble can live
@@ -100,7 +101,8 @@ buildPreamble(PathRef FileName, CompilerInvocation &CI,
       ComputePreambleBounds(*CI.getLangOpts(), ContentsBuffer.get(), 0);
 
   if (OldPreamble &&
-      compileCommandsAreEqual(Inputs.CompileCommand, OldCompileCommand) &&
+      compileCommandsAreEqual(Inputs.CompileCommand,
+                              OldPreamble->CompileCommand) &&
       OldPreamble->Preamble.CanReuse(CI, ContentsBuffer.get(), Bounds,
                                      Inputs.FS.get())) {
     vlog("Reusing preamble version {0} for version {1} of {2}",
@@ -155,7 +157,7 @@ buildPreamble(PathRef FileName, CompilerInvocation &CI,
          BuiltPreamble->getSize(), FileName, Inputs.Version);
     std::vector<Diag> Diags = PreambleDiagnostics.take();
     return std::make_shared<PreambleData>(
-        Inputs.Version, std::move(*BuiltPreamble), std::move(Diags),
+        Inputs, std::move(*BuiltPreamble), std::move(Diags),
         SerializedDeclsCollector.takeIncludes(),
         SerializedDeclsCollector.takeMacros(), std::move(StatCache),
         SerializedDeclsCollector.takeCanonicalIncludes());

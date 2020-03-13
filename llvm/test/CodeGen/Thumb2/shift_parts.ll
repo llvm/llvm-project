@@ -422,16 +422,10 @@ entry:
 
 
 define i32 @ashr_demand_bottommask(i64 %x) {
-; CHECK-MVE-LABEL: ashr_demand_bottommask:
-; CHECK-MVE:       @ %bb.0: @ %entry
-; CHECK-MVE-NEXT:    lsrl r0, r1, #31
-; CHECK-MVE-NEXT:    bic r0, r0, #1
-; CHECK-MVE-NEXT:    bx lr
-;
-; CHECK-NON-MVE-LABEL: ashr_demand_bottommask:
-; CHECK-NON-MVE:       @ %bb.0: @ %entry
-; CHECK-NON-MVE-NEXT:    lsls r0, r1, #1
-; CHECK-NON-MVE-NEXT:    bx lr
+; CHECK-LABEL: ashr_demand_bottommask:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    lsls r0, r1, #1
+; CHECK-NEXT:    bx lr
 entry:
   %shr = ashr i64 %x, 31
   %t = trunc i64 %shr to i32
@@ -440,16 +434,10 @@ entry:
 }
 
 define i32 @lshr_demand_bottommask(i64 %x) {
-; CHECK-MVE-LABEL: lshr_demand_bottommask:
-; CHECK-MVE:       @ %bb.0: @ %entry
-; CHECK-MVE-NEXT:    lsrl r0, r1, #31
-; CHECK-MVE-NEXT:    bic r0, r0, #1
-; CHECK-MVE-NEXT:    bx lr
-;
-; CHECK-NON-MVE-LABEL: lshr_demand_bottommask:
-; CHECK-NON-MVE:       @ %bb.0: @ %entry
-; CHECK-NON-MVE-NEXT:    lsls r0, r1, #1
-; CHECK-NON-MVE-NEXT:    bx lr
+; CHECK-LABEL: lshr_demand_bottommask:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    lsls r0, r1, #1
+; CHECK-NEXT:    bx lr
 entry:
   %shr = lshr i64 %x, 31
   %t = trunc i64 %shr to i32
@@ -470,17 +458,11 @@ entry:
 }
 
 define i32 @ashr_demand_bottommask2(i64 %x) {
-; CHECK-MVE-LABEL: ashr_demand_bottommask2:
-; CHECK-MVE:       @ %bb.0: @ %entry
-; CHECK-MVE-NEXT:    lsrl r0, r1, #31
-; CHECK-MVE-NEXT:    bic r0, r0, #3
-; CHECK-MVE-NEXT:    bx lr
-;
-; CHECK-NON-MVE-LABEL: ashr_demand_bottommask2:
-; CHECK-NON-MVE:       @ %bb.0: @ %entry
-; CHECK-NON-MVE-NEXT:    mvn r0, #2
-; CHECK-NON-MVE-NEXT:    and.w r0, r0, r1, lsl #1
-; CHECK-NON-MVE-NEXT:    bx lr
+; CHECK-LABEL: ashr_demand_bottommask2:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    mvn r0, #2
+; CHECK-NEXT:    and.w r0, r0, r1, lsl #1
+; CHECK-NEXT:    bx lr
 entry:
   %shr = ashr i64 %x, 31
   %t = trunc i64 %shr to i32
@@ -489,17 +471,11 @@ entry:
 }
 
 define i32 @lshr_demand_bottommask2(i64 %x) {
-; CHECK-MVE-LABEL: lshr_demand_bottommask2:
-; CHECK-MVE:       @ %bb.0: @ %entry
-; CHECK-MVE-NEXT:    lsrl r0, r1, #31
-; CHECK-MVE-NEXT:    bic r0, r0, #3
-; CHECK-MVE-NEXT:    bx lr
-;
-; CHECK-NON-MVE-LABEL: lshr_demand_bottommask2:
-; CHECK-NON-MVE:       @ %bb.0: @ %entry
-; CHECK-NON-MVE-NEXT:    mvn r0, #2
-; CHECK-NON-MVE-NEXT:    and.w r0, r0, r1, lsl #1
-; CHECK-NON-MVE-NEXT:    bx lr
+; CHECK-LABEL: lshr_demand_bottommask2:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    mvn r0, #2
+; CHECK-NEXT:    and.w r0, r0, r1, lsl #1
+; CHECK-NEXT:    bx lr
 entry:
   %shr = lshr i64 %x, 31
   %t = trunc i64 %shr to i32

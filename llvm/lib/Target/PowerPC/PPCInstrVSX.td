@@ -4397,19 +4397,6 @@ let AddedComplexity = 400 in {
     def : Pat<(v2i64 (build_vector ByteToDWord.BE_A0, ByteToDWord.BE_A1)),
               (v2i64 (VEXTSB2D $A))>;
   }
-
-  let Predicates = [HasP9Altivec] in {
-    def: Pat<(v2i64 (PPCSExtVElems v16i8:$A)),
-              (v2i64 (VEXTSB2D $A))>;
-    def: Pat<(v2i64 (PPCSExtVElems v8i16:$A)),
-              (v2i64 (VEXTSH2D $A))>;
-    def: Pat<(v2i64 (PPCSExtVElems v4i32:$A)),
-              (v2i64 (VEXTSW2D $A))>;
-    def: Pat<(v4i32 (PPCSExtVElems v16i8:$A)),
-              (v4i32 (VEXTSB2W $A))>;
-    def: Pat<(v4i32 (PPCSExtVElems v8i16:$A)),
-              (v4i32 (VEXTSH2W $A))>;
-  }
 }
 
 // Put this P9Altivec related definition here since it's possible to be 

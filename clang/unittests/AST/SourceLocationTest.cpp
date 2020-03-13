@@ -15,15 +15,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/AST/ASTContext.h"
 #include "MatchVerifier.h"
+#include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Tooling/Tooling.h"
+#include "llvm/Testing/Support/Annotations.h"
 #include "gtest/gtest.h"
 
-namespace clang {
-namespace ast_matchers {
+using namespace clang;
+using namespace clang::ast_matchers;
+
+namespace {
 
 // FIXME: Pull the *Verifier tests into their own test file.
 
@@ -642,10 +645,8 @@ TEST(FunctionDecl, FunctionDeclWithThrowSpecification) {
 TEST(FunctionDecl, FunctionDeclWithNoExceptSpecification) {
   RangeVerifier<FunctionDecl> Verifier;
   Verifier.expectRange(1, 1, 1, 24);
-  EXPECT_TRUE(Verifier.match(
-      "void f() noexcept(false);\n",
-      functionDecl(),
-      Language::Lang_CXX11));
+  EXPECT_TRUE(Verifier.match("void f() noexcept(false);\n", functionDecl(),
+                             Lang_CXX11));
 }
 
 class FunctionDeclParametersRangeVerifier : public RangeVerifier<FunctionDecl> {
@@ -767,12 +768,10 @@ TEST(CXXMethodDecl, CXXMethodDeclWithThrowSpecification) {
 TEST(CXXMethodDecl, CXXMethodDeclWithNoExceptSpecification) {
   RangeVerifier<FunctionDecl> Verifier;
   Verifier.expectRange(2, 1, 2, 24);
-  EXPECT_TRUE(Verifier.match(
-      "class A {\n"
-      "void f() noexcept(false);\n"
-      "};\n",
-      functionDecl(),
-      Language::Lang_CXX11));
+  EXPECT_TRUE(Verifier.match("class A {\n"
+                             "void f() noexcept(false);\n"
+                             "};\n",
+                             functionDecl(), Lang_CXX11));
 }
 
 class ExceptionSpecRangeVerifier : public RangeVerifier<TypeLoc> {
@@ -815,19 +814,19 @@ TEST(FunctionDecl, ExceptionSpecifications) {
   std::vector<std::string> Args;
   Args.push_back("-fms-extensions");
   EXPECT_TRUE(Verifier.match("void f() throw(...);\n", loc(functionType()),
-                             Args, Language::Lang_CXX));
+                             Args, Lang_CXX));
 
   Verifier.expectRange(1, 10, 1, 10);
-  EXPECT_TRUE(Verifier.match("void f() noexcept;\n", loc(functionType()),
-                             Language::Lang_CXX11));
+  EXPECT_TRUE(
+      Verifier.match("void f() noexcept;\n", loc(functionType()), Lang_CXX11));
 
   Verifier.expectRange(1, 10, 1, 24);
   EXPECT_TRUE(Verifier.match("void f() noexcept(false);\n", loc(functionType()),
-                             Language::Lang_CXX11));
+                             Lang_CXX11));
 
   Verifier.expectRange(1, 10, 1, 32);
   EXPECT_TRUE(Verifier.match("void f() noexcept(noexcept(1+1));\n",
-                             loc(functionType()), Language::Lang_CXX11));
+                             loc(functionType()), Lang_CXX11));
 
   ParmVarExceptionSpecRangeVerifier Verifier2;
   Verifier2.expectRange(1, 25, 1, 31);
@@ -839,8 +838,25 @@ TEST(FunctionDecl, ExceptionSpecifications) {
   EXPECT_TRUE(Verifier2.match("void g(void (*fp)(void) noexcept(true));\n",
                               parmVarDecl(hasType(pointerType(pointee(
                                   parenType(innerType(functionType())))))),
-                              Language::Lang_CXX11));
+                              Lang_CXX11));
 }
 
-} // end namespace ast_matchers
-} // end namespace clang
+TEST(Decl, MemberPointerStarLoc) {
+  llvm::Annotations Example(R"cpp(
+    struct X {};
+    int X::$star^* a;
+  )cpp");
+
+  auto AST = tooling::buildASTFromCode(Example.code());
+  SourceManager &SM = AST->getSourceManager();
+  auto &Ctx = AST->getASTContext();
+
+  auto *VD = selectFirst<VarDecl>("vd", match(varDecl().bind("vd"), Ctx));
+  ASSERT_TRUE(VD != nullptr);
+
+  auto TL =
+      VD->getTypeSourceInfo()->getTypeLoc().castAs<MemberPointerTypeLoc>();
+  ASSERT_EQ(SM.getFileOffset(TL.getStarLoc()), Example.point("star"));
+}
+
+} // end namespace

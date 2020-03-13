@@ -3808,6 +3808,12 @@ ARMTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG,
   case Intrinsic::arm_mve_vreinterpretq:
     return DAG.getNode(ARMISD::VECTOR_REG_CAST, SDLoc(Op), Op.getValueType(),
                        Op.getOperand(1));
+  case Intrinsic::arm_mve_lsll:
+    return DAG.getNode(ARMISD::LSLL, SDLoc(Op), Op->getVTList(),
+                       Op.getOperand(1), Op.getOperand(2), Op.getOperand(3));
+  case Intrinsic::arm_mve_asrl:
+    return DAG.getNode(ARMISD::ASRL, SDLoc(Op), Op->getVTList(),
+                       Op.getOperand(1), Op.getOperand(2), Op.getOperand(3));
   }
 }
 
@@ -14138,6 +14144,34 @@ static SDValue PerformVECREDUCE_ADDCombine(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+static SDValue PerformLongShiftCombine(SDNode *N, SelectionDAG &DAG) {
+  SDLoc DL(N);
+  SDValue Op0 = N->getOperand(0);
+  SDValue Op1 = N->getOperand(1);
+
+  // Turn X << -C -> X >> C and viceversa. The negative shifts can come up from
+  // uses of the intrinsics.
+  if (auto C = dyn_cast<ConstantSDNode>(N->getOperand(2))) {
+    int ShiftAmt = C->getSExtValue();
+    if (ShiftAmt == 0) {
+      SDValue Merge = DAG.getMergeValues({Op0, Op1}, DL);
+      DAG.ReplaceAllUsesWith(N, Merge.getNode());
+      return SDValue();
+    }
+
+    if (ShiftAmt >= -32 && ShiftAmt < 0) {
+      unsigned NewOpcode =
+          N->getOpcode() == ARMISD::LSLL ? ARMISD::LSRL : ARMISD::LSLL;
+      SDValue NewShift = DAG.getNode(NewOpcode, DL, N->getVTList(), Op0, Op1,
+                                     DAG.getConstant(-ShiftAmt, DL, MVT::i32));
+      DAG.ReplaceAllUsesWith(N, NewShift.getNode());
+      return NewShift;
+    }
+  }
+
+  return SDValue();
+}
+
 /// PerformIntrinsicCombine - ARM-specific DAG combining for intrinsics.
 static SDValue PerformIntrinsicCombine(SDNode *N, SelectionDAG &DAG) {
   unsigned IntNo = cast<ConstantSDNode>(N->getOperand(0))->getZExtValue();
@@ -15033,6 +15067,10 @@ SDValue ARMTargetLowering::PerformDAGCombine(SDNode *N,
     return PerformVCMPCombine(N, DCI, Subtarget);
   case ISD::VECREDUCE_ADD:
     return PerformVECREDUCE_ADDCombine(N, DCI.DAG, Subtarget);
+  case ARMISD::ASRL:
+  case ARMISD::LSRL:
+  case ARMISD::LSLL:
+    return PerformLongShiftCombine(N, DCI.DAG);
   case ARMISD::SMULWB: {
     unsigned BitWidth = N->getValueType(0).getSizeInBits();
     APInt DemandedMask = APInt::getLowBitsSet(BitWidth, 16);
@@ -16191,6 +16229,35 @@ ARMTargetLowering::targetShrinkDemandedConstant(SDValue Op,
   return false;
 }
 
+bool ARMTargetLowering::SimplifyDemandedBitsForTargetNode(
+    SDValue Op, const APInt &OriginalDemandedBits,
+    const APInt &OriginalDemandedElts, KnownBits &Known, TargetLoweringOpt &TLO,
+    unsigned Depth) const {
+  unsigned Opc = Op.getOpcode();
+
+  switch (Opc) {
+  case ARMISD::ASRL:
+  case ARMISD::LSRL: {
+    // If this is result 0 and the other result is unused, see if the demand
+    // bits allow us to shrink this long shift into a standard small shift in
+    // the opposite direction.
+    if (Op.getResNo() == 0 && !Op->hasAnyUseOfValue(1) &&
+        isa<ConstantSDNode>(Op->getOperand(2))) {
+      unsigned ShAmt = Op->getConstantOperandVal(2);
+      if (ShAmt < 32 && OriginalDemandedBits.isSubsetOf(
+                            APInt::getAllOnesValue(32) << (32 - ShAmt)))
+        return TLO.CombineTo(
+            Op, TLO.DAG.getNode(
+                    ISD::SHL, SDLoc(Op), MVT::i32, Op.getOperand(1),
+                    TLO.DAG.getConstant(32 - ShAmt, SDLoc(Op), MVT::i32)));
+    }
+    break;
+  }
+  }
+
+  return TargetLowering::SimplifyDemandedBitsForTargetNode(
+      Op, OriginalDemandedBits, OriginalDemandedElts, Known, TLO, Depth);
+}
 
 //===----------------------------------------------------------------------===//
 //                           ARM Inline Assembly Support

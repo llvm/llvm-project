@@ -1899,6 +1899,13 @@ void printSymbolTable(const ObjectFile *O, StringRef ArchiveName,
     char GlobLoc = ' ';
     if ((Section != O->section_end() || Absolute) && !Weak)
       GlobLoc = Global ? 'g' : 'l';
+    char IFunc = ' ';
+    if (auto *ELF = dyn_cast<ELFObjectFileBase>(O)) {
+      if (ELFSymbolRef(*I).getELFType() == ELF::STT_GNU_IFUNC)
+        IFunc = 'i';
+      if (ELFSymbolRef(*I).getBinding() == ELF::STB_GNU_UNIQUE)
+        GlobLoc = 'u';
+    }
     char Debug = (Type == SymbolRef::ST_Debug || Type == SymbolRef::ST_File)
                  ? 'd' : ' ';
     char FileFunc = ' ';
@@ -1917,7 +1924,7 @@ void printSymbolTable(const ObjectFile *O, StringRef ArchiveName,
            << (Weak ? 'w' : ' ') // Weak?
            << ' ' // Constructor. Not supported yet.
            << ' ' // Warning. Not supported yet.
-           << ' ' // Indirect reference to another symbol.
+           << IFunc
            << Debug // Debugging (d) or dynamic (D) symbol.
            << FileFunc // Name of function (F), file (f) or object (O).
            << ' ';
