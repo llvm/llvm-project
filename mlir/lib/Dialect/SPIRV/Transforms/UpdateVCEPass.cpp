@@ -33,6 +33,71 @@ private:
 };
 } // namespace
 
+/// Checks that `candidates` extension requirements are possible to be satisfied
+/// with the given `allowedExtensions` and updates `deducedExtensions` if so.
+/// Emits errors attaching to the given `op` on failures.
+///
+///  `candidates` is a vector of vector for extension requirements following
+/// ((Extension::A OR Extension::B) AND (Extension::C OR Extension::D))
+/// convention.
+static LogicalResult checkAndUpdateExtensionRequirements(
+    Operation *op, const llvm::SmallSet<spirv::Extension, 4> &allowedExtensions,
+    const spirv::SPIRVType::ExtensionArrayRefVector &candidates,
+    llvm::SetVector<spirv::Extension> &deducedExtensions) {
+  for (const auto &ors : candidates) {
+    auto chosen = llvm::find_if(ors, [&](spirv::Extension ext) {
+      return allowedExtensions.count(ext);
+    });
+
+    if (chosen != ors.end()) {
+      deducedExtensions.insert(*chosen);
+    } else {
+      SmallVector<StringRef, 4> extStrings;
+      for (spirv::Extension ext : ors)
+        extStrings.push_back(spirv::stringifyExtension(ext));
+
+      return op->emitError("'")
+             << op->getName() << "' requires at least one extension in ["
+             << llvm::join(extStrings, ", ")
+             << "] but none allowed in target environment";
+    }
+  }
+  return success();
+}
+
+/// Checks that `candidates`capability requirements are possible to be satisfied
+/// with the given `allowedCapabilities` and updates `deducedCapabilities` if
+/// so. Emits errors attaching to the given `op` on failures.
+///
+///  `candidates` is a vector of vector for capability requirements following
+/// ((Capability::A OR Capability::B) AND (Capability::C OR Capability::D))
+/// convention.
+static LogicalResult checkAndUpdateCapabilityRequirements(
+    Operation *op,
+    const llvm::SmallSet<spirv::Capability, 8> &allowedCapabilities,
+    const spirv::SPIRVType::CapabilityArrayRefVector &candidates,
+    llvm::SetVector<spirv::Capability> &deducedCapabilities) {
+  for (const auto &ors : candidates) {
+    auto chosen = llvm::find_if(ors, [&](spirv::Capability cap) {
+      return allowedCapabilities.count(cap);
+    });
+
+    if (chosen != ors.end()) {
+      deducedCapabilities.insert(*chosen);
+    } else {
+      SmallVector<StringRef, 4> capStrings;
+      for (spirv::Capability cap : ors)
+        capStrings.push_back(spirv::stringifyCapability(cap));
+
+      return op->emitError("'")
+             << op->getName() << "' requires at least one capability in ["
+             << llvm::join(capStrings, ", ")
+             << "] but none allowed in target environment";
+    }
+  }
+  return success();
+}
+
 void UpdateVCEPass::runOnOperation() {
   spirv::ModuleOp module = getOperation();
 
@@ -70,6 +135,7 @@ void UpdateVCEPass::runOnOperation() {
   // Walk each SPIR-V op to deduce the minimal version/extension/capability
   // requirements.
   WalkResult walkResult = module.walk([&](Operation *op) -> WalkResult {
+    // Op min version requirements
     if (auto minVersion = dyn_cast<spirv::QueryMinVersionInterface>(op)) {
       deducedVersion = std::max(deducedVersion, minVersion.getMinVersion());
       if (deducedVersion > allowedVersion) {
@@ -80,62 +146,44 @@ void UpdateVCEPass::runOnOperation() {
       }
     }
 
-    // Deduce this op's extension requirement. For each op, the query interfacce
-    // returns a vector of vector for its extension requirements following
-    // ((Extension::A OR Extension::B) AND (Extension::C OR Extension::D))
-    // convention. Ops not implementing QueryExtensionInterface do not require
-    // extensions to be available.
-    if (auto extensions = dyn_cast<spirv::QueryExtensionInterface>(op)) {
-      for (const auto &ors : extensions.getExtensions()) {
-        bool satisfied = false; // True when at least one extension can be used
-        for (spirv::Extension ext : ors) {
-          if (allowedExtensions.count(ext)) {
-            deducedExtensions.insert(ext);
-            satisfied = true;
-            break;
-          }
-        }
+    // Op extension requirements
+    if (auto extensions = dyn_cast<spirv::QueryExtensionInterface>(op))
+      if (failed(checkAndUpdateExtensionRequirements(op, allowedExtensions,
+                                                     extensions.getExtensions(),
+                                                     deducedExtensions)))
+        return WalkResult::interrupt();
 
-        if (!satisfied) {
-          SmallVector<StringRef, 4> extStrings;
-          for (spirv::Extension ext : ors)
-            extStrings.push_back(spirv::stringifyExtension(ext));
+    // Op capability requirements
+    if (auto capabilities = dyn_cast<spirv::QueryCapabilityInterface>(op))
+      if (failed(checkAndUpdateCapabilityRequirements(
+              op, allowedCapabilities, capabilities.getCapabilities(),
+              deducedCapabilities)))
+        return WalkResult::interrupt();
 
-          return op->emitError("'")
-                 << op->getName() << "' requires at least one extension in ["
-                 << llvm::join(extStrings, ", ")
-                 << "] but none allowed in target environment";
-        }
-      }
-    }
+    SmallVector<Type, 4> valueTypes;
+    valueTypes.append(op->operand_type_begin(), op->operand_type_end());
+    valueTypes.append(op->result_type_begin(), op->result_type_end());
 
-    // Deduce this op's capability requirement. For each op, the queryinterface
-    // returns a vector of vector for its capability requirements following
-    // ((Capability::A OR Extension::B) AND (Capability::C OR Capability::D))
-    // convention. Ops not implementing QueryExtensionInterface do not require
-    // extensions to be available.
-    if (auto capabilities = dyn_cast<spirv::QueryCapabilityInterface>(op)) {
-      for (const auto &ors : capabilities.getCapabilities()) {
-        bool satisfied = false; // True when at least one capability can be used
-        for (spirv::Capability cap : ors) {
-          if (allowedCapabilities.count(cap)) {
-            deducedCapabilities.insert(cap);
-            satisfied = true;
-            break;
-          }
-        }
+    // Special treatment for global variables, whose type requirements are
+    // conveyed by type attributes.
+    if (auto globalVar = dyn_cast<spirv::GlobalVariableOp>(op))
+      valueTypes.push_back(globalVar.type());
 
-        if (!satisfied) {
-          SmallVector<StringRef, 4> capStrings;
-          for (spirv::Capability cap : ors)
-            capStrings.push_back(spirv::stringifyCapability(cap));
+    // Requirements from values' types
+    SmallVector<ArrayRef<spirv::Extension>, 4> typeExtensions;
+    SmallVector<ArrayRef<spirv::Capability>, 8> typeCapabilities;
+    for (Type valueType : valueTypes) {
+      typeExtensions.clear();
+      valueType.cast<spirv::SPIRVType>().getExtensions(typeExtensions);
+      if (failed(checkAndUpdateExtensionRequirements(
+              op, allowedExtensions, typeExtensions, deducedExtensions)))
+        return WalkResult::interrupt();
 
-          return op->emitError("'")
-                 << op->getName() << "' requires at least one capability in ["
-                 << llvm::join(capStrings, ", ")
-                 << "] but none allowed in target environment";
-        }
-      }
+      typeCapabilities.clear();
+      valueType.cast<spirv::SPIRVType>().getCapabilities(typeCapabilities);
+      if (failed(checkAndUpdateCapabilityRequirements(
+              op, allowedCapabilities, typeCapabilities, deducedCapabilities)))
+        return WalkResult::interrupt();
     }
 
     return WalkResult::advance();
