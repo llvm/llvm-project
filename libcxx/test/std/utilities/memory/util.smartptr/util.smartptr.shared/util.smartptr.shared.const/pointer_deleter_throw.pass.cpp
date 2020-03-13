@@ -37,7 +37,6 @@ int A::count = 0;
 
 int main(int, char**)
 {
-    globalMemCounter.reset();
     A* ptr = new A;
     globalMemCounter.throw_after = 0;
     try
