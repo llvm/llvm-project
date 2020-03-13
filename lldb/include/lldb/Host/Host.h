@@ -232,6 +232,10 @@ public:
 
   static std::unique_ptr<Connection>
   CreateDefaultConnection(llvm::StringRef url);
+
+protected:
+  static uint32_t FindProcessesImpl(const ProcessInstanceInfoMatch &match_info,
+                                    ProcessInstanceInfoList &proc_infos);
 };
 
 } // namespace lldb_private
