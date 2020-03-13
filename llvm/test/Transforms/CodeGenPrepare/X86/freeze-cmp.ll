@@ -73,9 +73,9 @@ B:
 
 define i1 @ptrcmp(i8* %p) {
 ; CHECK-LABEL: @ptrcmp(
-; CHECK-NEXT:    [[C:%.*]] = icmp eq i8* [[P:%.*]], null
-; CHECK-NEXT:    [[FR:%.*]] = freeze i1 [[C]]
-; CHECK-NEXT:    ret i1 [[FR]]
+; CHECK-NEXT:    [[FR:%.*]] = freeze i8* [[P:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i8* [[FR]], null
+; CHECK-NEXT:    ret i1 [[C]]
 ;
   %c = icmp eq i8* %p, null
   %fr = freeze i1 %c
@@ -85,9 +85,9 @@ define i1 @ptrcmp(i8* %p) {
 
 define i1 @fcmp(float %a) {
 ; CHECK-LABEL: @fcmp(
-; CHECK-NEXT:    [[C:%.*]] = fcmp oeq float [[A:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[FR:%.*]] = freeze i1 [[C]]
-; CHECK-NEXT:    ret i1 [[FR]]
+; CHECK-NEXT:    [[FR:%.*]] = freeze float [[A:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = fcmp oeq float [[FR]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[C]]
 ;
   %c = fcmp oeq float %a, 0.0
   %fr = freeze i1 %c
@@ -104,5 +104,6 @@ define i1 @fcmp_nan(float %a) {
   %fr = freeze i1 %c
   ret i1 %fr
 }
+
 declare void @g1()
 declare void @g2()

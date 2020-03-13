@@ -7198,16 +7198,25 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, bool &ModifiedDT) {
   if (FreezeInst *FI = dyn_cast<FreezeInst>(I)) {
     // br(freeze(icmp a, const)) -> br(icmp (freeze a), const)
     // This helps generate efficient conditional jumps.
-    if (ICmpInst *II = dyn_cast<ICmpInst>(FI->getOperand(0))) {
-      auto Op0 = II->getOperand(0), Op1 = II->getOperand(1);
-      bool Const0 = isa<ConstantInt>(Op0), Const1 = isa<ConstantInt>(Op1);
-      if (II->hasOneUse() && (Const0 || Const1)) {
+    Instruction *CmpI = nullptr;
+    if (ICmpInst *II = dyn_cast<ICmpInst>(FI->getOperand(0)))
+      CmpI = II;
+    else if (FCmpInst *F = dyn_cast<FCmpInst>(FI->getOperand(0)))
+      CmpI = F->getFastMathFlags().none() ? F : nullptr;
+
+    if (CmpI && CmpI->hasOneUse()) {
+      auto Op0 = CmpI->getOperand(0), Op1 = CmpI->getOperand(1);
+      bool Const0 = isa<ConstantInt>(Op0) || isa<ConstantFP>(Op0) ||
+                    isa<ConstantPointerNull>(Op0);
+      bool Const1 = isa<ConstantInt>(Op1) || isa<ConstantFP>(Op1) ||
+                    isa<ConstantPointerNull>(Op1);
+      if (Const0 || Const1) {
         if (!Const0 || !Const1) {
-          auto *F = new FreezeInst(Const0 ? Op1 : Op0, "", II);
+          auto *F = new FreezeInst(Const0 ? Op1 : Op0, "", CmpI);
           F->takeName(FI);
-          II->setOperand(Const0 ? 1 : 0, F);
+          CmpI->setOperand(Const0 ? 1 : 0, F);
         }
-        FI->replaceAllUsesWith(II);
+        FI->replaceAllUsesWith(CmpI);
         FI->eraseFromParent();
         return true;
       }
