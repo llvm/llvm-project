@@ -249,12 +249,31 @@ int vararg_receiver(int count, svint8_t first, ...) {
   return count;
 }
 
+struct sized_struct {
+  int f1;
+  svint8_t f2;     // expected-error {{field has sizeless type 'svint8_t'}}
+  svint8_t f3 : 2; // expected-error {{field has sizeless type 'svint8_t'}}
+  svint8_t : 3;    // expected-error {{field has sizeless type 'svint8_t'}}
+};
+
+union sized_union {
+  int f1;
+  svint8_t f2;     // expected-error {{field has sizeless type 'svint8_t'}}
+  svint8_t f3 : 2; // expected-error {{field has sizeless type 'svint8_t'}}
+  svint8_t : 3;    // expected-error {{field has sizeless type 'svint8_t'}}
+};
+
 void pass_int8_ref(svint8_t &); // expected-note {{not viable}}
 
 svint8_t &return_int8_ref();
 #if __cplusplus >= 201103L
 svint8_t &&return_int8_rvalue_ref();
 #endif
+
+template <typename T>
+struct s_template {
+  T y; // expected-error {{field has sizeless type '__SVInt8_t'}}
+};
 
 template <typename T>
 struct s_ptr_template {
@@ -343,6 +362,9 @@ void cxx_only(int sel) {
 
   local_int8 = svint8_t();
   local_int8 = svint16_t(); // expected-error {{assigning to 'svint8_t' (aka '__SVInt8_t') from incompatible type 'svint16_t'}}
+
+  s_template<int> st_int;
+  s_template<svint8_t> st_svint8; // expected-note {{in instantiation}}
 
   s_ptr_template<int> st_ptr_int;
   s_ptr_template<svint8_t> st_ptr_svint8;
@@ -474,6 +496,9 @@ void cxx_only(int sel) {
   local_int8 = ([]() -> svint8_t { return svint8_t(); })();
   auto fn1 = [&local_int8](svint8_t x) { local_int8 = x; };
   auto fn2 = [&local_int8](svint8_t *ptr) { *ptr = local_int8; };
+#if __cplusplus >= 201703L
+  auto fn3 = [a(return_int8())] {}; // expected-error {{field has sizeless type '__SVInt8_t'}}
+#endif
 
   for (auto x : local_int8) { // expected-error {{no viable 'begin' function available}}
   }
