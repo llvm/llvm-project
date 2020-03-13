@@ -129,14 +129,17 @@ struct AliasPattern {
 
 struct AliasPatternCond {
   enum CondKind : uint8_t {
-    K_Feature,    // Match only if a feature is enabled.
-    K_NegFeature, // Match only if a feature is disabled.
-    K_Ignore,     // Match any operand.
-    K_Reg,        // Match a specific register.
-    K_TiedReg,    // Match another already matched register.
-    K_Imm,        // Match a specific immediate.
-    K_RegClass,   // Match registers in a class.
-    K_Custom,     // Call custom matcher by index.
+    K_Feature,       // Match only if a feature is enabled.
+    K_NegFeature,    // Match only if a feature is disabled.
+    K_OrFeature,     // Match only if one of a set of features is enabled.
+    K_OrNegFeature,  // Match only if one of a set of features is disabled.
+    K_EndOrFeatures, // Note end of list of K_Or(Neg)?Features.
+    K_Ignore,        // Match any operand.
+    K_Reg,           // Match a specific register.
+    K_TiedReg,       // Match another already matched register.
+    K_Imm,           // Match a specific immediate.
+    K_RegClass,      // Match registers in a class.
+    K_Custom,        // Call custom matcher by index.
   };
 
   CondKind Kind;

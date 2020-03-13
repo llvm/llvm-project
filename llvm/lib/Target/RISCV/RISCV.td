@@ -16,21 +16,21 @@ def FeatureStdExtM
     : SubtargetFeature<"m", "HasStdExtM", "true",
                        "'M' (Integer Multiplication and Division)">;
 def HasStdExtM : Predicate<"Subtarget->hasStdExtM()">,
-                           AssemblerPredicate<"FeatureStdExtM",
+                           AssemblerPredicate<(all_of FeatureStdExtM),
                            "'M' (Integer Multiplication and Division)">;
 
 def FeatureStdExtA
     : SubtargetFeature<"a", "HasStdExtA", "true",
                        "'A' (Atomic Instructions)">;
 def HasStdExtA : Predicate<"Subtarget->hasStdExtA()">,
-                           AssemblerPredicate<"FeatureStdExtA",
+                           AssemblerPredicate<(all_of FeatureStdExtA),
                            "'A' (Atomic Instructions)">;
 
 def FeatureStdExtF
     : SubtargetFeature<"f", "HasStdExtF", "true",
                        "'F' (Single-Precision Floating-Point)">;
 def HasStdExtF : Predicate<"Subtarget->hasStdExtF()">,
-                           AssemblerPredicate<"FeatureStdExtF",
+                           AssemblerPredicate<(all_of FeatureStdExtF),
                            "'F' (Single-Precision Floating-Point)">;
 
 def FeatureStdExtD
@@ -38,30 +38,30 @@ def FeatureStdExtD
                        "'D' (Double-Precision Floating-Point)",
                        [FeatureStdExtF]>;
 def HasStdExtD : Predicate<"Subtarget->hasStdExtD()">,
-                           AssemblerPredicate<"FeatureStdExtD",
+                           AssemblerPredicate<(all_of FeatureStdExtD),
                            "'D' (Double-Precision Floating-Point)">;
 
 def FeatureStdExtC
     : SubtargetFeature<"c", "HasStdExtC", "true",
                        "'C' (Compressed Instructions)">;
 def HasStdExtC : Predicate<"Subtarget->hasStdExtC()">,
-                           AssemblerPredicate<"FeatureStdExtC",
+                           AssemblerPredicate<(all_of FeatureStdExtC),
                            "'C' (Compressed Instructions)">;
 
 def FeatureRVCHints
     : SubtargetFeature<"rvc-hints", "EnableRVCHintInstrs", "true",
                        "Enable RVC Hint Instructions.">;
 def HasRVCHints : Predicate<"Subtarget->enableRVCHintInstrs()">,
-                            AssemblerPredicate<"FeatureRVCHints",
+                            AssemblerPredicate<(all_of FeatureRVCHints),
                             "RVC Hint Instructions">;
 
 def Feature64Bit
     : SubtargetFeature<"64bit", "HasRV64", "true", "Implements RV64">;
 def IsRV64 : Predicate<"Subtarget->is64Bit()">,
-                       AssemblerPredicate<"Feature64Bit",
+                       AssemblerPredicate<(all_of Feature64Bit),
                        "RV64I Base Instruction Set">;
 def IsRV32 : Predicate<"!Subtarget->is64Bit()">,
-                       AssemblerPredicate<"!Feature64Bit",
+                       AssemblerPredicate<(all_of (not Feature64Bit)),
                        "RV32I Base Instruction Set">;
 
 def RV64           : HwMode<"+64bit">;
@@ -71,7 +71,7 @@ def FeatureRV32E
     : SubtargetFeature<"e", "IsRV32E", "true",
                        "Implements RV32E (provides 16 rather than 32 GPRs)">;
 def IsRV32E : Predicate<"Subtarget->isRV32E()">,
-                        AssemblerPredicate<"FeatureRV32E">;
+                        AssemblerPredicate<(all_of FeatureRV32E)>;
 
 def FeatureRelax
     : SubtargetFeature<"relax", "EnableLinkerRelax", "true",

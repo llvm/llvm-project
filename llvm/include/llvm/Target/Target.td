@@ -664,14 +664,21 @@ class Predicate<string cond> {
   /// feature from the AssemblerPredicate class in addition to Predicate.
   bit AssemblerMatcherPredicate = 0;
 
-  /// AssemblerCondString - Name of the subtarget feature being tested used
-  /// as alternative condition string used for assembler matcher.
-  /// e.g. "ModeThumb" is translated to "(Bits & ModeThumb) != 0".
-  ///      "!ModeThumb" is translated to "(Bits & ModeThumb) == 0".
-  /// It can also list multiple features separated by ",".
-  /// e.g. "ModeThumb,FeatureThumb2" is translated to
+  /// AssemblerCondDag - Set of subtarget features being tested used
+  /// as alternative condition string used for assembler matcher. Must be used
+  /// with (all_of) to indicate that all features must be present, or (any_of)
+  /// to indicate that at least one must be. The required lack of presence of
+  /// a feature can be tested using a (not) node including the feature.
+  /// e.g. "(all_of ModeThumb)" is translated to "(Bits & ModeThumb) != 0".
+  ///      "(all_of (not ModeThumb))" is translated to
+  ///      "(Bits & ModeThumb) == 0".
+  ///      "(all_of ModeThumb, FeatureThumb2)" is translated to
   ///      "(Bits & ModeThumb) != 0 && (Bits & FeatureThumb2) != 0".
-  string AssemblerCondString = "";
+  ///      "(any_of ModeTumb, FeatureThumb2)" is translated to
+  ///      "(Bits & ModeThumb) != 0 || (Bits & FeatureThumb2) != 0".
+  /// all_of and any_of cannot be combined in a single dag, instead multiple
+  /// predicates can be placed onto Instruction definitions.
+  dag AssemblerCondDag;
 
   /// PredicateName - User-level name to use for the predicate. Mainly for use
   /// in diagnostics such as missing feature errors in the asm matcher.
@@ -1352,11 +1359,15 @@ class AsmParserVariant {
 }
 def DefaultAsmParserVariant : AsmParserVariant;
 
+// Operators for combining SubtargetFeatures in AssemblerPredicates
+def any_of;
+def all_of;
+
 /// AssemblerPredicate - This is a Predicate that can be used when the assembler
 /// matches instructions and aliases.
-class AssemblerPredicate<string cond, string name = ""> {
+class AssemblerPredicate<dag cond, string name = ""> {
   bit AssemblerMatcherPredicate = 1;
-  string AssemblerCondString = cond;
+  dag AssemblerCondDag = cond;
   string PredicateName = name;
 }
 

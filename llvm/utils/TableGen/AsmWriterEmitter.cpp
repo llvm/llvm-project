@@ -941,21 +941,35 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
 
       for (auto I = ReqFeatures.cbegin(); I != ReqFeatures.cend(); I++) {
         Record *R = *I;
-        StringRef AsmCondString = R->getValueAsString("AssemblerCondString");
+        const DagInit *D = R->getValueAsDag("AssemblerCondDag");
+        std::string CombineType = D->getOperator()->getAsString();
+        if (CombineType != "any_of" && CombineType != "all_of")
+          PrintFatalError(R->getLoc(), "Invalid AssemblerCondDag!");
+        if (D->getNumArgs() == 0)
+          PrintFatalError(R->getLoc(), "Invalid AssemblerCondDag!");
+        bool IsOr = CombineType == "any_of";
 
-        // AsmCondString has syntax [!]F(,[!]F)*
-        SmallVector<StringRef, 4> Ops;
-        SplitString(AsmCondString, Ops, ",");
-        assert(!Ops.empty() && "AssemblerCondString cannot be empty");
+        for (auto *Arg : D->getArgs()) {
+          bool IsNeg = false;
+          if (auto *NotArg = dyn_cast<DagInit>(Arg)) {
+            if (NotArg->getOperator()->getAsString() != "not" ||
+                NotArg->getNumArgs() != 1)
+              PrintFatalError(R->getLoc(), "Invalid AssemblerCondDag!");
+            Arg = NotArg->getArg(0);
+            IsNeg = true;
+          }
+          if (!isa<DefInit>(Arg) ||
+              !cast<DefInit>(Arg)->getDef()->isSubClassOf("SubtargetFeature"))
+            PrintFatalError(R->getLoc(), "Invalid AssemblerCondDag!");
 
-        for (StringRef Op : Ops) {
-          assert(!Op.empty() && "Empty operator");
-          bool IsNeg = Op[0] == '!';
-          StringRef Feature = Op.drop_front(IsNeg ? 1 : 0);
-          IAP.addCond(
-              std::string(formatv("AliasPatternCond::K_{0}Feature, {1}::{2}",
-                                  IsNeg ? "Neg" : "", Namespace, Feature)));
+          IAP.addCond(std::string(formatv(
+              "AliasPatternCond::K_{0}{1}Feature, {2}::{3}", IsOr ? "Or" : "",
+              IsNeg ? "Neg" : "", Namespace, Arg->getAsString())));
         }
+        // If an AssemblerPredicate with ors is used, note end of list should
+        // these be combined.
+        if (IsOr)
+          IAP.addCond("AliasPatternCond::K_EndOrFeatures, 0");
       }
 
       IAPrinterMap[Aliases.first].push_back(std::move(IAP));
