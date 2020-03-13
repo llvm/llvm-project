@@ -320,7 +320,16 @@ private:
 
   bool GetCFBooleanValuesIfNeeded();
 
+  NonPointerISACache *GetNonPointerIsaCache() {
+    if (!m_non_pointer_isa_cache_up)
+      m_non_pointer_isa_cache_up.reset(
+          NonPointerISACache::CreateInstance(*this, m_objc_module_sp));
+    return m_non_pointer_isa_cache_up.get();
+  }
+
   friend class ClassDescriptorV2;
+
+  lldb::ModuleSP m_objc_module_sp;
 
   std::unique_ptr<UtilityFunction> m_get_class_info_code;
   lldb::addr_t m_get_class_info_args;
