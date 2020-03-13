@@ -20,6 +20,11 @@ cl::opt<bool> ShouldPreserveAllAttributes(
     cl::desc("enable preservation of all attrbitues. even those that are "
              "unlikely to be usefull"));
 
+cl::opt<bool> EnableKnowledgeRetention(
+    "enable-knowledge-retention", cl::init(false), cl::Hidden,
+    cl::desc(
+        "enable preservation of attributes throughout code transformation"));
+
 namespace {
 
 struct AssumedKnowledge {
@@ -166,6 +171,8 @@ struct AssumeBuilderState {
 } // namespace
 
 CallInst *llvm::BuildAssumeFromInst(const Instruction *I, Module *M) {
+  if (!EnableKnowledgeRetention)
+    return nullptr;
   AssumeBuilderState Builder(M);
   Builder.addInstruction(I);
   return Builder.build();
