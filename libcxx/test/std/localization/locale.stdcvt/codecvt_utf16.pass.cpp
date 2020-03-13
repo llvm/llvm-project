@@ -28,7 +28,6 @@
 
 int main(int, char**)
 {
-    globalMemCounter.reset();
     assert(globalMemCounter.checkOutstandingNewEq(0));
     {
         typedef std::codecvt_utf16<wchar_t> C;
