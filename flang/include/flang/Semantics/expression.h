@@ -353,6 +353,7 @@ private:
       parser::CharBlock, const ProcedureDesignator &, ActualArguments &);
   using AdjustActuals =
       std::optional<std::function<bool(const Symbol &, ActualArguments &)>>;
+  bool ResolveForward(const Symbol &);
   const Symbol *ResolveGeneric(const Symbol &, const ActualArguments &,
       const AdjustActuals &, bool mightBeStructureConstructor = false);
   void EmitGenericResolutionError(const Symbol &);

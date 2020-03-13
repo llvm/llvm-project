@@ -63,6 +63,7 @@ template<typename A> bool IsConstantExpr(const A &x) {
 }
 template bool IsConstantExpr(const Expr<SomeType> &);
 template bool IsConstantExpr(const Expr<SomeInteger> &);
+template bool IsConstantExpr(const Expr<SubscriptInteger> &);
 
 // Object pointer initialization checking predicate IsInitialDataTarget().
 // This code determines whether an expression is allowable as the static
@@ -243,6 +244,12 @@ void CheckSpecificationExpr(const A &x, parser::ContextualMessages &messages,
 }
 
 template void CheckSpecificationExpr(const Expr<SomeType> &,
+    parser::ContextualMessages &, const semantics::Scope &);
+template void CheckSpecificationExpr(const Expr<SomeInteger> &,
+    parser::ContextualMessages &, const semantics::Scope &);
+template void CheckSpecificationExpr(const Expr<SubscriptInteger> &,
+    parser::ContextualMessages &, const semantics::Scope &);
+template void CheckSpecificationExpr(const std::optional<Expr<SomeType>> &,
     parser::ContextualMessages &, const semantics::Scope &);
 template void CheckSpecificationExpr(const std::optional<Expr<SomeInteger>> &,
     parser::ContextualMessages &, const semantics::Scope &);

@@ -31,6 +31,7 @@ class IntrinsicProcTable;
 template<typename A> bool IsConstantExpr(const A &);
 extern template bool IsConstantExpr(const Expr<SomeType> &);
 extern template bool IsConstantExpr(const Expr<SomeInteger> &);
+extern template bool IsConstantExpr(const Expr<SubscriptInteger> &);
 
 // Checks whether an expression is an object designator with
 // constant addressing and no vector-valued subscript.
@@ -44,6 +45,13 @@ void CheckSpecificationExpr(
     const A &, parser::ContextualMessages &, const semantics::Scope &);
 extern template void CheckSpecificationExpr(const Expr<SomeType> &x,
     parser::ContextualMessages &, const semantics::Scope &);
+extern template void CheckSpecificationExpr(const Expr<SomeInteger> &x,
+    parser::ContextualMessages &, const semantics::Scope &);
+extern template void CheckSpecificationExpr(const Expr<SubscriptInteger> &x,
+    parser::ContextualMessages &, const semantics::Scope &);
+extern template void CheckSpecificationExpr(
+    const std::optional<Expr<SomeType>> &x, parser::ContextualMessages &,
+    const semantics::Scope &);
 extern template void CheckSpecificationExpr(
     const std::optional<Expr<SomeInteger>> &x, parser::ContextualMessages &,
     const semantics::Scope &);

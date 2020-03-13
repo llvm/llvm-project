@@ -27,6 +27,7 @@ namespace Fortran::semantics {
 
 class Scope;
 class Symbol;
+class ProgramTree;
 
 using SymbolRef = common::Reference<const Symbol>;
 using SymbolVector = std::vector<SymbolRef>;
@@ -91,12 +92,15 @@ ENUM_CLASS(SubprogramKind, Module, Internal)
 // type information.
 class SubprogramNameDetails {
 public:
-  SubprogramNameDetails(SubprogramKind kind) : kind_{kind} {}
+  SubprogramNameDetails(SubprogramKind kind, ProgramTree &node)
+    : kind_{kind}, node_{node} {}
   SubprogramNameDetails() = delete;
   SubprogramKind kind() const { return kind_; }
+  ProgramTree &node() const { return *node_; }
 
 private:
   SubprogramKind kind_;
+  common::Reference<ProgramTree> node_;
 };
 
 // A name from an entity-decl -- could be object or function.

@@ -42,6 +42,10 @@ class FoldingContext;
 // optionality and defaults.  The kind and rank patterns are represented
 // here with code values that are significant to the matching/validation engine.
 
+// An actual argument to an intrinsic procedure may be a procedure itself
+// only if the dummy argument is Rank::reduceOperation,
+// KindCode::addressable, or the special case of NULL(MOLD=procedurePointer).
+
 // These are small bit-sets of type category enumerators.
 // Note that typeless (BOZ literal) values don't have a distinct type category.
 // These typeless arguments are represented in the tables as if they were
@@ -1085,9 +1089,8 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
     std::optional<DynamicType> type{arg->GetType()};
     if (!type) {
       CHECK(arg->Rank() == 0);
-      const Expr<SomeType> *expr{arg->UnwrapExpr()};
-      CHECK(expr);
-      if (std::holds_alternative<BOZLiteralConstant>(expr->u)) {
+      const Expr<SomeType> &expr{DEREF(arg->UnwrapExpr())};
+      if (std::holds_alternative<BOZLiteralConstant>(expr.u)) {
         if (d.typePattern.kindCode == KindCode::typeless ||
             d.rank == Rank::elementalOrBOZ) {
           continue;
@@ -1097,11 +1100,14 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
               d.keyword);
         }
       } else {
-        // NULL(), pointer to subroutine, &c.
-        if (d.typePattern.kindCode == KindCode::addressable) {
+        // NULL(), procedure, or procedure pointer
+        CHECK(IsProcedurePointer(expr));
+        if (d.typePattern.kindCode == KindCode::addressable ||
+            d.rank == Rank::reduceOperation) {
           continue;
         } else {
-          messages.Say("Typeless item not allowed for '%s=' argument"_err_en_US,
+          messages.Say(
+              "Actual argument for '%s=' may not be a procedure"_err_en_US,
               d.keyword);
         }
       }
@@ -1249,8 +1255,8 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
         argOk = rank == 0 || rank + 1 == arrayArg->Rank();
         break;
       case Rank::reduceOperation:
-        // TODO: Confirm that the argument is a pure function
-        // of two arguments with several constraints
+        // TODO: validate the reduction operation -- it must be a pure
+        // function of two arguments with special constraints.
         CHECK(arrayArg);
         argOk = rank == 0;
         break;

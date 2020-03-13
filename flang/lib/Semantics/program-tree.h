@@ -11,6 +11,7 @@
 
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/symbol.h"
+#include <list>
 #include <variant>
 
 // A ProgramTree represents a tree of program units and their contained
@@ -56,11 +57,17 @@ public:
   const parser::Name &name() const { return name_; }
   Kind GetKind() const;
   const Stmt &stmt() const { return stmt_; }
+  bool isSpecificationPartResolved() const {
+    return isSpecificationPartResolved_;
+  }
+  void set_isSpecificationPartResolved(bool yes = true) {
+    isSpecificationPartResolved_ = yes;
+  }
   const parser::ParentIdentifier &GetParentId() const;  // only for Submodule
   const parser::SpecificationPart &spec() const { return spec_; }
   const parser::ExecutionPart *exec() const { return exec_; }
-  std::vector<ProgramTree> &children() { return children_; }
-  const std::vector<ProgramTree> &children() const { return children_; }
+  std::list<ProgramTree> &children() { return children_; }
+  const std::list<ProgramTree> &children() const { return children_; }
   Symbol::Flag GetSubpFlag() const;
   bool IsModule() const;  // Module or Submodule
   bool HasModulePrefix() const;  // in function or subroutine stmt
@@ -84,9 +91,10 @@ private:
       static_cast<const parser::Statement<parser::ProgramStmt> *>(nullptr)};
   const parser::SpecificationPart &spec_;
   const parser::ExecutionPart *exec_{nullptr};
-  std::vector<ProgramTree> children_;
+  std::list<ProgramTree> children_;
   Scope *scope_{nullptr};
   const parser::CharBlock *endStmt_{nullptr};
+  bool isSpecificationPartResolved_{false};
 };
 
 }

@@ -9,6 +9,7 @@
 #include "flang/Semantics/expression.h"
 #include "check-call.h"
 #include "pointer-assignment.h"
+#include "resolve-names.h"
 #include "flang/Common/idioms.h"
 #include "flang/Evaluate/common.h"
 #include "flang/Evaluate/fold.h"
@@ -1718,6 +1719,41 @@ static bool CheckCompatibleArguments(
   return true;
 }
 
+// Handles a forward reference to a module function from what must
+// be a specification expression.  Return false if the symbol is
+// an invalid forward reference.
+bool ExpressionAnalyzer::ResolveForward(const Symbol &symbol) {
+  if (context_.HasError(symbol)) {
+    return false;
+  }
+  if (const auto *details{
+          symbol.detailsIf<semantics::SubprogramNameDetails>()}) {
+    if (details->kind() == semantics::SubprogramKind::Module) {
+      // If this symbol is still a SubprogramNameDetails, we must be
+      // checking a specification expression in a sibling module
+      // procedure.  Resolve its names now so that its interface
+      // is known.
+      semantics::ResolveSpecificationParts(context_, symbol);
+      if (symbol.has<semantics::SubprogramNameDetails>()) {
+        // When the symbol hasn't had its details updated, we must have
+        // already been in the process of resolving the function's
+        // specification part; but recursive function calls are not
+        // allowed in specification parts (10.1.11 para 5).
+        Say("The module function '%s' may not be referenced recursively in a specification expression"_err_en_US,
+            symbol.name());
+        context_.SetError(const_cast<Symbol &>(symbol));
+        return false;
+      }
+    } else {  // 10.1.11 para 4
+      Say("The internal function '%s' may not be referenced in a specification expression"_err_en_US,
+          symbol.name());
+      context_.SetError(const_cast<Symbol &>(symbol));
+      return false;
+    }
+  }
+  return true;
+}
+
 // Resolve a call to a generic procedure with given actual arguments.
 // adjustActuals is called on procedure bindings to handle pass arg.
 const Symbol *ExpressionAnalyzer::ResolveGeneric(const Symbol &symbol,
@@ -1726,6 +1762,9 @@ const Symbol *ExpressionAnalyzer::ResolveGeneric(const Symbol &symbol,
   const Symbol *elemental{nullptr};  // matching elemental specific proc
   const auto &details{symbol.GetUltimate().get<semantics::GenericDetails>()};
   for (const Symbol &specific : details.specificProcs()) {
+    if (!ResolveForward(specific)) {
+      continue;
+    }
     if (std::optional<characteristics::Procedure> procedure{
             characteristics::Procedure::Characterize(
                 ProcedureDesignator{specific}, context_.intrinsics())}) {
@@ -2533,6 +2572,11 @@ MaybeExpr ExpressionAnalyzer::MakeFunctionRef(parser::CharBlock callSite,
       return Expr<SomeType>{NullPointer{}};
     }
   }
+  if (const Symbol * symbol{proc.GetSymbol()}) {
+    if (!ResolveForward(*symbol)) {
+      return std::nullopt;
+    }
+  }
   if (auto chars{CheckCall(callSite, proc, arguments)}) {
     if (chars->functionResult) {
       const auto &result{*chars->functionResult};
@@ -2545,28 +2589,6 @@ MaybeExpr ExpressionAnalyzer::MakeFunctionRef(parser::CharBlock callSite,
             DEREF(result.GetTypeAndShape()).type(),
             ProcedureRef{std::move(proc), std::move(arguments)});
       }
-    }
-  }
-  if (const Symbol * symbol{proc.GetSymbol()}) {
-    if (const auto *details{
-            symbol->detailsIf<semantics::SubprogramNameDetails>()}) {
-      // If this symbol is still a SubprogramNameDetails, we must be
-      // checking a specification expression in a sibling module or internal
-      // procedure.  Since recursion is disallowed in specification
-      // expressions, we should handle such references by processing the
-      // sibling procedure's specification part right now (recursively),
-      // but until we can do so, just complain about the forward reference.
-      // TODO: recursively process sibling's specification part.
-      if (details->kind() == semantics::SubprogramKind::Module) {
-        Say("The module function '%s' must have been previously defined "
-            "when referenced in a specification expression"_err_en_US,
-            symbol->name());
-      } else {
-        Say("The internal function '%s' cannot be referenced in "
-            "a specification expression"_err_en_US,
-            symbol->name());
-      }
-      return std::nullopt;
     }
   }
   return std::nullopt;

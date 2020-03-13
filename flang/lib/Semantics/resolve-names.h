@@ -20,8 +20,10 @@ struct Program;
 namespace Fortran::semantics {
 
 class SemanticsContext;
+class Symbol;
 
 bool ResolveNames(SemanticsContext &, const parser::Program &);
+void ResolveSpecificationParts(SemanticsContext &, const Symbol &);
 void DumpSymbols(std::ostream &);
 
 }

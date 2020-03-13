@@ -29,7 +29,7 @@ module m
     integer :: local
     !ERROR: Invalid specification expression: reference to local entity 'local'
     type(t(local)) :: x2
-    !ERROR: The internal function 'internal' cannot be referenced in a specification expression
+    !ERROR: The internal function 'internal' may not be referenced in a specification expression
     type(t(internal(0))) :: x3
     integer, intent(out) :: out
     !ERROR: Invalid specification expression: reference to INTENT(OUT) dummy argument 'out'
@@ -43,7 +43,6 @@ module m
     type(t(coarray[1])) :: x7
     type(t(kind(foo()))) :: x101 ! ok
     type(t(modulefunc1(0))) :: x102 ! ok
-    !ERROR: The module function 'modulefunc2' must have been previously defined when referenced in a specification expression
     type(t(modulefunc2(0))) :: x103 ! ok
    contains
     pure integer function internal(n)

@@ -41,7 +41,7 @@ contains
     f4 => rf
     ! OK call to f4 pointer (rf)
     x = acos(f4())
-    !ERROR: Typeless item not allowed for 'x=' argument
+    !ERROR: Actual argument for 'x=' may not be a procedure
     x = acos(f4)
   end function
   function f5(x)
@@ -55,7 +55,7 @@ contains
     f5 => rfunc
     ! OK call to f5 pointer
     x = acos(f5(x+1))
-    !ERROR: Typeless item not allowed for 'x=' argument
+    !ERROR: Actual argument for 'x=' may not be a procedure
     x = acos(f5)
   end function
   ! Sanity test: f18 handles C1560 violation by ignoring RESULT
@@ -78,21 +78,21 @@ contains
   function f1() result(r)
     real :: r
     r = acos(f1()) !OK, recursive call
-    !ERROR: Typeless item not allowed for 'x=' argument
+    !ERROR: Actual argument for 'x=' may not be a procedure
     x = acos(f1)
   end function
   function f2(i) result(r)
     integer i
     real :: r
     r = acos(f2(i+1)) ! OK, recursive call
-    !ERROR: Typeless item not allowed for 'x=' argument
+    !ERROR: Actual argument for 'x=' may not be a procedure
     r = acos(f2)
   end function
   function f3(i) result(r)
     integer i
     real :: r(1)
     r = acos(f3(i+1)) !OK recursive call
-    !ERROR: Typeless item not allowed for 'x=' argument
+    !ERROR: Actual argument for 'x=' may not be a procedure
     r = sum(acos(f3))
   end function
 
@@ -104,9 +104,9 @@ contains
     real :: x
     procedure(rf), pointer :: r
     r => rf
-    !ERROR: Typeless item not allowed for 'x=' argument
+    !ERROR: Actual argument for 'x=' may not be a procedure
     x = acos(f4()) ! recursive call
-    !ERROR: Typeless item not allowed for 'x=' argument
+    !ERROR: Actual argument for 'x=' may not be a procedure
     x = acos(f4)
     x = acos(r()) ! OK
   end function
@@ -114,9 +114,9 @@ contains
     real :: x
     procedure(acos), pointer :: r
     r => acos
-    !ERROR: Typeless item not allowed for 'x=' argument
+    !ERROR: Actual argument for 'x=' may not be a procedure
     x = acos(f5(x+1)) ! recursive call
-    !ERROR: Typeless item not allowed for 'x=' argument
+    !ERROR: Actual argument for 'x=' may not be a procedure
     x = acos(f5)
     x = acos(r(x+1)) ! OK
   end function

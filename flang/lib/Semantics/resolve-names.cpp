@@ -90,6 +90,9 @@ private:
   friend void ShowImplicitRule(std::ostream &, const ImplicitRules &, char);
 };
 
+// scope -> implicit rules for that scope
+using ImplicitRulesMap = std::map<const Scope *, ImplicitRules>;
+
 // Track statement source locations and save messages.
 class MessageHandler {
 public:
@@ -135,8 +138,9 @@ private:
 class BaseVisitor {
 public:
   BaseVisitor() { DIE("BaseVisitor: default-constructed"); }
-  BaseVisitor(SemanticsContext &c, ResolveNamesVisitor &v)
-    : this_{&v}, context_{&c}, messageHandler_{c} {}
+  BaseVisitor(
+      SemanticsContext &c, ResolveNamesVisitor &v, ImplicitRulesMap &rules)
+    : implicitRulesMap_{&rules}, this_{&v}, context_{&c}, messageHandler_{c} {}
   template<typename T> void Walk(const T &);
 
   MessageHandler &messageHandler() { return messageHandler_; }
@@ -214,6 +218,9 @@ public:
       const parser::Name &name, MessageFixedText &&text, const A &... args) {
     return messageHandler_.Say(name.source, std::move(text), args...);
   }
+
+protected:
+  ImplicitRulesMap *implicitRulesMap_{nullptr};
 
 private:
   ResolveNamesVisitor *this_;
@@ -377,8 +384,6 @@ protected:
   void SetScope(const Scope &);
 
 private:
-  // scope -> implicit rules for that scope
-  std::map<const Scope *, ImplicitRules> implicitRulesMap_;
   // implicit rules in effect for current scope
   ImplicitRules *implicitRules_{nullptr};
   std::optional<SourceName> prevImplicit_;
@@ -1330,7 +1335,8 @@ public:
   using SubprogramVisitor::Post;
   using SubprogramVisitor::Pre;
 
-  ResolveNamesVisitor(SemanticsContext &context) : BaseVisitor{context, *this} {
+  ResolveNamesVisitor(SemanticsContext &context, ImplicitRulesMap &rules)
+    : BaseVisitor{context, *this, rules} {
     PushScope(context.globalScope());
   }
 
@@ -1370,6 +1376,8 @@ public:
 
   void NoteExecutablePartCall(Symbol::Flag, const parser::Call &);
 
+  friend void ResolveSpecificationParts(SemanticsContext &, const Symbol &);
+
 private:
   // Kind of procedure we are expecting to see in a ProcedureDesignator
   std::optional<Symbol::Flag> expectedProcFlag_;
@@ -1384,8 +1392,8 @@ private:
   void HandleProcedureName(Symbol::Flag, const parser::Name &);
   bool SetProcFlag(const parser::Name &, Symbol &, Symbol::Flag);
   void ResolveSpecificationParts(ProgramTree &);
-  void AddSubpNames(const ProgramTree &);
-  bool BeginScope(const ProgramTree &);
+  void AddSubpNames(ProgramTree &);
+  bool BeginScopeForNode(const ProgramTree &);
   void FinishSpecificationParts(const ProgramTree &);
   void FinishDerivedTypeInstantiation(Scope &);
   void ResolveExecutionParts(const ProgramTree &);
@@ -1712,7 +1720,7 @@ void ImplicitRulesVisitor::Post(const parser::ImplicitSpec &) {
 }
 
 void ImplicitRulesVisitor::SetScope(const Scope &scope) {
-  implicitRules_ = &implicitRulesMap_.at(&scope);
+  implicitRules_ = &DEREF(implicitRulesMap_).at(&scope);
   prevImplicit_ = std::nullopt;
   prevImplicitNone_ = std::nullopt;
   prevImplicitNoneType_ = std::nullopt;
@@ -1720,7 +1728,7 @@ void ImplicitRulesVisitor::SetScope(const Scope &scope) {
 }
 void ImplicitRulesVisitor::BeginScope(const Scope &scope) {
   // find or create implicit rules for this scope
-  implicitRulesMap_.try_emplace(&scope, context(), implicitRules_);
+  DEREF(implicitRulesMap_).try_emplace(&scope, context(), implicitRules_);
   SetScope(scope);
 }
 
@@ -1910,7 +1918,7 @@ void ScopeHandler::PushScope(Scope &scope) {
   currScope_ = &scope;
   auto kind{currScope_->kind()};
   if (kind != Scope::Kind::Block) {
-    ImplicitRulesVisitor::BeginScope(scope);
+    BeginScope(scope);
   }
   // The name of a module or submodule cannot be "used" in its scope,
   // as we read 19.3.1(2), so we allow the name to be used as a local
@@ -5818,7 +5826,11 @@ private:
 // Build the scope tree and resolve names in the specification parts of this
 // node and its children
 void ResolveNamesVisitor::ResolveSpecificationParts(ProgramTree &node) {
-  if (!BeginScope(node)) {
+  if (node.isSpecificationPartResolved()) {
+    return;  // been here already
+  }
+  node.set_isSpecificationPartResolved();
+  if (!BeginScopeForNode(node)) {
     return;  // an error prevented scope from being created
   }
   Scope &scope{currScope()};
@@ -5861,18 +5873,18 @@ void ResolveNamesVisitor::ResolveSpecificationParts(ProgramTree &node) {
   }
 }
 
-// Add SubprogramNameDetails symbols for contained subprograms
-void ResolveNamesVisitor::AddSubpNames(const ProgramTree &node) {
+// Add SubprogramNameDetails symbols for module and internal subprograms
+void ResolveNamesVisitor::AddSubpNames(ProgramTree &node) {
   auto kind{
       node.IsModule() ? SubprogramKind::Module : SubprogramKind::Internal};
-  for (const auto &child : node.children()) {
-    auto &symbol{MakeSymbol(child.name(), SubprogramNameDetails{kind})};
+  for (auto &child : node.children()) {
+    auto &symbol{MakeSymbol(child.name(), SubprogramNameDetails{kind, child})};
     symbol.set(child.GetSubpFlag());
   }
 }
 
 // Push a new scope for this node or return false on error.
-bool ResolveNamesVisitor::BeginScope(const ProgramTree &node) {
+bool ResolveNamesVisitor::BeginScopeForNode(const ProgramTree &node) {
   switch (node.GetKind()) {
     SWITCH_COVERS_ALL_CASES
   case ProgramTree::Kind::Program:
@@ -6539,8 +6551,29 @@ void ResolveNamesVisitor::Post(const parser::Program &) {
   CHECK(!GetDeclTypeSpec());
 }
 
+// A singleton instance of the scope -> IMPLICIT rules mapping is
+// shared by all instances of ResolveNamesVisitor and accessed by this
+// pointer when the visitors (other than the top-level original) are
+// constructed.
+static ImplicitRulesMap *sharedImplicitRulesMap{nullptr};
+
 bool ResolveNames(SemanticsContext &context, const parser::Program &program) {
-  ResolveNamesVisitor{context}.Walk(program);
+  ImplicitRulesMap implicitRulesMap;
+  auto restorer{common::ScopedSet(sharedImplicitRulesMap, &implicitRulesMap)};
+  ResolveNamesVisitor{context, implicitRulesMap}.Walk(program);
   return !context.AnyFatalError();
+}
+
+// Processes a module (but not internal) function when it is referenced
+// in a specification expression in a sibling procedure.
+void ResolveSpecificationParts(
+    SemanticsContext &context, const Symbol &subprogram) {
+  auto originalLocation{context.location()};
+  ResolveNamesVisitor visitor{context, DEREF(sharedImplicitRulesMap)};
+  ProgramTree &node{subprogram.get<SubprogramNameDetails>().node()};
+  const Scope &moduleScope{subprogram.owner()};
+  visitor.SetScope(const_cast<Scope &>(moduleScope));
+  visitor.ResolveSpecificationParts(node);
+  context.set_location(std::move(originalLocation));
 }
 }

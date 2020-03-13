@@ -607,8 +607,7 @@ bool IsOrContainsEventOrLockComponent(const Symbol &symbol) {
 
 bool IsSaved(const Symbol &symbol) {
   auto scopeKind{symbol.owner().kind()};
-  if (scopeKind == Scope::Kind::MainProgram ||
-      scopeKind == Scope::Kind::Module) {
+  if (scopeKind == Scope::Kind::Module || scopeKind == Scope::Kind::BlockData) {
     return true;
   } else if (scopeKind == Scope::Kind::DerivedType) {
     return false;  // this is a component
