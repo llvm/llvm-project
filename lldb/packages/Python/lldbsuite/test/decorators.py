@@ -258,7 +258,8 @@ def expectedFailureAll(bugnumber=None,
                        debug_info=None,
                        swig_version=None, py_version=None,
                        macos_version=None,
-                       remote=None, dwarf_version=None):
+                       remote=None, dwarf_version=None,
+                       setting=None):
     return _decorateTest(DecorateMode.Xfail,
                          bugnumber=bugnumber,
                          oslist=oslist, hostoslist=hostoslist,
@@ -267,7 +268,8 @@ def expectedFailureAll(bugnumber=None,
                          debug_info=debug_info,
                          swig_version=swig_version, py_version=py_version,
                          macos_version=None,
-                         remote=remote,dwarf_version=dwarf_version)
+                         remote=remote,dwarf_version=dwarf_version,
+                         setting=setting)
 
 
 # provide a function to skip on defined oslist, compiler version, and archs
