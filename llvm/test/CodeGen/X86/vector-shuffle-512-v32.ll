@@ -333,16 +333,13 @@ define <32 x i16> @insert_dup_elt1_mem_v16i16_i64(i64* %ptr) {
 define <32 x i16> @insert_dup_elt3_mem_v16i16_i64(i64* %ptr) {
 ; KNL-LABEL: insert_dup_elt3_mem_v16i16_i64:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    movzwl 6(%rdi), %eax
-; KNL-NEXT:    vmovd %eax, %xmm0
-; KNL-NEXT:    vpbroadcastw %xmm0, %ymm0
+; KNL-NEXT:    vpbroadcastw 6(%rdi), %ymm0
 ; KNL-NEXT:    vinserti64x4 $1, %ymm0, %zmm0, %zmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: insert_dup_elt3_mem_v16i16_i64:
 ; SKX:       ## %bb.0:
-; SKX-NEXT:    movzwl 6(%rdi), %eax
-; SKX-NEXT:    vpbroadcastw %eax, %zmm0
+; SKX-NEXT:    vpbroadcastw 6(%rdi), %zmm0
 ; SKX-NEXT:    retq
   %tmp = load i64, i64* %ptr, align 4
   %tmp1 = insertelement <2 x i64> zeroinitializer, i64 %tmp, i32 0
@@ -354,16 +351,13 @@ define <32 x i16> @insert_dup_elt3_mem_v16i16_i64(i64* %ptr) {
 define <32 x i16> @insert_dup_elt7_mem_v16i16_i64(i64* %ptr) {
 ; KNL-LABEL: insert_dup_elt7_mem_v16i16_i64:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    movzwl 6(%rdi), %eax
-; KNL-NEXT:    vmovd %eax, %xmm0
-; KNL-NEXT:    vpbroadcastw %xmm0, %ymm0
+; KNL-NEXT:    vpbroadcastw 6(%rdi), %ymm0
 ; KNL-NEXT:    vinserti64x4 $1, %ymm0, %zmm0, %zmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: insert_dup_elt7_mem_v16i16_i64:
 ; SKX:       ## %bb.0:
-; SKX-NEXT:    movzwl 6(%rdi), %eax
-; SKX-NEXT:    vpbroadcastw %eax, %zmm0
+; SKX-NEXT:    vpbroadcastw 6(%rdi), %zmm0
 ; SKX-NEXT:    retq
   %tmp = load i64, i64* %ptr, align 4
   %tmp1 = insertelement <2 x i64> zeroinitializer, i64 %tmp, i32 1
@@ -375,16 +369,13 @@ define <32 x i16> @insert_dup_elt7_mem_v16i16_i64(i64* %ptr) {
 define <32 x i16> @insert_dup_mem_v16i16_sext_i16_i64(i16* %ptr) {
 ; KNL-LABEL: insert_dup_mem_v16i16_sext_i16_i64:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    movzwl (%rdi), %eax
-; KNL-NEXT:    vmovd %eax, %xmm0
-; KNL-NEXT:    vpbroadcastw %xmm0, %ymm0
+; KNL-NEXT:    vpbroadcastw (%rdi), %ymm0
 ; KNL-NEXT:    vinserti64x4 $1, %ymm0, %zmm0, %zmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: insert_dup_mem_v16i16_sext_i16_i64:
 ; SKX:       ## %bb.0:
-; SKX-NEXT:    movzwl (%rdi), %eax
-; SKX-NEXT:    vpbroadcastw %eax, %zmm0
+; SKX-NEXT:    vpbroadcastw (%rdi), %zmm0
 ; SKX-NEXT:    retq
   %tmp = load i16, i16* %ptr, align 2
   %tmp1 = sext i16 %tmp to i64
