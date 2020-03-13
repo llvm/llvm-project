@@ -4,6 +4,7 @@ add_public_tablegen_target(MLIRSPIRVCanonicalizationIncGen)
 
 add_mlir_dialect_library(MLIRSPIRV
   LayoutUtils.cpp
+  SPIRVAttributes.cpp
   SPIRVCanonicalization.cpp
   SPIRVDialect.cpp
   SPIRVOps.cpp
