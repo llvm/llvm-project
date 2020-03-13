@@ -230,7 +230,7 @@ define i32 @caller6() {
 ; CHECK-NEXT:    %call.1 = call i32 @callee6.1(i32 30)
 ; CHECK-NEXT:    %call.2 = call i32 @callee6.1(i32 43)
 ; CHECK-NEXT:    ret i32 2
-
+;
   %call.1 = call i32 @callee6.1(i32 30)
   %call.2 = call i32 @callee6.1(i32 43)
   %res = add i32 %call.1, %call.2

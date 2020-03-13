@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
+#include "llvm/ExecutionEngine/JITLink/EHFrameSupport.h"
 #include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/MachOPlatform.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
@@ -923,8 +924,11 @@ Error LLJITBuilderState::prepareForConstruction() {
       CreateObjectLinkingLayer =
           [](ExecutionSession &ES,
              const Triple &) -> std::unique_ptr<ObjectLayer> {
-        return std::make_unique<ObjectLinkingLayer>(
+        auto ObjLinkingLayer = std::make_unique<ObjectLinkingLayer>(
             ES, std::make_unique<jitlink::InProcessMemoryManager>());
+        ObjLinkingLayer->addPlugin(std::make_unique<EHFrameRegistrationPlugin>(
+            jitlink::InProcessEHFrameRegistrar::getInstance()));
+        return ObjLinkingLayer;
       };
     }
   }

@@ -3228,10 +3228,9 @@ bool BoUpSLP::areAllUsersVectorized(Instruction *I) const {
          });
 }
 
-std::pair<unsigned, unsigned> getVectorCallCosts(CallInst *CI,
-                                                 VectorType *VecTy,
-                                                 TargetTransformInfo *TTI,
-                                                 TargetLibraryInfo *TLI) {
+static std::pair<unsigned, unsigned>
+getVectorCallCosts(CallInst *CI, VectorType *VecTy, TargetTransformInfo *TTI,
+                   TargetLibraryInfo *TLI) {
   Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, TLI);
 
   // Calculate the cost of the scalar and vector calls.

@@ -4385,11 +4385,17 @@ class sve2_int_while_rr<bits<2> sz8_64, bits<1> rw, string asm,
   let Defs = [NZCV];
 }
 
-multiclass sve2_int_while_rr<bits<1> rw, string asm> {
+multiclass sve2_int_while_rr<bits<1> rw, string asm, string op> {
   def _B : sve2_int_while_rr<0b00, rw, asm, PPR8>;
   def _H : sve2_int_while_rr<0b01, rw, asm, PPR16>;
   def _S : sve2_int_while_rr<0b10, rw, asm, PPR32>;
   def _D : sve2_int_while_rr<0b11, rw, asm, PPR64>;
+
+  def : SVE_2_Op_Pat<nxv16i1, !cast<SDPatternOperator>(op # _b), i64, i64, !cast<Instruction>(NAME # _B)>;
+  def : SVE_2_Op_Pat<nxv8i1,  !cast<SDPatternOperator>(op # _h), i64, i64, !cast<Instruction>(NAME # _H)>;
+  def : SVE_2_Op_Pat<nxv4i1,  !cast<SDPatternOperator>(op # _s), i64, i64, !cast<Instruction>(NAME # _S)>;
+  def : SVE_2_Op_Pat<nxv2i1,  !cast<SDPatternOperator>(op # _d), i64, i64, !cast<Instruction>(NAME # _D)>;
+
 }
 
 //===----------------------------------------------------------------------===//
@@ -4822,10 +4828,12 @@ multiclass sve_int_bin_cons_shift_wide<bits<2> opc, string asm> {
 }
 
 class sve_int_bin_cons_shift_imm<bits<4> tsz8_64, bits<2> opc, string asm,
-                               ZPRRegOp zprty, Operand immtype>
+                               ZPRRegOp zprty, Operand immtype, ValueType vt,
+                               SDPatternOperator op>
 : I<(outs zprty:$Zd), (ins zprty:$Zn, immtype:$imm),
   asm, "\t$Zd, $Zn, $imm",
-  "", []>, Sched<[]> {
+  "",
+  [(set (vt zprty:$Zd), (op (vt zprty:$Zn), immtype:$imm))]>, Sched<[]> {
   bits<5> Zd;
   bits<5> Zn;
   bits<6> imm;
@@ -4840,29 +4848,31 @@ class sve_int_bin_cons_shift_imm<bits<4> tsz8_64, bits<2> opc, string asm,
   let Inst{4-0}   = Zd;
 }
 
-multiclass sve_int_bin_cons_shift_imm_left<bits<2> opc, string asm> {
-  def _B : sve_int_bin_cons_shift_imm<{0,0,0,1}, opc, asm, ZPR8, vecshiftL8>;
-  def _H : sve_int_bin_cons_shift_imm<{0,0,1,?}, opc, asm, ZPR16, vecshiftL16> {
+multiclass sve_int_bin_cons_shift_imm_left<bits<2> opc, string asm,
+                                         SDPatternOperator op> {
+  def _B : sve_int_bin_cons_shift_imm<{0,0,0,1}, opc, asm, ZPR8, vecshiftL8, nxv16i8, op>;
+  def _H : sve_int_bin_cons_shift_imm<{0,0,1,?}, opc, asm, ZPR16, vecshiftL16, nxv8i16, op> {
     let Inst{19} = imm{3};
   }
-  def _S : sve_int_bin_cons_shift_imm<{0,1,?,?}, opc, asm, ZPR32, vecshiftL32> {
+  def _S : sve_int_bin_cons_shift_imm<{0,1,?,?}, opc, asm, ZPR32, vecshiftL32, nxv4i32, op> {
     let Inst{20-19} = imm{4-3};
   }
-  def _D : sve_int_bin_cons_shift_imm<{1,?,?,?}, opc, asm, ZPR64, vecshiftL64> {
+  def _D : sve_int_bin_cons_shift_imm<{1,?,?,?}, opc, asm, ZPR64, vecshiftL64, nxv2i64, op> {
     let Inst{22}    = imm{5};
     let Inst{20-19} = imm{4-3};
   }
 }
 
-multiclass sve_int_bin_cons_shift_imm_right<bits<2> opc, string asm> {
-  def _B : sve_int_bin_cons_shift_imm<{0,0,0,1}, opc, asm, ZPR8, vecshiftR8>;
-  def _H : sve_int_bin_cons_shift_imm<{0,0,1,?}, opc, asm, ZPR16, vecshiftR16> {
+multiclass sve_int_bin_cons_shift_imm_right<bits<2> opc, string asm,
+                                          SDPatternOperator op> {
+  def _B : sve_int_bin_cons_shift_imm<{0,0,0,1}, opc, asm, ZPR8, vecshiftR8, nxv16i8, op>;
+  def _H : sve_int_bin_cons_shift_imm<{0,0,1,?}, opc, asm, ZPR16, vecshiftR16, nxv8i16, op> {
     let Inst{19} = imm{3};
   }
-  def _S : sve_int_bin_cons_shift_imm<{0,1,?,?}, opc, asm, ZPR32, vecshiftR32> {
+  def _S : sve_int_bin_cons_shift_imm<{0,1,?,?}, opc, asm, ZPR32, vecshiftR32, nxv4i32, op> {
     let Inst{20-19} = imm{4-3};
   }
-  def _D : sve_int_bin_cons_shift_imm<{1,?,?,?}, opc, asm, ZPR64, vecshiftR64> {
+  def _D : sve_int_bin_cons_shift_imm<{1,?,?,?}, opc, asm, ZPR64, vecshiftR64, nxv2i64, op> {
     let Inst{22}    = imm{5};
     let Inst{20-19} = imm{4-3};
   }

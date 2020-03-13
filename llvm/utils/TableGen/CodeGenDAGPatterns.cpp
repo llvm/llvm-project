@@ -277,7 +277,7 @@ bool TypeSetByHwMode::intersect(SetType &Out, const SetType &In) {
 
   // Compute the intersection of scalars separately to account for only
   // one set containing iPTR.
-  // The itersection of iPTR with a set of integer scalar types that does not
+  // The intersection of iPTR with a set of integer scalar types that does not
   // include iPTR will result in the most specific scalar type:
   // - iPTR is more specific than any set with two elements or more
   // - iPTR is less specific than any single integer scalar type.

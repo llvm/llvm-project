@@ -14,6 +14,7 @@ target_link_libraries(MLIRFxpMathOps
   MLIRQuantOps
   MLIRIR
   MLIRPass
+  MLIRSideEffects
   MLIRSupport
   MLIRStandardOps
   )

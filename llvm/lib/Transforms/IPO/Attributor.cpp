@@ -28,6 +28,7 @@
 #include "llvm/Analysis/LazyValueInfo.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
+#include "llvm/Analysis/MustExecute.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Argument.h"
@@ -36,9 +37,9 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/NoFolder.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/IR/NoFolder.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -1232,7 +1233,7 @@ public:
       }
     }
 
-    if (!F->hasExactDefinition())
+    if (!A.isFunctionIPOAmendable(*F))
       indicatePessimisticFixpoint();
   }
 
@@ -2491,28 +2492,34 @@ struct AAUndefinedBehaviorFunction final : AAUndefinedBehaviorImpl {
 
 /// ------------------------ Will-Return Attributes ----------------------------
 
-// Helper function that checks whether a function has any cycle.
-// TODO: Replace with more efficent code
-static bool containsCycle(Function &F) {
-  SmallPtrSet<BasicBlock *, 32> Visited;
-
-  // Traverse BB by dfs and check whether successor is already visited.
-  for (BasicBlock *BB : depth_first(&F)) {
-    Visited.insert(BB);
-    for (auto *SuccBB : successors(BB)) {
-      if (Visited.count(SuccBB))
+// Helper function that checks whether a function has any cycle which we don't
+// know if it is bounded or not.
+// Loops with maximum trip count are considered bounded, any other cycle not.
+static bool mayContainUnboundedCycle(Function &F, Attributor &A) {
+  ScalarEvolution *SE =
+      A.getInfoCache().getAnalysisResultForFunction<ScalarEvolutionAnalysis>(F);
+  LoopInfo *LI = A.getInfoCache().getAnalysisResultForFunction<LoopAnalysis>(F);
+  // If either SCEV or LoopInfo is not available for the function then we assume
+  // any cycle to be unbounded cycle.
+  // We use scc_iterator which uses Tarjan algorithm to find all the maximal
+  // SCCs.To detect if there's a cycle, we only need to find the maximal ones.
+  if (!SE || !LI) {
+    for (scc_iterator<Function *> SCCI = scc_begin(&F); !SCCI.isAtEnd(); ++SCCI)
+      if (SCCI.hasCycle())
         return true;
-    }
+    return false;
+  }
+
+  // If there's irreducible control, the function may contain non-loop cycles.
+  if (mayContainIrreducibleControl(F, LI))
+    return true;
+
+  // Any loop that does not have a max trip count is considered unbounded cycle.
+  for (auto *L : LI->getLoopsInPreorder()) {
+    if (!SE->getSmallConstantMaxTripCount(L))
+      return true;
   }
   return false;
-}
-
-// Helper function that checks the function have a loop which might become an
-// endless loop
-// FIXME: Any cycle is regarded as endless loop for now.
-//        We have to allow some patterns.
-static bool containsPossiblyEndlessLoop(Function *F) {
-  return !F || !F->hasExactDefinition() || containsCycle(*F);
 }
 
 struct AAWillReturnImpl : public AAWillReturn {
@@ -2523,7 +2530,7 @@ struct AAWillReturnImpl : public AAWillReturn {
     AAWillReturn::initialize(A);
 
     Function *F = getAssociatedFunction();
-    if (containsPossiblyEndlessLoop(F))
+    if (!F || !A.isFunctionIPOAmendable(*F) || mayContainUnboundedCycle(*F, A))
       indicatePessimisticFixpoint();
   }
 
@@ -2812,17 +2819,61 @@ struct AANoAliasCallSiteArgument final : AANoAliasImpl {
       return false;
     }
 
+    A.recordDependence(NoAliasAA, *this, DepClassTy::OPTIONAL);
+
     const IRPosition &VIRP = IRPosition::value(getAssociatedValue());
     auto &NoCaptureAA =
         A.getAAFor<AANoCapture>(*this, VIRP, /* TrackDependence */ false);
     // Check whether the value is captured in the scope using AANoCapture.
-    // FIXME: This is conservative though, it is better to look at CFG and
-    //        check only uses possibly executed before this callsite.
-    if (!NoCaptureAA.isAssumedNoCaptureMaybeReturned()) {
-      LLVM_DEBUG(
-          dbgs() << "[AANoAliasCSArg] " << getAssociatedValue()
-                 << " cannot be noalias as it is potentially captured\n");
+    //      Look at CFG and check only uses possibly executed before this
+    //      callsite.
+    auto UsePred = [&](const Use &U, bool &Follow) -> bool {
+      Instruction *UserI = cast<Instruction>(U.getUser());
+
+      // If user if curr instr and only use.
+      if ((UserI == getCtxI()) && (UserI->getNumUses() == 1))
+        return true;
+
+      const Function *ScopeFn = VIRP.getAnchorScope();
+      if (ScopeFn) {
+        const auto &ReachabilityAA =
+            A.getAAFor<AAReachability>(*this, IRPosition::function(*ScopeFn));
+
+        if (!ReachabilityAA.isAssumedReachable(UserI, getCtxI()))
+          return true;
+
+        if (auto *CB = dyn_cast<CallBase>(UserI)) {
+          if (CB->isArgOperand(&U)) {
+
+            unsigned ArgNo = CB->getArgOperandNo(&U);
+
+            const auto &NoCaptureAA = A.getAAFor<AANoCapture>(
+                *this, IRPosition::callsite_argument(*CB, ArgNo));
+
+            if (NoCaptureAA.isAssumedNoCapture())
+              return true;
+          }
+        }
+      }
+
+      // For cases which can potentially have more users
+      if (isa<GetElementPtrInst>(U) || isa<BitCastInst>(U) || isa<PHINode>(U) ||
+          isa<SelectInst>(U)) {
+        Follow = true;
+        return true;
+      }
+
+      LLVM_DEBUG(dbgs() << "[AANoAliasCSArg] Unknown user: " << *U << "\n");
       return false;
+    };
+
+    if (!NoCaptureAA.isAssumedNoCaptureMaybeReturned()) {
+      if (!A.checkForAllUses(UsePred, *this, getAssociatedValue())) {
+        LLVM_DEBUG(
+            dbgs() << "[AANoAliasCSArg] " << getAssociatedValue()
+                   << " cannot be noalias as it is potentially captured\n");
+        return false;
+      }
     }
     A.recordDependence(NoCaptureAA, *this, DepClassTy::OPTIONAL);
 
@@ -3063,7 +3114,7 @@ struct AAIsDeadArgument : public AAIsDeadFloating {
 
   /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
-    if (!getAssociatedFunction()->hasExactDefinition())
+    if (!A.isFunctionIPOAmendable(*getAssociatedFunction()))
       indicatePessimisticFixpoint();
   }
 
@@ -3614,8 +3665,8 @@ struct AADereferenceableImpl : AADereferenceable {
 
     const IRPosition &IRP = this->getIRPosition();
     bool IsFnInterface = IRP.isFnInterfaceKind();
-    const Function *FnScope = IRP.getAnchorScope();
-    if (IsFnInterface && (!FnScope || !FnScope->hasExactDefinition()))
+    Function *FnScope = IRP.getAnchorScope();
+    if (IsFnInterface && (!FnScope || !A.isFunctionIPOAmendable(*FnScope)))
       indicatePessimisticFixpoint();
   }
 
@@ -3897,7 +3948,7 @@ struct AAAlignImpl : AAAlign {
 
     if (getIRPosition().isFnInterfaceKind() &&
         (!getAssociatedFunction() ||
-         !getAssociatedFunction()->hasExactDefinition()))
+         !A.isFunctionIPOAmendable(*getAssociatedFunction())))
       indicatePessimisticFixpoint();
   }
 
@@ -4154,7 +4205,7 @@ struct AANoCaptureImpl : public AANoCapture {
     }
     Function *AnchorScope = getAnchorScope();
     if (isFnInterfaceKind() &&
-        (!AnchorScope || !AnchorScope->hasExactDefinition())) {
+        (!AnchorScope || !A.isFunctionIPOAmendable(*AnchorScope))) {
       indicatePessimisticFixpoint();
       return;
     }
@@ -5886,7 +5937,7 @@ struct AAMemoryBehaviorArgument : AAMemoryBehaviorFloating {
 
     // Initialize the use vector with all direct uses of the associated value.
     Argument *Arg = getAssociatedArgument();
-    if (!Arg || !Arg->getParent()->hasExactDefinition()) {
+    if (!Arg || !A.isFunctionIPOAmendable(*(Arg->getParent()))) {
       indicatePessimisticFixpoint();
     } else {
       // Initialize the use vector with all direct uses of the associated value.
@@ -6014,7 +6065,7 @@ struct AAMemoryBehaviorCallSite final : AAMemoryBehaviorImpl {
   void initialize(Attributor &A) override {
     AAMemoryBehaviorImpl::initialize(A);
     Function *F = getAssociatedFunction();
-    if (!F || !F->hasExactDefinition())
+    if (!F || !A.isFunctionIPOAmendable(*F))
       indicatePessimisticFixpoint();
   }
 
@@ -6701,7 +6752,7 @@ struct AAMemoryLocationCallSite final : AAMemoryLocationImpl {
   void initialize(Attributor &A) override {
     AAMemoryLocationImpl::initialize(A);
     Function *F = getAssociatedFunction();
-    if (!F || !F->hasExactDefinition())
+    if (!F || !A.isFunctionIPOAmendable(*F))
       indicatePessimisticFixpoint();
   }
 
@@ -8291,6 +8342,10 @@ void Attributor::initializeInformationCache(Function &F) {
     if (I.mayReadOrWriteMemory())
       ReadOrWriteInsts.push_back(&I);
   }
+
+  if (F.hasFnAttribute(Attribute::AlwaysInline) &&
+      isInlineViable(F).isSuccess())
+    InfoCache.InlineableFunctions.insert(&F);
 }
 
 void Attributor::recordDependence(const AbstractAttribute &FromAA,

@@ -865,6 +865,12 @@ bool CompilerType::GetValueAsScalar(const lldb_private::DataExtractor &data,
   return false;
 }
 
+#ifndef NDEBUG
+bool CompilerType::Verify() const {
+  return !IsValid() || m_type_system->Verify(m_type);
+}
+#endif
+
 bool lldb_private::operator==(const lldb_private::CompilerType &lhs,
                               const lldb_private::CompilerType &rhs) {
   return lhs.GetTypeSystem() == rhs.GetTypeSystem() &&

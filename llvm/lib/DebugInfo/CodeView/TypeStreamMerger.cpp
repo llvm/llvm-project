@@ -360,16 +360,18 @@ Error TypeStreamMerger::remapType(const CVType &Type) {
         [this, Type](MutableArrayRef<uint8_t> Storage) -> ArrayRef<uint8_t> {
       return remapIndices(Type, Storage);
     };
+    unsigned AlignedSize = alignTo(Type.RecordData.size(), 4);
+
     if (LLVM_LIKELY(UseGlobalHashes)) {
       GlobalTypeTableBuilder &Dest =
           isIdRecord(Type.kind()) ? *DestGlobalIdStream : *DestGlobalTypeStream;
       GloballyHashedType H = GlobalHashes[CurIndex.toArrayIndex()];
-      DestIdx = Dest.insertRecordAs(H, Type.RecordData.size(), DoSerialize);
+      DestIdx = Dest.insertRecordAs(H, AlignedSize, DoSerialize);
     } else {
       MergingTypeTableBuilder &Dest =
           isIdRecord(Type.kind()) ? *DestIdStream : *DestTypeStream;
 
-      RemapStorage.resize(Type.RecordData.size());
+      RemapStorage.resize(AlignedSize);
       ArrayRef<uint8_t> Result = DoSerialize(RemapStorage);
       if (!Result.empty())
         DestIdx = Dest.insertRecordBytes(Result);
@@ -386,9 +388,15 @@ Error TypeStreamMerger::remapType(const CVType &Type) {
 ArrayRef<uint8_t>
 TypeStreamMerger::remapIndices(const CVType &OriginalType,
                                MutableArrayRef<uint8_t> Storage) {
+  unsigned Align = OriginalType.RecordData.size() & 3;
+  unsigned AlignedSize = alignTo(OriginalType.RecordData.size(), 4);
+  assert(Storage.size() == AlignedSize &&
+         "The storage buffer size is not a multiple of 4 bytes which will "
+         "cause misalignment in the output TPI stream!");
+
   SmallVector<TiReference, 4> Refs;
   discoverTypeIndices(OriginalType.RecordData, Refs);
-  if (Refs.empty())
+  if (Refs.empty() && Align == 0)
     return OriginalType.RecordData;
 
   ::memcpy(Storage.data(), OriginalType.RecordData.data(),
@@ -407,6 +415,16 @@ TypeStreamMerger::remapIndices(const CVType &OriginalType,
       if (LLVM_UNLIKELY(!Success))
         return {};
     }
+  }
+
+  if (Align > 0) {
+    RecordPrefix *StorageHeader =
+        reinterpret_cast<RecordPrefix *>(Storage.data());
+    StorageHeader->RecordLen += 4 - Align;
+
+    DestContent = Storage.data() + OriginalType.RecordData.size();
+    for (; Align < 4; ++Align)
+      *DestContent++ = LF_PAD4 - Align;
   }
   return Storage;
 }

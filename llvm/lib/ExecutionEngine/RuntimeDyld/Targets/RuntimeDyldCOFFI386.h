@@ -25,7 +25,7 @@ class RuntimeDyldCOFFI386 : public RuntimeDyldCOFF {
 public:
   RuntimeDyldCOFFI386(RuntimeDyld::MemoryManager &MM,
                       JITSymbolResolver &Resolver)
-      : RuntimeDyldCOFF(MM, Resolver) {}
+      : RuntimeDyldCOFF(MM, Resolver, 4, COFF::IMAGE_REL_I386_DIR32) {}
 
   unsigned getMaxStubSize() const override {
     return 8; // 2-byte jmp instruction + 32-bit relative address + 2 byte pad
@@ -53,9 +53,27 @@ public:
     if (!SectionOrErr)
       return SectionOrErr.takeError();
     auto Section = *SectionOrErr;
+    bool IsExtern = Section == Obj.section_end();
 
     uint64_t RelType = RelI->getType();
     uint64_t Offset = RelI->getOffset();
+
+    unsigned TargetSectionID = -1;
+    uint64_t TargetOffset = -1;
+    if (TargetName.startswith(getImportSymbolPrefix())) {
+      TargetSectionID = SectionID;
+      TargetOffset = getDLLImportOffset(SectionID, Stubs, TargetName, true);
+      TargetName = StringRef();
+      IsExtern = false;
+    } else if (!IsExtern) {
+      if (auto TargetSectionIDOrErr = findOrEmitSection(
+              Obj, *Section, Section->isText(), ObjSectionToID))
+        TargetSectionID = *TargetSectionIDOrErr;
+      else
+        return TargetSectionIDOrErr.takeError();
+      if (RelType != COFF::IMAGE_REL_I386_SECTION)
+        TargetOffset = getSymbolOffset(*Symbol);
+    }
 
     // Determine the Addend used to adjust the relocation value.
     uint64_t Addend = 0;
@@ -83,16 +101,10 @@ public:
                       << " RelType: " << RelTypeName << " TargetName: "
                       << TargetName << " Addend " << Addend << "\n");
 
-    unsigned TargetSectionID = -1;
-    if (Section == Obj.section_end()) {
+    if (IsExtern) {
       RelocationEntry RE(SectionID, Offset, RelType, 0, -1, 0, 0, 0, false, 0);
       addRelocationForSymbol(RE, TargetName);
     } else {
-      if (auto TargetSectionIDOrErr =
-          findOrEmitSection(Obj, *Section, Section->isText(), ObjSectionToID))
-        TargetSectionID = *TargetSectionIDOrErr;
-      else
-        return TargetSectionIDOrErr.takeError();
 
       switch (RelType) {
       case COFF::IMAGE_REL_I386_ABSOLUTE:
@@ -103,7 +115,7 @@ public:
       case COFF::IMAGE_REL_I386_REL32: {
         RelocationEntry RE =
             RelocationEntry(SectionID, Offset, RelType, Addend, TargetSectionID,
-                            getSymbolOffset(*Symbol), 0, 0, false, 0);
+                            TargetOffset, 0, 0, false, 0);
         addRelocationForSection(RE, TargetSectionID);
         break;
       }
@@ -114,15 +126,14 @@ public:
         break;
       }
       case COFF::IMAGE_REL_I386_SECREL: {
-        RelocationEntry RE = RelocationEntry(SectionID, Offset, RelType,
-                                             getSymbolOffset(*Symbol) + Addend);
+        RelocationEntry RE =
+            RelocationEntry(SectionID, Offset, RelType, TargetOffset + Addend);
         addRelocationForSection(RE, TargetSectionID);
         break;
       }
       default:
         llvm_unreachable("unsupported relocation type");
       }
-
     }
 
     return ++RelI;

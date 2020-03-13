@@ -208,12 +208,6 @@ foo.region_op {
 This trait is an important structural property of the IR, and enables operations
 to have [passes](WritingAPass.md) scheduled under them.
 
-### NoSideEffect
-
-*   `OpTrait::HasNoSideEffect` -- `NoSideEffect`
-
-This trait signifies that the operation is pure and has no visible side effects.
-
 ### Single Block with Implicit Terminator
 
 *   `OpTrait::SingleBlockImplicitTerminator<typename TerminatorOpType>` :

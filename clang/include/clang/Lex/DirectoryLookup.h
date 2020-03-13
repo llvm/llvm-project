@@ -14,13 +14,12 @@
 #define LLVM_CLANG_LEX_DIRECTORYLOOKUP_H
 
 #include "clang/Basic/LLVM.h"
+#include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/ModuleMap.h"
 
 namespace clang {
 class HeaderMap;
-class DirectoryEntry;
-class FileEntry;
 class HeaderSearch;
 class Module;
 

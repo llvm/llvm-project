@@ -97,6 +97,10 @@ void CompilerInstance::setVerboseOutputStream(std::unique_ptr<raw_ostream> Value
 void CompilerInstance::setTarget(TargetInfo *Value) { Target = Value; }
 void CompilerInstance::setAuxTarget(TargetInfo *Value) { AuxTarget = Value; }
 
+llvm::vfs::FileSystem &CompilerInstance::getVirtualFileSystem() const {
+  return getFileManager().getVirtualFileSystem();
+}
+
 void CompilerInstance::setFileManager(FileManager *Value) {
   FileMgr = Value;
 }

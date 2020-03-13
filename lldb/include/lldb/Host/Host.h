@@ -27,8 +27,8 @@ namespace lldb_private {
 class FileAction;
 class ProcessLaunchInfo;
 class ProcessInstanceInfo;
-class ProcessInstanceInfoList;
 class ProcessInstanceInfoMatch;
+typedef std::vector<ProcessInstanceInfo> ProcessInstanceInfoList;
 
 // Exit Type for inferior processes
 struct WaitStatus {
@@ -232,6 +232,10 @@ public:
 
   static std::unique_ptr<Connection>
   CreateDefaultConnection(llvm::StringRef url);
+
+protected:
+  static uint32_t FindProcessesImpl(const ProcessInstanceInfoMatch &match_info,
+                                    ProcessInstanceInfoList &proc_infos);
 };
 
 } // namespace lldb_private

@@ -441,7 +441,7 @@ const uint8_t MachO_x86_64_GOTAndStubsBuilder::StubContent[6] = {
     0xFF, 0x25, 0x00, 0x00, 0x00, 0x00};
 } // namespace
 
-Error optimizeMachO_x86_64_GOTAndStubs(LinkGraph &G) {
+static Error optimizeMachO_x86_64_GOTAndStubs(LinkGraph &G) {
   LLVM_DEBUG(dbgs() << "Optimizing GOT entries and stubs:\n");
 
   for (auto *B : G.blocks())

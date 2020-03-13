@@ -958,17 +958,6 @@ LogicalResult OpTrait::impl::verifyResultSizeAttr(Operation *op,
 }
 
 //===----------------------------------------------------------------------===//
-// SideEffect Interfaces
-
-/// Include the definitions of the side effect interfaces.
-#include "mlir/IR/SideEffectInterfaces.cpp.inc"
-
-bool MemoryEffects::Effect::classof(const SideEffects::Effect *effect) {
-  return isa<Allocate>(effect) || isa<Free>(effect) || isa<Read>(effect) ||
-         isa<Write>(effect);
-}
-
-//===----------------------------------------------------------------------===//
 // BinaryOp implementation
 //===----------------------------------------------------------------------===//
 

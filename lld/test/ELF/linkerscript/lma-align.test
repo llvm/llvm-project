@@ -5,21 +5,21 @@
 # RUN: ld.lld -T %s %t.o -o %t 2>&1 | FileCheck --check-prefix=WARN %s --implicit-check-not=warning:
 # RUN: llvm-readelf -S -l %t | FileCheck %s
 
-# WARN: warning: start of section .data changes from 0x11001 to 0x11010
-# WARN: warning: start of section .bss changes from 0x11021 to 0x11040
+# WARN: warning: address (0x11001) of section .data is not a multiple of alignment (32)
+# WARN: warning: address (0x11021) of section .bss is not a multiple of alignment (64)
 
 # CHECK:      Name         Type     Address          Off    Size   ES Flg Lk Inf Al
 # CHECK-NEXT:              NULL     0000000000000000 000000 000000 00      0   0  0
 # CHECK-NEXT: .text        PROGBITS 0000000000001000 001000 000001 00  AX  0   0  4
 # CHECK-NEXT: .data.rel.ro PROGBITS 0000000000011000 002000 000001 00  WA  0   0 16
-# CHECK-NEXT: .data        PROGBITS 0000000000011010 002010 000011 00  WA  0   0 32
-# CHECK-NEXT: .bss         NOBITS   0000000000011040 002040 000001 00  WA  0   0 64
+# CHECK-NEXT: .data        PROGBITS 0000000000011001 002001 000020 00  WA  0   0 32
+# CHECK-NEXT: .bss         NOBITS   0000000000011021 002021 000001 00  WA  0   0 64
 
 # CHECK:      Type  Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
 # CHECK-NEXT: LOAD  0x001000 0x0000000000001000 0x0000000000001000 0x000001 0x000001 R E 0x1000
 # CHECK-NEXT: LOAD  0x002000 0x0000000000011000 0x0000000000001010 0x000001 0x000001 RW  0x1000
-# CHECK-NEXT: LOAD  0x002010 0x0000000000011010 0x0000000000001020 0x000011 0x000011 RW  0x1000
-# CHECK-NEXT: LOAD  0x002040 0x0000000000011040 0x0000000000011040 0x000000 0x000001 RW  0x1000
+# CHECK-NEXT: LOAD  0x002001 0x0000000000011001 0x0000000000001020 0x000020 0x000020 RW  0x1000
+# CHECK-NEXT: LOAD  0x002021 0x0000000000011021 0x0000000000011021 0x000000 0x000001 RW  0x1000
 
 MEMORY {
   ROM : ORIGIN = 0x1000, LENGTH = 1K

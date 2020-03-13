@@ -71,8 +71,8 @@ declare void @llvm.matrix.columnwise.store(<9 x double>, <9 x double>*, i32, i32
 
 define void @binaryops(<9 x double>* %A, <9 x double>* %B) !dbg !31 {
   %A.matrix = call <9 x double> @llvm.matrix.columnwise.load(<9 x double>* %A, i32 5, i32 3, i32 3), !dbg !32
-  %R1.matrix = fadd <9 x double> %A.matrix, %A.matrix
-  %R2.matrix = fmul <9 x double> %R1.matrix, %A.matrix
+  %R1.matrix = fadd <9 x double> %A.matrix, %A.matrix, !dbg !32
+  %R2.matrix = fmul <9 x double> %R1.matrix, %A.matrix, !dbg !32
   call void @llvm.matrix.columnwise.store(<9 x double> %R2.matrix, <9 x double>* %B, i32 10, i32 3, i32 3), !dbg !32
   ret void
 }
@@ -95,8 +95,8 @@ define void @binaryops(<9 x double>* %A, <9 x double>* %B) !dbg !31 {
 
 define void @multiple_expressions(<9 x double>* %A, <9 x double>* %B, <12 x double>* %C, <12 x double>* %D, <4 x double>* %E) !dbg !33 {
   %A.matrix = call <9 x double> @llvm.matrix.columnwise.load(<9 x double>* %A, i32 5, i32 3, i32 3), !dbg !34
-  %R1.matrix = fadd <9 x double> %A.matrix, %A.matrix
-  %R2.matrix = fmul <9 x double> %R1.matrix, %A.matrix
+  %R1.matrix = fadd <9 x double> %A.matrix, %A.matrix, !dbg !34
+  %R2.matrix = fmul <9 x double> %R1.matrix, %A.matrix, !dbg !34
   call void @llvm.matrix.columnwise.store(<9 x double> %R2.matrix, <9 x double>* %B, i32 10, i32 3, i32 3), !dbg !34
 
   %C.matrix = load <12 x double>, <12 x double>* %C, !dbg !34
@@ -119,8 +119,8 @@ define void @multiple_expressions(<9 x double>* %A, <9 x double>* %B, <12 x doub
 define void @stackaddresses(<9 x double>* %A) !dbg !35 {
   %B = alloca <9 x double>
   %A.matrix = call <9 x double> @llvm.matrix.columnwise.load(<9 x double>* %A, i32 5, i32 3, i32 3), !dbg !36
-  %R1.matrix = fadd <9 x double> %A.matrix, %A.matrix
-  %R2.matrix = fmul <9 x double> %R1.matrix, %A.matrix
+  %R1.matrix = fadd <9 x double> %A.matrix, %A.matrix, !dbg !36
+  %R2.matrix = fmul <9 x double> %R1.matrix, %A.matrix, !dbg !36
   call void @llvm.matrix.columnwise.store(<9 x double> %R2.matrix, <9 x double>* %B, i32 10, i32 3, i32 3), !dbg !36
   ret void
 }
@@ -140,7 +140,7 @@ entry:
   %s2 = bitcast <15 x double>* %s1 to i64*, !dbg !22
   %s3 = bitcast i64* %s2 to <15 x double>*, !dbg !22
 
-  %t = call <15 x double> @llvm.matrix.transpose.v15f64.v15f64(<15 x double> %av, i32 5, i32 3)
+  %t = call <15 x double> @llvm.matrix.transpose.v15f64.v15f64(<15 x double> %av, i32 5, i32 3), !dbg !22
 
   store <15 x double> %t, <15 x double>* %s3, !dbg !22
   ret void

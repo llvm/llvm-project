@@ -3607,6 +3607,7 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
     /// Nested immediate invocation have been previously removed so if we found
     /// a ConstantExpr it can only be the EvaluatingDecl.
     assert(CE->isImmediateInvocation() && CE == Info.EvaluatingDecl);
+    (void)CE;
     BaseVal = Info.EvaluatingDeclValue;
   } else if (const ValueDecl *D = LVal.Base.dyn_cast<const ValueDecl *>()) {
     // In C++98, const, non-volatile integers initialized with ICEs are ICEs.

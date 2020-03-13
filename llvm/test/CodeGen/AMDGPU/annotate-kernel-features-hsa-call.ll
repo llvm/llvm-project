@@ -319,4 +319,4 @@ attributes #3 = { nounwind }
 ; HSA: attributes #16 = { nounwind "amdgpu-implicitarg-ptr" "target-cpu"="fiji" "uniform-work-group-size"="false" }
 ; HSA: attributes #17 = { nounwind "uniform-work-group-size"="false" }
 ; HSA: attributes #18 = { nounwind }
-; HSA: attributes #19 = { nounwind "amdgpu-flat-scratch" "uniform-work-group-size"="false" }
+; HSA: attributes #19 = { nounwind "amdgpu-calls" "uniform-work-group-size"="false" }

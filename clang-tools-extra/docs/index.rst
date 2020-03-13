@@ -20,8 +20,7 @@ Contents
    modularize
    pp-trace
    clang-rename
-   clangd/index
-   clangd/DeveloperDocumentation
+   clangd <https://clangd.llvm.org/>
    clang-doc
 
 

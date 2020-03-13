@@ -11,20 +11,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Analysis/CallGraph.h"
-#include "mlir/Analysis/CallInterfaces.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/SymbolTable.h"
+#include "mlir/Interfaces/CallInterfaces.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace mlir;
-
-//===----------------------------------------------------------------------===//
-// CallInterfaces
-//===----------------------------------------------------------------------===//
-
-#include "mlir/Analysis/CallInterfaces.cpp.inc"
 
 //===----------------------------------------------------------------------===//
 // CallGraphNode

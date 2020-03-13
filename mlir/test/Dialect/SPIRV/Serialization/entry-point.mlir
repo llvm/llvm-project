@@ -1,6 +1,6 @@
 // RUN: mlir-translate -test-spirv-roundtrip -split-input-file %s | FileCheck %s
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
   spv.func @noop() -> () "None" {
     spv.Return
   }
@@ -12,7 +12,7 @@ spv.module "Logical" "GLSL450" {
 
 // -----
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
   // CHECK:       spv.globalVariable @var2 : !spv.ptr<f32, Input>
   // CHECK-NEXT:  spv.globalVariable @var3 : !spv.ptr<f32, Output>
   // CHECK-NEXT:  spv.func @noop({{%.*}}: !spv.ptr<f32, Input>, {{%.*}}: !spv.ptr<f32, Output>) "None"

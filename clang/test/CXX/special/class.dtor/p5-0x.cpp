@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -verify -std=c++11 %s -Wno-defaulted-function-deleted
+// RUN: %clang_cc1 -verify -std=c++11 %s -Wno-defaulted-function-deleted -triple x86_64-linux-gnu
 
 struct NonTrivDtor {
   ~NonTrivDtor();
@@ -86,9 +86,9 @@ struct C4 : virtual InaccessibleDtor { C4(); } c4; // expected-error {{deleted f
 // -- for a virtual destructor, lookup of the non-array deallocation function
 // results in an ambiguity or a function that is deleted or inaccessible.
 class D1 {
-  void operator delete(void*);
+  void operator delete(void*); // expected-note {{here}}
 public:
-  virtual ~D1() = default; // expected-note {{here}}
+  virtual ~D1() = default; // expected-note 2{{here}}
 } d1; // ok
 struct D2 : D1 { // expected-note 2{{virtual destructor requires an unambiguous, accessible 'operator delete'}} \
                  // expected-error {{deleted function '~D2' cannot override a non-deleted}}
@@ -103,3 +103,10 @@ struct D4 { // expected-note {{virtual destructor requires an unambiguous, acces
   virtual ~D4() = default; // expected-note {{implicitly deleted here}}
   void operator delete(void*) = delete;
 } d4; // expected-error {{deleted function}}
+struct D5 : D1 {
+  ~D5(); // ok (but not definable)
+} d5;
+D5::~D5() {} // expected-error {{'operator delete' is a private member of 'D1'}}
+struct D6 : D1 {
+  ~D6() = delete; // expected-error {{deleted function '~D6' cannot override a non-deleted}}
+};

@@ -1188,26 +1188,6 @@ Value *llvm::emitFPutC(Value *Char, Value *File, IRBuilderBase &B,
   return CI;
 }
 
-Value *llvm::emitFPutCUnlocked(Value *Char, Value *File, IRBuilderBase &B,
-                               const TargetLibraryInfo *TLI) {
-  if (!TLI->has(LibFunc_fputc_unlocked))
-    return nullptr;
-
-  Module *M = B.GetInsertBlock()->getModule();
-  StringRef FPutcUnlockedName = TLI->getName(LibFunc_fputc_unlocked);
-  FunctionCallee F = M->getOrInsertFunction(FPutcUnlockedName, B.getInt32Ty(),
-                                            B.getInt32Ty(), File->getType());
-  if (File->getType()->isPointerTy())
-    inferLibFuncAttributes(M, FPutcUnlockedName, *TLI);
-  Char = B.CreateIntCast(Char, B.getInt32Ty(), /*isSigned*/ true, "chari");
-  CallInst *CI = B.CreateCall(F, {Char, File}, FPutcUnlockedName);
-
-  if (const Function *Fn =
-          dyn_cast<Function>(F.getCallee()->stripPointerCasts()))
-    CI->setCallingConv(Fn->getCallingConv());
-  return CI;
-}
-
 Value *llvm::emitFPutS(Value *Str, Value *File, IRBuilderBase &B,
                        const TargetLibraryInfo *TLI) {
   if (!TLI->has(LibFunc_fputs))
@@ -1220,25 +1200,6 @@ Value *llvm::emitFPutS(Value *Str, Value *File, IRBuilderBase &B,
   if (File->getType()->isPointerTy())
     inferLibFuncAttributes(M, FPutsName, *TLI);
   CallInst *CI = B.CreateCall(F, {castToCStr(Str, B), File}, FPutsName);
-
-  if (const Function *Fn =
-          dyn_cast<Function>(F.getCallee()->stripPointerCasts()))
-    CI->setCallingConv(Fn->getCallingConv());
-  return CI;
-}
-
-Value *llvm::emitFPutSUnlocked(Value *Str, Value *File, IRBuilderBase &B,
-                               const TargetLibraryInfo *TLI) {
-  if (!TLI->has(LibFunc_fputs_unlocked))
-    return nullptr;
-
-  Module *M = B.GetInsertBlock()->getModule();
-  StringRef FPutsUnlockedName = TLI->getName(LibFunc_fputs_unlocked);
-  FunctionCallee F = M->getOrInsertFunction(FPutsUnlockedName, B.getInt32Ty(),
-                                            B.getInt8PtrTy(), File->getType());
-  if (File->getType()->isPointerTy())
-    inferLibFuncAttributes(M, FPutsUnlockedName, *TLI);
-  CallInst *CI = B.CreateCall(F, {castToCStr(Str, B), File}, FPutsUnlockedName);
 
   if (const Function *Fn =
           dyn_cast<Function>(F.getCallee()->stripPointerCasts()))
@@ -1308,90 +1269,5 @@ Value *llvm::emitCalloc(Value *Num, Value *Size, const AttributeList &Attrs,
           dyn_cast<Function>(Calloc.getCallee()->stripPointerCasts()))
     CI->setCallingConv(F->getCallingConv());
 
-  return CI;
-}
-
-Value *llvm::emitFWriteUnlocked(Value *Ptr, Value *Size, Value *N, Value *File,
-                                IRBuilderBase &B, const DataLayout &DL,
-                                const TargetLibraryInfo *TLI) {
-  if (!TLI->has(LibFunc_fwrite_unlocked))
-    return nullptr;
-
-  Module *M = B.GetInsertBlock()->getModule();
-  LLVMContext &Context = B.GetInsertBlock()->getContext();
-  StringRef FWriteUnlockedName = TLI->getName(LibFunc_fwrite_unlocked);
-  FunctionCallee F = M->getOrInsertFunction(
-      FWriteUnlockedName, DL.getIntPtrType(Context), B.getInt8PtrTy(),
-      DL.getIntPtrType(Context), DL.getIntPtrType(Context), File->getType());
-
-  if (File->getType()->isPointerTy())
-    inferLibFuncAttributes(M, FWriteUnlockedName, *TLI);
-  CallInst *CI = B.CreateCall(F, {castToCStr(Ptr, B), Size, N, File});
-
-  if (const Function *Fn =
-          dyn_cast<Function>(F.getCallee()->stripPointerCasts()))
-    CI->setCallingConv(Fn->getCallingConv());
-  return CI;
-}
-
-Value *llvm::emitFGetCUnlocked(Value *File, IRBuilderBase &B,
-                               const TargetLibraryInfo *TLI) {
-  if (!TLI->has(LibFunc_fgetc_unlocked))
-    return nullptr;
-
-  Module *M = B.GetInsertBlock()->getModule();
-  StringRef FGetCUnlockedName = TLI->getName(LibFunc_fgetc_unlocked);
-  FunctionCallee F = M->getOrInsertFunction(FGetCUnlockedName, B.getInt32Ty(),
-                                            File->getType());
-  if (File->getType()->isPointerTy())
-    inferLibFuncAttributes(M, FGetCUnlockedName, *TLI);
-  CallInst *CI = B.CreateCall(F, File, FGetCUnlockedName);
-
-  if (const Function *Fn =
-          dyn_cast<Function>(F.getCallee()->stripPointerCasts()))
-    CI->setCallingConv(Fn->getCallingConv());
-  return CI;
-}
-
-Value *llvm::emitFGetSUnlocked(Value *Str, Value *Size, Value *File,
-                               IRBuilderBase &B, const TargetLibraryInfo *TLI) {
-  if (!TLI->has(LibFunc_fgets_unlocked))
-    return nullptr;
-
-  Module *M = B.GetInsertBlock()->getModule();
-  StringRef FGetSUnlockedName = TLI->getName(LibFunc_fgets_unlocked);
-  FunctionCallee F =
-      M->getOrInsertFunction(FGetSUnlockedName, B.getInt8PtrTy(),
-                             B.getInt8PtrTy(), B.getInt32Ty(), File->getType());
-  inferLibFuncAttributes(M, FGetSUnlockedName, *TLI);
-  CallInst *CI =
-      B.CreateCall(F, {castToCStr(Str, B), Size, File}, FGetSUnlockedName);
-
-  if (const Function *Fn =
-          dyn_cast<Function>(F.getCallee()->stripPointerCasts()))
-    CI->setCallingConv(Fn->getCallingConv());
-  return CI;
-}
-
-Value *llvm::emitFReadUnlocked(Value *Ptr, Value *Size, Value *N, Value *File,
-                               IRBuilderBase &B, const DataLayout &DL,
-                               const TargetLibraryInfo *TLI) {
-  if (!TLI->has(LibFunc_fread_unlocked))
-    return nullptr;
-
-  Module *M = B.GetInsertBlock()->getModule();
-  LLVMContext &Context = B.GetInsertBlock()->getContext();
-  StringRef FReadUnlockedName = TLI->getName(LibFunc_fread_unlocked);
-  FunctionCallee F = M->getOrInsertFunction(
-      FReadUnlockedName, DL.getIntPtrType(Context), B.getInt8PtrTy(),
-      DL.getIntPtrType(Context), DL.getIntPtrType(Context), File->getType());
-
-  if (File->getType()->isPointerTy())
-    inferLibFuncAttributes(M, FReadUnlockedName, *TLI);
-  CallInst *CI = B.CreateCall(F, {castToCStr(Ptr, B), Size, N, File});
-
-  if (const Function *Fn =
-          dyn_cast<Function>(F.getCallee()->stripPointerCasts()))
-    CI->setCallingConv(Fn->getCallingConv());
   return CI;
 }

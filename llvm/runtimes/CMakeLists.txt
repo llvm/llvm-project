@@ -333,6 +333,11 @@ else() # if this is included from LLVM's CMake
     string(REPLACE "-" "_" canon_name ${projName})
     string(TOUPPER ${canon_name} canon_name)
     list(APPEND prefixes ${canon_name})
+    # Many compiler-rt options start with SANITIZER_ rather than COMPILER_RT_,
+    # so when compiler-rt is enabled, consider both.
+    if(canon_name STREQUAL "COMPILER_RT")
+      list(APPEND prefixes SANITIZER)
+    endif()
 
     string(FIND ${projName} "lib" LIB_IDX)
     if(LIB_IDX EQUAL 0)

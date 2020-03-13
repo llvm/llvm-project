@@ -81,10 +81,20 @@ struct DomainValue {
   }
 
   /// Mark domain as available.
-  void addDomain(unsigned domain) { AvailableDomains |= 1u << domain; }
+  void addDomain(unsigned domain) {
+    assert(domain <
+               static_cast<unsigned>(std::numeric_limits<unsigned>::digits) &&
+           "undefined behavior");
+    AvailableDomains |= 1u << domain;
+  }
 
   // Restrict to a single domain available.
-  void setSingleDomain(unsigned domain) { AvailableDomains = 1u << domain; }
+  void setSingleDomain(unsigned domain) {
+    assert(domain <
+               static_cast<unsigned>(std::numeric_limits<unsigned>::digits) &&
+           "undefined behavior");
+    AvailableDomains = 1u << domain;
+  }
 
   /// Return bitmask of domains that are available and in mask.
   unsigned getCommonDomains(unsigned mask) const {

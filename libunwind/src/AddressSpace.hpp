@@ -452,31 +452,46 @@ struct _LIBUNWIND_HIDDEN dl_iterate_cb_data {
     #error "_LIBUNWIND_SUPPORT_DWARF_UNWIND requires _LIBUNWIND_SUPPORT_DWARF_INDEX on this platform."
   #endif
 
-int findUnwindSectionsByPhdr(struct dl_phdr_info *pinfo, size_t, void *data) {
-  auto *cbdata = static_cast<dl_iterate_cb_data *>(data);
+#include "FrameHeaderCache.hpp"
+
+// There should be just one of these per process.
+static FrameHeaderCache ProcessFrameHeaderCache;
+
+static bool checkAddrInSegment(const Elf_Phdr *phdr, size_t image_base,
+                               dl_iterate_cb_data *cbdata) {
+  if (phdr->p_type == PT_LOAD) {
+    uintptr_t begin = image_base + phdr->p_vaddr;
+    uintptr_t end = begin + phdr->p_memsz;
+    if (cbdata->targetAddr >= begin && cbdata->targetAddr < end) {
+      cbdata->sects->dso_base = begin;
+      cbdata->sects->dwarf_section_length = phdr->p_memsz;
+      return true;
+    }
+  }
+  return false;
+}
+
+int findUnwindSectionsByPhdr(struct dl_phdr_info *pinfo, size_t pinfo_size,
+                             void *data) {
+  auto cbdata = static_cast<dl_iterate_cb_data *>(data);
+  if (pinfo->dlpi_phnum == 0 || cbdata->targetAddr < pinfo->dlpi_addr)
+    return 0;
+  if (ProcessFrameHeaderCache.find(pinfo, pinfo_size, data))
+    return 1;
+
+  Elf_Addr image_base = calculateImageBase(pinfo);
   bool found_obj = false;
   bool found_hdr = false;
 
-  assert(cbdata);
-  assert(cbdata->sects);
+  // Third phdr is usually the executable phdr.
+  if (pinfo->dlpi_phnum > 2)
+    found_obj = checkAddrInSegment(&pinfo->dlpi_phdr[2], image_base, cbdata);
 
-  if (cbdata->targetAddr < pinfo->dlpi_addr)
-    return 0;
-
-  Elf_Addr image_base = calculateImageBase(pinfo);
-  size_t object_length;
-
-  for (Elf_Half i = 0; i < pinfo->dlpi_phnum; i++) {
-    const Elf_Phdr *phdr = &pinfo->dlpi_phdr[i];
-    if (phdr->p_type == PT_LOAD) {
-      uintptr_t begin = image_base + phdr->p_vaddr;
-      uintptr_t end = begin + phdr->p_memsz;
-      if (cbdata->targetAddr >= begin && cbdata->targetAddr < end) {
-        cbdata->sects->dso_base = begin;
-        object_length = phdr->p_memsz;
-        found_obj = true;
-      }
-    } else if (phdr->p_type == PT_GNU_EH_FRAME) {
+  // PT_GNU_EH_FRAME is usually near the end. Iterate backward. We already know
+  // that there is one or more phdrs.
+  for (Elf_Half i = pinfo->dlpi_phnum; i > 0; i--) {
+    const Elf_Phdr *phdr = &pinfo->dlpi_phdr[i - 1];
+    if (!found_hdr && phdr->p_type == PT_GNU_EH_FRAME) {
       EHHeaderParser<LocalAddressSpace>::EHHeaderInfo hdrInfo;
       uintptr_t eh_frame_hdr_start = image_base + phdr->p_vaddr;
       cbdata->sects->dwarf_index_section = eh_frame_hdr_start;
@@ -486,15 +501,16 @@ int findUnwindSectionsByPhdr(struct dl_phdr_info *pinfo, size_t, void *data) {
           hdrInfo);
       if (found_hdr)
         cbdata->sects->dwarf_section = hdrInfo.eh_frame_ptr;
+    } else if (!found_obj) {
+      found_obj = checkAddrInSegment(phdr, image_base, cbdata);
+    }
+    if (found_obj && found_hdr) {
+      ProcessFrameHeaderCache.add(cbdata->sects);
+      return 1;
     }
   }
-
-  if (found_obj && found_hdr) {
-    cbdata->sects->dwarf_section_length = object_length;
-    return true;
-  } else {
-    return false;
-  }
+  cbdata->sects->dwarf_section_length = 0;
+  return 0;
 }
 
 #else  // defined(LIBUNWIND_SUPPORT_DWARF_UNWIND)

@@ -18,6 +18,7 @@ target_link_libraries(MLIRGPU
   MLIRLLVMIR
   MLIRLoopOps
   MLIRPass
+  MLIRSideEffects
   MLIRStandardOps
   MLIRSupport
   MLIRTransformUtils

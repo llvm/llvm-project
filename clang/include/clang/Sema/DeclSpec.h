@@ -1518,6 +1518,8 @@ struct DeclaratorChunk {
   struct MemberPointerTypeInfo {
     /// The type qualifiers: const/volatile/restrict/__unaligned/_Atomic.
     unsigned TypeQuals : 5;
+    /// Location of the '*' token.
+    unsigned StarLoc;
     // CXXScopeSpec has a constructor, so it can't be a direct member.
     // So we need some pointer-aligned storage and a bit of trickery.
     alignas(CXXScopeSpec) char ScopeMem[sizeof(CXXScopeSpec)];
@@ -1660,11 +1662,13 @@ struct DeclaratorChunk {
 
   static DeclaratorChunk getMemberPointer(const CXXScopeSpec &SS,
                                           unsigned TypeQuals,
-                                          SourceLocation Loc) {
+                                          SourceLocation StarLoc,
+                                          SourceLocation EndLoc) {
     DeclaratorChunk I;
     I.Kind          = MemberPointer;
     I.Loc           = SS.getBeginLoc();
-    I.EndLoc        = Loc;
+    I.EndLoc = EndLoc;
+    I.Mem.StarLoc = StarLoc.getRawEncoding();
     I.Mem.TypeQuals = TypeQuals;
     new (I.Mem.ScopeMem) CXXScopeSpec(SS);
     return I;

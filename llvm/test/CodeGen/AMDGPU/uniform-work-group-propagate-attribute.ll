@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=amdgcn-amd- -amdgpu-annotate-kernel-features %s | FileCheck %s 
+; RUN: opt -S -mtriple=amdgcn-amd- -amdgpu-annotate-kernel-features %s | FileCheck %s
 
 ; Propagate the uniform-work-group-attribute from the kernel to callee if it doesn't have it
 ; CHECK: define void @func() #[[FUNC:[0-9]+]] {
@@ -29,5 +29,5 @@ attributes #1 = { "uniform-work-group-size"="false" }
 attributes #2 = { "uniform-work-group-size"="true" }
 
 ; CHECK: attributes #[[FUNC]] = { nounwind "uniform-work-group-size"="false" }
-; CHECK: attributes #[[KERNEL1]] = { "uniform-work-group-size"="false" }
-; CHECK: attributes #[[KERNEL2]] = { "uniform-work-group-size"="true" }
+; CHECK: attributes #[[KERNEL1]] = { "amdgpu-calls" "uniform-work-group-size"="false" }
+; CHECK: attributes #[[KERNEL2]] = { "amdgpu-calls" "uniform-work-group-size"="true" }

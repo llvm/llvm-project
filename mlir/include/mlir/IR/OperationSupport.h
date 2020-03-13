@@ -68,19 +68,15 @@ enum class OperationProperty {
   /// results.
   Commutative = 0x1,
 
-  /// This bit is set for operations that have no side effects: that means that
-  /// they do not read or write memory, or access any hidden state.
-  NoSideEffect = 0x2,
-
   /// This bit is set for an operation if it is a terminator: that means
   /// an operation at the end of a block.
-  Terminator = 0x4,
+  Terminator = 0x2,
 
   /// This bit is set for operations that are completely isolated from above.
   /// This is used for operations whose regions are explicit capture only, i.e.
   /// they are never allowed to implicitly reference values defined above the
   /// parent operation.
-  IsolatedFromAbove = 0x8,
+  IsolatedFromAbove = 0x4,
 };
 
 /// This is a "type erased" representation of a registered operation.  This

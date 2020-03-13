@@ -24,7 +24,13 @@ llvm::SmallString<5> SmallString("foo");
 llvm::StringRef StringRef = "bar";
 llvm::Twine Twine = llvm::Twine(SmallString) + StringRef;
 llvm::PointerIntPair<int *, 1> PointerIntPair(IntPtr, 1);
-llvm::PointerUnion<float *, int *> PointerUnion(IntPtr);
+
+struct alignas(8) Z {};
+llvm::PointerUnion<Z *, int *> PointerUnion(IntPtr);
+
+// No members which instantiate PointerUnionUIntTraits<Z *> (e.g. get<T *>())
+// are called, and this instance will therefore be raw-printed.
+llvm::PointerUnion<Z *, float *> RawPrintingPointerUnion(nullptr);
 
 using IlistTag = llvm::ilist_tag<struct A>;
 using SimpleIlistTag = llvm::ilist_tag<struct B>;

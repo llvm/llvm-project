@@ -392,12 +392,8 @@ Archive::Child::Child(const Archive *Parent, const char *Start, Error *Err)
 }
 
 Expected<uint64_t> Archive::Child::getSize() const {
-  if (Parent->IsThin) {
-    Expected<uint32_t> Size = Header.getSize();
-    if (!Size)
-      return Size.takeError();
-    return Size.get();
-  }
+  if (Parent->IsThin)
+    return Header.getSize();
   return Data.size() - StartOfFile;
 }
 
@@ -437,7 +433,7 @@ Expected<StringRef> Archive::Child::getBuffer() const {
     return isThinOrErr.takeError();
   bool isThin = isThinOrErr.get();
   if (!isThin) {
-    Expected<uint32_t> Size = getSize();
+    Expected<uint64_t> Size = getSize();
     if (!Size)
       return Size.takeError();
     return StringRef(Data.data() + StartOfFile, Size.get());

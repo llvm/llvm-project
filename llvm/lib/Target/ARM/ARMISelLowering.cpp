@@ -1074,6 +1074,8 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::SRA,       MVT::i64, Custom);
   setOperationAction(ISD::INTRINSIC_VOID, MVT::Other, Custom);
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i64, Custom);
+  setOperationAction(ISD::LOAD, MVT::i64, Custom);
+  setOperationAction(ISD::STORE, MVT::i64, Custom);
 
   // MVE lowers 64 bit shifts to lsll and lsrl
   // assuming that ISD::SRL and SRA of i64 are already marked custom
@@ -1610,6 +1612,9 @@ const char *ARMTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case ARMISD::MEMBARRIER_MCR: return "ARMISD::MEMBARRIER_MCR";
 
   case ARMISD::PRELOAD:       return "ARMISD::PRELOAD";
+
+  case ARMISD::LDRD:          return "ARMISD::LDRD";
+  case ARMISD::STRD:          return "ARMISD::STRD";
 
   case ARMISD::WIN__CHKSTK:   return "ARMISD::WIN__CHKSTK";
   case ARMISD::WIN__DBZCHK:   return "ARMISD::WIN__DBZCHK";
@@ -3803,6 +3808,12 @@ ARMTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG,
   case Intrinsic::arm_mve_vreinterpretq:
     return DAG.getNode(ARMISD::VECTOR_REG_CAST, SDLoc(Op), Op.getValueType(),
                        Op.getOperand(1));
+  case Intrinsic::arm_mve_lsll:
+    return DAG.getNode(ARMISD::LSLL, SDLoc(Op), Op->getVTList(),
+                       Op.getOperand(1), Op.getOperand(2), Op.getOperand(3));
+  case Intrinsic::arm_mve_asrl:
+    return DAG.getNode(ARMISD::ASRL, SDLoc(Op), Op->getVTList(),
+                       Op.getOperand(1), Op.getOperand(2), Op.getOperand(3));
   }
 }
 
@@ -9104,6 +9115,25 @@ static SDValue LowerPredicateLoad(SDValue Op, SelectionDAG &DAG) {
   return DAG.getMergeValues({Pred, Load.getValue(1)}, dl);
 }
 
+void ARMTargetLowering::LowerLOAD(SDNode *N, SmallVectorImpl<SDValue> &Results,
+                                  SelectionDAG &DAG) const {
+  LoadSDNode *LD = cast<LoadSDNode>(N);
+  EVT MemVT = LD->getMemoryVT();
+  assert(LD->isUnindexed() && "Loads should be unindexed at this point.");
+
+  if (MemVT == MVT::i64 && Subtarget->hasV5TEOps() &&
+      !Subtarget->isThumb1Only() && LD->isVolatile()) {
+    SDLoc dl(N);
+    SDValue Result = DAG.getMemIntrinsicNode(
+        ARMISD::LDRD, dl, DAG.getVTList({MVT::i32, MVT::i32, MVT::Other}),
+        {LD->getChain(), LD->getBasePtr()}, MemVT, LD->getMemOperand());
+    SDValue Lo = Result.getValue(DAG.getDataLayout().isLittleEndian() ? 0 : 1);
+    SDValue Hi = Result.getValue(DAG.getDataLayout().isLittleEndian() ? 1 : 0);
+    SDValue Pair = DAG.getNode(ISD::BUILD_PAIR, dl, MVT::i64, Lo, Hi);
+    Results.append({Pair, Result.getValue(2)});
+  }
+}
+
 static SDValue LowerPredicateStore(SDValue Op, SelectionDAG &DAG) {
   StoreSDNode *ST = cast<StoreSDNode>(Op.getNode());
   EVT MemVT = ST->getMemoryVT();
@@ -9131,6 +9161,38 @@ static SDValue LowerPredicateStore(SDValue Op, SelectionDAG &DAG) {
       ST->getChain(), dl, GRP, ST->getBasePtr(),
       EVT::getIntegerVT(*DAG.getContext(), MemVT.getSizeInBits()),
       ST->getMemOperand());
+}
+
+static SDValue LowerSTORE(SDValue Op, SelectionDAG &DAG,
+                          const ARMSubtarget *Subtarget) {
+  StoreSDNode *ST = cast<StoreSDNode>(Op.getNode());
+  EVT MemVT = ST->getMemoryVT();
+  assert(ST->isUnindexed() && "Stores should be unindexed at this point.");
+
+  if (MemVT == MVT::i64 && Subtarget->hasV5TEOps() &&
+      !Subtarget->isThumb1Only() && ST->isVolatile()) {
+    SDNode *N = Op.getNode();
+    SDLoc dl(N);
+
+    SDValue Lo = DAG.getNode(
+        ISD::EXTRACT_ELEMENT, dl, MVT::i32, ST->getValue(),
+        DAG.getTargetConstant(DAG.getDataLayout().isLittleEndian() ? 0 : 1, dl,
+                              MVT::i32));
+    SDValue Hi = DAG.getNode(
+        ISD::EXTRACT_ELEMENT, dl, MVT::i32, ST->getValue(),
+        DAG.getTargetConstant(DAG.getDataLayout().isLittleEndian() ? 1 : 0, dl,
+                              MVT::i32));
+
+    return DAG.getMemIntrinsicNode(ARMISD::STRD, dl, DAG.getVTList(MVT::Other),
+                                   {ST->getChain(), Lo, Hi, ST->getBasePtr()},
+                                   MemVT, ST->getMemOperand());
+  } else if (Subtarget->hasMVEIntegerOps() &&
+             ((MemVT == MVT::v4i1 || MemVT == MVT::v8i1 ||
+               MemVT == MVT::v16i1))) {
+    return LowerPredicateStore(Op, DAG);
+  }
+
+  return SDValue();
 }
 
 static bool isZeroVector(SDValue N) {
@@ -9366,7 +9428,7 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::LOAD:
     return LowerPredicateLoad(Op, DAG);
   case ISD::STORE:
-    return LowerPredicateStore(Op, DAG);
+    return LowerSTORE(Op, DAG, Subtarget);
   case ISD::MLOAD:
     return LowerMLOAD(Op, DAG);
   case ISD::ATOMIC_LOAD:
@@ -9470,7 +9532,9 @@ void ARMTargetLowering::ReplaceNodeResults(SDNode *N,
   case ISD::ABS:
      lowerABS(N, Results, DAG);
      return ;
-
+  case ISD::LOAD:
+    LowerLOAD(N, Results, DAG);
+    break;
   }
   if (Res.getNode())
     Results.push_back(Res);
@@ -14080,6 +14144,34 @@ static SDValue PerformVECREDUCE_ADDCombine(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+static SDValue PerformLongShiftCombine(SDNode *N, SelectionDAG &DAG) {
+  SDLoc DL(N);
+  SDValue Op0 = N->getOperand(0);
+  SDValue Op1 = N->getOperand(1);
+
+  // Turn X << -C -> X >> C and viceversa. The negative shifts can come up from
+  // uses of the intrinsics.
+  if (auto C = dyn_cast<ConstantSDNode>(N->getOperand(2))) {
+    int ShiftAmt = C->getSExtValue();
+    if (ShiftAmt == 0) {
+      SDValue Merge = DAG.getMergeValues({Op0, Op1}, DL);
+      DAG.ReplaceAllUsesWith(N, Merge.getNode());
+      return SDValue();
+    }
+
+    if (ShiftAmt >= -32 && ShiftAmt < 0) {
+      unsigned NewOpcode =
+          N->getOpcode() == ARMISD::LSLL ? ARMISD::LSRL : ARMISD::LSLL;
+      SDValue NewShift = DAG.getNode(NewOpcode, DL, N->getVTList(), Op0, Op1,
+                                     DAG.getConstant(-ShiftAmt, DL, MVT::i32));
+      DAG.ReplaceAllUsesWith(N, NewShift.getNode());
+      return NewShift;
+    }
+  }
+
+  return SDValue();
+}
+
 /// PerformIntrinsicCombine - ARM-specific DAG combining for intrinsics.
 static SDValue PerformIntrinsicCombine(SDNode *N, SelectionDAG &DAG) {
   unsigned IntNo = cast<ConstantSDNode>(N->getOperand(0))->getZExtValue();
@@ -14975,6 +15067,10 @@ SDValue ARMTargetLowering::PerformDAGCombine(SDNode *N,
     return PerformVCMPCombine(N, DCI, Subtarget);
   case ISD::VECREDUCE_ADD:
     return PerformVECREDUCE_ADDCombine(N, DCI.DAG, Subtarget);
+  case ARMISD::ASRL:
+  case ARMISD::LSRL:
+  case ARMISD::LSLL:
+    return PerformLongShiftCombine(N, DCI.DAG);
   case ARMISD::SMULWB: {
     unsigned BitWidth = N->getValueType(0).getSizeInBits();
     APInt DemandedMask = APInt::getLowBitsSet(BitWidth, 16);
@@ -16133,6 +16229,35 @@ ARMTargetLowering::targetShrinkDemandedConstant(SDValue Op,
   return false;
 }
 
+bool ARMTargetLowering::SimplifyDemandedBitsForTargetNode(
+    SDValue Op, const APInt &OriginalDemandedBits,
+    const APInt &OriginalDemandedElts, KnownBits &Known, TargetLoweringOpt &TLO,
+    unsigned Depth) const {
+  unsigned Opc = Op.getOpcode();
+
+  switch (Opc) {
+  case ARMISD::ASRL:
+  case ARMISD::LSRL: {
+    // If this is result 0 and the other result is unused, see if the demand
+    // bits allow us to shrink this long shift into a standard small shift in
+    // the opposite direction.
+    if (Op.getResNo() == 0 && !Op->hasAnyUseOfValue(1) &&
+        isa<ConstantSDNode>(Op->getOperand(2))) {
+      unsigned ShAmt = Op->getConstantOperandVal(2);
+      if (ShAmt < 32 && OriginalDemandedBits.isSubsetOf(
+                            APInt::getAllOnesValue(32) << (32 - ShAmt)))
+        return TLO.CombineTo(
+            Op, TLO.DAG.getNode(
+                    ISD::SHL, SDLoc(Op), MVT::i32, Op.getOperand(1),
+                    TLO.DAG.getConstant(32 - ShAmt, SDLoc(Op), MVT::i32)));
+    }
+    break;
+  }
+  }
+
+  return TargetLowering::SimplifyDemandedBitsForTargetNode(
+      Op, OriginalDemandedBits, OriginalDemandedElts, Known, TLO, Depth);
+}
 
 //===----------------------------------------------------------------------===//
 //                           ARM Inline Assembly Support

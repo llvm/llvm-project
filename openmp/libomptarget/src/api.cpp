@@ -174,6 +174,7 @@ EXTERN int omp_target_memcpy(void *dst, void *src, size_t length,
     rc = SrcDev.data_retrieve(buffer, srcAddr, length);
     if (rc == OFFLOAD_SUCCESS)
       rc = DstDev.data_submit(dstAddr, buffer, length);
+    free(buffer);
   }
 
   DP("omp_target_memcpy returns %d\n", rc);

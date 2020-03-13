@@ -34,8 +34,10 @@ constexpr uint32_t kGeneratorNumber = 22;
 #define GET_SPIRV_SERIALIZATION_UTILS
 #include "mlir/Dialect/SPIRV/SPIRVSerialization.inc"
 
-/// Appends a SPRI-V module header to `header` with the given `idBound`.
-void appendModuleHeader(SmallVectorImpl<uint32_t> &header, uint32_t idBound);
+/// Appends a SPRI-V module header to `header` with the given `version` and
+/// `idBound`.
+void appendModuleHeader(SmallVectorImpl<uint32_t> &header,
+                        spirv::Version version, uint32_t idBound);
 
 /// Returns the word-count-prefixed opcode for an SPIR-V instruction.
 uint32_t getPrefixedOpcode(uint32_t wordCount, spirv::Opcode opcode);

@@ -523,20 +523,16 @@ public:
 class MCBoundaryAlignFragment : public MCFragment {
   /// The alignment requirement of the branch to be aligned.
   Align AlignBoundary;
-  /// Flag to indicate whether the branch is fused.  Use in determining the
-  /// region of fragments being aligned.
-  bool Fused : 1;
-  /// Flag to indicate whether NOPs should be emitted.
-  bool EmitNops : 1;
+  /// The last fragment in the set of fragments to be aligned.
+  const MCFragment *LastFragment = nullptr;
   /// The size of the fragment.  The size is lazily set during relaxation, and
   /// is not meaningful before that.
   uint64_t Size = 0;
 
 public:
-  MCBoundaryAlignFragment(Align AlignBoundary = Align(1), bool Fused = false,
-                          bool EmitNops = false, MCSection *Sec = nullptr)
-      : MCFragment(FT_BoundaryAlign, false, Sec), AlignBoundary(AlignBoundary),
-        Fused(Fused), EmitNops(EmitNops) {}
+  MCBoundaryAlignFragment(Align AlignBoundary, MCSection *Sec = nullptr)
+      : MCFragment(FT_BoundaryAlign, false, Sec), AlignBoundary(AlignBoundary) {
+  }
 
   uint64_t getSize() const { return Size; }
   void setSize(uint64_t Value) { Size = Value; }
@@ -544,11 +540,11 @@ public:
   Align getAlignment() const { return AlignBoundary; }
   void setAlignment(Align Value) { AlignBoundary = Value; }
 
-  bool isFused() const { return Fused; }
-  void setFused(bool Value) { Fused = Value; }
-
-  bool canEmitNops() const { return EmitNops; }
-  void setEmitNops(bool Value) { EmitNops = Value; }
+  const MCFragment *getLastFragment() const { return LastFragment; }
+  void setLastFragment(const MCFragment *F) {
+    assert(!F || getParent() == F->getParent());
+    LastFragment = F;
+  }
 
   static bool classof(const MCFragment *F) {
     return F->getKind() == MCFragment::FT_BoundaryAlign;

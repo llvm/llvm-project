@@ -163,9 +163,8 @@ define void @undef_lo2_v4i16(<2 x i16> %arg0) {
 ; GFX8-LABEL: undef_lo2_v4i16:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; GFX8-NEXT:    v_lshlrev_b32_e32 v1, 16, v0
-; GFX8-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX8-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
+; GFX8-NEXT:    v_alignbit_b32 v0, v1, v0, 16
 ; GFX8-NEXT:    ;;#ASMSTART
 ; GFX8-NEXT:    ; use v[0:1]
 ; GFX8-NEXT:    ;;#ASMEND
@@ -190,9 +189,8 @@ define void @undef_lo2_v4f16(<2 x half> %arg0) {
 ; GFX8-LABEL: undef_lo2_v4f16:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; GFX8-NEXT:    v_lshlrev_b32_e32 v1, 16, v0
-; GFX8-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX8-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
+; GFX8-NEXT:    v_alignbit_b32 v0, v1, v0, 16
 ; GFX8-NEXT:    ;;#ASMSTART
 ; GFX8-NEXT:    ; use v[0:1]
 ; GFX8-NEXT:    ;;#ASMEND

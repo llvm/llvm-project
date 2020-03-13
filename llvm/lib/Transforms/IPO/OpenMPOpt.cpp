@@ -44,7 +44,7 @@ STATISTIC(NumOpenMPRuntimeFunctionsIdentified,
 STATISTIC(NumOpenMPRuntimeFunctionUsesIdentified,
           "Number of OpenMP runtime function uses identified");
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+#if !defined(NDEBUG)
 static constexpr auto TAG = "[" DEBUG_TYPE "]";
 #endif
 

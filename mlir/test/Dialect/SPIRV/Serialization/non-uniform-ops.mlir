@@ -1,6 +1,6 @@
 // RUN: mlir-translate -test-spirv-roundtrip -split-input-file %s | FileCheck %s
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
   // CHECK-LABEL: @group_non_uniform_ballot
   spv.func @group_non_uniform_ballot(%predicate: i1) -> vector<4xi32> "None" {
     // CHECK: %{{.*}} = spv.GroupNonUniformBallot "Workgroup" %{{.*}}: vector<4xi32>

@@ -6565,19 +6565,23 @@ class VectorPromoteHelper {
         UseSplat = true;
     }
 
-    unsigned End = getTransitionType()->getVectorNumElements();
+    ElementCount EC = getTransitionType()->getVectorElementCount();
     if (UseSplat)
-      return ConstantVector::getSplat(End, Val);
+      return ConstantVector::getSplat(EC, Val);
 
-    SmallVector<Constant *, 4> ConstVec;
-    UndefValue *UndefVal = UndefValue::get(Val->getType());
-    for (unsigned Idx = 0; Idx != End; ++Idx) {
-      if (Idx == ExtractIdx)
-        ConstVec.push_back(Val);
-      else
-        ConstVec.push_back(UndefVal);
-    }
-    return ConstantVector::get(ConstVec);
+    if (!EC.Scalable) {
+      SmallVector<Constant *, 4> ConstVec;
+      UndefValue *UndefVal = UndefValue::get(Val->getType());
+      for (unsigned Idx = 0; Idx != EC.Min; ++Idx) {
+        if (Idx == ExtractIdx)
+          ConstVec.push_back(Val);
+        else
+          ConstVec.push_back(UndefVal);
+      }
+      return ConstantVector::get(ConstVec);
+    } else
+      llvm_unreachable(
+          "Generate scalable vector for non-splat is unimplemented");
   }
 
   /// Check if promoting to a vector type an operand at \p OperandIdx
@@ -7187,6 +7191,35 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, bool &ModifiedDT) {
     }
     if (tryUnmergingGEPsAcrossIndirectBr(GEPI, TTI)) {
       return true;
+    }
+    return false;
+  }
+
+  if (FreezeInst *FI = dyn_cast<FreezeInst>(I)) {
+    // br(freeze(icmp a, const)) -> br(icmp (freeze a), const)
+    // This helps generate efficient conditional jumps.
+    Instruction *CmpI = nullptr;
+    if (ICmpInst *II = dyn_cast<ICmpInst>(FI->getOperand(0)))
+      CmpI = II;
+    else if (FCmpInst *F = dyn_cast<FCmpInst>(FI->getOperand(0)))
+      CmpI = F->getFastMathFlags().none() ? F : nullptr;
+
+    if (CmpI && CmpI->hasOneUse()) {
+      auto Op0 = CmpI->getOperand(0), Op1 = CmpI->getOperand(1);
+      bool Const0 = isa<ConstantInt>(Op0) || isa<ConstantFP>(Op0) ||
+                    isa<ConstantPointerNull>(Op0);
+      bool Const1 = isa<ConstantInt>(Op1) || isa<ConstantFP>(Op1) ||
+                    isa<ConstantPointerNull>(Op1);
+      if (Const0 || Const1) {
+        if (!Const0 || !Const1) {
+          auto *F = new FreezeInst(Const0 ? Op1 : Op0, "", CmpI);
+          F->takeName(FI);
+          CmpI->setOperand(Const0 ? 1 : 0, F);
+        }
+        FI->replaceAllUsesWith(CmpI);
+        FI->eraseFromParent();
+        return true;
+      }
     }
     return false;
   }

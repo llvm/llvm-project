@@ -12,6 +12,7 @@
 
 #include "clang/Frontend/PrecompiledPreamble.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/Basic/FileManager.h"
 #include "clang/Basic/LangStandard.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Frontend/CompilerInstance.h"

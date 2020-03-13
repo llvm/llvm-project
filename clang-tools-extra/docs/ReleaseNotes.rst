@@ -67,8 +67,18 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
+New module
+^^^^^^^^^^
+- New module `llvmlibc`.
+
+  This module contains checks related to the LLVM-libc coding standards.
+
 New checks
 ^^^^^^^^^^
+- New :doc:`cppcoreguidelines-avoid-non-const-global-variables
+  <clang-tidy/checks/cppcoreguidelines-avoid-non-const-global-variables>` check.
+  Finds non-const global variables as described in check I.2 of C++ Core
+  Guidelines.
 
 - New :doc:`bugprone-misplaced-pointer-arithmetic-in-alloc
   <clang-tidy/checks/bugprone-misplaced-pointer-arithmetic-in-alloc>` check.
@@ -82,11 +92,24 @@ New checks
 
   Checks for usages of identifiers reserved for use by the implementation.
 
+- New :doc:`bugprone-suspicious-include
+  <clang-tidy/checks/bugprone-suspicious-include>` check.
+
+  Finds cases where an include refers to what appears to be an implementation
+  file, which often leads to hard-to-track-down ODR violations, and diagnoses
+  them.
+
 - New :doc:`cert-oop57-cpp
   <clang-tidy/checks/cert-oop57-cpp>` check.
 
   Flags use of the `C` standard library functions ``memset``, ``memcpy`` and
   ``memcmp`` and similar derivatives on non-trivial types.
+
+- New :doc:`llvmlibc-restrict-system-libc-headers
+  <clang-tidy/checks/llvmlibc-restrict-system-libc-headers>` check.
+
+  Finds includes of system libc headers not provided by the compiler within
+  llvm-libc implementations.
 
 - New :doc:`objc-dealloc-in-category
   <clang-tidy/checks/objc-dealloc-in-category>` check.
@@ -132,6 +155,9 @@ Changes in existing checks
 
 Renamed checks
 ^^^^^^^^^^^^^^
+
+- The 'fuchsia-restrict-system-headers' check was renamed to :doc:`portability-restrict-system-includes
+  <clang-tidy/checks/portability-restrict-system-includes>`
 
 Improvements to include-fixer
 -----------------------------

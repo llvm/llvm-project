@@ -24,7 +24,7 @@ func @failedSameOperandElementType(%t1f: tensor<1xf32>, %t1i: tensor<1xi32>) {
 // -----
 
 func @failedSameOperandAndResultElementType_no_operands() {
-  // expected-error@+1 {{expected 1 or more operands}}
+  // expected-error@+1 {{expected 2 operands, but found 0}}
   "test.same_operand_element_type"() : () -> tensor<1xf32>
 }
 

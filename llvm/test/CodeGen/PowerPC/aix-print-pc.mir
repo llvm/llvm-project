@@ -1,0 +1,31 @@
+# RUN: llc -x mir -mtriple powerpc-unknown-aix-xcoff --verify-machineinstrs \
+# RUN: -start-before=ppc-branch-select < %s | FileCheck %s
+#
+# RUN: llc -x mir -mtriple powerpc64-unknown-aix-xcoff --verify-machineinstrs \
+# RUN: -start-before=ppc-branch-select < %s | FileCheck %s
+
+# Test uses a long branch to force printing of a branch that uses the program
+# counter as an operand. ($PC + 8)
+
+---
+name:            print_program_counter
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x30000000), %bb.2(0x50000000)
+    liveins: $r3
+    renamable $cr0 = CMPLWI killed renamable $r3, 0
+    BCC 76, killed renamable $cr0, %bb.1
+  bb.2:
+    renamable $r3 = LI 2
+    INLINEASM &".space 32760", 1
+    BLR implicit $lr, implicit $rm, implicit killed $r3
+  bb.1:
+    renamable $r3 = LI 1
+    INLINEASM &".space 32760", 1
+    BLR implicit $lr, implicit $rm, implicit killed $r3
+
+# CHECK-LABEL: .print_program_counter:
+# CHECK:         cmplwi
+# CHECK-NEXT:    bne    {{[0-9]}}, $+8
+

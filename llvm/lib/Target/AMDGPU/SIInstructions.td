@@ -848,20 +848,29 @@ def : GCNPat <
 // VOP2 Patterns
 //===----------------------------------------------------------------------===//
 
-multiclass FMADPat <ValueType vt, Instruction inst> {
-  def : GCNPat <
-    (vt (fmad (VOP3NoMods vt:$src0),
-              (VOP3NoMods vt:$src1),
-              (VOP3NoMods vt:$src2))),
+// TODO: Check only no src2 mods?
+class FMADPat <ValueType vt, Instruction inst, SDPatternOperator node>
+  : GCNPat <(vt (node (vt (VOP3NoMods vt:$src0)),
+                      (vt (VOP3NoMods vt:$src1)),
+                      (vt (VOP3NoMods vt:$src2)))),
     (inst SRCMODS.NONE, $src0, SRCMODS.NONE, $src1,
           SRCMODS.NONE, $src2, DSTCLAMP.NONE, DSTOMOD.NONE)
-  >;
+>;
+
+
+// Prefer mac form when there are no modifiers.
+let AddedComplexity = 9 in {
+def : FMADPat <f32, V_MAC_F32_e64, fmad>;
+def : FMADPat <f32, V_MAC_F32_e64, AMDGPUfmad_ftz>;
+
+let SubtargetPredicate = Has16BitInsts in {
+def : FMADPat <f16, V_MAC_F16_e64, fmad>;
+def : FMADPat <f16, V_MAC_F16_e64, AMDGPUfmad_ftz>;
 }
 
-defm : FMADPat <f16, V_MAC_F16_e64>;
-defm : FMADPat <f32, V_MAC_F32_e64>;
+}
 
-class FMADModsPat<Instruction inst, SDPatternOperator mad_opr, ValueType Ty>
+class FMADModsPat<ValueType Ty, Instruction inst, SDPatternOperator mad_opr>
   : GCNPat<
   (Ty (mad_opr (Ty (VOP3Mods Ty:$src0, i32:$src0_mod)),
                (Ty (VOP3Mods Ty:$src1, i32:$src1_mod)),
@@ -870,9 +879,8 @@ class FMADModsPat<Instruction inst, SDPatternOperator mad_opr, ValueType Ty>
   $src2_mod, $src2, DSTCLAMP.NONE, DSTOMOD.NONE)
 >;
 
-// FIXME: This should select to V_MAC_F32
-def : FMADModsPat<V_MAD_F32, AMDGPUfmad_ftz, f32>;
-def : FMADModsPat<V_MAD_F16, AMDGPUfmad_ftz, f16> {
+def : FMADModsPat<f32, V_MAD_F32, AMDGPUfmad_ftz>;
+def : FMADModsPat<f16, V_MAD_F16, AMDGPUfmad_ftz> {
   let SubtargetPredicate = Has16BitInsts;
 }
 
@@ -1476,6 +1484,7 @@ def : UMad24Pat<V_MAD_U32_U24, 1>;
 
 // FIXME: This should only be done for VALU inputs
 defm : BFIPatterns <V_BFI_B32, S_MOV_B32, SReg_64>;
+def : FSHRPattern <V_ALIGNBIT_B32>;
 def : ROTRPattern <V_ALIGNBIT_B32>;
 
 def : GCNPat<(i32 (trunc (srl i64:$src0, (and i32:$src1, (i32 31))))),

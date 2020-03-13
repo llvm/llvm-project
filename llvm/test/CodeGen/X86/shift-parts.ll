@@ -10,15 +10,14 @@ define i32 @int87(i32 %uint64p_8, i1 %cond) nounwind {
 ; CHECK-LABEL: int87:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq g_144+{{.*}}(%rip), %rax
-; CHECK-NEXT:    movq g_144+{{.*}}(%rip), %rdx
-; CHECK-NEXT:    movzbl %sil, %ecx
-; CHECK-NEXT:    shll $6, %ecx
+; CHECK-NEXT:    movq g_144+{{.*}}(%rip), %rcx
+; CHECK-NEXT:    movzbl %sil, %edx
+; CHECK-NEXT:    shll $6, %edx
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB0_1: # %for.cond
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    movq %rdx, %rsi
-; CHECK-NEXT:    shrdq %cl, %rax, %rsi
-; CHECK-NEXT:    testb $64, %cl
+; CHECK-NEXT:    testb $64, %dl
+; CHECK-NEXT:    movq %rcx, %rsi
 ; CHECK-NEXT:    cmovneq %rax, %rsi
 ; CHECK-NEXT:    orl $0, %esi
 ; CHECK-NEXT:    je .LBB0_1

@@ -1,6 +1,7 @@
 // RUN: mlir-tblgen -gen-op-decls -I %S/../../include %s | FileCheck --dump-input-on-failure %s
 
 include "mlir/IR/OpBase.td"
+include "mlir/Interfaces/SideEffects.td"
 
 def Test_Dialect : Dialect {
   let name = "test";
@@ -9,9 +10,9 @@ def Test_Dialect : Dialect {
 class NS_Op<string mnemonic, list<OpTrait> traits> :
     Op<Test_Dialect, mnemonic, traits>;
 
-// NoSideEffect trait is included twice to ensure it gets uniqued during
+// IsolatedFromAbove trait is included twice to ensure it gets uniqued during
 // emission.
-def NS_AOp : NS_Op<"a_op", [NoSideEffect, NoSideEffect]> {
+def NS_AOp : NS_Op<"a_op", [IsolatedFromAbove, IsolatedFromAbove]> {
   let arguments = (ins
     I32:$a,
     Variadic<F32>:$b,
@@ -54,7 +55,8 @@ def NS_AOp : NS_Op<"a_op", [NoSideEffect, NoSideEffect]> {
 // CHECK:   ArrayRef<Value> tblgen_operands;
 // CHECK: };
 
-// CHECK: class AOp : public Op<AOp, OpTrait::AtLeastNResults<1>::Impl, OpTrait::ZeroSuccessor, OpTrait::HasNoSideEffect, OpTrait::AtLeastNOperands<1>::Impl
+// CHECK: class AOp : public Op<AOp, OpTrait::AtLeastNResults<1>::Impl, OpTrait::ZeroSuccessor, OpTrait::AtLeastNOperands<1>::Impl, OpTrait::IsIsolatedFromAbove
+// CHECK-NOT: OpTrait::IsIsolatedFromAbove
 // CHECK: public:
 // CHECK:   using Op::Op;
 // CHECK:   using OperandAdaptor = AOpOperandAdaptor;

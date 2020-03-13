@@ -29,6 +29,7 @@ def MIMFMARead  : SchedRead;
 
 // Vector ALU instructions
 def Write32Bit         : SchedWrite;
+def WriteFloatCvt      : SchedWrite;
 def WriteQuarterRate32 : SchedWrite;
 
 def WriteFloatFMA   : SchedWrite;
@@ -126,6 +127,7 @@ multiclass SICommonWriteRes {
 
   def : HWVALUWriteRes<Write32Bit,         1>;
   def : HWVALUWriteRes<Write64Bit,         2>;
+  def : HWVALUWriteRes<WriteFloatCvt,      4>;
   def : HWVALUWriteRes<WriteQuarterRate32, 4>;
   def : HWVALUWriteRes<Write2PassMAI,      2>;
   def : HWVALUWriteRes<Write8PassMAI,      8>;
@@ -185,6 +187,7 @@ let SchedModel = GFX10SpeedModel in {
 // The latency values are 1 / (operations / cycle).
 // Add 1 stall cycle for VGPR read.
 def : HWWriteRes<Write32Bit,         [HWVALU, HWRC],   5>;
+def : HWWriteRes<WriteFloatCvt,      [HWVALU, HWRC],   5>;
 def : HWWriteRes<Write64Bit,         [HWVALU, HWRC],   9>;
 def : HWWriteRes<WriteQuarterRate32, [HWVALU, HWRC],   17>;
 def : HWWriteRes<WriteFloatFMA,      [HWVALU, HWRC],   5>;

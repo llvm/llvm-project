@@ -18,7 +18,7 @@ void test() {
 // CHECK-NEXT:     `-OMPParallelDirective 0x{{.*}} <line:9:1, col:21>
 // CHECK-NEXT:       `-CapturedStmt 0x{{.*}} <line:10:3>
 // CHECK-NEXT:         `-CapturedDecl 0x{{.*}} <<invalid sloc>> <invalid sloc> {{(nothrow|imported <undeserialized declarations> nothrow)}}
-// CHECK-NEXT:           |-NullStmt 0x{{.*}} <col:3> openmp_structured_block
+// CHECK-NEXT:           |-NullStmt 0x{{.*}} <col:3>
 // CHECK-NEXT:           |-ImplicitParamDecl 0x{{.*}} <line:9:1> col:1 {{(implicit|imported implicit)}} .global_tid. 'const int *const __restrict'
 // CHECK-NEXT:           |-ImplicitParamDecl 0x{{.*}} <col:1> col:1 {{(implicit|imported implicit)}} .bound_tid. 'const int *const __restrict'
 // CHECK-NEXT:           `-ImplicitParamDecl 0x{{.*}} <col:1> col:1 {{(implicit|imported implicit)}} __context '(anonymous struct at {{.*}}stmt-openmp_structured_block-bit.cpp:9:1) *const __restrict'

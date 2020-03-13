@@ -129,6 +129,11 @@ public:
                                               void *other_opaque_decl_ctx) = 0;
 
   // Tests
+#ifndef NDEBUG
+  /// Verify the integrity of the type to catch CompilerTypes that mix
+  /// and match invalid TypeSystem/Opaque type pairs.
+  virtual bool Verify(lldb::opaque_compiler_type_t type) = 0;
+#endif
 
   virtual bool IsArrayType(lldb::opaque_compiler_type_t type,
                            CompilerType *element_type, uint64_t *size,

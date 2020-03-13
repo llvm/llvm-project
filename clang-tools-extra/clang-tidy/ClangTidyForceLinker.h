@@ -45,6 +45,11 @@ extern volatile int LLVMModuleAnchorSource;
 static int LLVM_ATTRIBUTE_UNUSED LLVMModuleAnchorDestination =
     LLVMModuleAnchorSource;
 
+// This anchor is used to force the linker to link the LLVMLibcModule.
+extern volatile int LLVMLibcModuleAnchorSource;
+static int LLVM_ATTRIBUTE_UNUSED LLVMLibcModuleAnchorDestination =
+    LLVMLibcModuleAnchorSource;
+
 // This anchor is used to force the linker to link the CppCoreGuidelinesModule.
 extern volatile int CppCoreGuidelinesModuleAnchorSource;
 static int LLVM_ATTRIBUTE_UNUSED CppCoreGuidelinesModuleAnchorDestination =

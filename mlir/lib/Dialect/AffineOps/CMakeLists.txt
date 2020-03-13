@@ -14,5 +14,6 @@ target_link_libraries(MLIRAffineOps
   PUBLIC
   MLIREDSC
   MLIRIR
+  MLIRSideEffects
   MLIRStandardOps
   )

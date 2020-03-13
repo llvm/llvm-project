@@ -38,19 +38,21 @@ int llvm_test_dibuilder(void) {
 
   LLVMMetadataRef CompileUnit = LLVMDIBuilderCreateCompileUnit(
       DIB, LLVMDWARFSourceLanguageC, File, "llvm-c-test", 11, 0, NULL, 0, 0,
-      NULL, 0, LLVMDWARFEmissionFull, 0, 0, 0, "/", 1);
+      NULL, 0, LLVMDWARFEmissionFull, 0, 0, 0, "/", 1, "", 0);
 
   LLVMMetadataRef Module =
     LLVMDIBuilderCreateModule(DIB, CompileUnit,
                               "llvm-c-test", 11,
                               "", 0,
-                              "/test/include/llvm-c-test.h", 27);
+                              "/test/include/llvm-c-test.h", 27,
+                              "", 0);
 
   LLVMMetadataRef OtherModule =
     LLVMDIBuilderCreateModule(DIB, CompileUnit,
                               "llvm-c-test-import", 18,
                               "", 0,
-                              "/test/include/llvm-c-test-import.h", 34);
+                              "/test/include/llvm-c-test-import.h", 34,
+                              "", 0);
   LLVMMetadataRef ImportedModule =
     LLVMDIBuilderCreateImportedModuleFromModule(DIB, Module, OtherModule,
                                                 File, 42);

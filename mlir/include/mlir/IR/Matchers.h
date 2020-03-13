@@ -48,8 +48,13 @@ struct attr_value_binder {
   }
 };
 
-/// The matcher that matches a constant foldable operation that has no side
-/// effect, no operands and produces a single result.
+/// The matcher that matches operations that have the `ConstantLike` trait.
+struct constant_op_matcher {
+  bool match(Operation *op) { return op->hasTrait<OpTrait::ConstantLike>(); }
+};
+
+/// The matcher that matches operations that have the `ConstantLike` trait, and
+/// binds the folded attribute value.
 template <typename AttrT> struct constant_op_binder {
   AttrT *bind_value;
 
@@ -60,20 +65,19 @@ template <typename AttrT> struct constant_op_binder {
   constant_op_binder() : bind_value(nullptr) {}
 
   bool match(Operation *op) {
-    if (op->getNumOperands() > 0 || op->getNumResults() != 1)
-      return false;
-    if (!op->hasNoSideEffect())
+    if (!op->hasTrait<OpTrait::ConstantLike>())
       return false;
 
+    // Fold the constant to an attribute.
     SmallVector<OpFoldResult, 1> foldedOp;
-    if (succeeded(op->fold(/*operands=*/llvm::None, foldedOp))) {
-      if (auto attr = foldedOp.front().dyn_cast<Attribute>()) {
-        if (auto attrT = attr.dyn_cast<AttrT>()) {
-          if (bind_value)
-            *bind_value = attrT;
-          return true;
-        }
-      }
+    LogicalResult result = op->fold(/*operands=*/llvm::None, foldedOp);
+    (void)result;
+    assert(succeeded(result) && "expected constant to be foldable");
+
+    if (auto attr = foldedOp.front().get<Attribute>().dyn_cast<AttrT>()) {
+      if (bind_value)
+        *bind_value = attr;
+      return true;
     }
     return false;
   }
@@ -201,8 +205,8 @@ struct RecursivePatternMatcher {
 } // end namespace detail
 
 /// Matches a constant foldable operation.
-inline detail::constant_op_binder<Attribute> m_Constant() {
-  return detail::constant_op_binder<Attribute>();
+inline detail::constant_op_matcher m_Constant() {
+  return detail::constant_op_matcher();
 }
 
 /// Matches a value from a constant foldable operation and writes the value to

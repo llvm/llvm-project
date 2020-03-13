@@ -864,6 +864,53 @@ public:
   }
 };
 
+/// Progressive lowering of OuterProductOp.
+/// One:
+///   %x = vector.outerproduct %lhs, %rhs, %acc
+/// is replaced by:
+///   %z = zero-result
+///   %0 = vector.extract %lhs[0]
+///   %1 = vector.broadcast %0
+///   %2 = vector.extract %acc[0]
+///   %3 = vector.fma %1, %arg1, %2
+///   %4 = vector.insert %3, %z[0]
+///   ..
+///   %x = vector.insert %.., %..[N-1]
+///
+class OuterProductOpLowering : public OpRewritePattern<vector::OuterProductOp> {
+public:
+  using OpRewritePattern<vector::OuterProductOp>::OpRewritePattern;
+
+  PatternMatchResult matchAndRewrite(vector::OuterProductOp op,
+                                     PatternRewriter &rewriter) const override {
+    auto loc = op.getLoc();
+
+    VectorType rhsType = op.getOperandVectorTypeRHS();
+    VectorType resType = op.getVectorType();
+    Type eltType = resType.getElementType();
+    Value acc = (op.acc().empty()) ? nullptr : op.acc()[0];
+
+    Value zero = rewriter.create<ConstantOp>(loc, eltType,
+                                             rewriter.getZeroAttr(eltType));
+    Value result = rewriter.create<SplatOp>(loc, resType, zero);
+    for (int64_t d = 0, e = resType.getDimSize(0); d < e; ++d) {
+      auto pos = rewriter.getI64ArrayAttr(d);
+      Value x = rewriter.create<vector::ExtractOp>(loc, eltType, op.lhs(), pos);
+      Value b = rewriter.create<vector::BroadcastOp>(loc, rhsType, x);
+      Value m;
+      if (acc) {
+        Value z = rewriter.create<vector::ExtractOp>(loc, rhsType, acc, pos);
+        m = rewriter.create<vector::FMAOp>(loc, b, op.rhs(), z);
+      } else {
+        m = rewriter.create<MulFOp>(loc, b, op.rhs());
+      }
+      result = rewriter.create<vector::InsertOp>(loc, resType, m, result, pos);
+    }
+    rewriter.replaceOp(op, result);
+    return matchSuccess();
+  }
+};
+
 /// Progressive lowering of ContractionOp.
 /// One:
 ///   %x = vector.contract with at least one free/batch dimension
@@ -1077,6 +1124,7 @@ private:
   // Helper to construct an affine map with one index removed.
   static AffineMap adjustMap(AffineMap map, int64_t index,
                              PatternRewriter &rewriter) {
+    auto *ctx = rewriter.getContext();
     SmallVector<AffineExpr, 4> results;
     for (int64_t i = 0, e = map.getNumResults(); i < e; ++i) {
       int64_t idx = map.getResult(i).cast<AffineDimExpr>().getPosition();
@@ -1084,13 +1132,11 @@ private:
         continue;
       // Re-insert remaining indices, but renamed when occurring
       // after the removed index.
-      auto targetExpr =
-          getAffineDimExpr(idx < index ? idx : idx - 1, rewriter.getContext());
+      auto targetExpr = getAffineDimExpr(idx < index ? idx : idx - 1, ctx);
       results.push_back(targetExpr);
     }
-    // Since (...) -> () cannot be represented properly,
-    // we resort to an empty map when this situation happens.
-    return results.empty() ? AffineMap::get(rewriter.getContext())
+    // The (...) -> () affine map has its own factory method.
+    return results.empty() ? AffineMap::get(map.getNumDims() - 1, 0, ctx)
                            : AffineMap::get(map.getNumDims() - 1, 0, results);
   }
 
@@ -1257,9 +1303,7 @@ void mlir::vector::populateVectorSlicesLoweringPatterns(
 
 void mlir::vector::populateVectorContractLoweringPatterns(
     OwningRewritePatternList &patterns, MLIRContext *context) {
-  patterns.insert<ContractionOpLowering,
-                  // Shape 2d up/down casts are used as part of contraction
-                  // lowering.
-                  ShapeCastOp2DDownCastRewritePattern,
-                  ShapeCastOp2DUpCastRewritePattern>(context);
+  patterns.insert<ContractionOpLowering, ShapeCastOp2DDownCastRewritePattern,
+                  ShapeCastOp2DUpCastRewritePattern, OuterProductOpLowering>(
+      context);
 }

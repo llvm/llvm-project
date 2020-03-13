@@ -704,6 +704,7 @@ bool RuntimeDyldCheckerImpl::checkAllRulesInBuffer(StringRef RulePrefix,
   bool DidAllTestsPass = true;
   unsigned NumRules = 0;
 
+  std::string CheckExpr;
   const char *LineStart = MemBuf->getBufferStart();
 
   // Eat whitespace.
@@ -717,9 +718,18 @@ bool RuntimeDyldCheckerImpl::checkAllRulesInBuffer(StringRef RulePrefix,
       ++LineEnd;
 
     StringRef Line(LineStart, LineEnd - LineStart);
-    if (Line.startswith(RulePrefix)) {
-      DidAllTestsPass &= check(Line.substr(RulePrefix.size()));
-      ++NumRules;
+    if (Line.startswith(RulePrefix))
+      CheckExpr += Line.substr(RulePrefix.size()).str();
+
+    // If there's a check expr string...
+    if (!CheckExpr.empty()) {
+      // ... and it's complete then run it, otherwise remove the trailer '\'.
+      if (CheckExpr.back() != '\\') {
+        DidAllTestsPass &= check(CheckExpr);
+        CheckExpr.clear();
+        ++NumRules;
+      } else
+        CheckExpr.pop_back();
     }
 
     // Eat whitespace.

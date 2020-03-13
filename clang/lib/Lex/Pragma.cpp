@@ -42,6 +42,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Timer.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -1038,6 +1039,8 @@ struct PragmaDebugHandler : public PragmaHandler {
       if (!PP.getPreprocessorOpts().DisablePragmaDebugCrash)
         llvm_unreachable("This is an assertion!");
     } else if (II->isStr("crash")) {
+      llvm::Timer T("crash", "pragma crash");
+      llvm::TimeRegion R(&T);
       if (!PP.getPreprocessorOpts().DisablePragmaDebugCrash)
         LLVM_BUILTIN_TRAP;
     } else if (II->isStr("parser_crash")) {

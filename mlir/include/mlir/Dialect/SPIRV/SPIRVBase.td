@@ -96,12 +96,12 @@ class SPV_StrEnumAttr<string name, string description,
 // SPIR-V availability definitions
 //===----------------------------------------------------------------------===//
 
-def SPV_V_1_0 : I32EnumAttrCase<"V_1_0", 0>;
-def SPV_V_1_1 : I32EnumAttrCase<"V_1_1", 1>;
-def SPV_V_1_2 : I32EnumAttrCase<"V_1_2", 2>;
-def SPV_V_1_3 : I32EnumAttrCase<"V_1_3", 3>;
-def SPV_V_1_4 : I32EnumAttrCase<"V_1_4", 4>;
-def SPV_V_1_5 : I32EnumAttrCase<"V_1_5", 5>;
+def SPV_V_1_0 : I32EnumAttrCase<"V_1_0", 0, "v1.0">;
+def SPV_V_1_1 : I32EnumAttrCase<"V_1_1", 1, "v1.1">;
+def SPV_V_1_2 : I32EnumAttrCase<"V_1_2", 2, "v1.2">;
+def SPV_V_1_3 : I32EnumAttrCase<"V_1_3", 3, "v1.3">;
+def SPV_V_1_4 : I32EnumAttrCase<"V_1_4", 4, "v1.4">;
+def SPV_V_1_5 : I32EnumAttrCase<"V_1_5", 5, "v1.5">;
 
 def SPV_VersionAttr : SPV_I32EnumAttr<"Version", "valid SPIR-V version", [
     SPV_V_1_0, SPV_V_1_1, SPV_V_1_2, SPV_V_1_3, SPV_V_1_4, SPV_V_1_5]>;
@@ -148,23 +148,27 @@ class Extension<list<StrEnumAttrCase> extensions> : Availability {
     AND (`Extension::C`) AND (`Extension::D` OR `Extension::E`) is enabled.
   }];
 
-  // TODO(antiagainst): Using SmallVector<SmallVector<...>> is an anti-pattern.
+  // TODO(antiagainst): Returning SmallVector<ArrayRef<...>> is not recommended.
   // Find a better way for this.
-  let queryFnRetType = "::llvm::SmallVector<::llvm::SmallVector<"
-                          "::mlir::spirv::Extension, 1>, 1>";
+  let queryFnRetType = "::llvm::SmallVector<::llvm::ArrayRef<"
+                          "::mlir::spirv::Extension>, 1>";
   let queryFnName = "getExtensions";
 
   let mergeAction = !if(
       !empty(extensions), "", "$overall.emplace_back($instance)");
   let initializer = "{}";
-  let instanceType = "::llvm::SmallVector<::mlir::spirv::Extension, 1>";
+  let instanceType = "::llvm::ArrayRef<::mlir::spirv::Extension>";
 
-  // Compose all capabilities as an C++ initializer list
-  let instance = "std::initializer_list<::mlir::spirv::Extension>{" #
-                 StrJoin<!foreach(
-                   ext, extensions,
-                   "::mlir::spirv::Extension::" # ext.symbol)>.result #
-                 "}";
+  // Pack all extensions as a static array and get its reference.
+  let instancePreparation = !if(!empty(extensions), "",
+    "static const ::mlir::spirv::Extension exts[] = {" #
+    StrJoin<!foreach(ext, extensions,
+      "::mlir::spirv::Extension::" # ext.symbol)>.result #
+    "}; " #
+    // The following manual ArrayRef constructor call is to satisfy GCC 5.
+    "ArrayRef<::mlir::spirv::Extension> " #
+      "ref(exts, ::llvm::array_lengthof(exts));");
+  let instance = "ref";
 }
 
 class Capability<list<I32EnumAttrCase> capabilities> : Availability {
@@ -187,21 +191,25 @@ class Capability<list<I32EnumAttrCase> capabilities> : Availability {
     AND (`Capability::C`) AND (`Capability::D` OR `Capability::E`) is enabled.
   }];
 
-  let queryFnRetType = "::llvm::SmallVector<::llvm::SmallVector<"
-                          "::mlir::spirv::Capability, 1>, 1>";
+  let queryFnRetType = "::llvm::SmallVector<::llvm::ArrayRef<"
+                          "::mlir::spirv::Capability>, 1>";
   let queryFnName = "getCapabilities";
 
   let mergeAction = !if(
       !empty(capabilities), "", "$overall.emplace_back($instance)");
   let initializer = "{}";
-  let instanceType = "::llvm::SmallVector<::mlir::spirv::Capability, 1>";
+  let instanceType = "::llvm::ArrayRef<::mlir::spirv::Capability>";
 
-  // Compose all capabilities as an C++ initializer list
-  let instance = "std::initializer_list<::mlir::spirv::Capability>{" #
-                 StrJoin<!foreach(
-                   cap, capabilities,
-                   "::mlir::spirv::Capability::" # cap.symbol)>.result #
-                 "}";
+  // Pack all capabilities as a static array and get its reference.
+  let instancePreparation = !if(!empty(capabilities), "",
+    "static const ::mlir::spirv::Capability caps[] = {" #
+    StrJoin<!foreach(cap, capabilities,
+      "::mlir::spirv::Capability::" # cap.symbol)>.result #
+    "}; " #
+    // The following manual ArrayRef constructor call is to satisfy GCC 5.
+    "ArrayRef<::mlir::spirv::Capability> " #
+      "ref(caps, ::llvm::array_lengthof(caps));");
+  let instance = "ref";
 }
 
 // TODO(antiagainst): the following interfaces definitions are duplicating with
@@ -216,13 +224,13 @@ def QueryMaxVersionInterface : OpInterface<"QueryMaxVersionInterface"> {
 def QueryExtensionInterface : OpInterface<"QueryExtensionInterface"> {
   let methods = [InterfaceMethod<
     "",
-    "::llvm::SmallVector<::llvm::SmallVector<::mlir::spirv::Extension, 1>, 1>",
+    "::llvm::SmallVector<::llvm::ArrayRef<::mlir::spirv::Extension>, 1>",
     "getExtensions">];
 }
 def QueryCapabilityInterface : OpInterface<"QueryCapabilityInterface"> {
   let methods = [InterfaceMethod<
     "",
-    "::llvm::SmallVector<::llvm::SmallVector<::mlir::spirv::Capability, 1>, 1>",
+    "::llvm::SmallVector<::llvm::ArrayRef<::mlir::spirv::Capability>, 1>",
     "getCapabilities">];
 }
 
@@ -2942,6 +2950,18 @@ def SPV_SamplerUseAttr:
       [SPV_ISUI_SamplerUnknown, SPV_ISUI_NeedSampler, SPV_ISUI_NoSampler]>;
 
 //===----------------------------------------------------------------------===//
+// SPIR-V attribute definitions
+//===----------------------------------------------------------------------===//
+
+def SPV_VerCapExtAttr : Attr<
+    CPred<"$_self.isa<::mlir::spirv::VerCapExtAttr>()">,
+    "version-capability-extension attribute"> {
+  let storageType = "::mlir::spirv::VerCapExtAttr";
+  let returnType = "::mlir::spirv::VerCapExtAttr";
+  let convertFromStorage = "$_self";
+}
+
+//===----------------------------------------------------------------------===//
 // SPIR-V type definitions
 //===----------------------------------------------------------------------===//
 
@@ -2980,7 +3000,7 @@ def SPV_AnyStruct : Type<SPV_IsStructType, "any SPIR-V struct type">;
 
 def SPV_Numerical : AnyTypeOf<[SPV_Integer, SPV_Float]>;
 def SPV_Scalar : AnyTypeOf<[SPV_Numerical, SPV_Bool]>;
-def SPV_Aggregate : AnyTypeOf<[SPV_AnyArray, SPV_AnyStruct]>;
+def SPV_Aggregate : AnyTypeOf<[SPV_AnyArray, SPV_AnyRTArray, SPV_AnyStruct]>;
 def SPV_Composite :
     AnyTypeOf<[SPV_Vector, SPV_AnyArray, SPV_AnyRTArray, SPV_AnyStruct]>;
 def SPV_Type : AnyTypeOf<[

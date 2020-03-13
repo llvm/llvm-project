@@ -6635,8 +6635,9 @@ ExpectedStmt ASTNodeImporter::VisitStmtExpr(StmtExpr *E) {
   if (Err)
     return std::move(Err);
 
-  return new (Importer.getToContext()) StmtExpr(
-      ToSubStmt, ToType, ToLParenLoc, ToRParenLoc);
+  return new (Importer.getToContext())
+      StmtExpr(ToSubStmt, ToType, ToLParenLoc, ToRParenLoc,
+               E->getTemplateDepth());
 }
 
 ExpectedStmt ASTNodeImporter::VisitUnaryOperator(UnaryOperator *E) {
@@ -7908,6 +7909,18 @@ Expected<Decl *> ASTImporter::ImportImpl(Decl *FromD) {
 
 void ASTImporter::RegisterImportedDecl(Decl *FromD, Decl *ToD) {
   MapImported(FromD, ToD);
+}
+
+llvm::Expected<ExprWithCleanups::CleanupObject>
+ASTImporter::Import(ExprWithCleanups::CleanupObject From) {
+  if (auto *CLE = From.dyn_cast<CompoundLiteralExpr *>()) {
+    if (Expected<Expr *> R = Import(CLE))
+      return ExprWithCleanups::CleanupObject(cast<CompoundLiteralExpr>(*R));
+  }
+
+  // FIXME: Handle BlockDecl when we implement importing BlockExpr in
+  //        ASTNodeImporter.
+  return make_error<ImportError>(ImportError::UnsupportedConstruct);
 }
 
 Expected<QualType> ASTImporter::Import(QualType FromT) {

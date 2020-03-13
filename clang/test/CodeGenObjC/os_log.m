@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 %s -emit-llvm -o - -triple x86_64-darwin-apple -fobjc-arc -O2 -fno-experimental-new-pass-manager | FileCheck %s --check-prefixes=CHECK,CHECK-LEGACY
 // RUN: %clang_cc1 %s -emit-llvm -o - -triple x86_64-darwin-apple -fobjc-arc -O2 -fexperimental-new-pass-manager | FileCheck %s --check-prefixes=CHECK,CHECK-NEWPM
 // RUN: %clang_cc1 %s -emit-llvm -o - -triple x86_64-darwin-apple -fobjc-arc -O0 | FileCheck %s -check-prefix=CHECK-O0
+// RUN: %clang_cc1 %s -emit-llvm -o - -triple x86_64-darwin-apple -O2 -disable-llvm-passes | FileCheck %s -check-prefix=CHECK-MRR
 
 // Make sure we emit clang.arc.use before calling objc_release as part of the
 // cleanup. This way we make sure the object will not be released until the
@@ -136,6 +137,9 @@ void os_log_pack_send(void *);
 // CHECK-O0: %[[V13:.*]] = bitcast %{{.*}}** %[[OS_LOG_ARG]] to i8**
 // CHECK-O0: call void @llvm.objc.storeStrong(i8** %[[V13]], i8* null)
 // CHECK-O0: call void @llvm.objc.storeStrong(i8** %[[A_ADDR]], i8* null)
+
+// CHECK-MRR: define void @test_builtin_os_log2(
+// CHECK-MRR-NOT: call {{.*}} @llvm.objc
 
 void test_builtin_os_log2(void *buf, id a) {
   __builtin_os_log_format(buf, "capabilities: %@ %@", GenString(), a);

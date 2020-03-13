@@ -250,8 +250,15 @@ unsigned CodeViewDebug::maybeRecordFile(const DIFile *F) {
       ChecksumAsBytes = ArrayRef<uint8_t>(
           reinterpret_cast<const uint8_t *>(CKMem), Checksum.size());
       switch (F->getChecksum()->Kind) {
-      case DIFile::CSK_MD5:  CSKind = FileChecksumKind::MD5; break;
-      case DIFile::CSK_SHA1: CSKind = FileChecksumKind::SHA1; break;
+      case DIFile::CSK_MD5:
+        CSKind = FileChecksumKind::MD5;
+        break;
+      case DIFile::CSK_SHA1:
+        CSKind = FileChecksumKind::SHA1;
+        break;
+      case DIFile::CSK_SHA256:
+        CSKind = FileChecksumKind::SHA256;
+        break;
       }
     }
     bool Success = OS.EmitCVFileDirective(NextId, FullPath, ChecksumAsBytes,

@@ -4,7 +4,7 @@
 // spv._address_of
 //===----------------------------------------------------------------------===//
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
   spv.globalVariable @var1 : !spv.ptr<!spv.struct<f32, !spv.array<4xf32>>, Input>
   spv.func @access_chain() -> () "None" {
     %0 = spv.constant 1: i32
@@ -28,7 +28,7 @@ func @address_of() -> () {
 
 // -----
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
   spv.globalVariable @var1 : !spv.ptr<!spv.struct<f32, !spv.array<4xf32>>, Input>
   spv.func @foo() -> () "None" {
     // expected-error @+1 {{expected spv.globalVariable symbol}}
@@ -38,7 +38,7 @@ spv.module "Logical" "GLSL450" {
 
 // -----
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
   spv.globalVariable @var1 : !spv.ptr<!spv.struct<f32, !spv.array<4xf32>>, Input>
   spv.func @foo() -> () "None" {
     // expected-error @+1 {{result type mismatch with the referenced global variable's type}}
@@ -135,7 +135,7 @@ func @value_result_num_elements_mismatch() -> () {
 // spv.EntryPoint
 //===----------------------------------------------------------------------===//
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
    spv.func @do_nothing() -> () "None" {
      spv.Return
    }
@@ -143,7 +143,7 @@ spv.module "Logical" "GLSL450" {
    spv.EntryPoint "GLCompute" @do_nothing
 }
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
    spv.globalVariable @var2 : !spv.ptr<f32, Input>
    spv.globalVariable @var3 : !spv.ptr<f32, Output>
    spv.func @do_something(%arg0 : !spv.ptr<f32, Input>, %arg1 : !spv.ptr<f32, Output>) -> () "None" {
@@ -157,7 +157,7 @@ spv.module "Logical" "GLSL450" {
 
 // -----
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
    spv.func @do_nothing() -> () "None" {
      spv.Return
    }
@@ -167,7 +167,7 @@ spv.module "Logical" "GLSL450" {
 
 // -----
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
    spv.func @do_nothing() -> () "None" {
      spv.Return
    }
@@ -182,7 +182,7 @@ spv.module "Logical" "GLSL450" {
 
 // -----
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
    spv.func @do_nothing() -> () "None" {
      // expected-error @+1 {{op must appear in a module-like op's block}}
      spv.EntryPoint "GLCompute" @do_something
@@ -191,7 +191,7 @@ spv.module "Logical" "GLSL450" {
 
 // -----
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
    spv.func @do_nothing() -> () "None" {
      spv.Return
    }
@@ -202,12 +202,12 @@ spv.module "Logical" "GLSL450" {
 
 // -----
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
    spv.func @do_nothing() -> () "None" {
      spv.Return
    }
    spv.EntryPoint "GLCompute" @do_nothing
-   // expected-error @+1 {{custom op 'spv.EntryPoint' invalid execution_model attribute specification: "ContractionOff"}}
+   // expected-error @+1 {{'spv.EntryPoint' invalid execution_model attribute specification: "ContractionOff"}}
    spv.EntryPoint "ContractionOff" @do_nothing
 }
 
@@ -250,7 +250,7 @@ spv.func @cannot_have_variadic_arguments(%arg: i32, ...) "None"
 // -----
 
 // Nested function
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
   spv.func @outer_func() -> () "None" {
     // expected-error @+1 {{must appear in a module-like op's block}}
     spv.func @inner_func() -> () "None" {
@@ -266,13 +266,13 @@ spv.module "Logical" "GLSL450" {
 // spv.globalVariable
 //===----------------------------------------------------------------------===//
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
   // CHECK: spv.globalVariable @var0 : !spv.ptr<f32, Input>
   spv.globalVariable @var0 : !spv.ptr<f32, Input>
 }
 
 // TODO: Fix test case after initialization with normal constant is addressed
-// spv.module "Logical" "GLSL450" {
+// spv.module Logical GLSL450 {
 //   %0 = spv.constant 4.0 : f32
 //   // CHECK1: spv.Variable init(%0) : !spv.ptr<f32, Private>
 //   spv.globalVariable @var1 init(%0) : !spv.ptr<f32, Private>
@@ -280,7 +280,7 @@ spv.module "Logical" "GLSL450" {
 
 // -----
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
   spv.specConstant @sc = 4.0 : f32
   // CHECK: spv.globalVariable @var initializer(@sc) : !spv.ptr<f32, Private>
   spv.globalVariable @var initializer(@sc) : !spv.ptr<f32, Private>
@@ -295,13 +295,13 @@ spv.globalVariable @var initializer(@sc) : !spv.ptr<f32, Private>
 
 // -----
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
   // CHECK: spv.globalVariable @var0 bind(1, 2) : !spv.ptr<f32, Uniform>
   spv.globalVariable @var0 bind(1, 2) : !spv.ptr<f32, Uniform>
 }
 
 // TODO: Fix test case after initialization with constant is addressed
-// spv.module "Logical" "GLSL450" {
+// spv.module Logical GLSL450 {
 //   %0 = spv.constant 4.0 : f32
 //   // CHECK1: spv.globalVariable @var1 initializer(%0) {binding = 5 : i32} : !spv.ptr<f32, Private>
 //   spv.globalVariable @var1 initializer(%0) {binding = 5 : i32} : !spv.ptr<f32, Private>
@@ -309,7 +309,7 @@ spv.module "Logical" "GLSL450" {
 
 // -----
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
   // CHECK: spv.globalVariable @var1 built_in("GlobalInvocationID") : !spv.ptr<vector<3xi32>, Input>
   spv.globalVariable @var1 built_in("GlobalInvocationID") : !spv.ptr<vector<3xi32>, Input>
   // CHECK: spv.globalVariable @var2 built_in("GlobalInvocationID") : !spv.ptr<vector<3xi32>, Input>
@@ -326,28 +326,28 @@ module {
 
 // -----
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
   // expected-error @+1 {{expected spv.ptr type}}
   spv.globalVariable @var0 : f32
 }
 
 // -----
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
   // expected-error @+1 {{op initializer must be result of a spv.specConstant or spv.globalVariable op}}
   spv.globalVariable @var0 initializer(@var1) : !spv.ptr<f32, Private>
 }
 
 // -----
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
   // expected-error @+1 {{storage class cannot be 'Generic'}}
   spv.globalVariable @var0 : !spv.ptr<f32, Generic>
 }
 
 // -----
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
   spv.func @foo() "None" {
     // expected-error @+1 {{op must appear in a module-like op's block}}
     spv.globalVariable @var0 : !spv.ptr<f32, Input>
@@ -362,25 +362,33 @@ spv.module "Logical" "GLSL450" {
 //===----------------------------------------------------------------------===//
 
 // Module without capability and extension
-// CHECK: spv.module "Logical" "GLSL450"
-spv.module "Logical" "GLSL450" { }
+// CHECK: spv.module Logical GLSL450
+spv.module Logical GLSL450 { }
 
-// Module with capability and extension
-// CHECK: attributes {capability = ["Shader"], extension = ["SPV_KHR_16bit_storage"]}
-spv.module "Logical" "GLSL450" { } attributes {
-  capability = ["Shader"],
-  extension = ["SPV_KHR_16bit_storage"]
-}
+
+// Module with (version, capabilities, extensions) triple
+// CHECK: spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], [SPV_KHR_16bit_storage]>
+spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], [SPV_KHR_16bit_storage]> { }
+
+// Module with additional attributes
+// CHECK: spv.module Logical GLSL450 attributes {foo = "bar"}
+spv.module Logical GLSL450 attributes {foo = "bar"} { }
+
+// Module with VCE triple and additional attributes
+// CHECK: spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], [SPV_KHR_16bit_storage]> attributes {foo = "bar"}
+spv.module Logical GLSL450
+  requires #spv.vce<v1.0, [Shader], [SPV_KHR_16bit_storage]>
+  attributes {foo = "bar"} { }
 
 // Module with explicit spv._module_end
 // CHECK: spv.module
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
   spv._module_end
 }
 
 // Module with function
 // CHECK: spv.module
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
   spv.func @do_nothing() -> () "None" {
     spv.Return
   }
@@ -389,32 +397,32 @@ spv.module "Logical" "GLSL450" {
 // -----
 
 // Missing addressing model
-// expected-error@+1 {{custom op 'spv.module' expected addressing_model attribute specified as string}}
+// expected-error@+1 {{'spv.module' expected valid keyword}}
 spv.module { }
 
 // -----
 
 // Wrong addressing model
-// expected-error@+1 {{custom op 'spv.module' invalid addressing_model attribute specification: "Physical"}}
-spv.module "Physical" { }
+// expected-error@+1 {{'spv.module' invalid addressing_model attribute specification: Physical}}
+spv.module Physical { }
 
 // -----
 
 // Missing memory model
-// expected-error@+1 {{custom op 'spv.module' expected memory_model attribute specified as string}}
-spv.module "Logical" { }
+// expected-error@+1 {{'spv.module' expected valid keyword}}
+spv.module Logical { }
 
 // -----
 
 // Wrong memory model
-// expected-error@+1 {{custom op 'spv.module' invalid memory_model attribute specification: "Bla"}}
-spv.module "Logical" "Bla" { }
+// expected-error@+1 {{'spv.module' invalid memory_model attribute specification: Bla}}
+spv.module Logical Bla { }
 
 // -----
 
 // Module with multiple blocks
 // expected-error @+1 {{expects region #0 to have 0 or 1 blocks}}
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
 ^first:
   spv.Return
 ^second:
@@ -433,7 +441,7 @@ spv.module "Logical" "GLSL450" {
 // -----
 
 // Use non SPIR-V op inside module
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
   // expected-error @+1 {{'spv.module' can only contain spv.* ops}}
   "dialect.op"() : () -> ()
 }
@@ -441,7 +449,7 @@ spv.module "Logical" "GLSL450" {
 // -----
 
 // Use non SPIR-V op inside function
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
   spv.func @do_nothing() -> () "None" {
     // expected-error @+1 {{functions in 'spv.module' can only contain spv.* ops}}
     "dialect.op"() : () -> ()
@@ -451,25 +459,9 @@ spv.module "Logical" "GLSL450" {
 // -----
 
 // Use external function
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
   // expected-error @+1 {{'spv.module' cannot contain external functions}}
   spv.func @extern() -> () "None"
-}
-
-// -----
-
-// expected-error @+1 {{uses unknown capability: MyAwesomeCapability}}
-spv.module "Logical" "GLSL450" {
-} attributes {
-  capabilities = ["MyAwesomeCapability"]
-}
-
-// -----
-
-// expected-error @+1 {{uses unknown extension: MyAwesomeExtension}}
-spv.module "Logical" "GLSL450" {
-} attributes {
-  extensions = ["MyAwesomeExtension"]
 }
 
 // -----
@@ -489,7 +481,7 @@ func @module_end_not_in_module() -> () {
 // spv._reference_of
 //===----------------------------------------------------------------------===//
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
   spv.specConstant @sc1 = false
   spv.specConstant @sc2 = 42 : i64
   spv.specConstant @sc3 = 1.5 : f32
@@ -532,7 +524,7 @@ func @reference_of() {
 
 // -----
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
   spv.func @foo() -> () "None" {
     // expected-error @+1 {{expected spv.specConstant symbol}}
     %0 = spv._reference_of @sc : i32
@@ -542,7 +534,7 @@ spv.module "Logical" "GLSL450" {
 
 // -----
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
   spv.specConstant @sc = 42 : i32
   spv.func @foo() -> () "None" {
     // expected-error @+1 {{result type mismatch with the referenced specialization constant's type}}
@@ -557,7 +549,7 @@ spv.module "Logical" "GLSL450" {
 // spv.specConstant
 //===----------------------------------------------------------------------===//
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
   // CHECK: spv.specConstant @sc1 = false
   spv.specConstant @sc1 = false
   // CHECK: spv.specConstant @sc2 spec_id(5) = 42 : i64
@@ -568,21 +560,21 @@ spv.module "Logical" "GLSL450" {
 
 // -----
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
   // expected-error @+1 {{SpecId cannot be negative}}
   spv.specConstant @sc2 spec_id(-5) = 42 : i64
 }
 
 // -----
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
   // expected-error @+1 {{default value bitwidth disallowed}}
   spv.specConstant @sc = 15 : i4
 }
 
 // -----
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
   // expected-error @+1 {{default value can only be a bool, integer, or float scalar}}
   spv.specConstant @sc = dense<[2, 3]> : vector<2xi32>
 }

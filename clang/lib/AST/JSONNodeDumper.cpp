@@ -1334,7 +1334,16 @@ void JSONNodeDumper::VisitExprWithCleanups(const ExprWithCleanups *EWC) {
   if (EWC->getNumObjects()) {
     JOS.attributeArray("cleanups", [this, EWC] {
       for (const ExprWithCleanups::CleanupObject &CO : EWC->getObjects())
-        JOS.value(createBareDeclRef(CO));
+        if (auto *BD = CO.dyn_cast<BlockDecl *>()) {
+          JOS.value(createBareDeclRef(BD));
+        } else if (auto *CLE = CO.dyn_cast<CompoundLiteralExpr *>()) {
+          llvm::json::Object Obj;
+          Obj["id"] = createPointerRepresentation(CLE);
+          Obj["kind"] = CLE->getStmtClassName();
+          JOS.value(std::move(Obj));
+        } else {
+          llvm_unreachable("unexpected cleanup object type");
+        }
     });
   }
 }

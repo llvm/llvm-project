@@ -24,6 +24,7 @@ class AffineForOp;
 class FuncOp;
 class OpBuilder;
 class Value;
+struct MemRefRegion;
 
 namespace loop {
 class ForOp;
@@ -184,6 +185,34 @@ uint64_t affineDataCopyGenerate(AffineForOp forOp,
                                 const AffineCopyOptions &copyOptions,
                                 Optional<Value> filterMemRef,
                                 DenseSet<Operation *> &copyNests);
+
+/// Result for calling generateCopyForMemRegion.
+struct CopyGenerateResult {
+  // Number of bytes used by alloc.
+  uint64_t sizeInBytes;
+
+  // The newly created buffer allocation.
+  Operation *alloc;
+
+  // Generated loop nest for copying data between the allocated buffer and the
+  // original memref.
+  Operation *copyNest;
+};
+
+/// generateCopyForMemRegion is similar to affineDataCopyGenerate, but works
+/// with a single memref region. `memrefRegion` is supposed to contain analysis
+/// information within analyzedOp. The generated prologue and epilogue always
+/// surround `analyzedOp`.
+///
+/// Note that `analyzedOp` is a single op for API convenience, and the
+/// [begin, end) version can be added as needed.
+///
+/// Also note that certain options in `copyOptions` aren't looked at anymore,
+/// like slowMemorySpace.
+LogicalResult generateCopyForMemRegion(const MemRefRegion &memrefRegion,
+                                       Operation *analyzedOp,
+                                       const AffineCopyOptions &copyOptions,
+                                       CopyGenerateResult &result);
 
 /// Tile a nest of standard for loops rooted at `rootForOp` by finding such
 /// parametric tile sizes that the outer loops have a fixed number of iterations

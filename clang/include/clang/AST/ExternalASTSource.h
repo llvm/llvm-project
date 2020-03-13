@@ -17,7 +17,6 @@
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/Basic/LLVM.h"
-#include "clang/Basic/Module.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
@@ -39,6 +38,7 @@ namespace clang {
 
 class ASTConsumer;
 class ASTContext;
+class ASTSourceDescriptor;
 class CXXBaseSpecifier;
 class CXXCtorInitializer;
 class CXXRecordDecl;
@@ -164,31 +164,6 @@ public:
   /// Determine whether D comes from a PCH which was built with a corresponding
   /// object file.
   virtual bool DeclIsFromPCHWithObjectFile(const Decl *D) { return false; }
-
-  /// Abstracts clang modules and precompiled header files and holds
-  /// everything needed to generate debug info for an imported module
-  /// or PCH.
-  class ASTSourceDescriptor {
-    StringRef PCHModuleName;
-    StringRef Path;
-    StringRef ASTFile;
-    ASTFileSignature Signature;
-    const Module *ClangModule = nullptr;
-
-  public:
-    ASTSourceDescriptor() = default;
-    ASTSourceDescriptor(StringRef Name, StringRef Path, StringRef ASTFile,
-                        ASTFileSignature Signature)
-        : PCHModuleName(std::move(Name)), Path(std::move(Path)),
-          ASTFile(std::move(ASTFile)), Signature(Signature) {}
-    ASTSourceDescriptor(const Module &M);
-
-    std::string getModuleName() const;
-    StringRef getPath() const { return Path; }
-    StringRef getASTFile() const { return ASTFile; }
-    ASTFileSignature getSignature() const { return Signature; }
-    const Module *getModuleOrNull() const { return ClangModule; }
-  };
 
   /// Return a descriptor for the corresponding module, if one exists.
   virtual llvm::Optional<ASTSourceDescriptor> getSourceDescriptor(unsigned ID);

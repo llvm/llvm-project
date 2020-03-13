@@ -14,6 +14,7 @@
 #define ROCDLIR_OPS
 
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
+include "mlir/Interfaces/SideEffects.td"
 
 //===----------------------------------------------------------------------===//
 // ROCDL dialect definitions

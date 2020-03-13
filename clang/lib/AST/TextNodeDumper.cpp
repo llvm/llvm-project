@@ -15,6 +15,7 @@
 #include "clang/AST/DeclOpenMP.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/LocInfoType.h"
+#include "clang/Basic/Module.h"
 #include "clang/Basic/SourceManager.h"
 
 using namespace clang;
@@ -121,9 +122,6 @@ void TextNodeDumper::Visit(const Stmt *Node) {
   }
   dumpPointer(Node);
   dumpSourceRange(Node->getSourceRange());
-
-  if (Node->isOMPStructuredBlock())
-    OS << " openmp_structured_block";
 
   if (const auto *E = dyn_cast<Expr>(Node)) {
     dumpType(E->getType());
@@ -446,6 +444,23 @@ void TextNodeDumper::dumpAccessSpecifier(AccessSpecifier AS) {
     OS << "private";
     break;
   }
+}
+
+void TextNodeDumper::dumpCleanupObject(
+    const ExprWithCleanups::CleanupObject &C) {
+  if (auto *BD = C.dyn_cast<BlockDecl *>())
+    dumpDeclRef(BD, "cleanup");
+  else if (auto *CLE = C.dyn_cast<CompoundLiteralExpr *>())
+    AddChild([=] {
+      OS << "cleanup ";
+      {
+        ColorScope Color(OS, ShowColors, StmtColor);
+        OS << CLE->getStmtClassName();
+      }
+      dumpPointer(CLE);
+    });
+  else
+    llvm_unreachable("unexpected cleanup type");
 }
 
 void TextNodeDumper::dumpDeclRef(const Decl *D, StringRef Label) {
@@ -950,7 +965,7 @@ void TextNodeDumper::VisitMaterializeTemporaryExpr(
 
 void TextNodeDumper::VisitExprWithCleanups(const ExprWithCleanups *Node) {
   for (unsigned i = 0, e = Node->getNumObjects(); i != e; ++i)
-    dumpDeclRef(Node->getObject(i), "cleanup");
+    dumpCleanupObject(Node->getObject(i));
 }
 
 void TextNodeDumper::VisitSizeOfPackExpr(const SizeOfPackExpr *Node) {
