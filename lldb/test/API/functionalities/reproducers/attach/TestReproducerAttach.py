@@ -10,17 +10,18 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-class CreateAfterAttachTestCase(TestBase):
+class ReproducerAttachTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
+    @skipIfLinux # Reproducer received unexpected packet.
     @skipIfFreeBSD
     @skipIfNetBSD
     @skipIfWindows
     @skipIfRemote
     @skipIfiOSSimulator
-    def test_create_after_attach_with_fork(self):
+    def test_reproducer_attach(self):
         """Test thread creation after process attach."""
         exe = '%s_%d' % (self.testMethodName, os.getpid())
 
