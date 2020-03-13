@@ -386,11 +386,6 @@ class DwarfDebug : public DebugHandlerBase {
   /// a monolithic sequence of string offsets.
   bool UseSegmentedStringOffsetsTable;
 
-  /// Enable production of call site parameters needed to print the debug entry
-  /// values. Useful for testing purposes when a debugger does not support the
-  /// feature yet.
-  bool EmitDebugEntryValues;
-
   /// Separated Dwarf Variables
   /// In general these will all be for bits that are left in the
   /// original object file, rather than things that are meant
@@ -711,10 +706,6 @@ public:
   /// monolithic string offsets table.
   bool useSegmentedStringOffsetsTable() const {
     return UseSegmentedStringOffsetsTable;
-  }
-
-  bool emitDebugEntryValues() const {
-    return EmitDebugEntryValues;
   }
 
   bool shareAcrossDWOCUs() const;
