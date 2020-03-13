@@ -1549,6 +1549,7 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
                        !args.hasArg(OPT_profile));
   config->integrityCheck =
       args.hasFlag(OPT_integritycheck, OPT_integritycheck_no, false);
+  config->cetCompat = args.hasFlag(OPT_cetcompat, OPT_cetcompat_no, false);
   config->nxCompat = args.hasFlag(OPT_nxcompat, OPT_nxcompat_no, true);
   for (auto *arg : args.filtered(OPT_swaprun))
     parseSwaprun(arg->getValue());

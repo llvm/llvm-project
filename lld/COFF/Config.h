@@ -211,6 +211,7 @@ struct Configuration {
   uint32_t functionPadMin = 0;
   bool dynamicBase = true;
   bool allowBind = true;
+  bool cetCompat = false;
   bool nxCompat = true;
   bool allowIsolation = true;
   bool terminalServerAware = true;
