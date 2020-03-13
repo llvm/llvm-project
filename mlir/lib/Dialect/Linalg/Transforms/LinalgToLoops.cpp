@@ -177,6 +177,51 @@ public:
 template <typename IndexedValueType>
 class LinalgScopedEmitter<IndexedValueType, ConvOp> {
 public:
+  /// Returns the input value of convOp. If the indices in `imIdx` is out of
+  /// boundrary, returns 0 instead.
+  static ValueHandle getConvOpInput(ConvOp convOp, IndexedValueType im,
+                                    ArrayRef<ValueHandle> imIdx) {
+    // TODO(ntv): add a level of indirection to linalg.generic.
+    if (!convOp.padding())
+      return im(imIdx);
+
+    ValueHandle zeroIndex = std_constant_index(0);
+    SmallVector<ValueHandle, 8> conds = {
+        std_constant_int(/*value=*/1, /*width=*/1)};
+    SmallVector<ValueHandle, 8> clampedImIdx;
+    for (auto iter : llvm::enumerate(imIdx)) {
+      int idx = iter.index();
+      auto dim = iter.value();
+      // Only need to iterate over the window dimensions.
+      if (idx == 0 || idx == static_cast<int>(imIdx.size()) - 1) {
+        clampedImIdx.push_back(dim);
+        continue;
+      }
+
+      using edsc::op::operator<;
+      using edsc::op::operator>=;
+      using edsc::op::operator||;
+      conds.push_back(conds.back() || (dim < zeroIndex));
+      ValueHandle bound = std_dim(convOp.input(), idx);
+      conds.push_back(conds.back() || (dim >= bound));
+
+      // When padding is involed, the indices will only be shifted to negative,
+      // so having a max op is enough.
+      auto *context = ScopedContext::getContext();
+      auto maxMap = AffineMap::get(/*dimCount=*/1, 0,
+                                   {getAffineDimExpr(/*position=*/0, context),
+                                    getAffineConstantExpr(0, context)});
+      clampedImIdx.push_back(
+          affine_max(dim.getType(), maxMap, ValueRange{dim}));
+    }
+
+    auto b = ScopedContext::getBuilder();
+    Type type = convOp.input().getType().cast<MemRefType>().getElementType();
+    ValueHandle zero = std_constant(type, b.getZeroAttr(type));
+    ValueHandle readInput = im(clampedImIdx);
+    return std_select(conds.back(), zero, readInput);
+  }
+
   static void emitScalarImplementation(ArrayRef<Value> allIvs, ConvOp convOp) {
     assert(convOp.hasBufferSemantics() &&
            "expected linalg op with buffer semantics");
@@ -192,8 +237,10 @@ public:
     SmallVector<ValueHandle, 8> oIdx(
         makeCanonicalAffineApplies(b, loc, maps[2], allIvs));
     IndexedValueType F(convOp.filter()), I(convOp.input()), O(convOp.output());
+
     // Emit scalar form.
-    O(oIdx) += F(fIdx) * I(imIdx);
+    ValueHandle paddedInput = getConvOpInput(convOp, I, imIdx);
+    O(oIdx) += F(fIdx) * paddedInput;
   }
 };
 

@@ -265,13 +265,18 @@ def ConvOp : LinalgStructured_Op<"conv", [NInputs<2>, NOutputs<1>]> {
     ```
   }];
 
-  // TODO(ntv) padding.
-  // Following the TF source of truth above, strides and dilations are integer
-  // attributes of the same rank as the number of window dimensions.
+  // Following the TF source of truth above, strides, dilations and padding are
+  // integer attributes of the same rank as the number of window dimensions.
+  // The padding attribute specifies the amount of zero padding to be applied to
+  // the base area, which is a n-d array of (low, high) padding. Each pair has
+  // the low padding as the first element and the high padding as the second
+  // element. Using padding is equivalent to inserting those same zero values
+  // into the input before doing the convolution.
   let arguments = (ins AnyStridedMemRef:$filter, AnyStridedMemRef:$input,
                    AnyStridedMemRef:$output,
                    OptionalAttr<I64ArrayAttr>:$strides,
-                   OptionalAttr<I64ArrayAttr>:$dilations);
+                   OptionalAttr<I64ArrayAttr>:$dilations,
+                   OptionalAttr<I64ElementsAttr>:$padding);
 
   let extraClassDeclaration = libraryCallName # [{
     // TODO(ntv) extend to support more than 1 dimensions and potentially
@@ -314,9 +319,17 @@ def ConvOp : LinalgStructured_Op<"conv", [NInputs<2>, NOutputs<1>]> {
         .cast<IntegerAttr>().getValue().getSExtValue();
     }
 
-    //   F(z0, ..., zN-1, q, k) * I(b, x0 + z0, ..., xN-1 + zN-1, q) ->
-    //     O(b, x0, ..., xN-1, k)
-    // for N equal to `nWindow`.
+    int64_t getLowPad(unsigned i) {
+      assert(i < getNumWindowLoops());
+      if (!padding().hasValue()) return 0;
+      return padding().getValue().getValue<int64_t>({i, 0});
+    }
+
+    //   F(z0, ..., zN-1, q, k) *
+    //     I(b, x0 + z0 - pad_low_0, ..., xN-1 + zN-1 - pad_low_N-1, q)
+    //   ->  O(b, x0, ..., xN-1, k)
+    // for N equal to `nWindow`. If there is no padding attirbute, it will be
+    // ignored.
     llvm::Optional<SmallVector<AffineMap, 8>> referenceIndexingMaps() {
       MLIRContext *context = getContext();
       auto nWin = getNumWindowLoops();
@@ -346,7 +359,9 @@ def ConvOp : LinalgStructured_Op<"conv", [NInputs<2>, NOutputs<1>]> {
         // filter[z[0], ..., z[N-1], q, k]
         AffineMap::get(idx, 0, concat(concat(zs, qs), ks)),
         // input[b,
-        //       x[0]*s[0] + d[0]*z[0], ..., x[N-1]*s[N-1] + d[N-1]*z[N-1],
+        //       x[0]*s[0] + d[0]*z[0] - pad_low[0],
+        //       ...
+        //       x[N-1]*s[N-1] + d[N-1]*z[N-1] - pad_low[N-1],
         //       q]
         AffineMap::get(idx, 0, concat(concat(bs, ws), qs)),
         // output[b, x[0], ..., x[N-1], k]
