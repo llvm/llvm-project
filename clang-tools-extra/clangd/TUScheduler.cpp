@@ -403,7 +403,6 @@ void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags) {
         std::tie(PrevInputs->CompileCommand, PrevInputs->Contents) ==
         std::tie(Inputs.CompileCommand, Inputs.Contents);
 
-    tooling::CompileCommand OldCommand = PrevInputs->CompileCommand;
     bool RanCallbackForPrevInputs = RanASTCallback;
     {
       std::lock_guard<std::mutex> Lock(Mutex);
@@ -445,8 +444,7 @@ void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags) {
         Inputs.ForceRebuild ? std::shared_ptr<const PreambleData>()
                             : getPossiblyStalePreamble();
     std::shared_ptr<const PreambleData> NewPreamble = buildPreamble(
-        FileName, *Invocation, OldPreamble, OldCommand, Inputs,
-        StorePreambleInMemory,
+        FileName, *Invocation, OldPreamble, Inputs, StorePreambleInMemory,
         [this, Version(Inputs.Version)](
             ASTContext &Ctx, std::shared_ptr<clang::Preprocessor> PP,
             const CanonicalIncludes &CanonIncludes) {
