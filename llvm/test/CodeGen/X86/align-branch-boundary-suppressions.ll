@@ -69,8 +69,12 @@ define void @patchpoint(i64 %a, i64 %b) {
 ; CHECK-NEXT:    .cfi_def_cfa_register %rbp
 ; CHECK-NEXT:    #noautopadding
 ; CHECK-NEXT:  .Ltmp2:
+; CHECK-NEXT:    .byte 102
+; CHECK-NEXT:    .byte 102
+; CHECK-NEXT:    .byte 102
+; CHECK-NEXT:    .byte 102
+; CHECK-NEXT:    .byte 102
 ; CHECK-NEXT:    nopw %cs:512(%rax,%rax)
-; CHECK-NEXT:    nopl 8(%rax,%rax)
 ; CHECK-NEXT:    #autopadding
 ; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    .cfi_def_cfa %rsp, 8
