@@ -175,6 +175,10 @@ StringRef getTargetEnvAttrName();
 TargetEnvAttr getDefaultTargetEnv(MLIRContext *context);
 
 /// Queries the target environment recursively from enclosing symbol table ops
+/// containing the given `op`.
+TargetEnvAttr lookupTargetEnv(Operation *op);
+
+/// Queries the target environment recursively from enclosing symbol table ops
 /// containing the given `op` or returns the default target environment as
 /// returned by getDefaultTargetEnv() if not provided.
 TargetEnvAttr lookupTargetEnvOrDefault(Operation *op);

@@ -294,19 +294,25 @@ spirv::TargetEnvAttr spirv::getDefaultTargetEnv(MLIRContext *context) {
                                    spirv::getDefaultResourceLimits(context));
 }
 
-spirv::TargetEnvAttr spirv::lookupTargetEnvOrDefault(Operation *op) {
-  Operation *symTable = op;
-  while (symTable) {
-    symTable = SymbolTable::getNearestSymbolTable(symTable);
-    if (!symTable)
+spirv::TargetEnvAttr spirv::lookupTargetEnv(Operation *op) {
+  while (op) {
+    op = SymbolTable::getNearestSymbolTable(op);
+    if (!op)
       break;
 
-    if (auto attr = symTable->getAttrOfType<spirv::TargetEnvAttr>(
+    if (auto attr = op->getAttrOfType<spirv::TargetEnvAttr>(
             spirv::getTargetEnvAttrName()))
       return attr;
 
-    symTable = symTable->getParentOp();
+    op = op->getParentOp();
   }
+
+  return {};
+}
+
+spirv::TargetEnvAttr spirv::lookupTargetEnvOrDefault(Operation *op) {
+  if (spirv::TargetEnvAttr attr = spirv::lookupTargetEnv(op))
+    return attr;
 
   return getDefaultTargetEnv(op->getContext());
 }
