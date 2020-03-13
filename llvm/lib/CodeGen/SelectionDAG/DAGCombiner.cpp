@@ -11916,20 +11916,33 @@ SDValue DAGCombiner::visitFSUBForFMACombine(SDNode *N) {
   };
 
   // fold (fsub (fmul x, y), z) -> (fma x, y, (fneg z))
-  if (isContractableFMUL(N0) && (Aggressive || N0->hasOneUse())) {
-    return DAG.getNode(PreferredFusedOpcode, SL, VT,
-                       N0.getOperand(0), N0.getOperand(1),
-                       DAG.getNode(ISD::FNEG, SL, VT, N1), Flags);
-  }
+  auto tryToFoldXYSubZ = [&](SDValue XY, SDValue Z) {
+    if (isContractableFMUL(XY) && (Aggressive || XY->hasOneUse())) {
+      return DAG.getNode(PreferredFusedOpcode, SL, VT, XY.getOperand(0),
+                         XY.getOperand(1), DAG.getNode(ISD::FNEG, SL, VT, Z),
+                         Flags);
+    }
+    return SDValue();
+  };
 
   // fold (fsub x, (fmul y, z)) -> (fma (fneg y), z, x)
   // Note: Commutes FSUB operands.
-  if (isContractableFMUL(N1) && (Aggressive || N1->hasOneUse())) {
-    return DAG.getNode(PreferredFusedOpcode, SL, VT,
-                       DAG.getNode(ISD::FNEG, SL, VT,
-                                   N1.getOperand(0)),
-                       N1.getOperand(1), N0, Flags);
-  }
+  auto tryToFoldXSubYZ = [&](SDValue X, SDValue YZ) {
+    if (isContractableFMUL(YZ) && (Aggressive || YZ->hasOneUse())) {
+      return DAG.getNode(PreferredFusedOpcode, SL, VT,
+                         DAG.getNode(ISD::FNEG, SL, VT, YZ.getOperand(0)),
+                         YZ.getOperand(1), X, Flags);
+    }
+    return SDValue();
+  };
+
+  // fold (fsub (fmul x, y), z) -> (fma x, y, (fneg z))
+  if (SDValue V = tryToFoldXYSubZ(N0, N1))
+    return V;
+
+  // fold (fsub x, (fmul y, z)) -> (fma (fneg y), z, x)
+  if (SDValue V = tryToFoldXSubYZ(N0, N1))
+    return V;
 
   // fold (fsub (fneg (fmul, x, y)), z) -> (fma (fneg x), y, (fneg z))
   if (N0.getOpcode() == ISD::FNEG && isContractableFMUL(N0.getOperand(0)) &&
