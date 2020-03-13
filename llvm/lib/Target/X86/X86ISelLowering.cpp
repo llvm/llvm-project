@@ -37847,6 +37847,7 @@ static SDValue combineExtractWithShuffle(SDNode *N, SelectionDAG &DAG,
   EVT VT = N->getValueType(0);
   EVT SrcVT = Src.getValueType();
   EVT SrcSVT = SrcVT.getVectorElementType();
+  unsigned SrcEltBits = SrcSVT.getSizeInBits();
   unsigned NumSrcElts = SrcVT.getVectorNumElements();
 
   // Don't attempt this for boolean mask vectors or unknown extraction indices.
@@ -37867,9 +37868,9 @@ static SDValue combineExtractWithShuffle(SDNode *N, SelectionDAG &DAG,
 
     EVT SrcOpVT = SrcOp.getValueType();
     if (SrcOpVT.isScalarInteger() && VT.isInteger() &&
-        (SrcOpVT.getSizeInBits() % SrcSVT.getSizeInBits()) == 0) {
-      unsigned Scale = SrcOpVT.getSizeInBits() / SrcSVT.getSizeInBits();
-      unsigned Offset = IdxC.urem(Scale) * SrcSVT.getSizeInBits();
+        (SrcOpVT.getSizeInBits() % SrcEltBits) == 0) {
+      unsigned Scale = SrcOpVT.getSizeInBits() / SrcEltBits;
+      unsigned Offset = IdxC.urem(Scale) * SrcEltBits;
       // TODO support non-zero offsets.
       if (Offset == 0) {
         SrcOp = DAG.getZExtOrTrunc(SrcOp, dl, SrcVT.getScalarType());
@@ -37900,10 +37901,10 @@ static SDValue combineExtractWithShuffle(SDNode *N, SelectionDAG &DAG,
   // TODO: Move to DAGCombine?
   if (SrcBC.getOpcode() == ISD::SCALAR_TO_VECTOR && VT.isInteger() &&
       SrcBC.getValueType().isInteger() &&
-      (SrcBC.getScalarValueSizeInBits() % SrcSVT.getSizeInBits()) == 0 &&
+      (SrcBC.getScalarValueSizeInBits() % SrcEltBits) == 0 &&
       SrcBC.getScalarValueSizeInBits() ==
           SrcBC.getOperand(0).getValueSizeInBits()) {
-    unsigned Scale = SrcBC.getScalarValueSizeInBits() / SrcSVT.getSizeInBits();
+    unsigned Scale = SrcBC.getScalarValueSizeInBits() / SrcEltBits;
     if (IdxC.ult(Scale)) {
       unsigned Offset = IdxC.getZExtValue() * SrcVT.getScalarSizeInBits();
       SDValue Scl = SrcBC.getOperand(0);
@@ -37996,8 +37997,7 @@ static SDValue combineExtractWithShuffle(SDNode *N, SelectionDAG &DAG,
 
   if ((SrcVT == MVT::v8i16 && Subtarget.hasSSE2()) ||
       (SrcVT == MVT::v16i8 && Subtarget.hasSSE41())) {
-    assert(VT.getSizeInBits() >= SrcSVT.getSizeInBits() &&
-           "Unexpected extraction type");
+    assert(VT.getSizeInBits() >= SrcEltBits && "Unexpected extraction type");
     unsigned OpCode = (SrcVT == MVT::v8i16 ? X86ISD::PEXTRW : X86ISD::PEXTRB);
     SrcOp = DAG.getBitcast(SrcVT, SrcOp);
     SDValue ExtOp = DAG.getNode(OpCode, dl, MVT::i32, SrcOp,
