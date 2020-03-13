@@ -12,7 +12,7 @@ define <3 x i8 > @foo(<3 x i8>%x, <3 x i8>%a, <3 x i8>%b) {
 ; CHECK-NEXT:    vpinsrb $1, %r8d, %xmm1, %xmm1
 ; CHECK-NEXT:    vpinsrb $2, %r9d, %xmm1, %xmm1
 ; CHECK-NEXT:    vpcmpgtb %xmm0, %xmm1, %xmm0
-; CHECK-NEXT:    vpextrb $0, %xmm0, %eax
+; CHECK-NEXT:    vmovd %xmm0, %eax
 ; CHECK-NEXT:    vpextrb $1, %xmm0, %edx
 ; CHECK-NEXT:    vpextrb $2, %xmm0, %ecx
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax

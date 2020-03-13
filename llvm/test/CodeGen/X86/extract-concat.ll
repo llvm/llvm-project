@@ -10,8 +10,6 @@ define void @foo(<4 x float> %in, <4 x i8>* %out) {
 ; SSE42-NEXT:    cvttps2dq %xmm0, %xmm0
 ; SSE42-NEXT:    pextrb $8, %xmm0, %eax
 ; SSE42-NEXT:    pextrb $4, %xmm0, %ecx
-; SSE42-NEXT:    pextrb $0, %xmm0, %edx
-; SSE42-NEXT:    movd %edx, %xmm0
 ; SSE42-NEXT:    pinsrb $1, %ecx, %xmm0
 ; SSE42-NEXT:    pinsrb $2, %eax, %xmm0
 ; SSE42-NEXT:    movl $255, %eax
@@ -24,8 +22,6 @@ define void @foo(<4 x float> %in, <4 x i8>* %out) {
 ; AVX-NEXT:    vcvttps2dq %xmm0, %xmm0
 ; AVX-NEXT:    vpextrb $8, %xmm0, %eax
 ; AVX-NEXT:    vpextrb $4, %xmm0, %ecx
-; AVX-NEXT:    vpextrb $0, %xmm0, %edx
-; AVX-NEXT:    vmovd %edx, %xmm0
 ; AVX-NEXT:    vpinsrb $1, %ecx, %xmm0, %xmm0
 ; AVX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
 ; AVX-NEXT:    movl $255, %eax
