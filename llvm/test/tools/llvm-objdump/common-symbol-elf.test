@@ -1,3 +1,0 @@
-// RUN: llvm-objdump -t %p/Inputs/common-symbol-elf | FileCheck %s
-
-CHECK: 00000400       O *COM*  00000008 common_symbol
