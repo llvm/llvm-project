@@ -2818,13 +2818,55 @@ struct AANoAliasCallSiteArgument final : AANoAliasImpl {
     auto &NoCaptureAA =
         A.getAAFor<AANoCapture>(*this, VIRP, /* TrackDependence */ false);
     // Check whether the value is captured in the scope using AANoCapture.
-    // FIXME: This is conservative though, it is better to look at CFG and
-    //        check only uses possibly executed before this callsite.
-    if (!NoCaptureAA.isAssumedNoCaptureMaybeReturned()) {
-      LLVM_DEBUG(
-          dbgs() << "[AANoAliasCSArg] " << getAssociatedValue()
-                 << " cannot be noalias as it is potentially captured\n");
+    //      Look at CFG and check only uses possibly executed before this
+    //      callsite.
+    auto UsePred = [&](const Use &U, bool &Follow) -> bool {
+      Instruction *UserI = cast<Instruction>(U.getUser());
+
+      // If user if curr instr and only use.
+      if ((UserI == getCtxI()) && (UserI->getNumUses() == 1))
+        return true;
+
+      const Function *ScopeFn = VIRP.getAnchorScope();
+      if (ScopeFn) {
+        const auto &ReachabilityAA =
+            A.getAAFor<AAReachability>(*this, IRPosition::function(*ScopeFn));
+
+        if (!ReachabilityAA.isAssumedReachable(UserI, getCtxI()))
+          return true;
+
+        if (auto *CB = dyn_cast<CallBase>(UserI)) {
+          if (CB->isArgOperand(&U)) {
+
+            unsigned ArgNo = CB->getArgOperandNo(&U);
+
+            const auto &NoCaptureAA = A.getAAFor<AANoCapture>(
+                *this, IRPosition::callsite_argument(*CB, ArgNo));
+
+            if (NoCaptureAA.isAssumedNoCapture())
+              return true;
+          }
+        }
+      }
+
+      // For cases which can potentially have more users
+      if (isa<GetElementPtrInst>(U) || isa<BitCastInst>(U) || isa<PHINode>(U) ||
+          isa<SelectInst>(U)) {
+        Follow = true;
+        return true;
+      }
+
+      LLVM_DEBUG(dbgs() << "[AANoAliasCSArg] Unknown user: " << *U << "\n");
       return false;
+    };
+
+    if (!NoCaptureAA.isAssumedNoCaptureMaybeReturned()) {
+      if (!A.checkForAllUses(UsePred, *this, getAssociatedValue())) {
+        LLVM_DEBUG(
+            dbgs() << "[AANoAliasCSArg] " << getAssociatedValue()
+                   << " cannot be noalias as it is potentially captured\n");
+        return false;
+      }
     }
     A.recordDependence(NoCaptureAA, *this, DepClassTy::OPTIONAL);
 
