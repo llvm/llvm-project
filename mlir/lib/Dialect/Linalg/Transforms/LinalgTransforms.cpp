@@ -15,6 +15,7 @@
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/StandardOps/EDSC/Intrinsics.h"
+#include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/Dialect/VectorOps/VectorOps.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/Matchers.h"
@@ -144,17 +145,10 @@ static bool hasMultiplyAddBody(linalg::GenericOp op) {
 
 // TODO(ntv) should be Tablegen'd from a single source that generates the op
 // itself.
-static bool isMatmul(linalg::GenericOp genericOp) {
-  auto *ctx = genericOp.getContext();
-  auto m = getAffineDimExpr(0, ctx);
-  auto n = getAffineDimExpr(1, ctx);
-  auto k = getAffineDimExpr(2, ctx);
-  auto mapA = AffineMapAttr::get(AffineMap::get(3, 0, {m, k}));
-  auto mapB = AffineMapAttr::get(AffineMap::get(3, 0, {k, n}));
-  auto mapC = AffineMapAttr::get(AffineMap::get(3, 0, {m, n}));
-  auto maps = ArrayAttr::get({mapA, mapB, mapC}, ctx);
+static bool isRowMajorMatmul(linalg::GenericOp genericOp) {
   return genericOp.getNumInputs() == 2 && genericOp.getNumOutputs() == 1 &&
-         genericOp.indexing_maps() == maps && hasMultiplyAddBody(genericOp);
+         isRowMajorMatmul(genericOp.indexing_maps()) &&
+         hasMultiplyAddBody(genericOp);
 }
 
 // TODO(ntv, ataei): This is in fact much more general than just vectorization
@@ -172,7 +166,7 @@ LogicalResult mlir::linalg::vectorizeLinalgOpPrecondition(Operation *op) {
     return success();
 
   auto genericOp = dyn_cast<linalg::GenericOp>(op);
-  if (!genericOp || !isMatmul(genericOp))
+  if (!genericOp || !::isRowMajorMatmul(genericOp))
     return failure();
 
   // TODO(ntv): non-identity layout.
