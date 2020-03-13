@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -verify -std=c++11 %s -Wno-defaulted-function-deleted
+// RUN: %clang_cc1 -verify -std=c++11 %s -Wno-defaulted-function-deleted -triple x86_64-linux-gnu
 
 struct NonTrivDtor {
   ~NonTrivDtor();
