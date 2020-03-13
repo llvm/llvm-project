@@ -142,16 +142,15 @@ bb.outer.end:                                        ; preds = %bb, %bb.then, %b
 ; GCN-NEXT: s_cbranch_execz [[ENDIF_OUTER:BB[0-9_]+]]
 ; GCN-NEXT: ; %bb.{{[0-9]+}}:
 ; GCN:      store_dword
-; GCN-NEXT: s_and_b64 exec, exec,
+; GCN-NEXT: s_and_saveexec_b64 [[SAVEEXEC_ELSE:s\[[0-9:]+\]]],
 ; GCN-NEXT: s_cbranch_execz [[FLOW1:BB[0-9_]+]]
 ; GCN-NEXT: ; %bb.{{[0-9]+}}:
 ; GCN:      store_dword
 ; GCN-NEXT: [[FLOW1]]:
-; GCN-NEXT: s_or_b64 exec, exec, [[SAVEEXEC_OUTER3]]
-; GCN-NOT:  s_or_b64 exec
-; GCN-NOT:  {{^.*:}}
-; GCN: ds_write_b32
-; GCN: s_endpgm
+; GCN-NEXT: s_or_b64 exec, exec, [[SAVEEXEC_ELSE]]
+; GCN:      s_or_b64 exec, exec, [[SAVEEXEC_OUTER3]]
+; GCN:      ds_write_b32
+; GCN:      s_endpgm
 define amdgpu_kernel void @nested_if_else_if(i32 addrspace(1)* nocapture %arg) {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
