@@ -2869,6 +2869,8 @@ inline bool Registers_mips_o32::validFloatRegister(int regNum) const {
 #if defined(__mips_hard_float) && __mips_fpr == 64
   if (regNum >= UNW_MIPS_F0 && regNum <= UNW_MIPS_F31)
     return true;
+#else
+  (void)regNum;
 #endif
   return false;
 }
@@ -2878,6 +2880,7 @@ inline double Registers_mips_o32::getFloatRegister(int regNum) const {
   assert(validFloatRegister(regNum));
   return _floats[regNum - UNW_MIPS_F0];
 #else
+  (void)regNum;
   _LIBUNWIND_ABORT("mips_o32 float support not implemented");
 #endif
 }
@@ -2888,6 +2891,8 @@ inline void Registers_mips_o32::setFloatRegister(int regNum,
   assert(validFloatRegister(regNum));
   _floats[regNum - UNW_MIPS_F0] = value;
 #else
+  (void)regNum;
+  (void)value;
   _LIBUNWIND_ABORT("mips_o32 float support not implemented");
 #endif
 }
@@ -3159,6 +3164,8 @@ inline bool Registers_mips_newabi::validFloatRegister(int regNum) const {
 #ifdef __mips_hard_float
   if (regNum >= UNW_MIPS_F0 && regNum <= UNW_MIPS_F31)
     return true;
+#else
+  (void)regNum;
 #endif
   return false;
 }
@@ -3168,6 +3175,7 @@ inline double Registers_mips_newabi::getFloatRegister(int regNum) const {
   assert(validFloatRegister(regNum));
   return _floats[regNum - UNW_MIPS_F0];
 #else
+  (void)regNum;
   _LIBUNWIND_ABORT("mips_newabi float support not implemented");
 #endif
 }
@@ -3178,6 +3186,8 @@ inline void Registers_mips_newabi::setFloatRegister(int regNum,
   assert(validFloatRegister(regNum));
   _floats[regNum - UNW_MIPS_F0] = value;
 #else
+  (void)regNum;
+  (void)value;
   _LIBUNWIND_ABORT("mips_newabi float support not implemented");
 #endif
 }
@@ -3757,6 +3767,7 @@ inline double Registers_riscv::getFloatRegister(int regNum) const {
   assert(validFloatRegister(regNum));
   return _floats[regNum - UNW_RISCV_F0];
 #else
+  (void)regNum;
   _LIBUNWIND_ABORT("libunwind not built with float support");
 #endif
 }
@@ -3766,6 +3777,8 @@ inline void Registers_riscv::setFloatRegister(int regNum, double value) {
   assert(validFloatRegister(regNum));
   _floats[regNum - UNW_RISCV_F0] = value;
 #else
+  (void)regNum;
+  (void)value;
   _LIBUNWIND_ABORT("libunwind not built with float support");
 #endif
 }
