@@ -238,6 +238,12 @@ static cl::opt<bool>
                      cl::desc("Emit functions into separate sections"),
                      cl::init(false));
 
+static cl::opt<std::string>
+    BBSections("basicblock-sections",
+               cl::desc("Emit basic blocks into separate sections"),
+               cl::value_desc("all | <function list (file)> | labels | none"),
+               cl::init("none"));
+
 static cl::opt<unsigned> TLSSize("tls-size",
                                  cl::desc("Bit size of immediate TLS offsets"),
                                  cl::init(0));
@@ -250,6 +256,11 @@ static cl::opt<bool>
     UniqueSectionNames("unique-section-names",
                        cl::desc("Give unique names to every section"),
                        cl::init(true));
+
+static cl::opt<bool> UniqueBBSectionNames(
+    "unique-bb-section-names",
+    cl::desc("Give unique names to every basic block section"),
+    cl::init(false));
 
 static cl::opt<llvm::EABI>
     EABIVersion("meabi", cl::desc("Set EABI type (default depends on triple):"),
@@ -291,6 +302,27 @@ static cl::opt<bool>
                            cl::desc("Always emit a debug frame section."),
                            cl::init(false));
 
+static llvm::BasicBlockSection
+getBBSectionsMode(llvm::TargetOptions &Options) {
+  if (BBSections == "all")
+    return BasicBlockSection::All;
+  else if (BBSections == "labels")
+    return BasicBlockSection::Labels;
+  else if (BBSections == "none")
+    return BasicBlockSection::None;
+  else {
+    ErrorOr<std::unique_ptr<MemoryBuffer>> MBOrErr =
+        MemoryBuffer::getFile(BBSections);
+    if (!MBOrErr) {
+      errs() << "Error loading basic block sections function list file: "
+             << MBOrErr.getError().message() << "\n";
+    } else {
+      Options.BBSectionsFuncListBuf = std::move(*MBOrErr);
+    }
+    return BasicBlockSection::List;
+  }
+}
+
 // Common utility function tightly tied to the options listed here. Initializes
 // a TargetOptions object with CodeGen flags and returns it.
 static TargetOptions InitTargetOptionsFromCodeGenFlags() {
@@ -314,7 +346,9 @@ static TargetOptions InitTargetOptionsFromCodeGenFlags() {
   Options.RelaxELFRelocations = RelaxELFRelocations;
   Options.DataSections = DataSections;
   Options.FunctionSections = FunctionSections;
+  Options.BBSections = getBBSectionsMode(Options);
   Options.UniqueSectionNames = UniqueSectionNames;
+  Options.UniqueBBSectionNames = UniqueBBSectionNames;
   Options.TLSSize = TLSSize;
   Options.EmulatedTLS = EmulatedTLS;
   Options.ExplicitEmulatedTLS = EmulatedTLS.getNumOccurrences() > 0;
