@@ -44,6 +44,7 @@ struct A
 
 int main(int, char**)
 {
+    new_called = 0;
     A *ap = new A;
     DoNotOptimize(ap);
     assert(ap);
