@@ -678,3 +678,23 @@ void llvm::format_provider<WaitStatus>::format(const WaitStatus &WS,
   }
   OS << desc << " " << int(WS.status);
 }
+
+uint32_t Host::FindProcesses(const ProcessInstanceInfoMatch &match_info,
+                             ProcessInstanceInfoList &process_infos) {
+
+  if (llvm::Optional<ProcessInstanceInfoList> infos =
+          repro::GetReplayProcessInstanceInfoList()) {
+    process_infos = *infos;
+    return process_infos.size();
+  }
+
+  uint32_t result = FindProcessesImpl(match_info, process_infos);
+
+  if (repro::Generator *g = repro::Reproducer::Instance().GetGenerator()) {
+    g->GetOrCreate<repro::ProcessInfoProvider>()
+        .GetNewProcessInfoRecorder()
+        ->Record(process_infos);
+  }
+
+  return result;
+}
