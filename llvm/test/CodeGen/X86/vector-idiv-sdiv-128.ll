@@ -1059,8 +1059,8 @@ define <16 x i8> @test_rem_variable_16i8(<16 x i8> %a, <16 x i8> %b) nounwind {
 ; SSE41-NEXT:    cbtw
 ; SSE41-NEXT:    idivb %cl
 ; SSE41-NEXT:    movsbl %ah, %ecx
-; SSE41-NEXT:    pextrb $0, %xmm1, %edx
-; SSE41-NEXT:    pextrb $0, %xmm0, %eax
+; SSE41-NEXT:    movd %xmm1, %edx
+; SSE41-NEXT:    movd %xmm0, %eax
 ; SSE41-NEXT:    cbtw
 ; SSE41-NEXT:    idivb %dl
 ; SSE41-NEXT:    movsbl %ah, %eax
@@ -1160,8 +1160,8 @@ define <16 x i8> @test_rem_variable_16i8(<16 x i8> %a, <16 x i8> %b) nounwind {
 ; AVX-NEXT:    cbtw
 ; AVX-NEXT:    idivb %cl
 ; AVX-NEXT:    movsbl %ah, %ecx
-; AVX-NEXT:    vpextrb $0, %xmm1, %edx
-; AVX-NEXT:    vpextrb $0, %xmm0, %eax
+; AVX-NEXT:    vmovd %xmm1, %edx
+; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    cbtw
 ; AVX-NEXT:    idivb %dl
 ; AVX-NEXT:    movsbl %ah, %eax
