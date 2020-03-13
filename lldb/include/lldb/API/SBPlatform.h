@@ -154,6 +154,14 @@ public:
 
   SBUnixSignals GetUnixSignals() const;
 
+  /// Return the environment variables of the remote platform connection
+  /// process.
+  ///
+  /// \return
+  ///     An lldb::SBEnvironment object which is a copy of the platform's
+  ///     enviroment.
+  SBEnvironment GetEnvironment();
+
 protected:
   friend class SBDebugger;
   friend class SBTarget;
