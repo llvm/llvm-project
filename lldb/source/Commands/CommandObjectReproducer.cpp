@@ -8,13 +8,14 @@
 
 #include "CommandObjectReproducer.h"
 
+#include "lldb/Host/HostInfo.h"
 #include "lldb/Host/OptionParser.h"
-#include "lldb/Utility/GDBRemote.h"
-#include "lldb/Utility/Reproducer.h"
-
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionArgParser.h"
+#include "lldb/Utility/GDBRemote.h"
+#include "lldb/Utility/ProcessInfo.h"
+#include "lldb/Utility/Reproducer.h"
 
 #include <csignal>
 
@@ -27,6 +28,7 @@ enum ReproducerProvider {
   eReproducerProviderCommands,
   eReproducerProviderFiles,
   eReproducerProviderGDB,
+  eReproducerProviderProcessInfo,
   eReproducerProviderVersion,
   eReproducerProviderWorkingDirectory,
   eReproducerProviderNone
@@ -47,6 +49,11 @@ static constexpr OptionEnumValueElement g_reproducer_provider_type[] = {
         eReproducerProviderGDB,
         "gdb",
         "GDB Remote Packets",
+    },
+    {
+        eReproducerProviderProcessInfo,
+        "processes",
+        "Process Info",
     },
     {
         eReproducerProviderVersion,
@@ -96,6 +103,24 @@ static constexpr OptionEnumValues ReproducerSignalType() {
 
 #define LLDB_OPTIONS_reproducer_xcrash
 #include "CommandOptions.inc"
+
+template <typename T>
+llvm::Expected<T> static ReadFromYAML(StringRef filename) {
+  auto error_or_file = MemoryBuffer::getFile(filename);
+  if (auto err = error_or_file.getError()) {
+    return errorCodeToError(err);
+  }
+
+  T t;
+  yaml::Input yin((*error_or_file)->getBuffer());
+  yin >> t;
+
+  if (auto err = yin.error()) {
+    return errorCodeToError(err);
+  }
+
+  return t;
+}
 
 class CommandObjectReproducerGenerate : public CommandObjectParsed {
 public:
@@ -458,23 +483,41 @@ protected:
 
       llvm::Optional<std::string> gdb_file;
       while ((gdb_file = multi_loader->GetNextFile())) {
-        auto error_or_file = MemoryBuffer::getFile(*gdb_file);
-        if (auto err = error_or_file.getError()) {
-          SetError(result, errorCodeToError(err));
+        if (llvm::Expected<std::vector<GDBRemotePacket>> packets =
+                ReadFromYAML<std::vector<GDBRemotePacket>>(*gdb_file)) {
+          for (GDBRemotePacket &packet : *packets) {
+            packet.Dump(result.GetOutputStream());
+          }
+        } else {
+          SetError(result, packets.takeError());
           return false;
         }
+      }
 
-        std::vector<GDBRemotePacket> packets;
-        yaml::Input yin((*error_or_file)->getBuffer());
-        yin >> packets;
+      result.SetStatus(eReturnStatusSuccessFinishResult);
+      return true;
+    }
+    case eReproducerProviderProcessInfo: {
+      std::unique_ptr<repro::MultiLoader<repro::ProcessInfoProvider>>
+          multi_loader =
+              repro::MultiLoader<repro::ProcessInfoProvider>::Create(loader);
 
-        if (auto err = yin.error()) {
-          SetError(result, errorCodeToError(err));
+      if (!multi_loader) {
+        SetError(result, make_error<StringError>(
+                             llvm::inconvertibleErrorCode(),
+                             "Unable to create process info loader."));
+        return false;
+      }
+
+      llvm::Optional<std::string> process_file;
+      while ((process_file = multi_loader->GetNextFile())) {
+        if (llvm::Expected<ProcessInstanceInfoList> infos =
+                ReadFromYAML<ProcessInstanceInfoList>(*process_file)) {
+          for (ProcessInstanceInfo info : *infos)
+            info.Dump(result.GetOutputStream(), HostInfo::GetUserIDResolver());
+        } else {
+          SetError(result, infos.takeError());
           return false;
-        }
-
-        for (GDBRemotePacket &packet : packets) {
-          packet.Dump(result.GetOutputStream());
         }
       }
 
