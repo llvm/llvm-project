@@ -961,6 +961,10 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
                  LLVMVectorElementType<0>],
                 [IntrNoMem]>;
 
+  class AdvSIMD_SVE_DUP_Unpred_Intrinsic
+    : Intrinsic<[llvm_anyvector_ty], [LLVMVectorElementType<0>],
+                [IntrNoMem]>;
+
   class AdvSIMD_SVE_DUPQ_Intrinsic
     : Intrinsic<[llvm_anyvector_ty],
                 [LLVMMatchType<0>,
@@ -1287,6 +1291,8 @@ def int_aarch64_sve_prf
 //
 
 def int_aarch64_sve_dup : AdvSIMD_SVE_DUP_Intrinsic;
+def int_aarch64_sve_dup_x : AdvSIMD_SVE_DUP_Unpred_Intrinsic;
+
 
 def int_aarch64_sve_index : AdvSIMD_SVE_Index_Intrinsic;
 
