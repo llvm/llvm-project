@@ -1177,7 +1177,16 @@ llvm.func @callFreezeOp(%x : !llvm.i32) {
   // CHECK: freeze i32 %{{[0-9]+}}
   %0 = llvm.freeze %x : !llvm.i32
   %1 = llvm.mlir.undef : !llvm.i32
-  // CHECK: freeze i32 undef 
+  // CHECK: freeze i32 undef
   %2 = llvm.freeze %1 : !llvm.i32
   llvm.return
+}
+
+// CHECK-LABEL: @boolConstArg
+llvm.func @boolConstArg() -> !llvm.i1 {
+  // CHECK: ret i1 false
+  %0 = llvm.mlir.constant(true) : !llvm.i1
+  %1 = llvm.mlir.constant(false) : !llvm.i1
+  %2 = llvm.and %0, %1 : !llvm.i1
+  llvm.return %2 : !llvm.i1
 }
