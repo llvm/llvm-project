@@ -1688,10 +1688,11 @@ static ArgDescriptor allocateSGPR64Input(CCState &CCInfo) {
   return allocateSGPR32InputImpl(CCInfo, &AMDGPU::SGPR_64RegClass, 16);
 }
 
-void SITargetLowering::allocateSpecialInputVGPRs(CCState &CCInfo,
-                                                 MachineFunction &MF,
-                                                 const SIRegisterInfo &TRI,
-                                                 SIMachineFunctionInfo &Info) const {
+/// Allocate implicit function VGPR arguments at the end of allocated user
+/// arguments.
+void SITargetLowering::allocateSpecialInputVGPRs(
+  CCState &CCInfo, MachineFunction &MF,
+  const SIRegisterInfo &TRI, SIMachineFunctionInfo &Info) const {
   const unsigned Mask = 0x3ff;
   ArgDescriptor Arg;
 
@@ -1707,6 +1708,20 @@ void SITargetLowering::allocateSpecialInputVGPRs(CCState &CCInfo,
 
   if (Info.hasWorkItemIDZ())
     Info.setWorkItemIDZ(allocateVGPR32Input(CCInfo, Mask << 20, Arg));
+}
+
+/// Allocate implicit function VGPR arguments in fixed registers.
+void SITargetLowering::allocateSpecialInputVGPRsFixed(
+  CCState &CCInfo, MachineFunction &MF,
+  const SIRegisterInfo &TRI, SIMachineFunctionInfo &Info) const {
+  Register Reg = CCInfo.AllocateReg(AMDGPU::VGPR31);
+  if (!Reg)
+    report_fatal_error("failed to allocated VGPR for implicit arguments");
+
+  const unsigned Mask = 0x3ff;
+  Info.setWorkItemIDX(ArgDescriptor::createRegister(Reg, Mask));
+  Info.setWorkItemIDY(ArgDescriptor::createRegister(Reg, Mask << 10));
+  Info.setWorkItemIDZ(ArgDescriptor::createRegister(Reg, Mask << 20));
 }
 
 void SITargetLowering::allocateSpecialInputSGPRs(
@@ -2091,6 +2106,10 @@ SDValue SITargetLowering::LowerFormalArguments(
   if (IsEntryFunc) {
     allocateSpecialEntryInputVGPRs(CCInfo, MF, *TRI, *Info);
     allocateHSAUserSGPRs(CCInfo, MF, *TRI, *Info);
+  } else {
+    // For the fixed ABI, pass workitem IDs in the last argument register.
+    if (AMDGPUTargetMachine::EnableFixedFunctionABI)
+      allocateSpecialInputVGPRsFixed(CCInfo, MF, *TRI, *Info);
   }
 
   if (IsKernel) {
@@ -2202,7 +2221,7 @@ SDValue SITargetLowering::LowerFormalArguments(
     InVals.push_back(Val);
   }
 
-  if (!IsEntryFunc) {
+  if (!IsEntryFunc && !AMDGPUTargetMachine::EnableFixedFunctionABI) {
     // Special inputs come after user arguments.
     allocateSpecialInputVGPRs(CCInfo, MF, *TRI, *Info);
   }
@@ -2483,6 +2502,8 @@ void SITargetLowering::passSpecialInputs(
 
     if (OutgoingArg->isRegister()) {
       RegsToPass.emplace_back(OutgoingArg->getRegister(), InputReg);
+      if (!CCInfo.AllocateReg(OutgoingArg->getRegister()))
+        report_fatal_error("failed to allocate implicit input argument");
     } else {
       unsigned SpecialArgOffset = CCInfo.AllocateStack(ArgVT.getStoreSize(), 4);
       SDValue ArgStore = storeStackInputValue(DAG, DL, Chain, InputReg,
@@ -2549,6 +2570,7 @@ void SITargetLowering::passSpecialInputs(
 
   if (OutgoingArg->isRegister()) {
     RegsToPass.emplace_back(OutgoingArg->getRegister(), InputReg);
+    CCInfo.AllocateReg(OutgoingArg->getRegister());
   } else {
     unsigned SpecialArgOffset = CCInfo.AllocateStack(4, 4);
     SDValue ArgStore = storeStackInputValue(DAG, DL, Chain, InputReg,
@@ -2723,11 +2745,18 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   }
 
   const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
+  SmallVector<std::pair<unsigned, SDValue>, 8> RegsToPass;
+  SmallVector<SDValue, 8> MemOpChains;
 
   // Analyze operands of the call, assigning locations to each operand.
   SmallVector<CCValAssign, 16> ArgLocs;
   CCState CCInfo(CallConv, IsVarArg, MF, ArgLocs, *DAG.getContext());
   CCAssignFn *AssignFn = CCAssignFnForCall(CallConv, IsVarArg);
+
+  if (AMDGPUTargetMachine::EnableFixedFunctionABI) {
+    // With a fixed ABI, allocate fixed registers before user arguments.
+    passSpecialInputs(CLI, CCInfo, *Info, RegsToPass, MemOpChains, Chain);
+  }
 
   CCInfo.AnalyzeCallOperands(Outs, AssignFn);
 
@@ -2747,7 +2776,6 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   // arguments to begin at SP+0. Completely unused for non-tail calls.
   int32_t FPDiff = 0;
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  SmallVector<std::pair<unsigned, SDValue>, 8> RegsToPass;
 
   // Adjust the stack pointer for the new arguments...
   // These operations are automatically eliminated by the prolog/epilog pass
@@ -2764,7 +2792,6 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
     Chain = DAG.getTokenFactor(DL, CopyFromChains);
   }
 
-  SmallVector<SDValue, 8> MemOpChains;
   MVT PtrVT = MVT::i32;
 
   // Walk the register/memloc assignments, inserting copies/loads.
@@ -2860,8 +2887,10 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
     }
   }
 
-  // Copy special input registers after user input arguments.
-  passSpecialInputs(CLI, CCInfo, *Info, RegsToPass, MemOpChains, Chain);
+  if (!AMDGPUTargetMachine::EnableFixedFunctionABI) {
+    // Copy special input registers after user input arguments.
+    passSpecialInputs(CLI, CCInfo, *Info, RegsToPass, MemOpChains, Chain);
+  }
 
   if (!MemOpChains.empty())
     Chain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other, MemOpChains);
