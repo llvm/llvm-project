@@ -206,7 +206,7 @@ int main() {
 // CHECK: [[VAR_REF:%.+]] = getelementptr inbounds [[CAP_MAIN_TY]], [[CAP_MAIN_TY]]* %{{.+}}, i{{[0-9]+}} 0, i{{[0-9]+}} 4
 // CHECK: store [[S_DOUBLE_TY]]* %{{.+}}, [[S_DOUBLE_TY]]** [[VAR_REF]],
 // CHECK: [[SIVAR_REF:%.+]] = getelementptr inbounds [[CAP_MAIN_TY]], [[CAP_MAIN_TY]]* %{{.+}}, i{{[0-9]+}} 0, i{{[0-9]+}} 5
-// CHECK: [[SIVAR_VAL:%.+]] = load i32, i32* %{{.+}},
+// CHECK: [[SIVAR_VAL:%.+]] = load i32, i32* @{{.+}},
 // CHECK: store i{{[0-9]+}} [[SIVAR_VAL]], i{{[0-9]+}}* [[SIVAR_REF]],
 
 // Allocate task.

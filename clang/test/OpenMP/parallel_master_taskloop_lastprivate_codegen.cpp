@@ -187,7 +187,7 @@ int main() {
 // CHECK: [[VAR_REF:%.+]] = getelementptr inbounds [[CAP_MAIN_TY]], [[CAP_MAIN_TY]]* %{{.+}}, i{{[0-9]+}} 0, i{{[0-9]+}} 3
 // CHECK: store [[S_DOUBLE_TY]]* [[VAR_ADDR:%.+]], [[S_DOUBLE_TY]]** [[VAR_REF]],
 // CHECK: [[SIVAR_REF:%.+]] = getelementptr inbounds [[CAP_MAIN_TY]], [[CAP_MAIN_TY]]* %{{.+}}, i{{[0-9]+}} 0, i{{[0-9]+}} 4
-// CHECK: store i{{[0-9]+}}* [[SIVAR:%.+]], i{{[0-9]+}}** [[SIVAR_REF]],
+// CHECK: store i{{[0-9]+}}* [[SIVAR:@.+]], i{{[0-9]+}}** [[SIVAR_REF]],
 
 // Allocate task.
 // Returns struct kmp_task_t {
