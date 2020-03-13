@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -131,6 +132,8 @@ public:
   using symbol_map = DenseMap<MCSymbol const *, COFFSymbol *>;
   using section_map = DenseMap<MCSection const *, COFFSection *>;
 
+  using symbol_list = DenseSet<COFFSymbol *>;
+
   std::unique_ptr<MCWinCOFFObjectTargetWriter> TargetObjectWriter;
 
   // Root level file contents.
@@ -142,6 +145,8 @@ public:
   // Maps used during object file creation.
   section_map SectionMap;
   symbol_map SymbolMap;
+
+  symbol_list WeakDefaults;
 
   bool UseBigObj;
 
@@ -205,6 +210,7 @@ public:
                         MCValue Target, uint64_t &FixedValue) override;
 
   void createFileSymbols(MCAssembler &Asm);
+  void setWeakDefaultNames();
   void assignSectionNumbers();
   void assignFileOffsets(MCAssembler &Asm, const MCAsmLayout &Layout);
 
@@ -376,6 +382,7 @@ void WinCOFFObjectWriter::DefineSymbol(const MCSymbol &MCSym,
         WeakDefault->Data.SectionNumber = COFF::IMAGE_SYM_ABSOLUTE;
       else
         WeakDefault->Section = Sec;
+      WeakDefaults.insert(WeakDefault);
       Local = WeakDefault;
     }
 
@@ -863,6 +870,47 @@ void WinCOFFObjectWriter::createFileSymbols(MCAssembler &Asm) {
   }
 }
 
+void WinCOFFObjectWriter::setWeakDefaultNames() {
+  if (WeakDefaults.empty())
+    return;
+
+  // If multiple object files use a weak symbol (either with a regular
+  // defined default, or an absolute zero symbol as default), the defaults
+  // cause duplicate definitions unless their names are made unique. Look
+  // for a defined extern symbol, that isn't comdat - that should be unique
+  // unless there are other duplicate definitions. And if none is found,
+  // allow picking a comdat symbol, as that's still better than nothing.
+
+  COFFSymbol *Unique = nullptr;
+  for (bool AllowComdat : {false, true}) {
+    for (auto &Sym : Symbols) {
+      // Don't include the names of the defaults themselves
+      if (WeakDefaults.count(Sym.get()))
+        continue;
+      // Only consider external symbols
+      if (Sym->Data.StorageClass != COFF::IMAGE_SYM_CLASS_EXTERNAL)
+        continue;
+      // Only consider symbols defined in a section or that are absolute
+      if (!Sym->Section && Sym->Data.SectionNumber != COFF::IMAGE_SYM_ABSOLUTE)
+        continue;
+      if (!AllowComdat && Sym->Section &&
+          Sym->Section->Header.Characteristics & COFF::IMAGE_SCN_LNK_COMDAT)
+        continue;
+      Unique = Sym.get();
+      break;
+    }
+    if (Unique)
+      break;
+  }
+  // If we didn't find any unique symbol to use for the names, just skip this.
+  if (!Unique)
+    return;
+  for (auto *Sym : WeakDefaults) {
+    Sym->Name.append(".");
+    Sym->Name.append(Unique->Name);
+  }
+}
+
 static bool isAssociative(const COFFSection &Section) {
   return Section.Symbol->Aux[0].Aux.SectionDefinition.Selection ==
          COFF::IMAGE_COMDAT_SELECT_ASSOCIATIVE;
@@ -961,6 +1009,7 @@ uint64_t WinCOFFObjectWriter::writeObject(MCAssembler &Asm,
   Header.NumberOfSections = Sections.size();
   Header.NumberOfSymbols = 0;
 
+  setWeakDefaultNames();
   assignSectionNumbers();
   createFileSymbols(Asm);
 
