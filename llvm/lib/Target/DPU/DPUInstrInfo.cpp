@@ -310,12 +310,9 @@ bool DPUInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
   if (++I != REnd) {
     SecondLastInst = &*I;
     if (!isUnpredicatedTerminator(*SecondLastInst) ||
-        !SecondLastInst->isBranch()) {
+        !isAnalyzableBranch(SecondLastInst)) {
       // If not a branch, reset to nullptr.
       SecondLastInst = nullptr;
-    } else if (!isAnalyzableBranch(SecondLastInst)) {
-      // If not an analyzable branch, just leave.
-      return true;
     }
   }
 
