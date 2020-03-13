@@ -25,6 +25,14 @@
 #  cmake --build . --target check-clang
 #  cmake --build . --target check-lld
 
+# LLVM_PROJECT_DIR is the path to the llvm-project directory.
+# The right way to compute it would probably be to use "${CMAKE_SOURCE_DIR}/../",
+# but CMAKE_SOURCE_DIR is set to the wrong value on earlier CMake versions
+# that we still need to support (for instance, 3.10.2).
+get_filename_component(LLVM_PROJECT_DIR
+                       "${CMAKE_CURRENT_LIST_DIR}/../../../"
+                       ABSOLUTE)
+
 if (NOT DEFINED DEFAULT_SYSROOT)
   message(WARNING "DEFAULT_SYSROOT must be specified for the cross toolchain build.")
 endif()
@@ -83,6 +91,9 @@ set(LIBCXX_USE_COMPILER_RT                  ON CACHE BOOL "")
 set(LIBCXX_TARGET_TRIPLE                    "${CMAKE_C_COMPILER_TARGET}" CACHE STRING "")
 set(LIBCXX_SYSROOT                          "${DEFAULT_SYSROOT}" CACHE STRING "")
 set(LIBCXX_ENABLE_SHARED                    OFF CACHE BOOL "")
+set(LIBCXX_CXX_ABI                          "libcxxabi" CACHE STRING "")
+set(LIBCXX_CXX_ABI_INCLUDE_PATHS            "${LLVM_PROJECT_DIR}/libcxxabi/include" CACHE PATH "")
+set(LIBCXX_CXX_ABI_LIBRARY_PATH             "${CMAKE_BINARY_DIR}/lib/${LIBCXX_TARGET_TRIPLE}/c++" CACHE PATH "")
 
 set(BUILTINS_CMAKE_ARGS                     "-DCMAKE_SYSTEM_NAME=Linux;-DCMAKE_AR=${CMAKE_AR}" CACHE STRING "")
 set(RUNTIMES_CMAKE_ARGS                     "-DCMAKE_SYSTEM_NAME=Linux;-DCMAKE_AR=${CMAKE_AR}" CACHE STRING "")
