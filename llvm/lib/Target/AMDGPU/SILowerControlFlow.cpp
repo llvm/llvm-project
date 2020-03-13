@@ -76,7 +76,7 @@ using namespace llvm;
 
 static cl::opt<bool>
 RemoveRedundantEndcf("amdgpu-remove-redundant-endcf",
-    cl::init(false), cl::ReallyHidden);
+    cl::init(true), cl::ReallyHidden);
 
 namespace {
 
@@ -87,6 +87,7 @@ private:
   LiveIntervals *LIS = nullptr;
   MachineRegisterInfo *MRI = nullptr;
   DenseSet<const MachineInstr*> LoweredEndCf;
+  DenseSet<Register> LoweredIf;
 
   const TargetRegisterClass *BoolRC = nullptr;
   unsigned AndOpc;
@@ -212,6 +213,7 @@ void SILowerControlFlow::emitIf(MachineInstr &MI) {
     BuildMI(MBB, I, DL, TII->get(AMDGPU::COPY), CopyReg)
     .addReg(Exec)
     .addReg(Exec, RegState::ImplicitDefine);
+  LoweredIf.insert(CopyReg);
 
   Register Tmp = MRI->createVirtualRegister(BoolRC);
 
@@ -453,11 +455,19 @@ void SILowerControlFlow::emitEndCf(MachineInstr &MI) {
       skipIgnoreExecInstsTrivialSucc(MBB, std::next(MI.getIterator()));
     if (Next != MBB.end() && (Next->getOpcode() == AMDGPU::SI_END_CF ||
                               LoweredEndCf.count(&*Next))) {
-      LLVM_DEBUG(dbgs() << "Skip redundant "; MI.dump());
-      if (LIS)
-        LIS->RemoveMachineInstrFromMaps(MI);
-      MI.eraseFromParent();
-      return;
+      // Only skip inner END_CF if outer ENDCF belongs to SI_IF.
+      // If that belongs to SI_ELSE then saved mask has an inverted value.
+      Register SavedExec = Next->getOperand(0).getReg();
+      const MachineInstr *Def = MRI.getUniqueVRegDef(SavedExec);
+      // A lowered SI_IF turns definition into COPY of exec.
+      if (Def && (Def->getOpcode() == AMDGPU::SI_IF ||
+                  LoweredIf.count(SavedExec))) {
+        LLVM_DEBUG(dbgs() << "Skip redundant "; MI.dump());
+        if (LIS)
+          LIS->RemoveMachineInstrFromMaps(MI);
+        MI.eraseFromParent();
+        return;
+      }
     }
   }
 
@@ -617,6 +627,7 @@ bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
   }
 
   LoweredEndCf.clear();
+  LoweredIf.clear();
 
   return true;
 }
