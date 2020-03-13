@@ -165,18 +165,13 @@ define void @opencl_func_call_implicitarg_ptr_func() #0 {
 
 ; GCN-LABEL: {{^}}func_kernarg_implicitarg_ptr:
 ; GCN: s_waitcnt
-; MESA-DAG: v_mov_b32_e32 v0, s4
-; MESA-DAG: v_mov_b32_e32 v1, s5
-; MESA-DAG: buffer_load_dword v0, v[0:1], s[8:11], 0 addr64
-; MESA: v_mov_b32_e32 v0, s6
-; MESA: v_mov_b32_e32 v1, s7
+; GCN-DAG: v_mov_b32_e32 v0, s4
+; GCN-DAG: v_mov_b32_e32 v1, s5
+; GCN-DAG: s_mov_b64 [[NULL:s\[[0-9]+:[0-9]+\]]], 0
+; GCN-DAG: s_load_dword s{{[0-9]+}}, [[NULL]], 0x0
+
 ; MESA: buffer_load_dword v0, v[0:1], s[8:11], 0 addr64
 
-; HSA: v_mov_b32_e32 v0, s4
-; HSA: v_mov_b32_e32 v1, s5
-; HSA: flat_load_dword v0, v[0:1]
-; HSA: v_mov_b32_e32 v0, s6
-; HSA: v_mov_b32_e32 v1, s7
 ; HSA: flat_load_dword v0, v[0:1]
 
 ; GCN: s_waitcnt vmcnt(0)
@@ -192,20 +187,12 @@ define void @func_kernarg_implicitarg_ptr() #0 {
 
 ; GCN-LABEL: {{^}}opencl_func_kernarg_implicitarg_ptr:
 ; GCN: s_waitcnt
-; MESA-DAG: v_mov_b32_e32 v0, s4
-; MESA-DAG: v_mov_b32_e32 v1, s5
+; GCN-DAG: v_mov_b32_e32 v0, s4
+; GCN-DAG: v_mov_b32_e32 v1, s5
+; GCN-DAG: s_mov_b64 [[NULL:s\[[0-9]+:[0-9]+\]]], 0
+; GCN-DAG: s_load_dword s{{[0-9]+}}, [[NULL]], 0x0
+
 ; MESA: buffer_load_dword v0, v[0:1], s[8:11], 0 addr64
-; MESA-DAG: v_mov_b32_e32 v0, s6
-; MESA-DAG: v_mov_b32_e32 v1, s7
-; MESA: buffer_load_dword v0, v[0:1], s[8:11], 0 addr64
-
-
-; HSA: v_mov_b32_e32 v0, s4
-; HSA: v_mov_b32_e32 v1, s5
-; HSA: flat_load_dword v0, v[0:1]
-
-; HSA: v_mov_b32_e32 v0, s6
-; HSA: v_mov_b32_e32 v1, s7
 ; HSA: flat_load_dword v0, v[0:1]
 
 ; GCN: s_waitcnt vmcnt(0)
@@ -220,8 +207,8 @@ define void @opencl_func_kernarg_implicitarg_ptr() #0 {
 }
 
 ; GCN-LABEL: {{^}}kernel_call_kernarg_implicitarg_ptr_func:
-; GCN: s_add_u32 s6, s4, 0x70
-; GCN: s_addc_u32 s7, s5, 0
+; GCN: s_add_u32 s4, s4, 0x70
+; GCN: s_addc_u32 s5, s5, 0
 ; GCN: s_swappc_b64
 define amdgpu_kernel void @kernel_call_kernarg_implicitarg_ptr_func([112 x i8]) #0 {
   call void @func_kernarg_implicitarg_ptr()
