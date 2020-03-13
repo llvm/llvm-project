@@ -160,6 +160,12 @@ LinalgOp mlir::linalg::promoteSubViewOperands(OpBuilder &b, LinalgOp op,
                                               OperationFolder *folder) {
   assert(op.hasBufferSemantics() && "expected linalg op with buffer semantics");
 
+  if (auto convOp = dyn_cast<linalg::ConvOp>(op.getOperation())) {
+    // TODO(ntv): add a level of indirection to linalg.generic.
+    if (convOp.padding())
+      llvm_unreachable("Unexpected conv with padding");
+  }
+
   // 1. Promote the specified views and use them in the new op.
   ScopedContext scope(b, op.getLoc());
   auto promotedBufferAndViews = promoteSubViews(
