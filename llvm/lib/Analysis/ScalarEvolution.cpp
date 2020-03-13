@@ -3532,9 +3532,8 @@ ScalarEvolution::getGEPExpr(GEPOperator *GEP,
                                              : SCEV::FlagAnyWrap;
 
   const SCEV *TotalOffset = getZero(IntIdxTy);
-  // The array size is unimportant. The first thing we do on CurTy is getting
-  // its element type.
-  Type *CurTy = ArrayType::get(GEP->getSourceElementType(), 0);
+  Type *CurTy = GEP->getType();
+  bool FirstIter = true;
   for (const SCEV *IndexExpr : IndexExprs) {
     // Compute the (potentially symbolic) offset in bytes for this index.
     if (StructType *STy = dyn_cast<StructType>(CurTy)) {
@@ -3550,7 +3549,14 @@ ScalarEvolution::getGEPExpr(GEPOperator *GEP,
       CurTy = STy->getTypeAtIndex(Index);
     } else {
       // Update CurTy to its element type.
-      CurTy = cast<SequentialType>(CurTy)->getElementType();
+      if (FirstIter) {
+        assert(isa<PointerType>(CurTy) &&
+               "The first index of a GEP indexes a pointer");
+        CurTy = GEP->getSourceElementType();
+        FirstIter = false;
+      } else {
+        CurTy = cast<SequentialType>(CurTy)->getElementType();
+      }
       // For an array, add the element offset, explicitly scaled.
       const SCEV *ElementSize = getSizeOfExpr(IntIdxTy, CurTy);
       // Getelementptr indices are signed.
@@ -3754,6 +3760,14 @@ const SCEV *ScalarEvolution::getSizeOfExpr(Type *IntTy, Type *AllocTy) {
   // We can bypass creating a target-independent
   // constant expression and then folding it back into a ConstantInt.
   // This is just a compile-time optimization.
+  if (auto *VecTy = dyn_cast<VectorType>(AllocTy)) {
+    if (VecTy->isScalable()) {
+      Constant *NullPtr = Constant::getNullValue(AllocTy->getPointerTo());
+      Constant *One = ConstantInt::get(IntTy, 1);
+      Constant *GEP = ConstantExpr::getGetElementPtr(AllocTy, NullPtr, One);
+      return getSCEV(ConstantExpr::getPtrToInt(GEP, IntTy));
+    }
+  }
   return getConstant(IntTy, getDataLayout().getTypeAllocSize(AllocTy));
 }
 
