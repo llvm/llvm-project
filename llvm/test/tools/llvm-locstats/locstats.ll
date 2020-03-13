@@ -9,9 +9,9 @@
 ; LOCSTATS: [10%,20%) 0 0%
 ; LOCSTATS: [20%,30%) 1 11%
 ; LOCSTATS: [30%,40%) 0 0%
-; LOCSTATS: [40%,50%) 0 0%
-; LOCSTATS: [50%,60%) 0 0%
-; LOCSTATS: [60%,70%) 3 33%
+; LOCSTATS: [40%,50%) 1 11%
+; LOCSTATS: [50%,60%) 1 11%
+; LOCSTATS: [60%,70%) 1 11%
 ; LOCSTATS: [70%,80%) 0 0%
 ; LOCSTATS: [80%,90%) 2 22%
 ; LOCSTATS: [90%,100%) 1 11%
