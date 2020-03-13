@@ -87,9 +87,8 @@ define i32 @fact_maybe_not_halt(i32 %0) local_unnamed_addr #0 {
 ;   return ans;
 ; }
 
-; FIXME: missing willreturn
-; ATTRIBUTOR_MODULE: Function Attrs: nofree noinline nosync nounwind readnone uwtable
-; ATTRIBUTOR_CGSCC: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable
+; ATTRIBUTOR_MODULE: Function Attrs: nofree noinline nosync nounwind readnone uwtable willreturn
+; ATTRIBUTOR_CGSCC: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable willreturn
 ; ATTRIBUTOR-NEXT: define i32 @fact_loop(i32 %0) local_unnamed_addr
 define i32 @fact_loop(i32 %0) local_unnamed_addr #0 {
   %2 = icmp slt i32 %0, 1
@@ -296,7 +295,7 @@ declare i32 @__gxx_personality_v0(...)
 
 
 ; TEST 11 (positive case)
-; counstant trip count
+; constant trip count
 ; int loop_constant_trip_count(int*p){
 ;    int ans = 0;
 ;    for(int i = 0;i<10;i++){
@@ -305,9 +304,8 @@ declare i32 @__gxx_personality_v0(...)
 ;    return ans;
 ; }
 
-; FIXME: missing willreturn
-; ATTRIBUTOR_MODULE: Function Attrs: argmemonly nofree noinline nosync nounwind readonly uwtable
-; ATTRIBUTOR_CGSCC: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind readonly uwtable
+; ATTRIBUTOR_MODULE: Function Attrs: argmemonly nofree noinline nosync nounwind readonly uwtable willreturn
+; ATTRIBUTOR_CGSCC: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind readonly uwtable willreturn
 ; ATTRIBUTOR-NEXT: define i32 @loop_constant_trip_count(i32* nocapture nofree readonly %0)
 define i32 @loop_constant_trip_count(i32* nocapture readonly %0) #0 {
   br label %3
@@ -374,9 +372,8 @@ define i32 @loop_trip_count_unbound(i32 %0, i32 %1, i32* nocapture readonly %2, 
 ;  }
 
 
-; FIXME: missing willreturn
-; ATTRIBUTOR_MODULE: Function Attrs: argmemonly nofree noinline nosync nounwind readonly uwtable
-; ATTRIBUTOR_CGSCC: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind readonly uwtable
+; ATTRIBUTOR_MODULE: Function Attrs: argmemonly nofree noinline nosync nounwind readonly uwtable willreturn
+; ATTRIBUTOR_CGSCC: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind readonly uwtable willreturn
 ; ATTRIBUTOR-NEXT: define i32 @loop_trip_dec(i32 %0, i32* nocapture nofree readonly %1) local_unnamed_addr
 
 define i32 @loop_trip_dec(i32 %0, i32* nocapture readonly %1) local_unnamed_addr #0 {
@@ -434,9 +431,8 @@ unreachable_label:
   unreachable
 }
 
-; FIXME: missing willreturn
-; ATTRIBUTOR_MODULE: Function Attrs: nofree noinline nosync nounwind readnone uwtable
-; ATTRIBUTOR_CGSCC: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable
+; ATTRIBUTOR_MODULE: Function Attrs: nofree noinline nosync nounwind readnone uwtable willreturn
+; ATTRIBUTOR_CGSCC: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable willreturn
 ; ATTRIBUTOR-NEXT: define i32 @unreachable_exit_positive2(i32 %0)
 define i32 @unreachable_exit_positive2(i32) local_unnamed_addr #0 {
   %2 = icmp slt i32 %0, 1
@@ -503,6 +499,274 @@ define void @call_longjmp(i8* nocapture readnone %0) local_unnamed_addr #0 {
   ret void
 }
 
+
+; TEST 16 (negative case) 
+; int infinite_loop_inside_bounded_loop(int n) {
+;   int ans = 0;
+;   for (int i = 0; i < n; i++) {
+;     while (1)
+;       ans++;
+;   }
+;   return ans;
+; }
+
+; ATTRIBUTOR_MODULE: Function Attrs:  nofree nosync nounwind readnone
+; ATTRIBUTOR_CGSCC: Function Attrs: nofree norecurse nosync nounwind readnone
+; ATTRIBUTOR-NOT: willreturn
+; ATTRIBUTOR-NEXT: define i32 @infinite_loop_inside_bounded_loop(i32 %n)
+define i32 @infinite_loop_inside_bounded_loop(i32 %n) {
+entry:
+  br label %for.cond
+
+for.cond:                                         ; preds = %for.inc, %entry
+  %cmp = icmp sgt i32 %n, 0
+  br i1 %cmp, label %for.body, label %for.cond.cleanup
+
+for.cond.cleanup:                                 ; preds = %for.cond
+  br label %for.end
+
+for.body:                                         ; preds = %for.cond
+  br label %while.cond
+
+while.cond:                                       ; preds = %while.body, %for.body
+  br label %while.body
+
+while.body:                                       ; preds = %while.cond
+  br label %while.cond
+
+for.inc:                                          ; No predecessors!
+  br label %for.cond
+
+for.end:                                          ; preds = %for.cond.cleanup
+  ret i32 0
+}
+
+
+; TEST 17 (positive case)
+; Nested loops with constant max trip count
+; int bounded_nested_loops(int n) {
+;   int ans = 0;
+;   for (int i = 0; i < n; i++) {
+;     while (n--) {
+;       ans++;
+;     }
+;   }
+;   return ans;
+; }
+
+; ATTRIBUTOR_MODULE: Function Attrs:  nofree nosync nounwind readnone willreturn
+; ATTRIBUTOR_CGSCC: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; ATTRIBUTOR-NEXT: define i32 @bounded_nested_loops(i32 %n)
+define i32 @bounded_nested_loops(i32 %n) {
+entry:
+  br label %for.cond
+
+for.cond:                                         ; preds = %for.inc, %entry
+  %i.0 = phi i32 [ 0, %entry ], [ %inc1, %for.inc ]
+  %ans.0 = phi i32 [ 0, %entry ], [ %tmp, %for.inc ]
+  %n.addr.0 = phi i32 [ %n, %entry ], [ -1, %for.inc ]
+  %cmp = icmp slt i32 %i.0, %n.addr.0
+  br i1 %cmp, label %for.body, label %for.cond.cleanup
+
+for.cond.cleanup:                                 ; preds = %for.cond
+  %ans.0.lcssa = phi i32 [ %ans.0, %for.cond ]
+  br label %for.end
+
+for.body:                                         ; preds = %for.cond
+  br label %while.cond
+
+while.cond:                                       ; preds = %while.body, %for.body
+  br i1 true, label %while.end, label %while.body
+
+while.body:                                       ; preds = %while.cond
+  br label %while.cond
+
+while.end:                                        ; preds = %while.cond
+  %tmp = add i32 %n.addr.0, %ans.0
+  br label %for.inc
+
+for.inc:                                          ; preds = %while.end
+  %inc1 = add nuw nsw i32 %i.0, 1
+  br label %for.cond
+
+for.end:                                          ; preds = %for.cond.cleanup
+  ret i32 %ans.0.lcssa
+}
+
+
+; TEST 18 (negative case)
+; int bounded_loop_inside_unbounded_loop(int n) {
+;   int ans = 0;
+;   while (n++) {
+;     for (int i = 0; i < n; i++) {
+;       ans++;
+;     }
+;   }
+;   return ans;
+; }
+
+; ATTRIBUTOR_MODULE: Function Attrs:  nofree nosync nounwind readnone
+; ATTRIBUTOR_CGSCC: Function Attrs: nofree norecurse nosync nounwind readnone
+; ATTRIBUTOR-NOT: willreturn
+; ATTRIBUTOR-NEXT: define i32 @bounded_loop_inside_unbounded_loop(i32 %n)
+define i32 @bounded_loop_inside_unbounded_loop(i32 %n) {
+entry:
+  br label %while.cond
+
+while.cond:                                       ; preds = %for.end, %entry
+  %ans.0 = phi i32 [ 0, %entry ], [ %tmp2, %for.end ]
+  %n.addr.0 = phi i32 [ %n, %entry ], [ %inc, %for.end ]
+  %tmp = icmp sgt i32 %n.addr.0, -1
+  %smax = select i1 %tmp, i32 %n.addr.0, i32 -1
+  %inc = add nsw i32 %n.addr.0, 1
+  %tobool = icmp eq i32 %n.addr.0, 0
+  br i1 %tobool, label %while.end, label %while.body
+
+while.body:                                       ; preds = %while.cond
+  %tmp1 = add i32 %ans.0, 1
+  br label %for.cond
+
+for.cond:                                         ; preds = %for.inc, %while.body
+  br i1 true, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.cond
+  %tmp2 = add i32 %tmp1, %smax
+  br label %for.end
+
+for.body:                                         ; preds = %for.cond
+  br label %for.inc
+
+for.inc:                                          ; preds = %for.body
+  br label %for.cond
+
+for.end:                                          ; preds = %for.cond.cleanup
+  br label %while.cond
+
+while.end:                                        ; preds = %while.cond
+  %ans.0.lcssa = phi i32 [ %ans.0, %while.cond ]
+  ret i32 %ans.0.lcssa
+}
+
+
+; TEST 19 (negative case)
+; int nested_unbounded_loops(int n) {
+;   int ans = 0;
+;   while (n--) {
+;     while (n--) {
+;       ans++;
+;     }
+;     while (n--) {
+;       ans++;
+;     }
+;   }
+;   return ans;
+; }
+
+; ATTRIBUTOR_MODULE: Function Attrs:  nofree nosync nounwind readnone
+; ATTRIBUTOR_CGSCC: Function Attrs: nofree norecurse nosync nounwind readnone
+; ATTRIBUTOR-NOT: willreturn
+; ATTRIBUTOR-NEXT: define i32 @nested_unbounded_loops(i32 %n)
+define i32 @nested_unbounded_loops(i32 %n) {
+entry:
+  br label %while.cond
+
+while.cond:                                       ; preds = %while.end10, %entry
+  %ans.0 = phi i32 [ 0, %entry ], [ %tmp1, %while.end10 ]
+  %n.addr.0 = phi i32 [ %n, %entry ], [ -1, %while.end10 ]
+  %tobool = icmp eq i32 %n.addr.0, 0
+  br i1 %tobool, label %while.end11, label %while.body
+
+while.body:                                       ; preds = %while.cond
+  br label %while.cond1
+
+while.cond1:                                      ; preds = %while.body4, %while.body
+  br i1 true, label %while.end, label %while.body4
+
+while.body4:                                      ; preds = %while.cond1
+  br label %while.cond1
+
+while.end:                                        ; preds = %while.cond1
+  %tmp = add i32 %n.addr.0, -2
+  br label %while.cond5
+
+while.cond5:                                      ; preds = %while.body8, %while.end
+  br i1 true, label %while.end10, label %while.body8
+
+while.body8:                                      ; preds = %while.cond5
+  br label %while.cond5
+
+while.end10:                                      ; preds = %while.cond5
+  %tmp1 = add i32 %tmp, %ans.0
+  br label %while.cond
+
+while.end11:                                      ; preds = %while.cond
+  %ans.0.lcssa = phi i32 [ %ans.0, %while.cond ]
+  ret i32 %ans.0.lcssa
+}
+
+
+; TEST 20 (negative case)
+;    void non_loop_cycle(int n) {
+;      if (fact_loop(n)>5)
+;        goto entry1;
+;      else
+;        goto entry2;
+;
+;    entry1:
+;      if (fact_loop(n)>5)
+;        goto exit;
+;      else
+;        goto entry2;
+;    entry2:
+;      if (fact_loop(n)>5)
+;        goto exit;
+;      else
+;        goto entry1;
+;    exit:
+;      return;
+;    }
+
+; ATTRIBUTOR_MODULE: Function Attrs:  nofree nosync nounwind readnone
+; ATTRIBUTOR_CGSCC: Function Attrs: nofree norecurse nosync nounwind readnone
+; ATTRIBUTOR-NOT: willreturn
+; ATTRIBUTOR-NEXT: define void @non_loop_cycle(i32 %n)
+define void @non_loop_cycle(i32 %n) {
+entry:
+  %call = call i32 @fact_loop(i32 %n)
+  %cmp = icmp sgt i32 %call, 5
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:                                          ; preds = %entry
+  br label %entry1
+
+if.else:                                          ; preds = %entry
+  br label %entry2
+
+entry1:                                           ; preds = %if.else8, %if.then
+  %call1 = call i32 @fact_loop(i32 %n)
+  %cmp2 = icmp sgt i32 %call1, 5
+  br i1 %cmp2, label %if.then3, label %if.else4
+
+if.then3:                                         ; preds = %entry1
+  br label %exit
+
+if.else4:                                         ; preds = %entry1
+  br label %entry2
+
+entry2:                                           ; preds = %if.else4, %if.else
+  %call5 = call i32 @fact_loop(i32 %n)
+  %cmp6 = icmp sgt i32 %call5, 5
+  br i1 %cmp6, label %if.then7, label %if.else8
+
+if.then7:                                         ; preds = %entry2
+  br label %exit
+
+if.else8:                                         ; preds = %entry2
+  br label %entry1
+
+exit:                                             ; preds = %if.then7, %if.then3
+  ret void
+}
 
 attributes #0 = { nounwind uwtable noinline }
 attributes #1 = { uwtable noinline }
