@@ -8,6 +8,8 @@
 
 #include "AMDGPU.h"
 #include "AMDGPUArgumentUsageInfo.h"
+#include "AMDGPUTargetMachine.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIRegisterInfo.h"
 #include "llvm/Support/NativeFormatting.h"
 #include "llvm/Support/raw_ostream.h"
@@ -42,6 +44,10 @@ void ArgDescriptor::print(raw_ostream &OS,
 char AMDGPUArgumentUsageInfo::ID = 0;
 
 const AMDGPUFunctionArgInfo AMDGPUArgumentUsageInfo::ExternFunctionInfo{};
+
+// Hardcoded registers from fixed function ABI
+const AMDGPUFunctionArgInfo AMDGPUArgumentUsageInfo::FixedABIFunctionInfo
+  = AMDGPUFunctionArgInfo::fixedABILayout();
 
 bool AMDGPUArgumentUsageInfo::doInitialization(Module &M) {
   return false;
@@ -132,4 +138,42 @@ AMDGPUFunctionArgInfo::getPreloadedValue(
                           &AMDGPU::VGPR_32RegClass);
   }
   llvm_unreachable("unexpected preloaded value type");
+}
+
+constexpr AMDGPUFunctionArgInfo AMDGPUFunctionArgInfo::fixedABILayout() {
+  AMDGPUFunctionArgInfo AI;
+  AI.PrivateSegmentBuffer = AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3;
+  AI.DispatchPtr = AMDGPU::SGPR4_SGPR5;
+  AI.QueuePtr = AMDGPU::SGPR6_SGPR7;
+
+  // Do not pass kernarg segment pointer, only pass increment version in its
+  // place.
+  AI.ImplicitArgPtr = AMDGPU::SGPR8_SGPR9;
+  AI.DispatchID = AMDGPU::SGPR10_SGPR11;
+
+  // Skip FlatScratchInit/PrivateSegmentSize
+  AI.WorkGroupIDX = AMDGPU::SGPR12;
+  AI.WorkGroupIDY = AMDGPU::SGPR13;
+  AI.WorkGroupIDZ = AMDGPU::SGPR14;
+
+  const unsigned Mask = 0x3ff;
+  AI.WorkItemIDX = ArgDescriptor::createRegister(AMDGPU::VGPR31, Mask);
+  AI.WorkItemIDY = ArgDescriptor::createRegister(AMDGPU::VGPR31, Mask << 10);
+  AI.WorkItemIDZ = ArgDescriptor::createRegister(AMDGPU::VGPR31, Mask << 20);
+  return AI;
+}
+
+const AMDGPUFunctionArgInfo &
+AMDGPUArgumentUsageInfo::lookupFuncArgInfo(const Function &F) const {
+  auto I = ArgInfoMap.find(&F);
+  if (I == ArgInfoMap.end()) {
+    if (AMDGPUTargetMachine::EnableFixedFunctionABI)
+      return FixedABIFunctionInfo;
+
+    // Without the fixed ABI, we assume no function has special inputs.
+    assert(F.isDeclaration());
+    return ExternFunctionInfo;
+  }
+
+  return I->second;
 }

@@ -439,6 +439,10 @@ public:
                                  MachineFunction &MF,
                                  const SIRegisterInfo &TRI,
                                  SIMachineFunctionInfo &Info) const;
+  void allocateSpecialInputVGPRsFixed(CCState &CCInfo,
+                                      MachineFunction &MF,
+                                      const SIRegisterInfo &TRI,
+                                      SIMachineFunctionInfo &Info) const;
 };
 
 } // End namespace llvm
