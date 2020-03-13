@@ -53,7 +53,8 @@ class CreateAfterAttachTestCase(TestBase):
                                    stdin=subprocess.PIPE,
                                    stdout=subprocess.PIPE,
                                    stderr=subprocess.PIPE)
-        outs, errs = capture.communicate()
+        outs, _ = capture.communicate()
+        outs = outs.decode('utf-8')
         self.assertIn('Process {} stopped'.format(pid), outs)
         self.assertIn('Reproducer written', outs)
 
@@ -63,7 +64,8 @@ class CreateAfterAttachTestCase(TestBase):
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE)
-        outs, errs = replay.communicate()
+        outs, _ = replay.communicate()
+        outs = outs.decode('utf-8')
         self.assertIn('Process {} stopped'.format(pid), outs)
 
         # We can dump the reproducer in the current context.
