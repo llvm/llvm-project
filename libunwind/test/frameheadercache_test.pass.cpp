@@ -3,6 +3,11 @@
 #include "../src/config.h"
 
 // Only run this test under supported configurations.
+// The frame header cache should work fine for other architectures,
+// but the #ifdefs end up being even more complicated than this.
+
+#ifdef __x86_64__
+
 // This #if chain is ugly, but see the comments in AddressSpace.hpp for
 // the reasoning.
 
@@ -81,4 +86,7 @@ int main() {
 }
 #else
 int main() { return 0; }
+#endif
+#else
+int main() { return 0;}
 #endif
