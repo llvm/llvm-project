@@ -174,9 +174,9 @@ StringRef getTargetEnvAttrName();
 /// and no extra extensions.
 TargetEnvAttr getDefaultTargetEnv(MLIRContext *context);
 
-/// Queries the target environment from the given `op` or returns the default
-/// target environment (SPIR-V 1.0 with Shader capability and no extra
-/// extensions) if not provided.
+/// Queries the target environment recursively from enclosing symbol table ops
+/// containing the given `op` or returns the default target environment as
+/// returned by getDefaultTargetEnv() if not provided.
 TargetEnvAttr lookupTargetEnvOrDefault(Operation *op);
 
 } // namespace spirv
