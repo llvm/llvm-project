@@ -25,12 +25,16 @@ class TestSwiftRewriteClangPaths(TestBase):
     def setUp(self):
         TestBase.setUp(self)
 
+    # Don't run ClangImporter tests if Clangimporter is disabled.
+    @skipIf(setting=('symbols.use-swift-clangimporter', 'false'))
     @skipUnlessDarwin
     @swiftTest
     @skipIf(debug_info=no_match(["dsym"]))
     def testWithRemap(self):
         self.dotest(True)
 
+    # Don't run ClangImporter tests if Clangimporter is disabled.
+    @skipIf(setting=('symbols.use-swift-clangimporter', 'false'))
     @skipUnlessDarwin
     @swiftTest
     @skipIf(debug_info=no_match(["dsym"]))

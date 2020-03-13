@@ -11,6 +11,8 @@ class TestSwiftExtraClangFlags(TestBase):
     def setUp(self):
         TestBase.setUp(self)
 
+    # Don't run ClangImporter tests if Clangimporter is disabled.
+    @skipIf(setting=('symbols.use-swift-clangimporter', 'false'))
     @skipUnlessDarwin
     @swiftTest
     def test_sanity(self):
@@ -20,6 +22,8 @@ class TestSwiftExtraClangFlags(TestBase):
         self.expect("frame var foo", "sanity check", substrs=['(Foo)'])
         self.expect("expr FromOverlay(i: 23)", error=True)
 
+    # Don't run ClangImporter tests if Clangimporter is disabled.
+    @skipIf(setting=('symbols.use-swift-clangimporter', 'false'))
     @skipUnlessDarwin
     @swiftTest
     def test_extra_clang_flags(self):

@@ -33,8 +33,10 @@ class TestSwiftUnknownSelf(lldbtest.TestBase):
         self.expect("fr v self", substrs=["hello", "world"])
 
 
-    @skipIf(archs=['ppc64le'])
-    # SR-10216
+    @expectedFailureAll(bugnumber="rdar://60396797",
+                        oslist=lldbplatform.darwin_all,
+                        setting=('symbols.use-swift-clangimporter', 'false'))
+    @skipIf(bugnumber="SR-10216", archs=['ppc64le'])
     @swiftTest
     def test_unknown_self_objc_ref(self):
         """Test unknown references to Objective-C objects."""

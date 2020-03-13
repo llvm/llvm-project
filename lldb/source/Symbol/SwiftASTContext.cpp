@@ -3260,6 +3260,9 @@ swift::ClangImporterOptions &SwiftASTContext::GetClangImporterOptions() {
     if (FileSystem::Instance().Exists(clang_dir_spec))
       clang_importer_options.OverrideResourceDir = clang_dir_spec.GetPath();
     clang_importer_options.DebuggerSupport = true;
+
+    clang_importer_options.DisableSourceImport =
+        !props.GetUseSwiftClangImporter();
   }
   return clang_importer_options;
 }
@@ -3990,7 +3993,7 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
     if (!clang_importer_options.OverrideResourceDir.empty()) {
       // Create the DWARFImporterDelegate.
       auto props = ModuleList::GetGlobalModuleListProperties();
-      if (props.GetUseDWARFImporter())
+      if (props.GetUseSwiftDWARFImporter())
         m_dwarf_importer_delegate_up =
             std::make_unique<SwiftDWARFImporterDelegate>(*this);
       clang_importer_ap = swift::ClangImporter::create(
