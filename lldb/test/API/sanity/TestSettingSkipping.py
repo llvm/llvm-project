@@ -27,3 +27,11 @@ class SettingSkipSanityTestCase(TestBase):
   def testNotExisting(self):
     self.assertTrue(True, "This test should run!")
 
+  @expectedFailureAll(setting=('target.prefer-dynamic-value', 'no-dynamic-values'))
+  def testXFAIL(self):
+    self.assertTrue(False, "This test should run and fail!")
+
+  @expectedFailureAll(setting=('target.prefer-dynamic-value', 'run-target'))
+  def testNotXFAIL(self):
+    self.assertTrue(True, "This test should run and succeed!")
+
