@@ -716,3 +716,21 @@ body: |
 #     %2:_(s112) = G_SEXT %1
 #     S_ENDPGM 0, implicit %2
 # ...
+
+---
+name: test_sext_s112_to_s128
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK-LABEL: name: test_sext_s112_to_s128
+    ; CHECK: [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s128) = COPY [[COPY]](s128)
+    ; CHECK: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY1]](s128)
+    ; CHECK: [[SEXT_INREG:%[0-9]+]]:_(s64) = G_SEXT_INREG [[UV1]], 48
+    ; CHECK: [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[UV]](s64), [[SEXT_INREG]](s64)
+    ; CHECK: S_ENDPGM 0, implicit [[MV]](s128)
+    %0:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    %1:_(s112) = G_TRUNC %0
+    %2:_(s128) = G_SEXT %1
+    S_ENDPGM 0, implicit %2
+...

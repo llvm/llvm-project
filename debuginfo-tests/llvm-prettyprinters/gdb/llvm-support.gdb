@@ -1,4 +1,4 @@
-# RUN: gdb -q -batch -n -iex 'source %llvm_src_root/utils/gdb-scripts/prettyprinters.py' -x %s %llvm_tools_dir/check-gdb-llvm-support | FileCheck %s
+# RUN: gdb -q -batch -n -iex 'source %llvm_src_root/utils/gdb-scripts/prettyprinters.py' -x %s %llvm_tools_dir/check-gdb-llvm-support | FileCheck %s --dump-input-on-failure
 
 break main
 run
@@ -39,11 +39,14 @@ p StringRef
 # CHECK: "\"foo\"\"bar\""
 p Twine
 
-# CHECK: llvm::PointerIntPair<int *> = {pointer = 0xabc, value = 1}
+# CHECK: {pointer = 0xabc, value = 1}
 p PointerIntPair
 
-# CHECK: llvm::PointerUnion containing int * = {pointer = 0xabc}
+# CHECK: Containing int * = {pointer = 0xabc}
 p PointerUnion
+
+# CHECK: PointerUnionMembers<llvm::PointerUnion<Z*, float*>,
+p RawPrintingPointerUnion
 
 # Switch to print pretty adds newlines to the following statements.
 set print pretty

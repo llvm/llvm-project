@@ -3080,7 +3080,7 @@ unsigned RAGreedy::selectOrSplitImpl(LiveInterval &VirtReg,
     unsigned NewVRegSizeBefore = NewVRegs.size();
     unsigned PhysReg = trySplit(VirtReg, Order, NewVRegs, FixedRegisters);
     if (PhysReg || (NewVRegs.size() - NewVRegSizeBefore)) {
-      // If VirtReg got split, the eviction info is no longre relevant.
+      // If VirtReg got split, the eviction info is no longer relevant.
       LastEvicted.clearEvicteeInfo(VirtReg.reg);
       return PhysReg;
     }

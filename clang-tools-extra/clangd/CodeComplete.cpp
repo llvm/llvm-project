@@ -1373,8 +1373,8 @@ public:
     //  - accessible scopes are determined heuristically.
     //  - all-scopes query if no qualifier was typed (and it's allowed).
     SpecifiedScope Scopes;
-    Scopes.AccessibleScopes =
-        visibleNamespaces(Content.take_front(Offset), Style);
+    Scopes.AccessibleScopes = visibleNamespaces(
+        Content.take_front(Offset), format::getFormattingLangOpts(Style));
     for (std::string &S : Scopes.AccessibleScopes)
       if (!S.empty())
         S.append("::"); // visibleNamespaces doesn't include trailing ::.
@@ -1776,8 +1776,7 @@ SignatureHelp signatureHelp(PathRef FileName,
   Options.IncludeBriefComments = false;
   IncludeStructure PreambleInclusions; // Unused for signatureHelp
   semaCodeComplete(
-      std::make_unique<SignatureHelpCollector>(Options, Index, Result),
-      Options,
+      std::make_unique<SignatureHelpCollector>(Options, Index, Result), Options,
       {FileName, Command, Preamble, Contents, *Offset, std::move(VFS)});
   return Result;
 }

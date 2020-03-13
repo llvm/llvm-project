@@ -576,6 +576,28 @@ public:
           continue;
         }
 
+        if (AtPredExit == MayUninitialized) {
+          // If the predecessor's terminator is an "asm goto" that initializes
+          // the variable, then it won't be counted as "initialized" on the
+          // non-fallthrough paths.
+          CFGTerminator term = Pred->getTerminator();
+          if (const auto *as = dyn_cast_or_null<GCCAsmStmt>(term.getStmt())) {
+            const CFGBlock *fallthrough = *Pred->succ_begin();
+            if (as->isAsmGoto() &&
+                llvm::any_of(as->outputs(), [&](const Expr *output) {
+                    return vd == findVar(output).getDecl() &&
+                        llvm::any_of(as->labels(),
+                                     [&](const AddrLabelExpr *label) {
+                          return label->getLabel()->getStmt() == B->Label &&
+                              B != fallthrough;
+                        });
+                })) {
+              Use.setUninitAfterDecl();
+              continue;
+            }
+          }
+        }
+
         unsigned &SV = SuccsVisited[Pred->getBlockID()];
         if (!SV) {
           // When visiting the first successor of a block, mark all NULL
@@ -768,7 +790,11 @@ void TransferFunctions::VisitGCCAsmStmt(GCCAsmStmt *as) {
 
   for (const Expr *o : as->outputs())
     if (const VarDecl *VD = findVar(o).getDecl())
-      vals[VD] = Initialized;
+      if (vals[VD] != Initialized)
+        // If the variable isn't initialized by the time we get here, then we
+        // mark it as potentially uninitialized for those cases where it's used
+        // on an indirect path, where it's not guaranteed to be defined.
+        vals[VD] = MayUninitialized;
 }
 
 void TransferFunctions::VisitObjCMessageExpr(ObjCMessageExpr *ME) {
@@ -809,7 +835,7 @@ static bool runOnBlock(const CFGBlock *block, const CFG &cfg,
       tf.Visit(const_cast<Stmt *>(cs->getStmt()));
   }
   CFGTerminator terminator = block->getTerminator();
-  if (GCCAsmStmt *as = dyn_cast_or_null<GCCAsmStmt>(terminator.getStmt()))
+  if (auto *as = dyn_cast_or_null<GCCAsmStmt>(terminator.getStmt()))
     if (as->isAsmGoto())
       tf.Visit(as);
   return vals.updateValueVectorWithScratch(block);

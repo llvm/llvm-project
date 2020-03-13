@@ -707,9 +707,8 @@ static Constant *stripAndComputeConstantOffsets(const DataLayout &DL, Value *&V,
   Offset = Offset.sextOrTrunc(IntIdxTy->getIntegerBitWidth());
 
   Constant *OffsetIntPtr = ConstantInt::get(IntIdxTy, Offset);
-  if (V->getType()->isVectorTy())
-    return ConstantVector::getSplat(V->getType()->getVectorNumElements(),
-                                    OffsetIntPtr);
+  if (VectorType *VecTy = dyn_cast<VectorType>(V->getType()))
+    return ConstantVector::getSplat(VecTy->getElementCount(), OffsetIntPtr);
   return OffsetIntPtr;
 }
 
@@ -4220,10 +4219,10 @@ Value *llvm::SimplifyInsertElementInst(Value *Vec, Value *Val, Value *Idx,
   if (VecC && ValC && IdxC)
     return ConstantFoldInsertElementInstruction(VecC, ValC, IdxC);
 
-  // Fold into undef if index is out of bounds.
+  // For fixed-length vector, fold into undef if index is out of bounds.
   if (auto *CI = dyn_cast<ConstantInt>(Idx)) {
-    uint64_t NumElements = cast<VectorType>(Vec->getType())->getNumElements();
-    if (CI->uge(NumElements))
+    if (!Vec->getType()->getVectorIsScalable() &&
+        CI->uge(Vec->getType()->getVectorNumElements()))
       return UndefValue::get(Vec->getType());
   }
 
@@ -4294,8 +4293,9 @@ static Value *SimplifyExtractElementInst(Value *Vec, Value *Idx, const SimplifyQ
   // If extracting a specified index from the vector, see if we can recursively
   // find a previously computed scalar that was inserted into the vector.
   if (auto *IdxC = dyn_cast<ConstantInt>(Idx)) {
-    if (IdxC->getValue().uge(Vec->getType()->getVectorNumElements()))
-      // definitely out of bounds, thus undefined result
+    // For fixed-length vector, fold into undef if index is out of bounds.
+    if (!Vec->getType()->getVectorIsScalable() &&
+        IdxC->getValue().uge(Vec->getType()->getVectorNumElements()))
       return UndefValue::get(Vec->getType()->getVectorElementType());
     if (Value *Elt = findScalarElement(Vec, IdxC->getZExtValue()))
       return Elt;
@@ -4602,14 +4602,24 @@ static Constant *propagateNaN(Constant *In) {
 /// Perform folds that are common to any floating-point operation. This implies
 /// transforms based on undef/NaN because the operation itself makes no
 /// difference to the result.
-static Constant *simplifyFPOp(ArrayRef<Value *> Ops) {
-  if (any_of(Ops, [](Value *V) { return isa<UndefValue>(V); }))
-    return ConstantFP::getNaN(Ops[0]->getType());
+static Constant *simplifyFPOp(ArrayRef<Value *> Ops,
+                              FastMathFlags FMF = FastMathFlags()) {
+  for (Value *V : Ops) {
+    bool IsNan = match(V, m_NaN());
+    bool IsInf = match(V, m_Inf());
+    bool IsUndef = match(V, m_Undef());
 
-  for (Value *V : Ops)
-    if (match(V, m_NaN()))
+    // If this operation has 'nnan' or 'ninf' and at least 1 disallowed operand
+    // (an undef operand can be chosen to be Nan/Inf), then the result of
+    // this operation is poison. That result can be relaxed to undef.
+    if (FMF.noNaNs() && (IsNan || IsUndef))
+      return UndefValue::get(V->getType());
+    if (FMF.noInfs() && (IsInf || IsUndef))
+      return UndefValue::get(V->getType());
+
+    if (IsUndef || IsNan)
       return propagateNaN(cast<Constant>(V));
-
+  }
   return nullptr;
 }
 
@@ -4620,7 +4630,7 @@ static Value *SimplifyFAddInst(Value *Op0, Value *Op1, FastMathFlags FMF,
   if (Constant *C = foldOrCommuteConstant(Instruction::FAdd, Op0, Op1, Q))
     return C;
 
-  if (Constant *C = simplifyFPOp({Op0, Op1}))
+  if (Constant *C = simplifyFPOp({Op0, Op1}, FMF))
     return C;
 
   // fadd X, -0 ==> X
@@ -4667,7 +4677,7 @@ static Value *SimplifyFSubInst(Value *Op0, Value *Op1, FastMathFlags FMF,
   if (Constant *C = foldOrCommuteConstant(Instruction::FSub, Op0, Op1, Q))
     return C;
 
-  if (Constant *C = simplifyFPOp({Op0, Op1}))
+  if (Constant *C = simplifyFPOp({Op0, Op1}, FMF))
     return C;
 
   // fsub X, +0 ==> X
@@ -4709,7 +4719,7 @@ static Value *SimplifyFSubInst(Value *Op0, Value *Op1, FastMathFlags FMF,
 
 static Value *SimplifyFMAFMul(Value *Op0, Value *Op1, FastMathFlags FMF,
                               const SimplifyQuery &Q, unsigned MaxRecurse) {
-  if (Constant *C = simplifyFPOp({Op0, Op1}))
+  if (Constant *C = simplifyFPOp({Op0, Op1}, FMF))
     return C;
 
   // fmul X, 1.0 ==> X
@@ -4776,7 +4786,7 @@ static Value *SimplifyFDivInst(Value *Op0, Value *Op1, FastMathFlags FMF,
   if (Constant *C = foldOrCommuteConstant(Instruction::FDiv, Op0, Op1, Q))
     return C;
 
-  if (Constant *C = simplifyFPOp({Op0, Op1}))
+  if (Constant *C = simplifyFPOp({Op0, Op1}, FMF))
     return C;
 
   // X / 1.0 -> X
@@ -4821,7 +4831,7 @@ static Value *SimplifyFRemInst(Value *Op0, Value *Op1, FastMathFlags FMF,
   if (Constant *C = foldOrCommuteConstant(Instruction::FRem, Op0, Op1, Q))
     return C;
 
-  if (Constant *C = simplifyFPOp({Op0, Op1}))
+  if (Constant *C = simplifyFPOp({Op0, Op1}, FMF))
     return C;
 
   // Unlike fdiv, the result of frem always matches the sign of the dividend.

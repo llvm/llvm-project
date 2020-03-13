@@ -570,6 +570,15 @@ inline cstfp_pred_ty<is_nan> m_NaN() {
   return cstfp_pred_ty<is_nan>();
 }
 
+struct is_inf {
+  bool isValue(const APFloat &C) { return C.isInfinity(); }
+};
+/// Match a positive or negative infinity FP constant.
+/// For vectors, this includes constants with undefined elements.
+inline cstfp_pred_ty<is_inf> m_Inf() {
+  return cstfp_pred_ty<is_inf>();
+}
+
 struct is_any_zero_fp {
   bool isValue(const APFloat &C) { return C.isZero(); }
 };

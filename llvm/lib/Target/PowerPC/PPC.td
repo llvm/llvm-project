@@ -166,6 +166,16 @@ def FeatureHTM : SubtargetFeature<"htm", "HasHTM", "true",
                                   "Enable Hardware Transactional Memory instructions">;
 def FeatureMFTB   : SubtargetFeature<"", "FeatureMFTB", "true",
                                         "Implement mftb using the mfspr instruction">;
+def FeatureFusion : SubtargetFeature<"fusion", "HasFusion", "true",
+                                     "Target supports instruction fusion">;
+def FeatureAddiLoadFusion : SubtargetFeature<"fuse-addi-load",
+                                             "HasAddiLoadFusion", "true",
+                                             "Power8 Addi-Load fusion",
+                                             [FeatureFusion]>;
+def FeatureAddisLoadFusion : SubtargetFeature<"fuse-addis-load",
+                                              "HasAddisLoadFusion", "true",
+                                              "Power8 Addis-Load fusion",
+                                              [FeatureFusion]>;
 def FeatureUnalignedFloats :
   SubtargetFeature<"allow-unaligned-fp-access", "AllowsUnalignedFPAccess",
                    "true", "CPU does not trap on unaligned FP access">;
@@ -279,7 +289,8 @@ def ProcessorFeatures {
                                                  FeatureDirectMove,
                                                  FeatureICBT,
                                                  FeaturePartwordAtomic];
-  list<SubtargetFeature> P8SpecificFeatures = [];
+  list<SubtargetFeature> P8SpecificFeatures = [FeatureAddiLoadFusion,
+                                               FeatureAddisLoadFusion];
   list<SubtargetFeature> P8InheritableFeatures =
     !listconcat(P7InheritableFeatures, P8AdditionalFeatures);
   list<SubtargetFeature> P8Features =

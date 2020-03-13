@@ -331,3 +331,16 @@ void ProcessInstanceInfoMatch::Clear() {
   m_name_match_type = NameMatch::Ignore;
   m_match_all_users = false;
 }
+
+void llvm::yaml::MappingTraits<ProcessInstanceInfo>::mapping(
+    IO &io, ProcessInstanceInfo &Info) {
+  io.mapRequired("executable", Info.m_executable);
+  io.mapRequired("arg0", Info.m_arg0);
+  io.mapRequired("arch", Info.m_arch);
+  io.mapRequired("uid", Info.m_uid);
+  io.mapRequired("gid", Info.m_gid);
+  io.mapRequired("pid", Info.m_pid);
+  io.mapRequired("effective-uid", Info.m_euid);
+  io.mapRequired("effective-gid", Info.m_egid);
+  io.mapRequired("parent-pid", Info.m_parent_pid);
+}

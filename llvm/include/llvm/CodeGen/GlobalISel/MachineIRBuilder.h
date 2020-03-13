@@ -468,7 +468,27 @@ public:
   ///
   /// \return The newly created instruction.
   MachineInstrBuilder buildUAddo(const DstOp &Res, const DstOp &CarryOut,
-                                 const SrcOp &Op0, const SrcOp &Op1);
+                                 const SrcOp &Op0, const SrcOp &Op1) {
+    return buildInstr(TargetOpcode::G_UADDO, {Res, CarryOut}, {Op0, Op1});
+  }
+
+  /// Build and insert \p Res, \p CarryOut = G_USUBO \p Op0, \p Op1
+  MachineInstrBuilder buildUSubo(const DstOp &Res, const DstOp &CarryOut,
+                                 const SrcOp &Op0, const SrcOp &Op1) {
+    return buildInstr(TargetOpcode::G_USUBO, {Res, CarryOut}, {Op0, Op1});
+  }
+
+  /// Build and insert \p Res, \p CarryOut = G_SADDO \p Op0, \p Op1
+  MachineInstrBuilder buildSAddo(const DstOp &Res, const DstOp &CarryOut,
+                                 const SrcOp &Op0, const SrcOp &Op1) {
+    return buildInstr(TargetOpcode::G_SADDO, {Res, CarryOut}, {Op0, Op1});
+  }
+
+  /// Build and insert \p Res, \p CarryOut = G_SUBO \p Op0, \p Op1
+  MachineInstrBuilder buildSSubo(const DstOp &Res, const DstOp &CarryOut,
+                                 const SrcOp &Op0, const SrcOp &Op1) {
+    return buildInstr(TargetOpcode::G_SSUBO, {Res, CarryOut}, {Op0, Op1});
+  }
 
   /// Build and insert \p Res, \p CarryOut = G_UADDE \p Op0,
   /// \p Op1, \p CarryIn
@@ -486,7 +506,34 @@ public:
   /// \return The newly created instruction.
   MachineInstrBuilder buildUAdde(const DstOp &Res, const DstOp &CarryOut,
                                  const SrcOp &Op0, const SrcOp &Op1,
-                                 const SrcOp &CarryIn);
+                                 const SrcOp &CarryIn) {
+    return buildInstr(TargetOpcode::G_UADDE, {Res, CarryOut},
+                                             {Op0, Op1, CarryIn});
+  }
+
+  /// Build and insert \p Res, \p CarryOut = G_USUBE \p Op0, \p Op1, \p CarryInp
+  MachineInstrBuilder buildUSube(const DstOp &Res, const DstOp &CarryOut,
+                                 const SrcOp &Op0, const SrcOp &Op1,
+                                 const SrcOp &CarryIn) {
+    return buildInstr(TargetOpcode::G_USUBE, {Res, CarryOut},
+                                             {Op0, Op1, CarryIn});
+  }
+
+  /// Build and insert \p Res, \p CarryOut = G_SADDE \p Op0, \p Op1, \p CarryInp
+  MachineInstrBuilder buildSAdde(const DstOp &Res, const DstOp &CarryOut,
+                                 const SrcOp &Op0, const SrcOp &Op1,
+                                 const SrcOp &CarryIn) {
+    return buildInstr(TargetOpcode::G_SADDE, {Res, CarryOut},
+                                             {Op0, Op1, CarryIn});
+  }
+
+  /// Build and insert \p Res, \p CarryOut = G_SSUBE \p Op0, \p Op1, \p CarryInp
+  MachineInstrBuilder buildSSube(const DstOp &Res, const DstOp &CarryOut,
+                                 const SrcOp &Op0, const SrcOp &Op1,
+                                 const SrcOp &CarryIn) {
+    return buildInstr(TargetOpcode::G_SSUBE, {Res, CarryOut},
+                                             {Op0, Op1, CarryIn});
+  }
 
   /// Build and insert \p Res = G_ANYEXT \p Op0
   ///

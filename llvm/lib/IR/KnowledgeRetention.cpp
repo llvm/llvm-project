@@ -183,80 +183,41 @@ static Value *getValueFromBundleOpInfo(IntrinsicInst &Assume,
   return (Assume.op_begin() + BOI.Begin + Idx)->get();
 }
 
-#ifndef NDEBUG
-
-static bool isExistingAttribute(StringRef Name) {
-  return StringSwitch<bool>(Name)
-#define GET_ATTR_NAMES
-#define ATTRIBUTE_ALL(ENUM_NAME, DISPLAY_NAME) .Case(#DISPLAY_NAME, true)
-#include "llvm/IR/Attributes.inc"
-      .Default(false);
-}
-
-#endif
-
 bool llvm::hasAttributeInAssume(CallInst &AssumeCI, Value *IsOn,
                                 StringRef AttrName, uint64_t *ArgVal,
                                 AssumeQuery AQR) {
   IntrinsicInst &Assume = cast<IntrinsicInst>(AssumeCI);
   assert(Assume.getIntrinsicID() == Intrinsic::assume &&
          "this function is intended to be used on llvm.assume");
-  assert(isExistingAttribute(AttrName) && "this attribute doesn't exist");
+  assert(Attribute::isExistingAttribute(AttrName) &&
+         "this attribute doesn't exist");
   assert((ArgVal == nullptr || Attribute::doesAttrKindHaveArgument(
                                    Attribute::getAttrKindFromName(AttrName))) &&
          "requested value for an attribute that has no argument");
   if (Assume.bundle_op_infos().empty())
     return false;
 
-  CallInst::bundle_op_iterator Lookup;
-
-  /// The right attribute can be found by binary search. After this finding the
-  /// right WasOn needs to be done via linear search.
-  /// Element have been ordered by argument value so the first we find is the
-  /// one we need.
-  if (AQR == AssumeQuery::Lowest)
-    Lookup =
-        llvm::lower_bound(Assume.bundle_op_infos(), AttrName,
-                          [](const CallBase::BundleOpInfo &BOI, StringRef RHS) {
-                            assert(isExistingAttribute(BOI.Tag->getKey()) &&
-                                   "this attribute doesn't exist");
-                            return BOI.Tag->getKey() < RHS;
-                          });
-  else
-    Lookup = std::prev(
-        llvm::upper_bound(Assume.bundle_op_infos(), AttrName,
-                          [](StringRef LHS, const CallBase::BundleOpInfo &BOI) {
-                            assert(isExistingAttribute(BOI.Tag->getKey()) &&
-                                   "this attribute doesn't exist");
-                            return LHS < BOI.Tag->getKey();
-                          }));
-
-  if (Lookup == Assume.bundle_op_info_end() ||
-      Lookup->Tag->getKey() != AttrName)
-    return false;
-  if (IsOn) {
-    assert((Lookup->End - Lookup->Begin > BOIE_WasOn) &&
-           "missing argument of attribute");
-    while (true) {
-      if (Lookup == Assume.bundle_op_info_end() ||
-          Lookup->Tag->getKey() != AttrName)
-        return false;
-      if (getValueFromBundleOpInfo(Assume, *Lookup, BOIE_WasOn) == IsOn)
-        break;
-      if (AQR == AssumeQuery::Highest &&
-          Lookup == Assume.bundle_op_info_begin())
-        return false;
-      Lookup = Lookup + (AQR == AssumeQuery::Lowest ? 1 : -1);
+  auto Loop = [&](auto &&Range) {
+    for (auto &BOI : Range) {
+      if (BOI.Tag->getKey() != AttrName)
+        continue;
+      if (IsOn && (BOI.End - BOI.Begin <= BOIE_WasOn ||
+                   IsOn != getValueFromBundleOpInfo(Assume, BOI, BOIE_WasOn)))
+        continue;
+      if (ArgVal) {
+        assert(BOI.End - BOI.Begin > BOIE_Argument);
+        *ArgVal = cast<ConstantInt>(
+                      getValueFromBundleOpInfo(Assume, BOI, BOIE_Argument))
+                      ->getZExtValue();
+      }
+      return true;
     }
-  }
+    return false;
+  };
 
-  if (Lookup->End - Lookup->Begin < BOIE_Argument)
-    return true;
-  if (ArgVal)
-    *ArgVal = cast<ConstantInt>(
-                  getValueFromBundleOpInfo(Assume, *Lookup, BOIE_Argument))
-                  ->getZExtValue();
-  return true;
+  if (AQR == AssumeQuery::Lowest)
+    return Loop(Assume.bundle_op_infos());
+  return Loop(reverse(Assume.bundle_op_infos()));
 }
 
 void llvm::fillMapFromAssume(CallInst &AssumeCI, RetainedKnowledgeMap &Result) {

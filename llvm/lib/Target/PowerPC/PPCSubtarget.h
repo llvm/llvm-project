@@ -135,6 +135,9 @@ protected:
   bool HasDirectMove;
   bool HasHTM;
   bool HasFloat128;
+  bool HasFusion;
+  bool HasAddiLoadFusion;
+  bool HasAddisLoadFusion;
   bool IsISA3_0;
   bool UseLongCalls;
   bool SecurePlt;
@@ -306,6 +309,9 @@ public:
   bool hasFloat128() const { return HasFloat128; }
   bool isISA3_0() const { return IsISA3_0; }
   bool useLongCalls() const { return UseLongCalls; }
+  bool hasFusion() const { return HasFusion; }
+  bool hasAddiLoadFusion() const { return HasAddiLoadFusion; }
+  bool hasAddisLoadFusion() const { return HasAddisLoadFusion; }
   bool needsSwapsForVSXMemOps() const {
     return hasVSX() && isLittleEndian() && !hasP9Vector();
   }

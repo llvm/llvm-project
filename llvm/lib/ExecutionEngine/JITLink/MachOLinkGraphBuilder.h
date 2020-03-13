@@ -13,6 +13,8 @@
 #ifndef LIB_EXECUTIONENGINE_JITLINK_MACHOLINKGRAPHBUILDER_H
 #define LIB_EXECUTIONENGINE_JITLINK_MACHOLINKGRAPHBUILDER_H
 
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 
 #include "EHFrameSupportImpl.h"

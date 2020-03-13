@@ -52,7 +52,6 @@
 #include "clang/AST/DeclFriend.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
-#include "clang/AST/ParentMapContext.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
@@ -60,6 +59,7 @@
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/OpenMPClause.h"
 #include "clang/AST/OperationKinds.h"
+#include "clang/AST/ParentMapContext.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtObjC.h"
@@ -72,6 +72,7 @@
 #include "clang/ASTMatchers/ASTMatchersMacros.h"
 #include "clang/Basic/AttrKinds.h"
 #include "clang/Basic/ExceptionSpecificationType.h"
+#include "clang/Basic/FileManager.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceManager.h"
@@ -7014,19 +7015,6 @@ extern const internal::VariadicDynCastAllOfMatcher<Stmt, OMPExecutableDirective>
 AST_MATCHER(OMPExecutableDirective, isStandaloneDirective) {
   return Node.isStandaloneDirective();
 }
-
-/// Matches the Stmt AST node that is marked as being the structured-block
-/// of an OpenMP executable directive.
-///
-/// Given
-///
-/// \code
-///    #pragma omp parallel
-///    {}
-/// \endcode
-///
-/// ``stmt(isOMPStructuredBlock()))`` matches ``{}``.
-AST_MATCHER(Stmt, isOMPStructuredBlock) { return Node.isOMPStructuredBlock(); }
 
 /// Matches the structured-block of the OpenMP executable directive
 ///

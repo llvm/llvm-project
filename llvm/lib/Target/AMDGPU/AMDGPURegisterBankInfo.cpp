@@ -3080,6 +3080,27 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   const MachineFunction &MF = *MI.getParent()->getParent();
   const MachineRegisterInfo &MRI = MF.getRegInfo();
 
+  if (MI.isCopy()) {
+    // The default logic bothers to analyze impossible alternative mappings. We
+    // want the most straightforward mapping, so just directly handle this.
+    const RegisterBank *DstBank = getRegBank(MI.getOperand(0).getReg(), MRI,
+                                             *TRI);
+    const RegisterBank *SrcBank = getRegBank(MI.getOperand(1).getReg(), MRI,
+                                             *TRI);
+    assert(SrcBank && "src bank should have been assigned already");
+    if (!DstBank)
+      DstBank = SrcBank;
+
+    unsigned Size = getSizeInBits(MI.getOperand(0).getReg(), MRI, *TRI);
+    if (cannotCopy(*DstBank, *SrcBank, Size))
+      return getInvalidInstructionMapping();
+
+    const ValueMapping &ValMap = getValueMapping(0, Size, *DstBank);
+    return getInstructionMapping(
+        1, /*Cost*/ 1,
+        /*OperandsMapping*/ getOperandsMapping({&ValMap}), 1);
+  }
+
   if (MI.isRegSequence()) {
     // If any input is a VGPR, the result must be a VGPR. The default handling
     // assumes any copy between banks is legal.

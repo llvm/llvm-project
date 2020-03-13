@@ -46,6 +46,48 @@ clang::getTemplateParamsRange(TemplateParameterList const * const *Ps,
   return SourceRange(Ps[0]->getTemplateLoc(), Ps[N-1]->getRAngleLoc());
 }
 
+unsigned Sema::getTemplateDepth(Scope *S) const {
+  unsigned Depth = 0;
+
+  // Each template parameter scope represents one level of template parameter
+  // depth.
+  for (Scope *TempParamScope = S->getTemplateParamParent();
+       TempParamScope && !Depth;
+       TempParamScope = TempParamScope->getParent()->getTemplateParamParent()) {
+    ++Depth;
+  }
+
+  // Note that there are template parameters with the given depth.
+  auto ParamsAtDepth = [&](unsigned D) { Depth = std::max(Depth, D + 1); };
+
+  // Look for parameters of an enclosing generic lambda. We don't create a
+  // template parameter scope for these.
+  for (FunctionScopeInfo *FSI : getFunctionScopes()) {
+    if (auto *LSI = dyn_cast<LambdaScopeInfo>(FSI)) {
+      if (!LSI->TemplateParams.empty()) {
+        ParamsAtDepth(LSI->AutoTemplateParameterDepth);
+        break;
+      }
+      if (LSI->GLTemplateParameterList) {
+        ParamsAtDepth(LSI->GLTemplateParameterList->getDepth());
+        break;
+      }
+    }
+  }
+
+  // Look for parameters of an enclosing terse function template. We don't
+  // create a template parameter scope for these either.
+  for (const InventedTemplateParameterInfo &Info :
+       getInventedParameterInfos()) {
+    if (!Info.TemplateParams.empty()) {
+      ParamsAtDepth(Info.AutoTemplateParameterDepth);
+      break;
+    }
+  }
+
+  return Depth;
+}
+
 /// \brief Determine whether the declaration found is acceptable as the name
 /// of a template and, if so, return that template declaration. Otherwise,
 /// returns null.

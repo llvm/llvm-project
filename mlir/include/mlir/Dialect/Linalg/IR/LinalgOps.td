@@ -15,6 +15,7 @@
 
 include "mlir/Dialect/AffineOps/AffineOpsBase.td"
 include "mlir/Dialect/Linalg/IR/LinalgBase.td"
+include "mlir/Interfaces/SideEffects.td"
 
 // Base class for Linalg dialect ops that do not correspond to library calls.
 class Linalg_Op<string mnemonic, list<OpTrait> traits = []> :
@@ -233,7 +234,7 @@ def Linalg_TransposeOp : Linalg_Op<"transpose", [NoSideEffect]>,
   let hasFolder = 1;
 }
 
-def Linalg_YieldOp : Linalg_Op<"yield", [NativeOpTrait<"IsTerminator">]>,
+def Linalg_YieldOp : Linalg_Op<"yield", [NoSideEffect, Terminator]>,
     Arguments<(ins Variadic<AnyType>:$values)> {
   let summary = "Linalg yield operation";
   let description = [{

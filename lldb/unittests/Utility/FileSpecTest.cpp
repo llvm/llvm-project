@@ -420,3 +420,24 @@ TEST(FileSpecTest, Match) {
   EXPECT_TRUE(Match("", ""));
 
 }
+
+TEST(FileSpecTest, Yaml) {
+  std::string buffer;
+  llvm::raw_string_ostream os(buffer);
+
+  // Serialize.
+  FileSpec fs_windows("F:\\bar", FileSpec::Style::windows);
+  llvm::yaml::Output yout(os);
+  yout << fs_windows;
+  os.flush();
+
+  // Deserialize.
+  FileSpec deserialized;
+  llvm::yaml::Input yin(buffer);
+  yin >> deserialized;
+
+  EXPECT_EQ(deserialized.GetPathStyle(), fs_windows.GetPathStyle());
+  EXPECT_EQ(deserialized.GetFilename(), fs_windows.GetFilename());
+  EXPECT_EQ(deserialized.GetDirectory(), fs_windows.GetDirectory());
+  EXPECT_EQ(deserialized, fs_windows);
+}

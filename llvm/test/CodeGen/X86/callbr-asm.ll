@@ -56,7 +56,7 @@ fail:
 ; Test 3 - asm-goto implements a loop. The loop gets recognized, but many loop
 ; transforms fail due to canonicalization having callbr exceptions. Trivial
 ; blocks at labels 1 and 3 also don't get simplified due to callbr.
-define dso_local i32 @test3(i32 %a) {
+define i32 @test3(i32 %a) {
 ; CHECK-LABEL: test3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:  .Ltmp1: # Block address taken
@@ -78,7 +78,6 @@ define dso_local i32 @test3(i32 %a) {
 ; CHECK-NEXT:    # Parent Loop BB2_2 Depth=2
 ; CHECK-NEXT:    # => This Loop Header: Depth=3
 ; CHECK-NEXT:    # Child Loop BB2_4 Depth 4
-; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .Ltmp4: # Block address taken
 ; CHECK-NEXT:  .LBB2_4: # %label04
 ; CHECK-NEXT:    # Parent Loop BB2_1 Depth=1
@@ -134,17 +133,17 @@ normal1:                                          ; preds = %normal0
 ; Test 4 - asm-goto referenced with the 'l' (ell) modifier and not.
 define void @test4() {
 ; CHECK-LABEL: test4:
-; CHECK:       # %bb.0:
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    #APP
-; CHECK-NOT:     ja .Ltmp50
-; CHECK-NEXT:    ja .Ltmp5
+; CHECK-NEXT:    ja .Ltmp5{{$}}
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:  .LBB3_1:
+; CHECK-NEXT:  .LBB3_1: # %asm.fallthrough
 ; CHECK-NEXT:    #APP
-; CHECK-NOT:     ja .Ltmp50
-; CHECK-NEXT:    ja .Ltmp5
+; CHECK-NEXT:    ja .Ltmp5{{$}}
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    jmp .LBB3_3
+; CHECK-NEXT:  .Ltmp5: # Block address taken
+; CHECK-NEXT:  .LBB3_3: # %quux
+; CHECK-NEXT:    retl
 entry:
   callbr void asm sideeffect "ja $0", "X,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@test4, %quux))
           to label %asm.fallthrough [label %quux]

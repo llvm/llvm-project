@@ -14,7 +14,7 @@
 #define AFFINE_OPS
 
 include "mlir/Dialect/AffineOps/AffineOpsBase.td"
-include "mlir/IR/OpBase.td"
+include "mlir/Interfaces/SideEffects.td"
 include "mlir/Transforms/LoopLikeInterface.td"
 
 def Affine_Dialect : Dialect {
@@ -39,6 +39,60 @@ class Affine_Op<string mnemonic, list<OpTrait> traits = []> :
 // Require regions to have affine terminator.
 def ImplicitAffineTerminator
     : SingleBlockImplicitTerminator<"AffineTerminatorOp">;
+
+def AffineApplyOp : Affine_Op<"apply", [NoSideEffect]> {
+  let summary = "affine apply operation";
+  let description = [{
+    The affine.apply operation applies an affine mapping to a list of SSA
+    values, yielding a single SSA value. The number of dimension and symbol
+    arguments to affine.apply must be equal to the respective number of
+    dimensional and symbolic inputs to the affine mapping; the affine mapping
+    has to be one-dimensional, and so the affine.apply operation always returns
+    one value. The input operands and result must all have ‘index’ type.
+
+    Example:
+
+    ```mlir
+      #map10 = affine_map<(d0, d1) -> (d0 floordiv 8 + d1 floordiv 128)>
+      ...
+      %1 = affine.apply #map10 (%s, %t)
+
+      // Inline example.
+      %2 = affine.apply affine_map<(i)[s0] -> (i+s0)> (%42)[%n]
+    ```
+  }];
+  let arguments = (ins AffineMapAttr:$map, Variadic<Index>:$mapOperands);
+  let results = (outs Index);
+
+  // TODO: The auto-generated builders should check to see if the return type
+  // has a constant builder. That way we wouldn't need to explicitly specify the
+  // result types here.
+  let builders = [
+    OpBuilder<"Builder *builder, OperationState &result, "
+              "AffineMap map, ValueRange mapOperands", [{
+      build(builder, result, builder->getIndexType(), map, mapOperands);
+    }]>
+  ];
+
+  let extraClassDeclaration = [{
+    /// Returns the affine map to be applied by this operation.
+    AffineMap getAffineMap() { return map(); }
+
+    /// Returns the affine value map computed from this operation.
+    AffineValueMap getAffineValueMap();
+
+    /// Returns true if the result of this operation can be used as dimension id.
+    bool isValidDim();
+
+    /// Returns true if the result of this operation is a symbol.
+    bool isValidSymbol();
+
+    operand_range getMapOperands() { return getOperands(); }
+  }];
+
+  let hasCanonicalizer = 1;
+  let hasFolder = 1;
+}
 
 def AffineForOp : Affine_Op<"for",
     [ImplicitAffineTerminator, RecursiveSideEffects,
@@ -433,7 +487,7 @@ def AffinePrefetchOp : Affine_Op<"prefetch"> {
 }
 
 def AffineTerminatorOp :
-    Affine_Op<"terminator", [Terminator]> {
+    Affine_Op<"terminator", [NoSideEffect, Terminator]> {
   let summary = "affine terminator operation";
   let description = [{
     Affine terminator is a special terminator operation for blocks inside affine

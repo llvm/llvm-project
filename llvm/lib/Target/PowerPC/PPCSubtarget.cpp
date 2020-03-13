@@ -111,6 +111,9 @@ void PPCSubtarget::initializeEnvironment() {
   IsQPXStackUnaligned = false;
   HasHTM = false;
   HasFloat128 = false;
+  HasFusion = false;
+  HasAddiLoadFusion = false;
+  HasAddisLoadFusion = false;
   IsISA3_0 = false;
   UseLongCalls = false;
   SecurePlt = false;

@@ -184,6 +184,7 @@ private:
     size_t Size;
   };
 
+  std::mutex EHFramePluginMutex;
   jitlink::EHFrameRegistrar &Registrar;
   DenseMap<MaterializationResponsibility *, EHFrameRange> InProcessLinks;
   DenseMap<VModuleKey, EHFrameRange> TrackedEHFrameRanges;

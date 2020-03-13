@@ -33,8 +33,8 @@
 namespace lldb_private {
 
 class ProcessInstanceInfo;
-class ProcessInstanceInfoList;
 class ProcessInstanceInfoMatch;
+typedef std::vector<ProcessInstanceInfo> ProcessInstanceInfoList;
 
 class ModuleCache;
 enum MmapFlags { eMmapFlagsPrivate = 1, eMmapFlagsAnon = 2 };
@@ -50,6 +50,9 @@ public:
 
   FileSpec GetModuleCacheDirectory() const;
   bool SetModuleCacheDirectory(const FileSpec &dir_spec);
+
+private:
+  void SetDefaultModuleCacheDirectory(const FileSpec &dir_spec);
 };
 
 typedef std::shared_ptr<PlatformProperties> PlatformPropertiesSP;

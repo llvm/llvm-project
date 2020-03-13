@@ -15,7 +15,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Path.h"
 
-#define DEBUG_TYPE "llvm-jitlink"
+#define DEBUG_TYPE "llvm_jitlink"
 
 using namespace llvm;
 using namespace llvm::jitlink;

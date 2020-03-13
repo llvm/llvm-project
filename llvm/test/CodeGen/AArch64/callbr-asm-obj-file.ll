@@ -41,10 +41,10 @@ declare dso_local i32 @g(...) local_unnamed_addr
 declare dso_local i32 @i(...) local_unnamed_addr
 
 ; CHECK-LABEL: <test2>:
-; CHECK:         bl #0 <test2+0x10>
+; CHECK:         bl #0 <test2+0x18>
 ; CHECK-LABEL: <$d.5>:
 ; CHECK-LABEL: <$x.6>:
-; CHECK-NEXT:    b #16 <$x.8+0x4>
+; CHECK-NEXT:    b #-20 <test2+0x18>
 define hidden i32 @test2() local_unnamed_addr {
   %1 = load i32, i32* @l, align 4
   %2 = icmp eq i32 %1, 0

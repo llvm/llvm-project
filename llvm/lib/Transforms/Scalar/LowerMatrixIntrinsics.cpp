@@ -10,8 +10,6 @@
 //
 // TODO:
 //  * Implement multiply & add fusion
-//  * Add remark, summarizing the available matrix optimization opportunities
-//    (WIP).
 //
 //===----------------------------------------------------------------------===//
 
@@ -25,6 +23,7 @@
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
@@ -49,6 +48,14 @@ static cl::opt<bool> AllowContractEnabled(
     "matrix-allow-contract", cl::init(false), cl::Hidden,
     cl::desc("Allow the use of FMAs if available and profitable. This may "
              "result in different results, due to less rounding error."));
+
+/// Helper function to either return Scope, if it is a subprogram or the
+/// attached subprogram for a local scope.
+static DISubprogram *getSubprogram(DIScope *Scope) {
+  if (auto *Subprogram = dyn_cast<DISubprogram>(Scope))
+    return Subprogram;
+  return cast<DILocalScope>(Scope)->getSubprogram();
+}
 
 namespace {
 
@@ -574,7 +581,7 @@ public:
       }
     }
 
-    RemarkGenerator RemarkGen(Inst2ColumnMatrix, ORE, DL);
+    RemarkGenerator RemarkGen(Inst2ColumnMatrix, ORE, Func);
     RemarkGen.emitRemarks();
 
     for (Instruction *Inst : reverse(ToRemove))
@@ -950,6 +957,9 @@ public:
     /// part of.
     const DenseMap<Value *, SmallPtrSet<Value *, 2>> &Shared;
 
+    /// Set of matrix expressions in the scope of a given DISubprogram.
+    const SmallSetVector<Value *, 32> &ExprsInSubprogram;
+
     /// Leaf node of the expression to linearize.
     Value *Leaf;
 
@@ -960,9 +970,10 @@ public:
     ExprLinearizer(const DataLayout &DL,
                    const MapVector<Value *, ColumnMatrixTy> &Inst2ColumnMatrix,
                    const DenseMap<Value *, SmallPtrSet<Value *, 2>> &Shared,
+                   const SmallSetVector<Value *, 32> &ExprsInSubprogram,
                    Value *Leaf)
         : Str(), Stream(Str), DL(DL), Inst2ColumnMatrix(Inst2ColumnMatrix),
-          Shared(Shared), Leaf(Leaf) {}
+          Shared(Shared), ExprsInSubprogram(ExprsInSubprogram), Leaf(Leaf) {}
 
     void indent(unsigned N) {
       LineLength += N;
@@ -996,10 +1007,8 @@ public:
       return V;
     }
 
-    /// Returns true if \p V is a matrix value.
-    bool isMatrix(Value *V) const {
-      return Inst2ColumnMatrix.find(V) != Inst2ColumnMatrix.end();
-    }
+    /// Returns true if \p V is a matrix value in the given subprogram.
+    bool isMatrix(Value *V) const { return ExprsInSubprogram.count(V); }
 
     /// If \p V is a matrix value, print its shape as as NumRows x NumColumns to
     /// \p SS.
@@ -1191,60 +1200,69 @@ public:
 
   /// Generate remarks for matrix operations in a function. To generate remarks
   /// for matrix expressions, the following approach is used:
-  /// 1. Collect leafs of matrix expressions (done in
-  ///    RemarkGenerator::getExpressionLeaves).  Leaves are lowered matrix
-  ///    instructions without other matrix users (like stores).
-  ///
-  /// 2. For each leaf, create a remark containing a linearizied version of the
-  ///    matrix expression.
-  ///
-  /// TODO:
-  ///  * Summarize number of vector instructions generated for each expression.
-  ///  * Propagate matrix remarks up the inlining chain.
+  /// 1. Use the inlined-at debug information to group matrix operations to the
+  ///    DISubprograms they are contained in.
+  /// 2. Collect leaves of matrix expressions (done in
+  ///    RemarkGenerator::getExpressionLeaves) for each subprogram - expression
+  //     mapping.  Leaves are lowered matrix instructions without other matrix
+  //     users (like stores) in the current subprogram.
+  /// 3. For each leaf, create a remark containing a linearizied version of the
+  ///    matrix expression. The expression is linearized by a recursive
+  ///    bottom-up traversal of the matrix operands, starting at a leaf. Note
+  ///    that multiple leaves can share sub-expressions. Shared subexpressions
+  ///    are explicitly marked as shared().
   struct RemarkGenerator {
     const MapVector<Value *, ColumnMatrixTy> &Inst2ColumnMatrix;
     OptimizationRemarkEmitter &ORE;
+    Function &Func;
     const DataLayout &DL;
 
     RemarkGenerator(const MapVector<Value *, ColumnMatrixTy> &Inst2ColumnMatrix,
-                    OptimizationRemarkEmitter &ORE, const DataLayout &DL)
-        : Inst2ColumnMatrix(Inst2ColumnMatrix), ORE(ORE), DL(DL) {}
+                    OptimizationRemarkEmitter &ORE, Function &Func)
+        : Inst2ColumnMatrix(Inst2ColumnMatrix), ORE(ORE), Func(Func),
+          DL(Func.getParent()->getDataLayout()) {}
 
-    /// Return all leafs of matrix expressions. Those are instructions in
-    /// Inst2ColumnMatrix returing void. Currently that should only include
-    /// stores.
-    SmallVector<Value *, 4> getExpressionLeaves() {
+    /// Return all leaves of the expressions in \p ExprsInSubprogram. Those are
+    /// instructions in Inst2ColumnMatrix returning void or without any users in
+    /// \p ExprsInSubprogram. Currently that should only include stores.
+    SmallVector<Value *, 4>
+    getExpressionLeaves(const SmallSetVector<Value *, 32> &ExprsInSubprogram) {
       SmallVector<Value *, 4> Leaves;
-      for (auto &KV : Inst2ColumnMatrix)
-        if (KV.first->getType()->isVoidTy())
-          Leaves.push_back(KV.first);
-
+      for (auto *Expr : ExprsInSubprogram)
+        if (Expr->getType()->isVoidTy() ||
+            !any_of(Expr->users(), [&ExprsInSubprogram](User *U) {
+              return ExprsInSubprogram.count(U);
+            }))
+          Leaves.push_back(Expr);
       return Leaves;
     }
 
     /// Recursively traverse expression \p V starting at \p Leaf and add \p Leaf
-    /// to all visited expressions in \p Shared.
+    /// to all visited expressions in \p Shared. Limit the matrix operations to
+    /// the ones in \p ExprsInSubprogram.
     void collectSharedInfo(Value *Leaf, Value *V,
+                           const SmallSetVector<Value *, 32> &ExprsInSubprogram,
                            DenseMap<Value *, SmallPtrSet<Value *, 2>> &Shared) {
 
-      if (Inst2ColumnMatrix.find(V) == Inst2ColumnMatrix.end())
+      if (!ExprsInSubprogram.count(V))
         return;
 
       auto I = Shared.insert({V, {}});
       I.first->second.insert(Leaf);
 
       for (Value *Op : cast<Instruction>(V)->operand_values())
-        collectSharedInfo(Leaf, Op, Shared);
+        collectSharedInfo(Leaf, Op, ExprsInSubprogram, Shared);
       return;
     }
 
     /// Calculate the number of exclusive and shared op counts for expression
     /// starting at \p V. Expressions used multiple times are counted once.
+    /// Limit the matrix operations to the ones in \p ExprsInSubprogram.
     std::pair<OpInfoTy, OpInfoTy>
     sumOpInfos(Value *Root, SmallPtrSetImpl<Value *> &ReusedExprs,
-               DenseMap<Value *, SmallPtrSet<Value *, 2>> &Shared) {
-      auto CM = Inst2ColumnMatrix.find(Root);
-      if (CM == Inst2ColumnMatrix.end())
+               const SmallSetVector<Value *, 32> &ExprsInSubprogram,
+               DenseMap<Value *, SmallPtrSet<Value *, 2>> &Shared) const {
+      if (!ExprsInSubprogram.count(Root))
         return {};
 
       // Already counted this expression. Stop.
@@ -1255,13 +1273,14 @@ public:
       OpInfoTy Count;
 
       auto I = Shared.find(Root);
+      auto CM = Inst2ColumnMatrix.find(Root);
       if (I->second.size() == 1)
         Count = CM->second.getOpInfo();
       else
         SharedCount = CM->second.getOpInfo();
 
       for (Value *Op : cast<Instruction>(Root)->operand_values()) {
-        auto C = sumOpInfos(Op, ReusedExprs, Shared);
+        auto C = sumOpInfos(Op, ReusedExprs, ExprsInSubprogram, Shared);
         Count += C.first;
         SharedCount += C.second;
       }
@@ -1272,49 +1291,83 @@ public:
       if (!ORE.allowExtraAnalysis(DEBUG_TYPE))
         return;
 
-      // Find leafs of matrix expressions.
-      auto Leaves = getExpressionLeaves();
-
-      DenseMap<Value *, SmallPtrSet<Value *, 2>> Shared;
-
-      for (Value *Leaf : Leaves)
-        collectSharedInfo(Leaf, Leaf, Shared);
-
-      // Generate remarks for each leaf.
-      for (auto *L : Leaves) {
-        SmallPtrSet<Value *, 8> ReusedExprs;
-        OpInfoTy Counts, SharedCounts;
-        std::tie(Counts, SharedCounts) = sumOpInfos(L, ReusedExprs, Shared);
-
-        OptimizationRemark Rem(DEBUG_TYPE, "matrix-lowered",
-                               cast<Instruction>(L)->getDebugLoc(),
-                               cast<Instruction>(L)->getParent());
-
-        Rem << "Lowered with ";
-        Rem << ore::NV("NumStores", Counts.NumStores) << " stores, "
-            << ore::NV("NumLoads", Counts.NumLoads) << " loads, "
-            << ore::NV("NumComputeOps", Counts.NumComputeOps) << " compute ops";
-
-        if (SharedCounts.NumStores > 0 || SharedCounts.NumLoads > 0 ||
-            SharedCounts.NumComputeOps > 0) {
-          Rem << ",\nadditionally "
-              << ore::NV("NumStores", SharedCounts.NumStores) << " stores, "
-              << ore::NV("NumLoads", SharedCounts.NumLoads) << " loads, "
-              << ore::NV("NumFPOps", SharedCounts.NumComputeOps)
-              << " compute ops"
-              << " are shared with other expressions";
+      // Map matrix operations to their containting subprograms, by traversing
+      // the inlinedAt chain. If the function does not have a DISubprogram, we
+      // only map them to the containing function.
+      MapVector<DISubprogram *, SmallVector<Value *, 8>> Subprog2Exprs;
+      for (auto &KV : Inst2ColumnMatrix) {
+        if (Func.getSubprogram()) {
+          auto *I = cast<Instruction>(KV.first);
+          DILocation *Context = I->getDebugLoc();
+          while (Context) {
+            auto I =
+                Subprog2Exprs.insert({getSubprogram(Context->getScope()), {}});
+            I.first->second.push_back(KV.first);
+            Context = DebugLoc(Context).getInlinedAt();
+          }
+        } else {
+          auto I = Subprog2Exprs.insert({nullptr, {}});
+          I.first->second.push_back(KV.first);
         }
+      }
+      for (auto &KV : Subprog2Exprs) {
+        SmallSetVector<Value *, 32> ExprsInSubprogram(KV.second.begin(),
+                                                      KV.second.end());
+        auto Leaves = getExpressionLeaves(ExprsInSubprogram);
 
-        Rem << ("\n" + linearize(L, Shared, DL));
-        ORE.emit(Rem);
+        DenseMap<Value *, SmallPtrSet<Value *, 2>> Shared;
+        for (Value *Leaf : Leaves)
+          collectSharedInfo(Leaf, Leaf, ExprsInSubprogram, Shared);
+
+        // Generate remarks for each leaf.
+        for (auto *L : Leaves) {
+
+          DebugLoc Loc = cast<Instruction>(L)->getDebugLoc();
+          DILocation *Context = cast<Instruction>(L)->getDebugLoc();
+          while (Context) {
+            if (getSubprogram(Context->getScope()) == KV.first) {
+              Loc = Context;
+              break;
+            }
+            Context = DebugLoc(Context).getInlinedAt();
+          }
+
+          SmallPtrSet<Value *, 8> ReusedExprs;
+          OpInfoTy Counts, SharedCounts;
+          std::tie(Counts, SharedCounts) =
+              sumOpInfos(L, ReusedExprs, ExprsInSubprogram, Shared);
+
+          OptimizationRemark Rem(DEBUG_TYPE, "matrix-lowered", Loc,
+                                 cast<Instruction>(L)->getParent());
+
+          Rem << "Lowered with ";
+          Rem << ore::NV("NumStores", Counts.NumStores) << " stores, "
+              << ore::NV("NumLoads", Counts.NumLoads) << " loads, "
+              << ore::NV("NumComputeOps", Counts.NumComputeOps)
+              << " compute ops";
+
+          if (SharedCounts.NumStores > 0 || SharedCounts.NumLoads > 0 ||
+              SharedCounts.NumComputeOps > 0) {
+            Rem << ",\nadditionally "
+                << ore::NV("NumStores", SharedCounts.NumStores) << " stores, "
+                << ore::NV("NumLoads", SharedCounts.NumLoads) << " loads, "
+                << ore::NV("NumFPOps", SharedCounts.NumComputeOps)
+                << " compute ops"
+                << " are shared with other expressions";
+          }
+
+          Rem << ("\n" + linearize(L, Shared, ExprsInSubprogram, DL));
+          ORE.emit(Rem);
+        }
       }
     }
 
     std::string
     linearize(Value *L,
               const DenseMap<Value *, SmallPtrSet<Value *, 2>> &Shared,
+              const SmallSetVector<Value *, 32> &ExprsInSubprogram,
               const DataLayout &DL) {
-      ExprLinearizer Lin(DL, Inst2ColumnMatrix, Shared, L);
+      ExprLinearizer Lin(DL, Inst2ColumnMatrix, Shared, ExprsInSubprogram, L);
       Lin.linearizeExpr(L, 0, false, false);
       return Lin.getResult();
     }

@@ -652,3 +652,18 @@ body: |
     %2:_(s112) = G_ANYEXT %1
     S_ENDPGM 0, implicit %2
 ...
+
+---
+name: test_anyext_s112_to_s128
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK-LABEL: name: test_anyext_s112_to_s128
+    ; CHECK: [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s128) = COPY [[COPY]](s128)
+    ; CHECK: S_ENDPGM 0, implicit [[COPY1]](s128)
+    %0:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    %1:_(s112) = G_TRUNC %0
+    %2:_(s128) = G_ANYEXT %1
+    S_ENDPGM 0, implicit %2
+...

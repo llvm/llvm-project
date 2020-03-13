@@ -290,7 +290,6 @@ define i64 @ashr_add_shl_mismatch_shifts2(i64 %r) nounwind {
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    shrdl $8, %edx, %eax
 ; X32-NEXT:    shrl $8, %edx
 ; X32-NEXT:    incl %edx
 ; X32-NEXT:    shrdl $8, %edx, %eax

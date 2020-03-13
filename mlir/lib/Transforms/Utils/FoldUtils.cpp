@@ -57,7 +57,7 @@ static Operation *materializeConstant(Dialect *dialect, OpBuilder &builder,
   // Ask the dialect to materialize a constant operation for this value.
   if (auto *constOp = dialect->materializeConstant(builder, value, type, loc)) {
     assert(insertPt == builder.getInsertionPoint());
-    assert(matchPattern(constOp, m_Constant(&value)));
+    assert(matchPattern(constOp, m_Constant()));
     return constOp;
   }
 
@@ -124,6 +124,12 @@ void OperationFolder::notifyRemoval(Operation *op) {
   for (auto *dialect : it->second)
     uniquedConstants.erase(std::make_tuple(dialect, constValue, type));
   referencedDialects.erase(it);
+}
+
+/// Clear out any constants cached inside of the folder.
+void OperationFolder::clear() {
+  foldScopes.clear();
+  referencedDialects.clear();
 }
 
 /// Tries to perform folding on the given `op`. If successful, populates

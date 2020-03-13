@@ -412,14 +412,14 @@ static std::pair<ELFKind, uint16_t> parseBfdName(StringRef s) {
 void ScriptParser::readOutputFormat() {
   expect("(");
 
-  StringRef name = unquote(next());
-  StringRef s = name;
+  config->bfdname = unquote(next());
+  StringRef s = config->bfdname;
   if (s.consume_back("-freebsd"))
     config->osabi = ELFOSABI_FREEBSD;
 
   std::tie(config->ekind, config->emachine) = parseBfdName(s);
   if (config->emachine == EM_NONE)
-    setError("unknown output format name: " + name);
+    setError("unknown output format name: " + config->bfdname);
   if (s == "elf32-ntradlittlemips" || s == "elf32-ntradbigmips")
     config->mipsN32Abi = true;
 

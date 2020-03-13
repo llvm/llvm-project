@@ -14,6 +14,7 @@
 #define TOY_OPS
 
 include "mlir/IR/OpBase.td"
+include "mlir/Interfaces/SideEffects.td"
 
 // Provide a definition of the 'toy' dialect in the ODS framework so that we
 // can define our operations.
@@ -190,7 +191,8 @@ def ReshapeOp : Toy_Op<"reshape"> {
   }];
 }
 
-def ReturnOp : Toy_Op<"return", [Terminator, HasParent<"FuncOp">]> {
+def ReturnOp : Toy_Op<"return", [NoSideEffect, HasParent<"FuncOp">,
+                                 Terminator]> {
   let summary = "return operation";
   let description = [{
     The "return" operation represents a return operation within a function.

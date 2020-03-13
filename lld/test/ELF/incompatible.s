@@ -44,6 +44,14 @@
 // RUN:   FileCheck --check-prefix=SO-AND-C-I386 %s
 // SO-AND-C-I386: c.o is incompatible with elf_i386
 
+// RUN: echo 'OUTPUT_FORMAT(elf32-i386)' > %t.script
+// RUN: not ld.lld %t.script %ta.o -o /dev/null 2>&1 | \
+// RUN:   FileCheck --check-prefix=A-AND-SCRIPT %s
+// RUN: not ld.lld %ta.o %t.script -o /dev/null 2>&1 | \
+// RUN:   FileCheck --check-prefix=A-AND-SCRIPT %s
+// RUN: not ld.lld -m elf_x86_64 %ta.o %t.script -o /dev/null 2>&1 | \
+// RUN:   FileCheck --check-prefix=A-AND-SCRIPT %s
+// A-AND-SCRIPT: a.o is incompatible with elf32-i386
 
 // We used to fail to identify this incompatibility and crash trying to
 // read a 64 bit file as a 32 bit one.

@@ -40,8 +40,7 @@ namespace {
 /// This class encapsulates all the state used to verify an operation region.
 class OperationVerifier {
 public:
-  explicit OperationVerifier(MLIRContext *ctx)
-      : ctx(ctx), identifierRegex("^[a-zA-Z_][a-zA-Z_0-9\\.\\$]*$") {}
+  explicit OperationVerifier(MLIRContext *ctx) : ctx(ctx) {}
 
   /// Verify the given operation.
   LogicalResult verify(Operation &op);
@@ -52,9 +51,6 @@ public:
     auto dialectNamePair = attr.first.strref().split('.');
     return ctx->getRegisteredDialect(dialectNamePair.first);
   }
-
-  /// Returns if the given string is valid to use as an identifier name.
-  bool isValidName(StringRef name) { return identifierRegex.match(name); }
 
 private:
   /// Verify the given potentially nested region or block.
@@ -81,9 +77,6 @@ private:
 
   /// Dominance information for this operation, when checking dominance.
   DominanceInfo *domInfo = nullptr;
-
-  /// Regex checker for attribute names.
-  llvm::Regex identifierRegex;
 
   /// Mapping between dialect namespace and if that dialect supports
   /// unregistered operations.
@@ -172,9 +165,6 @@ LogicalResult OperationVerifier::verifyOperation(Operation &op) {
 
   /// Verify that all of the attributes are okay.
   for (auto attr : op.getAttrs()) {
-    if (!identifierRegex.match(attr.first))
-      return op.emitError("invalid attribute name '") << attr.first << "'";
-
     // Check for any optional dialect specific attributes.
     if (!attr.first.strref().contains('.'))
       continue;

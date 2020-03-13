@@ -63,7 +63,9 @@ protected:
   //===--------------------------------------------------------------------===//
 
   /// Adds the SPIR-V module header to `binary`.
-  void addHeader() { spirv::appendModuleHeader(binary, /*idBound=*/0); }
+  void addHeader() {
+    spirv::appendModuleHeader(binary, spirv::Version::V_1_0, /*idBound=*/0);
+  }
 
   /// Adds the SPIR-V instruction into `binary`.
   void addInstruction(spirv::Opcode op, ArrayRef<uint32_t> operands) {

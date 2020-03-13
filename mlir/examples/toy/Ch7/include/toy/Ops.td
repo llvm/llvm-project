@@ -13,7 +13,8 @@
 #ifndef TOY_OPS
 #define TOY_OPS
 
-include "mlir/Analysis/CallInterfaces.td"
+include "mlir/Interfaces/CallInterfaces.td"
+include "mlir/Interfaces/SideEffects.td"
 include "toy/ShapeInferenceInterface.td"
 
 // Provide a definition of the 'toy' dialect in the ODS framework so that we
@@ -48,7 +49,8 @@ def Toy_Type : AnyTypeOf<[F64Tensor, Toy_StructType]>;
 // constant operation is marked as 'NoSideEffect' as it is a pure operation
 // and may be removed if dead.
 def ConstantOp : Toy_Op<"constant",
-    [NoSideEffect, DeclareOpInterfaceMethods<ShapeInferenceOpInterface>]> {
+    [ConstantLike, NoSideEffect,
+     DeclareOpInterfaceMethods<ShapeInferenceOpInterface>]> {
   // Provide a summary and description for this operation. This can be used to
   // auto-generate documentation of the operations within our dialect.
   let summary = "constant";
@@ -232,7 +234,8 @@ def ReshapeOp : Toy_Op<"reshape", [NoSideEffect]> {
   let results = (outs StaticShapeTensorOf<[F64]>);
 }
 
-def ReturnOp : Toy_Op<"return", [Terminator, HasParent<"FuncOp">]> {
+def ReturnOp : Toy_Op<"return", [NoSideEffect, HasParent<"FuncOp">,
+                                 Terminator]> {
   let summary = "return operation";
   let description = [{
     The "return" operation represents a return operation within a function.
@@ -293,7 +296,7 @@ def StructAccessOp : Toy_Op<"struct_access", [NoSideEffect]> {
   let hasFolder = 1;
 }
 
-def StructConstantOp : Toy_Op<"struct_constant", [NoSideEffect]> {
+def StructConstantOp : Toy_Op<"struct_constant", [ConstantLike, NoSideEffect]> {
   let summary = "struct constant";
   let description = [{
     Constant operation turns a literal struct value into an SSA value. The data

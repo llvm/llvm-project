@@ -209,11 +209,13 @@ ValueHandle mlir::edsc::op::operator!(ValueHandle value) {
 ValueHandle mlir::edsc::op::operator&&(ValueHandle lhs, ValueHandle rhs) {
   assert(lhs.getType().isInteger(1) && "expected boolean expression on LHS");
   assert(rhs.getType().isInteger(1) && "expected boolean expression on RHS");
-  return lhs * rhs;
+  return ValueHandle::create<AndOp>(lhs, rhs);
 }
 
 ValueHandle mlir::edsc::op::operator||(ValueHandle lhs, ValueHandle rhs) {
-  return !(!lhs && !rhs);
+  assert(lhs.getType().isInteger(1) && "expected boolean expression on LHS");
+  assert(rhs.getType().isInteger(1) && "expected boolean expression on RHS");
+  return ValueHandle::create<OrOp>(lhs, rhs);
 }
 
 static ValueHandle createIComparisonExpr(CmpIPredicate predicate,

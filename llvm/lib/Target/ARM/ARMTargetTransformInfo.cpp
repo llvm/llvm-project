@@ -863,16 +863,17 @@ int ARMTTIImpl::getInterleavedMemoryOpCost(
 
 unsigned ARMTTIImpl::getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
                                             Value *Ptr, bool VariableMask,
-                                            unsigned Alignment) {
+                                            unsigned Alignment,
+                                            const Instruction *I) {
+  using namespace PatternMatch;
   if (!ST->hasMVEIntegerOps() || !EnableMaskedGatherScatters)
     return BaseT::getGatherScatterOpCost(Opcode, DataTy, Ptr, VariableMask,
-                                         Alignment);
+                                         Alignment, I);
 
   assert(DataTy->isVectorTy() && "Can't do gather/scatters on scalar!");
   VectorType *VTy = cast<VectorType>(DataTy);
 
   // TODO: Splitting, once we do that.
-  // TODO: trunc/sext/zext the result/input
 
   unsigned NumElems = VTy->getNumElements();
   unsigned EltSize = VTy->getScalarSizeInBits();
@@ -889,19 +890,54 @@ unsigned ARMTTIImpl::getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
   unsigned ScalarCost =
       NumElems * LT.first + BaseT::getScalarizationOverhead(DataTy, {});
 
-  // TODO: Cost extended gathers or trunc stores correctly.
-  if (EltSize * NumElems != 128 || NumElems < 4)
-    return ScalarCost;
   if (Alignment < EltSize / 8)
     return ScalarCost;
 
+  unsigned ExtSize = EltSize;
+  // Check whether there's a single user that asks for an extended type
+  if (I != nullptr) {
+    // Dependent of the caller of this function, a gather instruction will
+    // either have opcode Instruction::Load or be a call to the masked_gather
+    // intrinsic
+    if ((I->getOpcode() == Instruction::Load ||
+         match(I, m_Intrinsic<Intrinsic::masked_gather>())) &&
+        I->hasOneUse()) {
+      const User *Us = *I->users().begin();
+      if (isa<ZExtInst>(Us) || isa<SExtInst>(Us)) {
+        // only allow valid type combinations
+        unsigned TypeSize =
+            cast<Instruction>(Us)->getType()->getScalarSizeInBits();
+        if (((TypeSize == 32 && (EltSize == 8 || EltSize == 16)) ||
+             (TypeSize == 16 && EltSize == 8)) &&
+            TypeSize * NumElems == 128) {
+          ExtSize = TypeSize;
+        }
+      }
+    }
+    // Check whether the input data needs to be truncated
+    TruncInst *T;
+    if ((I->getOpcode() == Instruction::Store ||
+         match(I, m_Intrinsic<Intrinsic::masked_scatter>())) &&
+        (T = dyn_cast<TruncInst>(I->getOperand(0)))) {
+      // Only allow valid type combinations
+      unsigned TypeSize = T->getOperand(0)->getType()->getScalarSizeInBits();
+      if (((EltSize == 16 && TypeSize == 32) ||
+           (EltSize == 8 && (TypeSize == 32 || TypeSize == 16))) &&
+          TypeSize * NumElems == 128)
+        ExtSize = TypeSize;
+    }
+  }
+
+  if (ExtSize * NumElems != 128 || NumElems < 4)
+    return ScalarCost;
+
   // Any (aligned) i32 gather will not need to be scalarised.
-  if (EltSize == 32)
+  if (ExtSize == 32)
     return VectorCost;
   // For smaller types, we need to ensure that the gep's inputs are correctly
-  // extended from a small enough value. Other size (including i64) are
+  // extended from a small enough value. Other sizes (including i64) are
   // scalarized for now.
-  if (EltSize != 8 && EltSize != 16)
+  if (ExtSize != 8 && ExtSize != 16)
     return ScalarCost;
 
   if (auto BC = dyn_cast<BitCastInst>(Ptr))
@@ -911,12 +947,13 @@ unsigned ARMTTIImpl::getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
       return ScalarCost;
     unsigned Scale = DL.getTypeAllocSize(GEP->getResultElementType());
     // Scale needs to be correct (which is only relevant for i16s).
-    if (Scale != 1 && Scale * 8 != EltSize)
+    if (Scale != 1 && Scale * 8 != ExtSize)
       return ScalarCost;
     // And we need to zext (not sext) the indexes from a small enough type.
-    if (auto ZExt = dyn_cast<ZExtInst>(GEP->getOperand(1)))
-      if (ZExt->getOperand(0)->getType()->getScalarSizeInBits() <= EltSize)
+    if (auto ZExt = dyn_cast<ZExtInst>(GEP->getOperand(1))) {
+      if (ZExt->getOperand(0)->getType()->getScalarSizeInBits() <= ExtSize)
         return VectorCost;
+    }
     return ScalarCost;
   }
   return ScalarCost;

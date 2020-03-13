@@ -22,6 +22,7 @@
 #include "mlir/IR/StandardTypes.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/IR/Types.h"
+#include "mlir/Interfaces/SideEffects.h"
 #include "mlir/Support/LLVM.h"
 
 namespace mlir {

@@ -17,12 +17,12 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManagerInternals.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/None.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Capacity.h"
 #include "llvm/Support/Compiler.h"
@@ -560,6 +560,70 @@ FileID SourceManager::getNextFileID(FileID FID) const {
 // Methods to create new FileID's and macro expansions.
 //===----------------------------------------------------------------------===//
 
+/// Create a new FileID that represents the specified file
+/// being \#included from the specified IncludePosition.
+///
+/// This translates NULL into standard input.
+FileID SourceManager::createFileID(const FileEntry *SourceFile,
+                                   SourceLocation IncludePos,
+                                   SrcMgr::CharacteristicKind FileCharacter,
+                                   int LoadedID, unsigned LoadedOffset) {
+  assert(SourceFile && "Null source file!");
+  const SrcMgr::ContentCache *IR =
+      getOrCreateContentCache(SourceFile, isSystem(FileCharacter));
+  assert(IR && "getOrCreateContentCache() cannot return NULL");
+  return createFileID(IR, SourceFile->getName(), IncludePos, FileCharacter,
+		      LoadedID, LoadedOffset);
+}
+
+FileID SourceManager::createFileID(FileEntryRef SourceFile,
+                                   SourceLocation IncludePos,
+                                   SrcMgr::CharacteristicKind FileCharacter,
+                                   int LoadedID, unsigned LoadedOffset) {
+  const SrcMgr::ContentCache *IR = getOrCreateContentCache(
+      &SourceFile.getFileEntry(), isSystem(FileCharacter));
+  assert(IR && "getOrCreateContentCache() cannot return NULL");
+  return createFileID(IR, SourceFile.getName(), IncludePos, FileCharacter,
+		      LoadedID, LoadedOffset);
+}
+
+/// Create a new FileID that represents the specified memory buffer.
+///
+/// This does no caching of the buffer and takes ownership of the
+/// MemoryBuffer, so only pass a MemoryBuffer to this once.
+FileID SourceManager::createFileID(std::unique_ptr<llvm::MemoryBuffer> Buffer,
+                                   SrcMgr::CharacteristicKind FileCharacter,
+                                   int LoadedID, unsigned LoadedOffset,
+                                   SourceLocation IncludeLoc) {
+  StringRef Name = Buffer->getBufferIdentifier();
+  return createFileID(
+      createMemBufferContentCache(Buffer.release(), /*DoNotFree*/ false),
+      Name, IncludeLoc, FileCharacter, LoadedID, LoadedOffset);
+}
+
+/// Create a new FileID that represents the specified memory buffer.
+///
+/// This does not take ownership of the MemoryBuffer. The memory buffer must
+/// outlive the SourceManager.
+FileID SourceManager::createFileID(UnownedTag, const llvm::MemoryBuffer *Buffer,
+                                   SrcMgr::CharacteristicKind FileCharacter,
+                                   int LoadedID, unsigned LoadedOffset,
+                                   SourceLocation IncludeLoc) {
+  return createFileID(createMemBufferContentCache(Buffer, /*DoNotFree*/ true),
+		      Buffer->getBufferIdentifier(), IncludeLoc,
+		      FileCharacter, LoadedID, LoadedOffset);
+}
+
+/// Get the FileID for \p SourceFile if it exists. Otherwise, create a
+/// new FileID for the \p SourceFile.
+FileID
+SourceManager::getOrCreateFileID(const FileEntry *SourceFile,
+                                 SrcMgr::CharacteristicKind FileCharacter) {
+  FileID ID = translateFile(SourceFile);
+  return ID.isValid() ? ID : createFileID(SourceFile, SourceLocation(),
+					  FileCharacter);
+}
+
 /// createFileID - Create a new FileID for the specified ContentCache and
 /// include position.  This works regardless of whether the ContentCache
 /// corresponds to a file or some other input source.
@@ -699,6 +763,18 @@ SourceManager::bypassFileContentsOverride(const FileEntry &File) {
 void SourceManager::setFileIsTransient(const FileEntry *File) {
   const SrcMgr::ContentCache *CC = getOrCreateContentCache(File);
   const_cast<SrcMgr::ContentCache *>(CC)->IsTransient = true;
+}
+
+Optional<FileEntryRef> SourceManager::getFileEntryRefForID(FileID FID) const {
+  bool Invalid = false;
+  const SrcMgr::SLocEntry &Entry = getSLocEntry(FID, &Invalid);
+  if (Invalid || !Entry.isFile())
+    return None;
+
+  const SrcMgr::ContentCache *Content = Entry.getFile().getContentCache();
+  if (!Content || !Content->OrigEntry)
+    return None;
+  return FileEntryRef(Entry.getFile().getName(), *Content->OrigEntry);
 }
 
 StringRef SourceManager::getBufferData(FileID FID, bool *Invalid) const {
@@ -990,6 +1066,13 @@ SourceLocation SourceManager::getImmediateSpellingLoc(SourceLocation Loc) const{
   std::pair<FileID, unsigned> LocInfo = getDecomposedLoc(Loc);
   Loc = getSLocEntry(LocInfo.first).getExpansion().getSpellingLoc();
   return Loc.getLocWithOffset(LocInfo.second);
+}
+
+/// Return the filename of the file containing a SourceLocation.
+StringRef SourceManager::getFilename(SourceLocation SpellingLoc) const {
+  if (const FileEntry *F = getFileEntryForID(getFileID(SpellingLoc)))
+    return F->getName();
+  return StringRef();
 }
 
 /// getImmediateExpansionRange - Loc is required to be an expansion location.

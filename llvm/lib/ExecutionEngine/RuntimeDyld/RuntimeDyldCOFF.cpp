@@ -18,6 +18,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/FormatVariadic.h"
 
 using namespace llvm;
 using namespace llvm::object;
@@ -76,6 +77,41 @@ RuntimeDyldCOFF::loadObject(const object::ObjectFile &O) {
 uint64_t RuntimeDyldCOFF::getSymbolOffset(const SymbolRef &Sym) {
   // The value in a relocatable COFF object is the offset.
   return Sym.getValue();
+}
+
+uint64_t RuntimeDyldCOFF::getDLLImportOffset(unsigned SectionID, StubMap &Stubs,
+                                             StringRef Name,
+                                             bool SetSectionIDMinus1) {
+  LLVM_DEBUG(dbgs() << "Getting DLLImport entry for " << Name << "... ");
+  assert(Name.startswith(getImportSymbolPrefix()) && "Not a DLLImport symbol?");
+  RelocationValueRef Reloc;
+  Reloc.SymbolName = Name.data();
+  auto I = Stubs.find(Reloc);
+  if (I != Stubs.end()) {
+    LLVM_DEBUG(dbgs() << format("{0:x8}", I->second) << "\n");
+    return I->second;
+  }
+
+  assert(SectionID < Sections.size() && "SectionID out of range");
+  auto &Sec = Sections[SectionID];
+  auto EntryOffset = alignTo(Sec.getStubOffset(), PointerSize);
+  Sec.advanceStubOffset(EntryOffset + PointerSize - Sec.getStubOffset());
+  Stubs[Reloc] = EntryOffset;
+
+  RelocationEntry RE(SectionID, EntryOffset, PointerReloc, 0, false,
+                     Log2_64(PointerSize));
+  // Hack to tell I386/Thumb resolveRelocation that this isn't section relative.
+  if (SetSectionIDMinus1)
+    RE.Sections.SectionA = -1;
+  addRelocationForSymbol(RE, Name.drop_front(getImportSymbolPrefix().size()));
+
+  LLVM_DEBUG({
+    dbgs() << "Creating entry at "
+           << formatv("{0:x16} + {1:x8} ( {2:x16} )", Sec.getLoadAddress(),
+                      EntryOffset, Sec.getLoadAddress() + EntryOffset)
+           << "\n";
+  });
+  return EntryOffset;
 }
 
 bool RuntimeDyldCOFF::isCompatibleFile(const object::ObjectFile &Obj) const {

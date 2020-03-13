@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s -split-input-file -pass-pipeline='spv.module(inline)' -mlir-disable-inline-simplify | FileCheck %s
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
   spv.func @callee() "None" {
     spv.Return
   }
@@ -15,7 +15,7 @@ spv.module "Logical" "GLSL450" {
 
 // -----
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
   spv.func @callee() -> i32 "None" {
     %0 = spv.constant 42 : i32
     spv.ReturnValue %0 : i32
@@ -32,7 +32,7 @@ spv.module "Logical" "GLSL450" {
 
 // -----
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
   spv.globalVariable @data bind(0, 0) : !spv.ptr<!spv.struct<!spv.rtarray<i32> [0]>, StorageBuffer>
   spv.func @callee() "None" {
     %0 = spv._address_of @data : !spv.ptr<!spv.struct<!spv.rtarray<i32> [0]>, StorageBuffer>
@@ -67,7 +67,7 @@ spv.module "Logical" "GLSL450" {
 
 // -----
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
   spv.func @callee(%cond : i1) -> () "None" {
     spv.selection {
       spv.BranchConditional %cond, ^then, ^merge
@@ -90,7 +90,7 @@ spv.module "Logical" "GLSL450" {
 
 // -----
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
   spv.func @callee(%cond : i1) -> () "None" {
     spv.selection {
       spv.BranchConditional %cond, ^then, ^merge
@@ -119,7 +119,7 @@ spv.module "Logical" "GLSL450" {
 
 // -----
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
   spv.func @callee(%cond : i1) -> () "None" {
     spv.loop {
       spv.Branch ^header
@@ -146,7 +146,7 @@ spv.module "Logical" "GLSL450" {
 
 // -----
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
   spv.func @callee(%cond : i1) -> () "None" {
     spv.loop {
       spv.Branch ^header
@@ -183,7 +183,7 @@ spv.module "Logical" "GLSL450" {
 
 // -----
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
   spv.globalVariable @arg_0 bind(0, 0) : !spv.ptr<!spv.struct<i32 [0]>, StorageBuffer>
   spv.globalVariable @arg_1 bind(0, 1) : !spv.ptr<!spv.struct<i32 [0]>, StorageBuffer>
 
@@ -222,7 +222,7 @@ spv.module "Logical" "GLSL450" {
   }
   spv.EntryPoint "GLCompute" @inline_into_selection_region
   spv.ExecutionMode @inline_into_selection_region "LocalSize", 32, 1, 1
-} attributes {capabilities = ["Shader"], extensions = ["SPV_KHR_storage_buffer_storage_class"]}
+}
 
 // TODO: Add tests for inlining structured control flow into
 // structured control flow.

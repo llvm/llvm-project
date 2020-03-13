@@ -6433,12 +6433,11 @@ INTERCEPTOR(SSIZE_T, recvfrom, int fd, void *buf, SIZE_T len, int flags,
   if (srcaddr) srcaddr_sz = *addrlen;
   (void)srcaddr_sz;  // prevent "set but not used" warning
   SSIZE_T res = REAL(recvfrom)(fd, buf, len, flags, srcaddr, addrlen);
-  if (res > 0) {
+  if (res > 0)
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, buf, Min((SIZE_T)res, len));
-    if (srcaddr)
-      COMMON_INTERCEPTOR_INITIALIZE_RANGE(srcaddr,
-                                          Min((SIZE_T)*addrlen, srcaddr_sz));
-  }
+  if (res >= 0 && srcaddr)
+    COMMON_INTERCEPTOR_INITIALIZE_RANGE(srcaddr,
+                                        Min((SIZE_T)*addrlen, srcaddr_sz));
   return res;
 }
 #define INIT_RECV_RECVFROM          \

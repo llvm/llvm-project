@@ -709,4 +709,103 @@ void test_copy_constructor_VolatileArray(VolatileArray *a) {
   VolatileArray t = *a;
 }
 
+// CHECK: define void @test_compound_literal0(
+// CHECK: %[[P:.*]] = alloca %[[STRUCT_STRONGSMALL]]*, align 8
+// CHECK: %[[_COMPOUNDLITERAL:.*]] = alloca %[[STRUCT_STRONGSMALL]], align 8
+// CHECK: %[[CLEANUP_COND:.*]] = alloca i1, align 1
+// CHECK: %[[_COMPOUNDLITERAL1:.*]] = alloca %[[STRUCT_STRONGSMALL]], align 8
+// CHECK: %[[CLEANUP_COND4:.*]] = alloca i1, align 1
+
+// CHECK: %[[I:.*]] = getelementptr inbounds %[[STRUCT_STRONGSMALL]], %[[STRUCT_STRONGSMALL]]* %[[_COMPOUNDLITERAL]], i32 0, i32 0
+// CHECK: store i32 1, i32* %[[I]], align 8
+// CHECK: %[[F1:.*]] = getelementptr inbounds %[[STRUCT_STRONGSMALL]], %[[STRUCT_STRONGSMALL]]* %[[_COMPOUNDLITERAL]], i32 0, i32 1
+// CHECK: store i8* null, i8** %[[F1]], align 8
+// CHECK: store i1 true, i1* %[[CLEANUP_COND]], align 1
+
+// CHECK: %[[I2:.*]] = getelementptr inbounds %[[STRUCT_STRONGSMALL]], %[[STRUCT_STRONGSMALL]]* %[[_COMPOUNDLITERAL1]], i32 0, i32 0
+// CHECK: store i32 2, i32* %[[I2]], align 8
+// CHECK: %[[F13:.*]] = getelementptr inbounds %[[STRUCT_STRONGSMALL]], %[[STRUCT_STRONGSMALL]]* %[[_COMPOUNDLITERAL1]], i32 0, i32 1
+// CHECK: store i8* null, i8** %[[F13]], align 8
+// CHECK: store i1 true, i1* %[[CLEANUP_COND4]], align 1
+
+// CHECK: %[[COND:.*]] = phi %[[STRUCT_STRONGSMALL]]* [ %[[_COMPOUNDLITERAL]], %{{.*}} ], [ %[[_COMPOUNDLITERAL1]], %{{.*}} ]
+// CHECK: store %[[STRUCT_STRONGSMALL]]* %[[COND]], %[[STRUCT_STRONGSMALL]]** %[[P]], align 8
+// CHECK: call void @func(
+
+// CHECK: %[[V1:.*]] = bitcast %[[STRUCT_STRONGSMALL]]* %[[_COMPOUNDLITERAL1]] to i8**
+// CHECK: call void @__destructor_8_s8(i8** %[[V1]])
+
+// CHECK: %[[V2:.*]] = bitcast %[[STRUCT_STRONGSMALL]]* %[[_COMPOUNDLITERAL]] to i8**
+// CHECK: call void @__destructor_8_s8(i8** %[[V2]])
+
+void test_compound_literal0(int c) {
+  StrongSmall *p = c ? &(StrongSmall){ 1, 0 } : &(StrongSmall){ 2, 0 };
+  func(0);
+}
+
+// Check that there is only one destructor call, which destructs 't'.
+
+// CHECK: define void @test_compound_literal1(
+// CHECK: %[[T:.*]] = alloca %[[STRUCT_STRONGSMALL]], align 8
+
+// CHECK: %[[I:.*]] = getelementptr inbounds %[[STRUCT_STRONGSMALL]], %[[STRUCT_STRONGSMALL]]* %[[T]], i32 0, i32 0
+// CHECK: store i32 1, i32* %[[I]], align 8
+// CHECK: %[[F1:.*]] = getelementptr inbounds %[[STRUCT_STRONGSMALL]], %[[STRUCT_STRONGSMALL]]* %[[T]], i32 0, i32 1
+// CHECK: store i8* null, i8** %[[F1]], align 8
+
+// CHECK: %[[I1:.*]] = getelementptr inbounds %[[STRUCT_STRONGSMALL]], %[[STRUCT_STRONGSMALL]]* %[[T]], i32 0, i32 0
+// CHECK: store i32 2, i32* %[[I1]], align 8
+// CHECK: %[[F12:.*]] = getelementptr inbounds %[[STRUCT_STRONGSMALL]], %[[STRUCT_STRONGSMALL]]* %[[T]], i32 0, i32 1
+// CHECK: store i8* null, i8** %[[F12]], align 8
+
+// CHECK: call void @func(
+// CHECK-NOT: call void
+// CHECK: %[[V1:.*]] = bitcast %[[STRUCT_STRONGSMALL]]* %[[T]] to i8**
+// CHECK: call void @__destructor_8_s8(i8** %[[V1]])
+// CHECK-NOT: call void
+
+void test_compound_literal1(int c) {
+  StrongSmall t = c ? (StrongSmall){ 1, 0 } : (StrongSmall){ 2, 0 };
+  func(0);
+}
+
+// CHECK: define void @test_compound_literal2(
+// CHECK: %[[P_ADDR:.*]] = alloca %[[STRUCT_STRONGSMALL]]*, align 8
+// CHECK: %[[_COMPOUNDLITERAL:.*]] = alloca %[[STRUCT_STRONGSMALL]], align 8
+// CHECK: %[[CLEANUP_COND:.*]] = alloca i1, align 1
+// CHECK: %[[_COMPOUNDLITERAL1:.*]] = alloca %[[STRUCT_STRONGSMALL]], align 8
+// CHECK: %[[CLEANUP_COND4:.*]] = alloca i1, align 1
+// CHECK: %[[V0:.*]] = load %[[STRUCT_STRONGSMALL]]*, %[[STRUCT_STRONGSMALL]]** %[[P_ADDR]], align 8
+
+// CHECK: %[[I:.*]] = getelementptr inbounds %[[STRUCT_STRONGSMALL]], %[[STRUCT_STRONGSMALL]]* %[[_COMPOUNDLITERAL]], i32 0, i32 0
+// CHECK: store i32 1, i32* %[[I]], align 8
+// CHECK: %[[F1:.*]] = getelementptr inbounds %[[STRUCT_STRONGSMALL]], %[[STRUCT_STRONGSMALL]]* %[[_COMPOUNDLITERAL]], i32 0, i32 1
+// CHECK: store i8* null, i8** %[[F1]], align 8
+// CHECK: store i1 true, i1* %[[CLEANUP_COND]], align 1
+// CHECK: %[[V2:.*]] = bitcast %[[STRUCT_STRONGSMALL]]* %[[V0]] to i8**
+// CHECK: %[[V3:.*]] = bitcast %[[STRUCT_STRONGSMALL]]* %[[_COMPOUNDLITERAL]] to i8**
+// CHECK: call void @__copy_assignment_8_8_t0w4_s8(i8** %[[V2]], i8** %[[V3]])
+
+// CHECK: %[[I2:.*]] = getelementptr inbounds %[[STRUCT_STRONGSMALL]], %[[STRUCT_STRONGSMALL]]* %[[_COMPOUNDLITERAL1]], i32 0, i32 0
+// CHECK: store i32 2, i32* %[[I2]], align 8
+// CHECK: %[[F13:.*]] = getelementptr inbounds %[[STRUCT_STRONGSMALL]], %[[STRUCT_STRONGSMALL]]* %[[_COMPOUNDLITERAL1]], i32 0, i32 1
+// CHECK: store i8* null, i8** %[[F13]], align 8
+// CHECK: store i1 true, i1* %[[CLEANUP_COND4]], align 1
+// CHECK: %[[V4:.*]] = bitcast %[[STRUCT_STRONGSMALL]]* %[[V0]] to i8**
+// CHECK: %[[V5:.*]] = bitcast %[[STRUCT_STRONGSMALL]]* %[[_COMPOUNDLITERAL1]] to i8**
+// CHECK: call void @__copy_assignment_8_8_t0w4_s8(i8** %[[V4]], i8** %[[V5]])
+
+// CHECK: call void @func(
+
+// CHECK: %[[V6:.*]] = bitcast %[[STRUCT_STRONGSMALL]]* %[[_COMPOUNDLITERAL1]] to i8**
+// CHECK: call void @__destructor_8_s8(i8** %[[V6]])
+
+// CHECK: %[[V7:.*]] = bitcast %[[STRUCT_STRONGSMALL]]* %[[_COMPOUNDLITERAL]] to i8**
+// CHECK: call void @__destructor_8_s8(i8** %[[V7]])
+
+void test_compound_literal2(int c, StrongSmall *p) {
+  *p = c ? (StrongSmall){ 1, 0 } : (StrongSmall){ 2, 0 };
+  func(0);
+}
+
 #endif /* USESTRUCT */

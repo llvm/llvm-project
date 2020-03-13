@@ -32,4 +32,4 @@ define amdgpu_kernel void @kernel3() #0 {
 
 attributes #0 = { "uniform-work-group-size"="false" }
 
-; CHECK: attributes #[[FUNC]] = { "amdgpu-flat-scratch" "uniform-work-group-size"="false" }
+; CHECK: attributes #[[FUNC]] = { "amdgpu-calls" "uniform-work-group-size"="false" }

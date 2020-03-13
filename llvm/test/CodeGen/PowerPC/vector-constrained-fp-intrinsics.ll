@@ -191,8 +191,8 @@ define <4 x double> @constrained_vector_fdiv_v4f64() #0 {
 ; PC64LE-NEXT:    xxswapd 0, 0
 ; PC64LE-NEXT:    xxswapd 1, 1
 ; PC64LE-NEXT:    xxswapd 2, 2
-; PC64LE-NEXT:    xvdivdp 34, 1, 0
-; PC64LE-NEXT:    xvdivdp 35, 2, 0
+; PC64LE-NEXT:    xvdivdp 35, 1, 0
+; PC64LE-NEXT:    xvdivdp 34, 2, 0
 ; PC64LE-NEXT:    blr
 ;
 ; PC64LE9-LABEL: constrained_vector_fdiv_v4f64:
@@ -205,9 +205,9 @@ define <4 x double> @constrained_vector_fdiv_v4f64() #0 {
 ; PC64LE9-NEXT:    lxvx 1, 0, 3
 ; PC64LE9-NEXT:    addis 3, 2, .LCPI4_2@toc@ha
 ; PC64LE9-NEXT:    addi 3, 3, .LCPI4_2@toc@l
-; PC64LE9-NEXT:    xvdivdp 34, 1, 0
-; PC64LE9-NEXT:    lxvx 1, 0, 3
 ; PC64LE9-NEXT:    xvdivdp 35, 1, 0
+; PC64LE9-NEXT:    lxvx 1, 0, 3
+; PC64LE9-NEXT:    xvdivdp 34, 1, 0
 ; PC64LE9-NEXT:    blr
 entry:
   %div = call <4 x double> @llvm.experimental.constrained.fdiv.v4f64(
@@ -829,8 +829,8 @@ define <4 x double> @constrained_vector_fmul_v4f64() #0 {
 ; PC64LE-NEXT:    xxswapd 0, 0
 ; PC64LE-NEXT:    xxswapd 1, 1
 ; PC64LE-NEXT:    xxswapd 2, 2
-; PC64LE-NEXT:    xvmuldp 34, 1, 0
-; PC64LE-NEXT:    xvmuldp 35, 1, 2
+; PC64LE-NEXT:    xvmuldp 35, 1, 0
+; PC64LE-NEXT:    xvmuldp 34, 1, 2
 ; PC64LE-NEXT:    blr
 ;
 ; PC64LE9-LABEL: constrained_vector_fmul_v4f64:
@@ -843,9 +843,9 @@ define <4 x double> @constrained_vector_fmul_v4f64() #0 {
 ; PC64LE9-NEXT:    lxvx 1, 0, 3
 ; PC64LE9-NEXT:    addis 3, 2, .LCPI14_2@toc@ha
 ; PC64LE9-NEXT:    addi 3, 3, .LCPI14_2@toc@l
-; PC64LE9-NEXT:    xvmuldp 34, 1, 0
-; PC64LE9-NEXT:    lxvx 0, 0, 3
 ; PC64LE9-NEXT:    xvmuldp 35, 1, 0
+; PC64LE9-NEXT:    lxvx 0, 0, 3
+; PC64LE9-NEXT:    xvmuldp 34, 1, 0
 ; PC64LE9-NEXT:    blr
 entry:
   %mul = call <4 x double> @llvm.experimental.constrained.fmul.v4f64(
@@ -1045,8 +1045,8 @@ define <4 x double> @constrained_vector_fadd_v4f64() #0 {
 ; PC64LE-NEXT:    xxswapd 0, 0
 ; PC64LE-NEXT:    xxswapd 1, 1
 ; PC64LE-NEXT:    xxswapd 2, 2
-; PC64LE-NEXT:    xvadddp 34, 1, 0
-; PC64LE-NEXT:    xvadddp 35, 1, 2
+; PC64LE-NEXT:    xvadddp 35, 1, 0
+; PC64LE-NEXT:    xvadddp 34, 1, 2
 ; PC64LE-NEXT:    blr
 ;
 ; PC64LE9-LABEL: constrained_vector_fadd_v4f64:
@@ -1059,9 +1059,9 @@ define <4 x double> @constrained_vector_fadd_v4f64() #0 {
 ; PC64LE9-NEXT:    lxvx 1, 0, 3
 ; PC64LE9-NEXT:    addis 3, 2, .LCPI19_2@toc@ha
 ; PC64LE9-NEXT:    addi 3, 3, .LCPI19_2@toc@l
-; PC64LE9-NEXT:    xvadddp 34, 1, 0
-; PC64LE9-NEXT:    lxvx 0, 0, 3
 ; PC64LE9-NEXT:    xvadddp 35, 1, 0
+; PC64LE9-NEXT:    lxvx 0, 0, 3
+; PC64LE9-NEXT:    xvadddp 34, 1, 0
 ; PC64LE9-NEXT:    blr
 entry:
   %add = call <4 x double> @llvm.experimental.constrained.fadd.v4f64(
@@ -1261,8 +1261,8 @@ define <4 x double> @constrained_vector_fsub_v4f64() #0 {
 ; PC64LE-NEXT:    xxswapd 0, 0
 ; PC64LE-NEXT:    xxswapd 1, 1
 ; PC64LE-NEXT:    xxswapd 2, 2
-; PC64LE-NEXT:    xvsubdp 34, 1, 0
-; PC64LE-NEXT:    xvsubdp 35, 1, 2
+; PC64LE-NEXT:    xvsubdp 35, 1, 0
+; PC64LE-NEXT:    xvsubdp 34, 1, 2
 ; PC64LE-NEXT:    blr
 ;
 ; PC64LE9-LABEL: constrained_vector_fsub_v4f64:
@@ -1275,9 +1275,9 @@ define <4 x double> @constrained_vector_fsub_v4f64() #0 {
 ; PC64LE9-NEXT:    lxvx 1, 0, 3
 ; PC64LE9-NEXT:    addis 3, 2, .LCPI24_2@toc@ha
 ; PC64LE9-NEXT:    addi 3, 3, .LCPI24_2@toc@l
-; PC64LE9-NEXT:    xvsubdp 34, 1, 0
-; PC64LE9-NEXT:    lxvx 0, 0, 3
 ; PC64LE9-NEXT:    xvsubdp 35, 1, 0
+; PC64LE9-NEXT:    lxvx 0, 0, 3
+; PC64LE9-NEXT:    xvsubdp 34, 1, 0
 ; PC64LE9-NEXT:    blr
 entry:
   %sub = call <4 x double> @llvm.experimental.constrained.fsub.v4f64(

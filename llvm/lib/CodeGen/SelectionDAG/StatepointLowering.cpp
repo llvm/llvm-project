@@ -268,45 +268,6 @@ static void reservePreviousStackSlotForValue(const Value *IncomingValue,
   Builder.StatepointLowering.setLocation(Incoming, Loc);
 }
 
-/// Remove any duplicate (as SDValues) from the derived pointer pairs.  This
-/// is not required for correctness.  It's purpose is to reduce the size of
-/// StackMap section.  It has no effect on the number of spill slots required
-/// or the actual lowering.
-static void
-removeDuplicateGCPtrs(SmallVectorImpl<const Value *> &Bases,
-                      SmallVectorImpl<const Value *> &Ptrs,
-                      SmallVectorImpl<const GCRelocateInst *> &Relocs,
-                      SelectionDAGBuilder &Builder,
-                      FunctionLoweringInfo::StatepointSpillMap &SSM) {
-  DenseMap<SDValue, const Value *> Seen;
-
-  SmallVector<const Value *, 64> NewBases, NewPtrs;
-  SmallVector<const GCRelocateInst *, 64> NewRelocs;
-  for (size_t i = 0, e = Ptrs.size(); i < e; i++) {
-    SDValue SD = Builder.getValue(Ptrs[i]);
-    auto SeenIt = Seen.find(SD);
-
-    if (SeenIt == Seen.end()) {
-      // Only add non-duplicates
-      NewBases.push_back(Bases[i]);
-      NewPtrs.push_back(Ptrs[i]);
-      NewRelocs.push_back(Relocs[i]);
-      Seen[SD] = Ptrs[i];
-    } else {
-      // Duplicate pointer found, note in SSM and move on:
-      SSM.DuplicateMap[Ptrs[i]] = SeenIt->second;
-    }
-  }
-  assert(Bases.size() >= NewBases.size());
-  assert(Ptrs.size() >= NewPtrs.size());
-  assert(Relocs.size() >= NewRelocs.size());
-  Bases = NewBases;
-  Ptrs = NewPtrs;
-  Relocs = NewRelocs;
-  assert(Ptrs.size() == Bases.size());
-  assert(Ptrs.size() == Relocs.size());
-}
-
 /// Extract call from statepoint, lower it and return pointer to the
 /// call node. Also update NodeMap so that getValue(statepoint) will
 /// reference lowered call result
@@ -610,7 +571,7 @@ lowerStatepointMetaArgs(SmallVectorImpl<SDValue> &Ops,
     SDValue Loc = Builder.StatepointLowering.getLocation(SDV);
 
     if (Loc.getNode()) {
-      SpillMap.SlotMap[V] = cast<FrameIndexSDNode>(Loc)->getIndex();
+      SpillMap[V] = cast<FrameIndexSDNode>(Loc)->getIndex();
     } else {
       // Record value as visited, but not spilled. This is case for allocas
       // and constants. For this values we can avoid emitting spill load while
@@ -618,7 +579,7 @@ lowerStatepointMetaArgs(SmallVectorImpl<SDValue> &Ops,
       // Actually we do not need to record them in this map at all.
       // We do this only to check that we are not relocating any unvisited
       // value.
-      SpillMap.SlotMap[V] = None;
+      SpillMap[V] = None;
 
       // Default llvm mechanisms for exporting values which are used in
       // different basic blocks does not work for gc relocates.
@@ -641,23 +602,14 @@ SDValue SelectionDAGBuilder::LowerAsSTATEPOINT(
   NumOfStatepoints++;
   // Clear state
   StatepointLowering.startNewStatepoint(*this);
+  assert(SI.Bases.size() == SI.Ptrs.size() &&
+         SI.Ptrs.size() <= SI.GCRelocates.size());
 
 #ifndef NDEBUG
-  // We schedule gc relocates before removeDuplicateGCPtrs since we _will_
-  // encounter the duplicate gc relocates we elide in removeDuplicateGCPtrs.
   for (auto *Reloc : SI.GCRelocates)
     if (Reloc->getParent() == SI.StatepointInstr->getParent())
       StatepointLowering.scheduleRelocCall(*Reloc);
 #endif
-
-  // Remove any redundant llvm::Values which map to the same SDValue as another
-  // input.  Also has the effect of removing duplicates in the original
-  // llvm::Value input list as well.  This is a useful optimization for
-  // reducing the size of the StackMap section.  It has no other impact.
-  removeDuplicateGCPtrs(SI.Bases, SI.Ptrs, SI.GCRelocates, *this,
-                        FuncInfo.StatepointSpillMaps[SI.StatepointInstr]);
-  assert(SI.Bases.size() == SI.Ptrs.size() &&
-         SI.Ptrs.size() == SI.GCRelocates.size());
 
   // Lower statepoint vmstate and gcstate arguments
   SmallVector<SDValue, 10> LoweredMetaArgs;
@@ -871,10 +823,28 @@ SelectionDAGBuilder::LowerStatepoint(ImmutableStatepoint ISP,
                            ISP.getNumCallArgs(), ActualCallee,
                            ISP.getActualReturnType(), false /* IsPatchPoint */);
 
+  // There may be duplication in the gc.relocate list; such as two copies of
+  // each relocation on normal and exceptional path for an invoke.  We only
+  // need to spill once and record one copy in the stackmap, but we need to
+  // reload once per gc.relocate.  (Dedupping gc.relocates is trickier and best
+  // handled as a CSE problem elsewhere.)
+  // TODO: There a couple of major stackmap size optimizations we could do
+  // here if we wished.
+  // 1) If we've encountered a derived pair {B, D}, we don't need to actually
+  // record {B,B} if it's seen later.
+  // 2) Due to rematerialization, actual derived pointers are somewhat rare;
+  // given that, we could change the format to record base pointer relocations
+  // separately with half the space. This would require a format rev and a
+  // fairly major rework of the STATEPOINT node though.
+  SmallSet<SDValue, 8> Seen;
   for (const GCRelocateInst *Relocate : ISP.getRelocates()) {
     SI.GCRelocates.push_back(Relocate);
-    SI.Bases.push_back(Relocate->getBasePtr());
-    SI.Ptrs.push_back(Relocate->getDerivedPtr());
+
+    SDValue DerivedSD = getValue(Relocate->getDerivedPtr());
+    if (Seen.insert(DerivedSD).second) {
+      SI.Bases.push_back(Relocate->getBasePtr());
+      SI.Ptrs.push_back(Relocate->getDerivedPtr());
+    }
   }
 
   SI.GCArgs = ArrayRef<const Use>(ISP.gc_args_begin(), ISP.gc_args_end());
@@ -1021,10 +991,13 @@ void SelectionDAGBuilder::visitGCRelocate(const GCRelocateInst &Relocate) {
   unsigned Index = *DerivedPtrLocation;
   SDValue SpillSlot = DAG.getTargetFrameIndex(Index, getFrameIndexTy());
 
-  // Note: We know all of these reloads are independent, but don't bother to
-  // exploit that chain wise.  DAGCombine will happily do so as needed, so
-  // doing it here would be a small compile time win at most.
-  SDValue Chain = getRoot();
+  // All the reloads are independent and are reading memory only modified by
+  // statepoints (i.e. no other aliasing stores); informing SelectionDAG of
+  // this this let's CSE kick in for free and allows reordering of instructions
+  // if possible.  The lowering for statepoint sets the root, so this is
+  // ordering all reloads with the either a) the statepoint node itself, or b)
+  // the entry of the current block for an invoke statepoint.
+  const SDValue Chain = DAG.getRoot(); // != Builder.getRoot()
 
   auto &MF = DAG.getMachineFunction();
   auto &MFI = MF.getFrameInfo();
@@ -1039,8 +1012,7 @@ void SelectionDAGBuilder::visitGCRelocate(const GCRelocateInst &Relocate) {
 
   SDValue SpillLoad = DAG.getLoad(LoadVT, getCurSDLoc(), Chain,
                                   SpillSlot, LoadMMO);
-
-  DAG.setRoot(SpillLoad.getValue(1));
+  PendingLoads.push_back(SpillLoad.getValue(1));
 
   assert(SpillLoad.getNode());
   setValue(&Relocate, SpillLoad);

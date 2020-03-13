@@ -1899,17 +1899,11 @@
 #   error "__cpp_lib_launder should have the value 201606L in c++2a"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_list_remove_return_type
-#     error "__cpp_lib_list_remove_return_type should be defined in c++2a"
-#   endif
-#   if __cpp_lib_list_remove_return_type != 201806L
-#     error "__cpp_lib_list_remove_return_type should have the value 201806L in c++2a"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_list_remove_return_type
-#     error "__cpp_lib_list_remove_return_type should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_list_remove_return_type
+#   error "__cpp_lib_list_remove_return_type should be defined in c++2a"
+# endif
+# if __cpp_lib_list_remove_return_type != 201806L
+#   error "__cpp_lib_list_remove_return_type should have the value 201806L in c++2a"
 # endif
 
 # ifndef __cpp_lib_logical_traits

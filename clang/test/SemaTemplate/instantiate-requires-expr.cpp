@@ -164,6 +164,19 @@ namespace expr_requirement {
   struct r3 {};
 
   using r3i = r3<int, unsigned int>; // expected-error{{constraints not satisfied for class template 'r3' [with Ts = <int, unsigned int>]}}
+
+  template<typename T>
+  struct r4 {
+      constexpr int foo() {
+        if constexpr (requires { this->invalid(); })
+          return 1;
+        else
+          return 0;
+      }
+
+      constexpr void invalid() requires false { }
+  };
+  static_assert(r4<int>{}.foo() == 0);
 }
 
 namespace nested_requirement {
