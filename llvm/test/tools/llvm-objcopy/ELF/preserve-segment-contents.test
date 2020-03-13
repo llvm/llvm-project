@@ -313,7 +313,6 @@ ProgramHeaders:
   # First segment has unlabelled space at start and end.
   - Type:  0x6ABCDEF0 # Non-specific segment type.
     VAddr: 0x2000
-    PAddr: 0x2000
     Align: 0x2000
     Sections:
       - Section: blob1
@@ -326,7 +325,6 @@ ProgramHeaders:
   # Second segment has sections at start and end.
   - Type:  0x6ABCDEF0
     VAddr: 0x2100
-    PAddr: 0x2100
     Align: 0x100
     Sections:
       - Section: section4
@@ -335,28 +333,24 @@ ProgramHeaders:
   # Third segment is all covered by a section.
   - Type:  0x6ABCDEF0
     VAddr: 0x2200
-    PAddr: 0x2200
     Align: 0x100
     Sections:
       - Section: section6
   # Fourth segment has no sections (after removing blob headers).
   - Type:  0x6ABCDEF0
     VAddr: 0x2300
-    PAddr: 0x2300
     Align: 0x100
     Sections:
       - Section: blob6
   # Fifth segment is empty.
   - Type:   0x6ABCDEF0
     VAddr:  0x2308
-    PAddr:  0x2308
     Offset: 0x2308
 
   # The next few segments test behaviour of fully nested segments.
   # Sixth segment is the "parent" segment.
   - Type:  0x6ABCDEF0
     VAddr: 0x3000
-    PAddr: 0x3000
     Align: 0x1000
     Sections:
       - Section: sectionA
@@ -379,24 +373,20 @@ ProgramHeaders:
   # Seventh segment is empty and nested.
   - Type:   0x6ABCDEF0
     VAddr:  0x3002
-    PAddr:  0x3002
     Offset: 0x3002
   # Eighth segment contains only a section and is nested.
   - Type:  0x6ABCDEF0
     VAddr: 0x3004
-    PAddr: 0x3004
     Sections:
       - Section: sectionB
   # Ninth segment contains only unlabelled space and is nested.
   - Type:  0x6ABCDEF0
     VAddr: 0x3008
-    PAddr: 0x3008
     Sections:
       - Section: blobA
   # Tenth segment contains two sections with space between and is nested.
   - Type:  0x6ABCDEF0
     VAddr: 0x300C
-    PAddr: 0x300C
     Sections:
       - Section: sectionC
       - Section: blobB
@@ -404,7 +394,6 @@ ProgramHeaders:
   # Eleventh segment contains two sections with space between and at ends and is nested.
   - Type:  0x6ABCDEF0
     VAddr: 0x3018
-    PAddr: 0x3018
     Sections:
       - Section: blobC
       - Section: sectionE
@@ -414,7 +403,6 @@ ProgramHeaders:
   # Twelfth segment contains one section with space at ends adjacent to space in parent segment.
   - Type:     0x6ABCDEF0
     VAddr:    0x302E
-    PAddr:    0x302E
     Offset:   0x302E
     FileSize: 8
     Sections:
@@ -422,7 +410,6 @@ ProgramHeaders:
   # Thirteenth segment contains overlaps sections at either end in parent segment.
   - Type:     0x6ABCDEF0
     VAddr:    0x303A
-    PAddr:    0x303A
     Offset:   0x303A
     FileSize: 0x8
     Sections:
@@ -434,13 +421,11 @@ ProgramHeaders:
   # Segment15:           |--|-Sec-|-unlabelled-|
   - Type:  0x6ABCDEF0
     VAddr: 0x4000
-    PAddr: 0x4000
     Sections:
       - Section: blobz
       - Section: sectionz
   - Type:   0x6ABCDEF0
     VAddr:  0x4002
-    PAddr:  0x4002
     Offset: 0x4002
     Sections:
       - Section: sectionz
@@ -450,13 +435,11 @@ ProgramHeaders:
   # Segment17:    |--|----unlabelled---|
   - Type:  0x6ABCDEF0
     VAddr: 0x400C
-    PAddr: 0x400C
     FileSize: 6
     Sections:
       - Section: sectiony
   - Type:   0x6ABCDEF0
     VAddr:  0x400E
-    PAddr:  0x400E
     Offset: 0x400E
     Sections:
       - Section: blobx
@@ -465,13 +448,11 @@ ProgramHeaders:
   # Segment19:              |-Sec-|-unlabelled-|
   - Type:  0x6ABCDEF0
     VAddr: 0x4014
-    PAddr: 0x4014
     Sections:
       - Section: blobw
       - Section: sectionx
   - Type:  0x6ABCDEF0
     VAddr: 0x4018
-    PAddr: 0x4018
     Sections:
       - Section: sectionx
       - Section: blobv
@@ -480,12 +461,10 @@ ProgramHeaders:
   # Segment21:    |--|-unlabelled-|-Sec-|
   - Type:  0x6ABCDEF0
     VAddr: 0x4020
-    PAddr: 0x4020
     Sections:
       - Section: sectionw
   - Type:   0x6ABCDEF0
     VAddr:  0x4022
-    PAddr:  0x4022
     Offset: 0x4022
     Sections:
       - Section: blobu
@@ -495,12 +474,10 @@ ProgramHeaders:
   # Segment23:    |--|-Sec-|
   - Type:  0x6ABCDEF0
     VAddr: 0x402C
-    PAddr: 0x402C
     Sections:
       - Section: sectionu
   - Type:   0x6ABCDEF0
     VAddr:  0x402E
-    PAddr:  0x402E
     Offset: 0x402E
     Sections:
       - Section: sectiont
@@ -509,13 +486,11 @@ ProgramHeaders:
   # Segment25:              |--Sec--|
   - Type:  0x6ABCDEF0
     VAddr: 0x4034
-    PAddr: 0x4034
     FileSize: 6
     Sections:
       - Section: blobt
   - Type:  0x6ABCDEF0
     VAddr: 0x4038
-    PAddr: 0x4038
     Sections:
       - Section: sections
 
@@ -527,7 +502,6 @@ ProgramHeaders:
   # Segment28:              |-Sec-|------------|
   - Type:  0x6ABCDEF0
     VAddr: 0x5000
-    PAddr: 0x5000
     Align: 0x1000
     Sections:
       - Section: bloba
@@ -535,13 +509,11 @@ ProgramHeaders:
       - Section: blobb
   - Type:  0x6ABCDEF0
     VAddr: 0x5000
-    PAddr: 0x5000
     FileSize: 6
     Sections:
       - Section: bloba
   - Type:  0x6ABCDEF0
     VAddr: 0x5004
-    PAddr: 0x5004
     Sections:
       - Section: sectiona
       - Section: blobb
@@ -551,20 +523,17 @@ ProgramHeaders:
   # Segment31:          |---------|-Sec-|
   - Type:  0x6ABCDEF0
     VAddr: 0x500C
-    PAddr: 0x500C
     Sections:
       - Section: sectionb
       - Section: blobc
       - Section: sectionc
   - Type:  0x6ABCDEF0
     VAddr: 0x500C
-    PAddr: 0x500C
     FileSize: 7
     Sections:
       - Section: sectionb
   - Type:   0x6ABCDEF0
     VAddr:  0x5011
-    PAddr:  0x5011
     Offset: 0x5011
     Sections:
       - Section: sectionc
@@ -574,20 +543,17 @@ ProgramHeaders:
   # Segment34:       |------------|-Sec-|
   - Type:  0x6ABCDEF0
     VAddr: 0x5018
-    PAddr: 0x5018
     Sections:
       - Section: sectiond
       - Section: blobd
       - Section: sectione
   - Type:  0x6ABCDEF0
     VAddr: 0x5018
-    PAddr: 0x5018
     Sections:
       - Section: sectiond
       - Section: blobd
   - Type:  0x6ABCDEF0
     VAddr: 0x501C
-    PAddr: 0x501C
     Sections:
       - Section: blobd
       - Section: sectione
@@ -597,20 +563,17 @@ ProgramHeaders:
   # Segment37:              |-Sec-|------------|
   - Type:  0x6ABCDEF0
     VAddr: 0x5024
-    PAddr: 0x5024
     Sections:
       - Section: blobe
       - Section: sectionf
       - Section: blobf
   - Type:  0x6ABCDEF0
     VAddr: 0x5024
-    PAddr: 0x5024
     Sections:
       - Section: blobe
       - Section: sectionf
   - Type:  0x6ABCDEF0
     VAddr: 0x5028
-    PAddr: 0x5028
     Sections:
       - Section: sectionf
       - Section: blobf
@@ -620,20 +583,17 @@ ProgramHeaders:
   # Segment40:                |---|------------|
   - Type:  0x6ABCDEF0
     VAddr: 0x5030
-    PAddr: 0x5030
     Sections:
       - Section: blobg
       - Section: sectiong
       - Section: blobh
   - Type:  0x6ABCDEF0
     VAddr: 0x5030
-    PAddr: 0x5030
     FileSize: 7
     Sections:
       - Section: blobg
   - Type:   0x6ABCDEF0
     VAddr:  0x5035
-    PAddr:  0x5035
     Offset: 0x5035
     Sections:
       - Section: blobh
