@@ -718,6 +718,43 @@ std::ostream &DescriptorInquiry::AsFortran(std::ostream &o) const {
   }
 }
 
+std::ostream &Assignment::AsFortran(std::ostream &o) const {
+  std::visit(
+      common::visitors{
+          [&](const Assignment::Intrinsic &) {
+            rhs.AsFortran(lhs.AsFortran(o) << '=');
+          },
+          [&](const ProcedureRef &proc) { proc.AsFortran(o << "CALL "); },
+          [&](const BoundsSpec &bounds) {
+            lhs.AsFortran(o);
+            if (!bounds.empty()) {
+              char sep{'('};
+              for (const auto &bound : bounds) {
+                bound.AsFortran(o << sep) << ':';
+                sep = ',';
+              }
+              o << ')';
+            }
+            rhs.AsFortran(o << " => ");
+          },
+          [&](const BoundsRemapping &bounds) {
+            lhs.AsFortran(o);
+            if (!bounds.empty()) {
+              char sep{'('};
+              for (const auto &bound : bounds) {
+                bound.first.AsFortran(o << sep) << ':';
+                bound.second.AsFortran(o);
+                sep = ',';
+              }
+              o << ')';
+            }
+            rhs.AsFortran(o << " => ");
+          },
+      },
+      u);
+  return o;
+}
+
 INSTANTIATE_CONSTANT_TEMPLATES
 INSTANTIATE_EXPRESSION_TEMPLATES
 INSTANTIATE_VARIABLE_TEMPLATES
