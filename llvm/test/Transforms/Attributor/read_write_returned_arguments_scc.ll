@@ -101,7 +101,7 @@ return:                                           ; preds = %if.end, %if.then
   ret i32* %retval.0
 }
 
-; CHECK: Function Attrs: argmemonly nofree norecurse nosync nounwind
+; CHECK: Function Attrs: argmemonly nofree norecurse nosync nounwind willreturn
 ; CHECK-NEXT: define i32* @external_sink_ret2_nrw(i32* nofree readnone %n0, i32* nocapture nofree readonly %r0, i32* nofree returned writeonly "no-capture-maybe-returned" %w0)
 define i32* @external_sink_ret2_nrw(i32* %n0, i32* %r0, i32* %w0) {
 entry:
@@ -160,6 +160,7 @@ entry:
 ;
 ; CHECK-NOT: attributes #
 ; CHECK: attributes #{{.*}} = { argmemonly nofree nosync nounwind }
-; CHECK: attributes #{{.*}} = { argmemonly nofree norecurse nosync nounwind }
+; CHECK: attributes #{{.*}} = { argmemonly nofree norecurse nosync nounwind willreturn }
 ; CHECK: attributes #{{.*}} = { nosync nounwind }
+; CHECK: attributes #{{.*}} = { norecurse nosync nounwind willreturn }
 ; CHECK-NOT: attributes #
