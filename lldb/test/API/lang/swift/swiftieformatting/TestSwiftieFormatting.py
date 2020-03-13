@@ -27,6 +27,8 @@ class TestSwiftieFormatting(TestBase):
     def setUp(self):
         TestBase.setUp(self)
 
+    @expectedFailureAll(bugnumber="rdar://60396797",
+                        setting=('symbols.use-swift-clangimporter', 'false'))
     @skipUnlessDarwin
     @swiftTest
     def test_swiftie_formatting(self):

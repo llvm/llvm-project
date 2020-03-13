@@ -25,6 +25,8 @@ class TestSwiftMacroConflict(TestBase):
     def setUp(self):
         TestBase.setUp(self)
 
+    # Don't run ClangImporter tests if Clangimporter is disabled.
+    @skipIf(setting=('symbols.use-swift-clangimporter', 'false'))
     @skipUnlessDarwin
     @swiftTest
     def test(self):
@@ -61,6 +63,8 @@ class TestSwiftMacroConflict(TestBase):
         self.assertTrue(os.path.isdir(mod_cache), "module cache exists")
         lldb.SBDebugger.MemoryPressureDetected()
 
+    # Don't run ClangImporter tests if Clangimporter is disabled.
+    @skipIf(setting=('symbols.use-swift-clangimporter', 'false'))
     @skipUnlessDarwin
     @swiftTest
     def test_with_dwarfimporter(self):

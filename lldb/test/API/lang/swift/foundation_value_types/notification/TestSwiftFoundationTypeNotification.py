@@ -14,4 +14,7 @@ from lldbsuite.test.decorators import *
 
 lldbinline.MakeInlineTest(
     __file__, globals(), decorators=
-    [skipUnlessDarwin,swiftTest])
+    [skipUnlessDarwin,swiftTest,
+        expectedFailureAll(bugnumber="rdar://60396797",
+                           setting=('symbols.use-swift-clangimporter', 'false'))
+])

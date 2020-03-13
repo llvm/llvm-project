@@ -23,6 +23,8 @@ class TestSwiftDeploymentTarget(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
+    @skipIf(bugnumber="rdar://60396797", # should work but crashes.
+            setting=('symbols.use-swift-clangimporter', 'false'))
     @skipUnlessDarwin
     @skipIfDarwinEmbedded # This test uses macOS triples explicitly.
     @skipIf(macos_version=["<", "10.11"])
@@ -35,6 +37,8 @@ class TestSwiftDeploymentTarget(TestBase):
                                           lldb.SBFileSpec('main.swift'))
         self.expect("p f", substrs=['i = 23'])
 
+    @skipIf(bugnumber="rdar://60396797", # should work but crashes.
+            setting=('symbols.use-swift-clangimporter', 'false'))
     @skipUnlessDarwin
     @skipIfDarwinEmbedded # This test uses macOS triples explicitely.
     @skipIf(macos_version=["<", "10.11"])

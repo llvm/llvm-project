@@ -15,6 +15,8 @@ class TestMultilangFormatterCategories(TestBase):
     def setUp(self):
         TestBase.setUp(self)
 
+    @expectedFailureAll(bugnumber="rdar://60396797",
+                        setting=('symbols.use-swift-clangimporter', 'false'))
     @swiftTest
     @skipUnlessDarwin
     def test_multilang_formatter_categories(self):
