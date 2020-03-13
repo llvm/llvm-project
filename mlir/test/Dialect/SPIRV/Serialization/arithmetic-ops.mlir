@@ -1,6 +1,6 @@
 // RUN: mlir-translate -test-spirv-roundtrip %s | FileCheck %s
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
   spv.func @fmul(%arg0 : f32, %arg1 : f32) "None" {
     // CHECK: {{%.*}}= spv.FMul {{%.*}}, {{%.*}} : f32
     %0 = spv.FMul %arg0, %arg1 : f32

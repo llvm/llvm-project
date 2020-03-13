@@ -23,6 +23,7 @@ namespace mlir {
 class OpBuilder;
 
 namespace spirv {
+class VerCapExtAttr;
 
 // TableGen'erated operation interfaces for querying versions, extensions, and
 // capabilities.

@@ -1,6 +1,6 @@
 // RUN: mlir-translate -test-spirv-roundtrip -split-input-file %s | FileCheck %s
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
   spv.func @bit_cast(%arg0 : f32) "None" {
     // CHECK: {{%.*}} = spv.Bitcast {{%.*}} : f32 to i32
     %0 = spv.Bitcast %arg0 : f32 to i32
@@ -14,7 +14,7 @@ spv.module "Logical" "GLSL450" {
 
 // -----
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
   spv.func @convert_f_to_s(%arg0 : f32) -> i32 "None" {
     // CHECK: {{%.*}} = spv.ConvertFToS {{%.*}} : f32 to i32
     %0 = spv.ConvertFToS %arg0 : f32 to i32

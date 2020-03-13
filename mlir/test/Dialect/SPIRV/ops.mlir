@@ -416,7 +416,7 @@ func @u_convert_scalar(%arg0 : i32) -> i64 {
 // spv.ExecutionMode
 //===----------------------------------------------------------------------===//
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
    spv.func @do_nothing() -> () "None" {
      spv.Return
    }
@@ -425,7 +425,7 @@ spv.module "Logical" "GLSL450" {
    spv.ExecutionMode @do_nothing "ContractionOff"
 }
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
    spv.func @do_nothing() -> () "None" {
      spv.Return
    }
@@ -436,7 +436,7 @@ spv.module "Logical" "GLSL450" {
 
 // -----
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
    spv.func @do_nothing() -> () "None" {
      spv.Return
    }
@@ -639,7 +639,7 @@ func @aligned_load_incorrect_attributes() -> () {
 
 // -----
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
   spv.globalVariable @var0 : !spv.ptr<f32, Input>
   // CHECK_LABEL: @simple_load
   spv.func @simple_load() -> () "None" {
@@ -1057,7 +1057,7 @@ func @aligned_store_incorrect_attributes(%arg0 : f32) -> () {
 
 // -----
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
   spv.globalVariable @var0 : !spv.ptr<f32, Input>
   spv.func @simple_store(%arg0 : f32) -> () "None" {
     %0 = spv._address_of @var0 : !spv.ptr<f32, Input>
@@ -1130,7 +1130,7 @@ func @variable_init_normal_constant() -> () {
 
 // -----
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
   spv.globalVariable @global : !spv.ptr<f32, Workgroup>
   spv.func @variable_init_global_variable() -> () "None" {
     %0 = spv._address_of @global : !spv.ptr<f32, Workgroup>
@@ -1138,14 +1138,11 @@ spv.module "Logical" "GLSL450" {
     %1 = spv.Variable init(%0) : !spv.ptr<!spv.ptr<f32, Workgroup>, Function>
     spv.Return
   }
-} attributes {
-  capability = ["VariablePointers"],
-  extension = ["SPV_KHR_variable_pointers"]
 }
 
 // -----
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
   spv.specConstant @sc = 42 : i32
   // CHECK-LABEL: @variable_init_spec_constant
   spv.func @variable_init_spec_constant() -> () "None" {

@@ -2,7 +2,7 @@
 
 // Single loop
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
   // for (int i = 0; i < count; ++i) {}
   spv.func @loop(%count : i32) -> () "None" {
     %zero = spv.constant 0: i32
@@ -55,13 +55,11 @@ spv.module "Logical" "GLSL450" {
     spv.Return
   }
   spv.EntryPoint "GLCompute" @main
-} attributes {
-  capabilities = ["Shader"]
 }
 
 // -----
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
   spv.globalVariable @GV1 bind(0, 0) : !spv.ptr<!spv.struct<!spv.array<10 x f32 [4]> [0]>, StorageBuffer>
   spv.globalVariable @GV2 bind(0, 1) : !spv.ptr<!spv.struct<!spv.array<10 x f32 [4]> [0]>, StorageBuffer>
   spv.func @loop_kernel() "None" {
@@ -103,13 +101,13 @@ spv.module "Logical" "GLSL450" {
   }
   spv.EntryPoint "GLCompute" @loop_kernel
   spv.ExecutionMode @loop_kernel "LocalSize", 1, 1, 1
-} attributes {capabilities = ["Shader"], extensions = ["SPV_KHR_storage_buffer_storage_class"]}
+}
 
 // -----
 
 // Nested loop
 
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
   // for (int i = 0; i < count; ++i) {
   //   for (int j = 0; j < count; ++j) { }
   // }
@@ -207,7 +205,5 @@ spv.module "Logical" "GLSL450" {
     spv.Return
   }
   spv.EntryPoint "GLCompute" @main
-} attributes {
-  capabilities = ["Shader"]
 }
 

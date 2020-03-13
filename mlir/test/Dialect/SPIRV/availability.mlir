@@ -36,7 +36,7 @@ func @module_logical_glsl450() {
   // CHECK: spv.module max version: v1.5
   // CHECK: spv.module extensions: [ ]
   // CHECK: spv.module capabilities: [ [Shader] ]
-  spv.module "Logical" "GLSL450" { }
+  spv.module Logical GLSL450 { }
   return
 }
 
@@ -46,6 +46,6 @@ func @module_physical_storage_buffer64_vulkan() {
   // CHECK: spv.module max version: v1.5
   // CHECK: spv.module extensions: [ [SPV_EXT_physical_storage_buffer, SPV_KHR_physical_storage_buffer] [SPV_KHR_vulkan_memory_model] ]
   // CHECK: spv.module capabilities: [ [PhysicalStorageBufferAddresses] [VulkanMemoryModel] ]
-  spv.module "PhysicalStorageBuffer64" "Vulkan" { }
+  spv.module PhysicalStorageBuffer64 Vulkan { }
   return
 }

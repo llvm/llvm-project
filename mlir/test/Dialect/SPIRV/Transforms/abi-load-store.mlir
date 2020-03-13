@@ -1,7 +1,7 @@
 // RUN: mlir-opt -spirv-lower-abi-attrs -verify-diagnostics %s -o - | FileCheck %s
 
 // CHECK-LABEL: spv.module
-spv.module "Logical" "GLSL450" {
+spv.module Logical GLSL450 {
   // CHECK-DAG: spv.globalVariable [[WORKGROUPSIZE:@.*]] built_in("WorkgroupSize")
   spv.globalVariable @__builtin_var_WorkgroupSize__ built_in("WorkgroupSize") : !spv.ptr<vector<3xi32>, Input>
   // CHECK-DAG: spv.globalVariable [[NUMWORKGROUPS:@.*]] built_in("NumWorkgroups")
@@ -122,4 +122,4 @@ spv.module "Logical" "GLSL450" {
   }
   // CHECK: spv.EntryPoint "GLCompute" [[FN]], [[WORKGROUPID]], [[LOCALINVOCATIONID]], [[NUMWORKGROUPS]], [[WORKGROUPSIZE]]
   // CHECK-NEXT: spv.ExecutionMode [[FN]] "LocalSize", 32, 1, 1
-} attributes {capabilities = ["Shader"], extensions = ["SPV_KHR_storage_buffer_storage_class"]}
+}
