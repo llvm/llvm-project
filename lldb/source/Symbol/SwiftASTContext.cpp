@@ -4025,7 +4025,13 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
   llvm::Triple triple(GetTriple());
   llvm::SmallString<128> prebuiltModuleCachePath = GetResourceDir(triple);
   StringRef platform;
-  platform = swift::getPlatformNameForTriple(triple);
+  if (swift::tripleIsMacCatalystEnvironment(triple)) {
+    // The prebuilt cache for macCatalyst is the same as the one for macOS,
+    // not iOS or a separate location of its own.
+    platform = "macosx";
+  } else {
+    platform = swift::getPlatformNameForTriple(triple);
+  }
   llvm::sys::path::append(prebuiltModuleCachePath, platform,
                           "prebuilt-modules");
   LOG_PRINTF(LIBLLDB_LOG_TYPES, "Using prebuilt Swift module cache path: %s",
