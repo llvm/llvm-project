@@ -1903,6 +1903,8 @@ void printSymbolTable(const ObjectFile *O, StringRef ArchiveName,
     if (auto *ELF = dyn_cast<ELFObjectFileBase>(O)) {
       if (ELFSymbolRef(*I).getELFType() == ELF::STT_GNU_IFUNC)
         IFunc = 'i';
+      if (ELFSymbolRef(*I).getBinding() == ELF::STB_GNU_UNIQUE)
+        GlobLoc = 'u';
     }
     char Debug = (Type == SymbolRef::ST_Debug || Type == SymbolRef::ST_File)
                  ? 'd' : ' ';
