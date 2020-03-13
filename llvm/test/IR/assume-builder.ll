@@ -14,9 +14,9 @@ define void @test(i32* %P, i32* %P1, i32* %P2, i32* %P3) {
 ; BASIC-NEXT:    call void @func(i32* nonnull dereferenceable(16) [[P]], i32* null)
 ; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P1:%.*]], i64 12), "nonnull"(i32* [[P]]) ]
 ; BASIC-NEXT:    call void @func(i32* dereferenceable(12) [[P1]], i32* nonnull [[P]])
-; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P1]], i64 12) ]
+; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "cold"(), "dereferenceable"(i32* [[P1]], i64 12) ]
 ; BASIC-NEXT:    call void @func_cold(i32* dereferenceable(12) [[P1]]) #0
-; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P1]], i64 12) ]
+; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "cold"(), "dereferenceable"(i32* [[P1]], i64 12) ]
 ; BASIC-NEXT:    call void @func_cold(i32* dereferenceable(12) [[P1]])
 ; BASIC-NEXT:    call void @func(i32* [[P1]], i32* [[P]])
 ; BASIC-NEXT:    call void @func_strbool(i32* [[P1]])

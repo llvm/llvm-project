@@ -28,29 +28,27 @@ entry:
 }
 
 define void @foo(float* noalias nocapture %a, float* noalias nocapture readonly %c) #0 {
-; NO_ASSUME-LABEL: define {{[^@]+}}@foo
-; NO_ASSUME-SAME: (float* noalias nocapture [[A:%.*]], float* noalias nocapture readonly [[C:%.*]]) #0
-; NO_ASSUME-NEXT:  entry:
-; NO_ASSUME-NEXT:    [[TMP0:%.*]] = load float, float* [[C]], align 4, !alias.scope !0, !noalias !3
-; NO_ASSUME-NEXT:    [[ARRAYIDX_I:%.*]] = getelementptr inbounds float, float* [[A]], i64 5
-; NO_ASSUME-NEXT:    store float [[TMP0]], float* [[ARRAYIDX_I]], align 4, !alias.scope !3, !noalias !0
-; NO_ASSUME-NEXT:    [[TMP1:%.*]] = load float, float* [[C]], align 4
-; NO_ASSUME-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, float* [[A]], i64 7
-; NO_ASSUME-NEXT:    store float [[TMP1]], float* [[ARRAYIDX]], align 4
-; NO_ASSUME-NEXT:    ret void
+; CHECK-LABEL: define {{[^@]+}}@foo
+; CHECK-SAME: (float* noalias nocapture [[A:%.*]], float* noalias nocapture readonly [[C:%.*]]) #0
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load float, float* [[C]], align 4, !alias.scope !0, !noalias !3
+; CHECK-NEXT:    [[ARRAYIDX_I:%.*]] = getelementptr inbounds float, float* [[A]], i64 5
+; CHECK-NEXT:    store float [[TMP0]], float* [[ARRAYIDX_I]], align 4, !alias.scope !3, !noalias !0
+; CHECK-NEXT:    [[TMP1:%.*]] = load float, float* [[C]], align 4
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, float* [[A]], i64 7
+; CHECK-NEXT:    store float [[TMP1]], float* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    ret void
 ;
-; USE_ASSUME-LABEL: define {{[^@]+}}@foo
-; USE_ASSUME-SAME: (float* noalias nocapture [[A:%.*]], float* noalias nocapture readonly [[C:%.*]]) #0
-; USE_ASSUME-NEXT:  entry:
-; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "noalias"(float* [[A]]), "noalias"(float* [[C]]), "nocapture"(float* [[A]]), "nocapture"(float* [[C]]), "readonly"(float* [[C]]) ]
-; USE_ASSUME-NEXT:    [[TMP0:%.*]] = load float, float* [[C]], align 4, !alias.scope !0, !noalias !3
-; USE_ASSUME-NEXT:    [[ARRAYIDX_I:%.*]] = getelementptr inbounds float, float* [[A]], i64 5
-; USE_ASSUME-NEXT:    store float [[TMP0]], float* [[ARRAYIDX_I]], align 4, !alias.scope !3, !noalias !0
-; USE_ASSUME-NEXT:    [[TMP1:%.*]] = load float, float* [[C]], align 4
-; USE_ASSUME-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, float* [[A]], i64 7
-; USE_ASSUME-NEXT:    store float [[TMP1]], float* [[ARRAYIDX]], align 4
-; USE_ASSUME-NEXT:    ret void
-;
+; ASSUME-LABEL: @foo(
+; ASSUME-NEXT:  entry:
+; ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "noalias"(float* [[A:%.*]]), "noalias"(float* [[C:%.*]]) ]
+; ASSUME-NEXT:    [[TMP0:%.*]] = load float, float* [[C]], align 4, !alias.scope !0, !noalias !3
+; ASSUME-NEXT:    [[ARRAYIDX_I:%.*]] = getelementptr inbounds float, float* [[A]], i64 5
+; ASSUME-NEXT:    store float [[TMP0]], float* [[ARRAYIDX_I]], align 4, !alias.scope !3, !noalias !0
+; ASSUME-NEXT:    [[TMP1:%.*]] = load float, float* [[C]], align 4
+; ASSUME-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, float* [[A]], i64 7
+; ASSUME-NEXT:    store float [[TMP1]], float* [[ARRAYIDX]], align 4
+; ASSUME-NEXT:    ret void
 entry:
   tail call void @hello(float* %a, float* %c)
   %0 = load float, float* %c, align 4
@@ -82,46 +80,24 @@ entry:
 ; Check that when hello() is inlined into foo(), and then foo() is inlined into
 ; foo2(), the noalias scopes are properly concatenated.
 define void @foo2(float* nocapture %a, float* nocapture %b, float* nocapture readonly %c) #0 {
-; NO_ASSUME-LABEL: define {{[^@]+}}@foo2
-; NO_ASSUME-SAME: (float* nocapture [[A:%.*]], float* nocapture [[B:%.*]], float* nocapture readonly [[C:%.*]]) #0
-; NO_ASSUME-NEXT:  entry:
-; NO_ASSUME-NEXT:    [[TMP0:%.*]] = load float, float* [[C]], align 4, !alias.scope !5, !noalias !10
-; NO_ASSUME-NEXT:    [[ARRAYIDX_I_I:%.*]] = getelementptr inbounds float, float* [[A]], i64 5
-; NO_ASSUME-NEXT:    store float [[TMP0]], float* [[ARRAYIDX_I_I]], align 4, !alias.scope !10, !noalias !5
-; NO_ASSUME-NEXT:    [[TMP1:%.*]] = load float, float* [[C]], align 4, !alias.scope !13, !noalias !14
-; NO_ASSUME-NEXT:    [[ARRAYIDX_I:%.*]] = getelementptr inbounds float, float* [[A]], i64 7
-; NO_ASSUME-NEXT:    store float [[TMP1]], float* [[ARRAYIDX_I]], align 4, !alias.scope !14, !noalias !13
-; NO_ASSUME-NEXT:    [[TMP2:%.*]] = load float, float* [[C]], align 4, !noalias !15
-; NO_ASSUME-NEXT:    [[ARRAYIDX_I1:%.*]] = getelementptr inbounds float, float* [[A]], i64 6
-; NO_ASSUME-NEXT:    store float [[TMP2]], float* [[ARRAYIDX_I1]], align 4, !alias.scope !19, !noalias !20
-; NO_ASSUME-NEXT:    [[ARRAYIDX1_I:%.*]] = getelementptr inbounds float, float* [[B]], i64 8
-; NO_ASSUME-NEXT:    store float [[TMP2]], float* [[ARRAYIDX1_I]], align 4, !alias.scope !20, !noalias !19
-; NO_ASSUME-NEXT:    [[TMP3:%.*]] = load float, float* [[C]], align 4
-; NO_ASSUME-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, float* [[A]], i64 7
-; NO_ASSUME-NEXT:    store float [[TMP3]], float* [[ARRAYIDX]], align 4
-; NO_ASSUME-NEXT:    ret void
-;
-; USE_ASSUME-LABEL: define {{[^@]+}}@foo2
-; USE_ASSUME-SAME: (float* nocapture [[A:%.*]], float* nocapture [[B:%.*]], float* nocapture readonly [[C:%.*]]) #0
-; USE_ASSUME-NEXT:  entry:
-; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "noalias"(float* [[A]]), "noalias"(float* [[C]]), "nocapture"(float* [[A]]), "nocapture"(float* [[C]]), "readonly"(float* [[C]]) ]
-; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) #2 [ "noalias"(float* [[A]]), "noalias"(float* [[C]]), "nocapture"(float* [[A]]), "nocapture"(float* [[C]]), "readonly"(float* [[C]]) ], !noalias !5
-; USE_ASSUME-NEXT:    [[TMP0:%.*]] = load float, float* [[C]], align 4, !alias.scope !9, !noalias !12
-; USE_ASSUME-NEXT:    [[ARRAYIDX_I_I:%.*]] = getelementptr inbounds float, float* [[A]], i64 5
-; USE_ASSUME-NEXT:    store float [[TMP0]], float* [[ARRAYIDX_I_I]], align 4, !alias.scope !12, !noalias !9
-; USE_ASSUME-NEXT:    [[TMP1:%.*]] = load float, float* [[C]], align 4, !alias.scope !14, !noalias !15
-; USE_ASSUME-NEXT:    [[ARRAYIDX_I:%.*]] = getelementptr inbounds float, float* [[A]], i64 7
-; USE_ASSUME-NEXT:    store float [[TMP1]], float* [[ARRAYIDX_I]], align 4, !alias.scope !15, !noalias !14
-; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "noalias"(float* [[A]]), "noalias"(float* [[B]]), "nocapture"(float* [[A]]), "nocapture"(float* [[B]]), "nocapture"(float* [[C]]), "readonly"(float* [[C]]) ]
-; USE_ASSUME-NEXT:    [[TMP2:%.*]] = load float, float* [[C]], align 4, !noalias !16
-; USE_ASSUME-NEXT:    [[ARRAYIDX_I1:%.*]] = getelementptr inbounds float, float* [[A]], i64 6
-; USE_ASSUME-NEXT:    store float [[TMP2]], float* [[ARRAYIDX_I1]], align 4, !alias.scope !20, !noalias !21
-; USE_ASSUME-NEXT:    [[ARRAYIDX1_I:%.*]] = getelementptr inbounds float, float* [[B]], i64 8
-; USE_ASSUME-NEXT:    store float [[TMP2]], float* [[ARRAYIDX1_I]], align 4, !alias.scope !21, !noalias !20
-; USE_ASSUME-NEXT:    [[TMP3:%.*]] = load float, float* [[C]], align 4
-; USE_ASSUME-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, float* [[A]], i64 7
-; USE_ASSUME-NEXT:    store float [[TMP3]], float* [[ARRAYIDX]], align 4
-; USE_ASSUME-NEXT:    ret void
+; CHECK-LABEL: define {{[^@]+}}@foo2
+; CHECK-SAME: (float* nocapture [[A:%.*]], float* nocapture [[B:%.*]], float* nocapture readonly [[C:%.*]]) #0
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load float, float* [[C]], align 4, !alias.scope !5, !noalias !10
+; CHECK-NEXT:    [[ARRAYIDX_I_I:%.*]] = getelementptr inbounds float, float* [[A]], i64 5
+; CHECK-NEXT:    store float [[TMP0]], float* [[ARRAYIDX_I_I]], align 4, !alias.scope !10, !noalias !5
+; CHECK-NEXT:    [[TMP1:%.*]] = load float, float* [[C]], align 4, !alias.scope !13, !noalias !14
+; CHECK-NEXT:    [[ARRAYIDX_I:%.*]] = getelementptr inbounds float, float* [[A]], i64 7
+; CHECK-NEXT:    store float [[TMP1]], float* [[ARRAYIDX_I]], align 4, !alias.scope !14, !noalias !13
+; CHECK-NEXT:    [[TMP2:%.*]] = load float, float* [[C]], align 4, !noalias !15
+; CHECK-NEXT:    [[ARRAYIDX_I1:%.*]] = getelementptr inbounds float, float* [[A]], i64 6
+; CHECK-NEXT:    store float [[TMP2]], float* [[ARRAYIDX_I1]], align 4, !alias.scope !19, !noalias !20
+; CHECK-NEXT:    [[ARRAYIDX1_I:%.*]] = getelementptr inbounds float, float* [[B]], i64 8
+; CHECK-NEXT:    store float [[TMP2]], float* [[ARRAYIDX1_I]], align 4, !alias.scope !20, !noalias !19
+; CHECK-NEXT:    [[TMP3:%.*]] = load float, float* [[C]], align 4
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, float* [[A]], i64 7
+; CHECK-NEXT:    store float [[TMP3]], float* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    ret void
 ;
 entry:
   tail call void @foo(float* %a, float* %c)
