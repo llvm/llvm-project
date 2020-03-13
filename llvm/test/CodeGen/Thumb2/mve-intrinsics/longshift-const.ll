@@ -7,8 +7,6 @@ declare {i32, i32} @llvm.arm.mve.lsll(i32, i32, i32)
 define i64 @asrl_0(i64 %X) {
 ; CHECK-LABEL: asrl_0:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    movs r2, #0
-; CHECK-NEXT:    asrl r0, r1, r2
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = lshr i64 %X, 32
@@ -27,8 +25,7 @@ entry:
 define i64 @asrl_23(i64 %X) {
 ; CHECK-LABEL: asrl_23:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    movs r2, #23
-; CHECK-NEXT:    asrl r0, r1, r2
+; CHECK-NEXT:    asrl r0, r1, #23
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = lshr i64 %X, 32
@@ -47,8 +44,7 @@ entry:
 define i64 @asrl_32(i64 %X) {
 ; CHECK-LABEL: asrl_32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    movs r2, #32
-; CHECK-NEXT:    asrl r0, r1, r2
+; CHECK-NEXT:    asrl r0, r1, #32
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = lshr i64 %X, 32
@@ -127,8 +123,7 @@ entry:
 define i64 @asrl_m2(i64 %X) {
 ; CHECK-LABEL: asrl_m2:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    mvn r2, #1
-; CHECK-NEXT:    asrl r0, r1, r2
+; CHECK-NEXT:    lsll r0, r1, #2
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = lshr i64 %X, 32
@@ -147,8 +142,7 @@ entry:
 define i64 @asrl_m32(i64 %X) {
 ; CHECK-LABEL: asrl_m32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    mvn r2, #31
-; CHECK-NEXT:    asrl r0, r1, r2
+; CHECK-NEXT:    lsll r0, r1, #32
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = lshr i64 %X, 32
@@ -210,8 +204,6 @@ entry:
 define i64 @lsll_0(i64 %X) {
 ; CHECK-LABEL: lsll_0:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    movs r2, #0
-; CHECK-NEXT:    lsll r0, r1, r2
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = lshr i64 %X, 32
@@ -230,8 +222,7 @@ entry:
 define i64 @lsll_23(i64 %X) {
 ; CHECK-LABEL: lsll_23:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    movs r2, #23
-; CHECK-NEXT:    lsll r0, r1, r2
+; CHECK-NEXT:    lsll r0, r1, #23
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = lshr i64 %X, 32
@@ -250,8 +241,7 @@ entry:
 define i64 @lsll_32(i64 %X) {
 ; CHECK-LABEL: lsll_32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    movs r2, #32
-; CHECK-NEXT:    lsll r0, r1, r2
+; CHECK-NEXT:    lsll r0, r1, #32
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = lshr i64 %X, 32
@@ -330,8 +320,7 @@ entry:
 define i64 @lsll_m2(i64 %X) {
 ; CHECK-LABEL: lsll_m2:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    mvn r2, #1
-; CHECK-NEXT:    lsll r0, r1, r2
+; CHECK-NEXT:    lsrl r0, r1, #2
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = lshr i64 %X, 32
@@ -350,8 +339,7 @@ entry:
 define i64 @lsll_m32(i64 %X) {
 ; CHECK-LABEL: lsll_m32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    mvn r2, #31
-; CHECK-NEXT:    lsll r0, r1, r2
+; CHECK-NEXT:    lsrl r0, r1, #32
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = lshr i64 %X, 32
