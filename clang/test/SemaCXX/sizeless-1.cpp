@@ -61,6 +61,8 @@ void unused() {
 
 struct incomplete_struct *incomplete_ptr;
 
+typedef svint8_t sizeless_array[1]; // expected-error {{array has sizeless element type}}
+
 void func(int sel) {
   static svint8_t static_int8; // expected-error {{non-local variable with sizeless type 'svint8_t'}}
 
@@ -106,6 +108,9 @@ void func(int sel) {
 
   _Atomic svint8_t atomic_int8;      // expected-error {{_Atomic cannot be applied to sizeless type 'svint8_t'}}
   __restrict svint8_t restrict_int8; // expected-error {{requires a pointer or reference}}
+
+  svint8_t array_int8[1];          // expected-error {{array has sizeless element type}}
+  svint8_t array_int8_init[] = {}; // expected-error {{array has sizeless element type}}
 
   bool test_int8 = init_int8; // expected-error {{cannot initialize a variable of type 'bool' with an lvalue of type 'svint8_t'}}
 
@@ -283,6 +288,11 @@ struct s_ptr_template {
   T *y;
 };
 
+template <typename T>
+struct s_array_template {
+  T y[1]; // expected-error {{array has sizeless element type}}
+};
+
 struct widget {
   widget(s_ptr_template<int>);
   svint8_t operator[](int);
@@ -330,6 +340,13 @@ template <typename T>
 void template_fn_rvalue_ref(T &&) {}
 #endif
 
+#if __cplusplus >= 201103L
+template <typename T>
+using array_alias = T[1]; // expected-error {{array has sizeless element type '__SVInt8_t'}}
+extern array_alias<int> *array_alias_int_ptr;
+extern array_alias<svint8_t> *array_alias_int8_ptr; // expected-note {{in instantiation of template type alias 'array_alias' requested here}}
+#endif
+
 void cxx_only(int sel) {
   svint8_t local_int8;
   svint16_t local_int16;
@@ -371,6 +388,9 @@ void cxx_only(int sel) {
 
   widget w(1);
   local_int8 = w[1];
+
+  s_array_template<int> st_array_int;
+  s_array_template<svint8_t> st_array_svint8; // expected-note {{in instantiation}}
 
   local_int8 = static_cast<svint8_t>(wrapper<svint8_t>());
   local_int16 = static_cast<svint8_t>(wrapper<svint8_t>()); // expected-error {{assigning to 'svint16_t' (aka '__SVInt16_t') from incompatible type 'svint8_t'}}
