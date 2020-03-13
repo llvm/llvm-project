@@ -760,8 +760,8 @@ void SSANameState::setValueName(Value value, StringRef name) {
   valueNames[value] = uniqueValueName(name);
 }
 
-// Returns true if 'c' is an allowable punctuation character: [$._-]
-// Returns false otherwise.
+/// Returns true if 'c' is an allowable punctuation character: [$._-]
+/// Returns false otherwise.
 static bool isPunct(char c) {
   return c == '$' || c == '.' || c == '_' || c == '-';
 }
@@ -780,12 +780,12 @@ StringRef SSANameState::uniqueValueName(StringRef name) {
   
   // Check to see if the name consists of all-valid identifiers.  If not, we
   // need to escape them.
-  for (auto ch : name) {
+  for (char ch : name) {
     if (isalpha(ch) || isPunct(ch) || isdigit(ch))
       continue;
     
     SmallString<16> tmpName;
-    for (auto ch : name) {
+    for (char ch : name) {
       if (isalpha(ch) || isPunct(ch) || isdigit(ch))
         tmpName += ch;
       else if (ch == ' ')
