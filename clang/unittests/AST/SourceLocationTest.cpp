@@ -15,11 +15,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/AST/ASTContext.h"
 #include "MatchVerifier.h"
+#include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Tooling/Tooling.h"
+#include "llvm/Testing/Support/Annotations.h"
 #include "gtest/gtest.h"
 
 namespace clang {
@@ -840,6 +841,24 @@ TEST(FunctionDecl, ExceptionSpecifications) {
                               parmVarDecl(hasType(pointerType(pointee(
                                   parenType(innerType(functionType())))))),
                               Language::Lang_CXX11));
+}
+
+TEST(Decl, MemberPointerStarLoc) {
+  llvm::Annotations Example(R"cpp(
+    struct X {};
+    int X::$star^* a;
+  )cpp");
+
+  auto AST = tooling::buildASTFromCode(Example.code());
+  SourceManager &SM = AST->getSourceManager();
+  auto &Ctx = AST->getASTContext();
+
+  auto *VD = selectFirst<VarDecl>("vd", match(varDecl().bind("vd"), Ctx));
+  ASSERT_TRUE(VD != nullptr);
+
+  auto TL =
+      VD->getTypeSourceInfo()->getTypeLoc().castAs<MemberPointerTypeLoc>();
+  ASSERT_EQ(SM.getFileOffset(TL.getStarLoc()), Example.point("star"));
 }
 
 } // end namespace ast_matchers
