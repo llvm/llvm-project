@@ -20,6 +20,7 @@
 using namespace llvm;
 
 extern cl::opt<bool> ShouldPreserveAllAttributes;
+extern cl::opt<bool> EnableKnowledgeRetention;
 
 static void RunTest(
     StringRef Head, StringRef Tail,
@@ -79,6 +80,7 @@ static void AssertHasTheRightValue(CallInst *Assume, Value *WasOn,
 }
 
 TEST(AssumeQueryAPI, hasAttributeInAssume) {
+  EnableKnowledgeRetention.setValue(true);
   StringRef Head =
       "declare void @llvm.assume(i1)\n"
       "declare void @func(i32*, i32*)\n"
@@ -263,7 +265,8 @@ static void AssertMapHasRightValue(RetainedKnowledgeMap &Map,
 }
 
 TEST(AssumeQueryAPI, fillMapFromAssume) {
-    StringRef Head =
+  EnableKnowledgeRetention.setValue(true);
+  StringRef Head =
       "declare void @llvm.assume(i1)\n"
       "declare void @func(i32*, i32*)\n"
       "declare void @func1(i32*, i32*, i32*, i32*)\n"
