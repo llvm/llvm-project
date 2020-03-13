@@ -68,8 +68,6 @@
         nmsub.ps        $f6,$f12,$f14,$f17
         preceq.w.phl    $s8,$gp
         preceq.w.phr    $s5,$15
-        pul.ps          $f9,$f30,$f26
-        puu.ps          $f24,$f9,$f2
         rdpgpr          $s3,$9
         rorv            $13,$a3,$s5
         sbe             $s7,33($s1)
