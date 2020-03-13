@@ -135,6 +135,7 @@ private:
   struct method_list_t {
     uint16_t m_entsize;
     bool m_is_small;
+    bool m_has_direct_selector;
     uint32_t m_count;
     lldb::addr_t m_first_ptr;
 
@@ -161,7 +162,7 @@ private:
              + field_size; // IMP imp;
     }
 
-    bool Read(Process *process, lldb::addr_t addr, bool);
+    bool Read(Process *process, lldb::addr_t addr, bool, bool);
   };
 
   struct ivar_list_t {
