@@ -288,9 +288,6 @@ public:
       return object[index];
     }
 
-    /// Allow StructType class access to constructors.
-    friend class ElementTypeRange;
-
     /// Allow base class access to `offset_base` and `dereference_iterator`.
     friend RangeBaseT;
   };
