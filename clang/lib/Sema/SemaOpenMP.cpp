@@ -498,6 +498,8 @@ public:
   const DSAVarData getTopDSA(ValueDecl *D, bool FromParent);
   /// Returns data-sharing attributes for the specified declaration.
   const DSAVarData getImplicitDSA(ValueDecl *D, bool FromParent) const;
+  /// Returns data-sharing attributes for the specified declaration.
+  const DSAVarData getImplicitDSA(ValueDecl *D, unsigned Level) const;
   /// Checks if the specified variables has data-sharing attributes which
   /// match specified \a CPred predicate in any directive which matches \a DPred
   /// predicate.
@@ -1552,6 +1554,15 @@ const DSAStackTy::DSAVarData DSAStackTy::getImplicitDSA(ValueDecl *D,
   return getDSA(StartI, D);
 }
 
+const DSAStackTy::DSAVarData DSAStackTy::getImplicitDSA(ValueDecl *D,
+                                                        unsigned Level) const {
+  if (getStackSize() <= Level)
+    return DSAVarData();
+  D = getCanonicalDecl(D);
+  const_iterator StartI = std::next(begin(), getStackSize() - 1 - Level);
+  return getDSA(StartI, D);
+}
+
 const DSAStackTy::DSAVarData
 DSAStackTy::hasDSA(ValueDecl *D,
                    const llvm::function_ref<bool(OpenMPClauseKind)> CPred,
@@ -2108,9 +2119,7 @@ VarDecl *Sema::isOpenMPCapturedDecl(ValueDecl *D, bool CheckScopeInfo,
 
 void Sema::adjustOpenMPTargetScopeIndex(unsigned &FunctionScopesIndex,
                                         unsigned Level) const {
-  SmallVector<OpenMPDirectiveKind, 4> Regions;
-  getOpenMPCaptureRegions(Regions, DSAStack->getDirective(Level));
-  FunctionScopesIndex -= Regions.size();
+  FunctionScopesIndex -= getOpenMPCaptureLevels(DSAStack->getDirective(Level));
 }
 
 void Sema::startOpenMPLoop() {
@@ -2211,6 +2220,29 @@ bool Sema::isOpenMPTargetCapturedDecl(const ValueDecl *D, unsigned Level,
          DSAStack->hasExplicitDirective(isOpenMPTargetExecutionDirective,
                                         Level) &&
          Regions[CaptureLevel] != OMPD_task;
+}
+
+bool Sema::isOpenMPGlobalCapturedDecl(ValueDecl *D, unsigned Level,
+                                      unsigned CaptureLevel) const {
+  assert(LangOpts.OpenMP && "OpenMP is not allowed");
+  // Return true if the current level is no longer enclosed in a target region.
+
+  if (const auto *VD = dyn_cast<VarDecl>(D)) {
+    if (!VD->hasLocalStorage()) {
+      DSAStackTy::DSAVarData TopDVar =
+          DSAStack->getTopDSA(D, /*FromParent=*/false);
+      unsigned NumLevels =
+          getOpenMPCaptureLevels(DSAStack->getDirective(Level));
+      if (Level == 0)
+        return (NumLevels == CaptureLevel + 1) && TopDVar.CKind != OMPC_shared;
+      DSAStackTy::DSAVarData DVar = DSAStack->getImplicitDSA(D, Level - 1);
+      return DVar.CKind != OMPC_shared ||
+             isOpenMPGlobalCapturedDecl(
+                 D, Level - 1,
+                 getOpenMPCaptureLevels(DSAStack->getDirective(Level - 1)) - 1);
+    }
+  }
+  return true;
 }
 
 void Sema::DestroyDataSharingAttributesStack() { delete DSAStack; }
@@ -3575,7 +3607,7 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
     };
     // Start a captured region for 'parallel'.
     ActOnCapturedRegionStart(DSAStack->getConstructLoc(), CurScope, CR_OpenMP,
-                             ParamsParallel, /*OpenMPCaptureLevel=*/1);
+                             ParamsParallel, /*OpenMPCaptureLevel=*/0);
     QualType Args[] = {VoidPtrTy};
     FunctionProtoType::ExtProtoInfo EPI;
     EPI.Variadic = true;
@@ -3596,7 +3628,7 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
         std::make_pair(StringRef(), QualType()) // __context with shared vars
     };
     ActOnCapturedRegionStart(DSAStack->getConstructLoc(), CurScope, CR_OpenMP,
-                             Params, /*OpenMPCaptureLevel=*/2);
+                             Params, /*OpenMPCaptureLevel=*/1);
     // Mark this captured region as inlined, because we don't use outlined
     // function directly.
     getCurCapturedRegion()->TheCapturedDecl->addAttr(
