@@ -52,7 +52,6 @@ int g(int) {return 0;}
 
 int main(int, char**)
 {
-    globalMemCounter.reset();
     assert(globalMemCounter.checkOutstandingNewEq(0));
     {
     std::function<int(int)> f = A();

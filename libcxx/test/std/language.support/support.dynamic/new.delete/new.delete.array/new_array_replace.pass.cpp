@@ -18,8 +18,23 @@
 #include <cassert>
 #include <limits>
 
-#include "count_new.h"
 #include "test_macros.h"
+
+int new_called = 0;
+
+void* operator new(std::size_t s) TEST_THROW_SPEC(std::bad_alloc)
+{
+    ++new_called;
+    void* ret = std::malloc(s);
+    if (!ret) std::abort(); // placate MSVC's unchecked malloc warning
+    return  ret;
+}
+
+void  operator delete(void* p) TEST_NOEXCEPT
+{
+    --new_called;
+    std::free(p);
+}
 
 int A_constructed = 0;
 
@@ -31,17 +46,15 @@ struct A
 
 int main(int, char**)
 {
-    globalMemCounter.reset();
-    assert(globalMemCounter.checkOutstandingNewEq(0));
     A *ap = new A[3];
     DoNotOptimize(ap);
     assert(ap);
     assert(A_constructed == 3);
-    assert(globalMemCounter.checkOutstandingNewEq(1));
+    assert(new_called == 1);
     delete [] ap;
     DoNotOptimize(ap);
     assert(A_constructed == 0);
-    assert(globalMemCounter.checkOutstandingNewEq(0));
+    assert(new_called == 0);
 
   return 0;
 }
