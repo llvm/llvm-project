@@ -363,7 +363,6 @@ ProgramHeaders:
   - Type:  PT_LOAD
     Flags: [ PF_R, PF_X ]
     VAddr: 0x0
-    PAddr: 0x0
     Sections:
       - Section: .dynsym
       - Section: .dynstr
@@ -372,7 +371,6 @@ ProgramHeaders:
   - Type:  PT_DYNAMIC
     Flags: [ PF_R ]
     VAddr: 0x1000
-    PAddr: 0x1000
     Sections:
       - Section: .dynamic
 

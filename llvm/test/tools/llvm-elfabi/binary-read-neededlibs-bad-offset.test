@@ -39,7 +39,6 @@ ProgramHeaders:
   - Type: PT_LOAD
     Flags: [ PF_R ]
     VAddr: 0x1000
-    PAddr: 0x1000
     Align: 8
     Sections:
       - Section: .dynstr
@@ -47,7 +46,6 @@ ProgramHeaders:
   - Type: PT_DYNAMIC
     Flags: [ PF_X, PF_R ]
     VAddr: 0x1024
-    PAddr: 0x1024
     Sections:
 
 # CHECK: DT_NEEDED string offset (0x000000000000ffff) outside of dynamic string table

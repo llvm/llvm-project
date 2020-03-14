@@ -44,7 +44,6 @@ ProgramHeaders:
   - Type:  PT_LOAD
     Flags: [ PF_R ]
     VAddr: 0x0000
-    PAddr: 0x0000
     Sections:
       - Section: .dynstr
       - Section: .dynamic
