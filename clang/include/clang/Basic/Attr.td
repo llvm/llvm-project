@@ -3314,7 +3314,7 @@ def OMPDeclareVariant : InheritableAttr {
     OMPTraitInfoArgument<"TraitInfos">,
   ];
   let AdditionalMembers = [{
-    OMPTraitInfo &getTraitInfo() { return traitInfos; }
+    OMPTraitInfo &getTraitInfo() { return *traitInfos; }
     void printPrettyPragma(raw_ostream & OS, const PrintingPolicy &Policy)
         const;
   }];

@@ -116,6 +116,7 @@ class ObjCPropertyDecl;
 class ObjCPropertyImplDecl;
 class ObjCProtocolDecl;
 class ObjCTypeParamDecl;
+struct OMPTraitInfo;
 struct ParsedTargetAttr;
 class Preprocessor;
 class Stmt;
@@ -2962,6 +2963,14 @@ public:
   };
 
   llvm::StringMap<SectionInfo> SectionInfos;
+
+  /// Return a new OMPTraitInfo object owned by this context.
+  OMPTraitInfo &getNewOMPTraitInfo();
+
+private:
+  /// All OMPTraitInfo objects live in this collection, one per
+  /// `pragma omp [begin] declare variant` directive.
+  SmallVector<OMPTraitInfo *, 4> OMPTraitInfoVector;
 };
 
 /// Utility function for constructing a nullary selector.

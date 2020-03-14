@@ -1365,7 +1365,7 @@ void Parser::ParseOMPDeclareVariantClauses(Parser::DeclGroupPtrTy Ptr,
   }
 
   // Parse inner context selectors.
-  OMPTraitInfo TI;
+  OMPTraitInfo &TI = Actions.getASTContext().getNewOMPTraitInfo();
   parseOMPContextSelectors(Loc, TI);
 
   // Parse ')'

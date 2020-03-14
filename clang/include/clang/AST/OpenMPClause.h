@@ -7116,22 +7116,27 @@ public:
 /// collection of selector sets, each with an associated kind and an ordered
 /// collection of selectors. A selector has a kind, an optional score/condition,
 /// and an ordered collection of properties.
-struct OMPTraitInfo {
+class OMPTraitInfo {
+  /// Private constructor accesible only by ASTContext.
+  OMPTraitInfo() {}
+  friend class ASTContext;
+
+public:
   struct OMPTraitProperty {
     llvm::omp::TraitProperty Kind = llvm::omp::TraitProperty::invalid;
   };
   struct OMPTraitSelector {
     Expr *ScoreOrCondition = nullptr;
     llvm::omp::TraitSelector Kind = llvm::omp::TraitSelector::invalid;
-    llvm::SmallVector<OMPTraitProperty, 4> Properties;
+    llvm::SmallVector<OMPTraitProperty, 1> Properties;
   };
   struct OMPTraitSet {
     llvm::omp::TraitSet Kind = llvm::omp::TraitSet::invalid;
-    llvm::SmallVector<OMPTraitSelector, 4> Selectors;
+    llvm::SmallVector<OMPTraitSelector, 2> Selectors;
   };
 
   /// The outermost level of selector sets.
-  llvm::SmallVector<OMPTraitSet, 4> Sets;
+  llvm::SmallVector<OMPTraitSet, 2> Sets;
 
   bool anyScoreOrCondition(
       llvm::function_ref<bool(Expr *&, bool /* IsScore */)> Cond) {
@@ -7157,6 +7162,7 @@ struct OMPTraitInfo {
   void print(llvm::raw_ostream &OS, const PrintingPolicy &Policy) const;
 };
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const OMPTraitInfo &TI);
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const OMPTraitInfo *TI);
 
 } // namespace clang
 

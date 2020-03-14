@@ -1964,3 +1964,7 @@ llvm::raw_ostream &clang::operator<<(llvm::raw_ostream &OS,
   TI.print(OS, Policy);
   return OS;
 }
+llvm::raw_ostream &clang::operator<<(llvm::raw_ostream &OS,
+                                     const OMPTraitInfo *TI) {
+  return TI ? OS << *TI : OS;
+}
