@@ -3814,6 +3814,9 @@ TypeResult Sema::ActOnTagTemplateIdType(TagUseKind TUK,
                                         SourceLocation LAngleLoc,
                                         ASTTemplateArgsPtr TemplateArgsIn,
                                         SourceLocation RAngleLoc) {
+  if (SS.isInvalid())
+    return TypeResult(true);
+
   TemplateName Template = TemplateD.get();
 
   // Translate the parser's template argument list in our AST format.
