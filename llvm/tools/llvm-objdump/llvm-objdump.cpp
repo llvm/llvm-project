@@ -1900,7 +1900,7 @@ void printSymbolTable(const ObjectFile *O, StringRef ArchiveName,
     if ((Section != O->section_end() || Absolute) && !Weak)
       GlobLoc = Global ? 'g' : 'l';
     char IFunc = ' ';
-    if (auto *ELF = dyn_cast<ELFObjectFileBase>(O)) {
+    if (isa<ELFObjectFileBase>(O)) {
       if (ELFSymbolRef(*I).getELFType() == ELF::STT_GNU_IFUNC)
         IFunc = 'i';
       if (ELFSymbolRef(*I).getBinding() == ELF::STB_GNU_UNIQUE)
