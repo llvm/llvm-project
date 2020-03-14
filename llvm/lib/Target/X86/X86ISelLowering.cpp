@@ -7183,6 +7183,8 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
   if ((NumBitsPerElt % 8) != 0 || (NumSizeInBits % 8) != 0)
     return false;
   assert(NumElts == DemandedElts.getBitWidth() && "Unexpected vector size");
+  unsigned NumSizeInBytes = NumSizeInBits / 8;
+  unsigned NumBytesPerElt = NumBitsPerElt / 8;
 
   unsigned Opcode = N.getOpcode();
   switch (Opcode) {
@@ -7230,8 +7232,6 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
         DAG.computeKnownBits(N.getOperand(1), DemandedElts, Depth + 1);
     if (Known0.One.isNullValue() && Known1.One.isNullValue()) {
       bool IsByteMask = true;
-      unsigned NumSizeInBytes = NumSizeInBits / 8;
-      unsigned NumBytesPerElt = NumBitsPerElt / 8;
       APInt ZeroMask = APInt::getNullValue(NumBytesPerElt);
       APInt SelectMask = APInt::getNullValue(NumBytesPerElt);
       for (unsigned i = 0; i != NumBytesPerElt && IsByteMask; ++i) {
@@ -7493,19 +7493,17 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
       break;
 
     uint64_t ByteShift = ShiftVal / 8;
-    unsigned NumBytes = NumSizeInBits / 8;
-    unsigned NumBytesPerElt = NumBitsPerElt / 8;
     Ops.push_back(N.getOperand(0));
 
     // Clear mask to all zeros and insert the shifted byte indices.
-    Mask.append(NumBytes, SM_SentinelZero);
+    Mask.append(NumSizeInBytes, SM_SentinelZero);
 
     if (X86ISD::VSHLI == Opcode) {
-      for (unsigned i = 0; i != NumBytes; i += NumBytesPerElt)
+      for (unsigned i = 0; i != NumSizeInBytes; i += NumBytesPerElt)
         for (unsigned j = ByteShift; j != NumBytesPerElt; ++j)
           Mask[i + j] = i + j - ByteShift;
     } else {
-      for (unsigned i = 0; i != NumBytes; i += NumBytesPerElt)
+      for (unsigned i = 0; i != NumSizeInBytes; i += NumBytesPerElt)
         for (unsigned j = ByteShift; j != NumBytesPerElt; ++j)
           Mask[i + j - ByteShift] = i + j;
     }
@@ -7518,7 +7516,6 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
     if ((RotateVal % 8) != 0)
       return false;
     Ops.push_back(N.getOperand(0));
-    int NumBytesPerElt = NumBitsPerElt / 8;
     int Offset = RotateVal / 8;
     Offset = (X86ISD::VROTLI == Opcode ? NumBytesPerElt - Offset : Offset);
     for (int i = 0; i != (int)NumElts; ++i) {
