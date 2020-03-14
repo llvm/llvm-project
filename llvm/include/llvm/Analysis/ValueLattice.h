@@ -138,6 +138,9 @@ public:
     return Res;
   }
   static ValueLatticeElement getRange(ConstantRange CR) {
+    if (CR.isFullSet())
+      return getOverdefined();
+
     ValueLatticeElement Res;
     Res.markConstantRange(std::move(CR));
     return Res;
