@@ -426,3 +426,9 @@ namespace Vector {
     (void)(v1 <=> v2); // expected-error {{three-way comparison between vectors is not supported}}
   }
 }
+
+namespace PR44992 {
+  extern "C++" struct s {
+    friend auto operator<=>(s const &, s const &) = default;
+  };
+}
