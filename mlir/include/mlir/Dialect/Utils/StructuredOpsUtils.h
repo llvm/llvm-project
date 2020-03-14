@@ -17,11 +17,33 @@
 #ifndef MLIR_DIALECT_UTILS_STRUCTUREDOPSUTILS_H
 #define MLIR_DIALECT_UTILS_STRUCTUREDOPSUTILS_H
 
+#include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/StringRef.h"
 
 namespace mlir {
+
+inline bool isRowMajorMatmul(ArrayAttr indexingMaps) {
+  AffineExpr m, n, k;
+  bindDims(indexingMaps.getContext(), m, n, k);
+  auto mapA = AffineMapAttr::get(AffineMap::get(3, 0, {m, k}));
+  auto mapB = AffineMapAttr::get(AffineMap::get(3, 0, {k, n}));
+  auto mapC = AffineMapAttr::get(AffineMap::get(3, 0, {m, n}));
+  auto maps = ArrayAttr::get({mapA, mapB, mapC}, indexingMaps.getContext());
+  return indexingMaps == maps;
+}
+
+inline bool isColumnMajorMatmul(ArrayAttr indexingMaps) {
+  AffineExpr m, n, k;
+  bindDims(indexingMaps.getContext(), m, n, k);
+  auto mapA = AffineMapAttr::get(AffineMap::get(3, 0, {k, n}));
+  auto mapB = AffineMapAttr::get(AffineMap::get(3, 0, {m, k}));
+  auto mapC = AffineMapAttr::get(AffineMap::get(3, 0, {n, m}));
+  auto maps = ArrayAttr::get({mapA, mapB, mapC}, indexingMaps.getContext());
+  return indexingMaps == maps;
+}
+
 /// Attribute name for the AffineArrayAttr which encodes the relationship
 /// between a structured op iterators' and its operands.
 constexpr StringRef getIndexingMapsAttrName() { return "indexing_maps"; }

@@ -63,15 +63,15 @@ let PrintMethod = "printFCCOperand", DecoderMethod = "DecodeCondCode" in
 //===----------------------------------------------------------------------===//
 
 def IsFP64bit        : Predicate<"Subtarget->isFP64bit()">,
-                       AssemblerPredicate<"FeatureFP64Bit">;
+                       AssemblerPredicate<(all_of FeatureFP64Bit)>;
 def NotFP64bit       : Predicate<"!Subtarget->isFP64bit()">,
-                       AssemblerPredicate<"!FeatureFP64Bit">;
+                       AssemblerPredicate<(all_of (not FeatureFP64Bit))>;
 def IsSingleFloat    : Predicate<"Subtarget->isSingleFloat()">,
-                       AssemblerPredicate<"FeatureSingleFloat">;
+                       AssemblerPredicate<(all_of FeatureSingleFloat)>;
 def IsNotSingleFloat : Predicate<"!Subtarget->isSingleFloat()">,
-                       AssemblerPredicate<"!FeatureSingleFloat">;
+                       AssemblerPredicate<(all_of (not FeatureSingleFloat))>;
 def IsNotSoftFloat   : Predicate<"!Subtarget->useSoftFloat()">,
-                       AssemblerPredicate<"!FeatureSoftFloat">;
+                       AssemblerPredicate<(all_of (not FeatureSoftFloat))>;
 
 //===----------------------------------------------------------------------===//
 // Mips FGR size adjectives.

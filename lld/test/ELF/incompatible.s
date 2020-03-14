@@ -53,6 +53,11 @@
 // RUN:   FileCheck --check-prefix=A-AND-SCRIPT %s
 // A-AND-SCRIPT: a.o is incompatible with elf32-i386
 
+// RUN: echo 'OUTPUT_FORMAT(elf32-i386-freebsd)' > %t-freebsd.script
+// RUN: not ld.lld %t-freebsd.script %ta.o -o /dev/null 2>&1 | \
+// RUN:   FileCheck --check-prefix=A-AND-FREEBSD-SCRIPT %s
+// A-AND-FREEBSD-SCRIPT: a.o is incompatible with elf32-i386-freebsd
+
 // We used to fail to identify this incompatibility and crash trying to
 // read a 64 bit file as a 32 bit one.
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %p/Inputs/archive2.s -o %ta.o

@@ -2344,6 +2344,14 @@ void ObjCARCOpt::OptimizeReturns(Function &F) {
     bool HasSafePathToCall = HasSafePathToPredecessorCall(Arg, Retain,
                                                           DependingInstructions,
                                                           Visited, PA);
+
+    // Don't remove retainRV/autoreleaseRV pairs if the call isn't a tail call.
+    if (HasSafePathToCall &&
+        GetBasicARCInstKind(Retain) == ARCInstKind::RetainRV &&
+        GetBasicARCInstKind(Autorelease) == ARCInstKind::AutoreleaseRV &&
+        !cast<CallInst>(*DependingInstructions.begin())->isTailCall())
+      continue;
+
     DependingInstructions.clear();
     Visited.clear();
 

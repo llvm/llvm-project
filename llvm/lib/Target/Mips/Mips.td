@@ -54,22 +54,6 @@ class AdditionalRequires<list<Predicate> preds> {
 }
 
 //===----------------------------------------------------------------------===//
-// Register File, Calling Conv, Instruction Descriptions
-//===----------------------------------------------------------------------===//
-
-include "MipsRegisterInfo.td"
-include "MipsSchedule.td"
-include "MipsInstrInfo.td"
-include "MipsCallingConv.td"
-include "MipsRegisterBanks.td"
-
-// Avoid forward declaration issues.
-include "MipsScheduleP5600.td"
-include "MipsScheduleGeneric.td"
-
-def MipsInstrInfo : InstrInfo;
-
-//===----------------------------------------------------------------------===//
 // Mips Subtarget features                                                    //
 //===----------------------------------------------------------------------===//
 
@@ -221,6 +205,23 @@ def FeatureUseIndirectJumpsHazard : SubtargetFeature<"use-indirect-jump-hazard",
                                                     "UseIndirectJumpsHazard",
                                                     "true", "Use indirect jump"
                         " guards to prevent certain speculation based attacks">;
+
+//===----------------------------------------------------------------------===//
+// Register File, Calling Conv, Instruction Descriptions
+//===----------------------------------------------------------------------===//
+
+include "MipsRegisterInfo.td"
+include "MipsSchedule.td"
+include "MipsInstrInfo.td"
+include "MipsCallingConv.td"
+include "MipsRegisterBanks.td"
+
+// Avoid forward declaration issues.
+include "MipsScheduleP5600.td"
+include "MipsScheduleGeneric.td"
+
+def MipsInstrInfo : InstrInfo;
+
 //===----------------------------------------------------------------------===//
 // Mips processors supported.
 //===----------------------------------------------------------------------===//

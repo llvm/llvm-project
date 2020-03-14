@@ -232,9 +232,6 @@ X86TargetMachine::X86TargetMachine(const Target &T, const Triple &TT,
 
   setMachineOutliner(true);
 
-  // x86 supports the debug entry values.
-  setSupportsDebugEntryValues(true);
-
   initAsmInfo();
 }
 

@@ -222,6 +222,28 @@ func @conv_view6(%arg0: memref<?x?x?x?x?x?xf32, offset: ?, strides: [?, ?, ?, ?,
 
 // -----
 
+func @conv_padding(%arg0: memref<?x?x?x?xf32>,
+                   %arg1: memref<?x?x?x?xf32>,
+                   %arg2: memref<?x?x?x?xf32>) {
+  linalg.conv(%arg0, %arg1, %arg2) {dilations = [1, 1],
+                                    padding = dense<[[0, 1], [1, 1]]> : tensor<2x2xi64>,
+                                    strides = [1, 1]} :
+    memref<?x?x?x?xf32>, memref<?x?x?x?xf32>, memref<?x?x?x?xf32>
+  return
+}
+
+// CHECK-LABEL: func @conv_padding(
+//       CHECK:   linalg.conv(%{{.*}}, %{{.*}}, %{{.*}}) {
+//  CHECK-SAME:     dilations = [1, 1],
+//  CHECK-SAME:     padding = dense<[
+//  CHECK-SAME:                      [0, 1], [1, 1]]> : tensor<2x2xi64>,
+//  CHECK-SAME:     strides = [1, 1]} :
+//  CHECK-SAME:     memref<?x?x?x?xf32>,
+//  CHECK-SAME:     memref<?x?x?x?xf32>,
+//  CHECK-SAME:     memref<?x?x?x?xf32>
+
+// -----
+
 // CHECK-DAG: #[[strided2D:.*]] = affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)>
 // CHECK-DAG: #[[strided3D:.*]] = affine_map<(d0, d1, d2)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2 + d2)>
 
