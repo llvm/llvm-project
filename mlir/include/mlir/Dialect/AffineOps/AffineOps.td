@@ -14,8 +14,8 @@
 #define AFFINE_OPS
 
 include "mlir/Dialect/AffineOps/AffineOpsBase.td"
+include "mlir/Interfaces/LoopLikeInterface.td"
 include "mlir/Interfaces/SideEffects.td"
-include "mlir/Transforms/LoopLikeInterface.td"
 
 def Affine_Dialect : Dialect {
   let name = "affine";

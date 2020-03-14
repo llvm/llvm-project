@@ -10,17 +10,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_TRANSFORMS_LOOPLIKEINTERFACE_H_
-#define MLIR_TRANSFORMS_LOOPLIKEINTERFACE_H_
+#ifndef MLIR_INTERFACES_LOOPLIKEINTERFACE_H_
+#define MLIR_INTERFACES_LOOPLIKEINTERFACE_H_
 
 #include "mlir/IR/OpDefinition.h"
-#include "mlir/Support/LogicalResult.h"
-#include "llvm/ADT/ArrayRef.h"
 
 namespace mlir {
 
-#include "mlir/Transforms/LoopLikeInterface.h.inc"
+#include "mlir/Interfaces/LoopLikeInterface.h.inc"
 
 } // namespace mlir
 
-#endif // MLIR_TRANSFORMS_LOOPLIKEINTERFACE_H_
+#endif // MLIR_INTERFACES_LOOPLIKEINTERFACE_H_

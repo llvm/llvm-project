@@ -7,13 +7,13 @@ add_mlir_dialect_library(MLIRLoopOps
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/LoopOps
 
   DEPENDS
-  MLIRLoopLikeInterfaceIncGen
   MLIRLoopOpsIncGen
   )
 target_link_libraries(MLIRLoopOps
   PUBLIC
   MLIREDSC
   MLIRIR
+  MLIRLoopLikeInterface
   MLIRSideEffects
   MLIRStandardOps
   LLVMSupport
