@@ -89,14 +89,25 @@ getObjectSymbolInfo(ExecutionSession &ES, MemoryBufferRef ObjBuffer) {
   if (!Obj)
     return Obj.takeError();
 
+  bool IsMachO = isa<object::MachOObjectFile>(Obj->get());
+
   SymbolFlagsMap SymbolFlags;
   for (auto &Sym : (*Obj)->symbols()) {
     // Skip symbols not defined in this object file.
     if (Sym.getFlags() & object::BasicSymbolRef::SF_Undefined)
       continue;
 
-    // Skip symbols that are not global.
-    if (!(Sym.getFlags() & object::BasicSymbolRef::SF_Global))
+    // Get the symbol name.
+    auto Name = Sym.getName();
+    if (!Name)
+      return Name.takeError();
+
+    bool IsLinkerPrivate = IsMachO && Name->startswith("l");
+
+    // Skip symbols that are not global. Treat linker private symbols as global
+    // hidden.
+    if (!(Sym.getFlags() & object::BasicSymbolRef::SF_Global) &&
+        !IsLinkerPrivate)
       continue;
 
     // Skip symbols that have type SF_File.
@@ -106,9 +117,6 @@ getObjectSymbolInfo(ExecutionSession &ES, MemoryBufferRef ObjBuffer) {
     } else
       return SymType.takeError();
 
-    auto Name = Sym.getName();
-    if (!Name)
-      return Name.takeError();
     auto InternedName = ES.intern(*Name);
     auto SymFlags = JITSymbolFlags::fromObjectSymbol(Sym);
     if (!SymFlags)
@@ -118,9 +126,10 @@ getObjectSymbolInfo(ExecutionSession &ES, MemoryBufferRef ObjBuffer) {
 
   SymbolStringPtr InitSymbol;
 
-  if (auto *MachOObj = dyn_cast<object::MachOObjectFile>(Obj->get())) {
-    for (auto &Sec : MachOObj->sections()) {
-      auto SecType = MachOObj->getSectionType(Sec);
+  if (IsMachO) {
+    auto &MachOObj = cast<object::MachOObjectFile>(*Obj->get());
+    for (auto &Sec : MachOObj.sections()) {
+      auto SecType = MachOObj.getSectionType(Sec);
       if ((SecType & MachO::SECTION_TYPE) == MachO::S_MOD_INIT_FUNC_POINTERS) {
         std::string InitSymString;
         raw_string_ostream(InitSymString)
