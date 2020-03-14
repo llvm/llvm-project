@@ -2441,4 +2441,36 @@ TEST_F(GISelMITest, LowerInsert) {
   // Check
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
+
+// Test lowering of G_FFLOOR
+TEST_F(GISelMITest, LowerFFloor) {
+  setUp();
+  if (!TM)
+    return;
+
+  // Declare your legalization info
+  DefineLegalizerInfo(A, {});
+  // Build Instr
+  auto Floor = B.buildFFloor(LLT::scalar(64), Copies[0], MachineInstr::MIFlag::FmNoInfs);
+  AInfo Info(MF->getSubtarget());
+  DummyGISelObserver Observer;
+  LegalizerHelper Helper(*MF, Info, Observer, B);
+  // Perform Legalization
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.lower(*Floor, 0, LLT()));
+
+  auto CheckStr = R"(
+  CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY
+  CHECK: [[TRUNC:%[0-9]+]]:_(s64) = ninf G_INTRINSIC_TRUNC [[COPY]]
+  CHECK: [[ZERO:%[0-9]+]]:_(s64) = G_FCONSTANT double 0.000000e+00
+  CHECK: [[CMP0:%[0-9]+]]:_(s1) = ninf G_FCMP floatpred(olt), [[COPY]]:_(s64), [[ZERO]]:_
+  CHECK: [[CMP1:%[0-9]+]]:_(s1) = ninf G_FCMP floatpred(one), [[COPY]]:_(s64), [[TRUNC]]:_
+  CHECK: [[AND:%[0-9]+]]:_(s1) = G_AND [[CMP0]]:_, [[CMP1]]:_
+  CHECK: [[ITOFP:%[0-9]+]]:_(s64) = G_SITOFP [[AND]]
+  = ninf G_FADD [[TRUNC]]:_, [[ITOFP]]:_
+  )";
+
+  // Check
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
 } // namespace
