@@ -434,19 +434,16 @@ private:
     if (!I.second)
       return LV;  // Common case, already in the map.
 
-    if (auto *C = dyn_cast<Constant>(V)) {
-      // Undef values remain unknown.
-      if (!isa<UndefValue>(V))
-        LV.markConstant(C);          // Constants are constant
-    }
+    if (auto *C = dyn_cast<Constant>(V))
+      LV.markConstant(C);          // Constants are constant
 
-    // All others are underdefined by default.
+    // All others are unknown by default.
     return LV;
   }
 
   LatticeVal toLatticeVal(const ValueLatticeElement &V, Type *T) {
     LatticeVal Res;
-    if (V.isUndefined())
+    if (V.isUnknownOrUndef())
       return Res;
 
     if (V.isConstant()) {
@@ -621,7 +618,7 @@ void SCCPSolver::getFeasibleSuccessors(Instruction &TI,
     if (!CI) {
       // Overdefined condition variables, and branches on unfoldable constant
       // conditions, mean the branch could go either way.
-      if (!BCValue.isUnknown())
+      if (!BCValue.isUnknownOrUndef())
         Succs[0] = Succs[1] = true;
       return;
     }
@@ -647,7 +644,7 @@ void SCCPSolver::getFeasibleSuccessors(Instruction &TI,
 
     if (!CI) {   // Overdefined or unknown condition?
       // All destinations are executable!
-      if (!SCValue.isUnknown())
+      if (!SCValue.isUnknownOrUndef())
         Succs.assign(TI.getNumSuccessors(), true);
       return;
     }
@@ -664,7 +661,7 @@ void SCCPSolver::getFeasibleSuccessors(Instruction &TI,
     BlockAddress *Addr = dyn_cast_or_null<BlockAddress>(getConstant(IBRValue));
     if (!Addr) {   // Overdefined or unknown condition?
       // All destinations are executable!
-      if (!IBRValue.isUnknown())
+      if (!IBRValue.isUnknownOrUndef())
         Succs.assign(TI.getNumSuccessors(), true);
       return;
     }
@@ -745,7 +742,7 @@ void SCCPSolver::visitPHINode(PHINode &PN) {
   Constant *OperandVal = nullptr;
   for (unsigned i = 0, e = PN.getNumIncomingValues(); i != e; ++i) {
     LatticeVal IV = getValueState(PN.getIncomingValue(i));
-    if (IV.isUnknown()) continue;  // Doesn't influence PHI node.
+    if (IV.isUnknownOrUndef()) continue;  // Doesn't influence PHI node.
 
     if (!isEdgeFeasible(PN.getIncomingBlock(i), PN.getParent()))
       continue;
@@ -833,7 +830,7 @@ void SCCPSolver::visitCastInst(CastInst &I) {
       return;
     // Propagate constant value
     markConstant(&I, C);
-  } else if (!OpSt.isUnknown())
+  } else if (!OpSt.isUnknownOrUndef())
     markOverdefined(&I);
 }
 
@@ -913,7 +910,7 @@ void SCCPSolver::visitSelectInst(SelectInst &I) {
     return;
 
   LatticeVal CondValue = getValueState(I.getCondition());
-  if (CondValue.isUnknown())
+  if (CondValue.isUnknownOrUndef())
     return;
 
   if (ConstantInt *CondCB = getConstantInt(CondValue)) {
@@ -933,9 +930,9 @@ void SCCPSolver::visitSelectInst(SelectInst &I) {
       getConstant(TVal) == getConstant(FVal))
     return (void)markConstant(&I, getConstant(FVal));
 
-  if (TVal.isUnknown())   // select ?, undef, X -> X.
+  if (TVal.isUnknownOrUndef())   // select ?, undef, X -> X.
     return (void)mergeInValue(&I, FVal);
-  if (FVal.isUnknown())   // select ?, X, undef -> X.
+  if (FVal.isUnknownOrUndef())   // select ?, X, undef -> X.
     return (void)mergeInValue(&I, TVal);
   markOverdefined(&I);
 }
@@ -986,7 +983,7 @@ void SCCPSolver::visitBinaryOperator(Instruction &I) {
   }
 
   // If something is undef, wait for it to resolve.
-  if (V1State.isUnknown() || V2State.isUnknown())
+  if (V1State.isUnknownOrUndef() || V2State.isUnknownOrUndef())
     return;
 
   // Otherwise, one of our operands is overdefined.  Try to produce something
@@ -1010,7 +1007,7 @@ void SCCPSolver::visitBinaryOperator(Instruction &I) {
     else if (!isOverdefined(V2State))
       NonOverdefVal = &V2State;
     if (NonOverdefVal) {
-      if (NonOverdefVal->isUnknown())
+      if (!isConstant(*NonOverdefVal))
         return;
 
       if (I.getOpcode() == Instruction::And ||
@@ -1059,7 +1056,7 @@ void SCCPSolver::visitCmpInst(CmpInst &I) {
   }
 
   // If operands are still unknown, wait for it to resolve.
-  if ((V1State.isUnknown() || V2State.isUnknown()) &&
+  if ((V1State.isUnknownOrUndef() || V2State.isUnknownOrUndef()) &&
       !isConstant(ValueState[&I]))
     return;
 
@@ -1076,7 +1073,7 @@ void SCCPSolver::visitGetElementPtrInst(GetElementPtrInst &I) {
 
   for (unsigned i = 0, e = I.getNumOperands(); i != e; ++i) {
     LatticeVal State = getValueState(I.getOperand(i));
-    if (State.isUnknown())
+    if (State.isUnknownOrUndef())
       return;  // Operands are not resolved yet.
 
     if (isOverdefined(State))
@@ -1136,7 +1133,8 @@ void SCCPSolver::visitLoadInst(LoadInst &I) {
     return;
 
   LatticeVal PtrVal = getValueState(I.getOperand(0));
-  if (PtrVal.isUnknown()) return;   // The pointer is not resolved yet!
+  if (PtrVal.isUnknownOrUndef())
+    return; // The pointer is not resolved yet!
 
   LatticeVal &IV = ValueState[&I];
 
@@ -1260,7 +1258,7 @@ CallOverdefined:
           return markOverdefined(I); // Can't handle struct args.
         LatticeVal State = getValueState(*AI);
 
-        if (State.isUnknown())
+        if (State.isUnknownOrUndef())
           return;  // Operands are not resolved yet.
         if (isOverdefined(State))
           return (void)markOverdefined(I);
@@ -1427,14 +1425,14 @@ bool SCCPSolver::ResolvedUndefsIn(Function &F) {
         // more precise than this but it isn't worth bothering.
         for (unsigned i = 0, e = STy->getNumElements(); i != e; ++i) {
           LatticeVal &LV = getStructValueState(&I, i);
-          if (LV.isUnknown())
+          if (LV.isUnknownOrUndef())
             markOverdefined(LV, &I);
         }
         continue;
       }
 
       LatticeVal &LV = getValueState(&I);
-      if (!LV.isUnknown())
+      if (!LV.isUnknownOrUndef())
         continue;
 
       // There are two reasons a call can have an undef result
@@ -1464,7 +1462,7 @@ bool SCCPSolver::ResolvedUndefsIn(Function &F) {
     Instruction *TI = BB.getTerminator();
     if (auto *BI = dyn_cast<BranchInst>(TI)) {
       if (!BI->isConditional()) continue;
-      if (!getValueState(BI->getCondition()).isUnknown())
+      if (!getValueState(BI->getCondition()).isUnknownOrUndef())
         continue;
 
       // If the input to SCCP is actually branch on undef, fix the undef to
@@ -1492,7 +1490,7 @@ bool SCCPSolver::ResolvedUndefsIn(Function &F) {
       if (IBR->getNumSuccessors() < 1)
         continue;
 
-      if (!getValueState(IBR->getAddress()).isUnknown())
+      if (!getValueState(IBR->getAddress()).isUnknownOrUndef())
         continue;
 
       // If the input to SCCP is actually branch on undef, fix the undef to
@@ -1516,7 +1514,8 @@ bool SCCPSolver::ResolvedUndefsIn(Function &F) {
     }
 
     if (auto *SI = dyn_cast<SwitchInst>(TI)) {
-      if (!SI->getNumCases() || !getValueState(SI->getCondition()).isUnknown())
+      if (!SI->getNumCases() ||
+          !getValueState(SI->getCondition()).isUnknownOrUndef())
         continue;
 
       // If the input to SCCP is actually switch on undef, fix the undef to
