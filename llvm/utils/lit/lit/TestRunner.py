@@ -1147,10 +1147,18 @@ def _memoize(f):
 def _caching_re_compile(r):
     return re.compile(r)
 
-def applySubstitutions(script, substitutions):
-    """Apply substitutions to the script.  Allow full regular expression syntax.
+def applySubstitutions(script, substitutions, recursion_limit=None):
+    """
+    Apply substitutions to the script.  Allow full regular expression syntax.
     Replace each matching occurrence of regular expression pattern a with
-    substitution b in line ln."""
+    substitution b in line ln.
+
+    If a substitution expands into another substitution, it is expanded
+    recursively until the line has no more expandable substitutions. If
+    the line can still can be substituted after being substituted
+    `recursion_limit` times, it is an error. If the `recursion_limit` is
+    `None` (the default), no recursive substitution is performed at all.
+    """
     def processLine(ln):
         # Apply substitutions
         for a,b in substitutions:
@@ -1167,9 +1175,28 @@ def applySubstitutions(script, substitutions):
 
         # Strip the trailing newline and any extra whitespace.
         return ln.strip()
+
+    def processLineToFixedPoint(ln):
+        assert isinstance(recursion_limit, int) and recursion_limit >= 0
+        origLine = ln
+        steps = 0
+        processed = processLine(ln)
+        while processed != ln and steps < recursion_limit:
+            ln = processed
+            processed = processLine(ln)
+            steps += 1
+
+        if processed != ln:
+            raise ValueError("Recursive substitution of '%s' did not complete "
+                             "in the provided recursion limit (%s)" % \
+                             (origLine, recursion_limit))
+
+        return processed
+
     # Note Python 3 map() gives an iterator rather than a list so explicitly
     # convert to list before returning.
-    return list(map(processLine, script))
+    process = processLine if recursion_limit is None else processLineToFixedPoint
+    return list(map(process, script))
 
 
 class ParserKind(object):
@@ -1506,7 +1533,8 @@ def executeShTest(test, litConfig, useExternalSh,
     substitutions = list(extra_substitutions)
     substitutions += getDefaultSubstitutions(test, tmpDir, tmpBase,
                                              normalize_slashes=useExternalSh)
-    script = applySubstitutions(script, substitutions)
+    script = applySubstitutions(script, substitutions,
+                                recursion_limit=litConfig.recursiveExpansionLimit)
 
     # Re-run failed tests up to test.allowed_retries times.
     attempts = test.allowed_retries + 1
