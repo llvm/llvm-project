@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Defines the interface for loop-like operations as used by LICM.
+// Defines the interface for loop-like operations.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_LOOPLIKEINTERFACE
-#define MLIR_LOOPLIKEINTERFACE
+#ifndef MLIR_INTERFACES_LOOPLIKEINTERFACE
+#define MLIR_INTERFACES_LOOPLIKEINTERFACE
 
 include "mlir/IR/OpBase.td"
 
@@ -46,4 +46,4 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
   ];
 }
 
-#endif // MLIR_LOOPLIKEINTERFACE
+#endif // MLIR_INTERFACES_LOOPLIKEINTERFACE
