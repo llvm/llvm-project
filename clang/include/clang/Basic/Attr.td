@@ -677,7 +677,7 @@ def AlwaysInline : InheritableAttr {
 
 def Artificial : InheritableAttr {
   let Spellings = [GCC<"artificial">];
-  let Subjects = SubjectList<[InlineFunction], WarnDiag>;
+  let Subjects = SubjectList<[InlineFunction]>;
   let Documentation = [ArtificialDocs];
 }
 
