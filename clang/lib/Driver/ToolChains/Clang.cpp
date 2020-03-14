@@ -4580,6 +4580,14 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   RenderFloatingPointOptions(TC, D, OFastEnabled, Args, CmdArgs,
                              JA.getOffloadingDeviceKind());
 
+  if (Arg *A = Args.getLastArg(options::OPT_mdouble_EQ)) {
+    if (TC.getArch() == llvm::Triple::avr)
+      A->render(Args, CmdArgs);
+    else
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << A->getAsString(Args) << TripleStr;
+  }
+
   if (Arg *A = Args.getLastArg(options::OPT_LongDouble_Group)) {
     if (TC.getTriple().isX86())
       A->render(Args, CmdArgs);
