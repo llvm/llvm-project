@@ -7373,15 +7373,34 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
     }
     return true;
   }
+  case X86ISD::PINSRB:
+  case X86ISD::PINSRW:
   case ISD::SCALAR_TO_VECTOR:
   case ISD::INSERT_VECTOR_ELT: {
     // Match against a insert_vector_elt/scalar_to_vector of an extract from a
     // vector, for matching src/dst vector types.
-    // TODO: Merge with PINSRB/PINSRW cases below.
-    // TODO: Handle truncate/zext/shift of scalars.
     SDValue Scl = N.getOperand(Opcode == ISD::SCALAR_TO_VECTOR ? 0 : 1);
-    SDValue SrcExtract;
 
+    unsigned DstIdx = 0;
+    if (Opcode != ISD::SCALAR_TO_VECTOR) {
+      // Check we have an in-range constant insertion index.
+      if (!isa<ConstantSDNode>(N.getOperand(2)) ||
+          N.getConstantOperandAPInt(2).uge(NumElts))
+        return false;
+      DstIdx = N.getConstantOperandVal(2);
+
+      // Attempt to recognise an INSERT*(VEC, 0, DstIdx) shuffle pattern.
+      if (X86::isZeroNode(Scl)) {
+        Ops.push_back(N.getOperand(0));
+        for (unsigned i = 0; i != NumElts; ++i)
+          Mask.push_back(i == DstIdx ? SM_SentinelZero : (int)i);
+        return true;
+      }
+    }
+
+    // Attempt to find the source vector the scalar was extracted from.
+    // TODO: Handle truncate/zext/shift of scalars.
+    SDValue SrcExtract;
     if ((Scl.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
          Scl.getOperand(0).getValueType() == VT) ||
         (Scl.getOpcode() == X86ISD::PEXTRW &&
@@ -7390,11 +7409,7 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
          Scl.getOperand(0).getValueType() == MVT::v16i8)) {
       SrcExtract = Scl;
     }
-
     if (!SrcExtract || !isa<ConstantSDNode>(SrcExtract.getOperand(1)))
-      return false;
-    if (Opcode != ISD::SCALAR_TO_VECTOR &&
-        !isa<ConstantSDNode>(N.getOperand(2)))
       return false;
 
     SDValue SrcVec = SrcExtract.getOperand(0);
@@ -7411,11 +7426,6 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
     if (NumSrcElts <= SrcIdx)
       return false;
 
-    unsigned DstIdx =
-        Opcode == ISD::SCALAR_TO_VECTOR ? 0 : N.getConstantOperandVal(2);
-    if (NumElts <= DstIdx)
-      return false;
-
     if (Opcode == ISD::SCALAR_TO_VECTOR) {
       Ops.push_back(SrcVec);
       Mask.append(NumSrcElts, SM_SentinelUndef);
@@ -7430,44 +7440,6 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
     Mask[Scale * DstIdx] = SrcIdx;
     for (int i = 0; i != (int)NumZeros; ++i)
       Mask[(Scale * DstIdx) + i + 1] = SM_SentinelZero;
-    return true;
-  }
-  case X86ISD::PINSRB:
-  case X86ISD::PINSRW: {
-    SDValue InVec = N.getOperand(0);
-    SDValue InScl = N.getOperand(1);
-    SDValue InIndex = N.getOperand(2);
-    if (!isa<ConstantSDNode>(InIndex) ||
-        cast<ConstantSDNode>(InIndex)->getAPIntValue().uge(NumElts))
-      return false;
-    uint64_t InIdx = N.getConstantOperandVal(2);
-
-    // Attempt to recognise a PINSR*(VEC, 0, Idx) shuffle pattern.
-    if (X86::isZeroNode(InScl)) {
-      Ops.push_back(InVec);
-      for (unsigned i = 0; i != NumElts; ++i)
-        Mask.push_back(i == InIdx ? SM_SentinelZero : (int)i);
-      return true;
-    }
-
-    // Attempt to recognise a PINSR*(PEXTR*) shuffle pattern.
-    // TODO: Expand this to support INSERT_VECTOR_ELT/etc.
-    unsigned ExOp =
-        (X86ISD::PINSRB == Opcode ? X86ISD::PEXTRB : X86ISD::PEXTRW);
-    if (InScl.getOpcode() != ExOp)
-      return false;
-
-    SDValue ExVec = InScl.getOperand(0);
-    SDValue ExIndex = InScl.getOperand(1);
-    if (!isa<ConstantSDNode>(ExIndex) ||
-        cast<ConstantSDNode>(ExIndex)->getAPIntValue().uge(NumElts))
-      return false;
-    uint64_t ExIdx = InScl.getConstantOperandVal(1);
-
-    Ops.push_back(InVec);
-    Ops.push_back(ExVec);
-    for (unsigned i = 0; i != NumElts; ++i)
-      Mask.push_back(i == InIdx ? NumElts + ExIdx : i);
     return true;
   }
   case X86ISD::PACKSS:
