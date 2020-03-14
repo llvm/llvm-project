@@ -7500,20 +7500,10 @@ define <16 x i16> @insert_dup_elt1_mem_v16i16_i64(i64* %ptr) {
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
-; AVX2-LABEL: insert_dup_elt1_mem_v16i16_i64:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    movq (%rdi), %rax
-; AVX2-NEXT:    shrq $16, %rax
-; AVX2-NEXT:    vmovd %eax, %xmm0
-; AVX2-NEXT:    vpbroadcastw %xmm0, %ymm0
-; AVX2-NEXT:    retq
-;
-; AVX512VL-LABEL: insert_dup_elt1_mem_v16i16_i64:
-; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    movq (%rdi), %rax
-; AVX512VL-NEXT:    shrq $16, %rax
-; AVX512VL-NEXT:    vpbroadcastw %eax, %ymm0
-; AVX512VL-NEXT:    retq
+; AVX2OR512VL-LABEL: insert_dup_elt1_mem_v16i16_i64:
+; AVX2OR512VL:       # %bb.0:
+; AVX2OR512VL-NEXT:    vpbroadcastw 2(%rdi), %ymm0
+; AVX2OR512VL-NEXT:    retq
 ;
 ; XOPAVX1-LABEL: insert_dup_elt1_mem_v16i16_i64:
 ; XOPAVX1:       # %bb.0:
@@ -7525,10 +7515,7 @@ define <16 x i16> @insert_dup_elt1_mem_v16i16_i64(i64* %ptr) {
 ;
 ; XOPAVX2-LABEL: insert_dup_elt1_mem_v16i16_i64:
 ; XOPAVX2:       # %bb.0:
-; XOPAVX2-NEXT:    movq (%rdi), %rax
-; XOPAVX2-NEXT:    shrq $16, %rax
-; XOPAVX2-NEXT:    vmovd %eax, %xmm0
-; XOPAVX2-NEXT:    vpbroadcastw %xmm0, %ymm0
+; XOPAVX2-NEXT:    vpbroadcastw 2(%rdi), %ymm0
 ; XOPAVX2-NEXT:    retq
   %tmp = load i64, i64* %ptr, align 4
   %tmp1 = insertelement <2 x i64> zeroinitializer, i64 %tmp, i32 0

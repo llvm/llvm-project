@@ -35231,22 +35231,74 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
     // Due to isTypeDesirableForOp, we won't always shrink a load truncated to
     // i16. So shrink it ourselves if we can make a broadcast_load.
     if (SrcVT == MVT::i16 && Src.getOpcode() == ISD::TRUNCATE &&
-        Src.hasOneUse() && ISD::isNormalLoad(Src.getOperand(0).getNode()) &&
-        Src.getOperand(0).hasOneUse()) {
+        Src.hasOneUse() && Src.getOperand(0).hasOneUse()) {
       assert(Subtarget.hasAVX2() && "Expected AVX2");
-      LoadSDNode *LN = cast<LoadSDNode>(Src.getOperand(0));
-      if (LN->isSimple()) {
-        SDVTList Tys = DAG.getVTList(VT, MVT::Other);
-        SDValue Ops[] = { LN->getChain(), LN->getBasePtr() };
-        SDValue BcastLd =
-            DAG.getMemIntrinsicNode(X86ISD::VBROADCAST_LOAD, DL, Tys, Ops,
-                                    MVT::i16, LN->getPointerInfo(),
-                                    LN->getAlignment(),
-                                    LN->getMemOperand()->getFlags());
-        DCI.CombineTo(N.getNode(), BcastLd);
-        DAG.ReplaceAllUsesOfValueWith(SDValue(LN, 1), BcastLd.getValue(1));
-        DCI.recursivelyDeleteUnusedNodes(LN);
-        return N; // Return N so it doesn't get rechecked!
+      SDValue TruncIn = Src.getOperand(0);
+
+      // If this is a truncate of a non extending load we can just narrow it to
+      // use a broadcast_load.
+      if (ISD::isNormalLoad(TruncIn.getNode())) {
+        LoadSDNode *LN = cast<LoadSDNode>(TruncIn);
+        // Unless its volatile or atomic.
+        if (LN->isSimple()) {
+          SDVTList Tys = DAG.getVTList(VT, MVT::Other);
+          SDValue Ops[] = { LN->getChain(), LN->getBasePtr() };
+          SDValue BcastLd =
+              DAG.getMemIntrinsicNode(X86ISD::VBROADCAST_LOAD, DL, Tys, Ops,
+                                      MVT::i16, LN->getPointerInfo(),
+                                      LN->getAlignment(),
+                                      LN->getMemOperand()->getFlags());
+          DCI.CombineTo(N.getNode(), BcastLd);
+          DAG.ReplaceAllUsesOfValueWith(SDValue(LN, 1), BcastLd.getValue(1));
+          DCI.recursivelyDeleteUnusedNodes(LN);
+          return N; // Return N so it doesn't get rechecked!
+        }
+      }
+
+      // If this is a truncate of an i16 extload, we can directly replace it.
+      if (ISD::isUNINDEXEDLoad(Src.getOperand(0).getNode()) &&
+          ISD::isEXTLoad(Src.getOperand(0).getNode())) {
+        LoadSDNode *LN = cast<LoadSDNode>(Src.getOperand(0));
+        if (LN->getMemoryVT().getSizeInBits() == 16) {
+          SDVTList Tys = DAG.getVTList(VT, MVT::Other);
+          SDValue Ops[] = { LN->getChain(), LN->getBasePtr() };
+          SDValue BcastLd =
+              DAG.getMemIntrinsicNode(X86ISD::VBROADCAST_LOAD, DL, Tys, Ops,
+                                      LN->getMemoryVT(), LN->getMemOperand());
+          DCI.CombineTo(N.getNode(), BcastLd);
+          DAG.ReplaceAllUsesOfValueWith(SDValue(LN, 1), BcastLd.getValue(1));
+          DCI.recursivelyDeleteUnusedNodes(LN);
+          return N; // Return N so it doesn't get rechecked!
+        }
+      }
+
+      // If this is a truncate of load that has been shifted right, we can
+      // offset the pointer and use a narrower load.
+      if (TruncIn.getOpcode() == ISD::SRL &&
+          TruncIn.getOperand(0).hasOneUse() &&
+          isa<ConstantSDNode>(TruncIn.getOperand(1)) &&
+          ISD::isNormalLoad(TruncIn.getOperand(0).getNode())) {
+        LoadSDNode *LN = cast<LoadSDNode>(TruncIn.getOperand(0));
+        unsigned ShiftAmt = TruncIn.getConstantOperandVal(1);
+        // Make sure the shift amount and the load size are divisible by 16.
+        // Don't do this if the load is volatile or atomic.
+        if (ShiftAmt % 16 == 0 && TruncIn.getValueSizeInBits() % 16 == 0 &&
+            LN->isSimple()) {
+          unsigned Offset = ShiftAmt / 8;
+          SDVTList Tys = DAG.getVTList(VT, MVT::Other);
+          SDValue Ptr = DAG.getMemBasePlusOffset(LN->getBasePtr(), Offset, DL);
+          SDValue Ops[] = { LN->getChain(), Ptr };
+          SDValue BcastLd =
+              DAG.getMemIntrinsicNode(X86ISD::VBROADCAST_LOAD, DL, Tys, Ops,
+                                      MVT::i16,
+                                      LN->getPointerInfo().getWithOffset(Offset),
+                                      MinAlign(LN->getAlignment(), Offset),
+                                      LN->getMemOperand()->getFlags());
+          DCI.CombineTo(N.getNode(), BcastLd);
+          DAG.ReplaceAllUsesOfValueWith(SDValue(LN, 1), BcastLd.getValue(1));
+          DCI.recursivelyDeleteUnusedNodes(LN);
+          return N; // Return N so it doesn't get rechecked!
+        }
       }
     }
 
