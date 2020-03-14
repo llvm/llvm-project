@@ -47,7 +47,8 @@ define i64 @constant_range_and_undef(i1 %cond, i64 %a) {
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    [[P:%.*]] = phi i64 [ undef, [[BB1]] ], [ [[R]], [[BB2]] ]
-; CHECK-NEXT:    ret i64 [[P]]
+; CHECK-NEXT:    [[RES:%.*]] = and i64 [[P]], 255
+; CHECK-NEXT:    ret i64 [[RES]]
 ;
 entry:
   br i1 %cond, label %bb1, label %bb2
@@ -70,7 +71,7 @@ define i64 @constant_range_and_undef2(i1 %c1, i1 %c2, i64 %a) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C1:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[V1:%.*]] = add nuw nsw i64 undef, undef
+; CHECK-NEXT:    [[V1:%.*]] = add i64 undef, undef
 ; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    [[V2:%.*]] = and i64 [[A:%.*]], 255
@@ -161,7 +162,8 @@ define i64 @constant_range_and_undef_3_incoming_v1(i1 %c1, i1 %c2, i64 %a) {
 ; CHECK-NEXT:    br label [[BB4]]
 ; CHECK:       bb4:
 ; CHECK-NEXT:    [[P:%.*]] = phi i64 [ [[R]], [[BB1]] ], [ 10, [[BB2]] ], [ undef, [[BB3]] ]
-; CHECK-NEXT:    ret i64 [[P]]
+; CHECK-NEXT:    [[RES:%.*]] = and i64 [[P]], 255
+; CHECK-NEXT:    ret i64 [[RES]]
 ;
 entry:
   br i1 %c1, label %bb1, label %bb2
@@ -233,7 +235,8 @@ define i64 @constant_range_and_undef_3_incoming_v3(i1 %c1, i1 %c2, i64 %a) {
 ; CHECK-NEXT:    br label [[BB4]]
 ; CHECK:       bb4:
 ; CHECK-NEXT:    [[P:%.*]] = phi i64 [ [[R]], [[BB1]] ], [ undef, [[BB2]] ], [ 10, [[BB3]] ]
-; CHECK-NEXT:    ret i64 [[P]]
+; CHECK-NEXT:    [[RES:%.*]] = and i64 [[P]], 255
+; CHECK-NEXT:    ret i64 [[RES]]
 ;
 entry:
   br i1 %c1, label %bb1, label %bb2

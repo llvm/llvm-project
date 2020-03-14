@@ -29,7 +29,12 @@ class ValueLatticeElement {
     /// producing instruction is dead.  Caution: We use this as the starting
     /// state in our local meet rules.  In this usage, it's taken to mean
     /// "nothing known yet".
-    undefined,
+    unknown,
+
+    /// This Value is an UndefValue constant or produces undef. Undefined values
+    /// can be merged with constants (or single element constant ranges),
+    /// assuming all uses of the result will be replaced.
+    undef,
 
     /// This Value has a specific constant value.  (For constant integers,
     /// constantrange is used instead.  Integer typed constantexprs can appear
@@ -60,14 +65,15 @@ class ValueLatticeElement {
 
 public:
   // Const and Range are initialized on-demand.
-  ValueLatticeElement() : Tag(undefined) {}
+  ValueLatticeElement() : Tag(unknown) {}
 
   /// Custom destructor to ensure Range is properly destroyed, when the object
   /// is deallocated.
   ~ValueLatticeElement() {
     switch (Tag) {
     case overdefined:
-    case undefined:
+    case unknown:
+    case undef:
     case constant:
     case notconstant:
       break;
@@ -79,7 +85,7 @@ public:
 
   /// Custom copy constructor, to ensure Range gets initialized when
   /// copying a constant range lattice element.
-  ValueLatticeElement(const ValueLatticeElement &Other) : Tag(undefined) {
+  ValueLatticeElement(const ValueLatticeElement &Other) : Tag(unknown) {
     *this = Other;
   }
 
@@ -109,7 +115,8 @@ public:
       ConstVal = Other.ConstVal;
       break;
     case overdefined:
-    case undefined:
+    case unknown:
+    case undef:
       break;
     }
     Tag = Other.Tag;
@@ -118,14 +125,16 @@ public:
 
   static ValueLatticeElement get(Constant *C) {
     ValueLatticeElement Res;
-    if (!isa<UndefValue>(C))
+    if (isa<UndefValue>(C))
+      Res.markUndef();
+    else
       Res.markConstant(C);
     return Res;
   }
   static ValueLatticeElement getNot(Constant *C) {
     ValueLatticeElement Res;
-    if (!isa<UndefValue>(C))
-      Res.markNotConstant(C);
+    assert(!isa<UndefValue>(C) && "!= undef is not supported");
+    Res.markNotConstant(C);
     return Res;
   }
   static ValueLatticeElement getRange(ConstantRange CR) {
@@ -139,8 +148,9 @@ public:
     return Res;
   }
 
-  bool isUndefined() const { return Tag == undefined; }
-  bool isUnknown() const { return Tag == undefined; }
+  bool isUndef() const { return Tag == undef; }
+  bool isUnknown() const { return Tag == unknown; }
+  bool isUnknownOrUndef() const { return Tag == unknown || Tag == undef; }
   bool isConstant() const { return Tag == constant; }
   bool isNotConstant() const { return Tag == notconstant; }
   bool isConstantRange() const { return Tag == constantrange; }
@@ -182,9 +192,18 @@ public:
     return true;
   }
 
+  bool markUndef() {
+    if (isUndef())
+      return false;
+
+    assert(isUnknown());
+    Tag = undef;
+    return true;
+  }
+
   bool markConstant(Constant *V) {
     if (isa<UndefValue>(V))
-      return false;
+      return markUndef();
 
     if (isConstant()) {
       assert(getConstant() == V && "Marking constant with different value");
@@ -194,7 +213,7 @@ public:
     if (ConstantInt *CI = dyn_cast<ConstantInt>(V))
       return markConstantRange(ConstantRange(CI->getValue()));
 
-    assert(isUndefined());
+    assert(isUnknown() || isUndef());
     Tag = constant;
     ConstVal = V;
     return true;
@@ -214,7 +233,7 @@ public:
       return false;
     }
 
-    assert(isUndefined());
+    assert(isUnknown());
     Tag = notconstant;
     ConstVal = V;
     return true;
@@ -223,7 +242,7 @@ public:
   /// Mark the object as constant range with \p NewR. If the object is already a
   /// constant range, nothing changes if the existing range is equal to \p
   /// NewR. Otherwise \p NewR must be a superset of the existing range or the
-  /// object must be undefined.
+  /// object must be undef.
   bool markConstantRange(ConstantRange NewR) {
     if (isConstantRange()) {
       if (getConstantRange() == NewR)
@@ -238,7 +257,7 @@ public:
       return true;
     }
 
-    assert(isUndefined());
+    assert(isUnknown() || isUndef());
     if (NewR.isEmptySet())
       return markOverdefined();
 
@@ -250,20 +269,34 @@ public:
   /// Updates this object to approximate both this object and RHS. Returns
   /// true if this object has been changed.
   bool mergeIn(const ValueLatticeElement &RHS, const DataLayout &DL) {
-    if (RHS.isUndefined() || isOverdefined())
+    if (RHS.isUnknown() || isOverdefined())
       return false;
     if (RHS.isOverdefined()) {
       markOverdefined();
       return true;
     }
 
-    if (isUndefined()) {
+    if (isUndef()) {
+      assert(!RHS.isUnknown());
+      if (RHS.isUndef())
+        return false;
+      if (RHS.isConstant())
+        return markConstant(RHS.getConstant());
+      if (RHS.isConstantRange() && RHS.getConstantRange().isSingleElement())
+        return markConstantRange(RHS.getConstantRange());
+      return markOverdefined();
+    }
+
+    if (isUnknown()) {
+      assert(!RHS.isUnknown() && "Unknow RHS should be handled earlier");
       *this = RHS;
-      return !RHS.isUndefined();
+      return true;
     }
 
     if (isConstant()) {
       if (RHS.isConstant() && getConstant() == RHS.getConstant())
+        return false;
+      if (RHS.isUndef())
         return false;
       markOverdefined();
       return true;
@@ -277,6 +310,9 @@ public:
     }
 
     assert(isConstantRange() && "New ValueLattice type?");
+    if (RHS.isUndef() && getConstantRange().isSingleElement())
+      return false;
+
     if (!RHS.isConstantRange()) {
       // We can get here if we've encountered a constantexpr of integer type
       // and merge it with a constantrange.
@@ -292,12 +328,12 @@ public:
       return markConstantRange(std::move(NewR));
   }
 
-  /// Compares this symbolic value with Other using Pred and returns either
+  // Compares this symbolic value with Other using Pred and returns either
   /// true, false or undef constants, or nullptr if the comparison cannot be
   /// evaluated.
   Constant *getCompare(CmpInst::Predicate Pred, Type *Ty,
                        const ValueLatticeElement &Other) const {
-    if (isUndefined() || Other.isUndefined())
+    if (isUnknownOrUndef() || Other.isUnknownOrUndef())
       return UndefValue::get(Ty);
 
     if (isConstant() && Other.isConstant())
