@@ -310,18 +310,13 @@ define <32 x i16> @insert_dup_mem_v16i16_i64(i64* %ptr) {
 define <32 x i16> @insert_dup_elt1_mem_v16i16_i64(i64* %ptr) {
 ; KNL-LABEL: insert_dup_elt1_mem_v16i16_i64:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    movq (%rdi), %rax
-; KNL-NEXT:    shrq $16, %rax
-; KNL-NEXT:    vmovd %eax, %xmm0
-; KNL-NEXT:    vpbroadcastw %xmm0, %ymm0
+; KNL-NEXT:    vpbroadcastw 2(%rdi), %ymm0
 ; KNL-NEXT:    vinserti64x4 $1, %ymm0, %zmm0, %zmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: insert_dup_elt1_mem_v16i16_i64:
 ; SKX:       ## %bb.0:
-; SKX-NEXT:    movq (%rdi), %rax
-; SKX-NEXT:    shrq $16, %rax
-; SKX-NEXT:    vpbroadcastw %eax, %zmm0
+; SKX-NEXT:    vpbroadcastw 2(%rdi), %zmm0
 ; SKX-NEXT:    retq
   %tmp = load i64, i64* %ptr, align 4
   %tmp1 = insertelement <2 x i64> zeroinitializer, i64 %tmp, i32 0
