@@ -848,7 +848,7 @@ void MappingTraits<ELFYAML::ProgramHeader>::mapping(
   IO.mapOptional("Flags", Phdr.Flags, ELFYAML::ELF_PF(0));
   IO.mapOptional("Sections", Phdr.Sections);
   IO.mapOptional("VAddr", Phdr.VAddr, Hex64(0));
-  IO.mapOptional("PAddr", Phdr.PAddr, Hex64(0));
+  IO.mapOptional("PAddr", Phdr.PAddr, Phdr.VAddr);
   IO.mapOptional("Align", Phdr.Align);
   IO.mapOptional("FileSize", Phdr.FileSize);
   IO.mapOptional("MemSize", Phdr.MemSize);

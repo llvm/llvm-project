@@ -33,7 +33,6 @@ ProgramHeaders:
   - Type: PT_LOAD
     Flags: [ PF_R ]
     VAddr: 0x0000
-    PAddr: 0x0000
     Align: 8
     Sections:
       - Section: .dynstr
@@ -41,7 +40,6 @@ ProgramHeaders:
   - Type: PT_DYNAMIC
     Flags: [ PF_X, PF_R ]
     VAddr: 0x0008
-    PAddr: 0x0008
     Sections:
       - Section: .dynamic
 
