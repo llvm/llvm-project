@@ -138,5 +138,6 @@ jit_cleanup:
 llvm_shutdown:
   // Shut down LLVM.
   LLVMShutdown();
-  return 0;
+
+  return MainResult;
 }
