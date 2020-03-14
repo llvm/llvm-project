@@ -1,3 +1,4 @@
+add_subdirectory(BasicOrcV2CBindings)
 add_subdirectory(LLJITDumpObjects)
 add_subdirectory(LLJITWithObjectCache)
 add_subdirectory(LLJITWithCustomObjectLinkingLayer)
