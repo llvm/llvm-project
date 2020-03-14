@@ -269,3 +269,7 @@ namespace AnnotateAfterInvalidTemplateId {
 
   void f() { A<0, 0>::f(); } // expected-error {{ambiguous partial specializations}}
 }
+
+namespace PR45063 {
+  template<class=class a::template b<>> struct X {}; // expected-error {{undeclared identifier 'a'}}
+}
