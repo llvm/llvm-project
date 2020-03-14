@@ -124,14 +124,12 @@ Sections:
 ProgramHeaders:
   - Type:  PT_LOAD
     VAddr: 0x100
-    PAddr: 0x100
     Sections:
       - Section: fill1
       - Section: .bar
       - Section: fill2
   - Type:  PT_GNU_RELRO
     VAddr: 0x105
-    PAddr: 0x105
     Sections:
       - Section: fill2
 
