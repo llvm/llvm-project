@@ -7514,36 +7514,6 @@ defm VPBROADCASTD  : avx2_broadcast<0x58, "vpbroadcastd", i32mem, X86VBroadcastl
 defm VPBROADCASTQ  : avx2_broadcast<0x59, "vpbroadcastq", i64mem, X86VBroadcastld64,
                                     v2i64, v4i64, NoVLX>;
 
-let Predicates = [HasAVX2, NoVLX_Or_NoBWI] in {
-  // loadi16 is tricky to fold, because !isTypeDesirableForOp, justifiably.
-  // This means we'll encounter truncated i32 loads; match that here.
-  def : Pat<(v8i16 (X86VBroadcast
-              (i16 (trunc (extloadi32i16 addr:$src))))),
-            (VPBROADCASTWrm addr:$src)>;
-  def : Pat<(v8i16 (X86VBroadcast
-              (i16 (trunc (zextloadi32i16 addr:$src))))),
-            (VPBROADCASTWrm addr:$src)>;
-  def : Pat<(v16i16 (X86VBroadcast
-              (i16 (trunc (extloadi32i16 addr:$src))))),
-            (VPBROADCASTWYrm addr:$src)>;
-  def : Pat<(v16i16 (X86VBroadcast
-              (i16 (trunc (zextloadi32i16 addr:$src))))),
-            (VPBROADCASTWYrm addr:$src)>;
-
-  def : Pat<(v8i16 (X86VBroadcast
-              (i16 (trunc (extloadi64i16 addr:$src))))),
-            (VPBROADCASTWrm addr:$src)>;
-  def : Pat<(v8i16 (X86VBroadcast
-              (i16 (trunc (zextloadi64i16 addr:$src))))),
-            (VPBROADCASTWrm addr:$src)>;
-  def : Pat<(v16i16 (X86VBroadcast
-              (i16 (trunc (extloadi64i16 addr:$src))))),
-            (VPBROADCASTWYrm addr:$src)>;
-  def : Pat<(v16i16 (X86VBroadcast
-              (i16 (trunc (zextloadi64i16 addr:$src))))),
-            (VPBROADCASTWYrm addr:$src)>;
-}
-
 let Predicates = [HasAVX2, NoVLX] in {
   // Provide fallback in case the load node that is used in the patterns above
   // is used by additional users, which prevents the pattern selection.
