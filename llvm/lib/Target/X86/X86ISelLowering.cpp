@@ -7520,7 +7520,7 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
     Offset = (X86ISD::VROTLI == Opcode ? NumBytesPerElt - Offset : Offset);
     for (int i = 0; i != (int)NumElts; ++i) {
       int BaseIdx = i * NumBytesPerElt;
-      for (int j = 0; j != NumBytesPerElt; ++j) {
+      for (int j = 0; j != (int)NumBytesPerElt; ++j) {
         Mask.push_back(BaseIdx + ((Offset + j) % NumBytesPerElt));
       }
     }
