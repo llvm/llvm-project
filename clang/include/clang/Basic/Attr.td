@@ -319,6 +319,7 @@ class SubjectList<list<AttrSubject> subjects, SubjectDiag diag = WarnDiag,
 }
 
 class LangOpt<string name, code customCode = [{}]> {
+  // The language option to test; ignored when custom code is supplied.
   string Name = name;
 
   // A custom predicate, written as an expression evaluated in a context with
@@ -330,15 +331,15 @@ def Borland : LangOpt<"Borland">;
 def CUDA : LangOpt<"CUDA">;
 def HIP : LangOpt<"HIP">;
 def SYCL : LangOpt<"SYCLIsDevice">;
-def COnly : LangOpt<"COnly", "!LangOpts.CPlusPlus">;
+def COnly : LangOpt<"", "!LangOpts.CPlusPlus">;
 def CPlusPlus : LangOpt<"CPlusPlus">;
 def OpenCL : LangOpt<"OpenCL">;
 def RenderScript : LangOpt<"RenderScript">;
 def ObjC : LangOpt<"ObjC">;
 def BlocksSupported : LangOpt<"Blocks">;
 def ObjCAutoRefCount : LangOpt<"ObjCAutoRefCount">;
-def ObjCNonFragileRuntime : LangOpt<"ObjCNonFragileRuntime",
-                                    "LangOpts.ObjCRuntime.allowsClassStubs()">;
+def ObjCNonFragileRuntime
+    : LangOpt<"", "LangOpts.ObjCRuntime.allowsClassStubs()">;
 
 // Language option for CMSE extensions
 def Cmse : LangOpt<"Cmse">;
