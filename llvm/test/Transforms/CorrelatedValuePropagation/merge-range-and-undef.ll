@@ -199,7 +199,8 @@ define i64 @constant_range_and_undef_3_incoming_v2(i1 %c1, i1 %c2, i64 %a) {
 ; CHECK-NEXT:    br label [[BB4]]
 ; CHECK:       bb4:
 ; CHECK-NEXT:    [[P:%.*]] = phi i64 [ undef, [[BB1]] ], [ 10, [[BB2]] ], [ [[R]], [[BB3]] ]
-; CHECK-NEXT:    ret i64 [[P]]
+; CHECK-NEXT:    [[RES:%.*]] = and i64 [[P]], 255
+; CHECK-NEXT:    ret i64 [[RES]]
 ;
 entry:
   br i1 %c1, label %bb1, label %bb2
