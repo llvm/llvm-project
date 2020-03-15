@@ -1,5 +1,5 @@
 # RUN: llvm-mc -triple mips-unknown-linux -target-abi o32 -filetype=obj -o - %s | \
-# RUN:   llvm-objdump -d -r -z - | FileCheck -check-prefixes=ALL,O32 %s
+# RUN:   llvm-objdump -d -r -z - | FileCheck --check-prefixes=ALL,O32 %s
 
 # RUN: llvm-mc -triple mips-unknown-linux -target-abi o32 %s | \
 # RUN:   FileCheck -check-prefixes=ASM,ASM-O32 %s

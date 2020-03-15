@@ -1,4 +1,4 @@
-@ RUN: llvm-mc -triple=thumbv7-apple-ios -filetype=obj -o - < %s | llvm-objdump -d -macho -triple=thumbv7-apple-ios - | FileCheck %s
+@ RUN: llvm-mc -triple=thumbv7-apple-ios -filetype=obj -o - < %s | llvm-objdump -d --macho --triple=thumbv7-apple-ios - | FileCheck %s
 .thumb
 .thumb_func _fib
 _fib:

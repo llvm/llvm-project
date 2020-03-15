@@ -5,14 +5,14 @@
 ; RUN: echo 'attributes #0 = { nounwind }' >> %t.tgtattr
 ; RUN: llc -mtriple=riscv32 -mattr=+c -filetype=obj \
 ; RUN:   -disable-block-placement < %t.tgtattr \
-; RUN:   | llvm-objdump -d -triple=riscv32 -mattr=+c -M no-aliases - \
+; RUN:   | llvm-objdump -d --triple=riscv32 --mattr=+c -M no-aliases - \
 ; RUN:   | FileCheck -check-prefix=RV32IC %s
 ;
 ; RUN: cat %s > %t.fnattr
 ; RUN: echo 'attributes #0 = { nounwind "target-features"="+c" }' >> %t.fnattr
 ; RUN: llc -mtriple=riscv32 -filetype=obj \
 ; RUN:   -disable-block-placement < %t.fnattr \
-; RUN:   | llvm-objdump -d -triple=riscv32 -mattr=+c -M no-aliases - \
+; RUN:   | llvm-objdump -d --triple=riscv32 --mattr=+c -M no-aliases - \
 ; RUN:   | FileCheck -check-prefix=RV32IC %s
 
 ; This acts as a sanity check for the codegen instruction compression path,

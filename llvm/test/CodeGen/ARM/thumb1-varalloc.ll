@@ -1,7 +1,7 @@
 ; RUN: llc < %s -mtriple=thumbv6-apple-darwin | FileCheck %s
 ; RUN: llc < %s -mtriple=thumbv6-apple-darwin -regalloc=basic | FileCheck %s
 ; RUN: llc < %s -o %t -filetype=obj -mtriple=thumbv6-apple-darwin
-; RUN: llvm-objdump -triple=thumbv6-apple-darwin -d %t | FileCheck %s
+; RUN: llvm-objdump --triple=thumbv6-apple-darwin -d %t | FileCheck %s
 
 @__bar = external hidden global i8*
 @__baz = external hidden global i8*

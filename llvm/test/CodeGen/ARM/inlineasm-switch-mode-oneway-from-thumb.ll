@@ -1,4 +1,4 @@
-;RUN:  llc -mtriple=thumbv7-linux-gnueabi < %s | llvm-mc -triple=thumbv7-linux-gnueabi -filetype=obj | llvm-objdump -triple=thumbv7 -d - | FileCheck %s
+;RUN:  llc -mtriple=thumbv7-linux-gnueabi < %s | llvm-mc -triple=thumbv7-linux-gnueabi -filetype=obj | llvm-objdump --triple=thumbv7 -d - | FileCheck %s
 ;RUN:  llc -mtriple=thumbv7-linux-gnueabi < %s | FileCheck %s -check-prefix=ASM
 ;RUN:  llc -mtriple=thumbv7-apple-darwin < %s | FileCheck %s -check-prefix=ASM
 

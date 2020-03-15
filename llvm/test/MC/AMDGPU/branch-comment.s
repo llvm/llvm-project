@@ -1,4 +1,4 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=fiji -filetype=obj %s | llvm-objcopy -S -K keep_symbol - | llvm-objdump -disassemble -mcpu=fiji - | FileCheck %s --check-prefix=BIN
+// RUN: llvm-mc -arch=amdgcn -mcpu=fiji -filetype=obj %s | llvm-objcopy -S -K keep_symbol - | llvm-objdump -d --mcpu=fiji - | FileCheck %s --check-prefix=BIN
 
 // FIXME: Immediate operands to sopp_br instructions are currently scaled by a
 // factor of 4, are unsigned, are always PC relative, don't accept most

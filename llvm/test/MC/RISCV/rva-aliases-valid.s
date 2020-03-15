@@ -7,16 +7,16 @@
 # RUN: llvm-mc %s -triple=riscv64 -mattr=+a \
 # RUN:     | FileCheck -check-prefixes=CHECK-S,CHECK-S-OBJ %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+a < %s \
-# RUN:     | llvm-objdump -d -mattr=+a -M no-aliases - \
+# RUN:     | llvm-objdump -d --mattr=+a -M no-aliases - \
 # RUN:     | FileCheck -check-prefixes=CHECK-OBJ-NOALIAS,CHECK-S-OBJ-NOALIAS %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+a < %s \
-# RUN:     | llvm-objdump -d -mattr=+a - \
+# RUN:     | llvm-objdump -d --mattr=+a - \
 # RUN:     | FileCheck -check-prefixes=CHECK-OBJ,CHECK-S-OBJ %s
 # RUN: llvm-mc -filetype=obj -triple riscv64 -mattr=+a < %s \
-# RUN:     | llvm-objdump -d -mattr=+a -M no-aliases - \
+# RUN:     | llvm-objdump -d --mattr=+a -M no-aliases - \
 # RUN:     | FileCheck -check-prefixes=CHECK-OBJ-NOALIAS,CHECK-S-OBJ-NOALIAS %s
 # RUN: llvm-mc -filetype=obj -triple riscv64 -mattr=+a < %s \
-# RUN:     | llvm-objdump -d -mattr=+a - \
+# RUN:     | llvm-objdump -d --mattr=+a - \
 # RUN:     | FileCheck -check-prefixes=CHECK-OBJ,CHECK-S-OBJ %s
 
 # The following check prefixes are used in this test:

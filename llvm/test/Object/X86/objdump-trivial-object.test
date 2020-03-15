@@ -27,7 +27,7 @@
 # COFF-x86-64:       25: c3                           ret
 
 # RUN: yaml2obj --docnum=1 %s -o %t.elf-i386
-# RUN: llvm-objdump -d %t.elf-i386 | FileCheck %s -check-prefix ELF-i386
+# RUN: llvm-objdump -d %t.elf-i386 | FileCheck %s --check-prefix=ELF-i386
 
 # ELF-i386: file format elf32-i386
 # ELF-i386: Disassembly of section .text:
@@ -53,7 +53,7 @@ Sections:
     Content: 83EC0CC744240800000000C7042400000000E8FCFFFFFFE8FCFFFFFF8B44240883C40CC3
 
 # RUN: yaml2obj --docnum=2 %s -o %t.elf-x86-64
-# RUN: llvm-objdump -d %t.elf-x86-64 | FileCheck %s -check-prefix ELF-x86-64
+# RUN: llvm-objdump -d %t.elf-x86-64 | FileCheck %s --check-prefix=ELF-x86-64
 
 # ELF-x86-64: file format elf64-x86-64
 # ELF-x86-64: Disassembly of section .text:

@@ -1,5 +1,5 @@
 @ RUN: llvm-mc -triple thumbv6m-apple-macho %s -filetype=obj -o %t
-@ RUN: llvm-objdump -macho -section=__DATA,__data %t | FileCheck %s
+@ RUN: llvm-objdump --macho --section=__DATA,__data %t | FileCheck %s
 
 @ CHECK: 00000000 00000003
         .data

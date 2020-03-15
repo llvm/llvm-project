@@ -1,5 +1,5 @@
 # RUN: llvm-mc -filetype=obj -triple=mipsel-unknown-nacl %s \
-# RUN:   | llvm-objdump -disassemble -z -no-show-raw-insn - | FileCheck %s
+# RUN:   | llvm-objdump -d -z --no-show-raw-insn - | FileCheck %s
 
 # This test tests that address-masking sandboxing is added when given assembly
 # input.

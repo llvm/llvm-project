@@ -1,5 +1,5 @@
 ; RUN: llvm-mc -triple avr -mattr=addsubiw -show-encoding < %s | FileCheck %s
-; RUNx: llvm-mc -filetype=obj -triple avr -mattr=addsubiw < %s | llvm-objdump -d -mattr=addsubiw - | FileCheck -check-prefix=CHECK-INST %s
+; RUNx: llvm-mc -filetype=obj -triple avr -mattr=addsubiw < %s | llvm-objdump -d --mattr=addsubiw - | FileCheck --check-prefix=CHECK-INST %s
 
 
 foo:

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn--amdhsa -mattr=-code-object-v3 -mcpu=fiji -filetype=obj < %s | llvm-objdump -d - -mcpu=fiji | FileCheck %s
+; RUN: llc -mtriple=amdgcn--amdhsa -mattr=-code-object-v3 -mcpu=fiji -filetype=obj < %s | llvm-objdump -d - --mcpu=fiji | FileCheck %s
 
 ; CHECK: <kernel0>:
 ; CHECK-NEXT: s_endpgm

@@ -20,7 +20,7 @@
 #       - Section: .text
 #
 # Then editing the e_phoff in with a hexeditor to set it to 0xffffff
-RUN: not --crash llvm-objdump -private-headers %p/Inputs/invalid-phdr.elf 2>&1 \
+RUN: not --crash llvm-objdump --private-headers %p/Inputs/invalid-phdr.elf 2>&1 \
 RUN:         | FileCheck %s
 
 CHECK: LLVM ERROR: program headers are longer than binary of size 4162: e_phoff = 0xffffff, e_phnum = 1, e_phentsize = 56

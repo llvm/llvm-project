@@ -1,5 +1,5 @@
 #RUN: llvm-mc -triple=hexagon -mcpu=hexagonv60 -filetype=obj -mhvx %s | \
-#RUN: llvm-objdump -triple=hexagon -mcpu=hexagonv60 -mhvx -d - | \
+#RUN: llvm-objdump --triple=hexagon --mcpu=hexagonv60 --mhvx -d - | \
 #RUN: FileCheck %s
 
 #CHECK: 1ce2cbd7 { v23.w = vavg(v11.w,{{ *}}v2.w):rnd }

@@ -1,4 +1,4 @@
-; RUN: llc %s -filetype=obj -o - | llvm-objdump -macho -private-headers - | FileCheck %s
+; RUN: llc %s -filetype=obj -o - | llvm-objdump --macho --private-headers - | FileCheck %s
 ; RUN: llc %s -filetype=asm -o - | FileCheck --check-prefix=ASM %s
 
 target triple = "x86_64-apple-macos10.14";

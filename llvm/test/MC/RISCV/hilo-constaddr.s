@@ -1,5 +1,5 @@
 # RUN: llvm-mc -filetype=obj -triple=riscv32 %s \
-# RUN:  | llvm-objdump -d - | FileCheck %s -check-prefix=CHECK-INSTR
+# RUN:  | llvm-objdump -d - | FileCheck %s --check-prefix=CHECK-INSTR
 
 # RUN: llvm-mc -filetype=obj -triple=riscv32 %s \
 # RUN:  | llvm-readobj -r | FileCheck %s -check-prefix=CHECK-REL
