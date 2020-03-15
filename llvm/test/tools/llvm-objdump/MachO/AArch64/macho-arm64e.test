@@ -1,5 +1,5 @@
 // RUN: yaml2obj %p/Inputs/arm64e.macho.yaml -o %tarm64e.o
-// RUN: llvm-objdump -p %tarm64e.o | FileCheck -strict-whitespace %s
+// RUN: llvm-objdump -p %tarm64e.o | FileCheck --strict-whitespace %s
 
 CHECK:      Mach header
 CHECK-NEXT:       magic cputype cpusubtype  caps    filetype ncmds sizeofcmds      flags

@@ -1,7 +1,7 @@
-RUN: llvm-objdump -m -section __TEXT,__cstring %p/Inputs/hello.obj.macho-x86_64 2>&1 | FileCheck %s --implicit-check-not="warning:"
-RUN: llvm-objdump -m -section __TEXT,__cstring -no-leading-addr %p/Inputs/hello.obj.macho-x86_64 | FileCheck %s -check-prefix=NO_ADDR --implicit-check-not="warning:"
-RUN: llvm-objdump -m -section __TEXT,__cstring -no-leading-headers %p/Inputs/hello.obj.macho-x86_64 | FileCheck %s -check-prefix=NO_HEADERS --implicit-check-not="warning:"
-RUN: llvm-objdump -m -section __TEXT,__cstring -non-verbose %p/Inputs/hello.obj.macho-x86_64 | FileCheck %s -check-prefix=NON_VERBOSE --implicit-check-not="warning:"
+RUN: llvm-objdump --macho --section __TEXT,__cstring %p/Inputs/hello.obj.macho-x86_64 2>&1 | FileCheck %s --implicit-check-not="warning:"
+RUN: llvm-objdump --macho --section __TEXT,__cstring --no-leading-addr %p/Inputs/hello.obj.macho-x86_64 | FileCheck %s --check-prefix=NO_ADDR --implicit-check-not="warning:"
+RUN: llvm-objdump --macho --section __TEXT,__cstring --no-leading-headers %p/Inputs/hello.obj.macho-x86_64 | FileCheck %s --check-prefix=NO_HEADERS --implicit-check-not="warning:"
+RUN: llvm-objdump --macho --section __TEXT,__cstring --non-verbose %p/Inputs/hello.obj.macho-x86_64 | FileCheck %s --check-prefix=NON_VERBOSE --implicit-check-not="warning:"
 
 CHECK: Contents of (__TEXT,__cstring) section
 CHECK-NEXT: 000000000000003b  Hello world\n

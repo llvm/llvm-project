@@ -1,4 +1,4 @@
-RUN: llvm-objdump -macho -d %p/Inputs/truncated-section.dylib.macho-x86_64 | FileCheck %s
+RUN: llvm-objdump --macho -d %p/Inputs/truncated-section.dylib.macho-x86_64 | FileCheck %s
 
 CHECK: _func:
 CHECK:     retq

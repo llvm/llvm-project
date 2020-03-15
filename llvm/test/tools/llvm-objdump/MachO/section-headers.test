@@ -1,4 +1,4 @@
-RUN: llvm-objdump -macho -h %p/Inputs/hello.obj.macho-x86_64 | FileCheck %s
+RUN: llvm-objdump --macho -h %p/Inputs/hello.obj.macho-x86_64 | FileCheck %s
 
 CHECK: Sections:
 CHECK: Idx Name          Size     VMA              Type

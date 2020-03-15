@@ -1,5 +1,5 @@
-@ RUN: llvm-mc < %s -triple armv7a -mattr=+vfp3,+neon,+fp16,+hwdiv-arm,+hwdiv -filetype=obj | llvm-objdump -triple=arm -d - | FileCheck %s
-@ RUN: llvm-mc < %s -triple armv7a -mattr=+vfp3,+neon,+fp16,+hwdiv-arm,+hwdiv -filetype=obj | llvm-objdump -triple=thumb -d - | FileCheck %s --check-prefix=CHECK-THUMB
+@ RUN: llvm-mc < %s -triple armv7a -mattr=+vfp3,+neon,+fp16,+hwdiv-arm,+hwdiv -filetype=obj | llvm-objdump --triple=arm -d - | FileCheck %s
+@ RUN: llvm-mc < %s -triple armv7a -mattr=+vfp3,+neon,+fp16,+hwdiv-arm,+hwdiv -filetype=obj | llvm-objdump --triple=thumb -d - | FileCheck %s --check-prefix=CHECK-THUMB
 
 .eabi_attribute Tag_FP_arch, 0 // disallow vfp
 

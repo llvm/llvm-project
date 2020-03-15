@@ -1,4 +1,4 @@
-# RUN: yaml2obj %p/Inputs/eh_frame-coff.yaml | llvm-objdump -dwarf=frames - 2>/dev/null | FileCheck %s
+# RUN: yaml2obj %p/Inputs/eh_frame-coff.yaml | llvm-objdump --dwarf=frames - 2>/dev/null | FileCheck %s
 
 # CHECK: .eh_frame contents:
 

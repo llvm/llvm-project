@@ -1,4 +1,4 @@
-# RUN: llvm-mc < %s -triple x86_64-apple-darwin -filetype=obj | llvm-objdump -m -section __FOO,__bar -full-leading-addr -print-imm-hex -no-show-raw-insn - | FileCheck %s
+# RUN: llvm-mc < %s --triple x86_64-apple-darwin -filetype=obj | llvm-objdump --macho --section __FOO,__bar --full-leading-addr --print-imm-hex --no-show-raw-insn - | FileCheck %s
 
 .section __FOO, __bar
 _foo:

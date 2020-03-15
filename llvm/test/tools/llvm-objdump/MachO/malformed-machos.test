@@ -1,74 +1,74 @@
 // These test checks that llvm-objdump will not crash with malformed Mach-O
 // files.  So the check line is not all that important but the bug fixes to
 // make sure llvm-objdump is robust is what matters.
-# RUN: not llvm-objdump -macho -objc-meta-data \
+# RUN: not llvm-objdump --macho --objc-meta-data \
 # RUN:   %p/Inputs/malformed-machos/mem-crup-0001.macho 2>&1 \
 # RUN:   | FileCheck -check-prefix=m0001 %s
 
 # m0001: mem-crup-0001.macho': truncated or malformed object (addr field plus size of section 2 in LC_SEGMENT_64 command 0 greater than than the segment's vmaddr plus vmsize)
 
-# RUN: not llvm-objdump -macho -objc-meta-data \
+# RUN: not llvm-objdump --macho --objc-meta-data \
 # RUN:   %p/Inputs/malformed-machos/mem-crup-0006.macho 2>&1 \
 # RUN:   | FileCheck -check-prefix=m0006 %s
 
 # m0006: malformed-machos/mem-crup-0006.macho': truncated or malformed object (section contents at offset 4128 with a size of 176, overlaps section contents at offset 4128 with a size of 8)
 
-# RUN: not llvm-objdump -macho -objc-meta-data \
+# RUN: not llvm-objdump --macho --objc-meta-data \
 # RUN:   %p/Inputs/malformed-machos/mem-crup-0010.macho 2>&1 \
 # RUN:   | FileCheck -check-prefix=m0010 %s
 
 # m0010: mem-crup-0010.macho': truncated or malformed object (section contents at offset 4320 with a size of 80, overlaps section contents at offset 4320 with a size of 8)
 
-# RUN: not llvm-objdump -macho -objc-meta-data \
+# RUN: not llvm-objdump --macho --objc-meta-data \
 # RUN:   %p/Inputs/malformed-machos/mem-crup-0040.macho 2>&1 \
 # RUN:   | FileCheck -check-prefix=m0040 %s
 
 # m0040: mem-crup-0040.macho': truncated or malformed object (offset field plus size field of section 2 in LC_SEGMENT_64 command 1 extends past the end of the file)
 
-# RUN: not llvm-objdump -macho -objc-meta-data \
+# RUN: not llvm-objdump --macho --objc-meta-data \
 # RUN:   %p/Inputs/malformed-machos/mem-crup-0080.macho 2>&1 \
 # RUN:   | FileCheck -check-prefix=m0080 %s
 
 # m0080: mem-crup-0080.macho': truncated or malformed object (addr field plus size of section 2 in LC_SEGMENT_64 command 1 greater than than the segment's vmaddr plus vmsize)
 
-# RUN: llvm-objdump -macho -objc-meta-data \
+# RUN: llvm-objdump --macho --objc-meta-data \
 # RUN:   %p/Inputs/malformed-machos/mem-crup-0261.macho
 
-# RUN: not llvm-objdump -macho -disassemble \
+# RUN: not llvm-objdump --macho -d \
 # RUN:   %p/Inputs/malformed-machos/mem-crup-0337.macho 2>&1 \
 # RUN:   | FileCheck -check-prefix=m0337 %s
 
 # m0337: mem-crup-0337.macho': truncated or malformed object (section relocation entries at offset 0 with a size of 512, overlaps Mach-O headers at offset 0 with a size of 2048)
 
-RUN: not llvm-objdump -macho -disassemble %p/Inputs/macho-invalid-symbol-nsect 2>&1 | FileCheck -check-prefix INVALID-SYMBOL-NSECT %s
+RUN: not llvm-objdump --macho -d %p/Inputs/macho-invalid-symbol-nsect 2>&1 | FileCheck --check-prefix INVALID-SYMBOL-NSECT %s
 INVALID-SYMBOL-NSECT: macho-invalid-symbol-nsect': truncated or malformed object (bad section index: 97 for symbol at index 1)
 
-RUN: not llvm-objdump -macho -disassemble %p/Inputs/macho-invalid-symbol-nsect-archive 2>&1 | FileCheck -check-prefix INVALID-SYMBOL-NSECT-ARCHIVE %s
+RUN: not llvm-objdump --macho -d %p/Inputs/macho-invalid-symbol-nsect-archive 2>&1 | FileCheck --check-prefix INVALID-SYMBOL-NSECT-ARCHIVE %s
 INVALID-SYMBOL-NSECT-ARCHIVE: macho-invalid-symbol-nsect-archive(macho-invalid-symbol-nsect): truncated or malformed object (bad section index: 97 for symbol at index 1)
 
-RUN: not llvm-objdump -macho -disassemble %p/Inputs/macho-invalid-symbol-indr 2>&1 | FileCheck -check-prefix INVALID-SYMBOL-INDR %s
+RUN: not llvm-objdump --macho -d %p/Inputs/macho-invalid-symbol-indr 2>&1 | FileCheck --check-prefix INVALID-SYMBOL-INDR %s
 INVALID-SYMBOL-INDR: macho-invalid-symbol-indr': truncated or malformed object (bad n_value: 22 past the end of string table, for N_INDR symbol at index 1)
 
-RUN: not llvm-objdump -macho -disassemble -arch all %p/Inputs/macho-invalid-symbol-indr-archive-universal 2>&1 | FileCheck -check-prefix INVALID-SYMBOL-INDR-ARCHIVE-UNIVERSAL %s
+RUN: not llvm-objdump --macho -d --arch all %p/Inputs/macho-invalid-symbol-indr-archive-universal 2>&1 | FileCheck --check-prefix INVALID-SYMBOL-INDR-ARCHIVE-UNIVERSAL %s
 INVALID-SYMBOL-INDR-ARCHIVE-UNIVERSAL: macho-invalid-symbol-indr-archive-universal(macho-invalid-symbol-indr) (for architecture i386): truncated or malformed object (bad n_value: 22 past the end of string table, for N_INDR symbol at index 1)
 
-RUN: not llvm-objdump -macho -disassemble %p/Inputs/macho-invalid-symbol-strx 2>&1 | FileCheck -check-prefix INVALID-SYMBOL-STRX %s
+RUN: not llvm-objdump --macho -d %p/Inputs/macho-invalid-symbol-strx 2>&1 | FileCheck --check-prefix INVALID-SYMBOL-STRX %s
 INVALID-SYMBOL-STRX: macho-invalid-symbol-strx': truncated or malformed object (bad string table index: 22 past the end of string table, for symbol at index 1)
 
-RUN: not llvm-objdump -disassemble %p/Inputs/macho-invalid-symbol-strx 2>&1 | FileCheck -check-prefix INVALID-SYMBOL-STRX-NO-MACHO-FLAG %s
+RUN: not llvm-objdump -d %p/Inputs/macho-invalid-symbol-strx 2>&1 | FileCheck --check-prefix INVALID-SYMBOL-STRX-NO-MACHO-FLAG %s
 INVALID-SYMBOL-STRX-NO-MACHO-FLAG: macho-invalid-symbol-strx': truncated or malformed object (bad string index: 22 for symbol at index 1)
 
-RUN: not llvm-objdump -macho -disassemble -arch all %p/Inputs/macho-invalid-symbol-strx-universal 2>&1 | FileCheck -check-prefix INVALID-SYMBOL-STRX-UNIVERSAL %s
+RUN: not llvm-objdump --macho -d --arch all %p/Inputs/macho-invalid-symbol-strx-universal 2>&1 | FileCheck --check-prefix INVALID-SYMBOL-STRX-UNIVERSAL %s
 INVALID-SYMBOL-STRX-UNIVERSAL: macho-invalid-symbol-strx-universal' (for architecture i386): truncated or malformed object (bad string table index: 22 past the end of string table, for symbol at index 1)
 
-RUN: not llvm-objdump -macho -disassemble %p/Inputs/macho-invalid-symbol-lib_ordinal 2>&1 | FileCheck -check-prefix INVALID-SYMBOL-LIB_ORDINAL %s
+RUN: not llvm-objdump --macho -d %p/Inputs/macho-invalid-symbol-lib_ordinal 2>&1 | FileCheck --check-prefix INVALID-SYMBOL-LIB_ORDINAL %s
 INVALID-SYMBOL-LIB_ORDINAL: macho-invalid-symbol-lib_ordinal': truncated or malformed object (bad library ordinal: 7 for symbol at index 2)
 
-RUN: not llvm-objdump -macho -objc-meta-data %p/Inputs/macho-invalid-bind-entry 2>&1 | FileCheck -check-prefix INVALID-BIND-ENTRY %s
+RUN: not llvm-objdump --macho --objc-meta-data %p/Inputs/macho-invalid-bind-entry 2>&1 | FileCheck --check-prefix INVALID-BIND-ENTRY %s
 INVALID-BIND-ENTRY: macho-invalid-bind-entry': truncated or malformed object (for BIND_OPCODE_SET_DYLIB_ORDINAL_ULEB bad library ordinal: 83 (max 0) for opcode at: 0x0)
 
-RUN: llvm-objdump -macho -r -arch x86_64 %p/Inputs/macho-invalid-reloc-section-index 2>&1 | FileCheck -check-prefix INVALID-RELOC-SECTION-INDEX %s
+RUN: llvm-objdump --macho -r --arch x86_64 %p/Inputs/macho-invalid-reloc-section-index 2>&1 | FileCheck --check-prefix INVALID-RELOC-SECTION-INDEX %s
 INVALID-RELOC-SECTION-INDEX: 00000021 False byte   False  UNSIGND False     8388613 (?,?)
 
-RUN: not llvm-objdump -bind -g -macho -r -rebase -s -section-headers -t -unwind-info %p/Inputs/macho-invalid-linker-command 2>&1 | FileCheck -check-prefix INVALID-LINKCMD %s
+RUN: not llvm-objdump --bind -g --macho -r --rebase -s --section-headers -t --unwind-info %p/Inputs/macho-invalid-linker-command 2>&1 | FileCheck --check-prefix INVALID-LINKCMD %s
 INVALID-LINKCMD: truncated or malformed object (load command 4 LC_LINKER_OPTION string #2 is not NULL terminated)

@@ -1,4 +1,4 @@
-RUN: llvm-objdump -d -macho %p/Inputs/mh_dylib_header.macho-arm
+RUN: llvm-objdump -d --macho %p/Inputs/mh_dylib_header.macho-arm
 
 CHECK: _t1:
 CHECK:     movw r0, #4133

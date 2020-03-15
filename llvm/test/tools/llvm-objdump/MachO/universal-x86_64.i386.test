@@ -1,15 +1,15 @@
-RUN: llvm-objdump %p/Inputs/macho-universal.x86_64.i386 -d -m -no-show-raw-insn -full-leading-addr -print-imm-hex -arch all \
-RUN: | FileCheck %s -check-prefix UEXE-all
-RUN: llvm-objdump %p/Inputs/macho-universal.x86_64.i386 -d -no-show-raw-insn -full-leading-addr -print-imm-hex -arch all \
-RUN: | FileCheck %s -check-prefix UEXE-all
-RUN: llvm-objdump %p/Inputs/macho-universal-archive.x86_64.i386 -d -m -no-show-raw-insn -full-leading-addr -print-imm-hex -arch i386 \
-RUN: | FileCheck %s -check-prefix UArchive-i386
-RUN: llvm-objdump %p/Inputs/macho-universal.x86_64.i386 -universal-headers -m \
-RUN: | FileCheck %s -check-prefix FAT
-RUN: llvm-objdump %p/Inputs/macho-universal.x86_64.i386 -universal-headers -m \
-RUN: -non-verbose | FileCheck %s -check-prefix NON-VERBOSE
-RUN: llvm-objdump %p/Inputs/macho-universal64.x86_64.i386 -universal-headers \
-RUN: -m | FileCheck %s -check-prefix FAT-64
+RUN: llvm-objdump %p/Inputs/macho-universal.x86_64.i386 -d --macho --no-show-raw-insn --full-leading-addr --print-imm-hex --arch all \
+RUN: | FileCheck %s --check-prefix UEXE-all
+RUN: llvm-objdump %p/Inputs/macho-universal.x86_64.i386 -d --no-show-raw-insn --full-leading-addr --print-imm-hex --arch all \
+RUN: | FileCheck %s --check-prefix UEXE-all
+RUN: llvm-objdump %p/Inputs/macho-universal-archive.x86_64.i386 -d --macho --no-show-raw-insn --full-leading-addr --print-imm-hex --arch i386 \
+RUN: | FileCheck %s --check-prefix UArchive-i386
+RUN: llvm-objdump %p/Inputs/macho-universal.x86_64.i386 --universal-headers --macho \
+RUN: | FileCheck %s --check-prefix FAT
+RUN: llvm-objdump %p/Inputs/macho-universal.x86_64.i386 --universal-headers --macho \
+RUN: --non-verbose | FileCheck %s --check-prefix NON-VERBOSE
+RUN: llvm-objdump %p/Inputs/macho-universal64.x86_64.i386 --universal-headers \
+RUN: --macho | FileCheck %s --check-prefix FAT-64
 
 UEXE-all: macho-universal.x86_64.i386 (architecture x86_64):
 UEXE-all: (__TEXT,__text) section

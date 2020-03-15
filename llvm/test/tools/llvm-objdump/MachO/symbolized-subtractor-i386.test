@@ -1,4 +1,4 @@
-# RUN: llvm-mc < %s -triple x86_64-apple-darwin -filetype=obj | llvm-objdump -m -d - | FileCheck %s
+# RUN: llvm-mc < %s --triple x86_64-apple-darwin -filetype=obj | llvm-objdump --macho -d - | FileCheck %s
 
 nop
 x:

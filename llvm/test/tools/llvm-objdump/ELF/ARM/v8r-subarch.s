@@ -1,4 +1,4 @@
-@ RUN: llvm-mc < %s -triple armv8r-elf -filetype=obj | llvm-objdump -triple=arm -d - | FileCheck %s
+@ RUN: llvm-mc < %s -triple armv8r-elf -filetype=obj | llvm-objdump --triple=arm -d - | FileCheck %s
 
 .eabi_attribute Tag_CPU_arch, 15 // v8_R
 .eabi_attribute Tag_CPU_arch_profile, 0x52 // 'R' profile

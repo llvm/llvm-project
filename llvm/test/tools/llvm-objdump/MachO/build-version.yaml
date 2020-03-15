@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s | llvm-objdump -macho -private-headers - | FileCheck %s
+# RUN: yaml2obj %s | llvm-objdump --macho --private-headers - | FileCheck %s
 
 --- !mach-o
 FileHeader:

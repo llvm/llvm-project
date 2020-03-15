@@ -17,11 +17,11 @@
 // RUN:     | FileCheck %s -check-prefix=ROUTINE
 // RUN: llvm-objdump -p %p/Inputs/exeThread.macho-x86_64 \
 // RUN:     | FileCheck %s -check-prefix=THREAD
-// RUN: llvm-objdump -macho -p -arch i386 %p/Inputs/macho-universal.x86_64.i386 \
+// RUN: llvm-objdump --macho -p --arch i386 %p/Inputs/macho-universal.x86_64.i386 \
 // RUN:     | FileCheck %s -check-prefix=FATi386
-// RUN: llvm-objdump -p -arch i386 %p/Inputs/macho-universal.x86_64.i386 \
+// RUN: llvm-objdump -p --arch i386 %p/Inputs/macho-universal.x86_64.i386 \
 // RUN:     | FileCheck %s -check-prefix=FATi386
-// RUN: llvm-objdump -p -non-verbose %p/Inputs/hello.obj.macho-x86_64 \
+// RUN: llvm-objdump -p --non-verbose %p/Inputs/hello.obj.macho-x86_64 \
 // RUN:     | FileCheck %s -check-prefix=NON_VERBOSE
 // RUN: llvm-objdump -p %p/Inputs/codesig.macho-x86_64 \
 // RUN:     | FileCheck %s -check-prefix=CODESIG
