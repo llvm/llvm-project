@@ -29,27 +29,48 @@ class ValueLatticeElement {
     /// producing instruction is dead.  Caution: We use this as the starting
     /// state in our local meet rules.  In this usage, it's taken to mean
     /// "nothing known yet".
+    /// Transition to any other state allowed.
     unknown,
 
     /// This Value is an UndefValue constant or produces undef. Undefined values
     /// can be merged with constants (or single element constant ranges),
     /// assuming all uses of the result will be replaced.
+    /// Transition allowed to the following states:
+    ///  constant
+    ///  singlecrfromundef
+    ///  overdefined
     undef,
 
-    /// This Value has a specific constant value.  (For constant integers,
-    /// constantrange is used instead.  Integer typed constantexprs can appear
-    /// as constant.)
+    /// This Value has a specific constant value.  The constant cannot be undef.
+    /// (For constant integers, constantrange is used instead. Integer typed
+    /// constantexprs can appear as constant.)
+    /// Transition allowed to the following states:
+    ///  overdefined
     constant,
 
-    /// This Value is known to not have the specified value.  (For constant
+    /// This Value is known to not have the specified value. (For constant
     /// integers, constantrange is used instead.  As above, integer typed
     /// constantexprs can appear here.)
+    /// Transition allowed to the following states:
+    ///  overdefined
     notconstant,
 
     /// The Value falls within this range. (Used only for integer typed values.)
+    /// Transition allowed to the following states:
+    ///  constantrange (new range must be a superset of the existing range)
+    ///  singlecrfromundef (range must stay a single element range)
+    ///  overdefined
     constantrange,
 
+    /// This Value contains a single element constant range that was merged with
+    /// an Undef value. Merging it with other constant ranges results in
+    /// overdefined, unless they match the single element constant range.
+    /// Transition allowed to the following states:
+    ///  overdefined
+    singlecrfromundef,
+
     /// We can not precisely model the dynamic values this value might take.
+    /// No transitions are allowed after reaching overdefined.
     overdefined
   };
 
@@ -75,6 +96,7 @@ public:
     case unknown:
     case undef:
     case constant:
+    case singlecrfromundef:
     case notconstant:
       break;
     case constantrange:
@@ -105,6 +127,7 @@ public:
 
     switch (Other.Tag) {
     case constantrange:
+    case singlecrfromundef:
       if (!isConstantRange())
         new (&Range) ConstantRange(Other.Range);
       else
@@ -155,8 +178,11 @@ public:
   bool isUnknown() const { return Tag == unknown; }
   bool isUnknownOrUndef() const { return Tag == unknown || Tag == undef; }
   bool isConstant() const { return Tag == constant; }
+  bool isSingleCRFromUndef() const { return Tag == singlecrfromundef; }
   bool isNotConstant() const { return Tag == notconstant; }
-  bool isConstantRange() const { return Tag == constantrange; }
+  bool isConstantRange() const {
+    return Tag == constantrange || Tag == singlecrfromundef;
+  }
   bool isOverdefined() const { return Tag == overdefined; }
 
   Constant *getConstant() const {
@@ -251,6 +277,8 @@ public:
       if (getConstantRange() == NewR)
         return false;
 
+      assert(!isSingleCRFromUndef());
+
       if (NewR.isEmptySet())
         return markOverdefined();
 
@@ -260,11 +288,11 @@ public:
       return true;
     }
 
-    assert(isUnknown() || isUndef());
+    assert(isUnknown() || (isUndef() && NewR.isSingleElement()));
     if (NewR.isEmptySet())
       return markOverdefined();
 
-    Tag = constantrange;
+    Tag = isUnknown() ? constantrange : singlecrfromundef;
     new (&Range) ConstantRange(std::move(NewR));
     return true;
   }
@@ -322,7 +350,17 @@ public:
       markOverdefined();
       return true;
     }
+
     ConstantRange NewR = getConstantRange().unionWith(RHS.getConstantRange());
+
+    if (isSingleCRFromUndef() || RHS.isSingleCRFromUndef()) {
+      if (NewR.isSingleElement()) {
+        assert(getConstantRange() == NewR);
+        return false;
+      }
+      markOverdefined();
+      return true;
+    }
     if (NewR.isFullSet())
       return markOverdefined();
     else if (NewR == getConstantRange())
