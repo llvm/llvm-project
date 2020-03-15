@@ -1980,6 +1980,11 @@ static std::string GenerateTestExpression(ArrayRef<Record *> LangOpts) {
       Test += "(";
       Test += Code;
       Test += ")";
+      if (!E->getValueAsString("Name").empty()) {
+        PrintWarning(
+            E->getLoc(),
+            "non-empty 'Name' field ignored because 'CustomCode' was supplied");
+      }
     } else {
       Test += "LangOpts.";
       Test += E->getValueAsString("Name");

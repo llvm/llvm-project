@@ -3,6 +3,7 @@ set(LLVM_OPTIONAL_SOURCES
   ControlFlowInterfaces.cpp
   DerivedAttributeOpInterface.cpp
   InferTypeOpInterface.cpp
+  LoopLikeInterface.cpp
   SideEffects.cpp
   )
 
@@ -58,6 +59,20 @@ add_dependencies(MLIRInferTypeOpInterface
   MLIRInferTypeOpInterfaceIncGen
   )
 target_link_libraries(MLIRInferTypeOpInterface
+  PUBLIC
+  MLIRIR
+  )
+
+add_llvm_library(MLIRLoopLikeInterface
+  LoopLikeInterface.cpp
+
+  ADDITIONAL_HEADER_DIRS
+  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Interfaces
+  )
+add_dependencies(MLIRLoopLikeInterface
+  MLIRLoopLikeInterfaceIncGen
+  )
+target_link_libraries(MLIRLoopLikeInterface
   PUBLIC
   MLIRIR
   )

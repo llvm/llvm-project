@@ -29,7 +29,7 @@ include "mlir/Dialect/SPIRV/SPIRVBase.td"
 // 1) Descriptor Set.
 // 2) Binding number.
 // 3) Storage class.
-def SPV_InterfaceVarABIAttr : StructAttr<"InterfaceVarABIAttr", SPV_Dialect, [
+def SPV_InterfaceVarABIAttr : StructAttr<"InterfaceVarABIAttr", SPIRV_Dialect, [
     StructFieldAttr<"descriptor_set", I32Attr>,
     StructFieldAttr<"binding", I32Attr>,
     StructFieldAttr<"storage_class", SPV_StorageClassAttr>
@@ -38,7 +38,7 @@ def SPV_InterfaceVarABIAttr : StructAttr<"InterfaceVarABIAttr", SPV_Dialect, [
 // For entry functions, this attribute specifies information related to entry
 // points in the generated SPIR-V module:
 // 1) WorkGroup Size.
-def SPV_EntryPointABIAttr : StructAttr<"EntryPointABIAttr", SPV_Dialect, [
+def SPV_EntryPointABIAttr : StructAttr<"EntryPointABIAttr", SPIRV_Dialect, [
     StructFieldAttr<"local_size", I32ElementsAttr>
 ]>;
 
@@ -54,7 +54,7 @@ def SPV_CapabilityArrayAttr : TypedArrayAttrBase<
 // See https://renderdoc.org/vkspec_chunked/chap36.html#limits for the complete
 // list of limits and their explanation for the Vulkan API. The following ones
 // are those affecting SPIR-V CodeGen.
-def SPV_ResourceLimitsAttr : StructAttr<"ResourceLimitsAttr", SPV_Dialect, [
+def SPV_ResourceLimitsAttr : StructAttr<"ResourceLimitsAttr", SPIRV_Dialect, [
     StructFieldAttr<"max_compute_workgroup_invocations", I32Attr>,
     StructFieldAttr<"max_compute_workgroup_size", I32ElementsAttr>
 ]>;

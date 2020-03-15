@@ -14,9 +14,9 @@
 
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Function.h"
+#include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Interfaces/SideEffects.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Transforms/LoopLikeInterface.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -26,12 +26,12 @@
 using namespace mlir;
 
 namespace {
-
 /// Loop invariant code motion (LICM) pass.
 struct LoopInvariantCodeMotion : public OperationPass<LoopInvariantCodeMotion> {
 public:
   void runOnOperation() override;
 };
+} // end anonymous namespace
 
 // Checks whether the given op can be hoisted by checking that
 // - the op and any of its contained operations do not depend on SSA values
@@ -107,8 +107,6 @@ static LogicalResult moveLoopInvariantCode(LoopLikeOpInterface looplike) {
   return result;
 }
 
-} // end anonymous namespace
-
 void LoopInvariantCodeMotion::runOnOperation() {
   // Walk through all loops in a function in innermost-loop-first order. This
   // way, we first LICM from the inner loop, and place the ops in
@@ -119,11 +117,6 @@ void LoopInvariantCodeMotion::runOnOperation() {
       signalPassFailure();
   });
 }
-
-// Include the generated code for the loop-like interface here, as it otherwise
-// has no compilation unit. This works as loop-invariant code motion is the
-// only user of that interface.
-#include "mlir/Transforms/LoopLikeInterface.cpp.inc"
 
 std::unique_ptr<Pass> mlir::createLoopInvariantCodeMotionPass() {
   return std::make_unique<LoopInvariantCodeMotion>();

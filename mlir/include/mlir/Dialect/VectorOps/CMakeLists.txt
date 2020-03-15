@@ -1,4 +1,4 @@
-add_mlir_dialect(VectorOps VectorOps)
+add_mlir_dialect(VectorOps vector VectorOps)
 
 set(LLVM_TARGET_DEFINITIONS VectorTransformPatterns.td)
 mlir_tablegen(VectorTransformPatterns.h.inc -gen-rewriters)
