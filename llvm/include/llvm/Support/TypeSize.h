@@ -15,6 +15,8 @@
 #ifndef LLVM_SUPPORT_TYPESIZE_H
 #define LLVM_SUPPORT_TYPESIZE_H
 
+#include "llvm/Support/WithColor.h"
+
 #include <cstdint>
 #include <cassert>
 
@@ -146,10 +148,32 @@ public:
 
   // Casts to a uint64_t if this is a fixed-width size.
   //
-  // NOTE: This interface is obsolete and will be removed in a future version
-  // of LLVM in favour of calling getFixedSize() directly.
+  // This interface is deprecated and will be removed in a future version
+  // of LLVM in favour of upgrading uses that rely on this implicit conversion
+  // to uint64_t. Calls to functions that return a TypeSize should use the
+  // proper interfaces to TypeSize.
+  // In practice this is mostly calls to MVT/EVT::getSizeInBits().
+  //
+  // To determine how to upgrade the code:
+  //
+  //   if (<algorithm works for both scalable and fixed-width vectors>)
+  //     use getKnownMinSize()
+  //   else if (<algorithm works only for fixed-width vectors>) {
+  //     if <algorithm can be adapted for both scalable and fixed-width vectors>
+  //       update the algorithm and use getKnownMinSize()
+  //     else
+  //       bail out early for scalable vectors and use getFixedSize()
+  //   }
   operator uint64_t() const {
+#ifdef STRICT_IMPLICIT_CONVERSION_TYPESIZE
     return getFixedSize();
+#else
+    if (isScalable())
+      WithColor::warning() << "Compiler has made implicit assumption that "
+                              "TypeSize is not scalable. This may or may not "
+                              "lead to broken code.\n";
+    return getKnownMinSize();
+#endif
   }
 
   // Additional convenience operators needed to avoid ambiguous parses.

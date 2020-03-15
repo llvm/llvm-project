@@ -410,6 +410,17 @@ endif()
 
 option(LLVM_ENABLE_EXPENSIVE_CHECKS "Enable expensive checks" OFF)
 
+# While adding scalable vector support to LLVM, we temporarily want to
+# allow an implicit conversion of TypeSize to uint64_t. This CMake flag
+# enables a more strict conversion where it asserts that the type is not
+# a scalable vector type.
+#
+# Enabling this flag makes it easier to find cases where the compiler makes
+# assumptions on the size being 'fixed size', when building tests for
+# SVE/SVE2 or other scalable vector architectures.
+option(LLVM_ENABLE_STRICT_IMPLICIT_CONVERSION_TYPESIZE
+       "Enable assertions that type is not scalable in implicit conversion from TypeSize to uint64_t" OFF)
+
 set(LLVM_ABI_BREAKING_CHECKS "WITH_ASSERTS" CACHE STRING
   "Enable abi-breaking checks.  Can be WITH_ASSERTS, FORCE_ON or FORCE_OFF.")
 
