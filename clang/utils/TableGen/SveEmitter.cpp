@@ -43,12 +43,7 @@ using namespace llvm;
 namespace {
 
 class SVEEmitter {
-private:
-  RecordKeeper &Records;
-
 public:
-  SVEEmitter(RecordKeeper &R) : Records(R) {}
-
   // run - Emit arm_sve.h
   void run(raw_ostream &o);
 };
@@ -122,7 +117,7 @@ void SVEEmitter::run(raw_ostream &OS) {
 
 namespace clang {
 void EmitSveHeader(RecordKeeper &Records, raw_ostream &OS) {
-  SVEEmitter(Records).run(OS);
+  SVEEmitter().run(OS);
 }
 
 } // End namespace clang
