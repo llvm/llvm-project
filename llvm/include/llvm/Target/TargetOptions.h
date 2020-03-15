@@ -16,8 +16,11 @@
 
 #include "llvm/MC/MCTargetOptions.h"
 
+#include <memory>
+
 namespace llvm {
   class MachineFunction;
+  class MemoryBuffer;
   class Module;
 
   namespace FloatABI {
@@ -62,6 +65,18 @@ namespace llvm {
       PositiveZero    // denormals are flushed to positive zero
     };
   }
+
+  enum class BasicBlockSection {
+    All,    // Use Basic Block Sections for all basic blocks.  A section
+            // for every basic block can significantly bloat object file sizes.
+    List,   // Get list of functions & BBs from a file. Selectively enables
+            // basic block sections for a subset of basic blocks which can be
+            // used to control object size bloats from creating sections.
+    Labels, // Do not use Basic Block Sections but label basic blocks.  This
+            // is useful when associating profile counts from virtual addresses
+            // to basic blocks.
+    None    // Do not use Basic Block Sections.
+  };
 
   enum class EABI {
     Unknown,
@@ -114,9 +129,9 @@ namespace llvm {
           EnableFastISel(false), EnableGlobalISel(false), UseInitArray(false),
           DisableIntegratedAS(false), RelaxELFRelocations(false),
           FunctionSections(false), DataSections(false),
-          UniqueSectionNames(true), TrapUnreachable(false),
-          NoTrapAfterNoreturn(false), TLSSize(0), EmulatedTLS(false),
-          ExplicitEmulatedTLS(false), EnableIPRA(false),
+          UniqueSectionNames(true), UniqueBBSectionNames(false),
+          TrapUnreachable(false), NoTrapAfterNoreturn(false), TLSSize(0),
+          EmulatedTLS(false), ExplicitEmulatedTLS(false), EnableIPRA(false),
           EmitStackSizeSection(false), EnableMachineOutliner(false),
           SupportsDefaultOutlining(false), EmitAddrsig(false),
           EmitCallSiteInfo(false), EnableDebugEntryValues(false),
@@ -225,6 +240,9 @@ namespace llvm {
 
     unsigned UniqueSectionNames : 1;
 
+    /// Use unique names for basic block sections.
+    unsigned UniqueBBSectionNames : 1;
+
     /// Emit target-specific trap instruction for 'unreachable' IR instructions.
     unsigned TrapUnreachable : 1;
 
@@ -256,6 +274,13 @@ namespace llvm {
 
     /// Emit address-significance table.
     unsigned EmitAddrsig : 1;
+
+    /// Emit basic blocks into separate sections.
+    BasicBlockSection BBSections = BasicBlockSection::None;
+
+    /// Memory Buffer that contains information on sampled basic blocks and used
+    /// to selectively generate basic block sections.
+    std::shared_ptr<MemoryBuffer> BBSectionsFuncListBuf;
 
     /// The flag enables call site info production. It is used only for debug
     /// info, and it is restricted only to optimized code. This can be used for
