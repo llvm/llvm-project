@@ -89,6 +89,8 @@ getObjectSymbolInfo(ExecutionSession &ES, MemoryBufferRef ObjBuffer) {
   if (!Obj)
     return Obj.takeError();
 
+  bool IsMachO = isa<object::MachOObjectFile>(Obj->get());
+
   SymbolFlagsMap SymbolFlags;
   for (auto &Sym : (*Obj)->symbols()) {
     // Skip symbols not defined in this object file.
@@ -113,14 +115,20 @@ getObjectSymbolInfo(ExecutionSession &ES, MemoryBufferRef ObjBuffer) {
     auto SymFlags = JITSymbolFlags::fromObjectSymbol(Sym);
     if (!SymFlags)
       return SymFlags.takeError();
+
+    // Strip the 'exported' flag from MachO linker-private symbols.
+    if (IsMachO && Name->startswith("l"))
+      *SymFlags &= ~JITSymbolFlags::Exported;
+
     SymbolFlags[InternedName] = std::move(*SymFlags);
   }
 
   SymbolStringPtr InitSymbol;
 
-  if (auto *MachOObj = dyn_cast<object::MachOObjectFile>(Obj->get())) {
-    for (auto &Sec : MachOObj->sections()) {
-      auto SecType = MachOObj->getSectionType(Sec);
+  if (IsMachO) {
+    auto &MachOObj = cast<object::MachOObjectFile>(*Obj->get());
+    for (auto &Sec : MachOObj.sections()) {
+      auto SecType = MachOObj.getSectionType(Sec);
       if ((SecType & MachO::SECTION_TYPE) == MachO::S_MOD_INIT_FUNC_POINTERS) {
         std::string InitSymString;
         raw_string_ostream(InitSymString)
