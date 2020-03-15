@@ -81,8 +81,12 @@ RTDyldObjectLinkingLayer::RTDyldObjectLinkingLayer(
 
 RTDyldObjectLinkingLayer::~RTDyldObjectLinkingLayer() {
   std::lock_guard<std::mutex> Lock(RTDyldLayerMutex);
-  for (auto &MemMgr : MemMgrs)
+  for (auto &MemMgr : MemMgrs) {
+    for (auto *L : EventListeners)
+      L->notifyFreeingObject(
+          static_cast<uint64_t>(reinterpret_cast<uintptr_t>(MemMgr.get())));
     MemMgr->deregisterEHFrames();
+  }
 }
 
 void RTDyldObjectLinkingLayer::emit(MaterializationResponsibility R,
@@ -155,19 +159,35 @@ void RTDyldObjectLinkingLayer::emit(MaterializationResponsibility R,
 
   jitLinkForORC(
       **Obj, std::move(O), *MemMgr, Resolver, ProcessAllSections,
-      [this, K, SharedR, &Obj, InternalSymbols](
+      [this, K, SharedR, &Obj, MemMgr, InternalSymbols](
           std::unique_ptr<RuntimeDyld::LoadedObjectInfo> LoadedObjInfo,
           std::map<StringRef, JITEvaluatedSymbol> ResolvedSymbols) {
-        return onObjLoad(K, *SharedR, **Obj, std::move(LoadedObjInfo),
+        return onObjLoad(K, *SharedR, **Obj, MemMgr, std::move(LoadedObjInfo),
                          ResolvedSymbols, *InternalSymbols);
       },
-      [this, K, SharedR, O = std::move(O)](Error Err) mutable {
-        onObjEmit(K, std::move(O), *SharedR, std::move(Err));
+      [this, K, SharedR, &Obj, O = std::move(O), MemMgr](Error Err) mutable {
+        onObjEmit(K, *SharedR, **Obj, std::move(O), MemMgr, std::move(Err));
       });
+}
+
+void RTDyldObjectLinkingLayer::registerJITEventListener(JITEventListener &L) {
+  std::lock_guard<std::mutex> Lock(RTDyldLayerMutex);
+  assert(llvm::none_of(EventListeners,
+                       [&](JITEventListener *O) { return O == &L; }) &&
+         "Listener has already been registered");
+  EventListeners.push_back(&L);
+}
+
+void RTDyldObjectLinkingLayer::unregisterJITEventListener(JITEventListener &L) {
+  std::lock_guard<std::mutex> Lock(RTDyldLayerMutex);
+  auto I = llvm::find(EventListeners, &L);
+  assert(I != EventListeners.end() && "Listener not registered");
+  EventListeners.erase(I);
 }
 
 Error RTDyldObjectLinkingLayer::onObjLoad(
     VModuleKey K, MaterializationResponsibility &R, object::ObjectFile &Obj,
+    RuntimeDyld::MemoryManager *MemMgr,
     std::unique_ptr<RuntimeDyld::LoadedObjectInfo> LoadedObjInfo,
     std::map<StringRef, JITEvaluatedSymbol> Resolved,
     std::set<StringRef> &InternalSymbols) {
@@ -252,12 +272,17 @@ Error RTDyldObjectLinkingLayer::onObjLoad(
   if (NotifyLoaded)
     NotifyLoaded(K, Obj, *LoadedObjInfo);
 
+  std::lock_guard<std::mutex> Lock(RTDyldLayerMutex);
+  assert(!LoadedObjInfos.count(MemMgr) && "Duplicate loaded info for MemMgr");
+  LoadedObjInfos[MemMgr] = std::move(LoadedObjInfo);
+
   return Error::success();
 }
 
 void RTDyldObjectLinkingLayer::onObjEmit(
-    VModuleKey K, std::unique_ptr<MemoryBuffer> ObjBuffer,
-    MaterializationResponsibility &R, Error Err) {
+    VModuleKey K, MaterializationResponsibility &R, object::ObjectFile &Obj,
+    std::unique_ptr<MemoryBuffer> ObjBuffer, RuntimeDyld::MemoryManager *MemMgr,
+    Error Err) {
   if (Err) {
     getExecutionSession().reportError(std::move(Err));
     R.failMaterialization();
@@ -272,6 +297,16 @@ void RTDyldObjectLinkingLayer::onObjEmit(
 
   if (NotifyEmitted)
     NotifyEmitted(K, std::move(ObjBuffer));
+
+  // Run EventListener notifyLoaded callbacks.
+  std::lock_guard<std::mutex> Lock(RTDyldLayerMutex);
+  auto LOIItr = LoadedObjInfos.find(MemMgr);
+  assert(LOIItr != LoadedObjInfos.end() && "LoadedObjInfo missing");
+  for (auto *L : EventListeners)
+    L->notifyObjectLoaded(
+        static_cast<uint64_t>(reinterpret_cast<uintptr_t>(MemMgr)), Obj,
+        *LOIItr->second);
+  LoadedObjInfos.erase(MemMgr);
 }
 
 LegacyRTDyldObjectLinkingLayer::LegacyRTDyldObjectLinkingLayer(
