@@ -1,4 +1,4 @@
-// RUN: llvm-objdump -macho -r %p/Inputs/macho-preload-x86_64 | FileCheck %s
+// RUN: llvm-objdump --macho -r %p/Inputs/macho-preload-x86_64 | FileCheck %s
 
 CHECK: Local relocation information 1 entries
 CHECK: address  pcrel length extern type    scattered symbolnum/value

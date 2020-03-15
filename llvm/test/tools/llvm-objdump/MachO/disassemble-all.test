@@ -1,4 +1,4 @@
-// RUN: llvm-objdump -m -d -full-leading-addr -print-imm-hex -no-show-raw-insn %p/Inputs/macho-multiple-text | FileCheck %s -check-prefix=TEXT
+// RUN: llvm-objdump --macho -d --full-leading-addr --print-imm-hex --no-show-raw-insn %p/Inputs/macho-multiple-text | FileCheck %s --check-prefix=TEXT
 
 TEXT:      (__TEXT,__text) section
 TEXT_NEXT: _main:
@@ -12,7 +12,7 @@ TEXT_NEXT: 0000000100000f76	addq	$0x10, %rsp
 TEXT_NEXT: 0000000100000f7a	popq	%rbp
 TEXT_NEXT: 0000000100000f7b	retq
 
-// RUN: llvm-objdump -m -D -full-leading-addr -print-imm-hex -no-show-raw-insn %p/Inputs/macho-multiple-text | FileCheck %s -check-prefix=ALL
+// RUN: llvm-objdump --macho -D --full-leading-addr --print-imm-hex --no-show-raw-insn %p/Inputs/macho-multiple-text | FileCheck %s --check-prefix=ALL
 
 ALL:      (__TEXT,__text) section
 ALL_NEXT: _main:

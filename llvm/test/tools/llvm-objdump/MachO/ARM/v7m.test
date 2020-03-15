@@ -1,5 +1,5 @@
-@ RUN: llvm-mc < %s -triple thumbv7m-apple-macho -filetype=obj | llvm-objdump -macho -d - | FileCheck %s
-@ RUN: llvm-mc < %s -triple thumbv7em-apple-macho -filetype=obj | llvm-objdump -macho -d - | FileCheck %s
+@ RUN: llvm-mc < %s -triple thumbv7m-apple-macho -filetype=obj | llvm-objdump --macho -d - | FileCheck %s
+@ RUN: llvm-mc < %s -triple thumbv7em-apple-macho -filetype=obj | llvm-objdump --macho -d - | FileCheck %s
 
         .thumb
         .thumb_func _t

@@ -1,8 +1,8 @@
-RUN: llvm-objdump %p/Inputs/macho-universal-archive.x86_64.i386 -macho -archive-headers -arch all \
+RUN: llvm-objdump %p/Inputs/macho-universal-archive.x86_64.i386 --macho --archive-headers --arch all \
 RUN: | FileCheck %s
-RUN: llvm-objdump %p/Inputs/macho-universal-archive.x86_64.i386 -macho -archive-headers -arch all -archive-member-offsets \
+RUN: llvm-objdump %p/Inputs/macho-universal-archive.x86_64.i386 --macho --archive-headers --arch all --archive-member-offsets \
 RUN: | FileCheck %s -check-prefix=OFFSETS
-RUN: llvm-objdump %p/Inputs/macho-universal-archive.x86_64.i386 -macho -archive-headers -arch all -non-verbose \
+RUN: llvm-objdump %p/Inputs/macho-universal-archive.x86_64.i386 --macho --archive-headers --arch all --non-verbose \
 RUN: | FileCheck %s -check-prefix=NON-VERBOSE
 
 # Note the date as printed by ctime(3) is time zone dependent and not checked.

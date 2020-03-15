@@ -1,4 +1,4 @@
-RUN: llvm-objdump -macho -r %p/Inputs/hello.obj.macho-x86_64 | FileCheck %s
+RUN: llvm-objdump --macho -r %p/Inputs/hello.obj.macho-x86_64 | FileCheck %s
 
 CHECK: Relocation information (__TEXT,__text) 2 entries
 CHECK: address  pcrel length extern type    scattered symbolnum/value

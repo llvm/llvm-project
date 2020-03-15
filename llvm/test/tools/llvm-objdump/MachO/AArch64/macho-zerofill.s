@@ -1,4 +1,4 @@
-// RUN: llvm-mc < %s -triple aarch64-macho -filetype=obj | llvm-objdump -triple=aarch64-- -D - | FileCheck %s
+// RUN: llvm-mc < %s -triple aarch64-macho -filetype=obj | llvm-objdump --triple=aarch64-- -D - | FileCheck %s
 
 
 // Check that we don't print garbage when we dump zerofill sections.

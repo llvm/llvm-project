@@ -1,4 +1,4 @@
-// RUN: llvm-objdump -d -m -no-show-raw-insn -full-leading-addr -print-imm-hex %p/Inputs/kextbundle.macho-x86_64 | FileCheck %s
+// RUN: llvm-objdump -d --macho --no-show-raw-insn --full-leading-addr --print-imm-hex %p/Inputs/kextbundle.macho-x86_64 | FileCheck %s
 
 CHECK: (__TEXT,__text) section
 CHECK: _foo:

@@ -1,4 +1,4 @@
-RUN: llvm-objdump -macho -private-headers %p/Inputs/thread.macho-aarch64 | FileCheck %s
+RUN: llvm-objdump --macho --private-headers %p/Inputs/thread.macho-aarch64 | FileCheck %s
 
 CHECK: Load command 0
 CHECK:         cmd LC_THREAD

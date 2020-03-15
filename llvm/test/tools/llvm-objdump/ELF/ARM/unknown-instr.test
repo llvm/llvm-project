@@ -1,5 +1,5 @@
 # RUN: yaml2obj %s -o %t
-# RUN: llvm-objdump -D -triple=thumbv8.1m.main-none-eabi %t | FileCheck %s
+# RUN: llvm-objdump -D --triple=thumbv8.1m.main-none-eabi %t | FileCheck %s
 
 ## This is a test case with "random" data/instructions, checking that
 ## llvm-objdump handles such instructions cleanly. Disassembly of instructions
@@ -10,7 +10,7 @@
 ##
 ## and disassembly is attempted with:
 ##
-##   llvm-objdump -mattr=+ext1
+##   llvm-objdump --mattr=+ext1
 
 # CHECK:        00000000 <.text>:
 # CHECK-NEXT:       0: cb              <unknown>

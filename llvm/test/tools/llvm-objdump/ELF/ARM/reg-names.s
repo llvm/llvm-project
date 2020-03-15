@@ -1,5 +1,5 @@
 @ RUN: llvm-mc %s -triple armv5-unknown-linux -filetype=obj -o %t
-@ RUN: llvm-objdump -d %t | FileCheck -check-prefix=STD %s
+@ RUN: llvm-objdump -d %t | FileCheck --check-prefix=STD %s
 @ RUN: llvm-objdump -d -Mreg-names-std %t \
 @ RUN:   | FileCheck -check-prefix=STD %s
 @ RUN: llvm-objdump -d --disassembler-options=reg-names-raw %t \

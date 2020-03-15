@@ -1,9 +1,9 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t
 
 # Use '|' to show where the tabs line up.
-# RUN: llvm-objdump -d -print-imm-hex %t | tr '\t' '|' | FileCheck -strict-whitespace %s
+# RUN: llvm-objdump -d --print-imm-hex %t | tr '\t' '|' | FileCheck --strict-whitespace %s
 
-# RUN: llvm-objdump -d -print-imm-hex -no-show-raw-insn %t | tr '\t' '|' | \
+# RUN: llvm-objdump -d --print-imm-hex --no-show-raw-insn %t | tr '\t' '|' | \
 # RUN:   FileCheck -check-prefix=NORAW -strict-whitespace %s
 
 # Instructions are expected to be aligned if the instruction in hex is not too long.

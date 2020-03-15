@@ -6,7 +6,7 @@
 # CHECK: bl {{.*}} <__cfi_slowpath@plt>
 
 # RUN: yaml2obj %s -o %t.aarch64
-# RUN: llvm-objdump -d -mattr=+bti %t.aarch64 | \
+# RUN: llvm-objdump -d --mattr=+bti %t.aarch64 | \
 # RUN:   FileCheck --check-prefix=CHECK-BTI %s
 # CHECK-BTI: bl {{.*}} <f1@plt>
 # CHECK-BTI: bl {{.*}} <f2@plt>
