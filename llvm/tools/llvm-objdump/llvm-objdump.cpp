@@ -2339,7 +2339,9 @@ int main(int argc, char **argv) {
   // Register the target printer for --version.
   cl::AddExtraVersionPrinter(TargetRegistry::printRegisteredTargetsForVersion);
 
-  cl::ParseCommandLineOptions(argc, argv, "llvm object file dumper\n");
+  cl::ParseCommandLineOptions(argc, argv, "llvm object file dumper\n", nullptr,
+                              /*EnvVar=*/nullptr,
+                              /*LongOptionsUseDoubleDash=*/true);
 
   if (StartAddress >= StopAddress)
     reportCmdLineError("start address should be less than stop address");
