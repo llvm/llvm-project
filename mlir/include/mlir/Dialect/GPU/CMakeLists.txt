@@ -1,1 +1,1 @@
-add_mlir_dialect(GPUOps GPUOps)
+add_mlir_dialect(GPUOps gpu GPUOps)

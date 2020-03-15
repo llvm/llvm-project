@@ -1,1 +1,1 @@
-add_mlir_dialect(QuantOps QuantOps)
+add_mlir_dialect(QuantOps quant QuantOps)

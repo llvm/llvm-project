@@ -13,20 +13,15 @@
 #ifndef DIALECT_QUANTOPS_QUANT_OPS_
 #define DIALECT_QUANTOPS_QUANT_OPS_
 
-include "mlir/IR/OpBase.td"
-include "mlir/Dialect/QuantOps/QuantPredicates.td"
+include "mlir/Dialect/QuantOps/QuantOpsBase.td"
 include "mlir/Interfaces/SideEffects.td"
-
-def quant_Dialect : Dialect {
-  let name = "quant";
-}
 
 //===----------------------------------------------------------------------===//
 // Base classes
 //===----------------------------------------------------------------------===//
 
 class quant_Op<string mnemonic, list<OpTrait> traits> :
-    Op<quant_Dialect, mnemonic, traits>;
+    Op<Quantization_Dialect, mnemonic, traits>;
 
 //===----------------------------------------------------------------------===//
 // Quantization casts

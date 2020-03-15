@@ -16,14 +16,14 @@
 include "mlir/Interfaces/LoopLikeInterface.td"
 include "mlir/Interfaces/SideEffects.td"
 
-def Loop_Dialect : Dialect {
+def LoopOps_Dialect : Dialect {
   let name = "loop";
   let cppNamespace = "";
 }
 
 // Base class for Loop dialect ops.
 class Loop_Op<string mnemonic, list<OpTrait> traits = []> :
-    Op<Loop_Dialect, mnemonic, traits> {
+    Op<LoopOps_Dialect, mnemonic, traits> {
   // For every standard op, there needs to be a:
   //   * void print(OpAsmPrinter &p, ${C++ class of Op} op)
   //   * LogicalResult verify(${C++ class of Op} op)

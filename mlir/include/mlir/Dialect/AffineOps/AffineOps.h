@@ -36,17 +36,6 @@ class OpBuilder;
 /// symbol.
 bool isTopLevelValue(Value value);
 
-class AffineOpsDialect : public Dialect {
-public:
-  AffineOpsDialect(MLIRContext *context);
-  static StringRef getDialectNamespace() { return "affine"; }
-
-  /// Materialize a single constant operation from a given attribute value with
-  /// the desired resultant type.
-  Operation *materializeConstant(OpBuilder &builder, Attribute value, Type type,
-                                 Location loc) override;
-};
-
 /// AffineDmaStartOp starts a non-blocking DMA operation that transfers data
 /// from a source memref to a destination memref. The source and destination
 /// memref need not be of the same dimensionality, but need to have the same
@@ -503,6 +492,8 @@ AffineApplyOp makeComposedAffineApply(OpBuilder &b, Location loc, AffineMap map,
 /// argument.
 void fullyComposeAffineMapAndOperands(AffineMap *map,
                                       SmallVectorImpl<Value> *operands);
+
+#include "mlir/Dialect/AffineOps/AffineOpsDialect.h.inc"
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/AffineOps/AffineOps.h.inc"

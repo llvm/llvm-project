@@ -15,10 +15,10 @@
 #define DIALECT_FXPMATHOPS_FXPMATH_OPS_
 
 include "mlir/IR/OpBase.td"
-include "mlir/Dialect/QuantOps/QuantPredicates.td"
+include "mlir/Dialect/QuantOps/QuantOpsBase.td"
 include "mlir/Interfaces/SideEffects.td"
 
-def fxpmath_Dialect : Dialect {
+def FxpMathOps_Dialect : Dialect {
   let name = "fxpmath";
 }
 
@@ -78,7 +78,7 @@ def fxpmath_CompareFnAttr : StrEnumAttr<"ComparisonFn",
 //===----------------------------------------------------------------------===//
 
 class fxpmath_Op<string mnemonic, list<OpTrait> traits> :
-    Op<fxpmath_Dialect, mnemonic, traits>;
+    Op<FxpMathOps_Dialect, mnemonic, traits>;
 
 //===----------------------------------------------------------------------===//
 // Fixed-point (fxp) arithmetic ops used by kernels.
