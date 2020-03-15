@@ -46,7 +46,8 @@ copy("arm_headers") {
     ":arm_sve",
   ]
   sources = get_target_outputs(":arm_neon") + get_target_outputs(":arm_fp16") +
-            get_target_outputs(":arm_mve")  + get_target_outputs(":arm_cde")
+            get_target_outputs(":arm_mve") + get_target_outputs(":arm_cde") +
+            get_target_outputs(":arm_sve")
   outputs = [ "$clang_resource_dir/include/{{source_file_part}}" ]
 }
 
