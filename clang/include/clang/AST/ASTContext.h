@@ -1275,6 +1275,12 @@ public:
   /// Returns a vla type where known sizes are replaced with [*].
   QualType getVariableArrayDecayedType(QualType Ty) const;
 
+  /// Return the unique reference to a scalable vector type of the specified
+  /// element type and scalable number of elements.
+  ///
+  /// \pre \p EltTy must be a built-in type.
+  QualType getScalableVectorType(QualType EltTy, unsigned NumElts) const;
+
   /// Return the unique reference to a vector type of the specified
   /// element type and size.
   ///
