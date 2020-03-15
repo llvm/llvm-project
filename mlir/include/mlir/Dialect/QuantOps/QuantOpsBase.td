@@ -1,4 +1,4 @@
-//===- QuantPredicates.td - Predicates for dialect types ---*- tablegen -*-===//
+//===- QuantOpsBase.td - Quantization dialect base ---------*- tablegen -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,8 +10,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef DIALECT_QUANTOPS_QUANT_PREDICATES_
-#define DIALECT_QUANTOPS_QUANT_PREDICATES_
+#ifndef DIALECT_QUANTOPS_QUANT_OPS_BASE_
+#define DIALECT_QUANTOPS_QUANT_OPS_BASE_
+
+include "mlir/IR/OpBase.td"
+
+def Quantization_Dialect : Dialect {
+  let name = "quant";
+}
 
 //===----------------------------------------------------------------------===//
 // Quantization type definitions
@@ -54,10 +60,12 @@ def quant_RealOrStorageValueType :
 
 // An implementation of UniformQuantizedType.
 def quant_UniformQuantizedType :
-    Type<CPred<"$_self.isa<UniformQuantizedType>()">, "UniformQuantizedType">;
+    DialectType<Quantization_Dialect,
+                CPred<"$_self.isa<UniformQuantizedType>()">,
+                "UniformQuantizedType">;
 
 // Predicate for detecting a container or primitive of UniformQuantizedType.
 def quant_UniformQuantizedValueType :
     quant_TypedPrimitiveOrContainer<quant_UniformQuantizedType>;
 
-#endif // DIALECT_QUANTOPS_QUANT_PREDICATES_
+#endif // DIALECT_QUANTOPS_QUANT_OPS_BASE_

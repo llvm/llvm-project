@@ -28,15 +28,13 @@ using namespace mlir::gpu;
 // GPUDialect
 //===----------------------------------------------------------------------===//
 
-StringRef GPUDialect::getDialectName() { return "gpu"; }
-
 bool GPUDialect::isKernel(Operation *op) {
   UnitAttr isKernelAttr = op->getAttrOfType<UnitAttr>(getKernelFuncAttrName());
   return static_cast<bool>(isKernelAttr);
 }
 
 GPUDialect::GPUDialect(MLIRContext *context)
-    : Dialect(getDialectName(), context) {
+    : Dialect(getDialectNamespace(), context) {
   addOperations<
 #define GET_OP_LIST
 #include "mlir/Dialect/GPU/GPUOps.cpp.inc"

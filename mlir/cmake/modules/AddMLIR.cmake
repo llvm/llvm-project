@@ -28,10 +28,11 @@ function(whole_archive_link target)
 endfunction(whole_archive_link)
 
 # Declare a dialect in the include directory
-function(add_mlir_dialect dialect dialect_doc_filename)
+function(add_mlir_dialect dialect dialect_namespace dialect_doc_filename)
   set(LLVM_TARGET_DEFINITIONS ${dialect}.td)
   mlir_tablegen(${dialect}.h.inc -gen-op-decls)
   mlir_tablegen(${dialect}.cpp.inc -gen-op-defs)
+  mlir_tablegen(${dialect}Dialect.h.inc -gen-dialect-decls -dialect=${dialect_namespace})
   add_public_tablegen_target(MLIR${dialect}IncGen)
   add_dependencies(mlir-headers MLIR${dialect}IncGen)
 

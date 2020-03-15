@@ -21,17 +21,7 @@
 namespace mlir {
 namespace quant {
 
-/// Defines the 'Quantization' dialect
-class QuantizationDialect : public Dialect {
-public:
-  QuantizationDialect(MLIRContext *context);
-
-  /// Parse a type registered to this dialect.
-  Type parseType(DialectAsmParser &parser) const override;
-
-  /// Print a type registered to this dialect.
-  void printType(Type type, DialectAsmPrinter &os) const override;
-};
+#include "mlir/Dialect/QuantOps/QuantOpsDialect.h.inc"
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/QuantOps/QuantOps.h.inc"

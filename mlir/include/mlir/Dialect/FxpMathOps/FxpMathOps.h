@@ -17,11 +17,7 @@
 namespace mlir {
 namespace fxpmath {
 
-/// Defines the 'FxpMathOps' dialect.
-class FxpMathOpsDialect : public Dialect {
-public:
-  FxpMathOpsDialect(MLIRContext *context);
-};
+#include "mlir/Dialect/FxpMathOps/FxpMathOpsDialect.h.inc"
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/FxpMathOps/FxpMathOps.h.inc"

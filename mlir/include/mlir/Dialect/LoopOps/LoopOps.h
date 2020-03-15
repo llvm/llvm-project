@@ -25,11 +25,7 @@ namespace loop {
 
 class TerminatorOp;
 
-class LoopOpsDialect : public Dialect {
-public:
-  LoopOpsDialect(MLIRContext *context);
-  static StringRef getDialectNamespace() { return "loop"; }
-};
+#include "mlir/Dialect/LoopOps/LoopOpsDialect.h.inc"
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/LoopOps/LoopOps.h.inc"
