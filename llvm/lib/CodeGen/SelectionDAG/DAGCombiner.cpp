@@ -555,6 +555,10 @@ namespace {
                               SDValue InnerPos, SDValue InnerNeg,
                               unsigned PosOpcode, unsigned NegOpcode,
                               const SDLoc &DL);
+    SDValue MatchFunnelPosNeg(SDValue N0, SDValue N1, SDValue Pos, SDValue Neg,
+                              SDValue InnerPos, SDValue InnerNeg,
+                              unsigned PosOpcode, unsigned NegOpcode,
+                              const SDLoc &DL);
     SDValue MatchRotate(SDValue LHS, SDValue RHS, const SDLoc &DL);
     SDValue MatchLoadCombine(SDNode *N);
     SDValue MatchStoreCombine(StoreSDNode *N);
@@ -6319,6 +6323,33 @@ SDValue DAGCombiner::MatchRotatePosNeg(SDValue Shifted, SDValue Pos,
   return SDValue();
 }
 
+// A subroutine of MatchRotate used once we have found an OR of two opposite
+// shifts of N0 + N1.  If Neg == <operand size> - Pos then the OR reduces
+// to both (PosOpcode N0, N1, Pos) and (NegOpcode N0, N1, Neg), with the
+// former being preferred if supported.  InnerPos and InnerNeg are Pos and
+// Neg with outer conversions stripped away.
+// TODO: Merge with MatchRotatePosNeg.
+SDValue DAGCombiner::MatchFunnelPosNeg(SDValue N0, SDValue N1, SDValue Pos,
+                                       SDValue Neg, SDValue InnerPos,
+                                       SDValue InnerNeg, unsigned PosOpcode,
+                                       unsigned NegOpcode, const SDLoc &DL) {
+  // fold (or (shl x0, (*ext y)),
+  //          (srl x1, (*ext (sub 32, y)))) ->
+  //   (fshl x0, x1, y) or (fshr x0, x1, (sub 32, y))
+  //
+  // fold (or (shl x0, (*ext (sub 32, y))),
+  //          (srl x1, (*ext y))) ->
+  //   (fshr x0, x1, y) or (fshl x0, x1, (sub 32, y))
+  EVT VT = N0.getValueType();
+  if (matchRotateSub(InnerPos, InnerNeg, VT.getScalarSizeInBits(), DAG)) {
+    bool HasPos = TLI.isOperationLegalOrCustom(PosOpcode, VT);
+    return DAG.getNode(HasPos ? PosOpcode : NegOpcode, DL, VT, N0, N1,
+                       HasPos ? Pos : Neg);
+  }
+
+  return SDValue();
+}
+
 // MatchRotate - Handle an 'or' of two operands.  If this is one of the many
 // idioms for rotate, and if the target supports rotation instructions, generate
 // a rot[lr]. This also matches funnel shift patterns, similar to rotation but
@@ -6444,10 +6475,6 @@ SDValue DAGCombiner::MatchRotate(SDValue LHS, SDValue RHS, const SDLoc &DL) {
     return Res;
   }
 
-  // TODO: Handle variable funnel shifts.
-  if (!IsRotate)
-    return SDValue();
-
   // If there is a mask here, and we have a variable shift, we can't be sure
   // that we're masking out the right stuff.
   if (LHSMask.getNode() || RHSMask.getNode())
@@ -6468,13 +6495,29 @@ SDValue DAGCombiner::MatchRotate(SDValue LHS, SDValue RHS, const SDLoc &DL) {
     RExtOp0 = RHSShiftAmt.getOperand(0);
   }
 
-  SDValue TryL = MatchRotatePosNeg(LHSShiftArg, LHSShiftAmt, RHSShiftAmt,
-                                   LExtOp0, RExtOp0, ISD::ROTL, ISD::ROTR, DL);
+  if (IsRotate && (HasROTL || HasROTR)) {
+    SDValue TryL =
+        MatchRotatePosNeg(LHSShiftArg, LHSShiftAmt, RHSShiftAmt, LExtOp0,
+                          RExtOp0, ISD::ROTL, ISD::ROTR, DL);
+    if (TryL)
+      return TryL;
+
+    SDValue TryR =
+        MatchRotatePosNeg(RHSShiftArg, RHSShiftAmt, LHSShiftAmt, RExtOp0,
+                          LExtOp0, ISD::ROTR, ISD::ROTL, DL);
+    if (TryR)
+      return TryR;
+  }
+
+  SDValue TryL =
+      MatchFunnelPosNeg(LHSShiftArg, RHSShiftArg, LHSShiftAmt, RHSShiftAmt,
+                        LExtOp0, RExtOp0, ISD::FSHL, ISD::FSHR, DL);
   if (TryL)
     return TryL;
 
-  SDValue TryR = MatchRotatePosNeg(RHSShiftArg, RHSShiftAmt, LHSShiftAmt,
-                                   RExtOp0, LExtOp0, ISD::ROTR, ISD::ROTL, DL);
+  SDValue TryR =
+      MatchFunnelPosNeg(LHSShiftArg, RHSShiftArg, RHSShiftAmt, LHSShiftAmt,
+                        RExtOp0, LExtOp0, ISD::FSHR, ISD::FSHL, DL);
   if (TryR)
     return TryR;
 
