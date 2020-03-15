@@ -1,6 +1,6 @@
 // RUN: llvm-objdump -d %p/Inputs/trivial.obj.elf-i386 \
 // RUN:     | FileCheck %s -check-prefix=WITHRAW
-// RUN: llvm-objdump -d -no-show-raw-insn %p/Inputs/trivial.obj.elf-i386 \
+// RUN: llvm-objdump -d --no-show-raw-insn %p/Inputs/trivial.obj.elf-i386 \
 // RUN:     | FileCheck %s -check-prefix=NORAW
 
 // Expect to find the raw incoding when run with raw output (default), but not

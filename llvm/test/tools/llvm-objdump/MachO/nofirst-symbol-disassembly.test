@@ -1,4 +1,4 @@
-// RUN: llvm-objdump -d -m %p/Inputs/nofirst-symbol.macho-x86_64 | FileCheck %s
+// RUN: llvm-objdump -d --macho %p/Inputs/nofirst-symbol.macho-x86_64 | FileCheck %s
 
 CHECK:        0:	90 	nop
 CHECK: _foo:

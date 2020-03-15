@@ -1,4 +1,4 @@
-@ RUN: llvm-mc < %s -triple armv7m -mattr=+vfp4 -filetype=obj | llvm-objdump -triple=thumb -d - | FileCheck %s
+@ RUN: llvm-mc < %s -triple armv7m -mattr=+vfp4 -filetype=obj | llvm-objdump --triple=thumb -d - | FileCheck %s
 
 .eabi_attribute Tag_CPU_arch, 10 // v7
 .eabi_attribute Tag_FP_arch, 0 // VFP4

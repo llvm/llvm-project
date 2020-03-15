@@ -1,6 +1,6 @@
-# RUN: llvm-objdump -macho -exports-trie -arch x86_64 \
+# RUN: llvm-objdump --macho --exports-trie --arch x86_64 \
 # RUN:   %p/Inputs/exports-trie.macho-x86_64 2>/dev/null | FileCheck %s
-# RUN: llvm-objdump -macho -exports-trie -arch x86_64 \
+# RUN: llvm-objdump --macho --exports-trie --arch x86_64 \
 # RUN:   %p/Inputs/weak-bind.macho-x86_64 2>/dev/null | FileCheck --check-prefix=EXE %s
 
 

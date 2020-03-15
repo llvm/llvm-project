@@ -10,12 +10,12 @@
 # CHECK-NEXT:   5 linking       0000006d 00000000
 # CHECK-NEXT:   6 reloc.CODE    0000000f 00000000
 
-# RUN: llvm-objdump -p %p/Inputs/trivial.obj.wasm | FileCheck %s -check-prefix CHECK-HEADER
+# RUN: llvm-objdump -p %p/Inputs/trivial.obj.wasm | FileCheck %s --check-prefix CHECK-HEADER
 
 # CHECK-HEADER: Program Header:
 # CHECK-HEADER: Version: 0x1
 
-# RUN: llvm-objdump -s --section=CODE %p/Inputs/trivial.obj.wasm | FileCheck %s -check-prefix CHECK-SECTIONS
+# RUN: llvm-objdump -s --section=CODE %p/Inputs/trivial.obj.wasm | FileCheck %s --check-prefix CHECK-SECTIONS
 
 # CHECK-SECTIONS: Contents of section CODE:
 # CHECK-SECTIONS: 0000 02170041 80808080 00108080 8080001a  ...A............

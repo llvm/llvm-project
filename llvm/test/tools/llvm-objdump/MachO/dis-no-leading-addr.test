@@ -1,4 +1,4 @@
-# RUN: llvm-objdump -m -d %p/Inputs/hello.obj.macho-x86_64 -no-show-raw-insn -print-imm-hex -no-leading-addr | FileCheck %s
+# RUN: llvm-objdump --macho -d %p/Inputs/hello.obj.macho-x86_64 --no-show-raw-insn --print-imm-hex --no-leading-addr | FileCheck %s
 
 # CHECK: (__TEXT,__text) section
 # CHECK: _main:

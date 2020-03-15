@@ -1,14 +1,14 @@
-// RUN: llvm-objdump -d -m -no-show-raw-insn -full-leading-addr -print-imm-hex %p/Inputs/hello.obj.macho-x86_64 | FileCheck %s -check-prefix=OBJ
-// RUN: llvm-objdump -d -m -no-show-raw-insn -full-leading-addr -print-imm-hex %p/Inputs/hello.exe.macho-x86_64 | FileCheck %s -check-prefix=EXE
-// RUN: llvm-objdump -d -m -no-show-raw-insn -full-leading-addr -print-imm-hex %p/Inputs/ObjC.obj.macho-x86_64 | FileCheck %s -check-prefix=ObjC-OBJ
-// RUN: llvm-objdump -d -m -no-show-raw-insn -full-leading-addr -print-imm-hex %p/Inputs/ObjC.exe.macho-x86_64 | FileCheck %s -check-prefix=ObjC-EXE
-// RUN: llvm-objdump -d -m -no-show-raw-insn -full-leading-addr -print-imm-hex %p/Inputs/hello_cpp.exe.macho-x86_64 | FileCheck %s -check-prefix=CXX-EXE
+// RUN: llvm-objdump -d --macho --no-show-raw-insn --full-leading-addr --print-imm-hex %p/Inputs/hello.obj.macho-x86_64 | FileCheck %s --check-prefix=OBJ
+// RUN: llvm-objdump -d --macho --no-show-raw-insn --full-leading-addr --print-imm-hex %p/Inputs/hello.exe.macho-x86_64 | FileCheck %s --check-prefix=EXE
+// RUN: llvm-objdump -d --macho --no-show-raw-insn --full-leading-addr --print-imm-hex %p/Inputs/ObjC.obj.macho-x86_64 | FileCheck %s --check-prefix=ObjC-OBJ
+// RUN: llvm-objdump -d --macho --no-show-raw-insn --full-leading-addr --print-imm-hex %p/Inputs/ObjC.exe.macho-x86_64 | FileCheck %s --check-prefix=ObjC-EXE
+// RUN: llvm-objdump -d --macho --no-show-raw-insn --full-leading-addr --print-imm-hex %p/Inputs/hello_cpp.exe.macho-x86_64 | FileCheck %s --check-prefix=CXX-EXE
 
-// RUN: llvm-objdump -d -m -no-show-raw-insn -full-leading-addr -print-imm-hex %p/Inputs/hello.obj.macho-i386 | FileCheck %s -check-prefix=i386-OBJ
-// RUN: llvm-objdump -d -m -no-show-raw-insn -full-leading-addr -print-imm-hex %p/Inputs/hello.exe.macho-i386 | FileCheck %s -check-prefix=i386-EXE
+// RUN: llvm-objdump -d --macho --no-show-raw-insn --full-leading-addr --print-imm-hex %p/Inputs/hello.obj.macho-i386 | FileCheck %s --check-prefix=i386-OBJ
+// RUN: llvm-objdump -d --macho --no-show-raw-insn --full-leading-addr --print-imm-hex %p/Inputs/hello.exe.macho-i386 | FileCheck %s --check-prefix=i386-EXE
 
-// RUN: llvm-objdump -d -m -no-show-raw-insn -full-leading-addr -print-imm-hex -no-symbolic-operands %p/Inputs/hello.obj.macho-x86_64 | FileCheck %s -check-prefix=NO-SYM-OPS-OBJ
-// RUN: llvm-objdump -d -m -no-show-raw-insn -full-leading-addr -print-imm-hex -no-symbolic-operands %p/Inputs/hello.exe.macho-x86_64 | FileCheck %s -check-prefix=NO-SYM-OPS-EXE
+// RUN: llvm-objdump -d --macho --no-show-raw-insn --full-leading-addr --print-imm-hex --no-symbolic-operands %p/Inputs/hello.obj.macho-x86_64 | FileCheck %s --check-prefix=NO-SYM-OPS-OBJ
+// RUN: llvm-objdump -d --macho --no-show-raw-insn --full-leading-addr --print-imm-hex --no-symbolic-operands %p/Inputs/hello.exe.macho-x86_64 | FileCheck %s --check-prefix=NO-SYM-OPS-EXE
 
 OBJ: 0000000000000008	leaq	L_.str(%rip), %rax      ## literal pool for: "Hello world\n"
 OBJ: 0000000000000026	callq	_printf

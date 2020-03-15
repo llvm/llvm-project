@@ -1,5 +1,5 @@
 @ RUN: llvm-mc < %s -triple armv7-apple-darwin -filetype=obj | llvm-objdump -m -d - | FileCheck %s
-@ RUN: llvm-mc < %s -triple armv7-apple-darwin -filetype=obj | llvm-objdump -arch armv7 -m -d - | FileCheck %s
+@ RUN: llvm-mc < %s -triple armv7-apple-darwin -filetype=obj | llvm-objdump --arch armv7 -m -d - | FileCheck %s
 
 .thumb
 .thumb_func _t

@@ -1,4 +1,4 @@
-@ RUN: llvm-mc < %s -triple armv5tej-elf -filetype=obj | llvm-objdump -triple=arm -d - | FileCheck %s
+@ RUN: llvm-mc < %s -triple armv5tej-elf -filetype=obj | llvm-objdump --triple=arm -d - | FileCheck %s
 
 bxj:
 bxj r0

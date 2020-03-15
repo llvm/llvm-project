@@ -1,4 +1,4 @@
-# RUN: llvm-mc < %s -triple x86_64-darwin -filetype=obj | llvm-objdump -m -objc-meta-data - | FileCheck %s
+# RUN: llvm-mc < %s --triple x86_64-darwin -filetype=obj | llvm-objdump --macho --objc-meta-data - | FileCheck %s
 
 .section	__DATA,__objc_imageinfo,regular,no_dead_strip
 .long	0

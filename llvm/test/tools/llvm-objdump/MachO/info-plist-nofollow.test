@@ -1,4 +1,4 @@
-# RUN: llvm-mc < %s -triple x86_64-apple-darwin -filetype=obj | llvm-objdump -m -info-plist - | FileCheck %s
+# RUN: llvm-mc < %s --triple x86_64-apple-darwin -filetype=obj | llvm-objdump --macho --info-plist - | FileCheck %s
 
 .section  __TEXT, __info_plist
 .ascii "This is the (__TEXT,__info_plist) section\n"

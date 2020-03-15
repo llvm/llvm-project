@@ -1,11 +1,11 @@
-# RUN: llvm-objdump -m -objc-meta-data %p/Inputs/Objc2.64bit.exe.macho-x86_64 | FileCheck %s -check-prefix=OBJC2_64BIT_EXE
-# RUN: llvm-objdump -m -objc-meta-data %p/Inputs/Objc2.64bit.obj.macho-x86_64 | FileCheck %s -check-prefix=OBJC2_64BIT_OBJ
-# RUN: llvm-objdump -m -objc-meta-data %p/Inputs/Objc2.32bit.exe.macho-i386 | FileCheck %s -check-prefix=OBJC2_32BIT_EXE
-# RUN: llvm-objdump -m -objc-meta-data %p/Inputs/Objc2.32bit.obj.macho-i386 | FileCheck %s -check-prefix=OBJC2_32BIT_OBJ
-# RUN: llvm-objdump -m -objc-meta-data %p/Inputs/Objc1.32bit.exe.macho-i386 | FileCheck %s -check-prefix=OBJC1_32BIT_EXE
-# RUN: llvm-objdump -m -objc-meta-data %p/Inputs/Objc1.32bit.obj.macho-i386 | FileCheck %s -check-prefix=OBJC1_32BIT_OBJ
-# RUN: llvm-objdump -m -section __OBJC,__protocol %p/Inputs/Objc1.32bit.exe.macho-i386 | FileCheck %s -check-prefix=PROTOCOL
-# RUN: llvm-objdump -m -objc-meta-data %p/Inputs/Objc2.64bit.obj.dylib-x86_64 | FileCheck %s -check-prefix=OBJC2_64BIT_DYLIB
+# RUN: llvm-objdump --macho --objc-meta-data %p/Inputs/Objc2.64bit.exe.macho-x86_64 | FileCheck %s --check-prefix=OBJC2_64BIT_EXE
+# RUN: llvm-objdump --macho --objc-meta-data %p/Inputs/Objc2.64bit.obj.macho-x86_64 | FileCheck %s --check-prefix=OBJC2_64BIT_OBJ
+# RUN: llvm-objdump --macho --objc-meta-data %p/Inputs/Objc2.32bit.exe.macho-i386 | FileCheck %s --check-prefix=OBJC2_32BIT_EXE
+# RUN: llvm-objdump --macho --objc-meta-data %p/Inputs/Objc2.32bit.obj.macho-i386 | FileCheck %s --check-prefix=OBJC2_32BIT_OBJ
+# RUN: llvm-objdump --macho --objc-meta-data %p/Inputs/Objc1.32bit.exe.macho-i386 | FileCheck %s --check-prefix=OBJC1_32BIT_EXE
+# RUN: llvm-objdump --macho --objc-meta-data %p/Inputs/Objc1.32bit.obj.macho-i386 | FileCheck %s --check-prefix=OBJC1_32BIT_OBJ
+# RUN: llvm-objdump --macho --section __OBJC,__protocol %p/Inputs/Objc1.32bit.exe.macho-i386 | FileCheck %s --check-prefix=PROTOCOL
+# RUN: llvm-objdump --macho --objc-meta-data %p/Inputs/Objc2.64bit.obj.dylib-x86_64 | FileCheck %s --check-prefix=OBJC2_64BIT_DYLIB
 
 OBJC2_64BIT_EXE: Contents of (__DATA,__objc_classlist) section
 OBJC2_64BIT_EXE: 0000000100002028 0x1000029f0

@@ -1,5 +1,5 @@
-; RUN: llvm-objdump -disassemble -line-numbers %p/Inputs/embedded-source | FileCheck --check-prefix=LINE %s
-; RUN: llvm-objdump -disassemble -source       %p/Inputs/embedded-source | FileCheck --check-prefix=SOURCE %s
+; RUN: llvm-objdump --disassemble --line-numbers %p/Inputs/embedded-source | FileCheck --check-prefix=LINE %s
+; RUN: llvm-objdump --disassemble --source       %p/Inputs/embedded-source | FileCheck --check-prefix=SOURCE %s
 ; REQUIRES: x86-registered-target
 
 ; Source for embedded-source.c

@@ -1,7 +1,7 @@
-// RUN: llvm-objdump -d -m -no-show-raw-insn -full-leading-addr -print-imm-hex %p/Inputs/hello.obj.macho-aarch64 | FileCheck %s -check-prefix=OBJ
-// RUN: llvm-objdump -d -m -no-show-raw-insn -full-leading-addr -print-imm-hex %p/Inputs/hello.exe.macho-aarch64 | FileCheck %s -check-prefix=EXE
-// RUN: llvm-objdump -d -m -no-show-raw-insn -full-leading-addr -print-imm-hex %p/Inputs/ObjC.obj.macho-aarch64 | FileCheck %s -check-prefix=ObjC-OBJ
-// RUN: llvm-objdump -d -m -no-show-raw-insn -full-leading-addr -print-imm-hex %p/Inputs/ObjC.exe.macho-aarch64 | FileCheck %s -check-prefix=ObjC-EXE
+// RUN: llvm-objdump -d -m --no-show-raw-insn --full-leading-addr --print-imm-hex %p/Inputs/hello.obj.macho-aarch64 | FileCheck %s --check-prefix=OBJ
+// RUN: llvm-objdump -d -m --no-show-raw-insn --full-leading-addr --print-imm-hex %p/Inputs/hello.exe.macho-aarch64 | FileCheck %s --check-prefix=EXE
+// RUN: llvm-objdump -d -m --no-show-raw-insn --full-leading-addr --print-imm-hex %p/Inputs/ObjC.obj.macho-aarch64 | FileCheck %s --check-prefix=ObjC-OBJ
+// RUN: llvm-objdump -d -m --no-show-raw-insn --full-leading-addr --print-imm-hex %p/Inputs/ObjC.exe.macho-aarch64 | FileCheck %s --check-prefix=ObjC-EXE
 
 OBJ: 000000000000001c	adrp	x0, L_.str@PAGE
 OBJ: 0000000000000020	add	x0, x0, L_.str@PAGEOFF

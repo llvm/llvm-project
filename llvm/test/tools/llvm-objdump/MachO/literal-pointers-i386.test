@@ -1,5 +1,5 @@
-# RUN: llvm-mc < %s -triple i386-apple-darwin -filetype=obj | llvm-objdump -m -section __DATA,__litp - | FileCheck %s
-# RUN: llvm-mc < %s -triple i386-apple-darwin -filetype=obj | llvm-objdump -m -section __DATA,__litp -non-verbose - | FileCheck %s -check-prefix=NON-VERBOSE
+# RUN: llvm-mc < %s --triple i386-apple-darwin -filetype=obj | llvm-objdump --macho --section __DATA,__litp - | FileCheck %s
+# RUN: llvm-mc < %s --triple i386-apple-darwin -filetype=obj | llvm-objdump --macho --section __DATA,__litp --non-verbose - | FileCheck %s --check-prefix=NON-VERBOSE
 
 .cstring
 L1: .asciz "Hello world\n"

@@ -1,9 +1,9 @@
-# RUN: llvm-mc < %s -triple x86_64-apple-darwin -filetype=obj | llvm-objdump -m -section __TEXT,__literal4 - | FileCheck %s -check-prefix=CHECK-LIT4
-# RUN: llvm-mc < %s -triple x86_64-apple-darwin -filetype=obj | llvm-objdump -m -section __TEXT,__literal4 -non-verbose - | FileCheck %s -check-prefix=NON-VERBOSE-LIT4
-# RUN: llvm-mc < %s -triple x86_64-apple-darwin -filetype=obj | llvm-objdump -m -section __TEXT,__literal8 - | FileCheck %s -check-prefix=CHECK-LIT8
-# RUN: llvm-mc < %s -triple x86_64-apple-darwin -filetype=obj | llvm-objdump -m -section __TEXT,__literal8 -non-verbose - | FileCheck %s -check-prefix=NON-VERBOSE-LIT8
-# RUN: llvm-mc < %s -triple x86_64-apple-darwin -filetype=obj | llvm-objdump -m -section __TEXT,__literal16 - | FileCheck %s -check-prefix=CHECK-LIT16
-# RUN: llvm-mc < %s -triple x86_64-apple-darwin -filetype=obj | llvm-objdump -m -section __TEXT,__literal16 -non-verbose - | FileCheck %s -check-prefix=NON-VERBOSE-LIT16
+# RUN: llvm-mc < %s --triple x86_64-apple-darwin -filetype=obj | llvm-objdump --macho --section __TEXT,__literal4 - | FileCheck %s --check-prefix=CHECK-LIT4
+# RUN: llvm-mc < %s --triple x86_64-apple-darwin -filetype=obj | llvm-objdump --macho --section __TEXT,__literal4 --non-verbose - | FileCheck %s --check-prefix=NON-VERBOSE-LIT4
+# RUN: llvm-mc < %s --triple x86_64-apple-darwin -filetype=obj | llvm-objdump --macho --section __TEXT,__literal8 - | FileCheck %s --check-prefix=CHECK-LIT8
+# RUN: llvm-mc < %s --triple x86_64-apple-darwin -filetype=obj | llvm-objdump --macho --section __TEXT,__literal8 --non-verbose - | FileCheck %s --check-prefix=NON-VERBOSE-LIT8
+# RUN: llvm-mc < %s --triple x86_64-apple-darwin -filetype=obj | llvm-objdump --macho --section __TEXT,__literal16 - | FileCheck %s --check-prefix=CHECK-LIT16
+# RUN: llvm-mc < %s --triple x86_64-apple-darwin -filetype=obj | llvm-objdump --macho --section __TEXT,__literal16 --non-verbose - | FileCheck %s --check-prefix=NON-VERBOSE-LIT16
 
 .literal4
 .float 2.5
