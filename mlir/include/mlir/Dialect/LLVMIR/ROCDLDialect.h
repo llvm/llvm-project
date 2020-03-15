@@ -33,12 +33,7 @@ namespace ROCDL {
 #define GET_OP_CLASSES
 #include "mlir/Dialect/LLVMIR/ROCDLOps.h.inc"
 
-class ROCDLDialect : public Dialect {
-public:
-  explicit ROCDLDialect(MLIRContext *context);
-
-  static StringRef getDialectNamespace() { return "rocdl"; }
-};
+#include "mlir/Dialect/LLVMIR/ROCDLOpsDialect.h.inc"
 
 } // namespace ROCDL
 } // namespace mlir

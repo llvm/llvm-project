@@ -17,14 +17,15 @@ include "mlir/Dialect/AffineOps/AffineOpsBase.td"
 include "mlir/Interfaces/LoopLikeInterface.td"
 include "mlir/Interfaces/SideEffects.td"
 
-def Affine_Dialect : Dialect {
+def AffineOps_Dialect : Dialect {
   let name = "affine";
   let cppNamespace = "";
+  let hasConstantMaterializer = 1;
 }
 
 // Base class for Affine dialect ops.
 class Affine_Op<string mnemonic, list<OpTrait> traits = []> :
-    Op<Affine_Dialect, mnemonic, traits> {
+    Op<AffineOps_Dialect, mnemonic, traits> {
   // For every affine op, there needs to be a:
   //   * void print(OpAsmPrinter &p, ${C++ class of Op} op)
   //   * LogicalResult verify(${C++ class of Op} op)
@@ -290,7 +291,7 @@ def AffineIfOp : Affine_Op<"if",
 }
 
 class AffineMinMaxOpBase<string mnemonic, list<OpTrait> traits = []> :
-    Op<Affine_Dialect, mnemonic, traits> {
+    Op<AffineOps_Dialect, mnemonic, traits> {
   let arguments = (ins AffineMapAttr:$map, Variadic<Index>:$operands);
   let results = (outs Index);
 

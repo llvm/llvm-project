@@ -21,13 +21,6 @@
 namespace mlir {
 namespace shape {
 
-/// This dialect contains shape inference related operations and facilities.
-class ShapeDialect : public Dialect {
-public:
-  /// Create the dialect in the given `context`.
-  explicit ShapeDialect(MLIRContext *context);
-};
-
 namespace ShapeTypes {
 enum Kind {
   Component = Type::FIRST_SHAPE_TYPE,
@@ -111,6 +104,8 @@ public:
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Shape/IR/ShapeOps.h.inc"
+
+#include "mlir/Dialect/Shape/IR/ShapeOpsDialect.h.inc"
 
 } // namespace shape
 } // namespace mlir

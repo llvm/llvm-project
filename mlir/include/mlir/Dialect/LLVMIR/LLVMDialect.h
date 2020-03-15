@@ -201,32 +201,7 @@ private:
 #define GET_OP_CLASSES
 #include "mlir/Dialect/LLVMIR/LLVMOps.h.inc"
 
-class LLVMDialect : public Dialect {
-public:
-  explicit LLVMDialect(MLIRContext *context);
-  ~LLVMDialect();
-  static StringRef getDialectNamespace() { return "llvm"; }
-
-  llvm::LLVMContext &getLLVMContext();
-  llvm::Module &getLLVMModule();
-
-  /// Parse a type registered to this dialect.
-  Type parseType(DialectAsmParser &parser) const override;
-
-  /// Print a type registered to this dialect.
-  void printType(Type type, DialectAsmPrinter &os) const override;
-
-  /// Verify a region argument attribute registered to this dialect.
-  /// Returns failure if the verification failed, success otherwise.
-  LogicalResult verifyRegionArgAttribute(Operation *op, unsigned regionIdx,
-                                         unsigned argIdx,
-                                         NamedAttribute argAttr) override;
-
-private:
-  friend LLVMType;
-
-  std::unique_ptr<detail::LLVMDialectImpl> impl;
-};
+#include "mlir/Dialect/LLVMIR/LLVMOpsDialect.h.inc"
 
 /// Create an LLVM global containing the string "value" at the module containing
 /// surrounding the insertion point of builder. Obtain the address of that
