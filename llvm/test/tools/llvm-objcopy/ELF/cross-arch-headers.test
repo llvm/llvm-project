@@ -133,16 +133,16 @@ Symbols:
     Binding:  STB_GLOBAL
 
 # CHECK: Format:
-# 32-SAME:      ELF32-
-# 64-SAME:      ELF64-
+# 32-SAME:      elf32-
+# 64-SAME:      elf64-
 # I386-SAME:    i386
 # IAMCU-SAME:   iamcu
 # AARCH-SAME:   aarch64
-# ARM-SAME:     arm-little
+# ARM-SAME:     littlearm
 # MIPS-SAME:    mips
-# PPC-SAME:     ppc{{$}}
-# PPC64BE-SAME: ppc64{{$}}
-# PPC64LE-SAME: ppc64{{$}}
+# PPC-SAME:     powerpc{{$}}
+# PPC64BE-SAME: powerpc{{$}}
+# PPC64LE-SAME: powerpc{{$}}
 # RISCV32-SAME: riscv{{$}}
 # RISCV64-SAME: riscv{{$}}
 # SPARC-SAME:   sparc

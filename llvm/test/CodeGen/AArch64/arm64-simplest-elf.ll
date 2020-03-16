@@ -11,7 +11,7 @@ define void @foo() nounwind {
 
   ; Similarly make sure ELF output works and is vaguely sane: aarch64 target
   ; machine with correct section & symbol names.
-; CHECK-ELF: file format elf64-aarch64
+; CHECK-ELF: file format elf64-littleaarch64
 
 ; CHECK-ELF: Disassembly of section .text
 ; CHECK-ELF-LABEL: <foo>:

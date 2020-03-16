@@ -13,7 +13,7 @@
 
 # LLVM: {{^$}}
 # LLVM-NEXT: File: [[ARFILE]](trivial.obj.elf-x86-64)
-# LLVM: Format: ELF64-x86-64
+# LLVM: Format: elf64-x86-64
 # LLVM: ElfHeader {
 # LLVM:   Machine: EM_X86_64
 # LLVM: Sections [
@@ -33,7 +33,7 @@
 
 # LLVM-EMPTY:
 # LLVM-NEXT: File: [[ARFILE]](trivial.obj.elf-i386)
-# LLVM: Format: ELF32-i386
+# LLVM: Format: elf32-i386
 # LLVM: ElfHeader {
 # LLVM:   Machine: EM_386
 # LLVM: Sections [

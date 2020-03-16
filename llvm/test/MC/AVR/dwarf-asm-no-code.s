@@ -8,7 +8,7 @@
 a:
 .long 42
 
-// DWARF: ELF32-avr
+// DWARF: elf32-avr
 // DWARF-NOT: contents:
 // DWARF: .debug_line contents:
 
