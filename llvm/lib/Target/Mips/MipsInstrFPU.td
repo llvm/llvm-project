@@ -456,6 +456,12 @@ let DecoderNamespace = "MipsFP64" in {
     def PLU_PS64    : ADDS_FT<"plu.ps", FGR64Opnd, II_CVT, 0>,
                       ADDS_FM<0x2D, 22>,
                       ISA_MIPS32R2_NOT_32R6_64R6, FGR_64;
+    def PUL_PS64    : ADDS_FT<"pul.ps", FGR64Opnd, II_CVT, 0>,
+                      ADDS_FM<0x2E, 22>,
+                      ISA_MIPS32R2_NOT_32R6_64R6, FGR_64;
+    def PUU_PS64    : ADDS_FT<"puu.ps", FGR64Opnd, II_CVT, 0>,
+                      ADDS_FM<0x2F, 22>,
+                      ISA_MIPS32R2_NOT_32R6_64R6, FGR_64;
 
     def CVT_S_PU64  : ABSS_FT<"cvt.s.pu", FGR32Opnd, FGR64Opnd, II_CVT>,
                       ABSS_FM<0x20, 22>,
