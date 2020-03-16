@@ -27,8 +27,7 @@ entry:
 define float @fdiv_true_sink(float %a, float %b) {
 ; CHECK-LABEL: @fdiv_true_sink(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SEL_FR:%.*]] = freeze float [[A:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt float [[SEL_FR]], 1.000000e+00
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt float [[A:%.*]], 1.000000e+00
 ; CHECK-NEXT:    br i1 [[CMP]], label [[SELECT_TRUE_SINK:%.*]], label [[SELECT_END:%.*]]
 ; CHECK:       select.true.sink:
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv float [[A]], [[B:%.*]]
@@ -39,8 +38,7 @@ define float @fdiv_true_sink(float %a, float %b) {
 ;
 ; DEBUG-LABEL: @fdiv_true_sink(
 ; DEBUG-NEXT:  entry:
-; DEBUG-NEXT:    [[SEL_FR:%.*]] = freeze float [[A:%.*]]
-; DEBUG-NEXT:    [[CMP:%.*]] = fcmp ogt float [[SEL_FR]], 1.000000e+00, !dbg !24
+; DEBUG-NEXT:    [[CMP:%.*]] = fcmp ogt float [[A:%.*]], 1.000000e+00
 ; DEBUG-NEXT:    call void @llvm.dbg.value(metadata i1 [[CMP]]
 ; DEBUG-NEXT:    br i1 [[CMP]], label [[SELECT_TRUE_SINK:%.*]], label [[SELECT_END:%.*]], !dbg
 ; DEBUG:       select.true.sink:
@@ -62,8 +60,7 @@ entry:
 define float @fdiv_false_sink(float %a, float %b) {
 ; CHECK-LABEL: @fdiv_false_sink(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SEL_FR:%.*]] = freeze float [[A:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt float [[SEL_FR]], 3.000000e+00
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt float [[A:%.*]], 3.000000e+00
 ; CHECK-NEXT:    br i1 [[CMP]], label [[SELECT_END:%.*]], label [[SELECT_FALSE_SINK:%.*]]
 ; CHECK:       select.false.sink:
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv float [[A]], [[B:%.*]]
@@ -74,8 +71,7 @@ define float @fdiv_false_sink(float %a, float %b) {
 ;
 ; DEBUG-LABEL: @fdiv_false_sink(
 ; DEBUG-NEXT:  entry:
-; DEBUG-NEXT:    [[SEL_FR:%.*]] = freeze float [[A:%.*]]
-; DEBUG-NEXT:    [[CMP:%.*]] = fcmp ogt float [[SEL_FR]], 3.000000e+00, !dbg !33
+; DEBUG-NEXT:    [[CMP:%.*]] = fcmp ogt float [[A:%.*]], 3.000000e+00
 ; DEBUG-NEXT:    call void @llvm.dbg.value(metadata i1 [[CMP]]
 ; DEBUG-NEXT:    br i1 [[CMP]], label [[SELECT_END:%.*]], label [[SELECT_FALSE_SINK:%.*]], !dbg
 ; DEBUG:       select.false.sink:
@@ -97,8 +93,7 @@ entry:
 define float @fdiv_both_sink(float %a, float %b) {
 ; CHECK-LABEL: @fdiv_both_sink(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SEL_FR:%.*]] = freeze float [[A:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt float [[SEL_FR]], 5.000000e+00
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt float [[A:%.*]], 5.000000e+00
 ; CHECK-NEXT:    br i1 [[CMP]], label [[SELECT_TRUE_SINK:%.*]], label [[SELECT_FALSE_SINK:%.*]]
 ; CHECK:       select.true.sink:
 ; CHECK-NEXT:    [[DIV1:%.*]] = fdiv float [[A]], [[B:%.*]]

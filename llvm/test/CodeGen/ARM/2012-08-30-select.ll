@@ -2,9 +2,9 @@
 ; rdar://12201387
 
 ;CHECK-LABEL: select_s_v_v:
-;CHECK: vmov.i32
 ;CHECK: vmov
 ;CHECK-NEXT: vmov
+;CHECK: vmov.i32
 ;CHECK: bx
 define <16 x i8> @select_s_v_v(<16 x i8> %vec, i32 %avail) {
 entry:

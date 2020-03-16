@@ -7,8 +7,7 @@ target triple = "x86_64-unknown-linux-gnu"
 define i1 @PR41004(i32 %x, i32 %y, i32 %t1) {
 ; CHECK-LABEL: @PR41004(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[MUL_FR:%.*]] = freeze i32 [[Y:%.*]]
-; CHECK-NEXT:    [[T0:%.*]] = icmp eq i32 [[MUL_FR]], 1
+; CHECK-NEXT:    [[T0:%.*]] = icmp eq i32 [[Y:%.*]], 1
 ; CHECK-NEXT:    br i1 [[T0]], label [[SELECT_TRUE_SINK:%.*]], label [[SELECT_END:%.*]]
 ; CHECK:       select.true.sink:
 ; CHECK-NEXT:    [[REM:%.*]] = srem i32 [[X:%.*]], 2
