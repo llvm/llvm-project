@@ -2,13 +2,13 @@
 
 ## Test we use the "Entries" property when it is possible to dump values correctly.
 
-# RUN: yaml2obj --docnum=1 %s -o %t.le64
+# RUN: yaml2obj -D BITS=64 -D ENCODE=LSB %s -o %t.le64
 # RUN: obj2yaml %t.le64 | FileCheck %s --check-prefix=BASIC
-# RUN: yaml2obj --docnum=2 %s -o %t.be64
+# RUN: yaml2obj -D BITS=64 -D ENCODE=MSB %s -o %t.be64
 # RUN: obj2yaml %t.be64 | FileCheck %s --check-prefix=BASIC
-# RUN: yaml2obj --docnum=3 %s -o %t.le32
+# RUN: yaml2obj -D BITS=32 -D ENCODE=LSB %s -o %t.le32
 # RUN: obj2yaml %t.le32 | FileCheck %s --check-prefix=BASIC
-# RUN: yaml2obj --docnum=4 %s -o %t.be32
+# RUN: yaml2obj -D BITS=32 -D ENCODE=MSB %s -o %t.be32
 # RUN: obj2yaml %t.be32 | FileCheck %s --check-prefix=BASIC
 
 # BASIC:      Sections:
@@ -25,75 +25,12 @@
 # BASIC-NEXT:         Weight: 98
 # BASIC-NEXT: Symbols:
 
-## TODO: we should really improve yaml2obj somehow to be able to collapse
-##       the following four YAML descriptions into a single one.
-
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
+  Class:   ELFCLASS[[BITS]]
+  Data:    ELFDATA2[[ENCODE]]
   Type:    ET_DYN
-  Machine: EM_X86_64
-Sections:
-  - Name: .llvm.call-graph-profile
-    Type: SHT_LLVM_CALL_GRAPH_PROFILE
-    Entries:
-      - From:   1
-        To:     2
-        Weight: 89
-      - From:   2
-        To:     1
-        Weight: 98
-Symbols:
-  - Name: foo
-  - Name: bar
-
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2MSB
-  Type:    ET_DYN
-  Machine: EM_X86_64
-Sections:
-  - Name: .llvm.call-graph-profile
-    Type: SHT_LLVM_CALL_GRAPH_PROFILE
-    Entries:
-      - From:   1
-        To:     2
-        Weight: 89
-      - From:   2
-        To:     1
-        Weight: 98
-Symbols:
-  - Name: foo
-  - Name: bar
-
---- !ELF
-FileHeader:
-  Class:   ELFCLASS32
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_386
-Sections:
-  - Name: .llvm.call-graph-profile
-    Type: SHT_LLVM_CALL_GRAPH_PROFILE
-    Entries:
-      - From:   1
-        To:     2
-        Weight: 89
-      - From:   2
-        To:     1
-        Weight: 98
-Symbols:
-  - Name: foo
-  - Name: bar
-
---- !ELF
-FileHeader:
-  Class:   ELFCLASS32
-  Data:    ELFDATA2MSB
-  Type:    ET_DYN
-  Machine: EM_386
+  Machine: EM_NONE
 Sections:
   - Name: .llvm.call-graph-profile
     Type: SHT_LLVM_CALL_GRAPH_PROFILE
@@ -110,7 +47,7 @@ Symbols:
 
 ## Check how we handle broken cases.
 
-# RUN: yaml2obj --docnum=5 %s -o %t.invalid
+# RUN: yaml2obj --docnum=2 %s -o %t.invalid
 # RUN: obj2yaml %t.invalid | FileCheck %s --check-prefix=INVALID
 
 # INVALID:      --- !ELF
