@@ -16,9 +16,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm-objdump.h"
-#include "llvm/ADT/IndexedMap.h"
 #include "llvm/ADT/Optional.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/StringExtras.h"
@@ -71,8 +69,6 @@
 #include <system_error>
 #include <unordered_map>
 #include <utility>
-
-#define DEBUG_TYPE "objdump"
 
 using namespace llvm::object;
 
@@ -338,28 +334,6 @@ static cl::opt<bool>
          cl::cat(ObjdumpCat));
 static cl::alias WideShort("w", cl::Grouping, cl::aliasopt(Wide));
 
-enum DebugVarsFormat {
-  DVDisabled,
-  DVUnicode,
-  DVASCII,
-};
-
-static cl::opt<DebugVarsFormat> DbgVariables(
-    "debug-vars", cl::init(DVDisabled),
-    cl::desc("Print the locations (in registers or memory) of "
-             "source-level variables alongside disassembly"),
-    cl::ValueOptional,
-    cl::values(clEnumValN(DVUnicode, "", "unicode"),
-               clEnumValN(DVUnicode, "unicode", "unicode"),
-               clEnumValN(DVASCII, "ascii", "unicode")),
-    cl::cat(ObjdumpCat));
-
-static cl::opt<int>
-    DbgIndent("debug-vars-indent", cl::init(40),
-              cl::desc("Distance to indent the source-level variable display, "
-                       "relative to the start of the disassembly"),
-              cl::cat(ObjdumpCat));
-
 static cl::extrahelp
     HelpResponse("\nPass @FILE as argument to read options from FILE.\n");
 
@@ -562,357 +536,6 @@ static bool getHidden(RelocationRef RelRef) {
 }
 
 namespace {
-
-/// Get the column at which we want to start printing the instruction
-/// disassembly, taking into account anything which appears to the left of it.
-unsigned getInstStartColumn() {
-  return NoShowRawInsn ? 16 : 40;
-}
-
-/// Stores a single expression representing the location of a source-level
-/// variable, along with the PC range for which that expression is valid.
-struct LiveVariable {
-  DWARFLocationExpression LocExpr;
-  const char *VarName;
-  DWARFUnit *Unit;
-  const DWARFDie FuncDie;
-
-  LiveVariable(const DWARFLocationExpression &LocExpr, const char *VarName,
-               DWARFUnit *Unit, const DWARFDie FuncDie)
-      : LocExpr(LocExpr), VarName(VarName), Unit(Unit), FuncDie(FuncDie) {}
-
-  bool liveAtAddress(object::SectionedAddress Addr) {
-    if (LocExpr.Range == None)
-      return false;
-    return LocExpr.Range->SectionIndex == Addr.SectionIndex &&
-           LocExpr.Range->LowPC <= Addr.Address &&
-           LocExpr.Range->HighPC > Addr.Address;
-  }
-
-  void print(raw_ostream &OS, const MCRegisterInfo &MRI) const {
-    DataExtractor Data({LocExpr.Expr.data(), LocExpr.Expr.size()},
-                       Unit->getContext().isLittleEndian(), 0);
-    DWARFExpression Expression(Data, Unit->getAddressByteSize());
-    Expression.printCompact(OS, MRI);
-  }
-};
-
-/// Helper class for printing source variable locations alongside disassembly.
-class LiveVariablePrinter {
-  // Information we want to track about one column in which we are printing a
-  // variable live range.
-  struct Column {
-    unsigned VarIdx = NullVarIdx;
-    bool LiveIn = false;
-    bool LiveOut = false;
-    bool MustDrawLabel  = false;
-
-    bool isActive() const { return VarIdx != NullVarIdx; }
-
-    static constexpr unsigned NullVarIdx = std::numeric_limits<unsigned>::max();
-  };
-
-  // All live variables we know about in the object/image file.
-  std::vector<LiveVariable> LiveVariables;
-
-  // The columns we are currently drawing.
-  IndexedMap<Column> ActiveCols;
-
-  const MCRegisterInfo &MRI;
-
-  void addVariable(DWARFDie FuncDie, DWARFDie VarDie) {
-    uint64_t FuncLowPC, FuncHighPC, SectionIndex;
-    FuncDie.getLowAndHighPC(FuncLowPC, FuncHighPC, SectionIndex);
-    const char *VarName = VarDie.getName(DINameKind::ShortName);
-    DWARFUnit *U = VarDie.getDwarfUnit();
-
-    Expected<DWARFLocationExpressionsVector> Locs =
-        VarDie.getLocations(dwarf::DW_AT_location);
-    if (!Locs) {
-      // If the variable doesn't have any locations, just ignore it. We don't
-      // report an error or warning here as that could be noisy on optimised
-      // code.
-      consumeError(Locs.takeError());
-      return;
-    }
-
-    for (const DWARFLocationExpression &LocExpr : *Locs) {
-      if (LocExpr.Range) {
-        LiveVariables.emplace_back(LocExpr, VarName, U, FuncDie);
-      } else {
-        // If the LocExpr does not have an associated range, it is valid for
-        // the whole of the function.
-        // TODO: technically it is not valid for any range covered by another
-        // LocExpr, does that happen in reality?
-        DWARFLocationExpression WholeFuncExpr{
-            DWARFAddressRange(FuncLowPC, FuncHighPC, SectionIndex),
-            LocExpr.Expr};
-        LiveVariables.emplace_back(WholeFuncExpr, VarName, U, FuncDie);
-      }
-    }
-  }
-
-  void addFunction(DWARFDie D) {
-    for (const DWARFDie &Child : D.children()) {
-      if (Child.getTag() == dwarf::DW_TAG_variable ||
-          Child.getTag() == dwarf::DW_TAG_formal_parameter)
-        addVariable(D, Child);
-      else
-        addFunction(Child);
-    }
-  }
-
-  // Get the column number (in characters) at which the first live variable
-  // line should be printed.
-  unsigned getIndentLevel() const {
-    return DbgIndent + getInstStartColumn();
-  }
-
-  // Indent to the first live-range column to the right of the currently
-  // printed line, and return the index of that column.
-  // TODO: formatted_raw_ostream uses "column" to mean a number of characters
-  // since the last \n, and we use it to mean the number of slots in which we
-  // put live variable lines. Pick a less overloaded word.
-  unsigned moveToFirstVarColumn(formatted_raw_ostream &OS) {
-    // Logical column number: column zero is the first column we print in, each
-    // logical column is 2 physical columns wide.
-    unsigned FirstUnprintedLogicalColumn =
-        std::max((int)(OS.getColumn() - getIndentLevel() + 1) / 2, 0);
-    // Physical column number: the actual column number in characters, with
-    // zero being the left-most side of the screen.
-    unsigned FirstUnprintedPhysicalColumn =
-        getIndentLevel() + FirstUnprintedLogicalColumn * 2;
-
-    if (FirstUnprintedPhysicalColumn > OS.getColumn())
-      OS.PadToColumn(FirstUnprintedPhysicalColumn);
-
-    return FirstUnprintedLogicalColumn;
-  }
-
-  unsigned findFreeColumn() {
-    for (unsigned ColIdx = 0; ColIdx < ActiveCols.size(); ++ColIdx)
-      if (!ActiveCols[ColIdx].isActive())
-        return ColIdx;
-
-    size_t OldSize = ActiveCols.size();
-    ActiveCols.grow(std::max<size_t>(OldSize * 2, 1));
-    return OldSize;
-  }
-
-public:
-  LiveVariablePrinter(const MCRegisterInfo &MRI)
-      : LiveVariables(), ActiveCols(Column()), MRI(MRI) {}
-
-  void dump() const {
-    for (const LiveVariable &LV : LiveVariables) {
-      dbgs() << LV.VarName << " @ " << LV.LocExpr.Range << ": ";
-      LV.print(dbgs(), MRI);
-      dbgs() << "\n";
-    }
-  }
-
-  void addCompileUnit(DWARFDie D) {
-    if (D.getTag() == dwarf::DW_TAG_subprogram)
-      addFunction(D);
-    else
-      for (const DWARFDie &Child : D.children())
-        addFunction(Child);
-  }
-
-  /// Update to match the state of the instruction between ThisAddr and
-  /// NextAddr. In the common case, any live range active at ThisAddr is
-  /// live-in to the instruction, and any live range active at NextAddr is
-  /// live-out of the instruction. If IncludeDefinedVars is false, then live
-  /// ranges starting at NextAddr will be ignored.
-  void update(object::SectionedAddress ThisAddr,
-              object::SectionedAddress NextAddr, bool IncludeDefinedVars) {
-    // First, check variables which have already been assigned a column, so
-    // that we don't change their order.
-    SmallSet<unsigned, 8> CheckedVarIdxs;
-    for (unsigned ColIdx = 0, End = ActiveCols.size(); ColIdx < End; ++ColIdx) {
-      if (!ActiveCols[ColIdx].isActive())
-        continue;
-      CheckedVarIdxs.insert(ActiveCols[ColIdx].VarIdx);
-      LiveVariable &LV = LiveVariables[ActiveCols[ColIdx].VarIdx];
-      ActiveCols[ColIdx].LiveIn = LV.liveAtAddress(ThisAddr);
-      ActiveCols[ColIdx].LiveOut = LV.liveAtAddress(NextAddr);
-      LLVM_DEBUG(dbgs() << "pass 1, " << ThisAddr.Address << "-"
-                        << NextAddr.Address << ", " << LV.VarName << ", Col "
-                        << ColIdx << ": LiveIn=" << ActiveCols[ColIdx].LiveIn
-                        << ", LiveOut=" << ActiveCols[ColIdx].LiveOut << "\n");
-
-      if (!ActiveCols[ColIdx].LiveIn && !ActiveCols[ColIdx].LiveOut)
-        ActiveCols[ColIdx].VarIdx = Column::NullVarIdx;
-    }
-
-    // Next, look for variables which don't already have a column, but which
-    // are now live.
-    if (IncludeDefinedVars) {
-      for (unsigned VarIdx = 0, End = LiveVariables.size(); VarIdx < End;
-           ++VarIdx) {
-        if (CheckedVarIdxs.count(VarIdx))
-          continue;
-        LiveVariable &LV = LiveVariables[VarIdx];
-        bool LiveIn = LV.liveAtAddress(ThisAddr);
-        bool LiveOut = LV.liveAtAddress(NextAddr);
-        if (!LiveIn && !LiveOut)
-          continue;
-
-        unsigned ColIdx = findFreeColumn();
-        LLVM_DEBUG(dbgs() << "pass 2, " << ThisAddr.Address << "-"
-                          << NextAddr.Address << ", " << LV.VarName << ", Col "
-                          << ColIdx << ": LiveIn=" << LiveIn
-                          << ", LiveOut=" << LiveOut << "\n");
-        ActiveCols[ColIdx].VarIdx = VarIdx;
-        ActiveCols[ColIdx].LiveIn = LiveIn;
-        ActiveCols[ColIdx].LiveOut = LiveOut;
-        ActiveCols[ColIdx].MustDrawLabel = true;
-      }
-    }
-  }
-
-  enum class LineChar {
-    RangeStart,
-    RangeMid,
-    RangeEnd,
-    LabelVert,
-    LabelCornerNew,
-    LabelCornerActive,
-    LabelHoriz,
-  };
-  const char *getLineChar(LineChar C) const {
-    bool IsASCII = DbgVariables == DVASCII;
-    switch (C) {
-    case LineChar::RangeStart:
-      return IsASCII ? "^" : "╈";
-    case LineChar::RangeMid:
-      return IsASCII ? "|" : "┃";
-    case LineChar::RangeEnd:
-      return IsASCII ? "v" : "┻";
-    case LineChar::LabelVert:
-      return IsASCII ? "|" : "│";
-    case LineChar::LabelCornerNew:
-      return IsASCII ? "/" : "┌";
-    case LineChar::LabelCornerActive:
-      return IsASCII ? "|" : "┠";
-    case LineChar::LabelHoriz:
-      return IsASCII ? "-" : "─";
-    }
-    llvm_unreachable("Unexpected LineChar");
-  }
-
-  /// Print live ranges to the right of an existing line. This assumes the
-  /// line is not an instruction, so doesn't start or end any live ranges, so
-  /// we only need to print active ranges or empty columns. If AfterInst is
-  /// true, this is being printed after the last instruction fed to update(),
-  /// otherwise this is being printed before it.
-  void printAfterOtherLine(formatted_raw_ostream &OS, bool AfterInst) {
-    if (ActiveCols.size()) {
-      unsigned FirstUnprintedColumn = moveToFirstVarColumn(OS);
-      for (size_t ColIdx = FirstUnprintedColumn, End = ActiveCols.size();
-           ColIdx < End; ++ColIdx) {
-        if (ActiveCols[ColIdx].isActive()) {
-          if ((AfterInst && ActiveCols[ColIdx].LiveOut) ||
-              (!AfterInst && ActiveCols[ColIdx].LiveIn))
-            OS << getLineChar(LineChar::RangeMid);
-          else if (!AfterInst && ActiveCols[ColIdx].LiveOut)
-            OS << getLineChar(LineChar::LabelVert);
-          else
-            OS << " ";
-        }
-        OS << " ";
-      }
-    }
-    OS << "\n";
-  }
-
-  /// Print any live variable range info needed to the right of a
-  /// non-instruction line of disassembly. This is where we print the variable
-  /// names and expressions, with thin line-drawing characters connecting them
-  /// to the live range which starts at the next instruction. If MustPrint is
-  /// true, we have to print at least one line (with the continuation of any
-  /// already-active live ranges) because something has already been printed
-  /// earlier on this line.
-  void printBetweenInsts(formatted_raw_ostream &OS, bool MustPrint) {
-    bool PrintedSomething = false;
-    for (unsigned ColIdx = 0, End = ActiveCols.size(); ColIdx < End; ++ColIdx) {
-      if (ActiveCols[ColIdx].isActive() && ActiveCols[ColIdx].MustDrawLabel) {
-        // First we need to print the live range markers for any active
-        // columns to the left of this one.
-        OS.PadToColumn(getIndentLevel());
-        for (unsigned ColIdx2 = 0; ColIdx2 < ColIdx; ++ColIdx2) {
-          if (ActiveCols[ColIdx2].isActive()) {
-            if (ActiveCols[ColIdx2].MustDrawLabel &&
-                           !ActiveCols[ColIdx2].LiveIn)
-              OS << getLineChar(LineChar::LabelVert) << " ";
-            else
-              OS << getLineChar(LineChar::RangeMid) << " ";
-          } else
-            OS << "  ";
-        }
-
-        // Then print the variable name and location of the new live range,
-        // with box drawing characters joining it to the live range line.
-        OS << getLineChar(ActiveCols[ColIdx].LiveIn
-                              ? LineChar::LabelCornerActive
-                              : LineChar::LabelCornerNew)
-           << getLineChar(LineChar::LabelHoriz) << " ";
-        WithColor(OS, raw_ostream::GREEN)
-            << LiveVariables[ActiveCols[ColIdx].VarIdx].VarName;
-        OS << " = ";
-        {
-          WithColor ExprColor(OS, raw_ostream::CYAN);
-          LiveVariables[ActiveCols[ColIdx].VarIdx].print(OS, MRI);
-        }
-
-        // If there are any columns to the right of the expression we just
-        // printed, then continue their live range lines.
-        unsigned FirstUnprintedColumn = moveToFirstVarColumn(OS);
-        for (unsigned ColIdx2 = FirstUnprintedColumn, End = ActiveCols.size();
-             ColIdx2 < End; ++ColIdx2) {
-          if (ActiveCols[ColIdx2].isActive() && ActiveCols[ColIdx2].LiveIn)
-            OS << getLineChar(LineChar::RangeMid) << " ";
-          else
-            OS << "  ";
-        }
-
-        OS << "\n";
-        PrintedSomething = true;
-      }
-    }
-
-    for (unsigned ColIdx = 0, End = ActiveCols.size(); ColIdx < End; ++ColIdx)
-      if (ActiveCols[ColIdx].isActive())
-        ActiveCols[ColIdx].MustDrawLabel = false;
-
-    // If we must print something (because we printed a line/column number),
-    // but don't have any new variables to print, then print a line which
-    // just continues any existing live ranges.
-    if (MustPrint && !PrintedSomething)
-      printAfterOtherLine(OS, false);
-  }
-
-  /// Print the live variable ranges to the right of a disassembled instruction.
-  void printAfterInst(formatted_raw_ostream &OS) {
-    if (!ActiveCols.size())
-      return;
-    unsigned FirstUnprintedColumn = moveToFirstVarColumn(OS);
-    for (unsigned ColIdx = FirstUnprintedColumn, End = ActiveCols.size();
-         ColIdx < End; ++ColIdx) {
-      if (!ActiveCols[ColIdx].isActive())
-        OS << "  ";
-      else if (ActiveCols[ColIdx].LiveIn && ActiveCols[ColIdx].LiveOut)
-        OS << getLineChar(LineChar::RangeMid) << " ";
-      else if (ActiveCols[ColIdx].LiveOut)
-        OS << getLineChar(LineChar::RangeStart) << " ";
-      else if (ActiveCols[ColIdx].LiveIn)
-        OS << getLineChar(LineChar::RangeEnd) << " ";
-      else
-        llvm_unreachable("var must be live in or out!");
-    }
-  }
-};
-
 class SourcePrinter {
 protected:
   DILineInfo OldLineInfo;
@@ -930,12 +553,11 @@ protected:
 private:
   bool cacheSource(const DILineInfo& LineInfoFile);
 
-  void printLines(formatted_raw_ostream &OS, const DILineInfo &LineInfo,
-                  StringRef Delimiter, LiveVariablePrinter &LVP);
+  void printLines(raw_ostream &OS, const DILineInfo &LineInfo,
+                  StringRef Delimiter);
 
-  void printSources(formatted_raw_ostream &OS, const DILineInfo &LineInfo,
-                    StringRef ObjectFilename, StringRef Delimiter,
-                    LiveVariablePrinter &LVP);
+  void printSources(raw_ostream &OS, const DILineInfo &LineInfo,
+                    StringRef ObjectFilename, StringRef Delimiter);
 
 public:
   SourcePrinter() = default;
@@ -949,10 +571,9 @@ public:
     Symbolizer.reset(new symbolize::LLVMSymbolizer(SymbolizerOpts));
   }
   virtual ~SourcePrinter() = default;
-  virtual void printSourceLine(formatted_raw_ostream &OS,
+  virtual void printSourceLine(raw_ostream &OS,
                                object::SectionedAddress Address,
                                StringRef ObjectFilename,
-                               LiveVariablePrinter &LVP,
                                StringRef Delimiter = "; ");
 };
 
@@ -986,10 +607,9 @@ bool SourcePrinter::cacheSource(const DILineInfo &LineInfo) {
   return true;
 }
 
-void SourcePrinter::printSourceLine(formatted_raw_ostream &OS,
+void SourcePrinter::printSourceLine(raw_ostream &OS,
                                     object::SectionedAddress Address,
                                     StringRef ObjectFilename,
-                                    LiveVariablePrinter &LVP,
                                     StringRef Delimiter) {
   if (!Symbolizer)
     return;
@@ -1014,15 +634,14 @@ void SourcePrinter::printSourceLine(formatted_raw_ostream &OS,
   }
 
   if (PrintLines)
-    printLines(OS, LineInfo, Delimiter, LVP);
+    printLines(OS, LineInfo, Delimiter);
   if (PrintSource)
-    printSources(OS, LineInfo, ObjectFilename, Delimiter, LVP);
+    printSources(OS, LineInfo, ObjectFilename, Delimiter);
   OldLineInfo = LineInfo;
 }
 
-void SourcePrinter::printLines(formatted_raw_ostream &OS,
-                               const DILineInfo &LineInfo, StringRef Delimiter,
-                               LiveVariablePrinter &LVP) {
+void SourcePrinter::printLines(raw_ostream &OS, const DILineInfo &LineInfo,
+                               StringRef Delimiter) {
   bool PrintFunctionName = LineInfo.FunctionName != DILineInfo::BadString &&
                            LineInfo.FunctionName != OldLineInfo.FunctionName;
   if (PrintFunctionName) {
@@ -1035,16 +654,13 @@ void SourcePrinter::printLines(formatted_raw_ostream &OS,
   }
   if (LineInfo.FileName != DILineInfo::BadString && LineInfo.Line != 0 &&
       (OldLineInfo.Line != LineInfo.Line ||
-       OldLineInfo.FileName != LineInfo.FileName || PrintFunctionName)) {
-    OS << Delimiter << LineInfo.FileName << ":" << LineInfo.Line;
-    LVP.printBetweenInsts(OS, true);
-  }
+       OldLineInfo.FileName != LineInfo.FileName || PrintFunctionName))
+    OS << Delimiter << LineInfo.FileName << ":" << LineInfo.Line << "\n";
 }
 
-void SourcePrinter::printSources(formatted_raw_ostream &OS,
-                                 const DILineInfo &LineInfo,
-                                 StringRef ObjectFilename, StringRef Delimiter,
-                                 LiveVariablePrinter &LVP) {
+void SourcePrinter::printSources(raw_ostream &OS, const DILineInfo &LineInfo,
+                                 StringRef ObjectFilename,
+                                 StringRef Delimiter) {
   if (LineInfo.FileName == DILineInfo::BadString || LineInfo.Line == 0 ||
       (OldLineInfo.Line == LineInfo.Line &&
        OldLineInfo.FileName == LineInfo.FileName))
@@ -1064,8 +680,7 @@ void SourcePrinter::printSources(formatted_raw_ostream &OS,
       return;
     }
     // Vector begins at 0, line numbers are non-zero
-    OS << Delimiter << LineBuffer->second[LineInfo.Line - 1];
-    LVP.printBetweenInsts(OS, true);
+    OS << Delimiter << LineBuffer->second[LineInfo.Line - 1] << '\n';
   }
 }
 
@@ -1083,30 +698,28 @@ static bool hasMappingSymbols(const ObjectFile *Obj) {
   return isArmElf(Obj) || isAArch64Elf(Obj);
 }
 
-static void printRelocation(formatted_raw_ostream &OS, StringRef FileName,
-                            const RelocationRef &Rel, uint64_t Address,
-                            bool Is64Bits) {
+static void printRelocation(StringRef FileName, const RelocationRef &Rel,
+                            uint64_t Address, bool Is64Bits) {
   StringRef Fmt = Is64Bits ? "\t\t%016" PRIx64 ":  " : "\t\t\t%08" PRIx64 ":  ";
   SmallString<16> Name;
   SmallString<32> Val;
   Rel.getTypeName(Name);
   if (Error E = getRelocationValueString(Rel, Val))
     reportError(std::move(E), FileName);
-  OS << format(Fmt.data(), Address) << Name << "\t" << Val;
+  outs() << format(Fmt.data(), Address) << Name << "\t" << Val << "\n";
 }
 
 class PrettyPrinter {
 public:
   virtual ~PrettyPrinter() = default;
-  virtual void
-  printInst(MCInstPrinter &IP, const MCInst *MI, ArrayRef<uint8_t> Bytes,
-            object::SectionedAddress Address, formatted_raw_ostream &OS,
-            StringRef Annot, MCSubtargetInfo const &STI, SourcePrinter *SP,
-            StringRef ObjectFilename, std::vector<RelocationRef> *Rels,
-            LiveVariablePrinter &LVP) {
+  virtual void printInst(MCInstPrinter &IP, const MCInst *MI,
+                         ArrayRef<uint8_t> Bytes,
+                         object::SectionedAddress Address, raw_ostream &OS,
+                         StringRef Annot, MCSubtargetInfo const &STI,
+                         SourcePrinter *SP, StringRef ObjectFilename,
+                         std::vector<RelocationRef> *Rels = nullptr) {
     if (SP && (PrintSource || PrintLines))
-      SP->printSourceLine(OS, Address, ObjectFilename, LVP);
-    LVP.printBetweenInsts(OS, false);
+      SP->printSourceLine(OS, Address, ObjectFilename);
 
     size_t Start = OS.tell();
     if (!NoLeadingAddr)
@@ -1118,7 +731,7 @@ public:
 
     // The output of printInst starts with a tab. Print some spaces so that
     // the tab has 1 column and advances to the target tab stop.
-    unsigned TabStop = getInstStartColumn();
+    unsigned TabStop = NoShowRawInsn ? 16 : 40;
     unsigned Column = OS.tell() - Start;
     OS.indent(Column < TabStop - 1 ? TabStop - 1 - Column : 7 - Column % 8);
 
@@ -1133,7 +746,7 @@ PrettyPrinter PrettyPrinterInst;
 class HexagonPrettyPrinter : public PrettyPrinter {
 public:
   void printLead(ArrayRef<uint8_t> Bytes, uint64_t Address,
-                 formatted_raw_ostream &OS) {
+                 raw_ostream &OS) {
     uint32_t opcode =
       (Bytes[3] << 24) | (Bytes[2] << 16) | (Bytes[1] << 8) | Bytes[0];
     if (!NoLeadingAddr)
@@ -1145,12 +758,12 @@ public:
     }
   }
   void printInst(MCInstPrinter &IP, const MCInst *MI, ArrayRef<uint8_t> Bytes,
-                 object::SectionedAddress Address, formatted_raw_ostream &OS,
+                 object::SectionedAddress Address, raw_ostream &OS,
                  StringRef Annot, MCSubtargetInfo const &STI, SourcePrinter *SP,
-                 StringRef ObjectFilename, std::vector<RelocationRef> *Rels,
-                 LiveVariablePrinter &LVP) override {
+                 StringRef ObjectFilename,
+                 std::vector<RelocationRef> *Rels) override {
     if (SP && (PrintSource || PrintLines))
-      SP->printSourceLine(OS, Address, ObjectFilename, LVP, "");
+      SP->printSourceLine(OS, Address, ObjectFilename, "");
     if (!MI) {
       printLead(Bytes, Address.Address, OS);
       OS << " <unknown>";
@@ -1176,7 +789,7 @@ public:
     auto PrintReloc = [&]() -> void {
       while ((RelCur != RelEnd) && (RelCur->getOffset() <= Address.Address)) {
         if (RelCur->getOffset() == Address.Address) {
-          printRelocation(OS, ObjectFilename, *RelCur, Address.Address, false);
+          printRelocation(ObjectFilename, *RelCur, Address.Address, false);
           return;
         }
         ++RelCur;
@@ -1187,7 +800,7 @@ public:
       OS << Separator;
       Separator = "\n";
       if (SP && (PrintSource || PrintLines))
-        SP->printSourceLine(OS, Address, ObjectFilename, LVP, "");
+        SP->printSourceLine(OS, Address, ObjectFilename, "");
       printLead(Bytes, Address.Address, OS);
       OS << Preamble;
       Preamble = "   ";
@@ -1215,12 +828,12 @@ HexagonPrettyPrinter HexagonPrettyPrinterInst;
 class AMDGCNPrettyPrinter : public PrettyPrinter {
 public:
   void printInst(MCInstPrinter &IP, const MCInst *MI, ArrayRef<uint8_t> Bytes,
-                 object::SectionedAddress Address, formatted_raw_ostream &OS,
+                 object::SectionedAddress Address, raw_ostream &OS,
                  StringRef Annot, MCSubtargetInfo const &STI, SourcePrinter *SP,
-                 StringRef ObjectFilename, std::vector<RelocationRef> *Rels,
-                 LiveVariablePrinter &LVP) override {
+                 StringRef ObjectFilename,
+                 std::vector<RelocationRef> *Rels) override {
     if (SP && (PrintSource || PrintLines))
-      SP->printSourceLine(OS, Address, ObjectFilename, LVP);
+      SP->printSourceLine(OS, Address, ObjectFilename);
 
     if (MI) {
       SmallString<40> InstStr;
@@ -1267,12 +880,12 @@ AMDGCNPrettyPrinter AMDGCNPrettyPrinterInst;
 class BPFPrettyPrinter : public PrettyPrinter {
 public:
   void printInst(MCInstPrinter &IP, const MCInst *MI, ArrayRef<uint8_t> Bytes,
-                 object::SectionedAddress Address, formatted_raw_ostream &OS,
+                 object::SectionedAddress Address, raw_ostream &OS,
                  StringRef Annot, MCSubtargetInfo const &STI, SourcePrinter *SP,
-                 StringRef ObjectFilename, std::vector<RelocationRef> *Rels,
-                 LiveVariablePrinter &LVP) override {
+                 StringRef ObjectFilename,
+                 std::vector<RelocationRef> *Rels) override {
     if (SP && (PrintSource || PrintLines))
-      SP->printSourceLine(OS, Address, ObjectFilename, LVP);
+      SP->printSourceLine(OS, Address, ObjectFilename);
     if (!NoLeadingAddr)
       OS << format("%8" PRId64 ":", Address.Address / 8);
     if (!NoShowRawInsn) {
@@ -1458,34 +1071,33 @@ static char getMappingSymbolKind(ArrayRef<MappingSymbolPair> MappingSymbols,
   return (It - 1)->second;
 }
 
-static uint64_t dumpARMELFData(uint64_t SectionAddr, uint64_t Index,
-                               uint64_t End, const ObjectFile *Obj,
-                               ArrayRef<uint8_t> Bytes,
-                               ArrayRef<MappingSymbolPair> MappingSymbols,
-                               raw_ostream &OS) {
+static uint64_t
+dumpARMELFData(uint64_t SectionAddr, uint64_t Index, uint64_t End,
+               const ObjectFile *Obj, ArrayRef<uint8_t> Bytes,
+               ArrayRef<MappingSymbolPair> MappingSymbols) {
   support::endianness Endian =
       Obj->isLittleEndian() ? support::little : support::big;
   while (Index < End) {
-    OS << format("%8" PRIx64 ":", SectionAddr + Index);
-    OS << "\t";
+    outs() << format("%8" PRIx64 ":", SectionAddr + Index);
+    outs() << "\t";
     if (Index + 4 <= End) {
-      dumpBytes(Bytes.slice(Index, 4), OS);
-      OS << "\t.word\t"
+      dumpBytes(Bytes.slice(Index, 4), outs());
+      outs() << "\t.word\t"
              << format_hex(
                     support::endian::read32(Bytes.data() + Index, Endian), 10);
       Index += 4;
     } else if (Index + 2 <= End) {
-      dumpBytes(Bytes.slice(Index, 2), OS);
-      OS << "\t\t.short\t"
+      dumpBytes(Bytes.slice(Index, 2), outs());
+      outs() << "\t\t.short\t"
              << format_hex(
                     support::endian::read16(Bytes.data() + Index, Endian), 6);
       Index += 2;
     } else {
-      dumpBytes(Bytes.slice(Index, 1), OS);
-      OS << "\t\t.byte\t" << format_hex(Bytes[0], 4);
+      dumpBytes(Bytes.slice(Index, 1), outs());
+      outs() << "\t\t.byte\t" << format_hex(Bytes[0], 4);
       ++Index;
     }
-    OS << "\n";
+    outs() << "\n";
     if (getMappingSymbolKind(MappingSymbols, Index) != 'd')
       break;
   }
@@ -1629,17 +1241,6 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
   for (std::pair<const SectionRef, SectionSymbolsTy> &SecSyms : AllSymbols)
     array_pod_sort(SecSyms.second.begin(), SecSyms.second.end());
   array_pod_sort(AbsoluteSymbols.begin(), AbsoluteSymbols.end());
-
-  std::unique_ptr<DWARFContext> DICtx;
-  LiveVariablePrinter LVP(*Ctx.getRegisterInfo());
-
-  if (DbgVariables != DVDisabled) {
-    DICtx = DWARFContext::create(*Obj);
-    for (const std::unique_ptr<DWARFUnit> &CU : DICtx->compile_units())
-      LVP.addCompileUnit(CU->getUnitDIE(false));
-  }
-
-  LLVM_DEBUG(LVP.dump());
 
   for (const SectionRef &Section : ToolSectionFilter(*Obj)) {
     if (FilterSections.empty() && !DisassembleAll &&
@@ -1804,7 +1405,6 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
       bool CheckARMELFData = hasMappingSymbols(Obj) &&
                              Symbols[SI].Type != ELF::STT_OBJECT &&
                              !DisassembleAll;
-      formatted_raw_ostream FOS(outs());
       while (Index < End) {
         // ARM and AArch64 ELF binaries can interleave data and text in the
         // same section. We rely on the markers introduced to understand what
@@ -1813,7 +1413,7 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
         if (CheckARMELFData &&
             getMappingSymbolKind(MappingSymbols, Index) == 'd') {
           Index = dumpARMELFData(SectionAddr, Index, End, Obj, Bytes,
-                                 MappingSymbols, FOS);
+                                 MappingSymbols);
           continue;
         }
 
@@ -1828,7 +1428,7 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
 
           if (size_t N =
                   countSkippableZeroBytes(Bytes.slice(Index, MaxOffset))) {
-            FOS << "\t\t..." << '\n';
+            outs() << "\t\t..." << '\n';
             Index += N;
             continue;
           }
@@ -1852,20 +1452,17 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
         if (Size == 0)
           Size = 1;
 
-        LVP.update({Index, Section.getIndex()},
-                   {Index + Size, Section.getIndex()}, Index + Size != End);
-
         PIP.printInst(*IP, Disassembled ? &Inst : nullptr,
                       Bytes.slice(Index, Size),
                       {SectionAddr + Index + VMAAdjustment, Section.getIndex()},
-                      FOS, "", *STI, &SP, Obj->getFileName(), &Rels, LVP);
-        FOS << CommentStream.str();
+                      outs(), "", *STI, &SP, Obj->getFileName(), &Rels);
+        outs() << CommentStream.str();
         Comments.clear();
 
         // If disassembly has failed, continue with the next instruction, to
         // avoid analysing invalid/incomplete instruction information.
         if (!Disassembled) {
-          FOS << "\n";
+          outs() << "\n";
           Index += Size;
           continue;
         }
@@ -1918,17 +1515,15 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
               --TargetSym;
               uint64_t TargetAddress = TargetSym->Addr;
               StringRef TargetName = TargetSym->Name;
-              FOS << " <" << TargetName;
+              outs() << " <" << TargetName;
               uint64_t Disp = Target - TargetAddress;
               if (Disp)
-                FOS << "+0x" << Twine::utohexstr(Disp);
-              FOS << '>';
+                outs() << "+0x" << Twine::utohexstr(Disp);
+              outs() << '>';
             }
           }
         }
-
-        LVP.printAfterInst(FOS);
-        FOS << "\n";
+        outs() << "\n";
 
         // Hexagon does this in pretty printer
         if (Obj->getArch() != Triple::hexagon) {
@@ -1954,9 +1549,8 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
                 Offset += AdjustVMA;
             }
 
-            printRelocation(FOS, Obj->getFileName(), *RelCur,
-                            SectionAddr + Offset, Is64Bits);
-            LVP.printAfterOtherLine(FOS, true);
+            printRelocation(Obj->getFileName(), *RelCur, SectionAddr + Offset,
+                            Is64Bits);
             ++RelCur;
           }
         }
