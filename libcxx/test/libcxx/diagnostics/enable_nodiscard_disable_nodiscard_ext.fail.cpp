@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++98, c++03
+// REQUIRES: verify-support
 
 // GCC 7 is the first version to introduce [[nodiscard]]
 // UNSUPPORTED: gcc-5, gcc-6
