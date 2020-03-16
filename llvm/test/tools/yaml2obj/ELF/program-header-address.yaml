@@ -27,20 +27,21 @@ Sections:
     Size:    0x1
     Address: 0x1234
 ProgramHeaders:
-## Show addresses we emit by default for a case when a program header
-## has no sections included.
+## Show what virtual and physical address we set by default for the case where
+## a program header has no sections.
   - Type:     PT_LOAD
     Flags:    [ PF_X, PF_R ]
     Sections: []
-## Show addresses we emit by default for a case when a program header
-## includes a section with a virtual address that is explicitly set.
+## Show what virtual and physical address we set by default for the case
+## where a program header includes a section with a virtual address that
+## is explicitly set.
   - Type:     PT_LOAD
     Flags:    [ PF_X, PF_R ]
     Sections:
       - Section: .foo
-## Now we have a program header that has a virtual address different from
-## a address of the section included. Show that the default physical address
-## is equal to virtual address.
+## Now we have a program header that has a virtual address different to
+## the address of the section included. Show that the default physical address
+## is equal to the program header's virtual address.
   - Type:  PT_LOAD
     Flags: [ PF_X, PF_R ]
     VAddr: 0xAAAA1000
