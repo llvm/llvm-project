@@ -1,5 +1,5 @@
 # RUN: llvm-mc -filetype=obj -triple riscv32 < %s \
-# RUN:     | llvm-objdump -d - | FileCheck -check-prefix=INSTR %s
+# RUN:     | llvm-objdump -d - | FileCheck --check-prefix=INSTR %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 < %s \
 # RUN:     | llvm-readobj -r | FileCheck -check-prefix=RELOC %s
 # RUN: llvm-mc -triple riscv32 < %s -show-encoding \

@@ -2,7 +2,7 @@
 // RUN: llvm-mc -triple=arm64-linux-gnu -show-encoding -o - < %s | \
 // RUN:   FileCheck --check-prefix=CHECK-ENCODING %s
 // RUN: llvm-mc -triple=arm64-linux-gnu -filetype=obj < %s | \
-// RUN:   llvm-objdump -triple=arm64-linux-gnu - -r | \
+// RUN:   llvm-objdump --triple=arm64-linux-gnu - -r | \
 // RUN:   FileCheck %s --check-prefix=CHECK-OBJ-LP64
 
    add x0, x2, #:lo12:sym

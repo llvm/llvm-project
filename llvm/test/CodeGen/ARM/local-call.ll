@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=thumbv7-apple-ios -filetype=obj %s -o %t
-; RUN: llvm-objdump -macho -d %t | FileCheck %s
+; RUN: llvm-objdump --macho -d %t | FileCheck %s
 
 ; This function just messes up the offsets enough to make the libcall in
 ; test_local_call unencodable with a blx.

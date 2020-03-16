@@ -1,5 +1,5 @@
 ; RUN: llvm-mc -triple aarch64-apple-ios %s -filetype=obj -o %t.o
-; RUN: llvm-objdump -macho -d %t.o | FileCheck %s
+; RUN: llvm-objdump --macho -d %t.o | FileCheck %s
 
   .data_region
   .space 0x4124

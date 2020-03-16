@@ -1,6 +1,6 @@
 # RUN: llvm-mc -filetype=obj -triple=i386-unknown-unknown %s -o %t
-# RUN: llvm-objdump -r -D -section .text.bar -triple i386-unknown-unknown-code16 %t | FileCheck --check-prefix=CHECK16 %s
-# RUN: llvm-objdump -r -D -section .text.baz -triple i386-unknown-unknown        %t | FileCheck --check-prefix=CHECK32 %s 	
+# RUN: llvm-objdump -r -D --section .text.bar --triple=i386-unknown-unknown-code16 %t | FileCheck --check-prefix=CHECK16 %s
+# RUN: llvm-objdump -r -D --section .text.baz --triple=i386-unknown-unknown        %t | FileCheck --check-prefix=CHECK32 %s 	
 	.text
 	.section	.text.foo,"",@progbits
 

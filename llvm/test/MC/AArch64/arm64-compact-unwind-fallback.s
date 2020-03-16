@@ -1,5 +1,5 @@
 // RUN: llvm-mc -triple=arm64-apple-ios -filetype=obj %s -o %t
-// RUN: llvm-objdump -macho -unwind-info -dwarf=frames %t | FileCheck %s
+// RUN: llvm-objdump --macho --unwind-info --dwarf=frames %t | FileCheck %s
 
 // Check that we fallback on DWARF instead of asserting.
 

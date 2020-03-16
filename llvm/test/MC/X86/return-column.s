@@ -1,6 +1,6 @@
 // REQUIRES: x86-registered-target
 // RUN: llvm-mc -triple i686-unknown-linux-gnu -filetype asm -o - %s | FileCheck %s -check-prefix CHECK-ASM-ROUNDTRIP
-// RUN: llvm-mc -triple i686-unknown-linux-gnu -filetype obj -o - %s | llvm-objdump -dwarf=frames - | FileCheck %s -check-prefix CHECK-EH_FRAME
+// RUN: llvm-mc -triple i686-unknown-linux-gnu -filetype obj -o - %s | llvm-objdump --dwarf=frames - | FileCheck %s --check-prefix=CHECK-EH_FRAME
 
 	.text
 

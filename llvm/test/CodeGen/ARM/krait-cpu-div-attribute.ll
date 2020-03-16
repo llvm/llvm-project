@@ -10,8 +10,8 @@
 ; RUN: llc < %s -mtriple=armv7-linux-gnueabi -mcpu=krait -mattr=-hwdiv,-hwdiv-arm | FileCheck %s --check-prefix=NODIV_KRAIT
 
 ; check if correct instruction is emitted by integrated assembler
-; RUN: llc < %s -mtriple=armv7-linux-gnueabi -mcpu=krait -filetype=obj | llvm-objdump -mcpu=krait -triple armv7-linux-gnueabi -d - | FileCheck %s --check-prefix=HWDIV
-; RUN: llc < %s -mtriple=thumbv7-linux-gnueabi -mcpu=krait -filetype=obj | llvm-objdump -mcpu=krait -triple thumbv7-linux-gnueabi -d - | FileCheck %s --check-prefix=HWDIV
+; RUN: llc < %s -mtriple=armv7-linux-gnueabi -mcpu=krait -filetype=obj | llvm-objdump --mcpu=krait --triple=armv7-linux-gnueabi -d - | FileCheck %s --check-prefix=HWDIV
+; RUN: llc < %s -mtriple=thumbv7-linux-gnueabi -mcpu=krait -filetype=obj | llvm-objdump --mcpu=krait --triple=thumbv7-linux-gnueabi -d - | FileCheck %s --check-prefix=HWDIV
 
 ; arch_extension attribute
 ; DIV_EXTENSION:  .cpu cortex-a9

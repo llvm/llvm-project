@@ -1,4 +1,4 @@
-# RUN: llvm-mc -arch=hexagon -mcpu=hexagonv66 -mhvx -filetype=obj %s | llvm-objdump -mcpu=hexagonv66 -mhvx -d - | FileCheck --implicit-check-not='{' %s
+# RUN: llvm-mc -arch=hexagon -mcpu=hexagonv66 -mhvx -filetype=obj %s | llvm-objdump --mcpu=hexagonv66 --mhvx -d - | FileCheck --implicit-check-not='{' %s
 
 # CHECK:      2d00c000 { z = vmem(r0++#0) }
 z = vmem(r0++#0)
