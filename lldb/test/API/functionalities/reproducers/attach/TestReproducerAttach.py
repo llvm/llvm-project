@@ -15,7 +15,6 @@ class ReproducerAttachTestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
-    @skipIfLinux # Reproducer received unexpected packet.
     @skipIfFreeBSD
     @skipIfNetBSD
     @skipIfWindows
