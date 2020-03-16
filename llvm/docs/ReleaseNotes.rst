@@ -100,7 +100,9 @@ Changes to the AMDGPU Target
 Changes to the AVR Target
 -----------------------------
 
-During this release ...
+* Moved from an experimental backend to an official backend. AVR support is now
+  included by default in all LLVM builds and releases and is available under
+  the "avr-unknown-unknown" target triple.
 
 Changes to the WebAssembly Target
 ---------------------------------
