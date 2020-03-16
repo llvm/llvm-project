@@ -217,6 +217,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   const LLT S64 = LLT::scalar(64);
   const LLT S128 = LLT::scalar(128);
   const LLT S256 = LLT::scalar(256);
+  const LLT S512 = LLT::scalar(512);
   const LLT S1024 = LLT::scalar(1024);
 
   const LLT V2S16 = LLT::vector(2, 16);
@@ -1205,10 +1206,10 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     unsigned LitTyIdx = Op == G_MERGE_VALUES ? 1 : 0;
 
     auto notValidElt = [=](const LegalityQuery &Query, unsigned TypeIdx) {
-      const LLT &Ty = Query.Types[TypeIdx];
+      const LLT Ty = Query.Types[TypeIdx];
       if (Ty.isVector()) {
         const LLT &EltTy = Ty.getElementType();
-        if (EltTy.getSizeInBits() < 8 || EltTy.getSizeInBits() > 64)
+        if (EltTy.getSizeInBits() < 8 || EltTy.getSizeInBits() > 512)
           return true;
         if (!isPowerOf2_32(EltTy.getSizeInBits()))
           return true;
@@ -1230,14 +1231,14 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       // Clamp the little scalar to s8-s256 and make it a power of 2. It's not
       // worth considering the multiples of 64 since 2*192 and 2*384 are not
       // valid.
-      .clampScalar(LitTyIdx, S32, S256)
+      .clampScalar(LitTyIdx, S32, S512)
       .widenScalarToNextPow2(LitTyIdx, /*Min*/ 32)
       // Break up vectors with weird elements into scalars
       .fewerElementsIf(
-        [=](const LegalityQuery &Query) { return notValidElt(Query, 0); },
+        [=](const LegalityQuery &Query) { return notValidElt(Query, LitTyIdx); },
         scalarize(0))
       .fewerElementsIf(
-        [=](const LegalityQuery &Query) { return notValidElt(Query, 1); },
+        [=](const LegalityQuery &Query) { return notValidElt(Query, BigTyIdx); },
         scalarize(1))
       .clampScalar(BigTyIdx, S32, S1024);
 
