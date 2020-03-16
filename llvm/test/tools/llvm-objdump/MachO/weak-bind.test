@@ -1,4 +1,4 @@
-# RUN: llvm-objdump -macho -weak-bind  %p/Inputs/weak-bind.macho-x86_64 \
+# RUN: llvm-objdump --macho --weak-bind  %p/Inputs/weak-bind.macho-x86_64 \
 # RUN:   | FileCheck %s
 
 

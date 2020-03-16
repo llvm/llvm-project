@@ -1,7 +1,7 @@
 # RUN: llvm-mc -triple riscv32 -mattr=+f < %s -riscv-arch-reg-names \
 # RUN:     | FileCheck -check-prefix=CHECK-NUMERIC %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+f < %s \
-# RUN:     | llvm-objdump -mattr=+f -d -M numeric - \
+# RUN:     | llvm-objdump --mattr=+f -d -M numeric - \
 # RUN:     | FileCheck -check-prefix=CHECK-NUMERIC %s
 
 # CHECK-NUMERIC: fsqrt.s f10, f0

@@ -1,4 +1,4 @@
-# RUN: llvm-objdump -unwind-info %p/Inputs/compact-unwind.macho-x86_64 | FileCheck %s
+# RUN: llvm-objdump --unwind-info %p/Inputs/compact-unwind.macho-x86_64 | FileCheck %s
 
 # CHECK: Contents of __compact_unwind section:
 # CHECK:   Entry at offset 0x0:

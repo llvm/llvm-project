@@ -1,4 +1,4 @@
-@ RUN: llvm-mc -triple=thumbv7k-apple-watchos2.0.0 -filetype=obj -o %t < %s && llvm-objdump -unwind-info %t | FileCheck %s
+@ RUN: llvm-mc -triple=thumbv7k-apple-watchos2.0.0 -filetype=obj -o %t < %s && llvm-objdump --unwind-info %t | FileCheck %s
 
 @ CHECK: Contents of __compact_unwind section:
 

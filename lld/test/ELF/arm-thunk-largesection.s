@@ -1,11 +1,11 @@
 // REQUIRES: arm
 // RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=thumbv7a-none-linux-gnueabi %s -o %t
 // RUN: ld.lld %t -o %t2
-// RUN: llvm-objdump -d -triple=thumbv7a-none-linux-gnueabi --start-address=0x12000 --stop-address=0x12006 %t2 | FileCheck -check-prefix=CHECK1 %s
-// RUN: llvm-objdump -d -triple=thumbv7a-none-linux-gnueabi --start-address=0x13004 --stop-address=0x13008 %t2 | FileCheck -check-prefix=CHECK2 %s
-// RUN: llvm-objdump -d -triple=thumbv7a-none-linux-gnueabi --start-address=0x1012ff8 --stop-address=0x1012ffc %t2 | FileCheck -check-prefix=CHECK3 %s
-// RUN: llvm-objdump -d -triple=thumbv7a-none-linux-gnueabi --start-address=0x2012ff8 --stop-address=0x2012ffc %t2 | FileCheck -check-prefix=CHECK4 %s
-// RUN: llvm-objdump -d -triple=thumbv7a-none-linux-gnueabi --start-address=0x3012fec --stop-address=0x3012ff6 %t2 | FileCheck -check-prefix=CHECK5 %s
+// RUN: llvm-objdump -d --triple=thumbv7a-none-linux-gnueabi --start-address=0x12000 --stop-address=0x12006 %t2 | FileCheck --check-prefix=CHECK1 %s
+// RUN: llvm-objdump -d --triple=thumbv7a-none-linux-gnueabi --start-address=0x13004 --stop-address=0x13008 %t2 | FileCheck --check-prefix=CHECK2 %s
+// RUN: llvm-objdump -d --triple=thumbv7a-none-linux-gnueabi --start-address=0x1012ff8 --stop-address=0x1012ffc %t2 | FileCheck --check-prefix=CHECK3 %s
+// RUN: llvm-objdump -d --triple=thumbv7a-none-linux-gnueabi --start-address=0x2012ff8 --stop-address=0x2012ffc %t2 | FileCheck --check-prefix=CHECK4 %s
+// RUN: llvm-objdump -d --triple=thumbv7a-none-linux-gnueabi --start-address=0x3012fec --stop-address=0x3012ff6 %t2 | FileCheck --check-prefix=CHECK5 %s
  .syntax unified
  .balign 0x1000
  .thumb

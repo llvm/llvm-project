@@ -1,7 +1,7 @@
 // REQUIRES: arm
 // RUN: llvm-mc -filetype=obj -triple=armv7a-none-linux-gnueabi %s -o %t.o
 // RUN: ld.lld %t.o -shared -o %t.so --section-start .text=0x2000 --section-start .ARM.exidx=0x1000
-// RUN: llvm-objdump -s -triple=armv7a-none-linux-gnueabi %t.so | FileCheck %s
+// RUN: llvm-objdump -s --triple=armv7a-none-linux-gnueabi %t.so | FileCheck %s
 
  .syntax unified
 

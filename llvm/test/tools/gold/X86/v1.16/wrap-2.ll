@@ -15,7 +15,7 @@
 ; RUN: opt -module-summary %s -o %t.o
 ; RUN: opt -module-summary %S/Inputs/wrap-bar.ll -o %t1.o
 ; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext %t.o %t1.o -shared -o %t.so -wrap=bar
-; RUN: llvm-objdump -d %t.so | FileCheck %s -check-prefix=THIN
+; RUN: llvm-objdump -d %t.so | FileCheck %s --check-prefix=THIN
 ; RUN: llvm-readobj --symbols %t.so | FileCheck -check-prefix=BIND %s
 
 ; Make sure that calls in foo() are not eliminated and that bar is

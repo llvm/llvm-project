@@ -1,5 +1,5 @@
 # RUN: llvm-mc -triple=wasm32-unknown-unknown -filetype=obj -o %t.o -mattr=+simd128,+nontrapping-fptoint,+exception-handling < %s
-# RUN: llvm-objdump -triple=wasm32-unknown-unknown -disassemble %t.o | FileCheck %s
+# RUN: llvm-objdump --triple=wasm32-unknown-unknown -d %t.o | FileCheck %s
 
 test0:
     .functype   test0 (i32, i64) -> (i32)

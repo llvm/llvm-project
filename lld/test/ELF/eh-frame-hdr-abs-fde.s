@@ -5,7 +5,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux %s -o %t.o
 # RUN: ld.lld --eh-frame-hdr %t.o -o %t
-# RUN: llvm-objdump -s -dwarf=frames %t | FileCheck %s
+# RUN: llvm-objdump -s --dwarf=frames %t | FileCheck %s
 
 # CHECK: Augmentation:          "zLR"
 # CHECK: Augmentation data:     00 1B

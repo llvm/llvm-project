@@ -1,0 +1,556 @@
+// RUN: llvm-objdump -p %p/Inputs/hello.obj.macho-x86_64 | FileCheck %s
+// RUN: llvm-objdump -p %p/Inputs/hello.exe.macho-x86_64 \
+// RUN:     | FileCheck %s -check-prefix=EXE
+// RUN: llvm-objdump -p %p/Inputs/dylibLoadKinds.macho-x86_64 \
+// RUN:     | FileCheck %s -check-prefix=LOAD
+// RUN: llvm-objdump -p %p/Inputs/linkerOption.macho-x86_64 \
+// RUN:     | FileCheck %s -check-prefix=LD_OPT
+// RUN: llvm-objdump -p %p/Inputs/dylibSubFramework.macho-x86_64 \
+// RUN:     | FileCheck %s -check-prefix=SUB_FRAME
+// RUN: llvm-objdump -p %p/Inputs/dylibSubUmbrella.macho-x86_64 \
+// RUN:     | FileCheck %s -check-prefix=SUB_UMB
+// RUN: llvm-objdump -p %p/Inputs/dylibSubLibrary.macho-x86_64 \
+// RUN:     | FileCheck %s -check-prefix=SUB_LIB
+// RUN: llvm-objdump -p %p/Inputs/dylibSubClient.macho-x86_64 \
+// RUN:     | FileCheck %s -check-prefix=SUB_CLI
+// RUN: llvm-objdump -p %p/Inputs/dylibRoutines.macho-x86_64 \
+// RUN:     | FileCheck %s -check-prefix=ROUTINE
+// RUN: llvm-objdump -p %p/Inputs/exeThread.macho-x86_64 \
+// RUN:     | FileCheck %s -check-prefix=THREAD
+// RUN: llvm-objdump --macho -p --arch i386 %p/Inputs/macho-universal.x86_64.i386 \
+// RUN:     | FileCheck %s -check-prefix=FATi386
+// RUN: llvm-objdump -p --arch i386 %p/Inputs/macho-universal.x86_64.i386 \
+// RUN:     | FileCheck %s -check-prefix=FATi386
+// RUN: llvm-objdump -p --non-verbose %p/Inputs/hello.obj.macho-x86_64 \
+// RUN:     | FileCheck %s -check-prefix=NON_VERBOSE
+// RUN: llvm-objdump -p %p/Inputs/codesig.macho-x86_64 \
+// RUN:     | FileCheck %s -check-prefix=CODESIG
+// RUN: llvm-objdump -p %p/Inputs/note.macho-x86 \
+// RUN:     | FileCheck %s -check-prefix=NOTE
+
+CHECK: Mach header
+CHECK:       magic cputype cpusubtype  caps    filetype ncmds sizeofcmds      flags
+CHECK: MH_MAGIC_64  X86_64        ALL  0x00      OBJECT     3        496 SUBSECTIONS_VIA_SYMBOLS
+CHECK: Load command 0
+CHECK:       cmd LC_SEGMENT_64
+CHECK:   cmdsize 392
+CHECK:   segname 
+CHECK:    vmaddr 0x0000000000000000
+CHECK:    vmsize 0x00000000000000a8
+CHECK:   fileoff 528
+CHECK:  filesize 168
+CHECK:   maxprot rwx
+CHECK:  initprot rwx
+CHECK:    nsects 4
+CHECK:     flags (none)
+CHECK: Section
+CHECK:   sectname __text
+CHECK:    segname __TEXT
+CHECK:       addr 0x0000000000000000
+CHECK:       size 0x000000000000003b
+CHECK:     offset 528
+CHECK:      align 2^4 (16)
+CHECK:     reloff 696
+CHECK:     nreloc 2
+CHECK:       type S_REGULAR
+CHECK: attributes PURE_INSTRUCTIONS SOME_INSTRUCTIONS
+CHECK:  reserved1 0
+CHECK:  reserved2 0
+CHECK: Section
+CHECK:   sectname __cstring
+CHECK:    segname __TEXT
+CHECK:       addr 0x000000000000003b
+CHECK:       size 0x000000000000000d
+CHECK:     offset 587
+CHECK:      align 2^0 (1)
+CHECK:     reloff 0
+CHECK:     nreloc 0
+CHECK:       type S_CSTRING_LITERALS
+CHECK: attributes (none)
+CHECK:  reserved1 0
+CHECK:  reserved2 0
+CHECK: Section
+CHECK:   sectname __compact_unwind
+CHECK:    segname __LD
+CHECK:       addr 0x0000000000000048
+CHECK:       size 0x0000000000000020
+CHECK:     offset 600
+CHECK:      align 2^3 (8)
+CHECK:     reloff 712
+CHECK:     nreloc 1
+CHECK:       type S_REGULAR
+CHECK: attributes DEBUG
+CHECK:  reserved1 0
+CHECK:  reserved2 0
+CHECK: Section
+CHECK:   sectname __eh_frame
+CHECK:    segname __TEXT
+CHECK:       addr 0x0000000000000068
+CHECK:       size 0x0000000000000040
+CHECK:     offset 632
+CHECK:      align 2^3 (8)
+CHECK:     reloff 0
+CHECK:     nreloc 0
+CHECK:       type S_COALESCED
+CHECK: attributes NO_TOC STRIP_STATIC_SYMS LIVE_SUPPORT
+CHECK:  reserved1 0
+CHECK:  reserved2 0
+CHECK: Load command 1
+CHECK:      cmd LC_SYMTAB
+CHECK:  cmdsize 24
+CHECK:   symoff 720
+CHECK:    nsyms 5
+CHECK:   stroff 800
+CHECK:  strsize 44
+CHECK: Load command 2
+CHECK:             cmd LC_DYSYMTAB
+CHECK:         cmdsize 80
+CHECK:       ilocalsym 0
+CHECK:       nlocalsym 2
+CHECK:      iextdefsym 2
+CHECK:      nextdefsym 2
+CHECK:       iundefsym 4
+CHECK:       nundefsym 1
+CHECK:          tocoff 0
+CHECK:            ntoc 0
+CHECK:       modtaboff 0
+CHECK:         nmodtab 0
+CHECK:    extrefsymoff 0
+CHECK:     nextrefsyms 0
+CHECK:  indirectsymoff 0
+CHECK:   nindirectsyms 0
+CHECK:       extreloff 0
+CHECK:         nextrel 0
+CHECK:       locreloff 0
+CHECK:         nlocrel 0
+
+EXE: Mach header
+EXE:       magic cputype cpusubtype  caps    filetype ncmds sizeofcmds      flags
+EXE: MH_MAGIC_64  X86_64        ALL LIB64     EXECUTE    16       1296   NOUNDEFS DYLDLINK TWOLEVEL PIE
+EXE: Load command 0
+EXE:       cmd LC_SEGMENT_64
+EXE:   cmdsize 72
+EXE:   segname __PAGEZERO
+EXE:    vmaddr 0x0000000000000000
+EXE:    vmsize 0x0000000100000000
+EXE:   fileoff 0
+EXE:  filesize 0
+EXE:   maxprot ---
+EXE:  initprot ---
+EXE:    nsects 0
+EXE:     flags (none)
+EXE: Load command 1
+EXE:       cmd LC_SEGMENT_64
+EXE:   cmdsize 552
+EXE:   segname __TEXT
+EXE:    vmaddr 0x0000000100000000
+EXE:    vmsize 0x0000000000001000
+EXE:   fileoff 0
+EXE:  filesize 4096
+EXE:   maxprot rwx
+EXE:  initprot r-x
+EXE:    nsects 6
+EXE:     flags (none)
+EXE: Section
+EXE:   sectname __text
+EXE:    segname __TEXT
+EXE:       addr 0x0000000100000f30
+EXE:       size 0x000000000000003b
+EXE:     offset 3888
+EXE:      align 2^4 (16)
+EXE:     reloff 0
+EXE:     nreloc 0
+EXE:       type S_REGULAR
+EXE: attributes PURE_INSTRUCTIONS SOME_INSTRUCTIONS
+EXE:  reserved1 0
+EXE:  reserved2 0
+EXE: Section
+EXE:   sectname __stubs
+EXE:    segname __TEXT
+EXE:       addr 0x0000000100000f6c
+EXE:       size 0x0000000000000006
+EXE:     offset 3948
+EXE:      align 2^1 (2)
+EXE:     reloff 0
+EXE:     nreloc 0
+EXE:       type S_SYMBOL_STUBS
+EXE: attributes PURE_INSTRUCTIONS SOME_INSTRUCTIONS
+EXE:  reserved1 0 (index into indirect symbol table)
+EXE:  reserved2 6 (size of stubs)
+EXE: Section
+EXE:   sectname __stub_helper
+EXE:    segname __TEXT
+EXE:       addr 0x0000000100000f74
+EXE:       size 0x000000000000001a
+EXE:     offset 3956
+EXE:      align 2^2 (4)
+EXE:     reloff 0
+EXE:     nreloc 0
+EXE:       type S_REGULAR
+EXE: attributes PURE_INSTRUCTIONS SOME_INSTRUCTIONS
+EXE:  reserved1 0
+EXE:  reserved2 0
+EXE: Section
+EXE:   sectname __cstring
+EXE:    segname __TEXT
+EXE:       addr 0x0000000100000f8e
+EXE:       size 0x000000000000000d
+EXE:     offset 3982
+EXE:      align 2^0 (1)
+EXE:     reloff 0
+EXE:     nreloc 0
+EXE:       type S_CSTRING_LITERALS
+EXE: attributes (none)
+EXE:  reserved1 0
+EXE:  reserved2 0
+EXE: Section
+EXE:   sectname __unwind_info
+EXE:    segname __TEXT
+EXE:       addr 0x0000000100000f9b
+EXE:       size 0x0000000000000048
+EXE:     offset 3995
+EXE:      align 2^0 (1)
+EXE:     reloff 0
+EXE:     nreloc 0
+EXE:       type S_REGULAR
+EXE: attributes (none)
+EXE:  reserved1 0
+EXE:  reserved2 0
+EXE: Section
+EXE:   sectname __eh_frame
+EXE:    segname __TEXT
+EXE:       addr 0x0000000100000fe8
+EXE:       size 0x0000000000000018
+EXE:     offset 4072
+EXE:      align 2^3 (8)
+EXE:     reloff 0
+EXE:     nreloc 0
+EXE:       type S_REGULAR
+EXE: attributes (none)
+EXE:  reserved1 0
+EXE:  reserved2 0
+EXE: Load command 2
+EXE:       cmd LC_SEGMENT_64
+EXE:   cmdsize 232
+EXE:   segname __DATA
+EXE:    vmaddr 0x0000000100001000
+EXE:    vmsize 0x0000000000001000
+EXE:   fileoff 4096
+EXE:  filesize 4096
+EXE:   maxprot rwx
+EXE:  initprot rw-
+EXE:    nsects 2
+EXE:     flags (none)
+EXE: Section
+EXE:   sectname __nl_symbol_ptr
+EXE:    segname __DATA
+EXE:       addr 0x0000000100001000
+EXE:       size 0x0000000000000010
+EXE:     offset 4096
+EXE:      align 2^3 (8)
+EXE:     reloff 0
+EXE:     nreloc 0
+EXE:       type S_NON_LAZY_SYMBOL_POINTERS
+EXE: attributes (none)
+EXE:  reserved1 1 (index into indirect symbol table)
+EXE:  reserved2 0
+EXE: Section
+EXE:   sectname __la_symbol_ptr
+EXE:    segname __DATA
+EXE:       addr 0x0000000100001010
+EXE:       size 0x0000000000000008
+EXE:     offset 4112
+EXE:      align 2^3 (8)
+EXE:     reloff 0
+EXE:     nreloc 0
+EXE:       type S_LAZY_SYMBOL_POINTERS
+EXE: attributes (none)
+EXE:  reserved1 3 (index into indirect symbol table)
+EXE:  reserved2 0
+EXE: Load command 3
+EXE:       cmd LC_SEGMENT_64
+EXE:   cmdsize 72
+EXE:   segname __LINKEDIT
+EXE:    vmaddr 0x0000000100002000
+EXE:    vmsize 0x0000000000001000
+EXE:   fileoff 8192
+EXE:  filesize 304
+EXE:   maxprot rwx
+EXE:  initprot r--
+EXE:    nsects 0
+EXE:     flags (none)
+EXE: Load command 4
+EXE:             cmd LC_DYLD_INFO_ONLY
+EXE:         cmdsize 48
+EXE:      rebase_off 8192
+EXE:     rebase_size 8
+EXE:        bind_off 8200
+EXE:       bind_size 24
+EXE:   weak_bind_off 0
+EXE:  weak_bind_size 0
+EXE:   lazy_bind_off 8224
+EXE:  lazy_bind_size 16
+EXE:      export_off 8240
+EXE:     export_size 48
+EXE: Load command 5
+EXE:      cmd LC_SYMTAB
+EXE:  cmdsize 24
+EXE:   symoff 8360
+EXE:    nsyms 4
+EXE:   stroff 8440
+EXE:  strsize 56
+EXE: Load command 6
+EXE:             cmd LC_DYSYMTAB
+EXE:         cmdsize 80
+EXE:       ilocalsym 0
+EXE:       nlocalsym 0
+EXE:      iextdefsym 0
+EXE:      nextdefsym 2
+EXE:       iundefsym 2
+EXE:       nundefsym 2
+EXE:          tocoff 0
+EXE:            ntoc 0
+EXE:       modtaboff 0
+EXE:         nmodtab 0
+EXE:    extrefsymoff 0
+EXE:     nextrefsyms 0
+EXE:  indirectsymoff 8424
+EXE:   nindirectsyms 4
+EXE:       extreloff 0
+EXE:         nextrel 0
+EXE:       locreloff 0
+EXE:         nlocrel 0
+EXE: Load command 7
+EXE:           cmd LC_LOAD_DYLINKER
+EXE:       cmdsize 32
+EXE:          name /usr/lib/dyld (offset 12)
+EXE: Load command 8
+EXE:      cmd LC_UUID
+EXE:  cmdsize 24
+EXE:     uuid 65C2DD41-79B0-3B34-871B-8CB3446AB762
+EXE: Load command 9
+EXE:       cmd LC_VERSION_MIN_MACOSX
+EXE:   cmdsize 16
+EXE:   version 10.9
+EXE:       sdk 10.9
+EXE: Load command 10
+EXE:       cmd LC_SOURCE_VERSION
+EXE:   cmdsize 16
+EXE:   version 0.0
+EXE: Load command 11
+EXE:        cmd LC_MAIN
+EXE:    cmdsize 24
+EXE:   entryoff 3888
+EXE:  stacksize 0
+EXE: Load command 12
+EXE:           cmd LC_LOAD_DYLIB
+EXE:       cmdsize 56
+EXE:          name /usr/lib/libSystem.B.dylib (offset 24)
+EXE:       current version 1197.1.1
+EXE: compatibility version 1.0.0
+EXE: Load command 13
+EXE:       cmd LC_FUNCTION_STARTS
+EXE:   cmdsize 16
+EXE:   dataoff 8288
+EXE:  datasize 8
+EXE: Load command 14
+EXE:       cmd LC_DATA_IN_CODE
+EXE:   cmdsize 16
+EXE:   dataoff 8296
+EXE:  datasize 0
+EXE: Load command 15
+EXE:       cmd LC_DYLIB_CODE_SIGN_DRS
+EXE:   cmdsize 16
+EXE:   dataoff 8296
+EXE:  datasize 64
+
+
+LOAD: Load command 10
+LOAD:           cmd LC_LOAD_DYLIB
+LOAD:       cmdsize 48
+LOAD:          name /usr/lib/foo1.dylib (offset 24)
+LOAD:       current version 0.0.0
+LOAD: compatibility version 0.0.0
+LOAD: Load command 11
+LOAD:           cmd LC_LOAD_WEAK_DYLIB
+LOAD:       cmdsize 48
+LOAD:          name /usr/lib/foo2.dylib (offset 24)
+LOAD:       current version 0.0.0
+LOAD: compatibility version 0.0.0
+LOAD: Load command 12
+LOAD:           cmd LC_REEXPORT_DYLIB
+LOAD:       cmdsize 48
+LOAD:          name /usr/lib/foo3.dylib (offset 24)
+LOAD:       current version 0.0.0
+LOAD: compatibility version 0.0.0
+LOAD: Load command 13
+LOAD:           cmd LC_LAZY_LOAD_DYLIB
+LOAD:       cmdsize 48
+LOAD:          name /usr/lib/foo4.dylib (offset 24)
+LOAD:       current version 0.0.0
+LOAD: compatibility version 0.0.0
+
+LD_OPT: Load command 4
+LD_OPT:      cmd LC_LINKER_OPTION
+LD_OPT:  cmdsize 24
+LD_OPT:    count 1
+LD_OPT:   string #1 -lc++
+LD_OPT: Load command 5
+LD_OPT:      cmd LC_LINKER_OPTION
+LD_OPT:  cmdsize 40
+LD_OPT:    count 2
+LD_OPT:   string #1 -framework
+LD_OPT:   string #2 Foundation
+
+SUB_FRAME: Load command 10
+SUB_FRAME:           cmd LC_SUB_FRAMEWORK
+SUB_FRAME:       cmdsize 16
+SUB_FRAME:      umbrella Bar (offset 12)
+
+SUB_UMB: Load command 5
+SUB_UMB:           cmd LC_SUB_UMBRELLA
+SUB_UMB:       cmdsize 16
+SUB_UMB:  sub_umbrella Foo (offset 12)
+
+SUB_LIB: Load command 5
+SUB_LIB:           cmd LC_SUB_LIBRARY
+SUB_LIB:       cmdsize 20
+SUB_LIB:   sub_library libfoo (offset 12)
+
+SUB_CLI: Load command 10
+SUB_CLI:           cmd LC_SUB_CLIENT
+SUB_CLI:       cmdsize 16
+SUB_CLI:        client bar (offset 12)
+
+ROUTINE: Load command 6
+ROUTINE:           cmd LC_ROUTINES_64
+ROUTINE:       cmdsize 72
+ROUTINE:  init_address 0x0000000000000f80
+ROUTINE:   init_module 0
+ROUTINE:     reserved1 0
+ROUTINE:     reserved2 0
+ROUTINE:     reserved3 0
+ROUTINE:     reserved4 0
+ROUTINE:     reserved5 0
+ROUTINE:     reserved6 0
+
+THREAD: Load command 10
+THREAD:         cmd LC_UNIXTHREAD
+THREAD:     cmdsize 184
+THREAD:      flavor x86_THREAD_STATE64
+THREAD:       count x86_THREAD_STATE64_COUNT
+THREAD:    rax  0x0000000000000000 rbx 0x0000000000000000 rcx  0x0000000000000000
+THREAD:    rdx  0x0000000000000000 rdi 0x0000000000000000 rsi  0x0000000000000000
+THREAD:    rbp  0x0000000000000000 rsp 0x0000000000000000 r8   0x0000000000000000
+THREAD:     r9  0x0000000000000000 r10 0x0000000000000000 r11  0x0000000000000000
+THREAD:    r12  0x0000000000000000 r13 0x0000000000000000 r14  0x0000000000000000
+THREAD:    r15  0x0000000000000000 rip 0x0000000100000d00
+THREAD: rflags  0x0000000000000000 cs  0x0000000000000000 fs   0x0000000000000000
+THREAD:     gs  0x0000000000000000
+
+FATi386: Mach header
+FATi386:       magic cputype cpusubtype  caps    filetype ncmds sizeofcmds      flags
+FATi386:    MH_MAGIC    I386        ALL  0x00     EXECUTE    16        716   NOUNDEFS DYLDLINK TWOLEVEL PIE MH_NO_HEAP_EXECUTION
+
+NON_VERBOSE: Mach header
+NON_VERBOSE:       magic cputype cpusubtype  caps    filetype ncmds sizeofcmds      flags
+NON_VERBOSE:  0xfeedfacf 16777223          3  0x00           1     3        496 0x00002000
+NON_VERBOSE: Load command 0
+NON_VERBOSE:       cmd LC_SEGMENT_64
+NON_VERBOSE:   cmdsize 392
+NON_VERBOSE:   segname 
+NON_VERBOSE:    vmaddr 0x0000000000000000
+NON_VERBOSE:    vmsize 0x00000000000000a8
+NON_VERBOSE:   fileoff 528
+NON_VERBOSE:  filesize 168
+NON_VERBOSE:   maxprot 0x00000007
+NON_VERBOSE:  initprot 0x00000007
+NON_VERBOSE:    nsects 4
+NON_VERBOSE:     flags 0x0
+NON_VERBOSE: Section
+NON_VERBOSE:   sectname __text
+NON_VERBOSE:    segname __TEXT
+NON_VERBOSE:       addr 0x0000000000000000
+NON_VERBOSE:       size 0x000000000000003b
+NON_VERBOSE:     offset 528
+NON_VERBOSE:      align 2^4 (16)
+NON_VERBOSE:     reloff 696
+NON_VERBOSE:     nreloc 2
+NON_VERBOSE:      flags 0x80000400
+NON_VERBOSE:  reserved1 0
+NON_VERBOSE:  reserved2 0
+NON_VERBOSE: Section
+NON_VERBOSE:   sectname __cstring
+NON_VERBOSE:    segname __TEXT
+NON_VERBOSE:       addr 0x000000000000003b
+NON_VERBOSE:       size 0x000000000000000d
+NON_VERBOSE:     offset 587
+NON_VERBOSE:      align 2^0 (1)
+NON_VERBOSE:     reloff 0
+NON_VERBOSE:     nreloc 0
+NON_VERBOSE:      flags 0x00000002
+NON_VERBOSE:  reserved1 0
+NON_VERBOSE:  reserved2 0
+NON_VERBOSE: Section
+NON_VERBOSE:   sectname __compact_unwind
+NON_VERBOSE:    segname __LD
+NON_VERBOSE:       addr 0x0000000000000048
+NON_VERBOSE:       size 0x0000000000000020
+NON_VERBOSE:     offset 600
+NON_VERBOSE:      align 2^3 (8)
+NON_VERBOSE:     reloff 712
+NON_VERBOSE:     nreloc 1
+NON_VERBOSE:      flags 0x02000000
+NON_VERBOSE:  reserved1 0
+NON_VERBOSE:  reserved2 0
+NON_VERBOSE: Section
+NON_VERBOSE:   sectname __eh_frame
+NON_VERBOSE:    segname __TEXT
+NON_VERBOSE:       addr 0x0000000000000068
+NON_VERBOSE:       size 0x0000000000000040
+NON_VERBOSE:     offset 632
+NON_VERBOSE:      align 2^3 (8)
+NON_VERBOSE:     reloff 0
+NON_VERBOSE:     nreloc 0
+NON_VERBOSE:      flags 0x6800000b
+NON_VERBOSE:  reserved1 0
+NON_VERBOSE:  reserved2 0
+NON_VERBOSE: Load command 1
+NON_VERBOSE:      cmd LC_SYMTAB
+NON_VERBOSE:  cmdsize 24
+NON_VERBOSE:   symoff 720
+NON_VERBOSE:    nsyms 5
+NON_VERBOSE:   stroff 800
+NON_VERBOSE:  strsize 44
+NON_VERBOSE: Load command 2
+NON_VERBOSE:             cmd LC_DYSYMTAB
+NON_VERBOSE:         cmdsize 80
+NON_VERBOSE:       ilocalsym 0
+NON_VERBOSE:       nlocalsym 2
+NON_VERBOSE:      iextdefsym 2
+NON_VERBOSE:      nextdefsym 2
+NON_VERBOSE:       iundefsym 4
+NON_VERBOSE:       nundefsym 1
+NON_VERBOSE:          tocoff 0
+NON_VERBOSE:            ntoc 0
+NON_VERBOSE:       modtaboff 0
+NON_VERBOSE:         nmodtab 0
+NON_VERBOSE:    extrefsymoff 0
+NON_VERBOSE:     nextrefsyms 0
+NON_VERBOSE:  indirectsymoff 0
+NON_VERBOSE:   nindirectsyms 0
+NON_VERBOSE:       extreloff 0
+NON_VERBOSE:         nextrel 0
+NON_VERBOSE:       locreloff 0
+NON_VERBOSE:         nlocrel 0
+
+CODESIG:      cmd LC_CODE_SIGNATURE
+CODESIG:  cmdsize 16
+CODESIG:  dataoff 8496
+CODESIG: datasize 64
+
+NOTE:        cmd LC_NOTE
+NOTE:    cmdsize 40
+NOTE: data_owner DATA OWNER
+NOTE:     offset 68
+NOTE:       size 8

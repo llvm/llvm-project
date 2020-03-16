@@ -7,7 +7,7 @@
 # RUN:         . = 0x20000; .text :  { *(.text) } \
 # RUN:       }" > %t.script
 # RUN: ld.lld -shared --script %t.script -o %t.so %t.o
-# RUN: llvm-objdump -s -section=.rodata -t %t.so | FileCheck %s
+# RUN: llvm-objdump -s --section=.rodata -t %t.so | FileCheck %s
 
   .text
   .globl  __start

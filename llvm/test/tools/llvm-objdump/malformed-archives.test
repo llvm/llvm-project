@@ -1,49 +1,49 @@
 // These test checks that llvm-objdump will not crash with malformed Archive
 // files.  So the check line is not all that important but the bug fixes to
 // make sure llvm-objdump is robust is what matters.
-# RUN: not llvm-objdump -macho -archive-headers \
+# RUN: not llvm-objdump --macho --archive-headers \
 # RUN:   %p/Inputs/libbogus1.a \
 # RUN:   2>&1 | FileCheck -check-prefix=bogus1 %s 
 
 # bogus1: libbogus1.a': truncated or malformed archive (characters in size field in archive header are not all decimal numbers: '10%' for archive member header at offset 8)
 
-# RUN: not llvm-objdump -macho -archive-headers \
+# RUN: not llvm-objdump --macho --archive-headers \
 # RUN:   %p/Inputs/libbogus2.a \
 # RUN:   2>&1 | FileCheck -check-prefix=bogus2 %s 
 
 # bogus2: libbogus2.a': truncated or malformed archive (characters in size field in archive header are not all decimal numbers: '1%' for archive member header at offset 170)
 
-# RUN: not llvm-objdump -macho -archive-headers \
+# RUN: not llvm-objdump --macho --archive-headers \
 # RUN:   %p/Inputs/libbogus3.a \
 # RUN:   2>&1 | FileCheck -check-prefix=bogus3 %s 
 
 # bogus3: libbogus3.a': truncated or malformed archive (offset to next archive member past the end of the archive after member foo.c)
 
-# RUN: not llvm-objdump -macho -archive-headers \
+# RUN: not llvm-objdump --macho --archive-headers \
 # RUN:   %p/Inputs/libbogus4.a \
 # RUN:   2>&1 | FileCheck -check-prefix=bogus4 %s 
 
 # bogus4: libbogus4.a': truncated or malformed archive (remaining size of archive too small for next archive member header for foo.c)
 
-# RUN: not llvm-objdump -macho -archive-headers \
+# RUN: not llvm-objdump --macho --archive-headers \
 # RUN:   %p/Inputs/libbogus5.a \
 # RUN:   2>&1 | FileCheck -check-prefix=bogus5 %s 
 
 # bogus5: libbogus5.a': truncated or malformed archive (terminator characters in archive member "@\n" not the correct "`\n" values for the archive member header for hello.c)
 
-# RUN: not llvm-objdump -macho -archive-headers \
+# RUN: not llvm-objdump --macho --archive-headers \
 # RUN:   %p/Inputs/libbogus6.a \
 # RUN:   2>&1 | FileCheck -check-prefix=bogus6 %s 
 
 # bogus6: libbogus6.a': truncated or malformed archive (name contains a leading space for archive member header at offset 96)
 
-# RUN: not llvm-objdump -macho -archive-headers \
+# RUN: not llvm-objdump --macho --archive-headers \
 # RUN:   %p/Inputs/libbogus7.a \
 # RUN:   2>&1 | FileCheck -check-prefix=bogus7 %s 
 
 # bogus7: libbogus7.a': truncated or malformed archive (long name length characters after the #1/ are not all decimal numbers: '@123$' for archive member header at offset 8)
 
-# RUN: not llvm-objdump -macho -archive-headers \
+# RUN: not llvm-objdump --macho --archive-headers \
 # RUN:   %p/Inputs/libbogus8.a \
 # RUN:   2>&1 | FileCheck -check-prefix=bogus8 %s 
 
@@ -59,25 +59,25 @@
 
 # bogus10: libbogus10.a(<file index: 0>): truncated or malformed archive (long name offset 507 past the end of the string table for archive member header at offset 94)
 
-# RUN: not llvm-objdump -macho -archive-headers \
+# RUN: not llvm-objdump --macho --archive-headers \
 # RUN:   %p/Inputs/libbogus11.a \
 # RUN:   2>&1 | FileCheck -check-prefix=bogus11 %s 
 
 # bogus11: libbogus11.a(hello.c): truncated or malformed archive (characters in UID field in archive header are not all decimal numbers: '~97&' for the archive member header at offset 8)
 
-# RUN: not llvm-objdump -macho -archive-headers \
+# RUN: not llvm-objdump --macho --archive-headers \
 # RUN:   %p/Inputs/libbogus12.a \
 # RUN:   2>&1 | FileCheck -check-prefix=bogus12 %s 
 
 # bogus12: libbogus12.a(hello.c): truncated or malformed archive (characters in GID field in archive header are not all decimal numbers: '#55!' for the archive member header at offset 8)
 
-# RUN: not llvm-objdump -macho -archive-headers \
+# RUN: not llvm-objdump --macho --archive-headers \
 # RUN:   %p/Inputs/libbogus13.a \
 # RUN:   2>&1 | FileCheck -check-prefix=bogus13 %s 
 
 # bogus13: libbogus13.a(hello.c): truncated or malformed archive (characters in AccessMode field in archive header are not all decimal numbers: 'Feed' for the archive member header at offset 8)
 
-# RUN: llvm-objdump -macho -archive-headers %p/Inputs/libbogus14.a \
+# RUN: llvm-objdump --macho --archive-headers %p/Inputs/libbogus14.a \
 # RUN:   2>&1 | FileCheck -check-prefix=bogus14 %s 
 
 # bogus14: -rw-r--r--124/0     102 (date: "1foobar273" contains non-decimal chars) hello.c

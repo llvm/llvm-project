@@ -1,5 +1,5 @@
 // RUN: llvm-mc -filetype=obj -triple thumbv7-linux-gnu %s -o %t
-// RUN: llvm-objdump -triple thumbv7-linux-gnu -d %t | FileCheck %s
+// RUN: llvm-objdump --triple=thumbv7-linux-gnu -d %t | FileCheck %s
 
 //PR18303
 .code 16

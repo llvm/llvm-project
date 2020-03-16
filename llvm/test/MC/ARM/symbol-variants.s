@@ -1,5 +1,5 @@
-@ RUN: llvm-mc < %s -triple armv7-none-linux-gnueabi -filetype=obj  | llvm-objdump -triple armv7-none-linux-gnueabi -r - | FileCheck %s --check-prefix=CHECK --check-prefix=ARM
-@ RUN: llvm-mc < %s -triple thumbv7-none-linux-gnueabi -filetype=obj  | llvm-objdump -triple thumbv7-none-linux-gnueabi -r - | FileCheck %s --check-prefix=CHECK --check-prefix=THUMB
+@ RUN: llvm-mc < %s -triple armv7-none-linux-gnueabi -filetype=obj  | llvm-objdump --triple=armv7-none-linux-gnueabi -r - | FileCheck %s --check-prefix=CHECK --check-prefix=ARM
+@ RUN: llvm-mc < %s -triple thumbv7-none-linux-gnueabi -filetype=obj  | llvm-objdump --triple=thumbv7-none-linux-gnueabi -r - | FileCheck %s --check-prefix=CHECK --check-prefix=THUMB
 
 @ CHECK-LABEL: RELOCATION RECORDS FOR [.text]
 .Lsym:

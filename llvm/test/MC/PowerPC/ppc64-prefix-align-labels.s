@@ -1,7 +1,7 @@
 # RUN: llvm-mc -triple powerpc64-unknown-linux-gnu --filetype=obj -o - %s | \
-# RUN:   llvm-objdump -D  -r - | FileCheck -check-prefix=CHECK-BE %s
+# RUN:   llvm-objdump -D  -r - | FileCheck --check-prefix=CHECK-BE %s
 # RUN: llvm-mc -triple powerpc64le-unknown-linux-gnu --filetype=obj -o - %s | \
-# RUN:   llvm-objdump -D  -r - | FileCheck -check-prefix=CHECK-LE %s
+# RUN:   llvm-objdump -D  -r - | FileCheck --check-prefix=CHECK-LE %s
 
 # The purpose of this test is to check that when an alignment nop is added
 # it is added correctly with resepect to the labels in the .s file.

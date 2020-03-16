@@ -2,7 +2,7 @@
 ; assembly, the current code path will bypass the parser and just write the
 ; raw text out to the Streamer. We need to actually parse the inlineasm to
 ; demonstrate the bug. Going the asm->obj route does not show the issue.
-; RUN: llc -mtriple=aarch64   < %s -filetype=obj | llvm-objdump -arch=aarch64 -d - | FileCheck %s
+; RUN: llc -mtriple=aarch64   < %s -filetype=obj | llvm-objdump --arch=aarch64 -d - | FileCheck %s
 
 ; CHECK-LABEL: <foo>:
 ; CHECK:       a0 79 95 d2   mov x0, #43981

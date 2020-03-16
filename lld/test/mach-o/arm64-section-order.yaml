@@ -1,7 +1,7 @@
 # RUN: ld64.lld -arch arm64 -r -print_atoms %s -o %t
 # RUN: ld64.lld -arch arm64 -r -print_atoms %t -o %t2
-# RUN: llvm-objdump -section-headers %t | FileCheck %s
-# RUN: llvm-objdump -section-headers %t2 | FileCheck %s
+# RUN: llvm-objdump --section-headers %t | FileCheck %s
+# RUN: llvm-objdump --section-headers %t2 | FileCheck %s
 
 # Make sure that the sections are sorted.  Currently we want this order:
 # __text, __unwind_info

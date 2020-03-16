@@ -1,7 +1,7 @@
 # RUN: llvm-mc -triple powerpc64-unknown-linux-gnu --filetype=obj -o - %s | \
-# RUN:   llvm-objdump -D  -r - | FileCheck -check-prefix=CHECK-BE %s
+# RUN:   llvm-objdump -D  -r - | FileCheck --check-prefix=CHECK-BE %s
 # RUN: llvm-mc -triple powerpc64le-unknown-linux-gnu --filetype=obj -o - %s | \
-# RUN:   llvm-objdump -D  -r - | FileCheck -check-prefix=CHECK-LE %s
+# RUN:   llvm-objdump -D  -r - | FileCheck --check-prefix=CHECK-LE %s
 
 # The purpose of this test is to make sure that 8 byte instructions do not
 # cross 64 byte boundaries. If an 8 byte instruction is about to cross such

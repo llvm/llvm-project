@@ -4,7 +4,7 @@
 # RUN: ld.lld %t1 %t2 -o %t
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
 # RUN: ld.lld -shared %t1 %t2 -o %t3
-# RUN: llvm-objdump -d --no-show-raw-insn %t3 | FileCheck -check-prefix=DSO %s
+# RUN: llvm-objdump -d --no-show-raw-insn %t3 | FileCheck --check-prefix=DSO %s
 # RUN: llvm-readobj -S -r %t3 | FileCheck -check-prefix=DSOREL %s
 
 # CHECK:      <_foo>:

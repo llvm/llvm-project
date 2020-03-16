@@ -1,4 +1,4 @@
-;RUN: llc -march=hexagon -filetype=obj < %s -o - | llvm-objdump -mv60 -mhvx -d - | FileCheck %s
+;RUN: llc -march=hexagon -filetype=obj < %s -o - | llvm-objdump --mv60 --mhvx -d - | FileCheck %s
 
 ; Should not crash! and map to vxor
 

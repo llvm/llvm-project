@@ -5,17 +5,17 @@
 // RUN: ld.lld -o %t3.so -shared %t3.o
 
 // RUN: ld.lld -o %t %t1.o %t2.o -wrap foo
-// RUN: llvm-objdump -d -print-imm-hex %t | FileCheck %s
+// RUN: llvm-objdump -d --print-imm-hex %t | FileCheck %s
 
 // RUN: ld.lld -o %t %t1.o %t2.o %t3.so -wrap foo
-// RUN: llvm-objdump -d -print-imm-hex %t | FileCheck %s
+// RUN: llvm-objdump -d --print-imm-hex %t | FileCheck %s
 
 // CHECK: <_start>:
 // CHECK-NEXT: movl $0x11010, %edx
 // CHECK-NEXT: movl $0x11010, %edx
 // CHECK-NEXT: movl $0x11000, %edx
 
-// RUN: llvm-objdump -t %t | FileCheck -check-prefix=SYM %s
+// RUN: llvm-objdump -t %t | FileCheck --check-prefix=SYM %s
 
 
 // SYM:      {{.*}}           l .dynamic 0000000000000000 .hidden _DYNAMIC

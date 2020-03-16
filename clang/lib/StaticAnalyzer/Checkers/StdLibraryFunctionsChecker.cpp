@@ -510,8 +510,14 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
   const RangeInt LongMax = BVF.getMaxValue(LongTy).getLimitedValue();
   const RangeInt LongLongMax = BVF.getMaxValue(LongLongTy).getLimitedValue();
 
-  const RangeInt UCharMax =
-      BVF.getMaxValue(ACtx.UnsignedCharTy).getLimitedValue();
+  // Set UCharRangeMax to min of int or uchar maximum value.
+  // The C standard states that the arguments of functions like isalpha must
+  // be representable as an unsigned char. Their type is 'int', so the max
+  // value of the argument should be min(UCharMax, IntMax). This just happen
+  // to be true for commonly used and well tested instruction set
+  // architectures, but not for others.
+  const RangeInt UCharRangeMax =
+      std::min(BVF.getMaxValue(ACtx.UnsignedCharTy).getLimitedValue(), IntMax);
 
   // The platform dependent value of EOF.
   // Try our best to parse this from the Preprocessor, otherwise fallback to -1.
@@ -573,8 +579,8 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
   // Templates for summaries that are reused by many functions.
   auto Getc = [&]() {
     return Summary(ArgTypes{Irrelevant}, RetType{IntTy}, NoEvalCall)
-        .Case(
-            {ReturnValueCondition(WithinRange, {{EOFv, EOFv}, {0, UCharMax}})});
+        .Case({ReturnValueCondition(WithinRange,
+                                    {{EOFv, EOFv}, {0, UCharRangeMax}})});
   };
   auto Read = [&](RetType R, RangeInt Max) {
     return Summary(ArgTypes{Irrelevant, Irrelevant, SizeTy}, RetType{R},
@@ -609,12 +615,13 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
                   // The locale-specific range.
                   // No post-condition. We are completely unaware of
                   // locale-specific return values.
-                  .Case({ArgumentCondition(0U, WithinRange, {{128, UCharMax}})})
+                  .Case({ArgumentCondition(0U, WithinRange,
+                                           {{128, UCharRangeMax}})})
                   .Case({ArgumentCondition(0U, OutOfRange,
                                            {{'0', '9'},
                                             {'A', 'Z'},
                                             {'a', 'z'},
-                                            {128, UCharMax}}),
+                                            {128, UCharRangeMax}}),
                          ReturnValueCondition(WithinRange, SingleValue(0))})},
       },
       {
@@ -625,10 +632,11 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
                                            {{'A', 'Z'}, {'a', 'z'}}),
                          ReturnValueCondition(OutOfRange, SingleValue(0))})
                   // The locale-specific range.
-                  .Case({ArgumentCondition(0U, WithinRange, {{128, UCharMax}})})
+                  .Case({ArgumentCondition(0U, WithinRange,
+                                           {{128, UCharRangeMax}})})
                   .Case({ArgumentCondition(
                              0U, OutOfRange,
-                             {{'A', 'Z'}, {'a', 'z'}, {128, UCharMax}}),
+                             {{'A', 'Z'}, {'a', 'z'}, {128, UCharRangeMax}}),
                          ReturnValueCondition(WithinRange, SingleValue(0))})},
       },
       {
@@ -692,9 +700,11 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
                          ArgumentCondition(0U, OutOfRange, Range('a', 'z')),
                          ReturnValueCondition(WithinRange, SingleValue(0))})
                   // The locale-specific range.
-                  .Case({ArgumentCondition(0U, WithinRange, {{128, UCharMax}})})
+                  .Case({ArgumentCondition(0U, WithinRange,
+                                           {{128, UCharRangeMax}})})
                   // Is not an unsigned char.
-                  .Case({ArgumentCondition(0U, OutOfRange, Range(0, UCharMax)),
+                  .Case({ArgumentCondition(0U, OutOfRange,
+                                           Range(0, UCharRangeMax)),
                          ReturnValueCondition(WithinRange, SingleValue(0))})},
       },
       {
@@ -728,10 +738,11 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
                                            {{9, 13}, {' ', ' '}}),
                          ReturnValueCondition(OutOfRange, SingleValue(0))})
                   // The locale-specific range.
-                  .Case({ArgumentCondition(0U, WithinRange, {{128, UCharMax}})})
+                  .Case({ArgumentCondition(0U, WithinRange,
+                                           {{128, UCharRangeMax}})})
                   .Case({ArgumentCondition(
                              0U, OutOfRange,
-                             {{9, 13}, {' ', ' '}, {128, UCharMax}}),
+                             {{9, 13}, {' ', ' '}, {128, UCharRangeMax}}),
                          ReturnValueCondition(WithinRange, SingleValue(0))})},
       },
       {
@@ -742,10 +753,11 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
                   .Case({ArgumentCondition(0U, WithinRange, Range('A', 'Z')),
                          ReturnValueCondition(OutOfRange, SingleValue(0))})
                   // The locale-specific range.
-                  .Case({ArgumentCondition(0U, WithinRange, {{128, UCharMax}})})
+                  .Case({ArgumentCondition(0U, WithinRange,
+                                           {{128, UCharRangeMax}})})
                   // Other.
                   .Case({ArgumentCondition(0U, OutOfRange,
-                                           {{'A', 'Z'}, {128, UCharMax}}),
+                                           {{'A', 'Z'}, {128, UCharRangeMax}}),
                          ReturnValueCondition(WithinRange, SingleValue(0))})},
       },
       {
@@ -768,7 +780,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
       {"getchar",
        Summaries{Summary(ArgTypes{}, RetType{IntTy}, NoEvalCall)
                      .Case({ReturnValueCondition(
-                         WithinRange, {{EOFv, EOFv}, {0, UCharMax}})})}},
+                         WithinRange, {{EOFv, EOFv}, {0, UCharRangeMax}})})}},
 
       // read()-like functions that never return more than buffer size.
       // We are not sure how ssize_t is defined on every platform, so we

@@ -1,3 +1,0 @@
-RUN: llvm-objdump -d -m -no-show-raw-insn %p/Inputs/print-mrs.obj.macho-aarch64 | FileCheck %s
-
-CHECK: 0:  mrs x0, CPM_IOACC_CTL_EL3

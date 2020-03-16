@@ -1,0 +1,7 @@
+RUN: llvm-objdump --macho --universal-headers %p/Inputs/arm64_32-fat.o | FileCheck %s
+
+CHECK: cputype CPU_TYPE_ARM64_32
+CHECK-NEXT: cpusubtype CPU_SUBTYPE_ARM64_32_V8
+
+CHECK: cputype CPU_TYPE_ARM64
+CHECK-NEXT: cpusubtype CPU_SUBTYPE_ARM64_ALL

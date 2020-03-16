@@ -1,0 +1,24 @@
+# RUN: llvm-objdump --macho -d %p/Inputs/hello.obj.macho-x86_64 --no-show-raw-insn --print-imm-hex --no-leading-addr | FileCheck %s
+
+# CHECK: (__TEXT,__text) section
+# CHECK: _main:
+# CHECK: 	pushq	%rbp
+# CHECK: 	movq	%rsp, %rbp
+# CHECK: 	subq	$0x20, %rsp
+# CHECK: 	leaq	L_.str(%rip), %rax ## literal pool for: "Hello world\n"
+# CHECK: 	movl	$_main, -0x4(%rbp)
+# CHECK: 	movl	%edi, -0x8(%rbp)
+# CHECK: 	movq	%rsi, -0x10(%rbp)
+# CHECK: 	movq	%rdx, -0x18(%rbp)
+# CHECK: 	movq	%rax, %rdi
+# CHECK: 	movb	$0x0, %al
+# CHECK: 	callq	_printf
+# CHECK: 	movl	$_main, %ecx
+# CHECK: 	movl	%eax, -0x1c(%rbp)
+# CHECK: 	movl	%ecx, %eax
+# CHECK: 	addq	$0x20, %rsp
+# CHECK: 	popq	%rbp
+# CHECK: 	retq
+
+# CHECK-NOT: 0:
+# CHECK-NOT: 0000000000000000

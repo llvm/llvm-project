@@ -1,4 +1,4 @@
-; RUN: llc -O0 -mtriple thumbv7--windows-itanium -filetype obj -o - %s | llvm-objdump -disassemble - | FileCheck %s
+; RUN: llc -O0 -mtriple thumbv7--windows-itanium -filetype obj -o - %s | llvm-objdump -d - | FileCheck %s
 
 declare i32 @llvm.arm.space(i32, i32)
 

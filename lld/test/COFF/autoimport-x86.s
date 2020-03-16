@@ -8,8 +8,8 @@
 # RUN: lld-link -lldmingw -debug:symtab -out:%t.exe -entry:main %t.obj %t-lib.lib -verbose
 
 # RUN: llvm-readobj --coff-imports %t.exe | FileCheck -check-prefix=IMPORTS %s
-# RUN: llvm-objdump -d %t.exe | FileCheck -check-prefix=DISASM %s
-# RUN: llvm-objdump -s %t.exe | FileCheck -check-prefix=CONTENTS %s
+# RUN: llvm-objdump -d %t.exe | FileCheck --check-prefix=DISASM %s
+# RUN: llvm-objdump -s %t.exe | FileCheck --check-prefix=CONTENTS %s
 # RUN: llvm-nm %t.exe | FileCheck -check-prefix=SYMBOLS %s
 
 # IMPORTS: Import {

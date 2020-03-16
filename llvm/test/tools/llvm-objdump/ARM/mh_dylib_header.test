@@ -1,7 +1,0 @@
-RUN: llvm-objdump -d -macho %p/Inputs/mh_dylib_header.macho-arm
-
-CHECK: _t1:
-CHECK:     movw r0, #4133
-
-CHECK: _a1:
-CHECK:     bx lr

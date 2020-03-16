@@ -1,4 +1,4 @@
-@ RUN: llvm-mc -triple armv7-linux -filetype obj -o - %s | llvm-objdump -triple armv7 -D -r - | FileCheck %s
+@ RUN: llvm-mc -triple armv7-linux -filetype obj -o - %s | llvm-objdump --triple=armv7 -D -r - | FileCheck %s
 
 	.text
 
