@@ -798,10 +798,14 @@ accomplished by creating a new value to hold the initial value of the array
 access for the first iteration, and then creating a new GEP instruction in the
 loop to increment the value by the appropriate amount.
 
+.. _passes-loop-rotate:
+
 ``-loop-rotate``: Rotate Loops
 ------------------------------
 
-A simple loop rotation transformation.
+A simple loop rotation transformation.  A summary of it can be found in
+:ref:`Loop Terminology for Rotated Loops <loop-terminology-loop-rotate>`.
+
 
 .. _passes-loop-simplify:
 
@@ -1193,6 +1197,8 @@ performing optimizing transformations.
 
 Note that this does not provide full security verification (like Java), but
 instead just tries to ensure that code is well-formed.
+
+.. _passes-view-cfg:
 
 ``-view-cfg``: View CFG of function
 -----------------------------------
