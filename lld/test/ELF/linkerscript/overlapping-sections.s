@@ -82,7 +82,7 @@
 # However, in order to create such a broken binary the user has to ignore a
 # fatal error by passing --noinhibit-exec, so this behaviour is fine.
 
-# RUN: llvm-objdump -s %t.so | FileCheck %s -check-prefix BROKEN-OUTPUT-FILE
+# RUN: llvm-objdump -s %t.so | FileCheck %s --check-prefix BROKEN-OUTPUT-FILE
 # BROKEN-OUTPUT-FILE-LABEL: Contents of section .sec1:
 # BROKEN-OUTPUT-FILE-NEXT: 8000 01010101 01010101 01010101 01010101
 # BROKEN-OUTPUT-FILE-NEXT: 8010 01010101 01010101 01010101 01010101

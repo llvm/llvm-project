@@ -4,8 +4,8 @@
 // RUN: ld.lld -shared %t2.o -soname fixed-length-string.so -o %t2.so
 // RUN: ld.lld %t.o %t2.so -o %t
 // RUN: llvm-readobj -S -r --symbols %t | FileCheck %s
-// RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck -check-prefix=CODE %s
-// RUN: llvm-objdump -s -section=.rodata %t | FileCheck -check-prefix=RODATA %s
+// RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck --check-prefix=CODE %s
+// RUN: llvm-objdump -s --section=.rodata %t | FileCheck --check-prefix=RODATA %s
 
 .text
 .globl _start

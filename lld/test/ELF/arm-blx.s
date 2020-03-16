@@ -9,7 +9,7 @@
 // RUN:          .callee3 : { *(.callee_high) } \
 // RUN:          .callee4 : { *(.callee_arm_high) } } " > %t.script
 // RUN: ld.lld --script %t.script %t %tfar -o %t2
-// RUN: llvm-objdump -d -triple=armv7a-none-linux-gnueabi %t2 | FileCheck %s
+// RUN: llvm-objdump -d --triple=armv7a-none-linux-gnueabi %t2 | FileCheck %s
 
 // Test BLX instruction is chosen for ARM BL/BLX instruction and Thumb callee
 // Using two callees to ensure at least one has 2-byte alignment.

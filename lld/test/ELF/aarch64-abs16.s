@@ -11,7 +11,7 @@ _start:
   .hword foo - 0x8100
 
 // RUN: ld.lld %t.o %t256.o -o %t2
-// RUN: llvm-objdump -s -section=.data %t2 | FileCheck %s
+// RUN: llvm-objdump -s --section=.data %t2 | FileCheck %s
 
 // CHECK: Contents of section .data:
 // 220158: S = 0x100, A = 0xfeff

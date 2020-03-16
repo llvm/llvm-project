@@ -11,7 +11,7 @@
 # RUN:         . = 0x70000; .got  : { *(.got)  } \
 # RUN:       }" > %t.script
 # RUN: ld.lld -shared -mips-got-size 52 --script %t.script %t0.o %t1.o %t2.o -o %t.so
-# RUN: llvm-objdump -s -section=.got -t %t.so | FileCheck %s
+# RUN: llvm-objdump -s --section=.got -t %t.so | FileCheck %s
 # RUN: llvm-readobj -r --dyn-syms -A %t.so | FileCheck -check-prefix=GOT %s
 
 # CHECK: SYMBOL TABLE:

@@ -2,7 +2,7 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
 # RUN: ld.lld %t.o --section-start .text=0x100000 \
 # RUN:   --section-start=.data=0x110000 --section-start .bss=0x200000 -o %t
-# RUN: llvm-objdump -section-headers %t | FileCheck %s
+# RUN: llvm-objdump --section-headers %t | FileCheck %s
 
 # CHECK:      Sections:
 # CHECK-NEXT:  Idx Name          Size     VMA              Type
@@ -14,19 +14,19 @@
 ## The same, but dropped "0x" prefix.
 # RUN: ld.lld %t.o --section-start .text=100000 \
 # RUN:   --section-start .data=110000 --section-start .bss=0x200000 -o %t1
-# RUN: llvm-objdump -section-headers %t1 | FileCheck %s
+# RUN: llvm-objdump --section-headers %t1 | FileCheck %s
 
 ## Use -Ttext, -Tdata, -Tbss as replacement for --section-start:
 # RUN: ld.lld %t.o -Ttext=0x100000 -Tdata=0x110000 -Tbss=0x200000 -o %t4
-# RUN: llvm-objdump -section-headers %t4 | FileCheck %s
+# RUN: llvm-objdump --section-headers %t4 | FileCheck %s
 
 ## The same, but dropped "0x" prefix.
 # RUN: ld.lld %t.o -Ttext=100000 -Tdata=110000 -Tbss=200000 -o %t5
-# RUN: llvm-objdump -section-headers %t5 | FileCheck %s
+# RUN: llvm-objdump --section-headers %t5 | FileCheck %s
 
 ## Check form without assignment:
 # RUN: ld.lld %t.o -Ttext 0x100000 -Tdata 0x110000 -Tbss 0x200000 -o %t4
-# RUN: llvm-objdump -section-headers %t4 | FileCheck %s
+# RUN: llvm-objdump --section-headers %t4 | FileCheck %s
 
 ## Errors:
 # RUN: not ld.lld %t.o --section-start .text100000 -o /dev/null 2>&1 \
