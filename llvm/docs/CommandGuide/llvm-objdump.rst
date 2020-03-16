@@ -119,6 +119,17 @@ OPTIONS
 
   Demangle symbol names in the output.
 
+.. option:: --debug-vars=<format>
+
+  Print the locations (in registers or memory) of source-level variables
+  alongside disassembly. ``format`` may be ``unicode`` or ``ascii``, defaulting
+  to ``unicode`` if omitted.
+
+.. option:: --debug-vars-indent=<width>
+
+  Distance to indent the source-level variable display, relative to the start
+  of the disassembly. Defaults to 40 characters.
+
 .. option:: -j, --section=<section1[,section2,...]>
 
   Perform commands on the specified sections only. For Mach-O use

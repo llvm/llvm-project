@@ -137,6 +137,12 @@ public:
   void print(raw_ostream &OS, const MCRegisterInfo *RegInfo, DWARFUnit *U,
              bool IsEH = false) const;
 
+  /// Print the expression in a format intended to be compact and useful to a
+  /// user, but not perfectly unambiguous, or capable of representing every
+  /// valid DWARF expression. Returns true if the expression was sucessfully
+  /// printed.
+  bool printCompact(raw_ostream &OS, const MCRegisterInfo &RegInfo);
+
   bool verify(DWARFUnit *U);
 
 private:
