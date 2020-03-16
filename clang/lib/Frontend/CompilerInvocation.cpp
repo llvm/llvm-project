@@ -788,8 +788,10 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
 
   llvm::Triple T(TargetOpts.Triple);
   if (Opts.OptimizationLevel > 0 && Opts.hasReducedDebugInfo() &&
-      llvm::is_contained(DebugEntryValueArchs, T.getArch()))
+      llvm::is_contained(DebugEntryValueArchs, T.getArch())) {
+    Opts.EnableDebugEntryValues = Args.hasArg(OPT_femit_debug_entry_values);
     Opts.EmitCallSiteInfo = true;
+  }
 
   Opts.DisableO0ImplyOptNone = Args.hasArg(OPT_disable_O0_optnone);
   Opts.DisableRedZone = Args.hasArg(OPT_disable_red_zone);

@@ -42,6 +42,13 @@ using namespace mlir;
 using llvm::dbgs;
 using mlir::functional::zipMap;
 
+static llvm::cl::OptionCategory clOptionsCategory(DEBUG_TYPE " options");
+
+static llvm::cl::opt<bool> lowerToLLVMMatrixIntrinsics(
+    "vector-lower-matrix-intrinsics",
+    llvm::cl::desc("Lower vector.contract to llvm.intr.matrix.multiply"),
+    llvm::cl::init(false), llvm::cl::cat(clOptionsCategory));
+
 /// Given a shape with sizes greater than 0 along all dimensions,
 /// returns the distance, in number of elements, between a slice in a dimension
 /// and the next slice in the same dimension.
@@ -934,6 +941,39 @@ public:
     // TODO(ajcbik): implement masks
     if (llvm::size(op.masks()) != 0)
       return matchFailure();
+
+    // TODO(ntv, ajcbik): implement benefits, cost models, separate this out in
+    // a new pattern.
+    // TODO(ntv, fhahn): once row-major mode is available in LLVM's matrix
+    // intrinsics, use that.
+    if (lowerToLLVMMatrixIntrinsics &&
+        isColumnMajorMatmul(op.indexing_maps())) {
+      VectorType lhsType = op.getLhsType();
+      VectorType rhsType = op.getRhsType();
+      Type flattenedLHSType =
+          VectorType::get(lhsType.getNumElements(), lhsType.getElementType());
+      Type flattenedRHSType =
+          VectorType::get(rhsType.getNumElements(), rhsType.getElementType());
+      auto lhs = rewriter.create<vector::ShapeCastOp>(
+          op.getLoc(), flattenedLHSType, op.lhs());
+      auto rhs = rewriter.create<vector::ShapeCastOp>(
+          op.getLoc(), flattenedRHSType, op.rhs());
+
+      unsigned lhsRows = op.getLhsType().getShape()[0];
+      unsigned lhsColumns = op.getLhsType().getShape()[1];
+      unsigned rhsColumns = op.getRhsType().getShape()[1];
+      Value mul = rewriter.create<vector::MatmulOp>(
+          op.getLoc(), lhs, rhs, lhsRows, lhsColumns, rhsColumns);
+      mul = rewriter.create<vector::ShapeCastOp>(op.getLoc(),
+                                                 op.acc().getType(), mul);
+      Type elementType = op.getLhsType().getElementType();
+      assert(elementType.isIntOrFloat());
+      if (elementType.isa<IntegerType>())
+        rewriter.replaceOpWithNewOp<AddIOp>(op, op.acc(), mul);
+      else
+        rewriter.replaceOpWithNewOp<AddFOp>(op, op.acc(), mul);
+      return matchSuccess();
+    }
 
     // Find first batch dimension in LHS/RHS, and lower when found.
     std::vector<std::pair<int64_t, int64_t>> batchDimMap = op.getBatchDimMap();

@@ -70,7 +70,7 @@
 # MACHO-x86-64:       27:       c3                                              ret
 
 # RUN: yaml2obj --docnum=1 %s -o %t.elf-i386
-# RUN: llvm-objdump -d -r %t.elf-i386 | FileCheck %s -check-prefix ELF-i386
+# RUN: llvm-objdump -d -r %t.elf-i386 | FileCheck %s --check-prefix=ELF-i386
 
 # ELF-i386: file format elf32-i386
 # ELF-i386: Disassembly of section .text:
@@ -127,7 +127,7 @@ Symbols:
     Binding: STB_GLOBAL
 
 # RUN: yaml2obj --docnum=2 %s -o %t.elf-x86-64
-# RUN: llvm-objdump -d -r %t.elf-x86-64 | FileCheck %s -check-prefix ELF-x86-64
+# RUN: llvm-objdump -d -r %t.elf-x86-64 | FileCheck %s --check-prefix=ELF-x86-64
 
 --- !ELF
 FileHeader:

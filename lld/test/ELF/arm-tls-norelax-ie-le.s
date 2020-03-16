@@ -3,7 +3,7 @@
 // RUN: ld.lld %t1.o --shared -soname=t1.so -o %t1.so
 // RUN: llvm-mc %s -o %t.o -filetype=obj -triple=armv7a-linux-gnueabi
 // RUN: ld.lld %t1.so %t.o -o %t
-// RUN: llvm-objdump -s -triple=armv7a-linux-gnueabi %t | FileCheck %s
+// RUN: llvm-objdump -s --triple=armv7a-linux-gnueabi %t | FileCheck %s
 
 // This tls Initial Exec sequence is with respect to a non-preemptible symbol
 // so a relaxation would normally be possible. This would result in an assertion

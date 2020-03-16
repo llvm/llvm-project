@@ -58,14 +58,10 @@ int main(int argc, char **argv) {
 // CHECK-NEXT:  [[TASK_T_WITH_PRIVS:%.+]] = bitcast i8* [[TASK_T]] to [[T]]*
 // CHECK:       [[PRIVS:%.+]] = getelementptr inbounds [[T]], [[T]]* [[TASK_T_WITH_PRIVS]], i32 0, i32 1
 // CHECK:       [[TD1_REF:%.+]] = getelementptr inbounds [[PRIVATES]], [[PRIVATES]]* [[PRIVS]], i32 0, i32 0
-// CHECK-NEXT:  [[TD1_SHAR:%.+]] = getelementptr inbounds %
-// CHECK-NEXT:  [[TD1_ADDR:%.+]] = load i8**, i8*** [[TD1_SHAR]],
-// CHECK-NEXT:  [[TD1:%.+]] = load i8*, i8** [[TD1_ADDR]],
+// CHECK-NEXT:  [[TD1:%.+]] = load i8*, i8** %{{.+}},
 // CHECK-NEXT:  store i8* [[TD1]], i8** [[TD1_REF]],
 // CHECK-NEXT:  [[TD2_REF:%.+]] = getelementptr inbounds [[PRIVATES]], [[PRIVATES]]* [[PRIVS]], i32 0, i32 1
-// CHECK-NEXT:  [[TD2_SHAR:%.+]] = getelementptr inbounds %
-// CHECK-NEXT:  [[TD2_ADDR:%.+]] = load i8**, i8*** [[TD2_SHAR]],
-// CHECK-NEXT:  [[TD2:%.+]] = load i8*, i8** [[TD2_ADDR]],
+// CHECK-NEXT:  [[TD2:%.+]] = load i8*, i8** %{{.+}},
 // CHECK-NEXT:  store i8* [[TD2]], i8** [[TD2_REF]],
 // CHECK:       call void @__kmpc_taskloop(%struct.ident_t* @0, i32 [[GTID]], i8* [[TASK_T]], i32 1,
 // CHECK:  call {{.*}}void @__kmpc_end_master(

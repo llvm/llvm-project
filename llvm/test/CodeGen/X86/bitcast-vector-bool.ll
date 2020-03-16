@@ -158,7 +158,7 @@ define i8 @bitcast_v16i8_to_v2i8(<16 x i8> %a0) nounwind {
 ; AVX512-NEXT:    vpmovb2m %xmm0, %k0
 ; AVX512-NEXT:    kmovw %k0, -{{[0-9]+}}(%rsp)
 ; AVX512-NEXT:    vmovdqa -{{[0-9]+}}(%rsp), %xmm0
-; AVX512-NEXT:    vpextrb $0, %xmm0, %ecx
+; AVX512-NEXT:    vmovd %xmm0, %ecx
 ; AVX512-NEXT:    vpextrb $1, %xmm0, %eax
 ; AVX512-NEXT:    addb %cl, %al
 ; AVX512-NEXT:    # kill: def $al killed $al killed $eax
@@ -311,7 +311,7 @@ define i8 @bitcast_v16i16_to_v2i8(<16 x i16> %a0) nounwind {
 ; AVX512-NEXT:    vpmovw2m %ymm0, %k0
 ; AVX512-NEXT:    kmovw %k0, -{{[0-9]+}}(%rsp)
 ; AVX512-NEXT:    vmovdqa -{{[0-9]+}}(%rsp), %xmm0
-; AVX512-NEXT:    vpextrb $0, %xmm0, %ecx
+; AVX512-NEXT:    vmovd %xmm0, %ecx
 ; AVX512-NEXT:    vpextrb $1, %xmm0, %eax
 ; AVX512-NEXT:    addb %cl, %al
 ; AVX512-NEXT:    # kill: def $al killed $al killed $eax
@@ -505,7 +505,7 @@ define i8 @bitcast_v16i32_to_v2i8(<16 x i32> %a0) nounwind {
 ; AVX512-NEXT:    vpcmpgtd %zmm0, %zmm1, %k0
 ; AVX512-NEXT:    kmovw %k0, -{{[0-9]+}}(%rsp)
 ; AVX512-NEXT:    vmovdqa -{{[0-9]+}}(%rsp), %xmm0
-; AVX512-NEXT:    vpextrb $0, %xmm0, %ecx
+; AVX512-NEXT:    vmovd %xmm0, %ecx
 ; AVX512-NEXT:    vpextrb $1, %xmm0, %eax
 ; AVX512-NEXT:    addb %cl, %al
 ; AVX512-NEXT:    # kill: def $al killed $al killed $eax

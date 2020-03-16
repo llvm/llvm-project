@@ -25,6 +25,7 @@ class Record;
 
 namespace mlir {
 namespace tblgen {
+class Dialect;
 class Type;
 
 // Wrapper class with helper methods for accessing attribute constraints defined
@@ -105,6 +106,9 @@ public:
   // Returns the code body for derived attribute. Aborts if this is not a
   // derived attribute.
   StringRef getDerivedCodeBody() const;
+
+  // Returns the dialect for the attribute if defined.
+  Dialect getDialect() const;
 };
 
 // Wrapper class providing helper methods for accessing MLIR constant attribute

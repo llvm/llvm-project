@@ -1,7 +1,7 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
 # RUN: ld.lld -pie %t.o -o %tout
-# RUN: llvm-objdump -section-headers %tout | FileCheck %s
+# RUN: llvm-objdump --section-headers %tout | FileCheck %s
 # RUN: llvm-readobj --dynamic-table -r %tout | FileCheck %s --check-prefix=TAGS
 
 ## Check we produce DT_PLTREL/DT_JMPREL/DT_PLTGOT and DT_PLTRELSZ tags

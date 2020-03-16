@@ -34,6 +34,6 @@ def Linalg_Dialect : Dialect {
 
 // Whether a type is a RangeType.
 def LinalgIsRangeTypePred : CPred<"$_self.isa<RangeType>()">;
-def Range : Type<LinalgIsRangeTypePred, "range">;
+def Range : DialectType<Linalg_Dialect, LinalgIsRangeTypePred, "range">;
 
 #endif // LINALG_BASE

@@ -3,13 +3,13 @@
 # RUN: llvm-mc %s -triple=riscv32 -mattr=+relax | FileCheck -check-prefix=ASM %s
 # RUN: llvm-mc %s -triple=riscv64 -mattr=+relax | FileCheck -check-prefix=ASM %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 < %s \
-# RUN:   | llvm-objdump -d -M no-aliases - | FileCheck -check-prefixes=DISASM,DISASM-NORELAX %s
+# RUN:   | llvm-objdump -d -M no-aliases - | FileCheck --check-prefixes=DISASM,DISASM-NORELAX %s
 # RUN: llvm-mc -filetype=obj -triple riscv64 < %s \
-# RUN:   | llvm-objdump -d -M no-aliases - | FileCheck -check-prefixes=DISASM,DISASM-NORELAX %s
+# RUN:   | llvm-objdump -d -M no-aliases - | FileCheck --check-prefixes=DISASM,DISASM-NORELAX %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+relax < %s \
-# RUN:   | llvm-objdump -d -M no-aliases - | FileCheck -check-prefixes=DISASM,DISASM-RELAX %s
+# RUN:   | llvm-objdump -d -M no-aliases - | FileCheck --check-prefixes=DISASM,DISASM-RELAX %s
 # RUN: llvm-mc -filetype=obj -triple riscv64 -mattr=+relax < %s \
-# RUN:   | llvm-objdump -d -M no-aliases - | FileCheck -check-prefixes=DISASM,DISASM-RELAX %s
+# RUN:   | llvm-objdump -d -M no-aliases - | FileCheck --check-prefixes=DISASM,DISASM-RELAX %s
 
 # Checks change of options does not cause error: could not find corresponding %pcrel_hi
 # when assembling pseudoinstruction and its extended form. Also checks that we

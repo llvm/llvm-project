@@ -29,6 +29,34 @@ body: |
 ...
 
 ---
+name: test_ssube_v2s32
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5
+
+    ; CHECK-LABEL: name: test_ssube_v2s32
+    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    ; CHECK: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr2_vgpr3
+    ; CHECK: [[COPY2:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr4_vgpr5
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C]](s32)
+    ; CHECK: [[ICMP:%[0-9]+]]:_(<2 x s1>) = G_ICMP intpred(eq), [[COPY2]](<2 x s32>), [[BUILD_VECTOR]]
+    ; CHECK: [[SSUBE:%[0-9]+]]:_(<2 x s32>), [[SSUBE1:%[0-9]+]]:_(<2 x s1>) = G_SSUBE [[COPY]], [[COPY1]], [[ICMP]]
+    ; CHECK: [[ZEXT:%[0-9]+]]:_(<2 x s32>) = G_ZEXT [[SSUBE1]](<2 x s1>)
+    ; CHECK: $vgpr0_vgpr1 = COPY [[SSUBE]](<2 x s32>)
+    ; CHECK: $vgpr2_vgpr3 = COPY [[ZEXT]](<2 x s32>)
+    %0:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    %1:_(<2 x s32>) = COPY $vgpr2_vgpr3
+    %2:_(<2 x s32>) = COPY $vgpr4_vgpr5
+    %3:_(s32) = G_CONSTANT i32 0
+    %4:_(<2 x s32>) = G_BUILD_VECTOR %3, %3
+    %5:_(<2 x s1>) = G_ICMP intpred(eq), %2, %4
+    %6:_(<2 x s32>), %7:_(<2 x s1>) = G_SSUBE %0, %1, %5
+    %8:_(<2 x s32>) = G_ZEXT %7
+    $vgpr0_vgpr1 = COPY %6
+    $vgpr2_vgpr3 = COPY %8
+...
+---
 name: test_ssube_s16
 body: |
   bb.0:
@@ -59,4 +87,31 @@ body: |
     %10:_(s32) = G_ZEXT %8
     $vgpr0 = COPY %9
     $vgpr1 = COPY %10
+...
+
+---
+name: test_ssube_s64
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4
+
+    ; CHECK-LABEL: name: test_ssube_s64
+    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $vgpr2_vgpr3
+    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr4
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; CHECK: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY2]](s32), [[C]]
+    ; CHECK: [[SSUBE:%[0-9]+]]:_(s64), [[SSUBE1:%[0-9]+]]:_(s1) = G_SSUBE [[COPY]], [[COPY1]], [[ICMP]]
+    ; CHECK: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[SSUBE1]](s1)
+    ; CHECK: $vgpr0_vgpr1 = COPY [[SSUBE]](s64)
+    ; CHECK: $vgpr2 = COPY [[ZEXT]](s32)
+    %0:_(s64) = COPY $vgpr0_vgpr1
+    %1:_(s64) = COPY $vgpr2_vgpr3
+    %2:_(s32) = COPY $vgpr4
+    %3:_(s32) = G_CONSTANT i32 0
+    %4:_(s1) = G_ICMP intpred(eq), %2, %3
+    %5:_(s64), %6:_(s1) = G_SSUBE %0, %1, %4
+    %7:_(s32) = G_ZEXT %6
+    $vgpr0_vgpr1 = COPY %5
+    $vgpr2 = COPY %7
 ...

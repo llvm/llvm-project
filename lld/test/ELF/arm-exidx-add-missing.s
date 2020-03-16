@@ -3,7 +3,7 @@
 // RUN: ld.lld %t --no-merge-exidx-entries -o %t2
 // RUN: llvm-objdump -s %t2 | FileCheck %s
 // RUN: ld.lld %t -o %t3
-// RUN: llvm-objdump -s %t3 | FileCheck %s -check-prefix=CHECK-MERGE
+// RUN: llvm-objdump -s %t3 | FileCheck %s --check-prefix=CHECK-MERGE
 
 // The ARM.exidx section is a table of 8-byte entries of the form:
 // | PREL31 Relocation to start of function | Unwinding information |

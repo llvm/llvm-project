@@ -1,0 +1,5 @@
+@ RUN: llvm-objdump --macho -d --arch armv7m %p/Inputs/fat-armv7m.o | FileCheck %s
+@ CHECK: fat-armv7m.o:
+@ CHECK: (__TEXT,__text) section
+@ CHECK: foo:
+@ CHECK: 00 bf nop

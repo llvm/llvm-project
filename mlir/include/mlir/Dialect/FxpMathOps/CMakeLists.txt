@@ -1,1 +1,1 @@
-add_mlir_dialect(FxpMathOps FxpMathOps)
+add_mlir_dialect(FxpMathOps fxpmath FxpMathOps)

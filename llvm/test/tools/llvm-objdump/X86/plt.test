@@ -1,6 +1,6 @@
-// RUN: llvm-objdump -d %p/Inputs/stripped-elf.so | FileCheck -check-prefix=64 %s
-// RUN: llvm-objdump -d %p/Inputs/hello.exe.elf-i386 | FileCheck -check-prefix=32 %s
-// RUN: llvm-objdump -d %p/Inputs/hello.exe.nopie.elf-i386 | FileCheck -check-prefix=32 %s
+// RUN: llvm-objdump -d %p/Inputs/stripped-elf.so | FileCheck --check-prefix=64 %s
+// RUN: llvm-objdump -d %p/Inputs/hello.exe.elf-i386 | FileCheck --check-prefix=32 %s
+// RUN: llvm-objdump -d %p/Inputs/hello.exe.nopie.elf-i386 | FileCheck --check-prefix=32 %s
 
 # 64: Disassembly of section .plt:
 # 64: <__gmon_start__@plt>:

@@ -1,4 +1,4 @@
-# RUN: llvm-objdump -unwind-info %p/Inputs/unwind-info.macho-arm64 2>/dev/null | FileCheck %s
+# RUN: llvm-objdump --unwind-info %p/Inputs/unwind-info.macho-arm64 2>/dev/null | FileCheck %s
 
 # The 2nd level index here is "regular", including all offsets & encodings in
 # full.

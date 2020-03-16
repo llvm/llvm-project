@@ -922,7 +922,7 @@ define <16 x i8> @var_shuffle_v16i8_from_v32i8_v16i8(<32 x i8> %v, <16 x i8> %in
 ; SSE41-NEXT:    movq %rsp, %rbp
 ; SSE41-NEXT:    andq $-32, %rsp
 ; SSE41-NEXT:    subq $544, %rsp # imm = 0x220
-; SSE41-NEXT:    pextrb $0, %xmm2, %eax
+; SSE41-NEXT:    movd %xmm2, %eax
 ; SSE41-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
 ; SSE41-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; SSE41-NEXT:    andl $31, %eax

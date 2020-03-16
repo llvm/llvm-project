@@ -231,7 +231,7 @@ define void @use_kernarg_segment_ptr() #1 {
   ret void
 }
 
-; HSA: define void @func_indirect_use_kernarg_segment_ptr() #14 {
+; HSA: define void @func_indirect_use_kernarg_segment_ptr() #11 {
 define void @func_indirect_use_kernarg_segment_ptr() #1 {
   call void @use_kernarg_segment_ptr()
   ret void

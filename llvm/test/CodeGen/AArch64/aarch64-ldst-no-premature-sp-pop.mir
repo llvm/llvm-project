@@ -1,0 +1,85 @@
+# RUN: llc -start-before=aarch64-ldst-opt -o - %s | FileCheck %s
+# CHECK-NOT: stp     xzr, xzr, [sp], #16
+# CHECK:     add     sp, sp, #16
+--- |
+  target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64-arm-none-eabi"
+
+  define hidden i32 @foo(i32 %0) {
+    %2 = alloca [4 x i32], align 4
+    %3 = bitcast [4 x i32]* %2 to i8*
+    call void @llvm.memset.p0i8.i64(i8* nonnull align 4 dereferenceable(16) %3, i8 0, i64 16, i1 false)
+    %4 = sext i32 %0 to i64
+    %5 = getelementptr inbounds [4 x i32], [4 x i32]* %2, i64 0, i64 %4
+    %6 = load i32, i32* %5, align 4
+    ret i32 %6
+  }
+
+  declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i1 immarg) #2
+  declare void @llvm.stackprotector(i8*, i8**) #3
+
+  !llvm.module.flags = !{!0}
+  !llvm.ident = !{!1}
+
+  !0 = !{i32 1, !"wchar_size", i32 4}
+  !1 = !{!"clang version 11.0.0 "}
+  !2 = !{!3, !3, i64 0}
+  !3 = !{!"int", !4, i64 0}
+  !4 = !{!"omnipotent char", !5, i64 0}
+  !5 = !{!"Simple C++ TBAA"}
+
+...
+---
+name:            foo
+alignment:       8
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:       []
+liveins:
+  - { reg: '$w0', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       16
+  offsetAdjustment: 0
+  maxAlignment:    8
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  16
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:
+  - { id: 0, type: default, offset: -16, size: 16,
+      alignment: 8, stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      local-offset: -16, debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
+callSites:       []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0 (%ir-block.1):
+    liveins: $w0
+
+    $sp = frame-setup SUBXri $sp, 16, 0
+    $x8 = ADDXri $sp, 0, 0
+    STRXui $xzr, $sp, 1 :: (store 8 into %ir.3 + 8)
+    STRXui $xzr, $sp, 0 :: (store 8 into %ir.3)
+    renamable $w0 = LDRWroW killed renamable $x8, killed renamable $w0, 1, 1 :: (load 4 from %ir.5, !tbaa !2)
+    $sp = frame-destroy ADDXri $sp, 16, 0
+    RET undef $lr, implicit $w0
+
+...

@@ -18,14 +18,15 @@ include "mlir/Interfaces/CallInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/SideEffects.td"
 
-def Std_Dialect : Dialect {
+def StandardOps_Dialect : Dialect {
   let name = "std";
   let cppNamespace = "";
+  let hasConstantMaterializer = 1;
 }
 
 // Base class for Standard dialect ops.
 class Std_Op<string mnemonic, list<OpTrait> traits = []> :
-    Op<Std_Dialect, mnemonic, traits> {
+    Op<StandardOps_Dialect, mnemonic, traits> {
   // For every standard op, there needs to be a:
   //   * void print(OpAsmPrinter &p, ${C++ class of Op} op)
   //   * LogicalResult verify(${C++ class of Op} op)
@@ -63,7 +64,7 @@ class CastOp<string mnemonic, list<OpTrait> traits = []> :
 // Base class for unary ops. Requires single operand and result. Individual
 // classes will have `operand` accessor.
 class UnaryOp<string mnemonic, list<OpTrait> traits = []> :
-    Op<Std_Dialect, mnemonic, !listconcat(traits, [NoSideEffect])> {
+    Op<StandardOps_Dialect, mnemonic, !listconcat(traits, [NoSideEffect])> {
   let results = (outs AnyType);
   let printer = [{
     return printStandardUnaryOp(this->getOperation(), p);
@@ -86,7 +87,7 @@ class FloatUnaryOp<string mnemonic, list<OpTrait> traits = []> :
 // results to be of the same type, but does not constrain them to specific
 // types.  Individual classes will have `lhs` and `rhs` accessor to operands.
 class ArithmeticOp<string mnemonic, list<OpTrait> traits = []> :
-    Op<Std_Dialect, mnemonic,
+    Op<StandardOps_Dialect, mnemonic,
        !listconcat(traits, [NoSideEffect, SameOperandsAndResultType])> {
 
   let results = (outs AnyType);

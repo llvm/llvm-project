@@ -484,13 +484,13 @@ static bool maybeEndlessLoop(const Loop &L) {
   return true;
 }
 
-static bool mayContainIrreducibleControl(const Function &F, const LoopInfo *LI) {
+bool llvm::mayContainIrreducibleControl(const Function &F, const LoopInfo *LI) {
   if (!LI)
     return false;
   using RPOTraversal = ReversePostOrderTraversal<const Function *>;
   RPOTraversal FuncRPOT(&F);
-  return !containsIrreducibleCFG<const BasicBlock *, const RPOTraversal,
-                                 const LoopInfo>(FuncRPOT, *LI);
+  return containsIrreducibleCFG<const BasicBlock *, const RPOTraversal,
+                                const LoopInfo>(FuncRPOT, *LI);
 }
 
 /// Lookup \p Key in \p Map and return the result, potentially after

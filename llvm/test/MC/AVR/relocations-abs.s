@@ -1,4 +1,4 @@
-; RUN: llvm-mc -filetype=obj -triple=avr %s | llvm-objdump -dr - | FileCheck %s
+; RUN: llvm-mc -filetype=obj -triple=avr %s | llvm-objdump -d -r - | FileCheck %s
 
 ; CHECK: <bar>:
 ; CHECK-NEXT: 00 00 nop

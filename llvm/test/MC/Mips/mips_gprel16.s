@@ -4,9 +4,9 @@
 // field.
 
 // RUN: llvm-mc -mcpu=mips32r2 -triple=mipsel-pc-linux -filetype=obj %s -o - \
-// RUN: | llvm-objdump -disassemble - | FileCheck %s
+// RUN: | llvm-objdump -d - | FileCheck %s
 // RUN: llvm-mc -mcpu=mips32r2 -triple=mips-pc-linux -filetype=obj %s -o - \
-// RUN: | llvm-objdump -disassemble - | FileCheck %s
+// RUN: | llvm-objdump -d - | FileCheck %s
 
 	.text
 	.abicalls

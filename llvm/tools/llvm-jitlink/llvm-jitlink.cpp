@@ -86,6 +86,11 @@ static cl::list<std::string> AbsoluteDefs(
     cl::desc("Inject absolute symbol definitions (syntax: <name>=<addr>)"),
     cl::ZeroOrMore);
 
+static cl::opt<bool> ShowInitialExecutionSessionState(
+    "show-init-es",
+    cl::desc("Print ExecutionSession state before resolving entry point"),
+    cl::init(false));
+
 static cl::opt<bool> ShowAddrs(
     "show-addrs",
     cl::desc("Print registered symbol, section, got and stub addresses"),
@@ -841,11 +846,13 @@ int main(int argc, char *argv[]) {
     ExitOnErr(loadProcessSymbols(*S));
   ExitOnErr(loadDylibs());
 
-
   {
     TimeRegion TR(Timers ? &Timers->LoadObjectsTimer : nullptr);
     ExitOnErr(loadObjects(*S));
   }
+
+  if (ShowInitialExecutionSessionState)
+    S->ES.dump(outs());
 
   JITEvaluatedSymbol EntryPoint = 0;
   {

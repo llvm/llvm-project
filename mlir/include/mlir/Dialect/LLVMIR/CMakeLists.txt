@@ -1,12 +1,13 @@
 set(LLVM_TARGET_DEFINITIONS LLVMOps.td)
 mlir_tablegen(LLVMOps.h.inc -gen-op-decls)
 mlir_tablegen(LLVMOps.cpp.inc -gen-op-defs)
+mlir_tablegen(LLVMOpsDialect.h.inc -gen-dialect-decls)
 mlir_tablegen(LLVMOpsEnums.h.inc -gen-enum-decls)
 mlir_tablegen(LLVMOpsEnums.cpp.inc -gen-enum-defs)
 add_public_tablegen_target(MLIRLLVMOpsIncGen)
 
-add_mlir_dialect(NVVMOps NVVMOps)
-add_mlir_dialect(ROCDLOps ROCDLOps)
+add_mlir_dialect(NVVMOps nvvm NVVMOps)
+add_mlir_dialect(ROCDLOps rocdl ROCDLOps)
 
 set(LLVM_TARGET_DEFINITIONS LLVMOps.td)
 mlir_tablegen(LLVMConversions.inc -gen-llvmir-conversions)

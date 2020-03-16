@@ -95,7 +95,7 @@ Sections:
 ## .strtab is not null-terminated.
 
 # RUN: yaml2obj %s --docnum=5 -o %t5
-# RUN: not llvm-objdump -syms %t5 2>&1 | FileCheck --check-prefix=NONULL %s
+# RUN: not llvm-objdump --syms %t5 2>&1 | FileCheck --check-prefix=NONULL %s
 
 # NONULL: error: {{.*}}: SHT_STRTAB string table section [index 1] is non-null terminated
 
@@ -596,7 +596,7 @@ FileHeader:
 ## symbol name and .strtab is empty.
 
 # RUN: yaml2obj %s --docnum=28 -o %t28
-# RUN: not llvm-objdump -syms %t28 2>&1 | FileCheck -DFILE=%t28 --check-prefix=STRTAB-EMPTY2 %s
+# RUN: not llvm-objdump --syms %t28 2>&1 | FileCheck -DFILE=%t28 --check-prefix=STRTAB-EMPTY2 %s
 
 # STRTAB-EMPTY2: error: '[[FILE]]': SHT_STRTAB string table section [index 1] is empty
 

@@ -19,8 +19,8 @@
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/StandardTypes.h"
+#include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Interfaces/SideEffects.h"
-#include "mlir/Transforms/LoopLikeInterface.h"
 
 namespace mlir {
 class AffineApplyOp;
@@ -35,17 +35,6 @@ class OpBuilder;
 /// function. A value of index type defined at the top level is always a valid
 /// symbol.
 bool isTopLevelValue(Value value);
-
-class AffineOpsDialect : public Dialect {
-public:
-  AffineOpsDialect(MLIRContext *context);
-  static StringRef getDialectNamespace() { return "affine"; }
-
-  /// Materialize a single constant operation from a given attribute value with
-  /// the desired resultant type.
-  Operation *materializeConstant(OpBuilder &builder, Attribute value, Type type,
-                                 Location loc) override;
-};
 
 /// AffineDmaStartOp starts a non-blocking DMA operation that transfers data
 /// from a source memref to a destination memref. The source and destination
@@ -503,6 +492,8 @@ AffineApplyOp makeComposedAffineApply(OpBuilder &b, Location loc, AffineMap map,
 /// argument.
 void fullyComposeAffineMapAndOperands(AffineMap *map,
                                       SmallVectorImpl<Value> *operands);
+
+#include "mlir/Dialect/AffineOps/AffineOpsDialect.h.inc"
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/AffineOps/AffineOps.h.inc"

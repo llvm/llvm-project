@@ -1,6 +1,6 @@
 @ PR24346
 @ RUN: llvm-mc < %s -triple=arm-linux-gnueabi -filetype=obj -o - \
-@ RUN: | llvm-objdump --disassemble -arch=arm - | FileCheck %s
+@ RUN: | llvm-objdump -d --arch=arm - | FileCheck %s
 
     .data
     .align 8

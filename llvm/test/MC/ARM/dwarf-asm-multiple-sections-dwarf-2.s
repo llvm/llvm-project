@@ -1,6 +1,6 @@
 // RUN: llvm-mc < %s -triple=armv7-linux-gnueabi -filetype=obj -o %t -g -fdebug-compilation-dir=/tmp -dwarf-version 2 2>&1 | FileCheck -check-prefix MESSAGES %s
 // RUN: llvm-dwarfdump -a %t | FileCheck -check-prefix DWARF %s
-// RUN: llvm-objdump -r %t | FileCheck -check-prefix RELOC %s
+// RUN: llvm-objdump -r %t | FileCheck --check-prefix=RELOC %s
 
   .section .text, "ax"
 a:

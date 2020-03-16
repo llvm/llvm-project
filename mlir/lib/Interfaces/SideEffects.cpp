@@ -63,9 +63,13 @@ static bool wouldOpBeTriviallyDeadImpl(Operation *rootOp) {
       // memory.
       SmallVector<MemoryEffects::EffectInstance, 1> effects;
       effectInterface.getEffects(effects);
-      if (!llvm::all_of(effects, [](const auto &it) {
-            return isa<MemoryEffects::Read>(it.getEffect()) ||
-                   isa<MemoryEffects::Allocate>(it.getEffect());
+      if (!llvm::all_of(effects, [op](const MemoryEffects::EffectInstance &it) {
+            // We can drop allocations if the value is a result of the
+            // operation.
+            if (isa<MemoryEffects::Allocate>(it.getEffect()))
+              return it.getValue() && it.getValue().getDefiningOp() == op;
+            // Otherwise, the effect must be a read.
+            return isa<MemoryEffects::Read>(it.getEffect());
           })) {
         return false;
       }

@@ -28,7 +28,6 @@ add_mlir_library(MLIRTransforms
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Transforms
 
   DEPENDS
-  MLIRLoopLikeInterfaceIncGen
   MLIRStandardOpsIncGen
   )
 
@@ -36,6 +35,7 @@ target_link_libraries(MLIRTransforms
   PUBLIC
   MLIRAffineOps
   MLIRAnalysis
+  MLIRLoopLikeInterface
   MLIRLoopOps
   MLIRPass
   MLIRTransformUtils

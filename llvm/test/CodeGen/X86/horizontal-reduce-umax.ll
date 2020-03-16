@@ -366,7 +366,7 @@ define i8 @test_reduce_v16i8(<16 x i8> %a0) {
 ; X86-SSE42-NEXT:    psrlw $8, %xmm0
 ; X86-SSE42-NEXT:    pminub %xmm1, %xmm0
 ; X86-SSE42-NEXT:    phminposuw %xmm0, %xmm0
-; X86-SSE42-NEXT:    pextrb $0, %xmm0, %eax
+; X86-SSE42-NEXT:    movd %xmm0, %eax
 ; X86-SSE42-NEXT:    notb %al
 ; X86-SSE42-NEXT:    ## kill: def $al killed $al killed $eax
 ; X86-SSE42-NEXT:    retl
@@ -378,7 +378,7 @@ define i8 @test_reduce_v16i8(<16 x i8> %a0) {
 ; X86-AVX-NEXT:    vpsrlw $8, %xmm0, %xmm1
 ; X86-AVX-NEXT:    vpminub %xmm1, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vphminposuw %xmm0, %xmm0
-; X86-AVX-NEXT:    vpextrb $0, %xmm0, %eax
+; X86-AVX-NEXT:    vmovd %xmm0, %eax
 ; X86-AVX-NEXT:    notb %al
 ; X86-AVX-NEXT:    ## kill: def $al killed $al killed $eax
 ; X86-AVX-NEXT:    retl
@@ -407,7 +407,7 @@ define i8 @test_reduce_v16i8(<16 x i8> %a0) {
 ; X64-SSE42-NEXT:    psrlw $8, %xmm0
 ; X64-SSE42-NEXT:    pminub %xmm1, %xmm0
 ; X64-SSE42-NEXT:    phminposuw %xmm0, %xmm0
-; X64-SSE42-NEXT:    pextrb $0, %xmm0, %eax
+; X64-SSE42-NEXT:    movd %xmm0, %eax
 ; X64-SSE42-NEXT:    notb %al
 ; X64-SSE42-NEXT:    ## kill: def $al killed $al killed $eax
 ; X64-SSE42-NEXT:    retq
@@ -419,7 +419,7 @@ define i8 @test_reduce_v16i8(<16 x i8> %a0) {
 ; X64-AVX1-NEXT:    vpsrlw $8, %xmm0, %xmm1
 ; X64-AVX1-NEXT:    vpminub %xmm1, %xmm0, %xmm0
 ; X64-AVX1-NEXT:    vphminposuw %xmm0, %xmm0
-; X64-AVX1-NEXT:    vpextrb $0, %xmm0, %eax
+; X64-AVX1-NEXT:    vmovd %xmm0, %eax
 ; X64-AVX1-NEXT:    notb %al
 ; X64-AVX1-NEXT:    ## kill: def $al killed $al killed $eax
 ; X64-AVX1-NEXT:    retq
@@ -431,7 +431,7 @@ define i8 @test_reduce_v16i8(<16 x i8> %a0) {
 ; X64-AVX2-NEXT:    vpsrlw $8, %xmm0, %xmm1
 ; X64-AVX2-NEXT:    vpminub %xmm1, %xmm0, %xmm0
 ; X64-AVX2-NEXT:    vphminposuw %xmm0, %xmm0
-; X64-AVX2-NEXT:    vpextrb $0, %xmm0, %eax
+; X64-AVX2-NEXT:    vmovd %xmm0, %eax
 ; X64-AVX2-NEXT:    notb %al
 ; X64-AVX2-NEXT:    ## kill: def $al killed $al killed $eax
 ; X64-AVX2-NEXT:    retq
@@ -442,7 +442,7 @@ define i8 @test_reduce_v16i8(<16 x i8> %a0) {
 ; X64-AVX512-NEXT:    vpsrlw $8, %xmm0, %xmm1
 ; X64-AVX512-NEXT:    vpminub %xmm1, %xmm0, %xmm0
 ; X64-AVX512-NEXT:    vphminposuw %xmm0, %xmm0
-; X64-AVX512-NEXT:    vpextrb $0, %xmm0, %eax
+; X64-AVX512-NEXT:    vmovd %xmm0, %eax
 ; X64-AVX512-NEXT:    notb %al
 ; X64-AVX512-NEXT:    ## kill: def $al killed $al killed $eax
 ; X64-AVX512-NEXT:    retq
@@ -988,7 +988,7 @@ define i8 @test_reduce_v32i8(<32 x i8> %a0) {
 ; X86-SSE42-NEXT:    psrlw $8, %xmm0
 ; X86-SSE42-NEXT:    pminub %xmm1, %xmm0
 ; X86-SSE42-NEXT:    phminposuw %xmm0, %xmm0
-; X86-SSE42-NEXT:    pextrb $0, %xmm0, %eax
+; X86-SSE42-NEXT:    movd %xmm0, %eax
 ; X86-SSE42-NEXT:    notb %al
 ; X86-SSE42-NEXT:    ## kill: def $al killed $al killed $eax
 ; X86-SSE42-NEXT:    retl
@@ -1002,7 +1002,7 @@ define i8 @test_reduce_v32i8(<32 x i8> %a0) {
 ; X86-AVX1-NEXT:    vpsrlw $8, %xmm0, %xmm1
 ; X86-AVX1-NEXT:    vpminub %xmm1, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    vphminposuw %xmm0, %xmm0
-; X86-AVX1-NEXT:    vpextrb $0, %xmm0, %eax
+; X86-AVX1-NEXT:    vmovd %xmm0, %eax
 ; X86-AVX1-NEXT:    notb %al
 ; X86-AVX1-NEXT:    ## kill: def $al killed $al killed $eax
 ; X86-AVX1-NEXT:    vzeroupper
@@ -1017,7 +1017,7 @@ define i8 @test_reduce_v32i8(<32 x i8> %a0) {
 ; X86-AVX2-NEXT:    vpsrlw $8, %xmm0, %xmm1
 ; X86-AVX2-NEXT:    vpminub %xmm1, %xmm0, %xmm0
 ; X86-AVX2-NEXT:    vphminposuw %xmm0, %xmm0
-; X86-AVX2-NEXT:    vpextrb $0, %xmm0, %eax
+; X86-AVX2-NEXT:    vmovd %xmm0, %eax
 ; X86-AVX2-NEXT:    notb %al
 ; X86-AVX2-NEXT:    ## kill: def $al killed $al killed $eax
 ; X86-AVX2-NEXT:    vzeroupper
@@ -1049,7 +1049,7 @@ define i8 @test_reduce_v32i8(<32 x i8> %a0) {
 ; X64-SSE42-NEXT:    psrlw $8, %xmm0
 ; X64-SSE42-NEXT:    pminub %xmm1, %xmm0
 ; X64-SSE42-NEXT:    phminposuw %xmm0, %xmm0
-; X64-SSE42-NEXT:    pextrb $0, %xmm0, %eax
+; X64-SSE42-NEXT:    movd %xmm0, %eax
 ; X64-SSE42-NEXT:    notb %al
 ; X64-SSE42-NEXT:    ## kill: def $al killed $al killed $eax
 ; X64-SSE42-NEXT:    retq
@@ -1063,7 +1063,7 @@ define i8 @test_reduce_v32i8(<32 x i8> %a0) {
 ; X64-AVX1-NEXT:    vpsrlw $8, %xmm0, %xmm1
 ; X64-AVX1-NEXT:    vpminub %xmm1, %xmm0, %xmm0
 ; X64-AVX1-NEXT:    vphminposuw %xmm0, %xmm0
-; X64-AVX1-NEXT:    vpextrb $0, %xmm0, %eax
+; X64-AVX1-NEXT:    vmovd %xmm0, %eax
 ; X64-AVX1-NEXT:    notb %al
 ; X64-AVX1-NEXT:    ## kill: def $al killed $al killed $eax
 ; X64-AVX1-NEXT:    vzeroupper
@@ -1078,7 +1078,7 @@ define i8 @test_reduce_v32i8(<32 x i8> %a0) {
 ; X64-AVX2-NEXT:    vpsrlw $8, %xmm0, %xmm1
 ; X64-AVX2-NEXT:    vpminub %xmm1, %xmm0, %xmm0
 ; X64-AVX2-NEXT:    vphminposuw %xmm0, %xmm0
-; X64-AVX2-NEXT:    vpextrb $0, %xmm0, %eax
+; X64-AVX2-NEXT:    vmovd %xmm0, %eax
 ; X64-AVX2-NEXT:    notb %al
 ; X64-AVX2-NEXT:    ## kill: def $al killed $al killed $eax
 ; X64-AVX2-NEXT:    vzeroupper
@@ -1092,7 +1092,7 @@ define i8 @test_reduce_v32i8(<32 x i8> %a0) {
 ; X64-AVX512-NEXT:    vpsrlw $8, %xmm0, %xmm1
 ; X64-AVX512-NEXT:    vpminub %xmm1, %xmm0, %xmm0
 ; X64-AVX512-NEXT:    vphminposuw %xmm0, %xmm0
-; X64-AVX512-NEXT:    vpextrb $0, %xmm0, %eax
+; X64-AVX512-NEXT:    vmovd %xmm0, %eax
 ; X64-AVX512-NEXT:    notb %al
 ; X64-AVX512-NEXT:    ## kill: def $al killed $al killed $eax
 ; X64-AVX512-NEXT:    vzeroupper
@@ -1835,7 +1835,7 @@ define i8 @test_reduce_v64i8(<64 x i8> %a0) {
 ; X86-SSE42-NEXT:    psrlw $8, %xmm1
 ; X86-SSE42-NEXT:    pminub %xmm0, %xmm1
 ; X86-SSE42-NEXT:    phminposuw %xmm1, %xmm0
-; X86-SSE42-NEXT:    pextrb $0, %xmm0, %eax
+; X86-SSE42-NEXT:    movd %xmm0, %eax
 ; X86-SSE42-NEXT:    notb %al
 ; X86-SSE42-NEXT:    ## kill: def $al killed $al killed $eax
 ; X86-SSE42-NEXT:    retl
@@ -1852,7 +1852,7 @@ define i8 @test_reduce_v64i8(<64 x i8> %a0) {
 ; X86-AVX1-NEXT:    vpsrlw $8, %xmm0, %xmm1
 ; X86-AVX1-NEXT:    vpminub %xmm1, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    vphminposuw %xmm0, %xmm0
-; X86-AVX1-NEXT:    vpextrb $0, %xmm0, %eax
+; X86-AVX1-NEXT:    vmovd %xmm0, %eax
 ; X86-AVX1-NEXT:    notb %al
 ; X86-AVX1-NEXT:    ## kill: def $al killed $al killed $eax
 ; X86-AVX1-NEXT:    vzeroupper
@@ -1868,7 +1868,7 @@ define i8 @test_reduce_v64i8(<64 x i8> %a0) {
 ; X86-AVX2-NEXT:    vpsrlw $8, %xmm0, %xmm1
 ; X86-AVX2-NEXT:    vpminub %xmm1, %xmm0, %xmm0
 ; X86-AVX2-NEXT:    vphminposuw %xmm0, %xmm0
-; X86-AVX2-NEXT:    vpextrb $0, %xmm0, %eax
+; X86-AVX2-NEXT:    vmovd %xmm0, %eax
 ; X86-AVX2-NEXT:    notb %al
 ; X86-AVX2-NEXT:    ## kill: def $al killed $al killed $eax
 ; X86-AVX2-NEXT:    vzeroupper
@@ -1904,7 +1904,7 @@ define i8 @test_reduce_v64i8(<64 x i8> %a0) {
 ; X64-SSE42-NEXT:    psrlw $8, %xmm1
 ; X64-SSE42-NEXT:    pminub %xmm0, %xmm1
 ; X64-SSE42-NEXT:    phminposuw %xmm1, %xmm0
-; X64-SSE42-NEXT:    pextrb $0, %xmm0, %eax
+; X64-SSE42-NEXT:    movd %xmm0, %eax
 ; X64-SSE42-NEXT:    notb %al
 ; X64-SSE42-NEXT:    ## kill: def $al killed $al killed $eax
 ; X64-SSE42-NEXT:    retq
@@ -1921,7 +1921,7 @@ define i8 @test_reduce_v64i8(<64 x i8> %a0) {
 ; X64-AVX1-NEXT:    vpsrlw $8, %xmm0, %xmm1
 ; X64-AVX1-NEXT:    vpminub %xmm1, %xmm0, %xmm0
 ; X64-AVX1-NEXT:    vphminposuw %xmm0, %xmm0
-; X64-AVX1-NEXT:    vpextrb $0, %xmm0, %eax
+; X64-AVX1-NEXT:    vmovd %xmm0, %eax
 ; X64-AVX1-NEXT:    notb %al
 ; X64-AVX1-NEXT:    ## kill: def $al killed $al killed $eax
 ; X64-AVX1-NEXT:    vzeroupper
@@ -1937,7 +1937,7 @@ define i8 @test_reduce_v64i8(<64 x i8> %a0) {
 ; X64-AVX2-NEXT:    vpsrlw $8, %xmm0, %xmm1
 ; X64-AVX2-NEXT:    vpminub %xmm1, %xmm0, %xmm0
 ; X64-AVX2-NEXT:    vphminposuw %xmm0, %xmm0
-; X64-AVX2-NEXT:    vpextrb $0, %xmm0, %eax
+; X64-AVX2-NEXT:    vmovd %xmm0, %eax
 ; X64-AVX2-NEXT:    notb %al
 ; X64-AVX2-NEXT:    ## kill: def $al killed $al killed $eax
 ; X64-AVX2-NEXT:    vzeroupper
@@ -1953,7 +1953,7 @@ define i8 @test_reduce_v64i8(<64 x i8> %a0) {
 ; X64-AVX512-NEXT:    vpsrlw $8, %xmm0, %xmm1
 ; X64-AVX512-NEXT:    vpminub %xmm1, %xmm0, %xmm0
 ; X64-AVX512-NEXT:    vphminposuw %xmm0, %xmm0
-; X64-AVX512-NEXT:    vpextrb $0, %xmm0, %eax
+; X64-AVX512-NEXT:    vmovd %xmm0, %eax
 ; X64-AVX512-NEXT:    notb %al
 ; X64-AVX512-NEXT:    ## kill: def $al killed $al killed $eax
 ; X64-AVX512-NEXT:    vzeroupper
@@ -2229,7 +2229,7 @@ define i8 @test_reduce_v32i8_v16i8(<32 x i8> %a0) {
 ; X86-SSE42-NEXT:    psrlw $8, %xmm0
 ; X86-SSE42-NEXT:    pminub %xmm1, %xmm0
 ; X86-SSE42-NEXT:    phminposuw %xmm0, %xmm0
-; X86-SSE42-NEXT:    pextrb $0, %xmm0, %eax
+; X86-SSE42-NEXT:    movd %xmm0, %eax
 ; X86-SSE42-NEXT:    notb %al
 ; X86-SSE42-NEXT:    ## kill: def $al killed $al killed $eax
 ; X86-SSE42-NEXT:    retl
@@ -2241,7 +2241,7 @@ define i8 @test_reduce_v32i8_v16i8(<32 x i8> %a0) {
 ; X86-AVX-NEXT:    vpsrlw $8, %xmm0, %xmm1
 ; X86-AVX-NEXT:    vpminub %xmm1, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vphminposuw %xmm0, %xmm0
-; X86-AVX-NEXT:    vpextrb $0, %xmm0, %eax
+; X86-AVX-NEXT:    vmovd %xmm0, %eax
 ; X86-AVX-NEXT:    notb %al
 ; X86-AVX-NEXT:    ## kill: def $al killed $al killed $eax
 ; X86-AVX-NEXT:    vzeroupper
@@ -2271,7 +2271,7 @@ define i8 @test_reduce_v32i8_v16i8(<32 x i8> %a0) {
 ; X64-SSE42-NEXT:    psrlw $8, %xmm0
 ; X64-SSE42-NEXT:    pminub %xmm1, %xmm0
 ; X64-SSE42-NEXT:    phminposuw %xmm0, %xmm0
-; X64-SSE42-NEXT:    pextrb $0, %xmm0, %eax
+; X64-SSE42-NEXT:    movd %xmm0, %eax
 ; X64-SSE42-NEXT:    notb %al
 ; X64-SSE42-NEXT:    ## kill: def $al killed $al killed $eax
 ; X64-SSE42-NEXT:    retq
@@ -2283,7 +2283,7 @@ define i8 @test_reduce_v32i8_v16i8(<32 x i8> %a0) {
 ; X64-AVX1-NEXT:    vpsrlw $8, %xmm0, %xmm1
 ; X64-AVX1-NEXT:    vpminub %xmm1, %xmm0, %xmm0
 ; X64-AVX1-NEXT:    vphminposuw %xmm0, %xmm0
-; X64-AVX1-NEXT:    vpextrb $0, %xmm0, %eax
+; X64-AVX1-NEXT:    vmovd %xmm0, %eax
 ; X64-AVX1-NEXT:    notb %al
 ; X64-AVX1-NEXT:    ## kill: def $al killed $al killed $eax
 ; X64-AVX1-NEXT:    vzeroupper
@@ -2296,7 +2296,7 @@ define i8 @test_reduce_v32i8_v16i8(<32 x i8> %a0) {
 ; X64-AVX2-NEXT:    vpsrlw $8, %xmm0, %xmm1
 ; X64-AVX2-NEXT:    vpminub %xmm1, %xmm0, %xmm0
 ; X64-AVX2-NEXT:    vphminposuw %xmm0, %xmm0
-; X64-AVX2-NEXT:    vpextrb $0, %xmm0, %eax
+; X64-AVX2-NEXT:    vmovd %xmm0, %eax
 ; X64-AVX2-NEXT:    notb %al
 ; X64-AVX2-NEXT:    ## kill: def $al killed $al killed $eax
 ; X64-AVX2-NEXT:    vzeroupper
@@ -2308,7 +2308,7 @@ define i8 @test_reduce_v32i8_v16i8(<32 x i8> %a0) {
 ; X64-AVX512-NEXT:    vpsrlw $8, %xmm0, %xmm1
 ; X64-AVX512-NEXT:    vpminub %xmm1, %xmm0, %xmm0
 ; X64-AVX512-NEXT:    vphminposuw %xmm0, %xmm0
-; X64-AVX512-NEXT:    vpextrb $0, %xmm0, %eax
+; X64-AVX512-NEXT:    vmovd %xmm0, %eax
 ; X64-AVX512-NEXT:    notb %al
 ; X64-AVX512-NEXT:    ## kill: def $al killed $al killed $eax
 ; X64-AVX512-NEXT:    vzeroupper
@@ -2354,7 +2354,7 @@ define i8 @test_reduce_v64i8_v16i8(<64 x i8> %a0) {
 ; X86-SSE42-NEXT:    psrlw $8, %xmm0
 ; X86-SSE42-NEXT:    pminub %xmm1, %xmm0
 ; X86-SSE42-NEXT:    phminposuw %xmm0, %xmm0
-; X86-SSE42-NEXT:    pextrb $0, %xmm0, %eax
+; X86-SSE42-NEXT:    movd %xmm0, %eax
 ; X86-SSE42-NEXT:    notb %al
 ; X86-SSE42-NEXT:    ## kill: def $al killed $al killed $eax
 ; X86-SSE42-NEXT:    retl
@@ -2366,7 +2366,7 @@ define i8 @test_reduce_v64i8_v16i8(<64 x i8> %a0) {
 ; X86-AVX-NEXT:    vpsrlw $8, %xmm0, %xmm1
 ; X86-AVX-NEXT:    vpminub %xmm1, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vphminposuw %xmm0, %xmm0
-; X86-AVX-NEXT:    vpextrb $0, %xmm0, %eax
+; X86-AVX-NEXT:    vmovd %xmm0, %eax
 ; X86-AVX-NEXT:    notb %al
 ; X86-AVX-NEXT:    ## kill: def $al killed $al killed $eax
 ; X86-AVX-NEXT:    vzeroupper
@@ -2396,7 +2396,7 @@ define i8 @test_reduce_v64i8_v16i8(<64 x i8> %a0) {
 ; X64-SSE42-NEXT:    psrlw $8, %xmm0
 ; X64-SSE42-NEXT:    pminub %xmm1, %xmm0
 ; X64-SSE42-NEXT:    phminposuw %xmm0, %xmm0
-; X64-SSE42-NEXT:    pextrb $0, %xmm0, %eax
+; X64-SSE42-NEXT:    movd %xmm0, %eax
 ; X64-SSE42-NEXT:    notb %al
 ; X64-SSE42-NEXT:    ## kill: def $al killed $al killed $eax
 ; X64-SSE42-NEXT:    retq
@@ -2408,7 +2408,7 @@ define i8 @test_reduce_v64i8_v16i8(<64 x i8> %a0) {
 ; X64-AVX1-NEXT:    vpsrlw $8, %xmm0, %xmm1
 ; X64-AVX1-NEXT:    vpminub %xmm1, %xmm0, %xmm0
 ; X64-AVX1-NEXT:    vphminposuw %xmm0, %xmm0
-; X64-AVX1-NEXT:    vpextrb $0, %xmm0, %eax
+; X64-AVX1-NEXT:    vmovd %xmm0, %eax
 ; X64-AVX1-NEXT:    notb %al
 ; X64-AVX1-NEXT:    ## kill: def $al killed $al killed $eax
 ; X64-AVX1-NEXT:    vzeroupper
@@ -2421,7 +2421,7 @@ define i8 @test_reduce_v64i8_v16i8(<64 x i8> %a0) {
 ; X64-AVX2-NEXT:    vpsrlw $8, %xmm0, %xmm1
 ; X64-AVX2-NEXT:    vpminub %xmm1, %xmm0, %xmm0
 ; X64-AVX2-NEXT:    vphminposuw %xmm0, %xmm0
-; X64-AVX2-NEXT:    vpextrb $0, %xmm0, %eax
+; X64-AVX2-NEXT:    vmovd %xmm0, %eax
 ; X64-AVX2-NEXT:    notb %al
 ; X64-AVX2-NEXT:    ## kill: def $al killed $al killed $eax
 ; X64-AVX2-NEXT:    vzeroupper
@@ -2433,7 +2433,7 @@ define i8 @test_reduce_v64i8_v16i8(<64 x i8> %a0) {
 ; X64-AVX512-NEXT:    vpsrlw $8, %xmm0, %xmm1
 ; X64-AVX512-NEXT:    vpminub %xmm1, %xmm0, %xmm0
 ; X64-AVX512-NEXT:    vphminposuw %xmm0, %xmm0
-; X64-AVX512-NEXT:    vpextrb $0, %xmm0, %eax
+; X64-AVX512-NEXT:    vmovd %xmm0, %eax
 ; X64-AVX512-NEXT:    notb %al
 ; X64-AVX512-NEXT:    ## kill: def $al killed $al killed $eax
 ; X64-AVX512-NEXT:    vzeroupper

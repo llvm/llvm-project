@@ -18,6 +18,7 @@
 
 using namespace lldb;
 using namespace lldb_private;
+using namespace lldb_private::repro;
 
 ProcessInfo::ProcessInfo()
     : m_executable(), m_arguments(), m_environment(), m_uid(UINT32_MAX),
@@ -344,3 +345,86 @@ void llvm::yaml::MappingTraits<ProcessInstanceInfo>::mapping(
   io.mapRequired("effective-gid", Info.m_egid);
   io.mapRequired("parent-pid", Info.m_parent_pid);
 }
+
+llvm::Expected<std::unique_ptr<ProcessInfoRecorder>>
+ProcessInfoRecorder::Create(const FileSpec &filename) {
+  std::error_code ec;
+  auto recorder =
+      std::make_unique<ProcessInfoRecorder>(std::move(filename), ec);
+  if (ec)
+    return llvm::errorCodeToError(ec);
+  return std::move(recorder);
+}
+
+void ProcessInfoProvider::Keep() {
+  std::vector<std::string> files;
+  for (auto &recorder : m_process_info_recorders) {
+    recorder->Stop();
+    files.push_back(recorder->GetFilename().GetPath());
+  }
+
+  FileSpec file = GetRoot().CopyByAppendingPathComponent(Info::file);
+  std::error_code ec;
+  llvm::raw_fd_ostream os(file.GetPath(), ec, llvm::sys::fs::OF_Text);
+  if (ec)
+    return;
+  llvm::yaml::Output yout(os);
+  yout << files;
+}
+
+void ProcessInfoProvider::Discard() { m_process_info_recorders.clear(); }
+
+ProcessInfoRecorder *ProcessInfoProvider::GetNewProcessInfoRecorder() {
+  std::size_t i = m_process_info_recorders.size() + 1;
+  std::string filename = (llvm::Twine(Info::name) + llvm::Twine("-") +
+                          llvm::Twine(i) + llvm::Twine(".yaml"))
+                             .str();
+  auto recorder_or_error = ProcessInfoRecorder::Create(
+      GetRoot().CopyByAppendingPathComponent(filename));
+  if (!recorder_or_error) {
+    llvm::consumeError(recorder_or_error.takeError());
+    return nullptr;
+  }
+
+  m_process_info_recorders.push_back(std::move(*recorder_or_error));
+  return m_process_info_recorders.back().get();
+}
+
+void ProcessInfoRecorder::Record(const ProcessInstanceInfoList &process_infos) {
+  if (!m_record)
+    return;
+  llvm::yaml::Output yout(m_os);
+  yout << const_cast<ProcessInstanceInfoList &>(process_infos);
+  m_os.flush();
+}
+
+llvm::Optional<ProcessInstanceInfoList>
+repro::GetReplayProcessInstanceInfoList() {
+  static std::unique_ptr<repro::MultiLoader<repro::ProcessInfoProvider>>
+      loader = repro::MultiLoader<repro::ProcessInfoProvider>::Create(
+          repro::Reproducer::Instance().GetLoader());
+
+  if (!loader)
+    return {};
+
+  llvm::Optional<std::string> nextfile = loader->GetNextFile();
+  if (!nextfile)
+    return {};
+
+  auto error_or_file = llvm::MemoryBuffer::getFile(*nextfile);
+  if (std::error_code err = error_or_file.getError())
+    return {};
+
+  ProcessInstanceInfoList infos;
+  llvm::yaml::Input yin((*error_or_file)->getBuffer());
+  yin >> infos;
+
+  if (auto err = yin.error())
+    return {};
+
+  return infos;
+}
+
+char ProcessInfoProvider::ID = 0;
+const char *ProcessInfoProvider::Info::file = "process-info.yaml";
+const char *ProcessInfoProvider::Info::name = "process-info";

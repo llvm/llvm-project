@@ -53,8 +53,6 @@ public:
                                  IRTransformLayer::TransformFunction T);
   };
 
-  static Expected<std::unique_ptr<LLJIT>> Create(LLJITBuilderState &S);
-
   /// Destruct this instance. If a multi-threaded instance, waits for all
   /// compile threads to complete.
   ~LLJIT();

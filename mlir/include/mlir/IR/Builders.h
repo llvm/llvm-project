@@ -117,6 +117,7 @@ public:
   IntegerAttr getUI32IntegerAttr(uint32_t value);
 
   DenseIntElementsAttr getI32VectorAttr(ArrayRef<int32_t> values);
+  DenseIntElementsAttr getI64VectorAttr(ArrayRef<int64_t> values);
 
   ArrayAttr getAffineMapArrayAttr(ArrayRef<AffineMap> values);
   ArrayAttr getI32ArrayAttr(ArrayRef<int32_t> values);

@@ -560,7 +560,8 @@ private:
       *(ulittle32_t *)FixupPtr = Value;
       break;
     }
-    case Pointer64: {
+    case Pointer64:
+    case Pointer64Anon: {
       uint64_t Value = E.getTarget().getAddress() + E.getAddend();
       *(ulittle64_t *)FixupPtr = Value;
       break;

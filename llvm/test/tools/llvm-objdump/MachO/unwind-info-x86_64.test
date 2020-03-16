@@ -1,4 +1,4 @@
-# RUN: llvm-objdump -unwind-info %p/Inputs/unwind-info.macho-x86_64 2>/dev/null | FileCheck %s
+# RUN: llvm-objdump --unwind-info %p/Inputs/unwind-info.macho-x86_64 2>/dev/null | FileCheck %s
 
 # The 2nd level index in this file is in compressed form, referring to both
 # common and packed encodings.

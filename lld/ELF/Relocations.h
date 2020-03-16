@@ -115,6 +115,9 @@ template <class ELFT> void scanRelocations(InputSectionBase &);
 
 template <class ELFT> void reportUndefinedSymbols();
 
+void hexagonTLSSymbolUpdate(ArrayRef<OutputSection *> outputSections);
+bool hexagonNeedsTLSSymbol(ArrayRef<OutputSection *> outputSections);
+
 class ThunkSection;
 class Thunk;
 struct InputSectionDescription;

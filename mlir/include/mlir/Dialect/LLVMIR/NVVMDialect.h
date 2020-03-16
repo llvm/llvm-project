@@ -25,12 +25,7 @@ namespace NVVM {
 #define GET_OP_CLASSES
 #include "mlir/Dialect/LLVMIR/NVVMOps.h.inc"
 
-class NVVMDialect : public Dialect {
-public:
-  explicit NVVMDialect(MLIRContext *context);
-
-  static StringRef getDialectNamespace() { return "nvvm"; }
-};
+#include "mlir/Dialect/LLVMIR/NVVMOpsDialect.h.inc"
 
 } // namespace NVVM
 } // namespace mlir

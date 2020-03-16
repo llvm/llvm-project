@@ -1,5 +1,5 @@
 ; RUN: llc -march=mips64el -filetype=obj -mcpu=mips64r2 %s -o - | \
-; RUN:   llvm-objdump -disassemble - | FileCheck %s
+; RUN:   llvm-objdump -d - | FileCheck %s
 
 ; Sign extend from 32 to 64 was creating nonsense opcodes
 

@@ -14,134 +14,134 @@
 // ARM Instruction Predicate Definitions.
 //
 def HasV8_1a         : Predicate<"Subtarget->hasV8_1aOps()">,
-                                 AssemblerPredicate<"HasV8_1aOps", "armv8.1a">;
+                                 AssemblerPredicate<(all_of HasV8_1aOps), "armv8.1a">;
 def HasV8_2a         : Predicate<"Subtarget->hasV8_2aOps()">,
-                                 AssemblerPredicate<"HasV8_2aOps", "armv8.2a">;
+                                 AssemblerPredicate<(all_of HasV8_2aOps), "armv8.2a">;
 def HasV8_3a         : Predicate<"Subtarget->hasV8_3aOps()">,
-                                 AssemblerPredicate<"HasV8_3aOps", "armv8.3a">;
+                                 AssemblerPredicate<(all_of HasV8_3aOps), "armv8.3a">;
 def HasV8_4a         : Predicate<"Subtarget->hasV8_4aOps()">,
-                                 AssemblerPredicate<"HasV8_4aOps", "armv8.4a">;
+                                 AssemblerPredicate<(all_of HasV8_4aOps), "armv8.4a">;
 def HasV8_5a         : Predicate<"Subtarget->hasV8_5aOps()">,
-                                 AssemblerPredicate<"HasV8_5aOps", "armv8.5a">;
+                                 AssemblerPredicate<(all_of HasV8_5aOps), "armv8.5a">;
 def HasVH            : Predicate<"Subtarget->hasVH()">,
-                       AssemblerPredicate<"FeatureVH", "vh">;
+                       AssemblerPredicate<(all_of FeatureVH), "vh">;
 
 def HasLOR           : Predicate<"Subtarget->hasLOR()">,
-                       AssemblerPredicate<"FeatureLOR", "lor">;
+                       AssemblerPredicate<(all_of FeatureLOR), "lor">;
 
 def HasPA            : Predicate<"Subtarget->hasPA()">,
-                       AssemblerPredicate<"FeaturePA", "pa">;
+                       AssemblerPredicate<(all_of FeaturePA), "pa">;
 
 def HasJS            : Predicate<"Subtarget->hasJS()">,
-                       AssemblerPredicate<"FeatureJS", "jsconv">;
+                       AssemblerPredicate<(all_of FeatureJS), "jsconv">;
 
 def HasCCIDX         : Predicate<"Subtarget->hasCCIDX()">,
-                       AssemblerPredicate<"FeatureCCIDX", "ccidx">;
+                       AssemblerPredicate<(all_of FeatureCCIDX), "ccidx">;
 
 def HasComplxNum      : Predicate<"Subtarget->hasComplxNum()">,
-                       AssemblerPredicate<"FeatureComplxNum", "complxnum">;
+                       AssemblerPredicate<(all_of FeatureComplxNum), "complxnum">;
 
 def HasNV            : Predicate<"Subtarget->hasNV()">,
-                       AssemblerPredicate<"FeatureNV", "nv">;
+                       AssemblerPredicate<(all_of FeatureNV), "nv">;
 
 def HasRASv8_4       : Predicate<"Subtarget->hasRASv8_4()">,
-                       AssemblerPredicate<"FeatureRASv8_4", "rasv8_4">;
+                       AssemblerPredicate<(all_of FeatureRASv8_4), "rasv8_4">;
 
 def HasMPAM          : Predicate<"Subtarget->hasMPAM()">,
-                       AssemblerPredicate<"FeatureMPAM", "mpam">;
+                       AssemblerPredicate<(all_of FeatureMPAM), "mpam">;
 
 def HasDIT           : Predicate<"Subtarget->hasDIT()">,
-                       AssemblerPredicate<"FeatureDIT", "dit">;
+                       AssemblerPredicate<(all_of FeatureDIT), "dit">;
 
 def HasTRACEV8_4         : Predicate<"Subtarget->hasTRACEV8_4()">,
-                       AssemblerPredicate<"FeatureTRACEV8_4", "tracev8.4">;
+                       AssemblerPredicate<(all_of FeatureTRACEV8_4), "tracev8.4">;
 
 def HasAM            : Predicate<"Subtarget->hasAM()">,
-                       AssemblerPredicate<"FeatureAM", "am">;
+                       AssemblerPredicate<(all_of FeatureAM), "am">;
 
 def HasSEL2          : Predicate<"Subtarget->hasSEL2()">,
-                       AssemblerPredicate<"FeatureSEL2", "sel2">;
+                       AssemblerPredicate<(all_of FeatureSEL2), "sel2">;
 
 def HasPMU           : Predicate<"Subtarget->hasPMU()">,
-                       AssemblerPredicate<"FeaturePMU", "pmu">;
+                       AssemblerPredicate<(all_of FeaturePMU), "pmu">;
 
 def HasTLB_RMI          : Predicate<"Subtarget->hasTLB_RMI()">,
-                       AssemblerPredicate<"FeatureTLB_RMI", "tlb-rmi">;
+                       AssemblerPredicate<(all_of FeatureTLB_RMI), "tlb-rmi">;
 
 def HasFMI           : Predicate<"Subtarget->hasFMI()">,
-                       AssemblerPredicate<"FeatureFMI", "fmi">;
+                       AssemblerPredicate<(all_of FeatureFMI), "fmi">;
 
 def HasRCPC_IMMO      : Predicate<"Subtarget->hasRCPCImm()">,
-                       AssemblerPredicate<"FeatureRCPC_IMMO", "rcpc-immo">;
+                       AssemblerPredicate<(all_of FeatureRCPC_IMMO), "rcpc-immo">;
 
 def HasFPARMv8       : Predicate<"Subtarget->hasFPARMv8()">,
-                               AssemblerPredicate<"FeatureFPARMv8", "fp-armv8">;
+                               AssemblerPredicate<(all_of FeatureFPARMv8), "fp-armv8">;
 def HasNEON          : Predicate<"Subtarget->hasNEON()">,
-                                 AssemblerPredicate<"FeatureNEON", "neon">;
+                                 AssemblerPredicate<(all_of FeatureNEON), "neon">;
 def HasCrypto        : Predicate<"Subtarget->hasCrypto()">,
-                                 AssemblerPredicate<"FeatureCrypto", "crypto">;
+                                 AssemblerPredicate<(all_of FeatureCrypto), "crypto">;
 def HasSM4           : Predicate<"Subtarget->hasSM4()">,
-                                 AssemblerPredicate<"FeatureSM4", "sm4">;
+                                 AssemblerPredicate<(all_of FeatureSM4), "sm4">;
 def HasSHA3          : Predicate<"Subtarget->hasSHA3()">,
-                                 AssemblerPredicate<"FeatureSHA3", "sha3">;
+                                 AssemblerPredicate<(all_of FeatureSHA3), "sha3">;
 def HasSHA2          : Predicate<"Subtarget->hasSHA2()">,
-                                 AssemblerPredicate<"FeatureSHA2", "sha2">;
+                                 AssemblerPredicate<(all_of FeatureSHA2), "sha2">;
 def HasAES           : Predicate<"Subtarget->hasAES()">,
-                                 AssemblerPredicate<"FeatureAES", "aes">;
+                                 AssemblerPredicate<(all_of FeatureAES), "aes">;
 def HasDotProd       : Predicate<"Subtarget->hasDotProd()">,
-                                 AssemblerPredicate<"FeatureDotProd", "dotprod">;
+                                 AssemblerPredicate<(all_of FeatureDotProd), "dotprod">;
 def HasCRC           : Predicate<"Subtarget->hasCRC()">,
-                                 AssemblerPredicate<"FeatureCRC", "crc">;
+                                 AssemblerPredicate<(all_of FeatureCRC), "crc">;
 def HasLSE           : Predicate<"Subtarget->hasLSE()">,
-                                 AssemblerPredicate<"FeatureLSE", "lse">;
+                                 AssemblerPredicate<(all_of FeatureLSE), "lse">;
 def HasRAS           : Predicate<"Subtarget->hasRAS()">,
-                                 AssemblerPredicate<"FeatureRAS", "ras">;
+                                 AssemblerPredicate<(all_of FeatureRAS), "ras">;
 def HasRDM           : Predicate<"Subtarget->hasRDM()">,
-                                 AssemblerPredicate<"FeatureRDM", "rdm">;
+                                 AssemblerPredicate<(all_of FeatureRDM), "rdm">;
 def HasPerfMon       : Predicate<"Subtarget->hasPerfMon()">;
 def HasFullFP16      : Predicate<"Subtarget->hasFullFP16()">,
-                                 AssemblerPredicate<"FeatureFullFP16", "fullfp16">;
+                                 AssemblerPredicate<(all_of FeatureFullFP16), "fullfp16">;
 def HasFP16FML       : Predicate<"Subtarget->hasFP16FML()">,
-                                 AssemblerPredicate<"FeatureFP16FML", "fp16fml">;
+                                 AssemblerPredicate<(all_of FeatureFP16FML), "fp16fml">;
 def HasSPE           : Predicate<"Subtarget->hasSPE()">,
-                                 AssemblerPredicate<"FeatureSPE", "spe">;
+                                 AssemblerPredicate<(all_of FeatureSPE), "spe">;
 def HasFuseAES       : Predicate<"Subtarget->hasFuseAES()">,
-                                 AssemblerPredicate<"FeatureFuseAES",
+                                 AssemblerPredicate<(all_of FeatureFuseAES),
                                  "fuse-aes">;
 def HasSVE           : Predicate<"Subtarget->hasSVE()">,
-                                 AssemblerPredicate<"FeatureSVE", "sve">;
+                                 AssemblerPredicate<(all_of FeatureSVE), "sve">;
 def HasSVE2          : Predicate<"Subtarget->hasSVE2()">,
-                                 AssemblerPredicate<"FeatureSVE2", "sve2">;
+                                 AssemblerPredicate<(all_of FeatureSVE2), "sve2">;
 def HasSVE2AES       : Predicate<"Subtarget->hasSVE2AES()">,
-                                 AssemblerPredicate<"FeatureSVE2AES", "sve2-aes">;
+                                 AssemblerPredicate<(all_of FeatureSVE2AES), "sve2-aes">;
 def HasSVE2SM4       : Predicate<"Subtarget->hasSVE2SM4()">,
-                                 AssemblerPredicate<"FeatureSVE2SM4", "sve2-sm4">;
+                                 AssemblerPredicate<(all_of FeatureSVE2SM4), "sve2-sm4">;
 def HasSVE2SHA3      : Predicate<"Subtarget->hasSVE2SHA3()">,
-                                 AssemblerPredicate<"FeatureSVE2SHA3", "sve2-sha3">;
+                                 AssemblerPredicate<(all_of FeatureSVE2SHA3), "sve2-sha3">;
 def HasSVE2BitPerm   : Predicate<"Subtarget->hasSVE2BitPerm()">,
-                                 AssemblerPredicate<"FeatureSVE2BitPerm", "sve2-bitperm">;
+                                 AssemblerPredicate<(all_of FeatureSVE2BitPerm), "sve2-bitperm">;
 def HasRCPC          : Predicate<"Subtarget->hasRCPC()">,
-                                 AssemblerPredicate<"FeatureRCPC", "rcpc">;
+                                 AssemblerPredicate<(all_of FeatureRCPC), "rcpc">;
 def HasAltNZCV       : Predicate<"Subtarget->hasAlternativeNZCV()">,
-                       AssemblerPredicate<"FeatureAltFPCmp", "altnzcv">;
+                       AssemblerPredicate<(all_of FeatureAltFPCmp), "altnzcv">;
 def HasFRInt3264     : Predicate<"Subtarget->hasFRInt3264()">,
-                       AssemblerPredicate<"FeatureFRInt3264", "frint3264">;
+                       AssemblerPredicate<(all_of FeatureFRInt3264), "frint3264">;
 def HasSB            : Predicate<"Subtarget->hasSB()">,
-                       AssemblerPredicate<"FeatureSB", "sb">;
+                       AssemblerPredicate<(all_of FeatureSB), "sb">;
 def HasPredRes      : Predicate<"Subtarget->hasPredRes()">,
-                       AssemblerPredicate<"FeaturePredRes", "predres">;
+                       AssemblerPredicate<(all_of FeaturePredRes), "predres">;
 def HasCCDP          : Predicate<"Subtarget->hasCCDP()">,
-                       AssemblerPredicate<"FeatureCacheDeepPersist", "ccdp">;
+                       AssemblerPredicate<(all_of FeatureCacheDeepPersist), "ccdp">;
 def HasBTI           : Predicate<"Subtarget->hasBTI()">,
-                       AssemblerPredicate<"FeatureBranchTargetId", "bti">;
+                       AssemblerPredicate<(all_of FeatureBranchTargetId), "bti">;
 def HasMTE           : Predicate<"Subtarget->hasMTE()">,
-                       AssemblerPredicate<"FeatureMTE", "mte">;
+                       AssemblerPredicate<(all_of FeatureMTE), "mte">;
 def HasTME           : Predicate<"Subtarget->hasTME()">,
-                       AssemblerPredicate<"FeatureTME", "tme">;
+                       AssemblerPredicate<(all_of FeatureTME), "tme">;
 def HasETE           : Predicate<"Subtarget->hasETE()">,
-                       AssemblerPredicate<"FeatureETE", "ete">;
+                       AssemblerPredicate<(all_of FeatureETE), "ete">;
 def HasTRBE          : Predicate<"Subtarget->hasTRBE()">,
-                       AssemblerPredicate<"FeatureTRBE", "trbe">;
+                       AssemblerPredicate<(all_of FeatureTRBE), "trbe">;
 def IsLE             : Predicate<"Subtarget->isLittleEndian()">;
 def IsBE             : Predicate<"!Subtarget->isLittleEndian()">;
 def IsWindows        : Predicate<"Subtarget->isTargetWindows()">;
@@ -149,7 +149,7 @@ def UseAlternateSExtLoadCVTF32
     : Predicate<"Subtarget->useAlternateSExtLoadCVTF32Pattern()">;
 
 def UseNegativeImmediates
-    : Predicate<"false">, AssemblerPredicate<"!FeatureNoNegativeImmediates",
+    : Predicate<"false">, AssemblerPredicate<(all_of (not FeatureNoNegativeImmediates)),
                                              "NegativeImmediates">;
 
 def AArch64LocalRecover : SDNode<"ISD::LOCAL_RECOVER",

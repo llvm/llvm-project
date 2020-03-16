@@ -2,7 +2,7 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
 # RUN: echo "SECTIONS { .text : { *(.text) *(.nonalloc) } }" > %t.script
 # RUN: ld.lld -shared -o %t.exe %t.script %t.o
-# RUN: llvm-objdump -syms %t.exe | FileCheck %s
+# RUN: llvm-objdump --syms %t.exe | FileCheck %s
 
 # CHECK: .text 0000000000000000 nonalloc_start
 

@@ -40,19 +40,22 @@ private:
   bool IsSet : 1;
 
 public:
-  ArgDescriptor(unsigned Val = 0, unsigned Mask = ~0u,
+  constexpr ArgDescriptor(unsigned Val = 0, unsigned Mask = ~0u,
                 bool IsStack = false, bool IsSet = false)
     : Reg(Val), Mask(Mask), IsStack(IsStack), IsSet(IsSet) {}
 
-  static ArgDescriptor createRegister(Register Reg, unsigned Mask = ~0u) {
+  static constexpr ArgDescriptor createRegister(Register Reg,
+                                                unsigned Mask = ~0u) {
     return ArgDescriptor(Reg, Mask, false, true);
   }
 
-  static ArgDescriptor createStack(unsigned Offset, unsigned Mask = ~0u) {
+  static constexpr ArgDescriptor createStack(unsigned Offset,
+                                             unsigned Mask = ~0u) {
     return ArgDescriptor(Offset, Mask, true, true);
   }
 
-  static ArgDescriptor createArg(const ArgDescriptor &Arg, unsigned Mask) {
+  static constexpr ArgDescriptor createArg(const ArgDescriptor &Arg,
+                                           unsigned Mask) {
     return ArgDescriptor(Arg.Reg, Mask, Arg.IsStack, Arg.IsSet);
   }
 
@@ -141,7 +144,7 @@ struct AMDGPUFunctionArgInfo {
   ArgDescriptor ImplicitArgPtr;
 
   // Input registers for non-HSA ABI
-  ArgDescriptor ImplicitBufferPtr = 0;
+  ArgDescriptor ImplicitBufferPtr;
 
   // VGPRs inputs. These are always v0, v1 and v2 for entry functions.
   ArgDescriptor WorkItemIDX;
@@ -150,11 +153,14 @@ struct AMDGPUFunctionArgInfo {
 
   std::pair<const ArgDescriptor *, const TargetRegisterClass *>
   getPreloadedValue(PreloadedValue Value) const;
+
+  static constexpr AMDGPUFunctionArgInfo fixedABILayout();
 };
 
 class AMDGPUArgumentUsageInfo : public ImmutablePass {
 private:
   static const AMDGPUFunctionArgInfo ExternFunctionInfo;
+  static const AMDGPUFunctionArgInfo FixedABIFunctionInfo;
   DenseMap<const Function *, AMDGPUFunctionArgInfo> ArgInfoMap;
 
 public:
@@ -175,15 +181,7 @@ public:
     ArgInfoMap[&F] = ArgInfo;
   }
 
-  const AMDGPUFunctionArgInfo &lookupFuncArgInfo(const Function &F) const {
-    auto I = ArgInfoMap.find(&F);
-    if (I == ArgInfoMap.end()) {
-      assert(F.isDeclaration());
-      return ExternFunctionInfo;
-    }
-
-    return I->second;
-  }
+  const AMDGPUFunctionArgInfo &lookupFuncArgInfo(const Function &F) const;
 };
 
 } // end namespace llvm

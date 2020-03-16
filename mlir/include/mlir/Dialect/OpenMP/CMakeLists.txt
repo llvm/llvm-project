@@ -1,1 +1,1 @@
-add_mlir_dialect(OpenMPOps OpenMPOps)
+add_mlir_dialect(OpenMPOps omp OpenMPOps)

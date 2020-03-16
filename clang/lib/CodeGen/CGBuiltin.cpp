@@ -7384,6 +7384,58 @@ Value *CodeGenFunction::vectorWrapScalar16(Value *Op) {
   return Op;
 }
 
+// Reinterpret the input predicate so that it can be used to correctly isolate
+// the elements of the specified datatype.
+Value *CodeGenFunction::EmitSVEPredicateCast(Value *Pred,
+                                             llvm::VectorType *VTy) {
+  llvm::VectorType *RTy = llvm::VectorType::get(
+      IntegerType::get(getLLVMContext(), 1), VTy->getElementCount());
+  if (Pred->getType() == RTy)
+    return Pred;
+
+  unsigned IntID;
+  llvm::Type *IntrinsicTy;
+  switch (VTy->getNumElements()) {
+  default:
+    llvm_unreachable("unsupported element count!");
+  case 2:
+  case 4:
+  case 8:
+    IntID = Intrinsic::aarch64_sve_convert_from_svbool;
+    IntrinsicTy = RTy;
+    break;
+  case 16:
+    IntID = Intrinsic::aarch64_sve_convert_to_svbool;
+    IntrinsicTy = Pred->getType();
+    break;
+  }
+
+  Function *F = CGM.getIntrinsic(IntID, IntrinsicTy);
+  Value *C = Builder.CreateCall(F, Pred);
+  assert(C->getType() == RTy && "Unexpected return type!");
+  return C;
+}
+
+Value *CodeGenFunction::EmitSVEMaskedLoad(llvm::Type *ReturnTy,
+                                          SmallVectorImpl<Value *> &Ops) {
+  llvm::PointerType *PTy = cast<llvm::PointerType>(Ops[1]->getType());
+  llvm::Type *MemEltTy = PTy->getPointerElementType();
+
+  // The vector type that is returned may be different from the
+  // eventual type loaded from memory.
+  auto VectorTy = cast<llvm::VectorType>(ReturnTy);
+  auto MemoryTy =
+      llvm::VectorType::get(MemEltTy, VectorTy->getVectorElementCount());
+
+  Value *Offset = Builder.getInt32(0);
+  Value *Predicate = EmitSVEPredicateCast(Ops[0], MemoryTy);
+  Value *BasePtr = Builder.CreateBitCast(Ops[1], MemoryTy->getPointerTo());
+  BasePtr = Builder.CreateGEP(MemoryTy, BasePtr, Offset);
+
+  Value *Splat0 = Constant::getNullValue(MemoryTy);
+  return Builder.CreateMaskedLoad(BasePtr, Align(1), Predicate, Splat0);
+}
+
 Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
                                                const CallExpr *E,
                                                llvm::Triple::ArchType Arch) {
@@ -7418,6 +7470,27 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
   if (HintID != static_cast<unsigned>(-1)) {
     Function *F = CGM.getIntrinsic(Intrinsic::aarch64_hint);
     return Builder.CreateCall(F, llvm::ConstantInt::get(Int32Ty, HintID));
+  }
+
+  switch (BuiltinID) {
+  case AArch64::BI__builtin_sve_svld1_u8:
+  case AArch64::BI__builtin_sve_svld1_u16:
+  case AArch64::BI__builtin_sve_svld1_u32:
+  case AArch64::BI__builtin_sve_svld1_u64:
+  case AArch64::BI__builtin_sve_svld1_s8:
+  case AArch64::BI__builtin_sve_svld1_s16:
+  case AArch64::BI__builtin_sve_svld1_s32:
+  case AArch64::BI__builtin_sve_svld1_s64:
+  case AArch64::BI__builtin_sve_svld1_f16:
+  case AArch64::BI__builtin_sve_svld1_f32:
+  case AArch64::BI__builtin_sve_svld1_f64: {
+    llvm::SmallVector<Value *, 4> Ops = {EmitScalarExpr(E->getArg(0)),
+                                         EmitScalarExpr(E->getArg(1))};
+    llvm::Type *Ty = ConvertType(E->getType());
+    return EmitSVEMaskedLoad(Ty, Ops);
+  }
+  default:
+    break;
   }
 
   if (BuiltinID == AArch64::BI__builtin_arm_prefetch) {

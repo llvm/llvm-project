@@ -19,6 +19,7 @@ add_llvm_component_library(LLVMOrcJIT
   ObjectTransformLayer.cpp
   OrcABISupport.cpp
   OrcCBindings.cpp
+  OrcV2CBindings.cpp
   OrcMCJITReplacement.cpp
   RTDyldObjectLinkingLayer.cpp
   ThreadSafeModule.cpp

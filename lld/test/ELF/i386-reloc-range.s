@@ -7,7 +7,7 @@
 // RUN: llvm-mc %t2.s -o %t2.o -triple i386-pc-linux -filetype=obj
 
 // RUN: ld.lld -Ttext 0x200 %t.o %t1.o -o %t1
-// RUN: llvm-objdump -d --no-show-raw-insn -triple=i386-pc-linux-code16 %t1 | FileCheck %s
+// RUN: llvm-objdump -d --no-show-raw-insn --triple=i386-pc-linux-code16 %t1 | FileCheck %s
 
 // CHECK:        Disassembly of section .text:
 // CHECK-EMPTY:

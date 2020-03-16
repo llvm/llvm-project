@@ -1297,6 +1297,8 @@ int X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
     { ISD::ZERO_EXTEND, MVT::v32i8,  MVT::v32i1, 2 },
     { ISD::ZERO_EXTEND, MVT::v32i16, MVT::v32i1, 2 },
     { ISD::ZERO_EXTEND, MVT::v64i8,  MVT::v64i1, 2 },
+
+    { ISD::TRUNCATE,    MVT::v32i8,  MVT::v32i16, 1 },
   };
 
   static const TypeConversionCostTblEntry AVX512DQConversionTbl[] = {
@@ -2133,6 +2135,14 @@ int X86TTIImpl::getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
     { ISD::FSQRT,      MVT::f32,    28 }, // Pentium III from http://www.agner.org/
     { ISD::FSQRT,      MVT::v4f32,  56 }, // Pentium III from http://www.agner.org/
   };
+  static const CostTblEntry BMI64CostTbl[] = { // 64-bit targets
+    { ISD::CTTZ,       MVT::i64,     1 },
+  };
+  static const CostTblEntry BMI32CostTbl[] = { // 32 or 64-bit targets
+    { ISD::CTTZ,       MVT::i32,     1 },
+    { ISD::CTTZ,       MVT::i16,     1 },
+    { ISD::CTTZ,       MVT::i8,      1 },
+  };
   static const CostTblEntry LZCNT64CostTbl[] = { // 64-bit targets
     { ISD::CTLZ,       MVT::i64,     1 },
   };
@@ -2152,6 +2162,7 @@ int X86TTIImpl::getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
   static const CostTblEntry X64CostTbl[] = { // 64-bit targets
     { ISD::BITREVERSE, MVT::i64,    14 },
     { ISD::CTLZ,       MVT::i64,     4 }, // BSR+XOR or BSR+XOR+CMOV
+    { ISD::CTTZ,       MVT::i64,     3 }, // TEST+BSF+CMOV/BRANCH
     { ISD::CTPOP,      MVT::i64,    10 },
     { ISD::SADDO,      MVT::i64,     1 },
     { ISD::UADDO,      MVT::i64,     1 },
@@ -2163,6 +2174,9 @@ int X86TTIImpl::getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
     { ISD::CTLZ,       MVT::i32,     4 }, // BSR+XOR or BSR+XOR+CMOV
     { ISD::CTLZ,       MVT::i16,     4 }, // BSR+XOR or BSR+XOR+CMOV
     { ISD::CTLZ,       MVT::i8,      4 }, // BSR+XOR or BSR+XOR+CMOV
+    { ISD::CTTZ,       MVT::i32,     3 }, // TEST+BSF+CMOV/BRANCH
+    { ISD::CTTZ,       MVT::i16,     3 }, // TEST+BSF+CMOV/BRANCH
+    { ISD::CTTZ,       MVT::i8,      3 }, // TEST+BSF+CMOV/BRANCH
     { ISD::CTPOP,      MVT::i32,     8 },
     { ISD::CTPOP,      MVT::i16,     9 },
     { ISD::CTPOP,      MVT::i8,      7 },
@@ -2281,6 +2295,15 @@ int X86TTIImpl::getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
     if (ST->hasSSE1())
       if (const auto *Entry = CostTableLookup(SSE1CostTbl, ISD, MTy))
         return LT.first * Entry->Cost;
+
+    if (ST->hasBMI()) {
+      if (ST->is64Bit())
+        if (const auto *Entry = CostTableLookup(BMI64CostTbl, ISD, MTy))
+          return LT.first * Entry->Cost;
+
+      if (const auto *Entry = CostTableLookup(BMI32CostTbl, ISD, MTy))
+        return LT.first * Entry->Cost;
+    }
 
     if (ST->hasLZCNT()) {
       if (ST->is64Bit())

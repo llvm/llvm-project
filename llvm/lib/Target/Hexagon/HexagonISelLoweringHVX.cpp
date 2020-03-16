@@ -304,6 +304,10 @@ HexagonTargetLowering::allowsHvxMemoryAccess(MVT VecTy, unsigned Alignment,
         MachineMemOperand::Flags Flags, bool *Fast) const {
   // Bool vectors are excluded by default, but make it explicit to
   // emphasize that bool vectors cannot be loaded or stored.
+  // Also, disallow double vector stores (to prevent unnecessary
+  // store widening in DAG combiner).
+  if (VecTy.getSizeInBits() > 8*Subtarget.getVectorLength())
+    return false;
   if (!Subtarget.isHVXVectorType(VecTy, /*IncludeBool=*/false))
     return false;
   if (Fast)

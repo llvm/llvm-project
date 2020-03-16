@@ -388,7 +388,6 @@ ProgramHeaders:
   - Type: PT_LOAD
     Flags: [ PF_X, PF_R ]
     VAddr: 0x0000000000400000
-    PAddr: 0x0000000000400000
     Align: 1024
     Sections:
       - Section: .interp

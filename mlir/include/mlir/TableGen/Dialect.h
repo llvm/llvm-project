@@ -32,12 +32,21 @@ public:
   // Returns the C++ namespaces that ops of this dialect should be placed into.
   StringRef getCppNamespace() const;
 
+  // Returns this dialect's C++ class name.
+  std::string getCppClassName() const;
+
   // Returns the summary description of the dialect. Returns empty string if
   // none.
   StringRef getSummary() const;
 
   // Returns the description of the dialect. Returns empty string if none.
   StringRef getDescription() const;
+
+  // Returns the dialects extra class declaration code.
+  llvm::Optional<StringRef> getExtraClassDeclaration() const;
+
+  // Returns if this dialect has a constant materializer or not.
+  bool hasConstantMaterializer() const;
 
   // Returns whether two dialects are equal by checking the equality of the
   // underlying record.

@@ -31,19 +31,10 @@ class Builder;
 class FuncOp;
 class OpBuilder;
 
-class StandardOpsDialect : public Dialect {
-public:
-  StandardOpsDialect(MLIRContext *context);
-  static StringRef getDialectNamespace() { return "std"; }
-
-  /// Materialize a single constant operation from a given attribute value with
-  /// the desired resultant type.
-  Operation *materializeConstant(OpBuilder &builder, Attribute value, Type type,
-                                 Location loc) override;
-};
-
 #define GET_OP_CLASSES
 #include "mlir/Dialect/StandardOps/IR/Ops.h.inc"
+
+#include "mlir/Dialect/StandardOps/IR/OpsDialect.h.inc"
 
 /// This is a refinement of the "constant" op for the case where it is
 /// returning a float value of FloatType.

@@ -2,7 +2,7 @@
 // RUN: llvm-mc %s -o %t.o -filetype=obj -triple=armv7a-linux-gnueabi
 // RUN: ld.lld %t.o -o %t
 // RUN: llvm-readobj -S --dyn-relocations %t | FileCheck --check-prefix=SEC %s
-// RUN: llvm-objdump -d -triple=armv7a-linux-gnueabi %t | FileCheck %s
+// RUN: llvm-objdump -d --triple=armv7a-linux-gnueabi %t | FileCheck %s
 
 // Test the handling of the local exec TLS model. TLS can be resolved
 // statically for an application. The code sequences assume a thread pointer

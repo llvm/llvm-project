@@ -2,7 +2,7 @@
 @ RUN:   | llvm-readobj -r - | FileCheck %s -check-prefix CHECK-RELOCATION
 
 @ RUN: llvm-mc -triple thumbv7-windows-itanium -filetype obj -o - %s \
-@ RUN:   | llvm-objdump -d - | FileCheck %s -check-prefix CHECK-ENCODING
+@ RUN:   | llvm-objdump -d - | FileCheck %s --check-prefix=CHECK-ENCODING
 
 	.syntax unified
 	.text

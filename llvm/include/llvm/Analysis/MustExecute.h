@@ -176,6 +176,8 @@ public:
   virtual ~ICFLoopSafetyInfo() {};
 };
 
+bool mayContainIrreducibleControl(const Function &F, const LoopInfo *LI);
+
 struct MustBeExecutedContextExplorer;
 
 /// Enum that allows us to spell out the direction.

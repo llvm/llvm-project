@@ -6,10 +6,10 @@
 # RUN: llvm-readelf -r %t.o | FileCheck -check-prefix=REL %s
 
 # RUN: ld.lld %t.o -shared -o %t.so
-# RUN: llvm-objdump -d --no-show-raw-insn %t.so | FileCheck -check-prefix=SO %s
+# RUN: llvm-objdump -d --no-show-raw-insn %t.so | FileCheck --check-prefix=SO %s
 
 # RUN: ld.lld %t.o --defsym=bar=__start -o %t.so
-# RUN: llvm-objdump -d --no-show-raw-insn %t.so | FileCheck -check-prefix=EXE %s
+# RUN: llvm-objdump -d --no-show-raw-insn %t.so | FileCheck --check-prefix=EXE %s
 
 # REL: R_MIPS_JALR   {{.*}} bar
 # REL: R_MIPS_JALR   {{.*}} foo

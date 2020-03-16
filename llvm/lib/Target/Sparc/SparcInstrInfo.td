@@ -27,12 +27,12 @@ def Is32Bit : Predicate<"!Subtarget->is64Bit()">;
 def Is64Bit : Predicate<"Subtarget->is64Bit()">;
 
 def UseSoftMulDiv : Predicate<"Subtarget->useSoftMulDiv()">,
-              AssemblerPredicate<"FeatureSoftMulDiv">;
+              AssemblerPredicate<(all_of FeatureSoftMulDiv)>;
 
 // HasV9 - This predicate is true when the target processor supports V9
 // instructions.  Note that the machine may be running in 32-bit mode.
 def HasV9   : Predicate<"Subtarget->isV9()">,
-              AssemblerPredicate<"FeatureV9">;
+              AssemblerPredicate<(all_of FeatureV9)>;
 
 // HasNoV9 - This predicate is true when the target doesn't have V9
 // instructions.  Use of this is just a hack for the isel not having proper
@@ -41,11 +41,11 @@ def HasNoV9 : Predicate<"!Subtarget->isV9()">;
 
 // HasVIS - This is true when the target processor has VIS extensions.
 def HasVIS : Predicate<"Subtarget->isVIS()">,
-             AssemblerPredicate<"FeatureVIS">;
+             AssemblerPredicate<(all_of FeatureVIS)>;
 def HasVIS2 : Predicate<"Subtarget->isVIS2()">,
-             AssemblerPredicate<"FeatureVIS2">;
+             AssemblerPredicate<(all_of FeatureVIS2)>;
 def HasVIS3 : Predicate<"Subtarget->isVIS3()">,
-             AssemblerPredicate<"FeatureVIS3">;
+             AssemblerPredicate<(all_of FeatureVIS3)>;
 
 // HasHardQuad - This is true when the target processor supports quad floating
 // point instructions.
@@ -58,7 +58,7 @@ def HasLeonCASA : Predicate<"Subtarget->hasLeonCasa()">;
 // HasPWRPSR - This is true when the target processor supports partial
 // writes to the PSR register that only affects the ET field.
 def HasPWRPSR : Predicate<"Subtarget->hasPWRPSR()">,
-                AssemblerPredicate<"FeaturePWRPSR">;
+                AssemblerPredicate<(all_of FeaturePWRPSR)>;
 
 // HasUMAC_SMAC - This is true when the target processor supports the
 // UMAC and SMAC instructions

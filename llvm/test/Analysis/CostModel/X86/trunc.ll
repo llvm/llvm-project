@@ -317,8 +317,8 @@ define i32 @trunc_vXi8() {
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4i16 = trunc <4 x i16> undef to <4 x i8>
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8i16 = trunc <8 x i16> undef to <8 x i8>
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16i16 = trunc <16 x i16> undef to <16 x i8>
-; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V32i16 = trunc <32 x i16> undef to <32 x i8>
-; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V64i16 = trunc <64 x i16> undef to <64 x i8>
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V32i16 = trunc <32 x i16> undef to <32 x i8>
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V64i16 = trunc <64 x i16> undef to <64 x i8>
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; BTVER2-LABEL: 'trunc_vXi8'

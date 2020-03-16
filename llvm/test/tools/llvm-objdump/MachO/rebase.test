@@ -1,4 +1,4 @@
-# RUN: llvm-objdump -macho -rebase -arch x86_64 \
+# RUN: llvm-objdump --macho --rebase --arch x86_64 \
 # RUN:   %p/Inputs/rebase.macho-x86_64 | FileCheck %s
 
 

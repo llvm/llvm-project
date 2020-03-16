@@ -928,7 +928,7 @@ Error LLJITBuilderState::prepareForConstruction() {
             ES, std::make_unique<jitlink::InProcessMemoryManager>());
         ObjLinkingLayer->addPlugin(std::make_unique<EHFrameRegistrationPlugin>(
             jitlink::InProcessEHFrameRegistrar::getInstance()));
-        return ObjLinkingLayer;
+        return std::move(ObjLinkingLayer);
       };
     }
   }

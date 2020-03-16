@@ -50,6 +50,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/KnowledgeRetention.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
@@ -1695,10 +1696,15 @@ llvm::InlineResult llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
       VMap[&*I] = ActualArg;
     }
 
+    // TODO: Remove this when users have been updated to the assume bundles.
     // Add alignment assumptions if necessary. We do this before the inlined
     // instructions are actually cloned into the caller so that we can easily
     // check what will be known at the start of the inlined code.
     AddAlignmentAssumptions(CS, IFI);
+
+    /// Preserve all attributes on of the call and its parameters.
+    if (Instruction *Assume = BuildAssumeFromInst(CS.getInstruction()))
+      Assume->insertBefore(CS.getInstruction());
 
     // We want the inliner to prune the code as it copies.  We would LOVE to
     // have no dead or constant instructions leftover after inlining occurs

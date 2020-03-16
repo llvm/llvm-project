@@ -18,6 +18,11 @@ mlir_tablegen(InferTypeOpInterface.h.inc -gen-op-interface-decls)
 mlir_tablegen(InferTypeOpInterface.cpp.inc -gen-op-interface-defs)
 add_public_tablegen_target(MLIRInferTypeOpInterfaceIncGen)
 
+set(LLVM_TARGET_DEFINITIONS LoopLikeInterface.td)
+mlir_tablegen(LoopLikeInterface.h.inc -gen-op-interface-decls)
+mlir_tablegen(LoopLikeInterface.cpp.inc -gen-op-interface-defs)
+add_public_tablegen_target(MLIRLoopLikeInterfaceIncGen)
+
 set(LLVM_TARGET_DEFINITIONS SideEffects.td)
 mlir_tablegen(SideEffectInterfaces.h.inc -gen-op-interface-decls)
 mlir_tablegen(SideEffectInterfaces.cpp.inc -gen-op-interface-defs)

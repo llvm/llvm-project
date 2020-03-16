@@ -1,5 +1,5 @@
 # RUN: llvm-mc -filetype=obj -triple=mips64el-unknown-linux -mcpu=mips64r2 %s \
-# RUN:   | llvm-objdump -disassemble - | FileCheck %s
+# RUN:   | llvm-objdump -d - | FileCheck %s
 
 # RUN: llvm-mc -filetype=obj -triple=mips64el-unknown-linux -mcpu=mips64r2 %s \
 # RUN:   | llvm-readobj -r | FileCheck %s -check-prefix=CHECK-REL

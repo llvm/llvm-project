@@ -1,4 +1,4 @@
-# RUN: llvm-objdump -dwarf=frames %p/Inputs/eh_frame.elf-mipsel | FileCheck %s
+# RUN: llvm-objdump --dwarf=frames %p/Inputs/eh_frame.elf-mipsel | FileCheck %s
 
 # CHECK: .eh_frame contents:
 

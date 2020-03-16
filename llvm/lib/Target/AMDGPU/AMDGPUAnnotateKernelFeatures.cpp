@@ -216,7 +216,7 @@ static void copyFeaturesToFunction(Function &Parent, const Function &Callee,
       "amdgpu-work-item-id-z",      "amdgpu-work-group-id-x",
       "amdgpu-work-group-id-y",     "amdgpu-work-group-id-z",
       "amdgpu-dispatch-ptr",        "amdgpu-dispatch-id",
-      "amdgpu-kernarg-segment-ptr", "amdgpu-implicitarg-ptr"};
+      "amdgpu-implicitarg-ptr"};
 
   if (handleAttr(Parent, Callee, "amdgpu-queue-ptr"))
     NeedQueuePtr = true;
@@ -305,11 +305,16 @@ bool AMDGPUAnnotateKernelFeatures::addFeatureAttributes(Function &F) {
           Changed = true;
         } else {
           bool NonKernelOnly = false;
-          StringRef AttrName = intrinsicToAttrName(IID,
-                                                   NonKernelOnly, NeedQueuePtr);
-          if (!AttrName.empty() && (IsFunc || !NonKernelOnly)) {
-            F.addFnAttr(AttrName);
-            Changed = true;
+
+          if (!IsFunc && IID == Intrinsic::amdgcn_kernarg_segment_ptr) {
+            F.addFnAttr("amdgpu-kernarg-segment-ptr");
+          } else {
+            StringRef AttrName = intrinsicToAttrName(IID, NonKernelOnly,
+                                                     NeedQueuePtr);
+            if (!AttrName.empty() && (IsFunc || !NonKernelOnly)) {
+              F.addFnAttr(AttrName);
+              Changed = true;
+            }
           }
         }
       }

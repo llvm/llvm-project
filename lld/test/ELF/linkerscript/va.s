@@ -3,7 +3,7 @@
 
 # RUN: echo "SECTIONS {}" > %t.script
 # RUN: ld.lld -o %t1 --script %t.script %t
-# RUN: llvm-objdump -section-headers %t1 | FileCheck %s
+# RUN: llvm-objdump --section-headers %t1 | FileCheck %s
 # CHECK:      Sections:
 # CHECK-NEXT: Idx Name          Size     VMA
 # CHECK-NEXT:   0               00000000 0000000000000000

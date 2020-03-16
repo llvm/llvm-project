@@ -1,6 +1,6 @@
 # RUN: llvm-mc -triple bpfel -filetype=obj -o %t %s
 # RUN: llvm-objdump -d -r %t | FileCheck --check-prefixes CHECK,CHECK-64 %s
-# RUN: llvm-objdump -mattr=+alu32 -d -r %t | FileCheck --check-prefixes CHECK,CHECK-32 %s
+# RUN: llvm-objdump --mattr=+alu32 -d -r %t | FileCheck --check-prefixes CHECK,CHECK-32 %s
 
 // ======== BPF_LD Class ========
 // Some extra whitespaces are deliberately added to test the parser.

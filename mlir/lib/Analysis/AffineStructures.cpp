@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Structures for affine/polyhedral analysis of MLIR functions.
+// Structures for affine/polyhedral analysis of affine dialect ops.
 //
 //===----------------------------------------------------------------------===//
 
@@ -90,9 +90,8 @@ getFlattenedAffineExprs(ArrayRef<AffineExpr> exprs, unsigned numDims,
   flattenedExprs->assign(flattener.operandExprStack.begin(),
                          flattener.operandExprStack.end());
 
-  if (localVarCst) {
+  if (localVarCst)
     localVarCst->clearAndCopyFrom(flattener.localVarCst);
-  }
 
   return success();
 }
@@ -272,13 +271,12 @@ void FlatAffineConstraints::addSymbolId(unsigned pos, Value id) {
 /// Adds a dimensional identifier. The added column is initialized to
 /// zero.
 void FlatAffineConstraints::addId(IdKind kind, unsigned pos, Value id) {
-  if (kind == IdKind::Dimension) {
+  if (kind == IdKind::Dimension)
     assert(pos <= getNumDimIds());
-  } else if (kind == IdKind::Symbol) {
+  else if (kind == IdKind::Symbol)
     assert(pos <= getNumSymbolIds());
-  } else {
+  else
     assert(pos <= getNumLocalIds());
-  }
 
   unsigned oldNumReservedCols = numReservedCols;
 
@@ -333,11 +331,10 @@ void FlatAffineConstraints::addId(IdKind kind, unsigned pos, Value id) {
   }
 
   // If an 'id' is provided, insert it; otherwise use None.
-  if (id) {
+  if (id)
     ids.insert(ids.begin() + absolutePos, id);
-  } else {
+  else
     ids.insert(ids.begin() + absolutePos, None);
-  }
   assert(ids.size() == getNumIds());
 }
 
@@ -709,9 +706,8 @@ LogicalResult FlatAffineConstraints::addAffineForOpDomain(AffineForOp forOp) {
     addConstantLowerBound(pos, forOp.getConstantLowerBound());
   } else {
     // Non-constant lower bound case.
-    SmallVector<Value, 4> lbOperands(forOp.getLowerBoundOperands().begin(),
-                                     forOp.getLowerBoundOperands().end());
-    if (failed(addLowerOrUpperBound(pos, forOp.getLowerBoundMap(), lbOperands,
+    if (failed(addLowerOrUpperBound(pos, forOp.getLowerBoundMap(),
+                                    forOp.getLowerBoundOperands(),
                                     /*eq=*/false, /*lower=*/true)))
       return failure();
   }
@@ -721,9 +717,8 @@ LogicalResult FlatAffineConstraints::addAffineForOpDomain(AffineForOp forOp) {
     return success();
   }
   // Non-constant upper bound case.
-  SmallVector<Value, 4> ubOperands(forOp.getUpperBoundOperands().begin(),
-                                   forOp.getUpperBoundOperands().end());
-  return addLowerOrUpperBound(pos, forOp.getUpperBoundMap(), ubOperands,
+  return addLowerOrUpperBound(pos, forOp.getUpperBoundMap(),
+                              forOp.getUpperBoundOperands(),
                               /*eq=*/false, /*lower=*/false);
 }
 
@@ -1206,7 +1201,7 @@ static bool detectAsMod(const FlatAffineConstraints &cst, unsigned pos,
   return false;
 }
 
-// Gather lower and upper bounds for the pos^th identifier.
+/// Gather all lower and upper bounds of the identifier at `pos`.
 static void getLowerAndUpperBoundIndices(const FlatAffineConstraints &cst,
                                          unsigned pos,
                                          SmallVectorImpl<unsigned> *lbIndices,
@@ -1227,12 +1222,16 @@ static void getLowerAndUpperBoundIndices(const FlatAffineConstraints &cst,
   }
 }
 
-// Check if the pos^th identifier can be expressed as a floordiv of an affine
-// function of other identifiers (where the divisor is a positive constant).
-// For eg: 4q <= i + j <= 4q + 3   <=>   q = (i + j) floordiv 4.
+/// Check if the pos^th identifier can be expressed as a floordiv of an affine
+/// function of other identifiers (where the divisor is a positive constant)
+/// given the initial set of expressions in `exprs`. If it can be, the
+/// corresponding position in `exprs` is set as the detected affine expr. For
+/// eg: 4q <= i + j <= 4q + 3   <=>   q = (i + j) floordiv 4. An equality can
+/// also yield a floordiv: eg.  4q = i + j <=> q = (i + j) floordiv 4. 32q + 28
+/// <= i <= 32q + 31 => q = i floordiv 32.
 static bool detectAsFloorDiv(const FlatAffineConstraints &cst, unsigned pos,
-                             SmallVectorImpl<AffineExpr> *memo,
-                             MLIRContext *context) {
+                             MLIRContext *context,
+                             SmallVectorImpl<AffineExpr> &exprs) {
   assert(pos < cst.getNumIds() && "invalid position");
 
   SmallVector<unsigned, 4> lbIndices, ubIndices;
@@ -1249,10 +1248,12 @@ static bool detectAsFloorDiv(const FlatAffineConstraints &cst, unsigned pos,
   unsigned seenDividends = 0;
   for (auto ubPos : ubIndices) {
     for (auto lbPos : lbIndices) {
-      // Check if lower bound's constant term is 'divisor - 1'. The 'divisor'
-      // here is cst.atIneq(lbPos, pos) and we already know that it's positive
-      // (since cst.Ineq(lbPos, ...) is a lower bound expression for 'pos'.
-      if (cst.atIneq(lbPos, cst.getNumCols() - 1) != cst.atIneq(lbPos, pos) - 1)
+      // Check if the lower bound's constant term is divisor - 1. The
+      // 'divisor' here is cst.atIneq(lbPos, pos) and we already know that it's
+      // positive (since cst.Ineq(lbPos, ...) is a lower bound expr for 'pos'.
+      int64_t divisor = cst.atIneq(lbPos, pos);
+      int64_t lbConstTerm = cst.atIneq(lbPos, cst.getNumCols() - 1);
+      if (lbConstTerm != divisor - 1)
         continue;
       // Check if upper bound's constant term is 0.
       if (cst.atIneq(ubPos, cst.getNumCols() - 1) != 0)
@@ -1271,9 +1272,6 @@ static bool detectAsFloorDiv(const FlatAffineConstraints &cst, unsigned pos,
       if (c < f)
         continue;
       if (seenDividends >= 1) {
-        // The divisor is the constant term of the lower bound expression.
-        // We already know that cst.atIneq(lbPos, pos) > 0.
-        int64_t divisor = cst.atIneq(lbPos, pos);
         // Construct the dividend expression.
         auto dividendExpr = getAffineConstantExpr(0, context);
         unsigned c, f;
@@ -1283,9 +1281,9 @@ static bool detectAsFloorDiv(const FlatAffineConstraints &cst, unsigned pos,
           int64_t ubVal = cst.atIneq(ubPos, c);
           if (ubVal == 0)
             continue;
-          if (!(*memo)[c])
+          if (!exprs[c])
             break;
-          dividendExpr = dividendExpr + ubVal * (*memo)[c];
+          dividendExpr = dividendExpr + ubVal * exprs[c];
         }
         // Expression can't be constructed as it depends on a yet unknown
         // identifier.
@@ -1294,7 +1292,7 @@ static bool detectAsFloorDiv(const FlatAffineConstraints &cst, unsigned pos,
         if (c < f)
           continue;
         // Successfully detected the floordiv.
-        (*memo)[pos] = dividendExpr.floorDiv(divisor);
+        exprs[pos] = dividendExpr.floorDiv(divisor);
         return true;
       }
     }
@@ -1473,9 +1471,9 @@ void FlatAffineConstraints::getSliceBounds(unsigned offset, unsigned num,
         }
       }
 
-      // Detect an identifier as floordiv of another identifier w.r.t a
-      // constant.
-      if (detectAsFloorDiv(*this, pos, &memo, context)) {
+      // Detect an identifier as a floordiv of an affine function of other
+      // identifiers (divisor is a positive constant).
+      if (detectAsFloorDiv(*this, pos, context, memo)) {
         changed = true;
         continue;
       }
@@ -1593,8 +1591,8 @@ void FlatAffineConstraints::getSliceBounds(unsigned offset, unsigned num,
 
 LogicalResult
 FlatAffineConstraints::addLowerOrUpperBound(unsigned pos, AffineMap boundMap,
-                                            ArrayRef<Value> boundOperands,
-                                            bool eq, bool lower) {
+                                            ValueRange boundOperands, bool eq,
+                                            bool lower) {
   assert(pos < getNumDimAndSymbolIds() && "invalid position");
   // Equality follows the logic of lower bound except that we add an equality
   // instead of an inequality.
@@ -1954,7 +1952,7 @@ Optional<int64_t> FlatAffineConstraints::getConstantBoundOnDimSize(
   if (eqRow != -1) {
     // This identifier can only take a single value.
     if (lb) {
-      // Set lb to the symbolic value.
+      // Set lb to that symbolic value.
       lb->resize(getNumSymbolIds() + 1);
       if (ub)
         ub->resize(getNumSymbolIds() + 1);
@@ -1988,9 +1986,10 @@ Optional<int64_t> FlatAffineConstraints::getConstantBoundOnDimSize(
   // Positions of constraints that are lower/upper bounds on the variable.
   SmallVector<unsigned, 4> lbIndices, ubIndices;
 
-  // Gather all symbolic lower bounds and upper bounds of the variable. Since
-  // the canonical form c_1*x_1 + c_2*x_2 + ... + c_0 >= 0, a constraint is a
-  // lower bound for x_i if c_i >= 1, and an upper bound if c_i <= -1.
+  // Gather all symbolic lower bounds and upper bounds of the variable, i.e.,
+  // the bounds can only involve symbolic (and local) identifiers. Since the
+  // canonical form c_1*x_1 + c_2*x_2 + ... + c_0 >= 0, a constraint is a lower
+  // bound for x_i if c_i >= 1, and an upper bound if c_i <= -1.
   for (unsigned r = 0, e = getNumInequalities(); r < e; r++) {
     unsigned c, f;
     for (c = 0, f = getNumDimIds(); c < f; c++) {

@@ -3,7 +3,7 @@
 
 # RUN: yaml2obj -o %t.out %p/Inputs/simple-executable-x86_64.yaml
 # RUN: llvm-objdump -d %t.out --disassemble-symbols=main \
-# RUN:   | FileCheck %s --check-prefix=MAIN --implicit-check-not=foo --implicit-check-not=somedata
+# RUN:   | FileCheck %s --check-prefix=MAIN --implicit-check-not="<foo>:" --implicit-check-not=somedata
 # RUN: llvm-objdump -d %t.out --disassemble-symbols=main,foo \
 # RUN:   | FileCheck %s --check-prefixes=MAIN,FOO --implicit-check-not=somedata
 

@@ -8,12 +8,12 @@ add_mlir_dialect_library(MLIRAffineOps
 
   DEPENDS
   MLIRAffineOpsIncGen
-  MLIRLoopLikeInterfaceIncGen
   )
 target_link_libraries(MLIRAffineOps
   PUBLIC
   MLIREDSC
   MLIRIR
+  MLIRLoopLikeInterface
   MLIRSideEffects
   MLIRStandardOps
   )

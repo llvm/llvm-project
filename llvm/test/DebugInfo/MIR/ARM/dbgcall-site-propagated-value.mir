@@ -1,4 +1,4 @@
-# RUN: llc -run-pass=livedebugvalues -o - %s | FileCheck %s
+# RUN: llc -emit-call-site-info -debug-entry-values -run-pass=livedebugvalues -o - %s | FileCheck %s
 
 # Based on the following C reproducer:
 #
@@ -106,6 +106,10 @@
 name:            caller
 alignment:       4
 tracksRegLiveness: true
+callSites:
+  - { bb: 0, offset: 6 }
+  - { bb: 0, offset: 9, fwdArgRegs:
+      - { arg: 0, reg: '$r0' } }
 body:             |
   bb.0:
     liveins: $lr

@@ -91,7 +91,8 @@ namespace {
 
 class DebugDirectoryChunk : public NonSectionChunk {
 public:
-  DebugDirectoryChunk(const std::vector<Chunk *> &r, bool writeRepro)
+  DebugDirectoryChunk(const std::vector<std::pair<COFF::DebugType, Chunk *>> &r,
+                      bool writeRepro)
       : records(r), writeRepro(writeRepro) {}
 
   size_t getSize() const override {
@@ -101,11 +102,11 @@ public:
   void writeTo(uint8_t *b) const override {
     auto *d = reinterpret_cast<debug_directory *>(b);
 
-    for (const Chunk *record : records) {
-      OutputSection *os = record->getOutputSection();
-      uint64_t offs = os->getFileOff() + (record->getRVA() - os->getRVA());
-      fillEntry(d, COFF::IMAGE_DEBUG_TYPE_CODEVIEW, record->getSize(),
-                record->getRVA(), offs);
+    for (const std::pair<COFF::DebugType, Chunk *> record : records) {
+      Chunk *c = record.second;
+      OutputSection *os = c->getOutputSection();
+      uint64_t offs = os->getFileOff() + (c->getRVA() - os->getRVA());
+      fillEntry(d, record.first, c->getSize(), c->getRVA(), offs);
       ++d;
     }
 
@@ -140,7 +141,7 @@ private:
   }
 
   mutable std::vector<support::ulittle32_t *> timeDateStamps;
-  const std::vector<Chunk *> &records;
+  const std::vector<std::pair<COFF::DebugType, Chunk *>> &records;
   bool writeRepro;
 };
 
@@ -163,6 +164,17 @@ public:
   }
 
   mutable codeview::DebugInfo *buildId = nullptr;
+};
+
+class ExtendedDllCharacteristicsChunk : public NonSectionChunk {
+public:
+  ExtendedDllCharacteristicsChunk(uint32_t c) : characteristics(c) {}
+
+  size_t getSize() const override { return 4; }
+
+  void writeTo(uint8_t *buf) const override { write32le(buf, characteristics); }
+
+  uint32_t characteristics = 0;
 };
 
 // PartialSection represents a group of chunks that contribute to an
@@ -250,7 +262,7 @@ private:
   bool setNoSEHCharacteristic = false;
 
   DebugDirectoryChunk *debugDirectory = nullptr;
-  std::vector<Chunk *> debugRecords;
+  std::vector<std::pair<COFF::DebugType, Chunk *>> debugRecords;
   CVDebugRecordChunk *buildId = nullptr;
   ArrayRef<uint8_t> sectionTable;
 
@@ -920,8 +932,9 @@ void Writer::createMiscChunks() {
 
   // Create Debug Information Chunks
   OutputSection *debugInfoSec = config->mingw ? buildidSec : rdataSec;
-  if (config->debug || config->repro) {
+  if (config->debug || config->repro || config->cetCompat) {
     debugDirectory = make<DebugDirectoryChunk>(debugRecords, config->repro);
+    debugDirectory->setAlignment(4);
     debugInfoSec->addChunk(debugDirectory);
   }
 
@@ -931,10 +944,20 @@ void Writer::createMiscChunks() {
     // allowing a debugger to match a PDB and an executable.  So we need it even
     // if we're ultimately not going to write CodeView data to the PDB.
     buildId = make<CVDebugRecordChunk>();
-    debugRecords.push_back(buildId);
+    debugRecords.push_back({COFF::IMAGE_DEBUG_TYPE_CODEVIEW, buildId});
+  }
 
-    for (Chunk *c : debugRecords)
-      debugInfoSec->addChunk(c);
+  if (config->cetCompat) {
+    ExtendedDllCharacteristicsChunk *extendedDllChars =
+        make<ExtendedDllCharacteristicsChunk>(
+            IMAGE_DLL_CHARACTERISTICS_EX_CET_COMPAT);
+    debugRecords.push_back(
+        {COFF::IMAGE_DEBUG_TYPE_EX_DLLCHARACTERISTICS, extendedDllChars});
+  }
+
+  if (debugRecords.size() > 0) {
+    for (std::pair<COFF::DebugType, Chunk *> r : debugRecords)
+      debugInfoSec->addChunk(r.second);
   }
 
   // Create SEH table. x86-only.

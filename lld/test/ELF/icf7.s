@@ -2,7 +2,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
 # RUN: ld.lld %t -o %t2 --icf=all --print-icf-sections | FileCheck %s
-# RUN: llvm-objdump -t %t2 | FileCheck -check-prefix=ALIGN %s
+# RUN: llvm-objdump -t %t2 | FileCheck --check-prefix=ALIGN %s
 
 # CHECK: selected section {{.*}}:(.text.f1)
 # CHECK:   removing identical section {{.*}}:(.text.f2)

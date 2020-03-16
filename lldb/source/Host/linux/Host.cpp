@@ -221,8 +221,8 @@ static bool GetProcessAndStatInfo(::pid_t pid,
   return true;
 }
 
-uint32_t Host::FindProcesses(const ProcessInstanceInfoMatch &match_info,
-                             ProcessInstanceInfoList &process_infos) {
+uint32_t Host::FindProcessesImpl(const ProcessInstanceInfoMatch &match_info,
+                                 ProcessInstanceInfoList &process_infos) {
   static const char procdir[] = "/proc/";
 
   DIR *dirproc = opendir(procdir);

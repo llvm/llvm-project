@@ -57,19 +57,17 @@ void mlir::buildTripCountMapAndOperands(
     *tripCountMap = AffineMap();
     return;
   }
-  SmallVector<Value, 4> lbOperands(forOp.getLowerBoundOperands());
-  SmallVector<Value, 4> ubOperands(forOp.getUpperBoundOperands());
 
   // Difference of each upper bound expression from the single lower bound
   // expression (divided by the step) provides the expressions for the trip
   // count map.
-  AffineValueMap ubValueMap(ubMap, ubOperands);
+  AffineValueMap ubValueMap(ubMap, forOp.getUpperBoundOperands());
 
   SmallVector<AffineExpr, 4> lbSplatExpr(ubValueMap.getNumResults(),
                                          lbMap.getResult(0));
   auto lbMapSplat =
       AffineMap::get(lbMap.getNumDims(), lbMap.getNumSymbols(), lbSplatExpr);
-  AffineValueMap lbSplatValueMap(lbMapSplat, lbOperands);
+  AffineValueMap lbSplatValueMap(lbMapSplat, forOp.getLowerBoundOperands());
 
   AffineValueMap tripCountValueMap;
   AffineValueMap::difference(ubValueMap, lbSplatValueMap, &tripCountValueMap);

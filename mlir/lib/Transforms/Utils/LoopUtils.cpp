@@ -121,20 +121,20 @@ LogicalResult mlir::promoteIfSingleIteration(AffineForOp forOp) {
   Operation *op = forOp.getOperation();
   if (!iv.use_empty()) {
     if (forOp.hasConstantLowerBound()) {
-      OpBuilder topBuilder(op->getParentOfType<FuncOp>().getBody());
+      OpBuilder topBuilder(forOp.getParentOfType<FuncOp>().getBody());
       auto constOp = topBuilder.create<ConstantIndexOp>(
           forOp.getLoc(), forOp.getConstantLowerBound());
       iv.replaceAllUsesWith(constOp);
     } else {
-      AffineBound lb = forOp.getLowerBound();
-      SmallVector<Value, 4> lbOperands(lb.operand_begin(), lb.operand_end());
+      auto lbOperands = forOp.getLowerBoundOperands();
+      auto lbMap = forOp.getLowerBoundMap();
       OpBuilder builder(op->getBlock(), Block::iterator(op));
-      if (lb.getMap() == builder.getDimIdentityMap()) {
+      if (lbMap == builder.getDimIdentityMap()) {
         // No need of generating an affine.apply.
         iv.replaceAllUsesWith(lbOperands[0]);
       } else {
-        auto affineApplyOp = builder.create<AffineApplyOp>(
-            op->getLoc(), lb.getMap(), lbOperands);
+        auto affineApplyOp =
+            builder.create<AffineApplyOp>(forOp.getLoc(), lbMap, lbOperands);
         iv.replaceAllUsesWith(affineApplyOp);
       }
     }
@@ -168,8 +168,8 @@ generateLoop(AffineMap lbMap, AffineMap ubMap,
              const std::vector<std::pair<uint64_t, ArrayRef<Operation *>>>
                  &instGroupQueue,
              unsigned offset, AffineForOp srcForInst, OpBuilder b) {
-  SmallVector<Value, 4> lbOperands(srcForInst.getLowerBoundOperands());
-  SmallVector<Value, 4> ubOperands(srcForInst.getUpperBoundOperands());
+  auto lbOperands = srcForInst.getLowerBoundOperands();
+  auto ubOperands = srcForInst.getUpperBoundOperands();
 
   assert(lbMap.getNumInputs() == lbOperands.size());
   assert(ubMap.getNumInputs() == ubOperands.size());
@@ -393,8 +393,8 @@ LogicalResult mlir::loopUnrollFull(AffineForOp forOp) {
   return failure();
 }
 
-/// Unrolls and jams this loop by the specified factor or by the trip count (if
-/// constant) whichever is lower.
+/// Unrolls this loop by the specified factor or by the trip count (if constant)
+/// whichever is lower.
 LogicalResult mlir::loopUnrollUpToFactor(AffineForOp forOp,
                                          uint64_t unrollFactor) {
   Optional<uint64_t> mayBeConstantTripCount = getConstantTripCount(forOp);

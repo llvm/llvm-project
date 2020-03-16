@@ -1900,7 +1900,7 @@ void printSymbolTable(const ObjectFile *O, StringRef ArchiveName,
     if ((Section != O->section_end() || Absolute) && !Weak)
       GlobLoc = Global ? 'g' : 'l';
     char IFunc = ' ';
-    if (auto *ELF = dyn_cast<ELFObjectFileBase>(O)) {
+    if (isa<ELFObjectFileBase>(O)) {
       if (ELFSymbolRef(*I).getELFType() == ELF::STT_GNU_IFUNC)
         IFunc = 'i';
       if (ELFSymbolRef(*I).getBinding() == ELF::STB_GNU_UNIQUE)
@@ -2339,7 +2339,9 @@ int main(int argc, char **argv) {
   // Register the target printer for --version.
   cl::AddExtraVersionPrinter(TargetRegistry::printRegisteredTargetsForVersion);
 
-  cl::ParseCommandLineOptions(argc, argv, "llvm object file dumper\n");
+  cl::ParseCommandLineOptions(argc, argv, "llvm object file dumper\n", nullptr,
+                              /*EnvVar=*/nullptr,
+                              /*LongOptionsUseDoubleDash=*/true);
 
   if (StartAddress >= StopAddress)
     reportCmdLineError("start address should be less than stop address");

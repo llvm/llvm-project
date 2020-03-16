@@ -1761,14 +1761,14 @@ void JITDylib::dump(raw_ostream &OS) {
       else
         OS << "<not resolved> ";
 
-      OS << KV.second.getState();
+      OS << KV.second.getFlags() << " " << KV.second.getState();
 
       if (KV.second.hasMaterializerAttached()) {
         OS << " (Materializer ";
         auto I = UnmaterializedInfos.find(KV.first);
         assert(I != UnmaterializedInfos.end() &&
                "Lazy symbol should have UnmaterializedInfo");
-        OS << I->second->MU.get() << ")\n";
+        OS << I->second->MU.get() << ", " << I->second->MU->getName() << ")\n";
       } else
         OS << "\n";
     }

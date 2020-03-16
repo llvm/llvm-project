@@ -20,6 +20,11 @@ cl::opt<bool> ShouldPreserveAllAttributes(
     cl::desc("enable preservation of all attrbitues. even those that are "
              "unlikely to be usefull"));
 
+cl::opt<bool> EnableKnowledgeRetention(
+    "enable-knowledge-retention", cl::init(false), cl::Hidden,
+    cl::desc(
+        "enable preservation of attributes throughout code transformation"));
+
 namespace {
 
 struct AssumedKnowledge {
@@ -90,6 +95,19 @@ bool isLowerOpBundle(const OperandBundleDef &LHS, const OperandBundleDef &RHS) {
   return getTuple(LHS) < getTuple(RHS);
 }
 
+bool isUsefullToPreserve(Attribute::AttrKind Kind) {
+  switch (Kind) {
+    case Attribute::NonNull:
+    case Attribute::Alignment:
+    case Attribute::Dereferenceable:
+    case Attribute::DereferenceableOrNull:
+    case Attribute::Cold:
+      return true;
+    default:
+      return false;
+  }
+}
+
 /// This class contain all knowledge that have been gather while building an
 /// llvm.assume and the function to manipulate it.
 struct AssumeBuilderState {
@@ -100,13 +118,14 @@ struct AssumeBuilderState {
   AssumeBuilderState(Module *M) : M(M) {}
 
   void addAttribute(Attribute Attr, Value *WasOn) {
+    if (!ShouldPreserveAllAttributes &&
+        (Attr.isTypeAttribute() || Attr.isStringAttribute() ||
+         !isUsefullToPreserve(Attr.getKindAsEnum())))
+      return;
     StringRef Name;
     Value *AttrArg = nullptr;
     if (Attr.isStringAttribute())
-      if (ShouldPreserveAllAttributes)
-        Name = Attr.getKindAsString();
-      else
-        return;
+      Name = Attr.getKindAsString();
     else
       Name = Attribute::getNameFromAttrKind(Attr.getKindAsEnum());
     if (Attr.isIntAttribute())
@@ -122,9 +141,8 @@ struct AssumeBuilderState {
            Idx < AttrList.getNumAttrSets(); Idx++)
         for (Attribute Attr : AttrList.getAttributes(Idx))
           addAttribute(Attr, Call->getArgOperand(Idx - 1));
-      if (ShouldPreserveAllAttributes)
-        for (Attribute Attr : AttrList.getFnAttributes())
-          addAttribute(Attr, nullptr);
+      for (Attribute Attr : AttrList.getFnAttributes())
+        addAttribute(Attr, nullptr);
     };
     addAttrList(Call->getAttributes());
     if (Function *Fn = Call->getCalledFunction())
@@ -166,6 +184,8 @@ struct AssumeBuilderState {
 } // namespace
 
 CallInst *llvm::BuildAssumeFromInst(const Instruction *I, Module *M) {
+  if (!EnableKnowledgeRetention)
+    return nullptr;
   AssumeBuilderState Builder(M);
   Builder.addInstruction(I);
   return Builder.build();

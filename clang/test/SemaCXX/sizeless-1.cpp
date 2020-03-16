@@ -61,6 +61,8 @@ void unused() {
 
 struct incomplete_struct *incomplete_ptr;
 
+typedef svint8_t sizeless_array[1]; // expected-error {{array has sizeless element type}}
+
 void func(int sel) {
   static svint8_t static_int8; // expected-error {{non-local variable with sizeless type 'svint8_t'}}
 
@@ -106,6 +108,9 @@ void func(int sel) {
 
   _Atomic svint8_t atomic_int8;      // expected-error {{_Atomic cannot be applied to sizeless type 'svint8_t'}}
   __restrict svint8_t restrict_int8; // expected-error {{requires a pointer or reference}}
+
+  svint8_t array_int8[1];          // expected-error {{array has sizeless element type}}
+  svint8_t array_int8_init[] = {}; // expected-error {{array has sizeless element type}}
 
   bool test_int8 = init_int8; // expected-error {{cannot initialize a variable of type 'bool' with an lvalue of type 'svint8_t'}}
 
@@ -249,6 +254,20 @@ int vararg_receiver(int count, svint8_t first, ...) {
   return count;
 }
 
+struct sized_struct {
+  int f1;
+  svint8_t f2;     // expected-error {{field has sizeless type 'svint8_t'}}
+  svint8_t f3 : 2; // expected-error {{field has sizeless type 'svint8_t'}}
+  svint8_t : 3;    // expected-error {{field has sizeless type 'svint8_t'}}
+};
+
+union sized_union {
+  int f1;
+  svint8_t f2;     // expected-error {{field has sizeless type 'svint8_t'}}
+  svint8_t f3 : 2; // expected-error {{field has sizeless type 'svint8_t'}}
+  svint8_t : 3;    // expected-error {{field has sizeless type 'svint8_t'}}
+};
+
 void pass_int8_ref(svint8_t &); // expected-note {{not viable}}
 
 svint8_t &return_int8_ref();
@@ -257,11 +276,21 @@ svint8_t &&return_int8_rvalue_ref();
 #endif
 
 template <typename T>
+struct s_template {
+  T y; // expected-error {{field has sizeless type '__SVInt8_t'}}
+};
+
+template <typename T>
 struct s_ptr_template {
   s_ptr_template();
   s_ptr_template(T, svint8_t = svint8_t());
   s_ptr_template(const s_ptr_template &, svint8_t = svint8_t());
   T *y;
+};
+
+template <typename T>
+struct s_array_template {
+  T y[1]; // expected-error {{array has sizeless element type}}
 };
 
 struct widget {
@@ -311,6 +340,13 @@ template <typename T>
 void template_fn_rvalue_ref(T &&) {}
 #endif
 
+#if __cplusplus >= 201103L
+template <typename T>
+using array_alias = T[1]; // expected-error {{array has sizeless element type '__SVInt8_t'}}
+extern array_alias<int> *array_alias_int_ptr;
+extern array_alias<svint8_t> *array_alias_int8_ptr; // expected-note {{in instantiation of template type alias 'array_alias' requested here}}
+#endif
+
 void cxx_only(int sel) {
   svint8_t local_int8;
   svint16_t local_int16;
@@ -344,11 +380,17 @@ void cxx_only(int sel) {
   local_int8 = svint8_t();
   local_int8 = svint16_t(); // expected-error {{assigning to 'svint8_t' (aka '__SVInt8_t') from incompatible type 'svint16_t'}}
 
+  s_template<int> st_int;
+  s_template<svint8_t> st_svint8; // expected-note {{in instantiation}}
+
   s_ptr_template<int> st_ptr_int;
   s_ptr_template<svint8_t> st_ptr_svint8;
 
   widget w(1);
   local_int8 = w[1];
+
+  s_array_template<int> st_array_int;
+  s_array_template<svint8_t> st_array_svint8; // expected-note {{in instantiation}}
 
   local_int8 = static_cast<svint8_t>(wrapper<svint8_t>());
   local_int16 = static_cast<svint8_t>(wrapper<svint8_t>()); // expected-error {{assigning to 'svint16_t' (aka '__SVInt16_t') from incompatible type 'svint8_t'}}
@@ -474,6 +516,10 @@ void cxx_only(int sel) {
   local_int8 = ([]() -> svint8_t { return svint8_t(); })();
   auto fn1 = [&local_int8](svint8_t x) { local_int8 = x; };
   auto fn2 = [&local_int8](svint8_t *ptr) { *ptr = local_int8; };
+#if __cplusplus >= 201703L
+  auto fn3 = [a(return_int8())] {}; // expected-error {{field has sizeless type '__SVInt8_t'}}
+#endif
+  auto fn4 = [local_int8](svint8_t *ptr) { *ptr = local_int8; }; // expected-error {{by-copy capture of variable 'local_int8' with sizeless type 'svint8_t'}}
 
   for (auto x : local_int8) { // expected-error {{no viable 'begin' function available}}
   }

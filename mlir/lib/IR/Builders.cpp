@@ -98,11 +98,15 @@ IntegerAttr Builder::getI64IntegerAttr(int64_t value) {
 }
 
 DenseIntElementsAttr Builder::getI32VectorAttr(ArrayRef<int32_t> values) {
-  return DenseElementsAttr::get(
-             VectorType::get(static_cast<int64_t>(values.size()),
-                             getIntegerType(32)),
-             values)
-      .cast<DenseIntElementsAttr>();
+  return DenseIntElementsAttr::get(
+      VectorType::get(static_cast<int64_t>(values.size()), getIntegerType(32)),
+      values);
+}
+
+DenseIntElementsAttr Builder::getI64VectorAttr(ArrayRef<int64_t> values) {
+  return DenseIntElementsAttr::get(
+      VectorType::get(static_cast<int64_t>(values.size()), getIntegerType(64)),
+      values);
 }
 
 IntegerAttr Builder::getI32IntegerAttr(int32_t value) {

@@ -26,7 +26,6 @@ class AffineValueMap;
 class IntegerSet;
 class MLIRContext;
 class Value;
-class HyperRectangularSet;
 class MemRefType;
 struct MutableAffineMap;
 
@@ -96,8 +95,6 @@ public:
     else
       ids.append(idArgs.begin(), idArgs.end());
   }
-
-  explicit FlatAffineConstraints(const HyperRectangularSet &set);
 
   /// Create a flat affine constraint system from an AffineValueMap or a list of
   /// these. The constructed system will only include equalities.
@@ -210,7 +207,7 @@ public:
   /// operands. If `eq` is true, add a single equality equal to the bound map's
   /// first result expr.
   LogicalResult addLowerOrUpperBound(unsigned pos, AffineMap boundMap,
-                                     ArrayRef<Value> operands, bool eq,
+                                     ValueRange operands, bool eq,
                                      bool lower = true);
 
   /// Computes the lower and upper bounds of the first 'num' dimensional
@@ -317,10 +314,8 @@ public:
   /// Projects out the identifier that is associate with Value .
   void projectOut(Value id);
 
-  void removeId(IdKind idKind, unsigned pos);
+  /// Removes the specified identifier from the system.
   void removeId(unsigned pos);
-
-  void removeDim(unsigned pos);
 
   void removeEquality(unsigned pos);
   void removeInequality(unsigned pos);
@@ -551,7 +546,7 @@ private:
   /// Normalized each constraints by the GCD of its coefficients.
   void normalizeConstraintsByGCD();
 
-  /// Removes identifiers in column range [idStart, idLimit), and copies any
+  /// Removes identifiers in the column range [idStart, idLimit), and copies any
   /// remaining valid data into place, updates member variables, and resizes
   /// arrays as needed.
   void removeIdRange(unsigned idStart, unsigned idLimit);

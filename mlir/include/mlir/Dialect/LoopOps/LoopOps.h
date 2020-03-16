@@ -17,19 +17,15 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
+#include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Interfaces/SideEffects.h"
-#include "mlir/Transforms/LoopLikeInterface.h"
 
 namespace mlir {
 namespace loop {
 
 class TerminatorOp;
 
-class LoopOpsDialect : public Dialect {
-public:
-  LoopOpsDialect(MLIRContext *context);
-  static StringRef getDialectNamespace() { return "loop"; }
-};
+#include "mlir/Dialect/LoopOps/LoopOpsDialect.h.inc"
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/LoopOps/LoopOps.h.inc"

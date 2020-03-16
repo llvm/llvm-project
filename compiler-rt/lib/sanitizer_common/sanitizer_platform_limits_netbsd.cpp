@@ -161,9 +161,50 @@
 #include <net/slip.h>
 #include <netbt/hci.h>
 #include <netinet/ip_compat.h>
+#if __has_include(<netinet/ip_fil.h>)
 #include <netinet/ip_fil.h>
 #include <netinet/ip_nat.h>
 #include <netinet/ip_proxy.h>
+#else
+/* Fallback for MKIPFILTER=no */
+
+typedef struct ap_control {
+  char apc_label[16];
+  char apc_config[16];
+  unsigned char apc_p;
+  unsigned long apc_cmd;
+  unsigned long apc_arg;
+  void *apc_data;
+  size_t apc_dsize;
+} ap_ctl_t;
+
+typedef struct ipftq {
+  ipfmutex_t ifq_lock;
+  unsigned int ifq_ttl;
+  void *ifq_head;
+  void **ifq_tail;
+  void *ifq_next;
+  void **ifq_pnext;
+  int ifq_ref;
+  unsigned int ifq_flags;
+} ipftq_t;
+
+typedef struct ipfobj {
+  uint32_t ipfo_rev;
+  uint32_t ipfo_size;
+  void *ipfo_ptr;
+  int ipfo_type;
+  int ipfo_offset;
+  int ipfo_retval;
+  unsigned char ipfo_xxxpad[28];
+} ipfobj_t;
+
+#define SIOCADNAT _IOW('r', 60, struct ipfobj)
+#define SIOCRMNAT _IOW('r', 61, struct ipfobj)
+#define SIOCGNATS _IOWR('r', 62, struct ipfobj)
+#define SIOCGNATL _IOWR('r', 63, struct ipfobj)
+#define SIOCPURGENAT _IOWR('r', 100, struct ipfobj)
+#endif
 #include <netinet6/in6_var.h>
 #include <netinet6/nd6.h>
 #include <netsmb/smb_dev.h>

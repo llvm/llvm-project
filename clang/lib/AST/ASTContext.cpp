@@ -2100,16 +2100,16 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     // Because the length is only known at runtime, we use a dummy value
     // of 0 for the static length.  The alignment values are those defined
     // by the Procedure Call Standard for the Arm Architecture.
-#define SVE_VECTOR_TYPE(Name, Id, SingletonId, ElKind, ElBits, IsSigned, IsFP)\
-    case BuiltinType::Id: \
-      Width = 0; \
-      Align = 128; \
-      break;
-#define SVE_PREDICATE_TYPE(Name, Id, SingletonId, ElKind) \
-    case BuiltinType::Id: \
-      Width = 0; \
-      Align = 16; \
-      break;
+#define SVE_VECTOR_TYPE(Name, Id, SingletonId, NumEls, ElBits, IsSigned, IsFP) \
+  case BuiltinType::Id:                                                        \
+    Width = 0;                                                                 \
+    Align = 128;                                                               \
+    break;
+#define SVE_PREDICATE_TYPE(Name, Id, SingletonId, NumEls)                      \
+  case BuiltinType::Id:                                                        \
+    Width = 0;                                                                 \
+    Align = 16;                                                                \
+    break;
 #include "clang/Basic/AArch64SVEACLETypes.def"
     }
     break;
@@ -3582,6 +3582,28 @@ QualType ASTContext::getIncompleteArrayType(QualType elementType,
   IncompleteArrayTypes.InsertNode(newType, insertPos);
   Types.push_back(newType);
   return QualType(newType, 0);
+}
+
+/// getScalableVectorType - Return the unique reference to a scalable vector
+/// type of the specified element type and size. VectorType must be a built-in
+/// type.
+QualType ASTContext::getScalableVectorType(QualType EltTy,
+                                           unsigned NumElts) const {
+  if (Target->hasAArch64SVETypes()) {
+    uint64_t EltTySize = getTypeSize(EltTy);
+#define SVE_VECTOR_TYPE(Name, Id, SingletonId, NumEls, ElBits, IsSigned, IsFP) \
+  if (!EltTy->isBooleanType() &&                                               \
+      ((EltTy->hasIntegerRepresentation() &&                                   \
+        EltTy->hasSignedIntegerRepresentation() == IsSigned) ||                \
+       (EltTy->hasFloatingRepresentation() && IsFP)) &&                        \
+      EltTySize == ElBits && NumElts == NumEls)                                \
+    return SingletonId;
+#define SVE_PREDICATE_TYPE(Name, Id, SingletonId, NumEls)                      \
+  if (EltTy->isBooleanType() && NumElts == NumEls)                             \
+    return SingletonId;
+#include "clang/Basic/AArch64SVEACLETypes.def"
+  }
+  return QualType();
 }
 
 /// getVectorType - Return the unique reference to a vector type of
@@ -9699,6 +9721,19 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
     else
       Type = Context.getLValueReferenceType(Type);
     break;
+  case 'q': {
+    char *End;
+    unsigned NumElements = strtoul(Str, &End, 10);
+    assert(End != Str && "Missing vector size");
+    Str = End;
+
+    QualType ElementType = DecodeTypeFromStr(Str, Context, Error,
+                                             RequiresICE, false);
+    assert(!RequiresICE && "Can't require vector ICE");
+
+    Type = Context.getScalableVectorType(ElementType, NumElements);
+    break;
+  }
   case 'V': {
     char *End;
     unsigned NumElements = strtoul(Str, &End, 10);

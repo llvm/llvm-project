@@ -1,10 +1,10 @@
 # RUN: llc -mcpu=future -mtriple=powerpc64le-unknown-unknown %s \
 # RUN:   -start-before=ppc-branch-select -verify-machineinstrs \
-# RUN:   -filetype=obj -o - | llvm-objdump -mcpu=future -d -r - | \
+# RUN:   -filetype=obj -o - | llvm-objdump --mcpu=future -d -r - | \
 # RUN:   FileCheck --check-prefix=CHECK-LE %s
 # RUN: llc -mcpu=future -mtriple=powerpc64-unknown-unknown %s \
 # RUN:   -start-before=ppc-branch-select -verify-machineinstrs \
-# RUN:   -filetype=obj -o - | llvm-objdump -mcpu=future -d -r - | \
+# RUN:   -filetype=obj -o - | llvm-objdump --mcpu=future -d -r - | \
 # RUN:   FileCheck --check-prefix=CHECK-BE %s
 
 # The purpose of this test is to check that long branches are selected correctly

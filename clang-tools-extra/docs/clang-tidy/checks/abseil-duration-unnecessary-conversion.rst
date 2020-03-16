@@ -40,6 +40,17 @@ Integer examples:
   // Suggestion - Remove division and conversion
   absl::Duration d2 = d1;
 
+Unwrapping scalar operations:
+
+.. code-block:: c++
+
+  // Original - Multiplication by a scalar
+  absl::Duration d1;
+  absl::Duration d2 = absl::Seconds(absl::ToInt64Seconds(d1) * 2);
+
+  // Suggestion - Remove unnecessary conversion
+  absl::Duration d2 = d1 * 2;
+
 Note: Converting to an integer and back to an ``absl::Duration`` might be a
 truncating operation if the value is not aligned to the scale of conversion.
 In the rare case where this is the intended result, callers should use

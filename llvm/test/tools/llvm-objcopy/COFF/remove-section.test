@@ -1,23 +1,23 @@
 # RUN: yaml2obj %s -o %t.in.o
 #
-# RUN: llvm-objdump -section-headers %t.in.o | FileCheck %s --check-prefixes=SECTIONS-PRE
+# RUN: llvm-objdump --section-headers %t.in.o | FileCheck %s --check-prefixes=SECTIONS-PRE
 # RUN: llvm-objdump -t %t.in.o | FileCheck %s --check-prefixes=SYMBOLS-PRE
 #
 # RUN: llvm-objcopy -R .bss %t.in.o %t.remove-bss.o
-# RUN: llvm-objdump -section-headers %t.remove-bss.o | FileCheck %s --check-prefix=SECTIONS-REMOVE-BSS
+# RUN: llvm-objdump --section-headers %t.remove-bss.o | FileCheck %s --check-prefix=SECTIONS-REMOVE-BSS
 # RUN: llvm-objdump -t %t.remove-bss.o | FileCheck %s --check-prefix=SYMBOLS-REMOVE-BSS
 #
 # RUN: llvm-objcopy --remove-section .bss %t.in.o %t.cmp.o
 # RUN: cmp %t.remove-bss.o %t.cmp.o
 #
 # RUN: llvm-objcopy -R .text %t.in.o %t.remove-text.o
-# RUN: llvm-objdump -section-headers %t.remove-text.o | FileCheck %s --check-prefix=SECTIONS-REMOVE-TEXT
+# RUN: llvm-objdump --section-headers %t.remove-text.o | FileCheck %s --check-prefix=SECTIONS-REMOVE-TEXT
 # RUN: llvm-objdump -t %t.remove-text.o | FileCheck %s --check-prefix=SYMBOLS-REMOVE-TEXT
 #
 # RUN: not llvm-objcopy -R .comdat %t.in.o %t.remove-comdat.o 2>&1 | FileCheck %s --check-prefix=ERROR-RELOC
 #
 # RUN: llvm-objcopy -R .text -R .comdat %t.in.o %t.remove-text-comdat.o
-# RUN: llvm-objdump -section-headers %t.remove-text-comdat.o | FileCheck %s --check-prefix=SECTIONS-REMOVE-TEXT-COMDAT
+# RUN: llvm-objdump --section-headers %t.remove-text-comdat.o | FileCheck %s --check-prefix=SECTIONS-REMOVE-TEXT-COMDAT
 # RUN: llvm-objdump -t %t.remove-text-comdat.o | FileCheck %s --check-prefix=SYMBOLS-REMOVE-TEXT-COMDAT
 #
 #

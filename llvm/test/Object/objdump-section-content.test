@@ -1,4 +1,4 @@
-# RUN: yaml2obj %p/Inputs/COFF/i386.yaml | llvm-objdump -s - | FileCheck %s -check-prefix COFF-i386
+# RUN: yaml2obj %p/Inputs/COFF/i386.yaml | llvm-objdump -s - | FileCheck %s --check-prefix=COFF-i386
 
 # COFF-i386: file format
 # COFF-i386: Contents of section .text:
@@ -9,7 +9,7 @@
 # COFF-i386:  0000 48656c6c 6f20576f 726c6421 00        Hello World!.
 
 # RUN: yaml2obj %s -o %t.elf-i386
-# RUN: llvm-objdump -s %t.elf-i386 | FileCheck %s -DFILE=%t.elf-i386 -check-prefix ELF-i386
+# RUN: llvm-objdump -s %t.elf-i386 | FileCheck %s -DFILE=%t.elf-i386 --check-prefix=ELF-i386
 
 # ELF-i386: [[FILE]]:     file format
 # ELF-i386: Contents of section .text:

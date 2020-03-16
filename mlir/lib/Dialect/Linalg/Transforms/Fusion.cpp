@@ -152,6 +152,18 @@ static LinalgOp fuse(Value producedView, LinalgOp producer, LinalgOp consumer,
          "expected linalg op with buffer semantics");
   assert(consumer.hasBufferSemantics() &&
          "expected linalg op with buffer semantics");
+
+  if (auto convOp = dyn_cast<linalg::ConvOp>(producer.getOperation())) {
+    // TODO(ntv): add a level of indirection to linalg.generic.
+    if (convOp.padding())
+      llvm_unreachable("Unexpected conv with padding");
+  }
+  if (auto convOp = dyn_cast<linalg::ConvOp>(consumer.getOperation())) {
+    // TODO(ntv): add a level of indirection to linalg.generic.
+    if (convOp.padding())
+      llvm_unreachable("Unexpected conv with padding");
+  }
+
   auto subView = dyn_cast_or_null<SubViewOp>(
       consumer.getInput(consumerIdx).getDefiningOp());
   auto slice =

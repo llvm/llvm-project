@@ -8,14 +8,14 @@
 
 define i32 @admiral(i32 %a, i32 %b) {
 ; CHECK-LABEL: @admiral(
-; CHECK-NEXT:    [[C:%.*]] = icmp sle i32 %a, %b
-; CHECK-NEXT:    br i1 [[C]], label %bb2, label %bb1
+; CHECK-NEXT:    [[C:%.*]] = icmp sle i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    br i1 [[C]], label [[BB2:%.*]], label [[BB1:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[D:%.*]] = icmp sgt i32 sdiv (i32 -32768, i32 ptrtoint (i32* @G to i32)), 0
-; CHECK-NEXT:    [[DOT:%.*]] = select i1 [[D]], i32 927, i32 42
-; CHECK-NEXT:    br label %bb2
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[D]], i32 927, i32 42
+; CHECK-NEXT:    br label [[BB2]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[MERGE:%.*]] = phi i32 [ 42, %0 ], [ [[DOT]], %bb1 ]
+; CHECK-NEXT:    [[MERGE:%.*]] = phi i32 [ 42, [[TMP0:%.*]] ], [ [[SPEC_SELECT]], [[BB1]] ]
 ; CHECK-NEXT:    ret i32 [[MERGE]]
 ;
   %c = icmp sle i32 %a, %b
@@ -31,12 +31,12 @@ bb6:
 
 define i32 @ackbar(i1 %c) {
 ; CHECK-LABEL: @ackbar(
-; CHECK-NEXT:    br i1 %c, label %bb5, label %bb6
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[BB5:%.*]], label [[BB6:%.*]]
 ; CHECK:       bb5:
-; CHECK-NEXT:    [[DOT:%.*]] = select i1 icmp sgt (i32 sdiv (i32 32767, i32 ptrtoint (i32* @G to i32)), i32 0), i32 42, i32 927
-; CHECK-NEXT:    br label %bb6
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 icmp sgt (i32 sdiv (i32 32767, i32 ptrtoint (i32* @G to i32)), i32 0), i32 42, i32 927
+; CHECK-NEXT:    br label [[BB6]]
 ; CHECK:       bb6:
-; CHECK-NEXT:    [[MERGE:%.*]] = phi i32 [ 42, %0 ], [ [[DOT]], %bb5 ]
+; CHECK-NEXT:    [[MERGE:%.*]] = phi i32 [ 42, [[TMP0:%.*]] ], [ [[SPEC_SELECT]], [[BB5]] ]
 ; CHECK-NEXT:    ret i32 [[MERGE]]
 ;
   br i1 %c, label %bb5, label %bb6
@@ -53,8 +53,8 @@ bb7:
 define i32 @tarp(i1 %c) {
 ; CHECK-LABEL: @tarp(
 ; CHECK-NEXT:  bb9:
-; CHECK-NEXT:    [[DOT:%.*]] = select i1 fcmp oeq (float fdiv (float 3.000000e+00, float sitofp (i32 ptrtoint (i32* @G to i32) to float)), float 1.000000e+00), i32 42, i32 927
-; CHECK-NEXT:    [[MERGE:%.*]] = select i1 %c, i32 [[DOT]], i32 42
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 fcmp oeq (float fdiv (float 3.000000e+00, float sitofp (i32 ptrtoint (i32* @G to i32) to float)), float 1.000000e+00), i32 42, i32 927
+; CHECK-NEXT:    [[MERGE:%.*]] = select i1 [[C:%.*]], i32 [[SPEC_SELECT]], i32 42
 ; CHECK-NEXT:    ret i32 [[MERGE]]
 ;
   br i1 %c, label %bb8, label %bb9

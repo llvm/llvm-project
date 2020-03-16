@@ -3747,6 +3747,14 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(MachineInstr &MI,
     return false;
   }
   case Intrinsic::amdgcn_kernarg_segment_ptr:
+    if (!AMDGPU::isKernel(B.getMF().getFunction().getCallingConv())) {
+      B.setInstr(MI);
+      // This only makes sense to call in a kernel, so just lower to null.
+      B.buildConstant(MI.getOperand(0).getReg(), 0);
+      MI.eraseFromParent();
+      return true;
+    }
+
     return legalizePreloadedArgIntrin(
       MI, MRI, B, AMDGPUFunctionArgInfo::KERNARG_SEGMENT_PTR);
   case Intrinsic::amdgcn_implicitarg_ptr:

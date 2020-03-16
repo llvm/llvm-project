@@ -14,9 +14,6 @@
 #include <sys/types.h>
 #include <sys/user.h>
 
-#include "lldb/Target/UnixSignals.h"
-#include "lldb/Utility/State.h"
-
 #include "FreeBSDThread.h"
 #include "POSIXStopInfo.h"
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
@@ -43,6 +40,8 @@
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/ThreadSpec.h"
+#include "lldb/Target/UnixSignals.h"
+#include "lldb/Target/Unwind.h"
 #include "lldb/Utility/State.h"
 #include "llvm/ADT/SmallString.h"
 

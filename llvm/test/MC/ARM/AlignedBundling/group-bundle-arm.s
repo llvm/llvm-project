@@ -1,5 +1,5 @@
 # RUN: llvm-mc -filetype=obj -triple armv7-linux-gnueabi %s -o - \
-# RUN:   | llvm-objdump -no-show-raw-insn -triple armv7 -disassemble - | FileCheck %s
+# RUN:   | llvm-objdump --no-show-raw-insn --triple=armv7 -d - | FileCheck %s
 
 # On ARM each instruction is 4 bytes long so padding for individual
 # instructions should not be inserted. However, for bundle-locked groups

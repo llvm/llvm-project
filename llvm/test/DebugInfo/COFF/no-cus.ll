@@ -1,5 +1,5 @@
 ; RUN: llc < %s -filetype=obj -o %t.o
-; RUN: llvm-objdump -section-headers %t.o | FileCheck %s
+; RUN: llvm-objdump --section-headers %t.o | FileCheck %s
 
 ; Don't emit debug info in this scenario and don't crash.
 

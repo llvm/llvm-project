@@ -2,7 +2,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-musl %s -o %t
 # RUN: llvm-readelf -s %t | FileCheck --check-prefix=SYM %s
-# RUN: llvm-objdump -dr --no-show-raw-insn %t | FileCheck --match-full-lines %s
+# RUN: llvm-objdump -d -r --no-show-raw-insn %t | FileCheck --match-full-lines %s
 
 # PRINT:      leaq a@tlsdesc(%rip), %rax
 # PRINT-NEXT: callq *a@tlscall(%rax)

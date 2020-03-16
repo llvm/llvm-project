@@ -38,32 +38,32 @@
 //===----------------------------------------------------------------------===//
 
 #ifndef SVE_VECTOR_TYPE
-#define SVE_VECTOR_TYPE(Name, Id, SingletonId, ElKind, ElBits, IsSigned, IsFP)\
+#define SVE_VECTOR_TYPE(Name, Id, SingletonId, NumEls, ElBits, IsSigned, IsFP) \
   SVE_TYPE(Name, Id, SingletonId)
 #endif
 
 #ifndef SVE_PREDICATE_TYPE
-#define SVE_PREDICATE_TYPE(Name, Id, SingletonId, ElKind)\
+#define SVE_PREDICATE_TYPE(Name, Id, SingletonId, NumEls)\
   SVE_TYPE(Name, Id, SingletonId)
 #endif
 
 //===- Vector point types -----------------------------------------------===//
 
-SVE_VECTOR_TYPE("__SVInt8_t",  SveInt8, SveInt8Ty, SveElSInt8, 8, true, false)
-SVE_VECTOR_TYPE("__SVInt16_t", SveInt16, SveInt16Ty, SveElSInt16, 16, true, false)
-SVE_VECTOR_TYPE("__SVInt32_t", SveInt32, SveInt32Ty, SveElSInt32, 32, true, false)
-SVE_VECTOR_TYPE("__SVInt64_t", SveInt64, SveInt64Ty, SveElSInt64, 64, true, false)
+SVE_VECTOR_TYPE("__SVInt8_t",  SveInt8, SveInt8Ty, 16, 8, true, false)
+SVE_VECTOR_TYPE("__SVInt16_t", SveInt16, SveInt16Ty, 8, 16, true, false)
+SVE_VECTOR_TYPE("__SVInt32_t", SveInt32, SveInt32Ty, 4, 32, true, false)
+SVE_VECTOR_TYPE("__SVInt64_t", SveInt64, SveInt64Ty, 2, 64, true, false)
 
-SVE_VECTOR_TYPE("__SVUint8_t",  SveUint8, SveUint8Ty, SveElUInt8, 8, false, false)
-SVE_VECTOR_TYPE("__SVUint16_t", SveUint16, SveUint16Ty, SveElUInt16, 16, false, false)
-SVE_VECTOR_TYPE("__SVUint32_t", SveUint32, SveUint32Ty, SveElUInt32, 32, false, false)
-SVE_VECTOR_TYPE("__SVUint64_t", SveUint64, SveUint64Ty, SveElUInt64, 64, false, false)
+SVE_VECTOR_TYPE("__SVUint8_t",  SveUint8, SveUint8Ty, 16, 8, false, false)
+SVE_VECTOR_TYPE("__SVUint16_t", SveUint16, SveUint16Ty, 8, 16, false, false)
+SVE_VECTOR_TYPE("__SVUint32_t", SveUint32, SveUint32Ty, 4, 32, false, false)
+SVE_VECTOR_TYPE("__SVUint64_t", SveUint64, SveUint64Ty, 2, 64, false, false)
 
-SVE_VECTOR_TYPE("__SVFloat16_t", SveFloat16, SveFloat16Ty, SveElHalf, 16, true, true)
-SVE_VECTOR_TYPE("__SVFloat32_t", SveFloat32, SveFloat32Ty, SveElFloat, 32, true, true)
-SVE_VECTOR_TYPE("__SVFloat64_t", SveFloat64, SveFloat64Ty, SveElDouble, 64, true, true)
+SVE_VECTOR_TYPE("__SVFloat16_t", SveFloat16, SveFloat16Ty, 8, 16, true, true)
+SVE_VECTOR_TYPE("__SVFloat32_t", SveFloat32, SveFloat32Ty, 4, 32, true, true)
+SVE_VECTOR_TYPE("__SVFloat64_t", SveFloat64, SveFloat64Ty, 2, 64, true, true)
 
-SVE_PREDICATE_TYPE("__SVBool_t", SveBool, SveBoolTy, SveElBool)
+SVE_PREDICATE_TYPE("__SVBool_t", SveBool, SveBoolTy, 16)
 
 #undef SVE_VECTOR_TYPE
 #undef SVE_PREDICATE_TYPE

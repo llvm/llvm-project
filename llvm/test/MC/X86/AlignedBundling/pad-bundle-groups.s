@@ -1,7 +1,7 @@
 # RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu -mcpu=pentiumpro %s -o - \
-# RUN:   | llvm-objdump -disassemble -no-show-raw-insn - | FileCheck %s
+# RUN:   | llvm-objdump -d --no-show-raw-insn - | FileCheck %s
 # RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu -mcpu=pentiumpro -mc-relax-all %s -o - \
-# RUN:   | llvm-objdump -disassemble -no-show-raw-insn - | FileCheck %s
+# RUN:   | llvm-objdump -d --no-show-raw-insn - | FileCheck %s
 
 # Test some variations of padding for bundle-locked groups.
 

@@ -239,6 +239,10 @@ void MCJIT::finalizeLoadedModules() {
   // Resolve any outstanding relocations.
   Dyld.resolveRelocations();
 
+  // Check for Dyld error.
+  if (Dyld.hasError())
+    ErrMsg = Dyld.getErrorString().str();
+
   OwnedModules.markAllLoadedModulesAsFinalized();
 
   // Register EH frame data for any module we own which has been loaded

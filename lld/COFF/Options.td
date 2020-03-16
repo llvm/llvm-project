@@ -148,6 +148,8 @@ defm allowisolation : B<"allowisolation", "Enable DLL isolation (default)",
 defm appcontainer : B<"appcontainer",
                       "Image can only be run in an app container",
                       "Image can run outside an app container (default)">;
+defm cetcompat : B<"cetcompat", "Mark executable image as compatible with Control-flow Enforcement Technology (CET) Shadow Stack",
+                   "Don't mark executable image as compatible with Control-flow Enforcement Technology (CET) Shadow Stack (default)">;
 defm dynamicbase : B<"dynamicbase", "Enable ASLR (default unless /fixed)",
                      "Disable ASLR (default when /fixed)">;
 defm fixed : B<"fixed", "Disable base relocations",

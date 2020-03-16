@@ -1,10 +1,10 @@
 # RUN: yaml2obj < %s > %t.obj
 #
 # RUN: lld-link -safeseh:no /out:%t.dll /dll %t.obj /export:exportfn1 /export:exportfn2
-# RUN: llvm-objdump -p %t.dll | FileCheck -check-prefix=CHECK1 %s
+# RUN: llvm-objdump -p %t.dll | FileCheck --check-prefix=CHECK1 %s
 #
 # RUN: lld-link -safeseh:no /out:%t.dll /dll %t.obj /export:exportfn1 /export:exportfn2 /merge:.edata=.rdata
-# RUN: llvm-objdump -p %t.dll | FileCheck -check-prefix=CHECK1 %s
+# RUN: llvm-objdump -p %t.dll | FileCheck --check-prefix=CHECK1 %s
 # RUN: llvm-readobj --file-headers --sections %t.dll | FileCheck -check-prefix=HEADER-MERGE %s
 
 # CHECK1:      Export Table:
@@ -22,7 +22,7 @@
 
 # RUN: lld-link -safeseh:no /out:%t.dll /dll %t.obj /export:exportfn1,@5 \
 # RUN:   /export:exportfn2 /export:mangled
-# RUN: llvm-objdump -p %t.dll | FileCheck -check-prefix=CHECK2 %s
+# RUN: llvm-objdump -p %t.dll | FileCheck --check-prefix=CHECK2 %s
 
 # CHECK2:      Export Table:
 # CHECK2:      DLL name: export32.test.tmp.dll
@@ -38,7 +38,7 @@
 # CHECK2-NEXT:       8   0x1010  mangled
 
 # RUN: lld-link -safeseh:no /out:%t.dll /dll %t.obj /export:exportfn1,@5,noname /export:exportfn2
-# RUN: llvm-objdump -p %t.dll | FileCheck -check-prefix=CHECK3 %s
+# RUN: llvm-objdump -p %t.dll | FileCheck --check-prefix=CHECK3 %s
 
 # CHECK3:      Export Table:
 # CHECK3:      DLL name: export32.test.tmp.dll
@@ -52,7 +52,7 @@
 # CHECK3-NEXT:       6   0x1010  exportfn2
 
 # RUN: lld-link -safeseh:no /out:%t.dll /dll %t.obj /export:f1=exportfn1 /export:f2=exportfn2
-# RUN: llvm-objdump -p %t.dll | FileCheck -check-prefix=CHECK4 %s
+# RUN: llvm-objdump -p %t.dll | FileCheck --check-prefix=CHECK4 %s
 
 # CHECK4:      Export Table:
 # CHECK4:      DLL name: export32.test.tmp.dll
@@ -65,12 +65,12 @@
 # RUN: echo "EXPORTS exportfn1 @3" > %t.def
 # RUN: echo "fn2=exportfn2 @2" >> %t.def
 # RUN: lld-link -safeseh:no /out:%t.dll /dll %t.obj /def:%t.def
-# RUN: llvm-objdump -p %t.dll | FileCheck -check-prefix=CHECK5 %s
+# RUN: llvm-objdump -p %t.dll | FileCheck --check-prefix=CHECK5 %s
 
 # RUN: echo "EXPORTS exportfn1 @ 3" > %t.def
 # RUN: echo "fn2=exportfn2 @ 2" >> %t.def
 # RUN: lld-link -safeseh:no /out:%t.dll /dll %t.obj /def:%t.def
-# RUN: llvm-objdump -p %t.dll | FileCheck -check-prefix=CHECK5 %s
+# RUN: llvm-objdump -p %t.dll | FileCheck --check-prefix=CHECK5 %s
 
 # CHECK5:      Export Table:
 # CHECK5:      DLL name: export32.test.tmp.dll
@@ -89,7 +89,7 @@
 # CHECK6-NOT: duplicate /export option: _exportfn1
 
 # RUN: lld-link -safeseh:no /out:%t.dll /dll %t.obj /export:foo=mangled
-# RUN: llvm-objdump -p %t.dll | FileCheck -check-prefix=CHECK7 %s
+# RUN: llvm-objdump -p %t.dll | FileCheck --check-prefix=CHECK7 %s
 
 # CHECK7:      Export Table:
 # CHECK7:      DLL name: export32.test.tmp.dll

@@ -1,5 +1,5 @@
 // RUN: llvm-mc -arch=amdgcn -mcpu=gfx1010 -show-encoding %s | FileCheck %s --check-prefix=GFX10
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1010 -filetype=obj %s | llvm-objdump -disassemble -mcpu=gfx1010 - | FileCheck %s --check-prefix=BIN
+// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1010 -filetype=obj %s | llvm-objdump -d --mcpu=gfx1010 - | FileCheck %s --check-prefix=BIN
 	s_getpc_b64 s[0:1]
 	s_cbranch_vccnz BB0_1
 // GFX10: s_cbranch_vccnz BB0_1           ; encoding: [A,A,0x87,0xbf]

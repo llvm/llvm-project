@@ -208,7 +208,9 @@ def DerivedTypeAttrOp : NS_Op<"derived_type_attr_op", []> {
   DerivedTypeAttr element_dtype = DerivedTypeAttr<"return output().getType();">;
 }
 
-// DECL: bool isDerivedAttribute
+// DECL: class DerivedTypeAttrOp : public Op
+// DECL-SAME: DerivedAttributeOpInterface::Trait
+// DECL: static bool isDerivedAttribute
 // DEF: bool DerivedTypeAttrOp::isDerivedAttribute(StringRef name) {
 // DEF:   if (name == "element_dtype") return true;
 // DEF:   return false;

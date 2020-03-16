@@ -62,6 +62,34 @@ int CharPointer(signed char *CCharacter) {
   return NCharacter;
 }
 
+int SignedUnsignedCharEquality(signed char SCharacter) {
+  unsigned char USCharacter = 'a';
+  if (SCharacter == USCharacter) // CHECK-MESSAGES: [[@LINE]]:7: warning: comparison between 'signed char' and 'unsigned char' [bugprone-signed-char-misuse]
+    return 1;
+  return 0;
+}
+
+int SignedUnsignedCharIneqiality(signed char SCharacter) {
+  unsigned char USCharacter = 'a';
+  if (SCharacter != USCharacter) // CHECK-MESSAGES: [[@LINE]]:7: warning: comparison between 'signed char' and 'unsigned char' [bugprone-signed-char-misuse]
+    return 1;
+  return 0;
+}
+
+int CompareWithNonAsciiConstant(unsigned char USCharacter) {
+  const signed char SCharacter = -5;
+  if (USCharacter == SCharacter) // CHECK-MESSAGES: [[@LINE]]:7: warning: comparison between 'signed char' and 'unsigned char' [bugprone-signed-char-misuse]
+    return 1;
+  return 0;
+}
+
+int CompareWithUnsignedNonAsciiConstant(signed char SCharacter) {
+  const unsigned char USCharacter = 128;
+  if (USCharacter == SCharacter) // CHECK-MESSAGES: [[@LINE]]:7: warning: comparison between 'signed char' and 'unsigned char' [bugprone-signed-char-misuse]
+    return 1;
+  return 0;
+}
+
 ///////////////////////////////////////////////////////////////////
 /// Test cases correctly ignored by the check.
 
@@ -120,4 +148,62 @@ unsigned char CharToCharCast() {
   USCharacter = SCCharacter;
 
   return USCharacter;
+}
+
+int FixComparisonWithSignedCharCast(signed char SCharacter) {
+  unsigned char USCharacter = 'a';
+  if (SCharacter == static_cast<signed char>(USCharacter))
+    return 1;
+  return 0;
+}
+
+int FixComparisonWithUnSignedCharCast(signed char SCharacter) {
+  unsigned char USCharacter = 'a';
+  if (static_cast<unsigned char>(SCharacter) == USCharacter)
+    return 1;
+  return 0;
+}
+
+// Make sure we don't catch other type of char comparison.
+int SameCharTypeComparison(signed char SCharacter) {
+  signed char SCharacter2 = 'a';
+  if (SCharacter == SCharacter2)
+    return 1;
+  return 0;
+}
+
+// Make sure we don't catch other type of char comparison.
+int SameCharTypeComparison2(unsigned char USCharacter) {
+  unsigned char USCharacter2 = 'a';
+  if (USCharacter == USCharacter2)
+    return 1;
+  return 0;
+}
+
+// Make sure we don't catch integer - char comparison.
+int CharIntComparison(signed char SCharacter) {
+  int ICharacter = 10;
+  if (SCharacter == ICharacter)
+    return 1;
+  return 0;
+}
+
+int CompareWithAsciiLiteral(unsigned char USCharacter) {
+  if (USCharacter == 'x') // no warning
+    return 1;
+  return 0;
+}
+
+int CompareWithAsciiConstant(unsigned char USCharacter) {
+  const signed char SCharacter = 'a';
+  if (USCharacter == SCharacter)
+    return 1;
+  return 0;
+}
+
+int CompareWithUnsignedAsciiConstant(signed char SCharacter) {
+  const unsigned char USCharacter = 'a';
+  if (USCharacter == SCharacter)
+    return 1;
+  return 0;
 }

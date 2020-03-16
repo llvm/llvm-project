@@ -33,6 +33,7 @@ static_library("Orc") {
     "OrcABISupport.cpp",
     "OrcCBindings.cpp",
     "OrcMCJITReplacement.cpp",
+    "OrcV2CBindings.cpp",
     "RTDyldObjectLinkingLayer.cpp",
     "SpeculateAnalyses.cpp",
     "Speculation.cpp",

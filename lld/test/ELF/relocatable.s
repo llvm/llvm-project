@@ -4,13 +4,13 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %p/Inputs/relocatable2.s -o %t3.o
 # RUN: ld.lld -r %t1.o %t2.o %t3.o -o %t
 # RUN: llvm-readobj --file-headers --sections -l --symbols -r %t | FileCheck %s
-# RUN: llvm-objdump -section-headers %t | FileCheck -check-prefix=SECTION %s
-# RUN: llvm-objdump -s -d %t | FileCheck -check-prefix=CHECKTEXT %s
+# RUN: llvm-objdump --section-headers %t | FileCheck --check-prefix=SECTION %s
+# RUN: llvm-objdump -s -d %t | FileCheck --check-prefix=CHECKTEXT %s
 
 ## Test --relocatable alias
 # RUN: ld.lld --relocatable %t1.o %t2.o %t3.o -o %t
 # RUN: llvm-readobj --file-headers --sections -l --symbols -r %t | FileCheck %s
-# RUN: llvm-objdump -s -d %t | FileCheck -check-prefix=CHECKTEXT %s
+# RUN: llvm-objdump -s -d %t | FileCheck --check-prefix=CHECKTEXT %s
 
 ## Verify that we can use our relocation output as input to produce executable
 # RUN: ld.lld -e main %t -o %texec

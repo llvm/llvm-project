@@ -348,3 +348,48 @@ define internal i32 @ret(i32* %arg) {
   ret i32 %l
 }
 
+; Test to propagate noalias where value is assumed to be no-capture in all the
+; uses possibly executed before this callsite.
+; IR referred from musl/src/strtod.c file
+
+%struct._IO_FILE = type { i32, i8*, i8*, i32 (%struct._IO_FILE*)*, i8*, i8*, i8*, i8*, i32 (%struct._IO_FILE*, i8*, i32)*, i32 (%struct._IO_FILE*, i8*, i32)*, i64 (%struct._IO_FILE*, i64, i32)*, i8*, i32, %struct._IO_FILE*, %struct._IO_FILE*, i32, i32, i32, i16, i8, i8, i32, i32, i8*, i64, i8*, i8*, i8*, [4 x i8], i64, i64, %struct._IO_FILE*, %struct._IO_FILE*, %struct.__locale_struct*, [4 x i8] }
+%struct.__locale_struct = type { [6 x %struct.__locale_map*] }
+%struct.__locale_map = type opaque
+
+; Function Attrs: nounwind optsize
+; CHECK: define internal fastcc double @strtox(i8* noalias %s) unnamed_addr
+define internal fastcc double @strtox(i8* %s, i8** %p, i32 %prec) unnamed_addr {
+entry:
+  %f = alloca %struct._IO_FILE, align 8
+  %0 = bitcast %struct._IO_FILE* %f to i8*
+  call void @llvm.lifetime.start.p0i8(i64 144, i8* nonnull %0)
+  %call = call i32 bitcast (i32 (...)* @sh_fromstring to i32 (%struct._IO_FILE*, i8*)*)(%struct._IO_FILE* nonnull %f, i8* %s)
+  call void @__shlim(%struct._IO_FILE* nonnull %f, i64 0)
+  %call1 = call double @__floatscan(%struct._IO_FILE* nonnull %f, i32 %prec, i32 1)
+  call void @llvm.lifetime.end.p0i8(i64 144, i8* nonnull %0)
+
+  ret double %call1
+}
+
+; Function Attrs: nounwind optsize
+define dso_local double @strtod(i8* noalias %s, i8** noalias %p) {
+entry:
+; CHECK: %call = tail call fastcc double @strtox(i8* noalias %s)
+  %call = tail call fastcc double @strtox(i8* %s, i8** %p, i32 1)
+  ret double %call
+}
+
+; Function Attrs: argmemonly nounwind willreturn
+declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture)
+
+; Function Attrs: optsize
+declare dso_local i32 @sh_fromstring(...) local_unnamed_addr
+
+; Function Attrs: optsize
+declare dso_local void @__shlim(%struct._IO_FILE*, i64) local_unnamed_addr
+
+; Function Attrs: optsize
+declare dso_local double @__floatscan(%struct._IO_FILE*, i32, i32) local_unnamed_addr
+
+; Function Attrs: argmemonly nounwind willreturn
+declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture)

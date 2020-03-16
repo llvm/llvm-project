@@ -24,47 +24,47 @@ def HasAddr64 : Predicate<"Subtarget->hasAddr64()">;
 
 def HasSIMD128 :
     Predicate<"Subtarget->hasSIMD128()">,
-    AssemblerPredicate<"FeatureSIMD128", "simd128">;
+    AssemblerPredicate<(all_of FeatureSIMD128), "simd128">;
 
 def HasUnimplementedSIMD128 :
     Predicate<"Subtarget->hasUnimplementedSIMD128()">,
-    AssemblerPredicate<"FeatureUnimplementedSIMD128", "unimplemented-simd128">;
+    AssemblerPredicate<(all_of FeatureUnimplementedSIMD128), "unimplemented-simd128">;
 
 def HasAtomics :
     Predicate<"Subtarget->hasAtomics()">,
-    AssemblerPredicate<"FeatureAtomics", "atomics">;
+    AssemblerPredicate<(all_of FeatureAtomics), "atomics">;
 
 def HasMultivalue :
     Predicate<"Subtarget->hasMultivalue()">,
-    AssemblerPredicate<"FeatureMultivalue", "multivalue">;
+    AssemblerPredicate<(all_of FeatureMultivalue), "multivalue">;
 
 def HasNontrappingFPToInt :
     Predicate<"Subtarget->hasNontrappingFPToInt()">,
-    AssemblerPredicate<"FeatureNontrappingFPToInt", "nontrapping-fptoint">;
+    AssemblerPredicate<(all_of FeatureNontrappingFPToInt), "nontrapping-fptoint">;
 
 def NotHasNontrappingFPToInt :
     Predicate<"!Subtarget->hasNontrappingFPToInt()">,
-    AssemblerPredicate<"!FeatureNontrappingFPToInt", "nontrapping-fptoint">;
+    AssemblerPredicate<(all_of (not FeatureNontrappingFPToInt)), "nontrapping-fptoint">;
 
 def HasSignExt :
     Predicate<"Subtarget->hasSignExt()">,
-    AssemblerPredicate<"FeatureSignExt", "sign-ext">;
+    AssemblerPredicate<(all_of FeatureSignExt), "sign-ext">;
 
 def HasTailCall :
     Predicate<"Subtarget->hasTailCall()">,
-    AssemblerPredicate<"FeatureTailCall", "tail-call">;
+    AssemblerPredicate<(all_of FeatureTailCall), "tail-call">;
 
 def HasExceptionHandling :
     Predicate<"Subtarget->hasExceptionHandling()">,
-    AssemblerPredicate<"FeatureExceptionHandling", "exception-handling">;
+    AssemblerPredicate<(all_of FeatureExceptionHandling), "exception-handling">;
 
 def HasBulkMemory :
     Predicate<"Subtarget->hasBulkMemory()">,
-    AssemblerPredicate<"FeatureBulkMemory", "bulk-memory">;
+    AssemblerPredicate<(all_of FeatureBulkMemory), "bulk-memory">;
 
 def HasReferenceTypes :
     Predicate<"Subtarget->hasReferenceTypes()">,
-    AssemblerPredicate<"FeatureReferenceTypes", "reference-types">;
+    AssemblerPredicate<(all_of FeatureReferenceTypes), "reference-types">;
 
 //===----------------------------------------------------------------------===//
 // WebAssembly-specific DAG Node Types.

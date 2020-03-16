@@ -7,10 +7,10 @@
 # RUN:         -position-independent -mattr=micromips \
 # RUN:         %S/Inputs/mips-micro.s -o %t-eb-pic.o
 # RUN: ld.lld -o %t-eb.exe %t-eb.o %t-eb-pic.o
-# RUN: llvm-objdump -d -t -mattr=-micromips \
+# RUN: llvm-objdump -d -t --mattr=-micromips \
 # RUN:              --no-show-raw-insn --print-imm-hex %t-eb.exe \
 # RUN:   | FileCheck --check-prefixes=SYM,REG %s
-# RUN: llvm-objdump -d -t -mattr=+micromips \
+# RUN: llvm-objdump -d -t --mattr=+micromips \
 # RUN:              --no-show-raw-insn --print-imm-hex %t-eb.exe \
 # RUN:   | FileCheck --check-prefixes=SYM,MICRO %s
 

@@ -149,8 +149,8 @@ error:
   return false;
 }
 
-uint32_t Host::FindProcesses(const ProcessInstanceInfoMatch &match_info,
-                             ProcessInstanceInfoList &process_infos) {
+uint32_t Host::FindProcessesImpl(const ProcessInstanceInfoMatch &match_info,
+                                 ProcessInstanceInfoList &process_infos) {
   const ::pid_t our_pid = ::getpid();
   const ::uid_t our_uid = ::getuid();
   std::vector<struct kinfo_proc> kinfos;

@@ -15,13 +15,11 @@ namespace clang {
 namespace tidy {
 namespace bugprone {
 
-/// Finds ``signed char`` -> integer conversions which might indicate a programming
-/// error. The basic problem with the ``signed char``, that it might store the
-/// non-ASCII characters as negative values. The human programmer probably
-/// expects that after an integer conversion the converted value matches with the
-/// character code (a value from [0..255]), however, the actual value is in
-/// [-128..127] interval. This also applies to the plain ``char`` type on
-/// those implementations which represent ``char`` similar to ``signed char``.
+/// Finds those ``signed char`` -> integer conversions which might indicate a
+/// programming error. The basic problem with the ``signed char``, that it might
+/// store the non-ASCII characters as negative values. This behavior can cause a
+/// misunderstanding of the written code both when an explicit and when an
+/// implicit conversion happens.
 ///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/bugprone-signed-char-misuse.html
@@ -34,6 +32,11 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
 private:
+  ast_matchers::internal::BindableMatcher<clang::Stmt> charCastExpression(
+      bool IsSigned,
+      const ast_matchers::internal::Matcher<clang::QualType> &IntegerType,
+      const std::string &CastBindName) const;
+
   const std::string CharTypdefsToIgnoreList;
 };
 

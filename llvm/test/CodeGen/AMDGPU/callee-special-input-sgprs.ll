@@ -66,10 +66,10 @@ define amdgpu_kernel void @kern_indirect_use_queue_ptr_addrspacecast(i32) #1 {
   ret void
 }
 
+; Not really supported in callable functions.
 ; GCN-LABEL: {{^}}use_kernarg_segment_ptr:
-; GCN: v_mov_b32_e32 v[[LO:[0-9]+]], s4
-; GCN: v_mov_b32_e32 v[[HI:[0-9]+]], s5
-; GCN: {{flat|global}}_load_dword v{{[0-9]+}}, v{{\[}}[[LO]]:[[HI]]{{\]}}
+; GCN: s_mov_b64 [[PTR:s\[[0-9]+:[0-9]+\]]], 0{{$}}
+; GCN: s_load_dword s{{[0-9]+}}, [[PTR]], 0x0{{$}}
 define hidden void @use_kernarg_segment_ptr() #1 {
   %kernarg_segment_ptr = call noalias i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr() #0
   %header_ptr = bitcast i8 addrspace(4)* %kernarg_segment_ptr to i32 addrspace(4)*
@@ -79,10 +79,6 @@ define hidden void @use_kernarg_segment_ptr() #1 {
 
 ; GCN-LABEL: {{^}}kern_indirect_use_kernarg_segment_ptr:
 ; GCN: enable_sgpr_kernarg_segment_ptr = 1
-; GCN-NOT: s[4:5]
-; GCN-NOT: s4
-; GCN-NOT: s5
-; GCN: s_swappc_b64
 define amdgpu_kernel void @kern_indirect_use_kernarg_segment_ptr(i32) #1 {
   call void @use_kernarg_segment_ptr()
   ret void
@@ -437,9 +433,9 @@ define hidden void @use_every_sgpr_input() #1 {
   %queue_ptr.bc = bitcast i8 addrspace(4)* %queue_ptr to i32 addrspace(4)*
   %val1 = load volatile i32, i32 addrspace(4)* %queue_ptr.bc
 
-  %kernarg_segment_ptr = call noalias i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr() #0
-  %kernarg_segment_ptr.bc = bitcast i8 addrspace(4)* %kernarg_segment_ptr to i32 addrspace(4)*
-  %val2 = load volatile i32, i32 addrspace(4)* %kernarg_segment_ptr.bc
+  %implicitarg.ptr = call noalias i8 addrspace(4)* @llvm.amdgcn.implicitarg.ptr() #0
+  %implicitarg.ptr.bc = bitcast i8 addrspace(4)* %implicitarg.ptr to i32 addrspace(4)*
+  %val2 = load volatile i32, i32 addrspace(4)* %implicitarg.ptr.bc
 
   %val3 = call i64 @llvm.amdgcn.dispatch.id()
   call void asm sideeffect "; use $0", "s"(i64 %val3)
@@ -521,9 +517,9 @@ define hidden void @func_use_every_sgpr_input_call_use_workgroup_id_xyz() #1 {
   %queue_ptr.bc = bitcast i8 addrspace(4)* %queue_ptr to i32 addrspace(4)*
   %val1 = load volatile i32, i32 addrspace(4)* %queue_ptr.bc
 
-  %kernarg_segment_ptr = call noalias i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr() #0
-  %kernarg_segment_ptr.bc = bitcast i8 addrspace(4)* %kernarg_segment_ptr to i32 addrspace(4)*
-  %val2 = load volatile i32, i32 addrspace(4)* %kernarg_segment_ptr.bc
+  %implicitarg.ptr = call noalias i8 addrspace(4)* @llvm.amdgcn.implicitarg.ptr() #0
+  %implicitarg.ptr.bc = bitcast i8 addrspace(4)* %implicitarg.ptr to i32 addrspace(4)*
+  %val2 = load volatile i32, i32 addrspace(4)* %implicitarg.ptr.bc
 
   %val3 = call i64 @llvm.amdgcn.dispatch.id()
   call void asm sideeffect "; use $0", "s"(i64 %val3)
@@ -590,9 +586,9 @@ define hidden void @func_use_every_sgpr_input_call_use_workgroup_id_xyz_spill() 
   %queue_ptr.bc = bitcast i8 addrspace(4)* %queue_ptr to i32 addrspace(4)*
   %val1 = load volatile i32, i32 addrspace(4)* %queue_ptr.bc
 
-  %kernarg_segment_ptr = call noalias i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr() #0
-  %kernarg_segment_ptr.bc = bitcast i8 addrspace(4)* %kernarg_segment_ptr to i32 addrspace(4)*
-  %val2 = load volatile i32, i32 addrspace(4)* %kernarg_segment_ptr.bc
+  %implicitarg.ptr = call noalias i8 addrspace(4)* @llvm.amdgcn.implicitarg.ptr() #0
+  %implicitarg.ptr.bc = bitcast i8 addrspace(4)* %implicitarg.ptr to i32 addrspace(4)*
+  %val2 = load volatile i32, i32 addrspace(4)* %implicitarg.ptr.bc
 
   %val3 = call i64 @llvm.amdgcn.dispatch.id()
   call void asm sideeffect "; use $0", "s"(i64 %val3)
@@ -614,6 +610,7 @@ declare i32 @llvm.amdgcn.workgroup.id.y() #0
 declare i32 @llvm.amdgcn.workgroup.id.z() #0
 declare noalias i8 addrspace(4)* @llvm.amdgcn.queue.ptr() #0
 declare noalias i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr() #0
+declare noalias i8 addrspace(4)* @llvm.amdgcn.implicitarg.ptr() #0
 declare i64 @llvm.amdgcn.dispatch.id() #0
 declare noalias i8 addrspace(4)* @llvm.amdgcn.dispatch.ptr() #0
 

@@ -119,33 +119,43 @@ void SubtargetFeatureInfo::emitComputeAssemblerAvailableFeatures(
     const SubtargetFeatureInfo &SFI = SF.second;
 
     OS << "  if (";
-    std::string CondStorage =
-        std::string(SFI.TheDef->getValueAsString("AssemblerCondString"));
-    StringRef Conds = CondStorage;
-    std::pair<StringRef, StringRef> Comma = Conds.split(',');
-    bool First = true;
-    do {
-      if (!First)
-        OS << " && ";
 
-      bool Neg = false;
-      StringRef Cond = Comma.first;
-      if (Cond[0] == '!') {
-        Neg = true;
-        Cond = Cond.substr(1);
-      }
+    const DagInit *D = SFI.TheDef->getValueAsDag("AssemblerCondDag");
+    std::string CombineType = D->getOperator()->getAsString();
+    if (CombineType != "any_of" && CombineType != "all_of")
+      PrintFatalError(SFI.TheDef->getLoc(), "Invalid AssemblerCondDag!");
+    if (D->getNumArgs() == 0)
+      PrintFatalError(SFI.TheDef->getLoc(), "Invalid AssemblerCondDag!");
+    bool IsOr = CombineType == "any_of";
 
+    if (IsOr)
       OS << "(";
-      if (Neg)
-        OS << "!";
-      OS << "FB[" << TargetName << "::" << Cond << "])";
 
-      if (Comma.second.empty())
-        break;
+    bool First = true;
+    for (auto *Arg : D->getArgs()) {
+      if (!First) {
+        if (IsOr)
+          OS << " || ";
+        else
+          OS << " && ";
+      }
+      if (auto *NotArg = dyn_cast<DagInit>(Arg)) {
+        if (NotArg->getOperator()->getAsString() != "not" ||
+            NotArg->getNumArgs() != 1)
+          PrintFatalError(SFI.TheDef->getLoc(), "Invalid AssemblerCondDag!");
+        Arg = NotArg->getArg(0);
+        OS << "!";
+      }
+      if (!isa<DefInit>(Arg) ||
+          !cast<DefInit>(Arg)->getDef()->isSubClassOf("SubtargetFeature"))
+        PrintFatalError(SFI.TheDef->getLoc(), "Invalid AssemblerCondDag!");
+      OS << "FB[" << TargetName << "::" << Arg->getAsString() << "]";
 
       First = false;
-      Comma = Comma.second.split(',');
-    } while (true);
+    }
+
+    if (IsOr)
+      OS << ")";
 
     OS << ")\n";
     OS << "    Features.set(" << SFI.getEnumBitName() << ");\n";

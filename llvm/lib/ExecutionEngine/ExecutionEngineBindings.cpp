@@ -308,6 +308,18 @@ uint64_t LLVMGetFunctionAddress(LLVMExecutionEngineRef EE, const char *Name) {
   return unwrap(EE)->getFunctionAddress(Name);
 }
 
+LLVMBool LLVMExecutionEngineGetErrMsg(LLVMExecutionEngineRef EE,
+                                      char **OutError) {
+  assert(OutError && "OutError must be non-null");
+  auto *ExecEngine = unwrap(EE);
+  if (ExecEngine->hasError()) {
+    *OutError = strdup(ExecEngine->getErrorMessage().c_str());
+    ExecEngine->clearErrorMessage();
+    return true;
+  }
+  return false;
+}
+
 /*===-- Operations on memory managers -------------------------------------===*/
 
 namespace {

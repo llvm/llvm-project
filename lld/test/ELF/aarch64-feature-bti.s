@@ -9,7 +9,7 @@
 ## field.
 
 # RUN: ld.lld %tno.o %t3.o --shared -o %tno.so
-# RUN: llvm-objdump -d -mattr=+bti --no-show-raw-insn %tno.so | FileCheck --check-prefix=NOBTI %s
+# RUN: llvm-objdump -d --mattr=+bti --no-show-raw-insn %tno.so | FileCheck --check-prefix=NOBTI %s
 # RUN: llvm-readelf -x .got.plt %tno.so | FileCheck --check-prefix SOGOTPLT %s
 # RUN: llvm-readelf --dynamic-table %tno.so | FileCheck --check-prefix NOBTIDYN %s
 
@@ -46,7 +46,7 @@
 
 # RUN: ld.lld %t1.o %t3.o --shared --soname=t.so -o %t.so
 # RUN: llvm-readelf -n %t.so | FileCheck --check-prefix BTIPROP %s
-# RUN: llvm-objdump -d -mattr=+bti --no-show-raw-insn %t.so | FileCheck --check-prefix BTISO %s
+# RUN: llvm-objdump -d --mattr=+bti --no-show-raw-insn %t.so | FileCheck --check-prefix BTISO %s
 # RUN: llvm-readelf -x .got.plt %t.so | FileCheck --check-prefix SOGOTPLT2 %s
 # RUN: llvm-readelf --dynamic-table %t.so | FileCheck --check-prefix BTIDYN %s
 
@@ -88,7 +88,7 @@
 
 # RUN: ld.lld %t.o %t.so %t2.so -o %t.exe
 # RUN: llvm-readelf --dynamic-table -n %t.exe | FileCheck --check-prefix=BTIPROP %s
-# RUN: llvm-objdump -d -mattr=+bti --no-show-raw-insn %t.exe | FileCheck --check-prefix=EXECBTI %s
+# RUN: llvm-objdump -d --mattr=+bti --no-show-raw-insn %t.exe | FileCheck --check-prefix=EXECBTI %s
 
 # EXECBTI: Disassembly of section .text:
 # EXECBTI: 0000000000210348 <func1>:
@@ -116,7 +116,7 @@
 # RUN: ld.lld --pie %t.o %t.so %t2.so -o %tpie.exe
 # RUN: llvm-readelf -n %tpie.exe | FileCheck --check-prefix=BTIPROP %s
 # RUN: llvm-readelf --dynamic-table -n %tpie.exe | FileCheck --check-prefix=BTIPROP %s
-# RUN: llvm-objdump -d -mattr=+bti --no-show-raw-insn %tpie.exe | FileCheck --check-prefix=PIE %s
+# RUN: llvm-objdump -d --mattr=+bti --no-show-raw-insn %tpie.exe | FileCheck --check-prefix=PIE %s
 
 # PIE: Disassembly of section .text:
 # PIE: 0000000000010348 <func1>:
@@ -145,7 +145,7 @@
 
 # RUN: ld.lld %t.o %t2.o %t.so -o %tnobti.exe
 # RUN: llvm-readelf --dynamic-table %tnobti.exe | FileCheck --check-prefix NOBTIDYN %s
-# RUN: llvm-objdump -d -mattr=+bti --no-show-raw-insn %tnobti.exe | FileCheck --check-prefix=NOEX %s
+# RUN: llvm-objdump -d --mattr=+bti --no-show-raw-insn %tnobti.exe | FileCheck --check-prefix=NOEX %s
 
 # NOEX: Disassembly of section .text:
 # NOEX: 00000000002102e0 <func1>:
@@ -179,7 +179,7 @@
 
 # RUN: llvm-readelf -n %tforcebti.exe | FileCheck --check-prefix=BTIPROP %s
 # RUN: llvm-readelf --dynamic-table %tforcebti.exe | FileCheck --check-prefix BTIDYN %s
-# RUN: llvm-objdump -d -mattr=+bti --no-show-raw-insn %tforcebti.exe | FileCheck --check-prefix=FORCE %s
+# RUN: llvm-objdump -d --mattr=+bti --no-show-raw-insn %tforcebti.exe | FileCheck --check-prefix=FORCE %s
 
 # FORCE: Disassembly of section .text:
 # FORCE: 0000000000210370 <func1>:

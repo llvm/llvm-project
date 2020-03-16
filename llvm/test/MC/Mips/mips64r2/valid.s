@@ -294,6 +294,12 @@ a:
         plu.ps  $f2,$f26,$f30          # CHECK: plu.ps $f2, $f26, $f30    # encoding: [0x46,0xde,0xd0,0xad]
                                        # CHECK:                          # <MCInst #{{[0-9]+}} PLU_PS64
         pref      1, 8($5)             # CHECK: pref 1, 8($5)           # encoding: [0xcc,0xa1,0x00,0x08]
+        pul.ps $f9,$f30,$f26           # CHECK: pul.ps $f9, $f30, $f26  # encoding: [0x46,0xda,0xf2,0x6e]
+                                       # CHECK:                         # <MCInst #{{[0-9]+}} PUL_PS64
+
+        puu.ps $f24,$f9,$f2            # CHECK: puu.ps $f24, $f9, $f2   # encoding: [0x46,0xc2,0x4e,0x2f]
+                                       # CHECK:                         # <MCInst #{{[0-9]+}} PUU_PS64
+
         # FIXME: Use the code generator in order to print the .set directives
         #        instead of the instruction printer.
         rdhwr     $sp,$11              # CHECK:      .set  push

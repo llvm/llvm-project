@@ -1,4 +1,4 @@
-# RUN: llvm-objdump -dwarf=frames %p/Inputs/eh_frame.macho-arm64 2>/dev/null | FileCheck %s
+# RUN: llvm-objdump --dwarf=frames %p/Inputs/eh_frame.macho-arm64 2>/dev/null | FileCheck %s
 
 # CHECK: .eh_frame contents:
 

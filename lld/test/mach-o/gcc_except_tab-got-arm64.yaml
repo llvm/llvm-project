@@ -1,6 +1,6 @@
 # RUN: ld64.lld -arch arm64 %s \
 # RUN: -dylib %p/Inputs/arm64/libSystem.yaml -o %t
-# RUN: llvm-objdump -section-headers %t | FileCheck %s
+# RUN: llvm-objdump --section-headers %t | FileCheck %s
 
 # Make sure that the GOT relocation from gcc_except_tab to the data
 # is not removed.

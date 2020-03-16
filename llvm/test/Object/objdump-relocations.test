@@ -4,7 +4,7 @@
 # RUN:              | FileCheck %s -check-prefix COFF-x86-64
 
 # RUN: yaml2obj --docnum=1 %s -o %t-i386
-# RUN: llvm-objdump -r %t-i386 | FileCheck %s -check-prefix ELF-i386
+# RUN: llvm-objdump -r %t-i386 | FileCheck %s --check-prefix=ELF-i386
 
 # ELF-i386: .text
 # ELF-i386: R_386_32 .section
@@ -39,7 +39,7 @@ Symbols:
     Binding: STB_GLOBAL
 
 # RUN: yaml2obj --docnum=2 %s -o %t-x86-64
-# RUN: llvm-objdump -r %t-x86-64 | FileCheck %s -check-prefix ELF-x86-64
+# RUN: llvm-objdump -r %t-x86-64 | FileCheck %s --check-prefix=ELF-x86-64
 
 # ELF-x86-64: .text
 # ELF-x86-64: R_X86_64_32S .section

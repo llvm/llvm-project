@@ -2,7 +2,7 @@
 # RUN:     -install_name /usr/lib/libbar.dylib %p/Inputs/x86_64/libSystem.yaml -o %t1.dylib
 # RUN: ld64.lld -arch x86_64 -dylib %s -upward_library  %t1.dylib \
 # RUN:      -install_name /usr/lib/libfoo.dylib %p/Inputs/x86_64/libSystem.yaml -o %t
-# RUN: llvm-objdump -private-headers %t | FileCheck %s
+# RUN: llvm-objdump --private-headers %t | FileCheck %s
 #
 #
 # Test upward linking: 1) build libbar.dylib, 2) build libfoo.dylib and upward

@@ -1,9 +1,9 @@
 ; RUN: llc < %s -mtriple=thumb-apple-ios | FileCheck %s --check-prefix=CHECK --check-prefix=ALIGN4
 ; RUN: llc < %s -mtriple=thumb-none-eabi | FileCheck %s --check-prefix=CHECK --check-prefix=ALIGN8
 ; RUN: llc < %s -o %t -filetype=obj -mtriple=thumbv6-apple-ios
-; RUN: llvm-objdump -triple=thumbv6-apple-ios -d %t | FileCheck %s --check-prefix=CHECK --check-prefix=ALIGN4
+; RUN: llvm-objdump --triple=thumbv6-apple-ios -d %t | FileCheck %s --check-prefix=CHECK --check-prefix=ALIGN4
 ; RUN: llc < %s -o %t -filetype=obj -mtriple=thumbv6-none-eabi
-; RUN: llvm-objdump -triple=thumbv6-none-eabi -d %t | FileCheck %s --check-prefix=CHECK --check-prefix=ALIGN8
+; RUN: llvm-objdump --triple=thumbv6-none-eabi -d %t | FileCheck %s --check-prefix=CHECK --check-prefix=ALIGN8
 
 ; Largest stack for which a single tADDspi/tSUBspi is enough
 define void @test1() {

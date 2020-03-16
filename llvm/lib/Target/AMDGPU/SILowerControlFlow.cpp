@@ -74,6 +74,10 @@ using namespace llvm;
 
 #define DEBUG_TYPE "si-lower-control-flow"
 
+static cl::opt<bool>
+RemoveRedundantEndcf("amdgpu-remove-redundant-endcf",
+    cl::init(true), cl::ReallyHidden);
+
 namespace {
 
 class SILowerControlFlow : public MachineFunctionPass {
@@ -83,6 +87,7 @@ private:
   LiveIntervals *LIS = nullptr;
   MachineRegisterInfo *MRI = nullptr;
   DenseSet<const MachineInstr*> LoweredEndCf;
+  DenseSet<Register> LoweredIf;
 
   const TargetRegisterClass *BoolRC = nullptr;
   unsigned AndOpc;
@@ -208,6 +213,7 @@ void SILowerControlFlow::emitIf(MachineInstr &MI) {
     BuildMI(MBB, I, DL, TII->get(AMDGPU::COPY), CopyReg)
     .addReg(Exec)
     .addReg(Exec, RegState::ImplicitDefine);
+  LoweredIf.insert(CopyReg);
 
   Register Tmp = MRI->createVirtualRegister(BoolRC);
 
@@ -444,14 +450,25 @@ void SILowerControlFlow::emitEndCf(MachineInstr &MI) {
 
   // If the only instruction immediately following this END_CF is an another
   // END_CF in the only successor we can avoid emitting exec mask restore here.
-  auto Next = skipIgnoreExecInstsTrivialSucc(MBB, std::next(MI.getIterator()));
-  if (Next != MBB.end() && (Next->getOpcode() == AMDGPU::SI_END_CF ||
-                            LoweredEndCf.count(&*Next))) {
-    LLVM_DEBUG(dbgs() << "Skip redundant "; MI.dump());
-    if (LIS)
-      LIS->RemoveMachineInstrFromMaps(MI);
-    MI.eraseFromParent();
-    return;
+  if (RemoveRedundantEndcf) {
+    auto Next =
+      skipIgnoreExecInstsTrivialSucc(MBB, std::next(MI.getIterator()));
+    if (Next != MBB.end() && (Next->getOpcode() == AMDGPU::SI_END_CF ||
+                              LoweredEndCf.count(&*Next))) {
+      // Only skip inner END_CF if outer ENDCF belongs to SI_IF.
+      // If that belongs to SI_ELSE then saved mask has an inverted value.
+      Register SavedExec = Next->getOperand(0).getReg();
+      const MachineInstr *Def = MRI.getUniqueVRegDef(SavedExec);
+      // A lowered SI_IF turns definition into COPY of exec.
+      if (Def && (Def->getOpcode() == AMDGPU::SI_IF ||
+                  LoweredIf.count(SavedExec))) {
+        LLVM_DEBUG(dbgs() << "Skip redundant "; MI.dump());
+        if (LIS)
+          LIS->RemoveMachineInstrFromMaps(MI);
+        MI.eraseFromParent();
+        return;
+      }
+    }
   }
 
   MachineBasicBlock::iterator InsPt =
@@ -610,6 +627,7 @@ bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
   }
 
   LoweredEndCf.clear();
+  LoweredIf.clear();
 
   return true;
 }

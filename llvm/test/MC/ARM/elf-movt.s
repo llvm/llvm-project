@@ -1,8 +1,8 @@
 @ RUN: llvm-mc %s -triple=armv7-linux-gnueabi | FileCheck -check-prefix=ASM %s
 @ RUN: llvm-mc %s -triple=armv7-linux-gnueabi -filetype=obj -o %t.o
-@ RUN: llvm-objdump -d -r %t.o -triple=armv7-linux-gnueabi | FileCheck -check-prefix=OBJ %s
+@ RUN: llvm-objdump -d -r %t.o --triple=armv7-linux-gnueabi | FileCheck --check-prefix=OBJ %s
 @ RUN: llvm-mc %s -triple=thumbv7-linux-gnueabi -filetype=obj -o %t.o
-@ RUN: llvm-objdump -d -r %t.o -triple=thumbv7-linux-gnueabi | FileCheck -check-prefix=THUMB %s
+@ RUN: llvm-objdump -d -r %t.o --triple=thumbv7-linux-gnueabi | FileCheck --check-prefix=THUMB %s
 
 	.syntax unified
 	.text

@@ -237,13 +237,13 @@ public:
   void setSupportsDefaultOutlining(bool Enable) {
     Options.SupportsDefaultOutlining = Enable;
   }
-  void setSupportsDebugEntryValues(bool Enable) {
-    Options.SupportsDebugEntryValues = Enable;
-  }
 
   bool shouldPrintMachineCode() const { return Options.PrintMachineCode; }
 
   bool getUniqueSectionNames() const { return Options.UniqueSectionNames; }
+
+  /// Return true if unique basic block section names must be generated.
+  bool getUniqueBBSectionNames() const { return Options.UniqueBBSectionNames; }
 
   /// Return true if data objects should be emitted into their own section,
   /// corresponds to -fdata-sections.
@@ -255,6 +255,17 @@ public:
   /// corresponding to -ffunction-sections.
   bool getFunctionSections() const {
     return Options.FunctionSections;
+  }
+
+  /// If basic blocks should be emitted into their own section,
+  /// corresponding to -fbasicblock-sections.
+  llvm::BasicBlockSection getBBSectionsType() const {
+    return Options.BBSections;
+  }
+
+  /// Get the list of functions and basic block ids that need unique sections.
+  const MemoryBuffer *getBBSectionsFuncListBuf() const {
+    return Options.BBSectionsFuncListBuf.get();
   }
 
   /// Get a \c TargetIRAnalysis appropriate for the target.

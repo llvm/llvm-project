@@ -36,7 +36,7 @@ SECTIONS {
 
 # RUN: llvm-mc -filetype=obj -triple=mips64-unknown-linux %p/Inputs/data-commands.s -o %t2.o
 # RUN: ld.lld --script %s %t2.o -o %t2
-# RUN: llvm-objdump -s %t2 | FileCheck -check-prefix=BIGENDIAN %s
+# RUN: llvm-objdump -s %t2 | FileCheck --check-prefix=BIGENDIAN %s
 # BIGENDIAN:      Contents of section .foo:
 # BIGENDIAN-NEXT:   ff11ff11 22ff1122 3344ff11 22334455
 # BIGENDIAN-NEXT:   667788

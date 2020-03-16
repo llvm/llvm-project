@@ -1,5 +1,5 @@
 # RUN: llvm-mc -triple s390x-linux-gnu -filetype=obj %s | \
-# RUN: llvm-objdump -mcpu=zEC12 -disassemble - | FileCheck %s
+# RUN: llvm-objdump --mcpu=zEC12 -d - | FileCheck %s
 
 # Test the .insn directive which provides a way of encoding an instruction
 # directly. It takes a format, encoding, and operands based on the format.
