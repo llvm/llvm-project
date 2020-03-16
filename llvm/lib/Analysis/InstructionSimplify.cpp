@@ -4081,13 +4081,16 @@ static Value *SimplifyGEPInst(Type *SrcTy, ArrayRef<Value *> Ops,
   if (isa<UndefValue>(Ops[0]))
     return UndefValue::get(GEPTy);
 
+  bool IsScalableVec =
+      SrcTy->isVectorTy() ? SrcTy->getVectorIsScalable() : false;
+
   if (Ops.size() == 2) {
     // getelementptr P, 0 -> P.
     if (match(Ops[1], m_Zero()) && Ops[0]->getType() == GEPTy)
       return Ops[0];
 
     Type *Ty = SrcTy;
-    if (Ty->isSized()) {
+    if (!IsScalableVec && Ty->isSized()) {
       Value *P;
       uint64_t C;
       uint64_t TyAllocSize = Q.DL.getTypeAllocSize(Ty);
@@ -4135,7 +4138,7 @@ static Value *SimplifyGEPInst(Type *SrcTy, ArrayRef<Value *> Ops,
     }
   }
 
-  if (Q.DL.getTypeAllocSize(LastType) == 1 &&
+  if (!IsScalableVec && Q.DL.getTypeAllocSize(LastType) == 1 &&
       all_of(Ops.slice(1).drop_back(1),
              [](Value *Idx) { return match(Idx, m_Zero()); })) {
     unsigned IdxWidth =
