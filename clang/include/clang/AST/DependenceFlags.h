@@ -1,12 +1,12 @@
-//===--- DependencyFlags.h ------------------------------------------------===//
+//===--- DependenceFlags.h ------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_CLANG_AST_DEPENDENCYFLAGS_H
-#define LLVM_CLANG_AST_DEPENDENCYFLAGS_H
+#ifndef LLVM_CLANG_AST_DEPENDENCEFLAGS_H
+#define LLVM_CLANG_AST_DEPENDENCEFLAGS_H
 
 #include "clang/Basic/BitmaskEnum.h"
 #include "llvm/ADT/BitmaskEnum.h"
