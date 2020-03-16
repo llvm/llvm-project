@@ -104,6 +104,7 @@ public:
                           bool GHash) override;
   void printStackMap() const override;
   void printAddrsig() override;
+
 private:
   void printSymbols() override;
   void printDynamicSymbols() override;
@@ -409,6 +410,11 @@ static const EnumEntry<COFF::DLLCharacteristics> PEDLLCharacteristics[] = {
   LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_DLL_CHARACTERISTICS_TERMINAL_SERVER_AWARE),
 };
 
+static const EnumEntry<COFF::ExtendedDLLCharacteristics>
+    PEExtendedDLLCharacteristics[] = {
+        LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_DLL_CHARACTERISTICS_EX_CET_COMPAT),
+};
+
 static const EnumEntry<COFF::SectionCharacteristics>
 ImageSectionCharacteristics[] = {
   LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_SCN_TYPE_NOLOAD           ),
@@ -516,23 +522,25 @@ static const EnumEntry<COFF::COMDATType> ImageCOMDATSelect[] = {
 };
 
 static const EnumEntry<COFF::DebugType> ImageDebugType[] = {
-  { "Unknown"    , COFF::IMAGE_DEBUG_TYPE_UNKNOWN       },
-  { "COFF"       , COFF::IMAGE_DEBUG_TYPE_COFF          },
-  { "CodeView"   , COFF::IMAGE_DEBUG_TYPE_CODEVIEW      },
-  { "FPO"        , COFF::IMAGE_DEBUG_TYPE_FPO           },
-  { "Misc"       , COFF::IMAGE_DEBUG_TYPE_MISC          },
-  { "Exception"  , COFF::IMAGE_DEBUG_TYPE_EXCEPTION     },
-  { "Fixup"      , COFF::IMAGE_DEBUG_TYPE_FIXUP         },
-  { "OmapToSrc"  , COFF::IMAGE_DEBUG_TYPE_OMAP_TO_SRC   },
-  { "OmapFromSrc", COFF::IMAGE_DEBUG_TYPE_OMAP_FROM_SRC },
-  { "Borland"    , COFF::IMAGE_DEBUG_TYPE_BORLAND       },
-  { "Reserved10" , COFF::IMAGE_DEBUG_TYPE_RESERVED10    },
-  { "CLSID"      , COFF::IMAGE_DEBUG_TYPE_CLSID         },
-  { "VCFeature"  , COFF::IMAGE_DEBUG_TYPE_VC_FEATURE    },
-  { "POGO"       , COFF::IMAGE_DEBUG_TYPE_POGO          },
-  { "ILTCG"      , COFF::IMAGE_DEBUG_TYPE_ILTCG         },
-  { "MPX"        , COFF::IMAGE_DEBUG_TYPE_MPX           },
-  { "Repro"      , COFF::IMAGE_DEBUG_TYPE_REPRO         },
+    {"Unknown", COFF::IMAGE_DEBUG_TYPE_UNKNOWN},
+    {"COFF", COFF::IMAGE_DEBUG_TYPE_COFF},
+    {"CodeView", COFF::IMAGE_DEBUG_TYPE_CODEVIEW},
+    {"FPO", COFF::IMAGE_DEBUG_TYPE_FPO},
+    {"Misc", COFF::IMAGE_DEBUG_TYPE_MISC},
+    {"Exception", COFF::IMAGE_DEBUG_TYPE_EXCEPTION},
+    {"Fixup", COFF::IMAGE_DEBUG_TYPE_FIXUP},
+    {"OmapToSrc", COFF::IMAGE_DEBUG_TYPE_OMAP_TO_SRC},
+    {"OmapFromSrc", COFF::IMAGE_DEBUG_TYPE_OMAP_FROM_SRC},
+    {"Borland", COFF::IMAGE_DEBUG_TYPE_BORLAND},
+    {"Reserved10", COFF::IMAGE_DEBUG_TYPE_RESERVED10},
+    {"CLSID", COFF::IMAGE_DEBUG_TYPE_CLSID},
+    {"VCFeature", COFF::IMAGE_DEBUG_TYPE_VC_FEATURE},
+    {"POGO", COFF::IMAGE_DEBUG_TYPE_POGO},
+    {"ILTCG", COFF::IMAGE_DEBUG_TYPE_ILTCG},
+    {"MPX", COFF::IMAGE_DEBUG_TYPE_MPX},
+    {"Repro", COFF::IMAGE_DEBUG_TYPE_REPRO},
+    {"ExtendedDLLCharacteristics",
+     COFF::IMAGE_DEBUG_TYPE_EX_DLLCHARACTERISTICS},
 };
 
 static const EnumEntry<COFF::WeakExternalCharacteristics>
@@ -736,12 +744,19 @@ void COFFDumper::printCOFFDebugDirectory() {
         W.printString("PDBFileName", PDBFileName);
       }
     } else if (D.SizeOfData != 0) {
-      // FIXME: Type values of 12 and 13 are commonly observed but are not in
-      // the documented type enum.  Figure out what they mean.
+      // FIXME: Data visualization for IMAGE_DEBUG_TYPE_VC_FEATURE and
+      // IMAGE_DEBUG_TYPE_POGO?
       ArrayRef<uint8_t> RawData;
       if (std::error_code EC = Obj->getRvaAndSizeAsBytes(D.AddressOfRawData,
                                                          D.SizeOfData, RawData))
         reportError(errorCodeToError(EC), Obj->getFileName());
+      if (D.Type == COFF::IMAGE_DEBUG_TYPE_EX_DLLCHARACTERISTICS) {
+        // FIXME right now the only possible value would fit in 8 bits,
+        // but that might change in the future
+        uint16_t Characteristics = RawData[0];
+        W.printFlags("ExtendedCharacteristics", Characteristics,
+                     makeArrayRef(PEExtendedDLLCharacteristics));
+      }
       W.printBinaryBlock("RawData", RawData);
     }
   }
