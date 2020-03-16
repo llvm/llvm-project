@@ -107,3 +107,38 @@ body:             |
     S_ENDPGM 0
 
 ...
+
+---
+# Ensure that wwm is not put around an EXEC copy
+#CHECK-LABEL: name: copy_exec
+#CHECK: %7:sreg_64 = COPY $exec
+#CHECK-NEXT: %14:sreg_64 = ENTER_WWM -1, implicit-def $exec, implicit-def $scc, implicit $exec
+#CHECK-NEXT: %8:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+#CHECK-NEXT: $exec = EXIT_WWM %14
+#CHECK-NEXT: %9:vgpr_32 = V_MBCNT_LO_U32_B32_e64 %7.sub0, 0, implicit $exec
+name:            copy_exec
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
+
+    %3:sgpr_32 = COPY $sgpr3
+    %2:sgpr_32 = COPY $sgpr2
+    %1:sgpr_32 = COPY $sgpr1
+    %0:sgpr_32 = COPY $sgpr0
+    %4:sgpr_128 = REG_SEQUENCE %0, %subreg.sub0, %1, %subreg.sub1, %2, %subreg.sub2, %3, %subreg.sub3
+    %5:sreg_32 = S_MOV_B32 0
+    %6:vreg_64 = BUFFER_LOAD_DWORDX2_OFFSET %4, %5, 0, 0, 0, 0, 0, 0, implicit $exec
+
+    %8:sreg_64 = COPY $exec
+    %9:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %10:vgpr_32 = V_MBCNT_LO_U32_B32_e64 %8.sub0:sreg_64, 0, implicit $exec
+    %11:vgpr_32 = V_MOV_B32_dpp %9:vgpr_32, %10:vgpr_32, 312, 15, 15, 0, implicit $exec
+    %12:sreg_32 = V_READLANE_B32 %11:vgpr_32, 63
+    early-clobber %13:sreg_32 = WWM %9:vgpr_32, implicit $exec
+
+    %14:vgpr_32 = COPY %13
+    BUFFER_STORE_DWORD_OFFSET_exact killed %14, %4, %5, 4, 0, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0
+
+...
