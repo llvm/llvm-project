@@ -387,6 +387,20 @@ static bool printCompactDWARFExpr(raw_ostream &OS, DWARFExpression::iterator I,
       S << MRI.getName(*LLVMRegNum);
       break;
     }
+    case dwarf::DW_OP_bregx: {
+      int DwarfRegNum = Op.getRawOperand(0);
+      int64_t Offset = Op.getRawOperand(1);
+      Optional<unsigned> LLVMRegNum = MRI.getLLVMRegNum(DwarfRegNum, false);
+      if (!LLVMRegNum) {
+        OS << "<unknown register " << DwarfRegNum << ">";
+        return false;
+      }
+      raw_svector_ostream S(Stack.emplace_back().String);
+      S << MRI.getName(*LLVMRegNum);
+      if (Offset)
+        S << format("%+" PRId64, Offset);
+      break;
+    }
     default:
       if (Opcode >= dwarf::DW_OP_reg0 && Opcode <= dwarf::DW_OP_reg31) {
         // DW_OP_reg<N>: A register, with the register num implied by the
@@ -399,6 +413,19 @@ static bool printCompactDWARFExpr(raw_ostream &OS, DWARFExpression::iterator I,
         }
         raw_svector_ostream S(Stack.emplace_back(PrintedExpr::Value).String);
         S << MRI.getName(*LLVMRegNum);
+      } else if (Opcode >= dwarf::DW_OP_breg0 &&
+                 Opcode <= dwarf::DW_OP_breg31) {
+        int DwarfRegNum = Opcode - dwarf::DW_OP_breg0;
+        int64_t Offset = Op.getRawOperand(0);
+        Optional<unsigned> LLVMRegNum = MRI.getLLVMRegNum(DwarfRegNum, false);
+        if (!LLVMRegNum) {
+          OS << "<unknown register " << DwarfRegNum << ">";
+          return false;
+        }
+        raw_svector_ostream S(Stack.emplace_back().String);
+        S << MRI.getName(*LLVMRegNum);
+        if (Offset)
+          S << format("%+" PRId64, Offset);
       } else {
         // If we hit an unknown operand, we don't know its effect on the stack,
         // so bail out on the whole expression.
@@ -412,7 +439,11 @@ static bool printCompactDWARFExpr(raw_ostream &OS, DWARFExpression::iterator I,
   }
 
   assert(Stack.size() == 1 && "expected one value on stack");
-  OS << Stack.front().String;
+
+  if (Stack.front().Kind == PrintedExpr::Address)
+    OS << "[" << Stack.front().String << "]";
+  else
+    OS << Stack.front().String;
 
   return true;
 }
