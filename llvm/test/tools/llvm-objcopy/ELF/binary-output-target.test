@@ -31,16 +31,16 @@
 # RUN: llvm-readobj --file-headers %t.sparcel.o | FileCheck %s --check-prefixes=CHECK,LE,SPARCEL,32
 
 # CHECK: Format:
-# 32-SAME:      ELF32-
-# 64-SAME:      ELF64-
-# AARCH64-SAME: aarch64-little
-# ARM-SAME:     arm-little
+# 32-SAME:      elf32-
+# 64-SAME:      elf64-
+# AARCH64-SAME: littleaarch64
+# ARM-SAME:     littlearm
 # I386-SAME:    i386
 # MIPS-SAME:    mips{{$}}
 # RISCV32-SAME: riscv{{$}}
 # RISCV64-SAME: riscv{{$}}
-# PPC-SAME:     ppc{{$}}
-# PPC64le-SAME: ppc64
+# PPC-SAME:     powerpc{{$}}
+# PPC64le-SAME: powerpc{{$}}
 # SPARC-SAME:   sparc
 # SPARCEL-SAME: sparc
 # X86-64-SAME:  x86-64

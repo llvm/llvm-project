@@ -119,6 +119,16 @@ clang_tablegen("arm_mve_builtin_aliases") {
   td_file = "arm_mve.td"
 }
 
+clang_tablegen("arm_sve_builtins") {
+  args = [ "-gen-arm-sve-builtins" ]
+  td_file = "arm_sve.td"
+}
+
+clang_tablegen("arm_sve_codegenmap") {
+  args = [ "-gen-arm-sve-codegenmap" ]
+  td_file = "arm_sve.td"
+}
+
 clang_tablegen("arm_cde_builtins") {
   args = [ "-gen-arm-cde-builtin-def" ]
   td_file = "arm_cde.td"

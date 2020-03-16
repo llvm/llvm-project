@@ -167,7 +167,8 @@ public:
 
   bool tryCombineTrunc(MachineInstr &MI,
                        SmallVectorImpl<MachineInstr *> &DeadInsts,
-                       SmallVectorImpl<Register> &UpdatedDefs) {
+                       SmallVectorImpl<Register> &UpdatedDefs,
+                       GISelObserverWrapper &Observer) {
     assert(MI.getOpcode() == TargetOpcode::G_TRUNC);
 
     Builder.setInstr(MI);
@@ -187,6 +188,66 @@ public:
         markInstAndDefDead(MI, *SrcMI, DeadInsts);
         return true;
       }
+    }
+
+    // Try to fold trunc(merge) to directly use the source of the merge.
+    // This gets rid of large, difficult to legalize, merges
+    if (SrcMI->getOpcode() == TargetOpcode::G_MERGE_VALUES) {
+      const Register MergeSrcReg = SrcMI->getOperand(1).getReg();
+      const LLT MergeSrcTy = MRI.getType(MergeSrcReg);
+      const LLT DstTy = MRI.getType(DstReg);
+
+      // We can only fold if the types are scalar
+      const unsigned DstSize = DstTy.getSizeInBits();
+      const unsigned MergeSrcSize = MergeSrcTy.getSizeInBits();
+      if (!DstTy.isScalar() || !MergeSrcTy.isScalar())
+        return false;
+
+      if (DstSize < MergeSrcSize) {
+        // When the merge source is larger than the destination, we can just
+        // truncate the merge source directly
+        if (isInstUnsupported({TargetOpcode::G_TRUNC, {DstTy, MergeSrcTy}}))
+          return false;
+
+        LLVM_DEBUG(dbgs() << "Combining G_TRUNC(G_MERGE_VALUES) to G_TRUNC: "
+                          << MI);
+
+        Builder.buildTrunc(DstReg, MergeSrcReg);
+        UpdatedDefs.push_back(DstReg);
+      } else if (DstSize == MergeSrcSize) {
+        // If the sizes match we can simply try to replace the register
+        LLVM_DEBUG(
+            dbgs() << "Replacing G_TRUNC(G_MERGE_VALUES) with merge input: "
+                   << MI);
+        replaceRegOrBuildCopy(DstReg, MergeSrcReg, MRI, Builder, UpdatedDefs,
+                              Observer);
+      } else if (DstSize % MergeSrcSize == 0) {
+        // If the trunc size is a multiple of the merge source size we can use
+        // a smaller merge instead
+        if (isInstUnsupported(
+                {TargetOpcode::G_MERGE_VALUES, {DstTy, MergeSrcTy}}))
+          return false;
+
+        LLVM_DEBUG(
+            dbgs() << "Combining G_TRUNC(G_MERGE_VALUES) to G_MERGE_VALUES: "
+                   << MI);
+
+        const unsigned NumSrcs = DstSize / MergeSrcSize;
+        assert(NumSrcs < SrcMI->getNumOperands() - 1 &&
+               "trunc(merge) should require less inputs than merge");
+        SmallVector<Register, 2> SrcRegs(NumSrcs);
+        for (unsigned i = 0; i < NumSrcs; ++i)
+          SrcRegs[i] = SrcMI->getOperand(i + 1).getReg();
+
+        Builder.buildMerge(DstReg, SrcRegs);
+        UpdatedDefs.push_back(DstReg);
+      } else {
+        // Unable to combine
+        return false;
+      }
+
+      markInstAndDefDead(MI, *SrcMI, DeadInsts);
+      return true;
     }
 
     return false;
@@ -533,7 +594,7 @@ public:
       Changed = tryCombineExtract(MI, DeadInsts, UpdatedDefs);
       break;
     case TargetOpcode::G_TRUNC:
-      Changed = tryCombineTrunc(MI, DeadInsts, UpdatedDefs);
+      Changed = tryCombineTrunc(MI, DeadInsts, UpdatedDefs, WrapperObserver);
       if (!Changed) {
         // Try to combine truncates away even if they are legal. As all artifact
         // combines at the moment look only "up" the def-use chains, we achieve

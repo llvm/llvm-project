@@ -75,7 +75,7 @@
 # CHECKTEXT-NEXT: 40: c7 04 25 00 00 00 00 08 00 00 00 movl $8, 0
 # CHECKTEXT-NEXT: 4b: c7 04 25 00 00 00 00 09 00 00 00 movl $9, 0
 
-# CHECKEXE:       Format: ELF64-x86-64
+# CHECKEXE:       Format: elf64-x86-64
 # CHECKEXE-NEXT:  Arch: x86_64
 # CHECKEXE-NEXT:  AddressSize: 64bit
 # CHECKEXE-NEXT:  LoadName:
