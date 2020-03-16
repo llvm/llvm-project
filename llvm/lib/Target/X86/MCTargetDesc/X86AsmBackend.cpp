@@ -161,8 +161,8 @@ public:
   }
 
   bool allowAutoPadding() const override;
-  void alignBranchesBegin(MCObjectStreamer &OS, const MCInst &Inst) override;
-  void alignBranchesEnd(MCObjectStreamer &OS, const MCInst &Inst) override;
+  void emitInstructionBegin(MCObjectStreamer &OS, const MCInst &Inst) override;
+  void emitInstructionEnd(MCObjectStreamer &OS, const MCInst &Inst) override;
 
   unsigned getNumFixupKinds() const override {
     return X86::NumTargetFixupKinds;
@@ -171,7 +171,7 @@ public:
   Optional<MCFixupKind> getFixupKind(StringRef Name) const override;
 
   const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
-  
+
   bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
                              const MCValue &Target) override;
 
@@ -512,7 +512,7 @@ bool X86AsmBackend::needAlignInst(const MCInst &Inst) const {
 }
 
 /// Insert BoundaryAlignFragment before instructions to align branches.
-void X86AsmBackend::alignBranchesBegin(MCObjectStreamer &OS,
+void X86AsmBackend::emitInstructionBegin(MCObjectStreamer &OS,
                                        const MCInst &Inst) {
   if (!needAlign(OS))
     return;
@@ -538,7 +538,7 @@ void X86AsmBackend::alignBranchesBegin(MCObjectStreamer &OS,
     //
     // Do nothing here since we already inserted a BoudaryAlign fragment when
     // we met the first instruction in the fused pair and we'll tie them
-    // together in alignBranchesEnd.
+    // together in emitInstructionEnd.
     //
     // Note: When there is at least one fragment, such as MCAlignFragment,
     // inserted after the previous instruction, e.g.
@@ -564,7 +564,7 @@ void X86AsmBackend::alignBranchesBegin(MCObjectStreamer &OS,
 }
 
 /// Set the last fragment to be aligned for the BoundaryAlignFragment.
-void X86AsmBackend::alignBranchesEnd(MCObjectStreamer &OS, const MCInst &Inst) {
+void X86AsmBackend::emitInstructionEnd(MCObjectStreamer &OS, const MCInst &Inst) {
   if (!needAlign(OS))
     return;
 
