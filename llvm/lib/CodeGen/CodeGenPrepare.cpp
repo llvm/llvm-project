@@ -6140,7 +6140,7 @@ bool CodeGenPrepare::optimizeSelectInst(SelectInst *SI) {
   //    select.end:
   //       %sel = phi i32 [ %c, %select.true ], [ %d, %select.false ]
   //
-  // %cmp should be freezed, otherwise it may introduce undefined behavior.
+  // %cmp should be frozen, otherwise it may introduce undefined behavior.
   // In addition, we may sink instructions that produce %c or %d from
   // the entry block into the destination(s) of the new branch.
   // If the true or false blocks do not contain a sunken instruction, that
