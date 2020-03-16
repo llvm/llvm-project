@@ -1295,8 +1295,8 @@ body: |
     ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 -65536
     ; CHECK: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C1]]
     ; CHECK: [[OR:%[0-9]+]]:_(s32) = G_OR [[AND1]], [[AND]]
-    ; CHECK: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[OR]](s32)
-    ; CHECK: $vgpr0 = COPY [[BITCAST]](s32)
+    ; CHECK: [[COPY3:%[0-9]+]]:_(s32) = COPY [[OR]](s32)
+    ; CHECK: $vgpr0 = COPY [[COPY3]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1
     %2:_(s16) = G_TRUNC %1
@@ -1321,8 +1321,8 @@ body: |
     ; CHECK: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 -131071
     ; CHECK: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C2]]
     ; CHECK: [[OR:%[0-9]+]]:_(s32) = G_OR [[AND1]], [[SHL]]
-    ; CHECK: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[OR]](s32)
-    ; CHECK: $vgpr0 = COPY [[BITCAST]](s32)
+    ; CHECK: [[COPY3:%[0-9]+]]:_(s32) = COPY [[OR]](s32)
+    ; CHECK: $vgpr0 = COPY [[COPY3]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1
     %2:_(s16) = G_TRUNC %1
@@ -1347,8 +1347,8 @@ body: |
     ; CHECK: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 -16776961
     ; CHECK: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C2]]
     ; CHECK: [[OR:%[0-9]+]]:_(s32) = G_OR [[AND1]], [[SHL]]
-    ; CHECK: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[OR]](s32)
-    ; CHECK: $vgpr0 = COPY [[BITCAST]](s32)
+    ; CHECK: [[COPY3:%[0-9]+]]:_(s32) = COPY [[OR]](s32)
+    ; CHECK: $vgpr0 = COPY [[COPY3]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1
     %2:_(s16) = G_TRUNC %1
@@ -1372,8 +1372,8 @@ body: |
     ; CHECK: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[AND]], [[C1]](s32)
     ; CHECK: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
     ; CHECK: [[OR:%[0-9]+]]:_(s32) = G_OR [[AND1]], [[SHL]]
-    ; CHECK: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[OR]](s32)
-    ; CHECK: $vgpr0 = COPY [[BITCAST]](s32)
+    ; CHECK: [[COPY3:%[0-9]+]]:_(s32) = COPY [[OR]](s32)
+    ; CHECK: $vgpr0 = COPY [[COPY3]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1
     %2:_(s16) = G_TRUNC %1
