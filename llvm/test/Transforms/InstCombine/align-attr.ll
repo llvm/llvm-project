@@ -20,7 +20,7 @@ define i32 @foo2(i32* align 32 %a) #0 {
 ; CHECK-LABEL: @foo2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[V:%.*]] = call i32* @func1(i32* [[A:%.*]])
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[A]], align 32
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[V]], align 32
 ; CHECK-NEXT:    ret i32 [[TMP0]]
 ;
 entry:

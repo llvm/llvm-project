@@ -53,7 +53,7 @@ define i8* @test_simplify3() {
 define i8* @test_simplify4() {
 ; CHECK-LABEL: @test_simplify4(
 ; CHECK-NEXT:    [[STRCPY:%.*]] = call i8* @strcpy(i8* nonnull dereferenceable(1) getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 0), i8* nonnull dereferenceable(1) getelementptr inbounds ([60 x i8], [60 x i8]* @b, i32 0, i32 0))
-; CHECK-NEXT:    ret i8* getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 0)
+; CHECK-NEXT:    ret i8* [[STRCPY]]
 ;
   %dst = getelementptr inbounds [60 x i8], [60 x i8]* @a, i32 0, i32 0
   %src = getelementptr inbounds [60 x i8], [60 x i8]* @b, i32 0, i32 0
