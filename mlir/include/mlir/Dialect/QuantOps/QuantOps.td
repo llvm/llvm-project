@@ -83,6 +83,36 @@ def quant_StorageCastOp : quant_Op<"scast", [NoSideEffect]> {
   let hasFolder = 1;
 }
 
+// A QuantizeRegion (region) represents a quantization unit which wraps
+// high-precision ops with quantization specifications for all the inputs
+// and outputs. Some quantization specifications can be undetermined and
+// derived from other ports by the target specification of the kernel.
+def quant_QuantizeRegionOp : quant_Op<"region", [
+    NoSideEffect,
+    IsolatedFromAbove,
+    SingleBlockImplicitTerminator<"ReturnOp">]> {
+  let summary = [{
+    The `region operation wraps high-precision ops as a logical low-precision
+    quantized kernel.
+  }];
+
+  let arguments = (ins Variadic<AnyType>:$inputs,
+                    TypeArrayAttr:$input_specs,
+                    TypeArrayAttr:$output_specs,
+                    StrAttr:$logical_kernel);
+  let results = (outs Variadic<AnyType>:$outputs);
+  let regions = (region SizedRegion<1>:$body);
+  let verifier = [{ return verifyRegionOp(*this); }];
+}
+
+def quant_ReturnOp : quant_Op<"return", [Terminator]> {
+  let summary = [{
+    The `return` operation terminates a quantize region and returns values.
+  }];
+
+  let arguments = (ins Variadic<AnyTensor>:$results);
+}
+
 //===----------------------------------------------------------------------===//
 // Training integration and instrumentation ops
 //===----------------------------------------------------------------------===//
