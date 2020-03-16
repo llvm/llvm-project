@@ -296,7 +296,7 @@ LLVMDIBuilderCreateModule(LLVMDIBuilderRef Builder, LLVMMetadataRef ParentScope,
                           const char *Name, size_t NameLen,
                           const char *ConfigMacros, size_t ConfigMacrosLen,
                           const char *IncludePath, size_t IncludePathLen,
-                          const char *APINotestFile, size_t APINotestFileLen);
+                          const char *APINotesFile, size_t APINotesFileLen);
 
 /**
  * Creates a new descriptor for a namespace with the specified parent scope.
