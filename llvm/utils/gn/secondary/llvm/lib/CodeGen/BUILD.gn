@@ -21,6 +21,7 @@ static_library("CodeGen") {
     "AllocationOrder.cpp",
     "Analysis.cpp",
     "AtomicExpandPass.cpp",
+    "BBSectionsPrepare.cpp",
     "BasicTargetTransformInfo.cpp",
     "BranchFolding.cpp",
     "BranchRelaxation.cpp",
