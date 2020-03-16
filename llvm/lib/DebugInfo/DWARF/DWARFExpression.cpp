@@ -266,7 +266,13 @@ bool DWARFExpression::Operation::print(raw_ostream &OS,
       break;
 
     if (Size == Operation::BaseTypeRef && U) {
-      prettyPrintBaseTypeRef(U, OS, Operands, Operand);
+      // For DW_OP_convert the operand may be 0 to indicate that conversion to
+      // the generic type should be done. The same holds for DW_OP_reinterpret,
+      // which is currently not supported.
+      if (Opcode == DW_OP_convert && Operands[Operand] == 0)
+        OS << " 0x0";
+      else
+        prettyPrintBaseTypeRef(U, OS, Operands, Operand);
     } else if (Size == Operation::SizeBlock) {
       uint64_t Offset = Operands[Operand];
       for (unsigned i = 0; i < Operands[Operand - 1]; ++i)
@@ -320,6 +326,12 @@ bool DWARFExpression::Operation::verify(DWARFUnit *U) {
       break;
 
     if (Size == Operation::BaseTypeRef) {
+      // For DW_OP_convert the operand may be 0 to indicate that conversion to
+      // the generic type should be done, so don't look up a base type in that
+      // case. The same holds for DW_OP_reinterpret, which is currently not
+      // supported.
+      if (Opcode == DW_OP_convert && Operands[Operand] == 0)
+        continue;
       auto Die = U->getDIEForOffset(U->getOffset() + Operands[Operand]);
       if (!Die || Die.getTag() != dwarf::DW_TAG_base_type) {
         Error = true;
@@ -337,6 +349,128 @@ bool DWARFExpression::verify(DWARFUnit *U) {
       return false;
 
   return true;
+}
+
+/// A user-facing string representation of a DWARF expression. This might be an
+/// Address expression, in which case it will be implicitly dereferenced, or a
+/// Value expression.
+struct PrintedExpr {
+  enum ExprKind {
+    Address,
+    Value,
+  };
+  ExprKind Kind;
+  SmallString<16> String;
+
+  PrintedExpr(ExprKind K = Address) : Kind(K) {}
+};
+
+static bool printCompactDWARFExpr(raw_ostream &OS, DWARFExpression::iterator I,
+                                  const DWARFExpression::iterator E,
+                                  const MCRegisterInfo &MRI) {
+  SmallVector<PrintedExpr, 4> Stack;
+
+  while (I != E) {
+    DWARFExpression::Operation &Op = *I;
+    uint8_t Opcode = Op.getCode();
+    switch (Opcode) {
+    case dwarf::DW_OP_regx: {
+      // DW_OP_regx: A register, with the register num given as an operand.
+      // Printed as the plain register name.
+      uint64_t DwarfRegNum = Op.getRawOperand(0);
+      Optional<unsigned> LLVMRegNum = MRI.getLLVMRegNum(DwarfRegNum, false);
+      if (!LLVMRegNum) {
+        OS << "<unknown register " << DwarfRegNum << ">";
+        return false;
+      }
+      raw_svector_ostream S(Stack.emplace_back(PrintedExpr::Value).String);
+      S << MRI.getName(*LLVMRegNum);
+      break;
+    }
+    case dwarf::DW_OP_bregx: {
+      int DwarfRegNum = Op.getRawOperand(0);
+      int64_t Offset = Op.getRawOperand(1);
+      Optional<unsigned> LLVMRegNum = MRI.getLLVMRegNum(DwarfRegNum, false);
+      if (!LLVMRegNum) {
+        OS << "<unknown register " << DwarfRegNum << ">";
+        return false;
+      }
+      raw_svector_ostream S(Stack.emplace_back().String);
+      S << MRI.getName(*LLVMRegNum);
+      if (Offset)
+        S << format("%+" PRId64, Offset);
+      break;
+    }
+    case dwarf::DW_OP_entry_value:
+    case dwarf::DW_OP_GNU_entry_value: {
+      // DW_OP_entry_value contains a sub-expression which must be rendered
+      // separately.
+      uint64_t SubExprLength = Op.getRawOperand(0);
+      DWARFExpression::iterator SubExprEnd = I.skipBytes(SubExprLength);
+      ++I;
+      raw_svector_ostream S(Stack.emplace_back().String);
+      S << "entry(";
+      printCompactDWARFExpr(S, I, SubExprEnd, MRI);
+      S << ")";
+      I = SubExprEnd;
+      continue;
+    }
+    case dwarf::DW_OP_stack_value: {
+      // The top stack entry should be treated as the actual value of tne
+      // variable, rather than the address of the variable in memory.
+      assert(!Stack.empty());
+      Stack.back().Kind = PrintedExpr::Value;
+      break;
+    }
+    default:
+      if (Opcode >= dwarf::DW_OP_reg0 && Opcode <= dwarf::DW_OP_reg31) {
+        // DW_OP_reg<N>: A register, with the register num implied by the
+        // opcode. Printed as the plain register name.
+        uint64_t DwarfRegNum = Opcode - dwarf::DW_OP_reg0;
+        Optional<unsigned> LLVMRegNum = MRI.getLLVMRegNum(DwarfRegNum, false);
+        if (!LLVMRegNum) {
+          OS << "<unknown register " << DwarfRegNum << ">";
+          return false;
+        }
+        raw_svector_ostream S(Stack.emplace_back(PrintedExpr::Value).String);
+        S << MRI.getName(*LLVMRegNum);
+      } else if (Opcode >= dwarf::DW_OP_breg0 &&
+                 Opcode <= dwarf::DW_OP_breg31) {
+        int DwarfRegNum = Opcode - dwarf::DW_OP_breg0;
+        int64_t Offset = Op.getRawOperand(0);
+        Optional<unsigned> LLVMRegNum = MRI.getLLVMRegNum(DwarfRegNum, false);
+        if (!LLVMRegNum) {
+          OS << "<unknown register " << DwarfRegNum << ">";
+          return false;
+        }
+        raw_svector_ostream S(Stack.emplace_back().String);
+        S << MRI.getName(*LLVMRegNum);
+        if (Offset)
+          S << format("%+" PRId64, Offset);
+      } else {
+        // If we hit an unknown operand, we don't know its effect on the stack,
+        // so bail out on the whole expression.
+        OS << "<unknown op " << dwarf::OperationEncodingString(Opcode) << " ("
+           << (int)Opcode << ")>";
+        return false;
+      }
+      break;
+    }
+    ++I;
+  }
+
+  assert(Stack.size() == 1 && "expected one value on stack");
+
+  if (Stack.front().Kind == PrintedExpr::Address)
+    OS << "[" << Stack.front().String << "]";
+  else
+    OS << Stack.front().String;
+
+  return true;
+}
+
+bool DWARFExpression::printCompact(raw_ostream &OS, const MCRegisterInfo &MRI) {
+  return printCompactDWARFExpr(OS, begin(), end(), MRI);
 }
 
 } // namespace llvm

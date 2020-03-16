@@ -923,15 +923,20 @@ void DWARFLinker::DIECloner::cloneExpression(
         OutputBuffer.push_back(Op.getRawOperand(0));
         RefOffset = Op.getRawOperand(1);
       }
-      auto RefDie = Unit.getOrigUnit().getDIEForOffset(RefOffset);
-      uint32_t RefIdx = Unit.getOrigUnit().getDIEIndex(RefDie);
-      CompileUnit::DIEInfo &Info = Unit.getInfo(RefIdx);
       uint32_t Offset = 0;
-      if (DIE *Clone = Info.Clone)
-        Offset = Clone->getOffset();
-      else
-        Linker.reportWarning("base type ref doesn't point to DW_TAG_base_type.",
-                             File);
+      // Look up the base type. For DW_OP_convert, the operand may be 0 to
+      // instead indicate the generic type. The same holds for
+      // DW_OP_reinterpret, which is currently not supported.
+      if (RefOffset > 0 || Op.getCode() != dwarf::DW_OP_convert) {
+        auto RefDie = Unit.getOrigUnit().getDIEForOffset(RefOffset);
+        uint32_t RefIdx = Unit.getOrigUnit().getDIEIndex(RefDie);
+        CompileUnit::DIEInfo &Info = Unit.getInfo(RefIdx);
+        if (DIE *Clone = Info.Clone)
+          Offset = Clone->getOffset();
+        else
+          Linker.reportWarning(
+              "base type ref doesn't point to DW_TAG_base_type.", File);
+      }
       uint8_t ULEB[16];
       unsigned RealSize = encodeULEB128(Offset, ULEB, ULEBsize);
       if (RealSize > ULEBsize) {

@@ -882,33 +882,32 @@ public:
       if (A->isStaticAlloca())
         return TTI::TCC_Free;
 
-    if (const GEPOperator *GEP = dyn_cast<GEPOperator>(U)) {
-      return static_cast<T *>(this)->getGEPCost(GEP->getSourceElementType(),
-                                                GEP->getPointerOperand(),
-                                                Operands.drop_front());
-    }
+    auto *TargetTTI = static_cast<T *>(this);
+
+    if (const GEPOperator *GEP = dyn_cast<GEPOperator>(U))
+      return TargetTTI->getGEPCost(GEP->getSourceElementType(),
+                                   GEP->getPointerOperand(),
+                                   Operands.drop_front());
 
     if (auto CS = ImmutableCallSite(U)) {
       const Function *F = CS.getCalledFunction();
       if (!F) {
         // Just use the called value type.
         Type *FTy = CS.getCalledValue()->getType()->getPointerElementType();
-        return static_cast<T *>(this)
-            ->getCallCost(cast<FunctionType>(FTy), CS.arg_size(), U);
+        return TargetTTI->getCallCost(cast<FunctionType>(FTy),
+                                      CS.arg_size(), U);
       }
 
       SmallVector<const Value *, 8> Arguments(CS.arg_begin(), CS.arg_end());
-      return static_cast<T *>(this)->getCallCost(F, Arguments, U);
+      return TargetTTI->getCallCost(F, Arguments, U);
     }
 
     if (isa<SExtInst>(U) || isa<ZExtInst>(U) || isa<FPExtInst>(U))
       // The old behaviour of generally treating extensions of icmp to be free
       // has been removed. A target that needs it should override getUserCost().
-      return static_cast<T *>(this)->getExtCost(cast<Instruction>(U),
-                                                Operands.back());
+      return TargetTTI->getExtCost(cast<Instruction>(U), Operands.back());
 
-    return static_cast<T *>(this)->getOperationCost(
-        Operator::getOpcode(U), U->getType(),
+    return TargetTTI->getOperationCost(Operator::getOpcode(U), U->getType(),
         U->getNumOperands() == 1 ? U->getOperand(0)->getType() : nullptr);
   }
 

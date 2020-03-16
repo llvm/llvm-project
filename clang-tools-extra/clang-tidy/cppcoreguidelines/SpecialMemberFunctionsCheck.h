@@ -43,19 +43,30 @@ public:
     MoveAssignment
   };
 
+  struct SpecialMemberFunctionData {
+    SpecialMemberFunctionKind FunctionKind;
+    bool IsDeleted;
+
+    bool operator==(const SpecialMemberFunctionData &Other) {
+      return (Other.FunctionKind == FunctionKind) &&
+             (Other.IsDeleted == IsDeleted);
+    }
+  };
+
   using ClassDefId = std::pair<SourceLocation, std::string>;
 
   using ClassDefiningSpecialMembersMap =
       llvm::DenseMap<ClassDefId,
-                     llvm::SmallVector<SpecialMemberFunctionKind, 5>>;
+                     llvm::SmallVector<SpecialMemberFunctionData, 5>>;
 
 private:
   void checkForMissingMembers(
       const ClassDefId &ID,
-      llvm::ArrayRef<SpecialMemberFunctionKind> DefinedSpecialMembers);
+      llvm::ArrayRef<SpecialMemberFunctionData> DefinedSpecialMembers);
 
   const bool AllowMissingMoveFunctions;
   const bool AllowSoleDefaultDtor;
+  const bool AllowMissingMoveFunctionsWhenCopyIsDeleted;
   ClassDefiningSpecialMembersMap ClassWithSpecialMembers;
 };
 
