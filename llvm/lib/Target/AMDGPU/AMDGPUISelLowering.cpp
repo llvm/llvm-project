@@ -2220,8 +2220,7 @@ SDValue AMDGPUTargetLowering::LowerFNEARBYINT(SDValue Op, SelectionDAG &DAG) con
 // Don't handle v2f16. The extra instructions to scalarize and repack around the
 // compare and vselect end up producing worse code than scalarizing the whole
 // operation.
-SDValue AMDGPUTargetLowering::LowerFROUND_LegalFTRUNC(SDValue Op,
-                                                      SelectionDAG &DAG) const {
+SDValue AMDGPUTargetLowering::LowerFROUND(SDValue Op, SelectionDAG &DAG) const {
   SDLoc SL(Op);
   SDValue X = Op.getOperand(0);
   EVT VT = Op.getValueType();
@@ -2248,75 +2247,6 @@ SDValue AMDGPUTargetLowering::LowerFROUND_LegalFTRUNC(SDValue Op,
   SDValue Sel = DAG.getNode(ISD::SELECT, SL, VT, Cmp, SignOne, Zero);
 
   return DAG.getNode(ISD::FADD, SL, VT, T, Sel);
-}
-
-SDValue AMDGPUTargetLowering::LowerFROUND64(SDValue Op, SelectionDAG &DAG) const {
-  SDLoc SL(Op);
-  SDValue X = Op.getOperand(0);
-
-  SDValue L = DAG.getNode(ISD::BITCAST, SL, MVT::i64, X);
-
-  const SDValue Zero = DAG.getConstant(0, SL, MVT::i32);
-  const SDValue One = DAG.getConstant(1, SL, MVT::i32);
-  const SDValue NegOne = DAG.getConstant(-1, SL, MVT::i32);
-  const SDValue FiftyOne = DAG.getConstant(51, SL, MVT::i32);
-  EVT SetCCVT =
-      getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), MVT::i32);
-
-  SDValue BC = DAG.getNode(ISD::BITCAST, SL, MVT::v2i32, X);
-
-  SDValue Hi = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32, BC, One);
-
-  SDValue Exp = extractF64Exponent(Hi, SL, DAG);
-
-  const SDValue Mask = DAG.getConstant(INT64_C(0x000fffffffffffff), SL,
-                                       MVT::i64);
-
-  SDValue M = DAG.getNode(ISD::SRA, SL, MVT::i64, Mask, Exp);
-  SDValue D = DAG.getNode(ISD::SRA, SL, MVT::i64,
-                          DAG.getConstant(INT64_C(0x0008000000000000), SL,
-                                          MVT::i64),
-                          Exp);
-
-  SDValue Tmp0 = DAG.getNode(ISD::AND, SL, MVT::i64, L, M);
-  SDValue Tmp1 = DAG.getSetCC(SL, SetCCVT,
-                              DAG.getConstant(0, SL, MVT::i64), Tmp0,
-                              ISD::SETNE);
-
-  SDValue Tmp2 = DAG.getNode(ISD::SELECT, SL, MVT::i64, Tmp1,
-                             D, DAG.getConstant(0, SL, MVT::i64));
-  SDValue K = DAG.getNode(ISD::ADD, SL, MVT::i64, L, Tmp2);
-
-  K = DAG.getNode(ISD::AND, SL, MVT::i64, K, DAG.getNOT(SL, M, MVT::i64));
-  K = DAG.getNode(ISD::BITCAST, SL, MVT::f64, K);
-
-  SDValue ExpLt0 = DAG.getSetCC(SL, SetCCVT, Exp, Zero, ISD::SETLT);
-  SDValue ExpGt51 = DAG.getSetCC(SL, SetCCVT, Exp, FiftyOne, ISD::SETGT);
-  SDValue ExpEqNegOne = DAG.getSetCC(SL, SetCCVT, NegOne, Exp, ISD::SETEQ);
-
-  SDValue Mag = DAG.getNode(ISD::SELECT, SL, MVT::f64,
-                            ExpEqNegOne,
-                            DAG.getConstantFP(1.0, SL, MVT::f64),
-                            DAG.getConstantFP(0.0, SL, MVT::f64));
-
-  SDValue S = DAG.getNode(ISD::FCOPYSIGN, SL, MVT::f64, Mag, X);
-
-  K = DAG.getNode(ISD::SELECT, SL, MVT::f64, ExpLt0, S, K);
-  K = DAG.getNode(ISD::SELECT, SL, MVT::f64, ExpGt51, X, K);
-
-  return K;
-}
-
-SDValue AMDGPUTargetLowering::LowerFROUND(SDValue Op, SelectionDAG &DAG) const {
-  EVT VT = Op.getValueType();
-
-  if (isOperationLegal(ISD::FTRUNC, VT))
-    return LowerFROUND_LegalFTRUNC(Op, DAG);
-
-  if (VT == MVT::f64)
-    return LowerFROUND64(Op, DAG);
-
-  llvm_unreachable("unhandled type");
 }
 
 SDValue AMDGPUTargetLowering::LowerFFLOOR(SDValue Op, SelectionDAG &DAG) const {
