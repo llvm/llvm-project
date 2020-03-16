@@ -4,6 +4,9 @@
 ## Generated with this compile command, with the source code in Inputs/debug.c:
 ## clang --target=arm--none-eabi -march=armv7-a -c debug.c -O1 -gdwarf-5 -S -o - -ffunction-sections
 
+## The unicode characters in this test cause test failures on Windows.
+# UNSUPPORTED: system-windows
+
 # RUN: llvm-mc -triple armv8a--none-eabi < %s -filetype=obj --dwarf-version=5 | \
 # RUN:     llvm-objdump - -d --debug-vars --no-show-raw-insn | \
 # RUN:     FileCheck %s

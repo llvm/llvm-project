@@ -8,6 +8,9 @@
 ## Generated with this compile command, with the source code in Inputs/debug.c:
 ## clang --target=arm--none-eabi -march=armv7-a -c debug.c -O1 -gdwarf-4 -S -o -
 
+## The unicode characters in this test cause test failures on Windows.
+# UNSUPPORTED: system-windows
+
 # RUN: llvm-mc -triple armv8a--none-eabi < %s -filetype=obj | \
 # RUN:     llvm-objdump - -d --debug-vars | \
 # RUN:     FileCheck %s --check-prefix=RAW --strict-whitespace
