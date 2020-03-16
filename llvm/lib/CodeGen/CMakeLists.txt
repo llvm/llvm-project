@@ -8,6 +8,7 @@ add_llvm_component_library(LLVMCodeGen
   BranchRelaxation.cpp
   BreakFalseDeps.cpp
   BuiltinGCs.cpp
+  BBSectionsPrepare.cpp
   CalcSpillWeights.cpp
   CallingConvLower.cpp
   CFGuardLongjmp.cpp

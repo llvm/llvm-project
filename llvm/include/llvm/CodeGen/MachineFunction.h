@@ -37,6 +37,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Recycler.h"
+#include "llvm/Target/TargetOptions.h"
 #include <cassert>
 #include <cstdint>
 #include <memory>
@@ -64,6 +65,7 @@ class MachineRegisterInfo;
 class MCContext;
 class MCInstrDesc;
 class MCSymbol;
+class MCSection;
 class Pass;
 class PseudoSourceValueManager;
 class raw_ostream;
@@ -244,6 +246,9 @@ class MachineFunction {
   // Keep track of jump tables for switch instructions
   MachineJumpTableInfo *JumpTableInfo;
 
+  // Keep track of the function section.
+  MCSection *Section = nullptr;
+
   // Keeps track of Wasm exception handling related data. This will be null for
   // functions that aren't using a wasm EH personality.
   WasmEHFuncInfo *WasmEHInfo = nullptr;
@@ -256,6 +261,12 @@ class MachineFunction {
   // MachineBasicBlock is inserted into a MachineFunction is it automatically
   // numbered and this vector keeps track of the mapping from ID's to MBB's.
   std::vector<MachineBasicBlock*> MBBNumbering;
+
+  // Unary encoding of basic block symbols is used to reduce size of ".strtab".
+  // Basic block number 'i' gets a prefix of length 'i'.  The ith character also
+  // denotes the type of basic block number 'i'.  Return blocks are marked with
+  // 'r', landing pads with 'l' and regular blocks with 'a'.
+  std::vector<char> BBSectionsSymbolPrefix;
 
   // Pool-allocate MachineFunction-lifetime and IR objects.
   BumpPtrAllocator Allocator;
@@ -331,6 +342,14 @@ class MachineFunction {
   bool CallsUnwindInit = false;
   bool HasEHScopes = false;
   bool HasEHFunclets = false;
+
+  /// Section Type for basic blocks, only relevant with basic block sections.
+  BasicBlockSection BBSectionsType = BasicBlockSection::None;
+
+  /// With Basic Block Sections, this stores the bb ranges of cold and
+  /// exception sections.
+  std::pair<int, int> ColdSectionRange = {-1, -1};
+  std::pair<int, int> ExceptionSectionRange = {-1, -1};
 
   /// List of C++ TypeInfo used.
   std::vector<const GlobalValue *> TypeInfos;
@@ -453,6 +472,12 @@ public:
   MachineModuleInfo &getMMI() const { return MMI; }
   MCContext &getContext() const { return Ctx; }
 
+  /// Returns the Section this function belongs to.
+  MCSection *getSection() const { return Section; }
+
+  /// Indicates the Section this function belongs to.
+  void setSection(MCSection *S) { Section = S; }
+
   PseudoSourceValueManager &getPSVManager() const { return *PSVManager; }
 
   /// Return the DataLayout attached to the Module associated to this MF.
@@ -466,6 +491,35 @@ public:
 
   /// getFunctionNumber - Return a unique ID for the current function.
   unsigned getFunctionNumber() const { return FunctionNumber; }
+
+  /// Returns true if this function has basic block sections enabled.
+  bool hasBBSections() const {
+    return (BBSectionsType == BasicBlockSection::All ||
+            BBSectionsType == BasicBlockSection::List);
+  }
+
+  /// Returns true if basic block labels are to be generated for this function.
+  bool hasBBLabels() const {
+    return BBSectionsType == BasicBlockSection::Labels;
+  }
+
+  void setBBSectionsType(BasicBlockSection V) { BBSectionsType = V; }
+
+  void setSectionRange();
+
+  /// Returns true if this basic block number starts a cold or exception
+  /// section.
+  bool isSectionStartMBB(int N) const {
+    return (N == ColdSectionRange.first || N == ExceptionSectionRange.first);
+  }
+
+  /// Returns true if this basic block ends a cold or exception section.
+  bool isSectionEndMBB(int N) const {
+    return (N == ColdSectionRange.second || N == ExceptionSectionRange.second);
+  }
+
+  /// Creates basic block Labels for this function.
+  void createBBLabels();
 
   /// getTarget - Return the target machine this machine code is compiled with
   const LLVMTargetMachine &getTarget() const { return Target; }
@@ -1014,6 +1068,11 @@ public:
   /// of the instruction stream.
   void copyCallSiteInfo(const MachineInstr *Old,
                         const MachineInstr *New);
+
+  const std::vector<char> &getBBSectionsSymbolPrefix() const {
+    return BBSectionsSymbolPrefix;
+  }
+
   /// Move the call site info from \p Old to \New call site info. This function
   /// is used when we are replacing one call instruction with another one to
   /// the same callee.
