@@ -170,4 +170,226 @@ TBD
 "More Canonical" Loops
 ======================
 
-TBD
+.. _loop-terminology-loop-rotate:
+
+Rotated Loops
+-------------
+
+Loops are rotated by the LoopRotate (:ref:`loop-rotate <passes-loop-rotate>`)
+pass, which converts loops into do/while style loops and is
+implemented in
+`LoopRotation.h <http://llvm.org/doxygen/LoopRotation_8h_source.html>`_.  Example:
+
+.. code-block:: C
+
+  void test(int n) {
+    for (int i = 0; i < n; i += 1)
+      // Loop body
+  }
+
+is transformed to:
+
+.. code-block:: C
+
+  void test(int n) {
+    int i = 0;
+    do {
+      // Loop body
+      i += 1;
+    } while (i < n);
+  }
+
+**Warning**: This transformation is valid only if the compiler
+can prove that the loop body will be executed at least once. Otherwise,
+it has to insert a guard which will test it at runtime. In the example
+above, that would be:
+
+.. code-block:: C
+
+  void test(int n) {
+    int i = 0;
+    if (n > 0) {
+      do {
+        // Loop body
+        i += 1;
+      } while (i < n);
+    }
+  }
+
+It's important to understand the effect of loop rotation
+at the LLVM IR level. We follow with the previous examples
+in LLVM IR while also providing a graphical representation
+of the control-flow graphs (CFG). You can get the same graphical
+results by utilizing the `view-cfg <passes-view-cfg>` pass.
+
+The initial **for** loop could be translated to:
+
+.. code-block:: none
+
+  define void @test(i32 %n) {
+  entry:
+    br label %for.header
+
+  for.header:
+    %i = phi i32 [ 0, %entry ], [ %i.next, %latch ]
+    %cond = icmp slt i32 %i, %n
+    br i1 %cond, label %body, label %exit
+
+  body:
+    ; Loop body
+    br label %latch
+
+  latch:
+    %i.next = add nsw i32 %i, 1
+    br label %for.header
+
+  exit:
+    ret void
+  }
+
+.. image:: ./loop-terminology-initial-loop.png
+  :width: 400 px
+
+Before we explain how LoopRotate will actually
+transform this loop, here's how we could convert
+it (by hand) to a do-while style loop.
+
+.. code-block:: none
+
+  define void @test(i32 %n) {
+  entry:
+    br label %body
+
+  body:
+    %i = phi i32 [ 0, %entry ], [ %i.next, %latch ]
+    ; Loop body
+    br label %latch
+
+  latch:
+    %i.next = add nsw i32 %i, 1
+    %cond = icmp slt i32 %i.next, %n
+    br i1 %cond, label %body, label %exit
+
+  exit:
+    ret void
+  }
+
+.. image:: ./loop-terminology-rotated-loop.png
+  :width: 400 px
+
+Note a two things:
+
+* The condition check was moved to the "bottom" of the loop, i.e.
+  the latch. This is something that LoopRotate does by copying the header
+  of the loop to the latch.
+* The compiler in this case can't deduce that the loop will
+  definitely execute at least once so the above transformation
+  is not valid. As mentioned above, a guard has to be inserted,
+  which is something that LoopRotate will do.
+
+This is how LoopRotate transforms this loop:
+
+.. code-block:: none
+
+  define void @test(i32 %n) {
+  entry:
+    %guard_cond = icmp slt i32 0, %n
+    br i1 %guard_cond, label %loop.preheader, label %exit
+
+  loop.preheader:
+    br label %body
+
+  body:
+    %i2 = phi i32 [ 0, %loop.preheader ], [ %i.next, %latch ]
+    br label %latch
+
+  latch:
+    %i.next = add nsw i32 %i2, 1
+    %cond = icmp slt i32 %i.next, %n
+    br i1 %cond, label %body, label %loop.exit
+
+  loop.exit:
+    br label %exit
+
+  exit:
+    ret void
+  }
+
+.. image:: ./loop-terminology-guarded-loop.png
+  :width: 500 px
+
+The result is a little bit more complicated than we may expect
+because LoopRotate ensures that the loop is in
+`Loop Simplify Form <loop-terminology-loop-simplify>`
+after rotation.
+In this case, it inserted the %loop.preheader basic block so
+that the loop has a preheader and it introduced the %loop.exit
+basic block so that the loop has dedicated exits
+(otherwise, %exit would be jumped from both %latch and %entry,
+but %entry is not contained in the loop).
+Note that a loop has to be in Loop Simplify Form beforehand
+too for LoopRotate to be applied successfully.
+
+The main advantage of this form is that it allows hoisting
+invariant instructions, especially loads, into the preheader.
+That could be done in non-rotated loops as well but with
+some disadvantages.  Let's illustrate them with an example:
+
+.. code-block:: C
+
+  for (int i = 0; i < n; ++i) {
+    auto v = *p;
+    use(v);
+  }
+
+We assume that loading from p is invariant and use(v) is some
+statement that uses v.
+If we wanted to execute the load only once we could move it
+"out" of the loop body, resulting in this:
+
+.. code-block:: C
+
+  auto v = *p;
+  for (int i = 0; i < n; ++i) {
+    use(v);
+  }
+
+However, now, in the case that n <= 0, in the initial form,
+the loop body would never execute, and so, the load would
+never execute.  This is a problem mainly for semantic reasons.
+Consider the case in which n <= 0 and loading from p is invalid.
+In the initial program there would be no error.  However, with this
+transformation we would introduce one, effectively breaking
+the initial semantics.
+
+To avoid both of these problems, we can insert a guard:
+
+.. code-block:: C
+
+  if (n > 0) {  // loop guard
+    auto v = *p;
+    for (int i = 0; i < n; ++i) {
+      use(v);
+    }
+  }
+
+This is certainly better but it could be improved slightly. Notice
+that the check for whether n is bigger than 0 is executed twice (and
+n does not change in between).  Once when we check the guard condition
+and once in the first execution of the loop.  To avoid that, we could
+do an unconditional first execution and insert the loop condition
+in the end. This effectively means transforming the loop into a do-while loop:
+
+.. code-block:: C
+
+  if (0 < n) {
+    auto v = *p;
+    do {
+      use(v);
+      ++i;
+    } while (i < n);
+  }
+
+Note that LoopRotate does not generally do such
+hoisting.  Rather, it is an enabling transformation for other
+passes like Loop-Invariant Code Motion (:ref:`-licm <passes-licm>`).
