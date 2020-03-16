@@ -722,7 +722,10 @@ namespace llvm {
 
     /// If Op is a constant whose elements are all the same constant or
     /// undefined, return true and return the constant value in \p SplatVal.
-    bool isConstantSplat(SDValue Op, APInt &SplatVal);
+    /// If we have undef bits that don't cover an entire element, we treat these
+    /// as zero if AllowPartialUndefs is set, else we fail and return false.
+    bool isConstantSplat(SDValue Op, APInt &SplatVal,
+                         bool AllowPartialUndefs = true);
   } // end namespace X86
 
   //===--------------------------------------------------------------------===//
