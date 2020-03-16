@@ -4,8 +4,8 @@
 // Test that we produce the correct relocation types and that the relocations
 // correctly point to the section or the symbol.
 
-// IAMCU: Format: ELF32-iamcu
-// I386: Format: ELF32-i386
+// IAMCU: Format: elf32-iamcu
+// I386: Format: elf32-i386
 // CHECK:      Relocations [
 // CHECK-NEXT:   Section {{.*}} .rel.text {
 // CHECK-NEXT:     0x2          R_386_GOTOFF     .Lfoo 0x0
