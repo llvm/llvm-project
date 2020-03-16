@@ -1,5 +1,7 @@
-# RUN: llvm-mc -mcpu=skylake -filetype=obj -triple x86_64-pc-linux-gnu %s | llvm-objdump -d --section=.text - | FileCheck %s
+# RUN: llvm-mc -mcpu=skylake -filetype=obj -triple x86_64-pc-linux-gnu -x86-pad-max-prefix-size=0 %s | llvm-objdump -d --section=.text - | FileCheck %s
 
+# This test exercises only the padding via relaxation logic.  The  interaction
+# etween prefix padding and relaxation logic can be seen in align-via-padding.s
 
   .file "test.c"
   .text

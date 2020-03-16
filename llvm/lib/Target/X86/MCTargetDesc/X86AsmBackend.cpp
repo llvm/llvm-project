@@ -105,6 +105,10 @@ cl::opt<bool> X86AlignBranchWithin32BBoundaries(
         "assumptions about labels corresponding to particular instructions, "
         "and should be used with caution."));
 
+cl::opt<unsigned> X86PadMaxPrefixSize(
+    "x86-pad-max-prefix-size", cl::init(0),
+    cl::desc("Maximum number of prefixes to use for padding"));
+
 cl::opt<bool> X86PadForAlign(
     "x86-pad-for-align", cl::init(true), cl::Hidden,
     cl::desc("Pad previous instructions to implement align directives"));
@@ -186,8 +190,16 @@ public:
   void relaxInstruction(const MCInst &Inst, const MCSubtargetInfo &STI,
                         MCInst &Res) const override;
 
+  bool padInstructionViaRelaxation(MCRelaxableFragment &RF,
+                                   MCCodeEmitter &Emitter,
+                                   unsigned &RemainingSize) const;
+
+  bool padInstructionViaPrefix(MCRelaxableFragment &RF, MCCodeEmitter &Emitter,
+                               unsigned &RemainingSize) const;
+
   bool padInstructionEncoding(MCRelaxableFragment &RF, MCCodeEmitter &Emitter,
                               unsigned &RemainingSize) const;
+
   void finishLayout(MCAssembler const &Asm, MCAsmLayout &Layout) const override;
 
   bool writeNopData(raw_ostream &OS, uint64_t Count) const override;
@@ -734,19 +746,86 @@ void X86AsmBackend::relaxInstruction(const MCInst &Inst,
   Res.setOpcode(RelaxedOp);
 }
 
-static bool canBeRelaxedForPadding(const MCRelaxableFragment &RF) {
-  // TODO: There are lots of other tricks we could apply for increasing
-  // encoding size without impacting performance.
+/// Return true if this instruction has been fully relaxed into it's most
+/// general available form.
+static bool isFullyRelaxed(const MCRelaxableFragment &RF) {
   auto &Inst = RF.getInst();
   auto &STI = *RF.getSubtargetInfo();
   bool Is16BitMode = STI.getFeatureBits()[X86::Mode16Bit];
-  return getRelaxedOpcode(Inst, Is16BitMode) != Inst.getOpcode();
+  return getRelaxedOpcode(Inst, Is16BitMode) == Inst.getOpcode();
 }
 
-bool X86AsmBackend::padInstructionEncoding(MCRelaxableFragment &RF,
-                                           MCCodeEmitter &Emitter,
-                                           unsigned &RemainingSize) const {
-  if (!canBeRelaxedForPadding(RF))
+
+static bool shouldAddPrefix(const MCInst &Inst, const MCInstrInfo &MCII) {
+  // Linker may rewrite the instruction with variant symbol operand.
+  return !hasVariantSymbol(Inst);
+}
+
+static unsigned getRemainingPrefixSize(const MCInst &Inst,
+                                       const MCSubtargetInfo &STI,
+                                       MCCodeEmitter &Emitter) {
+  SmallString<256> Code;
+  raw_svector_ostream VecOS(Code);
+  Emitter.emitPrefix(Inst, VecOS, STI);
+  assert(Code.size() < 15 && "The number of prefixes must be less than 15.");
+
+  // TODO: It turns out we need a decent amount of plumbing for the target
+  // specific bits to determine number of prefixes its safe to add.  Various
+  // targets (older chips mostly, but also Atom family) encounter decoder
+  // stalls with too many prefixes.  For testing purposes, we set the value
+  // externally for the moment.
+  unsigned ExistingPrefixSize = Code.size();
+  unsigned TargetPrefixMax = X86PadMaxPrefixSize;
+  if (TargetPrefixMax <= ExistingPrefixSize)
+    return 0;
+  return TargetPrefixMax - ExistingPrefixSize;
+}
+
+bool X86AsmBackend::padInstructionViaPrefix(MCRelaxableFragment &RF,
+                                            MCCodeEmitter &Emitter,
+                                            unsigned &RemainingSize) const {
+  if (!shouldAddPrefix(RF.getInst(), *MCII))
+    return false;
+  // If the instruction isn't fully relaxed, shifting it around might require a
+  // larger value for one of the fixups then can be encoded.  The outer loop
+  // will also catch this before moving to the next instruction, but we need to
+  // prevent padding this single instruction as well.
+  if (!isFullyRelaxed(RF))
+    return false;
+
+  const unsigned OldSize = RF.getContents().size();
+  if (OldSize == 15)
+    return false;
+
+  const unsigned MaxPossiblePad = std::min(15 - OldSize, RemainingSize);
+  const unsigned PrefixBytesToAdd =
+    std::min(MaxPossiblePad,
+             getRemainingPrefixSize(RF.getInst(), STI, Emitter));
+  if (PrefixBytesToAdd == 0)
+    return false;
+
+  const uint8_t Prefix = determinePaddingPrefix(RF.getInst());
+
+  SmallString<256> Code;
+  Code.append(PrefixBytesToAdd, Prefix);
+  Code.append(RF.getContents().begin(), RF.getContents().end());
+  RF.getContents() = Code;
+
+  // Adjust the fixups for the change in offsets
+  for (auto &F : RF.getFixups()) {
+    F.setOffset(F.getOffset() + PrefixBytesToAdd);
+  }
+
+  RemainingSize -= PrefixBytesToAdd;
+  return true;
+}
+
+bool X86AsmBackend::padInstructionViaRelaxation(MCRelaxableFragment &RF,
+                                                MCCodeEmitter &Emitter,
+                                                unsigned &RemainingSize) const {
+  if (isFullyRelaxed(RF))
+    // TODO: There are lots of other tricks we could apply for increasing
+    // encoding size without impacting performance.
     return false;
 
   MCInst Relaxed;
@@ -767,6 +846,17 @@ bool X86AsmBackend::padInstructionEncoding(MCRelaxableFragment &RF,
   RF.getFixups() = Fixups;
   RemainingSize -= Delta;
   return true;
+}
+
+bool X86AsmBackend::padInstructionEncoding(MCRelaxableFragment &RF,
+                                           MCCodeEmitter &Emitter,
+                                           unsigned &RemainingSize) const {
+  bool Changed = false;
+  if (RemainingSize != 0)
+    Changed |= padInstructionViaRelaxation(RF, Emitter, RemainingSize);
+  if (RemainingSize != 0)
+    Changed |= padInstructionViaPrefix(RF, Emitter, RemainingSize);
+  return Changed;
 }
 
 void X86AsmBackend::finishLayout(MCAssembler const &Asm,
@@ -851,7 +941,7 @@ void X86AsmBackend::finishLayout(MCAssembler const &Asm,
         // We don't need to worry about larger positive offsets as none of the
         // possible offsets between this and our align are visible, and the
         // ones afterwards aren't changing.
-        if (mayNeedRelaxation(RF.getInst(), *RF.getSubtargetInfo()))
+        if (!isFullyRelaxed(RF))
           break;
       }
       Relaxable.clear();
