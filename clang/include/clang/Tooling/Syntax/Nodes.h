@@ -38,10 +38,10 @@ enum class NodeKind : uint16_t {
   Leaf,
   TranslationUnit,
 
-  // Expressions
+  // Expressions.
   UnknownExpression,
 
-  // Statements
+  // Statements.
   UnknownStatement,
   DeclarationStatement,
   EmptyStatement,
@@ -58,7 +58,7 @@ enum class NodeKind : uint16_t {
   ExpressionStatement,
   CompoundStatement,
 
-  // Declarations
+  // Declarations.
   UnknownDeclaration,
   EmptyDeclaration,
   StaticAssertDeclaration,
@@ -68,7 +68,16 @@ enum class NodeKind : uint16_t {
   NamespaceAliasDefinition,
   UsingNamespaceDirective,
   UsingDeclaration,
-  TypeAliasDeclaration
+  TypeAliasDeclaration,
+
+  // Declarators.
+  SimpleDeclarator,
+  ParenDeclarator,
+
+  ArraySubscript,
+  TrailingReturnType,
+  ParametersAndQualifiers,
+  MemberPointer
 };
 /// For debugging purposes.
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, NodeKind K);
@@ -101,10 +110,18 @@ enum class NodeRole : uint8_t {
   ExpressionStatement_expression,
   CompoundStatement_statement,
   StaticAssertDeclaration_condition,
-  StaticAssertDeclaration_message
+  StaticAssertDeclaration_message,
+  SimpleDeclaration_declarator,
+  ArraySubscript_sizeExpression,
+  TrailingReturnType_arrow,
+  TrailingReturnType_declarator,
+  ParametersAndQualifiers_parameter,
+  ParametersAndQualifiers_trailingReturn
 };
 /// For debugging purposes.
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, NodeRole R);
+
+class SimpleDeclarator;
 
 /// A root node for a translation unit. Parent is always null.
 class TranslationUnit final : public Tree {
@@ -375,6 +392,8 @@ public:
   static bool classof(const Node *N) {
     return N->kind() == NodeKind::SimpleDeclaration;
   }
+  /// FIXME: use custom iterator instead of 'vector'.
+  std::vector<syntax::SimpleDeclarator *> declarators();
 };
 
 /// namespace <name> { <decls> }
@@ -421,6 +440,113 @@ public:
   TypeAliasDeclaration() : Declaration(NodeKind::TypeAliasDeclaration) {}
   static bool classof(const Node *N) {
     return N->kind() == NodeKind::TypeAliasDeclaration;
+  }
+};
+
+/// Covers a name, an initializer and a part of the type outside declaration
+/// specifiers. Examples are:
+///     `*a` in `int *a`
+///     `a[10]` in `int a[10]`
+///     `*a = nullptr` in `int *a = nullptr`
+/// Declarators can be unnamed too:
+///     `**` in `new int**`
+///     `* = nullptr` in `void foo(int* = nullptr)`
+/// Most declarators you encounter are instances of SimpleDeclarator. They may
+/// contain an inner declarator inside parentheses, we represent it as
+/// ParenDeclarator. E.g.
+///     `(*a)` in `int (*a) = 10`
+class Declarator : public Tree {
+public:
+  Declarator(NodeKind K) : Tree(K) {}
+  static bool classof(const Node *N) {
+    return NodeKind::SimpleDeclarator <= N->kind() &&
+           N->kind() <= NodeKind::ParenDeclarator;
+  }
+};
+
+/// A top-level declarator without parentheses. See comment of Declarator for
+/// more details.
+class SimpleDeclarator final : public Declarator {
+public:
+  SimpleDeclarator() : Declarator(NodeKind::SimpleDeclarator) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::SimpleDeclarator;
+  }
+};
+
+/// Declarator inside parentheses.
+/// E.g. `(***a)` from `int (***a) = nullptr;`
+/// See comment of Declarator for more details.
+class ParenDeclarator final : public Declarator {
+public:
+  ParenDeclarator() : Declarator(NodeKind::ParenDeclarator) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::ParenDeclarator;
+  }
+  syntax::Leaf *lparen();
+  syntax::Leaf *rparen();
+};
+
+/// Array size specified inside a declarator.
+/// E.g:
+///   `[10]` in `int a[10];`
+///   `[static 10]` in `void f(int xs[static 10]);`
+class ArraySubscript final : public Tree {
+public:
+  ArraySubscript() : Tree(NodeKind::ArraySubscript) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::ArraySubscript;
+  }
+  // TODO: add an accessor for the "static" keyword.
+  syntax::Leaf *lbracket();
+  syntax::Expression *sizeExpression();
+  syntax::Leaf *rbracket();
+};
+
+/// Trailing return type after the parameter list, including the arrow token.
+/// E.g. `-> int***`.
+class TrailingReturnType final : public Tree {
+public:
+  TrailingReturnType() : Tree(NodeKind::TrailingReturnType) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::TrailingReturnType;
+  }
+  // TODO: add accessors for specifiers.
+  syntax::Leaf *arrow();
+  syntax::SimpleDeclarator *declarator();
+};
+
+/// Parameter list for a function type and a trailing return type, if the
+/// function has one.
+/// E.g.:
+///  `(int a) volatile ` in `int foo(int a) volatile;`
+///  `(int a) &&` in `int foo(int a) &&;`
+///  `() -> int` in `auto foo() -> int;`
+///  `() const` in `int foo() const;`
+///  `() noexcept` in `int foo() noexcept;`
+///  `() throw()` in `int foo() throw();`
+///
+/// (!) override doesn't belong here.
+class ParametersAndQualifiers final : public Tree {
+public:
+  ParametersAndQualifiers() : Tree(NodeKind::ParametersAndQualifiers) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::ParametersAndQualifiers;
+  }
+  syntax::Leaf *lparen();
+  /// FIXME: use custom iterator instead of 'vector'.
+  std::vector<syntax::SimpleDeclaration *> parameters();
+  syntax::Leaf *rparen();
+  syntax::TrailingReturnType *trailingReturn();
+};
+
+/// Member pointer inside a declarator
+/// E.g. `X::*` in `int X::* a = 0;`
+class MemberPointer final : public Tree {
+public:
+  MemberPointer() : Tree(NodeKind::MemberPointer) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::MemberPointer;
   }
 };
 
