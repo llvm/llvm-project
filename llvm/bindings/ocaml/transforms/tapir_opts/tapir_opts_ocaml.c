@@ -20,18 +20,16 @@
 
 /* [`Module] Llvm.PassManager.t -> unit
  */
-CAMLprim value llvm_add_lower_tapir_to_cilk(LLVMPassManagerRef PM,
-                                            TapirTargetRef tt)
+CAMLprim value llvm_add_lower_tapir_to_cilk(LLVMPassManagerRef PM)
 {
-    LLVMAddLowerTapirToCilk(PM, TapirTarget_val(tt));
+    LLVMAddLowerTapirToCilk(PM);
     return Val_unit;
 }
 
 /* [`Module] Llvm.PassManager.t -> unit
  */
-CAMLprim value llvm_add_loop_spawning(LLVMPassManagerRef PM,
-                                      TapirTargetRef tt)
+CAMLprim value llvm_add_loop_spawning(LLVMPassManagerRef PM)
 {
-    LLVMAddLoopSpawning(PM, TapirTarget_val(tt));
+    LLVMAddLoopSpawning(PM);
     return Val_unit;
 }
