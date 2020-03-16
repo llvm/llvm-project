@@ -704,27 +704,32 @@ public:
     std::pair<unsigned, MVT> SrcLT = TLI->getTypeLegalizationCost(DL, Src);
     std::pair<unsigned, MVT> DstLT = TLI->getTypeLegalizationCost(DL, Dst);
 
-    // Check for NOOP conversions.
-    if (SrcLT.first == DstLT.first &&
-        SrcLT.second.getSizeInBits() == DstLT.second.getSizeInBits()) {
+    unsigned SrcSize = SrcLT.second.getSizeInBits();
+    unsigned DstSize = DstLT.second.getSizeInBits();
 
-      // Bitcast between types that are legalized to the same type are free.
-      if (Opcode == Instruction::BitCast || Opcode == Instruction::Trunc)
+    switch (Opcode) {
+    default:
+      break;
+    case Instruction::Trunc:
+      // Check for NOOP conversions.
+      if (TLI->isTruncateFree(SrcLT.second, DstLT.second))
         return 0;
+      LLVM_FALLTHROUGH;
+    case Instruction::BitCast:
+      // Bitcast between types that are legalized to the same type are free.
+      if (SrcLT.first == DstLT.first && SrcSize == DstSize)
+        return 0;
+      break;
+    case Instruction::ZExt:
+      if (TLI->isZExtFree(SrcLT.second, DstLT.second))
+        return 0;
+      break;
+    case Instruction::AddrSpaceCast:
+      if (TLI->isFreeAddrSpaceCast(Src->getPointerAddressSpace(),
+                                   Dst->getPointerAddressSpace()))
+        return 0;
+      break;
     }
-
-    if (Opcode == Instruction::Trunc &&
-        TLI->isTruncateFree(SrcLT.second, DstLT.second))
-      return 0;
-
-    if (Opcode == Instruction::ZExt &&
-        TLI->isZExtFree(SrcLT.second, DstLT.second))
-      return 0;
-
-    if (Opcode == Instruction::AddrSpaceCast &&
-        TLI->isFreeAddrSpaceCast(Src->getPointerAddressSpace(),
-                                 Dst->getPointerAddressSpace()))
-      return 0;
 
     // If this is a zext/sext of a load, return 0 if the corresponding
     // extending load exists on target.
