@@ -5,7 +5,7 @@
 // RUN:          .caller  0x500000 : { *(.text) } \
 // RUN:          .callee2 0x900004 : { *(.callee_high) } } " > %t.script
 // RUN: ld.lld %t --script %t.script -o %t2
-// RUN: llvm-objdump -d -triple=armv6-none-linux-gnueabi %t2 | FileCheck %s
+// RUN: llvm-objdump -d --triple=armv6-none-linux-gnueabi %t2 | FileCheck %s
 
 // On older Arm Architectures such as v5 and v6 the Thumb BL and BLX relocation
 // uses a slightly different encoding that has a lower range. These relocations

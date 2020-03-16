@@ -1,7 +1,7 @@
 // REQUIRES: arm
 // RUN: llvm-mc -filetype=obj -triple=armv7a-none-linux-gnueabi %s -o %t
 // RUN: ld.lld %t -o %t2 --icf=all
-// RUN: llvm-objdump -s -d -triple=armv7a-none-linux-gnueabi %t2 | FileCheck %s
+// RUN: llvm-objdump -s -d --triple=armv7a-none-linux-gnueabi %t2 | FileCheck %s
 
  .syntax unified
  .section        .text.f,"axG",%progbits,f,comdat

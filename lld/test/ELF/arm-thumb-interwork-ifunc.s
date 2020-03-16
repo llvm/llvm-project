@@ -1,7 +1,7 @@
 // REQUIRES: arm
 // RUN: llvm-mc --triple=armv7a-linux-gnueabihf -arm-add-build-attributes -filetype=obj -o %t.o %s
 // RUN: ld.lld %t.o -o %t
-// RUN: llvm-objdump -triple armv7a-none-linux-gnueabi -d --no-show-raw-insn %t
+// RUN: llvm-objdump --triple=armv7a-none-linux-gnueabi -d --no-show-raw-insn %t
 
 /// Non-preemptible ifuncs are called via a PLT entry which is always Arm
 /// state, expect the ARM callers to go direct to the PLT entry, Thumb

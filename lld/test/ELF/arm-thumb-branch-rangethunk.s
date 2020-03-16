@@ -2,7 +2,7 @@
 // RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=thumbv7a-none-linux-gnueabi %s -o %t
 // RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=thumbv7a-none-linux-gnueabi %S/Inputs/far-arm-thumb-abs.s -o %tfar
 // RUN: ld.lld  %t %tfar -o %t2
-// RUN: llvm-objdump -d -triple=thumbv7a-none-linux-gnueabi %t2
+// RUN: llvm-objdump -d --triple=thumbv7a-none-linux-gnueabi %t2
  .syntax unified
  .thumb
  .section .text, "ax",%progbits

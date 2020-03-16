@@ -8,7 +8,7 @@
 # RUN:  .keep : { *(.keep) } \
 # RUN:  .temp : { *(.temp) }}" > %t.script
 # RUN: ld.lld --gc-sections -o %t --script %t.script %t.o
-# RUN: llvm-objdump -section-headers %t | \
+# RUN: llvm-objdump --section-headers %t | \
 # RUN:   FileCheck -check-prefix=SECGC %s
 # SECGC:      Sections:
 # SECGC-NEXT: Idx Name          Size
@@ -22,7 +22,7 @@
 # RUN:  .keep : { KEEP(*(.keep)) } \
 # RUN:  .temp : { *(.temp) }}" > %t.script
 # RUN: ld.lld --gc-sections -o %t --script %t.script %t.o
-# RUN: llvm-objdump -section-headers %t | \
+# RUN: llvm-objdump --section-headers %t | \
 # RUN:   FileCheck -check-prefix=SECNOGC %s
 # SECNOGC:      Sections:
 # SECNOGC-NEXT: Idx Name          Size
@@ -39,7 +39,7 @@
 # RUN:  .keep : { KEEP(*(.keep)) } \
 # RUN:  .nokeep : { *(.keep) }}" > %t.script
 # RUN: ld.lld --gc-sections -o %t --script %t.script %t.o
-# RUN: llvm-objdump -section-headers %t | FileCheck -check-prefix=MIXED1 %s
+# RUN: llvm-objdump --section-headers %t | FileCheck --check-prefix=MIXED1 %s
 # MIXED1:      Sections:
 # MIXED1-NEXT: Idx Name          Size
 # MIXED1-NEXT:   0               00000000
@@ -60,7 +60,7 @@
 # RUN:  .nokeep : { *(.keep) } \
 # RUN:  .keep : { KEEP(*(.keep)) }}" > %t.script
 # RUN: ld.lld --gc-sections -o %t --script %t.script %t.o
-# RUN: llvm-objdump -section-headers %t | FileCheck -check-prefix=MIXED2 %s
+# RUN: llvm-objdump --section-headers %t | FileCheck --check-prefix=MIXED2 %s
 # MIXED2:      Sections:
 # MIXED2-NEXT: Idx Name          Size
 # MIXED2-NEXT:   0               00000000
@@ -78,7 +78,7 @@
 # RUN:  .keep : { KEEP(*1.o(.keep)) } \
 # RUN:  }" > %t.script
 # RUN: ld.lld --gc-sections -o %t --script %t.script %t1.o %t.o
-# RUN: llvm-objdump -s %t | FileCheck -check-prefix=FILEMATCH %s
+# RUN: llvm-objdump -s %t | FileCheck --check-prefix=FILEMATCH %s
 # FILEMATCH:        Contents of section .keep:
 # FILEMATCH-NEXT:   00e8 41414141  AAAA
 

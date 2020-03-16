@@ -2,7 +2,7 @@
 # RUN: echo '.section bar, "a"' \
 # RUN:   | llvm-mc -filetype=obj -triple=x86_64-unknown-linux - -o %t
 # RUN: ld.lld -o %t1 --script %s %t -shared
-# RUN: llvm-objdump -section-headers -t %t1 | FileCheck %s
+# RUN: llvm-objdump --section-headers -t %t1 | FileCheck %s
 
 SECTIONS {
   . = SIZEOF_HEADERS;

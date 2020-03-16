@@ -15,7 +15,7 @@
 # RUN:  .mega2 : { *(.mega.2) } \
 # RUN: }" > %t.script
 # RUN: ld.lld %t --script %t.script -o %t2
-# RUN: llvm-objdump -section-headers %t2 | FileCheck %s
+# RUN: llvm-objdump --section-headers %t2 | FileCheck %s
 
 # CHECK:     Sections:
 # CHECK-NEXT: Idx Name          Size     VMA
@@ -65,7 +65,7 @@
 # RUN:  .hex2 0x500:{ *(.hex.2) } \
 # RUN: }" > %t8.script
 # RUN: ld.lld %t --script %t8.script -o %t6
-# RUN: llvm-objdump -section-headers %t6 | FileCheck -check-prefix=SECADDR %s
+# RUN: llvm-objdump --section-headers %t6 | FileCheck --check-prefix=SECADDR %s
 # SECADDR:     Sections:
 # SECADDR-NEXT: Idx Name          Size     VMA
 # SECADDR-NEXT:   0               00000000 0000000000000000

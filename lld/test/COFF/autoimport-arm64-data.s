@@ -8,7 +8,7 @@
 # RUN: lld-link -lldmingw -out:%t.exe -entry:main %t.obj %t-lib.lib -verbose
 
 # RUN: llvm-readobj --coff-imports %t.exe | FileCheck -check-prefix=IMPORTS %s
-# RUN: llvm-objdump -s %t.exe | FileCheck -check-prefix=CONTENTS %s
+# RUN: llvm-objdump -s %t.exe | FileCheck --check-prefix=CONTENTS %s
 
 # IMPORTS: Import {
 # IMPORTS-NEXT: Name: autoimport-arm64-data.s.tmp-lib.dll

@@ -82,7 +82,7 @@ __start:
 # .text.2 sections will be added to .text
 # RUN: echo "SECTIONS { .text 0x20000 : { *(.text) }  }" > %t2.script
 # RUN: ld.lld --script %t2.script %t-npic.o %t-pic.o %t-sto-pic.o -o %t2.exe
-# RUN: llvm-objdump -d --no-show-raw-insn %t2.exe | FileCheck -check-prefix=ORPH1 %s
+# RUN: llvm-objdump -d --no-show-raw-insn %t2.exe | FileCheck --check-prefix=ORPH1 %s
 
 # ORPH1: Disassembly of section .text:
 # ORPH1-EMPTY:
@@ -143,7 +143,7 @@ __start:
 # .text.2 sections will form a new OutputSection .text
 # RUN: echo "SECTIONS { .out 0x20000 : { *(.text) }  }" > %t3.script
 # RUN: ld.lld --script %t3.script %t-npic.o %t-pic.o %t-sto-pic.o -o %t3.exe
-# RUN: llvm-objdump -d --no-show-raw-insn %t3.exe | FileCheck -check-prefix=ORPH2 %s
+# RUN: llvm-objdump -d --no-show-raw-insn %t3.exe | FileCheck --check-prefix=ORPH2 %s
 
 # ORPH2: Disassembly of section .out:
 # ORPH2-EMPTY:

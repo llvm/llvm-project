@@ -1,7 +1,7 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
 # RUN: ld.lld %t.o -o %t
-# RUN: llvm-objdump -t -section-headers %t | FileCheck %s
+# RUN: llvm-objdump -t --section-headers %t | FileCheck %s
 
 ## This checks that:
 ## 1) Address of _etext is the first location after the last read-only loadable segment.

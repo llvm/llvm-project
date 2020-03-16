@@ -2,7 +2,7 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
 # RUN: echo "SECTIONS { /DISCARD/ : { *(.aaa*) } }" > %t.script
 # RUN: ld.lld -o %t1 --script %t.script %t
-# RUN: llvm-objdump -section-headers %t1 | FileCheck %s
+# RUN: llvm-objdump --section-headers %t1 | FileCheck %s
 
 # CHECK-NOT: .aaa
 

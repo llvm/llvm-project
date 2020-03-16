@@ -1,7 +1,7 @@
 // REQUIRES: arm
 // RUN: llvm-mc --arm-add-build-attributes -filetype=obj -triple=thumbv6a-none-linux-gnueabi %s -o %t
 // RUN: ld.lld %t -o %t2
-// RUN: llvm-objdump --no-show-raw-insn -triple=thumbv6a-none-linux-gnueabi -d %t2
+// RUN: llvm-objdump --no-show-raw-insn --triple=thumbv6a-none-linux-gnueabi -d %t2
 
 /// Check that the ARM ABI rules for undefined weak symbols are applied.
 /// Relative relocations are resolved to the place. Although we can't encode

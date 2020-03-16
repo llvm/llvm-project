@@ -1,7 +1,7 @@
 // REQUIRES: arm
 // RUN: llvm-mc -filetype=obj --arm-add-build-attributes -triple=armv7a-none-linux-gnueabi %s -o %t
 // RUN: ld.lld --emit-relocs %t -o %t2
-// RUN: llvm-objdump -s -triple=armv7a-none-linux-gnueabi %t2 | FileCheck %s
+// RUN: llvm-objdump -s --triple=armv7a-none-linux-gnueabi %t2 | FileCheck %s
 // RUN: llvm-readelf --relocs %t2 | FileCheck -check-prefix=CHECK-RELOCS %s
 
 // LLD does not support --emit-relocs for .ARM.exidx sections as the relocations
