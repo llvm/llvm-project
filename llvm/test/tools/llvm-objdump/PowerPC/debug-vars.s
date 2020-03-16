@@ -2,9 +2,10 @@
 ## using DWARF4 debug info, with multiple functions in one section.
 
 ## Generated with this compile command and source code:
-## clang --target=arm--none-eabi -march=armv7-a -c debug.c -O1 -gdwarf-3 -S -o -
-
 ## clang --target=powerpc64-unknown-linux -c debug.c -O1 -S -o -
+
+## The unicode characters in this test cause test failures on Windows.
+# UNSUPPORTED: system-windows
 
 ## int foo(int a, int b, int c) {
 ##   int x = a + b;
