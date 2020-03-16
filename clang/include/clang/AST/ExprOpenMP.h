@@ -13,7 +13,6 @@
 #ifndef LLVM_CLANG_AST_EXPROPENMP_H
 #define LLVM_CLANG_AST_EXPROPENMP_H
 
-#include "clang/AST/ComputeDependence.h"
 #include "clang/AST/Expr.h"
 
 namespace clang {
@@ -52,12 +51,24 @@ public:
   OMPArraySectionExpr(Expr *Base, Expr *LowerBound, Expr *Length, QualType Type,
                       ExprValueKind VK, ExprObjectKind OK,
                       SourceLocation ColonLoc, SourceLocation RBracketLoc)
-      : Expr(OMPArraySectionExprClass, Type, VK, OK), ColonLoc(ColonLoc),
-        RBracketLoc(RBracketLoc) {
+      : Expr(
+            OMPArraySectionExprClass, Type, VK, OK,
+            Base->isTypeDependent() ||
+                (LowerBound && LowerBound->isTypeDependent()) ||
+                (Length && Length->isTypeDependent()),
+            Base->isValueDependent() ||
+                (LowerBound && LowerBound->isValueDependent()) ||
+                (Length && Length->isValueDependent()),
+            Base->isInstantiationDependent() ||
+                (LowerBound && LowerBound->isInstantiationDependent()) ||
+                (Length && Length->isInstantiationDependent()),
+            Base->containsUnexpandedParameterPack() ||
+                (LowerBound && LowerBound->containsUnexpandedParameterPack()) ||
+                (Length && Length->containsUnexpandedParameterPack())),
+        ColonLoc(ColonLoc), RBracketLoc(RBracketLoc) {
     SubExprs[BASE] = Base;
     SubExprs[LOWER_BOUND] = LowerBound;
     SubExprs[LENGTH] = Length;
-    setDependence(computeDependence(this));
   }
 
   /// Create an empty array section expression.

@@ -13,10 +13,8 @@
 #ifndef LLVM_CLANG_AST_EXPROBJC_H
 #define LLVM_CLANG_AST_EXPROBJC_H
 
-#include "clang/AST/ComputeDependence.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclObjC.h"
-#include "clang/AST/DependenceFlags.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/OperationKinds.h"
 #include "clang/AST/SelectorLocationsKind.h"
@@ -55,10 +53,9 @@ class ObjCStringLiteral : public Expr {
 
 public:
   ObjCStringLiteral(StringLiteral *SL, QualType T, SourceLocation L)
-      : Expr(ObjCStringLiteralClass, T, VK_RValue, OK_Ordinary), String(SL),
-        AtLoc(L) {
-    setDependence(ExprDependence::None);
-  }
+      : Expr(ObjCStringLiteralClass, T, VK_RValue, OK_Ordinary, false, false,
+             false, false),
+        String(SL), AtLoc(L) {}
   explicit ObjCStringLiteral(EmptyShell Empty)
       : Expr(ObjCStringLiteralClass, Empty) {}
 
@@ -91,10 +88,9 @@ class ObjCBoolLiteralExpr : public Expr {
 
 public:
   ObjCBoolLiteralExpr(bool val, QualType Ty, SourceLocation l)
-      : Expr(ObjCBoolLiteralExprClass, Ty, VK_RValue, OK_Ordinary), Value(val),
-        Loc(l) {
-    setDependence(ExprDependence::None);
-  }
+      : Expr(ObjCBoolLiteralExprClass, Ty, VK_RValue, OK_Ordinary, false, false,
+             false, false),
+        Value(val), Loc(l) {}
   explicit ObjCBoolLiteralExpr(EmptyShell Empty)
       : Expr(ObjCBoolLiteralExprClass, Empty) {}
 
@@ -133,11 +129,13 @@ class ObjCBoxedExpr : public Expr {
 public:
   friend class ASTStmtReader;
 
-  ObjCBoxedExpr(Expr *E, QualType T, ObjCMethodDecl *method, SourceRange R)
-      : Expr(ObjCBoxedExprClass, T, VK_RValue, OK_Ordinary), SubExpr(E),
-        BoxingMethod(method), Range(R) {
-    setDependence(computeDependence(this));
-  }
+  ObjCBoxedExpr(Expr *E, QualType T, ObjCMethodDecl *method,
+                     SourceRange R)
+      : Expr(ObjCBoxedExprClass, T, VK_RValue, OK_Ordinary,
+             E->isTypeDependent(), E->isValueDependent(),
+             E->isInstantiationDependent(),
+             E->containsUnexpandedParameterPack()),
+        SubExpr(E), BoxingMethod(method), Range(R) {}
   explicit ObjCBoxedExpr(EmptyShell Empty)
       : Expr(ObjCBoxedExprClass, Empty) {}
 
@@ -411,12 +409,14 @@ class ObjCEncodeExpr : public Expr {
   SourceLocation AtLoc, RParenLoc;
 
 public:
-  ObjCEncodeExpr(QualType T, TypeSourceInfo *EncodedType, SourceLocation at,
-                 SourceLocation rp)
-      : Expr(ObjCEncodeExprClass, T, VK_LValue, OK_Ordinary),
-        EncodedType(EncodedType), AtLoc(at), RParenLoc(rp) {
-    setDependence(computeDependence(this));
-  }
+  ObjCEncodeExpr(QualType T, TypeSourceInfo *EncodedType,
+                 SourceLocation at, SourceLocation rp)
+      : Expr(ObjCEncodeExprClass, T, VK_LValue, OK_Ordinary,
+             EncodedType->getType()->isDependentType(),
+             EncodedType->getType()->isDependentType(),
+             EncodedType->getType()->isInstantiationDependentType(),
+             EncodedType->getType()->containsUnexpandedParameterPack()),
+        EncodedType(EncodedType), AtLoc(at), RParenLoc(rp) {}
 
   explicit ObjCEncodeExpr(EmptyShell Empty) : Expr(ObjCEncodeExprClass, Empty){}
 
@@ -456,12 +456,11 @@ class ObjCSelectorExpr : public Expr {
   SourceLocation AtLoc, RParenLoc;
 
 public:
-  ObjCSelectorExpr(QualType T, Selector selInfo, SourceLocation at,
-                   SourceLocation rp)
-      : Expr(ObjCSelectorExprClass, T, VK_RValue, OK_Ordinary),
-        SelName(selInfo), AtLoc(at), RParenLoc(rp) {
-    setDependence(ExprDependence::None);
-  }
+  ObjCSelectorExpr(QualType T, Selector selInfo,
+                   SourceLocation at, SourceLocation rp)
+      : Expr(ObjCSelectorExprClass, T, VK_RValue, OK_Ordinary, false, false,
+             false, false),
+        SelName(selInfo), AtLoc(at), RParenLoc(rp) {}
   explicit ObjCSelectorExpr(EmptyShell Empty)
       : Expr(ObjCSelectorExprClass, Empty) {}
 
@@ -509,12 +508,11 @@ public:
   friend class ASTStmtReader;
   friend class ASTStmtWriter;
 
-  ObjCProtocolExpr(QualType T, ObjCProtocolDecl *protocol, SourceLocation at,
-                   SourceLocation protoLoc, SourceLocation rp)
-      : Expr(ObjCProtocolExprClass, T, VK_RValue, OK_Ordinary),
-        TheProtocol(protocol), AtLoc(at), ProtoLoc(protoLoc), RParenLoc(rp) {
-    setDependence(ExprDependence::None);
-  }
+  ObjCProtocolExpr(QualType T, ObjCProtocolDecl *protocol,
+                 SourceLocation at, SourceLocation protoLoc, SourceLocation rp)
+      : Expr(ObjCProtocolExprClass, T, VK_RValue, OK_Ordinary, false, false,
+             false, false),
+        TheProtocol(protocol), AtLoc(at), ProtoLoc(protoLoc), RParenLoc(rp) {}
   explicit ObjCProtocolExpr(EmptyShell Empty)
       : Expr(ObjCProtocolExprClass, Empty) {}
 
@@ -560,15 +558,17 @@ class ObjCIvarRefExpr : public Expr {
   bool IsFreeIvar : 1;
 
 public:
-  ObjCIvarRefExpr(ObjCIvarDecl *d, QualType t, SourceLocation l,
-                  SourceLocation oploc, Expr *base, bool arrow = false,
-                  bool freeIvar = false)
+  ObjCIvarRefExpr(ObjCIvarDecl *d, QualType t,
+                  SourceLocation l, SourceLocation oploc,
+                  Expr *base,
+                  bool arrow = false, bool freeIvar = false)
       : Expr(ObjCIvarRefExprClass, t, VK_LValue,
-             d->isBitField() ? OK_BitField : OK_Ordinary),
+             d->isBitField() ? OK_BitField : OK_Ordinary,
+             /*TypeDependent=*/false, base->isValueDependent(),
+             base->isInstantiationDependent(),
+             base->containsUnexpandedParameterPack()),
         D(d), Base(base), Loc(l), OpLoc(oploc), IsArrow(arrow),
-        IsFreeIvar(freeIvar) {
-    setDependence(computeDependence(this));
-  }
+        IsFreeIvar(freeIvar) {}
 
   explicit ObjCIvarRefExpr(EmptyShell Empty)
       : Expr(ObjCIvarRefExprClass, Empty) {}
@@ -645,53 +645,57 @@ private:
   llvm::PointerUnion<Stmt *, const Type *, ObjCInterfaceDecl *> Receiver;
 
 public:
-  ObjCPropertyRefExpr(ObjCPropertyDecl *PD, QualType t, ExprValueKind VK,
-                      ExprObjectKind OK, SourceLocation l, Expr *base)
-      : Expr(ObjCPropertyRefExprClass, t, VK, OK), PropertyOrGetter(PD, false),
-        IdLoc(l), Receiver(base) {
+  ObjCPropertyRefExpr(ObjCPropertyDecl *PD, QualType t,
+                      ExprValueKind VK, ExprObjectKind OK,
+                      SourceLocation l, Expr *base)
+      : Expr(ObjCPropertyRefExprClass, t, VK, OK,
+             /*TypeDependent=*/false, base->isValueDependent(),
+             base->isInstantiationDependent(),
+             base->containsUnexpandedParameterPack()),
+        PropertyOrGetter(PD, false), IdLoc(l), Receiver(base) {
     assert(t->isSpecificPlaceholderType(BuiltinType::PseudoObject));
-    setDependence(computeDependence(this));
   }
 
-  ObjCPropertyRefExpr(ObjCPropertyDecl *PD, QualType t, ExprValueKind VK,
-                      ExprObjectKind OK, SourceLocation l, SourceLocation sl,
-                      QualType st)
-      : Expr(ObjCPropertyRefExprClass, t, VK, OK), PropertyOrGetter(PD, false),
-        IdLoc(l), ReceiverLoc(sl), Receiver(st.getTypePtr()) {
+  ObjCPropertyRefExpr(ObjCPropertyDecl *PD, QualType t,
+                      ExprValueKind VK, ExprObjectKind OK,
+                      SourceLocation l, SourceLocation sl, QualType st)
+      : Expr(ObjCPropertyRefExprClass, t, VK, OK,
+             /*TypeDependent=*/false, false, st->isInstantiationDependentType(),
+             st->containsUnexpandedParameterPack()),
+        PropertyOrGetter(PD, false), IdLoc(l), ReceiverLoc(sl),
+        Receiver(st.getTypePtr()) {
     assert(t->isSpecificPlaceholderType(BuiltinType::PseudoObject));
-    setDependence(computeDependence(this));
   }
 
   ObjCPropertyRefExpr(ObjCMethodDecl *Getter, ObjCMethodDecl *Setter,
                       QualType T, ExprValueKind VK, ExprObjectKind OK,
                       SourceLocation IdLoc, Expr *Base)
-      : Expr(ObjCPropertyRefExprClass, T, VK, OK),
+      : Expr(ObjCPropertyRefExprClass, T, VK, OK, false,
+             Base->isValueDependent(), Base->isInstantiationDependent(),
+             Base->containsUnexpandedParameterPack()),
         PropertyOrGetter(Getter, true), SetterAndMethodRefFlags(Setter, 0),
         IdLoc(IdLoc), Receiver(Base) {
     assert(T->isSpecificPlaceholderType(BuiltinType::PseudoObject));
-    setDependence(computeDependence(this));
   }
 
   ObjCPropertyRefExpr(ObjCMethodDecl *Getter, ObjCMethodDecl *Setter,
                       QualType T, ExprValueKind VK, ExprObjectKind OK,
-                      SourceLocation IdLoc, SourceLocation SuperLoc,
-                      QualType SuperTy)
-      : Expr(ObjCPropertyRefExprClass, T, VK, OK),
+                      SourceLocation IdLoc,
+                      SourceLocation SuperLoc, QualType SuperTy)
+      : Expr(ObjCPropertyRefExprClass, T, VK, OK, false, false, false, false),
         PropertyOrGetter(Getter, true), SetterAndMethodRefFlags(Setter, 0),
         IdLoc(IdLoc), ReceiverLoc(SuperLoc), Receiver(SuperTy.getTypePtr()) {
     assert(T->isSpecificPlaceholderType(BuiltinType::PseudoObject));
-    setDependence(computeDependence(this));
   }
 
   ObjCPropertyRefExpr(ObjCMethodDecl *Getter, ObjCMethodDecl *Setter,
                       QualType T, ExprValueKind VK, ExprObjectKind OK,
-                      SourceLocation IdLoc, SourceLocation ReceiverLoc,
-                      ObjCInterfaceDecl *Receiver)
-      : Expr(ObjCPropertyRefExprClass, T, VK, OK),
+                      SourceLocation IdLoc,
+                      SourceLocation ReceiverLoc, ObjCInterfaceDecl *Receiver)
+      : Expr(ObjCPropertyRefExprClass, T, VK, OK, false, false, false, false),
         PropertyOrGetter(Getter, true), SetterAndMethodRefFlags(Setter, 0),
         IdLoc(IdLoc), ReceiverLoc(ReceiverLoc), Receiver(Receiver) {
     assert(T->isSpecificPlaceholderType(BuiltinType::PseudoObject));
-    setDependence(computeDependence(this));
   }
 
   explicit ObjCPropertyRefExpr(EmptyShell Empty)
@@ -855,14 +859,20 @@ class ObjCSubscriptRefExpr : public Expr {
   ObjCMethodDecl *SetAtIndexMethodDecl;
 
 public:
-  ObjCSubscriptRefExpr(Expr *base, Expr *key, QualType T, ExprValueKind VK,
-                       ExprObjectKind OK, ObjCMethodDecl *getMethod,
+  ObjCSubscriptRefExpr(Expr *base, Expr *key, QualType T,
+                       ExprValueKind VK, ExprObjectKind OK,
+                       ObjCMethodDecl *getMethod,
                        ObjCMethodDecl *setMethod, SourceLocation RB)
-      : Expr(ObjCSubscriptRefExprClass, T, VK, OK), RBracket(RB),
-        GetAtIndexMethodDecl(getMethod), SetAtIndexMethodDecl(setMethod) {
-    SubExprs[BASE] = base;
-    SubExprs[KEY] = key;
-    setDependence(computeDependence(this));
+      : Expr(ObjCSubscriptRefExprClass, T, VK, OK,
+             base->isTypeDependent() || key->isTypeDependent(),
+             base->isValueDependent() || key->isValueDependent(),
+             (base->isInstantiationDependent() ||
+              key->isInstantiationDependent()),
+             (base->containsUnexpandedParameterPack() ||
+              key->containsUnexpandedParameterPack())),
+        RBracket(RB), GetAtIndexMethodDecl(getMethod),
+        SetAtIndexMethodDecl(setMethod) {
+    SubExprs[BASE] = base; SubExprs[KEY] = key;
   }
 
   explicit ObjCSubscriptRefExpr(EmptyShell Empty)
@@ -1495,10 +1505,11 @@ class ObjCIsaExpr : public Expr {
 public:
   ObjCIsaExpr(Expr *base, bool isarrow, SourceLocation l, SourceLocation oploc,
               QualType ty)
-      : Expr(ObjCIsaExprClass, ty, VK_LValue, OK_Ordinary), Base(base),
-        IsaMemberLoc(l), OpLoc(oploc), IsArrow(isarrow) {
-    setDependence(computeDependence(this));
-  }
+      : Expr(ObjCIsaExprClass, ty, VK_LValue, OK_Ordinary,
+             /*TypeDependent=*/false, base->isValueDependent(),
+             base->isInstantiationDependent(),
+             /*ContainsUnexpandedParameterPack=*/false),
+        Base(base), IsaMemberLoc(l), OpLoc(oploc), IsArrow(isarrow) {}
 
   /// Build an empty expression.
   explicit ObjCIsaExpr(EmptyShell Empty) : Expr(ObjCIsaExprClass, Empty) {}
@@ -1580,10 +1591,12 @@ class ObjCIndirectCopyRestoreExpr : public Expr {
 
 public:
   ObjCIndirectCopyRestoreExpr(Expr *operand, QualType type, bool shouldCopy)
-      : Expr(ObjCIndirectCopyRestoreExprClass, type, VK_LValue, OK_Ordinary),
+      : Expr(ObjCIndirectCopyRestoreExprClass, type, VK_LValue, OK_Ordinary,
+             operand->isTypeDependent(), operand->isValueDependent(),
+             operand->isInstantiationDependent(),
+             operand->containsUnexpandedParameterPack()),
         Operand(operand) {
     setShouldCopy(shouldCopy);
-    setDependence(computeDependence(this));
   }
 
   Expr *getSubExpr() { return cast<Expr>(Operand); }
@@ -1692,10 +1705,9 @@ class ObjCAvailabilityCheckExpr : public Expr {
 public:
   ObjCAvailabilityCheckExpr(VersionTuple VersionToCheck, SourceLocation AtLoc,
                             SourceLocation RParen, QualType Ty)
-      : Expr(ObjCAvailabilityCheckExprClass, Ty, VK_RValue, OK_Ordinary),
-        VersionToCheck(VersionToCheck), AtLoc(AtLoc), RParen(RParen) {
-    setDependence(ExprDependence::None);
-  }
+      : Expr(ObjCAvailabilityCheckExprClass, Ty, VK_RValue, OK_Ordinary, false,
+             false, false, false),
+        VersionToCheck(VersionToCheck), AtLoc(AtLoc), RParen(RParen) {}
 
   explicit ObjCAvailabilityCheckExpr(EmptyShell Shell)
       : Expr(ObjCAvailabilityCheckExprClass, Shell) {}
