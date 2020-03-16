@@ -23,7 +23,6 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/OSLog.h"
-#include "clang/Basic/AArch64SVETypeFlags.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
@@ -4649,7 +4648,7 @@ enum {
 };
 
 namespace {
-struct ARMVectorIntrinsicInfo {
+struct NeonIntrinsicInfo {
   const char *NameHint;
   unsigned BuiltinID;
   unsigned LLVMIntrinsic;
@@ -4659,7 +4658,7 @@ struct ARMVectorIntrinsicInfo {
   bool operator<(unsigned RHSBuiltinID) const {
     return BuiltinID < RHSBuiltinID;
   }
-  bool operator<(const ARMVectorIntrinsicInfo &TE) const {
+  bool operator<(const NeonIntrinsicInfo &TE) const {
     return BuiltinID < TE.BuiltinID;
   }
 };
@@ -4677,7 +4676,7 @@ struct ARMVectorIntrinsicInfo {
       Intrinsic::LLVMIntrinsic, Intrinsic::AltLLVMIntrinsic, \
       TypeModifier }
 
-static const ARMVectorIntrinsicInfo ARMSIMDIntrinsicMap [] = {
+static const NeonIntrinsicInfo ARMSIMDIntrinsicMap [] = {
   NEONMAP2(vabd_v, arm_neon_vabdu, arm_neon_vabds, Add1ArgType | UnsignedAlts),
   NEONMAP2(vabdq_v, arm_neon_vabdu, arm_neon_vabds, Add1ArgType | UnsignedAlts),
   NEONMAP1(vabs_v, arm_neon_vabs, 0),
@@ -4958,7 +4957,7 @@ static const ARMVectorIntrinsicInfo ARMSIMDIntrinsicMap [] = {
   NEONMAP0(vzipq_v)
 };
 
-static const ARMVectorIntrinsicInfo AArch64SIMDIntrinsicMap[] = {
+static const NeonIntrinsicInfo AArch64SIMDIntrinsicMap[] = {
   NEONMAP1(vabs_v, aarch64_neon_abs, 0),
   NEONMAP1(vabsq_v, aarch64_neon_abs, 0),
   NEONMAP0(vaddhn_v),
@@ -5127,7 +5126,7 @@ static const ARMVectorIntrinsicInfo AArch64SIMDIntrinsicMap[] = {
   NEONMAP0(vtstq_v),
 };
 
-static const ARMVectorIntrinsicInfo AArch64SISDIntrinsicMap[] = {
+static const NeonIntrinsicInfo AArch64SISDIntrinsicMap[] = {
   NEONMAP1(vabdd_f64, aarch64_sisd_fabd, Add1ArgType),
   NEONMAP1(vabds_f32, aarch64_sisd_fabd, Add1ArgType),
   NEONMAP1(vabsd_s64, aarch64_neon_abs, Add1ArgType),
@@ -5357,32 +5356,15 @@ static const ARMVectorIntrinsicInfo AArch64SISDIntrinsicMap[] = {
 #undef NEONMAP1
 #undef NEONMAP2
 
-#define SVEMAP1(NameBase, LLVMIntrinsic, TypeModifier)                         \
-  {                                                                            \
-    #NameBase, SVE::BI__builtin_sve_##NameBase, Intrinsic::LLVMIntrinsic, 0,   \
-        TypeModifier                                                           \
-  }
-
-#define SVEMAP2(NameBase, TypeModifier)                                        \
-  { #NameBase, SVE::BI__builtin_sve_##NameBase, 0, 0, TypeModifier }
-static const ARMVectorIntrinsicInfo AArch64SVEIntrinsicMap[] = {
-#define GET_SVE_LLVM_INTRINSIC_MAP
-#include "clang/Basic/arm_sve_codegenmap.inc"
-#undef GET_SVE_LLVM_INTRINSIC_MAP
-};
-
-#undef SVEMAP1
-#undef SVEMAP2
-
 static bool NEONSIMDIntrinsicsProvenSorted = false;
 
 static bool AArch64SIMDIntrinsicsProvenSorted = false;
 static bool AArch64SISDIntrinsicsProvenSorted = false;
-static bool AArch64SVEIntrinsicsProvenSorted = false;
 
-static const ARMVectorIntrinsicInfo *
-findARMVectorIntrinsicInMap(ArrayRef<ARMVectorIntrinsicInfo> IntrinsicMap,
-                            unsigned BuiltinID, bool &MapProvenSorted) {
+
+static const NeonIntrinsicInfo *
+findNeonIntrinsicInMap(ArrayRef<NeonIntrinsicInfo> IntrinsicMap,
+                       unsigned BuiltinID, bool &MapProvenSorted) {
 
 #ifndef NDEBUG
   if (!MapProvenSorted) {
@@ -5391,8 +5373,7 @@ findARMVectorIntrinsicInMap(ArrayRef<ARMVectorIntrinsicInfo> IntrinsicMap,
   }
 #endif
 
-  const ARMVectorIntrinsicInfo *Builtin =
-      llvm::lower_bound(IntrinsicMap, BuiltinID);
+  const NeonIntrinsicInfo *Builtin = llvm::lower_bound(IntrinsicMap, BuiltinID);
 
   if (Builtin != IntrinsicMap.end() && Builtin->BuiltinID == BuiltinID)
     return Builtin;
@@ -5439,9 +5420,10 @@ Function *CodeGenFunction::LookupNeonLLVMIntrinsic(unsigned IntrinsicID,
   return CGM.getIntrinsic(IntrinsicID, Tys);
 }
 
-static Value *EmitCommonNeonSISDBuiltinExpr(
-    CodeGenFunction &CGF, const ARMVectorIntrinsicInfo &SISDInfo,
-    SmallVectorImpl<Value *> &Ops, const CallExpr *E) {
+static Value *EmitCommonNeonSISDBuiltinExpr(CodeGenFunction &CGF,
+                                            const NeonIntrinsicInfo &SISDInfo,
+                                            SmallVectorImpl<Value *> &Ops,
+                                            const CallExpr *E) {
   unsigned BuiltinID = SISDInfo.BuiltinID;
   unsigned int Int = SISDInfo.LLVMIntrinsic;
   unsigned Modifier = SISDInfo.TypeModifier;
@@ -6954,7 +6936,7 @@ Value *CodeGenFunction::EmitARMBuiltinExpr(unsigned BuiltinID,
   // Many NEON builtins have identical semantics and uses in ARM and
   // AArch64. Emit these in a single function.
   auto IntrinsicMap = makeArrayRef(ARMSIMDIntrinsicMap);
-  const ARMVectorIntrinsicInfo *Builtin = findARMVectorIntrinsicInMap(
+  const NeonIntrinsicInfo *Builtin = findNeonIntrinsicInMap(
       IntrinsicMap, BuiltinID, NEONSIMDIntrinsicsProvenSorted);
   if (Builtin)
     return EmitCommonNeonBuiltinExpr(
@@ -7526,40 +7508,9 @@ Value *CodeGenFunction::EmitSVEMaskedLoad(llvm::Type *ReturnTy,
   return Builder.CreateMaskedLoad(BasePtr, Align(1), Predicate, Splat0);
 }
 
-Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
-                                                  const CallExpr *E) {
-  // Find out if any arguments are required to be integer constant expressions.
-  unsigned ICEArguments = 0;
-  ASTContext::GetBuiltinTypeError Error;
-  getContext().GetBuiltinType(BuiltinID, Error, &ICEArguments);
-  assert(Error == ASTContext::GE_None && "Should not codegen an error");
-
-  llvm::SmallVector<Value *, 4> Ops;
-  for (unsigned i = 0, e = E->getNumArgs(); i != e; i++) {
-    if ((ICEArguments & (1 << i)) == 0)
-      Ops.push_back(EmitScalarExpr(E->getArg(i)));
-    else
-      llvm_unreachable("Not yet implemented");
-  }
-
-  auto *Builtin = findARMVectorIntrinsicInMap(AArch64SVEIntrinsicMap, BuiltinID,
-                                              AArch64SVEIntrinsicsProvenSorted);
-  SVETypeFlags TypeFlags(Builtin->TypeModifier);
-  llvm::Type *Ty = ConvertType(E->getType());
-  if (TypeFlags.isLoad())
-    return EmitSVEMaskedLoad(Ty, Ops);
-
-  /// Should not happen
-  return nullptr;
-}
-
 Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
                                                const CallExpr *E,
                                                llvm::Triple::ArchType Arch) {
-  if (BuiltinID >= AArch64::FirstSVEBuiltin &&
-      BuiltinID <= AArch64::LastSVEBuiltin)
-    return EmitAArch64SVEBuiltinExpr(BuiltinID, E);
-
   unsigned HintID = static_cast<unsigned>(-1);
   switch (BuiltinID) {
   default: break;
@@ -7591,6 +7542,27 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
   if (HintID != static_cast<unsigned>(-1)) {
     Function *F = CGM.getIntrinsic(Intrinsic::aarch64_hint);
     return Builder.CreateCall(F, llvm::ConstantInt::get(Int32Ty, HintID));
+  }
+
+  switch (BuiltinID) {
+  case AArch64::BI__builtin_sve_svld1_u8:
+  case AArch64::BI__builtin_sve_svld1_u16:
+  case AArch64::BI__builtin_sve_svld1_u32:
+  case AArch64::BI__builtin_sve_svld1_u64:
+  case AArch64::BI__builtin_sve_svld1_s8:
+  case AArch64::BI__builtin_sve_svld1_s16:
+  case AArch64::BI__builtin_sve_svld1_s32:
+  case AArch64::BI__builtin_sve_svld1_s64:
+  case AArch64::BI__builtin_sve_svld1_f16:
+  case AArch64::BI__builtin_sve_svld1_f32:
+  case AArch64::BI__builtin_sve_svld1_f64: {
+    llvm::SmallVector<Value *, 4> Ops = {EmitScalarExpr(E->getArg(0)),
+                                         EmitScalarExpr(E->getArg(1))};
+    llvm::Type *Ty = ConvertType(E->getType());
+    return EmitSVEMaskedLoad(Ty, Ops);
+  }
+  default:
+    break;
   }
 
   if (BuiltinID == AArch64::BI__builtin_arm_prefetch) {
@@ -7991,7 +7963,7 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
   }
 
   auto SISDMap = makeArrayRef(AArch64SISDIntrinsicMap);
-  const ARMVectorIntrinsicInfo *Builtin = findARMVectorIntrinsicInMap(
+  const NeonIntrinsicInfo *Builtin = findNeonIntrinsicInMap(
       SISDMap, BuiltinID, AArch64SISDIntrinsicsProvenSorted);
 
   if (Builtin) {
@@ -8831,8 +8803,8 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
 
   // Not all intrinsics handled by the common case work for AArch64 yet, so only
   // defer to common code if it's been added to our special map.
-  Builtin = findARMVectorIntrinsicInMap(AArch64SIMDIntrinsicMap, BuiltinID,
-                                        AArch64SIMDIntrinsicsProvenSorted);
+  Builtin = findNeonIntrinsicInMap(AArch64SIMDIntrinsicMap, BuiltinID,
+                                   AArch64SIMDIntrinsicsProvenSorted);
 
   if (Builtin)
     return EmitCommonNeonBuiltinExpr(
