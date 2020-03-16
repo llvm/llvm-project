@@ -12711,7 +12711,6 @@ static SDValue performScatterStoreCombine(SDNode *N, SelectionDAG &DAG,
   // immediates outside that range and non-immediate scalar offsets use SST1 or
   // SST1_UXTW instead.
   if (Opcode == AArch64ISD::SST1_IMM) {
-    ConstantSDNode *OffsetConst = dyn_cast<ConstantSDNode>(Offset.getNode());
     if (!isValidImmForSVEVecImmAddrMode(Offset,
                                         SrcVT.getScalarSizeInBits() / 8)) {
       if (MVT::nxv4i32 == Base.getValueType().getSimpleVT().SimpleTy)
