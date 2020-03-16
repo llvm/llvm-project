@@ -273,6 +273,8 @@ MemCmpExpansion::LoadPair MemCmpExpansion::getLoadPair(Type *LoadSizeType,
   // Get the memory source at offset `OffsetBytes`.
   Value *LhsSource = CI->getArgOperand(0);
   Value *RhsSource = CI->getArgOperand(1);
+  Align LhsAlign = LhsSource->getPointerAlignment(DL).valueOrOne();
+  Align RhsAlign = RhsSource->getPointerAlignment(DL).valueOrOne();
   if (OffsetBytes > 0) {
     auto *ByteType = Type::getInt8Ty(CI->getContext());
     LhsSource = Builder.CreateConstGEP1_64(
@@ -281,6 +283,8 @@ MemCmpExpansion::LoadPair MemCmpExpansion::getLoadPair(Type *LoadSizeType,
     RhsSource = Builder.CreateConstGEP1_64(
         ByteType, Builder.CreateBitCast(RhsSource, ByteType->getPointerTo()),
         OffsetBytes);
+    LhsAlign = commonAlignment(LhsAlign, OffsetBytes);
+    RhsAlign = commonAlignment(RhsAlign, OffsetBytes);
   }
   LhsSource = Builder.CreateBitCast(LhsSource, LoadSizeType->getPointerTo());
   RhsSource = Builder.CreateBitCast(RhsSource, LoadSizeType->getPointerTo());
@@ -290,13 +294,13 @@ MemCmpExpansion::LoadPair MemCmpExpansion::getLoadPair(Type *LoadSizeType,
   if (auto *C = dyn_cast<Constant>(LhsSource))
     Lhs = ConstantFoldLoadFromConstPtr(C, LoadSizeType, DL);
   if (!Lhs)
-    Lhs = Builder.CreateLoad(LoadSizeType, LhsSource);
+    Lhs = Builder.CreateAlignedLoad(LoadSizeType, LhsSource, LhsAlign);
 
   Value *Rhs = nullptr;
   if (auto *C = dyn_cast<Constant>(RhsSource))
     Rhs = ConstantFoldLoadFromConstPtr(C, LoadSizeType, DL);
   if (!Rhs)
-    Rhs = Builder.CreateLoad(LoadSizeType, RhsSource);
+    Rhs = Builder.CreateAlignedLoad(LoadSizeType, RhsSource, RhsAlign);
 
   // Swap bytes if required.
   if (NeedsBSwap) {
