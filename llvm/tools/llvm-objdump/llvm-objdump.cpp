@@ -798,6 +798,7 @@ public:
     case LineChar::LabelHoriz:
       return IsASCII ? "-" : "─";
     }
+    llvm_unreachable("Unexpected LineChar");
   }
 
   /// Print live ranges to the right of an existing line. This assumes the
