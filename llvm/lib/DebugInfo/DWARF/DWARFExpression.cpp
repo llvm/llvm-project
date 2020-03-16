@@ -401,6 +401,27 @@ static bool printCompactDWARFExpr(raw_ostream &OS, DWARFExpression::iterator I,
         S << format("%+" PRId64, Offset);
       break;
     }
+    case dwarf::DW_OP_entry_value:
+    case dwarf::DW_OP_GNU_entry_value: {
+      // DW_OP_entry_value contains a sub-expression which must be rendered
+      // separately.
+      uint64_t SubExprLength = Op.getRawOperand(0);
+      DWARFExpression::iterator SubExprEnd = I.skipBytes(SubExprLength);
+      ++I;
+      raw_svector_ostream S(Stack.emplace_back().String);
+      S << "entry(";
+      printCompactDWARFExpr(S, I, SubExprEnd, MRI);
+      S << ")";
+      I = SubExprEnd;
+      continue;
+    }
+    case dwarf::DW_OP_stack_value: {
+      // The top stack entry should be treated as the actual value of tne
+      // variable, rather than the address of the variable in memory.
+      assert(!Stack.empty());
+      Stack.back().Kind = PrintedExpr::Value;
+      break;
+    }
     default:
       if (Opcode >= dwarf::DW_OP_reg0 && Opcode <= dwarf::DW_OP_reg31) {
         // DW_OP_reg<N>: A register, with the register num implied by the
