@@ -13,6 +13,7 @@
 #define MLIR_TABLEGEN_DIALECT_H_
 
 #include "mlir/Support/LLVM.h"
+#include <string>
 
 namespace llvm {
 class Record;
