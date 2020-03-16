@@ -2473,4 +2473,47 @@ TEST_F(GISelMITest, LowerFFloor) {
   // Check
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
+
+// Test lowering of G_BSWAP
+TEST_F(GISelMITest, LowerBSWAP) {
+  setUp();
+  if (!TM)
+    return;
+
+  DefineLegalizerInfo(A, {});
+
+  // Make sure vector lowering doesn't assert.
+  auto Cast = B.buildBitcast(LLT::vector(2, 32), Copies[0]);
+  auto BSwap = B.buildBSwap(LLT::vector(2, 32), Cast);
+  AInfo Info(MF->getSubtarget());
+  DummyGISelObserver Observer;
+  LegalizerHelper Helper(*MF, Info, Observer, B);
+  // Perform Legalization
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.lower(*BSwap, 0, LLT()));
+
+  auto CheckStr = R"(
+  CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY
+  CHECK: [[VEC:%[0-9]+]]:_(<2 x s32>) = G_BITCAST [[COPY]]
+  CHECK: [[K24:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
+  CHECK: [[SPLAT24:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[K24]]:_(s32), [[K24]]:_(s32)
+  CHECK: [[SHL0:%[0-9]+]]:_(<2 x s32>) = G_SHL [[VEC]]:_, [[SPLAT24]]
+  CHECK: [[SHR0:%[0-9]+]]:_(<2 x s32>) = G_LSHR [[VEC]]:_, [[SPLAT24]]
+  CHECK: [[OR0:%[0-9]+]]:_(<2 x s32>) = G_OR [[SHR0]]:_, [[SHL0]]:_
+  CHECK: [[KMASK:%[0-9]+]]:_(s32) = G_CONSTANT i32 65280
+  CHECK: [[SPLATMASK:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[KMASK]]:_(s32), [[KMASK]]:_(s32)
+  CHECK: [[K8:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+  CHECK: [[SPLAT8:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[K8]]:_(s32), [[K8]]:_(s32)
+  CHECK: [[AND0:%[0-9]+]]:_(<2 x s32>) = G_AND [[VEC]]:_, [[SPLATMASK]]:_
+  CHECK: [[SHL1:%[0-9]+]]:_(<2 x s32>) = G_SHL [[AND0]]:_, [[SPLAT8]]
+  CHECK: [[OR1:%[0-9]+]]:_(<2 x s32>) = G_OR [[OR0]]:_, [[SHL1]]:_
+  CHECK: [[SHR1:%[0-9]+]]:_(<2 x s32>) = G_LSHR [[VEC]]:_, [[SPLAT8]]
+  CHECK: [[AND1:%[0-9]+]]:_(<2 x s32>) = G_AND [[SHR1]]:_, [[SPLATMASK]]:_
+  CHECK: [[BSWAP:%[0-9]+]]:_(<2 x s32>) = G_OR [[OR1]]:_, [[AND1]]:_
+  )";
+
+  // Check
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
+
 } // namespace
