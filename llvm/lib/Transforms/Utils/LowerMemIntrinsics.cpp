@@ -36,15 +36,15 @@ void llvm::createMemCpyLoopKnownSize(Instruction *InsertBefore, Value *SrcAddr,
   Function *ParentFunc = PreLoopBB->getParent();
   LLVMContext &Ctx = PreLoopBB->getContext();
 
+  unsigned SrcAS = cast<PointerType>(SrcAddr->getType())->getAddressSpace();
+  unsigned DstAS = cast<PointerType>(DstAddr->getType())->getAddressSpace();
+
   Type *TypeOfCopyLen = CopyLen->getType();
   Type *LoopOpType =
-      TTI.getMemcpyLoopLoweringType(Ctx, CopyLen, SrcAlign, DestAlign);
+    TTI.getMemcpyLoopLoweringType(Ctx, CopyLen, SrcAS, DstAS, SrcAlign, DestAlign);
 
   unsigned LoopOpSize = getLoopOperandSizeInBytes(LoopOpType);
   uint64_t LoopEndCount = CopyLen->getZExtValue() / LoopOpSize;
-
-  unsigned SrcAS = cast<PointerType>(SrcAddr->getType())->getAddressSpace();
-  unsigned DstAS = cast<PointerType>(DstAddr->getType())->getAddressSpace();
 
   if (LoopEndCount != 0) {
     // Split
@@ -99,6 +99,7 @@ void llvm::createMemCpyLoopKnownSize(Instruction *InsertBefore, Value *SrcAddr,
 
     SmallVector<Type *, 5> RemainingOps;
     TTI.getMemcpyLoopResidualLoweringType(RemainingOps, Ctx, RemainingBytes,
+                                          SrcAS, DstAS,
                                           SrcAlign, DestAlign);
 
     for (auto OpTy : RemainingOps) {
@@ -144,15 +145,15 @@ void llvm::createMemCpyLoopUnknownSize(Instruction *InsertBefore,
 
   Function *ParentFunc = PreLoopBB->getParent();
   LLVMContext &Ctx = PreLoopBB->getContext();
+  unsigned SrcAS = cast<PointerType>(SrcAddr->getType())->getAddressSpace();
+  unsigned DstAS = cast<PointerType>(DstAddr->getType())->getAddressSpace();
 
   Type *LoopOpType =
-      TTI.getMemcpyLoopLoweringType(Ctx, CopyLen, SrcAlign, DestAlign);
+    TTI.getMemcpyLoopLoweringType(Ctx, CopyLen, SrcAS, DstAS, SrcAlign, DestAlign);
   unsigned LoopOpSize = getLoopOperandSizeInBytes(LoopOpType);
 
   IRBuilder<> PLBuilder(PreLoopBB->getTerminator());
 
-  unsigned SrcAS = cast<PointerType>(SrcAddr->getType())->getAddressSpace();
-  unsigned DstAS = cast<PointerType>(DstAddr->getType())->getAddressSpace();
   PointerType *SrcOpType = PointerType::get(LoopOpType, SrcAS);
   PointerType *DstOpType = PointerType::get(LoopOpType, DstAS);
   if (SrcAddr->getType() != SrcOpType) {
