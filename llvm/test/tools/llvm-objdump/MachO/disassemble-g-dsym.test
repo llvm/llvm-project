@@ -1,6 +1,6 @@
 // RUN: dsymutil -f -oso-prepend-path=%p/../../dsymutil/ %p/../../dsymutil/Inputs/basic.macho.x86_64 -o %t1.dSYM
 // RUN: llvm-objdump -d -g --dsym=%t1.dSYM %p/../../dsymutil/Inputs/basic.macho.x86_64 >%t0
-// RUN: llvm-objdump --dg --dsym=%t1.dSYM %p/../../dsymutil/Inputs/basic.macho.x86_64 >%t1
+// RUN: llvm-objdump -dg --dsym=%t1.dSYM %p/../../dsymutil/Inputs/basic.macho.x86_64 >%t1
 // RUN: cmp %t0 %t1
 // RUN: FileCheck --input-file %t0 %s
 

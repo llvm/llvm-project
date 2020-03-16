@@ -45,7 +45,7 @@ Symbols:
 ## sh_info field of a relocation section is invalid.
 
 # RUN: yaml2obj %s --docnum=2 -o %t2.o
-# RUN: not llvm-objdump %t2.o --disassemble --reloc 2>&1 | FileCheck %s -DFILE=%t2.o --check-prefix=ERR
+# RUN: not llvm-objdump %t2.o -d --reloc 2>&1 | FileCheck %s -DFILE=%t2.o --check-prefix=ERR
 
 # ERR: error: '[[FILE]]': section (1): failed to get a relocated section: invalid section index: 255
 

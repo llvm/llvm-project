@@ -1,6 +1,6 @@
 ; RUN: llc -filetype=obj -mtriple=riscv32 -mattr=+relax %s -o %t.o
 ; RUN: llvm-readobj -r %t.o | FileCheck -check-prefix=READOBJ-RELOCS %s
-; RUN: llvm-objdump --source %t.o | FileCheck -check-prefix=OBJDUMP-SOURCE %s
+; RUN: llvm-objdump --source %t.o | FileCheck --check-prefix=OBJDUMP-SOURCE %s
 ; RUN: llvm-dwarfdump --debug-info --debug-line %t.o | \
 ; RUN:     FileCheck -check-prefix=DWARF-DUMP %s
 

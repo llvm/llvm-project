@@ -1,5 +1,5 @@
 RUN: llvm-objdump -d -m --no-show-raw-insn --arch all %p/Inputs/fat.macho-armv7s-arm64 >%t0
-RUN: llvm-objdump --dm --no-show-raw-insn --arch all %p/Inputs/fat.macho-armv7s-arm64 >%t1
+RUN: llvm-objdump -dm --no-show-raw-insn --arch all %p/Inputs/fat.macho-armv7s-arm64 >%t1
 RUN: cmp %t0 %t1
 RUN: FileCheck --input-file %t0 %s
 REQUIRES: arm-registered-target

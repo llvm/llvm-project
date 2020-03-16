@@ -4,7 +4,7 @@
 //
 // rdar://13070556
 
-// FIXME: we should add compact unwind support to llvm-objdump -unwind-info
+// FIXME: we should add compact unwind support to llvm-objdump --unwind-info
 
 // CHECK:      Section {
 // CHECK:        Index: 1

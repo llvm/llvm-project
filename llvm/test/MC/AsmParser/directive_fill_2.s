@@ -1,4 +1,4 @@
-# RUN: llvm-mc -filetype=obj -defsym=I=6 -triple i686-unknown-unknown %s | llvm-objdump -triple i686-unknown-unknown -s - | FileCheck --check-prefix="CHECK" %s
+# RUN: llvm-mc -filetype=obj -defsym=I=6 -triple i686-unknown-unknown %s | llvm-objdump --triple=i686-unknown-unknown -s - | FileCheck --check-prefix="CHECK" %s
 # RUN: not llvm-mc -filetype=obj -defsym=I=4 -triple i686-unknown-unknown %s -o /dev/null 2>&1 | FileCheck --check-prefix="CHECK-ERR" %s
 
 

@@ -1,4 +1,4 @@
-; RUN: llc -filetype=obj -o - %s | llvm-objdump -section-headers - | FileCheck %s
+; RUN: llc -filetype=obj -o - %s | llvm-objdump --section-headers - | FileCheck %s
 ; This should not trigger the "Creating regular section after DWARF" assert.
 ; CHECK: __text
 ; CHECK: __thread_ptr  00000004

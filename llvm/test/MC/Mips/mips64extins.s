@@ -1,5 +1,5 @@
 # RUN: llvm-mc -arch=mips64el -filetype=obj -mcpu=mips64r2 -target-abi=n64 %s -o - \
-# RUN:   | llvm-objdump -disassemble - | FileCheck --check-prefix=OBJ %s
+# RUN:   | llvm-objdump -d - | FileCheck --check-prefix=OBJ %s
 
 # RUN: llvm-mc -arch=mips64el -mcpu=mips64r2 -target-abi=n64 %s -o - \
 # RUN:   | FileCheck --check-prefix=ASM %s
