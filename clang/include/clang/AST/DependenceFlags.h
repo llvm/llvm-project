@@ -23,7 +23,6 @@ struct ExprDependenceScope {
     None = 0,
     All = 15,
 
-    TypeValue = Type | Value,
     TypeInstantiation = Type | Instantiation,
     ValueInstantiation = Value | Instantiation,
     TypeValueInstantiation = Type | Value | Instantiation,
@@ -94,12 +93,6 @@ inline ExprDependence toExprDependence(TypeDependence TD) {
   // share the same bit representation, apart from variably-modified.
   return toExprDependence(static_cast<TemplateArgumentDependence>(
       TD & ~TypeDependence::VariablyModified));
-}
-inline ExprDependence toExprDependence(NestedNameSpecifierDependence NSD) {
-  // This hack works because TypeDependence and TemplateArgumentDependence
-  // share the same bit representation.
-  return toExprDependence(static_cast<TemplateArgumentDependence>(NSD)) &
-         ~ExprDependence::TypeValue;
 }
 inline ExprDependence turnTypeToValueDependence(ExprDependence D) {
   // Type-dependent expressions are always be value-dependent, so we simply drop
