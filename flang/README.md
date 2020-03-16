@@ -224,7 +224,7 @@ To run all tests:
 ```
 cd ~/f18/build
 cmake -DLLVM_DIR=$LLVM ~/f18/src
-make check-all
+make test check-all
 ```
 
 To run individual regression tests llvm-lit needs to know the lit

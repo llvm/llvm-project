@@ -1,5 +1,4 @@
 ! RUN: %S/test_errors.sh %s %flang %t
-!XFAIL: *
 ! OPTIONS: -fopenmp
 
 ! Check OpenMP 2.17 Nesting of Regions
@@ -9,7 +8,7 @@
   do i = 1, N
      !ERROR: A worksharing region may not be closely nested inside a worksharing, explicit task, taskloop, critical, ordered, atomic, or master region
      !$omp do
-     do i = 1, N
+     do j = 1, N
         a = 3.14
      enddo
   enddo
