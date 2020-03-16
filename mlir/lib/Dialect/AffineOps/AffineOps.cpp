@@ -1185,14 +1185,14 @@ static ParseResult parseBound(bool isLower, OperationState &result,
     if (map.getNumDims() != numDims)
       return p.emitError(
           p.getNameLoc(),
-          "dim operand count and integer set dim count must match");
+          "dim operand count and affine map dim count must match");
 
     unsigned numDimAndSymbolOperands =
         result.operands.size() - currentNumOperands;
     if (numDims + map.getNumSymbols() != numDimAndSymbolOperands)
       return p.emitError(
           p.getNameLoc(),
-          "symbol operand count and integer set symbol count must match");
+          "symbol operand count and affine map symbol count must match");
 
     // If the map has multiple results, make sure that we parsed the min/max
     // prefix.
