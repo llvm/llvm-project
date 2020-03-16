@@ -637,7 +637,7 @@ SourceRange CXXOperatorCallExpr::getSourceRangeImpl() const {
       // Postfix operator
       return SourceRange(getArg(0)->getBeginLoc(), getOperatorLoc());
   } else if (Kind == OO_Arrow) {
-    return getArg(0)->getSourceRange();
+    return SourceRange(getArg(0)->getBeginLoc(), getOperatorLoc());
   } else if (Kind == OO_Call) {
     return SourceRange(getArg(0)->getBeginLoc(), getRParenLoc());
   } else if (Kind == OO_Subscript) {
