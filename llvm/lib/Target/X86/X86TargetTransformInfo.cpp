@@ -1297,6 +1297,8 @@ int X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
     { ISD::ZERO_EXTEND, MVT::v32i8,  MVT::v32i1, 2 },
     { ISD::ZERO_EXTEND, MVT::v32i16, MVT::v32i1, 2 },
     { ISD::ZERO_EXTEND, MVT::v64i8,  MVT::v64i1, 2 },
+
+    { ISD::TRUNCATE,    MVT::v32i8,  MVT::v32i16, 1 },
   };
 
   static const TypeConversionCostTblEntry AVX512DQConversionTbl[] = {
