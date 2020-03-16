@@ -36,14 +36,23 @@ static llvm::cl::opt<std::string>
     selectedDialect("dialect", llvm::cl::desc("The dialect to gen for"),
                     llvm::cl::cat(dialectGenCat), llvm::cl::CommaSeparated);
 
+/// Utility iterator used for filtering records for a specific dialect.
+namespace {
+using DialectFilterIterator =
+    llvm::filter_iterator<ArrayRef<llvm::Record *>::iterator,
+                          std::function<bool(const llvm::Record *)>>;
+} // end anonymous namespace
+
 /// Given a set of records for a T, filter the ones that correspond to
 /// the given dialect.
 template <typename T>
-static auto filterForDialect(ArrayRef<llvm::Record *> records,
-                             Dialect &dialect) {
-  return llvm::make_filter_range(records, [&](const llvm::Record *record) {
+static iterator_range<DialectFilterIterator>
+filterForDialect(ArrayRef<llvm::Record *> records, Dialect &dialect) {
+  auto filterFn = [&](const llvm::Record *record) {
     return T(record).getDialect() == dialect;
-  });
+  };
+  return {DialectFilterIterator(records.begin(), records.end(), filterFn),
+          DialectFilterIterator(records.end(), records.end(), filterFn)};
 }
 
 //===----------------------------------------------------------------------===//
@@ -93,12 +102,10 @@ static const char *const constantMaterializerDecl = R"(
 )";
 
 /// Generate the declaration for the given dialect class.
-static void emitDialectDecl(
-    Dialect &dialect,
-    FunctionTraits<decltype(&filterForDialect<Attribute>)>::result_t
-        dialectAttrs,
-    FunctionTraits<decltype(&filterForDialect<Type>)>::result_t dialectTypes,
-    raw_ostream &os) {
+static void emitDialectDecl(Dialect &dialect,
+                            iterator_range<DialectFilterIterator> dialectAttrs,
+                            iterator_range<DialectFilterIterator> dialectTypes,
+                            raw_ostream &os) {
   // Emit the start of the decl.
   std::string cppName = dialect.getCppClassName();
   os << llvm::formatv(dialectDeclBeginStr, cppName, dialect.getName());
