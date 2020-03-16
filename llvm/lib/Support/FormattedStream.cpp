@@ -11,7 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/FormattedStream.h"
+#include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Locale.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 
@@ -19,15 +21,32 @@ using namespace llvm;
 
 /// UpdatePosition - Examine the given char sequence and figure out which
 /// column we end up in after output, and how many line breaks are contained.
-///
-static void UpdatePosition(std::pair<unsigned, unsigned> &Position, const char *Ptr, size_t Size) {
+/// This assumes that the input string is well-formed UTF-8, and takes into
+/// account unicode characters which render as multiple columns wide.
+static void UpdatePosition(std::pair<unsigned, unsigned> &Position,
+                           const char *Ptr, size_t Size) {
   unsigned &Column = Position.first;
   unsigned &Line = Position.second;
 
   // Keep track of the current column and line by scanning the string for
-  // special characters
-  for (const char *End = Ptr + Size; Ptr != End; ++Ptr) {
-    ++Column;
+  // special characters.
+  unsigned NumBytes;
+  for (const char *End = Ptr + Size; Ptr < End; Ptr += NumBytes) {
+    NumBytes = getNumBytesForUTF8(*Ptr);
+
+    // The string should never end part way through a multi-byte sequence.
+    assert((Ptr + NumBytes) <= End && "Malformed multi-byte sequence");
+
+    int Width = sys::locale::columnWidth(StringRef(Ptr, NumBytes));
+    // columnWidth returns -1 for non-printing characters.
+    if (Width != -1)
+      Column += Width;
+
+    // If this is the final byte of a multi-byte sequence, it can't be any of
+    // the special whitespace characters below.
+    if (NumBytes > 1)
+      continue;
+
     switch (*Ptr) {
     case '\n':
       Line += 1;

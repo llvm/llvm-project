@@ -351,4 +351,74 @@ bool DWARFExpression::verify(DWARFUnit *U) {
   return true;
 }
 
+/// A user-facing string representation of a DWARF expression. This might be an
+/// Address expression, in which case it will be implicitly dereferenced, or a
+/// Value expression.
+struct PrintedExpr {
+  enum ExprKind {
+    Address,
+    Value,
+  };
+  ExprKind Kind;
+  SmallString<16> String;
+
+  PrintedExpr(ExprKind K = Address) : Kind(K) {}
+};
+
+static bool printCompactDWARFExpr(raw_ostream &OS, DWARFExpression::iterator I,
+                                  const DWARFExpression::iterator E,
+                                  const MCRegisterInfo &MRI) {
+  SmallVector<PrintedExpr, 4> Stack;
+
+  while (I != E) {
+    DWARFExpression::Operation &Op = *I;
+    uint8_t Opcode = Op.getCode();
+    switch (Opcode) {
+    case dwarf::DW_OP_regx: {
+      // DW_OP_regx: A register, with the register num given as an operand.
+      // Printed as the plain register name.
+      uint64_t DwarfRegNum = Op.getRawOperand(0);
+      Optional<unsigned> LLVMRegNum = MRI.getLLVMRegNum(DwarfRegNum, false);
+      if (!LLVMRegNum) {
+        OS << "<unknown register " << DwarfRegNum << ">";
+        return false;
+      }
+      raw_svector_ostream S(Stack.emplace_back(PrintedExpr::Value).String);
+      S << MRI.getName(*LLVMRegNum);
+      break;
+    }
+    default:
+      if (Opcode >= dwarf::DW_OP_reg0 && Opcode <= dwarf::DW_OP_reg31) {
+        // DW_OP_reg<N>: A register, with the register num implied by the
+        // opcode. Printed as the plain register name.
+        uint64_t DwarfRegNum = Opcode - dwarf::DW_OP_reg0;
+        Optional<unsigned> LLVMRegNum = MRI.getLLVMRegNum(DwarfRegNum, false);
+        if (!LLVMRegNum) {
+          OS << "<unknown register " << DwarfRegNum << ">";
+          return false;
+        }
+        raw_svector_ostream S(Stack.emplace_back(PrintedExpr::Value).String);
+        S << MRI.getName(*LLVMRegNum);
+      } else {
+        // If we hit an unknown operand, we don't know its effect on the stack,
+        // so bail out on the whole expression.
+        OS << "<unknown op " << dwarf::OperationEncodingString(Opcode) << " ("
+           << (int)Opcode << ")>";
+        return false;
+      }
+      break;
+    }
+    ++I;
+  }
+
+  assert(Stack.size() == 1 && "expected one value on stack");
+  OS << Stack.front().String;
+
+  return true;
+}
+
+bool DWARFExpression::printCompact(raw_ostream &OS, const MCRegisterInfo &MRI) {
+  return printCompactDWARFExpr(OS, begin(), end(), MRI);
+}
+
 } // namespace llvm
