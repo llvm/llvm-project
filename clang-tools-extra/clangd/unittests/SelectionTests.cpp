@@ -380,6 +380,14 @@ TEST(SelectionTest, CommonAncestor) {
       {"struct foo { [[^~foo()]]; };", "CXXDestructorDecl"},
       // FIXME: The following to should be class itself instead.
       {"struct foo { [[fo^o(){}]] };", "CXXConstructorDecl"},
+
+      {R"cpp(
+        struct S1 { void f(); };
+        struct S2 { S1 * operator->(); };
+        void test(S2 s2) {
+          s2[[-^>]]f();
+        }
+      )cpp", "DeclRefExpr"} // DeclRefExpr to the "operator->" method.
   };
   for (const Case &C : Cases) {
     Annotations Test(C.Code);
