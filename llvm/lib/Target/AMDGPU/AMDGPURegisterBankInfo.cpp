@@ -220,7 +220,7 @@ unsigned AMDGPURegisterBankInfo::copyCost(const RegisterBank &Dst,
                                           unsigned Size) const {
   // TODO: Should there be a UniformVGPRRegBank which can use readfirstlane?
   if (Dst.getID() == AMDGPU::SGPRRegBankID &&
-      isVectorRegisterBank(Src)) {
+      (isVectorRegisterBank(Src) || Src.getID() == AMDGPU::VCCRegBankID)) {
     return std::numeric_limits<unsigned>::max();
   }
 
@@ -236,9 +236,6 @@ unsigned AMDGPURegisterBankInfo::copyCost(const RegisterBank &Dst,
       (isVectorRegisterBank(Src) ||
        Src.getID() == AMDGPU::SGPRRegBankID ||
        Src.getID() == AMDGPU::VCCRegBankID))
-    return std::numeric_limits<unsigned>::max();
-
-  if (Src.getID() == AMDGPU::VCCRegBankID)
     return std::numeric_limits<unsigned>::max();
 
   // There is no direct copy between AGPRs.
@@ -2252,10 +2249,13 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     return;
   }
   case AMDGPU::G_SEXT:
-  case AMDGPU::G_ZEXT: {
+  case AMDGPU::G_ZEXT:
+  case AMDGPU::G_ANYEXT: {
     Register SrcReg = MI.getOperand(1).getReg();
     LLT SrcTy = MRI.getType(SrcReg);
-    bool Signed = Opc == AMDGPU::G_SEXT;
+    const bool Signed = Opc == AMDGPU::G_SEXT;
+
+    assert(empty(OpdMapper.getVRegs(1)));
 
     MachineIRBuilder B(MI);
     const RegisterBank *SrcBank =
@@ -2282,9 +2282,12 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
         auto ShiftAmt = B.buildConstant(S32, 31);
         MRI.setRegBank(ShiftAmt.getReg(0), *SrcBank);
         B.buildAShr(DefRegs[1], DefRegs[0], ShiftAmt);
-      } else {
+      } else if (Opc == AMDGPU::G_ZEXT) {
         B.buildZExtOrTrunc(DefRegs[0], SrcReg);
         B.buildConstant(DefRegs[1], 0);
+      } else {
+        B.buildAnyExtOrTrunc(DefRegs[0], SrcReg);
+        B.buildUndef(DefRegs[1]);
       }
 
       MRI.setRegBank(DstReg, *SrcBank);
@@ -2295,6 +2298,9 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     if (SrcTy != LLT::scalar(1))
       return;
 
+    // It is not legal to have a legalization artifact with a VCC source. Rather
+    // than introducing a copy, insert the selcet we would have to select the
+    // copy to.
     if (SrcBank == &AMDGPU::VCCRegBank) {
       SmallVector<Register, 2> DefRegs(OpdMapper.getVRegs(0));
 
@@ -2329,24 +2335,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       return;
     }
 
-    // Fixup the case with an s1 src that isn't a condition register. Use shifts
-    // instead of introducing a compare to avoid an unnecessary condition
-    // register (and since there's no scalar 16-bit compares).
-    auto Ext = B.buildAnyExt(DstTy, SrcReg);
-    auto ShiftAmt = B.buildConstant(LLT::scalar(32), DstTy.getSizeInBits() - 1);
-    auto Shl = B.buildShl(DstTy, Ext, ShiftAmt);
-
-    if (MI.getOpcode() == AMDGPU::G_SEXT)
-      B.buildAShr(DstReg, Shl, ShiftAmt);
-    else
-      B.buildLShr(DstReg, Shl, ShiftAmt);
-
-    MRI.setRegBank(DstReg, *SrcBank);
-    MRI.setRegBank(Ext.getReg(0), *SrcBank);
-    MRI.setRegBank(ShiftAmt.getReg(0), *SrcBank);
-    MRI.setRegBank(Shl.getReg(0), *SrcBank);
-    MI.eraseFromParent();
-    return;
+    break;
   }
   case AMDGPU::G_BUILD_VECTOR:
   case AMDGPU::G_BUILD_VECTOR_TRUNC: {
@@ -3423,17 +3412,11 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       break;
     }
 
-    // TODO: Should anyext be split into 32-bit part as well?
-    if (MI.getOpcode() == AMDGPU::G_ANYEXT) {
-      OpdsMapping[0] = AMDGPU::getValueMapping(DstBank, DstSize);
-      OpdsMapping[1] = AMDGPU::getValueMapping(SrcBank->getID(), SrcSize);
-    } else {
-      // Scalar extend can use 64-bit BFE, but VGPRs require extending to
-      // 32-bits, and then to 64.
-      OpdsMapping[0] = AMDGPU::getValueMappingSGPR64Only(DstBank, DstSize);
-      OpdsMapping[1] = AMDGPU::getValueMappingSGPR64Only(SrcBank->getID(),
-                                                         SrcSize);
-    }
+    // Scalar extend can use 64-bit BFE, but VGPRs require extending to
+    // 32-bits, and then to 64.
+    OpdsMapping[0] = AMDGPU::getValueMappingSGPR64Only(DstBank, DstSize);
+    OpdsMapping[1] = AMDGPU::getValueMappingSGPR64Only(SrcBank->getID(),
+                                                       SrcSize);
     break;
   }
   case AMDGPU::G_FCMP: {
