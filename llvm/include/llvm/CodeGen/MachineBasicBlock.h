@@ -46,6 +46,19 @@ class raw_ostream;
 class TargetRegisterClass;
 class TargetRegisterInfo;
 
+enum MachineBasicBlockSection : unsigned {
+  ///  This is also the order of sections in a function.  Basic blocks that are
+  ///  part of the original function section (entry block) come first, followed
+  ///  by exception handling basic blocks, cold basic blocks and finally basic
+  //   blocks that need unique sections.
+  MBBS_Entry,
+  MBBS_Exception,
+  MBBS_Cold,
+  MBBS_Unique,
+  ///  None implies no sections for any basic block, the default.
+  MBBS_None,
+};
+
 template <> struct ilist_traits<MachineInstr> {
 private:
   friend class MachineBasicBlock; // Set by the owning MachineBasicBlock.
@@ -130,6 +143,9 @@ private:
   /// Indicate that this basic block is the entry block of a cleanup funclet.
   bool IsCleanupFuncletEntry = false;
 
+  /// Stores the Section type of the basic block with basic block sections.
+  MachineBasicBlockSection SectionType = MBBS_None;
+
   /// Default target of the callbr of a basic block.
   bool InlineAsmBrDefaultTarget = false;
 
@@ -139,6 +155,9 @@ private:
   /// since getSymbol is a relatively heavy-weight operation, the symbol
   /// is only computed once and is cached.
   mutable MCSymbol *CachedMCSymbol = nullptr;
+
+  /// Used during basic block sections to mark the end of a basic block.
+  MCSymbol *EndMCSymbol = nullptr;
 
   // Intrusive list support
   MachineBasicBlock() = default;
@@ -415,6 +434,18 @@ public:
   /// Indicates if this is the entry block of a cleanup funclet.
   void setIsCleanupFuncletEntry(bool V = true) { IsCleanupFuncletEntry = V; }
 
+  /// Returns true if this block begins any section.
+  bool isBeginSection() const;
+
+  /// Returns true if this block ends any section.
+  bool isEndSection() const;
+
+  /// Returns the type of section this basic block belongs to.
+  MachineBasicBlockSection getSectionType() const { return SectionType; }
+
+  /// Indicate that the basic block belongs to a Section Type.
+  void setSectionType(MachineBasicBlockSection V) { SectionType = V; }
+
   /// Returns true if this is the indirect dest of an INLINEASM_BR.
   bool isInlineAsmBrIndirectTarget(const MachineBasicBlock *Tgt) const {
     return InlineAsmBrIndirectTargets.count(Tgt);
@@ -452,6 +483,12 @@ public:
   /// the end of the block.
   void moveBefore(MachineBasicBlock *NewAfter);
   void moveAfter(MachineBasicBlock *NewBefore);
+
+  /// Returns true if this and MBB belong to the same section.
+  bool sameSection(const MachineBasicBlock *MBB) const;
+
+  /// Returns the basic block that ends the section which contains this one.
+  const MachineBasicBlock *getSectionEndMBB() const;
 
   /// Update the terminator instructions in block to account for changes to the
   /// layout. If the block previously used a fallthrough, it may now need a
@@ -838,6 +875,12 @@ public:
 
   /// Return the MCSymbol for this basic block.
   MCSymbol *getSymbol() const;
+
+  /// Sets the MCSymbol corresponding to the end of this basic block.
+  void setEndMCSymbol(MCSymbol *Sym) { EndMCSymbol = Sym; }
+
+  /// Returns the MCSymbol corresponding to the end of this basic block.
+  MCSymbol *getEndMCSymbol() const { return EndMCSymbol; }
 
   Optional<uint64_t> getIrrLoopHeaderWeight() const {
     return IrrLoopHeaderWeight;

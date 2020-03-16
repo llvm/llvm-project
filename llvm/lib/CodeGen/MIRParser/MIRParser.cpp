@@ -438,6 +438,14 @@ MIRParserImpl::initializeMachineFunction(const yaml::MachineFunction &YamlMF,
         diagFromBlockStringDiag(Error, YamlMF.Body.Value.SourceRange));
     return true;
   }
+  // Check Basic Block Section Flags.
+  if (MF.getTarget().getBBSectionsType() == BasicBlockSection::Labels) {
+    MF.createBBLabels();
+    MF.setBBSectionsType(BasicBlockSection::Labels);
+  } else if (MF.hasBBSections()) {
+    MF.setSectionRange();
+    MF.createBBLabels();
+  }
   PFS.SM = &SM;
 
   // Initialize the frame information after creating all the MBBs so that the
