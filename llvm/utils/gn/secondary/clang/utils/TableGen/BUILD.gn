@@ -3,6 +3,11 @@ executable("clang-tblgen") {
     "//llvm/lib/Support",
     "//llvm/lib/TableGen",
   ]
+
+  # FIXME: This is incorrect, see https://reviews.llvm.org/D75470#inline-695187
+  # Remoe again once that's rectified.
+  include_dirs = [ "//clang/include" ]
+
   sources = [
     "ASTTableGen.cpp",
     "ClangASTNodesEmitter.cpp",
