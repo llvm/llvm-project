@@ -6,9 +6,9 @@
 # RUN: ld.lld %t1.o %t2.o -o %t --defsym __morestack=0x10010000 -split-stack-adjust-size 32768
 # RUN: llvm-objdump -d %t | FileCheck %s
 # RUN: ld.lld %t1.o %t2.o -o %t --defsym __morestack=0x10010000 -split-stack-adjust-size 4096
-# RUN: llvm-objdump -d %t | FileCheck %s -check-prefix=SMALL
+# RUN: llvm-objdump -d %t | FileCheck %s --check-prefix=SMALL
 # RUN: ld.lld %t1.o %t2.o -o %t --defsym __morestack=0x10010000 -split-stack-adjust-size 0
-# RUN: llvm-objdump -d %t | FileCheck %s -check-prefix=ZERO
+# RUN: llvm-objdump -d %t | FileCheck %s --check-prefix=ZERO
 # RUN: not ld.lld %t1.o %t2.o -o /dev/null -split-stack-adjust-size -1 2>&1 | FileCheck %s -check-prefix=ERR
 # ERR: error: --split-stack-adjust-size: size must be >= 0
 
@@ -18,9 +18,9 @@
 # RUN: ld.lld %t1.o %t2.o -o %t --defsym __morestack=0x10010000 -split-stack-adjust-size 32768
 # RUN: llvm-objdump -d %t | FileCheck %s
 # RUN: ld.lld %t1.o %t2.o -o %t --defsym __morestack=0x10010000 -split-stack-adjust-size 4096
-# RUN: llvm-objdump -d %t | FileCheck %s -check-prefix=SMALL
+# RUN: llvm-objdump -d %t | FileCheck %s --check-prefix=SMALL
 # RUN: ld.lld %t1.o %t2.o -o %t --defsym __morestack=0x10010000 -split-stack-adjust-size 0
-# RUN: llvm-objdump -d %t | FileCheck %s -check-prefix=ZERO
+# RUN: llvm-objdump -d %t | FileCheck %s --check-prefix=ZERO
         .p2align    2
         .global caller
         .type caller, @function

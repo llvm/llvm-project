@@ -3,7 +3,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple=mips64-unknown-linux %s -o %t.o
 # RUN: ld.lld -shared %t.o -o %t.so
-# RUN: llvm-objdump -s -t %t.so | FileCheck -check-prefix=SYM %s
+# RUN: llvm-objdump -s -t %t.so | FileCheck --check-prefix=SYM %s
 # RUN: llvm-readelf --dynamic-table -r -s -A %t.so | FileCheck %s
 
   .data

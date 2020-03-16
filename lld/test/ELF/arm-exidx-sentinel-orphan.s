@@ -6,7 +6,7 @@
 // RUN:          .text 0x11000 : { *(.text*) } \
 // RUN:          } " > %t.script
 // RUN: ld.lld --no-merge-exidx-entries --script %t.script %t -o %t2
-// RUN: llvm-objdump -s -triple=armv7a-none-linux-gnueabi %t2 | FileCheck %s
+// RUN: llvm-objdump -s --triple=armv7a-none-linux-gnueabi %t2 | FileCheck %s
 
  .syntax unified
  .text

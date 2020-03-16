@@ -10,23 +10,23 @@
 # RUN: ld.lld %t-be.o --script %t.script -o %t-be.exe
 # RUN: llvm-readobj --sections -r --symbols -A %t-be.exe \
 # RUN:   | FileCheck -check-prefix=ELF %s
-# RUN: llvm-objdump -d %t-be.exe | FileCheck -check-prefix=DIS %s
+# RUN: llvm-objdump -d %t-be.exe | FileCheck --check-prefix=DIS %s
 
 # RUN: llvm-mc -filetype=obj -triple=mipsel-unknown-linux %s -o %t-el.o
 # RUN: ld.lld %t-el.o --script %t.script -o %t-el.exe
 # RUN: llvm-readobj --sections -r --symbols -A %t-el.exe \
 # RUN:   | FileCheck -check-prefix=ELF %s
-# RUN: llvm-objdump -d %t-el.exe | FileCheck -check-prefix=DIS %s
+# RUN: llvm-objdump -d %t-el.exe | FileCheck --check-prefix=DIS %s
 
 # RUN: ld.lld -shared %t-be.o --script %t.script -o %t-be.so
 # RUN: llvm-readobj --sections -r --symbols -A %t-be.so \
 # RUN:   | FileCheck -check-prefix=ELF %s
-# RUN: llvm-objdump -d %t-be.so | FileCheck -check-prefix=DIS %s
+# RUN: llvm-objdump -d %t-be.so | FileCheck --check-prefix=DIS %s
 
 # RUN: ld.lld -shared %t-el.o --script %t.script -o %t-el.so
 # RUN: llvm-readobj --sections -r --symbols -A %t-el.so \
 # RUN:   | FileCheck -check-prefix=ELF %s
-# RUN: llvm-objdump -d %t-el.so | FileCheck -check-prefix=DIS %s
+# RUN: llvm-objdump -d %t-el.so | FileCheck --check-prefix=DIS %s
 
   .text
   .globl  __start
