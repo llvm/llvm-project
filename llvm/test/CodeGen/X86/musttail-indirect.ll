@@ -22,6 +22,8 @@
 ; Each member pointer creates a thunk.  The ones with inalloca are required to
 ; tail calls by the ABI, even at O0.
 
+; TODO: add tests for preallocated/musttail once supported
+
 %struct.B = type { i32 (...)** }
 %struct.A = type { i32 }
 

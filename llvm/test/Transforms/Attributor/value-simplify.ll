@@ -6,6 +6,8 @@
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 declare void @f(i32)
+declare token @llvm.call.preallocated.setup(i32)
+declare i8* @llvm.call.preallocated.arg(token, i32)
 
 ; Test1: Replace argument with constant
 define internal void @test1(i32 %a) {
@@ -277,6 +279,24 @@ define i32* @complicated_args_inalloca() {
 ; CHECK-NEXT:    ret i32* [[CALL]]
 ;
   %call = call i32* @test_inalloca(i32* null)
+  ret i32* %call
+}
+
+define internal i32* @test_preallocated(i32* preallocated(i32) %a) {
+; CHECK-LABEL: define {{[^@]+}}@test_preallocated
+; CHECK-SAME: (i32* noalias nofree returned writeonly preallocated(i32) align 536870912 "no-capture-maybe-returned" [[A:%.*]])
+; CHECK-NEXT:    ret i32* [[A]]
+;
+  ret i32* %a
+}
+define i32* @complicated_args_preallocated() {
+; CHECK-LABEL: define {{[^@]+}}@complicated_args_preallocated()
+; CHECK-NEXT:    [[C:%.*]] = call token @llvm.call.preallocated.setup(i32 1)
+; CHECK-NEXT:    [[CALL:%.*]] = call i32* @test_preallocated(i32* noalias nocapture nofree writeonly preallocated(i32) align 536870912 null)
+; CHECK-NEXT:    ret i32* [[CALL]]
+;
+  %c = call token @llvm.call.preallocated.setup(i32 1)
+  %call = call i32* @test_preallocated(i32* preallocated(i32) null) ["preallocated"(token %c)]
   ret i32* %call
 }
 

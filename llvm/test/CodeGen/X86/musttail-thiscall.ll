@@ -1,6 +1,8 @@
 ; RUN: llc -verify-machineinstrs -mtriple=i686-- < %s | FileCheck %s
 ; RUN: llc -verify-machineinstrs -mtriple=i686-- -O0 < %s | FileCheck %s
 
+; TODO: add tests for preallocated/musttail once supported
+
 ; CHECK-LABEL: t1:
 ; CHECK: jmp {{_?}}t1_callee
 define x86_thiscallcc void @t1(i8* %this) {

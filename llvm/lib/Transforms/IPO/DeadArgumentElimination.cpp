@@ -483,9 +483,10 @@ DeadArgumentEliminationPass::SurveyUses(const Value *V,
 // We consider arguments of non-internal functions to be intrinsically alive as
 // well as arguments to functions which have their "address taken".
 void DeadArgumentEliminationPass::SurveyFunction(const Function &F) {
-  // Functions with inalloca parameters are expecting args in a particular
-  // register and memory layout.
-  if (F.getAttributes().hasAttrSomewhere(Attribute::InAlloca)) {
+  // Functions with inalloca/preallocated parameters are expecting args in a
+  // particular register and memory layout.
+  if (F.getAttributes().hasAttrSomewhere(Attribute::InAlloca) ||
+      F.getAttributes().hasAttrSomewhere(Attribute::Preallocated)) {
     MarkLive(F);
     return;
   }
