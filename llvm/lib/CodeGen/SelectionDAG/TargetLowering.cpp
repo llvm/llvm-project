@@ -1634,6 +1634,14 @@ bool TargetLowering::SimplifyDemandedBits(
       Known.One |= Known2.One;
       Known.Zero |= Known2.Zero;
     }
+
+    // For pow-2 bitwidths we only demand the bottom modulo amt bits.
+    if (isPowerOf2_32(BitWidth)) {
+      APInt DemandedAmtBits(Op2.getScalarValueSizeInBits(), BitWidth - 1);
+      if (SimplifyDemandedBits(Op2, DemandedAmtBits, DemandedElts,
+                               Known2, TLO, Depth + 1))
+        return true;
+    }
     break;
   }
   case ISD::ROTL:
