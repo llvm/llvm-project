@@ -4837,35 +4837,47 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerInsert(MachineInstr &MI) {
   LLT DstTy = MRI.getType(Src);
   LLT InsertTy = MRI.getType(InsertSrc);
 
-  if (InsertTy.isScalar() &&
-      (DstTy.isScalar() ||
-       (DstTy.isVector() && DstTy.getElementType() == InsertTy))) {
-    LLT IntDstTy = DstTy;
-    if (!DstTy.isScalar()) {
-      IntDstTy = LLT::scalar(DstTy.getSizeInBits());
-      Src = MIRBuilder.buildBitcast(IntDstTy, Src).getReg(0);
-    }
+  if (InsertTy.isVector() ||
+      (DstTy.isVector() && DstTy.getElementType() != InsertTy))
+    return UnableToLegalize;
 
-    Register ExtInsSrc = MIRBuilder.buildZExt(IntDstTy, InsertSrc).getReg(0);
-    if (Offset != 0) {
-      auto ShiftAmt = MIRBuilder.buildConstant(IntDstTy, Offset);
-      ExtInsSrc = MIRBuilder.buildShl(IntDstTy, ExtInsSrc, ShiftAmt).getReg(0);
-    }
-
-    APInt MaskVal = APInt::getBitsSetWithWrap(DstTy.getSizeInBits(),
-                                              Offset + InsertTy.getSizeInBits(),
-                                              Offset);
-
-    auto Mask = MIRBuilder.buildConstant(IntDstTy, MaskVal);
-    auto MaskedSrc = MIRBuilder.buildAnd(IntDstTy, Src, Mask);
-    auto Or = MIRBuilder.buildOr(IntDstTy, MaskedSrc, ExtInsSrc);
-
-    MIRBuilder.buildBitcast(Dst, Or);
-    MI.eraseFromParent();
-    return Legalized;
+  const DataLayout &DL = MIRBuilder.getDataLayout();
+  if ((DstTy.isPointer() &&
+       DL.isNonIntegralAddressSpace(DstTy.getAddressSpace())) ||
+      (InsertTy.isPointer() &&
+       DL.isNonIntegralAddressSpace(InsertTy.getAddressSpace()))) {
+    LLVM_DEBUG(dbgs() << "Not casting non-integral address space integer\n");
+    return UnableToLegalize;
   }
 
-  return UnableToLegalize;
+  LLT IntDstTy = DstTy;
+
+  if (!DstTy.isScalar()) {
+    IntDstTy = LLT::scalar(DstTy.getSizeInBits());
+    Src = MIRBuilder.buildCast(IntDstTy, Src).getReg(0);
+  }
+
+  if (!InsertTy.isScalar()) {
+    const LLT IntInsertTy = LLT::scalar(InsertTy.getSizeInBits());
+    InsertSrc = MIRBuilder.buildPtrToInt(IntInsertTy, InsertSrc).getReg(0);
+  }
+
+  Register ExtInsSrc = MIRBuilder.buildZExt(IntDstTy, InsertSrc).getReg(0);
+  if (Offset != 0) {
+    auto ShiftAmt = MIRBuilder.buildConstant(IntDstTy, Offset);
+    ExtInsSrc = MIRBuilder.buildShl(IntDstTy, ExtInsSrc, ShiftAmt).getReg(0);
+  }
+
+  APInt MaskVal = APInt::getBitsSetWithWrap(
+      DstTy.getSizeInBits(), Offset + InsertTy.getSizeInBits(), Offset);
+
+  auto Mask = MIRBuilder.buildConstant(IntDstTy, MaskVal);
+  auto MaskedSrc = MIRBuilder.buildAnd(IntDstTy, Src, Mask);
+  auto Or = MIRBuilder.buildOr(IntDstTy, MaskedSrc, ExtInsSrc);
+
+  MIRBuilder.buildCast(Dst, Or);
+  MI.eraseFromParent();
+  return Legalized;
 }
 
 LegalizerHelper::LegalizeResult

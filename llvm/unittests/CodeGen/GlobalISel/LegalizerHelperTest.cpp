@@ -2341,4 +2341,104 @@ TEST_F(GISelMITest, NarrowScalarExtract) {
   // Check
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
+
+TEST_F(GISelMITest, LowerInsert) {
+  setUp();
+  if (!TM)
+    return;
+
+  // Declare your legalization info
+  DefineLegalizerInfo(A, { getActionDefinitionsBuilder(G_INSERT).lower(); });
+
+  LLT S32{LLT::scalar(32)};
+  LLT S64{LLT::scalar(64)};
+  LLT P0{LLT::pointer(0, 64)};
+  LLT P1{LLT::pointer(1, 32)};
+  LLT V2S32{LLT::vector(2, 32)};
+
+  auto TruncS32 = B.buildTrunc(S32, Copies[0]);
+  auto IntToPtrP0 = B.buildIntToPtr(P0, Copies[0]);
+  auto IntToPtrP1 = B.buildIntToPtr(P1, TruncS32);
+  auto BitcastV2S32 = B.buildBitcast(V2S32, Copies[0]);
+
+  auto InsertS64S32 = B.buildInsert(S64, Copies[0], TruncS32, 0);
+  auto InsertS64P1 = B.buildInsert(S64, Copies[0], IntToPtrP1, 8);
+  auto InsertP0S32 = B.buildInsert(P0, IntToPtrP0, TruncS32, 16);
+  auto InsertP0P1 = B.buildInsert(P0, IntToPtrP0, IntToPtrP1, 4);
+  auto InsertV2S32S32 = B.buildInsert(V2S32, BitcastV2S32, TruncS32, 32);
+  auto InsertV2S32P1 = B.buildInsert(V2S32, BitcastV2S32, IntToPtrP1, 0);
+
+  AInfo Info(MF->getSubtarget());
+  DummyGISelObserver Observer;
+  LegalizerHelper Helper(*MF, Info, Observer, B);
+
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.lower(*InsertS64S32, 0, LLT{}));
+
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.lower(*InsertS64P1, 0, LLT{}));
+
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.lower(*InsertP0S32, 0, LLT{}));
+
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.lower(*InsertP0P1, 0, LLT{}));
+
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.lower(*InsertV2S32S32, 0, LLT{}));
+
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::UnableToLegalize,
+            Helper.lower(*InsertV2S32P1, 0, LLT{}));
+
+  const auto *CheckStr = R"(
+  CHECK: [[S64:%[0-9]+]]:_(s64) = COPY
+  CHECK: [[S32:%[0-9]+]]:_(s32) = G_TRUNC [[S64]]
+  CHECK: [[P0:%[0-9]+]]:_(p0) = G_INTTOPTR [[S64]]
+  CHECK: [[P1:%[0-9]+]]:_(p1) = G_INTTOPTR [[S32]]
+  CHECK: [[V2S32:%[0-9]+]]:_(<2 x s32>) = G_BITCAST [[S64]]
+  CHECK: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[S32]]
+  CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT
+  CHECK: [[AND:%[0-9]+]]:_(s64) = G_AND [[S64]]:_, [[C]]:_
+  CHECK: [[OR:%[0-9]+]]:_(s64) = G_OR [[AND]]:_, [[ZEXT]]:_
+
+  CHECK: [[PTRTOINT:%[0-9]+]]:_(s32) = G_PTRTOINT [[P1]]
+  CHECK: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[PTRTOINT]]
+  CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT
+  CHECK: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[ZEXT]]:_, [[C]]:_(s64)
+  CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT
+  CHECK: [[AND:%[0-9]+]]:_(s64) = G_AND [[S64]]:_, [[C]]:_
+  CHECK: [[OR:%[0-9]+]]:_(s64) = G_OR [[AND]]:_, [[SHL]]:_
+
+  CHECK: [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[P0]]
+  CHECK: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[S32]]
+  CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT
+  CHECK: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[ZEXT]]:_, [[C]]:_(s64)
+  CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT
+  CHECK: [[AND:%[0-9]+]]:_(s64) = G_AND [[PTRTOINT]]:_, [[C]]:_
+  CHECK: [[OR:%[0-9]+]]:_(s64) = G_OR [[AND]]:_, [[SHL]]:_
+  CHECK: [[INTTOPTR:%[0-9]+]]:_(p0) = G_INTTOPTR [[OR]]
+
+  CHECK: [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[P0]]
+  CHECK: [[PTRTOINT1:%[0-9]+]]:_(s32) = G_PTRTOINT [[P1]]
+  CHECK: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[PTRTOINT1]]
+  CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT
+  CHECK: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[ZEXT]]:_, [[C]]:_(s64)
+  CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT
+  CHECK: [[AND:%[0-9]+]]:_(s64) = G_AND [[PTRTOINT]]:_, [[C]]:_
+  CHECK: [[OR:%[0-9]+]]:_(s64) = G_OR [[AND]]:_, [[SHL]]:_
+  CHECK: [[INTTOPTR:%[0-9]+]]:_(p0) = G_INTTOPTR [[OR]]
+
+  CHECK: [[BITCAST:%[0-9]+]]:_(s64) = G_BITCAST [[V2S32]]
+  CHECK: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[S32]]
+  CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT
+  CHECK: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[ZEXT]]:_, [[C]]:_(s64)
+  CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT
+  CHECK: [[AND:%[0-9]+]]:_(s64) = G_AND [[BITCAST]]:_, [[C]]:_
+  CHECK: [[OR:%[0-9]+]]:_(s64) = G_OR [[AND]]:_, [[SHL]]:_
+  CHECK: [[BITCAST:%[0-9]+]]:_(<2 x s32>) = G_BITCAST [[OR]]
+  )";
+
+  // Check
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
 } // namespace
