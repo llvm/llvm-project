@@ -17,7 +17,7 @@
 #include "clang/AST/ASTVector.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclAccessPair.h"
-#include "clang/AST/DependencyFlags.h"
+#include "clang/AST/DependenceFlags.h"
 #include "clang/AST/OperationKinds.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/TemplateBase.h"

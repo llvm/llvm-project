@@ -13,7 +13,7 @@
 #ifndef LLVM_CLANG_AST_TEMPLATENAME_H
 #define LLVM_CLANG_AST_TEMPLATENAME_H
 
-#include "clang/AST/DependencyFlags.h"
+#include "clang/AST/DependenceFlags.h"
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/FoldingSet.h"
