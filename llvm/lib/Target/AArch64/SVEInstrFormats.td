@@ -6455,9 +6455,17 @@ class sve_mem_32b_prfm_sv<bits<2> msz, bit xs, string asm,
 
 multiclass sve_mem_32b_prfm_sv_scaled<bits<2> msz, string asm,
                                       RegisterOperand sxtw_opnd,
-                                      RegisterOperand uxtw_opnd> {
+                                      RegisterOperand uxtw_opnd,
+                                      PatFrag op_sxtw,
+                                      PatFrag op_uxtw> {
   def _UXTW_SCALED : sve_mem_32b_prfm_sv<msz, 0, asm, uxtw_opnd>;
   def _SXTW_SCALED : sve_mem_32b_prfm_sv<msz, 1, asm, sxtw_opnd>;
+
+  def : Pat<(op_uxtw (nxv4i1 PPR3bAny:$Pg), (i64 GPR64sp:$Rn), (nxv4i32 uxtw_opnd:$Zm), (i32 sve_prfop:$prfop)),
+            (!cast<Instruction>(NAME # _UXTW_SCALED) sve_prfop:$prfop, PPR3bAny:$Pg, GPR64sp:$Rn, uxtw_opnd:$Zm)>;
+
+  def : Pat<(op_sxtw (nxv4i1 PPR3bAny:$Pg), (i64 GPR64sp:$Rn), (nxv4i32 sxtw_opnd:$Zm), (i32 sve_prfop:$prfop)),
+            (!cast<Instruction>(NAME # _SXTW_SCALED) sve_prfop:$prfop, PPR3bAny:$Pg, GPR64sp:$Rn, sxtw_opnd:$Zm)>;
 }
 
 class sve_mem_32b_prfm_vi<bits<2> msz, string asm, Operand imm_ty>
@@ -6480,11 +6488,14 @@ class sve_mem_32b_prfm_vi<bits<2> msz, string asm, Operand imm_ty>
   let Inst{3-0}   = prfop;
 }
 
-multiclass sve_mem_32b_prfm_vi<bits<2> msz, string asm, Operand imm_ty> {
+multiclass sve_mem_32b_prfm_vi<bits<2> msz, string asm, Operand imm_ty, SDPatternOperator op> {
   def NAME : sve_mem_32b_prfm_vi<msz, asm, imm_ty>;
 
   def : InstAlias<asm # "\t$prfop, $Pg, [$Zn]",
                   (!cast<Instruction>(NAME) sve_prfop:$prfop, PPR3bAny:$Pg, ZPR32:$Zn, 0), 1>;
+
+  def : Pat<(op (nxv4i1 PPR_3b:$Pg), (nxv4i32 ZPR32:$Zn), (i64 imm_ty:$imm), (i32 sve_prfop:$prfop)),
+            (!cast<Instruction>(NAME) sve_prfop:$prfop, PPR_3b:$Pg, ZPR32:$Zn, imm_ty:$imm)>;
 }
 
 class sve_mem_z_fill<string asm>
@@ -6798,14 +6809,27 @@ class sve_mem_64b_prfm_sv<bits<2> msz, bit xs, bit lsl, string asm,
 
 multiclass sve_mem_64b_prfm_sv_ext_scaled<bits<2> msz, string asm,
                                           RegisterOperand sxtw_opnd,
-                                          RegisterOperand uxtw_opnd> {
+                                          RegisterOperand uxtw_opnd,
+                                          PatFrag op_sxtw,
+                                          PatFrag op_uxtw> {
   def _UXTW_SCALED : sve_mem_64b_prfm_sv<msz, 0, 0, asm, uxtw_opnd>;
   def _SXTW_SCALED : sve_mem_64b_prfm_sv<msz, 1, 0, asm, sxtw_opnd>;
+
+  def : Pat<(op_uxtw (nxv2i1 PPR3bAny:$Pg), (i64 GPR64sp:$Rn), (nxv2i64 uxtw_opnd:$Zm), (i32 sve_prfop:$prfop)),
+            (!cast<Instruction>(NAME # _UXTW_SCALED) sve_prfop:$prfop, PPR3bAny:$Pg, GPR64sp:$Rn, uxtw_opnd:$Zm)>;
+
+  def : Pat<(op_sxtw (nxv2i1 PPR3bAny:$Pg), (i64 GPR64sp:$Rn), (nxv2i64 sxtw_opnd:$Zm), (i32 sve_prfop:$prfop)),
+            (!cast<Instruction>(NAME # _SXTW_SCALED) sve_prfop:$prfop, PPR3bAny:$Pg, GPR64sp:$Rn, sxtw_opnd:$Zm)>;
+
 }
 
 multiclass sve_mem_64b_prfm_sv_lsl_scaled<bits<2> msz, string asm,
-                                          RegisterOperand zprext> {
+                                          RegisterOperand zprext, PatFrag frag> {
   def NAME : sve_mem_64b_prfm_sv<msz, 1, 1, asm, zprext>;
+
+  def : Pat<(frag (nxv2i1 PPR3bAny:$Pg), (i64 GPR64sp:$Rn), (nxv2i64 zprext:$Zm), (i32 sve_prfop:$prfop)),
+            (!cast<Instruction>(NAME) sve_prfop:$prfop, PPR3bAny:$Pg, GPR64sp:$Rn, zprext:$Zm)>;
+
 }
 
 
@@ -6831,11 +6855,14 @@ class sve_mem_64b_prfm_vi<bits<2> msz, string asm, Operand imm_ty>
   let hasSideEffects = 1;
 }
 
-multiclass sve_mem_64b_prfm_vi<bits<2> msz, string asm, Operand imm_ty> {
+multiclass sve_mem_64b_prfm_vi<bits<2> msz, string asm, Operand imm_ty, SDPatternOperator op> {
   def NAME : sve_mem_64b_prfm_vi<msz, asm, imm_ty>;
 
   def : InstAlias<asm # "\t$prfop, $Pg, [$Zn]",
                   (!cast<Instruction>(NAME) sve_prfop:$prfop, PPR3bAny:$Pg, ZPR64:$Zn, 0), 1>;
+
+  def : Pat<(op (nxv2i1 PPR_3b:$Pg), (nxv2i64 ZPR32:$Zn), (i64 imm_ty:$imm), (i32 sve_prfop:$prfop)),
+            (!cast<Instruction>(NAME) sve_prfop:$prfop, PPR_3b:$Pg, ZPR32:$Zn, imm_ty:$imm)>;
 }
 
 //===----------------------------------------------------------------------===//
