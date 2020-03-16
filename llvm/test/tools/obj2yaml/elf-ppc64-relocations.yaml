@@ -10,9 +10,8 @@
 # CHECK-NEXT:   Type:    ET_REL
 # CHECK-NEXT:   Machine: EM_PPC64
 # CHECK-NEXT: Sections:
-# CHECK-NEXT:   - Name:    .rela.text
-# CHECK-NEXT:     Type:    SHT_RELA
-# CHECK-NEXT:     EntSize: 0x0000000000000018
+# CHECK-NEXT:   - Name: .rela.text
+# CHECK-NEXT:     Type: SHT_RELA
 # CHECK-NEXT:     Relocations:
 # CHECK-NEXT:       - Type: R_PPC64_NONE
 # CHECK-NEXT:       - Type: R_PPC64_ADDR32

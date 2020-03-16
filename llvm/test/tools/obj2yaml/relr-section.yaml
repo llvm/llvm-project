@@ -1,7 +1,8 @@
 ## Test how we dump SHT_RELR sections for 32 and 64-bit targets.
 
-## Test we use the "Entries" property when it is possible do
-## dump values correctly.
+## Test we use the "Entries" property when it is possible to
+## dump values correctly. Also, check we do not dump sh_entsize when
+## it has the default value.
 
 # RUN: yaml2obj --docnum=1 -D BITS=32 -D ENCODE=LSB %s -o %t.32le
 # RUN: obj2yaml %t.32le | FileCheck %s --check-prefix=ELF32LE
@@ -15,25 +16,21 @@
 # ELF64LE:      Sections:
 # ELF64LE-NEXT:   - Name:    .relr.dyn
 # ELF64LE-NEXT:     Type:    SHT_RELR
-# ELF64LE-NEXT:     EntSize: 0x0000000000000008
 # ELF64LE-NEXT:     Entries: [ 0x8877665544332211 ]
 
 # ELF32LE:      Sections:
 # ELF32LE-NEXT:   - Name:    .relr.dyn
 # ELF32LE-NEXT:     Type:    SHT_RELR
-# ELF32LE-NEXT:     EntSize: 0x0000000000000004
 # ELF32LE-NEXT:     Entries: [ 0x0000000044332211, 0x0000000088776655 ]
 
 # ELF64BE:      Sections:
 # ELF64BE-NEXT:   - Name:    .relr.dyn
 # ELF64BE-NEXT:     Type:    SHT_RELR
-# ELF64BE-NEXT:     EntSize: 0x0000000000000008
 # ELF64BE-NEXT:     Entries: [ 0x1122334455667788 ]
 
 # ELF32BE:      Sections:
 # ELF32BE-NEXT:  - Name:    .relr.dyn
 # ELF32BE-NEXT:    Type:    SHT_RELR
-# ELF32BE-NEXT:    EntSize: 0x0000000000000004
 # ELF32BE-NEXT:    Entries: [ 0x0000000011223344, 0x0000000055667788 ]
 
 --- !ELF
@@ -54,7 +51,6 @@ Sections:
 
 # CONTENT:      - Name:    .relr.dyn
 # CONTENT-NEXT:   Type:    SHT_RELR
-# CONTENT-NEXT:   EntSize: 0x0000000000000008
 # CONTENT-NEXT:   Content: '11223344556677'
 
 --- !ELF
