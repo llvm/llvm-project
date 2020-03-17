@@ -158,6 +158,8 @@ void func(int sel) {
   dump(&volatile_int8);
   dump(&const_volatile_int8);
 
+  dump(&local_int8 + 1); // expected-error {{arithmetic on a pointer to sizeless type}}
+
   *&local_int8 = local_int8;
   *&const_int8 = local_int8; // expected-error {{read-only variable is not assignable}}
   *&volatile_int8 = local_int8;
@@ -177,6 +179,16 @@ void func(int sel) {
   overf16(local_int16);
 
   varargs(1, local_int8, local_int16);
+
+  global_int8_ptr++;                 // expected-error {{arithmetic on a pointer to sizeless type}}
+  global_int8_ptr--;                 // expected-error {{arithmetic on a pointer to sizeless type}}
+  ++global_int8_ptr;                 // expected-error {{arithmetic on a pointer to sizeless type}}
+  --global_int8_ptr;                 // expected-error {{arithmetic on a pointer to sizeless type}}
+  global_int8_ptr + 1;               // expected-error {{arithmetic on a pointer to sizeless type}}
+  global_int8_ptr - 1;               // expected-error {{arithmetic on a pointer to sizeless type}}
+  global_int8_ptr += 1;              // expected-error {{arithmetic on a pointer to sizeless type}}
+  global_int8_ptr -= 1;              // expected-error {{arithmetic on a pointer to sizeless type}}
+  global_int8_ptr - global_int8_ptr; // expected-error {{arithmetic on a pointer to sizeless type}}
 
   +init_int8;       // expected-error {{invalid argument type 'svint8_t'}}
   ++init_int8;      // expected-error {{cannot increment value of type 'svint8_t'}}
