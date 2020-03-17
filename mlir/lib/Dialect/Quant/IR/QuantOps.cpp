@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/QuantOps/QuantOps.h"
+#include "mlir/Dialect/Quant/QuantOps.h"
 #include "TypeDetail.h"
 
-#include "mlir/Dialect/QuantOps/QuantTypes.h"
+#include "mlir/Dialect/Quant/QuantTypes.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
@@ -29,7 +29,7 @@ QuantizationDialect::QuantizationDialect(MLIRContext *context)
            UniformQuantizedPerAxisType>();
   addOperations<
 #define GET_OP_LIST
-#include "mlir/Dialect/QuantOps/QuantOps.cpp.inc"
+#include "mlir/Dialect/Quant/QuantOps.cpp.inc"
       >();
 }
 
@@ -93,4 +93,4 @@ static LogicalResult verifyRegionOp(QuantizeRegionOp op) {
 }
 
 #define GET_OP_CLASSES
-#include "mlir/Dialect/QuantOps/QuantOps.cpp.inc"
+#include "mlir/Dialect/Quant/QuantOps.cpp.inc"

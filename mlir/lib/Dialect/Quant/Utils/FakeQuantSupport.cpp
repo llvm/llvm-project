@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/QuantOps/FakeQuantSupport.h"
-#include "mlir/Dialect/QuantOps/QuantTypes.h"
+#include "mlir/Dialect/Quant/FakeQuantSupport.h"
+#include "mlir/Dialect/Quant/QuantTypes.h"
 
 using namespace mlir;
 using namespace mlir::quant;
