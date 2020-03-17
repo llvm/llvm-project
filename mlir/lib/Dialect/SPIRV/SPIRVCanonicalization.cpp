@@ -318,9 +318,8 @@ struct ConvertSelectionOpToSelect
     auto *falseBlock = brConditionalOp.getSuccessor(1);
     auto *mergeBlock = selectionOp.getMergeBlock();
 
-    if (!canCanonicalizeSelection(trueBlock, falseBlock, mergeBlock)) {
+    if (failed(canCanonicalizeSelection(trueBlock, falseBlock, mergeBlock)))
       return matchFailure();
-    }
 
     auto trueValue = getSrcValue(trueBlock);
     auto falseValue = getSrcValue(falseBlock);
