@@ -1,0 +1,68 @@
+# RUN: llc -start-after=livedebugvalues -mtriple=x86_64-apple-darwin -o - %s -filetype=obj \
+# RUN:   -emit-call-site-info -debug-entry-values | llvm-dwarfdump - | FileCheck %s -implicit-check-not=call_site_parameter
+
+# CHECK: DW_TAG_formal_parameter
+# CHECK-NEXT: DW_AT_location
+# CHECK-NEXT: DW_OP_reg17
+
+# struct S {
+#   float w;
+# };
+# void f(long w, long b);
+# void g(struct S s) {
+#   int w = s.w;
+#   f(w, w*4);
+# }
+
+--- |
+  define void @g(float %s.coerce) local_unnamed_addr !dbg !20 {
+  entry:
+    ret void, !dbg !31
+  }
+  declare !dbg !14 void @f(i64, i64) local_unnamed_addr
+  !llvm.module.flags = !{!6, !7, !8, !9}
+  !llvm.dbg.cu = !{!10}
+  !6 = !{i32 7, !"Dwarf Version", i32 4}
+  !7 = !{i32 2, !"Debug Info Version", i32 3}
+  !8 = !{i32 1, !"wchar_size", i32 4}
+  !9 = !{i32 7, !"PIC Level", i32 2}
+  !10 = distinct !DICompileUnit(language: DW_LANG_ObjC, file: !15, producer: "", isOptimized: true, runtimeVersion: 2, emissionKind: FullDebug, enums: !12, retainedTypes: !13, nameTableKind: None, sysroot: "/")
+  !12 = !{}
+  !13 = !{!14}
+  !14 = !DISubprogram(name: "f", scope: !15, file: !15, line: 4, type: !16, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized, retainedNodes: !12)
+  !15 = !DIFile(filename: "test.m", directory: "/")
+  !16 = !DISubroutineType(types: !17)
+  !17 = !{null, !18, !18}
+  !18 = !DIBasicType(name: "long int", size: 64, encoding: DW_ATE_signed)
+  !20 = distinct !DISubprogram(name: "g", scope: !15, file: !15, line: 5, type: !21, scopeLine: 5, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !10, retainedNodes: !27)
+  !21 = !DISubroutineType(types: !22)
+  !22 = !{null, !23}
+  !23 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "S", file: !15, line: 1, size: 32, elements: !24)
+  !24 = !{!25}
+  !25 = !DIDerivedType(tag: DW_TAG_member, name: "w", scope: !23, file: !15, line: 2, baseType: !26, size: 32)
+  !26 = !DIBasicType(name: "float", size: 32, encoding: DW_ATE_float)
+  !27 = !{!28, !29}
+  !28 = !DILocalVariable(name: "s", arg: 1, scope: !20, file: !15, line: 5, type: !23)
+  !29 = !DILocalVariable(name: "w", scope: !20, file: !15, line: 6, type: !30)
+  !30 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !31 = !DILocation(line: 0, scope: !20)
+name:            g
+callSites:
+  - { bb: 0, offset: 13, fwdArgRegs: 
+      - { arg: 1, reg: '$rsi' } }
+body:             |
+  bb.0.entry:
+    DBG_VALUE $xmm0, $noreg, !28, !DIExpression(), debug-location !31
+    DBG_VALUE $xmm0, $noreg, !28, !DIExpression(), debug-location !31
+    frame-setup PUSH64r killed $rbp, implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION def_cfa_offset 16
+    CFI_INSTRUCTION offset $rbp, -16
+    $rbp = frame-setup MOV64rr $rsp
+    CFI_INSTRUCTION def_cfa_register $rbp
+    renamable $eax = nofpexcept CVTTSS2SIrr killed renamable $xmm0, implicit $mxcsr, debug-location !31
+    DBG_VALUE $eax, $noreg, !29, !DIExpression(), debug-location !31
+    renamable $rdi = MOVSX64rr32 killed renamable $eax, debug-location !31
+    renamable $eax = LEA64_32r $noreg, 4, renamable $rdi, 0, $noreg, debug-location !31
+    renamable $rsi = MOVSX64rr32 killed renamable $eax, debug-location !31
+    $rbp = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !31
+    TAILJMPd64 @f, csr_64, implicit $rsp, implicit $ssp, implicit $rsp, implicit $ssp, implicit $rdi, implicit $rsi, debug-location !31
