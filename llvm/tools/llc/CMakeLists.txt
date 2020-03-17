@@ -26,4 +26,5 @@ add_llvm_tool(llc
   intrinsics_gen
   SUPPORT_PLUGINS
   )
+
 export_executable_symbols(llc)

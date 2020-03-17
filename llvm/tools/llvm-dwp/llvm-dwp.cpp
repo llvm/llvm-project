@@ -27,7 +27,7 @@
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
-#include "llvm/MC/MCTargetOptionsCommandFlags.inc"
+#include "llvm/MC/MCTargetOptionsCommandFlags.h"
 #include "llvm/Object/Decompressor.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/DataExtractor.h"
@@ -45,6 +45,8 @@
 
 using namespace llvm;
 using namespace llvm::object;
+
+static mc::RegisterMCTargetOptionsFlags MCTargetOptionsFlags;
 
 cl::OptionCategory DwpCategory("Specific Options");
 static cl::list<std::string> InputFiles(cl::Positional, cl::ZeroOrMore,
@@ -686,7 +688,7 @@ int main(int argc, char **argv) {
   if (!MRI)
     return error(Twine("no register info for target ") + TripleName, Context);
 
-  MCTargetOptions MCOptions = InitMCTargetOptionsFromFlags();
+  MCTargetOptions MCOptions = llvm::mc::InitMCTargetOptionsFromFlags();
   std::unique_ptr<MCAsmInfo> MAI(
       TheTarget->createMCAsmInfo(*MRI, TripleName, MCOptions));
   if (!MAI)

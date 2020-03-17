@@ -25,7 +25,7 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/MC/MCTargetOptionsCommandFlags.inc"
+#include "llvm/MC/MCTargetOptionsCommandFlags.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/FileUtilities.h"
@@ -40,6 +40,8 @@
 #include "llvm/Support/WithColor.h"
 
 using namespace llvm;
+
+static mc::RegisterMCTargetOptionsFlags MOF;
 
 static cl::opt<std::string>
 InputFilename(cl::Positional, cl::desc("<input file>"), cl::init("-"));
@@ -222,7 +224,7 @@ int main(int argc, char **argv) {
   cl::AddExtraVersionPrinter(TargetRegistry::printRegisteredTargetsForVersion);
 
   cl::ParseCommandLineOptions(argc, argv, "llvm machine code playground\n");
-  MCTargetOptions MCOptions = InitMCTargetOptionsFromFlags();
+  MCTargetOptions MCOptions = mc::InitMCTargetOptionsFromFlags();
   MCOptions.AssemblyLanguage = "masm";
 
   const char *ProgName = argv[0];
