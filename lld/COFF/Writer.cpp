@@ -102,7 +102,7 @@ public:
   void writeTo(uint8_t *b) const override {
     auto *d = reinterpret_cast<debug_directory *>(b);
 
-    for (const std::pair<COFF::DebugType, Chunk *> record : records) {
+    for (const std::pair<COFF::DebugType, Chunk *>& record : records) {
       Chunk *c = record.second;
       OutputSection *os = c->getOutputSection();
       uint64_t offs = os->getFileOff() + (c->getRVA() - os->getRVA());
