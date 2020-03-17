@@ -33,6 +33,7 @@ static_library("CodeGen") {
     "CallingConvLower.cpp",
     "CodeGen.cpp",
     "CodeGenPrepare.cpp",
+    "CommandFlags.cpp",
     "CriticalAntiDepBreaker.cpp",
     "DFAPacketizer.cpp",
     "DeadMachineInstructionElim.cpp",
