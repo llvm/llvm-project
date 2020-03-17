@@ -604,8 +604,8 @@ ExprDependence clang::computeDependence(DependentScopeDeclRefExpr *E) {
 
 ExprDependence clang::computeDependence(CXXConstructExpr *E) {
   auto D = toExprDependence(E->getType()->getDependence());
-  for (auto *E : E->arguments())
-    D |= E->getDependence() & ~ExprDependence::Type;
+  for (auto *A : E->arguments())
+    D |= A->getDependence() & ~ExprDependence::Type;
   return D;
 }
 
