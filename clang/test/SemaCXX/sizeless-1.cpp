@@ -398,6 +398,19 @@ void cxx_only(int sel) {
   throw local_int8; // expected-error {{cannot throw object of sizeless type 'svint8_t'}}
   throw global_int8_ptr;
 
+  try {
+  } catch (int) {
+  }
+  try {
+  } catch (svint8_t) { // expected-error {{cannot catch sizeless type 'svint8_t'}}
+  }
+  try {
+  } catch (svint8_t *) {
+  }
+  try {
+  } catch (svint8_t &) { // expected-error {{cannot catch reference to sizeless type 'svint8_t'}}
+  }
+
   local_int8.~__SVInt8_t(); // expected-error {{object expression of non-scalar type 'svint8_t' (aka '__SVInt8_t') cannot be used in a pseudo-destructor expression}}
 
   (void)svint8_t();
