@@ -970,10 +970,6 @@ void X86AsmBackend::finishLayout(MCAssembler const &Asm,
       const uint64_t OrigOffset = Layout.getFragmentOffset(&F);
 #endif
       const uint64_t OrigSize = Asm.computeFragmentSize(Layout, F);
-      if (OrigSize == 0 || Relaxable.empty()) {
-        Relaxable.clear();
-        continue;
-      }
 
       // To keep the effects local, prefer to relax instructions closest to
       // the align directive.  This is purely about human understandability
