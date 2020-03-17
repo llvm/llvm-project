@@ -273,3 +273,9 @@ namespace AnnotateAfterInvalidTemplateId {
 namespace PR45063 {
   template<class=class a::template b<>> struct X {}; // expected-error {{undeclared identifier 'a'}}
 }
+
+namespace NoCrashOnEmptyNestedNameSpecifier {
+  template <typename FnT,
+            typename T = typename ABC<FnT>::template arg_t<0>> // expected-error {{no template named 'ABC'}}
+  void foo(FnT) {}
+}
