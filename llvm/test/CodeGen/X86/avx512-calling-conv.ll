@@ -3,6 +3,7 @@
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin9 -mcpu=knl -x86-enable-old-knl-abi | FileCheck %s --check-prefix=ALL_X64 --check-prefix=KNL --check-prefix=KNL-OLD
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin9 -mcpu=skx | FileCheck %s --check-prefix=ALL_X64 --check-prefix=SKX
 ; RUN: llc < %s -mtriple=i686-apple-darwin9 -mcpu=knl | FileCheck %s --check-prefix=KNL_X32
+; RUN: llc < %s -mtriple=x86_64-apple-darwin9 -mcpu=skx -fast-isel | FileCheck %s --check-prefix=FASTISEL
 
 define <16 x i1> @test1() {
 ; ALL_X64-LABEL: test1:
@@ -14,6 +15,11 @@ define <16 x i1> @test1() {
 ; KNL_X32:       ## %bb.0:
 ; KNL_X32-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; KNL_X32-NEXT:    retl
+;
+; FASTISEL-LABEL: test1:
+; FASTISEL:       ## %bb.0:
+; FASTISEL-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; FASTISEL-NEXT:    retq
   ret <16 x i1> zeroinitializer
 }
 
@@ -27,6 +33,16 @@ define <16 x i1> @test2(<16 x i1>%a, <16 x i1>%b) {
 ; KNL_X32:       ## %bb.0:
 ; KNL_X32-NEXT:    vandps %xmm1, %xmm0, %xmm0
 ; KNL_X32-NEXT:    retl
+;
+; FASTISEL-LABEL: test2:
+; FASTISEL:       ## %bb.0:
+; FASTISEL-NEXT:    vpsllw $7, %xmm1, %xmm1
+; FASTISEL-NEXT:    vpmovb2m %xmm1, %k0
+; FASTISEL-NEXT:    vpsllw $7, %xmm0, %xmm0
+; FASTISEL-NEXT:    vpmovb2m %xmm0, %k1
+; FASTISEL-NEXT:    kandw %k0, %k1, %k0
+; FASTISEL-NEXT:    vpmovm2b %k0, %xmm0
+; FASTISEL-NEXT:    retq
   %c = and <16 x i1>%a, %b
   ret <16 x i1> %c
 }
@@ -41,6 +57,16 @@ define <8 x i1> @test3(<8 x i1>%a, <8 x i1>%b) {
 ; KNL_X32:       ## %bb.0:
 ; KNL_X32-NEXT:    vandps %xmm1, %xmm0, %xmm0
 ; KNL_X32-NEXT:    retl
+;
+; FASTISEL-LABEL: test3:
+; FASTISEL:       ## %bb.0:
+; FASTISEL-NEXT:    vpsllw $15, %xmm1, %xmm1
+; FASTISEL-NEXT:    vpmovw2m %xmm1, %k0
+; FASTISEL-NEXT:    vpsllw $15, %xmm0, %xmm0
+; FASTISEL-NEXT:    vpmovw2m %xmm0, %k1
+; FASTISEL-NEXT:    kandb %k0, %k1, %k0
+; FASTISEL-NEXT:    vpmovm2w %k0, %xmm0
+; FASTISEL-NEXT:    retq
   %c = and <8 x i1>%a, %b
   ret <8 x i1> %c
 }
@@ -55,6 +81,16 @@ define <4 x i1> @test4(<4 x i1>%a, <4 x i1>%b) {
 ; KNL_X32:       ## %bb.0:
 ; KNL_X32-NEXT:    vandps %xmm1, %xmm0, %xmm0
 ; KNL_X32-NEXT:    retl
+;
+; FASTISEL-LABEL: test4:
+; FASTISEL:       ## %bb.0:
+; FASTISEL-NEXT:    vpslld $31, %xmm1, %xmm1
+; FASTISEL-NEXT:    vpmovd2m %xmm1, %k0
+; FASTISEL-NEXT:    vpslld $31, %xmm0, %xmm0
+; FASTISEL-NEXT:    vpmovd2m %xmm0, %k1
+; FASTISEL-NEXT:    kandw %k0, %k1, %k0
+; FASTISEL-NEXT:    vpmovm2d %k0, %xmm0
+; FASTISEL-NEXT:    retq
   %c = and <4 x i1>%a, %b
   ret <4 x i1> %c
 }
@@ -103,6 +139,20 @@ define <8 x i32> @test5(<8 x i32>%a, <8 x i32>%b) {
 ; KNL_X32-NEXT:    vpsrad $31, %ymm0, %ymm0
 ; KNL_X32-NEXT:    addl $12, %esp
 ; KNL_X32-NEXT:    retl
+;
+; FASTISEL-LABEL: test5:
+; FASTISEL:       ## %bb.0:
+; FASTISEL-NEXT:    pushq %rax
+; FASTISEL-NEXT:    .cfi_def_cfa_offset 16
+; FASTISEL-NEXT:    vpcmpgtd %ymm1, %ymm0, %k0
+; FASTISEL-NEXT:    vpmovm2w %k0, %xmm0
+; FASTISEL-NEXT:    vzeroupper
+; FASTISEL-NEXT:    callq _func8xi1
+; FASTISEL-NEXT:    vpsllw $15, %xmm0, %xmm0
+; FASTISEL-NEXT:    vpmovw2m %xmm0, %k0
+; FASTISEL-NEXT:    vpmovm2d %k0, %ymm0
+; FASTISEL-NEXT:    popq %rax
+; FASTISEL-NEXT:    retq
   %cmpRes = icmp sgt <8 x i32>%a, %b
   %resi = call <8 x i1> @func8xi1(<8 x i1> %cmpRes)
   %res = sext <8 x i1>%resi to <8 x i32>
@@ -153,6 +203,20 @@ define <16 x i32> @test6(<16 x i32>%a, <16 x i32>%b) {
 ; KNL_X32-NEXT:    vpsrad $31, %zmm0, %zmm0
 ; KNL_X32-NEXT:    addl $12, %esp
 ; KNL_X32-NEXT:    retl
+;
+; FASTISEL-LABEL: test6:
+; FASTISEL:       ## %bb.0:
+; FASTISEL-NEXT:    pushq %rax
+; FASTISEL-NEXT:    .cfi_def_cfa_offset 16
+; FASTISEL-NEXT:    vpcmpgtd %zmm1, %zmm0, %k0
+; FASTISEL-NEXT:    vpmovm2b %k0, %xmm0
+; FASTISEL-NEXT:    vzeroupper
+; FASTISEL-NEXT:    callq _func16xi1
+; FASTISEL-NEXT:    vpsllw $7, %xmm0, %xmm0
+; FASTISEL-NEXT:    vpmovb2m %xmm0, %k0
+; FASTISEL-NEXT:    vpmovm2d %k0, %zmm0
+; FASTISEL-NEXT:    popq %rax
+; FASTISEL-NEXT:    retq
   %cmpRes = icmp sgt <16 x i32>%a, %b
   %resi = call <16 x i1> @func16xi1(<16 x i1> %cmpRes)
   %res = sext <16 x i1>%resi to <16 x i32>
@@ -183,6 +247,19 @@ define <4 x i32> @test7(<4 x i32>%a, <4 x i32>%b) {
 ; KNL_X32-NEXT:    vpsrad $31, %xmm0, %xmm0
 ; KNL_X32-NEXT:    addl $12, %esp
 ; KNL_X32-NEXT:    retl
+;
+; FASTISEL-LABEL: test7:
+; FASTISEL:       ## %bb.0:
+; FASTISEL-NEXT:    pushq %rax
+; FASTISEL-NEXT:    .cfi_def_cfa_offset 16
+; FASTISEL-NEXT:    vpcmpgtd %xmm1, %xmm0, %k0
+; FASTISEL-NEXT:    vpmovm2d %k0, %xmm0
+; FASTISEL-NEXT:    callq _func4xi1
+; FASTISEL-NEXT:    vpslld $31, %xmm0, %xmm0
+; FASTISEL-NEXT:    vpmovd2m %xmm0, %k0
+; FASTISEL-NEXT:    vpmovm2d %k0, %xmm0
+; FASTISEL-NEXT:    popq %rax
+; FASTISEL-NEXT:    retq
   %cmpRes = icmp sgt <4 x i32>%a, %b
   %resi = call <4 x i1> @func4xi1(<4 x i1> %cmpRes)
   %res = sext <4 x i1>%resi to <4 x i32>
@@ -225,6 +302,18 @@ define <8 x i1> @test7a(<8 x i32>%a, <8 x i32>%b) {
 ; KNL_X32-NEXT:    vandps LCPI7_0, %xmm0, %xmm0
 ; KNL_X32-NEXT:    addl $12, %esp
 ; KNL_X32-NEXT:    retl
+;
+; FASTISEL-LABEL: test7a:
+; FASTISEL:       ## %bb.0:
+; FASTISEL-NEXT:    pushq %rax
+; FASTISEL-NEXT:    .cfi_def_cfa_offset 16
+; FASTISEL-NEXT:    vpcmpgtd %ymm1, %ymm0, %k0
+; FASTISEL-NEXT:    vpmovm2w %k0, %xmm0
+; FASTISEL-NEXT:    vzeroupper
+; FASTISEL-NEXT:    callq _func8xi1
+; FASTISEL-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; FASTISEL-NEXT:    popq %rax
+; FASTISEL-NEXT:    retq
   %cmpRes = icmp sgt <8 x i32>%a, %b
   %resi = call <8 x i1> @func8xi1(<8 x i1> %cmpRes)
   %res = and <8 x i1>%resi,  <i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false>
@@ -249,6 +338,15 @@ define <16 x i8> @test8(<16 x i8> %a1, <16 x i8> %a2, i1 %cond) {
 ; KNL_X32-NEXT:    vmovaps %xmm1, %xmm0
 ; KNL_X32-NEXT:  LBB8_2:
 ; KNL_X32-NEXT:    retl
+;
+; FASTISEL-LABEL: test8:
+; FASTISEL:       ## %bb.0:
+; FASTISEL-NEXT:    testb $1, %dil
+; FASTISEL-NEXT:    jne LBB8_2
+; FASTISEL-NEXT:  ## %bb.1:
+; FASTISEL-NEXT:    vmovaps %xmm1, %xmm0
+; FASTISEL-NEXT:  LBB8_2:
+; FASTISEL-NEXT:    retq
   %res = select i1 %cond, <16 x i8> %a1, <16 x i8> %a2
   ret <16 x i8> %res
 }
@@ -266,6 +364,12 @@ define i1 @test9(double %a, double %b) {
 ; KNL_X32-NEXT:    vucomisd {{[0-9]+}}(%esp), %xmm0
 ; KNL_X32-NEXT:    setb %al
 ; KNL_X32-NEXT:    retl
+;
+; FASTISEL-LABEL: test9:
+; FASTISEL:       ## %bb.0:
+; FASTISEL-NEXT:    vucomisd %xmm0, %xmm1
+; FASTISEL-NEXT:    setb %al
+; FASTISEL-NEXT:    retq
   %c = fcmp ugt double %a, %b
   ret i1 %c
 }
@@ -286,6 +390,13 @@ define i32 @test10(i32 %a, i32 %b, i1 %cond) {
 ; KNL_X32-NEXT:    cmovnel %eax, %ecx
 ; KNL_X32-NEXT:    movl (%ecx), %eax
 ; KNL_X32-NEXT:    retl
+;
+; FASTISEL-LABEL: test10:
+; FASTISEL:       ## %bb.0:
+; FASTISEL-NEXT:    movl %edi, %eax
+; FASTISEL-NEXT:    testb $1, %dl
+; FASTISEL-NEXT:    cmovel %esi, %eax
+; FASTISEL-NEXT:    retq
   %c = select i1 %cond, i32 %a, i32 %b
   ret i32 %c
 }
@@ -303,6 +414,12 @@ define i1 @test11(i32 %a, i32 %b) {
 ; KNL_X32-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
 ; KNL_X32-NEXT:    setg %al
 ; KNL_X32-NEXT:    retl
+;
+; FASTISEL-LABEL: test11:
+; FASTISEL:       ## %bb.0:
+; FASTISEL-NEXT:    cmpl %esi, %edi
+; FASTISEL-NEXT:    setg %al
+; FASTISEL-NEXT:    retq
   %c = icmp sgt i32 %a, %b
   ret i1 %c
 }
@@ -369,6 +486,34 @@ define i32 @test12(i32 %a1, i32 %a2, i32 %b1) {
 ; KNL_X32-NEXT:    popl %edi
 ; KNL_X32-NEXT:    popl %ebx
 ; KNL_X32-NEXT:    retl
+;
+; FASTISEL-LABEL: test12:
+; FASTISEL:       ## %bb.0:
+; FASTISEL-NEXT:    pushq %rbp
+; FASTISEL-NEXT:    .cfi_def_cfa_offset 16
+; FASTISEL-NEXT:    pushq %r14
+; FASTISEL-NEXT:    .cfi_def_cfa_offset 24
+; FASTISEL-NEXT:    pushq %rbx
+; FASTISEL-NEXT:    .cfi_def_cfa_offset 32
+; FASTISEL-NEXT:    .cfi_offset %rbx, -32
+; FASTISEL-NEXT:    .cfi_offset %r14, -24
+; FASTISEL-NEXT:    .cfi_offset %rbp, -16
+; FASTISEL-NEXT:    movl %esi, %r14d
+; FASTISEL-NEXT:    movl %edi, %ebp
+; FASTISEL-NEXT:    movl %edx, %esi
+; FASTISEL-NEXT:    callq _test11
+; FASTISEL-NEXT:    movzbl %al, %ebx
+; FASTISEL-NEXT:    movl %ebp, %edi
+; FASTISEL-NEXT:    movl %r14d, %esi
+; FASTISEL-NEXT:    movl %ebx, %edx
+; FASTISEL-NEXT:    callq _test10
+; FASTISEL-NEXT:    xorl %ecx, %ecx
+; FASTISEL-NEXT:    testb $1, %bl
+; FASTISEL-NEXT:    cmovel %ecx, %eax
+; FASTISEL-NEXT:    popq %rbx
+; FASTISEL-NEXT:    popq %r14
+; FASTISEL-NEXT:    popq %rbp
+; FASTISEL-NEXT:    retq
   %cond = call i1 @test11(i32 %a1, i32 %b1)
   %res = call i32 @test10(i32 %a1, i32 %a2, i1 %cond)
   %res1 = select i1 %cond, i32 %res, i32 0
@@ -395,6 +540,13 @@ define <1 x i1> @test13(<1 x i1>* %foo) {
 ; KNL_X32-NEXT:    movzbl (%eax), %eax
 ; KNL_X32-NEXT:    ## kill: def $al killed $al killed $eax
 ; KNL_X32-NEXT:    retl
+;
+; FASTISEL-LABEL: test13:
+; FASTISEL:       ## %bb.0:
+; FASTISEL-NEXT:    kmovb (%rdi), %k0
+; FASTISEL-NEXT:    kmovd %k0, %eax
+; FASTISEL-NEXT:    ## kill: def $al killed $al killed $eax
+; FASTISEL-NEXT:    retq
   %bar = load <1 x i1>, <1 x i1>* %foo
   ret <1 x i1> %bar
 }
@@ -453,6 +605,19 @@ define void @test14(<32 x i16>* %x) {
 ; KNL_X32-NEXT:    addl $8, %esp
 ; KNL_X32-NEXT:    popl %esi
 ; KNL_X32-NEXT:    retl
+;
+; FASTISEL-LABEL: test14:
+; FASTISEL:       ## %bb.0:
+; FASTISEL-NEXT:    pushq %rbx
+; FASTISEL-NEXT:    .cfi_def_cfa_offset 16
+; FASTISEL-NEXT:    .cfi_offset %rbx, -16
+; FASTISEL-NEXT:    movq %rdi, %rbx
+; FASTISEL-NEXT:    vmovaps (%rdi), %zmm0
+; FASTISEL-NEXT:    callq _test14_callee
+; FASTISEL-NEXT:    vmovaps %zmm0, (%rbx)
+; FASTISEL-NEXT:    popq %rbx
+; FASTISEL-NEXT:    vzeroupper
+; FASTISEL-NEXT:    retq
   %a = load <32 x i16>, <32 x i16>* %x
   %b = call <32 x i16> @test14_callee(<32 x i16> %a)
   store <32 x i16> %b, <32 x i16>* %x
@@ -514,6 +679,19 @@ define void @test15(<64 x i8>* %x) {
 ; KNL_X32-NEXT:    addl $8, %esp
 ; KNL_X32-NEXT:    popl %esi
 ; KNL_X32-NEXT:    retl
+;
+; FASTISEL-LABEL: test15:
+; FASTISEL:       ## %bb.0:
+; FASTISEL-NEXT:    pushq %rbx
+; FASTISEL-NEXT:    .cfi_def_cfa_offset 16
+; FASTISEL-NEXT:    .cfi_offset %rbx, -16
+; FASTISEL-NEXT:    movq %rdi, %rbx
+; FASTISEL-NEXT:    vmovaps (%rdi), %zmm0
+; FASTISEL-NEXT:    callq _test15_callee
+; FASTISEL-NEXT:    vmovaps %zmm0, (%rbx)
+; FASTISEL-NEXT:    popq %rbx
+; FASTISEL-NEXT:    vzeroupper
+; FASTISEL-NEXT:    retq
   %a = load <64 x i8>, <64 x i8>* %x
   %b = call <64 x i8> @test15_callee(<64 x i8> %a)
   store <64 x i8> %b, <64 x i8>* %x
@@ -1497,6 +1675,321 @@ define <17 x i1> @test16(<17 x i1> %a, <17 x i1> %b) nounwind {
 ; KNL_X32-NEXT:    popl %ebx
 ; KNL_X32-NEXT:    popl %ebp
 ; KNL_X32-NEXT:    retl $4
+;
+; FASTISEL-LABEL: test16:
+; FASTISEL:       ## %bb.0:
+; FASTISEL-NEXT:    pushq %rbp
+; FASTISEL-NEXT:    pushq %r15
+; FASTISEL-NEXT:    pushq %r14
+; FASTISEL-NEXT:    pushq %r13
+; FASTISEL-NEXT:    pushq %r12
+; FASTISEL-NEXT:    pushq %rbx
+; FASTISEL-NEXT:    movq %rdi, %rax
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k0
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k1
+; FASTISEL-NEXT:    movl $-3, %edi
+; FASTISEL-NEXT:    kmovd %edi, %k2
+; FASTISEL-NEXT:    kmovd %k2, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
+; FASTISEL-NEXT:    kandd %k2, %k0, %k0
+; FASTISEL-NEXT:    kshiftld $31, %k1, %k1
+; FASTISEL-NEXT:    kshiftrd $30, %k1, %k1
+; FASTISEL-NEXT:    kord %k1, %k0, %k0
+; FASTISEL-NEXT:    movl $-5, %edi
+; FASTISEL-NEXT:    kmovd %edi, %k1
+; FASTISEL-NEXT:    kmovd %k1, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
+; FASTISEL-NEXT:    kandd %k1, %k0, %k0
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k1
+; FASTISEL-NEXT:    kshiftld $31, %k1, %k1
+; FASTISEL-NEXT:    kshiftrd $29, %k1, %k1
+; FASTISEL-NEXT:    kord %k1, %k0, %k0
+; FASTISEL-NEXT:    movl $-9, %edi
+; FASTISEL-NEXT:    kmovd %edi, %k1
+; FASTISEL-NEXT:    kmovd %k1, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
+; FASTISEL-NEXT:    kandd %k1, %k0, %k0
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k1
+; FASTISEL-NEXT:    kshiftld $31, %k1, %k1
+; FASTISEL-NEXT:    kshiftrd $28, %k1, %k1
+; FASTISEL-NEXT:    kord %k1, %k0, %k0
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k1
+; FASTISEL-NEXT:    movl $-17, %edi
+; FASTISEL-NEXT:    kmovd %edi, %k2
+; FASTISEL-NEXT:    kmovd %k2, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
+; FASTISEL-NEXT:    kandd %k2, %k0, %k0
+; FASTISEL-NEXT:    kshiftld $31, %k1, %k1
+; FASTISEL-NEXT:    kshiftrd $27, %k1, %k1
+; FASTISEL-NEXT:    kord %k1, %k0, %k0
+; FASTISEL-NEXT:    movl $-33, %edi
+; FASTISEL-NEXT:    kmovd %edi, %k1
+; FASTISEL-NEXT:    kmovd %k1, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
+; FASTISEL-NEXT:    kandd %k1, %k0, %k0
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k1
+; FASTISEL-NEXT:    kshiftld $31, %k1, %k1
+; FASTISEL-NEXT:    kshiftrd $26, %k1, %k1
+; FASTISEL-NEXT:    kord %k1, %k0, %k0
+; FASTISEL-NEXT:    movl $-65, %edi
+; FASTISEL-NEXT:    kmovd %edi, %k1
+; FASTISEL-NEXT:    kmovd %k1, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
+; FASTISEL-NEXT:    kandd %k1, %k0, %k0
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k1
+; FASTISEL-NEXT:    kshiftld $31, %k1, %k1
+; FASTISEL-NEXT:    kshiftrd $25, %k1, %k1
+; FASTISEL-NEXT:    kord %k1, %k0, %k0
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k1
+; FASTISEL-NEXT:    movl $-129, %edi
+; FASTISEL-NEXT:    kmovd %edi, %k2
+; FASTISEL-NEXT:    kmovd %k2, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
+; FASTISEL-NEXT:    kandd %k2, %k0, %k0
+; FASTISEL-NEXT:    kshiftld $31, %k1, %k1
+; FASTISEL-NEXT:    kshiftrd $24, %k1, %k1
+; FASTISEL-NEXT:    kord %k1, %k0, %k0
+; FASTISEL-NEXT:    movl $-257, %edi ## imm = 0xFEFF
+; FASTISEL-NEXT:    kmovd %edi, %k1
+; FASTISEL-NEXT:    kmovd %k1, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
+; FASTISEL-NEXT:    kandd %k1, %k0, %k0
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k1
+; FASTISEL-NEXT:    kshiftld $31, %k1, %k1
+; FASTISEL-NEXT:    kshiftrd $23, %k1, %k1
+; FASTISEL-NEXT:    kord %k1, %k0, %k0
+; FASTISEL-NEXT:    movl $-513, %edi ## imm = 0xFDFF
+; FASTISEL-NEXT:    kmovd %edi, %k1
+; FASTISEL-NEXT:    kmovd %k1, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
+; FASTISEL-NEXT:    kandd %k1, %k0, %k0
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k1
+; FASTISEL-NEXT:    kshiftld $31, %k1, %k1
+; FASTISEL-NEXT:    kshiftrd $22, %k1, %k1
+; FASTISEL-NEXT:    kord %k1, %k0, %k0
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k1
+; FASTISEL-NEXT:    movl $-1025, %edi ## imm = 0xFBFF
+; FASTISEL-NEXT:    kmovd %edi, %k6
+; FASTISEL-NEXT:    kandd %k6, %k0, %k0
+; FASTISEL-NEXT:    kshiftld $31, %k1, %k1
+; FASTISEL-NEXT:    kshiftrd $21, %k1, %k1
+; FASTISEL-NEXT:    kord %k1, %k0, %k0
+; FASTISEL-NEXT:    movl $-2049, %edi ## imm = 0xF7FF
+; FASTISEL-NEXT:    kmovd %edi, %k1
+; FASTISEL-NEXT:    kmovd %k1, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
+; FASTISEL-NEXT:    kandd %k1, %k0, %k0
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k1
+; FASTISEL-NEXT:    kshiftld $31, %k1, %k1
+; FASTISEL-NEXT:    kshiftrd $20, %k1, %k1
+; FASTISEL-NEXT:    kord %k1, %k0, %k0
+; FASTISEL-NEXT:    movl $-4097, %edi ## imm = 0xEFFF
+; FASTISEL-NEXT:    kmovd %edi, %k1
+; FASTISEL-NEXT:    kmovd %k1, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
+; FASTISEL-NEXT:    kandd %k1, %k0, %k0
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k1
+; FASTISEL-NEXT:    kshiftld $31, %k1, %k1
+; FASTISEL-NEXT:    kshiftrd $19, %k1, %k1
+; FASTISEL-NEXT:    kord %k1, %k0, %k0
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k1
+; FASTISEL-NEXT:    movl $-8193, %edi ## imm = 0xDFFF
+; FASTISEL-NEXT:    kmovd %edi, %k4
+; FASTISEL-NEXT:    kandd %k4, %k0, %k0
+; FASTISEL-NEXT:    kshiftld $31, %k1, %k1
+; FASTISEL-NEXT:    kshiftrd $18, %k1, %k1
+; FASTISEL-NEXT:    kord %k1, %k0, %k0
+; FASTISEL-NEXT:    movl $-16385, %edi ## imm = 0xBFFF
+; FASTISEL-NEXT:    kmovd %edi, %k5
+; FASTISEL-NEXT:    kandd %k5, %k0, %k0
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k1
+; FASTISEL-NEXT:    kshiftld $31, %k1, %k1
+; FASTISEL-NEXT:    kshiftrd $17, %k1, %k1
+; FASTISEL-NEXT:    kord %k1, %k0, %k0
+; FASTISEL-NEXT:    movl $-32769, %edi ## imm = 0xFFFF7FFF
+; FASTISEL-NEXT:    kmovd %edi, %k3
+; FASTISEL-NEXT:    kandd %k3, %k0, %k0
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k7
+; FASTISEL-NEXT:    kshiftld $31, %k7, %k7
+; FASTISEL-NEXT:    kshiftrd $16, %k7, %k7
+; FASTISEL-NEXT:    kord %k7, %k0, %k7
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k0
+; FASTISEL-NEXT:    movl $-65537, %edi ## imm = 0xFFFEFFFF
+; FASTISEL-NEXT:    kmovd %edi, %k2
+; FASTISEL-NEXT:    kandd %k2, %k7, %k7
+; FASTISEL-NEXT:    kshiftld $31, %k0, %k0
+; FASTISEL-NEXT:    kshiftrd $15, %k0, %k0
+; FASTISEL-NEXT:    kord %k0, %k7, %k0
+; FASTISEL-NEXT:    kmovd %k0, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
+; FASTISEL-NEXT:    kmovd %esi, %k0
+; FASTISEL-NEXT:    kmovd {{[-0-9]+}}(%r{{[sb]}}p), %k1 ## 4-byte Reload
+; FASTISEL-NEXT:    kandd %k1, %k0, %k0
+; FASTISEL-NEXT:    kmovd %edx, %k7
+; FASTISEL-NEXT:    kshiftld $31, %k7, %k7
+; FASTISEL-NEXT:    kshiftrd $30, %k7, %k7
+; FASTISEL-NEXT:    kord %k7, %k0, %k0
+; FASTISEL-NEXT:    kmovd {{[-0-9]+}}(%r{{[sb]}}p), %k1 ## 4-byte Reload
+; FASTISEL-NEXT:    kandd %k1, %k0, %k0
+; FASTISEL-NEXT:    kmovd %ecx, %k7
+; FASTISEL-NEXT:    kshiftld $31, %k7, %k7
+; FASTISEL-NEXT:    kshiftrd $29, %k7, %k7
+; FASTISEL-NEXT:    kord %k7, %k0, %k0
+; FASTISEL-NEXT:    kmovd {{[-0-9]+}}(%r{{[sb]}}p), %k1 ## 4-byte Reload
+; FASTISEL-NEXT:    kandd %k1, %k0, %k0
+; FASTISEL-NEXT:    kmovd %r8d, %k7
+; FASTISEL-NEXT:    kshiftld $31, %k7, %k7
+; FASTISEL-NEXT:    kshiftrd $28, %k7, %k7
+; FASTISEL-NEXT:    kord %k7, %k0, %k0
+; FASTISEL-NEXT:    kmovd {{[-0-9]+}}(%r{{[sb]}}p), %k1 ## 4-byte Reload
+; FASTISEL-NEXT:    kandd %k1, %k0, %k0
+; FASTISEL-NEXT:    kmovd %r9d, %k7
+; FASTISEL-NEXT:    kshiftld $31, %k7, %k7
+; FASTISEL-NEXT:    kshiftrd $27, %k7, %k7
+; FASTISEL-NEXT:    kord %k7, %k0, %k0
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k7
+; FASTISEL-NEXT:    kmovd {{[-0-9]+}}(%r{{[sb]}}p), %k1 ## 4-byte Reload
+; FASTISEL-NEXT:    kandd %k1, %k0, %k1
+; FASTISEL-NEXT:    kshiftld $31, %k7, %k7
+; FASTISEL-NEXT:    kshiftrd $26, %k7, %k7
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k0
+; FASTISEL-NEXT:    kord %k7, %k1, %k1
+; FASTISEL-NEXT:    kmovd {{[-0-9]+}}(%r{{[sb]}}p), %k7 ## 4-byte Reload
+; FASTISEL-NEXT:    kandd %k7, %k1, %k1
+; FASTISEL-NEXT:    kshiftld $31, %k0, %k0
+; FASTISEL-NEXT:    kshiftrd $25, %k0, %k0
+; FASTISEL-NEXT:    kord %k0, %k1, %k0
+; FASTISEL-NEXT:    kmovd {{[-0-9]+}}(%r{{[sb]}}p), %k1 ## 4-byte Reload
+; FASTISEL-NEXT:    kandd %k1, %k0, %k0
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k1
+; FASTISEL-NEXT:    kshiftld $31, %k1, %k1
+; FASTISEL-NEXT:    kshiftrd $24, %k1, %k1
+; FASTISEL-NEXT:    kord %k1, %k0, %k0
+; FASTISEL-NEXT:    kmovd {{[-0-9]+}}(%r{{[sb]}}p), %k1 ## 4-byte Reload
+; FASTISEL-NEXT:    kandd %k1, %k0, %k0
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k1
+; FASTISEL-NEXT:    kshiftld $31, %k1, %k1
+; FASTISEL-NEXT:    kshiftrd $23, %k1, %k1
+; FASTISEL-NEXT:    kord %k1, %k0, %k0
+; FASTISEL-NEXT:    kmovd {{[-0-9]+}}(%r{{[sb]}}p), %k1 ## 4-byte Reload
+; FASTISEL-NEXT:    kandd %k1, %k0, %k0
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k1
+; FASTISEL-NEXT:    kshiftld $31, %k1, %k1
+; FASTISEL-NEXT:    kshiftrd $22, %k1, %k1
+; FASTISEL-NEXT:    kord %k1, %k0, %k0
+; FASTISEL-NEXT:    kandd %k6, %k0, %k0
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k1
+; FASTISEL-NEXT:    kshiftld $31, %k1, %k1
+; FASTISEL-NEXT:    kshiftrd $21, %k1, %k1
+; FASTISEL-NEXT:    kord %k1, %k0, %k0
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k1
+; FASTISEL-NEXT:    kmovd {{[-0-9]+}}(%r{{[sb]}}p), %k6 ## 4-byte Reload
+; FASTISEL-NEXT:    kandd %k6, %k0, %k0
+; FASTISEL-NEXT:    kshiftld $31, %k1, %k1
+; FASTISEL-NEXT:    kshiftrd $20, %k1, %k1
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k6
+; FASTISEL-NEXT:    kord %k1, %k0, %k0
+; FASTISEL-NEXT:    kmovd {{[-0-9]+}}(%r{{[sb]}}p), %k1 ## 4-byte Reload
+; FASTISEL-NEXT:    kandd %k1, %k0, %k0
+; FASTISEL-NEXT:    kshiftld $31, %k6, %k1
+; FASTISEL-NEXT:    kshiftrd $19, %k1, %k1
+; FASTISEL-NEXT:    kord %k1, %k0, %k0
+; FASTISEL-NEXT:    kandd %k4, %k0, %k0
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k1
+; FASTISEL-NEXT:    kshiftld $31, %k1, %k1
+; FASTISEL-NEXT:    kshiftrd $18, %k1, %k1
+; FASTISEL-NEXT:    kord %k1, %k0, %k0
+; FASTISEL-NEXT:    kandd %k5, %k0, %k0
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k1
+; FASTISEL-NEXT:    kshiftld $31, %k1, %k1
+; FASTISEL-NEXT:    kshiftrd $17, %k1, %k1
+; FASTISEL-NEXT:    kord %k1, %k0, %k0
+; FASTISEL-NEXT:    kandd %k3, %k0, %k0
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k1
+; FASTISEL-NEXT:    kshiftld $31, %k1, %k1
+; FASTISEL-NEXT:    kshiftrd $16, %k1, %k1
+; FASTISEL-NEXT:    kord %k1, %k0, %k0
+; FASTISEL-NEXT:    kandd %k2, %k0, %k0
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k1
+; FASTISEL-NEXT:    kshiftld $31, %k1, %k1
+; FASTISEL-NEXT:    kshiftrd $15, %k1, %k1
+; FASTISEL-NEXT:    kord %k1, %k0, %k0
+; FASTISEL-NEXT:    kmovd {{[-0-9]+}}(%r{{[sb]}}p), %k1 ## 4-byte Reload
+; FASTISEL-NEXT:    kandd %k1, %k0, %k0
+; FASTISEL-NEXT:    kshiftrd $16, %k0, %k1
+; FASTISEL-NEXT:    kmovd %k1, %r8d
+; FASTISEL-NEXT:    kshiftrd $1, %k0, %k1
+; FASTISEL-NEXT:    kmovd %k1, %r9d
+; FASTISEL-NEXT:    kshiftrd $2, %k0, %k1
+; FASTISEL-NEXT:    kmovd %k1, %r10d
+; FASTISEL-NEXT:    kshiftrd $3, %k0, %k1
+; FASTISEL-NEXT:    kmovd %k1, %r11d
+; FASTISEL-NEXT:    kshiftrd $4, %k0, %k1
+; FASTISEL-NEXT:    kmovd %k1, %r12d
+; FASTISEL-NEXT:    kshiftrd $5, %k0, %k1
+; FASTISEL-NEXT:    kmovd %k1, %r15d
+; FASTISEL-NEXT:    kshiftrd $6, %k0, %k1
+; FASTISEL-NEXT:    kmovd %k1, %r14d
+; FASTISEL-NEXT:    kshiftrd $7, %k0, %k1
+; FASTISEL-NEXT:    kmovd %k1, %r13d
+; FASTISEL-NEXT:    kshiftrd $8, %k0, %k1
+; FASTISEL-NEXT:    kmovd %k1, %ebx
+; FASTISEL-NEXT:    kshiftrd $9, %k0, %k1
+; FASTISEL-NEXT:    kmovd %k1, %esi
+; FASTISEL-NEXT:    kshiftrd $10, %k0, %k1
+; FASTISEL-NEXT:    kmovd %k1, %ebp
+; FASTISEL-NEXT:    kshiftrd $11, %k0, %k1
+; FASTISEL-NEXT:    kmovd %k1, %ecx
+; FASTISEL-NEXT:    kshiftrd $12, %k0, %k1
+; FASTISEL-NEXT:    kmovd %k1, %edx
+; FASTISEL-NEXT:    kshiftrd $13, %k0, %k1
+; FASTISEL-NEXT:    kmovd %k1, %edi
+; FASTISEL-NEXT:    kshiftrd $14, %k0, %k1
+; FASTISEL-NEXT:    andl $1, %r8d
+; FASTISEL-NEXT:    movb %r8b, 2(%rax)
+; FASTISEL-NEXT:    kmovd %k0, %r8d
+; FASTISEL-NEXT:    andl $1, %r8d
+; FASTISEL-NEXT:    andl $1, %r9d
+; FASTISEL-NEXT:    leal (%r8,%r9,2), %r8d
+; FASTISEL-NEXT:    kmovd %k1, %r9d
+; FASTISEL-NEXT:    kshiftrd $15, %k0, %k0
+; FASTISEL-NEXT:    andl $1, %r10d
+; FASTISEL-NEXT:    leal (%r8,%r10,4), %r8d
+; FASTISEL-NEXT:    kmovd %k0, %r10d
+; FASTISEL-NEXT:    andl $1, %r11d
+; FASTISEL-NEXT:    leal (%r8,%r11,8), %r8d
+; FASTISEL-NEXT:    andl $1, %r12d
+; FASTISEL-NEXT:    shll $4, %r12d
+; FASTISEL-NEXT:    orl %r8d, %r12d
+; FASTISEL-NEXT:    andl $1, %r15d
+; FASTISEL-NEXT:    shll $5, %r15d
+; FASTISEL-NEXT:    orl %r12d, %r15d
+; FASTISEL-NEXT:    andl $1, %r14d
+; FASTISEL-NEXT:    shll $6, %r14d
+; FASTISEL-NEXT:    andl $1, %r13d
+; FASTISEL-NEXT:    shll $7, %r13d
+; FASTISEL-NEXT:    orl %r14d, %r13d
+; FASTISEL-NEXT:    andl $1, %ebx
+; FASTISEL-NEXT:    shll $8, %ebx
+; FASTISEL-NEXT:    orl %r13d, %ebx
+; FASTISEL-NEXT:    andl $1, %esi
+; FASTISEL-NEXT:    shll $9, %esi
+; FASTISEL-NEXT:    orl %ebx, %esi
+; FASTISEL-NEXT:    andl $1, %ebp
+; FASTISEL-NEXT:    shll $10, %ebp
+; FASTISEL-NEXT:    orl %esi, %ebp
+; FASTISEL-NEXT:    orl %r15d, %ebp
+; FASTISEL-NEXT:    andl $1, %ecx
+; FASTISEL-NEXT:    shll $11, %ecx
+; FASTISEL-NEXT:    andl $1, %edx
+; FASTISEL-NEXT:    shll $12, %edx
+; FASTISEL-NEXT:    orl %ecx, %edx
+; FASTISEL-NEXT:    andl $1, %edi
+; FASTISEL-NEXT:    shll $13, %edi
+; FASTISEL-NEXT:    orl %edx, %edi
+; FASTISEL-NEXT:    andl $1, %r9d
+; FASTISEL-NEXT:    shll $14, %r9d
+; FASTISEL-NEXT:    orl %edi, %r9d
+; FASTISEL-NEXT:    andl $1, %r10d
+; FASTISEL-NEXT:    shll $15, %r10d
+; FASTISEL-NEXT:    orl %r9d, %r10d
+; FASTISEL-NEXT:    orl %ebp, %r10d
+; FASTISEL-NEXT:    movw %r10w, (%rax)
+; FASTISEL-NEXT:    popq %rbx
+; FASTISEL-NEXT:    popq %r12
+; FASTISEL-NEXT:    popq %r13
+; FASTISEL-NEXT:    popq %r14
+; FASTISEL-NEXT:    popq %r15
+; FASTISEL-NEXT:    popq %rbp
+; FASTISEL-NEXT:    retq
   %c = and <17 x i1> %a, %b
   ret <17 x i1> %c
 }
@@ -2700,6 +3193,383 @@ define <7 x i1> @test17(<7 x i1> %a, <7 x i1> %b, <7 x i1> %c, <7 x i1> %d, <7 x
 ; KNL_X32-NEXT:    addl $16, %esp
 ; KNL_X32-NEXT:    popl %ebx
 ; KNL_X32-NEXT:    retl $4
+;
+; FASTISEL-LABEL: test17:
+; FASTISEL:       ## %bb.0:
+; FASTISEL-NEXT:    movq %rdi, %rax
+; FASTISEL-NEXT:    movb $-3, %dil
+; FASTISEL-NEXT:    kmovd %edi, %k1
+; FASTISEL-NEXT:    kmovw %k1, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k0
+; FASTISEL-NEXT:    kandb %k1, %k0, %k0
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k1
+; FASTISEL-NEXT:    kshiftlb $7, %k1, %k1
+; FASTISEL-NEXT:    kshiftrb $6, %k1, %k1
+; FASTISEL-NEXT:    korb %k1, %k0, %k0
+; FASTISEL-NEXT:    movb $-5, %dil
+; FASTISEL-NEXT:    kmovd %edi, %k1
+; FASTISEL-NEXT:    kmovw %k1, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
+; FASTISEL-NEXT:    kandb %k1, %k0, %k0
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k2
+; FASTISEL-NEXT:    kshiftlb $7, %k2, %k2
+; FASTISEL-NEXT:    kshiftrb $5, %k2, %k2
+; FASTISEL-NEXT:    korb %k2, %k0, %k0
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k3
+; FASTISEL-NEXT:    movb $-9, %dil
+; FASTISEL-NEXT:    kmovd %edi, %k1
+; FASTISEL-NEXT:    kmovw %k1, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
+; FASTISEL-NEXT:    kandb %k1, %k0, %k0
+; FASTISEL-NEXT:    kshiftlb $7, %k3, %k3
+; FASTISEL-NEXT:    kshiftrb $4, %k3, %k3
+; FASTISEL-NEXT:    korb %k3, %k0, %k0
+; FASTISEL-NEXT:    movb $-17, %dil
+; FASTISEL-NEXT:    kmovd %edi, %k1
+; FASTISEL-NEXT:    kmovw %k1, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
+; FASTISEL-NEXT:    kandb %k1, %k0, %k0
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k4
+; FASTISEL-NEXT:    kshiftlb $7, %k4, %k4
+; FASTISEL-NEXT:    kshiftrb $3, %k4, %k4
+; FASTISEL-NEXT:    korb %k4, %k0, %k0
+; FASTISEL-NEXT:    movb $-33, %dil
+; FASTISEL-NEXT:    kmovd %edi, %k1
+; FASTISEL-NEXT:    kandb %k1, %k0, %k0
+; FASTISEL-NEXT:    kmovq %k1, %k4
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k5
+; FASTISEL-NEXT:    kshiftlb $7, %k5, %k5
+; FASTISEL-NEXT:    kshiftrb $2, %k5, %k5
+; FASTISEL-NEXT:    korb %k5, %k0, %k0
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k7
+; FASTISEL-NEXT:    movb $-65, %dil
+; FASTISEL-NEXT:    kmovd %edi, %k6
+; FASTISEL-NEXT:    kandb %k6, %k0, %k1
+; FASTISEL-NEXT:    kshiftlb $7, %k7, %k7
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k0
+; FASTISEL-NEXT:    kshiftrb $1, %k7, %k7
+; FASTISEL-NEXT:    korb %k7, %k1, %k7
+; FASTISEL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k3 ## 2-byte Reload
+; FASTISEL-NEXT:    kandb %k3, %k0, %k0
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k1
+; FASTISEL-NEXT:    kshiftlb $7, %k1, %k1
+; FASTISEL-NEXT:    kshiftrb $6, %k1, %k1
+; FASTISEL-NEXT:    korb %k1, %k0, %k0
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k1
+; FASTISEL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k2 ## 2-byte Reload
+; FASTISEL-NEXT:    kandb %k2, %k0, %k2
+; FASTISEL-NEXT:    kshiftlb $7, %k1, %k1
+; FASTISEL-NEXT:    kshiftrb $5, %k1, %k1
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k0
+; FASTISEL-NEXT:    korb %k1, %k2, %k1
+; FASTISEL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k5 ## 2-byte Reload
+; FASTISEL-NEXT:    kandb %k5, %k1, %k1
+; FASTISEL-NEXT:    kshiftlb $7, %k0, %k0
+; FASTISEL-NEXT:    kshiftrb $4, %k0, %k0
+; FASTISEL-NEXT:    korb %k0, %k1, %k0
+; FASTISEL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k2 ## 2-byte Reload
+; FASTISEL-NEXT:    kandb %k2, %k0, %k0
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k1
+; FASTISEL-NEXT:    kshiftlb $7, %k1, %k1
+; FASTISEL-NEXT:    kshiftrb $3, %k1, %k1
+; FASTISEL-NEXT:    korb %k1, %k0, %k0
+; FASTISEL-NEXT:    kandb %k4, %k0, %k0
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k1
+; FASTISEL-NEXT:    kshiftlb $7, %k1, %k1
+; FASTISEL-NEXT:    kshiftrb $2, %k1, %k1
+; FASTISEL-NEXT:    korb %k1, %k0, %k0
+; FASTISEL-NEXT:    kandb %k6, %k0, %k0
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k1
+; FASTISEL-NEXT:    kshiftlb $7, %k1, %k1
+; FASTISEL-NEXT:    kshiftrb $1, %k1, %k1
+; FASTISEL-NEXT:    korb %k1, %k0, %k0
+; FASTISEL-NEXT:    kandb %k7, %k0, %k0
+; FASTISEL-NEXT:    kmovw %k0, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k0
+; FASTISEL-NEXT:    kandb %k3, %k0, %k0
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k1
+; FASTISEL-NEXT:    kshiftlb $7, %k1, %k1
+; FASTISEL-NEXT:    kshiftrb $6, %k1, %k1
+; FASTISEL-NEXT:    korb %k1, %k0, %k0
+; FASTISEL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k7 ## 2-byte Reload
+; FASTISEL-NEXT:    kandb %k7, %k0, %k0
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k1
+; FASTISEL-NEXT:    kshiftlb $7, %k1, %k1
+; FASTISEL-NEXT:    kshiftrb $5, %k1, %k1
+; FASTISEL-NEXT:    korb %k1, %k0, %k0
+; FASTISEL-NEXT:    kandb %k5, %k0, %k0
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k1
+; FASTISEL-NEXT:    kshiftlb $7, %k1, %k1
+; FASTISEL-NEXT:    kshiftrb $4, %k1, %k1
+; FASTISEL-NEXT:    korb %k1, %k0, %k0
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k1
+; FASTISEL-NEXT:    kmovq %k2, %k3
+; FASTISEL-NEXT:    kandb %k2, %k0, %k0
+; FASTISEL-NEXT:    kshiftlb $7, %k1, %k1
+; FASTISEL-NEXT:    kshiftrb $3, %k1, %k1
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k2
+; FASTISEL-NEXT:    korb %k1, %k0, %k0
+; FASTISEL-NEXT:    kandb %k4, %k0, %k0
+; FASTISEL-NEXT:    kmovq %k4, %k5
+; FASTISEL-NEXT:    kmovw %k4, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
+; FASTISEL-NEXT:    kshiftlb $7, %k2, %k1
+; FASTISEL-NEXT:    kshiftrb $2, %k1, %k1
+; FASTISEL-NEXT:    korb %k1, %k0, %k0
+; FASTISEL-NEXT:    kmovq %k6, %k4
+; FASTISEL-NEXT:    kandb %k6, %k0, %k0
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k1
+; FASTISEL-NEXT:    kshiftlb $7, %k1, %k1
+; FASTISEL-NEXT:    kshiftrb $1, %k1, %k1
+; FASTISEL-NEXT:    korb %k1, %k0, %k0
+; FASTISEL-NEXT:    kmovw %k0, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k0
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k1
+; FASTISEL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k6 ## 2-byte Reload
+; FASTISEL-NEXT:    kandb %k6, %k0, %k0
+; FASTISEL-NEXT:    kshiftlb $7, %k1, %k1
+; FASTISEL-NEXT:    kshiftrb $6, %k1, %k1
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k2
+; FASTISEL-NEXT:    korb %k1, %k0, %k0
+; FASTISEL-NEXT:    kandb %k7, %k0, %k0
+; FASTISEL-NEXT:    kshiftlb $7, %k2, %k1
+; FASTISEL-NEXT:    kshiftrb $5, %k1, %k1
+; FASTISEL-NEXT:    korb %k1, %k0, %k0
+; FASTISEL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k7 ## 2-byte Reload
+; FASTISEL-NEXT:    kandb %k7, %k0, %k0
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k1
+; FASTISEL-NEXT:    kshiftlb $7, %k1, %k1
+; FASTISEL-NEXT:    kshiftrb $4, %k1, %k1
+; FASTISEL-NEXT:    korb %k1, %k0, %k0
+; FASTISEL-NEXT:    kandb %k3, %k0, %k0
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k1
+; FASTISEL-NEXT:    kshiftlb $7, %k1, %k1
+; FASTISEL-NEXT:    kshiftrb $3, %k1, %k1
+; FASTISEL-NEXT:    korb %k1, %k0, %k0
+; FASTISEL-NEXT:    kandb %k5, %k0, %k0
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k1
+; FASTISEL-NEXT:    kshiftlb $7, %k1, %k1
+; FASTISEL-NEXT:    kshiftrb $2, %k1, %k1
+; FASTISEL-NEXT:    korb %k1, %k0, %k0
+; FASTISEL-NEXT:    kandb %k4, %k0, %k0
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k1
+; FASTISEL-NEXT:    kshiftlb $7, %k1, %k1
+; FASTISEL-NEXT:    kshiftrb $1, %k1, %k1
+; FASTISEL-NEXT:    korb %k1, %k0, %k0
+; FASTISEL-NEXT:    kmovw %k0, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k1
+; FASTISEL-NEXT:    kandb %k6, %k1, %k1
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k2
+; FASTISEL-NEXT:    kshiftlb $7, %k2, %k2
+; FASTISEL-NEXT:    kshiftrb $6, %k2, %k2
+; FASTISEL-NEXT:    korb %k2, %k1, %k1
+; FASTISEL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k5 ## 2-byte Reload
+; FASTISEL-NEXT:    kandb %k5, %k1, %k1
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k2
+; FASTISEL-NEXT:    kshiftlb $7, %k2, %k2
+; FASTISEL-NEXT:    kshiftrb $5, %k2, %k2
+; FASTISEL-NEXT:    korb %k2, %k1, %k1
+; FASTISEL-NEXT:    kandb %k7, %k1, %k1
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k2
+; FASTISEL-NEXT:    kshiftlb $7, %k2, %k2
+; FASTISEL-NEXT:    kshiftrb $4, %k2, %k2
+; FASTISEL-NEXT:    korb %k2, %k1, %k1
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k2
+; FASTISEL-NEXT:    kandb %k3, %k1, %k1
+; FASTISEL-NEXT:    kshiftlb $7, %k2, %k2
+; FASTISEL-NEXT:    kshiftrb $3, %k2, %k2
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k0
+; FASTISEL-NEXT:    korb %k2, %k1, %k1
+; FASTISEL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k2 ## 2-byte Reload
+; FASTISEL-NEXT:    kandb %k2, %k1, %k1
+; FASTISEL-NEXT:    kshiftlb $7, %k0, %k0
+; FASTISEL-NEXT:    kshiftrb $2, %k0, %k0
+; FASTISEL-NEXT:    korb %k0, %k1, %k0
+; FASTISEL-NEXT:    kmovq %k4, %k3
+; FASTISEL-NEXT:    kmovw %k4, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
+; FASTISEL-NEXT:    kandb %k4, %k0, %k0
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k1
+; FASTISEL-NEXT:    kshiftlb $7, %k1, %k1
+; FASTISEL-NEXT:    kshiftrb $1, %k1, %k1
+; FASTISEL-NEXT:    korb %k1, %k0, %k0
+; FASTISEL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k1 ## 2-byte Reload
+; FASTISEL-NEXT:    kandb %k1, %k0, %k0
+; FASTISEL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k1 ## 2-byte Reload
+; FASTISEL-NEXT:    kandb %k1, %k0, %k0
+; FASTISEL-NEXT:    kmovw %k0, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k0
+; FASTISEL-NEXT:    kmovq %k6, %k4
+; FASTISEL-NEXT:    kandb %k6, %k0, %k0
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k1
+; FASTISEL-NEXT:    kshiftlb $7, %k1, %k1
+; FASTISEL-NEXT:    kshiftrb $6, %k1, %k1
+; FASTISEL-NEXT:    korb %k1, %k0, %k0
+; FASTISEL-NEXT:    kandb %k5, %k0, %k0
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k1
+; FASTISEL-NEXT:    kshiftlb $7, %k1, %k1
+; FASTISEL-NEXT:    kshiftrb $5, %k1, %k1
+; FASTISEL-NEXT:    korb %k1, %k0, %k0
+; FASTISEL-NEXT:    kandb %k7, %k0, %k0
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k1
+; FASTISEL-NEXT:    kshiftlb $7, %k1, %k1
+; FASTISEL-NEXT:    kshiftrb $4, %k1, %k1
+; FASTISEL-NEXT:    korb %k1, %k0, %k0
+; FASTISEL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k6 ## 2-byte Reload
+; FASTISEL-NEXT:    kandb %k6, %k0, %k0
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k1
+; FASTISEL-NEXT:    kshiftlb $7, %k1, %k1
+; FASTISEL-NEXT:    kshiftrb $3, %k1, %k1
+; FASTISEL-NEXT:    korb %k1, %k0, %k0
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k1
+; FASTISEL-NEXT:    kandb %k2, %k0, %k0
+; FASTISEL-NEXT:    kmovq %k2, %k7
+; FASTISEL-NEXT:    kshiftlb $7, %k1, %k1
+; FASTISEL-NEXT:    kshiftrb $2, %k1, %k1
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k2
+; FASTISEL-NEXT:    korb %k1, %k0, %k0
+; FASTISEL-NEXT:    kandb %k3, %k0, %k0
+; FASTISEL-NEXT:    kshiftlb $7, %k2, %k1
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k2
+; FASTISEL-NEXT:    kshiftrb $1, %k1, %k1
+; FASTISEL-NEXT:    korb %k1, %k0, %k0
+; FASTISEL-NEXT:    kandb %k4, %k2, %k1
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k2
+; FASTISEL-NEXT:    kshiftlb $7, %k2, %k2
+; FASTISEL-NEXT:    kshiftrb $6, %k2, %k2
+; FASTISEL-NEXT:    korb %k2, %k1, %k1
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k2
+; FASTISEL-NEXT:    kandb %k5, %k1, %k1
+; FASTISEL-NEXT:    kshiftlb $7, %k2, %k2
+; FASTISEL-NEXT:    kshiftrb $5, %k2, %k2
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k3
+; FASTISEL-NEXT:    korb %k2, %k1, %k1
+; FASTISEL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k4 ## 2-byte Reload
+; FASTISEL-NEXT:    kandb %k4, %k1, %k1
+; FASTISEL-NEXT:    kshiftlb $7, %k3, %k2
+; FASTISEL-NEXT:    kshiftrb $4, %k2, %k2
+; FASTISEL-NEXT:    korb %k2, %k1, %k1
+; FASTISEL-NEXT:    kandb %k6, %k1, %k1
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k2
+; FASTISEL-NEXT:    kshiftlb $7, %k2, %k2
+; FASTISEL-NEXT:    kshiftrb $3, %k2, %k2
+; FASTISEL-NEXT:    korb %k2, %k1, %k1
+; FASTISEL-NEXT:    kandb %k7, %k1, %k1
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k2
+; FASTISEL-NEXT:    kshiftlb $7, %k2, %k2
+; FASTISEL-NEXT:    kshiftrb $2, %k2, %k2
+; FASTISEL-NEXT:    korb %k2, %k1, %k1
+; FASTISEL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k3 ## 2-byte Reload
+; FASTISEL-NEXT:    kandb %k3, %k1, %k1
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k2
+; FASTISEL-NEXT:    kshiftlb $7, %k2, %k2
+; FASTISEL-NEXT:    kshiftrb $1, %k2, %k2
+; FASTISEL-NEXT:    korb %k2, %k1, %k1
+; FASTISEL-NEXT:    kandb %k0, %k1, %k0
+; FASTISEL-NEXT:    kmovw %k0, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k0
+; FASTISEL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k5 ## 2-byte Reload
+; FASTISEL-NEXT:    kandb %k5, %k0, %k0
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k1
+; FASTISEL-NEXT:    kshiftlb $7, %k1, %k1
+; FASTISEL-NEXT:    kshiftrb $6, %k1, %k1
+; FASTISEL-NEXT:    korb %k1, %k0, %k0
+; FASTISEL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k1 ## 2-byte Reload
+; FASTISEL-NEXT:    kandb %k1, %k0, %k0
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k1
+; FASTISEL-NEXT:    kshiftlb $7, %k1, %k1
+; FASTISEL-NEXT:    kshiftrb $5, %k1, %k1
+; FASTISEL-NEXT:    korb %k1, %k0, %k0
+; FASTISEL-NEXT:    kandb %k4, %k0, %k0
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k1
+; FASTISEL-NEXT:    kshiftlb $7, %k1, %k1
+; FASTISEL-NEXT:    kshiftrb $4, %k1, %k1
+; FASTISEL-NEXT:    korb %k1, %k0, %k0
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k1
+; FASTISEL-NEXT:    kandb %k6, %k0, %k0
+; FASTISEL-NEXT:    kshiftlb $7, %k1, %k1
+; FASTISEL-NEXT:    kshiftrb $3, %k1, %k1
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k2
+; FASTISEL-NEXT:    korb %k1, %k0, %k0
+; FASTISEL-NEXT:    kandb %k7, %k0, %k0
+; FASTISEL-NEXT:    kshiftlb $7, %k2, %k1
+; FASTISEL-NEXT:    kshiftrb $2, %k1, %k1
+; FASTISEL-NEXT:    korb %k1, %k0, %k0
+; FASTISEL-NEXT:    kandb %k3, %k0, %k0
+; FASTISEL-NEXT:    kmovq %k3, %k7
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k1
+; FASTISEL-NEXT:    kshiftlb $7, %k1, %k1
+; FASTISEL-NEXT:    kshiftrb $1, %k1, %k1
+; FASTISEL-NEXT:    korb %k1, %k0, %k0
+; FASTISEL-NEXT:    kmovd %esi, %k1
+; FASTISEL-NEXT:    kandb %k5, %k1, %k1
+; FASTISEL-NEXT:    kmovd %edx, %k2
+; FASTISEL-NEXT:    kshiftlb $7, %k2, %k2
+; FASTISEL-NEXT:    kshiftrb $6, %k2, %k2
+; FASTISEL-NEXT:    korb %k2, %k1, %k1
+; FASTISEL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k2 ## 2-byte Reload
+; FASTISEL-NEXT:    kandb %k2, %k1, %k1
+; FASTISEL-NEXT:    kmovd %ecx, %k2
+; FASTISEL-NEXT:    kshiftlb $7, %k2, %k2
+; FASTISEL-NEXT:    kshiftrb $5, %k2, %k2
+; FASTISEL-NEXT:    korb %k2, %k1, %k1
+; FASTISEL-NEXT:    kandb %k4, %k1, %k1
+; FASTISEL-NEXT:    kmovd %r8d, %k2
+; FASTISEL-NEXT:    kshiftlb $7, %k2, %k2
+; FASTISEL-NEXT:    kshiftrb $4, %k2, %k2
+; FASTISEL-NEXT:    korb %k2, %k1, %k1
+; FASTISEL-NEXT:    kandb %k6, %k1, %k1
+; FASTISEL-NEXT:    kmovd %r9d, %k2
+; FASTISEL-NEXT:    kshiftlb $7, %k2, %k2
+; FASTISEL-NEXT:    kshiftrb $3, %k2, %k2
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k3
+; FASTISEL-NEXT:    korb %k2, %k1, %k1
+; FASTISEL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k2 ## 2-byte Reload
+; FASTISEL-NEXT:    kandb %k2, %k1, %k1
+; FASTISEL-NEXT:    kshiftlb $7, %k3, %k2
+; FASTISEL-NEXT:    kshiftrb $2, %k2, %k2
+; FASTISEL-NEXT:    korb %k2, %k1, %k1
+; FASTISEL-NEXT:    kandb %k7, %k1, %k1
+; FASTISEL-NEXT:    kmovb {{[0-9]+}}(%rsp), %k2
+; FASTISEL-NEXT:    kshiftlb $7, %k2, %k2
+; FASTISEL-NEXT:    kshiftrb $1, %k2, %k2
+; FASTISEL-NEXT:    korb %k2, %k1, %k1
+; FASTISEL-NEXT:    kandb %k0, %k1, %k0
+; FASTISEL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k1 ## 2-byte Reload
+; FASTISEL-NEXT:    kandb %k1, %k0, %k0
+; FASTISEL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k1 ## 2-byte Reload
+; FASTISEL-NEXT:    kandb %k1, %k0, %k0
+; FASTISEL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k1 ## 2-byte Reload
+; FASTISEL-NEXT:    kandb %k1, %k0, %k0
+; FASTISEL-NEXT:    kshiftrb $6, %k0, %k1
+; FASTISEL-NEXT:    kmovd %k1, %r8d
+; FASTISEL-NEXT:    kshiftrb $5, %k0, %k1
+; FASTISEL-NEXT:    kmovd %k1, %r9d
+; FASTISEL-NEXT:    kshiftrb $4, %k0, %k1
+; FASTISEL-NEXT:    kmovd %k1, %r10d
+; FASTISEL-NEXT:    kshiftrb $3, %k0, %k1
+; FASTISEL-NEXT:    kmovd %k1, %edi
+; FASTISEL-NEXT:    kshiftrb $2, %k0, %k1
+; FASTISEL-NEXT:    kmovd %k1, %ecx
+; FASTISEL-NEXT:    kshiftrb $1, %k0, %k1
+; FASTISEL-NEXT:    kmovd %k1, %edx
+; FASTISEL-NEXT:    kmovd %k0, %esi
+; FASTISEL-NEXT:    andb $1, %sil
+; FASTISEL-NEXT:    andb $1, %dl
+; FASTISEL-NEXT:    addb %dl, %dl
+; FASTISEL-NEXT:    orb %sil, %dl
+; FASTISEL-NEXT:    andb $1, %cl
+; FASTISEL-NEXT:    shlb $2, %cl
+; FASTISEL-NEXT:    orb %dl, %cl
+; FASTISEL-NEXT:    andb $1, %dil
+; FASTISEL-NEXT:    shlb $3, %dil
+; FASTISEL-NEXT:    orb %cl, %dil
+; FASTISEL-NEXT:    andb $1, %r10b
+; FASTISEL-NEXT:    shlb $4, %r10b
+; FASTISEL-NEXT:    orb %dil, %r10b
+; FASTISEL-NEXT:    andb $1, %r9b
+; FASTISEL-NEXT:    shlb $5, %r9b
+; FASTISEL-NEXT:    orb %r10b, %r9b
+; FASTISEL-NEXT:    shlb $6, %r8b
+; FASTISEL-NEXT:    orb %r9b, %r8b
+; FASTISEL-NEXT:    andb $127, %r8b
+; FASTISEL-NEXT:    movb %r8b, (%rax)
+; FASTISEL-NEXT:    retq
   %j = and <7 x i1> %a, %b
   %k = and <7 x i1> %j, %c
   %l = and <7 x i1> %k, %d
@@ -2757,6 +3627,19 @@ define void @v2i1_mem(<128 x i32> %x, <2 x i1> %y) {
 ; KNL_X32-NEXT:    movl %ebp, %esp
 ; KNL_X32-NEXT:    popl %ebp
 ; KNL_X32-NEXT:    retl
+;
+; FASTISEL-LABEL: v2i1_mem:
+; FASTISEL:       ## %bb.0:
+; FASTISEL-NEXT:    subq $24, %rsp
+; FASTISEL-NEXT:    .cfi_def_cfa_offset 32
+; FASTISEL-NEXT:    vpsllq $63, {{[0-9]+}}(%rsp), %xmm8
+; FASTISEL-NEXT:    vpmovq2m %xmm8, %k0
+; FASTISEL-NEXT:    vpmovm2q %k0, %xmm8
+; FASTISEL-NEXT:    vmovdqa %xmm8, (%rsp)
+; FASTISEL-NEXT:    callq _v2i1_mem_callee
+; FASTISEL-NEXT:    addq $24, %rsp
+; FASTISEL-NEXT:    vzeroupper
+; FASTISEL-NEXT:    retq
   call void @v2i1_mem_callee(<128 x i32> %x, <2 x i1> %y)
   ret void
 }
@@ -2807,6 +3690,19 @@ define void @v4i1_mem(<128 x i32> %x, <4 x i1> %y) {
 ; KNL_X32-NEXT:    movl %ebp, %esp
 ; KNL_X32-NEXT:    popl %ebp
 ; KNL_X32-NEXT:    retl
+;
+; FASTISEL-LABEL: v4i1_mem:
+; FASTISEL:       ## %bb.0:
+; FASTISEL-NEXT:    subq $24, %rsp
+; FASTISEL-NEXT:    .cfi_def_cfa_offset 32
+; FASTISEL-NEXT:    vpslld $31, {{[0-9]+}}(%rsp), %xmm8
+; FASTISEL-NEXT:    vpmovd2m %xmm8, %k0
+; FASTISEL-NEXT:    vpmovm2d %k0, %xmm8
+; FASTISEL-NEXT:    vmovdqa %xmm8, (%rsp)
+; FASTISEL-NEXT:    callq _v4i1_mem_callee
+; FASTISEL-NEXT:    addq $24, %rsp
+; FASTISEL-NEXT:    vzeroupper
+; FASTISEL-NEXT:    retq
   call void @v4i1_mem_callee(<128 x i32> %x, <4 x i1> %y)
   ret void
 }
@@ -2857,6 +3753,19 @@ define void @v8i1_mem(<128 x i32> %x, <8 x i1> %y) {
 ; KNL_X32-NEXT:    movl %ebp, %esp
 ; KNL_X32-NEXT:    popl %ebp
 ; KNL_X32-NEXT:    retl
+;
+; FASTISEL-LABEL: v8i1_mem:
+; FASTISEL:       ## %bb.0:
+; FASTISEL-NEXT:    subq $24, %rsp
+; FASTISEL-NEXT:    .cfi_def_cfa_offset 32
+; FASTISEL-NEXT:    vpsllw $15, {{[0-9]+}}(%rsp), %xmm8
+; FASTISEL-NEXT:    vpmovw2m %xmm8, %k0
+; FASTISEL-NEXT:    vpmovm2w %k0, %xmm8
+; FASTISEL-NEXT:    vmovdqa %xmm8, (%rsp)
+; FASTISEL-NEXT:    callq _v8i1_mem_callee
+; FASTISEL-NEXT:    addq $24, %rsp
+; FASTISEL-NEXT:    vzeroupper
+; FASTISEL-NEXT:    retq
   call void @v8i1_mem_callee(<128 x i32> %x, <8 x i1> %y)
   ret void
 }
@@ -2907,6 +3816,19 @@ define void @v16i1_mem(<128 x i32> %x, <16 x i1> %y) {
 ; KNL_X32-NEXT:    movl %ebp, %esp
 ; KNL_X32-NEXT:    popl %ebp
 ; KNL_X32-NEXT:    retl
+;
+; FASTISEL-LABEL: v16i1_mem:
+; FASTISEL:       ## %bb.0:
+; FASTISEL-NEXT:    subq $24, %rsp
+; FASTISEL-NEXT:    .cfi_def_cfa_offset 32
+; FASTISEL-NEXT:    vpsllw $7, {{[0-9]+}}(%rsp), %xmm8
+; FASTISEL-NEXT:    vpmovb2m %xmm8, %k0
+; FASTISEL-NEXT:    vpmovm2b %k0, %xmm8
+; FASTISEL-NEXT:    vmovdqa %xmm8, (%rsp)
+; FASTISEL-NEXT:    callq _v16i1_mem_callee
+; FASTISEL-NEXT:    addq $24, %rsp
+; FASTISEL-NEXT:    vzeroupper
+; FASTISEL-NEXT:    retq
   call void @v16i1_mem_callee(<128 x i32> %x, <16 x i1> %y)
   ret void
 }
@@ -2969,6 +3891,25 @@ define void @v32i1_mem(<128 x i32> %x, <32 x i1> %y) {
 ; KNL_X32-NEXT:    movl %ebp, %esp
 ; KNL_X32-NEXT:    popl %ebp
 ; KNL_X32-NEXT:    retl
+;
+; FASTISEL-LABEL: v32i1_mem:
+; FASTISEL:       ## %bb.0:
+; FASTISEL-NEXT:    pushq %rbp
+; FASTISEL-NEXT:    .cfi_def_cfa_offset 16
+; FASTISEL-NEXT:    .cfi_offset %rbp, -16
+; FASTISEL-NEXT:    movq %rsp, %rbp
+; FASTISEL-NEXT:    .cfi_def_cfa_register %rbp
+; FASTISEL-NEXT:    andq $-32, %rsp
+; FASTISEL-NEXT:    subq $64, %rsp
+; FASTISEL-NEXT:    vpsllw $7, 16(%rbp), %ymm8
+; FASTISEL-NEXT:    vpmovb2m %ymm8, %k0
+; FASTISEL-NEXT:    vpmovm2b %k0, %ymm8
+; FASTISEL-NEXT:    vmovdqa %ymm8, (%rsp)
+; FASTISEL-NEXT:    callq _v32i1_mem_callee
+; FASTISEL-NEXT:    movq %rbp, %rsp
+; FASTISEL-NEXT:    popq %rbp
+; FASTISEL-NEXT:    vzeroupper
+; FASTISEL-NEXT:    retq
   call void @v32i1_mem_callee(<128 x i32> %x, <32 x i1> %y)
   ret void
 }
@@ -3265,6 +4206,25 @@ define void @v64i1_mem(<128 x i32> %x, <64 x i1> %y) {
 ; KNL_X32-NEXT:    movl %ebp, %esp
 ; KNL_X32-NEXT:    popl %ebp
 ; KNL_X32-NEXT:    retl
+;
+; FASTISEL-LABEL: v64i1_mem:
+; FASTISEL:       ## %bb.0:
+; FASTISEL-NEXT:    pushq %rbp
+; FASTISEL-NEXT:    .cfi_def_cfa_offset 16
+; FASTISEL-NEXT:    .cfi_offset %rbp, -16
+; FASTISEL-NEXT:    movq %rsp, %rbp
+; FASTISEL-NEXT:    .cfi_def_cfa_register %rbp
+; FASTISEL-NEXT:    andq $-64, %rsp
+; FASTISEL-NEXT:    subq $128, %rsp
+; FASTISEL-NEXT:    vpsllw $7, 16(%rbp), %zmm8
+; FASTISEL-NEXT:    vpmovb2m %zmm8, %k0
+; FASTISEL-NEXT:    vpmovm2b %k0, %zmm8
+; FASTISEL-NEXT:    vmovdqa64 %zmm8, (%rsp)
+; FASTISEL-NEXT:    callq _v64i1_mem_callee
+; FASTISEL-NEXT:    movq %rbp, %rsp
+; FASTISEL-NEXT:    popq %rbp
+; FASTISEL-NEXT:    vzeroupper
+; FASTISEL-NEXT:    retq
   call void @v64i1_mem_callee(<128 x i32> %x, <64 x i1> %y)
   ret void
 }
