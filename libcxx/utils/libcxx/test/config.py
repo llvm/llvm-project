@@ -1043,7 +1043,7 @@ class Configuration(object):
         if self.target_info.is_darwin():
             # Do not pass DYLD_LIBRARY_PATH to the compiler, linker, etc. as
             # these tools are not meant to exercise the just-built libraries.
-            tool_env += 'DYLD_LIBRARY_PATH="" '
+            tool_env += 'env DYLD_LIBRARY_PATH="" '
 
         sub = self.config.substitutions
         cxx_path = tool_env + pipes.quote(self.cxx.path)
