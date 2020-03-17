@@ -115,7 +115,7 @@ else()
 
   elseif (CMAKE_SYSTEM_NAME MATCHES "NetBSD")
     add_host_subdirectory(netbsd
-      netbsd/Host.cpp
+      netbsd/HostNetBSD.cpp
       netbsd/HostInfoNetBSD.cpp
       )
 
