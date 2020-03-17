@@ -286,6 +286,16 @@ RetainedKnowledge llvm::getKnowledgeFromOperandInAssume(CallInst &AssumeCI,
   return Result;
 }
 
+bool llvm::isAssumeWithEmptyBundle(CallInst &CI) {
+  IntrinsicInst &Assume = cast<IntrinsicInst>(CI);
+  assert(Assume.getIntrinsicID() == Intrinsic::assume &&
+         "this function is intended to be used on llvm.assume");
+  return none_of(Assume.bundle_op_infos(),
+                 [](const CallBase::BundleOpInfo &BOI) {
+                   return BOI.Tag->getKey() != "ignore";
+                 });
+}
+
 PreservedAnalyses AssumeBuilderPass::run(Function &F,
                                          FunctionAnalysisManager &AM) {
   for (Instruction &I : instructions(F))

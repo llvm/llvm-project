@@ -115,6 +115,16 @@ inline RetainedKnowledge getKnowledgeFromUseInAssume(const Use *U) {
                                          U->getOperandNo());
 }
 
+/// Return true iff the operand bundles of the provided llvm.assume doesn't
+/// contain any valuable information. This is true when:
+///  - The operand bundle is empty
+///  - The operand bundle only contains information about dropped values or
+///    constant folded values.
+///
+/// the argument to the call of llvm.assume may still be useful even if the
+/// function returned true.
+bool isAssumeWithEmptyBundle(CallInst &Assume);
+
 //===----------------------------------------------------------------------===//
 // Utilities for testing
 //===----------------------------------------------------------------------===//
