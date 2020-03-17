@@ -3467,7 +3467,8 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
       // this, so we treat it as a warning unless we're in a SFINAE context.
       Diag(StartLoc, diag::ext_delete_void_ptr_operand)
         << Type << Ex.get()->getSourceRange();
-    } else if (Pointee->isFunctionType() || Pointee->isVoidType()) {
+    } else if (Pointee->isFunctionType() || Pointee->isVoidType() ||
+               Pointee->isSizelessType()) {
       return ExprError(Diag(StartLoc, diag::err_delete_operand)
         << Type << Ex.get()->getSourceRange());
     } else if (!Pointee->isDependentType()) {
