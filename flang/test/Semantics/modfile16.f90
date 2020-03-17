@@ -22,16 +22,16 @@ end
 
 !Expect: m.mod
 !module m
-!  character(2_4,1),parameter::prefix=1_"c_"
-!  integer(4),bind(c, name=1_"c_a")::a
-!  procedure(sub),bind(c, name=1_"c_b"),pointer::b
+!  character(2_4,1),parameter::prefix="c_"
+!  integer(4),bind(c, name="c_a")::a
+!  procedure(sub),bind(c, name="c_b"),pointer::b
 !  type,bind(c)::t
 !    real(4)::c
 !  end type
-!  procedure(real(4)),bind(c, name=1_"dd")::d
-!  procedure(real(4)),bind(c, name=1_"ee")::e
-!  procedure(real(4)),bind(c, name=1_"ff")::f
+!  procedure(real(4)),bind(c, name="dd")::d
+!  procedure(real(4)),bind(c, name="ee")::e
+!  procedure(real(4)),bind(c, name="ff")::f
 !contains
-!  subroutine sub() bind(c, name=1_"sub")
+!  subroutine sub() bind(c, name="sub")
 !  end
 !end

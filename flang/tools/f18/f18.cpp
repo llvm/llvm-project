@@ -333,13 +333,11 @@ std::string CompileFortran(std::string path, Fortran::parser::Options options,
   {
     std::ofstream tmpSource;
     tmpSource.open(tmpSourcePath);
-    Fortran::evaluate::formatForPGF90 = true;
     Unparse(tmpSource, parseTree, driver.encoding, true /*capitalize*/,
         options.features.IsEnabled(
             Fortran::common::LanguageFeature::BackslashEscapes),
         nullptr /* action before each statement */,
         driver.unparseTypedExprsToPGF90 ? &asFortran : nullptr);
-    Fortran::evaluate::formatForPGF90 = false;
   }
 
   if (ParentProcess()) {

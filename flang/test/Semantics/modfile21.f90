@@ -30,6 +30,6 @@ end
 !  bind(c)::/cb2/
 !  common//t,w,u,v
 !  common/cb/x,y,z
-!  bind(c, name=1_"CB")::/cb/
+!  bind(c, name="CB")::/cb/
 !  common/b/cb
 !end

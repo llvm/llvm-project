@@ -18,8 +18,6 @@
 
 namespace Fortran::evaluate {
 
-bool formatForPGF90{false};
-
 static void ShapeAsFortran(std::ostream &o, const ConstantSubscripts &shape) {
   if (GetRank(shape) > 1) {
     o << ",shape=";
@@ -87,7 +85,7 @@ std::ostream &Constant<Type<TypeCategory::Character, KIND>>::AsFortran(
     if (j > 0) {
       o << ',';
     }
-    if (Result::kind != 1 || !formatForPGF90) {
+    if (Result::kind != 1) {
       o << Result::kind << '_';
     }
     o << parser::QuoteCharacterLiteral(value);

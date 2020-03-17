@@ -75,7 +75,7 @@ end
 
 !Expect: m4a.mod
 !module m4a
-! character(1_4,1),parameter::a=1_"\001"
+! character(1_4,1),parameter::a="\001"
 ! intrinsic::achar
 !end
 
@@ -83,6 +83,6 @@ end
 !module m4b
 ! use m4a,only:a
 ! use m4a,only:achar
-! character(1_4,1),parameter::b=1_"\001"
+! character(1_4,1),parameter::b="\001"
 !end
 

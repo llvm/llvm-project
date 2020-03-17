@@ -18,6 +18,6 @@ end module m
 !character(1_4,int(k,kind=8))::a
 !character(3_4,int(k,kind=8))::b
 !end type
-!type(t(k=1_4)),parameter::p=t(k=1_4)(a=1_"x",b=1_"xx ")
-!character(2_4,1),parameter::c2(1_8:3_8)=[CHARACTER(KIND=1,LEN=2)::1_"x ",1_"xx",1_"xx"]
+!type(t(k=1_4)),parameter::p=t(k=1_4)(a="x",b="xx ")
+!character(2_4,1),parameter::c2(1_8:3_8)=[CHARACTER(KIND=1,LEN=2)::"x ","xx","xx"]
 !end
