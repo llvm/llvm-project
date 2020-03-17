@@ -4127,6 +4127,7 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
   registerSILGenRequestFunctions(m_ast_context_ap->evaluator);
   registerSILOptimizerRequestFunctions(m_ast_context_ap->evaluator);
   registerTBDGenRequestFunctions(m_ast_context_ap->evaluator);
+  registerIRGenRequestFunctions(m_ast_context_ap->evaluator);
 
   registerIRGenSILTransforms(*m_ast_context_ap);
 
