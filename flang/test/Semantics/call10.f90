@@ -109,8 +109,8 @@ module m
       real, volatile :: v2
     end block
   end subroutine
-  !ERROR: A dummy procedure of a pure subprogram must be pure
   pure subroutine s07(p) ! C1590
+    !ERROR: A dummy procedure of a pure subprogram must be pure
     procedure(impure) :: p
   end subroutine
   ! C1591 is tested in call11.f90.

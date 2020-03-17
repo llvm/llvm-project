@@ -28,8 +28,8 @@ module m
     real, intent(in) :: x
     elemfunc = x
   end function
-  !ERROR: A dummy procedure may not be ELEMENTAL
   subroutine selemental2(p)
+    !ERROR: A dummy procedure may not be ELEMENTAL
     procedure(elemfunc) :: p
   end subroutine
 

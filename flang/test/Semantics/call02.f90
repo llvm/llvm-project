@@ -9,9 +9,9 @@ subroutine s01(elem, subr)
     subroutine subr(dummy)
       procedure(sin) :: dummy
     end subroutine
-    !ERROR: A dummy procedure may not be ELEMENTAL
     subroutine badsubr(dummy)
       import :: elem
+      !ERROR: A dummy procedure may not be ELEMENTAL
       procedure(elem) :: dummy
     end subroutine
   end interface

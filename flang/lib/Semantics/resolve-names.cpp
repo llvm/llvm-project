@@ -3603,6 +3603,7 @@ void DeclarationVisitor::Post(const parser::ProcDecl &x) {
     attrs.set(Attr::EXTERNAL);
   }
   Symbol &symbol{DeclareProcEntity(name, attrs, interface)};
+  symbol.ReplaceName(name.source);
   if (dtDetails) {
     dtDetails->add_component(symbol);
   }
