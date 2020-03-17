@@ -187,7 +187,7 @@ public:
 class AffineConstantExpr : public AffineExpr {
 public:
   using ImplType = detail::AffineConstantExprStorage;
-  /* implicit */ AffineConstantExpr(AffineExpr::ImplType *ptr);
+  /* implicit */ AffineConstantExpr(AffineExpr::ImplType *ptr = nullptr);
   int64_t getValue() const;
 };
 
