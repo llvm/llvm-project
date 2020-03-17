@@ -220,7 +220,7 @@ It's important to understand the effect of loop rotation
 at the LLVM IR level. We follow with the previous examples
 in LLVM IR while also providing a graphical representation
 of the control-flow graphs (CFG). You can get the same graphical
-results by utilizing the `view-cfg <passes-view-cfg>` pass.
+results by utilizing the :ref:`view-cfg <passes-view-cfg>` pass.
 
 The initial **for** loop could be translated to:
 
@@ -277,7 +277,7 @@ it (by hand) to a do-while style loop.
 .. image:: ./loop-terminology-rotated-loop.png
   :width: 400 px
 
-Note a two things:
+Note two things:
 
 * The condition check was moved to the "bottom" of the loop, i.e.
   the latch. This is something that LoopRotate does by copying the header
@@ -320,7 +320,7 @@ This is how LoopRotate transforms this loop:
 
 The result is a little bit more complicated than we may expect
 because LoopRotate ensures that the loop is in
-`Loop Simplify Form <loop-terminology-loop-simplify>`
+:ref:`Loop Simplify Form <loop-terminology-loop-simplify>`
 after rotation.
 In this case, it inserted the %loop.preheader basic block so
 that the loop has a preheader and it introduced the %loop.exit
