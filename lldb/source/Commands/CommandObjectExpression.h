@@ -71,9 +71,8 @@ protected:
   /// expression in the given target.
   EvaluateExpressionOptions GetEvalOptions(const Target &target);
 
-  bool EvaluateExpression(llvm::StringRef expr, Stream *output_stream,
-                          Stream *error_stream,
-                          CommandReturnObject *result = nullptr);
+  bool EvaluateExpression(llvm::StringRef expr, Stream &output_stream,
+                          Stream &error_stream, CommandReturnObject &result);
 
   void GetMultilineExpression();
 
