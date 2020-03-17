@@ -334,6 +334,23 @@ public:
     finalizeRootUpdate(root);
   }
 
+  /// Notify the pattern rewriter that the pattern is failing to match the given
+  /// operation, and provide a callback to populate a diagnostic with the reason
+  /// why the failure occurred. This method allows for derived rewriters to
+  /// optionally hook into the reason why a pattern failed, and display it to
+  /// users.
+  virtual LogicalResult
+  notifyMatchFailure(Operation *op,
+                     function_ref<void(Diagnostic &)> reasonCallback) {
+    return failure();
+  }
+  LogicalResult notifyMatchFailure(Operation *op, const Twine &msg) {
+    return notifyMatchFailure(op, [&](Diagnostic &diag) { diag << msg; });
+  }
+  LogicalResult notifyMatchFailure(Operation *op, const char *msg) {
+    return notifyMatchFailure(op, Twine(msg));
+  }
+
 protected:
   explicit PatternRewriter(MLIRContext *ctx) : OpBuilder(ctx) {}
   virtual ~PatternRewriter();
