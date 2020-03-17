@@ -26,6 +26,7 @@
 #include "mlir/Dialect/QuantOps/QuantOps.h"
 #include "mlir/Dialect/SDBM/SDBMDialect.h"
 #include "mlir/Dialect/SPIRV/SPIRVDialect.h"
+#include "mlir/Dialect/Shape/IR/Shape.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/VectorOps/VectorOps.h"
 #include "mlir/IR/Dialect.h"
@@ -50,6 +51,7 @@ inline void registerAllDialects() {
     registerDialect<NVVM::NVVMDialect>();
     registerDialect<ROCDL::ROCDLDialect>();
     registerDialect<SDBMDialect>();
+    registerDialect<shape::ShapeDialect>();
     return true;
   }();
   (void)init_once;

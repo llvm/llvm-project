@@ -27,7 +27,8 @@ enum Kind {
   Element,
   Shape,
   Size,
-  ValueShape
+  ValueShape,
+  LAST_SHAPE_TYPE = ValueShape
 };
 } // namespace ShapeTypes
 
