@@ -26,8 +26,6 @@ def err_msasm_unable_to_create_target : Error<
   "MS-style inline assembly is not available: %0">;
 def err_gnu_inline_asm_disabled : Error<
   "GNU-style inline assembly is disabled">;
-def err_asm_goto_cannot_have_output : Error<
-  "'asm goto' cannot have output constraints">;
 def err_asm_duplicate_qual : Error<"duplicate asm qualifier '%0'">;
 }
 
@@ -181,9 +179,6 @@ def err_unparenthesized_non_primary_expr_in_requires_clause : Error<
   "parentheses are required around this expression in a requires clause">;
 def note_unparenthesized_non_primary_expr_in_requires_clause : Note<
   "parentheses are required around this expression in a requires clause">;
-def err_potential_function_call_in_constraint_logical_or : Error<
-  "function call must be parenthesized to be considered part of the requires "
-  "clause">;
 
 def err_expected_fn_body : Error<
   "expected function body after function declarator">;
@@ -211,7 +206,6 @@ def err_invalid_token_after_declarator_suggest_equal : Error<
   "invalid %0 at end of declaration; did you mean '='?">;
 def err_expected_statement : Error<"expected statement">;
 def err_expected_lparen_after : Error<"expected '(' after '%0'">;
-def err_expected_lbrace_after : Error<"expected '{' after '%0'">;
 def err_expected_rparen_after : Error<"expected ')' after '%0'">;
 def err_expected_punc : Error<"expected ')' or ',' after '%0'">;
 def err_expected_less_after : Error<"expected '<' after '%0'">;
@@ -744,17 +738,10 @@ def err_friend_explicit_instantiation : Error<
 def err_explicit_instantiation_enum : Error<
   "enumerations cannot be explicitly instantiated">;
 def err_expected_template_parameter : Error<"expected template parameter">;
-def note_ill_formed_requires_expression_outside_template : Note<
-  "requires expression outside a template declaration may not contain invalid "
-  "types or expressions">;
 def err_empty_requires_expr : Error<
   "a requires expression must contain at least one requirement">;
 def err_requires_expr_parameter_list_ellipsis : Error<
   "varargs not allowed in requires expression">;
-def err_requires_expr_type_req_illegal_identifier : Error<
-  "expected identifier or template-id in type requirement">;
-def err_requires_expr_type_req_template_args_on_non_template : Error<
-  "template arguments provided for non-template '%0'">;
 def err_expected_semi_requirement : Error<
   "expected ';' at end of requirement">;
 def err_requires_expr_missing_arrow : Error<
@@ -764,9 +751,6 @@ def err_requires_expr_expected_type_constraint : Error<
 def err_requires_expr_simple_requirement_noexcept : Error<
   "'noexcept' can only be used in a compound requirement (with '{' '}' around "
   "the expression)">;
-def err_requires_expr_simple_requirement_unexpected_tok : Error<
-  "unexpected %0 after expression; did you intend to use a compound "
-  "requirement (with '{' '}' around the expression)?">;
 def warn_requires_expr_in_simple_requirement : Warning<
   "this requires expression will only be checked for syntactic validity; did "
   "you intend to place it in a nested requirement? (add another 'requires' "
