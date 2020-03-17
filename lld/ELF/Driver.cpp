@@ -860,7 +860,6 @@ static void readConfigs(opt::InputArgList &args) {
       args.hasFlag(OPT_fatal_warnings, OPT_no_fatal_warnings, false);
   errorHandler().vsDiagnostics =
       args.hasArg(OPT_visual_studio_diagnostics_format, false);
-  threadsEnabled = args.hasFlag(OPT_threads, OPT_no_threads, true);
 
   config->allowMultipleDefinition =
       args.hasFlag(OPT_allow_multiple_definition,
@@ -974,7 +973,6 @@ static void readConfigs(opt::InputArgList &args) {
   config->thinLTOIndexOnly = args.hasArg(OPT_thinlto_index_only) ||
                              args.hasArg(OPT_thinlto_index_only_eq);
   config->thinLTOIndexOnlyArg = args.getLastArgValue(OPT_thinlto_index_only_eq);
-  config->thinLTOJobs = args.getLastArgValue(OPT_thinlto_jobs);
   config->thinLTOObjectSuffixReplace =
       getOldNewOptions(args, OPT_thinlto_object_suffix_replace_eq);
   config->thinLTOPrefixReplace =
@@ -1035,6 +1033,20 @@ static void readConfigs(opt::InputArgList &args) {
   // Parse -mllvm options.
   for (auto *arg : args.filtered(OPT_mllvm))
     parseClangOption(arg->getValue(), arg->getSpelling());
+
+  // --threads= takes a positive integer and provides the default value for
+  // --thinlto-jobs=.
+  if (auto *arg = args.getLastArg(OPT_threads)) {
+    StringRef v(arg->getValue());
+    unsigned threads = 0;
+    if (!llvm::to_integer(v, threads, 0) || threads == 0)
+      error(arg->getSpelling() + ": expected a positive integer, but got '" +
+            arg->getValue() + "'");
+    parallel::strategy = hardware_concurrency(threads);
+    config->thinLTOJobs = v;
+  }
+  if (auto *arg = args.getLastArg(OPT_thinlto_jobs))
+    config->thinLTOJobs = arg->getValue();
 
   if (config->ltoo > 3)
     error("invalid optimization level for LTO: " + Twine(config->ltoo));

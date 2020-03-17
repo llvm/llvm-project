@@ -43,7 +43,7 @@ void lld::unlinkAsync(StringRef path) {
 #if defined(_WIN32)
   sys::fs::remove(path);
 #else
-  if (!threadsEnabled || !sys::fs::exists(path) ||
+  if (parallel::strategy.ThreadsRequested == 1 || !sys::fs::exists(path) ||
       !sys::fs::is_regular_file(path))
     return;
 
