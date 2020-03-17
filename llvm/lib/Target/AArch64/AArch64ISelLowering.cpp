@@ -12646,6 +12646,27 @@ static SDValue getScaledOffsetForBitWidth(SelectionDAG &DAG, SDValue Offset,
   return DAG.getNode(ISD::SHL, DL, MVT::nxv2i64, Offset, SplatShift);
 }
 
+/// Check if the value of \p OffsetInBytes can be used as an immediate for
+/// the gather load/prefetch and scatter store instructions with vector base and
+/// immediate offset addressing mode:
+///
+///      [<Zn>.[S|D]{, #<imm>}]
+///
+/// where <imm> = sizeof(<T>) * k, for k = 0, 1, ..., 31.
+
+inline static bool isValidImmForSVEVecImmAddrMode(unsigned OffsetInBytes,
+                                                  unsigned ScalarSizeInBytes) {
+  // The immediate is not a multiple of the scalar size.
+  if (OffsetInBytes % ScalarSizeInBytes)
+    return false;
+
+  // The immediate is out of range.
+  if (OffsetInBytes / ScalarSizeInBytes > 31)
+    return false;
+
+  return true;
+}
+
 /// Check if the value of \p Offset represents a valid immediate for the SVE
 /// gather load/prefetch and scatter store instructiona with vector base and
 /// immediate offset addressing mode:
@@ -12656,7 +12677,7 @@ static SDValue getScaledOffsetForBitWidth(SelectionDAG &DAG, SDValue Offset,
 static bool isValidImmForSVEVecImmAddrMode(SDValue Offset,
                                            unsigned ScalarSizeInBytes) {
   ConstantSDNode *OffsetConst = dyn_cast<ConstantSDNode>(Offset.getNode());
-  return OffsetConst && AArch64_AM::isValidImmForSVEVecImmAddrMode(
+  return OffsetConst && isValidImmForSVEVecImmAddrMode(
                             OffsetConst->getZExtValue(), ScalarSizeInBytes);
 }
 
