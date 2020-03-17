@@ -96,7 +96,7 @@ public:
       Constraint += 2;
       break;
     default:
-      R = std::string(1, *Constraint);
+      R = TargetInfo::convertConstraint(Constraint);
       break;
     }
     return R;
