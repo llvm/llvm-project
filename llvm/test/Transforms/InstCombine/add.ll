@@ -1184,10 +1184,8 @@ define i32 @lshr_add_use2(i1 %x, i1 %y, i32* %p) {
 
 define i32 @lshr_add_sexts(i1 %x, i1 %y) {
 ; CHECK-LABEL: @lshr_add_sexts(
-; CHECK-NEXT:    [[XS:%.*]] = sext i1 [[X:%.*]] to i32
-; CHECK-NEXT:    [[YS:%.*]] = sext i1 [[Y:%.*]] to i32
-; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[XS]], [[YS]]
-; CHECK-NEXT:    [[R:%.*]] = lshr i32 [[SUB]], 31
+; CHECK-NEXT:    [[TMP1:%.*]] = or i1 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[TMP1]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %xs = sext i1 %x to i32
@@ -1199,10 +1197,8 @@ define i32 @lshr_add_sexts(i1 %x, i1 %y) {
 
 define i5 @and_add_sexts(i1 %x, i1 %y) {
 ; CHECK-LABEL: @and_add_sexts(
-; CHECK-NEXT:    [[XS:%.*]] = sext i1 [[X:%.*]] to i5
-; CHECK-NEXT:    [[YS:%.*]] = sext i1 [[Y:%.*]] to i5
-; CHECK-NEXT:    [[SUB:%.*]] = add nsw i5 [[XS]], [[YS]]
-; CHECK-NEXT:    [[R:%.*]] = and i5 [[SUB]], -2
+; CHECK-NEXT:    [[TMP1:%.*]] = or i1 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP1]], i5 -2, i5 0
 ; CHECK-NEXT:    ret i5 [[R]]
 ;
   %xs = sext i1 %x to i5
@@ -1214,11 +1210,9 @@ define i5 @and_add_sexts(i1 %x, i1 %y) {
 
 define <2 x i8> @ashr_add_sexts(<2 x i1> %x, <2 x i1> %y) {
 ; CHECK-LABEL: @ashr_add_sexts(
-; CHECK-NEXT:    [[XS:%.*]] = sext <2 x i1> [[X:%.*]] to <2 x i8>
-; CHECK-NEXT:    [[YS:%.*]] = sext <2 x i1> [[Y:%.*]] to <2 x i8>
-; CHECK-NEXT:    [[SUB:%.*]] = add nsw <2 x i8> [[YS]], [[XS]]
-; CHECK-NEXT:    [[R:%.*]] = ashr <2 x i8> [[SUB]], <i8 1, i8 1>
-; CHECK-NEXT:    ret <2 x i8> [[R]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i1> [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = sext <2 x i1> [[TMP1]] to <2 x i8>
+; CHECK-NEXT:    ret <2 x i8> [[TMP2]]
 ;
   %xs = sext <2 x i1> %x to <2 x i8>
   %ys = sext <2 x i1> %y to <2 x i8>
@@ -1229,12 +1223,8 @@ define <2 x i8> @ashr_add_sexts(<2 x i1> %x, <2 x i1> %y) {
 
 define i32 @cmp_math_sexts(i32 %x, i32 %y) {
 ; CHECK-LABEL: @cmp_math_sexts(
-; CHECK-NEXT:    [[GT:%.*]] = icmp ugt i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[LT:%.*]] = icmp ult i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[XZ:%.*]] = sext i1 [[GT]] to i32
-; CHECK-NEXT:    [[TMP1:%.*]] = sext i1 [[LT]] to i32
-; CHECK-NEXT:    [[S:%.*]] = add nsw i32 [[XZ]], [[TMP1]]
-; CHECK-NEXT:    [[R:%.*]] = lshr i32 [[S]], 31
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[TMP1]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %gt = icmp ugt i32 %x, %y
