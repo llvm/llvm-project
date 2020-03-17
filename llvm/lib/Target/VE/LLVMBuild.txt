@@ -15,7 +15,7 @@
 ;===------------------------------------------------------------------------===;
 
 [common]
-subdirectories = InstPrinter MCTargetDesc TargetInfo
+subdirectories = MCTargetDesc TargetInfo
 
 [component_0]
 type = TargetGroup
@@ -29,6 +29,5 @@ type = Library
 name = VECodeGen
 parent = VE
 required_libraries = Analysis AsmPrinter CodeGen Core
-                     MC SelectionDAG VEAsmPrinter
-                     VEDesc VEInfo Support Target
+                     MC SelectionDAG VEDesc VEInfo Support Target
 add_to_library_groups = VE

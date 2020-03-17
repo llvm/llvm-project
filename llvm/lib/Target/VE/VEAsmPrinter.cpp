@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "InstPrinter/VEInstPrinter.h"
+#include "MCTargetDesc/VEInstPrinter.h"
 #include "MCTargetDesc/VEMCExpr.h"
 #include "MCTargetDesc/VETargetStreamer.h"
 #include "VE.h"
