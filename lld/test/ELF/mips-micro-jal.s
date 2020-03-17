@@ -51,7 +51,7 @@
 # RUN:         %S/Inputs/mips-fpic.s -o %t-reg.o
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux \
 # RUN:         -mattr=micromips %s -o %t2eb.o
-# RUN: ld.lld --script %t.script --no-threads -o %teb.exe %t-reg.o %t2eb.o %teb.so
+# RUN: ld.lld --script %t.script -o %teb.exe %t-reg.o %t2eb.o %teb.so
 # RUN: llvm-objdump -d --mattr=micromips --no-show-raw-insn %teb.exe \
 # RUN:   | FileCheck --check-prefix=R2 %s
 

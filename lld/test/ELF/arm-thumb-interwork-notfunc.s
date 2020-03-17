@@ -1,7 +1,6 @@
 // REQUIRES: arm
 // RUN: llvm-mc -g --triple=armv7a-linux-gnueabihf -arm-add-build-attributes -filetype=obj -o %t.o %s
-// RUN: ld.lld %t.o --no-threads -o %t 2>&1
-// RUN: ld.lld %t.o --no-threads -o %t 2>&1 | FileCheck %s --check-prefix=WARN
+// RUN: ld.lld %t.o -o %t 2>&1 | FileCheck %s --check-prefix=WARN
 // RUN: llvm-objdump --no-show-raw-insn -d %t | FileCheck %s
 
 .syntax unified
