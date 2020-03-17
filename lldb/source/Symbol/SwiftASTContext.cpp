@@ -4103,11 +4103,13 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
   }
 
   // Set up the required state for the evaluator in the TypeChecker.
-  (void)swift::createTypeChecker(*m_ast_context_ap);
+  m_ast_context_ap->setLegacySemanticQueriesEnabled();
   registerIDERequestFunctions(m_ast_context_ap->evaluator);
   registerParseRequestFunctions(m_ast_context_ap->evaluator);
   registerTypeCheckerRequestFunctions(m_ast_context_ap->evaluator);
   registerSILGenRequestFunctions(m_ast_context_ap->evaluator);
+  registerTBDGenRequestFunctions(m_ast_context_ap->evaluator);
+  registerIRGenRequestFunctions(m_ast_context_ap->evaluator);
 
   GetASTMap().Insert(m_ast_context_ap.get(), this);
 
