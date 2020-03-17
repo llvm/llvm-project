@@ -110,6 +110,18 @@ bool Scope::Contains(const Scope &that) const {
   }
 }
 
+Symbol *Scope::CopySymbol(const Symbol &symbol) {
+  auto pair{try_emplace(symbol.name(), symbol.attrs())};
+  if (!pair.second) {
+    return nullptr;  // already exists
+  } else {
+    Symbol &result{*pair.first->second};
+    result.flags() = symbol.flags();
+    result.set_details(common::Clone(symbol.details()));
+    return &result;
+  }
+}
+
 const std::list<EquivalenceSet> &Scope::equivalenceSets() const {
   return equivalenceSets_;
 }

@@ -2729,10 +2729,25 @@ bool SubprogramVisitor::BeginMpSubprogram(const parser::Name &name) {
     Say(name, "'%s' was not declared a separate module procedure"_err_en_US);
     return false;
   }
-  if (symbol->owner() != currScope()) {
-    symbol = &MakeSymbol(name, SubprogramDetails{});
+  if (symbol->owner() == currScope()) {
+    PushScope(Scope::Kind::Subprogram, symbol);
+  } else {
+    Symbol &newSymbol{MakeSymbol(name, SubprogramDetails{})};
+    PushScope(Scope::Kind::Subprogram, &newSymbol);
+    const auto &details{symbol->get<SubprogramDetails>()};
+    auto &newDetails{newSymbol.get<SubprogramDetails>()};
+    for (const Symbol *dummyArg : details.dummyArgs()) {
+      if (!dummyArg) {
+        newDetails.add_alternateReturn();
+      } else if (Symbol * copy{currScope().CopySymbol(*dummyArg)}) {
+        newDetails.add_dummyArg(*copy);
+      }
+    }
+    if (details.isFunction()) {
+      currScope().erase(symbol->name());
+      newDetails.set_result(*currScope().CopySymbol(details.result()));
+    }
   }
-  PushScope(Scope::Kind::Subprogram, symbol);
   return true;
 }
 

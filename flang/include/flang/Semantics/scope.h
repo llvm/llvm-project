@@ -134,6 +134,8 @@ public:
     Symbol &symbol{MakeSymbol(name, attrs, std::move(details))};
     return symbols_.emplace(name, symbol);
   }
+  // Make a copy of a symbol in this scope; nullptr if one is already there
+  Symbol *CopySymbol(const Symbol &);
 
   const std::list<EquivalenceSet> &equivalenceSets() const;
   void add_equivalenceSet(EquivalenceSet &&);
