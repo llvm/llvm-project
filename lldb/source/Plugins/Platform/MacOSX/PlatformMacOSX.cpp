@@ -185,73 +185,35 @@ PlatformMacOSX::~PlatformMacOSX() {}
 
 ConstString PlatformMacOSX::GetSDKDirectory(lldb_private::Target &target) {
   ModuleSP exe_module_sp(target.GetExecutableModule());
-  if (exe_module_sp) {
-    ObjectFile *objfile = exe_module_sp->GetObjectFile();
-    if (objfile) {
-      std::string xcode_contents_path;
-      std::string default_xcode_sdk;
-      FileSpec fspec;
-      llvm::VersionTuple version = objfile->GetSDKVersion();
-      if (!version.empty()) {
-        fspec = HostInfo::GetShlibDir();
-        if (fspec) {
-          std::string path;
-          xcode_contents_path = fspec.GetPath();
-          size_t pos = xcode_contents_path.find("/Xcode.app/Contents/");
-          if (pos != std::string::npos) {
-            // LLDB.framework is inside an Xcode app bundle, we can locate the
-            // SDK from here
-            xcode_contents_path.erase(pos + strlen("/Xcode.app/Contents/"));
-          } else {
-            xcode_contents_path.clear();
-            // Use the selected Xcode
-            int status = 0;
-            int signo = 0;
-            std::string output;
-            const char *command = "xcrun -sdk macosx --show-sdk-path";
-            lldb_private::Status error = RunShellCommand(
-                command,    // shell command to run
-                FileSpec(), // current working directory
-                &status,    // Put the exit status of the process in here
-                &signo,     // Put the signal that caused the process to exit in
-                            // here
-                &output, // Get the output from the command and place it in this
-                         // string
-                std::chrono::seconds(3));
-            if (status == 0 && !output.empty()) {
-              size_t first_non_newline = output.find_last_not_of("\r\n");
-              if (first_non_newline != std::string::npos)
-                output.erase(first_non_newline + 1);
-              default_xcode_sdk = output;
+  if (!exe_module_sp)
+    return {};
 
-              pos = default_xcode_sdk.find("/Xcode.app/Contents/");
-              if (pos != std::string::npos)
-                xcode_contents_path = default_xcode_sdk.substr(
-                    0, pos + strlen("/Xcode.app/Contents/"));
-            }
-          }
-        }
+  ObjectFile *objfile = exe_module_sp->GetObjectFile();
+  if (!objfile)
+    return {};
 
-        if (!xcode_contents_path.empty()) {
-          StreamString sdk_path;
-          sdk_path.Printf("%sDeveloper/Platforms/MacOSX.platform/Developer/"
-                          "SDKs/MacOSX%u.%u.sdk",
-                          xcode_contents_path.c_str(), version.getMajor(),
-                          version.getMinor().getValue());
-          fspec.SetFile(sdk_path.GetString(), FileSpec::Style::native);
-          if (FileSystem::Instance().Exists(fspec))
-            return ConstString(sdk_path.GetString());
-        }
+  llvm::VersionTuple version = objfile->GetSDKVersion();
+  if (version.empty())
+    return {};
 
-        if (!default_xcode_sdk.empty()) {
-          fspec.SetFile(default_xcode_sdk, FileSpec::Style::native);
-          if (FileSystem::Instance().Exists(fspec))
-            return ConstString(default_xcode_sdk);
-        }
-      }
-    }
+  // First try to find an SDK that matches the given SDK version.
+  if (FileSpec fspec = GetXcodeContentsDirectory()) {
+    StreamString sdk_path;
+    sdk_path.Printf("%s/Developer/Platforms/MacOSX.platform/Developer/"
+                    "SDKs/MacOSX%u.%u.sdk",
+                    fspec.GetPath().c_str(), version.getMajor(),
+                    version.getMinor().getValue());
+    if (FileSystem::Instance().Exists(fspec))
+      return ConstString(sdk_path.GetString());
   }
-  return ConstString();
+
+  // Use the default SDK as a fallback.
+  if (FileSpec fspec = GetXcodeSDK(SDKType::MacOSX)) {
+    if (FileSystem::Instance().Exists(fspec))
+      return ConstString(fspec.GetPath());
+  }
+
+  return {};
 }
 
 Status PlatformMacOSX::GetSymbolFile(const FileSpec &platform_file,

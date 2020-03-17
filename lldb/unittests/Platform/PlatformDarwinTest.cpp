@@ -18,6 +18,8 @@ using namespace lldb;
 using namespace lldb_private;
 
 struct PlatformDarwinTester : public PlatformDarwin {
+public:
+  using PlatformDarwin::FindXcodeContentsDirectoryInPath;
   static bool SDKSupportsModules(SDKType desired_type,
                                  const lldb_private::FileSpec &sdk_path) {
     return PlatformDarwin::SDKSupportsModules(desired_type, sdk_path);
@@ -68,4 +70,65 @@ TEST(PlatformDarwinTest, TestParseVersionBuildDir) {
   EXPECT_FALSE(PlatformDarwinTester::SDKSupportsModules(
       PlatformDarwin::SDKType::MacOSX,
       FileSpec(base + "MacOSX.platform/Developer/SDKs/MacOSX10.9.sdk")));
+}
+
+TEST(PlatformDarwinTest, FindXcodeContentsDirectoryInPath) {
+  std::string standard =
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/"
+      "Developer/SDKs/MacOSX.sdk";
+  EXPECT_EQ("/Applications/Xcode.app/Contents",
+            PlatformDarwinTester::FindXcodeContentsDirectoryInPath(standard));
+
+  std::string standard_version =
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/"
+      "Developer/SDKs/MacOSX10.15.sdk";
+  EXPECT_EQ(
+      "/Applications/Xcode.app/Contents",
+      PlatformDarwinTester::FindXcodeContentsDirectoryInPath(standard_version));
+
+  std::string beta = "/Applications/Xcode-beta.app/Contents/Developer/"
+                     "Platforms/MacOSX.platform/"
+                     "Developer/SDKs/MacOSX10.15.sdk";
+  EXPECT_EQ("/Applications/Xcode-beta.app/Contents",
+            PlatformDarwinTester::FindXcodeContentsDirectoryInPath(beta));
+
+  std::string no_app =
+      "/Applications/Xcode/Contents/Developer/Platforms/MacOSX.platform/"
+      "Developer/SDKs/MacOSX10.15.sdk";
+  EXPECT_EQ("", PlatformDarwinTester::FindXcodeContentsDirectoryInPath(no_app));
+
+  std::string no_contents =
+      "/Applications/Xcode.app/Developer/Platforms/MacOSX.platform/"
+      "Developer/SDKs/MacOSX10.15.sdk";
+  EXPECT_EQ(
+      "", PlatformDarwinTester::FindXcodeContentsDirectoryInPath(no_contents));
+
+  std::string no_capitalization =
+      "/Applications/Xcode.app/contents/Developer/Platforms/MacOSX.platform/"
+      "Developer/SDKs/MacOSX10.15.sdk";
+  EXPECT_EQ("", PlatformDarwinTester::FindXcodeContentsDirectoryInPath(
+                    no_capitalization));
+}
+
+TEST(PlatformDarwinTest, GetSDKNameForType) {
+  EXPECT_EQ("macosx",
+            PlatformDarwin::GetSDKNameForType(PlatformDarwin::SDKType::MacOSX));
+  EXPECT_EQ("iphonesimulator", PlatformDarwin::GetSDKNameForType(
+                                   PlatformDarwin::SDKType::iPhoneSimulator));
+  EXPECT_EQ("iphoneos", PlatformDarwin::GetSDKNameForType(
+                            PlatformDarwin::SDKType::iPhoneOS));
+  EXPECT_EQ("appletvsimulator", PlatformDarwin::GetSDKNameForType(
+                                    PlatformDarwin::SDKType::AppleTVSimulator));
+  EXPECT_EQ("appletvos", PlatformDarwin::GetSDKNameForType(
+                             PlatformDarwin::SDKType::AppleTVOS));
+  EXPECT_EQ("watchsimulator", PlatformDarwin::GetSDKNameForType(
+                                  PlatformDarwin::SDKType::WatchSimulator));
+  EXPECT_EQ("watchos", PlatformDarwin::GetSDKNameForType(
+                           PlatformDarwin::SDKType::watchOS));
+  EXPECT_EQ("linux",
+            PlatformDarwin::GetSDKNameForType(PlatformDarwin::SDKType::Linux));
+  EXPECT_EQ("", PlatformDarwin::GetSDKNameForType(
+                    PlatformDarwin::SDKType::numSDKTypes));
+  EXPECT_EQ(
+      "", PlatformDarwin::GetSDKNameForType(PlatformDarwin::SDKType::unknown));
 }
