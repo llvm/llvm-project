@@ -99,11 +99,11 @@ raw_ostream &operator<<(raw_ostream &OS, const UseInfo &U) {
 }
 
 struct AllocaInfo {
-  const AllocaInst *AI = nullptr;
+  AllocaInst *AI = nullptr;
   uint64_t Size = 0;
   UseInfo Use;
 
-  AllocaInfo(unsigned PointerSize, const AllocaInst *AI, uint64_t Size)
+  AllocaInfo(unsigned PointerSize, AllocaInst *AI, uint64_t Size)
       : AI(AI), Size(Size), Use(PointerSize) {}
 
   StringRef getName() const { return AI->getName(); }
@@ -205,7 +205,7 @@ StackSafetyInfo::FunctionInfo::FunctionInfo(const GlobalAlias *A) : GV(A) {
 namespace {
 
 class StackSafetyLocalAnalysis {
-  const Function &F;
+  Function &F;
   const DataLayout &DL;
   ScalarEvolution &SE;
   unsigned PointerSize = 0;
@@ -227,7 +227,7 @@ class StackSafetyLocalAnalysis {
   }
 
 public:
-  StackSafetyLocalAnalysis(const Function &F, ScalarEvolution &SE)
+  StackSafetyLocalAnalysis(Function &F, ScalarEvolution &SE)
       : F(F), DL(F.getParent()->getDataLayout()), SE(SE),
         PointerSize(DL.getPointerSizeInBits()),
         UnknownRange(PointerSize, true) {}
@@ -653,17 +653,47 @@ PreservedAnalyses StackSafetyGlobalPrinterPass::run(Module &M,
   return PreservedAnalyses::all();
 }
 
+static bool SetStackSafetyMetadata(Module &M,
+                                   const StackSafetyGlobalInfo &SSGI) {
+  bool Changed = false;
+  unsigned Width = M.getDataLayout().getPointerSizeInBits();
+  for (auto &F : M.functions()) {
+    if (F.isDeclaration() || F.hasOptNone())
+      continue;
+    auto Iter = SSGI.find(&F);
+    if (Iter == SSGI.end())
+      continue;
+    StackSafetyInfo::FunctionInfo *Summary = Iter->second.getInfo();
+    for (auto &AS : Summary->Allocas) {
+      ConstantRange AllocaRange{APInt(Width, 0), APInt(Width, AS.Size)};
+      if (AllocaRange.contains(AS.Use.Range)) {
+        AS.AI->setMetadata(M.getMDKindID("stack-safe"),
+                           MDNode::get(M.getContext(), None));
+        Changed = true;
+      }
+    }
+  }
+  return Changed;
+}
+
+PreservedAnalyses
+StackSafetyGlobalAnnotatorPass::run(Module &M, ModuleAnalysisManager &AM) {
+  auto &SSGI = AM.getResult<StackSafetyGlobalAnalysis>(M);
+  (void)SetStackSafetyMetadata(M, SSGI);
+  return PreservedAnalyses::all();
+}
+
 char StackSafetyGlobalInfoWrapperPass::ID = 0;
 
-StackSafetyGlobalInfoWrapperPass::StackSafetyGlobalInfoWrapperPass()
-    : ModulePass(ID) {
+StackSafetyGlobalInfoWrapperPass::StackSafetyGlobalInfoWrapperPass(bool SetMetadata)
+    : ModulePass(ID), SetMetadata(SetMetadata) {
   initializeStackSafetyGlobalInfoWrapperPassPass(
       *PassRegistry::getPassRegistry());
 }
 
 void StackSafetyGlobalInfoWrapperPass::print(raw_ostream &O,
                                              const Module *M) const {
-  ::print(SSI, O, *M);
+  ::print(SSGI, O, *M);
 }
 
 void StackSafetyGlobalInfoWrapperPass::getAnalysisUsage(
@@ -676,8 +706,12 @@ bool StackSafetyGlobalInfoWrapperPass::runOnModule(Module &M) {
       M, [this](Function &F) -> const StackSafetyInfo & {
         return getAnalysis<StackSafetyInfoWrapperPass>(F).getResult();
       });
-  SSI = SSDFA.run();
-  return false;
+  SSGI = SSDFA.run();
+  return SetMetadata ? SetStackSafetyMetadata(M, SSGI) : false;
+}
+
+ModulePass *llvm::createStackSafetyGlobalInfoWrapperPass(bool SetMetadata) {
+  return new StackSafetyGlobalInfoWrapperPass(SetMetadata);
 }
 
 static const char LocalPassArg[] = "stack-safety-local";
