@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_QUANTOPS_QUANTOPS_H_
-#define MLIR_DIALECT_QUANTOPS_QUANTOPS_H_
+#ifndef MLIR_DIALECT_QUANT_QUANTOPS_H_
+#define MLIR_DIALECT_QUANT_QUANTOPS_H_
 
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
@@ -21,12 +21,12 @@
 namespace mlir {
 namespace quant {
 
-#include "mlir/Dialect/QuantOps/QuantOpsDialect.h.inc"
+#include "mlir/Dialect/Quant/QuantOpsDialect.h.inc"
 
 #define GET_OP_CLASSES
-#include "mlir/Dialect/QuantOps/QuantOps.h.inc"
+#include "mlir/Dialect/Quant/QuantOps.h.inc"
 
 } // namespace quant
 } // namespace mlir
 
-#endif // MLIR_DIALECT_QUANTOPS_QUANTOPS_H_
+#endif // MLIR_DIALECT_QUANT_QUANTOPS_H_

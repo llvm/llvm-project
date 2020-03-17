@@ -13,8 +13,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_QUANTOPS_PASSES_H
-#define MLIR_DIALECT_QUANTOPS_PASSES_H
+#ifndef MLIR_DIALECT_QUANT_PASSES_H
+#define MLIR_DIALECT_QUANT_PASSES_H
 
 #include <memory>
 
@@ -38,4 +38,4 @@ std::unique_ptr<OpPassBase<FuncOp>> createConvertConstPass();
 } // namespace quant
 } // namespace mlir
 
-#endif // MLIR_DIALECT_QUANTOPS_PASSES_H
+#endif // MLIR_DIALECT_QUANT_PASSES_H

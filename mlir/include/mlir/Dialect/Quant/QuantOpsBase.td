@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef DIALECT_QUANTOPS_QUANT_OPS_BASE_
-#define DIALECT_QUANTOPS_QUANT_OPS_BASE_
+#ifndef DIALECT_QUANT_QUANT_OPS_BASE_
+#define DIALECT_QUANT_QUANT_OPS_BASE_
 
 include "mlir/IR/OpBase.td"
 
@@ -68,4 +68,4 @@ def quant_UniformQuantizedType :
 def quant_UniformQuantizedValueType :
     quant_TypedPrimitiveOrContainer<quant_UniformQuantizedType>;
 
-#endif // DIALECT_QUANTOPS_QUANT_OPS_BASE_
+#endif // DIALECT_QUANT_QUANT_OPS_BASE_

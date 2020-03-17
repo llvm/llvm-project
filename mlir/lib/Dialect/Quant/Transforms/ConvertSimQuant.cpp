@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/QuantOps/FakeQuantSupport.h"
-#include "mlir/Dialect/QuantOps/Passes.h"
-#include "mlir/Dialect/QuantOps/QuantOps.h"
-#include "mlir/Dialect/QuantOps/UniformSupport.h"
+#include "mlir/Dialect/Quant/FakeQuantSupport.h"
+#include "mlir/Dialect/Quant/Passes.h"
+#include "mlir/Dialect/Quant/QuantOps.h"
+#include "mlir/Dialect/Quant/UniformSupport.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/StandardTypes.h"

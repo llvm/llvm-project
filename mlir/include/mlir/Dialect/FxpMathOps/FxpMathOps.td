@@ -15,7 +15,7 @@
 #define DIALECT_FXPMATHOPS_FXPMATH_OPS_
 
 include "mlir/IR/OpBase.td"
-include "mlir/Dialect/QuantOps/QuantOpsBase.td"
+include "mlir/Dialect/Quant/QuantOpsBase.td"
 include "mlir/Interfaces/SideEffects.td"
 
 def FxpMathOps_Dialect : Dialect {

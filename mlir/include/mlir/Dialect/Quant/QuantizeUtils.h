@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_QUANTOPS_QUANTIZEUTILS_H_
-#define MLIR_DIALECT_QUANTOPS_QUANTIZEUTILS_H_
+#ifndef MLIR_DIALECT_QUANT_QUANTIZEUTILS_H_
+#define MLIR_DIALECT_QUANT_QUANTIZEUTILS_H_
 
 namespace mlir {
 class Attribute;
@@ -58,4 +58,4 @@ Attribute quantizeAttrUniform(Attribute realValue,
 } // namespace quant
 } // namespace mlir
 
-#endif // MLIR_DIALECT_QUANTOPS_QUANTIZEUTILS_H_
+#endif // MLIR_DIALECT_QUANT_QUANTIZEUTILS_H_

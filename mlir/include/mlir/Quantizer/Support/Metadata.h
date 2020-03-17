@@ -17,7 +17,7 @@
 
 #include <limits>
 
-#include "mlir/Dialect/QuantOps/QuantTypes.h"
+#include "mlir/Dialect/Quant/QuantTypes.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Quantizer/Support/Rules.h"
 #include "llvm/ADT/SmallBitVector.h"

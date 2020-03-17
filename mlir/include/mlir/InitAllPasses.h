@@ -29,7 +29,7 @@
 #include "mlir/Dialect/LLVMIR/Transforms/LegalizeForExport.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/LoopOps/Passes.h"
-#include "mlir/Dialect/QuantOps/Passes.h"
+#include "mlir/Dialect/Quant/Passes.h"
 #include "mlir/Dialect/SPIRV/Passes.h"
 #include "mlir/Quantizer/Transforms/Passes.h"
 #include "mlir/Transforms/LocationSnapshot.h"
