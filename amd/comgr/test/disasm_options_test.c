@@ -40,7 +40,7 @@
 #include <string.h>
 
 const char *expectedOut = "\n"
-                          ":\tfile format ELF64-amdgpu\n"
+                          ":\tfile format elf64-amdgpu\n"
                           "\n"
                           "Disassembly of section .text:\n"
                           "foo:\n"
