@@ -1256,7 +1256,7 @@ def : GCNPat <
 
 // Same as a 32-bit inreg
 def : GCNPat<
-  (i32 (sext i16:$src)),
+  (i32 (UniformUnaryFrag<sext> i16:$src)),
   (S_SEXT_I32_I16 $src)
 >;
 
@@ -1283,7 +1283,7 @@ def : GCNPat<
 >;
 
 def : GCNPat <
-  (i64 (sext i16:$src)),
+  (i64 (UniformUnaryFrag<sext> i16:$src)),
     (REG_SEQUENCE SReg_64, (i32 (S_SEXT_I32_I16 $src)), sub0,
     (i32 (COPY_TO_REGCLASS (S_ASHR_I32 (i32 (S_SEXT_I32_I16 $src)), (S_MOV_B32 (i32 31))), SGPR_32)), sub1)
 >;
