@@ -420,6 +420,9 @@ void cxx_only(int sel) {
   new (global_int8_ptr) svint8_t();   // expected-error {{allocation of sizeless type 'svint8_t'}}
   new (global_int8_ptr) svint8_t[10]; // expected-error {{allocation of sizeless type 'svint8_t'}}
 
+  delete global_int8_ptr;   // expected-error {{cannot delete expression of type 'svint8_t *'}}
+  delete[] global_int8_ptr; // expected-error {{cannot delete expression of type 'svint8_t *'}}
+
   local_int8.~__SVInt8_t(); // expected-error {{object expression of non-scalar type 'svint8_t' (aka '__SVInt8_t') cannot be used in a pseudo-destructor expression}}
 
   (void)svint8_t();
