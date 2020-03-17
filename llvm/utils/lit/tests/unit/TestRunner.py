@@ -57,6 +57,7 @@ class TestIntegratedTestKeywordParser(unittest.TestCase):
             IntegratedTestKeywordParser("MY_DNE_TAG.", ParserKind.TAG),
             IntegratedTestKeywordParser("MY_LIST:", ParserKind.LIST),
             IntegratedTestKeywordParser("MY_BOOL:", ParserKind.BOOLEAN_EXPR),
+            IntegratedTestKeywordParser("MY_INT:", ParserKind.INTEGER),
             IntegratedTestKeywordParser("MY_RUN:", ParserKind.COMMAND),
             IntegratedTestKeywordParser("MY_CUSTOM:", ParserKind.CUSTOM,
                                         custom_parse),
@@ -111,6 +112,17 @@ class TestIntegratedTestKeywordParser(unittest.TestCase):
         self.assertEqual(len(value), 2)  # there are only two run lines
         self.assertEqual(value[0].strip(), "a && (b)")
         self.assertEqual(value[1].strip(), "d")
+
+    def test_integer(self):
+        parsers = self.make_parsers()
+        self.parse_test(parsers)
+        int_parser = self.get_parser(parsers, 'MY_INT:')
+        value = int_parser.getValue()
+        self.assertEqual(len(value), 2)  # there are only two MY_INT: lines
+        self.assertEqual(type(value[0]), int)
+        self.assertEqual(value[0], 4)
+        self.assertEqual(type(value[1]), int)
+        self.assertEqual(value[1], 6)
 
     def test_boolean_unterminated(self):
         parsers = self.make_parsers() + \
