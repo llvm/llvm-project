@@ -15,6 +15,7 @@
 #define MLIR_TARGET_LLVMIR_MODULETRANSLATION_H
 
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/Transforms/LegalizeForExport.h"
 #include "mlir/IR/Block.h"
 #include "mlir/IR/Module.h"
 #include "mlir/IR/Value.h"
@@ -56,6 +57,8 @@ public:
     auto llvmModule = prepareLLVMModule(m);
     if (!llvmModule)
       return nullptr;
+
+    LLVM::ensureDistinctSuccessors(m);
 
     T translator(m, std::move(llvmModule));
     if (failed(translator.convertGlobals()))
