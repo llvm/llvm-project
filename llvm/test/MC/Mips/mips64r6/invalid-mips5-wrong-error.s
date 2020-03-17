@@ -28,7 +28,6 @@
         c.ule.ps        $fcc6,$f17,$f3      # CHECK: :[[@LINE]]:{{[0-9]+}}: error: unknown instruction
         c.ult.ps        $fcc7,$f14,$f0      # CHECK: :[[@LINE]]:{{[0-9]+}}: error: unknown instruction
         c.un.ps         $fcc4,$f2,$f26      # CHECK: :[[@LINE]]:{{[0-9]+}}: error: unknown instruction
-        cvt.ps.pw       $f3,$f18            # CHECK: :[[@LINE]]:{{[0-9]+}}: error: unknown instruction
         madd.ps         $f22,$f3,$f14,$f3   # CHECK: :[[@LINE]]:{{[0-9]+}}: error: unknown instruction
         mov.ps          $f22,$f17           # CHECK: :[[@LINE]]:{{[0-9]+}}: error: unknown instruction
         movf.ps         $f10,$f28,$fcc6     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: unknown instruction
