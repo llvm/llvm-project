@@ -4,14 +4,14 @@
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s
 
-; Test that AND is not removed when some lower 6 bits are not set.
+; Test that AND is not removed when some lower 5 bits are not set.
 define i32 @f1(i32 %val, i32 %amt) {
 ; CHECK-LABEL: f1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    nill %r3, 31
+; CHECK-NEXT:    nill %r3, 15
 ; CHECK-NEXT:    rll %r2, %r2, 0(%r3)
 ; CHECK-NEXT:    br %r14
-  %and = and i32 %amt, 31
+  %and = and i32 %amt, 15
 
   %inv = sub i32 32, %and
   %parta = shl i32 %val, %and
