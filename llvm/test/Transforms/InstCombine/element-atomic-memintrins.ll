@@ -415,4 +415,23 @@ define void @test_memcpy_loadstore_16(i8* %dest, i8* %src) {
   ret void
 }
 
+define void @test_undefined(i8* %dest, i8* %src) {
+; CHECK-LABEL: @test_undefined(
+entry:
+  br i1 undef, label %ok, label %undefined
+undefined:
+; CHECK: undefined:
+; CHECK-NEXT:    store i1 true, i1* undef
+; CHECK-NEXT:    br label %ok
+  call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i32(i8* align 16 %dest, i8* align 16 %src, i32 7, i32 4)
+  call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i32(i8* align 16 %dest, i8* align 16 %src, i32 -8, i32 4)
+  call void @llvm.memmove.element.unordered.atomic.p0i8.p0i8.i32(i8* align 16 %dest, i8* align 16 %src, i32 7, i32 4)
+  call void @llvm.memmove.element.unordered.atomic.p0i8.p0i8.i32(i8* align 16 %dest, i8* align 16 %src, i32 -8, i32 4)
+  call void @llvm.memset.element.unordered.atomic.p0i8.i32(i8* align 16 %dest, i8 1, i32 7, i32 4)
+  call void @llvm.memset.element.unordered.atomic.p0i8.i32(i8* align 16 %dest, i8 1, i32 -8, i32 4)
+  br label %ok
+ok:
+  ret void
+}
+
 declare void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i32(i8* nocapture writeonly, i8* nocapture readonly, i32, i32) nounwind argmemonly
