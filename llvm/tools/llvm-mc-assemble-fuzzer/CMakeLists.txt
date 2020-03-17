@@ -6,6 +6,7 @@ set(LLVM_LINK_COMPONENTS
     MCParser
     Support
 )
+
 add_llvm_fuzzer(llvm-mc-assemble-fuzzer
   llvm-mc-assemble-fuzzer.cpp
   )
