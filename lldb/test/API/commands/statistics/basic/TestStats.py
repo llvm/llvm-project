@@ -18,8 +18,8 @@ class TestCase(TestBase):
         self.expect("statistics enable", substrs=['already enabled'], error=True)
         self.expect("expr patatino", substrs=['27'])
         self.expect("statistics disable")
-        self.expect("statistics dump", substrs=['expr evaluation successes : 1',
-                                                'expr evaluation failures : 0'])
+        self.expect("statistics dump", substrs=['expr evaluation successes : 1\n',
+                                                'expr evaluation failures : 0\n'])
 
         # 'frame var' with disabled statistics shouldn't change stats.
         self.expect("frame var", substrs=['27'])
@@ -28,5 +28,5 @@ class TestCase(TestBase):
         # 'frame var' with enabled statistics will change stats.
         self.expect("frame var", substrs=['27'])
         self.expect("statistics disable")
-        self.expect("statistics dump", substrs=['frame var successes : 1',
-                                                'frame var failures : 0'])
+        self.expect("statistics dump", substrs=['frame var successes : 1\n',
+                                                'frame var failures : 0\n'])
