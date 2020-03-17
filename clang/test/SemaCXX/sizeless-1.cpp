@@ -395,6 +395,9 @@ void cxx_only(int sel) {
   local_int16 = static_cast<svint16_t>(local_int8); // expected-error {{static_cast from 'svint8_t' (aka '__SVInt8_t') to 'svint16_t' (aka '__SVInt16_t') is not allowed}}
   sel = static_cast<int>(local_int8);               // expected-error {{static_cast from 'svint8_t' (aka '__SVInt8_t') to 'int' is not allowed}}
 
+  throw local_int8; // expected-error {{cannot throw object of sizeless type 'svint8_t'}}
+  throw global_int8_ptr;
+
   local_int8.~__SVInt8_t(); // expected-error {{object expression of non-scalar type 'svint8_t' (aka '__SVInt8_t') cannot be used in a pseudo-destructor expression}}
 
   (void)svint8_t();
