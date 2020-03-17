@@ -659,7 +659,7 @@ void VisibleModuleSet::setVisible(Module *M, SourceLocation Loc,
   VisitModule({M, nullptr});
 }
 
-ASTSourceDescriptor::ASTSourceDescriptor(const Module &M)
+ASTSourceDescriptor::ASTSourceDescriptor(Module &M)
     : Signature(M.Signature), ClangModule(&M) {
   if (M.Directory)
     Path = M.Directory->getName();
