@@ -2,36 +2,50 @@
 
 ## Case 1: Check a 64-bit object.
 
-## Case 1.1: Document we accept an addend with the
-## value INT64_MAX = 2^63-1 = 0x7FFFFFFFFFFFFFFF = 9223372036854775807.
+## Case 1.1: Document we accept any hex/decimal addends in [INT64_MIN, UINT64_MAX].
 
-# RUN: yaml2obj %s -o %t1 -D ADDEND=9223372036854775807
-# RUN: llvm-readobj -r %t1 | FileCheck %s --check-prefix=MAX64
-# RUN: yaml2obj %s -o %t2 -D ADDEND=0x7FFFFFFFFFFFFFFF
-# RUN: llvm-readobj -r %t2 | FileCheck %s --check-prefix=MAX64
+## INT64_MIN   == -9223372036854775808
+## UINT64_MAX  == 0xffffffffffffffff
 
-# MAX64: 0x0 R_X86_64_PC32 foo 0x7FFFFFFFFFFFFFFF
+## Addend == UINT64_MAX.
+# RUN: yaml2obj %s -o %t64.decimal.max -DADDEND=18446744073709551615
+# RUN: llvm-readobj -r %t64.decimal.max | FileCheck %s --check-prefix=TEST -DADDEND=0xFFFFFFFFFFFFFFFF
+# RUN: yaml2obj %s -o %t64.hex.max -DADDEND=0xFFFFFFFFFFFFFFFF
+# RUN: llvm-readobj -r %t64.hex.max | FileCheck %s --check-prefix=TEST -DADDEND=0xFFFFFFFFFFFFFFFF
 
-## Case 1.2: Check we report an error when an addend is greater than INT64_MAX and
-## it is in decimal form. We use (INT64_MAX + 1).
-# RUN: not yaml2obj %s -o %t3 -D ADDEND=9223372036854775808 2>&1 | FileCheck %s --check-prefix=OVERFLOW64
+## Addend == first positive integer.
+# RUN: yaml2obj %s -o %t64.decimal.first.pos -DADDEND=1
+# RUN: llvm-readobj -r %t64.decimal.first.pos | FileCheck %s --check-prefix=TEST -DADDEND=0x1
+# RUN: yaml2obj %s -o %t64.hex.first.pos -DADDEND=0x1
+# RUN: llvm-readobj -r %t64.hex.first.pos | FileCheck %s --check-prefix=TEST -DADDEND=0x1
 
-# OVERFLOW64: error: invalid number
+## Addend == 0.
+# RUN: yaml2obj %s -o %t64.decimal.null -DADDEND=0
+# RUN: llvm-readobj -r %t64.decimal.null | FileCheck %s --check-prefix=TEST -DADDEND=0x0
+# RUN: yaml2obj %s -o %t64.hex.null -DADDEND=0x0
+# RUN: llvm-readobj -r %t64.hex.null | FileCheck %s --check-prefix=TEST -DADDEND=0x0
 
-## Case 1.3: Document we accept an addend with the
-## value INT64_MIN = -2^63 = 0x8000000000000000 = -9223372036854775808.
+## Addend == first negative integer.
+# RUN: yaml2obj %s -o %t64.decimal.first.neg -DADDEND=-1
+# RUN: llvm-readobj -r %t64.decimal.first.neg | FileCheck %s --check-prefix=TEST -DADDEND=0xFFFFFFFFFFFFFFFF
+## We do not accept negative hex addends.
+# RUN: not yaml2obj %s -o /dev/null -DADDEND=-0x1 2>&1 | FileCheck %s --check-prefix=ERR
 
-# RUN: yaml2obj %s -o %t3 -D ADDEND=-9223372036854775808
-# RUN: llvm-readobj -r %t3 | FileCheck %s --check-prefix=MIN64
+## Addend == INT64_MIN.
+# RUN: yaml2obj %s -o %t64.decimal.min -DADDEND=-9223372036854775808
+# RUN: llvm-readobj -r %t64.decimal.min | FileCheck %s --check-prefix=TEST -DADDEND=0x8000000000000000
+# TEST: 0x0 R_{{.*}}_PC32 foo [[ADDEND]]
 
-# MIN64: 0x0 R_X86_64_PC32 foo 0x8000000000000000
+# Case 1.2: Document we do not accept any hex/decimal addends outside of the range specified.
 
-## FIXME: We should support the following case instead.
-# RUN: not yaml2obj %s -o /dev/null -D ADDEND=0x8000000000000000 2>&1 | FileCheck %s --check-prefix=OVERFLOW64
+## Addend == 2^64.
+# RUN: not yaml2obj %s -o /dev/null -DADDEND=18446744073709551616 2>&1 | FileCheck %s --check-prefix=ERR
+# RUN: not yaml2obj %s -o /dev/null -DADDEND=0x10000000000000000 2>&1 | FileCheck %s --check-prefix=ERR
 
-## Case 1.4: Check we report an error when an addend is less than INT64_MIN and
-## it is in decimal form. We use (INT64_MIN - 1).
-# RUN: not yaml2obj %s -o /dev/null -D ADDEND=-9223372036854775809 2>&1 | FileCheck %s --check-prefix=OVERFLOW64
+## Addend == INT64_MIN - 1.
+# RUN: not yaml2obj %s -o /dev/null -DADDEND=-9223372036854775809 2>&1 | FileCheck %s --check-prefix=ERR
+
+# ERR: invalid number
 
 --- !ELF
 FileHeader:
@@ -55,43 +69,47 @@ Symbols:
 
 ## Case 2: Check a 32-bit object.
 
-## Case 2.1: Document we accept an addend with the
-## value INT32_MAX = 2^31-1 = 0x7FFFFFFF = 2,147,483,647.
+## INT32_MIN   == -2147483648
+## UINT32_MAX  == 0xffffffff
 
-# RUN: yaml2obj --docnum=2 %s -o %t4 -D ADDEND=2147483647
-# RUN: llvm-readobj -r %t4 | FileCheck %s --check-prefix=MAX32
-# RUN: yaml2obj --docnum=2 %s -o %t5 -D ADDEND=0x7FFFFFFF
-# RUN: cmp %t4 %t5
+## Case 2.1: Document we accept any hex/decimal addends in [INT32_MIN, UINT32_MAX].
 
-# MAX32: 0x0 R_386_PC32 foo 0x7FFFFFFF{{$}}
+## Addend == UINT32_MAX.
+# RUN: yaml2obj --docnum=2 %s -o %t32.decimal.max -DADDEND=4294967295
+# RUN: llvm-readobj -r %t32.decimal.max | FileCheck %s --check-prefix=TEST -DADDEND=0xFFFFFFFF
+# RUN: yaml2obj --docnum=2 %s -o %t32.hex.max -DADDEND=0xFFFFFFFF
+# RUN: llvm-readobj -r %t32.hex.max | FileCheck %s --check-prefix=TEST -DADDEND=0xFFFFFFFF
 
-## Case 2.2: Check we report an error when an addend is greater than INT32_MAX and
-## it is specified in decimal form. We use (INT32_MAX + 1).
+## Addend == first positive integer.
+# RUN: yaml2obj --docnum=2 %s -o %t32.decimal.first.pos -DADDEND=1
+# RUN: llvm-readobj -r %t32.decimal.first.pos | FileCheck %s --check-prefix=TEST -DADDEND=0x1
+# RUN: yaml2obj --docnum=2 %s -o %t32.hex.first.pos -DADDEND=0x1
+# RUN: llvm-readobj -r %t32.hex.first.pos | FileCheck %s --check-prefix=TEST -DADDEND=0x1
 
-## FIXME: The following case should fail, see OVERFLOW64.
-# RUN: yaml2obj --docnum=2 %s -o %t6 -D ADDEND=2147483648
-# RUN: llvm-readobj -r %t6 | FileCheck %s --check-prefix=OVERFLOW32-1
+## Addend == 0.
+# RUN: yaml2obj --docnum=2 %s -o %t32.decimal.null -DADDEND=0
+# RUN: llvm-readobj -r %t32.decimal.null | FileCheck %s --check-prefix=TEST -DADDEND=0x0
+# RUN: yaml2obj --docnum=2 %s -o %t32.hex.null -DADDEND=0x0
+# RUN: llvm-readobj -r %t32.hex.null | FileCheck %s --check-prefix=TEST -DADDEND=0x0
 
-# OVERFLOW32-1: 0x0 R_386_PC32 foo 0x80000000{{$}}
+## Addend == first negative integer.
+# RUN: yaml2obj --docnum=2 %s -o %t32.decimal.first.neg -DADDEND=-1
+# RUN: llvm-readobj -r %t32.decimal.first.neg | FileCheck %s --check-prefix=TEST -DADDEND=0xFFFFFFFF
+## We do not accept negative hex addends.
+# RUN: not yaml2obj --docnum=2 %s -o /dev/null -DADDEND=-0x1 2>&1 | FileCheck %s --check-prefix=ERR
 
-## Case 2.3: Document we accept an addend with the
-## value INT32_MIN = -2^31 = 0x80000000 = -2,147,483,648.
+## Addend == INT32_MIN
+# RUN: yaml2obj --docnum=2 %s -o %t32.decimal.min -DADDEND=-2147483648
+# RUN: llvm-readobj -r %t32.decimal.min | FileCheck %s --check-prefix=TEST -DADDEND=0x80000000
 
-# RUN: yaml2obj --docnum=2 %s -o %t7 -D ADDEND=-2147483648
-# RUN: llvm-readobj -r %t7 | FileCheck %s --check-prefix=MIN32
-# RUN: yaml2obj --docnum=2 %s -o %t8 -D ADDEND=0x80000000
-# RUN: cmp %t7 %t8
+# Case 2.2: Document we do not accept any hex/decimal addends outside of the range specified.
 
-# MIN32: 0x0 R_386_PC32 foo 0x80000000{{$}}
+## Addend == 2^32.
+# RUN: not yaml2obj --docnum=2 %s -o /dev/null -DADDEND=4294967296 2>&1 | FileCheck %s --check-prefix=ERR
+# RUN: not yaml2obj --docnum=2 %s -o /dev/null -DADDEND=0x100000000 2>&1 | FileCheck %s --check-prefix=ERR
 
-## Case 2.4: Check we report an error when an addend is less than INT32_MIN and
-## it is in decimal form. We use (INT32_MIN - 1).
-
-## FIXME: The following case should fail, see OVERFLOW64.
-# RUN: yaml2obj --docnum=2 %s -o %t9 -D ADDEND=-2147483649
-# RUN: llvm-readobj -r %t9 | FileCheck %s --check-prefix=OVERFLOW32-2
-
-# OVERFLOW32-2: 0x0 R_386_PC32 foo 0x7FFFFFFF{{$}}
+## Addend == INT32_MIN - 1.
+# RUN: not yaml2obj --docnum=2 %s -o /dev/null -DADDEND=-2147483649 2>&1 | FileCheck %s --check-prefix=ERR
 
 --- !ELF
 FileHeader:
@@ -112,3 +130,12 @@ Sections:
         Addend: [[ADDEND]]
 Symbols:
   - Name: foo
+
+## Case 3: Check we do not allow invalid values.
+# RUN: not yaml2obj %s -D ADDEND=0x1122GGEE 2>&1 | FileCheck %s --check-prefix=ERR
+# RUN: not yaml2obj %s -D ADDEND=-0x1122GGEE 2>&1 | FileCheck %s --check-prefix=ERR
+# RUN: not yaml2obj %s -D ADDEND=1234G5 2>&1 | FileCheck %s --check-prefix=ERR
+# RUN: not yaml2obj %s -D ADDEND=-1234G5 2>&1 | FileCheck %s --check-prefix=ERR
+# RUN: not yaml2obj %s -D ADDEND=foo 2>&1 | FileCheck %s --check-prefix=ERR
+# RUN: not yaml2obj %s -D ADDEND=- 2>&1 | FileCheck %s --check-prefix=ERR
+# RUN: not yaml2obj %s -D ADDEND=--1234 2>&1 | FileCheck %s --check-prefix=ERR
