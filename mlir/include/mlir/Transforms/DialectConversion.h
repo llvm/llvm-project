@@ -238,7 +238,7 @@ public:
   virtual PatternMatchResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const {
-    if (!match(op))
+    if (failed(match(op)))
       return matchFailure();
     rewrite(op, operands, rewriter);
     return matchSuccess();
@@ -285,7 +285,7 @@ struct OpConversionPattern : public ConversionPattern {
   virtual PatternMatchResult
   matchAndRewrite(SourceOp op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const {
-    if (!match(op))
+    if (failed(match(op)))
       return matchFailure();
     rewrite(op, operands, rewriter);
     return matchSuccess();

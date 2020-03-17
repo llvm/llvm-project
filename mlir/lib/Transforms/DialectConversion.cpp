@@ -1237,12 +1237,12 @@ OperationLegalizer::legalizePattern(Operation *op, RewritePattern *pattern,
 
   // Try to rewrite with the given pattern.
   rewriter.setInsertionPoint(op);
-  auto matchedPattern = pattern->matchAndRewrite(op, rewriter);
+  LogicalResult matchedPattern = pattern->matchAndRewrite(op, rewriter);
 #ifndef NDEBUG
   assert(rewriterImpl.pendingRootUpdates.empty() && "dangling root updates");
 #endif
 
-  if (!matchedPattern) {
+  if (failed(matchedPattern)) {
     LLVM_DEBUG(logFailure(rewriterImpl.logger, "pattern failed to match"));
     return cleanupFailure();
   }
