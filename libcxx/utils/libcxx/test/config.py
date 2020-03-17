@@ -602,7 +602,7 @@ class Configuration(object):
 
         # FIXME(EricWF): variant_size.pass.cpp requires a slightly larger
         # template depth with older Clang versions.
-        self.cxx.addFlagIfSupported('-ftemplate-depth=270')
+        self.cxx.addCompileFlagIfSupported('-ftemplate-depth=270')
 
     def configure_compile_flags_header_includes(self):
         support_path = os.path.join(self.libcxx_src_root, 'test', 'support')
@@ -1200,7 +1200,7 @@ class Configuration(object):
                 self.config.available_features.add('dylib-has-no-filesystem')
                 self.lit_config.note("the deployment target does not support <filesystem>")
         else:
-            self.cxx.flags += ['-D_LIBCPP_DISABLE_AVAILABILITY']
+            self.cxx.compile_flags += ['-D_LIBCPP_DISABLE_AVAILABILITY']
 
     def configure_env(self):
         self.target_info.configure_env(self.exec_env)
