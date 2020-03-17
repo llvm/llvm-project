@@ -27,5 +27,5 @@ target_link_libraries(MLIRLinalgTransforms
   MLIRStandardOps
   MLIRStandardToLLVM
   MLIRTransformUtils
-  MLIRVectorOps
+  MLIRVector
   )

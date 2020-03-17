@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef DIALECT_VECTOROPS_VECTORTRANSFORMS_H_
-#define DIALECT_VECTOROPS_VECTORTRANSFORMS_H_
+#ifndef DIALECT_VECTOR_VECTORTRANSFORMS_H_
+#define DIALECT_VECTOR_VECTORTRANSFORMS_H_
 
 #include "mlir/IR/PatternMatch.h"
 
@@ -71,4 +71,4 @@ unrollSingleResultOpMatchingType(PatternRewriter &builder, Operation *op,
 } // namespace vector
 } // namespace mlir
 
-#endif // DIALECT_VECTOROPS_VECTORTRANSFORMS_H_
+#endif // DIALECT_VECTOR_VECTORTRANSFORMS_H_
