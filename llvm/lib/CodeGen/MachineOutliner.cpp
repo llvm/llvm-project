@@ -97,13 +97,6 @@ static cl::opt<bool> EnableLinkOnceODROutlining(
     cl::desc("Enable the machine outliner on linkonceodr functions"),
     cl::init(false));
 
-// Set the number of times to repeatedly apply outlining.
-// Defaults to 1, but more repetitions can save additional size.
-static cl::opt<unsigned>
-    NumRepeat("machine-outline-runs", cl::Hidden,
-              cl::desc("The number of times to apply machine outlining"),
-              cl::init(1));
-
 namespace {
 
 /// Represents an undefined index in the suffix tree.
@@ -849,9 +842,6 @@ struct MachineOutliner : public ModulePass {
   /// linkonceodr linkage.
   bool OutlineFromLinkOnceODRs = false;
 
-  /// The current repeat number of machine outlining.
-  unsigned OutlineRepeatedNum = 0;
-
   /// Set to true if the outliner should run on all functions in the module
   /// considered safe for outlining.
   /// Set to true by default for compatibility with llc's -run-pass option.
@@ -910,11 +900,8 @@ struct MachineOutliner : public ModulePass {
                                           InstructionMapper &Mapper,
                                           unsigned Name);
 
-  /// Calls runOnceOnModule NumRepeat times
-  bool runOnModule(Module &M) override;
-
   /// Calls 'doOutline()'.
-  bool runOnceOnModule(Module &M, unsigned Iter);
+  bool runOnModule(Module &M) override;
 
   /// Construct a suffix tree on the instructions in \p M and outline repeated
   /// strings from that tree.
@@ -1112,13 +1099,7 @@ MachineFunction *MachineOutliner::createOutlinedFunction(
   // Create the function name. This should be unique.
   // FIXME: We should have a better naming scheme. This should be stable,
   // regardless of changes to the outliner's cost model/traversal order.
-  std::string FunctionName;
-  if (OutlineRepeatedNum > 0)
-    FunctionName = ("OUTLINED_FUNCTION_" + Twine(OutlineRepeatedNum + 1) + "_" +
-                    Twine(Name))
-                       .str();
-  else
-    FunctionName = ("OUTLINED_FUNCTION_" + Twine(Name)).str();
+  std::string FunctionName = ("OUTLINED_FUNCTION_" + Twine(Name)).str();
 
   // Create the function using an IR-level function.
   LLVMContext &C = M.getContext();
@@ -1457,13 +1438,11 @@ void MachineOutliner::emitInstrCountChangedRemark(
   }
 }
 
-bool MachineOutliner::runOnceOnModule(Module &M, unsigned Iter) {
+bool MachineOutliner::runOnModule(Module &M) {
   // Check if there's anything in the module. If it's empty, then there's
   // nothing to outline.
   if (M.empty())
     return false;
-
-  OutlineRepeatedNum = Iter;
 
   // Number to append to the current outlined function.
   unsigned OutlinedFunctionNum = 0;
@@ -1527,24 +1506,4 @@ bool MachineOutliner::doOutline(Module &M, unsigned &OutlinedFunctionNum) {
     emitInstrCountChangedRemark(M, MMI, FunctionToInstrCount);
 
   return OutlinedSomething;
-}
-
-// Apply machine outlining for NumRepeat times.
-bool MachineOutliner::runOnModule(Module &M) {
-  if (NumRepeat < 1)
-    report_fatal_error("Expect NumRepeat for machine outlining "
-                       "to be greater than or equal to 1!\n");
-
-  bool Changed = false;
-  for (unsigned I = 0; I < NumRepeat; I++) {
-    if (!runOnceOnModule(M, I)) {
-      LLVM_DEBUG(dbgs() << "Stopped outlining at iteration " << I
-                        << " because no changes were found.\n";);
-      return Changed;
-    }
-    Changed = true;
-  }
-  LLVM_DEBUG(dbgs() << "Stopped outlining because iteration is "
-                       "equal to " << NumRepeat << "\n";);
-  return Changed;
 }
