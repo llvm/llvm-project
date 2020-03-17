@@ -4377,7 +4377,7 @@ void SelectionDAGBuilder::visitMaskedStore(const CallInst &I,
 // are looking for. If first operand of the GEP is a splat vector - we
 // extract the splat value and use it as a uniform base.
 // In all other cases the function returns 'false'.
-static bool getUniformBase(const Value *&Ptr, SDValue &Base, SDValue &Index,
+static bool getUniformBase(const Value *Ptr, SDValue &Base, SDValue &Index,
                            ISD::MemIndexType &IndexType, SDValue &Scale,
                            SelectionDAGBuilder *SDB) {
   SelectionDAG& DAG = SDB->DAG;
@@ -4388,11 +4388,12 @@ static bool getUniformBase(const Value *&Ptr, SDValue &Base, SDValue &Index,
   if (!GEP)
     return false;
 
-  const Value *GEPPtr = GEP->getPointerOperand();
-  if (!GEPPtr->getType()->isVectorTy())
-    Ptr = GEPPtr;
-  else if (!(Ptr = getSplatValue(GEPPtr)))
-    return false;
+  const Value *BasePtr = GEP->getPointerOperand();
+  if (BasePtr->getType()->isVectorTy()) {
+    BasePtr = getSplatValue(BasePtr);
+    if (!BasePtr)
+      return false;
+  }
 
   unsigned FinalIndex = GEP->getNumOperands() - 1;
   Value *IndexVal = GEP->getOperand(FinalIndex);
@@ -4412,7 +4413,7 @@ static bool getUniformBase(const Value *&Ptr, SDValue &Base, SDValue &Index,
 
   // The operands of the GEP may be defined in another basic block.
   // In this case we'll not find nodes for the operands.
-  if (!SDB->findValue(Ptr))
+  if (!SDB->findValue(BasePtr))
     return false;
   Constant *C = dyn_cast<Constant>(IndexVal);
   if (!C && !SDB->findValue(IndexVal))
@@ -4434,7 +4435,7 @@ static bool getUniformBase(const Value *&Ptr, SDValue &Base, SDValue &Index,
                 SDB->getCurSDLoc(), TLI.getPointerTy(DL));
     Index = SDB->getValue(IndexVal);
   }
-  Base = SDB->getValue(Ptr);
+  Base = SDB->getValue(BasePtr);
   IndexType = ISD::SIGNED_SCALED;
 
   if (STy || !Index.getValueType().isVector()) {
@@ -4465,17 +4466,15 @@ void SelectionDAGBuilder::visitMaskedScatter(const CallInst &I) {
   SDValue Index;
   ISD::MemIndexType IndexType;
   SDValue Scale;
-  const Value *BasePtr = Ptr;
-  bool UniformBase = getUniformBase(BasePtr, Base, Index, IndexType, Scale,
-                                    this);
+  bool UniformBase = getUniformBase(Ptr, Base, Index, IndexType, Scale, this);
 
-  const Value *MemOpBasePtr = UniformBase ? BasePtr : nullptr;
+  unsigned AS = Ptr->getType()->getScalarType()->getPointerAddressSpace();
   MachineMemOperand *MMO = DAG.getMachineFunction().
-    getMachineMemOperand(MachinePointerInfo(MemOpBasePtr),
+    getMachineMemOperand(MachinePointerInfo(AS),
                          MachineMemOperand::MOStore,
                          // TODO: Make MachineMemOperands aware of scalable
                          // vectors.
-                         VT.getStoreSize().getKnownMinSize(),
+                         MemoryLocation::UnknownSize,
                          Alignment, AAInfo);
   if (!UniformBase) {
     Base = DAG.getConstant(0, sdl, TLI.getPointerTy(DAG.getDataLayout()));
@@ -4582,28 +4581,15 @@ void SelectionDAGBuilder::visitMaskedGather(const CallInst &I) {
   SDValue Index;
   ISD::MemIndexType IndexType;
   SDValue Scale;
-  const Value *BasePtr = Ptr;
-  bool UniformBase = getUniformBase(BasePtr, Base, Index, IndexType, Scale,
-                                    this);
-  bool ConstantMemory = false;
-  if (UniformBase && AA &&
-      AA->pointsToConstantMemory(
-          MemoryLocation(BasePtr,
-                         LocationSize::precise(
-                             DAG.getDataLayout().getTypeStoreSize(I.getType())),
-                         AAInfo))) {
-    // Do not serialize (non-volatile) loads of constant memory with anything.
-    Root = DAG.getEntryNode();
-    ConstantMemory = true;
-  }
-
+  bool UniformBase = getUniformBase(Ptr, Base, Index, IndexType, Scale, this);
+  unsigned AS = Ptr->getType()->getScalarType()->getPointerAddressSpace();
   MachineMemOperand *MMO =
     DAG.getMachineFunction().
-    getMachineMemOperand(MachinePointerInfo(UniformBase ? BasePtr : nullptr),
+    getMachineMemOperand(MachinePointerInfo(AS),
                          MachineMemOperand::MOLoad,
                          // TODO: Make MachineMemOperands aware of scalable
                          // vectors.
-                         VT.getStoreSize().getKnownMinSize(),
+                         MemoryLocation::UnknownSize,
                          Alignment, AAInfo, Ranges);
 
   if (!UniformBase) {
@@ -4616,9 +4602,7 @@ void SelectionDAGBuilder::visitMaskedGather(const CallInst &I) {
   SDValue Gather = DAG.getMaskedGather(DAG.getVTList(VT, MVT::Other), VT, sdl,
                                        Ops, MMO, IndexType);
 
-  SDValue OutChain = Gather.getValue(1);
-  if (!ConstantMemory)
-    PendingLoads.push_back(OutChain);
+  PendingLoads.push_back(Gather.getValue(1));
   setValue(&I, Gather);
 }
 
