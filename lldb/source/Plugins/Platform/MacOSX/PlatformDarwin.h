@@ -79,14 +79,26 @@ public:
   static std::tuple<llvm::VersionTuple, llvm::StringRef>
   ParseVersionBuildDir(llvm::StringRef str);
 
-  enum SDKType : unsigned {
+  enum SDKType : int {
     MacOSX = 0,
     iPhoneSimulator,
     iPhoneOS,
+    AppleTVSimulator,
+    AppleTVOS,
+    WatchSimulator,
+    watchOS,
+    bridgeOS,
+    Linux,
+    numSDKTypes,
+    unknown = -1
   };
 
   llvm::Expected<lldb_private::StructuredData::DictionarySP>
   FetchExtendedCrashInformation(lldb_private::Process &process) override;
+
+  static llvm::StringRef GetSDKNameForType(SDKType type);
+  static lldb_private::FileSpec GetXcodeSDK(SDKType type);
+  static lldb_private::FileSpec GetXcodeContentsDirectory();
 
 protected:
   struct CrashInfoAnnotations {
@@ -154,13 +166,15 @@ protected:
 
   const char *GetDeveloperDirectory();
 
-  lldb_private::Status
-  FindBundleBinaryInExecSearchPaths (const lldb_private::ModuleSpec &module_spec, lldb_private::Process *process,
-                                     lldb::ModuleSP &module_sp, const lldb_private::FileSpecList *module_search_paths_ptr, 
-                                     lldb::ModuleSP *old_module_sp_ptr, bool *did_create_ptr);
+  lldb_private::Status FindBundleBinaryInExecSearchPaths(
+      const lldb_private::ModuleSpec &module_spec,
+      lldb_private::Process *process, lldb::ModuleSP &module_sp,
+      const lldb_private::FileSpecList *module_search_paths_ptr,
+      lldb::ModuleSP *old_module_sp_ptr, bool *did_create_ptr);
+
+  static std::string FindXcodeContentsDirectoryInPath(llvm::StringRef path);
 
   std::string m_developer_directory;
-
 
 private:
   DISALLOW_COPY_AND_ASSIGN(PlatformDarwin);
