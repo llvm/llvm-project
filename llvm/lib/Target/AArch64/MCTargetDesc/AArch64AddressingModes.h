@@ -839,7 +839,6 @@ inline static bool isAnyMOVWMovAlias(uint64_t Value, int RegWidth) {
 
   return isAnyMOVZMovAlias(Value, RegWidth);
 }
-
 /// Check if the value of \p OffsetInBytes can be used as an immediate for
 /// the gather load/prefetch and scatter store instructions with vector base and
 /// immediate offset addressing mode:
@@ -847,8 +846,8 @@ inline static bool isAnyMOVWMovAlias(uint64_t Value, int RegWidth) {
 ///      [<Zn>.[S|D]{, #<imm>}]
 ///
 /// where <imm> = sizeof(<T>) * k, for k = 0, 1, ..., 31.
-static bool isValidImmForSVEVecImmAddrMode(unsigned OffsetInBytes,
-                                           unsigned ScalarSizeInBytes) {
+inline static bool isValidImmForSVEVecImmAddrMode(unsigned OffsetInBytes,
+                                                  unsigned ScalarSizeInBytes) {
   // The immediate is not a multiple of the scalar size.
   if (OffsetInBytes % ScalarSizeInBytes)
     return false;
