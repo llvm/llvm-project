@@ -1,11 +1,4 @@
 ! RUN: %S/test_errors.sh %s %flang %t
-!===--- separate-module-procs.f90 - Test separate module procedure ---------===
-!
-! Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-! See https://llvm.org/LICENSE.txt for license information.
-! SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-!
-!===------------------------------------------------------------------------===
 
 ! case 1: ma_create_new_fun' was not declared a separate module procedure
 module m1

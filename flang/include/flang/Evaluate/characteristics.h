@@ -47,6 +47,11 @@ bool Distinguishable(const Procedure &, const Procedure &);
 // Are these procedures distinguishable for a generic operator or assignment?
 bool DistinguishableOpOrAssign(const Procedure &, const Procedure &);
 
+// Shapes of function results and dummy arguments have to have
+// the same rank, the same deferred dimensions, and the same
+// values for explicit dimensions when constant.
+bool ShapesAreCompatible(const Shape &, const Shape &);
+
 class TypeAndShape {
 public:
   ENUM_CLASS(

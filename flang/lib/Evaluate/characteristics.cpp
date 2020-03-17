@@ -37,7 +37,7 @@ static void CopyAttrs(const semantics::Symbol &src, A &dst,
 // Shapes of function results and dummy arguments have to have
 // the same rank, the same deferred dimensions, and the same
 // values for explicit dimensions when constant.
-static bool ShapesAreCompatible(const Shape &x, const Shape &y) {
+bool ShapesAreCompatible(const Shape &x, const Shape &y) {
   if (x.size() != y.size()) {
     return false;
   }
@@ -158,10 +158,9 @@ void TypeAndShape::AcquireShape(const semantics::ObjectEntityDetails &object) {
   for (const semantics::ShapeSpec &dim : object.shape()) {
     if (dim.ubound().GetExplicit()) {
       Expr<SubscriptInteger> extent{*dim.ubound().GetExplicit()};
-      if (dim.lbound().GetExplicit()) {
-        extent = std::move(extent) +
-            common::Clone(*dim.lbound().GetExplicit()) -
-            Expr<SubscriptInteger>{1};
+      if (auto lbound{dim.lbound().GetExplicit()}) {
+        extent =
+            std::move(extent) + Expr<SubscriptInteger>{1} - std::move(*lbound);
       }
       shape_.emplace_back(std::move(extent));
     } else {

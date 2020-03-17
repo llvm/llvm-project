@@ -85,20 +85,25 @@ std::ostream &operator<<(std::ostream &os, const SubprogramDetails &x) {
   DumpBool(os, "isInterface", x.isInterface_);
   DumpExpr(os, "bindName", x.bindName_);
   if (x.result_) {
-    os << " result:" << x.result_->name();
+    DumpType(os << " result:", x.result());
+    os << x.result_->name();
     if (!x.result_->attrs().empty()) {
       os << ", " << x.result_->attrs();
     }
   }
-  if (x.dummyArgs_.empty()) {
-    char sep{'('};
-    os << ' ';
-    for (const auto *arg : x.dummyArgs_) {
-      os << sep << arg->name();
-      sep = ',';
+  char sep{'('};
+  os << ' ';
+  for (const Symbol *arg : x.dummyArgs_) {
+    os << sep;
+    sep = ',';
+    if (arg) {
+      DumpType(os, *arg);
+      os << arg->name();
+    } else {
+      os << '*';
     }
-    os << (sep == '(' ? "()" : ")");
   }
+  os << (sep == '(' ? "()" : ")");
   return os;
 }
 
@@ -398,23 +403,6 @@ std::ostream &operator<<(std::ostream &os, const Details &details) {
               }
               os << ")";
             }
-          },
-          [&](const SubprogramDetails &x) {
-            os << " (";
-            int n = 0;
-            for (const auto &dummy : x.dummyArgs()) {
-              if (n++ > 0) os << ", ";
-              DumpType(os, *dummy);
-              os << dummy->name();
-            }
-            os << ')';
-            DumpExpr(os, "bindName", x.bindName());
-            if (x.isFunction()) {
-              os << " result(";
-              DumpType(os, x.result());
-              os << x.result().name() << ')';
-            }
-            DumpBool(os, "interface", x.isInterface());
           },
           [&](const SubprogramNameDetails &x) {
             os << ' ' << EnumToString(x.kind());

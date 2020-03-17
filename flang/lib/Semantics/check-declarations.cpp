@@ -23,6 +23,7 @@ namespace Fortran::semantics {
 
 using evaluate::characteristics::DummyArgument;
 using evaluate::characteristics::DummyDataObject;
+using evaluate::characteristics::DummyProcedure;
 using evaluate::characteristics::Procedure;
 
 class CheckHelper {
@@ -59,6 +60,7 @@ private:
   void CheckObjectEntity(const Symbol &, const ObjectEntityDetails &);
   void CheckArraySpec(const Symbol &, const ArraySpec &);
   void CheckProcEntity(const Symbol &, const ProcEntityDetails &);
+  void CheckSubprogram(const Symbol &, const SubprogramDetails &);
   void CheckAssumedTypeEntity(const Symbol &, const ObjectEntityDetails &);
   void CheckDerivedType(const Symbol &, const DerivedTypeDetails &);
   void CheckGeneric(const Symbol &, const GenericDetails &);
@@ -88,7 +90,7 @@ private:
   template<typename... A>
   void SayWithDeclaration(const Symbol &symbol, A &&... x) {
     if (parser::Message * msg{messages_.Say(std::forward<A>(x)...)}) {
-      if (messages_.at() != symbol.name()) {
+      if (messages_.at().begin() != symbol.name().begin()) {
         evaluate::AttachDeclaration(*msg, symbol);
       }
     }
@@ -156,6 +158,7 @@ void CheckHelper::Check(const Symbol &symbol) {
           [&](const ProcBindingDetails &x) { CheckProcBinding(symbol, x); },
           [&](const ObjectEntityDetails &x) { CheckObjectEntity(symbol, x); },
           [&](const ProcEntityDetails &x) { CheckProcEntity(symbol, x); },
+          [&](const SubprogramDetails &x) { CheckSubprogram(symbol, x); },
           [&](const DerivedTypeDetails &x) { CheckDerivedType(symbol, x); },
           [&](const GenericDetails &x) { CheckGeneric(symbol, x); },
           [](const auto &) {},
@@ -537,6 +540,54 @@ void CheckHelper::CheckProcEntity(
         messages_.Say("Procedure pointer '%s' may not be ELEMENTAL"_err_en_US,
             symbol.name());  // C1517
       }
+    }
+  }
+}
+
+// When a module subprogram has the MODULE prefix the following must match
+// with the corresponding separate module procedure interface body:
+// - C1549: characteristics and dummy argument names
+// - C1550: binding label
+// - C1551: NON_RECURSIVE prefix
+class SubprogramMatchHelper {
+public:
+  explicit SubprogramMatchHelper(SemanticsContext &context)
+    : context{context} {}
+
+  void Check(const Symbol &, const Symbol &);
+
+private:
+  void CheckDummyArg(const Symbol &, const Symbol &, const DummyArgument &,
+      const DummyArgument &);
+  void CheckDummyDataObject(const Symbol &, const Symbol &,
+      const DummyDataObject &, const DummyDataObject &);
+  void CheckDummyProcedure(const Symbol &, const Symbol &,
+      const DummyProcedure &, const DummyProcedure &);
+  bool CheckSameIntent(
+      const Symbol &, const Symbol &, common::Intent, common::Intent);
+  template<typename... A>
+  void Say(
+      const Symbol &, const Symbol &, parser::MessageFixedText &&, A &&...);
+  template<typename ATTRS>
+  bool CheckSameAttrs(const Symbol &, const Symbol &, ATTRS, ATTRS);
+  bool ShapesAreCompatible(const DummyDataObject &, const DummyDataObject &);
+  evaluate::Shape FoldShape(const evaluate::Shape &);
+  std::string AsFortran(DummyDataObject::Attr attr) {
+    return parser::ToUpperCaseLetters(DummyDataObject::EnumToString(attr));
+  }
+  std::string AsFortran(DummyProcedure::Attr attr) {
+    return parser::ToUpperCaseLetters(DummyProcedure::EnumToString(attr));
+  }
+
+  SemanticsContext &context;
+};
+
+void CheckHelper::CheckSubprogram(
+    const Symbol &symbol, const SubprogramDetails &) {
+  const Scope &scope{symbol.owner()};
+  if (symbol.attrs().test(Attr::MODULE) && scope.IsSubmodule()) {
+    if (const Symbol * iface{scope.parent().FindSymbol(symbol.name())}) {
+      SubprogramMatchHelper{context_}.Check(symbol, *iface);
     }
   }
 }
@@ -1158,7 +1209,217 @@ void CheckHelper::CheckBlockData(const Scope &scope) {
   }
 }
 
+void SubprogramMatchHelper::Check(
+    const Symbol &symbol1, const Symbol &symbol2) {
+  const auto details1{symbol1.get<SubprogramDetails>()};
+  const auto details2{symbol2.get<SubprogramDetails>()};
+  if (details1.isFunction() != details2.isFunction()) {
+    Say(symbol1, symbol2,
+        details1.isFunction()
+            ? "Module function '%s' was declared as a subroutine in the"
+              " corresponding interface body"_err_en_US
+            : "Module subroutine '%s' was declared as a function in the"
+              " corresponding interface body"_err_en_US);
+    return;
+  }
+  const auto &args1{details1.dummyArgs()};
+  const auto &args2{details2.dummyArgs()};
+  int nargs1{static_cast<int>(args1.size())};
+  int nargs2{static_cast<int>(args2.size())};
+  if (nargs1 != nargs2) {
+    Say(symbol1, symbol2,
+        "Module subprogram '%s' has %d args but the corresponding interface"
+        " body has %d"_err_en_US,
+        nargs1, nargs2);
+    return;
+  }
+  bool nonRecursive1{symbol1.attrs().test(Attr::NON_RECURSIVE)};
+  if (nonRecursive1 != symbol2.attrs().test(Attr::NON_RECURSIVE)) {  // C1551
+    Say(symbol1, symbol2,
+        nonRecursive1
+            ? "Module subprogram '%s' has NON_RECURSIVE prefix but"
+              " the corresponding interface body does not"_err_en_US
+            : "Module subprogram '%s' does not have NON_RECURSIVE prefix but "
+              "the corresponding interface body does"_err_en_US);
+  }
+  MaybeExpr bindName1{details1.bindName()};
+  MaybeExpr bindName2{details2.bindName()};
+  if (bindName1.has_value() != bindName2.has_value()) {
+    Say(symbol1, symbol2,
+        bindName1.has_value()
+            ? "Module subprogram '%s' has a binding label but the corresponding"
+              " interface body does not"_err_en_US
+            : "Module subprogram '%s' does not have a binding label but the"
+              " corresponding interface body does"_err_en_US);
+  } else if (bindName1) {
+    std::string string1{bindName1->AsFortran()};
+    std::string string2{bindName2->AsFortran()};
+    if (string1 != string2) {
+      Say(symbol1, symbol2,
+          "Module subprogram '%s' has binding label %s but the corresponding"
+          " interface body has %s"_err_en_US,
+          string1, string2);
+    }
+  }
+  auto proc1{Procedure::Characterize(symbol1, context.intrinsics())};
+  auto proc2{Procedure::Characterize(symbol2, context.intrinsics())};
+  if (!proc1 || !proc2) {
+    return;
+  }
+  if (proc1->functionResult && proc2->functionResult &&
+      *proc1->functionResult != *proc2->functionResult) {
+    Say(symbol1, symbol2,
+        "Return type of function '%s' does not match return type of"
+        " the corresponding interface body"_err_en_US);
+  }
+  for (int i{0}; i < nargs1; ++i) {
+    const Symbol *arg1{args1[i]};
+    const Symbol *arg2{args2[i]};
+    if (arg1 && !arg2) {
+      Say(symbol1, symbol2,
+          "Dummy argument %2$d of '%1$s' is not an alternate return indicator"
+          " but the corresponding argument in the interface body is"_err_en_US,
+          i + 1);
+    } else if (!arg1 && arg2) {
+      Say(symbol1, symbol2,
+          "Dummy argument %2$d of '%1$s' is an alternate return indicator but"
+          " the corresponding argument in the interface body is not"_err_en_US,
+          i + 1);
+    } else if (arg1 && arg2) {
+      SourceName name1{arg1->name()};
+      SourceName name2{arg2->name()};
+      if (name1 != name2) {
+        Say(*arg1, *arg2,
+            "Dummy argument name '%s' does not match corresponding name '%s'"
+            " in interface body"_err_en_US,
+            name2);
+      } else {
+        CheckDummyArg(
+            *arg1, *arg2, proc1->dummyArguments[i], proc2->dummyArguments[i]);
+      }
+    }
+  }
+}
+
+void SubprogramMatchHelper::CheckDummyArg(const Symbol &symbol1,
+    const Symbol &symbol2, const DummyArgument &arg1,
+    const DummyArgument &arg2) {
+  std::visit(
+      common::visitors{
+          [&](const DummyDataObject &obj1, const DummyDataObject &obj2) {
+            CheckDummyDataObject(symbol1, symbol2, obj1, obj2);
+          },
+          [&](const DummyProcedure &proc1, const DummyProcedure &proc2) {
+            CheckDummyProcedure(symbol1, symbol2, proc1, proc2);
+          },
+          [&](const DummyDataObject &, const auto &) {
+            Say(symbol1, symbol2,
+                "Dummy argument '%s' is a data object; the corresponding"
+                " argument in the interface body is not"_err_en_US);
+          },
+          [&](const DummyProcedure &, const auto &) {
+            Say(symbol1, symbol2,
+                "Dummy argument '%s' is a procedure; the corresponding"
+                " argument in the interface body is not"_err_en_US);
+          },
+          [&](const auto &, const auto &) { DIE("can't happen"); },
+      },
+      arg1.u, arg2.u);
+}
+
+void SubprogramMatchHelper::CheckDummyDataObject(const Symbol &symbol1,
+    const Symbol &symbol2, const DummyDataObject &obj1,
+    const DummyDataObject &obj2) {
+  if (!CheckSameIntent(symbol1, symbol2, obj1.intent, obj2.intent)) {
+  } else if (!CheckSameAttrs(symbol1, symbol2, obj1.attrs, obj2.attrs)) {
+  } else if (obj1.type.type() != obj2.type.type()) {
+    Say(symbol1, symbol2,
+        "Dummy argument '%s' has type %s; the corresponding argument in the"
+        " interface body has type %s"_err_en_US,
+        obj1.type.type().AsFortran(), obj2.type.type().AsFortran());
+  } else if (!ShapesAreCompatible(obj1, obj2)) {
+    Say(symbol1, symbol2,
+        "The shape of dummy argument '%s' does not match the shape of the"
+        " corresponding argument in the interface body"_err_en_US);
+  }
+  // TODO: coshape
+}
+
+void SubprogramMatchHelper::CheckDummyProcedure(const Symbol &symbol1,
+    const Symbol &symbol2, const DummyProcedure &proc1,
+    const DummyProcedure &proc2) {
+  if (!CheckSameIntent(symbol1, symbol2, proc1.intent, proc2.intent)) {
+  } else if (!CheckSameAttrs(symbol1, symbol2, proc1.attrs, proc2.attrs)) {
+  } else if (proc1 != proc2) {
+    Say(symbol1, symbol2,
+        "Dummy procedure '%s' does not match the corresponding argument in"
+        " the interface body"_err_en_US);
+  }
+}
+
+bool SubprogramMatchHelper::CheckSameIntent(const Symbol &symbol1,
+    const Symbol &symbol2, common::Intent intent1, common::Intent intent2) {
+  if (intent1 == intent2) {
+    return true;
+  } else {
+    Say(symbol1, symbol2,
+        "The intent of dummy argument '%s' does not match the intent"
+        " of the corresponding argument in the interface body"_err_en_US);
+    return false;
+  }
+}
+
+// Report an error referring to first symbol with declaration of second symbol
+template<typename... A>
+void SubprogramMatchHelper::Say(const Symbol &symbol1, const Symbol &symbol2,
+    parser::MessageFixedText &&text, A &&... args) {
+  auto &message{context.Say(symbol1.name(), std::move(text), symbol1.name(),
+      std::forward<A>(args)...)};
+  evaluate::AttachDeclaration(message, symbol2);
+}
+
+template<typename ATTRS>
+bool SubprogramMatchHelper::CheckSameAttrs(
+    const Symbol &symbol1, const Symbol &symbol2, ATTRS attrs1, ATTRS attrs2) {
+  if (attrs1 == attrs2) {
+    return true;
+  }
+  attrs1.IterateOverMembers([&](auto attr) {
+    if (!attrs2.test(attr)) {
+      Say(symbol1, symbol2,
+          "Dummy argument '%s' has the %s attribute; the corresponding"
+          " argument in the interface body does not"_err_en_US,
+          AsFortran(attr));
+    }
+  });
+  attrs2.IterateOverMembers([&](auto attr) {
+    if (!attrs1.test(attr)) {
+      Say(symbol1, symbol2,
+          "Dummy argument '%s' does not have the %s attribute; the"
+          " corresponding argument in the interface body does"_err_en_US,
+          AsFortran(attr));
+    }
+  });
+  return false;
+}
+
+bool SubprogramMatchHelper::ShapesAreCompatible(
+    const DummyDataObject &obj1, const DummyDataObject &obj2) {
+  return evaluate::characteristics::ShapesAreCompatible(
+      FoldShape(obj1.type.shape()), FoldShape(obj2.type.shape()));
+}
+
+evaluate::Shape SubprogramMatchHelper::FoldShape(const evaluate::Shape &shape) {
+  evaluate::Shape result;
+  for (const auto &extent : shape) {
+    result.emplace_back(
+        evaluate::Fold(context.foldingContext(), common::Clone(extent)));
+  }
+  return result;
+}
+
 void CheckDeclarations(SemanticsContext &context) {
   CheckHelper{context}.Check();
 }
+
 }
