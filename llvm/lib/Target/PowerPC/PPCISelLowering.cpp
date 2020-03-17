@@ -7592,15 +7592,6 @@ SDValue PPCTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
       !Op.getOperand(2).getValueType().isFloatingPoint())
     return Op;
 
-  bool HasNoInfs = DAG.getTarget().Options.NoInfsFPMath;
-  bool HasNoNaNs = DAG.getTarget().Options.NoNaNsFPMath;
-  // We might be able to do better than this under some circumstances, but in
-  // general, fsel-based lowering of select is a finite-math-only optimization.
-  // For more information, see section F.3 of the 2.06 ISA specification.
-  // With ISA 3.0, we have xsmaxcdp/xsmincdp which are OK to emit even in the
-  // presence of infinities.
-  if (!Subtarget.hasP9Vector() && (!HasNoInfs || !HasNoNaNs))
-    return Op;
   ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(4))->get();
 
   EVT ResVT = Op.getValueType();
@@ -7609,13 +7600,12 @@ SDValue PPCTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
   SDValue TV  = Op.getOperand(2), FV  = Op.getOperand(3);
   SDLoc dl(Op);
 
+  // We have xsmaxcdp/xsmincdp which are OK to emit even in the
+  // presence of infinities.
   if (Subtarget.hasP9Vector() && LHS == TV && RHS == FV) {
     switch (CC) {
     default:
-      // Not a min/max but with finite math, we may still be able to use fsel.
-      if (HasNoInfs && HasNoNaNs)
-        break;
-      return Op;
+      break;
     case ISD::SETOGT:
     case ISD::SETGT:
       return DAG.getNode(PPCISD::XSMAXCDP, dl, Op.getValueType(), LHS, RHS);
@@ -7623,7 +7613,14 @@ SDValue PPCTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
     case ISD::SETLT:
       return DAG.getNode(PPCISD::XSMINCDP, dl, Op.getValueType(), LHS, RHS);
     }
-  } else if (!HasNoInfs || !HasNoNaNs)
+  }
+
+  // We might be able to do better than this under some circumstances, but in
+  // general, fsel-based lowering of select is a finite-math-only optimization.
+  // For more information, see section F.3 of the 2.06 ISA specification.
+  // With ISA 3.0
+  if (!DAG.getTarget().Options.NoInfsFPMath ||
+      !DAG.getTarget().Options.NoNaNsFPMath)
     return Op;
 
   // TODO: Propagate flags from the select rather than global settings.
