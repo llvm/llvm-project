@@ -529,9 +529,20 @@ private:
 
   // Mark I's users as changed, including AdditionalUsers.
   void markUsersAsChanged(Value *I) {
-    for (User *U : I->users())
-      if (auto *UI = dyn_cast<Instruction>(U))
-        OperandChangedState(UI);
+    // Functions include their arguments in the use-list. Changed function
+    // values mean that the result of the function changed. We only need to
+    // update the call sites with the new function result and do not have to
+    // propagate the call arguments.
+    if (auto *Fn = dyn_cast<Function>(I)) {
+      for (User *U : I->users()) {
+        if (auto CS = CallSite(U))
+          handleCallResult(CS);
+      }
+    } else {
+      for (User *U : I->users())
+        if (auto *UI = dyn_cast<Instruction>(U))
+          OperandChangedState(UI);
+    }
 
     auto Iter = AdditionalUsers.find(I);
     if (Iter != AdditionalUsers.end()) {
@@ -540,6 +551,9 @@ private:
           OperandChangedState(UI);
     }
   }
+  void handleCallOverdefined(CallSite CS);
+  void handleCallResult(CallSite CS);
+  void handleCallArguments(CallSite CS);
 
 private:
   friend class InstVisitor<SCCPSolver>;
@@ -1175,6 +1189,87 @@ void SCCPSolver::visitLoadInst(LoadInst &I) {
 }
 
 void SCCPSolver::visitCallSite(CallSite CS) {
+  handleCallResult(CS);
+  handleCallArguments(CS);
+}
+
+void SCCPSolver::handleCallOverdefined(CallSite CS) {
+  Function *F = CS.getCalledFunction();
+  Instruction *I = CS.getInstruction();
+
+  // Void return and not tracking callee, just bail.
+  if (I->getType()->isVoidTy())
+    return;
+
+  // Otherwise, if we have a single return value case, and if the function is
+  // a declaration, maybe we can constant fold it.
+  if (F && F->isDeclaration() && !I->getType()->isStructTy() &&
+      canConstantFoldCallTo(cast<CallBase>(CS.getInstruction()), F)) {
+    SmallVector<Constant *, 8> Operands;
+    for (CallSite::arg_iterator AI = CS.arg_begin(), E = CS.arg_end(); AI != E;
+         ++AI) {
+      if (AI->get()->getType()->isStructTy())
+        return markOverdefined(I); // Can't handle struct args.
+      LatticeVal State = getValueState(*AI);
+
+      if (State.isUnknownOrUndef())
+        return; // Operands are not resolved yet.
+      if (isOverdefined(State))
+        return (void)markOverdefined(I);
+      assert(isConstant(State) && "Unknown state!");
+      Operands.push_back(getConstant(State));
+    }
+
+    if (isOverdefined(getValueState(I)))
+      return (void)markOverdefined(I);
+
+    // If we can constant fold this, mark the result of the call as a
+    // constant.
+    if (Constant *C = ConstantFoldCall(cast<CallBase>(CS.getInstruction()), F,
+                                       Operands, &GetTLI(*F))) {
+      // call -> undef.
+      if (isa<UndefValue>(C))
+        return;
+      return (void)markConstant(I, C);
+    }
+  }
+
+  // Otherwise, we don't know anything about this call, mark it overdefined.
+  return (void)markOverdefined(I);
+}
+
+void SCCPSolver::handleCallArguments(CallSite CS) {
+  Function *F = CS.getCalledFunction();
+  // If this is a local function that doesn't have its address taken, mark its
+  // entry block executable and merge in the actual arguments to the call into
+  // the formal arguments of the function.
+  if (!TrackingIncomingArguments.empty() &&
+      TrackingIncomingArguments.count(F)) {
+    MarkBlockExecutable(&F->front());
+
+    // Propagate information from this call site into the callee.
+    CallSite::arg_iterator CAI = CS.arg_begin();
+    for (Function::arg_iterator AI = F->arg_begin(), E = F->arg_end(); AI != E;
+         ++AI, ++CAI) {
+      // If this argument is byval, and if the function is not readonly, there
+      // will be an implicit copy formed of the input aggregate.
+      if (AI->hasByValAttr() && !F->onlyReadsMemory()) {
+        markOverdefined(&*AI);
+        continue;
+      }
+
+      if (auto *STy = dyn_cast<StructType>(AI->getType())) {
+        for (unsigned i = 0, e = STy->getNumElements(); i != e; ++i) {
+          LatticeVal CallArg = getStructValueState(*CAI, i);
+          mergeInValue(getStructValueState(&*AI, i), &*AI, CallArg);
+        }
+      } else
+        mergeInValue(&*AI, getValueState(*CAI), false);
+    }
+  }
+}
+
+void SCCPSolver::handleCallResult(CallSite CS) {
   Function *F = CS.getCalledFunction();
   Instruction *I = CS.getInstruction();
 
@@ -1240,79 +1335,13 @@ void SCCPSolver::visitCallSite(CallSite CS) {
   // The common case is that we aren't tracking the callee, either because we
   // are not doing interprocedural analysis or the callee is indirect, or is
   // external.  Handle these cases first.
-  if (!F || F->isDeclaration()) {
-CallOverdefined:
-    // Void return and not tracking callee, just bail.
-    if (I->getType()->isVoidTy()) return;
-
-    // Otherwise, if we have a single return value case, and if the function is
-    // a declaration, maybe we can constant fold it.
-    if (F && F->isDeclaration() && !I->getType()->isStructTy() &&
-        canConstantFoldCallTo(cast<CallBase>(CS.getInstruction()), F)) {
-      SmallVector<Constant*, 8> Operands;
-      for (CallSite::arg_iterator AI = CS.arg_begin(), E = CS.arg_end();
-           AI != E; ++AI) {
-        if (AI->get()->getType()->isStructTy())
-          return markOverdefined(I); // Can't handle struct args.
-        LatticeVal State = getValueState(*AI);
-
-        if (State.isUnknownOrUndef())
-          return;  // Operands are not resolved yet.
-        if (isOverdefined(State))
-          return (void)markOverdefined(I);
-        assert(isConstant(State) && "Unknown state!");
-        Operands.push_back(getConstant(State));
-      }
-
-      if (isOverdefined(getValueState(I)))
-        return (void)markOverdefined(I);
-
-      // If we can constant fold this, mark the result of the call as a
-      // constant.
-      if (Constant *C = ConstantFoldCall(cast<CallBase>(CS.getInstruction()), F,
-                                         Operands, &GetTLI(*F))) {
-        // call -> undef.
-        if (isa<UndefValue>(C))
-          return;
-        return (void)markConstant(I, C);
-      }
-    }
-
-    // Otherwise, we don't know anything about this call, mark it overdefined.
-    return (void)markOverdefined(I);
-  }
-
-  // If this is a local function that doesn't have its address taken, mark its
-  // entry block executable and merge in the actual arguments to the call into
-  // the formal arguments of the function.
-  if (!TrackingIncomingArguments.empty() && TrackingIncomingArguments.count(F)){
-    MarkBlockExecutable(&F->front());
-
-    // Propagate information from this call site into the callee.
-    CallSite::arg_iterator CAI = CS.arg_begin();
-    for (Function::arg_iterator AI = F->arg_begin(), E = F->arg_end();
-         AI != E; ++AI, ++CAI) {
-      // If this argument is byval, and if the function is not readonly, there
-      // will be an implicit copy formed of the input aggregate.
-      if (AI->hasByValAttr() && !F->onlyReadsMemory()) {
-        markOverdefined(&*AI);
-        continue;
-      }
-
-      if (auto *STy = dyn_cast<StructType>(AI->getType())) {
-        for (unsigned i = 0, e = STy->getNumElements(); i != e; ++i) {
-          LatticeVal CallArg = getStructValueState(*CAI, i);
-          mergeInValue(getStructValueState(&*AI, i), &*AI, CallArg, false);
-        }
-      } else
-        mergeInValue(&*AI, getValueState(*CAI), false);
-    }
-  }
+  if (!F || F->isDeclaration())
+    return handleCallOverdefined(CS);
 
   // If this is a single/zero retval case, see if we're tracking the function.
   if (auto *STy = dyn_cast<StructType>(F->getReturnType())) {
     if (!MRVFunctionsTracked.count(F))
-      goto CallOverdefined;  // Not tracking this callee.
+      return handleCallOverdefined(CS); // Not tracking this callee.
 
     // If we are tracking this callee, propagate the result of the function
     // into this call site.
@@ -1322,7 +1351,7 @@ CallOverdefined:
   } else {
     MapVector<Function*, LatticeVal>::iterator TFRVI = TrackedRetVals.find(F);
     if (TFRVI == TrackedRetVals.end())
-      goto CallOverdefined;  // Not tracking this callee.
+      return handleCallOverdefined(CS); // Not tracking this callee.
 
     // If so, propagate the return value of the callee into this call result.
     mergeInValue(I, TFRVI->second);
