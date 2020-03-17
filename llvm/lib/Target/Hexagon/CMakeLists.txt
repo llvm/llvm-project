@@ -64,9 +64,6 @@ add_llvm_target(HexagonCodeGen
   HexagonVLIWPacketizer.cpp
   RDFCopy.cpp
   RDFDeadCode.cpp
-  RDFGraph.cpp
-  RDFLiveness.cpp
-  RDFRegisters.cpp
 )
 
 add_subdirectory(AsmParser)
