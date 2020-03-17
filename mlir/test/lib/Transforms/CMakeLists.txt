@@ -48,5 +48,5 @@ target_link_libraries(MLIRTestTransforms
   MLIRTestDialect
   MLIRTransformUtils
   MLIRVectorToLoops
-  MLIRVectorOps
+  MLIRVector
   )

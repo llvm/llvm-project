@@ -11,10 +11,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/VectorOps/VectorOps.h"
+#include "mlir/Dialect/Vector/VectorOps.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
-#include "mlir/Dialect/VectorOps/VectorUtils.h"
+#include "mlir/Dialect/Vector/VectorUtils.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Builders.h"
@@ -32,20 +32,20 @@ using namespace mlir;
 using namespace mlir::vector;
 
 //===----------------------------------------------------------------------===//
-// VectorOpsDialect
+// VectorDialect
 //===----------------------------------------------------------------------===//
 
-VectorOpsDialect::VectorOpsDialect(MLIRContext *context)
+VectorDialect::VectorDialect(MLIRContext *context)
     : Dialect(getDialectNamespace(), context) {
   addOperations<
 #define GET_OP_LIST
-#include "mlir/Dialect/VectorOps/VectorOps.cpp.inc"
+#include "mlir/Dialect/Vector/VectorOps.cpp.inc"
       >();
 }
 
 /// Materialize a single constant operation from a given attribute value with
 /// the desired resultant type.
-Operation *VectorOpsDialect::materializeConstant(OpBuilder &builder,
+Operation *VectorDialect::materializeConstant(OpBuilder &builder,
                                                  Attribute value, Type type,
                                                  Location loc) {
   return builder.create<ConstantOp>(loc, type, value);
@@ -1249,7 +1249,7 @@ static LogicalResult verifyTransferOp(Operation *op, MemRefType memrefType,
     if (memrefVecEltRank > resultVecRank)
       return op->emitOpError(
           "requires memref vector element and vector result ranks to match.");
-    // TODO(b/146516564) Move this to isSuffix in VectorOps/Utils.h.
+    // TODO(b/146516564) Move this to isSuffix in Vector/Utils.h.
     unsigned rankOffset = resultVecRank - memrefVecEltRank;
     auto memrefVecEltShape = memrefVectorElementType.getShape();
     auto resultVecShape = vectorType.getShape();
@@ -1657,7 +1657,7 @@ namespace mlir {
 namespace vector {
 
 #define GET_OP_CLASSES
-#include "mlir/Dialect/VectorOps/VectorOps.cpp.inc"
+#include "mlir/Dialect/Vector/VectorOps.cpp.inc"
 
 } // namespace vector
 } // namespace mlir
