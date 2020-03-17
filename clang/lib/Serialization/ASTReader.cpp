@@ -8488,7 +8488,7 @@ unsigned ASTReader::getModuleFileID(ModuleFile *F) {
 
 llvm::Optional<ExternalASTSource::ASTSourceDescriptor>
 ASTReader::getSourceDescriptor(unsigned ID) {
-  if (const Module *M = getSubmodule(ID))
+  if (Module *M = getSubmodule(ID))
     return ExternalASTSource::ASTSourceDescriptor(*M);
 
   // If there is only a single PCH, return it instead.

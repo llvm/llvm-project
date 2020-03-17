@@ -173,7 +173,7 @@ public:
     StringRef Path;
     StringRef ASTFile;
     ASTFileSignature Signature;
-    const Module *ClangModule = nullptr;
+    Module *ClangModule = nullptr;
 
   public:
     ASTSourceDescriptor() = default;
@@ -181,13 +181,13 @@ public:
                         ASTFileSignature Signature)
         : PCHModuleName(std::move(Name)), Path(std::move(Path)),
           ASTFile(std::move(ASTFile)), Signature(Signature) {}
-    ASTSourceDescriptor(const Module &M);
+    ASTSourceDescriptor(Module &M);
 
     std::string getModuleName() const;
     StringRef getPath() const { return Path; }
     StringRef getASTFile() const { return ASTFile; }
     ASTFileSignature getSignature() const { return Signature; }
-    const Module *getModuleOrNull() const { return ClangModule; }
+    Module *getModuleOrNull() const { return ClangModule; }
   };
 
   /// Return a descriptor for the corresponding module, if one exists.
