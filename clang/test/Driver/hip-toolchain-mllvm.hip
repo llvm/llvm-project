@@ -3,7 +3,7 @@
 // REQUIRES: amdgpu-registered-target
 
 // RUN: %clang -### -target x86_64-linux-gnu \
-// RUN:   -x hip --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
+// RUN:   --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
 // RUN:   -mllvm -amdgpu-function-calls=0 \
 // RUN:   %s 2>&1 | FileCheck %s
 

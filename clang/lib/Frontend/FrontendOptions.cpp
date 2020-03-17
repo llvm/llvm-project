@@ -30,6 +30,7 @@ InputKind FrontendOptions::getInputKindForExtension(StringRef Extension) {
       .Case("iim", InputKind(Language::CXX).getPreprocessed())
       .Case("cl", Language::OpenCL)
       .Case("cu", Language::CUDA)
+      .Case("hip", Language::HIP)
       .Cases("ll", "bc", Language::LLVM_IR)
       .Default(Language::Unknown);
 }
