@@ -1,3 +1,4 @@
+// UNSUPPORTED: system-windows
 // RUN: %clang_cc1 -emit-llvm %s -o - | FileCheck %s
 
 // CHECK: @tentative_attr_first = global i32 undef

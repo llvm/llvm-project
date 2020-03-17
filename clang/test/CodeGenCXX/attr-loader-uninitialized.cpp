@@ -1,3 +1,4 @@
+// UNSUPPORTED: system-windows
 // RUN: %clang_cc1 -emit-llvm -o - %s | FileCheck %s
 
 // CHECK: @defn = global i32 undef
