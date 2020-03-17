@@ -575,6 +575,11 @@ Error ELFDumper<ELFT>::dumpCommonRelocationSection(
   if (Error E = dumpCommonSection(Shdr, S))
     return E;
 
+  // Having a zero sh_info field is normal: .rela.dyn is a dynamic
+  // relocation section that normally has no value in this field.
+  if (!Shdr->sh_info)
+    return Error::success();
+
   auto InfoSection = Obj.getSection(Shdr->sh_info);
   if (!InfoSection)
     return InfoSection.takeError();
