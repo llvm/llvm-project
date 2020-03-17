@@ -1,5 +1,5 @@
 # Start after bbsections0-prepare and check if the right code is generated.
-# RUN: llc -start-after=bbsections-prepare  %s -o - | FileCheck %s -check-prefix=CHECK
+# RUN: llc -mtriple x86_64-unknown-linux-gnu -start-after=bbsections-prepare  %s -o - | FileCheck %s -check-prefix=CHECK
 
 
 # How to generate the input:
