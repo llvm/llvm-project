@@ -97,12 +97,12 @@ define i32 @f7(i32 %a, i64 %amt) {
   ret i32 %or
 }
 
-; Check shift amounts that have the largest in-range constant term.  We could
-; mask the amount instead.
+; Check shift amounts that have the largest in-range constant term, and then
+; mask the amount.
 define i32 @f8(i32 %a, i32 %amt) {
 ; CHECK-LABEL: f8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    rll %r2, %r2, 524287(%r3)
+; CHECK-NEXT:    rll %r2, %r2, -1(%r3)
 ; CHECK-NEXT:    br %r14
   %add = add i32 %amt, 524287
   %sub = sub i32 32, %add
@@ -157,13 +157,11 @@ define i32 @f11(i32 %a, i32 %amt) {
   ret i32 %or
 }
 
-; Check the next value down, which without masking must use a separate
-; addition.
+; Check the next value down, masking the amount removes the addition.
 define i32 @f12(i32 %a, i32 %amt) {
 ; CHECK-LABEL: f12:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    afi %r3, -524289
-; CHECK-NEXT:    rll %r2, %r2, 0(%r3)
+; CHECK-NEXT:    rll %r2, %r2, -1(%r3)
 ; CHECK-NEXT:    br %r14
   %suba = sub i32 %amt, 524289
   %subb = sub i32 32, %suba
