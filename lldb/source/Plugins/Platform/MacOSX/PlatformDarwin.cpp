@@ -1842,7 +1842,8 @@ PlatformDarwin::FindXcodeContentsDirectoryInPath(llvm::StringRef path) {
       auto next = it;
       if (++next != end && *next == "Contents") {
         llvm::SmallString<128> buffer;
-        llvm::sys::path::append(buffer, begin, ++next);
+        llvm::sys::path::append(buffer, begin, ++next,
+                                llvm::sys::path::Style::posix);
         return buffer.str().str();
       }
     }
