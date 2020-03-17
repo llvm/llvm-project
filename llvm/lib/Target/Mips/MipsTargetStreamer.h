@@ -84,6 +84,8 @@ public:
   virtual void emitDirectiveSetDsp();
   virtual void emitDirectiveSetDspr2();
   virtual void emitDirectiveSetNoDsp();
+  virtual void emitDirectiveSetMips3D();
+  virtual void emitDirectiveSetNoMips3D();
   virtual void emitDirectiveSetPop();
   virtual void emitDirectiveSetPush();
   virtual void emitDirectiveSetSoftFloat();
@@ -263,6 +265,8 @@ public:
   void emitDirectiveSetDsp() override;
   void emitDirectiveSetDspr2() override;
   void emitDirectiveSetNoDsp() override;
+  void emitDirectiveSetMips3D() override;
+  void emitDirectiveSetNoMips3D() override;
   void emitDirectiveSetPop() override;
   void emitDirectiveSetPush() override;
   void emitDirectiveSetSoftFloat() override;
