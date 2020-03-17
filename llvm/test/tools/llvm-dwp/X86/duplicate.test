@@ -18,10 +18,10 @@ RUN:   | FileCheck --check-prefix=DWO1DWP %s
 
 Build from a, b, and c.c all containing a single void() func by the name of the file.
 
-DWOS: error: Duplicate DWO ID ({{.*}}) in 'c.c' and 'c.c'{{$}}
-1DWP: error: Duplicate DWO ID ({{.*}}) in 'c.c' (from '{{.*}}ac.dwp') and 'c.c'{{$}}
-2DWP: error: Duplicate DWO ID ({{.*}}) in 'c.c' and 'c.c' (from '{{.*}}bc.dwp'){{$}}
+DWOS: error: duplicate DWO ID ({{.*}}) in 'c.c' and 'c.c'{{$}}
+1DWP: error: duplicate DWO ID ({{.*}}) in 'c.c' (from '{{.*}}ac.dwp') and 'c.c'{{$}}
+2DWP: error: duplicate DWO ID ({{.*}}) in 'c.c' and 'c.c' (from '{{.*}}bc.dwp'){{$}}
 
-DWODWOS: error: Duplicate DWO ID ({{.*}}) in 'c.c' and 'c.c'{{$}}
-DWO1DWP: error: Duplicate DWO ID ({{.*}}) in 'c.c' (from 'c.dwo' in '{{.*}}ac.dwp') and 'c.c'{{$}}
-DWO2DWP: error: Duplicate DWO ID ({{.*}}) in 'c.c' and 'c.c' (from 'c.dwo' in '{{.*}}bc.dwp'){{$}}
+DWODWOS: error: duplicate DWO ID ({{.*}}) in 'c.c' and 'c.c'{{$}}
+DWO1DWP: error: duplicate DWO ID ({{.*}}) in 'c.c' (from 'c.dwo' in '{{.*}}ac.dwp') and 'c.c'{{$}}
+DWO2DWP: error: duplicate DWO ID ({{.*}}) in 'c.c' and 'c.c' (from 'c.dwo' in '{{.*}}bc.dwp'){{$}}
