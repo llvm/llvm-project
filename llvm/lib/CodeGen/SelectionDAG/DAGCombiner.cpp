@@ -11023,7 +11023,9 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
 
   // Attempt to pre-truncate BUILD_VECTOR sources.
   if (N0.getOpcode() == ISD::BUILD_VECTOR && !LegalOperations &&
-      TLI.isTruncateFree(SrcVT.getScalarType(), VT.getScalarType())) {
+      TLI.isTruncateFree(SrcVT.getScalarType(), VT.getScalarType()) &&
+      // Avoid creating illegal types if running after type legalizer.
+      (!LegalTypes || TLI.isTypeLegal(VT.getScalarType()))) {
     SDLoc DL(N);
     EVT SVT = VT.getScalarType();
     SmallVector<SDValue, 8> TruncOps;
