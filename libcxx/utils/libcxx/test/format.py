@@ -238,9 +238,6 @@ class LibcxxTestFormat(object):
             test_cxx.flags += ['-fsyntax-only']
         if use_verify:
             test_cxx.useVerify()
-            test_cxx.useWarnings()
-            if '-Wuser-defined-warnings' in test_cxx.warning_flags:
-                test_cxx.warning_flags += ['-Wno-error=user-defined-warnings']
         cmd, out, err, rc = test_cxx.compile(source_path, out=os.devnull)
         check_rc = lambda rc: rc == 0 if use_verify else rc != 0
         report = libcxx.util.makeReport(cmd, out, err, rc)
