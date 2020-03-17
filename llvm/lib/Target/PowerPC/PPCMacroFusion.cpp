@@ -113,7 +113,7 @@ static bool checkOpConstraints(FusionFeature::FusionKind Kd,
     if (!SI.isImm())
       return true;
     int64_t Imm = SI.getImm();
-    if (((Imm & 0xFFF0) != 0) || ((Imm & 0xFFF0) != 0xFFF0)) 
+    if (((Imm & 0xFFF0) != 0) && ((Imm & 0xFFF0) != 0xFFF0))
       return false;
 
     // If si = 1111111111110000 and the msb of the d/ds field of the load equals 
