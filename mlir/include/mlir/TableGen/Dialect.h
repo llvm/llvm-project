@@ -49,6 +49,15 @@ public:
   // Returns if this dialect has a constant materializer or not.
   bool hasConstantMaterializer() const;
 
+  /// Returns if this dialect has an operation attribute verifier.
+  bool hasOperationAttrVerify() const;
+
+  /// Returns if this dialect has a region argument attribute verifier.
+  bool hasRegionArgAttrVerify() const;
+
+  /// Returns if this dialect has a region result attribute verifier.
+  bool hasRegionResultAttrVerify() const;
+
   // Returns whether two dialects are equal by checking the equality of the
   // underlying record.
   bool operator==(const Dialect &other) const;
