@@ -62,32 +62,26 @@ private:
 
 } // namespace
 
+template <typename T, int N>
+struct MemRefDescriptor {
+  T *allocated;
+  T *aligned;
+  int64_t offset;
+  int64_t sizes[N];
+  int64_t strides[N];
+};
+
 extern "C" {
-// Initializes `VulkanRuntimeManager` and returns a pointer to it.
+/// Initializes `VulkanRuntimeManager` and returns a pointer to it.
 void *initVulkan() { return new VulkanRuntimeManager(); }
 
-// Deinitializes `VulkanRuntimeManager` by the given pointer.
+/// Deinitializes `VulkanRuntimeManager` by the given pointer.
 void deinitVulkan(void *vkRuntimeManager) {
   delete reinterpret_cast<VulkanRuntimeManager *>(vkRuntimeManager);
 }
 
-/// Binds the given memref to the given descriptor set and descriptor index.
-void bindResource(void *vkRuntimeManager, DescriptorSetIndex setIndex,
-                  BindingIndex bindIndex, float *ptr, int64_t size) {
-  VulkanHostMemoryBuffer memBuffer{ptr,
-                                   static_cast<uint32_t>(size * sizeof(float))};
-  reinterpret_cast<VulkanRuntimeManager *>(vkRuntimeManager)
-      ->setResourceData(setIndex, bindIndex, memBuffer);
-}
-
 void runOnVulkan(void *vkRuntimeManager) {
   reinterpret_cast<VulkanRuntimeManager *>(vkRuntimeManager)->runOnVulkan();
-}
-
-/// Fills the given 1D float memref with the given float value.
-void fillResource1DFloat(float *allocated, float *aligned, int64_t offset,
-                         int64_t size, int64_t stride, float value) {
-  std::fill_n(allocated, size, value);
 }
 
 void setEntryPoint(void *vkRuntimeManager, const char *entryPoint) {
@@ -104,5 +98,22 @@ void setNumWorkGroups(void *vkRuntimeManager, uint32_t x, uint32_t y,
 void setBinaryShader(void *vkRuntimeManager, uint8_t *shader, uint32_t size) {
   reinterpret_cast<VulkanRuntimeManager *>(vkRuntimeManager)
       ->setShaderModule(shader, size);
+}
+
+/// Binds the given 1D float memref to the given descriptor set and descriptor
+/// index.
+void bindMemRef1DFloat(void *vkRuntimeManager, DescriptorSetIndex setIndex,
+                       BindingIndex bindIndex,
+                       MemRefDescriptor<float, 1> *ptr) {
+  VulkanHostMemoryBuffer memBuffer{
+      ptr->allocated, static_cast<uint32_t>(ptr->sizes[0] * sizeof(float))};
+  reinterpret_cast<VulkanRuntimeManager *>(vkRuntimeManager)
+      ->setResourceData(setIndex, bindIndex, memBuffer);
+}
+
+/// Fills the given 1D float memref with the given float value.
+void _mlir_ciface_fillResource1DFloat(MemRefDescriptor<float, 1> *ptr, // NOLINT
+                                      float value) {
+  std::fill_n(ptr->allocated, ptr->sizes[0], value);
 }
 }
