@@ -272,7 +272,7 @@ struct TestChangeProducerTypeF32ToF64 : public ConversionPattern {
                   ConversionPatternRewriter &rewriter) const final {
     // If the type is F32, change the type to F64.
     if (!Type(*op->result_type_begin()).isF32())
-      return matchFailure();
+      return rewriter.notifyMatchFailure(op, "expected single f32 operand");
     rewriter.replaceOpWithNewOp<TestTypeProducerOp>(op, rewriter.getF64Type());
     return matchSuccess();
   }
