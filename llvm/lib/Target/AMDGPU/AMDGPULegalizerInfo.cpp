@@ -3549,7 +3549,22 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
   if (!BaseOpcode->Atomic) {
     const int DMaskIdx = getDMaskIdx(BaseOpcode, NumDefs);
     unsigned DMask = MI.getOperand(DMaskIdx).getImm();
-    DMaskLanes = BaseOpcode->Gather4 ? 4 : countPopulation(DMask);
+    if (BaseOpcode->Gather4) {
+      DMaskLanes = 4;
+    } else if (DMask != 0) {
+      DMaskLanes = countPopulation(DMask);
+    } else if (IsTFE) {
+      // Expecting to get an error flag since TFC is on - and dmask is 0 Force
+      // dmask to be at least 1 otherwise the instruction will fail
+      DMask = 0x1;
+      DMaskLanes = 1;
+      MI.getOperand(DMaskIdx).setImm(DMask);
+    } else if (!BaseOpcode->Store) {
+      // If dmask is 0, this is a no-op load. This can be eliminated.
+      B.buildUndef(MI.getOperand(0));
+      MI.eraseFromParent();
+      return true;
+    }
   }
 
   if (BaseOpcode->Store) { // No TFE for stores?
