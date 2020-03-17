@@ -13054,11 +13054,13 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
   }
 
   // (fdiv (fneg X), (fneg Y)) -> (fdiv X, Y)
-  if (isCheaperToUseNegatedFPOps(N0, N1))
-    return DAG.getNode(
-        ISD::FDIV, SDLoc(N), VT,
-        TLI.getNegatedExpression(N0, DAG, LegalOperations, ForCodeSize),
-        TLI.getNegatedExpression(N1, DAG, LegalOperations, ForCodeSize), Flags);
+  if (isCheaperToUseNegatedFPOps(N0, N1)) {
+    SDValue Neg0 =
+        TLI.getNegatedExpression(N0, DAG, LegalOperations, ForCodeSize);
+    SDValue Neg1 =
+        TLI.getNegatedExpression(N1, DAG, LegalOperations, ForCodeSize);
+    return DAG.getNode(ISD::FDIV, SDLoc(N), VT, Neg0, Neg1, Flags);
+  }
 
   return SDValue();
 }
