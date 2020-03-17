@@ -448,7 +448,7 @@ func @canonicalize_affine_if(%M : index, %N : index) {
 // -----
 
 // CHECK-DAG: [[LBMAP:#map[0-9]+]] = affine_map<()[s0] -> (0, s0)>
-// CHECK-DAG: [[UBMAP:#map[0-9]+]] = affine_map<()[s0] -> (1024, s0 + s0)>
+// CHECK-DAG: [[UBMAP:#map[0-9]+]] = affine_map<()[s0] -> (1024, s0 * 2)>
 
 // CHECK-LABEL: func @canonicalize_bounds
 // CHECK-SAME: [[M:%.*]]: index,
