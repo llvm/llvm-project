@@ -79,13 +79,14 @@ void getCleanupLoopLowerBound(AffineForOp forOp, unsigned unrollFactor,
                               AffineMap *map, SmallVectorImpl<Value> *operands,
                               OpBuilder &builder);
 
-/// Skew the operations in the body of a 'affine.for' operation with the
+/// Skew the operations in the body of an affine.for operation with the
 /// specified operation-wise shifts. The shifts are with respect to the
 /// original execution order, and are multiplied by the loop 'step' before being
-/// applied.
+/// applied. If `unrollPrologueEpilogue` is set, fully unroll the prologue and
+/// epilogue loops when possible.
 LLVM_NODISCARD
-LogicalResult instBodySkew(AffineForOp forOp, ArrayRef<uint64_t> shifts,
-                           bool unrollPrologueEpilogue = false);
+LogicalResult affineForOpBodySkew(AffineForOp forOp, ArrayRef<uint64_t> shifts,
+                                  bool unrollPrologueEpilogue = false);
 
 /// Tiles the specified band of perfectly nested loops creating tile-space loops
 /// and intra-tile loops. A band is a contiguous set of loops.
