@@ -669,6 +669,9 @@ struct alignas(void *) ASTTemplateKWAndArgsInfo {
   void initializeFrom(SourceLocation TemplateKWLoc,
                       const TemplateArgumentListInfo &List,
                       TemplateArgumentLoc *OutArgArray);
+  // FIXME: The parameter Deps is the result populated by this method, the
+  // caller doesn't need it since it is populated by computeDependence. remove
+  // it.
   void initializeFrom(SourceLocation TemplateKWLoc,
                       const TemplateArgumentListInfo &List,
                       TemplateArgumentLoc *OutArgArray,
