@@ -270,6 +270,8 @@ private:
   QualType OMPAllocatorHandleT;
   /// omp_depend_t type.
   QualType OMPDependT;
+  /// omp_event_handle_t type.
+  QualType OMPEventHandleT;
   /// Expression for the predefined allocators.
   Expr *OMPPredefinedAllocators[OMPAllocateDeclAttr::OMPUserDefinedMemAlloc] = {
       nullptr};
@@ -297,6 +299,11 @@ public:
   void setOMPDependT(QualType Ty) { OMPDependT = Ty; }
   /// Gets omp_depend_t type.
   QualType getOMPDependT() const { return OMPDependT; }
+
+  /// Sets omp_event_handle_t type.
+  void setOMPEventHandleT(QualType Ty) { OMPEventHandleT = Ty; }
+  /// Gets omp_event_handle_t type.
+  QualType getOMPEventHandleT() const { return OMPEventHandleT; }
 
   bool isClauseParsingMode() const { return ClauseKindMode != OMPC_unknown; }
   OpenMPClauseKind getClauseParsingMode() const {
@@ -5090,6 +5097,7 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
           break;
         continue;
       case OMPC_schedule:
+      case OMPC_detach:
         break;
       case OMPC_grainsize:
       case OMPC_num_tasks:
@@ -8619,10 +8627,39 @@ Sema::ActOnOpenMPParallelSectionsDirective(ArrayRef<OMPClause *> Clauses,
       Context, StartLoc, EndLoc, Clauses, AStmt, DSAStack->isCancelRegion());
 }
 
+/// detach and mergeable clauses are mutially exclusive, check for it.
+static bool checkDetachMergeableClauses(Sema &S,
+                                        ArrayRef<OMPClause *> Clauses) {
+  const OMPClause *PrevClause = nullptr;
+  bool ErrorFound = false;
+  for (const OMPClause *C : Clauses) {
+    if (C->getClauseKind() == OMPC_detach ||
+        C->getClauseKind() == OMPC_mergeable) {
+      if (!PrevClause) {
+        PrevClause = C;
+      } else if (PrevClause->getClauseKind() != C->getClauseKind()) {
+        S.Diag(C->getBeginLoc(), diag::err_omp_clauses_mutually_exclusive)
+            << getOpenMPClauseName(C->getClauseKind())
+            << getOpenMPClauseName(PrevClause->getClauseKind());
+        S.Diag(PrevClause->getBeginLoc(), diag::note_omp_previous_clause)
+            << getOpenMPClauseName(PrevClause->getClauseKind());
+        ErrorFound = true;
+      }
+    }
+  }
+  return ErrorFound;
+}
+
 StmtResult Sema::ActOnOpenMPTaskDirective(ArrayRef<OMPClause *> Clauses,
                                           Stmt *AStmt, SourceLocation StartLoc,
                                           SourceLocation EndLoc) {
   if (!AStmt)
+    return StmtError();
+
+  // OpenMP 5.0, 2.10.1 task Construct
+  // If a detach clause appears on the directive, then a mergeable clause cannot
+  // appear on the same directive.
+  if (checkDetachMergeableClauses(*this, Clauses))
     return StmtError();
 
   auto *CS = cast<CapturedStmt>(AStmt);
@@ -9884,12 +9921,10 @@ static bool checkGrainsizeNumTasksClauses(Sema &S,
       if (!PrevClause)
         PrevClause = C;
       else if (PrevClause->getClauseKind() != C->getClauseKind()) {
-        S.Diag(C->getBeginLoc(),
-               diag::err_omp_grainsize_num_tasks_mutually_exclusive)
+        S.Diag(C->getBeginLoc(), diag::err_omp_clauses_mutually_exclusive)
             << getOpenMPClauseName(C->getClauseKind())
             << getOpenMPClauseName(PrevClause->getClauseKind());
-        S.Diag(PrevClause->getBeginLoc(),
-               diag::note_omp_previous_grainsize_num_tasks)
+        S.Diag(PrevClause->getBeginLoc(), diag::note_omp_previous_clause)
             << getOpenMPClauseName(PrevClause->getClauseKind());
         ErrorFound = true;
       }
@@ -11027,6 +11062,9 @@ OMPClause *Sema::ActOnOpenMPSingleExprClause(OpenMPClauseKind Kind, Expr *Expr,
   case OMPC_depobj:
     Res = ActOnOpenMPDepobjClause(Expr, StartLoc, LParenLoc, EndLoc);
     break;
+  case OMPC_detach:
+    Res = ActOnOpenMPDetachClause(Expr, StartLoc, LParenLoc, EndLoc);
+    break;
   case OMPC_if:
   case OMPC_default:
   case OMPC_proc_bind:
@@ -11806,6 +11844,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
   case OMPC_nontemporal:
   case OMPC_order:
   case OMPC_destroy:
+  case OMPC_detach:
     llvm_unreachable("Unexpected OpenMP clause.");
   }
   return CaptureRegion;
@@ -12242,6 +12281,7 @@ OMPClause *Sema::ActOnOpenMPSimpleClause(
   case OMPC_match:
   case OMPC_nontemporal:
   case OMPC_destroy:
+  case OMPC_detach:
     llvm_unreachable("Clause is not allowed.");
   }
   return Res;
@@ -12459,6 +12499,7 @@ OMPClause *Sema::ActOnOpenMPSingleExprWithArgClause(
   case OMPC_nontemporal:
   case OMPC_order:
   case OMPC_destroy:
+  case OMPC_detach:
     llvm_unreachable("Clause is not allowed.");
   }
   return Res;
@@ -12688,6 +12729,7 @@ OMPClause *Sema::ActOnOpenMPClause(OpenMPClauseKind Kind,
   case OMPC_match:
   case OMPC_nontemporal:
   case OMPC_order:
+  case OMPC_detach:
     llvm_unreachable("Clause is not allowed.");
   }
   return Res;
@@ -12943,6 +12985,7 @@ OMPClause *Sema::ActOnOpenMPVarListClause(
   case OMPC_match:
   case OMPC_order:
   case OMPC_destroy:
+  case OMPC_detach:
     llvm_unreachable("Clause is not allowed.");
   }
   return Res;
@@ -17264,6 +17307,56 @@ OMPClause *Sema::ActOnOpenMPHintClause(Expr *Hint, SourceLocation StartLoc,
     return nullptr;
   return new (Context)
       OMPHintClause(HintExpr.get(), StartLoc, LParenLoc, EndLoc);
+}
+
+/// Tries to find omp_event_handle_t type.
+static bool findOMPEventHandleT(Sema &S, SourceLocation Loc,
+                                DSAStackTy *Stack) {
+  QualType OMPEventHandleT = Stack->getOMPEventHandleT();
+  if (!OMPEventHandleT.isNull())
+    return true;
+  IdentifierInfo *II = &S.PP.getIdentifierTable().get("omp_event_handle_t");
+  ParsedType PT = S.getTypeName(*II, Loc, S.getCurScope());
+  if (!PT.getAsOpaquePtr() || PT.get().isNull()) {
+    S.Diag(Loc, diag::err_omp_implied_type_not_found) << "omp_event_handle_t";
+    return false;
+  }
+  Stack->setOMPEventHandleT(PT.get());
+  return true;
+}
+
+OMPClause *Sema::ActOnOpenMPDetachClause(Expr *Evt, SourceLocation StartLoc,
+                                         SourceLocation LParenLoc,
+                                         SourceLocation EndLoc) {
+  if (!Evt->isValueDependent() && !Evt->isTypeDependent() &&
+      !Evt->isInstantiationDependent() &&
+      !Evt->containsUnexpandedParameterPack()) {
+    if (!findOMPEventHandleT(*this, Evt->getExprLoc(), DSAStack))
+      return nullptr;
+    // OpenMP 5.0, 2.10.1 task Construct.
+    // event-handle is a variable of the omp_event_handle_t type.
+    auto *Ref = dyn_cast<DeclRefExpr>(Evt->IgnoreParenImpCasts());
+    if (!Ref) {
+      Diag(Evt->getExprLoc(), diag::err_omp_event_var_expected)
+          << 0 << Evt->getSourceRange();
+      return nullptr;
+    }
+    auto *VD = dyn_cast_or_null<VarDecl>(Ref->getDecl());
+    if (!VD) {
+      Diag(Evt->getExprLoc(), diag::err_omp_event_var_expected)
+          << 0 << Evt->getSourceRange();
+      return nullptr;
+    }
+    if (!Context.hasSameUnqualifiedType(DSAStack->getOMPEventHandleT(),
+                                        VD->getType()) ||
+        VD->getType().isConstant(Context)) {
+      Diag(Evt->getExprLoc(), diag::err_omp_event_var_expected)
+          << 1 << VD->getType() << Evt->getSourceRange();
+      return nullptr;
+    }
+  }
+
+  return new (Context) OMPDetachClause(Evt, StartLoc, LParenLoc, EndLoc);
 }
 
 OMPClause *Sema::ActOnOpenMPDistScheduleClause(

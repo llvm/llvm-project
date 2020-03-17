@@ -472,6 +472,11 @@ void OMPClauseProfiler::VisitOMPCollapseClause(const OMPCollapseClause *C) {
     Profiler->VisitStmt(C->getNumForLoops());
 }
 
+void OMPClauseProfiler::VisitOMPDetachClause(const OMPDetachClause *C) {
+  if (Expr *Evt = C->getEventHandler())
+    Profiler->VisitStmt(Evt);
+}
+
 void OMPClauseProfiler::VisitOMPDefaultClause(const OMPDefaultClause *C) { }
 
 void OMPClauseProfiler::VisitOMPProcBindClause(const OMPProcBindClause *C) { }

@@ -9976,9 +9976,9 @@ def err_omp_wrong_ordered_loop_count : Error<
   "the parameter of the 'ordered' clause must be greater than or equal to the parameter of the 'collapse' clause">;
 def note_collapse_loop_count : Note<
   "parameter of the 'collapse' clause">;
-def err_omp_grainsize_num_tasks_mutually_exclusive : Error<
+def err_omp_clauses_mutually_exclusive : Error<
   "'%0' and '%1' clause are mutually exclusive and may not appear on the same directive">;
-def note_omp_previous_grainsize_num_tasks : Note<
+def note_omp_previous_clause : Note<
   "'%0' clause is specified here">;
 def err_omp_hint_clause_no_name : Error<
   "the name of the construct must be specified in presence of 'hint' clause">;
@@ -10150,6 +10150,8 @@ def note_omp_flush_order_clause_here : Note<
 def err_omp_non_lvalue_in_map_or_motion_clauses: Error<
   "expected addressable lvalue in '%0' clause"
   >;
+def err_omp_event_var_expected : Error<
+  "expected variable of the 'omp_event_handle_t' type%select{|, not %1}0">;
 } // end of OpenMP category
 
 let CategoryName = "Related Result Type Issue" in {
