@@ -59,6 +59,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/KnowledgeRetention.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
@@ -411,7 +412,8 @@ bool llvm::wouldInstructionBeTriviallyDead(Instruction *I,
     // true are operationally no-ops.  In the future we can consider more
     // sophisticated tradeoffs for guards considering potential for check
     // widening, but for now we keep things simple.
-    if (II->getIntrinsicID() == Intrinsic::assume ||
+    if ((II->getIntrinsicID() == Intrinsic::assume &&
+         isAssumeWithEmptyBundle(*II)) ||
         II->getIntrinsicID() == Intrinsic::experimental_guard) {
       if (ConstantInt *Cond = dyn_cast<ConstantInt>(II->getArgOperand(0)))
         return !Cond->isZero();
