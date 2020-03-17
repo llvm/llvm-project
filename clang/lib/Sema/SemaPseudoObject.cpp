@@ -167,16 +167,11 @@ namespace {
         Expr *&rebuiltExpr = ce->isConditionTrue() ? LHS : RHS;
         rebuiltExpr = rebuild(rebuiltExpr);
 
-        return new (S.Context) ChooseExpr(ce->getBuiltinLoc(),
-                                          ce->getCond(),
-                                          LHS, RHS,
-                                          rebuiltExpr->getType(),
-                                          rebuiltExpr->getValueKind(),
-                                          rebuiltExpr->getObjectKind(),
-                                          ce->getRParenLoc(),
-                                          ce->isConditionTrue(),
-                                          rebuiltExpr->isTypeDependent(),
-                                          rebuiltExpr->isValueDependent());
+        return new (S.Context)
+            ChooseExpr(ce->getBuiltinLoc(), ce->getCond(), LHS, RHS,
+                       rebuiltExpr->getType(), rebuiltExpr->getValueKind(),
+                       rebuiltExpr->getObjectKind(), ce->getRParenLoc(),
+                       ce->isConditionTrue());
       }
 
       llvm_unreachable("bad expression to rebuild!");
