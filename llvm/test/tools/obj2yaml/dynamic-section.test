@@ -1,9 +1,9 @@
-# RUN: yaml2obj %s -o %t
-# RUN: obj2yaml %t | FileCheck %s
-
 ## Check we can use obj2yaml to yamalize the object containing
 ## .dynamic section. Check that resulting section has the
 ## proper attributes and dynamic tags.
+
+# RUN: yaml2obj -DENTSIZE=0x10 %s -o %t1
+# RUN: obj2yaml %t1 | FileCheck %s
 
 # CHECK:       Sections:
 # CHECK-NEXT:  - Name:            .dynamic
@@ -136,7 +136,7 @@ Sections:
     Type:            SHT_DYNAMIC
     Address:         0x0000000000001000
     AddressAlign:    0x0000000000002000
-    EntSize:         0x0000000000000010
+    EntSize:         [[ENTSIZE]]
     Entries:
       - Tag:             DT_NULL
         Value:           0x0000000000000000
@@ -250,3 +250,11 @@ Sections:
         Value:           0x0000000000000036
       - Tag:             DT_USED
         Value:           0x0000000000000001
+
+## Test the behavior when sh_entsize is invalid.
+## Here we use 0xFE as an arbitrary broken value instead of expected 0x16.
+
+# RUN: yaml2obj -DENTSIZE=0xff %s -o %t2
+# RUN: not obj2yaml %t2 2>&1 | FileCheck %s --check-prefix=ENTSIZE
+
+# ENTSIZE: section [index 1] has an invalid sh_entsize: 255

@@ -29,3 +29,24 @@ Sections:
     Type: SHT_REL
 ## Trigger the .dynsym emission.
 DynamicSymbols: []
+
+## Test the behavior when the sh_entsize field is broken.
+## Here we use the 0xFE value instead of expected 0x18/0x10.
+
+# RUN: yaml2obj -DTYPE=SHT_RELA --docnum=2 %s -o %t2.rela
+# RUN: not obj2yaml %t2.rela 2>&1 | FileCheck %s --check-prefix=ERR
+# RUN: yaml2obj -DTYPE=SHT_REL  --docnum=2 %s -o %t2.rel
+# RUN: not obj2yaml %t2.rel 2>&1 | FileCheck %s --check-prefix=ERR
+
+# ERR: section [index 1] has an invalid sh_entsize: 254
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:    .foo
+    Type:    [[TYPE]]
+    EntSize: 0xFE
