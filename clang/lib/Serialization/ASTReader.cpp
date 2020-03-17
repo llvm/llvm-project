@@ -11834,6 +11834,9 @@ OMPClause *OMPClauseReader::readClause() {
   case OMPC_destroy:
     C = new (Context) OMPDestroyClause();
     break;
+  case OMPC_detach:
+    C = new (Context) OMPDetachClause();
+    break;
   }
   assert(C && "Unknown OMPClause type");
 
@@ -11929,6 +11932,11 @@ void OMPClauseReader::VisitOMPOrderedClause(OMPOrderedClause *C) {
     C->setLoopNumIterations(I, Record.readSubExpr());
   for (unsigned I = 0, E = C->NumberOfLoops; I < E; ++I)
     C->setLoopCounter(I, Record.readSubExpr());
+  C->setLParenLoc(Record.readSourceLocation());
+}
+
+void OMPClauseReader::VisitOMPDetachClause(OMPDetachClause *C) {
+  C->setEventHandler(Record.readSubExpr());
   C->setLParenLoc(Record.readSourceLocation());
 }
 
