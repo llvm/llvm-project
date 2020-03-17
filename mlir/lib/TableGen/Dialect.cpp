@@ -58,6 +58,18 @@ bool tblgen::Dialect::hasConstantMaterializer() const {
   return def->getValueAsBit("hasConstantMaterializer");
 }
 
+bool tblgen::Dialect::hasOperationAttrVerify() const {
+  return def->getValueAsBit("hasOperationAttrVerify");
+}
+
+bool tblgen::Dialect::hasRegionArgAttrVerify() const {
+  return def->getValueAsBit("hasRegionArgAttrVerify");
+}
+
+bool tblgen::Dialect::hasRegionResultAttrVerify() const {
+  return def->getValueAsBit("hasRegionResultAttrVerify");
+}
+
 bool Dialect::operator==(const Dialect &other) const {
   return def == other.def;
 }

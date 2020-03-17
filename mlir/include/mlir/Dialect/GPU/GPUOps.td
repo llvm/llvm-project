@@ -28,6 +28,8 @@ def IntLikeOrLLVMInt : TypeConstraint<
 
 def GPU_Dialect : Dialect {
   let name = "gpu";
+  let hasOperationAttrVerify = 1;
+
   let extraClassDeclaration = [{
     /// Get the name of the attribute used to annotate the modules that contain
     /// kernel modules.
@@ -57,9 +59,6 @@ def GPU_Dialect : Dialect {
     /// Returns the numeric value used to identify the private memory address
     /// space.
     static unsigned getPrivateAddressSpace() { return 5; }
-
-    LogicalResult verifyOperationAttribute(Operation *op,
-                                           NamedAttribute attr) override;
   }];
 }
 
