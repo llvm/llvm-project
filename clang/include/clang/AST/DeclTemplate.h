@@ -1927,6 +1927,10 @@ public:
         getTemplateSpecializationKind());
   }
 
+  void setSpecializedTemplate(ClassTemplateDecl *Specialized) {
+    SpecializedTemplate = Specialized;
+  }
+
   void setSpecializationKind(TemplateSpecializationKind TSK) {
     SpecializationKind = TSK;
   }
