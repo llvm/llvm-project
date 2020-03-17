@@ -16,7 +16,7 @@
 include "mlir/Dialect/AffineOps/AffineOpsBase.td"
 include "mlir/Interfaces/SideEffects.td"
 
-def VectorOps_Dialect : Dialect {
+def Vector_Dialect : Dialect {
   let name = "vector";
   let cppNamespace = "vector";
   let hasConstantMaterializer = 1;
@@ -24,7 +24,7 @@ def VectorOps_Dialect : Dialect {
 
 // Base class for Vector dialect ops.
 class Vector_Op<string mnemonic, list<OpTrait> traits = []> :
-    Op<VectorOps_Dialect, mnemonic, traits> {
+    Op<Vector_Dialect, mnemonic, traits> {
   // For every vector op, there needs to be a:
   //   * void print(OpAsmPrinter &p, ${C++ class of Op} op)
   //   * LogicalResult verify(${C++ class of Op} op)
@@ -433,7 +433,7 @@ def Vector_ExtractSlicesOp :
 }
 
 def Vector_FMAOp :
-  Op<VectorOps_Dialect, "fma", [NoSideEffect,
+  Op<Vector_Dialect, "fma", [NoSideEffect,
                              AllTypesMatch<["lhs", "rhs", "acc", "result"]>]>,
     Arguments<(ins AnyVector:$lhs, AnyVector:$rhs, AnyVector:$acc)>,
     Results<(outs AnyVector:$result)> {

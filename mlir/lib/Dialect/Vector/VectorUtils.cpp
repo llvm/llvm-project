@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements utility methods for working with the VectorOps dialect.
+// This file implements utility methods for working with the Vector dialect.
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/VectorOps/VectorUtils.h"
+#include "mlir/Dialect/Vector/VectorUtils.h"
 #include "mlir/Analysis/LoopAnalysis.h"
 #include "mlir/Dialect/AffineOps/AffineOps.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
-#include "mlir/Dialect/VectorOps/VectorOps.h"
+#include "mlir/Dialect/Vector/VectorOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/IR/Operation.h"

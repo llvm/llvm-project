@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_VECTOROPS_VECTOROPS_H
-#define MLIR_DIALECT_VECTOROPS_VECTOROPS_H
+#ifndef MLIR_DIALECT_VECTOR_VECTOROPS_H
+#define MLIR_DIALECT_VECTOR_VECTOROPS_H
 
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Dialect.h"
@@ -61,11 +61,11 @@ IntegerType getVectorSubscriptType(Builder &builder);
 ArrayAttr getVectorSubscriptAttr(Builder &b, ArrayRef<int64_t> values);
 
 #define GET_OP_CLASSES
-#include "mlir/Dialect/VectorOps/VectorOps.h.inc"
+#include "mlir/Dialect/Vector/VectorOps.h.inc"
 
-#include "mlir/Dialect/VectorOps/VectorOpsDialect.h.inc"
+#include "mlir/Dialect/Vector/VectorOpsDialect.h.inc"
 
 } // end namespace vector
 } // end namespace mlir
 
-#endif // MLIR_DIALECT_VECTOROPS_VECTOROPS_H
+#endif // MLIR_DIALECT_VECTOR_VECTOROPS_H

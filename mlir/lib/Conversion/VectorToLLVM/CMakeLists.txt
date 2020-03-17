@@ -7,7 +7,7 @@ add_mlir_conversion_library(MLIRVectorToLLVM
 set(LIBS
   MLIRLLVMIR
   MLIRStandardToLLVM
-  MLIRVectorOps
+  MLIRVector
   MLIRTransforms
   LLVMCore
   LLVMSupport

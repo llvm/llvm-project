@@ -15,8 +15,8 @@
 #define TEST_VECTOR_TRANSFORMS_PATTERNS
 
 include "mlir/Dialect/StandardOps/IR/Ops.td"
-include "mlir/Dialect/VectorOps/VectorOps.td"
-include "mlir/Dialect/VectorOps/VectorTransformPatterns.td"
+include "mlir/Dialect/Vector/VectorOps.td"
+include "mlir/Dialect/Vector/VectorTransformPatterns.td"
 
 def : Pat<(AddFOp:$op_results $a, $b),
           (UnrollVectorOp<[2, 2]> $op_results, $a, $b),
