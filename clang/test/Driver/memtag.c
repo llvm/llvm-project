@@ -17,7 +17,7 @@ __attribute__((noinline)) void use(int *p) { *p = z; }
 int foo() { int x; use(&x); return x; }
 
 // CHECK-NO-SAFETY: define dso_local i32 @foo()
-// CHECK-NO-SAFETY: %x = alloca i32, align 4{{$}}
+// CHECK-NO-SAFETY: %{{.*}} = alloca i32, align 4{{$}}
 
 // CHECK-SAFETY: define dso_local i32 @foo()
-// CHECK-SAFETY: %x = alloca i32, align 4, !stack-safe
+// CHECK-SAFETY: %{{.*}} = alloca i32, align 4, !stack-safe
