@@ -792,7 +792,7 @@ size_t raw_fd_ostream::preferred_buffer_size() const {
   // If this is a terminal, don't use buffering. Line buffering
   // would be a more traditional thing to do, but it's not worth
   // the complexity.
-  if (S_ISCHR(statbuf.st_mode) && isatty(FD))
+  if (S_ISCHR(statbuf.st_mode) && is_displayed())
     return 0;
   // Return the preferred block size.
   return statbuf.st_blksize;
