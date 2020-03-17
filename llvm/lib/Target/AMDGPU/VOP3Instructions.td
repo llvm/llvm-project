@@ -402,6 +402,20 @@ def V_ASHRREV_I64 : VOP3Inst <"v_ashrrev_i64", VOP3_Profile<VOP_I64_I32_I64>, as
 } // End SubtargetPredicate = isGFX8Plus
 } // End SchedRW = [Write64Bit]
 
+def : GCNPat<
+  (i64 (getDivergentFrag<sext>.ret i16:$src)),
+    (REG_SEQUENCE VReg_64,
+      (i32 (V_BFE_I32 $src, (S_MOV_B32 (i32 0)), (S_MOV_B32 (i32 0x10)))), sub0,
+      (i32 (COPY_TO_REGCLASS
+         (V_ASHRREV_I32_e32 (S_MOV_B32 (i32 0x1f)), (i32 (V_BFE_I32 $src, (S_MOV_B32 (i32 0)), (S_MOV_B32 (i32 0x10))))
+      ), VGPR_32)), sub1)
+>;
+
+def : GCNPat<
+  (i32 (getDivergentFrag<sext>.ret i16:$src)),
+  (i32 (V_BFE_I32 $src, (S_MOV_B32 (i32 0)), (S_MOV_B32 (i32 0x10))))
+>;
+
 let SubtargetPredicate = isGFX6GFX7GFX10 in {
 def V_MULLIT_F32 : VOP3Inst <"v_mullit_f32", VOP3_Profile<VOP_F32_F32_F32_F32>>;
 } // End SubtargetPredicate = isGFX6GFX7GFX10

@@ -39,11 +39,6 @@ void Pattern::anchor() {}
 // RewritePattern and PatternRewriter implementation
 //===----------------------------------------------------------------------===//
 
-void RewritePattern::rewrite(Operation *op, std::unique_ptr<PatternState> state,
-                             PatternRewriter &rewriter) const {
-  rewrite(op, rewriter);
-}
-
 void RewritePattern::rewrite(Operation *op, PatternRewriter &rewriter) const {
   llvm_unreachable("need to implement either matchAndRewrite or one of the "
                    "rewrite functions!");
@@ -191,7 +186,7 @@ bool RewritePatternMatcher::matchAndRewrite(Operation *op,
 
     // Try to match and rewrite this pattern. The patterns are sorted by
     // benefit, so if we match we can immediately rewrite and return.
-    if (pattern->matchAndRewrite(op, rewriter))
+    if (succeeded(pattern->matchAndRewrite(op, rewriter)))
       return true;
   }
   return false;

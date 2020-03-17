@@ -15,7 +15,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Bitcode/BitcodeReader.h"
-#include "llvm/CodeGen/CommandFlags.inc"
+#include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/LLVMContext.h"
@@ -27,6 +27,10 @@
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
+
+using namespace llvm;
+
+static codegen::RegisterCodeGenFlags CGF;
 
 // extra command-line flags needed for LTOCodeGenerator
 static cl::opt<char>
@@ -154,14 +158,9 @@ DEFINE_SIMPLE_CONVERSION_FUNCTIONS(LTOModule, lto_module_t)
 // Convert the subtarget features into a string to pass to LTOCodeGenerator.
 static void lto_add_attrs(lto_code_gen_t cg) {
   LTOCodeGenerator *CG = unwrap(cg);
-  if (MAttrs.size()) {
-    std::string attrs;
-    for (unsigned i = 0; i < MAttrs.size(); ++i) {
-      if (i > 0)
-        attrs.append(",");
-      attrs.append(MAttrs[i]);
-    }
-
+  auto MAttrs = codegen::getMAttrs();
+  if (!MAttrs.empty()) {
+    std::string attrs = join(MAttrs, ",");
     CG->setAttr(attrs);
   }
 
@@ -219,7 +218,7 @@ lto_module_is_object_file_in_memory_for_target(const void* mem,
 
 lto_module_t lto_module_create(const char* path) {
   lto_initialize();
-  llvm::TargetOptions Options = InitTargetOptionsFromCodeGenFlags();
+  llvm::TargetOptions Options = codegen::InitTargetOptionsFromCodeGenFlags();
   ErrorOr<std::unique_ptr<LTOModule>> M =
       LTOModule::createFromFile(*LTOContext, StringRef(path), Options);
   if (!M)
@@ -229,7 +228,7 @@ lto_module_t lto_module_create(const char* path) {
 
 lto_module_t lto_module_create_from_fd(int fd, const char *path, size_t size) {
   lto_initialize();
-  llvm::TargetOptions Options = InitTargetOptionsFromCodeGenFlags();
+  llvm::TargetOptions Options = codegen::InitTargetOptionsFromCodeGenFlags();
   ErrorOr<std::unique_ptr<LTOModule>> M = LTOModule::createFromOpenFile(
       *LTOContext, fd, StringRef(path), size, Options);
   if (!M)
@@ -242,7 +241,7 @@ lto_module_t lto_module_create_from_fd_at_offset(int fd, const char *path,
                                                  size_t map_size,
                                                  off_t offset) {
   lto_initialize();
-  llvm::TargetOptions Options = InitTargetOptionsFromCodeGenFlags();
+  llvm::TargetOptions Options = codegen::InitTargetOptionsFromCodeGenFlags();
   ErrorOr<std::unique_ptr<LTOModule>> M = LTOModule::createFromOpenFileSlice(
       *LTOContext, fd, StringRef(path), map_size, offset, Options);
   if (!M)
@@ -252,7 +251,7 @@ lto_module_t lto_module_create_from_fd_at_offset(int fd, const char *path,
 
 lto_module_t lto_module_create_from_memory(const void* mem, size_t length) {
   lto_initialize();
-  llvm::TargetOptions Options = InitTargetOptionsFromCodeGenFlags();
+  llvm::TargetOptions Options = codegen::InitTargetOptionsFromCodeGenFlags();
   ErrorOr<std::unique_ptr<LTOModule>> M =
       LTOModule::createFromBuffer(*LTOContext, mem, length, Options);
   if (!M)
@@ -264,7 +263,7 @@ lto_module_t lto_module_create_from_memory_with_path(const void* mem,
                                                      size_t length,
                                                      const char *path) {
   lto_initialize();
-  llvm::TargetOptions Options = InitTargetOptionsFromCodeGenFlags();
+  llvm::TargetOptions Options = codegen::InitTargetOptionsFromCodeGenFlags();
   ErrorOr<std::unique_ptr<LTOModule>> M = LTOModule::createFromBuffer(
       *LTOContext, mem, length, Options, StringRef(path));
   if (!M)
@@ -275,7 +274,7 @@ lto_module_t lto_module_create_from_memory_with_path(const void* mem,
 lto_module_t lto_module_create_in_local_context(const void *mem, size_t length,
                                                 const char *path) {
   lto_initialize();
-  llvm::TargetOptions Options = InitTargetOptionsFromCodeGenFlags();
+  llvm::TargetOptions Options = codegen::InitTargetOptionsFromCodeGenFlags();
 
   // Create a local context. Ownership will be transferred to LTOModule.
   std::unique_ptr<LLVMContext> Context = std::make_unique<LLVMContext>();
@@ -294,7 +293,7 @@ lto_module_t lto_module_create_in_codegen_context(const void *mem,
                                                   const char *path,
                                                   lto_code_gen_t cg) {
   lto_initialize();
-  llvm::TargetOptions Options = InitTargetOptionsFromCodeGenFlags();
+  llvm::TargetOptions Options = codegen::InitTargetOptionsFromCodeGenFlags();
   ErrorOr<std::unique_ptr<LTOModule>> M = LTOModule::createFromBuffer(
       unwrap(cg)->getContext(), mem, length, Options, StringRef(path));
   return wrap(M->release());
@@ -357,7 +356,7 @@ void lto_codegen_set_diagnostic_handler(lto_code_gen_t cg,
 static lto_code_gen_t createCodeGen(bool InLocalContext) {
   lto_initialize();
 
-  TargetOptions Options = InitTargetOptionsFromCodeGenFlags();
+  TargetOptions Options = codegen::InitTargetOptionsFromCodeGenFlags();
 
   LibLTOCodeGenerator *CodeGen =
       InLocalContext ? new LibLTOCodeGenerator(std::make_unique<LLVMContext>())
@@ -505,7 +504,7 @@ void lto_codegen_set_should_embed_uselists(lto_code_gen_t cg,
 thinlto_code_gen_t thinlto_create_codegen(void) {
   lto_initialize();
   ThinLTOCodeGenerator *CodeGen = new ThinLTOCodeGenerator();
-  CodeGen->setTargetOptions(InitTargetOptionsFromCodeGenFlags());
+  CodeGen->setTargetOptions(codegen::InitTargetOptionsFromCodeGenFlags());
   CodeGen->setFreestanding(EnableFreestanding);
 
   if (OptLevel.getNumOccurrences()) {

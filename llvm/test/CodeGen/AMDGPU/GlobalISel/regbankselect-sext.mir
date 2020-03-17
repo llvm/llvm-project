@@ -61,10 +61,7 @@ body: |
     ; CHECK: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
     ; CHECK: [[ICMP:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(eq), [[COPY]](s32), [[COPY1]]
     ; CHECK: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP]](s32)
-    ; CHECK: [[ANYEXT:%[0-9]+]]:sgpr(s16) = G_ANYEXT [[TRUNC]](s1)
-    ; CHECK: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 15
-    ; CHECK: [[SHL:%[0-9]+]]:sgpr(s16) = G_SHL [[ANYEXT]], [[C]](s32)
-    ; CHECK: [[ASHR:%[0-9]+]]:sgpr(s16) = G_ASHR [[SHL]], [[C]](s32)
+    ; CHECK: [[SEXT:%[0-9]+]]:sgpr(s16) = G_SEXT [[TRUNC]](s1)
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $sgpr1
     %2:_(s1) = G_ICMP intpred(eq), %0, %1
@@ -83,10 +80,7 @@ body: |
     ; CHECK: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
     ; CHECK: [[ICMP:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(eq), [[COPY]](s32), [[COPY1]]
     ; CHECK: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP]](s32)
-    ; CHECK: [[ANYEXT:%[0-9]+]]:sgpr(s32) = G_ANYEXT [[TRUNC]](s1)
-    ; CHECK: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 31
-    ; CHECK: [[SHL:%[0-9]+]]:sgpr(s32) = G_SHL [[ANYEXT]], [[C]](s32)
-    ; CHECK: [[ASHR:%[0-9]+]]:sgpr(s32) = G_ASHR [[SHL]], [[C]](s32)
+    ; CHECK: [[SEXT:%[0-9]+]]:sgpr(s32) = G_SEXT [[TRUNC]](s1)
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $sgpr1
     %2:_(s1) = G_ICMP intpred(eq), %0, %1
@@ -105,10 +99,7 @@ body: |
     ; CHECK: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
     ; CHECK: [[ICMP:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(eq), [[COPY]](s32), [[COPY1]]
     ; CHECK: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP]](s32)
-    ; CHECK: [[ANYEXT:%[0-9]+]]:sgpr(s64) = G_ANYEXT [[TRUNC]](s1)
-    ; CHECK: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 63
-    ; CHECK: [[SHL:%[0-9]+]]:sgpr(s64) = G_SHL [[ANYEXT]], [[C]](s32)
-    ; CHECK: [[ASHR:%[0-9]+]]:sgpr(s64) = G_ASHR [[SHL]], [[C]](s32)
+    ; CHECK: [[SEXT:%[0-9]+]]:sgpr(s64) = G_SEXT [[TRUNC]](s1)
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $sgpr1
     %2:_(s1) = G_ICMP intpred(eq), %0, %1
@@ -188,10 +179,7 @@ body: |
     ; CHECK-LABEL: name: sext_s1_to_s16_sgpr
     ; CHECK: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; CHECK: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[COPY]](s32)
-    ; CHECK: [[ANYEXT:%[0-9]+]]:sgpr(s16) = G_ANYEXT [[TRUNC]](s1)
-    ; CHECK: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 15
-    ; CHECK: [[SHL:%[0-9]+]]:sgpr(s16) = G_SHL [[ANYEXT]], [[C]](s32)
-    ; CHECK: [[ASHR:%[0-9]+]]:sgpr(s16) = G_ASHR [[SHL]], [[C]](s32)
+    ; CHECK: [[SEXT:%[0-9]+]]:sgpr(s16) = G_SEXT [[TRUNC]](s1)
     %0:_(s32) = COPY $sgpr0
     %1:_(s1) = G_TRUNC %0
     %2:_(s16) = G_SEXT %1
@@ -207,10 +195,7 @@ body: |
     ; CHECK-LABEL: name: sext_s1_to_s32_sgpr
     ; CHECK: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; CHECK: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[COPY]](s32)
-    ; CHECK: [[ANYEXT:%[0-9]+]]:sgpr(s32) = G_ANYEXT [[TRUNC]](s1)
-    ; CHECK: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 31
-    ; CHECK: [[SHL:%[0-9]+]]:sgpr(s32) = G_SHL [[ANYEXT]], [[C]](s32)
-    ; CHECK: [[ASHR:%[0-9]+]]:sgpr(s32) = G_ASHR [[SHL]], [[C]](s32)
+    ; CHECK: [[SEXT:%[0-9]+]]:sgpr(s32) = G_SEXT [[TRUNC]](s1)
     %0:_(s32) = COPY $sgpr0
     %1:_(s1) = G_TRUNC %0
     %2:_(s32) = G_SEXT %1
@@ -226,10 +211,7 @@ body: |
     ; CHECK-LABEL: name: sext_s1_to_s64_sgpr
     ; CHECK: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; CHECK: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[COPY]](s32)
-    ; CHECK: [[ANYEXT:%[0-9]+]]:sgpr(s64) = G_ANYEXT [[TRUNC]](s1)
-    ; CHECK: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 63
-    ; CHECK: [[SHL:%[0-9]+]]:sgpr(s64) = G_SHL [[ANYEXT]], [[C]](s32)
-    ; CHECK: [[ASHR:%[0-9]+]]:sgpr(s64) = G_ASHR [[SHL]], [[C]](s32)
+    ; CHECK: [[SEXT:%[0-9]+]]:sgpr(s64) = G_SEXT [[TRUNC]](s1)
     %0:_(s32) = COPY $sgpr0
     %1:_(s1) = G_TRUNC %0
     %2:_(s64) = G_SEXT %1
@@ -245,10 +227,7 @@ body: |
     ; CHECK-LABEL: name: sext_s1_to_s16_vgpr
     ; CHECK: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
     ; CHECK: [[TRUNC:%[0-9]+]]:vgpr(s1) = G_TRUNC [[COPY]](s32)
-    ; CHECK: [[ANYEXT:%[0-9]+]]:vgpr(s16) = G_ANYEXT [[TRUNC]](s1)
-    ; CHECK: [[C:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 15
-    ; CHECK: [[SHL:%[0-9]+]]:vgpr(s16) = G_SHL [[ANYEXT]], [[C]](s32)
-    ; CHECK: [[ASHR:%[0-9]+]]:vgpr(s16) = G_ASHR [[SHL]], [[C]](s32)
+    ; CHECK: [[SEXT:%[0-9]+]]:vgpr(s16) = G_SEXT [[TRUNC]](s1)
     %0:_(s32) = COPY $vgpr0
     %1:_(s1) = G_TRUNC %0
     %2:_(s16) = G_SEXT %1
@@ -264,10 +243,7 @@ body: |
     ; CHECK-LABEL: name: sext_s1_to_s32_vgpr
     ; CHECK: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
     ; CHECK: [[TRUNC:%[0-9]+]]:vgpr(s1) = G_TRUNC [[COPY]](s32)
-    ; CHECK: [[ANYEXT:%[0-9]+]]:vgpr(s32) = G_ANYEXT [[TRUNC]](s1)
-    ; CHECK: [[C:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 31
-    ; CHECK: [[SHL:%[0-9]+]]:vgpr(s32) = G_SHL [[ANYEXT]], [[C]](s32)
-    ; CHECK: [[ASHR:%[0-9]+]]:vgpr(s32) = G_ASHR [[SHL]], [[C]](s32)
+    ; CHECK: [[SEXT:%[0-9]+]]:vgpr(s32) = G_SEXT [[TRUNC]](s1)
     %0:_(s32) = COPY $vgpr0
     %1:_(s1) = G_TRUNC %0
     %2:_(s32) = G_SEXT %1

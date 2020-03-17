@@ -35,8 +35,8 @@ define signext i32 @zeroEqualityTest02(i8* %x, i8* %y) {
 define signext i32 @zeroEqualityTest01(i8* %x, i8* %y) {
 ; CHECK-LABEL: zeroEqualityTest01:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    ld 5, 0(3)
-; CHECK-NEXT:    ld 6, 0(4)
+; CHECK-NEXT:    ldx 5, 0, 3
+; CHECK-NEXT:    ldx 6, 0, 4
 ; CHECK-NEXT:    cmpld 5, 6
 ; CHECK-NEXT:    bne 0, .LBB1_2
 ; CHECK-NEXT:  # %bb.1: # %loadbb1
@@ -125,7 +125,7 @@ define signext i32 @equalityFoldTwoConstants() {
 define signext i32 @equalityFoldOneConstant(i8* %X) {
 ; CHECK-LABEL: equalityFoldOneConstant:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    ld 4, 0(3)
+; CHECK-NEXT:    ldx 4, 0, 3
 ; CHECK-NEXT:    li 5, 1
 ; CHECK-NEXT:    sldi 5, 5, 32
 ; CHECK-NEXT:    cmpld 4, 5

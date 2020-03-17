@@ -293,3 +293,14 @@ func @useFreezeOp(%arg0: !llvm.i32) {
   %2 = llvm.freeze %1 : !llvm.i8
   return
 }
+
+// CHECK-LABEL: @useFenceInst
+func @useFenceInst() {
+  // CHECK:  syncscope("agent") seq_cst 
+  llvm.fence syncscope("agent") seq_cst
+  // CHECK:  seq_cst 
+  llvm.fence syncscope("") seq_cst
+  // CHECK:  release
+  llvm.fence release
+  return
+}

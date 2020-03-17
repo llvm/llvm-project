@@ -43,7 +43,8 @@ class ValueLatticeElement {
 
     /// This Value has a specific constant value.  The constant cannot be undef.
     /// (For constant integers, constantrange is used instead. Integer typed
-    /// constantexprs can appear as constant.)
+    /// constantexprs can appear as constant.) Note that the constant state
+    /// can be reached by merging undef & constant states.
     /// Transition allowed to the following states:
     ///  overdefined
     constant,

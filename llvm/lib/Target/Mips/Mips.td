@@ -161,6 +161,8 @@ def FeatureDSPR3
     : SubtargetFeature<"dspr3", "HasDSPR3", "true", "Mips DSP-R3 ASE",
                        [ FeatureDSP, FeatureDSPR2 ]>;
 
+def FeatureMips3D : SubtargetFeature<"mips3d", "Has3D", "true", "Mips 3D ASE">;
+
 def FeatureMSA : SubtargetFeature<"msa", "HasMSA", "true", "Mips MSA ASE">;
 
 def FeatureEVA : SubtargetFeature<"eva", "HasEVA", "true", "Mips EVA ASE">;

@@ -6269,8 +6269,12 @@ static bool matchRotateSub(SDValue Pos, SDValue Neg, unsigned EltSize,
   //              EltSize & Mask == NegC & Mask
   //
   // (because "x & Mask" is a truncation and distributes through subtraction).
+  //
+  // We also need to account for a potential truncation of NegOp1 if the amount
+  // has already been legalized to a shift amount type.
   APInt Width;
-  if (Pos == NegOp1)
+  if ((Pos == NegOp1) ||
+      (NegOp1.getOpcode() == ISD::TRUNCATE && Pos == NegOp1.getOperand(0)))
     Width = NegC->getAPIntValue();
 
   // Check for cases where Pos has the form (add NegOp1, PosC) for some PosC.

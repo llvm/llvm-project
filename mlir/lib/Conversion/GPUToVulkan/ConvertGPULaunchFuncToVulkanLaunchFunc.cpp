@@ -33,10 +33,10 @@ static constexpr const char *kVulkanLaunch = "vulkanLaunch";
 
 namespace {
 
-// A pass to convert gpu launch op to vulkan launch call op, by creating a
-// SPIR-V binary shader from `spirv::ModuleOp` using `spirv::serialize`
-// function and attaching binary data and entry point name as an attributes to
-// created vulkan launch call op.
+/// A pass to convert gpu launch op to vulkan launch call op, by creating a
+/// SPIR-V binary shader from `spirv::ModuleOp` using `spirv::serialize`
+/// function and attaching binary data and entry point name as an attributes to
+/// created vulkan launch call op.
 class ConvertGpuLaunchFuncToVulkanLaunchFunc
     : public ModulePass<ConvertGpuLaunchFuncToVulkanLaunchFunc> {
 public:

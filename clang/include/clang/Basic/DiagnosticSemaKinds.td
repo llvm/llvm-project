@@ -1537,6 +1537,9 @@ def err_distant_exception_spec : Error<
 def err_incomplete_in_exception_spec : Error<
   "%select{|pointer to |reference to }0incomplete type %1 is not allowed "
   "in exception specification">;
+def err_sizeless_in_exception_spec : Error<
+  "%select{|reference to }0sizeless type %1 is not allowed "
+  "in exception specification">;
 def ext_incomplete_in_exception_spec : ExtWarn<err_incomplete_in_exception_spec.Text>,
   InGroup<MicrosoftExceptionSpec>;
 def err_rref_in_exception_spec : Error<
@@ -1945,9 +1948,6 @@ def note_destructor_nontype_here : Note<
 def ext_dtor_named_in_wrong_scope : Extension<
   "ISO C++ requires the name after '::~' to be found in the same scope as "
   "the name before '::~'">, InGroup<DtorName>;
-def ext_dtor_name_missing_template_arguments : Extension<
-  "ISO C++ requires template argument list in destructor name">,
-  InGroup<DtorName>;
 def ext_qualified_dtor_named_in_lexical_scope : ExtWarn<
   "qualified destructor name only found in lexical scope; omit the qualifier "
   "to find this type name by unqualified lookup">, InGroup<DtorName>;
@@ -2647,8 +2647,6 @@ def err_concept_extra_headers : Error<
   "extraneous template parameter list in concept definition">;
 def err_concept_no_associated_constraints : Error<
   "concept cannot have associated constraints">;
-def err_concept_not_implemented : Error<
-  "sorry, unimplemented concepts feature %0 used">;
 def err_non_constant_constraint_expression : Error<
   "substitution into constraint expression resulted in a non-constant "
   "expression">;
@@ -2657,8 +2655,6 @@ def err_non_bool_atomic_constraint : Error<
 def err_template_arg_list_constraints_not_satisfied : Error<
   "constraints not satisfied for %select{class template|function template|variable template|alias template|"
   "template template parameter|template}0 %1%2">;
-def note_constraints_not_satisfied : Note<
-  "constraints not satisfied">;
 def note_substituted_constraint_expr_is_ill_formed : Note<
   "because substituted constraint expression is ill-formed%0">;
 def note_atomic_constraint_evaluated_to_false : Note<
@@ -2675,11 +2671,6 @@ def err_trailing_requires_clause_on_deduction_guide : Error<
   "deduction guide cannot have a requires clause">;
 def err_reference_to_function_with_unsatisfied_constraints : Error<
   "invalid reference to function %0: constraints not satisfied">;
-def note_requires_expr_ill_formed_expr : Note<
-  "expression is invalid: %0">;
-def note_requires_expr_no_implicit_conversion : Note<
-  "no implicit conversion exists between expression type %0 and expected type "
-  "%1">;
 def err_requires_expr_local_parameter_default_argument : Error<
   "default arguments not allowed for parameters of a requires expression">;
 def err_requires_expr_parameter_referenced_in_evaluated_context : Error<
@@ -2702,12 +2693,6 @@ def note_type_requirement_substitution_error : Note<
   "%select{and|because}0 '%1' would be invalid: %2">;
 def note_type_requirement_unknown_substitution_error : Note<
   "%select{and|because}0 '%1' would be invalid">;
-def err_type_requirement_non_type_template : Error<
-  "'%0' refers to a %select{class template|function template|"
-  "variable template|alias template|template template parameter|template}1, "
-  "not a type template">;
-def err_type_requirement_no_such_type : Error<
-  "'%0' does not name a type">;
 def note_nested_requirement_substitution_error : Note<
   "%select{and|because}0 '%1' would be invalid: %2">;
 def note_nested_requirement_unknown_substitution_error : Note<
@@ -6126,8 +6111,8 @@ def err_typecheck_subscript_not_integer : Error<
   "array subscript is not an integer">;
 def err_subscript_function_type : Error<
   "subscript of pointer to function type %0">;
-def err_subscript_incomplete_type : Error<
-  "subscript of pointer to incomplete type %0">;
+def err_subscript_incomplete_or_sizeless_type : Error<
+  "subscript of pointer to %select{incomplete|sizeless}0 type %1">;
 def err_dereference_incomplete_type : Error<
   "dereference of pointer to incomplete type %0">;
 def ext_gnu_subscript_void_type : Extension<
@@ -6237,8 +6222,8 @@ def err_typecheck_illegal_increment_decrement : Error<
   "cannot %select{decrement|increment}1 value of type %0">;
 def err_typecheck_expect_int : Error<
   "used type %0 where integer is required">;
-def err_typecheck_arithmetic_incomplete_type : Error<
-  "arithmetic on a pointer to an incomplete type %0">;
+def err_typecheck_arithmetic_incomplete_or_sizeless_type : Error<
+  "arithmetic on a pointer to %select{an incomplete|sizeless}0 type %1">;
 def err_typecheck_pointer_arith_function_type : Error<
   "arithmetic on%select{ a|}0 pointer%select{|s}0 to%select{ the|}2 "
   "function type%select{|s}2 %1%select{| and %3}2">;
@@ -6894,8 +6879,8 @@ def err_array_new_needs_size : Error<
   "array size must be specified in new expression with no initializer">;
 def err_bad_new_type : Error<
   "cannot allocate %select{function|reference}1 type %0 with new">;
-def err_new_incomplete_type : Error<
-  "allocation of incomplete type %0">;
+def err_new_incomplete_or_sizeless_type : Error<
+  "allocation of %select{incomplete|sizeless}0 type %1">;
 def err_new_array_nonconst : Error<
   "only the first dimension of an allocated array may have dynamic size">;
 def err_new_array_size_unknown_from_init : Error<
@@ -7012,6 +6997,8 @@ def err_catch_incomplete_ptr : Error<
 def err_catch_incomplete_ref : Error<
   "cannot catch reference to incomplete type %0">;
 def err_catch_incomplete : Error<"cannot catch incomplete type %0">;
+def err_catch_sizeless : Error<
+  "cannot catch %select{|reference to }0sizeless type %1">;
 def err_catch_rvalue_ref : Error<"cannot catch exceptions by rvalue reference">;
 def err_catch_variably_modified : Error<
   "cannot catch variably modified type %0">;
@@ -7117,6 +7104,8 @@ def err_throw_incomplete : Error<
   "cannot throw object of incomplete type %0">;
 def err_throw_incomplete_ptr : Error<
   "cannot throw pointer to object of incomplete type %0">;
+def err_throw_sizeless : Error<
+  "cannot throw object of sizeless type %0">;
 def warn_throw_underaligned_obj : Warning<
   "underaligned exception object thrown">,
   InGroup<UnderalignedExceptionObject>;
@@ -9232,12 +9221,6 @@ def err_x86_builtin_invalid_rounding : Error<
   "invalid rounding argument">;
 def err_x86_builtin_invalid_scale : Error<
   "scale argument must be 1, 2, 4, or 8">;
-def err_hexagon_builtin_unsupported_cpu : Error<
-  "builtin is not supported on this CPU">;
-def err_hexagon_builtin_requires_hvx : Error<
-  "builtin requires HVX">;
-def err_hexagon_builtin_unsupported_hvx : Error<
-  "builtin is not supported on this version of HVX">;
 
 def err_builtin_target_unsupported : Error<
   "builtin is not supported on this target">;
@@ -9969,9 +9952,9 @@ def err_omp_wrong_ordered_loop_count : Error<
   "the parameter of the 'ordered' clause must be greater than or equal to the parameter of the 'collapse' clause">;
 def note_collapse_loop_count : Note<
   "parameter of the 'collapse' clause">;
-def err_omp_grainsize_num_tasks_mutually_exclusive : Error<
+def err_omp_clauses_mutually_exclusive : Error<
   "'%0' and '%1' clause are mutually exclusive and may not appear on the same directive">;
-def note_omp_previous_grainsize_num_tasks : Note<
+def note_omp_previous_clause : Note<
   "'%0' clause is specified here">;
 def err_omp_hint_clause_no_name : Error<
   "the name of the construct must be specified in presence of 'hint' clause">;
@@ -10143,6 +10126,8 @@ def note_omp_flush_order_clause_here : Note<
 def err_omp_non_lvalue_in_map_or_motion_clauses: Error<
   "expected addressable lvalue in '%0' clause"
   >;
+def err_omp_event_var_expected : Error<
+  "expected variable of the 'omp_event_handle_t' type%select{|, not %1}0">;
 } // end of OpenMP category
 
 let CategoryName = "Related Result Type Issue" in {

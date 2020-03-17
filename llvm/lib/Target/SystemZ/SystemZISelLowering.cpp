@@ -641,6 +641,8 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
   setTargetDAGCombine(ISD::FP_ROUND);
   setTargetDAGCombine(ISD::STRICT_FP_ROUND);
   setTargetDAGCombine(ISD::FP_EXTEND);
+  setTargetDAGCombine(ISD::SINT_TO_FP);
+  setTargetDAGCombine(ISD::UINT_TO_FP);
   setTargetDAGCombine(ISD::STRICT_FP_EXTEND);
   setTargetDAGCombine(ISD::BSWAP);
   setTargetDAGCombine(ISD::SDIV);
@@ -6081,6 +6083,32 @@ SDValue SystemZTargetLowering::combineFP_EXTEND(
   return SDValue();
 }
 
+SDValue SystemZTargetLowering::combineINT_TO_FP(
+    SDNode *N, DAGCombinerInfo &DCI) const {
+  if (DCI.Level != BeforeLegalizeTypes)
+    return SDValue();
+  unsigned Opcode = N->getOpcode();
+  EVT OutVT = N->getValueType(0);
+  SelectionDAG &DAG = DCI.DAG;
+  SDValue Op = N->getOperand(0);
+  unsigned OutScalarBits = OutVT.getScalarSizeInBits();
+  unsigned InScalarBits = Op->getValueType(0).getScalarSizeInBits();
+
+  // Insert an extension before type-legalization to avoid scalarization, e.g.:
+  // v2f64 = uint_to_fp v2i16
+  // =>
+  // v2f64 = uint_to_fp (v2i64 zero_extend v2i16)
+  if (OutVT.isVector() && OutScalarBits > InScalarBits) {
+    MVT ExtVT = MVT::getVectorVT(MVT::getIntegerVT(OutVT.getScalarSizeInBits()),
+                                 OutVT.getVectorNumElements());
+    unsigned ExtOpcode =
+      (Opcode == ISD::UINT_TO_FP ? ISD::ZERO_EXTEND : ISD::SIGN_EXTEND);
+    SDValue ExtOp = DAG.getNode(ExtOpcode, SDLoc(N), ExtVT, Op);
+    return DAG.getNode(Opcode, SDLoc(N), OutVT, ExtOp);
+  }
+  return SDValue();
+}
+
 SDValue SystemZTargetLowering::combineBSWAP(
     SDNode *N, DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -6408,6 +6436,8 @@ SDValue SystemZTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::FP_ROUND:           return combineFP_ROUND(N, DCI);
   case ISD::STRICT_FP_EXTEND:
   case ISD::FP_EXTEND:          return combineFP_EXTEND(N, DCI);
+  case ISD::SINT_TO_FP:
+  case ISD::UINT_TO_FP:         return combineINT_TO_FP(N, DCI);
   case ISD::BSWAP:              return combineBSWAP(N, DCI);
   case SystemZISD::BR_CCMASK:   return combineBR_CCMASK(N, DCI);
   case SystemZISD::SELECT_CCMASK: return combineSELECT_CCMASK(N, DCI);

@@ -6528,11 +6528,12 @@ static bool getTargetConstantBitsFromNode(SDValue Op, unsigned EltSizeInBits,
 
 namespace llvm {
 namespace X86 {
-bool isConstantSplat(SDValue Op, APInt &SplatVal) {
+bool isConstantSplat(SDValue Op, APInt &SplatVal, bool AllowPartialUndefs) {
   APInt UndefElts;
   SmallVector<APInt, 16> EltBits;
   if (getTargetConstantBitsFromNode(Op, Op.getScalarValueSizeInBits(),
-                                    UndefElts, EltBits, true, false)) {
+                                    UndefElts, EltBits, true,
+                                    AllowPartialUndefs)) {
     int SplatIndex = -1;
     for (int i = 0, e = EltBits.size(); i != e; ++i) {
       if (UndefElts[i])
@@ -20963,9 +20964,12 @@ static SDValue getSETCC(X86::CondCode Cond, SDValue EFLAGS, const SDLoc &dl,
 }
 
 /// Helper for matching OR(EXTRACTELT(X,0),OR(EXTRACTELT(X,1),...))
-/// style scalarized (associative) reduction patterns.
+/// style scalarized (associative) reduction patterns. Partial reductions
+/// are supported when the pointer SrcMask is non-null.
+/// TODO - move this to SelectionDAG?
 static bool matchScalarReduction(SDValue Op, ISD::NodeType BinOp,
-                                 SmallVectorImpl<SDValue> &SrcOps) {
+                                 SmallVectorImpl<SDValue> &SrcOps,
+                                 SmallVectorImpl<APInt> *SrcMask = nullptr) {
   SmallVector<SDValue, 8> Opnds;
   DenseMap<SDValue, APInt> SrcOpMap;
   EVT VT = MVT::Other;
@@ -21017,12 +21021,18 @@ static bool matchScalarReduction(SDValue Op, ISD::NodeType BinOp,
     M->second.setBit(CIdx);
   }
 
-  // Quit if not all elements are used.
-  for (DenseMap<SDValue, APInt>::const_iterator I = SrcOpMap.begin(),
-                                                E = SrcOpMap.end();
-       I != E; ++I) {
-    if (!I->second.isAllOnesValue())
-      return false;
+  if (SrcMask) {
+    // Collect the source partial masks.
+    for (SDValue &SrcOp : SrcOps)
+      SrcMask->push_back(SrcOpMap[SrcOp]);
+  } else {
+    // Quit if not all elements are used.
+    for (DenseMap<SDValue, APInt>::const_iterator I = SrcOpMap.begin(),
+                                                  E = SrcOpMap.end();
+         I != E; ++I) {
+      if (!I->second.isAllOnesValue())
+        return false;
+    }
   }
 
   return true;
@@ -27359,30 +27369,19 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
   int NumElts = VT.getVectorNumElements();
 
   // Check for constant splat rotation amount.
-  APInt UndefElts;
-  SmallVector<APInt, 32> EltBits;
-  int CstSplatIndex = -1;
-  if (getTargetConstantBitsFromNode(Amt, EltSizeInBits, UndefElts, EltBits))
-    for (int i = 0; i != NumElts; ++i)
-      if (!UndefElts[i]) {
-        if (CstSplatIndex < 0 || EltBits[i] == EltBits[CstSplatIndex]) {
-          CstSplatIndex = i;
-          continue;
-        }
-        CstSplatIndex = -1;
-        break;
-      }
+  APInt CstSplatValue;
+  bool IsCstSplat = X86::isConstantSplat(Amt, CstSplatValue);
 
   // Check for splat rotate by zero.
-  if (0 <= CstSplatIndex && EltBits[CstSplatIndex].urem(EltSizeInBits) == 0)
+  if (IsCstSplat && CstSplatValue.urem(EltSizeInBits) == 0)
     return R;
 
   // AVX512 implicitly uses modulo rotation amounts.
   if (Subtarget.hasAVX512() && 32 <= EltSizeInBits) {
     // Attempt to rotate by immediate.
-    if (0 <= CstSplatIndex) {
+    if (IsCstSplat) {
       unsigned RotOpc = (Opcode == ISD::ROTL ? X86ISD::VROTLI : X86ISD::VROTRI);
-      uint64_t RotAmt = EltBits[CstSplatIndex].urem(EltSizeInBits);
+      uint64_t RotAmt = CstSplatValue.urem(EltSizeInBits);
       return DAG.getNode(RotOpc, DL, VT, R,
                          DAG.getTargetConstant(RotAmt, DL, MVT::i8));
     }
@@ -27402,10 +27401,10 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
     assert(VT.is128BitVector() && "Only rotate 128-bit vectors!");
 
     // Attempt to rotate by immediate.
-    if (0 <= CstSplatIndex) {
-      uint64_t RotateAmt = EltBits[CstSplatIndex].urem(EltSizeInBits);
+    if (IsCstSplat) {
+      uint64_t RotAmt = CstSplatValue.urem(EltSizeInBits);
       return DAG.getNode(X86ISD::VROTLI, DL, VT, R,
-                         DAG.getTargetConstant(RotateAmt, DL, MVT::i8));
+                         DAG.getTargetConstant(RotAmt, DL, MVT::i8));
     }
 
     // Use general rotate by variable (per-element).
@@ -27422,7 +27421,7 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
          "Only vXi32/vXi16/vXi8 vector rotates supported");
 
   // Rotate by an uniform constant - expand back to shifts.
-  if (0 <= CstSplatIndex)
+  if (IsCstSplat)
     return SDValue();
 
   bool IsSplatAmt = DAG.isSplatValue(Amt);
@@ -41220,7 +41219,8 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
   // TODO: Support multiple SrcOps.
   if (VT == MVT::i1) {
     SmallVector<SDValue, 2> SrcOps;
-    if (matchScalarReduction(SDValue(N, 0), ISD::AND, SrcOps) &&
+    SmallVector<APInt, 2> SrcPartials;
+    if (matchScalarReduction(SDValue(N, 0), ISD::AND, SrcOps, &SrcPartials) &&
         SrcOps.size() == 1) {
       SDLoc dl(N);
       const TargetLowering &TLI = DAG.getTargetLoweringInfo();
@@ -41230,9 +41230,11 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
       if (!Mask && TLI.isTypeLegal(SrcOps[0].getValueType()))
         Mask = DAG.getBitcast(MaskVT, SrcOps[0]);
       if (Mask) {
-        APInt AllBits = APInt::getAllOnesValue(NumElts);
-        return DAG.getSetCC(dl, MVT::i1, Mask,
-                            DAG.getConstant(AllBits, dl, MaskVT), ISD::SETEQ);
+        assert(SrcPartials[0].getBitWidth() == NumElts &&
+               "Unexpected partial reduction mask");
+        SDValue PartialBits = DAG.getConstant(SrcPartials[0], dl, MaskVT);
+        Mask = DAG.getNode(ISD::AND, dl, MaskVT, Mask, PartialBits);
+        return DAG.getSetCC(dl, MVT::i1, Mask, PartialBits, ISD::SETEQ);
       }
     }
   }
@@ -41627,30 +41629,9 @@ static SDValue combineOrShiftToFunnelShift(SDNode *N, SelectionDAG &DAG,
                        DAG.getNode(ISD::TRUNCATE, DL, ShiftVT, Amt));
   };
 
-  // OR( SHL( X, C ), SRL( Y, 32 - C ) ) -> FSHL( X, Y, C )
-  // OR( SRL( X, C ), SHL( Y, 32 - C ) ) -> FSHR( Y, X, C )
   // OR( SHL( X, C ), SRL( SRL( Y, 1 ), XOR( C, 31 ) ) ) -> FSHL( X, Y, C )
   // OR( SRL( X, C ), SHL( SHL( Y, 1 ), XOR( C, 31 ) ) ) -> FSHR( Y, X, C )
-  // OR( SHL( X, AND( C, 31 ) ), SRL( Y, AND( 0 - C, 31 ) ) ) -> FSHL( X, Y, C )
-  // OR( SRL( X, AND( C, 31 ) ), SHL( Y, AND( 0 - C, 31 ) ) ) -> FSHR( Y, X, C )
-  if (ShAmt1.getOpcode() == ISD::SUB) {
-    SDValue Sum = ShAmt1.getOperand(0);
-    if (auto *SumC = dyn_cast<ConstantSDNode>(Sum)) {
-      SDValue ShAmt1Op1 = ShAmt1.getOperand(1);
-      if (ShAmt1Op1.getOpcode() == ISD::AND &&
-          isa<ConstantSDNode>(ShAmt1Op1.getOperand(1)) &&
-          ShAmt1Op1.getConstantOperandAPInt(1) == (Bits - 1)) {
-        ShMsk1 = ShAmt1Op1;
-        ShAmt1Op1 = ShAmt1Op1.getOperand(0);
-      }
-      if (ShAmt1Op1.getOpcode() == ISD::TRUNCATE)
-        ShAmt1Op1 = ShAmt1Op1.getOperand(0);
-      if ((SumC->getAPIntValue() == Bits ||
-           (SumC->getAPIntValue() == 0 && ShMsk1)) &&
-          ShAmt1Op1 == ShAmt0)
-        return GetFunnelShift(Op0, Op1, ShAmt0);
-    }
-  } else if (ShAmt1.getOpcode() == ISD::XOR) {
+  if (ShAmt1.getOpcode() == ISD::XOR) {
     SDValue Mask = ShAmt1.getOperand(1);
     if (auto *MaskC = dyn_cast<ConstantSDNode>(Mask)) {
       unsigned InnerShift = (ISD::FSHL == Opc ? ISD::SRL : ISD::SHL);
@@ -41695,7 +41676,8 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
   // TODO: Support multiple SrcOps.
   if (VT == MVT::i1) {
     SmallVector<SDValue, 2> SrcOps;
-    if (matchScalarReduction(SDValue(N, 0), ISD::OR, SrcOps) &&
+    SmallVector<APInt, 2> SrcPartials;
+    if (matchScalarReduction(SDValue(N, 0), ISD::OR, SrcOps, &SrcPartials) &&
         SrcOps.size() == 1) {
       SDLoc dl(N);
       const TargetLowering &TLI = DAG.getTargetLoweringInfo();
@@ -41705,9 +41687,12 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
       if (!Mask && TLI.isTypeLegal(SrcOps[0].getValueType()))
         Mask = DAG.getBitcast(MaskVT, SrcOps[0]);
       if (Mask) {
-        APInt AllBits = APInt::getNullValue(NumElts);
-        return DAG.getSetCC(dl, MVT::i1, Mask,
-                            DAG.getConstant(AllBits, dl, MaskVT), ISD::SETNE);
+        assert(SrcPartials[0].getBitWidth() == NumElts &&
+               "Unexpected partial reduction mask");
+        SDValue ZeroBits = DAG.getConstant(0, dl, MaskVT);
+        SDValue PartialBits = DAG.getConstant(SrcPartials[0], dl, MaskVT);
+        Mask = DAG.getNode(ISD::AND, dl, MaskVT, Mask, PartialBits);
+        return DAG.getSetCC(dl, MVT::i1, Mask, ZeroBits, ISD::SETNE);
       }
     }
   }

@@ -6,7 +6,7 @@
 // CHECK: %[[addressof_SPIRV_BIN:.*]] = llvm.mlir.addressof @SPIRV_BIN
 // CHECK: %[[SPIRV_BIN_ptr:.*]] = llvm.getelementptr %[[addressof_SPIRV_BIN]]
 // CHECK: %[[SPIRV_BIN_size:.*]] = llvm.mlir.constant
-// CHECK: llvm.call @bindResource(%[[Vulkan_Runtime_ptr]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (!llvm<"i8*">, !llvm.i32, !llvm.i32, !llvm<"float*">, !llvm.i64) -> !llvm.void
+// CHECK: llvm.call @bindMemRef1DFloat(%[[Vulkan_Runtime_ptr]], %{{.*}}, %{{.*}}, %{{.*}}) : (!llvm<"i8*">, !llvm.i32, !llvm.i32, !llvm<"{ float*, float*, i64, [1 x i64], [1 x i64] }*">) -> !llvm.void
 // CHECK: llvm.call @setBinaryShader(%[[Vulkan_Runtime_ptr]], %[[SPIRV_BIN_ptr]], %[[SPIRV_BIN_size]]) : (!llvm<"i8*">, !llvm<"i8*">, !llvm.i32) -> !llvm.void
 // CHECK: %[[addressof_entry_point:.*]] = llvm.mlir.addressof @kernel_spv_entry_point_name
 // CHECK: %[[entry_point_ptr:.*]] = llvm.getelementptr %[[addressof_entry_point]]
@@ -44,5 +44,18 @@ module attributes {gpu.container_module} {
     : (!llvm.i64, !llvm.i64, !llvm.i64, !llvm.i64, !llvm.i64, !llvm.i64, !llvm<"float*">, !llvm<"float*">, !llvm.i64, !llvm.i64, !llvm.i64) -> ()
     llvm.return
   }
-  llvm.func @vulkanLaunch(!llvm.i64, !llvm.i64, !llvm.i64, !llvm.i64, !llvm.i64, !llvm.i64, !llvm<"float*">, !llvm<"float*">, !llvm.i64, !llvm.i64, !llvm.i64)
+  llvm.func @vulkanLaunch(%arg0: !llvm.i64, %arg1: !llvm.i64, %arg2: !llvm.i64, %arg3: !llvm.i64, %arg4: !llvm.i64, %arg5: !llvm.i64, %arg6: !llvm<"float*">, %arg7: !llvm<"float*">, %arg8: !llvm.i64, %arg9: !llvm.i64, %arg10: !llvm.i64) {
+    %0 = llvm.mlir.undef : !llvm<"{ float*, float*, i64, [1 x i64], [1 x i64] }">
+    %1 = llvm.insertvalue %arg6, %0[0] : !llvm<"{ float*, float*, i64, [1 x i64], [1 x i64] }">
+    %2 = llvm.insertvalue %arg7, %1[1] : !llvm<"{ float*, float*, i64, [1 x i64], [1 x i64] }">
+    %3 = llvm.insertvalue %arg8, %2[2] : !llvm<"{ float*, float*, i64, [1 x i64], [1 x i64] }">
+    %4 = llvm.insertvalue %arg9, %3[3, 0] : !llvm<"{ float*, float*, i64, [1 x i64], [1 x i64] }">
+    %5 = llvm.insertvalue %arg10, %4[4, 0] : !llvm<"{ float*, float*, i64, [1 x i64], [1 x i64] }">
+    %6 = llvm.mlir.constant(1 : index) : !llvm.i64
+    %7 = llvm.alloca %6 x !llvm<"{ float*, float*, i64, [1 x i64], [1 x i64] }"> : (!llvm.i64) -> !llvm<"{ float*, float*, i64, [1 x i64], [1 x i64] }*">
+    llvm.store %5, %7 : !llvm<"{ float*, float*, i64, [1 x i64], [1 x i64] }*">
+    llvm.call @_mlir_ciface_vulkanLaunch(%arg0, %arg1, %arg2, %arg3, %arg4, %arg5, %7) : (!llvm.i64, !llvm.i64, !llvm.i64, !llvm.i64, !llvm.i64, !llvm.i64, !llvm<"{ float*, float*, i64, [1 x i64], [1 x i64] }*">) -> ()
+    llvm.return
+  }
+  llvm.func @_mlir_ciface_vulkanLaunch(!llvm.i64, !llvm.i64, !llvm.i64, !llvm.i64, !llvm.i64, !llvm.i64, !llvm<"{ float*, float*, i64, [1 x i64], [1 x i64] }*">)
 }

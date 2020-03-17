@@ -231,6 +231,27 @@ declare void @escape(i32* %a)
 
 ; Canonicalize a nonnull assumption on a load into metadata form.
 
+define i32 @bundle1(i32* %P) {
+; CHECK-LABEL: @bundle1(
+; CHECK-NEXT:    tail call void @llvm.assume(i1 true) [ "nonnull"(i32* [[P:%.*]]) ]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32, i32* [[P]], align 4
+; CHECK-NEXT:    ret i32 [[LOAD]]
+;
+  tail call void @llvm.assume(i1 true) ["nonnull"(i32* %P)]
+  %load = load i32, i32* %P
+  ret i32 %load
+}
+
+define i32 @bundle2(i32* %P) {
+; CHECK-LABEL: @bundle2(
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    ret i32 [[LOAD]]
+;
+  tail call void @llvm.assume(i1 true) ["ignore"(i32* undef)]
+  %load = load i32, i32* %P
+  ret i32 %load
+}
+
 define i1 @nonnull1(i32** %a) {
 ; CHECK-LABEL: @nonnull1(
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i32*, i32** [[A:%.*]], align 8, !nonnull !6

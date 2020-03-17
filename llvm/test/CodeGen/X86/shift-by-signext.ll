@@ -88,9 +88,9 @@ declare i32 @llvm.fshr.i32(i32 %a, i32 %b, i32 %c)
 define i32 @n6_fshl(i32 %x, i32 %y, i8 %shamt) nounwind {
 ; X86-LABEL: n6_fshl:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-NEXT:    shldl %cl, %edx, %eax
 ; X86-NEXT:    retl
 ;
@@ -108,9 +108,9 @@ define i32 @n6_fshl(i32 %x, i32 %y, i8 %shamt) nounwind {
 define i32 @n7_fshr(i32 %x, i32 %y, i8 %shamt) nounwind {
 ; X86-LABEL: n7_fshr:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-NEXT:    shrdl %cl, %edx, %eax
 ; X86-NEXT:    retl
 ;

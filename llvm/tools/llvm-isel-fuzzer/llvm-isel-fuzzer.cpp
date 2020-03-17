@@ -14,7 +14,7 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
-#include "llvm/CodeGen/CommandFlags.inc"
+#include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/FuzzMutate/FuzzerCLI.h"
 #include "llvm/FuzzMutate/IRMutator.h"
 #include "llvm/FuzzMutate/Operations.h"
@@ -34,6 +34,8 @@
 #define DEBUG_TYPE "isel-fuzzer"
 
 using namespace llvm;
+
+static codegen::RegisterCodeGenFlags CGF;
 
 static cl::opt<char>
 OptLevel("O",
@@ -133,14 +135,15 @@ extern "C" LLVM_ATTRIBUTE_USED int LLVMFuzzerInitialize(int *argc,
   // Get the target specific parser.
   std::string Error;
   const Target *TheTarget =
-      TargetRegistry::lookupTarget(MArch, TheTriple, Error);
+      TargetRegistry::lookupTarget(codegen::getMArch(), TheTriple, Error);
   if (!TheTarget) {
     errs() << argv[0] << ": " << Error;
     return 1;
   }
 
   // Set up the pipeline like llc does.
-  std::string CPUStr = getCPUStr(), FeaturesStr = getFeaturesStr();
+  std::string CPUStr = codegen::getCPUStr(),
+              FeaturesStr = codegen::getFeaturesStr();
 
   CodeGenOpt::Level OLvl = CodeGenOpt::Default;
   switch (OptLevel) {
@@ -154,10 +157,10 @@ extern "C" LLVM_ATTRIBUTE_USED int LLVMFuzzerInitialize(int *argc,
   case '3': OLvl = CodeGenOpt::Aggressive; break;
   }
 
-  TargetOptions Options = InitTargetOptionsFromCodeGenFlags();
-  TM.reset(TheTarget->createTargetMachine(TheTriple.getTriple(), CPUStr,
-                                          FeaturesStr, Options, getRelocModel(),
-                                          getCodeModel(), OLvl));
+  TargetOptions Options = codegen::InitTargetOptionsFromCodeGenFlags();
+  TM.reset(TheTarget->createTargetMachine(
+      TheTriple.getTriple(), CPUStr, FeaturesStr, Options,
+      codegen::getExplicitRelocModel(), codegen::getExplicitCodeModel(), OLvl));
   assert(TM && "Could not allocate target machine!");
 
   // Make sure we print the summary and the current unit when LLVM errors out.

@@ -55,6 +55,7 @@ static_library("MC") {
     "MCSymbol.cpp",
     "MCSymbolELF.cpp",
     "MCTargetOptions.cpp",
+    "MCTargetOptionsCommandFlags.cpp",
     "MCValue.cpp",
     "MCWasmObjectTargetWriter.cpp",
     "MCWasmStreamer.cpp",

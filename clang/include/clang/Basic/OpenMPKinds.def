@@ -277,6 +277,7 @@ OPENMP_CLAUSE(nontemporal, OMPNontemporalClause)
 OPENMP_CLAUSE(order, OMPOrderClause)
 OPENMP_CLAUSE(depobj, OMPDepobjClause)
 OPENMP_CLAUSE(destroy, OMPDestroyClause)
+OPENMP_CLAUSE(detach, OMPDetachClause)
 
 // Clauses allowed for OpenMP directive 'parallel'.
 OPENMP_PARALLEL_CLAUSE(if)
@@ -471,6 +472,7 @@ OPENMP_TASK_CLAUSE(depend)
 OPENMP_TASK_CLAUSE(priority)
 OPENMP_TASK_CLAUSE(in_reduction)
 OPENMP_TASK_CLAUSE(allocate)
+OPENMP_TASK_CLAUSE(detach)
 
 // Clauses allowed for OpenMP directive 'atomic'.
 OPENMP_ATOMIC_CLAUSE(read)

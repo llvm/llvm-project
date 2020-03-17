@@ -943,4 +943,16 @@ def LLVM_AssumeOp : LLVM_Op<"intr.assume", []>,
   }];
 }
 
+def LLVM_FenceOp : LLVM_ZeroResultOp<"fence", []>,
+                   Arguments<(ins AtomicOrdering:$ordering,
+                    StrAttr:$syncscope)> {
+  let llvmBuilder = [{
+    llvm::LLVMContext &llvmContext = builder.getContext();
+    builder.CreateFence(getLLVMAtomicOrdering($ordering),
+      llvmContext.getOrInsertSyncScopeID($syncscope));
+  }];
+  let parser = [{ return parseFenceOp(parser, result); }];
+  let printer = [{ printFenceOp(p, *this); }];
+  let verifier = "return ::verify(*this);";
+}
 #endif // LLVMIR_OPS

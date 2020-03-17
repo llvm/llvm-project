@@ -18,9 +18,9 @@ define amdgpu_ps void @load_1d_vgpr_vaddr__sgpr_srsrc(<8 x i32> inreg %rsrc, i32
   ; CHECK:   [[COPY8:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
   ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:sgpr(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
   ; CHECK:   [[DEF:%[0-9]+]]:sgpr(p1) = G_IMPLICIT_DEF
-  ; CHECK:   [[INT:%[0-9]+]]:vgpr(<4 x s32>) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.image.load.1d), 15, [[COPY8]](s32), [[BUILD_VECTOR]](<8 x s32>), 0, 0 :: (dereferenceable load 16 from custom "TargetCustom8")
+  ; CHECK:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.1d), 15, [[COPY8]](s32), [[BUILD_VECTOR]](<8 x s32>), 0, 0 :: (dereferenceable load 16 from custom "TargetCustom8")
   ; CHECK:   [[COPY9:%[0-9]+]]:vgpr(p1) = COPY [[DEF]](p1)
-  ; CHECK:   G_STORE [[INT]](<4 x s32>), [[COPY9]](p1) :: (store 16 into `<4 x float> addrspace(1)* undef`, addrspace 1)
+  ; CHECK:   G_STORE [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>), [[COPY9]](p1) :: (store 16 into `<4 x float> addrspace(1)* undef`, addrspace 1)
   ; CHECK:   S_ENDPGM 0
   %v = call <4 x float> @llvm.amdgcn.image.load.1d.v4f32.i32(i32 15, i32 %s, <8 x i32> %rsrc, i32 0, i32 0)
   store <4 x float> %v, <4 x float> addrspace(1)* undef
@@ -44,9 +44,9 @@ define amdgpu_ps void @load_1d_sgpr_vaddr__sgpr_srsrc(<8 x i32> inreg %rsrc, i32
   ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:sgpr(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
   ; CHECK:   [[DEF:%[0-9]+]]:sgpr(p1) = G_IMPLICIT_DEF
   ; CHECK:   [[COPY9:%[0-9]+]]:vgpr(s32) = COPY [[COPY8]](s32)
-  ; CHECK:   [[INT:%[0-9]+]]:vgpr(<4 x s32>) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.image.load.1d), 15, [[COPY9]](s32), [[BUILD_VECTOR]](<8 x s32>), 0, 0 :: (dereferenceable load 16 from custom "TargetCustom8")
+  ; CHECK:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.1d), 15, [[COPY9]](s32), [[BUILD_VECTOR]](<8 x s32>), 0, 0 :: (dereferenceable load 16 from custom "TargetCustom8")
   ; CHECK:   [[COPY10:%[0-9]+]]:vgpr(p1) = COPY [[DEF]](p1)
-  ; CHECK:   G_STORE [[INT]](<4 x s32>), [[COPY10]](p1) :: (store 16 into `<4 x float> addrspace(1)* undef`, addrspace 1)
+  ; CHECK:   G_STORE [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>), [[COPY10]](p1) :: (store 16 into `<4 x float> addrspace(1)* undef`, addrspace 1)
   ; CHECK:   S_ENDPGM 0
   %v = call <4 x float> @llvm.amdgcn.image.load.1d.v4f32.i32(i32 15, i32 %s, <8 x i32> %rsrc, i32 0, i32 0)
   store <4 x float> %v, <4 x float> addrspace(1)* undef
@@ -98,7 +98,7 @@ define amdgpu_ps void @load_1d_vgpr_vaddr__vgpr_srsrc(<8 x i32> %rsrc, i32 %s) {
   ; CHECK:   [[V_CMP_EQ_U64_e64_3:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[MV3]](s64), [[UV3]](s64), implicit $exec
   ; CHECK:   [[S_AND_B64_2:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_3]], [[S_AND_B64_1]], implicit-def $scc
   ; CHECK:   [[BUILD_VECTOR1:%[0-9]+]]:sgpr(<8 x s32>) = G_BUILD_VECTOR [[V_READFIRSTLANE_B32_]](s32), [[V_READFIRSTLANE_B32_1]](s32), [[V_READFIRSTLANE_B32_2]](s32), [[V_READFIRSTLANE_B32_3]](s32), [[V_READFIRSTLANE_B32_4]](s32), [[V_READFIRSTLANE_B32_5]](s32), [[V_READFIRSTLANE_B32_6]](s32), [[V_READFIRSTLANE_B32_7]](s32)
-  ; CHECK:   [[INT:%[0-9]+]]:vgpr(<4 x s32>) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.image.load.1d), 15, [[COPY8]](s32), [[BUILD_VECTOR1]](<8 x s32>), 0, 0 :: (dereferenceable load 16 from custom "TargetCustom8")
+  ; CHECK:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.1d), 15, [[COPY8]](s32), [[BUILD_VECTOR1]](<8 x s32>), 0, 0 :: (dereferenceable load 16 from custom "TargetCustom8")
   ; CHECK:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_2]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; CHECK:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; CHECK:   S_CBRANCH_EXECNZ %bb.2, implicit $exec
@@ -107,7 +107,7 @@ define amdgpu_ps void @load_1d_vgpr_vaddr__vgpr_srsrc(<8 x i32> %rsrc, i32 %s) {
   ; CHECK:   $exec = S_MOV_B64_term [[S_MOV_B64_term]]
   ; CHECK: bb.4:
   ; CHECK:   [[COPY9:%[0-9]+]]:vgpr(p1) = COPY [[DEF]](p1)
-  ; CHECK:   G_STORE [[INT]](<4 x s32>), [[COPY9]](p1) :: (store 16 into `<4 x float> addrspace(1)* undef`, addrspace 1)
+  ; CHECK:   G_STORE [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>), [[COPY9]](p1) :: (store 16 into `<4 x float> addrspace(1)* undef`, addrspace 1)
   ; CHECK:   S_ENDPGM 0
   %v = call <4 x float> @llvm.amdgcn.image.load.1d.v4f32.i32(i32 15, i32 %s, <8 x i32> %rsrc, i32 0, i32 0)
   store <4 x float> %v, <4 x float> addrspace(1)* undef
@@ -160,7 +160,7 @@ define amdgpu_ps void @load_1d_sgpr_vaddr__vgpr_srsrc(<8 x i32> %rsrc, i32 inreg
   ; CHECK:   [[V_CMP_EQ_U64_e64_3:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[MV3]](s64), [[UV3]](s64), implicit $exec
   ; CHECK:   [[S_AND_B64_2:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_3]], [[S_AND_B64_1]], implicit-def $scc
   ; CHECK:   [[BUILD_VECTOR1:%[0-9]+]]:sgpr(<8 x s32>) = G_BUILD_VECTOR [[V_READFIRSTLANE_B32_]](s32), [[V_READFIRSTLANE_B32_1]](s32), [[V_READFIRSTLANE_B32_2]](s32), [[V_READFIRSTLANE_B32_3]](s32), [[V_READFIRSTLANE_B32_4]](s32), [[V_READFIRSTLANE_B32_5]](s32), [[V_READFIRSTLANE_B32_6]](s32), [[V_READFIRSTLANE_B32_7]](s32)
-  ; CHECK:   [[INT:%[0-9]+]]:vgpr(<4 x s32>) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.image.load.1d), 15, [[COPY9]](s32), [[BUILD_VECTOR1]](<8 x s32>), 0, 0 :: (dereferenceable load 16 from custom "TargetCustom8")
+  ; CHECK:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.1d), 15, [[COPY9]](s32), [[BUILD_VECTOR1]](<8 x s32>), 0, 0 :: (dereferenceable load 16 from custom "TargetCustom8")
   ; CHECK:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_2]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; CHECK:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; CHECK:   S_CBRANCH_EXECNZ %bb.2, implicit $exec
@@ -169,7 +169,7 @@ define amdgpu_ps void @load_1d_sgpr_vaddr__vgpr_srsrc(<8 x i32> %rsrc, i32 inreg
   ; CHECK:   $exec = S_MOV_B64_term [[S_MOV_B64_term]]
   ; CHECK: bb.4:
   ; CHECK:   [[COPY10:%[0-9]+]]:vgpr(p1) = COPY [[DEF]](p1)
-  ; CHECK:   G_STORE [[INT]](<4 x s32>), [[COPY10]](p1) :: (store 16 into `<4 x float> addrspace(1)* undef`, addrspace 1)
+  ; CHECK:   G_STORE [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>), [[COPY10]](p1) :: (store 16 into `<4 x float> addrspace(1)* undef`, addrspace 1)
   ; CHECK:   S_ENDPGM 0
   %v = call <4 x float> @llvm.amdgcn.image.load.1d.v4f32.i32(i32 15, i32 %s, <8 x i32> %rsrc, i32 0, i32 0)
   store <4 x float> %v, <4 x float> addrspace(1)* undef

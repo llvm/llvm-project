@@ -22,6 +22,7 @@
 #include "mlir/Transforms/Utils.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/Debug.h"
+
 #define DEBUG_TYPE "affine-pipeline-data-transfer"
 
 using namespace mlir;
@@ -46,9 +47,9 @@ std::unique_ptr<OpPassBase<FuncOp>> mlir::createPipelineDataTransferPass() {
 // Returns the position of the tag memref operand given a DMA operation.
 // Temporary utility: will be replaced when DmaStart/DmaFinish abstract op's are
 // added.  TODO(b/117228571)
-static unsigned getTagMemRefPos(Operation &dmaInst) {
-  assert(isa<AffineDmaStartOp>(dmaInst) || isa<AffineDmaWaitOp>(dmaInst));
-  if (auto dmaStartOp = dyn_cast<AffineDmaStartOp>(dmaInst)) {
+static unsigned getTagMemRefPos(Operation &dmaOp) {
+  assert(isa<AffineDmaStartOp>(dmaOp) || isa<AffineDmaWaitOp>(dmaOp));
+  if (auto dmaStartOp = dyn_cast<AffineDmaStartOp>(dmaOp)) {
     return dmaStartOp.getTagMemRefOperandIndex();
   }
   // First operand for a dma finish operation.
@@ -79,21 +80,20 @@ static bool doubleBuffer(Value oldMemRef, AffineForOp forOp) {
   auto oldMemRefType = oldMemRef.getType().cast<MemRefType>();
   auto newMemRefType = doubleShape(oldMemRefType);
 
-  // The double buffer is allocated right before 'forInst'.
-  auto *forInst = forOp.getOperation();
-  OpBuilder bOuter(forInst);
+  // The double buffer is allocated right before 'forOp'.
+  OpBuilder bOuter(forOp);
   // Put together alloc operands for any dynamic dimensions of the memref.
   SmallVector<Value, 4> allocOperands;
   unsigned dynamicDimCount = 0;
   for (auto dimSize : oldMemRefType.getShape()) {
     if (dimSize == -1)
-      allocOperands.push_back(bOuter.create<DimOp>(forInst->getLoc(), oldMemRef,
-                                                   dynamicDimCount++));
+      allocOperands.push_back(
+          bOuter.create<DimOp>(forOp.getLoc(), oldMemRef, dynamicDimCount++));
   }
 
   // Create and place the alloc right before the 'affine.for' operation.
   Value newMemRef =
-      bOuter.create<AllocOp>(forInst->getLoc(), newMemRefType, allocOperands);
+      bOuter.create<AllocOp>(forOp.getLoc(), newMemRefType, allocOperands);
 
   // Create 'iv mod 2' value to index the leading dimension.
   auto d0 = bInner.getAffineDimExpr(0);
@@ -118,8 +118,8 @@ static bool doubleBuffer(Value oldMemRef, AffineForOp forOp) {
     return false;
   }
   // Insert the dealloc op right after the for loop.
-  bOuter.setInsertionPointAfter(forInst);
-  bOuter.create<DeallocOp>(forInst->getLoc(), newMemRef);
+  bOuter.setInsertionPointAfter(forOp);
+  bOuter.create<DeallocOp>(forOp.getLoc(), newMemRef);
 
   return true;
 }
@@ -219,11 +219,11 @@ static void findMatchingStartFinishInsts(
   }
 
   // For each start operation, we look for a matching finish operation.
-  for (auto *dmaStartInst : dmaStartInsts) {
-    for (auto *dmaFinishInst : dmaFinishInsts) {
-      if (checkTagMatch(cast<AffineDmaStartOp>(dmaStartInst),
-                        cast<AffineDmaWaitOp>(dmaFinishInst))) {
-        startWaitPairs.push_back({dmaStartInst, dmaFinishInst});
+  for (auto *dmaStartOp : dmaStartInsts) {
+    for (auto *dmaFinishOp : dmaFinishInsts) {
+      if (checkTagMatch(cast<AffineDmaStartOp>(dmaStartOp),
+                        cast<AffineDmaWaitOp>(dmaFinishOp))) {
+        startWaitPairs.push_back({dmaStartOp, dmaFinishOp});
         break;
       }
     }
@@ -236,8 +236,7 @@ static void findMatchingStartFinishInsts(
 void PipelineDataTransfer::runOnAffineForOp(AffineForOp forOp) {
   auto mayBeConstTripCount = getConstantTripCount(forOp);
   if (!mayBeConstTripCount.hasValue()) {
-    LLVM_DEBUG(
-        forOp.emitRemark("won't pipeline due to unknown trip count loop"));
+    LLVM_DEBUG(forOp.emitRemark("won't pipeline due to unknown trip count"));
     return;
   }
 
@@ -258,14 +257,14 @@ void PipelineDataTransfer::runOnAffineForOp(AffineForOp forOp) {
   // the dimension we are adding here for the double buffering is the outermost
   // dimension.
   for (auto &pair : startWaitPairs) {
-    auto *dmaStartInst = pair.first;
-    Value oldMemRef = dmaStartInst->getOperand(
-        cast<AffineDmaStartOp>(dmaStartInst).getFasterMemPos());
+    auto *dmaStartOp = pair.first;
+    Value oldMemRef = dmaStartOp->getOperand(
+        cast<AffineDmaStartOp>(dmaStartOp).getFasterMemPos());
     if (!doubleBuffer(oldMemRef, forOp)) {
       // Normally, double buffering should not fail because we already checked
       // that there are no uses outside.
       LLVM_DEBUG(llvm::dbgs()
-                     << "double buffering failed for" << dmaStartInst << "\n";);
+                     << "double buffering failed for" << dmaStartOp << "\n";);
       // IR still valid and semantically correct.
       return;
     }
@@ -275,13 +274,13 @@ void PipelineDataTransfer::runOnAffineForOp(AffineForOp forOp) {
     // order to create the double buffer above.)
     // '-canonicalize' does this in a more general way, but we'll anyway do the
     // simple/common case so that the output / test cases looks clear.
-    if (auto *allocInst = oldMemRef.getDefiningOp()) {
+    if (auto *allocOp = oldMemRef.getDefiningOp()) {
       if (oldMemRef.use_empty()) {
-        allocInst->erase();
+        allocOp->erase();
       } else if (oldMemRef.hasOneUse()) {
         if (auto dealloc = dyn_cast<DeallocOp>(*oldMemRef.user_begin())) {
           dealloc.erase();
-          allocInst->erase();
+          allocOp->erase();
         }
       }
     }
@@ -289,22 +288,21 @@ void PipelineDataTransfer::runOnAffineForOp(AffineForOp forOp) {
 
   // Double the buffers for tag memrefs.
   for (auto &pair : startWaitPairs) {
-    auto *dmaFinishInst = pair.second;
-    Value oldTagMemRef =
-        dmaFinishInst->getOperand(getTagMemRefPos(*dmaFinishInst));
+    auto *dmaFinishOp = pair.second;
+    Value oldTagMemRef = dmaFinishOp->getOperand(getTagMemRefPos(*dmaFinishOp));
     if (!doubleBuffer(oldTagMemRef, forOp)) {
       LLVM_DEBUG(llvm::dbgs() << "tag double buffering failed\n";);
       return;
     }
     // If the old tag has no uses or a single dealloc use, remove it.
     // (canonicalization handles more complex cases).
-    if (auto *tagAllocInst = oldTagMemRef.getDefiningOp()) {
+    if (auto *tagAllocOp = oldTagMemRef.getDefiningOp()) {
       if (oldTagMemRef.use_empty()) {
-        tagAllocInst->erase();
+        tagAllocOp->erase();
       } else if (oldTagMemRef.hasOneUse()) {
         if (auto dealloc = dyn_cast<DeallocOp>(*oldTagMemRef.user_begin())) {
           dealloc.erase();
-          tagAllocInst->erase();
+          tagAllocOp->erase();
         }
       }
     }
@@ -317,12 +315,12 @@ void PipelineDataTransfer::runOnAffineForOp(AffineForOp forOp) {
   // Store shift for operation for later lookup for AffineApplyOp's.
   DenseMap<Operation *, unsigned> instShiftMap;
   for (auto &pair : startWaitPairs) {
-    auto *dmaStartInst = pair.first;
-    assert(isa<AffineDmaStartOp>(dmaStartInst));
-    instShiftMap[dmaStartInst] = 0;
+    auto *dmaStartOp = pair.first;
+    assert(isa<AffineDmaStartOp>(dmaStartOp));
+    instShiftMap[dmaStartOp] = 0;
     // Set shifts for DMA start op's affine operand computation slices to 0.
     SmallVector<AffineApplyOp, 4> sliceOps;
-    mlir::createAffineComputationSlice(dmaStartInst, &sliceOps);
+    mlir::createAffineComputationSlice(dmaStartOp, &sliceOps);
     if (!sliceOps.empty()) {
       for (auto sliceOp : sliceOps) {
         instShiftMap[sliceOp.getOperation()] = 0;
@@ -331,7 +329,7 @@ void PipelineDataTransfer::runOnAffineForOp(AffineForOp forOp) {
       // If a slice wasn't created, the reachable affine.apply op's from its
       // operands are the ones that go with it.
       SmallVector<Operation *, 4> affineApplyInsts;
-      SmallVector<Value, 4> operands(dmaStartInst->getOperands());
+      SmallVector<Value, 4> operands(dmaStartOp->getOperands());
       getReachableAffineApplyOps(operands, affineApplyInsts);
       for (auto *op : affineApplyInsts) {
         instShiftMap[op] = 0;
@@ -339,16 +337,14 @@ void PipelineDataTransfer::runOnAffineForOp(AffineForOp forOp) {
     }
   }
   // Everything else (including compute ops and dma finish) are shifted by one.
-  for (auto &op : *forOp.getBody()) {
-    if (instShiftMap.find(&op) == instShiftMap.end()) {
+  for (auto &op : forOp.getBody()->without_terminator())
+    if (instShiftMap.find(&op) == instShiftMap.end())
       instShiftMap[&op] = 1;
-    }
-  }
 
   // Get shifts stored in map.
   std::vector<uint64_t> shifts(forOp.getBody()->getOperations().size());
   unsigned s = 0;
-  for (auto &op : *forOp.getBody()) {
+  for (auto &op : forOp.getBody()->without_terminator()) {
     assert(instShiftMap.find(&op) != instShiftMap.end());
     shifts[s++] = instShiftMap[&op];
 
@@ -365,7 +361,7 @@ void PipelineDataTransfer::runOnAffineForOp(AffineForOp forOp) {
     return;
   }
 
-  if (failed(instBodySkew(forOp, shifts))) {
+  if (failed(affineForOpBodySkew(forOp, shifts))) {
     LLVM_DEBUG(llvm::dbgs() << "op body skewing failed - unexpected\n";);
     return;
   }

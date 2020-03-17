@@ -17,13 +17,16 @@ include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffects.td"
 
-def TEST_Dialect : Dialect {
+def Test_Dialect : Dialect {
   let name = "test";
   let cppNamespace = "";
+  let hasOperationAttrVerify = 1;
+  let hasRegionArgAttrVerify = 1;
+  let hasRegionResultAttrVerify = 1;
 }
 
 class TEST_Op<string mnemonic, list<OpTrait> traits = []> :
-    Op<TEST_Dialect, mnemonic, traits>;
+    Op<Test_Dialect, mnemonic, traits>;
 
 //===----------------------------------------------------------------------===//
 // Test Types

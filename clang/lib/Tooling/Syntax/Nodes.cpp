@@ -68,6 +68,18 @@ llvm::raw_ostream &syntax::operator<<(llvm::raw_ostream &OS, NodeKind K) {
     return OS << "UsingDeclaration";
   case NodeKind::TypeAliasDeclaration:
     return OS << "TypeAliasDeclaration";
+  case NodeKind::SimpleDeclarator:
+    return OS << "SimpleDeclarator";
+  case NodeKind::ParenDeclarator:
+    return OS << "ParenDeclarator";
+  case NodeKind::ArraySubscript:
+    return OS << "ArraySubscript";
+  case NodeKind::TrailingReturnType:
+    return OS << "TrailingReturnType";
+  case NodeKind::ParametersAndQualifiers:
+    return OS << "ParametersAndQualifiers";
+  case NodeKind::MemberPointer:
+    return OS << "MemberPointer";
   }
   llvm_unreachable("unknown node kind");
 }
@@ -104,6 +116,18 @@ llvm::raw_ostream &syntax::operator<<(llvm::raw_ostream &OS, NodeRole R) {
     return OS << "StaticAssertDeclaration_condition";
   case syntax::NodeRole::StaticAssertDeclaration_message:
     return OS << "StaticAssertDeclaration_message";
+  case syntax::NodeRole::SimpleDeclaration_declarator:
+    return OS << "SimpleDeclaration_declarator";
+  case syntax::NodeRole::ArraySubscript_sizeExpression:
+    return OS << "ArraySubscript_sizeExpression";
+  case syntax::NodeRole::TrailingReturnType_arrow:
+    return OS << "TrailingReturnType_arrow";
+  case syntax::NodeRole::TrailingReturnType_declarator:
+    return OS << "TrailingReturnType_declarator";
+  case syntax::NodeRole::ParametersAndQualifiers_parameter:
+    return OS << "ParametersAndQualifiers_parameter";
+  case syntax::NodeRole::ParametersAndQualifiers_trailingReturn:
+    return OS << "ParametersAndQualifiers_trailingReturn";
   }
   llvm_unreachable("invalid role");
 }
@@ -245,4 +269,74 @@ syntax::Expression *syntax::StaticAssertDeclaration::condition() {
 syntax::Expression *syntax::StaticAssertDeclaration::message() {
   return llvm::cast_or_null<syntax::Expression>(
       findChild(syntax::NodeRole::StaticAssertDeclaration_message));
+}
+
+std::vector<syntax::SimpleDeclarator *>
+syntax::SimpleDeclaration::declarators() {
+  std::vector<syntax::SimpleDeclarator *> Children;
+  for (auto *C = firstChild(); C; C = C->nextSibling()) {
+    if (C->role() == syntax::NodeRole::SimpleDeclaration_declarator)
+      Children.push_back(llvm::cast<syntax::SimpleDeclarator>(C));
+  }
+  return Children;
+}
+
+syntax::Leaf *syntax::ParenDeclarator::lparen() {
+  return llvm::cast_or_null<syntax::Leaf>(
+      findChild(syntax::NodeRole::OpenParen));
+}
+
+syntax::Leaf *syntax::ParenDeclarator::rparen() {
+  return llvm::cast_or_null<syntax::Leaf>(
+      findChild(syntax::NodeRole::CloseParen));
+}
+
+syntax::Leaf *syntax::ArraySubscript::lbracket() {
+  return llvm::cast_or_null<syntax::Leaf>(
+      findChild(syntax::NodeRole::OpenParen));
+}
+
+syntax::Expression *syntax::ArraySubscript::sizeExpression() {
+  return llvm::cast_or_null<syntax::Expression>(
+      findChild(syntax::NodeRole::ArraySubscript_sizeExpression));
+}
+
+syntax::Leaf *syntax::ArraySubscript::rbracket() {
+  return llvm::cast_or_null<syntax::Leaf>(
+      findChild(syntax::NodeRole::CloseParen));
+}
+
+syntax::Leaf *syntax::TrailingReturnType::arrow() {
+  return llvm::cast_or_null<syntax::Leaf>(
+      findChild(syntax::NodeRole::TrailingReturnType_arrow));
+}
+
+syntax::SimpleDeclarator *syntax::TrailingReturnType::declarator() {
+  return llvm::cast_or_null<syntax::SimpleDeclarator>(
+      findChild(syntax::NodeRole::TrailingReturnType_declarator));
+}
+
+syntax::Leaf *syntax::ParametersAndQualifiers::lparen() {
+  return llvm::cast_or_null<syntax::Leaf>(
+      findChild(syntax::NodeRole::OpenParen));
+}
+
+std::vector<syntax::SimpleDeclaration *>
+syntax::ParametersAndQualifiers::parameters() {
+  std::vector<syntax::SimpleDeclaration *> Children;
+  for (auto *C = firstChild(); C; C = C->nextSibling()) {
+    if (C->role() == syntax::NodeRole::ParametersAndQualifiers_parameter)
+      Children.push_back(llvm::cast<syntax::SimpleDeclaration>(C));
+  }
+  return Children;
+}
+
+syntax::Leaf *syntax::ParametersAndQualifiers::rparen() {
+  return llvm::cast_or_null<syntax::Leaf>(
+      findChild(syntax::NodeRole::CloseParen));
+}
+
+syntax::TrailingReturnType *syntax::ParametersAndQualifiers::trailingReturn() {
+  return llvm::cast_or_null<syntax::TrailingReturnType>(
+      findChild(syntax::NodeRole::ParametersAndQualifiers_trailingReturn));
 }

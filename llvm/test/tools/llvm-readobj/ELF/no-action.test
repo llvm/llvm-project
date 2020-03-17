@@ -7,7 +7,7 @@
 # RUN: llvm-readelf %t.exe | FileCheck %s -DFILE=%t.exe --check-prefix GNU --allow-empty
 
 # LLVM: File: [[FILE]]
-# LLVM: Format: ELF64-x86-64
+# LLVM: Format: elf64-x86-64
 # LLVM: Arch: x86_64
 # LLVM: AddressSize: 64bit
 # LLVM: LoadName: <Not found>{{$}}

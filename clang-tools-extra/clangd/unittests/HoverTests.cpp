@@ -1905,7 +1905,7 @@ TEST(Hover, PresentRulers) {
   llvm::StringRef ExpectedMarkdown = R"md(### variable `foo`  
 
 ---
-Value \= `val`  
+Value = `val`  
 
 ---
 ```cpp

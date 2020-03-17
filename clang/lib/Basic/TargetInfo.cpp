@@ -380,6 +380,20 @@ void TargetInfo::adjust(LangOptions &Opts) {
     LongDoubleFormat = &llvm::APFloat::IEEEquad();
   }
 
+  if (Opts.DoubleSize) {
+    if (Opts.DoubleSize == 32) {
+      DoubleWidth = 32;
+      LongDoubleWidth = 32;
+      DoubleFormat = &llvm::APFloat::IEEEsingle();
+      LongDoubleFormat = &llvm::APFloat::IEEEsingle();
+    } else if (Opts.DoubleSize == 64) {
+      DoubleWidth = 64;
+      LongDoubleWidth = 64;
+      DoubleFormat = &llvm::APFloat::IEEEdouble();
+      LongDoubleFormat = &llvm::APFloat::IEEEdouble();
+    }
+  }
+
   if (Opts.LongDoubleSize) {
     if (Opts.LongDoubleSize == DoubleWidth) {
       LongDoubleWidth = DoubleWidth;

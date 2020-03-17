@@ -21,6 +21,8 @@
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/BinaryFormat/MachO.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
 #include "llvm/IR/Comdat.h"
@@ -52,8 +54,8 @@
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CodeGen.h"
-#include "llvm/Support/Format.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include <cassert>
@@ -760,6 +762,56 @@ MCSection *TargetLoweringObjectFileELF::getSectionForConstant(
 
   assert(Kind.isReadOnlyWithRel() && "Unknown section kind");
   return DataRelROSection;
+}
+
+/// Returns a unique section for the given machine basic block.
+MCSection *TargetLoweringObjectFileELF::getSectionForMachineBasicBlock(
+    const Function &F, const MachineBasicBlock &MBB,
+    const TargetMachine &TM) const {
+  SmallString<128> Name;
+  Name = (static_cast<MCSectionELF *>(MBB.getParent()->getSection()))
+             ->getSectionName();
+  if (TM.getUniqueBBSectionNames()) {
+    Name += ".";
+    Name += MBB.getSymbol()->getName();
+  }
+  unsigned UniqueID = NextUniqueID++;
+  unsigned Flags = ELF::SHF_ALLOC | ELF::SHF_EXECINSTR;
+  std::string GroupName = "";
+  if (F.hasComdat()) {
+    Flags |= ELF::SHF_GROUP;
+    GroupName = F.getComdat()->getName().str();
+  }
+  return getContext().getELFSection(Name, ELF::SHT_PROGBITS, Flags,
+                                    0 /* Entry Size */, GroupName, UniqueID,
+                                    nullptr);
+}
+
+MCSection *TargetLoweringObjectFileELF::getNamedSectionForMachineBasicBlock(
+    const Function &F, const MachineBasicBlock &MBB, const TargetMachine &TM,
+    const char *Suffix) const {
+  SmallString<128> Name;
+  Name = (static_cast<MCSectionELF *>(MBB.getParent()->getSection()))
+             ->getSectionName();
+
+  // If unique section names is off, explicity add the function name to the
+  // section name to make sure named sections for functions are unique
+  // across the module.
+  if (!TM.getUniqueSectionNames()) {
+    Name += ".";
+    Name += MBB.getParent()->getName();
+  }
+
+  Name += Suffix;
+
+  unsigned Flags = ELF::SHF_ALLOC | ELF::SHF_EXECINSTR;
+  std::string GroupName = "";
+  if (F.hasComdat()) {
+    Flags |= ELF::SHF_GROUP;
+    GroupName = F.getComdat()->getName().str();
+  }
+  return getContext().getELFSection(Name, ELF::SHT_PROGBITS, Flags,
+                                    0 /* Entry Size */, GroupName);
 }
 
 static MCSectionELF *getStaticStructorSection(MCContext &Ctx, bool UseInitArray,

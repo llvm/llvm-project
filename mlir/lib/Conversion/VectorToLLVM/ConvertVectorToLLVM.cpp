@@ -805,7 +805,7 @@ public:
         // multiple times.
         auto success = matchAndRewrite(insertStridedSliceOp, rewriter);
         (void)success;
-        assert(success && "Unexpected failure");
+        assert(succeeded(success) && "Unexpected failure");
         extractedSource = insertStridedSliceOp;
       }
       // 4. Insert the extractedSource into the res vector.
@@ -1083,7 +1083,7 @@ public:
         // multiple times.
         auto success = matchAndRewrite(stridedSliceOp, rewriter);
         (void)success;
-        assert(success && "Unexpected failure");
+        assert(succeeded(success) && "Unexpected failure");
         extracted = stridedSliceOp;
       }
       res = insertOne(rewriter, loc, extracted, res, idx);

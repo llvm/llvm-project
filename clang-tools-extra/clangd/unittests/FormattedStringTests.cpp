@@ -17,25 +17,96 @@ namespace clangd {
 namespace markup {
 namespace {
 
-TEST(Render, Escaping) {
-  // Check some ASCII punctuation
-  Paragraph P;
-  P.appendText("*!`");
-  EXPECT_EQ(P.asMarkdown(), "\\*\\!\\`");
+std::string escape(llvm::StringRef Text) {
+  return Paragraph().appendText(Text.str()).asMarkdown();
+}
 
+MATCHER_P(escaped, C, "") {
+  return testing::ExplainMatchResult(::testing::HasSubstr(std::string{'\\', C}),
+                                     arg, result_listener);
+}
+
+MATCHER(escapedNone, "") {
+  return testing::ExplainMatchResult(::testing::Not(::testing::HasSubstr("\\")),
+                                     arg, result_listener);
+}
+
+TEST(Render, Escaping) {
   // Check all ASCII punctuation.
-  P = Paragraph();
   std::string Punctuation = R"txt(!"#$%&'()*+,-./:;<=>?@[\]^_`{|}~)txt";
-  // Same text, with each character escaped.
-  std::string EscapedPunctuation;
-  EscapedPunctuation.reserve(2 * Punctuation.size());
-  for (char C : Punctuation)
-    EscapedPunctuation += std::string("\\") + C;
-  P.appendText(Punctuation);
-  EXPECT_EQ(P.asMarkdown(), EscapedPunctuation);
+  std::string EscapedPunc = R"txt(!"#$%&'()\*+,-./:;<=>?@[\\]^\_\`{|}~)txt";
+  EXPECT_EQ(escape(Punctuation), EscapedPunc);
+
+  // Inline code
+  EXPECT_EQ(escape("`foo`"), R"(\`foo\`)");
+  EXPECT_EQ(escape("`foo"), R"(\`foo)");
+  EXPECT_EQ(escape("foo`"), R"(foo\`)");
+  EXPECT_EQ(escape("``foo``"), R"(\`\`foo\`\`)");
+  // Code blocks
+  EXPECT_EQ(escape("```"), R"(\`\`\`)"); // This could also be inline code!
+  EXPECT_EQ(escape("~~~"), R"(\~~~)");
+
+  // Rulers and headings
+  EXPECT_THAT(escape("## Heading"), escaped('#'));
+  EXPECT_THAT(escape("Foo # bar"), escapedNone());
+  EXPECT_EQ(escape("---"), R"(\---)");
+  EXPECT_EQ(escape("-"), R"(\-)");
+  EXPECT_EQ(escape("==="), R"(\===)");
+  EXPECT_EQ(escape("="), R"(\=)");
+  EXPECT_EQ(escape("***"), R"(\*\*\*)"); // \** could start emphasis!
+
+  // HTML tags.
+  EXPECT_THAT(escape("<pre"), escaped('<'));
+  EXPECT_THAT(escape("< pre"), escapedNone());
+  EXPECT_THAT(escape("if a<b then"), escaped('<'));
+  EXPECT_THAT(escape("if a<b then c."), escapedNone());
+  EXPECT_THAT(escape("if a<b then c='foo'."), escaped('<'));
+  EXPECT_THAT(escape("std::vector<T>"), escaped('<'));
+  EXPECT_THAT(escape("std::vector<std::string>"), escaped('<'));
+  EXPECT_THAT(escape("std::map<int, int>"), escapedNone());
+  // Autolinks
+  EXPECT_THAT(escape("Email <foo@bar.com>"), escapedNone());
+  EXPECT_THAT(escape("Website <http://foo.bar>"), escapedNone());
+
+  // Bullet lists.
+  EXPECT_THAT(escape("- foo"), escaped('-'));
+  EXPECT_THAT(escape("* foo"), escaped('*'));
+  EXPECT_THAT(escape("+ foo"), escaped('+'));
+  EXPECT_THAT(escape("+"), escaped('+'));
+  EXPECT_THAT(escape("a + foo"), escapedNone());
+  EXPECT_THAT(escape("a+ foo"), escapedNone());
+  EXPECT_THAT(escape("1. foo"), escaped('.'));
+  EXPECT_THAT(escape("a. foo"), escapedNone());
+
+  // Emphasis.
+  EXPECT_EQ(escape("*foo*"), R"(\*foo\*)");
+  EXPECT_EQ(escape("**foo**"), R"(\*\*foo\*\*)");
+  EXPECT_THAT(escape("*foo"), escaped('*'));
+  EXPECT_THAT(escape("foo *"), escapedNone());
+  EXPECT_THAT(escape("foo * bar"), escapedNone());
+  EXPECT_THAT(escape("foo_bar"), escapedNone());
+  EXPECT_THAT(escape("foo _bar"), escaped('_'));
+  EXPECT_THAT(escape("foo_ bar"), escaped('_'));
+  EXPECT_THAT(escape("foo _ bar"), escapedNone());
+
+  // HTML entities.
+  EXPECT_THAT(escape("fish &chips;"), escaped('&'));
+  EXPECT_THAT(escape("fish & chips;"), escapedNone());
+  EXPECT_THAT(escape("fish &chips"), escapedNone());
+  EXPECT_THAT(escape("foo &#42; bar"), escaped('&'));
+  EXPECT_THAT(escape("foo &#xaf; bar"), escaped('&'));
+  EXPECT_THAT(escape("foo &?; bar"), escapedNone());
+
+  // Links.
+  EXPECT_THAT(escape("[foo](bar)"), escaped(']'));
+  EXPECT_THAT(escape("[foo]: bar"), escaped(']'));
+  // No need to escape these, as the target never exists.
+  EXPECT_THAT(escape("[foo][]"), escapedNone());
+  EXPECT_THAT(escape("[foo][bar]"), escapedNone());
+  EXPECT_THAT(escape("[foo]"), escapedNone());
 
   // In code blocks we don't need to escape ASCII punctuation.
-  P = Paragraph();
+  Paragraph P = Paragraph();
   P.appendCode("* foo !+ bar * baz");
   EXPECT_EQ(P.asMarkdown(), "`* foo !+ bar * baz`");
 

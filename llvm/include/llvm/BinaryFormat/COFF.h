@@ -642,6 +642,11 @@ enum DLLCharacteristics : unsigned {
   IMAGE_DLL_CHARACTERISTICS_TERMINAL_SERVER_AWARE = 0x8000
 };
 
+enum ExtendedDLLCharacteristics : unsigned {
+  /// Image is CET compatible
+  IMAGE_DLL_CHARACTERISTICS_EX_CET_COMPAT = 0x0001
+};
+
 enum DebugType : unsigned {
   IMAGE_DEBUG_TYPE_UNKNOWN = 0,
   IMAGE_DEBUG_TYPE_COFF = 1,
@@ -660,6 +665,7 @@ enum DebugType : unsigned {
   IMAGE_DEBUG_TYPE_ILTCG = 14,
   IMAGE_DEBUG_TYPE_MPX = 15,
   IMAGE_DEBUG_TYPE_REPRO = 16,
+  IMAGE_DEBUG_TYPE_EX_DLLCHARACTERISTICS = 20,
 };
 
 enum BaseRelocationType : unsigned {

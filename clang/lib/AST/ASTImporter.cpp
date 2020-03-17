@@ -6340,16 +6340,13 @@ ExpectedStmt ASTNodeImporter::VisitChooseExpr(ChooseExpr *E) {
   ExprValueKind VK = E->getValueKind();
   ExprObjectKind OK = E->getObjectKind();
 
-  bool TypeDependent = ToCond->isTypeDependent();
-  bool ValueDependent = ToCond->isValueDependent();
-
   // The value of CondIsTrue only matters if the value is not
   // condition-dependent.
   bool CondIsTrue = !E->isConditionDependent() && E->isConditionTrue();
 
   return new (Importer.getToContext())
       ChooseExpr(ToBuiltinLoc, ToCond, ToLHS, ToRHS, ToType, VK, OK,
-                 ToRParenLoc, CondIsTrue, TypeDependent, ValueDependent);
+                 ToRParenLoc, CondIsTrue);
 }
 
 ExpectedStmt ASTNodeImporter::VisitGNUNullExpr(GNUNullExpr *E) {

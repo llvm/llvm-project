@@ -266,7 +266,13 @@ bool DWARFExpression::Operation::print(raw_ostream &OS,
       break;
 
     if (Size == Operation::BaseTypeRef && U) {
-      prettyPrintBaseTypeRef(U, OS, Operands, Operand);
+      // For DW_OP_convert the operand may be 0 to indicate that conversion to
+      // the generic type should be done. The same holds for DW_OP_reinterpret,
+      // which is currently not supported.
+      if (Opcode == DW_OP_convert && Operands[Operand] == 0)
+        OS << " 0x0";
+      else
+        prettyPrintBaseTypeRef(U, OS, Operands, Operand);
     } else if (Size == Operation::SizeBlock) {
       uint64_t Offset = Operands[Operand];
       for (unsigned i = 0; i < Operands[Operand - 1]; ++i)
@@ -320,6 +326,12 @@ bool DWARFExpression::Operation::verify(DWARFUnit *U) {
       break;
 
     if (Size == Operation::BaseTypeRef) {
+      // For DW_OP_convert the operand may be 0 to indicate that conversion to
+      // the generic type should be done, so don't look up a base type in that
+      // case. The same holds for DW_OP_reinterpret, which is currently not
+      // supported.
+      if (Opcode == DW_OP_convert && Operands[Operand] == 0)
+        continue;
       auto Die = U->getDIEForOffset(U->getOffset() + Operands[Operand]);
       if (!Die || Die.getTag() != dwarf::DW_TAG_base_type) {
         Error = true;

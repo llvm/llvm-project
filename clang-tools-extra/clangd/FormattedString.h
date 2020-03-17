@@ -95,6 +95,8 @@ public:
   BulletList &addBulletList();
 
   /// Doesn't contain any trailing newlines.
+  /// We try to make the markdown human-readable, e.g. avoid extra escaping.
+  /// At least one client (coc.nvim) displays the markdown verbatim!
   std::string asMarkdown() const;
   /// Doesn't contain any trailing newlines.
   std::string asPlainText() const;

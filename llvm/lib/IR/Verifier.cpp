@@ -2385,11 +2385,14 @@ void Verifier::visitFunction(const Function &F) {
     AssertDI(Parent && isa<DILocalScope>(Parent),
              "DILocation's scope must be a DILocalScope", N, &F, &I, DL,
              Parent);
+
     DILocalScope *Scope = DL->getInlinedAtScope();
-    if (Scope && !Seen.insert(Scope).second)
+    Assert(Scope, "Failed to find DILocalScope", DL);
+
+    if (!Seen.insert(Scope).second)
       return;
 
-    DISubprogram *SP = Scope ? Scope->getSubprogram() : nullptr;
+    DISubprogram *SP = Scope->getSubprogram();
 
     // Scope and SP could be the same MDNode and we don't want to skip
     // validation in that case

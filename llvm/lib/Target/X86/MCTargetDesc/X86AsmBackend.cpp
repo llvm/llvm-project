@@ -138,6 +138,7 @@ class X86AsmBackend : public MCAsmBackend {
   bool needAlignInst(const MCInst &Inst) const;
   MCInst PrevInst;
   MCBoundaryAlignFragment *PendingBoundaryAlign = nullptr;
+  std::pair<MCFragment *, size_t> PrevInstPosition;
 
 public:
   X86AsmBackend(const Target &T, const MCSubtargetInfo &STI)
@@ -161,8 +162,8 @@ public:
   }
 
   bool allowAutoPadding() const override;
-  void alignBranchesBegin(MCObjectStreamer &OS, const MCInst &Inst) override;
-  void alignBranchesEnd(MCObjectStreamer &OS, const MCInst &Inst) override;
+  void emitInstructionBegin(MCObjectStreamer &OS, const MCInst &Inst) override;
+  void emitInstructionEnd(MCObjectStreamer &OS, const MCInst &Inst) override;
 
   unsigned getNumFixupKinds() const override {
     return X86::NumTargetFixupKinds;
@@ -171,7 +172,7 @@ public:
   Optional<MCFixupKind> getFixupKind(StringRef Name) const override;
 
   const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
-  
+
   bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
                              const MCValue &Target) override;
 
@@ -491,6 +492,52 @@ static bool hasInterruptDelaySlot(const MCInst &Inst) {
   return false;
 }
 
+/// Check if the instruction to be emitted is right after any data.
+static bool
+isRightAfterData(MCFragment *CurrentFragment,
+                 const std::pair<MCFragment *, size_t> &PrevInstPosition) {
+  MCFragment *F = CurrentFragment;
+  // Empty data fragments may be created to prevent further data being
+  // added into the previous fragment, we need to skip them since they
+  // have no contents.
+  for (; isa_and_nonnull<MCDataFragment>(F); F = F->getPrevNode())
+    if (cast<MCDataFragment>(F)->getContents().size() != 0)
+      break;
+
+  // Since data is always emitted into a DataFragment, our check strategy is
+  // simple here.
+  //   - If the fragment is a DataFragment
+  //     - If it's not the fragment where the previous instruction is,
+  //       returns true.
+  //     - If it's the fragment holding the previous instruction but its
+  //       size changed since the the previous instruction was emitted into
+  //       it, returns true.
+  //     - Otherwise returns false.
+  //   - If the fragment is not a DataFragment, returns false.
+  if (auto *DF = dyn_cast_or_null<MCDataFragment>(F))
+    return DF != PrevInstPosition.first ||
+           DF->getContents().size() != PrevInstPosition.second;
+
+  return false;
+}
+
+/// \returns the fragment size if it has instructions, otherwise returns 0.
+static size_t getSizeForInstFragment(const MCFragment *F) {
+  if (!F || !F->hasInstructions())
+    return 0;
+  // MCEncodedFragmentWithContents being templated makes this tricky.
+  switch (F->getKind()) {
+  default:
+    llvm_unreachable("Unknown fragment with instructions!");
+  case MCFragment::FT_Data:
+    return cast<MCDataFragment>(*F).getContents().size();
+  case MCFragment::FT_Relaxable:
+    return cast<MCRelaxableFragment>(*F).getContents().size();
+  case MCFragment::FT_CompactEncodedInst:
+    return cast<MCCompactEncodedInstFragment>(*F).getContents().size();
+  }
+}
+
 /// Check if the instruction operand needs to be aligned. Padding is disabled
 /// before intruction which may be rewritten by linker(e.g. TLSCALL).
 bool X86AsmBackend::needAlignInst(const MCInst &Inst) const {
@@ -512,7 +559,7 @@ bool X86AsmBackend::needAlignInst(const MCInst &Inst) const {
 }
 
 /// Insert BoundaryAlignFragment before instructions to align branches.
-void X86AsmBackend::alignBranchesBegin(MCObjectStreamer &OS,
+void X86AsmBackend::emitInstructionBegin(MCObjectStreamer &OS,
                                        const MCInst &Inst) {
   if (!needAlign(OS))
     return;
@@ -527,6 +574,11 @@ void X86AsmBackend::alignBranchesBegin(MCObjectStreamer &OS,
     // semantic.
     return;
 
+  if (isRightAfterData(OS.getCurrentFragment(), PrevInstPosition))
+    // If this instruction follows any data, there is no clear
+    // instruction boundary, inserting a nop would change semantic.
+    return;
+
   if (!isMacroFused(PrevInst, Inst))
     // Macro fusion doesn't happen indeed, clear the pending.
     PendingBoundaryAlign = nullptr;
@@ -538,7 +590,7 @@ void X86AsmBackend::alignBranchesBegin(MCObjectStreamer &OS,
     //
     // Do nothing here since we already inserted a BoudaryAlign fragment when
     // we met the first instruction in the fused pair and we'll tie them
-    // together in alignBranchesEnd.
+    // together in emitInstructionEnd.
     //
     // Note: When there is at least one fragment, such as MCAlignFragment,
     // inserted after the previous instruction, e.g.
@@ -564,24 +616,26 @@ void X86AsmBackend::alignBranchesBegin(MCObjectStreamer &OS,
 }
 
 /// Set the last fragment to be aligned for the BoundaryAlignFragment.
-void X86AsmBackend::alignBranchesEnd(MCObjectStreamer &OS, const MCInst &Inst) {
+void X86AsmBackend::emitInstructionEnd(MCObjectStreamer &OS, const MCInst &Inst) {
   if (!needAlign(OS))
     return;
 
   PrevInst = Inst;
+  MCFragment *CF = OS.getCurrentFragment();
+  PrevInstPosition = std::make_pair(CF, getSizeForInstFragment(CF));
 
   if (!needAlignInst(Inst) || !PendingBoundaryAlign)
     return;
 
   // Tie the aligned instructions into a a pending BoundaryAlign.
-  PendingBoundaryAlign->setLastFragment(OS.getCurrentFragment());
+  PendingBoundaryAlign->setLastFragment(CF);
   PendingBoundaryAlign = nullptr;
 
   // We need to ensure that further data isn't added to the current
   // DataFragment, so that we can get the size of instructions later in
   // MCAssembler::relaxBoundaryAlign. The easiest way is to insert a new empty
   // DataFragment.
-  if (isa_and_nonnull<MCDataFragment>(OS.getCurrentFragment()))
+  if (isa_and_nonnull<MCDataFragment>(CF))
     OS.insert(new MCDataFragment());
 
   // Update the maximum alignment on the current section if necessary.

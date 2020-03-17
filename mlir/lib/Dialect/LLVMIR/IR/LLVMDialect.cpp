@@ -1568,6 +1568,47 @@ static LogicalResult verify(AtomicCmpXchgOp op) {
 }
 
 //===----------------------------------------------------------------------===//
+// Printer, parser and verifier for LLVM::FenceOp.
+//===----------------------------------------------------------------------===//
+
+// <operation> ::= `llvm.fence` (`syncscope(`strAttr`)`)? keyword
+// attribute-dict?
+static ParseResult parseFenceOp(OpAsmParser &parser, OperationState &result) {
+  StringAttr sScope;
+  StringRef syncscopeKeyword = "syncscope";
+  if (!failed(parser.parseOptionalKeyword(syncscopeKeyword))) {
+    if (parser.parseLParen() ||
+        parser.parseAttribute(sScope, syncscopeKeyword, result.attributes) ||
+        parser.parseRParen())
+      return failure();
+  } else {
+    result.addAttribute(syncscopeKeyword,
+                        parser.getBuilder().getStringAttr(""));
+  }
+  if (parseAtomicOrdering(parser, result, "ordering") ||
+      parser.parseOptionalAttrDict(result.attributes))
+    return failure();
+  return success();
+}
+
+static void printFenceOp(OpAsmPrinter &p, FenceOp &op) {
+  StringRef syncscopeKeyword = "syncscope";
+  p << op.getOperationName() << ' ';
+  if (!op.getAttr(syncscopeKeyword).cast<StringAttr>().getValue().empty())
+    p << "syncscope(" << op.getAttr(syncscopeKeyword) << ") ";
+  p << stringifyAtomicOrdering(op.ordering());
+}
+
+static LogicalResult verify(FenceOp &op) {
+  if (op.ordering() == AtomicOrdering::not_atomic ||
+      op.ordering() == AtomicOrdering::unordered ||
+      op.ordering() == AtomicOrdering::monotonic)
+    return op.emitOpError("can be given only acquire, release, acq_rel, "
+                          "and seq_cst orderings");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // LLVMDialect initialization, type parsing, and registration.
 //===----------------------------------------------------------------------===//
 

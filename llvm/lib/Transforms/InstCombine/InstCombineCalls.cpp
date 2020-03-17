@@ -48,6 +48,7 @@
 #include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsPowerPC.h"
+#include "llvm/IR/KnowledgeRetention.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/PatternMatch.h"
@@ -1805,6 +1806,18 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
 
   IntrinsicInst *II = dyn_cast<IntrinsicInst>(&CI);
   if (!II) return visitCallBase(CI);
+
+  // For atomic unordered mem intrinsics if len is not a positive or
+  // not a multiple of element size then behavior is undefined.
+  if (auto *AMI = dyn_cast<AtomicMemIntrinsic>(II))
+    if (ConstantInt *NumBytes = dyn_cast<ConstantInt>(AMI->getLength()))
+      if (NumBytes->getSExtValue() < 0 ||
+          (NumBytes->getZExtValue() % AMI->getElementSizeInBytes() != 0)) {
+        CreateNonTerminatorUnreachable(AMI);
+        assert(AMI->getType()->isVoidTy() &&
+               "non void atomic unordered mem intrinsic");
+        return eraseInstFromFunction(*AMI);
+      }
 
   // Intrinsics cannot occur in an invoke or a callbr, so handle them here
   // instead of in visitCallBase.
@@ -4081,7 +4094,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     // then this one is redundant, and should be removed.
     KnownBits Known(1);
     computeKnownBits(IIOperand, Known, 0, II);
-    if (Known.isAllOnes())
+    if (Known.isAllOnes() && isAssumeWithEmptyBundle(*II))
       return eraseInstFromFunction(*II);
 
     // Update the cache of affected values for this assumption (we might be

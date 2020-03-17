@@ -109,6 +109,8 @@ void MipsTargetStreamer::emitDirectiveSetHardFloat() {
 void MipsTargetStreamer::emitDirectiveSetDsp() { forbidModuleDirective(); }
 void MipsTargetStreamer::emitDirectiveSetDspr2() { forbidModuleDirective(); }
 void MipsTargetStreamer::emitDirectiveSetNoDsp() { forbidModuleDirective(); }
+void MipsTargetStreamer::emitDirectiveSetMips3D() { forbidModuleDirective(); }
+void MipsTargetStreamer::emitDirectiveSetNoMips3D() { forbidModuleDirective(); }
 void MipsTargetStreamer::emitDirectiveCpLoad(unsigned RegNo) {}
 void MipsTargetStreamer::emitDirectiveCpLocal(unsigned RegNo) {
   // .cplocal $reg
@@ -607,6 +609,16 @@ void MipsTargetAsmStreamer::emitDirectiveSetDspr2() {
 void MipsTargetAsmStreamer::emitDirectiveSetNoDsp() {
   OS << "\t.set\tnodsp\n";
   MipsTargetStreamer::emitDirectiveSetNoDsp();
+}
+
+void MipsTargetAsmStreamer::emitDirectiveSetMips3D() {
+  OS << "\t.set\tmips3d\n";
+  MipsTargetStreamer::emitDirectiveSetMips3D();
+}
+
+void MipsTargetAsmStreamer::emitDirectiveSetNoMips3D() {
+  OS << "\t.set\tnomips3d\n";
+  MipsTargetStreamer::emitDirectiveSetNoMips3D();
 }
 
 void MipsTargetAsmStreamer::emitDirectiveSetPop() {

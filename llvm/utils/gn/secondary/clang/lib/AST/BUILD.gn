@@ -60,6 +60,7 @@ static_library("AST") {
     "CommentParser.cpp",
     "CommentSema.cpp",
     "ComparisonCategories.cpp",
+    "ComputeDependence.cpp",
     "DataCollection.cpp",
     "Decl.cpp",
     "DeclBase.cpp",
