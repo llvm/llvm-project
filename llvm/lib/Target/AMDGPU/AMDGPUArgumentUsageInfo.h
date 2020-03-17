@@ -159,12 +159,13 @@ struct AMDGPUFunctionArgInfo {
 
 class AMDGPUArgumentUsageInfo : public ImmutablePass {
 private:
-  static const AMDGPUFunctionArgInfo ExternFunctionInfo;
-  static const AMDGPUFunctionArgInfo FixedABIFunctionInfo;
   DenseMap<const Function *, AMDGPUFunctionArgInfo> ArgInfoMap;
 
 public:
   static char ID;
+
+  static const AMDGPUFunctionArgInfo ExternFunctionInfo;
+  static const AMDGPUFunctionArgInfo FixedABIFunctionInfo;
 
   AMDGPUArgumentUsageInfo() : ImmutablePass(ID) { }
 
