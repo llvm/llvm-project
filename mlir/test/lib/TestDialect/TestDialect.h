@@ -29,23 +29,7 @@
 
 namespace mlir {
 
-class TestDialect : public Dialect {
-public:
-  /// Create the dialect in the given `context`.
-  TestDialect(MLIRContext *context);
-
-  /// Get the canonical string name of the dialect.
-  static StringRef getDialectName() { return "test"; }
-
-  LogicalResult verifyOperationAttribute(Operation *op,
-                                         NamedAttribute namedAttr) override;
-  LogicalResult verifyRegionArgAttribute(Operation *op, unsigned regionIndex,
-                                         unsigned argIndex,
-                                         NamedAttribute namedAttr) override;
-  LogicalResult verifyRegionResultAttribute(Operation *op, unsigned regionIndex,
-                                            unsigned resultIndex,
-                                            NamedAttribute namedAttr) override;
-};
+#include "TestOpsDialect.h.inc"
 
 #define GET_OP_CLASSES
 #include "TestOps.h.inc"

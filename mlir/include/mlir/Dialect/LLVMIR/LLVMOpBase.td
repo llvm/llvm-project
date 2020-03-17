@@ -19,16 +19,11 @@ include "mlir/IR/OpBase.td"
 def LLVM_Dialect : Dialect {
   let name = "llvm";
   let cppNamespace = "LLVM";
+  let hasRegionArgAttrVerify = 1;
   let extraClassDeclaration = [{
     ~LLVMDialect();
     llvm::LLVMContext &getLLVMContext();
     llvm::Module &getLLVMModule();
-
-    /// Verify a region argument attribute registered to this dialect.
-    /// Returns failure if the verification failed, success otherwise.
-    LogicalResult verifyRegionArgAttribute(Operation *op, unsigned regionIdx,
-                                           unsigned argIdx,
-                                           NamedAttribute argAttr) override;
 
   private:
     friend LLVMType;

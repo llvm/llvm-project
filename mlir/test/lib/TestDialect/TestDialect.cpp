@@ -128,7 +128,7 @@ struct TestInlinerInterface : public DialectInlinerInterface {
 //===----------------------------------------------------------------------===//
 
 TestDialect::TestDialect(MLIRContext *context)
-    : Dialect(getDialectName(), context) {
+    : Dialect(getDialectNamespace(), context) {
   addOperations<
 #define GET_OP_LIST
 #include "TestOps.cpp.inc"

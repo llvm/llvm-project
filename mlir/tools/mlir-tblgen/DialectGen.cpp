@@ -101,6 +101,32 @@ static const char *const constantMaterializerDecl = R"(
                                          ::mlir::Location loc) override;
 )";
 
+/// The code block for the operation attribute verifier hook.
+static const char *const opAttrVerifierDecl = R"(
+    /// Provides a hook for verifying dialect attributes attached to the given
+    /// op.
+    ::mlir::LogicalResult verifyOperationAttribute(
+        ::mlir::Operation *op, ::mlir::NamedAttribute attribute) override;
+)";
+
+/// The code block for the region argument attribute verifier hook.
+static const char *const regionArgAttrVerifierDecl = R"(
+    /// Provides a hook for verifying dialect attributes attached to the given
+    /// op's region argument.
+    ::mlir::LogicalResult verifyRegionArgAttribute(
+        ::mlir::Operation *op, unsigned regionIndex, unsigned argIndex,
+        ::mlir::NamedAttribute attribute) override;
+)";
+
+/// The code block for the region result attribute verifier hook.
+static const char *const regionResultAttrVerifierDecl = R"(
+    /// Provides a hook for verifying dialect attributes attached to the given
+    /// op's region result.
+    ::mlir::LogicalResult verifyRegionResultAttribute(
+        ::mlir::Operation *op, unsigned regionIndex, unsigned resultIndex,
+        ::mlir::NamedAttribute attribute) override;
+)";
+
 /// Generate the declaration for the given dialect class.
 static void emitDialectDecl(Dialect &dialect,
                             iterator_range<DialectFilterIterator> dialectAttrs,
@@ -120,6 +146,12 @@ static void emitDialectDecl(Dialect &dialect,
   // Add the decls for the various features of the dialect.
   if (dialect.hasConstantMaterializer())
     os << constantMaterializerDecl;
+  if (dialect.hasOperationAttrVerify())
+    os << opAttrVerifierDecl;
+  if (dialect.hasRegionArgAttrVerify())
+    os << regionArgAttrVerifierDecl;
+  if (dialect.hasRegionResultAttrVerify())
+    os << regionResultAttrVerifierDecl;
   if (llvm::Optional<StringRef> extraDecl = dialect.getExtraClassDeclaration())
     os << *extraDecl;
 
