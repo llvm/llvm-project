@@ -2340,7 +2340,8 @@ bool Sema::CheckAllocatedType(QualType AllocType, SourceLocation Loc,
     return Diag(Loc, diag::err_bad_new_type)
       << AllocType << 1 << R;
   else if (!AllocType->isDependentType() &&
-           RequireCompleteType(Loc, AllocType, diag::err_new_incomplete_type,R))
+           RequireCompleteSizedType(
+               Loc, AllocType, diag::err_new_incomplete_or_sizeless_type, R))
     return true;
   else if (RequireNonAbstractType(Loc, AllocType,
                                   diag::err_allocation_of_abstract_type))
