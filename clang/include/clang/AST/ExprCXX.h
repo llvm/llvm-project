@@ -4020,7 +4020,7 @@ public:
         EllipsisLoc(EllipsisLoc),
         NumExpansions(NumExpansions ? *NumExpansions + 1 : 0),
         Pattern(Pattern) {
-    setDependence(ExprDependence::TypeValueInstantiation);
+    setDependence(computeDependence(this));
   }
 
   PackExpansionExpr(EmptyShell Empty) : Expr(PackExpansionExprClass, Empty) {}
@@ -4531,7 +4531,7 @@ public:
         NumExpansions(NumExpansions ? *NumExpansions + 1 : 0), Opcode(Opcode) {
     SubExprs[0] = LHS;
     SubExprs[1] = RHS;
-    setDependence(ExprDependence::TypeValueInstantiation);
+    setDependence(computeDependence(this));
   }
 
   CXXFoldExpr(EmptyShell Empty) : Expr(CXXFoldExprClass, Empty) {}

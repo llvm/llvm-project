@@ -62,6 +62,8 @@ static const TerminalColor LocationColor = {llvm::raw_ostream::YELLOW, false};
 static const TerminalColor ValueKindColor = {llvm::raw_ostream::CYAN, false};
 // bitfield/objcproperty/objcsubscript/vectorcomponent
 static const TerminalColor ObjectKindColor = {llvm::raw_ostream::CYAN, false};
+// contains-errors
+static const TerminalColor ErrorsColor = {llvm::raw_ostream::RED, true};
 
 // Null statements
 static const TerminalColor NullColor = {llvm::raw_ostream::BLUE, false};
