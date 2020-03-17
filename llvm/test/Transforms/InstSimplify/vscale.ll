@@ -133,3 +133,13 @@ define <vscale x 4 x i32>* @getelementptr_not_constant_foldable(i64 %x) {
   %ptr = getelementptr <vscale x 4 x i32>, <vscale x 4 x i32>* null, i64 %x
   ret <vscale x 4 x i32>* %ptr
 }
+
+; Check GEP's result is known to be non-null.
+define i1 @getelementptr_check_non_null(<vscale x 16 x i8>* %ptr) {
+; CHECK-LABEL: @getelementptr_check_non_null(
+; CHECK-NEXT:    ret i1 false
+;
+  %x = getelementptr inbounds <vscale x 16 x i8>, <vscale x 16 x i8>* %ptr, i32 1
+  %cmp = icmp eq <vscale x 16 x i8>* %x, null
+  ret i1 %cmp
+}
