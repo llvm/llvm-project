@@ -308,3 +308,14 @@ define i32 @useFreezeOp(i32 %x) {
   %poison = add nsw i1 0, undef
   ret i32 0
 }
+
+;CHECK-LABEL: @useFenceInst
+define i32 @useFenceInst() {
+  ;CHECK: llvm.fence syncscope("agent") seq_cst
+  fence syncscope("agent") seq_cst
+  ;CHECK: llvm.fence release
+  fence release
+  ;CHECK: llvm.fence seq_cst
+  fence syncscope("") seq_cst
+  ret i32 0
+}

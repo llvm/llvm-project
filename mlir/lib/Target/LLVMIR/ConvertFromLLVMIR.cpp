@@ -485,8 +485,7 @@ static const DenseMap<unsigned, StringRef> opcMap = {
     INST(Or, Or), INST(Xor, XOr), INST(Alloca, Alloca), INST(Load, Load),
     INST(Store, Store),
     // Getelementptr is handled specially.
-    INST(Ret, Return),
-    // FIXME: fence
+    INST(Ret, Return), INST(Fence, Fence),
     // FIXME: atomiccmpxchg
     // FIXME: atomicrmw
     INST(Trunc, Trunc), INST(ZExt, ZExt), INST(SExt, SExt),
@@ -537,6 +536,26 @@ static ICmpPredicate getICmpPredicate(llvm::CmpInst::Predicate p) {
     return LLVM::ICmpPredicate::uge;
   }
   llvm_unreachable("incorrect comparison predicate");
+}
+
+static AtomicOrdering getLLVMAtomicOrdering(llvm::AtomicOrdering ordering) {
+  switch (ordering) {
+  case llvm::AtomicOrdering::NotAtomic:
+    return LLVM::AtomicOrdering::not_atomic;
+  case llvm::AtomicOrdering::Unordered:
+    return LLVM::AtomicOrdering::unordered;
+  case llvm::AtomicOrdering::Monotonic:
+    return LLVM::AtomicOrdering::monotonic;
+  case llvm::AtomicOrdering::Acquire:
+    return LLVM::AtomicOrdering::acquire;
+  case llvm::AtomicOrdering::Release:
+    return LLVM::AtomicOrdering::release;
+  case llvm::AtomicOrdering::AcquireRelease:
+    return LLVM::AtomicOrdering::acq_rel;
+  case llvm::AtomicOrdering::SequentiallyConsistent:
+    return LLVM::AtomicOrdering::seq_cst;
+  }
+  llvm_unreachable("incorrect atomic ordering");
 }
 
 // `br` branches to `target`. Return the branch arguments to `br`, in the
@@ -741,6 +760,23 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
 
     if (!ii->getType()->isVoidTy())
       v = op->getResult(0);
+    return success();
+  }
+  case llvm::Instruction::Fence: {
+    StringRef syncscope;
+    SmallVector<StringRef, 4> ssNs;
+    llvm::LLVMContext &llvmContext = dialect->getLLVMContext();
+    llvm::FenceInst *fence = cast<llvm::FenceInst>(inst);
+    llvmContext.getSyncScopeNames(ssNs);
+    int fenceSyncScopeID = fence->getSyncScopeID();
+    for (unsigned i = 0, e = ssNs.size(); i != e; i++) {
+      if (fenceSyncScopeID == llvmContext.getOrInsertSyncScopeID(ssNs[i])) {
+        syncscope = ssNs[i];
+        break;
+      }
+    }
+    b.create<FenceOp>(loc, getLLVMAtomicOrdering(fence->getOrdering()),
+                      syncscope);
     return success();
   }
   case llvm::Instruction::GetElementPtr: {
