@@ -21,9 +21,9 @@ class trivial
 // CHECK: @ut = global %class.trivial undef
 trivial ut [[clang::loader_uninitialized]];
 
-// CHECK: @arr = global [32 x double] undef, align 16
+// CHECK: @arr = global [32 x double] undef
 double arr[32] __attribute__((loader_uninitialized));
 
 // Defining as arr2[] [[clang..]] raises the error: attribute cannot be applied to types
-// CHECK: @arr2 = global [4 x double] undef, align 16
+// CHECK: @arr2 = global [4 x double] undef
 double arr2 [[clang::loader_uninitialized]] [4];
