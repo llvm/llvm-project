@@ -1,11 +1,11 @@
 // REQUIRES: amdgpu-registered-target
 
 // RUN: %clang_cc1 -triple amdgcn -fcuda-is-device -std=c++11 -fvisibility hidden -fapply-global-visibility-to-externs \
-// RUN:     -emit-llvm -o - -x hip %s | FileCheck -check-prefixes=HIPDEV %s
+// RUN:     -emit-llvm -o - %s | FileCheck -check-prefixes=HIPDEV %s
 // RUN: %clang_cc1 -triple x86_64 -std=c++11 \
-// RUN:     -emit-llvm -o - -x hip %s | FileCheck -check-prefixes=HIPHOST %s
+// RUN:     -emit-llvm -o - %s | FileCheck -check-prefixes=HIPHOST %s
 // RUN: %clang_cc1 -triple amdgcn -fcuda-is-device -std=c++11 -fvisibility hidden -fapply-global-visibility-to-externs \
-// RUN:     -O3 -emit-llvm -o - -x hip %s | FileCheck -check-prefixes=HIPDEVUNSED %s
+// RUN:     -O3 -emit-llvm -o - %s | FileCheck -check-prefixes=HIPDEVUNSED %s
 
 struct textureReference {
   int a;
