@@ -117,6 +117,9 @@ TargetInfo *AllocateTarget(const llvm::Triple &Triple,
     return new XCoreTargetInfo(Triple, Opts);
 
   case llvm::Triple::hexagon:
+    if (os == llvm::Triple::Linux &&
+        Triple.getEnvironment() == llvm::Triple::Musl)
+      return new LinuxTargetInfo<HexagonTargetInfo>(Triple, Opts);
     return new HexagonTargetInfo(Triple, Opts);
 
   case llvm::Triple::lanai:
