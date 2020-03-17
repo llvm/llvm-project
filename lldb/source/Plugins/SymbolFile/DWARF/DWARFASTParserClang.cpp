@@ -35,6 +35,8 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 
+#include "llvm/Demangle/Demangle.h"
+
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
@@ -1167,12 +1169,22 @@ TypeSP DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
       }
 
       if (!function_decl) {
+        const char *name = attrs.name.GetCString();
+
+        // We currently generate function templates with template parameters in
+        // their name. In order to get closer to the AST that clang generates
+        // we want to strip these from the name when creating the AST.
+        if (attrs.mangled_name) {
+          llvm::ItaniumPartialDemangler D;
+          if (!D.partialDemangle(attrs.mangled_name))
+            name = D.getFunctionBaseName(nullptr, nullptr);
+        }
+
         // We just have a function that isn't part of a class
         function_decl = m_ast.CreateFunctionDeclaration(
             ignore_containing_context ? m_ast.GetTranslationUnitDecl()
                                       : containing_decl_ctx,
-            attrs.name.GetCString(), clang_type, attrs.storage,
-            attrs.is_inline);
+            name, clang_type, attrs.storage, attrs.is_inline);
 
         if (has_template_params) {
           TypeSystemClang::TemplateParameterInfos template_param_infos;
@@ -1180,14 +1192,14 @@ TypeSP DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
           template_function_decl = m_ast.CreateFunctionDeclaration(
               ignore_containing_context ? m_ast.GetTranslationUnitDecl()
                                         : containing_decl_ctx,
-              attrs.name.GetCString(), clang_type, attrs.storage,
-              attrs.is_inline);
+              name, clang_type, attrs.storage, attrs.is_inline);
+
           clang::FunctionTemplateDecl *func_template_decl =
-              m_ast.CreateFunctionTemplateDecl(
-                  containing_decl_ctx, template_function_decl,
-                  attrs.name.GetCString(), template_param_infos);
+              m_ast.CreateFunctionTemplateDecl(containing_decl_ctx,
+                                               template_function_decl, name,
+                                               template_param_infos);
           m_ast.CreateFunctionTemplateSpecializationInfo(
-              function_decl, func_template_decl, template_param_infos);
+              template_function_decl, func_template_decl, template_param_infos);
         }
 
         lldbassert(function_decl);
