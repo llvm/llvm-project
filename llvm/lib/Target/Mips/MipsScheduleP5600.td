@@ -458,6 +458,8 @@ def : InstRW<[P5600WriteFPUL], (instregex "^C_[A-Z]+_(S|D32|D64)$")>;
 def : InstRW<[P5600WriteFPUL], (instregex "^FCMP_(S32|D32|D64)$")>;
 def : InstRW<[P5600WriteFPUL], (instregex "^PseudoCVT_(S|D32|D64)_(L|W)$")>;
 def : InstRW<[P5600WriteFPUL], (instrs PLL_PS64, PLU_PS64, PUL_PS64, PUU_PS64)>;
+def : InstRW<[P5600WriteFPUL], (instrs ADDR_PS64, MULR_PS64)>;
+def : InstRW<[P5600WriteFPUL], (instrs CVT_PS_PW64, CVT_PW_PS64)>;
 
 // div.[ds], div.ps
 def : InstRW<[P5600WriteFPUDivS], (instrs FDIV_S)>;

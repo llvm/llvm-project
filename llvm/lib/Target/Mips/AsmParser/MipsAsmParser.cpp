@@ -368,6 +368,7 @@ class MipsAsmParser : public MCTargetAsmParser {
   bool parseSetMsaDirective();
   bool parseSetNoMsaDirective();
   bool parseSetNoDspDirective();
+  bool parseSetNoMips3DDirective();
   bool parseSetReorderDirective();
   bool parseSetNoReorderDirective();
   bool parseSetMips16Directive();
@@ -6985,6 +6986,21 @@ bool MipsAsmParser::parseSetNoDspDirective() {
   return false;
 }
 
+bool MipsAsmParser::parseSetNoMips3DDirective() {
+  MCAsmParser &Parser = getParser();
+  Parser.Lex(); // Eat "nomips3d".
+
+  // If this is not the end of the statement, report an error.
+  if (getLexer().isNot(AsmToken::EndOfStatement)) {
+    reportParseError("unexpected token, expected end of statement");
+    return false;
+  }
+
+  clearFeatureBits(Mips::FeatureMips3D, "mips3d");
+  getTargetStreamer().emitDirectiveSetNoMips3D();
+  return false;
+}
+
 bool MipsAsmParser::parseSetMips16Directive() {
   MCAsmParser &Parser = getParser();
   Parser.Lex(); // Eat "mips16".
@@ -7317,6 +7333,10 @@ bool MipsAsmParser::parseSetFeature(uint64_t Feature) {
   switch (Feature) {
   default:
     llvm_unreachable("Unimplemented feature");
+  case Mips::FeatureMips3D:
+    setFeatureBits(Mips::FeatureMips3D, "mips3d");
+    getTargetStreamer().emitDirectiveSetMips3D();
+    break;
   case Mips::FeatureDSP:
     setFeatureBits(Mips::FeatureDSP, "dsp");
     getTargetStreamer().emitDirectiveSetDsp();
@@ -7732,6 +7752,10 @@ bool MipsAsmParser::parseDirectiveSet() {
     return parseSetFeature(Mips::FeatureDSPR2);
   if (IdVal == "nodsp")
     return parseSetNoDspDirective();
+  if (IdVal == "mips3d")
+    return parseSetFeature(Mips::FeatureMips3D);
+  if (IdVal == "nomips3d")
+    return parseSetNoMips3DDirective();
   if (IdVal == "msa")
     return parseSetMsaDirective();
   if (IdVal == "nomsa")
