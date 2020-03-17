@@ -24,6 +24,7 @@
 #include "AMDGPUGlobalISelUtils.h"
 #include "AMDGPUTargetMachine.h"
 #include "SIMachineFunctionInfo.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
@@ -3465,7 +3466,22 @@ static void packImageA16AddressToDwords(MachineIRBuilder &B,
   }
 }
 
-// Return number of address operands in an image intrinsic.
+/// Convert from separate vaddr components to a single vector address register,
+/// and replace the remaining operands with $noreg.
+static void convertImageAddrToPacked(MachineIRBuilder &B, MachineInstr &MI,
+                                     int DimIdx, int NumVAddrs) {
+  SmallVector<Register, 8> AddrRegs(NumVAddrs);
+  for (int I = 0; I != NumVAddrs; ++I) {
+    AddrRegs[I] = MI.getOperand(DimIdx + I).getReg();
+    assert(B.getMRI()->getType(AddrRegs[I]) == LLT::scalar(32));
+  }
+
+  auto VAddr = B.buildBuildVector(LLT::vector(NumVAddrs, 32), AddrRegs);
+  MI.getOperand(DimIdx).setReg(VAddr.getReg(0));
+  for (int I = 1; I != NumVAddrs; ++I)
+    MI.getOperand(DimIdx + I).setReg(AMDGPU::NoRegister);
+}
+
 static int getImageNumVAddr(const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr,
                             const AMDGPU::MIMGBaseOpcodeInfo *BaseOpcode) {
   const AMDGPU::MIMGDimInfo *DimInfo
@@ -3513,6 +3529,16 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
   const AMDGPU::MIMGBaseOpcodeInfo *BaseOpcode =
     AMDGPU::getMIMGBaseOpcodeInfo(ImageDimIntr->BaseOpcode);
 
+  Observer.changingInstr(MI);
+  auto ChangedInstr = make_scope_exit([&] { Observer.changedInstr(MI); });
+
+
+  unsigned NewOpcode = NumDefs == 0 ?
+    AMDGPU::G_AMDGPU_INTRIN_IMAGE_STORE : AMDGPU::G_AMDGPU_INTRIN_IMAGE_LOAD;
+
+  // Track that we legalized this
+  MI.setDesc(B.getTII().get(NewOpcode));
+
   B.setInstr(MI);
 
   MachineRegisterInfo *MRI = B.getMRI();
@@ -3527,28 +3553,30 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
   LLT AddrTy = MRI->getType(MI.getOperand(DimIdx).getReg());
   const bool IsA16 = AddrTy == S16;
 
-  // TODO: Handle NSA vs. non-NSA for non-a16 case.
+  const int NumVAddrs = getImageNumVAddr(ImageDimIntr, BaseOpcode);
+
+  // If the register allocator cannot place the address registers contiguously
+  // without introducing moves, then using the non-sequential address encoding
+  // is always preferable, since it saves VALU instructions and is usually a
+  // wash in terms of code size or even better.
+  //
+  // However, we currently have no way of hinting to the register allocator
+  // that MIMG addresses should be placed contiguously when it is possible to
+  // do so, so force non-NSA for the common 2-address case as a heuristic.
+  //
+  // SIShrinkInstructions will convert NSA encodings to non-NSA after register
+  // allocation when possible.
+  const bool UseNSA = NumVAddrs >= 3 &&
+                      ST.hasFeature(AMDGPU::FeatureNSAEncoding);
 
   // Rewrite the addressing register layout before doing anything else.
   if (IsA16) {
+#if 0
+    // FIXME: this feature is missing from gfx10. When that is fixed, this check
+    // should be introduced.
     if (!ST.hasFeature(AMDGPU::FeatureR128A16))
       return false;
-
-    const int NumVAddrs = getImageNumVAddr(ImageDimIntr, BaseOpcode);
-
-    // If the register allocator cannot place the address registers contiguously
-    // without introducing moves, then using the non-sequential address encoding
-    // is always preferable, since it saves VALU instructions and is usually a
-    // wash in terms of code size or even better.
-    //
-    // However, we currently have no way of hinting to the register allocator
-    // that MIMG addresses should be placed contiguously when it is possible to
-    // do so, so force non-NSA for the common 2-address case as a heuristic.
-    //
-    // SIShrinkInstructions will convert NSA encodings to non-NSA after register
-    // allocation when possible.
-    const bool UseNSA = NumVAddrs >= 3 &&
-                        ST.hasFeature(AMDGPU::FeatureNSAEncoding);
+#endif
 
     if (NumVAddrs > 1) {
       SmallVector<Register, 4> PackedRegs;
@@ -3561,10 +3589,6 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
         PackedRegs.resize(1);
       }
 
-      // FIXME: We'll notify the observer multiple times if there are further
-      // modifications later.
-      Observer.changingInstr(MI);
-
       const int NumPacked = PackedRegs.size();
       for (int I = 0; I != NumVAddrs; ++I) {
         assert(MI.getOperand(DimIdx + I).getReg() != AMDGPU::NoRegister);
@@ -3574,9 +3598,9 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
         else
           MI.getOperand(DimIdx + I).setReg(AMDGPU::NoRegister);
       }
-
-      Observer.changedInstr(MI);
     }
+  } else if (!UseNSA && NumVAddrs > 1) {
+    convertImageAddrToPacked(B, MI, DimIdx, NumVAddrs);
   }
 
   if (BaseOpcode->Atomic) // No d16 atomics, or TFE.
@@ -3592,9 +3616,7 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
 
     Register RepackedReg = handleD16VData(B, *MRI, VData);
     if (RepackedReg != VData) {
-      Observer.changingInstr(MI);
       MI.getOperand(1).setReg(RepackedReg);
-      Observer.changedInstr(MI);
     }
 
     return true;
@@ -3635,12 +3657,9 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
     }
 
     Register TFEReg = MRI->createGenericVirtualRegister(TFETy);
-    Observer.changingInstr(MI);
 
     MI.getOperand(0).setReg(TFEReg);
     MI.RemoveOperand(1);
-
-    Observer.changedInstr(MI);
 
     // Insert after the instruction.
     B.setInsertPt(*MI.getParent(), ++MI.getIterator());
@@ -3689,9 +3708,7 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
   LLT WidenedTy = Ty.changeElementType(S32);
   Register WideDstReg = MRI->createGenericVirtualRegister(WidenedTy);
 
-  Observer.changingInstr(MI);
   MI.getOperand(0).setReg(WideDstReg);
-  Observer.changedInstr(MI);
 
   repackUnpackedD16Load(B, DstReg, WideDstReg);
   return true;

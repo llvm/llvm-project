@@ -2747,6 +2747,17 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     }
     break;
   }
+  case AMDGPU::G_AMDGPU_INTRIN_IMAGE_LOAD:
+  case AMDGPU::G_AMDGPU_INTRIN_IMAGE_STORE: {
+    const AMDGPU::RsrcIntrinsic *RSrcIntrin
+      = AMDGPU::lookupRsrcIntrinsic(MI.getIntrinsicID());
+    assert(RSrcIntrin && RSrcIntrin->IsImage);
+    // Non-images can have complications from operands that allow both SGPR
+    // and VGPR. For now it's too complicated to figure out the final opcode
+    // to derive the register bank from the MCInstrDesc.
+    applyMappingImage(MI, OpdMapper, MRI, RSrcIntrin->RsrcArg);
+    return;
+  }
   case AMDGPU::G_INTRINSIC_W_SIDE_EFFECTS: {
     auto IntrID = MI.getIntrinsicID();
     switch (IntrID) {
@@ -3856,6 +3867,17 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     }
     break;
   }
+  case AMDGPU::G_AMDGPU_INTRIN_IMAGE_LOAD:
+  case AMDGPU::G_AMDGPU_INTRIN_IMAGE_STORE: {
+    auto IntrID = MI.getIntrinsicID();
+    const AMDGPU::RsrcIntrinsic *RSrcIntrin = AMDGPU::lookupRsrcIntrinsic(IntrID);
+    assert(RSrcIntrin && "missing RsrcIntrinsic for image intrinsic");
+    // Non-images can have complications from operands that allow both SGPR
+    // and VGPR. For now it's too complicated to figure out the final opcode
+    // to derive the register bank from the MCInstrDesc.
+    assert(RSrcIntrin->IsImage);
+    return getImageMapping(MRI, MI, RSrcIntrin->RsrcArg);
+  }
   case AMDGPU::G_INTRINSIC_W_SIDE_EFFECTS: {
     auto IntrID = MI.getIntrinsicID();
     switch (IntrID) {
@@ -3988,15 +4010,6 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       break;
     }
     default:
-      if (const AMDGPU::RsrcIntrinsic *RSrcIntrin =
-              AMDGPU::lookupRsrcIntrinsic(IntrID)) {
-        // Non-images can have complications from operands that allow both SGPR
-        // and VGPR. For now it's too complicated to figure out the final opcode
-        // to derive the register bank from the MCInstrDesc.
-        if (RSrcIntrin->IsImage)
-          return getImageMapping(MRI, MI, RSrcIntrin->RsrcArg);
-      }
-
       return getInvalidInstructionMapping();
     }
     break;
