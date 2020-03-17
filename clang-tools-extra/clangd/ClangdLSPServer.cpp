@@ -15,6 +15,7 @@
 #include "Protocol.h"
 #include "SemanticHighlighting.h"
 #include "SourceCode.h"
+#include "TUScheduler.h"
 #include "Trace.h"
 #include "URI.h"
 #include "refactor/Tweak.h"
@@ -1368,7 +1369,8 @@ ClangdLSPServer::ClangdLSPServer(
   // clang-format on
 }
 
-ClangdLSPServer::~ClangdLSPServer() { IsBeingDestroyed = true;
+ClangdLSPServer::~ClangdLSPServer() {
+  IsBeingDestroyed = true;
   // Explicitly destroy ClangdServer first, blocking on threads it owns.
   // This ensures they don't access any other members.
   Server.reset();
@@ -1556,8 +1558,9 @@ void ClangdLSPServer::onFileUpdated(PathRef File, const TUStatus &Status) {
   // two statuses are running faster in practice, which leads the UI constantly
   // changing, and doesn't provide much value. We may want to emit status at a
   // reasonable time interval (e.g. 0.5s).
-  if (Status.Action.S == TUAction::BuildingFile ||
-      Status.Action.S == TUAction::RunningAction)
+  if (Status.PreambleActivity == PreambleAction::Idle &&
+      (Status.ASTActivity.K == ASTAction::Building ||
+       Status.ASTActivity.K == ASTAction::RunningAction))
     return;
   notify("textDocument/clangd.fileStatus", Status.render(File));
 }
