@@ -10,10 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef DIALECT_QUANTOPS_QUANT_OPS_
-#define DIALECT_QUANTOPS_QUANT_OPS_
+#ifndef DIALECT_QUANT_QUANT_OPS_
+#define DIALECT_QUANT_QUANT_OPS_
 
-include "mlir/Dialect/QuantOps/QuantOpsBase.td"
+include "mlir/Dialect/Quant/QuantOpsBase.td"
 include "mlir/Interfaces/SideEffects.td"
 
 //===----------------------------------------------------------------------===//
@@ -281,4 +281,4 @@ def quant_CoupledRefOp : quant_Op<"coupled_ref", [SameOperandsAndResultType]> {
   let results = (outs quant_RealValueType);
 }
 
-#endif // DIALECT_QUANTOPS_QUANT_OPS_
+#endif // DIALECT_QUANT_QUANT_OPS_

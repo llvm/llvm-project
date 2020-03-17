@@ -17,7 +17,7 @@
 
 #include <functional>
 
-#include "mlir/Dialect/QuantOps/QuantTypes.h"
+#include "mlir/Dialect/Quant/QuantTypes.h"
 #include "mlir/IR/Identifier.h"
 #include "mlir/Quantizer/Support/ConstraintAnalysisGraph.h"
 #include "mlir/Quantizer/Support/Metadata.h"

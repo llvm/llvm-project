@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_QUANTOPS_UNIFORMSUPPORT_H_
-#define MLIR_DIALECT_QUANTOPS_UNIFORMSUPPORT_H_
+#ifndef MLIR_DIALECT_QUANT_UNIFORMSUPPORT_H_
+#define MLIR_DIALECT_QUANT_UNIFORMSUPPORT_H_
 
-#include "mlir/Dialect/QuantOps/QuantTypes.h"
+#include "mlir/Dialect/Quant/QuantTypes.h"
 #include "mlir/IR/StandardTypes.h"
 #include "mlir/IR/Types.h"
 #include "llvm/ADT/APFloat.h"
@@ -215,4 +215,4 @@ private:
 } // namespace quant
 } // namespace mlir
 
-#endif // MLIR_DIALECT_QUANTOPS_UNIFORMSUPPORT_H_
+#endif // MLIR_DIALECT_QUANT_UNIFORMSUPPORT_H_

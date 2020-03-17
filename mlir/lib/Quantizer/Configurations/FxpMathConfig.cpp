@@ -15,8 +15,8 @@
 #include "mlir/Quantizer/Configurations/FxpMathConfig.h"
 
 #include "mlir/Dialect/FxpMathOps/FxpMathOps.h"
-#include "mlir/Dialect/QuantOps/QuantOps.h"
-#include "mlir/Dialect/QuantOps/QuantTypes.h"
+#include "mlir/Dialect/Quant/QuantOps.h"
+#include "mlir/Dialect/Quant/QuantTypes.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/StandardTypes.h"

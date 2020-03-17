@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/QuantOps/UniformSupport.h"
+#include "mlir/Dialect/Quant/UniformSupport.h"
 #include "mlir/IR/StandardTypes.h"
 #include <numeric>
 
