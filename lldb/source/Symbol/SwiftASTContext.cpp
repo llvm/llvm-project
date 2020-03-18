@@ -3013,41 +3013,43 @@ static ConstString EnumerateSDKsForVersion(FileSpec sdks_spec,
 
 static ConstString GetSDKDirectory(PlatformDarwin::SDKType sdk_type,
                                    uint32_t least_major, uint32_t least_minor) {
+  using namespace llvm::sys;
   if (sdk_type != PlatformDarwin::SDKType::MacOSX) {
     // Look inside Xcode for the required installed iOS SDK version.
-    std::string sdks_path =
-        PlatformDarwin::GetXcodeContentsDirectory().GetPath();
-    sdks_path.append("Developer/Platforms");
+    llvm::SmallString<256> sdks_path(
+        PlatformDarwin::GetXcodeContentsDirectory().GetPath());
+    path::append(sdks_path, "Developer", "Platforms");
 
     if (sdk_type == PlatformDarwin::SDKType::iPhoneSimulator) {
-      sdks_path.append("/iPhoneSimulator.platform/");
+      path::append(sdks_path, "iPhoneSimulator.platform");
     } else if (sdk_type == PlatformDarwin::SDKType::AppleTVSimulator) {
-      sdks_path.append("/AppleTVSimulator.platform/");
+      path::append(sdks_path, "AppleTVSimulator.platform");
     } else if (sdk_type == PlatformDarwin::SDKType::AppleTVOS) {
-      sdks_path.append("/AppleTVOS.platform/");
+      path::append(sdks_path, "AppleTVOS.platform");
     } else if (sdk_type == PlatformDarwin::SDKType::WatchSimulator) {
-      sdks_path.append("/WatchSimulator.platform/");
+      path::append(sdks_path, "WatchSimulator.platform");
     } else if (sdk_type == PlatformDarwin::SDKType::watchOS) {
-      // For now, we need to be prepared to handle either capitalization of this
-      // path.
-      std::string WatchOS_candidate_path = sdks_path + "/WatchOS.platform/";
-      if (IsDirectory(FileSpec(WatchOS_candidate_path.c_str()))) {
-        sdks_path = WatchOS_candidate_path;
+      // For now, we need to be prepared to handle either capitalization of
+      // this path.
+      llvm::SmallString<256> candidate_path = sdks_path;
+      path::append(candidate_path, "WatchOS.platform");
+      if (FileSystem::Instance().Exists(candidate_path)) {
+        sdks_path = candidate_path;
       } else {
-        std::string watchOS_candidate_path = sdks_path + "/watchOS.platform/";
-        if (IsDirectory(FileSpec(watchOS_candidate_path.c_str()))) {
-          sdks_path = watchOS_candidate_path;
+        // Reset the candidate path.
+        candidate_path = sdks_path;
+        path::append(candidate_path, "watchOS.platform");
+        if (FileSystem::Instance().Exists(candidate_path)) {
+          sdks_path = candidate_path;
         } else {
           return ConstString();
         }
       }
     } else {
-      sdks_path.append("/iPhoneOS.platform/");
+      path::append(sdks_path, "iPhoneOS.platform");
     }
-
-    sdks_path.append("Developer/SDKs/");
-
-    FileSpec sdks_spec(sdks_path.c_str());
+    path::append(sdks_path, "Developer", "SDKs");
+    FileSpec sdks_spec(sdks_path.str());
 
     return EnumerateSDKsForVersion(sdks_spec, sdk_type, least_major,
                                    least_major);
@@ -3087,44 +3089,49 @@ static ConstString GetSDKDirectory(PlatformDarwin::SDKType sdk_type,
   ;
 
   if (!xcode_contents_path.empty()) {
-    StreamString sdk_path;
-    sdk_path.Printf(
-        "%s/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX%u.%u.sdk",
-        xcode_contents_path.c_str(), major, minor);
-    fspec.SetFile(sdk_path.GetString(), FileSpec::Style::native);
-    if (FileSystem::Instance().Exists(fspec)) {
-      ConstString path(sdk_path.GetString());
-      // Cache results.
-      g_sdk_cache[major_minor] = path;
-      return path;
-    } else if ((least_major != major) || (least_minor != minor)) {
-      // Try the required SDK.
-      sdk_path.Clear();
-      sdk_path.Printf("%sDeveloper/Platforms/MacOSX.platform/Developer/SDKs/"
-                      "MacOSX%u.%u.sdk",
-                      xcode_contents_path.c_str(), least_major, least_minor);
-      fspec.SetFile(sdk_path.GetString(), FileSpec::Style::native);
+    llvm::SmallString<256> sdks_dir(
+        PlatformDarwin::GetXcodeContentsDirectory().GetPath());
+    llvm::sys::path::append(sdks_dir, "Developer", "Platforms",
+                            "MacOSX.platform");
+    llvm::sys::path::append(sdks_dir, "Developer", "SDKs");
+
+    // Try an exact match first.
+    {
+      std::string sdk_name = llvm::formatv("MacOSX{0}.{1}.sdk", major, minor);
+      llvm::SmallString<256> sdk_path = sdks_dir;
+      llvm::sys::path::append(sdk_path, sdk_name);
+      fspec.SetFile(sdk_path.str(), FileSpec::Style::native);
       if (FileSystem::Instance().Exists(fspec)) {
-        ConstString path(sdk_path.GetString());
+        ConstString path(sdk_path.str());
         // Cache results.
         g_sdk_cache[major_minor] = path;
         return path;
-      } else {
-        // Okay, we're going to do an exhaustive search for *any* SDK
-        // that has an adequate version.
-        std::string sdks_path = xcode_contents_path;
-        sdks_path.append("Developer/Platforms/MacOSX.platform/Developer/SDKs");
-
-        FileSpec sdks_spec(sdks_path.c_str());
-
-        ConstString sdk_path = EnumerateSDKsForVersion(
-            sdks_spec, sdk_type, least_major, least_major);
-
-        if (sdk_path) {
-          g_sdk_cache[major_minor] = sdk_path;
-          return sdk_path;
-        }
       }
+    }
+
+    // Try the minimum required SDK, if it's different from the actual version.
+    if ((least_major != major) || (least_minor != minor)) {
+      std::string sdk_name =
+          llvm::formatv("MacOSX{0}.{1}.sdk", least_major, least_minor);
+      llvm::SmallString<256> sdk_path = sdks_dir;
+      llvm::sys::path::append(sdk_path, sdk_name);
+      fspec.SetFile(sdk_path.str(), FileSpec::Style::native);
+      if (FileSystem::Instance().Exists(fspec)) {
+        ConstString path(sdk_path.str());
+        // Cache results.
+        g_sdk_cache[major_minor] = path;
+        return path;
+      }
+    }
+
+    // Okay, if we haven't found anything yet, we're going to do an exhaustive
+    // search for *any* SDK that has an adequate version.
+    ConstString sdk_path = EnumerateSDKsForVersion(
+        FileSpec(sdks_dir.str()), sdk_type, least_major, least_major);
+    if (sdk_path) {
+      // Cache results.
+      g_sdk_cache[major_minor] = sdk_path;
+      return sdk_path;
     }
   }
 
