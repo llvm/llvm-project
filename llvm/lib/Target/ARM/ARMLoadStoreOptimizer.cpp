@@ -991,7 +991,7 @@ static bool mayCombineMisaligned(const TargetSubtargetInfo &STI,
   // Stack pointer alignment is out of the programmers control so we can trust
   // SP-relative loads/stores.
   if (getLoadStoreBaseOp(MI).getReg() == ARM::SP &&
-      STI.getFrameLowering()->getTransientStackAlignment() >= 4)
+      STI.getFrameLowering()->getTransientStackAlign() >= Align(4))
     return true;
   return false;
 }
