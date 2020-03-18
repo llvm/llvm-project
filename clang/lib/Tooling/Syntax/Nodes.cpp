@@ -58,10 +58,6 @@ llvm::raw_ostream &syntax::operator<<(llvm::raw_ostream &OS, NodeKind K) {
     return OS << "LinkageSpecificationDeclaration";
   case NodeKind::SimpleDeclaration:
     return OS << "SimpleDeclaration";
-  case NodeKind::TemplateDeclaration:
-    return OS << "TemplateDeclaration";
-  case NodeKind::ExplicitTemplateInstantiation:
-    return OS << "ExplicitTemplateInstantiation";
   case NodeKind::NamespaceDefinition:
     return OS << "NamespaceDefinition";
   case NodeKind::NamespaceAliasDefinition:
@@ -122,12 +118,6 @@ llvm::raw_ostream &syntax::operator<<(llvm::raw_ostream &OS, NodeRole R) {
     return OS << "StaticAssertDeclaration_message";
   case syntax::NodeRole::SimpleDeclaration_declarator:
     return OS << "SimpleDeclaration_declarator";
-  case syntax::NodeRole::TemplateDeclaration_declaration:
-    return OS << "TemplateDeclaration_declaration";
-  case syntax::NodeRole::ExplicitTemplateInstantiation_externKeyword:
-    return OS << "ExplicitTemplateInstantiation_externKeyword";
-  case syntax::NodeRole::ExplicitTemplateInstantiation_declaration:
-    return OS << "ExplicitTemplateInstantiation_declaration";
   case syntax::NodeRole::ArraySubscript_sizeExpression:
     return OS << "ArraySubscript_sizeExpression";
   case syntax::NodeRole::TrailingReturnType_arrow:
@@ -289,31 +279,6 @@ syntax::SimpleDeclaration::declarators() {
       Children.push_back(llvm::cast<syntax::SimpleDeclarator>(C));
   }
   return Children;
-}
-
-syntax::Leaf *syntax::TemplateDeclaration::templateKeyword() {
-  return llvm::cast_or_null<syntax::Leaf>(
-      findChild(syntax::NodeRole::IntroducerKeyword));
-}
-
-syntax::Declaration *syntax::TemplateDeclaration::declaration() {
-  return llvm::cast_or_null<syntax::Declaration>(
-      findChild(syntax::NodeRole::TemplateDeclaration_declaration));
-}
-
-syntax::Leaf *syntax::ExplicitTemplateInstantiation::templateKeyword() {
-  return llvm::cast_or_null<syntax::Leaf>(
-      findChild(syntax::NodeRole::IntroducerKeyword));
-}
-
-syntax::Leaf *syntax::ExplicitTemplateInstantiation::externKeyword() {
-  return llvm::cast_or_null<syntax::Leaf>(
-      findChild(syntax::NodeRole::ExplicitTemplateInstantiation_externKeyword));
-}
-
-syntax::Declaration *syntax::ExplicitTemplateInstantiation::declaration() {
-  return llvm::cast_or_null<syntax::Declaration>(
-      findChild(syntax::NodeRole::ExplicitTemplateInstantiation_declaration));
 }
 
 syntax::Leaf *syntax::ParenDeclarator::lparen() {
