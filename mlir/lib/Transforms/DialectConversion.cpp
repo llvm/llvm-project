@@ -1108,6 +1108,12 @@ OperationLegalizer::legalize(Operation *op,
     os.startLine() << "Legalizing operation : '" << op->getName() << "'(" << op
                    << ") {\n";
     os.indent();
+
+    // If the operation has no regions, just print it here.
+    if (op->getNumRegions() == 0) {
+      op->print(os.startLine(), OpPrintingFlags().printGenericOpForm());
+      os.getOStream() << "\n\n";
+    }
   });
 
   // Check if this operation is legal on the target.
