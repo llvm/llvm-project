@@ -2137,7 +2137,8 @@ SCEVExpander::getRelatedExistingExpansion(const SCEV *S, const Instruction *At,
 
 bool SCEVExpander::isHighCostExpansionHelper(
     const SCEV *S, Loop *L, const Instruction &At, int &BudgetRemaining,
-    const TargetTransformInfo &TTI, SmallPtrSetImpl<const SCEV *> &Processed) {
+    const TargetTransformInfo &TTI, SmallPtrSetImpl<const SCEV *> &Processed,
+    SmallVectorImpl<const SCEV *> &Worklist) {
   if (BudgetRemaining < 0)
     return true; // Already run out of budget, give up.
 
@@ -2172,12 +2173,11 @@ bool SCEVExpander::isHighCostExpansionHelper(
       llvm_unreachable("There are no other cast types.");
     }
     const SCEV *Op = CastExpr->getOperand();
-    BudgetRemaining -=
-        TTI.getCastInstrCost(Opcode, S->getType(), Op->getType());
-    return isHighCostExpansionHelper(Op, L, At, BudgetRemaining, TTI,
-                                     Processed);
+    BudgetRemaining -= TTI.getCastInstrCost(Opcode, /*Dst=*/S->getType(),
+                                            /*Src=*/Op->getType());
+    Worklist.emplace_back(Op);
+    return false; // Will answer upon next entry into this function.
   }
-
 
   if (auto *UDivExpr = dyn_cast<SCEVUDivExpr>(S)) {
     // If the divisor is a power of two count this as a logical right-shift.
@@ -2188,8 +2188,8 @@ bool SCEVExpander::isHighCostExpansionHelper(
         // Note that we don't count the cost of RHS, because it is a constant,
         // and we consider those to be free. But if that changes, we would need
         // to log2() it first before calling isHighCostExpansionHelper().
-        return isHighCostExpansionHelper(UDivExpr->getLHS(), L, At,
-                                         BudgetRemaining, TTI, Processed);
+        Worklist.emplace_back(UDivExpr->getLHS());
+        return false; // Will answer upon next entry into this function.
       }
     }
 
@@ -2208,10 +2208,8 @@ bool SCEVExpander::isHighCostExpansionHelper(
     // Need to count the cost of this UDiv.
     BudgetRemaining -=
         TTI.getArithmeticInstrCost(Instruction::UDiv, S->getType());
-    return isHighCostExpansionHelper(UDivExpr->getLHS(), L, At, BudgetRemaining,
-                                     TTI, Processed) ||
-           isHighCostExpansionHelper(UDivExpr->getRHS(), L, At, BudgetRemaining,
-                                     TTI, Processed);
+    Worklist.insert(Worklist.end(), {UDivExpr->getLHS(), UDivExpr->getRHS()});
+    return false; // Will answer upon next entry into this function.
   }
 
   if (const auto *NAry = dyn_cast<SCEVAddRecExpr>(S)) {
@@ -2264,12 +2262,9 @@ bool SCEVExpander::isHighCostExpansionHelper(
       return true;
 
     // And finally, the operands themselves should fit within the budget.
-    for (const SCEV *Op : NAry->operands()) {
-      if (isHighCostExpansionHelper(Op, L, At, BudgetRemaining, TTI, Processed))
-        return true;
-    }
-
-    return BudgetRemaining < 0;
+    Worklist.insert(Worklist.end(), NAry->operands().begin(),
+                    NAry->operands().end());
+    return false; // So far so good, though ops may be too costly?
   }
 
   if (const SCEVNAryExpr *NAry = dyn_cast<SCEVNAryExpr>(S)) {
@@ -2301,15 +2296,16 @@ bool SCEVExpander::isHighCostExpansionHelper(
 
     assert(NAry->getNumOperands() > 1 &&
            "Nary expr should have more than 1 operand.");
-    for (const SCEV *Op : NAry->operands()) {
-      if (isHighCostExpansionHelper(Op, L, At, BudgetRemaining, TTI, Processed))
-        return true;
-      if (Op == *NAry->op_begin())
-        continue;
-      BudgetRemaining -= PairCost;
-    }
+    // The simple nary expr will require one less op (or pair of ops)
+    // than the number of it's terms.
+    BudgetRemaining -= PairCost * (NAry->getNumOperands() - 1);
+    if (BudgetRemaining < 0)
+      return true;
 
-    return BudgetRemaining < 0;
+    // And finally, the operands themselves should fit within the budget.
+    Worklist.insert(Worklist.end(), NAry->operands().begin(),
+                    NAry->operands().end());
+    return false; // So far so good, though ops may be too costly?
   }
 
   llvm_unreachable("No other scev expressions possible.");

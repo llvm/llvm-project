@@ -16,6 +16,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/ScalarEvolutionNormalization.h"
 #include "llvm/Analysis/TargetFolder.h"
@@ -186,10 +187,18 @@ namespace llvm {
       assert(At && "This function requires At instruction to be provided.");
       if (!TTI)      // In assert-less builds, avoid crashing
         return true; // by always claiming to be high-cost.
+      SmallVector<const SCEV *, 8> Worklist;
       SmallPtrSet<const SCEV *, 8> Processed;
       int BudgetRemaining = Budget * TargetTransformInfo::TCC_Basic;
-      return isHighCostExpansionHelper(Expr, L, *At, BudgetRemaining, *TTI,
-                                       Processed);
+      Worklist.emplace_back(Expr);
+      while (!Worklist.empty()) {
+        const SCEV *S = Worklist.pop_back_val();
+        if (isHighCostExpansionHelper(S, L, *At, BudgetRemaining, *TTI,
+                                      Processed, Worklist))
+          return true;
+      }
+      assert(BudgetRemaining >= 0 && "Should have returned from inner loop.");
+      return false;
     }
 
     /// This method returns the canonical induction variable of the specified
@@ -334,7 +343,8 @@ namespace llvm {
     bool isHighCostExpansionHelper(const SCEV *S, Loop *L,
                                    const Instruction &At, int &BudgetRemaining,
                                    const TargetTransformInfo &TTI,
-                                   SmallPtrSetImpl<const SCEV *> &Processed);
+                                   SmallPtrSetImpl<const SCEV *> &Processed,
+                                   SmallVectorImpl<const SCEV *> &Worklist);
 
     /// Insert the specified binary operator, doing a small amount of work to
     /// avoid inserting an obviously redundant operation, and hoisting to an
