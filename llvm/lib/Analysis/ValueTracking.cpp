@@ -1121,7 +1121,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
     if (!Known.Zero[0] && !Known.One[0] &&
         match(I, m_c_BinOp(m_Value(X), m_Add(m_Deferred(X), m_Value(Y))))) {
       Known2.resetAll();
-      computeKnownBits(Y, Known2, Depth + 1, Q);
+      computeKnownBits(Y, DemandedElts, Known2, Depth + 1, Q);
       if (Known2.countMinTrailingOnes() > 0)
         Known.Zero.setBit(0);
     }

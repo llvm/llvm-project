@@ -13,11 +13,7 @@ define i1 @test1(i32 %a) {
 
 define i1 @test1v(<2 x i32> %a) {
 ; CHECK-LABEL: @test1v(
-; CHECK-NEXT:    [[RHS:%.*]] = add <2 x i32> [[A:%.*]], <i32 -1, i32 0>
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[A]], [[RHS]]
-; CHECK-NEXT:    [[EXT:%.*]] = extractelement <2 x i32> [[AND]], i32 0
-; CHECK-NEXT:    [[RES:%.*]] = icmp eq i32 [[EXT]], 1
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 false
 ;
   %rhs = add <2 x i32> %a, <i32 -1, i32 0>
   %and = and <2 x i32> %a, %rhs
@@ -38,11 +34,7 @@ define i1 @test2(i32 %a) {
 
 define i1 @test2v(<2 x i32> %a) {
 ; CHECK-LABEL: @test2v(
-; CHECK-NEXT:    [[RHS:%.*]] = add <2 x i32> [[A:%.*]], <i32 0, i32 1>
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[A]], [[RHS]]
-; CHECK-NEXT:    [[EXT:%.*]] = extractelement <2 x i32> [[AND]], i32 1
-; CHECK-NEXT:    [[RES:%.*]] = icmp eq i32 [[EXT]], 1
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 false
 ;
   %rhs = add <2 x i32> %a, <i32 0, i32 1>
   %and = and <2 x i32> %a, %rhs
@@ -63,11 +55,7 @@ define i1 @test3(i32 %a) {
 
 define i1 @test3v(<2 x i32> %a) {
 ; CHECK-LABEL: @test3v(
-; CHECK-NEXT:    [[RHS:%.*]] = add <2 x i32> [[A:%.*]], <i32 7, i32 0>
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[A]], [[RHS]]
-; CHECK-NEXT:    [[EXT:%.*]] = extractelement <2 x i32> [[AND]], i32 0
-; CHECK-NEXT:    [[RES:%.*]] = icmp eq i32 [[EXT]], 1
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 false
 ;
   %rhs = add <2 x i32> %a, <i32 7, i32 0>
   %and = and <2 x i32> %a, %rhs
@@ -140,11 +128,7 @@ define i1 @test6(i32 %a) {
 
 define i1 @test6v(<2 x i32> %a) {
 ; CHECK-LABEL: @test6v(
-; CHECK-NEXT:    [[LHS:%.*]] = add <2 x i32> [[A:%.*]], <i32 0, i32 -1>
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[LHS]], [[A]]
-; CHECK-NEXT:    [[EXT:%.*]] = extractelement <2 x i32> [[AND]], i32 1
-; CHECK-NEXT:    [[RES:%.*]] = icmp eq i32 [[EXT]], 1
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 false
 ;
   %lhs = add <2 x i32> %a, <i32 0, i32 -1>
   %and = and <2 x i32> %lhs, %a
