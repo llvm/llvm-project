@@ -654,7 +654,7 @@ value type is buildable. In those cases, the type of the attribute is elided.
 #### Optional Groups
 
 In certain situations operations may have "optional" information, e.g.
-attributes or an empty set of variadic operands. In these situtations a section
+attributes or an empty set of variadic operands. In these situations a section
 of the assembly format can be marked as `optional` based on the presence of this
 information. An optional group is defined by wrapping a set of elements within
 `()` followed by a `?` and has the following requirements:

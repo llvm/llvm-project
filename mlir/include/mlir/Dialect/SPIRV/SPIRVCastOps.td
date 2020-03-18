@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file contains cast ops for the SPIR-V dialect. It corresponds
-// to "3.32.11. Convertion Instructions" of the SPIR-V specification.
+// to "3.32.11. Conversion Instructions" of the SPIR-V specification.
 //
 //===----------------------------------------------------------------------===//
 
