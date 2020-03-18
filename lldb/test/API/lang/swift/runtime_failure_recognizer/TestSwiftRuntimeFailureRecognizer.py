@@ -30,7 +30,7 @@ class TestSwiftRuntimeRecognizer(lldbtest.TestBase):
         self.runCmd("file " + self.getBuildArtifact("a.out"))
 
         self.expect("frame recognizer list",
-                    substrs=['Swift Runtime Failure StackFrame Recognizer, function Swift runtime failure (regexp)'])
+                    substrs=['Swift Runtime Failure StackFrame Recognizer, symbol Swift runtime failure (regexp)'])
 
         self.runCmd("process launch")
 
