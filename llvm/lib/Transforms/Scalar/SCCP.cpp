@@ -533,7 +533,7 @@ private:
     // values mean that the result of the function changed. We only need to
     // update the call sites with the new function result and do not have to
     // propagate the call arguments.
-    if (auto *Fn = dyn_cast<Function>(I)) {
+    if (isa<Function>(I)) {
       for (User *U : I->users()) {
         if (auto CS = CallSite(U))
           handleCallResult(CS);
