@@ -478,7 +478,7 @@ Process::Process(lldb::TargetSP target_sp, ListenerSP listener_sp,
       m_mod_id(), m_process_unique_id(0), m_thread_index_id(0),
       m_thread_id_to_index_id_map(), m_exit_status(-1), m_exit_string(),
       m_exit_status_mutex(), m_thread_mutex(), m_thread_list_real(this),
-      m_thread_list(this), m_extended_thread_list(this),
+      m_thread_list(this), m_thread_plans(*this), m_extended_thread_list(this),
       m_extended_thread_stop_id(0), m_queue_list(this), m_queue_list_stop_id(0),
       m_notifications(), m_image_tokens(), m_listener_sp(listener_sp),
       m_breakpoint_site_list(), m_dynamic_checkers_up(),
@@ -1184,9 +1184,12 @@ void Process::UpdateThreadListIfNeeded() {
   const uint32_t stop_id = GetStopID();
   if (m_thread_list.GetSize(false) == 0 ||
       stop_id != m_thread_list.GetStopID()) {
+    bool clear_unused_threads = true;
     const StateType state = GetPrivateState();
     if (StateIsStoppedState(state, true)) {
       std::lock_guard<std::recursive_mutex> guard(m_thread_list.GetMutex());
+      m_thread_list.SetStopID(stop_id);
+
       // m_thread_list does have its own mutex, but we need to hold onto the
       // mutex between the call to UpdateThreadList(...) and the
       // os->UpdateThreadList(...) so it doesn't change on us
@@ -1207,6 +1210,10 @@ void Process::UpdateThreadListIfNeeded() {
           size_t num_old_threads = old_thread_list.GetSize(false);
           for (size_t i = 0; i < num_old_threads; ++i)
             old_thread_list.GetThreadAtIndex(i, false)->ClearBackingThread();
+          // See if the OS plugin reports all threads.  If it does, then
+          // it is safe to clear unseen thread's plans here.  Otherwise we 
+          // should preserve them in case they show up again:
+          clear_unused_threads = GetTarget().GetOSPluginReportsAllThreads();
 
           // Turn off dynamic types to ensure we don't run any expressions.
           // Objective-C can run an expression to determine if a SBValue is a
@@ -1233,7 +1240,7 @@ void Process::UpdateThreadListIfNeeded() {
             target.SetPreferDynamicValue(saved_prefer_dynamic);
         } else {
           // No OS plug-in, the new thread list is the same as the real thread
-          // list
+          // list.
           new_thread_list = real_thread_list;
         }
 
@@ -1250,6 +1257,12 @@ void Process::UpdateThreadListIfNeeded() {
           m_queue_list_stop_id = GetLastNaturalStopID();
         }
       }
+      // Now update the plan stack map.
+      // If we do have an OS plugin, any absent real threads in the
+      // m_thread_list have already been removed from the ThreadPlanStackMap.
+      // So any remaining threads are OS Plugin threads, and those we want to
+      // preserve in case they show up again.
+      m_thread_plans.Update(m_thread_list, clear_unused_threads);
     }
   }
 }
@@ -1258,14 +1271,26 @@ ThreadPlanStack *Process::FindThreadPlans(lldb::tid_t tid) {
   return m_thread_plans.Find(tid);
 }
 
-void Process::AddThreadPlansForThread(Thread &thread) {
-  if (m_thread_plans.Find(thread.GetID()))
-    return;
-  m_thread_plans.AddThread(thread);
+bool Process::PruneThreadPlansForTID(lldb::tid_t tid) {
+  return m_thread_plans.PrunePlansForTID(tid);
 }
 
-void Process::RemoveThreadPlansForTID(lldb::tid_t tid) {
-  m_thread_plans.RemoveTID(tid);
+void Process::PruneThreadPlans() {
+  m_thread_plans.Update(GetThreadList(), true, false);
+}
+
+bool Process::DumpThreadPlansForTID(Stream &strm, lldb::tid_t tid,
+                                    lldb::DescriptionLevel desc_level,
+                                    bool internal, bool condense_trivial,
+                                    bool skip_unreported_plans) {
+  return m_thread_plans.DumpPlansForTID(
+      strm, tid, desc_level, internal, condense_trivial, skip_unreported_plans);
+}
+void Process::DumpThreadPlans(Stream &strm, lldb::DescriptionLevel desc_level,
+                              bool internal, bool condense_trivial,
+                              bool skip_unreported_plans) {
+  m_thread_plans.DumpPlans(strm, desc_level, internal, condense_trivial,
+                           skip_unreported_plans);
 }
 
 void Process::UpdateQueueListIfNeeded() {

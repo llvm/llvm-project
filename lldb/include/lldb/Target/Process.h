@@ -2198,19 +2198,75 @@ public:
   }
 
   void SetDynamicCheckers(DynamicCheckerFunctions *dynamic_checkers);
-  
+
+/// Prune ThreadPlanStacks for unreported threads.
+///
+/// \param[in] tid
+///     The tid whose Plan Stack we are seeking to prune.
+///
+/// \return
+///     \b true if the TID is found or \b false if not.
+bool PruneThreadPlansForTID(lldb::tid_t tid);
+
+/// Prune ThreadPlanStacks for all unreported threads.
+void PruneThreadPlans();
+
   /// Find the thread plan stack associated with thread with \a tid.
   ///
   /// \param[in] tid
-  ///     The tid whose Plan Stack we are seeking..
+  ///     The tid whose Plan Stack we are seeking.
   ///
   /// \return
   ///     Returns a ThreadPlan if the TID is found or nullptr if not.
   ThreadPlanStack *FindThreadPlans(lldb::tid_t tid);
-  
-  void AddThreadPlansForThread(Thread &thread);
-  
-  void RemoveThreadPlansForTID(lldb::tid_t tid);
+
+  /// Dump the thread plans associated with thread with \a tid.
+  ///
+  /// \param[in/out] strm
+  ///     The stream to which to dump the output
+  ///
+  /// \param[in] tid
+  ///     The tid whose Plan Stack we are dumping
+  ///
+  /// \param[in] desc_level
+  ///     How much detail to dump
+  ///
+  /// \param[in] internal
+  ///     If \b true dump all plans, if false only user initiated plans
+  ///
+  /// \param[in] condense_trivial
+  ///     If true, only dump a header if the plan stack is just the base plan.
+  ///
+  /// \param[in] skip_unreported_plans
+  ///     If true, only dump a plan if it is currently backed by an
+  ///     lldb_private::Thread *.
+  ///
+  /// \return
+  ///     Returns \b true if TID was found, \b false otherwise
+  bool DumpThreadPlansForTID(Stream &strm, lldb::tid_t tid,
+                             lldb::DescriptionLevel desc_level, bool internal,
+                             bool condense_trivial, bool skip_unreported_plans);
+
+  /// Dump all the thread plans for this process.
+  ///
+  /// \param[in/out] strm
+  ///     The stream to which to dump the output
+  ///
+  /// \param[in] desc_level
+  ///     How much detail to dump
+  ///
+  /// \param[in] internal
+  ///     If \b true dump all plans, if false only user initiated plans
+  ///
+  /// \param[in] condense_trivial
+  ///     If true, only dump a header if the plan stack is just the base plan.
+  ///
+  /// \param[in] skip_unreported_plans
+  ///     If true, skip printing all thread plan stacks that don't currently
+  ///     have a backing lldb_private::Thread *.
+  void DumpThreadPlans(Stream &strm, lldb::DescriptionLevel desc_level,
+                       bool internal, bool condense_trivial,
+                       bool skip_unreported_plans);
 
   /// Call this to set the lldb in the mode where it breaks on new thread
   /// creations, and then auto-restarts.  This is useful when you are trying
@@ -2547,7 +2603,7 @@ protected:
     virtual EventActionResult HandleBeingInterrupted() = 0;
     virtual const char *GetExitString() = 0;
     void RequestResume() { m_process->m_resume_requested = true; }
-    
+
   protected:
     Process *m_process;
   };
