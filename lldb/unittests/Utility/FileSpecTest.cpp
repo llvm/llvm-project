@@ -441,3 +441,9 @@ TEST(FileSpecTest, Yaml) {
   EXPECT_EQ(deserialized.GetDirectory(), fs_windows.GetDirectory());
   EXPECT_EQ(deserialized, fs_windows);
 }
+
+TEST(FileSpecTest, OperatorBool) {
+  EXPECT_FALSE(FileSpec());
+  EXPECT_FALSE(FileSpec(""));
+  EXPECT_TRUE(FileSpec("/foo/bar"));
+}
