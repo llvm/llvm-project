@@ -18,7 +18,8 @@ namespace lldb_private {
 
 class HistoryUnwind : public lldb_private::Unwind {
 public:
-  HistoryUnwind(Thread &thread, std::vector<lldb::addr_t> pcs);
+  HistoryUnwind(Thread &thread, std::vector<lldb::addr_t> pcs,
+                bool pcs_are_call_addresses = false);
 
   ~HistoryUnwind() override;
 
@@ -35,6 +36,9 @@ protected:
 
 private:
   std::vector<lldb::addr_t> m_pcs;
+  /// This boolean indicates that the PCs in the non-0 frames are call
+  /// addresses and not return addresses.
+  bool m_pcs_are_call_addresses;
 };
 
 } // namespace lldb_private
