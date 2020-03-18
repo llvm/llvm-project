@@ -2492,12 +2492,16 @@ llvm::DIModule *CGDebugInfo::getOrCreateModuleRef(ASTSourceDescriptor Mod,
             ? (uint64_t)Mod.getSignature()[1] << 32 | Mod.getSignature()[0]
             : ~1ULL;
     llvm::DIBuilder DIB(CGM.getModule());
+    SmallString<0> PCM;
+    if (!llvm::sys::path::is_absolute(PCM))
+      PCM = Mod.getPath();
+    llvm::sys::path::append(PCM, Mod.getASTFile());
+    StringRef CompDir = getCurrentDirname();
     DIB.createCompileUnit(TheCU->getSourceLanguage(),
                           // TODO: Support "Source" from external AST providers?
-                          DIB.createFile(Mod.getModuleName(), Mod.getPath()),
-                          TheCU->getProducer(), true, StringRef(), 0,
-                          Mod.getASTFile(), llvm::DICompileUnit::FullDebug,
-                          Signature);
+                          DIB.createFile(Mod.getModuleName(), CompDir),
+                          TheCU->getProducer(), true, StringRef(), 0, PCM,
+                          llvm::DICompileUnit::FullDebug, Signature);
     DIB.finalize();
   }
 
