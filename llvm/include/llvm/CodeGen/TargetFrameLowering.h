@@ -93,6 +93,11 @@ public:
   /// is the largest alignment for any data object in the target.
   ///
   unsigned getStackAlignment() const { return StackAlignment.value(); }
+  /// getStackAlignment - This method returns the number of bytes to which the
+  /// stack pointer must be aligned on entry to a function.  Typically, this
+  /// is the largest alignment for any data object in the target.
+  ///
+  Align getStackAlign() const { return StackAlignment; }
 
   /// alignSPAdjust - This method aligns the stack adjustment to the correct
   /// alignment.
@@ -110,9 +115,15 @@ public:
   /// which the stack pointer must be aligned at all times, even between
   /// calls.
   ///
-  unsigned getTransientStackAlignment() const {
+  LLVM_ATTRIBUTE_DEPRECATED(unsigned getTransientStackAlignment() const,
+                            "Use getTransientStackAlign instead") {
     return TransientStackAlignment.value();
   }
+  /// getTransientStackAlignment - This method returns the number of bytes to
+  /// which the stack pointer must be aligned at all times, even between
+  /// calls.
+  ///
+  Align getTransientStackAlign() const { return TransientStackAlignment; }
 
   /// isStackRealignable - This method returns whether the stack can be
   /// realigned.

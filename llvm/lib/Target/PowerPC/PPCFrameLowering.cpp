@@ -437,9 +437,9 @@ PPCFrameLowering::determineFrameLayout(const MachineFunction &MF,
     UseEstimate ? MFI.estimateStackSize(MF) : MFI.getStackSize();
 
   // Get stack alignments. The frame must be aligned to the greatest of these:
-  unsigned TargetAlign = getStackAlignment(); // alignment required per the ABI
-  unsigned MaxAlign = MFI.getMaxAlignment(); // algmt required by data in frame
-  unsigned AlignMask = std::max(MaxAlign, TargetAlign) - 1;
+  Align TargetAlign = getStackAlign(); // alignment required per the ABI
+  Align MaxAlign = MFI.getMaxAlign();  // algmt required by data in frame
+  Align Alignment = std::max(TargetAlign, MaxAlign);
 
   const PPCRegisterInfo *RegInfo = Subtarget.getRegisterInfo();
 
@@ -471,7 +471,7 @@ PPCFrameLowering::determineFrameLayout(const MachineFunction &MF,
   // If we have dynamic alloca then maxCallFrameSize needs to be aligned so
   // that allocations will be aligned.
   if (MFI.hasVarSizedObjects())
-    maxCallFrameSize = (maxCallFrameSize + AlignMask) & ~AlignMask;
+    maxCallFrameSize = alignTo(maxCallFrameSize, Alignment);
 
   // Update the new max call frame size if the caller passes in a valid pointer.
   if (NewMaxCallFrameSize)
@@ -481,7 +481,7 @@ PPCFrameLowering::determineFrameLayout(const MachineFunction &MF,
   FrameSize += maxCallFrameSize;
 
   // Make sure the frame is aligned.
-  FrameSize = (FrameSize + AlignMask) & ~AlignMask;
+  FrameSize = alignTo(FrameSize, Alignment);
 
   return FrameSize;
 }
@@ -667,7 +667,7 @@ PPCFrameLowering::twoUniqueScratchRegsRequired(MachineBasicBlock *MBB) const {
   int NegFrameSize = -FrameSize;
   bool IsLargeFrame = !isInt<16>(NegFrameSize);
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  unsigned MaxAlign = MFI.getMaxAlignment();
+  Align MaxAlign = MFI.getMaxAlign();
   bool HasRedZone = Subtarget.isPPC64() || !Subtarget.isSVR4ABI();
 
   return (IsLargeFrame || !HasRedZone) && HasBP && MaxAlign > 1;
@@ -867,10 +867,9 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
   }
 
   // Get stack alignments.
-  unsigned MaxAlign = MFI.getMaxAlignment();
+  Align MaxAlign = MFI.getMaxAlign();
   if (HasBP && MaxAlign > 1)
-    assert(isPowerOf2_32(MaxAlign) && isInt<16>(MaxAlign) &&
-           "Invalid alignment!");
+    assert(Log2(MaxAlign) < 16 && "Invalid alignment!");
 
   // Frames of 32KB & larger require special handling because they cannot be
   // indexed into with a simple STDU/STWU/STD/STW immediate offset operand.
@@ -1007,15 +1006,15 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
   if (HasBP && MaxAlign > 1) {
     if (isPPC64)
       BuildMI(MBB, MBBI, dl, TII.get(PPC::RLDICL), ScratchReg)
-        .addReg(SPReg)
-        .addImm(0)
-        .addImm(64 - Log2_32(MaxAlign));
+          .addReg(SPReg)
+          .addImm(0)
+          .addImm(64 - Log2(MaxAlign));
     else // PPC32...
       BuildMI(MBB, MBBI, dl, TII.get(PPC::RLWINM), ScratchReg)
-        .addReg(SPReg)
-        .addImm(0)
-        .addImm(32 - Log2_32(MaxAlign))
-        .addImm(31);
+          .addReg(SPReg)
+          .addImm(0)
+          .addImm(32 - Log2(MaxAlign))
+          .addImm(31);
     if (!isLargeFrame) {
       BuildMI(MBB, MBBI, dl, SubtractImmCarryingInst, ScratchReg)
         .addReg(ScratchReg, RegState::Kill)
@@ -2058,8 +2057,8 @@ PPCFrameLowering::addScavengingSpillSlot(MachineFunction &MF,
     RS->addScavengingFrameIndex(MFI.CreateStackObject(Size, Align, false));
 
     // Might we have over-aligned allocas?
-    bool HasAlVars = MFI.hasVarSizedObjects() &&
-                     MFI.getMaxAlignment() > getStackAlignment();
+    bool HasAlVars =
+        MFI.hasVarSizedObjects() && MFI.getMaxAlign() > getStackAlign();
 
     // These kinds of spills might need two registers.
     if (spillsCR(MF) || spillsVRSAVE(MF) || HasAlVars)

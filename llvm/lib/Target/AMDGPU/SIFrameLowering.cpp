@@ -768,7 +768,7 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
 
   if (TRI.needsStackRealignment(MF)) {
     HasFP = true;
-    const unsigned Alignment = MFI.getMaxAlignment();
+    const unsigned Alignment = MFI.getMaxAlign().value();
 
     RoundedSize += Alignment;
     if (LiveRegs.empty()) {
@@ -834,8 +834,9 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
 
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   uint32_t NumBytes = MFI.getStackSize();
-  uint32_t RoundedSize = FuncInfo->isStackRealigned() ?
-    NumBytes + MFI.getMaxAlignment() : NumBytes;
+  uint32_t RoundedSize = FuncInfo->isStackRealigned()
+                             ? NumBytes + MFI.getMaxAlign().value()
+                             : NumBytes;
 
   if (RoundedSize != 0 && hasFP(MF)) {
     const unsigned StackPtrReg = FuncInfo->getStackPtrOffsetReg();

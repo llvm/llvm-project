@@ -17,8 +17,6 @@ define amdgpu_ps void @_amdgpu_ps_main() local_unnamed_addr #3 {
 ; IR-NEXT:    br i1 true, label [[TRANSITIONBLOCK]], label [[UNIFIEDRETURNBLOCK:%.*]]
 ; IR:       TransitionBlock:
 ; IR-NEXT:    br i1 [[N30]], label [[DOTLOOPEXIT]], label [[N28]]
-; IR:       n31:
-; IR-NEXT:    ret void
 ; IR:       UnifiedReturnBlock:
 ; IR-NEXT:    call void @llvm.amdgcn.exp.f32(i32 9, i32 0, float undef, float undef, float undef, float undef, i1 true, i1 true)
 ; IR-NEXT:    ret void

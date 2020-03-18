@@ -934,7 +934,7 @@ proper hooks to check the dynamic legality of SPIR-V ops. Users can further
 register other legality constraints into the returned `SPIRVConversionTarget`.
 
 `spirv::lookupTargetEnvOrDefault()` is a handy utility function to query an
-`spv.target_env` attached in the input IR or use the feault to construct a
+`spv.target_env` attached in the input IR or use the default to construct a
 `SPIRVConversionTarget`.
 
 ### `SPIRVTypeConverter`

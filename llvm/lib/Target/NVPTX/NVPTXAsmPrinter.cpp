@@ -1634,8 +1634,8 @@ void NVPTXAsmPrinter::setAndEmitFunctionVirtualRegisters(
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   int NumBytes = (int) MFI.getStackSize();
   if (NumBytes) {
-    O << "\t.local .align " << MFI.getMaxAlignment() << " .b8 \t" << DEPOTNAME
-      << getFunctionNumber() << "[" << NumBytes << "];\n";
+    O << "\t.local .align " << MFI.getMaxAlign().value() << " .b8 \t"
+      << DEPOTNAME << getFunctionNumber() << "[" << NumBytes << "];\n";
     if (static_cast<const NVPTXTargetMachine &>(MF.getTarget()).is64Bit()) {
       O << "\t.reg .b64 \t%SP;\n";
       O << "\t.reg .b64 \t%SPL;\n";

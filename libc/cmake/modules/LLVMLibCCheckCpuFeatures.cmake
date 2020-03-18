@@ -1,99 +1,129 @@
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Cpu features definition and flags
-#
-# Declare a list of all supported cpu features in ALL_CPU_FEATURES.
-#
-# Declares associated flags to enable/disable individual feature of the form:
-# - CPU_FEATURE_<FEATURE>_ENABLE_FLAG
-# - CPU_FEATURE_<FEATURE>_DISABLE_FLAG
-#
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 if(${LIBC_TARGET_MACHINE} MATCHES "x86|x86_64")
-  set(ALL_CPU_FEATURES SSE SSE2 AVX AVX512F)
+  set(ALL_CPU_FEATURES SSE SSE2 AVX AVX2 AVX512F)
 endif()
 
-function(_define_cpu_feature_flags feature)
-  if(${CMAKE_CXX_COMPILER_ID} MATCHES "Clang")
-    string(TOLOWER ${feature} lowercase_feature)
-    set(CPU_FEATURE_${feature}_ENABLE_FLAG "-m${lowercase_feature}" PARENT_SCOPE)
-    set(CPU_FEATURE_${feature}_DISABLE_FLAG "-mno-${lowercase_feature}" PARENT_SCOPE)
+list(SORT ALL_CPU_FEATURES)
+
+# Function to check whether the host supports the provided set of features.
+# Usage:
+# host_supports(
+#   <output variable>
+#   <list of cpu features>
+# )
+function(host_supports output_var features)
+  _intersection(a "${HOST_CPU_FEATURES}" "${features}")
+  if("${a}" STREQUAL "${features}")
+    set(${output_var} TRUE PARENT_SCOPE)
+  else()
+    unset(${output_var} PARENT_SCOPE)
+  endif()
+endfunction()
+
+# Function to compute the flags to pass down to the compiler.
+# Usage:
+# compute_flags(
+#   <output variable>
+#   MARCH <arch name or "native">
+#   REQUIRE <list of mandatory features to enable>
+#   REJECT <list of features to disable>
+# )
+function(compute_flags output_var)
+  cmake_parse_arguments(
+    "COMPUTE_FLAGS"
+    "" # Optional arguments
+    "MARCH" # Single value arguments
+    "REQUIRE;REJECT" # Multi value arguments
+    ${ARGN})
+  # Check that features are not required and rejected at the same time.
+  if(COMPUTE_FLAGS_REQUIRE AND COMPUTE_FLAGS_REJECT)
+    _intersection(var ${COMPUTE_FLAGS_REQUIRE} ${COMPUTE_FLAGS_REJECT})
+    if(var)
+      message(FATAL_ERROR "Cpu Features REQUIRE and REJECT ${var}")
+    endif()
+  endif()
+  # Generate the compiler flags in `current`.
+  if(${CMAKE_CXX_COMPILER_ID} MATCHES "Clang|GNU")
+    if(COMPUTE_FLAGS_MARCH)
+      list(APPEND current "-march=${COMPUTE_FLAGS_MARCH}")
+    endif()
+    foreach(feature IN LISTS COMPUTE_FLAGS_REQUIRE)
+      string(TOLOWER ${feature} lowercase_feature)
+      list(APPEND current "-m${lowercase_feature}")
+    endforeach()
+    foreach(feature IN LISTS COMPUTE_FLAGS_REJECT)
+      string(TOLOWER ${feature} lowercase_feature)
+      list(APPEND current "-mno-${lowercase_feature}")
+    endforeach()
   else()
     # In future, we can extend for other compilers.
     message(FATAL_ERROR "Unkown compiler ${CMAKE_CXX_COMPILER_ID}.")
   endif()
+  # Export the list of flags.
+  set(${output_var} "${current}" PARENT_SCOPE)
 endfunction()
 
-# Defines cpu features flags
-foreach(feature IN LISTS ALL_CPU_FEATURES)
-  _define_cpu_feature_flags(${feature})
-endforeach()
+# ------------------------------------------------------------------------------
+# Internal helpers and utilities.
+# ------------------------------------------------------------------------------
 
-#------------------------------------------------------------------------------
-# Optimization level flags
-#
-# Generates the set of flags needed to compile for a up to a particular
-# optimization level.
-#
-# Creates variables of the form `CPU_FEATURE_OPT_<FEATURE>_FLAGS`.
-# CPU_FEATURE_OPT_NONE_FLAGS is a special flag for which no feature is needed.
-#
-# e.g.
-# CPU_FEATURE_OPT_NONE_FLAGS : -mno-sse;-mno-sse2;-mno-avx;-mno-avx512f
-# CPU_FEATURE_OPT_SSE_FLAGS : -msse;-mno-sse2;-mno-avx;-mno-avx512f
-# CPU_FEATURE_OPT_SSE2_FLAGS : -msse;-msse2;-mno-avx;-mno-avx512f
-# CPU_FEATURE_OPT_AVX_FLAGS : -msse;-msse2;-mavx;-mno-avx512f
-# CPU_FEATURE_OPT_AVX512F_FLAGS : -msse;-msse2;-mavx;-mavx512f
-#------------------------------------------------------------------------------
-
-# Helper function to concatenate flags needed to support optimization up to
-# a particular feature.
-function(_generate_flags_for_up_to feature flag_variable)
-  list(FIND ALL_CPU_FEATURES ${feature} feature_index)
-  foreach(current_feature IN LISTS ALL_CPU_FEATURES)
-    list(FIND ALL_CPU_FEATURES ${current_feature} current_feature_index)  
-    if(${current_feature_index} GREATER ${feature_index})
-      list(APPEND flags ${CPU_FEATURE_${current_feature}_DISABLE_FLAG})
-    else()
-      list(APPEND flags ${CPU_FEATURE_${current_feature}_ENABLE_FLAG})
+# Computes the intersection between two lists.
+function(_intersection output_var list1 list2)
+  foreach(element IN LISTS list1)
+    if("${list2}" MATCHES "(^|;)${element}(;|$)")
+      list(APPEND tmp "${element}")
     endif()
   endforeach()
-  set(${flag_variable} ${flags} PARENT_SCOPE)
+  set(${output_var} ${tmp} PARENT_SCOPE)
 endfunction()
 
-function(_generate_opt_levels)
-  set(opt_levels NONE)
-  list(APPEND opt_levels ${ALL_CPU_FEATURES})
-  foreach(feature IN LISTS opt_levels)
-    set(flag_name "CPU_FEATURE_OPT_${feature}_FLAGS")
-    _generate_flags_for_up_to(${feature} ${flag_name})
-    set(${flag_name} ${${flag_name}} PARENT_SCOPE)
+# Generates a cpp file to introspect the compiler defined flags.
+function(_generate_check_code)
+  foreach(feature IN LISTS ALL_CPU_FEATURES)
+    set(DEFINITIONS
+        "${DEFINITIONS}
+#ifdef __${feature}__
+    \"${feature}\",
+#endif")
   endforeach()
+  configure_file(
+    "${LIBC_SOURCE_DIR}/cmake/modules/cpu_features/check_cpu_features.cpp.in"
+    "cpu_features/check_cpu_features.cpp" @ONLY)
 endfunction()
+_generate_check_code()
 
-_generate_opt_levels()
-
-#------------------------------------------------------------------------------
-# Host cpu feature introspection
-#
-# Populates a HOST_CPU_FEATURES list containing the available CPU_FEATURE.
-#------------------------------------------------------------------------------
-function(_check_host_cpu_feature feature)
-  string(TOLOWER ${feature} lowercase_feature)
+# Compiles and runs the code generated above with the specified requirements.
+# This is helpful to infer which features a particular target supports or if
+# a specific features implies other features (e.g. BMI2 implies SSE2 and SSE).
+function(_check_defined_cpu_feature output_var)
+  cmake_parse_arguments(
+    "CHECK_DEFINED"
+    "" # Optional arguments
+    "MARCH" # Single value arguments
+    "REQUIRE;REJECT" # Multi value arguments
+    ${ARGN})
+  compute_flags(
+    flags
+    MARCH  ${CHECK_DEFINED_MARCH}
+    REQUIRE ${CHECK_DEFINED_REQUIRE}
+    REJECT  ${CHECK_DEFINED_REJECT})
   try_run(
-    run_result
-    compile_result
-    "${CMAKE_CURRENT_BINARY_DIR}/check_${lowercase_feature}"
-    "${CMAKE_MODULE_PATH}/cpu_features/check_${lowercase_feature}.cpp"
-    COMPILE_DEFINITIONS ${CPU_FEATURE_${feature}_ENABLE_FLAG}
-    OUTPUT_VARIABLE compile_output
-  )
+    run_result compile_result "${CMAKE_CURRENT_BINARY_DIR}/check_${feature}"
+    "${CMAKE_CURRENT_BINARY_DIR}/cpu_features/check_cpu_features.cpp"
+    COMPILE_DEFINITIONS ${flags}
+    COMPILE_OUTPUT_VARIABLE compile_output
+    RUN_OUTPUT_VARIABLE run_output)
   if(${compile_result} AND ("${run_result}" EQUAL 0))
-    list(APPEND HOST_CPU_FEATURES ${feature})
-    set(HOST_CPU_FEATURES ${HOST_CPU_FEATURES} PARENT_SCOPE)
+    set(${output_var}
+        "${run_output}"
+        PARENT_SCOPE)
+  else()
+    message(FATAL_ERROR "${compile_output}")
   endif()
 endfunction()
 
-foreach(feature IN LISTS ALL_CPU_FEATURES)
-  _check_host_cpu_feature(${feature})
-endforeach()
+# Populates the HOST_CPU_FEATURES list.
+_check_defined_cpu_feature(HOST_CPU_FEATURES MARCH native)

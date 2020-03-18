@@ -445,8 +445,8 @@ def SI_RETURN : SPseudoInstSI <
 
 // Return for returning function calls without output register.
 //
-// This version is only needed so we can fill in the output regiter in
-// the custom inserter.
+// This version is only needed so we can fill in the output register
+// in the custom inserter.
 def SI_CALL_ISEL : SPseudoInstSI <
   (outs), (ins SSrc_b64:$src0, unknown:$callee),
   [(AMDGPUcall i64:$src0, tglobaladdr:$callee)]> {
@@ -457,6 +457,11 @@ def SI_CALL_ISEL : SPseudoInstSI <
   // TODO: Should really base this on the call target
   let isConvergent = 1;
 }
+
+def : GCNPat<
+  (AMDGPUcall i64:$src0, (i64 0)),
+  (SI_CALL_ISEL $src0, (i64 0))
+>;
 
 // Wrapper around s_swappc_b64 with extra $callee parameter to track
 // the called function after regalloc.

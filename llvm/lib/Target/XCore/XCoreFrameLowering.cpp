@@ -233,9 +233,9 @@ void XCoreFrameLowering::emitPrologue(MachineFunction &MF,
   // to determine the end of the prologue.
   DebugLoc dl;
 
-  if (MFI.getMaxAlignment() > getStackAlignment())
-    report_fatal_error("emitPrologue unsupported alignment: "
-                       + Twine(MFI.getMaxAlignment()));
+  if (MFI.getMaxAlign() > getStackAlign())
+    report_fatal_error("emitPrologue unsupported alignment: " +
+                       Twine(MFI.getMaxAlign().value()));
 
   const AttributeList &PAL = MF.getFunction().getAttributes();
   if (PAL.hasAttrSomewhere(Attribute::Nest))
@@ -490,8 +490,7 @@ MachineBasicBlock::iterator XCoreFrameLowering::eliminateCallFramePseudoInstr(
       // We need to keep the stack aligned properly.  To do this, we round the
       // amount of space needed for the outgoing arguments up to the next
       // alignment boundary.
-      unsigned Align = getStackAlignment();
-      Amount = (Amount+Align-1)/Align*Align;
+      Amount = alignTo(Amount, getStackAlign());
 
       assert(Amount%4 == 0);
       Amount /= 4;

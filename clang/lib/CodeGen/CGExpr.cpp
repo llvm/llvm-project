@@ -4678,12 +4678,12 @@ CGCallee CodeGenFunction::EmitCallee(const Expr *E) {
   // Resolve direct calls.
   } else if (auto DRE = dyn_cast<DeclRefExpr>(E)) {
     if (auto FD = dyn_cast<FunctionDecl>(DRE->getDecl())) {
-      return EmitDirectCallee(*this, CGM.getGlobalDecl(FD));
+      return EmitDirectCallee(*this, FD);
     }
   } else if (auto ME = dyn_cast<MemberExpr>(E)) {
     if (auto FD = dyn_cast<FunctionDecl>(ME->getMemberDecl())) {
       EmitIgnoredExpr(ME->getBase());
-      return EmitDirectCallee(*this, CGM.getGlobalDecl(FD));
+      return EmitDirectCallee(*this, FD);
     }
 
   // Look through template substitutions.

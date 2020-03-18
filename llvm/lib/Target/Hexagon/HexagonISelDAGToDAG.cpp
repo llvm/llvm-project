@@ -734,8 +734,8 @@ void HexagonDAGToDAGISel::SelectFrameIndex(SDNode *N) {
   MachineFrameInfo &MFI = MF->getFrameInfo();
   const HexagonFrameLowering *HFI = HST->getFrameLowering();
   int FX = cast<FrameIndexSDNode>(N)->getIndex();
-  unsigned StkA = HFI->getStackAlignment();
-  unsigned MaxA = MFI.getMaxAlignment();
+  Align StkA = HFI->getStackAlign();
+  Align MaxA = MFI.getMaxAlign();
   SDValue FI = CurDAG->getTargetFrameIndex(FX, MVT::i32);
   SDLoc DL(N);
   SDValue Zero = CurDAG->getTargetConstant(0, DL, MVT::i32);
@@ -1284,9 +1284,9 @@ void HexagonDAGToDAGISel::emitFunctionEntryCode() {
   MachineFrameInfo &MFI = MF->getFrameInfo();
   MachineBasicBlock *EntryBB = &MF->front();
   unsigned AR = FuncInfo->CreateReg(MVT::i32);
-  unsigned EntryMaxA = MFI.getMaxAlignment();
+  Align EntryMaxA = MFI.getMaxAlign();
   BuildMI(EntryBB, DebugLoc(), HII->get(Hexagon::PS_aligna), AR)
-      .addImm(EntryMaxA);
+      .addImm(EntryMaxA.value());
   MF->getInfo<HexagonMachineFunctionInfo>()->setStackAlignBaseVReg(AR);
 }
 
@@ -1296,7 +1296,7 @@ void HexagonDAGToDAGISel::updateAligna() {
     return;
   auto *AlignaI = const_cast<MachineInstr*>(HFI.getAlignaInstr(*MF));
   assert(AlignaI != nullptr);
-  unsigned MaxA = MF->getFrameInfo().getMaxAlignment();
+  unsigned MaxA = MF->getFrameInfo().getMaxAlign().value();
   if (AlignaI->getOperand(1).getImm() < MaxA)
     AlignaI->getOperand(1).setImm(MaxA);
 }

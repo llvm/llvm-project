@@ -87,6 +87,14 @@ TEST(UtilsTest, OffsetToNextAligned) {
   EXPECT_EQ(offset_to_next_aligned<32>(forge(16)), I(16));
 }
 
+TEST(UtilsTest, OffsetFromLastAligned) {
+  EXPECT_EQ(offset_from_last_aligned<16>(forge(0)), I(0));
+  EXPECT_EQ(offset_from_last_aligned<16>(forge(1)), I(1));
+  EXPECT_EQ(offset_from_last_aligned<16>(forge(16)), I(0));
+  EXPECT_EQ(offset_from_last_aligned<16>(forge(15)), I(15));
+  EXPECT_EQ(offset_from_last_aligned<32>(forge(16)), I(16));
+}
+
 TEST(UtilsTest, OffsetToNextCacheLine) {
   EXPECT_GT(LLVM_LIBC_CACHELINE_SIZE, 0);
   EXPECT_EQ(offset_to_next_cache_line(forge(0)), I(0));

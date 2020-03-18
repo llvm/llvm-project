@@ -711,9 +711,6 @@ public:
   CtorList &getGlobalCtors() { return GlobalCtors; }
   CtorList &getGlobalDtors() { return GlobalDtors; }
 
-  /// get GlobalDecl for non-ctor/dtor functions.
-  GlobalDecl getGlobalDecl(const FunctionDecl *FD);
-
   /// getTBAATypeInfo - Get metadata used to describe accesses to objects of
   /// the given type.
   llvm::MDNode *getTBAATypeInfo(QualType QTy);

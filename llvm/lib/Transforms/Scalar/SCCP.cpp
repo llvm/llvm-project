@@ -939,16 +939,10 @@ void SCCPSolver::visitSelectInst(SelectInst &I) {
   LatticeVal TVal = getValueState(I.getTrueValue());
   LatticeVal FVal = getValueState(I.getFalseValue());
 
-  // select ?, C, C -> C.
-  if (isConstant(TVal) && isConstant(FVal) &&
-      getConstant(TVal) == getConstant(FVal))
-    return (void)markConstant(&I, getConstant(FVal));
-
-  if (TVal.isUnknownOrUndef())   // select ?, undef, X -> X.
-    return (void)mergeInValue(&I, FVal);
-  if (FVal.isUnknownOrUndef())   // select ?, X, undef -> X.
-    return (void)mergeInValue(&I, TVal);
-  markOverdefined(&I);
+  bool Changed = ValueState[&I].mergeIn(TVal, DL);
+  Changed |= ValueState[&I].mergeIn(FVal, DL);
+  if (Changed)
+    pushToWorkListMsg(ValueState[&I], &I);
 }
 
 // Handle Unary Operators.
