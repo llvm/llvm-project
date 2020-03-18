@@ -107,7 +107,7 @@ int main(int argc, char *argv[]) {
       [](ThreadSafeModule TSM,
          const MaterializationResponsibility &R) -> Expected<ThreadSafeModule> {
         TSM.withModuleDo([](Module &M) { dbgs() << "---Compiling---\n" << M; });
-        return TSM;
+        return std::move(TSM); // Not a redundant move: fix build on gcc-7.5
       });
 
   // (3) Create stubs and call-through managers:
