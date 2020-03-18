@@ -11043,9 +11043,6 @@ OMPClause *Sema::ActOnOpenMPSingleExprClause(OpenMPClauseKind Kind, Expr *Expr,
   case OMPC_ordered:
     Res = ActOnOpenMPOrderedClause(StartLoc, EndLoc, LParenLoc, Expr);
     break;
-  case OMPC_device:
-    Res = ActOnOpenMPDeviceClause(Expr, StartLoc, LParenLoc, EndLoc);
-    break;
   case OMPC_num_teams:
     Res = ActOnOpenMPNumTeamsClause(Expr, StartLoc, LParenLoc, EndLoc);
     break;
@@ -11070,6 +11067,7 @@ OMPClause *Sema::ActOnOpenMPSingleExprClause(OpenMPClauseKind Kind, Expr *Expr,
   case OMPC_detach:
     Res = ActOnOpenMPDetachClause(Expr, StartLoc, LParenLoc, EndLoc);
     break;
+  case OMPC_device:
   case OMPC_if:
   case OMPC_default:
   case OMPC_proc_bind:
@@ -12440,6 +12438,12 @@ OMPClause *Sema::ActOnOpenMPSingleExprWithArgClause(
         StartLoc, LParenLoc, ArgumentLoc[Modifier], ArgumentLoc[DefaultmapKind],
         EndLoc);
     break;
+  case OMPC_device:
+    assert(Argument.size() == 1 && ArgumentLoc.size() == 1);
+    Res = ActOnOpenMPDeviceClause(
+        static_cast<OpenMPDeviceClauseModifier>(Argument.back()), Expr,
+        StartLoc, LParenLoc, ArgumentLoc.back(), EndLoc);
+    break;
   case OMPC_final:
   case OMPC_num_threads:
   case OMPC_safelen:
@@ -12477,7 +12481,6 @@ OMPClause *Sema::ActOnOpenMPSingleExprWithArgClause(
   case OMPC_release:
   case OMPC_relaxed:
   case OMPC_depend:
-  case OMPC_device:
   case OMPC_threads:
   case OMPC_simd:
   case OMPC_map:
@@ -15641,16 +15644,32 @@ Sema::ActOnOpenMPDependClause(OpenMPDependClauseKind DepKind,
   return C;
 }
 
-OMPClause *Sema::ActOnOpenMPDeviceClause(Expr *Device, SourceLocation StartLoc,
+OMPClause *Sema::ActOnOpenMPDeviceClause(OpenMPDeviceClauseModifier Modifier,
+                                         Expr *Device, SourceLocation StartLoc,
                                          SourceLocation LParenLoc,
+                                         SourceLocation ModifierLoc,
                                          SourceLocation EndLoc) {
+  assert((ModifierLoc.isInvalid() || LangOpts.OpenMP >= 50) &&
+         "Unexpected device modifier in OpenMP < 50.");
+
+  bool ErrorFound = false;
+  if (ModifierLoc.isValid() && Modifier == OMPC_DEVICE_unknown) {
+    std::string Values =
+        getListOfPossibleValues(OMPC_device, /*First=*/0, OMPC_DEVICE_unknown);
+    Diag(ModifierLoc, diag::err_omp_unexpected_clause_value)
+        << Values << getOpenMPClauseName(OMPC_device);
+    ErrorFound = true;
+  }
+
   Expr *ValExpr = Device;
   Stmt *HelperValStmt = nullptr;
 
   // OpenMP [2.9.1, Restrictions]
   // The device expression must evaluate to a non-negative integer value.
-  if (!isNonNegativeIntegerValue(ValExpr, *this, OMPC_device,
-                                 /*StrictlyPositive=*/false))
+  ErrorFound = !isNonNegativeIntegerValue(ValExpr, *this, OMPC_device,
+                                          /*StrictlyPositive=*/false) ||
+               ErrorFound;
+  if (ErrorFound)
     return nullptr;
 
   OpenMPDirectiveKind DKind = DSAStack->getCurrentDirective();
@@ -15663,8 +15682,9 @@ OMPClause *Sema::ActOnOpenMPDeviceClause(Expr *Device, SourceLocation StartLoc,
     HelperValStmt = buildPreInits(Context, Captures);
   }
 
-  return new (Context) OMPDeviceClause(ValExpr, HelperValStmt, CaptureRegion,
-                                       StartLoc, LParenLoc, EndLoc);
+  return new (Context)
+      OMPDeviceClause(Modifier, ValExpr, HelperValStmt, CaptureRegion, StartLoc,
+                      LParenLoc, ModifierLoc, EndLoc);
 }
 
 static bool checkTypeMappable(SourceLocation SL, SourceRange SR, Sema &SemaRef,

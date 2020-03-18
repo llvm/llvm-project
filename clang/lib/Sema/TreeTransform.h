@@ -1847,11 +1847,13 @@ public:
   ///
   /// By default, performs semantic analysis to build the new statement.
   /// Subclasses may override this routine to provide different behavior.
-  OMPClause *RebuildOMPDeviceClause(Expr *Device, SourceLocation StartLoc,
+  OMPClause *RebuildOMPDeviceClause(OpenMPDeviceClauseModifier Modifier,
+                                    Expr *Device, SourceLocation StartLoc,
                                     SourceLocation LParenLoc,
+                                    SourceLocation ModifierLoc,
                                     SourceLocation EndLoc) {
-    return getSema().ActOnOpenMPDeviceClause(Device, StartLoc, LParenLoc,
-                                             EndLoc);
+    return getSema().ActOnOpenMPDeviceClause(Modifier, Device, StartLoc,
+                                             LParenLoc, ModifierLoc, EndLoc);
   }
 
   /// Build a new OpenMP 'map' clause.
@@ -9256,8 +9258,9 @@ TreeTransform<Derived>::TransformOMPDeviceClause(OMPDeviceClause *C) {
   ExprResult E = getDerived().TransformExpr(C->getDevice());
   if (E.isInvalid())
     return nullptr;
-  return getDerived().RebuildOMPDeviceClause(E.get(), C->getBeginLoc(),
-                                             C->getLParenLoc(), C->getEndLoc());
+  return getDerived().RebuildOMPDeviceClause(
+      C->getModifier(), E.get(), C->getBeginLoc(), C->getLParenLoc(),
+      C->getModifierLoc(), C->getEndLoc());
 }
 
 template <typename Derived, class T>

@@ -51,6 +51,13 @@ enum OpenMPScheduleClauseModifier {
   OMPC_SCHEDULE_MODIFIER_last
 };
 
+/// OpenMP modifiers for 'device' clause.
+enum OpenMPDeviceClauseModifier {
+#define OPENMP_DEVICE_MODIFIER(Name) OMPC_DEVICE_##Name,
+#include "clang/Basic/OpenMPKinds.def"
+  OMPC_DEVICE_unknown,
+};
+
 /// OpenMP attributes for 'depend' clause.
 enum OpenMPDependClauseKind {
 #define OPENMP_DEPEND_KIND(Name) \
