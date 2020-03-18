@@ -1047,19 +1047,20 @@ static Constant *getSequenceIfElementsMatch(Constant *C,
   return nullptr;
 }
 
-ConstantAggregate::ConstantAggregate(CompositeType *T, ValueTy VT,
+ConstantAggregate::ConstantAggregate(Type *T, ValueTy VT,
                                      ArrayRef<Constant *> V)
     : Constant(T, VT, OperandTraits<ConstantAggregate>::op_end(this) - V.size(),
                V.size()) {
   llvm::copy(V, op_begin());
 
   // Check that types match, unless this is an opaque struct.
-  if (auto *ST = dyn_cast<StructType>(T))
+  if (auto *ST = dyn_cast<StructType>(T)) {
     if (ST->isOpaque())
       return;
-  for (unsigned I = 0, E = V.size(); I != E; ++I)
-    assert(V[I]->getType() == T->getTypeAtIndex(I) &&
-           "Initializer for composite element doesn't match!");
+    for (unsigned I = 0, E = V.size(); I != E; ++I)
+      assert(V[I]->getType() == ST->getTypeAtIndex(I) &&
+             "Initializer for struct element doesn't match!");
+  }
 }
 
 ConstantArray::ConstantArray(ArrayType *T, ArrayRef<Constant *> V)

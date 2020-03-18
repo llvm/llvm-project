@@ -142,7 +142,7 @@ static bool isLeakCheckerRoot(GlobalVariable *GV) {
                  E = STy->element_end(); I != E; ++I) {
           Type *InnerTy = *I;
           if (isa<PointerType>(InnerTy)) return true;
-          if (isa<CompositeType>(InnerTy))
+          if (isa<StructType>(InnerTy) || isa<SequentialType>(InnerTy))
             Types.push_back(InnerTy);
         }
         break;

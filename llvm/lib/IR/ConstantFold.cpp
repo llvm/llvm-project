@@ -2389,10 +2389,11 @@ Constant *llvm::ConstantFoldGetElementPtr(Type *PointeeTy, Constant *C,
   SmallVector<Constant *, 8> NewIdxs;
   Type *Ty = PointeeTy;
   Type *Prev = C->getType();
+  auto GEPIter = gep_type_begin(PointeeTy, Idxs);
   bool Unknown =
       !isa<ConstantInt>(Idxs[0]) && !isa<ConstantDataVector>(Idxs[0]);
   for (unsigned i = 1, e = Idxs.size(); i != e;
-       Prev = Ty, Ty = cast<CompositeType>(Ty)->getTypeAtIndex(Idxs[i]), ++i) {
+       Prev = Ty, Ty = (++GEPIter).getIndexedType(), ++i) {
     if (!isa<ConstantInt>(Idxs[i]) && !isa<ConstantDataVector>(Idxs[i])) {
       // We don't know if it's in range or not.
       Unknown = true;
