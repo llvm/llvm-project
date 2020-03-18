@@ -19,6 +19,7 @@
 #include "llvm/Support/MachineValueType.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/TypeSize.h"
+#include "llvm/Support/WithColor.h"
 #include <cassert>
 #include <cstdint>
 #include <string>
@@ -163,6 +164,11 @@ namespace llvm {
       return V.isScalableVector();
     }
 
+    bool isFixedLengthVector() const {
+      return isSimple() ? V.isFixedLengthVector()
+                        : isExtendedFixedLengthVector();
+    }
+
     /// Return true if this is a 16-bit vector type.
     bool is16BitVector() const {
       return isSimple() ? V.is16BitVector() : isExtended16BitVector();
@@ -273,7 +279,16 @@ namespace llvm {
 
     /// Given a vector type, return the number of elements it contains.
     unsigned getVectorNumElements() const {
+#ifdef STRICT_FIXED_SIZE_VECTORS
+      assert(isFixedLengthVector() && "Invalid vector type!");
+#else
       assert(isVector() && "Invalid vector type!");
+      if (isScalableVector())
+        WithColor::warning()
+            << "Possible incorrect use of EVT::getVectorNumElements() for "
+               "scalable vector. Scalable flag may be dropped, use"
+               "EVT::getVectorElementCount() instead\n";
+#endif
       if (isSimple())
         return V.getVectorNumElements();
       return getExtendedVectorNumElements();
@@ -442,6 +457,7 @@ namespace llvm {
     bool isExtended512BitVector() const LLVM_READONLY;
     bool isExtended1024BitVector() const LLVM_READONLY;
     bool isExtended2048BitVector() const LLVM_READONLY;
+    bool isExtendedFixedLengthVector() const LLVM_READONLY;
     EVT getExtendedVectorElementType() const;
     unsigned getExtendedVectorNumElements() const LLVM_READONLY;
     TypeSize getExtendedSizeInBits() const LLVM_READONLY;
