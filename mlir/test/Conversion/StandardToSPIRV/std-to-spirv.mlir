@@ -280,9 +280,9 @@ module attributes {
 func @constant() {
   // CHECK: spv.constant true
   %0 = constant true
-  // CHECK: spv.constant 42 : i64
-  %1 = constant 42
-  // CHECK: spv.constant {{[0-9]*\.[0-9]*e?-?[0-9]*}} : f32
+  // CHECK: spv.constant 42 : i32
+  %1 = constant 42 : i32
+  // CHECK: spv.constant 5.000000e-01 : f32
   %2 = constant 0.5 : f32
   // CHECK: spv.constant dense<[2, 3]> : vector<2xi32>
   %3 = constant dense<[2, 3]> : vector<2xi32>
@@ -300,6 +300,114 @@ func @constant() {
   %9 =  constant dense<[[1, 2], [3, 4], [5, 6]]> : tensor<3x2xi32>
   // CHECK: spv.constant dense<{{\[}}1, 2, 3, 4, 5, 6]> : tensor<6xi32> : !spv.array<6 x i32 [4]>
   %10 =  constant dense<[1, 2, 3, 4, 5, 6]> : tensor<6xi32>
+  return
+}
+
+// CHECK-LABEL: @constant_16bit
+func @constant_16bit() {
+  // CHECK: spv.constant 4 : i16
+  %0 = constant 4 : i16
+  // CHECK: spv.constant 5.000000e+00 : f16
+  %1 = constant 5.0 : f16
+  // CHECK: spv.constant dense<[2, 3]> : vector<2xi16>
+  %2 = constant dense<[2, 3]> : vector<2xi16>
+  // CHECK: spv.constant dense<4.000000e+00> : tensor<5xf16> : !spv.array<5 x f16 [2]>
+  %3 = constant dense<4.0> : tensor<5xf16>
+  return
+}
+
+// CHECK-LABEL: @constant_64bit
+func @constant_64bit() {
+  // CHECK: spv.constant 4 : i64
+  %0 = constant 4 : i64
+  // CHECK: spv.constant 5.000000e+00 : f64
+  %1 = constant 5.0 : f64
+  // CHECK: spv.constant dense<[2, 3]> : vector<2xi64>
+  %2 = constant dense<[2, 3]> : vector<2xi64>
+  // CHECK: spv.constant dense<4.000000e+00> : tensor<5xf64> : !spv.array<5 x f64 [8]>
+  %3 = constant dense<4.0> : tensor<5xf64>
+  return
+}
+
+} // end module
+
+// -----
+
+// Check that constants are converted to 32-bit when no special capability.
+module attributes {
+  spv.target_env = #spv.target_env<
+    #spv.vce<v1.0, [], []>,
+    {max_compute_workgroup_invocations = 128 : i32,
+     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+} {
+
+// CHECK-LABEL: @constant_16bit
+func @constant_16bit() {
+  // CHECK: spv.constant 4 : i32
+  %0 = constant 4 : i16
+  // CHECK: spv.constant 5.000000e+00 : f32
+  %1 = constant 5.0 : f16
+  // CHECK: spv.constant dense<[2, 3]> : vector<2xi32>
+  %2 = constant dense<[2, 3]> : vector<2xi16>
+  // CHECK: spv.constant dense<4.000000e+00> : tensor<5xf32> : !spv.array<5 x f32 [4]>
+  %3 = constant dense<4.0> : tensor<5xf16>
+  // CHECK: spv.constant dense<[1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00]> : tensor<4xf32> : !spv.array<4 x f32 [4]>
+  %4 = constant dense<[[1.0, 2.0], [3.0, 4.0]]> : tensor<2x2xf16>
+  return
+}
+
+// CHECK-LABEL: @constant_64bit
+func @constant_64bit() {
+  // CHECK: spv.constant 4 : i32
+  %0 = constant 4 : i64
+  // CHECK: spv.constant 5.000000e+00 : f32
+  %1 = constant 5.0 : f64
+  // CHECK: spv.constant dense<[2, 3]> : vector<2xi32>
+  %2 = constant dense<[2, 3]> : vector<2xi64>
+  // CHECK: spv.constant dense<4.000000e+00> : tensor<5xf32> : !spv.array<5 x f32 [4]>
+  %3 = constant dense<4.0> : tensor<5xf64>
+  // CHECK: spv.constant dense<[1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00]> : tensor<4xf32> : !spv.array<4 x f32 [4]>
+  %4 = constant dense<[[1.0, 2.0], [3.0, 4.0]]> : tensor<2x2xf16>
+  return
+}
+
+// CHECK-LABEL: @corner_cases
+func @corner_cases() {
+  // CHECK: %{{.*}} = spv.constant -1 : i32
+  %0 = constant 4294967295  : i64 // 2^32 - 1
+  // CHECK: %{{.*}} = spv.constant 2147483647 : i32
+  %1 = constant 2147483647  : i64 // 2^31 - 1
+  // CHECK: %{{.*}} = spv.constant -2147483648 : i32
+  %2 = constant 2147483648  : i64 // 2^31
+  // CHECK: %{{.*}} = spv.constant -2147483648 : i32
+  %3 = constant -2147483648 : i64 // -2^31
+
+  // CHECK: %{{.*}} = spv.constant -1 : i32
+  %5 = constant -1 : i64
+  // CHECK: %{{.*}} = spv.constant -2 : i32
+  %6 = constant -2 : i64
+  // CHECK: %{{.*}} = spv.constant -1 : i32
+  %7 = constant -1 : index
+  // CHECK: %{{.*}} = spv.constant -2 : i32
+  %8 = constant -2 : index
+
+
+  // CHECK: spv.constant false
+  %9 = constant 0 : i1
+  // CHECK: spv.constant true
+  %10 = constant 1 : i1
+
+  return
+}
+
+// CHECK-LABEL: @unsupported_cases
+func @unsupported_cases() {
+  // CHECK: %{{.*}} = constant 4294967296 : i64
+  %0 = constant 4294967296 : i64 // 2^32
+  // CHECK: %{{.*}} = constant -2147483649 : i64
+  %1 = constant -2147483649 : i64 // -2^31 - 1
+  // CHECK: %{{.*}} = constant 1.0000000000000002 : f64
+  %2 = constant 0x3FF0000000000001 : f64 // smallest number > 1
   return
 }
 
