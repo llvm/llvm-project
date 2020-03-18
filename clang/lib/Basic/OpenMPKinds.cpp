@@ -154,6 +154,11 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind,
 #define OPENMP_DEPEND_KIND(Name) .Case(#Name, OMPC_DEPEND_##Name)
 #include "clang/Basic/OpenMPKinds.def"
         .Default(OMPC_DEPEND_unknown);
+  case OMPC_device:
+    return llvm::StringSwitch<OpenMPDeviceClauseModifier>(Str)
+#define OPENMP_DEVICE_MODIFIER(Name) .Case(#Name, OMPC_DEVICE_##Name)
+#include "clang/Basic/OpenMPKinds.def"
+        .Default(OMPC_DEVICE_unknown);
   case OMPC_unknown:
   case OMPC_threadprivate:
   case OMPC_if:
@@ -187,7 +192,6 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind,
   case OMPC_acquire:
   case OMPC_release:
   case OMPC_relaxed:
-  case OMPC_device:
   case OMPC_threads:
   case OMPC_simd:
   case OMPC_num_teams:
@@ -380,6 +384,16 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
 #include "clang/Basic/OpenMPKinds.def"
     }
     llvm_unreachable("Invalid OpenMP 'depend' clause type");
+  case OMPC_device:
+    switch (Type) {
+    case OMPC_DEVICE_unknown:
+      return "unknown";
+#define OPENMP_DEVICE_MODIFIER(Name)                                           \
+  case OMPC_DEVICE_##Name:                                                     \
+    return #Name;
+#include "clang/Basic/OpenMPKinds.def"
+    }
+    llvm_unreachable("Invalid OpenMP 'device' clause modifier");
   case OMPC_unknown:
   case OMPC_threadprivate:
   case OMPC_if:
@@ -413,7 +427,6 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
   case OMPC_acquire:
   case OMPC_release:
   case OMPC_relaxed:
-  case OMPC_device:
   case OMPC_threads:
   case OMPC_simd:
   case OMPC_num_teams:

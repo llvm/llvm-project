@@ -353,11 +353,11 @@ int a;
 template <typename T, int C>
 T tmain(T argc, T *argv) {
   T i, j, a[20], always, close;
-#pragma omp target
+#pragma omp target device(argc)
   foo();
-#pragma omp target if (target:argc > 0)
+#pragma omp target if (target:argc > 0) device(device_num: C)
   foo();
-#pragma omp target if (C)
+#pragma omp target if (C) device(ancestor: argc)
   foo();
 #pragma omp target map(i)
   foo();
@@ -458,11 +458,11 @@ T tmain(T argc, T *argv) {
 
 // OMP5: template <typename T, int C> T tmain(T argc, T *argv) {
 // OMP5-NEXT: T i, j, a[20]
-// OMP5-NEXT: #pragma omp target{{$}}
+// OMP5-NEXT: #pragma omp target device(argc){{$}}
 // OMP5-NEXT: foo();
-// OMP5-NEXT: #pragma omp target if(target: argc > 0)
+// OMP5-NEXT: #pragma omp target if(target: argc > 0) device(device_num: C)
 // OMP5-NEXT: foo()
-// OMP5-NEXT: #pragma omp target if(C)
+// OMP5-NEXT: #pragma omp target if(C) device(ancestor: argc)
 // OMP5-NEXT: foo()
 // OMP5-NEXT: #pragma omp target map(tofrom: i)
 // OMP5-NEXT: foo()
@@ -650,11 +650,11 @@ T tmain(T argc, T *argv) {
 // OMP5-NEXT: foo()
 // OMP5: template<> char tmain<char, 1>(char argc, char *argv) {
 // OMP5-NEXT: char i, j, a[20]
-// OMP5-NEXT: #pragma omp target
+// OMP5-NEXT: #pragma omp target device(argc)
 // OMP5-NEXT: foo();
-// OMP5-NEXT: #pragma omp target if(target: argc > 0)
+// OMP5-NEXT: #pragma omp target if(target: argc > 0) device(device_num: 1)
 // OMP5-NEXT: foo()
-// OMP5-NEXT: #pragma omp target if(1)
+// OMP5-NEXT: #pragma omp target if(1) device(ancestor: argc)
 // OMP5-NEXT: foo()
 // OMP5-NEXT: #pragma omp target map(tofrom: i)
 // OMP5-NEXT: foo()
