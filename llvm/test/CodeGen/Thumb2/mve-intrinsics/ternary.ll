@@ -101,6 +101,168 @@ entry:
   ret <4 x float> %1
 }
 
+define arm_aapcs_vfpcc <16 x i8> @test_vmlaq_n_s8(<16 x i8> %a, <16 x i8> %b, i8 signext %c) {
+; CHECK-LABEL: test_vmlaq_n_s8:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmla.u8 q0, q1, r0
+; CHECK-NEXT:    bx lr
+entry:
+  %.splatinsert = insertelement <16 x i8> undef, i8 %c, i32 0
+  %.splat = shufflevector <16 x i8> %.splatinsert, <16 x i8> undef, <16 x i32> zeroinitializer
+  %0 = mul <16 x i8> %.splat, %b
+  %1 = add <16 x i8> %0, %a
+  ret <16 x i8> %1
+}
+
+define arm_aapcs_vfpcc <8 x i16> @test_vmlaq_n_s16(<8 x i16> %a, <8 x i16> %b, i16 signext %c) {
+; CHECK-LABEL: test_vmlaq_n_s16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmla.u16 q0, q1, r0
+; CHECK-NEXT:    bx lr
+entry:
+  %.splatinsert = insertelement <8 x i16> undef, i16 %c, i32 0
+  %.splat = shufflevector <8 x i16> %.splatinsert, <8 x i16> undef, <8 x i32> zeroinitializer
+  %0 = mul <8 x i16> %.splat, %b
+  %1 = add <8 x i16> %0, %a
+  ret <8 x i16> %1
+}
+
+define arm_aapcs_vfpcc <4 x i32> @test_vmlaq_n_s32(<4 x i32> %a, <4 x i32> %b, i32 %c) {
+; CHECK-LABEL: test_vmlaq_n_s32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmla.u32 q0, q1, r0
+; CHECK-NEXT:    bx lr
+entry:
+  %.splatinsert = insertelement <4 x i32> undef, i32 %c, i32 0
+  %.splat = shufflevector <4 x i32> %.splatinsert, <4 x i32> undef, <4 x i32> zeroinitializer
+  %0 = mul <4 x i32> %.splat, %b
+  %1 = add <4 x i32> %0, %a
+  ret <4 x i32> %1
+}
+
+define arm_aapcs_vfpcc <16 x i8> @test_vmlaq_n_u8(<16 x i8> %a, <16 x i8> %b, i8 zeroext %c) {
+; CHECK-LABEL: test_vmlaq_n_u8:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmla.u8 q0, q1, r0
+; CHECK-NEXT:    bx lr
+entry:
+  %.splatinsert = insertelement <16 x i8> undef, i8 %c, i32 0
+  %.splat = shufflevector <16 x i8> %.splatinsert, <16 x i8> undef, <16 x i32> zeroinitializer
+  %0 = mul <16 x i8> %.splat, %b
+  %1 = add <16 x i8> %0, %a
+  ret <16 x i8> %1
+}
+
+define arm_aapcs_vfpcc <8 x i16> @test_vmlaq_n_u16(<8 x i16> %a, <8 x i16> %b, i16 zeroext %c) {
+; CHECK-LABEL: test_vmlaq_n_u16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmla.u16 q0, q1, r0
+; CHECK-NEXT:    bx lr
+entry:
+  %.splatinsert = insertelement <8 x i16> undef, i16 %c, i32 0
+  %.splat = shufflevector <8 x i16> %.splatinsert, <8 x i16> undef, <8 x i32> zeroinitializer
+  %0 = mul <8 x i16> %.splat, %b
+  %1 = add <8 x i16> %0, %a
+  ret <8 x i16> %1
+}
+
+define arm_aapcs_vfpcc <4 x i32> @test_vmlaq_n_u32(<4 x i32> %a, <4 x i32> %b, i32 %c) {
+; CHECK-LABEL: test_vmlaq_n_u32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmla.u32 q0, q1, r0
+; CHECK-NEXT:    bx lr
+entry:
+  %.splatinsert = insertelement <4 x i32> undef, i32 %c, i32 0
+  %.splat = shufflevector <4 x i32> %.splatinsert, <4 x i32> undef, <4 x i32> zeroinitializer
+  %0 = mul <4 x i32> %.splat, %b
+  %1 = add <4 x i32> %0, %a
+  ret <4 x i32> %1
+}
+
+define arm_aapcs_vfpcc <16 x i8> @test_vmlasq_n_s8(<16 x i8> %a, <16 x i8> %b, i8 signext %c) {
+; CHECK-LABEL: test_vmlasq_n_s8:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmlas.u8 q1, q0, r0
+; CHECK-NEXT:    vmov q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = mul <16 x i8> %b, %a
+  %.splatinsert = insertelement <16 x i8> undef, i8 %c, i32 0
+  %.splat = shufflevector <16 x i8> %.splatinsert, <16 x i8> undef, <16 x i32> zeroinitializer
+  %1 = add <16 x i8> %.splat, %0
+  ret <16 x i8> %1
+}
+
+define arm_aapcs_vfpcc <8 x i16> @test_vmlasq_n_s16(<8 x i16> %a, <8 x i16> %b, i16 signext %c) {
+; CHECK-LABEL: test_vmlasq_n_s16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmlas.u16 q1, q0, r0
+; CHECK-NEXT:    vmov q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = mul <8 x i16> %b, %a
+  %.splatinsert = insertelement <8 x i16> undef, i16 %c, i32 0
+  %.splat = shufflevector <8 x i16> %.splatinsert, <8 x i16> undef, <8 x i32> zeroinitializer
+  %1 = add <8 x i16> %.splat, %0
+  ret <8 x i16> %1
+}
+
+define arm_aapcs_vfpcc <4 x i32> @test_vmlasq_n_s32(<4 x i32> %a, <4 x i32> %b, i32 %c) {
+; CHECK-LABEL: test_vmlasq_n_s32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmlas.u32 q1, q0, r0
+; CHECK-NEXT:    vmov q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = mul <4 x i32> %b, %a
+  %.splatinsert = insertelement <4 x i32> undef, i32 %c, i32 0
+  %.splat = shufflevector <4 x i32> %.splatinsert, <4 x i32> undef, <4 x i32> zeroinitializer
+  %1 = add <4 x i32> %.splat, %0
+  ret <4 x i32> %1
+}
+
+define arm_aapcs_vfpcc <16 x i8> @test_vmlasq_n_u8(<16 x i8> %a, <16 x i8> %b, i8 zeroext %c) {
+; CHECK-LABEL: test_vmlasq_n_u8:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmlas.u8 q1, q0, r0
+; CHECK-NEXT:    vmov q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = mul <16 x i8> %b, %a
+  %.splatinsert = insertelement <16 x i8> undef, i8 %c, i32 0
+  %.splat = shufflevector <16 x i8> %.splatinsert, <16 x i8> undef, <16 x i32> zeroinitializer
+  %1 = add <16 x i8> %.splat, %0
+  ret <16 x i8> %1
+}
+
+define arm_aapcs_vfpcc <8 x i16> @test_vmlasq_n_u16(<8 x i16> %a, <8 x i16> %b, i16 zeroext %c) {
+; CHECK-LABEL: test_vmlasq_n_u16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmlas.u16 q1, q0, r0
+; CHECK-NEXT:    vmov q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = mul <8 x i16> %b, %a
+  %.splatinsert = insertelement <8 x i16> undef, i16 %c, i32 0
+  %.splat = shufflevector <8 x i16> %.splatinsert, <8 x i16> undef, <8 x i32> zeroinitializer
+  %1 = add <8 x i16> %.splat, %0
+  ret <8 x i16> %1
+}
+
+define arm_aapcs_vfpcc <4 x i32> @test_vmlasq_n_u32(<4 x i32> %a, <4 x i32> %b, i32 %c) {
+; CHECK-LABEL: test_vmlasq_n_u32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmlas.u32 q1, q0, r0
+; CHECK-NEXT:    vmov q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = mul <4 x i32> %b, %a
+  %.splatinsert = insertelement <4 x i32> undef, i32 %c, i32 0
+  %.splat = shufflevector <4 x i32> %.splatinsert, <4 x i32> undef, <4 x i32> zeroinitializer
+  %1 = add <4 x i32> %.splat, %0
+  ret <4 x i32> %1
+}
+
 define arm_aapcs_vfpcc <8 x half> @test_vfmaq_m_f16(<8 x half> %a, <8 x half> %b, <8 x half> %c, i16 zeroext %p) {
 ; CHECK-LABEL: test_vfmaq_m_f16:
 ; CHECK:       @ %bb.0: @ %entry
@@ -233,6 +395,183 @@ entry:
   ret <4 x float> %3
 }
 
+define arm_aapcs_vfpcc <16 x i8> @test_vmlaq_m_n_s8(<16 x i8> %a, <16 x i8> %b, i8 signext %c, i16 zeroext %p) {
+; CHECK-LABEL: test_vmlaq_m_n_s8:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vmlat.u8 q0, q1, r0
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = zext i8 %c to i32
+  %1 = zext i16 %p to i32
+  %2 = tail call <16 x i1> @llvm.arm.mve.pred.i2v.v16i1(i32 %1)
+  %3 = tail call <16 x i8> @llvm.arm.mve.vmla.n.predicated.v16i8.v16i1(<16 x i8> %a, <16 x i8> %b, i32 %0, <16 x i1> %2)
+  ret <16 x i8> %3
+}
+
+define arm_aapcs_vfpcc <8 x i16> @test_vmlaq_m_n_s16(<8 x i16> %a, <8 x i16> %b, i16 signext %c, i16 zeroext %p) {
+; CHECK-LABEL: test_vmlaq_m_n_s16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vmlat.u16 q0, q1, r0
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = zext i16 %c to i32
+  %1 = zext i16 %p to i32
+  %2 = tail call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 %1)
+  %3 = tail call <8 x i16> @llvm.arm.mve.vmla.n.predicated.v8i16.v8i1(<8 x i16> %a, <8 x i16> %b, i32 %0, <8 x i1> %2)
+  ret <8 x i16> %3
+}
+
+define arm_aapcs_vfpcc <4 x i32> @test_vmlaq_m_n_s32(<4 x i32> %a, <4 x i32> %b, i32 %c, i16 zeroext %p) {
+; CHECK-LABEL: test_vmlaq_m_n_s32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vmlat.u32 q0, q1, r0
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = zext i16 %p to i32
+  %1 = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %0)
+  %2 = tail call <4 x i32> @llvm.arm.mve.vmla.n.predicated.v4i32.v4i1(<4 x i32> %a, <4 x i32> %b, i32 %c, <4 x i1> %1)
+  ret <4 x i32> %2
+}
+
+define arm_aapcs_vfpcc <16 x i8> @test_vmlaq_m_n_u8(<16 x i8> %a, <16 x i8> %b, i8 zeroext %c, i16 zeroext %p) {
+; CHECK-LABEL: test_vmlaq_m_n_u8:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vmlat.u8 q0, q1, r0
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = zext i8 %c to i32
+  %1 = zext i16 %p to i32
+  %2 = tail call <16 x i1> @llvm.arm.mve.pred.i2v.v16i1(i32 %1)
+  %3 = tail call <16 x i8> @llvm.arm.mve.vmla.n.predicated.v16i8.v16i1(<16 x i8> %a, <16 x i8> %b, i32 %0, <16 x i1> %2)
+  ret <16 x i8> %3
+}
+
+define arm_aapcs_vfpcc <8 x i16> @test_vmlaq_m_n_u16(<8 x i16> %a, <8 x i16> %b, i16 zeroext %c, i16 zeroext %p) {
+; CHECK-LABEL: test_vmlaq_m_n_u16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vmlat.u16 q0, q1, r0
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = zext i16 %c to i32
+  %1 = zext i16 %p to i32
+  %2 = tail call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 %1)
+  %3 = tail call <8 x i16> @llvm.arm.mve.vmla.n.predicated.v8i16.v8i1(<8 x i16> %a, <8 x i16> %b, i32 %0, <8 x i1> %2)
+  ret <8 x i16> %3
+}
+
+define arm_aapcs_vfpcc <4 x i32> @test_vmlaq_m_n_u32(<4 x i32> %a, <4 x i32> %b, i32 %c, i16 zeroext %p) {
+; CHECK-LABEL: test_vmlaq_m_n_u32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vmlat.u32 q0, q1, r0
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = zext i16 %p to i32
+  %1 = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %0)
+  %2 = tail call <4 x i32> @llvm.arm.mve.vmla.n.predicated.v4i32.v4i1(<4 x i32> %a, <4 x i32> %b, i32 %c, <4 x i1> %1)
+  ret <4 x i32> %2
+}
+
+define arm_aapcs_vfpcc <16 x i8> @test_vmlasq_m_n_s8(<16 x i8> %a, <16 x i8> %b, i8 signext %c, i16 zeroext %p) {
+; CHECK-LABEL: test_vmlasq_m_n_s8:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vmlast.u8 q0, q1, r0
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = zext i8 %c to i32
+  %1 = zext i16 %p to i32
+  %2 = tail call <16 x i1> @llvm.arm.mve.pred.i2v.v16i1(i32 %1)
+  %3 = tail call <16 x i8> @llvm.arm.mve.vmlas.n.predicated.v16i8.v16i1(<16 x i8> %a, <16 x i8> %b, i32 %0, <16 x i1> %2)
+  ret <16 x i8> %3
+}
+
+define arm_aapcs_vfpcc <8 x i16> @test_vmlasq_m_n_s16(<8 x i16> %a, <8 x i16> %b, i16 signext %c, i16 zeroext %p) {
+; CHECK-LABEL: test_vmlasq_m_n_s16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vmlast.u16 q0, q1, r0
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = zext i16 %c to i32
+  %1 = zext i16 %p to i32
+  %2 = tail call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 %1)
+  %3 = tail call <8 x i16> @llvm.arm.mve.vmlas.n.predicated.v8i16.v8i1(<8 x i16> %a, <8 x i16> %b, i32 %0, <8 x i1> %2)
+  ret <8 x i16> %3
+}
+
+define arm_aapcs_vfpcc <4 x i32> @test_vmlasq_m_n_s32(<4 x i32> %a, <4 x i32> %b, i32 %c, i16 zeroext %p) {
+; CHECK-LABEL: test_vmlasq_m_n_s32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vmlast.u32 q0, q1, r0
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = zext i16 %p to i32
+  %1 = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %0)
+  %2 = tail call <4 x i32> @llvm.arm.mve.vmlas.n.predicated.v4i32.v4i1(<4 x i32> %a, <4 x i32> %b, i32 %c, <4 x i1> %1)
+  ret <4 x i32> %2
+}
+
+define arm_aapcs_vfpcc <16 x i8> @test_vmlasq_m_n_u8(<16 x i8> %a, <16 x i8> %b, i8 zeroext %c, i16 zeroext %p) {
+; CHECK-LABEL: test_vmlasq_m_n_u8:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vmlast.u8 q0, q1, r0
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = zext i8 %c to i32
+  %1 = zext i16 %p to i32
+  %2 = tail call <16 x i1> @llvm.arm.mve.pred.i2v.v16i1(i32 %1)
+  %3 = tail call <16 x i8> @llvm.arm.mve.vmlas.n.predicated.v16i8.v16i1(<16 x i8> %a, <16 x i8> %b, i32 %0, <16 x i1> %2)
+  ret <16 x i8> %3
+}
+
+define arm_aapcs_vfpcc <8 x i16> @test_vmlasq_m_n_u16(<8 x i16> %a, <8 x i16> %b, i16 zeroext %c, i16 zeroext %p) {
+; CHECK-LABEL: test_vmlasq_m_n_u16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vmlast.u16 q0, q1, r0
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = zext i16 %c to i32
+  %1 = zext i16 %p to i32
+  %2 = tail call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 %1)
+  %3 = tail call <8 x i16> @llvm.arm.mve.vmlas.n.predicated.v8i16.v8i1(<8 x i16> %a, <8 x i16> %b, i32 %0, <8 x i1> %2)
+  ret <8 x i16> %3
+}
+
+define arm_aapcs_vfpcc <4 x i32> @test_vmlasq_m_n_u32(<4 x i32> %a, <4 x i32> %b, i32 %c, i16 zeroext %p) {
+; CHECK-LABEL: test_vmlasq_m_n_u32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vmlast.u32 q0, q1, r0
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = zext i16 %p to i32
+  %1 = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %0)
+  %2 = tail call <4 x i32> @llvm.arm.mve.vmlas.n.predicated.v4i32.v4i1(<4 x i32> %a, <4 x i32> %b, i32 %c, <4 x i1> %1)
+  ret <4 x i32> %2
+}
+
+declare <16 x i1> @llvm.arm.mve.pred.i2v.v16i1(i32)
 declare <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32)
 declare <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32)
 
@@ -240,3 +579,9 @@ declare <8 x half> @llvm.fma.v8f16(<8 x half>, <8 x half>, <8 x half>)
 declare <4 x float> @llvm.fma.v4f32(<4 x float>, <4 x float>, <4 x float>)
 declare <8 x half> @llvm.arm.mve.fma.predicated.v8f16.v8i1(<8 x half>, <8 x half>, <8 x half>, <8 x i1>)
 declare <4 x float> @llvm.arm.mve.fma.predicated.v4f32.v4i1(<4 x float>, <4 x float>, <4 x float>, <4 x i1>)
+declare <16 x i8> @llvm.arm.mve.vmla.n.predicated.v16i8.v16i1(<16 x i8>, <16 x i8>, i32, <16 x i1>)
+declare <8 x i16> @llvm.arm.mve.vmla.n.predicated.v8i16.v8i1(<8 x i16>, <8 x i16>, i32, <8 x i1>)
+declare <4 x i32> @llvm.arm.mve.vmla.n.predicated.v4i32.v4i1(<4 x i32>, <4 x i32>, i32, <4 x i1>)
+declare <16 x i8> @llvm.arm.mve.vmlas.n.predicated.v16i8.v16i1(<16 x i8>, <16 x i8>, i32, <16 x i1>)
+declare <8 x i16> @llvm.arm.mve.vmlas.n.predicated.v8i16.v8i1(<8 x i16>, <8 x i16>, i32, <8 x i1>)
+declare <4 x i32> @llvm.arm.mve.vmlas.n.predicated.v4i32.v4i1(<4 x i32>, <4 x i32>, i32, <4 x i1>)
