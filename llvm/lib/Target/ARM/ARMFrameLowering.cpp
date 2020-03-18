@@ -142,27 +142,6 @@ ARMFrameLowering::canSimplifyCallFramePseudos(const MachineFunction &MF) const {
   return hasReservedCallFrame(MF) || MF.getFrameInfo().hasVarSizedObjects();
 }
 
-static bool isCSRestore(MachineInstr &MI, const ARMBaseInstrInfo &TII,
-                        const MCPhysReg *CSRegs) {
-  // Integer spill area is handled with "pop".
-  if (isPopOpcode(MI.getOpcode())) {
-    // The first two operands are predicates. The last two are
-    // imp-def and imp-use of SP. Check everything in between.
-    for (int i = 5, e = MI.getNumOperands(); i != e; ++i)
-      if (!isCalleeSavedRegister(MI.getOperand(i).getReg(), CSRegs))
-        return false;
-    return true;
-  }
-  if ((MI.getOpcode() == ARM::LDR_POST_IMM ||
-       MI.getOpcode() == ARM::LDR_POST_REG ||
-       MI.getOpcode() == ARM::t2LDR_POST) &&
-      isCalleeSavedRegister(MI.getOperand(0).getReg(), CSRegs) &&
-      MI.getOperand(1).getReg() == ARM::SP)
-    return true;
-
-  return false;
-}
-
 static void emitRegPlusImmediate(
     bool isARM, MachineBasicBlock &MBB, MachineBasicBlock::iterator &MBBI,
     const DebugLoc &dl, const ARMBaseInstrInfo &TII, unsigned DestReg,
@@ -793,15 +772,16 @@ void ARMFrameLowering::emitEpilogue(MachineFunction &MF,
 
   if (!AFI->hasStackFrame()) {
     if (NumBytes - ArgRegsSaveSize != 0)
-      emitSPUpdate(isARM, MBB, MBBI, dl, TII, NumBytes - ArgRegsSaveSize);
+      emitSPUpdate(isARM, MBB, MBBI, dl, TII, NumBytes - ArgRegsSaveSize,
+                   MachineInstr::FrameDestroy);
   } else {
     // Unwind MBBI to point to first LDR / VLDRD.
-    const MCPhysReg *CSRegs = RegInfo->getCalleeSavedRegs(&MF);
     if (MBBI != MBB.begin()) {
       do {
         --MBBI;
-      } while (MBBI != MBB.begin() && isCSRestore(*MBBI, TII, CSRegs));
-      if (!isCSRestore(*MBBI, TII, CSRegs))
+      } while (MBBI != MBB.begin() &&
+               MBBI->getFlag(MachineInstr::FrameDestroy));
+      if (!MBBI->getFlag(MachineInstr::FrameDestroy))
         ++MBBI;
     }
 
@@ -819,7 +799,8 @@ void ARMFrameLowering::emitEpilogue(MachineFunction &MF,
       if (NumBytes) {
         if (isARM)
           emitARMRegPlusImmediate(MBB, MBBI, dl, ARM::SP, FramePtr, -NumBytes,
-                                  ARMCC::AL, 0, TII);
+                                  ARMCC::AL, 0, TII,
+                                  MachineInstr::FrameDestroy);
         else {
           // It's not possible to restore SP from FP in a single instruction.
           // For iOS, this looks like:
@@ -831,10 +812,11 @@ void ARMFrameLowering::emitEpilogue(MachineFunction &MF,
           assert(!MFI.getPristineRegs(MF).test(ARM::R4) &&
                  "No scratch register to restore SP from FP!");
           emitT2RegPlusImmediate(MBB, MBBI, dl, ARM::R4, FramePtr, -NumBytes,
-                                 ARMCC::AL, 0, TII);
+                                 ARMCC::AL, 0, TII, MachineInstr::FrameDestroy);
           BuildMI(MBB, MBBI, dl, TII.get(ARM::tMOVr), ARM::SP)
               .addReg(ARM::R4)
-              .add(predOps(ARMCC::AL));
+              .add(predOps(ARMCC::AL))
+              .setMIFlag(MachineInstr::FrameDestroy);
         }
       } else {
         // Thumb2 or ARM.
@@ -842,15 +824,18 @@ void ARMFrameLowering::emitEpilogue(MachineFunction &MF,
           BuildMI(MBB, MBBI, dl, TII.get(ARM::MOVr), ARM::SP)
               .addReg(FramePtr)
               .add(predOps(ARMCC::AL))
-              .add(condCodeOp());
+              .add(condCodeOp())
+              .setMIFlag(MachineInstr::FrameDestroy);
         else
           BuildMI(MBB, MBBI, dl, TII.get(ARM::tMOVr), ARM::SP)
               .addReg(FramePtr)
-              .add(predOps(ARMCC::AL));
+              .add(predOps(ARMCC::AL))
+              .setMIFlag(MachineInstr::FrameDestroy);
       }
     } else if (NumBytes &&
                !tryFoldSPUpdateIntoPushPop(STI, MF, &*MBBI, NumBytes))
-      emitSPUpdate(isARM, MBB, MBBI, dl, TII, NumBytes);
+      emitSPUpdate(isARM, MBB, MBBI, dl, TII, NumBytes,
+                   MachineInstr::FrameDestroy);
 
     // Increment past our save areas.
     if (MBBI != MBB.end() && AFI->getDPRCalleeSavedAreaSize()) {
@@ -863,7 +848,8 @@ void ARMFrameLowering::emitEpilogue(MachineFunction &MF,
     if (AFI->getDPRCalleeSavedGapSize()) {
       assert(AFI->getDPRCalleeSavedGapSize() == 4 &&
              "unexpected DPR alignment gap");
-      emitSPUpdate(isARM, MBB, MBBI, dl, TII, AFI->getDPRCalleeSavedGapSize());
+      emitSPUpdate(isARM, MBB, MBBI, dl, TII, AFI->getDPRCalleeSavedGapSize(),
+                   MachineInstr::FrameDestroy);
     }
 
     if (AFI->getGPRCalleeSavedArea2Size()) MBBI++;
@@ -871,7 +857,8 @@ void ARMFrameLowering::emitEpilogue(MachineFunction &MF,
   }
 
   if (ArgRegsSaveSize)
-    emitSPUpdate(isARM, MBB, MBBI, dl, TII, ArgRegsSaveSize);
+    emitSPUpdate(isARM, MBB, MBBI, dl, TII, ArgRegsSaveSize,
+                 MachineInstr::FrameDestroy);
 }
 
 /// getFrameIndexReference - Provide a base+offset reference to an FI slot for
@@ -1118,7 +1105,8 @@ void ARMFrameLowering::emitPopInst(MachineBasicBlock &MBB,
     if (Regs.size() > 1 || LdrOpc == 0) {
       MachineInstrBuilder MIB = BuildMI(MBB, MI, DL, TII.get(LdmOpc), ARM::SP)
                                     .addReg(ARM::SP)
-                                    .add(predOps(ARMCC::AL));
+                                    .add(predOps(ARMCC::AL))
+                                    .setMIFlags(MachineInstr::FrameDestroy);
       for (unsigned i = 0, e = Regs.size(); i < e; ++i)
         MIB.addReg(Regs[i], getDefRegState(true));
       if (DeleteRet) {
@@ -1136,7 +1124,8 @@ void ARMFrameLowering::emitPopInst(MachineBasicBlock &MBB,
       MachineInstrBuilder MIB =
         BuildMI(MBB, MI, DL, TII.get(LdrOpc), Regs[0])
           .addReg(ARM::SP, RegState::Define)
-          .addReg(ARM::SP);
+          .addReg(ARM::SP)
+          .setMIFlags(MachineInstr::FrameDestroy);
       // ARM mode needs an extra reg0 here due to addrmode2. Will go away once
       // that refactoring is complete (eventually).
       if (LdrOpc == ARM::LDR_POST_REG || LdrOpc == ARM::LDR_POST_IMM) {
