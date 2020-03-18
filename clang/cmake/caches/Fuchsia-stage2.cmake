@@ -195,6 +195,7 @@ set(LLVM_TOOLCHAIN_TOOLS
   llvm-cxxfilt
   llvm-dwarfdump
   llvm-dwp
+  llvm-gsymutil
   llvm-lib
   llvm-nm
   llvm-objcopy
