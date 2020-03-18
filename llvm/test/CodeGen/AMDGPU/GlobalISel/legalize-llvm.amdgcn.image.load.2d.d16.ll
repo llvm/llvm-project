@@ -508,8 +508,11 @@ define amdgpu_ps half @image_load_f16_dmask_0000(<8 x i32> inreg %rsrc, i32 %s, 
   ; UNPACKED:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
   ; UNPACKED:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; UNPACKED:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; UNPACKED:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; UNPACKED:   $vgpr0 = COPY [[DEF]](s32)
+  ; UNPACKED:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; UNPACKED:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32)
+  ; UNPACKED:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s16) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.2d), 0, [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0 :: (dereferenceable load 2 from custom "TargetCustom8")
+  ; UNPACKED:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[AMDGPU_INTRIN_IMAGE_LOAD]](s16)
+  ; UNPACKED:   $vgpr0 = COPY [[ANYEXT]](s32)
   ; UNPACKED:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ; PACKED-LABEL: name: image_load_f16_dmask_0000
   ; PACKED: bb.1 (%ir-block.0):
@@ -524,8 +527,11 @@ define amdgpu_ps half @image_load_f16_dmask_0000(<8 x i32> inreg %rsrc, i32 %s, 
   ; PACKED:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
   ; PACKED:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; PACKED:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; PACKED:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; PACKED:   $vgpr0 = COPY [[DEF]](s32)
+  ; PACKED:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; PACKED:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32)
+  ; PACKED:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s16) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.2d), 0, [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0 :: (dereferenceable load 2 from custom "TargetCustom8")
+  ; PACKED:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[AMDGPU_INTRIN_IMAGE_LOAD]](s16)
+  ; PACKED:   $vgpr0 = COPY [[ANYEXT]](s32)
   ; PACKED:   SI_RETURN_TO_EPILOG implicit $vgpr0
   %tex = call half @llvm.amdgcn.image.load.2d.f16.i32(i32 0, i32 %s, i32 %t, <8 x i32> %rsrc, i32 0, i32 0)
   ret half %tex
@@ -594,8 +600,18 @@ define amdgpu_ps <2 x half> @image_load_v2f16_dmask_0000(<8 x i32> inreg %rsrc, 
   ; UNPACKED:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
   ; UNPACKED:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; UNPACKED:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; UNPACKED:   [[DEF:%[0-9]+]]:_(<2 x s16>) = G_IMPLICIT_DEF
-  ; UNPACKED:   $vgpr0 = COPY [[DEF]](<2 x s16>)
+  ; UNPACKED:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; UNPACKED:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32)
+  ; UNPACKED:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.2d), 0, [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0 :: (dereferenceable load 4 from custom "TargetCustom8")
+  ; UNPACKED:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
+  ; UNPACKED:   [[COPY10:%[0-9]+]]:_(s32) = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
+  ; UNPACKED:   [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY10]], [[C]]
+  ; UNPACKED:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+  ; UNPACKED:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+  ; UNPACKED:   [[SHL:%[0-9]+]]:_(s32) = G_SHL [[C1]], [[C2]](s32)
+  ; UNPACKED:   [[OR:%[0-9]+]]:_(s32) = G_OR [[AND]], [[SHL]]
+  ; UNPACKED:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
+  ; UNPACKED:   $vgpr0 = COPY [[BITCAST]](<2 x s16>)
   ; UNPACKED:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ; PACKED-LABEL: name: image_load_v2f16_dmask_0000
   ; PACKED: bb.1 (%ir-block.0):
@@ -610,8 +626,10 @@ define amdgpu_ps <2 x half> @image_load_v2f16_dmask_0000(<8 x i32> inreg %rsrc, 
   ; PACKED:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
   ; PACKED:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; PACKED:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; PACKED:   [[DEF:%[0-9]+]]:_(<2 x s16>) = G_IMPLICIT_DEF
-  ; PACKED:   $vgpr0 = COPY [[DEF]](<2 x s16>)
+  ; PACKED:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; PACKED:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32)
+  ; PACKED:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<2 x s16>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.2d), 0, [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0 :: (dereferenceable load 4 from custom "TargetCustom8")
+  ; PACKED:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](<2 x s16>)
   ; PACKED:   SI_RETURN_TO_EPILOG implicit $vgpr0
   %tex = call <2 x half> @llvm.amdgcn.image.load.2d.v2f16.i32(i32 0, i32 %s, i32 %t, <8 x i32> %rsrc, i32 0, i32 0)
   ret <2 x half> %tex
@@ -767,10 +785,23 @@ define amdgpu_ps <3 x half> @image_load_v3f16_dmask_0000(<8 x i32> inreg %rsrc, 
   ; UNPACKED:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
   ; UNPACKED:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; UNPACKED:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; UNPACKED:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; UNPACKED:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32)
+  ; UNPACKED:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.2d), 0, [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0 :: (dereferenceable load 6 from custom "TargetCustom8", align 8)
+  ; UNPACKED:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
+  ; UNPACKED:   [[COPY10:%[0-9]+]]:_(s32) = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
+  ; UNPACKED:   [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY10]], [[C]]
+  ; UNPACKED:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+  ; UNPACKED:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+  ; UNPACKED:   [[SHL:%[0-9]+]]:_(s32) = G_SHL [[C1]], [[C2]](s32)
+  ; UNPACKED:   [[OR:%[0-9]+]]:_(s32) = G_OR [[AND]], [[SHL]]
+  ; UNPACKED:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
+  ; UNPACKED:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[C1]], [[SHL]]
+  ; UNPACKED:   [[BITCAST1:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR1]](s32)
+  ; UNPACKED:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BITCAST]](<2 x s16>), [[BITCAST1]](<2 x s16>)
+  ; UNPACKED:   [[EXTRACT:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[CONCAT_VECTORS]](<4 x s16>), 0
   ; UNPACKED:   [[DEF:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
-  ; UNPACKED:   [[EXTRACT:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[DEF]](<4 x s16>), 0
-  ; UNPACKED:   [[DEF1:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
-  ; UNPACKED:   [[INSERT:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF1]], [[EXTRACT]](<3 x s16>), 0
+  ; UNPACKED:   [[INSERT:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF]], [[EXTRACT]](<3 x s16>), 0
   ; UNPACKED:   [[EXTRACT1:%[0-9]+]]:_(<2 x s16>) = G_EXTRACT [[INSERT]](<4 x s16>), 0
   ; UNPACKED:   [[EXTRACT2:%[0-9]+]]:_(<2 x s16>) = G_EXTRACT [[INSERT]](<4 x s16>), 32
   ; UNPACKED:   $vgpr0 = COPY [[EXTRACT1]](<2 x s16>)
@@ -789,14 +820,18 @@ define amdgpu_ps <3 x half> @image_load_v3f16_dmask_0000(<8 x i32> inreg %rsrc, 
   ; PACKED:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
   ; PACKED:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; PACKED:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; PACKED:   [[DEF:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
-  ; PACKED:   [[EXTRACT:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[DEF]](<4 x s16>), 0
+  ; PACKED:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; PACKED:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32)
+  ; PACKED:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<2 x s16>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.2d), 0, [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0 :: (dereferenceable load 6 from custom "TargetCustom8", align 8)
+  ; PACKED:   [[DEF:%[0-9]+]]:_(<2 x s16>) = G_IMPLICIT_DEF
+  ; PACKED:   [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[AMDGPU_INTRIN_IMAGE_LOAD]](<2 x s16>), [[DEF]](<2 x s16>), [[DEF]](<2 x s16>)
+  ; PACKED:   [[UV:%[0-9]+]]:_(<3 x s16>), [[UV1:%[0-9]+]]:_(<3 x s16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<6 x s16>)
   ; PACKED:   [[DEF1:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
-  ; PACKED:   [[INSERT:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF1]], [[EXTRACT]](<3 x s16>), 0
-  ; PACKED:   [[EXTRACT1:%[0-9]+]]:_(<2 x s16>) = G_EXTRACT [[INSERT]](<4 x s16>), 0
-  ; PACKED:   [[EXTRACT2:%[0-9]+]]:_(<2 x s16>) = G_EXTRACT [[INSERT]](<4 x s16>), 32
-  ; PACKED:   $vgpr0 = COPY [[EXTRACT1]](<2 x s16>)
-  ; PACKED:   $vgpr1 = COPY [[EXTRACT2]](<2 x s16>)
+  ; PACKED:   [[INSERT:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF1]], [[UV]](<3 x s16>), 0
+  ; PACKED:   [[EXTRACT:%[0-9]+]]:_(<2 x s16>) = G_EXTRACT [[INSERT]](<4 x s16>), 0
+  ; PACKED:   [[EXTRACT1:%[0-9]+]]:_(<2 x s16>) = G_EXTRACT [[INSERT]](<4 x s16>), 32
+  ; PACKED:   $vgpr0 = COPY [[EXTRACT]](<2 x s16>)
+  ; PACKED:   $vgpr1 = COPY [[EXTRACT1]](<2 x s16>)
   ; PACKED:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1
   %tex = call <3 x half> @llvm.amdgcn.image.load.2d.v3f16.i32(i32 0, i32 %s, i32 %t, <8 x i32> %rsrc, i32 0, i32 0)
   ret <3 x half> %tex
@@ -988,10 +1023,21 @@ define amdgpu_ps <4 x half> @image_load_v4f16_dmask_0000(<8 x i32> inreg %rsrc, 
   ; UNPACKED:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
   ; UNPACKED:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; UNPACKED:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; UNPACKED:   [[DEF:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
-  ; UNPACKED:   [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF]](<4 x s16>)
-  ; UNPACKED:   $vgpr0 = COPY [[UV]](<2 x s16>)
-  ; UNPACKED:   $vgpr1 = COPY [[UV1]](<2 x s16>)
+  ; UNPACKED:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; UNPACKED:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32)
+  ; UNPACKED:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.2d), 0, [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0 :: (dereferenceable load 8 from custom "TargetCustom8")
+  ; UNPACKED:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
+  ; UNPACKED:   [[COPY10:%[0-9]+]]:_(s32) = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
+  ; UNPACKED:   [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY10]], [[C]]
+  ; UNPACKED:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+  ; UNPACKED:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+  ; UNPACKED:   [[SHL:%[0-9]+]]:_(s32) = G_SHL [[C1]], [[C2]](s32)
+  ; UNPACKED:   [[OR:%[0-9]+]]:_(s32) = G_OR [[AND]], [[SHL]]
+  ; UNPACKED:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
+  ; UNPACKED:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[C1]], [[SHL]]
+  ; UNPACKED:   [[BITCAST1:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR1]](s32)
+  ; UNPACKED:   $vgpr0 = COPY [[BITCAST]](<2 x s16>)
+  ; UNPACKED:   $vgpr1 = COPY [[BITCAST1]](<2 x s16>)
   ; UNPACKED:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1
   ; PACKED-LABEL: name: image_load_v4f16_dmask_0000
   ; PACKED: bb.1 (%ir-block.0):
@@ -1006,10 +1052,12 @@ define amdgpu_ps <4 x half> @image_load_v4f16_dmask_0000(<8 x i32> inreg %rsrc, 
   ; PACKED:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
   ; PACKED:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; PACKED:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; PACKED:   [[DEF:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
-  ; PACKED:   [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF]](<4 x s16>)
-  ; PACKED:   $vgpr0 = COPY [[UV]](<2 x s16>)
-  ; PACKED:   $vgpr1 = COPY [[UV1]](<2 x s16>)
+  ; PACKED:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; PACKED:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32)
+  ; PACKED:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<2 x s16>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.2d), 0, [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0 :: (dereferenceable load 8 from custom "TargetCustom8")
+  ; PACKED:   [[DEF:%[0-9]+]]:_(<2 x s16>) = G_IMPLICIT_DEF
+  ; PACKED:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](<2 x s16>)
+  ; PACKED:   $vgpr1 = COPY [[DEF]](<2 x s16>)
   ; PACKED:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1
   %tex = call <4 x half> @llvm.amdgcn.image.load.2d.v4f16.i32(i32 0, i32 %s, i32 %t, <8 x i32> %rsrc, i32 0, i32 0)
   ret <4 x half> %tex
@@ -1032,7 +1080,7 @@ define amdgpu_ps half @image_load_tfe_f16_dmask_0000(<8 x i32> inreg %rsrc, i32 
   ; UNPACKED:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
   ; UNPACKED:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; UNPACKED:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32)
-  ; UNPACKED:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<2 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.2d), 1, [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 1, 0 :: (dereferenceable load 2 from custom "TargetCustom8")
+  ; UNPACKED:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<2 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.2d), 0, [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 1, 0 :: (dereferenceable load 2 from custom "TargetCustom8")
   ; UNPACKED:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<2 x s32>)
   ; UNPACKED:   G_STORE [[UV1]](s32), [[DEF]](p1) :: (store 4 into `i32 addrspace(1)* undef`, addrspace 1)
   ; UNPACKED:   [[COPY10:%[0-9]+]]:_(s32) = COPY [[UV]](s32)
@@ -1054,7 +1102,7 @@ define amdgpu_ps half @image_load_tfe_f16_dmask_0000(<8 x i32> inreg %rsrc, i32 
   ; PACKED:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
   ; PACKED:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; PACKED:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32)
-  ; PACKED:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<2 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.2d), 1, [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 1, 0 :: (dereferenceable load 2 from custom "TargetCustom8")
+  ; PACKED:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<2 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.2d), 0, [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 1, 0 :: (dereferenceable load 2 from custom "TargetCustom8")
   ; PACKED:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<2 x s32>)
   ; PACKED:   G_STORE [[UV1]](s32), [[DEF]](p1) :: (store 4 into `i32 addrspace(1)* undef`, addrspace 1)
   ; PACKED:   [[COPY10:%[0-9]+]]:_(s32) = COPY [[UV]](s32)
@@ -1143,7 +1191,7 @@ define amdgpu_ps <2 x half> @image_load_tfe_v2f16_dmask_0000(<8 x i32> inreg %rs
   ; UNPACKED:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
   ; UNPACKED:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; UNPACKED:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32)
-  ; UNPACKED:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<2 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.2d), 1, [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 1, 0 :: (dereferenceable load 4 from custom "TargetCustom8")
+  ; UNPACKED:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<2 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.2d), 0, [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 1, 0 :: (dereferenceable load 4 from custom "TargetCustom8")
   ; UNPACKED:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<2 x s32>)
   ; UNPACKED:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
   ; UNPACKED:   [[COPY10:%[0-9]+]]:_(s32) = COPY [[UV]](s32)
@@ -1172,7 +1220,7 @@ define amdgpu_ps <2 x half> @image_load_tfe_v2f16_dmask_0000(<8 x i32> inreg %rs
   ; PACKED:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
   ; PACKED:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; PACKED:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32)
-  ; PACKED:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<2 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.2d), 1, [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 1, 0 :: (dereferenceable load 4 from custom "TargetCustom8")
+  ; PACKED:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<2 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.2d), 0, [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 1, 0 :: (dereferenceable load 4 from custom "TargetCustom8")
   ; PACKED:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<2 x s32>)
   ; PACKED:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[UV]](s32)
   ; PACKED:   G_STORE [[UV1]](s32), [[DEF]](p1) :: (store 4 into `i32 addrspace(1)* undef`, addrspace 1)
@@ -1357,7 +1405,7 @@ define amdgpu_ps <3 x half> @image_load_tfe_v3f16_dmask_0000(<8 x i32> inreg %rs
   ; UNPACKED:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
   ; UNPACKED:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; UNPACKED:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32)
-  ; UNPACKED:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<2 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.2d), 1, [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 1, 0 :: (dereferenceable load 6 from custom "TargetCustom8", align 8)
+  ; UNPACKED:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<2 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.2d), 0, [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 1, 0 :: (dereferenceable load 6 from custom "TargetCustom8", align 8)
   ; UNPACKED:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<2 x s32>)
   ; UNPACKED:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
   ; UNPACKED:   [[COPY10:%[0-9]+]]:_(s32) = COPY [[UV]](s32)
@@ -1395,7 +1443,7 @@ define amdgpu_ps <3 x half> @image_load_tfe_v3f16_dmask_0000(<8 x i32> inreg %rs
   ; PACKED:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
   ; PACKED:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; PACKED:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32)
-  ; PACKED:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<2 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.2d), 1, [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 1, 0 :: (dereferenceable load 6 from custom "TargetCustom8", align 8)
+  ; PACKED:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<2 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.2d), 0, [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 1, 0 :: (dereferenceable load 6 from custom "TargetCustom8", align 8)
   ; PACKED:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<2 x s32>)
   ; PACKED:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[UV]](s32)
   ; PACKED:   [[DEF1:%[0-9]+]]:_(<2 x s16>) = G_IMPLICIT_DEF
@@ -1633,7 +1681,7 @@ define amdgpu_ps <4 x half> @image_load_tfe_v4f16_dmask_0000(<8 x i32> inreg %rs
   ; UNPACKED:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
   ; UNPACKED:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; UNPACKED:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32)
-  ; UNPACKED:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<2 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.2d), 1, [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 1, 0 :: (dereferenceable load 8 from custom "TargetCustom8")
+  ; UNPACKED:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<2 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.2d), 0, [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 1, 0 :: (dereferenceable load 8 from custom "TargetCustom8")
   ; UNPACKED:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<2 x s32>)
   ; UNPACKED:   G_STORE [[UV1]](s32), [[DEF]](p1) :: (store 4 into `i32 addrspace(1)* undef`, addrspace 1)
   ; UNPACKED:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
@@ -1665,7 +1713,7 @@ define amdgpu_ps <4 x half> @image_load_tfe_v4f16_dmask_0000(<8 x i32> inreg %rs
   ; PACKED:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
   ; PACKED:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; PACKED:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32)
-  ; PACKED:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<2 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.2d), 1, [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 1, 0 :: (dereferenceable load 8 from custom "TargetCustom8")
+  ; PACKED:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<2 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.2d), 0, [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 1, 0 :: (dereferenceable load 8 from custom "TargetCustom8")
   ; PACKED:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<2 x s32>)
   ; PACKED:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[UV]](s32)
   ; PACKED:   [[DEF1:%[0-9]+]]:_(<2 x s16>) = G_IMPLICIT_DEF
