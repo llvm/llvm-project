@@ -11,6 +11,7 @@ add_entrypoint_library(
     # string.h entrypoints
     strcpy
     strcat
+    memcpy
 
     # sys/mman.h entrypoints
     mmap
