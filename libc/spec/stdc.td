@@ -225,7 +225,6 @@ def StdC : StandardSpec<"stdc"> {
         Macro<"SIGTERM">
       ],
       [
-        NamedType<"sigset_t">,
         SizeTType,
       ],
       [], // Enumerations
