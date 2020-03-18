@@ -1150,8 +1150,8 @@ void LowerVectorToLLVMPass::runOnModule() {
   }
 }
 
-OpPassBase<ModuleOp> *mlir::createLowerVectorToLLVMPass() {
-  return new LowerVectorToLLVMPass();
+std::unique_ptr<OpPassBase<ModuleOp>> mlir::createConvertVectorToLLVMPass() {
+  return std::make_unique<LowerVectorToLLVMPass>();
 }
 
 static PassRegistration<LowerVectorToLLVMPass>
