@@ -235,18 +235,18 @@ public:
   }
 
   /// Hook for derived classes to implement combined matching and rewriting.
-  virtual PatternMatchResult
+  virtual LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const {
     if (failed(match(op)))
-      return matchFailure();
+      return failure();
     rewrite(op, operands, rewriter);
-    return matchSuccess();
+    return success();
   }
 
   /// Attempt to match and rewrite the IR root at the specified operation.
-  PatternMatchResult matchAndRewrite(Operation *op,
-                                     PatternRewriter &rewriter) const final;
+  LogicalResult matchAndRewrite(Operation *op,
+                                PatternRewriter &rewriter) const final;
 
 private:
   using RewritePattern::rewrite;
@@ -266,7 +266,7 @@ struct OpConversionPattern : public ConversionPattern {
                ConversionPatternRewriter &rewriter) const final {
     rewrite(cast<SourceOp>(op), operands, rewriter);
   }
-  PatternMatchResult
+  LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const final {
     return matchAndRewrite(cast<SourceOp>(op), operands, rewriter);
@@ -282,13 +282,13 @@ struct OpConversionPattern : public ConversionPattern {
     llvm_unreachable("must override matchAndRewrite or a rewrite method");
   }
 
-  virtual PatternMatchResult
+  virtual LogicalResult
   matchAndRewrite(SourceOp op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const {
     if (failed(match(op)))
-      return matchFailure();
+      return failure();
     rewrite(op, operands, rewriter);
-    return matchSuccess();
+    return success();
   }
 
 private:

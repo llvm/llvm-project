@@ -106,7 +106,7 @@ struct TransposeOpLowering : public mlir::ConversionPattern {
 
   /// Match and rewrite the given `toy.transpose` operation, with the given
   /// operands that have been remapped from `tensor<...>` to `memref<...>`.
-  mlir::PatternMatchResult
+  mlir::LogicalResult
   matchAndRewrite(mlir::Operation *op, ArrayRef<mlir::Value> operands,
                   mlir::ConversionPatternRewriter &rewriter) const final {
     auto loc = op->getLoc();
@@ -132,7 +132,7 @@ struct TransposeOpLowering : public mlir::ConversionPattern {
           SmallVector<mlir::Value, 2> reverseIvs(llvm::reverse(loopIvs));
           return rewriter.create<mlir::AffineLoadOp>(loc, input, reverseIvs);
         });
-    return matchSuccess();
+    return success();
   }
 };
 ```

@@ -98,8 +98,8 @@ struct LoopToStandardPass : public OperationPass<LoopToStandardPass> {
 struct ForLowering : public OpRewritePattern<ForOp> {
   using OpRewritePattern<ForOp>::OpRewritePattern;
 
-  PatternMatchResult matchAndRewrite(ForOp forOp,
-                                     PatternRewriter &rewriter) const override;
+  LogicalResult matchAndRewrite(ForOp forOp,
+                                PatternRewriter &rewriter) const override;
 };
 
 // Create a CFG subgraph for the loop.if operation (including its "then" and
@@ -147,20 +147,20 @@ struct ForLowering : public OpRewritePattern<ForOp> {
 struct IfLowering : public OpRewritePattern<IfOp> {
   using OpRewritePattern<IfOp>::OpRewritePattern;
 
-  PatternMatchResult matchAndRewrite(IfOp ifOp,
-                                     PatternRewriter &rewriter) const override;
+  LogicalResult matchAndRewrite(IfOp ifOp,
+                                PatternRewriter &rewriter) const override;
 };
 
 struct ParallelLowering : public OpRewritePattern<mlir::loop::ParallelOp> {
   using OpRewritePattern<mlir::loop::ParallelOp>::OpRewritePattern;
 
-  PatternMatchResult matchAndRewrite(mlir::loop::ParallelOp parallelOp,
-                                     PatternRewriter &rewriter) const override;
+  LogicalResult matchAndRewrite(mlir::loop::ParallelOp parallelOp,
+                                PatternRewriter &rewriter) const override;
 };
 } // namespace
 
-PatternMatchResult
-ForLowering::matchAndRewrite(ForOp forOp, PatternRewriter &rewriter) const {
+LogicalResult ForLowering::matchAndRewrite(ForOp forOp,
+                                           PatternRewriter &rewriter) const {
   Location loc = forOp.getLoc();
 
   // Start by splitting the block containing the 'loop.for' into two parts.
@@ -189,7 +189,7 @@ ForLowering::matchAndRewrite(ForOp forOp, PatternRewriter &rewriter) const {
   auto step = forOp.step();
   auto stepped = rewriter.create<AddIOp>(loc, iv, step).getResult();
   if (!stepped)
-    return matchFailure();
+    return failure();
 
   SmallVector<Value, 8> loopCarried;
   loopCarried.push_back(stepped);
@@ -202,7 +202,7 @@ ForLowering::matchAndRewrite(ForOp forOp, PatternRewriter &rewriter) const {
   Value lowerBound = forOp.lowerBound();
   Value upperBound = forOp.upperBound();
   if (!lowerBound || !upperBound)
-    return matchFailure();
+    return failure();
 
   // The initial values of loop-carried values is obtained from the operands
   // of the loop operation.
@@ -222,11 +222,11 @@ ForLowering::matchAndRewrite(ForOp forOp, PatternRewriter &rewriter) const {
   // The result of the loop operation is the values of the condition block
   // arguments except the induction variable on the last iteration.
   rewriter.replaceOp(forOp, conditionBlock->getArguments().drop_front());
-  return matchSuccess();
+  return success();
 }
 
-PatternMatchResult
-IfLowering::matchAndRewrite(IfOp ifOp, PatternRewriter &rewriter) const {
+LogicalResult IfLowering::matchAndRewrite(IfOp ifOp,
+                                          PatternRewriter &rewriter) const {
   auto loc = ifOp.getLoc();
 
   // Start by splitting the block containing the 'loop.if' into two parts.
@@ -265,10 +265,10 @@ IfLowering::matchAndRewrite(IfOp ifOp, PatternRewriter &rewriter) const {
 
   // Ok, we're done!
   rewriter.eraseOp(ifOp);
-  return matchSuccess();
+  return success();
 }
 
-PatternMatchResult
+LogicalResult
 ParallelLowering::matchAndRewrite(ParallelOp parallelOp,
                                   PatternRewriter &rewriter) const {
   Location loc = parallelOp.getLoc();
@@ -344,7 +344,7 @@ ParallelLowering::matchAndRewrite(ParallelOp parallelOp,
 
   rewriter.replaceOp(parallelOp, loopResults);
 
-  return matchSuccess();
+  return success();
 }
 
 void mlir::populateLoopToStdConversionPatterns(

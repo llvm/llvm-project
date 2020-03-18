@@ -41,7 +41,7 @@ public:
   explicit PrintOpLowering(MLIRContext *context)
       : ConversionPattern(toy::PrintOp::getOperationName(), 1, context) {}
 
-  PatternMatchResult
+  LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     auto memRefType = (*op->operand_type_begin()).cast<MemRefType>();
@@ -91,7 +91,7 @@ public:
 
     // Notify the rewriter that this operation has been removed.
     rewriter.eraseOp(op);
-    return matchSuccess();
+    return success();
   }
 
 private:
