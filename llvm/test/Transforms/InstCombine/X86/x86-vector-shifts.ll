@@ -2689,6 +2689,19 @@ define <4 x i32> @avx2_psrav_d_128_masked(<4 x i32> %v, <4 x i32> %a) {
   ret <4 x i32> %2
 }
 
+define <4 x i32> @avx2_psrav_d_128_masked_shuffle(<4 x i32> %v, <4 x i32> %a) {
+; CHECK-LABEL: @avx2_psrav_d_128_masked_shuffle(
+; CHECK-NEXT:    [[TMP1:%.*]] = and <4 x i32> [[A:%.*]], <i32 undef, i32 undef, i32 15, i32 31>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP3:%.*]] = tail call <4 x i32> @llvm.x86.avx2.psrav.d(<4 x i32> [[V:%.*]], <4 x i32> [[TMP2]])
+; CHECK-NEXT:    ret <4 x i32> [[TMP3]]
+;
+  %1 = and <4 x i32> %a, <i32 undef, i32 undef, i32 15, i32 31>
+  %2 = shufflevector <4 x i32> %1, <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 2, i32 3>
+  %3 = tail call <4 x i32> @llvm.x86.avx2.psrav.d(<4 x i32> %v, <4 x i32> %2)
+  ret <4 x i32> %3
+}
+
 define <8 x i32> @avx2_psrav_d_256_masked(<8 x i32> %v, <8 x i32> %a) {
 ; CHECK-LABEL: @avx2_psrav_d_256_masked(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <8 x i32> [[A:%.*]], <i32 0, i32 1, i32 7, i32 15, i32 16, i32 30, i32 31, i32 31>
