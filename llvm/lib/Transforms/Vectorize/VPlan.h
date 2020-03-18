@@ -1488,7 +1488,7 @@ public:
   void addVPValue(Value *V) {
     assert(V && "Trying to add a null Value to VPlan");
     assert(!Value2VPValue.count(V) && "Value already exists in VPlan");
-    Value2VPValue[V] = new VPValue();
+    Value2VPValue[V] = new VPValue(V);
   }
 
   VPValue *getVPValue(Value *V) {
