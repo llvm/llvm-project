@@ -6841,9 +6841,6 @@ static bool CC_AIX(unsigned ValNo, MVT ValVT, MVT LocVT,
   if (ValVT == MVT::f128)
     report_fatal_error("f128 is unimplemented on AIX.");
 
-  if (ArgFlags.isByVal())
-    report_fatal_error("Passing structure by value is unimplemented.");
-
   if (ArgFlags.isNest())
     report_fatal_error("Nest arguments are unimplemented.");
 
@@ -6856,6 +6853,29 @@ static bool CC_AIX(unsigned ValNo, MVT ValVT, MVT LocVT,
   static const MCPhysReg GPR_64[] = {// 64-bit registers.
                                      PPC::X3, PPC::X4, PPC::X5, PPC::X6,
                                      PPC::X7, PPC::X8, PPC::X9, PPC::X10};
+
+  if (ArgFlags.isByVal()) {
+    if (ArgFlags.getNonZeroByValAlign() > PtrByteSize)
+      report_fatal_error("Pass-by-value arguments with alignment greater than "
+                         "register width are not supported.");
+
+    const unsigned ByValSize = ArgFlags.getByValSize();
+
+    // An empty aggregate parameter takes up no storage and no registers.
+    if (ByValSize == 0)
+      return false;
+
+    if (ByValSize <= PtrByteSize) {
+      State.AllocateStack(PtrByteSize, PtrByteSize);
+      if (unsigned Reg = State.AllocateReg(IsPPC64 ? GPR_64 : GPR_32)) {
+        State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, RegVT, LocInfo));
+        return false;
+      }
+    }
+
+    report_fatal_error(
+        "Pass-by-value arguments are only supported in a single register.");
+  }
 
   // Arguments always reserve parameter save area.
   switch (ValVT.SimpleTy) {
@@ -7130,9 +7150,59 @@ SDValue PPCTargetLowering::LowerCall_AIX(
     CCValAssign &VA = ArgLocs[I++];
 
     SDValue Arg = OutVals[VA.getValNo()];
+    ISD::ArgFlagsTy Flags = Outs[VA.getValNo()].Flags;
+    const MVT LocVT = VA.getLocVT();
+    const MVT ValVT = VA.getValVT();
 
-    if (!VA.isRegLoc() && !VA.isMemLoc())
-      report_fatal_error("Unexpected location for function call argument.");
+    if (Flags.isByVal()) {
+      const unsigned ByValSize = Flags.getByValSize();
+      assert(
+          VA.isRegLoc() && ByValSize > 0 && ByValSize <= PtrByteSize &&
+          "Pass-by-value arguments are only supported in a single register.");
+
+      // Loads must be a power-of-2 size and cannot be larger than the
+      // ByValSize. For example: a 7 byte by-val arg requires 4, 2 and 1 byte
+      // loads.
+      SDValue RegVal;
+      for (unsigned Bytes = 0; Bytes != ByValSize;) {
+        unsigned N = PowerOf2Floor(ByValSize - Bytes);
+        const MVT VT =
+            N == 1 ? MVT::i8
+                   : ((N == 2) ? MVT::i16 : (N == 4 ? MVT::i32 : MVT::i64));
+
+        SDValue LoadAddr = Arg;
+        if (Bytes != 0) {
+          // Adjust the load offset by the number of bytes read so far.
+          SDNodeFlags Flags;
+          Flags.setNoUnsignedWrap(true);
+          LoadAddr = DAG.getNode(ISD::ADD, dl, LocVT, Arg,
+                                 DAG.getConstant(Bytes, dl, LocVT), Flags);
+        }
+        SDValue Load = DAG.getExtLoad(ISD::ZEXTLOAD, dl, PtrVT, Chain, LoadAddr,
+                                      MachinePointerInfo(), VT);
+        MemOpChains.push_back(Load.getValue(1));
+
+        Bytes += N;
+        assert(LocVT.getSizeInBits() >= (Bytes * 8));
+        if (unsigned NumSHLBits = LocVT.getSizeInBits() - (Bytes * 8)) {
+          // By-val arguments are passed left-justfied in register.
+          EVT ShiftAmountTy =
+              getShiftAmountTy(Load->getValueType(0), DAG.getDataLayout());
+          SDValue SHLAmt = DAG.getConstant(NumSHLBits, dl, ShiftAmountTy);
+          SDValue ShiftedLoad =
+              DAG.getNode(ISD::SHL, dl, Load.getValueType(), Load, SHLAmt);
+          RegVal = RegVal ? DAG.getNode(ISD::OR, dl, LocVT, RegVal, ShiftedLoad)
+                          : ShiftedLoad;
+        } else {
+          assert(!RegVal && Bytes == ByValSize &&
+                 "Pass-by-value argument handling unexpectedly incomplete.");
+          RegVal = Load;
+        }
+      }
+
+      RegsToPass.push_back(std::make_pair(VA.getLocReg(), RegVal));
+      continue;
+    }
 
     switch (VA.getLocInfo()) {
     default:
@@ -7165,20 +7235,20 @@ SDValue PPCTargetLowering::LowerCall_AIX(
     // Custom handling is used for GPR initializations for vararg float
     // arguments.
     assert(VA.isRegLoc() && VA.needsCustom() && CFlags.IsVarArg &&
-           VA.getValVT().isFloatingPoint() && VA.getLocVT().isInteger() &&
+           ValVT.isFloatingPoint() && LocVT.isInteger() &&
            "Unexpected register handling for calling convention.");
 
     SDValue ArgAsInt =
-        DAG.getBitcast(MVT::getIntegerVT(VA.getValVT().getSizeInBits()), Arg);
+        DAG.getBitcast(MVT::getIntegerVT(ValVT.getSizeInBits()), Arg);
 
-    if (Arg.getValueType().getStoreSize() == VA.getLocVT().getStoreSize())
+    if (Arg.getValueType().getStoreSize() == LocVT.getStoreSize())
       // f32 in 32-bit GPR
       // f64 in 64-bit GPR
       RegsToPass.push_back(std::make_pair(VA.getLocReg(), ArgAsInt));
-    else if (Arg.getValueType().getSizeInBits() < VA.getLocVT().getSizeInBits())
+    else if (Arg.getValueType().getSizeInBits() < LocVT.getSizeInBits())
       // f32 in 64-bit GPR.
       RegsToPass.push_back(std::make_pair(
-          VA.getLocReg(), DAG.getZExtOrTrunc(ArgAsInt, dl, VA.getLocVT())));
+          VA.getLocReg(), DAG.getZExtOrTrunc(ArgAsInt, dl, LocVT)));
     else {
       // f64 in two 32-bit GPRs
       // The 2 GPRs are marked custom and expected to be adjacent in ArgLocs.
