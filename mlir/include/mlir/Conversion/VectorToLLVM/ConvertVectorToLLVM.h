@@ -26,7 +26,7 @@ void populateVectorToLLVMConversionPatterns(LLVMTypeConverter &converter,
                                             OwningRewritePatternList &patterns);
 
 /// Create a pass to convert vector operations to the LLVMIR dialect.
-OpPassBase<ModuleOp> *createLowerVectorToLLVMPass();
+std::unique_ptr<OpPassBase<ModuleOp>> createConvertVectorToLLVMPass();
 
 } // namespace mlir
 
