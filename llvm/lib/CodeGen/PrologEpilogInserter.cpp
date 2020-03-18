@@ -453,6 +453,8 @@ static void assignCalleeSavedSpillSlots(MachineFunction &F,
         FrameIdx = MFI.CreateFixedSpillStackObject(Size, FixedSlot->Offset);
       }
 
+      LLVM_DEBUG(dbgs() << "Assigned " << RegInfo->getName(Reg)
+                        << " to spill slot " << FrameIdx << "\n");
       CS.setFrameIdx(FrameIdx);
     }
   }

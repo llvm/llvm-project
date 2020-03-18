@@ -56,6 +56,10 @@ public:
 
   void getCalleeSaves(const MachineFunction &MF,
                       BitVector &SavedRegs) const override;
+  void findRegDefsOutsideSaveRestore(MachineFunction &MF,
+                                     BitVector &Regs) const;
+  unsigned spillExtraRegsForIPRA(MachineFunction &MF, BitVector &SavedRegs,
+                                 bool HasFPRegSaves) const;
   void determineCalleeSaves(MachineFunction &MF, BitVector &SavedRegs,
                             RegScavenger *RS) const override;
 
@@ -63,9 +67,8 @@ public:
                                 MachineBasicBlock &MBB) const override;
 
   /// Returns true if the target will correctly handle shrink wrapping.
-  bool enableShrinkWrapping(const MachineFunction &MF) const override {
-    return true;
-  }
+  bool enableShrinkWrapping(const MachineFunction &MF) const override;
+
   bool isProfitableForNoCSROpt(const Function &F) const override {
     // The no-CSR optimisation is bad for code size on ARM, because we can save
     // many registers with a single PUSH/POP pair.
