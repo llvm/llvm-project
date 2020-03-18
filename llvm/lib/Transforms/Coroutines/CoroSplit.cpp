@@ -1157,7 +1157,10 @@ static void simplifySuspendPoints(coro::Shape &Shape) {
   if (N == 0)
     return;
   while (true) {
-    if (simplifySuspendPoint(cast<CoroSuspendInst>(S[I]), Shape.CoroBegin)) {
+    auto SI = cast<CoroSuspendInst>(S[I]);
+    // Leave final.suspend to handleFinalSuspend since it is undefined behavior
+    // to resume a coroutine suspended at the final suspend point.
+    if (!SI->isFinal() && simplifySuspendPoint(SI, Shape.CoroBegin)) {
       if (--N == I)
         break;
       std::swap(S[I], S[N]);
