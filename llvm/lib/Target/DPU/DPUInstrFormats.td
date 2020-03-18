@@ -76,7 +76,7 @@ class UImmOperand<int nr_bits, ValueType super_op> : ImmOperand<nr_bits, "U", su
 class SUImmOperand<int nr_bits, ValueType super_op> : ImmOperand<nr_bits, "SU", super_op>, ImmLeaf<super_op, !strconcat("return (Imm >= -(1L << (", !cast<string>(nr_bits), " - 1))) && (Imm < (1L << ", !cast<string>(nr_bits), "));")>;
 class PCImmOperand<int nr_bits, ValueType super_op> : ImmOperand<nr_bits, "PC", super_op>, ImmLeaf<super_op, !strconcat("return (Imm >= -(1L << (", !cast<string>(nr_bits), " - 1))) && (Imm < (1L << ", !cast<string>(nr_bits), "));")>;
 
-def endian : Operand<OtherVT> {
+def endian : Operand<i32> {
   let PrintMethod = "printEndianness";
   let ParserMatchClass = EndianAsmOperandClass;
 }

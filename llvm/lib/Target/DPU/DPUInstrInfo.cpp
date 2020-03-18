@@ -96,11 +96,8 @@ void DPUInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
 bool DPUInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   MachineBasicBlock &MBB = *MI.getParent();
   MachineFunction *MF = MBB.getParent();
-  const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
   MachineFrameInfo &MFI = MF->getFrameInfo();
 
-  // todo __sys_thread_nanostack_entry_0 and __sys_thread_nanostack_entry_1
-  // should have abstract representations
   switch (MI.getDesc().getOpcode()) {
   default:
     return false;
@@ -117,58 +114,6 @@ bool DPUInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
         .addReg(DPU::R23)
         .add(MI.getOperand(0));
     break;
-  case DPU::BSWAP16:
-    BuildMI(MBB, MI, MI.getDebugLoc(), get(DPU::SHrir))
-        .addReg(DPU::ID4)
-        .addExternalSymbol("__sys_thread_nanostack_entry_0")
-        .add(MI.getOperand(1));
-    BuildMI(MBB, MI, MI.getDebugLoc(), get(DPU::LHUerri))
-        .add(MI.getOperand(0))
-        .addImm(1)
-        .addReg(DPU::ID4)
-        .addExternalSymbol("__sys_thread_nanostack_entry_0");
-    break;
-  case DPU::BSWAP32:
-    BuildMI(MBB, MI, MI.getDebugLoc(), get(DPU::SWrir))
-        .addReg(DPU::ID4)
-        .addExternalSymbol("__sys_thread_nanostack_entry_0")
-        .add(MI.getOperand(1));
-    BuildMI(MBB, MI, MI.getDebugLoc(), get(DPU::LWerri))
-        .add(MI.getOperand(0))
-        .addImm(1)
-        .addReg(DPU::ID4)
-        .addExternalSymbol("__sys_thread_nanostack_entry_0");
-    break;
-  case DPU::BSWAP64: {
-    unsigned int LsbDestReg =
-        TRI->getSubReg(MI.getOperand(0).getReg(), DPU::sub_32bit);
-    unsigned int MsbDestReg =
-        TRI->getSubReg(MI.getOperand(0).getReg(), DPU::sub_32bit_hi);
-    unsigned int LsbSrcReg =
-        TRI->getSubReg(MI.getOperand(1).getReg(), DPU::sub_32bit);
-    unsigned int MsbSrcReg =
-        TRI->getSubReg(MI.getOperand(1).getReg(), DPU::sub_32bit_hi);
-
-    BuildMI(MBB, MI, MI.getDebugLoc(), get(DPU::SWrir))
-        .addReg(DPU::ID4)
-        .addExternalSymbol("__sys_thread_nanostack_entry_0")
-        .addReg(LsbSrcReg);
-    BuildMI(MBB, MI, MI.getDebugLoc(), get(DPU::SWrir))
-        .addReg(DPU::ID4)
-        .addExternalSymbol("__sys_thread_nanostack_entry_1")
-        .addReg(MsbSrcReg);
-    BuildMI(MBB, MI, MI.getDebugLoc(), get(DPU::LWerri))
-        .addReg(LsbDestReg)
-        .addImm(1)
-        .addReg(DPU::ID4)
-        .addExternalSymbol("__sys_thread_nanostack_entry_1");
-    BuildMI(MBB, MI, MI.getDebugLoc(), get(DPU::LWerri))
-        .addReg(MsbDestReg)
-        .addImm(1)
-        .addReg(DPU::ID4)
-        .addExternalSymbol("__sys_thread_nanostack_entry_0");
-    break;
-  }
   case DPU::ADD_VAStart: { // Get the first index in stack where the first
                            // vaargs is stored
     unsigned int StackSize = 0;

@@ -65,6 +65,11 @@ def DPUWrapper          : SDNode<"DPUISD::Wrapper", SDTDPUWrapper>;
 def SDT_DPUAddVAStart   : SDTypeProfile<1, 1, [SDTCisPtrTy<0>]>;
 def DPUAddVAStart       : SDNode<"DPUISD::ADD_VASTART", SDT_DPUAddVAStart>;
 
+def SDT_DPULoadBig : SDTypeProfile<1, 1, [SDTCisPtrTy<0>]>;
+def DPULhuBig : SDNode <"DPUISD::LHU_BIG", SDT_DPULoadBig, [SDNPHasChain, SDNPMayLoad]>;
+def DPULwBig : SDNode <"DPUISD::LW_BIG", SDT_DPULoadBig, [SDNPHasChain, SDNPMayLoad]>;
+def DPULdBig : SDNode <"DPUISD::LD_BIG", SDT_DPULoadBig, [SDNPHasChain, SDNPMayLoad]>;
+
 include "DPUInstrFormats.td"
 
 def ADD_VAStart: PseudoDPUInstruction<
@@ -79,6 +84,10 @@ def : Pat<(SDT_Lsl_add SimpleReg:$rb, SimpleRegOrCst:$ra, u5_imm:$shift),
 
 // Necessary because a frameindex can't be matched directly in a pattern.
 def AddrFI : ComplexPattern<iPTR, 1, "SelectAddrFI", [frameindex], []>;
+
+def : Pat<(DPULhuBig AddrFI:$addr), (LHUerri 1, AddrFI:$addr, 0)>;
+def : Pat<(DPULwBig AddrFI:$addr), (LWerri 1, AddrFI:$addr, 0)>;
+def : Pat<(DPULdBig AddrFI:$addr), (LDerri 1, AddrFI:$addr, 0)>;
 
 // Inspects parent to determine whether an or instruction can be implemented as
 // an add (i.e. whether we know overflow won't occur in the add).
@@ -312,24 +321,6 @@ def : Pat<(sext_inreg DoubleReg:$src, i32), (MOVE_Srr  (EXTRACT_SUBREG DoubleReg
 
 def : Pat<(anyext SimpleRegOrCst:$ra), (MOVE_Srr SimpleRegOrCst:$ra)>;
 def : Pat<(ctpop DoubleReg:$src), (ADD_Urrr (CAOrr (EXTRACT_SUBREG DoubleReg:$src, sub_32bit)), (CAOrr (EXTRACT_SUBREG DoubleReg:$src, sub_32bit_hi)))>;
-
-let isAsCheapAsAMove = 0 in {
-
-def BSWAP16: PseudoDPUInstruction<
-                  (outs GP_REG:$rc), (ins OP_REG:$ra),
-                  "",
-                  [(set i32:$rc, (srl (bswap i32:$ra), (i32 16)))]>;
-
-def BSWAP32: PseudoDPUInstruction<
-                  (outs GP_REG:$rc), (ins OP_REG:$ra),
-                  "",
-                  [(set i32:$rc, (bswap i32:$ra))]>;
-
-def BSWAP64: PseudoDPUInstruction<
-                  (outs GP64_REG:$dc), (ins GP64_REG:$da),
-                  "",
-                  [(set i64:$dc, (bswap i64:$da))]>;
-}
 
 let isAsCheapAsAMove = 0, usesCustomInserter = 1 in {
 def Mul16UUrr: PseudoDPUInstruction<

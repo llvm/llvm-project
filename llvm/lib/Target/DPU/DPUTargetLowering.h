@@ -103,6 +103,8 @@ private:
 
   SDValue LowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const;
 
+  SDValue LowerBswap(SDValue Op, SelectionDAG &DAG) const;
+
   SDValue LowerJumpTable(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerBrCc(SDValue Op, SelectionDAG &DAG) const;

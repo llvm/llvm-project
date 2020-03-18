@@ -28,3 +28,10 @@ int DPUMachineFunctionInfo::getOffsetFromFrameIndex(int FrameIndex) {
   MFI.setObjectOffset(FrameIndex, Offset);
   return Offset;
 }
+
+int DPUMachineFunctionInfo::getTemporaryFrameIndex() {
+  if (FI == UNDEF_FI)
+    FI = MFI.CreateSpillStackObject(8, 8);
+
+  return FI;
+}

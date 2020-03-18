@@ -157,6 +157,10 @@ enum {
   LDMA,
   SDMA,
 
+  LHU_BIG,
+  LW_BIG,
+  LD_BIG,
+
   TEST_NODE
 };
 }

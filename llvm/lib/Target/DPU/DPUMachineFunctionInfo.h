@@ -18,6 +18,8 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include <set>
 
+#define UNDEF_FI INT_MAX
+
 namespace llvm {
 
 // DPUMachineFunctionInfo - This class is derived from MachineFunction and
@@ -27,12 +29,14 @@ class DPUMachineFunctionInfo : public MachineFunctionInfo {
 
   MachineFrameInfo &MFI;
   std::set<int> frameIndexOffsetSet;
+  int FI;
 
 public:
   explicit DPUMachineFunctionInfo(MachineFunction &MF)
-      : MFI(MF.getFrameInfo()), frameIndexOffsetSet() {}
+      : MFI(MF.getFrameInfo()), frameIndexOffsetSet(), FI(UNDEF_FI) {}
 
   int getOffsetFromFrameIndex(int FrameIndex);
+  int getTemporaryFrameIndex();
 };
 
 } // namespace llvm

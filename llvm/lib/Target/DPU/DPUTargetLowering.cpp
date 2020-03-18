@@ -12,8 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "DPUTargetLowering.h"
 #include "DPUISelLowering.h"
+#include "DPUMachineFunctionInfo.h"
+#include "DPUTargetLowering.h"
 #include "DPUTargetMachine.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -106,6 +107,11 @@ DPUTargetLowering::DPUTargetLowering(const TargetMachine &TM, DPUSubtarget &STI)
   setBooleanContents(BooleanContent::ZeroOrOneBooleanContent);
 
   setMinStackArgumentAlignment(4);
+
+  setTargetDAGCombine(ISD::SRL); // to produce BSWAP16
+  setTargetDAGCombine(ISD::SRA); // to produce BSWAP16
+  setOperationAction(ISD::BSWAP, MVT::i32, Custom);
+  setOperationAction(ISD::BSWAP, MVT::i64, Custom);
 
   // Global addresses require a special processing, achieved by LowerOperation.
   setOperationAction(ISD::GlobalTLSAddress, MVT::i32, Custom);
@@ -321,6 +327,9 @@ SDValue DPUTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerUnsupported(Op, DAG,
                             "Dynamic allocation of stack is not supported");
 
+  case ISD::BSWAP:
+    return LowerBswap(Op, DAG);
+
   case ISD::GlobalAddress:
     return LowerGlobalAddress(Op, DAG);
 
@@ -390,6 +399,12 @@ const char *DPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
   switch (Opcode) {
   default:
     return nullptr;
+  case DPUISD::LHU_BIG:
+    return "DPUISD::LHU_BIG";
+  case DPUISD::LW_BIG:
+    return "DPUISD::LW_BIG";
+  case DPUISD::LD_BIG:
+    return "DPUISD::LD_BIG";
   case DPUISD::LDMA:
     return "DPUISD::LDMA";
   case DPUISD::SDMA:
@@ -641,6 +656,29 @@ const char *DPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
   }
 }
 
+static SDValue LowerBswapStatic(SDValue Op, SelectionDAG &DAG, bool isBswap16) {
+  SDLoc DL(Op);
+  MVT VT = Op.getValueType().getSimpleVT();
+  int Opcode = DPUISD::LW_BIG;
+  if (isBswap16) {
+    Opcode = DPUISD::LHU_BIG;
+  } else if (VT.SimpleTy == MVT::i64) {
+    Opcode = DPUISD::LD_BIG;
+  }
+
+  SDValue SpillSlot = DAG.getFrameIndex(
+      DAG.getMachineFunction()
+          .getInfo<DPUMachineFunctionInfo>()
+          ->getTemporaryFrameIndex(),
+      MVT::getIntegerVT(DAG.getDataLayout().getPointerSizeInBits(0)));
+  SDValue Store = DAG.getStore(DAG.getEntryNode(), DL, Op.getOperand(0),
+                               SpillSlot, MachinePointerInfo());
+  return DAG.getNode(Opcode, DL, VT, Store, SpillSlot);
+}
+
+SDValue DPUTargetLowering::LowerBswap(SDValue Op, SelectionDAG &DAG) const {
+  return LowerBswapStatic(Op, DAG, false);
+}
 SDValue DPUTargetLowering::LowerUnsupported(SDValue Op, SelectionDAG &DAG,
                                             StringRef Message) const {
   const Function &Func = DAG.getMachineFunction().getFunction();
@@ -1448,12 +1486,25 @@ static SDValue PerformMULCombine(SDValue Op, SelectionDAG &DAG) {
   return LoweredMultiplication;
 }
 
+static SDValue PerformShiftCombine(SDValue Op, SelectionDAG &DAG) {
+  LLVM_DEBUG(Op.dumpr());
+  SDValue Bswap = Op.getOperand(0);
+  if ((Bswap.getOpcode() == ISD::BSWAP) &&
+      (Op.getConstantOperandVal(1) == 16)) {
+    return LowerBswapStatic(Bswap, DAG, true);
+  }
+  return SDValue();
+}
+
 SDValue DPUTargetLowering::PerformDAGCombine(SDNode *N,
                                              DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
   switch (N->getOpcode()) {
   case ISD::MUL:
     return PerformMULCombine(SDValue(N, 0), DAG);
+  case ISD::SRA:
+  case ISD::SRL:
+    return PerformShiftCombine(SDValue(N, 0), DAG);
   }
   return TargetLowering::PerformDAGCombine(N, DCI);
 }
