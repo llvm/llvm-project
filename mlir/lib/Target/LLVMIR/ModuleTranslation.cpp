@@ -470,7 +470,8 @@ LogicalResult ModuleTranslation::convertGlobals() {
 
     auto linkage = convertLinkageToLLVM(op.linkage());
     bool anyExternalLinkage =
-        (linkage == llvm::GlobalVariable::ExternalLinkage ||
+        ((linkage == llvm::GlobalVariable::ExternalLinkage &&
+          isa<llvm::UndefValue>(cst)) ||
          linkage == llvm::GlobalVariable::ExternalWeakLinkage);
     auto addrSpace = op.addr_space().getLimitedValue();
     auto *var = new llvm::GlobalVariable(
