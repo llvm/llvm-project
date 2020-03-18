@@ -143,6 +143,23 @@ CallGraphNode *CallGraph::resolveCallable(CallOpInterface call) const {
   return getExternalNode();
 }
 
+/// Erase the given node from the callgraph.
+void CallGraph::eraseNode(CallGraphNode *node) {
+  // Erase any children of this node first.
+  if (node->hasChildren()) {
+    for (const CallGraphNode::Edge &edge : llvm::make_early_inc_range(*node))
+      if (edge.isChild())
+        eraseNode(edge.getTarget());
+  }
+  // Erase any edges to this node from any other nodes.
+  for (auto &it : nodes) {
+    it.second->edges.remove_if([node](const CallGraphNode::Edge &edge) {
+      return edge.getTarget() == node;
+    });
+  }
+  nodes.erase(node->getCallableRegion());
+}
+
 //===----------------------------------------------------------------------===//
 // Printing
 
