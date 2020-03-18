@@ -531,13 +531,13 @@ public:
   explicit LinalgRewritePattern(MLIRContext *context)
       : RewritePattern(ConcreteOp::getOperationName(), 1, context) {}
 
-  PatternMatchResult matchAndRewrite(Operation *op,
-                                     PatternRewriter &rewriter) const override {
+  LogicalResult matchAndRewrite(Operation *op,
+                                PatternRewriter &rewriter) const override {
     using Impl = LinalgOpToLoopsImpl<LoopType, IndexedValueType, ConcreteOp>;
     if (failed(Impl::doit(op, rewriter)))
-      return matchFailure();
+      return failure();
     rewriter.eraseOp(op);
-    return matchSuccess();
+    return success();
   }
 };
 
@@ -595,26 +595,26 @@ struct FoldAffineOp : public RewritePattern {
   FoldAffineOp(MLIRContext *context)
       : RewritePattern(AffineApplyOp::getOperationName(), 0, context) {}
 
-  PatternMatchResult matchAndRewrite(Operation *op,
-                                     PatternRewriter &rewriter) const override {
+  LogicalResult matchAndRewrite(Operation *op,
+                                PatternRewriter &rewriter) const override {
     AffineApplyOp affineApplyOp = cast<AffineApplyOp>(op);
     auto map = affineApplyOp.getAffineMap();
     if (map.getNumResults() != 1 || map.getNumInputs() > 1)
-      return matchFailure();
+      return failure();
 
     AffineExpr expr = map.getResult(0);
     if (map.getNumInputs() == 0) {
       if (auto val = expr.dyn_cast<AffineConstantExpr>()) {
         rewriter.replaceOpWithNewOp<ConstantIndexOp>(op, val.getValue());
-        return matchSuccess();
+        return success();
       }
-      return matchFailure();
+      return failure();
     }
     if (expr.dyn_cast<AffineDimExpr>() || expr.dyn_cast<AffineSymbolExpr>()) {
       rewriter.replaceOp(op, op->getOperand(0));
-      return matchSuccess();
+      return success();
     }
-    return matchFailure();
+    return failure();
   }
 };
 } // namespace

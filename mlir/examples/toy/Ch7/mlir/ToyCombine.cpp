@@ -58,7 +58,7 @@ struct SimplifyRedundantTranspose : public mlir::OpRewritePattern<TransposeOp> {
   /// This method attempts to match a pattern and rewrite it. The rewriter
   /// argument is the orchestrator of the sequence of rewrites. The pattern is
   /// expected to interact with it to perform any changes to the IR from here.
-  mlir::PatternMatchResult
+  mlir::LogicalResult
   matchAndRewrite(TransposeOp op,
                   mlir::PatternRewriter &rewriter) const override {
     // Look through the input of the current transpose.
@@ -68,11 +68,11 @@ struct SimplifyRedundantTranspose : public mlir::OpRewritePattern<TransposeOp> {
 
     // Input defined by another transpose? If not, no match.
     if (!transposeInputOp)
-      return matchFailure();
+      return failure();
 
     // Otherwise, we have a redundant transpose. Use the rewriter.
     rewriter.replaceOp(op, {transposeInputOp.getOperand()});
-    return matchSuccess();
+    return success();
   }
 };
 

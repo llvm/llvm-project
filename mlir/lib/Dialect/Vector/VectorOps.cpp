@@ -1145,18 +1145,18 @@ class StridedSliceConstantMaskFolder final
 public:
   using OpRewritePattern<StridedSliceOp>::OpRewritePattern;
 
-  PatternMatchResult matchAndRewrite(StridedSliceOp stridedSliceOp,
-                                     PatternRewriter &rewriter) const override {
+  LogicalResult matchAndRewrite(StridedSliceOp stridedSliceOp,
+                                PatternRewriter &rewriter) const override {
     // Return if 'stridedSliceOp' operand is not defined by a ConstantMaskOp.
     auto defOp = stridedSliceOp.vector().getDefiningOp();
     auto constantMaskOp = dyn_cast_or_null<ConstantMaskOp>(defOp);
     if (!constantMaskOp)
-      return matchFailure();
+      return failure();
     // Return if 'stridedSliceOp' has non-unit strides.
     if (llvm::any_of(stridedSliceOp.strides(), [](Attribute attr) {
           return attr.cast<IntegerAttr>().getInt() != 1;
         }))
-      return matchFailure();
+      return failure();
     // Gather constant mask dimension sizes.
     SmallVector<int64_t, 4> maskDimSizes;
     populateFromInt64AttrArray(constantMaskOp.mask_dim_sizes(), maskDimSizes);
@@ -1187,7 +1187,7 @@ public:
     rewriter.replaceOpWithNewOp<ConstantMaskOp>(
         stridedSliceOp, stridedSliceOp.getResult().getType(),
         vector::getVectorSubscriptAttr(rewriter, sliceMaskDimSizes));
-    return matchSuccess();
+    return success();
   }
 };
 
@@ -1619,14 +1619,14 @@ class CreateMaskFolder final : public OpRewritePattern<CreateMaskOp> {
 public:
   using OpRewritePattern<CreateMaskOp>::OpRewritePattern;
 
-  PatternMatchResult matchAndRewrite(CreateMaskOp createMaskOp,
-                                     PatternRewriter &rewriter) const override {
+  LogicalResult matchAndRewrite(CreateMaskOp createMaskOp,
+                                PatternRewriter &rewriter) const override {
     // Return if any of 'createMaskOp' operands are not defined by a constant.
     auto is_not_def_by_constant = [](Value operand) {
       return !isa_and_nonnull<ConstantIndexOp>(operand.getDefiningOp());
     };
     if (llvm::any_of(createMaskOp.operands(), is_not_def_by_constant))
-      return matchFailure();
+      return failure();
     // Gather constant mask dimension sizes.
     SmallVector<int64_t, 4> maskDimSizes;
     for (auto operand : createMaskOp.operands()) {
@@ -1637,7 +1637,7 @@ public:
     rewriter.replaceOpWithNewOp<ConstantMaskOp>(
         createMaskOp, createMaskOp.getResult().getType(),
         vector::getVectorSubscriptAttr(rewriter, maskDimSizes));
-    return matchSuccess();
+    return success();
   }
 };
 

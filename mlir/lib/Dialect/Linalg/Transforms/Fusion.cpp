@@ -534,10 +534,10 @@ namespace {
 struct FuseGenericTensorOps : public OpRewritePattern<GenericOp> {
   using OpRewritePattern<GenericOp>::OpRewritePattern;
 
-  PatternMatchResult matchAndRewrite(GenericOp op,
-                                     PatternRewriter &rewriter) const override {
+  LogicalResult matchAndRewrite(GenericOp op,
+                                PatternRewriter &rewriter) const override {
     if (!op.hasTensorSemantics())
-      return matchFailure();
+      return failure();
 
     // Find the first operand that is defined by another generic op on tensors.
     for (auto operand : llvm::enumerate(op.getOperation()->getOperands())) {
@@ -551,9 +551,9 @@ struct FuseGenericTensorOps : public OpRewritePattern<GenericOp> {
       if (!fusedOp)
         continue;
       rewriter.replaceOp(op, fusedOp.getValue().getOperation()->getResults());
-      return matchSuccess();
+      return success();
     }
-    return matchFailure();
+    return failure();
   }
 };
 

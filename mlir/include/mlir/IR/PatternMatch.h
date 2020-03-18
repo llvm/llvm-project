@@ -54,10 +54,6 @@ private:
   unsigned short representation;
 };
 
-/// This is the type returned by a pattern match.
-/// TODO: Replace usages with LogicalResult directly.
-using PatternMatchResult = LogicalResult;
-
 //===----------------------------------------------------------------------===//
 // Pattern class
 //===----------------------------------------------------------------------===//
@@ -85,19 +81,9 @@ public:
 
   /// Attempt to match against code rooted at the specified operation,
   /// which is the same operation code as getRootKind().
-  virtual PatternMatchResult match(Operation *op) const = 0;
+  virtual LogicalResult match(Operation *op) const = 0;
 
   virtual ~Pattern() {}
-
-  //===--------------------------------------------------------------------===//
-  // Helper methods to simplify pattern implementations
-  //===--------------------------------------------------------------------===//
-
-  /// Return a result, indicating that no match was found.
-  PatternMatchResult matchFailure() const { return failure(); }
-
-  /// This method indicates that a match was found.
-  PatternMatchResult matchSuccess() const { return success(); }
 
 protected:
   /// Patterns must specify the root operation name they match against, and can
@@ -130,22 +116,19 @@ public:
   virtual void rewrite(Operation *op, PatternRewriter &rewriter) const;
 
   /// Attempt to match against code rooted at the specified operation,
-  /// which is the same operation code as getRootKind().  On failure, this
-  /// returns a None value.  On success, it returns a (possibly null)
-  /// pattern-specific state wrapped in an Optional.  This state is passed back
-  /// into the rewrite function if this match is selected.
-  PatternMatchResult match(Operation *op) const override;
+  /// which is the same operation code as getRootKind().
+  LogicalResult match(Operation *op) const override;
 
   /// Attempt to match against code rooted at the specified operation,
   /// which is the same operation code as getRootKind(). If successful, this
   /// function will automatically perform the rewrite.
-  virtual PatternMatchResult matchAndRewrite(Operation *op,
-                                             PatternRewriter &rewriter) const {
+  virtual LogicalResult matchAndRewrite(Operation *op,
+                                        PatternRewriter &rewriter) const {
     if (succeeded(match(op))) {
       rewrite(op, rewriter);
-      return matchSuccess();
+      return success();
     }
-    return matchFailure();
+    return failure();
   }
 
   /// Return a list of operations that may be generated when rewriting an
@@ -182,11 +165,11 @@ template <typename SourceOp> struct OpRewritePattern : public RewritePattern {
   void rewrite(Operation *op, PatternRewriter &rewriter) const final {
     rewrite(cast<SourceOp>(op), rewriter);
   }
-  PatternMatchResult match(Operation *op) const final {
+  LogicalResult match(Operation *op) const final {
     return match(cast<SourceOp>(op));
   }
-  PatternMatchResult matchAndRewrite(Operation *op,
-                                     PatternRewriter &rewriter) const final {
+  LogicalResult matchAndRewrite(Operation *op,
+                                PatternRewriter &rewriter) const final {
     return matchAndRewrite(cast<SourceOp>(op), rewriter);
   }
 
@@ -195,16 +178,16 @@ template <typename SourceOp> struct OpRewritePattern : public RewritePattern {
   virtual void rewrite(SourceOp op, PatternRewriter &rewriter) const {
     llvm_unreachable("must override rewrite or matchAndRewrite");
   }
-  virtual PatternMatchResult match(SourceOp op) const {
+  virtual LogicalResult match(SourceOp op) const {
     llvm_unreachable("must override match or matchAndRewrite");
   }
-  virtual PatternMatchResult matchAndRewrite(SourceOp op,
-                                             PatternRewriter &rewriter) const {
+  virtual LogicalResult matchAndRewrite(SourceOp op,
+                                        PatternRewriter &rewriter) const {
     if (succeeded(match(op))) {
       rewrite(op, rewriter);
-      return matchSuccess();
+      return success();
     }
-    return matchFailure();
+    return failure();
   }
 };
 
