@@ -812,7 +812,7 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &MF) {
   for (unsigned i = 0, e = MFI.getObjectIndexEnd(); i != e; ++i)
     if (!MFI.isDeadObjectIndex(i) &&
         MFI.getStackID(i) == TargetStackID::Default)
-      assert(MFI.getObjectAlignment(i) <= MFI.getMaxAlignment() &&
+      assert(MFI.getObjectAlign(i) <= MFI.getMaxAlign() &&
              "MaxAlignment is invalid");
 #endif
 
