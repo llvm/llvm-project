@@ -16,11 +16,7 @@ define i1 @test1(i32 %arg) {
 
 define i1 @test1v(<2 x i32> %arg) {
 ; CHECK-LABEL: @test1v(
-; CHECK-NEXT:    [[A:%.*]] = or <2 x i32> [[ARG:%.*]], <i32 1, i32 0>
-; CHECK-NEXT:    [[B:%.*]] = call <2 x i32> @llvm.bitreverse.v2i32(<2 x i32> [[A]])
-; CHECK-NEXT:    [[C:%.*]] = extractelement <2 x i32> [[B]], i32 0
-; CHECK-NEXT:    [[RES:%.*]] = icmp eq i32 [[C]], 0
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 false
 ;
   %a = or <2 x i32> %arg, <i32 1, i32 0>
   %b = call <2 x i32> @llvm.bitreverse.v2i32(<2 x i32> %a)
@@ -41,11 +37,7 @@ define i1 @test2(i32 %arg) {
 
 define i1 @test2v(<2 x i32> %arg) {
 ; CHECK-LABEL: @test2v(
-; CHECK-NEXT:    [[A:%.*]] = or <2 x i32> [[ARG:%.*]], <i32 0, i32 1024>
-; CHECK-NEXT:    [[B:%.*]] = call <2 x i32> @llvm.bitreverse.v2i32(<2 x i32> [[A]])
-; CHECK-NEXT:    [[C:%.*]] = extractelement <2 x i32> [[B]], i32 1
-; CHECK-NEXT:    [[RES:%.*]] = icmp eq i32 [[C]], 0
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 false
 ;
   %a = or <2 x i32> %arg, <i32 0, i32 1024>
   %b = call <2 x i32> @llvm.bitreverse.v2i32(<2 x i32> %a)
@@ -67,12 +59,7 @@ define i1 @test3(i32 %arg) {
 
 define i1 @test3v(<2 x i32> %arg) {
 ; CHECK-LABEL: @test3v(
-; CHECK-NEXT:    [[A:%.*]] = and <2 x i32> [[ARG:%.*]], <i32 1, i32 -1>
-; CHECK-NEXT:    [[B:%.*]] = call <2 x i32> @llvm.bitreverse.v2i32(<2 x i32> [[A]])
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[B]], <i32 1, i32 -1>
-; CHECK-NEXT:    [[EXT:%.*]] = extractelement <2 x i32> [[AND]], i32 0
-; CHECK-NEXT:    [[RES:%.*]] = icmp eq i32 [[EXT]], 1
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 false
 ;
   %a = and <2 x i32> %arg, <i32 1, i32 -1>
   %b = call <2 x i32> @llvm.bitreverse.v2i32(<2 x i32> %a)

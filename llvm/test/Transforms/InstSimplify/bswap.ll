@@ -16,11 +16,7 @@ define i1 @test1(i16 %arg) {
 
 define i1 @test1v(<2 x i16> %arg) {
 ; CHECK-LABEL: @test1v(
-; CHECK-NEXT:    [[A:%.*]] = or <2 x i16> [[ARG:%.*]], <i16 1, i16 0>
-; CHECK-NEXT:    [[B:%.*]] = call <2 x i16> @llvm.bswap.v2i16(<2 x i16> [[A]])
-; CHECK-NEXT:    [[C:%.*]] = extractelement <2 x i16> [[B]], i32 0
-; CHECK-NEXT:    [[RES:%.*]] = icmp eq i16 [[C]], 0
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 false
 ;
   %a = or <2 x i16> %arg, <i16 1, i16 0>
   %b = call <2 x i16> @llvm.bswap.v2i16(<2 x i16> %a)
@@ -41,11 +37,7 @@ define i1 @test2(i16 %arg) {
 
 define i1 @test2v(<2 x i16> %arg) {
 ; CHECK-LABEL: @test2v(
-; CHECK-NEXT:    [[A:%.*]] = or <2 x i16> [[ARG:%.*]], <i16 0, i16 1024>
-; CHECK-NEXT:    [[B:%.*]] = call <2 x i16> @llvm.bswap.v2i16(<2 x i16> [[A]])
-; CHECK-NEXT:    [[C:%.*]] = extractelement <2 x i16> [[B]], i32 1
-; CHECK-NEXT:    [[RES:%.*]] = icmp eq i16 [[C]], 0
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 false
 ;
   %a = or <2 x i16> %arg, <i16 0, i16 1024>
   %b = call <2 x i16> @llvm.bswap.v2i16(<2 x i16> %a)
@@ -67,12 +59,7 @@ define i1 @test3(i16 %arg) {
 
 define i1 @test3v(<2 x i16> %arg) {
 ; CHECK-LABEL: @test3v(
-; CHECK-NEXT:    [[A:%.*]] = and <2 x i16> [[ARG:%.*]], <i16 1, i16 -1>
-; CHECK-NEXT:    [[B:%.*]] = call <2 x i16> @llvm.bswap.v2i16(<2 x i16> [[A]])
-; CHECK-NEXT:    [[C:%.*]] = extractelement <2 x i16> [[B]], i32 0
-; CHECK-NEXT:    [[AND:%.*]] = and i16 [[C]], 1
-; CHECK-NEXT:    [[RES:%.*]] = icmp eq i16 [[AND]], 1
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 false
 ;
   %a = and <2 x i16> %arg, <i16 1, i16 -1>
   %b = call <2 x i16> @llvm.bswap.v2i16(<2 x i16> %a)
@@ -95,12 +82,7 @@ define i1 @test4(i16 %arg) {
 
 define i1 @test4v(<2 x i16> %arg) {
 ; CHECK-LABEL: @test4v(
-; CHECK-NEXT:    [[A:%.*]] = and <2 x i16> [[ARG:%.*]], <i16 511, i16 511>
-; CHECK-NEXT:    [[B:%.*]] = call <2 x i16> @llvm.bswap.v2i16(<2 x i16> [[A]])
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i16> [[B]], <i16 255, i16 256>
-; CHECK-NEXT:    [[EXT:%.*]] = extractelement <2 x i16> [[AND]], i32 1
-; CHECK-NEXT:    [[RES:%.*]] = icmp eq i16 [[EXT]], 1
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 false
 ;
   %a = and <2 x i16> %arg, <i16 511, i16 511>
   %b = call <2 x i16> @llvm.bswap.v2i16(<2 x i16> %a)

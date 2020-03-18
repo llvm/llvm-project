@@ -1128,8 +1128,8 @@ static void computeKnownBitsFromOperator(const Operator *I,
     break;
   }
   case Instruction::Or:
-    computeKnownBits(I->getOperand(1), Known, Depth + 1, Q);
-    computeKnownBits(I->getOperand(0), Known2, Depth + 1, Q);
+    computeKnownBits(I->getOperand(1), DemandedElts, Known, Depth + 1, Q);
+    computeKnownBits(I->getOperand(0), DemandedElts, Known2, Depth + 1, Q);
 
     // Output known-0 bits are only known if clear in both the LHS & RHS.
     Known.Zero &= Known2.Zero;
@@ -1605,12 +1605,12 @@ static void computeKnownBitsFromOperator(const Operator *I,
       switch (II->getIntrinsicID()) {
       default: break;
       case Intrinsic::bitreverse:
-        computeKnownBits(I->getOperand(0), Known2, Depth + 1, Q);
+        computeKnownBits(I->getOperand(0), DemandedElts, Known2, Depth + 1, Q);
         Known.Zero |= Known2.Zero.reverseBits();
         Known.One |= Known2.One.reverseBits();
         break;
       case Intrinsic::bswap:
-        computeKnownBits(I->getOperand(0), Known2, Depth + 1, Q);
+        computeKnownBits(I->getOperand(0), DemandedElts, Known2, Depth + 1, Q);
         Known.Zero |= Known2.Zero.byteSwap();
         Known.One |= Known2.One.byteSwap();
         break;
@@ -1762,13 +1762,20 @@ static void computeKnownBitsFromOperator(const Operator *I,
     }
     break;
   }
-  case Instruction::ExtractElement:
-    // Look through extract element. At the moment we keep this simple and skip
-    // tracking the specific element. But at least we might find information
-    // valid for all elements of the vector (for example if vector is sign
-    // extended, shifted, etc).
-    computeKnownBits(I->getOperand(0), Known, Depth + 1, Q);
+  case Instruction::ExtractElement: {
+    // Look through extract element. If the index is non-constant or
+    // out-of-range demand all elements, otherwise just the extracted element.
+    auto* EEI = cast<ExtractElementInst>(I);
+    const Value* Vec = EEI->getVectorOperand();
+    const Value* Idx = EEI->getIndexOperand();
+    auto *CIdx = dyn_cast<ConstantInt>(Idx);
+    unsigned NumElts = Vec->getType()->getVectorNumElements();
+    APInt DemandedVecElts = APInt::getAllOnesValue(NumElts);
+    if (CIdx && CIdx->getValue().ult(NumElts))
+      DemandedVecElts = APInt::getOneBitSet(NumElts, CIdx->getZExtValue());
+    computeKnownBits(Vec, DemandedVecElts, Known, Depth + 1, Q);
     break;
+  }
   case Instruction::ExtractValue:
     if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I->getOperand(0))) {
       const ExtractValueInst *EVI = cast<ExtractValueInst>(I);
