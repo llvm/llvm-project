@@ -89,6 +89,9 @@ TEST_F(VPlanHCFGTest, testBuildHCFGInnerLoop) {
   EXPECT_EQ(IndvarAdd, ICmp->getOperand(0));
   EXPECT_EQ(VecBB->getCondBit(), ICmp);
 
+  // Add an external value to check we do not print the list of external values,
+  // as this is not required with the new printing.
+  Plan->addVPValue(&*F->arg_begin());
   std::string FullDump;
   raw_string_ostream(FullDump) << *Plan;
   EXPECT_EQ(R"(digraph VPlan {
