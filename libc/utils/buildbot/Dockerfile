@@ -8,6 +8,9 @@ RUN apt-get install -y build-essential clang subversion git vim \
   ninja-build
 RUN python -m pip install buildbot-slave==0.8.12
 
+# Temporary dependecies for AOR tests.
+RUN apt-get install -y libmpfr-dev libmpc-dev
+
 # Change linker to gold.
 RUN update-alternatives --install "/usr/bin/ld" "ld" "/usr/bin/ld.gold" 20
 
