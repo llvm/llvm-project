@@ -3483,7 +3483,7 @@ Poison value behavior is defined in terms of value *dependence*:
 -  :ref:`Phi <i_phi>` nodes depend on the operand corresponding to
    their dynamic predecessor basic block.
 -  Select instructions depend on their condition operand and their
-   select operand.
+   selected operand.
 -  Function arguments depend on the corresponding actual argument values
    in the dynamic callers of their functions.
 -  :ref:`Call <i_call>` instructions depend on the :ref:`ret <i_ret>`
