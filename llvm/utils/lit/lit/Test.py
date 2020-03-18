@@ -220,6 +220,10 @@ class Test:
         # triple parts. All of them must be False for the test to run.
         self.unsupported = []
 
+        # An optional number of retries allowed before the test finally succeeds.
+        # The test is run at most once plus the number of retries specified here.
+        self.allowed_retries = getattr(config, 'test_retry_attempts', 0)
+
         # The test result, once complete.
         self.result = None
 

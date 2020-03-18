@@ -319,6 +319,8 @@ patterns:
     name: string.regexp
   - match: ";\\s*RUN:.*$"
     name: string.regexp
+  - match: ";\\s*ALLOW_RETRIES:.*$"
+    name: string.regexp
   - match: ";\\s*CHECK:.*$"
     name: string.regexp
   - match: ";\\s*CHECK-(NEXT|NOT|DAG|SAME|LABEL):.*$"
