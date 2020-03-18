@@ -22,6 +22,18 @@
 // RUN: | FileCheck %s -check-prefix=HAS-ATTR \
 // RUN:     -implicit-check-not=DIFlagAllCallsDescribed
 
+// Note: DIFlagAllCallsDescribed may have been enabled prematurely when tuning
+// for GDB under -gdwarf-4 in https://reviews.llvm.org/D69743. It's possible
+// this should have been 'Unsupported' until entry values emission was enabled
+// by default.
+//
+// Supported: DWARF4 + GDB tuning
+// RUN: %clang_cc1 -emit-llvm -triple x86_64-linux-gnu \
+// RUN:   %s -o - -O1 -disable-llvm-passes -debugger-tuning=gdb \
+// RUN:   -debug-info-kind=standalone -dwarf-version=4 \
+// RUN: | FileCheck %s -check-prefix=HAS-ATTR \
+// RUN:     -implicit-check-not=DIFlagAllCallsDescribed
+
 // Supported: DWARF4 + LLDB tuning by using '-femit-debug-entry-values'
 // RUN: %clang_cc1 -femit-debug-entry-values -emit-llvm -triple x86_64-linux-gnu \
 // RUN:   %s -o - -O1 -disable-llvm-passes -debugger-tuning=lldb \
