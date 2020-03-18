@@ -208,6 +208,7 @@ bool AMDGPUUnifyDivergentExitNodes::runOnFunction(Function &F) {
   // Loop over all of the blocks in a function, tracking all of the blocks that
   // return.
   SmallVector<BasicBlock *, 4> ReturningBlocks;
+  SmallVector<BasicBlock *, 4> UniformlyReachedRetBlocks;
   SmallVector<BasicBlock *, 4> UnreachableBlocks;
 
   // Dummy return block for infinite loop.
@@ -219,6 +220,8 @@ bool AMDGPUUnifyDivergentExitNodes::runOnFunction(Function &F) {
     if (isa<ReturnInst>(BB->getTerminator())) {
       if (!isUniformlyReached(DA, *BB))
         ReturningBlocks.push_back(BB);
+      else
+        UniformlyReachedRetBlocks.push_back(BB);
     } else if (isa<UnreachableInst>(BB->getTerminator())) {
       if (!isUniformlyReached(DA, *BB))
         UnreachableBlocks.push_back(BB);
@@ -332,6 +335,18 @@ bool AMDGPUUnifyDivergentExitNodes::runOnFunction(Function &F) {
   const TargetTransformInfo &TTI
     = getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
 
-  unifyReturnBlockSet(F, ReturningBlocks, InsertExport, TTI, "UnifiedReturnBlock");
+  // Unify returning blocks. If we are going to insert the export it is also
+  // necessary to include blocks that are uniformly reached, because in addition
+  // to inserting the export the "done" bits on existing exports will be cleared
+  // and we do not want to end up with the normal export in a non-unified,
+  // uniformly reached block with the "done" bit cleared.
+  auto BlocksToUnify = std::move(ReturningBlocks);
+  if (InsertExport) {
+    BlocksToUnify.insert(BlocksToUnify.end(), UniformlyReachedRetBlocks.begin(),
+                         UniformlyReachedRetBlocks.end());
+  }
+
+  unifyReturnBlockSet(F, BlocksToUnify, InsertExport, TTI,
+                      "UnifiedReturnBlock");
   return true;
 }
