@@ -202,6 +202,24 @@ let params = T.Float in {
   defm vfms: FMA<0>;
 }
 
+let params = T.Int, pnt = PNT_NType in {
+  def vmlaq_n: Intrinsic<
+    Vector, (args Vector:$addend, Vector:$m1, unpromoted<Scalar>:$m2_s),
+    (add (mul $m1, (splat $m2_s)), $addend)>;
+  def vmlasq_n: Intrinsic<
+    Vector, (args Vector:$m1, Vector:$m2, unpromoted<Scalar>:$addend_s),
+    (add (mul $m1, $m2), (splat $addend_s))>;
+
+  def vmlaq_m_n: Intrinsic<
+    Vector, (args Vector:$addend, Vector:$m1, Scalar:$m2_s, Predicate:$pred),
+    (IRInt<"vmla_n_predicated", [Vector, Predicate]>
+        $addend, $m1, $m2_s, $pred)>;
+  def vmlasq_m_n: Intrinsic<
+    Vector, (args Vector:$m1, Vector:$m2, Scalar:$addend_s, Predicate:$pred),
+    (IRInt<"vmlas_n_predicated", [Vector, Predicate]>
+        $m1, $m2, $addend_s, $pred)>;
+}
+
 let params = !listconcat(T.Int16, T.Int32) in {
   let pnt = PNT_None in {
     def vmvnq_n: Intrinsic<Vector, (args imm_simd_vmvn:$imm),
