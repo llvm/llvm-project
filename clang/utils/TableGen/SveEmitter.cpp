@@ -100,6 +100,10 @@ public:
   /// string for passing to the BUILTIN() macro in Builtins.def.
   std::string builtin_str() const;
 
+  /// Return the C/C++ string representation of a type for use in the
+  /// arm_sve.h header file.
+  std::string str() const;
+
 private:
   /// Creates the type based on the typespec string in TS.
   void applyTypespec();
@@ -335,6 +339,45 @@ std::string SVEType::builtin_str() const {
   return "q" + utostr(getNumElements() * NumVectors) + S;
 }
 
+std::string SVEType::str() const {
+  if (isPredicatePattern())
+    return "sv_pattern";
+
+  if (isPrefetchOp())
+    return "sv_prfop";
+
+  std::string S;
+  if (Void)
+    S += "void";
+  else {
+    if (isScalableVector())
+      S += "sv";
+    if (!Signed && !Float)
+      S += "u";
+
+    if (Float)
+      S += "float";
+    else if (isScalarPredicate())
+      S += "bool";
+    else
+      S += "int";
+
+    if (!isScalarPredicate())
+      S += utostr(ElementBitwidth);
+    if (!isScalableVector() && isVector())
+      S += "x" + utostr(getNumElements());
+    if (NumVectors > 1)
+      S += "x" + utostr(NumVectors);
+    S += "_t";
+  }
+
+  if (Constant)
+    S += " const";
+  if (Pointer)
+    S += " *";
+
+  return S;
+}
 void SVEType::applyTypespec() {
   for (char I : TS) {
     switch (I) {
@@ -515,8 +558,19 @@ void Intrinsic::emitIntrinsic(raw_ostream &OS) const {
        << "(...) __builtin_sve_" << mangleName(ClassS)
        << "(__VA_ARGS__)\n";
   } else {
-    llvm_unreachable("Not yet implemented. Overloaded intrinsics will follow "
-                     "in a future patch");
+    std::string FullName = mangleName(ClassS);
+    std::string ProtoName = mangleName(ClassG);
+
+    OS << "__aio __attribute__((__clang_arm_builtin_alias("
+       << "__builtin_sve_" << FullName << ")))\n";
+
+    OS << getTypes()[0].str() << " " << ProtoName << "(";
+    for (unsigned I = 0; I < getTypes().size() - 1; ++I) {
+      if (I != 0)
+        OS << ", ";
+      OS << getTypes()[I + 1].str();
+    }
+    OS << ");\n";
   }
 }
 
@@ -559,6 +613,11 @@ void SVEEmitter::createIntrinsic(
     Out.push_back(std::make_unique<Intrinsic>(Name, Proto, Merge,
                                               LLVMName, Flags, TS, ClassS,
                                               *this, Guard));
+
+    // Also generate the short-form (e.g. svadd_m) for the given type-spec.
+    if (Intrinsic::isOverloadedIntrinsic(Name))
+      Out.push_back(std::make_unique<Intrinsic>(
+          Name, Proto, Merge, LLVMName, Flags, TS, ClassG, *this, Guard));
   }
 }
 
@@ -607,6 +666,10 @@ void SVEEmitter::createHeader(raw_ostream &OS) {
   OS << "typedef __SVFloat32_t svfloat32_t;\n";
   OS << "typedef __SVFloat64_t svfloat64_t;\n";
   OS << "typedef __SVBool_t  svbool_t;\n\n";
+
+  OS << "/* Function attributes */\n";
+  OS << "#define __aio static inline __attribute__((__always_inline__, "
+        "__nodebug__, __overloadable__))\n\n";
 
   SmallVector<std::unique_ptr<Intrinsic>, 128> Defs;
   std::vector<Record *> RV = Records.getAllDerivedDefinitions("Inst");
