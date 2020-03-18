@@ -201,11 +201,9 @@ void WebAssemblyFrameLowering::emitPrologue(MachineFunction &MF,
   }
   if (HasBP) {
     Register BitmaskReg = MRI.createVirtualRegister(PtrRC);
-    unsigned Alignment = MFI.getMaxAlignment();
-    assert((1u << countTrailingZeros(Alignment)) == Alignment &&
-           "Alignment must be a power of 2");
+    Align Alignment = MFI.getMaxAlign();
     BuildMI(MBB, InsertPt, DL, TII->get(WebAssembly::CONST_I32), BitmaskReg)
-        .addImm((int)~(Alignment - 1));
+        .addImm((int)~(Alignment.value() - 1));
     BuildMI(MBB, InsertPt, DL, TII->get(WebAssembly::AND_I32),
             WebAssembly::SP32)
         .addReg(WebAssembly::SP32)

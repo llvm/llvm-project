@@ -402,7 +402,7 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
   AFI->setDPRCalleeSavedAreaSize(DPRCSSize);
 
   if (RegInfo->needsStackRealignment(MF)) {
-    const unsigned NrBitsToZero = countTrailingZeros(MFI.getMaxAlignment());
+    const unsigned NrBitsToZero = Log2(MFI.getMaxAlign());
     // Emit the following sequence, using R4 as a temporary, since we cannot use
     // SP as a source or destination register for the shifts:
     // mov  r4, sp
