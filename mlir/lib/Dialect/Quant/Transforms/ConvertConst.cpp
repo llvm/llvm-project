@@ -30,8 +30,8 @@ public:
 struct QuantizedConstRewrite : public OpRewritePattern<QuantizeCastOp> {
   using OpRewritePattern<QuantizeCastOp>::OpRewritePattern;
 
-  PatternMatchResult matchAndRewrite(QuantizeCastOp qbarrier,
-                                     PatternRewriter &rewriter) const override;
+  LogicalResult matchAndRewrite(QuantizeCastOp qbarrier,
+                                PatternRewriter &rewriter) const override;
 };
 
 } // end anonymous namespace
@@ -39,14 +39,14 @@ struct QuantizedConstRewrite : public OpRewritePattern<QuantizeCastOp> {
 /// Matches a [constant] -> [qbarrier] where the qbarrier results type is
 /// quantized and the operand type is quantizable.
 
-PatternMatchResult
+LogicalResult
 QuantizedConstRewrite::matchAndRewrite(QuantizeCastOp qbarrier,
                                        PatternRewriter &rewriter) const {
   Attribute value;
 
   // Is the operand a constant?
   if (!matchPattern(qbarrier.arg(), m_Constant(&value))) {
-    return matchFailure();
+    return failure();
   }
 
   // Does the qbarrier convert to a quantized type. This will not be true
@@ -56,10 +56,10 @@ QuantizedConstRewrite::matchAndRewrite(QuantizeCastOp qbarrier,
   QuantizedType quantizedElementType =
       QuantizedType::getQuantizedElementType(qbarrierResultType);
   if (!quantizedElementType) {
-    return matchFailure();
+    return failure();
   }
   if (!QuantizedType::castToStorageType(qbarrierResultType)) {
-    return matchFailure();
+    return failure();
   }
 
   // Is the operand type compatible with the expressed type of the quantized
@@ -67,20 +67,20 @@ QuantizedConstRewrite::matchAndRewrite(QuantizeCastOp qbarrier,
   // from and to a quantized type).
   if (!quantizedElementType.isCompatibleExpressedType(
           qbarrier.arg().getType())) {
-    return matchFailure();
+    return failure();
   }
 
   // Is the constant value a type expressed in a way that we support?
   if (!value.isa<FloatAttr>() && !value.isa<DenseElementsAttr>() &&
       !value.isa<SparseElementsAttr>()) {
-    return matchFailure();
+    return failure();
   }
 
   Type newConstValueType;
   auto newConstValue =
       quantizeAttr(value, quantizedElementType, newConstValueType);
   if (!newConstValue) {
-    return matchFailure();
+    return failure();
   }
 
   // When creating the new const op, use a fused location that combines the
@@ -92,7 +92,7 @@ QuantizedConstRewrite::matchAndRewrite(QuantizeCastOp qbarrier,
       rewriter.create<ConstantOp>(fusedLoc, newConstValueType, newConstValue);
   rewriter.replaceOpWithNewOp<StorageCastOp>(qbarrier, qbarrier.getType(),
                                              newConstOp);
-  return matchSuccess();
+  return success();
 }
 
 void ConvertConstPass::runOnFunction() {

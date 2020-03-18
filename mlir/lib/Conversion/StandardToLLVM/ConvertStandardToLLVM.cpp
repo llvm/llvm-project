@@ -946,7 +946,7 @@ struct FuncOpConversion : public FuncOpConversionBase {
                    bool emitCWrappers)
       : FuncOpConversionBase(dialect, converter), emitWrappers(emitCWrappers) {}
 
-  PatternMatchResult
+  LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     auto funcOp = cast<FuncOp>(op);
@@ -962,7 +962,7 @@ struct FuncOpConversion : public FuncOpConversionBase {
     }
 
     rewriter.eraseOp(op);
-    return matchSuccess();
+    return success();
   }
 
 private:
@@ -976,7 +976,7 @@ private:
 struct BarePtrFuncOpConversion : public FuncOpConversionBase {
   using FuncOpConversionBase::FuncOpConversionBase;
 
-  PatternMatchResult
+  LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     auto funcOp = cast<FuncOp>(op);
@@ -990,7 +990,7 @@ struct BarePtrFuncOpConversion : public FuncOpConversionBase {
     auto newFuncOp = convertFuncOpToLLVMFuncOp(funcOp, rewriter);
     if (newFuncOp.getBody().empty()) {
       rewriter.eraseOp(op);
-      return matchSuccess();
+      return success();
     }
 
     // Promote bare pointers from MemRef arguments to a MemRef descriptor struct
@@ -1017,7 +1017,7 @@ struct BarePtrFuncOpConversion : public FuncOpConversionBase {
     }
 
     rewriter.eraseOp(op);
-    return matchSuccess();
+    return success();
   }
 };
 
@@ -1109,7 +1109,7 @@ struct OneToOneLLVMOpLowering : public LLVMLegalizationPattern<SourceOp> {
 
   // Convert the type of the result to an LLVM type, pass operands as is,
   // preserve attributes.
-  PatternMatchResult
+  LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     unsigned numResults = op->getNumResults();
@@ -1119,7 +1119,7 @@ struct OneToOneLLVMOpLowering : public LLVMLegalizationPattern<SourceOp> {
       packedType =
           this->typeConverter.packFunctionResults(op->getResultTypes());
       if (!packedType)
-        return this->matchFailure();
+        return failure();
     }
 
     auto newOp = rewriter.create<TargetOp>(op->getLoc(), packedType, operands,
@@ -1127,10 +1127,10 @@ struct OneToOneLLVMOpLowering : public LLVMLegalizationPattern<SourceOp> {
 
     // If the operation produced 0 or 1 result, return them immediately.
     if (numResults == 0)
-      return rewriter.eraseOp(op), this->matchSuccess();
+      return rewriter.eraseOp(op), success();
     if (numResults == 1)
       return rewriter.replaceOp(op, newOp.getOperation()->getResult(0)),
-             this->matchSuccess();
+             success();
 
     // Otherwise, it had been converted to an operation producing a structure.
     // Extract individual results from the structure and return them as list.
@@ -1143,7 +1143,7 @@ struct OneToOneLLVMOpLowering : public LLVMLegalizationPattern<SourceOp> {
           rewriter.getI64ArrayAttr(i)));
     }
     rewriter.replaceOp(op, results);
-    return this->matchSuccess();
+    return success();
   }
 };
 
@@ -1207,7 +1207,7 @@ struct NaryOpLLVMOpLowering : public LLVMLegalizationPattern<SourceOp> {
 
   // Convert the type of the result to an LLVM type, pass operands as is,
   // preserve attributes.
-  PatternMatchResult
+  LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     ValidateOpCount<SourceOp, OpCount>();
@@ -1221,7 +1221,7 @@ struct NaryOpLLVMOpLowering : public LLVMLegalizationPattern<SourceOp> {
     // Cannot convert ops if their operands are not of LLVM type.
     for (Value operand : operands) {
       if (!operand || !operand.getType().isa<LLVM::LLVMType>())
-        return this->matchFailure();
+        return failure();
     }
 
     auto llvmArrayTy = operands[0].getType().cast<LLVM::LLVMType>();
@@ -1230,7 +1230,7 @@ struct NaryOpLLVMOpLowering : public LLVMLegalizationPattern<SourceOp> {
       auto newOp = rewriter.create<TargetOp>(
           op->getLoc(), operands[0].getType(), operands, op->getAttrs());
       rewriter.replaceOp(op, newOp.getResult());
-      return this->matchSuccess();
+      return success();
     }
 
     if (succeeded(HandleMultidimensionalVectors(
@@ -1240,8 +1240,8 @@ struct NaryOpLLVMOpLowering : public LLVMLegalizationPattern<SourceOp> {
                                                operands, op->getAttrs());
             },
             rewriter)))
-      return this->matchSuccess();
-    return this->matchFailure();
+      return success();
+    return failure();
   }
 };
 
@@ -1381,24 +1381,24 @@ struct AllocOpLowering : public LLVMLegalizationPattern<AllocOp> {
       : LLVMLegalizationPattern<AllocOp>(dialect_, converter),
         useAlloca(useAlloca) {}
 
-  PatternMatchResult match(Operation *op) const override {
+  LogicalResult match(Operation *op) const override {
     MemRefType type = cast<AllocOp>(op).getType();
     if (isSupportedMemRefType(type))
-      return matchSuccess();
+      return success();
 
     int64_t offset;
     SmallVector<int64_t, 4> strides;
     auto successStrides = getStridesAndOffset(type, strides, offset);
     if (failed(successStrides))
-      return matchFailure();
+      return failure();
 
     // Dynamic strides are ok if they can be deduced from dynamic sizes (which
     // is guaranteed when succeeded(successStrides)). Dynamic offset however can
     // never be alloc'ed.
     if (offset == MemRefType::getDynamicStrideOrOffset())
-      return matchFailure();
+      return failure();
 
-    return matchSuccess();
+    return success();
   }
 
   void rewrite(Operation *op, ArrayRef<Value> operands,
@@ -1574,7 +1574,7 @@ struct CallOpInterfaceLowering : public LLVMLegalizationPattern<CallOpType> {
   using Super = CallOpInterfaceLowering<CallOpType>;
   using Base = LLVMLegalizationPattern<CallOpType>;
 
-  PatternMatchResult
+  LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     OperandAdaptor<CallOpType> transformed(operands);
@@ -1595,7 +1595,7 @@ struct CallOpInterfaceLowering : public LLVMLegalizationPattern<CallOpType> {
     if (numResults != 0) {
       if (!(packedResult =
                 this->typeConverter.packFunctionResults(resultTypes)))
-        return this->matchFailure();
+        return failure();
     }
 
     auto promoted = this->typeConverter.promoteMemRefDescriptors(
@@ -1606,7 +1606,7 @@ struct CallOpInterfaceLowering : public LLVMLegalizationPattern<CallOpType> {
     // If < 2 results, packing did not do anything and we can just return.
     if (numResults < 2) {
       rewriter.replaceOp(op, newOp.getResults());
-      return this->matchSuccess();
+      return success();
     }
 
     // Otherwise, it had been converted to an operation producing a structure.
@@ -1624,7 +1624,7 @@ struct CallOpInterfaceLowering : public LLVMLegalizationPattern<CallOpType> {
     }
     rewriter.replaceOp(op, results);
 
-    return this->matchSuccess();
+    return success();
   }
 };
 
@@ -1647,11 +1647,11 @@ struct DeallocOpLowering : public LLVMLegalizationPattern<DeallocOp> {
       : LLVMLegalizationPattern<DeallocOp>(dialect_, converter),
         useAlloca(useAlloca) {}
 
-  PatternMatchResult
+  LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     if (useAlloca)
-      return rewriter.eraseOp(op), matchSuccess();
+      return rewriter.eraseOp(op), success();
 
     assert(operands.size() == 1 && "dealloc takes one operand");
     OperandAdaptor<DeallocOp> transformed(operands);
@@ -1673,7 +1673,7 @@ struct DeallocOpLowering : public LLVMLegalizationPattern<DeallocOp> {
         memref.allocatedPtr(rewriter, op->getLoc()));
     rewriter.replaceOpWithNewOp<LLVM::CallOp>(
         op, ArrayRef<Type>(), rewriter.getSymbolRefAttr(freeFunc), casted);
-    return matchSuccess();
+    return success();
   }
 
   bool useAlloca;
@@ -1683,7 +1683,7 @@ struct DeallocOpLowering : public LLVMLegalizationPattern<DeallocOp> {
 struct RsqrtOpLowering : public LLVMLegalizationPattern<RsqrtOp> {
   using LLVMLegalizationPattern<RsqrtOp>::LLVMLegalizationPattern;
 
-  PatternMatchResult
+  LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     OperandAdaptor<RsqrtOp> transformed(operands);
@@ -1691,7 +1691,7 @@ struct RsqrtOpLowering : public LLVMLegalizationPattern<RsqrtOp> {
         transformed.operand().getType().dyn_cast<LLVM::LLVMType>();
 
     if (!operandType)
-      return matchFailure();
+      return failure();
 
     auto loc = op->getLoc();
     auto resultType = *op->result_type_begin();
@@ -1709,12 +1709,12 @@ struct RsqrtOpLowering : public LLVMLegalizationPattern<RsqrtOp> {
       }
       auto sqrt = rewriter.create<LLVM::SqrtOp>(loc, transformed.operand());
       rewriter.replaceOpWithNewOp<LLVM::FDivOp>(op, operandType, one, sqrt);
-      return this->matchSuccess();
+      return success();
     }
 
     auto vectorType = resultType.dyn_cast<VectorType>();
     if (!vectorType)
-      return this->matchFailure();
+      return failure();
 
     if (succeeded(HandleMultidimensionalVectors(
             op, operands, typeConverter,
@@ -1732,8 +1732,8 @@ struct RsqrtOpLowering : public LLVMLegalizationPattern<RsqrtOp> {
                                                    sqrt);
             },
             rewriter)))
-      return this->matchSuccess();
-    return this->matchFailure();
+      return success();
+    return failure();
   }
 };
 
@@ -1741,7 +1741,7 @@ struct RsqrtOpLowering : public LLVMLegalizationPattern<RsqrtOp> {
 struct TanhOpLowering : public LLVMLegalizationPattern<TanhOp> {
   using LLVMLegalizationPattern<TanhOp>::LLVMLegalizationPattern;
 
-  PatternMatchResult
+  LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
 
@@ -1753,7 +1753,7 @@ struct TanhOpLowering : public LLVMLegalizationPattern<TanhOp> {
         transformed.operand().getType().dyn_cast<LLVM::LLVMType>();
 
     if (!operandType)
-      return matchFailure();
+      return failure();
 
     std::string functionName;
     if (operandType.isFloatTy())
@@ -1761,7 +1761,7 @@ struct TanhOpLowering : public LLVMLegalizationPattern<TanhOp> {
     else if (operandType.isDoubleTy())
       functionName = "tanh";
     else
-      return matchFailure();
+      return failure();
 
     // Get a reference to the tanh function, inserting it if necessary.
     Operation *tanhFunc =
@@ -1783,14 +1783,14 @@ struct TanhOpLowering : public LLVMLegalizationPattern<TanhOp> {
     rewriter.replaceOpWithNewOp<LLVM::CallOp>(
         op, operandType, rewriter.getSymbolRefAttr(tanhLLVMFunc),
         transformed.operand());
-    return matchSuccess();
+    return success();
   }
 };
 
 struct MemRefCastOpLowering : public LLVMLegalizationPattern<MemRefCastOp> {
   using LLVMLegalizationPattern<MemRefCastOp>::LLVMLegalizationPattern;
 
-  PatternMatchResult match(Operation *op) const override {
+  LogicalResult match(Operation *op) const override {
     auto memRefCastOp = cast<MemRefCastOp>(op);
     Type srcType = memRefCastOp.getOperand().getType();
     Type dstType = memRefCastOp.getType();
@@ -1801,8 +1801,8 @@ struct MemRefCastOpLowering : public LLVMLegalizationPattern<MemRefCastOp> {
       MemRefType targetType = memRefCastOp.getType().cast<MemRefType>();
       return (isSupportedMemRefType(targetType) &&
               isSupportedMemRefType(sourceType))
-                 ? matchSuccess()
-                 : matchFailure();
+                 ? success()
+                 : failure();
     }
 
     // At least one of the operands is unranked type
@@ -1812,8 +1812,8 @@ struct MemRefCastOpLowering : public LLVMLegalizationPattern<MemRefCastOp> {
     // Unranked to unranked cast is disallowed
     return !(srcType.isa<UnrankedMemRefType>() &&
              dstType.isa<UnrankedMemRefType>())
-               ? matchSuccess()
-               : matchFailure();
+               ? success()
+               : failure();
   }
 
   void rewrite(Operation *op, ArrayRef<Value> operands,
@@ -1886,17 +1886,17 @@ struct DialectCastOpLowering
     : public LLVMLegalizationPattern<LLVM::DialectCastOp> {
   using LLVMLegalizationPattern<LLVM::DialectCastOp>::LLVMLegalizationPattern;
 
-  PatternMatchResult
+  LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     auto castOp = cast<LLVM::DialectCastOp>(op);
     OperandAdaptor<LLVM::DialectCastOp> transformed(operands);
     if (transformed.in().getType() !=
         typeConverter.convertType(castOp.getType())) {
-      return matchFailure();
+      return failure();
     }
     rewriter.replaceOp(op, transformed.in());
-    return matchSuccess();
+    return success();
   }
 };
 
@@ -1905,7 +1905,7 @@ struct DialectCastOpLowering
 struct DimOpLowering : public LLVMLegalizationPattern<DimOp> {
   using LLVMLegalizationPattern<DimOp>::LLVMLegalizationPattern;
 
-  PatternMatchResult
+  LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     auto dimOp = cast<DimOp>(op);
@@ -1922,7 +1922,7 @@ struct DimOpLowering : public LLVMLegalizationPattern<DimOp> {
       // Use constant for static size.
       rewriter.replaceOp(
           op, createIndexConstant(rewriter, op->getLoc(), shape[index]));
-    return matchSuccess();
+    return success();
   }
 };
 
@@ -1934,10 +1934,9 @@ struct LoadStoreOpLowering : public LLVMLegalizationPattern<Derived> {
   using LLVMLegalizationPattern<Derived>::LLVMLegalizationPattern;
   using Base = LoadStoreOpLowering<Derived>;
 
-  PatternMatchResult match(Operation *op) const override {
+  LogicalResult match(Operation *op) const override {
     MemRefType type = cast<Derived>(op).getMemRefType();
-    return isSupportedMemRefType(type) ? this->matchSuccess()
-                                       : this->matchFailure();
+    return isSupportedMemRefType(type) ? success() : failure();
   }
 
   // Given subscript indices and array sizes in row-major order,
@@ -2010,7 +2009,7 @@ struct LoadStoreOpLowering : public LLVMLegalizationPattern<Derived> {
 struct LoadOpLowering : public LoadStoreOpLowering<LoadOp> {
   using Base::Base;
 
-  PatternMatchResult
+  LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     auto loadOp = cast<LoadOp>(op);
@@ -2020,7 +2019,7 @@ struct LoadOpLowering : public LoadStoreOpLowering<LoadOp> {
     Value dataPtr = getDataPtr(op->getLoc(), type, transformed.memref(),
                                transformed.indices(), rewriter, getModule());
     rewriter.replaceOpWithNewOp<LLVM::LoadOp>(op, dataPtr);
-    return matchSuccess();
+    return success();
   }
 };
 
@@ -2029,7 +2028,7 @@ struct LoadOpLowering : public LoadStoreOpLowering<LoadOp> {
 struct StoreOpLowering : public LoadStoreOpLowering<StoreOp> {
   using Base::Base;
 
-  PatternMatchResult
+  LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     auto type = cast<StoreOp>(op).getMemRefType();
@@ -2039,7 +2038,7 @@ struct StoreOpLowering : public LoadStoreOpLowering<StoreOp> {
                                transformed.indices(), rewriter, getModule());
     rewriter.replaceOpWithNewOp<LLVM::StoreOp>(op, transformed.value(),
                                                dataPtr);
-    return matchSuccess();
+    return success();
   }
 };
 
@@ -2048,7 +2047,7 @@ struct StoreOpLowering : public LoadStoreOpLowering<StoreOp> {
 struct PrefetchOpLowering : public LoadStoreOpLowering<PrefetchOp> {
   using Base::Base;
 
-  PatternMatchResult
+  LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     auto prefetchOp = cast<PrefetchOp>(op);
@@ -2072,7 +2071,7 @@ struct PrefetchOpLowering : public LoadStoreOpLowering<PrefetchOp> {
 
     rewriter.replaceOpWithNewOp<LLVM::Prefetch>(op, dataPtr, isWrite,
                                                 localityHint, isData);
-    return matchSuccess();
+    return success();
   }
 };
 
@@ -2083,7 +2082,7 @@ struct PrefetchOpLowering : public LoadStoreOpLowering<PrefetchOp> {
 struct IndexCastOpLowering : public LLVMLegalizationPattern<IndexCastOp> {
   using LLVMLegalizationPattern<IndexCastOp>::LLVMLegalizationPattern;
 
-  PatternMatchResult
+  LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     IndexCastOpOperandAdaptor transformed(operands);
@@ -2104,7 +2103,7 @@ struct IndexCastOpLowering : public LLVMLegalizationPattern<IndexCastOp> {
     else
       rewriter.replaceOpWithNewOp<LLVM::SExtOp>(op, targetType,
                                                 transformed.in());
-    return matchSuccess();
+    return success();
   }
 };
 
@@ -2118,7 +2117,7 @@ static LLVMPredType convertCmpPredicate(StdPredType pred) {
 struct CmpIOpLowering : public LLVMLegalizationPattern<CmpIOp> {
   using LLVMLegalizationPattern<CmpIOp>::LLVMLegalizationPattern;
 
-  PatternMatchResult
+  LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     auto cmpiOp = cast<CmpIOp>(op);
@@ -2130,14 +2129,14 @@ struct CmpIOpLowering : public LLVMLegalizationPattern<CmpIOp> {
             convertCmpPredicate<LLVM::ICmpPredicate>(cmpiOp.getPredicate()))),
         transformed.lhs(), transformed.rhs());
 
-    return matchSuccess();
+    return success();
   }
 };
 
 struct CmpFOpLowering : public LLVMLegalizationPattern<CmpFOp> {
   using LLVMLegalizationPattern<CmpFOp>::LLVMLegalizationPattern;
 
-  PatternMatchResult
+  LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     auto cmpfOp = cast<CmpFOp>(op);
@@ -2149,7 +2148,7 @@ struct CmpFOpLowering : public LLVMLegalizationPattern<CmpFOp> {
             convertCmpPredicate<LLVM::FCmpPredicate>(cmpfOp.getPredicate()))),
         transformed.lhs(), transformed.rhs());
 
-    return matchSuccess();
+    return success();
   }
 };
 
@@ -2189,12 +2188,12 @@ struct OneToOneLLVMTerminatorLowering
   using LLVMLegalizationPattern<SourceOp>::LLVMLegalizationPattern;
   using Super = OneToOneLLVMTerminatorLowering<SourceOp, TargetOp>;
 
-  PatternMatchResult
+  LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     rewriter.replaceOpWithNewOp<TargetOp>(op, operands, op->getSuccessors(),
                                           op->getAttrs());
-    return this->matchSuccess();
+    return success();
   }
 };
 
@@ -2207,7 +2206,7 @@ struct OneToOneLLVMTerminatorLowering
 struct ReturnOpLowering : public LLVMLegalizationPattern<ReturnOp> {
   using LLVMLegalizationPattern<ReturnOp>::LLVMLegalizationPattern;
 
-  PatternMatchResult
+  LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     unsigned numArguments = op->getNumOperands();
@@ -2216,12 +2215,12 @@ struct ReturnOpLowering : public LLVMLegalizationPattern<ReturnOp> {
     if (numArguments == 0) {
       rewriter.replaceOpWithNewOp<LLVM::ReturnOp>(
           op, ArrayRef<Type>(), ArrayRef<Value>(), op->getAttrs());
-      return matchSuccess();
+      return success();
     }
     if (numArguments == 1) {
       rewriter.replaceOpWithNewOp<LLVM::ReturnOp>(
           op, ArrayRef<Type>(), operands.front(), op->getAttrs());
-      return matchSuccess();
+      return success();
     }
 
     // Otherwise, we need to pack the arguments into an LLVM struct type before
@@ -2237,7 +2236,7 @@ struct ReturnOpLowering : public LLVMLegalizationPattern<ReturnOp> {
     }
     rewriter.replaceOpWithNewOp<LLVM::ReturnOp>(op, ArrayRef<Type>(), packed,
                                                 op->getAttrs());
-    return matchSuccess();
+    return success();
   }
 };
 
@@ -2256,13 +2255,13 @@ struct CondBranchOpLowering
 struct SplatOpLowering : public LLVMLegalizationPattern<SplatOp> {
   using LLVMLegalizationPattern<SplatOp>::LLVMLegalizationPattern;
 
-  PatternMatchResult
+  LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     auto splatOp = cast<SplatOp>(op);
     VectorType resultType = splatOp.getType().dyn_cast<VectorType>();
     if (!resultType || resultType.getRank() != 1)
-      return matchFailure();
+      return failure();
 
     // First insert it into an undef vector so we can shuffle it.
     auto vectorType = typeConverter.convertType(splatOp.getType());
@@ -2280,7 +2279,7 @@ struct SplatOpLowering : public LLVMLegalizationPattern<SplatOp> {
     // Shuffle the value across the desired number of elements.
     ArrayAttr zeroAttrs = rewriter.getI32ArrayAttr(zeroValues);
     rewriter.replaceOpWithNewOp<LLVM::ShuffleVectorOp>(op, v, undef, zeroAttrs);
-    return matchSuccess();
+    return success();
   }
 };
 
@@ -2290,14 +2289,14 @@ struct SplatOpLowering : public LLVMLegalizationPattern<SplatOp> {
 struct SplatNdOpLowering : public LLVMLegalizationPattern<SplatOp> {
   using LLVMLegalizationPattern<SplatOp>::LLVMLegalizationPattern;
 
-  PatternMatchResult
+  LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     auto splatOp = cast<SplatOp>(op);
     OperandAdaptor<SplatOp> adaptor(operands);
     VectorType resultType = splatOp.getType().dyn_cast<VectorType>();
     if (!resultType || resultType.getRank() == 1)
-      return matchFailure();
+      return failure();
 
     // First insert it into an undef vector so we can shuffle it.
     auto loc = op->getLoc();
@@ -2305,7 +2304,7 @@ struct SplatNdOpLowering : public LLVMLegalizationPattern<SplatOp> {
     auto llvmArrayTy = vectorTypeInfo.llvmArrayTy;
     auto llvmVectorTy = vectorTypeInfo.llvmVectorTy;
     if (!llvmArrayTy || !llvmVectorTy)
-      return matchFailure();
+      return failure();
 
     // Construct returned value.
     Value desc = rewriter.create<LLVM::UndefOp>(loc, llvmArrayTy);
@@ -2332,7 +2331,7 @@ struct SplatNdOpLowering : public LLVMLegalizationPattern<SplatOp> {
                                                   position);
     });
     rewriter.replaceOp(op, desc);
-    return matchSuccess();
+    return success();
   }
 };
 
@@ -2344,7 +2343,7 @@ struct SplatNdOpLowering : public LLVMLegalizationPattern<SplatOp> {
 struct SubViewOpLowering : public LLVMLegalizationPattern<SubViewOp> {
   using LLVMLegalizationPattern<SubViewOp>::LLVMLegalizationPattern;
 
-  PatternMatchResult
+  LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     auto loc = op->getLoc();
@@ -2376,7 +2375,7 @@ struct SubViewOpLowering : public LLVMLegalizationPattern<SubViewOp> {
     auto targetDescTy = typeConverter.convertType(viewMemRefType)
                             .dyn_cast_or_null<LLVM::LLVMType>();
     if (!sourceElementTy || !targetDescTy)
-      return matchFailure();
+      return failure();
 
     // Currently, only rank > 0 and full or no operands are supported. Fail to
     // convert otherwise.
@@ -2385,22 +2384,22 @@ struct SubViewOpLowering : public LLVMLegalizationPattern<SubViewOp> {
         (!dynamicOffsets.empty() && rank != dynamicOffsets.size()) ||
         (!dynamicSizes.empty() && rank != dynamicSizes.size()) ||
         (!dynamicStrides.empty() && rank != dynamicStrides.size()))
-      return matchFailure();
+      return failure();
 
     int64_t offset;
     SmallVector<int64_t, 4> strides;
     auto successStrides = getStridesAndOffset(viewMemRefType, strides, offset);
     if (failed(successStrides))
-      return matchFailure();
+      return failure();
 
     // Fail to convert if neither a dynamic nor static offset is available.
     if (dynamicOffsets.empty() &&
         offset == MemRefType::getDynamicStrideOrOffset())
-      return matchFailure();
+      return failure();
 
     // Create the descriptor.
     if (!operands.front().getType().isa<LLVM::LLVMType>())
-      return matchFailure();
+      return failure();
     MemRefDescriptor sourceMemRef(operands.front());
     auto targetMemRef = MemRefDescriptor::undef(rewriter, loc, targetDescTy);
 
@@ -2460,7 +2459,7 @@ struct SubViewOpLowering : public LLVMLegalizationPattern<SubViewOp> {
     }
 
     rewriter.replaceOp(op, {targetMemRef});
-    return matchSuccess();
+    return success();
   }
 };
 
@@ -2505,7 +2504,7 @@ struct ViewOpLowering : public LLVMLegalizationPattern<ViewOp> {
     return createIndexConstant(rewriter, loc, 1);
   }
 
-  PatternMatchResult
+  LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     auto loc = op->getLoc();
@@ -2520,14 +2519,13 @@ struct ViewOpLowering : public LLVMLegalizationPattern<ViewOp> {
         typeConverter.convertType(viewMemRefType).dyn_cast<LLVM::LLVMType>();
     if (!targetDescTy)
       return op->emitWarning("Target descriptor type not converted to LLVM"),
-             matchFailure();
+             failure();
 
     int64_t offset;
     SmallVector<int64_t, 4> strides;
     auto successStrides = getStridesAndOffset(viewMemRefType, strides, offset);
     if (failed(successStrides))
-      return op->emitWarning("cannot cast to non-strided shape"),
-             matchFailure();
+      return op->emitWarning("cannot cast to non-strided shape"), failure();
 
     // Create the descriptor.
     MemRefDescriptor sourceMemRef(adaptor.source());
@@ -2560,12 +2558,11 @@ struct ViewOpLowering : public LLVMLegalizationPattern<ViewOp> {
 
     // Early exit for 0-D corner case.
     if (viewMemRefType.getRank() == 0)
-      return rewriter.replaceOp(op, {targetMemRef}), matchSuccess();
+      return rewriter.replaceOp(op, {targetMemRef}), success();
 
     // Fields 4 and 5: Update sizes and strides.
     if (strides.back() != 1)
-      return op->emitWarning("cannot cast to non-contiguous shape"),
-             matchFailure();
+      return op->emitWarning("cannot cast to non-contiguous shape"), failure();
     Value stride = nullptr, nextSize = nullptr;
     // Drop the dynamic stride from the operand list, if present.
     ArrayRef<Value> sizeOperands(sizeAndOffsetOperands);
@@ -2583,7 +2580,7 @@ struct ViewOpLowering : public LLVMLegalizationPattern<ViewOp> {
     }
 
     rewriter.replaceOp(op, {targetMemRef});
-    return matchSuccess();
+    return success();
   }
 };
 
@@ -2591,7 +2588,7 @@ struct AssumeAlignmentOpLowering
     : public LLVMLegalizationPattern<AssumeAlignmentOp> {
   using LLVMLegalizationPattern<AssumeAlignmentOp>::LLVMLegalizationPattern;
 
-  PatternMatchResult
+  LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     OperandAdaptor<AssumeAlignmentOp> transformed(operands);
@@ -2622,7 +2619,7 @@ struct AssumeAlignmentOpLowering
             rewriter.create<LLVM::AndOp>(op->getLoc(), ptrValue, mask), zero));
 
     rewriter.eraseOp(op);
-    return matchSuccess();
+    return success();
   }
 };
 
@@ -2657,13 +2654,13 @@ namespace {
 struct AtomicRMWOpLowering : public LoadStoreOpLowering<AtomicRMWOp> {
   using Base::Base;
 
-  PatternMatchResult
+  LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     auto atomicOp = cast<AtomicRMWOp>(op);
     auto maybeKind = matchSimpleAtomicOp(atomicOp);
     if (!maybeKind)
-      return matchFailure();
+      return failure();
     OperandAdaptor<AtomicRMWOp> adaptor(operands);
     auto resultType = adaptor.value().getType();
     auto memRefType = atomicOp.getMemRefType();
@@ -2672,7 +2669,7 @@ struct AtomicRMWOpLowering : public LoadStoreOpLowering<AtomicRMWOp> {
     rewriter.replaceOpWithNewOp<LLVM::AtomicRMWOp>(
         op, resultType, *maybeKind, dataPtr, adaptor.value(),
         LLVM::AtomicOrdering::acq_rel);
-    return matchSuccess();
+    return success();
   }
 };
 
@@ -2706,13 +2703,13 @@ struct AtomicRMWOpLowering : public LoadStoreOpLowering<AtomicRMWOp> {
 struct AtomicCmpXchgOpLowering : public LoadStoreOpLowering<AtomicRMWOp> {
   using Base::Base;
 
-  PatternMatchResult
+  LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     auto atomicOp = cast<AtomicRMWOp>(op);
     auto maybeKind = matchSimpleAtomicOp(atomicOp);
     if (maybeKind)
-      return matchFailure();
+      return failure();
 
     LLVM::FCmpPredicate predicate;
     switch (atomicOp.kind()) {
@@ -2723,7 +2720,7 @@ struct AtomicCmpXchgOpLowering : public LoadStoreOpLowering<AtomicRMWOp> {
       predicate = LLVM::FCmpPredicate::olt;
       break;
     default:
-      return matchFailure();
+      return failure();
     }
 
     OperandAdaptor<AtomicRMWOp> adaptor(operands);
@@ -2779,7 +2776,7 @@ struct AtomicCmpXchgOpLowering : public LoadStoreOpLowering<AtomicRMWOp> {
     // The 'result' of the atomic_rmw op is the newly loaded value.
     rewriter.replaceOp(op, {newLoaded});
 
-    return matchSuccess();
+    return success();
   }
 };
 

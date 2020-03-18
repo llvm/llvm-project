@@ -35,13 +35,13 @@ public:
   RemoveIdentityOpRewrite(MLIRContext *context)
       : RewritePattern(OpTy::getOperationName(), 1, context) {}
 
-  PatternMatchResult matchAndRewrite(Operation *op,
-                                     PatternRewriter &rewriter) const override {
+  LogicalResult matchAndRewrite(Operation *op,
+                                PatternRewriter &rewriter) const override {
     assert(op->getNumOperands() == 1);
     assert(op->getNumResults() == 1);
 
     rewriter.replaceOp(op, op->getOperand(0));
-    return matchSuccess();
+    return success();
   }
 };
 

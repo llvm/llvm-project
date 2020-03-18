@@ -297,15 +297,15 @@ class AffineMinLowering : public OpRewritePattern<AffineMinOp> {
 public:
   using OpRewritePattern<AffineMinOp>::OpRewritePattern;
 
-  PatternMatchResult matchAndRewrite(AffineMinOp op,
-                                     PatternRewriter &rewriter) const override {
+  LogicalResult matchAndRewrite(AffineMinOp op,
+                                PatternRewriter &rewriter) const override {
     Value reduced =
         lowerAffineMapMin(rewriter, op.getLoc(), op.map(), op.operands());
     if (!reduced)
-      return matchFailure();
+      return failure();
 
     rewriter.replaceOp(op, reduced);
-    return matchSuccess();
+    return success();
   }
 };
 
@@ -313,15 +313,15 @@ class AffineMaxLowering : public OpRewritePattern<AffineMaxOp> {
 public:
   using OpRewritePattern<AffineMaxOp>::OpRewritePattern;
 
-  PatternMatchResult matchAndRewrite(AffineMaxOp op,
-                                     PatternRewriter &rewriter) const override {
+  LogicalResult matchAndRewrite(AffineMaxOp op,
+                                PatternRewriter &rewriter) const override {
     Value reduced =
         lowerAffineMapMax(rewriter, op.getLoc(), op.map(), op.operands());
     if (!reduced)
-      return matchFailure();
+      return failure();
 
     rewriter.replaceOp(op, reduced);
-    return matchSuccess();
+    return success();
   }
 };
 
@@ -330,10 +330,10 @@ class AffineTerminatorLowering : public OpRewritePattern<AffineTerminatorOp> {
 public:
   using OpRewritePattern<AffineTerminatorOp>::OpRewritePattern;
 
-  PatternMatchResult matchAndRewrite(AffineTerminatorOp op,
-                                     PatternRewriter &rewriter) const override {
+  LogicalResult matchAndRewrite(AffineTerminatorOp op,
+                                PatternRewriter &rewriter) const override {
     rewriter.replaceOpWithNewOp<loop::YieldOp>(op);
-    return matchSuccess();
+    return success();
   }
 };
 
@@ -341,8 +341,8 @@ class AffineForLowering : public OpRewritePattern<AffineForOp> {
 public:
   using OpRewritePattern<AffineForOp>::OpRewritePattern;
 
-  PatternMatchResult matchAndRewrite(AffineForOp op,
-                                     PatternRewriter &rewriter) const override {
+  LogicalResult matchAndRewrite(AffineForOp op,
+                                PatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
     Value lowerBound = lowerAffineLowerBound(op, rewriter);
     Value upperBound = lowerAffineUpperBound(op, rewriter);
@@ -351,7 +351,7 @@ public:
     f.region().getBlocks().clear();
     rewriter.inlineRegionBefore(op.region(), f.region(), f.region().end());
     rewriter.eraseOp(op);
-    return matchSuccess();
+    return success();
   }
 };
 
@@ -359,8 +359,8 @@ class AffineIfLowering : public OpRewritePattern<AffineIfOp> {
 public:
   using OpRewritePattern<AffineIfOp>::OpRewritePattern;
 
-  PatternMatchResult matchAndRewrite(AffineIfOp op,
-                                     PatternRewriter &rewriter) const override {
+  LogicalResult matchAndRewrite(AffineIfOp op,
+                                PatternRewriter &rewriter) const override {
     auto loc = op.getLoc();
 
     // Now we just have to handle the condition logic.
@@ -381,7 +381,7 @@ public:
                                          operandsRef.take_front(numDims),
                                          operandsRef.drop_front(numDims));
       if (!affResult)
-        return matchFailure();
+        return failure();
       auto pred = isEquality ? CmpIPredicate::eq : CmpIPredicate::sge;
       Value cmpVal =
           rewriter.create<CmpIOp>(loc, pred, affResult, zeroConstant);
@@ -402,7 +402,7 @@ public:
 
     // Ok, we're done!
     rewriter.eraseOp(op);
-    return matchSuccess();
+    return success();
   }
 };
 
@@ -412,15 +412,15 @@ class AffineApplyLowering : public OpRewritePattern<AffineApplyOp> {
 public:
   using OpRewritePattern<AffineApplyOp>::OpRewritePattern;
 
-  PatternMatchResult matchAndRewrite(AffineApplyOp op,
-                                     PatternRewriter &rewriter) const override {
+  LogicalResult matchAndRewrite(AffineApplyOp op,
+                                PatternRewriter &rewriter) const override {
     auto maybeExpandedMap =
         expandAffineMap(rewriter, op.getLoc(), op.getAffineMap(),
                         llvm::to_vector<8>(op.getOperands()));
     if (!maybeExpandedMap)
-      return matchFailure();
+      return failure();
     rewriter.replaceOp(op, *maybeExpandedMap);
-    return matchSuccess();
+    return success();
   }
 };
 
@@ -431,18 +431,18 @@ class AffineLoadLowering : public OpRewritePattern<AffineLoadOp> {
 public:
   using OpRewritePattern<AffineLoadOp>::OpRewritePattern;
 
-  PatternMatchResult matchAndRewrite(AffineLoadOp op,
-                                     PatternRewriter &rewriter) const override {
+  LogicalResult matchAndRewrite(AffineLoadOp op,
+                                PatternRewriter &rewriter) const override {
     // Expand affine map from 'affineLoadOp'.
     SmallVector<Value, 8> indices(op.getMapOperands());
     auto resultOperands =
         expandAffineMap(rewriter, op.getLoc(), op.getAffineMap(), indices);
     if (!resultOperands)
-      return matchFailure();
+      return failure();
 
     // Build std.load memref[expandedMap.results].
     rewriter.replaceOpWithNewOp<LoadOp>(op, op.getMemRef(), *resultOperands);
-    return matchSuccess();
+    return success();
   }
 };
 
@@ -453,20 +453,20 @@ class AffinePrefetchLowering : public OpRewritePattern<AffinePrefetchOp> {
 public:
   using OpRewritePattern<AffinePrefetchOp>::OpRewritePattern;
 
-  PatternMatchResult matchAndRewrite(AffinePrefetchOp op,
-                                     PatternRewriter &rewriter) const override {
+  LogicalResult matchAndRewrite(AffinePrefetchOp op,
+                                PatternRewriter &rewriter) const override {
     // Expand affine map from 'affinePrefetchOp'.
     SmallVector<Value, 8> indices(op.getMapOperands());
     auto resultOperands =
         expandAffineMap(rewriter, op.getLoc(), op.getAffineMap(), indices);
     if (!resultOperands)
-      return matchFailure();
+      return failure();
 
     // Build std.prefetch memref[expandedMap.results].
     rewriter.replaceOpWithNewOp<PrefetchOp>(
         op, op.memref(), *resultOperands, op.isWrite(),
         op.localityHint().getZExtValue(), op.isDataCache());
-    return matchSuccess();
+    return success();
   }
 };
 
@@ -477,19 +477,19 @@ class AffineStoreLowering : public OpRewritePattern<AffineStoreOp> {
 public:
   using OpRewritePattern<AffineStoreOp>::OpRewritePattern;
 
-  PatternMatchResult matchAndRewrite(AffineStoreOp op,
-                                     PatternRewriter &rewriter) const override {
+  LogicalResult matchAndRewrite(AffineStoreOp op,
+                                PatternRewriter &rewriter) const override {
     // Expand affine map from 'affineStoreOp'.
     SmallVector<Value, 8> indices(op.getMapOperands());
     auto maybeExpandedMap =
         expandAffineMap(rewriter, op.getLoc(), op.getAffineMap(), indices);
     if (!maybeExpandedMap)
-      return matchFailure();
+      return failure();
 
     // Build std.store valueToStore, memref[expandedMap.results].
     rewriter.replaceOpWithNewOp<StoreOp>(op, op.getValueToStore(),
                                          op.getMemRef(), *maybeExpandedMap);
-    return matchSuccess();
+    return success();
   }
 };
 
@@ -500,8 +500,8 @@ class AffineDmaStartLowering : public OpRewritePattern<AffineDmaStartOp> {
 public:
   using OpRewritePattern<AffineDmaStartOp>::OpRewritePattern;
 
-  PatternMatchResult matchAndRewrite(AffineDmaStartOp op,
-                                     PatternRewriter &rewriter) const override {
+  LogicalResult matchAndRewrite(AffineDmaStartOp op,
+                                PatternRewriter &rewriter) const override {
     SmallVector<Value, 8> operands(op.getOperands());
     auto operandsRef = llvm::makeArrayRef(operands);
 
@@ -510,26 +510,26 @@ public:
         rewriter, op.getLoc(), op.getSrcMap(),
         operandsRef.drop_front(op.getSrcMemRefOperandIndex() + 1));
     if (!maybeExpandedSrcMap)
-      return matchFailure();
+      return failure();
     // Expand affine map for DMA destination memref.
     auto maybeExpandedDstMap = expandAffineMap(
         rewriter, op.getLoc(), op.getDstMap(),
         operandsRef.drop_front(op.getDstMemRefOperandIndex() + 1));
     if (!maybeExpandedDstMap)
-      return matchFailure();
+      return failure();
     // Expand affine map for DMA tag memref.
     auto maybeExpandedTagMap = expandAffineMap(
         rewriter, op.getLoc(), op.getTagMap(),
         operandsRef.drop_front(op.getTagMemRefOperandIndex() + 1));
     if (!maybeExpandedTagMap)
-      return matchFailure();
+      return failure();
 
     // Build std.dma_start operation with affine map results.
     rewriter.replaceOpWithNewOp<DmaStartOp>(
         op, op.getSrcMemRef(), *maybeExpandedSrcMap, op.getDstMemRef(),
         *maybeExpandedDstMap, op.getNumElements(), op.getTagMemRef(),
         *maybeExpandedTagMap, op.getStride(), op.getNumElementsPerStride());
-    return matchSuccess();
+    return success();
   }
 };
 
@@ -540,19 +540,19 @@ class AffineDmaWaitLowering : public OpRewritePattern<AffineDmaWaitOp> {
 public:
   using OpRewritePattern<AffineDmaWaitOp>::OpRewritePattern;
 
-  PatternMatchResult matchAndRewrite(AffineDmaWaitOp op,
-                                     PatternRewriter &rewriter) const override {
+  LogicalResult matchAndRewrite(AffineDmaWaitOp op,
+                                PatternRewriter &rewriter) const override {
     // Expand affine map for DMA tag memref.
     SmallVector<Value, 8> indices(op.getTagIndices());
     auto maybeExpandedTagMap =
         expandAffineMap(rewriter, op.getLoc(), op.getTagMap(), indices);
     if (!maybeExpandedTagMap)
-      return matchFailure();
+      return failure();
 
     // Build std.dma_wait operation with affine map results.
     rewriter.replaceOpWithNewOp<DmaWaitOp>(
         op, op.getTagMemRef(), *maybeExpandedTagMap, op.getNumElements());
-    return matchSuccess();
+    return success();
   }
 };
 

@@ -88,13 +88,13 @@ struct CombineChainedAccessChain
     : public OpRewritePattern<spirv::AccessChainOp> {
   using OpRewritePattern<spirv::AccessChainOp>::OpRewritePattern;
 
-  PatternMatchResult matchAndRewrite(spirv::AccessChainOp accessChainOp,
-                                     PatternRewriter &rewriter) const override {
+  LogicalResult matchAndRewrite(spirv::AccessChainOp accessChainOp,
+                                PatternRewriter &rewriter) const override {
     auto parentAccessChainOp = dyn_cast_or_null<spirv::AccessChainOp>(
         accessChainOp.base_ptr().getDefiningOp());
 
     if (!parentAccessChainOp) {
-      return matchFailure();
+      return failure();
     }
 
     // Combine indices.
@@ -105,7 +105,7 @@ struct CombineChainedAccessChain
     rewriter.replaceOpWithNewOp<spirv::AccessChainOp>(
         accessChainOp, parentAccessChainOp.base_ptr(), indices);
 
-    return matchSuccess();
+    return success();
   }
 };
 } // end anonymous namespace
@@ -291,24 +291,24 @@ struct ConvertSelectionOpToSelect
     : public OpRewritePattern<spirv::SelectionOp> {
   using OpRewritePattern<spirv::SelectionOp>::OpRewritePattern;
 
-  PatternMatchResult matchAndRewrite(spirv::SelectionOp selectionOp,
-                                     PatternRewriter &rewriter) const override {
+  LogicalResult matchAndRewrite(spirv::SelectionOp selectionOp,
+                                PatternRewriter &rewriter) const override {
     auto *op = selectionOp.getOperation();
     auto &body = op->getRegion(0);
     // Verifier allows an empty region for `spv.selection`.
     if (body.empty()) {
-      return matchFailure();
+      return failure();
     }
 
     // Check that region consists of 4 blocks:
     // header block, `true` block, `false` block and merge block.
     if (std::distance(body.begin(), body.end()) != 4) {
-      return matchFailure();
+      return failure();
     }
 
     auto *headerBlock = selectionOp.getHeaderBlock();
     if (!onlyContainsBranchConditionalOp(headerBlock)) {
-      return matchFailure();
+      return failure();
     }
 
     auto brConditionalOp =
@@ -319,7 +319,7 @@ struct ConvertSelectionOpToSelect
     auto *mergeBlock = selectionOp.getMergeBlock();
 
     if (failed(canCanonicalizeSelection(trueBlock, falseBlock, mergeBlock)))
-      return matchFailure();
+      return failure();
 
     auto trueValue = getSrcValue(trueBlock);
     auto falseValue = getSrcValue(falseBlock);
@@ -335,7 +335,7 @@ struct ConvertSelectionOpToSelect
 
     // `spv.selection` is not needed anymore.
     rewriter.eraseOp(op);
-    return matchSuccess();
+    return success();
   }
 
 private:
@@ -345,9 +345,8 @@ private:
   // 2. Each `spv.Store` uses the same pointer and the same memory attributes.
   // 3. A control flow goes into the given merge block from the given
   //    conditional blocks.
-  PatternMatchResult canCanonicalizeSelection(Block *trueBlock,
-                                              Block *falseBlock,
-                                              Block *mergeBlock) const;
+  LogicalResult canCanonicalizeSelection(Block *trueBlock, Block *falseBlock,
+                                         Block *mergeBlock) const;
 
   bool onlyContainsBranchConditionalOp(Block *block) const {
     return std::next(block->begin()) == block->end() &&
@@ -382,12 +381,12 @@ private:
   }
 };
 
-PatternMatchResult ConvertSelectionOpToSelect::canCanonicalizeSelection(
+LogicalResult ConvertSelectionOpToSelect::canCanonicalizeSelection(
     Block *trueBlock, Block *falseBlock, Block *mergeBlock) const {
   // Each block must consists of 2 operations.
   if ((std::distance(trueBlock->begin(), trueBlock->end()) != 2) ||
       (std::distance(falseBlock->begin(), falseBlock->end()) != 2)) {
-    return matchFailure();
+    return failure();
   }
 
   auto trueBrStoreOp = dyn_cast<spirv::StoreOp>(trueBlock->front());
@@ -399,7 +398,7 @@ PatternMatchResult ConvertSelectionOpToSelect::canCanonicalizeSelection(
 
   if (!trueBrStoreOp || !trueBrBranchOp || !falseBrStoreOp ||
       !falseBrBranchOp) {
-    return matchFailure();
+    return failure();
   }
 
   // Check that each `spv.Store` uses the same pointer, memory access
@@ -407,15 +406,15 @@ PatternMatchResult ConvertSelectionOpToSelect::canCanonicalizeSelection(
   if ((trueBrStoreOp.ptr() != falseBrStoreOp.ptr()) ||
       !isSameAttrList(trueBrStoreOp, falseBrStoreOp) ||
       !isValidType(trueBrStoreOp.value().getType())) {
-    return matchFailure();
+    return failure();
   }
 
   if ((trueBrBranchOp.getOperation()->getSuccessor(0) != mergeBlock) ||
       (falseBrBranchOp.getOperation()->getSuccessor(0) != mergeBlock)) {
-    return matchFailure();
+    return failure();
   }
 
-  return matchSuccess();
+  return success();
 }
 } // end anonymous namespace
 

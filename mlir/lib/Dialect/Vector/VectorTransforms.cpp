@@ -545,18 +545,18 @@ namespace {
 struct SplitTransferReadOp : public OpRewritePattern<vector::TransferReadOp> {
   using OpRewritePattern<vector::TransferReadOp>::OpRewritePattern;
 
-  PatternMatchResult matchAndRewrite(vector::TransferReadOp xferReadOp,
-                                     PatternRewriter &rewriter) const override {
+  LogicalResult matchAndRewrite(vector::TransferReadOp xferReadOp,
+                                PatternRewriter &rewriter) const override {
     // TODO(andydavis, ntv) Support splitting TransferReadOp with non-identity
     // permutation maps. Repurpose code from MaterializeVectors transformation.
     if (!isIdentitySuffix(xferReadOp.permutation_map()))
-      return matchFailure();
+      return failure();
     // Return unless the unique 'xferReadOp' user is an ExtractSlicesOp.
     Value xferReadResult = xferReadOp.getResult();
     auto extractSlicesOp =
         dyn_cast<vector::ExtractSlicesOp>(*xferReadResult.getUsers().begin());
     if (!xferReadResult.hasOneUse() || !extractSlicesOp)
-      return matchFailure();
+      return failure();
 
     // Get 'sizes' and 'strides' parameters from ExtractSlicesOp user.
     auto sourceVectorType = extractSlicesOp.getSourceVectorType();
@@ -593,7 +593,7 @@ struct SplitTransferReadOp : public OpRewritePattern<vector::TransferReadOp> {
     rewriter.replaceOpWithNewOp<vector::InsertSlicesOp>(
         xferReadOp, sourceVectorType, tupleOp, extractSlicesOp.sizes(),
         extractSlicesOp.strides());
-    return matchSuccess();
+    return success();
   }
 };
 
@@ -601,23 +601,23 @@ struct SplitTransferReadOp : public OpRewritePattern<vector::TransferReadOp> {
 struct SplitTransferWriteOp : public OpRewritePattern<vector::TransferWriteOp> {
   using OpRewritePattern<vector::TransferWriteOp>::OpRewritePattern;
 
-  PatternMatchResult matchAndRewrite(vector::TransferWriteOp xferWriteOp,
-                                     PatternRewriter &rewriter) const override {
+  LogicalResult matchAndRewrite(vector::TransferWriteOp xferWriteOp,
+                                PatternRewriter &rewriter) const override {
     // TODO(andydavis, ntv) Support splitting TransferWriteOp with non-identity
     // permutation maps. Repurpose code from MaterializeVectors transformation.
     if (!isIdentitySuffix(xferWriteOp.permutation_map()))
-      return matchFailure();
+      return failure();
     // Return unless the 'xferWriteOp' 'vector' operand is an 'InsertSlicesOp'.
     auto *vectorDefOp = xferWriteOp.vector().getDefiningOp();
     auto insertSlicesOp = dyn_cast_or_null<vector::InsertSlicesOp>(vectorDefOp);
     if (!insertSlicesOp)
-      return matchFailure();
+      return failure();
 
     // Get TupleOp operand of 'insertSlicesOp'.
     auto tupleOp = dyn_cast_or_null<vector::TupleOp>(
         insertSlicesOp.vectors().getDefiningOp());
     if (!tupleOp)
-      return matchFailure();
+      return failure();
 
     // Get 'sizes' and 'strides' parameters from InsertSlicesOp user.
     auto sourceTupleType = insertSlicesOp.getSourceTupleType();
@@ -644,7 +644,7 @@ struct SplitTransferWriteOp : public OpRewritePattern<vector::TransferWriteOp> {
 
     // Erase old 'xferWriteOp'.
     rewriter.eraseOp(xferWriteOp);
-    return matchSuccess();
+    return success();
   }
 };
 
@@ -653,15 +653,15 @@ struct SplitTransferWriteOp : public OpRewritePattern<vector::TransferWriteOp> {
 struct ShapeCastOpDecomposer : public OpRewritePattern<vector::ShapeCastOp> {
   using OpRewritePattern<vector::ShapeCastOp>::OpRewritePattern;
 
-  PatternMatchResult matchAndRewrite(vector::ShapeCastOp shapeCastOp,
-                                     PatternRewriter &rewriter) const override {
+  LogicalResult matchAndRewrite(vector::ShapeCastOp shapeCastOp,
+                                PatternRewriter &rewriter) const override {
     // Check if 'shapeCastOp' has tuple source/result type.
     auto sourceTupleType =
         shapeCastOp.source().getType().dyn_cast_or_null<TupleType>();
     auto resultTupleType =
         shapeCastOp.result().getType().dyn_cast_or_null<TupleType>();
     if (!sourceTupleType || !resultTupleType)
-      return matchFailure();
+      return failure();
     assert(sourceTupleType.size() == resultTupleType.size());
 
     // Create single-vector ShapeCastOp for each source tuple element.
@@ -679,7 +679,7 @@ struct ShapeCastOpDecomposer : public OpRewritePattern<vector::ShapeCastOp> {
     // Replace 'shapeCastOp' with tuple of 'resultElements'.
     rewriter.replaceOpWithNewOp<vector::TupleOp>(shapeCastOp, resultTupleType,
                                                  resultElements);
-    return matchSuccess();
+    return success();
   }
 };
 
@@ -702,21 +702,21 @@ struct ShapeCastOpDecomposer : public OpRewritePattern<vector::ShapeCastOp> {
 struct ShapeCastOpFolder : public OpRewritePattern<vector::ShapeCastOp> {
   using OpRewritePattern<vector::ShapeCastOp>::OpRewritePattern;
 
-  PatternMatchResult matchAndRewrite(vector::ShapeCastOp shapeCastOp,
-                                     PatternRewriter &rewriter) const override {
+  LogicalResult matchAndRewrite(vector::ShapeCastOp shapeCastOp,
+                                PatternRewriter &rewriter) const override {
     // Check if 'shapeCastOp' has vector source/result type.
     auto sourceVectorType =
         shapeCastOp.source().getType().dyn_cast_or_null<VectorType>();
     auto resultVectorType =
         shapeCastOp.result().getType().dyn_cast_or_null<VectorType>();
     if (!sourceVectorType || !resultVectorType)
-      return matchFailure();
+      return failure();
 
     // Check if shape cast op source operand is also a shape cast op.
     auto sourceShapeCastOp = dyn_cast_or_null<vector::ShapeCastOp>(
         shapeCastOp.source().getDefiningOp());
     if (!sourceShapeCastOp)
-      return matchFailure();
+      return failure();
     auto operandSourceVectorType =
         sourceShapeCastOp.source().getType().cast<VectorType>();
     auto operandResultVectorType =
@@ -725,10 +725,10 @@ struct ShapeCastOpFolder : public OpRewritePattern<vector::ShapeCastOp> {
     // Check if shape cast operations invert each other.
     if (operandSourceVectorType != resultVectorType ||
         operandResultVectorType != sourceVectorType)
-      return matchFailure();
+      return failure();
 
     rewriter.replaceOp(shapeCastOp, sourceShapeCastOp.source());
-    return matchSuccess();
+    return success();
   }
 };
 
@@ -738,30 +738,30 @@ struct ShapeCastOpFolder : public OpRewritePattern<vector::ShapeCastOp> {
 struct TupleGetFolderOp : public OpRewritePattern<vector::TupleGetOp> {
   using OpRewritePattern<vector::TupleGetOp>::OpRewritePattern;
 
-  PatternMatchResult matchAndRewrite(vector::TupleGetOp tupleGetOp,
-                                     PatternRewriter &rewriter) const override {
+  LogicalResult matchAndRewrite(vector::TupleGetOp tupleGetOp,
+                                PatternRewriter &rewriter) const override {
     // Return if 'tupleGetOp.vectors' arg was not defined by ExtractSlicesOp.
     auto extractSlicesOp = dyn_cast_or_null<vector::ExtractSlicesOp>(
         tupleGetOp.vectors().getDefiningOp());
     if (!extractSlicesOp)
-      return matchFailure();
+      return failure();
 
     // Return if 'extractSlicesOp.vector' arg was not defined by InsertSlicesOp.
     auto insertSlicesOp = dyn_cast_or_null<vector::InsertSlicesOp>(
         extractSlicesOp.vector().getDefiningOp());
     if (!insertSlicesOp)
-      return matchFailure();
+      return failure();
 
     // Return if 'insertSlicesOp.vectors' arg was not defined by TupleOp.
     auto tupleOp = dyn_cast_or_null<vector::TupleOp>(
         insertSlicesOp.vectors().getDefiningOp());
     if (!tupleOp)
-      return matchFailure();
+      return failure();
 
     // Forward Value from 'tupleOp' at 'tupleGetOp.index'.
     Value tupleValue = tupleOp.getOperand(tupleGetOp.getIndex());
     rewriter.replaceOp(tupleGetOp, tupleValue);
-    return matchSuccess();
+    return success();
   }
 };
 
@@ -778,8 +778,8 @@ class ExtractSlicesOpLowering
 public:
   using OpRewritePattern<vector::ExtractSlicesOp>::OpRewritePattern;
 
-  PatternMatchResult matchAndRewrite(vector::ExtractSlicesOp op,
-                                     PatternRewriter &rewriter) const override {
+  LogicalResult matchAndRewrite(vector::ExtractSlicesOp op,
+                                PatternRewriter &rewriter) const override {
     auto loc = op.getLoc();
 
     VectorType vectorType = op.getSourceVectorType();
@@ -806,7 +806,7 @@ public:
     }
 
     rewriter.replaceOpWithNewOp<vector::TupleOp>(op, tupleType, tupleValues);
-    return matchSuccess();
+    return success();
   }
 };
 
@@ -825,8 +825,8 @@ class InsertSlicesOpLowering : public OpRewritePattern<vector::InsertSlicesOp> {
 public:
   using OpRewritePattern<vector::InsertSlicesOp>::OpRewritePattern;
 
-  PatternMatchResult matchAndRewrite(vector::InsertSlicesOp op,
-                                     PatternRewriter &rewriter) const override {
+  LogicalResult matchAndRewrite(vector::InsertSlicesOp op,
+                                PatternRewriter &rewriter) const override {
     auto loc = op.getLoc();
 
     VectorType vectorType = op.getResultVectorType();
@@ -860,7 +860,7 @@ public:
     }
 
     rewriter.replaceOp(op, result);
-    return matchSuccess();
+    return success();
   }
 };
 
@@ -881,8 +881,8 @@ class OuterProductOpLowering : public OpRewritePattern<vector::OuterProductOp> {
 public:
   using OpRewritePattern<vector::OuterProductOp>::OpRewritePattern;
 
-  PatternMatchResult matchAndRewrite(vector::OuterProductOp op,
-                                     PatternRewriter &rewriter) const override {
+  LogicalResult matchAndRewrite(vector::OuterProductOp op,
+                                PatternRewriter &rewriter) const override {
     auto loc = op.getLoc();
 
     VectorType rhsType = op.getOperandVectorTypeRHS();
@@ -907,7 +907,7 @@ public:
       result = rewriter.create<vector::InsertOp>(loc, resType, m, result, pos);
     }
     rewriter.replaceOp(op, result);
-    return matchSuccess();
+    return success();
   }
 };
 
@@ -934,11 +934,11 @@ public:
       : OpRewritePattern<vector::ContractionOp>(context),
         vectorTransformsOptions(vectorTransformsOptions) {}
 
-  PatternMatchResult matchAndRewrite(vector::ContractionOp op,
-                                     PatternRewriter &rewriter) const override {
+  LogicalResult matchAndRewrite(vector::ContractionOp op,
+                                PatternRewriter &rewriter) const override {
     // TODO(ajcbik): implement masks
     if (llvm::size(op.masks()) != 0)
-      return matchFailure();
+      return failure();
 
     // TODO(ntv, ajcbik): implement benefits, cost models, separate this out in
     // a new pattern.
@@ -977,7 +977,7 @@ public:
           rewriter.replaceOpWithNewOp<AddIOp>(op, op.acc(), mul);
         else
           rewriter.replaceOpWithNewOp<AddFOp>(op, op.acc(), mul);
-        return matchSuccess();
+        return success();
       }
     }
 
@@ -987,7 +987,7 @@ public:
       int64_t lhsIndex = batchDimMap[0].first;
       int64_t rhsIndex = batchDimMap[0].second;
       rewriter.replaceOp(op, lowerParallel(op, lhsIndex, rhsIndex, rewriter));
-      return matchSuccess();
+      return success();
     }
 
     // Collect contracting dimensions.
@@ -1007,7 +1007,7 @@ public:
       if (lhsContractingDimSet.count(lhsIndex) == 0) {
         rewriter.replaceOp(
             op, lowerParallel(op, lhsIndex, /*rhsIndex=*/-1, rewriter));
-        return matchSuccess();
+        return success();
       }
     }
 
@@ -1018,17 +1018,17 @@ public:
       if (rhsContractingDimSet.count(rhsIndex) == 0) {
         rewriter.replaceOp(
             op, lowerParallel(op, /*lhsIndex=*/-1, rhsIndex, rewriter));
-        return matchSuccess();
+        return success();
       }
     }
 
     // Lower the first remaining reduction dimension.
     if (!contractingDimMap.empty()) {
       rewriter.replaceOp(op, lowerReduction(op, rewriter));
-      return matchSuccess();
+      return success();
     }
 
-    return matchFailure();
+    return failure();
   }
 
 private:
@@ -1275,12 +1275,12 @@ class ShapeCastOp2DDownCastRewritePattern
 public:
   using OpRewritePattern<vector::ShapeCastOp>::OpRewritePattern;
 
-  PatternMatchResult matchAndRewrite(vector::ShapeCastOp op,
-                                     PatternRewriter &rewriter) const override {
+  LogicalResult matchAndRewrite(vector::ShapeCastOp op,
+                                PatternRewriter &rewriter) const override {
     auto sourceVectorType = op.getSourceVectorType();
     auto resultVectorType = op.getResultVectorType();
     if (sourceVectorType.getRank() != 2 || resultVectorType.getRank() != 1)
-      return matchFailure();
+      return failure();
 
     auto loc = op.getLoc();
     auto elemType = sourceVectorType.getElementType();
@@ -1295,7 +1295,7 @@ public:
           /*offsets=*/i * mostMinorVectorSize, /*strides=*/1);
     }
     rewriter.replaceOp(op, desc);
-    return matchSuccess();
+    return success();
   }
 };
 
@@ -1309,12 +1309,12 @@ class ShapeCastOp2DUpCastRewritePattern
 public:
   using OpRewritePattern<vector::ShapeCastOp>::OpRewritePattern;
 
-  PatternMatchResult matchAndRewrite(vector::ShapeCastOp op,
-                                     PatternRewriter &rewriter) const override {
+  LogicalResult matchAndRewrite(vector::ShapeCastOp op,
+                                PatternRewriter &rewriter) const override {
     auto sourceVectorType = op.getSourceVectorType();
     auto resultVectorType = op.getResultVectorType();
     if (sourceVectorType.getRank() != 1 || resultVectorType.getRank() != 2)
-      return matchFailure();
+      return failure();
 
     auto loc = op.getLoc();
     auto elemType = sourceVectorType.getElementType();
@@ -1330,7 +1330,7 @@ public:
       desc = rewriter.create<vector::InsertOp>(loc, vec, desc, i);
     }
     rewriter.replaceOp(op, desc);
-    return matchSuccess();
+    return success();
   }
 };
 

@@ -35,16 +35,16 @@ public:
   FakeQuantRewrite(MLIRContext *ctx, bool *hadFailure)
       : OpRewritePattern<FakeQuantOp>(ctx), hadFailure(hadFailure) {}
 
-  PatternMatchResult matchAndRewrite(FakeQuantOp op,
-                                     PatternRewriter &rewriter) const override {
+  LogicalResult matchAndRewrite(FakeQuantOp op,
+                                PatternRewriter &rewriter) const override {
     // TODO: If this pattern comes up more frequently, consider adding core
     // support for failable rewrites.
     if (failableRewrite(op, rewriter)) {
       *hadFailure = true;
-      return Pattern::matchFailure();
+      return failure();
     }
 
-    return Pattern::matchSuccess();
+    return success();
   }
 
 private:

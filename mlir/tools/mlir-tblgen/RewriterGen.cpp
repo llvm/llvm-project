@@ -215,7 +215,7 @@ void PatternEmitter::emitOpMatch(DagNode tree, int depth) {
   // Skip the operand matching at depth 0 as the pattern rewriter already does.
   if (depth != 0) {
     // Skip if there is no defining operation (e.g., arguments to function).
-    os.indent(indent) << formatv("if (!castedOp{0}) return matchFailure();\n",
+    os.indent(indent) << formatv("if (!castedOp{0}) return failure();\n",
                                  depth);
   }
   if (tree.getNumArgs() != op.getNumArgs()) {
@@ -300,7 +300,7 @@ void PatternEmitter::emitOperandMatch(DagNode tree, int argIndex, int depth,
       os.indent(indent) << "if (!("
                         << std::string(tgfmt(matcher.getConditionTemplate(),
                                              &fmtCtx.withSelf(self)))
-                        << ")) return matchFailure();\n";
+                        << ")) return failure();\n";
     }
   }
 
@@ -344,7 +344,7 @@ void PatternEmitter::emitAttributeMatch(DagNode tree, int argIndex, int depth,
     // should just capture a mlir::Attribute() to signal the missing state.
     // That is precisely what getAttr() returns on missing attributes.
   } else {
-    os.indent(indent) << "if (!tblgen_attr) return matchFailure();\n";
+    os.indent(indent) << "if (!tblgen_attr) return failure();\n";
   }
 
   auto matcher = tree.getArgAsLeaf(argIndex);
@@ -360,7 +360,7 @@ void PatternEmitter::emitAttributeMatch(DagNode tree, int argIndex, int depth,
     os.indent(indent) << "if (!("
                       << std::string(tgfmt(matcher.getConditionTemplate(),
                                            &fmtCtx.withSelf("tblgen_attr")))
-                      << ")) return matchFailure();\n";
+                      << ")) return failure();\n";
   }
 
   // Capture the value
@@ -383,7 +383,7 @@ void PatternEmitter::emitMatchLogic(DagNode tree) {
     auto &entities = appliedConstraint.entities;
 
     auto condition = constraint.getConditionTemplate();
-    auto cmd = "if (!({0})) return matchFailure();\n";
+    auto cmd = "if (!({0})) return failure();\n";
 
     if (isa<TypeConstraint>(constraint)) {
       auto self = formatv("({0}.getType())",
@@ -468,7 +468,7 @@ void PatternEmitter::emit(StringRef rewriteName) {
 
   // Emit matchAndRewrite() function.
   os << R"(
-  PatternMatchResult matchAndRewrite(Operation *op0,
+  LogicalResult matchAndRewrite(Operation *op0,
                                      PatternRewriter &rewriter) const override {
 )";
 
@@ -501,7 +501,7 @@ void PatternEmitter::emit(StringRef rewriteName) {
   os.indent(4) << "// Rewrite\n";
   emitRewriteLogic();
 
-  os.indent(4) << "return matchSuccess();\n";
+  os.indent(4) << "return success();\n";
   os << "  };\n";
   os << "};\n";
 }

@@ -198,8 +198,8 @@ struct VectorTransferRewriter : public RewritePattern {
   }
 
   /// Performs the rewrite.
-  PatternMatchResult matchAndRewrite(Operation *op,
-                                     PatternRewriter &rewriter) const override;
+  LogicalResult matchAndRewrite(Operation *op,
+                                PatternRewriter &rewriter) const override;
 };
 
 /// Lowers TransferReadOp into a combination of:
@@ -246,7 +246,7 @@ struct VectorTransferRewriter : public RewritePattern {
 
 /// Performs the rewrite.
 template <>
-PatternMatchResult VectorTransferRewriter<TransferReadOp>::matchAndRewrite(
+LogicalResult VectorTransferRewriter<TransferReadOp>::matchAndRewrite(
     Operation *op, PatternRewriter &rewriter) const {
   using namespace mlir::edsc::op;
 
@@ -282,7 +282,7 @@ PatternMatchResult VectorTransferRewriter<TransferReadOp>::matchAndRewrite(
 
   // 3. Propagate.
   rewriter.replaceOp(op, vectorValue.getValue());
-  return matchSuccess();
+  return success();
 }
 
 /// Lowers TransferWriteOp into a combination of:
@@ -304,7 +304,7 @@ PatternMatchResult VectorTransferRewriter<TransferReadOp>::matchAndRewrite(
 /// TODO(ntv): implement alternatives to clipping.
 /// TODO(ntv): support non-data-parallel operations.
 template <>
-PatternMatchResult VectorTransferRewriter<TransferWriteOp>::matchAndRewrite(
+LogicalResult VectorTransferRewriter<TransferWriteOp>::matchAndRewrite(
     Operation *op, PatternRewriter &rewriter) const {
   using namespace edsc::op;
 
@@ -340,7 +340,7 @@ PatternMatchResult VectorTransferRewriter<TransferWriteOp>::matchAndRewrite(
   (std_dealloc(tmp)); // vexing parse...
 
   rewriter.eraseOp(op);
-  return matchSuccess();
+  return success();
 }
 
 } // namespace

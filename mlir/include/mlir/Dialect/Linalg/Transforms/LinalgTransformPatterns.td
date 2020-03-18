@@ -53,7 +53,7 @@ class TileAndFuseLinalgOp<
   "if (failed(tileAndFuseLinalgOpAndSetMarker($_builder, op, {" #
   StrJoinInt<sizes>.result # "}, {" # StrJoinInt<operandIndices>.result # "}," #
       " \"" # value # "\")))" #
-  "  return matchFailure();">;
+  "  return failure();">;
 
 //===----------------------------------------------------------------------===//
 // Linalg tiling patterns.
@@ -70,22 +70,22 @@ class TileLinalgOp<list<int> sizes, string value, list<int> permutation=[]> :
     "if (failed(tileLinalgOpAndSetMarker($_builder, op, {" #
     StrJoinInt<sizes>.result # "}, \"" # value # "\", {" #
     StrJoinInt<permutation>.result # "})))" #
-    "  return matchFailure();">;
+    "  return failure();">;
 
 //===----------------------------------------------------------------------===//
 // Linalg to loop patterns.
 //===----------------------------------------------------------------------===//
 class LinalgOpToLoops<string OpType> : NativeCodeCall<
   "if (failed(linalgOpToLoops<" # OpType # ">($_builder, op))) " #
-  "  return matchFailure();">;
+  "  return failure();">;
 
 class LinalgOpToParallelLoops<string OpType> : NativeCodeCall<
   "if (failed(linalgOpToParallelLoops<" # OpType # ">($_builder, op))) " #
-  "  return matchFailure();">;
+  "  return failure();">;
 
 class LinalgOpToAffineLoops<string OpType> : NativeCodeCall<
   "if (failed(linalgOpToAffineLoops<" # OpType # ">($_builder, op))) " #
-  "  return matchFailure();">;
+  "  return failure();">;
 
 //===----------------------------------------------------------------------===//
 // Linalg to vector patterns precondition and DRR.
