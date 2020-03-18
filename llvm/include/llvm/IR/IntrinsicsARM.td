@@ -1268,6 +1268,11 @@ defm int_arm_mve_vqrdmlash: MVEPredicated<[llvm_anyvector_ty],
   [LLVMMatchType<0> /* mult op #1 */, LLVMMatchType<0> /* mult op #2 */,
    llvm_i32_ty /* addend (scalar) */]>;
 
+defm int_arm_mve_vqdmlad: MVEPredicated<[llvm_anyvector_ty],
+  [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>,
+   llvm_i32_ty /* exchange */, llvm_i32_ty /* round */,
+   llvm_i32_ty /* subtract */]>;
+
 // CDE (Custom Datapath Extension)
 
 def int_arm_cde_cx1: Intrinsic<

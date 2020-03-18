@@ -4210,11 +4210,32 @@ class MVE_VQxDMLxDH<string iname, bit exch, bit round, bit subtract,
   let Inst{0} = round;
 }
 
+multiclass MVE_VQxDMLxDH_p<string iname, bit exch, bit round, bit subtract,
+                           MVEVectorVTInfo VTI> {
+  def "": MVE_VQxDMLxDH<iname, exch, round, subtract, VTI.Suffix, VTI.Size,
+                        !if(!eq(VTI.LaneBits, 32), ",@earlyclobber $Qd", "")>;
+  defvar Inst = !cast<Instruction>(NAME);
+  defvar ConstParams = (? (i32 exch), (i32 round), (i32 subtract));
+  defvar unpred_intr = int_arm_mve_vqdmlad;
+  defvar pred_intr = int_arm_mve_vqdmlad_predicated;
+
+  def : Pat<(VTI.Vec !con((unpred_intr (VTI.Vec MQPR:$a), (VTI.Vec MQPR:$b),
+                                       (VTI.Vec MQPR:$c)), ConstParams)),
+            (VTI.Vec (Inst (VTI.Vec MQPR:$a), (VTI.Vec MQPR:$b),
+                           (VTI.Vec MQPR:$c)))>;
+  def : Pat<(VTI.Vec !con((pred_intr (VTI.Vec MQPR:$a), (VTI.Vec MQPR:$b),
+                                     (VTI.Vec MQPR:$c)), ConstParams,
+                          (? (VTI.Pred VCCR:$pred)))),
+            (VTI.Vec (Inst (VTI.Vec MQPR:$a), (VTI.Vec MQPR:$b),
+                           (VTI.Vec MQPR:$c),
+                           ARMVCCThen, (VTI.Pred VCCR:$pred)))>;
+}
+
 multiclass MVE_VQxDMLxDH_multi<string iname, bit exch,
                                bit round, bit subtract> {
-  def s8  : MVE_VQxDMLxDH<iname, exch, round, subtract, "s8",  0b00>;
-  def s16 : MVE_VQxDMLxDH<iname, exch, round, subtract, "s16", 0b01>;
-  def s32 : MVE_VQxDMLxDH<iname, exch, round, subtract, "s32", 0b10, ",@earlyclobber $Qd">;
+  defm s8  : MVE_VQxDMLxDH_p<iname, exch, round, subtract, MVE_v16s8>;
+  defm s16 : MVE_VQxDMLxDH_p<iname, exch, round, subtract, MVE_v8s16>;
+  defm s32 : MVE_VQxDMLxDH_p<iname, exch, round, subtract, MVE_v4s32>;
 }
 
 defm MVE_VQDMLADH   : MVE_VQxDMLxDH_multi<"vqdmladh",   0b0, 0b0, 0b0>;
