@@ -89,8 +89,8 @@ body:             |
     ; CHECK: t2STRi12 killed renamable $r0, $sp, 4, 14 /* CC::al */, $noreg :: (store 4 into %ir.s)
     ; CHECK: renamable $r0 = t2LDRi12 $sp, 4, 14 /* CC::al */, $noreg :: (dereferenceable load 4 from %ir.s)
     ; CHECK: tBL 14 /* CC::al */, $noreg, @bar, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit $r0, implicit-def $sp
-    ; CHECK: $sp = t2ADDspImm12 killed $sp, 4008, 14 /* CC::al */, $noreg
-    ; CHECK: $sp = t2LDMIA_RET $sp, 14 /* CC::al */, $noreg, def $r7, def $pc
+    ; CHECK: $sp = frame-destroy t2ADDspImm12 killed $sp, 4008, 14 /* CC::al */, $noreg
+    ; CHECK: $sp = frame-destroy t2LDMIA_RET $sp, 14 /* CC::al */, $noreg, def $r7, def $pc
     renamable $r0 = t2ADDri %stack.0.v, 0, 14, $noreg, $noreg
     t2STRi12 killed renamable $r0, %stack.1.s, 0, 14, $noreg :: (store 4 into %ir.s)
     renamable $r0 = t2LDRi12 %stack.1.s, 0, 14, $noreg :: (dereferenceable load 4 from %ir.s)
