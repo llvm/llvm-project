@@ -1,5 +1,12 @@
 // RUN: mlir-opt -convert-std-to-spirv %s -o - | FileCheck %s
 
+module attributes {
+  spv.target_env = #spv.target_env<
+    #spv.vce<v1.0, [Shader, Int64, Float64], [SPV_KHR_storage_buffer_storage_class]>,
+    {max_compute_workgroup_invocations = 128 : i32,
+     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+} {
+
 //===----------------------------------------------------------------------===//
 // std binary arithmetic ops
 //===----------------------------------------------------------------------===//
@@ -366,3 +373,5 @@ func @load_store_zero_rank_int(%arg0: memref<i32>, %arg1: memref<i32>) {
   store %0, %arg1[] : memref<i32>
   return
 }
+
+} // end module

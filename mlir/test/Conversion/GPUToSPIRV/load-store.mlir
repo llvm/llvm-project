@@ -1,6 +1,12 @@
 // RUN: mlir-opt -convert-gpu-to-spirv %s -o - | FileCheck %s
 
-module attributes {gpu.container_module} {
+module attributes {
+  gpu.container_module,
+  spv.target_env = #spv.target_env<
+    #spv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]>,
+    {max_compute_workgroup_invocations = 128 : i32,
+     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+} {
   func @load_store(%arg0: memref<12x4xf32>, %arg1: memref<12x4xf32>, %arg2: memref<12x4xf32>) {
     %c0 = constant 0 : index
     %c12 = constant 12 : index
