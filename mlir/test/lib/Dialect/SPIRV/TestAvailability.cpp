@@ -130,7 +130,12 @@ void ConvertToTargetEnv::runOnFunction() {
   auto targetEnv = fn.getOperation()
                        ->getAttr(spirv::getTargetEnvAttrName())
                        .cast<spirv::TargetEnvAttr>();
-  auto target = spirv::SPIRVConversionTarget::get(targetEnv, context);
+  if (!targetEnv) {
+    fn.emitError("missing 'spv.target_env' attribute");
+    return signalPassFailure();
+  }
+
+  auto target = spirv::SPIRVConversionTarget::get(targetEnv);
 
   OwningRewritePatternList patterns;
   patterns.insert<ConvertToAtomCmpExchangeWeak, ConvertToBitReverse,

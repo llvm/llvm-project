@@ -159,7 +159,8 @@ static Optional<int64_t> getTypeNumBytes(Type t) {
   return llvm::None;
 }
 
-SPIRVTypeConverter::SPIRVTypeConverter() {
+SPIRVTypeConverter::SPIRVTypeConverter(spirv::TargetEnvAttr targetAttr)
+    : targetEnv(targetAttr) {
   addConversion([](Type type) -> Optional<Type> {
     // If the type is already valid in SPIR-V, directly return.
     return spirv::SPIRVDialect::isValidType(type) ? type : Optional<Type>();
@@ -411,11 +412,10 @@ mlir::spirv::setABIAttrs(spirv::FuncOp funcOp,
 //===----------------------------------------------------------------------===//
 
 std::unique_ptr<spirv::SPIRVConversionTarget>
-spirv::SPIRVConversionTarget::get(spirv::TargetEnvAttr targetEnv,
-                                  MLIRContext *context) {
+spirv::SPIRVConversionTarget::get(spirv::TargetEnvAttr targetAttr) {
   std::unique_ptr<SPIRVConversionTarget> target(
       // std::make_unique does not work here because the constructor is private.
-      new SPIRVConversionTarget(targetEnv, context));
+      new SPIRVConversionTarget(targetAttr));
   SPIRVConversionTarget *targetPtr = target.get();
   target->addDynamicallyLegalDialect<SPIRVDialect>(
       Optional<ConversionTarget::DynamicLegalityCallbackFn>(
@@ -426,80 +426,57 @@ spirv::SPIRVConversionTarget::get(spirv::TargetEnvAttr targetEnv,
 }
 
 spirv::SPIRVConversionTarget::SPIRVConversionTarget(
-    spirv::TargetEnvAttr targetEnv, MLIRContext *context)
-    : ConversionTarget(*context), givenVersion(targetEnv.getVersion()) {
-  for (spirv::Extension ext : targetEnv.getExtensions())
-    givenExtensions.insert(ext);
-
-  // Add extensions implied by the current version.
-  for (spirv::Extension ext : spirv::getImpliedExtensions(givenVersion))
-    givenExtensions.insert(ext);
-
-  for (spirv::Capability cap : targetEnv.getCapabilities()) {
-    givenCapabilities.insert(cap);
-
-    // Add capabilities implied by the current capability.
-    for (spirv::Capability c : spirv::getRecursiveImpliedCapabilities(cap))
-      givenCapabilities.insert(c);
-  }
-}
+    spirv::TargetEnvAttr targetAttr)
+    : ConversionTarget(*targetAttr.getContext()), targetEnv(targetAttr) {}
 
 /// Checks that `candidates` extension requirements are possible to be satisfied
-/// with the given `allowedExtensions`.
+/// with the given `targetEnv`.
 ///
 ///  `candidates` is a vector of vector for extension requirements following
 /// ((Extension::A OR Extension::B) AND (Extension::C OR Extension::D))
 /// convention.
 static LogicalResult checkExtensionRequirements(
-    Operation *op, const llvm::SmallSet<spirv::Extension, 4> &allowedExtensions,
+    Operation *op, const spirv::TargetEnv &targetEnv,
     const spirv::SPIRVType::ExtensionArrayRefVector &candidates) {
   for (const auto &ors : candidates) {
-    auto chosen = llvm::find_if(ors, [&](spirv::Extension ext) {
-      return allowedExtensions.count(ext);
-    });
+    if (targetEnv.allows(ors))
+      continue;
 
-    if (chosen == ors.end()) {
-      SmallVector<StringRef, 4> extStrings;
-      for (spirv::Extension ext : ors)
-        extStrings.push_back(spirv::stringifyExtension(ext));
+    SmallVector<StringRef, 4> extStrings;
+    for (spirv::Extension ext : ors)
+      extStrings.push_back(spirv::stringifyExtension(ext));
 
-      LLVM_DEBUG(llvm::dbgs() << op->getName()
-                              << "illegal: requires at least one extension in ["
-                              << llvm::join(extStrings, ", ")
-                              << "] but none allowed in target environment\n");
-      return failure();
-    }
+    LLVM_DEBUG(llvm::dbgs() << op->getName()
+                            << " illegal: requires at least one extension in ["
+                            << llvm::join(extStrings, ", ")
+                            << "] but none allowed in target environment\n");
+    return failure();
   }
   return success();
 }
 
 /// Checks that `candidates`capability requirements are possible to be satisfied
-/// with the given `allowedCapabilities`.
+/// with the given `isAllowedFn`.
 ///
 ///  `candidates` is a vector of vector for capability requirements following
 /// ((Capability::A OR Capability::B) AND (Capability::C OR Capability::D))
 /// convention.
 static LogicalResult checkCapabilityRequirements(
-    Operation *op,
-    const llvm::SmallSet<spirv::Capability, 8> &allowedCapabilities,
+    Operation *op, const spirv::TargetEnv &targetEnv,
     const spirv::SPIRVType::CapabilityArrayRefVector &candidates) {
   for (const auto &ors : candidates) {
-    auto chosen = llvm::find_if(ors, [&](spirv::Capability cap) {
-      return allowedCapabilities.count(cap);
-    });
+    if (targetEnv.allows(ors))
+      continue;
 
-    if (chosen == ors.end()) {
-      SmallVector<StringRef, 4> capStrings;
-      for (spirv::Capability cap : ors)
-        capStrings.push_back(spirv::stringifyCapability(cap));
+    SmallVector<StringRef, 4> capStrings;
+    for (spirv::Capability cap : ors)
+      capStrings.push_back(spirv::stringifyCapability(cap));
 
-      LLVM_DEBUG(llvm::dbgs()
-                 << op->getName()
-                 << "illegal: requires at least one capability in ["
-                 << llvm::join(capStrings, ", ")
-                 << "] but none allowed in target environment\n");
-      return failure();
-    }
+    LLVM_DEBUG(llvm::dbgs() << op->getName()
+                            << " illegal: requires at least one capability in ["
+                            << llvm::join(capStrings, ", ")
+                            << "] but none allowed in target environment\n");
+    return failure();
   }
   return success();
 }
@@ -509,7 +486,7 @@ bool spirv::SPIRVConversionTarget::isLegalOp(Operation *op) {
   // QueryMinVersionInterface/QueryMaxVersionInterface are available to all
   // SPIR-V versions.
   if (auto minVersion = dyn_cast<spirv::QueryMinVersionInterface>(op))
-    if (minVersion.getMinVersion() > givenVersion) {
+    if (minVersion.getMinVersion() > this->targetEnv.getVersion()) {
       LLVM_DEBUG(llvm::dbgs()
                  << op->getName() << " illegal: requiring min version "
                  << spirv::stringifyVersion(minVersion.getMinVersion())
@@ -517,7 +494,7 @@ bool spirv::SPIRVConversionTarget::isLegalOp(Operation *op) {
       return false;
     }
   if (auto maxVersion = dyn_cast<spirv::QueryMaxVersionInterface>(op))
-    if (maxVersion.getMaxVersion() < givenVersion) {
+    if (maxVersion.getMaxVersion() < this->targetEnv.getVersion()) {
       LLVM_DEBUG(llvm::dbgs()
                  << op->getName() << " illegal: requiring max version "
                  << spirv::stringifyVersion(maxVersion.getMaxVersion())
@@ -529,7 +506,7 @@ bool spirv::SPIRVConversionTarget::isLegalOp(Operation *op) {
   // implementing QueryExtensionInterface do not require extensions to be
   // available.
   if (auto extensions = dyn_cast<spirv::QueryExtensionInterface>(op))
-    if (failed(checkExtensionRequirements(op, this->givenExtensions,
+    if (failed(checkExtensionRequirements(op, this->targetEnv,
                                           extensions.getExtensions())))
       return false;
 
@@ -537,7 +514,7 @@ bool spirv::SPIRVConversionTarget::isLegalOp(Operation *op) {
   // implementing QueryCapabilityInterface do not require capabilities to be
   // available.
   if (auto capabilities = dyn_cast<spirv::QueryCapabilityInterface>(op))
-    if (failed(checkCapabilityRequirements(op, this->givenCapabilities,
+    if (failed(checkCapabilityRequirements(op, this->targetEnv,
                                            capabilities.getCapabilities())))
       return false;
 
@@ -557,14 +534,13 @@ bool spirv::SPIRVConversionTarget::isLegalOp(Operation *op) {
   for (Type valueType : valueTypes) {
     typeExtensions.clear();
     valueType.cast<spirv::SPIRVType>().getExtensions(typeExtensions);
-    if (failed(checkExtensionRequirements(op, this->givenExtensions,
-                                          typeExtensions)))
+    if (failed(checkExtensionRequirements(op, this->targetEnv, typeExtensions)))
       return false;
 
     typeCapabilities.clear();
     valueType.cast<spirv::SPIRVType>().getCapabilities(typeCapabilities);
-    if (failed(checkCapabilityRequirements(op, this->givenCapabilities,
-                                           typeCapabilities)))
+    if (failed(
+            checkCapabilityRequirements(op, this->targetEnv, typeCapabilities)))
       return false;
   }
 

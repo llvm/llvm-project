@@ -13,6 +13,7 @@
 #ifndef MLIR_DIALECT_SPIRV_SPIRVLOWERING_H
 #define MLIR_DIALECT_SPIRV_SPIRVLOWERING_H
 
+#include "mlir/Dialect/SPIRV/SPIRVAttributes.h"
 #include "mlir/Dialect/SPIRV/SPIRVTypes.h"
 #include "mlir/Dialect/SPIRV/TargetAndABI.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -27,7 +28,7 @@ namespace mlir {
 /// pointers to structs.
 class SPIRVTypeConverter : public TypeConverter {
 public:
-  SPIRVTypeConverter();
+  explicit SPIRVTypeConverter(spirv::TargetEnvAttr targetAttr);
 
   /// Gets the SPIR-V correspondence for the standard index type.
   static Type getIndexType(MLIRContext *context);
@@ -40,6 +41,9 @@ public:
   /// llvm::None if the memory space does not map to any SPIR-V storage class.
   static Optional<spirv::StorageClass>
   getStorageClassForMemorySpace(unsigned space);
+
+private:
+  spirv::TargetEnv targetEnv;
 };
 
 /// Base class to define a conversion pattern to lower `SourceOp` into SPIR-V.
@@ -70,11 +74,10 @@ class FuncOp;
 class SPIRVConversionTarget : public ConversionTarget {
 public:
   /// Creates a SPIR-V conversion target for the given target environment.
-  static std::unique_ptr<SPIRVConversionTarget> get(TargetEnvAttr targetEnv,
-                                                    MLIRContext *context);
+  static std::unique_ptr<SPIRVConversionTarget> get(TargetEnvAttr targetAttr);
 
 private:
-  SPIRVConversionTarget(TargetEnvAttr targetEnv, MLIRContext *context);
+  explicit SPIRVConversionTarget(TargetEnvAttr targetAttr);
 
   // Be explicit that instance of this class cannot be copied or moved: there
   // are lambdas capturing fields of the instance.
@@ -87,9 +90,7 @@ private:
   /// environment.
   bool isLegalOp(Operation *op);
 
-  Version givenVersion;                            /// SPIR-V version to target
-  llvm::SmallSet<Extension, 4> givenExtensions;    /// Allowed extensions
-  llvm::SmallSet<Capability, 8> givenCapabilities; /// Allowed capabilities
+  TargetEnv targetEnv;
 };
 
 /// Returns the value for the given `builtin` variable. This function gets or
