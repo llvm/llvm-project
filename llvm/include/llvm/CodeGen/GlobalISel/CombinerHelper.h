@@ -190,6 +190,19 @@ public:
   bool applyCombineShiftToUnmerge(MachineInstr &MI, const unsigned &ShiftVal);
   bool tryCombineShiftToUnmerge(MachineInstr &MI, unsigned TargetShiftAmount);
 
+  /// Return true if any explicit use operand on \p MI is defined by a
+  /// G_IMPLICIT_DEF.
+  bool matchAnyExplicitUseIsUndef(MachineInstr &MI);
+
+  /// Replace an instruction with a G_FCONSTANT with value \p C.
+  bool replaceInstWithFConstant(MachineInstr &MI, double C);
+
+  /// Replace an instruction with a G_CONSTANT with value \p C.
+  bool replaceInstWithConstant(MachineInstr &MI, int64_t C);
+
+  /// Replace an instruction with a G_IMPLICIT_DEF.
+  bool replaceInstWithUndef(MachineInstr &MI);
+
   /// Try to transform \p MI by using all of the above
   /// combine functions. Returns true if changed.
   bool tryCombine(MachineInstr &MI);
