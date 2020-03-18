@@ -260,13 +260,13 @@ static void emitAligningInstructions(MachineFunction &MF, ARMFunctionInfo *AFI,
                                      MachineBasicBlock &MBB,
                                      MachineBasicBlock::iterator MBBI,
                                      const DebugLoc &DL, const unsigned Reg,
-                                     const unsigned Alignment,
+                                     const Align Alignment,
                                      const bool MustBeSingleInstruction) {
   const ARMSubtarget &AST =
       static_cast<const ARMSubtarget &>(MF.getSubtarget());
   const bool CanUseBFC = AST.hasV6T2Ops() || AST.hasV7Ops();
-  const unsigned AlignMask = Alignment - 1;
-  const unsigned NrBitsToZero = countTrailingZeros(Alignment);
+  const unsigned AlignMask = Alignment.value() - 1U;
+  const unsigned NrBitsToZero = Log2(Alignment);
   assert(!AFI->isThumb1OnlyFunction() && "Thumb1 not supported");
   if (!AFI->isThumbFunction()) {
     // if the BFC instruction is available, use that to zero the lower
@@ -346,7 +346,7 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
   assert(!AFI->isThumb1OnlyFunction() &&
          "This emitPrologue does not support Thumb1!");
   bool isARM = !AFI->isThumbFunction();
-  unsigned Align = STI.getFrameLowering()->getStackAlignment();
+  Align Alignment = STI.getFrameLowering()->getStackAlign();
   unsigned ArgRegsSaveSize = AFI->getArgRegsSaveSize();
   unsigned NumBytes = MFI.getStackSize();
   const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
@@ -437,8 +437,9 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
   // Determine starting offsets of spill areas.
   unsigned GPRCS1Offset = NumBytes - ArgRegsSaveSize - GPRCS1Size;
   unsigned GPRCS2Offset = GPRCS1Offset - GPRCS2Size;
-  unsigned DPRAlign = DPRCSSize ? std::min(8U, Align) : 4U;
-  unsigned DPRGapSize = (GPRCS1Size + GPRCS2Size + ArgRegsSaveSize) % DPRAlign;
+  Align DPRAlign = DPRCSSize ? std::min(Align(8), Alignment) : Align(4);
+  unsigned DPRGapSize =
+      (GPRCS1Size + GPRCS2Size + ArgRegsSaveSize) % DPRAlign.value();
   unsigned DPRCSOffset = GPRCS2Offset - DPRGapSize - DPRCSSize;
   int FramePtrOffsetInPush = 0;
   if (HasFP) {
@@ -696,7 +697,7 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
   // If aligned NEON registers were spilled, the stack has already been
   // realigned.
   if (!AFI->getNumAlignedDPRCS2Regs() && RegInfo->needsStackRealignment(MF)) {
-    unsigned MaxAlign = MFI.getMaxAlignment();
+    Align MaxAlign = MFI.getMaxAlign();
     assert(!AFI->isThumb1OnlyFunction());
     if (!AFI->isThumbFunction()) {
       emitAligningInstructions(MF, AFI, TII, MBB, MBBI, dl, ARM::SP, MaxAlign,
@@ -1168,7 +1169,7 @@ static void emitAlignedDPRCS2Spills(MachineBasicBlock &MBB,
     int FI = CSI[i].getFrameIdx();
     // The even-numbered registers will be 16-byte aligned, the odd-numbered
     // registers will be 8-byte aligned.
-    MFI.setObjectAlignment(FI, DNum % 2 ? 8 : 16);
+    MFI.setObjectAlignment(FI, DNum % 2 ? Align(8) : Align(16));
 
     // The stack slot for D8 needs to be maximally aligned because this is
     // actually the point where we align the stack pointer.  MachineFrameInfo
@@ -1177,7 +1178,7 @@ static void emitAlignedDPRCS2Spills(MachineBasicBlock &MBB,
     // over-alignment is not realized because the code inserted below adjusts
     // the stack pointer by numregs * 8 before aligning the stack pointer.
     if (DNum == 0)
-      MFI.setObjectAlignment(FI, MFI.getMaxAlignment());
+      MFI.setObjectAlignment(FI, MFI.getMaxAlign());
   }
 
   // Move the stack pointer to the d8 spill slot, and align it at the same
@@ -1200,7 +1201,7 @@ static void emitAlignedDPRCS2Spills(MachineBasicBlock &MBB,
       .add(predOps(ARMCC::AL))
       .add(condCodeOp());
 
-  unsigned MaxAlign = MF.getFrameInfo().getMaxAlignment();
+  Align MaxAlign = MF.getFrameInfo().getMaxAlign();
   // We must set parameter MustBeSingleInstruction to true, since
   // skipAlignedDPRCS2Spills expects exactly 3 instructions to perform
   // stack alignment.  Luckily, this can always be done since all ARM
