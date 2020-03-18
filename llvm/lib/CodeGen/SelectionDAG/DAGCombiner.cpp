@@ -11983,13 +11983,24 @@ SDValue DAGCombiner::visitFSUBForFMACombine(SDNode *N) {
     return SDValue();
   };
 
-  // fold (fsub (fmul x, y), z) -> (fma x, y, (fneg z))
-  if (SDValue V = tryToFoldXYSubZ(N0, N1))
-    return V;
-
-  // fold (fsub x, (fmul y, z)) -> (fma (fneg y), z, x)
-  if (SDValue V = tryToFoldXSubYZ(N0, N1))
-    return V;
+  // If we have two choices trying to fold (fsub (fmul u, v), (fmul x, y)),
+  // prefer to fold the multiply with fewer uses.
+  if (isContractableFMUL(N0) && isContractableFMUL(N1) &&
+      (N0.getNode()->use_size() > N1.getNode()->use_size())) {
+    // fold (fsub (fmul a, b), (fmul c, d)) -> (fma (fneg c), d, (fmul a, b))
+    if (SDValue V = tryToFoldXSubYZ(N0, N1))
+      return V;
+    // fold (fsub (fmul a, b), (fmul c, d)) -> (fma a, b, (fneg (fmul c, d)))
+    if (SDValue V = tryToFoldXYSubZ(N0, N1))
+      return V;
+  } else {
+    // fold (fsub (fmul x, y), z) -> (fma x, y, (fneg z))
+    if (SDValue V = tryToFoldXYSubZ(N0, N1))
+      return V;
+    // fold (fsub x, (fmul y, z)) -> (fma (fneg y), z, x)
+    if (SDValue V = tryToFoldXSubYZ(N0, N1))
+      return V;
+  }
 
   // fold (fsub (fneg (fmul, x, y)), z) -> (fma (fneg x), y, (fneg z))
   if (N0.getOpcode() == ISD::FNEG && isContractableFMUL(N0.getOperand(0)) &&
