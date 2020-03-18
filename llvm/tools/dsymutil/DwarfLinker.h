@@ -38,6 +38,7 @@ struct DebugMapObjectRange {
 /// Map LowPC to DebugMapObjectRange.
 using RangesTy = std::map<uint64_t, DebugMapObjectRange>;
 using UnitListTy = std::vector<std::unique_ptr<CompileUnit>>;
+typedef std::map<std::string, std::string> objectPrefixMap;
 
 /// The core of the Dwarf linking logic.
 ///
@@ -184,6 +185,11 @@ private:
   /// Called at the end of a debug object link.
   void endDebugObject(LinkContext &Context);
 
+  /// Set prefix map for objects.
+  void setObjectPrefixMap(objectPrefixMap *Map) {
+    ObjectPrefixMap = Map;
+  }
+  
   /// \defgroup FindRootDIEs Find DIEs corresponding to debug map entries.
   ///
   /// @{
@@ -505,6 +511,8 @@ private:
   /// be uniqued and sorted and there are only few entries expected
   /// per compile unit, which is why this is a std::map.
   std::map<std::string, std::string> ParseableSwiftInterfaces;
+  /// A list of remappings to apply to file paths.
+  objectPrefixMap *ObjectPrefixMap = nullptr;
 
   bool ModuleCacheHintDisplayed = false;
   bool ArchiveHintDisplayed = false;
