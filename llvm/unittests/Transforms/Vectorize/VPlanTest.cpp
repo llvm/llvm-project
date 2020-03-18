@@ -178,17 +178,17 @@ TEST(VPBasicBlockTest, getPlan) {
 }
 
 TEST(VPBasicBlockTest, print) {
-  VPInstruction *I1 = new VPInstruction(10, {});
-  VPInstruction *I2 = new VPInstruction(1, {I1});
-  VPInstruction *I3 = new VPInstruction(2, {I1, I2});
+  VPInstruction *I1 = new VPInstruction(Instruction::Add, {});
+  VPInstruction *I2 = new VPInstruction(Instruction::Sub, {I1});
+  VPInstruction *I3 = new VPInstruction(Instruction::Br, {I1, I2});
 
   VPBasicBlock *VPBB1 = new VPBasicBlock();
   VPBB1->appendRecipe(I1);
   VPBB1->appendRecipe(I2);
   VPBB1->appendRecipe(I3);
 
-  VPInstruction *I4 = new VPInstruction(4, {I3, I2});
-  VPInstruction *I5 = new VPInstruction(5, {I1});
+  VPInstruction *I4 = new VPInstruction(Instruction::Mul, {I2, I1});
+  VPInstruction *I5 = new VPInstruction(Instruction::Ret, {I4});
   VPBasicBlock *VPBB2 = new VPBasicBlock();
   VPBB2->appendRecipe(I4);
   VPBB2->appendRecipe(I5);
@@ -201,7 +201,7 @@ TEST(VPBasicBlockTest, print) {
     raw_string_ostream OS(I3Dump);
     I3->print(OS);
     OS.flush();
-    EXPECT_EQ("<badref> = br <badref> <badref>", I3Dump);
+    EXPECT_EQ("br <badref> <badref>", I3Dump);
   }
 
   VPlan Plan;
@@ -216,15 +216,15 @@ edge [fontname=Courier, fontsize=30]
 compound=true
   N0 [label =
     ":\n" +
-      "EMIT %vp0 = catchswitch\l" +
-      "EMIT %vp1 = ret %vp0\l" +
-      "EMIT %vp2 = br %vp0 %vp1\l"
+      "EMIT vp<%0> = add\l" +
+      "EMIT vp<%1> = sub vp<%0>\l" +
+      "EMIT br vp<%0> vp<%1>\l"
   ]
   N0 -> N1 [ label=""]
   N1 [label =
     ":\n" +
-      "EMIT %vp3 = indirectbr %vp2 %vp1\l" +
-      "EMIT %vp4 = invoke %vp0\l"
+      "EMIT vp<%2> = mul vp<%1> vp<%0>\l" +
+      "EMIT ret vp<%2>\l"
   ]
 }
 )",
@@ -235,15 +235,15 @@ compound=true
     raw_string_ostream OS(I3Dump);
     I3->print(OS);
     OS.flush();
-    EXPECT_EQ("%vp2 = br %vp0 %vp1", I3Dump);
+    EXPECT_EQ("br vp<%0> vp<%1>", I3Dump);
   }
 
   {
-    std::string I2Dump;
-    raw_string_ostream OS(I2Dump);
-    OS << *I2;
+    std::string I4Dump;
+    raw_string_ostream OS(I4Dump);
+    OS << *I4;
     OS.flush();
-    EXPECT_EQ("%vp1 = ret %vp0", I2Dump);
+    EXPECT_EQ("vp<%2> = mul vp<%1> vp<%0>", I4Dump);
   }
 }
 
