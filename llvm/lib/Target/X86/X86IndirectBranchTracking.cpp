@@ -127,11 +127,18 @@ bool X86IndirectBranchTrackingPass::runOnMachineFunction(MachineFunction &MF) {
     if (MBB.hasAddressTaken())
       Changed |= addENDBR(MBB, MBB.begin());
 
+    // Exception handle may indirectly jump to catch pad, So we should add
+    // ENDBR before catch pad instructions.
+    bool EHPadIBTNeeded = MBB.isEHPad();
+
     for (MachineBasicBlock::iterator I = MBB.begin(); I != MBB.end(); ++I) {
-      if (!I->isCall())
-        continue;
-      if (IsCallReturnTwice(I->getOperand(0)))
+      if (I->isCall() && IsCallReturnTwice(I->getOperand(0)))
         Changed |= addENDBR(MBB, std::next(I));
+
+      if (EHPadIBTNeeded && I->isEHLabel()) {
+          Changed |= addENDBR(MBB, std::next(I));
+          EHPadIBTNeeded = false;
+      }
     }
   }
   return Changed;
