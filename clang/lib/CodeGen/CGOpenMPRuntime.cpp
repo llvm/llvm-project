@@ -765,6 +765,9 @@ enum OpenMPRTLFunction {
   // Call to void __tgt_push_mapper_component(void *rt_mapper_handle, void
   // *base, void *begin, int64_t size, int64_t type);
   OMPRTL__tgt_push_mapper_component,
+  // Call to kmp_event_t *__kmpc_task_allow_completion_event(ident_t *loc_ref,
+  // int gtid, kmp_task_t *task);
+  OMPRTL__kmpc_task_allow_completion_event,
 };
 
 /// A basic class for pre|post-action for advanced codegen sequence for OpenMP
@@ -2594,6 +2597,16 @@ llvm::FunctionCallee CGOpenMPRuntime::createRuntimeFunction(unsigned Function) {
     auto *FnTy =
         llvm::FunctionType::get(CGM.VoidTy, TypeParams, /*isVarArg*/ false);
     RTLFn = CGM.CreateRuntimeFunction(FnTy, "__tgt_push_mapper_component");
+    break;
+  }
+  case OMPRTL__kmpc_task_allow_completion_event: {
+    // Build kmp_event_t *__kmpc_task_allow_completion_event(ident_t *loc_ref,
+    // int gtid, kmp_task_t *task);
+    auto *FnTy = llvm::FunctionType::get(
+        CGM.VoidPtrTy, {getIdentTyPointerTy(), CGM.IntTy, CGM.VoidPtrTy},
+        /*isVarArg=*/false);
+    RTLFn =
+        CGM.CreateRuntimeFunction(FnTy, "__kmpc_task_allow_completion_event");
     break;
   }
   }
@@ -5083,7 +5096,8 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
     TiedFlag = 0x1,
     FinalFlag = 0x2,
     DestructorsFlag = 0x8,
-    PriorityFlag = 0x20
+    PriorityFlag = 0x20,
+    DetachableFlag = 0x40,
   };
   unsigned Flags = Data.Tied ? TiedFlag : 0;
   bool NeedsCleanup = false;
@@ -5094,6 +5108,8 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
   }
   if (Data.Priority.getInt())
     Flags = Flags | PriorityFlag;
+  if (D.hasClausesOfKind<OMPDetachClause>())
+    Flags = Flags | DetachableFlag;
   llvm::Value *TaskFlags =
       Data.Final.getPointer()
           ? CGF.Builder.CreateSelect(Data.Final.getPointer(),
@@ -5125,6 +5141,25 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
   } else {
     NewTask = CGF.EmitRuntimeCall(
       createRuntimeFunction(OMPRTL__kmpc_omp_task_alloc), AllocArgs);
+  }
+  // Emit detach clause initialization.
+  // evt = (typeof(evt))__kmpc_task_allow_completion_event(loc, tid,
+  // task_descriptor);
+  if (const auto *DC = D.getSingleClause<OMPDetachClause>()) {
+    const Expr *Evt = DC->getEventHandler()->IgnoreParenImpCasts();
+    LValue EvtLVal = CGF.EmitLValue(Evt);
+
+    // Build kmp_event_t *__kmpc_task_allow_completion_event(ident_t *loc_ref,
+    // int gtid, kmp_task_t *task);
+    llvm::Value *Loc = emitUpdateLocation(CGF, DC->getBeginLoc());
+    llvm::Value *Tid = getThreadID(CGF, DC->getBeginLoc());
+    Tid = CGF.Builder.CreateIntCast(Tid, CGF.IntTy, /*isSigned=*/false);
+    llvm::Value *EvtVal = CGF.EmitRuntimeCall(
+        createRuntimeFunction(OMPRTL__kmpc_task_allow_completion_event),
+        {Loc, Tid, NewTask});
+    EvtVal = CGF.EmitScalarConversion(EvtVal, C.VoidPtrTy, Evt->getType(),
+                                      Evt->getExprLoc());
+    CGF.EmitStoreOfScalar(EvtVal, EvtLVal);
   }
   llvm::Value *NewTaskNewTaskTTy =
       CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(

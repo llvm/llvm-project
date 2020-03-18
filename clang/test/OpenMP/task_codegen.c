@@ -11,18 +11,24 @@
 #define HEADER
 
 typedef void *omp_depend_t;
+typedef __UINTPTR_TYPE__ omp_event_handle_t;
 
 void foo();
 
 // CHECK-LABEL: @main
 int main() {
   omp_depend_t d, x;
+  omp_event_handle_t evt;
   int a;
   // CHECK: [[D_ADDR:%.+]] = alloca i8*,
   // CHECK: [[X_ADDR:%.+]] = alloca i8*,
+  // CHECK: [[EVT_ADDR:%.+]] = alloca i64,
   // CHECK: [[A_ADDR:%.+]] = alloca i32,
   // CHECK: [[GTID:%.+]] = call i32 @__kmpc_global_thread_num(
-  // CHECK: [[ALLOC:%.+]] = call i8* @__kmpc_omp_task_alloc(%struct.ident_t* @{{.+}}, i32 %0, i32 1, i64 40, i64 0, i32 (i32, i8*)* bitcast (i32 (i32, [[PRIVATES_TY:%.+]]*)* [[TASK_ENTRY:@.+]] to i32 (i32, i8*)*))
+  // CHECK: [[ALLOC:%.+]] = call i8* @__kmpc_omp_task_alloc(%struct.ident_t* @{{.+}}, i32 [[GTID]], i32 65, i64 48, i64 0, i32 (i32, i8*)* bitcast (i32 (i32, [[PRIVATES_TY:%.+]]*)* [[TASK_ENTRY:@.+]] to i32 (i32, i8*)*))
+  // CHECK: [[EVT_VAL:%.+]] = call i8* @__kmpc_task_allow_completion_event(%struct.ident_t* @{{.+}}, i32 [[GTID]], i8* [[ALLOC]])
+  // CHECK: [[CAST_EVT_VAL:%.+]] = ptrtoint i8* [[EVT_VAL]] to i64
+  // CHECK: store i64 [[CAST_EVT_VAL]], i64* [[EVT_ADDR]],
   // CHECK: [[DATA:%.+]] = bitcast i8* [[ALLOC]] to [[PRIVATES_TY]]*
   // CHECK: [[D:%.+]] = load i8*, i8** [[D_ADDR]],
   // CHECK: [[D_DEP:%.+]] = bitcast i8* [[D]] to %struct.kmp_depend_info*
@@ -55,7 +61,7 @@ int main() {
   // CHECK: [[DEST:%.+]] = bitcast %struct.kmp_depend_info* [[VLA_D]] to i8*
   // CHECK: [[SRC:%.+]] = bitcast %struct.kmp_depend_info* [[D_DEP]] to i8*
   // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[DEST]], i8* align 8 [[SRC]], i64 [[D_SIZE]], i1 false)
-  // CHECK: [[VLA_X:%.+]] = getelementptr %struct.kmp_depend_info, %struct.kmp_depend_info* %25, i64 [[SIZE1]]
+  // CHECK: [[VLA_X:%.+]] = getelementptr %struct.kmp_depend_info, %struct.kmp_depend_info* [[VLA_D]], i64 [[SIZE1]]
   // CHECK: [[X_SIZE:%.+]] = mul nuw i64 24, [[SIZE2]]
   // CHECK: [[DEST:%.+]] = bitcast %struct.kmp_depend_info* [[VLA_X]] to i8*
   // CHECK: [[SRC:%.+]] = bitcast %struct.kmp_depend_info* [[X_DEP]] to i8*
@@ -64,7 +70,7 @@ int main() {
   // CHECK: call i32 @__kmpc_omp_task_with_deps(%struct.ident_t* @{{.+}}, i32 [[GTID]], i8* [[ALLOC]], i32 [[SIZE32]], i8* [[BC]], i32 0, i8* null)
   // CHECK: [[SV:%.+]] = load i8*, i8** [[SV_ADDR]],
   // CHECK: call void @llvm.stackrestore(i8* [[SV]])
-#pragma omp task depend(in: a) depend(depobj: d, x)
+#pragma omp task depend(in: a) depend(depobj: d, x) detach(evt)
   {
 #pragma omp taskgroup
     {
