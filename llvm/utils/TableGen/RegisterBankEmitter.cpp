@@ -37,12 +37,12 @@ private:
   /// The register classes that are covered by the register bank.
   RegisterClassesTy RCs;
 
-  /// The register class with the largest register size.
-  const CodeGenRegisterClass *RCWithLargestRegsSize;
+  /// The register classes with the largest register size for each HwMode.
+  std::vector<const CodeGenRegisterClass *> RCsWithLargestRegSize;
 
 public:
-  RegisterBank(const Record &TheDef)
-      : TheDef(TheDef), RCs(), RCWithLargestRegsSize(nullptr) {}
+  RegisterBank(const Record &TheDef, unsigned NumModeIds)
+      : TheDef(TheDef), RCs(), RCsWithLargestRegSize(NumModeIds) {}
 
   /// Get the human-readable name for the bank.
   StringRef getName() const { return TheDef.getValueAsString("Name"); }
@@ -52,6 +52,10 @@ public:
   /// Get the name of the array holding the register class coverage data;
   std::string getCoverageArrayName() const {
     return (TheDef.getName() + "CoverageData").str();
+  }
+
+  std::string getSizesArrayName() const {
+    return (TheDef.getName() + "Sizes").str();
   }
 
   /// Get the name of the global instance variable.
@@ -83,18 +87,20 @@ public:
     //        register size anywhere (we could sum the sizes of the subregisters
     //        but there may be additional bits too) and we can't derive it from
     //        the VT's reliably due to Untyped.
-    if (RCWithLargestRegsSize == nullptr)
-      RCWithLargestRegsSize = RC;
-    else if (RCWithLargestRegsSize->RSI.get(DefaultMode).SpillSize <
-             RC->RSI.get(DefaultMode).SpillSize)
-      RCWithLargestRegsSize = RC;
-    assert(RCWithLargestRegsSize && "RC was nullptr?");
-
+    unsigned NumModeIds = RCsWithLargestRegSize.size();
+    for (unsigned M = 0; M < NumModeIds; ++M) {
+      if (RCsWithLargestRegSize[M] == nullptr)
+        RCsWithLargestRegSize[M] = RC;
+      else if (RCsWithLargestRegSize[M]->RSI.get(M).SpillSize <
+              RC->RSI.get(M).SpillSize)
+        RCsWithLargestRegSize[M] = RC;
+      assert(RCsWithLargestRegSize[M] && "RC was nullptr?");
+    }
     RCs.emplace_back(RC);
   }
 
-  const CodeGenRegisterClass *getRCWithLargestRegsSize() const {
-    return RCWithLargestRegsSize;
+  const CodeGenRegisterClass *getRCWithLargestRegsSize(unsigned HwMode) const {
+    return RCsWithLargestRegSize[HwMode];
   }
 
   iterator_range<typename RegisterClassesTy::const_iterator>
@@ -147,7 +153,7 @@ void RegisterBankEmitter::emitBaseClassDefinition(
   OS << "private:\n"
      << "  static RegisterBank *RegBanks[];\n\n"
      << "protected:\n"
-     << "  " << TargetName << "GenRegisterBankInfo();\n"
+     << "  " << TargetName << "GenRegisterBankInfo(unsigned HwMode = 0);\n"
      << "\n";
 }
 
@@ -213,6 +219,7 @@ void RegisterBankEmitter::emitBaseClassImplementation(
     raw_ostream &OS, StringRef TargetName,
     std::vector<RegisterBank> &Banks) {
   const CodeGenRegBank &RegisterClassHierarchy = Target.getRegBank();
+  const CodeGenHwModes &CGH = Target.getHwModes();
 
   OS << "namespace llvm {\n"
      << "namespace " << TargetName << " {\n";
@@ -240,14 +247,30 @@ void RegisterBankEmitter::emitBaseClassImplementation(
   }
   OS << "\n";
 
+  unsigned NumModeIds = CGH.getNumModeIds();
+  for (const auto &Bank : Banks) {
+    OS << "const unsigned " << Bank.getSizesArrayName() << "[] = {\n";
+    for (unsigned M = 0; M < NumModeIds; ++M) {
+      const CodeGenRegisterClass &RC = *Bank.getRCWithLargestRegsSize(M);
+      unsigned Size = RC.RSI.get(M).SpillSize;
+      OS << "    // Mode = " << M << " (";
+      if (M == 0)
+        OS << "Default";
+      else
+        OS << CGH.getMode(M).Name;
+      OS << ")\n";
+      OS << "    " << Size << ",\n";
+    }
+    OS << "};\n";
+  }
+  OS << "\n";
+
   for (const auto &Bank : Banks) {
     std::string QualifiedBankID =
         (TargetName + "::" + Bank.getEnumeratorName()).str();
-    const CodeGenRegisterClass &RC = *Bank.getRCWithLargestRegsSize();
-    unsigned Size = RC.RSI.get(DefaultMode).SpillSize;
     OS << "RegisterBank " << Bank.getInstanceVarName() << "(/* ID */ "
        << QualifiedBankID << ", /* Name */ \"" << Bank.getName()
-       << "\", /* Size */ " << Size << ", "
+       << "\", /* Sizes */ " << Bank.getInstanceVarName() << "Sizes, "
        << "/* CoveredRegClasses */ " << Bank.getCoverageArrayName()
        << ", /* NumRegClasses */ "
        << RegisterClassHierarchy.getRegClasses().size() << ");\n";
@@ -262,9 +285,9 @@ void RegisterBankEmitter::emitBaseClassImplementation(
   OS << "};\n\n";
 
   OS << TargetName << "GenRegisterBankInfo::" << TargetName
-     << "GenRegisterBankInfo()\n"
+     << "GenRegisterBankInfo(unsigned HwMode)\n"
      << "    : RegisterBankInfo(RegBanks, " << TargetName
-     << "::NumRegisterBanks) {\n"
+     << "::NumRegisterBanks, HwMode) {\n"
      << "  // Assert that RegBank indices match their ID's\n"
      << "#ifndef NDEBUG\n"
      << "  unsigned Index = 0;\n"
@@ -278,11 +301,12 @@ void RegisterBankEmitter::emitBaseClassImplementation(
 void RegisterBankEmitter::run(raw_ostream &OS) {
   StringRef TargetName = Target.getName();
   const CodeGenRegBank &RegisterClassHierarchy = Target.getRegBank();
+  const CodeGenHwModes &CGH = Target.getHwModes();
 
   std::vector<RegisterBank> Banks;
   for (const auto &V : Records.getAllDerivedDefinitions("RegisterBank")) {
     SmallPtrSet<const CodeGenRegisterClass *, 8> VisitedRCs;
-    RegisterBank Bank(*V);
+    RegisterBank Bank(*V, CGH.getNumModeIds());
 
     for (const CodeGenRegisterClass *RC :
          Bank.getExplicitlySpecifiedRegisterClasses(RegisterClassHierarchy)) {
