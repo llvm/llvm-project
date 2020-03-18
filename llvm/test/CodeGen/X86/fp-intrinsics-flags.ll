@@ -108,7 +108,7 @@ entry:
 ; CHECK: [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (load 4 from %fixed-stack.0)
 ; CHECK: [[MOV32rm1:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.1, 1, $noreg, 0, $noreg :: (load 4 from %fixed-stack.1, align 16)
 ; CHECK: [[MOVSDrm_alt:%[0-9]+]]:fr64 = MOVSDrm_alt %fixed-stack.3, 1, $noreg, 0, $noreg :: (load 8 from %fixed-stack.3, align 16)
-; CHECK: %3:fr64 = nofpexcept DIVSDrm [[MOVSDrm_alt]], %fixed-stack.2, 1, $noreg, 0, $noreg, implicit $mxcsr :: (load 8 from %fixed-stack.2)
+; CHECK: %3:fr64 = DIVSDrm [[MOVSDrm_alt]], %fixed-stack.2, 1, $noreg, 0, $noreg, implicit $mxcsr :: (load 8 from %fixed-stack.2)
 ; CHECK: MOVSDmr killed [[MOV32rm1]], 1, $noreg, 0, $noreg, %3 :: (store 8 into %ir.x, align 4)
 ; CHECK: MOVSDmr killed [[MOV32rm]], 1, $noreg, 0, $noreg, %3 :: (store 8 into %ir.y, align 4)
 ; CHECK: RET 0
@@ -126,7 +126,7 @@ entry:
 ; CHECK-LABEL: name: sitofp_cse
 ; CHECK: [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (load 4 from %fixed-stack.0, align 8)
 ; CHECK: [[MOV32rm1:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.1, 1, $noreg, 0, $noreg :: (load 4 from %fixed-stack.1)
-; CHECK: %2:fr64 = nofpexcept CVTSI2SDrm %fixed-stack.2, 1, $noreg, 0, $noreg :: (load 4 from %fixed-stack.2, align 16)
+; CHECK: %2:fr64 = CVTSI2SDrm %fixed-stack.2, 1, $noreg, 0, $noreg :: (load 4 from %fixed-stack.2, align 16)
 ; CHECK: MOVSDmr killed [[MOV32rm1]], 1, $noreg, 0, $noreg, %2 :: (store 8 into %ir.x, align 4)
 ; CHECK: MOVSDmr killed [[MOV32rm]], 1, $noreg, 0, $noreg, %2 :: (store 8 into %ir.y, align 4)
 ; CHECK: RET 0
