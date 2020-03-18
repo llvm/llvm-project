@@ -195,26 +195,6 @@ private:
   Value *Callee = nullptr;
 };
 
-/// Common super class of ArrayType, StructType and VectorType.
-class CompositeType : public Type {
-protected:
-  explicit CompositeType(LLVMContext &C, TypeID tid) : Type(C, tid) {}
-
-public:
-  /// Given an index value into the type, return the type of the element.
-  Type *getTypeAtIndex(const Value *V) const;
-  Type *getTypeAtIndex(unsigned Idx) const;
-  bool indexValid(const Value *V) const;
-  bool indexValid(unsigned Idx) const;
-
-  /// Methods for support type inquiry through isa, cast, and dyn_cast.
-  static bool classof(const Type *T) {
-    return T->getTypeID() == ArrayTyID ||
-           T->getTypeID() == StructTyID ||
-           T->getTypeID() == VectorTyID;
-  }
-};
-
 /// Class to represent struct types. There are two different kinds of struct
 /// types: Literal structs and Identified structs.
 ///
@@ -235,8 +215,8 @@ public:
 /// elements as defined by DataLayout (which is required to match what the code
 /// generator for a target expects).
 ///
-class StructType : public CompositeType {
-  StructType(LLVMContext &C) : CompositeType(C, StructTyID) {}
+class StructType : public Type {
+  StructType(LLVMContext &C) : Type(C, StructTyID) {}
 
   enum {
     /// This is the contents of the SubClassData field.
@@ -350,6 +330,11 @@ public:
     assert(N < NumContainedTys && "Element number out of range!");
     return ContainedTys[N];
   }
+  /// Given an index value into the type, return the type of the element.
+  Type *getTypeAtIndex(const Value *V) const;
+  Type *getTypeAtIndex(unsigned N) const { return getElementType(N); }
+  bool indexValid(const Value *V) const;
+  bool indexValid(unsigned Idx) const { return Idx < getNumElements(); }
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast.
   static bool classof(const Type *T) {
@@ -375,14 +360,14 @@ Type *Type::getStructElementType(unsigned N) const {
 /// for use of SIMD instructions. SequentialType holds the common features of
 /// both, which stem from the fact that both lay their components out in memory
 /// identically.
-class SequentialType : public CompositeType {
+class SequentialType : public Type {
   Type *ContainedType;               ///< Storage for the single contained type.
   uint64_t NumElements;
 
 protected:
   SequentialType(TypeID TID, Type *ElType, uint64_t NumElements)
-    : CompositeType(ElType->getContext(), TID), ContainedType(ElType),
-      NumElements(NumElements) {
+      : Type(ElType->getContext(), TID), ContainedType(ElType),
+        NumElements(NumElements) {
     ContainedTys = &ContainedType;
     NumContainedTys = 1;
   }
