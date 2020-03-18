@@ -34,7 +34,7 @@ public:
                              lowering_.getDialect()->getContext(), lowering_),
         f32Func(f32Func), f64Func(f64Func) {}
 
-  PatternMatchResult
+  LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     using LLVM::LLVMFuncOp;
@@ -49,13 +49,13 @@ public:
     LLVMType funcType = getFunctionType(resultType, operands);
     StringRef funcName = getFunctionName(resultType);
     if (funcName.empty())
-      return matchFailure();
+      return failure();
 
     LLVMFuncOp funcOp = appendOrGetFuncOp(funcName, funcType, op);
     auto callOp = rewriter.create<LLVM::CallOp>(
         op->getLoc(), resultType, rewriter.getSymbolRefAttr(funcOp), operands);
     rewriter.replaceOp(op, {callOp.getResult(0)});
-    return matchSuccess();
+    return success();
   }
 
 private:

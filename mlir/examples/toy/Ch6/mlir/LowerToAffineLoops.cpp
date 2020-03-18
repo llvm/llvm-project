@@ -103,7 +103,7 @@ struct BinaryOpLowering : public ConversionPattern {
   BinaryOpLowering(MLIRContext *ctx)
       : ConversionPattern(BinaryOp::getOperationName(), 1, ctx) {}
 
-  PatternMatchResult
+  LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const final {
     auto loc = op->getLoc();
@@ -126,7 +126,7 @@ struct BinaryOpLowering : public ConversionPattern {
           // Create the binary operation performed on the loaded values.
           return rewriter.create<LoweredBinaryOp>(loc, loadedLhs, loadedRhs);
         });
-    return matchSuccess();
+    return success();
   }
 };
 using AddOpLowering = BinaryOpLowering<toy::AddOp, AddFOp>;
@@ -139,8 +139,8 @@ using MulOpLowering = BinaryOpLowering<toy::MulOp, MulFOp>;
 struct ConstantOpLowering : public OpRewritePattern<toy::ConstantOp> {
   using OpRewritePattern<toy::ConstantOp>::OpRewritePattern;
 
-  PatternMatchResult matchAndRewrite(toy::ConstantOp op,
-                                     PatternRewriter &rewriter) const final {
+  LogicalResult matchAndRewrite(toy::ConstantOp op,
+                                PatternRewriter &rewriter) const final {
     DenseElementsAttr constantValue = op.value();
     Location loc = op.getLoc();
 
@@ -189,7 +189,7 @@ struct ConstantOpLowering : public OpRewritePattern<toy::ConstantOp> {
 
     // Replace this operation with the generated alloc.
     rewriter.replaceOp(op, alloc);
-    return matchSuccess();
+    return success();
   }
 };
 
@@ -200,16 +200,16 @@ struct ConstantOpLowering : public OpRewritePattern<toy::ConstantOp> {
 struct ReturnOpLowering : public OpRewritePattern<toy::ReturnOp> {
   using OpRewritePattern<toy::ReturnOp>::OpRewritePattern;
 
-  PatternMatchResult matchAndRewrite(toy::ReturnOp op,
-                                     PatternRewriter &rewriter) const final {
+  LogicalResult matchAndRewrite(toy::ReturnOp op,
+                                PatternRewriter &rewriter) const final {
     // During this lowering, we expect that all function calls have been
     // inlined.
     if (op.hasOperand())
-      return matchFailure();
+      return failure();
 
     // We lower "toy.return" directly to "std.return".
     rewriter.replaceOpWithNewOp<ReturnOp>(op);
-    return matchSuccess();
+    return success();
   }
 };
 
@@ -221,7 +221,7 @@ struct TransposeOpLowering : public ConversionPattern {
   TransposeOpLowering(MLIRContext *ctx)
       : ConversionPattern(toy::TransposeOp::getOperationName(), 1, ctx) {}
 
-  PatternMatchResult
+  LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const final {
     auto loc = op->getLoc();
@@ -240,7 +240,7 @@ struct TransposeOpLowering : public ConversionPattern {
           SmallVector<Value, 2> reverseIvs(llvm::reverse(loopIvs));
           return rewriter.create<AffineLoadOp>(loc, input, reverseIvs);
         });
-    return matchSuccess();
+    return success();
   }
 };
 

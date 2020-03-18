@@ -98,12 +98,12 @@ define i64 @f7(i64 %a, i32 %amt) {
   ret i64 %or
 }
 
-; Check shift amounts that have the largest in-range constant term.  We could
-; mask the amount instead.
+; Check shift amounts that have the largest in-range constant term, and then
+; mask the amount.
 define i64 @f8(i64 %a, i64 %amt) {
 ; CHECK-LABEL: f8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    rllg %r2, %r2, 524287(%r3)
+; CHECK-NEXT:    rllg %r2, %r2, -1(%r3)
 ; CHECK-NEXT:    br %r14
   %add = add i64 %amt, 524287
   %sub = sub i64 64, %add
@@ -158,13 +158,11 @@ define i64 @f11(i64 %a, i64 %amt) {
   ret i64 %or
 }
 
-; Check the next value down, which without masking must use a separate
-; addition.
+; Check the next value down, masking the amount removes the addition.
 define i64 @f12(i64 %a, i64 %amt) {
 ; CHECK-LABEL: f12:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    afi %r3, -524289
-; CHECK-NEXT:    rllg %r2, %r2, 0(%r3)
+; CHECK-NEXT:    rllg %r2, %r2, -1(%r3)
 ; CHECK-NEXT:    br %r14
   %suba = sub i64 %amt, 524289
   %subb = sub i64 64, %suba

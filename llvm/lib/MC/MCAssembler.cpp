@@ -785,9 +785,15 @@ void MCAssembler::layout(MCAsmLayout &Layout) {
   }
 
   // Layout until everything fits.
-  while (layoutOnce(Layout))
+  while (layoutOnce(Layout)) {
     if (getContext().hadError())
       return;
+    // Size of fragments in one section can depend on the size of fragments in
+    // another. If any fragment has changed size, we have to re-layout (and
+    // as a result possibly further relax) all.
+    for (MCSection &Sec : *this)
+      Layout.invalidateFragmentsFrom(&*Sec.begin());
+  }
 
   DEBUG_WITH_TYPE("mc-dump", {
       errs() << "assembler backend - post-relaxation\n--\n";

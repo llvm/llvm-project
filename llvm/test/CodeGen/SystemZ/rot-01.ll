@@ -7,10 +7,10 @@
 define i32 @f1(i32 %val, i32 %amt) {
 ; CHECK-LABEL: f1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    nill %r3, 31
+; CHECK-NEXT:    nill %r3, 15
 ; CHECK-NEXT:    rll %r2, %r2, 0(%r3)
 ; CHECK-NEXT:    br %r14
-  %mod = urem i32 %amt, 32
+  %mod = urem i32 %amt, 16
 
   %inv = sub i32 32, %mod
   %parta = shl i32 %val, %mod

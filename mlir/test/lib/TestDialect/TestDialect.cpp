@@ -283,10 +283,10 @@ struct TestRemoveOpWithInnerOps
     : public OpRewritePattern<TestOpWithRegionPattern> {
   using OpRewritePattern<TestOpWithRegionPattern>::OpRewritePattern;
 
-  PatternMatchResult matchAndRewrite(TestOpWithRegionPattern op,
-                                     PatternRewriter &rewriter) const override {
+  LogicalResult matchAndRewrite(TestOpWithRegionPattern op,
+                                PatternRewriter &rewriter) const override {
     rewriter.eraseOp(op);
-    return matchSuccess();
+    return success();
   }
 };
 } // end anonymous namespace

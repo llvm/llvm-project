@@ -44,7 +44,7 @@ void RewritePattern::rewrite(Operation *op, PatternRewriter &rewriter) const {
                    "rewrite functions!");
 }
 
-PatternMatchResult RewritePattern::match(Operation *op) const {
+LogicalResult RewritePattern::match(Operation *op) const {
   llvm_unreachable("need to implement either match or matchAndRewrite!");
 }
 

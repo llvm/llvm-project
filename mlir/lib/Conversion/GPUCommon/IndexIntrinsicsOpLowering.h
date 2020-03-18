@@ -46,7 +46,7 @@ public:
         indexBitwidth(getIndexBitWidth(lowering_)) {}
 
   // Convert the kernel arguments to an LLVM type, preserve the rest.
-  PatternMatchResult
+  LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     auto loc = op->getLoc();
@@ -63,7 +63,7 @@ public:
       newOp = rewriter.create<ZOp>(loc, LLVM::LLVMType::getInt32Ty(dialect));
       break;
     default:
-      return matchFailure();
+      return failure();
     }
 
     if (indexBitwidth > 32) {
@@ -75,7 +75,7 @@ public:
     }
 
     rewriter.replaceOp(op, {newOp});
-    return matchSuccess();
+    return success();
   }
 };
 

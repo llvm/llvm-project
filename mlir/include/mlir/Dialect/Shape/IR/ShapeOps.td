@@ -14,6 +14,7 @@
 #define SHAPE_OPS
 
 include "mlir/IR/OpBase.td"
+include "mlir/Interfaces/SideEffects.td"
 
 // TODO(jpienaar): Move to base.
 def AnyShaped: ShapedContainerType<[AnyType], IsShapedTypePred, "shaped">;
@@ -40,20 +41,24 @@ def ShapeDialect : Dialect {
   let cppNamespace = "shape";
 }
 
-def Shape_SizeType : DialectType<ShapeDialect,
-    CPred<"$_self.isa<DimType>()">, "dim"> {
+def Shape_ComponentType : DialectType<ShapeDialect,
+    CPred<"$_self.isa<::mlir::shape::ComponentType>()">, "component type"> {
   let typeDescription = [{
-    `shape.size` represents a non-negative integer with support for being
-    unknown and invalid.
+    `shape.element_type` represents the element type of the ShapedType. It may
+    be unknown, error or regular element type supported by ShapedType.
+  }];
+}
 
-    Operations on `shape.size` types are specialized to handle unknown/dynamic
-    value. So, for example, `<unknown> + x == <unknown>` for all non-error `x :
-    !shape.size` (e.g., an unknown value does not become known due to addition).
+def Shape_ElementType : DialectType<ShapeDialect,
+    CPred<"$_self.isa<::mlir::shape::ElementType>()">, "element type"> {
+  let typeDescription = [{
+    `shape.element_type` represents the element type of the ShapedType. It may
+    be unknown, error or regular element type supported by ShapedType.
   }];
 }
 
 def Shape_ShapeType : DialectType<ShapeDialect,
-    CPred<"$_self.isa<ShapeType>()">, "shape"> {
+    CPred<"$_self.isa<::mlir::shape::ShapeType>()">, "shape"> {
   let typeDescription = [{
     `shape.type` represents either an unranked shape, a ranked shape with
     possibly unknown dimensions or an invalid shape. The rank is of type
@@ -70,24 +75,20 @@ def Shape_ShapeType : DialectType<ShapeDialect,
   }];
 }
 
-def Shape_ElementType : DialectType<ShapeDialect,
-    CPred<"$_self.isa<ElementType>()">, "element type"> {
+def Shape_SizeType : DialectType<ShapeDialect,
+    CPred<"$_self.isa<::mlir::shape::SizeType>()">, "size"> {
   let typeDescription = [{
-    `shape.element_type` represents the element type of the ShapedType. It may
-    be unknown, error or regular element type supported by ShapedType.
-  }];
-}
+    `shape.size` represents a non-negative integer with support for being
+    unknown and invalid.
 
-def Shape_ComponentType : DialectType<ShapeDialect,
-    CPred<"$_self.isa<ComponentType>()">, "component type"> {
-  let typeDescription = [{
-    `shape.element_type` represents the element type of the ShapedType. It may
-    be unknown, error or regular element type supported by ShapedType.
+    Operations on `shape.size` types are specialized to handle unknown/dynamic
+    value. So, for example, `<unknown> + x == <unknown>` for all non-error `x :
+    !shape.size` (e.g., an unknown value does not become known due to addition).
   }];
 }
 
 def Shape_ValueShapeType : DialectType<ShapeDialect,
-    CPred<"$_self.isa<ValueShapeType>()">, "value shape"> {
+    CPred<"$_self.isa<::mlir::shape::ValueShapeType>()">, "value shape"> {
   let typeDescription = [{
     `shape.value_shape` represents the value produced by an operation (this
     corresponds to `Value` in the compiler) and a shape. Conceptually this is a
@@ -116,8 +117,8 @@ def Shape_AddOp : Shape_Op<"add", [SameOperandsAndResultType]> {
     * lhs + rhs = (int)lhs + (int)rhs if known;
   }];
 
-  let arguments = (ins Shape_ShapeType:$lhs, Shape_ShapeType:$rhs);
-  let results = (outs Shape_ShapeType:$result);
+  let arguments = (ins Shape_SizeType:$lhs, Shape_SizeType:$rhs);
+  let results = (outs Shape_SizeType:$result);
 }
 
 def Shape_BroadcastOp : Shape_Op<"broadcast", []> {
@@ -158,8 +159,13 @@ def Shape_ConstantOp : Shape_Op<"constant", []> {
 
   // TODO(jpienaar): Change to a more specialized attribute that would
   // encapsulate the unknown parsing while using denser packing.
-  let arguments = (ins ArrayAttr:$value);
+  let arguments = (ins AnyAttr:$value);
   let results = (outs Shape_ShapeOrSizeType:$result);
+
+  // TODO: Move this to main so that all shape ops implement these.
+  let printer = [{ return ::print(p, *this); }];
+  let verifier = [{ return ::verify(*this); }];
+  let parser = [{ return ::parse$cppClass(parser, result); }];
 }
 
 def Shape_CreateShapeOp : Shape_Op<"create_shape", []> {
@@ -214,8 +220,8 @@ def Shape_MulOp : Shape_Op<"mul", [SameOperandsAndResultType]> {
     - lhs * rhs = (int)lhs * (int)rhs if both known;
   }];
 
-  let arguments = (ins Shape_ShapeType:$lhs, Shape_ShapeType:$rhs);
-  let results = (outs Shape_ShapeType:$result);
+  let arguments = (ins Shape_SizeType:$lhs, Shape_SizeType:$rhs);
+  let results = (outs Shape_SizeType:$result);
 }
 
 def Shape_ReduceOp : Shape_Op<"reduce", []> {
@@ -244,7 +250,7 @@ def Shape_ReduceOp : Shape_Op<"reduce", []> {
         ^bb0(%index: i32, %dim: !shape.size, %lci: !shape.size):
           %acc = "shape.mul"(%lci, %dim) :
             (!shape.size, !shape.size) -> !shape.size
-          "shape.return"(%acc) : (!shape.size) -> ()
+          shape.yield %acc : !shape.size
         }) : (!shape.type, !shape.size) -> (!shape.size)
       return %1 : !shape.size
     }
@@ -264,6 +270,18 @@ def Shape_ShapeOfOp : Shape_Op<"shape_of", []> {
 
   let arguments = (ins AnyTypeOf<[AnyShaped, Shape_ValueShapeType]>:$arg);
   let results = (outs Shape_ShapeType:$result);
+}
+
+def Shape_YieldOp : Shape_Op<"yield", [NoSideEffect, Terminator]> {
+  let summary = "Returns the value to parent op";
+
+  let arguments = (ins Variadic<AnyType>:$operands);
+
+  let builders = [OpBuilder<
+    "Builder *b, OperationState &result", [{ build(b, result, llvm::None); }]
+  >];
+
+  let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";
 }
 
 // TODO: Add Ops: if_static, if_ranked

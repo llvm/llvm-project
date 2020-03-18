@@ -7467,6 +7467,10 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
     handleUninitializedAttr(S, D, AL);
     break;
 
+  case ParsedAttr::AT_LoaderUninitialized:
+    handleSimpleAttribute<LoaderUninitializedAttr>(S, D, AL);
+    break;
+
   case ParsedAttr::AT_ObjCExternallyRetained:
     handleObjCExternallyRetainedAttr(S, D, AL);
     break;

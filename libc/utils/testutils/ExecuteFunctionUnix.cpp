@@ -67,8 +67,12 @@ ProcessStatus invokeInSubprocess(FunctionCaller *Func, unsigned timeoutMS) {
   }
 
   int WStatus = 0;
-  int status = ::waitpid(Pid, &WStatus, WNOHANG);
-  assert(status == Pid && "wait call should not block here");
+  // Wait on the pid of the subprocess here so it gets collected by the system
+  // and doesn't turn into a zombie.
+  pid_t status = ::waitpid(Pid, &WStatus, 0);
+  if (status == -1)
+    return ProcessStatus::Error("waitpid(2) failed");
+  assert(status == Pid);
   (void)status;
   return {WStatus};
 }

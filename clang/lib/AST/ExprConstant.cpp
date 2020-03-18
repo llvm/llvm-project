@@ -674,6 +674,7 @@ namespace {
     None,
     Bases,
     AfterBases,
+    AfterFields,
     Destroying,
     DestroyingBases
   };
@@ -820,6 +821,9 @@ namespace {
       }
       void finishedConstructingBases() {
         EI.ObjectsUnderConstruction[Object] = ConstructionPhase::AfterBases;
+      }
+      void finishedConstructingFields() {
+        EI.ObjectsUnderConstruction[Object] = ConstructionPhase::AfterFields;
       }
       ~EvaluatingConstructorRAII() {
         if (DidInsert) EI.ObjectsUnderConstruction.erase(Object);
@@ -5121,6 +5125,7 @@ static Optional<DynamicType> ComputeDynamicType(EvalInfo &Info, const Expr *E,
 
     case ConstructionPhase::None:
     case ConstructionPhase::AfterBases:
+    case ConstructionPhase::AfterFields:
     case ConstructionPhase::Destroying:
       // We've finished constructing the base classes and not yet started
       // destroying them again, so this is the dynamic type.
@@ -5339,7 +5344,10 @@ static bool HandleDynamicCast(EvalInfo &Info, const ExplicitCastExpr *E,
 
 namespace {
 struct StartLifetimeOfUnionMemberHandler {
+  EvalInfo &Info;
+  const Expr *LHSExpr;
   const FieldDecl *Field;
+  bool DuringInit;
 
   static const AccessKinds AccessKind = AK_Assign;
 
@@ -5355,9 +5363,21 @@ struct StartLifetimeOfUnionMemberHandler {
     //  * No variant members' lifetimes begin
     //  * All scalar subobjects whose lifetimes begin have indeterminate values
     assert(SubobjType->isUnionType());
-    if (!declaresSameEntity(Subobj.getUnionField(), Field) ||
-        !Subobj.getUnionValue().hasValue())
-      Subobj.setUnion(Field, getDefaultInitValue(Field->getType()));
+    if (declaresSameEntity(Subobj.getUnionField(), Field)) {
+      // This union member is already active. If it's also in-lifetime, there's
+      // nothing to do.
+      if (Subobj.getUnionValue().hasValue())
+        return true;
+    } else if (DuringInit) {
+      // We're currently in the process of initializing a different union
+      // member.  If we carried on, that initialization would attempt to
+      // store to an inactive union member, resulting in undefined behavior.
+      Info.FFDiag(LHSExpr,
+                  diag::note_constexpr_union_member_change_during_init);
+      return false;
+    }
+
+    Subobj.setUnion(Field, getDefaultInitValue(Field->getType()));
     return true;
   }
   bool found(APSInt &Value, QualType SubobjType) {
@@ -5460,7 +5480,10 @@ static bool HandleUnionActiveMemberChange(EvalInfo &Info, const Expr *LHSExpr,
     SubobjectDesignator D = LHS.Designator;
     D.truncate(Info.Ctx, LHS.Base, LengthAndField.first);
 
-    StartLifetimeOfUnionMemberHandler StartLifetime{LengthAndField.second};
+    bool DuringInit = Info.isEvaluatingCtorDtor(LHS.Base, D.Entries) ==
+                      ConstructionPhase::AfterBases;
+    StartLifetimeOfUnionMemberHandler StartLifetime{
+        Info, LHSExpr, LengthAndField.second, DuringInit};
     if (!findSubobject(Info, LHSExpr, Obj, D, StartLifetime))
       return false;
   }
@@ -5777,6 +5800,8 @@ static bool HandleConstructorCall(const Expr *E, const LValue &This,
             getDefaultInitValue(FieldIt->getType());
     }
   }
+
+  EvalObj.finishedConstructingFields();
 
   return Success &&
          EvaluateStmt(Ret, Info, Definition->getBody()) != ESR_Failed &&
@@ -9179,6 +9204,8 @@ bool RecordExprEvaluator::VisitInitListExpr(const InitListExpr *E) {
       Success = false;
     }
   }
+
+  EvalObj.finishedConstructingFields();
 
   return Success;
 }

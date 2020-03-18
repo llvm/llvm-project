@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -verify=expected,omp45 -fopenmp-version=45 -fopenmp -ferror-limit 100 -std=c++11 -o - %s -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-version=50 -fopenmp -ferror-limit 100 -std=c++11 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp45 -fopenmp-version=45 -fopenmp -ferror-limit 200 -std=c++11 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-version=50 -fopenmp -ferror-limit 200 -std=c++11 -o - %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify=expected,omp45 -fopenmp-version=45 -fopenmp-simd -ferror-limit 100 -std=c++11 -o - %s -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-version=50 -fopenmp-simd -ferror-limit 100 -std=c++11 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp45 -fopenmp-version=45 -fopenmp-simd -ferror-limit 200 -std=c++11 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-version=50 -fopenmp-simd -ferror-limit 200 -std=c++11 -o - %s -Wuninitialized
 
 void xxx(int argc) {
   int x; // expected-note {{initialize the variable 'x' to silence this warning}}
@@ -146,6 +146,9 @@ int foo() {
   ;
 #pragma omp task mergeable detach(evt) // omp45-error {{unexpected OpenMP clause 'detach' in directive '#pragma omp task'}} omp50-error {{'detach' and 'mergeable' clause are mutually exclusive and may not appear on the same directive}} omp50-note {{'mergeable' clause is specified here}}
 #pragma omp task detach(-evt) // omp45-error {{unexpected OpenMP clause 'detach' in directive '#pragma omp task'}} omp50-error {{expected variable of the 'omp_event_handle_t' type}}
+  ;
+#pragma omp task detach(evt) shared(evt) // omp45-error {{unexpected OpenMP clause 'detach' in directive '#pragma omp task'}}
+#pragma omp task detach(evt) firstprivate(evt) // omp45-error {{unexpected OpenMP clause 'detach' in directive '#pragma omp task'}}
   ;
   return a + b;
 }
@@ -326,6 +329,9 @@ L2:
   ;
 #pragma omp task mergeable detach(evt) // omp45-error {{unexpected OpenMP clause 'detach' in directive '#pragma omp task'}} omp50-error {{'detach' and 'mergeable' clause are mutually exclusive and may not appear on the same directive}} omp50-note {{'mergeable' clause is specified here}}
 #pragma omp task detach(-evt) // omp45-error {{unexpected OpenMP clause 'detach' in directive '#pragma omp task'}} omp50-error {{expected variable of the 'omp_event_handle_t' type}}
+  ;
+#pragma omp task detach(evt) shared(evt) // omp45-error {{unexpected OpenMP clause 'detach' in directive '#pragma omp task'}}
+#pragma omp task detach(evt) firstprivate(evt) // omp45-error {{unexpected OpenMP clause 'detach' in directive '#pragma omp task'}}
   ;
   // expected-note@+2 {{in instantiation of function template specialization 'foo<int>' requested here}}
   // expected-note@+1 {{in instantiation of function template specialization 'foo<S>' requested here}}

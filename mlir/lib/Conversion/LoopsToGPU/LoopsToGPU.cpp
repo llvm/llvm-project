@@ -497,8 +497,8 @@ namespace {
 struct ParallelToGpuLaunchLowering : public OpRewritePattern<ParallelOp> {
   using OpRewritePattern<ParallelOp>::OpRewritePattern;
 
-  PatternMatchResult matchAndRewrite(ParallelOp parallelOp,
-                                     PatternRewriter &rewriter) const override;
+  LogicalResult matchAndRewrite(ParallelOp parallelOp,
+                                PatternRewriter &rewriter) const override;
 };
 
 struct MappingAnnotation {
@@ -742,7 +742,7 @@ static LogicalResult processParallelLoop(ParallelOp parallelOp,
 /// the actual loop bound. This only works if an static upper bound for the
 /// dynamic loop bound can be defived, currently via analyzing `affine.min`
 /// operations.
-PatternMatchResult
+LogicalResult
 ParallelToGpuLaunchLowering::matchAndRewrite(ParallelOp parallelOp,
                                              PatternRewriter &rewriter) const {
   // Create a launch operation. We start with bound one for all grid/block
@@ -761,7 +761,7 @@ ParallelToGpuLaunchLowering::matchAndRewrite(ParallelOp parallelOp,
   SmallVector<Operation *, 16> worklist;
   if (failed(processParallelLoop(parallelOp, launchOp, cloningMap, worklist,
                                  launchBounds, rewriter)))
-    return matchFailure();
+    return failure();
 
   // Whether we have seen any side-effects. Reset when leaving an inner scope.
   bool seenSideeffects = false;
@@ -778,13 +778,13 @@ ParallelToGpuLaunchLowering::matchAndRewrite(ParallelOp parallelOp,
       // Before entering a nested scope, make sure there have been no
       // sideeffects until now.
       if (seenSideeffects)
-        return matchFailure();
+        return failure();
       // A nested loop.parallel needs insertion of code to compute indices.
       // Insert that now. This will also update the worklist with the loops
       // body.
       if (failed(processParallelLoop(nestedParallel, launchOp, cloningMap,
                                      worklist, launchBounds, rewriter)))
-        return matchFailure();
+        return failure();
     } else if (op == launchOp.getOperation()) {
       // Found our sentinel value. We have finished the operations from one
       // nesting level, pop one level back up.
@@ -802,7 +802,7 @@ ParallelToGpuLaunchLowering::matchAndRewrite(ParallelOp parallelOp,
                          clone->getNumRegions() != 0;
       // If we are no longer in the innermost scope, sideeffects are disallowed.
       if (seenSideeffects && leftNestingScope)
-        return matchFailure();
+        return failure();
     }
   }
 
@@ -812,7 +812,7 @@ ParallelToGpuLaunchLowering::matchAndRewrite(ParallelOp parallelOp,
     launchOp.setOperand(std::get<0>(bound), std::get<1>(bound));
 
   rewriter.eraseOp(parallelOp);
-  return matchSuccess();
+  return success();
 }
 
 void mlir::populateParallelLoopToGPUPatterns(OwningRewritePatternList &patterns,

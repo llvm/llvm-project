@@ -1346,3 +1346,38 @@ namespace mutable_subobjects {
   auto &zti = typeid(z.y);
   static_assert(&zti == &typeid(Y));
 }
+
+namespace PR45133 {
+  struct A { long x; };
+
+  union U;
+  constexpr A foo(U *up);
+
+  union U {
+    A a = foo(this); // expected-note {{in call to 'foo(&u)'}}
+    int y;
+  };
+
+  constexpr A foo(U *up) {
+    up->y = 11; // expected-note {{assignment would change active union member during the initialization of a different member}}
+    return {42};
+  }
+
+  constinit U u = {}; // expected-error {{constant init}} expected-note {{constinit}}
+
+  template<int> struct X {};
+
+  union V {
+    int a, b;
+    constexpr V(X<0>) : a(a = 1) {} // ok
+    constexpr V(X<1>) : a(b = 1) {} // expected-note {{assignment would change active union member during the initialization of a different member}}
+    constexpr V(X<2>) : a() { b = 1; } // ok
+    // This case (changing the active member then changing it back) is debatable,
+    // but it seems appropriate to reject.
+    constexpr V(X<3>) : a((b = 1, a = 1)) {} // expected-note {{assignment would change active union member during the initialization of a different member}}
+  };
+  constinit V v0 = X<0>();
+  constinit V v1 = X<1>(); // expected-error {{constant init}} expected-note {{constinit}} expected-note {{in call}}
+  constinit V v2 = X<2>();
+  constinit V v3 = X<3>(); // expected-error {{constant init}} expected-note {{constinit}} expected-note {{in call}}
+}

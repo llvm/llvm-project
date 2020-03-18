@@ -6,7 +6,7 @@
 #
 # RUN: not %{lit} %{inputs}/nonexistent                    2>&1 | FileCheck --check-prefix=CHECK-BAD-PATH %s
 # RUN: not %{lit} %{inputs}/nonexistent --allow-empty-runs 2>&1 | FileCheck --check-prefix=CHECK-BAD-PATH %s
-# CHECK-BAD-PATH: error: did not disover any tests for provided path(s)
+# CHECK-BAD-PATH: error: did not discover any tests for provided path(s)
 
 # Check that we exit with an error if we filter out all tests, but allow it with --allow-empty-runs.
 #
