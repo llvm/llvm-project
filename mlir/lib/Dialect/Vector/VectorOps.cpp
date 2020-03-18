@@ -1483,6 +1483,10 @@ static void print(OpAsmPrinter &p, TypeCastOp op) {
 }
 
 static LogicalResult verify(TypeCastOp op) {
+  MemRefType canonicalType = canonicalizeStridedLayout(op.getMemRefType());
+  if (!canonicalType.getAffineMaps().empty())
+    return op.emitOpError("expects operand to be a memref with no layout");
+
   auto resultType = inferVectorTypeCastResultType(op.getMemRefType());
   if (op.getResultMemRefType() != resultType)
     return op.emitOpError("expects result type to be: ") << resultType;
