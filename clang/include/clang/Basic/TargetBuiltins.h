@@ -41,11 +41,22 @@ namespace clang {
     };
   }
 
+  namespace SVE {
+  enum {
+    LastNEONBuiltin = NEON::FirstTSBuiltin - 1,
+#define BUILTIN(ID, TYPE, ATTRS) BI##ID,
+#include "clang/Basic/BuiltinsSVE.def"
+    FirstTSBuiltin,
+  };
+  }
+
   /// AArch64 builtins
   namespace AArch64 {
   enum {
     LastTIBuiltin = clang::Builtin::FirstTSBuiltin - 1,
     LastNEONBuiltin = NEON::FirstTSBuiltin - 1,
+    FirstSVEBuiltin = NEON::FirstTSBuiltin,
+    LastSVEBuiltin = SVE::FirstTSBuiltin - 1,
   #define BUILTIN(ID, TYPE, ATTRS) BI##ID,
   #include "clang/Basic/BuiltinsAArch64.def"
     LastTSBuiltin
@@ -147,6 +158,44 @@ namespace clang {
     }
     bool isUnsigned() const { return (Flags & UnsignedFlag) != 0; }
     bool isQuad() const { return (Flags & QuadFlag) != 0; }
+  };
+
+  /// Flags to identify the types for overloaded SVE builtins.
+  class SVETypeFlags {
+    uint64_t Flags;
+
+  public:
+#define LLVM_GET_SVE_TYPEFLAGS
+#include "clang/Basic/arm_sve_typeflags.inc"
+#undef LLVM_GET_SVE_TYPEFLAGS
+
+    enum EltType {
+#define LLVM_GET_SVE_ELTTYPES
+#include "clang/Basic/arm_sve_typeflags.inc"
+#undef LLVM_GET_SVE_ELTTYPES
+    };
+
+    enum MemEltType {
+#define LLVM_GET_SVE_MEMELTTYPES
+#include "clang/Basic/arm_sve_typeflags.inc"
+#undef LLVM_GET_SVE_MEMELTTYPES
+    };
+
+    SVETypeFlags(uint64_t F) : Flags(F) {}
+    SVETypeFlags(EltType ET, bool IsUnsigned) : Flags(ET) {}
+
+    EltType getEltType() const {
+      return (EltType)((Flags & EltTypeMask) - FirstEltType);
+    }
+
+    MemEltType getMemEltType() const {
+      return (MemEltType)((Flags & MemEltTypeMask) - FirstMemEltType);
+    }
+
+    bool isLoad() const { return Flags & IsLoad; }
+
+    uint64_t getBits() const { return Flags; }
+    bool isFlagSet(uint64_t Flag) const { return Flags & Flag; }
   };
 
   /// Hexagon builtins
