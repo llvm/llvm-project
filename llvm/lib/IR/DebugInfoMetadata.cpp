@@ -1117,7 +1117,9 @@ DIExpression *DIExpression::append(const DIExpression *Expr,
   }
 
   NewOps.append(Ops.begin(), Ops.end());
-  return DIExpression::get(Expr->getContext(), NewOps);
+  auto *result = DIExpression::get(Expr->getContext(), NewOps);
+  assert(result->isValid() && "concatenated expression is not valid");
+  return result;
 }
 
 DIExpression *DIExpression::appendToStack(const DIExpression *Expr,
