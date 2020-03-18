@@ -468,8 +468,8 @@ bool TargetRegisterInfo::needsStackRealignment(
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
   const Function &F = MF.getFunction();
-  unsigned StackAlign = TFI->getStackAlignment();
-  bool requiresRealignment = ((MFI.getMaxAlignment() > StackAlign) ||
+  Align StackAlign = TFI->getStackAlign();
+  bool requiresRealignment = ((MFI.getMaxAlign() > StackAlign) ||
                               F.hasFnAttribute(Attribute::StackAlignment));
   if (F.hasFnAttribute("stackrealign") || requiresRealignment) {
     if (canRealignStack(MF))

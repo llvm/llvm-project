@@ -1236,8 +1236,7 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
                       false, NeedsWinCFI, &HasWinCFI);
 
     if (NeedsRealignment) {
-      const unsigned Alignment = MFI.getMaxAlignment();
-      const unsigned NrBitsToZero = countTrailingZeros(Alignment);
+      const unsigned NrBitsToZero = Log2(MFI.getMaxAlign());
       assert(NrBitsToZero > 1);
       assert(scratchSPReg != AArch64::SP);
 

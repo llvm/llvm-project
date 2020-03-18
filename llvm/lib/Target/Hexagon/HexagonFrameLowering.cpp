@@ -591,7 +591,7 @@ void HexagonFrameLowering::insertPrologueInBlock(MachineBasicBlock &MBB,
   auto &HII = *HST.getInstrInfo();
   auto &HRI = *HST.getRegisterInfo();
 
-  unsigned MaxAlign = std::max(MFI.getMaxAlignment(), getStackAlignment());
+  Align MaxAlign = std::max(MFI.getMaxAlign(), getStackAlign());
 
   // Calculate the total stack frame size.
   // Get the number of bytes to allocate from the FrameInfo.
@@ -603,7 +603,7 @@ void HexagonFrameLowering::insertPrologueInBlock(MachineBasicBlock &MBB,
   FrameSize = MaxCFA + alignTo(FrameSize, MaxAlign);
   MFI.setStackSize(FrameSize);
 
-  bool AlignStack = (MaxAlign > getStackAlignment());
+  bool AlignStack = (MaxAlign > getStackAlign());
 
   // Get the number of bytes to allocate from the FrameInfo.
   unsigned NumBytes = MFI.getStackSize();
@@ -742,7 +742,7 @@ void HexagonFrameLowering::insertPrologueInBlock(MachineBasicBlock &MBB,
     if (AlignStack) {
       BuildMI(MBB, InsertPt, dl, HII.get(Hexagon::A2_andir), SP)
           .addReg(SP)
-          .addImm(-int64_t(MaxAlign));
+          .addImm(-int64_t(MaxAlign.value()));
     }
     // If the stack-checking is enabled, and we spilled the callee-saved
     // registers inline (i.e. did not use a spill function), then call
@@ -1507,7 +1507,7 @@ void HexagonFrameLowering::processFunctionBeforeFrameFinalized(
   // via AP, which may not be available at the particular place in the program.
   MachineFrameInfo &MFI = MF.getFrameInfo();
   bool HasAlloca = MFI.hasVarSizedObjects();
-  bool NeedsAlign = (MFI.getMaxAlignment() > getStackAlignment());
+  bool NeedsAlign = (MFI.getMaxAlign() > getStackAlign());
 
   if (!HasAlloca || !NeedsAlign)
     return;
