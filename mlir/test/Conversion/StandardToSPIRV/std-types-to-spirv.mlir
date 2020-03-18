@@ -255,6 +255,51 @@ func @large_vector(%arg0: vector<1024xi32>) { return }
 // MemRef types
 //===----------------------------------------------------------------------===//
 
+// Check memory spaces.
+module attributes {
+  spv.target_env = #spv.target_env<
+    #spv.vce<v1.0, [], [SPV_KHR_storage_buffer_storage_class]>,
+    {max_compute_workgroup_invocations = 128 : i32,
+     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+} {
+
+// CHECK-LABEL: func @memref_mem_space
+// CHECK-SAME: StorageBuffer
+// CHECK-SAME: Uniform
+// CHECK-SAME: Workgroup
+// CHECK-SAME: PushConstant
+// CHECK-SAME: Private
+// CHECK-SAME: Function
+func @memref_mem_space(
+    %arg0: memref<4xf32, 0>,
+    %arg1: memref<4xf32, 4>,
+    %arg2: memref<4xf32, 3>,
+    %arg3: memref<4xf32, 7>,
+    %arg4: memref<4xf32, 5>,
+    %arg5: memref<4xf32, 6>
+) { return }
+
+} // end module
+
+// -----
+
+// Check that boolean memref is not supported at the moment.
+module attributes {
+  spv.target_env = #spv.target_env<
+    #spv.vce<v1.0, [], []>,
+    {max_compute_workgroup_invocations = 128 : i32,
+     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+} {
+
+// CHECK-LABEL: func @memref_type({{%.*}}: memref<3xi1>)
+func @memref_type(%arg0: memref<3xi1>) {
+  return
+}
+
+} // end module
+
+// -----
+
 // Check that using non-32-bit scalar types in interface storage classes
 // requires special capability and extension: convert them to 32-bit if not
 // satisfied.

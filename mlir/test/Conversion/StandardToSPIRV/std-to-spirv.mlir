@@ -1,111 +1,141 @@
-// RUN: mlir-opt -convert-std-to-spirv %s -o - | FileCheck %s
+// RUN: mlir-opt -split-input-file -convert-std-to-spirv %s -o - | FileCheck %s
+
+//===----------------------------------------------------------------------===//
+// std arithmetic ops
+//===----------------------------------------------------------------------===//
 
 module attributes {
   spv.target_env = #spv.target_env<
-    #spv.vce<v1.0, [Shader, Int64, Float64], [SPV_KHR_storage_buffer_storage_class]>,
+    #spv.vce<v1.0, [Int8, Int16, Int64, Float16, Float64], []>,
     {max_compute_workgroup_invocations = 128 : i32,
      max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
 } {
 
-//===----------------------------------------------------------------------===//
-// std binary arithmetic ops
-//===----------------------------------------------------------------------===//
-
-// CHECK-LABEL: @add_sub
-func @add_sub(%arg0 : i32, %arg1 : i32) {
-  // CHECK: spv.IAdd
-  %0 = addi %arg0, %arg1 : i32
-  // CHECK: spv.ISub
-  %1 = subi %arg0, %arg1 : i32
+// Check integer operation conversions.
+// CHECK-LABEL: @int32_scalar
+func @int32_scalar(%lhs: i32, %rhs: i32) {
+  // CHECK: spv.IAdd %{{.*}}, %{{.*}}: i32
+  %0 = addi %lhs, %rhs: i32
+  // CHECK: spv.ISub %{{.*}}, %{{.*}}: i32
+  %1 = subi %lhs, %rhs: i32
+  // CHECK: spv.IMul %{{.*}}, %{{.*}}: i32
+  %2 = muli %lhs, %rhs: i32
+  // CHECK: spv.SDiv %{{.*}}, %{{.*}}: i32
+  %3 = divi_signed %lhs, %rhs: i32
+  // CHECK: spv.SRem %{{.*}}, %{{.*}}: i32
+  %4 = remi_signed %lhs, %rhs: i32
+  // CHECK: spv.UDiv %{{.*}}, %{{.*}}: i32
+  %5 = divi_unsigned %lhs, %rhs: i32
+  // CHECK: spv.UMod %{{.*}}, %{{.*}}: i32
+  %6 = remi_unsigned %lhs, %rhs: i32
   return
 }
 
-// CHECK-LABEL: @fadd_scalar
-func @fadd_scalar(%arg: f32) {
-  // CHECK: spv.FAdd
-  %0 = addf %arg, %arg : f32
+// Check float operation conversions.
+// CHECK-LABEL: @float32_scalar
+func @float32_scalar(%lhs: f32, %rhs: f32) {
+  // CHECK: spv.FAdd %{{.*}}, %{{.*}}: f32
+  %0 = addf %lhs, %rhs: f32
+  // CHECK: spv.FSub %{{.*}}, %{{.*}}: f32
+  %1 = subf %lhs, %rhs: f32
+  // CHECK: spv.FMul %{{.*}}, %{{.*}}: f32
+  %2 = mulf %lhs, %rhs: f32
+  // CHECK: spv.FDiv %{{.*}}, %{{.*}}: f32
+  %3 = divf %lhs, %rhs: f32
+  // CHECK: spv.FRem %{{.*}}, %{{.*}}: f32
+  %4 = remf %lhs, %rhs: f32
   return
 }
 
-// CHECK-LABEL: @fdiv_scalar
-func @fdiv_scalar(%arg: f32) {
-  // CHECK: spv.FDiv
-  %0 = divf %arg, %arg : f32
+// Check int vector types.
+// CHECK-LABEL: @int_vector234
+func @int_vector234(%arg0: vector<2xi8>, %arg1: vector<3xi16>, %arg2: vector<4xi64>) {
+  // CHECK: spv.SDiv %{{.*}}, %{{.*}}: vector<2xi8>
+  %0 = divi_signed %arg0, %arg0: vector<2xi8>
+  // CHECK: spv.SRem %{{.*}}, %{{.*}}: vector<3xi16>
+  %1 = remi_signed %arg1, %arg1: vector<3xi16>
+  // CHECK: spv.UDiv %{{.*}}, %{{.*}}: vector<4xi64>
+  %2 = divi_unsigned %arg2, %arg2: vector<4xi64>
   return
 }
 
-// CHECK-LABEL: @fmul_scalar
-func @fmul_scalar(%arg: f32) {
-  // CHECK: spv.FMul
-  %0 = mulf %arg, %arg : f32
+// Check float vector types.
+// CHECK-LABEL: @float_vector234
+func @float_vector234(%arg0: vector<2xf16>, %arg1: vector<3xf64>) {
+  // CHECK: spv.FAdd %{{.*}}, %{{.*}}: vector<2xf16>
+  %0 = addf %arg0, %arg0: vector<2xf16>
+  // CHECK: spv.FMul %{{.*}}, %{{.*}}: vector<3xf64>
+  %1 = mulf %arg1, %arg1: vector<3xf64>
   return
 }
 
-// CHECK-LABEL: @fmul_vector2
-func @fmul_vector2(%arg: vector<2xf32>) {
-  // CHECK: spv.FMul
-  %0 = mulf %arg, %arg : vector<2xf32>
+// CHECK-LABEL: @unsupported_1elem_vector
+func @unsupported_1elem_vector(%arg0: vector<1xi32>) {
+  // CHECK: addi
+  %0 = addi %arg0, %arg0: vector<1xi32>
   return
 }
 
-// CHECK-LABEL: @fmul_vector3
-func @fmul_vector3(%arg: vector<3xf32>) {
-  // CHECK: spv.FMul
-  %0 = mulf %arg, %arg : vector<3xf32>
+// CHECK-LABEL: @unsupported_5elem_vector
+func @unsupported_5elem_vector(%arg0: vector<5xi32>) {
+  // CHECK: subi
+  %1 = subi %arg0, %arg0: vector<5xi32>
   return
 }
 
-// CHECK-LABEL: @fmul_vector4
-func @fmul_vector4(%arg: vector<4xf32>) {
-  // CHECK: spv.FMul
-  %0 = mulf %arg, %arg : vector<4xf32>
+// CHECK-LABEL: @unsupported_2x2elem_vector
+func @unsupported_2x2elem_vector(%arg0: vector<2x2xi32>) {
+  // CHECK: muli
+  %2 = muli %arg0, %arg0: vector<2x2xi32>
   return
 }
 
-// CHECK-LABEL: @fmul_vector5
-func @fmul_vector5(%arg: vector<5xf32>) {
-  // Vector length of only 2, 3, and 4 is valid for SPIR-V.
-  // CHECK: mulf
-  %0 = mulf %arg, %arg : vector<5xf32>
+} // end module
+
+// -----
+
+// Check that types are converted to 32-bit when no special capabilities.
+module attributes {
+  spv.target_env = #spv.target_env<
+    #spv.vce<v1.0, [], []>,
+    {max_compute_workgroup_invocations = 128 : i32,
+     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+} {
+
+// CHECK-LABEL: @int_vector234
+func @int_vector234(%arg0: vector<2xi8>, %arg1: vector<3xi16>, %arg2: vector<4xi64>) {
+  // CHECK: spv.SDiv %{{.*}}, %{{.*}}: vector<2xi32>
+  %0 = divi_signed %arg0, %arg0: vector<2xi8>
+  // CHECK: spv.SRem %{{.*}}, %{{.*}}: vector<3xi32>
+  %1 = remi_signed %arg1, %arg1: vector<3xi16>
+  // CHECK: spv.UDiv %{{.*}}, %{{.*}}: vector<4xi32>
+  %2 = divi_unsigned %arg2, %arg2: vector<4xi64>
   return
 }
 
-// TODO(antiagainst): enable this once we support converting binary ops
-// needing type conversion.
-// XXXXX-LABEL: @fmul_tensor
-//func @fmul_tensor(%arg: tensor<4xf32>) {
-  // For tensors mulf cannot be lowered directly to spv.FMul.
-  // XXXXX: mulf
-  //%0 = mulf %arg, %arg : tensor<4xf32>
-  //return
-//}
-
-// CHECK-LABEL: @frem_scalar
-func @frem_scalar(%arg: f32) {
-  // CHECK: spv.FRem
-  %0 = remf %arg, %arg : f32
+// CHECK-LABEL: @float_scalar
+func @float_scalar(%arg0: f16, %arg1: f64) {
+  // CHECK: spv.FAdd %{{.*}}, %{{.*}}: f32
+  %0 = addf %arg0, %arg0: f16
+  // CHECK: spv.FMul %{{.*}}, %{{.*}}: f32
+  %1 = mulf %arg1, %arg1: f64
   return
 }
 
-// CHECK-LABEL: @fsub_scalar
-func @fsub_scalar(%arg: f32) {
-  // CHECK: spv.FSub
-  %0 = subf %arg, %arg : f32
-  return
-}
+} // end module
 
-// CHECK-LABEL: @div_rem
-func @div_rem(%arg0 : i32, %arg1 : i32) {
-  // CHECK: spv.SDiv
-  %0 = divi_signed %arg0, %arg1 : i32
-  // CHECK: spv.SMod
-  %1 = remi_signed %arg0, %arg1 : i32
-  return
-}
+// -----
 
 //===----------------------------------------------------------------------===//
 // std bit ops
 //===----------------------------------------------------------------------===//
+
+module attributes {
+  spv.target_env = #spv.target_env<
+    #spv.vce<v1.0, [], []>,
+    {max_compute_workgroup_invocations = 128 : i32,
+     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+} {
 
 // CHECK-LABEL: @bitwise_scalar
 func @bitwise_scalar(%arg0 : i32, %arg1 : i32) {
@@ -126,6 +156,24 @@ func @bitwise_vector(%arg0 : vector<4xi32>, %arg1 : vector<4xi32>) {
   %1 = or %arg0, %arg1 : vector<4xi32>
   // CHECK: spv.BitwiseXor
   %2 = xor %arg0, %arg1 : vector<4xi32>
+  return
+}
+
+// CHECK-LABEL: @logical_scalar
+func @logical_scalar(%arg0 : i1, %arg1 : i1) {
+  // CHECK: spv.LogicalAnd
+  %0 = and %arg0, %arg1 : i1
+  // CHECK: spv.LogicalOr
+  %1 = or %arg0, %arg1 : i1
+  return
+}
+
+// CHECK-LABEL: @logical_vector
+func @logical_vector(%arg0 : vector<4xi1>, %arg1 : vector<4xi1>) {
+  // CHECK: spv.LogicalAnd
+  %0 = and %arg0, %arg1 : vector<4xi1>
+  // CHECK: spv.LogicalOr
+  %1 = or %arg0, %arg1 : vector<4xi1>
   return
 }
 
@@ -213,9 +261,20 @@ func @cmpi(%arg0 : i32, %arg1 : i32) {
   return
 }
 
+} // end module
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // std.constant
 //===----------------------------------------------------------------------===//
+
+module attributes {
+  spv.target_env = #spv.target_env<
+    #spv.vce<v1.0, [Int8, Int16, Int64, Float16, Float64], []>,
+    {max_compute_workgroup_invocations = 128 : i32,
+     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+} {
 
 // CHECK-LABEL: @constant
 func @constant() {
@@ -244,49 +303,125 @@ func @constant() {
   return
 }
 
+} // end module
+
+// -----
+
 //===----------------------------------------------------------------------===//
-// std logical binary operations
+// std cast ops
 //===----------------------------------------------------------------------===//
 
-// CHECK-LABEL: @logical_scalar
-func @logical_scalar(%arg0 : i1, %arg1 : i1) {
-  // CHECK: spv.LogicalAnd
-  %0 = and %arg0, %arg1 : i1
-  // CHECK: spv.LogicalOr
-  %1 = or %arg0, %arg1 : i1
-  return
+module attributes {
+  spv.target_env = #spv.target_env<
+    #spv.vce<v1.0, [Int8, Int16, Int64, Float16, Float64], []>,
+    {max_compute_workgroup_invocations = 128 : i32,
+     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+} {
+
+// CHECK-LABEL: @fpext1
+func @fpext1(%arg0: f16) -> f64 {
+  // CHECK: spv.FConvert %{{.*}} : f16 to f64
+  %0 = std.fpext %arg0 : f16 to f64
+  return %0 : f64
 }
 
-// CHECK-LABEL: @logical_vector
-func @logical_vector(%arg0 : vector<4xi1>, %arg1 : vector<4xi1>) {
-  // CHECK: spv.LogicalAnd
-  %0 = and %arg0, %arg1 : vector<4xi1>
-  // CHECK: spv.LogicalOr
-  %1 = or %arg0, %arg1 : vector<4xi1>
-  return
-}
-
-//===----------------------------------------------------------------------===//
-// std.fpext
-//===----------------------------------------------------------------------===//
-
-// CHECK-LABEL: @fpext
-func @fpext(%arg0 : f32) {
-  // CHECK: spv.FConvert
+// CHECK-LABEL: @fpext2
+func @fpext2(%arg0 : f32) -> f64 {
+  // CHECK: spv.FConvert %{{.*}} : f32 to f64
   %0 = std.fpext %arg0 : f32 to f64
-  return
+  return %0 : f64
 }
 
-//===----------------------------------------------------------------------===//
-// std.fptrunc
-//===----------------------------------------------------------------------===//
-
-// CHECK-LABEL: @fptrunc
-func @fptrunc(%arg0 : f64) {
-  // CHECK: spv.FConvert
-  %0 = std.fptrunc %arg0 : f64 to f32
-  return
+// CHECK-LABEL: @fptrunc1
+func @fptrunc1(%arg0 : f64) -> f16 {
+  // CHECK: spv.FConvert %{{.*}} : f64 to f16
+  %0 = std.fptrunc %arg0 : f64 to f16
+  return %0 : f16
 }
+
+// CHECK-LABEL: @fptrunc2
+func @fptrunc2(%arg0: f32) -> f16 {
+  // CHECK: spv.FConvert %{{.*}} : f32 to f16
+  %0 = std.fptrunc %arg0 : f32 to f16
+  return %0 : f16
+}
+
+// CHECK-LABEL: @sitofp1
+func @sitofp1(%arg0 : i32) -> f32 {
+  // CHECK: spv.ConvertSToF %{{.*}} : i32 to f32
+  %0 = std.sitofp %arg0 : i32 to f32
+  return %0 : f32
+}
+
+// CHECK-LABEL: @sitofp2
+func @sitofp2(%arg0 : i64) -> f64 {
+  // CHECK: spv.ConvertSToF %{{.*}} : i64 to f64
+  %0 = std.sitofp %arg0 : i64 to f64
+  return %0 : f64
+}
+
+} // end module
+
+// -----
+
+// Checks that cast types will be adjusted when no special capabilities for
+// non-32-bit scalar types.
+module attributes {
+  spv.target_env = #spv.target_env<
+    #spv.vce<v1.0, [], []>,
+    {max_compute_workgroup_invocations = 128 : i32,
+     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+} {
+
+// CHECK-LABEL: @fpext1
+// CHECK-SAME: %[[ARG:.*]]: f32
+func @fpext1(%arg0: f16) {
+  // CHECK-NEXT: "use"(%[[ARG]])
+  %0 = std.fpext %arg0 : f16 to f64
+  "use"(%0) : (f64) -> ()
+}
+
+// CHECK-LABEL: @fpext2
+// CHECK-SAME: %[[ARG:.*]]: f32
+func @fpext2(%arg0 : f32) {
+  // CHECK-NEXT: "use"(%[[ARG]])
+  %0 = std.fpext %arg0 : f32 to f64
+  "use"(%0) : (f64) -> ()
+}
+
+// CHECK-LABEL: @fptrunc1
+// CHECK-SAME: %[[ARG:.*]]: f32
+func @fptrunc1(%arg0 : f64) {
+  // CHECK-NEXT: "use"(%[[ARG]])
+  %0 = std.fptrunc %arg0 : f64 to f16
+  "use"(%0) : (f16) -> ()
+}
+
+// CHECK-LABEL: @fptrunc2
+// CHECK-SAME: %[[ARG:.*]]: f32
+func @fptrunc2(%arg0: f32) {
+  // CHECK-NEXT: "use"(%[[ARG]])
+  %0 = std.fptrunc %arg0 : f32 to f16
+  "use"(%0) : (f16) -> ()
+}
+
+// CHECK-LABEL: @sitofp
+func @sitofp(%arg0 : i64) {
+  // CHECK: spv.ConvertSToF %{{.*}} : i32 to f32
+  %0 = std.sitofp %arg0 : i64 to f64
+  "use"(%0) : (f64) -> ()
+}
+
+} // end module
+
+// -----
+
+module attributes {
+  spv.target_env = #spv.target_env<
+    #spv.vce<v1.0, [Shader, Int8, Int16, Int64, Float16, Float64], [SPV_KHR_storage_buffer_storage_class]>,
+    {max_compute_workgroup_invocations = 128 : i32,
+     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+} {
 
 //===----------------------------------------------------------------------===//
 // std.select
@@ -301,40 +436,8 @@ func @select(%arg0 : i32, %arg1 : i32) {
 }
 
 //===----------------------------------------------------------------------===//
-// std.sitofp
+// std load/store ops
 //===----------------------------------------------------------------------===//
-
-// CHECK-LABEL: @sitofp
-func @sitofp(%arg0 : i32) {
-  // CHECK: spv.ConvertSToF
-  %0 = std.sitofp %arg0 : i32 to f32
-  return
-}
-
-//===----------------------------------------------------------------------===//
-// memref type
-//===----------------------------------------------------------------------===//
-
-// CHECK-LABEL: func @memref_type({{%.*}}: memref<3xi1>)
-func @memref_type(%arg0: memref<3xi1>) {
-  return
-}
-
-// CHECK-LABEL: func @memref_mem_space
-// CHECK-SAME: StorageBuffer
-// CHECK-SAME: Uniform
-// CHECK-SAME: Workgroup
-// CHECK-SAME: PushConstant
-// CHECK-SAME: Private
-// CHECK-SAME: Function
-func @memref_mem_space(
-    %arg0: memref<4xf32, 0>,
-    %arg1: memref<4xf32, 4>,
-    %arg2: memref<4xf32, 3>,
-    %arg3: memref<4xf32, 7>,
-    %arg4: memref<4xf32, 5>,
-    %arg5: memref<4xf32, 6>
-) { return }
 
 // CHECK-LABEL: @load_store_zero_rank_float
 // CHECK: [[ARG0:%.*]]: !spv.ptr<!spv.struct<!spv.array<1 x f32 [4]> [0]>, StorageBuffer>,
