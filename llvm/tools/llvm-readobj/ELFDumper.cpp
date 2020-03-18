@@ -752,7 +752,7 @@ public:
   void printRelocatableStackSizes(const ELFObjectFile<ELFT> *Obj,
                                   std::function<void()> PrintHeader);
   void printFunctionStackSize(const ELFObjectFile<ELFT> *Obj, uint64_t SymValue,
-                              SectionRef FunctionSec,
+                              Optional<SectionRef> FunctionSec,
                               const StringRef SectionName, DataExtractor Data,
                               uint64_t *Offset);
   void printStackSize(const ELFObjectFile<ELFT> *Obj, RelocationRef Rel,
@@ -5174,9 +5174,12 @@ static std::string getSymbolName(const ELFSymbolRef &Sym) {
 }
 
 template <class ELFT>
-void DumpStyle<ELFT>::printFunctionStackSize(
-    const ELFObjectFile<ELFT> *Obj, uint64_t SymValue, SectionRef FunctionSec,
-    const StringRef SectionName, DataExtractor Data, uint64_t *Offset) {
+void DumpStyle<ELFT>::printFunctionStackSize(const ELFObjectFile<ELFT> *Obj,
+                                             uint64_t SymValue,
+                                             Optional<SectionRef> FunctionSec,
+                                             const StringRef SectionName,
+                                             DataExtractor Data,
+                                             uint64_t *Offset) {
   // This function ignores potentially erroneous input, unless it is directly
   // related to stack size reporting.
   SymbolRef FuncSym;
@@ -5186,9 +5189,15 @@ void DumpStyle<ELFT>::printFunctionStackSize(
       consumeError(SymAddrOrErr.takeError());
       continue;
     }
+    if (Expected<uint32_t> SymFlags = Symbol.getFlags()) {
+      if (*SymFlags & SymbolRef::SF_Undefined)
+        continue;
+    } else
+      consumeError(SymFlags.takeError());
     if (Symbol.getELFType() == ELF::STT_FUNC && *SymAddrOrErr == SymValue) {
-      // Check if the symbol is in the right section.
-      if (FunctionSec.containsSymbol(Symbol)) {
+      // Check if the symbol is in the right section. FunctionSec == None means
+      // "any section".
+      if (!FunctionSec || FunctionSec->containsSymbol(Symbol)) {
         FuncSym = Symbol;
         break;
       }
@@ -5299,11 +5308,6 @@ void DumpStyle<ELFT>::printNonRelocatableStackSizes(
     ArrayRef<uint8_t> Contents =
         unwrapOrError(this->FileName, EF->getSectionContents(ElfSec));
     DataExtractor Data(Contents, Obj->isLittleEndian(), sizeof(Elf_Addr));
-    // A .stack_sizes section header's sh_link field is supposed to point
-    // to the section that contains the functions whose stack sizes are
-    // described in it.
-    const Elf_Shdr *FunctionELFSec =
-        unwrapOrError(this->FileName, EF->getSection(ElfSec->sh_link));
     uint64_t Offset = 0;
     while (Offset < Contents.size()) {
       // The function address is followed by a ULEB representing the stack
@@ -5317,8 +5321,8 @@ void DumpStyle<ELFT>::printNonRelocatableStackSizes(
             FileStr);
       }
       uint64_t SymValue = Data.getAddress(&Offset);
-      printFunctionStackSize(Obj, SymValue, Obj->toSectionRef(FunctionELFSec),
-                             SectionName, Data, &Offset);
+      printFunctionStackSize(Obj, SymValue, /*FunctionSec=*/None, SectionName,
+                             Data, &Offset);
     }
   }
 }
