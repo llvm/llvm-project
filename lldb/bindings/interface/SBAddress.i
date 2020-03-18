@@ -154,7 +154,7 @@ public:
 
         def __int__(self):
             '''Convert an address to a load address if there is a process and that process is alive, or to a file address otherwise.'''
-            if process.is_alive:
+            if process and process.is_alive:
                 return self.GetLoadAddress (target)
             else:
                 return self.GetFileAddress ()
