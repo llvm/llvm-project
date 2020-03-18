@@ -88,9 +88,9 @@ well as you do and avoid distracting her by calling out usage of new
 features in comments.
 
 ### Layout
-Always run `clang-format` before committing code.  Other developers should
-be able to run `git pull`, then `clang-format`, and see only their own
-changes. Use `clang-format` from llvm 7.
+Always run `clang-format` on your changes before committing code. LLVM
+has a `git-clang-format` script to facilitate running clang-format only
+on the lines that have changed.
 
 Here's what you can expect to see `clang-format` do:
 1. Indent with two spaces.

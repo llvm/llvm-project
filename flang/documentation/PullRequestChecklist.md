@@ -31,7 +31,7 @@ can also be used when reviewing pull requests.
 ## Follow the style guide
 The following items are taken from the [C++ style guide](C++style.md).  But
 even though I've read the style guide, they regularly trip me up.
-*  Run clang-format version 7 on all .cpp and .h files.
+*  Run clang-format using the git-clang-format script from LLVM HEAD.
 *  Make sure that all source lines have 80 or fewer characters.  Note that
    clang-format will do this for most code.  But you may need to break up long
    strings.

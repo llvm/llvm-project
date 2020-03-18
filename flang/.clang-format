@@ -3,16 +3,10 @@
 BasedOnStyle: LLVM
 AlignAfterOpenBracket: DontAlign
 AlignEscapedNewlines: DontAlign
-AllowShortCaseLabelsOnASingleLine: true
-AllowShortIfStatementsOnASingleLine: true
 AlignConsecutiveAssignments: false
 AlignConsecutiveDeclarations: false
 AlignOperands: false
 AlignTrailingComments: false
-ConstructorInitializerIndentWidth: 2
-SpaceAfterTemplateKeyword: false
-SpacesBeforeTrailingComments: 2
-FixNamespaceComments: false
 IncludeCategories:
   - Regex:           '^<'
     Priority:        4
