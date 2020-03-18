@@ -322,10 +322,15 @@ public:
   /// why the failure occurred. This method allows for derived rewriters to
   /// optionally hook into the reason why a pattern failed, and display it to
   /// users.
-  virtual LogicalResult
-  notifyMatchFailure(Operation *op,
-                     function_ref<void(Diagnostic &)> reasonCallback) {
+  template <typename CallbackT>
+  std::enable_if_t<!std::is_convertible<CallbackT, Twine>::value, LogicalResult>
+  notifyMatchFailure(Operation *op, CallbackT &&reasonCallback) {
+#ifndef NDEBUG
+    return notifyMatchFailure(op,
+                              function_ref<void(Diagnostic &)>(reasonCallback));
+#else
     return failure();
+#endif
   }
   LogicalResult notifyMatchFailure(Operation *op, const Twine &msg) {
     return notifyMatchFailure(op, [&](Diagnostic &diag) { diag << msg; });
@@ -350,6 +355,17 @@ protected:
   /// before the operation is deleted.  At this point, the operation has zero
   /// uses.
   virtual void notifyOperationRemoved(Operation *op) {}
+
+  /// Notify the pattern rewriter that the pattern is failing to match the given
+  /// operation, and provide a callback to populate a diagnostic with the reason
+  /// why the failure occurred. This method allows for derived rewriters to
+  /// optionally hook into the reason why a pattern failed, and display it to
+  /// users.
+  virtual LogicalResult
+  notifyMatchFailure(Operation *op,
+                     function_ref<void(Diagnostic &)> reasonCallback) {
+    return failure();
+  }
 
 private:
   /// 'op' and 'newOp' are known to have the same number of results, replace the
