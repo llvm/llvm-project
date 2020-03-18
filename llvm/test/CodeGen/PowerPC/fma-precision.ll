@@ -5,10 +5,10 @@
 define double @fsub1(double %a, double %b, double %c, double %d)  {
 ; CHECK-LABEL: fsub1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xsmuldp 3, 4, 3
 ; CHECK-NEXT:    xsmuldp 0, 2, 1
-; CHECK-NEXT:    xsmsubadp 3, 2, 1
-; CHECK-NEXT:    xsmuldp 1, 0, 3
+; CHECK-NEXT:    fmr 1, 0
+; CHECK-NEXT:    xsnmsubadp 1, 4, 3
+; CHECK-NEXT:    xsmuldp 1, 0, 1
 ; CHECK-NEXT:    blr
 entry:
   %mul = fmul fast double %b, %a
@@ -101,13 +101,12 @@ entry:
 define double @fma_multi_uses1(double %a, double %b, double %c, double %d, double* %p1, double* %p2, double* %p3) {
 ; CHECK-LABEL: fma_multi_uses1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xsmuldp 5, 1, 2
+; CHECK-NEXT:    xsmuldp 1, 1, 2
 ; CHECK-NEXT:    xsmuldp 0, 3, 4
-; CHECK-NEXT:    stfd 5, 0(7)
-; CHECK-NEXT:    stfd 5, 0(8)
+; CHECK-NEXT:    stfd 1, 0(7)
+; CHECK-NEXT:    stfd 1, 0(8)
+; CHECK-NEXT:    xsnmsubadp 1, 3, 4
 ; CHECK-NEXT:    stfd 0, 0(9)
-; CHECK-NEXT:    xsmsubadp 0, 1, 2
-; CHECK-NEXT:    fmr 1, 0
 ; CHECK-NEXT:    blr
   %ab = fmul fast double %a, %b
   %cd = fmul fast double %c, %d
@@ -142,16 +141,14 @@ define double @fma_multi_uses3(double %a, double %b, double %c, double %d, doubl
 ; CHECK-LABEL: fma_multi_uses3:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xsmuldp 0, 1, 2
-; CHECK-NEXT:    xsmuldp 3, 3, 4
+; CHECK-NEXT:    xsmuldp 1, 5, 6
 ; CHECK-NEXT:    ld 3, 96(1)
 ; CHECK-NEXT:    stfd 0, 0(9)
 ; CHECK-NEXT:    stfd 0, 0(10)
-; CHECK-NEXT:    fmr 0, 3
-; CHECK-NEXT:    xsmsubadp 3, 1, 2
-; CHECK-NEXT:    xsmsubadp 0, 5, 6
-; CHECK-NEXT:    xsmuldp 4, 5, 6
-; CHECK-NEXT:    stfd 4, 0(3)
-; CHECK-NEXT:    xsadddp 1, 3, 0
+; CHECK-NEXT:    stfd 1, 0(3)
+; CHECK-NEXT:    xsnmsubadp 1, 3, 4
+; CHECK-NEXT:    xsnmsubadp 0, 3, 4
+; CHECK-NEXT:    xsadddp 1, 0, 1
 ; CHECK-NEXT:    blr
   %ab = fmul fast double %a, %b
   %cd = fmul fast double %c, %d
