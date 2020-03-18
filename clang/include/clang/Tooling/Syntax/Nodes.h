@@ -64,6 +64,8 @@ enum class NodeKind : uint16_t {
   StaticAssertDeclaration,
   LinkageSpecificationDeclaration,
   SimpleDeclaration,
+  TemplateDeclaration,
+  ExplicitTemplateInstantiation,
   NamespaceDefinition,
   NamespaceAliasDefinition,
   UsingNamespaceDirective,
@@ -112,6 +114,9 @@ enum class NodeRole : uint8_t {
   StaticAssertDeclaration_condition,
   StaticAssertDeclaration_message,
   SimpleDeclaration_declarator,
+  TemplateDeclaration_declaration,
+  ExplicitTemplateInstantiation_externKeyword,
+  ExplicitTemplateInstantiation_declaration,
   ArraySubscript_sizeExpression,
   TrailingReturnType_arrow,
   TrailingReturnType_declarator,
@@ -394,6 +399,34 @@ public:
   }
   /// FIXME: use custom iterator instead of 'vector'.
   std::vector<syntax::SimpleDeclarator *> declarators();
+};
+
+/// template <template-parameters> <declaration>
+class TemplateDeclaration final : public Declaration {
+public:
+  TemplateDeclaration() : Declaration(NodeKind::TemplateDeclaration) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::TemplateDeclaration;
+  }
+  syntax::Leaf *templateKeyword();
+  syntax::Declaration *declaration();
+};
+
+/// template <declaration>
+/// Examples:
+///     template struct X<int>
+///     template void foo<int>()
+///     template int var<double>
+class ExplicitTemplateInstantiation final : public Declaration {
+public:
+  ExplicitTemplateInstantiation()
+      : Declaration(NodeKind::ExplicitTemplateInstantiation) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::ExplicitTemplateInstantiation;
+  }
+  syntax::Leaf *templateKeyword();
+  syntax::Leaf *externKeyword();
+  syntax::Declaration *declaration();
 };
 
 /// namespace <name> { <decls> }
