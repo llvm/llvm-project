@@ -124,8 +124,13 @@ clang_tablegen("arm_sve_builtins") {
   td_file = "arm_sve.td"
 }
 
-clang_tablegen("arm_sve_codegenmap") {
-  args = [ "-gen-arm-sve-codegenmap" ]
+clang_tablegen("arm_sve_builtin_cg") {
+  args = [ "-gen-arm-sve-builtin-codegen" ]
+  td_file = "arm_sve.td"
+}
+
+clang_tablegen("arm_sve_typeflags") {
+  args = [ "-gen-arm-sve-typeflags" ]
   td_file = "arm_sve.td"
 }
 

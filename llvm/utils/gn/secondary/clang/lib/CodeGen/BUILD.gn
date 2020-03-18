@@ -4,7 +4,7 @@ static_library("CodeGen") {
   deps = [
     "//clang/include/clang/Basic:arm_cde_builtin_cg",
     "//clang/include/clang/Basic:arm_mve_builtin_cg",
-    "//clang/include/clang/Basic:arm_sve_codegenmap",
+    "//clang/include/clang/Basic:arm_sve_builtin_cg",
     "//clang/lib/AST",
     "//clang/lib/Analysis",
     "//clang/lib/Basic",
