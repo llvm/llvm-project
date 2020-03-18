@@ -3470,6 +3470,8 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
     MachineInstr &MI, MachineIRBuilder &B,
     GISelChangeObserver &Observer,
     const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr) const {
+  B.setInstr(MI);
+
   const int NumDefs = MI.getNumExplicitDefs();
   bool IsTFE = NumDefs == 2;
   // We are only processing the operands of d16 image operations on subtargets
@@ -3478,18 +3480,6 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
   // TODO: Do we need to guard against already legalized intrinsics?
   const AMDGPU::MIMGBaseOpcodeInfo *BaseOpcode =
     AMDGPU::getMIMGBaseOpcodeInfo(ImageDimIntr->BaseOpcode);
-
-  Observer.changingInstr(MI);
-  auto ChangedInstr = make_scope_exit([&] { Observer.changedInstr(MI); });
-
-
-  unsigned NewOpcode = NumDefs == 0 ?
-    AMDGPU::G_AMDGPU_INTRIN_IMAGE_STORE : AMDGPU::G_AMDGPU_INTRIN_IMAGE_LOAD;
-
-  // Track that we legalized this
-  MI.setDesc(B.getTII().get(NewOpcode));
-
-  B.setInstr(MI);
 
   MachineRegisterInfo *MRI = B.getMRI();
   const LLT S32 = LLT::scalar(32);
@@ -3506,6 +3496,41 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
 
   int NumVAddrs, NumGradients;
   std::tie(NumVAddrs, NumGradients) = getImageNumVAddr(ImageDimIntr, BaseOpcode);
+  const int DMaskIdx = BaseOpcode->Atomic ? -1 :
+    getDMaskIdx(BaseOpcode, NumDefs);
+  unsigned DMask = 0;
+
+  int DMaskLanes = 0;
+  if (!BaseOpcode->Atomic) {
+    DMask = MI.getOperand(DMaskIdx).getImm();
+    if (BaseOpcode->Gather4) {
+      DMaskLanes = 4;
+    } else if (DMask != 0) {
+      DMaskLanes = countPopulation(DMask);
+    } else if (!IsTFE && !BaseOpcode->Store) {
+      // If dmask is 0, this is a no-op load. This can be eliminated.
+      B.buildUndef(MI.getOperand(0));
+      MI.eraseFromParent();
+      return true;
+    }
+  }
+
+  Observer.changingInstr(MI);
+  auto ChangedInstr = make_scope_exit([&] { Observer.changedInstr(MI); });
+
+  unsigned NewOpcode = NumDefs == 0 ?
+    AMDGPU::G_AMDGPU_INTRIN_IMAGE_STORE : AMDGPU::G_AMDGPU_INTRIN_IMAGE_LOAD;
+
+  // Track that we legalized this
+  MI.setDesc(B.getTII().get(NewOpcode));
+
+  // Expecting to get an error flag since TFC is on - and dmask is 0 Force
+  // dmask to be at least 1 otherwise the instruction will fail
+  if (IsTFE && DMask == 0) {
+    DMask = 0x1;
+    DMaskLanes = 1;
+    MI.getOperand(DMaskIdx).setImm(DMask);
+  }
 
   // If the register allocator cannot place the address registers contiguously
   // without introducing moves, then using the non-sequential address encoding
@@ -3554,13 +3579,6 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
     }
   } else if (!UseNSA && NumVAddrs > 1) {
     convertImageAddrToPacked(B, MI, AddrIdx, NumVAddrs);
-  }
-
-  int DMaskLanes = 0;
-  if (!BaseOpcode->Atomic) {
-    const int DMaskIdx = getDMaskIdx(BaseOpcode, NumDefs);
-    unsigned DMask = MI.getOperand(DMaskIdx).getImm();
-    DMaskLanes = BaseOpcode->Gather4 ? 4 : countPopulation(DMask);
   }
 
   if (BaseOpcode->Store) { // No TFE for stores?
