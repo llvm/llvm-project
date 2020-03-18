@@ -53,16 +53,6 @@ def SPIRV_Dialect : Dialect {
 
   let extraClassDeclaration = [{
     //===------------------------------------------------------------------===//
-    // Type
-    //===------------------------------------------------------------------===//
-
-    /// Checks if the given `type` is valid in SPIR-V dialect.
-    static bool isValidType(Type type);
-
-    /// Checks if the given `scalar type` is valid in SPIR-V dialect.
-    static bool isValidScalarType(Type type);
-
-    //===------------------------------------------------------------------===//
     // Attribute
     //===------------------------------------------------------------------===//
 

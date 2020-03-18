@@ -99,7 +99,7 @@ SPIRVTypeConverter::getStorageClassForMemorySpace(unsigned space) {
 // TODO(ravishankarm): This is a utility function that should probably be
 // exposed by the SPIR-V dialect. Keeping it local till the use case arises.
 static Optional<int64_t> getTypeNumBytes(Type t) {
-  if (spirv::SPIRVDialect::isValidScalarType(t)) {
+  if (t.isa<spirv::ScalarType>()) {
     auto bitWidth = t.getIntOrFloatBitWidth();
     // According to the SPIR-V spec:
     // "There is no physical size or bit pattern defined for values with boolean
@@ -163,7 +163,7 @@ SPIRVTypeConverter::SPIRVTypeConverter(spirv::TargetEnvAttr targetAttr)
     : targetEnv(targetAttr) {
   addConversion([](Type type) -> Optional<Type> {
     // If the type is already valid in SPIR-V, directly return.
-    return spirv::SPIRVDialect::isValidType(type) ? type : Optional<Type>();
+    return type.isa<spirv::SPIRVType>() ? type : Optional<Type>();
   });
   addConversion([](IndexType indexType) {
     return SPIRVTypeConverter::getIndexType(indexType.getContext());

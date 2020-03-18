@@ -152,42 +152,6 @@ template <>
 Optional<uint64_t> parseAndVerify<uint64_t>(SPIRVDialect const &dialect,
                                             DialectAsmParser &parser);
 
-static bool isValidSPIRVIntType(IntegerType type) {
-  return llvm::is_contained(ArrayRef<unsigned>({1, 8, 16, 32, 64}),
-                            type.getWidth());
-}
-
-bool SPIRVDialect::isValidScalarType(Type type) {
-  if (type.isa<FloatType>()) {
-    return !type.isBF16();
-  }
-  if (auto intType = type.dyn_cast<IntegerType>()) {
-    return isValidSPIRVIntType(intType);
-  }
-  return false;
-}
-
-static bool isValidSPIRVVectorType(VectorType type) {
-  return type.getRank() == 1 &&
-         SPIRVDialect::isValidScalarType(type.getElementType()) &&
-         type.getNumElements() >= 2 && type.getNumElements() <= 4;
-}
-
-bool SPIRVDialect::isValidType(Type type) {
-  // Allow SPIR-V dialect types
-  if (type.getKind() >= Type::FIRST_SPIRV_TYPE &&
-      type.getKind() <= TypeKind::LAST_SPIRV_TYPE) {
-    return true;
-  }
-  if (SPIRVDialect::isValidScalarType(type)) {
-    return true;
-  }
-  if (auto vectorType = type.dyn_cast<VectorType>()) {
-    return isValidSPIRVVectorType(vectorType);
-  }
-  return false;
-}
-
 static Type parseAndVerifyType(SPIRVDialect const &dialect,
                                DialectAsmParser &parser) {
   Type type;
@@ -206,7 +170,7 @@ static Type parseAndVerifyType(SPIRVDialect const &dialect,
       return Type();
     }
   } else if (auto t = type.dyn_cast<IntegerType>()) {
-    if (!isValidSPIRVIntType(t)) {
+    if (!ScalarType::isValid(t)) {
       parser.emitError(typeLoc,
                        "only 1/8/16/32/64-bit integer type allowed but found ")
           << type;
