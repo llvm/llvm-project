@@ -935,7 +935,7 @@ public:
   SDValue getNode(unsigned Opcode, const SDLoc &DL, ArrayRef<EVT> ResultTys,
                   ArrayRef<SDValue> Ops);
   SDValue getNode(unsigned Opcode, const SDLoc &DL, SDVTList VTList,
-                  ArrayRef<SDValue> Ops);
+                  ArrayRef<SDValue> Ops, const SDNodeFlags Flags = SDNodeFlags());
 
   // Specialize based on number of operands.
   SDValue getNode(unsigned Opcode, const SDLoc &DL, EVT VT);

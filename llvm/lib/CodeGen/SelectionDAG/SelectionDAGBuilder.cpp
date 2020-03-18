@@ -1113,29 +1113,23 @@ void SelectionDAGBuilder::visit(const Instruction &I) {
   visit(I.getOpcode(), I);
 
   if (auto *FPMO = dyn_cast<FPMathOperator>(&I)) {
-    // Propagate the fast-math-flags of this IR instruction to the DAG node that
-    // maps to this instruction.
-    // TODO: We could handle all flags (nsw, etc) here.
-    // TODO: If an IR instruction maps to >1 node, only the final node will have
-    //       flags set.
-    if (SDNode *Node = getNodeForIRValue(&I)) {
-      SDNodeFlags IncomingFlags;
-      IncomingFlags.copyFMF(*FPMO);
-      if (!Node->getFlags().isDefined())
-        Node->setFlags(IncomingFlags);
-      else
-        Node->intersectFlagsWith(IncomingFlags);
+    // ConstrainedFPIntrinsics handle their own FMF.
+    if (!isa<ConstrainedFPIntrinsic>(&I)) {
+      // Propagate the fast-math-flags of this IR instruction to the DAG node that
+      // maps to this instruction.
+      // TODO: We could handle all flags (nsw, etc) here.
+      // TODO: If an IR instruction maps to >1 node, only the final node will have
+      //       flags set.
+      if (SDNode *Node = getNodeForIRValue(&I)) {
+        SDNodeFlags IncomingFlags;
+        IncomingFlags.copyFMF(*FPMO);
+        if (!Node->getFlags().isDefined())
+          Node->setFlags(IncomingFlags);
+        else
+          Node->intersectFlagsWith(IncomingFlags);
+      }
     }
   }
-  // Constrained FP intrinsics with fpexcept.ignore should also get
-  // the NoFPExcept flag.
-  if (auto *FPI = dyn_cast<ConstrainedFPIntrinsic>(&I))
-    if (FPI->getExceptionBehavior() == fp::ExceptionBehavior::ebIgnore)
-      if (SDNode *Node = getNodeForIRValue(&I)) {
-        SDNodeFlags Flags = Node->getFlags();
-        Flags.setNoFPExcept(true);
-        Node->setFlags(Flags);
-      }
 
   if (!I.isTerminator() && !HasTailCall &&
       !isStatepoint(&I)) // statepoints handle their exports internally
@@ -7064,6 +7058,13 @@ void SelectionDAGBuilder::visitConstrainedFPIntrinsic(
   SDVTList VTs = DAG.getVTList(ValueVTs);
   fp::ExceptionBehavior EB = FPI.getExceptionBehavior().getValue();
 
+  SDNodeFlags Flags;
+  if (EB == fp::ExceptionBehavior::ebIgnore)
+    Flags.setNoFPExcept(true);
+
+  if (auto *FPOp = dyn_cast<FPMathOperator>(&FPI))
+    Flags.copyFMF(*FPOp);
+
   unsigned Opcode;
   switch (FPI.getIntrinsicID()) {
   default: llvm_unreachable("Impossible intrinsic");  // Can't reach here.
@@ -7079,7 +7080,7 @@ void SelectionDAGBuilder::visitConstrainedFPIntrinsic(
         !TLI.isFMAFasterThanFMulAndFAdd(DAG.getMachineFunction(),
                                         ValueVTs[0])) {
       Opers.pop_back();
-      SDValue Mul = DAG.getNode(ISD::STRICT_FMUL, sdl, VTs, Opers);
+      SDValue Mul = DAG.getNode(ISD::STRICT_FMUL, sdl, VTs, Opers, Flags);
       pushOutChain(Mul, EB);
       Opcode = ISD::STRICT_FADD;
       Opers.clear();
@@ -7107,7 +7108,7 @@ void SelectionDAGBuilder::visitConstrainedFPIntrinsic(
   }
   }
 
-  SDValue Result = DAG.getNode(Opcode, sdl, VTs, Opers);
+  SDValue Result = DAG.getNode(Opcode, sdl, VTs, Opers, Flags);
   pushOutChain(Result, EB);
 
   SDValue FPResult = Result.getValue(0);
