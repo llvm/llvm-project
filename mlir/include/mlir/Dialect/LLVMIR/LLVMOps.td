@@ -863,6 +863,37 @@ def LLVM_MatrixTranposeOp
 }
 
 //
+// LLVM masked operations.
+//
+
+/// Create a call to Masked Load intrinsic.
+def LLVM_MaskedLoadOp
+    : LLVM_OneResultOp<"intr.masked.load">,
+      Arguments<(ins LLVM_Type:$data, LLVM_Type:$mask,
+                 Variadic<LLVM_Type>:$pass_thru, I32Attr:$alignment)> {
+  string llvmBuilder = [{
+    $res = $pass_thru.empty() ? builder.CreateMaskedLoad(
+      $data, llvm::Align($alignment.getZExtValue()), $mask) :
+      builder.CreateMaskedLoad(
+        $data, llvm::Align($alignment.getZExtValue()), $mask, $pass_thru[0]);
+  }];
+  let assemblyFormat =
+    "operands attr-dict `:` functional-type(operands, results)";
+}
+
+/// Create a call to Masked Store intrinsic.
+def LLVM_MaskedStoreOp
+    : LLVM_ZeroResultOp<"intr.masked.store">,
+      Arguments<(ins LLVM_Type:$value, LLVM_Type:$data, LLVM_Type:$mask,
+                 I32Attr:$alignment)> {
+  string llvmBuilder = [{
+    builder.CreateMaskedStore(
+      $value, $data, llvm::Align($alignment.getZExtValue()), $mask);
+  }];
+  let assemblyFormat = "$value `,` $data `,` $mask attr-dict `:` "
+    "type($value) `,` type($mask) `into` type($data)";
+}
+//
 // Atomic operations.
 //
 
