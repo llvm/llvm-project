@@ -1088,43 +1088,6 @@ static Status LaunchProcessPosixSpawn(const char *exe_path,
     return error;
   }
 
-// posix_spawnattr_setbinpref_np appears to be an Apple extension per:
-// http://www.unix.com/man-page/OSX/3/posix_spawnattr_setbinpref_np/
-#if !defined(__arm__)
-
-  // Don't set the binpref if a shell was provided.  After all, that's only
-  // going to affect what version of the shell
-  // is launched, not what fork of the binary is launched.  We insert "arch
-  // --arch <ARCH> as part of the shell invocation
-  // to do that job on OSX.
-
-  if (launch_info.GetShell() == FileSpec()) {
-    // We don't need to do this for ARM, and we really shouldn't now that we
-    // have multiple CPU subtypes and no posix_spawnattr call that allows us
-    // to set which CPU subtype to launch...
-    const ArchSpec &arch_spec = launch_info.GetArchitecture();
-    cpu_type_t cpu = arch_spec.GetMachOCPUType();
-    cpu_type_t sub = arch_spec.GetMachOCPUSubType();
-    if (cpu != 0 && cpu != static_cast<cpu_type_t>(UINT32_MAX) &&
-        cpu != static_cast<cpu_type_t>(LLDB_INVALID_CPUTYPE) &&
-        !(cpu == 0x01000007 && sub == 8)) // If haswell is specified, don't try
-                                          // to set the CPU type or we will fail
-    {
-      size_t ocount = 0;
-      error.SetError(::posix_spawnattr_setbinpref_np(&attr, 1, &cpu, &ocount),
-                     eErrorTypePOSIX);
-      if (error.Fail())
-        LLDB_LOG(log,
-                 "error: {0}, ::posix_spawnattr_setbinpref_np ( &attr, 1, "
-                 "cpu_type = {1:x}, count => {2} )",
-                 error, cpu, ocount);
-
-      if (error.Fail() || ocount != 1)
-        return error;
-    }
-  }
-#endif // !defined(__arm__)
-
   const char *tmp_argv[2];
   char *const *argv = const_cast<char *const *>(
       launch_info.GetArguments().GetConstArgumentVector());
