@@ -484,7 +484,7 @@ public:
 
     // Only ensure max alignment for the default stack.
     if (getStackID(ObjectIdx) == 0)
-      ensureMaxAlignment(Align);
+      ensureMaxAlignment(assumeAligned(Align));
   }
 
   /// setObjectAlignment - Change the alignment of the specified stack object.
@@ -594,7 +594,8 @@ public:
   /// Make sure the function is at least Align bytes aligned.
   void ensureMaxAlignment(Align Alignment);
   /// FIXME: Remove this once transition to Align is over.
-  inline void ensureMaxAlignment(unsigned Align) {
+  LLVM_ATTRIBUTE_DEPRECATED(inline void ensureMaxAlignment(unsigned Align),
+                            "Use the version that uses Align instead") {
     ensureMaxAlignment(assumeAligned(Align));
   }
 
