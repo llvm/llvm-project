@@ -23,7 +23,7 @@
 // CHECK-REL-NODIR: ![[C]] = !DIFile({{.*}}directory: "[[DIR:.*]]"
 // CHECK-REL-NODIR: !DICompileUnit(
 // CHECK-REL-NODIR-SAME:           file: ![[PCH:[0-9]+]]
-// CHECK-REL-NODIR-SAME:           splitDebugFilename: "{{.*}}PCH{{.*}}prefix.pch"
+// CHECK-REL-NODIR-SAME:           splitDebugFilename: "prefix.pch"
 // CHECK-REL-NODIR: ![[PCH]] = !DIFile({{.*}}directory: "[[DIR]]
 
 // ---------------------------------------------------------------------
@@ -47,7 +47,7 @@
 // CHECK-REL: ![[C]] = !DIFile({{.*}}directory: "[[DIR:.*]]"
 // CHECK-REL: !DICompileUnit(
 // CHECK-REL-SAME:           file: ![[PCH:[0-9]+]]
-// CHECK-REL-SAME:           splitDebugFilename: "[[DIR]]{{.*}}pchdir{{.*}}prefix.pch"
+// CHECK-REL-SAME:           splitDebugFilename: "pchdir{{.*}}prefix.pch"
 // CHECK-REL: ![[PCH]] = !DIFile({{.*}}directory: "[[DIR]]"
 
 // ---------------------------------------------------------------------
@@ -70,5 +70,5 @@
 // CHECK-ABS: ![[C]] = !DIFile({{.*}}directory: "[[DIR:.*]]"
 // CHECK-ABS: !DICompileUnit(
 // CHECK-ABS-SAME:           file: ![[PCH:[0-9]+]]
-// CHECK-ABS-SAME:           splitDebugFilename: "[[DIR]]{{.*}}prefix.pch"
+// CHECK-ABS-SAME:           splitDebugFilename: "prefix.pch"
 // CHECK-ABS: ![[PCH]] = !DIFile({{.*}}directory: "[[DIR]]

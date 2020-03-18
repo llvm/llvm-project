@@ -2493,14 +2493,18 @@ llvm::DIModule *CGDebugInfo::getOrCreateModuleRef(ASTSourceDescriptor Mod,
             : ~1ULL;
     llvm::DIBuilder DIB(CGM.getModule());
     SmallString<0> PCM;
-    if (!llvm::sys::path::is_absolute(PCM))
+    if (!llvm::sys::path::is_absolute(Mod.getASTFile()))
       PCM = Mod.getPath();
     llvm::sys::path::append(PCM, Mod.getASTFile());
-    StringRef CompDir = getCurrentDirname();
+    std::string RemappedPCM = remapDIPath(PCM);
+    StringRef RelativePCM(RemappedPCM);
+    StringRef CompDir = TheCU->getDirectory();
+    if (RelativePCM.consume_front(CompDir))
+      RelativePCM.consume_front(llvm::sys::path::get_separator());
     DIB.createCompileUnit(TheCU->getSourceLanguage(),
                           // TODO: Support "Source" from external AST providers?
                           DIB.createFile(Mod.getModuleName(), CompDir),
-                          TheCU->getProducer(), false, StringRef(), 0, PCM,
+                          TheCU->getProducer(), false, StringRef(), 0, RelativePCM,
                           llvm::DICompileUnit::FullDebug, Signature);
     DIB.finalize();
   }
