@@ -112,12 +112,7 @@ define i8 @test11(i8 %A) {
 
 define i8 @test11v(<2 x i8> %A) {
 ; CHECK-LABEL: @test11v(
-; CHECK-NEXT:    [[B:%.*]] = or <2 x i8> [[A:%.*]], <i8 -2, i8 0>
-; CHECK-NEXT:    [[CV:%.*]] = xor <2 x i8> [[B]], <i8 13, i8 13>
-; CHECK-NEXT:    [[C:%.*]] = extractelement <2 x i8> [[CV]], i32 0
-; CHECK-NEXT:    [[D:%.*]] = or i8 [[C]], 1
-; CHECK-NEXT:    [[E:%.*]] = xor i8 [[D]], 12
-; CHECK-NEXT:    ret i8 [[E]]
+; CHECK-NEXT:    ret i8 -1
 ;
   %B = or <2 x i8> %A, <i8 -2, i8 0>
   %CV = xor <2 x i8> %B, <i8 13, i8 13>
