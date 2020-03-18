@@ -25,6 +25,64 @@
 using namespace mlir;
 
 //===----------------------------------------------------------------------===//
+// Utility functions
+//===----------------------------------------------------------------------===//
+
+/// Checks that `candidates` extension requirements are possible to be satisfied
+/// with the given `targetEnv`.
+///
+///  `candidates` is a vector of vector for extension requirements following
+/// ((Extension::A OR Extension::B) AND (Extension::C OR Extension::D))
+/// convention.
+template <typename LabelT>
+static LogicalResult checkExtensionRequirements(
+    LabelT label, const spirv::TargetEnv &targetEnv,
+    const spirv::SPIRVType::ExtensionArrayRefVector &candidates) {
+  for (const auto &ors : candidates) {
+    if (targetEnv.allows(ors))
+      continue;
+
+    SmallVector<StringRef, 4> extStrings;
+    for (spirv::Extension ext : ors)
+      extStrings.push_back(spirv::stringifyExtension(ext));
+
+    LLVM_DEBUG(llvm::dbgs()
+               << label << " illegal: requires at least one extension in ["
+               << llvm::join(extStrings, ", ")
+               << "] but none allowed in target environment\n");
+    return failure();
+  }
+  return success();
+}
+
+/// Checks that `candidates`capability requirements are possible to be satisfied
+/// with the given `isAllowedFn`.
+///
+///  `candidates` is a vector of vector for capability requirements following
+/// ((Capability::A OR Capability::B) AND (Capability::C OR Capability::D))
+/// convention.
+template <typename LabelT>
+static LogicalResult checkCapabilityRequirements(
+    LabelT label, const spirv::TargetEnv &targetEnv,
+    const spirv::SPIRVType::CapabilityArrayRefVector &candidates) {
+  for (const auto &ors : candidates) {
+    if (targetEnv.allows(ors))
+      continue;
+
+    SmallVector<StringRef, 4> capStrings;
+    for (spirv::Capability cap : ors)
+      capStrings.push_back(spirv::stringifyCapability(cap));
+
+    LLVM_DEBUG(llvm::dbgs()
+               << label << " illegal: requires at least one capability in ["
+               << llvm::join(capStrings, ", ")
+               << "] but none allowed in target environment\n");
+    return failure();
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // Type Conversion
 //===----------------------------------------------------------------------===//
 
@@ -159,62 +217,212 @@ static Optional<int64_t> getTypeNumBytes(Type t) {
   return llvm::None;
 }
 
+/// Converts a scalar `type` to a suitable type under the given `targetEnv`.
+static Optional<Type>
+convertScalarType(const spirv::TargetEnv &targetEnv, spirv::ScalarType type,
+                  Optional<spirv::StorageClass> storageClass = {}) {
+  // Get extension and capability requirements for the given type.
+  SmallVector<ArrayRef<spirv::Extension>, 1> extensions;
+  SmallVector<ArrayRef<spirv::Capability>, 2> capabilities;
+  type.getExtensions(extensions, storageClass);
+  type.getCapabilities(capabilities, storageClass);
+
+  // If all requirements are met, then we can accept this type as-is.
+  if (succeeded(checkCapabilityRequirements(type, targetEnv, capabilities)) &&
+      succeeded(checkExtensionRequirements(type, targetEnv, extensions)))
+    return type;
+
+  // Otherwise we need to adjust the type, which really means adjusting the
+  // bitwidth given this is a scalar type.
+  // TODO(antiagainst): We are unconditionally converting the bitwidth here,
+  // this might be okay for non-interface types (i.e., types used in
+  // Priviate/Function storage classes), but not for interface types (i.e.,
+  // types used in StorageBuffer/Uniform/PushConstant/etc. storage classes).
+  // This is because the later actually affects the ABI contract with the
+  // runtime. So we may want to expose a control on SPIRVTypeConverter to fail
+  // conversion if we cannot change there.
+
+  if (auto floatType = type.dyn_cast<FloatType>()) {
+    LLVM_DEBUG(llvm::dbgs() << type << " converted to 32-bit for SPIR-V\n");
+    return Builder(targetEnv.getContext()).getF32Type();
+  }
+
+  auto intType = type.cast<IntegerType>();
+  LLVM_DEBUG(llvm::dbgs() << type << " converted to 32-bit for SPIR-V\n");
+  return IntegerType::get(/*width=*/32, intType.getSignedness(),
+                          targetEnv.getContext());
+}
+
+/// Converts a vector `type` to a suitable type under the given `targetEnv`.
+static Optional<Type>
+convertVectorType(const spirv::TargetEnv &targetEnv, VectorType type,
+                  Optional<spirv::StorageClass> storageClass = {}) {
+  if (!spirv::CompositeType::isValid(type)) {
+    // TODO(antiagainst): One-element vector types can be translated into scalar
+    // types. Vector types with more than four elements can be translated into
+    // array types.
+    LLVM_DEBUG(llvm::dbgs()
+               << type << " illegal: 1- and > 4-element unimplemented\n");
+    return llvm::None;
+  }
+
+  // Get extension and capability requirements for the given type.
+  SmallVector<ArrayRef<spirv::Extension>, 1> extensions;
+  SmallVector<ArrayRef<spirv::Capability>, 2> capabilities;
+  type.cast<spirv::CompositeType>().getExtensions(extensions, storageClass);
+  type.cast<spirv::CompositeType>().getCapabilities(capabilities, storageClass);
+
+  // If all requirements are met, then we can accept this type as-is.
+  if (succeeded(checkCapabilityRequirements(type, targetEnv, capabilities)) &&
+      succeeded(checkExtensionRequirements(type, targetEnv, extensions)))
+    return type;
+
+  auto elementType = convertScalarType(
+      targetEnv, type.getElementType().cast<spirv::ScalarType>(), storageClass);
+  if (elementType)
+    return VectorType::get(type.getShape(), *elementType);
+  return llvm::None;
+}
+
+/// Converts a tensor `type` to a suitable type under the given `targetEnv`.
+///
+/// Note that this is mainly for lowering constant tensors.In SPIR-V one can
+/// create composite constants with OpConstantComposite to embed relative large
+/// constant values and use OpCompositeExtract and OpCompositeInsert to
+/// manipulate, like what we do for vectors.
+static Optional<Type> convertTensorType(const spirv::TargetEnv &targetEnv,
+                                        TensorType type) {
+  // TODO(ravishankarm) : Handle dynamic shapes.
+  if (!type.hasStaticShape()) {
+    LLVM_DEBUG(llvm::dbgs()
+               << type << " illegal: dynamic shape unimplemented\n");
+    return llvm::None;
+  }
+
+  auto scalarType = type.getElementType().dyn_cast<spirv::ScalarType>();
+  if (!scalarType) {
+    LLVM_DEBUG(llvm::dbgs()
+               << type << " illegal: cannot convert non-scalar element type\n");
+    return llvm::None;
+  }
+
+  Optional<int64_t> scalarSize = getTypeNumBytes(scalarType);
+  Optional<int64_t> tensorSize = getTypeNumBytes(type);
+  if (!scalarSize || !tensorSize) {
+    LLVM_DEBUG(llvm::dbgs()
+               << type << " illegal: cannot deduce element count\n");
+    return llvm::None;
+  }
+
+  auto arrayElemCount = *tensorSize / *scalarSize;
+  auto arrayElemType = convertScalarType(targetEnv, scalarType);
+  if (!arrayElemType)
+    return llvm::None;
+  Optional<int64_t> arrayElemSize = getTypeNumBytes(*arrayElemType);
+  if (!arrayElemSize) {
+    LLVM_DEBUG(llvm::dbgs()
+               << type << " illegal: cannot deduce converted element size\n");
+    return llvm::None;
+  }
+
+  return spirv::ArrayType::get(*arrayElemType, arrayElemCount, *arrayElemSize);
+}
+
+static Optional<Type> convertMemrefType(const spirv::TargetEnv &targetEnv,
+                                        MemRefType type) {
+  // TODO(ravishankarm) : Handle dynamic shapes.
+  if (!type.hasStaticShape()) {
+    LLVM_DEBUG(llvm::dbgs()
+               << type << " illegal: dynamic shape unimplemented\n");
+    return llvm::None;
+  }
+
+  auto scalarType = type.getElementType().dyn_cast<spirv::ScalarType>();
+  if (!scalarType) {
+    LLVM_DEBUG(llvm::dbgs()
+               << type << " illegal: cannot convert non-scalar element type\n");
+    return llvm::None;
+  }
+
+  Optional<int64_t> scalarSize = getTypeNumBytes(scalarType);
+  Optional<int64_t> memrefSize = getTypeNumBytes(type);
+  if (!scalarSize || !memrefSize) {
+    LLVM_DEBUG(llvm::dbgs()
+               << type << " illegal: cannot deduce element count\n");
+    return llvm::None;
+  }
+
+  auto arrayElemCount = *memrefSize / *scalarSize;
+
+  auto storageClass =
+      SPIRVTypeConverter::getStorageClassForMemorySpace(type.getMemorySpace());
+  if (!storageClass) {
+    LLVM_DEBUG(llvm::dbgs()
+               << type << " illegal: cannot convert memory space\n");
+    return llvm::None;
+  }
+
+  auto arrayElemType = convertScalarType(targetEnv, scalarType, storageClass);
+  if (!arrayElemType)
+    return llvm::None;
+  Optional<int64_t> arrayElemSize = getTypeNumBytes(*arrayElemType);
+  if (!arrayElemSize) {
+    LLVM_DEBUG(llvm::dbgs()
+               << type << " illegal: cannot deduce converted element size\n");
+    return llvm::None;
+  }
+
+  auto arrayType =
+      spirv::ArrayType::get(*arrayElemType, arrayElemCount, *arrayElemSize);
+
+  // Wrap in a struct to satisfy Vulkan interface requirements.
+  auto structType = spirv::StructType::get(arrayType, 0);
+  return spirv::PointerType::get(structType, *storageClass);
+}
+
 SPIRVTypeConverter::SPIRVTypeConverter(spirv::TargetEnvAttr targetAttr)
     : targetEnv(targetAttr) {
-  addConversion([](Type type) -> Optional<Type> {
-    // If the type is already valid in SPIR-V, directly return.
-    return type.isa<spirv::SPIRVType>() ? type : Optional<Type>();
-  });
+  // Add conversions. The order matters here: later ones will be tried earlier.
+
+  // All other cases failed. Then we cannot convert this type.
+  addConversion([](Type type) { return llvm::None; });
+
+  // Allow all SPIR-V dialect specific types. This assumes all standard types
+  // adopted in the SPIR-V dialect (i.e., IntegerType, FloatType, VectorType)
+  // were tried before.
+  //
+  // TODO(antiagainst): this assumes that the SPIR-V types are valid to use in
+  // the given target environment, which should be the case if the whole
+  // pipeline is driven by the same target environment. Still, we probably still
+  // want to validate and convert to be safe.
+  addConversion([](spirv::SPIRVType type) { return type; });
+
   addConversion([](IndexType indexType) {
     return SPIRVTypeConverter::getIndexType(indexType.getContext());
   });
-  addConversion([this](MemRefType memRefType) -> Type {
-    auto elementType = convertType(memRefType.getElementType());
-    if (!elementType)
-      return Type();
 
-    auto elementSize = getTypeNumBytes(elementType);
-    if (!elementSize)
-      return Type();
-
-    // TODO(ravishankarm) : Handle dynamic shapes.
-    if (memRefType.hasStaticShape()) {
-      auto arraySize = getTypeNumBytes(memRefType);
-      if (!arraySize)
-        return Type();
-
-      auto arrayType = spirv::ArrayType::get(
-          elementType, arraySize.getValue() / elementSize.getValue(),
-          elementSize.getValue());
-
-      // Wrap in a struct to satisfy Vulkan interface requirements.
-      auto structType = spirv::StructType::get(arrayType, 0);
-      if (auto sc = getStorageClassForMemorySpace(memRefType.getMemorySpace()))
-        return spirv::PointerType::get(structType, *sc);
-      return Type();
-    }
-    return Type();
+  addConversion([this](IntegerType intType) -> Optional<Type> {
+    if (auto scalarType = intType.dyn_cast<spirv::ScalarType>())
+      return convertScalarType(targetEnv, scalarType);
+    return llvm::None;
   });
-  addConversion([this](TensorType tensorType) -> Type {
-    // TODO(ravishankarm) : Handle dynamic shapes.
-    if (!tensorType.hasStaticShape())
-      return Type();
 
-    auto elementType = convertType(tensorType.getElementType());
-    if (!elementType)
-      return Type();
+  addConversion([this](FloatType floatType) -> Optional<Type> {
+    if (auto scalarType = floatType.dyn_cast<spirv::ScalarType>())
+      return convertScalarType(targetEnv, scalarType);
+    return llvm::None;
+  });
 
-    auto elementSize = getTypeNumBytes(elementType);
-    if (!elementSize)
-      return Type();
+  addConversion([this](VectorType vectorType) {
+    return convertVectorType(targetEnv, vectorType);
+  });
 
-    auto tensorSize = getTypeNumBytes(tensorType);
-    if (!tensorSize)
-      return Type();
+  addConversion([this](TensorType tensorType) {
+    return convertTensorType(targetEnv, tensorType);
+  });
 
-    return spirv::ArrayType::get(elementType,
-                                 tensorSize.getValue() / elementSize.getValue(),
-                                 elementSize.getValue());
+  addConversion([this](MemRefType memRefType) {
+    return convertMemrefType(targetEnv, memRefType);
   });
 }
 
@@ -429,58 +637,6 @@ spirv::SPIRVConversionTarget::SPIRVConversionTarget(
     spirv::TargetEnvAttr targetAttr)
     : ConversionTarget(*targetAttr.getContext()), targetEnv(targetAttr) {}
 
-/// Checks that `candidates` extension requirements are possible to be satisfied
-/// with the given `targetEnv`.
-///
-///  `candidates` is a vector of vector for extension requirements following
-/// ((Extension::A OR Extension::B) AND (Extension::C OR Extension::D))
-/// convention.
-static LogicalResult checkExtensionRequirements(
-    Operation *op, const spirv::TargetEnv &targetEnv,
-    const spirv::SPIRVType::ExtensionArrayRefVector &candidates) {
-  for (const auto &ors : candidates) {
-    if (targetEnv.allows(ors))
-      continue;
-
-    SmallVector<StringRef, 4> extStrings;
-    for (spirv::Extension ext : ors)
-      extStrings.push_back(spirv::stringifyExtension(ext));
-
-    LLVM_DEBUG(llvm::dbgs() << op->getName()
-                            << " illegal: requires at least one extension in ["
-                            << llvm::join(extStrings, ", ")
-                            << "] but none allowed in target environment\n");
-    return failure();
-  }
-  return success();
-}
-
-/// Checks that `candidates`capability requirements are possible to be satisfied
-/// with the given `isAllowedFn`.
-///
-///  `candidates` is a vector of vector for capability requirements following
-/// ((Capability::A OR Capability::B) AND (Capability::C OR Capability::D))
-/// convention.
-static LogicalResult checkCapabilityRequirements(
-    Operation *op, const spirv::TargetEnv &targetEnv,
-    const spirv::SPIRVType::CapabilityArrayRefVector &candidates) {
-  for (const auto &ors : candidates) {
-    if (targetEnv.allows(ors))
-      continue;
-
-    SmallVector<StringRef, 4> capStrings;
-    for (spirv::Capability cap : ors)
-      capStrings.push_back(spirv::stringifyCapability(cap));
-
-    LLVM_DEBUG(llvm::dbgs() << op->getName()
-                            << " illegal: requires at least one capability in ["
-                            << llvm::join(capStrings, ", ")
-                            << "] but none allowed in target environment\n");
-    return failure();
-  }
-  return success();
-}
-
 bool spirv::SPIRVConversionTarget::isLegalOp(Operation *op) {
   // Make sure this op is available at the given version. Ops not implementing
   // QueryMinVersionInterface/QueryMaxVersionInterface are available to all
@@ -506,7 +662,7 @@ bool spirv::SPIRVConversionTarget::isLegalOp(Operation *op) {
   // implementing QueryExtensionInterface do not require extensions to be
   // available.
   if (auto extensions = dyn_cast<spirv::QueryExtensionInterface>(op))
-    if (failed(checkExtensionRequirements(op, this->targetEnv,
+    if (failed(checkExtensionRequirements(op->getName(), this->targetEnv,
                                           extensions.getExtensions())))
       return false;
 
@@ -514,7 +670,7 @@ bool spirv::SPIRVConversionTarget::isLegalOp(Operation *op) {
   // implementing QueryCapabilityInterface do not require capabilities to be
   // available.
   if (auto capabilities = dyn_cast<spirv::QueryCapabilityInterface>(op))
-    if (failed(checkCapabilityRequirements(op, this->targetEnv,
+    if (failed(checkCapabilityRequirements(op->getName(), this->targetEnv,
                                            capabilities.getCapabilities())))
       return false;
 
@@ -534,13 +690,14 @@ bool spirv::SPIRVConversionTarget::isLegalOp(Operation *op) {
   for (Type valueType : valueTypes) {
     typeExtensions.clear();
     valueType.cast<spirv::SPIRVType>().getExtensions(typeExtensions);
-    if (failed(checkExtensionRequirements(op, this->targetEnv, typeExtensions)))
+    if (failed(checkExtensionRequirements(op->getName(), this->targetEnv,
+                                          typeExtensions)))
       return false;
 
     typeCapabilities.clear();
     valueType.cast<spirv::SPIRVType>().getCapabilities(typeCapabilities);
-    if (failed(
-            checkCapabilityRequirements(op, this->targetEnv, typeCapabilities)))
+    if (failed(checkCapabilityRequirements(op->getName(), this->targetEnv,
+                                           typeCapabilities)))
       return false;
   }
 
