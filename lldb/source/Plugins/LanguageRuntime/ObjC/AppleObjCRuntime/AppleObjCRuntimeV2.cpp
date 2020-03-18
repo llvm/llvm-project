@@ -2721,9 +2721,10 @@ static void RegisterObjCExceptionRecognizer() {
     FileSpec module;
     ConstString function;
     std::tie(module, function) = AppleObjCRuntime::GetExceptionThrowLocation();
+    std::vector<ConstString> symbols = {function};
     StackFrameRecognizerManager::AddRecognizer(
         StackFrameRecognizerSP(new ObjCExceptionThrowFrameRecognizer()),
-        module.GetFilename(), function, /*alternate_symbol*/ {},
+        module.GetFilename(), symbols,
         /*first_instruction_only*/ true);
   });
 }
