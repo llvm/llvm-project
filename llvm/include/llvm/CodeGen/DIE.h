@@ -551,10 +551,21 @@ public:
   }
 
   void takeNodes(IntrusiveBackList<T> &Other) {
-    for (auto &N : Other) {
-      N.Next.setPointerAndInt(&N, true);
-      push_back(N);
-    }
+    if (Other.empty())
+      return;
+
+    T *FirstNode = static_cast<T *>(Other.Last->Next.getPointer());
+    T *IterNode = FirstNode;
+    do {
+      // Keep a pointer to the node and increment the iterator.
+      T *TmpNode = IterNode;
+      IterNode = static_cast<T *>(IterNode->Next.getPointer());
+
+      // Unlink the node and push it back to this list.
+      TmpNode->Next.setPointerAndInt(TmpNode, true);
+      push_back(*TmpNode);
+    } while (IterNode != FirstNode);
+
     Other.Last = nullptr;
   }
 
