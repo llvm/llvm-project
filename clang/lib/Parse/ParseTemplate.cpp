@@ -710,8 +710,7 @@ bool Parser::TryAnnotateTypeConstraint() {
                                       /*ObjectType=*/ParsedType(),
                                       /*EnteringContext=*/false,
                                       PossibleConcept,
-                                      MemberOfUnknownSpecialization,
-                                      /*Disambiguation=*/true);
+                                      MemberOfUnknownSpecialization);
     if (MemberOfUnknownSpecialization || !PossibleConcept ||
         TNK != TNK_Concept_template) {
       if (SS.isNotEmpty())

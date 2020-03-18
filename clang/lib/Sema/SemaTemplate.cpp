@@ -174,8 +174,7 @@ TemplateNameKind Sema::isTemplateName(Scope *S,
                                       ParsedType ObjectTypePtr,
                                       bool EnteringContext,
                                       TemplateTy &TemplateResult,
-                                      bool &MemberOfUnknownSpecialization,
-                                      bool Disambiguation) {
+                                      bool &MemberOfUnknownSpecialization) {
   assert(getLangOpts().CPlusPlus && "No template names in C!");
 
   DeclarationName TName;
@@ -205,7 +204,7 @@ TemplateNameKind Sema::isTemplateName(Scope *S,
   LookupResult R(*this, TName, Name.getBeginLoc(), LookupOrdinaryName);
   if (LookupTemplateName(R, S, SS, ObjectType, EnteringContext,
                          MemberOfUnknownSpecialization, SourceLocation(),
-                         &AssumedTemplate, Disambiguation))
+                         &AssumedTemplate))
     return TNK_Non_template;
 
   if (AssumedTemplate != AssumedTemplateKind::None) {
@@ -372,8 +371,7 @@ bool Sema::LookupTemplateName(LookupResult &Found,
                               bool EnteringContext,
                               bool &MemberOfUnknownSpecialization,
                               SourceLocation TemplateKWLoc,
-                              AssumedTemplateKind *ATK,
-                              bool Disambiguation) {
+                              AssumedTemplateKind *ATK) {
   if (ATK)
     *ATK = AssumedTemplateKind::None;
 
@@ -496,9 +494,8 @@ bool Sema::LookupTemplateName(LookupResult &Found,
     }
   }
 
-  if (Found.empty() && !IsDependent && !Disambiguation) {
-    // If we did not find any names, and this is not a disambiguation, attempt
-    // to correct any typos.
+  if (Found.empty() && !IsDependent) {
+    // If we did not find any names, attempt to correct any typos.
     DeclarationName Name = Found.getLookupName();
     Found.clear();
     // Simple filter callback that, for keywords, only accepts the C++ *_cast

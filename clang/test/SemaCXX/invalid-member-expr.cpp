@@ -1,7 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++20 %s
 
 class X {};
 
