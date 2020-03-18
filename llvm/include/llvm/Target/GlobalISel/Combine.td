@@ -142,7 +142,34 @@ def mul_to_shl : GICombineRule<
          [{ return Helper.matchCombineMulToShl(*${mi}, ${matchinfo}); }]),
   (apply [{ Helper.applyCombineMulToShl(*${mi}, ${matchinfo}); }])>;
 
+// [us]itofp(undef) = 0, because the result value is bounded.
+def undef_to_fp_zero : GICombineRule<
+  (defs root:$root),
+  (match (wip_match_opcode G_UITOFP, G_SITOFP):$root,
+         [{ return Helper.matchAnyExplicitUseIsUndef(*${root}); }]),
+  (apply [{ Helper.replaceInstWithFConstant(*${root}, 0.0); }])>;
+
+def undef_to_int_zero: GICombineRule<
+  (defs root:$root),
+  (match (wip_match_opcode G_AND, G_MUL):$root,
+         [{ return Helper.matchAnyExplicitUseIsUndef(*${root}); }]),
+  (apply [{ Helper.replaceInstWithConstant(*${root}, 0); }])>;
+
+def undef_to_negative_one: GICombineRule<
+  (defs root:$root),
+  (match (wip_match_opcode G_OR):$root,
+         [{ return Helper.matchAnyExplicitUseIsUndef(*${root}); }]),
+  (apply [{ Helper.replaceInstWithConstant(*${root}, -1); }])>;
+
+def propagate_undef: GICombineRule<
+  (defs root:$root),
+  (match (wip_match_opcode G_ADD, G_FPTOSI, G_FPTOUI, G_SUB, G_XOR):$root,
+         [{ return Helper.matchAnyExplicitUseIsUndef(*${root}); }]),
+  (apply [{ Helper.replaceInstWithUndef(*${root}); }])>;
+
+def undef_combines : GICombineGroup<[undef_to_fp_zero, undef_to_int_zero,
+                                     undef_to_negative_one, propagate_undef]>;
+
 def trivial_combines : GICombineGroup<[copy_prop, mul_to_shl]>;
 def all_combines : GICombineGroup<[trivial_combines, ptr_add_immed_chain,
-    combines_for_extload, combine_indexed_load_store]>;
-
+    combines_for_extload, combine_indexed_load_store, undef_combines]>;
