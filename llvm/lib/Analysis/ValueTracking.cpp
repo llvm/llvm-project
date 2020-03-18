@@ -1104,8 +1104,8 @@ static void computeKnownBitsFromOperator(const Operator *I,
     break;
   case Instruction::And: {
     // If either the LHS or the RHS are Zero, the result is zero.
-    computeKnownBits(I->getOperand(1), Known, Depth + 1, Q);
-    computeKnownBits(I->getOperand(0), Known2, Depth + 1, Q);
+    computeKnownBits(I->getOperand(1), DemandedElts, Known, Depth + 1, Q);
+    computeKnownBits(I->getOperand(0), DemandedElts, Known2, Depth + 1, Q);
 
     // Output known-1 bits are only known if set in both the LHS & RHS.
     Known.One &= Known2.One;
