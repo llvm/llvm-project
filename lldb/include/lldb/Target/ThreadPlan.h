@@ -376,7 +376,9 @@ public:
   const Target &GetTarget() const;
 
   /// Print a description of this thread to the stream \a s.
-  /// \a thread.
+  /// \a thread.  Don't expect that the result of GetThread is valid in
+  /// the description method.  This might get called when the underlying
+  /// Thread has not been reported, so we only know the TID and not the thread.
   ///
   /// \param[in] s
   ///    The stream to which to print the description.
@@ -598,7 +600,9 @@ private:
   // For ThreadPlan only
   static lldb::user_id_t GetNextID();
 
-  Thread *m_thread;
+  Thread *m_thread; // Stores a cached value of the thread, which is set to
+                    // nullptr when the thread resumes.  Don't use this anywhere
+                    // but ThreadPlan::GetThread().
   ThreadPlanKind m_kind;
   std::string m_name;
   std::recursive_mutex m_plan_complete_mutex;
