@@ -75,7 +75,10 @@ void UnconventionalAssignOperatorCheck::check(
   } else {
     static const char *const Messages[][2] = {
         {"ReturnType", "operator=() should return '%0&'"},
-        {"ArgumentType", "operator=() should take '%0 const&', '%0&&' or '%0'"},
+        {"ArgumentType",
+         getLangOpts().CPlusPlus11
+             ? "operator=() should take '%0 const&', '%0&&' or '%0'"
+             : "operator=() should take '%0 const&' or '%0'"},
         {"cv", "operator=() should not be marked '%1'"}};
 
     const auto *Method = Result.Nodes.getNodeAs<CXXMethodDecl>("method");
