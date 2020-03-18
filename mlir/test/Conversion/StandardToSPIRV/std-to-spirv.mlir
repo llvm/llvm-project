@@ -313,6 +313,22 @@ func @memref_type(%arg0: memref<3xi1>) {
   return
 }
 
+// CHECK-LABEL: func @memref_mem_space
+// CHECK-SAME: StorageBuffer
+// CHECK-SAME: Uniform
+// CHECK-SAME: Workgroup
+// CHECK-SAME: PushConstant
+// CHECK-SAME: Private
+// CHECK-SAME: Function
+func @memref_mem_space(
+    %arg0: memref<4xf32, 0>,
+    %arg1: memref<4xf32, 4>,
+    %arg2: memref<4xf32, 3>,
+    %arg3: memref<4xf32, 7>,
+    %arg4: memref<4xf32, 5>,
+    %arg5: memref<4xf32, 6>
+) { return }
+
 // CHECK-LABEL: @load_store_zero_rank_float
 // CHECK: [[ARG0:%.*]]: !spv.ptr<!spv.struct<!spv.array<1 x f32 [4]> [0]>, StorageBuffer>,
 // CHECK: [[ARG1:%.*]]: !spv.ptr<!spv.struct<!spv.array<1 x f32 [4]> [0]>, StorageBuffer>)

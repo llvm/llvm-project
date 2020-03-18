@@ -28,7 +28,7 @@ StringRef getInterfaceVarABIAttrName();
 /// Gets the InterfaceVarABIAttr given its fields.
 InterfaceVarABIAttr getInterfaceVarABIAttr(unsigned descriptorSet,
                                            unsigned binding,
-                                           StorageClass storageClass,
+                                           Optional<StorageClass> storageClass,
                                            MLIRContext *context);
 
 /// Returns the attribute name for specifying entry point information.

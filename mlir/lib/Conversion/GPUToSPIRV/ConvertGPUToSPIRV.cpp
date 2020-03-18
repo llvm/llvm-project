@@ -349,10 +349,15 @@ LogicalResult GPUFuncOpConversion::matchAndRewrite(
   if (!gpu::GPUDialect::isKernel(funcOp))
     return failure();
 
+  // TODO(antiagainst): we are dictating the ABI by ourselves here; it should be
+  // specified outside.
   SmallVector<spirv::InterfaceVarABIAttr, 4> argABI;
-  for (auto argNum : llvm::seq<unsigned>(0, funcOp.getNumArguments())) {
-    argABI.push_back(spirv::getInterfaceVarABIAttr(
-        0, argNum, spirv::StorageClass::StorageBuffer, rewriter.getContext()));
+  for (auto argIndex : llvm::seq<unsigned>(0, funcOp.getNumArguments())) {
+    Optional<spirv::StorageClass> sc;
+    if (funcOp.getArgument(argIndex).getType().isIntOrIndexOrFloat())
+      sc = spirv::StorageClass::StorageBuffer;
+    argABI.push_back(
+        spirv::getInterfaceVarABIAttr(0, argIndex, sc, rewriter.getContext()));
   }
 
   auto entryPointAttr = spirv::lookupEntryPointABI(funcOp);

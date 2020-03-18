@@ -21,16 +21,13 @@ spv.module Logical GLSL450 {
   spv.func @load_store_kernel(
     %arg0: !spv.ptr<!spv.struct<!spv.array<12 x !spv.array<4 x f32>>>, StorageBuffer>
     {spv.interface_var_abi = {binding = 0 : i32,
-                              descriptor_set = 0 : i32,
-                              storage_class = 12 : i32}},
+                              descriptor_set = 0 : i32}},
     %arg1: !spv.ptr<!spv.struct<!spv.array<12 x !spv.array<4 x f32>>>, StorageBuffer>
     {spv.interface_var_abi = {binding = 1 : i32,
-                              descriptor_set = 0 : i32,
-                              storage_class = 12 : i32}},
+                              descriptor_set = 0 : i32}},
     %arg2: !spv.ptr<!spv.struct<!spv.array<12 x !spv.array<4 x f32>>>, StorageBuffer>
     {spv.interface_var_abi = {binding = 2 : i32,
-                              descriptor_set = 0 : i32,
-                              storage_class = 12 : i32}},
+                              descriptor_set = 0 : i32}},
     %arg3: i32
     {spv.interface_var_abi = {binding = 3 : i32,
                               descriptor_set = 0 : i32,
