@@ -24,6 +24,13 @@ class MLIRContext;
 class OwningRewritePatternList;
 namespace vector {
 
+/// Structure to control the behavior of vector transform patterns.
+struct VectorTransformsOptions {
+  /// Let vector.contract lower to vector.matrix_multiply and LLVM matrix
+  /// intrinsics.
+  bool lowerToLLVMMatrixIntrinsics = false;
+};
+
 /// Collect a set of vector-to-vector canonicalization patterns.
 void populateVectorToVectorCanonicalizationPatterns(
     OwningRewritePatternList &patterns, MLIRContext *context);
@@ -50,8 +57,9 @@ void populateVectorSlicesLoweringPatterns(OwningRewritePatternList &patterns,
 ///   OuterproductOpLowering
 /// These transformation express higher level vector ops in terms of more
 /// elementary extraction, insertion, reduction, product, and broadcast ops.
-void populateVectorContractLoweringPatterns(OwningRewritePatternList &patterns,
-                                            MLIRContext *context);
+void populateVectorContractLoweringPatterns(
+    OwningRewritePatternList &patterns, MLIRContext *context,
+    VectorTransformsOptions vectorTransformOptions = VectorTransformsOptions());
 
 /// Returns the integer type required for subscripts in the vector dialect.
 IntegerType getVectorSubscriptType(Builder &builder);
