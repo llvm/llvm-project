@@ -3478,7 +3478,7 @@ the ``nsw`` flag.
 
 Poison value behavior is defined in terms of value *dependence*:
 
--  Values other than :ref:`phi <i_phi>` nodes and :ref:`select <i_select>'
+-  Values other than :ref:`phi <i_phi>` nodes and :ref:`select <i_select>`
    instructions depend on their operands.
 -  :ref:`Phi <i_phi>` nodes depend on the operand corresponding to
    their dynamic predecessor basic block.
