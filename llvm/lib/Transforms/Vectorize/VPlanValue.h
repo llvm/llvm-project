@@ -42,6 +42,7 @@ class VPValue {
   friend class VPlanTransforms;
   friend class VPBasicBlock;
   friend class VPInterleavedAccessInfo;
+  friend class VPSlotTracker;
 
 private:
   const unsigned char SubclassID; ///< Subclass identifier (for isa/dyn_cast).
@@ -64,6 +65,7 @@ protected:
 
   /// Return the underlying Value attached to this VPValue.
   Value *getUnderlyingValue() { return UnderlyingVal; }
+  const Value *getUnderlyingValue() const { return UnderlyingVal; }
 
   // Set \p Val as the underlying Value of this VPValue.
   void setUnderlyingValue(Value *Val) {

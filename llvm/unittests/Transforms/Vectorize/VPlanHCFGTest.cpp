@@ -10,6 +10,7 @@
 #include "../lib/Transforms/Vectorize/VPlanTransforms.h"
 #include "VPlanTestBase.h"
 #include "gtest/gtest.h"
+#include <string>
 
 namespace llvm {
 namespace {
@@ -87,6 +88,42 @@ TEST_F(VPlanHCFGTest, testBuildHCFGInnerLoop) {
   EXPECT_EQ(2u, ICmp->getNumOperands());
   EXPECT_EQ(IndvarAdd, ICmp->getOperand(0));
   EXPECT_EQ(VecBB->getCondBit(), ICmp);
+
+  std::string FullDump;
+  raw_string_ostream(FullDump) << *Plan;
+  EXPECT_EQ(R"(digraph VPlan {
+graph [labelloc=t, fontsize=30; label="Vectorization Plan"]
+node [shape=rect, fontname=Courier, fontsize=30]
+edge [fontname=Courier, fontsize=30]
+compound=true
+  subgraph cluster_N0 {
+    fontname=Courier
+    label="\<x1\> TopRegion"
+    N1 [label =
+      "entry:\n"
+    ]
+    N1 -> N2 [ label=""]
+    N2 [label =
+      "for.body:\n" +
+        "EMIT ir<%indvars.iv> = phi ir<0> ir<%indvars.iv.next>\l" +
+        "EMIT ir<%arr.idx> = getelementptr ir<%A> ir<%indvars.iv>\l" +
+        "EMIT ir<%l1> = load ir<%arr.idx>\l" +
+        "EMIT ir<%res> = add ir<%l1> ir<10>\l" +
+        "EMIT store ir<%res> ir<%arr.idx>\l" +
+        "EMIT ir<%indvars.iv.next> = add ir<%indvars.iv> ir<1>\l" +
+        "EMIT ir<%exitcond> = icmp ir<%indvars.iv.next> ir<%N>\l" +
+         "CondBit: ir<%exitcond> (for.body)\l"
+    ]
+    N2 -> N2 [ label="T"]
+    N2 -> N3 [ label="F"]
+    N3 [label =
+      "for.end:\n" +
+        "EMIT ret\l"
+    ]
+  }
+}
+)",
+            FullDump);
 
   LoopVectorizationLegality::InductionList Inductions;
   SmallPtrSet<Instruction *, 1> DeadInstructions;

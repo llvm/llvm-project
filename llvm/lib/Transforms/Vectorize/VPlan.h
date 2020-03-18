@@ -735,6 +735,26 @@ public:
     return Opcode == Instruction::Store || Opcode == Instruction::Call ||
            Opcode == Instruction::Invoke || Opcode == SLPStore;
   }
+
+  bool hasResult() const {
+    // CallInst may or may not have a result, depending on the called function.
+    // Conservatively return calls have results for now.
+    switch (getOpcode()) {
+    case Instruction::Ret:
+    case Instruction::Br:
+    case Instruction::Store:
+    case Instruction::Switch:
+    case Instruction::IndirectBr:
+    case Instruction::Resume:
+    case Instruction::CatchRet:
+    case Instruction::Unreachable:
+    case Instruction::Fence:
+    case Instruction::AtomicRMW:
+      return false;
+    default:
+      return true;
+    }
+  }
 };
 
 /// VPWidenRecipe is a recipe for producing a copy of vector type for each
