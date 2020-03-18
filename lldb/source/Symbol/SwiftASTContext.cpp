@@ -7431,22 +7431,8 @@ CompilerType SwiftASTContext::GetFieldAtIndex(void *type, size_t idx,
     break;
 
   case swift::TypeKind::Enum:
-  case swift::TypeKind::BoundGenericEnum: {
-    SwiftEnumDescriptor *cached_enum_info = GetCachedEnumInfo(type);
-    if (cached_enum_info &&
-        idx < cached_enum_info->GetNumElementsWithPayload()) {
-      const SwiftEnumDescriptor::ElementInfo *enum_element_info =
-          cached_enum_info->GetElementWithPayloadAtIndex(idx);
-      name.assign(enum_element_info->name.GetCString());
-      if (bit_offset_ptr)
-        *bit_offset_ptr = 0;
-      if (bitfield_bit_size_ptr)
-        *bitfield_bit_size_ptr = 0;
-      if (is_bitfield_ptr)
-        *is_bitfield_ptr = false;
-      return enum_element_info->payload_type;
-    }
-  } break;
+  case swift::TypeKind::BoundGenericEnum:
+    break;
 
   case swift::TypeKind::Tuple: {
     auto tuple_type = cast<swift::TupleType>(swift_can_type);
