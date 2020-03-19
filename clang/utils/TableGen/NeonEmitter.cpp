@@ -27,9 +27,8 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/None.h"
-#include "llvm/ADT/Optional.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
@@ -237,11 +236,6 @@ public:
   void makeOneVector() {
     assert(isVector());
     NumVectors = 1;
-  }
-
-  void make32BitElement() {
-    assert_with_loc(Bitwidth > 32, "Not enough bits to make it 32!");
-    ElementBitwidth = 32;
   }
 
   void doubleLanes() {
@@ -524,8 +518,7 @@ private:
     std::pair<Type, std::string> emitDagDupTyped(DagInit *DI);
     std::pair<Type, std::string> emitDagShuffle(DagInit *DI);
     std::pair<Type, std::string> emitDagCast(DagInit *DI, bool IsBitCast);
-    std::pair<Type, std::string> emitDagCall(DagInit *DI,
-                                             bool MatchMangledName);
+    std::pair<Type, std::string> emitDagCall(DagInit *DI);
     std::pair<Type, std::string> emitDagNameReplace(DagInit *DI);
     std::pair<Type, std::string> emitDagLiteral(DagInit *DI);
     std::pair<Type, std::string> emitDagOp(DagInit *DI);
@@ -553,8 +546,7 @@ class NeonEmitter {
 public:
   /// Called by Intrinsic - this attempts to get an intrinsic that takes
   /// the given types as arguments.
-  Intrinsic &getIntrinsic(StringRef Name, ArrayRef<Type> Types,
-                          Optional<std::string> MangledName);
+  Intrinsic &getIntrinsic(StringRef Name, ArrayRef<Type> Types);
 
   /// Called by Intrinsic - returns a globally-unique number.
   unsigned getUniqueNumber() { return UniqueNumber++; }
@@ -1391,8 +1383,8 @@ std::pair<Type, std::string> Intrinsic::DagEmitter::emitDag(DagInit *DI) {
     return emitDagSaveTemp(DI);
   if (Op == "op")
     return emitDagOp(DI);
-  if (Op == "call" || Op == "call_mangled")
-    return emitDagCall(DI, Op == "call_mangled");
+  if (Op == "call")
+    return emitDagCall(DI);
   if (Op == "name_replace")
     return emitDagNameReplace(DI);
   if (Op == "literal")
@@ -1419,8 +1411,7 @@ std::pair<Type, std::string> Intrinsic::DagEmitter::emitDagOp(DagInit *DI) {
   }
 }
 
-std::pair<Type, std::string>
-Intrinsic::DagEmitter::emitDagCall(DagInit *DI, bool MatchMangledName) {
+std::pair<Type, std::string> Intrinsic::DagEmitter::emitDagCall(DagInit *DI) {
   std::vector<Type> Types;
   std::vector<std::string> Values;
   for (unsigned I = 0; I < DI->getNumArgs() - 1; ++I) {
@@ -1436,13 +1427,7 @@ Intrinsic::DagEmitter::emitDagCall(DagInit *DI, bool MatchMangledName) {
     N = SI->getAsUnquotedString();
   else
     N = emitDagArg(DI->getArg(0), "").second;
-  Optional<std::string> MangledName;
-  if (MatchMangledName) {
-    if (Intr.getRecord()->getValueAsBit("isLaneQ"))
-      N += "q";
-    MangledName = Intr.mangleName(N, ClassS);
-  }
-  Intrinsic &Callee = Intr.Emitter.getIntrinsic(N, Types, MangledName);
+  Intrinsic &Callee = Intr.Emitter.getIntrinsic(N, Types);
 
   // Make sure the callee is known as an early def.
   Callee.setNeededEarly();
@@ -1501,8 +1486,6 @@ std::pair<Type, std::string> Intrinsic::DagEmitter::emitDagCast(DagInit *DI,
         castToType.doubleLanes();
       } else if (SI->getAsUnquotedString() == "8") {
         castToType.makeInteger(8, true);
-      } else if (SI->getAsUnquotedString() == "32") {
-        castToType.make32BitElement();
       } else {
         castToType = Type::fromTypedefName(SI->getAsUnquotedString());
         assert_with_loc(!castToType.isVoid(), "Unknown typedef");
@@ -1849,8 +1832,7 @@ void Intrinsic::indexBody() {
 // NeonEmitter implementation
 //===----------------------------------------------------------------------===//
 
-Intrinsic &NeonEmitter::getIntrinsic(StringRef Name, ArrayRef<Type> Types,
-                                     Optional<std::string> MangledName) {
+Intrinsic &NeonEmitter::getIntrinsic(StringRef Name, ArrayRef<Type> Types) {
   // First, look up the name in the intrinsic map.
   assert_with_loc(IntrinsicMap.find(Name.str()) != IntrinsicMap.end(),
                   ("Intrinsic '" + Name + "' not found!").str());
@@ -1879,19 +1861,17 @@ Intrinsic &NeonEmitter::getIntrinsic(StringRef Name, ArrayRef<Type> Types,
     }
     ErrMsg += ")\n";
 
-    if (MangledName && MangledName != I.getMangledName(true))
-      continue;
-
     if (I.getNumParams() != Types.size())
       continue;
 
-    unsigned ArgNum = 0;
-    bool MatchingArgumentTypes =
-        std::all_of(Types.begin(), Types.end(), [&](const auto &Type) {
-          return Type == I.getParamType(ArgNum++);
-        });
-
-    if (MatchingArgumentTypes)
+    bool Good = true;
+    for (unsigned Arg = 0; Arg < Types.size(); ++Arg) {
+      if (I.getParamType(Arg) != Types[Arg]) {
+        Good = false;
+        break;
+      }
+    }
+    if (Good)
       GoodVec.push_back(&I);
   }
 

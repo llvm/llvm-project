@@ -28,9 +28,7 @@ float32x4_t test_vdupq_n_f32(float32_t w) {
 // this was in <rdar://problem/11778405>, but had already been implemented,
 // test anyway
 // CHECK-LABEL: define <2 x double> @test_vdupq_lane_f64(<1 x double> %V) #0 {
-// CHECK:   [[TMP0:%.*]] = bitcast <1 x double> %V to <8 x i8>
-// CHECK:   [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x double>
-// CHECK:   [[SHUFFLE:%.*]] = shufflevector <1 x double> [[TMP1]], <1 x double> [[TMP1]], <2 x i32> zeroinitializer
+// CHECK:   [[SHUFFLE:%.*]] = shufflevector <1 x double> %V, <1 x double> %V, <2 x i32> zeroinitializer
 // CHECK:   ret <2 x double> [[SHUFFLE]]
 float64x2_t test_vdupq_lane_f64(float64x1_t V) {
     return vdupq_lane_f64(V, 0);
