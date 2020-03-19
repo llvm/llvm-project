@@ -8,16 +8,13 @@ define void @and_range_limit(i64 %a) {
 ; CHECK-NEXT:    [[R:%.*]] = and i64 [[A:%.*]], 255
 ; CHECK-NEXT:    [[C_0:%.*]] = icmp slt i64 [[R]], 15
 ; CHECK-NEXT:    call void @use(i1 [[C_0]])
-; CHECK-NEXT:    [[C_1:%.*]] = icmp slt i64 [[R]], 256
-; CHECK-NEXT:    call void @use(i1 [[C_1]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp eq i64 [[R]], 100
 ; CHECK-NEXT:    call void @use(i1 [[C_2]])
-; CHECK-NEXT:    [[C_3:%.*]] = icmp eq i64 [[R]], 300
-; CHECK-NEXT:    call void @use(i1 [[C_3]])
+; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    [[C_4:%.*]] = icmp ne i64 [[R]], 100
 ; CHECK-NEXT:    call void @use(i1 [[C_4]])
-; CHECK-NEXT:    [[C_5:%.*]] = icmp ne i64 [[R]], 300
-; CHECK-NEXT:    call void @use(i1 [[C_5]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    ret void
 ;
   %r = and i64 %a, 255
