@@ -40,7 +40,7 @@ define i33 @ashr_amount_is_known_bogus(i33 %a, i33 %b) {
 
 define i16 @ashr_amount_is_zero(i16 %a, i16 %b) {
 ; CHECK-LABEL: @ashr_amount_is_zero(
-; CHECK-NEXT:    ret i16 %a
+; CHECK-NEXT:    ret i16 [[A:%.*]]
 ;
   %and = and i16 %b, 65520 ; 0xfff0
   %shr = ashr i16 %a, %and
@@ -49,7 +49,7 @@ define i16 @ashr_amount_is_zero(i16 %a, i16 %b) {
 
 define i300 @lshr_amount_is_zero(i300 %a, i300 %b) {
 ; CHECK-LABEL: @lshr_amount_is_zero(
-; CHECK-NEXT:    ret i300 %a
+; CHECK-NEXT:    ret i300 [[A:%.*]]
 ;
   %and = and i300 %b, 2048
   %shr = lshr i300 %a, %and
@@ -58,7 +58,7 @@ define i300 @lshr_amount_is_zero(i300 %a, i300 %b) {
 
 define i9 @shl_amount_is_zero(i9 %a, i9 %b) {
 ; CHECK-LABEL: @shl_amount_is_zero(
-; CHECK-NEXT:    ret i9 %a
+; CHECK-NEXT:    ret i9 [[A:%.*]]
 ;
   %and = and i9 %b, 496 ; 0x1f0
   %shl = shl i9 %a, %and
@@ -70,8 +70,8 @@ define i9 @shl_amount_is_zero(i9 %a, i9 %b) {
 
 define i9 @shl_amount_is_not_known_zero(i9 %a, i9 %b) {
 ; CHECK-LABEL: @shl_amount_is_not_known_zero(
-; CHECK-NEXT:    [[AND:%.*]] = and i9 %b, -8
-; CHECK-NEXT:    [[SHL:%.*]] = shl i9 %a, [[AND]]
+; CHECK-NEXT:    [[AND:%.*]] = and i9 [[B:%.*]], -8
+; CHECK-NEXT:    [[SHL:%.*]] = shl i9 [[A:%.*]], [[AND]]
 ; CHECK-NEXT:    ret i9 [[SHL]]
 ;
   %and = and i9 %b, 504 ; 0x1f8
@@ -94,8 +94,8 @@ define <2 x i32> @ashr_vector_bogus(<2 x i32> %a, <2 x i32> %b) {
 ; FIXME: This is undef, but computeKnownBits doesn't handle the union.
 define <2 x i32> @shl_vector_bogus(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-LABEL: @shl_vector_bogus(
-; CHECK-NEXT:    [[OR:%.*]] = or <2 x i32> %b, <i32 32, i32 64>
-; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i32> %a, [[OR]]
+; CHECK-NEXT:    [[OR:%.*]] = or <2 x i32> [[B:%.*]], <i32 32, i32 64>
+; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i32> [[A:%.*]], [[OR]]
 ; CHECK-NEXT:    ret <2 x i32> [[SHL]]
 ;
   %or = or <2 x i32> %b, <i32 32, i32 64>
@@ -105,7 +105,7 @@ define <2 x i32> @shl_vector_bogus(<2 x i32> %a, <2 x i32> %b) {
 
 define <2 x i32> @lshr_vector_zero(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-LABEL: @lshr_vector_zero(
-; CHECK-NEXT:    ret <2 x i32> %a
+; CHECK-NEXT:    ret <2 x i32> [[A:%.*]]
 ;
   %and = and <2 x i32> %b, <i32 64, i32 256>
   %shr = lshr <2 x i32> %a, %and
@@ -115,7 +115,7 @@ define <2 x i32> @lshr_vector_zero(<2 x i32> %a, <2 x i32> %b) {
 ; Make sure that weird vector types work too.
 define <2 x i15> @shl_vector_zero(<2 x i15> %a, <2 x i15> %b) {
 ; CHECK-LABEL: @shl_vector_zero(
-; CHECK-NEXT:    ret <2 x i15> %a
+; CHECK-NEXT:    ret <2 x i15> [[A:%.*]]
 ;
   %and = and <2 x i15> %b, <i15 1024, i15 1024>
   %shl = shl <2 x i15> %a, %and
@@ -124,8 +124,8 @@ define <2 x i15> @shl_vector_zero(<2 x i15> %a, <2 x i15> %b) {
 
 define <2 x i32> @shl_vector_for_real(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-LABEL: @shl_vector_for_real(
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> %b, <i32 3, i32 3>
-; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i32> %a, [[AND]]
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[B:%.*]], <i32 3, i32 3>
+; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i32> [[A:%.*]], [[AND]]
 ; CHECK-NEXT:    ret <2 x i32> [[SHL]]
 ;
   %and = and <2 x i32> %b, <i32 3, i32 3> ; a necessary mask op
@@ -139,7 +139,7 @@ define <2 x i32> @shl_vector_for_real(<2 x i32> %a, <2 x i32> %b) {
 
 define i1 @shl_i1(i1 %a, i1 %b) {
 ; CHECK-LABEL: @shl_i1(
-; CHECK-NEXT:    ret i1 %a
+; CHECK-NEXT:    ret i1 [[A:%.*]]
 ;
   %shl = shl i1 %a, %b
   ret i1 %shl
@@ -179,6 +179,19 @@ define <2 x i8> @lshr_ctlz_zero_is_undef_splat_vec(<2 x i8> %x) {
   ret <2 x i8> %sh
 }
 
+define i8 @lshr_ctlz_zero_is_undef_vec(<2 x i8> %x) {
+; CHECK-LABEL: @lshr_ctlz_zero_is_undef_vec(
+; CHECK-NEXT:    [[CT:%.*]] = call <2 x i8> @llvm.ctlz.v2i8(<2 x i8> [[X:%.*]], i1 true)
+; CHECK-NEXT:    [[SH:%.*]] = lshr <2 x i8> [[CT]], <i8 3, i8 0>
+; CHECK-NEXT:    [[EX:%.*]] = extractelement <2 x i8> [[SH]], i32 0
+; CHECK-NEXT:    ret i8 [[EX]]
+;
+  %ct = call <2 x i8> @llvm.ctlz.v2i8(<2 x i8> %x, i1 true)
+  %sh = lshr <2 x i8> %ct, <i8 3, i8 0>
+  %ex = extractelement <2 x i8> %sh, i32 0
+  ret i8 %ex
+}
+
 define <2 x i8> @lshr_cttz_zero_is_undef_splat_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @lshr_cttz_zero_is_undef_splat_vec(
 ; CHECK-NEXT:    ret <2 x i8> zeroinitializer
@@ -186,5 +199,18 @@ define <2 x i8> @lshr_cttz_zero_is_undef_splat_vec(<2 x i8> %x) {
   %ct = call <2 x i8> @llvm.cttz.v2i8(<2 x i8> %x, i1 true)
   %sh = lshr <2 x i8> %ct, <i8 3, i8 3>
   ret <2 x i8> %sh
+}
+
+define i8 @lshr_cttz_zero_is_undef_vec(<2 x i8> %x) {
+; CHECK-LABEL: @lshr_cttz_zero_is_undef_vec(
+; CHECK-NEXT:    [[CT:%.*]] = call <2 x i8> @llvm.cttz.v2i8(<2 x i8> [[X:%.*]], i1 true)
+; CHECK-NEXT:    [[SH:%.*]] = lshr <2 x i8> [[CT]], <i8 3, i8 0>
+; CHECK-NEXT:    [[EX:%.*]] = extractelement <2 x i8> [[SH]], i32 0
+; CHECK-NEXT:    ret i8 [[EX]]
+;
+  %ct = call <2 x i8> @llvm.cttz.v2i8(<2 x i8> %x, i1 true)
+  %sh = lshr <2 x i8> %ct, <i8 3, i8 0>
+  %ex = extractelement <2 x i8> %sh, i32 0
+  ret i8 %ex
 }
 
