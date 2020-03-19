@@ -29,6 +29,7 @@
 #include "clang/AST/DeclOpenMP.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclarationName.h"
+#include "clang/AST/DependenceFlags.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprConcepts.h"
@@ -5125,8 +5126,12 @@ ASTContext::getAutoType(QualType DeducedType, AutoTypeKeyword Keyword,
   void *Mem = Allocate(sizeof(AutoType) +
                        sizeof(TemplateArgument) * TypeConstraintArgs.size(),
                        TypeAlignment);
-  auto *AT = new (Mem) AutoType(DeducedType, Keyword, IsDependent, IsPack,
-                                TypeConstraintConcept, TypeConstraintArgs);
+  auto *AT = new (Mem) AutoType(
+      DeducedType, Keyword,
+      (IsDependent ? TypeDependence::DependentInstantiation
+                   : TypeDependence::None) |
+          (IsPack ? TypeDependence::UnexpandedPack : TypeDependence::None),
+      TypeConstraintConcept, TypeConstraintArgs);
   Types.push_back(AT);
   if (InsertPos)
     AutoTypes.InsertNode(AT, InsertPos);
@@ -5186,11 +5191,11 @@ QualType ASTContext::getAtomicType(QualType T) const {
 /// getAutoDeductType - Get type pattern for deducing against 'auto'.
 QualType ASTContext::getAutoDeductType() const {
   if (AutoDeductTy.isNull())
-    AutoDeductTy = QualType(
-      new (*this, TypeAlignment) AutoType(QualType(), AutoTypeKeyword::Auto,
-                                          /*dependent*/false, /*pack*/false,
-                                          /*concept*/nullptr, /*args*/{}),
-      0);
+    AutoDeductTy = QualType(new (*this, TypeAlignment)
+                                AutoType(QualType(), AutoTypeKeyword::Auto,
+                                         TypeDependence::None,
+                                         /*concept*/ nullptr, /*args*/ {}),
+                            0);
   return AutoDeductTy;
 }
 

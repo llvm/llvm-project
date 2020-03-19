@@ -115,6 +115,32 @@ inline ExprDependence turnTypeToValueDependence(ExprDependence D) {
   // type dependency.
   return D & ~ExprDependence::Type;
 }
+inline ExprDependence turnValueToTypeDependence(ExprDependence D) {
+  // Type-dependent expressions are always be value-dependent.
+  if (D & ExprDependence::Value)
+    D |= ExprDependence::Type;
+  return D;
+}
+
+// Returned type-dependence will never have VariablyModified set.
+inline TypeDependence toTypeDependence(ExprDependence D) {
+  // Supported bits all have the same representation.
+  return static_cast<TypeDependence>(D & (ExprDependence::UnexpandedPack |
+                                          ExprDependence::Instantiation |
+                                          ExprDependence::Type));
+}
+inline TypeDependence toTypeDependence(NestedNameSpecifierDependence D) {
+  // Supported bits all have the same representation.
+  return static_cast<TypeDependence>(D);
+}
+inline TypeDependence toTypeDependence(TemplateNameDependence D) {
+  // Supported bits all have the same representation.
+  return static_cast<TypeDependence>(D);
+}
+inline TypeDependence toTypeDependence(TemplateArgumentDependence D) {
+  // Supported bits all have the same representation.
+  return static_cast<TypeDependence>(D);
+}
 
 inline NestedNameSpecifierDependence
 toNestedNameSpecifierDependendence(TypeDependence D) {
