@@ -51,39 +51,39 @@ def OP_FMLA_N   : Op<(call "vfma", $p0, $p1, (dup $p2))>;
 def OP_FMLS_N   : Op<(call "vfma", $p0, (op "-", $p1), (dup $p2))>;
 def OP_MLAL_N   : Op<(op "+", $p0, (call "vmull", $p1, (dup $p2)))>;
 def OP_MLSL_N   : Op<(op "-", $p0, (call "vmull", $p1, (dup $p2)))>;
-def OP_MUL_LN   : Op<(op "*", $p0, (splat $p1, $p2))>;
-def OP_MULX_LN  : Op<(call "vmulx", $p0, (splat $p1, $p2))>;
+def OP_MUL_LN   : Op<(op "*", $p0, (call_mangled "splat_lane", $p1, $p2))>;
+def OP_MULX_LN  : Op<(call "vmulx", $p0, (call_mangled "splat_lane", $p1, $p2))>;
 def OP_MULL_N  : Op<(call "vmull", $p0, (dup $p1))>;
-def OP_MULL_LN  : Op<(call "vmull", $p0, (splat $p1, $p2))>;
-def OP_MULLHi_LN: Op<(call "vmull", (call "vget_high", $p0), (splat $p1, $p2))>;
-def OP_MLA_LN   : Op<(op "+", $p0, (op "*", $p1, (splat $p2, $p3)))>;
-def OP_MLS_LN   : Op<(op "-", $p0, (op "*", $p1, (splat $p2, $p3)))>;
-def OP_MLAL_LN  : Op<(op "+", $p0, (call "vmull", $p1, (splat $p2, $p3)))>;
+def OP_MULL_LN  : Op<(call "vmull", $p0, (call_mangled "splat_lane", $p1, $p2))>;
+def OP_MULLHi_LN: Op<(call "vmull", (call "vget_high", $p0), (call_mangled "splat_lane", $p1, $p2))>;
+def OP_MLA_LN   : Op<(op "+", $p0, (op "*", $p1, (call_mangled "splat_lane", $p2, $p3)))>;
+def OP_MLS_LN   : Op<(op "-", $p0, (op "*", $p1, (call_mangled "splat_lane", $p2, $p3)))>;
+def OP_MLAL_LN  : Op<(op "+", $p0, (call "vmull", $p1, (call_mangled "splat_lane", $p2, $p3)))>;
 def OP_MLALHi_LN: Op<(op "+", $p0, (call "vmull", (call "vget_high", $p1),
-                                                  (splat $p2, $p3)))>;
-def OP_MLSL_LN  : Op<(op "-", $p0, (call "vmull", $p1, (splat $p2, $p3)))>;
+                                                  (call_mangled "splat_lane", $p2, $p3)))>;
+def OP_MLSL_LN  : Op<(op "-", $p0, (call "vmull", $p1, (call_mangled "splat_lane", $p2, $p3)))>;
 def OP_MLSLHi_LN : Op<(op "-", $p0, (call "vmull", (call "vget_high", $p1),
-                                                   (splat $p2, $p3)))>;
+                                                   (call_mangled "splat_lane", $p2, $p3)))>;
 def OP_QDMULL_N : Op<(call "vqdmull", $p0, (dup $p1))>;
-def OP_QDMULL_LN : Op<(call "vqdmull", $p0, (splat $p1, $p2))>;
+def OP_QDMULL_LN : Op<(call "vqdmull", $p0, (call_mangled "splat_lane", $p1, $p2))>;
 def OP_QDMULLHi_LN : Op<(call "vqdmull", (call "vget_high", $p0),
-                                         (splat $p1, $p2))>;
+                                         (call_mangled "splat_lane", $p1, $p2))>;
 def OP_QDMLAL_N : Op<(call "vqdmlal", $p0, $p1, (dup $p2))>;
-def OP_QDMLAL_LN : Op<(call "vqdmlal", $p0, $p1, (splat $p2, $p3))>;
+def OP_QDMLAL_LN : Op<(call "vqdmlal", $p0, $p1, (call_mangled "splat_lane", $p2, $p3))>;
 def OP_QDMLALHi_LN : Op<(call "vqdmlal", $p0, (call "vget_high", $p1),
-                                              (splat $p2, $p3))>;
+                                              (call_mangled "splat_lane", $p2, $p3))>;
 def OP_QDMLSL_N : Op<(call "vqdmlsl", $p0, $p1, (dup $p2))>;
-def OP_QDMLSL_LN : Op<(call "vqdmlsl", $p0, $p1, (splat $p2, $p3))>;
+def OP_QDMLSL_LN : Op<(call "vqdmlsl", $p0, $p1, (call_mangled "splat_lane", $p2, $p3))>;
 def OP_QDMLSLHi_LN : Op<(call "vqdmlsl", $p0, (call "vget_high", $p1),
-                                              (splat $p2, $p3))>;
+                                              (call_mangled "splat_lane", $p2, $p3))>;
 def OP_QDMULH_N : Op<(call "vqdmulh", $p0, (dup $p1))>;
-def OP_QDMULH_LN : Op<(call "vqdmulh", $p0, (splat $p1, $p2))>;
-def OP_QRDMULH_LN : Op<(call "vqrdmulh", $p0, (splat $p1, $p2))>;
+def OP_QDMULH_LN : Op<(call "vqdmulh", $p0, (call_mangled "splat_lane", $p1, $p2))>;
+def OP_QRDMULH_LN : Op<(call "vqrdmulh", $p0, (call_mangled "splat_lane", $p1, $p2))>;
 def OP_QRDMULH_N : Op<(call "vqrdmulh", $p0, (dup $p1))>;
 def OP_QRDMLAH : Op<(call "vqadd", $p0, (call "vqrdmulh", $p1, $p2))>;
 def OP_QRDMLSH : Op<(call "vqsub", $p0, (call "vqrdmulh", $p1, $p2))>;
-def OP_QRDMLAH_LN : Op<(call "vqadd", $p0, (call "vqrdmulh", $p1, (splat $p2, $p3)))>;
-def OP_QRDMLSH_LN : Op<(call "vqsub", $p0, (call "vqrdmulh", $p1, (splat $p2, $p3)))>;
+def OP_QRDMLAH_LN : Op<(call "vqadd", $p0, (call "vqrdmulh", $p1, (call_mangled "splat_lane", $p2, $p3)))>;
+def OP_QRDMLSH_LN : Op<(call "vqsub", $p0, (call "vqrdmulh", $p1, (call_mangled "splat_lane", $p2, $p3)))>;
 def OP_FMS_LN   : Op<(call "vfma_lane", $p0, (op "-", $p1), $p2, $p3)>;
 def OP_FMS_LNQ  : Op<(call "vfma_laneq", $p0, (op "-", $p1), $p2, $p3)>;
 def OP_TRN1     : Op<(shuffle $p0, $p1, (interleave (decimate mask0, 2),
@@ -115,7 +115,7 @@ def OP_HI       : Op<(shuffle $p0, $p0, (highhalf mask0))>;
 def OP_LO       : Op<(shuffle $p0, $p0, (lowhalf mask0))>;
 def OP_CONC     : Op<(shuffle $p0, $p1, (add mask0, mask1))>;
 def OP_DUP      : Op<(dup $p0)>;
-def OP_DUP_LN   : Op<(splat $p0, $p1)>;
+def OP_DUP_LN   : Op<(call_mangled "splat_lane", $p0, $p1)>;
 def OP_SEL      : Op<(cast "R", (op "|",
                                     (op "&", $p0, (cast $p0, $p1)),
                                     (op "&", (op "~", $p0), (cast $p0, $p2))))>;
@@ -207,10 +207,10 @@ def OP_SCALAR_HALF_SET_LNQ : Op<(bitcast "float16x8_t",
 
 def OP_DOT_LN
     : Op<(call "vdot", $p0, $p1,
-          (bitcast $p1, (splat(bitcast "uint32x2_t", $p2), $p3)))>;
+          (bitcast $p1, (call_mangled "splat_lane", (bitcast "32", $p2), $p3)))>;
 def OP_DOT_LNQ
     : Op<(call "vdot", $p0, $p1,
-          (bitcast $p1, (splat(bitcast "uint32x4_t", $p2), $p3)))>;
+          (bitcast $p1, (call_mangled "splat_lane", (bitcast "32", $p2), $p3)))>;
 
 def OP_FMLAL_LN     : Op<(call "vfmlal_low", $p0, $p1,
                            (dup_typed $p1, (call "vget_lane", $p2, $p3)))>;
@@ -222,7 +222,19 @@ def OP_FMLSL_LN_Hi  : Op<(call "vfmlsl_high", $p0, $p1,
                            (dup_typed $p1, (call "vget_lane", $p2, $p3)))>;
 
 //===----------------------------------------------------------------------===//
-// Instructions
+// Auxiliary Instructions
+//===----------------------------------------------------------------------===//
+
+// Splat operation - performs a range-checked splat over a vector
+def SPLAT  : WInst<"splat_lane", ".(!q)I",
+                   "UcUsUicsilPcPsfQUcQUsQUiQcQsQiQPcQPsQflUlQlQUlhdQhQdPlQPl">;
+def SPLATQ : WInst<"splat_laneq", ".(!Q)I",
+                   "UcUsUicsilPcPsfQUcQUsQUiQcQsQiQPcQPsQflUlQlQUlhdQhQdPlQPl"> {
+  let isLaneQ = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// Intrinsics
 //===----------------------------------------------------------------------===//
 
 ////////////////////////////////////////////////////////////////////////////////

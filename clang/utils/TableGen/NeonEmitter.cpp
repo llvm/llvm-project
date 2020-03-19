@@ -239,6 +239,11 @@ public:
     NumVectors = 1;
   }
 
+  void make32BitElement() {
+    assert_with_loc(Bitwidth > 32, "Not enough bits to make it 32!");
+    ElementBitwidth = 32;
+  }
+
   void doubleLanes() {
     assert_with_loc(Bitwidth != 128, "Can't get bigger than 128!");
     Bitwidth = 128;
@@ -1496,6 +1501,8 @@ std::pair<Type, std::string> Intrinsic::DagEmitter::emitDagCast(DagInit *DI,
         castToType.doubleLanes();
       } else if (SI->getAsUnquotedString() == "8") {
         castToType.makeInteger(8, true);
+      } else if (SI->getAsUnquotedString() == "32") {
+        castToType.make32BitElement();
       } else {
         castToType = Type::fromTypedefName(SI->getAsUnquotedString());
         assert_with_loc(!castToType.isVoid(), "Unknown typedef");
