@@ -115,15 +115,9 @@ public:
 
     lldb::ProcessSP GetProcessSP() const { return m_process_sp; }
 
-    void SetHasSourceSize(bool e) { m_has_source_size = e; }
-
-    bool HasSourceSize() const { return m_has_source_size; }
-
   private:
     uint64_t m_location = 0;
     lldb::ProcessSP m_process_sp;
-    /// True iff we know the source size of the string.
-    bool m_has_source_size = false;
   };
 
   class ReadBufferAndDumpToStreamOptions : public DumpToStreamOptions {
