@@ -163,7 +163,6 @@ Error MachOPlatform::notifyAdding(JITDylib &JD, const MaterializationUnit &MU) {
   if (!InitSym)
     return Error::success();
 
-  std::lock_guard<std::mutex> Lock(PlatformMutex);
   RegisteredInitSymbols[&JD].add(InitSym);
   LLVM_DEBUG({
     dbgs() << "MachOPlatform: Registered init symbol " << *InitSym << " for MU "
@@ -187,11 +186,10 @@ MachOPlatform::getInitializerSequence(JITDylib &JD) {
   std::vector<JITDylib *> DFSLinkOrder;
 
   while (true) {
-    // Lock the platform while we search for any initializer symbols to
-    // look up.
+
     DenseMap<JITDylib *, SymbolLookupSet> NewInitSymbols;
-    {
-      std::lock_guard<std::mutex> Lock(PlatformMutex);
+
+    ES.runSessionLocked([&]() {
       DFSLinkOrder = getDFSLinkOrder(JD);
 
       for (auto *InitJD : DFSLinkOrder) {
@@ -201,7 +199,7 @@ MachOPlatform::getInitializerSequence(JITDylib &JD) {
           RegisteredInitSymbols.erase(RISItr);
         }
       }
-    }
+    });
 
     if (NewInitSymbols.empty())
       break;
@@ -228,7 +226,7 @@ MachOPlatform::getInitializerSequence(JITDylib &JD) {
   // Lock again to collect the initializers.
   InitializerSequence FullInitSeq;
   {
-    std::lock_guard<std::mutex> Lock(PlatformMutex);
+    std::lock_guard<std::mutex> Lock(InitSeqsMutex);
     for (auto *InitJD : reverse(DFSLinkOrder)) {
       LLVM_DEBUG({
         dbgs() << "MachOPlatform: Appending inits for \"" << InitJD->getName()
@@ -251,7 +249,7 @@ MachOPlatform::getDeinitializerSequence(JITDylib &JD) {
 
   DeinitializerSequence FullDeinitSeq;
   {
-    std::lock_guard<std::mutex> Lock(PlatformMutex);
+    std::lock_guard<std::mutex> Lock(InitSeqsMutex);
     for (auto *DeinitJD : DFSLinkOrder) {
       FullDeinitSeq.emplace_back(DeinitJD, MachOJITDylibDeinitializers());
     }
@@ -285,7 +283,7 @@ void MachOPlatform::registerInitInfo(
     MachOJITDylibInitializers::SectionExtent ModInits,
     MachOJITDylibInitializers::SectionExtent ObjCSelRefs,
     MachOJITDylibInitializers::SectionExtent ObjCClassList) {
-  std::lock_guard<std::mutex> Lock(PlatformMutex);
+  std::lock_guard<std::mutex> Lock(InitSeqsMutex);
 
   auto &InitSeq = InitSeqs[&JD];
 
