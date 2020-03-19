@@ -14,6 +14,7 @@
 
 #include "mlir/Dialect/CommonFolders.h"
 #include "mlir/Dialect/SPIRV/SPIRVDialect.h"
+#include "mlir/Dialect/SPIRV/SPIRVTypes.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Support/Functional.h"
@@ -358,15 +359,6 @@ private:
            rhs.getOperation()->getAttrList().getDictionary();
   }
 
-  // Checks that given type is valid for `spv.SelectOp`.
-  // According to SPIR-V spec:
-  // "Before version 1.4, Result Type must be a pointer, scalar, or vector.
-  // Starting with version 1.4, Result Type can additionally be a composite type
-  // other than a vector."
-  bool isValidType(Type type) const {
-    return spirv::SPIRVDialect::isValidScalarType(type) ||
-           type.isa<VectorType>();
-  }
 
   // Returns a source value for the given block.
   Value getSrcValue(Block *block) const {
@@ -401,11 +393,20 @@ LogicalResult ConvertSelectionOpToSelect::canCanonicalizeSelection(
     return failure();
   }
 
+  // Checks that given type is valid for `spv.SelectOp`.
+  // According to SPIR-V spec:
+  // "Before version 1.4, Result Type must be a pointer, scalar, or vector.
+  // Starting with version 1.4, Result Type can additionally be a composite type
+  // other than a vector."
+  bool isScalarOrVector = trueBrStoreOp.value()
+                              .getType()
+                              .cast<spirv::SPIRVType>()
+                              .isScalarOrVector();
+
   // Check that each `spv.Store` uses the same pointer, memory access
   // attributes and a valid type of the value.
   if ((trueBrStoreOp.ptr() != falseBrStoreOp.ptr()) ||
-      !isSameAttrList(trueBrStoreOp, falseBrStoreOp) ||
-      !isValidType(trueBrStoreOp.value().getType())) {
+      !isSameAttrList(trueBrStoreOp, falseBrStoreOp) || !isScalarOrVector) {
     return failure();
   }
 

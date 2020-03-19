@@ -59,7 +59,7 @@ VulkanLayoutUtils::decorateType(spirv::StructType structType,
 
 Type VulkanLayoutUtils::decorateType(Type type, VulkanLayoutUtils::Size &size,
                                      VulkanLayoutUtils::Size &alignment) {
-  if (spirv::SPIRVDialect::isValidScalarType(type)) {
+  if (type.isa<spirv::ScalarType>()) {
     alignment = VulkanLayoutUtils::getScalarTypeAlignment(type);
     // Vulkan spec does not specify any padding for a scalar type.
     size = alignment;

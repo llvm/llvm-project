@@ -78,6 +78,8 @@ public:
 
   static bool classof(Type type);
 
+  bool isScalarOrVector();
+
   /// The extension requirements for each type are following the
   /// ((Extension::A OR Extension::B) AND (Extension::C OR Extension::D))
   /// convention.
@@ -109,6 +111,11 @@ public:
 
   static bool classof(Type type);
 
+  /// Returns true if the given integer type is valid for the SPIR-V dialect.
+  static bool isValid(FloatType);
+  /// Returns true if the given float type is valid for the SPIR-V dialect.
+  static bool isValid(IntegerType);
+
   void getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
                      Optional<spirv::StorageClass> storage = llvm::None);
   void getCapabilities(SPIRVType::CapabilityArrayRefVector &capabilities,
@@ -121,6 +128,9 @@ public:
   using SPIRVType::SPIRVType;
 
   static bool classof(Type type);
+
+  /// Returns true if the given vector type is valid for the SPIR-V dialect.
+  static bool isValid(VectorType);
 
   unsigned getNumElements() const;
 

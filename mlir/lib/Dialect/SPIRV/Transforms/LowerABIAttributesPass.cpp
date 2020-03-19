@@ -21,12 +21,6 @@
 
 using namespace mlir;
 
-/// Checks if the `type` is a scalar or vector type. It is assumed that they are
-/// valid for SPIR-V dialect already.
-static bool isScalarOrVectorType(Type type) {
-  return spirv::SPIRVDialect::isValidScalarType(type) || type.isa<VectorType>();
-}
-
 /// Creates a global variable for an argument based on the ABI info.
 static spirv::GlobalVariableOp
 createGlobalVarForEntryPointArgument(OpBuilder &builder, spirv::FuncOp funcOp,
@@ -45,7 +39,7 @@ createGlobalVarForEntryPointArgument(OpBuilder &builder, spirv::FuncOp funcOp,
   // info create a variable of type !spv.ptr<!spv.struct<elementType>>. If not
   // it must already be a !spv.ptr<!spv.struct<...>>.
   auto varType = funcOp.getType().getInput(argIndex);
-  if (isScalarOrVectorType(varType)) {
+  if (varType.cast<spirv::SPIRVType>().isScalarOrVector()) {
     auto storageClass =
         static_cast<spirv::StorageClass>(abiInfo.storage_class().getInt());
     varType =
@@ -198,7 +192,7 @@ LogicalResult ProcessInterfaceVarABI::matchAndRewrite(
     // at the start of the function. It is probably better to do the load just
     // before the use. There might be multiple loads and currently there is no
     // easy way to replace all uses with a sequence of operations.
-    if (isScalarOrVectorType(argType.value())) {
+    if (argType.value().cast<spirv::SPIRVType>().isScalarOrVector()) {
       auto indexType = SPIRVTypeConverter::getIndexType(funcOp.getContext());
       auto zero =
           spirv::ConstantOp::getZero(indexType, funcOp.getLoc(), &rewriter);
