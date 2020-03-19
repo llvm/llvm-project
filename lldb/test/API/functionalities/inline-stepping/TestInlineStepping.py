@@ -16,9 +16,6 @@ class TestInlineStepping(TestBase):
     @expectedFailureAll(
         compiler="icc",
         bugnumber="# Not really a bug.  ICC combines two inlined functions.")
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr32343")
-    @expectedFailureAll(archs=["aarch64"], oslist=["linux"],
-                        bugnumber="llvm.org/pr44057")
     def test_with_python_api(self):
         """Test stepping over and into inlined functions."""
         self.build()
