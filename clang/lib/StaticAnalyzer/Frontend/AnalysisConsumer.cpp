@@ -65,126 +65,6 @@ STATISTIC(PercentReachableBlocks, "The % of reachable basic blocks.");
 STATISTIC(MaxCFGSize, "The maximum number of basic blocks in a function.");
 
 //===----------------------------------------------------------------------===//
-// Special PathDiagnosticConsumers.
-//===----------------------------------------------------------------------===//
-
-void ento::createPlistHTMLDiagnosticConsumer(
-    AnalyzerOptions &AnalyzerOpts, PathDiagnosticConsumers &C,
-    const std::string &prefix, const Preprocessor &PP,
-    const cross_tu::CrossTranslationUnitContext &CTU) {
-  createHTMLDiagnosticConsumer(
-      AnalyzerOpts, C, std::string(llvm::sys::path::parent_path(prefix)), PP,
-      CTU);
-  createPlistMultiFileDiagnosticConsumer(AnalyzerOpts, C, prefix, PP, CTU);
-}
-
-void ento::createTextPathDiagnosticConsumer(
-    AnalyzerOptions &AnalyzerOpts, PathDiagnosticConsumers &C,
-    const std::string &Prefix, const clang::Preprocessor &PP,
-    const cross_tu::CrossTranslationUnitContext &CTU) {
-  llvm_unreachable("'text' consumer should be enabled on ClangDiags");
-}
-
-namespace {
-class ClangDiagPathDiagConsumer : public PathDiagnosticConsumer {
-  DiagnosticsEngine &Diag;
-  LangOptions LO;
-
-  bool IncludePath = false;
-  bool ShouldEmitAsError = false;
-  bool ApplyFixIts = false;
-
-public:
-  ClangDiagPathDiagConsumer(DiagnosticsEngine &Diag, LangOptions LO)
-      : Diag(Diag), LO(LO) {}
-  ~ClangDiagPathDiagConsumer() override {}
-  StringRef getName() const override { return "ClangDiags"; }
-
-  bool supportsLogicalOpControlFlow() const override { return true; }
-  bool supportsCrossFileDiagnostics() const override { return true; }
-
-  PathGenerationScheme getGenerationScheme() const override {
-    return IncludePath ? Minimal : None;
-  }
-
-  void enablePaths() { IncludePath = true; }
-  void enableWerror() { ShouldEmitAsError = true; }
-  void enableApplyFixIts() { ApplyFixIts = true; }
-
-  void FlushDiagnosticsImpl(std::vector<const PathDiagnostic *> &Diags,
-                            FilesMade *filesMade) override {
-    unsigned WarnID =
-        ShouldEmitAsError
-            ? Diag.getCustomDiagID(DiagnosticsEngine::Error, "%0")
-            : Diag.getCustomDiagID(DiagnosticsEngine::Warning, "%0");
-    unsigned NoteID = Diag.getCustomDiagID(DiagnosticsEngine::Note, "%0");
-    SourceManager &SM = Diag.getSourceManager();
-
-    Replacements Repls;
-    auto reportPiece = [&](unsigned ID, FullSourceLoc Loc, StringRef String,
-                           ArrayRef<SourceRange> Ranges,
-                           ArrayRef<FixItHint> Fixits) {
-      if (!ApplyFixIts) {
-        Diag.Report(Loc, ID) << String << Ranges << Fixits;
-        return;
-      }
-
-      Diag.Report(Loc, ID) << String << Ranges;
-      for (const FixItHint &Hint : Fixits) {
-        Replacement Repl(SM, Hint.RemoveRange, Hint.CodeToInsert);
-
-        if (llvm::Error Err = Repls.add(Repl)) {
-          llvm::errs() << "Error applying replacement " << Repl.toString()
-                       << ": " << Err << "\n";
-        }
-      }
-    };
-
-    for (std::vector<const PathDiagnostic *>::iterator I = Diags.begin(),
-         E = Diags.end();
-         I != E; ++I) {
-      const PathDiagnostic *PD = *I;
-      reportPiece(WarnID, PD->getLocation().asLocation(),
-                  PD->getShortDescription(), PD->path.back()->getRanges(),
-                  PD->path.back()->getFixits());
-
-      // First, add extra notes, even if paths should not be included.
-      for (const auto &Piece : PD->path) {
-        if (!isa<PathDiagnosticNotePiece>(Piece.get()))
-          continue;
-
-        reportPiece(NoteID, Piece->getLocation().asLocation(),
-                    Piece->getString(), Piece->getRanges(), Piece->getFixits());
-      }
-
-      if (!IncludePath)
-        continue;
-
-      // Then, add the path notes if necessary.
-      PathPieces FlatPath = PD->path.flatten(/*ShouldFlattenMacros=*/true);
-      for (const auto &Piece : FlatPath) {
-        if (isa<PathDiagnosticNotePiece>(Piece.get()))
-          continue;
-
-        reportPiece(NoteID, Piece->getLocation().asLocation(),
-                    Piece->getString(), Piece->getRanges(), Piece->getFixits());
-      }
-    }
-
-    if (!ApplyFixIts || Repls.empty())
-      return;
-
-    Rewriter Rewrite(SM, LO);
-    if (!applyAllReplacements(Repls, Rewrite)) {
-      llvm::errs() << "An error occured during applying fix-it.\n";
-    }
-
-    Rewrite.overwriteChangedFiles();
-  }
-};
-} // end anonymous namespace
-
-//===----------------------------------------------------------------------===//
 // AnalysisConsumer declaration.
 //===----------------------------------------------------------------------===//
 
@@ -269,31 +149,16 @@ public:
   }
 
   void DigestAnalyzerOptions() {
-    if (Opts->AnalysisDiagOpt != PD_NONE) {
-      // Create the PathDiagnosticConsumer.
-      ClangDiagPathDiagConsumer *clangDiags =
-          new ClangDiagPathDiagConsumer(PP.getDiagnostics(), PP.getLangOpts());
-      PathConsumers.push_back(clangDiags);
-
-      if (Opts->AnalyzerWerror)
-        clangDiags->enableWerror();
-
-      if (Opts->ShouldApplyFixIts)
-        clangDiags->enableApplyFixIts();
-
-      if (Opts->AnalysisDiagOpt == PD_TEXT) {
-        clangDiags->enablePaths();
-
-      } else if (!OutDir.empty()) {
-        switch (Opts->AnalysisDiagOpt) {
-        default:
+    switch (Opts->AnalysisDiagOpt) {
+    case PD_NONE:
+      break;
 #define ANALYSIS_DIAGNOSTICS(NAME, CMDFLAG, DESC, CREATEFN)                    \
   case PD_##NAME:                                                              \
     CREATEFN(*Opts.get(), PathConsumers, OutDir, PP, CTU);                     \
     break;
 #include "clang/StaticAnalyzer/Core/Analyses.def"
-        }
-      }
+    default:
+      llvm_unreachable("Unkown analyzer output type!");
     }
 
     // Create the analyzer component creators.
@@ -329,20 +194,19 @@ public:
       else if (Mode == AM_Path) {
         llvm::errs() << " (Path, ";
         switch (IMode) {
-          case ExprEngine::Inline_Minimal:
-            llvm::errs() << " Inline_Minimal";
-            break;
-          case ExprEngine::Inline_Regular:
-            llvm::errs() << " Inline_Regular";
-            break;
+        case ExprEngine::Inline_Minimal:
+          llvm::errs() << " Inline_Minimal";
+          break;
+        case ExprEngine::Inline_Regular:
+          llvm::errs() << " Inline_Regular";
+          break;
         }
         llvm::errs() << ")";
-      }
-      else
+      } else
         assert(Mode == (AM_Syntax | AM_Path) && "Unexpected mode!");
 
-      llvm::errs() << ": " << Loc.getFilename() << ' '
-                           << getFunctionName(D) << '\n';
+      llvm::errs() << ": " << Loc.getFilename() << ' ' << getFunctionName(D)
+                   << '\n';
     }
   }
 
@@ -485,7 +349,7 @@ private:
 
   /// Print \p S to stderr if \c Opts->AnalyzerDisplayProgress is set.
   void reportAnalyzerProgress(StringRef S);
-};
+}; // namespace
 } // end anonymous namespace
 
 
