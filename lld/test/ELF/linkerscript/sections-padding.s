@@ -7,7 +7,7 @@
 # RUN: llvm-objdump -s %t.out | FileCheck --check-prefix=YES %s
 # YES: 66000011 22000011 22000011 22000011
 
-# RUN: echo "SECTIONS { .mysec : { *(.mysec*) } =0x1100+0x22 }" > %t.script
+# RUN: echo "SECTIONS { .mysec : { *(.mysec*) } =(0x1100+0x22) }" > %t.script
 # RUN: ld.lld -o %t.out --script %t.script %t
 # RUN: llvm-objdump -s %t.out | FileCheck --check-prefix=YES2 %s
 # YES2: 66000011 22000011 22000011 22000011
@@ -65,6 +65,11 @@
 # RUN: echo "SECTIONS { foo = 0x11; .mysec : { *(.mysec*) } = foo }" > %t.script
 # RUN: not ld.lld -o /dev/null %t --script %t.script 2>&1 | FileCheck --check-prefix=ERR4 %s
 # ERR4: symbol not found: foo
+
+## Check we are able to parse scripts where "/DISCARD/" follows a section fill expression.
+# RUN: echo "SECTIONS { .mysec : { *(.mysec*) } =0x1122 /DISCARD/ : { *(.text) } }" > %t.script
+# RUN: ld.lld -o %t.out --script %t.script %t
+# RUN: llvm-objdump -s %t.out | FileCheck --check-prefix=YES %s
 
 .section        .mysec.1,"a"
 .align  16
