@@ -150,22 +150,28 @@ poly64x2_t test_vmovq_n_p64(poly64_t a) {
 }
 
 // CHECK-LABEL: define <1 x i64> @test_vdup_lane_p64(<1 x i64> %vec) #0 {
-// CHECK:   [[SHUFFLE:%.*]] = shufflevector <1 x i64> %vec, <1 x i64> %vec, <1 x i32> zeroinitializer
-// CHECK:   ret <1 x i64> [[SHUFFLE]]
+// CHECK:    [[TMP0:%.*]] = bitcast <1 x i64> [[VEC:%.*]] to <8 x i8>
+// CHECK:    [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
+// CHECK:    [[LANE:%.*]] = shufflevector <1 x i64> [[TMP1]], <1 x i64> [[TMP1]], <1 x i32> zeroinitializer
+// CHECK:    ret <1 x i64> [[LANE]]
 poly64x1_t test_vdup_lane_p64(poly64x1_t vec) {
   return vdup_lane_p64(vec, 0);
 }
 
 // CHECK-LABEL: define <2 x i64> @test_vdupq_lane_p64(<1 x i64> %vec) #1 {
-// CHECK:   [[SHUFFLE:%.*]] = shufflevector <1 x i64> %vec, <1 x i64> %vec, <2 x i32> zeroinitializer
-// CHECK:   ret <2 x i64> [[SHUFFLE]]
+// CHECK:    [[TMP0:%.*]] = bitcast <1 x i64> [[VEC:%.*]] to <8 x i8>
+// CHECK:    [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
+// CHECK:    [[LANE:%.*]] = shufflevector <1 x i64> [[TMP1]], <1 x i64> [[TMP1]], <2 x i32> zeroinitializer
+// CHECK:    ret <2 x i64> [[LANE]]
 poly64x2_t test_vdupq_lane_p64(poly64x1_t vec) {
   return vdupq_lane_p64(vec, 0);
 }
 
 // CHECK-LABEL: define <2 x i64> @test_vdupq_laneq_p64(<2 x i64> %vec) #1 {
-// CHECK:   [[SHUFFLE:%.*]] = shufflevector <2 x i64> %vec, <2 x i64> %vec, <2 x i32> <i32 1, i32 1>
-// CHECK:   ret <2 x i64> [[SHUFFLE]]
+// CHECK:    [[TMP0:%.*]] = bitcast <2 x i64> [[VEC:%.*]] to <16 x i8>
+// CHECK:    [[TMP1:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
+// CHECK:    [[LANE:%.*]] = shufflevector <2 x i64> [[TMP1]], <2 x i64> [[TMP1]], <2 x i32> <i32 1, i32 1>
+// CHECK:    ret <2 x i64> [[LANE]]
 poly64x2_t test_vdupq_laneq_p64(poly64x2_t vec) {
   return vdupq_laneq_p64(vec, 1);
 }
