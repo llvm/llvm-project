@@ -126,6 +126,10 @@ private:
   void parseJavaScriptEs6ImportExport();
   void parseStatementMacro();
   void parseCSharpAttribute();
+  // Parse a C# generic type constraint: `where T : IComparable<T>`.
+  // See:
+  // https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/keywords/where-generic-type-constraint
+  void parseCSharpGenericTypeConstraint();
   bool tryToParseLambda();
   bool tryToParseLambdaIntroducer();
   void tryToParseJSFunction();
