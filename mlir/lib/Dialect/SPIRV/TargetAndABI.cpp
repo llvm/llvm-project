@@ -70,7 +70,9 @@ spirv::TargetEnv::allows(ArrayRef<spirv::Extension> exts) const {
   return llvm::None;
 }
 
-MLIRContext *spirv::TargetEnv::getContext() { return targetAttr.getContext(); }
+MLIRContext *spirv::TargetEnv::getContext() const {
+  return targetAttr.getContext();
+}
 
 //===----------------------------------------------------------------------===//
 // Utility functions

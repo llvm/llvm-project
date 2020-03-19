@@ -44,7 +44,7 @@ public:
   Optional<Extension> allows(ArrayRef<Extension>) const;
 
   /// Returns the MLIRContext.
-  MLIRContext *getContext();
+  MLIRContext *getContext() const;
 
   /// Allows implicity converting to the underlying spirv::TargetEnvAttr.
   operator TargetEnvAttr() const { return targetAttr; }
