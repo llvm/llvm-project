@@ -1,4 +1,4 @@
-# RUN: llc -emit-call-site-info -debug-entry-values -start-before=livedebugvalues -filetype=obj -o - %s | llvm-dwarfdump - | FileCheck %s
+# RUN: llc -start-before=livedebugvalues -filetype=obj -o - %s | llvm-dwarfdump - | FileCheck %s
 
 # Based on the following C++ code:
 # struct A { A(A &) {} };

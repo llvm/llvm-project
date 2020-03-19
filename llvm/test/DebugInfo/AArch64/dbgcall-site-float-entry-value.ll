@@ -1,4 +1,4 @@
-; RUN: llc -mtriple aarch64-linux-gnu -emit-call-site-info -debug-entry-values -filetype=obj -o - %s | llvm-dwarfdump - | FileCheck %s
+; RUN: llc -mtriple aarch64-linux-gnu -emit-call-site-info -filetype=obj -o - %s | llvm-dwarfdump - | FileCheck %s
 
 ; Based on the following C reproducer:
 ;

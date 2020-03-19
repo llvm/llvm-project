@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=x86_64-pc-linux -emit-call-site-info -debug-entry-values -run-pass=unreachable-mbb-elimination -o - %s | FileCheck %s
+# RUN: llc -emit-call-site-info -mtriple=x86_64-pc-linux -run-pass=unreachable-mbb-elimination -o - %s | FileCheck %s
 
 # Verify that the call site information for the call residing in the eliminated
 # block is removed. This test case would previously trigger an assertion when
