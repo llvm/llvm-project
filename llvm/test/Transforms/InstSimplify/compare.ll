@@ -724,12 +724,7 @@ define i1 @srem3(i16 %X, i32 %Y) {
 
 define i1 @srem3v(<2 x i16> %X, <2 x i32> %Y) {
 ; CHECK-LABEL: @srem3v(
-; CHECK-NEXT:    [[A:%.*]] = zext <2 x i16> [[X:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[B:%.*]] = or <2 x i32> <i32 1, i32 -2147483648>, [[A]]
-; CHECK-NEXT:    [[C:%.*]] = sub nsw <2 x i32> <i32 0, i32 1>, [[B]]
-; CHECK-NEXT:    [[E:%.*]] = extractelement <2 x i32> [[C]], i32 1
-; CHECK-NEXT:    [[F:%.*]] = icmp slt i32 [[E]], 0
-; CHECK-NEXT:    ret i1 [[F]]
+; CHECK-NEXT:    ret i1 false
 ;
   %A = zext <2 x i16> %X to <2 x i32>
   %B = or <2 x i32> <i32 1, i32 2147483648>, %A
@@ -838,11 +833,7 @@ define i1 @mul1(i32 %X) {
 
 define i1 @mul1v(<2 x i32> %X) {
 ; CHECK-LABEL: @mul1v(
-; CHECK-NEXT:    [[Y:%.*]] = or <2 x i32> [[X:%.*]], <i32 1, i32 0>
-; CHECK-NEXT:    [[M:%.*]] = mul nuw <2 x i32> [[Y]], [[Y]]
-; CHECK-NEXT:    [[E:%.*]] = extractelement <2 x i32> [[M]], i32 0
-; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[E]], 0
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 false
 ;
   %Y = or <2 x i32> %X, <i32 1, i32 0>
   %M = mul nuw <2 x i32> %Y, %Y
@@ -864,11 +855,7 @@ define i1 @mul2(i32 %X) {
 
 define i1 @mul2v(<2 x i32> %X) {
 ; CHECK-LABEL: @mul2v(
-; CHECK-NEXT:    [[Y:%.*]] = or <2 x i32> [[X:%.*]], <i32 0, i32 1>
-; CHECK-NEXT:    [[M:%.*]] = mul nsw <2 x i32> [[Y]], [[Y]]
-; CHECK-NEXT:    [[E:%.*]] = extractelement <2 x i32> [[M]], i32 1
-; CHECK-NEXT:    [[C:%.*]] = icmp sgt i32 [[E]], 0
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
   %Y = or <2 x i32> %X, <i32 0, i32 1>
   %M = mul nsw <2 x i32> %Y, %Y
@@ -1333,14 +1320,7 @@ define i1 @icmp_known_bits(i4 %x, i4 %y) {
 
 define i1 @icmp_known_bits_vec(<2 x i4> %x, <2 x i4> %y) {
 ; CHECK-LABEL: @icmp_known_bits_vec(
-; CHECK-NEXT:    [[AND1:%.*]] = and <2 x i4> [[Y:%.*]], <i4 -7, i4 -1>
-; CHECK-NEXT:    [[AND2:%.*]] = and <2 x i4> [[X:%.*]], <i4 -7, i4 -1>
-; CHECK-NEXT:    [[OR1:%.*]] = or <2 x i4> [[AND1]], <i4 2, i4 2>
-; CHECK-NEXT:    [[OR2:%.*]] = or <2 x i4> [[AND2]], <i4 2, i4 2>
-; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i4> [[OR1]], [[OR2]]
-; CHECK-NEXT:    [[EXT:%.*]] = extractelement <2 x i4> [[ADD]], i32 0
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i4 [[EXT]], 0
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %and1 = and <2 x i4> %y, <i4 -7, i4 -1>
   %and2 = and <2 x i4> %x, <i4 -7, i4 -1>
