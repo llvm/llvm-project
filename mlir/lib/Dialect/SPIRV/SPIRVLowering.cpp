@@ -1,4 +1,4 @@
-//===- SPIRVLowering.cpp - Standard to SPIR-V dialect conversion--===//
+//===- SPIRVLowering.cpp - SPIR-V lowering utilities ----------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,6 +15,7 @@
 #include "mlir/Dialect/SPIRV/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/SPIRVOps.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Debug.h"
 
 #include <functional>
@@ -443,6 +444,66 @@ spirv::SPIRVConversionTarget::SPIRVConversionTarget(
   }
 }
 
+/// Checks that `candidates` extension requirements are possible to be satisfied
+/// with the given `allowedExtensions`.
+///
+///  `candidates` is a vector of vector for extension requirements following
+/// ((Extension::A OR Extension::B) AND (Extension::C OR Extension::D))
+/// convention.
+static LogicalResult checkExtensionRequirements(
+    Operation *op, const llvm::SmallSet<spirv::Extension, 4> &allowedExtensions,
+    const spirv::SPIRVType::ExtensionArrayRefVector &candidates) {
+  for (const auto &ors : candidates) {
+    auto chosen = llvm::find_if(ors, [&](spirv::Extension ext) {
+      return allowedExtensions.count(ext);
+    });
+
+    if (chosen == ors.end()) {
+      SmallVector<StringRef, 4> extStrings;
+      for (spirv::Extension ext : ors)
+        extStrings.push_back(spirv::stringifyExtension(ext));
+
+      LLVM_DEBUG(llvm::dbgs() << op->getName()
+                              << "illegal: requires at least one extension in ["
+                              << llvm::join(extStrings, ", ")
+                              << "] but none allowed in target environment\n");
+      return failure();
+    }
+  }
+  return success();
+}
+
+/// Checks that `candidates`capability requirements are possible to be satisfied
+/// with the given `allowedCapabilities`.
+///
+///  `candidates` is a vector of vector for capability requirements following
+/// ((Capability::A OR Capability::B) AND (Capability::C OR Capability::D))
+/// convention.
+static LogicalResult checkCapabilityRequirements(
+    Operation *op,
+    const llvm::SmallSet<spirv::Capability, 8> &allowedCapabilities,
+    const spirv::SPIRVType::CapabilityArrayRefVector &candidates) {
+  for (const auto &ors : candidates) {
+    auto chosen = llvm::find_if(ors, [&](spirv::Capability cap) {
+      return allowedCapabilities.count(cap);
+    });
+
+    if (chosen == ors.end()) {
+      SmallVector<StringRef, 4> capStrings;
+      for (spirv::Capability cap : ors)
+        capStrings.push_back(spirv::stringifyCapability(cap));
+
+      LLVM_DEBUG(llvm::dbgs()
+                 << op->getName()
+                 << "illegal: requires at least one capability in ["
+                 << llvm::join(capStrings, ", ")
+                 << "] but none allowed in target environment\n");
+      return failure();
+    }
+  }
+  return success();
+}
+
 bool spirv::SPIRVConversionTarget::isLegalOp(Operation *op) {
   // Make sure this op is available at the given version. Ops not implementing
   // QueryMinVersionInterface/QueryMaxVersionInterface are available to all
@@ -464,38 +525,47 @@ bool spirv::SPIRVConversionTarget::isLegalOp(Operation *op) {
       return false;
     }
 
-  // Make sure this op's required extensions are allowed to use. For each op,
-  // we return a vector of vector for its extension requirements following
-  // ((Extension::A OR Extension::B) AND (Extension::C OR Extension::D))
-  // convention. Ops not implementing QueryExtensionInterface do not require
-  // extensions to be available.
-  if (auto extensions = dyn_cast<spirv::QueryExtensionInterface>(op)) {
-    auto exts = extensions.getExtensions();
-    for (const auto &ors : exts)
-      if (llvm::all_of(ors, [this](spirv::Extension ext) {
-            return this->givenExtensions.count(ext) == 0;
-          })) {
-        LLVM_DEBUG(llvm::dbgs() << op->getName()
-                                << " illegal: missing required extension\n");
-        return false;
-      }
-  }
+  // Make sure this op's required extensions are allowed to use. Ops not
+  // implementing QueryExtensionInterface do not require extensions to be
+  // available.
+  if (auto extensions = dyn_cast<spirv::QueryExtensionInterface>(op))
+    if (failed(checkExtensionRequirements(op, this->givenExtensions,
+                                          extensions.getExtensions())))
+      return false;
 
-  // Make sure this op's required extensions are allowed to use. For each op,
-  // we return a vector of vector for its capability requirements following
-  // ((Capability::A OR Extension::B) AND (Capability::C OR Capability::D))
-  // convention. Ops not implementing QueryExtensionInterface do not require
-  // extensions to be available.
-  if (auto capabilities = dyn_cast<spirv::QueryCapabilityInterface>(op)) {
-    auto caps = capabilities.getCapabilities();
-    for (const auto &ors : caps)
-      if (llvm::all_of(ors, [this](spirv::Capability cap) {
-            return this->givenCapabilities.count(cap) == 0;
-          })) {
-        LLVM_DEBUG(llvm::dbgs() << op->getName()
-                                << " illegal: missing required capability\n");
-        return false;
-      }
+  // Make sure this op's required extensions are allowed to use. Ops not
+  // implementing QueryCapabilityInterface do not require capabilities to be
+  // available.
+  if (auto capabilities = dyn_cast<spirv::QueryCapabilityInterface>(op))
+    if (failed(checkCapabilityRequirements(op, this->givenCapabilities,
+                                           capabilities.getCapabilities())))
+      return false;
+
+  SmallVector<Type, 4> valueTypes;
+  valueTypes.append(op->operand_type_begin(), op->operand_type_end());
+  valueTypes.append(op->result_type_begin(), op->result_type_end());
+
+  // Special treatment for global variables, whose type requirements are
+  // conveyed by type attributes.
+  if (auto globalVar = dyn_cast<spirv::GlobalVariableOp>(op))
+    valueTypes.push_back(globalVar.type());
+
+  // Make sure the op's operands/results use types that are allowed by the
+  // target environment.
+  SmallVector<ArrayRef<spirv::Extension>, 4> typeExtensions;
+  SmallVector<ArrayRef<spirv::Capability>, 8> typeCapabilities;
+  for (Type valueType : valueTypes) {
+    typeExtensions.clear();
+    valueType.cast<spirv::SPIRVType>().getExtensions(typeExtensions);
+    if (failed(checkExtensionRequirements(op, this->givenExtensions,
+                                          typeExtensions)))
+      return false;
+
+    typeCapabilities.clear();
+    valueType.cast<spirv::SPIRVType>().getCapabilities(typeCapabilities);
+    if (failed(checkCapabilityRequirements(op, this->givenCapabilities,
+                                           typeCapabilities)))
+      return false;
   }
 
   return true;
