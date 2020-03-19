@@ -158,58 +158,42 @@ template <typename GraphT, bool InverseGraph = false, bool InverseEdge = false,
           typename GT = GraphTraits<GraphT>>
 struct CFGViewChildren {
   using DataRef = const GraphDiff<typename GT::NodeRef, InverseGraph> *;
-  using RawNodeRef = typename GT::NodeRef;
-  using NodeRef = std::pair<DataRef, RawNodeRef>;
+  using NodeRef = std::pair<DataRef, typename GT::NodeRef>;
 
-  using ExistingChildIterator =
-      WrappedPairNodeDataIterator<typename GT::ChildIteratorType, NodeRef,
-                                  DataRef>;
-  struct DeletedEdgesFilter {
-    RawNodeRef BB;
-    DeletedEdgesFilter(RawNodeRef BB) : BB(BB){};
-    bool operator()(NodeRef N) const {
-      return !N.first->ignoreChild(BB, N.second, InverseEdge);
-    }
-  };
-  using FilterExistingChildrenIterator =
-      filter_iterator<ExistingChildIterator, DeletedEdgesFilter>;
-
-  using vec_iterator = typename SmallVectorImpl<RawNodeRef>::const_iterator;
-  using AddNewChildrenIterator =
-      WrappedPairNodeDataIterator<vec_iterator, NodeRef, DataRef>;
-  using ChildIteratorType =
-      concat_iterator<NodeRef, FilterExistingChildrenIterator,
-                      AddNewChildrenIterator>;
-
-  static ChildIteratorType child_begin(NodeRef N) {
-    auto InsertVec = N.first->getAddedChildren(N.second, InverseEdge);
-    // filter iterator init:
-    auto firstit = make_filter_range(
-        make_range<ExistingChildIterator>({GT::child_begin(N.second), N.first},
-                                          {GT::child_end(N.second), N.first}),
-        DeletedEdgesFilter(N.second));
-    // new inserts iterator init:
-    auto secondit = make_range<AddNewChildrenIterator>(
-        {InsertVec.begin(), N.first}, {InsertVec.end(), N.first});
-
-    return concat_iterator<NodeRef, FilterExistingChildrenIterator,
-                           AddNewChildrenIterator>(firstit, secondit);
+  template<typename Range>
+  static auto makeChildRange(Range &&R, DataRef DR) {
+    using Iter = WrappedPairNodeDataIterator<decltype(std::forward<Range>(R).begin()), NodeRef, DataRef>;
+    return make_range(Iter(R.begin(), DR), Iter(R.end(), DR));
   }
 
-  static ChildIteratorType child_end(NodeRef N) {
-    auto InsertVec = N.first->getAddedChildren(N.second, InverseEdge);
-    // filter iterator init:
-    auto firstit = make_filter_range(
-        make_range<ExistingChildIterator>({GT::child_end(N.second), N.first},
-                                          {GT::child_end(N.second), N.first}),
-        DeletedEdgesFilter(N.second));
-    // new inserts iterator init:
-    auto secondit = make_range<AddNewChildrenIterator>(
-        {InsertVec.end(), N.first}, {InsertVec.end(), N.first});
+  static auto children(NodeRef N) {
 
-    return concat_iterator<NodeRef, FilterExistingChildrenIterator,
-                           AddNewChildrenIterator>(firstit, secondit);
+    // filter iterator init:
+    auto R = make_range(GT::child_begin(N.second), GT::child_end(N.second));
+    auto First = make_filter_range(makeChildRange(R, N.first), [&](NodeRef C) {
+      return !C.first->ignoreChild(N.second, C.second, InverseEdge);
+    });
+
+    // new inserts iterator init:
+    auto InsertVec = N.first->getAddedChildren(N.second, InverseEdge);
+    auto Second = makeChildRange(InsertVec, N.first);
+
+    auto CR = concat<NodeRef>(First, Second);
+    // concat_range contains references to other ranges, returning it would
+    // leave those references dangling - the iterators contain
+    // other iterators by value so they're safe to return.
+    return make_range(CR.begin(), CR.end());
   }
+
+  static auto child_begin(NodeRef N) {
+    return children(N).begin();
+  }
+
+  static auto child_end(NodeRef N) {
+    return children(N).end();
+  }
+
+  using ChildIteratorType = decltype(child_end(std::declval<NodeRef>()));
 };
 
 template <typename T, bool B>
