@@ -116,8 +116,15 @@ public:
   IntegerAttr getSI32IntegerAttr(int32_t value);
   IntegerAttr getUI32IntegerAttr(uint32_t value);
 
+  /// Vector-typed DenseIntElementsAttr getters. `values` must not be empty.
   DenseIntElementsAttr getI32VectorAttr(ArrayRef<int32_t> values);
   DenseIntElementsAttr getI64VectorAttr(ArrayRef<int64_t> values);
+
+  /// Tensor-typed DenseIntElementsAttr getters. `values` can be empty.
+  /// These are generally preferable for representing general lists of integers
+  /// as attributes.
+  DenseIntElementsAttr getI32TensorAttr(ArrayRef<int32_t> values);
+  DenseIntElementsAttr getI64TensorAttr(ArrayRef<int64_t> values);
 
   ArrayAttr getAffineMapArrayAttr(ArrayRef<AffineMap> values);
   ArrayAttr getI32ArrayAttr(ArrayRef<int32_t> values);
