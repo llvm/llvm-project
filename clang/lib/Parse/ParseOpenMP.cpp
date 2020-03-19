@@ -2287,12 +2287,14 @@ bool Parser::ParseOpenMPSimpleVarList(
     NoIdentIsFound = false;
 
     if (AllowScopeSpecifier && getLangOpts().CPlusPlus &&
-        ParseOptionalCXXScopeSpecifier(SS, nullptr, false)) {
+        ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
+                                       /*ObjectHadErrors=*/false, false)) {
       IsCorrect = false;
       SkipUntil(tok::comma, tok::r_paren, tok::annot_pragma_openmp_end,
                 StopBeforeMatch);
-    } else if (ParseUnqualifiedId(SS, false, false, false, false, nullptr,
-                                  nullptr, Name)) {
+    } else if (ParseUnqualifiedId(SS, /*ObjectType=*/nullptr,
+                                  /*ObjectHadErrors=*/false, false, false,
+                                  false, false, nullptr, Name)) {
       IsCorrect = false;
       SkipUntil(tok::comma, tok::r_paren, tok::annot_pragma_openmp_end,
                 StopBeforeMatch);
@@ -2874,11 +2876,12 @@ static bool ParseReductionId(Parser &P, CXXScopeSpec &ReductionIdScopeSpec,
       return false;
     }
   }
-  return P.ParseUnqualifiedId(ReductionIdScopeSpec, /*EnteringContext*/ false,
-                              /*AllowDestructorName*/ false,
-                              /*AllowConstructorName*/ false,
-                              /*AllowDeductionGuide*/ false,
-                              nullptr, nullptr, ReductionId);
+  return P.ParseUnqualifiedId(
+      ReductionIdScopeSpec, /*ObjectType=*/nullptr,
+      /*ObjectHadErrors=*/false, /*EnteringContext*/ false,
+      /*AllowDestructorName*/ false,
+      /*AllowConstructorName*/ false,
+      /*AllowDeductionGuide*/ false, nullptr, ReductionId);
 }
 
 /// Checks if the token is a valid map-type-modifier.
@@ -2906,6 +2909,7 @@ bool Parser::parseMapperModifier(OpenMPVarListDataTy &Data) {
   if (getLangOpts().CPlusPlus)
     ParseOptionalCXXScopeSpecifier(Data.ReductionOrMapperIdScopeSpec,
                                    /*ObjectType=*/nullptr,
+                                   /*ObjectHadErrors=*/false,
                                    /*EnteringContext=*/false);
   if (Tok.isNot(tok::identifier) && Tok.isNot(tok::kw_default)) {
     Diag(Tok.getLocation(), diag::err_omp_mapper_illegal_identifier);
@@ -3011,6 +3015,7 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
     if (getLangOpts().CPlusPlus)
       ParseOptionalCXXScopeSpecifier(Data.ReductionOrMapperIdScopeSpec,
                                      /*ObjectType=*/nullptr,
+                                     /*ObjectHadErrors=*/false,
                                      /*EnteringContext=*/false);
     InvalidReductionId = ParseReductionId(
         *this, Data.ReductionOrMapperIdScopeSpec, UnqualifiedReductionId);
