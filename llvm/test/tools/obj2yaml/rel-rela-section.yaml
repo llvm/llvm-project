@@ -7,13 +7,10 @@
 
 ## Note: it is important to have at least two sections with sh_info == 0.
 ##       Previously we printed a broken Info field in this case.
-## FIXME: We should not print EntSize. Will be fixed by https://reviews.llvm.org/D76227.
 # YAML:      - Name:    .rela.dyn
 # YAML-NEXT:   Type:    SHT_RELA
-# YAML-NEXT:   EntSize: 0x0000000000000018
 # YAML-NEXT: - Name:    .rel.dyn
 # YAML-NEXT:   Type:    SHT_REL
-# YAML-NEXT:   EntSize: 0x0000000000000010
 # YAML-NEXT: - Name
 
 --- !ELF
