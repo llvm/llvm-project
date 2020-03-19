@@ -60,6 +60,15 @@ def op;
 // example: (call "vget_high", $p0) -> "vgetq_high_s16(__p0)"
 //            (assuming $p0 has type int16x8_t).
 def call;
+// call_mangled - Invoke another intrinsic matching the mangled name variation
+//                of the caller's base type. If there is no intrinsic defined
+//                that has the variation and takes the given types, an error
+//                is generated at tblgen time.
+// example: (call_mangled "vfma_lane", $p0, $p1) -> "vfma_lane(__p0, __p1)"
+//            (assuming non-LaneQ caller)
+//          (call_mangled "vfma_lane", $p0, $p1) -> "vfma_laneq(__p0, __p1)"
+//            (assuming LaneQ caller)
+def call_mangled;
 // cast - Perform a cast to a different type. This gets emitted as a static
 //        C-style cast. For a pure reinterpret cast (T x = *(T*)&y), use
 //        "bitcast".
