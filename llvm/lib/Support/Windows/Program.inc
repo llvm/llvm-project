@@ -151,7 +151,7 @@ static HANDLE RedirectIO(Optional<StringRef> Path, int fd,
     if (windows::UTF8ToUTF16(fname, fnameUnicode))
       return INVALID_HANDLE_VALUE;
   } else {
-    if (path::widenPath(fname, fnameUnicode))
+    if (sys::windows::widenPath(fname, fnameUnicode))
       return INVALID_HANDLE_VALUE;
   }
   h = CreateFileW(fnameUnicode.data(), fd ? GENERIC_WRITE : GENERIC_READ,
@@ -263,7 +263,7 @@ static bool Execute(ProcessInfo &PI, StringRef Program,
   fflush(stderr);
 
   SmallVector<wchar_t, MAX_PATH> ProgramUtf16;
-  if (std::error_code ec = path::widenPath(Program, ProgramUtf16)) {
+  if (std::error_code ec = sys::windows::widenPath(Program, ProgramUtf16)) {
     SetLastError(ec.value());
     MakeErrMsg(ErrMsg,
                std::string("Unable to convert application name to UTF-16"));
