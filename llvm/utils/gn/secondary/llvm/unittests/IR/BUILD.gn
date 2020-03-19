@@ -39,6 +39,7 @@ unittest("IRTests") {
     "TypesTest.cpp",
     "UseTest.cpp",
     "UserTest.cpp",
+    "VPIntrinsicTest.cpp",
     "ValueHandleTest.cpp",
     "ValueMapTest.cpp",
     "ValueTest.cpp",
