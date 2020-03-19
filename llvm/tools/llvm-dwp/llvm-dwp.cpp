@@ -479,7 +479,7 @@ static Error
 buildDuplicateError(const std::pair<uint64_t, UnitIndexEntry> &PrevE,
                     const CompileUnitIdentifiers &ID, StringRef DWPName) {
   return make_error<DWPError>(
-      std::string("Duplicate DWO ID (") + utohexstr(PrevE.first) + ") in " +
+      std::string("duplicate DWO ID (") + utohexstr(PrevE.first) + ") in " +
       buildDWODescription(PrevE.second.Name, PrevE.second.DWPName,
                           PrevE.second.DWOName) +
       " and " + buildDWODescription(ID.Name, DWPName, ID.DWOName));
@@ -596,7 +596,7 @@ static Error write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
     DWARFUnitIndex CUIndex(DW_SECT_INFO);
     DataExtractor CUIndexData(CurCUIndexSection, Obj.isLittleEndian(), 0);
     if (!CUIndex.parse(CUIndexData))
-      return make_error<DWPError>("Failed to parse cu_index");
+      return make_error<DWPError>("failed to parse cu_index");
 
     for (const DWARFUnitIndex::Entry &E : CUIndex.getRows()) {
       auto *I = E.getOffsets();
@@ -631,7 +631,7 @@ static Error write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
       DWARFUnitIndex TUIndex(DW_SECT_TYPES);
       DataExtractor TUIndexData(CurTUIndexSection, Obj.isLittleEndian(), 0);
       if (!TUIndex.parse(TUIndexData))
-        return make_error<DWPError>("Failed to parse tu_index");
+        return make_error<DWPError>("failed to parse tu_index");
       addAllTypesFromDWP(Out, TypeIndexEntries, TUIndex, TypesSection,
                          CurTypesSection.front(), CurEntry,
                          ContributionOffsets[DW_SECT_TYPES - DW_SECT_INFO]);
