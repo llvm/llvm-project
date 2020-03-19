@@ -912,7 +912,7 @@ void DoForallChecker::CheckForBadLeave(
 static bool StmtMatchesConstruct(const parser::Name *stmtName,
     StmtType stmtType, const parser::Name *constructName,
     const ConstructNode &construct) {
-  bool inDoConstruct{MaybeGetDoConstruct(construct)};
+  bool inDoConstruct{MaybeGetDoConstruct(construct) != nullptr};
   if (!stmtName) {
     return inDoConstruct;  // Unlabeled statements match all DO constructs
   } else if (constructName && constructName->source == stmtName->source) {
