@@ -29,25 +29,25 @@ static bool isScalarOrVectorType(Type type) {
 
 /// Creates a global variable for an argument based on the ABI info.
 static spirv::GlobalVariableOp
-createGlobalVariableForArg(spirv::FuncOp funcOp, OpBuilder &builder,
-                           unsigned argNum,
-                           spirv::InterfaceVarABIAttr abiInfo) {
+createGlobalVarForEntryPointArgument(OpBuilder &builder, spirv::FuncOp funcOp,
+                                     unsigned argIndex,
+                                     spirv::InterfaceVarABIAttr abiInfo) {
   auto spirvModule = funcOp.getParentOfType<spirv::ModuleOp>();
-  if (!spirvModule) {
+  if (!spirvModule)
     return nullptr;
-  }
+
   OpBuilder::InsertionGuard moduleInsertionGuard(builder);
   builder.setInsertionPoint(funcOp.getOperation());
   std::string varName =
-      funcOp.getName().str() + "_arg_" + std::to_string(argNum);
+      funcOp.getName().str() + "_arg_" + std::to_string(argIndex);
 
   // Get the type of variable. If this is a scalar/vector type and has an ABI
-  // info create a variable of type !spv.ptr<!spv.struct<elementTYpe>>. If not
+  // info create a variable of type !spv.ptr<!spv.struct<elementType>>. If not
   // it must already be a !spv.ptr<!spv.struct<...>>.
-  auto varType = funcOp.getType().getInput(argNum);
-  auto storageClass =
-      static_cast<spirv::StorageClass>(abiInfo.storage_class().getInt());
+  auto varType = funcOp.getType().getInput(argIndex);
   if (isScalarOrVectorType(varType)) {
+    auto storageClass =
+        static_cast<spirv::StorageClass>(abiInfo.storage_class().getInt());
     varType =
         spirv::PointerType::get(spirv::StructType::get(varType), storageClass);
   }
@@ -84,9 +84,18 @@ getInterfaceVariables(spirv::FuncOp funcOp,
   funcOp.walk([&](spirv::AddressOfOp addressOfOp) {
     auto var =
         module.lookupSymbol<spirv::GlobalVariableOp>(addressOfOp.variable());
-    if (var.type().cast<spirv::PointerType>().getStorageClass() !=
-        spirv::StorageClass::StorageBuffer) {
+    // TODO(antiagainst): Per SPIR-V spec: "Before version 1.4, the interface’s
+    // storage classes are limited to the Input and Output storage classes.
+    // Starting with version 1.4, the interface’s storage classes are all
+    // storage classes used in declaring all global variables referenced by the
+    // entry point’s call tree." We should consider the target environment here.
+    switch (var.type().cast<spirv::PointerType>().getStorageClass()) {
+    case spirv::StorageClass::Input:
+    case spirv::StorageClass::Output:
       interfaceVarSet.insert(var.getOperation());
+      break;
+    default:
+      break;
     }
   });
   for (auto &var : interfaceVarSet) {
@@ -173,11 +182,10 @@ LogicalResult ProcessInterfaceVarABI::matchAndRewrite(
       // produce an error.
       return failure();
     }
-    auto var =
-        createGlobalVariableForArg(funcOp, rewriter, argType.index(), abiInfo);
-    if (!var) {
+    spirv::GlobalVariableOp var = createGlobalVarForEntryPointArgument(
+        rewriter, funcOp, argType.index(), abiInfo);
+    if (!var)
       return failure();
-    }
 
     OpBuilder::InsertionGuard funcInsertionGuard(rewriter);
     rewriter.setInsertionPointToStart(&funcOp.front());
