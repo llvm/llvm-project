@@ -14,7 +14,7 @@ func @unknown_attr_on_region(%arg: i32 {spv.something}) {
 
 // -----
 
-// expected-error @+1 {{found unsupported 'spv.something' attribute on region result}}
+// expected-error @+1 {{cannot attach SPIR-V attributes to region result}}
 func @unknown_attr_on_region() -> (i32 {spv.something}) {
   %0 = constant 10.0 : f32
   return %0: f32
@@ -51,14 +51,14 @@ func @spv_entry_point() attributes {
 // spv.interface_var_abi
 //===----------------------------------------------------------------------===//
 
-// expected-error @+1 {{'spv.interface_var_abi' attribute must be a dictionary attribute containing three 32-bit integer attributes: 'descriptor_set', 'binding', and 'storage_class'}}
+// expected-error @+1 {{'spv.interface_var_abi' attribute must be a dictionary attribute containing two or three 32-bit integer attributes: 'descriptor_set', 'binding', and optional 'storage_class'}}
 func @interface_var(
   %arg0 : f32 {spv.interface_var_abi = 64}
 ) { return }
 
 // -----
 
-// expected-error @+1 {{'spv.interface_var_abi' attribute must be a dictionary attribute containing three 32-bit integer attributes: 'descriptor_set', 'binding', and 'storage_class'}}
+// expected-error @+1 {{'spv.interface_var_abi' attribute must be a dictionary attribute containing two or three 32-bit integer attributes: 'descriptor_set', 'binding', and optional 'storage_class'}}
 func @interface_var(
   %arg0 : f32 {spv.interface_var_abi = {binding = 0: i32}}
 ) { return }
@@ -74,31 +74,12 @@ func @interface_var(
 
 // -----
 
-// expected-error @+1 {{'spv.interface_var_abi' attribute must be a dictionary attribute containing three 32-bit integer attributes: 'descriptor_set', 'binding', and 'storage_class'}}
-func @interface_var() -> (f32 {spv.interface_var_abi = 64})
-{
-  %0 = constant 10.0 : f32
-  return %0: f32
-}
-
-// -----
-
-// expected-error @+1 {{'spv.interface_var_abi' attribute must be a dictionary attribute containing three 32-bit integer attributes: 'descriptor_set', 'binding', and 'storage_class'}}
-func @interface_var() -> (f32 {spv.interface_var_abi = {binding = 0: i32}})
-{
-  %0 = constant 10.0 : f32
-  return %0: f32
-}
-
-// -----
-
-// CHECK: {spv.interface_var_abi = {binding = 0 : i32, descriptor_set = 0 : i32, storage_class = 12 : i32}}
-func @interface_var() -> (f32 {spv.interface_var_abi = {
-    binding = 0 : i32, descriptor_set = 0 : i32, storage_class = 12 : i32}})
-{
-  %0 = constant 10.0 : f32
-  return %0: f32
-}
+// expected-error @+1 {{'spv.interface_var_abi' attribute cannot specify storage class when attaching to a non-scalar value}}
+func @interface_var(
+  %arg0 : memref<4xf32> {spv.interface_var_abi = {binding = 0 : i32,
+                                                  descriptor_set = 0 : i32,
+                                                  storage_class = 12 : i32}}
+) { return }
 
 // -----
 

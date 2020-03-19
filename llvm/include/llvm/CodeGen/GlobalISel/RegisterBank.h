@@ -29,18 +29,23 @@ class RegisterBank {
 private:
   unsigned ID;
   const char *Name;
-  unsigned Size;
+  const unsigned *Sizes;
   BitVector ContainedRegClasses;
 
-  /// Sentinel value used to recognize register bank not properly
+  /// HwMode of the target. Not initialized by the constructor, initialized
+  /// within generated RegisterBankInfo class constructor.
+  unsigned HwMode;
+
+  /// Sentinel values used to recognize register bank not properly
   /// initialized yet.
   static const unsigned InvalidID;
+  static const unsigned InvalidHwMode;
 
   /// Only the RegisterBankInfo can initialize RegisterBank properly.
   friend RegisterBankInfo;
 
 public:
-  RegisterBank(unsigned ID, const char *Name, unsigned Size,
+  RegisterBank(unsigned ID, const char *Name, const unsigned *Sizes,
                const uint32_t *CoveredClasses, unsigned NumRegClasses);
 
   /// Get the identifier of this register bank.
@@ -51,7 +56,7 @@ public:
   const char *getName() const { return Name; }
 
   /// Get the maximal size in bits that fits in this register bank.
-  unsigned getSize() const { return Size; }
+  unsigned getSize() const { return Sizes[HwMode]; }
 
   /// Check whether this instance is ready to be used.
   bool isValid() const;

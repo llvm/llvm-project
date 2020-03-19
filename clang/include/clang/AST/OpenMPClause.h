@@ -4433,6 +4433,12 @@ class OMPDeviceClause : public OMPClause, public OMPClauseWithPreInit {
   /// Location of '('.
   SourceLocation LParenLoc;
 
+  /// Device clause modifier.
+  OpenMPDeviceClauseModifier Modifier = OMPC_DEVICE_unknown;
+
+  /// Location of the modifier.
+  SourceLocation ModifierLoc;
+
   /// Device number.
   Stmt *Device = nullptr;
 
@@ -4441,20 +4447,30 @@ class OMPDeviceClause : public OMPClause, public OMPClauseWithPreInit {
   /// \param E Device number.
   void setDevice(Expr *E) { Device = E; }
 
+  /// Sets modifier.
+  void setModifier(OpenMPDeviceClauseModifier M) { Modifier = M; }
+
+  /// Setst modifier location.
+  void setModifierLoc(SourceLocation Loc) { ModifierLoc = Loc; }
+
 public:
   /// Build 'device' clause.
   ///
+  /// \param Modifier Clause modifier.
   /// \param E Expression associated with this clause.
   /// \param CaptureRegion Innermost OpenMP region where expressions in this
   /// clause must be captured.
   /// \param StartLoc Starting location of the clause.
+  /// \param ModifierLoc Modifier location.
   /// \param LParenLoc Location of '('.
   /// \param EndLoc Ending location of the clause.
-  OMPDeviceClause(Expr *E, Stmt *HelperE, OpenMPDirectiveKind CaptureRegion,
-                  SourceLocation StartLoc, SourceLocation LParenLoc,
+  OMPDeviceClause(OpenMPDeviceClauseModifier Modifier, Expr *E, Stmt *HelperE,
+                  OpenMPDirectiveKind CaptureRegion, SourceLocation StartLoc,
+                  SourceLocation LParenLoc, SourceLocation ModifierLoc,
                   SourceLocation EndLoc)
       : OMPClause(OMPC_device, StartLoc, EndLoc), OMPClauseWithPreInit(this),
-        LParenLoc(LParenLoc), Device(E) {
+        LParenLoc(LParenLoc), Modifier(Modifier), ModifierLoc(ModifierLoc),
+        Device(E) {
     setPreInitStmt(HelperE, CaptureRegion);
   }
 
@@ -4474,6 +4490,12 @@ public:
 
   /// Return device number.
   Expr *getDevice() const { return cast<Expr>(Device); }
+
+  /// Gets modifier.
+  OpenMPDeviceClauseModifier getModifier() const { return Modifier; }
+
+  /// Gets modifier location.
+  SourceLocation getModifierLoc() const { return ModifierLoc; }
 
   child_range children() { return child_range(&Device, &Device + 1); }
 

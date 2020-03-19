@@ -666,7 +666,7 @@ uint64_t Value::getPointerDereferenceableBytes(const DataLayout &DL,
     if (DerefBytes == 0 && (A->hasByValAttr() || A->hasStructRetAttr())) {
       Type *PT = cast<PointerType>(A->getType())->getElementType();
       if (PT->isSized())
-        DerefBytes = DL.getTypeStoreSize(PT);
+        DerefBytes = DL.getTypeStoreSize(PT).getKnownMinSize();
     }
     if (DerefBytes == 0) {
       DerefBytes = A->getDereferenceableOrNullBytes();
@@ -707,14 +707,15 @@ uint64_t Value::getPointerDereferenceableBytes(const DataLayout &DL,
     }
   } else if (auto *AI = dyn_cast<AllocaInst>(this)) {
     if (!AI->isArrayAllocation()) {
-      DerefBytes = DL.getTypeStoreSize(AI->getAllocatedType());
+      DerefBytes =
+          DL.getTypeStoreSize(AI->getAllocatedType()).getKnownMinSize();
       CanBeNull = false;
     }
   } else if (auto *GV = dyn_cast<GlobalVariable>(this)) {
     if (GV->getValueType()->isSized() && !GV->hasExternalWeakLinkage()) {
       // TODO: Don't outright reject hasExternalWeakLinkage but set the
       // CanBeNull flag.
-      DerefBytes = DL.getTypeStoreSize(GV->getValueType());
+      DerefBytes = DL.getTypeStoreSize(GV->getValueType()).getFixedSize();
       CanBeNull = false;
     }
   }

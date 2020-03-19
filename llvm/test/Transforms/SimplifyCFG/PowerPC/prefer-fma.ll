@@ -11,14 +11,15 @@ define double @_Z3fooRdS_S_S_(double* dereferenceable(8) %x, double* dereference
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq double [[TMP0]], 0.000000e+00
 ; CHECK-NEXT:    [[TMP1:%.*]] = load double, double* [[X:%.*]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load double, double* [[A:%.*]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = fmul fast double [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul fast double [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[MUL:%.*]] = fadd fast double 1.000000e+00, [[TMP3]]
 ; CHECK-NEXT:    store double [[MUL]], double* [[Y]], align 8
 ; CHECK-NEXT:    br label [[IF_END:%.*]]
 ; CHECK:       if.else:
-; CHECK-NEXT:    [[SUB1:%.*]] = fsub fast double [[TMP3]], [[TMP0]]
+; CHECK-NEXT:    [[MUL1:%.*]] = fmul fast double [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[SUB1:%.*]] = fsub fast double [[MUL1]], [[TMP0]]
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr double, double* [[Y]], i32 1
 ; CHECK-NEXT:    store double [[SUB1]], double* [[GEP1]], align 8
 ; CHECK-NEXT:    br label [[IF_END]]

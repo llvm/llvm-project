@@ -163,11 +163,17 @@ bool CompositeType::classof(Type type) {
   case TypeKind::Array:
   case TypeKind::RuntimeArray:
   case TypeKind::Struct:
-  case StandardTypes::Vector:
     return true;
+  case StandardTypes::Vector:
+    return isValid(type.cast<VectorType>());
   default:
     return false;
   }
+}
+
+bool CompositeType::isValid(VectorType type) {
+  return type.getRank() == 1 && type.getElementType().isa<ScalarType>() &&
+         type.getNumElements() >= 2 && type.getNumElements() <= 4;
 }
 
 Type CompositeType::getElementType(unsigned index) const {
@@ -560,7 +566,30 @@ void RuntimeArrayType::getCapabilities(
 // ScalarType
 //===----------------------------------------------------------------------===//
 
-bool ScalarType::classof(Type type) { return type.isIntOrFloat(); }
+bool ScalarType::classof(Type type) {
+  if (auto floatType = type.dyn_cast<FloatType>()) {
+    return isValid(floatType);
+  }
+  if (auto intType = type.dyn_cast<IntegerType>()) {
+    return isValid(intType);
+  }
+  return false;
+}
+
+bool ScalarType::isValid(FloatType type) { return !type.isBF16(); }
+
+bool ScalarType::isValid(IntegerType type) {
+  switch (type.getWidth()) {
+  case 1:
+  case 8:
+  case 16:
+  case 32:
+  case 64:
+    return true;
+  default:
+    return false;
+  }
+}
 
 void ScalarType::getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
                                Optional<StorageClass> storage) {
@@ -678,9 +707,19 @@ void ScalarType::getCapabilities(
 //===----------------------------------------------------------------------===//
 
 bool SPIRVType::classof(Type type) {
-  return type.isa<ScalarType>() || type.isa<VectorType>() ||
-         (type.getKind() >= Type::FIRST_SPIRV_TYPE &&
-          type.getKind() <= TypeKind::LAST_SPIRV_TYPE);
+  // Allow SPIR-V dialect types
+  if (type.getKind() >= Type::FIRST_SPIRV_TYPE &&
+      type.getKind() <= TypeKind::LAST_SPIRV_TYPE)
+    return true;
+  if (type.isa<ScalarType>())
+    return true;
+  if (auto vectorType = type.dyn_cast<VectorType>())
+    return CompositeType::isValid(vectorType);
+  return false;
+}
+
+bool SPIRVType::isScalarOrVector() {
+  return isIntOrFloat() || isa<VectorType>();
 }
 
 void SPIRVType::getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,

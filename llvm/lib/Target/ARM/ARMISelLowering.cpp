@@ -17079,7 +17079,7 @@ bool ARMTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::arm_mve_vld4q: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     // Conservatively set memVT to the entire set of vectors loaded.
-    Type *VecTy = cast<CompositeType>(I.getType())->getTypeAtIndex(1);
+    Type *VecTy = cast<StructType>(I.getType())->getElementType(1);
     unsigned Factor = Intrinsic == Intrinsic::arm_mve_vld2q ? 2 : 4;
     Info.memVT = EVT::getVectorVT(VecTy->getContext(), MVT::i64, Factor * 2);
     Info.ptrVal = I.getArgOperand(0);

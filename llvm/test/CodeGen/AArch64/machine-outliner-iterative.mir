@@ -1,0 +1,149 @@
+# RUN: llc -mtriple=aarch64 -run-pass=machine-outliner -machine-outline-runs=2 -verify-machineinstrs %s -o - | FileCheck %s --check-prefix TWO-RUNS
+# RUN: llc -mtriple=aarch64 -run-pass=machine-outliner -machine-outline-runs=1 -verify-machineinstrs %s -o - | FileCheck %s --check-prefix ONE-RUN
+# RUN: llc -mtriple=aarch64 -run-pass=machine-outliner -machine-outline-runs=4 -verify-machineinstrs %s -o - | FileCheck %s --check-prefix FOUR-RUNS
+
+# Example of Repeated Instruction Sequence - Iterative Machine Outlining
+#
+#; define void @"$s12"(...) {         define i64 @"$s5” (...) {             define void @"$s13"(...) {
+#   ...                                ...                                   ...
+#   %8 = load i1, i1* %7                                                     %8 = load i1, i1* %7
+#   %9 = load i4, i4*, %6              %9 = load i4, i4*, %6                 %9 = load i4, i4*, %6
+#   store i4 %9, i4* %5                store i4 %9, i4* %5                   store i4 %9, i4* %5
+#   ...                                ...                                   ...
+# }                                  }                                     }
+#
+# After machine outliner (1st time)
+#
+# define void @"$s12"(...) {         define i64 @"$s5” (...) {             define void @"$s13"(...) {
+#   ...                                ...                                   ...
+#   %8 = load i1, i1* %7                                                     %8 = load i1, i1* %7
+#   call void @outlined_function_1_1   call void @outlined_function_1_1      call void @outlined_function_1_1
+#   ...                                ...                                   ...
+# }                                  }                                     }
+#
+# After machine outliner (2nd time)
+#
+# define void @"$s12"(...) {         define i64 @"$s5” (...) {             define void @"$s13"(...) {
+#   ...                                ...                                   ...
+#   call void @outlined_function_2_1   call void @outlined_function_1_1      call void @outlined_function_2_1
+#   ...                                ...                                   ...
+# }                                  }                                     }
+#
+# Check whether machine outliner can further find the outlining opportunity after machine
+# outlining has performed.
+#
+--- |
+  declare void @foo() local_unnamed_addr
+
+  declare void @widget() local_unnamed_addr
+
+  ; Function Attrs: minsize noredzone optsize
+  define void @baz.14() #0 {
+    ret void
+  }
+
+  ; Function Attrs: minsize noredzone optsize
+  define void @baz.15() #0 {
+    ret void
+  }
+
+  ; Function Attrs: minsize noredzone optsize
+  define void @baz.16() #0 {
+    ret void
+  }
+
+  attributes #0 = { minsize noredzone optsize }
+...
+---
+name:            baz.14
+tracksRegLiveness: true
+stack:
+  - { id: 0, offset: -8, size: 8 }
+  - { id: 1, offset: -16, size: 8 }
+body:             |
+  bb.0:
+    liveins: $x0, $x19, $lr
+
+    early-clobber $sp = frame-setup STPXpre killed $lr, killed $x19, $sp, -2 :: (store 8 into %stack.1), (store 8 into %stack.0)
+    frame-setup CFI_INSTRUCTION def_cfa_offset 16
+    frame-setup CFI_INSTRUCTION offset $w19, -8
+    frame-setup CFI_INSTRUCTION offset $w30, -16
+    renamable $x19 = COPY $x0
+    renamable $x0 = nuw ADDXri $x0, 48, 0
+    $x1 = ADDXri $sp, 0, 0
+    dead $w2 = MOVi32imm 33, implicit-def $x2
+    $x3 = COPY $xzr
+    BL @foo, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit killed $x1, implicit killed $x2, implicit killed $x3, implicit-def $sp
+    $x0 = COPY killed renamable $x19
+    BL @widget, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit-def $sp
+    early-clobber $sp, $lr, $x19 = frame-destroy LDPXpost $sp, 2 :: (load 8 from %stack.1), (load 8 from %stack.0)
+    RET_ReallyLR
+
+...
+---
+name:            baz.15
+tracksRegLiveness: true
+stack:
+  - { id: 0, offset: -8, size: 8 }
+  - { id: 1, offset: -16, size: 8 }
+body:             |
+  bb.0:
+    liveins: $x0, $x19, $lr
+
+    early-clobber $sp = frame-setup STPXpre killed $lr, killed $x19, $sp, -2 :: (store 8 into %stack.1), (store 8 into %stack.0)
+    frame-setup CFI_INSTRUCTION def_cfa_offset 16
+    frame-setup CFI_INSTRUCTION offset $w19, -8
+    frame-setup CFI_INSTRUCTION offset $w30, -16
+    renamable $x19 = COPY $x0
+    renamable $x0 = nuw ADDXri killed renamable $x0, 16, 0
+    $x1 = ADDXri $sp, 0, 0
+    dead $w2 = MOVi32imm 33, implicit-def $x2
+    $x3 = COPY $xzr
+    BL @foo, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit $x1, implicit killed $x2, implicit killed $x3, implicit-def $sp
+    $x0 = COPY killed renamable $x19
+    BL @widget, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit-def $sp
+    early-clobber $sp, $lr, $x19 = frame-destroy LDPXpost $sp, 2 :: (load 8 from %stack.1), (load 8 from %stack.0)
+    RET_ReallyLR
+
+...
+---
+name:            baz.16
+tracksRegLiveness: true
+stack:
+  - { id: 0, offset: -8, size: 8 }
+  - { id: 1, offset: -16, size: 8 }
+body:             |
+  bb.0:
+    liveins: $x0, $x19, $lr
+
+    early-clobber $sp = frame-setup STPXpre killed $lr, killed $x19, $sp, -2 :: (store 8 into %stack.1), (store 8 into %stack.0)
+    frame-setup CFI_INSTRUCTION def_cfa_offset 16
+    frame-setup CFI_INSTRUCTION offset $w19, -8
+    frame-setup CFI_INSTRUCTION offset $w30, -16
+    renamable $x19 = COPY $x0
+    renamable $x0 = nuw ADDXri $x0, 48, 0
+    $x1 = ADDXri $sp, 0, 0
+    dead $w2 = MOVi32imm 33, implicit-def $x2
+    $x3 = COPY $xzr
+    BL @foo, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit killed $x1, implicit killed $x2, implicit killed $x3, implicit-def $sp
+    $x0 = COPY killed renamable $x19
+    BL @widget, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit-def $sp
+    early-clobber $sp, $lr, $x19 = frame-destroy LDPXpost $sp, 2 :: (load 8 from %stack.1), (load 8 from %stack.0)
+    RET_ReallyLR
+
+...
+
+# TWO-RUNS: name:            OUTLINED_FUNCTION_2_0
+# TWO-RUNS-DAG: bb.0:
+# TWO-RUNS-DAG: renamable $x19 = COPY $x0
+# TWO-RUNS-NEXT: renamable $x0 = nuw ADDXri $x0, 48, 0
+# TWO-RUNS-NEXT: TCRETURNdi @OUTLINED_FUNCTION_0, 0, implicit $sp
+#
+# The machine outliner is expected to stop at the 1st iteration for case ONE-RUN
+# since machine-outline-runs is specified as 1.
+# ONE-RUN-NOT: [[OUTLINED:OUTLINED_FUNCTION_2_[0-9]+]]
+#
+# The machine outliner is expected to stop at the 3rd iteration for case FOUR-RUNS
+# since the MIR has no change at the 3rd iteration.
+# FOUR-RUNS-NOT: [[OUTLINED:OUTLINED_FUNCTION_3_[0-9]+]]
+# FOUR-RUNS-NOT: [[OUTLINED:OUTLINED_FUNCTION_4_[0-9]+]]

@@ -1373,7 +1373,7 @@ static LogicalResult verify(spirv::ConstantOp constOp) {
 
 bool spirv::ConstantOp::isBuildableWith(Type type) {
   // Must be valid SPIR-V type first.
-  if (!SPIRVDialect::isValidType(type))
+  if (!type.isa<spirv::SPIRVType>())
     return false;
 
   if (type.getKind() >= Type::FIRST_SPIRV_TYPE &&
@@ -2460,7 +2460,7 @@ static LogicalResult verify(spirv::SpecConstantOp constOp) {
   case StandardAttributes::Integer:
   case StandardAttributes::Float: {
     // Make sure bitwidth is allowed.
-    if (!spirv::SPIRVDialect::isValidType(value.getType()))
+    if (!value.getType().isa<spirv::SPIRVType>())
       return constOp.emitOpError("default value bitwidth disallowed");
     return success();
   }

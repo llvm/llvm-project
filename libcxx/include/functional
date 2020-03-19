@@ -1618,7 +1618,7 @@ public:
 
 // __base provides an abstract interface for copyable functors.
 
-template<class _Fp> class __base;
+template<class _Fp> class _LIBCPP_TEMPLATE_VIS __base;
 
 template<class _Rp, class ..._ArgTypes>
 class __base<_Rp(_ArgTypes...)>

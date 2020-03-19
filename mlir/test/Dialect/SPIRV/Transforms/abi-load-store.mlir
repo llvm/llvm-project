@@ -1,5 +1,12 @@
 // RUN: mlir-opt -spirv-lower-abi-attrs -verify-diagnostics %s -o - | FileCheck %s
 
+module attributes {
+  spv.target_env = #spv.target_env<
+    #spv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]>,
+    {max_compute_workgroup_invocations = 128 : i32,
+     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+} {
+
 // CHECK-LABEL: spv.module
 spv.module Logical GLSL450 {
   // CHECK-DAG: spv.globalVariable [[WORKGROUPSIZE:@.*]] built_in("WorkgroupSize")
@@ -21,16 +28,13 @@ spv.module Logical GLSL450 {
   spv.func @load_store_kernel(
     %arg0: !spv.ptr<!spv.struct<!spv.array<12 x !spv.array<4 x f32>>>, StorageBuffer>
     {spv.interface_var_abi = {binding = 0 : i32,
-                              descriptor_set = 0 : i32,
-                              storage_class = 12 : i32}},
+                              descriptor_set = 0 : i32}},
     %arg1: !spv.ptr<!spv.struct<!spv.array<12 x !spv.array<4 x f32>>>, StorageBuffer>
     {spv.interface_var_abi = {binding = 1 : i32,
-                              descriptor_set = 0 : i32,
-                              storage_class = 12 : i32}},
+                              descriptor_set = 0 : i32}},
     %arg2: !spv.ptr<!spv.struct<!spv.array<12 x !spv.array<4 x f32>>>, StorageBuffer>
     {spv.interface_var_abi = {binding = 2 : i32,
-                              descriptor_set = 0 : i32,
-                              storage_class = 12 : i32}},
+                              descriptor_set = 0 : i32}},
     %arg3: i32
     {spv.interface_var_abi = {binding = 3 : i32,
                               descriptor_set = 0 : i32,
@@ -122,4 +126,6 @@ spv.module Logical GLSL450 {
   }
   // CHECK: spv.EntryPoint "GLCompute" [[FN]], [[WORKGROUPID]], [[LOCALINVOCATIONID]], [[NUMWORKGROUPS]], [[WORKGROUPSIZE]]
   // CHECK-NEXT: spv.ExecutionMode [[FN]] "LocalSize", 32, 1, 1
-}
+} // end spv.module
+
+} // end module

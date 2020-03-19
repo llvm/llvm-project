@@ -1008,15 +1008,22 @@ public:
     return getPointerAddressSpace();
   }
 
-  /// Returns the type of the element that would be loaded with
-  /// a load instruction with the specified parameters.
+  /// Returns the result type of a getelementptr with the given source
+  /// element type and indexes.
   ///
   /// Null is returned if the indices are invalid for the specified
-  /// pointer type.
-  ///
+  /// source element type.
   static Type *getIndexedType(Type *Ty, ArrayRef<Value *> IdxList);
   static Type *getIndexedType(Type *Ty, ArrayRef<Constant *> IdxList);
   static Type *getIndexedType(Type *Ty, ArrayRef<uint64_t> IdxList);
+
+  /// Return the type of the element at the given index of an indexable
+  /// type.  This is equivalent to "getIndexedType(Agg, {Zero, Idx})".
+  ///
+  /// Returns null if the type can't be indexed, or the given index is not
+  /// legal for the given type.
+  static Type *getTypeAtIndex(Type *Ty, Value *Idx);
+  static Type *getTypeAtIndex(Type *Ty, uint64_t Idx);
 
   inline op_iterator       idx_begin()       { return op_begin()+1; }
   inline const_op_iterator idx_begin() const { return op_begin()+1; }

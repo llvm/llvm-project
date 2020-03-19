@@ -1829,6 +1829,21 @@ lldb_private::Status PlatformDarwin::FindBundleBinaryInExecSearchPaths(
   return Status();
 }
 
+std::string PlatformDarwin::FindComponentInPath(llvm::StringRef path,
+                                                llvm::StringRef component) {
+  auto begin = llvm::sys::path::begin(path);
+  auto end = llvm::sys::path::end(path);
+  for (auto it = begin; it != end; ++it) {
+    if (it->contains(component)) {
+      llvm::SmallString<128> buffer;
+      llvm::sys::path::append(buffer, begin, ++it,
+                              llvm::sys::path::Style::posix);
+      return buffer.str().str();
+    }
+  }
+  return {};
+}
+
 std::string
 PlatformDarwin::FindXcodeContentsDirectoryInPath(llvm::StringRef path) {
   auto begin = llvm::sys::path::begin(path);
@@ -1958,4 +1973,16 @@ FileSpec PlatformDarwin::GetXcodeContentsDirectory() {
     }
   });
   return g_xcode_contents_path;
+}
+
+FileSpec PlatformDarwin::GetCurrentToolchainDirectory() {
+  if (FileSpec fspec = HostInfo::GetShlibDir())
+    return FileSpec(FindComponentInPath(fspec.GetPath(), ".xctoolchain"));
+  return {};
+}
+
+FileSpec PlatformDarwin::GetCurrentCommandLineToolsDirectory() {
+  if (FileSpec fspec = HostInfo::GetShlibDir())
+    return FileSpec(FindComponentInPath(fspec.GetPath(), "CommandLineTools"));
+  return {};
 }

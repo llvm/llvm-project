@@ -633,6 +633,10 @@ SizeOffsetType ObjectSizeOffsetVisitor::visitAllocaInst(AllocaInst &I) {
   if (!I.getAllocatedType()->isSized())
     return unknown();
 
+  if (I.getAllocatedType()->isVectorTy() &&
+      I.getAllocatedType()->getVectorIsScalable())
+    return unknown();
+
   APInt Size(IntTyBits, DL.getTypeAllocSize(I.getAllocatedType()));
   if (!I.isArrayAllocation())
     return std::make_pair(align(Size, I.getAlignment()), Zero);
