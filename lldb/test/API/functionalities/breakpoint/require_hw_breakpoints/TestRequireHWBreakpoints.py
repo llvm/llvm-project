@@ -19,7 +19,6 @@ class BreakpointLocationsTestCase(TestBase):
                     CURRENT_EXECUTABLE_SET)
         self.runCmd("breakpoint set -b main --hardware")
         self.runCmd("run")
-        print(self.res.GetOutput())
         if 'stopped' in self.res.GetOutput():
             return 'Hardware breakpoints are supported'
         return None
