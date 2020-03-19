@@ -80,20 +80,11 @@ class HiddenIvarsTestCase(TestBase):
     def common_setup(self, strip):
 
         if strip:
-            self.assertTrue(subprocess.call(
-                ['/usr/bin/strip', '-Sx',
-                 self.getBuildArtifact('libInternalDefiner.dylib')]) == 0,
-                            'stripping dylib succeeded')
-            self.assertTrue(subprocess.call(
-                ['/bin/rm', '-rf',
-                 self.getBuildArtifact('libInternalDefiner.dylib.dSYM')]) == 0,
-                            'remove dylib dSYM file succeeded')
-            self.assertTrue(subprocess.call(['/usr/bin/strip', '-Sx',
-                                             self.getBuildArtifact("a.out")
-                                            ]) == 0,
-                            'stripping a.out succeeded')
+            exe = self.getBuildArtifact("stripped/a.out")
+        else:
+            exe = self.getBuildArtifact("a.out")
         # Create a target by the debugger.
-        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
+        target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
 
         # Create the breakpoint inside function 'main'.
@@ -110,7 +101,6 @@ class HiddenIvarsTestCase(TestBase):
             None, environment, self.get_process_working_directory())
         self.assertTrue(process, PROCESS_IS_VALID)
 
-        exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # Break inside the foo function which takes a bar_ptr argument.
