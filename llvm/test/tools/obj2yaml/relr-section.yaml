@@ -67,3 +67,27 @@ Sections:
   - Name: .relr.dyn
     Type: SHT_RELR
     Content: "11223344556677"
+
+## Test we are able to dump a SHT_RELR section when sh_entsize is invalid.
+## Here we use 0xFE as a value instead of expected 0x8.
+
+# RUN: yaml2obj --docnum=3 %s -o %t.entsize
+# RUN: obj2yaml %t.entsize | FileCheck %s --check-prefix=ENTSIZE
+
+# ENTSIZE:        - Name:    .relr.dyn
+# ENTSIZE-NEXT:     Type:    SHT_RELR
+# ENTSIZE-NEXT:     EntSize: 0x00000000000000FE
+# ENTSIZE-NEXT:     Content: '1122334455667788'
+# ENTSIZE-NEXT: ...
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2MSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:    .relr.dyn
+    Type:    SHT_RELR
+    EntSize: 0xFE
+    Content: "1122334455667788"
