@@ -2680,9 +2680,12 @@ define <32 x i16> @avx512_psllv_w_512_undef(<32 x i16> %v) {
 
 define <8 x i16> @sse2_psrai_w_128_masked(<8 x i16> %v, i32 %a) {
 ; CHECK-LABEL: @sse2_psrai_w_128_masked(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], 15
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x i16> @llvm.x86.sse2.psrai.w(<8 x i16> [[V:%.*]], i32 [[TMP1]])
-; CHECK-NEXT:    ret <8 x i16> [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[A:%.*]] to i16
+; CHECK-NEXT:    [[TMP2:%.*]] = and i16 [[TMP1]], 15
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <8 x i16> undef, i16 [[TMP2]], i32 0
+; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <8 x i16> [[DOTSPLATINSERT]], <8 x i16> undef, <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = ashr <8 x i16> [[V:%.*]], [[DOTSPLAT]]
+; CHECK-NEXT:    ret <8 x i16> [[TMP3]]
 ;
   %1 = and i32 %a, 15
   %2 = tail call <8 x i16> @llvm.x86.sse2.psrai.w(<8 x i16> %v, i32 %1)
@@ -2692,7 +2695,9 @@ define <8 x i16> @sse2_psrai_w_128_masked(<8 x i16> %v, i32 %a) {
 define <8 x i32> @avx2_psrai_d_256_masked(<8 x i32> %v, i32 %a) {
 ; CHECK-LABEL: @avx2_psrai_d_256_masked(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], 31
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x i32> @llvm.x86.avx2.psrai.d(<8 x i32> [[V:%.*]], i32 [[TMP1]])
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <8 x i32> undef, i32 [[TMP1]], i32 0
+; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <8 x i32> [[DOTSPLATINSERT]], <8 x i32> undef, <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = ashr <8 x i32> [[V:%.*]], [[DOTSPLAT]]
 ; CHECK-NEXT:    ret <8 x i32> [[TMP2]]
 ;
   %1 = and i32 %a, 31
@@ -2703,8 +2708,11 @@ define <8 x i32> @avx2_psrai_d_256_masked(<8 x i32> %v, i32 %a) {
 define <8 x i64> @avx512_psrai_q_512_masked(<8 x i64> %v, i32 %a) {
 ; CHECK-LABEL: @avx512_psrai_q_512_masked(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], 63
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x i64> @llvm.x86.avx512.psrai.q.512(<8 x i64> [[V:%.*]], i32 [[TMP1]])
-; CHECK-NEXT:    ret <8 x i64> [[TMP2]]
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <8 x i64> undef, i64 [[TMP2]], i32 0
+; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <8 x i64> [[DOTSPLATINSERT]], <8 x i64> undef, <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = ashr <8 x i64> [[V:%.*]], [[DOTSPLAT]]
+; CHECK-NEXT:    ret <8 x i64> [[TMP3]]
 ;
   %1 = and i32 %a, 63
   %2 = tail call <8 x i64> @llvm.x86.avx512.psrai.q.512(<8 x i64> %v, i32 %1)
@@ -2714,7 +2722,9 @@ define <8 x i64> @avx512_psrai_q_512_masked(<8 x i64> %v, i32 %a) {
 define <4 x i32> @sse2_psrli_d_128_masked(<4 x i32> %v, i32 %a) {
 ; CHECK-LABEL: @sse2_psrli_d_128_masked(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], 31
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x i32> @llvm.x86.sse2.psrli.d(<4 x i32> [[V:%.*]], i32 [[TMP1]])
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i32> undef, i32 [[TMP1]], i32 0
+; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x i32> [[DOTSPLATINSERT]], <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr <4 x i32> [[V:%.*]], [[DOTSPLAT]]
 ; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 ;
   %1 = and i32 %a, 31
@@ -2725,8 +2735,11 @@ define <4 x i32> @sse2_psrli_d_128_masked(<4 x i32> %v, i32 %a) {
 define <4 x i64> @avx2_psrli_q_256_masked(<4 x i64> %v, i32 %a) {
 ; CHECK-LABEL: @avx2_psrli_q_256_masked(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], 63
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x i64> @llvm.x86.avx2.psrli.q(<4 x i64> [[V:%.*]], i32 [[TMP1]])
-; CHECK-NEXT:    ret <4 x i64> [[TMP2]]
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i64> undef, i64 [[TMP2]], i32 0
+; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x i64> [[DOTSPLATINSERT]], <4 x i64> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr <4 x i64> [[V:%.*]], [[DOTSPLAT]]
+; CHECK-NEXT:    ret <4 x i64> [[TMP3]]
 ;
   %1 = and i32 %a, 63
   %2 = tail call <4 x i64> @llvm.x86.avx2.psrli.q(<4 x i64> %v, i32 %1)
@@ -2735,9 +2748,12 @@ define <4 x i64> @avx2_psrli_q_256_masked(<4 x i64> %v, i32 %a) {
 
 define <32 x i16> @avx512_psrli_w_512_masked(<32 x i16> %v, i32 %a) {
 ; CHECK-LABEL: @avx512_psrli_w_512_masked(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], 15
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call <32 x i16> @llvm.x86.avx512.psrli.w.512(<32 x i16> [[V:%.*]], i32 [[TMP1]])
-; CHECK-NEXT:    ret <32 x i16> [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[A:%.*]] to i16
+; CHECK-NEXT:    [[TMP2:%.*]] = and i16 [[TMP1]], 15
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <32 x i16> undef, i16 [[TMP2]], i32 0
+; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <32 x i16> [[DOTSPLATINSERT]], <32 x i16> undef, <32 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr <32 x i16> [[V:%.*]], [[DOTSPLAT]]
+; CHECK-NEXT:    ret <32 x i16> [[TMP3]]
 ;
   %1 = and i32 %a, 15
   %2 = tail call <32 x i16> @llvm.x86.avx512.psrli.w.512(<32 x i16> %v, i32 %1)
@@ -2747,8 +2763,11 @@ define <32 x i16> @avx512_psrli_w_512_masked(<32 x i16> %v, i32 %a) {
 define <2 x i64> @sse2_pslli_q_128_masked(<2 x i64> %v, i32 %a) {
 ; CHECK-LABEL: @sse2_pslli_q_128_masked(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], 63
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call <2 x i64> @llvm.x86.sse2.pslli.q(<2 x i64> [[V:%.*]], i32 [[TMP1]])
-; CHECK-NEXT:    ret <2 x i64> [[TMP2]]
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i64> undef, i64 [[TMP2]], i32 0
+; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <2 x i64> [[DOTSPLATINSERT]], <2 x i64> undef, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = shl <2 x i64> [[V:%.*]], [[DOTSPLAT]]
+; CHECK-NEXT:    ret <2 x i64> [[TMP3]]
 ;
   %1 = and i32 %a, 63
   %2 = tail call <2 x i64> @llvm.x86.sse2.pslli.q(<2 x i64> %v, i32 %1)
@@ -2757,9 +2776,12 @@ define <2 x i64> @sse2_pslli_q_128_masked(<2 x i64> %v, i32 %a) {
 
 define <16 x i16> @avx2_pslli_w_256_masked(<16 x i16> %v, i32 %a) {
 ; CHECK-LABEL: @avx2_pslli_w_256_masked(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], 15
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call <16 x i16> @llvm.x86.avx2.pslli.w(<16 x i16> [[V:%.*]], i32 [[TMP1]])
-; CHECK-NEXT:    ret <16 x i16> [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[A:%.*]] to i16
+; CHECK-NEXT:    [[TMP2:%.*]] = and i16 [[TMP1]], 15
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <16 x i16> undef, i16 [[TMP2]], i32 0
+; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <16 x i16> [[DOTSPLATINSERT]], <16 x i16> undef, <16 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = shl <16 x i16> [[V:%.*]], [[DOTSPLAT]]
+; CHECK-NEXT:    ret <16 x i16> [[TMP3]]
 ;
   %1 = and i32 %a, 15
   %2 = tail call <16 x i16> @llvm.x86.avx2.pslli.w(<16 x i16> %v, i32 %1)
@@ -2769,7 +2791,9 @@ define <16 x i16> @avx2_pslli_w_256_masked(<16 x i16> %v, i32 %a) {
 define <16 x i32> @avx512_pslli_d_512_masked(<16 x i32> %v, i32 %a) {
 ; CHECK-LABEL: @avx512_pslli_d_512_masked(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], 31
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call <16 x i32> @llvm.x86.avx512.pslli.d.512(<16 x i32> [[V:%.*]], i32 [[TMP1]])
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <16 x i32> undef, i32 [[TMP1]], i32 0
+; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <16 x i32> [[DOTSPLATINSERT]], <16 x i32> undef, <16 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = shl <16 x i32> [[V:%.*]], [[DOTSPLAT]]
 ; CHECK-NEXT:    ret <16 x i32> [[TMP2]]
 ;
   %1 = and i32 %a, 31
