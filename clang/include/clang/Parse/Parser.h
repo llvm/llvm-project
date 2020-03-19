@@ -1814,7 +1814,9 @@ private:
                                   bool EnteringContext, IdentifierInfo &II,
                                   CXXScopeSpec &SS);
 
-  bool ParseOptionalCXXScopeSpecifier(CXXScopeSpec &SS, ParsedType ObjectType,
+  bool ParseOptionalCXXScopeSpecifier(CXXScopeSpec &SS,
+                                      ParsedType ObjectType,
+                                      bool ObjectHasErrors,
                                       bool EnteringContext,
                                       bool *MayBePseudoDestructor = nullptr,
                                       bool IsTypename = false,
@@ -2908,11 +2910,12 @@ private:
   AccessSpecifier getAccessSpecifierIfPresent() const;
 
   bool ParseUnqualifiedIdTemplateId(CXXScopeSpec &SS,
+                                    ParsedType ObjectType,
+                                    bool ObjectHadErrors,
                                     SourceLocation TemplateKWLoc,
                                     IdentifierInfo *Name,
                                     SourceLocation NameLoc,
                                     bool EnteringContext,
-                                    ParsedType ObjectType,
                                     UnqualifiedId &Id,
                                     bool AssumeTemplateId);
   bool ParseUnqualifiedIdOperator(CXXScopeSpec &SS, bool EnteringContext,
@@ -3081,13 +3084,12 @@ public:
   bool ParseOpenMPVarList(OpenMPDirectiveKind DKind, OpenMPClauseKind Kind,
                           SmallVectorImpl<Expr *> &Vars,
                           OpenMPVarListDataTy &Data);
-  bool ParseUnqualifiedId(CXXScopeSpec &SS, bool EnteringContext,
-                          bool AllowDestructorName,
-                          bool AllowConstructorName,
+  bool ParseUnqualifiedId(CXXScopeSpec &SS, ParsedType ObjectType,
+                          bool ObjectHadErrors, bool EnteringContext,
+                          bool AllowDestructorName, bool AllowConstructorName,
                           bool AllowDeductionGuide,
-                          ParsedType ObjectType,
-                          SourceLocation *TemplateKWLoc,
-                          UnqualifiedId &Result);
+                          SourceLocation *TemplateKWLoc, UnqualifiedId &Result);
+
   /// Parses the mapper modifier in map, to, and from clauses.
   bool parseMapperModifier(OpenMPVarListDataTy &Data);
   /// Parses map-type-modifiers in map clause.

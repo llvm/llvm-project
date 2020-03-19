@@ -1529,7 +1529,8 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
         // type, translate it into a type and continue parsing as a
         // cast expression.
         CXXScopeSpec SS;
-        ParseOptionalCXXScopeSpecifier(SS, nullptr,
+        ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
+                                       /*ObjectHadErrors=*/false,
                                        /*EnteringContext=*/false);
         AnnotateTemplateIdTokenAsType(SS);
         return ParseCastExpression(ParseKind, isAddressOfOperand, NotCastExpr,
@@ -1983,9 +1984,9 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
         if (LHS.isInvalid())
           break;
 
-        ParseOptionalCXXScopeSpecifier(SS, ObjectType,
-                                       /*EnteringContext=*/false,
-                                       &MayBePseudoDestructor);
+        ParseOptionalCXXScopeSpecifier(
+            SS, ObjectType, LHS.get() && LHS.get()->containsErrors(),
+            /*EnteringContext=*/false, &MayBePseudoDestructor);
         if (SS.isNotEmpty())
           ObjectType = nullptr;
       }
@@ -2045,14 +2046,13 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
         IdentifierInfo *Id = Tok.getIdentifierInfo();
         SourceLocation Loc = ConsumeToken();
         Name.setIdentifier(Id, Loc);
-      } else if (ParseUnqualifiedId(SS,
-                                    /*EnteringContext=*/false,
-                                    /*AllowDestructorName=*/true,
-                                    /*AllowConstructorName=*/
-                                    getLangOpts().MicrosoftExt &&
-                                        SS.isNotEmpty(),
-                                    /*AllowDeductionGuide=*/false,
-                                    ObjectType, &TemplateKWLoc, Name)) {
+      } else if (ParseUnqualifiedId(
+                     SS, ObjectType, LHS.get() && LHS.get()->containsErrors(),
+                     /*EnteringContext=*/false,
+                     /*AllowDestructorName=*/true,
+                     /*AllowConstructorName=*/
+                     getLangOpts().MicrosoftExt && SS.isNotEmpty(),
+                     /*AllowDeductionGuide=*/false, &TemplateKWLoc, Name)) {
         (void)Actions.CorrectDelayedTyposInExpr(LHS);
         LHS = ExprError();
       }

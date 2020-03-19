@@ -4421,7 +4421,8 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
     ColonProtectionRAIIObject X(*this, AllowDeclaration);
 
     CXXScopeSpec Spec;
-    if (ParseOptionalCXXScopeSpecifier(Spec, nullptr,
+    if (ParseOptionalCXXScopeSpecifier(Spec, /*ObjectType=*/nullptr,
+                                       /*ObjectHadErrors=*/false,
                                        /*EnteringContext=*/true))
       return;
 
@@ -5254,7 +5255,8 @@ bool Parser::isConstructorDeclarator(bool IsUnqualified, bool DeductionGuide) {
 
   // Parse the C++ scope specifier.
   CXXScopeSpec SS;
-  if (ParseOptionalCXXScopeSpecifier(SS, nullptr,
+  if (ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
+                                     /*ObjectHadErrors=*/false,
                                      /*EnteringContext=*/true)) {
     TPA.Revert();
     return false;
@@ -5634,7 +5636,8 @@ void Parser::ParseDeclaratorInternal(Declarator &D,
         D.getContext() == DeclaratorContext::FileContext ||
         D.getContext() == DeclaratorContext::MemberContext;
     CXXScopeSpec SS;
-    ParseOptionalCXXScopeSpecifier(SS, nullptr, EnteringContext);
+    ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
+                                   /*ObjectHadErrors=*/false, EnteringContext);
 
     if (SS.isNotEmpty()) {
       if (Tok.isNot(tok::star)) {
@@ -5857,8 +5860,9 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
       bool EnteringContext =
           D.getContext() == DeclaratorContext::FileContext ||
           D.getContext() == DeclaratorContext::MemberContext;
-      ParseOptionalCXXScopeSpecifier(D.getCXXScopeSpec(), nullptr,
-                                     EnteringContext);
+      ParseOptionalCXXScopeSpecifier(
+          D.getCXXScopeSpec(), /*ObjectType=*/nullptr,
+          /*ObjectHadErrors=*/false, EnteringContext);
     }
 
     if (D.getCXXScopeSpec().isValid()) {
@@ -5932,10 +5936,11 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
 
       bool HadScope = D.getCXXScopeSpec().isValid();
       if (ParseUnqualifiedId(D.getCXXScopeSpec(),
+                             /*ObjectType=*/nullptr,
+                             /*ObjectHadErrors=*/false,
                              /*EnteringContext=*/true,
                              /*AllowDestructorName=*/true, AllowConstructorName,
-                             AllowDeductionGuide, nullptr, nullptr,
-                             D.getName()) ||
+                             AllowDeductionGuide, nullptr, D.getName()) ||
           // Once we're past the identifier, if the scope was bad, mark the
           // whole declarator bad.
           D.getCXXScopeSpec().isInvalid()) {
