@@ -13,7 +13,6 @@
 # CHECK-NEXT: Sections:
 # CHECK-NEXT:   - Name:    .rela.text
 # CHECK-NEXT:     Type:    SHT_RELA
-# CHECK-NEXT:     EntSize: 0x0000000000000018
 # CHECK-NEXT:     Relocations:
 # CHECK-NEXT:       - Offset: 0x0000000000000009
 # CHECK-NEXT:         Type:   [[FIRST]]

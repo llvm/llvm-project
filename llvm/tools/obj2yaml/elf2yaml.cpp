@@ -522,6 +522,22 @@ Error ELFDumper<ELFT>::dumpRelocation(const RelT *Rel, const Elf_Shdr *SymTab,
 }
 
 template <class ELFT>
+static unsigned getDefaultShEntSize(ELFYAML::ELF_SHT SecType) {
+  switch (SecType) {
+  case ELF::SHT_REL:
+    return sizeof(typename ELFT::Rel);
+  case ELF::SHT_RELA:
+    return sizeof(typename ELFT::Rela);
+  case ELF::SHT_RELR:
+    return sizeof(typename ELFT::Relr);
+  case ELF::SHT_DYNAMIC:
+    return sizeof(typename ELFT::Dyn);
+  default:
+    return 0;
+  }
+}
+
+template <class ELFT>
 Error ELFDumper<ELFT>::dumpCommonSection(const Elf_Shdr *Shdr,
                                          ELFYAML::Section &S) {
   // Dump fields. We do not dump the ShOffset field. When not explicitly
@@ -532,7 +548,8 @@ Error ELFDumper<ELFT>::dumpCommonSection(const Elf_Shdr *Shdr,
   if (Shdr->sh_addr)
     S.Address = static_cast<uint64_t>(Shdr->sh_addr);
   S.AddressAlign = Shdr->sh_addralign;
-  if (Shdr->sh_entsize)
+
+  if (Shdr->sh_entsize != getDefaultShEntSize<ELFT>(S.Type))
     S.EntSize = static_cast<llvm::yaml::Hex64>(Shdr->sh_entsize);
 
   auto NameOrErr = getUniquedSectionName(Shdr);

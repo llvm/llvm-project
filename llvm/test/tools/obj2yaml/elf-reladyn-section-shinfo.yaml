@@ -1,0 +1,43 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-readobj --sections %t | FileCheck %s
+# RUN: obj2yaml %t | FileCheck %s --check-prefix=YAML
+
+## .rela.dyn is a dynamic relocation section that normally has
+## no value in sh_info field. Check we are able to use
+## yaml2obj/obj2yaml without needing to explicitly set it.
+
+# CHECK:      Name: .rela.dyn
+# CHECK-NEXT: Type: SHT_RELA
+# CHECK-NEXT: Flags [
+# CHECK-NEXT:   SHF_ALLOC
+# CHECK-NEXT: ]
+# CHECK-NEXT: Address:
+# CHECK-NEXT: Offset:
+# CHECK-NEXT: Size:
+# CHECK-NEXT: Link:
+# CHECK-NEXT: Info: 0
+# CHECK-NEXT: AddressAlignment:
+# CHECK-NEXT: EntrySize:
+
+# YAML:      - Name:  .rela.dyn
+# YAML-NEXT:   Type:  SHT_RELA
+# YAML-NEXT:   Flags: [ SHF_ALLOC ]
+# YAML-NEXT:   Link:  .dynsym
+# YAML-NEXT: - Name:
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+  Entry:   0x0000000000001000
+Sections:
+  - Name:    .rela.dyn
+    Type:    SHT_RELA
+    Flags:   [ SHF_ALLOC ]
+    Link:    .dynsym
+# Add at least one symbol to trigger the .dynsym emission.
+DynamicSymbols:
+  - Name:    bar
+    Binding: STB_GLOBAL
