@@ -167,7 +167,7 @@ public:
     }
 
     bool isDisabled(const LangOptions &LO) const {
-      return State == StateFromCmdLine::State_Disabled && ShouldRegister(LO);
+      return State == StateFromCmdLine::State_Disabled || !ShouldRegister(LO);
     }
 
     // Since each checker must have a different full name, we can identify

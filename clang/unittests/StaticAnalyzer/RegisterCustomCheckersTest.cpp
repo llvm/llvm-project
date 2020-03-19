@@ -81,6 +81,66 @@ TEST(RegisterCustomCheckers, CheckLocationIncDec) {
       runCheckerOnCode<addLocIncDecChecker>("void f() { int *p; (*p)++; }"));
 }
 
+//===----------------------------------------------------------------------===//
+// Unsatisfied checker dependency
+//===----------------------------------------------------------------------===//
+
+class PrerequisiteChecker : public Checker<check::ASTCodeBody> {
+public:
+  void checkASTCodeBody(const Decl *D, AnalysisManager &Mgr,
+                        BugReporter &BR) const {
+    BR.EmitBasicReport(D, this, "Prerequisite", categories::LogicError,
+                       "This is the prerequisite checker",
+                       PathDiagnosticLocation(D, Mgr.getSourceManager()), {});
+  }
+};
+
+void registerPrerequisiteChecker(CheckerManager &mgr) {
+  mgr.registerChecker<PrerequisiteChecker>();
+}
+
+bool shouldRegisterPrerequisiteChecker(const LangOptions &LO) {
+  return false;
+}
+
+class DependentChecker : public Checker<check::ASTCodeBody> {
+public:
+  void checkASTCodeBody(const Decl *D, AnalysisManager &Mgr,
+                        BugReporter &BR) const {
+    BR.EmitBasicReport(D, this, "Dependent", categories::LogicError,
+                       "This is the Dependent Checker",
+                       PathDiagnosticLocation(D, Mgr.getSourceManager()), {});
+  }
+};
+
+void registerDependentChecker(CheckerManager &mgr) {
+  mgr.registerChecker<DependentChecker>();
+}
+
+bool shouldRegisterDependentChecker(const LangOptions &LO) {
+  return true;
+}
+
+void addDependentChecker(AnalysisASTConsumer &AnalysisConsumer,
+                         AnalyzerOptions &AnOpts) {
+  AnOpts.CheckersAndPackages = {{"custom.Dependent", true}};
+  AnalysisConsumer.AddCheckerRegistrationFn([](CheckerRegistry &Registry) {
+     Registry.addChecker(registerPrerequisiteChecker,
+                         shouldRegisterPrerequisiteChecker,
+                         "custom.Prerequisite", "Description", "", false);
+     Registry.addChecker(registerDependentChecker,
+                         shouldRegisterDependentChecker,
+                         "custom.Dependent", "Description", "", false);
+     Registry.addDependency("custom.Dependent", "custom.Prerequisite");
+    });
+}
+
+TEST(RegisterDependentCheckers, RegisterChecker) {
+  std::string Diags;
+  EXPECT_TRUE(runCheckerOnCode<addDependentChecker>("void f() {;}", Diags));
+  EXPECT_EQ(Diags, "");
+}
+
 } // namespace
 } // namespace ento
 } // namespace clang
