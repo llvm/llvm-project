@@ -55,26 +55,23 @@ public:
                                 MachineBasicBlock::iterator MI) const override;
 
 private:
-  void emitFlatScratchInit(const GCNSubtarget &ST,
-                           MachineFunction &MF,
-                           MachineBasicBlock &MBB) const;
+  void emitEntryFunctionFlatScratchInit(MachineFunction &MF,
+                                        MachineBasicBlock &MBB,
+                                        MachineBasicBlock::iterator I,
+                                        const DebugLoc &DL,
+                                        Register ScratchWaveOffsetReg) const;
 
-  unsigned getReservedPrivateSegmentBufferReg(
-    const GCNSubtarget &ST,
-    const SIInstrInfo *TII,
-    const SIRegisterInfo *TRI,
-    SIMachineFunctionInfo *MFI,
-    MachineFunction &MF) const;
+  Register getEntryFunctionReservedScratchRsrcReg(MachineFunction &MF) const;
 
-  std::pair<unsigned, bool> getReservedPrivateSegmentWaveByteOffsetReg(
-      const GCNSubtarget &ST, const SIInstrInfo *TII, const SIRegisterInfo *TRI,
-      SIMachineFunctionInfo *MFI, MachineFunction &MF) const;
+  Register
+  getEntryFunctionReservedScratchWaveOffsetReg(MachineFunction &MF) const;
 
-  // Emit scratch setup code for AMDPAL or Mesa, assuming ResourceRegUsed is set.
-  void emitEntryFunctionScratchSetup(const GCNSubtarget &ST, MachineFunction &MF,
-      MachineBasicBlock &MBB, SIMachineFunctionInfo *MFI,
-      MachineBasicBlock::iterator I, unsigned PreloadedPrivateBufferReg,
-      unsigned ScratchRsrcReg) const;
+  void emitEntryFunctionScratchRsrcRegSetup(MachineFunction &MF,
+                                            MachineBasicBlock &MBB,
+                                            MachineBasicBlock::iterator I,
+                                            const DebugLoc &DL,
+                                            Register PreloadedPrivateBufferReg,
+                                            Register ScratchRsrcReg) const;
 
 public:
   bool hasFP(const MachineFunction &MF) const override;
