@@ -19,6 +19,7 @@
 #include "SourceCode.h"
 #include "index/Index.h"
 #include "index/SymbolLocation.h"
+#include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/Type.h"
 #include "clang/Format/Format.h"
 #include "clang/Index/IndexSymbol.h"
@@ -62,8 +63,8 @@ std::vector<LocatedSymbol> locateSymbolAt(ParsedAST &AST, Position Pos,
 // (This is for internal use by locateSymbolAt, and is exposed for testing).
 std::vector<LocatedSymbol>
 locateSymbolTextually(const SpelledWord &Word, ParsedAST &AST,
-                      const SymbolIndex *Index,
-                      const std::string &MainFilePath);
+                      const SymbolIndex *Index, const std::string &MainFilePath,
+                      ASTNodeKind NodeKind);
 
 // Try to find a proximate occurrence of `Word` as an identifier, which can be
 // used to resolve it.
