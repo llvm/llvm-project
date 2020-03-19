@@ -12,7 +12,6 @@
 ; and fail with "failed to compute relocation: IMAGE_REL_AMD64_ADDR32".
 ; UNSUPPORTED: cygwin,windows-gnu,windows-msvc
 
-; REQUIRES: x86
 ; RUN: %llc_dwarf -mtriple=x86_64-- < %s -o - | FileCheck %s -check-prefix=ASM
 ; RUN: %llc_dwarf -debugger-tune=lldb -mtriple=x86_64-- < %s -filetype=obj -o %t.o
 ; RUN: llvm-dwarfdump %t.o -o - | FileCheck %s -check-prefix=OBJ -implicit-check-not=DW_TAG_call_site
