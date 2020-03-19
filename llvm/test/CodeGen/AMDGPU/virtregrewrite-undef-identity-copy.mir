@@ -24,7 +24,6 @@ frameInfo:
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
-  scratchWaveOffsetReg: '$sgpr95'
   frameOffsetReg:  '$sgpr95'
   stackPtrOffsetReg: '$sgpr32'
 body:             |

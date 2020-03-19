@@ -1076,7 +1076,6 @@ bool GCNTargetMachine::parseMachineFunctionInfo(
   };
 
   if (parseRegister(YamlMFI.ScratchRSrcReg, MFI->ScratchRSrcReg) ||
-      parseRegister(YamlMFI.ScratchWaveOffsetReg, MFI->ScratchWaveOffsetReg) ||
       parseRegister(YamlMFI.FrameOffsetReg, MFI->FrameOffsetReg) ||
       parseRegister(YamlMFI.StackPtrOffsetReg, MFI->StackPtrOffsetReg))
     return true;
@@ -1084,11 +1083,6 @@ bool GCNTargetMachine::parseMachineFunctionInfo(
   if (MFI->ScratchRSrcReg != AMDGPU::PRIVATE_RSRC_REG &&
       !AMDGPU::SGPR_128RegClass.contains(MFI->ScratchRSrcReg)) {
     return diagnoseRegisterClass(YamlMFI.ScratchRSrcReg);
-  }
-
-  if (MFI->ScratchWaveOffsetReg != AMDGPU::SCRATCH_WAVE_OFFSET_REG &&
-      !AMDGPU::SGPR_32RegClass.contains(MFI->ScratchWaveOffsetReg)) {
-    return diagnoseRegisterClass(YamlMFI.ScratchWaveOffsetReg);
   }
 
   if (MFI->FrameOffsetReg != AMDGPU::FP_REG &&
