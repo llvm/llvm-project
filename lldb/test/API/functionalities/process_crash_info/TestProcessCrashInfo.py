@@ -69,6 +69,8 @@ class PlatformProcessCrashInfoTestCase(TestBase):
 
         self.assertIn("pointer being freed was not allocated", stream.GetData())
 
+    # dyld leaves permanent crash_info records when testing on device.
+    @skipIfDarwinEmbedded
     def test_on_sane_process(self):
         """Test that lldb doesn't fetch the extended crash information
         dictionnary from a 'sane' stopped process."""
