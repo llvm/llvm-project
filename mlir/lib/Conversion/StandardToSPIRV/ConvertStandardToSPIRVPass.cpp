@@ -31,13 +31,14 @@ void ConvertStandardToSPIRVPass::runOnModule() {
   MLIRContext *context = &getContext();
   ModuleOp module = getModule();
 
-  SPIRVTypeConverter typeConverter;
+  auto targetAttr = spirv::lookupTargetEnvOrDefault(module);
+  std::unique_ptr<ConversionTarget> target =
+      spirv::SPIRVConversionTarget::get(targetAttr);
+
+  SPIRVTypeConverter typeConverter(targetAttr);
   OwningRewritePatternList patterns;
   populateStandardToSPIRVPatterns(context, typeConverter, patterns);
   populateBuiltinFuncToSPIRVPatterns(context, typeConverter, patterns);
-
-  std::unique_ptr<ConversionTarget> target = spirv::SPIRVConversionTarget::get(
-      spirv::lookupTargetEnvOrDefault(module), context);
 
   if (failed(applyPartialConversion(module, *target, patterns))) {
     return signalPassFailure();

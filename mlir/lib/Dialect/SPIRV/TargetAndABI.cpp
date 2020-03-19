@@ -15,6 +15,67 @@
 
 using namespace mlir;
 
+//===----------------------------------------------------------------------===//
+// TargetEnv
+//===----------------------------------------------------------------------===//
+
+spirv::TargetEnv::TargetEnv(spirv::TargetEnvAttr targetAttr)
+    : targetAttr(targetAttr) {
+  for (spirv::Extension ext : targetAttr.getExtensions())
+    givenExtensions.insert(ext);
+
+  // Add extensions implied by the current version.
+  for (spirv::Extension ext :
+       spirv::getImpliedExtensions(targetAttr.getVersion()))
+    givenExtensions.insert(ext);
+
+  for (spirv::Capability cap : targetAttr.getCapabilities()) {
+    givenCapabilities.insert(cap);
+
+    // Add capabilities implied by the current capability.
+    for (spirv::Capability c : spirv::getRecursiveImpliedCapabilities(cap))
+      givenCapabilities.insert(c);
+  }
+}
+
+spirv::Version spirv::TargetEnv::getVersion() {
+  return targetAttr.getVersion();
+}
+
+bool spirv::TargetEnv::allows(spirv::Capability capability) const {
+  return givenCapabilities.count(capability);
+}
+
+Optional<spirv::Capability>
+spirv::TargetEnv::allows(ArrayRef<spirv::Capability> caps) const {
+  auto chosen = llvm::find_if(caps, [this](spirv::Capability cap) {
+    return givenCapabilities.count(cap);
+  });
+  if (chosen != caps.end())
+    return *chosen;
+  return llvm::None;
+}
+
+bool spirv::TargetEnv::allows(spirv::Extension extension) const {
+  return givenExtensions.count(extension);
+}
+
+Optional<spirv::Extension>
+spirv::TargetEnv::allows(ArrayRef<spirv::Extension> exts) const {
+  auto chosen = llvm::find_if(exts, [this](spirv::Extension ext) {
+    return givenExtensions.count(ext);
+  });
+  if (chosen != exts.end())
+    return *chosen;
+  return llvm::None;
+}
+
+MLIRContext *spirv::TargetEnv::getContext() { return targetAttr.getContext(); }
+
+//===----------------------------------------------------------------------===//
+// Utility functions
+//===----------------------------------------------------------------------===//
+
 StringRef spirv::getInterfaceVarABIAttrName() {
   return "spv.interface_var_abi";
 }

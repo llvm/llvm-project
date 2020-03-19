@@ -224,7 +224,9 @@ void LowerABIAttributesPass::runOnOperation() {
   spirv::ModuleOp module = getOperation();
   MLIRContext *context = &getContext();
 
-  SPIRVTypeConverter typeConverter;
+  spirv::TargetEnv targetEnv(spirv::lookupTargetEnv(module));
+
+  SPIRVTypeConverter typeConverter(targetEnv);
   OwningRewritePatternList patterns;
   patterns.insert<ProcessInterfaceVarABI>(context, typeConverter);
 
