@@ -1,7 +1,7 @@
 """
 LLDB module which provides the abstract base class of lldb test case.
 
-The concrete subclass can override lldbtest.TesBase in order to inherit the
+The concrete subclass can override lldbtest.TestBase in order to inherit the
 common behavior for unitest.TestCase.setUp/tearDown implemented in this file.
 
 The subclass should override the attribute mydir in order for the python runtime
