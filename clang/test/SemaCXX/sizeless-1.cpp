@@ -158,10 +158,16 @@ void func(int sel) {
   dump(&volatile_int8);
   dump(&const_volatile_int8);
 
+  dump(&local_int8 + 1); // expected-error {{arithmetic on a pointer to sizeless type}}
+
   *&local_int8 = local_int8;
   *&const_int8 = local_int8; // expected-error {{read-only variable is not assignable}}
   *&volatile_int8 = local_int8;
   *&const_volatile_int8 = local_int8; // expected-error {{read-only variable is not assignable}}
+
+  global_int8_ptr[0] = local_int8;       // expected-error {{subscript of pointer to sizeless type 'svint8_t'}}
+  global_int8_ptr[1] = local_int8;       // expected-error {{subscript of pointer to sizeless type 'svint8_t'}}
+  global_int8_ptr = &global_int8_ptr[2]; // expected-error {{subscript of pointer to sizeless type 'svint8_t'}}
 
   overf(local_int8);
   overf(local_int16);
@@ -173,6 +179,16 @@ void func(int sel) {
   overf16(local_int16);
 
   varargs(1, local_int8, local_int16);
+
+  global_int8_ptr++;                 // expected-error {{arithmetic on a pointer to sizeless type}}
+  global_int8_ptr--;                 // expected-error {{arithmetic on a pointer to sizeless type}}
+  ++global_int8_ptr;                 // expected-error {{arithmetic on a pointer to sizeless type}}
+  --global_int8_ptr;                 // expected-error {{arithmetic on a pointer to sizeless type}}
+  global_int8_ptr + 1;               // expected-error {{arithmetic on a pointer to sizeless type}}
+  global_int8_ptr - 1;               // expected-error {{arithmetic on a pointer to sizeless type}}
+  global_int8_ptr += 1;              // expected-error {{arithmetic on a pointer to sizeless type}}
+  global_int8_ptr -= 1;              // expected-error {{arithmetic on a pointer to sizeless type}}
+  global_int8_ptr - global_int8_ptr; // expected-error {{arithmetic on a pointer to sizeless type}}
 
   +init_int8;       // expected-error {{invalid argument type 'svint8_t'}}
   ++init_int8;      // expected-error {{cannot increment value of type 'svint8_t'}}
@@ -329,6 +345,12 @@ void with_default(svint8_t = svint8_t());
 constexpr int ce_taking_int8(svint8_t) { return 1; } // expected-error {{constexpr function's 1st parameter type 'svint8_t' (aka '__SVInt8_t') is not a literal type}}
 #endif
 
+#if __cplusplus < 201703L
+void throwing_func() throw(svint8_t); // expected-error {{sizeless type 'svint8_t' (aka '__SVInt8_t') is not allowed in exception specification}}
+void throwing_pointer_func() throw(svint8_t *);
+void throwing_reference_func() throw(svint8_t &); // expected-error {{reference to sizeless type 'svint8_t' (aka '__SVInt8_t') is not allowed in exception specification}}
+#endif
+
 template <typename T>
 void template_fn_direct(T) {}
 template <typename T>
@@ -372,6 +394,34 @@ void cxx_only(int sel) {
   local_int8 = static_cast<svint8_t>(0);            // expected-error {{static_cast from 'int' to 'svint8_t' (aka '__SVInt8_t') is not allowed}}
   local_int16 = static_cast<svint16_t>(local_int8); // expected-error {{static_cast from 'svint8_t' (aka '__SVInt8_t') to 'svint16_t' (aka '__SVInt16_t') is not allowed}}
   sel = static_cast<int>(local_int8);               // expected-error {{static_cast from 'svint8_t' (aka '__SVInt8_t') to 'int' is not allowed}}
+
+  throw local_int8; // expected-error {{cannot throw object of sizeless type 'svint8_t'}}
+  throw global_int8_ptr;
+
+  try {
+  } catch (int) {
+  }
+  try {
+  } catch (svint8_t) { // expected-error {{cannot catch sizeless type 'svint8_t'}}
+  }
+  try {
+  } catch (svint8_t *) {
+  }
+  try {
+  } catch (svint8_t &) { // expected-error {{cannot catch reference to sizeless type 'svint8_t'}}
+  }
+
+  new svint8_t;     // expected-error {{allocation of sizeless type 'svint8_t'}}
+  new svint8_t();   // expected-error {{allocation of sizeless type 'svint8_t'}}
+  new svint8_t[10]; // expected-error {{allocation of sizeless type 'svint8_t'}}
+  new svint8_t *;
+
+  new (global_int8_ptr) svint8_t;     // expected-error {{allocation of sizeless type 'svint8_t'}}
+  new (global_int8_ptr) svint8_t();   // expected-error {{allocation of sizeless type 'svint8_t'}}
+  new (global_int8_ptr) svint8_t[10]; // expected-error {{allocation of sizeless type 'svint8_t'}}
+
+  delete global_int8_ptr;   // expected-error {{cannot delete expression of type 'svint8_t *'}}
+  delete[] global_int8_ptr; // expected-error {{cannot delete expression of type 'svint8_t *'}}
 
   local_int8.~__SVInt8_t(); // expected-error {{object expression of non-scalar type 'svint8_t' (aka '__SVInt8_t') cannot be used in a pseudo-destructor expression}}
 

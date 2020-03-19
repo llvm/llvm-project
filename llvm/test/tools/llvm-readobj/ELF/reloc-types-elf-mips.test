@@ -74,106 +74,55 @@ Sections:
     EntSize:      0x0000000000000008
     Info:         .text
     Relocations:
-      - Type:   R_MIPS_NONE
-      - Offset: 0x0000000000000004
-        Type:   R_MIPS_16
-      - Offset: 0x0000000000000008
-        Type:   R_MIPS_32
-      - Offset: 0x000000000000000C
-        Type:   R_MIPS_REL32
-      - Offset: 0x0000000000000010
-        Type:   R_MIPS_26
-      - Offset: 0x0000000000000014
-        Type:   R_MIPS_HI16
-      - Offset: 0x0000000000000018
-        Type:   R_MIPS_LO16
-      - Offset: 0x000000000000001C
-        Type:   R_MIPS_GPREL16
-      - Offset: 0x0000000000000020
-        Type:   R_MIPS_LITERAL
-      - Offset: 0x0000000000000024
-        Type:   R_MIPS_GOT16
-      - Offset: 0x0000000000000028
-        Type:   R_MIPS_PC16
-      - Offset: 0x000000000000002C
-        Type:   R_MIPS_CALL16
-      - Offset: 0x0000000000000030
-        Type:   R_MIPS_GPREL32
-      - Offset: 0x0000000000000034
-        Type:   R_MIPS_SHIFT5
-      - Offset: 0x0000000000000038
-        Type:   R_MIPS_SHIFT6
-      - Offset: 0x000000000000003C
-        Type:   R_MIPS_64
-      - Offset: 0x0000000000000040
-        Type:   R_MIPS_GOT_DISP
-      - Offset: 0x0000000000000044
-        Type:   R_MIPS_GOT_PAGE
-      - Offset: 0x0000000000000048
-        Type:   R_MIPS_GOT_OFST
-      - Offset: 0x000000000000004C
-        Type:   R_MIPS_GOT_HI16
-      - Offset: 0x0000000000000050
-        Type:   R_MIPS_GOT_LO16
-      - Offset: 0x0000000000000054
-        Type:   R_MIPS_SUB
-      - Offset: 0x0000000000000058
-        Type:   R_MIPS_INSERT_A
-      - Offset: 0x000000000000005C
-        Type:   R_MIPS_INSERT_B
-      - Offset: 0x0000000000000060
-        Type:   R_MIPS_DELETE
-      - Offset: 0x0000000000000064
-        Type:   R_MIPS_HIGHER
-      - Offset: 0x0000000000000068
-        Type:   R_MIPS_HIGHEST
-      - Offset: 0x000000000000006C
-        Type:   R_MIPS_CALL_HI16
-      - Offset: 0x0000000000000070
-        Type:   R_MIPS_CALL_LO16
-      - Offset: 0x0000000000000074
-        Type:   R_MIPS_SCN_DISP
-      - Offset: 0x0000000000000078
-        Type:   R_MIPS_REL16
-      - Offset: 0x000000000000007C
-        Type:   R_MIPS_ADD_IMMEDIATE
-      - Offset: 0x0000000000000080
-        Type:   R_MIPS_PJUMP
-      - Offset: 0x0000000000000084
-        Type:   R_MIPS_RELGOT
-      - Offset: 0x0000000000000088
-        Type:   R_MIPS_JALR
-      - Offset: 0x000000000000008C
-        Type:   R_MIPS_TLS_DTPMOD32
-      - Offset: 0x0000000000000090
-        Type:   R_MIPS_TLS_DTPREL32
-      - Offset: 0x0000000000000094
-        Type:   R_MIPS_TLS_DTPMOD64
-      - Offset: 0x0000000000000098
-        Type:   R_MIPS_TLS_DTPREL64
-      - Offset: 0x000000000000009C
-        Type:   R_MIPS_TLS_GD
-      - Offset: 0x00000000000000A0
-        Type:   R_MIPS_TLS_LDM
-      - Offset: 0x00000000000000A4
-        Type:   R_MIPS_TLS_DTPREL_HI16
-      - Offset: 0x00000000000000A8
-        Type:   R_MIPS_TLS_DTPREL_LO16
-      - Offset: 0x00000000000000AC
-        Type:   R_MIPS_TLS_GOTTPREL
-      - Offset: 0x00000000000000B0
-        Type:   R_MIPS_TLS_TPREL32
-      - Offset: 0x00000000000000B4
-        Type:   R_MIPS_TLS_TPREL64
-      - Offset: 0x00000000000000B8
-        Type:   R_MIPS_TLS_TPREL_HI16
-      - Offset: 0x00000000000000BC
-        Type:   R_MIPS_TLS_TPREL_LO16
-      - Offset: 0x00000000000000C0
-        Type:   R_MIPS_GLOB_DAT
-      - Offset: 0x00000000000000C4
-        Type:   R_MIPS_COPY
-      - Offset: 0x00000000000000C8
-        Type:   R_MIPS_JUMP_SLOT
-      - Offset: 0x00000000000000CC
-        Type:   R_MIPS_NUM
+      - Type: R_MIPS_NONE
+      - Type: R_MIPS_16
+      - Type: R_MIPS_32
+      - Type: R_MIPS_REL32
+      - Type: R_MIPS_26
+      - Type: R_MIPS_HI16
+      - Type: R_MIPS_LO16
+      - Type: R_MIPS_GPREL16
+      - Type: R_MIPS_LITERAL
+      - Type: R_MIPS_GOT16
+      - Type: R_MIPS_PC16
+      - Type: R_MIPS_CALL16
+      - Type: R_MIPS_GPREL32
+      - Type: R_MIPS_SHIFT5
+      - Type: R_MIPS_SHIFT6
+      - Type: R_MIPS_64
+      - Type: R_MIPS_GOT_DISP
+      - Type: R_MIPS_GOT_PAGE
+      - Type: R_MIPS_GOT_OFST
+      - Type: R_MIPS_GOT_HI16
+      - Type: R_MIPS_GOT_LO16
+      - Type: R_MIPS_SUB
+      - Type: R_MIPS_INSERT_A
+      - Type: R_MIPS_INSERT_B
+      - Type: R_MIPS_DELETE
+      - Type: R_MIPS_HIGHER
+      - Type: R_MIPS_HIGHEST
+      - Type: R_MIPS_CALL_HI16
+      - Type: R_MIPS_CALL_LO16
+      - Type: R_MIPS_SCN_DISP
+      - Type: R_MIPS_REL16
+      - Type: R_MIPS_ADD_IMMEDIATE
+      - Type: R_MIPS_PJUMP
+      - Type: R_MIPS_RELGOT
+      - Type: R_MIPS_JALR
+      - Type: R_MIPS_TLS_DTPMOD32
+      - Type: R_MIPS_TLS_DTPREL32
+      - Type: R_MIPS_TLS_DTPMOD64
+      - Type: R_MIPS_TLS_DTPREL64
+      - Type: R_MIPS_TLS_GD
+      - Type: R_MIPS_TLS_LDM
+      - Type: R_MIPS_TLS_DTPREL_HI16
+      - Type: R_MIPS_TLS_DTPREL_LO16
+      - Type: R_MIPS_TLS_GOTTPREL
+      - Type: R_MIPS_TLS_TPREL32
+      - Type: R_MIPS_TLS_TPREL64
+      - Type: R_MIPS_TLS_TPREL_HI16
+      - Type: R_MIPS_TLS_TPREL_LO16
+      - Type: R_MIPS_GLOB_DAT
+      - Type: R_MIPS_COPY
+      - Type: R_MIPS_JUMP_SLOT
+      - Type: R_MIPS_NUM

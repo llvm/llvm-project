@@ -21,6 +21,5 @@ add_llvm_target(VECodeGen
   VETargetMachine.cpp
   )
 
-add_subdirectory(InstPrinter)
 add_subdirectory(TargetInfo)
 add_subdirectory(MCTargetDesc)

@@ -758,3 +758,109 @@ body: |
     $vgpr6 = COPY %16
     $vgpr7 = COPY %17
 ...
+
+---
+
+name: test_unmerge_s128_v2s128
+body: |
+  bb.0:
+    liveins:  $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    ; CHECK-LABEL: name: test_unmerge_s128_v2s128
+    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s128>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    ; CHECK: [[UV:%[0-9]+]]:_(s128), [[UV1:%[0-9]+]]:_(s128) = G_UNMERGE_VALUES [[COPY]](<2 x s128>)
+    ; CHECK: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[UV]](s128)
+    ; CHECK: $vgpr4_vgpr5_vgpr6_vgpr7 = COPY [[UV1]](s128)
+    %0:_(<2 x s128>) = COPY  $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    %1:_(s128), %2:_(s128) = G_UNMERGE_VALUES %0
+    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %1
+    $vgpr4_vgpr5_vgpr6_vgpr7 = COPY %2
+...
+
+---
+
+name: test_unmerge_s128_s256
+body: |
+  bb.0:
+    liveins:  $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    ; CHECK-LABEL: name: test_unmerge_s128_s256
+    ; CHECK: [[COPY:%[0-9]+]]:_(s256) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    ; CHECK: [[UV:%[0-9]+]]:_(s128), [[UV1:%[0-9]+]]:_(s128) = G_UNMERGE_VALUES [[COPY]](s256)
+    ; CHECK: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[UV]](s128)
+    ; CHECK: $vgpr4_vgpr5_vgpr6_vgpr7 = COPY [[UV1]](s128)
+    %0:_(s256) = COPY  $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    %1:_(s128), %2:_(s128) = G_UNMERGE_VALUES %0
+    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %1
+    $vgpr4_vgpr5_vgpr6_vgpr7 = COPY %2
+...
+
+---
+
+name: test_unmerge_s256_s512
+body: |
+  bb.0:
+    liveins:  $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+
+    ; CHECK-LABEL: name: test_unmerge_s256_s512
+    ; CHECK: [[COPY:%[0-9]+]]:_(s512) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    ; CHECK: [[UV:%[0-9]+]]:_(s256), [[UV1:%[0-9]+]]:_(s256) = G_UNMERGE_VALUES [[COPY]](s512)
+    ; CHECK: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY [[UV]](s256)
+    ; CHECK: $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = COPY [[UV1]](s256)
+    %0:_(s512) = COPY  $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    %1:_(s256), %2:_(s256) = G_UNMERGE_VALUES %0
+    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY %1
+    $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = COPY %2
+...
+
+---
+
+name: test_unmerge_s256_v2s256
+body: |
+  bb.0:
+    liveins:  $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+
+    ; CHECK-LABEL: name: test_unmerge_s256_v2s256
+    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s256>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    ; CHECK: [[UV:%[0-9]+]]:_(s256), [[UV1:%[0-9]+]]:_(s256) = G_UNMERGE_VALUES [[COPY]](<2 x s256>)
+    ; CHECK: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY [[UV]](s256)
+    ; CHECK: $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = COPY [[UV1]](s256)
+    %0:_(<2 x s256>) = COPY  $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    %1:_(s256), %2:_(s256) = G_UNMERGE_VALUES %0
+    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY %1
+    $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = COPY %2
+...
+
+---
+
+name: test_unmerge_s512_s1024
+body: |
+  bb.0:
+    liveins:  $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
+
+    ; CHECK-LABEL: name: test_unmerge_s512_s1024
+    ; CHECK: [[COPY:%[0-9]+]]:_(s1024) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
+    ; CHECK: [[UV:%[0-9]+]]:_(s512), [[UV1:%[0-9]+]]:_(s512) = G_UNMERGE_VALUES [[COPY]](s1024)
+    ; CHECK: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = COPY [[UV]](s512)
+    ; CHECK: $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31 = COPY [[UV1]](s512)
+    %0:_(s1024) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
+    %1:_(s512), %2:_(s512) = G_UNMERGE_VALUES %0
+    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = COPY %1
+    $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31 = COPY %2
+...
+
+---
+
+name: test_unmerge_s512_v2s512
+body: |
+  bb.0:
+    liveins:  $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
+
+    ; CHECK-LABEL: name: test_unmerge_s512_v2s512
+    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s512>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
+    ; CHECK: [[UV:%[0-9]+]]:_(s512), [[UV1:%[0-9]+]]:_(s512) = G_UNMERGE_VALUES [[COPY]](<2 x s512>)
+    ; CHECK: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = COPY [[UV]](s512)
+    ; CHECK: $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31 = COPY [[UV1]](s512)
+    %0:_(<2 x s512>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
+    %1:_(s512), %2:_(s512) = G_UNMERGE_VALUES %0
+    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = COPY %1
+    $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31 = COPY %2
+...

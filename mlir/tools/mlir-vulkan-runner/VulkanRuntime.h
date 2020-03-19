@@ -22,7 +22,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/ToolOutputFile.h"
 
-#include <vulkan/vulkan.h> // NOLINT
+#include <vulkan/vulkan.h>
 
 using namespace mlir;
 

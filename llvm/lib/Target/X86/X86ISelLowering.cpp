@@ -20964,9 +20964,12 @@ static SDValue getSETCC(X86::CondCode Cond, SDValue EFLAGS, const SDLoc &dl,
 }
 
 /// Helper for matching OR(EXTRACTELT(X,0),OR(EXTRACTELT(X,1),...))
-/// style scalarized (associative) reduction patterns.
+/// style scalarized (associative) reduction patterns. Partial reductions
+/// are supported when the pointer SrcMask is non-null.
+/// TODO - move this to SelectionDAG?
 static bool matchScalarReduction(SDValue Op, ISD::NodeType BinOp,
-                                 SmallVectorImpl<SDValue> &SrcOps) {
+                                 SmallVectorImpl<SDValue> &SrcOps,
+                                 SmallVectorImpl<APInt> *SrcMask = nullptr) {
   SmallVector<SDValue, 8> Opnds;
   DenseMap<SDValue, APInt> SrcOpMap;
   EVT VT = MVT::Other;
@@ -21018,12 +21021,18 @@ static bool matchScalarReduction(SDValue Op, ISD::NodeType BinOp,
     M->second.setBit(CIdx);
   }
 
-  // Quit if not all elements are used.
-  for (DenseMap<SDValue, APInt>::const_iterator I = SrcOpMap.begin(),
-                                                E = SrcOpMap.end();
-       I != E; ++I) {
-    if (!I->second.isAllOnesValue())
-      return false;
+  if (SrcMask) {
+    // Collect the source partial masks.
+    for (SDValue &SrcOp : SrcOps)
+      SrcMask->push_back(SrcOpMap[SrcOp]);
+  } else {
+    // Quit if not all elements are used.
+    for (DenseMap<SDValue, APInt>::const_iterator I = SrcOpMap.begin(),
+                                                  E = SrcOpMap.end();
+         I != E; ++I) {
+      if (!I->second.isAllOnesValue())
+        return false;
+    }
   }
 
   return true;
@@ -41210,7 +41219,8 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
   // TODO: Support multiple SrcOps.
   if (VT == MVT::i1) {
     SmallVector<SDValue, 2> SrcOps;
-    if (matchScalarReduction(SDValue(N, 0), ISD::AND, SrcOps) &&
+    SmallVector<APInt, 2> SrcPartials;
+    if (matchScalarReduction(SDValue(N, 0), ISD::AND, SrcOps, &SrcPartials) &&
         SrcOps.size() == 1) {
       SDLoc dl(N);
       const TargetLowering &TLI = DAG.getTargetLoweringInfo();
@@ -41220,9 +41230,11 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
       if (!Mask && TLI.isTypeLegal(SrcOps[0].getValueType()))
         Mask = DAG.getBitcast(MaskVT, SrcOps[0]);
       if (Mask) {
-        APInt AllBits = APInt::getAllOnesValue(NumElts);
-        return DAG.getSetCC(dl, MVT::i1, Mask,
-                            DAG.getConstant(AllBits, dl, MaskVT), ISD::SETEQ);
+        assert(SrcPartials[0].getBitWidth() == NumElts &&
+               "Unexpected partial reduction mask");
+        SDValue PartialBits = DAG.getConstant(SrcPartials[0], dl, MaskVT);
+        Mask = DAG.getNode(ISD::AND, dl, MaskVT, Mask, PartialBits);
+        return DAG.getSetCC(dl, MVT::i1, Mask, PartialBits, ISD::SETEQ);
       }
     }
   }
@@ -41685,7 +41697,8 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
   // TODO: Support multiple SrcOps.
   if (VT == MVT::i1) {
     SmallVector<SDValue, 2> SrcOps;
-    if (matchScalarReduction(SDValue(N, 0), ISD::OR, SrcOps) &&
+    SmallVector<APInt, 2> SrcPartials;
+    if (matchScalarReduction(SDValue(N, 0), ISD::OR, SrcOps, &SrcPartials) &&
         SrcOps.size() == 1) {
       SDLoc dl(N);
       const TargetLowering &TLI = DAG.getTargetLoweringInfo();
@@ -41695,9 +41708,12 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
       if (!Mask && TLI.isTypeLegal(SrcOps[0].getValueType()))
         Mask = DAG.getBitcast(MaskVT, SrcOps[0]);
       if (Mask) {
-        APInt AllBits = APInt::getNullValue(NumElts);
-        return DAG.getSetCC(dl, MVT::i1, Mask,
-                            DAG.getConstant(AllBits, dl, MaskVT), ISD::SETNE);
+        assert(SrcPartials[0].getBitWidth() == NumElts &&
+               "Unexpected partial reduction mask");
+        SDValue ZeroBits = DAG.getConstant(0, dl, MaskVT);
+        SDValue PartialBits = DAG.getConstant(SrcPartials[0], dl, MaskVT);
+        Mask = DAG.getNode(ISD::AND, dl, MaskVT, Mask, PartialBits);
+        return DAG.getSetCC(dl, MVT::i1, Mask, ZeroBits, ISD::SETNE);
       }
     }
   }

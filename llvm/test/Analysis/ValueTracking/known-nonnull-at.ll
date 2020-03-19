@@ -117,7 +117,7 @@ define i1 @nonnullReturnTest(i8* nonnull %x) {
 define i1 @unknownReturnTest(i8* %x) {
 ; CHECK-LABEL: @unknownReturnTest(
 ; CHECK-NEXT:    [[X2:%.*]] = call i8* @returningPtr(i8* [[X:%.*]])
-; CHECK-NEXT:    [[NULL_CHECK:%.*]] = icmp eq i8* [[X]], null
+; CHECK-NEXT:    [[NULL_CHECK:%.*]] = icmp eq i8* [[X2]], null
 ; CHECK-NEXT:    ret i1 [[NULL_CHECK]]
 ;
   %x2 = call i8* @returningPtr(i8* %x)

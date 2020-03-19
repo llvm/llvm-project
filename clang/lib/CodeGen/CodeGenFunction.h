@@ -3904,7 +3904,6 @@ public:
   llvm::Value *EmitSVEPredicateCast(llvm::Value *Pred, llvm::VectorType *VTy);
   llvm::Value *EmitSVEMaskedLoad(llvm::Type *ReturnTy,
                                  SmallVectorImpl<llvm::Value *> &Ops);
-  llvm::Value *EmitAArch64SVEBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
 
   llvm::Value *EmitAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
                                       llvm::Triple::ArchType Arch);

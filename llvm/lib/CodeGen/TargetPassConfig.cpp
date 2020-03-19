@@ -983,6 +983,9 @@ void TargetPassConfig::addMachinePasses() {
       addPass(createMachineOutlinerPass(RunOnAllFunctions));
   }
 
+  if (TM->getBBSectionsType() != llvm::BasicBlockSection::None)
+    addPass(llvm::createBBSectionsPreparePass(TM->getBBSectionsFuncListBuf()));
+
   // Add passes that directly emit MI after all other MI passes.
   addPreEmitPass2();
 

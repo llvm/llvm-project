@@ -1537,6 +1537,9 @@ def err_distant_exception_spec : Error<
 def err_incomplete_in_exception_spec : Error<
   "%select{|pointer to |reference to }0incomplete type %1 is not allowed "
   "in exception specification">;
+def err_sizeless_in_exception_spec : Error<
+  "%select{|reference to }0sizeless type %1 is not allowed "
+  "in exception specification">;
 def ext_incomplete_in_exception_spec : ExtWarn<err_incomplete_in_exception_spec.Text>,
   InGroup<MicrosoftExceptionSpec>;
 def err_rref_in_exception_spec : Error<
@@ -6126,8 +6129,8 @@ def err_typecheck_subscript_not_integer : Error<
   "array subscript is not an integer">;
 def err_subscript_function_type : Error<
   "subscript of pointer to function type %0">;
-def err_subscript_incomplete_type : Error<
-  "subscript of pointer to incomplete type %0">;
+def err_subscript_incomplete_or_sizeless_type : Error<
+  "subscript of pointer to %select{incomplete|sizeless}0 type %1">;
 def err_dereference_incomplete_type : Error<
   "dereference of pointer to incomplete type %0">;
 def ext_gnu_subscript_void_type : Extension<
@@ -6237,8 +6240,8 @@ def err_typecheck_illegal_increment_decrement : Error<
   "cannot %select{decrement|increment}1 value of type %0">;
 def err_typecheck_expect_int : Error<
   "used type %0 where integer is required">;
-def err_typecheck_arithmetic_incomplete_type : Error<
-  "arithmetic on a pointer to an incomplete type %0">;
+def err_typecheck_arithmetic_incomplete_or_sizeless_type : Error<
+  "arithmetic on a pointer to %select{an incomplete|sizeless}0 type %1">;
 def err_typecheck_pointer_arith_function_type : Error<
   "arithmetic on%select{ a|}0 pointer%select{|s}0 to%select{ the|}2 "
   "function type%select{|s}2 %1%select{| and %3}2">;
@@ -6894,8 +6897,8 @@ def err_array_new_needs_size : Error<
   "array size must be specified in new expression with no initializer">;
 def err_bad_new_type : Error<
   "cannot allocate %select{function|reference}1 type %0 with new">;
-def err_new_incomplete_type : Error<
-  "allocation of incomplete type %0">;
+def err_new_incomplete_or_sizeless_type : Error<
+  "allocation of %select{incomplete|sizeless}0 type %1">;
 def err_new_array_nonconst : Error<
   "only the first dimension of an allocated array may have dynamic size">;
 def err_new_array_size_unknown_from_init : Error<
@@ -7012,6 +7015,8 @@ def err_catch_incomplete_ptr : Error<
 def err_catch_incomplete_ref : Error<
   "cannot catch reference to incomplete type %0">;
 def err_catch_incomplete : Error<"cannot catch incomplete type %0">;
+def err_catch_sizeless : Error<
+  "cannot catch %select{|reference to }0sizeless type %1">;
 def err_catch_rvalue_ref : Error<"cannot catch exceptions by rvalue reference">;
 def err_catch_variably_modified : Error<
   "cannot catch variably modified type %0">;
@@ -7117,6 +7122,8 @@ def err_throw_incomplete : Error<
   "cannot throw object of incomplete type %0">;
 def err_throw_incomplete_ptr : Error<
   "cannot throw pointer to object of incomplete type %0">;
+def err_throw_sizeless : Error<
+  "cannot throw object of sizeless type %0">;
 def warn_throw_underaligned_obj : Warning<
   "underaligned exception object thrown">,
   InGroup<UnderalignedExceptionObject>;

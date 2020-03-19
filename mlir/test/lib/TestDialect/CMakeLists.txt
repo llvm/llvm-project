@@ -6,6 +6,7 @@ set(LLVM_OPTIONAL_SOURCES
 set(LLVM_TARGET_DEFINITIONS TestOps.td)
 mlir_tablegen(TestOps.h.inc -gen-op-decls)
 mlir_tablegen(TestOps.cpp.inc -gen-op-defs)
+mlir_tablegen(TestOpsDialect.h.inc -gen-dialect-decls)
 mlir_tablegen(TestOpEnums.h.inc -gen-enum-decls)
 mlir_tablegen(TestOpEnums.cpp.inc -gen-enum-defs)
 mlir_tablegen(TestPatterns.inc -gen-rewriters)

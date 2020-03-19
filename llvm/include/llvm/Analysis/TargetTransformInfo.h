@@ -1069,6 +1069,7 @@ public:
 
   /// \returns The type to use in a loop expansion of a memcpy call.
   Type *getMemcpyLoopLoweringType(LLVMContext &Context, Value *Length,
+                                  unsigned SrcAddrSpace, unsigned DestAddrSpace,
                                   unsigned SrcAlign, unsigned DestAlign) const;
 
   /// \param[out] OpsOut The operand types to copy RemainingBytes of memory.
@@ -1080,6 +1081,8 @@ public:
   void getMemcpyLoopResidualLoweringType(SmallVectorImpl<Type *> &OpsOut,
                                          LLVMContext &Context,
                                          unsigned RemainingBytes,
+                                         unsigned SrcAddrSpace,
+                                         unsigned DestAddrSpace,
                                          unsigned SrcAlign,
                                          unsigned DestAlign) const;
 
@@ -1382,11 +1385,15 @@ public:
   virtual Value *getOrCreateResultFromMemIntrinsic(IntrinsicInst *Inst,
                                                    Type *ExpectedType) = 0;
   virtual Type *getMemcpyLoopLoweringType(LLVMContext &Context, Value *Length,
+                                          unsigned SrcAddrSpace,
+                                          unsigned DestAddrSpace,
                                           unsigned SrcAlign,
                                           unsigned DestAlign) const = 0;
   virtual void getMemcpyLoopResidualLoweringType(
       SmallVectorImpl<Type *> &OpsOut, LLVMContext &Context,
-      unsigned RemainingBytes, unsigned SrcAlign, unsigned DestAlign) const = 0;
+      unsigned RemainingBytes,
+      unsigned SrcAddrSpace, unsigned DestAddrSpace,
+      unsigned SrcAlign, unsigned DestAlign) const = 0;
   virtual bool areInlineCompatible(const Function *Caller,
                                    const Function *Callee) const = 0;
   virtual bool
@@ -1830,16 +1837,22 @@ public:
     return Impl.getOrCreateResultFromMemIntrinsic(Inst, ExpectedType);
   }
   Type *getMemcpyLoopLoweringType(LLVMContext &Context, Value *Length,
+                                  unsigned SrcAddrSpace, unsigned DestAddrSpace,
                                   unsigned SrcAlign,
                                   unsigned DestAlign) const override {
-    return Impl.getMemcpyLoopLoweringType(Context, Length, SrcAlign, DestAlign);
+    return Impl.getMemcpyLoopLoweringType(Context, Length,
+                                          SrcAddrSpace, DestAddrSpace,
+                                          SrcAlign, DestAlign);
   }
   void getMemcpyLoopResidualLoweringType(SmallVectorImpl<Type *> &OpsOut,
                                          LLVMContext &Context,
                                          unsigned RemainingBytes,
+                                         unsigned SrcAddrSpace,
+                                         unsigned DestAddrSpace,
                                          unsigned SrcAlign,
                                          unsigned DestAlign) const override {
     Impl.getMemcpyLoopResidualLoweringType(OpsOut, Context, RemainingBytes,
+                                           SrcAddrSpace, DestAddrSpace,
                                            SrcAlign, DestAlign);
   }
   bool areInlineCompatible(const Function *Caller,

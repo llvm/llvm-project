@@ -24,9 +24,9 @@ define amdgpu_kernel void @min_size_large_static_memcpy_caller0(i8 addrspace(1)*
 ; OPT:       load-store-loop:
 ; OPT-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP4:%.*]], [[LOAD_STORE_LOOP]] ]
 ; OPT-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, i8 addrspace(1)* [[SRC:%.*]], i64 [[LOOP_INDEX]]
-; OPT-NEXT:    [[TMP2:%.*]] = load i8, i8 addrspace(1)* [[TMP1]]
+; OPT-NEXT:    [[TMP2:%.*]] = load i8, i8 addrspace(1)* [[TMP1]], align 1
 ; OPT-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, i8 addrspace(1)* [[DST:%.*]], i64 [[LOOP_INDEX]]
-; OPT-NEXT:    store i8 [[TMP2]], i8 addrspace(1)* [[TMP3]]
+; OPT-NEXT:    store i8 [[TMP2]], i8 addrspace(1)* [[TMP3]], align 1
 ; OPT-NEXT:    [[TMP4]] = add i64 [[LOOP_INDEX]], 1
 ; OPT-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP4]], 1025
 ; OPT-NEXT:    br i1 [[TMP5]], label [[LOAD_STORE_LOOP]], label [[MEMCPY_SPLIT:%.*]]
@@ -57,9 +57,9 @@ define amdgpu_kernel void @min_size_large_static_memmove_caller0(i8 addrspace(1)
 ; OPT-NEXT:    [[TMP1:%.*]] = phi i64 [ [[INDEX_PTR:%.*]], [[COPY_BACKWARDS_LOOP]] ], [ 1025, [[COPY_BACKWARDS]] ]
 ; OPT-NEXT:    [[INDEX_PTR]] = sub i64 [[TMP1]], 1
 ; OPT-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, i8 addrspace(1)* [[SRC]], i64 [[INDEX_PTR]]
-; OPT-NEXT:    [[ELEMENT:%.*]] = load i8, i8 addrspace(1)* [[TMP2]]
+; OPT-NEXT:    [[ELEMENT:%.*]] = load i8, i8 addrspace(1)* [[TMP2]], align 1
 ; OPT-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, i8 addrspace(1)* [[DST]], i64 [[INDEX_PTR]]
-; OPT-NEXT:    store i8 [[ELEMENT]], i8 addrspace(1)* [[TMP3]]
+; OPT-NEXT:    store i8 [[ELEMENT]], i8 addrspace(1)* [[TMP3]], align 1
 ; OPT-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_PTR]], 0
 ; OPT-NEXT:    br i1 [[TMP4]], label [[MEMMOVE_DONE]], label [[COPY_BACKWARDS_LOOP]]
 ; OPT:       copy_forward:
@@ -67,9 +67,9 @@ define amdgpu_kernel void @min_size_large_static_memmove_caller0(i8 addrspace(1)
 ; OPT:       copy_forward_loop:
 ; OPT-NEXT:    [[INDEX_PTR1:%.*]] = phi i64 [ [[INDEX_INCREMENT:%.*]], [[COPY_FORWARD_LOOP]] ], [ 0, [[COPY_FORWARD]] ]
 ; OPT-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, i8 addrspace(1)* [[SRC]], i64 [[INDEX_PTR1]]
-; OPT-NEXT:    [[ELEMENT2:%.*]] = load i8, i8 addrspace(1)* [[TMP5]]
+; OPT-NEXT:    [[ELEMENT2:%.*]] = load i8, i8 addrspace(1)* [[TMP5]], align 1
 ; OPT-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, i8 addrspace(1)* [[DST]], i64 [[INDEX_PTR1]]
-; OPT-NEXT:    store i8 [[ELEMENT2]], i8 addrspace(1)* [[TMP6]]
+; OPT-NEXT:    store i8 [[ELEMENT2]], i8 addrspace(1)* [[TMP6]], align 1
 ; OPT-NEXT:    [[INDEX_INCREMENT]] = add i64 [[INDEX_PTR1]], 1
 ; OPT-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_INCREMENT]], 1025
 ; OPT-NEXT:    br i1 [[TMP7]], label [[MEMMOVE_DONE]], label [[COPY_FORWARD_LOOP]]
@@ -95,7 +95,7 @@ define amdgpu_kernel void @min_size_large_static_memset_caller0(i8 addrspace(1)*
 ; OPT:       loadstoreloop:
 ; OPT-NEXT:    [[TMP1:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP3:%.*]], [[LOADSTORELOOP]] ]
 ; OPT-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, i8 addrspace(1)* [[DST:%.*]], i64 [[TMP1]]
-; OPT-NEXT:    store i8 [[VAL:%.*]], i8 addrspace(1)* [[TMP2]]
+; OPT-NEXT:    store i8 [[VAL:%.*]], i8 addrspace(1)* [[TMP2]], align 1
 ; OPT-NEXT:    [[TMP3]] = add i64 [[TMP1]], 1
 ; OPT-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], 1025
 ; OPT-NEXT:    br i1 [[TMP4]], label [[LOADSTORELOOP]], label [[SPLIT]]
@@ -113,9 +113,9 @@ define amdgpu_kernel void @variable_memcpy_caller0(i8 addrspace(1)* %dst, i8 add
 ; OPT:       loop-memcpy-expansion:
 ; OPT-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[LOOP_MEMCPY_EXPANSION]] ]
 ; OPT-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, i8 addrspace(1)* [[SRC:%.*]], i64 [[LOOP_INDEX]]
-; OPT-NEXT:    [[TMP3:%.*]] = load i8, i8 addrspace(1)* [[TMP2]]
+; OPT-NEXT:    [[TMP3:%.*]] = load i8, i8 addrspace(1)* [[TMP2]], align 1
 ; OPT-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, i8 addrspace(1)* [[DST:%.*]], i64 [[LOOP_INDEX]]
-; OPT-NEXT:    store i8 [[TMP3]], i8 addrspace(1)* [[TMP4]]
+; OPT-NEXT:    store i8 [[TMP3]], i8 addrspace(1)* [[TMP4]], align 1
 ; OPT-NEXT:    [[TMP5]] = add i64 [[LOOP_INDEX]], 1
 ; OPT-NEXT:    [[TMP6:%.*]] = icmp ult i64 [[TMP5]], [[N]]
 ; OPT-NEXT:    br i1 [[TMP6]], label [[LOOP_MEMCPY_EXPANSION]], label [[POST_LOOP_MEMCPY_EXPANSION]]
@@ -133,9 +133,9 @@ define amdgpu_kernel void @variable_memcpy_caller1(i8 addrspace(1)* %dst, i8 add
 ; OPT:       loop-memcpy-expansion:
 ; OPT-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[LOOP_MEMCPY_EXPANSION]] ]
 ; OPT-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, i8 addrspace(1)* [[SRC:%.*]], i64 [[LOOP_INDEX]]
-; OPT-NEXT:    [[TMP3:%.*]] = load i8, i8 addrspace(1)* [[TMP2]]
+; OPT-NEXT:    [[TMP3:%.*]] = load i8, i8 addrspace(1)* [[TMP2]], align 1
 ; OPT-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, i8 addrspace(1)* [[DST:%.*]], i64 [[LOOP_INDEX]]
-; OPT-NEXT:    store i8 [[TMP3]], i8 addrspace(1)* [[TMP4]]
+; OPT-NEXT:    store i8 [[TMP3]], i8 addrspace(1)* [[TMP4]], align 1
 ; OPT-NEXT:    [[TMP5]] = add i64 [[LOOP_INDEX]], 1
 ; OPT-NEXT:    [[TMP6:%.*]] = icmp ult i64 [[TMP5]], [[N]]
 ; OPT-NEXT:    br i1 [[TMP6]], label [[LOOP_MEMCPY_EXPANSION]], label [[POST_LOOP_MEMCPY_EXPANSION]]
@@ -153,9 +153,9 @@ define amdgpu_kernel void @memcpy_multi_use_one_function(i8 addrspace(1)* %dst0,
 ; OPT:       loop-memcpy-expansion2:
 ; OPT-NEXT:    [[LOOP_INDEX3:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[LOOP_MEMCPY_EXPANSION2]] ]
 ; OPT-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, i8 addrspace(1)* [[SRC:%.*]], i64 [[LOOP_INDEX3]]
-; OPT-NEXT:    [[TMP3:%.*]] = load i8, i8 addrspace(1)* [[TMP2]]
+; OPT-NEXT:    [[TMP3:%.*]] = load i8, i8 addrspace(1)* [[TMP2]], align 1
 ; OPT-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, i8 addrspace(1)* [[DST0:%.*]], i64 [[LOOP_INDEX3]]
-; OPT-NEXT:    store i8 [[TMP3]], i8 addrspace(1)* [[TMP4]]
+; OPT-NEXT:    store i8 [[TMP3]], i8 addrspace(1)* [[TMP4]], align 1
 ; OPT-NEXT:    [[TMP5]] = add i64 [[LOOP_INDEX3]], 1
 ; OPT-NEXT:    [[TMP6:%.*]] = icmp ult i64 [[TMP5]], [[N]]
 ; OPT-NEXT:    br i1 [[TMP6]], label [[LOOP_MEMCPY_EXPANSION2]], label [[POST_LOOP_MEMCPY_EXPANSION1]]
@@ -165,9 +165,9 @@ define amdgpu_kernel void @memcpy_multi_use_one_function(i8 addrspace(1)* %dst0,
 ; OPT:       loop-memcpy-expansion:
 ; OPT-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[POST_LOOP_MEMCPY_EXPANSION1]] ], [ [[TMP11:%.*]], [[LOOP_MEMCPY_EXPANSION]] ]
 ; OPT-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, i8 addrspace(1)* [[SRC]], i64 [[LOOP_INDEX]]
-; OPT-NEXT:    [[TMP9:%.*]] = load i8, i8 addrspace(1)* [[TMP8]]
+; OPT-NEXT:    [[TMP9:%.*]] = load i8, i8 addrspace(1)* [[TMP8]], align 1
 ; OPT-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, i8 addrspace(1)* [[DST1:%.*]], i64 [[LOOP_INDEX]]
-; OPT-NEXT:    store i8 [[TMP9]], i8 addrspace(1)* [[TMP10]]
+; OPT-NEXT:    store i8 [[TMP9]], i8 addrspace(1)* [[TMP10]], align 1
 ; OPT-NEXT:    [[TMP11]] = add i64 [[LOOP_INDEX]], 1
 ; OPT-NEXT:    [[TMP12:%.*]] = icmp ult i64 [[TMP11]], [[M]]
 ; OPT-NEXT:    br i1 [[TMP12]], label [[LOOP_MEMCPY_EXPANSION]], label [[POST_LOOP_MEMCPY_EXPANSION]]
@@ -186,9 +186,9 @@ define amdgpu_kernel void @memcpy_alt_type(i8 addrspace(1)* %dst, i8 addrspace(3
 ; OPT:       loop-memcpy-expansion:
 ; OPT-NEXT:    [[LOOP_INDEX:%.*]] = phi i32 [ 0, [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[LOOP_MEMCPY_EXPANSION]] ]
 ; OPT-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, i8 addrspace(3)* [[SRC:%.*]], i32 [[LOOP_INDEX]]
-; OPT-NEXT:    [[TMP3:%.*]] = load i8, i8 addrspace(3)* [[TMP2]]
+; OPT-NEXT:    [[TMP3:%.*]] = load i8, i8 addrspace(3)* [[TMP2]], align 1
 ; OPT-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, i8 addrspace(1)* [[DST:%.*]], i32 [[LOOP_INDEX]]
-; OPT-NEXT:    store i8 [[TMP3]], i8 addrspace(1)* [[TMP4]]
+; OPT-NEXT:    store i8 [[TMP3]], i8 addrspace(1)* [[TMP4]], align 1
 ; OPT-NEXT:    [[TMP5]] = add i32 [[LOOP_INDEX]], 1
 ; OPT-NEXT:    [[TMP6:%.*]] = icmp ult i32 [[TMP5]], [[N]]
 ; OPT-NEXT:    br i1 [[TMP6]], label [[LOOP_MEMCPY_EXPANSION]], label [[POST_LOOP_MEMCPY_EXPANSION]]
@@ -207,9 +207,9 @@ define amdgpu_kernel void @memcpy_multi_use_one_function_keep_small(i8 addrspace
 ; OPT:       loop-memcpy-expansion:
 ; OPT-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[LOOP_MEMCPY_EXPANSION]] ]
 ; OPT-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, i8 addrspace(1)* [[SRC:%.*]], i64 [[LOOP_INDEX]]
-; OPT-NEXT:    [[TMP3:%.*]] = load i8, i8 addrspace(1)* [[TMP2]]
+; OPT-NEXT:    [[TMP3:%.*]] = load i8, i8 addrspace(1)* [[TMP2]], align 1
 ; OPT-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, i8 addrspace(1)* [[DST0:%.*]], i64 [[LOOP_INDEX]]
-; OPT-NEXT:    store i8 [[TMP3]], i8 addrspace(1)* [[TMP4]]
+; OPT-NEXT:    store i8 [[TMP3]], i8 addrspace(1)* [[TMP4]], align 1
 ; OPT-NEXT:    [[TMP5]] = add i64 [[LOOP_INDEX]], 1
 ; OPT-NEXT:    [[TMP6:%.*]] = icmp ult i64 [[TMP5]], [[N]]
 ; OPT-NEXT:    br i1 [[TMP6]], label [[LOOP_MEMCPY_EXPANSION]], label [[POST_LOOP_MEMCPY_EXPANSION]]

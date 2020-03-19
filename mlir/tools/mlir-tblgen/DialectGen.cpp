@@ -36,14 +36,23 @@ static llvm::cl::opt<std::string>
     selectedDialect("dialect", llvm::cl::desc("The dialect to gen for"),
                     llvm::cl::cat(dialectGenCat), llvm::cl::CommaSeparated);
 
+/// Utility iterator used for filtering records for a specific dialect.
+namespace {
+using DialectFilterIterator =
+    llvm::filter_iterator<ArrayRef<llvm::Record *>::iterator,
+                          std::function<bool(const llvm::Record *)>>;
+} // end anonymous namespace
+
 /// Given a set of records for a T, filter the ones that correspond to
 /// the given dialect.
 template <typename T>
-static auto filterForDialect(ArrayRef<llvm::Record *> records,
-                             Dialect &dialect) {
-  return llvm::make_filter_range(records, [&](const llvm::Record *record) {
+static iterator_range<DialectFilterIterator>
+filterForDialect(ArrayRef<llvm::Record *> records, Dialect &dialect) {
+  auto filterFn = [&](const llvm::Record *record) {
     return T(record).getDialect() == dialect;
-  });
+  };
+  return {DialectFilterIterator(records.begin(), records.end(), filterFn),
+          DialectFilterIterator(records.end(), records.end(), filterFn)};
 }
 
 //===----------------------------------------------------------------------===//
@@ -92,13 +101,37 @@ static const char *const constantMaterializerDecl = R"(
                                          ::mlir::Location loc) override;
 )";
 
+/// The code block for the operation attribute verifier hook.
+static const char *const opAttrVerifierDecl = R"(
+    /// Provides a hook for verifying dialect attributes attached to the given
+    /// op.
+    ::mlir::LogicalResult verifyOperationAttribute(
+        ::mlir::Operation *op, ::mlir::NamedAttribute attribute) override;
+)";
+
+/// The code block for the region argument attribute verifier hook.
+static const char *const regionArgAttrVerifierDecl = R"(
+    /// Provides a hook for verifying dialect attributes attached to the given
+    /// op's region argument.
+    ::mlir::LogicalResult verifyRegionArgAttribute(
+        ::mlir::Operation *op, unsigned regionIndex, unsigned argIndex,
+        ::mlir::NamedAttribute attribute) override;
+)";
+
+/// The code block for the region result attribute verifier hook.
+static const char *const regionResultAttrVerifierDecl = R"(
+    /// Provides a hook for verifying dialect attributes attached to the given
+    /// op's region result.
+    ::mlir::LogicalResult verifyRegionResultAttribute(
+        ::mlir::Operation *op, unsigned regionIndex, unsigned resultIndex,
+        ::mlir::NamedAttribute attribute) override;
+)";
+
 /// Generate the declaration for the given dialect class.
-static void emitDialectDecl(
-    Dialect &dialect,
-    FunctionTraits<decltype(&filterForDialect<Attribute>)>::result_t
-        dialectAttrs,
-    FunctionTraits<decltype(&filterForDialect<Type>)>::result_t dialectTypes,
-    raw_ostream &os) {
+static void emitDialectDecl(Dialect &dialect,
+                            iterator_range<DialectFilterIterator> dialectAttrs,
+                            iterator_range<DialectFilterIterator> dialectTypes,
+                            raw_ostream &os) {
   // Emit the start of the decl.
   std::string cppName = dialect.getCppClassName();
   os << llvm::formatv(dialectDeclBeginStr, cppName, dialect.getName());
@@ -113,6 +146,12 @@ static void emitDialectDecl(
   // Add the decls for the various features of the dialect.
   if (dialect.hasConstantMaterializer())
     os << constantMaterializerDecl;
+  if (dialect.hasOperationAttrVerify())
+    os << opAttrVerifierDecl;
+  if (dialect.hasRegionArgAttrVerify())
+    os << regionArgAttrVerifierDecl;
+  if (dialect.hasRegionResultAttrVerify())
+    os << regionResultAttrVerifierDecl;
   if (llvm::Optional<StringRef> extraDecl = dialect.getExtraClassDeclaration())
     os << *extraDecl;
 

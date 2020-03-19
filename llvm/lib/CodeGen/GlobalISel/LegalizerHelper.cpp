@@ -2194,6 +2194,8 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
   }
   case TargetOpcode::G_FMAD:
     return lowerFMad(MI);
+  case TargetOpcode::G_FFLOOR:
+    return lowerFFloor(MI);
   case TargetOpcode::G_INTRINSIC_ROUND:
     return lowerIntrinsicRound(MI);
   case TargetOpcode::G_ATOMIC_CMPXCHG_WITH_SUCCESS: {
@@ -4647,6 +4649,39 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerFMad(MachineInstr &MI) {
 LegalizerHelper::LegalizeResult
 LegalizerHelper::lowerIntrinsicRound(MachineInstr &MI) {
   Register DstReg = MI.getOperand(0).getReg();
+  Register X = MI.getOperand(1).getReg();
+  const unsigned Flags = MI.getFlags();
+  const LLT Ty = MRI.getType(DstReg);
+  const LLT CondTy = Ty.changeElementSize(1);
+
+  // round(x) =>
+  //  t = trunc(x);
+  //  d = fabs(x - t);
+  //  o = copysign(1.0f, x);
+  //  return t + (d >= 0.5 ? o : 0.0);
+
+  auto T = MIRBuilder.buildIntrinsicTrunc(Ty, X, Flags);
+
+  auto Diff = MIRBuilder.buildFSub(Ty, X, T, Flags);
+  auto AbsDiff = MIRBuilder.buildFAbs(Ty, Diff, Flags);
+  auto Zero = MIRBuilder.buildFConstant(Ty, 0.0);
+  auto One = MIRBuilder.buildFConstant(Ty, 1.0);
+  auto Half = MIRBuilder.buildFConstant(Ty, 0.5);
+  auto SignOne = MIRBuilder.buildFCopysign(Ty, One, X);
+
+  auto Cmp = MIRBuilder.buildFCmp(CmpInst::FCMP_OGE, CondTy, AbsDiff, Half,
+                                  Flags);
+  auto Sel = MIRBuilder.buildSelect(Ty, Cmp, SignOne, Zero, Flags);
+
+  MIRBuilder.buildFAdd(DstReg, T, Sel, Flags);
+
+  MI.eraseFromParent();
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult
+LegalizerHelper::lowerFFloor(MachineInstr &MI) {
+  Register DstReg = MI.getOperand(0).getReg();
   Register SrcReg = MI.getOperand(1).getReg();
   unsigned Flags = MI.getFlags();
   LLT Ty = MRI.getType(DstReg);
@@ -4656,8 +4691,8 @@ LegalizerHelper::lowerIntrinsicRound(MachineInstr &MI) {
   // if (src < 0.0 && src != result)
   //   result += -1.0.
 
-  auto Zero = MIRBuilder.buildFConstant(Ty, 0.0);
   auto Trunc = MIRBuilder.buildIntrinsicTrunc(Ty, SrcReg, Flags);
+  auto Zero = MIRBuilder.buildFConstant(Ty, 0.0);
 
   auto Lt0 = MIRBuilder.buildFCmp(CmpInst::FCMP_OLT, CondTy,
                                   SrcReg, Zero, Flags);
@@ -4666,7 +4701,7 @@ LegalizerHelper::lowerIntrinsicRound(MachineInstr &MI) {
   auto And = MIRBuilder.buildAnd(CondTy, Lt0, NeTrunc);
   auto AddVal = MIRBuilder.buildSITOFP(Ty, And);
 
-  MIRBuilder.buildFAdd(DstReg, Trunc, AddVal);
+  MIRBuilder.buildFAdd(DstReg, Trunc, AddVal, Flags);
   MI.eraseFromParent();
   return Legalized;
 }
@@ -4837,35 +4872,47 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerInsert(MachineInstr &MI) {
   LLT DstTy = MRI.getType(Src);
   LLT InsertTy = MRI.getType(InsertSrc);
 
-  if (InsertTy.isScalar() &&
-      (DstTy.isScalar() ||
-       (DstTy.isVector() && DstTy.getElementType() == InsertTy))) {
-    LLT IntDstTy = DstTy;
-    if (!DstTy.isScalar()) {
-      IntDstTy = LLT::scalar(DstTy.getSizeInBits());
-      Src = MIRBuilder.buildBitcast(IntDstTy, Src).getReg(0);
-    }
+  if (InsertTy.isVector() ||
+      (DstTy.isVector() && DstTy.getElementType() != InsertTy))
+    return UnableToLegalize;
 
-    Register ExtInsSrc = MIRBuilder.buildZExt(IntDstTy, InsertSrc).getReg(0);
-    if (Offset != 0) {
-      auto ShiftAmt = MIRBuilder.buildConstant(IntDstTy, Offset);
-      ExtInsSrc = MIRBuilder.buildShl(IntDstTy, ExtInsSrc, ShiftAmt).getReg(0);
-    }
-
-    APInt MaskVal = APInt::getBitsSetWithWrap(DstTy.getSizeInBits(),
-                                              Offset + InsertTy.getSizeInBits(),
-                                              Offset);
-
-    auto Mask = MIRBuilder.buildConstant(IntDstTy, MaskVal);
-    auto MaskedSrc = MIRBuilder.buildAnd(IntDstTy, Src, Mask);
-    auto Or = MIRBuilder.buildOr(IntDstTy, MaskedSrc, ExtInsSrc);
-
-    MIRBuilder.buildBitcast(Dst, Or);
-    MI.eraseFromParent();
-    return Legalized;
+  const DataLayout &DL = MIRBuilder.getDataLayout();
+  if ((DstTy.isPointer() &&
+       DL.isNonIntegralAddressSpace(DstTy.getAddressSpace())) ||
+      (InsertTy.isPointer() &&
+       DL.isNonIntegralAddressSpace(InsertTy.getAddressSpace()))) {
+    LLVM_DEBUG(dbgs() << "Not casting non-integral address space integer\n");
+    return UnableToLegalize;
   }
 
-  return UnableToLegalize;
+  LLT IntDstTy = DstTy;
+
+  if (!DstTy.isScalar()) {
+    IntDstTy = LLT::scalar(DstTy.getSizeInBits());
+    Src = MIRBuilder.buildCast(IntDstTy, Src).getReg(0);
+  }
+
+  if (!InsertTy.isScalar()) {
+    const LLT IntInsertTy = LLT::scalar(InsertTy.getSizeInBits());
+    InsertSrc = MIRBuilder.buildPtrToInt(IntInsertTy, InsertSrc).getReg(0);
+  }
+
+  Register ExtInsSrc = MIRBuilder.buildZExt(IntDstTy, InsertSrc).getReg(0);
+  if (Offset != 0) {
+    auto ShiftAmt = MIRBuilder.buildConstant(IntDstTy, Offset);
+    ExtInsSrc = MIRBuilder.buildShl(IntDstTy, ExtInsSrc, ShiftAmt).getReg(0);
+  }
+
+  APInt MaskVal = APInt::getBitsSetWithWrap(
+      DstTy.getSizeInBits(), Offset + InsertTy.getSizeInBits(), Offset);
+
+  auto Mask = MIRBuilder.buildConstant(IntDstTy, MaskVal);
+  auto MaskedSrc = MIRBuilder.buildAnd(IntDstTy, Src, Mask);
+  auto Or = MIRBuilder.buildOr(IntDstTy, MaskedSrc, ExtInsSrc);
+
+  MIRBuilder.buildCast(Dst, Or);
+  MI.eraseFromParent();
+  return Legalized;
 }
 
 LegalizerHelper::LegalizeResult
@@ -4909,7 +4956,7 @@ LegalizerHelper::lowerBswap(MachineInstr &MI) {
   Register Dst = MI.getOperand(0).getReg();
   Register Src = MI.getOperand(1).getReg();
   const LLT Ty = MRI.getType(Src);
-  unsigned SizeInBytes = Ty.getSizeInBytes();
+  unsigned SizeInBytes = (Ty.getScalarSizeInBits() + 7) / 8;
   unsigned BaseShiftAmt = (SizeInBytes - 1) * 8;
 
   // Swap most and least significant byte, set remaining bytes in Res to zero.

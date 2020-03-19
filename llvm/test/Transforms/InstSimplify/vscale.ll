@@ -94,3 +94,42 @@ define i32 @insert_extract_element_same_vec_idx_2(<vscale x 4 x i32> %a) {
   ret i32 %r
 }
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Memory Access and Addressing Operations
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; getelementptr
+
+define <vscale x 4 x i32*> @getelementptr_constant_foldable_1() {
+; CHECK-LABEL: @getelementptr_constant_foldable_1(
+; CHECK-NEXT:    ret <vscale x 4 x i32*> zeroinitializer
+;
+  %ptr = getelementptr i32, <vscale x 4 x i32*> zeroinitializer, <vscale x 4 x i64> undef
+  ret <vscale x 4 x i32*> %ptr
+}
+
+define <vscale x 4 x <vscale x 4 x i32>*> @getelementptr_constant_foldable_2() {
+; CHECK-LABEL: @getelementptr_constant_foldable_2(
+; CHECK-NEXT:    ret <vscale x 4 x <vscale x 4 x i32>*> zeroinitializer
+;
+  %ptr = getelementptr <vscale x 4 x i32>, <vscale x 4 x i32>* null, <vscale x 4 x i64> undef
+  ret <vscale x 4 x <vscale x 4 x i32>*> %ptr
+}
+
+; fold getelementptr P, 0 -> P.
+define <vscale x 4 x i32>* @getelementptr_constant_foldable_3() {
+; CHECK-LABEL: @getelementptr_constant_foldable_3(
+; CHECK-NEXT:    ret <vscale x 4 x i32>* null
+;
+  %ptr = getelementptr <vscale x 4 x i32>, <vscale x 4 x i32>* null, i64 0
+  ret <vscale x 4 x i32>* %ptr
+}
+
+define <vscale x 4 x i32>* @getelementptr_not_constant_foldable(i64 %x) {
+; CHECK-LABEL: @getelementptr_not_constant_foldable(
+; CHECK-NEXT:    [[PTR:%.*]] = getelementptr <vscale x 4 x i32>, <vscale x 4 x i32>* null, i64 [[X:%.*]]
+; CHECK-NEXT:    ret <vscale x 4 x i32>* [[PTR]]
+;
+  %ptr = getelementptr <vscale x 4 x i32>, <vscale x 4 x i32>* null, i64 %x
+  ret <vscale x 4 x i32>* %ptr
+}

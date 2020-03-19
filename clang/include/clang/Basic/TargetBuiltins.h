@@ -41,22 +41,11 @@ namespace clang {
     };
   }
 
-  namespace SVE {
-  enum {
-    LastNEONBuiltin = NEON::FirstTSBuiltin - 1,
-#define BUILTIN(ID, TYPE, ATTRS) BI##ID,
-#include "clang/Basic/BuiltinsSVE.def"
-    FirstTSBuiltin,
-  };
-  }
-
   /// AArch64 builtins
   namespace AArch64 {
   enum {
     LastTIBuiltin = clang::Builtin::FirstTSBuiltin - 1,
     LastNEONBuiltin = NEON::FirstTSBuiltin - 1,
-    FirstSVEBuiltin = NEON::FirstTSBuiltin,
-    LastSVEBuiltin = SVE::FirstTSBuiltin - 1,
   #define BUILTIN(ID, TYPE, ATTRS) BI##ID,
   #include "clang/Basic/BuiltinsAArch64.def"
     LastTSBuiltin

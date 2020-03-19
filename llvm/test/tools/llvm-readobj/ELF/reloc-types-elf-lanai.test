@@ -30,16 +30,10 @@ Sections:
     EntSize:      0x000000000000000C
     Info:         .text
     Relocations:
-      - Type:   R_LANAI_NONE
-      - Offset: 0x0000000000000004
-        Type:   R_LANAI_21
-      - Offset: 0x0000000000000008
-        Type:   R_LANAI_21_F
-      - Offset: 0x000000000000000C
-        Type:   R_LANAI_25
-      - Offset: 0x0000000000000010
-        Type:   R_LANAI_32
-      - Offset: 0x0000000000000014
-        Type:   R_LANAI_HI16
-      - Offset: 0x0000000000000018
-        Type:   R_LANAI_LO16
+      - Type: R_LANAI_NONE
+      - Type: R_LANAI_21
+      - Type: R_LANAI_21_F
+      - Type: R_LANAI_25
+      - Type: R_LANAI_32
+      - Type: R_LANAI_HI16
+      - Type: R_LANAI_LO16

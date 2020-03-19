@@ -956,6 +956,11 @@ bool Sema::CheckCXXThrowOperand(SourceLocation ThrowLoc,
                             E->getSourceRange()))
       return true;
 
+    if (!isPointer && Ty->isSizelessType()) {
+      Diag(ThrowLoc, diag::err_throw_sizeless) << Ty << E->getSourceRange();
+      return true;
+    }
+
     if (RequireNonAbstractType(ThrowLoc, ExceptionObjectTy,
                                diag::err_throw_abstract_type, E))
       return true;
@@ -2335,7 +2340,8 @@ bool Sema::CheckAllocatedType(QualType AllocType, SourceLocation Loc,
     return Diag(Loc, diag::err_bad_new_type)
       << AllocType << 1 << R;
   else if (!AllocType->isDependentType() &&
-           RequireCompleteType(Loc, AllocType, diag::err_new_incomplete_type,R))
+           RequireCompleteSizedType(
+               Loc, AllocType, diag::err_new_incomplete_or_sizeless_type, R))
     return true;
   else if (RequireNonAbstractType(Loc, AllocType,
                                   diag::err_allocation_of_abstract_type))
@@ -3461,7 +3467,8 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
       // this, so we treat it as a warning unless we're in a SFINAE context.
       Diag(StartLoc, diag::ext_delete_void_ptr_operand)
         << Type << Ex.get()->getSourceRange();
-    } else if (Pointee->isFunctionType() || Pointee->isVoidType()) {
+    } else if (Pointee->isFunctionType() || Pointee->isVoidType() ||
+               Pointee->isSizelessType()) {
       return ExprError(Diag(StartLoc, diag::err_delete_operand)
         << Type << Ex.get()->getSourceRange());
     } else if (!Pointee->isDependentType()) {

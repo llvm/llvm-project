@@ -776,16 +776,23 @@ Value *TargetTransformInfo::getOrCreateResultFromMemIntrinsic(
 
 Type *TargetTransformInfo::getMemcpyLoopLoweringType(LLVMContext &Context,
                                                      Value *Length,
+                                                     unsigned SrcAddrSpace,
+                                                     unsigned DestAddrSpace,
                                                      unsigned SrcAlign,
                                                      unsigned DestAlign) const {
-  return TTIImpl->getMemcpyLoopLoweringType(Context, Length, SrcAlign,
+  return TTIImpl->getMemcpyLoopLoweringType(Context, Length, SrcAddrSpace,
+                                            DestAddrSpace, SrcAlign,
                                             DestAlign);
 }
 
 void TargetTransformInfo::getMemcpyLoopResidualLoweringType(
     SmallVectorImpl<Type *> &OpsOut, LLVMContext &Context,
-    unsigned RemainingBytes, unsigned SrcAlign, unsigned DestAlign) const {
+    unsigned RemainingBytes,
+    unsigned SrcAddrSpace,
+    unsigned DestAddrSpace,
+    unsigned SrcAlign, unsigned DestAlign) const {
   TTIImpl->getMemcpyLoopResidualLoweringType(OpsOut, Context, RemainingBytes,
+                                             SrcAddrSpace, DestAddrSpace,
                                              SrcAlign, DestAlign);
 }
 

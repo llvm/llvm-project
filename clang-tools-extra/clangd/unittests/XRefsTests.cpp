@@ -452,6 +452,14 @@ TEST(LocateSymbol, All) {
         }
       )cpp",
 
+      R"cpp(
+        struct S1 { void f(); };
+        struct S2 { S1 * $decl[[operator]]->(); };
+        void test(S2 s2) {
+          s2-^>f();
+        }
+      )cpp",
+
       R"cpp(// Declaration of explicit template specialization
         template <typename T>
         struct $decl[[Foo]] {};

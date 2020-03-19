@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "VEMCTargetDesc.h"
-#include "InstPrinter/VEInstPrinter.h"
+#include "VEInstPrinter.h"
 #include "VEMCAsmInfo.h"
 #include "VETargetStreamer.h"
 #include "llvm/MC/MCInstrInfo.h"

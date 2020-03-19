@@ -4885,8 +4885,9 @@ Sema::CreateBuiltinArraySubscriptExpr(Expr *Base, SourceLocation LLoc,
     // See IsCForbiddenLValueType.
     if (!ResultType.hasQualifiers()) VK = VK_RValue;
   } else if (!ResultType->isDependentType() &&
-      RequireCompleteType(LLoc, ResultType,
-                          diag::err_subscript_incomplete_type, BaseExpr))
+             RequireCompleteSizedType(
+                 LLoc, ResultType,
+                 diag::err_subscript_incomplete_or_sizeless_type, BaseExpr))
     return ExprError();
 
   assert(VK == VK_RValue || LangOpts.CPlusPlus ||
@@ -9533,9 +9534,10 @@ static bool checkArithmeticIncompletePointerType(Sema &S, SourceLocation Loc,
 
   assert(ResType->isAnyPointerType() && !ResType->isDependentType());
   QualType PointeeTy = ResType->getPointeeType();
-  return S.RequireCompleteType(Loc, PointeeTy,
-                               diag::err_typecheck_arithmetic_incomplete_type,
-                               PointeeTy, Operand->getSourceRange());
+  return S.RequireCompleteSizedType(
+      Loc, PointeeTy,
+      diag::err_typecheck_arithmetic_incomplete_or_sizeless_type,
+      Operand->getSourceRange());
 }
 
 /// Check the validity of an arithmetic pointer operand.
@@ -14204,11 +14206,9 @@ ExprResult Sema::ActOnChooseExpr(SourceLocation BuiltinLoc,
   ExprValueKind VK = VK_RValue;
   ExprObjectKind OK = OK_Ordinary;
   QualType resType;
-  bool ValueDependent = false;
   bool CondIsTrue = false;
   if (CondExpr->isTypeDependent() || CondExpr->isValueDependent()) {
     resType = Context.DependentTy;
-    ValueDependent = true;
   } else {
     // The conditional expression is required to be a constant expression.
     llvm::APSInt condEval(32);
@@ -14224,14 +14224,12 @@ ExprResult Sema::ActOnChooseExpr(SourceLocation BuiltinLoc,
     Expr *ActiveExpr = CondIsTrue ? LHSExpr : RHSExpr;
 
     resType = ActiveExpr->getType();
-    ValueDependent = ActiveExpr->isValueDependent();
     VK = ActiveExpr->getValueKind();
     OK = ActiveExpr->getObjectKind();
   }
 
-  return new (Context)
-      ChooseExpr(BuiltinLoc, CondExpr, LHSExpr, RHSExpr, resType, VK, OK, RPLoc,
-                 CondIsTrue, resType->isDependentType(), ValueDependent);
+  return new (Context) ChooseExpr(BuiltinLoc, CondExpr, LHSExpr, RHSExpr,
+                                  resType, VK, OK, RPLoc, CondIsTrue);
 }
 
 //===----------------------------------------------------------------------===//

@@ -400,7 +400,9 @@ bool AArch64StackTagging::isInterestingAlloca(const AllocaInst &AI) {
       // dynamic alloca instrumentation for them as well.
       !AI.isUsedWithInAlloca() &&
       // swifterror allocas are register promoted by ISel
-      !AI.isSwiftError();
+      !AI.isSwiftError() &&
+      // safe allocas are not interesting
+      !AI.getMetadata("stack-safe");
   return IsInteresting;
 }
 

@@ -131,22 +131,26 @@ GDBRemoteCommunicationReplayServer::GetPacketAndSendResponse(
     GDBRemotePacket entry = m_packet_history.back();
     m_packet_history.pop_back();
 
+    // Decode run-length encoding.
+    const std::string expanded_data =
+        GDBRemoteCommunication::ExpandRLE(entry.packet.data);
+
     // We've handled the handshake implicitly before. Skip the packet and move
     // on.
     if (entry.packet.data == "+")
       continue;
 
     if (entry.type == GDBRemotePacket::ePacketTypeSend) {
-      if (unexpected(entry.packet.data, packet.GetStringRef())) {
+      if (unexpected(expanded_data, packet.GetStringRef())) {
         LLDB_LOG(log,
                  "GDBRemoteCommunicationReplayServer expected packet: '{0}'",
-                 entry.packet.data);
+                 expanded_data);
         LLDB_LOG(log, "GDBRemoteCommunicationReplayServer actual packet: '{0}'",
                  packet.GetStringRef());
 #ifndef NDEBUG
         // This behaves like a regular assert, but prints the expected and
         // received packet before aborting.
-        printf("Reproducer expected packet: '%s'\n", entry.packet.data.c_str());
+        printf("Reproducer expected packet: '%s'\n", expanded_data.c_str());
         printf("Reproducer received packet: '%s'\n",
                packet.GetStringRef().data());
         llvm::report_fatal_error("Encountered unexpected packet during replay");
@@ -155,7 +159,7 @@ GDBRemoteCommunicationReplayServer::GetPacketAndSendResponse(
       }
 
       // Ignore QEnvironment packets as they're handled earlier.
-      if (entry.packet.data.find("QEnvironment") == 1) {
+      if (expanded_data.find("QEnvironment") == 1) {
         assert(m_packet_history.back().type ==
                GDBRemotePacket::ePacketTypeRecv);
         m_packet_history.pop_back();
