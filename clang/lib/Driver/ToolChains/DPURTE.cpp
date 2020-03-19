@@ -70,7 +70,8 @@ char *DPURTE::GetUpmemSdkPath(const char *Path) {
 
 Tool *DPURTE::buildLinker() const {
   return new tools::dpu::Linker(*this, PathToLinkScript, PathToRtLibDirectory,
-                                RtLibName, PathToRtLibBc, PathToBootstrap);
+                                RtLibName, PathToRtLibBc, PathToBootstrap,
+                                McountLibName);
 }
 
 void DPURTE::addClangTargetOptions(
@@ -115,15 +116,21 @@ void Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // the very beginning of memory with no allocation.
   CmdArgs.push_back("--define-common");
   if (!TCArgs.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
+    CmdArgs.push_back("-L");
+    CmdArgs.push_back(RtLibraryPath);
+
     if (TCArgs.hasArg(options::OPT_flto) ||
         TCArgs.hasArg(options::OPT_flto_EQ)) {
       // Need to inject the RTE BC library into the whole chain.
       CmdArgs.push_back(RtBcLibrary);
     } else {
-      CmdArgs.push_back("-L");
-      CmdArgs.push_back(RtLibraryPath);
       CmdArgs.push_back("-l");
       CmdArgs.push_back(RtLibraryName);
+    }
+
+    if (TCArgs.hasArg(options::OPT_pg)) {
+      CmdArgs.push_back("-l");
+      CmdArgs.push_back(McountLibraryName);
     }
   }
 

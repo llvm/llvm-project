@@ -41,6 +41,7 @@ public:
             ? GetUpmemSdkPath("/share/upmem/include/built-in/librtlto_p.a")
             : GetUpmemSdkPath("/share/upmem/include/built-in/librtlto.a");
     PathToBootstrap = GetUpmemSdkPath("/share/upmem/include/misc/crt0.o");
+    McountLibName = "rtmcount";
   }
 
   ~DPURTE() override {
@@ -84,6 +85,7 @@ private:
   const char *RtLibName;
   char *PathToRtLibBc;
   char *PathToBootstrap;
+  const char *McountLibName;
 };
 } // end namespace toolchains
 namespace tools {
@@ -92,13 +94,14 @@ class LLVM_LIBRARY_VISIBILITY Linker : public GnuTool {
 public:
   Linker(const ToolChain &TC, const char *Script, const char *RtLibDir,
          const char *RtLibName, const char *PathToRtLibBc,
-         const char *PathToBootstrap)
+         const char *PathToBootstrap, const char *McountLibName)
       : GnuTool("dpu::Linker", "ld.lld", TC) {
     LinkScript = Script;
     RtLibraryPath = RtLibDir;
     RtLibraryName = RtLibName;
     RtBcLibrary = PathToRtLibBc;
     Bootstrap = PathToBootstrap;
+    McountLibraryName = McountLibName;
   }
 
   bool isLinkJob() const override { return true; }
@@ -116,6 +119,7 @@ private:
   const char *RtLibraryName;
   const char *RtBcLibrary;
   const char *Bootstrap;
+  const char *McountLibraryName;
 };
 } // end namespace dpu
 } // end namespace tools
