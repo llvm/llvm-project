@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 -triple arm64-apple-ios -std=c++11  -fptrauth-calls -fptrauth-intrinsics -verify -fsyntax-only %s
 
 #define AQ __ptrauth(1,1,50)
+#define AQ2 __ptrauth(1,1,51)
 #define IQ __ptrauth(1,0,50)
 
 struct __attribute__((trivial_abi)) AddrDisc { // expected-warning {{'trivial_abi' cannot be applied to 'AddrDisc'}}
@@ -117,4 +118,14 @@ namespace test_union {
     *x3 = static_cast<S0 &&>(*s0); // expected-error {{cannot be assigned because its copy assignment operator is implicitly deleted}}
     *x4 = static_cast<S1 &&>(*s1); // expected-error {{cannot be assigned because its copy assignment operator is implicitly deleted}}
   }
+}
+
+void test_bad_call_diag(void *AQ* ptr); // expected-note{{candidate function not viable: 1st argument ('void *__ptrauth(1,1,51) *') has __ptrauth(1,1,51) qualifier, but parameter has __ptrauth(1,1,50) qualifier}} expected-note{{candidate function not viable: 1st argument ('void **') has no ptrauth qualifier, but parameter has __ptrauth(1,1,50) qualifier}}
+void test_bad_call_diag2(void ** ptr); // expected-note{{1st argument ('void *__ptrauth(1,1,50) *') has __ptrauth(1,1,50) qualifier, but parameter has no ptrauth qualifier}}
+
+int test_call_diag() {
+  void *AQ ptr1, *AQ2 ptr2, *ptr3;
+  test_bad_call_diag(&ptr2); // expected-error {{no matching function for call to 'test_bad_call_diag'}}
+  test_bad_call_diag(&ptr3); // expected-error {{no matching function for call to 'test_bad_call_diag'}}
+  test_bad_call_diag2(&ptr1); // expected-error {{no matching function for call to 'test_bad_call_diag2'}}
 }
