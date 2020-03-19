@@ -101,3 +101,15 @@
 // RUN: -target-feature +hvxv67 -target-feature +hvx-length128b %s | FileCheck \
 // RUN: %s -check-prefix CHECK-ELF
 // CHECK-ELF: #define __ELF__ 1
+
+// RUN: %clang_cc1 -E -dM -triple hexagon-unknown-linux-musl \
+// RUN: -target-cpu hexagonv67 -target-feature +hvxv67 \
+// RUN: -target-feature +hvx-length128b %s | FileCheck \
+// RUN: %s -check-prefix CHECK-LINUX
+// CHECK-LINUX: #define __gnu_linux__ 1
+// CHECK-LINUX: #define __linux 1
+// CHECK-LINUX: #define __linux__ 1
+// CHECK-LINUX: #define __unix 1
+// CHECK-LINUX: #define __unix__ 1
+// CHECK-LINUX: #define linux 1
+// CHECK-LINUX: #define unix 1
