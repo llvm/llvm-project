@@ -1,0 +1,31 @@
+## This is a generic test for SHT_REL/SHT_RELA sections.
+
+## Check that we do not print excessive default
+## fields for SHT_REL[A] sections.
+# RUN: yaml2obj %s -o %t1
+# RUN: obj2yaml %t1 | FileCheck %s --check-prefix=YAML
+
+## Note: it is important to have at least two sections with sh_info == 0.
+##       Previously we printed a broken Info field in this case.
+## FIXME: We should not print EntSize. Will be fixed by https://reviews.llvm.org/D76227.
+# YAML:      - Name:    .rela.dyn
+# YAML-NEXT:   Type:    SHT_RELA
+# YAML-NEXT:   EntSize: 0x0000000000000018
+# YAML-NEXT: - Name:    .rel.dyn
+# YAML-NEXT:   Type:    SHT_REL
+# YAML-NEXT:   EntSize: 0x0000000000000010
+# YAML-NEXT: - Name
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name: .rela.dyn
+    Type: SHT_RELA
+  - Name: .rel.dyn
+    Type: SHT_REL
+## Trigger the .dynsym emission.
+DynamicSymbols: []
