@@ -130,6 +130,14 @@ protected:
   /// Construct an empty expression.
   explicit Expr(StmtClass SC, EmptyShell) : ValueStmt(SC) { }
 
+  /// Each concrete expr subclass is expected to compute its dependence and call
+  /// this in the constructor.
+  void setDependence(ExprDependence Deps) {
+    ExprBits.Dependent = static_cast<unsigned>(Deps);
+  }
+  friend class ASTImporter; // Sets dependence dircetly.
+  friend class ASTStmtReader; // Sets dependence dircetly.
+
 public:
   QualType getType() const { return TR; }
   void setType(QualType t) {
@@ -147,18 +155,6 @@ public:
 
   ExprDependence getDependence() const {
     return static_cast<ExprDependence>(ExprBits.Dependent);
-  }
-
-  /// Each concrete expr subclass is expected to compute its dependence and call
-  /// this in the constructor.
-  void setDependence(ExprDependence Deps) {
-    ExprBits.Dependent = static_cast<unsigned>(Deps);
-  }
-  void addDependence(ExprDependence Deps) {
-    ExprBits.Dependent |= static_cast<unsigned>(Deps);
-  }
-  void removeDependence(ExprDependence Deps) {
-    ExprBits.Dependent &= ~static_cast<unsigned>(Deps);
   }
 
   /// isValueDependent - Determines whether this expression is
@@ -2773,6 +2769,12 @@ public:
   /// a non-value-dependent constant parameter evaluating as false.
   bool isBuiltinAssumeFalse(const ASTContext &Ctx) const;
 
+  /// Used by Sema to implement MSVC-compatible delayed name lookup.
+  /// (Usually Exprs themselves should set dependence).
+  void markDependentForPostponedNameLookup() {
+    setDependence(getDependence() | ExprDependence::TypeValueInstantiation);
+  }
+
   bool isCallToStdMove() const {
     const FunctionDecl *FD = getDirectCallee();
     return getNumArgs() == 1 && FD && FD->isInStdNamespace() &&
@@ -4384,7 +4386,7 @@ public:
     InitExprs[Init] = expr;
 
     if (expr)
-      addDependence(expr->getDependence());
+      setDependence(getDependence() | expr->getDependence());
   }
 
   /// Reserve space for some number of initializers.
