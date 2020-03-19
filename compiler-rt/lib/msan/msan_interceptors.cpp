@@ -953,7 +953,9 @@ void __sanitizer_dtor_callback(const void *data, uptr size) {
 template <class Mmap>
 static void *mmap_interceptor(Mmap real_mmap, void *addr, SIZE_T length,
                               int prot, int flags, int fd, OFF64_T offset) {
-  if (addr && !MEM_IS_APP(addr)) {
+  SIZE_T rounded_length = RoundUpTo(length, GetPageSize());
+  void *end_addr = (char *)addr + (rounded_length - 1);
+  if (addr && (!MEM_IS_APP(addr) || !MEM_IS_APP(end_addr))) {
     if (flags & map_fixed) {
       errno = errno_EINVAL;
       return (void *)-1;
@@ -962,7 +964,18 @@ static void *mmap_interceptor(Mmap real_mmap, void *addr, SIZE_T length,
     }
   }
   void *res = real_mmap(addr, length, prot, flags, fd, offset);
-  if (res != (void *)-1) __msan_unpoison(res, RoundUpTo(length, GetPageSize()));
+  if (res != (void *)-1) {
+    void *end_res = (char *)res + (rounded_length - 1);
+    if (MEM_IS_APP(res) && MEM_IS_APP(end_res)) {
+      __msan_unpoison(res, rounded_length);
+    } else {
+      // Application has attempted to map more memory than is supported by
+      // MSAN. Act as if we ran out of memory.
+      internal_munmap(res, length);
+      errno = errno_ENOMEM;
+      return (void *)-1;
+    }
+  }
   return res;
 }
 
