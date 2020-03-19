@@ -5,4 +5,4 @@ CHECK: Type Unit
 CHECK: Type Unit
 
 // Check that llvm-dwp can parse DW_FORM_string for CU name
-DUP: Duplicate DWO ID ({{.*}}) in 'a.cpp' and 'a.cpp'
+DUP: duplicate DWO ID ({{.*}}) in 'a.cpp' and 'a.cpp'

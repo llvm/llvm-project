@@ -220,9 +220,10 @@ ExprResult Parser::ParseMSAsmIdentifier(llvm::SmallVectorImpl<Token> &LineToks,
 
   // Parse an optional scope-specifier if we're in C++.
   CXXScopeSpec SS;
-  if (getLangOpts().CPlusPlus) {
-    ParseOptionalCXXScopeSpecifier(SS, nullptr, /*EnteringContext=*/false);
-  }
+  if (getLangOpts().CPlusPlus)
+    ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
+                                   /*ObjectHadErrors=*/false,
+                                   /*EnteringContext=*/false);
 
   // Require an identifier here.
   SourceLocation TemplateKWLoc;
@@ -233,12 +234,13 @@ ExprResult Parser::ParseMSAsmIdentifier(llvm::SmallVectorImpl<Token> &LineToks,
     Result = ParseCXXThis();
     Invalid = false;
   } else {
-    Invalid = ParseUnqualifiedId(SS,
-                                 /*EnteringContext=*/false,
-                                 /*AllowDestructorName=*/false,
-                                 /*AllowConstructorName=*/false,
-                                 /*AllowDeductionGuide=*/false,
-                                 /*ObjectType=*/nullptr, &TemplateKWLoc, Id);
+    Invalid =
+        ParseUnqualifiedId(SS, /*ObjectType=*/nullptr,
+                           /*ObjectHadErrors=*/false,
+                           /*EnteringContext=*/false,
+                           /*AllowDestructorName=*/false,
+                           /*AllowConstructorName=*/false,
+                           /*AllowDeductionGuide=*/false, &TemplateKWLoc, Id);
     // Perform the lookup.
     Result = Actions.LookupInlineAsmIdentifier(SS, TemplateKWLoc, Id,
                                                IsUnevaluatedContext);

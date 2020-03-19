@@ -206,6 +206,48 @@ namespace llvm {
     /// @}
   };
 
+  /// This is the common base class for vector predication intrinsics.
+  class VPIntrinsic : public IntrinsicInst {
+  public:
+    static Optional<int> GetMaskParamPos(Intrinsic::ID IntrinsicID);
+    static Optional<int> GetVectorLengthParamPos(Intrinsic::ID IntrinsicID);
+
+    /// The llvm.vp.* intrinsics for this instruction Opcode
+    static Intrinsic::ID GetForOpcode(unsigned OC);
+
+    // Whether \p ID is a VP intrinsic ID.
+    static bool IsVPIntrinsic(Intrinsic::ID);
+
+    /// \return the mask parameter or nullptr.
+    Value *getMaskParam() const;
+
+    /// \return the vector length parameter or nullptr.
+    Value *getVectorLengthParam() const;
+
+    /// \return whether the vector length param can be ignored.
+    bool canIgnoreVectorLengthParam() const;
+
+    /// \return the static element count (vector number of elements) the vector
+    /// length parameter applies to.
+    ElementCount getStaticVectorLength() const;
+
+    // Methods for support type inquiry through isa, cast, and dyn_cast:
+    static bool classof(const IntrinsicInst *I) {
+      return IsVPIntrinsic(I->getIntrinsicID());
+    }
+    static bool classof(const Value *V) {
+      return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+    }
+
+    // Equivalent non-predicated opcode
+    unsigned getFunctionalOpcode() const {
+      return GetFunctionalOpcodeForVP(getIntrinsicID());
+    }
+
+    // Equivalent non-predicated opcode
+    static unsigned GetFunctionalOpcodeForVP(Intrinsic::ID ID);
+  };
+
   /// This is the common base class for constrained floating point intrinsics.
   class ConstrainedFPIntrinsic : public IntrinsicInst {
   public:

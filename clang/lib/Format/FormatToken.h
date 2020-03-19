@@ -108,6 +108,9 @@ namespace format {
   TYPE(CSharpNullCoalescing)                                                   \
   TYPE(CSharpNullConditional)                                                  \
   TYPE(CSharpNullConditionalLSquare)                                           \
+  TYPE(CSharpGenericTypeConstraint)                                            \
+  TYPE(CSharpGenericTypeConstraintColon)                                       \
+  TYPE(CSharpGenericTypeConstraintComma)                                       \
   TYPE(Unknown)
 
 enum TokenType {
@@ -779,6 +782,7 @@ struct AdditionalKeywords {
     kw_unsafe = &IdentTable.get("unsafe");
     kw_ushort = &IdentTable.get("ushort");
     kw_when = &IdentTable.get("when");
+    kw_where = &IdentTable.get("where");
 
     // Keep this at the end of the constructor to make sure everything here
     // is
@@ -796,6 +800,7 @@ struct AdditionalKeywords {
          kw_is, kw_lock, kw_null, kw_object, kw_out, kw_override, kw_params,
          kw_readonly, kw_ref, kw_string, kw_stackalloc, kw_sbyte, kw_sealed,
          kw_uint, kw_ulong, kw_unchecked, kw_unsafe, kw_ushort, kw_when,
+         kw_where,
          // Keywords from the JavaScript section.
          kw_as, kw_async, kw_await, kw_declare, kw_finally, kw_from,
          kw_function, kw_get, kw_import, kw_is, kw_let, kw_module, kw_readonly,
@@ -900,6 +905,7 @@ struct AdditionalKeywords {
   IdentifierInfo *kw_unsafe;
   IdentifierInfo *kw_ushort;
   IdentifierInfo *kw_when;
+  IdentifierInfo *kw_where;
 
   /// Returns \c true if \p Tok is a true JavaScript identifier, returns
   /// \c false if it is a keyword or a pseudo keyword.

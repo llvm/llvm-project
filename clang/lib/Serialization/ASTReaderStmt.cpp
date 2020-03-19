@@ -106,7 +106,8 @@ namespace clang {
 
     /// The number of record fields required for the Expr class
     /// itself.
-    static const unsigned NumExprFields = NumStmtFields + 7;
+    static const unsigned NumExprFields =
+        NumStmtFields + ExprDependenceBits + 3;
 
     /// Read and initialize a ExplicitTemplateArgumentList structure.
     void ReadTemplateKWAndArgsInfo(ASTTemplateKWAndArgsInfo &Args,
@@ -517,6 +518,7 @@ void ASTStmtReader::VisitExpr(Expr *E) {
   bool ValueDependent = Record.readInt();
   bool InstantiationDependent = Record.readInt();
   bool ContainsUnexpandedTemplateParameters = Record.readInt();
+  bool ContainsErrors = Record.readInt();
   auto Deps = ExprDependence::None;
   if (TypeDependent)
     Deps |= ExprDependence::Type;
@@ -526,6 +528,8 @@ void ASTStmtReader::VisitExpr(Expr *E) {
     Deps |= ExprDependence::Instantiation;
   if (ContainsUnexpandedTemplateParameters)
     Deps |= ExprDependence::UnexpandedPack;
+  if (ContainsErrors)
+    Deps |= ExprDependence::Error;
   E->setDependence(Deps);
 
   E->setValueKind(static_cast<ExprValueKind>(Record.readInt()));

@@ -123,6 +123,9 @@ struct CodeGenIntrinsic {
   /// True if the intrinsic is no-return.
   bool isNoReturn;
 
+  /// True if the intrinsic is no-sync.
+  bool isNoSync;
+
   /// True if the intrinsic is will-return.
   bool isWillReturn;
 

@@ -282,8 +282,7 @@ define i32 @invokeLandingpad() personality i8* bitcast (i32 (...)* @__gxx_person
   ; FIXME: Change filter to a constant array once they are handled. 
   ; Currently, even though it parses this, LLVM module is broken
           filter [1 x i8] [i8 1]
-  ; CHECK: llvm.br ^bb3
-  br label %5
+  resume { i8*, i32 } %3
 
 ; CHECK: ^bb2:
   ; CHECK: llvm.return %{{[0-9]+}} : !llvm.i32

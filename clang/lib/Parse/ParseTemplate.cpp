@@ -363,9 +363,11 @@ Parser::ParseConceptDefinition(const ParsedTemplateInfo &TemplateInfo,
   DiagnoseAndSkipCXX11Attributes();
 
   CXXScopeSpec SS;
-  if (ParseOptionalCXXScopeSpecifier(SS, ParsedType(),
-      /*EnteringContext=*/false, /*MayBePseudoDestructor=*/nullptr,
-      /*IsTypename=*/false, /*LastII=*/nullptr, /*OnlyNamespace=*/true) ||
+  if (ParseOptionalCXXScopeSpecifier(
+          SS, /*ObjectType=*/nullptr,
+          /*ObjectHadErrors=*/false, /*EnteringContext=*/false,
+          /*MayBePseudoDestructor=*/nullptr,
+          /*IsTypename=*/false, /*LastII=*/nullptr, /*OnlyNamespace=*/true) ||
       SS.isInvalid()) {
     SkipUntil(tok::semi);
     return nullptr;
@@ -376,12 +378,12 @@ Parser::ParseConceptDefinition(const ParsedTemplateInfo &TemplateInfo,
          diag::err_concept_definition_not_identifier);
 
   UnqualifiedId Result;
-  if (ParseUnqualifiedId(SS, /*EnteringContext=*/false,
+  if (ParseUnqualifiedId(SS, /*ObjectType=*/nullptr,
+                         /*ObjectHadErrors=*/false, /*EnteringContext=*/false,
                          /*AllowDestructorName=*/false,
                          /*AllowConstructorName=*/false,
                          /*AllowDeductionGuide=*/false,
-                         /*ObjectType=*/ParsedType(), /*TemplateKWLoc=*/nullptr,
-                         Result)) {
+                         /*TemplateKWLoc=*/nullptr, Result)) {
     SkipUntil(tok::semi);
     return nullptr;
   }
@@ -682,19 +684,19 @@ bool Parser::TryAnnotateTypeConstraint() {
     return false;
   CXXScopeSpec SS;
   bool WasScopeAnnotation = Tok.is(tok::annot_cxxscope);
-  if (ParseOptionalCXXScopeSpecifier(
-          SS, ParsedType(),
-          /*EnteringContext=*/false,
-          /*MayBePseudoDestructor=*/nullptr,
-          // If this is not a type-constraint, then
-          // this scope-spec is part of the typename
-          // of a non-type template parameter
-          /*IsTypename=*/true, /*LastII=*/nullptr,
-          // We won't find concepts in
-          // non-namespaces anyway, so might as well
-          // parse this correctly for possible type
-          // names.
-          /*OnlyNamespace=*/false))
+  if (ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
+                                     /*ObjectHadErrors=*/false,
+                                     /*EnteringContext=*/false,
+                                     /*MayBePseudoDestructor=*/nullptr,
+                                     // If this is not a type-constraint, then
+                                     // this scope-spec is part of the typename
+                                     // of a non-type template parameter
+                                     /*IsTypename=*/true, /*LastII=*/nullptr,
+                                     // We won't find concepts in
+                                     // non-namespaces anyway, so might as well
+                                     // parse this correctly for possible type
+                                     // names.
+                                     /*OnlyNamespace=*/false))
     return true;
 
   if (Tok.is(tok::identifier)) {
@@ -754,7 +756,8 @@ NamedDecl *Parser::ParseTypeParameter(unsigned Depth, unsigned Position) {
   TemplateIdAnnotation *TypeConstraint = nullptr;
   bool TypenameKeyword = false;
   SourceLocation KeyLoc;
-  ParseOptionalCXXScopeSpecifier(TypeConstraintSS, nullptr,
+  ParseOptionalCXXScopeSpecifier(TypeConstraintSS, /*ObjectType=*/nullptr,
+                                 /*ObjectHadErrors=*/false,
                                  /*EnteringContext*/ false);
   if (Tok.is(tok::annot_template_id)) {
     // Consume the 'type-constraint'.
@@ -1438,7 +1441,8 @@ ParsedTemplateArgument Parser::ParseTemplateTemplateArgument() {
   // followed by a token that terminates a template argument, such as ',',
   // '>', or (in some cases) '>>'.
   CXXScopeSpec SS; // nested-name-specifier, if present
-  ParseOptionalCXXScopeSpecifier(SS, nullptr,
+  ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
+                                 /*ObjectHadErrors=*/false,
                                  /*EnteringContext=*/false);
 
   ParsedTemplateArgument Result;
