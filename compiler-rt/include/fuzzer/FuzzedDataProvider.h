@@ -139,6 +139,11 @@ class FuzzedDataProvider {
     return result;
   }
 
+  // Returns a std::string of length from 0 to |remaining_bytes_|.
+  std::string ConsumeRandomLengthString() {
+    return ConsumeRandomLengthString(remaining_bytes_);
+  }
+
   // Returns a std::vector containing all remaining bytes of the input data.
   template <typename T> std::vector<T> ConsumeRemainingBytes() {
     return ConsumeBytes<T>(remaining_bytes_);
