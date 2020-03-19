@@ -549,9 +549,11 @@ public:
 
   void resolveLocalRelocations();
 
-  static void finalizeAsync(std::unique_ptr<RuntimeDyldImpl> This,
-                            unique_function<void(Error)> OnEmitted,
-                            std::unique_ptr<MemoryBuffer> UnderlyingBuffer);
+  static void finalizeAsync(
+      std::unique_ptr<RuntimeDyldImpl> This,
+      unique_function<void(object::OwningBinary<object::ObjectFile>, Error)>
+          OnEmitted,
+      object::OwningBinary<object::ObjectFile> O);
 
   void reassignSectionAddress(unsigned SectionID, uint64_t Addr);
 
