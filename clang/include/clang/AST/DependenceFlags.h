@@ -20,19 +20,23 @@ struct ExprDependenceScope {
     Type = 4,
     Value = 8,
 
+    // clang extension: this expr contains or references an error, and is
+    // considered dependent on how that error is resolved.
+    Error = 16,
+
     None = 0,
-    All = 15,
+    All = 31,
 
     TypeValue = Type | Value,
     TypeInstantiation = Type | Instantiation,
     ValueInstantiation = Value | Instantiation,
     TypeValueInstantiation = Type | Value | Instantiation,
 
-    LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/Value)
+    LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/Error)
   };
 };
 using ExprDependence = ExprDependenceScope::ExprDependence;
-static constexpr unsigned ExprDependenceBits = 4;
+static constexpr unsigned ExprDependenceBits = 5;
 
 struct TypeDependenceScope {
   enum TypeDependence : uint8_t {
@@ -46,6 +50,8 @@ struct TypeDependenceScope {
     Dependent = 4,
     /// Whether this type is a variably-modified type (C99 6.7.5).
     VariablyModified = 8,
+
+    // FIXME: add Error bit.
 
     None = 0,
     All = 15,
@@ -83,11 +89,14 @@ LLVM_COMMON_DEPENDENCE(TemplateArgumentDependence)
 /// Computes dependencies of a reference with the name having template arguments
 /// with \p TA dependencies.
 inline ExprDependence toExprDependence(TemplateArgumentDependence TA) {
-  auto E =
-      static_cast<ExprDependence>(TA & ~TemplateArgumentDependence::Dependent);
+  auto D = ExprDependence::None;
+  if (TA & TemplateArgumentDependence::UnexpandedPack)
+    D |= ExprDependence::UnexpandedPack;
+  if (TA & TemplateArgumentDependence::Instantiation)
+    D |= ExprDependence::Instantiation;
   if (TA & TemplateArgumentDependence::Dependent)
-    return E | ExprDependence::Type | ExprDependence::Value;
-  return E;
+    D |= ExprDependence::Type | ExprDependence::Value;
+  return D;
 }
 inline ExprDependence toExprDependence(TypeDependence TD) {
   // This hack works because TypeDependence and TemplateArgumentDependence
@@ -127,10 +136,13 @@ toTemplateArgumentDependence(TemplateNameDependence D) {
 }
 inline TemplateArgumentDependence
 toTemplateArgumentDependence(ExprDependence ED) {
-  TemplateArgumentDependence TAD = static_cast<TemplateArgumentDependence>(
-      ED & ~(ExprDependence::Type | ExprDependence::Value));
+  TemplateArgumentDependence TAD = TemplateArgumentDependence::None;
   if (ED & (ExprDependence::Type | ExprDependence::Value))
     TAD |= TemplateArgumentDependence::Dependent;
+  if (ED & ExprDependence::Instantiation)
+    TAD |= TemplateArgumentDependence::Instantiation;
+  if (ED & ExprDependence::UnexpandedPack)
+    TAD |= TemplateArgumentDependence::UnexpandedPack;
   return TAD;
 }
 
