@@ -907,6 +907,8 @@ namespace llvm {
     bool isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
                                     EVT VT) const override;
 
+    bool isFMAFasterThanFMulAndFAdd(const Function &F, Type *Ty) const override;
+
     const MCPhysReg *getScratchRegisters(CallingConv::ID CC) const override;
 
     // Should we expand the build vector with shuffles?
