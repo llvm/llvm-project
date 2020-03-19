@@ -1497,28 +1497,15 @@ MemberExpr *MemberExpr::Create(
   MemberExpr *E = new (Mem) MemberExpr(Base, IsArrow, OperatorLoc, MemberDecl,
                                        NameInfo, T, VK, OK, NOUR);
 
-  if (isa<FieldDecl>(MemberDecl)) {
-    DeclContext *DC = MemberDecl->getDeclContext();
-    // dyn_cast_or_null is used to handle objC variables which do not
-    // have a declaration context.
-    CXXRecordDecl *RD = dyn_cast_or_null<CXXRecordDecl>(DC);
-    if (RD && RD->isDependentContext() && RD->isCurrentInstantiation(DC)) {
-      if (E->isTypeDependent() && !T->isDependentType())
-        E->removeDependence(ExprDependence::Type);
-    }
-    // Bitfield with value-dependent width is type-dependent.
-    FieldDecl *FD = dyn_cast<FieldDecl>(MemberDecl);
-    if (FD && FD->isBitField() && FD->getBitWidth()->isValueDependent())
-      E->addDependence(ExprDependence::Type);
-  }
-
+  // FIXME: remove remaining dependence computation to computeDependence().
+  auto Deps = E->getDependence();
   if (HasQualOrFound) {
     // FIXME: Wrong. We should be looking at the member declaration we found.
     if (QualifierLoc && QualifierLoc.getNestedNameSpecifier()->isDependent())
-      E->addDependence(ExprDependence::TypeValueInstantiation);
+      Deps |= ExprDependence::TypeValueInstantiation;
     else if (QualifierLoc &&
              QualifierLoc.getNestedNameSpecifier()->isInstantiationDependent())
-      E->addDependence(ExprDependence::Instantiation);
+      Deps |= ExprDependence::Instantiation;
 
     E->MemberExprBits.HasQualifierOrFoundDecl = true;
 
@@ -1532,16 +1519,17 @@ MemberExpr *MemberExpr::Create(
       TemplateArgs || TemplateKWLoc.isValid();
 
   if (TemplateArgs) {
-    auto Deps = TemplateArgumentDependence::None;
+    auto TemplateArgDeps = TemplateArgumentDependence::None;
     E->getTrailingObjects<ASTTemplateKWAndArgsInfo>()->initializeFrom(
         TemplateKWLoc, *TemplateArgs,
-        E->getTrailingObjects<TemplateArgumentLoc>(), Deps);
-    if (Deps & TemplateArgumentDependence::Instantiation)
-      E->addDependence(ExprDependence::Instantiation);
+        E->getTrailingObjects<TemplateArgumentLoc>(), TemplateArgDeps);
+    if (TemplateArgDeps & TemplateArgumentDependence::Instantiation)
+      Deps |= ExprDependence::Instantiation;
   } else if (TemplateKWLoc.isValid()) {
     E->getTrailingObjects<ASTTemplateKWAndArgsInfo>()->initializeFrom(
         TemplateKWLoc);
   }
+  E->setDependence(Deps);
 
   return E;
 }

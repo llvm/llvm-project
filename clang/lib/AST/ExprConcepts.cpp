@@ -175,13 +175,13 @@ RequiresExpr::RequiresExpr(ASTContext &C, SourceLocation RequiresKWLoc,
   RequiresExprBits.IsSatisfied |= Dependent;
   // FIXME: move the computing dependency logic to ComputeDependence.h
   if (ContainsUnexpandedParameterPack)
-    addDependence(ExprDependence::UnexpandedPack);
+    setDependence(getDependence() | ExprDependence::UnexpandedPack);
   // FIXME: this is incorrect for cases where we have a non-dependent
   // requirement, but its parameters are instantiation-dependent. RequiresExpr
   // should be instantiation-dependent if it has instantiation-dependent
   // parameters.
   if (Dependent)
-    addDependence(ExprDependence::ValueInstantiation);
+    setDependence(getDependence() | ExprDependence::ValueInstantiation);
 }
 
 RequiresExpr::RequiresExpr(ASTContext &C, EmptyShell Empty,
