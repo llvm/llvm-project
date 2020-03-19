@@ -698,6 +698,18 @@ define i1 @srem2(i16 %X, i32 %Y) {
   ret i1 %D
 }
 
+define i1 @srem2v(<2 x i16> %X, <2 x i32> %Y) {
+; CHECK-LABEL: @srem2v(
+; CHECK-NEXT:    ret i1 false
+;
+  %A = zext <2 x i16> %X to <2 x i32>
+  %B = add nsw <2 x i32> %A, <i32 1, i32 0>
+  %C = srem <2 x i32> %B, %Y
+  %D = extractelement <2 x i32> %C, i32 0
+  %E = icmp slt i32 %D, 0
+  ret i1 %E
+}
+
 define i1 @srem3(i16 %X, i32 %Y) {
 ; CHECK-LABEL: @srem3(
 ; CHECK-NEXT:    ret i1 false
@@ -708,6 +720,24 @@ define i1 @srem3(i16 %X, i32 %Y) {
   %D = srem i32 %C, %Y
   %E = icmp slt i32 %D, 0
   ret i1 %E
+}
+
+define i1 @srem3v(<2 x i16> %X, <2 x i32> %Y) {
+; CHECK-LABEL: @srem3v(
+; CHECK-NEXT:    [[A:%.*]] = zext <2 x i16> [[X:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[B:%.*]] = or <2 x i32> <i32 1, i32 -2147483648>, [[A]]
+; CHECK-NEXT:    [[C:%.*]] = sub nsw <2 x i32> <i32 0, i32 1>, [[B]]
+; CHECK-NEXT:    [[E:%.*]] = extractelement <2 x i32> [[C]], i32 1
+; CHECK-NEXT:    [[F:%.*]] = icmp slt i32 [[E]], 0
+; CHECK-NEXT:    ret i1 [[F]]
+;
+  %A = zext <2 x i16> %X to <2 x i32>
+  %B = or <2 x i32> <i32 1, i32 2147483648>, %A
+  %C = sub nsw <2 x i32> <i32 0, i32 1>, %B
+  %D = srem <2 x i32> %C, %Y
+  %E = extractelement <2 x i32> %C, i32 1
+  %F = icmp slt i32 %E, 0
+  ret i1 %F
 }
 
 define i1 @udiv2(i32 %Z) {
@@ -1299,7 +1329,27 @@ define i1 @icmp_known_bits(i4 %x, i4 %y) {
   %add = add i4 %or1, %or2
   %cmp = icmp eq i4 %add, 0
   ret i1 %cmp
+}
 
+define i1 @icmp_known_bits_vec(<2 x i4> %x, <2 x i4> %y) {
+; CHECK-LABEL: @icmp_known_bits_vec(
+; CHECK-NEXT:    [[AND1:%.*]] = and <2 x i4> [[Y:%.*]], <i4 -7, i4 -1>
+; CHECK-NEXT:    [[AND2:%.*]] = and <2 x i4> [[X:%.*]], <i4 -7, i4 -1>
+; CHECK-NEXT:    [[OR1:%.*]] = or <2 x i4> [[AND1]], <i4 2, i4 2>
+; CHECK-NEXT:    [[OR2:%.*]] = or <2 x i4> [[AND2]], <i4 2, i4 2>
+; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i4> [[OR1]], [[OR2]]
+; CHECK-NEXT:    [[EXT:%.*]] = extractelement <2 x i4> [[ADD]], i32 0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i4 [[EXT]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %and1 = and <2 x i4> %y, <i4 -7, i4 -1>
+  %and2 = and <2 x i4> %x, <i4 -7, i4 -1>
+  %or1 = or <2 x i4> %and1, <i4 2, i4 2>
+  %or2 = or <2 x i4> %and2, <i4 2, i4 2>
+  %add = add <2 x i4> %or1, %or2
+  %ext = extractelement <2 x i4> %add,i32 0
+  %cmp = icmp eq i4 %ext, 0
+  ret i1 %cmp
 }
 
 define i1 @icmp_shl_nuw_1(i64 %a) {
