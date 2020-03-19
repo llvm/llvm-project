@@ -24,6 +24,7 @@ namespace Fortran::semantics {
 using evaluate::characteristics::DummyArgument;
 using evaluate::characteristics::DummyDataObject;
 using evaluate::characteristics::DummyProcedure;
+using evaluate::characteristics::FunctionResult;
 using evaluate::characteristics::Procedure;
 
 class CheckHelper {
@@ -109,6 +110,7 @@ private:
       }
     }
   }
+  bool IsResultOkToDiffer(const FunctionResult &);
 
   SemanticsContext &context_;
   evaluate::FoldingContext &foldingContext_{context_.foldingContext()};
@@ -208,7 +210,8 @@ void CheckHelper::Check(const Symbol &symbol) {
   }
   if (type) {  // Section 7.2, paragraph 7
     bool canHaveAssumedParameter{IsNamedConstant(symbol) ||
-        IsAssumedLengthExternalCharacterFunction(symbol) ||  // C722
+        (IsAssumedLengthCharacter(symbol) &&  // C722
+            IsExternal(symbol)) ||
         symbol.test(Symbol::Flag::ParentComp)};
     if (!IsStmtFunctionDummy(symbol)) {  // C726
       if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
@@ -239,7 +242,7 @@ void CheckHelper::Check(const Symbol &symbol) {
       }
     }
   }
-  if (IsAssumedLengthExternalCharacterFunction(symbol)) {  // C723
+  if (IsAssumedLengthCharacter(symbol) && IsExternal(symbol)) {  // C723
     if (symbol.attrs().test(Attr::RECURSIVE)) {
       messages_.Say(
           "An assumed-length CHARACTER(*) function cannot be RECURSIVE"_err_en_US);
@@ -269,6 +272,16 @@ void CheckHelper::Check(const Symbol &symbol) {
   if (symbol.attrs().test(Attr::CONTIGUOUS) && IsPointer(symbol) &&
       symbol.Rank() == 0) {  // C830
     messages_.Say("CONTIGUOUS POINTER must be an array"_err_en_US);
+  }
+  if (IsDummy(symbol)) {
+    if (IsNamedConstant(symbol)) {
+      messages_.Say(
+          "A dummy argument may not also be a named constant"_err_en_US);
+    }
+    if (IsSaved(symbol)) {
+      messages_.Say(
+          "A dummy argument may not have the SAVE attribute"_err_en_US);
+    }
   }
 }
 
@@ -600,12 +613,66 @@ private:
   SemanticsContext &context;
 };
 
+// 15.6.2.6 para 3 - can the result of an ENTRY differ from its function?
+bool CheckHelper::IsResultOkToDiffer(const FunctionResult &result) {
+  if (result.attrs.test(FunctionResult::Attr::Allocatable) ||
+      result.attrs.test(FunctionResult::Attr::Pointer)) {
+    return false;
+  }
+  const auto *typeAndShape{result.GetTypeAndShape()};
+  if (!typeAndShape || typeAndShape->Rank() != 0) {
+    return false;
+  }
+  auto category{typeAndShape->type().category()};
+  if (category == TypeCategory::Character ||
+      category == TypeCategory::Derived) {
+    return false;
+  }
+  int kind{typeAndShape->type().kind()};
+  return kind == context_.GetDefaultKind(category) ||
+      (category == TypeCategory::Real &&
+          kind == context_.doublePrecisionKind());
+}
+
 void CheckHelper::CheckSubprogram(
-    const Symbol &symbol, const SubprogramDetails &) {
-  const Scope &scope{symbol.owner()};
-  if (symbol.attrs().test(Attr::MODULE) && scope.IsSubmodule()) {
-    if (const Symbol * iface{scope.parent().FindSymbol(symbol.name())}) {
-      SubprogramMatchHelper{context_}.Check(symbol, *iface);
+    const Symbol &symbol, const SubprogramDetails &details) {
+  if (const Symbol * iface{FindSeparateModuleSubprogramInterface(&symbol)}) {
+    SubprogramMatchHelper{context_}.Check(symbol, *iface);
+  }
+  if (const Scope * entryScope{details.entryScope()}) {
+    // ENTRY 15.6.2.6, esp. C1571
+    std::optional<parser::MessageFixedText> error;
+    const Symbol *subprogram{entryScope->symbol()};
+    const SubprogramDetails *subprogramDetails{nullptr};
+    if (subprogram) {
+      subprogramDetails = subprogram->detailsIf<SubprogramDetails>();
+    }
+    if (entryScope->kind() != Scope::Kind::Subprogram) {
+      error = "ENTRY may appear only in a subroutine or function"_err_en_US;
+    } else if (!(entryScope->parent().IsGlobal() ||
+                   entryScope->parent().IsModule() ||
+                   entryScope->parent().IsSubmodule())) {
+      error = "ENTRY may not appear in an internal subprogram"_err_en_US;
+    } else if (FindSeparateModuleSubprogramInterface(subprogram)) {
+      error = "ENTRY may not appear in a separate module procedure"_err_en_US;
+    } else if (subprogramDetails && details.isFunction() &&
+        subprogramDetails->isFunction()) {
+      auto result{FunctionResult::Characterize(
+          details.result(), context_.intrinsics())};
+      auto subpResult{FunctionResult::Characterize(
+          subprogramDetails->result(), context_.intrinsics())};
+      if (result && subpResult && *result != *subpResult &&
+          (!IsResultOkToDiffer(*result) || !IsResultOkToDiffer(*subpResult))) {
+        error =
+            "Result of ENTRY is not compatible with result of containing function"_err_en_US;
+      }
+    }
+    if (error) {
+      if (auto *msg{messages_.Say(symbol.name(), *error)}) {
+        if (subprogram) {
+          msg->Attach(subprogram->name(), "Containing subprogram"_en_US);
+        }
+      }
     }
   }
 }

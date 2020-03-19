@@ -14,6 +14,7 @@ end
 
 ! C901
 subroutine s2(x)
+  !ERROR: A dummy argument may not also be a named constant
   real, parameter :: x = 0.0
   real, parameter :: a(*) = [1, 2, 3]
   character, parameter :: c(2) = "ab"

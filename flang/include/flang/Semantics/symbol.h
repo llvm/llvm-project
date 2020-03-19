@@ -61,6 +61,9 @@ public:
   bool isFunction() const { return result_ != nullptr; }
   bool isInterface() const { return isInterface_; }
   void set_isInterface(bool value = true) { isInterface_ = value; }
+  Scope *entryScope() { return entryScope_; }
+  const Scope *entryScope() const { return entryScope_; }
+  void set_entryScope(Scope &scope) { entryScope_ = &scope; }
   MaybeExpr bindName() const { return bindName_; }
   void set_bindName(MaybeExpr &&expr) { bindName_ = std::move(expr); }
   const Symbol &result() const {
@@ -82,8 +85,10 @@ private:
   MaybeExpr bindName_;
   std::vector<Symbol *> dummyArgs_;  // nullptr -> alternate return indicator
   Symbol *result_{nullptr};
+  Scope *entryScope_{nullptr};  // if ENTRY, points to subprogram's scope
   MaybeExpr stmtFunction_;
-  friend llvm::raw_ostream &operator<<(llvm::raw_ostream &, const SubprogramDetails &);
+  friend llvm::raw_ostream &operator<<(
+      llvm::raw_ostream &, const SubprogramDetails &);
 };
 
 // For SubprogramNameDetails, the kind indicates whether it is the name
@@ -115,17 +120,19 @@ public:
   void set_type(const DeclTypeSpec &);
   void ReplaceType(const DeclTypeSpec &);
   bool isDummy() const { return isDummy_; }
+  void set_isDummy(bool value = true) { isDummy_ = value; }
   bool isFuncResult() const { return isFuncResult_; }
   void set_funcResult(bool x) { isFuncResult_ = x; }
   MaybeExpr bindName() const { return bindName_; }
   void set_bindName(MaybeExpr &&expr) { bindName_ = std::move(expr); }
 
 private:
-  bool isDummy_;
+  bool isDummy_{false};
   bool isFuncResult_{false};
   const DeclTypeSpec *type_{nullptr};
   MaybeExpr bindName_;
-  friend llvm::raw_ostream &operator<<(llvm::raw_ostream &, const EntityDetails &);
+  friend llvm::raw_ostream &operator<<(
+      llvm::raw_ostream &, const EntityDetails &);
 };
 
 // Symbol is associated with a name or expression in a SELECT TYPE or ASSOCIATE.
@@ -180,7 +187,8 @@ private:
   ArraySpec shape_;
   ArraySpec coshape_;
   const Symbol *commonBlock_{nullptr};  // common block this object is in
-  friend llvm::raw_ostream &operator<<(llvm::raw_ostream &, const ObjectEntityDetails &);
+  friend llvm::raw_ostream &operator<<(
+      llvm::raw_ostream &, const ObjectEntityDetails &);
 };
 
 // Mixin for details with passed-object dummy argument.
@@ -217,7 +225,8 @@ public:
 private:
   ProcInterface interface_;
   std::optional<const Symbol *> init_;
-  friend llvm::raw_ostream &operator<<(llvm::raw_ostream &, const ProcEntityDetails &);
+  friend llvm::raw_ostream &operator<<(
+      llvm::raw_ostream &, const ProcEntityDetails &);
 };
 
 // These derived type details represent the characteristics of a derived
@@ -263,7 +272,8 @@ private:
   std::list<SourceName> componentNames_;
   bool sequence_{false};
   bool isForwardReferenced_{false};
-  friend llvm::raw_ostream &operator<<(llvm::raw_ostream &, const DerivedTypeDetails &);
+  friend llvm::raw_ostream &operator<<(
+      llvm::raw_ostream &, const DerivedTypeDetails &);
 };
 
 class ProcBindingDetails : public WithPassArg {
@@ -570,7 +580,6 @@ public:
   bool IsFuncResult() const;
   bool IsObjectArray() const;
   bool IsSubprogram() const;
-  bool IsSeparateModuleProc() const;
   bool IsFromModFile() const;
   bool HasExplicitInterface() const {
     return std::visit(
@@ -662,7 +671,8 @@ private:
   Symbol() {}  // only created in class Symbols
   const std::string GetDetailsName() const;
   friend llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Symbol &);
-  friend llvm::raw_ostream &DumpForUnparse(llvm::raw_ostream &, const Symbol &, bool);
+  friend llvm::raw_ostream &DumpForUnparse(
+      llvm::raw_ostream &, const Symbol &, bool);
 
   // If a derived type's symbol refers to an extended derived type,
   // return the parent component's symbol.  The scope of the derived type

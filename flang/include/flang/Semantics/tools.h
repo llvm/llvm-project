@@ -108,6 +108,7 @@ bool IsSaved(const Symbol &);
 bool CanBeTypeBoundProc(const Symbol *);
 bool IsInitialized(const Symbol &);
 bool HasIntrinsicTypeName(const Symbol &);
+bool IsSeparateModuleProcedureInterface(const Symbol *);
 
 // Return an ultimate component of type that matches predicate, or nullptr.
 const Symbol *FindUltimateComponent(const DerivedTypeSpec &type,
@@ -164,7 +165,7 @@ inline bool IsAssumedRankArray(const Symbol &symbol) {
   return details && details->IsAssumedRank();
 }
 bool IsAssumedLengthCharacter(const Symbol &);
-bool IsAssumedLengthExternalCharacterFunction(const Symbol &);
+bool IsExternal(const Symbol &);
 // Is the symbol modifiable in this scope
 std::optional<parser::MessageFixedText> WhyNotModifiable(
     const Symbol &, const Scope &);
@@ -199,6 +200,11 @@ std::list<SourceName> OrderParameterNames(const Symbol &);
 // Return an existing or new derived type instance
 const DeclTypeSpec &FindOrInstantiateDerivedType(Scope &, DerivedTypeSpec &&,
     SemanticsContext &, DeclTypeSpec::Category = DeclTypeSpec::TypeDerived);
+
+// When a subprogram defined in a submodule defines a separate module
+// procedure whose interface is defined in an ancestor (sub)module,
+// returns a pointer to that interface, else null.
+const Symbol *FindSeparateModuleSubprogramInterface(const Symbol *);
 
 // Determines whether an object might be visible outside a
 // pure function (C1594); returns a non-null Symbol pointer for

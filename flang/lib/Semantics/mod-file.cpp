@@ -69,8 +69,8 @@ static std::string CheckSum(const std::string_view &);
 // Collect symbols needed for a subprogram interface
 class SubprogramSymbolCollector {
 public:
-  SubprogramSymbolCollector(const Symbol &symbol)
-    : symbol_{symbol}, scope_{DEREF(symbol.scope())} {}
+  SubprogramSymbolCollector(const Symbol &symbol, const Scope &scope)
+    : symbol_{symbol}, scope_{scope} {}
   const SymbolVector &symbols() const { return need_; }
   const std::set<SourceName> &imports() const { return imports_; }
   void Collect();
@@ -335,12 +335,14 @@ void ModFileWriter::PutSubprogram(const Symbol &symbol) {
   }
   os << '\n';
 
-  // walk symbols, collect ones needed
-  ModFileWriter writer{context_};
+  // walk symbols, collect ones needed for interface
+  const Scope &scope{
+      details.entryScope() ? *details.entryScope() : DEREF(symbol.scope())};
+  SubprogramSymbolCollector collector{symbol, scope};
+  collector.Collect();
   std::string typeBindingsBuf;
   llvm::raw_string_ostream typeBindings{typeBindingsBuf};
-  SubprogramSymbolCollector collector{symbol};
-  collector.Collect();
+  ModFileWriter writer{context_};
   for (const Symbol &need : collector.symbols()) {
     writer.PutSymbol(typeBindings, need);
   }

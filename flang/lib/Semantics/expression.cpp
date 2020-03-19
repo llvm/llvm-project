@@ -1889,7 +1889,7 @@ void ExpressionAnalyzer::CheckForBadRecursion(
       if (proc.attrs().test(semantics::Attr::NON_RECURSIVE)) {  // 15.6.2.1(3)
         msg = Say("NON_RECURSIVE procedure '%s' cannot call itself"_err_en_US,
             callSite);
-      } else if (IsAssumedLengthExternalCharacterFunction(proc)) {
+      } else if (IsAssumedLengthCharacter(proc) && IsExternal(proc)) {
         msg = Say(  // 15.6.2.1(3)
             "Assumed-length CHARACTER(*) function '%s' cannot call itself"_err_en_US,
             callSite);
@@ -2046,7 +2046,8 @@ static bool IsExternalCalledImplicitly(
   if (const auto *symbol{proc.GetSymbol()}) {
     return symbol->has<semantics::SubprogramDetails>() &&
         symbol->owner().IsGlobal() &&
-        !symbol->scope()->sourceRange().Contains(callSite);
+        (!symbol->scope() /*ENTRY*/ ||
+            !symbol->scope()->sourceRange().Contains(callSite));
   } else {
     return false;
   }

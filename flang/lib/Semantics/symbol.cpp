@@ -92,6 +92,12 @@ llvm::raw_ostream &operator<<(
       os << ", " << x.result_->attrs();
     }
   }
+  if (x.entryScope_) {
+    os << " entry";
+    if (x.entryScope_->symbol()) {
+      os << " in " << x.entryScope_->symbol()->name();
+    }
+  }
   char sep{'('};
   os << ' ';
   for (const Symbol *arg : x.dummyArgs_) {
@@ -316,15 +322,6 @@ bool Symbol::IsSubprogram() const {
           [](const auto &) { return false; },
       },
       details_);
-}
-
-bool Symbol::IsSeparateModuleProc() const {
-  if (attrs().test(Attr::MODULE)) {
-    if (auto *details{detailsIf<SubprogramDetails>()}) {
-      return details->isInterface();
-    }
-  }
-  return false;
 }
 
 bool Symbol::IsFromModFile() const {
