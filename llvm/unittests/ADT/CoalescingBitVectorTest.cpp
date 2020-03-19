@@ -453,6 +453,44 @@ TEST(CoalescingBitVectorTest, FindLowerBound) {
   EXPECT_EQ(*BV.find(3), 3u);
 }
 
+TEST(CoalescingBitVectorTest, AdvanceToLowerBound) {
+  U64BitVec::Allocator Alloc;
+  U64BitVec BV(Alloc);
+  uint64_t BigNum1 = uint64_t(1) << 32;
+  uint64_t BigNum2 = (uint64_t(1) << 33) + 1;
+
+  auto advFromBegin = [&](uint64_t To) -> U64BitVec::const_iterator {
+    auto It = BV.begin();
+    It.advanceToLowerBound(To);
+    return It;
+  };
+
+  EXPECT_TRUE(advFromBegin(BigNum1) == BV.end());
+  BV.set(BigNum1);
+  auto Find1 = advFromBegin(BigNum1);
+  EXPECT_EQ(*Find1, BigNum1);
+  BV.set(BigNum2);
+  auto Find2 = advFromBegin(BigNum1);
+  EXPECT_EQ(*Find2, BigNum1);
+  auto Find3 = advFromBegin(BigNum2);
+  EXPECT_EQ(*Find3, BigNum2);
+  BV.reset(BigNum1);
+  auto Find4 = advFromBegin(BigNum1);
+  EXPECT_EQ(*Find4, BigNum2);
+
+  BV.clear();
+  BV.set({1, 2, 3});
+  EXPECT_EQ(*advFromBegin(2), 2u);
+  EXPECT_EQ(*advFromBegin(3), 3u);
+  auto It = BV.begin();
+  It.advanceToLowerBound(0);
+  EXPECT_EQ(*It, 1u);
+  It.advanceToLowerBound(100);
+  EXPECT_TRUE(It == BV.end());
+  It.advanceToLowerBound(100);
+  EXPECT_TRUE(It == BV.end());
+}
+
 TEST(CoalescingBitVectorTest, Print) {
   std::string S;
   {
