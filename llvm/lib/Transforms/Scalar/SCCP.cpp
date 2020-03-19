@@ -739,9 +739,8 @@ void SCCPSolver::visitPHINode(PHINode &PN) {
   if (PN.getType()->isStructTy())
     return (void)markOverdefined(&PN);
 
-  if (isOverdefined(getValueState(&PN))) {
-    return (void)markOverdefined(&PN);
-  }
+  if (getValueState(&PN).isOverdefined())
+    return; // Quick exit
 
   // Super-extra-high-degree PHI nodes are unlikely to ever be marked constant,
   // and slow us down a lot.  Just mark them overdefined.
@@ -753,38 +752,19 @@ void SCCPSolver::visitPHINode(PHINode &PN) {
   // constant, and they agree with each other, the PHI becomes the identical
   // constant.  If they are constant and don't agree, the PHI is overdefined.
   // If there are no executable operands, the PHI remains unknown.
-  Constant *OperandVal = nullptr;
+  bool Changed = false;
   for (unsigned i = 0, e = PN.getNumIncomingValues(); i != e; ++i) {
     LatticeVal IV = getValueState(PN.getIncomingValue(i));
-    if (IV.isUnknownOrUndef()) continue;  // Doesn't influence PHI node.
-
     if (!isEdgeFeasible(PN.getIncomingBlock(i), PN.getParent()))
       continue;
 
-    if (isOverdefined(IV)) // PHI node becomes overdefined!
-      return (void)markOverdefined(&PN);
-
-    if (!OperandVal) {   // Grab the first value.
-      OperandVal = getConstant(IV);
-      continue;
-    }
-
-    // There is already a reachable operand.  If we conflict with it,
-    // then the PHI node becomes overdefined.  If we agree with it, we
-    // can continue on.
-
-    // Check to see if there are two different constants merging, if so, the PHI
-    // node is overdefined.
-    if (getConstant(IV) != OperandVal)
-      return (void)markOverdefined(&PN);
+    LatticeVal &Res = getValueState(&PN);
+    Changed |= Res.mergeIn(IV, DL);
+    if (Res.isOverdefined())
+      break;
   }
-
-  // If we exited the loop, this means that the PHI node only has constant
-  // arguments that agree with each other(and OperandVal is the constant) or
-  // OperandVal is null because there are no defined incoming arguments.  If
-  // this is the case, the PHI remains unknown.
-  if (OperandVal)
-    markConstant(&PN, OperandVal);      // Acquire operand value
+  if (Changed)
+    pushToWorkListMsg(ValueState[&PN], &PN);
 }
 
 void SCCPSolver::visitReturnInst(ReturnInst &I) {

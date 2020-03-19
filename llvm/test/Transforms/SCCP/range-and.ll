@@ -141,8 +141,7 @@ define i1 @constant_range_and_255_100(i1 %cond, i64 %a) {
 ; CHECK:       bb3:
 ; CHECK-NEXT:    [[P:%.*]] = phi i64 [ [[R_1]], [[BB1]] ], [ [[R_2]], [[BB2]] ]
 ; CHECK-NEXT:    [[P_AND:%.*]] = and i64 [[P]], 512
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i64 [[P_AND]], 256
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   br i1 %cond, label %bb1, label %bb2
