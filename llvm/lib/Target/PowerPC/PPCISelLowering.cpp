@@ -15385,6 +15385,33 @@ bool PPCTargetLowering::isFMAFasterThanFMulAndFAdd(const Function &F,
   }
 }
 
+// Currently this is a copy from AArch64TargetLowering::isProfitableToHoist.
+// FIXME: add more patterns which are profitable to hoist.
+bool PPCTargetLowering::isProfitableToHoist(Instruction *I) const {
+  if (I->getOpcode() != Instruction::FMul)
+    return true;
+
+  if (!I->hasOneUse())
+    return true;
+
+  Instruction *User = I->user_back();
+  assert(User && "A single use instruction with no uses.");
+
+  if (User->getOpcode() != Instruction::FSub &&
+      User->getOpcode() == Instruction::FAdd)
+    return true;
+
+  const TargetOptions &Options = getTargetMachine().Options;
+  const Function *F = I->getFunction();
+  const DataLayout &DL = F->getParent()->getDataLayout();
+  Type *Ty = User->getOperand(0)->getType();
+
+  return !(
+      isFMAFasterThanFMulAndFAdd(*F, Ty) &&
+      isOperationLegalOrCustom(ISD::FMA, getValueType(DL, Ty)) &&
+      (Options.AllowFPOpFusion == FPOpFusion::Fast || Options.UnsafeFPMath));
+}
+
 const MCPhysReg *
 PPCTargetLowering::getScratchRegisters(CallingConv::ID) const {
   // LR is a callee-save register, but we must treat it as clobbered by any call
