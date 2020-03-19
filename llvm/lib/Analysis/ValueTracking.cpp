@@ -356,7 +356,7 @@ unsigned llvm::ComputeNumSignBits(const Value *V, const DataLayout &DL,
 }
 
 static void computeKnownBitsAddSub(bool Add, const Value *Op0, const Value *Op1,
-                                   bool NSW,
+                                   bool NSW, const APInt &DemandedElts,
                                    KnownBits &KnownOut, KnownBits &Known2,
                                    unsigned Depth, const Query &Q) {
   unsigned BitWidth = KnownOut.getBitWidth();
@@ -364,18 +364,19 @@ static void computeKnownBitsAddSub(bool Add, const Value *Op0, const Value *Op1,
   // If an initial sequence of bits in the result is not needed, the
   // corresponding bits in the operands are not needed.
   KnownBits LHSKnown(BitWidth);
-  computeKnownBits(Op0, LHSKnown, Depth + 1, Q);
-  computeKnownBits(Op1, Known2, Depth + 1, Q);
+  computeKnownBits(Op0, DemandedElts, LHSKnown, Depth + 1, Q);
+  computeKnownBits(Op1, DemandedElts, Known2, Depth + 1, Q);
 
   KnownOut = KnownBits::computeForAddSub(Add, NSW, LHSKnown, Known2);
 }
 
 static void computeKnownBitsMul(const Value *Op0, const Value *Op1, bool NSW,
-                                KnownBits &Known, KnownBits &Known2,
-                                unsigned Depth, const Query &Q) {
+                                const APInt &DemandedElts, KnownBits &Known,
+                                KnownBits &Known2, unsigned Depth,
+                                const Query &Q) {
   unsigned BitWidth = Known.getBitWidth();
-  computeKnownBits(Op1, Known, Depth + 1, Q);
-  computeKnownBits(Op0, Known2, Depth + 1, Q);
+  computeKnownBits(Op1, DemandedElts, Known, Depth + 1, Q);
+  computeKnownBits(Op0, DemandedElts, Known2, Depth + 1, Q);
 
   bool isKnownNegative = false;
   bool isKnownNonNegative = false;
@@ -1149,8 +1150,8 @@ static void computeKnownBitsFromOperator(const Operator *I,
   }
   case Instruction::Mul: {
     bool NSW = Q.IIQ.hasNoSignedWrap(cast<OverflowingBinaryOperator>(I));
-    computeKnownBitsMul(I->getOperand(0), I->getOperand(1), NSW, Known,
-                        Known2, Depth, Q);
+    computeKnownBitsMul(I->getOperand(0), I->getOperand(1), NSW, DemandedElts,
+                        Known, Known2, Depth, Q);
     break;
   }
   case Instruction::UDiv: {
@@ -1336,13 +1337,13 @@ static void computeKnownBitsFromOperator(const Operator *I,
   case Instruction::Sub: {
     bool NSW = Q.IIQ.hasNoSignedWrap(cast<OverflowingBinaryOperator>(I));
     computeKnownBitsAddSub(false, I->getOperand(0), I->getOperand(1), NSW,
-                           Known, Known2, Depth, Q);
+                           DemandedElts, Known, Known2, Depth, Q);
     break;
   }
   case Instruction::Add: {
     bool NSW = Q.IIQ.hasNoSignedWrap(cast<OverflowingBinaryOperator>(I));
     computeKnownBitsAddSub(true, I->getOperand(0), I->getOperand(1), NSW,
-                           Known, Known2, Depth, Q);
+                           DemandedElts, Known, Known2, Depth, Q);
     break;
   }
   case Instruction::SRem:
@@ -1786,19 +1787,19 @@ static void computeKnownBitsFromOperator(const Operator *I,
         case Intrinsic::uadd_with_overflow:
         case Intrinsic::sadd_with_overflow:
           computeKnownBitsAddSub(true, II->getArgOperand(0),
-                                 II->getArgOperand(1), false, Known, Known2,
-                                 Depth, Q);
+                                 II->getArgOperand(1), false, DemandedElts,
+                                 Known, Known2, Depth, Q);
           break;
         case Intrinsic::usub_with_overflow:
         case Intrinsic::ssub_with_overflow:
           computeKnownBitsAddSub(false, II->getArgOperand(0),
-                                 II->getArgOperand(1), false, Known, Known2,
-                                 Depth, Q);
+                                 II->getArgOperand(1), false, DemandedElts,
+                                 Known, Known2, Depth, Q);
           break;
         case Intrinsic::umul_with_overflow:
         case Intrinsic::smul_with_overflow:
           computeKnownBitsMul(II->getArgOperand(0), II->getArgOperand(1), false,
-                              Known, Known2, Depth, Q);
+                              DemandedElts, Known, Known2, Depth, Q);
           break;
         }
       }
