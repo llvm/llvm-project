@@ -158,6 +158,7 @@ enum {
   SDMA,
 
   LHU_BIG,
+  LHS_BIG,
   LW_BIG,
   LD_BIG,
 

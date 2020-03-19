@@ -401,6 +401,8 @@ const char *DPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
     return nullptr;
   case DPUISD::LHU_BIG:
     return "DPUISD::LHU_BIG";
+  case DPUISD::LHS_BIG:
+    return "DPUISD::LHS_BIG";
   case DPUISD::LW_BIG:
     return "DPUISD::LW_BIG";
   case DPUISD::LD_BIG:
@@ -656,13 +658,11 @@ const char *DPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
   }
 }
 
-static SDValue LowerBswapStatic(SDValue Op, SelectionDAG &DAG, bool isBswap16) {
+static SDValue LowerBswapStatic(SDValue Op, SelectionDAG &DAG,
+                                int Opcode = DPUISD::LW_BIG) {
   SDLoc DL(Op);
   MVT VT = Op.getValueType().getSimpleVT();
-  int Opcode = DPUISD::LW_BIG;
-  if (isBswap16) {
-    Opcode = DPUISD::LHU_BIG;
-  } else if (VT.SimpleTy == MVT::i64) {
+  if (VT.SimpleTy == MVT::i64) {
     Opcode = DPUISD::LD_BIG;
   }
 
@@ -677,7 +677,7 @@ static SDValue LowerBswapStatic(SDValue Op, SelectionDAG &DAG, bool isBswap16) {
 }
 
 SDValue DPUTargetLowering::LowerBswap(SDValue Op, SelectionDAG &DAG) const {
-  return LowerBswapStatic(Op, DAG, false);
+  return LowerBswapStatic(Op, DAG);
 }
 SDValue DPUTargetLowering::LowerUnsupported(SDValue Op, SelectionDAG &DAG,
                                             StringRef Message) const {
@@ -1486,12 +1486,11 @@ static SDValue PerformMULCombine(SDValue Op, SelectionDAG &DAG) {
   return LoweredMultiplication;
 }
 
-static SDValue PerformShiftCombine(SDValue Op, SelectionDAG &DAG) {
-  LLVM_DEBUG(Op.dumpr());
+static SDValue PerformShiftCombine(SDValue Op, SelectionDAG &DAG, int Opcode) {
   SDValue Bswap = Op.getOperand(0);
   if ((Bswap.getOpcode() == ISD::BSWAP) &&
       (Op.getConstantOperandVal(1) == 16)) {
-    return LowerBswapStatic(Bswap, DAG, true);
+    return LowerBswapStatic(Bswap, DAG, Opcode);
   }
   return SDValue();
 }
@@ -1503,8 +1502,9 @@ SDValue DPUTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::MUL:
     return PerformMULCombine(SDValue(N, 0), DAG);
   case ISD::SRA:
+    return PerformShiftCombine(SDValue(N, 0), DAG, DPUISD::LHS_BIG);
   case ISD::SRL:
-    return PerformShiftCombine(SDValue(N, 0), DAG);
+    return PerformShiftCombine(SDValue(N, 0), DAG, DPUISD::LHU_BIG);
   }
   return TargetLowering::PerformDAGCombine(N, DCI);
 }

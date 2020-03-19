@@ -67,6 +67,7 @@ def DPUAddVAStart       : SDNode<"DPUISD::ADD_VASTART", SDT_DPUAddVAStart>;
 
 def SDT_DPULoadBig : SDTypeProfile<1, 1, [SDTCisPtrTy<0>]>;
 def DPULhuBig : SDNode <"DPUISD::LHU_BIG", SDT_DPULoadBig, [SDNPHasChain, SDNPMayLoad]>;
+def DPULhsBig : SDNode <"DPUISD::LHS_BIG", SDT_DPULoadBig, [SDNPHasChain, SDNPMayLoad]>;
 def DPULwBig : SDNode <"DPUISD::LW_BIG", SDT_DPULoadBig, [SDNPHasChain, SDNPMayLoad]>;
 def DPULdBig : SDNode <"DPUISD::LD_BIG", SDT_DPULoadBig, [SDNPHasChain, SDNPMayLoad]>;
 
@@ -86,6 +87,7 @@ def : Pat<(SDT_Lsl_add SimpleReg:$rb, SimpleRegOrCst:$ra, u5_imm:$shift),
 def AddrFI : ComplexPattern<iPTR, 1, "SelectAddrFI", [frameindex], []>;
 
 def : Pat<(DPULhuBig AddrFI:$addr), (LHUerri 1, AddrFI:$addr, 0)>;
+def : Pat<(DPULhsBig AddrFI:$addr), (LHSerri 1, AddrFI:$addr, 0)>;
 def : Pat<(DPULwBig AddrFI:$addr), (LWerri 1, AddrFI:$addr, 0)>;
 def : Pat<(DPULdBig AddrFI:$addr), (LDerri 1, AddrFI:$addr, 0)>;
 
