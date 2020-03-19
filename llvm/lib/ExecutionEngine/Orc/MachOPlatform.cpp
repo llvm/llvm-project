@@ -382,7 +382,7 @@ void MachOPlatform::InitScraperPlugin::modifyPassConfig(
       else
         dbgs() << "none\n";
 
-      dbgs() << "__mod_init_func: ";
+      dbgs() << "  __mod_init_func: ";
       if (ModInits.NumPtrs)
         dbgs() << ModInits.NumPtrs << " pointer(s) at "
                << formatv("{0:x16}", ModInits.Address) << "\n";
