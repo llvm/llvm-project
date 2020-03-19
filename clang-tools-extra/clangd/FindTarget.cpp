@@ -654,11 +654,18 @@ llvm::SmallVector<ReferenceLoc, 2> refInExpr(const Expr *E) {
                                   /*IsDecl=*/false,
                                   {E->getNamedConcept()}});
     }
+
     void VisitDeclRefExpr(const DeclRefExpr *E) {
       Refs.push_back(ReferenceLoc{E->getQualifierLoc(),
                                   E->getNameInfo().getLoc(),
                                   /*IsDecl=*/false,
                                   {E->getFoundDecl()}});
+    }
+
+    void VisitDependentScopeDeclRefExpr(const DependentScopeDeclRefExpr *E) {
+      Refs.push_back(ReferenceLoc{
+          E->getQualifierLoc(), E->getNameInfo().getLoc(), /*IsDecl=*/false,
+          explicitReferenceTargets(DynTypedNode::create(*E), {})});
     }
 
     void VisitMemberExpr(const MemberExpr *E) {
@@ -670,6 +677,14 @@ llvm::SmallVector<ReferenceLoc, 2> refInExpr(const Expr *E) {
                                   E->getMemberNameInfo().getLoc(),
                                   /*IsDecl=*/false,
                                   {E->getFoundDecl()}});
+    }
+
+    void
+    VisitCXXDependentScopeMemberExpr(const CXXDependentScopeMemberExpr *E) {
+      Refs.push_back(
+          ReferenceLoc{E->getQualifierLoc(), E->getMemberNameInfo().getLoc(),
+                       /*IsDecl=*/false,
+                       explicitReferenceTargets(DynTypedNode::create(*E), {})});
     }
 
     void VisitOverloadExpr(const OverloadExpr *E) {
