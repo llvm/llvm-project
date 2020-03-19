@@ -977,9 +977,18 @@ void SCCPSolver::visitBinaryOperator(Instruction &I) {
   LatticeVal V2State = getValueState(I.getOperand(1));
 
   LatticeVal &IV = ValueState[&I];
-  if (isOverdefined(IV))
+  if (IV.isOverdefined())
+    return;
+
+  // If something is undef, wait for it to resolve.
+  if (V1State.isUnknownOrUndef() || V2State.isUnknownOrUndef())
+    return;
+
+  if (V1State.isOverdefined() && V2State.isOverdefined())
     return (void)markOverdefined(&I);
 
+  // Both operands are non-integer constants or constant expressions.
+  // TODO: Use information from notconstant better.
   if (isConstant(V1State) && isConstant(V2State)) {
     Constant *C = ConstantExpr::get(I.getOpcode(), getConstant(V1State),
                                     getConstant(V2State));
@@ -989,50 +998,21 @@ void SCCPSolver::visitBinaryOperator(Instruction &I) {
     return (void)markConstant(IV, &I, C);
   }
 
-  // If something is undef, wait for it to resolve.
-  if (V1State.isUnknownOrUndef() || V2State.isUnknownOrUndef())
-    return;
+  // Operands are either constant ranges, notconstant, overdefined or one of the
+  // operands is a constant.
+  ConstantRange A = ConstantRange::getFull(I.getType()->getScalarSizeInBits());
+  ConstantRange B = ConstantRange::getFull(I.getType()->getScalarSizeInBits());
+  if (V1State.isConstantRange())
+    A = V1State.getConstantRange();
+  if (V2State.isConstantRange())
+    B = V2State.getConstantRange();
 
-  // Otherwise, one of our operands is overdefined.  Try to produce something
-  // better than overdefined with some tricks.
-  // If this is 0 / Y, it doesn't matter that the second operand is
-  // overdefined, and we can replace it with zero.
-  if (I.getOpcode() == Instruction::UDiv || I.getOpcode() == Instruction::SDiv)
-    if (isConstant(V1State) && getConstant(V1State)->isNullValue())
-      return (void)markConstant(IV, &I, getConstant(V1State));
+  ConstantRange R = A.binaryOp(cast<BinaryOperator>(&I)->getOpcode(), B);
+  mergeInValue(&I, LatticeVal::getRange(R));
 
-  // If this is:
-  // -> AND/MUL with 0
-  // -> OR with -1
-  // it doesn't matter that the other operand is overdefined.
-  if (I.getOpcode() == Instruction::And || I.getOpcode() == Instruction::Mul ||
-      I.getOpcode() == Instruction::Or) {
-    LatticeVal *NonOverdefVal = nullptr;
-    if (!isOverdefined(V1State))
-      NonOverdefVal = &V1State;
-
-    else if (!isOverdefined(V2State))
-      NonOverdefVal = &V2State;
-    if (NonOverdefVal) {
-      if (!isConstant(*NonOverdefVal))
-        return;
-
-      if (I.getOpcode() == Instruction::And ||
-          I.getOpcode() == Instruction::Mul) {
-        // X and 0 = 0
-        // X * 0 = 0
-        if (getConstant(*NonOverdefVal)->isNullValue())
-          return (void)markConstant(IV, &I, getConstant(*NonOverdefVal));
-      } else {
-        // X or -1 = -1
-        if (ConstantInt *CI = getConstantInt(*NonOverdefVal))
-          if (CI->isMinusOne())
-            return (void)markConstant(IV, &I, CI);
-      }
-    }
-  }
-
-  markOverdefined(&I);
+  // TODO: Currently we do not exploit special values that produce something
+  // better than overdefined with an overdefined operand for vector or floating
+  // point types, like and <4 x i32> overdefined, zeroinitializer.
 }
 
 // Handle ICmpInst instruction.
