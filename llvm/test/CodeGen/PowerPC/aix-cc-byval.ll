@@ -1,16 +1,18 @@
-; RUN: llc -mtriple powerpc-ibm-aix-xcoff -stop-after=machine-cp -verify-machineinstrs < %s | \
+; RUN: llc -mtriple powerpc-ibm-aix-xcoff -stop-after=machine-cp -mcpu=pwr4 \
+; RUN: -mattr=-altivec -verify-machineinstrs < %s | \
 ; RUN: FileCheck --check-prefixes=CHECK,32BIT %s
 
 ; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mattr=-altivec \
 ; RUN:  -mtriple powerpc-ibm-aix-xcoff < %s | \
-; RUN: FileCheck --check-prefixes=CHECKASM,ASM32PWR4 %s
+; RUN: FileCheck --check-prefixes=CHECKASM,ASM32 %s
 
-; RUN: llc -mtriple powerpc64-ibm-aix-xcoff -stop-after=machine-cp -verify-machineinstrs < %s | \
+; RUN: llc -mtriple powerpc64-ibm-aix-xcoff -stop-after=machine-cp -mcpu=pwr4 \
+; RUN: -mattr=-altivec -verify-machineinstrs < %s | \
 ; RUN: FileCheck --check-prefixes=CHECK,64BIT %s
 
 ; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mattr=-altivec \
 ; RUN:  -mtriple powerpc64-ibm-aix-xcoff < %s | \
-; RUN: FileCheck --check-prefixes=CHECKASM,ASM64PWR4 %s
+; RUN: FileCheck --check-prefixes=CHECKASM,ASM64 %s
 
 %struct.S1 = type { [1 x i8] }
 @gS1 = external global %struct.S1, align 1
@@ -34,13 +36,13 @@ declare void @test_byval_1Byte(%struct.S1* byval(%struct.S1) align 1)
 
 ; CHECKASM-LABEL: .call_test_byval_1Byte:
 
-; ASM32PWR4:       stwu 1, -64(1)
-; ASM32PWR4-NEXT:  lwz [[REG:[0-9]+]], LC{{[0-9]+}}(2)
-; ASM32PWR4-NEXT:  lbz 3, 0([[REG]])
-; ASM32PWR4-NEXT:  slwi 3, 3, 24
-; ASM32PWR4-NEXT:  bl .test_byval_1Byte
-; ASM32PWR4-NEXT:  nop
-; ASM32PWR4-NEXT:  addi 1, 1, 64
+; ASM32:       stwu 1, -64(1)
+; ASM32-NEXT:  lwz [[REG:[0-9]+]], LC{{[0-9]+}}(2)
+; ASM32-NEXT:  lbz 3, 0([[REG]])
+; ASM32-NEXT:  slwi 3, 3, 24
+; ASM32-NEXT:  bl .test_byval_1Byte
+; ASM32-NEXT:  nop
+; ASM32-NEXT:  addi 1, 1, 64
 
 ; 64BIT:       ADJCALLSTACKDOWN 112, 0, implicit-def dead $r1, implicit $r1
 ; 64BIT-NEXT:  renamable $x[[REG:[0-9]+]] = LDtoc @gS1, $x2 :: (load 8 from got)
@@ -49,14 +51,14 @@ declare void @test_byval_1Byte(%struct.S1* byval(%struct.S1) align 1)
 ; 64BIT-NEXT:  BL8_NOP <mcsymbol .test_byval_1Byte>, csr_aix64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x2, implicit-def $r1
 ; 64BIT-NEXT:  ADJCALLSTACKUP 112, 0, implicit-def dead $r1, implicit $r1
 
-; ASM64PWR4:       std 0, 16(1)
-; ASM64PWR4-NEXT:  stdu 1, -112(1)
-; ASM64PWR4-NEXT:  ld [[REG:[0-9]+]], LC{{[0-9]+}}(2)
-; ASM64PWR4-NEXT:  lbz 3, 0([[REG]])
-; ASM64PWR4-NEXT:  sldi 3, 3, 56
-; ASM64PWR4-NEXT:  bl .test_byval_1Byte
-; ASM64PWR4-NEXT:  nop
-; ASM64PWR4-NEXT:  addi 1, 1, 112
+; ASM64:       std 0, 16(1)
+; ASM64-NEXT:  stdu 1, -112(1)
+; ASM64-NEXT:  ld [[REG:[0-9]+]], LC{{[0-9]+}}(2)
+; ASM64-NEXT:  lbz 3, 0([[REG]])
+; ASM64-NEXT:  sldi 3, 3, 56
+; ASM64-NEXT:  bl .test_byval_1Byte
+; ASM64-NEXT:  nop
+; ASM64-NEXT:  addi 1, 1, 112
 
 %struct.S2 = type { [2 x i8] }
 
@@ -81,13 +83,13 @@ declare void @test_byval_2Byte(%struct.S2* byval(%struct.S2) align 1)
 
 ; CHECKASM-LABEL: .call_test_byval_2Byte:
 
-; ASM32PWR4:       stwu 1, -64(1)
-; ASM32PWR4-NEXT:  lwz [[REG:[0-9]+]], LC{{[0-9]+}}(2)
-; ASM32PWR4-NEXT:  lhz 3, 0([[REG]])
-; ASM32PWR4-NEXT:  slwi 3, 3, 16
-; ASM32PWR4-NEXT:  bl .test_byval_2Byte
-; ASM32PWR4-NEXT:  nop
-; ASM32PWR4-NEXT:  addi 1, 1, 64
+; ASM32:       stwu 1, -64(1)
+; ASM32-NEXT:  lwz [[REG:[0-9]+]], LC{{[0-9]+}}(2)
+; ASM32-NEXT:  lhz 3, 0([[REG]])
+; ASM32-NEXT:  slwi 3, 3, 16
+; ASM32-NEXT:  bl .test_byval_2Byte
+; ASM32-NEXT:  nop
+; ASM32-NEXT:  addi 1, 1, 64
 
 ; 64BIT:       ADJCALLSTACKDOWN 112, 0, implicit-def dead $r1, implicit $r1
 ; 64BIT-NEXT:  renamable $x[[REG:[0-9]+]] = LDtoc @gS2, $x2 :: (load 8 from got)
@@ -96,14 +98,14 @@ declare void @test_byval_2Byte(%struct.S2* byval(%struct.S2) align 1)
 ; 64BIT-NEXT:  BL8_NOP <mcsymbol .test_byval_2Byte>, csr_aix64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x2, implicit-def $r1
 ; 64BIT-NEXT:  ADJCALLSTACKUP 112, 0, implicit-def dead $r1, implicit $r1
 
-; ASM64PWR4:       std 0, 16(1)
-; ASM64PWR4-NEXT:  stdu 1, -112(1)
-; ASM64PWR4-NEXT:  ld [[REG:[0-9]+]], LC{{[0-9]+}}(2)
-; ASM64PWR4-NEXT:  lhz 3, 0([[REG]])
-; ASM64PWR4-NEXT:  sldi 3, 3, 48
-; ASM64PWR4-NEXT:  bl .test_byval_2Byte
-; ASM64PWR4-NEXT:  nop
-; ASM64PWR4-NEXT:  addi 1, 1, 112
+; ASM64:       std 0, 16(1)
+; ASM64-NEXT:  stdu 1, -112(1)
+; ASM64-NEXT:  ld [[REG:[0-9]+]], LC{{[0-9]+}}(2)
+; ASM64-NEXT:  lhz 3, 0([[REG]])
+; ASM64-NEXT:  sldi 3, 3, 48
+; ASM64-NEXT:  bl .test_byval_2Byte
+; ASM64-NEXT:  nop
+; ASM64-NEXT:  addi 1, 1, 112
 
 %struct.S3 = type { [3 x i8] }
 
@@ -132,14 +134,14 @@ declare void @test_byval_3Byte(%struct.S3* byval(%struct.S3) align 1)
 ; CHECKASM-LABEL: .call_test_byval_3Byte:
 
 ; The DAG block permits some invalid inputs for the benefit of allowing more valid orderings.
-; ASM32PWR4:       stwu 1, -64(1)
-; ASM32PWR4-NEXT:  lwz [[REGADDR:[0-9]+]], LC{{[0-9]+}}(2)
-; ASM32PWR4-DAG:   lhz [[REG1:[0-9]+]], 0([[REGADDR]])
-; ASM32PWR4-DAG:   lbz [[REG2:[0-9]+]], 2([[REGADDR]])
-; ASM32PWR4-DAG:   rlwinm 3, [[REG2]], 8, 16, 23
-; ASM32PWR4-DAG:   rlwimi 3, [[REG1]], 16, 0, 15
-; ASM32PWR4-NEXT:  bl .test_byval_3Byte
-; ASM32PWR4-NEXT:  nop
+; ASM32:       stwu 1, -64(1)
+; ASM32-NEXT:  lwz [[REGADDR:[0-9]+]], LC{{[0-9]+}}(2)
+; ASM32-DAG:   lhz [[REG1:[0-9]+]], 0([[REGADDR]])
+; ASM32-DAG:   lbz [[REG2:[0-9]+]], 2([[REGADDR]])
+; ASM32-DAG:   rlwinm 3, [[REG2]], 8, 16, 23
+; ASM32-DAG:   rlwimi 3, [[REG1]], 16, 0, 15
+; ASM32-NEXT:  bl .test_byval_3Byte
+; ASM32-NEXT:  nop
 
 ; The DAG block permits some invalid inputs for the benefit of allowing more valid orderings.
 ; 64BIT:       ADJCALLSTACKDOWN 112, 0, implicit-def dead $r1, implicit $r1
@@ -152,14 +154,14 @@ declare void @test_byval_3Byte(%struct.S3* byval(%struct.S3) align 1)
 ; 64BIT-NEXT:  ADJCALLSTACKUP 112, 0, implicit-def dead $r1, implicit $r1
 
 ; The DAG block permits some invalid inputs for the benefit of allowing more valid orderings.
-; ASM64PWR4:       stdu 1, -112(1)
-; ASM64PWR4-NEXT:  ld [[REGADDR:[0-9]+]], LC{{[0-9]+}}(2)
-; ASM64PWR4-DAG:   lhz [[REG1:[0-9]+]], 0([[REGADDR]])
-; ASM64PWR4-DAG:   lbz [[REG2:[0-9]+]], 2([[REGADDR]])
-; ASM64PWR4-DAG:   rldic 3, [[REG2]], 40, 16
-; ASM64PWR4-DAG:   rldimi 3, [[REG1]], 48, 0
-; ASM64PWR4-NEXT:  bl .test_byval_3Byte
-; ASM64PWR4-NEXT:  nop
+; ASM64:       stdu 1, -112(1)
+; ASM64-NEXT:  ld [[REGADDR:[0-9]+]], LC{{[0-9]+}}(2)
+; ASM64-DAG:   lhz [[REG1:[0-9]+]], 0([[REGADDR]])
+; ASM64-DAG:   lbz [[REG2:[0-9]+]], 2([[REGADDR]])
+; ASM64-DAG:   rldic 3, [[REG2]], 40, 16
+; ASM64-DAG:   rldimi 3, [[REG1]], 48, 0
+; ASM64-NEXT:  bl .test_byval_3Byte
+; ASM64-NEXT:  nop
 
 %struct.S4 = type { [4 x i8] }
 
@@ -183,12 +185,12 @@ declare void @test_byval_4Byte(%struct.S4* byval(%struct.S4) align 1)
 
 ; CHECKASM-LABEL: .call_test_byval_4Byte:
 
-; ASM32PWR4:       stwu 1, -64(1)
-; ASM32PWR4-NEXT:  lwz [[REG:[0-9]+]], LC{{[0-9]+}}(2)
-; ASM32PWR4-NEXT:  lwz 3, 0([[REG]])
-; ASM32PWR4-NEXT:  bl .test_byval_4Byte
-; ASM32PWR4-NEXT:  nop
-; ASM32PWR4-NEXT:  addi 1, 1, 64
+; ASM32:       stwu 1, -64(1)
+; ASM32-NEXT:  lwz [[REG:[0-9]+]], LC{{[0-9]+}}(2)
+; ASM32-NEXT:  lwz 3, 0([[REG]])
+; ASM32-NEXT:  bl .test_byval_4Byte
+; ASM32-NEXT:  nop
+; ASM32-NEXT:  addi 1, 1, 64
 
 ; 64BIT:       ADJCALLSTACKDOWN 112, 0, implicit-def dead $r1, implicit $r1
 ; 64BIT-NEXT:  renamable $x[[REG:[0-9]+]] = LDtoc @gS4, $x2 :: (load 8 from got)
@@ -197,10 +199,10 @@ declare void @test_byval_4Byte(%struct.S4* byval(%struct.S4) align 1)
 ; 64BIT-NEXT:  BL8_NOP <mcsymbol .test_byval_4Byte>, csr_aix64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x2, implicit-def $r1
 ; 64BIT-NEXT:  ADJCALLSTACKUP 112, 0, implicit-def dead $r1, implicit $r1
 
-; ASM64PWR4:       stdu 1, -112(1)
-; ASM64PWR4-NEXT:  ld [[REG:[0-9]+]], LC{{[0-9]+}}(2)
-; ASM64PWR4-NEXT:  lwz 3, 0([[REG]])
-; ASM64PWR4-NEXT:  sldi 3, 3, 32
-; ASM64PWR4-NEXT:  bl .test_byval_4Byte
-; ASM64PWR4-NEXT:  nop
-; ASM64PWR4-NEXT:  addi 1, 1, 112
+; ASM64:       stdu 1, -112(1)
+; ASM64-NEXT:  ld [[REG:[0-9]+]], LC{{[0-9]+}}(2)
+; ASM64-NEXT:  lwz 3, 0([[REG]])
+; ASM64-NEXT:  sldi 3, 3, 32
+; ASM64-NEXT:  bl .test_byval_4Byte
+; ASM64-NEXT:  nop
+; ASM64-NEXT:  addi 1, 1, 112
