@@ -3672,7 +3672,8 @@ recurse:
   case Expr::LambdaExprClass:
   case Expr::MSPropertyRefExprClass:
   case Expr::MSPropertySubscriptExprClass:
-  case Expr::TypoExprClass:  // This should no longer exist in the AST by now.
+  case Expr::TypoExprClass: // This should no longer exist in the AST by now.
+  case Expr::RecoveryExprClass:
   case Expr::OMPArraySectionExprClass:
   case Expr::CXXInheritedCtorInitExprClass:
     llvm_unreachable("unexpected statement kind");
