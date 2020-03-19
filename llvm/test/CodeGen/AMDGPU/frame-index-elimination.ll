@@ -219,10 +219,10 @@ declare void @func(<4 x float> addrspace(5)* nocapture) #0
 
 ; GCN-LABEL: {{^}}undefined_stack_store_reg:
 ; GCN: s_and_saveexec_b64
-; GCN: buffer_store_dword v0, off, s[0:3], s34 offset:
-; GCN: buffer_store_dword v0, off, s[0:3], s34 offset:
-; GCN: buffer_store_dword v0, off, s[0:3], s34 offset:
-; GCN: buffer_store_dword v{{[0-9]+}}, off, s[0:3], s34 offset:
+; GCN: buffer_store_dword v0, off, s[0:3], s33 offset:
+; GCN: buffer_store_dword v0, off, s[0:3], s33 offset:
+; GCN: buffer_store_dword v0, off, s[0:3], s33 offset:
+; GCN: buffer_store_dword v{{[0-9]+}}, off, s[0:3], s33 offset:
 define void @undefined_stack_store_reg(float %arg, i32 %arg1) #0 {
 bb:
   %tmp = alloca <4 x float>, align 16, addrspace(5)

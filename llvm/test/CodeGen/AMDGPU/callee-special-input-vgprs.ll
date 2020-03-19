@@ -486,7 +486,7 @@ define amdgpu_kernel void @kern_call_too_many_args_use_workitem_id_x() #1 {
 }
 
 ; GCN-LABEL: {{^}}func_call_too_many_args_use_workitem_id_x:
-; VARABI: s_mov_b32 s34, s32
+; VARABI: s_mov_b32 s33, s32
 ; VARABI: buffer_store_dword v1, off, s[0:3], s32{{$}}
 
 ; Touching the workitem id register is not necessary.
@@ -514,14 +514,14 @@ define void @func_call_too_many_args_use_workitem_id_x(i32 %arg0) #1 {
 ; Requires loading and storing to stack slot.
 ; GCN-LABEL: {{^}}too_many_args_call_too_many_args_use_workitem_id_x:
 ; GCN-DAG: s_add_u32 s32, s32, 0x400{{$}}
-; GCN-DAG: buffer_store_dword v32, off, s[0:3], s34 offset:4 ; 4-byte Folded Spill
-; GCN-DAG: buffer_load_dword v32, off, s[0:3], s34{{$}}
+; GCN-DAG: buffer_store_dword v32, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
+; GCN-DAG: buffer_load_dword v32, off, s[0:3], s33{{$}}
 
 ; GCN: buffer_store_dword v32, off, s[0:3], s32{{$}}
 
 ; GCN: s_swappc_b64
 
-; GCN: buffer_load_dword v32, off, s[0:3], s34 offset:4 ; 4-byte Folded Reload
+; GCN: buffer_load_dword v32, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
 ; GCN: s_sub_u32 s32, s32, 0x400{{$}}
 ; GCN: s_setpc_b64
 define void @too_many_args_call_too_many_args_use_workitem_id_x(
@@ -664,8 +664,8 @@ define amdgpu_kernel void @kern_call_too_many_args_use_workitem_id_x_byval() #1 
 
 ; GCN-LABEL: {{^}}func_call_too_many_args_use_workitem_id_x_byval:
 ; VARABI: v_mov_b32_e32 [[K:v[0-9]+]], 0x3e7{{$}}
-; VARABI: buffer_store_dword [[K]], off, s[0:3], s34{{$}}
-; VARABI: buffer_load_dword [[RELOAD_BYVAL:v[0-9]+]], off, s[0:3], s34{{$}}
+; VARABI: buffer_store_dword [[K]], off, s[0:3], s33{{$}}
+; VARABI: buffer_load_dword [[RELOAD_BYVAL:v[0-9]+]], off, s[0:3], s33{{$}}
 ; VARABI: buffer_store_dword v0, off, s[0:3], s32 offset:4
 ; VARABI: buffer_store_dword [[RELOAD_BYVAL]], off, s[0:3], s32{{$}}
 ; VARABI: v_mov_b32_e32 [[RELOAD_BYVAL]],
@@ -674,11 +674,11 @@ define amdgpu_kernel void @kern_call_too_many_args_use_workitem_id_x_byval() #1 
 
 ; FIXED-ABI-NOT: v31
 ; FIXEDABI: v_mov_b32_e32 [[K0:v[0-9]+]], 0x3e7{{$}}
-; FIXEDABI: buffer_store_dword [[K0]], off, s[0:3], s34{{$}}
+; FIXEDABI: buffer_store_dword [[K0]], off, s[0:3], s33{{$}}
 
 ; FIXEDABI: v_mov_b32_e32 [[K1:v[0-9]+]], 0x140{{$}}
 ; FIXEDABI: buffer_store_dword [[K1]], off, s[0:3], s32{{$}}
-; FIXEDABI: buffer_load_dword [[RELOAD_BYVAL:v[0-9]+]], off, s[0:3], s34{{$}}
+; FIXEDABI: buffer_load_dword [[RELOAD_BYVAL:v[0-9]+]], off, s[0:3], s33{{$}}
 
 ; FIXED-ABI-NOT: v31
 ; FIXEDABI: buffer_store_dword [[RELOAD_BYVAL]], off, s[0:3], s32 offset:4{{$}}

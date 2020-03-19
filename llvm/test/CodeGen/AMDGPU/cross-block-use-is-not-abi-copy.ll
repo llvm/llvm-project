@@ -30,9 +30,9 @@ define float @call_split_type_used_outside_block_v2f32() #0 {
 ; GCN-NEXT:    s_or_saveexec_b64 s[4:5], -1
 ; GCN-NEXT:    buffer_store_dword v32, off, s[0:3], s32 ; 4-byte Folded Spill
 ; GCN-NEXT:    s_mov_b64 exec, s[4:5]
-; GCN-NEXT:    v_writelane_b32 v32, s34, 2
+; GCN-NEXT:    v_writelane_b32 v32, s33, 2
 ; GCN-NEXT:    v_writelane_b32 v32, s30, 0
-; GCN-NEXT:    s_mov_b32 s34, s32
+; GCN-NEXT:    s_mov_b32 s33, s32
 ; GCN-NEXT:    s_add_u32 s32, s32, 0x400
 ; GCN-NEXT:    s_getpc_b64 s[4:5]
 ; GCN-NEXT:    s_add_u32 s4, s4, func_v2f32@rel32@lo+4
@@ -42,7 +42,7 @@ define float @call_split_type_used_outside_block_v2f32() #0 {
 ; GCN-NEXT:    v_readlane_b32 s4, v32, 0
 ; GCN-NEXT:    v_readlane_b32 s5, v32, 1
 ; GCN-NEXT:    s_sub_u32 s32, s32, 0x400
-; GCN-NEXT:    v_readlane_b32 s34, v32, 2
+; GCN-NEXT:    v_readlane_b32 s33, v32, 2
 ; GCN-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; GCN-NEXT:    buffer_load_dword v32, off, s[0:3], s32 ; 4-byte Folded Reload
 ; GCN-NEXT:    s_mov_b64 exec, s[6:7]
@@ -64,9 +64,9 @@ define float @call_split_type_used_outside_block_v3f32() #0 {
 ; GCN-NEXT:    s_or_saveexec_b64 s[4:5], -1
 ; GCN-NEXT:    buffer_store_dword v32, off, s[0:3], s32 ; 4-byte Folded Spill
 ; GCN-NEXT:    s_mov_b64 exec, s[4:5]
-; GCN-NEXT:    v_writelane_b32 v32, s34, 2
+; GCN-NEXT:    v_writelane_b32 v32, s33, 2
 ; GCN-NEXT:    v_writelane_b32 v32, s30, 0
-; GCN-NEXT:    s_mov_b32 s34, s32
+; GCN-NEXT:    s_mov_b32 s33, s32
 ; GCN-NEXT:    s_add_u32 s32, s32, 0x400
 ; GCN-NEXT:    s_getpc_b64 s[4:5]
 ; GCN-NEXT:    s_add_u32 s4, s4, func_v3f32@rel32@lo+4
@@ -76,7 +76,7 @@ define float @call_split_type_used_outside_block_v3f32() #0 {
 ; GCN-NEXT:    v_readlane_b32 s4, v32, 0
 ; GCN-NEXT:    v_readlane_b32 s5, v32, 1
 ; GCN-NEXT:    s_sub_u32 s32, s32, 0x400
-; GCN-NEXT:    v_readlane_b32 s34, v32, 2
+; GCN-NEXT:    v_readlane_b32 s33, v32, 2
 ; GCN-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; GCN-NEXT:    buffer_load_dword v32, off, s[0:3], s32 ; 4-byte Folded Reload
 ; GCN-NEXT:    s_mov_b64 exec, s[6:7]
@@ -98,9 +98,9 @@ define half @call_split_type_used_outside_block_v4f16() #0 {
 ; GCN-NEXT:    s_or_saveexec_b64 s[4:5], -1
 ; GCN-NEXT:    buffer_store_dword v32, off, s[0:3], s32 ; 4-byte Folded Spill
 ; GCN-NEXT:    s_mov_b64 exec, s[4:5]
-; GCN-NEXT:    v_writelane_b32 v32, s34, 2
+; GCN-NEXT:    v_writelane_b32 v32, s33, 2
 ; GCN-NEXT:    v_writelane_b32 v32, s30, 0
-; GCN-NEXT:    s_mov_b32 s34, s32
+; GCN-NEXT:    s_mov_b32 s33, s32
 ; GCN-NEXT:    s_add_u32 s32, s32, 0x400
 ; GCN-NEXT:    s_getpc_b64 s[4:5]
 ; GCN-NEXT:    s_add_u32 s4, s4, func_v4f16@rel32@lo+4
@@ -110,7 +110,7 @@ define half @call_split_type_used_outside_block_v4f16() #0 {
 ; GCN-NEXT:    v_readlane_b32 s4, v32, 0
 ; GCN-NEXT:    v_readlane_b32 s5, v32, 1
 ; GCN-NEXT:    s_sub_u32 s32, s32, 0x400
-; GCN-NEXT:    v_readlane_b32 s34, v32, 2
+; GCN-NEXT:    v_readlane_b32 s33, v32, 2
 ; GCN-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; GCN-NEXT:    buffer_load_dword v32, off, s[0:3], s32 ; 4-byte Folded Reload
 ; GCN-NEXT:    s_mov_b64 exec, s[6:7]
@@ -132,9 +132,9 @@ define { i32, half } @call_split_type_used_outside_block_struct() #0 {
 ; GCN-NEXT:    s_or_saveexec_b64 s[4:5], -1
 ; GCN-NEXT:    buffer_store_dword v32, off, s[0:3], s32 ; 4-byte Folded Spill
 ; GCN-NEXT:    s_mov_b64 exec, s[4:5]
-; GCN-NEXT:    v_writelane_b32 v32, s34, 2
+; GCN-NEXT:    v_writelane_b32 v32, s33, 2
 ; GCN-NEXT:    v_writelane_b32 v32, s30, 0
-; GCN-NEXT:    s_mov_b32 s34, s32
+; GCN-NEXT:    s_mov_b32 s33, s32
 ; GCN-NEXT:    s_add_u32 s32, s32, 0x400
 ; GCN-NEXT:    s_getpc_b64 s[4:5]
 ; GCN-NEXT:    s_add_u32 s4, s4, func_struct@rel32@lo+4
@@ -145,7 +145,7 @@ define { i32, half } @call_split_type_used_outside_block_struct() #0 {
 ; GCN-NEXT:    v_readlane_b32 s5, v32, 1
 ; GCN-NEXT:    v_mov_b32_e32 v1, v4
 ; GCN-NEXT:    s_sub_u32 s32, s32, 0x400
-; GCN-NEXT:    v_readlane_b32 s34, v32, 2
+; GCN-NEXT:    v_readlane_b32 s33, v32, 2
 ; GCN-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; GCN-NEXT:    buffer_load_dword v32, off, s[0:3], s32 ; 4-byte Folded Reload
 ; GCN-NEXT:    s_mov_b64 exec, s[6:7]
