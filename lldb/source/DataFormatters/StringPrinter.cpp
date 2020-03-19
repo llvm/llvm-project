@@ -525,27 +525,33 @@ static bool ReadUTFBufferAndDumpToStream(
   if (!options.GetStream())
     return false;
 
-  uint32_t sourceSize = options.GetSourceSize();
+  uint32_t sourceSize;
   bool needs_zero_terminator = options.GetNeedsZeroTermination();
 
   bool is_truncated = false;
   const auto max_size = process_sp->GetTarget().GetMaximumSizeOfStringSummary();
 
-  if (!sourceSize) {
+  if (options.HasSourceSize()) {
+    sourceSize = options.GetSourceSize();
+    if (!options.GetIgnoreMaxLength()) {
+      if (sourceSize > max_size) {
+        sourceSize = max_size;
+        is_truncated = true;
+      }
+    }
+  } else {
     sourceSize = max_size;
     needs_zero_terminator = true;
-  } else if (!options.GetIgnoreMaxLength()) {
-    if (sourceSize > max_size) {
-      sourceSize = max_size;
-      is_truncated = true;
-    }
   }
 
   const int bufferSPSize = sourceSize * type_width;
 
   lldb::DataBufferSP buffer_sp(new DataBufferHeap(bufferSPSize, 0));
 
-  if (!buffer_sp->GetBytes())
+  // Check if we got bytes. We never get any bytes if we have an empty
+  // string, but we still continue so that we end up actually printing
+  // an empty string ("").
+  if (sourceSize != 0 && !buffer_sp->GetBytes())
     return false;
 
   Status error;
