@@ -417,7 +417,7 @@ TEST(ScudoCombinedTest, ReleaseToOS) {
   Allocator->releaseToOS();
 }
 
-// Verify that when a region gets full, Android will still manage to
+// Verify that when a region gets full, the allocator will still manage to
 // fulfill the allocation through a larger size class.
 TEST(ScudoCombinedTest, FullRegion) {
   using AllocatorT = scudo::Allocator<DeathConfig>;
@@ -429,26 +429,25 @@ TEST(ScudoCombinedTest, FullRegion) {
                                                            Deleter);
   Allocator->reset();
 
-  const scudo::uptr Size = 1000U;
-  const scudo::uptr MaxNumberOfChunks =
-      (1U << DeathRegionSizeLog) /
-      DeathConfig::DeathSizeClassMap::getSizeByClassId(1U);
-  void *P;
   std::vector<void *> V;
   scudo::uptr FailedAllocationsCount = 0;
-  for (scudo::uptr I = 0; I <= MaxNumberOfChunks; I++) {
-    P = Allocator->allocate(Size, Origin);
-    if (!P)
-      FailedAllocationsCount++;
-    else
-      V.push_back(P);
+  for (scudo::uptr ClassId = 1U;
+       ClassId <= DeathConfig::DeathSizeClassMap::LargestClassId; ClassId++) {
+    const scudo::uptr Size =
+        DeathConfig::DeathSizeClassMap::getSizeByClassId(ClassId);
+    const scudo::uptr MaxNumberOfChunks = (1U << DeathRegionSizeLog) / Size;
+    void *P;
+    for (scudo::uptr I = 0; I <= MaxNumberOfChunks; I++) {
+      P = Allocator->allocate(Size - 64U, Origin);
+      if (!P)
+        FailedAllocationsCount++;
+      else
+        V.push_back(P);
+    }
   }
   while (!V.empty()) {
     Allocator->deallocate(V.back(), Origin);
     V.pop_back();
   }
-  if (SCUDO_ANDROID)
-    EXPECT_EQ(FailedAllocationsCount, 0U);
-  else
-    EXPECT_GT(FailedAllocationsCount, 0U);
+  EXPECT_EQ(FailedAllocationsCount, 0U);
 }
