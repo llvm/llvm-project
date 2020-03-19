@@ -377,6 +377,25 @@ define i1 @add(i32 %x, i32 %y) {
   ret i1 %c
 }
 
+define i1 @addv(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @addv(
+; CHECK-NEXT:    [[L:%.*]] = lshr <2 x i32> [[X:%.*]], <i32 1, i32 0>
+; CHECK-NEXT:    [[Q:%.*]] = lshr <2 x i32> [[Y:%.*]], <i32 1, i32 0>
+; CHECK-NEXT:    [[R:%.*]] = or <2 x i32> [[Q]], <i32 1, i32 0>
+; CHECK-NEXT:    [[S:%.*]] = add <2 x i32> [[L]], [[R]]
+; CHECK-NEXT:    [[E:%.*]] = extractelement <2 x i32> [[S]], i32 0
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[E]], 0
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %l = lshr <2 x i32> %x, <i32 1, i32 0>
+  %q = lshr <2 x i32> %y, <i32 1, i32 0>
+  %r = or <2 x i32> %q, <i32 1, i32 0>
+  %s = add <2 x i32> %l, %r
+  %e = extractelement <2 x i32> %s, i32 0
+  %c = icmp eq i32 %e, 0
+  ret i1 %c
+}
+
 define i1 @add2(i8 %x, i8 %y) {
 ; CHECK-LABEL: @add2(
 ; CHECK-NEXT:    ret i1 false
@@ -385,6 +404,23 @@ define i1 @add2(i8 %x, i8 %y) {
   %r = or i8 %y, 129
   %s = add i8 %l, %r
   %c = icmp eq i8 %s, 0
+  ret i1 %c
+}
+
+define i1 @add2v(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @add2v(
+; CHECK-NEXT:    [[L:%.*]] = or <2 x i8> [[X:%.*]], <i8 0, i8 -128>
+; CHECK-NEXT:    [[R:%.*]] = or <2 x i8> [[Y:%.*]], <i8 0, i8 -127>
+; CHECK-NEXT:    [[S:%.*]] = add <2 x i8> [[L]], [[R]]
+; CHECK-NEXT:    [[E:%.*]] = extractelement <2 x i8> [[S]], i32 1
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[E]], 0
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %l = or <2 x i8> %x, <i8 0, i8 128>
+  %r = or <2 x i8> %y, <i8 0, i8 129>
+  %s = add <2 x i8> %l, %r
+  %e = extractelement <2 x i8> %s, i32 1
+  %c = icmp eq i8 %e, 0
   ret i1 %c
 }
 
@@ -443,6 +479,23 @@ define i1 @addpowtwo(i32 %x, i32 %y) {
   %r = shl i32 1, %y
   %s = add i32 %l, %r
   %c = icmp eq i32 %s, 0
+  ret i1 %c
+}
+
+define i1 @addpowtwov(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @addpowtwov(
+; CHECK-NEXT:    [[L:%.*]] = lshr <2 x i32> [[X:%.*]], <i32 1, i32 0>
+; CHECK-NEXT:    [[R:%.*]] = shl <2 x i32> <i32 1, i32 0>, [[Y:%.*]]
+; CHECK-NEXT:    [[S:%.*]] = add <2 x i32> [[L]], [[R]]
+; CHECK-NEXT:    [[E:%.*]] = extractelement <2 x i32> [[S]], i32 0
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[E]], 0
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %l = lshr <2 x i32> %x, <i32 1, i32 0>
+  %r = shl <2 x i32> <i32 1, i32 0>, %y
+  %s = add <2 x i32> %l, %r
+  %e = extractelement <2 x i32> %s, i32 0
+  %c = icmp eq i32 %e, 0
   ret i1 %c
 }
 
