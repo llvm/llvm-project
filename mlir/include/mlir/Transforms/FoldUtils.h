@@ -75,11 +75,20 @@ public:
   template <typename OpTy, typename... Args>
   void create(OpBuilder &builder, SmallVectorImpl<Value> &results,
               Location location, Args &&... args) {
-    Operation *op = builder.create<OpTy>(location, std::forward<Args>(args)...);
-    if (failed(tryToFold(op, results)))
+    // The op needs to be inserted only if the fold (below) fails, or the number
+    // of results of the op is zero (which is treated as an in-place
+    // fold). Using create methods of the builder will insert the op, so not
+    // using it here.
+    OperationState state(location, OpTy::getOperationName());
+    OpTy::build(&builder, state, std::forward<Args>(args)...);
+    Operation *op = Operation::create(state);
+
+    if (failed(tryToFold(builder, op, results)) || op->getNumResults() == 0) {
+      builder.insert(op);
       results.assign(op->result_begin(), op->result_end());
-    else if (op->getNumResults() != 0)
-      op->erase();
+      return;
+    }
+    op->destroy();
   }
 
   /// Overload to create or fold a single result operation.
@@ -120,7 +129,7 @@ private:
   /// Tries to perform folding on the given `op`. If successful, populates
   /// `results` with the results of the folding.
   LogicalResult tryToFold(
-      Operation *op, SmallVectorImpl<Value> &results,
+      OpBuilder &builder, Operation *op, SmallVectorImpl<Value> &results,
       function_ref<void(Operation *)> processGeneratedConstants = nullptr);
 
   /// Try to get or create a new constant entry. On success this returns the
