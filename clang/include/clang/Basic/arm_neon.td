@@ -547,8 +547,8 @@ def VQDMULH_LANE  : SOpInst<"vqdmulh_lane", "..qI", "siQsQi", OP_QDMULH_LN>;
 def VQRDMULH_LANE : SOpInst<"vqrdmulh_lane", "..qI", "siQsQi", OP_QRDMULH_LN>;
 }
 let ArchGuard = "defined(__aarch64__)" in {
-def A64_VQDMULH_LANE  : SInst<"vqdmulh_lane", "..qI", "siQsQi">;
-def A64_VQRDMULH_LANE : SInst<"vqrdmulh_lane", "..qI", "siQsQi">;
+def A64_VQDMULH_LANE  : SInst<"vqdmulh_lane", "..(!q)I", "siQsQi">;
+def A64_VQRDMULH_LANE : SInst<"vqrdmulh_lane", "..(!q)I", "siQsQi">;
 }
 
 let ArchGuard = "defined(__ARM_FEATURE_QRDMX)" in {
