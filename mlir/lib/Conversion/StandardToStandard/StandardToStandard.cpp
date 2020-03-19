@@ -20,7 +20,7 @@ struct CallOpSignatureConversion : public OpConversionPattern<CallOp> {
       : OpConversionPattern(ctx), converter(converter) {}
 
   /// Hook for derived classes to implement combined matching and rewriting.
-  PatternMatchResult
+  LogicalResult
   matchAndRewrite(CallOp callOp, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     FunctionType type = callOp.getCalleeType();
@@ -28,13 +28,13 @@ struct CallOpSignatureConversion : public OpConversionPattern<CallOp> {
     // Convert the original function results.
     SmallVector<Type, 1> convertedResults;
     if (failed(converter.convertTypes(type.getResults(), convertedResults)))
-      return matchFailure();
+      return failure();
 
     // Substitute with the new result types from the corresponding FuncType
     // conversion.
     rewriter.replaceOpWithNewOp<CallOp>(callOp, callOp.callee(),
                                         convertedResults, operands);
-    return matchSuccess();
+    return success();
   }
 
   /// The type converter to use when rewriting the signature.
