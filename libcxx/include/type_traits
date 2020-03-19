@@ -1218,8 +1218,9 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_arithmetic_v
 
 // is_fundamental
 
-// In clang 9 and lower, this builtin did not work for nullptr_t
-#if __has_keyword(__is_fundamental) && _LIBCPP_CLANG_VER > 900
+// In clang 9 and lower, this builtin did not work for nullptr_t. Additionally, in C++03 mode,
+// nullptr isn't defined by the compiler so, this builtin won't work.
+#if __has_keyword(__is_fundamental) && _LIBCPP_CLANG_VER > 900 && !defined(_LIBCPP_CXX03_LANG)
 
 template<class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_fundamental : _BoolConstant<__is_fundamental(_Tp)> { };
