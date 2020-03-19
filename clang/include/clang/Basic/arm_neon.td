@@ -51,39 +51,39 @@ def OP_FMLA_N   : Op<(call "vfma", $p0, $p1, (dup $p2))>;
 def OP_FMLS_N   : Op<(call "vfma", $p0, (op "-", $p1), (dup $p2))>;
 def OP_MLAL_N   : Op<(op "+", $p0, (call "vmull", $p1, (dup $p2)))>;
 def OP_MLSL_N   : Op<(op "-", $p0, (call "vmull", $p1, (dup $p2)))>;
-def OP_MUL_LN   : Op<(op "*", $p0, (splat $p1, $p2))>;
-def OP_MULX_LN  : Op<(call "vmulx", $p0, (splat $p1, $p2))>;
+def OP_MUL_LN   : Op<(op "*", $p0, (call_mangled "splat_lane", $p1, $p2))>;
+def OP_MULX_LN  : Op<(call "vmulx", $p0, (call_mangled "splat_lane", $p1, $p2))>;
 def OP_MULL_N  : Op<(call "vmull", $p0, (dup $p1))>;
-def OP_MULL_LN  : Op<(call "vmull", $p0, (splat $p1, $p2))>;
-def OP_MULLHi_LN: Op<(call "vmull", (call "vget_high", $p0), (splat $p1, $p2))>;
-def OP_MLA_LN   : Op<(op "+", $p0, (op "*", $p1, (splat $p2, $p3)))>;
-def OP_MLS_LN   : Op<(op "-", $p0, (op "*", $p1, (splat $p2, $p3)))>;
-def OP_MLAL_LN  : Op<(op "+", $p0, (call "vmull", $p1, (splat $p2, $p3)))>;
+def OP_MULL_LN  : Op<(call "vmull", $p0, (call_mangled "splat_lane", $p1, $p2))>;
+def OP_MULLHi_LN: Op<(call "vmull", (call "vget_high", $p0), (call_mangled "splat_lane", $p1, $p2))>;
+def OP_MLA_LN   : Op<(op "+", $p0, (op "*", $p1, (call_mangled "splat_lane", $p2, $p3)))>;
+def OP_MLS_LN   : Op<(op "-", $p0, (op "*", $p1, (call_mangled "splat_lane", $p2, $p3)))>;
+def OP_MLAL_LN  : Op<(op "+", $p0, (call "vmull", $p1, (call_mangled "splat_lane", $p2, $p3)))>;
 def OP_MLALHi_LN: Op<(op "+", $p0, (call "vmull", (call "vget_high", $p1),
-                                                  (splat $p2, $p3)))>;
-def OP_MLSL_LN  : Op<(op "-", $p0, (call "vmull", $p1, (splat $p2, $p3)))>;
+                                                  (call_mangled "splat_lane", $p2, $p3)))>;
+def OP_MLSL_LN  : Op<(op "-", $p0, (call "vmull", $p1, (call_mangled "splat_lane", $p2, $p3)))>;
 def OP_MLSLHi_LN : Op<(op "-", $p0, (call "vmull", (call "vget_high", $p1),
-                                                   (splat $p2, $p3)))>;
+                                                   (call_mangled "splat_lane", $p2, $p3)))>;
 def OP_QDMULL_N : Op<(call "vqdmull", $p0, (dup $p1))>;
-def OP_QDMULL_LN : Op<(call "vqdmull", $p0, (splat $p1, $p2))>;
+def OP_QDMULL_LN : Op<(call "vqdmull", $p0, (call_mangled "splat_lane", $p1, $p2))>;
 def OP_QDMULLHi_LN : Op<(call "vqdmull", (call "vget_high", $p0),
-                                         (splat $p1, $p2))>;
+                                         (call_mangled "splat_lane", $p1, $p2))>;
 def OP_QDMLAL_N : Op<(call "vqdmlal", $p0, $p1, (dup $p2))>;
-def OP_QDMLAL_LN : Op<(call "vqdmlal", $p0, $p1, (splat $p2, $p3))>;
+def OP_QDMLAL_LN : Op<(call "vqdmlal", $p0, $p1, (call_mangled "splat_lane", $p2, $p3))>;
 def OP_QDMLALHi_LN : Op<(call "vqdmlal", $p0, (call "vget_high", $p1),
-                                              (splat $p2, $p3))>;
+                                              (call_mangled "splat_lane", $p2, $p3))>;
 def OP_QDMLSL_N : Op<(call "vqdmlsl", $p0, $p1, (dup $p2))>;
-def OP_QDMLSL_LN : Op<(call "vqdmlsl", $p0, $p1, (splat $p2, $p3))>;
+def OP_QDMLSL_LN : Op<(call "vqdmlsl", $p0, $p1, (call_mangled "splat_lane", $p2, $p3))>;
 def OP_QDMLSLHi_LN : Op<(call "vqdmlsl", $p0, (call "vget_high", $p1),
-                                              (splat $p2, $p3))>;
+                                              (call_mangled "splat_lane", $p2, $p3))>;
 def OP_QDMULH_N : Op<(call "vqdmulh", $p0, (dup $p1))>;
-def OP_QDMULH_LN : Op<(call "vqdmulh", $p0, (splat $p1, $p2))>;
-def OP_QRDMULH_LN : Op<(call "vqrdmulh", $p0, (splat $p1, $p2))>;
+def OP_QDMULH_LN : Op<(call "vqdmulh", $p0, (call_mangled "splat_lane", $p1, $p2))>;
+def OP_QRDMULH_LN : Op<(call "vqrdmulh", $p0, (call_mangled "splat_lane", $p1, $p2))>;
 def OP_QRDMULH_N : Op<(call "vqrdmulh", $p0, (dup $p1))>;
 def OP_QRDMLAH : Op<(call "vqadd", $p0, (call "vqrdmulh", $p1, $p2))>;
 def OP_QRDMLSH : Op<(call "vqsub", $p0, (call "vqrdmulh", $p1, $p2))>;
-def OP_QRDMLAH_LN : Op<(call "vqadd", $p0, (call "vqrdmulh", $p1, (splat $p2, $p3)))>;
-def OP_QRDMLSH_LN : Op<(call "vqsub", $p0, (call "vqrdmulh", $p1, (splat $p2, $p3)))>;
+def OP_QRDMLAH_LN : Op<(call "vqadd", $p0, (call "vqrdmulh", $p1, (call_mangled "splat_lane", $p2, $p3)))>;
+def OP_QRDMLSH_LN : Op<(call "vqsub", $p0, (call "vqrdmulh", $p1, (call_mangled "splat_lane", $p2, $p3)))>;
 def OP_FMS_LN   : Op<(call "vfma_lane", $p0, (op "-", $p1), $p2, $p3)>;
 def OP_FMS_LNQ  : Op<(call "vfma_laneq", $p0, (op "-", $p1), $p2, $p3)>;
 def OP_TRN1     : Op<(shuffle $p0, $p1, (interleave (decimate mask0, 2),
@@ -115,7 +115,7 @@ def OP_HI       : Op<(shuffle $p0, $p0, (highhalf mask0))>;
 def OP_LO       : Op<(shuffle $p0, $p0, (lowhalf mask0))>;
 def OP_CONC     : Op<(shuffle $p0, $p1, (add mask0, mask1))>;
 def OP_DUP      : Op<(dup $p0)>;
-def OP_DUP_LN   : Op<(splat $p0, $p1)>;
+def OP_DUP_LN   : Op<(call_mangled "splat_lane", $p0, $p1)>;
 def OP_SEL      : Op<(cast "R", (op "|",
                                     (op "&", $p0, (cast $p0, $p1)),
                                     (op "&", (op "~", $p0), (cast $p0, $p2))))>;
@@ -207,10 +207,10 @@ def OP_SCALAR_HALF_SET_LNQ : Op<(bitcast "float16x8_t",
 
 def OP_DOT_LN
     : Op<(call "vdot", $p0, $p1,
-          (bitcast $p1, (splat(bitcast "uint32x2_t", $p2), $p3)))>;
+          (bitcast $p1, (call_mangled "splat_lane", (bitcast "32", $p2), $p3)))>;
 def OP_DOT_LNQ
     : Op<(call "vdot", $p0, $p1,
-          (bitcast $p1, (splat(bitcast "uint32x4_t", $p2), $p3)))>;
+          (bitcast $p1, (call_mangled "splat_lane", (bitcast "32", $p2), $p3)))>;
 
 def OP_FMLAL_LN     : Op<(call "vfmlal_low", $p0, $p1,
                            (dup_typed $p1, (call "vget_lane", $p2, $p3)))>;
@@ -222,7 +222,19 @@ def OP_FMLSL_LN_Hi  : Op<(call "vfmlsl_high", $p0, $p1,
                            (dup_typed $p1, (call "vget_lane", $p2, $p3)))>;
 
 //===----------------------------------------------------------------------===//
-// Instructions
+// Auxiliary Instructions
+//===----------------------------------------------------------------------===//
+
+// Splat operation - performs a range-checked splat over a vector
+def SPLAT  : WInst<"splat_lane", ".(!q)I",
+                   "UcUsUicsilPcPsfQUcQUsQUiQcQsQiQPcQPsQflUlQlQUlhdQhQdPlQPl">;
+def SPLATQ : WInst<"splat_laneq", ".(!Q)I",
+                   "UcUsUicsilPcPsfQUcQUsQUiQcQsQiQPcQPsQflUlQlQUlhdQhQdPlQPl"> {
+  let isLaneQ = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// Intrinsics
 //===----------------------------------------------------------------------===//
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -535,8 +547,8 @@ def VQDMULH_LANE  : SOpInst<"vqdmulh_lane", "..qI", "siQsQi", OP_QDMULH_LN>;
 def VQRDMULH_LANE : SOpInst<"vqrdmulh_lane", "..qI", "siQsQi", OP_QRDMULH_LN>;
 }
 let ArchGuard = "defined(__aarch64__)" in {
-def A64_VQDMULH_LANE  : SInst<"vqdmulh_lane", "..qI", "siQsQi">;
-def A64_VQRDMULH_LANE : SInst<"vqrdmulh_lane", "..qI", "siQsQi">;
+def A64_VQDMULH_LANE  : SInst<"vqdmulh_lane", "..(!q)I", "siQsQi">;
+def A64_VQRDMULH_LANE : SInst<"vqrdmulh_lane", "..(!q)I", "siQsQi">;
 }
 
 let ArchGuard = "defined(__ARM_FEATURE_QRDMX)" in {
@@ -881,16 +893,22 @@ def COPY_LANE : IOpInst<"vcopy_lane", "..I.I",
 def COPYQ_LANE : IOpInst<"vcopy_lane", "..IqI",
                         "QcQsQiQlQUcQUsQUiQUlQPcQPsQfQdQPl", OP_COPY_LN>;
 def COPY_LANEQ : IOpInst<"vcopy_laneq", "..IQI",
-                     "csilPcPsPlUcUsUiUlfd", OP_COPY_LN>;
+                     "csilPcPsPlUcUsUiUlfd", OP_COPY_LN> {
+  let isLaneQ = 1;
+}
 def COPYQ_LANEQ : IOpInst<"vcopy_laneq", "..I.I",
-                     "QcQsQiQlQUcQUsQUiQUlQPcQPsQfQdQPl", OP_COPY_LN>;
+                     "QcQsQiQlQUcQUsQUiQUlQPcQPsQfQdQPl", OP_COPY_LN> {
+  let isLaneQ = 1;
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // Set all lanes to same value
 def VDUP_LANE1: WOpInst<"vdup_lane", ".qI", "hdQhQdPlQPl", OP_DUP_LN>;
 def VDUP_LANE2: WOpInst<"vdup_laneq", ".QI",
                   "csilUcUsUiUlPcPshfdQcQsQiQlQPcQPsQUcQUsQUiQUlQhQfQdPlQPl",
-                        OP_DUP_LN>;
+                        OP_DUP_LN> {
+  let isLaneQ = 1;
+}
 def DUP_N   : WOpInst<"vdup_n", ".1", "dQdPlQPl", OP_DUP>;
 def MOV_N   : WOpInst<"vmov_n", ".1", "dQdPlQPl", OP_DUP>;
 
@@ -906,38 +924,60 @@ def CREATE : NoTestOpInst<"vcreate", ".(IU>)", "dPl", OP_CAST> {
 ////////////////////////////////////////////////////////////////////////////////
 
 def VMLA_LANEQ   : IOpInst<"vmla_laneq", "...QI",
-                           "siUsUifQsQiQUsQUiQf", OP_MLA_LN>;
+                           "siUsUifQsQiQUsQUiQf", OP_MLA_LN> {
+  let isLaneQ = 1;
+}
 def VMLS_LANEQ   : IOpInst<"vmls_laneq", "...QI",
-                           "siUsUifQsQiQUsQUiQf", OP_MLS_LN>;
+                           "siUsUifQsQiQUsQUiQf", OP_MLS_LN> {
+  let isLaneQ = 1;
+}
 
 def VFMA_LANE    : IInst<"vfma_lane", "...qI", "fdQfQd">;
 def VFMA_LANEQ   : IInst<"vfma_laneq", "...QI", "fdQfQd"> {
   let isLaneQ = 1;
 }
 def VFMS_LANE    : IOpInst<"vfms_lane", "...qI", "fdQfQd", OP_FMS_LN>;
-def VFMS_LANEQ   : IOpInst<"vfms_laneq", "...QI", "fdQfQd", OP_FMS_LNQ>;
+def VFMS_LANEQ   : IOpInst<"vfms_laneq", "...QI", "fdQfQd", OP_FMS_LNQ> {
+  let isLaneQ = 1;
+}
 
-def VMLAL_LANEQ  : SOpInst<"vmlal_laneq", "(>Q)(>Q).QI", "siUsUi", OP_MLAL_LN>;
+def VMLAL_LANEQ  : SOpInst<"vmlal_laneq", "(>Q)(>Q).QI", "siUsUi", OP_MLAL_LN> {
+  let isLaneQ = 1;
+}
 def VMLAL_HIGH_LANE   : SOpInst<"vmlal_high_lane", "(>Q)(>Q)Q.I", "siUsUi",
                                 OP_MLALHi_LN>;
 def VMLAL_HIGH_LANEQ  : SOpInst<"vmlal_high_laneq", "(>Q)(>Q)QQI", "siUsUi",
-                                OP_MLALHi_LN>;
-def VMLSL_LANEQ  : SOpInst<"vmlsl_laneq", "(>Q)(>Q).QI", "siUsUi", OP_MLSL_LN>;
+                                OP_MLALHi_LN> {
+  let isLaneQ = 1;
+}
+def VMLSL_LANEQ  : SOpInst<"vmlsl_laneq", "(>Q)(>Q).QI", "siUsUi", OP_MLSL_LN> {
+  let isLaneQ = 1;
+}
 def VMLSL_HIGH_LANE   : SOpInst<"vmlsl_high_lane", "(>Q)(>Q)Q.I", "siUsUi",
                                 OP_MLSLHi_LN>;
 def VMLSL_HIGH_LANEQ  : SOpInst<"vmlsl_high_laneq", "(>Q)(>Q)QQI", "siUsUi",
-                                OP_MLSLHi_LN>;
+                                OP_MLSLHi_LN> {
+  let isLaneQ = 1;
+}
 
-def VQDMLAL_LANEQ  : SOpInst<"vqdmlal_laneq", "(>Q)(>Q).QI", "si", OP_QDMLAL_LN>;
+def VQDMLAL_LANEQ  : SOpInst<"vqdmlal_laneq", "(>Q)(>Q).QI", "si", OP_QDMLAL_LN> {
+  let isLaneQ = 1;
+}
 def VQDMLAL_HIGH_LANE   : SOpInst<"vqdmlal_high_lane", "(>Q)(>Q)Q.I", "si",
                                 OP_QDMLALHi_LN>;
 def VQDMLAL_HIGH_LANEQ  : SOpInst<"vqdmlal_high_laneq", "(>Q)(>Q)QQI", "si",
-                                OP_QDMLALHi_LN>;
-def VQDMLSL_LANEQ  : SOpInst<"vqdmlsl_laneq", "(>Q)(>Q).QI", "si", OP_QDMLSL_LN>;
+                                OP_QDMLALHi_LN> {
+  let isLaneQ = 1;
+}
+def VQDMLSL_LANEQ  : SOpInst<"vqdmlsl_laneq", "(>Q)(>Q).QI", "si", OP_QDMLSL_LN> {
+  let isLaneQ = 1;
+}
 def VQDMLSL_HIGH_LANE   : SOpInst<"vqdmlsl_high_lane", "(>Q)(>Q)Q.I", "si",
                                 OP_QDMLSLHi_LN>;
 def VQDMLSL_HIGH_LANEQ  : SOpInst<"vqdmlsl_high_laneq", "(>Q)(>Q)QQI", "si",
-                                OP_QDMLSLHi_LN>;
+                                OP_QDMLSLHi_LN> {
+  let isLaneQ = 1;
+}
 
 // Newly add double parameter for vmul_lane in aarch64
 // Note: d type is handled by SCALAR_VMUL_LANE
@@ -945,32 +985,48 @@ def VMUL_LANE_A64 : IOpInst<"vmul_lane", "..qI", "Qd", OP_MUL_LN>;
 
 // Note: d type is handled by SCALAR_VMUL_LANEQ
 def VMUL_LANEQ   : IOpInst<"vmul_laneq", "..QI",
-                           "sifUsUiQsQiQUsQUiQfQd", OP_MUL_LN>;
-def VMULL_LANEQ  : SOpInst<"vmull_laneq", "(>Q).QI", "siUsUi", OP_MULL_LN>;
+                           "sifUsUiQsQiQUsQUiQfQd", OP_MUL_LN> {
+  let isLaneQ = 1;
+}
+def VMULL_LANEQ  : SOpInst<"vmull_laneq", "(>Q).QI", "siUsUi", OP_MULL_LN> {
+  let isLaneQ = 1;
+}
 def VMULL_HIGH_LANE   : SOpInst<"vmull_high_lane", "(>Q)Q.I", "siUsUi",
                                 OP_MULLHi_LN>;
 def VMULL_HIGH_LANEQ  : SOpInst<"vmull_high_laneq", "(>Q)QQI", "siUsUi",
-                                OP_MULLHi_LN>;
+                                OP_MULLHi_LN> {
+  let isLaneQ = 1;
+}
 
-def VQDMULL_LANEQ  : SOpInst<"vqdmull_laneq", "(>Q).QI", "si", OP_QDMULL_LN>;
+def VQDMULL_LANEQ  : SOpInst<"vqdmull_laneq", "(>Q).QI", "si", OP_QDMULL_LN> {
+  let isLaneQ = 1;
+}
 def VQDMULL_HIGH_LANE   : SOpInst<"vqdmull_high_lane", "(>Q)Q.I", "si",
                                   OP_QDMULLHi_LN>;
 def VQDMULL_HIGH_LANEQ  : SOpInst<"vqdmull_high_laneq", "(>Q)QQI", "si",
-                                  OP_QDMULLHi_LN>;
+                                  OP_QDMULLHi_LN> {
+  let isLaneQ = 1;
+}
 
 let isLaneQ = 1 in {
 def VQDMULH_LANEQ  : SInst<"vqdmulh_laneq", "..QI", "siQsQi">;
 def VQRDMULH_LANEQ : SInst<"vqrdmulh_laneq", "..QI", "siQsQi">;
 }
 let ArchGuard = "defined(__ARM_FEATURE_QRDMX) && defined(__aarch64__)" in {
-def VQRDMLAH_LANEQ : SOpInst<"vqrdmlah_laneq", "...QI", "siQsQi", OP_QRDMLAH_LN>;
-def VQRDMLSH_LANEQ : SOpInst<"vqrdmlsh_laneq", "...QI", "siQsQi", OP_QRDMLSH_LN>;
+def VQRDMLAH_LANEQ : SOpInst<"vqrdmlah_laneq", "...QI", "siQsQi", OP_QRDMLAH_LN> {
+  let isLaneQ = 1;
+}
+def VQRDMLSH_LANEQ : SOpInst<"vqrdmlsh_laneq", "...QI", "siQsQi", OP_QRDMLSH_LN> {
+  let isLaneQ = 1;
+}
 }
 
 // Note: d type implemented by SCALAR_VMULX_LANE
 def VMULX_LANE : IOpInst<"vmulx_lane", "..qI", "fQfQd", OP_MULX_LN>;
 // Note: d type is implemented by SCALAR_VMULX_LANEQ
-def VMULX_LANEQ : IOpInst<"vmulx_laneq", "..QI", "fQfQd", OP_MULX_LN>;
+def VMULX_LANEQ : IOpInst<"vmulx_laneq", "..QI", "fQfQd", OP_MULX_LN> {
+  let isLaneQ = 1;
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // Across vectors class
@@ -1380,11 +1436,15 @@ def SCALAR_UQXTN : SInst<"vqmovn", "(1<)1", "SUsSUiSUl">;
 
 // Scalar Floating Point  multiply (scalar, by element)
 def SCALAR_FMUL_LANE : IOpInst<"vmul_lane", "11.I", "SfSd", OP_SCALAR_MUL_LN>;
-def SCALAR_FMUL_LANEQ : IOpInst<"vmul_laneq", "11QI", "SfSd", OP_SCALAR_MUL_LN>;
+def SCALAR_FMUL_LANEQ : IOpInst<"vmul_laneq", "11QI", "SfSd", OP_SCALAR_MUL_LN> {
+  let isLaneQ = 1;
+}
 
 // Scalar Floating Point  multiply extended (scalar, by element)
 def SCALAR_FMULX_LANE : IOpInst<"vmulx_lane", "11.I", "SfSd", OP_SCALAR_MULX_LN>;
-def SCALAR_FMULX_LANEQ : IOpInst<"vmulx_laneq", "11QI", "SfSd", OP_SCALAR_MULX_LN>;
+def SCALAR_FMULX_LANEQ : IOpInst<"vmulx_laneq", "11QI", "SfSd", OP_SCALAR_MULX_LN> {
+  let isLaneQ = 1;
+}
 
 def SCALAR_VMUL_N : IInst<"vmul_n", "..1", "d">;
 
@@ -1400,48 +1460,70 @@ def SCALAR_VMUL_LANEQ   : IInst<"vmul_laneq", "..QI", "d"> {
 def SCALAR_VMULX_LANE : IOpInst<"vmulx_lane", "..qI", "d", OP_SCALAR_VMULX_LN>;
 
 // VMULX_LANEQ d type implemented using scalar vmulx_laneq
-def SCALAR_VMULX_LANEQ : IOpInst<"vmulx_laneq", "..QI", "d", OP_SCALAR_VMULX_LNQ>;
+def SCALAR_VMULX_LANEQ : IOpInst<"vmulx_laneq", "..QI", "d", OP_SCALAR_VMULX_LNQ> {
+  let isLaneQ = 1;
+}
 
 // Scalar Floating Point fused multiply-add (scalar, by element)
 def SCALAR_FMLA_LANE : IInst<"vfma_lane", "111.I", "SfSd">;
-def SCALAR_FMLA_LANEQ : IInst<"vfma_laneq", "111QI", "SfSd">;
+def SCALAR_FMLA_LANEQ : IInst<"vfma_laneq", "111QI", "SfSd"> {
+  let isLaneQ = 1;
+}
 
 // Scalar Floating Point fused multiply-subtract (scalar, by element)
 def SCALAR_FMLS_LANE : IOpInst<"vfms_lane", "111.I", "SfSd", OP_FMS_LN>;
-def SCALAR_FMLS_LANEQ : IOpInst<"vfms_laneq", "111QI", "SfSd", OP_FMS_LNQ>;
+def SCALAR_FMLS_LANEQ : IOpInst<"vfms_laneq", "111QI", "SfSd", OP_FMS_LNQ> {
+  let isLaneQ = 1;
+}
 
 // Signed Saturating Doubling Multiply Long (scalar by element)
 def SCALAR_SQDMULL_LANE : SOpInst<"vqdmull_lane", "(1>)1.I", "SsSi", OP_SCALAR_QDMULL_LN>;
-def SCALAR_SQDMULL_LANEQ : SOpInst<"vqdmull_laneq", "(1>)1QI", "SsSi", OP_SCALAR_QDMULL_LN>;
+def SCALAR_SQDMULL_LANEQ : SOpInst<"vqdmull_laneq", "(1>)1QI", "SsSi", OP_SCALAR_QDMULL_LN> {
+  let isLaneQ = 1;
+}
 
 // Signed Saturating Doubling Multiply-Add Long (scalar by element)
 def SCALAR_SQDMLAL_LANE : SInst<"vqdmlal_lane", "(1>)(1>)1.I", "SsSi">;
-def SCALAR_SQDMLAL_LANEQ : SInst<"vqdmlal_laneq", "(1>)(1>)1QI", "SsSi">;
+def SCALAR_SQDMLAL_LANEQ : SInst<"vqdmlal_laneq", "(1>)(1>)1QI", "SsSi"> {
+  let isLaneQ = 1;
+}
 
 // Signed Saturating Doubling Multiply-Subtract Long (scalar by element)
 def SCALAR_SQDMLS_LANE : SInst<"vqdmlsl_lane", "(1>)(1>)1.I", "SsSi">;
-def SCALAR_SQDMLS_LANEQ : SInst<"vqdmlsl_laneq", "(1>)(1>)1QI", "SsSi">;
+def SCALAR_SQDMLS_LANEQ : SInst<"vqdmlsl_laneq", "(1>)(1>)1QI", "SsSi"> {
+  let isLaneQ = 1;
+}
 
 // Scalar Integer Saturating Doubling Multiply Half High (scalar by element)
 def SCALAR_SQDMULH_LANE : SOpInst<"vqdmulh_lane", "11.I", "SsSi", OP_SCALAR_QDMULH_LN>;
-def SCALAR_SQDMULH_LANEQ : SOpInst<"vqdmulh_laneq", "11QI", "SsSi", OP_SCALAR_QDMULH_LN>;
+def SCALAR_SQDMULH_LANEQ : SOpInst<"vqdmulh_laneq", "11QI", "SsSi", OP_SCALAR_QDMULH_LN> {
+  let isLaneQ = 1;
+}
 
 // Scalar Integer Saturating Rounding Doubling Multiply Half High
 def SCALAR_SQRDMULH_LANE : SOpInst<"vqrdmulh_lane", "11.I", "SsSi", OP_SCALAR_QRDMULH_LN>;
-def SCALAR_SQRDMULH_LANEQ : SOpInst<"vqrdmulh_laneq", "11QI", "SsSi", OP_SCALAR_QRDMULH_LN>;
+def SCALAR_SQRDMULH_LANEQ : SOpInst<"vqrdmulh_laneq", "11QI", "SsSi", OP_SCALAR_QRDMULH_LN> {
+  let isLaneQ = 1;
+}
 
 let ArchGuard = "defined(__ARM_FEATURE_QRDMX) && defined(__aarch64__)" in {
 // Signed Saturating Rounding Doubling Multiply Accumulate Returning High Half
 def SCALAR_SQRDMLAH_LANE : SOpInst<"vqrdmlah_lane", "111.I", "SsSi", OP_SCALAR_QRDMLAH_LN>;
-def SCALAR_SQRDMLAH_LANEQ : SOpInst<"vqrdmlah_laneq", "111QI", "SsSi", OP_SCALAR_QRDMLAH_LN>;
+def SCALAR_SQRDMLAH_LANEQ : SOpInst<"vqrdmlah_laneq", "111QI", "SsSi", OP_SCALAR_QRDMLAH_LN> {
+  let isLaneQ = 1;
+}
 
 // Signed Saturating Rounding Doubling Multiply Subtract Returning High Half
 def SCALAR_SQRDMLSH_LANE : SOpInst<"vqrdmlsh_lane", "111.I", "SsSi", OP_SCALAR_QRDMLSH_LN>;
-def SCALAR_SQRDMLSH_LANEQ : SOpInst<"vqrdmlsh_laneq", "111QI", "SsSi", OP_SCALAR_QRDMLSH_LN>;
+def SCALAR_SQRDMLSH_LANEQ : SOpInst<"vqrdmlsh_laneq", "111QI", "SsSi", OP_SCALAR_QRDMLSH_LN> {
+  let isLaneQ = 1;
+}
 }
 
 def SCALAR_VDUP_LANE : IInst<"vdup_lane", "1.I", "ScSsSiSlSfSdSUcSUsSUiSUlSPcSPs">;
-def SCALAR_VDUP_LANEQ : IInst<"vdup_laneq", "1QI", "ScSsSiSlSfSdSUcSUsSUiSUlSPcSPs">;
+def SCALAR_VDUP_LANEQ : IInst<"vdup_laneq", "1QI", "ScSsSiSlSfSdSUcSUsSUiSUlSPcSPs"> {
+  let isLaneQ = 1;
+}
 }
 
 // ARMv8.2-A FP16 vector intrinsics for A32/A64.
@@ -1605,36 +1687,52 @@ let ArchGuard = "defined(__ARM_FEATURE_FP16_VECTOR_ARITHMETIC) && defined(__aarc
 
   // FMA lane
   def VFMA_LANEH   : IInst<"vfma_lane", "...qI", "hQh">;
-  def VFMA_LANEQH  : IInst<"vfma_laneq", "...QI", "hQh">;
+  def VFMA_LANEQH  : IInst<"vfma_laneq", "...QI", "hQh"> {
+    let isLaneQ = 1;
+  }
 
   // FMA lane with scalar argument
   def FMLA_NH      : SOpInst<"vfma_n", "...1", "hQh", OP_FMLA_N>;
   // Scalar floating point fused multiply-add (scalar, by element)
   def SCALAR_FMLA_LANEH  : IInst<"vfma_lane", "111.I", "Sh">;
-  def SCALAR_FMLA_LANEQH : IInst<"vfma_laneq", "111QI", "Sh">;
+  def SCALAR_FMLA_LANEQH : IInst<"vfma_laneq", "111QI", "Sh"> {
+    let isLaneQ = 1;
+  }
 
   // FMS lane
   def VFMS_LANEH   : IOpInst<"vfms_lane", "...qI", "hQh", OP_FMS_LN>;
-  def VFMS_LANEQH  : IOpInst<"vfms_laneq", "...QI", "hQh", OP_FMS_LNQ>;
+  def VFMS_LANEQH  : IOpInst<"vfms_laneq", "...QI", "hQh", OP_FMS_LNQ> {
+    let isLaneQ = 1;
+  }
   // FMS lane with scalar argument
   def FMLS_NH      : SOpInst<"vfms_n", "...1", "hQh", OP_FMLS_N>;
   // Scalar floating foint fused multiply-subtract (scalar, by element)
   def SCALAR_FMLS_LANEH  : IOpInst<"vfms_lane", "111.I", "Sh", OP_FMS_LN>;
-  def SCALAR_FMLS_LANEQH : IOpInst<"vfms_laneq", "111QI", "Sh", OP_FMS_LNQ>;
+  def SCALAR_FMLS_LANEQH : IOpInst<"vfms_laneq", "111QI", "Sh", OP_FMS_LNQ> {
+    let isLaneQ = 1;
+  }
 
   // Mul lane
-  def VMUL_LANEQH   : IOpInst<"vmul_laneq", "..QI", "hQh", OP_MUL_LN>;
+  def VMUL_LANEQH   : IOpInst<"vmul_laneq", "..QI", "hQh", OP_MUL_LN> {
+    let isLaneQ = 1;
+  }
   // Scalar floating point  multiply (scalar, by element)
   def SCALAR_FMUL_LANEH  : IOpInst<"vmul_lane", "11.I", "Sh", OP_SCALAR_MUL_LN>;
-  def SCALAR_FMUL_LANEQH : IOpInst<"vmul_laneq", "11QI", "Sh", OP_SCALAR_MUL_LN>;
+  def SCALAR_FMUL_LANEQH : IOpInst<"vmul_laneq", "11QI", "Sh", OP_SCALAR_MUL_LN> {
+    let isLaneQ = 1;
+  }
 
   // Mulx lane
   def VMULX_LANEH   : IOpInst<"vmulx_lane", "..qI", "hQh", OP_MULX_LN>;
-  def VMULX_LANEQH  : IOpInst<"vmulx_laneq", "..QI", "hQh", OP_MULX_LN>;
+  def VMULX_LANEQH  : IOpInst<"vmulx_laneq", "..QI", "hQh", OP_MULX_LN> {
+    let isLaneQ = 1;
+  }
   def VMULX_NH      : IOpInst<"vmulx_n", "..1", "hQh", OP_MULX_N>;
   // Scalar floating point  mulx (scalar, by element)
   def SCALAR_FMULX_LANEH : IInst<"vmulx_lane", "11.I", "Sh">;
-  def SCALAR_FMULX_LANEQH : IInst<"vmulx_laneq", "11QI", "Sh">;
+  def SCALAR_FMULX_LANEQH : IInst<"vmulx_laneq", "11QI", "Sh"> {
+    let isLaneQ = 1;
+  }
 
   // ARMv8.2-A FP16 reduction vector intrinsics.
   def VMAXVH   : SInst<"vmaxv", "1.", "hQh">;
@@ -1651,7 +1749,9 @@ let ArchGuard = "defined(__ARM_FEATURE_FP16_VECTOR_ARITHMETIC) && defined(__aarc
   def VUZP2H     : SOpInst<"vuzp2", "...", "hQh", OP_UZP2>;
 
   def SCALAR_VDUP_LANEH  : IInst<"vdup_lane", "1.I", "Sh">;
-  def SCALAR_VDUP_LANEQH : IInst<"vdup_laneq", "1QI", "Sh">;
+  def SCALAR_VDUP_LANEQH : IInst<"vdup_laneq", "1QI", "Sh"> {
+    let isLaneQ = 1;
+  }
 }
 
 // v8.2-A dot product instructions.
@@ -1661,7 +1761,9 @@ let ArchGuard = "defined(__ARM_FEATURE_DOTPROD)" in {
 }
 let ArchGuard = "defined(__ARM_FEATURE_DOTPROD) && defined(__aarch64__)" in {
   // Variants indexing into a 128-bit vector are A64 only.
-  def UDOT_LANEQ : SOpInst<"vdot_laneq", "..(<<)(<<Q)I", "iUiQiQUi", OP_DOT_LNQ>;
+  def UDOT_LANEQ : SOpInst<"vdot_laneq", "..(<<)(<<Q)I", "iUiQiQUi", OP_DOT_LNQ> {
+    let isLaneQ = 1;
+  }
 }
 
 // v8.2-A FP16 fused multiply-add long instructions.
@@ -1676,10 +1778,18 @@ let ArchGuard = "defined(__ARM_FEATURE_FP16FML) && defined(__aarch64__)" in {
   def VFMLAL_LANE_HIGH : SOpInst<"vfmlal_lane_high", "(F>)(F>)F(Fq)I", "hQh", OP_FMLAL_LN_Hi>;
   def VFMLSL_LANE_HIGH : SOpInst<"vfmlsl_lane_high", "(F>)(F>)F(Fq)I", "hQh", OP_FMLSL_LN_Hi>;
 
-  def VFMLAL_LANEQ_LOW  : SOpInst<"vfmlal_laneq_low",  "(F>)(F>)F(FQ)I", "hQh", OP_FMLAL_LN>;
-  def VFMLSL_LANEQ_LOW  : SOpInst<"vfmlsl_laneq_low",  "(F>)(F>)F(FQ)I", "hQh", OP_FMLSL_LN>;
-  def VFMLAL_LANEQ_HIGH : SOpInst<"vfmlal_laneq_high", "(F>)(F>)F(FQ)I", "hQh", OP_FMLAL_LN_Hi>;
-  def VFMLSL_LANEQ_HIGH : SOpInst<"vfmlsl_laneq_high", "(F>)(F>)F(FQ)I", "hQh", OP_FMLSL_LN_Hi>;
+  def VFMLAL_LANEQ_LOW  : SOpInst<"vfmlal_laneq_low",  "(F>)(F>)F(FQ)I", "hQh", OP_FMLAL_LN> {
+    let isLaneQ = 1;
+  }
+  def VFMLSL_LANEQ_LOW  : SOpInst<"vfmlsl_laneq_low",  "(F>)(F>)F(FQ)I", "hQh", OP_FMLSL_LN> {
+    let isLaneQ = 1;
+  }
+  def VFMLAL_LANEQ_HIGH : SOpInst<"vfmlal_laneq_high", "(F>)(F>)F(FQ)I", "hQh", OP_FMLAL_LN_Hi> {
+    let isLaneQ = 1;
+  }
+  def VFMLSL_LANEQ_HIGH : SOpInst<"vfmlsl_laneq_high", "(F>)(F>)F(FQ)I", "hQh", OP_FMLSL_LN_Hi> {
+    let isLaneQ = 1;
+  }
 }
 
 // v8.3-A Vector complex addition intrinsics
