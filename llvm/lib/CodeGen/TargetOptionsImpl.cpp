@@ -45,3 +45,9 @@ bool TargetOptions::DisableFramePointerElim(const MachineFunction &MF) const {
 bool TargetOptions::HonorSignDependentRoundingFPMath() const {
   return !UnsafeFPMath && HonorSignDependentRoundingFPMathOption;
 }
+
+/// NOTE: There are targets that still do not support the debug entry values
+/// production.
+bool TargetOptions::ShouldEmitDebugEntryValues() const {
+  return SupportsDebugEntryValues || EnableDebugEntryValues;
+}
