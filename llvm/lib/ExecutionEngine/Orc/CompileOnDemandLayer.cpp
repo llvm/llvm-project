@@ -165,10 +165,12 @@ void CompileOnDemandLayer::emit(MaterializationResponsibility R,
     return;
   }
 
-  R.replace(reexports(PDR.getImplDylib(), std::move(NonCallables),
-                      JITDylibLookupFlags::MatchAllSymbols));
-  R.replace(lazyReexports(LCTMgr, PDR.getISManager(), PDR.getImplDylib(),
-                          std::move(Callables), AliaseeImpls));
+  if (!NonCallables.empty())
+    R.replace(reexports(PDR.getImplDylib(), std::move(NonCallables),
+                        JITDylibLookupFlags::MatchAllSymbols));
+  if (!Callables.empty())
+    R.replace(lazyReexports(LCTMgr, PDR.getISManager(), PDR.getImplDylib(),
+                            std::move(Callables), AliaseeImpls));
 }
 
 CompileOnDemandLayer::PerDylibResources &
