@@ -606,6 +606,18 @@ def : Pat<(i32 (seteq
           (i32 (!cast<NI>(reduction[1]#"_"#ty) (ty V128:$x)))>;
 }
 
+multiclass SIMDBitmask<ValueType vec_t, string vec, bits<32> simdop> {
+  defm _#vec_t : SIMD_I<(outs I32:$dst), (ins V128:$vec), (outs), (ins),
+                         [(set I32:$dst,
+                           (i32 (int_wasm_bitmask (vec_t V128:$vec)))
+                         )],
+                         vec#".bitmask\t$dst, $vec", vec#".bitmask", simdop>;
+}
+
+defm BITMASK : SIMDBitmask<v16i8, "i8x16", 228>;
+defm BITMASK : SIMDBitmask<v8i16, "i16x8", 229>;
+defm BITMASK : SIMDBitmask<v4i32, "i32x4", 230>;
+
 //===----------------------------------------------------------------------===//
 // Bit shifts
 //===----------------------------------------------------------------------===//
