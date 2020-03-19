@@ -44,8 +44,7 @@ define void @sdiv1_cmp_range_1(i32 %x, i1 %c) {
 ; CHECK:       bb3:
 ; CHECK-NEXT:    [[P:%.*]] = phi i32 [ 1, [[BB1]] ], [ 2, [[BB2]] ]
 ; CHECK-NEXT:    [[D:%.*]] = sdiv i32 1, [[X:%.*]]
-; CHECK-NEXT:    [[C_0:%.*]] = icmp slt i32 [[P]], [[D]]
-; CHECK-NEXT:    call void @use(i1 [[C_0]])
+; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp eq i32 [[P]], [[D]]
 ; CHECK-NEXT:    call void @use(i1 [[C_1]])
 ; CHECK-NEXT:    ret void
@@ -77,10 +76,8 @@ define void @sdiv1_cmp_range_2(i32 %x, i1 %c) {
 ; CHECK:       bb3:
 ; CHECK-NEXT:    [[P:%.*]] = phi i32 [ 3, [[BB1]] ], [ 2, [[BB2]] ]
 ; CHECK-NEXT:    [[D:%.*]] = sdiv i32 1, [[X:%.*]]
-; CHECK-NEXT:    [[C_0:%.*]] = icmp slt i32 [[P]], [[D]]
-; CHECK-NEXT:    call void @use(i1 [[C_0]])
-; CHECK-NEXT:    [[C_1:%.*]] = icmp eq i32 [[P]], [[D]]
-; CHECK-NEXT:    call void @use(i1 [[C_1]])
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    ret void
 ;
   br i1 %c, label %bb1, label %bb2
