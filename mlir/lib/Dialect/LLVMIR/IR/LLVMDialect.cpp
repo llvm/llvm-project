@@ -407,6 +407,11 @@ static ParseResult parseInvokeOp(OpAsmParser &parser, OperationState &result) {
 
 static LogicalResult verify(LandingpadOp op) {
   Value value;
+  if (LLVMFuncOp func = op.getParentOfType<LLVMFuncOp>()) {
+    if (!func.personality().hasValue())
+      return op.emitError(
+          "llvm.landingpad needs to be in a function with a personality");
+  }
 
   if (!op.cleanup() && op.getOperands().empty())
     return op.emitError("landingpad instruction expects at least one clause or "

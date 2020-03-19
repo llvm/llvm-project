@@ -238,7 +238,7 @@ llvm.func @bar(!llvm<"i8*">, !llvm<"i8*">, !llvm<"i8*">)
 llvm.func @__gxx_personality_v0(...) -> !llvm.i32
 
 // CHECK-LABEL: @invokeLandingpad
-llvm.func @invokeLandingpad() -> !llvm.i32 {
+llvm.func @invokeLandingpad() -> !llvm.i32 attributes { personality = @__gxx_personality_v0 } {
 // CHECK-NEXT: %[[a0:[0-9]+]] = llvm.mlir.constant(0 : i32) : !llvm.i32
 // CHECK-NEXT: %{{[0-9]+}} = llvm.mlir.constant(3 : i32) : !llvm.i32
 // CHECK-NEXT: %[[a2:[0-9]+]] = llvm.mlir.constant("\01") : !llvm<"[1 x i8]">
@@ -261,11 +261,11 @@ llvm.func @invokeLandingpad() -> !llvm.i32 {
   %9 = llvm.invoke @foo(%7) to ^bb2 unwind ^bb1 : (!llvm.i32) -> !llvm<"{ i32, double, i32 }">
 
 // CHECK-NEXT: ^bb1:
-// CHECK-NEXT:   %{{[0-9]+}} = llvm.landingpad cleanup (catch %[[a3]] : !llvm<"i8**">) (catch %[[a6]] : !llvm<"i8*">) (filter %[[a2]] : !llvm<"[1 x i8]">) : !llvm<"{ i8*, i32 }">
-// CHECK-NEXT:   llvm.br ^bb3
+// CHECK-NEXT:   %[[lp:[0-9]+]] = llvm.landingpad cleanup (catch %[[a3]] : !llvm<"i8**">) (catch %[[a6]] : !llvm<"i8*">) (filter %[[a2]] : !llvm<"[1 x i8]">) : !llvm<"{ i8*, i32 }">
+// CHECK-NEXT:   llvm.resume %[[lp]] : !llvm<"{ i8*, i32 }">
 ^bb1:
   %10 = llvm.landingpad cleanup (catch %3 : !llvm<"i8**">) (catch %6 : !llvm<"i8*">) (filter %2 : !llvm<"[1 x i8]">) : !llvm<"{ i8*, i32 }">
-  llvm.br ^bb3
+  llvm.resume %10 : !llvm<"{ i8*, i32 }">
 
 // CHECK-NEXT: ^bb2:
 // CHECK-NEXT:   llvm.return %[[a7]] : !llvm.i32

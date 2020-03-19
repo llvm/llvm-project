@@ -60,6 +60,8 @@ public:
   GlobalOp processGlobal(llvm::GlobalVariable *GV);
 
 private:
+  /// Returns personality of `f` as a FlatSymbolRefAttr.
+  FlatSymbolRefAttr getPersonalityAsAttr(llvm::Function *f);
   /// Imports `bb` into `block`, which must be initially empty.
   LogicalResult processBasicBlock(llvm::BasicBlock *bb, Block *block);
   /// Imports `inst` and populates instMap[inst] with the imported Value.
@@ -471,7 +473,7 @@ static const DenseMap<unsigned, StringRef> opcMap = {
     // FIXME: switch
     // FIXME: indirectbr
     // FIXME: invoke
-    // FIXME: resume
+    INST(Resume, Resume),
     // FIXME: unreachable
     // FIXME: cleanupret
     // FIXME: catchret
@@ -604,6 +606,7 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
   case llvm::Instruction::Load:
   case llvm::Instruction::Store:
   case llvm::Instruction::Ret:
+  case llvm::Instruction::Resume:
   case llvm::Instruction::Trunc:
   case llvm::Instruction::ZExt:
   case llvm::Instruction::SExt:
@@ -726,8 +729,11 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
     for (unsigned i = 0, ie = lpi->getNumClauses(); i < ie; i++)
       ops.push_back(processConstant(lpi->getClause(i)));
 
-    b.create<LandingpadOp>(loc, processType(lpi->getType()), lpi->isCleanup(),
-                           ops);
+    Type ty = processType(lpi->getType());
+    if (!ty)
+      return failure();
+
+    v = b.create<LandingpadOp>(loc, ty, lpi->isCleanup(), ops);
     return success();
   }
   case llvm::Instruction::Invoke: {
@@ -798,6 +804,28 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
   }
 }
 
+FlatSymbolRefAttr Importer::getPersonalityAsAttr(llvm::Function *f) {
+  if (!f->hasPersonalityFn())
+    return nullptr;
+
+  llvm::Constant *pf = f->getPersonalityFn();
+
+  // If it directly has a name, we can use it.
+  if (pf->hasName())
+    return b.getSymbolRefAttr(pf->getName());
+
+  // If it doesn't have a name, currently, only function pointers that are
+  // bitcast to i8* are parsed.
+  if (auto ce = dyn_cast<llvm::ConstantExpr>(pf)) {
+    if (ce->getOpcode() == llvm::Instruction::BitCast &&
+        ce->getType() == llvm::Type::getInt8PtrTy(dialect->getLLVMContext())) {
+      if (auto func = dyn_cast<llvm::Function>(ce->getOperand(0)))
+        return b.getSymbolRefAttr(func->getName());
+    }
+  }
+  return FlatSymbolRefAttr();
+}
+
 LogicalResult Importer::processFunction(llvm::Function *f) {
   blocks.clear();
   instMap.clear();
@@ -810,6 +838,13 @@ LogicalResult Importer::processFunction(llvm::Function *f) {
   b.setInsertionPoint(module.getBody(), getFuncInsertPt());
   LLVMFuncOp fop = b.create<LLVMFuncOp>(UnknownLoc::get(context), f->getName(),
                                         functionType);
+
+  if (FlatSymbolRefAttr personality = getPersonalityAsAttr(f))
+    fop.setAttr(b.getIdentifier("personality"), personality);
+  else if (f->hasPersonalityFn())
+    emitWarning(UnknownLoc::get(context),
+                "could not deduce personality, skipping it");
+
   if (f->isDeclaration())
     return success();
 
