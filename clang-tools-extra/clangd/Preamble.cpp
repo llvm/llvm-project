@@ -162,7 +162,7 @@ buildPreamble(PathRef FileName, CompilerInvocation &CI,
         SerializedDeclsCollector.takeMacros(), std::move(StatCache),
         SerializedDeclsCollector.takeCanonicalIncludes());
   } else {
-    elog("Could not build a preamble for file {0} version {2}", FileName,
+    elog("Could not build a preamble for file {0} version {1}", FileName,
          Inputs.Version);
     return nullptr;
   }
