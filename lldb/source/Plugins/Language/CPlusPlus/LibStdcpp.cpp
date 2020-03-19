@@ -259,6 +259,7 @@ bool lldb_private::formatters::LibStdcppStringSummaryProvider(
       if (error.Fail())
         return false;
       options.SetSourceSize(size_of_data);
+      options.SetHasSourceSize(true);
 
       if (!StringPrinter::ReadStringAndDumpToStream<
               StringPrinter::StringElementType::UTF8>(options)) {
@@ -319,6 +320,7 @@ bool lldb_private::formatters::LibStdcppWStringSummaryProvider(
       if (error.Fail())
         return false;
       options.SetSourceSize(size_of_data);
+      options.SetHasSourceSize(true);
       options.SetPrefixToken("L");
 
       switch (wchar_size) {
