@@ -69,177 +69,144 @@ float64x2_t test_vmlsq_n_f64(float64x2_t a, float64x2_t b, float64_t c) {
 }
 
 // CHECK-LABEL: define <2 x float> @test_vmla_lane_f32_0(<2 x float> %a, <2 x float> %b, <2 x float> %v) #0 {
-// CHECK:    [[TMP0:%.*]] = bitcast <2 x float> [[V:%.*]] to <8 x i8>
-// CHECK:    [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x float>
-// CHECK:    [[LANE:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> [[TMP1]], <2 x i32> zeroinitializer
-// CHECK:    [[MUL:%.*]] = fmul <2 x float> [[B:%.*]], [[LANE]]
-// CHECK:    [[ADD:%.*]] = fadd <2 x float> [[A:%.*]], [[MUL]]
-// CHECK:    ret <2 x float> [[ADD]]
+// CHECK:   [[SHUFFLE:%.*]] = shufflevector <2 x float> %v, <2 x float> %v, <2 x i32> zeroinitializer
+// CHECK:   [[MUL:%.*]] = fmul <2 x float> %b, [[SHUFFLE]]
+// CHECK:   [[ADD:%.*]] = fadd <2 x float> %a, [[MUL]]
+// CHECK:   ret <2 x float> [[ADD]]
 float32x2_t test_vmla_lane_f32_0(float32x2_t a, float32x2_t b, float32x2_t v) {
   return vmla_lane_f32(a, b, v, 0);
 }
 
 // CHECK-LABEL: define <4 x float> @test_vmlaq_lane_f32_0(<4 x float> %a, <4 x float> %b, <2 x float> %v) #1 {
-// CHECK:    [[TMP0:%.*]] = bitcast <2 x float> [[V:%.*]] to <8 x i8>
-// CHECK:    [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x float>
-// CHECK:    [[LANE:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> [[TMP1]], <4 x i32> zeroinitializer
-// CHECK:    [[MUL:%.*]] = fmul <4 x float> [[B:%.*]], [[LANE]]
-// CHECK:    [[ADD:%.*]] = fadd <4 x float> [[A:%.*]], [[MUL]]
-// CHECK:    ret <4 x float> [[ADD]]
+// CHECK:   [[SHUFFLE:%.*]] = shufflevector <2 x float> %v, <2 x float> %v, <4 x i32> zeroinitializer
+// CHECK:   [[MUL:%.*]] = fmul <4 x float> %b, [[SHUFFLE]]
+// CHECK:   [[ADD:%.*]] = fadd <4 x float> %a, [[MUL]]
+// CHECK:   ret <4 x float> [[ADD]]
 float32x4_t test_vmlaq_lane_f32_0(float32x4_t a, float32x4_t b, float32x2_t v) {
   return vmlaq_lane_f32(a, b, v, 0);
 }
 
 // CHECK-LABEL: define <2 x float> @test_vmla_laneq_f32_0(<2 x float> %a, <2 x float> %b, <4 x float> %v) #1 {
-// CHECK:    [[TMP0:%.*]] = bitcast <4 x float> [[V:%.*]] to <16 x i8>
-// CHECK:    [[TMP1:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x float>
-// CHECK:    [[LANE:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> [[TMP1]], <2 x i32> zeroinitializer
-// CHECK:    [[MUL:%.*]] = fmul <2 x float> [[B:%.*]], [[LANE]]
-// CHECK:    [[ADD:%.*]] = fadd <2 x float> [[A:%.*]], [[MUL]]
-// CHECK:    ret <2 x float> [[ADD]]
+// CHECK:   [[SHUFFLE:%.*]] = shufflevector <4 x float> %v, <4 x float> %v, <2 x i32> zeroinitializer
+// CHECK:   [[MUL:%.*]] = fmul <2 x float> %b, [[SHUFFLE]]
+// CHECK:   [[ADD:%.*]] = fadd <2 x float> %a, [[MUL]]
+// CHECK:   ret <2 x float> [[ADD]]
 float32x2_t test_vmla_laneq_f32_0(float32x2_t a, float32x2_t b, float32x4_t v) {
   return vmla_laneq_f32(a, b, v, 0);
 }
 
 // CHECK-LABEL: define <4 x float> @test_vmlaq_laneq_f32_0(<4 x float> %a, <4 x float> %b, <4 x float> %v) #1 {
-// CHECK:    [[TMP0:%.*]] = bitcast <4 x float> [[V:%.*]] to <16 x i8>
-// CHECK:    [[TMP1:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x float>
-// CHECK:    [[LANE:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> [[TMP1]], <4 x i32> zeroinitializer
-// CHECK:    [[MUL:%.*]] = fmul <4 x float> [[B:%.*]], [[LANE]]
-// CHECK:    [[ADD:%.*]] = fadd <4 x float> [[A:%.*]], [[MUL]]
-// CHECK:    ret <4 x float> [[ADD]]
+// CHECK:   [[SHUFFLE:%.*]] = shufflevector <4 x float> %v, <4 x float> %v, <4 x i32> zeroinitializer
+// CHECK:   [[MUL:%.*]] = fmul <4 x float> %b, [[SHUFFLE]]
+// CHECK:   [[ADD:%.*]] = fadd <4 x float> %a, [[MUL]]
+// CHECK:   ret <4 x float> [[ADD]]
 float32x4_t test_vmlaq_laneq_f32_0(float32x4_t a, float32x4_t b, float32x4_t v) {
   return vmlaq_laneq_f32(a, b, v, 0);
 }
 
 // CHECK-LABEL: define <2 x float> @test_vmls_lane_f32_0(<2 x float> %a, <2 x float> %b, <2 x float> %v) #0 {
-// CHECK:    [[TMP0:%.*]] = bitcast <2 x float> [[V:%.*]] to <8 x i8>
-// CHECK:    [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x float>
-// CHECK:    [[LANE:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> [[TMP1]], <2 x i32> zeroinitializer
-// CHECK:    [[MUL:%.*]] = fmul <2 x float> [[B:%.*]], [[LANE]]
-// CHECK:    [[SUB:%.*]] = fsub <2 x float> [[A:%.*]], [[MUL]]
-// CHECK:    ret <2 x float> [[SUB]]
+// CHECK:   [[SHUFFLE:%.*]] = shufflevector <2 x float> %v, <2 x float> %v, <2 x i32> zeroinitializer
+// CHECK:   [[MUL:%.*]] = fmul <2 x float> %b, [[SHUFFLE]]
+// CHECK:   [[SUB:%.*]] = fsub <2 x float> %a, [[MUL]]
+// CHECK:   ret <2 x float> [[SUB]]
 float32x2_t test_vmls_lane_f32_0(float32x2_t a, float32x2_t b, float32x2_t v) {
   return vmls_lane_f32(a, b, v, 0);
 }
 
 // CHECK-LABEL: define <4 x float> @test_vmlsq_lane_f32_0(<4 x float> %a, <4 x float> %b, <2 x float> %v) #1 {
-// CHECK:    [[TMP0:%.*]] = bitcast <2 x float> [[V:%.*]] to <8 x i8>
-// CHECK:    [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x float>
-// CHECK:    [[LANE:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> [[TMP1]], <4 x i32> zeroinitializer
-// CHECK:    [[MUL:%.*]] = fmul <4 x float> [[B:%.*]], [[LANE]]
-// CHECK:    [[SUB:%.*]] = fsub <4 x float> [[A:%.*]], [[MUL]]
-// CHECK:    ret <4 x float> [[SUB]]
+// CHECK:   [[SHUFFLE:%.*]] = shufflevector <2 x float> %v, <2 x float> %v, <4 x i32> zeroinitializer
+// CHECK:   [[MUL:%.*]] = fmul <4 x float> %b, [[SHUFFLE]]
+// CHECK:   [[SUB:%.*]] = fsub <4 x float> %a, [[MUL]]
+// CHECK:   ret <4 x float> [[SUB]]
 float32x4_t test_vmlsq_lane_f32_0(float32x4_t a, float32x4_t b, float32x2_t v) {
   return vmlsq_lane_f32(a, b, v, 0);
 }
 
 // CHECK-LABEL: define <2 x float> @test_vmls_laneq_f32_0(<2 x float> %a, <2 x float> %b, <4 x float> %v) #1 {
-// CHECK:    [[TMP0:%.*]] = bitcast <4 x float> [[V:%.*]] to <16 x i8>
-// CHECK:    [[TMP1:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x float>
-// CHECK:    [[LANE:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> [[TMP1]], <2 x i32> zeroinitializer
-// CHECK:    [[MUL:%.*]] = fmul <2 x float> [[B:%.*]], [[LANE]]
-// CHECK:    [[SUB:%.*]] = fsub <2 x float> [[A:%.*]], [[MUL]]
-// CHECK:    ret <2 x float> [[SUB]]
+// CHECK:   [[SHUFFLE:%.*]] = shufflevector <4 x float> %v, <4 x float> %v, <2 x i32> zeroinitializer
+// CHECK:   [[MUL:%.*]] = fmul <2 x float> %b, [[SHUFFLE]]
+// CHECK:   [[SUB:%.*]] = fsub <2 x float> %a, [[MUL]]
+// CHECK:   ret <2 x float> [[SUB]]
 float32x2_t test_vmls_laneq_f32_0(float32x2_t a, float32x2_t b, float32x4_t v) {
   return vmls_laneq_f32(a, b, v, 0);
 }
 
 // CHECK-LABEL: define <4 x float> @test_vmlsq_laneq_f32_0(<4 x float> %a, <4 x float> %b, <4 x float> %v) #1 {
-// CHECK:    [[TMP0:%.*]] = bitcast <4 x float> [[V:%.*]] to <16 x i8>
-// CHECK:    [[TMP1:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x float>
-// CHECK:    [[LANE:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> [[TMP1]], <4 x i32> zeroinitializer
-// CHECK:    [[MUL:%.*]] = fmul <4 x float> [[B:%.*]], [[LANE]]
-// CHECK:    [[SUB:%.*]] = fsub <4 x float> [[A:%.*]], [[MUL]]
-// CHECK:    ret <4 x float> [[SUB]]
+// CHECK:   [[SHUFFLE:%.*]] = shufflevector <4 x float> %v, <4 x float> %v, <4 x i32> zeroinitializer
+// CHECK:   [[MUL:%.*]] = fmul <4 x float> %b, [[SHUFFLE]]
+// CHECK:   [[SUB:%.*]] = fsub <4 x float> %a, [[MUL]]
+// CHECK:   ret <4 x float> [[SUB]]
 float32x4_t test_vmlsq_laneq_f32_0(float32x4_t a, float32x4_t b, float32x4_t v) {
   return vmlsq_laneq_f32(a, b, v, 0);
 }
 
 // CHECK-LABEL: define <2 x float> @test_vmla_lane_f32(<2 x float> %a, <2 x float> %b, <2 x float> %v) #0 {
-// CHECK:    [[TMP0:%.*]] = bitcast <2 x float> [[V:%.*]] to <8 x i8>
-// CHECK:    [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x float>
-// CHECK:    [[LANE:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> [[TMP1]], <2 x i32> <i32 1, i32 1>
-// CHECK:    [[MUL:%.*]] = fmul <2 x float> [[B:%.*]], [[LANE]]
-// CHECK:    [[ADD:%.*]] = fadd <2 x float> [[A:%.*]], [[MUL]]
-// CHECK:    ret <2 x float> [[ADD]]
+// CHECK:   [[SHUFFLE:%.*]] = shufflevector <2 x float> %v, <2 x float> %v, <2 x i32> <i32 1, i32 1>
+// CHECK:   [[MUL:%.*]] = fmul <2 x float> %b, [[SHUFFLE]]
+// CHECK:   [[ADD:%.*]] = fadd <2 x float> %a, [[MUL]]
+// CHECK:   ret <2 x float> [[ADD]]
 float32x2_t test_vmla_lane_f32(float32x2_t a, float32x2_t b, float32x2_t v) {
   return vmla_lane_f32(a, b, v, 1);
 }
 
 // CHECK-LABEL: define <4 x float> @test_vmlaq_lane_f32(<4 x float> %a, <4 x float> %b, <2 x float> %v) #1 {
-// CHECK:    [[TMP0:%.*]] = bitcast <2 x float> [[V:%.*]] to <8 x i8>
-// CHECK:    [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x float>
-// CHECK:    [[LANE:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> [[TMP1]], <4 x i32> <i32 1, i32 1, i32 1, i32 1>
-// CHECK:    [[MUL:%.*]] = fmul <4 x float> [[B:%.*]], [[LANE]]
-// CHECK:    [[ADD:%.*]] = fadd <4 x float> [[A:%.*]], [[MUL]]
-// CHECK:    ret <4 x float> [[ADD]]
+// CHECK:   [[SHUFFLE:%.*]] = shufflevector <2 x float> %v, <2 x float> %v, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+// CHECK:   [[MUL:%.*]] = fmul <4 x float> %b, [[SHUFFLE]]
+// CHECK:   [[ADD:%.*]] = fadd <4 x float> %a, [[MUL]]
+// CHECK:   ret <4 x float> [[ADD]]
 float32x4_t test_vmlaq_lane_f32(float32x4_t a, float32x4_t b, float32x2_t v) {
   return vmlaq_lane_f32(a, b, v, 1);
 }
 
 // CHECK-LABEL: define <2 x float> @test_vmla_laneq_f32(<2 x float> %a, <2 x float> %b, <4 x float> %v) #1 {
-// CHECK:    [[TMP0:%.*]] = bitcast <4 x float> [[V:%.*]] to <16 x i8>
-// CHECK:    [[TMP1:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x float>
-// CHECK:    [[LANE:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> [[TMP1]], <2 x i32> <i32 3, i32 3>
-// CHECK:    [[MUL:%.*]] = fmul <2 x float> [[B:%.*]], [[LANE]]
-// CHECK:    [[ADD:%.*]] = fadd <2 x float> [[A:%.*]], [[MUL]]
-// CHECK:    ret <2 x float> [[ADD]]
+// CHECK:   [[SHUFFLE:%.*]] = shufflevector <4 x float> %v, <4 x float> %v, <2 x i32> <i32 3, i32 3>
+// CHECK:   [[MUL:%.*]] = fmul <2 x float> %b, [[SHUFFLE]]
+// CHECK:   [[ADD:%.*]] = fadd <2 x float> %a, [[MUL]]
+// CHECK:   ret <2 x float> [[ADD]]
 float32x2_t test_vmla_laneq_f32(float32x2_t a, float32x2_t b, float32x4_t v) {
   return vmla_laneq_f32(a, b, v, 3);
 }
 
 // CHECK-LABEL: define <4 x float> @test_vmlaq_laneq_f32(<4 x float> %a, <4 x float> %b, <4 x float> %v) #1 {
-// CHECK:    [[TMP0:%.*]] = bitcast <4 x float> [[V:%.*]] to <16 x i8>
-// CHECK:    [[TMP1:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x float>
-// CHECK:    [[LANE:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> [[TMP1]], <4 x i32> <i32 3, i32 3, i32 3, i32 3>
-// CHECK:    [[MUL:%.*]] = fmul <4 x float> [[B:%.*]], [[LANE]]
-// CHECK:    [[ADD:%.*]] = fadd <4 x float> [[A:%.*]], [[MUL]]
-// CHECK:    ret <4 x float> [[ADD]]
+// CHECK:   [[SHUFFLE:%.*]] = shufflevector <4 x float> %v, <4 x float> %v, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
+// CHECK:   [[MUL:%.*]] = fmul <4 x float> %b, [[SHUFFLE]]
+// CHECK:   [[ADD:%.*]] = fadd <4 x float> %a, [[MUL]]
+// CHECK:   ret <4 x float> [[ADD]]
 float32x4_t test_vmlaq_laneq_f32(float32x4_t a, float32x4_t b, float32x4_t v) {
   return vmlaq_laneq_f32(a, b, v, 3);
 }
 
 // CHECK-LABEL: define <2 x float> @test_vmls_lane_f32(<2 x float> %a, <2 x float> %b, <2 x float> %v) #0 {
-// CHECK:    [[TMP0:%.*]] = bitcast <2 x float> [[V:%.*]] to <8 x i8>
-// CHECK:    [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x float>
-// CHECK:    [[LANE:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> [[TMP1]], <2 x i32> <i32 1, i32 1>
-// CHECK:    [[MUL:%.*]] = fmul <2 x float> [[B:%.*]], [[LANE]]
-// CHECK:    [[SUB:%.*]] = fsub <2 x float> [[A:%.*]], [[MUL]]
-// CHECK:    ret <2 x float> [[SUB]]
+// CHECK:   [[SHUFFLE:%.*]] = shufflevector <2 x float> %v, <2 x float> %v, <2 x i32> <i32 1, i32 1>
+// CHECK:   [[MUL:%.*]] = fmul <2 x float> %b, [[SHUFFLE]]
+// CHECK:   [[SUB:%.*]] = fsub <2 x float> %a, [[MUL]]
+// CHECK:   ret <2 x float> [[SUB]]
 float32x2_t test_vmls_lane_f32(float32x2_t a, float32x2_t b, float32x2_t v) {
   return vmls_lane_f32(a, b, v, 1);
 }
 
 // CHECK-LABEL: define <4 x float> @test_vmlsq_lane_f32(<4 x float> %a, <4 x float> %b, <2 x float> %v) #1 {
-// CHECK:    [[TMP0:%.*]] = bitcast <2 x float> [[V:%.*]] to <8 x i8>
-// CHECK:    [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x float>
-// CHECK:    [[LANE:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> [[TMP1]], <4 x i32> <i32 1, i32 1, i32 1, i32 1>
-// CHECK:    [[MUL:%.*]] = fmul <4 x float> [[B:%.*]], [[LANE]]
-// CHECK:    [[SUB:%.*]] = fsub <4 x float> [[A:%.*]], [[MUL]]
-// CHECK:    ret <4 x float> [[SUB]]
-//
+// CHECK:   [[SHUFFLE:%.*]] = shufflevector <2 x float> %v, <2 x float> %v, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+// CHECK:   [[MUL:%.*]] = fmul <4 x float> %b, [[SHUFFLE]]
+// CHECK:   [[SUB:%.*]] = fsub <4 x float> %a, [[MUL]]
+// CHECK:   ret <4 x float> [[SUB]]
 float32x4_t test_vmlsq_lane_f32(float32x4_t a, float32x4_t b, float32x2_t v) {
   return vmlsq_lane_f32(a, b, v, 1);
 }
 // CHECK-LABEL: define <2 x float> @test_vmls_laneq_f32(<2 x float> %a, <2 x float> %b, <4 x float> %v) #1 {
-// CHECK:    [[TMP0:%.*]] = bitcast <4 x float> [[V:%.*]] to <16 x i8>
-// CHECK:    [[TMP1:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x float>
-// CHECK:    [[LANE:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> [[TMP1]], <2 x i32> <i32 3, i32 3>
-// CHECK:    [[MUL:%.*]] = fmul <2 x float> [[B:%.*]], [[LANE]]
-// CHECK:    [[SUB:%.*]] = fsub <2 x float> [[A:%.*]], [[MUL]]
-// CHECK:    ret <2 x float> [[SUB]]
+// CHECK:   [[SHUFFLE:%.*]] = shufflevector <4 x float> %v, <4 x float> %v, <2 x i32> <i32 3, i32 3>
+// CHECK:   [[MUL:%.*]] = fmul <2 x float> %b, [[SHUFFLE]]
+// CHECK:   [[SUB:%.*]] = fsub <2 x float> %a, [[MUL]]
+// CHECK:   ret <2 x float> [[SUB]]
 float32x2_t test_vmls_laneq_f32(float32x2_t a, float32x2_t b, float32x4_t v) {
   return vmls_laneq_f32(a, b, v, 3);
 }
 
 // CHECK-LABEL: define <4 x float> @test_vmlsq_laneq_f32(<4 x float> %a, <4 x float> %b, <4 x float> %v) #1 {
-// CHECK:    [[TMP0:%.*]] = bitcast <4 x float> [[V:%.*]] to <16 x i8>
-// CHECK:    [[TMP1:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x float>
-// CHECK:    [[LANE:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> [[TMP1]], <4 x i32> <i32 3, i32 3, i32 3, i32 3>
-// CHECK:    [[MUL:%.*]] = fmul <4 x float> [[B:%.*]], [[LANE]]
-// CHECK:    [[SUB:%.*]] = fsub <4 x float> [[A:%.*]], [[MUL]]
-// CHECK:    ret <4 x float> [[SUB]]
+// CHECK:   [[SHUFFLE:%.*]] = shufflevector <4 x float> %v, <4 x float> %v, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
+// CHECK:   [[MUL:%.*]] = fmul <4 x float> %b, [[SHUFFLE]]
+// CHECK:   [[SUB:%.*]] = fsub <4 x float> %a, [[MUL]]
+// CHECK:   ret <4 x float> [[SUB]]
 float32x4_t test_vmlsq_laneq_f32(float32x4_t a, float32x4_t b, float32x4_t v) {
   return vmlsq_laneq_f32(a, b, v, 3);
 }
