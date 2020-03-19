@@ -95,6 +95,10 @@ static cl::opt<bool> UseDwarfRangesBaseAddressSpecifier(
     "use-dwarf-ranges-base-address-specifier", cl::Hidden,
     cl::desc("Use base address specifiers in debug_ranges"), cl::init(false));
 
+static cl::opt<bool> EmitDwarfDebugEntryValues(
+    "emit-debug-entry-values", cl::Hidden,
+    cl::desc("Emit the debug entry values"), cl::init(false));
+
 static cl::opt<bool> GenerateARangeSection("generate-arange-section",
                                            cl::Hidden,
                                            cl::desc("Generate dwarf aranges"),
@@ -418,6 +422,12 @@ DwarfDebug::DwarfDebug(AsmPrinter *A, Module *M)
   // offsets table used by the pre-DWARF v5 split-DWARF implementation uses
   // a monolithic string offsets table without any header.
   UseSegmentedStringOffsetsTable = DwarfVersion >= 5;
+
+  // Emit call-site-param debug info for GDB and LLDB, if the target supports
+  // the debug entry values feature. It can also be enabled explicitly.
+  EmitDebugEntryValues = (Asm->TM.Options.ShouldEmitDebugEntryValues() &&
+                          (tuneForGDB() || tuneForLLDB())) ||
+                         EmitDwarfDebugEntryValues;
 
   Asm->OutStreamer->getContext().setDwarfVersion(DwarfVersion);
 }
@@ -886,9 +896,8 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
       DIE &CallSiteDIE = CU.constructCallSiteEntryDIE(ScopeDIE, CalleeDIE,
                                                       IsTail, PCAddr, CallReg);
 
-      // GDB and LLDB support call site parameter debug info.
-      if (Asm->TM.Options.EnableDebugEntryValues &&
-          (tuneForGDB() || tuneForLLDB())) {
+      // Optionally emit call-site-param debug info.
+      if (emitDebugEntryValues()) {
         ParamSet Params;
         // Try to interpret values of call site parameters.
         collectCallSiteParameters(&MI, Params);
