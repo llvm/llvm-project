@@ -1,6 +1,6 @@
-## Check we can use obj2yaml to yamalize the object containing
-## .dynamic section. Check that resulting section has the
-## proper attributes and dynamic tags.
+## Check we can use obj2yaml to yamalize the object containing .dynamic
+## section. Check that resulting section has the proper attributes and
+## dynamic tags and that we do not dump the default sh_entsize.
 
 # RUN: yaml2obj -DENTSIZE=0x10 %s -o %t1
 # RUN: obj2yaml %t1 | FileCheck %s
@@ -10,7 +10,6 @@
 # CHECK-NEXT:    Type:            SHT_DYNAMIC
 # CHECK-NEXT:    Address:         0x0000000000001000
 # CHECK-NEXT:    AddressAlign:    0x0000000000002000
-# CHECK-NEXT:    EntSize:         0x0000000000000010
 # CHECK-NEXT:    Entries:
 # CHECK-NEXT:      - Tag:             DT_NULL
 # CHECK-NEXT:        Value:           0x0000000000000000
