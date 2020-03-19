@@ -6,28 +6,93 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements patterns to convert Standard Ops to the SPIR-V dialect.
+// This file implements patterns to convert standard ops to SPIR-V ops.
 //
 //===----------------------------------------------------------------------===//
+
 #include "mlir/Dialect/SPIRV/LayoutUtils.h"
 #include "mlir/Dialect/SPIRV/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/SPIRVLowering.h"
 #include "mlir/Dialect/SPIRV/SPIRVOps.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/AffineMap.h"
+#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/SetVector.h"
 
 using namespace mlir;
 
 //===----------------------------------------------------------------------===//
+// Utility functions
+//===----------------------------------------------------------------------===//
+
+/// Returns true if the given `type` is a boolean scalar or vector type.
+static bool isBoolScalarOrVector(Type type) {
+  if (type.isInteger(1))
+    return true;
+  if (auto vecType = type.dyn_cast<VectorType>())
+    return vecType.getElementType().isInteger(1);
+  return false;
+}
+
+//===----------------------------------------------------------------------===//
 // Operation conversion
 //===----------------------------------------------------------------------===//
 
+// Note that DRR cannot be used for the patterns in this file: we may need to
+// convert type along the way, which requires ConversionPattern. DRR generates
+// normal RewritePattern.
+
 namespace {
 
-/// Convert composite constant operation to SPIR-V dialect.
-// TODO(denis0x0D) : move to DRR.
-class ConstantCompositeOpConversion final : public SPIRVOpLowering<ConstantOp> {
+/// Converts binary standard operations to SPIR-V operations.
+template <typename StdOp, typename SPIRVOp>
+class BinaryOpPattern final : public SPIRVOpLowering<StdOp> {
+public:
+  using SPIRVOpLowering<StdOp>::SPIRVOpLowering;
+
+  LogicalResult
+  matchAndRewrite(StdOp operation, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    assert(operands.size() == 2);
+    auto dstType = this->typeConverter.convertType(operation.getType());
+    if (!dstType)
+      return failure();
+    rewriter.template replaceOpWithNewOp<SPIRVOp>(operation, dstType, operands,
+                                                  ArrayRef<NamedAttribute>());
+    return success();
+  }
+};
+
+/// Converts bitwise standard operations to SPIR-V operations. This is a special
+/// pattern other than the BinaryOpPatternPattern because if the operands are
+/// boolean values, SPIR-V uses different operations (`SPIRVLogicalOp`). For
+/// non-boolean operands, SPIR-V should use `SPIRVBitwiseOp`.
+template <typename StdOp, typename SPIRVLogicalOp, typename SPIRVBitwiseOp>
+class BitwiseOpPattern final : public SPIRVOpLowering<StdOp> {
+public:
+  using SPIRVOpLowering<StdOp>::SPIRVOpLowering;
+
+  LogicalResult
+  matchAndRewrite(StdOp operation, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    assert(operands.size() == 2);
+    auto dstType =
+        this->typeConverter.convertType(operation.getResult().getType());
+    if (!dstType)
+      return failure();
+    if (isBoolScalarOrVector(operands.front().getType())) {
+      rewriter.template replaceOpWithNewOp<SPIRVLogicalOp>(
+          operation, dstType, operands, ArrayRef<NamedAttribute>());
+    } else {
+      rewriter.template replaceOpWithNewOp<SPIRVBitwiseOp>(
+          operation, dstType, operands, ArrayRef<NamedAttribute>());
+    }
+    return success();
+  }
+};
+
+/// Converts composite std.constant operation to spv.constant.
+class ConstantCompositeOpPattern final : public SPIRVOpLowering<ConstantOp> {
 public:
   using SPIRVOpLowering<ConstantOp>::SPIRVOpLowering;
 
@@ -36,12 +101,8 @@ public:
                   ConversionPatternRewriter &rewriter) const override;
 };
 
-/// Convert constant operation with IndexType return to SPIR-V constant
-/// operation. Since IndexType is not used within SPIR-V dialect, this needs
-/// special handling to make sure the result type and the type of the value
-/// attribute are consistent.
-// TODO(ravishankarm) : This should be moved into DRR.
-class ConstantIndexOpConversion final : public SPIRVOpLowering<ConstantOp> {
+/// Converts scalar std.constant operation to spv.constant.
+class ConstantScalarOpPattern final : public SPIRVOpLowering<ConstantOp> {
 public:
   using SPIRVOpLowering<ConstantOp>::SPIRVOpLowering;
 
@@ -50,8 +111,8 @@ public:
                   ConversionPatternRewriter &rewriter) const override;
 };
 
-/// Convert floating-point comparison operations to SPIR-V dialect.
-class CmpFOpConversion final : public SPIRVOpLowering<CmpFOp> {
+/// Converts floating-point comparison operations to SPIR-V ops.
+class CmpFOpPattern final : public SPIRVOpLowering<CmpFOp> {
 public:
   using SPIRVOpLowering<CmpFOp>::SPIRVOpLowering;
 
@@ -60,8 +121,8 @@ public:
                   ConversionPatternRewriter &rewriter) const override;
 };
 
-/// Convert compare operation to SPIR-V dialect.
-class CmpIOpConversion final : public SPIRVOpLowering<CmpIOp> {
+/// Converts integer compare operation to SPIR-V ops.
+class CmpIOpPattern final : public SPIRVOpLowering<CmpIOp> {
 public:
   using SPIRVOpLowering<CmpIOp>::SPIRVOpLowering;
 
@@ -70,33 +131,8 @@ public:
                   ConversionPatternRewriter &rewriter) const override;
 };
 
-/// Convert integer binary operations to SPIR-V operations. Cannot use
-/// tablegen for this. If the integer operation is on variables of IndexType,
-/// the type of the return value of the replacement operation differs from
-/// that of the replaced operation. This is not handled in tablegen-based
-/// pattern specification.
-// TODO(ravishankarm) : This should be moved into DRR.
-template <typename StdOp, typename SPIRVOp>
-class IntegerOpConversion final : public SPIRVOpLowering<StdOp> {
-public:
-  using SPIRVOpLowering<StdOp>::SPIRVOpLowering;
-
-  LogicalResult
-  matchAndRewrite(StdOp operation, ArrayRef<Value> operands,
-                  ConversionPatternRewriter &rewriter) const override {
-    auto resultType =
-        this->typeConverter.convertType(operation.getResult().getType());
-    rewriter.template replaceOpWithNewOp<SPIRVOp>(
-        operation, resultType, operands, ArrayRef<NamedAttribute>());
-    return success();
-  }
-};
-
-/// Convert load -> spv.LoadOp. The operands of the replaced operation are of
-/// IndexType while that of the replacement operation are of type i32. This is
-/// not supported in tablegen based pattern specification.
-// TODO(ravishankarm) : This should be moved into DRR.
-class LoadOpConversion final : public SPIRVOpLowering<LoadOp> {
+/// Converts std.load to spv.Load.
+class LoadOpPattern final : public SPIRVOpLowering<LoadOp> {
 public:
   using SPIRVOpLowering<LoadOp>::SPIRVOpLowering;
 
@@ -105,9 +141,8 @@ public:
                   ConversionPatternRewriter &rewriter) const override;
 };
 
-/// Convert return -> spv.Return.
-// TODO(ravishankarm) : This should be moved into DRR.
-class ReturnOpConversion final : public SPIRVOpLowering<ReturnOp> {
+/// Converts std.return to spv.Return.
+class ReturnOpPattern final : public SPIRVOpLowering<ReturnOp> {
 public:
   using SPIRVOpLowering<ReturnOp>::SPIRVOpLowering;
 
@@ -116,9 +151,8 @@ public:
                   ConversionPatternRewriter &rewriter) const override;
 };
 
-/// Convert select -> spv.Select
-// TODO(ravishankarm) : This should be moved into DRR.
-class SelectOpConversion final : public SPIRVOpLowering<SelectOp> {
+/// Converts std.select to spv.Select.
+class SelectOpPattern final : public SPIRVOpLowering<SelectOp> {
 public:
   using SPIRVOpLowering<SelectOp>::SPIRVOpLowering;
   LogicalResult
@@ -126,16 +160,47 @@ public:
                   ConversionPatternRewriter &rewriter) const override;
 };
 
-/// Convert store -> spv.StoreOp. The operands of the replaced operation are
-/// of IndexType while that of the replacement operation are of type i32. This
-/// is not supported in tablegen based pattern specification.
-// TODO(ravishankarm) : This should be moved into DRR.
-class StoreOpConversion final : public SPIRVOpLowering<StoreOp> {
+/// Converts std.store to spv.Store.
+class StoreOpPattern final : public SPIRVOpLowering<StoreOp> {
 public:
   using SPIRVOpLowering<StoreOp>::SPIRVOpLowering;
 
   LogicalResult
   matchAndRewrite(StoreOp storeOp, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override;
+};
+
+/// Converts type-casting standard operations to SPIR-V operations.
+template <typename StdOp, typename SPIRVOp>
+class TypeCastingOpPattern final : public SPIRVOpLowering<StdOp> {
+public:
+  using SPIRVOpLowering<StdOp>::SPIRVOpLowering;
+
+  LogicalResult
+  matchAndRewrite(StdOp operation, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    assert(operands.size() == 1);
+    auto dstType =
+        this->typeConverter.convertType(operation.getResult().getType());
+    if (dstType == operands.front().getType()) {
+      // Due to type conversion, we are seeing the same source and target type.
+      // Then we can just erase this operation by forwarding its operand.
+      rewriter.replaceOp(operation, operands.front());
+    } else {
+      rewriter.template replaceOpWithNewOp<SPIRVOp>(
+          operation, dstType, operands, ArrayRef<NamedAttribute>());
+    }
+    return success();
+  }
+};
+
+/// Converts std.xor to SPIR-V operations.
+class XOrOpPattern final : public SPIRVOpLowering<XOrOp> {
+public:
+  using SPIRVOpLowering<XOrOp>::SPIRVOpLowering;
+
+  LogicalResult
+  matchAndRewrite(XOrOp xorOp, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override;
 };
 
@@ -145,7 +210,7 @@ public:
 // ConstantOp with composite type.
 //===----------------------------------------------------------------------===//
 
-LogicalResult ConstantCompositeOpConversion::matchAndRewrite(
+LogicalResult ConstantCompositeOpPattern::matchAndRewrite(
     ConstantOp constCompositeOp, ArrayRef<Value> operands,
     ConversionPatternRewriter &rewriter) const {
   auto compositeType =
@@ -175,10 +240,10 @@ LogicalResult ConstantCompositeOpConversion::matchAndRewrite(
 }
 
 //===----------------------------------------------------------------------===//
-// ConstantOp with index type.
+// ConstantOp with scalar type.
 //===----------------------------------------------------------------------===//
 
-LogicalResult ConstantIndexOpConversion::matchAndRewrite(
+LogicalResult ConstantScalarOpPattern::matchAndRewrite(
     ConstantOp constIndexOp, ArrayRef<Value> operands,
     ConversionPatternRewriter &rewriter) const {
   if (!constIndexOp.getResult().getType().isa<IndexType>()) {
@@ -213,8 +278,8 @@ LogicalResult ConstantIndexOpConversion::matchAndRewrite(
 //===----------------------------------------------------------------------===//
 
 LogicalResult
-CmpFOpConversion::matchAndRewrite(CmpFOp cmpFOp, ArrayRef<Value> operands,
-                                  ConversionPatternRewriter &rewriter) const {
+CmpFOpPattern::matchAndRewrite(CmpFOp cmpFOp, ArrayRef<Value> operands,
+                               ConversionPatternRewriter &rewriter) const {
   CmpFOpOperandAdaptor cmpFOpOperands(operands);
 
   switch (cmpFOp.getPredicate()) {
@@ -253,8 +318,8 @@ CmpFOpConversion::matchAndRewrite(CmpFOp cmpFOp, ArrayRef<Value> operands,
 //===----------------------------------------------------------------------===//
 
 LogicalResult
-CmpIOpConversion::matchAndRewrite(CmpIOp cmpIOp, ArrayRef<Value> operands,
-                                  ConversionPatternRewriter &rewriter) const {
+CmpIOpPattern::matchAndRewrite(CmpIOp cmpIOp, ArrayRef<Value> operands,
+                               ConversionPatternRewriter &rewriter) const {
   CmpIOpOperandAdaptor cmpIOpOperands(operands);
 
   switch (cmpIOp.getPredicate()) {
@@ -286,8 +351,8 @@ CmpIOpConversion::matchAndRewrite(CmpIOp cmpIOp, ArrayRef<Value> operands,
 //===----------------------------------------------------------------------===//
 
 LogicalResult
-LoadOpConversion::matchAndRewrite(LoadOp loadOp, ArrayRef<Value> operands,
-                                  ConversionPatternRewriter &rewriter) const {
+LoadOpPattern::matchAndRewrite(LoadOp loadOp, ArrayRef<Value> operands,
+                               ConversionPatternRewriter &rewriter) const {
   LoadOpOperandAdaptor loadOperands(operands);
   auto loadPtr = spirv::getElementPtr(
       typeConverter, loadOp.memref().getType().cast<MemRefType>(),
@@ -301,8 +366,8 @@ LoadOpConversion::matchAndRewrite(LoadOp loadOp, ArrayRef<Value> operands,
 //===----------------------------------------------------------------------===//
 
 LogicalResult
-ReturnOpConversion::matchAndRewrite(ReturnOp returnOp, ArrayRef<Value> operands,
-                                    ConversionPatternRewriter &rewriter) const {
+ReturnOpPattern::matchAndRewrite(ReturnOp returnOp, ArrayRef<Value> operands,
+                                 ConversionPatternRewriter &rewriter) const {
   if (returnOp.getNumOperands()) {
     return failure();
   }
@@ -315,8 +380,8 @@ ReturnOpConversion::matchAndRewrite(ReturnOp returnOp, ArrayRef<Value> operands,
 //===----------------------------------------------------------------------===//
 
 LogicalResult
-SelectOpConversion::matchAndRewrite(SelectOp op, ArrayRef<Value> operands,
-                                    ConversionPatternRewriter &rewriter) const {
+SelectOpPattern::matchAndRewrite(SelectOp op, ArrayRef<Value> operands,
+                                 ConversionPatternRewriter &rewriter) const {
   SelectOpOperandAdaptor selectOperands(operands);
   rewriter.replaceOpWithNewOp<spirv::SelectOp>(op, selectOperands.condition(),
                                                selectOperands.true_value(),
@@ -329,8 +394,8 @@ SelectOpConversion::matchAndRewrite(SelectOp op, ArrayRef<Value> operands,
 //===----------------------------------------------------------------------===//
 
 LogicalResult
-StoreOpConversion::matchAndRewrite(StoreOp storeOp, ArrayRef<Value> operands,
-                                   ConversionPatternRewriter &rewriter) const {
+StoreOpPattern::matchAndRewrite(StoreOp storeOp, ArrayRef<Value> operands,
+                                ConversionPatternRewriter &rewriter) const {
   StoreOpOperandAdaptor storeOperands(operands);
   auto storePtr = spirv::getElementPtr(
       typeConverter, storeOp.memref().getType().cast<MemRefType>(),
@@ -340,6 +405,31 @@ StoreOpConversion::matchAndRewrite(StoreOp storeOp, ArrayRef<Value> operands,
                                               storeOperands.value());
   return success();
 }
+
+//===----------------------------------------------------------------------===//
+// XorOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+XOrOpPattern::matchAndRewrite(XOrOp xorOp, ArrayRef<Value> operands,
+                              ConversionPatternRewriter &rewriter) const {
+  assert(operands.size() == 2);
+
+  if (isBoolScalarOrVector(operands.front().getType()))
+    return failure();
+
+  auto dstType = typeConverter.convertType(xorOp.getType());
+  if (!dstType)
+    return failure();
+  rewriter.replaceOpWithNewOp<spirv::BitwiseXorOp>(xorOp, dstType, operands,
+                                                   ArrayRef<NamedAttribute>());
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// Pattern population
+//===----------------------------------------------------------------------===//
 
 namespace {
 /// Import the Standard Ops to SPIR-V Patterns.
@@ -352,14 +442,29 @@ void populateStandardToSPIRVPatterns(MLIRContext *context,
                                      OwningRewritePatternList &patterns) {
   // Add patterns that lower operations into SPIR-V dialect.
   populateWithGenerated(context, &patterns);
-  patterns.insert<ConstantCompositeOpConversion, ConstantIndexOpConversion,
-                  CmpFOpConversion, CmpIOpConversion,
-                  IntegerOpConversion<AddIOp, spirv::IAddOp>,
-                  IntegerOpConversion<MulIOp, spirv::IMulOp>,
-                  IntegerOpConversion<SignedDivIOp, spirv::SDivOp>,
-                  IntegerOpConversion<SignedRemIOp, spirv::SModOp>,
-                  IntegerOpConversion<SubIOp, spirv::ISubOp>, LoadOpConversion,
-                  ReturnOpConversion, SelectOpConversion, StoreOpConversion>(
+  patterns.insert<
+      BinaryOpPattern<AddFOp, spirv::FAddOp>,
+      BinaryOpPattern<AddIOp, spirv::IAddOp>,
+      BinaryOpPattern<DivFOp, spirv::FDivOp>,
+      BinaryOpPattern<MulFOp, spirv::FMulOp>,
+      BinaryOpPattern<MulIOp, spirv::IMulOp>,
+      BinaryOpPattern<RemFOp, spirv::FRemOp>,
+      BinaryOpPattern<ShiftLeftOp, spirv::ShiftLeftLogicalOp>,
+      BinaryOpPattern<SignedShiftRightOp, spirv::ShiftRightArithmeticOp>,
+      BinaryOpPattern<SignedDivIOp, spirv::SDivOp>,
+      BinaryOpPattern<SignedRemIOp, spirv::SRemOp>,
+      BinaryOpPattern<SubFOp, spirv::FSubOp>,
+      BinaryOpPattern<SubIOp, spirv::ISubOp>,
+      BinaryOpPattern<UnsignedDivIOp, spirv::UDivOp>,
+      BinaryOpPattern<UnsignedRemIOp, spirv::UModOp>,
+      BinaryOpPattern<UnsignedShiftRightOp, spirv::ShiftRightLogicalOp>,
+      BitwiseOpPattern<AndOp, spirv::LogicalAndOp, spirv::BitwiseAndOp>,
+      BitwiseOpPattern<OrOp, spirv::LogicalOrOp, spirv::BitwiseOrOp>,
+      ConstantCompositeOpPattern, ConstantScalarOpPattern, CmpFOpPattern,
+      CmpIOpPattern, LoadOpPattern, ReturnOpPattern, SelectOpPattern,
+      StoreOpPattern, TypeCastingOpPattern<SIToFPOp, spirv::ConvertSToFOp>,
+      TypeCastingOpPattern<FPExtOp, spirv::FConvertOp>,
+      TypeCastingOpPattern<FPTruncOp, spirv::FConvertOp>, XOrOpPattern>(
       context, typeConverter);
 }
 } // namespace mlir
