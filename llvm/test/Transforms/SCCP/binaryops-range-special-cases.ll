@@ -7,16 +7,13 @@ define void @sdiv1_cmp_constants(i32 %x) {
 ; CHECK-NEXT:    [[D:%.*]] = sdiv i32 1, [[X:%.*]]
 ; CHECK-NEXT:    [[C_0:%.*]] = icmp slt i32 0, [[D]]
 ; CHECK-NEXT:    call void @use(i1 [[C_0]])
-; CHECK-NEXT:    [[C_1:%.*]] = icmp slt i32 1, [[D]]
-; CHECK-NEXT:    call void @use(i1 [[C_1]])
-; CHECK-NEXT:    [[C_2:%.*]] = icmp slt i32 2, [[D]]
-; CHECK-NEXT:    call void @use(i1 [[C_2]])
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp eq i32 1, [[D]]
 ; CHECK-NEXT:    call void @use(i1 [[C_3]])
 ; CHECK-NEXT:    [[C_4:%.*]] = icmp eq i32 0, [[D]]
 ; CHECK-NEXT:    call void @use(i1 [[C_4]])
-; CHECK-NEXT:    [[C_5:%.*]] = icmp eq i32 2, [[D]]
-; CHECK-NEXT:    call void @use(i1 [[C_5]])
+; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    ret void
 ;
   %d = sdiv i32 1, %x
