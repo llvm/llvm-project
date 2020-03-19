@@ -79,6 +79,11 @@ static uint32_t lprofVMOWriter(ProfDataWriter *This, ProfDataIOVec *IOVecs,
     __llvm_profile_offset += Length;
   }
 
+  /* Record the profile size as a property of the VMO. */
+  _zx_object_set_property(__llvm_profile_vmo, ZX_PROP_VMO_CONTENT_SIZE,
+                          &__llvm_profile_offset,
+                          sizeof(__llvm_profile_offset));
+
   return 0;
 }
 
