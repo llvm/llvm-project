@@ -169,8 +169,11 @@ public:
   /// Return true of this is a signless integer or a float type.
   bool isSignlessIntOrFloat();
 
-  /// Return true of this is an integer(of any signedness) or a float type.
+  /// Return true if this is an integer (of any signedness) or a float type.
   bool isIntOrFloat();
+  /// Return true if this is an integer (of any signedness), index, or float
+  /// type.
+  bool isIntOrIndexOrFloat();
 
   /// Print the current type.
   void print(raw_ostream &os);

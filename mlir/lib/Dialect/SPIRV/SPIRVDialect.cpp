@@ -61,7 +61,7 @@ struct SPIRVInlinerInterface : public DialectInlinerInterface {
                        BlockAndValueMapping &) const final {
     // Return true here when inlining into spv.func, spv.selection, and
     // spv.loop operations.
-    auto op = dest->getParentOp();
+    auto *op = dest->getParentOp();
     return isa<spirv::FuncOp>(op) || isa<spirv::SelectionOp>(op) ||
            isa<spirv::LoopOp>(op);
   }
@@ -383,7 +383,8 @@ namespace {
 // parseAndVerify does the actual parsing and verification of individual
 // elements. This is a functor since parsing the last element of the list
 // (termination condition) needs partial specialization.
-template <typename ParseType, typename... Args> struct parseCommaSeparatedList {
+template <typename ParseType, typename... Args>
+struct ParseCommaSeparatedList {
   Optional<std::tuple<ParseType, Args...>>
   operator()(SPIRVDialect const &dialect, DialectAsmParser &parser) const {
     auto parseVal = parseAndVerify<ParseType>(dialect, parser);
@@ -393,7 +394,7 @@ template <typename ParseType, typename... Args> struct parseCommaSeparatedList {
     auto numArgs = std::tuple_size<std::tuple<Args...>>::value;
     if (numArgs != 0 && failed(parser.parseComma()))
       return llvm::None;
-    auto remainingValues = parseCommaSeparatedList<Args...>{}(dialect, parser);
+    auto remainingValues = ParseCommaSeparatedList<Args...>{}(dialect, parser);
     if (!remainingValues)
       return llvm::None;
     return std::tuple_cat(std::tuple<ParseType>(parseVal.getValue()),
@@ -403,7 +404,8 @@ template <typename ParseType, typename... Args> struct parseCommaSeparatedList {
 
 // Partial specialization of the function to parse a comma separated list of
 // specs to parse the last element of the list.
-template <typename ParseType> struct parseCommaSeparatedList<ParseType> {
+template <typename ParseType>
+struct ParseCommaSeparatedList<ParseType> {
   Optional<std::tuple<ParseType>> operator()(SPIRVDialect const &dialect,
                                              DialectAsmParser &parser) const {
     if (auto value = parseAndVerify<ParseType>(dialect, parser))
@@ -434,7 +436,7 @@ static Type parseImageType(SPIRVDialect const &dialect,
     return Type();
 
   auto value =
-      parseCommaSeparatedList<Type, Dim, ImageDepthInfo, ImageArrayedInfo,
+      ParseCommaSeparatedList<Type, Dim, ImageDepthInfo, ImageArrayedInfo,
                               ImageSamplingInfo, ImageSamplerUseInfo,
                               ImageFormat>{}(dialect, parser);
   if (!value)
@@ -597,10 +599,10 @@ static void print(StructType type, DialectAsmPrinter &os) {
         if (!decorations.empty())
           os << ", ";
       }
-      auto each_fn = [&os](spirv::Decoration decoration) {
+      auto eachFn = [&os](spirv::Decoration decoration) {
         os << stringifyDecoration(decoration);
       };
-      interleaveComma(decorations, os, each_fn);
+      interleaveComma(decorations, os, eachFn);
       os << "]";
     }
   };
@@ -865,39 +867,44 @@ LogicalResult SPIRVDialect::verifyOperationAttribute(Operation *op,
   return success();
 }
 
-// Verifies the given SPIR-V `attribute` attached to a region's argument or
-// result and reports error to the given location if invalid.
-static LogicalResult
-verifyRegionAttribute(Location loc, NamedAttribute attribute, bool forArg) {
+/// Verifies the given SPIR-V `attribute` attached to a value of the given
+/// `valueType` is valid.
+static LogicalResult verifyRegionAttribute(Location loc, Type valueType,
+                                           NamedAttribute attribute) {
   StringRef symbol = attribute.first.strref();
   Attribute attr = attribute.second;
 
   if (symbol != spirv::getInterfaceVarABIAttrName())
     return emitError(loc, "found unsupported '")
-           << symbol << "' attribute on region "
-           << (forArg ? "argument" : "result");
+           << symbol << "' attribute on region argument";
 
-  if (!attr.isa<spirv::InterfaceVarABIAttr>())
+  auto varABIAttr = attr.dyn_cast<spirv::InterfaceVarABIAttr>();
+  if (!varABIAttr)
     return emitError(loc, "'")
            << symbol
-           << "' attribute must be a dictionary attribute containing three "
-              "32-bit integer attributes: 'descriptor_set', 'binding', and "
-              "'storage_class'";
+           << "' attribute must be a dictionary attribute containing two or "
+              "three 32-bit integer attributes: 'descriptor_set', 'binding', "
+              "and optional 'storage_class'";
+  if (varABIAttr.storage_class() && !valueType.isIntOrIndexOrFloat())
+    return emitError(loc, "'") << symbol
+                               << "' attribute cannot specify storage class "
+                                  "when attaching to a non-scalar value";
 
   return success();
 }
 
 LogicalResult SPIRVDialect::verifyRegionArgAttribute(Operation *op,
-                                                     unsigned /*regionIndex*/,
-                                                     unsigned /*argIndex*/,
+                                                     unsigned regionIndex,
+                                                     unsigned argIndex,
                                                      NamedAttribute attribute) {
-  return verifyRegionAttribute(op->getLoc(), attribute,
-                               /*forArg=*/true);
+  return verifyRegionAttribute(
+      op->getLoc(),
+      op->getRegion(regionIndex).front().getArgument(argIndex).getType(),
+      attribute);
 }
 
 LogicalResult SPIRVDialect::verifyRegionResultAttribute(
     Operation *op, unsigned /*regionIndex*/, unsigned /*resultIndex*/,
     NamedAttribute attribute) {
-  return verifyRegionAttribute(op->getLoc(), attribute,
-                               /*forArg=*/false);
+  return op->emitError("cannot attach SPIR-V attributes to region result");
 }

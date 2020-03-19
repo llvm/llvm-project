@@ -32,7 +32,7 @@ include "mlir/Dialect/SPIRV/SPIRVBase.td"
 def SPV_InterfaceVarABIAttr : StructAttr<"InterfaceVarABIAttr", SPIRV_Dialect, [
     StructFieldAttr<"descriptor_set", I32Attr>,
     StructFieldAttr<"binding", I32Attr>,
-    StructFieldAttr<"storage_class", SPV_StorageClassAttr>
+    StructFieldAttr<"storage_class", OptionalAttr<SPV_StorageClassAttr>>
 ]>;
 
 // For entry functions, this attribute specifies information related to entry

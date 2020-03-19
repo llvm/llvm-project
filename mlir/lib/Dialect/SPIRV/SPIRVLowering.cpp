@@ -38,6 +38,63 @@ Type SPIRVTypeConverter::getIndexType(MLIRContext *context) {
   return IntegerType::get(32, context);
 }
 
+/// Mapping between SPIR-V storage classes to memref memory spaces.
+///
+/// Note: memref does not have a defined smenatics for each memory space; it
+/// depends on the context where it is used. There are no particular reasons
+/// behind the number assigments; we try to follow NVVM conventions and largely
+/// give common storage classes a smaller number. The hope is use symbolic
+/// memory space representation eventually after memref supports it.
+// TODO(antiagainst): swap Generic and StorageBuffer assignment to be more akin
+// to NVVM.
+#define STORAGE_SPACE_MAP_LIST(MAP_FN)                                         \
+  MAP_FN(spirv::StorageClass::Generic, 1)                                      \
+  MAP_FN(spirv::StorageClass::StorageBuffer, 0)                                \
+  MAP_FN(spirv::StorageClass::Workgroup, 3)                                    \
+  MAP_FN(spirv::StorageClass::Uniform, 4)                                      \
+  MAP_FN(spirv::StorageClass::Private, 5)                                      \
+  MAP_FN(spirv::StorageClass::Function, 6)                                     \
+  MAP_FN(spirv::StorageClass::PushConstant, 7)                                 \
+  MAP_FN(spirv::StorageClass::UniformConstant, 8)                              \
+  MAP_FN(spirv::StorageClass::Input, 9)                                        \
+  MAP_FN(spirv::StorageClass::Output, 10)                                      \
+  MAP_FN(spirv::StorageClass::CrossWorkgroup, 11)                              \
+  MAP_FN(spirv::StorageClass::AtomicCounter, 12)                               \
+  MAP_FN(spirv::StorageClass::Image, 13)                                       \
+  MAP_FN(spirv::StorageClass::CallableDataNV, 14)                              \
+  MAP_FN(spirv::StorageClass::IncomingCallableDataNV, 15)                      \
+  MAP_FN(spirv::StorageClass::RayPayloadNV, 16)                                \
+  MAP_FN(spirv::StorageClass::HitAttributeNV, 17)                              \
+  MAP_FN(spirv::StorageClass::IncomingRayPayloadNV, 18)                        \
+  MAP_FN(spirv::StorageClass::ShaderRecordBufferNV, 19)                        \
+  MAP_FN(spirv::StorageClass::PhysicalStorageBuffer, 20)
+
+unsigned
+SPIRVTypeConverter::getMemorySpaceForStorageClass(spirv::StorageClass storage) {
+#define STORAGE_SPACE_MAP_FN(storage, space)                                   \
+  case storage:                                                                \
+    return space;
+
+  switch (storage) { STORAGE_SPACE_MAP_LIST(STORAGE_SPACE_MAP_FN) }
+#undef STORAGE_SPACE_MAP_FN
+}
+
+Optional<spirv::StorageClass>
+SPIRVTypeConverter::getStorageClassForMemorySpace(unsigned space) {
+#define STORAGE_SPACE_MAP_FN(storage, space)                                   \
+  case space:                                                                  \
+    return storage;
+
+  switch (space) {
+    STORAGE_SPACE_MAP_LIST(STORAGE_SPACE_MAP_FN)
+  default:
+    return llvm::None;
+  }
+#undef STORAGE_SPACE_MAP_FN
+}
+
+#undef STORAGE_SPACE_MAP_LIST
+
 // TODO(ravishankarm): This is a utility function that should probably be
 // exposed by the SPIR-V dialect. Keeping it local till the use case arises.
 static Optional<int64_t> getTypeNumBytes(Type t) {
@@ -110,14 +167,6 @@ SPIRVTypeConverter::SPIRVTypeConverter() {
     return SPIRVTypeConverter::getIndexType(indexType.getContext());
   });
   addConversion([this](MemRefType memRefType) -> Type {
-    // TODO(ravishankarm): For now only support default memory space. The memory
-    // space description is not set is stone within MLIR, i.e. it depends on the
-    // context it is being used. To map this to SPIR-V storage classes, we
-    // should rely on the ABI attributes, and not on the memory space. This is
-    // still evolving, and needs to be revisited when there is more clarity.
-    if (memRefType.getMemorySpace())
-      return Type();
-
     auto elementType = convertType(memRefType.getElementType());
     if (!elementType)
       return Type();
@@ -135,11 +184,12 @@ SPIRVTypeConverter::SPIRVTypeConverter() {
       auto arrayType = spirv::ArrayType::get(
           elementType, arraySize.getValue() / elementSize.getValue(),
           elementSize.getValue());
+
+      // Wrap in a struct to satisfy Vulkan interface requirements.
       auto structType = spirv::StructType::get(arrayType, 0);
-      // For now initialize the storage class to StorageBuffer. This will be
-      // updated later based on whats passed in w.r.t to the ABI attributes.
-      return spirv::PointerType::get(structType,
-                                     spirv::StorageClass::StorageBuffer);
+      if (auto sc = getStorageClassForMemorySpace(memRefType.getMemorySpace()))
+        return spirv::PointerType::get(structType, *sc);
+      return Type();
     }
     return Type();
   });
