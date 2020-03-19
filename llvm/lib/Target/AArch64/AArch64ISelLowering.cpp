@@ -12995,9 +12995,9 @@ static SDValue legalizeSVEGatherPrefetchOffsVec(SDNode *N, SelectionDAG &DAG) {
   return DAG.getNode(N->getOpcode(), DL, DAG.getVTList(MVT::Other), Ops);
 }
 
-/// Combines a node carrying the intrinsic `aarch64_sve_gather_prf<T>` into a
-/// node that uses `aarch64_sve_gather_prf<T>_scaled_uxtw` when the scalar
-/// offset passed to `aarch64_sve_gather_prf<T>` is not a valid immediate for
+/// Combines a node carrying the intrinsic `aarch64_sve_prf_gather<T>` into a
+/// node that uses `aarch64_sve_prf_gather<T>_scaled_uxtw` when the scalar
+/// offset passed to `aarch64_sve_prf_gather<T>` is not a valid immediate for
 /// the sve gather prefetch instruction with vector plus immediate addressing
 /// mode.
 static SDValue combineSVEPrefetchVecBaseImmOff(SDNode *N, SelectionDAG &DAG,
@@ -13011,8 +13011,8 @@ static SDValue combineSVEPrefetchVecBaseImmOff(SDNode *N, SelectionDAG &DAG,
   // ...otherwise swap the offset base with the offset...
   SmallVector<SDValue, 5> Ops(N->op_begin(), N->op_end());
   std::swap(Ops[ImmPos], Ops[OffsetPos]);
-  // ...and remap the intrinsic `aarch64_sve_gather_prf<T>` to
-  // `aarch64_sve_gather_prf<T>_scaled_uxtw`.
+  // ...and remap the intrinsic `aarch64_sve_prf_gather<T>` to
+  // `aarch64_sve_prf_gather<T>_scaled_uxtw`.
   SDLoc DL(N);
   Ops[1] = DAG.getConstant(NewIID, DL, MVT::i64);
 
@@ -13083,30 +13083,30 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::INTRINSIC_VOID:
   case ISD::INTRINSIC_W_CHAIN:
     switch (cast<ConstantSDNode>(N->getOperand(1))->getZExtValue()) {
-    case Intrinsic::aarch64_sve_gather_prfb:
+    case Intrinsic::aarch64_sve_prfb_gather:
       return combineSVEPrefetchVecBaseImmOff(
-          N, DAG, Intrinsic::aarch64_sve_gather_prfb_scaled_uxtw,
+          N, DAG, Intrinsic::aarch64_sve_prfb_gather_scaled_uxtw,
           1 /*=ScalarSizeInBytes*/);
-    case Intrinsic::aarch64_sve_gather_prfh:
+    case Intrinsic::aarch64_sve_prfh_gather:
       return combineSVEPrefetchVecBaseImmOff(
-          N, DAG, Intrinsic::aarch64_sve_gather_prfh_scaled_uxtw,
+          N, DAG, Intrinsic::aarch64_sve_prfh_gather_scaled_uxtw,
           2 /*=ScalarSizeInBytes*/);
-    case Intrinsic::aarch64_sve_gather_prfw:
+    case Intrinsic::aarch64_sve_prfw_gather:
       return combineSVEPrefetchVecBaseImmOff(
-          N, DAG, Intrinsic::aarch64_sve_gather_prfw_scaled_uxtw,
+          N, DAG, Intrinsic::aarch64_sve_prfw_gather_scaled_uxtw,
           4 /*=ScalarSizeInBytes*/);
-    case Intrinsic::aarch64_sve_gather_prfd:
+    case Intrinsic::aarch64_sve_prfd_gather:
       return combineSVEPrefetchVecBaseImmOff(
-          N, DAG, Intrinsic::aarch64_sve_gather_prfd_scaled_uxtw,
+          N, DAG, Intrinsic::aarch64_sve_prfd_gather_scaled_uxtw,
           8 /*=ScalarSizeInBytes*/);
-    case Intrinsic::aarch64_sve_gather_prfb_scaled_uxtw:
-    case Intrinsic::aarch64_sve_gather_prfb_scaled_sxtw:
-    case Intrinsic::aarch64_sve_gather_prfh_scaled_uxtw:
-    case Intrinsic::aarch64_sve_gather_prfh_scaled_sxtw:
-    case Intrinsic::aarch64_sve_gather_prfw_scaled_uxtw:
-    case Intrinsic::aarch64_sve_gather_prfw_scaled_sxtw:
-    case Intrinsic::aarch64_sve_gather_prfd_scaled_uxtw:
-    case Intrinsic::aarch64_sve_gather_prfd_scaled_sxtw:
+    case Intrinsic::aarch64_sve_prfb_gather_scaled_uxtw:
+    case Intrinsic::aarch64_sve_prfb_gather_scaled_sxtw:
+    case Intrinsic::aarch64_sve_prfh_gather_scaled_uxtw:
+    case Intrinsic::aarch64_sve_prfh_gather_scaled_sxtw:
+    case Intrinsic::aarch64_sve_prfw_gather_scaled_uxtw:
+    case Intrinsic::aarch64_sve_prfw_gather_scaled_sxtw:
+    case Intrinsic::aarch64_sve_prfd_gather_scaled_uxtw:
+    case Intrinsic::aarch64_sve_prfd_gather_scaled_sxtw:
       return legalizeSVEGatherPrefetchOffsVec(N, DAG);
     case Intrinsic::aarch64_neon_ld2:
     case Intrinsic::aarch64_neon_ld3:
