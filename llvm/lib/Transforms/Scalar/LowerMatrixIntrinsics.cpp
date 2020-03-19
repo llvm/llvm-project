@@ -908,9 +908,8 @@ public:
         getMatrix(MatMul->getArgOperand(1), RShape, Builder);
 
     const unsigned R = LShape.NumRows;
-    const unsigned M = LShape.NumColumns;
     const unsigned C = RShape.NumColumns;
-    assert(M == RShape.NumRows);
+    assert(LShape.NumColumns == RShape.NumRows);
 
     // Initialize the output
     ColumnMatrixTy Result;
