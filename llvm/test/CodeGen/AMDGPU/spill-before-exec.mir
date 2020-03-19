@@ -10,7 +10,6 @@ name:            foo
 tracksRegLiveness: true
 machineFunctionInfo:
   scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
-  scratchWaveOffsetReg: $sgpr4
   stackPtrOffsetReg: $sgpr32
 registers:
   - { id: 0, class: sreg_64 }
@@ -36,6 +35,10 @@ registers:
   - { id: 1119, class: sgpr_128 }
   - { id: 1120, class: sgpr_128 }
   - { id: 1121, class: sgpr_128 }
+  - { id: 1122, class: sgpr_128 }
+  - { id: 1123, class: sgpr_128 }
+  - { id: 1124, class: sgpr_128 }
+  - { id: 1125, class: sgpr_128 }
 body:             |
   bb.0:
     successors: %bb.1
@@ -63,6 +66,10 @@ body:             |
     %1119 = COPY %1100
     %1120 = COPY %1100
     %1121 = COPY %1100
+    %1122 = COPY %1100
+    %1123 = COPY %1100
+    %1124 = COPY %1100
+    %1125 = COPY %1100
     S_BRANCH %bb.1
 
   bb.1:
@@ -97,6 +104,8 @@ body:             |
     S_CMP_EQ_U64 %1116.sub0_sub1, %1117.sub2_sub3, implicit-def $scc
     S_CMP_EQ_U64 %1118.sub0_sub1, %1119.sub2_sub3, implicit-def $scc
     S_CMP_EQ_U64 %1120.sub0_sub1, %1121.sub2_sub3, implicit-def $scc
+    S_CMP_EQ_U64 %1122.sub0_sub1, %1123.sub2_sub3, implicit-def $scc
+    S_CMP_EQ_U64 %1124.sub0_sub1, %1125.sub2_sub3, implicit-def $scc
 
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
     S_SETPC_B64_return undef $sgpr30_sgpr31, implicit %0, implicit $vgpr0

@@ -165,7 +165,7 @@ define void @constrained_if_register_class() {
 ; CHECK-NEXT:    s_cbranch_execz BB4_5
 ; CHECK-NEXT:  ; %bb.4: ; %bb11
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 4.0
-; CHECK-NEXT:    buffer_store_dword v0, v0, s[0:3], s33 offen
+; CHECK-NEXT:    buffer_store_dword v0, v0, s[0:3], 0 offen
 ; CHECK-NEXT:  BB4_5: ; %Flow
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; CHECK-NEXT:  BB4_6: ; %bb12

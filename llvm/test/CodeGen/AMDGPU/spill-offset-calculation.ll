@@ -13,7 +13,7 @@ entry:
   %buf = bitcast i8 addrspace(5)* %alloca to i32 addrspace(5)*
 
   %aptr = getelementptr i32, i32 addrspace(5)* %buf, i32 1
-  ; CHECK: buffer_store_dword v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offset:4092 ; 4-byte Folded Spill
+  ; CHECK: buffer_store_dword v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], 0 offset:4092 ; 4-byte Folded Spill
   %a = load volatile i32, i32 addrspace(5)* %aptr
 
   ; Force %a to spill.
@@ -35,7 +35,7 @@ entry:
 
   %aptr = getelementptr i32, i32 addrspace(5)* %buf, i32 1
   ; 0x40000 / 64 = 4096 (for wave64)
-  ; CHECK: s_add_u32 s6, s7, 0x40000
+  ; CHECK: s_mov_b32 s6, 0x40000
   ; CHECK: buffer_store_dword v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], s6 ; 4-byte Folded Spill
   %a = load volatile i32, i32 addrspace(5)* %aptr
 
@@ -48,39 +48,8 @@ entry:
   ret void
 }
 
-; CHECK-LABEL: test_sgpr_offset_kernel_scavenge_fail
-define amdgpu_kernel void @test_sgpr_offset_kernel_scavenge_fail() #1 {
-entry:
-  ; Occupy 4096 bytes of scratch, so the offset of the spill of %a does not
-  ; fit in the instruction, and has to live in the SGPR offset.
-  %alloca = alloca i8, i32 4092, align 4, addrspace(5)
-  %buf = bitcast i8 addrspace(5)* %alloca to i32 addrspace(5)*
-
-  %aptr = getelementptr i32, i32 addrspace(5)* %buf, i32 1
-
-  ; 0x40000 / 64 = 4096 (for wave64)
-  %a = load volatile i32, i32 addrspace(5)* %aptr
-
-  %asm = call { i32, i32, i32, i32, i32, i32, i32, i32 } asm sideeffect "", "=s,=s,=s,=s,=s,=s,=s,=s"()
-  %asm0 = extractvalue { i32, i32, i32, i32, i32, i32, i32, i32 } %asm, 0
-  %asm1 = extractvalue { i32, i32, i32, i32, i32, i32, i32, i32 } %asm, 1
-  %asm2 = extractvalue { i32, i32, i32, i32, i32, i32, i32, i32 } %asm, 2
-  %asm3 = extractvalue { i32, i32, i32, i32, i32, i32, i32, i32 } %asm, 3
-  %asm4 = extractvalue { i32, i32, i32, i32, i32, i32, i32, i32 } %asm, 4
-  %asm5 = extractvalue { i32, i32, i32, i32, i32, i32, i32, i32 } %asm, 5
-  %asm6 = extractvalue { i32, i32, i32, i32, i32, i32, i32, i32 } %asm, 6
-  %asm7 = extractvalue { i32, i32, i32, i32, i32, i32, i32, i32 } %asm, 7
-
-  call void asm sideeffect "", "~{v0},~{v1},~{v2},~{v3},~{v4},~{v5},~{v6},~{v7}"() #0
-
-  ; CHECK: s_add_u32 s7, s7, 0x40000
-  ; CHECK: buffer_load_dword v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], s7 ; 4-byte Folded Reload
-  ; CHECK: s_sub_u32 s7, s7, 0x40000
-
-   ; Force %a to spill with no free SGPRs
-  call void asm sideeffect "", "s,s,s,s,s,s,s,s,v"(i32 %asm0, i32 %asm1, i32 %asm2, i32 %asm3, i32 %asm4, i32 %asm5, i32 %asm6, i32 %asm7, i32 %a)
-  ret void
-}
+; FIXME: If we fail to scavenge an SGPR in a kernel we don't have a stack
+; pointer to temporarily update, so we just crash.
 
 ; CHECK-LABEL: test_sgpr_offset_function_scavenge_fail
 define void @test_sgpr_offset_function_scavenge_fail() #2 {
@@ -141,8 +110,8 @@ entry:
   %bufv1 = bitcast i8 addrspace(5)* %alloca to i32 addrspace(5)*
   %bufv2 = bitcast i8 addrspace(5)* %alloca to <2 x i32> addrspace(5)*
 
-  ; CHECK: buffer_store_dword v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offset:4088 ; 4-byte Folded Spill
-  ; CHECK: buffer_store_dword v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}} offset:4092 ; 4-byte Folded Spill
+  ; CHECK: buffer_store_dword v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], 0 offset:4088 ; 4-byte Folded Spill
+  ; CHECK: buffer_store_dword v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], 0 offset:4092 ; 4-byte Folded Spill
   %aptr = getelementptr <2 x i32>, <2 x i32> addrspace(5)* %bufv2, i32 1
   %a = load volatile <2 x i32>, <2 x i32> addrspace(5)* %aptr
 
@@ -170,7 +139,7 @@ entry:
   %bufv2 = bitcast i8 addrspace(5)* %alloca to <2 x i32> addrspace(5)*
 
   ; 0x3ff00 / 64 = 4092 (for wave64)
-  ; CHECK: s_add_u32 s6, s7, 0x3ff00
+  ; CHECK: s_mov_b32 s6, 0x3ff00
   ; CHECK: buffer_store_dword v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], s6 ; 4-byte Folded Spill
   ; CHECK: buffer_store_dword v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], s6 offset:4 ; 4-byte Folded Spill
   %aptr = getelementptr <2 x i32>, <2 x i32> addrspace(5)* %bufv2, i32 1

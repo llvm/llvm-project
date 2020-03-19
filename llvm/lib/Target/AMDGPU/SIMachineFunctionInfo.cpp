@@ -79,7 +79,6 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
     // Non-entry functions have no special inputs for now, other registers
     // required for scratch access.
     ScratchRSrcReg = AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3;
-    ScratchWaveOffsetReg = AMDGPU::SGPR33;
 
     // TODO: Pick a high register, and shift down, similar to a kernel.
     FrameOffsetReg = AMDGPU::SGPR34;
@@ -87,8 +86,6 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
 
     ArgInfo.PrivateSegmentBuffer =
       ArgDescriptor::createRegister(ScratchRSrcReg);
-    ArgInfo.PrivateSegmentWaveByteOffset =
-      ArgDescriptor::createRegister(ScratchWaveOffsetReg);
 
     if (F.hasFnAttribute("amdgpu-implicitarg-ptr"))
       ImplicitArgPtr = true;
@@ -515,7 +512,6 @@ yaml::SIMachineFunctionInfo::SIMachineFunctionInfo(
     WaveLimiter(MFI.needsWaveLimiter()),
     HighBitsOf32BitAddress(MFI.get32BitAddressHighBits()),
     ScratchRSrcReg(regToString(MFI.getScratchRSrcReg(), TRI)),
-    ScratchWaveOffsetReg(regToString(MFI.getScratchWaveOffsetReg(), TRI)),
     FrameOffsetReg(regToString(MFI.getFrameOffsetReg(), TRI)),
     StackPtrOffsetReg(regToString(MFI.getStackPtrOffsetReg(), TRI)),
     ArgInfo(convertArgumentInfo(MFI.getArgInfo(), TRI)),

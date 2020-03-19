@@ -1684,8 +1684,8 @@ define amdgpu_ps <32 x i32> @dyn_insertelement_v32i32_s_s_s(<32 x i32> inreg %ve
 ; GPRIDX-NEXT:    s_mov_b32 s27, s29
 ; GPRIDX-NEXT:    s_mov_b32 s28, s30
 ; GPRIDX-NEXT:    s_mov_b32 s29, s31
-; GPRIDX-NEXT:    s_mov_b32 s30, s32
 ; GPRIDX-NEXT:    s_mov_b32 s31, s33
+; GPRIDX-NEXT:    s_mov_b32 s30, s32
 ; GPRIDX-NEXT:    s_mov_b32 m0, s35
 ; GPRIDX-NEXT:    s_nop 0
 ; GPRIDX-NEXT:    s_movreld_b32 s0, s34
@@ -1724,8 +1724,8 @@ define amdgpu_ps <32 x i32> @dyn_insertelement_v32i32_s_s_s(<32 x i32> inreg %ve
 ; MOVREL-NEXT:    s_mov_b32 s27, s29
 ; MOVREL-NEXT:    s_mov_b32 s28, s30
 ; MOVREL-NEXT:    s_mov_b32 s29, s31
-; MOVREL-NEXT:    s_mov_b32 s30, s32
 ; MOVREL-NEXT:    s_mov_b32 s31, s33
+; MOVREL-NEXT:    s_mov_b32 s30, s32
 ; MOVREL-NEXT:    s_movreld_b32 s0, s34
 ; MOVREL-NEXT:    ; implicit-def: $vcc_hi
 ; MOVREL-NEXT:    ; return to shader part epilog

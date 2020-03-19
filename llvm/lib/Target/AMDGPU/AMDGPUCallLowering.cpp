@@ -800,8 +800,6 @@ bool AMDGPUCallLowering::lowerFormalArguments(
     TLI.allocateSystemSGPRs(CCInfo, MF, *Info, CC, IsShader);
   } else {
     CCInfo.AllocateReg(Info->getScratchRSrcReg());
-    CCInfo.AllocateReg(Info->getScratchWaveOffsetReg());
-    CCInfo.AllocateReg(Info->getFrameOffsetReg());
     TLI.allocateSpecialInputSGPRs(CCInfo, MF, *TRI, *Info);
   }
 

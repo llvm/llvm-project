@@ -30,12 +30,6 @@ static ArrayRef<MCPhysReg> getAllSGPR128(const GCNSubtarget &ST,
                       ST.getMaxNumSGPRs(MF) / 4);
 }
 
-static ArrayRef<MCPhysReg> getAllSGPRs(const GCNSubtarget &ST,
-                                       const MachineFunction &MF) {
-  return makeArrayRef(AMDGPU::SGPR_32RegClass.begin(),
-                      ST.getMaxNumSGPRs(MF));
-}
-
 // Find a scratch register that we can use at the start of the prologue to
 // re-align the stack pointer. We avoid using callee-save registers since they
 // may appear to be free when this is called from canUseAsPrologue (during
@@ -263,7 +257,7 @@ void SIFrameLowering::emitEntryFunctionFlatScratchInit(
 
 // Shift down registers reserved for the scratch RSRC.
 Register SIFrameLowering::getEntryFunctionReservedScratchRsrcReg(
-    MachineFunction &MF) const {
+    MachineFunction &MF, Register ScratchWaveOffsetReg) const {
 
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIInstrInfo *TII = ST.getInstrInfo();
@@ -292,8 +286,6 @@ Register SIFrameLowering::getEntryFunctionReservedScratchRsrcReg(
   // cannot do this for the resources required for scratch access. For now we
   // skip over user SGPRs and may leave unused holes.
 
-  // We find the resource first because it has an alignment requirement.
-
   unsigned NumPreloaded = (MFI->getNumPreloadedSGPRs() + 3) / 4;
   ArrayRef<MCPhysReg> AllSGPR128s = getAllSGPR128(ST, MF);
   AllSGPR128s = AllSGPR128s.slice(std::min(static_cast<unsigned>(AllSGPR128s.size()), NumPreloaded));
@@ -303,7 +295,14 @@ Register SIFrameLowering::getEntryFunctionReservedScratchRsrcReg(
   for (MCPhysReg Reg : AllSGPR128s) {
     // Pick the first unallocated one. Make sure we don't clobber the other
     // reserved input we needed.
-    if (!MRI.isPhysRegUsed(Reg) && MRI.isAllocatable(Reg)) {
+    //
+    // FIXME: The preloaded SGPR count is not accurate for shaders as the
+    // scratch wave offset may be in a fixed SGPR or
+    // SITargetLowering::allocateSystemSGPRs may choose some free SGPR for the
+    // scratch wave offset. We explicitly avoid the scratch wave offset to
+    // account for this.
+    if (!MRI.isPhysRegUsed(Reg) && MRI.isAllocatable(Reg) &&
+        !TRI->isSubRegisterEq(Reg, ScratchWaveOffsetReg)) {
       MRI.replaceRegWith(ScratchRsrcReg, Reg);
       MFI->setScratchRSrcReg(Reg);
       return Reg;
@@ -311,76 +310,6 @@ Register SIFrameLowering::getEntryFunctionReservedScratchRsrcReg(
   }
 
   return ScratchRsrcReg;
-}
-
-// Shift down registers reserved for the scratch wave offset.
-Register SIFrameLowering::getEntryFunctionReservedScratchWaveOffsetReg(
-    MachineFunction &MF) const {
-
-  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-  const SIInstrInfo *TII = ST.getInstrInfo();
-  const SIRegisterInfo *TRI = &TII->getRegisterInfo();
-  MachineRegisterInfo &MRI = MF.getRegInfo();
-  SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
-
-  assert(MFI->isEntryFunction());
-
-  Register ScratchWaveOffsetReg = MFI->getScratchWaveOffsetReg();
-
-  if (ScratchWaveOffsetReg == AMDGPU::NoRegister ||
-      (!MRI.isPhysRegUsed(ScratchWaveOffsetReg) && !hasFP(MF) &&
-       !MFI->hasFlatScratchInit())) {
-    assert(!hasFP(MF) && !MFI->hasFlatScratchInit());
-    return AMDGPU::NoRegister;
-  }
-
-  if (ST.hasSGPRInitBug() ||
-      ScratchWaveOffsetReg != TRI->reservedPrivateSegmentWaveByteOffsetReg(MF))
-    return ScratchWaveOffsetReg;
-
-  unsigned NumPreloaded = MFI->getNumPreloadedSGPRs();
-
-  ArrayRef<MCPhysReg> AllSGPRs = getAllSGPRs(ST, MF);
-  if (NumPreloaded > AllSGPRs.size())
-    return ScratchWaveOffsetReg;
-
-  AllSGPRs = AllSGPRs.slice(NumPreloaded);
-
-  // We need to drop register from the end of the list that we cannot use
-  // for the scratch wave offset.
-  // + 2 s102 and s103 do not exist on VI.
-  // + 2 for vcc
-  // + 2 for xnack_mask
-  // + 2 for flat_scratch
-  // + 4 for registers reserved for scratch resource register
-  // + 1 for register reserved for scratch wave offset.  (By exluding this
-  //     register from the list to consider, it means that when this
-  //     register is being used for the scratch wave offset and there
-  //     are no other free SGPRs, then the value will stay in this register.
-  // + 1 if stack pointer is used.
-  // ----
-  //  13 (+1)
-  unsigned ReservedRegCount = 13;
-
-  if (AllSGPRs.size() < ReservedRegCount)
-    return ScratchWaveOffsetReg;
-
-  for (MCPhysReg Reg : AllSGPRs.drop_back(ReservedRegCount)) {
-    // Pick the first unallocated SGPR. Be careful not to pick an alias of the
-    // scratch descriptor, since we haven’t added its uses yet.
-    if (!MRI.isPhysRegUsed(Reg) && MRI.isAllocatable(Reg)) {
-      MRI.replaceRegWith(ScratchWaveOffsetReg, Reg);
-      if (MFI->getScratchWaveOffsetReg() == MFI->getStackPtrOffsetReg()) {
-        assert(!hasFP(MF));
-        MFI->setStackPtrOffsetReg(Reg);
-      }
-      MFI->setScratchWaveOffsetReg(Reg);
-      MFI->setFrameOffsetReg(Reg);
-      return Reg;
-    }
-  }
-
-  return ScratchWaveOffsetReg;
 }
 
 void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
@@ -401,128 +330,89 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
   SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIInstrInfo *TII = ST.getInstrInfo();
-  const SIRegisterInfo *TRI = &TII->getRegisterInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const Function &F = MF.getFunction();
 
   assert(MFI->isEntryFunction());
 
-  // We need to do the replacement of the private segment buffer and wave offset
-  // register even if there are no stack objects. There could be stores to undef
-  // or a constant without an associated object.
-  //
-  // These calls will return `AMDGPU::NoRegister` in cases where there are no
-  // actual uses of the respective registers.
-  Register ScratchRsrcReg = getEntryFunctionReservedScratchRsrcReg(MF);
-  Register ScratchWaveOffsetReg =
-      getEntryFunctionReservedScratchWaveOffsetReg(MF);
-
-  // Make the selected registers live throughout the function.
-  for (MachineBasicBlock &OtherBB : MF) {
-    if (&OtherBB == &MBB)
-      continue;
-
-    if (ScratchWaveOffsetReg != AMDGPU::NoRegister)
-      OtherBB.addLiveIn(ScratchWaveOffsetReg);
-
-    if (ScratchRsrcReg != AMDGPU::NoRegister)
-      OtherBB.addLiveIn(ScratchRsrcReg);
-  }
-
-  // Now that we have fixed the reserved registers we need to locate the
-  // (potentially) preloaded registers. We should always have a preloaded
-  // scratch wave offset register, but we only have a preloaded scratch rsrc
-  // register for HSA.
-  Register PreloadedScratchWaveOffsetReg = MFI->getPreloadedReg(
+  Register ScratchWaveOffsetReg = MFI->getPreloadedReg(
       AMDGPUFunctionArgInfo::PRIVATE_SEGMENT_WAVE_BYTE_OFFSET);
   // FIXME: Hack to not crash in situations which emitted an error.
-  if (PreloadedScratchWaveOffsetReg == AMDGPU::NoRegister)
+  if (ScratchWaveOffsetReg == AMDGPU::NoRegister)
     return;
 
-  // We added live-ins during argument lowering, but since they were not used
-  // they were deleted. We're adding the uses now, so add them back.
-  MRI.addLiveIn(PreloadedScratchWaveOffsetReg);
-  MBB.addLiveIn(PreloadedScratchWaveOffsetReg);
+  // We need to do the replacement of the private segment buffer register even
+  // if there are no stack objects. There could be stores to undef or a
+  // constant without an associated object.
+  //
+  // This will return `AMDGPU::NoRegister` in cases where there are no actual
+  // uses of the SRSRC.
+  Register ScratchRsrcReg =
+      getEntryFunctionReservedScratchRsrcReg(MF, ScratchWaveOffsetReg);
 
+  // Make the selected register live throughout the function.
+  if (ScratchRsrcReg != AMDGPU::NoRegister) {
+    for (MachineBasicBlock &OtherBB : MF) {
+      if (&OtherBB != &MBB) {
+        OtherBB.addLiveIn(ScratchRsrcReg);
+      }
+    }
+  }
+
+  // Now that we have fixed the reserved SRSRC we need to locate the
+  // (potentially) preloaded SRSRC.
   Register PreloadedScratchRsrcReg = AMDGPU::NoRegister;
   if (ST.isAmdHsaOrMesa(F)) {
     PreloadedScratchRsrcReg =
         MFI->getPreloadedReg(AMDGPUFunctionArgInfo::PRIVATE_SEGMENT_BUFFER);
     if (ScratchRsrcReg != AMDGPU::NoRegister &&
         PreloadedScratchRsrcReg != AMDGPU::NoRegister) {
+      // We added live-ins during argument lowering, but since they were not
+      // used they were deleted. We're adding the uses now, so add them back.
       MRI.addLiveIn(PreloadedScratchRsrcReg);
       MBB.addLiveIn(PreloadedScratchRsrcReg);
     }
   }
 
+  // Debug location must be unknown since the first debug location is used to
+  // determine the end of the prologue.
   DebugLoc DL;
   MachineBasicBlock::iterator I = MBB.begin();
 
-  const bool HasFP = hasFP(MF);
-
-  // If we are not HSA or we happened to reserved the original input registers,
-  // we don't need to copy to the reserved registers.
-  const bool CopyBuffer = ST.isAmdHsaOrMesa(F) &&
-                          ScratchRsrcReg != AMDGPU::NoRegister &&
-                          PreloadedScratchRsrcReg != AMDGPU::NoRegister &&
-                          ScratchRsrcReg != PreloadedScratchRsrcReg;
-
-  // This needs to be careful of the copying order to avoid overwriting one of
-  // the input registers before it's been copied to it's final
-  // destination. Usually the offset should be copied first.
-  const bool CopyBufferFirst =
-      TRI->isSubRegisterEq(PreloadedScratchRsrcReg, ScratchWaveOffsetReg);
-
-  if (CopyBuffer && CopyBufferFirst) {
-    BuildMI(MBB, I, DL, TII->get(AMDGPU::COPY), ScratchRsrcReg)
-        .addReg(PreloadedScratchRsrcReg, RegState::Kill);
-  }
-
-  if (ScratchWaveOffsetReg != AMDGPU::NoRegister) {
-    BuildMI(MBB, I, DL, TII->get(AMDGPU::COPY), ScratchWaveOffsetReg)
-        .addReg(PreloadedScratchWaveOffsetReg, HasFP ? RegState::Kill : 0);
-  }
-
-  if (CopyBuffer && !CopyBufferFirst) {
-    BuildMI(MBB, I, DL, TII->get(AMDGPU::COPY), ScratchRsrcReg)
-        .addReg(PreloadedScratchRsrcReg, RegState::Kill);
-  }
-
-  // FIXME: This should also implement the setup path for HSA.
-  if (ScratchRsrcReg != AMDGPU::NoRegister) {
-    emitEntryFunctionScratchRsrcRegSetup(
-        MF, MBB, I, DL, PreloadedScratchRsrcReg, ScratchRsrcReg);
-  }
-
-  if (HasFP) {
-    const MachineFrameInfo &FrameInfo = MF.getFrameInfo();
-    int64_t StackSize = FrameInfo.getStackSize();
-
+  if (MF.getFrameInfo().hasCalls()) {
     Register SPReg = MFI->getStackPtrOffsetReg();
     assert(SPReg != AMDGPU::SP_REG);
+    BuildMI(MBB, I, DL, TII->get(AMDGPU::S_MOV_B32), SPReg)
+        .addImm(MF.getFrameInfo().getStackSize() * ST.getWavefrontSize());
+  }
 
-    // On kernel entry, the private scratch wave offset is the SP value.
-    if (StackSize == 0) {
-      BuildMI(MBB, I, DL, TII->get(AMDGPU::COPY), SPReg)
-        .addReg(MFI->getScratchWaveOffsetReg());
-    } else {
-      BuildMI(MBB, I, DL, TII->get(AMDGPU::S_ADD_U32), SPReg)
-        .addReg(MFI->getScratchWaveOffsetReg())
-        .addImm(StackSize * ST.getWavefrontSize());
-    }
+  if (hasFP(MF)) {
+    Register FPReg = MFI->getFrameOffsetReg();
+    assert(FPReg != AMDGPU::FP_REG);
+    BuildMI(MBB, I, DL, TII->get(AMDGPU::S_MOV_B32), FPReg).addImm(0);
+  }
+
+  if (MFI->hasFlatScratchInit() || ScratchRsrcReg != AMDGPU::NoRegister) {
+    MRI.addLiveIn(ScratchWaveOffsetReg);
+    MBB.addLiveIn(ScratchWaveOffsetReg);
   }
 
   if (MFI->hasFlatScratchInit()) {
-    emitEntryFunctionFlatScratchInit(MF, MBB, I, DL,
-                                     MFI->getScratchWaveOffsetReg());
+    emitEntryFunctionFlatScratchInit(MF, MBB, I, DL, ScratchWaveOffsetReg);
+  }
+
+  if (ScratchRsrcReg != AMDGPU::NoRegister) {
+    emitEntryFunctionScratchRsrcRegSetup(MF, MBB, I, DL,
+                                         PreloadedScratchRsrcReg,
+                                         ScratchRsrcReg, ScratchWaveOffsetReg);
   }
 }
 
-// Emit scratch RSRC setup code, assuming `ScratchRsrcReg != AMDGPU::NoRegister`
+// Emit scratch RSRC setup code, assuming `ScratchRsrcReg != AMDGPU::NoReg`
 void SIFrameLowering::emitEntryFunctionScratchRsrcRegSetup(
     MachineFunction &MF, MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
     const DebugLoc &DL, Register PreloadedScratchRsrcReg,
-    Register ScratchRsrcReg) const {
+    Register ScratchRsrcReg, Register ScratchWaveOffsetReg) const {
 
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIInstrInfo *TII = ST.getInstrInfo();
@@ -646,7 +536,37 @@ void SIFrameLowering::emitEntryFunctionScratchRsrcRegSetup(
     BuildMI(MBB, I, DL, SMovB32, Rsrc3)
       .addImm(Rsrc23 >> 32)
       .addReg(ScratchRsrcReg, RegState::ImplicitDefine);
+  } else if (ST.isAmdHsaOrMesa(Fn)) {
+    assert(PreloadedScratchRsrcReg != AMDGPU::NoRegister);
+
+    if (ScratchRsrcReg != PreloadedScratchRsrcReg) {
+      BuildMI(MBB, I, DL, TII->get(AMDGPU::COPY), ScratchRsrcReg)
+          .addReg(PreloadedScratchRsrcReg, RegState::Kill);
+    }
   }
+
+  // Add the scratch wave offset into the scratch RSRC.
+  //
+  // We only want to update the first 48 bits, which is the base address
+  // pointer, without touching the adjacent 16 bits of flags. We know this add
+  // cannot carry-out from bit 47, otherwise the scratch allocation would be
+  // impossible to fit in the 48-bit global address space.
+  //
+  // TODO: Evaluate if it is better to just construct an SRD using the flat
+  // scratch init and some constants rather than update the one we are passed.
+  Register ScratchRsrcSub0 = TRI->getSubReg(ScratchRsrcReg, AMDGPU::sub0);
+  Register ScratchRsrcSub1 = TRI->getSubReg(ScratchRsrcReg, AMDGPU::sub1);
+
+  // We cannot Kill ScratchWaveOffsetReg here because we allow it to be used in
+  // the kernel body via inreg arguments.
+  BuildMI(MBB, I, DL, TII->get(AMDGPU::S_ADD_U32), ScratchRsrcSub0)
+      .addReg(ScratchRsrcSub0)
+      .addReg(ScratchWaveOffsetReg)
+      .addReg(ScratchRsrcReg, RegState::ImplicitDefine);
+  BuildMI(MBB, I, DL, TII->get(AMDGPU::S_ADDC_U32), ScratchRsrcSub1)
+      .addReg(ScratchRsrcSub1)
+      .addImm(0)
+      .addReg(ScratchRsrcReg, RegState::ImplicitDefine);
 }
 
 bool SIFrameLowering::isSupportedStackID(TargetStackID::Value ID) const {
@@ -1113,19 +1033,17 @@ MachineBasicBlock::iterator SIFrameLowering::eliminateCallFramePseudoInstr(
 
 bool SIFrameLowering::hasFP(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  if (MFI.hasCalls()) {
+
+  // For entry functions we can use an immediate offset in most cases, so the
+  // presence of calls doesn't imply we need a distinct frame pointer.
+  if (MFI.hasCalls() &&
+      !MF.getInfo<SIMachineFunctionInfo>()->isEntryFunction()) {
     // All offsets are unsigned, so need to be addressed in the same direction
     // as stack growth.
 
     // FIXME: This function is pretty broken, since it can be called before the
     // frame layout is determined or CSR spills are inserted.
-    if (MFI.getStackSize() != 0)
-      return true;
-
-    // For the entry point, the input wave scratch offset must be copied to the
-    // API SP if there are calls.
-    if (MF.getInfo<SIMachineFunctionInfo>()->isEntryFunction())
-      return true;
+    return MFI.getStackSize() != 0;
   }
 
   return MFI.hasVarSizedObjects() || MFI.isFrameAddressTaken() ||

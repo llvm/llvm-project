@@ -531,13 +531,13 @@ entry:
 
 ; GCN-LABEL: {{^}}load_private_hi_v2i16_reglo_vreg_nooff:
 ; GCN: s_waitcnt
-; GFX900: buffer_load_short_d16_hi v0, off, s[0:3], s33 offset:4094{{$}}
+; GFX900: buffer_load_short_d16_hi v0, off, s[0:3], 0 offset:4094{{$}}
 ; GFX900: s_waitcnt
 ; GFX900-NEXT: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, v0
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: s_setpc_b64
 
-; NO-D16-HI: buffer_load_ushort v{{[0-9]+}}, off, s[0:3], s33 offset:4094{{$}}
+; NO-D16-HI: buffer_load_ushort v{{[0-9]+}}, off, s[0:3], 0 offset:4094{{$}}
 define void @load_private_hi_v2i16_reglo_vreg_nooff(i16 addrspace(5)* byval %in, i16 %reg) #0 {
 entry:
   %load = load volatile i16, i16 addrspace(5)* inttoptr (i32 4094 to i16 addrspace(5)*)
@@ -549,13 +549,13 @@ entry:
 
 ; GCN-LABEL: {{^}}load_private_hi_v2f16_reglo_vreg_nooff:
 ; GCN: s_waitcnt
-; GFX900-NEXT: buffer_load_short_d16_hi v1, off, s[0:3], s33 offset:4094{{$}}
+; GFX900-NEXT: buffer_load_short_d16_hi v1, off, s[0:3], 0 offset:4094{{$}}
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, v1
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: s_setpc_b64
 
-; NO-D16-HI: buffer_load_ushort v{{[0-9]+}}, off, s[0:3], s33 offset:4094{{$}}
+; NO-D16-HI: buffer_load_ushort v{{[0-9]+}}, off, s[0:3], 0 offset:4094{{$}}
 define void @load_private_hi_v2f16_reglo_vreg_nooff(half addrspace(5)* %in, half %reg) #0 {
 entry:
   %load = load volatile half, half addrspace(5)* inttoptr (i32 4094 to half addrspace(5)*)
@@ -649,13 +649,13 @@ entry:
 
 ; GCN-LABEL: {{^}}load_private_hi_v2i16_reglo_vreg_nooff_zexti8:
 ; GCN: s_waitcnt
-; GFX900-NEXT: buffer_load_ubyte_d16_hi v1, off, s[0:3], s33 offset:4094{{$}}
+; GFX900-NEXT: buffer_load_ubyte_d16_hi v1, off, s[0:3], 0 offset:4094{{$}}
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, v1
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: s_setpc_b64
 
-; NO-D16-HI: buffer_load_ubyte v0, off, s[0:3], s33 offset:4094{{$}}
+; NO-D16-HI: buffer_load_ubyte v0, off, s[0:3], 0 offset:4094{{$}}
 define void @load_private_hi_v2i16_reglo_vreg_nooff_zexti8(i8 addrspace(5)* %in, i16 %reg) #0 {
 entry:
   %load = load volatile i8, i8 addrspace(5)* inttoptr (i32 4094 to i8 addrspace(5)*)
@@ -668,13 +668,13 @@ entry:
 
 ; GCN-LABEL: {{^}}load_private_hi_v2i16_reglo_vreg_nooff_sexti8:
 ; GCN: s_waitcnt
-; GFX900-NEXT: buffer_load_sbyte_d16_hi v1, off, s[0:3], s33 offset:4094{{$}}
+; GFX900-NEXT: buffer_load_sbyte_d16_hi v1, off, s[0:3], 0 offset:4094{{$}}
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, v1
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: s_setpc_b64
 
-; NO-D16-HI: buffer_load_sbyte v0, off, s[0:3], s33 offset:4094{{$}}
+; NO-D16-HI: buffer_load_sbyte v0, off, s[0:3], 0 offset:4094{{$}}
 define void @load_private_hi_v2i16_reglo_vreg_nooff_sexti8(i8 addrspace(5)* %in, i16 %reg) #0 {
 entry:
   %load = load volatile i8, i8 addrspace(5)* inttoptr (i32 4094 to i8 addrspace(5)*)
@@ -687,13 +687,13 @@ entry:
 
 ; GCN-LABEL: {{^}}load_private_hi_v2f16_reglo_vreg_nooff_zexti8:
 ; GCN: s_waitcnt
-; GFX900-NEXT: buffer_load_ubyte_d16_hi v1, off, s[0:3], s33 offset:4094{{$}}
+; GFX900-NEXT: buffer_load_ubyte_d16_hi v1, off, s[0:3], 0 offset:4094{{$}}
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, v1
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: s_setpc_b64
 
-; NO-D16-HI: buffer_load_ubyte v0, off, s[0:3], s33 offset:4094{{$}}
+; NO-D16-HI: buffer_load_ubyte v0, off, s[0:3], 0 offset:4094{{$}}
 define void @load_private_hi_v2f16_reglo_vreg_nooff_zexti8(i8 addrspace(5)* %in, half %reg) #0 {
 entry:
   %load = load volatile i8, i8 addrspace(5)* inttoptr (i32 4094 to i8 addrspace(5)*)

@@ -3,7 +3,7 @@
 ; FIXME: Requires stack object to not assert
 ; GCN-LABEL: {{^}}test_ps:
 ; GCN: s_load_dwordx2 s[4:5], s[0:1], 0x0
-; GCN: buffer_store_dword v0, off, s[4:7], s2 offset:4
+; GCN: buffer_store_dword v0, off, s[4:7], 0 offset:4
 ; GCN: s_load_dword s{{[0-9]+}}, s[0:1], 0x0
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: ; return
@@ -18,7 +18,7 @@ define amdgpu_ps i32 @test_ps() #1 {
 
 ; GCN-LABEL: {{^}}test_cs:
 ; GCN: s_mov_b64 s[4:5], s[0:1]
-; GCN: buffer_store_dword v{{[0-9]+}}, off, s[4:7], s2 offset:4
+; GCN: buffer_store_dword v{{[0-9]+}}, off, s[4:7], 0 offset:4
 ; GCN: s_load_dword s0, s[0:1], 0x0
 define amdgpu_cs i32 @test_cs() #1 {
   %alloca = alloca i32, addrspace(5)

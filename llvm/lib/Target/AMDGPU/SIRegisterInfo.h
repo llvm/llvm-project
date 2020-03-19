@@ -50,11 +50,6 @@ public:
   /// spilling is needed.
   unsigned reservedPrivateSegmentBufferReg(const MachineFunction &MF) const;
 
-  /// Return the end register initially reserved for the scratch wave offset in
-  /// case spilling is needed.
-  unsigned reservedPrivateSegmentWaveByteOffsetReg(
-    const MachineFunction &MF) const;
-
   BitVector getReservedRegs(const MachineFunction &MF) const override;
 
   const MCPhysReg *getCalleeSavedRegs(const MachineFunction *MF) const override;

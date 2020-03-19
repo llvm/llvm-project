@@ -133,7 +133,7 @@ define amdgpu_kernel void @use_flat_to_group_addrspacecast(i32* %ptr) #0 {
 ; HSA-DAG: v_mov_b32_e32 v[[VPTR_LO:[0-9]+]], s[[PTR_LO]]
 ; HSA-DAG: v_cndmask_b32_e32 [[CASTPTR:v[0-9]+]], 0, v[[VPTR_LO]]
 ; HSA-DAG: v_mov_b32_e32 v[[K:[0-9]+]], 0{{$}}
-; HSA: buffer_store_dword v[[K]], [[CASTPTR]], s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}} offen{{$}}
+; HSA: buffer_store_dword v[[K]], [[CASTPTR]], s{{\[[0-9]+:[0-9]+\]}}, 0 offen{{$}}
 define amdgpu_kernel void @use_flat_to_private_addrspacecast(i32* %ptr) #0 {
   %ftos = addrspacecast i32* %ptr to i32 addrspace(5)*
   store volatile i32 0, i32 addrspace(5)* %ftos
@@ -231,7 +231,7 @@ define amdgpu_kernel void @cast_0_private_to_flat_addrspacecast() #0 {
 
 ; HSA-LABEL: {{^}}cast_0_flat_to_private_addrspacecast:
 ; HSA: v_mov_b32_e32 [[K:v[0-9]+]], 7{{$}}
-; HSA: buffer_store_dword [[K]], off, s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+$}}
+; HSA: buffer_store_dword [[K]], off, s{{\[[0-9]+:[0-9]+\]}}, 0
 define amdgpu_kernel void @cast_0_flat_to_private_addrspacecast() #0 {
   %cast = addrspacecast i32* null to i32 addrspace(5)*
   store volatile i32 7, i32 addrspace(5)* %cast
