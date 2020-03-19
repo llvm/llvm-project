@@ -17464,7 +17464,10 @@ public:
     S.MarkDeclRefReferenced(E);
   }
 
-  void VisitMemberExpr(MemberExpr *E) { S.MarkMemberReferenced(E); }
+  void VisitMemberExpr(MemberExpr *E) {
+    S.MarkMemberReferenced(E);
+    Visit(E->getBase());
+  }
 };
 } // namespace
 
