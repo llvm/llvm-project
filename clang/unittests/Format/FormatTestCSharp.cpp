@@ -628,7 +628,6 @@ TEST_F(FormatTestCSharp, CSharpSpaces) {
   verifyFormat(R"(catch (TestException) when (innerFinallyExecuted))", Style);
   verifyFormat(R"(private float[,] Values;)", Style);
   verifyFormat(R"(Result this[Index x] => Foo(x);)", Style);
-  verifyFormat(R"(class ItemFactory<T> where T : new() {})", Style);
 
   Style.SpacesInSquareBrackets = true;
   verifyFormat(R"(private float[ , ] Values;)", Style);
@@ -669,6 +668,23 @@ if (someThings[index].Contains(myThing)) {
 
   verifyFormat(R"(//
 if (someThings[i][j][k].Contains(myThing)) {
+})",
+               Style);
+}
+
+TEST_F(FormatTestCSharp, CSharpGenericTypeConstraints) {
+  FormatStyle Style = getGoogleStyle(FormatStyle::LK_CSharp);
+
+  verifyFormat(R"(//
+class ItemFactory<T>
+    where T : new() {})", Style);
+
+  verifyFormat(R"(//
+class Dictionary<TKey, TVal>
+    where TKey : IComparable<TKey>
+    where TVal : IMyInterface {
+  public void MyMethod<T>(T t)
+      where T : IMyInterface { doThing(); }
 })",
                Style);
 }
