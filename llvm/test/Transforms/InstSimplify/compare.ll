@@ -795,38 +795,79 @@ define i1 @udiv8(i32 %X, i32 %Y) {
   ret i1 %C
 }
 
+; Square of a non-zero number is non-zero if there is no overflow.
 define i1 @mul1(i32 %X) {
 ; CHECK-LABEL: @mul1(
 ; CHECK-NEXT:    ret i1 false
 ;
-; Square of a non-zero number is non-zero if there is no overflow.
   %Y = or i32 %X, 1
   %M = mul nuw i32 %Y, %Y
   %C = icmp eq i32 %M, 0
   ret i1 %C
 }
 
+define i1 @mul1v(<2 x i32> %X) {
+; CHECK-LABEL: @mul1v(
+; CHECK-NEXT:    [[Y:%.*]] = or <2 x i32> [[X:%.*]], <i32 1, i32 0>
+; CHECK-NEXT:    [[M:%.*]] = mul nuw <2 x i32> [[Y]], [[Y]]
+; CHECK-NEXT:    [[E:%.*]] = extractelement <2 x i32> [[M]], i32 0
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[E]], 0
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %Y = or <2 x i32> %X, <i32 1, i32 0>
+  %M = mul nuw <2 x i32> %Y, %Y
+  %E = extractelement <2 x i32> %M, i32 0
+  %C = icmp eq i32 %E, 0
+  ret i1 %C
+}
+
+; Square of a non-zero number is positive if there is no signed overflow.
 define i1 @mul2(i32 %X) {
 ; CHECK-LABEL: @mul2(
 ; CHECK-NEXT:    ret i1 true
 ;
-; Square of a non-zero number is positive if there is no signed overflow.
   %Y = or i32 %X, 1
   %M = mul nsw i32 %Y, %Y
   %C = icmp sgt i32 %M, 0
   ret i1 %C
 }
 
+define i1 @mul2v(<2 x i32> %X) {
+; CHECK-LABEL: @mul2v(
+; CHECK-NEXT:    [[Y:%.*]] = or <2 x i32> [[X:%.*]], <i32 0, i32 1>
+; CHECK-NEXT:    [[M:%.*]] = mul nsw <2 x i32> [[Y]], [[Y]]
+; CHECK-NEXT:    [[E:%.*]] = extractelement <2 x i32> [[M]], i32 1
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt i32 [[E]], 0
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %Y = or <2 x i32> %X, <i32 0, i32 1>
+  %M = mul nsw <2 x i32> %Y, %Y
+  %E = extractelement <2 x i32> %M, i32 1
+  %C = icmp sgt i32 %E, 0
+  ret i1 %C
+}
+
+; Product of non-negative numbers is non-negative if there is no signed overflow.
 define i1 @mul3(i32 %X, i32 %Y) {
 ; CHECK-LABEL: @mul3(
 ; CHECK-NEXT:    ret i1 true
 ;
-; Product of non-negative numbers is non-negative if there is no signed overflow.
   %XX = mul nsw i32 %X, %X
   %YY = mul nsw i32 %Y, %Y
   %M = mul nsw i32 %XX, %YY
   %C = icmp sge i32 %M, 0
   ret i1 %C
+}
+
+define <2 x i1> @mul3v(<2 x i32> %X, <2 x i32> %Y) {
+; CHECK-LABEL: @mul3v(
+; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+;
+  %XX = mul nsw <2 x i32> %X, %X
+  %YY = mul nsw <2 x i32> %Y, %Y
+  %M = mul nsw <2 x i32> %XX, %YY
+  %C = icmp sge <2 x i32> %M, zeroinitializer
+  ret <2 x i1> %C
 }
 
 define <2 x i1> @vectorselect1(<2 x i1> %cond) {
