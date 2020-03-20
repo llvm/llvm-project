@@ -2760,6 +2760,12 @@ Instruction *InstCombiner::visitFree(CallInst &FI) {
   return nullptr;
 }
 
+static bool isMustTailCall(Value *V) {
+  if (auto *CI = dyn_cast<CallInst>(V))
+    return CI->isMustTailCall();
+  return false;
+}
+
 Instruction *InstCombiner::visitReturnInst(ReturnInst &RI) {
   if (RI.getNumOperands() == 0) // ret void
     return nullptr;
@@ -2767,6 +2773,10 @@ Instruction *InstCombiner::visitReturnInst(ReturnInst &RI) {
   Value *ResultOp = RI.getOperand(0);
   Type *VTy = ResultOp->getType();
   if (!VTy->isIntegerTy() || isa<Constant>(ResultOp))
+    return nullptr;
+
+  // Don't replace result of musttail calls.
+  if (isMustTailCall(ResultOp))
     return nullptr;
 
   // There might be assume intrinsics dominating this return that completely
@@ -3484,7 +3494,8 @@ bool InstCombiner::run() {
     // In general, it is possible for computeKnownBits to determine all bits in
     // a value even when the operands are not all constants.
     Type *Ty = I->getType();
-    if (ExpensiveCombines && !I->use_empty() && Ty->isIntOrIntVectorTy()) {
+    if (ExpensiveCombines && !I->use_empty() && Ty->isIntOrIntVectorTy() &&
+        !isMustTailCall(I)) {
       KnownBits Known = computeKnownBits(I, /*Depth*/0, I);
       if (Known.isConstant()) {
         Constant *C = ConstantInt::get(Ty, Known.getConstant());
