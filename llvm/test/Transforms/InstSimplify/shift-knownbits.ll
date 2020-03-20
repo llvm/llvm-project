@@ -181,10 +181,7 @@ define <2 x i8> @lshr_ctlz_zero_is_undef_splat_vec(<2 x i8> %x) {
 
 define i8 @lshr_ctlz_zero_is_undef_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @lshr_ctlz_zero_is_undef_vec(
-; CHECK-NEXT:    [[CT:%.*]] = call <2 x i8> @llvm.ctlz.v2i8(<2 x i8> [[X:%.*]], i1 true)
-; CHECK-NEXT:    [[SH:%.*]] = lshr <2 x i8> [[CT]], <i8 3, i8 0>
-; CHECK-NEXT:    [[EX:%.*]] = extractelement <2 x i8> [[SH]], i32 0
-; CHECK-NEXT:    ret i8 [[EX]]
+; CHECK-NEXT:    ret i8 0
 ;
   %ct = call <2 x i8> @llvm.ctlz.v2i8(<2 x i8> %x, i1 true)
   %sh = lshr <2 x i8> %ct, <i8 3, i8 0>
@@ -203,10 +200,7 @@ define <2 x i8> @lshr_cttz_zero_is_undef_splat_vec(<2 x i8> %x) {
 
 define i8 @lshr_cttz_zero_is_undef_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @lshr_cttz_zero_is_undef_vec(
-; CHECK-NEXT:    [[CT:%.*]] = call <2 x i8> @llvm.cttz.v2i8(<2 x i8> [[X:%.*]], i1 true)
-; CHECK-NEXT:    [[SH:%.*]] = lshr <2 x i8> [[CT]], <i8 3, i8 0>
-; CHECK-NEXT:    [[EX:%.*]] = extractelement <2 x i8> [[SH]], i32 0
-; CHECK-NEXT:    ret i8 [[EX]]
+; CHECK-NEXT:    ret i8 0
 ;
   %ct = call <2 x i8> @llvm.cttz.v2i8(<2 x i8> %x, i1 true)
   %sh = lshr <2 x i8> %ct, <i8 3, i8 0>
