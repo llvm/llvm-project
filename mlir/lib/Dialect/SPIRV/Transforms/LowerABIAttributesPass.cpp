@@ -138,7 +138,7 @@ namespace {
 class ProcessInterfaceVarABI final : public SPIRVOpLowering<spirv::FuncOp> {
 public:
   using SPIRVOpLowering<spirv::FuncOp>::SPIRVOpLowering;
-  PatternMatchResult
+  LogicalResult
   matchAndRewrite(spirv::FuncOp funcOp, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override;
 };
@@ -151,13 +151,13 @@ private:
 };
 } // namespace
 
-PatternMatchResult ProcessInterfaceVarABI::matchAndRewrite(
+LogicalResult ProcessInterfaceVarABI::matchAndRewrite(
     spirv::FuncOp funcOp, ArrayRef<Value> operands,
     ConversionPatternRewriter &rewriter) const {
   if (!funcOp.getAttrOfType<spirv::EntryPointABIAttr>(
           spirv::getEntryPointABIAttrName())) {
     // TODO(ravishankarm) : Non-entry point functions are not handled.
-    return matchFailure();
+    return failure();
   }
   TypeConverter::SignatureConversion signatureConverter(
       funcOp.getType().getNumInputs());
@@ -171,12 +171,12 @@ PatternMatchResult ProcessInterfaceVarABI::matchAndRewrite(
       // to pass around scalar/vector values and return a scalar/vector. For now
       // non-entry point functions are not handled in this ABI lowering and will
       // produce an error.
-      return matchFailure();
+      return failure();
     }
     auto var =
         createGlobalVariableForArg(funcOp, rewriter, argType.index(), abiInfo);
     if (!var) {
-      return matchFailure();
+      return failure();
     }
 
     OpBuilder::InsertionGuard funcInsertionGuard(rewriter);
@@ -207,7 +207,7 @@ PatternMatchResult ProcessInterfaceVarABI::matchAndRewrite(
         signatureConverter.getConvertedTypes(), llvm::None));
     rewriter.applySignatureConversion(&funcOp.getBody(), signatureConverter);
   });
-  return matchSuccess();
+  return success();
 }
 
 void LowerABIAttributesPass::runOnOperation() {

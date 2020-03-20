@@ -31,7 +31,7 @@ class ConstantCompositeOpConversion final : public SPIRVOpLowering<ConstantOp> {
 public:
   using SPIRVOpLowering<ConstantOp>::SPIRVOpLowering;
 
-  PatternMatchResult
+  LogicalResult
   matchAndRewrite(ConstantOp constCompositeOp, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override;
 };
@@ -45,7 +45,7 @@ class ConstantIndexOpConversion final : public SPIRVOpLowering<ConstantOp> {
 public:
   using SPIRVOpLowering<ConstantOp>::SPIRVOpLowering;
 
-  PatternMatchResult
+  LogicalResult
   matchAndRewrite(ConstantOp constIndexOp, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override;
 };
@@ -55,7 +55,7 @@ class CmpFOpConversion final : public SPIRVOpLowering<CmpFOp> {
 public:
   using SPIRVOpLowering<CmpFOp>::SPIRVOpLowering;
 
-  PatternMatchResult
+  LogicalResult
   matchAndRewrite(CmpFOp cmpFOp, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override;
 };
@@ -65,7 +65,7 @@ class CmpIOpConversion final : public SPIRVOpLowering<CmpIOp> {
 public:
   using SPIRVOpLowering<CmpIOp>::SPIRVOpLowering;
 
-  PatternMatchResult
+  LogicalResult
   matchAndRewrite(CmpIOp cmpIOp, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override;
 };
@@ -81,14 +81,14 @@ class IntegerOpConversion final : public SPIRVOpLowering<StdOp> {
 public:
   using SPIRVOpLowering<StdOp>::SPIRVOpLowering;
 
-  PatternMatchResult
+  LogicalResult
   matchAndRewrite(StdOp operation, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     auto resultType =
         this->typeConverter.convertType(operation.getResult().getType());
     rewriter.template replaceOpWithNewOp<SPIRVOp>(
         operation, resultType, operands, ArrayRef<NamedAttribute>());
-    return this->matchSuccess();
+    return success();
   }
 };
 
@@ -100,7 +100,7 @@ class LoadOpConversion final : public SPIRVOpLowering<LoadOp> {
 public:
   using SPIRVOpLowering<LoadOp>::SPIRVOpLowering;
 
-  PatternMatchResult
+  LogicalResult
   matchAndRewrite(LoadOp loadOp, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override;
 };
@@ -111,7 +111,7 @@ class ReturnOpConversion final : public SPIRVOpLowering<ReturnOp> {
 public:
   using SPIRVOpLowering<ReturnOp>::SPIRVOpLowering;
 
-  PatternMatchResult
+  LogicalResult
   matchAndRewrite(ReturnOp returnOp, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override;
 };
@@ -121,7 +121,7 @@ public:
 class SelectOpConversion final : public SPIRVOpLowering<SelectOp> {
 public:
   using SPIRVOpLowering<SelectOp>::SPIRVOpLowering;
-  PatternMatchResult
+  LogicalResult
   matchAndRewrite(SelectOp op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override;
 };
@@ -134,7 +134,7 @@ class StoreOpConversion final : public SPIRVOpLowering<StoreOp> {
 public:
   using SPIRVOpLowering<StoreOp>::SPIRVOpLowering;
 
-  PatternMatchResult
+  LogicalResult
   matchAndRewrite(StoreOp storeOp, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override;
 };
@@ -145,22 +145,22 @@ public:
 // ConstantOp with composite type.
 //===----------------------------------------------------------------------===//
 
-PatternMatchResult ConstantCompositeOpConversion::matchAndRewrite(
+LogicalResult ConstantCompositeOpConversion::matchAndRewrite(
     ConstantOp constCompositeOp, ArrayRef<Value> operands,
     ConversionPatternRewriter &rewriter) const {
   auto compositeType =
       constCompositeOp.getResult().getType().dyn_cast<RankedTensorType>();
   if (!compositeType)
-    return matchFailure();
+    return failure();
 
   auto spirvCompositeType = typeConverter.convertType(compositeType);
   if (!spirvCompositeType)
-    return matchFailure();
+    return failure();
 
   auto linearizedElements =
       constCompositeOp.value().dyn_cast<DenseElementsAttr>();
   if (!linearizedElements)
-    return matchFailure();
+    return failure();
 
   // If composite type has rank greater than one, then perform linearization.
   if (compositeType.getRank() > 1) {
@@ -171,24 +171,24 @@ PatternMatchResult ConstantCompositeOpConversion::matchAndRewrite(
 
   rewriter.replaceOpWithNewOp<spirv::ConstantOp>(
       constCompositeOp, spirvCompositeType, linearizedElements);
-  return matchSuccess();
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
 // ConstantOp with index type.
 //===----------------------------------------------------------------------===//
 
-PatternMatchResult ConstantIndexOpConversion::matchAndRewrite(
+LogicalResult ConstantIndexOpConversion::matchAndRewrite(
     ConstantOp constIndexOp, ArrayRef<Value> operands,
     ConversionPatternRewriter &rewriter) const {
   if (!constIndexOp.getResult().getType().isa<IndexType>()) {
-    return matchFailure();
+    return failure();
   }
   // The attribute has index type which is not directly supported in
   // SPIR-V. Get the integer value and create a new IntegerAttr.
   auto constAttr = constIndexOp.value().dyn_cast<IntegerAttr>();
   if (!constAttr) {
-    return matchFailure();
+    return failure();
   }
 
   // Use the bitwidth set in the value attribute to decide the result type
@@ -197,7 +197,7 @@ PatternMatchResult ConstantIndexOpConversion::matchAndRewrite(
   auto constVal = constAttr.getValue();
   auto constValType = constAttr.getType().dyn_cast<IndexType>();
   if (!constValType) {
-    return matchFailure();
+    return failure();
   }
   auto spirvConstType =
       typeConverter.convertType(constIndexOp.getResult().getType());
@@ -205,14 +205,14 @@ PatternMatchResult ConstantIndexOpConversion::matchAndRewrite(
       rewriter.getIntegerAttr(spirvConstType, constAttr.getInt());
   rewriter.replaceOpWithNewOp<spirv::ConstantOp>(constIndexOp, spirvConstType,
                                                  spirvConstVal);
-  return matchSuccess();
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
 // CmpFOp
 //===----------------------------------------------------------------------===//
 
-PatternMatchResult
+LogicalResult
 CmpFOpConversion::matchAndRewrite(CmpFOp cmpFOp, ArrayRef<Value> operands,
                                   ConversionPatternRewriter &rewriter) const {
   CmpFOpOperandAdaptor cmpFOpOperands(operands);
@@ -223,7 +223,7 @@ CmpFOpConversion::matchAndRewrite(CmpFOp cmpFOp, ArrayRef<Value> operands,
     rewriter.replaceOpWithNewOp<spirvOp>(cmpFOp, cmpFOp.getResult().getType(), \
                                          cmpFOpOperands.lhs(),                 \
                                          cmpFOpOperands.rhs());                \
-    return matchSuccess();
+    return success();
 
     // Ordered.
     DISPATCH(CmpFPredicate::OEQ, spirv::FOrdEqualOp);
@@ -245,14 +245,14 @@ CmpFOpConversion::matchAndRewrite(CmpFOp cmpFOp, ArrayRef<Value> operands,
   default:
     break;
   }
-  return matchFailure();
+  return failure();
 }
 
 //===----------------------------------------------------------------------===//
 // CmpIOp
 //===----------------------------------------------------------------------===//
 
-PatternMatchResult
+LogicalResult
 CmpIOpConversion::matchAndRewrite(CmpIOp cmpIOp, ArrayRef<Value> operands,
                                   ConversionPatternRewriter &rewriter) const {
   CmpIOpOperandAdaptor cmpIOpOperands(operands);
@@ -263,7 +263,7 @@ CmpIOpConversion::matchAndRewrite(CmpIOp cmpIOp, ArrayRef<Value> operands,
     rewriter.replaceOpWithNewOp<spirvOp>(cmpIOp, cmpIOp.getResult().getType(), \
                                          cmpIOpOperands.lhs(),                 \
                                          cmpIOpOperands.rhs());                \
-    return matchSuccess();
+    return success();
 
     DISPATCH(CmpIPredicate::eq, spirv::IEqualOp);
     DISPATCH(CmpIPredicate::ne, spirv::INotEqualOp);
@@ -278,14 +278,14 @@ CmpIOpConversion::matchAndRewrite(CmpIOp cmpIOp, ArrayRef<Value> operands,
 
 #undef DISPATCH
   }
-  return matchFailure();
+  return failure();
 }
 
 //===----------------------------------------------------------------------===//
 // LoadOp
 //===----------------------------------------------------------------------===//
 
-PatternMatchResult
+LogicalResult
 LoadOpConversion::matchAndRewrite(LoadOp loadOp, ArrayRef<Value> operands,
                                   ConversionPatternRewriter &rewriter) const {
   LoadOpOperandAdaptor loadOperands(operands);
@@ -293,42 +293,42 @@ LoadOpConversion::matchAndRewrite(LoadOp loadOp, ArrayRef<Value> operands,
       typeConverter, loadOp.memref().getType().cast<MemRefType>(),
       loadOperands.memref(), loadOperands.indices(), loadOp.getLoc(), rewriter);
   rewriter.replaceOpWithNewOp<spirv::LoadOp>(loadOp, loadPtr);
-  return matchSuccess();
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
 // ReturnOp
 //===----------------------------------------------------------------------===//
 
-PatternMatchResult
+LogicalResult
 ReturnOpConversion::matchAndRewrite(ReturnOp returnOp, ArrayRef<Value> operands,
                                     ConversionPatternRewriter &rewriter) const {
   if (returnOp.getNumOperands()) {
-    return matchFailure();
+    return failure();
   }
   rewriter.replaceOpWithNewOp<spirv::ReturnOp>(returnOp);
-  return matchSuccess();
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
 // SelectOp
 //===----------------------------------------------------------------------===//
 
-PatternMatchResult
+LogicalResult
 SelectOpConversion::matchAndRewrite(SelectOp op, ArrayRef<Value> operands,
                                     ConversionPatternRewriter &rewriter) const {
   SelectOpOperandAdaptor selectOperands(operands);
   rewriter.replaceOpWithNewOp<spirv::SelectOp>(op, selectOperands.condition(),
                                                selectOperands.true_value(),
                                                selectOperands.false_value());
-  return matchSuccess();
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
 // StoreOp
 //===----------------------------------------------------------------------===//
 
-PatternMatchResult
+LogicalResult
 StoreOpConversion::matchAndRewrite(StoreOp storeOp, ArrayRef<Value> operands,
                                    ConversionPatternRewriter &rewriter) const {
   StoreOpOperandAdaptor storeOperands(operands);
@@ -338,7 +338,7 @@ StoreOpConversion::matchAndRewrite(StoreOp storeOp, ArrayRef<Value> operands,
       rewriter);
   rewriter.replaceOpWithNewOp<spirv::StoreOp>(storeOp, storePtr,
                                               storeOperands.value());
-  return matchSuccess();
+  return success();
 }
 
 namespace {

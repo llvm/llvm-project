@@ -4,6 +4,12 @@ def ConstSigSetPtrType : ConstType<SigSetPtrType>;
 def RestrictSigSetType : RestrictedPtrType<SigSetType>;
 def ConstRestrictSigSetType : ConstType<RestrictSigSetType>;
 
+def StructSigaction : NamedType<"struct sigaction">;
+def StructSigactionPtr : PtrType<StructSigaction>;
+def ConstStructSigactionPtr : ConstType<StructSigactionPtr>;
+def RestrictStructSigactionPtr : RestrictedPtrType<StructSigaction>;
+def ConstRestrictStructSigactionPtr : ConstType<RestrictStructSigactionPtr>;
+
 def POSIX : StandardSpec<"POSIX"> {
   NamedType OffTType = NamedType<"off_t">;
 
@@ -137,9 +143,19 @@ def POSIX : StandardSpec<"POSIX"> {
   HeaderSpec Signal = HeaderSpec<
       "signal.h",
       [], // Macros
-      [], // Types
+      [
+        SigSetType,
+        StructSigaction,
+      ],
       [], // Enumerations
       [
+        FunctionSpec<
+          "sigaction",
+          RetValSpec<IntType>,
+          [ArgSpec<IntType>,
+           ArgSpec<ConstRestrictStructSigactionPtr>,
+           ArgSpec<RestrictStructSigactionPtr>]
+        >,
         FunctionSpec<
           "sigprocmask",
           RetValSpec<IntType>,

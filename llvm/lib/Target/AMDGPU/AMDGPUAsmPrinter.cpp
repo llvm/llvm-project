@@ -631,8 +631,7 @@ AMDGPUAsmPrinter::SIFunctionResourceInfo AMDGPUAsmPrinter::analyzeResourceUsage(
   Info.HasDynamicallySizedStack = FrameInfo.hasVarSizedObjects();
   Info.PrivateSegmentSize = FrameInfo.getStackSize();
   if (MFI->isStackRealigned())
-    Info.PrivateSegmentSize += FrameInfo.getMaxAlignment();
-
+    Info.PrivateSegmentSize += FrameInfo.getMaxAlign().value();
 
   Info.UsesVCC = MRI.isPhysRegUsed(AMDGPU::VCC_LO) ||
                  MRI.isPhysRegUsed(AMDGPU::VCC_HI);

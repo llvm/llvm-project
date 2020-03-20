@@ -9,9 +9,9 @@
 #ifndef MLIR_FXPMATH_UNIFORM_KERNEL_UTILS_H_
 #define MLIR_FXPMATH_UNIFORM_KERNEL_UTILS_H_
 
-#include "mlir/Dialect/QuantOps/QuantOps.h"
-#include "mlir/Dialect/QuantOps/QuantTypes.h"
-#include "mlir/Dialect/QuantOps/UniformSupport.h"
+#include "mlir/Dialect/Quant/QuantOps.h"
+#include "mlir/Dialect/Quant/QuantTypes.h"
+#include "mlir/Dialect/Quant/UniformSupport.h"
 #include "mlir/IR/Operation.h"
 
 #include <cmath>

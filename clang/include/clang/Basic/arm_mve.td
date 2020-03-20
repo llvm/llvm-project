@@ -202,6 +202,47 @@ let params = T.Float in {
   defm vfms: FMA<0>;
 }
 
+let params = T.Int, pnt = PNT_NType in {
+  def vmlaq_n: Intrinsic<
+    Vector, (args Vector:$addend, Vector:$m1, unpromoted<Scalar>:$m2_s),
+    (add (mul $m1, (splat $m2_s)), $addend)>;
+  def vmlasq_n: Intrinsic<
+    Vector, (args Vector:$m1, Vector:$m2, unpromoted<Scalar>:$addend_s),
+    (add (mul $m1, $m2), (splat $addend_s))>;
+
+  def vmlaq_m_n: Intrinsic<
+    Vector, (args Vector:$addend, Vector:$m1, Scalar:$m2_s, Predicate:$pred),
+    (IRInt<"vmla_n_predicated", [Vector, Predicate]>
+        $addend, $m1, $m2_s, $pred)>;
+  def vmlasq_m_n: Intrinsic<
+    Vector, (args Vector:$m1, Vector:$m2, Scalar:$addend_s, Predicate:$pred),
+    (IRInt<"vmlas_n_predicated", [Vector, Predicate]>
+        $m1, $m2, $addend_s, $pred)>;
+}
+
+multiclass VQDMLA {
+  def hq_n: Intrinsic<
+    Vector, (args Vector:$addend, Vector:$m1, Scalar:$m2_s),
+    (IRInt<NAME # "h", [Vector]> $addend, $m1, $m2_s)>;
+  def shq_n: Intrinsic<
+    Vector, (args Vector:$m1, Vector:$m2, Scalar:$addend_s),
+    (IRInt<NAME # "sh", [Vector]> $m1, $m2, $addend_s)>;
+
+  def hq_m_n: Intrinsic<
+    Vector, (args Vector:$addend, Vector:$m1, Scalar:$m2_s, Predicate:$pred),
+    (IRInt<NAME # "h_predicated", [Vector, Predicate]>
+         $addend, $m1, $m2_s, $pred)>;
+  def shq_m_n: Intrinsic<
+    Vector, (args Vector:$m1, Vector:$m2, Scalar:$addend_s, Predicate:$pred),
+    (IRInt<NAME # "sh_predicated", [Vector, Predicate]>
+         $m1, $m2, $addend_s, $pred)>;
+}
+
+let params = T.Signed, pnt = PNT_NType in {
+  defm vqdmla: VQDMLA;
+  defm vqrdmla: VQDMLA;
+}
+
 let params = !listconcat(T.Int16, T.Int32) in {
   let pnt = PNT_None in {
     def vmvnq_n: Intrinsic<Vector, (args imm_simd_vmvn:$imm),

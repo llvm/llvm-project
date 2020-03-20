@@ -177,25 +177,25 @@ class FuncOpConversion final : public SPIRVOpLowering<FuncOp> {
 public:
   using SPIRVOpLowering<FuncOp>::SPIRVOpLowering;
 
-  PatternMatchResult
+  LogicalResult
   matchAndRewrite(FuncOp funcOp, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override;
 };
 } // namespace
 
-PatternMatchResult
+LogicalResult
 FuncOpConversion::matchAndRewrite(FuncOp funcOp, ArrayRef<Value> operands,
                                   ConversionPatternRewriter &rewriter) const {
   auto fnType = funcOp.getType();
   // TODO(antiagainst): support converting functions with one result.
   if (fnType.getNumResults())
-    return matchFailure();
+    return failure();
 
   TypeConverter::SignatureConversion signatureConverter(fnType.getNumInputs());
   for (auto argType : enumerate(funcOp.getType().getInputs())) {
     auto convertedType = typeConverter.convertType(argType.value());
     if (!convertedType)
-      return matchFailure();
+      return failure();
     signatureConverter.addInputs(argType.index(), convertedType);
   }
 
@@ -216,7 +216,7 @@ FuncOpConversion::matchAndRewrite(FuncOp funcOp, ArrayRef<Value> operands,
                               newFuncOp.end());
   rewriter.applySignatureConversion(&newFuncOp.getBody(), signatureConverter);
   rewriter.eraseOp(funcOp);
-  return matchSuccess();
+  return success();
 }
 
 void mlir::populateBuiltinFuncToSPIRVPatterns(

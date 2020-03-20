@@ -499,7 +499,7 @@ void PPCRegisterInfo::lowerDynamicAlloc(MachineBasicBlock::iterator II) const {
   // Get stack alignments.
   const PPCFrameLowering *TFI = getFrameLowering(MF);
   unsigned TargetAlign = TFI->getStackAlignment();
-  unsigned MaxAlign = MFI.getMaxAlignment();
+  unsigned MaxAlign = MFI.getMaxAlign().value();
   assert((maxCallFrameSize & (MaxAlign-1)) == 0 &&
          "Maximum call-frame size not sufficiently aligned");
 

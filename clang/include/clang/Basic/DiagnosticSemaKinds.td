@@ -5333,6 +5333,17 @@ def ext_aggregate_init_not_constant : Extension<
   "initializer for aggregate is not a compile-time constant">, InGroup<C99>;
 def err_local_cant_init : Error<
   "'__local' variable cannot have an initializer">;
+def err_loader_uninitialized_cant_init
+    : Error<"variable with 'loader_uninitialized' attribute cannot have an "
+            "initializer">;
+def err_loader_uninitialized_trivial_ctor
+    : Error<"variable with 'loader_uninitialized' attribute must have a "
+            "trivial default constructor">;
+def err_loader_uninitialized_redeclaration
+    : Error<"redeclaration cannot add 'loader_uninitialized' attribute">;
+def err_loader_uninitialized_extern_decl
+    : Error<"variable %0 cannot be declared both 'extern' and with the "
+            "'loader_uninitialized' attribute">;
 def err_block_extern_cant_init : Error<
   "'extern' variable cannot have an initializer">;
 def warn_extern_init : Warning<"'extern' variable has an initializer">,

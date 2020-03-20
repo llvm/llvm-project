@@ -27,9 +27,7 @@ define i32 @f2(i32 %v, i32 %nbits) {
 ;
 ; THUMB1-LABEL: f2:
 ; THUMB1:       @ %bb.0: @ %entry
-; THUMB1-NEXT:    movs r2, #31
-; THUMB1-NEXT:    ands r2, r1
-; THUMB1-NEXT:    rors r0, r2
+; THUMB1-NEXT:    rors r0, r1
 ; THUMB1-NEXT:    bx lr
 entry:
   %and = and i32 %nbits, 31

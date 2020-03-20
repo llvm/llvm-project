@@ -529,6 +529,14 @@ TEST(LocateSymbol, All) {
         void test(unique_ptr<S<T>>& V) {
           V->fo^o();
         }
+      )cpp",
+
+      R"cpp(// Heuristic resolution of dependent enumerator
+        template <typename T>
+        struct Foo {
+          enum class E { [[A]], B };
+          E e = E::A^;
+        };
       )cpp"};
   for (const char *Test : Tests) {
     Annotations T(Test);

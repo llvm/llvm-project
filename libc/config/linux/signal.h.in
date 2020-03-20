@@ -9,3 +9,7 @@
 %%begin()
 
 #include <linux/signal.h>
+
+#ifndef __LLVM_LIBC_INTERNAL_SIGACTION
+#define sigaction __sigaction
+#endif

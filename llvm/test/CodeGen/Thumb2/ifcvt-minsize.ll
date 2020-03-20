@@ -66,16 +66,13 @@ return:                                           ; preds = %entry, %if.end
 define void @f3(i32 %x) #0 {
 ; CHECK-LABEL: f3:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    cmp r0, #1
-; CHECK-NEXT:    bne .LBB2_2
-; CHECK-NEXT:  @ %bb.1: @ %t
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    movs r0, #0
-; CHECK-NEXT:    bl fn
-; CHECK-NEXT:    pop.w {r7, lr}
-; CHECK-NEXT:  .LBB2_2: @ %f
-; CHECK-NEXT:    bx lr
+; CHECK-NEXT:    cmp r0, #1
+; CHECK-NEXT:    itt eq
+; CHECK-NEXT:    moveq r0, #0
+; CHECK-NEXT:    bleq fn
+; CHECK-NEXT:    pop {r7, pc}
 entry:
   %p = icmp eq i32 %x, 1
   br i1 %p, label %t, label %f

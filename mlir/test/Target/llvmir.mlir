@@ -1190,3 +1190,14 @@ llvm.func @boolConstArg() -> !llvm.i1 {
   %2 = llvm.and %0, %1 : !llvm.i1
   llvm.return %2 : !llvm.i1
 }
+
+// CHECK-LABEL: @callFenceInst
+llvm.func @callFenceInst() {
+  // CHECK: fence syncscope("agent") release
+  llvm.fence syncscope("agent") release
+  // CHECK: fence release
+  llvm.fence release
+  // CHECK: fence release
+  llvm.fence syncscope("") release
+  llvm.return
+}

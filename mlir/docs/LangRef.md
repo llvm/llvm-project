@@ -902,7 +902,7 @@ memref<16x32xf32, #identity, memspace0>
 %T = alloc(%M, %N) [%B1, %B2] : memref<?x?xf32, #tiled_dynamic>
 
 // A memref that has a two-element padding at either end. The allocation size
-// will fit 16 * 68 float elements of data.
+// will fit 16 * 64 float elements of data.
 %P = alloc() : memref<16x64xf32, #padded>
 
 // Affine map with symbol 's0' used as offset for the first dimension.

@@ -4729,6 +4729,11 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
           if (E)
             ImplicitFirstprivates.emplace_back(E);
       }
+      // OpenMP 5.0, 2.10.1 task Construct
+      // [detach clause]... The event-handle will be considered as if it was
+      // specified on a firstprivate clause.
+      if (auto *DC = dyn_cast<OMPDetachClause>(C))
+        ImplicitFirstprivates.push_back(DC->getEventHandler());
     }
     if (!ImplicitFirstprivates.empty()) {
       if (OMPClause *Implicit = ActOnOpenMPFirstprivateClause(
@@ -13432,7 +13437,8 @@ OMPClause *Sema::ActOnOpenMPFirstprivateClause(ArrayRef<Expr *> VarList,
           ExprCaptures.push_back(Ref->getDecl());
       }
     }
-    DSAStack->addDSA(D, RefExpr->IgnoreParens(), OMPC_firstprivate, Ref);
+    if (!IsImplicitClause)
+      DSAStack->addDSA(D, RefExpr->IgnoreParens(), OMPC_firstprivate, Ref);
     Vars.push_back((VD || CurContext->isDependentContext())
                        ? RefExpr->IgnoreParens()
                        : Ref);
@@ -17352,6 +17358,18 @@ OMPClause *Sema::ActOnOpenMPDetachClause(Expr *Evt, SourceLocation StartLoc,
         VD->getType().isConstant(Context)) {
       Diag(Evt->getExprLoc(), diag::err_omp_event_var_expected)
           << 1 << VD->getType() << Evt->getSourceRange();
+      return nullptr;
+    }
+    // OpenMP 5.0, 2.10.1 task Construct
+    // [detach clause]... The event-handle will be considered as if it was
+    // specified on a firstprivate clause.
+    DSAStackTy::DSAVarData DVar = DSAStack->getTopDSA(VD, /*FromParent=*/false);
+    if (DVar.CKind != OMPC_unknown && DVar.CKind != OMPC_firstprivate &&
+        DVar.RefExpr) {
+      Diag(Evt->getExprLoc(), diag::err_omp_wrong_dsa)
+          << getOpenMPClauseName(DVar.CKind)
+          << getOpenMPClauseName(OMPC_firstprivate);
+      reportOriginalDsa(*this, DSAStack, VD, DVar);
       return nullptr;
     }
   }

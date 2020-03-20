@@ -27,8 +27,8 @@ class SPIRVGlobalVariableOpLayoutInfoDecoration
 public:
   using OpRewritePattern<spirv::GlobalVariableOp>::OpRewritePattern;
 
-  PatternMatchResult matchAndRewrite(spirv::GlobalVariableOp op,
-                                     PatternRewriter &rewriter) const override {
+  LogicalResult matchAndRewrite(spirv::GlobalVariableOp op,
+                                PatternRewriter &rewriter) const override {
     spirv::StructType::LayoutInfo structSize = 0;
     VulkanLayoutUtils::Size structAlignment = 1;
     SmallVector<NamedAttribute, 4> globalVarAttrs;
@@ -50,7 +50,7 @@ public:
 
     rewriter.replaceOpWithNewOp<spirv::GlobalVariableOp>(
         op, TypeAttr::get(decoratedType), globalVarAttrs);
-    return matchSuccess();
+    return success();
   }
 };
 
@@ -59,15 +59,15 @@ class SPIRVAddressOfOpLayoutInfoDecoration
 public:
   using OpRewritePattern<spirv::AddressOfOp>::OpRewritePattern;
 
-  PatternMatchResult matchAndRewrite(spirv::AddressOfOp op,
-                                     PatternRewriter &rewriter) const override {
+  LogicalResult matchAndRewrite(spirv::AddressOfOp op,
+                                PatternRewriter &rewriter) const override {
     auto spirvModule = op.getParentOfType<spirv::ModuleOp>();
     auto varName = op.variable();
     auto varOp = spirvModule.lookupSymbol<spirv::GlobalVariableOp>(varName);
 
     rewriter.replaceOpWithNewOp<spirv::AddressOfOp>(
         op, varOp.type(), rewriter.getSymbolRefAttr(varName));
-    return matchSuccess();
+    return success();
   }
 };
 } // namespace

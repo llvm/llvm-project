@@ -678,6 +678,212 @@ struct {} *a1;
   `-;
 )txt"},
       {R"cpp(
+template <class T> struct cls {};
+template <class T> int var = 10;
+template <class T> int fun() {}
+    )cpp",
+       R"txt(
+*: TranslationUnit
+|-TemplateDeclaration
+| |-template
+| |-<
+| |-UnknownDeclaration
+| | |-class
+| | `-T
+| |->
+| `-SimpleDeclaration
+|   |-struct
+|   |-cls
+|   |-{
+|   |-}
+|   `-;
+|-TemplateDeclaration
+| |-template
+| |-<
+| |-UnknownDeclaration
+| | |-class
+| | `-T
+| |->
+| `-SimpleDeclaration
+|   |-int
+|   |-SimpleDeclarator
+|   | |-var
+|   | |-=
+|   | `-UnknownExpression
+|   |   `-10
+|   `-;
+`-TemplateDeclaration
+  |-template
+  |-<
+  |-UnknownDeclaration
+  | |-class
+  | `-T
+  |->
+  `-SimpleDeclaration
+    |-int
+    |-SimpleDeclarator
+    | |-fun
+    | `-ParametersAndQualifiers
+    |   |-(
+    |   `-)
+    `-CompoundStatement
+      |-{
+      `-}
+)txt"},
+      {R"cpp(
+template <class T>
+struct X {
+  template <class U>
+  U foo();
+};
+    )cpp",
+       R"txt(
+*: TranslationUnit
+`-TemplateDeclaration
+  |-template
+  |-<
+  |-UnknownDeclaration
+  | |-class
+  | `-T
+  |->
+  `-SimpleDeclaration
+    |-struct
+    |-X
+    |-{
+    |-TemplateDeclaration
+    | |-template
+    | |-<
+    | |-UnknownDeclaration
+    | | |-class
+    | | `-U
+    | |->
+    | `-SimpleDeclaration
+    |   |-U
+    |   |-SimpleDeclarator
+    |   | |-foo
+    |   | `-ParametersAndQualifiers
+    |   |   |-(
+    |   |   `-)
+    |   `-;
+    |-}
+    `-;
+)txt"},
+      {R"cpp(
+template <class T> struct X {};
+template <class T> struct X<T*> {};
+template <> struct X<int> {};
+
+template struct X<double>;
+extern template struct X<float>;
+)cpp",
+       R"txt(
+*: TranslationUnit
+|-TemplateDeclaration
+| |-template
+| |-<
+| |-UnknownDeclaration
+| | |-class
+| | `-T
+| |->
+| `-SimpleDeclaration
+|   |-struct
+|   |-X
+|   |-{
+|   |-}
+|   `-;
+|-TemplateDeclaration
+| |-template
+| |-<
+| |-UnknownDeclaration
+| | |-class
+| | `-T
+| |->
+| `-SimpleDeclaration
+|   |-struct
+|   |-X
+|   |-<
+|   |-T
+|   |-*
+|   |->
+|   |-{
+|   |-}
+|   `-;
+|-TemplateDeclaration
+| |-template
+| |-<
+| |->
+| `-SimpleDeclaration
+|   |-struct
+|   |-X
+|   |-<
+|   |-int
+|   |->
+|   |-{
+|   |-}
+|   `-;
+|-ExplicitTemplateInstantiation
+| |-template
+| `-SimpleDeclaration
+|   |-struct
+|   |-X
+|   |-<
+|   |-double
+|   |->
+|   `-;
+`-ExplicitTemplateInstantiation
+  |-extern
+  |-template
+  `-SimpleDeclaration
+    |-struct
+    |-X
+    |-<
+    |-float
+    |->
+    `-;
+)txt"},
+      {R"cpp(
+template <class T> struct X { struct Y; };
+template <class T> struct X<T>::Y {};
+    )cpp",
+       R"txt(
+*: TranslationUnit
+|-TemplateDeclaration
+| |-template
+| |-<
+| |-UnknownDeclaration
+| | |-class
+| | `-T
+| |->
+| `-SimpleDeclaration
+|   |-struct
+|   |-X
+|   |-{
+|   |-SimpleDeclaration
+|   | |-struct
+|   | |-Y
+|   | `-;
+|   |-}
+|   `-;
+`-TemplateDeclaration
+  |-template
+  |-<
+  |-UnknownDeclaration
+  | |-class
+  | `-T
+  |->
+  `-SimpleDeclaration
+    |-struct
+    |-X
+    |-<
+    |-T
+    |->
+    |-::
+    |-Y
+    |-{
+    |-}
+    `-;
+       )txt"},
+      {R"cpp(
 namespace ns {}
 using namespace ::ns;
     )cpp",
@@ -726,7 +932,7 @@ template <class T> struct X {
     )cpp",
        R"txt(
 *: TranslationUnit
-`-UnknownDeclaration
+`-TemplateDeclaration
   |-template
   |-<
   |-UnknownDeclaration

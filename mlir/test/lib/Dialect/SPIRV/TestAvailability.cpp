@@ -94,32 +94,32 @@ struct ConvertToTargetEnv : public FunctionPass<ConvertToTargetEnv> {
 
 struct ConvertToAtomCmpExchangeWeak : public RewritePattern {
   ConvertToAtomCmpExchangeWeak(MLIRContext *context);
-  PatternMatchResult matchAndRewrite(Operation *op,
-                                     PatternRewriter &rewriter) const override;
+  LogicalResult matchAndRewrite(Operation *op,
+                                PatternRewriter &rewriter) const override;
 };
 
 struct ConvertToBitReverse : public RewritePattern {
   ConvertToBitReverse(MLIRContext *context);
-  PatternMatchResult matchAndRewrite(Operation *op,
-                                     PatternRewriter &rewriter) const override;
+  LogicalResult matchAndRewrite(Operation *op,
+                                PatternRewriter &rewriter) const override;
 };
 
 struct ConvertToGroupNonUniformBallot : public RewritePattern {
   ConvertToGroupNonUniformBallot(MLIRContext *context);
-  PatternMatchResult matchAndRewrite(Operation *op,
-                                     PatternRewriter &rewriter) const override;
+  LogicalResult matchAndRewrite(Operation *op,
+                                PatternRewriter &rewriter) const override;
 };
 
 struct ConvertToModule : public RewritePattern {
   ConvertToModule(MLIRContext *context);
-  PatternMatchResult matchAndRewrite(Operation *op,
-                                     PatternRewriter &rewriter) const override;
+  LogicalResult matchAndRewrite(Operation *op,
+                                PatternRewriter &rewriter) const override;
 };
 
 struct ConvertToSubgroupBallot : public RewritePattern {
   ConvertToSubgroupBallot(MLIRContext *context);
-  PatternMatchResult matchAndRewrite(Operation *op,
-                                     PatternRewriter &rewriter) const override;
+  LogicalResult matchAndRewrite(Operation *op,
+                                PatternRewriter &rewriter) const override;
 };
 } // end anonymous namespace
 
@@ -145,7 +145,7 @@ ConvertToAtomCmpExchangeWeak::ConvertToAtomCmpExchangeWeak(MLIRContext *context)
     : RewritePattern("test.convert_to_atomic_compare_exchange_weak_op",
                      {"spv.AtomicCompareExchangeWeak"}, 1, context) {}
 
-PatternMatchResult
+LogicalResult
 ConvertToAtomCmpExchangeWeak::matchAndRewrite(Operation *op,
                                               PatternRewriter &rewriter) const {
   Value ptr = op->getOperand(0);
@@ -159,21 +159,21 @@ ConvertToAtomCmpExchangeWeak::matchAndRewrite(Operation *op,
       spirv::MemorySemantics::AcquireRelease |
           spirv::MemorySemantics::AtomicCounterMemory,
       spirv::MemorySemantics::Acquire, value, comparator);
-  return matchSuccess();
+  return success();
 }
 
 ConvertToBitReverse::ConvertToBitReverse(MLIRContext *context)
     : RewritePattern("test.convert_to_bit_reverse_op", {"spv.BitReverse"}, 1,
                      context) {}
 
-PatternMatchResult
+LogicalResult
 ConvertToBitReverse::matchAndRewrite(Operation *op,
                                      PatternRewriter &rewriter) const {
   Value predicate = op->getOperand(0);
 
   rewriter.replaceOpWithNewOp<spirv::BitReverseOp>(
       op, op->getResult(0).getType(), predicate);
-  return matchSuccess();
+  return success();
 }
 
 ConvertToGroupNonUniformBallot::ConvertToGroupNonUniformBallot(
@@ -181,39 +181,39 @@ ConvertToGroupNonUniformBallot::ConvertToGroupNonUniformBallot(
     : RewritePattern("test.convert_to_group_non_uniform_ballot_op",
                      {"spv.GroupNonUniformBallot"}, 1, context) {}
 
-PatternMatchResult ConvertToGroupNonUniformBallot::matchAndRewrite(
+LogicalResult ConvertToGroupNonUniformBallot::matchAndRewrite(
     Operation *op, PatternRewriter &rewriter) const {
   Value predicate = op->getOperand(0);
 
   rewriter.replaceOpWithNewOp<spirv::GroupNonUniformBallotOp>(
       op, op->getResult(0).getType(), spirv::Scope::Workgroup, predicate);
-  return matchSuccess();
+  return success();
 }
 
 ConvertToModule::ConvertToModule(MLIRContext *context)
     : RewritePattern("test.convert_to_module_op", {"spv.module"}, 1, context) {}
 
-PatternMatchResult
+LogicalResult
 ConvertToModule::matchAndRewrite(Operation *op,
                                  PatternRewriter &rewriter) const {
   rewriter.replaceOpWithNewOp<spirv::ModuleOp>(
       op, spirv::AddressingModel::PhysicalStorageBuffer64,
       spirv::MemoryModel::Vulkan);
-  return matchSuccess();
+  return success();
 }
 
 ConvertToSubgroupBallot::ConvertToSubgroupBallot(MLIRContext *context)
     : RewritePattern("test.convert_to_subgroup_ballot_op",
                      {"spv.SubgroupBallotKHR"}, 1, context) {}
 
-PatternMatchResult
+LogicalResult
 ConvertToSubgroupBallot::matchAndRewrite(Operation *op,
                                          PatternRewriter &rewriter) const {
   Value predicate = op->getOperand(0);
 
   rewriter.replaceOpWithNewOp<spirv::SubgroupBallotKHROp>(
       op, op->getResult(0).getType(), predicate);
-  return matchSuccess();
+  return success();
 }
 
 namespace mlir {

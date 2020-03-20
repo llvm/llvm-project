@@ -186,6 +186,9 @@ def note_constexpr_access_inactive_union_member : Note<
   "construction of subobject of|destruction of}0 "
   "member %1 of union with %select{active member %3|no active member}2 "
   "is not allowed in a constant expression">;
+def note_constexpr_union_member_change_during_init : Note<
+  "assignment would change active union member during the initialization of "
+  "a different member of the same union">;
 def note_constexpr_access_static_temporary : Note<
   "%select{read of|read of|assignment to|increment of|decrement of|"
   "member call on|dynamic_cast of|typeid applied to|reconstruction of|"

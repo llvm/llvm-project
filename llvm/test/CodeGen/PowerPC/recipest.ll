@@ -177,12 +177,11 @@ define float @rsqrt_fmul_fmf(float %a, float %b, float %c) {
 ; CHECK-NEXT:    fmuls 1, 1, 0
 ; CHECK-NEXT:    fmadds 1, 1, 0, 4
 ; CHECK-NEXT:    fmuls 0, 0, 5
-; CHECK-NEXT:    fres 5, 2
+; CHECK-NEXT:    fmuls 0, 0, 1
+; CHECK-NEXT:    fres 1, 2
 ; CHECK-NEXT:    fmuls 4, 0, 1
-; CHECK-NEXT:    fmuls 4, 4, 5
-; CHECK-NEXT:    fmuls 2, 2, 4
-; CHECK-NEXT:    fmsubs 0, 0, 1, 2
-; CHECK-NEXT:    fmadds 0, 5, 0, 4
+; CHECK-NEXT:    fnmsubs 0, 2, 4, 0
+; CHECK-NEXT:    fmadds 0, 1, 0, 4
 ; CHECK-NEXT:    fmuls 1, 3, 0
 ; CHECK-NEXT:    blr
   %x = call fast float @llvm.sqrt.f32(float %a)

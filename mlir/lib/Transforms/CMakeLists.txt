@@ -39,5 +39,5 @@ target_link_libraries(MLIRTransforms
   MLIRLoopOps
   MLIRPass
   MLIRTransformUtils
-  MLIRVectorOps
+  MLIRVector
   )

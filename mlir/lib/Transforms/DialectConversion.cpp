@@ -989,6 +989,17 @@ void ConversionPatternRewriter::cancelRootUpdate(Operation *op) {
   rootUpdates.erase(rootUpdates.begin() + (rootUpdates.rend() - it));
 }
 
+/// PatternRewriter hook for notifying match failure reasons.
+LogicalResult ConversionPatternRewriter::notifyMatchFailure(
+    Operation *op, function_ref<void(Diagnostic &)> reasonCallback) {
+  LLVM_DEBUG({
+    Diagnostic diag(op->getLoc(), DiagnosticSeverity::Remark);
+    reasonCallback(diag);
+    impl->logger.startLine() << "** Failure : " << diag.str() << "\n";
+  });
+  return failure();
+}
+
 /// Return a reference to the internal implementation.
 detail::ConversionPatternRewriterImpl &ConversionPatternRewriter::getImpl() {
   return *impl;
@@ -999,7 +1010,7 @@ detail::ConversionPatternRewriterImpl &ConversionPatternRewriter::getImpl() {
 //===----------------------------------------------------------------------===//
 
 /// Attempt to match and rewrite the IR root at the specified operation.
-PatternMatchResult
+LogicalResult
 ConversionPattern::matchAndRewrite(Operation *op,
                                    PatternRewriter &rewriter) const {
   SmallVector<Value, 4> operands;
@@ -1097,6 +1108,12 @@ OperationLegalizer::legalize(Operation *op,
     os.startLine() << "Legalizing operation : '" << op->getName() << "'(" << op
                    << ") {\n";
     os.indent();
+
+    // If the operation has no regions, just print it here.
+    if (op->getNumRegions() == 0) {
+      op->print(os.startLine(), OpPrintingFlags().printGenericOpForm());
+      os.getOStream() << "\n\n";
+    }
   });
 
   // Check if this operation is legal on the target.
@@ -1694,7 +1711,7 @@ struct FuncOpSignatureConversion : public OpConversionPattern<FuncOp> {
       : OpConversionPattern(ctx), converter(converter) {}
 
   /// Hook for derived classes to implement combined matching and rewriting.
-  PatternMatchResult
+  LogicalResult
   matchAndRewrite(FuncOp funcOp, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     FunctionType type = funcOp.getType();
@@ -1703,12 +1720,12 @@ struct FuncOpSignatureConversion : public OpConversionPattern<FuncOp> {
     TypeConverter::SignatureConversion result(type.getNumInputs());
     for (unsigned i = 0, e = type.getNumInputs(); i != e; ++i)
       if (failed(converter.convertSignatureArg(i, type.getInput(i), result)))
-        return matchFailure();
+        return failure();
 
     // Convert the original function results.
     SmallVector<Type, 1> convertedResults;
     if (failed(converter.convertTypes(type.getResults(), convertedResults)))
-      return matchFailure();
+      return failure();
 
     // Update the function signature in-place.
     rewriter.updateRootInPlace(funcOp, [&] {
@@ -1716,7 +1733,7 @@ struct FuncOpSignatureConversion : public OpConversionPattern<FuncOp> {
                                        convertedResults, funcOp.getContext()));
       rewriter.applySignatureConversion(&funcOp.getBody(), result);
     });
-    return matchSuccess();
+    return success();
   }
 
   /// The type converter to use when rewriting the signature.

@@ -14,7 +14,7 @@
 #include "mlir/Analysis/NestedMatcher.h"
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/AffineOps/AffineOps.h"
-#include "mlir/Dialect/VectorOps/VectorUtils.h"
+#include "mlir/Dialect/Vector/VectorUtils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/StandardTypes.h"

@@ -567,7 +567,7 @@ std::string PredefinedExpr::ComputeName(IdentKind IK, const Decl *CurrentDecl) {
         else if (const CXXDestructorDecl *DD = dyn_cast<CXXDestructorDecl>(ND))
           GD = GlobalDecl(DD, Dtor_Base);
         else if (ND->hasAttr<CUDAGlobalAttr>())
-          GD = GlobalDecl::getDefaultKernelReference(cast<FunctionDecl>(ND));
+          GD = GlobalDecl(cast<FunctionDecl>(ND));
         else
           GD = GlobalDecl(ND);
         MC->mangleName(GD, Out);

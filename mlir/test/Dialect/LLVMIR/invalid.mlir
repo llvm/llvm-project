@@ -561,3 +561,10 @@ llvm.func @caller(%arg0: !llvm.i32) -> !llvm.i32 {
   %2 = llvm.landingpad : !llvm<"{ i8*, i32 }">
   llvm.return %0 : !llvm.i32
 }
+
+// -----
+
+func @invalid_ordering_in_fence() {
+  // expected-error @+1 {{can be given only acquire, release, acq_rel, and seq_cst orderings}}
+  llvm.fence syncscope("agent") monotonic
+}

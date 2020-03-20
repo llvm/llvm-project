@@ -4358,6 +4358,29 @@ it rather documents the programmer's intent.
   }];
 }
 
+def LoaderUninitializedDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+The ``loader_uninitialized`` attribute can be placed on global variables to
+indicate that the variable does not need to be zero initialized by the loader.
+On most targets, zero-initialization does not incur any additional cost.
+For example, most general purpose operating systems deliberately ensure
+that all memory is properly initialized in order to avoid leaking privileged
+information from the kernel or other programs. However, some targets
+do not make this guarantee, and on these targets, avoiding an unnecessary
+zero-initialization can have a significant impact on load times and/or code
+size.
+
+A declaration with this attribute is a non-tentative definition just as if it
+provided an initializer. Variables with this attribute are considered to be
+uninitialized in the same sense as a local variable, and the programs must
+write to them before reading from them. If the variable's type is a C++ class
+type with a non-trivial default constructor, or an array thereof, this attribute
+only suppresses the static zero-initialization of the variable, not the dynamic
+initialization provided by executing the default constructor.
+  }];
+}
+
 def CallbackDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{

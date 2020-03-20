@@ -54,7 +54,7 @@ public:
   static Optional<linalg::RegionMatcher::BinaryOpKind>
   matchAsPerformingReduction(linalg::GenericOp genericOp);
 
-  PatternMatchResult
+  LogicalResult
   matchAndRewrite(linalg::GenericOp genericOp, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override;
 };
@@ -109,7 +109,7 @@ SingleWorkgroupReduction::matchAsPerformingReduction(
   return linalg::RegionMatcher::matchAsScalarBinaryOp(genericOp);
 }
 
-PatternMatchResult SingleWorkgroupReduction::matchAndRewrite(
+LogicalResult SingleWorkgroupReduction::matchAndRewrite(
     linalg::GenericOp genericOp, ArrayRef<Value> operands,
     ConversionPatternRewriter &rewriter) const {
   Operation *op = genericOp.getOperation();
@@ -118,19 +118,19 @@ PatternMatchResult SingleWorkgroupReduction::matchAndRewrite(
 
   auto binaryOpKind = matchAsPerformingReduction(genericOp);
   if (!binaryOpKind)
-    return matchFailure();
+    return failure();
 
   // Query the shader interface for local workgroup size to make sure the
   // invocation configuration fits with the input memref's shape.
   DenseIntElementsAttr localSize = spirv::lookupLocalWorkGroupSize(genericOp);
   if (!localSize)
-    return matchFailure();
+    return failure();
 
   if ((*localSize.begin()).getSExtValue() != originalInputType.getDimSize(0))
-    return matchFailure();
+    return failure();
   if (llvm::any_of(llvm::drop_begin(localSize.getIntValues(), 1),
                    [](const APInt &size) { return !size.isOneValue(); }))
-    return matchFailure();
+    return failure();
 
   // TODO(antiagainst): Query the target environment to make sure the current
   // workload fits in a local workgroup.
@@ -195,7 +195,7 @@ PatternMatchResult SingleWorkgroupReduction::matchAndRewrite(
   spirv::SelectionOp::createIfThen(loc, condition, createAtomicOp, &rewriter);
 
   rewriter.eraseOp(genericOp);
-  return matchSuccess();
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

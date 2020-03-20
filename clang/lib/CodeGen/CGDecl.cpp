@@ -249,7 +249,7 @@ llvm::Constant *CodeGenModule::getOrCreateStaticVarDecl(
   // variables cannot have an initializer.
   llvm::Constant *Init = nullptr;
   if (Ty.getAddressSpace() == LangAS::opencl_local ||
-      D.hasAttr<CUDASharedAttr>())
+      D.hasAttr<CUDASharedAttr>() || D.hasAttr<LoaderUninitializedAttr>())
     Init = llvm::UndefValue::get(LTy);
   else
     Init = EmitNullConstant(Ty);
@@ -297,7 +297,7 @@ llvm::Constant *CodeGenModule::getOrCreateStaticVarDecl(
   else if (const auto *DD = dyn_cast<CXXDestructorDecl>(DC))
     GD = GlobalDecl(DD, Dtor_Base);
   else if (const auto *FD = dyn_cast<FunctionDecl>(DC))
-    GD = getGlobalDecl(FD);
+    GD = GlobalDecl(FD);
   else {
     // Don't do anything for Obj-C method decls or global closures. We should
     // never defer them.

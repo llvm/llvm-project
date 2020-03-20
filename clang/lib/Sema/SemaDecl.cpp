@@ -2712,6 +2712,18 @@ static void checkNewAttributesAfterDef(Sema &S, Decl *New, const Decl *Old) {
         --E;
         continue;
       }
+    } else if (isa<LoaderUninitializedAttr>(NewAttribute)) {
+      // If there is a C definition followed by a redeclaration with this
+      // attribute then there are two different definitions. In C++, prefer the
+      // standard diagnostics.
+      if (!S.getLangOpts().CPlusPlus) {
+        S.Diag(NewAttribute->getLocation(),
+               diag::err_loader_uninitialized_redeclaration);
+        S.Diag(Def->getLocation(), diag::note_previous_definition);
+        NewAttributes.erase(NewAttributes.begin() + I);
+        --E;
+        continue;
+      }
     } else if (isa<SelectAnyAttr>(NewAttribute) &&
                cast<VarDecl>(New)->isInline() &&
                !cast<VarDecl>(New)->isInlineSpecified()) {
@@ -11915,6 +11927,13 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
     return;
   }
 
+  // The LoaderUninitialized attribute acts as a definition (of undef).
+  if (VDecl->hasAttr<LoaderUninitializedAttr>()) {
+    Diag(VDecl->getLocation(), diag::err_loader_uninitialized_cant_init);
+    VDecl->setInvalidDecl();
+    return;
+  }
+
   // Get the decls type and save a reference for later, since
   // CheckInitializerTypes may change it.
   QualType DclT = VDecl->getType(), SavT = DclT;
@@ -12326,6 +12345,22 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
       Diag(Var->getLocation(), diag::err_opencl_constant_no_init);
       Var->setInvalidDecl();
       return;
+    }
+
+    if (!Var->isInvalidDecl() && RealDecl->hasAttr<LoaderUninitializedAttr>()) {
+      if (CXXRecordDecl *RD = Var->getType()->getAsCXXRecordDecl()) {
+        if (!RD->hasTrivialDefaultConstructor()) {
+          Diag(Var->getLocation(), diag::err_loader_uninitialized_trivial_ctor);
+          Var->setInvalidDecl();
+          return;
+        }
+      }
+      if (Var->getStorageClass() == SC_Extern) {
+        Diag(Var->getLocation(), diag::err_loader_uninitialized_extern_decl)
+            << Var;
+        Var->setInvalidDecl();
+        return;
+      }
     }
 
     VarDecl::DefinitionKind DefKind = Var->isThisDeclarationADefinition();

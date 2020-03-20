@@ -247,7 +247,7 @@ struct MyConversionPattern : public ConversionPattern {
   /// The `matchAndRewrite` hooks on ConversionPatterns take an additional
   /// `operands` parameter, containing the remapped operands of the original
   /// operation.
-  virtual PatternMatchResult
+  virtual LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const;
 };

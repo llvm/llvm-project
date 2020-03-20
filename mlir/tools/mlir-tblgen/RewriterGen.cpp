@@ -83,6 +83,11 @@ private:
   // DAG `tree` as an attribute.
   void emitAttributeMatch(DagNode tree, int argIndex, int depth, int indent);
 
+  // Emits C++ for checking a match with a corresponding match failure
+  // diagnostic.
+  void emitMatchCheck(int depth, const FmtObjectBase &matchFmt,
+                      const llvm::formatv_object_base &failureFmt);
+
   //===--------------------------------------------------------------------===//
   // Rewrite utilities
   //===--------------------------------------------------------------------===//
@@ -215,7 +220,7 @@ void PatternEmitter::emitOpMatch(DagNode tree, int depth) {
   // Skip the operand matching at depth 0 as the pattern rewriter already does.
   if (depth != 0) {
     // Skip if there is no defining operation (e.g., arguments to function).
-    os.indent(indent) << formatv("if (!castedOp{0}) return matchFailure();\n",
+    os.indent(indent) << formatv("if (!castedOp{0}) return failure();\n",
                                  depth);
   }
   if (tree.getNumArgs() != op.getNumArgs()) {
@@ -287,7 +292,8 @@ void PatternEmitter::emitOperandMatch(DagNode tree, int argIndex, int depth,
 
     // Only need to verify if the matcher's type is different from the one
     // of op definition.
-    if (operand->constraint != matcher.getAsConstraint()) {
+    Constraint constraint = matcher.getAsConstraint();
+    if (operand->constraint != constraint) {
       if (operand->isVariadic()) {
         auto error = formatv(
             "further constrain op {0}'s variadic operand #{1} unsupported now",
@@ -297,10 +303,13 @@ void PatternEmitter::emitOperandMatch(DagNode tree, int argIndex, int depth,
       auto self =
           formatv("(*castedOp{0}.getODSOperands({1}).begin()).getType()", depth,
                   argIndex);
-      os.indent(indent) << "if (!("
-                        << std::string(tgfmt(matcher.getConditionTemplate(),
-                                             &fmtCtx.withSelf(self)))
-                        << ")) return matchFailure();\n";
+      emitMatchCheck(
+          depth,
+          tgfmt(constraint.getConditionTemplate(), &fmtCtx.withSelf(self)),
+          formatv("\"operand {0} of op '{1}' failed to satisfy constraint: "
+                  "'{2}'\"",
+                  operand - op.operand_begin(), op.getOperationName(),
+                  constraint.getDescription()));
     }
   }
 
@@ -321,7 +330,6 @@ void PatternEmitter::emitOperandMatch(DagNode tree, int argIndex, int depth,
 
 void PatternEmitter::emitAttributeMatch(DagNode tree, int argIndex, int depth,
                                         int indent) {
-
   Operator &op = tree.getDialectOp(opMap);
   auto *namedAttr = op.getArg(argIndex).get<NamedAttribute *>();
   const auto &attr = namedAttr->attr;
@@ -344,7 +352,11 @@ void PatternEmitter::emitAttributeMatch(DagNode tree, int argIndex, int depth,
     // should just capture a mlir::Attribute() to signal the missing state.
     // That is precisely what getAttr() returns on missing attributes.
   } else {
-    os.indent(indent) << "if (!tblgen_attr) return matchFailure();\n";
+    emitMatchCheck(depth, tgfmt("tblgen_attr", &fmtCtx),
+                   formatv("\"expected op '{0}' to have attribute '{1}' "
+                           "of type '{2}'\"",
+                           op.getOperationName(), namedAttr->name,
+                           attr.getStorageType()));
   }
 
   auto matcher = tree.getArgAsLeaf(argIndex);
@@ -357,10 +369,13 @@ void PatternEmitter::emitAttributeMatch(DagNode tree, int argIndex, int depth,
 
     // If a constraint is specified, we need to generate C++ statements to
     // check the constraint.
-    os.indent(indent) << "if (!("
-                      << std::string(tgfmt(matcher.getConditionTemplate(),
-                                           &fmtCtx.withSelf("tblgen_attr")))
-                      << ")) return matchFailure();\n";
+    emitMatchCheck(
+        depth,
+        tgfmt(matcher.getConditionTemplate(), &fmtCtx.withSelf("tblgen_attr")),
+        formatv("\"op '{0}' attribute '{1}' failed to satisfy constraint: "
+                "{2}\"",
+                op.getOperationName(), namedAttr->name,
+                matcher.getAsConstraint().getDescription()));
   }
 
   // Capture the value
@@ -374,22 +389,40 @@ void PatternEmitter::emitAttributeMatch(DagNode tree, int argIndex, int depth,
   os.indent(indent) << "}\n";
 }
 
+void PatternEmitter::emitMatchCheck(
+    int depth, const FmtObjectBase &matchFmt,
+    const llvm::formatv_object_base &failureFmt) {
+  // {0} The match depth (used to get the operation that failed to match).
+  // {1} The format for the match string.
+  // {2} The format for the failure string.
+  const char *matchStr = R"(
+    if (!({1})) {
+      return rewriter.notifyMatchFailure(op{0}, [&](::mlir::Diagnostic &diag) {
+        diag << {2};
+      });
+    })";
+  os << llvm::formatv(matchStr, depth, matchFmt.str(), failureFmt.str())
+     << "\n";
+}
+
 void PatternEmitter::emitMatchLogic(DagNode tree) {
   LLVM_DEBUG(llvm::dbgs() << "--- start emitting match logic ---\n");
-  emitOpMatch(tree, 0);
+  int depth = 0;
+  emitOpMatch(tree, depth);
 
   for (auto &appliedConstraint : pattern.getConstraints()) {
     auto &constraint = appliedConstraint.constraint;
     auto &entities = appliedConstraint.entities;
 
     auto condition = constraint.getConditionTemplate();
-    auto cmd = "if (!({0})) return matchFailure();\n";
-
     if (isa<TypeConstraint>(constraint)) {
       auto self = formatv("({0}.getType())",
                           symbolInfoMap.getValueAndRangeUse(entities.front()));
-      os.indent(4) << formatv(cmd,
-                              tgfmt(condition, &fmtCtx.withSelf(self.str())));
+      emitMatchCheck(
+          depth, tgfmt(condition, &fmtCtx.withSelf(self.str())),
+          formatv("\"value entity '{0}' failed to satisfy constraint: {1}\"",
+                  entities.front(), constraint.getDescription()));
+
     } else if (isa<AttrConstraint>(constraint)) {
       PrintFatalError(
           loc, "cannot use AttrConstraint in Pattern multi-entity constraints");
@@ -408,9 +441,13 @@ void PatternEmitter::emitMatchLogic(DagNode tree) {
         self = symbolInfoMap.getValueAndRangeUse(self);
       for (; i < 4; ++i)
         names.push_back("<unused>");
-      os.indent(4) << formatv(cmd,
-                              tgfmt(condition, &fmtCtx.withSelf(self), names[0],
-                                    names[1], names[2], names[3]));
+      emitMatchCheck(depth,
+                     tgfmt(condition, &fmtCtx.withSelf(self), names[0],
+                           names[1], names[2], names[3]),
+                     formatv("\"entities '{0}' failed to satisfy constraint: "
+                             "{1}\"",
+                             llvm::join(entities, ", "),
+                             constraint.getDescription()));
     }
   }
   LLVM_DEBUG(llvm::dbgs() << "--- done emitting match logic ---\n");
@@ -468,7 +505,7 @@ void PatternEmitter::emit(StringRef rewriteName) {
 
   // Emit matchAndRewrite() function.
   os << R"(
-  PatternMatchResult matchAndRewrite(Operation *op0,
+  LogicalResult matchAndRewrite(Operation *op0,
                                      PatternRewriter &rewriter) const override {
 )";
 
@@ -501,7 +538,7 @@ void PatternEmitter::emit(StringRef rewriteName) {
   os.indent(4) << "// Rewrite\n";
   emitRewriteLogic();
 
-  os.indent(4) << "return matchSuccess();\n";
+  os.indent(4) << "return success();\n";
   os << "  };\n";
   os << "};\n";
 }

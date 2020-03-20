@@ -1575,14 +1575,8 @@ static GlobalDecl getParentOfLocalEntity(const DeclContext *DC) {
     GD = GlobalDecl(CD, Ctor_Complete);
   else if (auto *DD = dyn_cast<CXXDestructorDecl>(DC))
     GD = GlobalDecl(DD, Dtor_Complete);
-  else {
-    auto *FD = cast<FunctionDecl>(DC);
-    // Local variables can only exist in real kernels.
-    if (FD->hasAttr<CUDAGlobalAttr>())
-      GD = GlobalDecl(FD, KernelReferenceKind::Kernel);
-    else
-      GD = GlobalDecl(FD);
-  }
+  else
+    GD = GlobalDecl(cast<FunctionDecl>(DC));
   return GD;
 }
 

@@ -602,7 +602,7 @@ class Configuration(object):
 
         # FIXME(EricWF): variant_size.pass.cpp requires a slightly larger
         # template depth with older Clang versions.
-        self.cxx.addFlagIfSupported('-ftemplate-depth=270')
+        self.cxx.addCompileFlagIfSupported('-ftemplate-depth=270')
 
     def configure_compile_flags_header_includes(self):
         support_path = os.path.join(self.libcxx_src_root, 'test', 'support')
@@ -1043,7 +1043,7 @@ class Configuration(object):
         if self.target_info.is_darwin():
             # Do not pass DYLD_LIBRARY_PATH to the compiler, linker, etc. as
             # these tools are not meant to exercise the just-built libraries.
-            tool_env += 'DYLD_LIBRARY_PATH="" '
+            tool_env += 'env DYLD_LIBRARY_PATH="" '
 
         sub = self.config.substitutions
         cxx_path = tool_env + pipes.quote(self.cxx.path)
@@ -1200,7 +1200,7 @@ class Configuration(object):
                 self.config.available_features.add('dylib-has-no-filesystem')
                 self.lit_config.note("the deployment target does not support <filesystem>")
         else:
-            self.cxx.flags += ['-D_LIBCPP_DISABLE_AVAILABILITY']
+            self.cxx.compile_flags += ['-D_LIBCPP_DISABLE_AVAILABILITY']
 
     def configure_env(self):
         self.target_info.configure_env(self.exec_env)

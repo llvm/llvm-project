@@ -4,7 +4,6 @@
 define i32 @rotl32(i32 %A, i8 %Amt) nounwind {
 ; CHECK-LABEL: rotl32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    clrlwi 4, 4, 24
 ; CHECK-NEXT:    rotlw 3, 3, 4
 ; CHECK-NEXT:    blr
 	%shift.upgrd.1 = zext i8 %Amt to i32		; <i32> [#uses=1]
@@ -20,7 +19,6 @@ define i32 @rotr32(i32 %A, i8 %Amt) nounwind {
 ; CHECK-LABEL: rotr32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    subfic 4, 4, 32
-; CHECK-NEXT:    clrlwi 4, 4, 24
 ; CHECK-NEXT:    rotlw 3, 3, 4
 ; CHECK-NEXT:    blr
 	%shift.upgrd.3 = zext i8 %Amt to i32		; <i32> [#uses=1]

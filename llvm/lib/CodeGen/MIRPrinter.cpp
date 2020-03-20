@@ -334,7 +334,7 @@ void MIRPrinter::convert(ModuleSlotTracker &MST,
   YamlMFI.HasPatchPoint = MFI.hasPatchPoint();
   YamlMFI.StackSize = MFI.getStackSize();
   YamlMFI.OffsetAdjustment = MFI.getOffsetAdjustment();
-  YamlMFI.MaxAlignment = MFI.getMaxAlignment();
+  YamlMFI.MaxAlignment = MFI.getMaxAlign().value();
   YamlMFI.AdjustsStack = MFI.adjustsStack();
   YamlMFI.HasCalls = MFI.hasCalls();
   YamlMFI.MaxCallFrameSize = MFI.isMaxCallFrameSizeComputed()

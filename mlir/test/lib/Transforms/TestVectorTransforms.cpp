@@ -9,14 +9,13 @@
 #include <type_traits>
 
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
-#include "mlir/Dialect/VectorOps/VectorOps.h"
-#include "mlir/Dialect/VectorOps/VectorTransforms.h"
+#include "mlir/Dialect/Vector/VectorOps.h"
+#include "mlir/Dialect/Vector/VectorTransforms.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 
 using namespace mlir;
 using namespace mlir::vector;
-
 namespace {
 
 #include "TestVectorTransformPatterns.h.inc"
@@ -44,9 +43,20 @@ struct TestVectorSlicesConversion
 
 struct TestVectorContractionConversion
     : public FunctionPass<TestVectorContractionConversion> {
+  TestVectorContractionConversion() = default;
+  TestVectorContractionConversion(const TestVectorContractionConversion &pass) {
+  }
+
+  Option<bool> lowerToLLVMMatrixIntrinsics{
+      *this, "vector-lower-matrix-intrinsics",
+      llvm::cl::desc("Lower vector.contract to llvm.intr.matrix.multiply"),
+      llvm::cl::init(false)};
+
   void runOnFunction() override {
     OwningRewritePatternList patterns;
-    populateVectorContractLoweringPatterns(patterns, &getContext());
+    VectorTransformsOptions options{
+        /*lowerToLLVMMatrixIntrinsics=*/lowerToLLVMMatrixIntrinsics};
+    populateVectorContractLoweringPatterns(patterns, &getContext(), options);
     applyPatternsGreedily(getFunction(), patterns);
   }
 };

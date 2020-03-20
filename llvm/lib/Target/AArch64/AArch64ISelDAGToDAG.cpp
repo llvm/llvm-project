@@ -4509,6 +4509,16 @@ static EVT getMemVTFromNode(LLVMContext &Ctx, SDNode *Root) {
     return cast<MemSDNode>(Root)->getMemoryVT();
 
   const unsigned Opcode = Root->getOpcode();
+  // For custom ISD nodes, we have to look at them individually to extract the
+  // type of the data moved to/from memory.
+  switch (Opcode) {
+  case AArch64ISD::LDNF1:
+  case AArch64ISD::LDNF1S:
+    return cast<VTSDNode>(Root->getOperand(3))->getVT();
+  default:
+    break;
+  }
+
   if (Opcode != ISD::INTRINSIC_VOID)
     return EVT();
 

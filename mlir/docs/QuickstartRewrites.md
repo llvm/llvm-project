@@ -171,8 +171,8 @@ struct ConvertTFLeakyRelu : public RewritePattern {
   ConvertTFLeakyRelu(MLIRContext *context)
       : RewritePattern("tf.LeakyRelu", 1, context) {}
 
-  PatternMatchResult match(Operation *op) const override {
-    return matchSuccess();
+  LogicalResult match(Operation *op) const override {
+    return success();
   }
 
   void rewrite(Operation *op, PatternRewriter &rewriter) const override {
@@ -188,12 +188,12 @@ struct ConvertTFLeakyRelu : public RewritePattern {
   ConvertTFLeakyRelu(MLIRContext *context)
       : RewritePattern("tf.LeakyRelu", 1, context) {}
 
-  PatternMatchResult matchAndRewrite(Operation *op,
+  LogicalResult matchAndRewrite(Operation *op,
                                      PatternRewriter &rewriter) const override {
     rewriter.replaceOpWithNewOp<TFL::LeakyReluOp>(
         op, op->getResult(0).getType(), op->getOperand(0),
         /*alpha=*/op->getAttrOfType<FloatAttr>("alpha"));
-    return matchSuccess();
+    return success();
   }
 };
 ```

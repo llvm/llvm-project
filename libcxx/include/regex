@@ -977,7 +977,8 @@ class _LIBCPP_EXCEPTION_ABI regex_error
     regex_constants::error_type __code_;
 public:
     explicit regex_error(regex_constants::error_type __ecode);
-    virtual ~regex_error() throw();
+    regex_error(const regex_error&) _NOEXCEPT = default;
+    virtual ~regex_error() _NOEXCEPT;
      _LIBCPP_INLINE_VISIBILITY
     regex_constants::error_type code() const {return __code_;}
 };

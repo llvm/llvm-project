@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/FxpMathOps/FxpMathOps.h"
-#include "mlir/Dialect/QuantOps/QuantTypes.h"
+#include "mlir/Dialect/Quant/QuantTypes.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/StandardTypes.h"
 #include "llvm/ADT/StringRef.h"

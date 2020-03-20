@@ -444,7 +444,7 @@ private:
       else if (const auto *DtorD = dyn_cast<CXXDestructorDecl>(D))
         GD = GlobalDecl(DtorD, Dtor_Complete);
       else if (D->hasAttr<CUDAGlobalAttr>())
-        GD = GlobalDecl::getDefaultKernelReference(cast<FunctionDecl>(D));
+        GD = GlobalDecl(cast<FunctionDecl>(D));
       else
         GD = GlobalDecl(D);
       MC->mangleName(GD, OS);
