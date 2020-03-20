@@ -10,5 +10,6 @@ add_mlir_dialect_library(MLIRAVX512
 target_link_libraries(MLIRAVX512
   PUBLIC
   MLIRIR
+  MLIRSideEffects
   LLVMSupport
   )
