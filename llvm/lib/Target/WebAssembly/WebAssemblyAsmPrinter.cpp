@@ -103,7 +103,7 @@ void WebAssemblyAsmPrinter::emitEndOfAsmFile(Module &M) {
     if (F.isDeclarationForLinker()) {
       SmallVector<MVT, 4> Results;
       SmallVector<MVT, 4> Params;
-      computeSignatureVTs(F.getFunctionType(), F, TM, Params, Results);
+      computeSignatureVTs(F.getFunctionType(), &F, F, TM, Params, Results);
       auto *Sym = cast<MCSymbolWasm>(getSymbol(&F));
       Sym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
       if (!Sym->getSignature()) {
@@ -290,7 +290,8 @@ void WebAssemblyAsmPrinter::emitFunctionBodyStart() {
   const Function &F = MF->getFunction();
   SmallVector<MVT, 1> ResultVTs;
   SmallVector<MVT, 4> ParamVTs;
-  computeSignatureVTs(F.getFunctionType(), F, TM, ParamVTs, ResultVTs);
+  computeSignatureVTs(F.getFunctionType(), &F, F, TM, ParamVTs, ResultVTs);
+
   auto Signature = signatureFromMVTs(ResultVTs, ParamVTs);
   auto *WasmSym = cast<MCSymbolWasm>(CurrentFnSym);
   WasmSym->setSignature(Signature.get());
