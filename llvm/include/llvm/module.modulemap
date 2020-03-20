@@ -290,6 +290,7 @@ module LLVM_IR {
   textual header "IR/Metadata.def"
   textual header "IR/FixedMetadataKinds.def"
   textual header "IR/Value.def"
+  textual header "IR/VPIntrinsics.def"
   textual header "IR/RuntimeLibcalls.def"
 }
 
