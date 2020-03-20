@@ -12,9 +12,10 @@ It can perform code signing, forward arguments to the program, and return the
 program's error code.
 """
 
+import argparse
+import os
 import subprocess
 import sys
-import argparse
 
 
 def main():
@@ -39,7 +40,7 @@ def main():
             return rc
 
     # Extract environment variables into a dictionary
-    env = {k : v  for (k, v) in map(lambda s: s.split('='), args.env)}
+    env = {k : v  for (k, v) in map(lambda s: s.split('=', 1), args.env)}
 
     # Ensure the file dependencies exist
     for file in args.dependencies:
