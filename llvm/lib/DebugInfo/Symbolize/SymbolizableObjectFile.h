@@ -35,10 +35,10 @@ public:
          bool UntagAddresses);
 
   DILineInfo symbolizeCode(object::SectionedAddress ModuleOffset,
-                           DILineInfoSpecifier LineInfoSpecifier,
+                           FunctionNameKind FNKind,
                            bool UseSymbolTable) const override;
   DIInliningInfo symbolizeInlinedCode(object::SectionedAddress ModuleOffset,
-                                      DILineInfoSpecifier LineInfoSpecifier,
+                                      FunctionNameKind FNKind,
                                       bool UseSymbolTable) const override;
   DIGlobal symbolizeData(object::SectionedAddress ModuleOffset) const override;
   std::vector<DILocal>
