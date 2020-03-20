@@ -742,21 +742,42 @@ class MVE_VMINMAXNMV<string iname, string suffix, bit sz,
   let Predicates = [HasMVEFloat];
 }
 
-multiclass MVE_VMINMAXNMV_fty<string iname, bit bit_7, list<dag> pattern=[]> {
-  def f32 : MVE_VMINMAXNMV<iname, "f32", 0b0, 0b1, bit_7, pattern>;
-  def f16 : MVE_VMINMAXNMV<iname, "f16", 0b1, 0b1, bit_7, pattern>;
+multiclass MVE_VMINMAXNMV_p<string iname, bit notAbs, bit isMin,
+                            MVEVectorVTInfo VTI, string intrBaseName,
+                            ValueType Scalar, RegisterClass ScalarReg> {
+  def "": MVE_VMINMAXNMV<iname, VTI.Suffix, VTI.Size{0}, notAbs, isMin>;
+  defvar Inst        = !cast<Instruction>(NAME);
+  defvar unpred_intr = !cast<Intrinsic>(intrBaseName);
+  defvar pred_intr   = !cast<Intrinsic>(intrBaseName#"_predicated");
+
+  let Predicates = [HasMVEFloat] in {
+    def : Pat<(Scalar (unpred_intr (Scalar ScalarReg:$prev),
+                                   (VTI.Vec MQPR:$vec))),
+           (COPY_TO_REGCLASS (Inst (COPY_TO_REGCLASS ScalarReg:$prev, rGPR),
+                                   (VTI.Vec MQPR:$vec)),
+                              ScalarReg)>;
+    def : Pat<(Scalar (pred_intr   (Scalar ScalarReg:$prev),
+                                   (VTI.Vec MQPR:$vec),
+                                   (VTI.Pred VCCR:$pred))),
+           (COPY_TO_REGCLASS (Inst (COPY_TO_REGCLASS ScalarReg:$prev, rGPR),
+                                   (VTI.Vec MQPR:$vec),
+                                   ARMVCCThen, (VTI.Pred VCCR:$pred)),
+                              ScalarReg)>;
+  }
 }
 
-defm MVE_VMINNMV : MVE_VMINMAXNMV_fty<"vminnmv", 0b1>;
-defm MVE_VMAXNMV : MVE_VMINMAXNMV_fty<"vmaxnmv", 0b0>;
-
-multiclass MVE_VMINMAXNMAV_fty<string iname, bit bit_7, list<dag> pattern=[]> {
-  def f32 : MVE_VMINMAXNMV<iname, "f32", 0b0, 0b0, bit_7, pattern>;
-  def f16 : MVE_VMINMAXNMV<iname, "f16", 0b1, 0b0, bit_7, pattern>;
+multiclass MVE_VMINMAXNMV_fty<string iname, bit notAbs, bit isMin,
+                              string intrBase> {
+  defm f32 : MVE_VMINMAXNMV_p<iname, notAbs, isMin, MVE_v4f32, intrBase,
+                              f32, SPR>;
+  defm f16 : MVE_VMINMAXNMV_p<iname, notAbs, isMin, MVE_v8f16, intrBase,
+                              f16, HPR>;
 }
 
-defm MVE_VMINNMAV : MVE_VMINMAXNMAV_fty<"vminnmav", 0b1>;
-defm MVE_VMAXNMAV : MVE_VMINMAXNMAV_fty<"vmaxnmav", 0b0>;
+defm MVE_VMINNMV : MVE_VMINMAXNMV_fty<"vminnmv",  1, 1, "int_arm_mve_minnmv">;
+defm MVE_VMAXNMV : MVE_VMINMAXNMV_fty<"vmaxnmv",  1, 0, "int_arm_mve_maxnmv">;
+defm MVE_VMINNMAV: MVE_VMINMAXNMV_fty<"vminnmav", 0, 1, "int_arm_mve_minnmav">;
+defm MVE_VMAXNMAV: MVE_VMINMAXNMV_fty<"vmaxnmav", 0, 0, "int_arm_mve_maxnmav">;
 
 class MVE_VMINMAXV<string iname, string suffix, bit U, bits<2> size,
                  bit bit_17, bit bit_7, list<dag> pattern=[]>
@@ -778,31 +799,37 @@ class MVE_VMINMAXV<string iname, string suffix, bit U, bits<2> size,
   let Inst{0} = 0b0;
 }
 
-multiclass MVE_VMINMAXV_p<string iname, bit bit_17, bit bit_7,
-                          MVEVectorVTInfo VTI, Intrinsic intr> {
+multiclass MVE_VMINMAXV_p<string iname, bit notAbs, bit isMin,
+                          MVEVectorVTInfo VTI, string intrBaseName> {
   def "": MVE_VMINMAXV<iname, VTI.Suffix, VTI.Unsigned, VTI.Size,
-                       bit_17, bit_7>;
-  defvar Inst = !cast<Instruction>(NAME);
+                       notAbs, isMin>;
+  defvar Inst        = !cast<Instruction>(NAME);
+  defvar unpred_intr = !cast<Intrinsic>(intrBaseName);
+  defvar pred_intr   = !cast<Intrinsic>(intrBaseName#"_predicated");
+  defvar base_args   = (? (i32 rGPR:$prev), (VTI.Vec MQPR:$vec));
+  defvar args        = !if(notAbs, !con(base_args, (? (i32 VTI.Unsigned))),
+                           base_args);
 
-  let Predicates = [HasMVEInt] in
-  def _pat : Pat<(i32 (intr (i32 rGPR:$prev), (VTI.Vec MQPR:$vec))),
-                 (i32 (Inst (i32 rGPR:$prev), (VTI.Vec MQPR:$vec)))>;
+  let Predicates = [HasMVEInt] in {
+    def : Pat<(i32 !con(args, (unpred_intr))),
+              (i32 (Inst (i32 rGPR:$prev), (VTI.Vec MQPR:$vec)))>;
+    def : Pat<(i32 !con(args, (pred_intr (VTI.Pred VCCR:$pred)))),
+              (i32 (Inst (i32 rGPR:$prev), (VTI.Vec MQPR:$vec),
+                         ARMVCCThen, (VTI.Pred VCCR:$pred)))>;
+  }
 }
 
-multiclass MVE_VMINMAXV_ty<string iname, bit bit_7,
-                           Intrinsic intr_s, Intrinsic intr_u> {
-  defm s8 : MVE_VMINMAXV_p<iname, 1, bit_7, MVE_v16s8, intr_s>;
-  defm s16: MVE_VMINMAXV_p<iname, 1, bit_7, MVE_v8s16, intr_s>;
-  defm s32: MVE_VMINMAXV_p<iname, 1, bit_7, MVE_v4s32, intr_s>;
-  defm u8 : MVE_VMINMAXV_p<iname, 1, bit_7, MVE_v16u8, intr_u>;
-  defm u16: MVE_VMINMAXV_p<iname, 1, bit_7, MVE_v8u16, intr_u>;
-  defm u32: MVE_VMINMAXV_p<iname, 1, bit_7, MVE_v4u32, intr_u>;
+multiclass MVE_VMINMAXV_ty<string iname, bit isMin, string intrBaseName> {
+  defm s8 : MVE_VMINMAXV_p<iname, 1, isMin, MVE_v16s8, intrBaseName>;
+  defm s16: MVE_VMINMAXV_p<iname, 1, isMin, MVE_v8s16, intrBaseName>;
+  defm s32: MVE_VMINMAXV_p<iname, 1, isMin, MVE_v4s32, intrBaseName>;
+  defm u8 : MVE_VMINMAXV_p<iname, 1, isMin, MVE_v16u8, intrBaseName>;
+  defm u16: MVE_VMINMAXV_p<iname, 1, isMin, MVE_v8u16, intrBaseName>;
+  defm u32: MVE_VMINMAXV_p<iname, 1, isMin, MVE_v4u32, intrBaseName>;
 }
 
-defm MVE_VMINV : MVE_VMINMAXV_ty<
-  "vminv", 0b1, int_arm_mve_minv_s, int_arm_mve_minv_u>;
-defm MVE_VMAXV : MVE_VMINMAXV_ty<
-  "vmaxv", 0b0, int_arm_mve_maxv_s, int_arm_mve_maxv_u>;
+defm MVE_VMINV : MVE_VMINMAXV_ty<"vminv", 1, "int_arm_mve_minv">;
+defm MVE_VMAXV : MVE_VMINMAXV_ty<"vmaxv", 0, "int_arm_mve_maxv">;
 
 let Predicates = [HasMVEInt] in {
   def : Pat<(i32 (vecreduce_smax (v16i8 MQPR:$src))),
@@ -833,14 +860,14 @@ let Predicates = [HasMVEInt] in {
 
 }
 
-multiclass MVE_VMINMAXAV_ty<string iname, bit bit_7, list<dag> pattern=[]> {
-  def s8  : MVE_VMINMAXV<iname, "s8",  0b0, 0b00, 0b0, bit_7>;
-  def s16 : MVE_VMINMAXV<iname, "s16", 0b0, 0b01, 0b0, bit_7>;
-  def s32 : MVE_VMINMAXV<iname, "s32", 0b0, 0b10, 0b0, bit_7>;
+multiclass MVE_VMINMAXAV_ty<string iname, bit isMin, string intrBaseName> {
+  defm s8 : MVE_VMINMAXV_p<iname, 0, isMin, MVE_v16s8, intrBaseName>;
+  defm s16: MVE_VMINMAXV_p<iname, 0, isMin, MVE_v8s16, intrBaseName>;
+  defm s32: MVE_VMINMAXV_p<iname, 0, isMin, MVE_v4s32, intrBaseName>;
 }
 
-defm MVE_VMINAV : MVE_VMINMAXAV_ty<"vminav", 0b1>;
-defm MVE_VMAXAV : MVE_VMINMAXAV_ty<"vmaxav", 0b0>;
+defm MVE_VMINAV : MVE_VMINMAXAV_ty<"vminav", 1, "int_arm_mve_minav">;
+defm MVE_VMAXAV : MVE_VMINMAXAV_ty<"vmaxav", 0, "int_arm_mve_maxav">;
 
 class MVE_VMLAMLSDAV<string iname, string suffix, dag iops, string cstr,
                    bit sz, bit bit_28, bit A, bit X, bit bit_8, bit bit_0>

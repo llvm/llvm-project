@@ -798,14 +798,6 @@ def int_arm_mve_pred_v2i : Intrinsic<
 def int_arm_mve_vreinterpretq : Intrinsic<
   [llvm_anyvector_ty], [llvm_anyvector_ty], [IntrNoMem]>;
 
-multiclass IntrinsicSignSuffix<list<LLVMType> rets, list<LLVMType> params = [],
-                                    list<IntrinsicProperty> props = [],
-                                    string name = "",
-                                    list<SDNodeProperty> sdprops = []> {
-  def _s: Intrinsic<rets, params, props, name, sdprops>;
-  def _u: Intrinsic<rets, params, props, name, sdprops>;
-}
-
 def int_arm_mve_min_predicated: Intrinsic<[llvm_anyvector_ty],
    [LLVMMatchType<0>, LLVMMatchType<0>, llvm_i32_ty /* unsigned */,
     llvm_anyvector_ty, LLVMMatchType<0>],
@@ -891,11 +883,6 @@ def int_arm_mve_vmaxnma_predicated: Intrinsic<[llvm_anyvector_ty],
    [LLVMMatchType<0>, LLVMMatchType<0>, llvm_anyvector_ty],
     [IntrNoMem]>;
 
-defm int_arm_mve_minv: IntrinsicSignSuffix<[llvm_i32_ty],
-   [llvm_i32_ty, llvm_anyvector_ty], [IntrNoMem]>;
-defm int_arm_mve_maxv: IntrinsicSignSuffix<[llvm_i32_ty],
-   [llvm_i32_ty, llvm_anyvector_ty], [IntrNoMem]>;
-
 multiclass MVEPredicated<list<LLVMType> rets, list<LLVMType> params,
                          LLVMType pred = llvm_anyvector_ty,
                          list<IntrinsicProperty> props = [IntrNoMem]> {
@@ -910,6 +897,19 @@ multiclass MVEPredicatedM<list<LLVMType> rets, list<LLVMType> params,
       !if(!eq(!cast<string>(rets[0]), "llvm_anyvector_ty"),
           LLVMMatchType<0>, rets[0])], props>;
 }
+
+multiclass MVE_minmaxv {
+  defm v: MVEPredicated<[llvm_i32_ty],
+     [llvm_i32_ty, llvm_anyvector_ty, llvm_i32_ty /* unsigned */]>;
+  defm av: MVEPredicated<[llvm_i32_ty],
+     [llvm_i32_ty, llvm_anyvector_ty]>;
+  defm nmv: MVEPredicated<[llvm_anyfloat_ty],
+     [LLVMMatchType<0>, llvm_anyvector_ty]>;
+  defm nmav: MVEPredicated<[llvm_anyfloat_ty],
+     [LLVMMatchType<0>, llvm_anyvector_ty]>;
+}
+defm int_arm_mve_min: MVE_minmaxv;
+defm int_arm_mve_max: MVE_minmaxv;
 
 // Intrinsic with a predicated and a non-predicated case. The predicated case
 // has two additional parameters: inactive (the value for inactive lanes, can
