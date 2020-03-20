@@ -542,3 +542,42 @@ def CDE_VCX3_fpdp   : CDE_VCX3_FP_Instr_D<"vcx3",  cde_vcx_params_d_noacc>;
 def CDE_VCX3A_fpdp  : CDE_VCX3_FP_Instr_D<"vcx3a", cde_vcx_params_d_acc>;
 def CDE_VCX3_vec    : CDE_VCX3_Vec_Instr<"vcx3",   cde_vcx_params_q_noacc>;
 def CDE_VCX3A_vec   : CDE_VCX3_Vec_Instr<"vcx3a",  cde_vcx_params_q_acc>;
+
+
+let Predicates = [HasCDE, HasFPRegs] in {
+  def : Pat<(f32 (int_arm_cde_vcx1 timm:$coproc, timm:$imm)),
+            (f32 (CDE_VCX1_fpsp p_imm:$coproc, imm_11b:$imm))>;
+  def : Pat<(f32 (int_arm_cde_vcx1a timm:$coproc, (f32 SPR:$acc), timm:$imm)),
+            (f32 (CDE_VCX1A_fpsp p_imm:$coproc, SPR:$acc, imm_11b:$imm))>;
+  def : Pat<(f64 (int_arm_cde_vcx1 timm:$coproc, timm:$imm)),
+            (f64 (CDE_VCX1_fpdp p_imm:$coproc, imm_11b:$imm))>;
+  def : Pat<(f64 (int_arm_cde_vcx1a timm:$coproc, (f64 DPR:$acc), timm:$imm)),
+            (f64 (CDE_VCX1A_fpdp p_imm:$coproc, DPR:$acc, imm_11b:$imm))>;
+
+  def : Pat<(f32 (int_arm_cde_vcx2 timm:$coproc, (f32 SPR:$n), timm:$imm)),
+            (f32 (CDE_VCX2_fpsp p_imm:$coproc, SPR:$n, imm_6b:$imm))>;
+  def : Pat<(f32 (int_arm_cde_vcx2a timm:$coproc, (f32 SPR:$acc), (f32 SPR:$n),
+                                    timm:$imm)),
+            (f32 (CDE_VCX2A_fpsp p_imm:$coproc, SPR:$acc, SPR:$n, imm_6b:$imm))>;
+  def : Pat<(f64 (int_arm_cde_vcx2 timm:$coproc, (f64 DPR:$n), timm:$imm)),
+            (f64 (CDE_VCX2_fpdp p_imm:$coproc, DPR:$n, imm_6b:$imm))>;
+  def : Pat<(f64 (int_arm_cde_vcx2a timm:$coproc, (f64 DPR:$acc), (f64 DPR:$n),
+                                    timm:$imm)),
+            (f64 (CDE_VCX2A_fpdp p_imm:$coproc, DPR:$acc, DPR:$n, imm_6b:$imm))>;
+
+  def : Pat<(f32 (int_arm_cde_vcx3 timm:$coproc, (f32 SPR:$n), (f32 SPR:$m),
+                                   timm:$imm)),
+            (f32 (CDE_VCX3_fpsp p_imm:$coproc, (f32 SPR:$n), (f32 SPR:$m),
+                                imm_3b:$imm))>;
+  def : Pat<(f32 (int_arm_cde_vcx3a timm:$coproc, (f32 SPR:$acc), (f32 SPR:$n),
+                                    (f32 SPR:$m), timm:$imm)),
+            (f32 (CDE_VCX3A_fpsp p_imm:$coproc, SPR:$acc, SPR:$n, SPR:$m,
+                                 imm_3b:$imm))>;
+  def : Pat<(f64 (int_arm_cde_vcx3 timm:$coproc, (f64 DPR:$n), (f64 DPR:$m),
+                                   timm:$imm)),
+            (f64 (CDE_VCX3_fpdp p_imm:$coproc, DPR:$n, DPR:$m, imm_3b:$imm))>;
+  def : Pat<(f64 (int_arm_cde_vcx3a timm:$coproc, (f64 DPR:$acc), (f64 DPR:$n),
+                                    (f64 DPR:$m), timm:$imm)),
+            (f64 (CDE_VCX3A_fpdp p_imm:$coproc, DPR:$acc, DPR:$n, DPR:$m,
+                                 imm_3b:$imm))>;
+}

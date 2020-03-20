@@ -63,3 +63,43 @@ void test_cx(uint32_t a, uint64_t da, uint32_t n, uint32_t m) {
   __arm_cx3da(0, da, n, m, a);  // expected-error {{argument to '__arm_cx3da' must be a constant integer}}
   __arm_cx3da(0, da, n, m, 64); // expected-error {{argument value 64 is outside the valid range [0, 63]}}
 }
+
+void test_vcxfp_u32(uint32_t a, uint32_t n, uint32_t m) {
+  (void)__arm_vcx1_u32(0, 0);
+  __arm_vcx1_u32(0, a);        // expected-error {{argument to '__arm_vcx1_u32' must be a constant integer}}
+  __arm_vcx1_u32(0, 2048);     // expected-error {{argument value 2048 is outside the valid range [0, 2047]}}
+  __arm_vcx1a_u32(0, a, a);    // expected-error {{argument to '__arm_vcx1a_u32' must be a constant integer}}
+  __arm_vcx1a_u32(0, a, 2048); // expected-error {{argument value 2048 is outside the valid range [0, 2047]}}
+
+  (void)__arm_vcx2_u32(0, n, 0);
+  __arm_vcx2_u32(0, n, a);      // expected-error {{argument to '__arm_vcx2_u32' must be a constant integer}}
+  __arm_vcx2_u32(0, n, 64);     // expected-error {{argument value 64 is outside the valid range [0, 63]}}
+  __arm_vcx2a_u32(0, a, n, a);  // expected-error {{argument to '__arm_vcx2a_u32' must be a constant integer}}
+  __arm_vcx2a_u32(0, a, n, 64); // expected-error {{argument value 64 is outside the valid range [0, 63]}}
+
+  (void)__arm_vcx3_u32(0, n, m, 0);
+  __arm_vcx3_u32(0, n, m, a);     // expected-error {{argument to '__arm_vcx3_u32' must be a constant integer}}
+  __arm_vcx3_u32(0, n, m, 8);     // expected-error {{argument value 8 is outside the valid range [0, 7]}}
+  __arm_vcx3a_u32(0, a, n, m, a); // expected-error {{argument to '__arm_vcx3a_u32' must be a constant integer}}
+  __arm_vcx3a_u32(0, a, n, m, 8); // expected-error {{argument value 8 is outside the valid range [0, 7]}}
+}
+
+void test_vcxfp_u64(uint64_t a, uint64_t n, uint64_t m) {
+  (void)__arm_vcx1d_u64(0, 0);
+  __arm_vcx1d_u64(0, a);        // expected-error {{argument to '__arm_vcx1d_u64' must be a constant integer}}
+  __arm_vcx1d_u64(0, 2048);     // expected-error {{argument value 2048 is outside the valid range [0, 2047]}}
+  __arm_vcx1da_u64(0, a, a);    // expected-error {{argument to '__arm_vcx1da_u64' must be a constant integer}}
+  __arm_vcx1da_u64(0, a, 2048); // expected-error {{argument value 2048 is outside the valid range [0, 2047]}}
+
+  (void)__arm_vcx2d_u64(0, n, 0);
+  __arm_vcx2d_u64(0, n, a);      // expected-error {{argument to '__arm_vcx2d_u64' must be a constant integer}}
+  __arm_vcx2d_u64(0, n, 64);     // expected-error {{argument value 64 is outside the valid range [0, 63]}}
+  __arm_vcx2da_u64(0, a, n, a);  // expected-error {{argument to '__arm_vcx2da_u64' must be a constant integer}}
+  __arm_vcx2da_u64(0, a, n, 64); // expected-error {{argument value 64 is outside the valid range [0, 63]}}
+
+  (void)__arm_vcx3d_u64(0, n, m, 0);
+  __arm_vcx3d_u64(0, n, m, a);     // expected-error {{argument to '__arm_vcx3d_u64' must be a constant integer}}
+  __arm_vcx3d_u64(0, n, m, 8);     // expected-error {{argument value 8 is outside the valid range [0, 7]}}
+  __arm_vcx3da_u64(0, a, n, m, a); // expected-error {{argument to '__arm_vcx3da_u64' must be a constant integer}}
+  __arm_vcx3da_u64(0, a, n, m, 8); // expected-error {{argument value 8 is outside the valid range [0, 7]}}
+}

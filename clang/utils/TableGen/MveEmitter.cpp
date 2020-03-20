@@ -1995,6 +1995,9 @@ void CdeEmitter::EmitHeader(raw_ostream &OS) {
     const ScalarType *ST = kv.second.get();
     if (ST->hasNonstandardName())
       continue;
+    // We don't have float64x2_t
+    if (ST->kind() == ScalarTypeKind::Float && ST->sizeInBits() == 64)
+      continue;
     raw_ostream &OS = parts[ST->requiresFloat() ? MVEFloat : MVE];
     const VectorType *VT = getVectorType(ST);
 
