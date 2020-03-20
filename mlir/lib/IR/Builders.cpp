@@ -109,6 +109,20 @@ DenseIntElementsAttr Builder::getI64VectorAttr(ArrayRef<int64_t> values) {
       values);
 }
 
+DenseIntElementsAttr Builder::getI32TensorAttr(ArrayRef<int32_t> values) {
+  return DenseIntElementsAttr::get(
+      RankedTensorType::get(static_cast<int64_t>(values.size()),
+                            getIntegerType(32)),
+      values);
+}
+
+DenseIntElementsAttr Builder::getI64TensorAttr(ArrayRef<int64_t> values) {
+  return DenseIntElementsAttr::get(
+      RankedTensorType::get(static_cast<int64_t>(values.size()),
+                            getIntegerType(64)),
+      values);
+}
+
 IntegerAttr Builder::getI32IntegerAttr(int32_t value) {
   return IntegerAttr::get(getIntegerType(32), APInt(32, value));
 }

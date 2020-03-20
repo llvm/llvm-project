@@ -2981,6 +2981,9 @@ multiclass AI3ldrT<bits<4> op, string opc> {
     let Inst{3-0} = Rm{3-0};
     let DecoderMethod = "DecodeLDR";
   }
+
+  def ii : ARMAsmPseudo<!strconcat(opc, "${p} $Rt, $addr"),
+                        (ins addr_offset_none:$addr, pred:$p), (outs GPR:$Rt)>;
 }
 
 defm LDRSBT : AI3ldrT<0b1101, "ldrsbt">;

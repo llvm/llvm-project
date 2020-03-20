@@ -482,7 +482,25 @@ ExprDependence clang::computeDependence(OffsetOfExpr *E) {
 }
 
 ExprDependence clang::computeDependence(MemberExpr *E) {
-  return E->getBase()->getDependence();
+  auto *MemberDecl = E->getMemberDecl();
+  auto D = E->getBase()->getDependence();
+  if (FieldDecl *FD = dyn_cast<FieldDecl>(MemberDecl)) {
+    DeclContext *DC = MemberDecl->getDeclContext();
+    // dyn_cast_or_null is used to handle objC variables which do not
+    // have a declaration context.
+    CXXRecordDecl *RD = dyn_cast_or_null<CXXRecordDecl>(DC);
+    if (RD && RD->isDependentContext() && RD->isCurrentInstantiation(DC)) {
+      if (!E->getType()->isDependentType())
+        D &= ~ExprDependence::Type;
+    }
+
+    // Bitfield with value-dependent width is type-dependent.
+    if (FD && FD->isBitField() && FD->getBitWidth()->isValueDependent()) {
+      D |= ExprDependence::Type;
+    }
+  }
+  // FIXME: move remaining dependence computation from MemberExpr::Create()
+  return D;
 }
 
 ExprDependence clang::computeDependence(InitListExpr *E) {

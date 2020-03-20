@@ -374,6 +374,18 @@ locateSymbolNamedTextuallyAt(ParsedAST &AST, const SymbolIndex *Index,
   unsigned WordOffset = Word.data() - Code.data();
   SourceLocation WordStart = SM.getComposedLoc(File, WordOffset);
 
+  // Attempt to determine the kind of token that contains the word,
+  // and bail if it's a string literal. Note that we cannot always
+  // determine the token kind (e.g. comments, for which we do want
+  // to activate, are not retained by TokenBuffer).
+  for (syntax::Token T :
+       syntax::spelledTokensTouching(WordStart, AST.getTokens())) {
+    if (T.range(AST.getSourceManager()).touches(WordOffset + Word.size())) {
+      if (isStringLiteral(T.kind()))
+        return {};
+    }
+  }
+
   // Do not consider tokens that survived preprocessing.
   // We are erring on the safe side here, as a user may expect to get
   // accurate (as opposed to textual-heuristic) results for such tokens.

@@ -5,7 +5,7 @@
 ; GCN-DAG: s_mov_b32 s6, -1{{$}}
 ; GCN-DAG: s_mov_b32 s7, 0xe8f000
 ; GCN-DAG: v_mov_b32_e32 [[V:v[0-9]+]], 2
-; GCN: buffer_store_dword [[V]], off, s[4:7], s2 offset:4
+; GCN: buffer_store_dword [[V]], off, s[4:7], 0 offset:4
 define amdgpu_ps void @scratch_ps(i32 addrspace(1)* %out, i32 %in) {
 entry:
   %alloca = alloca i32, addrspace(5)

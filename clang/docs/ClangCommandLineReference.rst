@@ -2403,7 +2403,7 @@ Target-dependent compilation options
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. option:: -G<size>, -G=<arg>, -msmall-data-threshold=<arg>
 
-Put objects of at most <size> bytes into small data section (MIPS / Hexagon)
+Put objects of at most <size> bytes into small data section (MIPS / Hexagon / RISCV)
 
 .. option:: -ffixed-x1
 
@@ -3200,6 +3200,10 @@ Enable linker relaxation
 .. option:: -msave-restore, -mno-save-restore
 
 Enable using library calls for save and restore
+
+.. option:: -msmall-data-limit=<limit>
+
+Put global and static data smaller than the limit into a special section
 
 Long double flags
 -----------------

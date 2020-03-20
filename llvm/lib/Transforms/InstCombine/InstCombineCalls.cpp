@@ -380,7 +380,8 @@ static Value *simplifyX86immShift(const IntrinsicInst &II,
   unsigned BitWidth = SVT->getPrimitiveSizeInBits();
 
   // If the shift amount is guaranteed to be in-range we can replace it with a
-  // generic shift.
+  // generic shift. If its guaranteed to be out of range, logical shifts combine to
+  // zero and arithmetic shifts are clamped to (BitWidth - 1).
   if (IsImm) {
     assert(Amt->getType()->isIntegerTy(32) &&
            "Unexpected shift-by-immediate type");
@@ -393,13 +394,18 @@ static Value *simplifyX86immShift(const IntrinsicInst &II,
                                         : Builder.CreateLShr(Vec, Amt))
                            : Builder.CreateAShr(Vec, Amt));
     }
+    if (KnownAmtBits.getMinValue().uge(BitWidth)) {
+      if (LogicalShift)
+        return ConstantAggregateZero::get(VT);
+      Amt = ConstantInt::get(SVT, BitWidth - 1);
+      return Builder.CreateAShr(Vec, Builder.CreateVectorSplat(VWidth, Amt));
+    }
   }
 
-  // Simplify if count is constant.
+  // Simplify if count is constant vector.
   auto CAZ = dyn_cast<ConstantAggregateZero>(Amt);
   auto CDV = dyn_cast<ConstantDataVector>(Amt);
-  auto CInt = dyn_cast<ConstantInt>(Amt);
-  if (!CAZ && !CDV && !CInt)
+  if (!CAZ && !CDV)
     return nullptr;
 
   APInt Count(64, 0);
@@ -419,8 +425,6 @@ static Value *simplifyX86immShift(const IntrinsicInst &II,
       Count |= SubElt->getValue().zextOrTrunc(64);
     }
   }
-  else if (CInt)
-    Count = CInt->getValue();
 
   // If shift-by-zero then just return the original value.
   if (Count.isNullValue())

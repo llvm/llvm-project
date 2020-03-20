@@ -545,12 +545,6 @@ void ScriptParser::readSections() {
                                  v.end());
 
   if (atEOF() || !consume("INSERT")) {
-    // --no-rosegment is used to avoid placing read only non-executable sections
-    // in their own segment. We do the same if SECTIONS command is present in
-    // linker script. See comment for computeFlags().
-    // TODO This rule will be dropped in the future.
-    config->singleRoRx = true;
-
     script->hasSectionsCommand = true;
     return;
   }

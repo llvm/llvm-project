@@ -166,3 +166,61 @@ body:             |
     RET_ReallyLR implicit $w0
 
 ...
+---
+name:            shufflevector_undef_ops_to_undef
+alignment:       4
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: shufflevector_undef_ops_to_undef
+    ; CHECK: [[DEF:%[0-9]+]]:_(<2 x s32>) = G_IMPLICIT_DEF
+    ; CHECK: $d0 = COPY [[DEF]](<2 x s32>)
+    ; CHECK: RET_ReallyLR implicit $d0
+    %1:_(<2 x s32>) = G_IMPLICIT_DEF
+    %2:_(<2 x s32>) = G_IMPLICIT_DEF
+    %0:_(<2 x s32>) = G_SHUFFLE_VECTOR %1(<2 x s32>), %2(<2 x s32>), shufflemask(0, 1)
+    $d0 = COPY %0(<2 x s32>)
+    RET_ReallyLR implicit $d0
+
+...
+---
+name:            shufflevector_undef_mask_to_undef
+alignment:       4
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $d0, $d1
+    ; CHECK-LABEL: name: shufflevector_undef_mask_to_undef
+    ; CHECK: liveins: $d0, $d1
+    ; CHECK: [[DEF:%[0-9]+]]:_(<2 x s32>) = G_IMPLICIT_DEF
+    ; CHECK: $d0 = COPY [[DEF]](<2 x s32>)
+    ; CHECK: RET_ReallyLR implicit $d0
+    %0:_(<2 x s32>) = COPY $d0
+    %1:_(<2 x s32>) = COPY $d1
+    %2:_(<2 x s32>) = G_SHUFFLE_VECTOR %0(<2 x s32>), %1, shufflemask(undef, undef)
+    $d0 = COPY %2(<2 x s32>)
+    RET_ReallyLR implicit $d0
+
+...
+---
+name:            shufflevector_not_all_ops_undef
+alignment:       4
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $d0
+    ; Show that we don't do the combine when one of the vectors is not a
+    ; G_IMPLICIT_DEF.
+    ;
+    ; CHECK-LABEL: name: shufflevector_not_all_ops_undef
+    ; CHECK: liveins: $d0
+    ; CHECK: [[DEF:%[0-9]+]]:_(<2 x s32>) = G_IMPLICIT_DEF
+    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $d0
+    ; CHECK: [[SHUF:%[0-9]+]]:_(<2 x s32>) = G_SHUFFLE_VECTOR [[DEF]](<2 x s32>), [[COPY]], shufflemask(0, 1)
+    ; CHECK: $d0 = COPY [[SHUF]](<2 x s32>)
+    ; CHECK: RET_ReallyLR implicit $d0
+    %1:_(<2 x s32>) = G_IMPLICIT_DEF
+    %2:_(<2 x s32>) = COPY $d0
+    %0:_(<2 x s32>) = G_SHUFFLE_VECTOR %1(<2 x s32>), %2(<2 x s32>), shufflemask(0, 1)
+    $d0 = COPY %0(<2 x s32>)
+    RET_ReallyLR implicit $d0
