@@ -250,6 +250,9 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
   case Stmt::OMPDepobjDirectiveClass:
     EmitOMPDepobjDirective(cast<OMPDepobjDirective>(*S));
     break;
+  case Stmt::OMPScanDirectiveClass:
+    llvm_unreachable("Scan directive not supported yet.");
+    break;
   case Stmt::OMPOrderedDirectiveClass:
     EmitOMPOrderedDirective(cast<OMPOrderedDirective>(*S));
     break;
