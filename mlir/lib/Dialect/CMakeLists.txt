@@ -1,3 +1,4 @@
+add_subdirectory(AVX512)
 add_subdirectory(AffineOps)
 add_subdirectory(FxpMathOps)
 add_subdirectory(GPU)

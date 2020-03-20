@@ -20,3 +20,9 @@ add_public_tablegen_target(MLIRNVVMConversionsIncGen)
 set(LLVM_TARGET_DEFINITIONS ROCDLOps.td)
 mlir_tablegen(ROCDLConversions.inc -gen-llvmir-conversions)
 add_public_tablegen_target(MLIRROCDLConversionsIncGen)
+
+add_mlir_dialect(LLVMAVX512 llvm_avx512 LLVMAVX512Doc)
+
+set(LLVM_TARGET_DEFINITIONS LLVMAVX512.td)
+mlir_tablegen(LLVMAVX512Conversions.inc -gen-llvmir-conversions)
+add_public_tablegen_target(MLIRLLVMAVX512ConversionsIncGen)
