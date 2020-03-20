@@ -11,30 +11,22 @@
 define float @f32_positive_zero(float *%pf) nounwind {
 ; RV32F-LABEL: f32_positive_zero:
 ; RV32F:       # %bb.0:
-; RV32F-NEXT:    lui a0, %hi(.LCPI0_0)
-; RV32F-NEXT:    addi a0, a0, %lo(.LCPI0_0)
-; RV32F-NEXT:    flw fa0, 0(a0)
+; RV32F-NEXT:    fmv.w.x fa0, zero
 ; RV32F-NEXT:    ret
 ;
 ; RV32D-LABEL: f32_positive_zero:
 ; RV32D:       # %bb.0:
-; RV32D-NEXT:    lui a0, %hi(.LCPI0_0)
-; RV32D-NEXT:    addi a0, a0, %lo(.LCPI0_0)
-; RV32D-NEXT:    flw fa0, 0(a0)
+; RV32D-NEXT:    fmv.w.x fa0, zero
 ; RV32D-NEXT:    ret
 ;
 ; RV64F-LABEL: f32_positive_zero:
 ; RV64F:       # %bb.0:
-; RV64F-NEXT:    lui a0, %hi(.LCPI0_0)
-; RV64F-NEXT:    addi a0, a0, %lo(.LCPI0_0)
-; RV64F-NEXT:    flw fa0, 0(a0)
+; RV64F-NEXT:    fmv.w.x fa0, zero
 ; RV64F-NEXT:    ret
 ;
 ; RV64D-LABEL: f32_positive_zero:
 ; RV64D:       # %bb.0:
-; RV64D-NEXT:    lui a0, %hi(.LCPI0_0)
-; RV64D-NEXT:    addi a0, a0, %lo(.LCPI0_0)
-; RV64D-NEXT:    flw fa0, 0(a0)
+; RV64D-NEXT:    fmv.w.x fa0, zero
 ; RV64D-NEXT:    ret
   ret float 0.0
 }
@@ -79,9 +71,7 @@ define double @f64_positive_zero(double *%pd) nounwind {
 ;
 ; RV32D-LABEL: f64_positive_zero:
 ; RV32D:       # %bb.0:
-; RV32D-NEXT:    lui a0, %hi(.LCPI2_0)
-; RV32D-NEXT:    addi a0, a0, %lo(.LCPI2_0)
-; RV32D-NEXT:    fld fa0, 0(a0)
+; RV32D-NEXT:    fcvt.d.w fa0, zero
 ; RV32D-NEXT:    ret
 ;
 ; RV64F-LABEL: f64_positive_zero:
@@ -91,9 +81,7 @@ define double @f64_positive_zero(double *%pd) nounwind {
 ;
 ; RV64D-LABEL: f64_positive_zero:
 ; RV64D:       # %bb.0:
-; RV64D-NEXT:    lui a0, %hi(.LCPI2_0)
-; RV64D-NEXT:    addi a0, a0, %lo(.LCPI2_0)
-; RV64D-NEXT:    fld fa0, 0(a0)
+; RV64D-NEXT:    fmv.d.x fa0, zero
 ; RV64D-NEXT:    ret
   ret double 0.0
 }
