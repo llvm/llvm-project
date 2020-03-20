@@ -185,7 +185,7 @@ GetFileByIndex(const llvm::DWARFDebugLine::Prologue &prologue, size_t idx,
 
   // Otherwise ask for a relative path.
   std::string rel_path;
-  auto relative = llvm::DILineInfoSpecifier::FileLineInfoKind::Default;
+  auto relative = llvm::DILineInfoSpecifier::FileLineInfoKind::RawValue;
   if (!prologue.getFileNameByIndex(idx, compile_dir, relative, rel_path, style))
     return {};
   return std::move(rel_path);
