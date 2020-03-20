@@ -543,9 +543,6 @@ void request_attach(const llvm::json::Object &request) {
     return;
   }
 
-  const bool detatchOnError = GetBoolean(arguments, "detachOnError", false);
-  g_vsc.launch_info.SetDetachOnError(detatchOnError);
-
   // Run any pre run LLDB commands the user specified in the launch.json
   g_vsc.RunPreRunCommands();
 
