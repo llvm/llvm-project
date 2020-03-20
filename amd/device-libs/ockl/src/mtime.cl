@@ -7,7 +7,7 @@
 
 #include "ockl.h"
 
-ulong
+__attribute__((target("s-memtime-inst"))) ulong
 OCKL_MANGLE_U64(memtime)(void)
 {
     return __builtin_amdgcn_s_memtime();

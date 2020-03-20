@@ -18,12 +18,12 @@
 extern void __llvm_amdgcn_global_atomic_fadd_p1f32_f32(__global float *, float) __asm("llvm.amdgcn.global.atomic.fadd.p1f32.f32");
 
 void
-__ockl_global_atomic_add_f32(__global float *p, float v)
+__ockl_atomic_add_noret_f32(float *p, float v)
 {
-    if (__oclc_ISA_version == 9008) {
-        __llvm_amdgcn_global_atomic_fadd_p1f32_f32(p, v);
+    if (__oclc_ISA_version == 9008 && !__ockl_is_local_addr(p) && !__ockl_is_private_addr(p)) {
+        __llvm_amdgcn_global_atomic_fadd_p1f32_f32((__global float *)p, v);
     } else {
-        __global atomic_uint *t = (__global atomic_uint *)p;
+        atomic_uint *t = (atomic_uint *)p;
         uint e = AL(t, memory_order_relaxed, memory_scope_device);
         while (!AC(t, &e, AS_UINT(v + AS_FLOAT(e)), memory_order_relaxed, memory_order_relaxed, memory_scope_device))
             ;
