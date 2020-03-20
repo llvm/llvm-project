@@ -201,7 +201,13 @@ ForOp mlir::loop::getForInductionVarOwner(Value val) {
 
 void IfOp::build(Builder *builder, OperationState &result, Value cond,
                  bool withElseRegion) {
+  build(builder, result, /*resultTypes=*/llvm::None, cond, withElseRegion);
+}
+
+void IfOp::build(Builder *builder, OperationState &result,
+                 TypeRange resultTypes, Value cond, bool withElseRegion) {
   result.addOperands(cond);
+  result.addTypes(resultTypes);
   Region *thenRegion = result.addRegion();
   Region *elseRegion = result.addRegion();
   IfOp::ensureTerminator(*thenRegion, *builder, result.location);
