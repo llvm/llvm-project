@@ -8,8 +8,8 @@
 # RUN: ld.lld -o %t.so --script %t.script %t.o -shared
 # RUN: llvm-nm -D %t.so | FileCheck %s
 
-# CHECK: 0000000000000226 R A
-# CHECK: 0000000000000227 R B
+# CHECK: 000000000000025e R A
+# CHECK: 000000000000025f R B
 
 .section .aaa,"a"
 .byte 11

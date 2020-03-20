@@ -5,9 +5,9 @@
 // RUN:       .text_low : { *(.text_low) *(.text_low2) } \
 // RUN:       .text_high 0x2000000 : { *(.text_high) *(.text_high2) } \
 // RUN:       } " > %t.script
-// RUN: ld.lld --script %t.script %t -o %t2
+// RUN: ld.lld --no-rosegment --script %t.script %t -o %t2
 // RUN: llvm-objdump -d %t2 --triple=armv6m-none-eabi | FileCheck %s
-// RUN: ld.lld --script %t.script %t -o %t3 --pie
+// RUN: ld.lld --no-rosegment --script %t.script %t -o %t3 --pie
 // RUN: llvm-objdump -d %t3 --triple=armv6m-none-eabi | FileCheck --check-prefix=CHECK-PI %s
 
 // Range extension thunks for Arm Architecture v6m. Only Thumb instructions
