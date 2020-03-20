@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/AffineOps/EDSC/Builders.h"
+#include "mlir/Dialect/Affine/EDSC/Builders.h"
 #include "mlir/Dialect/StandardOps/EDSC/Builders.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"

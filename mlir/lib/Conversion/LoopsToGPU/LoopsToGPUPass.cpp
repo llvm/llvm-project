@@ -8,7 +8,7 @@
 
 #include "mlir/Conversion/LoopsToGPU/LoopsToGPUPass.h"
 #include "mlir/Conversion/LoopsToGPU/LoopsToGPU.h"
-#include "mlir/Dialect/AffineOps/AffineOps.h"
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/LoopOps/LoopOps.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
@@ -123,7 +123,7 @@ struct ParallelLoopToGpuPass : public OperationPass<ParallelLoopToGpuPass> {
     populateParallelLoopToGPUPatterns(patterns, &getContext());
     ConversionTarget target(getContext());
     target.addLegalDialect<StandardOpsDialect>();
-    target.addLegalDialect<AffineOpsDialect>();
+    target.addLegalDialect<AffineDialect>();
     target.addLegalDialect<gpu::GPUDialect>();
     target.addLegalDialect<loop::LoopOpsDialect>();
     target.addIllegalOp<loop::ParallelOp>();

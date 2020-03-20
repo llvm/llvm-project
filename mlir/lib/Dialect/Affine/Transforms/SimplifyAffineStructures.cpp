@@ -13,7 +13,10 @@
 #include "mlir/Analysis/AffineStructures.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Transforms/Passes.h"
+#include "mlir/Dialect/Affine/IR/AffineValueMap.h"
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Affine/Passes.h"
+#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Transforms/Utils.h"
 
 #define DEBUG_TYPE "simplify-affine-structure"

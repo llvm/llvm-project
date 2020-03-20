@@ -16,7 +16,7 @@ target_link_libraries(MLIRVector
   MLIREDSC
   MLIRIR
   MLIRStandardOps
-  MLIRAffineOps
+  MLIRAffine
   MLIRLoopOps
   MLIRLoopAnalysis
   MLIRSideEffects

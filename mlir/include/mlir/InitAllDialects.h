@@ -15,7 +15,7 @@
 #define MLIR_INITALLDIALECTS_H_
 
 #include "mlir/Dialect/AVX512/AVX512Dialect.h"
-#include "mlir/Dialect/AffineOps/AffineOps.h"
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/FxpMathOps/FxpMathOps.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMAVX512Dialect.h"
@@ -39,7 +39,7 @@ namespace mlir {
 // all the possible dialects to be made available to the context automatically.
 inline void registerAllDialects() {
   static bool init_once = []() {
-    registerDialect<AffineOpsDialect>();
+    registerDialect<AffineDialect>();
     registerDialect<avx512::AVX512Dialect>();
     registerDialect<fxpmath::FxpMathOpsDialect>();
     registerDialect<gpu::GPUDialect>();

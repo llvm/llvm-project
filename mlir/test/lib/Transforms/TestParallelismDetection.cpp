@@ -12,7 +12,7 @@
 
 #include "mlir/Analysis/Passes.h"
 #include "mlir/Analysis/Utils.h"
-#include "mlir/Dialect/AffineOps/AffineOps.h"
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/Pass/Pass.h"
 
