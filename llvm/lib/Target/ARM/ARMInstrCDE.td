@@ -215,6 +215,35 @@ def CDE_CX3A  : CDE_CX3_Instr<"cx3a",   cde_cx_params_single_acc>;
 def CDE_CX3D  : CDE_CX3_Instr<"cx3d",   cde_cx_params_dual_noacc>;
 def CDE_CX3DA : CDE_CX3_Instr<"cx3da",  cde_cx_params_dual_acc>;
 
+let Predicates = [HasCDE] in {
+  def : Pat<(i32 (int_arm_cde_cx1 timm:$coproc, timm:$imm)),
+            (i32 (CDE_CX1 p_imm:$coproc, imm_13b:$imm))>;
+  def : Pat<(i32 (int_arm_cde_cx1a timm:$coproc, GPRwithAPSR_NZCVnosp:$acc,
+                                   timm:$imm)),
+            (i32 (CDE_CX1A p_imm:$coproc, GPRwithAPSR_NZCVnosp:$acc,
+                           imm_13b:$imm))>;
+  def : Pat<(i32 (int_arm_cde_cx2 timm:$coproc, GPRwithAPSR_NZCVnosp:$n,
+                                  timm:$imm)),
+            (i32 (CDE_CX2 p_imm:$coproc, GPRwithAPSR_NZCVnosp:$n,
+                          imm_9b:$imm))>;
+  def : Pat<(i32 (int_arm_cde_cx2a timm:$coproc, GPRwithAPSR_NZCVnosp:$acc,
+                                   GPRwithAPSR_NZCVnosp:$n, timm:$imm)),
+            (i32 (CDE_CX2A p_imm:$coproc, GPRwithAPSR_NZCVnosp:$acc,
+                           GPRwithAPSR_NZCVnosp:$n, imm_9b:$imm))>;
+  def : Pat<(i32 (int_arm_cde_cx3 timm:$coproc, GPRwithAPSR_NZCVnosp:$n,
+                                  GPRwithAPSR_NZCVnosp:$m, timm:$imm)),
+            (i32 (CDE_CX3  p_imm:$coproc, GPRwithAPSR_NZCVnosp:$n,
+                           GPRwithAPSR_NZCVnosp:$m, imm_6b:$imm))>;
+  def : Pat<(i32 (int_arm_cde_cx3a timm:$coproc,
+                                   GPRwithAPSR_NZCVnosp:$acc,
+                                   GPRwithAPSR_NZCVnosp:$n,
+                                   GPRwithAPSR_NZCVnosp:$m, timm:$imm)),
+            (i32 (CDE_CX3A p_imm:$coproc,
+                           GPRwithAPSR_NZCVnosp:$acc,
+                           GPRwithAPSR_NZCVnosp:$n,
+                           GPRwithAPSR_NZCVnosp:$m, imm_6b:$imm))>;
+}
+
 class CDE_RequiresSReg : Requires<[HasCDE, HasFPRegs]>;
 class CDE_RequiresDReg : Requires<[HasCDE, HasFPRegs]>;
 class CDE_RequiresQReg : Requires<[HasCDE, HasMVEInt]>;
