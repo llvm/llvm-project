@@ -641,6 +641,10 @@ void CheckHelper::CheckDerivedType(
       }
     }
   }
+  if (HasIntrinsicTypeName(symbol)) {  // C729
+    messages_.Say("A derived type name cannot be the name of an intrinsic"
+                  " type"_err_en_US);
+  }
 }
 
 void CheckHelper::CheckGeneric(

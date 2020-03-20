@@ -674,6 +674,22 @@ bool IsInitialized(const Symbol &symbol) {
   return false;
 }
 
+bool HasIntrinsicTypeName(const Symbol &symbol) {
+  std::string name{symbol.name().ToString()};
+  if (name == "doubleprecision") {
+    return true;
+  } else if (name == "derived") {
+    return false;
+  } else {
+    for (int i{0}; i != common::TypeCategory_enumSize; ++i) {
+      if (name == parser::ToLowerCaseLetters(EnumToString(TypeCategory{i}))) {
+        return true;
+      }
+    }
+    return false;
+  }
+}
+
 bool IsFinalizable(const Symbol &symbol) {
   if (const DeclTypeSpec * type{symbol.GetType()}) {
     if (const DerivedTypeSpec * derived{type->AsDerived()}) {

@@ -242,10 +242,12 @@ public:
   bool Pre(const parser::IntentSpec &);
   bool Pre(const parser::Pass &);
 
+  bool CheckAndSet(Attr);
+
 // Simple case: encountering CLASSNAME causes ATTRNAME to be set.
 #define HANDLE_ATTR_CLASS(CLASSNAME, ATTRNAME) \
   bool Pre(const parser::CLASSNAME &) { \
-    attrs_->set(Attr::ATTRNAME); \
+    CheckAndSet(Attr::ATTRNAME); \
     return false; \
   }
   HANDLE_ATTR_CLASS(PrefixSpec::Elemental, ELEMENTAL)
@@ -294,6 +296,10 @@ protected:
   }
 
 private:
+  bool IsDuplicateAttr(Attr);
+  bool HaveAttrConflict(Attr, Attr, Attr);
+  bool IsConflictingAttr(Attr);
+
   MaybeExpr bindName_;  // from BIND(C, NAME="...")
   std::optional<SourceName> passName_;  // from PASS(...)
 };
@@ -607,6 +613,7 @@ private:
 class InterfaceVisitor : public virtual ScopeHandler {
 public:
   bool Pre(const parser::InterfaceStmt &);
+  void Post(const parser::InterfaceStmt &);
   void Post(const parser::EndInterfaceStmt &);
   bool Pre(const parser::GenericSpec &);
   bool Pre(const parser::ProcedureStmt &);
@@ -1548,24 +1555,67 @@ bool AttrsVisitor::SetBindNameOn(Symbol &symbol) {
 
 void AttrsVisitor::Post(const parser::LanguageBindingSpec &x) {
   CHECK(attrs_);
-  attrs_->set(Attr::BIND_C);
-  if (x.v) {
-    bindName_ = EvaluateExpr(*x.v);
+  if (CheckAndSet(Attr::BIND_C)) {
+    if (x.v) {
+      bindName_ = EvaluateExpr(*x.v);
+    }
   }
 }
 bool AttrsVisitor::Pre(const parser::IntentSpec &x) {
   CHECK(attrs_);
-  attrs_->set(IntentSpecToAttr(x));
+  CheckAndSet(IntentSpecToAttr(x));
   return false;
 }
 bool AttrsVisitor::Pre(const parser::Pass &x) {
-  if (x.v) {
-    passName_ = x.v->source;
-    MakePlaceholder(*x.v, MiscDetails::Kind::PassName);
-  } else {
-    attrs_->set(Attr::PASS);
+  if (CheckAndSet(Attr::PASS)) {
+    if (x.v) {
+      passName_ = x.v->source;
+      MakePlaceholder(*x.v, MiscDetails::Kind::PassName);
+    }
   }
   return false;
+}
+
+// C730, C743, C755, C778, C1543 say no attribute or prefix repetitions
+bool AttrsVisitor::IsDuplicateAttr(Attr attrName) {
+  if (attrs_->test(attrName)) {
+    Say(currStmtSource().value(),
+        "Attribute '%s' cannot be used more than once"_en_US,
+        AttrToString(attrName));
+    return true;
+  }
+  return false;
+}
+
+// See if attrName violates a constraint cause by a conflict.  attr1 and attr2
+// name attributes that cannot be used on the same declaration
+bool AttrsVisitor::HaveAttrConflict(Attr attrName, Attr attr1, Attr attr2) {
+  if ((attrName == attr1 && attrs_->test(attr2)) ||
+      (attrName == attr2 && attrs_->test(attr1))) {
+    Say(currStmtSource().value(),
+        "Attributes '%s' and '%s' conflict with each other"_err_en_US,
+        AttrToString(attr1), AttrToString(attr2));
+    return true;
+  }
+  return false;
+}
+// C759, C1543
+bool AttrsVisitor::IsConflictingAttr(Attr attrName) {
+  return HaveAttrConflict(attrName, Attr::INTENT_IN, Attr::INTENT_INOUT) ||
+      HaveAttrConflict(attrName, Attr::INTENT_IN, Attr::INTENT_OUT) ||
+      HaveAttrConflict(attrName, Attr::INTENT_INOUT, Attr::INTENT_OUT) ||
+      HaveAttrConflict(attrName, Attr::PASS, Attr::NOPASS) ||
+      HaveAttrConflict(attrName, Attr::PURE, Attr::IMPURE) ||
+      HaveAttrConflict(attrName, Attr::PUBLIC, Attr::PRIVATE) ||
+      HaveAttrConflict(attrName, Attr::RECURSIVE, Attr::NON_RECURSIVE);
+}
+bool AttrsVisitor::CheckAndSet(Attr attrName) {
+  CHECK(attrs_);
+  if (IsConflictingAttr(attrName) || IsDuplicateAttr(attrName)) {
+    return false;
+  }
+  attrs_->set(attrName);
+  return true;
 }
 
 // DeclTypeSpecVisitor implementation
@@ -1824,14 +1874,22 @@ void ArraySpecVisitor::PostAttrSpec() {
   // Save dimension/codimension from attrs so we can process array/coarray-spec
   // on the entity-decl
   if (!arraySpec_.empty()) {
-    CHECK(attrArraySpec_.empty());
-    attrArraySpec_ = arraySpec_;
-    arraySpec_.clear();
+    if (attrArraySpec_.empty()) {
+      attrArraySpec_ = arraySpec_;
+      arraySpec_.clear();
+    } else {
+      Say(currStmtSource().value(),
+          "Attribute 'DIMENSION' cannot be used more than once"_err_en_US);
+    }
   }
   if (!coarraySpec_.empty()) {
-    CHECK(attrCoarraySpec_.empty());
-    attrCoarraySpec_ = coarraySpec_;
-    coarraySpec_.clear();
+    if (attrCoarraySpec_.empty()) {
+      attrCoarraySpec_ = coarraySpec_;
+      coarraySpec_.clear();
+    } else {
+      Say(currStmtSource().value(),
+          "Attribute 'CODIMENSION' cannot be used more than once"_err_en_US);
+    }
   }
 }
 
@@ -2395,8 +2453,10 @@ void ModuleVisitor::ApplyDefaultAccess() {
 bool InterfaceVisitor::Pre(const parser::InterfaceStmt &x) {
   bool isAbstract{std::holds_alternative<parser::Abstract>(x.u)};
   genericInfo_.emplace(/*isInterface*/ true, isAbstract);
-  return true;
+  return BeginAttrs();
 }
+
+void InterfaceVisitor::Post(const parser::InterfaceStmt &) { EndAttrs(); }
 
 void InterfaceVisitor::Post(const parser::EndInterfaceStmt &) {
   genericInfo_.pop();
@@ -2624,9 +2684,15 @@ bool SubprogramVisitor::Pre(const parser::Suffix &suffix) {
 bool SubprogramVisitor::Pre(const parser::PrefixSpec &x) {
   // Save this to process after UseStmt and ImplicitPart
   if (const auto *parsedType{std::get_if<parser::DeclarationTypeSpec>(&x.u)}) {
-    funcInfo_.parsedType = parsedType;
-    funcInfo_.source = currStmtSource();
-    return false;
+    if (funcInfo_.parsedType) {  // C1543
+      Say(currStmtSource().value(),
+          "FUNCTION prefix cannot specify the type more than once"_err_en_US);
+      return false;
+    } else {
+      funcInfo_.parsedType = parsedType;
+      funcInfo_.source = currStmtSource();
+      return false;
+    }
   } else {
     return true;
   }
@@ -3057,7 +3123,7 @@ bool DeclarationVisitor::Pre(const parser::AccessSpec &x) {
         "%s attribute may only appear in the specification part of a module"_err_en_US,
         EnumToString(attr));
   }
-  attrs_->set(attr);
+  CheckAndSet(attr);
   return false;
 }
 
@@ -3522,7 +3588,12 @@ void DeclarationVisitor::Post(const parser::TypeParamDefStmt &x) {
   EndDecl();
 }
 bool DeclarationVisitor::Pre(const parser::TypeAttrSpec::Extends &x) {
-  derivedTypeInfo_.extends = &x.v;
+  if (derivedTypeInfo_.extends) {
+    Say(currStmtSource().value(),
+        "Attribute 'EXTENDS' cannot be used more than once"_err_en_US);
+  } else {
+    derivedTypeInfo_.extends = &x.v;
+  }
   return false;
 }
 

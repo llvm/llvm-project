@@ -107,6 +107,7 @@ bool IsOrContainsEventOrLockComponent(const Symbol &);
 bool IsSaved(const Symbol &);
 bool CanBeTypeBoundProc(const Symbol *);
 bool IsInitialized(const Symbol &);
+bool HasIntrinsicTypeName(const Symbol &);
 
 // Return an ultimate component of type that matches predicate, or nullptr.
 const Symbol *FindUltimateComponent(const DerivedTypeSpec &type,

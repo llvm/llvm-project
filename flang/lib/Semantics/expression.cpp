@@ -626,7 +626,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::LogicalLiteralConstant &x) {
       TypeKindVisitor<TypeCategory::Logical, Constant, bool>{
           kind, std::move(value)})};
   if (!result) {
-    Say("unsupported LOGICAL(KIND=%d)"_err_en_US, kind);
+    Say("unsupported LOGICAL(KIND=%d)"_err_en_US, kind);  // C728
   }
   return result;
 }
@@ -2494,7 +2494,7 @@ DynamicType ExpressionAnalyzer::GetDefaultKindOfType(
 
 bool ExpressionAnalyzer::CheckIntrinsicKind(
     TypeCategory category, std::int64_t kind) {
-  if (IsValidKindOfIntrinsicType(category, kind)) {  // C712, C714, C715
+  if (IsValidKindOfIntrinsicType(category, kind)) {  // C712, C714, C715, C727
     return true;
   } else {
     Say("%s(KIND=%jd) is not a supported type"_err_en_US,
@@ -2543,7 +2543,7 @@ bool ExpressionAnalyzer::EnforceTypeConstraint(parser::CharBlock at,
     const MaybeExpr &result, TypeCategory category, bool defaultKind) {
   if (result) {
     if (auto type{result->GetType()}) {
-      if (type->category() != category) { // C885
+      if (type->category() != category) {  // C885
         Say(at, "Must have %s type, but is %s"_err_en_US,
             ToUpperCase(EnumToString(category)),
             ToUpperCase(type->AsFortran()));

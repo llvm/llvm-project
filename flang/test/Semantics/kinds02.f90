@@ -10,6 +10,8 @@
 ! double-colon separator appears in the typedeclaration- stmt.
 ! C727 The value of kind-param shall specify a representation method that 
 ! exists on the processor.
+! C728 The value of kind-param shall specify a representation method that 
+! exists on the processor.
 !
 !ERROR: INTEGER(KIND=0) is not a supported type
 integer(kind=0) :: j0
@@ -53,6 +55,18 @@ logical(kind=-1) :: lm1
 logical(kind=3) :: l3
 !ERROR: LOGICAL(KIND=16) is not a supported type
 logical(kind=16) :: l16
+integer, parameter :: negOne = -1
+!ERROR: unsupported LOGICAL(KIND=0)
+logical :: lvar0 = .true._0
+logical :: lvar1 = .true._1
+logical :: lvar2 = .true._2
+!ERROR: unsupported LOGICAL(KIND=3)
+logical :: lvar3 = .true._3
+logical :: lvar4 = .true._4
+!ERROR: unsupported LOGICAL(KIND=5)
+logical :: lvar5 = .true._5
+!ERROR: unsupported LOGICAL(KIND=-1)
+logical :: lvar6 = .true._negOne
 character (len=99, kind=1) :: cvar1
 character (len=99, kind=2) :: cvar2
 character *4, cvar3
