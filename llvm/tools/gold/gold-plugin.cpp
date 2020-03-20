@@ -14,7 +14,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
-#include "llvm/CodeGen/CommandFlags.inc"
+#include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/Config/config.h" // plugin-api.h requires HAVE_STDINT_H
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DiagnosticPrinter.h"
@@ -49,6 +49,8 @@
 
 using namespace llvm;
 using namespace lto;
+
+static codegen::RegisterCodeGenFlags CodeGenFlags;
 
 // FIXME: Remove when binutils 2.31 (containing gold 1.16) is the minimum
 // required version.
@@ -854,21 +856,21 @@ static std::unique_ptr<LTO> createLTO(IndexWriteCallback OnIndexWrite,
   ThinBackend Backend;
 
   Conf.CPU = options::mcpu;
-  Conf.Options = InitTargetOptionsFromCodeGenFlags();
+  Conf.Options = codegen::InitTargetOptionsFromCodeGenFlags();
 
   // Disable the new X86 relax relocations since gold might not support them.
   // FIXME: Check the gold version or add a new option to enable them.
   Conf.Options.RelaxELFRelocations = false;
 
   // Toggle function/data sections.
-  if (FunctionSections.getNumOccurrences() == 0)
+  if (!codegen::getExplicitFunctionSections())
     Conf.Options.FunctionSections = SplitSections;
-  if (DataSections.getNumOccurrences() == 0)
+  if (!codegen::getExplicitDataSections())
     Conf.Options.DataSections = SplitSections;
 
-  Conf.MAttrs = MAttrs;
-  Conf.RelocModel = RelocationModel;
-  Conf.CodeModel = getCodeModel();
+  Conf.MAttrs = codegen::getMAttrs();
+  Conf.RelocModel = codegen::getExplicitRelocModel();
+  Conf.CodeModel = codegen::getExplicitCodeModel();
   Conf.CGOptLevel = getCGOptLevel();
   Conf.DisableVerify = options::DisableVerify;
   Conf.OptLevel = options::OptLevel;

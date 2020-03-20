@@ -13,13 +13,16 @@
 #include "llvm/DWARFLinker/DWARFLinkerCompileUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/MC/MCTargetOptions.h"
-#include "llvm/MC/MCTargetOptionsCommandFlags.inc"
+#include "llvm/MC/MCTargetOptionsCommandFlags.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 
 namespace llvm {
+
+static mc::RegisterMCTargetOptionsFlags MOF;
+
 namespace dsymutil {
 
 bool DwarfStreamer::init(Triple TheTriple) {
@@ -39,7 +42,7 @@ bool DwarfStreamer::init(Triple TheTriple) {
   if (!MRI)
     return error(Twine("no register info for target ") + TripleName, Context);
 
-  MCTargetOptions MCOptions = InitMCTargetOptionsFromFlags();
+  MCTargetOptions MCOptions = mc::InitMCTargetOptionsFromFlags();
   MAI.reset(TheTarget->createMCAsmInfo(*MRI, TripleName, MCOptions));
   if (!MAI)
     return error("no asm info for target " + TripleName, Context);
