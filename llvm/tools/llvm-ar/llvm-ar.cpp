@@ -14,11 +14,14 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/BinaryFormat/Magic.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/ArchiveWriter.h"
+#include "llvm/Object/IRObjectFile.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Object/SymbolicFile.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ConvertUTF.h"
@@ -875,8 +878,9 @@ static object::Archive::Kind getDefaultForHost() {
 }
 
 static object::Archive::Kind getKindFromMember(const NewArchiveMember &Member) {
+  auto MemBufferRef = Member.Buf->getMemBufferRef();
   Expected<std::unique_ptr<object::ObjectFile>> OptionalObject =
-      object::ObjectFile::createObjectFile(Member.Buf->getMemBufferRef());
+      object::ObjectFile::createObjectFile(MemBufferRef);
 
   if (OptionalObject)
     return isa<object::MachOObjectFile>(**OptionalObject)
@@ -885,6 +889,23 @@ static object::Archive::Kind getKindFromMember(const NewArchiveMember &Member) {
 
   // squelch the error in case we had a non-object file
   consumeError(OptionalObject.takeError());
+
+  // If we're adding a bitcode file to the archive, detect the Archive kind
+  // based on the target triple.
+  LLVMContext Context;
+  if (identify_magic(MemBufferRef.getBuffer()) == file_magic::bitcode) {
+    if (auto ObjOrErr = object::SymbolicFile::createSymbolicFile(
+            MemBufferRef, file_magic::bitcode, &Context)) {
+      auto &IRObject = cast<object::IRObjectFile>(**ObjOrErr);
+      return Triple(IRObject.getTargetTriple()).isOSDarwin()
+                 ? object::Archive::K_DARWIN
+                 : object::Archive::K_GNU;
+    } else {
+      // Squelch the error in case this was not a SymbolicFile.
+      consumeError(ObjOrErr.takeError());
+    }
+  }
+
   return getDefaultForHost();
 }
 
