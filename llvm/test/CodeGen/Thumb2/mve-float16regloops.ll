@@ -8,7 +8,7 @@ define arm_aapcs_vfpcc void @test_fadd(half* noalias nocapture readonly %A, half
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    bxlt lr
 ; CHECK-NEXT:    vldr.16 s0, [r1]
-; CHECK-NEXT:    vmov r1, s0
+; CHECK-NEXT:    vmov.f16 r1, s0
 ; CHECK-NEXT:    vdup.16 q0, r1
 ; CHECK-NEXT:  .LBB0_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
@@ -56,7 +56,7 @@ define arm_aapcs_vfpcc void @test_fadd_r(half* noalias nocapture readonly %A, ha
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    bxlt lr
 ; CHECK-NEXT:    vldr.16 s0, [r1]
-; CHECK-NEXT:    vmov r1, s0
+; CHECK-NEXT:    vmov.f16 r1, s0
 ; CHECK-NEXT:    vdup.16 q0, r1
 ; CHECK-NEXT:  .LBB1_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
@@ -104,7 +104,7 @@ define arm_aapcs_vfpcc void @test_fmul(half* noalias nocapture readonly %A, half
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    bxlt lr
 ; CHECK-NEXT:    vldr.16 s0, [r1]
-; CHECK-NEXT:    vmov r1, s0
+; CHECK-NEXT:    vmov.f16 r1, s0
 ; CHECK-NEXT:    vdup.16 q0, r1
 ; CHECK-NEXT:  .LBB2_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
@@ -152,7 +152,7 @@ define arm_aapcs_vfpcc void @test_fmul_r(half* noalias nocapture readonly %A, ha
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    bxlt lr
 ; CHECK-NEXT:    vldr.16 s0, [r1]
-; CHECK-NEXT:    vmov r1, s0
+; CHECK-NEXT:    vmov.f16 r1, s0
 ; CHECK-NEXT:    vdup.16 q0, r1
 ; CHECK-NEXT:  .LBB3_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
@@ -200,7 +200,7 @@ define arm_aapcs_vfpcc void @test_fsub(half* noalias nocapture readonly %A, half
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    bxlt lr
 ; CHECK-NEXT:    vldr.16 s0, [r1]
-; CHECK-NEXT:    vmov r1, s0
+; CHECK-NEXT:    vmov.f16 r1, s0
 ; CHECK-NEXT:    vdup.16 q0, r1
 ; CHECK-NEXT:  .LBB4_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
@@ -248,7 +248,7 @@ define arm_aapcs_vfpcc void @test_fsub_r(half* noalias nocapture readonly %A, ha
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    bxlt lr
 ; CHECK-NEXT:    vldr.16 s0, [r1]
-; CHECK-NEXT:    vmov r1, s0
+; CHECK-NEXT:    vmov.f16 r1, s0
 ; CHECK-NEXT:    vdup.16 q0, r1
 ; CHECK-NEXT:  .LBB5_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
@@ -298,7 +298,7 @@ define arm_aapcs_vfpcc void @test_fmas(half* noalias nocapture readonly %A, half
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    bxlt lr
 ; CHECK-NEXT:    vldr.16 s0, [r2]
-; CHECK-NEXT:    vmov r2, s0
+; CHECK-NEXT:    vmov.f16 r2, s0
 ; CHECK-NEXT:    vdup.16 q0, r2
 ; CHECK-NEXT:  .LBB6_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
@@ -353,7 +353,7 @@ define arm_aapcs_vfpcc void @test_fmas_r(half* noalias nocapture readonly %A, ha
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    bxlt lr
 ; CHECK-NEXT:    vldr.16 s0, [r2]
-; CHECK-NEXT:    vmov r2, s0
+; CHECK-NEXT:    vmov.f16 r2, s0
 ; CHECK-NEXT:    vdup.16 q0, r2
 ; CHECK-NEXT:  .LBB7_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
@@ -408,7 +408,7 @@ define arm_aapcs_vfpcc void @test_fma(half* noalias nocapture readonly %A, half*
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    bxlt lr
 ; CHECK-NEXT:    vldr.16 s0, [r2]
-; CHECK-NEXT:    vmov r2, s0
+; CHECK-NEXT:    vmov.f16 r2, s0
 ; CHECK-NEXT:    vdup.16 q0, r2
 ; CHECK-NEXT:  .LBB8_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
@@ -462,7 +462,7 @@ define arm_aapcs_vfpcc void @test_fma_r(half* noalias nocapture readonly %A, hal
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    bxlt lr
 ; CHECK-NEXT:    vldr.16 s0, [r2]
-; CHECK-NEXT:    vmov r2, s0
+; CHECK-NEXT:    vmov.f16 r2, s0
 ; CHECK-NEXT:    vdup.16 q0, r2
 ; CHECK-NEXT:  .LBB9_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
@@ -517,7 +517,7 @@ define arm_aapcs_vfpcc void @test_fmss(half* noalias nocapture readonly %A, half
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    bxlt lr
 ; CHECK-NEXT:    vldr.16 s0, [r2]
-; CHECK-NEXT:    vmov r2, s0
+; CHECK-NEXT:    vmov.f16 r2, s0
 ; CHECK-NEXT:    vdup.16 q0, r2
 ; CHECK-NEXT:    vneg.f16 q0, q0
 ; CHECK-NEXT:  .LBB10_1: @ %vector.body
@@ -573,7 +573,7 @@ define arm_aapcs_vfpcc void @test_fmss_r(half* noalias nocapture readonly %A, ha
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    bxlt lr
 ; CHECK-NEXT:    vldr.16 s0, [r2]
-; CHECK-NEXT:    vmov r2, s0
+; CHECK-NEXT:    vmov.f16 r2, s0
 ; CHECK-NEXT:    vdup.16 q0, r2
 ; CHECK-NEXT:  .LBB11_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
@@ -628,7 +628,7 @@ define arm_aapcs_vfpcc void @test_fms(half* noalias nocapture readonly %A, half*
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    bxlt lr
 ; CHECK-NEXT:    vldr.16 s0, [r2]
-; CHECK-NEXT:    vmov r2, s0
+; CHECK-NEXT:    vmov.f16 r2, s0
 ; CHECK-NEXT:    vdup.16 q0, r2
 ; CHECK-NEXT:  .LBB12_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
@@ -683,7 +683,7 @@ define arm_aapcs_vfpcc void @test_fms_r(half* noalias nocapture readonly %A, hal
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    bxlt lr
 ; CHECK-NEXT:    vldr.16 s0, [r2]
-; CHECK-NEXT:    vmov r2, s0
+; CHECK-NEXT:    vmov.f16 r2, s0
 ; CHECK-NEXT:    vdup.16 q0, r2
 ; CHECK-NEXT:  .LBB13_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
@@ -744,7 +744,7 @@ define dso_local void @test_nested(half* noalias nocapture %pInT1, half* noalias
 ; CHECK-NEXT:    @ Child Loop BB14_2 Depth 2
 ; CHECK-NEXT:    vldr.16 s0, [r1]
 ; CHECK-NEXT:    mov r5, r12
-; CHECK-NEXT:    vmov r4, s0
+; CHECK-NEXT:    vmov.f16 r4, s0
 ; CHECK-NEXT:    vdup.16 q0, r4
 ; CHECK-NEXT:    movs r4, #0
 ; CHECK-NEXT:  .LBB14_2: @ %vector.body
@@ -833,18 +833,18 @@ define void @arm_fir_f32_1_4_mve(%struct.arm_fir_instance_f32* nocapture readonl
 ; CHECK-NEXT:  @ %bb.1: @ %if.then
 ; CHECK-NEXT:    ldr r6, [r0, #8]
 ; CHECK-NEXT:    vldr.16 s0, [r6]
-; CHECK-NEXT:    vmov lr, s0
+; CHECK-NEXT:    vmov.f16 lr, s0
 ; CHECK-NEXT:    vldr.16 s0, [r6, #2]
 ; CHECK-NEXT:    vdup.16 q3, lr
 ; CHECK-NEXT:    lsr.w lr, r3, #2
-; CHECK-NEXT:    vmov r5, s0
+; CHECK-NEXT:    vmov.f16 r5, s0
 ; CHECK-NEXT:    vldr.16 s0, [r6, #4]
 ; CHECK-NEXT:    vdup.16 q2, r5
-; CHECK-NEXT:    vmov r4, s0
+; CHECK-NEXT:    vmov.f16 r4, s0
 ; CHECK-NEXT:    vldr.16 s0, [r6, #6]
 ; CHECK-NEXT:    vdup.16 q1, r4
 ; CHECK-NEXT:    add.w r4, r12, r7, lsl #1
-; CHECK-NEXT:    vmov r6, s0
+; CHECK-NEXT:    vmov.f16 r6, s0
 ; CHECK-NEXT:    vdup.16 q0, r6
 ; CHECK-NEXT:    wls lr, lr, .LBB15_5
 ; CHECK-NEXT:  @ %bb.2: @ %while.body.lr.ph
@@ -1150,34 +1150,34 @@ define void @fir(%struct.arm_fir_instance_f32* nocapture readonly %S, half* noca
 ; CHECK-NEXT:    vldr.16 s14, [r12, #4]
 ; CHECK-NEXT:    vldr.16 s5, [r12, #2]
 ; CHECK-NEXT:    vstrb.8 q0, [r4], #8
-; CHECK-NEXT:    vldrw.u32 q0, [r5]
-; CHECK-NEXT:    vmov r0, s7
 ; CHECK-NEXT:    adds r6, r5, #2
-; CHECK-NEXT:    add.w r9, r5, #16
-; CHECK-NEXT:    vmul.f16 q0, q0, r0
+; CHECK-NEXT:    vldrw.u32 q0, [r5]
+; CHECK-NEXT:    vmov.f16 r0, s7
 ; CHECK-NEXT:    vldrw.u32 q4, [r6]
-; CHECK-NEXT:    vmov r0, s5
-; CHECK-NEXT:    adds r6, r5, #6
+; CHECK-NEXT:    vmul.f16 q0, q0, r0
+; CHECK-NEXT:    vmov.f16 r0, s5
 ; CHECK-NEXT:    vfma.f16 q0, q4, r0
 ; CHECK-NEXT:    vldrw.u32 q4, [r5, #4]
-; CHECK-NEXT:    vmov r0, s14
-; CHECK-NEXT:    cmp.w r11, #16
+; CHECK-NEXT:    vmov.f16 r0, s14
+; CHECK-NEXT:    adds r6, r5, #6
 ; CHECK-NEXT:    vfma.f16 q0, q4, r0
-; CHECK-NEXT:    vmov r0, s12
+; CHECK-NEXT:    vmov.f16 r0, s12
 ; CHECK-NEXT:    vldrw.u32 q3, [r6]
 ; CHECK-NEXT:    add.w r6, r5, #10
+; CHECK-NEXT:    add.w r9, r5, #16
+; CHECK-NEXT:    cmp.w r11, #16
 ; CHECK-NEXT:    vfma.f16 q0, q3, r0
 ; CHECK-NEXT:    vldrw.u32 q3, [r5, #8]
-; CHECK-NEXT:    vmov r0, s10
+; CHECK-NEXT:    vmov.f16 r0, s10
 ; CHECK-NEXT:    vfma.f16 q0, q3, r0
-; CHECK-NEXT:    vmov r0, s8
+; CHECK-NEXT:    vmov.f16 r0, s8
 ; CHECK-NEXT:    vldrw.u32 q2, [r6]
 ; CHECK-NEXT:    add.w r6, r5, #14
 ; CHECK-NEXT:    vfma.f16 q0, q2, r0
 ; CHECK-NEXT:    vldrw.u32 q2, [r5, #12]
-; CHECK-NEXT:    vmov r0, s6
+; CHECK-NEXT:    vmov.f16 r0, s6
 ; CHECK-NEXT:    vfma.f16 q0, q2, r0
-; CHECK-NEXT:    vmov r0, s4
+; CHECK-NEXT:    vmov.f16 r0, s4
 ; CHECK-NEXT:    vldrw.u32 q1, [r6]
 ; CHECK-NEXT:    vfma.f16 q0, q1, r0
 ; CHECK-NEXT:    blo .LBB16_8
@@ -1190,40 +1190,40 @@ define void @fir(%struct.arm_fir_instance_f32* nocapture readonly %S, half* noca
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2
 ; CHECK-NEXT:    vldr.16 s4, [r6]
 ; CHECK-NEXT:    add.w r5, r9, #2
-; CHECK-NEXT:    vmov r0, s4
+; CHECK-NEXT:    vmov.f16 r0, s4
 ; CHECK-NEXT:    vldrw.u32 q1, [r9]
 ; CHECK-NEXT:    vfma.f16 q0, q1, r0
 ; CHECK-NEXT:    vldr.16 s4, [r6, #2]
-; CHECK-NEXT:    vmov r0, s4
+; CHECK-NEXT:    vmov.f16 r0, s4
 ; CHECK-NEXT:    vldrw.u32 q1, [r5]
 ; CHECK-NEXT:    add.w r5, r9, #6
 ; CHECK-NEXT:    vfma.f16 q0, q1, r0
 ; CHECK-NEXT:    vldr.16 s4, [r6, #4]
-; CHECK-NEXT:    vmov r0, s4
+; CHECK-NEXT:    vmov.f16 r0, s4
 ; CHECK-NEXT:    vldrw.u32 q1, [r9, #4]
 ; CHECK-NEXT:    vfma.f16 q0, q1, r0
 ; CHECK-NEXT:    vldr.16 s4, [r6, #6]
-; CHECK-NEXT:    vmov r0, s4
+; CHECK-NEXT:    vmov.f16 r0, s4
 ; CHECK-NEXT:    vldrw.u32 q1, [r5]
 ; CHECK-NEXT:    add.w r5, r9, #10
 ; CHECK-NEXT:    vfma.f16 q0, q1, r0
 ; CHECK-NEXT:    vldr.16 s4, [r6, #8]
-; CHECK-NEXT:    vmov r0, s4
+; CHECK-NEXT:    vmov.f16 r0, s4
 ; CHECK-NEXT:    vldrw.u32 q1, [r9, #8]
 ; CHECK-NEXT:    vfma.f16 q0, q1, r0
 ; CHECK-NEXT:    vldr.16 s4, [r6, #10]
-; CHECK-NEXT:    vmov r0, s4
+; CHECK-NEXT:    vmov.f16 r0, s4
 ; CHECK-NEXT:    vldrw.u32 q1, [r5]
 ; CHECK-NEXT:    add.w r5, r9, #14
 ; CHECK-NEXT:    vfma.f16 q0, q1, r0
 ; CHECK-NEXT:    vldr.16 s4, [r6, #12]
-; CHECK-NEXT:    vmov r0, s4
+; CHECK-NEXT:    vmov.f16 r0, s4
 ; CHECK-NEXT:    vldrw.u32 q1, [r9, #12]
 ; CHECK-NEXT:    add.w r9, r9, #16
 ; CHECK-NEXT:    vfma.f16 q0, q1, r0
 ; CHECK-NEXT:    vldr.16 s4, [r6, #14]
 ; CHECK-NEXT:    adds r6, #16
-; CHECK-NEXT:    vmov r0, s4
+; CHECK-NEXT:    vmov.f16 r0, s4
 ; CHECK-NEXT:    vldrw.u32 q1, [r5]
 ; CHECK-NEXT:    vfma.f16 q0, q1, r0
 ; CHECK-NEXT:    le lr, .LBB16_6
@@ -1247,7 +1247,7 @@ define void @fir(%struct.arm_fir_instance_f32* nocapture readonly %S, half* noca
 ; CHECK-NEXT:    subs r0, #1
 ; CHECK-NEXT:    adds r6, #2
 ; CHECK-NEXT:    cmp r0, #1
-; CHECK-NEXT:    vmov r7, s4
+; CHECK-NEXT:    vmov.f16 r7, s4
 ; CHECK-NEXT:    vldrh.u16 q1, [r5], #2
 ; CHECK-NEXT:    vfma.f16 q0, q1, r7
 ; CHECK-NEXT:    bgt .LBB16_10

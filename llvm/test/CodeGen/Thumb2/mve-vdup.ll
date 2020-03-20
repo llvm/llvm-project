@@ -82,7 +82,7 @@ define arm_aapcs_vfpcc <8 x half> @vdup_f16(half* %src1, half* %src2) {
 ; CHECK-NEXT:    vldr.16 s0, [r1]
 ; CHECK-NEXT:    vldr.16 s2, [r0]
 ; CHECK-NEXT:    vadd.f16 s0, s2, s0
-; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    vmov.f16 r0, s0
 ; CHECK-NEXT:    vdup.16 q0, r0
 ; CHECK-NEXT:    bx lr
 entry:
