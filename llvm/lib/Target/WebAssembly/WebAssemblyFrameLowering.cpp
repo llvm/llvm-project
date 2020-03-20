@@ -266,12 +266,11 @@ WebAssemblyFrameLowering::getDwarfFrameBase(const MachineFunction &MF) const {
   const WebAssemblyFunctionInfo &MFI = *MF.getInfo<WebAssemblyFunctionInfo>();
   if (needsSP(MF) && MFI.isFrameBaseVirtual()) {
     unsigned LocalNum = MFI.getFrameBaseLocal();
-    Loc.Location.WasmLoc = {WebAssembly::TI_LOCAL_START, LocalNum};
+    Loc.Location.WasmLoc = {WebAssembly::TI_LOCAL, LocalNum};
   } else {
     // TODO: This should work on a breakpoint at a function with no frame,
     // but probably won't work for traversing up the stack.
-    // TODO: This needs a relocation for correct __stack_pointer
-    Loc.Location.WasmLoc = {WebAssembly::TI_GLOBAL_START, 0};
+    Loc.Location.WasmLoc = {WebAssembly::TI_GLOBAL_RELOC, 0};
   }
   return Loc;
 }
