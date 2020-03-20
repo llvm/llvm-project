@@ -1390,16 +1390,25 @@ LegalizerHelper::widenScalarUnmergeValues(MachineInstr &MI, unsigned TypeIdx,
   if (!DstTy.isScalar())
     return UnableToLegalize;
 
-  if (WideTy.getSizeInBits() == SrcTy.getSizeInBits()) {
+  if (WideTy.getSizeInBits() >= SrcTy.getSizeInBits()) {
     if (SrcTy.isPointer()) {
       const DataLayout &DL = MIRBuilder.getDataLayout();
       if (DL.isNonIntegralAddressSpace(SrcTy.getAddressSpace())) {
-        LLVM_DEBUG(dbgs() << "Not casting non-integral address space integer\n");
+        LLVM_DEBUG(
+            dbgs() << "Not casting non-integral address space integer\n");
         return UnableToLegalize;
       }
 
       SrcTy = LLT::scalar(SrcTy.getSizeInBits());
       SrcReg = MIRBuilder.buildPtrToInt(SrcTy, SrcReg).getReg(0);
+    }
+
+    // Widen SrcTy to WideTy. This does not affect the result, but since the
+    // user requested this size, it is probably better handled than SrcTy and
+    // should reduce the total number of legalization artifacts
+    if (WideTy.getSizeInBits() > SrcTy.getSizeInBits()) {
+      SrcTy = WideTy;
+      SrcReg = MIRBuilder.buildAnyExt(WideTy, SrcReg).getReg(0);
     }
 
     // Theres no unmerge type to target. Directly extract the bits from the
@@ -1416,10 +1425,6 @@ LegalizerHelper::widenScalarUnmergeValues(MachineInstr &MI, unsigned TypeIdx,
     MI.eraseFromParent();
     return Legalized;
   }
-
-  // TODO
-  if (WideTy.getSizeInBits() > SrcTy.getSizeInBits())
-    return UnableToLegalize;
 
   // Extend the source to a wider type.
   LLT LCMTy = getLCMType(SrcTy, WideTy);
