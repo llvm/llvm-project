@@ -1489,7 +1489,6 @@ def : UMad24Pat<V_MAD_U32_U24, 1>;
 
 // FIXME: This should only be done for VALU inputs
 defm : BFIPatterns <V_BFI_B32, S_MOV_B32, SReg_64>;
-def : FSHRPattern <V_ALIGNBIT_B32>;
 def : ROTRPattern <V_ALIGNBIT_B32>;
 
 def : GCNPat<(i32 (trunc (srl i64:$src0, (and i32:$src1, (i32 31))))),
