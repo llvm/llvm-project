@@ -161,14 +161,35 @@ def undef_to_negative_one: GICombineRule<
          [{ return Helper.matchAnyExplicitUseIsUndef(*${root}); }]),
   (apply [{ Helper.replaceInstWithConstant(*${root}, -1); }])>;
 
-def propagate_undef: GICombineRule<
+// Instructions where if any source operand is undef, the instruction can be
+// replaced with undef.
+def propagate_undef_any_op: GICombineRule<
   (defs root:$root),
   (match (wip_match_opcode G_ADD, G_FPTOSI, G_FPTOUI, G_SUB, G_XOR):$root,
          [{ return Helper.matchAnyExplicitUseIsUndef(*${root}); }]),
   (apply [{ Helper.replaceInstWithUndef(*${root}); }])>;
 
+// Instructions where if all source operands are undef, the instruction can be
+// replaced with undef.
+def propagate_undef_all_ops: GICombineRule<
+  (defs root:$root),
+  (match (wip_match_opcode G_SHUFFLE_VECTOR):$root,
+          [{ return Helper.matchAllExplicitUsesAreUndef(*${root}); }]),
+  (apply [{ Helper.replaceInstWithUndef(*${root}); }])>;
+
+// Replace a G_SHUFFLE_VECTOR with an undef mask with a G_IMPLICIT_DEF.
+def propagate_undef_shuffle_mask: GICombineRule<
+  (defs root:$root),
+  (match (wip_match_opcode G_SHUFFLE_VECTOR):$root,
+         [{ return Helper.matchUndefShuffleVectorMask(*${root}); }]),
+  (apply [{ Helper.replaceInstWithUndef(*${root}); }])>;
+
+// FIXME: These should use the custom predicate feature once it lands.
 def undef_combines : GICombineGroup<[undef_to_fp_zero, undef_to_int_zero,
-                                     undef_to_negative_one, propagate_undef]>;
+                                     undef_to_negative_one,
+                                     propagate_undef_any_op,
+                                     propagate_undef_all_ops,
+                                     propagate_undef_shuffle_mask]>;
 
 def trivial_combines : GICombineGroup<[copy_prop, mul_to_shl]>;
 def all_combines : GICombineGroup<[trivial_combines, ptr_add_immed_chain,

@@ -1490,6 +1490,19 @@ bool CombinerHelper::matchAnyExplicitUseIsUndef(MachineInstr &MI) {
   });
 }
 
+bool CombinerHelper::matchAllExplicitUsesAreUndef(MachineInstr &MI) {
+  return all_of(MI.explicit_uses(), [this](const MachineOperand &MO) {
+    return !MO.isReg() ||
+           getOpcodeDef(TargetOpcode::G_IMPLICIT_DEF, MO.getReg(), MRI);
+  });
+}
+
+bool CombinerHelper::matchUndefShuffleVectorMask(MachineInstr &MI) {
+  assert(MI.getOpcode() == TargetOpcode::G_SHUFFLE_VECTOR);
+  ArrayRef<int> Mask = MI.getOperand(3).getShuffleMask();
+  return all_of(Mask, [](int Elt) { return Elt < 0; });
+}
+
 bool CombinerHelper::replaceInstWithFConstant(MachineInstr &MI, double C) {
   assert(MI.getNumDefs() == 1 && "Expected only one def?");
   Builder.setInstr(MI);
