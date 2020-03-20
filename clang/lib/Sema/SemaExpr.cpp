@@ -15490,8 +15490,7 @@ static void RemoveNestedImmediateInvocation(
   /// nowhere in the expression being transformed therefore will not be rebuilt.
   /// Setting AllowSkippingFirstCXXConstructExpr to false will prevent from
   /// skipping the first CXXConstructExpr.
-  if (auto *OldExpr =
-          dyn_cast<CXXConstructExpr>(It->getPointer()->IgnoreImplicit()))
+  if (isa<CXXConstructExpr>(It->getPointer()->IgnoreImplicit()))
     Transformer.AllowSkippingFirstCXXConstructExpr = false;
 
   ExprResult Res = Transformer.TransformExpr(It->getPointer()->getSubExpr());
