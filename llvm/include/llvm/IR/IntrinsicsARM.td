@@ -911,6 +911,11 @@ multiclass MVE_minmaxv {
 defm int_arm_mve_min: MVE_minmaxv;
 defm int_arm_mve_max: MVE_minmaxv;
 
+defm int_arm_mve_addv: MVEPredicated<[llvm_i32_ty],
+   [llvm_anyvector_ty, llvm_i32_ty /* unsigned */]>;
+defm int_arm_mve_addlv: MVEPredicated<[llvm_i64_ty],
+   [llvm_anyvector_ty, llvm_i32_ty /* unsigned */]>;
+
 // Intrinsic with a predicated and a non-predicated case. The predicated case
 // has two additional parameters: inactive (the value for inactive lanes, can
 // be undef) and predicate.
