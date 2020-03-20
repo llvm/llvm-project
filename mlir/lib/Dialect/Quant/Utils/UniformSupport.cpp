@@ -46,8 +46,8 @@ Type ExpressedToQuantizedConverter::convert(QuantizedType elementalType) const {
 
   switch (inputType.getKind()) {
   default:
-    if (isQuantizablePrimitiveType(elementalType)) {
-      // For primitives, just use the new elemental type.
+    if (elementalType.getExpressedType() == expressedType) {
+      // If the expressed types match, just use the new elemental type.
       return elementalType;
     }
     // Unsupported.
