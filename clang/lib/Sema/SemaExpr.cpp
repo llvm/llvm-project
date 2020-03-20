@@ -15442,6 +15442,8 @@ static void EvaluateAndDiagnoseImmediateInvocation(
                                            SemaRef.getASTContext(), true);
   if (!Result || !Notes.empty()) {
     Expr *InnerExpr = CE->getSubExpr()->IgnoreImplicit();
+    if (auto *FunctionalCast = dyn_cast<CXXFunctionalCastExpr>(InnerExpr))
+      InnerExpr = FunctionalCast->getSubExpr();
     FunctionDecl *FD = nullptr;
     if (auto *Call = dyn_cast<CallExpr>(InnerExpr))
       FD = cast<FunctionDecl>(Call->getCalleeDecl());
@@ -15512,8 +15514,25 @@ static void RemoveNestedImmediateInvocation(
     }
     bool AlwaysRebuild() { return false; }
     bool ReplacingOriginal() { return true; }
+    bool AllowSkippingCXXConstructExpr() {
+      bool Res = AllowSkippingFirstCXXConstructExpr;
+      AllowSkippingFirstCXXConstructExpr = true;
+      return Res;
+    }
+    bool AllowSkippingFirstCXXConstructExpr = true;
   } Transformer(SemaRef, Rec.ReferenceToConsteval,
                 Rec.ImmediateInvocationCandidates, It);
+
+  /// CXXConstructExpr with a single argument are getting skipped by
+  /// TreeTransform in some situtation because they could be implicit. This
+  /// can only occur for the top-level CXXConstructExpr because it is used
+  /// nowhere in the expression being transformed therefore will not be rebuilt.
+  /// Setting AllowSkippingFirstCXXConstructExpr to false will prevent from
+  /// skipping the first CXXConstructExpr.
+  if (auto *OldExpr =
+          dyn_cast<CXXConstructExpr>(It->getPointer()->IgnoreImplicit()))
+    Transformer.AllowSkippingFirstCXXConstructExpr = false;
+
   ExprResult Res = Transformer.TransformExpr(It->getPointer()->getSubExpr());
   assert(Res.isUsable());
   Res = SemaRef.MaybeCreateExprWithCleanups(Res);
