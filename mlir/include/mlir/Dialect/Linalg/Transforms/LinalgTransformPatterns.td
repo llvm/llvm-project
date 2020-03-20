@@ -15,7 +15,7 @@
 
 include "mlir/Dialect/Linalg/IR/LinalgOps.td"
 include "mlir/Dialect/Linalg/IR/LinalgStructuredOps.td"
-include "mlir/Dialect/AffineOps/AffineOps.td"
+include "mlir/Dialect/Affine/IR/AffineOps.td"
 
 def HasNoLinalgTransformMarker : CPred<[{
   !op.getAttrOfType<StringAttr>(LinalgTransforms::kLinalgTransformMarker)

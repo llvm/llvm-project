@@ -13,7 +13,7 @@
 #include <type_traits>
 
 #include "mlir/Conversion/VectorToLoops/ConvertVectorToLoops.h"
-#include "mlir/Dialect/AffineOps/EDSC/Intrinsics.h"
+#include "mlir/Dialect/Affine/EDSC/Intrinsics.h"
 #include "mlir/Dialect/LoopOps/EDSC/Builders.h"
 #include "mlir/Dialect/StandardOps/EDSC/Intrinsics.h"
 #include "mlir/Dialect/Vector/VectorOps.h"

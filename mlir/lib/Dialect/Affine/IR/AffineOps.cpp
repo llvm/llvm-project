@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/AffineOps/AffineOps.h"
-#include "mlir/Dialect/AffineOps/AffineValueMap.h"
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Affine/IR/AffineValueMap.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Function.h"
 #include "mlir/IR/IntegerSet.h"
@@ -25,7 +25,7 @@ using llvm::dbgs;
 #define DEBUG_TYPE "affine-analysis"
 
 //===----------------------------------------------------------------------===//
-// AffineOpsDialect Interfaces
+// AffineDialect Interfaces
 //===----------------------------------------------------------------------===//
 
 namespace {
@@ -64,21 +64,21 @@ struct AffineInlinerInterface : public DialectInlinerInterface {
 } // end anonymous namespace
 
 //===----------------------------------------------------------------------===//
-// AffineOpsDialect
+// AffineDialect
 //===----------------------------------------------------------------------===//
 
-AffineOpsDialect::AffineOpsDialect(MLIRContext *context)
+AffineDialect::AffineDialect(MLIRContext *context)
     : Dialect(getDialectNamespace(), context) {
   addOperations<AffineDmaStartOp, AffineDmaWaitOp, AffineLoadOp, AffineStoreOp,
 #define GET_OP_LIST
-#include "mlir/Dialect/AffineOps/AffineOps.cpp.inc"
+#include "mlir/Dialect/Affine/IR/AffineOps.cpp.inc"
                 >();
   addInterfaces<AffineInlinerInterface>();
 }
 
 /// Materialize a single constant operation from a given attribute value with
 /// the desired resultant type.
-Operation *AffineOpsDialect::materializeConstant(OpBuilder &builder,
+Operation *AffineDialect::materializeConstant(OpBuilder &builder,
                                                  Attribute value, Type type,
                                                  Location loc) {
   return builder.create<ConstantOp>(loc, type, value);
@@ -2369,4 +2369,4 @@ static ParseResult parseAffineParallelOp(OpAsmParser &parser,
 //===----------------------------------------------------------------------===//
 
 #define GET_OP_CLASSES
-#include "mlir/Dialect/AffineOps/AffineOps.cpp.inc"
+#include "mlir/Dialect/Affine/IR/AffineOps.cpp.inc"

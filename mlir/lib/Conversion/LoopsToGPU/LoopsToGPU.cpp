@@ -15,7 +15,7 @@
 #include "mlir/Conversion/LoopsToGPU/LoopsToGPU.h"
 
 #include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
-#include "mlir/Dialect/AffineOps/AffineOps.h"
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/GPU/ParallelLoopMapper.h"
 #include "mlir/Dialect/LoopOps/LoopOps.h"
