@@ -19,12 +19,11 @@
 using namespace llvm;
 
 const unsigned RegisterBank::InvalidID = UINT_MAX;
-const unsigned RegisterBank::InvalidHwMode = UINT_MAX;
 
 RegisterBank::RegisterBank(
-    unsigned ID, const char *Name, const unsigned *Sizes,
+    unsigned ID, const char *Name, unsigned Size,
     const uint32_t *CoveredClasses, unsigned NumRegClasses)
-    : ID(ID), Name(Name), Sizes(Sizes), HwMode(InvalidHwMode) {
+    : ID(ID), Name(Name), Size(Size) {
   ContainedRegClasses.resize(NumRegClasses);
   ContainedRegClasses.setBitsInMask(CoveredClasses);
 }
@@ -64,8 +63,7 @@ bool RegisterBank::covers(const TargetRegisterClass &RC) const {
 }
 
 bool RegisterBank::isValid() const {
-  return ID != InvalidID && Name != nullptr && Sizes != nullptr &&
-         HwMode != InvalidID &&
+  return ID != InvalidID && Name != nullptr && Size != 0 &&
          // A register bank that does not cover anything is useless.
          !ContainedRegClasses.empty();
 }

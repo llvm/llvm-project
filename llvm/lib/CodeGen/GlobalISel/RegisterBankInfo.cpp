@@ -56,11 +56,8 @@ const unsigned RegisterBankInfo::InvalidMappingID = UINT_MAX - 1;
 // RegisterBankInfo implementation.
 //------------------------------------------------------------------------------
 RegisterBankInfo::RegisterBankInfo(RegisterBank **RegBanks,
-                                   unsigned NumRegBanks, unsigned HwMode)
+                                   unsigned NumRegBanks)
     : RegBanks(RegBanks), NumRegBanks(NumRegBanks) {
-  // Initialize HwMode for all RegBanks
-  for (unsigned Idx = 0, End = getNumRegBanks(); Idx != End; ++Idx)
-    RegBanks[Idx]->HwMode = HwMode;
 #ifndef NDEBUG
   for (unsigned Idx = 0, End = getNumRegBanks(); Idx != End; ++Idx) {
     assert(RegBanks[Idx] != nullptr && "Invalid RegisterBank");
