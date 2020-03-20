@@ -415,8 +415,7 @@ protected:
 
   /// Create a RegisterBankInfo that can accommodate up to \p NumRegBanks
   /// RegisterBank instances.
-  RegisterBankInfo(RegisterBank **RegBanks, unsigned NumRegBanks,
-                   unsigned HwMode);
+  RegisterBankInfo(RegisterBank **RegBanks, unsigned NumRegBanks);
 
   /// This constructor is meaningless.
   /// It just provides a default constructor that can be used at link time
