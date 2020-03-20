@@ -125,6 +125,10 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
       for (auto T : {MVT::v16i8, MVT::v8i16})
         setOperationAction(Op, T, Legal);
 
+    // Support integer abs
+    for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32})
+      setOperationAction(ISD::ABS, T, Legal);
+
     // Custom lower BUILD_VECTORs to minimize number of replace_lanes
     for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v4f32, MVT::v2i64,
                    MVT::v2f64})
