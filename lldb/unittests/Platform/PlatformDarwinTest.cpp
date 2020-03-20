@@ -19,6 +19,7 @@ using namespace lldb_private;
 
 struct PlatformDarwinTester : public PlatformDarwin {
 public:
+  using PlatformDarwin::FindComponentInPath;
   using PlatformDarwin::FindXcodeContentsDirectoryInPath;
   static bool SDKSupportsModules(SDKType desired_type,
                                  const lldb_private::FileSpec &sdk_path) {
@@ -131,4 +132,21 @@ TEST(PlatformDarwinTest, GetSDKNameForType) {
                     PlatformDarwin::SDKType::numSDKTypes));
   EXPECT_EQ(
       "", PlatformDarwin::GetSDKNameForType(PlatformDarwin::SDKType::unknown));
+}
+
+TEST(PlatformDarwinTest, FindComponentInPath) {
+  EXPECT_EQ("/path/to/foo",
+            PlatformDarwinTester::FindComponentInPath("/path/to/foo/", "foo"));
+
+  EXPECT_EQ("/path/to/foo",
+            PlatformDarwinTester::FindComponentInPath("/path/to/foo", "foo"));
+
+  EXPECT_EQ("/path/to/foobar", PlatformDarwinTester::FindComponentInPath(
+                                   "/path/to/foobar", "foo"));
+
+  EXPECT_EQ("/path/to/foobar", PlatformDarwinTester::FindComponentInPath(
+                                   "/path/to/foobar", "bar"));
+
+  EXPECT_EQ("",
+            PlatformDarwinTester::FindComponentInPath("/path/to/foo", "bar"));
 }
