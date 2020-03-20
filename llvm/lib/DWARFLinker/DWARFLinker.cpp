@@ -1914,6 +1914,15 @@ static uint64_t getDwoId(const DWARFDie &CUDie, const DWARFUnit &Unit) {
   return 0;
 }
 
+static std::string remapPath(std::string Path,
+                             const objectPrefixMap &ObjectPrefixMap) {
+  StringRef PathRef(Path);
+  for (const auto &Entry : ObjectPrefixMap)
+    if (PathRef.startswith(Entry.first))
+      return (Twine(Entry.second) + PathRef.substr(Entry.first.size())).str();
+  return Path;
+}
+
 bool DWARFLinker::registerModuleReference(
     DWARFDie CUDie, const DWARFUnit &Unit, const DwarfFile &File,
     OffsetsStringPool &StringPool, UniquingStringPool &UniquingStringPool,
