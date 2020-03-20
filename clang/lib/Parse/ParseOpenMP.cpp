@@ -2340,7 +2340,7 @@ bool Parser::ParseOpenMPSimpleVarList(
 ///       from-clause | is_device_ptr-clause | task_reduction-clause |
 ///       in_reduction-clause | allocator-clause | allocate-clause |
 ///       acq_rel-clause | acquire-clause | release-clause | relaxed-clause |
-///       depobj-clause | destroy-clause
+///       depobj-clause | destroy-clause | detach-clause
 ///
 OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
                                      OpenMPClauseKind CKind, bool FirstClause) {
@@ -2372,6 +2372,7 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
   case OMPC_hint:
   case OMPC_allocator:
   case OMPC_depobj:
+  case OMPC_detach:
     // OpenMP [2.5, Restrictions]
     //  At most one num_threads clause can appear on the directive.
     // OpenMP [2.8.1, simd construct, Restrictions]
@@ -2394,6 +2395,8 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
     // At most one num_tasks clause can appear on the directive.
     // OpenMP [2.11.3, allocate Directive, Restrictions]
     // At most one allocator clause can appear on the directive.
+    // OpenMP 5.0, 2.10.1 task Construct, Restrictions.
+    // At most one detach clause can appear on the directive.
     if (!FirstClause) {
       Diag(Tok, diag::err_omp_more_one_clause)
           << getOpenMPDirectiveName(DKind) << getOpenMPClauseName(CKind) << 0;
@@ -2552,7 +2555,8 @@ ExprResult Parser::ParseOpenMPParensExpr(StringRef ClauseName,
 
 /// Parsing of OpenMP clauses with single expressions like 'final',
 /// 'collapse', 'safelen', 'num_threads', 'simdlen', 'num_teams',
-/// 'thread_limit', 'simdlen', 'priority', 'grainsize', 'num_tasks' or 'hint'.
+/// 'thread_limit', 'simdlen', 'priority', 'grainsize', 'num_tasks', 'hint' or
+/// 'detach'.
 ///
 ///    final-clause:
 ///      'final' '(' expression ')'
@@ -2583,6 +2587,9 @@ ExprResult Parser::ParseOpenMPParensExpr(StringRef ClauseName,
 ///
 ///    allocator-clause:
 ///      'allocator' '(' expression ')'
+///
+///    detach-clause:
+///      'detach' '(' event-handler-expression ')'
 ///
 OMPClause *Parser::ParseOpenMPSingleExprClause(OpenMPClauseKind Kind,
                                                bool ParseOnly) {

@@ -19,7 +19,8 @@ define amdgpu_ps void @image_store_f16(<8 x i32> inreg %rsrc, i32 %s, i32 %t, ha
   ; UNPACKED:   [[COPY10:%[0-9]+]]:_(s32) = COPY $vgpr2
   ; UNPACKED:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY10]](s32)
   ; UNPACKED:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; UNPACKED:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.image.store.2d), [[TRUNC]](s16), 1, [[COPY8]](s32), [[COPY9]](s32), [[BUILD_VECTOR]](<8 x s32>), 0, 0 :: (dereferenceable store 2 into custom "TargetCustom8")
+  ; UNPACKED:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32)
+  ; UNPACKED:   G_AMDGPU_INTRIN_IMAGE_STORE intrinsic(@llvm.amdgcn.image.store.2d), [[TRUNC]](s16), 1, [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0 :: (dereferenceable store 2 into custom "TargetCustom8")
   ; UNPACKED:   S_ENDPGM 0
   ; PACKED-LABEL: name: image_store_f16
   ; PACKED: bb.1 (%ir-block.0):
@@ -37,7 +38,8 @@ define amdgpu_ps void @image_store_f16(<8 x i32> inreg %rsrc, i32 %s, i32 %t, ha
   ; PACKED:   [[COPY10:%[0-9]+]]:_(s32) = COPY $vgpr2
   ; PACKED:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY10]](s32)
   ; PACKED:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; PACKED:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.image.store.2d), [[TRUNC]](s16), 1, [[COPY8]](s32), [[COPY9]](s32), [[BUILD_VECTOR]](<8 x s32>), 0, 0 :: (dereferenceable store 2 into custom "TargetCustom8")
+  ; PACKED:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32)
+  ; PACKED:   G_AMDGPU_INTRIN_IMAGE_STORE intrinsic(@llvm.amdgcn.image.store.2d), [[TRUNC]](s16), 1, [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0 :: (dereferenceable store 2 into custom "TargetCustom8")
   ; PACKED:   S_ENDPGM 0
   call void @llvm.amdgcn.image.store.2d.f16.i32(half %data, i32 1, i32 %s, i32 %t, <8 x i32> %rsrc, i32 0, i32 0)
   ret void
@@ -59,13 +61,14 @@ define amdgpu_ps void @image_store_v2f16(<8 x i32> inreg %rsrc, i32 %s, i32 %t, 
   ; UNPACKED:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; UNPACKED:   [[COPY10:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr2
   ; UNPACKED:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; UNPACKED:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32)
   ; UNPACKED:   [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[COPY10]](<2 x s16>)
   ; UNPACKED:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
   ; UNPACKED:   [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
   ; UNPACKED:   [[COPY11:%[0-9]+]]:_(s32) = COPY [[BITCAST]](s32)
   ; UNPACKED:   [[COPY12:%[0-9]+]]:_(s32) = COPY [[LSHR]](s32)
-  ; UNPACKED:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY11]](s32), [[COPY12]](s32)
-  ; UNPACKED:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.image.store.2d), [[BUILD_VECTOR1]](<2 x s32>), 3, [[COPY8]](s32), [[COPY9]](s32), [[BUILD_VECTOR]](<8 x s32>), 0, 0 :: (dereferenceable store 4 into custom "TargetCustom8")
+  ; UNPACKED:   [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY11]](s32), [[COPY12]](s32)
+  ; UNPACKED:   G_AMDGPU_INTRIN_IMAGE_STORE intrinsic(@llvm.amdgcn.image.store.2d), [[BUILD_VECTOR2]](<2 x s32>), 3, [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0 :: (dereferenceable store 4 into custom "TargetCustom8")
   ; UNPACKED:   S_ENDPGM 0
   ; PACKED-LABEL: name: image_store_v2f16
   ; PACKED: bb.1 (%ir-block.0):
@@ -82,7 +85,8 @@ define amdgpu_ps void @image_store_v2f16(<8 x i32> inreg %rsrc, i32 %s, i32 %t, 
   ; PACKED:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; PACKED:   [[COPY10:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr2
   ; PACKED:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; PACKED:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.image.store.2d), [[COPY10]](<2 x s16>), 3, [[COPY8]](s32), [[COPY9]](s32), [[BUILD_VECTOR]](<8 x s32>), 0, 0 :: (dereferenceable store 4 into custom "TargetCustom8")
+  ; PACKED:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32)
+  ; PACKED:   G_AMDGPU_INTRIN_IMAGE_STORE intrinsic(@llvm.amdgcn.image.store.2d), [[COPY10]](<2 x s16>), 3, [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0 :: (dereferenceable store 4 into custom "TargetCustom8")
   ; PACKED:   S_ENDPGM 0
   call void @llvm.amdgcn.image.store.2d.v2f16.i32(<2 x half> %in, i32 3, i32 %s, i32 %t, <8 x i32> %rsrc, i32 0, i32 0)
   ret void
@@ -108,6 +112,7 @@ define amdgpu_ps void @image_store_v3f16(<8 x i32> inreg %rsrc, i32 %s, i32 %t, 
   ; UNPACKED:   [[DEF:%[0-9]+]]:_(<2 x s16>) = G_IMPLICIT_DEF
   ; UNPACKED:   [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[COPY10]](<2 x s16>), [[COPY11]](<2 x s16>), [[DEF]](<2 x s16>)
   ; UNPACKED:   [[UV:%[0-9]+]]:_(<3 x s16>), [[UV1:%[0-9]+]]:_(<3 x s16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<6 x s16>)
+  ; UNPACKED:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32)
   ; UNPACKED:   [[DEF1:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
   ; UNPACKED:   [[INSERT:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF1]], [[UV]](<3 x s16>), 0
   ; UNPACKED:   [[UV2:%[0-9]+]]:_(<2 x s16>), [[UV3:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[INSERT]](<4 x s16>)
@@ -119,8 +124,8 @@ define amdgpu_ps void @image_store_v3f16(<8 x i32> inreg %rsrc, i32 %s, i32 %t, 
   ; UNPACKED:   [[COPY12:%[0-9]+]]:_(s32) = COPY [[BITCAST]](s32)
   ; UNPACKED:   [[COPY13:%[0-9]+]]:_(s32) = COPY [[LSHR]](s32)
   ; UNPACKED:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[BITCAST1]](s32)
-  ; UNPACKED:   [[BUILD_VECTOR1:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[COPY12]](s32), [[COPY13]](s32), [[COPY14]](s32)
-  ; UNPACKED:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.image.store.2d), [[BUILD_VECTOR1]](<3 x s32>), 7, [[COPY8]](s32), [[COPY9]](s32), [[BUILD_VECTOR]](<8 x s32>), 0, 0 :: (dereferenceable store 6 into custom "TargetCustom8", align 8)
+  ; UNPACKED:   [[BUILD_VECTOR2:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[COPY12]](s32), [[COPY13]](s32), [[COPY14]](s32)
+  ; UNPACKED:   G_AMDGPU_INTRIN_IMAGE_STORE intrinsic(@llvm.amdgcn.image.store.2d), [[BUILD_VECTOR2]](<3 x s32>), 7, [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0 :: (dereferenceable store 6 into custom "TargetCustom8", align 8)
   ; UNPACKED:   S_ENDPGM 0
   ; PACKED-LABEL: name: image_store_v3f16
   ; PACKED: bb.1 (%ir-block.0):
@@ -141,7 +146,8 @@ define amdgpu_ps void @image_store_v3f16(<8 x i32> inreg %rsrc, i32 %s, i32 %t, 
   ; PACKED:   [[DEF:%[0-9]+]]:_(<2 x s16>) = G_IMPLICIT_DEF
   ; PACKED:   [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[COPY10]](<2 x s16>), [[COPY11]](<2 x s16>), [[DEF]](<2 x s16>)
   ; PACKED:   [[UV:%[0-9]+]]:_(<3 x s16>), [[UV1:%[0-9]+]]:_(<3 x s16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<6 x s16>)
-  ; PACKED:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.image.store.2d), [[UV]](<3 x s16>), 7, [[COPY8]](s32), [[COPY9]](s32), [[BUILD_VECTOR]](<8 x s32>), 0, 0 :: (dereferenceable store 6 into custom "TargetCustom8", align 8)
+  ; PACKED:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32)
+  ; PACKED:   G_AMDGPU_INTRIN_IMAGE_STORE intrinsic(@llvm.amdgcn.image.store.2d), [[UV]](<3 x s16>), 7, [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0 :: (dereferenceable store 6 into custom "TargetCustom8", align 8)
   ; PACKED:   S_ENDPGM 0
   call void @llvm.amdgcn.image.store.2d.v3f16.i32(<3 x half> %in, i32 7, i32 %s, i32 %t, <8 x i32> %rsrc, i32 0, i32 0)
   ret void
@@ -164,6 +170,7 @@ define amdgpu_ps void @image_store_v4f16(<8 x i32> inreg %rsrc, i32 %s, i32 %t, 
   ; UNPACKED:   [[COPY10:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr2
   ; UNPACKED:   [[COPY11:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr3
   ; UNPACKED:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; UNPACKED:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32)
   ; UNPACKED:   [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[COPY10]](<2 x s16>)
   ; UNPACKED:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
   ; UNPACKED:   [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
@@ -173,8 +180,8 @@ define amdgpu_ps void @image_store_v4f16(<8 x i32> inreg %rsrc, i32 %s, i32 %t, 
   ; UNPACKED:   [[COPY13:%[0-9]+]]:_(s32) = COPY [[LSHR]](s32)
   ; UNPACKED:   [[COPY14:%[0-9]+]]:_(s32) = COPY [[BITCAST1]](s32)
   ; UNPACKED:   [[COPY15:%[0-9]+]]:_(s32) = COPY [[LSHR1]](s32)
-  ; UNPACKED:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY12]](s32), [[COPY13]](s32), [[COPY14]](s32), [[COPY15]](s32)
-  ; UNPACKED:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.image.store.2d), [[BUILD_VECTOR1]](<4 x s32>), 15, [[COPY8]](s32), [[COPY9]](s32), [[BUILD_VECTOR]](<8 x s32>), 0, 0 :: (dereferenceable store 8 into custom "TargetCustom8")
+  ; UNPACKED:   [[BUILD_VECTOR2:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY12]](s32), [[COPY13]](s32), [[COPY14]](s32), [[COPY15]](s32)
+  ; UNPACKED:   G_AMDGPU_INTRIN_IMAGE_STORE intrinsic(@llvm.amdgcn.image.store.2d), [[BUILD_VECTOR2]](<4 x s32>), 15, [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0 :: (dereferenceable store 8 into custom "TargetCustom8")
   ; UNPACKED:   S_ENDPGM 0
   ; PACKED-LABEL: name: image_store_v4f16
   ; PACKED: bb.1 (%ir-block.0):
@@ -193,7 +200,8 @@ define amdgpu_ps void @image_store_v4f16(<8 x i32> inreg %rsrc, i32 %s, i32 %t, 
   ; PACKED:   [[COPY11:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr3
   ; PACKED:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
   ; PACKED:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[COPY10]](<2 x s16>), [[COPY11]](<2 x s16>)
-  ; PACKED:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.image.store.2d), [[CONCAT_VECTORS]](<4 x s16>), 15, [[COPY8]](s32), [[COPY9]](s32), [[BUILD_VECTOR]](<8 x s32>), 0, 0 :: (dereferenceable store 8 into custom "TargetCustom8")
+  ; PACKED:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32)
+  ; PACKED:   G_AMDGPU_INTRIN_IMAGE_STORE intrinsic(@llvm.amdgcn.image.store.2d), [[CONCAT_VECTORS]](<4 x s16>), 15, [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0 :: (dereferenceable store 8 into custom "TargetCustom8")
   ; PACKED:   S_ENDPGM 0
   call void @llvm.amdgcn.image.store.2d.v4f16.i32(<4 x half> %in, i32 15, i32 %s, i32 %t, <8 x i32> %rsrc, i32 0, i32 0)
   ret void

@@ -125,6 +125,13 @@ TEST(AlignmentTest, AlignTo) {
   }
 }
 
+TEST(AlignmentTest, AlignToWithSkew) {
+  EXPECT_EQ(alignTo(5, Align(8), 0), alignTo(5, Align(8)));
+  EXPECT_EQ(alignTo(5, Align(8), 7), 7U);
+  EXPECT_EQ(alignTo(17, Align(8), 1), 17U);
+  EXPECT_EQ(alignTo(~0LL, Align(8), 3), 3U);
+}
+
 TEST(AlignmentTest, Log2) {
   for (uint64_t Value : getValidAlignments()) {
     EXPECT_EQ(Log2(Align(Value)), Log2_64(Value));

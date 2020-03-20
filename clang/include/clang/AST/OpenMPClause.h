@@ -6827,6 +6827,68 @@ public:
   }
 };
 
+/// This represents 'detach' clause in the '#pragma omp task' directive.
+///
+/// \code
+/// #pragma omp task detach(evt)
+/// \endcode
+/// In this example directive '#pragma omp detach' has simple 'detach' clause
+/// with the variable 'evt'.
+class OMPDetachClause final : public OMPClause {
+  friend class OMPClauseReader;
+
+  /// Location of '('.
+  SourceLocation LParenLoc;
+
+  /// Expression of the 'detach' clause.
+  Stmt *Evt = nullptr;
+
+  /// Set condition.
+  void setEventHandler(Expr *E) { Evt = E; }
+
+  /// Sets the location of '('.
+  void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
+
+public:
+  /// Build 'detach' clause with event-handler \a Evt.
+  ///
+  /// \param Evt Event handler expression.
+  /// \param StartLoc Starting location of the clause.
+  /// \param LParenLoc Location of '('.
+  /// \param EndLoc Ending location of the clause.
+  OMPDetachClause(Expr *Evt, SourceLocation StartLoc, SourceLocation LParenLoc,
+                  SourceLocation EndLoc)
+      : OMPClause(OMPC_detach, StartLoc, EndLoc), LParenLoc(LParenLoc),
+        Evt(Evt) {}
+
+  /// Build an empty clause.
+  OMPDetachClause()
+      : OMPClause(OMPC_detach, SourceLocation(), SourceLocation()) {}
+
+  /// Returns the location of '('.
+  SourceLocation getLParenLoc() const { return LParenLoc; }
+
+  /// Returns event-handler expression.
+  Expr *getEventHandler() const { return cast_or_null<Expr>(Evt); }
+
+  child_range children() { return child_range(&Evt, &Evt + 1); }
+
+  const_child_range children() const {
+    return const_child_range(&Evt, &Evt + 1);
+  }
+
+  child_range used_children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range used_children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == OMPC_detach;
+  }
+};
+
 /// This class implements a simple visitor for OMPClause
 /// subclasses.
 template<class ImplClass, template <typename> class Ptr, typename RetTy>

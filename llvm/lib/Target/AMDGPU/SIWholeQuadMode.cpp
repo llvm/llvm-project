@@ -192,8 +192,6 @@ private:
                      std::vector<MachineBasicBlock *> &Worklist);
   void analyzeLiveLanes(MachineFunction &MF);
 
-  bool requiresCorrectState(const MachineInstr &MI) const;
-
   MachineBasicBlock::iterator saveSCC(MachineBasicBlock &MBB,
                                       MachineBasicBlock::iterator Before);
   MachineBasicBlock::iterator
@@ -724,36 +722,6 @@ void SIWholeQuadMode::analyzeLiveLanes(MachineFunction &MF) {
   }
 }
 
-/// Whether \p MI really requires the exec state computed during analysis.
-///
-/// Scalar instructions must occasionally be marked WQM for correct propagation
-/// (e.g. thread masks leading up to branches), but when it comes to actual
-/// execution, they don't care about EXEC.
-bool SIWholeQuadMode::requiresCorrectState(const MachineInstr &MI) const {
-  if (MI.isTerminator())
-    return true;
-
-  // Skip instructions that are not affected by EXEC
-  if (TII->isScalarUnit(MI))
-    return false;
-
-  // Generic instructions such as COPY will either disappear by register
-  // coalescing or be lowered to SALU or VALU instructions.
-  if (MI.isTransient()) {
-    if (MI.getNumExplicitOperands() >= 1) {
-      const MachineOperand &Op = MI.getOperand(0);
-      if (Op.isReg()) {
-        if (TRI->isSGPRReg(*MRI, Op.getReg())) {
-          // SGPR instructions are not affected by EXEC
-          return false;
-        }
-      }
-    }
-  }
-
-  return true;
-}
-
 MachineBasicBlock::iterator
 SIWholeQuadMode::saveSCC(MachineBasicBlock &MBB,
                          MachineBasicBlock::iterator Before) {
@@ -1276,7 +1244,7 @@ void SIWholeQuadMode::processBlock(MachineBasicBlock &MBB, bool isEntry) {
     if (II != IE) {
       MachineInstr &MI = *II;
 
-      if (requiresCorrectState(MI)) {
+      if (MI.isTerminator() || TII->mayReadEXEC(*MRI, MI)) {
         auto III = Instructions.find(&MI);
         if (III != Instructions.end()) {
           if (III->second.Needs & StateWWM)

@@ -1948,9 +1948,6 @@ def note_destructor_nontype_here : Note<
 def ext_dtor_named_in_wrong_scope : Extension<
   "ISO C++ requires the name after '::~' to be found in the same scope as "
   "the name before '::~'">, InGroup<DtorName>;
-def ext_dtor_name_missing_template_arguments : Extension<
-  "ISO C++ requires template argument list in destructor name">,
-  InGroup<DtorName>;
 def ext_qualified_dtor_named_in_lexical_scope : ExtWarn<
   "qualified destructor name only found in lexical scope; omit the qualifier "
   "to find this type name by unqualified lookup">, InGroup<DtorName>;
@@ -2650,8 +2647,6 @@ def err_concept_extra_headers : Error<
   "extraneous template parameter list in concept definition">;
 def err_concept_no_associated_constraints : Error<
   "concept cannot have associated constraints">;
-def err_concept_not_implemented : Error<
-  "sorry, unimplemented concepts feature %0 used">;
 def err_non_constant_constraint_expression : Error<
   "substitution into constraint expression resulted in a non-constant "
   "expression">;
@@ -2660,8 +2655,6 @@ def err_non_bool_atomic_constraint : Error<
 def err_template_arg_list_constraints_not_satisfied : Error<
   "constraints not satisfied for %select{class template|function template|variable template|alias template|"
   "template template parameter|template}0 %1%2">;
-def note_constraints_not_satisfied : Note<
-  "constraints not satisfied">;
 def note_substituted_constraint_expr_is_ill_formed : Note<
   "because substituted constraint expression is ill-formed%0">;
 def note_atomic_constraint_evaluated_to_false : Note<
@@ -2678,11 +2671,6 @@ def err_trailing_requires_clause_on_deduction_guide : Error<
   "deduction guide cannot have a requires clause">;
 def err_reference_to_function_with_unsatisfied_constraints : Error<
   "invalid reference to function %0: constraints not satisfied">;
-def note_requires_expr_ill_formed_expr : Note<
-  "expression is invalid: %0">;
-def note_requires_expr_no_implicit_conversion : Note<
-  "no implicit conversion exists between expression type %0 and expected type "
-  "%1">;
 def err_requires_expr_local_parameter_default_argument : Error<
   "default arguments not allowed for parameters of a requires expression">;
 def err_requires_expr_parameter_referenced_in_evaluated_context : Error<
@@ -2705,12 +2693,6 @@ def note_type_requirement_substitution_error : Note<
   "%select{and|because}0 '%1' would be invalid: %2">;
 def note_type_requirement_unknown_substitution_error : Note<
   "%select{and|because}0 '%1' would be invalid">;
-def err_type_requirement_non_type_template : Error<
-  "'%0' refers to a %select{class template|function template|"
-  "variable template|alias template|template template parameter|template}1, "
-  "not a type template">;
-def err_type_requirement_no_such_type : Error<
-  "'%0' does not name a type">;
 def note_nested_requirement_substitution_error : Note<
   "%select{and|because}0 '%1' would be invalid: %2">;
 def note_nested_requirement_unknown_substitution_error : Note<
@@ -9239,12 +9221,6 @@ def err_x86_builtin_invalid_rounding : Error<
   "invalid rounding argument">;
 def err_x86_builtin_invalid_scale : Error<
   "scale argument must be 1, 2, 4, or 8">;
-def err_hexagon_builtin_unsupported_cpu : Error<
-  "builtin is not supported on this CPU">;
-def err_hexagon_builtin_requires_hvx : Error<
-  "builtin requires HVX">;
-def err_hexagon_builtin_unsupported_hvx : Error<
-  "builtin is not supported on this version of HVX">;
 
 def err_builtin_target_unsupported : Error<
   "builtin is not supported on this target">;
@@ -9976,9 +9952,9 @@ def err_omp_wrong_ordered_loop_count : Error<
   "the parameter of the 'ordered' clause must be greater than or equal to the parameter of the 'collapse' clause">;
 def note_collapse_loop_count : Note<
   "parameter of the 'collapse' clause">;
-def err_omp_grainsize_num_tasks_mutually_exclusive : Error<
+def err_omp_clauses_mutually_exclusive : Error<
   "'%0' and '%1' clause are mutually exclusive and may not appear on the same directive">;
-def note_omp_previous_grainsize_num_tasks : Note<
+def note_omp_previous_clause : Note<
   "'%0' clause is specified here">;
 def err_omp_hint_clause_no_name : Error<
   "the name of the construct must be specified in presence of 'hint' clause">;
@@ -10150,6 +10126,8 @@ def note_omp_flush_order_clause_here : Note<
 def err_omp_non_lvalue_in_map_or_motion_clauses: Error<
   "expected addressable lvalue in '%0' clause"
   >;
+def err_omp_event_var_expected : Error<
+  "expected variable of the 'omp_event_handle_t' type%select{|, not %1}0">;
 } // end of OpenMP category
 
 let CategoryName = "Related Result Type Issue" in {

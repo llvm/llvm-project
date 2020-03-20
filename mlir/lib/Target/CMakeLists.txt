@@ -10,6 +10,7 @@ add_mlir_library(MLIRTargetLLVMIRModuleTranslation
 target_link_libraries(MLIRTargetLLVMIRModuleTranslation
   PUBLIC
   MLIRLLVMIR
+  MLIRLLVMIRTransforms
   LLVMCore
   LLVMIRReader
   LLVMSupport
