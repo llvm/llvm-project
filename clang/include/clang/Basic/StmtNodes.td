@@ -233,6 +233,7 @@ def OMPTaskwaitDirective : StmtNode<OMPExecutableDirective>;
 def OMPTaskgroupDirective : StmtNode<OMPExecutableDirective>;
 def OMPFlushDirective : StmtNode<OMPExecutableDirective>;
 def OMPDepobjDirective : StmtNode<OMPExecutableDirective>;
+def OMPScanDirective : StmtNode<OMPExecutableDirective>;
 def OMPOrderedDirective : StmtNode<OMPExecutableDirective>;
 def OMPAtomicDirective : StmtNode<OMPExecutableDirective>;
 def OMPTargetDirective : StmtNode<OMPExecutableDirective>;
