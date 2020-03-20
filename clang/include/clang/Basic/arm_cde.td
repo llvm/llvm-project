@@ -37,6 +37,13 @@ class CDEImmediateBits<int numBits> : Immediate<u32, IB_ConstBits<numBits>>;
 class CDEIRInt<string name, list<Type> params = [], bit appendKind = 0>
       : IRIntBase<"arm_cde_" # name, params, appendKind>;
 
+// Class for generating function macros in arm_cde.h:
+// "#define <name>(<params>) <definition>"
+class FunctionMacro<list<string> params_, string definition_> {
+  list<string> params = params_;
+  string definition = definition_;
+}
+
 // Coprocessor immediate
 def imm_coproc : Immediate<sint, IB_ConstRange<0, 7>>;
 
@@ -107,3 +114,77 @@ defm vcx2: CDE_VCXFP_m<(args imm_6b:$imm), (args u32:$n), (args u64:$n),
 defm vcx3: CDE_VCXFP_m<(args imm_3b:$imm),
                        (args u32:$n, u32:$m), (args u64:$n, u64:$m),
                        (? (bitcast $n, FScalar), (bitcast $m, FScalar))>;
+
+// VCX* instructions operating on Q vector registers
+
+def v16u8 : VecOf<u8>;
+
+let pnt = PNT_None, params = [u8] in
+def vcx1q : CDEIntrinsic<Vector, (args imm_coproc:$cp, imm_12b:$imm),
+                         (CDEIRInt<"vcx1q"> $cp, $imm)>;
+
+let pnt = PNT_Type, params = T.All, polymorphicOnly = 1 in {
+  def vcx1qa :
+    CDEIntrinsic<Vector, (args imm_coproc:$cp, Vector:$acc, imm_12b:$imm),
+            (bitcast (CDEIRInt<"vcx1qa"> $cp, (bitcast $acc, v16u8), $imm),
+                     Vector)>;
+
+  def vcx2q :
+    CDEIntrinsic<Vector, (args imm_coproc:$cp, Vector:$n, imm_7b:$imm),
+            (bitcast (CDEIRInt<"vcx2q"> $cp, (bitcast $n, VecOf<u8>), $imm),
+                      Vector)>;
+  def vcx2q_u8 :
+    CDEIntrinsic<v16u8, (args imm_coproc:$cp, Vector:$n, imm_7b:$imm),
+            (CDEIRInt<"vcx2q"> $cp, (bitcast $n, VecOf<u8>), $imm)>;
+
+  def vcx2qa_impl :
+    CDEIntrinsic<Vector,
+            (args imm_coproc:$cp, Vector:$acc, v16u8:$n, imm_7b:$imm),
+            (bitcast (CDEIRInt<"vcx2qa"> $cp, (bitcast $acc, v16u8), $n, $imm),
+                     Vector)>;
+
+  def vcx3q_impl :
+    CDEIntrinsic<Vector,
+            (args imm_coproc:$cp, Vector:$n, v16u8:$m, imm_4b:$imm),
+            (bitcast (CDEIRInt<"vcx3q"> $cp, (bitcast $n, v16u8), $m, $imm),
+                     Vector)>;
+  def vcx3q_u8_impl :
+    CDEIntrinsic<v16u8,
+            (args imm_coproc:$cp, Vector:$n, v16u8:$m, imm_4b:$imm),
+            (CDEIRInt<"vcx3q"> $cp, (bitcast $n, v16u8), $m, $imm)>;
+  def vcx3qa_impl :
+    CDEIntrinsic<Vector,
+            (args imm_coproc:$cp, Vector:$acc, v16u8:$n, v16u8:$m, imm_4b:$imm),
+            (bitcast (CDEIRInt<"vcx3qa"> $cp, (bitcast $acc, v16u8), $n, $m,
+                                         $imm),
+                     Vector)>;
+}
+
+// Reinterpret intrinsics required to implement __arm_vcx*q with 2 or 3
+// polymorphic paramters.
+let params = [/* no u8 */ s8, u16, s16, u32, s32, u64, s64, f16, f32],
+    headerOnly = 1, polymorphicOnly = 1 in
+def vreinterpretq_u8 :
+    Intrinsic<v16u8, (args Vector:$x), (vreinterpret $x, v16u8)>;
+
+// We need vreinterpretq_u8_u8 to avoid doing smart tricks in the macros
+let params = [u8], polymorphicOnly = 1 in
+def vreinterpretq_u8_cde :
+    CDEIntrinsic<v16u8, (args Vector:$x), (id $x)>,
+    NameOverride<"vreinterpretq_u8">;
+
+
+def vcx2qa : FunctionMacro<
+  ["cp", "acc", "n", "imm"],
+  "__arm_vcx2qa_impl((cp), (acc), __arm_vreinterpretq_u8(n), (imm))">;
+
+def vcx3q : FunctionMacro<
+  ["cp", "n", "m", "imm"],
+  "__arm_vcx3q_impl((cp), (n), __arm_vreinterpretq_u8(m), (imm))">;
+def vcx3q_u8 : FunctionMacro<
+  ["cp", "n", "m", "imm"],
+  "__arm_vcx3q_u8_impl((cp), (n), __arm_vreinterpretq_u8(m), (imm))">;
+def vcx3qa : FunctionMacro<
+  ["cp", "acc", "n", "m", "imm"],
+  "__arm_vcx3qa_impl((cp), (acc), __arm_vreinterpretq_u8(n), "
+                     "__arm_vreinterpretq_u8(m), (imm))">;
