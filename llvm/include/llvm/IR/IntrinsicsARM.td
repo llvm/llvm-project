@@ -1317,4 +1317,20 @@ defm int_arm_cde_vcx1 : CDEVCXIntrinsics<[]>;
 defm int_arm_cde_vcx2 : CDEVCXIntrinsics<[LLVMMatchType<0>]>;
 defm int_arm_cde_vcx3 : CDEVCXIntrinsics<[LLVMMatchType<0>, LLVMMatchType<0>]>;
 
+multiclass CDEVCXVecIntrinsics<list<LLVMType> args> {
+  def "" : Intrinsic<
+    [llvm_v16i8_ty],
+    !listconcat([llvm_i32_ty /* coproc */], args, [llvm_i32_ty /* imm */]),
+    [IntrNoMem, ImmArg<0>, ImmArg<!add(!size(args), 1)>]>;
+  def a : Intrinsic<
+    [llvm_v16i8_ty],
+    !listconcat([llvm_i32_ty /* coproc */, llvm_v16i8_ty /* acc */],
+                args, [llvm_i32_ty /* imm */]),
+    [IntrNoMem, ImmArg<0>, ImmArg<!add(!size(args), 2)>]>;
+}
+
+defm int_arm_cde_vcx1q : CDEVCXVecIntrinsics<[]>;
+defm int_arm_cde_vcx2q : CDEVCXVecIntrinsics<[llvm_v16i8_ty]>;
+defm int_arm_cde_vcx3q : CDEVCXVecIntrinsics<[llvm_v16i8_ty, llvm_v16i8_ty]>;
+
 } // end TargetPrefix
