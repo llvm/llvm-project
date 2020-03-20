@@ -4688,6 +4688,63 @@ public:
   }
 };
 
+/// This represents '#pragma omp scan' directive.
+///
+/// \code
+/// #pragma omp scan inclusive(a)
+/// \endcode
+/// In this example directive '#pragma omp scan' has clause 'inclusive' with
+/// list item 'a'.
+class OMPScanDirective final : public OMPExecutableDirective {
+  friend class ASTStmtReader;
+  /// Build directive with the given start and end location.
+  ///
+  /// \param StartLoc Starting location of the directive kind.
+  /// \param EndLoc Ending location of the directive.
+  /// \param NumClauses Number of clauses.
+  ///
+  OMPScanDirective(SourceLocation StartLoc, SourceLocation EndLoc,
+                   unsigned NumClauses)
+      : OMPExecutableDirective(this, OMPScanDirectiveClass,
+                               llvm::omp::OMPD_scan, StartLoc, EndLoc,
+                               NumClauses, 0) {}
+
+  /// Build an empty directive.
+  ///
+  /// \param NumClauses Number of clauses.
+  ///
+  explicit OMPScanDirective(unsigned NumClauses)
+      : OMPExecutableDirective(this, OMPScanDirectiveClass,
+                               llvm::omp::OMPD_scan, SourceLocation(),
+                               SourceLocation(), NumClauses, 0) {}
+
+public:
+  /// Creates directive with a list of \a Clauses.
+  ///
+  /// \param C AST context.
+  /// \param StartLoc Starting location of the directive kind.
+  /// \param EndLoc Ending Location of the directive.
+  /// \param Clauses List of clauses (only single OMPFlushClause clause is
+  /// allowed).
+  ///
+  static OMPScanDirective *Create(const ASTContext &C, SourceLocation StartLoc,
+                                  SourceLocation EndLoc,
+                                  ArrayRef<OMPClause *> Clauses);
+
+  /// Creates an empty directive with the place for \a NumClauses
+  /// clauses.
+  ///
+  /// \param C AST context.
+  /// \param NumClauses Number of clauses.
+  ///
+  static OMPScanDirective *CreateEmpty(const ASTContext &C, unsigned NumClauses,
+                                       EmptyShell);
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == OMPScanDirectiveClass;
+  }
+};
+
 } // end namespace clang
 
 #endif

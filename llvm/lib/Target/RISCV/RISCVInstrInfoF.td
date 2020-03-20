@@ -286,6 +286,9 @@ def PseudoFSW  : PseudoStore<"fsw", FPR32>;
 // Pseudo-instructions and codegen patterns
 //===----------------------------------------------------------------------===//
 
+/// Floating point constants
+def fpimm0 : PatLeaf<(fpimm), [{ return N->isExactlyValue(+0.0); }]>;
+
 /// Generic pattern classes
 class PatFpr32Fpr32<SDPatternOperator OpNode, RVInstR Inst>
     : Pat<(OpNode FPR32:$rs1, FPR32:$rs2), (Inst $rs1, $rs2)>;
@@ -294,6 +297,9 @@ class PatFpr32Fpr32DynFrm<SDPatternOperator OpNode, RVInstRFrm Inst>
     : Pat<(OpNode FPR32:$rs1, FPR32:$rs2), (Inst $rs1, $rs2, 0b111)>;
 
 let Predicates = [HasStdExtF] in {
+
+/// Float constants
+def : Pat<(f32 (fpimm0)), (FMV_W_X X0)>;
 
 /// Float conversion operations
 

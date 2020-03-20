@@ -47,7 +47,9 @@ static llvm::ArrayRef<syntax::Token> tokens(syntax::Node *N) {
 class SyntaxTreeTest : public ::testing::Test {
 protected:
   // Build a syntax tree for the code.
-  syntax::TranslationUnit *buildTree(llvm::StringRef Code) {
+  syntax::TranslationUnit *
+  buildTree(llvm::StringRef Code,
+            const std::string &Target = "x86_64-pc-linux-gnu") {
     // FIXME: this code is almost the identical to the one in TokensTest. Share
     //        it.
     class BuildSyntaxTree : public ASTConsumer {
@@ -98,9 +100,10 @@ protected:
     if (!Diags->getClient())
       Diags->setClient(new IgnoringDiagConsumer);
     // Prepare to run a compiler.
-    std::vector<const char *> Args = {"syntax-test", "-std=c++11",
-                                      "-fno-delayed-template-parsing",
-                                      "-fsyntax-only", FileName};
+    std::vector<const char *> Args = {
+        "syntax-test", "-target",       Target.c_str(),
+        FileName,      "-fsyntax-only", "-std=c++17",
+    };
     Invocation = createInvocationFromCommandLine(Args, Diags, FS);
     assert(Invocation);
     Invocation->getFrontendOpts().DisableFree = false;
@@ -119,6 +122,32 @@ protected:
       std::abort();
     }
     return Root;
+  }
+
+  void expectTreeDumpEqual(StringRef Code, StringRef Tree,
+                           bool RunWithDelayedTemplateParsing = true) {
+    SCOPED_TRACE(Code);
+
+    std::string Expected = Tree.trim().str();
+
+    // We want to run the test with -fdelayed-template-parsing enabled and
+    // disabled, therefore we use these representative targets that differ in
+    // the default value.
+    // We are not passing -fdelayed-template-parsing directly but we are using
+    // the `-target` to improve coverage and discover differences in behavior
+    // early.
+    for (const std::string Target :
+         {"x86_64-pc-linux-gnu", "x86_64-pc-win32-msvc"}) {
+      if (!RunWithDelayedTemplateParsing &&
+          Target == "x86_64-pc-win32-msvc") {
+        continue;
+      }
+      auto *Root = buildTree(Code, Target);
+      std::string Actual = std::string(StringRef(Root->dump(*Arena)).trim());
+      EXPECT_EQ(Expected, Actual)
+          << "for target " << Target << " the resulting dump is:\n"
+          << Actual;
+    }
   }
 
   // Adds a file to the test VFS.
@@ -164,14 +193,13 @@ protected:
   std::unique_ptr<syntax::Arena> Arena;
 };
 
-TEST_F(SyntaxTreeTest, Basic) {
-  std::pair</*Input*/ std::string, /*Expected*/ std::string> Cases[] = {
-      {
-          R"cpp(
+TEST_F(SyntaxTreeTest, Simple) {
+  expectTreeDumpEqual(
+      R"cpp(
 int main() {}
 void foo() {}
     )cpp",
-          R"txt(
+      R"txt(
 *: TranslationUnit
 |-SimpleDeclaration
 | |-int
@@ -193,16 +221,18 @@ void foo() {}
   `-CompoundStatement
     |-{
     `-}
-)txt"},
-      // if.
-      {
-          R"cpp(
+)txt");
+}
+
+TEST_F(SyntaxTreeTest, If) {
+  expectTreeDumpEqual(
+      R"cpp(
 int main() {
   if (true) {}
   if (true) {} else if (false) {}
 }
         )cpp",
-          R"txt(
+      R"txt(
 *: TranslationUnit
 `-SimpleDeclaration
   |-int
@@ -242,14 +272,17 @@ int main() {
     |     |-{
     |     `-}
     `-}
-        )txt"},
-      // for.
-      {R"cpp(
+        )txt");
+}
+
+TEST_F(SyntaxTreeTest, For) {
+  expectTreeDumpEqual(
+      R"cpp(
 void test() {
   for (;;)  {}
 }
 )cpp",
-       R"txt(
+      R"txt(
 *: TranslationUnit
 `-SimpleDeclaration
   |-void
@@ -270,151 +303,18 @@ void test() {
     |   |-{
     |   `-}
     `-}
-        )txt"},
-      // declaration statement.
-      {"void test() { int a = 10; }",
-       R"txt(
-*: TranslationUnit
-`-SimpleDeclaration
-  |-void
-  |-SimpleDeclarator
-  | |-test
-  | `-ParametersAndQualifiers
-  |   |-(
-  |   `-)
-  `-CompoundStatement
-    |-{
-    |-DeclarationStatement
-    | |-SimpleDeclaration
-    | | |-int
-    | | `-SimpleDeclarator
-    | |   |-a
-    | |   |-=
-    | |   `-UnknownExpression
-    | |     `-10
-    | `-;
-    `-}
-)txt"},
-      {"void test() { ; }", R"txt(
-*: TranslationUnit
-`-SimpleDeclaration
-  |-void
-  |-SimpleDeclarator
-  | |-test
-  | `-ParametersAndQualifiers
-  |   |-(
-  |   `-)
-  `-CompoundStatement
-    |-{
-    |-EmptyStatement
-    | `-;
-    `-}
-)txt"},
-      // switch, case and default.
-      {R"cpp(
-void test() {
-  switch (true) {
-    case 0:
-    default:;
-  }
+        )txt");
 }
-)cpp",
-       R"txt(
-*: TranslationUnit
-`-SimpleDeclaration
-  |-void
-  |-SimpleDeclarator
-  | |-test
-  | `-ParametersAndQualifiers
-  |   |-(
-  |   `-)
-  `-CompoundStatement
-    |-{
-    |-SwitchStatement
-    | |-switch
-    | |-(
-    | |-UnknownExpression
-    | | `-true
-    | |-)
-    | `-CompoundStatement
-    |   |-{
-    |   |-CaseStatement
-    |   | |-case
-    |   | |-UnknownExpression
-    |   | | `-0
-    |   | |-:
-    |   | `-DefaultStatement
-    |   |   |-default
-    |   |   |-:
-    |   |   `-EmptyStatement
-    |   |     `-;
-    |   `-}
-    `-}
-)txt"},
-      // while.
-      {R"cpp(
-void test() {
-  while (true) { continue; break; }
-}
-)cpp",
-       R"txt(
-*: TranslationUnit
-`-SimpleDeclaration
-  |-void
-  |-SimpleDeclarator
-  | |-test
-  | `-ParametersAndQualifiers
-  |   |-(
-  |   `-)
-  `-CompoundStatement
-    |-{
-    |-WhileStatement
-    | |-while
-    | |-(
-    | |-UnknownExpression
-    | | `-true
-    | |-)
-    | `-CompoundStatement
-    |   |-{
-    |   |-ContinueStatement
-    |   | |-continue
-    |   | `-;
-    |   |-BreakStatement
-    |   | |-break
-    |   | `-;
-    |   `-}
-    `-}
-)txt"},
-      // return.
-      {R"cpp(
-int test() { return 1; }
-      )cpp",
-       R"txt(
-*: TranslationUnit
-`-SimpleDeclaration
-  |-int
-  |-SimpleDeclarator
-  | |-test
-  | `-ParametersAndQualifiers
-  |   |-(
-  |   `-)
-  `-CompoundStatement
-    |-{
-    |-ReturnStatement
-    | |-return
-    | |-UnknownExpression
-    | | `-1
-    | `-;
-    `-}
-)txt"},
-      // Range-based for.
-      {R"cpp(
+
+TEST_F(SyntaxTreeTest, RangeBasedFor) {
+  expectTreeDumpEqual(
+      R"cpp(
 void test() {
   int a[3];
   for (int x : a) ;
 }
       )cpp",
-       R"txt(
+      R"txt(
 *: TranslationUnit
 `-SimpleDeclaration
   |-void
@@ -450,11 +350,122 @@ void test() {
     | `-EmptyStatement
     |   `-;
     `-}
-       )txt"},
-      // Unhandled statements should end up as 'unknown statement'.
-      // This example uses a 'label statement', which does not yet have a syntax
-      // counterpart.
-      {"void main() { foo: return 100; }", R"txt(
+       )txt");
+}
+
+TEST_F(SyntaxTreeTest, DeclarationStatement) {
+  expectTreeDumpEqual("void test() { int a = 10; }",
+                      R"txt(
+*: TranslationUnit
+`-SimpleDeclaration
+  |-void
+  |-SimpleDeclarator
+  | |-test
+  | `-ParametersAndQualifiers
+  |   |-(
+  |   `-)
+  `-CompoundStatement
+    |-{
+    |-DeclarationStatement
+    | |-SimpleDeclaration
+    | | |-int
+    | | `-SimpleDeclarator
+    | |   |-a
+    | |   |-=
+    | |   `-UnknownExpression
+    | |     `-10
+    | `-;
+    `-}
+)txt");
+}
+
+TEST_F(SyntaxTreeTest, Switch) {
+  expectTreeDumpEqual(
+      R"cpp(
+void test() {
+  switch (true) {
+    case 0:
+    default:;
+  }
+}
+)cpp",
+      R"txt(
+*: TranslationUnit
+`-SimpleDeclaration
+  |-void
+  |-SimpleDeclarator
+  | |-test
+  | `-ParametersAndQualifiers
+  |   |-(
+  |   `-)
+  `-CompoundStatement
+    |-{
+    |-SwitchStatement
+    | |-switch
+    | |-(
+    | |-UnknownExpression
+    | | `-true
+    | |-)
+    | `-CompoundStatement
+    |   |-{
+    |   |-CaseStatement
+    |   | |-case
+    |   | |-UnknownExpression
+    |   | | `-0
+    |   | |-:
+    |   | `-DefaultStatement
+    |   |   |-default
+    |   |   |-:
+    |   |   `-EmptyStatement
+    |   |     `-;
+    |   `-}
+    `-}
+)txt");
+}
+
+TEST_F(SyntaxTreeTest, While) {
+  expectTreeDumpEqual(
+      R"cpp(
+void test() {
+  while (true) { continue; break; }
+}
+)cpp",
+      R"txt(
+*: TranslationUnit
+`-SimpleDeclaration
+  |-void
+  |-SimpleDeclarator
+  | |-test
+  | `-ParametersAndQualifiers
+  |   |-(
+  |   `-)
+  `-CompoundStatement
+    |-{
+    |-WhileStatement
+    | |-while
+    | |-(
+    | |-UnknownExpression
+    | | `-true
+    | |-)
+    | `-CompoundStatement
+    |   |-{
+    |   |-ContinueStatement
+    |   | |-continue
+    |   | `-;
+    |   |-BreakStatement
+    |   | |-break
+    |   | `-;
+    |   `-}
+    `-}
+)txt");
+}
+
+TEST_F(SyntaxTreeTest, UnhandledStatement) {
+  // Unhandled statements should end up as 'unknown statement'.
+  // This example uses a 'label statement', which does not yet have a syntax
+  // counterpart.
+  expectTreeDumpEqual("void main() { foo: return 100; }",
+                      R"txt(
 *: TranslationUnit
 `-SimpleDeclaration
   |-void
@@ -474,16 +485,20 @@ void test() {
     |   | `-100
     |   `-;
     `-}
-)txt"},
-      // expressions should be wrapped in 'ExpressionStatement' when they appear
-      // in a statement position.
-      {R"cpp(
+)txt");
+}
+
+TEST_F(SyntaxTreeTest, Expressions) {
+  // expressions should be wrapped in 'ExpressionStatement' when they appear
+  // in a statement position.
+  expectTreeDumpEqual(
+      R"cpp(
 void test() {
   test();
   if (true) test(); else test();
 }
     )cpp",
-       R"txt(
+      R"txt(
 *: TranslationUnit
 `-SimpleDeclaration
   |-void
@@ -520,12 +535,15 @@ void test() {
     |   | `-)
     |   `-;
     `-}
-)txt"},
-      // Multiple declarators group into a single SimpleDeclaration.
-      {R"cpp(
+)txt");
+}
+
+TEST_F(SyntaxTreeTest, MultipleDeclaratorsGrouping) {
+  expectTreeDumpEqual(
+      R"cpp(
       int *a, b;
   )cpp",
-       R"txt(
+      R"txt(
 *: TranslationUnit
 `-SimpleDeclaration
   |-int
@@ -536,11 +554,12 @@ void test() {
   |-SimpleDeclarator
   | `-b
   `-;
-  )txt"},
-      {R"cpp(
+  )txt");
+  expectTreeDumpEqual(
+      R"cpp(
     typedef int *a, b;
   )cpp",
-       R"txt(
+      R"txt(
 *: TranslationUnit
 `-SimpleDeclaration
   |-typedef
@@ -552,15 +571,18 @@ void test() {
   |-SimpleDeclarator
   | `-b
   `-;
-  )txt"},
-      // Multiple declarators inside a statement.
-      {R"cpp(
+  )txt");
+}
+
+TEST_F(SyntaxTreeTest, MultipleDeclaratorsInsideStatement) {
+  expectTreeDumpEqual(
+      R"cpp(
 void foo() {
       int *a, b;
       typedef int *ta, tb;
 }
   )cpp",
-       R"txt(
+      R"txt(
 *: TranslationUnit
 `-SimpleDeclaration
   |-void
@@ -593,15 +615,19 @@ void foo() {
     | |   `-tb
     | `-;
     `-}
-  )txt"},
-      {R"cpp(
+  )txt");
+}
+
+TEST_F(SyntaxTreeTest, Namespaces) {
+  expectTreeDumpEqual(
+      R"cpp(
 namespace a { namespace b {} }
 namespace a::b {}
 namespace {}
 
 namespace foo = a;
     )cpp",
-       R"txt(
+      R"txt(
 *: TranslationUnit
 |-NamespaceDefinition
 | |-namespace
@@ -630,9 +656,62 @@ namespace foo = a;
   |-=
   |-a
   `-;
-)txt"},
-      // Free-standing classes, must live inside a SimpleDeclaration.
-      {R"cpp(
+)txt");
+}
+
+TEST_F(SyntaxTreeTest, UsingDirective) {
+  expectTreeDumpEqual(
+      R"cpp(
+namespace ns {}
+using namespace ::ns;
+    )cpp",
+      R"txt(
+*: TranslationUnit
+|-NamespaceDefinition
+| |-namespace
+| |-ns
+| |-{
+| `-}
+`-UsingNamespaceDirective
+  |-using
+  |-namespace
+  |-::
+  |-ns
+  `-;
+       )txt");
+}
+
+TEST_F(SyntaxTreeTest, UsingDeclaration) {
+  expectTreeDumpEqual(
+      R"cpp(
+namespace ns { int a; }
+using ns::a;
+    )cpp",
+      R"txt(
+*: TranslationUnit
+|-NamespaceDefinition
+| |-namespace
+| |-ns
+| |-{
+| |-SimpleDeclaration
+| | |-int
+| | |-SimpleDeclarator
+| | | `-a
+| | `-;
+| `-}
+`-UsingDeclaration
+  |-using
+  |-ns
+  |-::
+  |-a
+  `-;
+       )txt");
+}
+
+TEST_F(SyntaxTreeTest, FreeStandingClasses) {
+  // Free-standing classes, must live inside a SimpleDeclaration.
+  expectTreeDumpEqual(
+      R"cpp(
 sturct X;
 struct X {};
 
@@ -641,7 +720,7 @@ struct Y {} *y2;
 
 struct {} *a1;
     )cpp",
-       R"txt(
+      R"txt(
 *: TranslationUnit
 |-SimpleDeclaration
 | |-sturct
@@ -677,13 +756,17 @@ struct {} *a1;
   | |-*
   | `-a1
   `-;
-)txt"},
-      {R"cpp(
+)txt");
+}
+
+TEST_F(SyntaxTreeTest, Templates) {
+  expectTreeDumpEqual(
+      R"cpp(
 template <class T> struct cls {};
 template <class T> int var = 10;
 template <class T> int fun() {}
     )cpp",
-       R"txt(
+      R"txt(
 *: TranslationUnit
 |-TemplateDeclaration
 | |-template
@@ -730,15 +813,22 @@ template <class T> int fun() {}
     `-CompoundStatement
       |-{
       `-}
-)txt"},
-      {R"cpp(
+)txt",
+      // FIXME: Make this test work on windows by generating the expected Syntax
+      // tree when -fdelayed-template-parsing is active.
+      /*RunWithDelayedTemplateParsing=*/false);
+}
+
+TEST_F(SyntaxTreeTest, NestedTemplates) {
+  expectTreeDumpEqual(
+      R"cpp(
 template <class T>
 struct X {
   template <class U>
   U foo();
 };
     )cpp",
-       R"txt(
+      R"txt(
 *: TranslationUnit
 `-TemplateDeclaration
   |-template
@@ -768,8 +858,97 @@ struct X {
     |   `-;
     |-}
     `-;
-)txt"},
-      {R"cpp(
+)txt");
+}
+
+TEST_F(SyntaxTreeTest, Templates2) {
+  expectTreeDumpEqual(
+      R"cpp(
+template <class T> struct X { struct Y; };
+template <class T> struct X<T>::Y {};
+    )cpp",
+      R"txt(
+*: TranslationUnit
+|-TemplateDeclaration
+| |-template
+| |-<
+| |-UnknownDeclaration
+| | |-class
+| | `-T
+| |->
+| `-SimpleDeclaration
+|   |-struct
+|   |-X
+|   |-{
+|   |-SimpleDeclaration
+|   | |-struct
+|   | |-Y
+|   | `-;
+|   |-}
+|   `-;
+`-TemplateDeclaration
+  |-template
+  |-<
+  |-UnknownDeclaration
+  | |-class
+  | `-T
+  |->
+  `-SimpleDeclaration
+    |-struct
+    |-X
+    |-<
+    |-T
+    |->
+    |-::
+    |-Y
+    |-{
+    |-}
+    `-;
+       )txt");
+}
+
+TEST_F(SyntaxTreeTest, TemplatesUsingUsing) {
+  expectTreeDumpEqual(
+      R"cpp(
+template <class T> struct X {
+  using T::foo;
+  using typename T::bar;
+};
+    )cpp",
+      R"txt(
+*: TranslationUnit
+`-TemplateDeclaration
+  |-template
+  |-<
+  |-UnknownDeclaration
+  | |-class
+  | `-T
+  |->
+  `-SimpleDeclaration
+    |-struct
+    |-X
+    |-{
+    |-UsingDeclaration
+    | |-using
+    | |-T
+    | |-::
+    | |-foo
+    | `-;
+    |-UsingDeclaration
+    | |-using
+    | |-typename
+    | |-T
+    | |-::
+    | |-bar
+    | `-;
+    |-}
+    `-;
+       )txt");
+}
+
+TEST_F(SyntaxTreeTest, ExplicitTemplateInstantations) {
+  expectTreeDumpEqual(
+      R"cpp(
 template <class T> struct X {};
 template <class T> struct X<T*> {};
 template <> struct X<int> {};
@@ -777,7 +956,7 @@ template <> struct X<int> {};
 template struct X<double>;
 extern template struct X<float>;
 )cpp",
-       R"txt(
+      R"txt(
 *: TranslationUnit
 |-TemplateDeclaration
 | |-template
@@ -841,129 +1020,15 @@ extern template struct X<float>;
     |-float
     |->
     `-;
-)txt"},
-      {R"cpp(
-template <class T> struct X { struct Y; };
-template <class T> struct X<T>::Y {};
-    )cpp",
-       R"txt(
-*: TranslationUnit
-|-TemplateDeclaration
-| |-template
-| |-<
-| |-UnknownDeclaration
-| | |-class
-| | `-T
-| |->
-| `-SimpleDeclaration
-|   |-struct
-|   |-X
-|   |-{
-|   |-SimpleDeclaration
-|   | |-struct
-|   | |-Y
-|   | `-;
-|   |-}
-|   `-;
-`-TemplateDeclaration
-  |-template
-  |-<
-  |-UnknownDeclaration
-  | |-class
-  | `-T
-  |->
-  `-SimpleDeclaration
-    |-struct
-    |-X
-    |-<
-    |-T
-    |->
-    |-::
-    |-Y
-    |-{
-    |-}
-    `-;
-       )txt"},
-      {R"cpp(
-namespace ns {}
-using namespace ::ns;
-    )cpp",
-       R"txt(
-*: TranslationUnit
-|-NamespaceDefinition
-| |-namespace
-| |-ns
-| |-{
-| `-}
-`-UsingNamespaceDirective
-  |-using
-  |-namespace
-  |-::
-  |-ns
-  `-;
-       )txt"},
-      {R"cpp(
-namespace ns { int a; }
-using ns::a;
-    )cpp",
-       R"txt(
-*: TranslationUnit
-|-NamespaceDefinition
-| |-namespace
-| |-ns
-| |-{
-| |-SimpleDeclaration
-| | |-int
-| | |-SimpleDeclarator
-| | | `-a
-| | `-;
-| `-}
-`-UsingDeclaration
-  |-using
-  |-ns
-  |-::
-  |-a
-  `-;
-       )txt"},
-      {R"cpp(
-template <class T> struct X {
-  using T::foo;
-  using typename T::bar;
-};
-    )cpp",
-       R"txt(
-*: TranslationUnit
-`-TemplateDeclaration
-  |-template
-  |-<
-  |-UnknownDeclaration
-  | |-class
-  | `-T
-  |->
-  `-SimpleDeclaration
-    |-struct
-    |-X
-    |-{
-    |-UsingDeclaration
-    | |-using
-    | |-T
-    | |-::
-    | |-foo
-    | `-;
-    |-UsingDeclaration
-    | |-using
-    | |-typename
-    | |-T
-    | |-::
-    | |-bar
-    | `-;
-    |-}
-    `-;
-       )txt"},
-      {R"cpp(
+)txt");
+}
+
+TEST_F(SyntaxTreeTest, UsingType) {
+  expectTreeDumpEqual(
+      R"cpp(
 using type = int;
     )cpp",
-       R"txt(
+      R"txt(
 *: TranslationUnit
 `-TypeAliasDeclaration
   |-using
@@ -971,20 +1036,28 @@ using type = int;
   |-=
   |-int
   `-;
-       )txt"},
-      {R"cpp(
+       )txt");
+}
+
+TEST_F(SyntaxTreeTest, EmptyDeclaration) {
+  expectTreeDumpEqual(
+      R"cpp(
 ;
     )cpp",
-       R"txt(
+      R"txt(
 *: TranslationUnit
 `-EmptyDeclaration
   `-;
-       )txt"},
-      {R"cpp(
+       )txt");
+}
+
+TEST_F(SyntaxTreeTest, StaticAssert) {
+  expectTreeDumpEqual(
+      R"cpp(
 static_assert(true, "message");
 static_assert(true);
     )cpp",
-       R"txt(
+      R"txt(
 *: TranslationUnit
 |-StaticAssertDeclaration
 | |-static_assert
@@ -1003,12 +1076,16 @@ static_assert(true);
   | `-true
   |-)
   `-;
-       )txt"},
-      {R"cpp(
+       )txt");
+}
+
+TEST_F(SyntaxTreeTest, ExternC) {
+  expectTreeDumpEqual(
+      R"cpp(
 extern "C" int a;
 extern "C" { int b; int c; }
     )cpp",
-       R"txt(
+      R"txt(
 *: TranslationUnit
 |-LinkageSpecificationDeclaration
 | |-extern
@@ -1033,15 +1110,19 @@ extern "C" { int b; int c; }
   | | `-c
   | `-;
   `-}
-       )txt"},
-      // Some nodes are non-modifiable, they are marked with 'I:'.
-      {R"cpp(
+       )txt");
+}
+
+TEST_F(SyntaxTreeTest, NonModifiableNodes) {
+  // Some nodes are non-modifiable, they are marked with 'I:'.
+  expectTreeDumpEqual(
+      R"cpp(
 #define HALF_IF if (1+
 #define HALF_IF_2 1) {}
 void test() {
   HALF_IF HALF_IF_2 else {}
 })cpp",
-       R"txt(
+      R"txt(
 *: TranslationUnit
 `-SimpleDeclaration
   |-void
@@ -1068,9 +1149,10 @@ void test() {
     |   |-{
     |   `-}
     `-}
-       )txt"},
-      // All nodes can be mutated.
-      {R"cpp(
+       )txt");
+  // All nodes can be mutated.
+  expectTreeDumpEqual(
+      R"cpp(
 #define OPEN {
 #define CLOSE }
 
@@ -1084,7 +1166,7 @@ void test() {
   }
 }
 )cpp",
-       R"txt(
+      R"txt(
 *: TranslationUnit
 `-SimpleDeclaration
   |-void
@@ -1110,15 +1192,18 @@ void test() {
     | | `-;
     | `-}
     `-}
-       )txt"},
-      // Array subscripts in declarators.
-      {R"cpp(
+       )txt");
+}
+
+TEST_F(SyntaxTreeTest, ArraySubscriptsInDeclarators) {
+  expectTreeDumpEqual(
+      R"cpp(
 int a[10];
 int b[1][2][3];
 int c[] = {1,2,3};
 void f(int xs[static 10]);
     )cpp",
-       R"txt(
+      R"txt(
 *: TranslationUnit
 |-SimpleDeclaration
 | |-int
@@ -1185,9 +1270,12 @@ void f(int xs[static 10]);
   |   |     `-]
   |   `-)
   `-;
-       )txt"},
-      // Parameter lists in declarators.
-      {R"cpp(
+       )txt");
+}
+
+TEST_F(SyntaxTreeTest, ParameterListsInDeclarators) {
+  expectTreeDumpEqual(
+      R"cpp(
 int a() const;
 int b() volatile;
 int c() &;
@@ -1202,7 +1290,7 @@ int foo(
   int&& f
 );
     )cpp",
-       R"txt(
+      R"txt(
 *: TranslationUnit
 |-SimpleDeclaration
 | |-int
@@ -1301,14 +1389,17 @@ int foo(
   |   |   `-f
   |   `-)
   `-;
-       )txt"},
-      // Trailing const qualifier.
-      {R"cpp(
+       )txt");
+}
+
+TEST_F(SyntaxTreeTest, TrailingConst) {
+  expectTreeDumpEqual(
+      R"cpp(
 struct X {
   int foo() const;
 }
     )cpp",
-       R"txt(
+      R"txt(
 *: TranslationUnit
 `-SimpleDeclaration
   |-struct
@@ -1324,12 +1415,15 @@ struct X {
   | |   `-const
   | `-;
   `-}
-    )txt"},
-      // Trailing return type in parameter lists.
-      {R"cpp(
+    )txt");
+}
+
+TEST_F(SyntaxTreeTest, TrailingReturn) {
+  expectTreeDumpEqual(
+      R"cpp(
 auto foo() -> int;
     )cpp",
-       R"txt(
+      R"txt(
 *: TranslationUnit
 `-SimpleDeclaration
   |-auto
@@ -1342,14 +1436,17 @@ auto foo() -> int;
   |     |-->
   |     `-int
   `-;
-       )txt"},
-      // Exception specification in parameter lists.
-      {R"cpp(
+       )txt");
+}
+
+TEST_F(SyntaxTreeTest, ExceptionSpecification) {
+  expectTreeDumpEqual(
+      R"cpp(
 int a() noexcept;
 int b() noexcept(true);
 int c() throw();
     )cpp",
-       R"txt(
+      R"txt(
 *: TranslationUnit
 |-SimpleDeclaration
 | |-int
@@ -1384,15 +1481,18 @@ int c() throw();
   |   |-(
   |   `-)
   `-;
-       )txt"},
-      // Declarators in parentheses.
-      {R"cpp(
+       )txt");
+}
+
+TEST_F(SyntaxTreeTest, DeclaratorsInParentheses) {
+  expectTreeDumpEqual(
+      R"cpp(
 int (a);
 int *(b);
 int (*c)(int);
 int *(d)(int);
     )cpp",
-       R"txt(
+      R"txt(
 *: TranslationUnit
 |-SimpleDeclaration
 | |-int
@@ -1439,15 +1539,18 @@ int *(d)(int);
   |   | `-int
   |   `-)
   `-;
-       )txt"},
-      // CV qualifiers.
-      {R"cpp(
+       )txt");
+}
+
+TEST_F(SyntaxTreeTest, ConstVolatileQualifiers) {
+  expectTreeDumpEqual(
+      R"cpp(
 const int west = -1;
 int const east = 1;
 const int const universal = 0;
 const int const *const *volatile b;
     )cpp",
-       R"txt(
+      R"txt(
 *: TranslationUnit
 |-SimpleDeclaration
 | |-const
@@ -1489,12 +1592,15 @@ const int const *const *volatile b;
   | |-volatile
   | `-b
   `-;
-       )txt"},
-      // Ranges of declarators with trailing return types.
-      {R"cpp(
+       )txt");
+}
+
+TEST_F(SyntaxTreeTest, RangesOfDeclaratorsWithTrailingReturnTypes) {
+  expectTreeDumpEqual(
+      R"cpp(
 auto foo() -> auto(*)(int) -> double*;
     )cpp",
-       R"txt(
+      R"txt(
 *: TranslationUnit
 `-SimpleDeclaration
   |-auto
@@ -1522,14 +1628,17 @@ auto foo() -> auto(*)(int) -> double*;
   |           `-SimpleDeclarator
   |             `-*
   `-;
-       )txt"},
-      // Member pointers.
-      {R"cpp(
+       )txt");
+}
+
+TEST_F(SyntaxTreeTest, MemberPointers) {
+  expectTreeDumpEqual(
+      R"cpp(
 struct X {};
 int X::* a;
 const int X::* b;
     )cpp",
-       R"txt(
+      R"txt(
 *: TranslationUnit
 |-SimpleDeclaration
 | |-struct
@@ -1556,12 +1665,15 @@ const int X::* b;
   | | `-*
   | `-b
   `-;
-       )txt"},
-      // All-in-one tests.
-      {R"cpp(
+       )txt");
+}
+
+TEST_F(SyntaxTreeTest, ComplexDeclarator) {
+  expectTreeDumpEqual(
+      R"cpp(
 void x(char a, short (*b)(int));
     )cpp",
-       R"txt(
+      R"txt(
 *: TranslationUnit
 `-SimpleDeclaration
   |-void
@@ -1589,11 +1701,15 @@ void x(char a, short (*b)(int));
   |   |     `-)
   |   `-)
   `-;
-       )txt"},
-      {R"cpp(
+       )txt");
+}
+
+TEST_F(SyntaxTreeTest, ComplexDeclarator2) {
+  expectTreeDumpEqual(
+      R"cpp(
 void x(char a, short (*b)(int), long (**c)(long long));
     )cpp",
-       R"txt(
+      R"txt(
 *: TranslationUnit
 `-SimpleDeclaration
   |-void
@@ -1637,18 +1753,7 @@ void x(char a, short (*b)(int), long (**c)(long long));
   |   |     `-)
   |   `-)
   `-;
-       )txt"},
-  };
-
-  for (const auto &T : Cases) {
-    SCOPED_TRACE(T.first);
-
-    auto *Root = buildTree(T.first);
-    std::string Expected = llvm::StringRef(T.second).trim().str();
-    std::string Actual =
-        std::string(llvm::StringRef(Root->dump(*Arena)).trim());
-    EXPECT_EQ(Expected, Actual) << "the resulting dump is:\n" << Actual;
-  }
+       )txt");
 }
 
 TEST_F(SyntaxTreeTest, Mutations) {

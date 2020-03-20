@@ -277,6 +277,15 @@ private:
   void SelectMVE_VxDUP(SDNode *N, const uint16_t *Opcodes,
                        bool Wrapping, bool Predicated);
 
+  /// Select SelectCDE_CXxD - Select CDE dual-GPR instruction (one of CX1D,
+  /// CX1DA, CX2D, CX2DA, CX3, CX3DA).
+  /// \arg \c NumExtraOps number of extra operands besides the coprocossor,
+  ///                     the accumulator and the immediate operand, i.e. 0
+  ///                     for CX1*, 1 for CX2*, 2 for CX3*
+  /// \arg \c HasAccum whether the instruction has an accumulator operand
+  void SelectCDE_CXxD(SDNode *N, uint16_t Opcode, size_t NumExtraOps,
+                      bool HasAccum);
+
   /// SelectVLDDup - Select NEON load-duplicate intrinsics.  NumVecs
   /// should be 1, 2, 3 or 4.  The opcode array specifies the instructions used
   /// for loading D registers.
@@ -2809,6 +2818,69 @@ void ARMDAGToDAGISel::SelectMVE_VxDUP(SDNode *N, const uint16_t *Opcodes,
   CurDAG->SelectNodeTo(N, Opcode, N->getVTList(), makeArrayRef(Ops));
 }
 
+void ARMDAGToDAGISel::SelectCDE_CXxD(SDNode *N, uint16_t Opcode,
+                                     size_t NumExtraOps, bool HasAccum) {
+  bool IsBigEndian = CurDAG->getDataLayout().isBigEndian();
+  SDLoc Loc(N);
+  SmallVector<SDValue, 8> Ops;
+
+  unsigned OpIdx = 1;
+
+  // Convert and append the immediate operand designating the coprocessor.
+  SDValue ImmCorpoc = N->getOperand(OpIdx++);
+  uint32_t ImmCoprocVal = cast<ConstantSDNode>(ImmCorpoc)->getZExtValue();
+  Ops.push_back(getI32Imm(ImmCoprocVal, Loc));
+
+  // For accumulating variants copy the low and high order parts of the
+  // accumulator into a register pair and add it to the operand vector.
+  if (HasAccum) {
+    SDValue AccLo = N->getOperand(OpIdx++);
+    SDValue AccHi = N->getOperand(OpIdx++);
+    if (IsBigEndian)
+      std::swap(AccLo, AccHi);
+    Ops.push_back(SDValue(createGPRPairNode(MVT::Untyped, AccLo, AccHi), 0));
+  }
+
+  // Copy extra operands as-is.
+  for (size_t I = 0; I < NumExtraOps; I++)
+    Ops.push_back(N->getOperand(OpIdx++));
+
+  // Convert and append the immediate operand
+  SDValue Imm = N->getOperand(OpIdx);
+  uint32_t ImmVal = cast<ConstantSDNode>(Imm)->getZExtValue();
+  Ops.push_back(getI32Imm(ImmVal, Loc));
+
+  // Accumulating variants are IT-predicable, add predicate operands.
+  if (HasAccum) {
+    SDValue Pred = getAL(CurDAG, Loc);
+    SDValue PredReg = CurDAG->getRegister(0, MVT::i32);
+    Ops.push_back(Pred);
+    Ops.push_back(PredReg);
+  }
+
+  // Create the CDE intruction
+  SDNode *InstrNode = CurDAG->getMachineNode(Opcode, Loc, MVT::Untyped, Ops);
+  SDValue ResultPair = SDValue(InstrNode, 0);
+
+  // The original intrinsic had two outputs, and the output of the dual-register
+  // CDE instruction is a register pair. We need to extract the two subregisters
+  // and replace all uses of the original outputs with the extracted
+  // subregisters.
+  uint16_t SubRegs[2] = {ARM::gsub_0, ARM::gsub_1};
+  if (IsBigEndian)
+    std::swap(SubRegs[0], SubRegs[1]);
+
+  for (size_t ResIdx = 0; ResIdx < 2; ResIdx++) {
+    if (SDValue(N, ResIdx).use_empty())
+      continue;
+    SDValue SubReg = CurDAG->getTargetExtractSubreg(SubRegs[ResIdx], Loc,
+                                                    MVT::i32, ResultPair);
+    ReplaceUses(SDValue(N, ResIdx), SubReg);
+  }
+
+  CurDAG->RemoveDeadNode(N);
+}
+
 void ARMDAGToDAGISel::SelectVLDDup(SDNode *N, bool IsIntrinsic,
                                    bool isUpdating, unsigned NumVecs,
                                    const uint16_t *DOpcodes,
@@ -4771,6 +4843,40 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
       };
       SelectMVE_VxDUP(N, Opcodes, true,
                       IntNo == Intrinsic::arm_mve_vdwdup_predicated);
+      return;
+    }
+
+    case Intrinsic::arm_cde_cx1d:
+    case Intrinsic::arm_cde_cx1da:
+    case Intrinsic::arm_cde_cx2d:
+    case Intrinsic::arm_cde_cx2da:
+    case Intrinsic::arm_cde_cx3d:
+    case Intrinsic::arm_cde_cx3da: {
+      bool HasAccum = IntNo == Intrinsic::arm_cde_cx1da ||
+                      IntNo == Intrinsic::arm_cde_cx2da ||
+                      IntNo == Intrinsic::arm_cde_cx3da;
+      size_t NumExtraOps;
+      uint16_t Opcode;
+      switch (IntNo) {
+      case Intrinsic::arm_cde_cx1d:
+      case Intrinsic::arm_cde_cx1da:
+        NumExtraOps = 0;
+        Opcode = HasAccum ? ARM::CDE_CX1DA : ARM::CDE_CX1D;
+        break;
+      case Intrinsic::arm_cde_cx2d:
+      case Intrinsic::arm_cde_cx2da:
+        NumExtraOps = 1;
+        Opcode = HasAccum ? ARM::CDE_CX2DA : ARM::CDE_CX2D;
+        break;
+      case Intrinsic::arm_cde_cx3d:
+      case Intrinsic::arm_cde_cx3da:
+        NumExtraOps = 2;
+        Opcode = HasAccum ? ARM::CDE_CX3DA : ARM::CDE_CX3D;
+        break;
+      default:
+        llvm_unreachable("Unexpected opcode");
+      }
+      SelectCDE_CXxD(N, Opcode, NumExtraOps, HasAccum);
       return;
     }
     }

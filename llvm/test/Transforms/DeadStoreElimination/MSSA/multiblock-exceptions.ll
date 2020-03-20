@@ -18,7 +18,6 @@ define void @test12(i32* %p) personality i32 (...)* @__CxxFrameHandler3 {
 ; CHECK-NEXT:    invoke void @f()
 ; CHECK-NEXT:    to label [[BLOCK3:%.*]] unwind label [[CATCH_DISPATCH:%.*]]
 ; CHECK:       block3:
-; CHECK-NEXT:    store i32 30, i32* [[SV]]
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       catch.dispatch:
 ; CHECK-NEXT:    [[CS1:%.*]] = catchswitch within none [label %catch] unwind label [[CLEANUP:%.*]]

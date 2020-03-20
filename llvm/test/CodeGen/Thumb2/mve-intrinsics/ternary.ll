@@ -24,7 +24,7 @@ entry:
 define arm_aapcs_vfpcc <8 x half> @test_vfmaq_n_f16(<8 x half> %a, <8 x half> %b, float %c.coerce) {
 ; CHECK-LABEL: test_vfmaq_n_f16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov r0, s8
+; CHECK-NEXT:    vmov.f16 r0, s8
 ; CHECK-NEXT:    vfma.f16 q0, q1, r0
 ; CHECK-NEXT:    bx lr
 entry:
@@ -53,7 +53,7 @@ entry:
 define arm_aapcs_vfpcc <8 x half> @test_vfmasq_n_f16(<8 x half> %a, <8 x half> %b, float %c.coerce) {
 ; CHECK-LABEL: test_vfmasq_n_f16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov r0, s8
+; CHECK-NEXT:    vmov.f16 r0, s8
 ; CHECK-NEXT:    vfmas.f16 q0, q1, r0
 ; CHECK-NEXT:    bx lr
 entry:
@@ -390,7 +390,7 @@ entry:
 define arm_aapcs_vfpcc <8 x half> @test_vfmaq_m_n_f16(<8 x half> %a, <8 x half> %b, float %c.coerce, i16 zeroext %p) {
 ; CHECK-LABEL: test_vfmaq_m_n_f16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov r1, s8
+; CHECK-NEXT:    vmov.f16 r1, s8
 ; CHECK-NEXT:    vmsr p0, r0
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vfmat.f16 q0, q1, r1
@@ -410,10 +410,10 @@ entry:
 define arm_aapcs_vfpcc <4 x float> @test_vfmaq_m_n_f32(<4 x float> %a, <4 x float> %b, float %c, i16 zeroext %p) {
 ; CHECK-LABEL: test_vfmaq_m_n_f32:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov r1, s8
 ; CHECK-NEXT:    vmsr p0, r0
-; CHECK-NEXT:    vmov r0, s8
 ; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vfmat.f32 q0, q1, r0
+; CHECK-NEXT:    vfmat.f32 q0, q1, r1
 ; CHECK-NEXT:    bx lr
 entry:
   %.splatinsert = insertelement <4 x float> undef, float %c, i32 0
@@ -427,7 +427,7 @@ entry:
 define arm_aapcs_vfpcc <8 x half> @test_vfmasq_m_n_f16(<8 x half> %a, <8 x half> %b, float %c.coerce, i16 zeroext %p) {
 ; CHECK-LABEL: test_vfmasq_m_n_f16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov r1, s8
+; CHECK-NEXT:    vmov.f16 r1, s8
 ; CHECK-NEXT:    vmsr p0, r0
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vfmast.f16 q0, q1, r1
@@ -447,10 +447,10 @@ entry:
 define arm_aapcs_vfpcc <4 x float> @test_vfmasq_m_n_f32(<4 x float> %a, <4 x float> %b, float %c, i16 zeroext %p) {
 ; CHECK-LABEL: test_vfmasq_m_n_f32:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov r1, s8
 ; CHECK-NEXT:    vmsr p0, r0
-; CHECK-NEXT:    vmov r0, s8
 ; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vfmast.f32 q0, q1, r0
+; CHECK-NEXT:    vfmast.f32 q0, q1, r1
 ; CHECK-NEXT:    bx lr
 entry:
   %.splatinsert = insertelement <4 x float> undef, float %c, i32 0

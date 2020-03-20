@@ -215,6 +215,35 @@ def CDE_CX3A  : CDE_CX3_Instr<"cx3a",   cde_cx_params_single_acc>;
 def CDE_CX3D  : CDE_CX3_Instr<"cx3d",   cde_cx_params_dual_noacc>;
 def CDE_CX3DA : CDE_CX3_Instr<"cx3da",  cde_cx_params_dual_acc>;
 
+let Predicates = [HasCDE] in {
+  def : Pat<(i32 (int_arm_cde_cx1 timm:$coproc, timm:$imm)),
+            (i32 (CDE_CX1 p_imm:$coproc, imm_13b:$imm))>;
+  def : Pat<(i32 (int_arm_cde_cx1a timm:$coproc, GPRwithAPSR_NZCVnosp:$acc,
+                                   timm:$imm)),
+            (i32 (CDE_CX1A p_imm:$coproc, GPRwithAPSR_NZCVnosp:$acc,
+                           imm_13b:$imm))>;
+  def : Pat<(i32 (int_arm_cde_cx2 timm:$coproc, GPRwithAPSR_NZCVnosp:$n,
+                                  timm:$imm)),
+            (i32 (CDE_CX2 p_imm:$coproc, GPRwithAPSR_NZCVnosp:$n,
+                          imm_9b:$imm))>;
+  def : Pat<(i32 (int_arm_cde_cx2a timm:$coproc, GPRwithAPSR_NZCVnosp:$acc,
+                                   GPRwithAPSR_NZCVnosp:$n, timm:$imm)),
+            (i32 (CDE_CX2A p_imm:$coproc, GPRwithAPSR_NZCVnosp:$acc,
+                           GPRwithAPSR_NZCVnosp:$n, imm_9b:$imm))>;
+  def : Pat<(i32 (int_arm_cde_cx3 timm:$coproc, GPRwithAPSR_NZCVnosp:$n,
+                                  GPRwithAPSR_NZCVnosp:$m, timm:$imm)),
+            (i32 (CDE_CX3  p_imm:$coproc, GPRwithAPSR_NZCVnosp:$n,
+                           GPRwithAPSR_NZCVnosp:$m, imm_6b:$imm))>;
+  def : Pat<(i32 (int_arm_cde_cx3a timm:$coproc,
+                                   GPRwithAPSR_NZCVnosp:$acc,
+                                   GPRwithAPSR_NZCVnosp:$n,
+                                   GPRwithAPSR_NZCVnosp:$m, timm:$imm)),
+            (i32 (CDE_CX3A p_imm:$coproc,
+                           GPRwithAPSR_NZCVnosp:$acc,
+                           GPRwithAPSR_NZCVnosp:$n,
+                           GPRwithAPSR_NZCVnosp:$m, imm_6b:$imm))>;
+}
+
 class CDE_RequiresSReg : Requires<[HasCDE, HasFPRegs]>;
 class CDE_RequiresDReg : Requires<[HasCDE, HasFPRegs]>;
 class CDE_RequiresQReg : Requires<[HasCDE, HasMVEInt]>;
@@ -513,3 +542,67 @@ def CDE_VCX3_fpdp   : CDE_VCX3_FP_Instr_D<"vcx3",  cde_vcx_params_d_noacc>;
 def CDE_VCX3A_fpdp  : CDE_VCX3_FP_Instr_D<"vcx3a", cde_vcx_params_d_acc>;
 def CDE_VCX3_vec    : CDE_VCX3_Vec_Instr<"vcx3",   cde_vcx_params_q_noacc>;
 def CDE_VCX3A_vec   : CDE_VCX3_Vec_Instr<"vcx3a",  cde_vcx_params_q_acc>;
+
+
+let Predicates = [HasCDE, HasFPRegs] in {
+  def : Pat<(f32 (int_arm_cde_vcx1 timm:$coproc, timm:$imm)),
+            (f32 (CDE_VCX1_fpsp p_imm:$coproc, imm_11b:$imm))>;
+  def : Pat<(f32 (int_arm_cde_vcx1a timm:$coproc, (f32 SPR:$acc), timm:$imm)),
+            (f32 (CDE_VCX1A_fpsp p_imm:$coproc, SPR:$acc, imm_11b:$imm))>;
+  def : Pat<(f64 (int_arm_cde_vcx1 timm:$coproc, timm:$imm)),
+            (f64 (CDE_VCX1_fpdp p_imm:$coproc, imm_11b:$imm))>;
+  def : Pat<(f64 (int_arm_cde_vcx1a timm:$coproc, (f64 DPR:$acc), timm:$imm)),
+            (f64 (CDE_VCX1A_fpdp p_imm:$coproc, DPR:$acc, imm_11b:$imm))>;
+
+  def : Pat<(f32 (int_arm_cde_vcx2 timm:$coproc, (f32 SPR:$n), timm:$imm)),
+            (f32 (CDE_VCX2_fpsp p_imm:$coproc, SPR:$n, imm_6b:$imm))>;
+  def : Pat<(f32 (int_arm_cde_vcx2a timm:$coproc, (f32 SPR:$acc), (f32 SPR:$n),
+                                    timm:$imm)),
+            (f32 (CDE_VCX2A_fpsp p_imm:$coproc, SPR:$acc, SPR:$n, imm_6b:$imm))>;
+  def : Pat<(f64 (int_arm_cde_vcx2 timm:$coproc, (f64 DPR:$n), timm:$imm)),
+            (f64 (CDE_VCX2_fpdp p_imm:$coproc, DPR:$n, imm_6b:$imm))>;
+  def : Pat<(f64 (int_arm_cde_vcx2a timm:$coproc, (f64 DPR:$acc), (f64 DPR:$n),
+                                    timm:$imm)),
+            (f64 (CDE_VCX2A_fpdp p_imm:$coproc, DPR:$acc, DPR:$n, imm_6b:$imm))>;
+
+  def : Pat<(f32 (int_arm_cde_vcx3 timm:$coproc, (f32 SPR:$n), (f32 SPR:$m),
+                                   timm:$imm)),
+            (f32 (CDE_VCX3_fpsp p_imm:$coproc, (f32 SPR:$n), (f32 SPR:$m),
+                                imm_3b:$imm))>;
+  def : Pat<(f32 (int_arm_cde_vcx3a timm:$coproc, (f32 SPR:$acc), (f32 SPR:$n),
+                                    (f32 SPR:$m), timm:$imm)),
+            (f32 (CDE_VCX3A_fpsp p_imm:$coproc, SPR:$acc, SPR:$n, SPR:$m,
+                                 imm_3b:$imm))>;
+  def : Pat<(f64 (int_arm_cde_vcx3 timm:$coproc, (f64 DPR:$n), (f64 DPR:$m),
+                                   timm:$imm)),
+            (f64 (CDE_VCX3_fpdp p_imm:$coproc, DPR:$n, DPR:$m, imm_3b:$imm))>;
+  def : Pat<(f64 (int_arm_cde_vcx3a timm:$coproc, (f64 DPR:$acc), (f64 DPR:$n),
+                                    (f64 DPR:$m), timm:$imm)),
+            (f64 (CDE_VCX3A_fpdp p_imm:$coproc, DPR:$acc, DPR:$n, DPR:$m,
+                                 imm_3b:$imm))>;
+}
+
+let Predicates = [HasCDE, HasMVEInt] in {
+  def : Pat<(v16i8 (int_arm_cde_vcx1q timm:$coproc, timm:$imm)),
+            (v16i8 (CDE_VCX1_vec p_imm:$coproc, imm_12b:$imm))>;
+  def : Pat<(v16i8 (int_arm_cde_vcx1qa timm:$coproc, (v16i8 MQPR:$acc),
+                                       timm:$imm)),
+            (v16i8 (CDE_VCX1A_vec p_imm:$coproc, MQPR:$acc, imm_12b:$imm))>;
+
+  def : Pat<(v16i8 (int_arm_cde_vcx2q timm:$coproc, (v16i8 MQPR:$n), timm:$imm)),
+            (v16i8 (CDE_VCX2_vec p_imm:$coproc, MQPR:$n, imm_7b:$imm))>;
+  def : Pat<(v16i8 (int_arm_cde_vcx2qa timm:$coproc, (v16i8 MQPR:$acc),
+                                       (v16i8 MQPR:$n), timm:$imm)),
+            (v16i8 (CDE_VCX2A_vec p_imm:$coproc, MQPR:$acc, MQPR:$n,
+                                  imm_7b:$imm))>;
+
+  def : Pat<(v16i8 (int_arm_cde_vcx3q timm:$coproc, (v16i8 MQPR:$n),
+                                      (v16i8 MQPR:$m), timm:$imm)),
+            (v16i8 (CDE_VCX3_vec p_imm:$coproc, MQPR:$n, MQPR:$m,
+                                 imm_4b:$imm))>;
+  def : Pat<(v16i8 (int_arm_cde_vcx3qa timm:$coproc, (v16i8 MQPR:$acc),
+                                       (v16i8 MQPR:$n), (v16i8 MQPR:$m),
+                                       timm:$imm)),
+            (v16i8 (CDE_VCX3A_vec p_imm:$coproc, MQPR:$acc, MQPR:$n, MQPR:$m,
+                                  imm_4b:$imm))>;
+}

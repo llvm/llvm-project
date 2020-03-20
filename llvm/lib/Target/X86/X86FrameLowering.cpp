@@ -486,7 +486,7 @@ void X86FrameLowering::BuildCFI(MachineBasicBlock &MBB,
 
 void X86FrameLowering::emitCalleeSavedFrameMoves(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-    const DebugLoc &DL, bool IsPrologue) const {
+    const DebugLoc &DL) const {
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   MachineModuleInfo &MMI = MF.getMMI();
@@ -501,15 +501,10 @@ void X86FrameLowering::emitCalleeSavedFrameMoves(
          I = CSI.begin(), E = CSI.end(); I != E; ++I) {
     int64_t Offset = MFI.getObjectOffset(I->getFrameIdx());
     unsigned Reg = I->getReg();
-    unsigned DwarfReg = MRI->getDwarfRegNum(Reg, true);
 
-    if (IsPrologue) {
-      BuildCFI(MBB, MBBI, DL,
-               MCCFIInstruction::createOffset(nullptr, DwarfReg, Offset));
-    } else {
-      BuildCFI(MBB, MBBI, DL,
-               MCCFIInstruction::createRestore(nullptr, DwarfReg));
-    }
+    unsigned DwarfReg = MRI->getDwarfRegNum(Reg, true);
+    BuildCFI(MBB, MBBI, DL,
+             MCCFIInstruction::createOffset(nullptr, DwarfReg, Offset));
   }
 }
 
@@ -1680,7 +1675,7 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
     }
 
     // Emit DWARF info specifying the offsets of the callee-saved registers.
-    emitCalleeSavedFrameMoves(MBB, MBBI, DL, true);
+    emitCalleeSavedFrameMoves(MBB, MBBI, DL);
   }
 
   // X86 Interrupt handling function cannot assume anything about the direction
@@ -1830,8 +1825,6 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
   }
   uint64_t SEHStackAllocAmt = NumBytes;
 
-  // AfterPop is the position to insert .cfi_restore.
-  MachineBasicBlock::iterator AfterPop = MBBI;
   if (HasFP) {
     // Pop EBP.
     BuildMI(MBB, MBBI, DL, TII.get(Is64Bit ? X86::POP64r : X86::POP32r),
@@ -1842,13 +1835,6 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
           TRI->getDwarfRegNum(Is64Bit ? X86::RSP : X86::ESP, true);
       BuildCFI(MBB, MBBI, DL, MCCFIInstruction::createDefCfa(
                                   nullptr, DwarfStackPtr, -SlotSize));
-      if (!MBB.succ_empty() && !MBB.isReturnBlock()) {
-        unsigned DwarfFramePtr = TRI->getDwarfRegNum(MachineFramePtr, true);
-        BuildCFI(MBB, AfterPop, DL,
-                 MCCFIInstruction::createRestore(nullptr, DwarfFramePtr));
-        --MBBI;
-        --AfterPop;
-      }
       --MBBI;
     }
   }
@@ -1946,13 +1932,6 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
                  MCCFIInstruction::createDefCfaOffset(nullptr, Offset));
       }
     }
-  }
-
-  // Emit DWARF info specifying the restores of the callee-saved registers.
-  // For epilogue with return inside or being other block without successor,
-  // no need to generate .cfi_restore for callee-saved registers.
-  if (NeedsDwarfCFI && !MBB.succ_empty() && !MBB.isReturnBlock()) {
-    emitCalleeSavedFrameMoves(MBB, AfterPop, DL, false);
   }
 
   if (Terminator == MBB.end() || !isTailCallOpcode(Terminator->getOpcode())) {

@@ -106,7 +106,7 @@ entry:
 define arm_aapcs_vfpcc <8 x half> @test_vsubq_n_f16(<8 x half> %a, float %b.coerce) {
 ; CHECK-LABEL: test_vsubq_n_f16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov r0, s4
+; CHECK-NEXT:    vmov.f16 r0, s4
 ; CHECK-NEXT:    vsub.f16 q0, q0, r0
 ; CHECK-NEXT:    bx lr
 entry:
@@ -138,10 +138,10 @@ entry:
 define arm_aapcs_vfpcc <4 x float> @test_vsubq_m_n_f32(<4 x float> %inactive, <4 x float> %a, float %b, i16 zeroext %p) {
 ; CHECK-LABEL: test_vsubq_m_n_f32:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov r1, s8
 ; CHECK-NEXT:    vmsr p0, r0
-; CHECK-NEXT:    vmov r0, s8
 ; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vsubt.f32 q0, q1, r0
+; CHECK-NEXT:    vsubt.f32 q0, q1, r1
 ; CHECK-NEXT:    bx lr
 entry:
   %.splatinsert = insertelement <4 x float> undef, float %b, i32 0
@@ -171,7 +171,7 @@ entry:
 define arm_aapcs_vfpcc <8 x half> @test_vsubq_x_n_f16(<8 x half> %a, float %b.coerce, i16 zeroext %p) {
 ; CHECK-LABEL: test_vsubq_x_n_f16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov r1, s4
+; CHECK-NEXT:    vmov.f16 r1, s4
 ; CHECK-NEXT:    vmsr p0, r0
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vsubt.f16 q0, q0, r1

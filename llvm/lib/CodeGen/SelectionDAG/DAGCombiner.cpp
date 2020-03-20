@@ -11023,7 +11023,9 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
 
   // Attempt to pre-truncate BUILD_VECTOR sources.
   if (N0.getOpcode() == ISD::BUILD_VECTOR && !LegalOperations &&
-      TLI.isTruncateFree(SrcVT.getScalarType(), VT.getScalarType())) {
+      TLI.isTruncateFree(SrcVT.getScalarType(), VT.getScalarType()) &&
+      // Avoid creating illegal types if running after type legalizer.
+      (!LegalTypes || TLI.isTypeLegal(VT.getScalarType()))) {
     SDLoc DL(N);
     EVT SVT = VT.getScalarType();
     SmallVector<SDValue, 8> TruncOps;
@@ -13054,11 +13056,13 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
   }
 
   // (fdiv (fneg X), (fneg Y)) -> (fdiv X, Y)
-  if (isCheaperToUseNegatedFPOps(N0, N1))
-    return DAG.getNode(
-        ISD::FDIV, SDLoc(N), VT,
-        TLI.getNegatedExpression(N0, DAG, LegalOperations, ForCodeSize),
-        TLI.getNegatedExpression(N1, DAG, LegalOperations, ForCodeSize), Flags);
+  if (isCheaperToUseNegatedFPOps(N0, N1)) {
+    SDValue Neg0 =
+        TLI.getNegatedExpression(N0, DAG, LegalOperations, ForCodeSize);
+    SDValue Neg1 =
+        TLI.getNegatedExpression(N1, DAG, LegalOperations, ForCodeSize);
+    return DAG.getNode(ISD::FDIV, SDLoc(N), VT, Neg0, Neg1, Flags);
+  }
 
   return SDValue();
 }
