@@ -1596,6 +1596,24 @@ bool Module::RemapSourceFile(llvm::StringRef path,
   return m_source_mappings.RemapPath(path, new_path);
 }
 
+void Module::RegisterXcodeSDK(llvm::StringRef sdk_name, llvm::StringRef sysroot) {
+  XcodeSDK sdk(sdk_name.str());
+  if (m_xcode_sdk == sdk)
+    return;
+  m_xcode_sdk.Merge(sdk);
+  PlatformSP module_platform =
+      Platform::GetPlatformForArchitecture(GetArchitecture(), nullptr);
+  ConstString sdk_path(module_platform->GetSDKPath(sdk));
+  if (!sdk_path)
+    return;
+  // If merged SDK changed for a previously registered source path, update it.
+  // This could happend with -fdebug-prefix-map, otherwise it's unlikely.
+  ConstString sysroot_cs(sysroot);
+  if (!m_source_mappings.Replace(sysroot_cs, sdk_path, true))
+    // In the general case, however, append it to the list.
+    m_source_mappings.Append(sysroot_cs, sdk_path, false);
+}
+
 bool Module::MergeArchitecture(const ArchSpec &arch_spec) {
   if (!arch_spec.IsValid())
     return false;

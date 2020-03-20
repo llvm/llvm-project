@@ -1220,56 +1220,12 @@ static FileSpec GetCommandLineToolsLibraryPath() {
   return g_command_line_tools_filespec;
 }
 
-bool PlatformDarwin::SDKSupportsModules(SDKType sdk_type,
-                                        llvm::VersionTuple version) {
-  switch (sdk_type) {
-  case SDKType::MacOSX:
-    return version >= llvm::VersionTuple(10, 10);
-  case SDKType::iPhoneOS:
-  case SDKType::iPhoneSimulator:
-  case SDKType::AppleTVOS:
-  case SDKType::AppleTVSimulator:
-    return version >= llvm::VersionTuple(8);
-  case SDKType::watchOS:
-  case SDKType::WatchSimulator:
-    return version >= llvm::VersionTuple(6);
-  default:
-    return false;
-  }
-
-  return false;
-}
-
-bool PlatformDarwin::SDKSupportsModules(SDKType desired_type,
-                                        const FileSpec &sdk_path) {
-  ConstString last_path_component = sdk_path.GetLastPathComponent();
-
-  if (last_path_component) {
-    const llvm::StringRef sdk_name = last_path_component.GetStringRef();
-
-    const std::string sdk_name_lower = sdk_name.lower();
-    const llvm::StringRef sdk_string = GetSDKNameForType(desired_type);
-    if (!llvm::StringRef(sdk_name_lower).startswith(sdk_string))
-      return false;
-
-    auto version_part = sdk_name.drop_front(sdk_string.size());
-    version_part.consume_back(".sdk");
-
-    llvm::VersionTuple version;
-    if (version.tryParse(version_part))
-      return false;
-    return SDKSupportsModules(desired_type, version);
-  }
-
-  return false;
-}
-
 FileSystem::EnumerateDirectoryResult PlatformDarwin::DirectoryEnumerator(
     void *baton, llvm::sys::fs::file_type file_type, llvm::StringRef path) {
   SDKEnumeratorInfo *enumerator_info = static_cast<SDKEnumeratorInfo *>(baton);
 
   FileSpec spec(path);
-  if (SDKSupportsModules(enumerator_info->sdk_type, spec)) {
+  if (XcodeSDK::SDKSupportsModules(enumerator_info->sdk_type, spec)) {
     enumerator_info->found_path = spec;
     return FileSystem::EnumerateDirectoryResult::eEnumerateDirectoryResultNext;
   }
@@ -1277,7 +1233,7 @@ FileSystem::EnumerateDirectoryResult PlatformDarwin::DirectoryEnumerator(
   return FileSystem::EnumerateDirectoryResult::eEnumerateDirectoryResultNext;
 }
 
-FileSpec PlatformDarwin::FindSDKInXcodeForModules(SDKType sdk_type,
+FileSpec PlatformDarwin::FindSDKInXcodeForModules(XcodeSDK::Type sdk_type,
                                                   const FileSpec &sdks_spec) {
   // Look inside Xcode for the required installed iOS SDK version
 
@@ -1303,19 +1259,19 @@ FileSpec PlatformDarwin::FindSDKInXcodeForModules(SDKType sdk_type,
     return FileSpec();
 }
 
-FileSpec PlatformDarwin::GetSDKDirectoryForModules(SDKType sdk_type) {
+FileSpec PlatformDarwin::GetSDKDirectoryForModules(XcodeSDK::Type sdk_type) {
   FileSpec sdks_spec = GetXcodeContentsDirectory();
   sdks_spec.AppendPathComponent("Developer");
   sdks_spec.AppendPathComponent("Platforms");
 
   switch (sdk_type) {
-  case SDKType::MacOSX:
+  case XcodeSDK::Type::MacOSX:
     sdks_spec.AppendPathComponent("MacOSX.platform");
     break;
-  case SDKType::iPhoneSimulator:
+  case XcodeSDK::Type::iPhoneSimulator:
     sdks_spec.AppendPathComponent("iPhoneSimulator.platform");
     break;
-  case SDKType::iPhoneOS:
+  case XcodeSDK::Type::iPhoneOS:
     sdks_spec.AppendPathComponent("iPhoneOS.platform");
     break;
   default:
@@ -1325,11 +1281,11 @@ FileSpec PlatformDarwin::GetSDKDirectoryForModules(SDKType sdk_type) {
   sdks_spec.AppendPathComponent("Developer");
   sdks_spec.AppendPathComponent("SDKs");
 
-  if (sdk_type == SDKType::MacOSX) {
+  if (sdk_type == XcodeSDK::Type::MacOSX) {
     llvm::VersionTuple version = HostInfo::GetOSVersion();
 
     if (!version.empty()) {
-      if (SDKSupportsModules(SDKType::MacOSX, version)) {
+      if (XcodeSDK::SDKSupportsModules(XcodeSDK::Type::MacOSX, version)) {
         // If the Xcode SDKs are not available then try to use the
         // Command Line Tools one which is only for MacOSX.
         if (!FileSystem::Instance().Exists(sdks_spec)) {
@@ -1498,7 +1454,7 @@ PlatformDarwin::ExtractCrashInfoAnnotations(Process &process) {
 }
 
 void PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
-    Target *target, std::vector<std::string> &options, SDKType sdk_type) {
+    Target *target, std::vector<std::string> &options, XcodeSDK::Type sdk_type) {
   const std::vector<std::string> apple_arguments = {
       "-x",       "objective-c++", "-fobjc-arc",
       "-fblocks", "-D_ISO646_H",   "-D__ISO646_H",
@@ -1509,7 +1465,7 @@ void PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
   StreamString minimum_version_option;
   bool use_current_os_version = false;
   switch (sdk_type) {
-  case SDKType::iPhoneOS:
+  case XcodeSDK::Type::iPhoneOS:
 #if defined(__arm__) || defined(__arm64__) || defined(__aarch64__)
     use_current_os_version = true;
 #else
@@ -1517,11 +1473,11 @@ void PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
 #endif
     break;
 
-  case SDKType::iPhoneSimulator:
+  case XcodeSDK::Type::iPhoneSimulator:
     use_current_os_version = false;
     break;
 
-  case SDKType::MacOSX:
+  case XcodeSDK::Type::MacOSX:
 #if defined(__i386__) || defined(__x86_64__)
     use_current_os_version = true;
 #else
@@ -1548,15 +1504,15 @@ void PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
   // Only add the version-min options if we got a version from somewhere
   if (!version.empty()) {
     switch (sdk_type) {
-    case SDKType::iPhoneOS:
+    case XcodeSDK::Type::iPhoneOS:
       minimum_version_option.PutCString("-mios-version-min=");
       minimum_version_option.PutCString(version.getAsString());
       break;
-    case SDKType::iPhoneSimulator:
+    case XcodeSDK::Type::iPhoneSimulator:
       minimum_version_option.PutCString("-mios-simulator-version-min=");
       minimum_version_option.PutCString(version.getAsString());
       break;
-    case SDKType::MacOSX:
+    case XcodeSDK::Type::MacOSX:
       minimum_version_option.PutCString("-mmacosx-version-min=");
       minimum_version_option.PutCString(version.getAsString());
       break;
@@ -1805,70 +1761,11 @@ PlatformDarwin::FindXcodeContentsDirectoryInPath(llvm::StringRef path) {
   return {};
 }
 
-llvm::StringRef PlatformDarwin::GetSDKNameForType(SDKType type) {
-  switch (type) {
-  case MacOSX:
-    return "macosx";
-  case iPhoneSimulator:
-    return "iphonesimulator";
-  case iPhoneOS:
-    return "iphoneos";
-  case AppleTVSimulator:
-    return "appletvsimulator";
-  case AppleTVOS:
-    return "appletvos";
-  case WatchSimulator:
-    return "watchsimulator";
-  case watchOS:
-    return "watchos";
-  case bridgeOS:
-    return "bridgeos";
-  case Linux:
-    return "linux";
-  case numSDKTypes:
-  case unknown:
-    return "";
-  }
-  llvm_unreachable("unhandled switch case");
-}
-
-FileSpec PlatformDarwin::GetXcodeSDK(SDKType type) {
-  std::string xcrun_cmd =
-      "xcrun --show-sdk-path --sdk " + GetSDKNameForType(type).str();
-
-  int status = 0;
-  int signo = 0;
-  std::string output_str;
-  lldb_private::Status error =
-      Host::RunShellCommand(xcrun_cmd.c_str(), FileSpec(), &status, &signo,
-                            &output_str, std::chrono::seconds(15));
-
-  // Check that xcrun return something useful.
-  if (status != 0 || output_str.empty())
-    return {};
-
-  // Convert to a StringRef so we can manipulate the string without modifying
-  // the underlying data.
-  llvm::StringRef output(output_str);
-
-  // Remove any trailing newline characters.
-  output = output.rtrim();
-
-  // Strip any leading newline characters and everything before them.
-  const size_t last_newline = output.rfind('\n');
-  if (last_newline != llvm::StringRef::npos)
-    output = output.substr(last_newline + 1);
-
-  // Whatever is left in output should be a valid path.
-  if (!FileSystem::Instance().Exists(output))
-    return {};
-
-  // Find the contents dir in the xcrun provided path.
-  std::string xcode_contents_dir = FindXcodeContentsDirectoryInPath(output);
-  if (xcode_contents_dir.empty())
-    return {};
-
-  return FileSpec(xcode_contents_dir);
+llvm::StringRef PlatformDarwin::GetSDKPath(XcodeSDK sdk) {
+  std::string &path = m_sdk_path[sdk.GetString()];
+  if (path.empty())
+    path = HostInfo::GetXcodeSDK(sdk);
+  return path;
 }
 
 FileSpec PlatformDarwin::GetXcodeContentsDirectory() {
@@ -1899,7 +1796,8 @@ FileSpec PlatformDarwin::GetXcodeContentsDirectory() {
       }
     }
 
-    if (FileSpec fspec = GetXcodeSDK(SDKType::MacOSX)) {
+    FileSpec fspec(HostInfo::GetXcodeSDK(XcodeSDK::GetAnyMacOS()));
+    if (fspec) {
       if (FileSystem::Instance().Exists(fspec)) {
         std::string xcode_contents_dir =
             FindXcodeContentsDirectoryInPath(fspec.GetPath());
