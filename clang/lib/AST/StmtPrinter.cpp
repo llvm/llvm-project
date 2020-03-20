@@ -758,6 +758,11 @@ void StmtPrinter::VisitOMPDepobjDirective(OMPDepobjDirective *Node) {
   PrintOMPExecutableDirective(Node);
 }
 
+void StmtPrinter::VisitOMPScanDirective(OMPScanDirective *Node) {
+  Indent() << "#pragma omp scan";
+  PrintOMPExecutableDirective(Node);
+}
+
 void StmtPrinter::VisitOMPOrderedDirective(OMPOrderedDirective *Node) {
   Indent() << "#pragma omp ordered";
   PrintOMPExecutableDirective(Node, Node->hasClausesOfKind<OMPDependClause>());

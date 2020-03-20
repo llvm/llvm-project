@@ -8305,6 +8305,17 @@ TreeTransform<Derived>::TransformOMPDepobjDirective(OMPDepobjDirective *D) {
 
 template <typename Derived>
 StmtResult
+TreeTransform<Derived>::TransformOMPScanDirective(OMPScanDirective *D) {
+  DeclarationNameInfo DirName;
+  getDerived().getSema().StartOpenMPDSABlock(OMPD_scan, DirName, nullptr,
+                                             D->getBeginLoc());
+  StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
+  getDerived().getSema().EndOpenMPDSABlock(Res.get());
+  return Res;
+}
+
+template <typename Derived>
+StmtResult
 TreeTransform<Derived>::TransformOMPOrderedDirective(OMPOrderedDirective *D) {
   DeclarationNameInfo DirName;
   getDerived().getSema().StartOpenMPDSABlock(OMPD_ordered, DirName, nullptr,

@@ -2852,6 +2852,9 @@ DEF_TRAVERSE_STMT(OMPFlushDirective,
 DEF_TRAVERSE_STMT(OMPDepobjDirective,
                   { TRY_TO(TraverseOMPExecutableDirective(S)); })
 
+DEF_TRAVERSE_STMT(OMPScanDirective,
+                  { TRY_TO(TraverseOMPExecutableDirective(S)); })
+
 DEF_TRAVERSE_STMT(OMPOrderedDirective,
                   { TRY_TO(TraverseOMPExecutableDirective(S)); })
 
