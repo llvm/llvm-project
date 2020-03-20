@@ -23,9 +23,10 @@ namespace portability {
 /// http://clang.llvm.org/extra/clang-tidy/checks/portability-restrict-system-includes.html
 class RestrictSystemIncludesCheck : public ClangTidyCheck {
 public:
-  RestrictSystemIncludesCheck(StringRef Name, ClangTidyContext *Context)
+  RestrictSystemIncludesCheck(StringRef Name, ClangTidyContext *Context,
+                              std::string DefaultAllowedIncludes = "*")
       : ClangTidyCheck(Name, Context),
-        AllowedIncludes(Options.get("Includes", "*")),
+        AllowedIncludes(Options.get("Includes", DefaultAllowedIncludes)),
         AllowedIncludesGlobList(AllowedIncludes) {}
 
   void registerPPCallbacks(const SourceManager &SM, Preprocessor *PP,
@@ -38,6 +39,42 @@ public:
 private:
   std::string AllowedIncludes;
   GlobList AllowedIncludesGlobList;
+};
+
+class RestrictedIncludesPPCallbacks : public PPCallbacks {
+public:
+  explicit RestrictedIncludesPPCallbacks(RestrictSystemIncludesCheck &Check,
+                                         const SourceManager &SM)
+      : Check(Check), SM(SM) {}
+
+  void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
+                          StringRef FileName, bool IsAngled,
+                          CharSourceRange FilenameRange, const FileEntry *File,
+                          StringRef SearchPath, StringRef RelativePath,
+                          const Module *Imported,
+                          SrcMgr::CharacteristicKind FileType) override;
+  void EndOfMainFile() override;
+
+private:
+  struct IncludeDirective {
+    IncludeDirective() = default;
+    IncludeDirective(SourceLocation Loc, CharSourceRange Range,
+                     StringRef Filename, StringRef FullPath, bool IsInMainFile)
+        : Loc(Loc), Range(Range), IncludeFile(Filename), IncludePath(FullPath),
+          IsInMainFile(IsInMainFile) {}
+
+    SourceLocation Loc;      // '#' location in the include directive
+    CharSourceRange Range;   // SourceRange for the file name
+    std::string IncludeFile; // Filename as a string
+    std::string IncludePath; // Full file path as a string
+    bool IsInMainFile;       // Whether or not the include is in the main file
+  };
+
+  using FileIncludes = llvm::SmallVector<IncludeDirective, 8>;
+  llvm::SmallDenseMap<FileID, FileIncludes> IncludeDirectives;
+
+  RestrictSystemIncludesCheck &Check;
+  const SourceManager &SM;
 };
 
 } // namespace portability 
