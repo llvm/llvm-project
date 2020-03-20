@@ -5,6 +5,7 @@ set(LIBS
   MLIRPass
   MLIRSPIRV
   MLIRSPIRVSerialization
+  MLIRTargetAVX512
   MLIRTargetLLVMIR
   MLIRTargetNVVMIR
   MLIRTargetROCDLIR
@@ -13,6 +14,7 @@ set(LIBS
 )
 set(FULL_LIBS
   MLIRSPIRVSerialization
+  MLIRTargetAVX512
   MLIRTargetLLVMIR
   MLIRTargetNVVMIR
   MLIRTargetROCDLIR
