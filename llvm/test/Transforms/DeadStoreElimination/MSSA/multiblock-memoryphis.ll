@@ -33,13 +33,11 @@ define void @test5(i32* noalias %P) {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:    br i1 true, label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    store i32 1, i32* [[P:%.*]]
 ; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    store i32 1, i32* [[P]]
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    store i32 0, i32* [[P]]
+; CHECK-NEXT:    store i32 0, i32* [[P:%.*]]
 ; CHECK-NEXT:    ret void
 ;
   br i1 true, label %bb1, label %bb2
@@ -58,13 +56,12 @@ define void @test8(i32* %P, i32* %Q) {
 ; CHECK-LABEL: @test8(
 ; CHECK-NEXT:    br i1 true, label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    store i32 1, i32* [[P:%.*]]
 ; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    store i32 1, i32* [[Q:%.*]]
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    store i32 0, i32* [[P]]
+; CHECK-NEXT:    store i32 0, i32* [[P:%.*]]
 ; CHECK-NEXT:    ret void
 ;
   br i1 true, label %bb1, label %bb2
@@ -115,7 +112,6 @@ define void @widget(i32* %Ptr, i1 %c1, i1 %c2, i32 %v1, i32 %v2, i32 %v3) {
 ; CHECK:       bb1:
 ; CHECK-NEXT:    br i1 [[C2:%.*]], label [[BB2:%.*]], label [[BB3]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    store i32 -1, i32* [[PTR:%.*]], align 4
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    br label [[BB4:%.*]]
@@ -126,7 +122,7 @@ define void @widget(i32* %Ptr, i1 %c1, i1 %c2, i32 %v1, i32 %v2, i32 %v3) {
 ; CHECK-NEXT:    i32 2, label [[BB7:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       bb5:
-; CHECK-NEXT:    store i32 0, i32* [[PTR]], align 4
+; CHECK-NEXT:    store i32 0, i32* [[PTR:%.*]], align 4
 ; CHECK-NEXT:    br label [[BB8]]
 ; CHECK:       bb6:
 ; CHECK-NEXT:    store i32 1, i32* [[PTR]], align 4
@@ -173,3 +169,34 @@ bb7:                                              ; preds = %bb4
 bb8:                                              ; preds = %bb7, %bb6, %bb5, %bb4
   br label %bb4
 }
+
+
+declare void @fn1_test11()
+declare void @fn2_test11()
+
+define void @test11(i1 %c, i8** %ptr.1) {
+; CHECK-LABEL: @test11(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF_THEN:%.*]], label [[EXIT:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    tail call void @fn2_test11() #0
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    store i8* null, i8** [[PTR_1:%.*]], align 8
+; CHECK-NEXT:    tail call void @fn2_test11() #0
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %c, label %if.then, label %exit
+
+if.then:                                      ; preds = %entry
+  tail call void @fn2_test11() #1
+  br label %exit
+
+exit:
+  store i8* null, i8** %ptr.1, align 8
+  tail call void @fn2_test11() #1
+  ret void
+}
+
+attributes #1 = { nounwind }
