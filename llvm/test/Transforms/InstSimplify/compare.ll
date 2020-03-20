@@ -379,13 +379,7 @@ define i1 @add(i32 %x, i32 %y) {
 
 define i1 @addv(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @addv(
-; CHECK-NEXT:    [[L:%.*]] = lshr <2 x i32> [[X:%.*]], <i32 1, i32 0>
-; CHECK-NEXT:    [[Q:%.*]] = lshr <2 x i32> [[Y:%.*]], <i32 1, i32 0>
-; CHECK-NEXT:    [[R:%.*]] = or <2 x i32> [[Q]], <i32 1, i32 0>
-; CHECK-NEXT:    [[S:%.*]] = add <2 x i32> [[L]], [[R]]
-; CHECK-NEXT:    [[E:%.*]] = extractelement <2 x i32> [[S]], i32 0
-; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[E]], 0
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 false
 ;
   %l = lshr <2 x i32> %x, <i32 1, i32 0>
   %q = lshr <2 x i32> %y, <i32 1, i32 0>
@@ -409,12 +403,7 @@ define i1 @add2(i8 %x, i8 %y) {
 
 define i1 @add2v(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @add2v(
-; CHECK-NEXT:    [[L:%.*]] = or <2 x i8> [[X:%.*]], <i8 0, i8 -128>
-; CHECK-NEXT:    [[R:%.*]] = or <2 x i8> [[Y:%.*]], <i8 0, i8 -127>
-; CHECK-NEXT:    [[S:%.*]] = add <2 x i8> [[L]], [[R]]
-; CHECK-NEXT:    [[E:%.*]] = extractelement <2 x i8> [[S]], i32 1
-; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[E]], 0
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 false
 ;
   %l = or <2 x i8> %x, <i8 0, i8 128>
   %r = or <2 x i8> %y, <i8 0, i8 129>
