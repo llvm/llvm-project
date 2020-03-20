@@ -27,10 +27,9 @@ end:
 define void @test14(i32* noalias %P) {
 ; CHECK-LABEL: @test14(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i32 1, i32* [[P:%.*]]
 ; CHECK-NEXT:    br label [[FOR:%.*]]
 ; CHECK:       for:
-; CHECK-NEXT:    store i32 0, i32* [[P]]
+; CHECK-NEXT:    store i32 0, i32* [[P:%.*]]
 ; CHECK-NEXT:    br i1 false, label [[FOR]], label [[END:%.*]]
 ; CHECK:       end:
 ; CHECK-NEXT:    ret void
@@ -77,7 +76,8 @@ define void @test21(i32* noalias %P) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ARRAYIDX0:%.*]] = getelementptr inbounds i32, i32* [[P:%.*]], i64 1
 ; CHECK-NEXT:    [[P3:%.*]] = bitcast i32* [[ARRAYIDX0]] to i8*
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 4 [[P3]], i8 0, i64 28, i1 false)
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, i8* [[P3]], i64 4
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 4 [[TMP0]], i8 0, i64 24, i1 false)
 ; CHECK-NEXT:    br label [[FOR:%.*]]
 ; CHECK:       for:
 ; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 1
@@ -281,3 +281,36 @@ end:
   ret void
 }
 
+%struct.hoge = type { i32, i32 }
+
+@global = external local_unnamed_addr global %struct.hoge*, align 8
+
+define void @widget(i8* %tmp) {
+; CHECK-LABEL: @widget(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 [[TMP:%.*]], i8* nonnull align 16 undef, i64 64, i1 false)
+; CHECK-NEXT:    br label [[BB1:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[TMP2:%.*]] = load %struct.hoge*, %struct.hoge** @global, align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT_HOGE:%.*]], %struct.hoge* [[TMP2]], i64 undef, i32 1
+; CHECK-NEXT:    store i32 0, i32* [[TMP3]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load %struct.hoge*, %struct.hoge** @global, align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT_HOGE]], %struct.hoge* [[TMP4]], i64 undef, i32 1
+; CHECK-NEXT:    store i32 10, i32* [[TMP5]], align 4
+; CHECK-NEXT:    br label [[BB1]]
+;
+bb:
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 %tmp, i8* nonnull align 16 undef, i64 64, i1 false)
+  br label %bb1
+
+bb1:                                              ; preds = %bb1, %bb
+  %tmp2 = load %struct.hoge*, %struct.hoge** @global, align 8
+  %tmp3 = getelementptr inbounds %struct.hoge, %struct.hoge* %tmp2, i64 undef, i32 1
+  store i32 0, i32* %tmp3, align 4
+  %tmp4 = load %struct.hoge*, %struct.hoge** @global, align 8
+  %tmp5 = getelementptr inbounds %struct.hoge, %struct.hoge* %tmp4, i64 undef, i32 1
+  store i32 10, i32* %tmp5, align 4
+  br label %bb1
+}
+
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* noalias nocapture writeonly, i8* noalias nocapture readonly, i64, i1 immarg)
