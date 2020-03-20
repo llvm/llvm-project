@@ -1275,9 +1275,30 @@ defm int_arm_mve_vqdmlad: MVEPredicated<[llvm_anyvector_ty],
 
 // CDE (Custom Datapath Extension)
 
-def int_arm_cde_cx1: Intrinsic<
-  [llvm_i32_ty],
-  [llvm_i32_ty /* coproc */, llvm_i32_ty /* imm */],
-  [IntrNoMem, ImmArg<0>, ImmArg<1>]>;
+multiclass CDEGPRIntrinsics<list<LLVMType> args> {
+  def "" : Intrinsic<
+    [llvm_i32_ty],
+    !listconcat([llvm_i32_ty /* coproc */], args, [llvm_i32_ty /* imm */]),
+    [IntrNoMem, ImmArg<0>, ImmArg<!add(!size(args), 1)>]>;
+  def a : Intrinsic<
+    [llvm_i32_ty],
+    !listconcat([llvm_i32_ty /* coproc */, llvm_i32_ty /* acc */], args,
+                [llvm_i32_ty /* imm */]),
+    [IntrNoMem, ImmArg<0>, ImmArg<!add(!size(args), 2)>]>;
+
+  def d: Intrinsic<
+    [llvm_i32_ty /* lo */, llvm_i32_ty /* hi */],
+    !listconcat([llvm_i32_ty /* coproc */], args, [llvm_i32_ty /* imm */]),
+    [IntrNoMem, ImmArg<0>, ImmArg<!add(!size(args), 1)>]>;
+  def da: Intrinsic<
+    [llvm_i32_ty /* lo */, llvm_i32_ty /* hi */],
+    !listconcat([llvm_i32_ty /* coproc */, llvm_i32_ty /* acc_lo */,
+                 llvm_i32_ty /* acc_hi */], args, [llvm_i32_ty /* imm */]),
+    [IntrNoMem, ImmArg<0>, ImmArg<!add(!size(args), 3)>]>;
+}
+
+defm int_arm_cde_cx1: CDEGPRIntrinsics<[]>;
+defm int_arm_cde_cx2: CDEGPRIntrinsics<[llvm_i32_ty]>;
+defm int_arm_cde_cx3: CDEGPRIntrinsics<[llvm_i32_ty, llvm_i32_ty]>;
 
 } // end TargetPrefix
