@@ -8,6 +8,7 @@
 
 // UNSUPPORTED: c++98, c++03, c++11, c++14
 // XFAIL: dylib-has-no-filesystem
+// FILE_DEPENDENCIES: test.dat
 
 // <fstream>
 
