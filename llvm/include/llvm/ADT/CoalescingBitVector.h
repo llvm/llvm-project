@@ -21,7 +21,6 @@
 
 #include <algorithm>
 #include <initializer_list>
-#include <memory>
 
 namespace llvm {
 
@@ -34,8 +33,7 @@ namespace llvm {
 /// performance for non-sequential find() operations.
 ///
 /// \tparam IndexT - The type of the index into the bitvector.
-/// \tparam N - The first N coalesced intervals of set bits are stored in-place
-/// (in the initial heap allocation).
+/// \tparam N - The first N coalesced intervals of set bits are stored in-place.
 template <typename IndexT, unsigned N = 16> class CoalescingBitVector {
   static_assert(std::is_unsigned<IndexT>::value,
                 "Index must be an unsigned integer.");
@@ -55,13 +53,13 @@ public:
   /// Construct by passing in a CoalescingBitVector<IndexT>::Allocator
   /// reference.
   CoalescingBitVector(Allocator &Alloc)
-      : Alloc(&Alloc), Intervals(std::make_unique<MapT>(Alloc)) {}
+      : Alloc(&Alloc), Intervals(Alloc) {}
 
   /// \name Copy/move constructors and assignment operators.
   /// @{
 
   CoalescingBitVector(const ThisT &Other)
-      : Alloc(Other.Alloc), Intervals(std::make_unique<MapT>(*Other.Alloc)) {
+      : Alloc(Other.Alloc), Intervals(*Other.Alloc) {
     set(Other);
   }
 
@@ -71,27 +69,21 @@ public:
     return *this;
   }
 
-  CoalescingBitVector(ThisT &&Other)
-      : Alloc(Other.Alloc), Intervals(std::move(Other.Intervals)) {}
-
-  ThisT &operator=(ThisT &&Other) {
-    Alloc = Other.Alloc;
-    Intervals = std::move(Other.Intervals);
-    return *this;
-  }
+  CoalescingBitVector(ThisT &&Other) = delete;
+  ThisT &operator=(ThisT &&Other) = delete;
 
   /// @}
 
   /// Clear all the bits.
-  void clear() { Intervals->clear(); }
+  void clear() { Intervals.clear(); }
 
   /// Check whether no bits are set.
-  bool empty() const { return Intervals->empty(); }
+  bool empty() const { return Intervals.empty(); }
 
   /// Count the number of set bits.
   unsigned count() const {
     unsigned Bits = 0;
-    for (auto It = Intervals->begin(), End = Intervals->end(); It != End; ++It)
+    for (auto It = Intervals.begin(), End = Intervals.end(); It != End; ++It)
       Bits += 1 + It.stop() - It.start();
     return Bits;
   }
@@ -112,7 +104,7 @@ public:
   /// This method does /not/ support setting already-set bits, see \ref set
   /// for the rationale. For a safe set union operation, use \ref operator|=.
   void set(const ThisT &Other) {
-    for (auto It = Other.Intervals->begin(), End = Other.Intervals->end();
+    for (auto It = Other.Intervals.begin(), End = Other.Intervals.end();
          It != End; ++It)
       insert(It.start(), It.stop());
   }
@@ -125,8 +117,8 @@ public:
 
   /// Check whether the bit at \p Index is set.
   bool test(IndexT Index) const {
-    const auto It = Intervals->find(Index);
-    if (It == Intervals->end())
+    const auto It = Intervals.find(Index);
+    if (It == Intervals.end())
       return false;
     assert(It.stop() >= Index && "Interval must end after Index");
     return It.start() <= Index;
@@ -140,8 +132,8 @@ public:
 
   /// Reset the bit at \p Index. Supports resetting an already-unset bit.
   void reset(IndexT Index) {
-    auto It = Intervals->find(Index);
-    if (It == Intervals->end())
+    auto It = Intervals.find(Index);
+    if (It == Intervals.end())
       return;
 
     // Split the interval containing Index into up to two parts: one from
@@ -169,7 +161,7 @@ public:
     getOverlaps(RHS, Overlaps);
 
     // Insert the non-overlapping parts of all the intervals from RHS.
-    for (auto It = RHS.Intervals->begin(), End = RHS.Intervals->end();
+    for (auto It = RHS.Intervals.begin(), End = RHS.Intervals.end();
          It != End; ++It) {
       IndexT Start = It.start();
       IndexT Stop = It.stop();
@@ -205,7 +197,7 @@ public:
       IndexT OlapStart, OlapStop;
       std::tie(OlapStart, OlapStop) = Overlap;
 
-      auto It = Intervals->find(OlapStart);
+      auto It = Intervals.find(OlapStart);
       IndexT CurrStart = It.start();
       IndexT CurrStop = It.stop();
       assert(CurrStart <= OlapStart && OlapStop <= CurrStop &&
@@ -227,14 +219,14 @@ public:
     // We cannot just use std::equal because it checks the dereferenced values
     // of an iterator pair for equality, not the iterators themselves. In our
     // case that results in comparison of the (unused) IntervalMap values.
-    auto ItL = Intervals->begin();
-    auto ItR = RHS.Intervals->begin();
-    while (ItL != Intervals->end() && ItR != RHS.Intervals->end() &&
+    auto ItL = Intervals.begin();
+    auto ItR = RHS.Intervals.begin();
+    while (ItL != Intervals.end() && ItR != RHS.Intervals.end() &&
            ItL.start() == ItR.start() && ItL.stop() == ItR.stop()) {
       ++ItL;
       ++ItR;
     }
-    return ItL == Intervals->end() && ItR == RHS.Intervals->end();
+    return ItL == Intervals.end() && ItR == RHS.Intervals.end();
   }
 
   bool operator!=(const ThisT &RHS) const { return !operator==(RHS); }
@@ -324,15 +316,15 @@ public:
     }
   };
 
-  const_iterator begin() const { return const_iterator(Intervals->begin()); }
+  const_iterator begin() const { return const_iterator(Intervals.begin()); }
 
   const_iterator end() const { return const_iterator(); }
 
   /// Return an iterator pointing to the first set bit AT, OR AFTER, \p Index.
   /// If no such set bit exists, return end(). This is like std::lower_bound.
   const_iterator find(IndexT Index) const {
-    auto UnderlyingIt = Intervals->find(Index);
-    if (UnderlyingIt == Intervals->end())
+    auto UnderlyingIt = Intervals.find(Index);
+    if (UnderlyingIt == Intervals.end())
       return end();
     auto It = const_iterator(UnderlyingIt);
     It.advanceTo(Index);
@@ -341,7 +333,7 @@ public:
 
   void print(raw_ostream &OS) const {
     OS << "{";
-    for (auto It = Intervals->begin(), End = Intervals->end(); It != End;
+    for (auto It = Intervals.begin(), End = Intervals.end(); It != End;
          ++It) {
       OS << "[" << It.start();
       if (It.start() != It.stop())
@@ -362,13 +354,13 @@ public:
 #endif
 
 private:
-  void insert(IndexT Start, IndexT End) { Intervals->insert(Start, End, 0); }
+  void insert(IndexT Start, IndexT End) { Intervals.insert(Start, End, 0); }
 
   /// Record the overlaps between \p this and \p Other in \p Overlaps. Return
   /// true if there is any overlap.
   bool getOverlaps(const ThisT &Other,
                    SmallVectorImpl<IntervalT> &Overlaps) const {
-    for (IntervalMapOverlaps<MapT, MapT> I(*Intervals, *Other.Intervals);
+    for (IntervalMapOverlaps<MapT, MapT> I(Intervals, Other.Intervals);
          I.valid(); ++I)
       Overlaps.emplace_back(I.start(), I.stop());
     assert(std::is_sorted(Overlaps.begin(), Overlaps.end(),
@@ -409,7 +401,7 @@ private:
   }
 
   Allocator *Alloc;
-  std::unique_ptr<MapT> Intervals;
+  MapT Intervals;
 };
 
 } // namespace llvm

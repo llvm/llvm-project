@@ -77,17 +77,6 @@ TEST(CoalescingBitVector, Copy) {
   EXPECT_TRUE(elementsMatch(BV2, {0}));
 }
 
-TEST(CoalescingBitVector, Move) {
-  UBitVec::Allocator Alloc;
-  UBitVec BV1(Alloc);
-  BV1.set(0);
-  UBitVec BV2 = std::move(BV1);
-  EXPECT_TRUE(elementsMatch(BV2, {0}));
-  BV2.set(5);
-  BV1 = std::move(BV2);
-  EXPECT_TRUE(elementsMatch(BV1, {0, 5}));
-}
-
 TEST(CoalescingBitVectorTest, Iterators) {
   UBitVec::Allocator Alloc;
   UBitVec BV(Alloc);
