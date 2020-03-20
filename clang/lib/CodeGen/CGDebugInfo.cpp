@@ -2463,7 +2463,7 @@ CGDebugInfo::getOrCreateModuleRef(ExternalASTSource::ASTSourceDescriptor Mod,
     DIB.createCompileUnit(TheCU->getSourceLanguage(),
                           // TODO: Support "Source" from external AST providers?
                           DIB.createFile(Mod.getModuleName(), CompDir),
-                          TheCU->getProducer(), true, StringRef(), 0, PCM,
+                          TheCU->getProducer(), false, StringRef(), 0, PCM,
                           llvm::DICompileUnit::FullDebug, Signature);
     DIB.finalize();
   }
