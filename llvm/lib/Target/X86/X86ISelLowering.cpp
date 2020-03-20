@@ -37385,19 +37385,22 @@ static SDValue combineBitcast(SDNode *N, SelectionDAG &DAG,
     auto *BCast = cast<MemIntrinsicSDNode>(N0);
     unsigned SrcVTSize = SrcVT.getScalarSizeInBits();
     unsigned MemSize = BCast->getMemoryVT().getScalarSizeInBits();
-    MVT MemVT = VT.isFloatingPoint() ? MVT::getFloatingPointVT(MemSize)
-                                     : MVT::getIntegerVT(MemSize);
-    MVT LoadVT = VT.isFloatingPoint() ? MVT::getFloatingPointVT(SrcVTSize)
-                                      : MVT::getIntegerVT(SrcVTSize);
-    LoadVT = MVT::getVectorVT(LoadVT, SrcVT.getVectorNumElements());
+    // Don't swap i8/i16 since don't have fp types that size.
+    if (MemSize >= 32) {
+      MVT MemVT = VT.isFloatingPoint() ? MVT::getFloatingPointVT(MemSize)
+                                       : MVT::getIntegerVT(MemSize);
+      MVT LoadVT = VT.isFloatingPoint() ? MVT::getFloatingPointVT(SrcVTSize)
+                                        : MVT::getIntegerVT(SrcVTSize);
+      LoadVT = MVT::getVectorVT(LoadVT, SrcVT.getVectorNumElements());
 
-    SDVTList Tys = DAG.getVTList(LoadVT, MVT::Other);
-    SDValue Ops[] = { BCast->getChain(), BCast->getBasePtr() };
-    SDValue ResNode =
-        DAG.getMemIntrinsicNode(X86ISD::VBROADCAST_LOAD, SDLoc(N), Tys, Ops,
-                                MemVT, BCast->getMemOperand());
-    DAG.ReplaceAllUsesOfValueWith(SDValue(BCast, 1), ResNode.getValue(1));
-    return DAG.getBitcast(VT, ResNode);
+      SDVTList Tys = DAG.getVTList(LoadVT, MVT::Other);
+      SDValue Ops[] = { BCast->getChain(), BCast->getBasePtr() };
+      SDValue ResNode =
+          DAG.getMemIntrinsicNode(X86ISD::VBROADCAST_LOAD, SDLoc(N), Tys, Ops,
+                                  MemVT, BCast->getMemOperand());
+      DAG.ReplaceAllUsesOfValueWith(SDValue(BCast, 1), ResNode.getValue(1));
+      return DAG.getBitcast(VT, ResNode);
+    }
   }
 
   // Since MMX types are special and don't usually play with other vector types,
