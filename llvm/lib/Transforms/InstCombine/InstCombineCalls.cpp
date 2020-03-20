@@ -4646,6 +4646,10 @@ Instruction *InstCombiner::visitCallBase(CallBase &Call) {
     if (I) return eraseInstFromFunction(*I);
   }
 
+  if (!Call.use_empty() && !Call.isMustTailCall())
+    if (Value *ReturnedArg = Call.getReturnedArgOperand())
+      return replaceInstUsesWith(Call, ReturnedArg);
+
   if (isAllocLikeFn(&Call, &TLI))
     return visitAllocSite(Call);
 
