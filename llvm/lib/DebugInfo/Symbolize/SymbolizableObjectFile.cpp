@@ -35,12 +35,6 @@ using namespace llvm;
 using namespace object;
 using namespace symbolize;
 
-static DILineInfoSpecifier
-getDILineInfoSpecifier(FunctionNameKind FNKind) {
-  return DILineInfoSpecifier(
-      DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath, FNKind);
-}
-
 ErrorOr<std::unique_ptr<SymbolizableObjectFile>>
 SymbolizableObjectFile::create(const object::ObjectFile *Obj,
                                std::unique_ptr<DIContext> DICtx,
@@ -251,16 +245,16 @@ bool SymbolizableObjectFile::shouldOverrideWithSymbolTable(
 
 DILineInfo
 SymbolizableObjectFile::symbolizeCode(object::SectionedAddress ModuleOffset,
-                                      FunctionNameKind FNKind,
+                                      DILineInfoSpecifier LineInfoSpecifier,
                                       bool UseSymbolTable) const {
   if (ModuleOffset.SectionIndex == object::SectionedAddress::UndefSection)
     ModuleOffset.SectionIndex =
         getModuleSectionIndexForAddress(ModuleOffset.Address);
-  DILineInfo LineInfo = DebugInfoContext->getLineInfoForAddress(
-      ModuleOffset, getDILineInfoSpecifier(FNKind));
+  DILineInfo LineInfo =
+      DebugInfoContext->getLineInfoForAddress(ModuleOffset, LineInfoSpecifier);
 
   // Override function name from symbol table if necessary.
-  if (shouldOverrideWithSymbolTable(FNKind, UseSymbolTable)) {
+  if (shouldOverrideWithSymbolTable(LineInfoSpecifier.FNKind, UseSymbolTable)) {
     std::string FunctionName;
     uint64_t Start, Size;
     if (getNameFromSymbolTable(SymbolRef::ST_Function, ModuleOffset.Address,
@@ -272,20 +266,20 @@ SymbolizableObjectFile::symbolizeCode(object::SectionedAddress ModuleOffset,
 }
 
 DIInliningInfo SymbolizableObjectFile::symbolizeInlinedCode(
-    object::SectionedAddress ModuleOffset, FunctionNameKind FNKind,
-    bool UseSymbolTable) const {
+    object::SectionedAddress ModuleOffset,
+    DILineInfoSpecifier LineInfoSpecifier, bool UseSymbolTable) const {
   if (ModuleOffset.SectionIndex == object::SectionedAddress::UndefSection)
     ModuleOffset.SectionIndex =
         getModuleSectionIndexForAddress(ModuleOffset.Address);
   DIInliningInfo InlinedContext = DebugInfoContext->getInliningInfoForAddress(
-      ModuleOffset, getDILineInfoSpecifier(FNKind));
+      ModuleOffset, LineInfoSpecifier);
 
   // Make sure there is at least one frame in context.
   if (InlinedContext.getNumberOfFrames() == 0)
     InlinedContext.addFrame(DILineInfo());
 
   // Override the function name in lower frame with name from symbol table.
-  if (shouldOverrideWithSymbolTable(FNKind, UseSymbolTable)) {
+  if (shouldOverrideWithSymbolTable(LineInfoSpecifier.FNKind, UseSymbolTable)) {
     std::string FunctionName;
     uint64_t Start, Size;
     if (getNameFromSymbolTable(SymbolRef::ST_Function, ModuleOffset.Address,

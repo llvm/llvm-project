@@ -309,6 +309,9 @@ int main(int argc, char **argv) {
   Opts.FallbackDebugPath = ClFallbackDebugPath;
   Opts.DWPName = ClDwpName;
   Opts.DebugFileDirectory = ClDebugFileDirectory;
+  Opts.PathStyle = DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath;
+  if (ClBasenames)
+    Opts.PathStyle = DILineInfoSpecifier::FileLineInfoKind::BaseNameOnly;
 
   for (const auto &hint : ClDsymHint) {
     if (sys::path::extension(hint) == ".dSYM") {
@@ -322,7 +325,7 @@ int main(int argc, char **argv) {
 
   DIPrinter Printer(outs(), ClPrintFunctions != FunctionNameKind::None,
                     ClPrettyPrint, ClPrintSourceContextLines, ClVerbose,
-                    ClBasenames, ClOutputStyle);
+                    ClOutputStyle);
 
   if (ClInputAddresses.empty()) {
     const int kMaxInputStringLength = 1024;
