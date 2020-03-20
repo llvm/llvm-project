@@ -4,23 +4,11 @@
 # Test that with linker scripts we don't create a RO PT_LOAD.
 
 # RUN: ld.lld -o %t1 --script %s %t -shared
-# RUN: llvm-readobj -l %t1 | FileCheck %s
+# RUN: llvm-readelf -l %t1 | FileCheck %s
 
 SECTIONS {
 }
 
-# CHECK-NOT:  Type: PT_LOAD
-
-# CHECK:      Type: PT_LOAD
-# CHECK:      Flags [
-# CHECK-NEXT:   PF_R
-# CHECK-NEXT:   PF_X
-# CHECK-NEXT: ]
-
-# CHECK:      Type: PT_LOAD
-# CHECK:      Flags [
-# CHECK-NEXT:   PF_R
-# CHECK-NEXT:   PF_W
-# CHECK-NEXT: ]
-
-# CHECK-NOT:  Type: PT_LOAD
+# CHECK:      Type {{.*}} Flg Align
+# CHECK-NEXT: LOAD {{.*}} R E 0x1000
+# CHECK-NEXT: LOAD {{.*}} RW  0x1000
