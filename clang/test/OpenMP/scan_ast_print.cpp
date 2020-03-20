@@ -17,33 +17,33 @@ T tmain(T argc) {
   static T a;
 #pragma omp for
   for (int i = 0; i < 10; ++i) {
-#pragma omp scan
+#pragma omp scan inclusive(a)
   }
   return a + argc;
 }
 // CHECK:      static T a;
 // CHECK-NEXT: #pragma omp for
 // CHECK-NEXT: for (int i = 0; i < 10; ++i) {
-// CHECK-NEXT: #pragma omp scan{{$}}
+// CHECK-NEXT: #pragma omp scan inclusive(a){{$}}
 // CHECK:      static int a;
 // CHECK-NEXT: #pragma omp for
 // CHECK-NEXT: for (int i = 0; i < 10; ++i) {
-// CHECK-NEXT: #pragma omp scan
+// CHECK-NEXT: #pragma omp scan inclusive(a)
 // CHECK:      static char a;
 // CHECK-NEXT: #pragma omp for
 // CHECK-NEXT: for (int i = 0; i < 10; ++i) {
-// CHECK-NEXT: #pragma omp scan
+// CHECK-NEXT: #pragma omp scan inclusive(a)
 
 int main(int argc, char **argv) {
   static int a;
 // CHECK: static int a;
 #pragma omp for simd
   for (int i = 0; i < 10; ++i) {
-#pragma omp scan
+#pragma omp scan inclusive(a)
   }
 // CHECK-NEXT: #pragma omp for simd
 // CHECK-NEXT: for (int i = 0; i < 10; ++i) {
-// CHECK-NEXT: #pragma omp scan{{$}}
+// CHECK-NEXT: #pragma omp scan inclusive(a){{$}}
   return tmain(argc) + tmain(argv[0][0]) + a;
 }
 

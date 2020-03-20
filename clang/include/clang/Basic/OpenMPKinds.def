@@ -215,6 +215,9 @@
 #ifndef OPENMP_DEVICE_MODIFIER
 #define OPENMP_DEVICE_MODIFIER(Name)
 #endif
+#ifndef OPENMP_SCAN_CLAUSE
+#define OPENMP_SCAN_CLAUSE(Name)
+#endif
 
 // OpenMP clauses.
 OPENMP_CLAUSE(allocator, OMPAllocatorClause)
@@ -281,6 +284,10 @@ OPENMP_CLAUSE(order, OMPOrderClause)
 OPENMP_CLAUSE(depobj, OMPDepobjClause)
 OPENMP_CLAUSE(destroy, OMPDestroyClause)
 OPENMP_CLAUSE(detach, OMPDetachClause)
+OPENMP_CLAUSE(inclusive, OMPInclusiveClause)
+
+// Clauses allowed for OpenMP directive 'scan'.
+OPENMP_SCAN_CLAUSE(inclusive)
 
 // Clauses allowed for OpenMP directive 'parallel'.
 OPENMP_PARALLEL_CLAUSE(if)
@@ -1098,6 +1105,7 @@ OPENMP_DEPOBJ_CLAUSE(depend)
 OPENMP_DEPOBJ_CLAUSE(destroy)
 OPENMP_DEPOBJ_CLAUSE(update)
 
+#undef OPENMP_SCAN_CLAUSE
 #undef OPENMP_DEVICE_MODIFIER
 #undef OPENMP_DEPOBJ_CLAUSE
 #undef OPENMP_FLUSH_CLAUSE

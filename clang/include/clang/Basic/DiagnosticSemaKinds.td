@@ -10055,6 +10055,8 @@ def err_omp_depobj_expected : Error<
   "expected depobj expression">;
 def err_omp_depobj_single_clause_expected : Error<
   "exactly one of 'depend', 'destroy', or 'update' clauses is expected">;
+def err_omp_scan_single_clause_expected : Error<
+  "exactly one of 'inclusive' or 'exclusive' clauses is expected">;
 def err_omp_expected_predefined_allocator : Error<
   "expected one of the predefined allocators for the variables with the static "
   "storage: 'omp_default_mem_alloc', 'omp_large_cap_mem_alloc', "

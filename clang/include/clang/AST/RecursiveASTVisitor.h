@@ -3184,6 +3184,13 @@ bool RecursiveASTVisitor<Derived>::VisitOMPClauseList(T *Node) {
 }
 
 template <typename Derived>
+bool RecursiveASTVisitor<Derived>::VisitOMPInclusiveClause(
+    OMPInclusiveClause *C) {
+  TRY_TO(VisitOMPClauseList(C));
+  return true;
+}
+
+template <typename Derived>
 bool RecursiveASTVisitor<Derived>::VisitOMPPrivateClause(OMPPrivateClause *C) {
   TRY_TO(VisitOMPClauseList(C));
   for (auto *E : C->private_copies()) {
