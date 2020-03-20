@@ -581,3 +581,28 @@ let Predicates = [HasCDE, HasFPRegs] in {
             (f64 (CDE_VCX3A_fpdp p_imm:$coproc, DPR:$acc, DPR:$n, DPR:$m,
                                  imm_3b:$imm))>;
 }
+
+let Predicates = [HasCDE, HasMVEInt] in {
+  def : Pat<(v16i8 (int_arm_cde_vcx1q timm:$coproc, timm:$imm)),
+            (v16i8 (CDE_VCX1_vec p_imm:$coproc, imm_12b:$imm))>;
+  def : Pat<(v16i8 (int_arm_cde_vcx1qa timm:$coproc, (v16i8 MQPR:$acc),
+                                       timm:$imm)),
+            (v16i8 (CDE_VCX1A_vec p_imm:$coproc, MQPR:$acc, imm_12b:$imm))>;
+
+  def : Pat<(v16i8 (int_arm_cde_vcx2q timm:$coproc, (v16i8 MQPR:$n), timm:$imm)),
+            (v16i8 (CDE_VCX2_vec p_imm:$coproc, MQPR:$n, imm_7b:$imm))>;
+  def : Pat<(v16i8 (int_arm_cde_vcx2qa timm:$coproc, (v16i8 MQPR:$acc),
+                                       (v16i8 MQPR:$n), timm:$imm)),
+            (v16i8 (CDE_VCX2A_vec p_imm:$coproc, MQPR:$acc, MQPR:$n,
+                                  imm_7b:$imm))>;
+
+  def : Pat<(v16i8 (int_arm_cde_vcx3q timm:$coproc, (v16i8 MQPR:$n),
+                                      (v16i8 MQPR:$m), timm:$imm)),
+            (v16i8 (CDE_VCX3_vec p_imm:$coproc, MQPR:$n, MQPR:$m,
+                                 imm_4b:$imm))>;
+  def : Pat<(v16i8 (int_arm_cde_vcx3qa timm:$coproc, (v16i8 MQPR:$acc),
+                                       (v16i8 MQPR:$n), (v16i8 MQPR:$m),
+                                       timm:$imm)),
+            (v16i8 (CDE_VCX3A_vec p_imm:$coproc, MQPR:$acc, MQPR:$n, MQPR:$m,
+                                  imm_4b:$imm))>;
+}

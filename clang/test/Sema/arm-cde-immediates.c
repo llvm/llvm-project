@@ -103,3 +103,27 @@ void test_vcxfp_u64(uint64_t a, uint64_t n, uint64_t m) {
   __arm_vcx3da_u64(0, a, n, m, a); // expected-error {{argument to '__arm_vcx3da_u64' must be a constant integer}}
   __arm_vcx3da_u64(0, a, n, m, 8); // expected-error {{argument value 8 is outside the valid range [0, 7]}}
 }
+
+void test_vcxq(uint32_t a, uint8x16_t acc, float16x8_t n, int64x2_t m) {
+  (void)__arm_vcx1q_u8(0, 0);
+  __arm_vcx1q_u8(0, a);       // expected-error {{argument to '__arm_vcx1q_u8' must be a constant integer}}
+  __arm_vcx1q_u8(0, 4096);    // expected-error {{argument value 4096 is outside the valid range [0, 4095]}}
+  __arm_vcx1qa(0, acc, a);    // expected-error {{argument to '__arm_vcx1qa' must be a constant integer}}
+  __arm_vcx1qa(0, acc, 4096); // expected-error {{argument value 4096 is outside the valid range [0, 4095]}}
+
+  (void)__arm_vcx2q_u8(0, n, 0);
+  __arm_vcx2q_u8(0, n, a);      // expected-error {{argument to '__arm_vcx2q_u8' must be a constant integer}}
+  __arm_vcx2q_u8(0, n, 128);    // expected-error {{argument value 128 is outside the valid range [0, 127]}}
+  __arm_vcx2q(0, n, a);         // expected-error {{argument to '__arm_vcx2q' must be a constant integer}}
+  __arm_vcx2q(0, n, 128);       // expected-error {{argument value 128 is outside the valid range [0, 127]}}
+  __arm_vcx2qa(0, n, acc, a);   // expected-error {{argument to '__arm_vcx2qa_impl' must be a constant integer}}
+  __arm_vcx2qa(0, n, acc, 128); // expected-error {{argument value 128 is outside the valid range [0, 127]}}
+
+  (void)__arm_vcx3q_u8(0, n, m, 0);
+  __arm_vcx3q_u8(0, n, m, a);     // expected-error {{argument to '__arm_vcx3q_u8_impl' must be a constant integer}}
+  __arm_vcx3q_u8(0, n, m, 16);    // expected-error {{argument value 16 is outside the valid range [0, 15]}}
+  __arm_vcx3q(0, n, m, a);        // expected-error {{argument to '__arm_vcx3q_impl' must be a constant integer}}
+  __arm_vcx3q(0, n, m, 16);       // expected-error {{argument value 16 is outside the valid range [0, 15]}}
+  __arm_vcx3qa(0, n, m, acc, a);  // expected-error {{argument to '__arm_vcx3qa_impl' must be a constant integer}}
+  __arm_vcx3qa(0, n, m, acc, 16); // expected-error {{argument value 16 is outside the valid range [0, 15]}}
+}

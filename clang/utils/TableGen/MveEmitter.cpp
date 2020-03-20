@@ -1963,16 +1963,46 @@ void MveEmitter::EmitBuiltinSema(raw_ostream &OS) {
 }
 
 // -----------------------------------------------------------------------------
+// Class that describes an ACLE intrinsic implemented as a macro.
+//
+// This class is used when the intrinsic is polymorphic in 2 or 3 types, but we
+// want to avoid a combinatorial explosion by reinterpreting the arguments to
+// fixed types.
+
+class FunctionMacro {
+  std::vector<StringRef> Params;
+  StringRef Definition;
+
+public:
+  FunctionMacro(const Record &R);
+
+  const std::vector<StringRef> &getParams() const { return Params; }
+  StringRef getDefinition() const { return Definition; }
+};
+
+FunctionMacro::FunctionMacro(const Record &R) {
+  Params = R.getValueAsListOfStrings("params");
+  Definition = R.getValueAsString("definition");
+}
+
+// -----------------------------------------------------------------------------
 // The class used for generating arm_cde.h and related Clang bits
 //
 
 class CdeEmitter : public EmitterBase {
+  std::map<StringRef, FunctionMacro> FunctionMacros;
+
 public:
-  CdeEmitter(RecordKeeper &Records) : EmitterBase(Records){};
+  CdeEmitter(RecordKeeper &Records);
   void EmitHeader(raw_ostream &OS) override;
   void EmitBuiltinDef(raw_ostream &OS) override;
   void EmitBuiltinSema(raw_ostream &OS) override;
 };
+
+CdeEmitter::CdeEmitter(RecordKeeper &Records) : EmitterBase(Records) {
+  for (Record *R : Records.getAllDerivedDefinitions("FunctionMacro"))
+    FunctionMacros.emplace(R->getName(), FunctionMacro(*R));
+}
 
 void CdeEmitter::EmitHeader(raw_ostream &OS) {
   // Accumulate pieces of the header file that will be enabled under various
@@ -2049,6 +2079,16 @@ void CdeEmitter::EmitHeader(raw_ostream &OS) {
          << "_" << Int.fullName() << ")))\n"
          << RetTypeName << FunctionName << "(" << ArgTypesString << ");\n";
     }
+  }
+
+  for (const auto &kv : FunctionMacros) {
+    StringRef Name = kv.first;
+    const FunctionMacro &FM = kv.second;
+
+    raw_ostream &OS = parts[MVE];
+    OS << "#define "
+       << "__arm_" << Name << "(" << join(FM.getParams(), ", ") << ") "
+       << FM.getDefinition() << "\n";
   }
 
   for (auto &part : parts)
