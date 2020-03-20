@@ -6211,10 +6211,12 @@ getOffsetFromIndex(const GEPOperator *GEP, unsigned Idx, const DataLayout &DL) {
       continue;
     }
 
-    // Otherwise, we have a sequential type like an array or vector.  Multiply
-    // the index by the ElementSize.
-    uint64_t Size = DL.getTypeAllocSize(GTI.getIndexedType());
-    Offset += Size * OpC->getSExtValue();
+    // Otherwise, we have a sequential type like an array or fixed-length
+    // vector. Multiply the index by the ElementSize.
+    TypeSize Size = DL.getTypeAllocSize(GTI.getIndexedType());
+    if (Size.isScalable())
+      return None;
+    Offset += Size.getFixedSize() * OpC->getSExtValue();
   }
 
   return Offset;
