@@ -1003,16 +1003,17 @@ static void computeKnownBitsFromAssume(const Value *V, KnownBits &Known,
 /// amount. The results from calling KZF and KOF are conservatively combined for
 /// all permitted shift amounts.
 static void computeKnownBitsFromShiftOperator(
-    const Operator *I, KnownBits &Known, KnownBits &Known2,
-    unsigned Depth, const Query &Q,
+    const Operator *I, const APInt &DemandedElts, KnownBits &Known,
+    KnownBits &Known2, unsigned Depth, const Query &Q,
     function_ref<APInt(const APInt &, unsigned)> KZF,
     function_ref<APInt(const APInt &, unsigned)> KOF) {
   unsigned BitWidth = Known.getBitWidth();
 
-  if (auto *SA = dyn_cast<ConstantInt>(I->getOperand(1))) {
-    unsigned ShiftAmt = SA->getLimitedValue(BitWidth-1);
+  computeKnownBits(I->getOperand(1), DemandedElts, Known, Depth + 1, Q);
+  if (Known.isConstant()) {
+    unsigned ShiftAmt = Known.getConstant().getLimitedValue(BitWidth - 1);
 
-    computeKnownBits(I->getOperand(0), Known, Depth + 1, Q);
+    computeKnownBits(I->getOperand(0), DemandedElts, Known, Depth + 1, Q);
     Known.Zero = KZF(Known.Zero, ShiftAmt);
     Known.One  = KOF(Known.One, ShiftAmt);
     // If the known bits conflict, this must be an overflowing left shift, so
@@ -1024,11 +1025,10 @@ static void computeKnownBitsFromShiftOperator(
     return;
   }
 
-  computeKnownBits(I->getOperand(1), Known, Depth + 1, Q);
-
   // If the shift amount could be greater than or equal to the bit-width of the
   // LHS, the value could be poison, but bail out because the check below is
-  // expensive. TODO: Should we just carry on?
+  // expensive.
+  // TODO: Should we just carry on?
   if (Known.getMaxValue().uge(BitWidth)) {
     Known.resetAll();
     return;
@@ -1057,7 +1057,7 @@ static void computeKnownBitsFromShiftOperator(
       return;
   }
 
-  computeKnownBits(I->getOperand(0), Known2, Depth + 1, Q);
+  computeKnownBits(I->getOperand(0), DemandedElts, Known2, Depth + 1, Q);
 
   Known.Zero.setAllBits();
   Known.One.setAllBits();
@@ -1302,7 +1302,8 @@ static void computeKnownBitsFromOperator(const Operator *I,
       return KOResult;
     };
 
-    computeKnownBitsFromShiftOperator(I, Known, Known2, Depth, Q, KZF, KOF);
+    computeKnownBitsFromShiftOperator(I, DemandedElts, Known, Known2, Depth, Q,
+                                      KZF, KOF);
     break;
   }
   case Instruction::LShr: {
@@ -1318,7 +1319,8 @@ static void computeKnownBitsFromOperator(const Operator *I,
       return KnownOne.lshr(ShiftAmt);
     };
 
-    computeKnownBitsFromShiftOperator(I, Known, Known2, Depth, Q, KZF, KOF);
+    computeKnownBitsFromShiftOperator(I, DemandedElts, Known, Known2, Depth, Q,
+                                      KZF, KOF);
     break;
   }
   case Instruction::AShr: {
@@ -1331,7 +1333,8 @@ static void computeKnownBitsFromOperator(const Operator *I,
       return KnownOne.ashr(ShiftAmt);
     };
 
-    computeKnownBitsFromShiftOperator(I, Known, Known2, Depth, Q, KZF, KOF);
+    computeKnownBitsFromShiftOperator(I, DemandedElts, Known, Known2, Depth, Q,
+                                      KZF, KOF);
     break;
   }
   case Instruction::Sub: {
