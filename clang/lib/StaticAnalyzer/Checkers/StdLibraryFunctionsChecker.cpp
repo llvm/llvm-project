@@ -162,8 +162,6 @@ class StdLibraryFunctionsChecker
       case WithinRange:
         Tmp.Kind = OutOfRange;
         break;
-      default:
-        llvm_unreachable("Unknown RangeConstraint kind!");
       }
       return std::make_shared<RangeConstraint>(Tmp);
     }
