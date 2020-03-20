@@ -4,17 +4,11 @@
 ; Check that we don't crash on unreasonable constant indexes
 
 define i32 @test_out_of_bounds(i32 %a, i1 %x, i1 %y) {
-; EXPENSIVE-OFF-LABEL: @test_out_of_bounds(
-; EXPENSIVE-OFF-NEXT:  entry:
-; EXPENSIVE-OFF-NEXT:    [[AND1:%.*]] = and i32 [[A:%.*]], 3
-; EXPENSIVE-OFF-NEXT:    tail call void @llvm.assume(i1 undef)
-; EXPENSIVE-OFF-NEXT:    ret i32 [[AND1]]
-;
-; EXPENSIVE-ON-LABEL: @test_out_of_bounds(
-; EXPENSIVE-ON-NEXT:  entry:
-; EXPENSIVE-ON-NEXT:    [[AND1:%.*]] = and i32 [[A:%.*]], 3
-; EXPENSIVE-ON-NEXT:    tail call void @llvm.assume(i1 false)
-; EXPENSIVE-ON-NEXT:    ret i32 [[AND1]]
+; CHECK-LABEL: @test_out_of_bounds(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[A:%.*]], 3
+; CHECK-NEXT:    tail call void @llvm.assume(i1 undef)
+; CHECK-NEXT:    ret i32 [[AND1]]
 ;
 entry:
   %and1 = and i32 %a, 3
@@ -25,15 +19,10 @@ entry:
 }
 
 define i128 @test_non64bit(i128 %a) {
-; EXPENSIVE-OFF-LABEL: @test_non64bit(
-; EXPENSIVE-OFF-NEXT:    [[AND1:%.*]] = and i128 [[A:%.*]], 3
-; EXPENSIVE-OFF-NEXT:    tail call void @llvm.assume(i1 undef)
-; EXPENSIVE-OFF-NEXT:    ret i128 [[AND1]]
-;
-; EXPENSIVE-ON-LABEL: @test_non64bit(
-; EXPENSIVE-ON-NEXT:    [[AND1:%.*]] = and i128 [[A:%.*]], 3
-; EXPENSIVE-ON-NEXT:    tail call void @llvm.assume(i1 false)
-; EXPENSIVE-ON-NEXT:    ret i128 [[AND1]]
+; CHECK-LABEL: @test_non64bit(
+; CHECK-NEXT:    [[AND1:%.*]] = and i128 [[A:%.*]], 3
+; CHECK-NEXT:    tail call void @llvm.assume(i1 undef)
+; CHECK-NEXT:    ret i128 [[AND1]]
 ;
   %and1 = and i128 %a, 3
   %B = lshr i128 %and1, -1
