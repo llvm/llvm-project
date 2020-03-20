@@ -1445,6 +1445,33 @@ multiclass MVEBinaryVectorHoriz64R<dag subtract, dag exchange, string xsuffix> {
                                        "vrmlldavha">;
 }
 
+multiclass VADDV<bit acc, bit pred, string intbase, Type Scalar> {
+  defvar accArg = !if(acc, (args Scalar:$acc), (args));
+  defvar predArg = !if(pred, (args Predicate:$pred), (args));
+  defvar intrinsic = !if(pred,
+      IRInt<intbase # "_predicated", [Vector, Predicate]>,
+      IRInt<intbase, [Vector]>);
+  defvar intCG = !con((intrinsic $v, (unsignedflag Scalar)),
+                      !if(pred, (? $pred), (?)));
+  defvar accCG = !if(acc, (add intCG, $acc), intCG);
+
+  def "": Intrinsic<Scalar, !con(accArg, (args Vector:$v), predArg), accCG>;
+}
+
+let params = T.Int in {
+defm vaddvq    : VADDV<0, 0, "addv", Scalar32>;
+defm vaddvaq   : VADDV<1, 0, "addv", Scalar32>;
+defm vaddvq_p  : VADDV<0, 1, "addv", Scalar32>;
+defm vaddvaq_p : VADDV<1, 1, "addv", Scalar32>;
+}
+
+let params = [s32, u32] in {
+defm vaddlvq    : VADDV<0, 0, "addlv", Scalar64>;
+defm vaddlvaq   : VADDV<1, 0, "addlv", Scalar64>;
+defm vaddlvq_p  : VADDV<0, 1, "addlv", Scalar64>;
+defm vaddlvaq_p : VADDV<1, 1, "addlv", Scalar64>;
+}
+
 let params = T.Int in {
 def vabavq : Intrinsic<u32, (args u32:$a, Vector:$b, Vector:$c),
     (IRInt<"vabav", [Vector]> (unsignedflag Scalar), $a, $b, $c)>;
