@@ -12720,7 +12720,7 @@ bool Sema::buildOverloadedCallSet(Scope *S, Expr *Fn,
       // base classes.
       CallExpr *CE = CallExpr::Create(Context, Fn, Args, Context.DependentTy,
                                       VK_RValue, RParenLoc);
-      CE->addDependence(ExprDependence::TypeValueInstantiation);
+      CE->markDependentForPostponedNameLookup();
       *Result = CE;
       return true;
     }

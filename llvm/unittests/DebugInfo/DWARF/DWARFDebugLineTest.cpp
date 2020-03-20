@@ -1324,7 +1324,12 @@ TEST_F(DebugLineBasicFixture, PrintPathsProperly) {
   EXPECT_TRUE((*ExpectedLineTable)
                   ->Prologue.getFileNameByIndex(
                       1, CompDir,
-                      DILineInfoSpecifier::FileLineInfoKind::Default, Result));
+                      DILineInfoSpecifier::FileLineInfoKind::RawValue, Result));
+  EXPECT_TRUE((*ExpectedLineTable)
+                  ->Prologue.getFileNameByIndex(
+                      1, CompDir,
+                      DILineInfoSpecifier::FileLineInfoKind::BaseNameOnly,
+                      Result));
   EXPECT_STREQ(Result.c_str(), "b file");
   EXPECT_TRUE((*ExpectedLineTable)
                   ->Prologue.getFileNameByIndex(

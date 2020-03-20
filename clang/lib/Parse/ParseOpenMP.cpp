@@ -1843,6 +1843,7 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
   case OMPD_taskgroup:
   case OMPD_flush:
   case OMPD_depobj:
+  case OMPD_scan:
   case OMPD_for:
   case OMPD_for_simd:
   case OMPD_sections:
@@ -2066,6 +2067,7 @@ Parser::ParseOpenMPDeclarativeOrExecutableDirective(ParsedStmtContext StmtCtx) {
   }
   case OMPD_flush:
   case OMPD_depobj:
+  case OMPD_scan:
   case OMPD_taskyield:
   case OMPD_barrier:
   case OMPD_taskwait:
@@ -2342,7 +2344,7 @@ bool Parser::ParseOpenMPSimpleVarList(
 ///       from-clause | is_device_ptr-clause | task_reduction-clause |
 ///       in_reduction-clause | allocator-clause | allocate-clause |
 ///       acq_rel-clause | acquire-clause | release-clause | relaxed-clause |
-///       depobj-clause | destroy-clause | detach-clause
+///       depobj-clause | destroy-clause | detach-clause | inclusive-clause
 ///
 OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
                                      OpenMPClauseKind CKind, bool FirstClause) {
@@ -2511,6 +2513,7 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
   case OMPC_is_device_ptr:
   case OMPC_allocate:
   case OMPC_nontemporal:
+  case OMPC_inclusive:
     Clause = ParseOpenMPVarListClause(DKind, CKind, WrongDirective);
     break;
   case OMPC_device_type:
@@ -3235,8 +3238,8 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
 }
 
 /// Parsing of OpenMP clause 'private', 'firstprivate', 'lastprivate',
-/// 'shared', 'copyin', 'copyprivate', 'flush', 'reduction', 'task_reduction' or
-/// 'in_reduction'.
+/// 'shared', 'copyin', 'copyprivate', 'flush', 'reduction', 'task_reduction',
+/// 'in_reduction', 'nontemporal' or 'inclusive'.
 ///
 ///    private-clause:
 ///       'private' '(' list ')'
@@ -3276,6 +3279,10 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
 ///       'is_device_ptr' '(' list ')'
 ///    allocate-clause:
 ///       'allocate' '(' [ allocator ':' ] list ')'
+///    nontemporal-clause:
+///       'nontemporal' '(' list ')'
+///    inclusive-clause:
+///       'inclusive' '(' list ')'
 ///
 /// For 'linear' clause linear-list may have the following forms:
 ///  list

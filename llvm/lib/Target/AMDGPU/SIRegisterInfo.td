@@ -216,10 +216,15 @@ foreach Index = 0-105 in {
 
 // VGPR registers
 foreach Index = 0-255 in {
+  // Set a cost value for vgprs other than the argument registers (v0-v31).
+  // The ratio of index/allocation_granularity is taken as the cost value.
+  // Considered the allocation granularity as 4 here.
+  let CostPerUse=!if(!gt(Index, 31), !srl(Index, 2), 0) in {
   def VGPR#Index :
       SIReg <"v"#Index, Index>,
       DwarfRegNum<[!add(Index, 2560)]> {
     let HWEncoding{8} = 1;
+  }
   }
 }
 

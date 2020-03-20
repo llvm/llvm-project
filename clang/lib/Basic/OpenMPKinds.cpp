@@ -212,6 +212,7 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind,
   case OMPC_nontemporal:
   case OMPC_destroy:
   case OMPC_detach:
+  case OMPC_inclusive:
     break;
   }
   llvm_unreachable("Invalid OpenMP simple clause kind");
@@ -447,6 +448,7 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
   case OMPC_nontemporal:
   case OMPC_destroy:
   case OMPC_detach:
+  case OMPC_inclusive:
     break;
   }
   llvm_unreachable("Invalid OpenMP simple clause kind");
@@ -604,6 +606,18 @@ bool clang::isAllowedClauseForDirective(OpenMPDirectiveKind DKind,
 #include "clang/Basic/OpenMPKinds.def"
     case OMPC_depobj:
       return true;
+    default:
+      break;
+    }
+    break;
+  case OMPD_scan:
+    if (OpenMPVersion < 50)
+      return false;
+    switch (CKind) {
+#define OPENMP_SCAN_CLAUSE(Name)                                               \
+  case OMPC_##Name:                                                            \
+    return true;
+#include "clang/Basic/OpenMPKinds.def"
     default:
       break;
     }
@@ -1251,6 +1265,7 @@ void clang::getOpenMPCaptureRegions(
   case OMPD_cancel:
   case OMPD_flush:
   case OMPD_depobj:
+  case OMPD_scan:
   case OMPD_declare_reduction:
   case OMPD_declare_mapper:
   case OMPD_declare_simd:

@@ -575,6 +575,11 @@ multiclass SIMDReduce<SDNode op, string name, bits<32> baseInst> {
 // Integer vector negation
 def ivneg : PatFrag<(ops node:$in), (sub immAllZerosV, node:$in)>;
 
+// Integer absolute value: abs
+defm ABS : SIMDUnary<v16i8, "i8x16", abs, "abs", 225>;
+defm ABS : SIMDUnary<v8i16, "i16x8", abs, "abs", 226>;
+defm ABS : SIMDUnary<v4i32, "i32x4", abs, "abs", 227>;
+
 // Integer negation: neg
 defm NEG : SIMDUnaryInt<ivneg, "neg", 81>;
 
@@ -605,6 +610,18 @@ def : Pat<(i32 (seteq
           )),
           (i32 (!cast<NI>(reduction[1]#"_"#ty) (ty V128:$x)))>;
 }
+
+multiclass SIMDBitmask<ValueType vec_t, string vec, bits<32> simdop> {
+  defm _#vec_t : SIMD_I<(outs I32:$dst), (ins V128:$vec), (outs), (ins),
+                         [(set I32:$dst,
+                           (i32 (int_wasm_bitmask (vec_t V128:$vec)))
+                         )],
+                         vec#".bitmask\t$dst, $vec", vec#".bitmask", simdop>;
+}
+
+defm BITMASK : SIMDBitmask<v16i8, "i8x16", 228>;
+defm BITMASK : SIMDBitmask<v8i16, "i16x8", 229>;
+defm BITMASK : SIMDBitmask<v4i32, "i32x4", 230>;
 
 //===----------------------------------------------------------------------===//
 // Bit shifts

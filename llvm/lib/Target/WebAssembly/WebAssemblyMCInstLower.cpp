@@ -56,7 +56,8 @@ WebAssemblyMCInstLower::GetGlobalAddressSymbol(const MachineOperand &MO) const {
 
     SmallVector<MVT, 1> ResultMVTs;
     SmallVector<MVT, 4> ParamMVTs;
-    computeSignatureVTs(FuncTy, CurrentFunc, TM, ParamMVTs, ResultMVTs);
+    const auto *const F = dyn_cast<Function>(Global);
+    computeSignatureVTs(FuncTy, F, CurrentFunc, TM, ParamMVTs, ResultMVTs);
 
     auto Signature = signatureFromMVTs(ResultMVTs, ParamMVTs);
     WasmSym->setSignature(Signature.get());

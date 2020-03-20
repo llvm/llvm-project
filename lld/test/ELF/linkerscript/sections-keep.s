@@ -44,8 +44,8 @@
 # MIXED1-NEXT: Idx Name          Size
 # MIXED1-NEXT:   0               00000000
 # MIXED1-NEXT:   1 .keep         00000004
-# MIXED1-NEXT:   2 .temp         00000004 00000000000000ec
-# MIXED1-NEXT:   3 .text         00000007 00000000000000f0
+# MIXED1-NEXT:   2 .temp         00000004 0000000000000124
+# MIXED1-NEXT:   3 .text         00000007 0000000000000128
 # MIXED1-NEXT:   4 .comment      00000008 0000000000000000
 # MIXED1-NEXT:   5 .symtab       00000060 0000000000000000
 # MIXED1-NEXT:   6 .shstrtab     00000036 0000000000000000
@@ -64,9 +64,9 @@
 # MIXED2:      Sections:
 # MIXED2-NEXT: Idx Name          Size
 # MIXED2-NEXT:   0               00000000
-# MIXED2-NEXT:   1 .nokeep       00000004 00000000000000e8
-# MIXED2-NEXT:   2 .temp         00000004 00000000000000ec
-# MIXED2-NEXT:   3 .text         00000007 00000000000000f0
+# MIXED2-NEXT:   1 .nokeep       00000004 0000000000000120
+# MIXED2-NEXT:   2 .temp         00000004 0000000000000124
+# MIXED2-NEXT:   3 .text         00000007 0000000000000128
 # MIXED2-NEXT:   4 .comment      00000008 0000000000000000
 # MIXED2-NEXT:   5 .symtab       00000060 0000000000000000
 # MIXED2-NEXT:   6 .shstrtab     00000038 0000000000000000
@@ -80,7 +80,7 @@
 # RUN: ld.lld --gc-sections -o %t --script %t.script %t1.o %t.o
 # RUN: llvm-objdump -s %t | FileCheck --check-prefix=FILEMATCH %s
 # FILEMATCH:        Contents of section .keep:
-# FILEMATCH-NEXT:   00e8 41414141  AAAA
+# FILEMATCH-NEXT:   0120 41414141  AAAA
 
 .global _start
 _start:

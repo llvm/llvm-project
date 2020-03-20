@@ -3548,12 +3548,10 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
 
   // Rewrite the addressing register layout before doing anything else.
   if (IsA16) {
-#if 0
     // FIXME: this feature is missing from gfx10. When that is fixed, this check
     // should be introduced.
-    if (!ST.hasFeature(AMDGPU::FeatureR128A16))
+    if (!ST.hasR128A16() && !ST.hasGFX10A16())
       return false;
-#endif
 
     if (NumVAddrs > 1) {
       SmallVector<Register, 4> PackedRegs;

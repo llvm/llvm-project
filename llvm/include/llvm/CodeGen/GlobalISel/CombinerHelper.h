@@ -194,6 +194,13 @@ public:
   /// G_IMPLICIT_DEF.
   bool matchAnyExplicitUseIsUndef(MachineInstr &MI);
 
+  /// Return true if all register explicit use operands on \p MI are defined by
+  /// a G_IMPLICIT_DEF.
+  bool matchAllExplicitUsesAreUndef(MachineInstr &MI);
+
+  /// Return true if a G_SHUFFLE_VECTOR instruction \p MI has an undef mask.
+  bool matchUndefShuffleVectorMask(MachineInstr &MI);
+
   /// Replace an instruction with a G_FCONSTANT with value \p C.
   bool replaceInstWithFConstant(MachineInstr &MI, double C);
 

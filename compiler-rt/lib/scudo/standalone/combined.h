@@ -260,8 +260,8 @@ public:
     }
     DCHECK_LE(Size, NeededSize);
 
-    void *Block;
-    uptr ClassId;
+    void *Block = nullptr;
+    uptr ClassId = 0;
     uptr SecondaryBlockEnd;
     if (LIKELY(PrimaryT::canAllocate(NeededSize))) {
       ClassId = SizeClassMap::getClassIdBySize(NeededSize);
@@ -273,20 +273,19 @@ public:
       // is the region being full. In that event, retry once using the
       // immediately larger class (except if the failing class was already the
       // largest). This will waste some memory but will allow the application to
-      // not fail.
-      if (SCUDO_ANDROID) {
-        if (UNLIKELY(!Block)) {
-          if (ClassId < SizeClassMap::LargestClassId)
-            Block = TSD->Cache.allocate(++ClassId);
-        }
+      // not fail. If dealing with the largest class, fallback to the Secondary.
+      if (UNLIKELY(!Block)) {
+        if (ClassId < SizeClassMap::LargestClassId)
+          Block = TSD->Cache.allocate(++ClassId);
+        else
+          ClassId = 0;
       }
       if (UnlockRequired)
         TSD->unlock();
-    } else {
-      ClassId = 0;
+    }
+    if (UNLIKELY(ClassId == 0))
       Block = Secondary.allocate(NeededSize, Alignment, &SecondaryBlockEnd,
                                  ZeroContents);
-    }
 
     if (UNLIKELY(!Block)) {
       if (Options.MayReturnNull)

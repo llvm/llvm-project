@@ -798,14 +798,6 @@ def int_arm_mve_pred_v2i : Intrinsic<
 def int_arm_mve_vreinterpretq : Intrinsic<
   [llvm_anyvector_ty], [llvm_anyvector_ty], [IntrNoMem]>;
 
-multiclass IntrinsicSignSuffix<list<LLVMType> rets, list<LLVMType> params = [],
-                                    list<IntrinsicProperty> props = [],
-                                    string name = "",
-                                    list<SDNodeProperty> sdprops = []> {
-  def _s: Intrinsic<rets, params, props, name, sdprops>;
-  def _u: Intrinsic<rets, params, props, name, sdprops>;
-}
-
 def int_arm_mve_min_predicated: Intrinsic<[llvm_anyvector_ty],
    [LLVMMatchType<0>, LLVMMatchType<0>, llvm_i32_ty /* unsigned */,
     llvm_anyvector_ty, LLVMMatchType<0>],
@@ -891,11 +883,6 @@ def int_arm_mve_vmaxnma_predicated: Intrinsic<[llvm_anyvector_ty],
    [LLVMMatchType<0>, LLVMMatchType<0>, llvm_anyvector_ty],
     [IntrNoMem]>;
 
-defm int_arm_mve_minv: IntrinsicSignSuffix<[llvm_i32_ty],
-   [llvm_i32_ty, llvm_anyvector_ty], [IntrNoMem]>;
-defm int_arm_mve_maxv: IntrinsicSignSuffix<[llvm_i32_ty],
-   [llvm_i32_ty, llvm_anyvector_ty], [IntrNoMem]>;
-
 multiclass MVEPredicated<list<LLVMType> rets, list<LLVMType> params,
                          LLVMType pred = llvm_anyvector_ty,
                          list<IntrinsicProperty> props = [IntrNoMem]> {
@@ -910,6 +897,24 @@ multiclass MVEPredicatedM<list<LLVMType> rets, list<LLVMType> params,
       !if(!eq(!cast<string>(rets[0]), "llvm_anyvector_ty"),
           LLVMMatchType<0>, rets[0])], props>;
 }
+
+multiclass MVE_minmaxv {
+  defm v: MVEPredicated<[llvm_i32_ty],
+     [llvm_i32_ty, llvm_anyvector_ty, llvm_i32_ty /* unsigned */]>;
+  defm av: MVEPredicated<[llvm_i32_ty],
+     [llvm_i32_ty, llvm_anyvector_ty]>;
+  defm nmv: MVEPredicated<[llvm_anyfloat_ty],
+     [LLVMMatchType<0>, llvm_anyvector_ty]>;
+  defm nmav: MVEPredicated<[llvm_anyfloat_ty],
+     [LLVMMatchType<0>, llvm_anyvector_ty]>;
+}
+defm int_arm_mve_min: MVE_minmaxv;
+defm int_arm_mve_max: MVE_minmaxv;
+
+defm int_arm_mve_addv: MVEPredicated<[llvm_i32_ty],
+   [llvm_anyvector_ty, llvm_i32_ty /* unsigned */]>;
+defm int_arm_mve_addlv: MVEPredicated<[llvm_i64_ty],
+   [llvm_anyvector_ty, llvm_i32_ty /* unsigned */]>;
 
 // Intrinsic with a predicated and a non-predicated case. The predicated case
 // has two additional parameters: inactive (the value for inactive lanes, can
@@ -1275,9 +1280,62 @@ defm int_arm_mve_vqdmlad: MVEPredicated<[llvm_anyvector_ty],
 
 // CDE (Custom Datapath Extension)
 
-def int_arm_cde_cx1: Intrinsic<
-  [llvm_i32_ty],
-  [llvm_i32_ty /* coproc */, llvm_i32_ty /* imm */],
-  [IntrNoMem, ImmArg<0>, ImmArg<1>]>;
+multiclass CDEGPRIntrinsics<list<LLVMType> args> {
+  def "" : Intrinsic<
+    [llvm_i32_ty],
+    !listconcat([llvm_i32_ty /* coproc */], args, [llvm_i32_ty /* imm */]),
+    [IntrNoMem, ImmArg<0>, ImmArg<!add(!size(args), 1)>]>;
+  def a : Intrinsic<
+    [llvm_i32_ty],
+    !listconcat([llvm_i32_ty /* coproc */, llvm_i32_ty /* acc */], args,
+                [llvm_i32_ty /* imm */]),
+    [IntrNoMem, ImmArg<0>, ImmArg<!add(!size(args), 2)>]>;
+
+  def d: Intrinsic<
+    [llvm_i32_ty /* lo */, llvm_i32_ty /* hi */],
+    !listconcat([llvm_i32_ty /* coproc */], args, [llvm_i32_ty /* imm */]),
+    [IntrNoMem, ImmArg<0>, ImmArg<!add(!size(args), 1)>]>;
+  def da: Intrinsic<
+    [llvm_i32_ty /* lo */, llvm_i32_ty /* hi */],
+    !listconcat([llvm_i32_ty /* coproc */, llvm_i32_ty /* acc_lo */,
+                 llvm_i32_ty /* acc_hi */], args, [llvm_i32_ty /* imm */]),
+    [IntrNoMem, ImmArg<0>, ImmArg<!add(!size(args), 3)>]>;
+}
+
+defm int_arm_cde_cx1: CDEGPRIntrinsics<[]>;
+defm int_arm_cde_cx2: CDEGPRIntrinsics<[llvm_i32_ty]>;
+defm int_arm_cde_cx3: CDEGPRIntrinsics<[llvm_i32_ty, llvm_i32_ty]>;
+
+multiclass CDEVCXIntrinsics<list<LLVMType> args> {
+  def "" : Intrinsic<
+    [llvm_anyfloat_ty],
+    !listconcat([llvm_i32_ty /* coproc */], args, [llvm_i32_ty /* imm */]),
+    [IntrNoMem, ImmArg<0>, ImmArg<!add(!size(args), 1)>]>;
+  def a : Intrinsic<
+    [llvm_anyfloat_ty],
+    !listconcat([llvm_i32_ty /* coproc */,  LLVMMatchType<0> /* acc */],
+                args, [llvm_i32_ty /* imm */]),
+    [IntrNoMem, ImmArg<0>, ImmArg<!add(!size(args), 2)>]>;
+}
+
+defm int_arm_cde_vcx1 : CDEVCXIntrinsics<[]>;
+defm int_arm_cde_vcx2 : CDEVCXIntrinsics<[LLVMMatchType<0>]>;
+defm int_arm_cde_vcx3 : CDEVCXIntrinsics<[LLVMMatchType<0>, LLVMMatchType<0>]>;
+
+multiclass CDEVCXVecIntrinsics<list<LLVMType> args> {
+  def "" : Intrinsic<
+    [llvm_v16i8_ty],
+    !listconcat([llvm_i32_ty /* coproc */], args, [llvm_i32_ty /* imm */]),
+    [IntrNoMem, ImmArg<0>, ImmArg<!add(!size(args), 1)>]>;
+  def a : Intrinsic<
+    [llvm_v16i8_ty],
+    !listconcat([llvm_i32_ty /* coproc */, llvm_v16i8_ty /* acc */],
+                args, [llvm_i32_ty /* imm */]),
+    [IntrNoMem, ImmArg<0>, ImmArg<!add(!size(args), 2)>]>;
+}
+
+defm int_arm_cde_vcx1q : CDEVCXVecIntrinsics<[]>;
+defm int_arm_cde_vcx2q : CDEVCXVecIntrinsics<[llvm_v16i8_ty]>;
+defm int_arm_cde_vcx3q : CDEVCXVecIntrinsics<[llvm_v16i8_ty, llvm_v16i8_ty]>;
 
 } // end TargetPrefix

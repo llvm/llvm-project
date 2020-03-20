@@ -1951,7 +1951,7 @@ static void reservePrivateMemoryRegs(const TargetMachine &TM,
   // finalized, because it does not rely on the known stack size, only
   // properties like whether variable sized objects are present.
   if (ST.getFrameLowering()->hasFP(MF)) {
-    Info.setFrameOffsetReg(AMDGPU::SGPR34);
+    Info.setFrameOffsetReg(AMDGPU::SGPR33);
   }
 }
 
@@ -6022,6 +6022,9 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                                 DAG.getConstant(1, SL, MVT::i32));
     return DAG.getSetCC(SL, MVT::i1, SrcHi, Aperture, ISD::SETEQ);
   }
+  case Intrinsic::amdgcn_alignbit:
+    return DAG.getNode(ISD::FSHR, DL, VT,
+                       Op.getOperand(1), Op.getOperand(2), Op.getOperand(3));
   default:
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
             AMDGPU::getImageDimIntrinsicInfo(IntrinsicID))

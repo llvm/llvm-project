@@ -536,11 +536,42 @@ let params = T.Float in {
                                     (IRInt<"vmaxnma_predicated", [Vector,Predicate]> $a, $b, $pred)>;
 }
 
+multiclass Reduction<Type Accumulator, string basename, list<Type> basetypes,
+                     bit needSign = 0,
+                     dag postCG = (seq (id $ret)),
+                     dag accArg = (args Accumulator:$prev),
+                     dag preCG = (seq)> {
+  defvar intArgsBase   = (? $prev, $vec);
+  defvar intArgsUnpred = !con(intArgsBase,
+                              !if(needSign, (? (unsignedflag Scalar)), (?)));
+  defvar intArgsPred   = !con(intArgsUnpred, (? $pred));
+  defvar intUnpred     = !setop(intArgsUnpred, IRInt<basename, basetypes>);
+  defvar intPred       = !setop(intArgsPred, IRInt<
+            basename#"_predicated", !listconcat(basetypes, [Predicate])>);
+
+  def "": Intrinsic<
+    Accumulator, !con(accArg, (args Vector:$vec)),
+    !con(preCG, (seq intUnpred:$ret), postCG)>;
+  def _p: Intrinsic<
+    Accumulator, !con(accArg, (args Vector:$vec, Predicate:$pred)),
+    !con(preCG, (seq intPred:$ret), postCG)>;
+}
+
 let params = T.Int in {
-def vminvq: Intrinsic<Scalar, (args Scalar:$prev, Vector:$vec),
-    (Scalar (IRInt<"minv", [Vector], 1> $prev, $vec))>;
-def vmaxvq: Intrinsic<Scalar, (args Scalar:$prev, Vector:$vec),
-    (Scalar (IRInt<"maxv", [Vector], 1> $prev, $vec))>;
+defm vminvq: Reduction<Scalar, "minv", [Vector], 1, (seq (Scalar $ret))>;
+defm vmaxvq: Reduction<Scalar, "maxv", [Vector], 1, (seq (Scalar $ret))>;
+}
+
+let params = T.Signed in {
+defm vminavq: Reduction<UScalar, "minav", [Vector], 0, (seq (UScalar $ret))>;
+defm vmaxavq: Reduction<UScalar, "maxav", [Vector], 0, (seq (UScalar $ret))>;
+}
+
+let params = T.Float in {
+defm vminnmvq: Reduction<Scalar, "minnmv", [Scalar, Vector]>;
+defm vmaxnmvq: Reduction<Scalar, "maxnmv", [Scalar, Vector]>;
+defm vminnmavq: Reduction<Scalar, "minnmav", [Scalar, Vector]>;
+defm vmaxnmavq: Reduction<Scalar, "maxnmav", [Scalar, Vector]>;
 }
 
 foreach half = [ "b", "t" ] in {
@@ -1412,6 +1443,33 @@ multiclass MVEBinaryVectorHoriz64<dag subtract, dag exchange, string xsuffix> {
 multiclass MVEBinaryVectorHoriz64R<dag subtract, dag exchange, string xsuffix> {
   defm "" : MVEBinaryVectorHoriz64Base<subtract, exchange, xsuffix,
                                        "vrmlldavha">;
+}
+
+multiclass VADDV<bit acc, bit pred, string intbase, Type Scalar> {
+  defvar accArg = !if(acc, (args Scalar:$acc), (args));
+  defvar predArg = !if(pred, (args Predicate:$pred), (args));
+  defvar intrinsic = !if(pred,
+      IRInt<intbase # "_predicated", [Vector, Predicate]>,
+      IRInt<intbase, [Vector]>);
+  defvar intCG = !con((intrinsic $v, (unsignedflag Scalar)),
+                      !if(pred, (? $pred), (?)));
+  defvar accCG = !if(acc, (add intCG, $acc), intCG);
+
+  def "": Intrinsic<Scalar, !con(accArg, (args Vector:$v), predArg), accCG>;
+}
+
+let params = T.Int in {
+defm vaddvq    : VADDV<0, 0, "addv", Scalar32>;
+defm vaddvaq   : VADDV<1, 0, "addv", Scalar32>;
+defm vaddvq_p  : VADDV<0, 1, "addv", Scalar32>;
+defm vaddvaq_p : VADDV<1, 1, "addv", Scalar32>;
+}
+
+let params = [s32, u32] in {
+defm vaddlvq    : VADDV<0, 0, "addlv", Scalar64>;
+defm vaddlvaq   : VADDV<1, 0, "addlv", Scalar64>;
+defm vaddlvq_p  : VADDV<0, 1, "addlv", Scalar64>;
+defm vaddlvaq_p : VADDV<1, 1, "addlv", Scalar64>;
 }
 
 let params = T.Int in {

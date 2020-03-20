@@ -215,6 +215,18 @@ void llvm::computeKnownBits(const Value *V, KnownBits &Known,
                      Query(DL, AC, safeCxtI(V, CxtI), DT, UseInstrInfo, ORE));
 }
 
+void llvm::computeKnownBits(const Value *V, const APInt &DemandedElts,
+                            KnownBits &Known, const DataLayout &DL,
+                            unsigned Depth, AssumptionCache *AC,
+                            const Instruction *CxtI, const DominatorTree *DT,
+                            OptimizationRemarkEmitter *ORE, bool UseInstrInfo) {
+  ::computeKnownBits(V, DemandedElts, Known, Depth,
+                     Query(DL, AC, safeCxtI(V, CxtI), DT, UseInstrInfo, ORE));
+}
+
+static KnownBits computeKnownBits(const Value *V, const APInt &DemandedElts,
+                                  unsigned Depth, const Query &Q);
+
 static KnownBits computeKnownBits(const Value *V, unsigned Depth,
                                   const Query &Q);
 
@@ -226,6 +238,17 @@ KnownBits llvm::computeKnownBits(const Value *V, const DataLayout &DL,
                                  bool UseInstrInfo) {
   return ::computeKnownBits(
       V, Depth, Query(DL, AC, safeCxtI(V, CxtI), DT, UseInstrInfo, ORE));
+}
+
+KnownBits llvm::computeKnownBits(const Value *V, const APInt &DemandedElts,
+                                 const DataLayout &DL, unsigned Depth,
+                                 AssumptionCache *AC, const Instruction *CxtI,
+                                 const DominatorTree *DT,
+                                 OptimizationRemarkEmitter *ORE,
+                                 bool UseInstrInfo) {
+  return ::computeKnownBits(
+      V, DemandedElts, Depth,
+      Query(DL, AC, safeCxtI(V, CxtI), DT, UseInstrInfo, ORE));
 }
 
 bool llvm::haveNoCommonBitsSet(const Value *LHS, const Value *RHS,
@@ -274,6 +297,9 @@ bool llvm::isKnownToBeAPowerOfTwo(const Value *V, const DataLayout &DL,
   return ::isKnownToBeAPowerOfTwo(
       V, OrZero, Depth, Query(DL, AC, safeCxtI(V, CxtI), DT, UseInstrInfo));
 }
+
+static bool isKnownNonZero(const Value *V, const APInt &DemandedElts,
+                           unsigned Depth, const Query &Q);
 
 static bool isKnownNonZero(const Value *V, unsigned Depth, const Query &Q);
 
@@ -1003,16 +1029,17 @@ static void computeKnownBitsFromAssume(const Value *V, KnownBits &Known,
 /// amount. The results from calling KZF and KOF are conservatively combined for
 /// all permitted shift amounts.
 static void computeKnownBitsFromShiftOperator(
-    const Operator *I, KnownBits &Known, KnownBits &Known2,
-    unsigned Depth, const Query &Q,
+    const Operator *I, const APInt &DemandedElts, KnownBits &Known,
+    KnownBits &Known2, unsigned Depth, const Query &Q,
     function_ref<APInt(const APInt &, unsigned)> KZF,
     function_ref<APInt(const APInt &, unsigned)> KOF) {
   unsigned BitWidth = Known.getBitWidth();
 
-  if (auto *SA = dyn_cast<ConstantInt>(I->getOperand(1))) {
-    unsigned ShiftAmt = SA->getLimitedValue(BitWidth-1);
+  computeKnownBits(I->getOperand(1), DemandedElts, Known, Depth + 1, Q);
+  if (Known.isConstant()) {
+    unsigned ShiftAmt = Known.getConstant().getLimitedValue(BitWidth - 1);
 
-    computeKnownBits(I->getOperand(0), Known, Depth + 1, Q);
+    computeKnownBits(I->getOperand(0), DemandedElts, Known, Depth + 1, Q);
     Known.Zero = KZF(Known.Zero, ShiftAmt);
     Known.One  = KOF(Known.One, ShiftAmt);
     // If the known bits conflict, this must be an overflowing left shift, so
@@ -1024,11 +1051,10 @@ static void computeKnownBitsFromShiftOperator(
     return;
   }
 
-  computeKnownBits(I->getOperand(1), Known, Depth + 1, Q);
-
   // If the shift amount could be greater than or equal to the bit-width of the
   // LHS, the value could be poison, but bail out because the check below is
-  // expensive. TODO: Should we just carry on?
+  // expensive.
+  // TODO: Should we just carry on?
   if (Known.getMaxValue().uge(BitWidth)) {
     Known.resetAll();
     return;
@@ -1052,12 +1078,13 @@ static void computeKnownBitsFromShiftOperator(
   // Early exit if we can't constrain any well-defined shift amount.
   if (!(ShiftAmtKZ & (PowerOf2Ceil(BitWidth) - 1)) &&
       !(ShiftAmtKO & (PowerOf2Ceil(BitWidth) - 1))) {
-    ShifterOperandIsNonZero = isKnownNonZero(I->getOperand(1), Depth + 1, Q);
+    ShifterOperandIsNonZero =
+        isKnownNonZero(I->getOperand(1), DemandedElts, Depth + 1, Q);
     if (!*ShifterOperandIsNonZero)
       return;
   }
 
-  computeKnownBits(I->getOperand(0), Known2, Depth + 1, Q);
+  computeKnownBits(I->getOperand(0), DemandedElts, Known2, Depth + 1, Q);
 
   Known.Zero.setAllBits();
   Known.One.setAllBits();
@@ -1074,7 +1101,7 @@ static void computeKnownBitsFromShiftOperator(
     if (ShiftAmt == 0) {
       if (!ShifterOperandIsNonZero.hasValue())
         ShifterOperandIsNonZero =
-            isKnownNonZero(I->getOperand(1), Depth + 1, Q);
+            isKnownNonZero(I->getOperand(1), DemandedElts, Depth + 1, Q);
       if (*ShifterOperandIsNonZero)
         continue;
     }
@@ -1302,7 +1329,8 @@ static void computeKnownBitsFromOperator(const Operator *I,
       return KOResult;
     };
 
-    computeKnownBitsFromShiftOperator(I, Known, Known2, Depth, Q, KZF, KOF);
+    computeKnownBitsFromShiftOperator(I, DemandedElts, Known, Known2, Depth, Q,
+                                      KZF, KOF);
     break;
   }
   case Instruction::LShr: {
@@ -1318,7 +1346,8 @@ static void computeKnownBitsFromOperator(const Operator *I,
       return KnownOne.lshr(ShiftAmt);
     };
 
-    computeKnownBitsFromShiftOperator(I, Known, Known2, Depth, Q, KZF, KOF);
+    computeKnownBitsFromShiftOperator(I, DemandedElts, Known, Known2, Depth, Q,
+                                      KZF, KOF);
     break;
   }
   case Instruction::AShr: {
@@ -1331,7 +1360,8 @@ static void computeKnownBitsFromOperator(const Operator *I,
       return KnownOne.ashr(ShiftAmt);
     };
 
-    computeKnownBitsFromShiftOperator(I, Known, Known2, Depth, Q, KZF, KOF);
+    computeKnownBitsFromShiftOperator(I, DemandedElts, Known, Known2, Depth, Q,
+                                      KZF, KOF);
     break;
   }
   case Instruction::Sub: {
@@ -1810,6 +1840,15 @@ static void computeKnownBitsFromOperator(const Operator *I,
 
 /// Determine which bits of V are known to be either zero or one and return
 /// them.
+KnownBits computeKnownBits(const Value *V, const APInt &DemandedElts,
+                           unsigned Depth, const Query &Q) {
+  KnownBits Known(getBitWidth(V->getType(), Q.DL));
+  computeKnownBits(V, DemandedElts, Known, Depth, Q);
+  return Known;
+}
+
+/// Determine which bits of V are known to be either zero or one and return
+/// them.
 KnownBits computeKnownBits(const Value *V, unsigned Depth, const Query &Q) {
   KnownBits Known(getBitWidth(V->getType(), Q.DL));
   computeKnownBits(V, Known, Depth, Q);
@@ -2220,12 +2259,13 @@ static bool rangeMetadataExcludesValue(const MDNode* Ranges, const APInt& Value)
 }
 
 /// Return true if the given value is known to be non-zero when defined. For
-/// vectors, return true if every element is known to be non-zero when
+/// vectors, return true if every demanded element is known to be non-zero when
 /// defined. For pointers, if the context instruction and dominator tree are
 /// specified, perform context-sensitive analysis and return true if the
 /// pointer couldn't possibly be null at the specified instruction.
 /// Supports values with integer or pointer type and vectors of integers.
-bool isKnownNonZero(const Value *V, unsigned Depth, const Query &Q) {
+bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
+                    const Query &Q) {
   if (auto *C = dyn_cast<Constant>(V)) {
     if (C->isNullValue())
       return false;
@@ -2246,6 +2286,8 @@ bool isKnownNonZero(const Value *V, unsigned Depth, const Query &Q) {
     // non-zero to determine that the whole vector is known non-zero.
     if (auto *VecTy = dyn_cast<VectorType>(C->getType())) {
       for (unsigned i = 0, e = VecTy->getNumElements(); i != e; ++i) {
+        if (!DemandedElts[i])
+          continue;
         Constant *Elt = C->getAggregateElement(i);
         if (!Elt || Elt->isNullValue())
           return false;
@@ -2346,7 +2388,8 @@ bool isKnownNonZero(const Value *V, unsigned Depth, const Query &Q) {
   // X | Y != 0 if X != 0 or Y != 0.
   Value *X = nullptr, *Y = nullptr;
   if (match(V, m_Or(m_Value(X), m_Value(Y))))
-    return isKnownNonZero(X, Depth, Q) || isKnownNonZero(Y, Depth, Q);
+    return isKnownNonZero(X, DemandedElts, Depth, Q) ||
+           isKnownNonZero(Y, DemandedElts, Depth, Q);
 
   // ext X != 0 if X != 0.
   if (isa<SExtInst>(V) || isa<ZExtInst>(V))
@@ -2361,7 +2404,7 @@ bool isKnownNonZero(const Value *V, unsigned Depth, const Query &Q) {
       return isKnownNonZero(X, Depth, Q);
 
     KnownBits Known(BitWidth);
-    computeKnownBits(X, Known, Depth, Q);
+    computeKnownBits(X, DemandedElts, Known, Depth, Q);
     if (Known.One[0])
       return true;
   }
@@ -2373,7 +2416,7 @@ bool isKnownNonZero(const Value *V, unsigned Depth, const Query &Q) {
     if (BO->isExact())
       return isKnownNonZero(X, Depth, Q);
 
-    KnownBits Known = computeKnownBits(X, Depth, Q);
+    KnownBits Known = computeKnownBits(X, DemandedElts, Depth, Q);
     if (Known.isNegative())
       return true;
 
@@ -2387,22 +2430,23 @@ bool isKnownNonZero(const Value *V, unsigned Depth, const Query &Q) {
         return true;
       // Are all the bits to be shifted out known zero?
       if (Known.countMinTrailingZeros() >= ShiftVal)
-        return isKnownNonZero(X, Depth, Q);
+        return isKnownNonZero(X, DemandedElts, Depth, Q);
     }
   }
   // div exact can only produce a zero if the dividend is zero.
   else if (match(V, m_Exact(m_IDiv(m_Value(X), m_Value())))) {
-    return isKnownNonZero(X, Depth, Q);
+    return isKnownNonZero(X, DemandedElts, Depth, Q);
   }
   // X + Y.
   else if (match(V, m_Add(m_Value(X), m_Value(Y)))) {
-    KnownBits XKnown = computeKnownBits(X, Depth, Q);
-    KnownBits YKnown = computeKnownBits(Y, Depth, Q);
+    KnownBits XKnown = computeKnownBits(X, DemandedElts, Depth, Q);
+    KnownBits YKnown = computeKnownBits(Y, DemandedElts, Depth, Q);
 
     // If X and Y are both non-negative (as signed values) then their sum is not
     // zero unless both X and Y are zero.
     if (XKnown.isNonNegative() && YKnown.isNonNegative())
-      if (isKnownNonZero(X, Depth, Q) || isKnownNonZero(Y, Depth, Q))
+      if (isKnownNonZero(X, DemandedElts, Depth, Q) ||
+          isKnownNonZero(Y, DemandedElts, Depth, Q))
         return true;
 
     // If X and Y are both negative (as signed values) then their sum is not
@@ -2433,13 +2477,14 @@ bool isKnownNonZero(const Value *V, unsigned Depth, const Query &Q) {
     // If X and Y are non-zero then so is X * Y as long as the multiplication
     // does not overflow.
     if ((Q.IIQ.hasNoSignedWrap(BO) || Q.IIQ.hasNoUnsignedWrap(BO)) &&
-        isKnownNonZero(X, Depth, Q) && isKnownNonZero(Y, Depth, Q))
+        isKnownNonZero(X, DemandedElts, Depth, Q) &&
+        isKnownNonZero(Y, DemandedElts, Depth, Q))
       return true;
   }
   // (C ? X : Y) != 0 if X != 0 and Y != 0.
   else if (const SelectInst *SI = dyn_cast<SelectInst>(V)) {
-    if (isKnownNonZero(SI->getTrueValue(), Depth, Q) &&
-        isKnownNonZero(SI->getFalseValue(), Depth, Q))
+    if (isKnownNonZero(SI->getTrueValue(), DemandedElts, Depth, Q) &&
+        isKnownNonZero(SI->getFalseValue(), DemandedElts, Depth, Q))
       return true;
   }
   // PHI
@@ -2469,10 +2514,29 @@ bool isKnownNonZero(const Value *V, unsigned Depth, const Query &Q) {
     if (AllNonZeroConstants)
       return true;
   }
+  // ExtractElement
+  else if (const auto *EEI = dyn_cast<ExtractElementInst>(V)) {
+    const Value *Vec = EEI->getVectorOperand();
+    const Value *Idx = EEI->getIndexOperand();
+    auto *CIdx = dyn_cast<ConstantInt>(Idx);
+    unsigned NumElts = Vec->getType()->getVectorNumElements();
+    APInt DemandedVecElts = APInt::getAllOnesValue(NumElts);
+    if (CIdx && CIdx->getValue().ult(NumElts))
+      DemandedVecElts = APInt::getOneBitSet(NumElts, CIdx->getZExtValue());
+    return isKnownNonZero(Vec, DemandedVecElts, Depth, Q);
+  }
 
   KnownBits Known(BitWidth);
-  computeKnownBits(V, Known, Depth, Q);
+  computeKnownBits(V, DemandedElts, Known, Depth, Q);
   return Known.One != 0;
+}
+
+bool isKnownNonZero(const Value* V, unsigned Depth, const Query& Q) {
+  Type *Ty = V->getType();
+  APInt DemandedElts = Ty->isVectorTy()
+                           ? APInt::getAllOnesValue(Ty->getVectorNumElements())
+                           : APInt(1, 1);
+  return isKnownNonZero(V, DemandedElts, Depth, Q);
 }
 
 /// Return true if V2 == V1 + X, where X is known non-zero.

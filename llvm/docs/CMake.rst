@@ -631,6 +631,14 @@ LLVM-specific variables
   If enabled, the Z3 constraint solver is activated for the Clang static analyzer.
   A recent version of the z3 library needs to be available on the system.
 
+**LLVM_USE_RELATIVE_PATHS_IN_DEBUG_INFO**:BOOL
+  Rewrite absolute source paths in debug info to relative ones. The source prefix
+  can be adjusted via the LLVM_SOURCE_PREFIX variable.
+
+**LLVM_USE_RELATIVE_PATHS_IN_FILES**:BOOL
+  Rewrite absolute source paths in sources and debug info to relative ones. The
+  source prefix can be adjusted via the LLVM_SOURCE_PREFIX variable.
+
 CMake Caches
 ============
 

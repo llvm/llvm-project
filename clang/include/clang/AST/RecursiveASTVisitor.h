@@ -2852,6 +2852,9 @@ DEF_TRAVERSE_STMT(OMPFlushDirective,
 DEF_TRAVERSE_STMT(OMPDepobjDirective,
                   { TRY_TO(TraverseOMPExecutableDirective(S)); })
 
+DEF_TRAVERSE_STMT(OMPScanDirective,
+                  { TRY_TO(TraverseOMPExecutableDirective(S)); })
+
 DEF_TRAVERSE_STMT(OMPOrderedDirective,
                   { TRY_TO(TraverseOMPExecutableDirective(S)); })
 
@@ -3177,6 +3180,13 @@ bool RecursiveASTVisitor<Derived>::VisitOMPClauseList(T *Node) {
   for (auto *E : Node->varlists()) {
     TRY_TO(TraverseStmt(E));
   }
+  return true;
+}
+
+template <typename Derived>
+bool RecursiveASTVisitor<Derived>::VisitOMPInclusiveClause(
+    OMPInclusiveClause *C) {
+  TRY_TO(VisitOMPClauseList(C));
   return true;
 }
 

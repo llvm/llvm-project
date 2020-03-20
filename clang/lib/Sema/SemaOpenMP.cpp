@@ -3858,6 +3858,7 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
   case OMPD_cancel:
   case OMPD_flush:
   case OMPD_depobj:
+  case OMPD_scan:
   case OMPD_declare_reduction:
   case OMPD_declare_mapper:
   case OMPD_declare_simd:
@@ -4202,12 +4203,14 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
       ShouldBeInParallelRegion,
       ShouldBeInOrderedRegion,
       ShouldBeInTargetRegion,
-      ShouldBeInTeamsRegion
+      ShouldBeInTeamsRegion,
+      ShouldBeInLoopSimdRegion,
     } Recommend = NoRecommend;
     if (isOpenMPSimdDirective(ParentRegion) &&
         ((SemaRef.LangOpts.OpenMP <= 45 && CurrentRegion != OMPD_ordered) ||
          (SemaRef.LangOpts.OpenMP >= 50 && CurrentRegion != OMPD_ordered &&
-          CurrentRegion != OMPD_simd && CurrentRegion != OMPD_atomic))) {
+          CurrentRegion != OMPD_simd && CurrentRegion != OMPD_atomic &&
+          CurrentRegion != OMPD_scan))) {
       // OpenMP [2.16, Nesting of Regions]
       // OpenMP constructs may not be nested inside a simd region.
       // OpenMP [2.8.1,simd Construct, Restrictions]
@@ -4366,6 +4369,16 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
            ParentRegion != OMPD_target);
       OrphanSeen = ParentRegion == OMPD_unknown;
       Recommend = ShouldBeInTargetRegion;
+    } else if (CurrentRegion == OMPD_scan) {
+      // OpenMP [2.16, Nesting of Regions]
+      // If specified, a teams construct must be contained within a target
+      // construct.
+      NestingProhibited =
+          SemaRef.LangOpts.OpenMP < 50 ||
+          (ParentRegion != OMPD_simd && ParentRegion != OMPD_for &&
+           ParentRegion != OMPD_for_simd);
+      OrphanSeen = ParentRegion == OMPD_unknown;
+      Recommend = ShouldBeInLoopSimdRegion;
     }
     if (!NestingProhibited &&
         !isOpenMPTargetExecutionDirective(CurrentRegion) &&
@@ -4874,6 +4887,11 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
            "No associated statement allowed for 'omp depobj' directive");
     Res = ActOnOpenMPDepobjDirective(ClausesWithImplicit, StartLoc, EndLoc);
     break;
+  case OMPD_scan:
+    assert(AStmt == nullptr &&
+           "No associated statement allowed for 'omp scan' directive");
+    Res = ActOnOpenMPScanDirective(ClausesWithImplicit, StartLoc, EndLoc);
+    break;
   case OMPD_ordered:
     Res = ActOnOpenMPOrderedDirective(ClausesWithImplicit, AStmt, StartLoc,
                                       EndLoc);
@@ -5159,6 +5177,7 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
       case OMPC_nontemporal:
       case OMPC_order:
       case OMPC_destroy:
+      case OMPC_inclusive:
         continue;
       case OMPC_allocator:
       case OMPC_flush:
@@ -8773,6 +8792,17 @@ StmtResult Sema::ActOnOpenMPDepobjDirective(ArrayRef<OMPClause *> Clauses,
   return OMPDepobjDirective::Create(Context, StartLoc, EndLoc, Clauses);
 }
 
+StmtResult Sema::ActOnOpenMPScanDirective(ArrayRef<OMPClause *> Clauses,
+                                          SourceLocation StartLoc,
+                                          SourceLocation EndLoc) {
+  if (Clauses.size() != 1) {
+    Diag(Clauses.empty() ? EndLoc : Clauses[1]->getBeginLoc(),
+         diag::err_omp_scan_single_clause_expected);
+    return StmtError();
+  }
+  return OMPScanDirective::Create(Context, StartLoc, EndLoc, Clauses);
+}
+
 StmtResult Sema::ActOnOpenMPOrderedDirective(ArrayRef<OMPClause *> Clauses,
                                              Stmt *AStmt,
                                              SourceLocation StartLoc,
@@ -11121,6 +11151,7 @@ OMPClause *Sema::ActOnOpenMPSingleExprClause(OpenMPClauseKind Kind, Expr *Expr,
   case OMPC_nontemporal:
   case OMPC_order:
   case OMPC_destroy:
+  case OMPC_inclusive:
     llvm_unreachable("Clause is not allowed.");
   }
   return Res;
@@ -11251,6 +11282,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_cancellation_point:
     case OMPD_flush:
     case OMPD_depobj:
+    case OMPD_scan:
     case OMPD_declare_reduction:
     case OMPD_declare_mapper:
     case OMPD_declare_simd:
@@ -11322,6 +11354,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_cancellation_point:
     case OMPD_flush:
     case OMPD_depobj:
+    case OMPD_scan:
     case OMPD_declare_reduction:
     case OMPD_declare_mapper:
     case OMPD_declare_simd:
@@ -11398,6 +11431,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_cancellation_point:
     case OMPD_flush:
     case OMPD_depobj:
+    case OMPD_scan:
     case OMPD_declare_reduction:
     case OMPD_declare_mapper:
     case OMPD_declare_simd:
@@ -11471,6 +11505,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_cancellation_point:
     case OMPD_flush:
     case OMPD_depobj:
+    case OMPD_scan:
     case OMPD_declare_reduction:
     case OMPD_declare_mapper:
     case OMPD_declare_simd:
@@ -11545,6 +11580,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_cancellation_point:
     case OMPD_flush:
     case OMPD_depobj:
+    case OMPD_scan:
     case OMPD_declare_reduction:
     case OMPD_declare_mapper:
     case OMPD_declare_simd:
@@ -11618,6 +11654,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_cancellation_point:
     case OMPD_flush:
     case OMPD_depobj:
+    case OMPD_scan:
     case OMPD_declare_reduction:
     case OMPD_declare_mapper:
     case OMPD_declare_simd:
@@ -11690,6 +11727,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_cancellation_point:
     case OMPD_flush:
     case OMPD_depobj:
+    case OMPD_scan:
     case OMPD_declare_reduction:
     case OMPD_declare_mapper:
     case OMPD_declare_simd:
@@ -11765,6 +11803,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_cancellation_point:
     case OMPD_flush:
     case OMPD_depobj:
+    case OMPD_scan:
     case OMPD_declare_reduction:
     case OMPD_declare_mapper:
     case OMPD_declare_simd:
@@ -11848,6 +11887,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
   case OMPC_order:
   case OMPC_destroy:
   case OMPC_detach:
+  case OMPC_inclusive:
     llvm_unreachable("Unexpected OpenMP clause.");
   }
   return CaptureRegion;
@@ -12285,6 +12325,7 @@ OMPClause *Sema::ActOnOpenMPSimpleClause(
   case OMPC_nontemporal:
   case OMPC_destroy:
   case OMPC_detach:
+  case OMPC_inclusive:
     llvm_unreachable("Clause is not allowed.");
   }
   return Res;
@@ -12508,6 +12549,7 @@ OMPClause *Sema::ActOnOpenMPSingleExprWithArgClause(
   case OMPC_order:
   case OMPC_destroy:
   case OMPC_detach:
+  case OMPC_inclusive:
     llvm_unreachable("Clause is not allowed.");
   }
   return Res;
@@ -12738,6 +12780,7 @@ OMPClause *Sema::ActOnOpenMPClause(OpenMPClauseKind Kind,
   case OMPC_nontemporal:
   case OMPC_order:
   case OMPC_detach:
+  case OMPC_inclusive:
     llvm_unreachable("Clause is not allowed.");
   }
   return Res;
@@ -12944,6 +12987,9 @@ OMPClause *Sema::ActOnOpenMPVarListClause(
     break;
   case OMPC_nontemporal:
     Res = ActOnOpenMPNontemporalClause(VarList, StartLoc, LParenLoc, EndLoc);
+    break;
+  case OMPC_inclusive:
+    Res = ActOnOpenMPInclusiveClause(VarList, StartLoc, LParenLoc, EndLoc);
     break;
   case OMPC_if:
   case OMPC_depobj:
@@ -18010,4 +18056,32 @@ OMPClause *Sema::ActOnOpenMPNontemporalClause(ArrayRef<Expr *> VarList,
 
   return OMPNontemporalClause::Create(Context, StartLoc, LParenLoc, EndLoc,
                                       Vars);
+}
+
+OMPClause *Sema::ActOnOpenMPInclusiveClause(ArrayRef<Expr *> VarList,
+                                            SourceLocation StartLoc,
+                                            SourceLocation LParenLoc,
+                                            SourceLocation EndLoc) {
+  SmallVector<Expr *, 8> Vars;
+  for (Expr *RefExpr : VarList) {
+    assert(RefExpr && "NULL expr in OpenMP nontemporal clause.");
+    SourceLocation ELoc;
+    SourceRange ERange;
+    Expr *SimpleRefExpr = RefExpr;
+    auto Res = getPrivateItem(*this, SimpleRefExpr, ELoc, ERange,
+                              /*AllowArraySection=*/true);
+    if (Res.second)
+      // It will be analyzed later.
+      Vars.push_back(RefExpr);
+    ValueDecl *D = Res.first;
+    if (!D)
+      continue;
+
+    Vars.push_back(RefExpr);
+  }
+
+  if (Vars.empty())
+    return nullptr;
+
+  return OMPInclusiveClause::Create(Context, StartLoc, LParenLoc, EndLoc, Vars);
 }

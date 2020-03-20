@@ -510,8 +510,9 @@ public:
                            ArrayRef<Type>(type), loc, result);
   }
   template <typename Operands, typename Types>
-  ParseResult resolveOperands(Operands &&operands, Types &&types,
-                              llvm::SMLoc loc, SmallVectorImpl<Value> &result) {
+  std::enable_if_t<!std::is_convertible<Types, Type>::value, ParseResult>
+  resolveOperands(Operands &&operands, Types &&types, llvm::SMLoc loc,
+                  SmallVectorImpl<Value> &result) {
     size_t operandSize = std::distance(operands.begin(), operands.end());
     size_t typeSize = std::distance(types.begin(), types.end());
     if (operandSize != typeSize)
