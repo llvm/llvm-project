@@ -15166,6 +15166,12 @@ Sema::VerifyIntegerConstantExpression(Expr *E, llvm::APSInt *Result,
     return ExprError();
   }
 
+  ExprResult RValueExpr = DefaultLvalueConversion(E);
+  if (RValueExpr.isInvalid())
+    return ExprError();
+
+  E = RValueExpr.get();
+
   // Circumvent ICE checking in C++11 to avoid evaluating the expression twice
   // in the non-ICE case.
   if (!getLangOpts().CPlusPlus11 && E->isIntegerConstantExpr(Context)) {
