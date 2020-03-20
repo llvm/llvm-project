@@ -11,10 +11,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_AFFINEOPS_EDSC_BUILDERS_H_
-#define MLIR_DIALECT_AFFINEOPS_EDSC_BUILDERS_H_
+#ifndef MLIR_DIALECT_AFFINE_EDSC_BUILDERS_H_
+#define MLIR_DIALECT_AFFINE_EDSC_BUILDERS_H_
 
-#include "mlir/Dialect/AffineOps/AffineOps.h"
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/EDSC/Builders.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Types.h"
@@ -203,4 +203,4 @@ ValueHandle TemplatedIndexedValue<Load, Store>::operator>=(ValueHandle e) {
 } // namespace edsc
 } // namespace mlir
 
-#endif // MLIR_DIALECT_AFFINEOPS_EDSC_BUILDERS_H_
+#endif // MLIR_DIALECT_AFFINE_EDSC_BUILDERS_H_

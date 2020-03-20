@@ -15,7 +15,7 @@
 #include "toy/Dialect.h"
 #include "toy/Passes.h"
 
-#include "mlir/Dialect/AffineOps/AffineOps.h"
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -280,7 +280,7 @@ void ToyToAffineLoweringPass::runOnFunction() {
   // We define the specific operations, or dialects, that are legal targets for
   // this lowering. In our case, we are lowering to a combination of the
   // `Affine` and `Standard` dialects.
-  target.addLegalDialect<AffineOpsDialect, StandardOpsDialect>();
+  target.addLegalDialect<AffineDialect, StandardOpsDialect>();
 
   // We also define the Toy dialect as Illegal so that the conversion will fail
   // if any of these operations are *not* converted. Given that we actually want

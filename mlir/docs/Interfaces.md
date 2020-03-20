@@ -63,7 +63,7 @@ struct AffineInlinerInterface : public DialectInlinerInterface {
 };
 
 /// Register the interface with the dialect.
-AffineOpsDialect::AffineOpsDialect(MLIRContext *context) ... {
+AffineDialect::AffineDialect(MLIRContext *context) ... {
   addInterfaces<AffineInlinerInterface>();
 }
 ```

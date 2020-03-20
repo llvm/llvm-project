@@ -9,7 +9,7 @@ add_mlir_dialect_library(MLIRLinalgUtils
 
 target_link_libraries(MLIRLinalgUtils
   PUBLIC
-  MLIRAffineOps
+  MLIRAffine
   MLIREDSC
   MLIRIR
   MLIRLinalgOps

@@ -1,5 +1,4 @@
 add_llvm_library(MLIRTestTransforms
-  TestAffineDataCopy.cpp
   TestAllReduceLowering.cpp
   TestCallGraph.cpp
   TestConstantFold.cpp
@@ -36,7 +35,7 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR}/../DeclarativeTransforms)
 
 target_link_libraries(MLIRTestTransforms
   PUBLIC
-  MLIRAffineOps
+  MLIRAffine
   MLIRAnalysis
   MLIREDSC
   MLIRGPU

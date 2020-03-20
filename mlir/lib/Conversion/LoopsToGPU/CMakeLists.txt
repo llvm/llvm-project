@@ -7,7 +7,7 @@ add_mlir_conversion_library(MLIRLoopsToGPU
 )
 target_link_libraries(MLIRLoopsToGPU
   PUBLIC
-  MLIRAffineOps
+  MLIRAffine
   MLIRAffineToStandard
   MLIRGPU
   MLIRIR

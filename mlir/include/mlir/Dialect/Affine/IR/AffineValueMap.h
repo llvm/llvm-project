@@ -10,8 +10,8 @@
 // analysis purposes.
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_AFFINEOPS_AFFINEVALUEMAP_H
-#define MLIR_DIALECT_AFFINEOPS_AFFINEVALUEMAP_H
+#ifndef MLIR_DIALECT_AFFINE_IR_AFFINEVALUEMAP_H
+#define MLIR_DIALECT_AFFINE_IR_AFFINEVALUEMAP_H
 
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/OperationSupport.h"
@@ -87,4 +87,4 @@ private:
 
 } // namespace mlir
 
-#endif // MLIR_DIALECT_AFFINEOPS_AFFINEVALUEMAP_H
+#endif // MLIR_DIALECT_AFFINE_IR_AFFINEVALUEMAP_H
