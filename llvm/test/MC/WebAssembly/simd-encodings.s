@@ -580,6 +580,15 @@ main:
     # CHECK: i32x4.dot_i16x8_s # encoding: [0xfd,0xdb,0x01]
     i32x4.dot_i16x8_s
 
+    # CHECK: i8x16.abs # encoding: [0xfd,0xe1,0x01]
+    i8x16.abs
+
+    # CHECK: i16x8.abs # encoding: [0xfd,0xe2,0x01]
+    i16x8.abs
+
+    # CHECK: i32x4.abs # encoding: [0xfd,0xe3,0x01]
+    i32x4.abs
+
     # CHECK: i8x16.bitmask # encoding: [0xfd,0xe4,0x01]
     i8x16.bitmask
 
