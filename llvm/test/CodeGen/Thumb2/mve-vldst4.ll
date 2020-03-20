@@ -21,7 +21,7 @@ define void @vldst4(half* nocapture readonly %pIn, half* nocapture %pOut, i32 %n
 ; CHECK-NEXT:    subs r2, #8
 ; CHECK-NEXT:    movs r3, #1
 ; CHECK-NEXT:    add.w lr, r3, r2, lsr #3
-; CHECK-NEXT:    vmov r2, s0
+; CHECK-NEXT:    vmov.f16 r2, s0
 ; CHECK-NEXT:    vdup.16 q0, r2
 ; CHECK-NEXT:    vstrw.32 q0, [sp, #80] @ 16-byte Spill
 ; CHECK-NEXT:    dls lr, lr
