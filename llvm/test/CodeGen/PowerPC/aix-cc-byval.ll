@@ -14,16 +14,19 @@
 ; RUN:  -mtriple powerpc64-ibm-aix-xcoff < %s | \
 ; RUN: FileCheck --check-prefixes=CHECKASM,ASM64 %s
 
+%struct.S0 = type {}
+
 %struct.S1 = type { [1 x i8] }
 @gS1 = external global %struct.S1, align 1
 
 define void @call_test_byval_1Byte() {
 entry:
-  call void @test_byval_1Byte(%struct.S1* byval(%struct.S1) align 1 @gS1)
+  %s0 = alloca %struct.S0, align 8
+  call void @test_byval_1Byte(%struct.S0* byval(%struct.S0) align 1 %s0, %struct.S1* byval(%struct.S1) align 1 @gS1)
   ret void
 }
 
-declare void @test_byval_1Byte(%struct.S1* byval(%struct.S1) align 1)
+declare void @test_byval_1Byte(%struct.S0* byval(%struct.S0) align 1, %struct.S1* byval(%struct.S1) align 1)
 
 ; CHECK-LABEL: name: call_test_byval_1Byte{{.*}}
 
@@ -52,13 +55,13 @@ declare void @test_byval_1Byte(%struct.S1* byval(%struct.S1) align 1)
 ; 64BIT-NEXT:  ADJCALLSTACKUP 112, 0, implicit-def dead $r1, implicit $r1
 
 ; ASM64:       std 0, 16(1)
-; ASM64-NEXT:  stdu 1, -112(1)
+; ASM64-NEXT:  stdu 1, -128(1)
 ; ASM64-NEXT:  ld [[REG:[0-9]+]], LC{{[0-9]+}}(2)
 ; ASM64-NEXT:  lbz 3, 0([[REG]])
 ; ASM64-NEXT:  sldi 3, 3, 56
 ; ASM64-NEXT:  bl .test_byval_1Byte
 ; ASM64-NEXT:  nop
-; ASM64-NEXT:  addi 1, 1, 112
+; ASM64-NEXT:  addi 1, 1, 128
 
 %struct.S2 = type { [2 x i8] }
 
@@ -169,11 +172,12 @@ declare void @test_byval_3Byte(%struct.S3* byval(%struct.S3) align 1)
 
 define void @call_test_byval_4Byte() {
 entry:
-  call void @test_byval_4Byte(%struct.S4* byval(%struct.S4) align 1 @gS4)
+  %s0 = alloca %struct.S0, align 8
+  call void @test_byval_4Byte(%struct.S4* byval(%struct.S4) align 1 @gS4, %struct.S0* byval(%struct.S0) align 1 %s0)
   ret void
 }
 
-declare void @test_byval_4Byte(%struct.S4* byval(%struct.S4) align 1)
+declare void @test_byval_4Byte(%struct.S4* byval(%struct.S4) align 1, %struct.S0* byval(%struct.S0) align 1)
 
 ; CHECK-LABEL: name: call_test_byval_4Byte{{.*}}
 
@@ -199,10 +203,10 @@ declare void @test_byval_4Byte(%struct.S4* byval(%struct.S4) align 1)
 ; 64BIT-NEXT:  BL8_NOP <mcsymbol .test_byval_4Byte>, csr_aix64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x2, implicit-def $r1
 ; 64BIT-NEXT:  ADJCALLSTACKUP 112, 0, implicit-def dead $r1, implicit $r1
 
-; ASM64:       stdu 1, -112(1)
+; ASM64:       stdu 1, -128(1)
 ; ASM64-NEXT:  ld [[REG:[0-9]+]], LC{{[0-9]+}}(2)
 ; ASM64-NEXT:  lwz 3, 0([[REG]])
 ; ASM64-NEXT:  sldi 3, 3, 32
 ; ASM64-NEXT:  bl .test_byval_4Byte
 ; ASM64-NEXT:  nop
-; ASM64-NEXT:  addi 1, 1, 112
+; ASM64-NEXT:  addi 1, 1, 128
