@@ -1209,13 +1209,9 @@ bool DWARFDebugLine::Prologue::getFileNameByIndex(
   if (!Name)
     return false;
   StringRef FileName = *Name;
-  if (Kind == FileLineInfoKind::RawValue ||
+  if (Kind == FileLineInfoKind::Default ||
       isPathAbsoluteOnWindowsOrPosix(FileName)) {
     Result = std::string(FileName);
-    return true;
-  }
-  if (Kind == FileLineInfoKind::BaseNameOnly) {
-    Result = std::string(llvm::sys::path::filename(FileName));
     return true;
   }
 

@@ -136,11 +136,7 @@ enum class DINameKind { None, ShortName, LinkageName };
 struct DILineInfoSpecifier {
   enum class FileLineInfoKind {
     None,
-    // RawValue is whatever the compiler stored in the filename table.  Could be
-    // a full path, could be something else.
-    RawValue,
-    BaseNameOnly,
-    // Relative to the compilation directory.
+    Default,
     RelativeFilePath,
     AbsoluteFilePath
   };
@@ -149,7 +145,7 @@ struct DILineInfoSpecifier {
   FileLineInfoKind FLIKind;
   FunctionNameKind FNKind;
 
-  DILineInfoSpecifier(FileLineInfoKind FLIKind = FileLineInfoKind::RawValue,
+  DILineInfoSpecifier(FileLineInfoKind FLIKind = FileLineInfoKind::Default,
                       FunctionNameKind FNKind = FunctionNameKind::None)
       : FLIKind(FLIKind), FNKind(FNKind) {}
 };
