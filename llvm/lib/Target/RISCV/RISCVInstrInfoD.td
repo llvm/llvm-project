@@ -339,6 +339,10 @@ def SplitF64Pseudo
 } // Predicates = [HasStdExtD]
 
 let Predicates = [HasStdExtD, IsRV32] in {
+
+/// Float constants
+def : Pat<(f64 (fpimm0)), (FCVT_D_W X0)>;
+
 // double->[u]int. Round-to-zero must be used.
 def : Pat<(fp_to_sint FPR64:$rs1), (FCVT_W_D FPR64:$rs1, 0b001)>;
 def : Pat<(fp_to_uint FPR64:$rs1), (FCVT_WU_D FPR64:$rs1, 0b001)>;
@@ -349,6 +353,10 @@ def : Pat<(uint_to_fp GPR:$rs1), (FCVT_D_WU GPR:$rs1)>;
 } // Predicates = [HasStdExtD, IsRV32]
 
 let Predicates = [HasStdExtD, IsRV64] in {
+
+/// Float constants
+def : Pat<(f64 (fpimm0)), (FMV_D_X X0)>;
+
 def : Pat<(bitconvert GPR:$rs1), (FMV_D_X GPR:$rs1)>;
 def : Pat<(bitconvert FPR64:$rs1), (FMV_X_D FPR64:$rs1)>;
 
