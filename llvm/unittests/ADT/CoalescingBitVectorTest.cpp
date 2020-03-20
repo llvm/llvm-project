@@ -183,14 +183,12 @@ TEST(CoalescingBitVectorTest, Comparison) {
 
 // A simple implementation of set union, used to double-check the human
 // "expected" answer.
-UBitVec simpleUnion(UBitVec::Allocator &Alloc, const UBitVec &LHS,
+void simpleUnion(UBitVec &Union, const UBitVec &LHS,
                     const UBitVec &RHS) {
-  UBitVec Union(Alloc);
   for (unsigned Bit : LHS)
     Union.test_and_set(Bit);
   for (unsigned Bit : RHS)
     Union.test_and_set(Bit);
-  return Union;
 }
 
 TEST(CoalescingBitVectorTest, Union) {
@@ -204,7 +202,8 @@ TEST(CoalescingBitVectorTest, Union) {
     BV1.set(LHS);
     UBitVec BV2(Alloc);
     BV2.set(RHS);
-    const UBitVec &DoubleCheckedExpected = simpleUnion(Alloc, BV1, BV2);
+    UBitVec DoubleCheckedExpected(Alloc);
+    simpleUnion(DoubleCheckedExpected, BV1, BV2);
     ASSERT_TRUE(elementsMatch(DoubleCheckedExpected, Expected));
     BV1 |= BV2;
     ASSERT_TRUE(elementsMatch(BV1, Expected));
@@ -277,13 +276,11 @@ TEST(CoalescingBitVectorTest, Union) {
 
 // A simple implementation of set intersection, used to double-check the
 // human "expected" answer.
-UBitVec simpleIntersection(UBitVec::Allocator &Alloc, const UBitVec &LHS,
-                           const UBitVec &RHS) {
-  UBitVec Intersection(Alloc);
+void simpleIntersection(UBitVec &Intersection, const UBitVec &LHS,
+                        const UBitVec &RHS) {
   for (unsigned Bit : LHS)
     if (RHS.test(Bit))
       Intersection.set(Bit);
-  return Intersection;
 }
 
 TEST(CoalescingBitVectorTest, Intersection) {
@@ -297,7 +294,8 @@ TEST(CoalescingBitVectorTest, Intersection) {
     BV1.set(LHS);
     UBitVec BV2(Alloc);
     BV2.set(RHS);
-    const UBitVec &DoubleCheckedExpected = simpleIntersection(Alloc, BV1, BV2);
+    UBitVec DoubleCheckedExpected(Alloc);
+    simpleIntersection(DoubleCheckedExpected, BV1, BV2);
     ASSERT_TRUE(elementsMatch(DoubleCheckedExpected, Expected));
     BV1 &= BV2;
     ASSERT_TRUE(elementsMatch(BV1, Expected));
@@ -356,14 +354,11 @@ TEST(CoalescingBitVectorTest, Intersection) {
 
 // A simple implementation of set intersection-with-complement, used to
 // double-check the human "expected" answer.
-UBitVec simpleIntersectionWithComplement(UBitVec::Allocator &Alloc,
-                                         const UBitVec &LHS,
-                                         const UBitVec &RHS) {
-  UBitVec Intersection(Alloc);
+void simpleIntersectionWithComplement(UBitVec &Intersection, const UBitVec &LHS,
+                                      const UBitVec &RHS) {
   for (unsigned Bit : LHS)
     if (!RHS.test(Bit))
       Intersection.set(Bit);
-  return Intersection;
 }
 
 TEST(CoalescingBitVectorTest, IntersectWithComplement) {
@@ -378,8 +373,8 @@ TEST(CoalescingBitVectorTest, IntersectWithComplement) {
         BV1.set(LHS);
         UBitVec BV2(Alloc);
         BV2.set(RHS);
-        const UBitVec &DoubleCheckedExpected =
-            simpleIntersectionWithComplement(Alloc, BV1, BV2);
+        UBitVec DoubleCheckedExpected(Alloc);
+        simpleIntersectionWithComplement(DoubleCheckedExpected, BV1, BV2);
         ASSERT_TRUE(elementsMatch(DoubleCheckedExpected, Expected));
         BV1.intersectWithComplement(BV2);
         ASSERT_TRUE(elementsMatch(BV1, Expected));
