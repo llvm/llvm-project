@@ -24,6 +24,26 @@ target_link_libraries(MLIRLLVMIR
   MLIRSupport
   )
 
+add_mlir_dialect_library(MLIRLLVMAVX512
+  IR/LLVMAVX512Dialect.cpp
+
+  ADDITIONAL_HEADER_DIRS
+  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/LLVMIR
+
+  DEPENDS
+  MLIRLLVMAVX512IncGen
+  MLIRLLVMAVX512ConversionsIncGen
+  )
+target_link_libraries(MLIRLLVMAVX512
+  PUBLIC
+  LLVMAsmParser
+  MLIRIR
+  MLIRLLVMIR
+  MLIRSideEffects
+  LLVMSupport
+  LLVMCore
+  )
+
 add_mlir_dialect_library(MLIRNVVMIR
   IR/NVVMDialect.cpp
 

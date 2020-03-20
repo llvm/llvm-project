@@ -18,6 +18,22 @@ target_link_libraries(MLIRTargetLLVMIRModuleTranslation
   MLIRTranslation
   )
 
+add_mlir_library(MLIRTargetAVX512
+  LLVMIR/LLVMAVX512Intr.cpp
+
+  ADDITIONAL_HEADER_DIRS
+  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Target/LLVMIR
+  DEPENDS
+  MLIRLLVMAVX512ConversionsIncGen
+  )
+target_link_libraries(MLIRTargetAVX512
+  PUBLIC
+  MLIRIR
+  MLIRLLVMAVX512
+  MLIRLLVMIR
+  MLIRTargetLLVMIRModuleTranslation
+  )
+
 add_mlir_library(MLIRTargetLLVMIR
   LLVMIR/ConvertFromLLVMIR.cpp
   LLVMIR/ConvertToLLVMIR.cpp
