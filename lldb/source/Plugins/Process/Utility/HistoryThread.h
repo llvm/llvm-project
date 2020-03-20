@@ -33,7 +33,8 @@ namespace lldb_private {
 class HistoryThread : public lldb_private::Thread {
 public:
   HistoryThread(lldb_private::Process &process, lldb::tid_t tid,
-                std::vector<lldb::addr_t> pcs);
+                std::vector<lldb::addr_t> pcs,
+                bool pcs_are_call_addresses = false);
 
   ~HistoryThread() override;
 

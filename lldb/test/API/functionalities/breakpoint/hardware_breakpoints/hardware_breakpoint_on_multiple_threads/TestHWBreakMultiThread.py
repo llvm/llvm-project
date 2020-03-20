@@ -32,19 +32,21 @@ class HardwareBreakpointMultiThreadTestCase(TestBase):
         self.setTearDownCleanup()
         self.break_multi_thread('disable', False) # llvm.org/PR44659
 
-    # LLDB on darwin supports hardware breakpoints for arm, aarch64, x86_64 and
-    # i386 architectures.
+    # LLDB on darwin supports hardware breakpoints for x86_64 and i386
+    # architectures.
     @skipUnlessDarwin
     @skipIfOutOfTreeDebugserver
+    @skipIfDarwinEmbedded
     def test_hw_break_set_delete_multi_thread_macos(self):
         self.build()
         self.setTearDownCleanup()
         self.break_multi_thread('delete')
 
-    # LLDB on darwin supports hardware breakpoints for arm, aarch64, x86_64 and
-    # i386 architectures.
+    # LLDB on darwin supports hardware breakpoints for x86_64 and i386
+    # architectures.
     @skipUnlessDarwin
     @skipIfOutOfTreeDebugserver
+    @skipIfDarwinEmbedded
     def test_hw_break_set_disable_multi_thread_macos(self):
         self.build()
         self.setTearDownCleanup()
