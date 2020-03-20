@@ -1,7 +1,7 @@
 // When entry values are emitted, expect a subprogram for extern decls so that
 // the dwarf generator can describe call site parameters at extern call sites.
 //
-// RUN: %clang -Xclang -femit-debug-entry-values -g -O2 -target x86_64-none-linux-gnu -S -emit-llvm %s -o - \
+// RUN: %clang -g -O2 -target x86_64-none-linux-gnu -S -emit-llvm %s -o - \
 // RUN:   | FileCheck %s -check-prefix=DECLS-FOR-EXTERN
 
 // Similarly, when the debugger tuning is gdb, expect a subprogram for extern

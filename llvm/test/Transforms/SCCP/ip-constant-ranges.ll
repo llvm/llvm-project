@@ -59,12 +59,9 @@ entry:
   ret i32 %res.2
 }
 
-; x is overdefined, because constant ranges are only used for parameter
-; values.
 ; CHECK-LABEL: f3
-; CHECK: %cmp = icmp sgt i32 %x, 300
-; CHECK: %res = select i1 %cmp, i32 1, i32 2
-; CHECK: ret i32 %res
+; CHECK-LABEL: entry:
+; CHECK: ret i32 undef
 define internal i32 @f3(i32 %x) {
 entry:
   %cmp = icmp sgt i32 %x, 300
@@ -83,7 +80,7 @@ if.true:
 end:
   %res = phi i32 [ 0, %entry], [ 1, %if.true ]
   %call1 = tail call i32 @f3(i32 %res)
-  ret i32 %call1
+  ret i32 2
 }
 
 ; CHECK-LABEL: f4

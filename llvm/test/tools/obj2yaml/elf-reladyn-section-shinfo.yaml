@@ -19,11 +19,11 @@
 # CHECK-NEXT: AddressAlignment:
 # CHECK-NEXT: EntrySize:
 
-# YAML:      - Name:    .rela.dyn
-# YAML-NEXT:   Type:    SHT_RELA
-# YAML-NEXT:   Flags:   [ SHF_ALLOC ]
-# YAML-NEXT:   Link:    .dynsym
-# YAML-NEXT:   EntSize: 0x0000000000000018
+# YAML:      - Name:  .rela.dyn
+# YAML-NEXT:   Type:  SHT_RELA
+# YAML-NEXT:   Flags: [ SHF_ALLOC ]
+# YAML-NEXT:   Link:  .dynsym
+# YAML-NEXT: - Name:
 
 --- !ELF
 FileHeader:
@@ -37,7 +37,6 @@ Sections:
     Type:    SHT_RELA
     Flags:   [ SHF_ALLOC ]
     Link:    .dynsym
-    EntSize: 0x0000000000000018
 # Add at least one symbol to trigger the .dynsym emission.
 DynamicSymbols:
   - Name:    bar

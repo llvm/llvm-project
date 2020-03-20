@@ -165,7 +165,7 @@ public:
   //       bail out early for scalable vectors and use getFixedSize()
   //   }
   operator uint64_t() const {
-#ifdef STRICT_IMPLICIT_CONVERSION_TYPESIZE
+#ifdef STRICT_FIXED_SIZE_VECTORS
     return getFixedSize();
 #else
     if (isScalable())

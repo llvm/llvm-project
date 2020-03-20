@@ -12,6 +12,9 @@ add_gen_header(
 
 add_header_library(
   memory_utils
-  HDRS utils.h
-  DEPENDS cacheline_size
+  HDRS
+    utils.h
+    memcpy_utils.h
+  DEPENDS
+    cacheline_size
 )

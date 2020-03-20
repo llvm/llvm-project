@@ -21,33 +21,27 @@
 
 using namespace mlir;
 
-/// Checks if the `type` is a scalar or vector type. It is assumed that they are
-/// valid for SPIR-V dialect already.
-static bool isScalarOrVectorType(Type type) {
-  return spirv::SPIRVDialect::isValidScalarType(type) || type.isa<VectorType>();
-}
-
 /// Creates a global variable for an argument based on the ABI info.
 static spirv::GlobalVariableOp
-createGlobalVariableForArg(spirv::FuncOp funcOp, OpBuilder &builder,
-                           unsigned argNum,
-                           spirv::InterfaceVarABIAttr abiInfo) {
+createGlobalVarForEntryPointArgument(OpBuilder &builder, spirv::FuncOp funcOp,
+                                     unsigned argIndex,
+                                     spirv::InterfaceVarABIAttr abiInfo) {
   auto spirvModule = funcOp.getParentOfType<spirv::ModuleOp>();
-  if (!spirvModule) {
+  if (!spirvModule)
     return nullptr;
-  }
+
   OpBuilder::InsertionGuard moduleInsertionGuard(builder);
   builder.setInsertionPoint(funcOp.getOperation());
   std::string varName =
-      funcOp.getName().str() + "_arg_" + std::to_string(argNum);
+      funcOp.getName().str() + "_arg_" + std::to_string(argIndex);
 
   // Get the type of variable. If this is a scalar/vector type and has an ABI
-  // info create a variable of type !spv.ptr<!spv.struct<elementTYpe>>. If not
+  // info create a variable of type !spv.ptr<!spv.struct<elementType>>. If not
   // it must already be a !spv.ptr<!spv.struct<...>>.
-  auto varType = funcOp.getType().getInput(argNum);
-  auto storageClass =
-      static_cast<spirv::StorageClass>(abiInfo.storage_class().getInt());
-  if (isScalarOrVectorType(varType)) {
+  auto varType = funcOp.getType().getInput(argIndex);
+  if (varType.cast<spirv::SPIRVType>().isScalarOrVector()) {
+    auto storageClass =
+        static_cast<spirv::StorageClass>(abiInfo.storage_class().getInt());
     varType =
         spirv::PointerType::get(spirv::StructType::get(varType), storageClass);
   }
@@ -84,9 +78,18 @@ getInterfaceVariables(spirv::FuncOp funcOp,
   funcOp.walk([&](spirv::AddressOfOp addressOfOp) {
     auto var =
         module.lookupSymbol<spirv::GlobalVariableOp>(addressOfOp.variable());
-    if (var.type().cast<spirv::PointerType>().getStorageClass() !=
-        spirv::StorageClass::StorageBuffer) {
+    // TODO(antiagainst): Per SPIR-V spec: "Before version 1.4, the interface’s
+    // storage classes are limited to the Input and Output storage classes.
+    // Starting with version 1.4, the interface’s storage classes are all
+    // storage classes used in declaring all global variables referenced by the
+    // entry point’s call tree." We should consider the target environment here.
+    switch (var.type().cast<spirv::PointerType>().getStorageClass()) {
+    case spirv::StorageClass::Input:
+    case spirv::StorageClass::Output:
       interfaceVarSet.insert(var.getOperation());
+      break;
+    default:
+      break;
     }
   });
   for (auto &var : interfaceVarSet) {
@@ -173,11 +176,10 @@ LogicalResult ProcessInterfaceVarABI::matchAndRewrite(
       // produce an error.
       return failure();
     }
-    auto var =
-        createGlobalVariableForArg(funcOp, rewriter, argType.index(), abiInfo);
-    if (!var) {
+    spirv::GlobalVariableOp var = createGlobalVarForEntryPointArgument(
+        rewriter, funcOp, argType.index(), abiInfo);
+    if (!var)
       return failure();
-    }
 
     OpBuilder::InsertionGuard funcInsertionGuard(rewriter);
     rewriter.setInsertionPointToStart(&funcOp.front());
@@ -190,7 +192,7 @@ LogicalResult ProcessInterfaceVarABI::matchAndRewrite(
     // at the start of the function. It is probably better to do the load just
     // before the use. There might be multiple loads and currently there is no
     // easy way to replace all uses with a sequence of operations.
-    if (isScalarOrVectorType(argType.value())) {
+    if (argType.value().cast<spirv::SPIRVType>().isScalarOrVector()) {
       auto indexType = SPIRVTypeConverter::getIndexType(funcOp.getContext());
       auto zero =
           spirv::ConstantOp::getZero(indexType, funcOp.getLoc(), &rewriter);
@@ -216,7 +218,9 @@ void LowerABIAttributesPass::runOnOperation() {
   spirv::ModuleOp module = getOperation();
   MLIRContext *context = &getContext();
 
-  SPIRVTypeConverter typeConverter;
+  spirv::TargetEnv targetEnv(spirv::lookupTargetEnv(module));
+
+  SPIRVTypeConverter typeConverter(targetEnv);
   OwningRewritePatternList patterns;
   patterns.insert<ProcessInterfaceVarABI>(context, typeConverter);
 

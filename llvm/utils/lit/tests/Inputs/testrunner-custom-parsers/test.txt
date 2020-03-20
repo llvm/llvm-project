@@ -13,6 +13,9 @@
 // MY_BOOL: b)
 // MY_BOOL: d
 //
+// MY_INT: 4
+// MY_INT: 6
+//
 // MY_BOOL_UNTERMINATED: a \
 //
 // END.

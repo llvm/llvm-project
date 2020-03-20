@@ -99,6 +99,7 @@ protected:
       Diags->setClient(new IgnoringDiagConsumer);
     // Prepare to run a compiler.
     std::vector<const char *> Args = {"syntax-test", "-std=c++11",
+                                      "-fno-delayed-template-parsing",
                                       "-fsyntax-only", FileName};
     Invocation = createInvocationFromCommandLine(Args, Diags, FS);
     assert(Invocation);

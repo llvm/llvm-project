@@ -356,7 +356,7 @@ unsigned llvm::ComputeNumSignBits(const Value *V, const DataLayout &DL,
 }
 
 static void computeKnownBitsAddSub(bool Add, const Value *Op0, const Value *Op1,
-                                   bool NSW,
+                                   bool NSW, const APInt &DemandedElts,
                                    KnownBits &KnownOut, KnownBits &Known2,
                                    unsigned Depth, const Query &Q) {
   unsigned BitWidth = KnownOut.getBitWidth();
@@ -364,18 +364,19 @@ static void computeKnownBitsAddSub(bool Add, const Value *Op0, const Value *Op1,
   // If an initial sequence of bits in the result is not needed, the
   // corresponding bits in the operands are not needed.
   KnownBits LHSKnown(BitWidth);
-  computeKnownBits(Op0, LHSKnown, Depth + 1, Q);
-  computeKnownBits(Op1, Known2, Depth + 1, Q);
+  computeKnownBits(Op0, DemandedElts, LHSKnown, Depth + 1, Q);
+  computeKnownBits(Op1, DemandedElts, Known2, Depth + 1, Q);
 
   KnownOut = KnownBits::computeForAddSub(Add, NSW, LHSKnown, Known2);
 }
 
 static void computeKnownBitsMul(const Value *Op0, const Value *Op1, bool NSW,
-                                KnownBits &Known, KnownBits &Known2,
-                                unsigned Depth, const Query &Q) {
+                                const APInt &DemandedElts, KnownBits &Known,
+                                KnownBits &Known2, unsigned Depth,
+                                const Query &Q) {
   unsigned BitWidth = Known.getBitWidth();
-  computeKnownBits(Op1, Known, Depth + 1, Q);
-  computeKnownBits(Op0, Known2, Depth + 1, Q);
+  computeKnownBits(Op1, DemandedElts, Known, Depth + 1, Q);
+  computeKnownBits(Op0, DemandedElts, Known2, Depth + 1, Q);
 
   bool isKnownNegative = false;
   bool isKnownNonNegative = false;
@@ -1121,15 +1122,15 @@ static void computeKnownBitsFromOperator(const Operator *I,
     if (!Known.Zero[0] && !Known.One[0] &&
         match(I, m_c_BinOp(m_Value(X), m_Add(m_Deferred(X), m_Value(Y))))) {
       Known2.resetAll();
-      computeKnownBits(Y, Known2, Depth + 1, Q);
+      computeKnownBits(Y, DemandedElts, Known2, Depth + 1, Q);
       if (Known2.countMinTrailingOnes() > 0)
         Known.Zero.setBit(0);
     }
     break;
   }
   case Instruction::Or:
-    computeKnownBits(I->getOperand(1), Known, Depth + 1, Q);
-    computeKnownBits(I->getOperand(0), Known2, Depth + 1, Q);
+    computeKnownBits(I->getOperand(1), DemandedElts, Known, Depth + 1, Q);
+    computeKnownBits(I->getOperand(0), DemandedElts, Known2, Depth + 1, Q);
 
     // Output known-0 bits are only known if clear in both the LHS & RHS.
     Known.Zero &= Known2.Zero;
@@ -1137,8 +1138,8 @@ static void computeKnownBitsFromOperator(const Operator *I,
     Known.One |= Known2.One;
     break;
   case Instruction::Xor: {
-    computeKnownBits(I->getOperand(1), Known, Depth + 1, Q);
-    computeKnownBits(I->getOperand(0), Known2, Depth + 1, Q);
+    computeKnownBits(I->getOperand(1), DemandedElts, Known, Depth + 1, Q);
+    computeKnownBits(I->getOperand(0), DemandedElts, Known2, Depth + 1, Q);
 
     // Output known-0 bits are known if clear or set in both the LHS & RHS.
     APInt KnownZeroOut = (Known.Zero & Known2.Zero) | (Known.One & Known2.One);
@@ -1149,8 +1150,8 @@ static void computeKnownBitsFromOperator(const Operator *I,
   }
   case Instruction::Mul: {
     bool NSW = Q.IIQ.hasNoSignedWrap(cast<OverflowingBinaryOperator>(I));
-    computeKnownBitsMul(I->getOperand(0), I->getOperand(1), NSW, Known,
-                        Known2, Depth, Q);
+    computeKnownBitsMul(I->getOperand(0), I->getOperand(1), NSW, DemandedElts,
+                        Known, Known2, Depth, Q);
     break;
   }
   case Instruction::UDiv: {
@@ -1336,13 +1337,13 @@ static void computeKnownBitsFromOperator(const Operator *I,
   case Instruction::Sub: {
     bool NSW = Q.IIQ.hasNoSignedWrap(cast<OverflowingBinaryOperator>(I));
     computeKnownBitsAddSub(false, I->getOperand(0), I->getOperand(1), NSW,
-                           Known, Known2, Depth, Q);
+                           DemandedElts, Known, Known2, Depth, Q);
     break;
   }
   case Instruction::Add: {
     bool NSW = Q.IIQ.hasNoSignedWrap(cast<OverflowingBinaryOperator>(I));
     computeKnownBitsAddSub(true, I->getOperand(0), I->getOperand(1), NSW,
-                           Known, Known2, Depth, Q);
+                           DemandedElts, Known, Known2, Depth, Q);
     break;
   }
   case Instruction::SRem:
@@ -1605,12 +1606,12 @@ static void computeKnownBitsFromOperator(const Operator *I,
       switch (II->getIntrinsicID()) {
       default: break;
       case Intrinsic::bitreverse:
-        computeKnownBits(I->getOperand(0), Known2, Depth + 1, Q);
+        computeKnownBits(I->getOperand(0), DemandedElts, Known2, Depth + 1, Q);
         Known.Zero |= Known2.Zero.reverseBits();
         Known.One |= Known2.One.reverseBits();
         break;
       case Intrinsic::bswap:
-        computeKnownBits(I->getOperand(0), Known2, Depth + 1, Q);
+        computeKnownBits(I->getOperand(0), DemandedElts, Known2, Depth + 1, Q);
         Known.Zero |= Known2.Zero.byteSwap();
         Known.One |= Known2.One.byteSwap();
         break;
@@ -1762,13 +1763,20 @@ static void computeKnownBitsFromOperator(const Operator *I,
     }
     break;
   }
-  case Instruction::ExtractElement:
-    // Look through extract element. At the moment we keep this simple and skip
-    // tracking the specific element. But at least we might find information
-    // valid for all elements of the vector (for example if vector is sign
-    // extended, shifted, etc).
-    computeKnownBits(I->getOperand(0), Known, Depth + 1, Q);
+  case Instruction::ExtractElement: {
+    // Look through extract element. If the index is non-constant or
+    // out-of-range demand all elements, otherwise just the extracted element.
+    auto* EEI = cast<ExtractElementInst>(I);
+    const Value* Vec = EEI->getVectorOperand();
+    const Value* Idx = EEI->getIndexOperand();
+    auto *CIdx = dyn_cast<ConstantInt>(Idx);
+    unsigned NumElts = Vec->getType()->getVectorNumElements();
+    APInt DemandedVecElts = APInt::getAllOnesValue(NumElts);
+    if (CIdx && CIdx->getValue().ult(NumElts))
+      DemandedVecElts = APInt::getOneBitSet(NumElts, CIdx->getZExtValue());
+    computeKnownBits(Vec, DemandedVecElts, Known, Depth + 1, Q);
     break;
+  }
   case Instruction::ExtractValue:
     if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I->getOperand(0))) {
       const ExtractValueInst *EVI = cast<ExtractValueInst>(I);
@@ -1779,19 +1787,19 @@ static void computeKnownBitsFromOperator(const Operator *I,
         case Intrinsic::uadd_with_overflow:
         case Intrinsic::sadd_with_overflow:
           computeKnownBitsAddSub(true, II->getArgOperand(0),
-                                 II->getArgOperand(1), false, Known, Known2,
-                                 Depth, Q);
+                                 II->getArgOperand(1), false, DemandedElts,
+                                 Known, Known2, Depth, Q);
           break;
         case Intrinsic::usub_with_overflow:
         case Intrinsic::ssub_with_overflow:
           computeKnownBitsAddSub(false, II->getArgOperand(0),
-                                 II->getArgOperand(1), false, Known, Known2,
-                                 Depth, Q);
+                                 II->getArgOperand(1), false, DemandedElts,
+                                 Known, Known2, Depth, Q);
           break;
         case Intrinsic::umul_with_overflow:
         case Intrinsic::smul_with_overflow:
           computeKnownBitsMul(II->getArgOperand(0), II->getArgOperand(1), false,
-                              Known, Known2, Depth, Q);
+                              DemandedElts, Known, Known2, Depth, Q);
           break;
         }
       }

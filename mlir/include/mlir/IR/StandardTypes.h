@@ -342,8 +342,8 @@ public:
 };
 
 /// Ranked tensor types represent multi-dimensional arrays that have a shape
-/// with a fixed number of dimensions. Each shape element can be a positive
-/// integer or unknown (represented -1).
+/// with a fixed number of dimensions. Each shape element can be a non-negative
+/// integer or unknown (represented by -1).
 class RankedTensorType
     : public Type::TypeBase<RankedTensorType, TensorType,
                             detail::RankedTensorTypeStorage> {

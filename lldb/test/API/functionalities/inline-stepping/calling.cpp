@@ -75,7 +75,7 @@ caller_trivial_1 ()
 void
 caller_trivial_2 ()
 {
-    inline_trivial_1 (); // In caller_trivial_2.
+    asm volatile ("nop"); inline_trivial_1 (); // In caller_trivial_2.
     inline_value += 1;  // At increment in caller_trivial_2.
 }
 
@@ -88,7 +88,7 @@ called_by_inline_trivial ()
 void
 inline_trivial_1 ()
 {
-    inline_trivial_2(); // In inline_trivial_1.
+    asm volatile ("nop"); inline_trivial_2(); // In inline_trivial_1.
     inline_value += 1;  // At increment in inline_trivial_1.
 }
 

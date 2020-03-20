@@ -15,6 +15,7 @@
 
 #include "mlir/Dialect/SPIRV/SPIRVAttributes.h"
 #include "mlir/Support/LLVM.h"
+#include "llvm/ADT/SmallSet.h"
 
 namespace mlir {
 class Operation;
@@ -22,13 +23,45 @@ class Operation;
 namespace spirv {
 enum class StorageClass : uint32_t;
 
+/// A wrapper class around a spirv::TargetEnvAttr to provide query methods for
+/// allowed version/capabilities/extensions.
+class TargetEnv {
+public:
+  explicit TargetEnv(TargetEnvAttr targetAttr);
+
+  Version getVersion();
+
+  /// Returns true if the given capability is allowed.
+  bool allows(Capability) const;
+  /// Returns the first allowed one if any of the given capabilities is allowed.
+  /// Returns llvm::None otherwise.
+  Optional<Capability> allows(ArrayRef<Capability>) const;
+
+  /// Returns true if the given extension is allowed.
+  bool allows(Extension) const;
+  /// Returns the first allowed one if any of the given extensions is allowed.
+  /// Returns llvm::None otherwise.
+  Optional<Extension> allows(ArrayRef<Extension>) const;
+
+  /// Returns the MLIRContext.
+  MLIRContext *getContext() const;
+
+  /// Allows implicity converting to the underlying spirv::TargetEnvAttr.
+  operator TargetEnvAttr() const { return targetAttr; }
+
+private:
+  TargetEnvAttr targetAttr;
+  llvm::SmallSet<Extension, 4> givenExtensions;    /// Allowed extensions
+  llvm::SmallSet<Capability, 8> givenCapabilities; /// Allowed capabilities
+};
+
 /// Returns the attribute name for specifying argument ABI information.
 StringRef getInterfaceVarABIAttrName();
 
 /// Gets the InterfaceVarABIAttr given its fields.
 InterfaceVarABIAttr getInterfaceVarABIAttr(unsigned descriptorSet,
                                            unsigned binding,
-                                           StorageClass storageClass,
+                                           Optional<StorageClass> storageClass,
                                            MLIRContext *context);
 
 /// Returns the attribute name for specifying entry point information.

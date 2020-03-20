@@ -143,12 +143,15 @@ private:
                         MachOJITDylibInitializers::SectionExtent ObjCSelRefs,
                         MachOJITDylibInitializers::SectionExtent ObjCClassList);
 
-  std::mutex PlatformMutex;
   ExecutionSession &ES;
   ObjectLinkingLayer &ObjLinkingLayer;
   std::unique_ptr<MemoryBuffer> StandardSymbolsObject;
 
   DenseMap<JITDylib *, SymbolLookupSet> RegisteredInitSymbols;
+
+  // InitSeqs gets its own mutex to avoid locking the whole session when
+  // aggregating data from the jitlink.
+  std::mutex InitSeqsMutex;
   DenseMap<JITDylib *, MachOJITDylibInitializers> InitSeqs;
 };
 

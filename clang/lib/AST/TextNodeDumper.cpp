@@ -126,6 +126,11 @@ void TextNodeDumper::Visit(const Stmt *Node) {
   if (const auto *E = dyn_cast<Expr>(Node)) {
     dumpType(E->getType());
 
+    if (E->containsErrors()) {
+      ColorScope Color(OS, ShowColors, ErrorsColor);
+      OS << " contains-errors";
+    }
+
     {
       ColorScope Color(OS, ShowColors, ValueKindColor);
       switch (E->getValueKind()) {

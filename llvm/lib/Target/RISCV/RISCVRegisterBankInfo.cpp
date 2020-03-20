@@ -22,5 +22,5 @@
 
 using namespace llvm;
 
-RISCVRegisterBankInfo::RISCVRegisterBankInfo(const TargetRegisterInfo &TRI)
-    : RISCVGenRegisterBankInfo() {}
+RISCVRegisterBankInfo::RISCVRegisterBankInfo(unsigned HwMode)
+    : RISCVGenRegisterBankInfo(HwMode) {}

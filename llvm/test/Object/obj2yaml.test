@@ -362,7 +362,6 @@
 # ELF-MIPSEL-NEXT:     Type:            SHT_REL
 # ELF-MIPSEL-NEXT:     Link:            .symtab
 # ELF-MIPSEL-NEXT:     AddressAlign:    0x0000000000000004
-# ELF-MIPSEL-NEXT:     EntSize:         0x0000000000000008
 # ELF-MIPSEL-NEXT:     Info:            .text
 # ELF-MIPSEL-NEXT:     Relocations:
 # ELF-MIPSEL-NEXT:       - Symbol:          _gp_disp
@@ -483,7 +482,6 @@
 # ELF-MIPS64EL-NEXT:     Type:            SHT_RELA
 # ELF-MIPS64EL-NEXT:     Link:            .symtab
 # ELF-MIPS64EL-NEXT:     AddressAlign:    0x0000000000000008
-# ELF-MIPS64EL-NEXT:     EntSize:         0x0000000000000018
 # ELF-MIPS64EL-NEXT:     Info:            .data
 # ELF-MIPS64EL-NEXT:     Relocations:
 # ELF-MIPS64EL-NEXT:       - Symbol:          zed
@@ -552,7 +550,6 @@
 # ELF-X86-64-NEXT:     Address:         0x0000000000000038
 # ELF-X86-64-NEXT:     Link:            .symtab
 # ELF-X86-64-NEXT:     AddressAlign:    0x0000000000000008
-# ELF-X86-64-NEXT:     EntSize:         0x0000000000000018
 # ELF-X86-64-NEXT:     Info:            .text
 # ELF-X86-64-NEXT:     Relocations:
 # ELF-X86-64-NEXT:       - Offset:          0x000000000000000D

@@ -1659,35 +1659,44 @@ GetElementPtrInst::GetElementPtrInst(const GetElementPtrInst &GEPI)
   SubclassOptionalData = GEPI.SubclassOptionalData;
 }
 
-/// getIndexedType - Returns the type of the element that would be accessed with
-/// a gep instruction with the specified parameters.
-///
-/// The Idxs pointer should point to a continuous piece of memory containing the
-/// indices, either as Value* or uint64_t.
-///
-/// A null type is returned if the indices are invalid for the specified
-/// pointer type.
-///
-template <typename IndexTy>
-static Type *getIndexedTypeInternal(Type *Agg, ArrayRef<IndexTy> IdxList) {
-  // Handle the special case of the empty set index set, which is always valid.
-  if (IdxList.empty())
-    return Agg;
-
-  // If there is at least one index, the top level type must be sized, otherwise
-  // it cannot be 'stepped over'.
-  if (!Agg->isSized())
-    return nullptr;
-
-  unsigned CurIdx = 1;
-  for (; CurIdx != IdxList.size(); ++CurIdx) {
-    CompositeType *CT = dyn_cast<CompositeType>(Agg);
-    if (!CT || CT->isPointerTy()) return nullptr;
-    IndexTy Index = IdxList[CurIdx];
-    if (!CT->indexValid(Index)) return nullptr;
-    Agg = CT->getTypeAtIndex(Index);
+Type *GetElementPtrInst::getTypeAtIndex(Type *Ty, Value *Idx) {
+  if (auto Struct = dyn_cast<StructType>(Ty)) {
+    if (!Struct->indexValid(Idx))
+      return nullptr;
+    return Struct->getTypeAtIndex(Idx);
   }
-  return CurIdx == IdxList.size() ? Agg : nullptr;
+  if (!Idx->getType()->isIntOrIntVectorTy())
+    return nullptr;
+  if (auto Array = dyn_cast<ArrayType>(Ty))
+    return Array->getElementType();
+  if (auto Vector = dyn_cast<VectorType>(Ty))
+    return Vector->getElementType();
+  return nullptr;
+}
+
+Type *GetElementPtrInst::getTypeAtIndex(Type *Ty, uint64_t Idx) {
+  if (auto Struct = dyn_cast<StructType>(Ty)) {
+    if (Idx >= Struct->getNumElements())
+      return nullptr;
+    return Struct->getElementType(Idx);
+  }
+  if (auto Array = dyn_cast<ArrayType>(Ty))
+    return Array->getElementType();
+  if (auto Vector = dyn_cast<VectorType>(Ty))
+    return Vector->getElementType();
+  return nullptr;
+}
+
+template <typename IndexTy>
+static Type *getIndexedTypeInternal(Type *Ty, ArrayRef<IndexTy> IdxList) {
+  if (IdxList.empty())
+    return Ty;
+  for (IndexTy V : IdxList.slice(1)) {
+    Ty = GetElementPtrInst::getTypeAtIndex(Ty, V);
+    if (!Ty)
+      return Ty;
+  }
+  return Ty;
 }
 
 Type *GetElementPtrInst::getIndexedType(Type *Ty, ArrayRef<Value *> IdxList) {
@@ -2220,15 +2229,15 @@ Type *ExtractValueInst::getIndexedType(Type *Agg,
     if (ArrayType *AT = dyn_cast<ArrayType>(Agg)) {
       if (Index >= AT->getNumElements())
         return nullptr;
+      Agg = AT->getElementType();
     } else if (StructType *ST = dyn_cast<StructType>(Agg)) {
       if (Index >= ST->getNumElements())
         return nullptr;
+      Agg = ST->getElementType(Index);
     } else {
       // Not a valid type to index into.
       return nullptr;
     }
-
-    Agg = cast<CompositeType>(Agg)->getTypeAtIndex(Index);
   }
   return const_cast<Type*>(Agg);
 }

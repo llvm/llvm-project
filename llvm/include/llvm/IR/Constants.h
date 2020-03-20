@@ -392,7 +392,7 @@ public:
 /// use operands.
 class ConstantAggregate : public Constant {
 protected:
-  ConstantAggregate(CompositeType *T, ValueTy VT, ArrayRef<Constant *> V);
+  ConstantAggregate(Type *T, ValueTy VT, ArrayRef<Constant *> V);
 
 public:
   /// Transparently provide more efficient getOperand methods.

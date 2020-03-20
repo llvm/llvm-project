@@ -2879,7 +2879,7 @@ bool PPCInstrInfo::convertToImmediateForm(MachineInstr &MI,
     APInt InVal((Opc == PPC::RLDICL || Opc == PPC::RLDICL_rec) ? 64 : 32,
                 SExtImm, true);
     InVal = InVal.rotl(SH);
-    uint64_t Mask = (1LLU << (63 - MB + 1)) - 1;
+    uint64_t Mask = MB == 0 ? -1LLU : (1LLU << (63 - MB + 1)) - 1;
     InVal &= Mask;
     // Can't replace negative values with an LI as that will sign-extend
     // and not clear the left bits. If we're setting the CR bit, we will use

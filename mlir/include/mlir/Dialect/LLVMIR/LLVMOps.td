@@ -506,6 +506,18 @@ def LLVM_ReturnOp : LLVM_TerminatorOp<"return", [NoSideEffect]>,
   let parser = [{ return parseReturnOp(parser, result); }];
   let printer = [{ printReturnOp(p, *this); }];
 }
+def LLVM_ResumeOp : LLVM_TerminatorOp<"resume", []> {
+  let arguments = (ins LLVM_Type:$value);
+  string llvmBuilder = [{ builder.CreateResume($value); }];
+  let verifier = [{
+    if (!isa_and_nonnull<LandingpadOp>(value().getDefiningOp()))
+      return emitOpError("expects landingpad value as operand");
+    // No check for personality of function - landingpad op verifies it.
+    return success();
+  }];
+
+  let assemblyFormat = "$value attr-dict `:` type($value)";
+}
 def LLVM_UnreachableOp : LLVM_TerminatorOp<"unreachable", []> {
   string llvmBuilder = [{ builder.CreateUnreachable(); }];
   let parser = [{ return success(); }];
@@ -650,7 +662,8 @@ def LLVM_GlobalOp
 def LLVM_LLVMFuncOp
     : LLVM_ZeroResultOp<"func", [IsolatedFromAbove, FunctionLike, Symbol]>,
       Arguments<(ins DefaultValuedAttr<Linkage,
-                                       "Linkage::External">:$linkage)> {
+                                       "Linkage::External">:$linkage,
+                     OptionalAttr<FlatSymbolRefAttr>:$personality)> {
   let summary = "LLVM dialect function, has wrapped LLVM IR function type";
 
   let regions = (region AnyRegion:$body);
@@ -862,6 +875,37 @@ def LLVM_MatrixTranposeOp
   let assemblyFormat = "$matrix attr-dict `:` type($matrix) `into` type($res)";
 }
 
+//
+// LLVM masked operations.
+//
+
+/// Create a call to Masked Load intrinsic.
+def LLVM_MaskedLoadOp
+    : LLVM_OneResultOp<"intr.masked.load">,
+      Arguments<(ins LLVM_Type:$data, LLVM_Type:$mask,
+                 Variadic<LLVM_Type>:$pass_thru, I32Attr:$alignment)> {
+  string llvmBuilder = [{
+    $res = $pass_thru.empty() ? builder.CreateMaskedLoad(
+      $data, llvm::Align($alignment.getZExtValue()), $mask) :
+      builder.CreateMaskedLoad(
+        $data, llvm::Align($alignment.getZExtValue()), $mask, $pass_thru[0]);
+  }];
+  let assemblyFormat =
+    "operands attr-dict `:` functional-type(operands, results)";
+}
+
+/// Create a call to Masked Store intrinsic.
+def LLVM_MaskedStoreOp
+    : LLVM_ZeroResultOp<"intr.masked.store">,
+      Arguments<(ins LLVM_Type:$value, LLVM_Type:$data, LLVM_Type:$mask,
+                 I32Attr:$alignment)> {
+  string llvmBuilder = [{
+    builder.CreateMaskedStore(
+      $value, $data, llvm::Align($alignment.getZExtValue()), $mask);
+  }];
+  let assemblyFormat = "$value `,` $data `,` $mask attr-dict `:` "
+    "type($value) `,` type($mask) `into` type($data)";
+}
 //
 // Atomic operations.
 //

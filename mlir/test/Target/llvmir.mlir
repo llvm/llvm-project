@@ -1137,7 +1137,7 @@ llvm.func @bar(!llvm<"i8*">) -> !llvm<"i8*">
 llvm.func @__gxx_personality_v0(...) -> !llvm.i32
 
 // CHECK-LABEL: @invokeLandingpad
-llvm.func @invokeLandingpad() -> !llvm.i32 {
+llvm.func @invokeLandingpad() -> !llvm.i32 attributes { personality = @__gxx_personality_v0 } {
 // CHECK: %[[a1:[0-9]+]] = alloca i8
   %0 = llvm.mlir.constant(0 : i32) : !llvm.i32
   %1 = llvm.mlir.constant("\01") : !llvm<"[1 x i8]">

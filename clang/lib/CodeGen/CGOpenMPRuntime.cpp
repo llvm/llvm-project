@@ -9483,7 +9483,7 @@ void CGOpenMPRuntime::emitTargetNumIterationsCall(
 void CGOpenMPRuntime::emitTargetCall(
     CodeGenFunction &CGF, const OMPExecutableDirective &D,
     llvm::Function *OutlinedFn, llvm::Value *OutlinedFnID, const Expr *IfCond,
-    const Expr *Device,
+    llvm::PointerIntPair<const Expr *, 2, OpenMPDeviceClauseModifier> Device,
     llvm::function_ref<llvm::Value *(CodeGenFunction &CGF,
                                      const OMPLoopDirective &D)>
         SizeEmitter) {
@@ -9507,6 +9507,16 @@ void CGOpenMPRuntime::emitTargetCall(
   auto &&ThenGen = [this, Device, OutlinedFn, OutlinedFnID, &D, &InputInfo,
                     &MapTypesArray, &CS, RequiresOuterTask, &CapturedVars,
                     SizeEmitter](CodeGenFunction &CGF, PrePostActionTy &) {
+    if (Device.getInt() == OMPC_DEVICE_ancestor) {
+      // Reverse offloading is not supported, so just execute on the host.
+      if (RequiresOuterTask) {
+        CapturedVars.clear();
+        CGF.GenerateOpenMPCapturedVars(CS, CapturedVars);
+      }
+      emitOutlinedFunctionCall(CGF, D.getBeginLoc(), OutlinedFn, CapturedVars);
+      return;
+    }
+
     // On top of the arrays that were filled up, the target offloading call
     // takes as arguments the device id as well as the host pointer. The host
     // pointer is used by the runtime library to identify the current target
@@ -9521,9 +9531,13 @@ void CGOpenMPRuntime::emitTargetCall(
 
     // Emit device ID if any.
     llvm::Value *DeviceID;
-    if (Device) {
-      DeviceID = CGF.Builder.CreateIntCast(CGF.EmitScalarExpr(Device),
-                                           CGF.Int64Ty, /*isSigned=*/true);
+    if (Device.getPointer()) {
+      assert((Device.getInt() == OMPC_DEVICE_unknown ||
+              Device.getInt() == OMPC_DEVICE_device_num) &&
+             "Expected device_num modifier.");
+      llvm::Value *DevVal = CGF.EmitScalarExpr(Device.getPointer());
+      DeviceID =
+          CGF.Builder.CreateIntCast(DevVal, CGF.Int64Ty, /*isSigned=*/true);
     } else {
       DeviceID = CGF.Builder.getInt64(OMP_DEVICEID_UNDEF);
     }
@@ -12135,7 +12149,7 @@ void CGOpenMPSIMDRuntime::emitTargetOutlinedFunction(
 void CGOpenMPSIMDRuntime::emitTargetCall(
     CodeGenFunction &CGF, const OMPExecutableDirective &D,
     llvm::Function *OutlinedFn, llvm::Value *OutlinedFnID, const Expr *IfCond,
-    const Expr *Device,
+    llvm::PointerIntPair<const Expr *, 2, OpenMPDeviceClauseModifier> Device,
     llvm::function_ref<llvm::Value *(CodeGenFunction &CGF,
                                      const OMPLoopDirective &D)>
         SizeEmitter) {

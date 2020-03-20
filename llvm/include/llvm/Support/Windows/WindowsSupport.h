@@ -236,6 +236,12 @@ namespace windows {
 // UTF-8 regardless of the current code page setting.
 std::error_code GetCommandLineArguments(SmallVectorImpl<const char *> &Args,
                                         BumpPtrAllocator &Alloc);
+
+/// Convert UTF-8 path to a suitable UTF-16 path for use with the Win32 Unicode
+/// File API.
+std::error_code widenPath(const Twine &Path8, SmallVectorImpl<wchar_t> &Path16,
+                          size_t MaxPathLen = MAX_PATH);
+
 } // end namespace windows
 } // end namespace sys
 } // end namespace llvm.

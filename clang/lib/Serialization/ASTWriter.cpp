@@ -6376,7 +6376,9 @@ void OMPClauseWriter::VisitOMPDependClause(OMPDependClause *C) {
 
 void OMPClauseWriter::VisitOMPDeviceClause(OMPDeviceClause *C) {
   VisitOMPClauseWithPreInit(C);
+  Record.writeEnum(C->getModifier());
   Record.AddStmt(C->getDevice());
+  Record.AddSourceLocation(C->getModifierLoc());
   Record.AddSourceLocation(C->getLParenLoc());
 }
 

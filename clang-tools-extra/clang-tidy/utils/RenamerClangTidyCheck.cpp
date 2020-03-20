@@ -272,6 +272,11 @@ void RenamerClangTidyCheck::check(const MatchFinder::MatchResult &Result) {
   }
 
   if (const auto *Decl = Result.Nodes.getNodeAs<NamedDecl>("decl")) {
+    // Fix using namespace declarations.
+    if (const auto *UsingNS = dyn_cast<UsingDirectiveDecl>(Decl))
+      addUsage(NamingCheckFailures, UsingNS->getNominatedNamespaceAsWritten(),
+               UsingNS->getIdentLocation());
+
     if (!Decl->getIdentifier() || Decl->getName().empty() || Decl->isImplicit())
       return;
 

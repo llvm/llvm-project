@@ -212,6 +212,9 @@
 #ifndef OPENMP_DEPOBJ_CLAUSE
 #define OPENMP_DEPOBJ_CLAUSE(Name)
 #endif
+#ifndef OPENMP_DEVICE_MODIFIER
+#define OPENMP_DEVICE_MODIFIER(Name)
+#endif
 
 // OpenMP clauses.
 OPENMP_CLAUSE(allocator, OMPAllocatorClause)
@@ -365,6 +368,10 @@ OPENMP_SCHEDULE_KIND(runtime)
 OPENMP_SCHEDULE_MODIFIER(monotonic)
 OPENMP_SCHEDULE_MODIFIER(nonmonotonic)
 OPENMP_SCHEDULE_MODIFIER(simd)
+
+// Modifiers for 'device' clause.
+OPENMP_DEVICE_MODIFIER(ancestor)
+OPENMP_DEVICE_MODIFIER(device_num)
 
 // Static attributes for 'defaultmap' clause.
 OPENMP_DEFAULTMAP_KIND(scalar)
@@ -1091,6 +1098,7 @@ OPENMP_DEPOBJ_CLAUSE(depend)
 OPENMP_DEPOBJ_CLAUSE(destroy)
 OPENMP_DEPOBJ_CLAUSE(update)
 
+#undef OPENMP_DEVICE_MODIFIER
 #undef OPENMP_DEPOBJ_CLAUSE
 #undef OPENMP_FLUSH_CLAUSE
 #undef OPENMP_ORDER_KIND

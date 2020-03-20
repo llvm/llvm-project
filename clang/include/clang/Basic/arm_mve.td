@@ -243,6 +243,26 @@ let params = T.Signed, pnt = PNT_NType in {
   defm vqrdmla: VQDMLA;
 }
 
+multiclass VQDMLAD<int exchange, int round, int subtract> {
+  def "": Intrinsic<Vector, (args Vector:$a, Vector:$b, Vector:$c),
+       (IRInt<"vqdmlad", [Vector]> $a, $b, $c,
+            (u32 exchange), (u32 round), (u32 subtract))>;
+  def _m: Intrinsic<Vector, (args Vector:$a, Vector:$b, Vector:$c,
+                                  Predicate:$pred),
+       (IRInt<"vqdmlad_predicated", [Vector, Predicate]> $a, $b, $c,
+            (u32 exchange), (u32 round), (u32 subtract), $pred)>;
+}
+let params = T.Signed in {
+  defm vqdmladhq:   VQDMLAD<0, 0, 0>;
+  defm vqdmladhxq:  VQDMLAD<1, 0, 0>;
+  defm vqdmlsdhq:   VQDMLAD<0, 0, 1>;
+  defm vqdmlsdhxq:  VQDMLAD<1, 0, 1>;
+  defm vqrdmladhq:  VQDMLAD<0, 1, 0>;
+  defm vqrdmladhxq: VQDMLAD<1, 1, 0>;
+  defm vqrdmlsdhq:  VQDMLAD<0, 1, 1>;
+  defm vqrdmlsdhxq: VQDMLAD<1, 1, 1>;
+}
+
 let params = !listconcat(T.Int16, T.Int32) in {
   let pnt = PNT_None in {
     def vmvnq_n: Intrinsic<Vector, (args imm_simd_vmvn:$imm),

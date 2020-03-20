@@ -13,6 +13,7 @@
 #ifndef MLIR_DIALECT_SPIRV_SPIRVLOWERING_H
 #define MLIR_DIALECT_SPIRV_SPIRVLOWERING_H
 
+#include "mlir/Dialect/SPIRV/SPIRVAttributes.h"
 #include "mlir/Dialect/SPIRV/SPIRVTypes.h"
 #include "mlir/Dialect/SPIRV/TargetAndABI.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -22,15 +23,38 @@ namespace mlir {
 
 /// Type conversion from standard types to SPIR-V types for shader interface.
 ///
-/// For composite types, this converter additionally performs type wrapping to
+/// Non-32-bit scalar types require special hardware support that may not exist
+/// on all GPUs. This is reflected in SPIR-V as that non-32-bit scalar types
+/// require special capabilities or extensions. Right now if a scalar type of a
+/// certain bitwidth is not supported in the target environment, we use 32-bit
+/// ones unconditionally. This requires the runtime to also feed in data with
+/// a matched bitwidth and layout for interface types. The runtime can do that
+/// by inspecting the SPIR-V module.
+///
+/// For memref types, this converter additionally performs type wrapping to
 /// satisfy shader interface requirements: shader interface types must be
 /// pointers to structs.
+///
+/// TODO(antiagainst): We might want to introduce a way to control how
+/// unsupported bitwidth are handled and explicitly fail if wanted.
 class SPIRVTypeConverter : public TypeConverter {
 public:
-  SPIRVTypeConverter();
+  explicit SPIRVTypeConverter(spirv::TargetEnvAttr targetAttr);
 
   /// Gets the SPIR-V correspondence for the standard index type.
   static Type getIndexType(MLIRContext *context);
+
+  /// Returns the corresponding memory space for memref given a SPIR-V storage
+  /// class.
+  static unsigned getMemorySpaceForStorageClass(spirv::StorageClass);
+
+  /// Returns the SPIR-V storage class given a memory space for memref. Return
+  /// llvm::None if the memory space does not map to any SPIR-V storage class.
+  static Optional<spirv::StorageClass>
+  getStorageClassForMemorySpace(unsigned space);
+
+private:
+  spirv::TargetEnv targetEnv;
 };
 
 /// Base class to define a conversion pattern to lower `SourceOp` into SPIR-V.
@@ -61,11 +85,10 @@ class FuncOp;
 class SPIRVConversionTarget : public ConversionTarget {
 public:
   /// Creates a SPIR-V conversion target for the given target environment.
-  static std::unique_ptr<SPIRVConversionTarget> get(TargetEnvAttr targetEnv,
-                                                    MLIRContext *context);
+  static std::unique_ptr<SPIRVConversionTarget> get(TargetEnvAttr targetAttr);
 
 private:
-  SPIRVConversionTarget(TargetEnvAttr targetEnv, MLIRContext *context);
+  explicit SPIRVConversionTarget(TargetEnvAttr targetAttr);
 
   // Be explicit that instance of this class cannot be copied or moved: there
   // are lambdas capturing fields of the instance.
@@ -78,9 +101,7 @@ private:
   /// environment.
   bool isLegalOp(Operation *op);
 
-  Version givenVersion;                            /// SPIR-V version to target
-  llvm::SmallSet<Extension, 4> givenExtensions;    /// Allowed extensions
-  llvm::SmallSet<Capability, 8> givenCapabilities; /// Allowed capabilities
+  TargetEnv targetEnv;
 };
 
 /// Returns the value for the given `builtin` variable. This function gets or

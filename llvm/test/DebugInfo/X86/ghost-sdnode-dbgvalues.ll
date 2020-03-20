@@ -1,4 +1,3 @@
-; REQUIRES: x86
 
 ; RUN: llc -mtriple=x86_64-apple-macosx10.10.0 -o %t %s
 

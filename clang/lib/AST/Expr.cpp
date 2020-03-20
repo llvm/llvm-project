@@ -4231,6 +4231,7 @@ DesignatedInitUpdateExpr::DesignatedInitUpdateExpr(const ASTContext &C,
   ILE->setType(baseExpr->getType());
   BaseAndUpdaterExprs[1] = ILE;
 
+  // FIXME: this is wrong, set it correctly.
   setDependence(ExprDependence::None);
 }
 

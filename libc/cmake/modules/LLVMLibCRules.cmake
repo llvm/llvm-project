@@ -372,6 +372,7 @@ endfunction(add_redirector_library)
 #      SRCS  <list of .cpp files for the test>
 #      HDRS  <list of .h files for the test>
 #      DEPENDS <list of dependencies>
+#      COMPILE_OPTIONS <list of special compile options for this target>
 #    )
 function(add_libc_unittest target_name)
   if(NOT LLVM_INCLUDE_TESTS)
@@ -382,7 +383,7 @@ function(add_libc_unittest target_name)
     "LIBC_UNITTEST"
     "" # No optional arguments
     "SUITE" # Single value arguments
-    "SRCS;HDRS;DEPENDS" # Multi-value arguments
+    "SRCS;HDRS;DEPENDS;COMPILE_OPTIONS" # Multi-value arguments
     ${ARGN}
   )
   if(NOT LIBC_UNITTEST_SRCS)
@@ -420,6 +421,12 @@ function(add_libc_unittest target_name)
       ${LIBC_BUILD_DIR}
       ${LIBC_BUILD_DIR}/include
   )
+  if(LIBC_UNITTEST_COMPILE_OPTIONS)
+    target_compile_options(
+      ${target_name}
+      PRIVATE ${LIBC_UNITTEST_COMPILE_OPTIONS}
+    )
+  endif()
 
   if(library_deps)
     target_link_libraries(${target_name} PRIVATE ${library_deps})

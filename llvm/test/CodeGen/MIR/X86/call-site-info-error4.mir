@@ -1,5 +1,5 @@
-# RUN: not llc -mtriple=x86_64-- -run-pass none %s -o - 2>&1 | FileCheck %s
-# CHECK: Call site info provided but not used
+# RUN: llc -emit-call-site-info -mtriple=x86_64-- -run-pass none %s -o - 2>&1 | FileCheck %s
+# CHECK-NOT: Call site info provided but not used
 --- |
   define dso_local i32 @baa(i32 %a) local_unnamed_addr {
   entry:

@@ -1483,6 +1483,37 @@ bool CombinerHelper::tryCombineShiftToUnmerge(MachineInstr &MI,
   return false;
 }
 
+bool CombinerHelper::matchAnyExplicitUseIsUndef(MachineInstr &MI) {
+  return any_of(MI.explicit_uses(), [this](const MachineOperand &MO) {
+    return MO.isReg() &&
+           getOpcodeDef(TargetOpcode::G_IMPLICIT_DEF, MO.getReg(), MRI);
+  });
+}
+
+bool CombinerHelper::replaceInstWithFConstant(MachineInstr &MI, double C) {
+  assert(MI.getNumDefs() == 1 && "Expected only one def?");
+  Builder.setInstr(MI);
+  Builder.buildFConstant(MI.getOperand(0), C);
+  MI.eraseFromParent();
+  return true;
+}
+
+bool CombinerHelper::replaceInstWithConstant(MachineInstr &MI, int64_t C) {
+  assert(MI.getNumDefs() == 1 && "Expected only one def?");
+  Builder.setInstr(MI);
+  Builder.buildConstant(MI.getOperand(0), C);
+  MI.eraseFromParent();
+  return true;
+}
+
+bool CombinerHelper::replaceInstWithUndef(MachineInstr &MI) {
+  assert(MI.getNumDefs() == 1 && "Expected only one def?");
+  Builder.setInstr(MI);
+  Builder.buildUndef(MI.getOperand(0));
+  MI.eraseFromParent();
+  return true;
+}
+
 bool CombinerHelper::tryCombine(MachineInstr &MI) {
   if (tryCombineCopy(MI))
     return true;

@@ -4980,6 +4980,17 @@ static bool ArmCdeAliasValid(unsigned BuiltinID, StringRef AliasName) {
   return ArmBuiltinAliasValid(BuiltinID, AliasName, Map, IntrinNames);
 }
 
+static bool ArmSveAliasValid(unsigned BuiltinID, StringRef AliasName) {
+  switch (BuiltinID) {
+  default:
+    return false;
+#define GET_SVE_BUILTINS
+#define BUILTIN(name, types, attr) case SVE::BI##name:
+#include "clang/Basic/arm_sve_builtins.inc"
+    return true;
+  }
+}
+
 static void handleArmBuiltinAliasAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (!AL.isArgIdent(0)) {
     S.Diag(AL.getLoc(), diag::err_attribute_argument_n_type)
@@ -4991,8 +5002,10 @@ static void handleArmBuiltinAliasAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   unsigned BuiltinID = Ident->getBuiltinID();
   StringRef AliasName = cast<FunctionDecl>(D)->getIdentifier()->getName();
 
-  if (!ArmMveAliasValid(BuiltinID, AliasName) &&
-      !ArmCdeAliasValid(BuiltinID, AliasName)) {
+  bool IsAArch64 = S.Context.getTargetInfo().getTriple().isAArch64();
+  if ((IsAArch64 && !ArmSveAliasValid(BuiltinID, AliasName)) ||
+      (!IsAArch64 && !ArmMveAliasValid(BuiltinID, AliasName) &&
+       !ArmCdeAliasValid(BuiltinID, AliasName))) {
     S.Diag(AL.getLoc(), diag::err_attribute_arm_builtin_alias);
     return;
   }

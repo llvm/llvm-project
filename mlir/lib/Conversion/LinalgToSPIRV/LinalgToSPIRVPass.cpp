@@ -25,14 +25,14 @@ void LinalgToSPIRVPass::runOnModule() {
   MLIRContext *context = &getContext();
   ModuleOp module = getModule();
 
-  SPIRVTypeConverter typeConverter;
+  auto targetAttr = spirv::lookupTargetEnvOrDefault(module);
+  std::unique_ptr<ConversionTarget> target =
+      spirv::SPIRVConversionTarget::get(targetAttr);
+
+  SPIRVTypeConverter typeConverter(targetAttr);
   OwningRewritePatternList patterns;
   populateLinalgToSPIRVPatterns(context, typeConverter, patterns);
   populateBuiltinFuncToSPIRVPatterns(context, typeConverter, patterns);
-
-  auto targetEnv = spirv::lookupTargetEnvOrDefault(module);
-  std::unique_ptr<ConversionTarget> target =
-      spirv::SPIRVConversionTarget::get(targetEnv, context);
 
   // Allow builtin ops.
   target->addLegalOp<ModuleOp, ModuleTerminatorOp>();

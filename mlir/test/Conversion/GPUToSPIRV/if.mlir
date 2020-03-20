@@ -1,6 +1,12 @@
 // RUN: mlir-opt -convert-gpu-to-spirv %s -o - | FileCheck %s
 
-module attributes {gpu.container_module} {
+module attributes {
+  gpu.container_module,
+  spv.target_env = #spv.target_env<
+    #spv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]>,
+    {max_compute_workgroup_invocations = 128 : i32,
+     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+} {
   func @main(%arg0 : memref<10xf32>, %arg1 : i1) {
     %c0 = constant 1 : index
     "gpu.launch_func"(%c0, %c0, %c0, %c0, %c0, %c0, %arg0, %arg1) { kernel = "kernel_simple_selection", kernel_module = @kernels} : (index, index, index, index, index, index, memref<10xf32>, i1) -> ()

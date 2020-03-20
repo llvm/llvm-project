@@ -540,6 +540,7 @@ void ASTStmtWriter::VisitExpr(Expr *E) {
   Record.push_back(E->isValueDependent());
   Record.push_back(E->isInstantiationDependent());
   Record.push_back(E->containsUnexpandedParameterPack());
+  Record.push_back(E->containsErrors());
   Record.push_back(E->getValueKind());
   Record.push_back(E->getObjectKind());
 }
