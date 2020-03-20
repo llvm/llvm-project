@@ -216,11 +216,12 @@ struct UnitIndexEntry {
   StringRef DWPName;
 };
 
-// Convert a section identifier into the index to use with
+// Convert an internal section identifier into the index to use with
 // UnitIndexEntry::Contributions.
 static unsigned getContributionIndex(DWARFSectionKind Kind) {
-  assert(Kind >= DW_SECT_INFO);
-  return Kind - DW_SECT_INFO;
+  // Assuming the pre-standard DWP format.
+  assert(serializeSectionKind(Kind, 2) >= DW_SECT_INFO);
+  return serializeSectionKind(Kind, 2) - DW_SECT_INFO;
 }
 
 // Convert a UnitIndexEntry::Contributions index to the corresponding on-disk
