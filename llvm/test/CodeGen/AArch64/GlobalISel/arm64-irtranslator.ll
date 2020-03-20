@@ -1396,6 +1396,30 @@ define i32 @test_bitreverse_intrinsic(i32 %a) {
   ret i32 %res
 }
 
+declare i32 @llvm.fshl.i32(i32, i32, i32)
+define i32 @test_fshl_intrinsic(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: name: test_fshl_intrinsic
+; CHECK: [[A:%[0-9]+]]:_(s32) = COPY $w0
+; CHECK: [[B:%[0-9]+]]:_(s32) = COPY $w1
+; CHECK: [[C:%[0-9]+]]:_(s32) = COPY $w2
+; CHECK: [[RES:%[0-9]+]]:_(s32) = G_FSHL [[A]], [[B]], [[C]]
+; CHECK: $w0 = COPY [[RES]]
+  %res = call i32 @llvm.fshl.i32(i32 %a, i32 %b, i32 %c)
+  ret i32 %res
+}
+
+declare i32 @llvm.fshr.i32(i32, i32, i32)
+define i32 @test_fshr_intrinsic(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: name: test_fshr_intrinsic
+; CHECK: [[A:%[0-9]+]]:_(s32) = COPY $w0
+; CHECK: [[B:%[0-9]+]]:_(s32) = COPY $w1
+; CHECK: [[C:%[0-9]+]]:_(s32) = COPY $w2
+; CHECK: [[RES:%[0-9]+]]:_(s32) = G_FSHR [[A]], [[B]], [[C]]
+; CHECK: $w0 = COPY [[RES]]
+  %res = call i32 @llvm.fshr.i32(i32 %a, i32 %b, i32 %c)
+  ret i32 %res
+}
+
 declare void @llvm.lifetime.start.p0i8(i64, i8*)
 declare void @llvm.lifetime.end.p0i8(i64, i8*)
 define void @test_lifetime_intrin() {
