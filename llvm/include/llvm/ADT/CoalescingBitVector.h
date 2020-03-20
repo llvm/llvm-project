@@ -266,9 +266,9 @@ public:
     }
 
     /// Advance the iterator to \p Index, if it is contained within the current
-    /// interval.
+    /// interval. The public-facing method which supports advancing past the
+    /// current interval is \ref advanceToLowerBound.
     void advanceTo(IndexT Index) {
-      assert(OffsetIntoMapIterator == 0 && "Not implemented");
       assert(Index <= CachedStop && "Cannot advance to OOB index");
       if (Index < CachedStart)
         // We're already past this index.
@@ -314,6 +314,25 @@ public:
       operator++();
       return tmp;
     }
+
+    /// Advance the iterator to the first set bit AT, OR AFTER, \p Index. If
+    /// no such set bit exists, advance to end(). This is like std::lower_bound.
+    /// This is useful if \p Index is close to the current iterator position.
+    /// However, unlike \ref find(), this has worst-case O(n) performance.
+    void advanceToLowerBound(IndexT Index) {
+      if (OffsetIntoMapIterator == kIteratorAtTheEndOffset)
+        return;
+
+      // Advance to the first interval containing (or past) Index, or to end().
+      while (Index > CachedStop) {
+        ++MapIterator;
+        resetCache();
+        if (OffsetIntoMapIterator == kIteratorAtTheEndOffset)
+          return;
+      }
+
+      advanceTo(Index);
+    }
   };
 
   const_iterator begin() const { return const_iterator(Intervals.begin()); }
@@ -322,6 +341,8 @@ public:
 
   /// Return an iterator pointing to the first set bit AT, OR AFTER, \p Index.
   /// If no such set bit exists, return end(). This is like std::lower_bound.
+  /// This has worst-case logarithmic performance (roughly O(log(gaps between
+  /// contiguous ranges))).
   const_iterator find(IndexT Index) const {
     auto UnderlyingIt = Intervals.find(Index);
     if (UnderlyingIt == Intervals.end())
