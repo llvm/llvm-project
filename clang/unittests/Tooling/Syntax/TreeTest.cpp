@@ -47,7 +47,7 @@ static llvm::ArrayRef<syntax::Token> tokens(syntax::Node *N) {
 class SyntaxTreeTest : public ::testing::Test {
 protected:
   // Build a syntax tree for the code.
-  syntax::TranslationUnit *buildTree(llvm::StringRef Code) {
+  syntax::TranslationUnit *buildTree(llvm::StringRef Code, StringRef Target) {
     // FIXME: this code is almost the identical to the one in TokensTest. Share
     //        it.
     class BuildSyntaxTree : public ASTConsumer {
@@ -98,9 +98,9 @@ protected:
     if (!Diags->getClient())
       Diags->setClient(new IgnoringDiagConsumer);
     // Prepare to run a compiler.
-    std::vector<const char *> Args = {"syntax-test", "-std=c++11",
-                                      "-fno-delayed-template-parsing",
-                                      "-fsyntax-only", FileName};
+    std::vector<const char *> Args = {"-target",       Target.data(),
+                                      "-fsyntax-only", "-std=c++17",
+                                      "syntax-test",   FileName};
     Invocation = createInvocationFromCommandLine(Args, Diags, FS);
     assert(Invocation);
     Invocation->getFrontendOpts().DisableFree = false;
@@ -121,14 +121,29 @@ protected:
     return Root;
   }
 
-  void expectTreeDumpEqual(StringRef code, StringRef tree) {
-    SCOPED_TRACE(code);
+  void expectTreeDumpEqual(StringRef Code, StringRef Tree,
+                           bool RunWithDelayedTemplateParsing = true) {
+    SCOPED_TRACE(Code);
 
-    auto *Root = buildTree(code);
-    std::string Expected = tree.trim().str();
-    std::string Actual =
-        std::string(llvm::StringRef(Root->dump(*Arena)).trim());
-    EXPECT_EQ(Expected, Actual) << "the resulting dump is:\n" << Actual;
+    std::string Expected = Tree.trim().str();
+
+    // We want to run the test with -fdelayed-template-parsing enabled and
+    // disabled, therefore we use these representative targets that differ in
+    // the default value.
+    // We are not passing -fdelayed-template-parsing directly but we are using
+    // the `-target` to improve coverage and discover differences in behavior
+    // early.
+    for (const StringRef Target :
+         {"x86_64-unknown-unknown", "x86_64-pc-win32"}) {
+      if (!RunWithDelayedTemplateParsing && Target.equals("x86_64-pc-win32")) {
+        continue;
+      }
+      auto *Root = buildTree(Code, Target);
+      std::string Actual = std::string(StringRef(Root->dump(*Arena)).trim());
+      EXPECT_EQ(Expected, Actual)
+          << "for target " << Target << " the resulting dump is:\n"
+          << Actual;
+    }
   }
 
   // Adds a file to the test VFS.
@@ -794,7 +809,10 @@ template <class T> int fun() {}
     `-CompoundStatement
       |-{
       `-}
-)txt");
+)txt",
+      // FIXME: Make this test work on windows by generating the expected Syntax
+      // tree when -fdelayed-template-parsing is active.
+      /*RunWithDelayedTemplateParsing=*/true);
 }
 
 TEST_F(SyntaxTreeTest, NestedTemplates) {
@@ -1740,7 +1758,7 @@ TEST_F(SyntaxTreeTest, Mutations) {
   auto CheckTransformation = [this](std::string Input, std::string Expected,
                                     Transformation Transform) -> void {
     llvm::Annotations Source(Input);
-    auto *Root = buildTree(Source.code());
+    auto *Root = buildTree(Source.code(), "x86_64-unknown-unknown");
 
     Transform(Source, Root);
 
@@ -1778,7 +1796,7 @@ TEST_F(SyntaxTreeTest, Mutations) {
 }
 
 TEST_F(SyntaxTreeTest, SynthesizedNodes) {
-  buildTree("");
+  buildTree("", "x86_64-unknown-unknown");
 
   auto *C = syntax::createPunctuation(*Arena, tok::comma);
   ASSERT_NE(C, nullptr);
