@@ -54,12 +54,12 @@ T tmain(T argc) {
 #pragma omp simd
   for (int i = 0; i < 10; ++i)
   switch (argc) {
-#pragma omp scan inclusive(argc)
+#pragma omp scan inclusive(argc) // expected-note 2 {{previous 'scan' directive used here}}
   case 1:
-#pragma omp scan inclusive(argc)
+#pragma omp scan inclusive(argc) // expected-error {{exactly one 'scan' directive must appear in the loop body of an enclosing directive}}
     break;
   default: {
-#pragma omp scan inclusive(argc)
+#pragma omp scan inclusive(argc) // expected-error {{exactly one 'scan' directive must appear in the loop body of an enclosing directive}}
   } break;
   }
 #pragma omp simd
@@ -133,12 +133,12 @@ int main(int argc, char **argv) {
 #pragma omp simd
   for (int i = 0; i < 10; ++i)
   switch (argc) {
-#pragma omp scan inclusive(argc)
+#pragma omp scan inclusive(argc) // expected-note 2 {{previous 'scan' directive used here}}
   case 1:
-#pragma omp scan inclusive(argc)
+#pragma omp scan inclusive(argc) // expected-error {{exactly one 'scan' directive must appear in the loop body of an enclosing directive}}
     break;
   default: {
-#pragma omp scan inclusive(argc)
+#pragma omp scan inclusive(argc) // expected-error {{exactly one 'scan' directive must appear in the loop body of an enclosing directive}}
   } break;
   }
 #pragma omp simd
