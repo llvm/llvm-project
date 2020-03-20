@@ -640,6 +640,9 @@ bool WebAssemblyFastISel::fastLowerArguments() {
   if (F->isVarArg())
     return false;
 
+  if (FuncInfo.Fn->getCallingConv() == CallingConv::Swift)
+    return false;
+
   unsigned I = 0;
   for (auto const &Arg : F->args()) {
     const AttributeList &Attrs = F->getAttributes();
@@ -752,6 +755,9 @@ bool WebAssemblyFastISel::selectCall(const Instruction *I) {
 
   Function *Func = Call->getCalledFunction();
   if (Func && Func->isIntrinsic())
+    return false;
+
+  if (Call->getCallingConv() == CallingConv::Swift)
     return false;
 
   bool IsDirect = Func != nullptr;
