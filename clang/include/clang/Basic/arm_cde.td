@@ -13,6 +13,15 @@
 
 include "arm_mve_defs.td"
 
+// f64 is not defined in arm_mve_defs.td because MVE instructions only work with
+// f16 and f32
+def f64: PrimitiveType<"f", 64>;
+
+// Float<t> expects t to be a scalar type, and expands to the floating-point
+// type of the same width.
+class Float<Type t>: ComplexType<(CTO_CopyKind t, f32)>;
+def FScalar: Float<Scalar>;
+
 // ACLE CDE intrinsic
 class CDEIntrinsic<Type ret, dag args, dag codegen>
   : Intrinsic<ret, args, codegen> {
@@ -70,3 +79,31 @@ multiclass CDE_CX_m<dag argsImm, dag argsReg, dag cgArgs> {
 defm cx1 : CDE_CX_m<(args imm_13b:$imm), (args), (?)>;
 defm cx2 : CDE_CX_m<(args imm_9b:$imm), (args u32:$n), (? $n)>;
 defm cx3 : CDE_CX_m<(args imm_6b:$imm), (args u32:$n, u32:$m), (? $n, $m)>;
+
+// VCX* instructions operating on VFP registers
+multiclass CDE_VCXFP_m<dag argsImm, dag argsReg32, dag argsReg64, dag cgArgs> {
+  defvar cp = (args imm_coproc:$cp);
+  let pnt = PNT_None, params = [u32] in {
+    def "" : CDEIntrinsic<u32, !con(cp, argsReg32, argsImm),
+          (bitcast !con((CDEIRInt<NAME, [f32]> $cp), cgArgs, (? $imm)),
+                   Scalar)>;
+    def a  : CDEIntrinsic<u32, !con(cp, (args u32:$acc), argsReg32, argsImm),
+          (bitcast !con((CDEIRInt<NAME # "a", [f32]> $cp,
+                         (bitcast $acc, FScalar)), cgArgs, (? $imm)), Scalar)>;
+  }
+  let pnt = PNT_None, params = [u64] in {
+    def d  : CDEIntrinsic<u64, !con(cp, argsReg64, argsImm),
+          (bitcast !con((CDEIRInt<NAME, [f64]> $cp), cgArgs, (? $imm)),
+                   Scalar)>;
+    def da : CDEIntrinsic<u64, !con(cp, (args u64:$acc), argsReg64, argsImm),
+          (bitcast !con((CDEIRInt<NAME # "a", [f64]> $cp,
+                         (bitcast $acc, FScalar)), cgArgs, (? $imm)), Scalar)>;
+  }
+}
+
+defm vcx1: CDE_VCXFP_m<(args imm_11b:$imm), (args), (args), (?)>;
+defm vcx2: CDE_VCXFP_m<(args imm_6b:$imm), (args u32:$n), (args u64:$n),
+                       (? (bitcast $n, FScalar))>;
+defm vcx3: CDE_VCXFP_m<(args imm_3b:$imm),
+                       (args u32:$n, u32:$m), (args u64:$n, u64:$m),
+                       (? (bitcast $n, FScalar), (bitcast $m, FScalar))>;

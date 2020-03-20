@@ -1301,4 +1301,20 @@ defm int_arm_cde_cx1: CDEGPRIntrinsics<[]>;
 defm int_arm_cde_cx2: CDEGPRIntrinsics<[llvm_i32_ty]>;
 defm int_arm_cde_cx3: CDEGPRIntrinsics<[llvm_i32_ty, llvm_i32_ty]>;
 
+multiclass CDEVCXIntrinsics<list<LLVMType> args> {
+  def "" : Intrinsic<
+    [llvm_anyfloat_ty],
+    !listconcat([llvm_i32_ty /* coproc */], args, [llvm_i32_ty /* imm */]),
+    [IntrNoMem, ImmArg<0>, ImmArg<!add(!size(args), 1)>]>;
+  def a : Intrinsic<
+    [llvm_anyfloat_ty],
+    !listconcat([llvm_i32_ty /* coproc */,  LLVMMatchType<0> /* acc */],
+                args, [llvm_i32_ty /* imm */]),
+    [IntrNoMem, ImmArg<0>, ImmArg<!add(!size(args), 2)>]>;
+}
+
+defm int_arm_cde_vcx1 : CDEVCXIntrinsics<[]>;
+defm int_arm_cde_vcx2 : CDEVCXIntrinsics<[LLVMMatchType<0>]>;
+defm int_arm_cde_vcx3 : CDEVCXIntrinsics<[LLVMMatchType<0>, LLVMMatchType<0>]>;
+
 } // end TargetPrefix
