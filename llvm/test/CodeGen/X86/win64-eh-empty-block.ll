@@ -20,8 +20,8 @@
 ; CHECK: callq   __cxa_throw
 ; CHECK: # %eh.resume
 ; CHECK: callq _Unwind_Resume
-; CHECK-NEXT: int3
 ; CHECK-NEXT: # %unreachable
+; CHECK-NEXT: int3
 ; CHECK-NEXT: .Lfunc_end0:
 
 %struct.as = type { i32* }

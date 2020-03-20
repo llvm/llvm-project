@@ -650,6 +650,7 @@ bool MIParser::parseBasicBlockDefinition(
   lex();
   bool HasAddressTaken = false;
   bool IsLandingPad = false;
+  bool IsEHFuncletEntry = false;
   MachineBasicBlockSection SectionType = MBBS_None;
   unsigned Alignment = 0;
   BasicBlock *BB = nullptr;
@@ -663,6 +664,10 @@ bool MIParser::parseBasicBlockDefinition(
         break;
       case MIToken::kw_landing_pad:
         IsLandingPad = true;
+        lex();
+        break;
+      case MIToken::kw_ehfunclet_entry:
+        IsEHFuncletEntry = true;
         lex();
         break;
       case MIToken::kw_align:
@@ -708,6 +713,7 @@ bool MIParser::parseBasicBlockDefinition(
   if (HasAddressTaken)
     MBB->setHasAddressTaken();
   MBB->setIsEHPad(IsLandingPad);
+  MBB->setIsEHFuncletEntry(IsEHFuncletEntry);
   if (SectionType != MBBS_None) {
     MBB->setSectionType(SectionType);
     MF.setBBSectionsType(BasicBlockSection::List);
