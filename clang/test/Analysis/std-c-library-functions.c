@@ -78,10 +78,13 @@ void test_read_write(int fd, char *buf) {
 size_t fread(void *, size_t, size_t, FILE *);
 size_t fwrite(const void *restrict, size_t, size_t, FILE *restrict);
 void test_fread_fwrite(FILE *fp, int *buf) {
+
   size_t x = fwrite(buf, sizeof(int), 10, fp);
   clang_analyzer_eval(x <= 10); // expected-warning{{TRUE}}
+
   size_t y = fread(buf, sizeof(int), 10, fp);
   clang_analyzer_eval(y <= 10); // expected-warning{{TRUE}}
+
   size_t z = fwrite(buf, sizeof(int), y, fp);
   clang_analyzer_eval(z <= y); // expected-warning{{TRUE}}
 }

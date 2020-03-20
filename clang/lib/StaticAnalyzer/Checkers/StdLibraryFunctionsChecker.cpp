@@ -183,6 +183,29 @@ class StdLibraryFunctionsChecker
                           const Summary &Summary) const override;
   };
 
+  class NotNullConstraint : public ValueConstraint {
+    using ValueConstraint::ValueConstraint;
+    // This variable has a role when we negate the constraint.
+    bool CannotBeNull = true;
+
+  public:
+    ProgramStateRef apply(ProgramStateRef State, const CallEvent &Call,
+                          const Summary &Summary) const override {
+      SVal V = getArgSVal(Call, getArgNo());
+      DefinedOrUnknownSVal L = V.castAs<DefinedOrUnknownSVal>();
+      if (!L.getAs<Loc>())
+        return State;
+
+      return State->assume(L, CannotBeNull);
+    }
+
+    ValueConstraintPtr negate() const override {
+      NotNullConstraint Tmp(*this);
+      Tmp.CannotBeNull = !this->CannotBeNull;
+      return std::make_shared<NotNullConstraint>(Tmp);
+    }
+  };
+
   /// The complete list of constraints that defines a single branch.
   typedef std::vector<ValueConstraintPtr> ConstraintSet;
 
@@ -233,9 +256,6 @@ class StdLibraryFunctionsChecker
              "We should have had no significant void types in the spec");
       assert(T.isCanonical() &&
              "We should only have canonical types in the spec");
-      // FIXME: lift this assert (but not the ones above!)
-      assert(T->isIntegralOrEnumerationType() &&
-             "We only support integral ranges in the spec");
     }
 
   public:
@@ -602,6 +622,9 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
   const QualType LongTy = ACtx.LongTy;
   const QualType LongLongTy = ACtx.LongLongTy;
   const QualType SizeTy = ACtx.getSizeType();
+  const QualType VoidPtrTy = ACtx.VoidPtrTy; // void *T
+  const QualType ConstVoidPtrTy =
+      ACtx.getPointerType(ACtx.VoidTy.withConst()); // const void *T
 
   const RangeInt IntMax = BVF.getMaxValue(IntTy).getLimitedValue();
   const RangeInt LongMax = BVF.getMaxValue(LongTy).getLimitedValue();
@@ -672,6 +695,9 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
     return IntRangeVector{std::pair<RangeInt, RangeInt>{v, v}};
   };
   auto LessThanOrEq = BO_LE;
+  auto NotNull = [&](ArgNo ArgN) {
+    return std::make_shared<NotNullConstraint>(ArgN);
+  };
 
   using RetType = QualType;
   // Templates for summaries that are reused by many functions.
@@ -687,11 +713,20 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
                ReturnValueCondition(WithinRange, Range(-1, Max))});
   };
   auto Fread = [&]() {
-    return Summary(ArgTypes{Irrelevant, Irrelevant, SizeTy, Irrelevant},
+    return Summary(ArgTypes{VoidPtrTy, Irrelevant, SizeTy, Irrelevant},
                    RetType{SizeTy}, NoEvalCall)
         .Case({
             ReturnValueCondition(LessThanOrEq, ArgNo(2)),
-        });
+        })
+        .ArgConstraint(NotNull(ArgNo(0)));
+  };
+  auto Fwrite = [&]() {
+    return Summary(ArgTypes{ConstVoidPtrTy, Irrelevant, SizeTy, Irrelevant},
+                   RetType{SizeTy}, NoEvalCall)
+        .Case({
+            ReturnValueCondition(LessThanOrEq, ArgNo(2)),
+        })
+        .ArgConstraint(NotNull(ArgNo(0)));
   };
   auto Getline = [&](RetType R, RangeInt Max) {
     return Summary(ArgTypes{Irrelevant, Irrelevant, Irrelevant}, RetType{R},
@@ -893,7 +928,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
       {"write", Summaries{Read(IntTy, IntMax), Read(LongTy, LongMax),
                           Read(LongLongTy, LongLongMax)}},
       {"fread", Summaries{Fread()}},
-      {"fwrite", Summaries{Fread()}},
+      {"fwrite", Summaries{Fwrite()}},
       // getline()-like functions either fail or read at least the delimiter.
       {"getline", Summaries{Getline(IntTy, IntMax), Getline(LongTy, LongMax),
                             Getline(LongLongTy, LongLongMax)}},
