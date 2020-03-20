@@ -9,8 +9,8 @@
 # RUN: llvm-readelf -s %t | FileCheck %s
 
 # CHECK:         Value         Size Type   Bind   Vis     Ndx Name
-# CHECK:      00000000000000e8    0 NOTYPE GLOBAL DEFAULT   1 _start
-# CHECK-NEXT: 00000000000000e8    0 NOTYPE GLOBAL DEFAULT ABS _size
+# CHECK:      0000000000000120    0 NOTYPE GLOBAL DEFAULT   1 _start
+# CHECK-NEXT: 0000000000000120    0 NOTYPE GLOBAL DEFAULT ABS _size
 
 .global _start
 _start:

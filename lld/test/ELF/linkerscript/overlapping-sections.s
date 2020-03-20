@@ -5,15 +5,15 @@
 # RUN:   .sec1 0x8000 : AT(0x8000) { sec1_start = .; *(.first_sec) sec1_end = .;} \
 # RUN:   .sec2 0x8800 : AT(0x8080) { sec2_start = .; *(.second_sec) sec2_end = .;} \
 # RUN: }" > %t-lma.script
-# RUN: not ld.lld -o /dev/null --script %t-lma.script %t.o -shared 2>&1 | FileCheck %s -check-prefix LMA-OVERLAP-ERR
+# RUN: not ld.lld -o /dev/null -T %t-lma.script %t.o -shared --no-rosegment 2>&1 | FileCheck %s -check-prefix LMA-OVERLAP-ERR
 # LMA-OVERLAP-ERR:      error: section .sec1 load address range overlaps with .sec2
 # LMA-OVERLAP-ERR-NEXT: >>> .sec1 range is [0x8000, 0x80FF]
 # LMA-OVERLAP-ERR-NEXT: >>> .sec2 range is [0x8080, 0x817F]
 
 # Check that we create the expected binary with --noinhibit-exec or --no-check-sections:
-# RUN: ld.lld -o %t.so --script %t-lma.script %t.o -shared --noinhibit-exec
-# RUN: ld.lld -o %t.so --script %t-lma.script %t.o -shared --no-check-sections -fatal-warnings
-# RUN: ld.lld -o %t.so --script %t-lma.script %t.o -shared --check-sections --no-check-sections -fatal-warnings
+# RUN: ld.lld -o %t.so --script %t-lma.script %t.o -shared --no-rosegment --noinhibit-exec
+# RUN: ld.lld -o %t.so --script %t-lma.script %t.o -shared --no-rosegment --no-check-sections -fatal-warnings
+# RUN: ld.lld -o %t.so --script %t-lma.script %t.o -shared --no-rosegment --check-sections --no-check-sections -fatal-warnings
 
 # Verify that the .sec2 was indeed placed in a PT_LOAD where the PhysAddr
 # overlaps with where .sec1 is loaded:
@@ -42,7 +42,7 @@
 # VADDR-OVERLAP-ERR-NEXT: >>> .sec2 range is [0x8020, 0x811F]
 
 # Check that the expected binary was created with --noinhibit-exec:
-# RUN: ld.lld -o %t.so --script %t-vaddr.script %t.o -shared --noinhibit-exec
+# RUN: ld.lld -o %t.so --script %t-vaddr.script %t.o -shared --no-rosegment --noinhibit-exec
 # RUN: llvm-readelf --sections -l %t.so | FileCheck %s -check-prefix BAD-VADDR
 # BAD-VADDR-LABEL: Section Headers:
 # BAD-VADDR: .sec1             PROGBITS        0000000000008000 002000 000100 00  WA  0   0  1
@@ -75,7 +75,7 @@
 # BOTH-OVERLAP-ERR-NEXT: >>> .sec1 range is [0x8000, 0x80FF]
 # BOTH-OVERLAP-ERR-NEXT: >>> .sec2 range is [0x8040, 0x813F]
 
-# RUN: ld.lld -o %t.so --script %t-both-overlap.script %t.o -shared --noinhibit-exec
+# RUN: ld.lld -o %t.so --script %t-both-overlap.script %t.o -shared --no-rosegment --noinhibit-exec
 # Note: In case everything overlaps we create a binary with overlapping file
 # offsets. ld.bfd seems to place .sec1 to file offset 18000 and .sec2
 # at 18100 so that only virtual addr and LMA overlap
