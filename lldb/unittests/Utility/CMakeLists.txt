@@ -41,6 +41,7 @@ add_lldb_unittest(UtilityTests
   UUIDTest.cpp
   VASprintfTest.cpp
   VMRangeTest.cpp
+  XcodeSDKTest.cpp
 
   LINK_LIBS
       lldbUtility
