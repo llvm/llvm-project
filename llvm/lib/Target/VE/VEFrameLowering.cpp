@@ -192,7 +192,7 @@ void VEFrameLowering::emitPrologue(MachineFunction &MF,
   // rather than reporting an error, as would be sensible. This is
   // poor, but fixing that bogosity is going to be a large project.
   // For now, just see if it's lied, and report an error here.
-  if (!NeedsStackRealignment && MFI.getMaxAlignment() > getStackAlignment())
+  if (!NeedsStackRealignment && MFI.getMaxAlign() > getStackAlign())
     report_fatal_error("Function \"" + Twine(MF.getName()) +
                        "\" required "
                        "stack re-alignment, but LLVM couldn't handle it "
@@ -222,9 +222,7 @@ void VEFrameLowering::emitPrologue(MachineFunction &MF,
 
   // Finally, ensure that the size is sufficiently aligned for the
   // data on the stack.
-  if (MFI.getMaxAlignment() > 0) {
-    NumBytes = alignTo(NumBytes, MFI.getMaxAlignment());
-  }
+  NumBytes = alignTo(NumBytes, MFI.getMaxAlign().value());
 
   // Update stack size with corrected value.
   MFI.setStackSize(NumBytes);
