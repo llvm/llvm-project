@@ -171,6 +171,10 @@ bool ThreadPlanStepOverRange::ShouldStop(Event *event_ptr) {
       const SymbolContext &older_context =
           older_frame_sp->GetSymbolContext(eSymbolContextEverything);
       if (IsEquivalentContext(older_context)) {
+        // If we have the  next-branch-breakpoint in the range, we can just
+        // rely on that breakpoint to trigger once we return to the range.
+        if (m_next_branch_bp_sp)
+          return false;
         new_plan_sp = m_thread.QueueThreadPlanForStepOutNoShouldStop(
             false, nullptr, true, stop_others, eVoteNo, eVoteNoOpinion, 0,
             m_status, true);
