@@ -1050,13 +1050,13 @@ static llvm::Constant *constWithPadding(CodeGenModule &CGM, IsPattern isPattern,
   llvm::Type *OrigTy = constant->getType();
   if (const auto STy = dyn_cast<llvm::StructType>(OrigTy))
     return constStructWithPadding(CGM, isPattern, STy, constant);
-  if (auto *STy = dyn_cast<llvm::SequentialType>(OrigTy)) {
+  if (auto *ArrayTy = dyn_cast<llvm::ArrayType>(OrigTy)) {
     llvm::SmallVector<llvm::Constant *, 8> Values;
-    unsigned Size = STy->getNumElements();
+    uint64_t Size = ArrayTy->getNumElements();
     if (!Size)
       return constant;
-    llvm::Type *ElemTy = STy->getElementType();
-    bool ZeroInitializer = constant->isZeroValue();
+    llvm::Type *ElemTy = ArrayTy->getElementType();
+    bool ZeroInitializer = constant->isNullValue();
     llvm::Constant *OpValue, *PaddedOp;
     if (ZeroInitializer) {
       OpValue = llvm::Constant::getNullValue(ElemTy);
@@ -1072,13 +1072,10 @@ static llvm::Constant *constWithPadding(CodeGenModule &CGM, IsPattern isPattern,
     auto *NewElemTy = Values[0]->getType();
     if (NewElemTy == ElemTy)
       return constant;
-    if (OrigTy->isArrayTy()) {
-      auto *ArrayTy = llvm::ArrayType::get(NewElemTy, Size);
-      return llvm::ConstantArray::get(ArrayTy, Values);
-    } else {
-      return llvm::ConstantVector::get(Values);
-    }
+    auto *NewArrayTy = llvm::ArrayType::get(NewElemTy, Size);
+    return llvm::ConstantArray::get(NewArrayTy, Values);
   }
+  // FIXME: Do we need to handle tail padding in vectors?
   return constant;
 }
 
