@@ -7134,7 +7134,7 @@ struct AAValueConstantRangeFloating : AAValueConstantRangeImpl {
     auto VisitValueCB = [&](Value &V, IntegerRangeState &T,
                             bool Stripped) -> bool {
       Instruction *I = dyn_cast<Instruction>(&V);
-      if (!I) {
+      if (!I || isa<CallBase>(I)) {
 
         // If the value is not instruction, we query AA to Attributor.
         const auto &AA =
