@@ -1521,6 +1521,35 @@ static void print(OpAsmPrinter &p, TupleOp op) {
 static LogicalResult verify(TupleOp op) { return success(); }
 
 //===----------------------------------------------------------------------===//
+// TransposeOp
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verify(TransposeOp op) {
+  VectorType vectorType = op.getVectorType();
+  VectorType resultType = op.getResultType();
+  int64_t rank = resultType.getRank();
+  if (vectorType.getRank() != rank)
+    return op.emitOpError("vector result rank mismatch: ") << rank;
+  // Verify transposition array.
+  auto transpAttr = op.transp().getValue();
+  int64_t size = transpAttr.size();
+  if (rank != size)
+    return op.emitOpError("transposition length mismatch: ") << size;
+  SmallVector<bool, 8> seen(rank, false);
+  for (auto ta : llvm::enumerate(transpAttr)) {
+    int64_t i = ta.value().cast<IntegerAttr>().getInt();
+    if (i < 0 || i >= rank)
+      return op.emitOpError("transposition index out of range: ") << i;
+    if (seen[i])
+      return op.emitOpError("duplicate position index: ") << i;
+    seen[i] = true;
+    if (resultType.getDimSize(ta.index()) != vectorType.getDimSize(i))
+      return op.emitOpError("dimension size mismatch at: ") << i;
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // TupleGetOp
 //===----------------------------------------------------------------------===//
 

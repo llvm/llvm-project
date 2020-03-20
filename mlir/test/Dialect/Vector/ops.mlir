@@ -315,3 +315,15 @@ func @reduce_int(%arg0: vector<16xi32>) -> i32 {
   // CHECK:    return %[[X]] : i32
   return %0 : i32
 }
+
+// CHECK-LABEL: transpose_fp
+func @transpose_fp(%arg0: vector<3x7xf32>) -> vector<7x3xf32> {
+  %0 = vector.transpose %arg0, [1, 0] : vector<3x7xf32> to vector<7x3xf32>
+  return %0 : vector<7x3xf32>
+}
+
+// CHECK-LABEL: transpose_int
+func @transpose_int(%arg0: vector<11x7x3x2xi32>) -> vector<2x11x7x3xi32> {
+  %0 = vector.transpose %arg0, [3, 0, 1, 2] : vector<11x7x3x2xi32> to vector<2x11x7x3xi32>
+  return %0 : vector<2x11x7x3xi32>
+}

@@ -1269,6 +1269,45 @@ def Vector_TupleOp :
   }];
 }
 
+def Vector_TransposeOp :
+  Vector_Op<"transpose", [NoSideEffect,
+    PredOpTrait<"operand and result have same element type",
+                 TCresVTEtIsSameAsOpBase<0, 0>>]>,
+    Arguments<(ins AnyVector:$vector, I64ArrayAttr:$transp)>,
+    Results<(outs AnyVector:$result)> {
+  let summary = "vector transpose operation";
+  let description = [{
+    Takes a n-D vector and returns the transposed n-D vector defined by
+    the permutation of ranks in the n-sized integer array attribute.
+    In the operation
+
+    %1 = vector.tranpose %0, [i_1, .., i_n]
+      : vector<d_1 x .. x d_n x f32>
+      to vector<d_trans[0] x .. x d_trans[n-1] x f32>
+
+    the transp array [i_1, .., i_n] must be a permutation of [0, .., n-1].
+
+    Example:
+
+    %1 = vector.tranpose %0, [1, 0] : vector<2x3xf32> to vector<3x2xf32>
+
+     [ [a, b, c],       [ [a, d],
+       [d, e, f] ]  ->    [b, e],
+                          [c, f] ]
+  }];
+  let extraClassDeclaration = [{
+    VectorType getVectorType() {
+      return vector().getType().cast<VectorType>();
+    }
+    VectorType getResultType() {
+      return result().getType().cast<VectorType>();
+    }
+  }];
+  let assemblyFormat = [{
+    $vector `,` $transp attr-dict `:` type($vector) `to` type($result)
+  }];
+}
+
 def Vector_TupleGetOp :
   Vector_Op<"tuple_get", [NoSideEffect]>,
     Arguments<(ins TupleOf<[AnyVector]>:$vectors, APIntAttr:$index)>,
