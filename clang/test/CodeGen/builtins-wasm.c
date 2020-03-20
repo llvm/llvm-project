@@ -511,6 +511,24 @@ int all_true_i64x2(i64x2 x) {
   // WEBASSEMBLY: ret
 }
 
+int bitmask_i8x16(i8x16 x) {
+  return __builtin_wasm_bitmask_i8x16(x);
+  // WEBASSEMBLY: call i32 @llvm.wasm.bitmask.v16i8(<16 x i8> %x)
+  // WEBASSEMBLY: ret
+}
+
+int bitmask_i16x8(i16x8 x) {
+  return __builtin_wasm_bitmask_i16x8(x);
+  // WEBASSEMBLY: call i32 @llvm.wasm.bitmask.v8i16(<8 x i16> %x)
+  // WEBASSEMBLY: ret
+}
+
+int bitmask_i32x4(i32x4 x) {
+  return __builtin_wasm_bitmask_i32x4(x);
+  // WEBASSEMBLY: call i32 @llvm.wasm.bitmask.v4i32(<4 x i32> %x)
+  // WEBASSEMBLY: ret
+}
+
 f32x4 abs_f32x4(f32x4 x) {
   return __builtin_wasm_abs_f32x4(x);
   // WEBASSEMBLY: call <4 x float> @llvm.fabs.v4f32(<4 x float> %x)
