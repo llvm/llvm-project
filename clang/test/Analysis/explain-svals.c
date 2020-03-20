@@ -1,4 +1,8 @@
-// RUN: %clang_cc1 -triple i386-apple-darwin10 -analyze -analyzer-checker=core.builtin,debug.ExprInspection,unix.cstring -verify %s
+// RUN: %clang_analyze_cc1 -triple i386-apple-darwin10 -verify %s \
+// RUN:   -analyzer-checker=core.builtin \
+// RUN:   -analyzer-checker=debug.ExprInspection \
+// RUN:   -analyzer-checker=unix.cstring \
+// RUN:   -analyzer-config display-checker-name=false
 
 struct S {
   int z;

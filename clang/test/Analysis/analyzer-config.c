@@ -52,6 +52,7 @@
 // CHECK-NEXT: debug.AnalysisOrder:PreStmtCastExpr = false
 // CHECK-NEXT: debug.AnalysisOrder:PreStmtOffsetOfExpr = false
 // CHECK-NEXT: debug.AnalysisOrder:RegionChanges = false
+// CHECK-NEXT: display-checker-name = true
 // CHECK-NEXT: display-ctu-progress = false
 // CHECK-NEXT: eagerly-assume = true
 // CHECK-NEXT: elide-constructors = true
@@ -100,4 +101,4 @@
 // CHECK-NEXT: unroll-loops = false
 // CHECK-NEXT: widen-loops = false
 // CHECK-NEXT: [stats]
-// CHECK-NEXT: num-entries = 97
+// CHECK-NEXT: num-entries = 98
