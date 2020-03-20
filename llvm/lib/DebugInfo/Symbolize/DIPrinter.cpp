@@ -73,6 +73,8 @@ void DIPrinter::print(const DILineInfo &Info, bool Inlined) {
   std::string Filename = Info.FileName;
   if (Filename == DILineInfo::BadString)
     Filename = DILineInfo::Addr2LineBadString;
+  else if (Basenames)
+    Filename = std::string(llvm::sys::path::filename(Filename));
   if (!Verbose) {
     OS << Filename << ":" << Info.Line;
     if (Style == OutputStyle::LLVM)
