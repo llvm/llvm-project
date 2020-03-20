@@ -29,9 +29,8 @@ machineFunctionInfo:
   isEntryFunction: true
   waveLimiter:     true
   scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
-  scratchWaveOffsetReg: '$sgpr101'
-  frameOffsetReg:  '$sgpr101'
   stackPtrOffsetReg: '$sgpr32'
+  frameOffsetReg: '$sgpr34'
   argumentInfo:
     privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
     dispatchPtr:     { reg: '$sgpr4_sgpr5' }

@@ -7,7 +7,7 @@
 ; GFX9: s_and_saveexec_b64 [[EXECMASK:s\[[0-9]+:[0-9]+\]]], [[BOUNDSMASK]]
 ; GFX10: v_cmp_gt_u32_e64 [[BOUNDSMASK:s[0-9]+]], [[BOUNDS]], [[OFFSET:v[0-9]+]]
 ; GFX10: s_and_saveexec_b32 [[EXECMASK:s[0-9]+]], [[BOUNDSMASK]]
-; GCN: buffer_load_dword [[LOADVALUE:v[0-9]+]], [[OFFSET]], s[{{[0-9]+}}:{{[0-9]+}}], s{{[0-9]+}} offen{{$}}
+; GCN: buffer_load_dword [[LOADVALUE:v[0-9]+]], [[OFFSET]], s[{{[0-9]+}}:{{[0-9]+}}], 0 offen{{$}}
 ; GFX9: s_mov_b64 exec, [[EXECMASK]]
 ; GFX10: s_mov_b32 exec_lo, [[EXECMASK]]
 ; GCN: v_cndmask_b32_e64 v{{[0-9]+}}, 0, [[LOADVALUE]], [[BOUNDSMASK]]
@@ -29,7 +29,7 @@ entry:
 ; GFX9: s_and_saveexec_b64 [[EXECMASK:s\[[0-9]+:[0-9]+\]]], [[BOUNDSMASK]]
 ; GFX10: v_cmp_gt_u32_e64 [[BOUNDSMASK:s[0-9]+]], [[BOUNDS]], [[OFFSET:v[0-9]+]]
 ; GFX10: s_and_saveexec_b32 [[EXECMASK:s[0-9]+]], [[BOUNDSMASK]]
-; GCN: buffer_store_dword v{{[0-9]+}}, [[OFFSET]], s[{{[0-9]+}}:{{[0-9]+}}], s{{[0-9]+}} offen{{$}}
+; GCN: buffer_store_dword v{{[0-9]+}}, [[OFFSET]], s[{{[0-9]+}}:{{[0-9]+}}], 0 offen{{$}}
 ; GFX9: s_mov_b64 exec, [[EXECMASK]]
 ; GFX10: s_mov_b32 exec_lo, [[EXECMASK]]
 
@@ -48,7 +48,7 @@ entry:
 ; GCN: s_mov_b32 [[BOUNDS:s[0-9]+]], 0x8008
 ; GFX9: s_and_saveexec_b64 [[EXECMASK:s\[[0-9]+:[0-9]+\]]], [[BOUNDSMASK:s\[[0-9]+:[0-9]+\]]]
 ; GFX10: s_and_saveexec_b32 [[EXECMASK:s[0-9]+]], [[BOUNDSMASK:s[0-9]+]]
-; GCN: buffer_load_dwordx2 v{{\[}}[[LOADLO:[0-9]+]]:[[LOADHI:[0-9]+]]{{\]}}, [[OFFSET:v[0-9]+]], s[{{[0-9]+}}:{{[0-9]+}}], s{{[0-9]+}} offen{{$}}
+; GCN: buffer_load_dwordx2 v{{\[}}[[LOADLO:[0-9]+]]:[[LOADHI:[0-9]+]]{{\]}}, [[OFFSET:v[0-9]+]], s[{{[0-9]+}}:{{[0-9]+}}], 0 offen{{$}}
 ; GFX9: s_mov_b64 exec, [[EXECMASK]]
 ; GFX10: s_mov_b32 exec_lo, [[EXECMASK]]
 ; GCN-DAG: v_cndmask_b32_e64 v{{[0-9]+}}, 0, v[[LOADLO]], [[BOUNDSMASK]]
@@ -69,7 +69,7 @@ entry:
 ; GCN: s_mov_b32 [[BOUNDS:s[0-9]+]], 0x8008
 ; GFX9: s_and_saveexec_b64 [[EXECMASK:s\[[0-9]+:[0-9]+\]]], [[BOUNDSMASK:s\[[0-9]+:[0-9]+\]]]
 ; GFX10: s_and_saveexec_b32 [[EXECMASK:s[0-9]+]], [[BOUNDSMASK:s[0-9]+]]
-; GCN: buffer_store_dwordx2 v[{{[0-9]+}}:{{[0-9]+}}], [[OFFSET:v[0-9]+]], s[{{[0-9]+}}:{{[0-9]+}}], s{{[0-9]+}} offen{{$}}
+; GCN: buffer_store_dwordx2 v[{{[0-9]+}}:{{[0-9]+}}], [[OFFSET:v[0-9]+]], s[{{[0-9]+}}:{{[0-9]+}}], 0 offen{{$}}
 ; GFX9: s_mov_b64 exec, [[EXECMASK]]
 ; GFX10: s_mov_b32 exec_lo, [[EXECMASK]]
 
@@ -88,7 +88,7 @@ entry:
 ; GCN: s_mov_b32 [[BOUNDS:s[0-9]+]], 0x8008
 ; GFX9: s_and_saveexec_b64 [[EXECMASK:s\[[0-9]+:[0-9]+\]]], [[BOUNDSMASK:s\[[0-9]+:[0-9]+\]]]
 ; GFX10: s_and_saveexec_b32 [[EXECMASK:s[0-9]+]], [[BOUNDSMASK:s[0-9]+]]
-; GCN: buffer_load_dwordx4 v{{\[}}[[LOADLO:[0-9]+]]:[[LOADHI:[0-9]+]]{{\]}}, [[OFFSET:v[0-9]+]], s[{{[0-9]+}}:{{[0-9]+}}], s{{[0-9]+}} offen{{$}}
+; GCN: buffer_load_dwordx4 v{{\[}}[[LOADLO:[0-9]+]]:[[LOADHI:[0-9]+]]{{\]}}, [[OFFSET:v[0-9]+]], s[{{[0-9]+}}:{{[0-9]+}}], 0 offen{{$}}
 ; GFX9: s_mov_b64 exec, [[EXECMASK]]
 ; GFX10: s_mov_b32 exec_lo, [[EXECMASK]]
 ; GCN-DAG: v_cndmask_b32_e64 v{{[0-9]+}}, 0, v[[LOADLO]], [[BOUNDSMASK]]
@@ -109,7 +109,7 @@ entry:
 ; GCN: s_mov_b32 [[BOUNDS:s[0-9]+]], 0x8008
 ; GFX9: s_and_saveexec_b64 [[EXECMASK:s\[[0-9]+:[0-9]+\]]], [[BOUNDSMASK:s\[[0-9]+:[0-9]+\]]]
 ; GFX10: s_and_saveexec_b32 [[EXECMASK:s[0-9]+]], [[BOUNDSMASK:s[0-9]+]]
-; GCN: buffer_store_dwordx4 v[{{[0-9]+}}:{{[0-9]+}}], [[OFFSET:v[0-9]+]], s[{{[0-9]+}}:{{[0-9]+}}], s{{[0-9]+}} offen{{$}}
+; GCN: buffer_store_dwordx4 v[{{[0-9]+}}:{{[0-9]+}}], [[OFFSET:v[0-9]+]], s[{{[0-9]+}}:{{[0-9]+}}], 0 offen{{$}}
 ; GFX9: s_mov_b64 exec, [[EXECMASK]]
 ; GFX10: s_mov_b32 exec_lo, [[EXECMASK]]
 
@@ -127,7 +127,7 @@ entry:
 ; GCN-LABEL: {{^}}bounds_check_static_valid_store_i32:
 ; GFX9-NOT: s_and_saveexec_b64
 ; GFX10-NOT: s_and_saveexec_b32
-; GCN: buffer_store_dword v{{[0-9]+}}, off, s[{{[0-9]+}}:{{[0-9]+}}], s{{[0-9]+}} offset:20
+; GCN: buffer_store_dword v{{[0-9]+}}, off, s[{{[0-9]+}}:{{[0-9]+}}], 0 offset:20
 
 define amdgpu_kernel void @bounds_check_static_valid_store_i32(i32 addrspace(1)* %out, i32 %value, i32 %offset) {
 entry:
@@ -144,7 +144,7 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}bounds_check_static_oob_store_i32:
-; GCN: buffer_store_dword v{{[0-9]+}}, off, s[{{[0-9]+}}:{{[0-9]+}}], s{{[0-9]+}} offset:2052
+; GCN: buffer_store_dword v{{[0-9]+}}, off, s[{{[0-9]+}}:{{[0-9]+}}], 0 offset:2052
 
 define amdgpu_kernel void @bounds_check_static_oob_store_i32(i32 addrspace(1)* %out, i32 %value, i32 %offset) {
 entry:
@@ -161,10 +161,10 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}bounds_check_static_valid_load_i32:
-; GCN: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+}}:{{[0-9]+}}], s{{[0-9]+}} offen{{$}}
+; GCN: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+}}:{{[0-9]+}}], 0 offen{{$}}
 ; GFX9-NOT: s_and_saveexec_b64
 ; GFX10-NOT: s_and_saveexec_b32
-; GCN: buffer_load_dword v{{[0-9]+}}, off, s[{{[0-9]+}}:{{[0-9]+}}], s{{[0-9]+}} offset:20
+; GCN: buffer_load_dword v{{[0-9]+}}, off, s[{{[0-9]+}}:{{[0-9]+}}], 0 offset:20
 ; GCN-NOT: v_cndmask_b32_e64
 
 define amdgpu_kernel void @bounds_check_static_valid_load_i32(i32 addrspace(1)* %out, i32 %value, i32 %offset) {
@@ -183,8 +183,8 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}bounds_check_static_oob_load_i32:
-; GCN: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+}}:{{[0-9]+}}], s{{[0-9]+}} offen{{$}}
-; GCN: buffer_load_dword v{{[0-9]+}}, off, s[{{[0-9]+}}:{{[0-9]+}}], s{{[0-9]+}} offset:2052
+; GCN: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+}}:{{[0-9]+}}], 0 offen{{$}}
+; GCN: buffer_load_dword v{{[0-9]+}}, off, s[{{[0-9]+}}:{{[0-9]+}}], 0 offset:2052
 
 define amdgpu_kernel void @bounds_check_static_oob_load_i32(i32 addrspace(1)* %out, i32 %value, i32 %offset) {
 entry:
@@ -209,7 +209,7 @@ entry:
 ; GFX10: v_add_nc_u32_e32 [[CMPOFFSET:v[0-9]+]], 16, [[OFFSET:v[0-9]+]]
 ; GFX10: v_cmp_gt_u32_e64 [[BOUNDSMASK:s[0-9]+]], [[BOUNDS]], [[CMPOFFSET]]
 ; GFX10: s_and_saveexec_b32 [[EXECMASK:s[0-9]+]], [[BOUNDSMASK]]
-; GCN: buffer_load_dword [[LOADVALUE:v[0-9]+]], [[OFFSET]], s[{{[0-9]+}}:{{[0-9]+}}], s{{[0-9]+}} offen offset:16{{$}}
+; GCN: buffer_load_dword [[LOADVALUE:v[0-9]+]], [[OFFSET]], s[{{[0-9]+}}:{{[0-9]+}}], 0 offen offset:16{{$}}
 ; GFX9: s_mov_b64 exec, [[EXECMASK]]
 ; GFX10: s_mov_b32 exec_lo, [[EXECMASK]]
 ; GCN: v_cndmask_b32_e64 v{{[0-9]+}}, 0, [[LOADVALUE]], [[BOUNDSMASK]]
@@ -234,7 +234,7 @@ entry:
 ; GFX10: v_add_nc_u32_e32 [[CMPOFFSET:v[0-9]+]], 16, [[OFFSET:v[0-9]+]]
 ; GFX10: v_cmp_gt_u32_e64 [[BOUNDSMASK:s[0-9]+]], [[BOUNDS]], [[CMPOFFSET]]
 ; GFX10: s_and_saveexec_b32 [[EXECMASK:s[0-9]+]], [[BOUNDSMASK]]
-; GCN: buffer_store_dword v{{[0-9]+}}, [[OFFSET]], s[{{[0-9]+}}:{{[0-9]+}}], s{{[0-9]+}} offen offset:16{{$}}
+; GCN: buffer_store_dword v{{[0-9]+}}, [[OFFSET]], s[{{[0-9]+}}:{{[0-9]+}}], 0 offen offset:16{{$}}
 ; GFX9: s_mov_b64 exec, [[EXECMASK]]
 ; GFX10: s_mov_b32 exec_lo, [[EXECMASK]]
 

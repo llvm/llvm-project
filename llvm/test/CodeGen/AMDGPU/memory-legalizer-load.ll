@@ -447,8 +447,8 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}nontemporal_private_0:
-; GFX89: buffer_load_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+}}:{{[0-9]+}}], s{{[0-9]+}} offen glc slc{{$}}
-; GFX10: buffer_load_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+}}:{{[0-9]+}}], s{{[0-9]+}} offen slc{{$}}
+; GFX89: buffer_load_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+}}:{{[0-9]+}}], 0 offen glc slc{{$}}
+; GFX10: buffer_load_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+}}:{{[0-9]+}}], 0 offen slc{{$}}
 ; GFX10:         .amdhsa_kernel nontemporal_private_0
 ; GFX10WGP-NOT:  .amdhsa_workgroup_processor_mode 0
 ; GFX10CU:       .amdhsa_workgroup_processor_mode 0
@@ -462,8 +462,8 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}nontemporal_private_1:
-; GFX89: buffer_load_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+}}:{{[0-9]+}}], s{{[0-9]+}} offen glc slc{{$}}
-; GFX10: buffer_load_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+}}:{{[0-9]+}}], s{{[0-9]+}} offen slc{{$}}
+; GFX89: buffer_load_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+}}:{{[0-9]+}}], 0 offen glc slc{{$}}
+; GFX10: buffer_load_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+}}:{{[0-9]+}}], 0 offen slc{{$}}
 ; GFX10:         .amdhsa_kernel nontemporal_private_1
 ; GFX10WGP-NOT:  .amdhsa_workgroup_processor_mode 0
 ; GFX10CU:       .amdhsa_workgroup_processor_mode 0

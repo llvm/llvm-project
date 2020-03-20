@@ -243,11 +243,10 @@ define hidden void @use_every_sgpr_input() #1 {
 }
 
 ; GCN-LABEL: {{^}}kern_indirect_use_every_sgpr_input:
-; GCN: s_mov_b32 s33, s17
 ; GCN: s_mov_b32 s12, s14
 ; GCN: s_mov_b32 s13, s15
 ; GCN: s_mov_b32 s14, s16
-; GCN: s_mov_b32 s32, s33
+; GCN: s_mov_b32 s32, 0
 ; GCN: s_swappc_b64
 
 ; GCN: .amdhsa_user_sgpr_private_segment_buffer 1

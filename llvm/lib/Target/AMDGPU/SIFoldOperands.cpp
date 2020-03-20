@@ -612,19 +612,26 @@ void SIFoldOperands::foldOperand(
   if (frameIndexMayFold(TII, *UseMI, UseOpIdx, OpToFold)) {
     // Sanity check that this is a stack access.
     // FIXME: Should probably use stack pseudos before frame lowering.
-    MachineOperand *SOff = TII->getNamedOperand(*UseMI, AMDGPU::OpName::soffset);
-    if (!SOff->isReg() || (SOff->getReg() != MFI->getScratchWaveOffsetReg() &&
-                           SOff->getReg() != MFI->getStackPtrOffsetReg()))
-      return;
 
     if (TII->getNamedOperand(*UseMI, AMDGPU::OpName::srsrc)->getReg() !=
         MFI->getScratchRSrcReg())
       return;
 
+    // Ensure this is either relative to the current frame or the current wave.
+    MachineOperand &SOff =
+        *TII->getNamedOperand(*UseMI, AMDGPU::OpName::soffset);
+    if ((!SOff.isReg() || SOff.getReg() != MFI->getStackPtrOffsetReg()) &&
+        (!SOff.isImm() || SOff.getImm() != 0))
+      return;
+
     // A frame index will resolve to a positive constant, so it should always be
     // safe to fold the addressing mode, even pre-GFX9.
     UseMI->getOperand(UseOpIdx).ChangeToFrameIndex(OpToFold.getIndex());
-    SOff->setReg(MFI->getStackPtrOffsetReg());
+
+    // If this is relative to the current wave, update it to be relative to the
+    // current frame.
+    if (SOff.isImm())
+      SOff.ChangeToRegister(MFI->getStackPtrOffsetReg(), false);
     return;
   }
 
