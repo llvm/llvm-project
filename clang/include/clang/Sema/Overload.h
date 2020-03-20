@@ -983,6 +983,14 @@ class Sema;
         return CRK;
       }
 
+      /// Determines whether this operator could be implemented by a function
+      /// with reversed parameter order.
+      bool isReversible() {
+        return AllowRewrittenCandidates && OriginalOperator &&
+               (getRewrittenOverloadedOperator(OriginalOperator) != OO_None ||
+                shouldAddReversed(OriginalOperator));
+      }
+
       /// Determine whether we should consider looking for and adding reversed
       /// candidates for operator Op.
       bool shouldAddReversed(OverloadedOperatorKind Op);
