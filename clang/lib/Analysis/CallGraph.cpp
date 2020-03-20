@@ -67,7 +67,7 @@ public:
   }
 
   void addCalledDecl(Decl *D, Expr *CallExpr) {
-    if (G->includeInGraph(D)) {
+    if (G->includeCalleeInGraph(D)) {
       CallGraphNode *CalleeNode = G->getOrInsertNode(D);
       CallerNode->addCallee({CalleeNode, CallExpr});
     }
@@ -157,6 +157,10 @@ bool CallGraph::includeInGraph(const Decl *D) {
   if (!D->hasBody())
     return false;
 
+  return includeCalleeInGraph(D);
+}
+
+bool CallGraph::includeCalleeInGraph(const Decl *D) {
   if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
     // We skip function template definitions, as their semantics is
     // only determined when they are instantiated.
