@@ -437,7 +437,8 @@ void CodeGenFunction::EmitMustTailThunk(GlobalDecl GD,
   // Finish the function to maintain CodeGenFunction invariants.
   // FIXME: Don't emit unreachable code.
   EmitBlock(createBasicBlock());
-  FinishFunction();
+
+  FinishThunk();
 }
 
 void CodeGenFunction::generateThunk(llvm::Function *Fn,
@@ -564,7 +565,7 @@ llvm::Constant *CodeGenVTables::maybeEmitThunk(GlobalDecl GD,
   CGM.SetLLVMFunctionAttributesForDefinition(GD.getDecl(), ThunkFn);
 
   // Thunks for variadic methods are special because in general variadic
-  // arguments cannot be perferctly forwarded. In the general case, clang
+  // arguments cannot be perfectly forwarded. In the general case, clang
   // implements such thunks by cloning the original function body. However, for
   // thunks with no return adjustment on targets that support musttail, we can
   // use musttail to perfectly forward the variadic arguments.
