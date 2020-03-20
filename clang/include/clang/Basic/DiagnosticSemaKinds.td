@@ -4214,11 +4214,16 @@ def err_ovl_ambiguous_oper_binary : Error<
   "use of overloaded operator '%0' is ambiguous (with operand types %1 and %2)">;
 def ext_ovl_ambiguous_oper_binary_reversed : ExtWarn<
   "ISO C++20 considers use of overloaded operator '%0' (with operand types %1 "
-  "and %2) to be ambiguous despite there being a unique best viable function">,
+  "and %2) to be ambiguous despite there being a unique best viable function"
+  "%select{ with non-reversed arguments|}3">,
   InGroup<DiagGroup<"ambiguous-reversed-operator">>, SFINAEFailure;
-def note_ovl_ambiguous_oper_binary_reversed_candidate : Note<
+def note_ovl_ambiguous_oper_binary_reversed_self : Note<
   "ambiguity is between a regular call to this operator and a call with the "
   "argument order reversed">;
+def note_ovl_ambiguous_oper_binary_selected_candidate : Note<
+  "candidate function with non-reversed arguments">;
+def note_ovl_ambiguous_oper_binary_reversed_candidate : Note<
+  "ambiguous candidate function with reversed arguments">;
 def err_ovl_no_viable_oper : Error<"no viable overloaded '%0'">;
 def note_assign_lhs_incomplete : Note<"type %0 is incomplete">;
 def err_ovl_deleted_oper : Error<
@@ -4232,6 +4237,10 @@ def err_ovl_deleted_comparison : Error<
 def err_ovl_rewrite_equalequal_not_bool : Error<
   "return type %0 of selected 'operator==' function for rewritten "
   "'%1' comparison is not 'bool'">;
+def ext_ovl_rewrite_equalequal_not_bool : ExtWarn<
+  "ISO C++20 requires return type of selected 'operator==' function for "
+  "rewritten '%1' comparison to be 'bool', not %0">,
+  InGroup<DiagGroup<"rewrite-not-bool">>, SFINAEFailure;
 def err_ovl_no_viable_subscript :
     Error<"no viable overloaded operator[] for type %0">;
 def err_ovl_no_oper :

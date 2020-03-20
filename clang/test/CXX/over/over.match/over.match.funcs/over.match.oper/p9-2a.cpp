@@ -4,18 +4,28 @@
 namespace not_bool {
   struct X {} x;
   struct Y {} y;
-  int operator==(X, Y); // expected-note 4{{here}}
+  double operator==(X, Y); // expected-note 4{{here}}
   bool a = x == y; // ok
-  bool b = y == x; // expected-error {{return type 'int' of selected 'operator==' function for rewritten '==' comparison is not 'bool'}}
-  bool c = x != y; // expected-error {{return type 'int' of selected 'operator==' function for rewritten '!=' comparison is not 'bool'}}
-  bool d = y != x; // expected-error {{return type 'int' of selected 'operator==' function for rewritten '!=' comparison is not 'bool'}}
+  bool b = y == x; // expected-error {{return type 'double' of selected 'operator==' function for rewritten '==' comparison is not 'bool'}}
+  bool c = x != y; // expected-error {{return type 'double' of selected 'operator==' function for rewritten '!=' comparison is not 'bool'}}
+  bool d = y != x; // expected-error {{return type 'double' of selected 'operator==' function for rewritten '!=' comparison is not 'bool'}}
 
   // cv-qualifiers are OK
   const bool operator==(Y, X);
   bool e = y != x; // ok
 
   // We don't prefer a function with bool return type over one witn non-bool return type.
-  bool f = x != y; // expected-error {{return type 'int' of selected 'operator==' function for rewritten '!=' comparison is not 'bool'}}
+  bool f = x != y; // expected-error {{return type 'double' of selected 'operator==' function for rewritten '!=' comparison is not 'bool'}}
+
+  // As an extension, we permit integral and unscoped enumeration types too.
+  // These are used by popular C++ libraries such as ICU.
+  struct Z {} z;
+  int operator==(X, Z); // expected-note {{here}}
+  bool g = z == x; // expected-warning {{ISO C++20 requires return type of selected 'operator==' function for rewritten '==' comparison to be 'bool', not 'int'}}
+
+  enum E {};
+  E operator==(Y, Z); // expected-note {{here}}
+  bool h = z == y; // expected-warning {{ISO C++20 requires return type of selected 'operator==' function for rewritten '==' comparison to be 'bool', not 'not_bool::E'}}
 }
 
 struct X { bool equal; };
