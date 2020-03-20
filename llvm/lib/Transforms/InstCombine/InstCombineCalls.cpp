@@ -376,6 +376,7 @@ static Value *simplifyX86immShift(const IntrinsicInst &II,
   auto Amt = II.getArgOperand(1);
   auto VT = cast<VectorType>(Vec->getType());
   auto SVT = VT->getElementType();
+  auto AmtVT = Amt->getType();
   unsigned VWidth = VT->getNumElements();
   unsigned BitWidth = SVT->getPrimitiveSizeInBits();
 
@@ -383,7 +384,7 @@ static Value *simplifyX86immShift(const IntrinsicInst &II,
   // generic shift. If its guaranteed to be out of range, logical shifts combine to
   // zero and arithmetic shifts are clamped to (BitWidth - 1).
   if (IsImm) {
-    assert(Amt->getType()->isIntegerTy(32) &&
+    assert(AmtVT ->isIntegerTy(32) &&
            "Unexpected shift-by-immediate type");
     KnownBits KnownAmtBits =
         llvm::computeKnownBits(Amt, II.getModule()->getDataLayout());
@@ -399,6 +400,27 @@ static Value *simplifyX86immShift(const IntrinsicInst &II,
         return ConstantAggregateZero::get(VT);
       Amt = ConstantInt::get(SVT, BitWidth - 1);
       return Builder.CreateAShr(Vec, Builder.CreateVectorSplat(VWidth, Amt));
+    }
+  } else {
+    // Ensure the first element has an in-range value and the rest of the
+    // elements in the bottom 64 bits are zero.
+    assert(AmtVT->isVectorTy() && AmtVT->getPrimitiveSizeInBits() == 128 &&
+           cast<VectorType>(AmtVT)->getElementType() == SVT &&
+           "Unexpected shift-by-scalar type");
+    unsigned NumAmtElts = cast<VectorType>(AmtVT)->getNumElements();
+    APInt DemandedLower = APInt::getOneBitSet(NumAmtElts, 0);
+    APInt DemandedUpper = APInt::getBitsSet(NumAmtElts, 1, NumAmtElts / 2);
+    KnownBits KnownLowerBits = llvm::computeKnownBits(
+        Amt, DemandedLower, II.getModule()->getDataLayout());
+    KnownBits KnownUpperBits = llvm::computeKnownBits(
+        Amt, DemandedUpper, II.getModule()->getDataLayout());
+    if (KnownLowerBits.getMaxValue().ult(BitWidth) &&
+        (DemandedUpper.isNullValue() || KnownUpperBits.isZero())) {
+      SmallVector<uint32_t, 16> ZeroSplat(VWidth, 0);
+      Amt = Builder.CreateShuffleVector(Amt, Amt, ZeroSplat);
+      return (LogicalShift ? (ShiftLeft ? Builder.CreateShl(Vec, Amt)
+                                        : Builder.CreateLShr(Vec, Amt))
+                           : Builder.CreateAShr(Vec, Amt));
     }
   }
 
