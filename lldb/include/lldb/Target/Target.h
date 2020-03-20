@@ -254,9 +254,12 @@ private:
   static void DisableSTDIOValueChangedCallback(void *target_property_ptr,
                                                OptionValue *);
 
+  Environment ComputeEnvironment() const;
+
   // Member variables.
   ProcessLaunchInfo m_launch_info;
   std::unique_ptr<TargetExperimentalProperties> m_experimental_properties_up;
+  Target *m_target;
 };
 
 class EvaluateExpressionOptions {
