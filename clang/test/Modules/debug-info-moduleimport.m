@@ -28,5 +28,7 @@
 // RUN:   -fmodule-format=obj -dwarf-ext-refs \
 // RUN:   %s -I %S/Inputs -isysroot /tmp/.. -I %t -emit-llvm -o - \
 // RUN:     | FileCheck %s --check-prefix=SKEL-CHECK
-// SKEL-CHECK: distinct !DICompileUnit
-// SKEL-CHECK: distinct !DICompileUnit{{.*}}dwoId
+// SKEL-CHECK: distinct !DICompileUnit({{.*}}file: ![[CUFILE:[0-9]+]]
+// SKEL-CHECK: ![[CUFILE]] = !DIFile({{.*}}directory: "[[COMP_DIR:.*]]"
+// SKEL-CHECK: distinct !DICompileUnit({{.*}}file: ![[DWOFILE:[0-9]+]]{{.*}}dwoId
+// SKEL-CHECK: ![[DWOFILE]] = !DIFile({{.*}}directory: "[[COMP_DIR]]"
