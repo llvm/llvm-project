@@ -51,7 +51,7 @@ run
 thread step-over
 # Stepping inside of the stop hook range
 # CHECK: (lldb) thread step-over
-# CHECK-NEXT: (void *) $1 = 0x
+# CHECK-NEXT: (void *) $2 = 0x
 # CHECK: ->{{.*}} // We should stop here after stepping.
 
 process continue
