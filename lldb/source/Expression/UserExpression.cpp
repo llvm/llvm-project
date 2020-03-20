@@ -266,11 +266,6 @@ UserExpression::Evaluate(ExecutionContext &exe_ctx,
     execution_results = lldb::eExpressionParseError;
     if (fixed_expression && !fixed_expression->empty() &&
         options.GetAutoApplyFixIts()) {
-      // Swift: temporarily release scratch context lock held by
-      // SwiftUserExpression, so the context can be restored if necessary.
-      if (expr == *fixed_expression)
-        user_expression_sp = nullptr;
-
       lldb::UserExpressionSP fixed_expression_sp(
           target->GetUserExpressionForLanguage(fixed_expression->c_str(),
                                                full_prefix, language,
