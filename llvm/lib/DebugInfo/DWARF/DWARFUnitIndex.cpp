@@ -110,13 +110,16 @@ StringRef DWARFUnitIndex::getColumnHeader(DWARFSectionKind DS) {
     return #DS;
   switch (DS) {
     CASE(INFO);
-    CASE(TYPES);
     CASE(ABBREV);
     CASE(LINE);
-    CASE(LOC);
     CASE(STR_OFFSETS);
-    CASE(MACINFO);
     CASE(MACRO);
+  case DW_SECT_EXT_TYPES:
+    return "TYPES";
+  case DW_SECT_EXT_LOC:
+    return "LOC";
+  case DW_SECT_EXT_MACINFO:
+    return "MACINFO";
   }
   return StringRef();
 }
