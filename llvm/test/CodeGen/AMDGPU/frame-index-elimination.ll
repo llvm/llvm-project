@@ -24,15 +24,15 @@ define void @func_mov_fi_i32() #0 {
 ; GCN: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 
 ; CI-DAG: v_lshr_b32_e64 v0, s32, 6
-; CI-DAG: v_lshr_b32_e64 [[SCALED:v[0-9]+]], s32, 6
 ; CI-NOT: v_mov
 ; CI: ds_write_b32 v0, v0
+; CI-NEXT: v_lshr_b32_e64 [[SCALED:v[0-9]+]], s32, 6
 ; CI-NEXT: v_add_i32_e{{32|64}} v0, {{s\[[0-9]+:[0-9]+\]|vcc}}, 4, [[SCALED]]
 ; CI-NEXT: ds_write_b32 v0, v0
 
 ; GFX9: v_lshrrev_b32_e64 v0, 6, s32
+; GFX9-NEXT: ds_write_b32 v0, v0
 ; GFX9-NEXT: v_lshrrev_b32_e64 [[SCALED:v[0-9]+]], 6, s32
-; GFX9-DAG: ds_write_b32 v0, v0
 ; GFX9-NEXT: v_add_u32_e32 v0, 4, [[SCALED]]
 ; GFX9-NEXT: ds_write_b32 v0, v0
 define void @func_mov_fi_i32_offset() #0 {
