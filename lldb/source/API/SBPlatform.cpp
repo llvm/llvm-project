@@ -8,11 +8,9 @@
 
 #include "lldb/API/SBPlatform.h"
 #include "SBReproducerPrivate.h"
-#include "lldb/API/SBEnvironment.h"
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBLaunchInfo.h"
-#include "lldb/API/SBPlatform.h"
 #include "lldb/API/SBUnixSignals.h"
 #include "lldb/Host/File.h"
 #include "lldb/Target/Platform.h"
@@ -651,17 +649,6 @@ SBUnixSignals SBPlatform::GetUnixSignals() const {
   return LLDB_RECORD_RESULT(SBUnixSignals());
 }
 
-SBEnvironment SBPlatform::GetEnvironment() {
-  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBEnvironment, SBPlatform, GetEnvironment);
-  PlatformSP platform_sp(GetSP());
-
-  if (platform_sp) {
-    return LLDB_RECORD_RESULT(SBEnvironment(platform_sp->GetEnvironment()));
-  }
-
-  return LLDB_RECORD_RESULT(SBEnvironment());
-}
-
 namespace lldb_private {
 namespace repro {
 
@@ -753,7 +740,6 @@ void RegisterMethods<SBPlatform>(Registry &R) {
                        (const char *));
   LLDB_REGISTER_METHOD(lldb::SBError, SBPlatform, SetFilePermissions,
                        (const char *, uint32_t));
-  LLDB_REGISTER_METHOD(lldb::SBEnvironment, SBPlatform, GetEnvironment, ());
   LLDB_REGISTER_METHOD_CONST(lldb::SBUnixSignals, SBPlatform, GetUnixSignals,
                              ());
 }
