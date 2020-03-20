@@ -1371,8 +1371,8 @@ def int_amdgcn_writelane :
   [IntrNoMem, IntrConvergent]
 >;
 
-def int_amdgcn_alignbit :
-  GCCBuiltin<"__builtin_amdgcn_alignbit">, Intrinsic<[llvm_i32_ty],
+// FIXME: Deprecated. This is equivalent to llvm.fshr
+def int_amdgcn_alignbit : Intrinsic<[llvm_i32_ty],
   [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
   [IntrNoMem, IntrSpeculatable]
 >;
