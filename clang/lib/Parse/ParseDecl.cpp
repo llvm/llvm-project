@@ -3321,10 +3321,8 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       if (!TypeRep) {
         if (TryAnnotateTypeConstraint())
           goto DoneWithDeclSpec;
-        if (isTypeConstraintAnnotation())
-          continue;
-        if (NextToken().is(tok::annot_template_id))
-          // Might have been annotated by TryAnnotateTypeConstraint.
+        if (Tok.isNot(tok::annot_cxxscope) ||
+            NextToken().isNot(tok::identifier))
           continue;
         // Eat the scope spec so the identifier is current.
         ConsumeAnnotationToken();
@@ -3478,9 +3476,6 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
         if (TryAnnotateTypeConstraint())
           goto DoneWithDeclSpec;
         if (Tok.isNot(tok::identifier))
-          continue;
-        if (Tok.is(tok::annot_template_id))
-          // Might have been annotated by TryAnnotateTypeConstraint.
           continue;
         ParsedAttributesWithRange Attrs(AttrFactory);
         if (ParseImplicitInt(DS, nullptr, TemplateInfo, AS, DSContext, Attrs)) {
