@@ -188,3 +188,11 @@ def vcx3qa : FunctionMacro<
   ["cp", "acc", "n", "m", "imm"],
   "__arm_vcx3qa_impl((cp), (acc), __arm_vreinterpretq_u8(n), "
                      "__arm_vreinterpretq_u8(m), (imm))">;
+
+// vreinterpretq intrinsics required by the ACLE CDE specification
+
+foreach desttype = [/* no u8 */ s8, u16, s16, u32, s32, u64, s64, f16, f32] in {
+  let params = [u8], headerOnly = 1, pnt = PNT_None in
+  def "vreinterpretq_" # desttype : Intrinsic<
+    VecOf<desttype>, (args Vector:$x), (vreinterpret $x, VecOf<desttype>)>;
+}
