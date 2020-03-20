@@ -10,6 +10,7 @@ add_clang_library(clangTidyLLVMLibcModule
   clangBasic
   clangLex
   clangTidy
+  clangTidyPortabilityModule
   clangTidyUtils
   clangTooling
   )
