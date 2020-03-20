@@ -92,26 +92,34 @@ Symbols:
     Binding: STB_GLOBAL
 
 ## Check that we correctly report the stack sizes in an executable (non-relocatable)
-## object file.
+## object file. This also shows that the sh_link field is ignored in this situation
+## without warning.
 
 # RUN: yaml2obj --docnum=2 %s -o %t02
-# RUN: llvm-readelf --stack-sizes %t02 \
-# RUN:   | FileCheck %s --check-prefix=EXEC-GNU --strict-whitespace --match-full-lines
-# RUN: llvm-readobj --stack-sizes %t02 | FileCheck %s --check-prefix=EXEC-LLVM
+# RUN: llvm-readelf --stack-sizes %t02 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=EXEC-GNU --strict-whitespace \
+# RUN:                  --match-full-lines --implicit-check-not=warning:
+# RUN: llvm-readobj --stack-sizes %t02 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=EXEC-LLVM --implicit-check-not=warning:
 
 #      EXEC-GNU:         Size     Function
-# EXEC-GNU-NEXT:           16     foo
-# EXEC-GNU-NEXT:           32     bar
+# EXEC-GNU-NEXT:           16     other
+# EXEC-GNU-NEXT:           32     other_end
+# EXEC-GNU-NEXT:           48     bar
 #  EXEC-GNU-NOT:{{.}}
 
 # EXEC-LLVM:      StackSizes [
 # EXEC-LLVM-NEXT:   Entry {
-# EXEC-LLVM-NEXT:     Function: foo
+# EXEC-LLVM-NEXT:     Function: other
 # EXEC-LLVM-NEXT:     Size: 0x10
 # EXEC-LLVM-NEXT:   }
 # EXEC-LLVM-NEXT:   Entry {
-# EXEC-LLVM-NEXT:     Function: bar
+# EXEC-LLVM-NEXT:     Function: other_end
 # EXEC-LLVM-NEXT:     Size: 0x20
+# EXEC-LLVM-NEXT:   }
+# EXEC-LLVM-NEXT:   Entry {
+# EXEC-LLVM-NEXT:     Function: bar
+# EXEC-LLVM-NEXT:     Size: 0x30
 # EXEC-LLVM-NEXT:   }
 # EXEC-LLVM-NEXT: ]
 
@@ -126,22 +134,45 @@ Sections:
     Type:    SHT_PROGBITS
     Flags:   [SHF_ALLOC]
     Size:    16
+  - Name:    .text2
+    Type:    SHT_PROGBITS
+    Flags:   [SHF_ALLOC]
+    Size:    16
   - Name:    .stack_sizes
     Type:    SHT_PROGBITS
     Entries:
-      - Address: 0x10
+      - Address: 0x0
         Size:    0x10
-      - Address: 0x20
+      - Address: 0x10
         Size:    0x20
-    Link:    .text
+      - Address: 0x20
+        Size:    0x30
+    Link:    .text2
 Symbols:
-  - Name:    foo
+  ## Undefined symbols are ignored.
+  - Name:    undefined
+    Type:    STT_FUNC
+    Binding: STB_GLOBAL
+  ## sh_link of .stack_sizes is ignored for non-reloctable objects.
+  - Name:    other
+    Section: .text
+    Value:   0
+    Type:    STT_FUNC
+    Binding: STB_GLOBAL
+  ## If two symbols have the same value, the first is picked, regardless of
+  ## the sh_link value of the .stack_sizes section.
+  - Name:    other_end
     Section: .text
     Value:   0x10
     Type:    STT_FUNC
     Binding: STB_GLOBAL
+  - Name:    foo
+    Section: .text2
+    Value:   0x10
+    Type:    STT_FUNC
+    Binding: STB_GLOBAL
   - Name:    bar
-    Section: .text
+    Section: .text2
     Value:   0x20
     Type:    STT_FUNC
     Binding: STB_GLOBAL
@@ -184,7 +215,8 @@ Symbols:
     Binding: STB_GLOBAL
 
 ## Check that we warn about a function symbol that is not in the section
-## that is referenced by the stack sizes section's sh_link.
+## that is referenced by the stack sizes section's sh_link, for relocatable
+## output.
 
 # RUN: yaml2obj --docnum=4 %s -o %t04
 # RUN: llvm-readelf --stack-sizes %t04 2> %t04-gnu.err | FileCheck %s --check-prefix=WRONGSECTION-GNU
@@ -437,17 +469,22 @@ Sections:
 # MULTIPLE-GNU-EMPTY:
 # MULTIPLE-GNU-NEXT:Stack Sizes:
 # MULTIPLE-GNU-NEXT:         Size     Function
-# MULTIPLE-GNU-NEXT:           16     foo
-# MULTIPLE-GNU-NEXT:           32     bar
+# MULTIPLE-GNU-NEXT:           16     other
+# MULTIPLE-GNU-NEXT:           32     other_end
+# MULTIPLE-GNU-NEXT:           48     bar
 
 # MULTIPLE-LLVM:      StackSizes [
 # MULTIPLE-LLVM-NEXT:   Entry {
-# MULTIPLE-LLVM-NEXT:     Function: foo
+# MULTIPLE-LLVM-NEXT:     Function: other
 # MULTIPLE-LLVM-NEXT:     Size: 0x10
 # MULTIPLE-LLVM-NEXT:   }
 # MULTIPLE-LLVM-NEXT:   Entry {
-# MULTIPLE-LLVM-NEXT:     Function: bar
+# MULTIPLE-LLVM-NEXT:     Function: other_end
 # MULTIPLE-LLVM-NEXT:     Size: 0x20
+# MULTIPLE-LLVM-NEXT:   }
+# MULTIPLE-LLVM-NEXT:   Entry {
+# MULTIPLE-LLVM-NEXT:     Function: bar
+# MULTIPLE-LLVM-NEXT:     Size: 0x30
 # MULTIPLE-LLVM-NEXT:   }
 # MULTIPLE-LLVM-NEXT: ]
 
