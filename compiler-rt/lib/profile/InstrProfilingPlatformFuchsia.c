@@ -34,7 +34,11 @@
 #include "InstrProfilingInternal.h"
 #include "InstrProfilingUtil.h"
 
-/* VMO that contains the coverage data shared across all modules. */
+COMPILER_RT_VISIBILITY unsigned lprofRuntimeCounterRelocation(void) {
+  return 1;
+}
+
+/* VMO that contains the profile data for this module. */
 static zx_handle_t __llvm_profile_vmo;
 /* Current offset within the VMO where data should be written next. */
 static uint64_t __llvm_profile_offset;
@@ -92,43 +96,23 @@ static void initVMOWriter(ProfDataWriter *This) {
   This->WriterCtx = NULL;
 }
 
-static int dump(void) {
-  if (lprofProfileDumped()) {
-    lprofWrite("LLVM Profile: data not published: already written.\n");
-    return 0;
-  }
-
-  /* Check if there is llvm/runtime version mismatch. */
-  if (GET_VERSION(__llvm_profile_get_version()) != INSTR_PROF_RAW_VERSION) {
-    lprofWrite("LLVM Profile: runtime and instrumentation version mismatch: "
-               "expected %d, but got %d\n",
-               INSTR_PROF_RAW_VERSION,
-               (int)GET_VERSION(__llvm_profile_get_version()));
-    return -1;
-  }
-
-  /* Write the profile data into the mapped region. */
-  ProfDataWriter VMOWriter;
-  initVMOWriter(&VMOWriter);
-  if (lprofWriteData(&VMOWriter, lprofGetVPDataReader(), 0) != 0)
-    return -1;
-
-  return 0;
-}
-
+/* This method is invoked by the runtime initialization hook
+ * InstrProfilingRuntime.o if it is linked in. */
 COMPILER_RT_VISIBILITY
-int __llvm_profile_dump(void) {
-  int rc = dump();
-  lprofSetProfileDumped();
-  return rc;
-}
-
-static void dumpWithoutReturn(void) { dump(); }
-
-static void createVMO(void) {
-  /* Don't create VMO if it has been alread created. */
-  if (__llvm_profile_vmo != ZX_HANDLE_INVALID)
+void __llvm_profile_initialize(void) {
+  /* This symbol is defined as weak and initialized to -1 by the runtimer, but
+   * compiler will generate a strong definition initialized to 0 when runtime
+   * counter relocation is used. */
+  if (__llvm_profile_counter_bias == -1) {
+    lprofWrite("LLVM Profile: counter relocation at runtime is required\n");
     return;
+  }
+
+  /* Don't create VMO if it has been alread created. */
+  if (__llvm_profile_vmo != ZX_HANDLE_INVALID) {
+    lprofWrite("LLVM Profile: VMO has already been created\n");
+    return;
+  }
 
   const __llvm_profile_data *DataBegin = __llvm_profile_begin_data();
   const __llvm_profile_data *DataEnd = __llvm_profile_end_data();
@@ -209,25 +193,6 @@ static void createVMO(void) {
   /* Update the profile fields based on the current mapping. */
   __llvm_profile_counter_bias = (intptr_t)Mapping -
       (uintptr_t)__llvm_profile_begin_counters() + CountersOffset;
-}
-
-/* This method is invoked by the runtime initialization hook
- * InstrProfilingRuntime.o if it is linked in.
- */
-COMPILER_RT_VISIBILITY
-void __llvm_profile_initialize_file(void) { createVMO(); }
-
-COMPILER_RT_VISIBILITY
-int __llvm_profile_register_write_file_atexit(void) {
-  static bool HasBeenRegistered = false;
-
-  if (HasBeenRegistered)
-    return 0;
-
-  lprofSetupValueProfiler();
-
-  HasBeenRegistered = true;
-  return atexit(dumpWithoutReturn);
 }
 
 #endif

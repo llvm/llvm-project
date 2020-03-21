@@ -35,6 +35,16 @@
 #include "InstrProfilingPort.h"
 #include "InstrProfilingUtil.h"
 
+static int RuntimeCounterRelocation = 0;
+
+COMPILER_RT_VISIBILITY unsigned lprofRuntimeCounterRelocation(void) {
+  return RuntimeCounterRelocation;
+}
+
+COMPILER_RT_VISIBILITY void lprofSetRuntimeCounterRelocation(void) {
+  RuntimeCounterRelocation = 1;
+}
+
 /* From where is profile name specified.
  * The order the enumerators define their
  * precedence. Re-order them may lead to
@@ -477,7 +487,8 @@ static int writeMMappedFile(FILE *OutputFile, char **Profile) {
 }
 
 static void relocateCounters(void) {
-  if (!__llvm_profile_is_continuous_mode_enabled() || !RuntimeCounterRelocation)
+  if (!__llvm_profile_is_continuous_mode_enabled() ||
+      !lprofRuntimeCounterRelocation())
     return;
 
   /* Get the sizes of various profile data sections. Taken from
@@ -808,7 +819,7 @@ static void parseAndSetFilename(const char *FilenamePat,
 
   truncateCurrentFile();
   if (__llvm_profile_is_continuous_mode_enabled()) {
-    if (RuntimeCounterRelocation)
+    if (lprofRuntimeCounterRelocation())
       relocateCounters();
     else
       initializeProfileForContinuousMode();
@@ -951,10 +962,10 @@ const char *__llvm_profile_get_filename(void) {
   return FilenameBuf;
 }
 
-/* This method is invoked by the runtime initialization hook
- * InstrProfilingRuntime.o if it is linked in. Both user specified
+/* This API initializes the file handling, both user specified
  * profile path via -fprofile-instr-generate= and LLVM_PROFILE_FILE
- * environment variable can override this default value. */
+ * environment variable can override this default value.
+ */
 COMPILER_RT_VISIBILITY
 void __llvm_profile_initialize_file(void) {
   const char *EnvFilenamePat;
@@ -963,7 +974,7 @@ void __llvm_profile_initialize_file(void) {
   int hasCommandLineOverrider = (INSTR_PROF_PROFILE_NAME_VAR[0] != 0);
 
   if (__llvm_profile_counter_bias != -1)
-    RuntimeCounterRelocation = 1;
+    lprofSetRuntimeCounterRelocation();
 
   EnvFilenamePat = getFilenamePatFromEnv();
   if (EnvFilenamePat) {
@@ -980,6 +991,16 @@ void __llvm_profile_initialize_file(void) {
   }
 
   parseAndSetFilename(SelectedPat, PNS, 0);
+}
+
+/* This method is invoked by the runtime initialization hook
+ * InstrProfilingRuntime.o if it is linked in.
+ */
+COMPILER_RT_VISIBILITY
+void __llvm_profile_initialize(void) {
+  __llvm_profile_initialize_file();
+  if (!__llvm_profile_is_continuous_mode_enabled())
+    __llvm_profile_register_write_file_atexit();
 }
 
 /* This API is directly called by the user application code. It has the
