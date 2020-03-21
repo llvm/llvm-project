@@ -216,6 +216,17 @@ TARGET_BUILTIN(__builtin_amdgcn_permlanex16, "UiUiUiUiUiIbIb", "nc", "gfx10-inst
 TARGET_BUILTIN(__builtin_amdgcn_mov_dpp8, "UiUiIUi", "nc", "gfx10-insts")
 
 //===----------------------------------------------------------------------===//
+// Raytracing builtins.
+// By default the 1st argument is i32 and the 4/5-th arguments are float4.
+// Postfix l indicates the 1st argument is i64.
+// Postfix h indicates the 4/5-th arguments are half4.
+//===----------------------------------------------------------------------===//
+TARGET_BUILTIN(__builtin_amdgcn_image_bvh_intersect_ray, "V4UiUifV4fV4fV4fV4Ui", "nc", "gfx10-insts")
+TARGET_BUILTIN(__builtin_amdgcn_image_bvh_intersect_ray_h, "V4UiUifV4fV4hV4hV4Ui", "nc", "gfx10-insts")
+TARGET_BUILTIN(__builtin_amdgcn_image_bvh_intersect_ray_l, "V4UiWUifV4fV4fV4fV4Ui", "nc", "gfx10-insts")
+TARGET_BUILTIN(__builtin_amdgcn_image_bvh_intersect_ray_lh, "V4UiWUifV4fV4hV4hV4Ui", "nc", "gfx10-insts")
+
+//===----------------------------------------------------------------------===//
 // Special builtins.
 //===----------------------------------------------------------------------===//
 BUILTIN(__builtin_amdgcn_read_exec, "WUi", "nc")
