@@ -1135,6 +1135,81 @@ middle.block:
   ret i32 %12
 }
 
+define i32 @sad_4i8() nounwind {
+; SSE2-LABEL: sad_4i8:
+; SSE2:       # %bb.0: # %entry
+; SSE2-NEXT:    pxor %xmm0, %xmm0
+; SSE2-NEXT:    movq $-1024, %rax # imm = 0xFC00
+; SSE2-NEXT:    .p2align 4, 0x90
+; SSE2-NEXT:  .LBB4_1: # %vector.body
+; SSE2-NEXT:    # =>This Inner Loop Header: Depth=1
+; SSE2-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; SSE2-NEXT:    movd {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; SSE2-NEXT:    psadbw %xmm1, %xmm2
+; SSE2-NEXT:    paddd %xmm2, %xmm0
+; SSE2-NEXT:    addq $4, %rax
+; SSE2-NEXT:    jne .LBB4_1
+; SSE2-NEXT:  # %bb.2: # %middle.block
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; SSE2-NEXT:    paddd %xmm0, %xmm1
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,2,3]
+; SSE2-NEXT:    paddd %xmm1, %xmm0
+; SSE2-NEXT:    movd %xmm0, %eax
+; SSE2-NEXT:    retq
+;
+; AVX-LABEL: sad_4i8:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    movq $-1024, %rax # imm = 0xFC00
+; AVX-NEXT:    .p2align 4, 0x90
+; AVX-NEXT:  .LBB4_1: # %vector.body
+; AVX-NEXT:    # =>This Inner Loop Header: Depth=1
+; AVX-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; AVX-NEXT:    vmovd {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; AVX-NEXT:    vpsadbw %xmm1, %xmm2, %xmm1
+; AVX-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    addq $4, %rax
+; AVX-NEXT:    jne .LBB4_1
+; AVX-NEXT:  # %bb.2: # %middle.block
+; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
+; AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vmovd %xmm0, %eax
+; AVX-NEXT:    retq
+entry:
+  br label %vector.body
+
+vector.body:
+  %index = phi i64 [ 0, %entry ], [ %index.next, %vector.body ]
+  %vec.phi = phi <4 x i32> [ zeroinitializer, %entry ], [ %10, %vector.body ]
+  %0 = getelementptr inbounds [1024 x i8], [1024 x i8]* @a, i64 0, i64 %index
+  %1 = bitcast i8* %0 to <4 x i8>*
+  %wide.load = load <4 x i8>, <4 x i8>* %1, align 4
+  %2 = zext <4 x i8> %wide.load to <4 x i32>
+  %3 = getelementptr inbounds [1024 x i8], [1024 x i8]* @b, i64 0, i64 %index
+  %4 = bitcast i8* %3 to <4 x i8>*
+  %wide.load1 = load <4 x i8>, <4 x i8>* %4, align 4
+  %5 = zext <4 x i8> %wide.load1 to <4 x i32>
+  %6 = sub nsw <4 x i32> %2, %5
+  %7 = icmp sgt <4 x i32> %6, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %8 = sub nsw <4 x i32> zeroinitializer, %6
+  %9 = select <4 x i1> %7, <4 x i32> %6, <4 x i32> %8
+  %10 = add nsw <4 x i32> %9, %vec.phi
+  %index.next = add i64 %index, 4
+  %11 = icmp eq i64 %index.next, 1024
+  br i1 %11, label %middle.block, label %vector.body
+
+middle.block:
+  %h2 = shufflevector <4 x i32> %10, <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+  %sum2 = add <4 x i32> %10, %h2
+  %h3 = shufflevector <4 x i32> %sum2, <4 x i32> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+  %sum3 = add <4 x i32> %sum2, %h3
+  %sum = extractelement <4 x i32> %sum3, i32 0
+  ret i32 %sum
+}
+
+
 define i32 @sad_nonloop_4i8(<4 x i8>* nocapture readonly %p, i64, <4 x i8>* nocapture readonly %q) local_unnamed_addr #0 {
 ; SSE2-LABEL: sad_nonloop_4i8:
 ; SSE2:       # %bb.0:
