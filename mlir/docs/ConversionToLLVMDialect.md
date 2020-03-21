@@ -1,7 +1,7 @@
 # Conversion to the LLVM Dialect
 
 Conversion from the Standard to the [LLVM Dialect](Dialects/LLVM.md) can be
-performed by the specialized dialect conversion pass by running
+performed by the specialized dialect conversion pass by running:
 
 ```shell
 mlir-opt -convert-std-to-llvm <filename.mlir>
@@ -19,7 +19,7 @@ described in this document. We use the terminology defined by the
 ### Scalar Types
 
 Scalar types are converted to their LLVM counterparts if they exist. The
-following conversions are currently implemented.
+following conversions are currently implemented:
 
 -   `i*` converts to `!llvm.i*`
 -   `f16` converts to `!llvm.half`
@@ -52,7 +52,7 @@ x 8 x 16 x f32>` converts to `!llvm<"[4 x [8 x <16 x float>]]">`.
 
 Memref types in MLIR have both static and dynamic information associated with
 them. The dynamic information comprises the buffer pointer as well as sizes and
-strides of any dynamically sized dimensions. Memref types are normalized and
+strides of any dynamically-sized dimensions. Memref types are normalized and
 converted to a descriptor that is only dependent on the rank of the memref. The
 descriptor contains:
 
@@ -90,7 +90,7 @@ memref<10x?x42x?x123 x f32> -> !llvm<"{ float*, float*, i64, [5 x i64], [5 x i64
 memref<1x? x vector<4xf32>> -> !llvm<"{ <4 x float>*, <4 x float>*, i64, [1 x i64], [1 x i64] }">
 ```
 
-If the rank of the memref is unknown at compile time, the Memref is converted to
+If the rank of the memref is unknown at compile time, the memref is converted to
 an unranked descriptor that contains:
 
 1.  a 64-bit integer representing the dynamic rank of the memref, followed by
@@ -128,7 +128,7 @@ fact that LLVM IR functions always have a return type, which may be a Void type.
 The converted function always has a single result type. If the original function
 type had no results, the converted function will have one result of the wrapped
 `void` type. If the original function type had one result, the converted
-function will have one result converted using these rules. Otherwise, the result
+function will also have one result converted using these rules. Otherwise, the result
 type will be a wrapped LLVM IR structure type where each element of the
 structure corresponds to one of the results of the original function, converted
 using these rules. In high-order functions, function-typed arguments and results
@@ -407,7 +407,7 @@ in the MLIR module.
 1. Add a body to the original function (making it non-external) that
    1. allocates a memref descriptor,
    1. populates it, and
-   1. passes the pointer to it into the newly declared interface function
+   1. passes the pointer to it into the newly declared interface function, then
    1. collects the result of the call and returns it to the caller.
 
 For (non-external) functions defined in the MLIR module.
@@ -560,7 +560,7 @@ produce an address of a specific element. In particular, it holds dynamic values
 for static sizes, and they are expected to match at all times.
 
 It is created by the allocation operation and is updated by the conversion
-operations that may change static dimensions into dynamic and vice versa.
+operations that may change static dimensions into dynamic dimensions and vice versa.
 
 **Note**: LLVM IR conversion does not support `memref`s with layouts that are
 not amenable to the strided form.
