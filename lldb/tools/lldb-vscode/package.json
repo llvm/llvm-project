@@ -140,6 +140,11 @@
 									"description": "Commands executed just before the program is launched.",
 									"default": []
 							},
+							"launchCommands": {
+									"type": "array",
+									"description": "Commands that create a custom target instead of using lldb-vscode's default target creation.",
+									"default": []
+							},
 							"stopCommands": {
 									"type": "array",
 									"description": "Commands executed each time the program stops.",
