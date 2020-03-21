@@ -14,6 +14,7 @@
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/API/SBBreakpoint.h"
 #include "lldb/API/SBDebugger.h"
+#include "lldb/API/SBEnvironment.h"
 #include "lldb/API/SBEvent.h"
 #include "lldb/API/SBExpressionOptions.h"
 #include "lldb/API/SBFileSpec.h"
@@ -2448,6 +2449,17 @@ void SBTarget::SetLaunchInfo(const lldb::SBLaunchInfo &launch_info) {
     m_opaque_sp->SetProcessLaunchInfo(launch_info.ref());
 }
 
+SBEnvironment SBTarget::GetEnvironment() {
+  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBEnvironment, SBTarget, GetEnvironment);
+  TargetSP target_sp(GetSP());
+
+  if (target_sp) {
+    return LLDB_RECORD_RESULT(SBEnvironment(target_sp->GetEnvironment()));
+  }
+
+  return LLDB_RECORD_RESULT(SBEnvironment());
+}
+
 namespace lldb_private {
 namespace repro {
 
@@ -2703,6 +2715,7 @@ void RegisterMethods<SBTarget>(Registry &R) {
   LLDB_REGISTER_METHOD(lldb::SBInstructionList, SBTarget,
                        GetInstructionsWithFlavor,
                        (lldb::addr_t, const char *, const void *, size_t));
+  LLDB_REGISTER_METHOD(lldb::SBEnvironment, SBTarget, GetEnvironment, ());
 }
 
 }
