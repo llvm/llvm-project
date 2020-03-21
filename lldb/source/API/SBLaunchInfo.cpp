@@ -9,7 +9,6 @@
 #include "lldb/API/SBLaunchInfo.h"
 #include "SBReproducerPrivate.h"
 
-#include "lldb/API/SBEnvironment.h"
 #include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBListener.h"
 #include "lldb/Host/ProcessLaunchInfo.h"
@@ -183,24 +182,13 @@ const char *SBLaunchInfo::GetEnvironmentEntryAtIndex(uint32_t idx) {
 void SBLaunchInfo::SetEnvironmentEntries(const char **envp, bool append) {
   LLDB_RECORD_METHOD(void, SBLaunchInfo, SetEnvironmentEntries,
                      (const char **, bool), envp, append);
-  SetEnvironment(SBEnvironment(Environment(envp)), append);
-}
 
-void SBLaunchInfo::SetEnvironment(const SBEnvironment &env, bool append) {
-  LLDB_RECORD_METHOD(void, SBLaunchInfo, SetEnvironment,
-                     (const lldb::SBEnvironment &, bool), env, append);
-  Environment &refEnv = env.ref();
+  Environment env(envp);
   if (append)
-    m_opaque_sp->GetEnvironment().insert(refEnv.begin(), refEnv.end());
+    m_opaque_sp->GetEnvironment().insert(env.begin(), env.end());
   else
-    m_opaque_sp->GetEnvironment() = refEnv;
+    m_opaque_sp->GetEnvironment() = env;
   m_opaque_sp->RegenerateEnvp();
-}
-
-SBEnvironment SBLaunchInfo::GetEnvironment() {
-  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBEnvironment, SBLaunchInfo, GetEnvironment);
-  return LLDB_RECORD_RESULT(
-      SBEnvironment(Environment(m_opaque_sp->GetEnvironment())));
 }
 
 void SBLaunchInfo::Clear() {
@@ -402,9 +390,6 @@ void RegisterMethods<SBLaunchInfo>(Registry &R) {
                              ());
   LLDB_REGISTER_METHOD(void, SBLaunchInfo, SetDetachOnError, (bool));
   LLDB_REGISTER_METHOD_CONST(bool, SBLaunchInfo, GetDetachOnError, ());
-  LLDB_REGISTER_METHOD(void, SBLaunchInfo, SetEnvironment,
-                       (const lldb::SBEnvironment &, bool));
-  LLDB_REGISTER_METHOD(lldb::SBEnvironment, SBLaunchInfo, GetEnvironment, ());
 }
 
 }
