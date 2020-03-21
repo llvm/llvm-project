@@ -267,7 +267,7 @@ class VSCodeTestCaseBase(TestBase):
                disableSTDIO=False, shellExpandArguments=False,
                trace=False, initCommands=None, preRunCommands=None,
                stopCommands=None, exitCommands=None,sourcePath= None,
-               debuggerRoot=None, launchCommands=None, inheritEnvironment=False):
+               debuggerRoot=None, launchCommands=None):
         '''Sending launch request to vscode
         '''
 
@@ -298,8 +298,7 @@ class VSCodeTestCaseBase(TestBase):
             exitCommands=exitCommands,
             sourcePath=sourcePath,
             debuggerRoot=debuggerRoot,
-            launchCommands=launchCommands,
-            inheritEnvironment=inheritEnvironment)
+            launchCommands=launchCommands)
         if not (response and response['success']):
             self.assertTrue(response['success'],
                             'launch failed (%s)' % (response['message']))
@@ -309,7 +308,7 @@ class VSCodeTestCaseBase(TestBase):
                          disableSTDIO=False, shellExpandArguments=False,
                          trace=False, initCommands=None, preRunCommands=None,
                          stopCommands=None, exitCommands=None,
-                         sourcePath=None, debuggerRoot=None, inheritEnvironment=False):
+                         sourcePath=None, debuggerRoot=None):
         '''Build the default Makefile target, create the VSCode debug adaptor,
            and launch the process.
         '''
@@ -319,4 +318,4 @@ class VSCodeTestCaseBase(TestBase):
         self.launch(program, args, cwd, env, stopOnEntry, disableASLR,
                     disableSTDIO, shellExpandArguments, trace,
                     initCommands, preRunCommands, stopCommands, exitCommands,
-                    sourcePath, debuggerRoot, inheritEnvironment=inheritEnvironment)
+                    sourcePath, debuggerRoot)

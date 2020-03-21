@@ -40,7 +40,6 @@
 #include <sstream>
 #include <thread>
 
-#include "lldb/API/SBEnvironment.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
@@ -1356,8 +1355,6 @@ void request_launch(const llvm::json::Object &request) {
   auto launchCommands = GetStrings(arguments, "launchCommands");
   g_vsc.stop_at_entry = GetBoolean(arguments, "stopOnEntry", false);
   const auto debuggerRoot = GetString(arguments, "debuggerRoot");
-  bool launchWithDebuggerEnvironment =
-      GetBoolean(arguments, "inheritEnvironment", false);
 
   // This is a hack for loading DWARF in .o files on Mac where the .o files
   // in the debug map of the main executable have relative paths which require
@@ -1373,13 +1370,6 @@ void request_launch(const llvm::json::Object &request) {
   // This is run before target is created, so commands can't do anything with
   // the targets - preRunCommands are run with the target.
   g_vsc.RunInitCommands();
-
-  // Reset the default value of the inherit environment setting, so that the
-  // environment of programs launched by launchCommands is consistent with the
-  // "inheritEnvironment" argument.
-  if (!launchWithDebuggerEnvironment)
-    g_vsc.RunLLDBCommands(llvm::StringRef(),
-                          {"settings set target.inherit-env false"});
 
   lldb::SBError status;
   g_vsc.SetTarget(g_vsc.CreateTargetFromArguments(*arguments, status));
@@ -1405,12 +1395,10 @@ void request_launch(const llvm::json::Object &request) {
   if (!args.empty())
     g_vsc.launch_info.SetArguments(MakeArgv(args).data(), true);
 
-  // This mimics what CommandObjectProcess does when launching a process
-  lldb::SBEnvironment env = g_vsc.target.GetEnvironment();
-  for (const auto &name_and_value : GetStrings(arguments, "env"))
-    env.PutEntry(name_and_value.c_str());
-
-  g_vsc.launch_info.SetEnvironment(env, true);
+  // Pass any environment variables along that the user specified.
+  auto envs = GetStrings(arguments, "env");
+  if (!envs.empty())
+    g_vsc.launch_info.SetEnvironmentEntries(MakeArgv(envs).data(), true);
 
   auto flags = g_vsc.launch_info.GetLaunchFlags();
 
