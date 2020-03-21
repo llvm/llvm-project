@@ -84,11 +84,6 @@
 								"description": "Additional environment variables.",
 								"default": []
 							},
-							"inheritEnvironment": {
-								"type": "boolean",
-								"description": "Inherit the debugger environment when launching a process. Only works for binaries launched directly by LLDB.",
-								"default": false
-							},
 							"stopOnEntry": {
 								"type": "boolean",
 								"description": "Automatically stop after launch.",
