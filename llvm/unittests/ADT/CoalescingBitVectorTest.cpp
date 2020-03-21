@@ -77,17 +77,6 @@ TEST(CoalescingBitVector, Copy) {
   EXPECT_TRUE(elementsMatch(BV2, {0}));
 }
 
-TEST(CoalescingBitVector, Move) {
-  UBitVec::Allocator Alloc;
-  UBitVec BV1(Alloc);
-  BV1.set(0);
-  UBitVec BV2 = std::move(BV1);
-  EXPECT_TRUE(elementsMatch(BV2, {0}));
-  BV2.set(5);
-  BV1 = std::move(BV2);
-  EXPECT_TRUE(elementsMatch(BV1, {0, 5}));
-}
-
 TEST(CoalescingBitVectorTest, Iterators) {
   UBitVec::Allocator Alloc;
   UBitVec BV(Alloc);
@@ -194,14 +183,12 @@ TEST(CoalescingBitVectorTest, Comparison) {
 
 // A simple implementation of set union, used to double-check the human
 // "expected" answer.
-UBitVec simpleUnion(UBitVec::Allocator &Alloc, const UBitVec &LHS,
+void simpleUnion(UBitVec &Union, const UBitVec &LHS,
                     const UBitVec &RHS) {
-  UBitVec Union(Alloc);
   for (unsigned Bit : LHS)
     Union.test_and_set(Bit);
   for (unsigned Bit : RHS)
     Union.test_and_set(Bit);
-  return Union;
 }
 
 TEST(CoalescingBitVectorTest, Union) {
@@ -215,7 +202,8 @@ TEST(CoalescingBitVectorTest, Union) {
     BV1.set(LHS);
     UBitVec BV2(Alloc);
     BV2.set(RHS);
-    const UBitVec &DoubleCheckedExpected = simpleUnion(Alloc, BV1, BV2);
+    UBitVec DoubleCheckedExpected(Alloc);
+    simpleUnion(DoubleCheckedExpected, BV1, BV2);
     ASSERT_TRUE(elementsMatch(DoubleCheckedExpected, Expected));
     BV1 |= BV2;
     ASSERT_TRUE(elementsMatch(BV1, Expected));
@@ -288,13 +276,11 @@ TEST(CoalescingBitVectorTest, Union) {
 
 // A simple implementation of set intersection, used to double-check the
 // human "expected" answer.
-UBitVec simpleIntersection(UBitVec::Allocator &Alloc, const UBitVec &LHS,
-                           const UBitVec &RHS) {
-  UBitVec Intersection(Alloc);
+void simpleIntersection(UBitVec &Intersection, const UBitVec &LHS,
+                        const UBitVec &RHS) {
   for (unsigned Bit : LHS)
     if (RHS.test(Bit))
       Intersection.set(Bit);
-  return Intersection;
 }
 
 TEST(CoalescingBitVectorTest, Intersection) {
@@ -308,7 +294,8 @@ TEST(CoalescingBitVectorTest, Intersection) {
     BV1.set(LHS);
     UBitVec BV2(Alloc);
     BV2.set(RHS);
-    const UBitVec &DoubleCheckedExpected = simpleIntersection(Alloc, BV1, BV2);
+    UBitVec DoubleCheckedExpected(Alloc);
+    simpleIntersection(DoubleCheckedExpected, BV1, BV2);
     ASSERT_TRUE(elementsMatch(DoubleCheckedExpected, Expected));
     BV1 &= BV2;
     ASSERT_TRUE(elementsMatch(BV1, Expected));
@@ -367,14 +354,11 @@ TEST(CoalescingBitVectorTest, Intersection) {
 
 // A simple implementation of set intersection-with-complement, used to
 // double-check the human "expected" answer.
-UBitVec simpleIntersectionWithComplement(UBitVec::Allocator &Alloc,
-                                         const UBitVec &LHS,
-                                         const UBitVec &RHS) {
-  UBitVec Intersection(Alloc);
+void simpleIntersectionWithComplement(UBitVec &Intersection, const UBitVec &LHS,
+                                      const UBitVec &RHS) {
   for (unsigned Bit : LHS)
     if (!RHS.test(Bit))
       Intersection.set(Bit);
-  return Intersection;
 }
 
 TEST(CoalescingBitVectorTest, IntersectWithComplement) {
@@ -389,8 +373,8 @@ TEST(CoalescingBitVectorTest, IntersectWithComplement) {
         BV1.set(LHS);
         UBitVec BV2(Alloc);
         BV2.set(RHS);
-        const UBitVec &DoubleCheckedExpected =
-            simpleIntersectionWithComplement(Alloc, BV1, BV2);
+        UBitVec DoubleCheckedExpected(Alloc);
+        simpleIntersectionWithComplement(DoubleCheckedExpected, BV1, BV2);
         ASSERT_TRUE(elementsMatch(DoubleCheckedExpected, Expected));
         BV1.intersectWithComplement(BV2);
         ASSERT_TRUE(elementsMatch(BV1, Expected));
@@ -462,6 +446,44 @@ TEST(CoalescingBitVectorTest, FindLowerBound) {
   BV.set({1, 2, 3});
   EXPECT_EQ(*BV.find(2), 2u);
   EXPECT_EQ(*BV.find(3), 3u);
+}
+
+TEST(CoalescingBitVectorTest, AdvanceToLowerBound) {
+  U64BitVec::Allocator Alloc;
+  U64BitVec BV(Alloc);
+  uint64_t BigNum1 = uint64_t(1) << 32;
+  uint64_t BigNum2 = (uint64_t(1) << 33) + 1;
+
+  auto advFromBegin = [&](uint64_t To) -> U64BitVec::const_iterator {
+    auto It = BV.begin();
+    It.advanceToLowerBound(To);
+    return It;
+  };
+
+  EXPECT_TRUE(advFromBegin(BigNum1) == BV.end());
+  BV.set(BigNum1);
+  auto Find1 = advFromBegin(BigNum1);
+  EXPECT_EQ(*Find1, BigNum1);
+  BV.set(BigNum2);
+  auto Find2 = advFromBegin(BigNum1);
+  EXPECT_EQ(*Find2, BigNum1);
+  auto Find3 = advFromBegin(BigNum2);
+  EXPECT_EQ(*Find3, BigNum2);
+  BV.reset(BigNum1);
+  auto Find4 = advFromBegin(BigNum1);
+  EXPECT_EQ(*Find4, BigNum2);
+
+  BV.clear();
+  BV.set({1, 2, 3});
+  EXPECT_EQ(*advFromBegin(2), 2u);
+  EXPECT_EQ(*advFromBegin(3), 3u);
+  auto It = BV.begin();
+  It.advanceToLowerBound(0);
+  EXPECT_EQ(*It, 1u);
+  It.advanceToLowerBound(100);
+  EXPECT_TRUE(It == BV.end());
+  It.advanceToLowerBound(100);
+  EXPECT_TRUE(It == BV.end());
 }
 
 TEST(CoalescingBitVectorTest, Print) {

@@ -572,6 +572,18 @@ struct FwdRegParamInfo {
 /// Register worklist for finding call site values.
 using FwdRegWorklist = MapVector<unsigned, SmallVector<FwdRegParamInfo, 2>>;
 
+/// Append the expression \p Addition to \p Original and return the result.
+static const DIExpression *combineDIExpressions(const DIExpression *Original,
+                                                const DIExpression *Addition) {
+  std::vector<uint64_t> Elts = Addition->getElements().vec();
+  // Avoid multiple DW_OP_stack_values.
+  if (Original->isImplicit() && Addition->isImplicit())
+    erase_if(Elts, [](uint64_t Op) { return Op == dwarf::DW_OP_stack_value; });
+  const DIExpression *CombinedExpr =
+      (Elts.size() > 0) ? DIExpression::append(Original, Elts) : Original;
+  return CombinedExpr;
+}
+
 /// Emit call site parameter entries that are described by the given value and
 /// debug expression.
 template <typename ValT>
@@ -591,9 +603,8 @@ static void finishCallSiteParams(ValT Val, const DIExpression *Expr,
     // parameter when walking through the instructions. Append that to the
     // base expression.
     const DIExpression *CombinedExpr =
-        ShouldCombineExpressions
-            ? DIExpression::append(Expr, Param.Expr->getElements())
-            : Expr;
+        ShouldCombineExpressions ? combineDIExpressions(Expr, Param.Expr)
+                                 : Expr;
     assert((!CombinedExpr || CombinedExpr->isValid()) &&
            "Combined debug expression is invalid");
 
@@ -623,15 +634,7 @@ static void addToFwdRegWorklist(FwdRegWorklist &Worklist, unsigned Reg,
     // instructions we may have already created an expression for the
     // parameter when walking through the instructions. Append that to the
     // new expression.
-    std::vector<uint64_t> ParamElts = Param.Expr->getElements().vec();
-    // Avoid multiple DW_OP_stack_values.
-    if (Expr->isImplicit() && Param.Expr->isImplicit())
-      erase_if(ParamElts,
-               [](uint64_t Op) { return Op == dwarf::DW_OP_stack_value; });
-    const DIExpression *CombinedExpr =
-        (Param.Expr->getNumElements() > 0)
-            ? DIExpression::append(Expr, ParamElts)
-            : Expr;
+    const DIExpression *CombinedExpr = combineDIExpressions(Expr, Param.Expr);
     ParamsForFwdReg.push_back({Param.ParamReg, CombinedExpr});
   }
 }
