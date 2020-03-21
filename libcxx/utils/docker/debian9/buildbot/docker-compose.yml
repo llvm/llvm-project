@@ -2,7 +2,7 @@ version: '3.7'
 services:
   llvm-buildbot-worker:
     build:
-      context: https://github.com/llvm-project/llvm-project.git#master:libcxx/utils/docker/debian9/buildbot
+      context: https://github.com/llvm/llvm-project.git#master:libcxx/utils/docker/debian9/buildbot
       args:
         gcc_tot: "ericwf/gcc:9.2.0"
         llvm_tot: "ericwf/llvm:9.x"
