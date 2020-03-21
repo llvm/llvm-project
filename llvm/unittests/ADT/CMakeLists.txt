@@ -73,6 +73,7 @@ add_llvm_unittest(ADTTests
   TinyPtrVectorTest.cpp
   TripleTest.cpp
   TwineTest.cpp
+  WaymarkingTest.cpp
   )
 
 target_link_libraries(ADTTests PRIVATE LLVMTestingSupport)
