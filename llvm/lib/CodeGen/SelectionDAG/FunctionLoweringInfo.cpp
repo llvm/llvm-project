@@ -85,7 +85,6 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
   TLI = MF->getSubtarget().getTargetLowering();
   RegInfo = &MF->getRegInfo();
   const TargetFrameLowering *TFI = MF->getSubtarget().getFrameLowering();
-  unsigned StackAlign = TFI->getStackAlignment();
   DA = DAG->getDivergenceAnalysis();
 
   // Check whether the function can return without sret-demotion.
@@ -130,19 +129,19 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
   // Initialize the mapping of values to registers.  This is only set up for
   // instruction values that are used outside of the block that defines
   // them.
+  const Align StackAlign = TFI->getStackAlign();
   for (const BasicBlock &BB : *Fn) {
     for (const Instruction &I : BB) {
       if (const AllocaInst *AI = dyn_cast<AllocaInst>(&I)) {
         Type *Ty = AI->getAllocatedType();
-        unsigned Align =
-          std::max((unsigned)MF->getDataLayout().getPrefTypeAlignment(Ty),
-                   AI->getAlignment());
+        Align Alignment =
+            max(MF->getDataLayout().getPrefTypeAlign(Ty), AI->getAlign());
 
         // Static allocas can be folded into the initial stack frame
         // adjustment. For targets that don't realign the stack, don't
         // do this if there is an extra alignment requirement.
         if (AI->isStaticAlloca() &&
-            (TFI->isStackRealignable() || (Align <= StackAlign))) {
+            (TFI->isStackRealignable() || (Alignment <= StackAlign))) {
           const ConstantInt *CUI = cast<ConstantInt>(AI->getArraySize());
           uint64_t TySize =
               MF->getDataLayout().getTypeAllocSize(Ty).getKnownMinSize();
@@ -154,10 +153,10 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
           if (Iter != CatchObjects.end() && TLI->needsFixedCatchObjects()) {
             FrameIndex = MF->getFrameInfo().CreateFixedObject(
                 TySize, 0, /*IsImmutable=*/false, /*isAliased=*/true);
-            MF->getFrameInfo().setObjectAlignment(FrameIndex, Align);
+            MF->getFrameInfo().setObjectAlignment(FrameIndex, Alignment);
           } else {
-            FrameIndex =
-                MF->getFrameInfo().CreateStackObject(TySize, Align, false, AI);
+            FrameIndex = MF->getFrameInfo().CreateStackObject(TySize, Alignment,
+                                                              false, AI);
           }
 
           // Scalable vectors may need a special StackID to distinguish
@@ -176,10 +175,9 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
           // FIXME: Overaligned static allocas should be grouped into
           // a single dynamic allocation instead of using a separate
           // stack allocation for each one.
-          if (Align <= StackAlign)
-            Align = 0;
           // Inform the Frame Information that we have variable-sized objects.
-          MF->getFrameInfo().CreateVariableSizedObject(Align ? Align : 1, AI);
+          MF->getFrameInfo().CreateVariableSizedObject(
+              Alignment <= StackAlign ? 0 : Alignment.value(), AI);
         }
       }
 

@@ -625,8 +625,7 @@ int X86InstrInfo::getSPAdjust(const MachineInstr &MI) const {
   const TargetFrameLowering *TFI = MF->getSubtarget().getFrameLowering();
 
   if (isFrameInstr(MI)) {
-    unsigned StackAlign = TFI->getStackAlignment();
-    int SPAdj = alignTo(getFrameSize(MI), StackAlign);
+    int SPAdj = alignTo(getFrameSize(MI), TFI->getStackAlign());
     SPAdj -= getFrameAdjustment(MI);
     if (!isFrameSetup(MI))
       SPAdj = -SPAdj;
@@ -3737,7 +3736,7 @@ void X86InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
          "Stack slot too small for store");
   unsigned Alignment = std::max<uint32_t>(TRI->getSpillSize(*RC), 16);
   bool isAligned =
-      (Subtarget.getFrameLowering()->getStackAlignment() >= Alignment) ||
+      (Subtarget.getFrameLowering()->getStackAlign() >= Alignment) ||
       RI.canRealignStack(MF);
   unsigned Opc = getStoreRegOpcode(SrcReg, RC, isAligned, Subtarget);
   addFrameReference(BuildMI(MBB, MI, DebugLoc(), get(Opc)), FrameIdx)
@@ -3752,7 +3751,7 @@ void X86InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
   const MachineFunction &MF = *MBB.getParent();
   unsigned Alignment = std::max<uint32_t>(TRI->getSpillSize(*RC), 16);
   bool isAligned =
-      (Subtarget.getFrameLowering()->getStackAlignment() >= Alignment) ||
+      (Subtarget.getFrameLowering()->getStackAlign() >= Alignment) ||
       RI.canRealignStack(MF);
   unsigned Opc = getLoadRegOpcode(DestReg, RC, isAligned, Subtarget);
   addFrameReference(BuildMI(MBB, MI, DebugLoc(), get(Opc), DestReg), FrameIdx);
@@ -5211,7 +5210,7 @@ static MachineInstr *MakeM0Inst(const TargetInstrInfo &TII, unsigned Opcode,
 MachineInstr *X86InstrInfo::foldMemoryOperandCustom(
     MachineFunction &MF, MachineInstr &MI, unsigned OpNum,
     ArrayRef<MachineOperand> MOs, MachineBasicBlock::iterator InsertPt,
-    unsigned Size, unsigned Align) const {
+    unsigned Size, Align Alignment) const {
   switch (MI.getOpcode()) {
   case X86::INSERTPSrr:
   case X86::VINSERTPSrr:
@@ -5227,7 +5226,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandCustom(
       const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
       const TargetRegisterClass *RC = getRegClass(MI.getDesc(), OpNum, &RI, MF);
       unsigned RCSize = TRI.getRegSizeInBits(*RC) / 8;
-      if ((Size == 0 || Size >= 16) && RCSize >= 16 && 4 <= Align) {
+      if ((Size == 0 || Size >= 16) && RCSize >= 16 && Alignment >= Align(4)) {
         int PtrOffset = SrcIdx * 4;
         unsigned NewImm = (DstIdx << 4) | ZMask;
         unsigned NewOpCode =
@@ -5251,7 +5250,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandCustom(
       const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
       const TargetRegisterClass *RC = getRegClass(MI.getDesc(), OpNum, &RI, MF);
       unsigned RCSize = TRI.getRegSizeInBits(*RC) / 8;
-      if ((Size == 0 || Size >= 16) && RCSize >= 16 && 8 <= Align) {
+      if ((Size == 0 || Size >= 16) && RCSize >= 16 && Alignment >= Align(8)) {
         unsigned NewOpCode =
             (MI.getOpcode() == X86::VMOVHLPSZrr) ? X86::VMOVLPSZ128rm :
             (MI.getOpcode() == X86::VMOVHLPSrr)  ? X86::VMOVLPSrm     :
@@ -5270,7 +5269,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandCustom(
       const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
       const TargetRegisterClass *RC = getRegClass(MI.getDesc(), OpNum, &RI, MF);
       unsigned RCSize = TRI.getRegSizeInBits(*RC) / 8;
-      if ((Size == 0 || Size >= 16) && RCSize >= 16 && Align < 16) {
+      if ((Size == 0 || Size >= 16) && RCSize >= 16 && Alignment < Align(16)) {
         MachineInstr *NewMI =
             FuseInst(MF, X86::MOVHPDrm, OpNum, MOs, InsertPt, MI, *this);
         return NewMI;
@@ -5302,11 +5301,10 @@ static bool shouldPreventUndefRegUpdateMemFold(MachineFunction &MF,
   return VRegDef && VRegDef->isImplicitDef();
 }
 
-
 MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
     MachineFunction &MF, MachineInstr &MI, unsigned OpNum,
     ArrayRef<MachineOperand> MOs, MachineBasicBlock::iterator InsertPt,
-    unsigned Size, unsigned Align, bool AllowCommute) const {
+    unsigned Size, Align Alignment, bool AllowCommute) const {
   bool isSlowTwoMemOps = Subtarget.slowTwoMemOps();
   bool isTwoAddrFold = false;
 
@@ -5346,8 +5344,8 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
   MachineInstr *NewMI = nullptr;
 
   // Attempt to fold any custom cases we have.
-  if (MachineInstr *CustomMI =
-          foldMemoryOperandCustom(MF, MI, OpNum, MOs, InsertPt, Size, Align))
+  if (MachineInstr *CustomMI = foldMemoryOperandCustom(
+          MF, MI, OpNum, MOs, InsertPt, Size, Alignment))
     return CustomMI;
 
   const X86MemoryFoldTableEntry *I = nullptr;
@@ -5374,9 +5372,9 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
 
   if (I != nullptr) {
     unsigned Opcode = I->DstOp;
-    unsigned MinAlign = (I->Flags & TB_ALIGN_MASK) >> TB_ALIGN_SHIFT;
-    MinAlign = MinAlign ? 1 << (MinAlign - 1) : 0;
-    if (Align < MinAlign)
+    MaybeAlign MinAlign =
+        decodeMaybeAlign((I->Flags & TB_ALIGN_MASK) >> TB_ALIGN_SHIFT);
+    if (MinAlign && Alignment < *MinAlign)
       return nullptr;
     bool NarrowToMOV32rm = false;
     if (Size) {
@@ -5451,8 +5449,8 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
       }
 
       // Attempt to fold with the commuted version of the instruction.
-      NewMI = foldMemoryOperandImpl(MF, MI, CommuteOpIdx2, MOs, InsertPt,
-                                    Size, Align, /*AllowCommute=*/false);
+      NewMI = foldMemoryOperandImpl(MF, MI, CommuteOpIdx2, MOs, InsertPt, Size,
+                                    Alignment, /*AllowCommute=*/false);
       if (NewMI)
         return NewMI;
 
@@ -5506,12 +5504,12 @@ X86InstrInfo::foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
 
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   unsigned Size = MFI.getObjectSize(FrameIndex);
-  unsigned Alignment = MFI.getObjectAlignment(FrameIndex);
+  Align Alignment = MFI.getObjectAlign(FrameIndex);
   // If the function stack isn't realigned we don't want to fold instructions
   // that need increased alignment.
   if (!RI.needsStackRealignment(MF))
     Alignment =
-        std::min(Alignment, Subtarget.getFrameLowering()->getStackAlignment());
+        std::min(Alignment, Subtarget.getFrameLowering()->getStackAlign());
   if (Ops.size() == 2 && Ops[0] == 0 && Ops[1] == 1) {
     unsigned NewOpc = 0;
     unsigned RCSize = 0;
@@ -5811,36 +5809,36 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
     return nullptr;
 
   // Determine the alignment of the load.
-  unsigned Alignment = 0;
+  Align Alignment;
   if (LoadMI.hasOneMemOperand())
-    Alignment = (*LoadMI.memoperands_begin())->getAlignment();
+    Alignment = Align((*LoadMI.memoperands_begin())->getAlignment());
   else
     switch (LoadMI.getOpcode()) {
     case X86::AVX512_512_SET0:
     case X86::AVX512_512_SETALLONES:
-      Alignment = 64;
+      Alignment = Align(64);
       break;
     case X86::AVX2_SETALLONES:
     case X86::AVX1_SETALLONES:
     case X86::AVX_SET0:
     case X86::AVX512_256_SET0:
-      Alignment = 32;
+      Alignment = Align(32);
       break;
     case X86::V_SET0:
     case X86::V_SETALLONES:
     case X86::AVX512_128_SET0:
     case X86::FsFLD0F128:
     case X86::AVX512_FsFLD0F128:
-      Alignment = 16;
+      Alignment = Align(16);
       break;
     case X86::MMX_SET0:
     case X86::FsFLD0SD:
     case X86::AVX512_FsFLD0SD:
-      Alignment = 8;
+      Alignment = Align(8);
       break;
     case X86::FsFLD0SS:
     case X86::AVX512_FsFLD0SS:
-      Alignment = 4;
+      Alignment = Align(4);
       break;
     default:
       return nullptr;
@@ -5929,7 +5927,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
                       Opc == X86::AVX1_SETALLONES);
     const Constant *C = IsAllOnes ? Constant::getAllOnesValue(Ty) :
                                     Constant::getNullValue(Ty);
-    unsigned CPI = MCP.getConstantPoolIndex(C, Alignment);
+    unsigned CPI = MCP.getConstantPoolIndex(C, Alignment.value());
 
     // Create operands to load from the constant pool entry.
     MOs.push_back(MachineOperand::CreateReg(PICBase, false));

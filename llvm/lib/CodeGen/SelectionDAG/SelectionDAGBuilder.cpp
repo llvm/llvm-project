@@ -4010,8 +4010,7 @@ void SelectionDAGBuilder::visitAlloca(const AllocaInst &I) {
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   auto &DL = DAG.getDataLayout();
   uint64_t TySize = DL.getTypeAllocSize(Ty);
-  unsigned Align =
-      std::max((unsigned)DL.getPrefTypeAlignment(Ty), I.getAlignment());
+  MaybeAlign Alignment = max(DL.getPrefTypeAlign(Ty), I.getAlign());
 
   SDValue AllocSize = getValue(I.getArraySize());
 
@@ -4026,25 +4025,26 @@ void SelectionDAGBuilder::visitAlloca(const AllocaInst &I) {
   // Handle alignment.  If the requested alignment is less than or equal to
   // the stack alignment, ignore it.  If the size is greater than or equal to
   // the stack alignment, we note this in the DYNAMIC_STACKALLOC node.
-  unsigned StackAlign =
-      DAG.getSubtarget().getFrameLowering()->getStackAlignment();
-  if (Align <= StackAlign)
-    Align = 0;
+  Align StackAlign = DAG.getSubtarget().getFrameLowering()->getStackAlign();
+  if (Alignment <= StackAlign)
+    Alignment = None;
 
+  const uint64_t StackAlignMask = StackAlign.value() - 1U;
   // Round the size of the allocation up to the stack alignment size
   // by add SA-1 to the size. This doesn't overflow because we're computing
   // an address inside an alloca.
   SDNodeFlags Flags;
   Flags.setNoUnsignedWrap(true);
   AllocSize = DAG.getNode(ISD::ADD, dl, AllocSize.getValueType(), AllocSize,
-                          DAG.getConstant(StackAlign - 1, dl, IntPtr), Flags);
+                          DAG.getConstant(StackAlignMask, dl, IntPtr), Flags);
 
   // Mask out the low bits for alignment purposes.
-  AllocSize =
-      DAG.getNode(ISD::AND, dl, AllocSize.getValueType(), AllocSize,
-                  DAG.getConstant(~(uint64_t)(StackAlign - 1), dl, IntPtr));
+  AllocSize = DAG.getNode(ISD::AND, dl, AllocSize.getValueType(), AllocSize,
+                          DAG.getConstant(~StackAlignMask, dl, IntPtr));
 
-  SDValue Ops[] = {getRoot(), AllocSize, DAG.getConstant(Align, dl, IntPtr)};
+  SDValue Ops[] = {
+      getRoot(), AllocSize,
+      DAG.getConstant(Alignment ? Alignment->value() : 0, dl, IntPtr)};
   SDVTList VTs = DAG.getVTList(AllocSize.getValueType(), MVT::Other);
   SDValue DSA = DAG.getNode(ISD::DYNAMIC_STACKALLOC, dl, VTs, Ops);
   setValue(&I, DSA);
