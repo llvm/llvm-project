@@ -12,7 +12,6 @@
 
 #include "mlir/Analysis/AffineAnalysis.h"
 #include "mlir/Analysis/AffineStructures.h"
-#include "mlir/Analysis/Passes.h"
 #include "mlir/Analysis/Utils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
@@ -35,11 +34,6 @@ struct TestMemRefDependenceCheck
 };
 
 } // end anonymous namespace
-
-std::unique_ptr<OpPassBase<FuncOp>>
-mlir::createTestMemRefDependenceCheckPass() {
-  return std::make_unique<TestMemRefDependenceCheck>();
-}
 
 // Returns a result string which represents the direction vector (if there was
 // a dependence), returns the string "false" otherwise.
