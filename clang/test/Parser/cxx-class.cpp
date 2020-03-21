@@ -37,7 +37,9 @@ public:
   virtual int vf5a(){0;}; // function definition, expected-warning {{unused}}
   virtual int vf6()(0); // expected-error +{{}} expected-note +{{}}
   virtual int vf7() = { 0 }; // expected-error {{does not look like a pure-specifier}}
-  
+  virtual int PR45267() = \
+                        0; // ok, despite escaped newline
+
 private:
   int x,f(),y,g();
   inline int h();
