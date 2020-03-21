@@ -46,7 +46,7 @@ public:
     Entry(Entry &&) = default;
     Entry &operator=(const Entry &) = default;
     Entry &operator=(Entry &&) = default;
-    virtual ~Entry() = default;
+    ~Entry() = default;
 
 
   public:

@@ -126,7 +126,7 @@ protected:
   explicit FoldingSetBase(unsigned Log2InitSize = 6);
   FoldingSetBase(FoldingSetBase &&Arg);
   FoldingSetBase &operator=(FoldingSetBase &&RHS);
-  virtual ~FoldingSetBase();
+  ~FoldingSetBase();
 
 public:
   //===--------------------------------------------------------------------===//
