@@ -29,7 +29,6 @@
 %include "./interface/SBDebugger.i"
 %include "./interface/SBDeclaration.i"
 %include "./interface/SBError.i"
-%include "./interface/SBEnvironment.i"
 %include "./interface/SBEvent.i"
 %include "./interface/SBExecutionContext.i"
 %include "./interface/SBExpressionOptions.i"
