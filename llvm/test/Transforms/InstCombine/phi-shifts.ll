@@ -4,21 +4,13 @@
 
 ; OSS Fuzz: https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=15217
 define i64 @fuzz15217(i1 %cond, i8* %Ptr, i64 %Val) {
-; EXPENSIVE-OFF-LABEL: @fuzz15217(
-; EXPENSIVE-OFF-NEXT:  entry:
-; EXPENSIVE-OFF-NEXT:    br i1 [[COND:%.*]], label [[END:%.*]], label [[TWO:%.*]]
-; EXPENSIVE-OFF:       two:
-; EXPENSIVE-OFF-NEXT:    br label [[END]]
-; EXPENSIVE-OFF:       end:
-; EXPENSIVE-OFF-NEXT:    ret i64 undef
-;
-; EXPENSIVE-ON-LABEL: @fuzz15217(
-; EXPENSIVE-ON-NEXT:  entry:
-; EXPENSIVE-ON-NEXT:    br i1 [[COND:%.*]], label [[END:%.*]], label [[TWO:%.*]]
-; EXPENSIVE-ON:       two:
-; EXPENSIVE-ON-NEXT:    br label [[END]]
-; EXPENSIVE-ON:       end:
-; EXPENSIVE-ON-NEXT:    ret i64 0
+; CHECK-LABEL: @fuzz15217(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[END:%.*]], label [[TWO:%.*]]
+; CHECK:       two:
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    ret i64 undef
 ;
 entry:
   br i1 %cond, label %end, label %two

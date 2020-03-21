@@ -24,7 +24,7 @@ add_mlir_library(MLIRAnalysis
 
 target_link_libraries(MLIRAnalysis
   PUBLIC
-  MLIRAffineOps
+  MLIRAffine
   MLIRCallInterfaces
   MLIRControlFlowInterfaces
   MLIRInferTypeOpInterface
@@ -44,7 +44,7 @@ add_mlir_library(MLIRLoopAnalysis
 
 target_link_libraries(MLIRLoopAnalysis
   PUBLIC
-  MLIRAffineOps
+  MLIRAffine
   MLIRCallInterfaces
   MLIRControlFlowInterfaces
   MLIRInferTypeOpInterface

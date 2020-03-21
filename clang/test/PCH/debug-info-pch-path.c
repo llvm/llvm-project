@@ -47,8 +47,8 @@
 // CHECK-REL: ![[C]] = !DIFile({{.*}}directory: "[[DIR:.*]]"
 // CHECK-REL: !DICompileUnit(
 // CHECK-REL-SAME:           file: ![[PCH:[0-9]+]]
-// CHECK-REL-SAME:           splitDebugFilename: "prefix.pch"
-// CHECK-REL: ![[PCH]] = !DIFile({{.*}}directory: "[[DIR]]{{.*}}pchdir"
+// CHECK-REL-SAME:           splitDebugFilename: "pchdir{{.*}}prefix.pch"
+// CHECK-REL: ![[PCH]] = !DIFile({{.*}}directory: "[[DIR]]"
 
 // ---------------------------------------------------------------------
 // Absolute PCH.

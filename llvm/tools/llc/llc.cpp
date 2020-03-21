@@ -50,6 +50,7 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/WithColor.h"
+#include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include <memory>
@@ -596,6 +597,8 @@ static int compileModule(char **argv, LLVMContext &Context) {
       return 1;
     }
 
+    const_cast<TargetLoweringObjectFile *>(LLVMTM.getObjFileLowering())
+        ->Initialize(MMIWP->getMMI().getContext(), *Target);
     if (MIR) {
       assert(MMIWP && "Forgot to create MMIWP?");
       if (MIR->parseMachineFunctions(*M, MMIWP->getMMI()))

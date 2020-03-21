@@ -364,7 +364,8 @@ void CodeGenFunction::EmitCallAndReturnForThunk(llvm::FunctionCallee Callee,
   ReturnValueSlot Slot;
   if (!ResultType->isVoidType() &&
       CurFnInfo->getReturnInfo().getKind() == ABIArgInfo::Indirect)
-    Slot = ReturnValueSlot(ReturnValue, ResultType.isVolatileQualified());
+    Slot = ReturnValueSlot(ReturnValue, ResultType.isVolatileQualified(),
+                           /*IsUnused=*/false, /*IsExternallyDestructed=*/true);
 
   // Now emit our call.
   llvm::CallBase *CallOrInvoke;

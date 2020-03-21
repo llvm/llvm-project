@@ -9,6 +9,7 @@ set(LIBS
   ${conversion_libs}
   MLIRLoopOpsTransforms
   MLIRLoopAnalysis
+  MLIRAffineTransformsTestPasses
   MLIRAnalysis
   MLIRDialect
   MLIREDSC

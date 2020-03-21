@@ -1049,6 +1049,41 @@ func @reduce_unsupported_rank(%arg0: vector<4x16xf32>) -> f32 {
 
 // -----
 
+func @transpose_rank_mismatch(%arg0: vector<4x16x11xf32>) {
+  // expected-error@+1 {{'vector.transpose' op vector result rank mismatch: 1}}
+  %0 = vector.transpose %arg0, [2, 1, 0] : vector<4x16x11xf32> to vector<100xf32>
+}
+
+// -----
+
+func @transpose_length_mismatch(%arg0: vector<4x4xf32>) {
+  // expected-error@+1 {{'vector.transpose' op transposition length mismatch: 3}}
+  %0 = vector.transpose %arg0, [2, 0, 1] : vector<4x4xf32> to vector<4x4xf32>
+}
+
+// -----
+
+func @transpose_index_oob(%arg0: vector<4x4xf32>) {
+  // expected-error@+1 {{'vector.transpose' op transposition index out of range: 2}}
+  %0 = vector.transpose %arg0, [2, 0] : vector<4x4xf32> to vector<4x4xf32>
+}
+
+// -----
+
+func @transpose_index_dup(%arg0: vector<4x4xf32>) {
+  // expected-error@+1 {{'vector.transpose' op duplicate position index: 0}}
+  %0 = vector.transpose %arg0, [0, 0] : vector<4x4xf32> to vector<4x4xf32>
+}
+
+// -----
+
+func @transpose_dim_size_mismatch(%arg0: vector<11x7x3x2xi32>) {
+  // expected-error@+1 {{'vector.transpose' op dimension size mismatch at: 0}}
+  %0 = vector.transpose %arg0, [3, 0, 1, 2] : vector<11x7x3x2xi32> to vector<2x3x7x11xi32>
+}
+
+// -----
+
 func @type_cast_layout(%arg0: memref<4x3xf32, affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s0 + d1 * s1 + s2)>>) {
   // expected-error@+1 {{expects operand to be a memref with no layout}}
   %0 = vector.type_cast %arg0: memref<4x3xf32, affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s0 + d1 * s1 + s2)>> to memref<vector<4x3xf32>>

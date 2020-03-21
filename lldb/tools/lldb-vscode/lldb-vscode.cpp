@@ -543,9 +543,6 @@ void request_attach(const llvm::json::Object &request) {
     return;
   }
 
-  const bool detatchOnError = GetBoolean(arguments, "detachOnError", false);
-  g_vsc.launch_info.SetDetachOnError(detatchOnError);
-
   // Run any pre run LLDB commands the user specified in the launch.json
   g_vsc.RunPreRunCommands();
 
@@ -2821,7 +2818,7 @@ int main(int argc, char *argv[]) {
   }
   auto request_handlers = GetRequestHandlers();
   uint32_t packet_idx = 0;
-  while (true) {
+  while (!g_vsc.sent_terminated_event) {
     std::string json = g_vsc.ReadJSON();
     if (json.empty())
       break;

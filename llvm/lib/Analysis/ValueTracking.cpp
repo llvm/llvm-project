@@ -3561,8 +3561,8 @@ Value *llvm::isBytewiseValue(Value *V, const DataLayout &DL) {
   if (isa<UndefValue>(V))
     return UndefInt8;
 
-  const uint64_t Size = DL.getTypeStoreSize(V->getType());
-  if (!Size)
+  // Return Undef for zero-sized type.
+  if (!DL.getTypeStoreSize(V->getType()).isNonZero())
     return UndefInt8;
 
   Constant *C = dyn_cast<Constant>(V);
@@ -3880,7 +3880,7 @@ bool llvm::getConstantDataArrayInfo(const Value *V,
       Array = nullptr;
     } else {
       const DataLayout &DL = GV->getParent()->getDataLayout();
-      uint64_t SizeInBytes = DL.getTypeStoreSize(GVTy);
+      uint64_t SizeInBytes = DL.getTypeStoreSize(GVTy).getFixedSize();
       uint64_t Length = SizeInBytes / (ElementSize / 8);
       if (Length <= Offset)
         return false;
@@ -6211,10 +6211,12 @@ getOffsetFromIndex(const GEPOperator *GEP, unsigned Idx, const DataLayout &DL) {
       continue;
     }
 
-    // Otherwise, we have a sequential type like an array or vector.  Multiply
-    // the index by the ElementSize.
-    uint64_t Size = DL.getTypeAllocSize(GTI.getIndexedType());
-    Offset += Size * OpC->getSExtValue();
+    // Otherwise, we have a sequential type like an array or fixed-length
+    // vector. Multiply the index by the ElementSize.
+    TypeSize Size = DL.getTypeAllocSize(GTI.getIndexedType());
+    if (Size.isScalable())
+      return None;
+    Offset += Size.getFixedSize() * OpC->getSExtValue();
   }
 
   return Offset;

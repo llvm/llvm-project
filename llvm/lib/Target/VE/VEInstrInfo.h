@@ -25,7 +25,6 @@ class VESubtarget;
 
 class VEInstrInfo : public VEGenInstrInfo {
   const VERegisterInfo RI;
-  const VESubtarget &Subtarget;
   virtual void anchor();
 
 public:

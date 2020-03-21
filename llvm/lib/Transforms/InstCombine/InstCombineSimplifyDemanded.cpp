@@ -553,11 +553,25 @@ Value *InstCombiner::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
       if (SimplifyDemandedBits(I, 0, DemandedMaskIn, Known, Depth + 1))
         return I;
       assert(!Known.hasConflict() && "Bits known to be one AND zero?");
+
+      bool SignBitZero = Known.Zero.isSignBitSet();
+      bool SignBitOne = Known.One.isSignBitSet();
       Known.Zero <<= ShiftAmt;
       Known.One  <<= ShiftAmt;
       // low bits known zero.
       if (ShiftAmt)
         Known.Zero.setLowBits(ShiftAmt);
+
+      // If this shift has "nsw" keyword, then the result is either a poison
+      // value or has the same sign bit as the first operand.
+      if (IOp->hasNoSignedWrap()) {
+        if (SignBitZero)
+          Known.Zero.setSignBit();
+        else if (SignBitOne)
+          Known.One.setSignBit();
+        if (Known.hasConflict())
+          return UndefValue::get(I->getType());
+      }
     } else {
       computeKnownBits(I, Known, Depth, CxtI);
     }

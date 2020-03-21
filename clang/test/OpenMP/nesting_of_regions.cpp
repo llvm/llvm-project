@@ -337,7 +337,7 @@ void foo() {
   }
 #pragma omp simd
   for (int i = 0; i < 10; ++i) {
-#pragma omp scan // omp45-error {{OpenMP constructs may not be nested inside a simd region}}
+#pragma omp scan // omp45-error {{OpenMP constructs may not be nested inside a simd region}} omp50-error {{exactly one of 'inclusive' or 'exclusive' clauses is expected}}
     bar();
   }
 #pragma omp simd
@@ -618,7 +618,7 @@ void foo() {
   }
 #pragma omp for
   for (int i = 0; i < 10; ++i) {
-#pragma omp scan // omp45-error {{region cannot be closely nested inside 'for' region; perhaps you forget to enclose 'omp scan' directive into a for, simd, or for simd region?}}
+#pragma omp scan // omp45-error {{region cannot be closely nested inside 'for' region; perhaps you forget to enclose 'omp scan' directive into a for, simd, or for simd region?}} omp50-error {{exactly one of 'inclusive' or 'exclusive' clauses is expected}}
     bar();
   }
 #pragma omp for
@@ -876,7 +876,7 @@ void foo() {
   }
 #pragma omp for simd
   for (int i = 0; i < 10; ++i) {
-#pragma omp scan // omp45-error {{OpenMP constructs may not be nested inside a simd region}}
+#pragma omp scan // omp45-error {{OpenMP constructs may not be nested inside a simd region}} omp50-error {{exactly one of 'inclusive' or 'exclusive' clauses is expected}}
     bar();
   }
 #pragma omp for simd
@@ -9861,7 +9861,7 @@ void foo() {
   }
 #pragma omp simd
   for (int i = 0; i < 10; ++i) {
-#pragma omp scan // omp45-error {{OpenMP constructs may not be nested inside a simd region}}
+#pragma omp scan // omp45-error {{OpenMP constructs may not be nested inside a simd region}} omp50-error {{exactly one of 'inclusive' or 'exclusive' clauses is expected}}
     bar();
   }
 #pragma omp simd
@@ -10116,7 +10116,7 @@ void foo() {
   }
 #pragma omp for
   for (int i = 0; i < 10; ++i) {
-#pragma omp scan // omp45-error {{region cannot be closely nested inside 'for' region}}
+#pragma omp scan // omp45-error {{region cannot be closely nested inside 'for' region}} omp50-error {{exactly one of 'inclusive' or 'exclusive' clauses is expected}}
     bar();
   }
 #pragma omp for
@@ -10361,7 +10361,7 @@ void foo() {
   }
 #pragma omp for simd
   for (int i = 0; i < 10; ++i) {
-#pragma omp scan // omp45-error {{OpenMP constructs may not be nested inside a simd region}}
+#pragma omp scan // omp45-error {{OpenMP constructs may not be nested inside a simd region}} omp50-error {{exactly one of 'inclusive' or 'exclusive' clauses is expected}}
     bar();
   }
 #pragma omp for simd

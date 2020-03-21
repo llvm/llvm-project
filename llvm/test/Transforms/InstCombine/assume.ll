@@ -353,16 +353,12 @@ define i1 @nonnull5(i32** %a) {
 ; PR35846 - https://bugs.llvm.org/show_bug.cgi?id=35846
 
 define i32 @assumption_conflicts_with_known_bits(i32 %a, i32 %b) {
-; EXPENSIVE-ON-LABEL: @assumption_conflicts_with_known_bits(
-; EXPENSIVE-ON-NEXT:    tail call void @llvm.assume(i1 false)
-; EXPENSIVE-ON-NEXT:    ret i32 0
-;
-; EXPENSIVE-OFF-LABEL: @assumption_conflicts_with_known_bits(
-; EXPENSIVE-OFF-NEXT:    [[AND1:%.*]] = and i32 [[B:%.*]], 3
-; EXPENSIVE-OFF-NEXT:    tail call void @llvm.assume(i1 false)
-; EXPENSIVE-OFF-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[AND1]], 0
-; EXPENSIVE-OFF-NEXT:    tail call void @llvm.assume(i1 [[CMP2]])
-; EXPENSIVE-OFF-NEXT:    ret i32 0
+; CHECK-LABEL: @assumption_conflicts_with_known_bits(
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[B:%.*]], 3
+; CHECK-NEXT:    tail call void @llvm.assume(i1 false)
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[AND1]], 0
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP2]])
+; CHECK-NEXT:    ret i32 0
 ;
   %and1 = and i32 %b, 3
   %B1 = lshr i32 %and1, %and1

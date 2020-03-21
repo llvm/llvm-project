@@ -110,7 +110,10 @@ static bool isRegOtherThanSPAndFP(const MachineOperand &Op,
 
 namespace {
 
+// Max out the number of statically allocated elements in DefinedRegsSet, as
+// this prevents fallback to std::set::count() operations.
 using DefinedRegsSet = SmallSet<Register, 32>;
+
 using VarLocSet = CoalescingBitVector<uint64_t>;
 
 /// A type-checked pair of {Register Location (or 0), Index}, used to index
@@ -482,7 +485,8 @@ private:
     }
   };
 
-  using VarLocInMBB = SmallDenseMap<const MachineBasicBlock *, VarLocSet>;
+  using VarLocInMBB =
+      SmallDenseMap<const MachineBasicBlock *, std::unique_ptr<VarLocSet>>;
   struct TransferDebugPair {
     MachineInstr *TransferInst; ///< Instruction where this transfer occurs.
     LocIndex LocationID;        ///< Location number for the transfer dest.
@@ -562,10 +566,11 @@ private:
     }
   };
 
-  /// Collect all VarLoc IDs from \p CollectFrom for VarLocs which are located
-  /// in \p Reg, of kind RegisterKind. Insert collected IDs in \p Collected.
-  void collectIDsForReg(VarLocSet &Collected, uint32_t Reg,
-                        const VarLocSet &CollectFrom) const;
+  /// Collect all VarLoc IDs from \p CollectFrom for VarLocs of kind
+  /// RegisterKind which are located in any reg in \p Regs. Insert collected IDs
+  /// into \p Collected.
+  void collectIDsForRegs(VarLocSet &Collected, const DefinedRegsSet &Regs,
+                         const VarLocSet &CollectFrom) const;
 
   /// Get the registers which are used by VarLocs of kind RegisterKind tracked
   /// by \p CollectFrom.
@@ -573,15 +578,17 @@ private:
                    SmallVectorImpl<uint32_t> &UsedRegs) const;
 
   VarLocSet &getVarLocsInMBB(const MachineBasicBlock *MBB, VarLocInMBB &Locs) {
-    auto Result = Locs.try_emplace(MBB, Alloc);
-    return Result.first->second;
+    std::unique_ptr<VarLocSet> &VLS = Locs[MBB];
+    if (!VLS)
+      VLS = std::make_unique<VarLocSet>(Alloc);
+    return *VLS.get();
   }
 
   const VarLocSet &getVarLocsInMBB(const MachineBasicBlock *MBB,
                                    const VarLocInMBB &Locs) const {
     auto It = Locs.find(MBB);
     assert(It != Locs.end() && "MBB not in map");
-    return It->second;
+    return *It->second.get();
   }
 
   /// Tests whether this instruction is a spill to a stack location.
@@ -770,16 +777,30 @@ LiveDebugValues::OpenRangesSet::getEntryValueBackup(DebugVariable Var) {
   return llvm::None;
 }
 
-void LiveDebugValues::collectIDsForReg(VarLocSet &Collected, uint32_t Reg,
-                                       const VarLocSet &CollectFrom) const {
-  // The half-open interval [FirstIndexForReg, FirstInvalidIndex) contains all
-  // possible VarLoc IDs for VarLocs of kind RegisterKind which live in Reg.
-  uint64_t FirstIndexForReg = LocIndex::rawIndexForReg(Reg);
-  uint64_t FirstInvalidIndex = LocIndex::rawIndexForReg(Reg + 1);
-  // Iterate through that half-open interval and collect all the set IDs.
-  for (auto It = CollectFrom.find(FirstIndexForReg), End = CollectFrom.end();
-       It != End && *It < FirstInvalidIndex; ++It)
-    Collected.set(*It);
+void LiveDebugValues::collectIDsForRegs(VarLocSet &Collected,
+                                        const DefinedRegsSet &Regs,
+                                        const VarLocSet &CollectFrom) const {
+  assert(!Regs.empty() && "Nothing to collect");
+  SmallVector<uint32_t, 32> SortedRegs;
+  for (Register Reg : Regs)
+    SortedRegs.push_back(Reg);
+  array_pod_sort(SortedRegs.begin(), SortedRegs.end());
+  auto It = CollectFrom.find(LocIndex::rawIndexForReg(SortedRegs.front()));
+  auto End = CollectFrom.end();
+  for (uint32_t Reg : SortedRegs) {
+    // The half-open interval [FirstIndexForReg, FirstInvalidIndex) contains all
+    // possible VarLoc IDs for VarLocs of kind RegisterKind which live in Reg.
+    uint64_t FirstIndexForReg = LocIndex::rawIndexForReg(Reg);
+    uint64_t FirstInvalidIndex = LocIndex::rawIndexForReg(Reg + 1);
+    It.advanceToLowerBound(FirstIndexForReg);
+
+    // Iterate through that half-open interval and collect all the set IDs.
+    for (; It != End && *It < FirstInvalidIndex; ++It)
+      Collected.set(*It);
+
+    if (It == End)
+      return;
+  }
 }
 
 void LiveDebugValues::getUsedRegs(const VarLocSet &CollectFrom,
@@ -800,7 +821,7 @@ void LiveDebugValues::getUsedRegs(const VarLocSet &CollectFrom,
     // even if there aren't any VarLocs living in `FoundReg+1`, we're still
     // guaranteed to move on to the next register (or to end()).
     uint64_t NextRegIndex = LocIndex::rawIndexForReg(FoundReg + 1);
-    It = CollectFrom.find(NextRegIndex);
+    It.advanceToLowerBound(NextRegIndex);
   }
 }
 
@@ -1073,9 +1094,7 @@ void LiveDebugValues::transferRegisterDef(
   unsigned SP = TLI->getStackPointerRegisterToSaveRestore();
 
   // Find the regs killed by MI, and find regmasks of preserved regs.
-  // Max out the number of statically allocated elements in `DeadRegs`, as this
-  // prevents fallback to std::set::count() operations.
-  SmallSet<uint32_t, 32> DeadRegs;
+  DefinedRegsSet DeadRegs;
   SmallVector<const uint32_t *, 4> RegMasks;
   for (const MachineOperand &MO : MI.operands()) {
     // Determine whether the operand is a register def.
@@ -1094,9 +1113,6 @@ void LiveDebugValues::transferRegisterDef(
   // Erase VarLocs which reside in one of the dead registers. For performance
   // reasons, it's critical to not iterate over the full set of open VarLocs.
   // Iterate over the set of dying/used regs instead.
-  VarLocSet KillSet(Alloc);
-  for (uint32_t DeadReg : DeadRegs)
-    collectIDsForReg(KillSet, DeadReg, OpenRanges.getVarLocs());
   if (!RegMasks.empty()) {
     SmallVector<uint32_t, 32> UsedRegs;
     getUsedRegs(OpenRanges.getVarLocs(), UsedRegs);
@@ -1118,9 +1134,15 @@ void LiveDebugValues::transferRegisterDef(
             return MachineOperand::clobbersPhysReg(RegMask, Reg);
           });
       if (AnyRegMaskKillsReg)
-        collectIDsForReg(KillSet, Reg, OpenRanges.getVarLocs());
+        DeadRegs.insert(Reg);
     }
   }
+
+  if (DeadRegs.empty())
+    return;
+
+  VarLocSet KillSet(Alloc);
+  collectIDsForRegs(KillSet, DeadRegs, OpenRanges.getVarLocs());
   OpenRanges.erase(KillSet, VarLocIDs);
 
   if (auto *TPC = getAnalysisIfAvailable<TargetPassConfig>()) {
@@ -1479,10 +1501,11 @@ bool LiveDebugValues::join(
 
     // Just copy over the Out locs to incoming locs for the first visited
     // predecessor, and for all other predecessors join the Out locs.
+    VarLocSet &OutLocVLS = *OL->second.get();
     if (!NumVisited)
-      InLocsT = OL->second;
+      InLocsT = OutLocVLS;
     else
-      InLocsT &= OL->second;
+      InLocsT &= OutLocVLS;
 
     LLVM_DEBUG({
       if (!InLocsT.empty()) {
@@ -1554,7 +1577,7 @@ void LiveDebugValues::flushPendingLocs(VarLocInMBB &PendingInLocs,
   for (auto &Iter : PendingInLocs) {
     // Map is keyed on a constant pointer, unwrap it so we can insert insts.
     auto &MBB = const_cast<MachineBasicBlock &>(*Iter.first);
-    VarLocSet &Pending = Iter.second;
+    VarLocSet &Pending = *Iter.second.get();
 
     for (uint64_t ID : Pending) {
       // The ID location is live-in to MBB -- work out what kind of machine
@@ -1703,7 +1726,7 @@ bool LiveDebugValues::ExtendRanges(MachineFunction &MF) {
 
   // Initialize per-block structures and scan for fragment overlaps.
   for (auto &MBB : MF) {
-    PendingInLocs.try_emplace(&MBB, Alloc);
+    PendingInLocs[&MBB] = std::make_unique<VarLocSet>(Alloc);
 
     for (auto &MI : MBB) {
       if (MI.isDebugValue())

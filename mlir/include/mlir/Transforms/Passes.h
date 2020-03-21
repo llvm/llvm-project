@@ -53,11 +53,6 @@ std::unique_ptr<OpPassBase<FuncOp>> createLoopUnrollPass(
 std::unique_ptr<OpPassBase<FuncOp>>
 createLoopUnrollAndJamPass(int unrollJamFactor = -1);
 
-/// Creates a simplification pass for affine structures (maps and sets). In
-/// addition, this pass also normalizes memrefs to have the trivial (identity)
-/// layout map.
-std::unique_ptr<OpPassBase<FuncOp>> createSimplifyAffineStructuresPass();
-
 /// Creates a loop fusion pass which fuses loops. Buffers of size less than or
 /// equal to `localBufSizeThreshold` are promoted to memory space
 /// `fastMemorySpace'.
@@ -90,14 +85,6 @@ createLoopTilingPass(uint64_t cacheSizeBytes);
 /// Creates a pass that transforms perfectly nested loops with independent
 /// bounds into a single loop.
 std::unique_ptr<OpPassBase<FuncOp>> createLoopCoalescingPass();
-
-/// Performs packing (or explicit copying) of accessed memref regions into
-/// buffers in the specified faster memory space through either pointwise copies
-/// or DMA operations.
-std::unique_ptr<OpPassBase<FuncOp>> createAffineDataCopyGenerationPass(
-    unsigned slowMemorySpace, unsigned fastMemorySpace,
-    unsigned tagMemorySpace = 0, int minDmaTransferSize = 1024,
-    uint64_t fastMemCapacityBytes = std::numeric_limits<uint64_t>::max());
 
 /// Creates a pass to perform optimizations relying on memref dataflow such as
 /// store to load forwarding, elimination of dead stores, and dead allocs.
