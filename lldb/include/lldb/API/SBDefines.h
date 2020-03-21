@@ -35,7 +35,6 @@ class LLDB_API SBCompileUnit;
 class LLDB_API SBData;
 class LLDB_API SBDebugger;
 class LLDB_API SBDeclaration;
-class LLDB_API SBEnvironment;
 class LLDB_API SBError;
 class LLDB_API SBEvent;
 class LLDB_API SBEventList;
