@@ -79,7 +79,7 @@ let Definition = "target" in {
     DefaultStringValue<"">,
     Desc<"A list containing all the arguments to be passed to the executable when it is run. Note that this does NOT include the argv[0] which is in target.arg0.">;
   def EnvVars: Property<"env-vars", "Dictionary">,
-    DefaultUnsignedValue<16>,
+    ElementType<"String">,
     Desc<"A list of all the environment variables to be passed to the executable's environment, and their values.">;
   def InheritEnv: Property<"inherit-env", "Boolean">,
     DefaultTrue,
@@ -140,7 +140,7 @@ let Definition = "target" in {
     Desc<"Expressions that crash will show up in crash logs if the host system supports executable specific crash log strings and this setting is set to true.">;
   def TrapHandlerNames: Property<"trap-handler-names", "Array">,
     Global,
-    DefaultUnsignedValue<16>,
+    ElementType<"String">,
     Desc<"A list of trap handler function names, e.g. a common Unix user process one is _sigtramp.">;
   def DisplayRuntimeSupportValues: Property<"display-runtime-support-values", "Boolean">,
     DefaultFalse,
@@ -164,7 +164,7 @@ let Definition = "process" in {
     DefaultFalse,
     Desc<"Disable reading and caching of memory in fixed-size units.">;
   def ExtraStartCommand: Property<"extra-startup-command", "Array">,
-    DefaultUnsignedValue<16>,
+    ElementType<"String">,
     Desc<"A list containing extra commands understood by the particular process plugin used.  For instance, to turn on debugserver logging set this to 'QSetLogging:bitmask=LOG_DEFAULT;'">;
   def IgnoreBreakpointsInExpressions: Property<"ignore-breakpoints-in-expressions", "Boolean">,
     Global,
