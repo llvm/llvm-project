@@ -20,20 +20,16 @@ define <8 x i32> @trunc8i64_8i32(<8 x i64> %a) {
 ;
 ; AVX1-LABEL: trunc8i64_8i32:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; AVX1-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[0,2],xmm2[0,2]
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; AVX1-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm2[0,2]
+; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm2 = ymm0[2,3],ymm1[2,3]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,2],ymm2[0,2],ymm0[4,6],ymm2[4,6]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-SLOW-LABEL: trunc8i64_8i32:
 ; AVX2-SLOW:       # %bb.0: # %entry
-; AVX2-SLOW-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; AVX2-SLOW-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[0,2],xmm2[0,2]
-; AVX2-SLOW-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; AVX2-SLOW-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm2[0,2]
+; AVX2-SLOW-NEXT:    vperm2f128 {{.*#+}} ymm2 = ymm0[2,3],ymm1[2,3]
 ; AVX2-SLOW-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX2-SLOW-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,2],ymm2[0,2],ymm0[4,6],ymm2[4,6]
 ; AVX2-SLOW-NEXT:    retq
 ;
 ; AVX2-FAST-LABEL: trunc8i64_8i32:
@@ -63,20 +59,16 @@ define <8 x i32> @trunc8i64_8i32_ashr(<8 x i64> %a) {
 ;
 ; AVX1-LABEL: trunc8i64_8i32_ashr:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
-; AVX1-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[1,3],xmm3[1,3]
-; AVX1-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,3],xmm2[1,3]
+; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm2 = ymm0[2,3],ymm1[2,3]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[1,3],ymm2[1,3],ymm0[5,7],ymm2[5,7]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-SLOW-LABEL: trunc8i64_8i32_ashr:
 ; AVX2-SLOW:       # %bb.0: # %entry
-; AVX2-SLOW-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; AVX2-SLOW-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[1,3],xmm2[1,3]
-; AVX2-SLOW-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; AVX2-SLOW-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,3],xmm2[1,3]
+; AVX2-SLOW-NEXT:    vperm2f128 {{.*#+}} ymm2 = ymm0[2,3],ymm1[2,3]
 ; AVX2-SLOW-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX2-SLOW-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[1,3],ymm2[1,3],ymm0[5,7],ymm2[5,7]
 ; AVX2-SLOW-NEXT:    retq
 ;
 ; AVX2-FAST-LABEL: trunc8i64_8i32_ashr:
@@ -108,22 +100,18 @@ define <8 x i32> @trunc8i64_8i32_lshr(<8 x i64> %a) {
 ;
 ; AVX1-LABEL: trunc8i64_8i32_lshr:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
-; AVX1-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[1,3],xmm3[1,3]
-; AVX1-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,3],xmm2[1,3]
+; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm2 = ymm0[2,3],ymm1[2,3]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[1,3],ymm2[1,3],ymm0[5,7],ymm2[5,7]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-SLOW-LABEL: trunc8i64_8i32_lshr:
 ; AVX2-SLOW:       # %bb.0: # %entry
-; AVX2-SLOW-NEXT:    vpsrlq $32, %ymm0, %ymm0
 ; AVX2-SLOW-NEXT:    vpsrlq $32, %ymm1, %ymm1
-; AVX2-SLOW-NEXT:    vextracti128 $1, %ymm1, %xmm2
-; AVX2-SLOW-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[0,2],xmm2[0,2]
-; AVX2-SLOW-NEXT:    vextracti128 $1, %ymm0, %xmm2
-; AVX2-SLOW-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm2[0,2]
-; AVX2-SLOW-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX2-SLOW-NEXT:    vpsrlq $32, %ymm0, %ymm0
+; AVX2-SLOW-NEXT:    vperm2i128 {{.*#+}} ymm2 = ymm0[2,3],ymm1[2,3]
+; AVX2-SLOW-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX2-SLOW-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,2],ymm2[0,2],ymm0[4,6],ymm2[4,6]
 ; AVX2-SLOW-NEXT:    retq
 ;
 ; AVX2-FAST-LABEL: trunc8i64_8i32_lshr:
@@ -205,11 +193,9 @@ define <8 x i16> @trunc8i64_8i16(<8 x i64> %a) {
 ;
 ; AVX2-SLOW-LABEL: trunc8i64_8i16:
 ; AVX2-SLOW:       # %bb.0: # %entry
-; AVX2-SLOW-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; AVX2-SLOW-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[0,2],xmm2[0,2]
-; AVX2-SLOW-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; AVX2-SLOW-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm2[0,2]
+; AVX2-SLOW-NEXT:    vperm2f128 {{.*#+}} ymm2 = ymm0[2,3],ymm1[2,3]
 ; AVX2-SLOW-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX2-SLOW-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,2],ymm2[0,2],ymm0[4,6],ymm2[4,6]
 ; AVX2-SLOW-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
 ; AVX2-SLOW-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
 ; AVX2-SLOW-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
@@ -1361,20 +1347,16 @@ define <8 x i32> @trunc2x4i64_8i32(<4 x i64> %a, <4 x i64> %b) {
 ;
 ; AVX1-LABEL: trunc2x4i64_8i32:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; AVX1-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm2[0,2]
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; AVX1-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[0,2],xmm2[0,2]
+; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm2 = ymm0[2,3],ymm1[2,3]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,2],ymm2[0,2],ymm0[4,6],ymm2[4,6]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-SLOW-LABEL: trunc2x4i64_8i32:
 ; AVX2-SLOW:       # %bb.0: # %entry
-; AVX2-SLOW-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; AVX2-SLOW-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm2[0,2]
-; AVX2-SLOW-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; AVX2-SLOW-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[0,2],xmm2[0,2]
+; AVX2-SLOW-NEXT:    vperm2f128 {{.*#+}} ymm2 = ymm0[2,3],ymm1[2,3]
 ; AVX2-SLOW-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX2-SLOW-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,2],ymm2[0,2],ymm0[4,6],ymm2[4,6]
 ; AVX2-SLOW-NEXT:    retq
 ;
 ; AVX2-FAST-LABEL: trunc2x4i64_8i32:
