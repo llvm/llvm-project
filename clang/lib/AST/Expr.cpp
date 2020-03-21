@@ -357,6 +357,8 @@ llvm::APSInt ConstantExpr::getResultAsAPSInt() const {
 }
 
 APValue ConstantExpr::getAPValueResult() const {
+  assert(hasAPValueResult());
+
   switch (ConstantExprBits.ResultKind) {
   case ConstantExpr::RSK_APValue:
     return APValueResult();
@@ -2721,9 +2723,6 @@ static Expr *IgnoreParensSingleStep(Expr *E) {
     if (!CE->isConditionDependent())
       return CE->getChosenSubExpr();
   }
-
-  else if (auto *CE = dyn_cast<ConstantExpr>(E))
-    return CE->getSubExpr();
 
   return E;
 }
