@@ -338,6 +338,30 @@ i8x16 sub_saturate_u_i8x16(i8x16 x, i8x16 y) {
   // WEBASSEMBLY-NEXT: ret
 }
 
+i8x16 abs_i8x16(i8x16 v) {
+  return __builtin_wasm_abs_i8x16(v);
+  // WEBASSEMBLY: %neg = sub <16 x i8> zeroinitializer, %v
+  // WEBASSEMBLY: %abscond = icmp slt <16 x i8> %v, zeroinitializer
+  // WEBASSEMBLY: %abs = select <16 x i1> %abscond, <16 x i8> %neg, <16 x i8> %v
+  // WEBASSEMBLY: ret <16 x i8> %abs
+}
+
+i16x8 abs_i16x8(i16x8 v) {
+  return __builtin_wasm_abs_i16x8(v);
+  // WEBASSEMBLY: %neg = sub <8 x i16> zeroinitializer, %v
+  // WEBASSEMBLY: %abscond = icmp slt <8 x i16> %v, zeroinitializer
+  // WEBASSEMBLY: %abs = select <8 x i1> %abscond, <8 x i16> %neg, <8 x i16> %v
+  // WEBASSEMBLY: ret <8 x i16> %abs
+}
+
+i32x4 abs_i32x4(i32x4 v) {
+  return __builtin_wasm_abs_i32x4(v);
+  // WEBASSEMBLY: %neg = sub <4 x i32> zeroinitializer, %v
+  // WEBASSEMBLY: %abscond = icmp slt <4 x i32> %v, zeroinitializer
+  // WEBASSEMBLY: %abs = select <4 x i1> %abscond, <4 x i32> %neg, <4 x i32> %v
+  // WEBASSEMBLY: ret <4 x i32> %abs
+}
+
 i8x16 min_s_i8x16(i8x16 x, i8x16 y) {
   return __builtin_wasm_min_s_i8x16(x, y);
   // WEBASSEMBLY: %0 = icmp slt <16 x i8> %x, %y
