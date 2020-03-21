@@ -226,6 +226,19 @@ void AMDGPUCallLowering::splitToValueTypes(
     MVT RegVT = TLI.getRegisterTypeForCallingConv(Ctx, CallConv, VT);
 
     if (NumParts == 1) {
+      // Fixup EVTs to an MVT.
+      //
+      // FIXME: This is pretty hacky. Why do we have to split the type
+      // legalization logic between here and handleAssignments?
+      if (OrigArgIdx != AttributeList::ReturnIndex && VT != RegVT) {
+        assert(VT.getSizeInBits() < 32 &&
+               "unexpected illegal type");
+        Ty = Type::getInt32Ty(Ctx);
+        Register OrigReg = Reg;
+        Reg = B.getMRI()->createGenericVirtualRegister(LLT::scalar(32));
+        B.buildTrunc(OrigReg, Reg);
+      }
+
       // No splitting to do, but we want to replace the original type (e.g. [1 x
       // double] -> double).
       SplitArgs.emplace_back(Reg, Ty, OrigArg.Flags, OrigArg.IsFixed);
