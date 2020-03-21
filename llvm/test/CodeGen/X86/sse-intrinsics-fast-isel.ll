@@ -2791,7 +2791,7 @@ define void @test_mm_storeh_pi(x86_mmx *%a0, <4 x float> %a1) nounwind {
 ;
 ; X64-SSE2-LABEL: test_mm_storeh_pi:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    shufps $78, %xmm0, %xmm0 # encoding: [0x0f,0xc6,0xc0,0x4e]
+; X64-SSE2-NEXT:    pshufd $78, %xmm0, %xmm0 # encoding: [0x66,0x0f,0x70,0xc0,0x4e]
 ; X64-SSE2-NEXT:    # xmm0 = xmm0[2,3,0,1]
 ; X64-SSE2-NEXT:    movq %xmm0, %rax # encoding: [0x66,0x48,0x0f,0x7e,0xc0]
 ; X64-SSE2-NEXT:    movq %rax, (%rdi) # encoding: [0x48,0x89,0x07]
