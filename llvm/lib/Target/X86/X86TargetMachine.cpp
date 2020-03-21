@@ -92,19 +92,9 @@ static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
     return std::make_unique<TargetLoweringObjectFileMachO>();
   }
 
-  if (TT.isOSFreeBSD())
-    return std::make_unique<X86FreeBSDTargetObjectFile>();
-  if (TT.isOSLinux() || TT.isOSNaCl() || TT.isOSIAMCU())
-    return std::make_unique<X86LinuxNaClTargetObjectFile>();
-  if (TT.isOSSolaris())
-    return std::make_unique<X86SolarisTargetObjectFile>();
-  if (TT.isOSFuchsia())
-    return std::make_unique<X86FuchsiaTargetObjectFile>();
-  if (TT.isOSBinFormatELF())
-    return std::make_unique<X86ELFTargetObjectFile>();
   if (TT.isOSBinFormatCOFF())
     return std::make_unique<TargetLoweringObjectFileCOFF>();
-  llvm_unreachable("unknown subtarget type");
+  return std::make_unique<X86ELFTargetObjectFile>();
 }
 
 static std::string computeDataLayout(const Triple &TT) {
