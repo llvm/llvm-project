@@ -49,3 +49,9 @@ class DefaultUnsignedValue<int value> {
 class EnumValues<string enum> {
   string EnumValues = enum;
 }
+
+// Determines the element type for arrays and dictionaries.
+class ElementType<string value> {
+  string ElementType = value;
+  bit HasElementType = 1;
+}
