@@ -823,9 +823,7 @@ define <4 x double> @PR44694(<4 x double> %0, <4 x double> %1) {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[2,3]
 ; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm1
-; AVX-NEXT:    vunpcklpd {{.*#+}} ymm2 = ymm1[0],ymm0[0],ymm1[2],ymm0[2]
-; AVX-NEXT:    vshufpd {{.*#+}} ymm0 = ymm1[0],ymm0[1],ymm1[3],ymm0[3]
-; AVX-NEXT:    vaddpd %ymm0, %ymm2, %ymm0
+; AVX-NEXT:    vhaddpd %ymm0, %ymm1, %ymm0
 ; AVX-NEXT:    retq
   %3 = shufflevector <4 x double> %0, <4 x double> %1, <4 x i32> <i32 undef, i32 2, i32 4, i32 6>
   %4 = shufflevector <4 x double> %0, <4 x double> %1, <4 x i32> <i32 undef, i32 3, i32 5, i32 7>
