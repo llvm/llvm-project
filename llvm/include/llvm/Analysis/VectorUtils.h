@@ -530,7 +530,10 @@ public:
 
   bool isReverse() const { return Reverse; }
   uint32_t getFactor() const { return Factor; }
-  uint32_t getAlignment() const { return Alignment.value(); }
+  LLVM_ATTRIBUTE_DEPRECATED(uint32_t getAlignment() const,
+                            "Use getAlign instead.") {
+    return Alignment.value();
+  }
   Align getAlign() const { return Alignment; }
   uint32_t getNumMembers() const { return Members.size(); }
 
