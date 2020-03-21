@@ -570,7 +570,7 @@ class DebugCommunication(object):
                        disableSTDIO=False, shellExpandArguments=False,
                        trace=False, initCommands=None, preRunCommands=None,
                        stopCommands=None, exitCommands=None, sourcePath=None,
-                       debuggerRoot=None, launchCommands=None, inheritEnvironment=False):
+                       debuggerRoot=None, launchCommands=None):
         args_dict = {
             'program': program
         }
@@ -605,8 +605,6 @@ class DebugCommunication(object):
             args_dict['debuggerRoot'] = debuggerRoot
         if launchCommands:
             args_dict['launchCommands'] = launchCommands
-        if inheritEnvironment:
-            args_dict['inheritEnvironment'] = inheritEnvironment
         command_dict = {
             'command': 'launch',
             'type': 'request',
@@ -914,8 +912,7 @@ def run_vscode(dbg, args, options):
                                       initCommands=options.initCmds,
                                       preRunCommands=options.preRunCmds,
                                       stopCommands=options.stopCmds,
-                                      exitCommands=options.exitCmds,
-                                      inheritEnvironment=options.inheritEnvironment)
+                                      exitCommands=options.exitCmds)
 
     if response['success']:
         if options.sourceBreakpoints:
