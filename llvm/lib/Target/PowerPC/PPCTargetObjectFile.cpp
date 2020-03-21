@@ -18,7 +18,6 @@ void
 PPC64LinuxTargetObjectFile::
 Initialize(MCContext &Ctx, const TargetMachine &TM) {
   TargetLoweringObjectFileELF::Initialize(Ctx, TM);
-  InitializeELF(TM.Options.UseInitArray);
 }
 
 MCSection *PPC64LinuxTargetObjectFile::SelectSectionForGlobal(

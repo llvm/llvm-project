@@ -108,6 +108,7 @@ void TargetLoweringObjectFileELF::Initialize(MCContext &Ctx,
   TM = &TgtM;
 
   CodeModel::Model CM = TgtM.getCodeModel();
+  InitializeELF(TgtM.Options.UseInitArray);
 
   switch (TgtM.getTargetTriple().getArch()) {
   case Triple::arm:
