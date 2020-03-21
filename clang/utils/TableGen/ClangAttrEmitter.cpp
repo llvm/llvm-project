@@ -3510,7 +3510,7 @@ static void GenerateAppertainsTo(const Record &Attr, raw_ostream &OS) {
   // of the declaration).
   OS << "virtual bool diagAppertainsToDecl(Sema &S, ";
   OS << "const ParsedAttr &Attr, const Decl *D) const {\n";
-  OS << "  if (!D || (";
+  OS << "  if (";
   for (auto I = Subjects.begin(), E = Subjects.end(); I != E; ++I) {
     // If the subject has custom code associated with it, use the generated
     // function for it. The function cannot be inlined into this check (yet)
@@ -3526,7 +3526,7 @@ static void GenerateAppertainsTo(const Record &Attr, raw_ostream &OS) {
     if (I + 1 != E)
       OS << " && ";
   }
-  OS << ")) {\n";
+  OS << ") {\n";
   OS << "    S.Diag(Attr.getLoc(), diag::";
   OS << (Warn ? "warn_attribute_wrong_decl_type_str" :
                "err_attribute_wrong_decl_type_str");
