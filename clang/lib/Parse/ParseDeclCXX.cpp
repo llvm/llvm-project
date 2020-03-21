@@ -2670,7 +2670,7 @@ Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
 
     auto &Zero = NextToken();
     SmallString<8> Buffer;
-    if (Zero.isNot(tok::numeric_constant) || Zero.getLength() != 1 ||
+    if (Zero.isNot(tok::numeric_constant) ||
         PP.getSpelling(Zero, Buffer) != "0")
       return false;
 
