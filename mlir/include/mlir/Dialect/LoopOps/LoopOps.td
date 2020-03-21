@@ -221,7 +221,10 @@ def IfOp : Loop_Op<"if",
   let skipDefaultBuilders = 1;
   let builders = [
     OpBuilder<"Builder *builder, OperationState &result, "
-              "Value cond, bool withElseRegion">
+              "Value cond, bool withElseRegion">,
+    OpBuilder<"Builder *builder, OperationState &result, "
+              "TypeRange resultTypes, Value cond, "
+              "bool withElseRegion">
   ];
 
   let extraClassDeclaration = [{
