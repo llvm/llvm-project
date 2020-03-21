@@ -46402,6 +46402,24 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
       })) {
     unsigned NumOps = Ops.size();
     switch (Op0.getOpcode()) {
+    case X86ISD::SHUFP: {
+      // Add SHUFPD support if/when necessary.
+      if (!IsSplat && VT.getScalarType() == MVT::f32 &&
+          llvm::all_of(Ops, [Op0](SDValue Op) {
+            return Op.getOperand(2) == Op0.getOperand(2);
+          })) {
+        SmallVector<SDValue, 2> LHS, RHS;
+        for (unsigned i = 0; i != NumOps; ++i) {
+          LHS.push_back(Ops[i].getOperand(0));
+          RHS.push_back(Ops[i].getOperand(1));
+        }
+        return DAG.getNode(Op0.getOpcode(), DL, VT,
+                           DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, LHS),
+                           DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, RHS),
+                           Op0.getOperand(2));
+      }
+      break;
+    }
     case X86ISD::PSHUFHW:
     case X86ISD::PSHUFLW:
     case X86ISD::PSHUFD:
