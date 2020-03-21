@@ -54,7 +54,7 @@ protected:
   ValueMaterializer() = default;
   ValueMaterializer(const ValueMaterializer &) = default;
   ValueMaterializer &operator=(const ValueMaterializer &) = default;
-  virtual ~ValueMaterializer() = default;
+  ~ValueMaterializer() = default;
 
 public:
   /// This method can be implemented to generate a mapped Value on demand. For

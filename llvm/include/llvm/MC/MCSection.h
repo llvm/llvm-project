@@ -104,7 +104,7 @@ protected:
   SectionKind Kind;
 
   MCSection(SectionVariant V, SectionKind K, MCSymbol *Begin);
-  virtual ~MCSection() = default;
+  ~MCSection();
 
 public:
   MCSection(const MCSection &) = delete;
