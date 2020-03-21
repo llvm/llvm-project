@@ -4828,6 +4828,11 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   for (CallLifetimeEnd &LifetimeEnd : CallLifetimeEndAfterCall)
     LifetimeEnd.Emit(*this, /*Flags=*/{});
 
+  if (!ReturnValue.isExternallyDestructed() &&
+      RetTy.isDestructedType() == QualType::DK_nontrivial_c_struct)
+    pushDestroy(QualType::DK_nontrivial_c_struct, Ret.getAggregateAddress(),
+                RetTy);
+
   return Ret;
 }
 
