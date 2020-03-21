@@ -2296,7 +2296,7 @@ are created implicitly. The following spellings are accepted:
                 placement.
   ``CXX11``     Spelled with a C++-style ``[[attr]]`` syntax with an optional
                 vendor-specific namespace.
-  ``C2x``       Spelled with a C-style ``[[attr]]` syntax with an optional
+  ``C2x``       Spelled with a C-style ``[[attr]]`` syntax with an optional
                 vendor-specific namespace.
   ``Declspec``  Spelled with a Microsoft-style ``__declspec(attr)`` syntax.
   ``Keyword``   The attribute is spelled as a keyword, and required custom
