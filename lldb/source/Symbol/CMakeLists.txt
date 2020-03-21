@@ -23,6 +23,7 @@ endif()
 add_lldb_library(lldbSymbol
   ArmUnwindInfo.cpp
   Block.cpp
+  TypeSystemSwiftTypeRef.cpp
   CompactUnwindInfo.cpp
   CompileUnit.cpp
   CompilerDecl.cpp
