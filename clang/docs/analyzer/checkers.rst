@@ -1934,14 +1934,14 @@ alpha.security
 alpha.security.cert
 ^^^^^^^^^^^^^^^^^^^
 
-SEI CERT checkers which tries to find errors based on their `C coding rules<https://wiki.sei.cmu.edu/confluence/display/c/2+Rules>`_.
+SEI CERT checkers which tries to find errors based on their `C coding rules <https://wiki.sei.cmu.edu/confluence/display/c/2+Rules>`_.
 
 .. _alpha-security-cert-pos-checkers:
 
 alpha.security.cert.pos
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-SEI CERT checkers of POSIX `C coding rules<https://wiki.sei.cmu.edu/confluence/pages/viewpage.action?pageId=87152405>`_.
+SEI CERT checkers of `POSIX C coding rules <https://wiki.sei.cmu.edu/confluence/pages/viewpage.action?pageId=87152405>`_.
 
 .. _alpha-security-cert-pos-34c:
 
