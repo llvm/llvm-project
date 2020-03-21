@@ -20,7 +20,7 @@ int main(int, char**) {
     // expected-error@array:* {{to_array does not accept multidimensional arrays}}
     // expected-error@array:* {{to_array requires copy constructible elements}}
     // expected-error@array:* 3 {{cannot initialize}}
-    // expected-error@array:* {{suggest braces}}
+    // expected-error@array:* 0+ {{suggest braces}}
     std::to_array(source); // expected-note {{requested here}}
   }
 
