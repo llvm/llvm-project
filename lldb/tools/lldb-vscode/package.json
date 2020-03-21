@@ -140,6 +140,11 @@
 									"description": "Commands executed just before the program is launched.",
 									"default": []
 							},
+							"launchCommands": {
+									"type": "array",
+									"description": "Custom commands that are executed instead of launching a process. A target will be created with the launch arguments prior to executing these commands. The commands may optionally create a new target and must perform a launch. A valid process must exist after these commands complete or the \"launch\" will fail.",
+									"default": []
+							},
 							"stopCommands": {
 									"type": "array",
 									"description": "Commands executed each time the program stops.",
