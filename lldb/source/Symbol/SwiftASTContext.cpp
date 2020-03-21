@@ -178,7 +178,7 @@ CompilerType lldb_private::ToCompilerType(swift::Type qual_type) {
 }
 
 CompilerType SwiftASTContext::GetCompilerType(ConstString mangled_name) {
-  return {&m_typeref_typesystem, (void *)mangled_name.AsCString()};
+  return m_typeref_typesystem.GetTypeFromMangledTypename(mangled_name);
 }
 
 CompilerType SwiftASTContext::GetCompilerType(swift::TypeBase *swift_type) {
@@ -215,13 +215,6 @@ swift::CanType SwiftASTContext::GetCanonicalSwiftType(void *opaque_type) {
   assert(opaque_type && *reinterpret_cast<const char *>(opaque_type) != '$' &&
          "wrong type system");
   return lldb_private::GetCanonicalSwiftType(CompilerType(this, opaque_type));
-}
-
-ConstString TypeSystemSwiftTypeRef::GetMangledTypeName(void *type) {
-  assert(type && *reinterpret_cast<const char *>(type) == '$' &&
-         "wrong type system");
-  // FIXME: Suboptimal performance, because the ConstString is looked up again.
-  return ConstString(reinterpret_cast<const char *>(type));
 }
 
 ConstString SwiftASTContext::GetMangledTypeName(void *type) {
