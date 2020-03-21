@@ -27,6 +27,204 @@ char TypeSystemSwiftTypeRef::ID;
 
 TypeSystemSwift::TypeSystemSwift() : TypeSystem() {}
 
+/// Create a mangled name for a type alias node.
+static ConstString GetTypeAlias(swift::Demangle::Demangler &Dem,
+                                swift::Demangle::NodePointer node) {
+  using namespace swift::Demangle;
+  auto global = Dem.createNode(Node::Kind::Global);
+  auto type_mangling = Dem.createNode(Node::Kind::TypeMangling);
+  global->addChild(type_mangling, Dem);
+  type_mangling->addChild(node, Dem);
+  return ConstString(mangleNode(global));
+}
+
+/// Iteratively resolve all type aliases in \p node by looking up their
+/// desugared types in the debug info of module \p M.
+static swift::Demangle::NodePointer
+GetCanonicalNode(lldb_private::Module *M, swift::Demangle::Demangler &Dem,
+                 swift::Demangle::NodePointer node) {
+  if (!node)
+    return node;
+  using namespace swift::Demangle;
+  auto getCanonicalNode = [&](NodePointer node) -> NodePointer {
+    return GetCanonicalNode(M, Dem, node);
+  };
+
+  NodePointer canonical = nullptr;
+  auto kind = node->getKind();
+  switch (kind) {
+  case Node::Kind::SugaredOptional:
+    // FIXME: Factor these three cases out.
+    assert(node->getNumChildren() == 1);
+    if (node->getNumChildren() != 1)
+      return node;
+
+    canonical = Dem.createNode(Node::Kind::BoundGenericEnum);
+    {
+      NodePointer type = Dem.createNode(Node::Kind::Type);
+      NodePointer e = Dem.createNode(Node::Kind::Enum);
+      NodePointer module = Dem.createNodeWithAllocatedText(Node::Kind::Module,
+                                                           swift::STDLIB_NAME);
+      e->addChild(module, Dem);
+      NodePointer optional =
+          Dem.createNodeWithAllocatedText(Node::Kind::Module, "Optional");
+      e->addChild(optional, Dem);
+      type->addChild(e, Dem);
+      canonical->addChild(type, Dem);
+    }
+    {
+      NodePointer typelist = Dem.createNode(Node::Kind::TypeList);
+      NodePointer type = Dem.createNode(Node::Kind::Type);
+      type->addChild(getCanonicalNode(node->getFirstChild()), Dem);
+      typelist->addChild(type, Dem);
+      canonical->addChild(typelist, Dem);
+    }
+    return canonical;
+  case Node::Kind::SugaredArray: {
+    assert(node->getNumChildren() == 1);
+    if (node->getNumChildren() != 1)
+      return node;
+
+    canonical = Dem.createNode(Node::Kind::BoundGenericStructure);
+    {
+      NodePointer type = Dem.createNode(Node::Kind::Type);
+      NodePointer structure = Dem.createNode(Node::Kind::Structure);
+      NodePointer module = Dem.createNodeWithAllocatedText(Node::Kind::Module,
+                                                           swift::STDLIB_NAME);
+      structure->addChild(module, Dem);
+      NodePointer array =
+          Dem.createNodeWithAllocatedText(Node::Kind::Module, "Array");
+      structure->addChild(array, Dem);
+      type->addChild(structure, Dem);
+      canonical->addChild(type, Dem);
+    }
+    {
+      NodePointer typelist = Dem.createNode(Node::Kind::TypeList);
+      NodePointer type = Dem.createNode(Node::Kind::Type);
+      type->addChild(getCanonicalNode(node->getFirstChild()), Dem);
+      typelist->addChild(type, Dem);
+      canonical->addChild(typelist, Dem);
+    }
+    return canonical;
+  }
+  case Node::Kind::SugaredDictionary:
+    // FIXME: This isnt covered by any test.
+    assert(node->getNumChildren() == 2);
+    if (node->getNumChildren() != 2)
+      return node;
+
+    canonical = Dem.createNode(Node::Kind::BoundGenericStructure);
+    {
+      NodePointer type = Dem.createNode(Node::Kind::Type);
+      NodePointer structure = Dem.createNode(Node::Kind::Structure);
+      NodePointer module = Dem.createNodeWithAllocatedText(Node::Kind::Module,
+                                                           swift::STDLIB_NAME);
+      structure->addChild(module, Dem);
+      NodePointer dict =
+          Dem.createNodeWithAllocatedText(Node::Kind::Module, "Dictionary");
+      structure->addChild(dict, Dem);
+      type->addChild(structure, Dem);
+      canonical->addChild(type, Dem);
+    }
+    {
+      NodePointer typelist = Dem.createNode(Node::Kind::TypeList);
+      {
+        NodePointer type = Dem.createNode(Node::Kind::Type);
+        type->addChild(getCanonicalNode(node->getChild(0)), Dem);
+        typelist->addChild(type, Dem);
+      }
+      {
+        NodePointer type = Dem.createNode(Node::Kind::Type);
+        type->addChild(getCanonicalNode(node->getChild(1)), Dem);
+        typelist->addChild(type, Dem);
+      }
+      canonical->addChild(typelist, Dem);
+    }
+    return canonical;
+  case Node::Kind::SugaredParen:
+    assert(node->getNumChildren() == 1);
+    if (node->getNumChildren() != 1)
+      return node;
+    return getCanonicalNode(node->getFirstChild());
+
+  case Node::Kind::BoundGenericTypeAlias:
+  case Node::Kind::TypeAlias: {
+    // Try to look this up as a Swift type alias. For each *Swift*
+    // type alias there is a debug info entry that has the mangled
+    // name as name and the aliased type as a type.
+    ConstString mangled = GetTypeAlias(Dem, node);
+    if (!M) {
+      LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
+                "No module. Couldn't resolve type alias %s",
+                mangled.AsCString());
+      return node;
+    }
+    llvm::DenseSet<lldb_private::SymbolFile *> searched_symbol_files;
+    TypeList types;
+    M->FindTypes({mangled}, false, 1, searched_symbol_files, types);
+    if (types.Empty()) {
+      // TODO: No Swift type found -- this could be a Clang typdef.
+      LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
+                "Couldn't resolve type alias %s", mangled.AsCString());
+      return node;
+    }
+    auto type = types.GetTypeAtIndex(0);
+    if (!type) {
+      LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
+                "Found empty type alias %s", mangled.AsCString());
+      return node;
+    }
+
+    // DWARFASTParserSwift stashes the desugared mangled name of a
+    // type alias into the Type's name field.
+    ConstString desugared_name = type->GetName();
+    if (!isMangledName(desugared_name.GetStringRef())) {
+      LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
+                "Found non-Swift type alias %s", mangled.AsCString());
+      return node;
+    }
+    NodePointer n = Dem.demangleSymbol(desugared_name.GetStringRef());
+    if (n && n->getKind() == Node::Kind::Global && n->hasChildren())
+      n = n->getFirstChild();
+    if (n && n->getKind() == Node::Kind::TypeMangling && n->hasChildren())
+      n = n->getFirstChild();
+    if (n && n->getKind() == Node::Kind::Type && n->hasChildren())
+      n = n->getFirstChild();
+    if (!n) {
+      LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
+               "Unrecognized demangling %s", desugared_name.AsCString());
+      return node;
+    }
+    return getCanonicalNode(n);
+  }
+  default:
+    break;
+  }
+
+  // Recurse through all children.
+  // FIXME: don't create new nodes if children don't change!
+  if (node->hasText())
+    canonical = Dem.createNodeWithAllocatedText(kind, node->getText());
+  else if (node->hasIndex())
+    canonical = Dem.createNode(kind, node->getIndex());
+  else
+    canonical = Dem.createNode(kind);
+  for (unsigned i = 0; i < node->getNumChildren(); ++i)
+    canonical->addChild(getCanonicalNode(node->getChild(i)), Dem);
+  return canonical;
+}
+
+/// Return the demangle tree representation of this type's canonical
+/// (type aliases resolved) type.
+static swift::Demangle::NodePointer
+GetCanonicalDemangleTree(lldb_private::Module *Module,
+                         swift::Demangle::Demangler &Dem,
+                         const char *mangled_name) {
+  NodePointer node = Dem.demangleSymbol(mangled_name);
+  NodePointer canonical = GetCanonicalNode(Module, Dem, node);
+  return canonical;
+}
+
 CompilerType TypeSystemSwift::GetInstanceType(CompilerType compiler_type) {
   auto *ts = compiler_type.GetTypeSystem();
   if (auto *tr = llvm::dyn_cast_or_null<TypeSystemSwiftTypeRef>(ts))
@@ -127,10 +325,77 @@ bool TypeSystemSwiftTypeRef::Verify(lldb::opaque_compiler_type_t type) {
 }
 #endif
 
+// This can be removed once the transition is complete.
+#define VALIDATE_AND_RETURN(IMPL, EXPECTED)                                    \
+  do {                                                                         \
+    auto result = IMPL();                                                      \
+    if (m_swift_ast_context)                                                   \
+      assert(result == (EXPECTED) &&                                           \
+             "TypeSystemSwiftTypeRef diverges from SwiftASTContext");          \
+    return result;                                                             \
+  } while (0)
+
 bool TypeSystemSwiftTypeRef::IsArrayType(void *type, CompilerType *element_type,
                                          uint64_t *size, bool *is_incomplete) {
-  return m_swift_ast_context->IsArrayType(ReconstructType(type), element_type,
-                                          size, is_incomplete);
+  auto impl = [&]() {
+    using namespace swift::Demangle;
+    Demangler Dem;
+    NodePointer node =
+        GetCanonicalDemangleTree(GetModule(), Dem, AsMangledName(type));
+
+    if (!node || node->getNumChildren() != 1 ||
+        node->getKind() != Node::Kind::Global)
+      return false;
+    node = node->getFirstChild();
+    if (node->getNumChildren() != 1 ||
+        node->getKind() != Node::Kind::TypeMangling)
+      return false;
+    node = node->getFirstChild();
+    if (node->getNumChildren() != 1 || node->getKind() != Node::Kind::Type)
+      return false;
+    node = node->getFirstChild();
+    if (node->getNumChildren() != 2 ||
+        node->getKind() != Node::Kind::BoundGenericStructure)
+      return false;
+    auto elem_node = node->getChild(1);
+    node = node->getFirstChild();
+    if (node->getNumChildren() != 1 || node->getKind() != Node::Kind::Type)
+      return false;
+    node = node->getFirstChild();
+    if (node->getNumChildren() != 2 ||
+        node->getKind() != Node::Kind::Structure ||
+        node->getChild(0)->getKind() != Node::Kind::Module ||
+        !node->getChild(0)->hasText() ||
+        node->getChild(0)->getText() != swift::STDLIB_NAME ||
+        node->getChild(1)->getKind() != Node::Kind::Identifier ||
+        !node->getChild(1)->hasText() ||
+        node->getChild(1)->getText() != "Array")
+      return false;
+
+    if (elem_node->getNumChildren() != 1 ||
+        elem_node->getKind() != Node::Kind::TypeList)
+      return false;
+    elem_node = elem_node->getFirstChild();
+
+    if (element_type) {
+      // Remangle the element type.
+      auto global = Dem.createNode(Node::Kind::Global);
+      auto type_mangling = Dem.createNode(Node::Kind::TypeMangling);
+      global->addChild(type_mangling, Dem);
+      type_mangling->addChild(elem_node, Dem);
+      ConstString mangled_element(mangleNode(global));
+      *element_type = GetTypeFromMangledTypename(mangled_element);
+    }
+    if (is_incomplete)
+      *is_incomplete = true;
+    if (size)
+      *size = 0;
+
+    return true;
+  };
+  VALIDATE_AND_RETURN(
+      impl, m_swift_ast_context->IsArrayType(ReconstructType(type), nullptr,
+                                             nullptr, nullptr));
 }
 bool TypeSystemSwiftTypeRef::IsAggregateType(void *type) {
   return m_swift_ast_context->IsAggregateType(ReconstructType(type));

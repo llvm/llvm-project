@@ -11,6 +11,8 @@ add_lldb_unittest(SymbolTests
   TestClangASTImporter.cpp
   TestDWARFCallFrameInfo.cpp
   TestType.cpp
+  TestTypeSystemSwiftTypeRef.cpp
+  TestSwiftASTContext.cpp
   TestLineEntry.cpp
 
   ${SWIFT_SOURCES}
