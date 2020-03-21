@@ -518,7 +518,7 @@ protected:
   GenericOptionValue() = default;
   GenericOptionValue(const GenericOptionValue&) = default;
   GenericOptionValue &operator=(const GenericOptionValue &) = default;
-  virtual ~GenericOptionValue() = default;
+  ~GenericOptionValue() = default;
 
 private:
   virtual void anchor();

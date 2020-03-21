@@ -175,7 +175,7 @@ protected:
   std::unique_ptr<Document> &Doc;
   SMRange SourceRange;
 
-  virtual ~Node() = default;
+  ~Node() = default;
 
 private:
   unsigned int TypeID;
