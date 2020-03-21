@@ -30,3 +30,9 @@ void test_memcpy_inline_null_buffer_is_ok_if_size_is_zero(void *ptr) {
 void test_memcpy_inline_non_constant_size(void *dst, const void *src, unsigned size) {
   __builtin_memcpy_inline(dst, src, size); // expected-error {{argument to '__builtin_memcpy_inline' must be a constant integer}}
 }
+
+template <unsigned size>
+void test_memcpy_inline_template(void *dst, const void *src) {
+  // we do not try to evaluate size in non intantiated templates.
+  __builtin_memcpy_inline(dst, src, size);
+}
