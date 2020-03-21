@@ -802,3 +802,33 @@ define <8 x float> @PR40243(<8 x float> %a, <8 x float> %b) {
   ret <8 x float> %r
 }
 
+define <4 x double> @PR44694(<4 x double> %0, <4 x double> %1) {
+; SSE-SLOW-LABEL: PR44694:
+; SSE-SLOW:       # %bb.0:
+; SSE-SLOW-NEXT:    movddup {{.*#+}} xmm0 = xmm1[0,0]
+; SSE-SLOW-NEXT:    haddpd %xmm3, %xmm2
+; SSE-SLOW-NEXT:    addpd %xmm1, %xmm0
+; SSE-SLOW-NEXT:    movapd %xmm2, %xmm1
+; SSE-SLOW-NEXT:    retq
+;
+; SSE-FAST-LABEL: PR44694:
+; SSE-FAST:       # %bb.0:
+; SSE-FAST-NEXT:    movapd %xmm1, %xmm0
+; SSE-FAST-NEXT:    haddpd %xmm3, %xmm2
+; SSE-FAST-NEXT:    haddpd %xmm1, %xmm0
+; SSE-FAST-NEXT:    movapd %xmm2, %xmm1
+; SSE-FAST-NEXT:    retq
+;
+; AVX-LABEL: PR44694:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[2,3]
+; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm1
+; AVX-NEXT:    vunpcklpd {{.*#+}} ymm2 = ymm1[0],ymm0[0],ymm1[2],ymm0[2]
+; AVX-NEXT:    vshufpd {{.*#+}} ymm0 = ymm1[0],ymm0[1],ymm1[3],ymm0[3]
+; AVX-NEXT:    vaddpd %ymm0, %ymm2, %ymm0
+; AVX-NEXT:    retq
+  %3 = shufflevector <4 x double> %0, <4 x double> %1, <4 x i32> <i32 undef, i32 2, i32 4, i32 6>
+  %4 = shufflevector <4 x double> %0, <4 x double> %1, <4 x i32> <i32 undef, i32 3, i32 5, i32 7>
+  %5 = fadd <4 x double> %3, %4
+  ret <4 x double> %5
+}
