@@ -1259,7 +1259,7 @@ ASM Goto with Output Constraints
 ================================
 
 In addition to the functionality provided by `GCC's extended
-assembly`<https://gcc.gnu.org/onlinedocs/gcc/Extended-Asm.html>`_, clang
+assembly <https://gcc.gnu.org/onlinedocs/gcc/Extended-Asm.html>`_, clang
 supports output constraints with the `goto` form.
 
 The goto form of GCC's extended assembly allows the programmer to branch to a C

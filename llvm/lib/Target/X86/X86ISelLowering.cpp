@@ -15948,7 +15948,6 @@ static bool matchShuffleWithSHUFPD(MVT VT, SDValue &V1, SDValue &V2,
   // Mask for V8F64: 0/1,  8/9,  2/3,  10/11, 4/5, ..
   // Mask for V4F64; 0/1,  4/5,  2/3,  6/7..
   ShuffleImm = 0;
-  bool UnaryMask = isUndefOrZeroOrInRange(Mask, 0, NumElts);
   bool ShufpdMask = true;
   bool CommutableMask = true;
   for (int i = 0; i < NumElts; ++i) {
@@ -15956,7 +15955,7 @@ static bool matchShuffleWithSHUFPD(MVT VT, SDValue &V1, SDValue &V2,
       continue;
     if (Mask[i] < 0)
       return false;
-    int Val = (i & 6) + (UnaryMask ? 0 : (NumElts * (i & 1)));
+    int Val = (i & 6) + NumElts * (i & 1);
     int CommutVal = (i & 0xe) + NumElts * ((i & 1) ^ 1);
     if (Mask[i] < Val || Mask[i] > Val + 1)
       ShufpdMask = false;
@@ -15968,9 +15967,7 @@ static bool matchShuffleWithSHUFPD(MVT VT, SDValue &V1, SDValue &V2,
   if (!ShufpdMask && !CommutableMask)
     return false;
 
-  if (UnaryMask)
-    V2 = V1;
-  else if (!ShufpdMask && CommutableMask)
+  if (!ShufpdMask && CommutableMask)
     std::swap(V1, V2);
 
   ForceV1Zero = ZeroLane[0];
@@ -46405,6 +46402,24 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
       })) {
     unsigned NumOps = Ops.size();
     switch (Op0.getOpcode()) {
+    case X86ISD::SHUFP: {
+      // Add SHUFPD support if/when necessary.
+      if (!IsSplat && VT.getScalarType() == MVT::f32 &&
+          llvm::all_of(Ops, [Op0](SDValue Op) {
+            return Op.getOperand(2) == Op0.getOperand(2);
+          })) {
+        SmallVector<SDValue, 2> LHS, RHS;
+        for (unsigned i = 0; i != NumOps; ++i) {
+          LHS.push_back(Ops[i].getOperand(0));
+          RHS.push_back(Ops[i].getOperand(1));
+        }
+        return DAG.getNode(Op0.getOpcode(), DL, VT,
+                           DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, LHS),
+                           DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, RHS),
+                           Op0.getOperand(2));
+      }
+      break;
+    }
     case X86ISD::PSHUFHW:
     case X86ISD::PSHUFLW:
     case X86ISD::PSHUFD:

@@ -385,15 +385,15 @@ static void computeKnownBitsAddSub(bool Add, const Value *Op0, const Value *Op1,
                                    bool NSW, const APInt &DemandedElts,
                                    KnownBits &KnownOut, KnownBits &Known2,
                                    unsigned Depth, const Query &Q) {
-  unsigned BitWidth = KnownOut.getBitWidth();
+  computeKnownBits(Op1, DemandedElts, KnownOut, Depth + 1, Q);
 
-  // If an initial sequence of bits in the result is not needed, the
-  // corresponding bits in the operands are not needed.
-  KnownBits LHSKnown(BitWidth);
-  computeKnownBits(Op0, DemandedElts, LHSKnown, Depth + 1, Q);
-  computeKnownBits(Op1, DemandedElts, Known2, Depth + 1, Q);
+  // If one operand is unknown and we have no nowrap information,
+  // the result will be unknown independently of the second operand.
+  if (KnownOut.isUnknown() && !NSW)
+    return;
 
-  KnownOut = KnownBits::computeForAddSub(Add, NSW, LHSKnown, Known2);
+  computeKnownBits(Op0, DemandedElts, Known2, Depth + 1, Q);
+  KnownOut = KnownBits::computeForAddSub(Add, NSW, Known2, KnownOut);
 }
 
 static void computeKnownBitsMul(const Value *Op0, const Value *Op1, bool NSW,

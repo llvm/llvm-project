@@ -8325,13 +8325,15 @@ SDValue DAGCombiner::visitFunnelShift(SDNode *N) {
     // fold (fshr ld1, ld0, c) -> (ld0[ofs]) iff ld0 and ld1 are consecutive.
     // TODO - bigendian support once we have test coverage.
     // TODO - can we merge this with CombineConseutiveLoads/MatchLoadCombine?
+    // TODO - permit LHS EXTLOAD if extensions are shifted out.
     if ((BitWidth % 8) == 0 && (ShAmt % 8) == 0 && !VT.isVector() &&
         !DAG.getDataLayout().isBigEndian()) {
       auto *LHS = dyn_cast<LoadSDNode>(N0);
       auto *RHS = dyn_cast<LoadSDNode>(N1);
       if (LHS && RHS && LHS->isSimple() && RHS->isSimple() &&
           LHS->getAddressSpace() == RHS->getAddressSpace() &&
-          (LHS->hasOneUse() || RHS->hasOneUse()) && ISD::isNON_EXTLoad(RHS)) {
+          (LHS->hasOneUse() || RHS->hasOneUse()) && ISD::isNON_EXTLoad(RHS) &&
+          ISD::isNON_EXTLoad(LHS)) {
         if (DAG.areNonVolatileConsecutiveLoads(LHS, RHS, BitWidth / 8, 1)) {
           SDLoc DL(RHS);
           uint64_t PtrOff =
