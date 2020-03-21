@@ -2870,7 +2870,7 @@ ASTReader::DeclCursorForID(DeclID ID, SourceLocation &Loc) {
   const DeclOffset &DOffs =
       M->DeclOffsets[ID - M->BaseDeclID - NUM_PREDEF_DECL_IDS];
   Loc = TranslateSourceLocation(*M, DOffs.getLocation());
-  return RecordLocation(M, DOffs.BitOffset);
+  return RecordLocation(M, DOffs.getBitOffset());
 }
 
 ASTReader::RecordLocation ASTReader::getLocalBitOffset(uint64_t GlobalOffset) {

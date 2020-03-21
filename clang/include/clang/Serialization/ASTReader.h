@@ -723,9 +723,10 @@ private:
 
   struct PendingMacroInfo {
     ModuleFile *M;
-    uint64_t MacroDirectivesOffset;
+    /// Offset relative to ModuleFile::MacroOffsetsBase.
+    uint32_t MacroDirectivesOffset;
 
-    PendingMacroInfo(ModuleFile *M, uint64_t MacroDirectivesOffset)
+    PendingMacroInfo(ModuleFile *M, uint32_t MacroDirectivesOffset)
         : M(M), MacroDirectivesOffset(MacroDirectivesOffset) {}
   };
 
@@ -2205,7 +2206,7 @@ public:
   /// \param MacroDirectivesOffset Offset of the serialized macro directive
   /// history.
   void addPendingMacro(IdentifierInfo *II, ModuleFile *M,
-                       uint64_t MacroDirectivesOffset);
+                       uint32_t MacroDirectivesOffset);
 
   /// Read the set of macros defined by this external macro source.
   void ReadDefinedMacros() override;
