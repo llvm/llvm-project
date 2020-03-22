@@ -92,6 +92,7 @@ public:
   virtual void emitDirectiveSetHardFloat();
 
   // PIC support
+  virtual void emitDirectiveCpAdd(unsigned RegNo);
   virtual void emitDirectiveCpLoad(unsigned RegNo);
   virtual void emitDirectiveCpLocal(unsigned RegNo);
   virtual bool emitDirectiveCpRestore(int Offset,
@@ -273,6 +274,7 @@ public:
   void emitDirectiveSetHardFloat() override;
 
   // PIC support
+  void emitDirectiveCpAdd(unsigned RegNo) override;
   void emitDirectiveCpLoad(unsigned RegNo) override;
   void emitDirectiveCpLocal(unsigned RegNo) override;
 
@@ -345,6 +347,7 @@ public:
   void emitFMask(unsigned FPUBitmask, int FPUTopSavedRegOff) override;
 
   // PIC support
+  void emitDirectiveCpAdd(unsigned RegNo) override;
   void emitDirectiveCpLoad(unsigned RegNo) override;
   void emitDirectiveCpLocal(unsigned RegNo) override;
   bool emitDirectiveCpRestore(int Offset, function_ref<unsigned()> GetATReg,
