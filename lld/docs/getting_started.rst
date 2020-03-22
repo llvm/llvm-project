@@ -6,7 +6,7 @@ Getting Started: Building and Running lld
 This page gives you the shortest path to checking out and building lld. If you
 run into problems, please file bugs in the `LLVM Bugzilla`__
 
-__ https://llvm.org/bugs/
+__ https://bugs.llvm.org/
 
 Building lld
 ------------
