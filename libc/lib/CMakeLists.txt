@@ -23,6 +23,7 @@ add_entrypoint_library(
     sigaddset
     sigemptyset
     sigprocmask
+    signal
 
     # stdlib.h entrypoints
     _Exit
