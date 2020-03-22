@@ -55,14 +55,6 @@ using llvm::dbgs;
 /// More advanced use cases, analyses as well as profitability heuristics are
 /// left for future work.
 
-static llvm::cl::OptionCategory clOptionsCategory(DEBUG_TYPE " options");
-static llvm::cl::list<unsigned> clTileSizes(
-    "linalg-fusion-tile-sizes",
-    llvm::cl::desc(
-        "Tile sizes by which to tile linalg operations during linalg fusion"),
-    llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated,
-    llvm::cl::cat(clOptionsCategory));
-
 // Return a cloned version of `op` that operates on `loopRanges`, assumed to be
 // a subset of the original loop ranges of `op`.
 // This is achieved by applying the `loopToOperandRangesMaps` permutation maps

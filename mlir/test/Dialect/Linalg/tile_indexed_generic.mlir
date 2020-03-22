@@ -1,6 +1,6 @@
-// RUN: mlir-opt %s -linalg-tile -linalg-tile-sizes=10,25 | FileCheck %s -check-prefix=TILE-10n25
-// RUN: mlir-opt %s -linalg-tile -linalg-tile-sizes=25,0 | FileCheck %s -check-prefix=TILE-25n0
-// RUN: mlir-opt %s -linalg-tile -linalg-tile-sizes=0,25 | FileCheck %s -check-prefix=TILE-0n25
+// RUN: mlir-opt %s -linalg-tile="linalg-tile-sizes=10,25" | FileCheck %s -check-prefix=TILE-10n25
+// RUN: mlir-opt %s -linalg-tile="linalg-tile-sizes=25,0" | FileCheck %s -check-prefix=TILE-25n0
+// RUN: mlir-opt %s -linalg-tile="linalg-tile-sizes=0,25" | FileCheck %s -check-prefix=TILE-0n25
 
 #id_1d = affine_map<(i) -> (i)>
 #pointwise_1d_trait = {

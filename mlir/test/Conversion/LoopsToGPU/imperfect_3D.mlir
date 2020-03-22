@@ -1,4 +1,4 @@
-// RUN: mlir-opt -convert-loop-op-to-gpu -gpu-num-workgroups=4,2,2 -gpu-workgroup-size=32,2,2 %s | FileCheck %s
+// RUN: mlir-opt -convert-loop-op-to-gpu="gpu-num-workgroups=4,2,2 gpu-workgroup-size=32,2,2" %s | FileCheck %s
 
 module {
   func @imperfect_3D(%arg0 : memref<?x?x?xf32>, %arg1 : memref<?x?x?xf32>, %arg2 : memref<?x?x?xf32>, %arg3 : memref<?x?x?xf32>, %t1 : index, %t2 : index, %t3 : index, %step1 : index, %step2 : index, %step3 : index) {
