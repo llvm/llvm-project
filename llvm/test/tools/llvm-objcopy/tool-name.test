@@ -1,0 +1,33 @@
+## Don't make symlinks on Windows.
+# UNSUPPORTED: system-windows
+
+# RUN: rm -rf %t
+# RUN: mkdir %t
+
+# RUN: ln -s llvm-objcopy %t/llvm-objcopy-11.exe
+# RUN: ln -s llvm-objcopy %t/powerpc64-unknown-freebsd13-objcopy
+
+# RUN: llvm-objcopy --help | FileCheck --check-prefix=OBJCOPY %s
+# RUN: %t/llvm-objcopy-11.exe --help | FileCheck --check-prefix=OBJCOPY %s
+# RUN: %t/powerpc64-unknown-freebsd13-objcopy --help | FileCheck --check-prefix=OBJCOPY %s
+
+# OBJCOPY: OVERVIEW: llvm-objcopy tool
+
+# RUN: ln -s llvm-strip %t/strip.exe
+# RUN: ln -s llvm-strip %t/gnu-llvm-strip-10
+
+# RUN: llvm-strip --help | FileCheck --check-prefix=STRIP %s
+# RUN: %t/strip.exe --help | FileCheck --check-prefix=STRIP %s
+# RUN: %t/gnu-llvm-strip-10 --help | FileCheck --check-prefix=STRIP %s
+
+# STRIP: OVERVIEW: llvm-strip tool
+
+## This driver emulates install_name_tool on macOS.
+# RUN: ln -s llvm-install-name-tool %t/llvm-install-name-tool-10
+# RUN: ln -s llvm-install-name-tool %t/install_name_tool.exe
+
+# RUN: llvm-install-name-tool --help | FileCheck --check-prefix=INSTALL %s
+# RUN: %t/llvm-install-name-tool-10 --help | FileCheck --check-prefix=INSTALL %s
+# RUN: %t/install_name_tool.exe --help | FileCheck --check-prefix=INSTALL %s
+
+# INSTALL: OVERVIEW: llvm-install-name-tool tool
