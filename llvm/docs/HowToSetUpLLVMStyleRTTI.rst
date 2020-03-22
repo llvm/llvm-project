@@ -380,8 +380,8 @@ contract, you can tweak and optimize it as much as you want.
 For example, LLVM-style RTTI can work fine in the presence of
 multiple-inheritance by defining an appropriate ``classof``.
 An example of this in practice is
-`Decl <http://clang.llvm.org/doxygen/classclang_1_1Decl.html>`_ vs.
-`DeclContext <http://clang.llvm.org/doxygen/classclang_1_1DeclContext.html>`_
+`Decl <https://clang.llvm.org/doxygen/classclang_1_1Decl.html>`_ vs.
+`DeclContext <https://clang.llvm.org/doxygen/classclang_1_1DeclContext.html>`_
 inside Clang.
 The ``Decl`` hierarchy is done very similarly to the example setup
 demonstrated in this tutorial.
@@ -396,7 +396,7 @@ returning true for ones that are known to be ``DeclContext``'s.
    Touch on some of the more advanced features, like ``isa_impl`` and
    ``simplify_type``. However, those two need reference documentation in
    the form of doxygen comments as well. We need the doxygen so that we can
-   say "for full details, see http://llvm.org/doxygen/..."
+   say "for full details, see https://llvm.org/doxygen/..."
 
 Rules of Thumb
 ==============

@@ -97,4 +97,4 @@ Then it's just a matter of fetching the analysis and using it:
   }
 
 There are many more API's beyond ``getKnownBits()``. See the `API reference
-<http://llvm.org/doxygen>`_ for more information
+<https://llvm.org/doxygen>`_ for more information

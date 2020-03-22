@@ -152,7 +152,7 @@ It is ensured by the LoopSimplify
 (:ref:`-loop-simplify <passes-loop-simplify>`) pass and is automatically
 added by the pass managers when scheduling a LoopPass.
 This pass is implemented in
-`LoopSimplify.h <http://llvm.org/doxygen/LoopSimplify_8h_source.html>`_.
+`LoopSimplify.h <https://llvm.org/doxygen/LoopSimplify_8h_source.html>`_.
 When it is successful, the loop has:
 
 * A preheader.
@@ -178,7 +178,7 @@ Rotated Loops
 Loops are rotated by the LoopRotate (:ref:`loop-rotate <passes-loop-rotate>`)
 pass, which converts loops into do/while style loops and is
 implemented in
-`LoopRotation.h <http://llvm.org/doxygen/LoopRotation_8h_source.html>`_.  Example:
+`LoopRotation.h <https://llvm.org/doxygen/LoopRotation_8h_source.html>`_.  Example:
 
 .. code-block:: C
 

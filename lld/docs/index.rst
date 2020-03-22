@@ -98,7 +98,7 @@ Build
 If you have already checked out LLVM using SVN, you can check out LLD
 under ``tools`` directory just like you probably did for clang. For the
 details, see `Getting Started with the LLVM System
-<http://llvm.org/docs/GettingStarted.html>`_.
+<https://llvm.org/docs/GettingStarted.html>`_.
 
 If you haven't checked out LLVM, the easiest way to build LLD is to
 check out the entire LLVM projects/sub-projects from a git mirror and

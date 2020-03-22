@@ -16,7 +16,7 @@ files needed to process intermediate representations and converts it into
 object files.  Tools include an assembler, disassembler, bitcode analyzer, and
 bitcode optimizer.  It also contains basic regression tests.
 
-C-like languages use the `Clang <http://clang.llvm.org/>`_ front end.  This
+C-like languages use the `Clang <https://clang.llvm.org/>`_ front end.  This
 component compiles C, C++, Objective C, and Objective C++ code into LLVM bitcode
 -- and from there into object files, using LLVM.
 
@@ -28,7 +28,7 @@ Getting the Source Code and Building LLVM
 =========================================
 
 The LLVM Getting Started documentation may be out of date.  The `Clang
-Getting Started <http://clang.llvm.org/get_started.html>`_ page might have more
+Getting Started <https://clang.llvm.org/get_started.html>`_ page might have more
 accurate information.
 
 This is an example workflow and configuration to get and build the LLVM source:
@@ -522,7 +522,7 @@ you need to check the code out of SVN rather than git for some reason, you can
 do it like so:
 
 * ``cd where-you-want-llvm-to-live``
-* Read-Only: ``svn co http://llvm.org/svn/llvm-project/llvm/trunk llvm``
+* Read-Only: ``svn co https://llvm.org/svn/llvm-project/llvm/trunk llvm``
 * Read-Write: ``svn co https://user@llvm.org/svn/llvm-project/llvm/trunk llvm``
 
 This will create an '``llvm``' directory in the current directory and fully
@@ -722,7 +722,7 @@ Note: There are some additional flags that need to be passed when building for
 iOS due to limitations in the iOS SDK.
 
 Check :doc:`HowToCrossCompileLLVM` and `Clang docs on how to cross-compile in general
-<http://clang.llvm.org/docs/CrossCompilation.html>`_ for more information
+<https://clang.llvm.org/docs/CrossCompilation.html>`_ for more information
 about cross-compiling.
 
 The Location of LLVM Object Files
@@ -789,7 +789,7 @@ Directory Layout
 
 One useful source of information about the LLVM source base is the LLVM `doxygen
 <http://www.doxygen.org/>`_ documentation available at
-`<http://llvm.org/doxygen/>`_.  The following is a brief introduction to code
+`<https://llvm.org/doxygen/>`_.  The following is a brief introduction to code
 layout:
 
 ``llvm/examples``
@@ -1105,8 +1105,8 @@ things... there are many more interesting and complicated things that you can do
 that aren't documented here (but we'll gladly accept a patch if you want to
 write something up!).  For more information about LLVM, check out:
 
-* `LLVM Homepage <http://llvm.org/>`_
-* `LLVM Doxygen Tree <http://llvm.org/doxygen/>`_
-* `Starting a Project that Uses LLVM <http://llvm.org/docs/Projects.html>`_
+* `LLVM Homepage <https://llvm.org/>`_
+* `LLVM Doxygen Tree <https://llvm.org/doxygen/>`_
+* `Starting a Project that Uses LLVM <https://llvm.org/docs/Projects.html>`_
 
 .. _installing arcanist: https://secure.phabricator.com/book/phabricator/article/arcanist_quick_start/

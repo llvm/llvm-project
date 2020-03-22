@@ -125,7 +125,7 @@ II. Usage of clang driver:
      invoking Graphviz.
 
      For more information on getting Graphviz to work with clang/LLVM,
-     see: http://llvm.org/docs/ProgrammersManual.html#ViewGraph
+     see: https://llvm.org/docs/ProgrammersManual.html#ViewGraph
 
 
 III. Current advantages over GCC:

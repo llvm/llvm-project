@@ -19,7 +19,7 @@ test libc++.
 
 Please see the `Lit Command Guide`_ for more information about LIT.
 
-.. _LIT Command Guide: http://llvm.org/docs/CommandGuide/lit.html
+.. _LIT Command Guide: https://llvm.org/docs/CommandGuide/lit.html
 
 Setting up the Environment
 --------------------------

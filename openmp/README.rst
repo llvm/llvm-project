@@ -4,7 +4,7 @@ How to Build the LLVM* OpenMP* Libraries
 This repository requires `CMake <http://www.cmake.org/>`_ v2.8.0 or later.  LLVM
 and Clang need a more recent version which also applies for in-tree builds.  For
 more information than available in this document please see
-`LLVM's CMake documentation <http://llvm.org/docs/CMake.html>`_ and the
+`LLVM's CMake documentation <https://llvm.org/docs/CMake.html>`_ and the
 `official documentation <https://cmake.org/cmake/help/v2.8.0/cmake.html>`_.
 
 .. contents::
