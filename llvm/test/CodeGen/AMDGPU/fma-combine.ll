@@ -2,6 +2,8 @@
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=verde -verify-machineinstrs -fp-contract=fast < %s | FileCheck -enable-var-scope -check-prefix=SI-NOFMA -check-prefix=SI-SAFE -check-prefix=SI -check-prefix=FUNC %s
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=tahiti -verify-machineinstrs -fp-contract=fast -enable-no-infs-fp-math -enable-unsafe-fp-math -mattr=+fp32-denormals < %s | FileCheck -enable-var-scope -check-prefix=SI-FMA -check-prefix=SI-UNSAFE -check-prefix=SI -check-prefix=FUNC %s
 
+; FIXME: Remove enable-unsafe-fp-math in RUN line and add flags to IR instrs
+
 ; Note: The SI-FMA conversions of type x * (y + 1) --> x * y + x would be
 ; beneficial even without fp32 denormals, but they do require no-infs-fp-math
 ; for correctness.
@@ -376,9 +378,10 @@ define amdgpu_kernel void @aggressive_combine_to_fma_fsub_1_f64(double addrspace
   %u = load volatile double, double addrspace(1)* %gep.3
   %v = load volatile double, double addrspace(1)* %gep.4
 
-  %tmp0 = fmul double %u, %v
-  %tmp1 = call double @llvm.fma.f64(double %y, double %z, double %tmp0) #0
-  %tmp2 = fsub double %x, %tmp1
+  ; nsz flag is needed since this combine may change sign of zero
+  %tmp0 = fmul nsz double %u, %v
+  %tmp1 = call nsz double @llvm.fma.f64(double %y, double %z, double %tmp0) #0
+  %tmp2 = fsub nsz double %x, %tmp1
 
   store double %tmp2, double addrspace(1)* %gep.out
   ret void

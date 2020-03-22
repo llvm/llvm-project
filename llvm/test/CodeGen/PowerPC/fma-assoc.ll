@@ -331,15 +331,16 @@ define double @test_reassoc_FMSUB_ASSOC1(double %A, double %B, double %C,
 define double @test_reassoc_FMSUB_ASSOC2(double %A, double %B, double %C,
 ; CHECK-LABEL: test_reassoc_FMSUB_ASSOC2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fnmsub 0, 3, 4, 5
-; CHECK-NEXT:    fnmsub 1, 1, 2, 0
+; CHECK-NEXT:    fmul 0, 3, 4
+; CHECK-NEXT:    fmadd 0, 1, 2, 0
+; CHECK-NEXT:    fsub 1, 5, 0
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-VSX-LABEL: test_reassoc_FMSUB_ASSOC2:
 ; CHECK-VSX:       # %bb.0:
-; CHECK-VSX-NEXT:    xsnmsubmdp 3, 4, 5
-; CHECK-VSX-NEXT:    xsnmsubadp 3, 1, 2
-; CHECK-VSX-NEXT:    fmr 1, 3
+; CHECK-VSX-NEXT:    xsmuldp 0, 3, 4
+; CHECK-VSX-NEXT:    xsmaddadp 0, 1, 2
+; CHECK-VSX-NEXT:    xssubdp 1, 5, 0
 ; CHECK-VSX-NEXT:    blr
                                  double %D, double %E) {
   %F = fmul reassoc double %A, %B         ; <double> [#uses=1]
