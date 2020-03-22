@@ -242,11 +242,14 @@ OpFoldResult AddIOp::fold(ArrayRef<Attribute> operands) {
 }
 
 //===----------------------------------------------------------------------===//
-// AllocOp
+// AllocOp / AllocaOp
 //===----------------------------------------------------------------------===//
 
-static void print(OpAsmPrinter &p, AllocOp op) {
-  p << "alloc";
+template <typename AllocLikeOp>
+static void printAllocLikeOp(OpAsmPrinter &p, AllocLikeOp op, StringRef name) {
+  static_assert(llvm::is_one_of<AllocLikeOp, AllocOp, AllocaOp>::value,
+                "applies to only alloc or alloca");
+  p << name;
 
   // Print dynamic dimension operands.
   MemRefType type = op.getType();
@@ -256,7 +259,16 @@ static void print(OpAsmPrinter &p, AllocOp op) {
   p << " : " << type;
 }
 
-static ParseResult parseAllocOp(OpAsmParser &parser, OperationState &result) {
+static void print(OpAsmPrinter &p, AllocOp op) {
+  printAllocLikeOp(p, op, "alloc");
+}
+
+static void print(OpAsmPrinter &p, AllocaOp op) {
+  printAllocLikeOp(p, op, "alloca");
+}
+
+static ParseResult parseAllocLikeOp(OpAsmParser &parser,
+                                    OperationState &result) {
   MemRefType type;
 
   // Parse the dimension operands and optional symbol operands, followed by a
@@ -281,8 +293,12 @@ static ParseResult parseAllocOp(OpAsmParser &parser, OperationState &result) {
   return success();
 }
 
-static LogicalResult verify(AllocOp op) {
-  auto memRefType = op.getResult().getType().dyn_cast<MemRefType>();
+template <typename AllocLikeOp>
+static LogicalResult verify(AllocLikeOp op) {
+  static_assert(std::is_same<AllocLikeOp, AllocOp>::value ||
+                    std::is_same<AllocLikeOp, AllocaOp>::value,
+                "applies to only alloc or alloca");
+  auto memRefType = op.getResult().getType().template dyn_cast<MemRefType>();
   if (!memRefType)
     return op.emitOpError("result must be a memref");
 
@@ -309,11 +325,12 @@ static LogicalResult verify(AllocOp op) {
 }
 
 namespace {
-/// Fold constant dimensions into an alloc operation.
-struct SimplifyAllocConst : public OpRewritePattern<AllocOp> {
-  using OpRewritePattern<AllocOp>::OpRewritePattern;
+/// Fold constant dimensions into an alloc like operation.
+template <typename AllocLikeOp>
+struct SimplifyAllocConst : public OpRewritePattern<AllocLikeOp> {
+  using OpRewritePattern<AllocLikeOp>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(AllocOp alloc,
+  LogicalResult matchAndRewrite(AllocLikeOp alloc,
                                 PatternRewriter &rewriter) const override {
     // Check to see if any dimensions operands are constants.  If so, we can
     // substitute and drop them.
@@ -357,8 +374,8 @@ struct SimplifyAllocConst : public OpRewritePattern<AllocOp> {
            newMemRefType.getNumDynamicDims());
 
     // Create and insert the alloc op for the new memref.
-    auto newAlloc = rewriter.create<AllocOp>(alloc.getLoc(), newMemRefType,
-                                             newOperands, IntegerAttr());
+    auto newAlloc = rewriter.create<AllocLikeOp>(alloc.getLoc(), newMemRefType,
+                                                 newOperands, IntegerAttr());
     // Insert a cast so we have the same type as the old alloc.
     auto resultCast = rewriter.create<MemRefCastOp>(alloc.getLoc(), newAlloc,
                                                     alloc.getType());
@@ -386,7 +403,12 @@ struct SimplifyDeadAlloc : public OpRewritePattern<AllocOp> {
 
 void AllocOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
                                           MLIRContext *context) {
-  results.insert<SimplifyAllocConst, SimplifyDeadAlloc>(context);
+  results.insert<SimplifyAllocConst<AllocOp>, SimplifyDeadAlloc>(context);
+}
+
+void AllocaOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+                                           MLIRContext *context) {
+  results.insert<SimplifyAllocConst<AllocaOp>>(context);
 }
 
 //===----------------------------------------------------------------------===//

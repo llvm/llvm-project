@@ -93,6 +93,42 @@ func @dynamic_alloc(%arg0: index, %arg1: index) -> memref<?x?xf32> {
   return %0 : memref<?x?xf32>
 }
 
+// -----
+
+// CHECK-LABEL: func @dynamic_alloca
+// CHECK: %[[M:.*]]: !llvm.i64, %[[N:.*]]: !llvm.i64) -> !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }"> {
+func @dynamic_alloca(%arg0: index, %arg1: index) -> memref<?x?xf32> {
+//       CHECK:  %[[num_elems:.*]] = llvm.mul %[[M]], %[[N]] : !llvm.i64
+//  CHECK-NEXT:  %[[null:.*]] = llvm.mlir.null : !llvm<"float*">
+//  CHECK-NEXT:  %[[one:.*]] = llvm.mlir.constant(1 : index) : !llvm.i64
+//  CHECK-NEXT:  %[[gep:.*]] = llvm.getelementptr %[[null]][%[[one]]] : (!llvm<"float*">, !llvm.i64) -> !llvm<"float*">
+//  CHECK-NEXT:  %[[sizeof:.*]] = llvm.ptrtoint %[[gep]] : !llvm<"float*"> to !llvm.i64
+//  CHECK-NEXT:  %[[sz_bytes:.*]] = llvm.mul %[[num_elems]], %[[sizeof]] : !llvm.i64
+//  CHECK-NEXT:  %[[allocated:.*]] = llvm.alloca %[[sz_bytes]] x !llvm.float : (!llvm.i64) -> !llvm<"float*">
+//  CHECK-NEXT:  llvm.mlir.undef : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
+//  CHECK-NEXT:  llvm.insertvalue %[[allocated]], %{{.*}}[0] : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
+//  CHECK-NEXT:  llvm.insertvalue %[[allocated]], %{{.*}}[1] : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
+//  CHECK-NEXT:  %[[off:.*]] = llvm.mlir.constant(0 : index) : !llvm.i64
+//  CHECK-NEXT:  llvm.insertvalue %[[off]], %{{.*}}[2] : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
+//  CHECK-NEXT:  %[[st1:.*]] = llvm.mlir.constant(1 : index) : !llvm.i64
+//  CHECK-NEXT:  %[[st0:.*]] = llvm.mul %{{.*}}, %[[N]] : !llvm.i64
+//  CHECK-NEXT:  llvm.insertvalue %[[M]], %{{.*}}[3, 0] : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
+//  CHECK-NEXT:  llvm.insertvalue %[[st0]], %{{.*}}[4, 0] : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
+//  CHECK-NEXT:  llvm.insertvalue %[[N]], %{{.*}}[3, 1] : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
+//  CHECK-NEXT:  llvm.insertvalue %[[st1]], %{{.*}}[4, 1] : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
+  %0 = alloca(%arg0, %arg1) : memref<?x?xf32>
+
+// Test with explicitly specified alignment. llvm.alloca takes care of the
+// alignment. The same pointer is thus used for allocation and aligned
+// accesses.
+// CHECK: %[[alloca_aligned:.*]] = llvm.alloca %{{.*}} x !llvm.float {alignment = 32 : i64} : (!llvm.i64) -> !llvm<"float*">
+// CHECK: %[[desc:.*]] = llvm.mlir.undef : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
+// CHECK: %[[desc1:.*]] = llvm.insertvalue %[[alloca_aligned]], %[[desc]][0] : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
+// CHECK: llvm.insertvalue %[[alloca_aligned]], %[[desc1]][1] : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
+  alloca(%arg0, %arg1) {alignment = 32} : memref<?x?xf32>
+  return %0 : memref<?x?xf32>
+}
+
 // CHECK-LABEL: func @dynamic_dealloc
 func @dynamic_dealloc(%arg0: memref<?x?xf32>) {
 //      CHECK:  %[[ptr:.*]] = llvm.extractvalue %{{.*}}[0] : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">

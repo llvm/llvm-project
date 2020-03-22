@@ -21,8 +21,7 @@ class OwningRewritePatternList;
 /// Standard dialect to the LLVM dialect, excluding non-memory-related
 /// operations and FuncOp.
 void populateStdToLLVMMemoryConversionPatters(
-    LLVMTypeConverter &converter, OwningRewritePatternList &patterns,
-    bool useAlloca);
+    LLVMTypeConverter &converter, OwningRewritePatternList &patterns);
 
 /// Collect a set of patterns to convert from the Standard dialect to the LLVM
 /// dialect, excluding the memory-related operations.
@@ -38,33 +37,34 @@ void populateStdToLLVMDefaultFuncOpConversionPattern(
     bool emitCWrappers = false);
 
 /// Collect a set of default patterns to convert from the Standard dialect to
-/// LLVM. If `useAlloca` is set, the patterns for AllocOp and DeallocOp will
-/// generate `llvm.alloca` instead of calls to "malloc".
+/// LLVM.
 void populateStdToLLVMConversionPatterns(LLVMTypeConverter &converter,
                                          OwningRewritePatternList &patterns,
-                                         bool useAlloca = false,
                                          bool emitCWrappers = false);
 
 /// Collect a set of patterns to convert from the Standard dialect to
 /// LLVM using the bare pointer calling convention for MemRef function
-/// arguments. If `useAlloca` is set, the patterns for AllocOp and DeallocOp
-/// will generate `llvm.alloca` instead of calls to "malloc".
+/// arguments.
 void populateStdToLLVMBarePtrConversionPatterns(
-    LLVMTypeConverter &converter, OwningRewritePatternList &patterns,
-    bool useAlloca = false);
+    LLVMTypeConverter &converter, OwningRewritePatternList &patterns);
 
 /// Value to pass as bitwidth for the index type when the converter is expected
 /// to derive the bitwidth from the LLVM data layout.
 static constexpr unsigned kDeriveIndexBitwidthFromDataLayout = 0;
 
+struct LowerToLLVMOptions {
+  bool useBarePtrCallConv = false;
+  bool emitCWrappers = false;
+  unsigned indexBitwidth = kDeriveIndexBitwidthFromDataLayout;
+};
+
 /// Creates a pass to convert the Standard dialect into the LLVMIR dialect.
-/// By default stdlib malloc/free are used for allocating MemRef payloads.
-/// Specifying `useAlloca-true` emits stack allocations instead. In the future
-/// this may become an enum when we have concrete uses for other options.
+/// stdlib malloc/free is used for allocating memrefs allocated with std.alloc,
+/// while LLVM's alloca is used for those allocated with std.alloca.
 std::unique_ptr<OpPassBase<ModuleOp>> createLowerToLLVMPass(
-    bool useAlloca = false, bool useBarePtrCallConv = false,
-    bool emitCWrappers = false,
-    unsigned indexBitwidth = kDeriveIndexBitwidthFromDataLayout);
+    const LowerToLLVMOptions &options = {
+        /*useBarePtrCallConv=*/false, /*emitCWrappers=*/false,
+        /*indexBitwidth=*/kDeriveIndexBitwidthFromDataLayout});
 
 } // namespace mlir
 
