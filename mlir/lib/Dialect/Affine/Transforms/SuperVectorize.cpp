@@ -1,4 +1,4 @@
-//===- Vectorize.cpp - Vectorize Pass Impl --------------------------------===//
+//===- SuperVectorize.cpp - Vectorize Pass Impl ---------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,6 +16,7 @@
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Analysis/Utils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Affine/Passes.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Vector/VectorOps.h"
 #include "mlir/Dialect/Vector/VectorUtils.h"
@@ -27,7 +28,6 @@
 #include "mlir/Support/Functional.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/FoldUtils.h"
-#include "mlir/Transforms/Passes.h"
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -1268,10 +1268,10 @@ void Vectorize::runOnFunction() {
 }
 
 std::unique_ptr<OpPassBase<FuncOp>>
-mlir::createVectorizePass(ArrayRef<int64_t> virtualVectorSize) {
+mlir::createSuperVectorizePass(ArrayRef<int64_t> virtualVectorSize) {
   return std::make_unique<Vectorize>(virtualVectorSize);
 }
 
 static PassRegistration<Vectorize>
-    pass("affine-vectorize",
+    pass("affine-super-vectorize",
          "Vectorize to a target independent n-D vector abstraction");

@@ -15,10 +15,10 @@
 #include "mlir/Analysis/LoopAnalysis.h"
 #include "mlir/Analysis/Utils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Affine/Passes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/LoopUtils.h"
-#include "mlir/Transforms/Passes.h"
 #include "mlir/Transforms/Utils.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -29,19 +29,20 @@ using namespace mlir;
 static llvm::cl::OptionCategory clOptionsCategory(DEBUG_TYPE " options");
 
 static llvm::cl::opt<unsigned long long>
-    clCacheSizeKiB("tile-cache-size",
+    clCacheSizeKiB("affine-tile-cache-size",
                    llvm::cl::desc("Set size of cache to tile for in KiB"),
                    llvm::cl::cat(clOptionsCategory));
 
 // Tile size to use for all loops (overrides -tile-sizes if provided).
 static llvm::cl::opt<unsigned>
-    clTileSize("tile-size", llvm::cl::desc("Use this tile size for all loops"),
+    clTileSize("affine-tile-size",
+               llvm::cl::desc("Use this tile size for all loops"),
                llvm::cl::cat(clOptionsCategory));
 
 // List of tile sizes. If any of them aren't provided, they are filled with
 // clTileSize / kDefaultTileSize.
 static llvm::cl::list<unsigned> clTileSizes(
-    "tile-sizes",
+    "affine-tile-sizes",
     llvm::cl::desc(
         "List of tile sizes for each perfect nest (overridden by -tile-size)"),
     llvm::cl::ZeroOrMore, llvm::cl::cat(clOptionsCategory));
