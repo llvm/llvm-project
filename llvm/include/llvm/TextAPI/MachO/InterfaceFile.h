@@ -278,11 +278,6 @@ public:
     return ParentUmbrellas;
   }
 
-  /// Get the parent umbrella framework.
-  const std::vector<std::pair<Target, std::string>> getParentUmbrellas() const {
-    return ParentUmbrellas;
-  }
-
   /// Add an allowable client.
   ///
   /// Mach-O Dynamic libraries have the concept of allowable clients that are
