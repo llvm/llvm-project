@@ -37809,21 +37809,14 @@ static SDValue combineBasicSADPattern(SDNode *Extract, SelectionDAG &DAG,
   if (!Subtarget.hasSSE2())
     return SDValue();
 
-  // Verify the type we're extracting from is any integer type above i16.
-  EVT VT = Extract->getOperand(0).getValueType();
-  if (!VT.isSimple() || !(VT.getVectorElementType().getSizeInBits() > 16))
+  EVT ExtractVT = Extract->getValueType(0);
+  // Verify the type we're extracting is either i32 or i64.
+  // FIXME: Could support other types, but this is what we have coverage for.
+  if (ExtractVT != MVT::i32 && ExtractVT != MVT::i64)
     return SDValue();
 
-  unsigned RegSize = 128;
-  if (Subtarget.useBWIRegs())
-    RegSize = 512;
-  else if (Subtarget.hasAVX())
-    RegSize = 256;
-
-  // We handle upto v16i* for SSE2 / v32i* for AVX / v64i* for AVX512.
-  // TODO: We should be able to handle larger vectors by splitting them before
-  // feeding them into several SADs, and then reducing over those.
-  if (RegSize / VT.getVectorNumElements() < 8)
+  EVT VT = Extract->getOperand(0).getValueType();
+  if (!isPowerOf2_32(VT.getVectorNumElements()))
     return SDValue();
 
   // Match shuffle + add pyramid.
@@ -37839,8 +37832,8 @@ static SDValue combineBasicSADPattern(SDNode *Extract, SelectionDAG &DAG,
   // (extends the sign bit which is zero).
   // So it is correct to skip the sign/zero extend instruction.
   if (Root && (Root.getOpcode() == ISD::SIGN_EXTEND ||
-    Root.getOpcode() == ISD::ZERO_EXTEND ||
-    Root.getOpcode() == ISD::ANY_EXTEND))
+               Root.getOpcode() == ISD::ZERO_EXTEND ||
+               Root.getOpcode() == ISD::ANY_EXTEND))
     Root = Root.getOperand(0);
 
   // If there was a match, we want Root to be a select that is the root of an
@@ -37860,7 +37853,7 @@ static SDValue combineBasicSADPattern(SDNode *Extract, SelectionDAG &DAG,
   // If the original vector was wider than 8 elements, sum over the results
   // in the SAD vector.
   unsigned Stages = Log2_32(VT.getVectorNumElements());
-  MVT SadVT = SAD.getSimpleValueType();
+  EVT SadVT = SAD.getValueType();
   if (Stages > 3) {
     unsigned SadElems = SadVT.getVectorNumElements();
 
@@ -37875,12 +37868,12 @@ static SDValue combineBasicSADPattern(SDNode *Extract, SelectionDAG &DAG,
     }
   }
 
-  MVT Type = Extract->getSimpleValueType(0);
-  unsigned TypeSizeInBits = Type.getSizeInBits();
-  // Return the lowest TypeSizeInBits bits.
-  MVT ResVT = MVT::getVectorVT(Type, SadVT.getSizeInBits() / TypeSizeInBits);
+  unsigned ExtractSizeInBits = ExtractVT.getSizeInBits();
+  // Return the lowest ExtractSizeInBits bits.
+  EVT ResVT = EVT::getVectorVT(*DAG.getContext(), ExtractVT,
+                               SadVT.getSizeInBits() / ExtractSizeInBits);
   SAD = DAG.getBitcast(ResVT, SAD);
-  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, Type, SAD,
+  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ExtractVT, SAD,
                      Extract->getOperand(1));
 }
 
