@@ -146,6 +146,12 @@ class AArch64GISelMITest : public GISelMITest {
                                  StringRef MIRFunc) const override;
 };
 
+class AMDGPUGISelMITest : public GISelMITest {
+  std::unique_ptr<LLVMTargetMachine> createTargetMachine() const override;
+  void getTargetTestModuleString(SmallString<512> &S,
+                                 StringRef MIRFunc) const override;
+};
+
 #define DefineLegalizerInfo(Name, SettingUpActionsBlock)                       \
   class Name##Info : public LegalizerInfo {                                    \
   public:                                                                      \

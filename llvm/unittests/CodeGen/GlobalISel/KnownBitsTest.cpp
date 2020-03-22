@@ -398,3 +398,36 @@ TEST_F(AArch64GISelMITest, TestNumSignBitsTrunc) {
   EXPECT_EQ(8u, Info.computeNumSignBits(CopyTruncNeg1));
   EXPECT_EQ(5u, Info.computeNumSignBits(CopyTrunc7));
 }
+
+TEST_F(AMDGPUGISelMITest, TestNumSignBitsTrunc) {
+  StringRef MIRString =
+    "  %3:_(<4 x s32>) = G_IMPLICIT_DEF\n"
+    "  %4:_(s32) = G_IMPLICIT_DEF\n"
+    "  %5:_(s32) = G_AMDGPU_BUFFER_LOAD_UBYTE %3, %4, %4, %4, 0, 0, 0 :: (load 1)\n"
+    "  %6:_(s32) = COPY %5\n"
+
+    "  %7:_(s32) = G_AMDGPU_BUFFER_LOAD_SBYTE %3, %4, %4, %4, 0, 0, 0 :: (load 1)\n"
+    "  %8:_(s32) = COPY %7\n"
+
+    "  %9:_(s32) = G_AMDGPU_BUFFER_LOAD_USHORT %3, %4, %4, %4, 0, 0, 0 :: (load 2)\n"
+    "  %10:_(s32) = COPY %9\n"
+
+    "  %11:_(s32) = G_AMDGPU_BUFFER_LOAD_SSHORT %3, %4, %4, %4, 0, 0, 0 :: (load 2)\n"
+    "  %12:_(s32) = COPY %11\n";
+
+  setUp(MIRString);
+  if (!TM)
+    return;
+
+  Register CopyLoadUByte = Copies[Copies.size() - 4];
+  Register CopyLoadSByte = Copies[Copies.size() - 3];
+  Register CopyLoadUShort = Copies[Copies.size() - 2];
+  Register CopyLoadSShort = Copies[Copies.size() - 1];
+
+  GISelKnownBits Info(*MF);
+
+  EXPECT_EQ(24u, Info.computeNumSignBits(CopyLoadUByte));
+  EXPECT_EQ(25u, Info.computeNumSignBits(CopyLoadSByte));
+  EXPECT_EQ(16u, Info.computeNumSignBits(CopyLoadUShort));
+  EXPECT_EQ(17u, Info.computeNumSignBits(CopyLoadSShort));
+}
