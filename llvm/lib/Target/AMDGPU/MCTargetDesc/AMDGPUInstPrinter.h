@@ -115,6 +115,10 @@ private:
                         raw_ostream &O);
   void printOperand(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                     raw_ostream &O);
+  void printOperand(const MCInst *MI, uint64_t /*Address*/, unsigned OpNum,
+                    const MCSubtargetInfo &STI, raw_ostream &O) {
+    printOperand(MI, OpNum, STI, O);
+  }
   void printOperandAndFPInputMods(const MCInst *MI, unsigned OpNo,
                                   const MCSubtargetInfo &STI, raw_ostream &O);
   void printOperandAndIntInputMods(const MCInst *MI, unsigned OpNo,

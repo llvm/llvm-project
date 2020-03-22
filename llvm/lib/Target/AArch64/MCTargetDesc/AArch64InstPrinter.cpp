@@ -1347,7 +1347,8 @@ void AArch64InstPrinter::printVectorIndex(const MCInst *MI, unsigned OpNum,
   O << "[" << MI->getOperand(OpNum).getImm() << "]";
 }
 
-void AArch64InstPrinter::printAlignedLabel(const MCInst *MI, unsigned OpNum,
+void AArch64InstPrinter::printAlignedLabel(const MCInst *MI, uint64_t Address,
+                                           unsigned OpNum,
                                            const MCSubtargetInfo &STI,
                                            raw_ostream &O) {
   const MCOperand &Op = MI->getOperand(OpNum);
@@ -1362,10 +1363,9 @@ void AArch64InstPrinter::printAlignedLabel(const MCInst *MI, unsigned OpNum,
   // If the branch target is simply an address then print it in hex.
   const MCConstantExpr *BranchTarget =
       dyn_cast<MCConstantExpr>(MI->getOperand(OpNum).getExpr());
-  int64_t Address;
-  if (BranchTarget && BranchTarget->evaluateAsAbsolute(Address)) {
-    O << "0x";
-    O.write_hex(Address);
+  int64_t TargetAddress;
+  if (BranchTarget && BranchTarget->evaluateAsAbsolute(TargetAddress)) {
+    O << formatHex(TargetAddress);
   } else {
     // Otherwise, just print the expression.
     MI->getOperand(OpNum).getExpr()->print(O, &MAI);
