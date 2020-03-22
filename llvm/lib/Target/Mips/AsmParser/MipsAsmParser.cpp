@@ -298,6 +298,12 @@ class MipsAsmParser : public MCTargetAsmParser {
   bool expandSgtImm(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
                     const MCSubtargetInfo *STI);
 
+  bool expandSle(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
+                 const MCSubtargetInfo *STI);
+
+  bool expandSleImm(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
+                    const MCSubtargetInfo *STI);
+
   bool expandRotation(MCInst &Inst, SMLoc IDLoc,
                       MCStreamer &Out, const MCSubtargetInfo *STI);
   bool expandRotationImm(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
@@ -2515,6 +2521,14 @@ MipsAsmParser::tryExpandInstruction(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
   case Mips::SGTImm64:
   case Mips::SGTUImm64:
     return expandSgtImm(Inst, IDLoc, Out, STI) ? MER_Fail : MER_Success;
+  case Mips::SLE:
+  case Mips::SLEU:
+    return expandSle(Inst, IDLoc, Out, STI) ? MER_Fail : MER_Success;
+  case Mips::SLEImm:
+  case Mips::SLEUImm:
+  case Mips::SLEImm64:
+  case Mips::SLEUImm64:
+    return expandSleImm(Inst, IDLoc, Out, STI) ? MER_Fail : MER_Success;
   case Mips::SLTImm64:
     if (isInt<16>(Inst.getOperand(2).getImm())) {
       Inst.setOpcode(Mips::SLTi64);
@@ -4635,6 +4649,88 @@ bool MipsAsmParser::expandSgtImm(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
 
   // $SrcReg > $ImmReg is equal to $ImmReg < $SrcReg
   TOut.emitRRR(OpCode, DstReg, ImmReg, SrcReg, IDLoc, STI);
+
+  return false;
+}
+
+bool MipsAsmParser::expandSle(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
+                              const MCSubtargetInfo *STI) {
+  MipsTargetStreamer &TOut = getTargetStreamer();
+
+  assert(Inst.getNumOperands() == 3 && "Invalid operand count");
+  assert(Inst.getOperand(0).isReg() &&
+         Inst.getOperand(1).isReg() &&
+         Inst.getOperand(2).isReg() && "Invalid instruction operand.");
+
+  unsigned DstReg = Inst.getOperand(0).getReg();
+  unsigned SrcReg = Inst.getOperand(1).getReg();
+  unsigned OpReg = Inst.getOperand(2).getReg();
+  unsigned OpCode;
+
+  warnIfNoMacro(IDLoc);
+
+  switch (Inst.getOpcode()) {
+  case Mips::SLE:
+    OpCode = Mips::SLT;
+    break;
+  case Mips::SLEU:
+    OpCode = Mips::SLTu;
+    break;
+  default:
+    llvm_unreachable("unexpected 'sge' opcode");
+  }
+
+  // $SrcReg <= $OpReg is equal to (not ($OpReg < $SrcReg))
+  TOut.emitRRR(OpCode, DstReg, OpReg, SrcReg, IDLoc, STI);
+  TOut.emitRRI(Mips::XORi, DstReg, DstReg, 1, IDLoc, STI);
+
+  return false;
+}
+
+bool MipsAsmParser::expandSleImm(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
+                                 const MCSubtargetInfo *STI) {
+  MipsTargetStreamer &TOut = getTargetStreamer();
+
+  assert(Inst.getNumOperands() == 3 && "Invalid operand count");
+  assert(Inst.getOperand(0).isReg() &&
+         Inst.getOperand(1).isReg() &&
+         Inst.getOperand(2).isImm() && "Invalid instruction operand.");
+
+  unsigned DstReg = Inst.getOperand(0).getReg();
+  unsigned SrcReg = Inst.getOperand(1).getReg();
+  int64_t ImmValue = Inst.getOperand(2).getImm();
+  unsigned OpRegCode;
+
+  warnIfNoMacro(IDLoc);
+
+  switch (Inst.getOpcode()) {
+  case Mips::SLEImm:
+  case Mips::SLEImm64:
+    OpRegCode = Mips::SLT;
+    break;
+  case Mips::SLEUImm:
+  case Mips::SLEUImm64:
+    OpRegCode = Mips::SLTu;
+    break;
+  default:
+    llvm_unreachable("unexpected 'sge' opcode with immediate");
+  }
+
+  // $SrcReg <= Imm is equal to (not (Imm < $SrcReg))
+  unsigned ImmReg = DstReg;
+  if (DstReg == SrcReg) {
+    unsigned ATReg = getATReg(Inst.getLoc());
+    if (!ATReg)
+      return true;
+    ImmReg = ATReg;
+  }
+
+  if (loadImmediate(ImmValue, ImmReg, Mips::NoRegister, isInt<32>(ImmValue),
+                    false, IDLoc, Out, STI))
+    return true;
+
+  TOut.emitRRR(OpRegCode, DstReg, ImmReg, SrcReg, IDLoc, STI);
+  TOut.emitRRI(Mips::XORi, DstReg, DstReg, 1, IDLoc, STI);
 
   return false;
 }
