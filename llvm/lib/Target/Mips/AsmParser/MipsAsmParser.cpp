@@ -340,6 +340,12 @@ class MipsAsmParser : public MCTargetAsmParser {
   bool expandSeqI(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
                   const MCSubtargetInfo *STI);
 
+  bool expandSne(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
+                 const MCSubtargetInfo *STI);
+
+  bool expandSneI(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
+                  const MCSubtargetInfo *STI);
+
   bool expandMXTRAlias(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
                        const MCSubtargetInfo *STI);
 
@@ -2605,6 +2611,10 @@ MipsAsmParser::tryExpandInstruction(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
     return expandSeq(Inst, IDLoc, Out, STI) ? MER_Fail : MER_Success;
   case Mips::SEQIMacro:
     return expandSeqI(Inst, IDLoc, Out, STI) ? MER_Fail : MER_Success;
+  case Mips::SNEMacro:
+    return expandSne(Inst, IDLoc, Out, STI) ? MER_Fail : MER_Success;
+  case Mips::SNEIMacro:
+    return expandSneI(Inst, IDLoc, Out, STI) ? MER_Fail : MER_Success;
   case Mips::MFTC0:   case Mips::MTTC0:
   case Mips::MFTGPR:  case Mips::MTTGPR:
   case Mips::MFTLO:   case Mips::MTTLO:
@@ -5421,6 +5431,88 @@ bool MipsAsmParser::expandSeqI(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
 
   TOut.emitRRI(Opc, DstReg, SrcReg, Imm, IDLoc, STI);
   TOut.emitRRI(Mips::SLTiu, DstReg, DstReg, 1, IDLoc, STI);
+  return false;
+}
+
+bool MipsAsmParser::expandSne(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
+                              const MCSubtargetInfo *STI) {
+
+  MipsTargetStreamer &TOut = getTargetStreamer();
+
+  assert(Inst.getNumOperands() == 3 && "Invalid operand count");
+  assert(Inst.getOperand(0).isReg() &&
+         Inst.getOperand(1).isReg() &&
+         Inst.getOperand(2).isReg() && "Invalid instruction operand.");
+
+  unsigned DstReg = Inst.getOperand(0).getReg();
+  unsigned SrcReg = Inst.getOperand(1).getReg();
+  unsigned OpReg = Inst.getOperand(2).getReg();
+
+  warnIfNoMacro(IDLoc);
+
+  if (SrcReg != Mips::ZERO && OpReg != Mips::ZERO) {
+    TOut.emitRRR(Mips::XOR, DstReg, SrcReg, OpReg, IDLoc, STI);
+    TOut.emitRRR(Mips::SLTu, DstReg, Mips::ZERO, DstReg, IDLoc, STI);
+    return false;
+  }
+
+  unsigned Reg = SrcReg == Mips::ZERO ? OpReg : SrcReg;
+  TOut.emitRRR(Mips::SLTu, DstReg, Mips::ZERO, Reg, IDLoc, STI);
+  return false;
+}
+
+bool MipsAsmParser::expandSneI(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
+                               const MCSubtargetInfo *STI) {
+  MipsTargetStreamer &TOut = getTargetStreamer();
+
+  assert(Inst.getNumOperands() == 3 && "Invalid operand count");
+  assert(Inst.getOperand(0).isReg() &&
+         Inst.getOperand(1).isReg() &&
+         Inst.getOperand(2).isImm() && "Invalid instruction operand.");
+
+  unsigned DstReg = Inst.getOperand(0).getReg();
+  unsigned SrcReg = Inst.getOperand(1).getReg();
+  int64_t ImmValue = Inst.getOperand(2).getImm();
+
+  warnIfNoMacro(IDLoc);
+
+  if (ImmValue == 0) {
+    TOut.emitRRR(Mips::SLTu, DstReg, Mips::ZERO, SrcReg, IDLoc, STI);
+    return false;
+  }
+
+  if (SrcReg == Mips::ZERO) {
+    Warning(IDLoc, "comparison is always true");
+    if (loadImmediate(1, DstReg, Mips::NoRegister, true, false, IDLoc, Out,
+                      STI))
+      return true;
+    return false;
+  }
+
+  unsigned Opc;
+  if (ImmValue > -0x8000 && ImmValue < 0) {
+    ImmValue = -ImmValue;
+    Opc = isGP64bit() ? Mips::DADDiu : Mips::ADDiu;
+  } else {
+    Opc = Mips::XORi;
+  }
+
+  if (isUInt<16>(ImmValue)) {
+    TOut.emitRRI(Opc, DstReg, SrcReg, ImmValue, IDLoc, STI);
+    TOut.emitRRR(Mips::SLTu, DstReg, Mips::ZERO, DstReg, IDLoc, STI);
+    return false;
+  }
+
+  unsigned ATReg = getATReg(IDLoc);
+  if (!ATReg)
+    return true;
+
+  if (loadImmediate(ImmValue, ATReg, Mips::NoRegister, isInt<32>(ImmValue),
+                    false, IDLoc, Out, STI))
+    return true;
+
+  TOut.emitRRR(Mips::XOR, DstReg, SrcReg, ATReg, IDLoc, STI);
+  TOut.emitRRR(Mips::SLTu, DstReg, Mips::ZERO, DstReg, IDLoc, STI);
   return false;
 }
 
