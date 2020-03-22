@@ -2589,6 +2589,22 @@ def : MipsInstAlias<"seq $rd, $imm",
                     (SEQIMacro GPR32Opnd:$rd, GPR32Opnd:$rd, simm32:$imm), 0>,
                     NOT_ASE_CNMIPS;
 
+def SNEMacro : MipsAsmPseudoInst<(outs GPR32Opnd:$rd),
+                                 (ins GPR32Opnd:$rs, GPR32Opnd:$rt),
+                                 "sne $rd, $rs, $rt">, NOT_ASE_CNMIPS;
+
+def : MipsInstAlias<"sne $rd, $rs",
+                    (SNEMacro GPR32Opnd:$rd, GPR32Opnd:$rd, GPR32Opnd:$rs), 0>,
+                    NOT_ASE_CNMIPS;
+
+def SNEIMacro : MipsAsmPseudoInst<(outs GPR32Opnd:$rd),
+                                  (ins GPR32Opnd:$rs, simm32_relaxed:$imm),
+                                  "sne $rd, $rs, $imm">, NOT_ASE_CNMIPS;
+
+def : MipsInstAlias<"sne $rd, $imm",
+                    (SNEIMacro GPR32Opnd:$rd, GPR32Opnd:$rd, simm32:$imm), 0>,
+                    NOT_ASE_CNMIPS;
+
 def MULImmMacro : MipsAsmPseudoInst<(outs), (ins GPR32Opnd:$rd, GPR32Opnd:$rs,
                                                  simm32_relaxed:$imm),
                                     "mul\t$rd, $rs, $imm">,
