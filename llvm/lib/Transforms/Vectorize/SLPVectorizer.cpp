@@ -5308,8 +5308,10 @@ unsigned BoUpSLP::getVectorElementSize(Value *V) const {
   // of memory operations where possible.
   SmallVector<Instruction *, 16> Worklist;
   SmallPtrSet<Instruction *, 16> Visited;
-  if (auto *I = dyn_cast<Instruction>(V))
+  if (auto *I = dyn_cast<Instruction>(V)) {
     Worklist.push_back(I);
+    Visited.insert(I);
+  }
 
   // Traverse the expression tree in bottom-up order looking for loads. If we
   // encounter an instruction we don't yet handle, we give up.
@@ -5317,7 +5319,6 @@ unsigned BoUpSLP::getVectorElementSize(Value *V) const {
   auto FoundUnknownInst = false;
   while (!Worklist.empty() && !FoundUnknownInst) {
     auto *I = Worklist.pop_back_val();
-    Visited.insert(I);
 
     // We should only be looking at scalar instructions here. If the current
     // instruction has a vector type, give up.
@@ -5337,7 +5338,7 @@ unsigned BoUpSLP::getVectorElementSize(Value *V) const {
              isa<CmpInst>(I) || isa<SelectInst>(I) || isa<BinaryOperator>(I)) {
       for (Use &U : I->operands())
         if (auto *J = dyn_cast<Instruction>(U.get()))
-          if (!Visited.count(J))
+          if (Visited.insert(J).second)
             Worklist.push_back(J);
     }
 
