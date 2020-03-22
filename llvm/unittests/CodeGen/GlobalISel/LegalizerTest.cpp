@@ -49,7 +49,7 @@ DefineLegalizerInfo(ALegalizer, {
   getActionDefinitionsBuilder(G_SHL).legalFor({{s32, s32}});
 })
 
-TEST_F(GISelMITest, BasicLegalizerTest) {
+TEST_F(AArch64GISelMITest, BasicLegalizerTest) {
   StringRef MIRString = R"(
     %vptr:_(p0) = COPY $x4
     %v:_(<2 x s8>) = G_LOAD %vptr:_(p0) :: (load 2, align 1)
@@ -85,7 +85,7 @@ TEST_F(GISelMITest, BasicLegalizerTest) {
 // Making sure the legalization finishes successfully w/o failure to combine
 // away all the legalization artifacts regardless of the order of their
 // creation.
-TEST_F(GISelMITest, UnorderedArtifactCombiningTest) {
+TEST_F(AArch64GISelMITest, UnorderedArtifactCombiningTest) {
   StringRef MIRString = R"(
     %vptr:_(p0) = COPY $x4
     %v:_(<2 x s8>) = G_LOAD %vptr:_(p0) :: (load 2, align 1)
@@ -169,7 +169,7 @@ TEST_F(GISelMITest, UnorderedArtifactCombiningTest) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckString)) << *MF;
 }
 
-TEST_F(GISelMITest, UnorderedArtifactCombiningManyCopiesTest) {
+TEST_F(AArch64GISelMITest, UnorderedArtifactCombiningManyCopiesTest) {
   StringRef MIRString = R"(
     %vptr:_(p0) = COPY $x4
     %v:_(<2 x s8>) = G_LOAD %vptr:_(p0) :: (load 2, align 1)

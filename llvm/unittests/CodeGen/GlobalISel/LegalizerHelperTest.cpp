@@ -25,7 +25,7 @@ public:
 
 // Test CTTZ expansion when CTTZ_ZERO_UNDEF is legal or custom,
 // in which case it becomes CTTZ_ZERO_UNDEF with select.
-TEST_F(GISelMITest, LowerBitCountingCTTZ0) {
+TEST_F(AArch64GISelMITest, LowerBitCountingCTTZ0) {
   setUp();
   if (!TM)
     return;
@@ -57,7 +57,7 @@ TEST_F(GISelMITest, LowerBitCountingCTTZ0) {
 }
 
 // CTTZ expansion in terms of CTLZ
-TEST_F(GISelMITest, LowerBitCountingCTTZ1) {
+TEST_F(AArch64GISelMITest, LowerBitCountingCTTZ1) {
   setUp();
   if (!TM)
     return;
@@ -91,7 +91,7 @@ TEST_F(GISelMITest, LowerBitCountingCTTZ1) {
 }
 
 // CTLZ scalar narrowing
-TEST_F(GISelMITest, NarrowScalarCTLZ) {
+TEST_F(AArch64GISelMITest, NarrowScalarCTLZ) {
   setUp();
   if (!TM)
     return;
@@ -126,7 +126,7 @@ TEST_F(GISelMITest, NarrowScalarCTLZ) {
 }
 
 // CTTZ scalar narrowing
-TEST_F(GISelMITest, NarrowScalarCTTZ) {
+TEST_F(AArch64GISelMITest, NarrowScalarCTTZ) {
   setUp();
   if (!TM)
     return;
@@ -161,7 +161,7 @@ TEST_F(GISelMITest, NarrowScalarCTTZ) {
 }
 
 // CTTZ expansion in terms of CTPOP
-TEST_F(GISelMITest, LowerBitCountingCTTZ2) {
+TEST_F(AArch64GISelMITest, LowerBitCountingCTTZ2) {
   setUp();
   if (!TM)
     return;
@@ -192,7 +192,7 @@ TEST_F(GISelMITest, LowerBitCountingCTTZ2) {
 }
 
 // CTPOP widening.
-TEST_F(GISelMITest, WidenBitCountingCTPOP1) {
+TEST_F(AArch64GISelMITest, WidenBitCountingCTPOP1) {
   if (!TM)
     return;
 
@@ -224,7 +224,7 @@ TEST_F(GISelMITest, WidenBitCountingCTPOP1) {
 }
 
 // Test a strange case where the result is wider than the source
-TEST_F(GISelMITest, WidenBitCountingCTPOP2) {
+TEST_F(AArch64GISelMITest, WidenBitCountingCTPOP2) {
   if (!TM)
     return;
 
@@ -257,7 +257,7 @@ TEST_F(GISelMITest, WidenBitCountingCTPOP2) {
 }
 
 // CTTZ_ZERO_UNDEF expansion in terms of CTTZ
-TEST_F(GISelMITest, LowerBitCountingCTTZ3) {
+TEST_F(AArch64GISelMITest, LowerBitCountingCTTZ3) {
   setUp();
   if (!TM)
     return;
@@ -284,7 +284,7 @@ TEST_F(GISelMITest, LowerBitCountingCTTZ3) {
 }
 
 // CTLZ expansion in terms of CTLZ_ZERO_UNDEF
-TEST_F(GISelMITest, LowerBitCountingCTLZ0) {
+TEST_F(AArch64GISelMITest, LowerBitCountingCTLZ0) {
   setUp();
   if (!TM)
     return;
@@ -315,7 +315,7 @@ TEST_F(GISelMITest, LowerBitCountingCTLZ0) {
 }
 
 // CTLZ expansion in terms of CTLZ_ZERO_UNDEF if the latter is a libcall
-TEST_F(GISelMITest, LowerBitCountingCTLZLibcall) {
+TEST_F(AArch64GISelMITest, LowerBitCountingCTLZLibcall) {
   setUp();
   if (!TM)
     return;
@@ -346,7 +346,7 @@ TEST_F(GISelMITest, LowerBitCountingCTLZLibcall) {
 }
 
 // CTLZ expansion
-TEST_F(GISelMITest, LowerBitCountingCTLZ1) {
+TEST_F(AArch64GISelMITest, LowerBitCountingCTLZ1) {
   setUp();
   if (!TM)
     return;
@@ -387,7 +387,7 @@ TEST_F(GISelMITest, LowerBitCountingCTLZ1) {
 }
 
 // CTLZ widening.
-TEST_F(GISelMITest, WidenBitCountingCTLZ) {
+TEST_F(AArch64GISelMITest, WidenBitCountingCTLZ) {
   setUp();
   if (!TM)
     return;
@@ -422,7 +422,7 @@ TEST_F(GISelMITest, WidenBitCountingCTLZ) {
 }
 
 // CTLZ_ZERO_UNDEF widening.
-TEST_F(GISelMITest, WidenBitCountingCTLZZeroUndef) {
+TEST_F(AArch64GISelMITest, WidenBitCountingCTLZZeroUndef) {
   setUp();
   if (!TM)
     return;
@@ -458,7 +458,7 @@ TEST_F(GISelMITest, WidenBitCountingCTLZZeroUndef) {
 }
 
 // CTPOP widening.
-TEST_F(GISelMITest, WidenBitCountingCTPOP) {
+TEST_F(AArch64GISelMITest, WidenBitCountingCTPOP) {
   setUp();
   if (!TM)
     return;
@@ -491,7 +491,7 @@ TEST_F(GISelMITest, WidenBitCountingCTPOP) {
 }
 
 // CTTZ_ZERO_UNDEF widening.
-TEST_F(GISelMITest, WidenBitCountingCTTZ_ZERO_UNDEF) {
+TEST_F(AArch64GISelMITest, WidenBitCountingCTTZ_ZERO_UNDEF) {
   setUp();
   if (!TM)
     return;
@@ -525,7 +525,7 @@ TEST_F(GISelMITest, WidenBitCountingCTTZ_ZERO_UNDEF) {
 }
 
 // CTTZ widening.
-TEST_F(GISelMITest, WidenBitCountingCTTZ) {
+TEST_F(AArch64GISelMITest, WidenBitCountingCTTZ) {
   setUp();
   if (!TM)
     return;
@@ -559,7 +559,7 @@ TEST_F(GISelMITest, WidenBitCountingCTTZ) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 // UADDO widening.
-TEST_F(GISelMITest, WidenUADDO) {
+TEST_F(AArch64GISelMITest, WidenUADDO) {
   setUp();
   if (!TM)
     return;
@@ -598,7 +598,7 @@ TEST_F(GISelMITest, WidenUADDO) {
 }
 
 // USUBO widening.
-TEST_F(GISelMITest, WidenUSUBO) {
+TEST_F(AArch64GISelMITest, WidenUSUBO) {
   setUp();
   if (!TM)
     return;
@@ -636,7 +636,7 @@ TEST_F(GISelMITest, WidenUSUBO) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
-TEST_F(GISelMITest, FewerElementsAnd) {
+TEST_F(AArch64GISelMITest, FewerElementsAnd) {
   if (!TM)
     return;
 
@@ -683,7 +683,7 @@ TEST_F(GISelMITest, FewerElementsAnd) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
-TEST_F(GISelMITest, MoreElementsAnd) {
+TEST_F(AArch64GISelMITest, MoreElementsAnd) {
   if (!TM)
     return;
 
@@ -724,7 +724,7 @@ TEST_F(GISelMITest, MoreElementsAnd) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
-TEST_F(GISelMITest, FewerElementsPhi) {
+TEST_F(AArch64GISelMITest, FewerElementsPhi) {
   if (!TM)
     return;
 
@@ -819,7 +819,7 @@ TEST_F(GISelMITest, FewerElementsPhi) {
 }
 
 // FNEG expansion in terms of FSUB
-TEST_F(GISelMITest, LowerFNEG) {
+TEST_F(AArch64GISelMITest, LowerFNEG) {
   if (!TM)
     return;
 
@@ -864,7 +864,7 @@ TEST_F(GISelMITest, LowerFNEG) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
-TEST_F(GISelMITest, LowerMinMax) {
+TEST_F(AArch64GISelMITest, LowerMinMax) {
   if (!TM)
     return;
 
@@ -942,7 +942,7 @@ TEST_F(GISelMITest, LowerMinMax) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
-TEST_F(GISelMITest, WidenScalarBuildVector) {
+TEST_F(AArch64GISelMITest, WidenScalarBuildVector) {
   if (!TM)
     return;
 
@@ -988,7 +988,7 @@ TEST_F(GISelMITest, WidenScalarBuildVector) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
-TEST_F(GISelMITest, LowerMergeValues) {
+TEST_F(AArch64GISelMITest, LowerMergeValues) {
   if (!TM)
     return;
 
@@ -1089,7 +1089,7 @@ TEST_F(GISelMITest, LowerMergeValues) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
-TEST_F(GISelMITest, WidenScalarMergeValuesPointer) {
+TEST_F(AArch64GISelMITest, WidenScalarMergeValuesPointer) {
   if (!TM)
     return;
 
@@ -1126,7 +1126,7 @@ TEST_F(GISelMITest, WidenScalarMergeValuesPointer) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
-TEST_F(GISelMITest, WidenSEXTINREG) {
+TEST_F(AArch64GISelMITest, WidenSEXTINREG) {
   if (!TM)
     return;
 
@@ -1157,7 +1157,7 @@ TEST_F(GISelMITest, WidenSEXTINREG) {
   ASSERT_TRUE(CheckMachineFunction(*MF, CheckStr));
 }
 
-TEST_F(GISelMITest, NarrowSEXTINREG) {
+TEST_F(AArch64GISelMITest, NarrowSEXTINREG) {
   if (!TM)
     return;
 
@@ -1188,7 +1188,7 @@ TEST_F(GISelMITest, NarrowSEXTINREG) {
   ASSERT_TRUE(CheckMachineFunction(*MF, CheckStr));
 }
 
-TEST_F(GISelMITest, NarrowSEXTINREG2) {
+TEST_F(AArch64GISelMITest, NarrowSEXTINREG2) {
   if (!TM)
     return;
 
@@ -1220,7 +1220,7 @@ TEST_F(GISelMITest, NarrowSEXTINREG2) {
   ASSERT_TRUE(CheckMachineFunction(*MF, CheckStr));
 }
 
-TEST_F(GISelMITest, LowerSEXTINREG) {
+TEST_F(AArch64GISelMITest, LowerSEXTINREG) {
   if (!TM)
     return;
 
@@ -1250,7 +1250,7 @@ TEST_F(GISelMITest, LowerSEXTINREG) {
   ASSERT_TRUE(CheckMachineFunction(*MF, CheckStr));
 }
 
-TEST_F(GISelMITest, LibcallFPExt) {
+TEST_F(AArch64GISelMITest, LibcallFPExt) {
   setUp();
   if (!TM)
     return;
@@ -1289,7 +1289,7 @@ TEST_F(GISelMITest, LibcallFPExt) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
-TEST_F(GISelMITest, LibcallFPTrunc) {
+TEST_F(AArch64GISelMITest, LibcallFPTrunc) {
   setUp();
   if (!TM)
     return;
@@ -1331,7 +1331,7 @@ TEST_F(GISelMITest, LibcallFPTrunc) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
-TEST_F(GISelMITest, LibcallSimple) {
+TEST_F(AArch64GISelMITest, LibcallSimple) {
   setUp();
   if (!TM)
     return;
@@ -1354,7 +1354,7 @@ TEST_F(GISelMITest, LibcallSimple) {
             Helper.libcall(*MIBFADD));
 }
 
-TEST_F(GISelMITest, LibcallSRem) {
+TEST_F(AArch64GISelMITest, LibcallSRem) {
   setUp();
   if (!TM)
     return;
@@ -1411,7 +1411,7 @@ TEST_F(GISelMITest, LibcallSRem) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
-TEST_F(GISelMITest, LibcallURem) {
+TEST_F(AArch64GISelMITest, LibcallURem) {
   setUp();
   if (!TM)
     return;
@@ -1468,7 +1468,7 @@ TEST_F(GISelMITest, LibcallURem) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
-TEST_F(GISelMITest, LibcallCtlzZeroUndef) {
+TEST_F(AArch64GISelMITest, LibcallCtlzZeroUndef) {
   setUp();
   if (!TM)
     return;
@@ -1521,7 +1521,7 @@ TEST_F(GISelMITest, LibcallCtlzZeroUndef) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
-TEST_F(GISelMITest, LibcallFAdd) {
+TEST_F(AArch64GISelMITest, LibcallFAdd) {
   setUp();
   if (!TM)
     return;
@@ -1573,7 +1573,7 @@ TEST_F(GISelMITest, LibcallFAdd) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
-TEST_F(GISelMITest, LibcallFSub) {
+TEST_F(AArch64GISelMITest, LibcallFSub) {
   setUp();
   if (!TM)
     return;
@@ -1625,7 +1625,7 @@ TEST_F(GISelMITest, LibcallFSub) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
-TEST_F(GISelMITest, LibcallFMul) {
+TEST_F(AArch64GISelMITest, LibcallFMul) {
   setUp();
   if (!TM)
     return;
@@ -1677,7 +1677,7 @@ TEST_F(GISelMITest, LibcallFMul) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
-TEST_F(GISelMITest, LibcallFDiv) {
+TEST_F(AArch64GISelMITest, LibcallFDiv) {
   setUp();
   if (!TM)
     return;
@@ -1729,7 +1729,7 @@ TEST_F(GISelMITest, LibcallFDiv) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
-TEST_F(GISelMITest, LibcallFExp) {
+TEST_F(AArch64GISelMITest, LibcallFExp) {
   setUp();
   if (!TM)
     return;
@@ -1776,7 +1776,7 @@ TEST_F(GISelMITest, LibcallFExp) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
-TEST_F(GISelMITest, LibcallFExp2) {
+TEST_F(AArch64GISelMITest, LibcallFExp2) {
   setUp();
   if (!TM)
     return;
@@ -1823,7 +1823,7 @@ TEST_F(GISelMITest, LibcallFExp2) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
-TEST_F(GISelMITest, LibcallFRem) {
+TEST_F(AArch64GISelMITest, LibcallFRem) {
   setUp();
   if (!TM)
     return;
@@ -1870,7 +1870,7 @@ TEST_F(GISelMITest, LibcallFRem) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
-TEST_F(GISelMITest, LibcallFPow) {
+TEST_F(AArch64GISelMITest, LibcallFPow) {
   setUp();
   if (!TM)
     return;
@@ -1917,7 +1917,7 @@ TEST_F(GISelMITest, LibcallFPow) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
-TEST_F(GISelMITest, LibcallFMa) {
+TEST_F(AArch64GISelMITest, LibcallFMa) {
   setUp();
   if (!TM)
     return;
@@ -1965,7 +1965,7 @@ TEST_F(GISelMITest, LibcallFMa) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
-TEST_F(GISelMITest, LibcallFCeil) {
+TEST_F(AArch64GISelMITest, LibcallFCeil) {
   setUp();
   if (!TM)
     return;
@@ -2012,7 +2012,7 @@ TEST_F(GISelMITest, LibcallFCeil) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
-TEST_F(GISelMITest, LibcallFFloor) {
+TEST_F(AArch64GISelMITest, LibcallFFloor) {
   setUp();
   if (!TM)
     return;
@@ -2059,7 +2059,7 @@ TEST_F(GISelMITest, LibcallFFloor) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
-TEST_F(GISelMITest, LibcallFMinNum) {
+TEST_F(AArch64GISelMITest, LibcallFMinNum) {
   setUp();
   if (!TM)
     return;
@@ -2109,7 +2109,7 @@ TEST_F(GISelMITest, LibcallFMinNum) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
-TEST_F(GISelMITest, LibcallFMaxNum) {
+TEST_F(AArch64GISelMITest, LibcallFMaxNum) {
   setUp();
   if (!TM)
     return;
@@ -2159,7 +2159,7 @@ TEST_F(GISelMITest, LibcallFMaxNum) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
-TEST_F(GISelMITest, LibcallFSqrt) {
+TEST_F(AArch64GISelMITest, LibcallFSqrt) {
   setUp();
   if (!TM)
     return;
@@ -2206,7 +2206,7 @@ TEST_F(GISelMITest, LibcallFSqrt) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
-TEST_F(GISelMITest, LibcallFRint) {
+TEST_F(AArch64GISelMITest, LibcallFRint) {
   setUp();
   if (!TM)
     return;
@@ -2253,7 +2253,7 @@ TEST_F(GISelMITest, LibcallFRint) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
-TEST_F(GISelMITest, LibcallFNearbyInt) {
+TEST_F(AArch64GISelMITest, LibcallFNearbyInt) {
   setUp();
   if (!TM)
     return;
@@ -2303,7 +2303,7 @@ TEST_F(GISelMITest, LibcallFNearbyInt) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
-TEST_F(GISelMITest, NarrowScalarExtract) {
+TEST_F(AArch64GISelMITest, NarrowScalarExtract) {
   setUp();
   if (!TM)
     return;
@@ -2342,7 +2342,7 @@ TEST_F(GISelMITest, NarrowScalarExtract) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
-TEST_F(GISelMITest, LowerInsert) {
+TEST_F(AArch64GISelMITest, LowerInsert) {
   setUp();
   if (!TM)
     return;
@@ -2443,7 +2443,7 @@ TEST_F(GISelMITest, LowerInsert) {
 }
 
 // Test lowering of G_FFLOOR
-TEST_F(GISelMITest, LowerFFloor) {
+TEST_F(AArch64GISelMITest, LowerFFloor) {
   setUp();
   if (!TM)
     return;
@@ -2475,7 +2475,7 @@ TEST_F(GISelMITest, LowerFFloor) {
 }
 
 // Test lowering of G_BSWAP
-TEST_F(GISelMITest, LowerBSWAP) {
+TEST_F(AArch64GISelMITest, LowerBSWAP) {
   setUp();
   if (!TM)
     return;
@@ -2517,7 +2517,7 @@ TEST_F(GISelMITest, LowerBSWAP) {
 }
 
 // Test widening of G_UNMERGE_VALUES
-TEST_F(GISelMITest, WidenUnmerge) {
+TEST_F(AArch64GISelMITest, WidenUnmerge) {
   setUp();
   if (!TM)
     return;

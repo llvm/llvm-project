@@ -11,7 +11,7 @@
 
 namespace {
 
-TEST_F(GISelMITest, TestCSE) {
+TEST_F(AArch64GISelMITest, TestCSE) {
   setUp();
   if (!TM)
     return;
@@ -79,7 +79,7 @@ TEST_F(GISelMITest, TestCSE) {
   EXPECT_EQ(&*Undef0, &*Undef1);
 }
 
-TEST_F(GISelMITest, TestCSEConstantConfig) {
+TEST_F(AArch64GISelMITest, TestCSEConstantConfig) {
   setUp();
   if (!TM)
     return;
