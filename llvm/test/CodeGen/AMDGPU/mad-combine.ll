@@ -4,6 +4,8 @@
 ; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs -fp-contract=fast < %s | FileCheck -enable-var-scope -check-prefix=SI -check-prefix=SI-STD -check-prefix=SI-STD-SAFE -check-prefix=FUNC %s
 ; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs -enable-unsafe-fp-math < %s | FileCheck -enable-var-scope -check-prefix=SI -check-prefix=SI-STD -check-prefix=SI-STD-UNSAFE -check-prefix=FUNC %s
 
+; FIXME: Remove enable-unsafe-fp-math in RUN line and add flags to IR instrs
+
 ; Make sure we don't form mad with denormals
 ; RUN: llc -march=amdgcn -mcpu=tahiti -mattr=+fp32-denormals -fp-contract=fast -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=SI -check-prefix=SI-DENORM -check-prefix=SI-DENORM-FASTFMAF -check-prefix=FUNC %s
 ; RUN: llc -march=amdgcn -mcpu=verde -mattr=+fp32-denormals -fp-contract=fast -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=SI -check-prefix=SI-DENORM -check-prefix=SI-DENORM-SLOWFMAF -check-prefix=FUNC %s
@@ -566,9 +568,10 @@ define amdgpu_kernel void @aggressive_combine_to_mad_fsub_3_f32(float addrspace(
   %u = load volatile float, float addrspace(1)* %gep.3
   %v = load volatile float, float addrspace(1)* %gep.4
 
-  %tmp0 = fmul float %u, %v
-  %tmp1 = call float @llvm.fmuladd.f32(float %y, float %z, float %tmp0) #0
-  %tmp2 = fsub float %x, %tmp1
+  ; nsz flag is needed since this combine may change sign of zero
+  %tmp0 = fmul nsz float %u, %v
+  %tmp1 = call nsz float @llvm.fmuladd.f32(float %y, float %z, float %tmp0) #0
+  %tmp2 = fsub nsz float %x, %tmp1
 
   store float %tmp2, float addrspace(1)* %gep.out
   ret void

@@ -1,4 +1,4 @@
-// RUN: mlir-opt -convert-loop-op-to-gpu -gpu-num-workgroups=2 -gpu-workgroup-size=32 %s | FileCheck %s
+// RUN: mlir-opt -convert-loop-op-to-gpu="gpu-num-workgroups=2 gpu-workgroup-size=32" %s | FileCheck %s
 
 module {
   func @foo(%arg0: memref<?x?xf32>, %arg1 : memref<?x?xf32>, %arg2 : memref<?x?xf32>) {

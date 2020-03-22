@@ -1,4 +1,4 @@
-// RUN: mlir-opt -convert-loop-op-to-gpu -gpu-num-workgroups=2,2 -gpu-workgroup-size=32,4 %s | FileCheck %s
+// RUN: mlir-opt -convert-loop-op-to-gpu="gpu-num-workgroups=2,2 gpu-workgroup-size=32,4" %s | FileCheck %s
 
 module {
   // arg2 = arg0 * transpose(arg1) ; with intermediate buffer and tile size passed as argument

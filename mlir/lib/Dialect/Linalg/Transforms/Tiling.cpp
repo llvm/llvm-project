@@ -39,13 +39,6 @@ using folded_affine_min = folded::ValueBuilder<AffineMinOp>;
 
 #define DEBUG_TYPE "linalg-tiling"
 
-static llvm::cl::OptionCategory clOptionsCategory(DEBUG_TYPE " options");
-static llvm::cl::list<unsigned>
-    clTileSizes("linalg-tile-sizes",
-                llvm::cl::desc("Tile sizes by which to tile linalg operations"),
-                llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated,
-                llvm::cl::cat(clOptionsCategory));
-
 static bool isZero(Value v) {
   return isa_and_nonnull<ConstantIndexOp>(v.getDefiningOp()) &&
          cast<ConstantIndexOp>(v.getDefiningOp()).getValue() == 0;
@@ -513,15 +506,19 @@ namespace {
 template <typename LoopTy>
 struct LinalgTilingPass : public FunctionPass<LinalgTilingPass<LoopTy>> {
   LinalgTilingPass() = default;
+  LinalgTilingPass(const LinalgTilingPass &) {}
   LinalgTilingPass(ArrayRef<int64_t> sizes) {
-    this->tileSizes.assign(sizes.begin(), sizes.end());
+    this->tileSizes->assign(sizes.begin(), sizes.end());
   }
 
   void runOnFunction() override {
     tileLinalgOps<LoopTy>(this->getFunction(), tileSizes);
   }
 
-  SmallVector<int64_t, 8> tileSizes;
+  Pass::ListOption<int64_t> tileSizes{
+      *this, "linalg-tile-sizes",
+      llvm::cl::desc("Tile sizes by which to tile linalg operations"),
+      llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated};
 };
 
 } // namespace
@@ -537,17 +534,9 @@ mlir::createLinalgTilingToParallelLoopsPass(ArrayRef<int64_t> tileSizes) {
 }
 
 static PassRegistration<LinalgTilingPass<loop::ForOp>>
-    tiling_pass("linalg-tile", "Tile operations in the linalg dialect", [] {
-      auto pass = std::make_unique<LinalgTilingPass<loop::ForOp>>();
-      pass->tileSizes.assign(clTileSizes.begin(), clTileSizes.end());
-      return pass;
-    });
+    tiling_pass("linalg-tile", "Tile operations in the linalg dialect");
 
 static PassRegistration<LinalgTilingPass<loop::ParallelOp>>
     tiling_to_parallel_loops(
         "linalg-tile-to-parallel-loops",
-        "Tile operations in the linalg dialect to parallel loops", [] {
-          auto pass = std::make_unique<LinalgTilingPass<loop::ParallelOp>>();
-          pass->tileSizes.assign(clTileSizes.begin(), clTileSizes.end());
-          return pass;
-        });
+        "Tile operations in the linalg dialect to parallel loops");

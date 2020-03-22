@@ -24,36 +24,17 @@
 using namespace mlir;
 using namespace mlir::loop;
 
-static llvm::cl::OptionCategory clOptionsCategory(PASS_NAME " options");
-static llvm::cl::opt<unsigned>
-    clNumBlockDims("gpu-block-dims",
-                   llvm::cl::desc("Number of GPU block dimensions for mapping"),
-                   llvm::cl::cat(clOptionsCategory), llvm::cl::init(1u));
-static llvm::cl::opt<unsigned> clNumThreadDims(
-    "gpu-thread-dims",
-    llvm::cl::desc("Number of GPU thread dimensions for mapping"),
-    llvm::cl::cat(clOptionsCategory), llvm::cl::init(1u));
-
-static llvm::cl::OptionCategory clLoopOpToGPUCategory(LOOPOP_TO_GPU_PASS_NAME
-                                                      " options");
-static llvm::cl::list<unsigned>
-    clNumWorkGroups("gpu-num-workgroups",
-                    llvm::cl::desc("Num workgroups in the GPU launch"),
-                    llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated,
-                    llvm::cl::cat(clLoopOpToGPUCategory));
-static llvm::cl::list<unsigned>
-    clWorkGroupSize("gpu-workgroup-size",
-                    llvm::cl::desc("Workgroup Size in the GPU launch"),
-                    llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated,
-                    llvm::cl::cat(clLoopOpToGPUCategory));
-
 namespace {
 // A pass that traverses top-level loops in the function and converts them to
 // GPU launch operations.  Nested launches are not allowed, so this does not
 // walk the function recursively to avoid considering nested loops.
 struct ForLoopMapper : public FunctionPass<ForLoopMapper> {
-  ForLoopMapper(unsigned numBlockDims, unsigned numThreadDims)
-      : numBlockDims(numBlockDims), numThreadDims(numThreadDims) {}
+  ForLoopMapper() = default;
+  ForLoopMapper(const ForLoopMapper &) {}
+  ForLoopMapper(unsigned numBlockDims, unsigned numThreadDims) {
+    this->numBlockDims = numBlockDims;
+    this->numThreadDims = numThreadDims;
+  }
 
   void runOnFunction() override {
     for (Block &block : getFunction())
@@ -70,8 +51,14 @@ struct ForLoopMapper : public FunctionPass<ForLoopMapper> {
       }
   }
 
-  unsigned numBlockDims;
-  unsigned numThreadDims;
+  Option<unsigned> numBlockDims{
+      *this, "gpu-block-dims",
+      llvm::cl::desc("Number of GPU block dimensions for mapping"),
+      llvm::cl::init(1u)};
+  Option<unsigned> numThreadDims{
+      *this, "gpu-thread-dims",
+      llvm::cl::desc("Number of GPU thread dimensions for mapping"),
+      llvm::cl::init(1u)};
 };
 
 // A pass that traverses top-level loops in the function and convertes them to
@@ -81,10 +68,13 @@ struct ForLoopMapper : public FunctionPass<ForLoopMapper> {
 // to be perfectly nested upto depth equal to size of `workGroupSize`.
 struct ImperfectlyNestedForLoopMapper
     : public FunctionPass<ImperfectlyNestedForLoopMapper> {
+  ImperfectlyNestedForLoopMapper() = default;
+  ImperfectlyNestedForLoopMapper(const ImperfectlyNestedForLoopMapper &) {}
   ImperfectlyNestedForLoopMapper(ArrayRef<int64_t> numWorkGroups,
-                                 ArrayRef<int64_t> workGroupSize)
-      : numWorkGroups(numWorkGroups.begin(), numWorkGroups.end()),
-        workGroupSize(workGroupSize.begin(), workGroupSize.end()) {}
+                                 ArrayRef<int64_t> workGroupSize) {
+    this->numWorkGroups->assign(numWorkGroups.begin(), numWorkGroups.end());
+    this->workGroupSize->assign(workGroupSize.begin(), workGroupSize.end());
+  }
 
   void runOnFunction() override {
     // Insert the num work groups and workgroup sizes as constant values. This
@@ -113,8 +103,14 @@ struct ImperfectlyNestedForLoopMapper
       }
     }
   }
-  SmallVector<int64_t, 3> numWorkGroups;
-  SmallVector<int64_t, 3> workGroupSize;
+  ListOption<int64_t> numWorkGroups{
+      *this, "gpu-num-workgroups",
+      llvm::cl::desc("Num workgroups in the GPU launch"), llvm::cl::ZeroOrMore,
+      llvm::cl::MiscFlags::CommaSeparated};
+  ListOption<int64_t> workGroupSize{
+      *this, "gpu-workgroup-size",
+      llvm::cl::desc("Workgroup Size in the GPU launch"), llvm::cl::ZeroOrMore,
+      llvm::cl::MiscFlags::CommaSeparated};
 };
 
 struct ParallelLoopToGpuPass : public OperationPass<ParallelLoopToGpuPass> {
@@ -152,20 +148,11 @@ std::unique_ptr<Pass> mlir::createParallelLoopToGpuPass() {
 }
 
 static PassRegistration<ForLoopMapper>
-    registration(PASS_NAME, "Convert top-level loops to GPU kernels", [] {
-      return std::make_unique<ForLoopMapper>(clNumBlockDims.getValue(),
-                                             clNumThreadDims.getValue());
-    });
+    registration(PASS_NAME, "Convert top-level loops to GPU kernels");
 
-static PassRegistration<ImperfectlyNestedForLoopMapper> loopOpToGPU(
-    LOOPOP_TO_GPU_PASS_NAME, "Convert top-level loop::ForOp to GPU kernels",
-    [] {
-      SmallVector<int64_t, 3> numWorkGroups, workGroupSize;
-      numWorkGroups.assign(clNumWorkGroups.begin(), clNumWorkGroups.end());
-      workGroupSize.assign(clWorkGroupSize.begin(), clWorkGroupSize.end());
-      return std::make_unique<ImperfectlyNestedForLoopMapper>(numWorkGroups,
-                                                              workGroupSize);
-    });
+static PassRegistration<ImperfectlyNestedForLoopMapper>
+    loopOpToGPU(LOOPOP_TO_GPU_PASS_NAME,
+                "Convert top-level loop::ForOp to GPU kernels");
 
 static PassRegistration<ParallelLoopToGpuPass>
     pass("convert-parallel-loops-to-gpu", "Convert mapped loop.parallel ops"
