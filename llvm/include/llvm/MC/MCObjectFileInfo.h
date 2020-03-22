@@ -221,6 +221,7 @@ protected:
 public:
   void InitMCObjectFileInfo(const Triple &TT, bool PIC, MCContext &ctx,
                             bool LargeCodeModel = false);
+  MCContext &getContext() const { return *Ctx; }
 
   bool getSupportsWeakOmittedEHFrame() const {
     return SupportsWeakOmittedEHFrame;

@@ -38,11 +38,10 @@ using namespace llvm;
 /// lowering implementations a chance to set up their default sections.
 void TargetLoweringObjectFile::Initialize(MCContext &ctx,
                                           const TargetMachine &TM) {
-  Ctx = &ctx;
   // `Initialize` can be called more than once.
   delete Mang;
   Mang = new Mangler();
-  InitMCObjectFileInfo(TM.getTargetTriple(), TM.isPositionIndependent(), *Ctx,
+  InitMCObjectFileInfo(TM.getTargetTriple(), TM.isPositionIndependent(), ctx,
                        TM.getCodeModel() == CodeModel::Large);
 
   // Reset various EH DWARF encodings.
@@ -121,7 +120,7 @@ MCSymbol *TargetLoweringObjectFile::getSymbolWithGlobalValueBase(
   NameStr += GV->getParent()->getDataLayout().getPrivateGlobalPrefix();
   TM.getNameWithPrefix(NameStr, GV, *Mang);
   NameStr.append(Suffix.begin(), Suffix.end());
-  return Ctx->getOrCreateSymbol(NameStr);
+  return getContext().getOrCreateSymbol(NameStr);
 }
 
 MCSymbol *TargetLoweringObjectFile::getCFIPersonalitySymbol(
@@ -353,7 +352,7 @@ getTTypeReference(const MCSymbolRefExpr *Sym, unsigned Encoding,
 const MCExpr *TargetLoweringObjectFile::getDebugThreadLocalSymbol(const MCSymbol *Sym) const {
   // FIXME: It's not clear what, if any, default this should have - perhaps a
   // null return could mean 'no location' & we should just do that here.
-  return MCSymbolRefExpr::create(Sym, *Ctx);
+  return MCSymbolRefExpr::create(Sym, getContext());
 }
 
 void TargetLoweringObjectFile::getNameWithPrefix(
