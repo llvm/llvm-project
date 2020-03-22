@@ -2,6 +2,7 @@ add_llvm_library(MLIRTestTransforms
   TestAllReduceLowering.cpp
   TestCallGraph.cpp
   TestConstantFold.cpp
+  TestConvertGPUKernelToCubin.cpp
   TestLoopFusion.cpp
   TestGpuMemoryPromotion.cpp
   TestGpuParallelLoopMapping.cpp
@@ -39,6 +40,7 @@ target_link_libraries(MLIRTestTransforms
   MLIRAnalysis
   MLIREDSC
   MLIRGPU
+  MLIRGPUtoCUDATransforms
   MLIRLinalgOps
   MLIRLinalgTransforms
   MLIRLoopOps
