@@ -45851,20 +45851,8 @@ static SDValue combineLoopSADPattern(SDNode *N, SelectionDAG &DAG,
 
   // TODO: There's nothing special about i32, any integer type above i16 should
   // work just as well.
-  if (!VT.isVector() || !VT.isSimple() ||
-      !(VT.getVectorElementType() == MVT::i32))
-    return SDValue();
-
-  unsigned RegSize = 128;
-  if (Subtarget.useBWIRegs())
-    RegSize = 512;
-  else if (Subtarget.hasAVX())
-    RegSize = 256;
-
-  // We only handle v16i32 for SSE2 / v32i32 for AVX / v64i32 for AVX512.
-  // TODO: We should be able to handle larger vectors by splitting them before
-  // feeding them into several SADs, and then reducing over those.
-  if (VT.getSizeInBits() / 4 > RegSize)
+  if (!VT.isVector() || !isPowerOf2_32(VT.getVectorNumElements()) ||
+      VT.getVectorElementType() != MVT::i32)
     return SDValue();
 
   // We know N is a reduction add. To match SAD, we need one of the operands to
@@ -45891,9 +45879,7 @@ static SDValue combineLoopSADPattern(SDNode *N, SelectionDAG &DAG,
   // We need to turn the vector of i64 into a vector of i32.
   // If the reduction vector is at least as wide as the psadbw result, just
   // bitcast. If it's narrower which can only occur for v2i32, bits 127:16 of
-  // the PSADBW will be zero. If we promote/ narrow vectors, truncate the v2i64
-  // result to v2i32 which will be removed by type legalization. If we/ widen
-  // narrow vectors then we bitcast to v4i32 and extract v2i32.
+  // the PSADBW will be zero.
   MVT ResVT = MVT::getVectorVT(MVT::i32, Sad.getValueSizeInBits() / 32);
   Sad = DAG.getNode(ISD::BITCAST, DL, ResVT, Sad);
 
