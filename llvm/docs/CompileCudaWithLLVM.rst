@@ -30,7 +30,7 @@ Before you build CUDA code, you'll need to have installed the CUDA SDK.  See
 `NVIDIA's CUDA installation guide
 <https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html>`_ for
 details.  Note that clang `maynot support
-<https://llvm.org/bugs/show_bug.cgi?id=26966>`_ the CUDA toolkit as installed by
+<https://bugs.llvm.org/show_bug.cgi?id=26966>`_ the CUDA toolkit as installed by
 some Linux package managers. Clang does attempt to deal with specific details of
 CUDA installation on a handful of common Linux distributions, but in general the
 most reliable way to make it work is to install CUDA in a single directory from
