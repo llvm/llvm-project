@@ -63,8 +63,3 @@ const MCExpr *X86ELFTargetObjectFile::getDebugThreadLocalSymbol(
     const MCSymbol *Sym) const {
   return MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_DTPOFF, getContext());
 }
-
-void X86ELFTargetObjectFile::Initialize(MCContext &Ctx,
-                                        const TargetMachine &TM) {
-  TargetLoweringObjectFileELF::Initialize(Ctx, TM);
-}
