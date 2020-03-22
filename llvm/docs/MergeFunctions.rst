@@ -39,16 +39,16 @@ LLVM code fundamentals. In this article, we assume the reader is familiar with
 `Single Static Assignment
 <http://en.wikipedia.org/wiki/Static_single_assignment_form>`_
 concept and has an understanding of
-`IR structure <http://llvm.org/docs/LangRef.html#high-level-structure>`_.
+`IR structure <https://llvm.org/docs/LangRef.html#high-level-structure>`_.
 
 We will use terms such as
-"`module <http://llvm.org/docs/LangRef.html#high-level-structure>`_",
-"`function <http://llvm.org/docs/ProgrammersManual.html#the-function-class>`_",
+"`module <https://llvm.org/docs/LangRef.html#high-level-structure>`_",
+"`function <https://llvm.org/docs/ProgrammersManual.html#the-function-class>`_",
 "`basic block <http://en.wikipedia.org/wiki/Basic_block>`_",
-"`user <http://llvm.org/docs/ProgrammersManual.html#the-user-class>`_",
-"`value <http://llvm.org/docs/ProgrammersManual.html#the-value-class>`_",
+"`user <https://llvm.org/docs/ProgrammersManual.html#the-user-class>`_",
+"`value <https://llvm.org/docs/ProgrammersManual.html#the-value-class>`_",
 "`instruction
-<http://llvm.org/docs/ProgrammersManual.html#the-instruction-class>`_".
+<https://llvm.org/docs/ProgrammersManual.html#the-instruction-class>`_".
 
 As a good starting point, the Kaleidoscope tutorial can be used:
 

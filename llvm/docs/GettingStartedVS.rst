@@ -18,7 +18,7 @@ to use LLVM. It contains an assembler, disassembler, bitcode analyzer and
 bitcode optimizer. It also contains basic regression tests that can be used to
 test the LLVM tools and the Clang front end.
 
-The second piece is the `Clang <http://clang.llvm.org/>`_ front end.  This
+The second piece is the `Clang <https://clang.llvm.org/>`_ front end.  This
 component compiles C, C++, Objective C, and Objective C++ code into LLVM
 bitcode. Clang typically uses LLVM libraries to optimize the bitcode and emit
 machine code. LLVM fully supports the COFF object file format, which is
@@ -233,6 +233,6 @@ things... there are many more interesting and complicated things that you can
 do that aren't documented here (but we'll gladly accept a patch if you want to
 write something up!).  For more information about LLVM, check out:
 
-* `LLVM homepage <http://llvm.org/>`_
-* `LLVM doxygen tree <http://llvm.org/doxygen/>`_
+* `LLVM homepage <https://llvm.org/>`_
+* `LLVM doxygen tree <https://llvm.org/doxygen/>`_
 

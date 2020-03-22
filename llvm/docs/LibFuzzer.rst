@@ -581,7 +581,7 @@ you will want to know whether the function or the corpus can be improved further
 One easy to use metric is, of course, code coverage.
 
 We recommend to use
-`Clang Coverage <http://clang.llvm.org/docs/SourceBasedCodeCoverage.html>`_,
+`Clang Coverage <https://clang.llvm.org/docs/SourceBasedCodeCoverage.html>`_,
 to visualize and study your code coverage
 (`example <https://github.com/google/fuzzer-test-suite/blob/master/tutorial/libFuzzerTutorial.md#visualizing-coverage>`_).
 
@@ -781,18 +781,18 @@ Trophies
 .. _pcre2: http://www.pcre.org/
 .. _AFL: http://lcamtuf.coredump.cx/afl/
 .. _Radamsa: https://github.com/aoh/radamsa
-.. _SanitizerCoverage: http://clang.llvm.org/docs/SanitizerCoverage.html
-.. _SanitizerCoverageTraceDataFlow: http://clang.llvm.org/docs/SanitizerCoverage.html#tracing-data-flow
-.. _AddressSanitizer: http://clang.llvm.org/docs/AddressSanitizer.html
-.. _LeakSanitizer: http://clang.llvm.org/docs/LeakSanitizer.html
+.. _SanitizerCoverage: https://clang.llvm.org/docs/SanitizerCoverage.html
+.. _SanitizerCoverageTraceDataFlow: https://clang.llvm.org/docs/SanitizerCoverage.html#tracing-data-flow
+.. _AddressSanitizer: https://clang.llvm.org/docs/AddressSanitizer.html
+.. _LeakSanitizer: https://clang.llvm.org/docs/LeakSanitizer.html
 .. _Heartbleed: http://en.wikipedia.org/wiki/Heartbleed
 .. _FuzzerInterface.h: https://github.com/llvm/llvm-project/blob/master/compiler-rt/lib/fuzzer/FuzzerInterface.h
-.. _3.7.0: http://llvm.org/releases/3.7.0/docs/LibFuzzer.html
-.. _building Clang from trunk: http://clang.llvm.org/get_started.html
-.. _MemorySanitizer: http://clang.llvm.org/docs/MemorySanitizer.html
-.. _UndefinedBehaviorSanitizer: http://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html
-.. _`coverage counters`: http://clang.llvm.org/docs/SanitizerCoverage.html#coverage-counters
+.. _3.7.0: https://llvm.org/releases/3.7.0/docs/LibFuzzer.html
+.. _building Clang from trunk: https://clang.llvm.org/get_started.html
+.. _MemorySanitizer: https://clang.llvm.org/docs/MemorySanitizer.html
+.. _UndefinedBehaviorSanitizer: https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html
+.. _`coverage counters`: https://clang.llvm.org/docs/SanitizerCoverage.html#coverage-counters
 .. _`value profile`: #value-profile
-.. _`caller-callee pairs`: http://clang.llvm.org/docs/SanitizerCoverage.html#caller-callee-coverage
+.. _`caller-callee pairs`: https://clang.llvm.org/docs/SanitizerCoverage.html#caller-callee-coverage
 .. _BoringSSL: https://boringssl.googlesource.com/boringssl/
 

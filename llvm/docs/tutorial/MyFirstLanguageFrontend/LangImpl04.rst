@@ -98,7 +98,7 @@ LLVM Optimization Passes
 
    Due to the transition to the new PassManager infrastructure this tutorial
    is based on ``llvm::legacy::FunctionPassManager`` which can be found in
-   `LegacyPassManager.h <http://llvm.org/doxygen/classllvm_1_1legacy_1_1FunctionPassManager.html>`_.
+   `LegacyPassManager.h <https://llvm.org/doxygen/classllvm_1_1legacy_1_1FunctionPassManager.html>`_.
    For the purpose of the this tutorial the above should be used until
    the pass manager transition is complete.
 

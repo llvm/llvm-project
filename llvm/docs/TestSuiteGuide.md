@@ -19,7 +19,7 @@ Quickstart
    % mkdir venv
    % virtualenv venv
    % . venv/bin/activate
-   % pip install svn+http://llvm.org/svn/llvm-project/llvm/trunk/utils/lit
+   % pip install svn+https://llvm.org/svn/llvm-project/llvm/trunk/utils/lit
    % lit --version
    lit 0.8.0dev
    ```
@@ -279,7 +279,7 @@ Example usage:
 
 LNT is a set of client and server tools for continuously monitoring
 performance. You can find more information at
-[http://llvm.org/docs/lnt](http://llvm.org/docs/lnt). The official LNT instance
+[https://llvm.org/docs/lnt](https://llvm.org/docs/lnt). The official LNT instance
 of the LLVM project is hosted at [http://lnt.llvm.org](http://lnt.llvm.org).
 
 
@@ -348,7 +348,7 @@ Cross Compilation and External Devices
 CMake allows to cross compile to a different target via toolchain files. More
 information can be found here:
 
-- [http://llvm.org/docs/lnt/tests.html#cross-compiling](http://llvm.org/docs/lnt/tests.html#cross-compiling)
+- [https://llvm.org/docs/lnt/tests.html#cross-compiling](https://llvm.org/docs/lnt/tests.html#cross-compiling)
 
 - [https://cmake.org/cmake/help/latest/manual/cmake-toolchains.7.html](https://cmake.org/cmake/help/latest/manual/cmake-toolchains.7.html)
 
@@ -389,7 +389,7 @@ Running the test-suite via LNT
 
 The LNT tool can run the test-suite. Use this when submitting test results to
 an LNT instance.  See
-[http://llvm.org/docs/lnt/tests.html#llvm-cmake-test-suite](http://llvm.org/docs/lnt/tests.html#llvm-cmake-test-suite)
+[https://llvm.org/docs/lnt/tests.html#llvm-cmake-test-suite](https://llvm.org/docs/lnt/tests.html#llvm-cmake-test-suite)
 for details.
 
 Running the test-suite via Makefiles (deprecated)

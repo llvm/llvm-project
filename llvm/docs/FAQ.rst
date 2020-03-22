@@ -72,9 +72,9 @@ What source languages are supported?
 ------------------------------------
 
 LLVM currently has full support for C and C++ source languages through
-`Clang <http://clang.llvm.org/>`_. Many other language frontends have
+`Clang <https://clang.llvm.org/>`_. Many other language frontends have
 been written using LLVM, and an incomplete list is available at
-`projects with LLVM <http://llvm.org/ProjectsWithLLVM/>`_.
+`projects with LLVM <https://llvm.org/ProjectsWithLLVM/>`_.
 
 
 I'd like to write a self-hosting LLVM compiler. How should I interface with the LLVM middle-end optimizers and back-end code generators?

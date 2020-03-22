@@ -161,8 +161,8 @@ Build Bots and Test Coverage
 Getting Involved
 ================
 
-First please review our `Developer's Policy <http://llvm.org/docs/DeveloperPolicy.html>`__
-and `Getting started with LLVM <http://llvm.org/docs/GettingStarted.html>`__.
+First please review our `Developer's Policy <https://llvm.org/docs/DeveloperPolicy.html>`__
+and `Getting started with LLVM <https://llvm.org/docs/GettingStarted.html>`__.
 
 **Bug Reports**
 
@@ -173,7 +173,7 @@ can post a message to the `libcxx-dev mailing list`_ or on IRC.
 **Patches**
 
 If you want to contribute a patch to libc++, the best place for that is
-`Phabricator <http://llvm.org/docs/Phabricator.html>`_. Please add `libcxx-commits` as a subscriber.
+`Phabricator <https://llvm.org/docs/Phabricator.html>`_. Please add `libcxx-commits` as a subscriber.
 Also make sure you are subscribed to the `libcxx-commits mailing list <http://lists.llvm.org/mailman/listinfo/libcxx-commits>`_.
 
 **Discussion and Questions**
@@ -185,7 +185,7 @@ Send discussions and questions to the
 
 Quick Links
 ===========
-* `LLVM Homepage <http://llvm.org/>`_
+* `LLVM Homepage <https://llvm.org/>`_
 * `libc++abi Homepage <http://libcxxabi.llvm.org/>`_
 * `LLVM Bugzilla <https://bugs.llvm.org/>`_
 * `libcxx-commits Mailing List`_

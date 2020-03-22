@@ -601,7 +601,7 @@ LLVM-specific variables
 
 **LLVM_BUILD_INSTRUMENTED_COVERAGE**:BOOL
   If enabled, `source-based code coverage
-  <http://clang.llvm.org/docs/SourceBasedCodeCoverage.html>`_ instrumentation
+  <https://clang.llvm.org/docs/SourceBasedCodeCoverage.html>`_ instrumentation
   is enabled while building llvm.
 
 **LLVM_CCACHE_BUILD**:BOOL

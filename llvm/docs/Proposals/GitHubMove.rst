@@ -319,7 +319,7 @@ Currently
   # direct SVN checkout
   svn co https://user@llvm.org/svn/llvm-project/llvm/trunk llvm
   # or using the read-only Git view, with git-svn
-  git clone http://llvm.org/git/llvm.git
+  git clone https://llvm.org/git/llvm.git
   cd llvm
   git svn init https://llvm.org/svn/llvm-project/llvm/trunk --username=<username>
   git config svn-remote.svn.fetch :refs/remotes/origin/master
@@ -381,29 +381,29 @@ Currently
 
 ::
 
-  svn co http://llvm.org/svn/llvm-project/llvm/trunk llvm -r $REVISION
+  svn co https://llvm.org/svn/llvm-project/llvm/trunk llvm -r $REVISION
   cd llvm/tools
-  svn co http://llvm.org/svn/llvm-project/clang/trunk clang -r $REVISION
+  svn co https://llvm.org/svn/llvm-project/clang/trunk clang -r $REVISION
   cd ../projects
-  svn co http://llvm.org/svn/llvm-project/libcxx/trunk libcxx -r $REVISION
+  svn co https://llvm.org/svn/llvm-project/libcxx/trunk libcxx -r $REVISION
 
 Or using git-svn::
 
-  git clone http://llvm.org/git/llvm.git
+  git clone https://llvm.org/git/llvm.git
   cd llvm/
   git svn init https://llvm.org/svn/llvm-project/llvm/trunk --username=<username>
   git config svn-remote.svn.fetch :refs/remotes/origin/master
   git svn rebase -l
   git checkout `git svn find-rev -B r258109`
   cd tools
-  git clone http://llvm.org/git/clang.git
+  git clone https://llvm.org/git/clang.git
   cd clang/
   git svn init https://llvm.org/svn/llvm-project/clang/trunk --username=<username>
   git config svn-remote.svn.fetch :refs/remotes/origin/master
   git svn rebase -l
   git checkout `git svn find-rev -B r258109`
   cd ../../projects/
-  git clone http://llvm.org/git/libcxx.git
+  git clone https://llvm.org/git/libcxx.git
   cd libcxx
   git svn init https://llvm.org/svn/llvm-project/libcxx/trunk --username=<username>
   git config svn-remote.svn.fetch :refs/remotes/origin/master
