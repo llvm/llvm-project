@@ -8,9 +8,9 @@
 
 # ASM:      00000000 <_callit>:
 #   begin inline {
-# ASM-NEXT:        0: e8 00 00 00 00                calll   0 <_callit+0x5>
+# ASM-NEXT:        0: e8 00 00 00 00                calll   0x5 <_callit+0x5>
 # ASM-NEXT:        5: 85 c0                         testl   %eax, %eax
-# ASM-NEXT:        7: 75 01                         jne     1 <_callit+0xa>
+# ASM-NEXT:        7: 75 01                         jne     0xa <_callit+0xa>
 #   } end inline
 # ASM-NEXT:        9: c3                            retl
 #   begin inline {

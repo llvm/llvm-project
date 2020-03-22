@@ -6,9 +6,9 @@
 ; Check that 'foo' and 'bar' were not inlined.
 ; CHECK:      <zed>:
 ; CHECK-NEXT:  {{.*}}  pushq   %rbx
-; CHECK-NEXT:  {{.*}}  callq   0 <zed+0x6>
+; CHECK-NEXT:  {{.*}}  callq   0x6 <zed+0x6>
 ; CHECK-NEXT:  {{.*}}  movl    %eax, %ebx
-; CHECK-NEXT:  {{.*}}  callq   0 <zed+0xd>
+; CHECK-NEXT:  {{.*}}  callq   0xd <zed+0xd>
 ; CHECK-NEXT:  {{.*}}  movl    %ebx, %eax
 ; CHECK-NEXT:  {{.*}}  popq    %rbx
 ; CHECK-NEXT:  {{.*}}  retq

@@ -8,7 +8,7 @@
 # CHECK: Disassembly of section .text:
 # CHECK-EMPTY:
 # CHECK-NEXT: _start
-# CHECK-NEXT: 201120: {{.*}} callq -2101541
+# CHECK-NEXT: 201120: {{.*}} callq 0x0
 
 # RELOC:      Relocations [
 # RELOC-NEXT: ]

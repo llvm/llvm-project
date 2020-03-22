@@ -2,7 +2,7 @@
 // RUN:   FileCheck %s
 
 // CHECK-LABEL: <g>:
-// CHECK: calll 8 <f>
+// CHECK: calll 0x10001010 <f>
 
 // CHECK-LABEL: f:
-// CHECK: calll -24 <g>
+// CHECK: calll 0x10001000 <g>

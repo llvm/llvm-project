@@ -3,9 +3,9 @@
 # RUN: llvm-objdump %t -d | FileCheck %s --check-prefix=EXEC
 
 # EXEC: Disassembly of section .text1:
-# EXEC:     4000: e8 00 00 00 00                callq   0 <third>
+# EXEC:     4000: e8 00 00 00 00                callq   0x4005 <third>
 # EXEC: Disassembly of section .text2:
-# EXEC:     4005: e8 12 34 56 78                callq   2018915346 <fourth+0x78563412>
+# EXEC:     4005: e8 12 34 56 78                callq   0x7856741c <fourth+0x78563412>
 
 --- !ELF
 FileHeader:
@@ -48,17 +48,17 @@ Symbols:
 # REL:      Disassembly of section .text1:
 # REL-EMPTY:
 # REL-NEXT: 0000000000000000 <.text1>:
-# REL-NEXT:        0: e8 00 00 00 00                callq   0 <.text1+0x5>
+# REL-NEXT:        0: e8 00 00 00 00                callq   0x5 <.text1+0x5>
 # REL-EMPTY:
 # REL-NEXT: Disassembly of section .text2:
 # REL-EMPTY:
 # REL-NEXT: 0000000000000000 <.text2>:
-# REL-NEXT:        0: e8 00 00 00 00                callq   0 <sym2>
+# REL-NEXT:        0: e8 00 00 00 00                callq   0x5 <sym2>
 # REL-EMPTY:
 # REL-NEXT: Disassembly of section .text3:
 # REL-EMPTY:
 # REL-NEXT: 0000000000000000 <.text3>:
-# REL-NEXT:        0: e8 00 00 00 00                callq   0 <.text3+0x5>
+# REL-NEXT:        0: e8 00 00 00 00                callq   0x5 <.text3+0x5>
 
 --- !ELF
 FileHeader:

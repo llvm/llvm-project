@@ -82,16 +82,16 @@ addl tls1@gotntpoff(%ebx),%eax
 ## -4128 and -4120 are first and second GOT entries offsets.
 ## Each one is a pair of records.
 # DIS-NEXT: 1260:       leal -4128(,%ebx), %eax
-# DIS-NEXT: 1267:       calll 100
+# DIS-NEXT: 1267:       calll 0x12d0
 # DIS-NEXT: 126c:       leal -4120(,%ebx), %eax
-# DIS-NEXT: 1273:       calll 88
+# DIS-NEXT: 1273:       calll 0x12d0
 ## Local dynamic model:
 ## -16 is a local module tls index offset.
 # DIS-NEXT: 1278:       leal -4112(%ebx), %eax
-# DIS-NEXT: 127e:       calll 77
+# DIS-NEXT: 127e:       calll 0x12d0
 # DIS-NEXT: 1283:       leal 8(%eax), %edx
 # DIS-NEXT: 1289:       leal -4112(%ebx), %eax
-# DIS-NEXT: 128f:       calll 60
+# DIS-NEXT: 128f:       calll 0x12d0
 # DIS-NEXT: 1294:       leal 12(%eax), %edx
 ## Initial exec model:
 # DIS-NEXT: 129a:       movl %gs:0, %eax

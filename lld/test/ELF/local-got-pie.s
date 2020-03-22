@@ -17,7 +17,7 @@ foo:
 // DISASM:      Disassembly of section .text:
 // DISASM-EMPTY:
 // DISASM-NEXT: <_start>:
-// DISASM-NEXT:   1210: {{.*}} callq 4275
+// DISASM-NEXT:   1210: {{.*}} callq 0x22c8
 // DISASM:      <foo>:
 // DISASM-NEXT:   1215: {{.*}} nop
 

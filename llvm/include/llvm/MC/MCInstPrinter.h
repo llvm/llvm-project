@@ -84,6 +84,12 @@ public:
   void setCommentStream(raw_ostream &OS) { CommentStream = &OS; }
 
   /// Print the specified MCInst to the specified raw_ostream.
+  ///
+  /// \p Address the address of current instruction on most targets, used to
+  /// print a PC relative immediate as the target address. On targets where a PC
+  /// relative immediate is relative to the next instruction and the length of a
+  /// MCInst is difficult to measure (e.g. x86), this is the address of the next
+  /// instruction. If Address is 0, the immediate will be printed.
   virtual void printInst(const MCInst *MI, uint64_t Address, StringRef Annot,
                          const MCSubtargetInfo &STI, raw_ostream &OS) = 0;
 
