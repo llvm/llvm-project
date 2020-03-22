@@ -2736,6 +2736,34 @@ let AdditionalPredicates = [NotInMicroMips] in {
                                                  uimm32_coerced:$imm), 0>,
         GPR_32;
 
+  def SLE : MipsAsmPseudoInst<(outs GPR32Opnd:$rd),
+                              (ins GPR32Opnd:$rs, GPR32Opnd:$rt),
+                              "sle\t$rd, $rs, $rt">, ISA_MIPS1;
+  def : MipsInstAlias<"sle $rs, $rt",
+                      (SLE GPR32Opnd:$rs, GPR32Opnd:$rs, GPR32Opnd:$rt), 0>,
+        ISA_MIPS1;
+  def SLEImm : MipsAsmPseudoInst<(outs GPR32Opnd:$rd),
+                                 (ins GPR32Opnd:$rs, simm32:$imm),
+                                 "sle\t$rd, $rs, $imm">, GPR_32;
+  def : MipsInstAlias<"sle $rs, $imm", (SLEImm GPR32Opnd:$rs,
+                                               GPR32Opnd:$rs,
+                                               simm32:$imm), 0>,
+        GPR_32;
+
+  def SLEU : MipsAsmPseudoInst<(outs GPR32Opnd:$rd),
+                               (ins GPR32Opnd:$rs, GPR32Opnd:$rt),
+                               "sleu\t$rd, $rs, $rt">, ISA_MIPS1;
+  def : MipsInstAlias<"sleu $rs, $rt",
+                      (SLEU GPR32Opnd:$rs, GPR32Opnd:$rs, GPR32Opnd:$rt), 0>,
+        ISA_MIPS1;
+  def SLEUImm : MipsAsmPseudoInst<(outs GPR32Opnd:$rd),
+                                  (ins GPR32Opnd:$rs, uimm32_coerced:$imm),
+                                  "sleu\t$rd, $rs, $imm">, GPR_32;
+  def : MipsInstAlias<"sleu $rs, $imm", (SLEUImm GPR32Opnd:$rs,
+                                                 GPR32Opnd:$rs,
+                                                 uimm32_coerced:$imm), 0>,
+        GPR_32;
+
   def : MipsInstAlias<
           "not $rt, $rs",
           (NOR GPR32Opnd:$rt, GPR32Opnd:$rs, ZERO), 0>, ISA_MIPS1;
