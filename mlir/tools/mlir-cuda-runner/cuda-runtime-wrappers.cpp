@@ -15,6 +15,7 @@
 #include <cassert>
 #include <numeric>
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include "cuda.h"
@@ -89,24 +90,39 @@ template <typename T, int N> struct MemRefType {
 
 // Allows to register a MemRef with the CUDA runtime. Initializes array with
 // value. Helpful until we have transfer functions implemented.
-template <typename T, int N>
-void mcuMemHostRegisterMemRef(const MemRefType<T, N> *arg, T value) {
-  auto count = std::accumulate(arg->sizes, arg->sizes + N, 1,
-                               std::multiplies<int64_t>());
-  std::fill_n(arg->data, count, value);
-  mcuMemHostRegister(arg->data, count * sizeof(T));
+template <typename T>
+void mcuMemHostRegisterMemRef(T *pointer, llvm::ArrayRef<int64_t> sizes,
+                              llvm::ArrayRef<int64_t> strides, T value) {
+  assert(sizes.size() == strides.size());
+  llvm::SmallVector<int64_t, 4> denseStrides(strides.size());
+
+  std::partial_sum(sizes.rbegin(), sizes.rend(), denseStrides.rbegin(),
+                   std::multiplies<int64_t>());
+  auto count = denseStrides.front();
+
+  // Only densely packed tensors are currently supported.
+  std::rotate(denseStrides.begin(), denseStrides.begin() + 1,
+              denseStrides.end());
+  denseStrides.back() = 1;
+  assert(strides == llvm::makeArrayRef(denseStrides));
+
+  std::fill_n(pointer, count, value);
+  mcuMemHostRegister(pointer, count * sizeof(T));
 }
 
 extern "C" void mcuMemHostRegisterMemRef1dFloat(float *allocated,
                                                 float *aligned, int64_t offset,
                                                 int64_t size, int64_t stride) {
-  MemRefType<float, 1> descriptor;
-  descriptor.basePtr = allocated;
-  descriptor.data = aligned;
-  descriptor.offset = offset;
-  descriptor.sizes[0] = size;
-  descriptor.strides[0] = stride;
-  mcuMemHostRegisterMemRef(&descriptor, 1.23f);
+  mcuMemHostRegisterMemRef(aligned + offset, {size}, {stride}, 1.23f);
+}
+
+extern "C" void mcuMemHostRegisterMemRef2dFloat(float *allocated,
+                                                float *aligned, int64_t offset,
+                                                int64_t size0, int64_t size1,
+                                                int64_t stride0,
+                                                int64_t stride1) {
+  mcuMemHostRegisterMemRef(aligned + offset, {size0, size1}, {stride0, stride1},
+                           1.23f);
 }
 
 extern "C" void mcuMemHostRegisterMemRef3dFloat(float *allocated,
@@ -115,15 +131,31 @@ extern "C" void mcuMemHostRegisterMemRef3dFloat(float *allocated,
                                                 int64_t size2, int64_t stride0,
                                                 int64_t stride1,
                                                 int64_t stride2) {
-  MemRefType<float, 3> descriptor;
-  descriptor.basePtr = allocated;
-  descriptor.data = aligned;
-  descriptor.offset = offset;
-  descriptor.sizes[0] = size0;
-  descriptor.strides[0] = stride0;
-  descriptor.sizes[1] = size1;
-  descriptor.strides[1] = stride1;
-  descriptor.sizes[2] = size2;
-  descriptor.strides[2] = stride2;
-  mcuMemHostRegisterMemRef(&descriptor, 1.23f);
+  mcuMemHostRegisterMemRef(aligned + offset, {size0, size1, size2},
+                           {stride0, stride1, stride2}, 1.23f);
+}
+
+extern "C" void mcuMemHostRegisterMemRef1dInt32(int32_t *allocated,
+                                                int32_t *aligned,
+                                                int64_t offset, int64_t size,
+                                                int64_t stride) {
+  mcuMemHostRegisterMemRef(aligned + offset, {size}, {stride}, 123);
+}
+
+extern "C" void mcuMemHostRegisterMemRef2dInt32(int32_t *allocated,
+                                                int32_t *aligned,
+                                                int64_t offset, int64_t size0,
+                                                int64_t size1, int64_t stride0,
+                                                int64_t stride1) {
+  mcuMemHostRegisterMemRef(aligned + offset, {size0, size1}, {stride0, stride1},
+                           123);
+}
+
+extern "C" void
+mcuMemHostRegisterMemRef3dInt32(int32_t *allocated, int32_t *aligned,
+                                int64_t offset, int64_t size0, int64_t size1,
+                                int64_t size2, int64_t stride0, int64_t stride1,
+                                int64_t stride2) {
+  mcuMemHostRegisterMemRef(aligned + offset, {size0, size1, size2},
+                           {stride0, stride1, stride2}, 123);
 }
