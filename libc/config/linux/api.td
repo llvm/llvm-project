@@ -194,9 +194,16 @@ def StructSigactionDefn : TypeDecl<"struct sigaction"> {
   }];
 }
 
+def SighandlerTDefn : TypeDecl<"__sighandler_t"> {
+  let Decl = [{
+    typedef void(*__sighandler_t)(int);
+  }];
+}
+
 def SignalAPI : PublicAPI<"signal.h"> {
   let TypeDeclarations = [
     StructSigactionDefn,
+    SighandlerTDefn,
   ];
 
   let Functions = [
@@ -205,6 +212,7 @@ def SignalAPI : PublicAPI<"signal.h"> {
     "sigprocmask",
     "sigemptyset",
     "sigaddset",
+    "signal",
   ];
 }
 

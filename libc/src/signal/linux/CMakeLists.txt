@@ -84,3 +84,15 @@ add_entrypoint_object(
     errno_h
     signal_h
 )
+
+add_entrypoint_object(
+  signal
+  SRCS
+    signal.cpp
+  HDRS
+    signal.h
+    ../signal.h
+  DEPENDS
+    sigaction
+    signal_h
+)
