@@ -2,7 +2,7 @@ User Guides
 ===========
 
 NOTE: If you are a user who is only interested in using an LLVM-based compiler,
-you should look into `Clang <http://clang.llvm.org>`_ instead. The
+you should look into `Clang <https://clang.llvm.org>`_ instead. The
 documentation here is intended for users who have a need to work with the
 intermediate LLVM representation.
 
@@ -71,7 +71,7 @@ Clang
 `How to build the C, C++, ObjC, and ObjC++ front end`__
    Instructions for building the clang front-end from source.
 
-   .. __: http://clang.llvm.org/get_started.html
+   .. __: https://clang.llvm.org/get_started.html
 
 :doc:`CoverageMappingFormat`
   This describes the format and encoding used for LLVM’s code coverage mapping.

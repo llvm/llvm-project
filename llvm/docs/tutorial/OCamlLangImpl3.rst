@@ -65,7 +65,7 @@ the top-level structure that the LLVM IR uses to contain code.
 
 The ``Codegen.builder`` object is a helper object that makes it easy to
 generate LLVM instructions. Instances of the
-`IRBuilder <http://llvm.org/doxygen/IRBuilder_8h-source.html>`_
+`IRBuilder <https://llvm.org/doxygen/IRBuilder_8h-source.html>`_
 class keep track of the current place to insert instructions and has
 methods to create new instructions.
 
@@ -522,7 +522,7 @@ Full Code Listing
 Here is the complete code listing for our running example, enhanced with
 the LLVM code generator. Because this uses the LLVM libraries, we need
 to link them in. To do this, we use the
-`llvm-config <http://llvm.org/cmds/llvm-config.html>`_ tool to inform
+`llvm-config <https://llvm.org/cmds/llvm-config.html>`_ tool to inform
 our makefile/command line about which options to use:
 
 .. code-block:: bash

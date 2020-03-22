@@ -324,7 +324,7 @@ MACH-O ONLY OPTIONS AND COMMANDS
 BUGS
 ----
 
-To report bugs, please visit <http://llvm.org/bugs/>.
+To report bugs, please visit <https://llvm.org/bugs/>.
 
 SEE ALSO
 --------
