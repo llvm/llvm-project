@@ -8,6 +8,7 @@
 
 #include "llvm/ExecutionEngine/Orc/Layer.h"
 
+#include "llvm/ExecutionEngine/Orc/DebugUtils.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/Object/MachO.h"
