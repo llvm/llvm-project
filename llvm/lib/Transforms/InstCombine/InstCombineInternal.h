@@ -313,9 +313,6 @@ private:
   // Mode in which we are running the combiner.
   const bool MinimizeSize;
 
-  /// Enable combines that trigger rarely but are costly in compiletime.
-  const bool ExpensiveCombines;
-
   AliasAnalysis *AA;
 
   // Required analyses.
@@ -336,12 +333,12 @@ private:
 
 public:
   InstCombiner(InstCombineWorklist &Worklist, BuilderTy &Builder,
-               bool MinimizeSize, bool ExpensiveCombines, AliasAnalysis *AA,
+               bool MinimizeSize, AliasAnalysis *AA,
                AssumptionCache &AC, TargetLibraryInfo &TLI, DominatorTree &DT,
                OptimizationRemarkEmitter &ORE, BlockFrequencyInfo *BFI,
                ProfileSummaryInfo *PSI, const DataLayout &DL, LoopInfo *LI)
       : Worklist(Worklist), Builder(Builder), MinimizeSize(MinimizeSize),
-        ExpensiveCombines(ExpensiveCombines), AA(AA), AC(AC), TLI(TLI), DT(DT),
+        AA(AA), AC(AC), TLI(TLI), DT(DT),
         DL(DL), SQ(DL, &TLI, &DT, &AC), ORE(ORE), BFI(BFI), PSI(PSI), LI(LI) {}
 
   /// Run the combiner over the entire worklist until it is empty.
