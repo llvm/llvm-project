@@ -361,6 +361,7 @@ class MipsAsmParser : public MCTargetAsmParser {
   bool parseSetArchDirective();
   bool parseSetFeature(uint64_t Feature);
   bool isPicAndNotNxxAbi(); // Used by .cpload, .cprestore, and .cpsetup.
+  bool parseDirectiveCpAdd(SMLoc Loc);
   bool parseDirectiveCpLoad(SMLoc Loc);
   bool parseDirectiveCpLocal(SMLoc Loc);
   bool parseDirectiveCpRestore(SMLoc Loc);
@@ -7632,6 +7633,31 @@ bool MipsAsmParser::isPicAndNotNxxAbi() {
   return inPicMode() && !(isABI_N32() || isABI_N64());
 }
 
+bool MipsAsmParser::parseDirectiveCpAdd(SMLoc Loc) {
+  SmallVector<std::unique_ptr<MCParsedAsmOperand>, 1> Reg;
+  OperandMatchResultTy ResTy = parseAnyRegister(Reg);
+  if (ResTy == MatchOperand_NoMatch || ResTy == MatchOperand_ParseFail) {
+    reportParseError("expected register");
+    return false;
+  }
+
+  MipsOperand &RegOpnd = static_cast<MipsOperand &>(*Reg[0]);
+  if (!RegOpnd.isGPRAsmReg()) {
+    reportParseError(RegOpnd.getStartLoc(), "invalid register");
+    return false;
+  }
+
+  // If this is not the end of the statement, report an error.
+  if (getLexer().isNot(AsmToken::EndOfStatement)) {
+    reportParseError("unexpected token, expected end of statement");
+    return false;
+  }
+  getParser().Lex(); // Consume the EndOfStatement.
+
+  getTargetStreamer().emitDirectiveCpAdd(RegOpnd.getGPR32Reg());
+  return false;
+}
+
 bool MipsAsmParser::parseDirectiveCpLoad(SMLoc Loc) {
   if (AssemblerOptions.back()->isReorder())
     Warning(Loc, ".cpload should be inside a noreorder section");
@@ -8544,6 +8570,10 @@ bool MipsAsmParser::ParseDirective(AsmToken DirectiveID) {
   MCAsmParser &Parser = getParser();
   StringRef IDVal = DirectiveID.getString();
 
+  if (IDVal == ".cpadd") {
+    parseDirectiveCpAdd(DirectiveID.getLoc());
+    return false;
+  }
   if (IDVal == ".cpload") {
     parseDirectiveCpLoad(DirectiveID.getLoc());
     return false;
