@@ -295,4 +295,7 @@ if (NOT CMAKE_CONFIGURATION_TYPES AND LIBCXXABI_INSTALL_LIBRARY)
             -DCMAKE_INSTALL_COMPONENT=cxxabi
             -DCMAKE_INSTALL_DO_STRIP=1
             -P "${LIBCXXABI_BINARY_DIR}/cmake_install.cmake")
+
+  # TODO: This is a legacy target name and should be removed at some point.
+  add_custom_target(install-libcxxabi DEPENDS install-cxxabi)
 endif()
