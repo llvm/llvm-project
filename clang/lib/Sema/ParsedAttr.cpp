@@ -140,7 +140,8 @@ const ParsedAttrInfo &ParsedAttrInfo::get(const AttributeCommonInfo &A) {
         return *Ptr;
 
   // If we failed to find a match then return a default ParsedAttrInfo.
-  static ParsedAttrInfo DefaultParsedAttrInfo;
+  static ParsedAttrInfo DefaultParsedAttrInfo(
+      AttributeCommonInfo::UnknownAttribute);
   return DefaultParsedAttrInfo;
 }
 
