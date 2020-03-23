@@ -22,7 +22,7 @@
 #include "llvm/ADT/APSInt.h"
 
 namespace clang {
-struct OMPTraitInfo;
+class OMPTraitInfo;
 
 /// An object for streaming information from a record.
 class ASTRecordReader
