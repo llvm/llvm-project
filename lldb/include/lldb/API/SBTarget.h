@@ -127,7 +127,9 @@ public:
   ///     The argument array.
   ///
   /// \param[in] envp
-  ///     The environment array.
+  ///     The environment array. If this is null, the default
+  ///     environment values (provided through `settings set
+  ///     target.env-vars`) will be used.
   ///
   /// \param[in] stdin_path
   ///     The path to use when re-directing the STDIN of the new
@@ -175,7 +177,9 @@ public:
   ///     The argument array.
   ///
   /// \param[in] envp
-  ///     The environment array.
+  ///     The environment array. If this isn't provided, the default
+  ///     environment values (provided through `settings set
+  ///     target.env-vars`) will be used.
   ///
   /// \param[in] working_directory
   ///     The working directory to have the child process run in
