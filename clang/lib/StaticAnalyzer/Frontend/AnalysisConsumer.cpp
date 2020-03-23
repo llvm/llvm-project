@@ -34,8 +34,6 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "clang/StaticAnalyzer/Frontend/CheckerRegistration.h"
-#include "clang/Tooling/Core/Replacement.h"
-#include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Support/FileSystem.h"
@@ -49,7 +47,6 @@
 
 using namespace clang;
 using namespace ento;
-using namespace tooling;
 
 #define DEBUG_TYPE "AnalysisConsumer"
 
