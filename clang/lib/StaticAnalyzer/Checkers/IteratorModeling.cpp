@@ -86,6 +86,15 @@ class IteratorModeling
     : public Checker<check::PostCall, check::PostStmt<MaterializeTemporaryExpr>,
                      check::Bind, check::LiveSymbols, check::DeadSymbols> {
 
+  using AdvanceFn = void (IteratorModeling::*)(CheckerContext &, const Expr *,
+                                               SVal, SVal, SVal) const;
+
+  void handleOverloadedOperator(CheckerContext &C, const CallEvent &Call,
+                                OverloadedOperatorKind Op) const;
+  void handleAdvanceLikeFunction(CheckerContext &C, const CallEvent &Call,
+                                 const Expr *OrigExpr,
+                                 const AdvanceFn *Handler) const;
+
   void handleComparison(CheckerContext &C, const Expr *CE, SVal RetVal,
                         const SVal &LVal, const SVal &RVal,
                         OverloadedOperatorKind Op) const;
@@ -99,13 +108,39 @@ class IteratorModeling
   void handleRandomIncrOrDecr(CheckerContext &C, const Expr *CE,
                               OverloadedOperatorKind Op, const SVal &RetVal,
                               const SVal &LHS, const SVal &RHS) const;
+  void handleAdvance(CheckerContext &C, const Expr *CE, SVal RetVal, SVal Iter,
+                     SVal Amount) const;
+  void handlePrev(CheckerContext &C, const Expr *CE, SVal RetVal, SVal Iter,
+                  SVal Amount) const;
+  void handleNext(CheckerContext &C, const Expr *CE, SVal RetVal, SVal Iter,
+                  SVal Amount) const;
   void assignToContainer(CheckerContext &C, const Expr *CE, const SVal &RetVal,
                          const MemRegion *Cont) const;
+  bool noChangeInAdvance(CheckerContext &C, SVal Iter, const Expr *CE) const;
   void printState(raw_ostream &Out, ProgramStateRef State, const char *NL,
                   const char *Sep) const override;
 
+  // std::advance, std::prev & std::next
+  CallDescriptionMap<AdvanceFn> AdvanceLikeFunctions = {
+      // template<class InputIt, class Distance>
+      // void advance(InputIt& it, Distance n);
+      {{{"std", "advance"}, 2}, &IteratorModeling::handleAdvance},
+
+      // template<class BidirIt>
+      // BidirIt prev(
+      //   BidirIt it,
+      //   typename std::iterator_traits<BidirIt>::difference_type n = 1);
+      {{{"std", "prev"}, 2}, &IteratorModeling::handlePrev},
+
+      // template<class ForwardIt>
+      // ForwardIt next(
+      //   ForwardIt it,
+      //   typename std::iterator_traits<ForwardIt>::difference_type n = 1);
+      {{{"std", "next"}, 2}, &IteratorModeling::handleNext},
+  };
+
 public:
-  IteratorModeling() {}
+  IteratorModeling() = default;
 
   void checkPostCall(const CallEvent &Call, CheckerContext &C) const;
   void checkBind(SVal Loc, SVal Val, const Stmt *S, CheckerContext &C) const;
@@ -123,6 +158,7 @@ ProgramStateRef relateSymbols(ProgramStateRef State, SymbolRef Sym1,
                               SymbolRef Sym2, bool Equal);
 bool isBoundThroughLazyCompoundVal(const Environment &Env,
                                    const MemRegion *Reg);
+const ExplodedNode *findCallEnter(const ExplodedNode *Node, const Expr *Call);
 
 } // namespace
 
@@ -135,101 +171,52 @@ void IteratorModeling::checkPostCall(const CallEvent &Call,
 
   if (Func->isOverloadedOperator()) {
     const auto Op = Func->getOverloadedOperator();
-    if (isSimpleComparisonOperator(Op)) {
-      const auto *OrigExpr = Call.getOriginExpr();
-      if (!OrigExpr)
-        return;
+    handleOverloadedOperator(C, Call, Op);
+    return;
+  }
 
-      if (const auto *InstCall = dyn_cast<CXXInstanceCall>(&Call)) {
-        handleComparison(C, OrigExpr, Call.getReturnValue(),
-                         InstCall->getCXXThisVal(), Call.getArgSVal(0), Op);
-        return;
+  const auto *OrigExpr = Call.getOriginExpr();
+  if (!OrigExpr)
+    return;
+
+  const AdvanceFn *Handler = AdvanceLikeFunctions.lookup(Call);
+  if (Handler) {
+    handleAdvanceLikeFunction(C, Call, OrigExpr, Handler);
+    return;
+  }
+
+  if (!isIteratorType(Call.getResultType()))
+    return;
+
+  auto State = C.getState();
+
+  // Already bound to container?
+  if (getIteratorPosition(State, Call.getReturnValue()))
+    return;
+
+  // Copy-like and move constructors
+  if (isa<CXXConstructorCall>(&Call) && Call.getNumArgs() == 1) {
+    if (const auto *Pos = getIteratorPosition(State, Call.getArgSVal(0))) {
+      State = setIteratorPosition(State, Call.getReturnValue(), *Pos);
+      if (cast<CXXConstructorDecl>(Func)->isMoveConstructor()) {
+        State = removeIteratorPosition(State, Call.getArgSVal(0));
       }
-
-      handleComparison(C, OrigExpr, Call.getReturnValue(), Call.getArgSVal(0),
-                         Call.getArgSVal(1), Op);
-      return;
-    } else if (isRandomIncrOrDecrOperator(Func->getOverloadedOperator())) {
-      const auto *OrigExpr = Call.getOriginExpr();
-      if (!OrigExpr)
-        return;
-
-      if (const auto *InstCall = dyn_cast<CXXInstanceCall>(&Call)) {
-        if (Call.getNumArgs() >= 1 &&
-              Call.getArgExpr(0)->getType()->isIntegralOrEnumerationType()) {
-          handleRandomIncrOrDecr(C, OrigExpr, Func->getOverloadedOperator(),
-                                 Call.getReturnValue(),
-                                 InstCall->getCXXThisVal(), Call.getArgSVal(0));
-          return;
-        }
-      } else {
-        if (Call.getNumArgs() >= 2 &&
-              Call.getArgExpr(1)->getType()->isIntegralOrEnumerationType()) {
-          handleRandomIncrOrDecr(C, OrigExpr, Func->getOverloadedOperator(),
-                                 Call.getReturnValue(), Call.getArgSVal(0),
-                                 Call.getArgSVal(1));
-          return;
-        }
-      }
-    } else if (isIncrementOperator(Func->getOverloadedOperator())) {
-      if (const auto *InstCall = dyn_cast<CXXInstanceCall>(&Call)) {
-        handleIncrement(C, Call.getReturnValue(), InstCall->getCXXThisVal(),
-                        Call.getNumArgs());
-        return;
-      }
-
-      handleIncrement(C, Call.getReturnValue(), Call.getArgSVal(0),
-                      Call.getNumArgs());
-      return;
-    } else if (isDecrementOperator(Func->getOverloadedOperator())) {
-      if (const auto *InstCall = dyn_cast<CXXInstanceCall>(&Call)) {
-        handleDecrement(C, Call.getReturnValue(), InstCall->getCXXThisVal(),
-                        Call.getNumArgs());
-        return;
-      }
-
-      handleDecrement(C, Call.getReturnValue(), Call.getArgSVal(0),
-                        Call.getNumArgs());
+      C.addTransition(State);
       return;
     }
-  } else {
-    if (!isIteratorType(Call.getResultType()))
-      return;
+  }
 
-    const auto *OrigExpr = Call.getOriginExpr();
-    if (!OrigExpr)
-      return;
-
-    auto State = C.getState();
-
-    // Already bound to container?
-    if (getIteratorPosition(State, Call.getReturnValue()))
-      return;
-
-    // Copy-like and move constructors
-    if (isa<CXXConstructorCall>(&Call) && Call.getNumArgs() == 1) {
-      if (const auto *Pos = getIteratorPosition(State, Call.getArgSVal(0))) {
-        State = setIteratorPosition(State, Call.getReturnValue(), *Pos);
-        if (cast<CXXConstructorDecl>(Func)->isMoveConstructor()) {
-          State = removeIteratorPosition(State, Call.getArgSVal(0));
-        }
-        C.addTransition(State);
+  // Assumption: if return value is an iterator which is not yet bound to a
+  //             container, then look for the first iterator argument, and
+  //             bind the return value to the same container. This approach
+  //             works for STL algorithms.
+  // FIXME: Add a more conservative mode
+  for (unsigned i = 0; i < Call.getNumArgs(); ++i) {
+    if (isIteratorType(Call.getArgExpr(i)->getType())) {
+      if (const auto *Pos = getIteratorPosition(State, Call.getArgSVal(i))) {
+        assignToContainer(C, OrigExpr, Call.getReturnValue(),
+                          Pos->getContainer());
         return;
-      }
-    }
-
-    // Assumption: if return value is an iterator which is not yet bound to a
-    //             container, then look for the first iterator argument, and
-    //             bind the return value to the same container. This approach
-    //             works for STL algorithms.
-    // FIXME: Add a more conservative mode
-    for (unsigned i = 0; i < Call.getNumArgs(); ++i) {
-      if (isIteratorType(Call.getArgExpr(i)->getType())) {
-        if (const auto *Pos = getIteratorPosition(State, Call.getArgSVal(i))) {
-          assignToContainer(C, OrigExpr, Call.getReturnValue(),
-                            Pos->getContainer());
-          return;
-        }
       }
     }
   }
@@ -308,6 +295,91 @@ void IteratorModeling::checkDeadSymbols(SymbolReaper &SR,
   }
 
   C.addTransition(State);
+}
+
+void
+IteratorModeling::handleOverloadedOperator(CheckerContext &C,
+                                           const CallEvent &Call,
+                                           OverloadedOperatorKind Op) const {
+    if (isSimpleComparisonOperator(Op)) {
+      const auto *OrigExpr = Call.getOriginExpr();
+      if (!OrigExpr)
+        return;
+
+      if (const auto *InstCall = dyn_cast<CXXInstanceCall>(&Call)) {
+        handleComparison(C, OrigExpr, Call.getReturnValue(),
+                         InstCall->getCXXThisVal(), Call.getArgSVal(0), Op);
+        return;
+      }
+
+      handleComparison(C, OrigExpr, Call.getReturnValue(), Call.getArgSVal(0),
+                         Call.getArgSVal(1), Op);
+      return;
+    } else if (isRandomIncrOrDecrOperator(Op)) {
+      const auto *OrigExpr = Call.getOriginExpr();
+      if (!OrigExpr)
+        return;
+
+      if (const auto *InstCall = dyn_cast<CXXInstanceCall>(&Call)) {
+        if (Call.getNumArgs() >= 1 &&
+              Call.getArgExpr(0)->getType()->isIntegralOrEnumerationType()) {
+          handleRandomIncrOrDecr(C, OrigExpr, Op, Call.getReturnValue(),
+                                 InstCall->getCXXThisVal(), Call.getArgSVal(0));
+          return;
+        }
+      } else {
+        if (Call.getNumArgs() >= 2 &&
+              Call.getArgExpr(1)->getType()->isIntegralOrEnumerationType()) {
+          handleRandomIncrOrDecr(C, OrigExpr, Op, Call.getReturnValue(),
+                                 Call.getArgSVal(0), Call.getArgSVal(1));
+          return;
+        }
+      }
+    } else if (isIncrementOperator(Op)) {
+      if (const auto *InstCall = dyn_cast<CXXInstanceCall>(&Call)) {
+        handleIncrement(C, Call.getReturnValue(), InstCall->getCXXThisVal(),
+                        Call.getNumArgs());
+        return;
+      }
+
+      handleIncrement(C, Call.getReturnValue(), Call.getArgSVal(0),
+                      Call.getNumArgs());
+      return;
+    } else if (isDecrementOperator(Op)) {
+      if (const auto *InstCall = dyn_cast<CXXInstanceCall>(&Call)) {
+        handleDecrement(C, Call.getReturnValue(), InstCall->getCXXThisVal(),
+                        Call.getNumArgs());
+        return;
+      }
+
+      handleDecrement(C, Call.getReturnValue(), Call.getArgSVal(0),
+                        Call.getNumArgs());
+      return;
+    }
+}
+
+void
+IteratorModeling::handleAdvanceLikeFunction(CheckerContext &C,
+                                            const CallEvent &Call,
+                                            const Expr *OrigExpr,
+                                            const AdvanceFn *Handler) const {
+  if (!C.wasInlined) {
+    (this->**Handler)(C, OrigExpr, Call.getReturnValue(),
+                      Call.getArgSVal(0), Call.getArgSVal(1));
+    return;
+  }
+
+  // If std::advance() was inlined, but a non-standard function it calls inside
+  // was not, then we have to model it explicitly
+  const auto *IdInfo = cast<FunctionDecl>(Call.getDecl())->getIdentifier();
+  if (IdInfo) {
+    if (IdInfo->getName() == "advance") {
+      if (noChangeInAdvance(C, Call.getArgSVal(0), OrigExpr)) {
+        (this->**Handler)(C, OrigExpr, Call.getReturnValue(),
+                          Call.getArgSVal(0), Call.getArgSVal(1));
+      }
+    }
+  }
 }
 
 void IteratorModeling::handleComparison(CheckerContext &C, const Expr *CE,
@@ -481,6 +553,22 @@ void IteratorModeling::handleRandomIncrOrDecr(CheckerContext &C,
   }
 }
 
+void IteratorModeling::handleAdvance(CheckerContext &C, const Expr *CE,
+                                     SVal RetVal, SVal Iter,
+                                     SVal Amount) const {
+  handleRandomIncrOrDecr(C, CE, OO_PlusEqual, RetVal, Iter, Amount);
+}
+
+void IteratorModeling::handlePrev(CheckerContext &C, const Expr *CE,
+                                  SVal RetVal, SVal Iter, SVal Amount) const {
+  handleRandomIncrOrDecr(C, CE, OO_Minus, RetVal, Iter, Amount);
+}
+
+void IteratorModeling::handleNext(CheckerContext &C, const Expr *CE,
+                                  SVal RetVal, SVal Iter, SVal Amount) const {
+  handleRandomIncrOrDecr(C, CE, OO_Plus, RetVal, Iter, Amount);
+}
+
 void IteratorModeling::assignToContainer(CheckerContext &C, const Expr *CE,
                                          const SVal &RetVal,
                                          const MemRegion *Cont) const {
@@ -491,6 +579,31 @@ void IteratorModeling::assignToContainer(CheckerContext &C, const Expr *CE,
   State = createIteratorPosition(State, RetVal, Cont, CE, LCtx, C.blockCount());
 
   C.addTransition(State);
+}
+
+bool IteratorModeling::noChangeInAdvance(CheckerContext &C, SVal Iter,
+                                         const Expr *CE) const {
+  // Compare the iterator position before and after the call. (To be called
+  // from `checkPostCall()`.)
+  const auto StateAfter = C.getState();
+
+  const auto *PosAfter = getIteratorPosition(StateAfter, Iter);
+  // If we have no position after the call of `std::advance`, then we are not
+  // interested. (Modeling of an inlined `std::advance()` should not remove the
+  // position in any case.)
+  if (!PosAfter)
+    return false;
+
+  const ExplodedNode *N = findCallEnter(C.getPredecessor(), CE);
+  assert(N && "Any call should have a `CallEnter` node.");
+
+  const auto StateBefore = N->getState();
+  const auto *PosBefore = getIteratorPosition(StateBefore, Iter);
+
+  assert(PosBefore && "`std::advance() should not create new iterator "
+         "position but change existing ones");
+
+  return PosBefore->getOffset() == PosAfter->getOffset();
 }
 
 void IteratorModeling::printState(raw_ostream &Out, ProgramStateRef State,
@@ -582,6 +695,20 @@ bool isBoundThroughLazyCompoundVal(const Environment &Env,
   }
 
   return false;
+}
+
+const ExplodedNode *findCallEnter(const ExplodedNode *Node, const Expr *Call) {
+  while (Node) {
+    ProgramPoint PP = Node->getLocation();
+    if (auto Enter = PP.getAs<CallEnter>()) {
+      if (Enter->getCallExpr() == Call)
+        break;
+    }
+
+    Node = Node->getFirstPred();
+  }
+
+  return Node;
 }
 
 } // namespace

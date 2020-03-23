@@ -2312,6 +2312,9 @@ void OMPClauseEnqueue::VisitOMPClauseList(T *Node) {
 void OMPClauseEnqueue::VisitOMPInclusiveClause(const OMPInclusiveClause *C) {
   VisitOMPClauseList(C);
 }
+void OMPClauseEnqueue::VisitOMPExclusiveClause(const OMPExclusiveClause *C) {
+  VisitOMPClauseList(C);
+}
 void OMPClauseEnqueue::VisitOMPAllocateClause(const OMPAllocateClause *C) {
   VisitOMPClauseList(C);
   Visitor->AddStmt(C->getAllocator());

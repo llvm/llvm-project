@@ -46,6 +46,7 @@ private:
   bool shortenOn001(MachineInstr &MI, unsigned Opcode);
   bool shortenOn001AddCC(MachineInstr &MI, unsigned Opcode);
   bool shortenFPConv(MachineInstr &MI, unsigned Opcode);
+  bool shortenFusedFPOp(MachineInstr &MI, unsigned Opcode);
 
   const SystemZInstrInfo *TII;
   const TargetRegisterInfo *TRI;
@@ -175,6 +176,32 @@ bool SystemZShortenInst::shortenFPConv(MachineInstr &MI, unsigned Opcode) {
   return false;
 }
 
+bool SystemZShortenInst::shortenFusedFPOp(MachineInstr &MI, unsigned Opcode) {
+  MachineOperand &DstMO = MI.getOperand(0);
+  MachineOperand &LHSMO = MI.getOperand(1);
+  MachineOperand &RHSMO = MI.getOperand(2);
+  MachineOperand &AccMO = MI.getOperand(3);
+  if (SystemZMC::getFirstReg(DstMO.getReg()) < 16 &&
+      SystemZMC::getFirstReg(LHSMO.getReg()) < 16 &&
+      SystemZMC::getFirstReg(RHSMO.getReg()) < 16 &&
+      SystemZMC::getFirstReg(AccMO.getReg()) < 16 &&
+      DstMO.getReg() == AccMO.getReg()) {
+    MachineOperand Lhs(LHSMO);
+    MachineOperand Rhs(RHSMO);
+    MachineOperand Src(AccMO);
+    MI.RemoveOperand(3);
+    MI.RemoveOperand(2);
+    MI.RemoveOperand(1);
+    MI.setDesc(TII->get(Opcode));
+    MachineInstrBuilder(*MI.getParent()->getParent(), &MI)
+        .add(Src)
+        .add(Lhs)
+        .add(Rhs);
+    return true;
+  }
+  return false;
+}
+
 // Process all instructions in MBB.  Return true if something changed.
 bool SystemZShortenInst::processBlock(MachineBasicBlock &MBB) {
   bool Changed = false;
@@ -233,6 +260,22 @@ bool SystemZShortenInst::processBlock(MachineBasicBlock &MBB) {
 
     case SystemZ::WFMSB:
       Changed |= shortenOn001(MI, SystemZ::MEEBR);
+      break;
+
+    case SystemZ::WFMADB:
+      Changed |= shortenFusedFPOp(MI, SystemZ::MADBR);
+      break;
+
+    case SystemZ::WFMASB:
+      Changed |= shortenFusedFPOp(MI, SystemZ::MAEBR);
+      break;
+
+    case SystemZ::WFMSDB:
+      Changed |= shortenFusedFPOp(MI, SystemZ::MSDBR);
+      break;
+
+    case SystemZ::WFMSSB:
+      Changed |= shortenFusedFPOp(MI, SystemZ::MSEBR);
       break;
 
     case SystemZ::WFLCDB:

@@ -80,7 +80,10 @@ let Definition = "target" in {
     Desc<"A list containing all the arguments to be passed to the executable when it is run. Note that this does NOT include the argv[0] which is in target.arg0.">;
   def EnvVars: Property<"env-vars", "Dictionary">,
     ElementType<"String">,
-    Desc<"A list of all the environment variables to be passed to the executable's environment, and their values.">;
+    Desc<"A list of user provided environment variables to be passed to the executable's environment, and their values.">;
+  def UnsetEnvVars: Property<"unset-env-vars", "Array">,
+    ElementType<"String">,
+    Desc<"A list of environment variable names to be unset in the inferior's environment. This is most useful to unset some host environment variables when target.inherit-env is true. target.env-vars takes precedence over target.unset-env-vars.">;
   def InheritEnv: Property<"inherit-env", "Boolean">,
     DefaultTrue,
     Desc<"Inherit the environment from the process that is running LLDB.">;

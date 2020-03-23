@@ -844,7 +844,7 @@ void VPInterleavedAccessInfo::visitBlock(VPBlockBase *Block, Old2NewTy &Old2New,
       auto NewIGIter = Old2New.find(IG);
       if (NewIGIter == Old2New.end())
         Old2New[IG] = new InterleaveGroup<VPInstruction>(
-            IG->getFactor(), IG->isReverse(), Align(IG->getAlignment()));
+            IG->getFactor(), IG->isReverse(), IG->getAlign());
 
       if (Inst == IG->getInsertPos())
         Old2New[IG]->setInsertPos(VPInst);

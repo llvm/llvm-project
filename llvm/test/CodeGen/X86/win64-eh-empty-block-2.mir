@@ -1,0 +1,223 @@
+# RUN: llc -start-before=x86-avoid-trailing-call %s -o - | FileCheck %s
+
+# If there is a trailing unreachable block, make sure it is non-empty.
+
+# Manually modified the IR of the following C++ to share one unreachable block,
+# as clang does for the real C++ throw:
+# void __declspec(noreturn) mythrow();
+# int multi_throw(bool c1, bool c2, bool c3) {
+#   try {
+#     if (c1)
+#       mythrow();
+#     if (c2)
+#       mythrow();
+#     if (c3)
+#       mythrow();
+#   } catch (...) {
+#     return 1;
+#   }
+#   return 0;
+# }
+
+# CHECK-LABEL: "?multi_throw@@YAH_N00@Z": # @"?multi_throw@@YAH_N00@Z"
+# CHECK: retq
+# CHECK: .LBB{{.*}} # %if.then
+# CHECK: callq mythrow
+# CHECK: .LBB{{.*}} # %if.then4
+# CHECK: callq mythrow
+# CHECK: .LBB{{.*}} # %if.then8
+# CHECK: callq mythrow
+# CHECK: .LBB{{.*}} # %unreachable
+# CHECK-NEXT: int3
+# CHECK: .seh_endproc
+# CHECK: # %catch
+
+--- |
+  ; ModuleID = '../llvm/test/CodeGen/X86/win64-eh-empty-block-2.ll'
+  source_filename = "t.cpp"
+  target datalayout = "e-m:w-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+  target triple = "x86_64-unknown-windows-msvc19.11.0"
+
+  ; Function Attrs: uwtable
+  define dso_local i32 @"?multi_throw@@YAH_N00@Z"(i1 zeroext %c1, i1 zeroext %c2, i1 zeroext %c3) local_unnamed_addr #0 personality i8* bitcast (i32 (...)* @__CxxFrameHandler3 to i8*) {
+  entry:
+    br i1 %c1, label %if.then, label %if.end
+
+  if.then:                                          ; preds = %entry
+    invoke void @mythrow()
+            to label %unreachable unwind label %catch.dispatch
+
+  unreachable:                                      ; preds = %if.then8, %if.then4, %if.then
+    unreachable
+
+  if.end:                                           ; preds = %entry
+    br i1 %c2, label %if.then4, label %if.end6
+
+  if.then4:                                         ; preds = %if.end
+    invoke void @mythrow()
+            to label %unreachable unwind label %catch.dispatch
+
+  if.end6:                                          ; preds = %if.end
+    br i1 %c3, label %if.then8, label %return
+
+  if.then8:                                         ; preds = %if.end6
+    invoke void @mythrow()
+            to label %unreachable unwind label %catch.dispatch
+
+  catch.dispatch:                                   ; preds = %if.then8, %if.then4, %if.then
+    %0 = catchswitch within none [label %catch] unwind to caller
+
+  catch:                                            ; preds = %catch.dispatch
+    %1 = catchpad within %0 [i8* null, i32 64, i8* null]
+    catchret from %1 to label %return
+
+  return:                                           ; preds = %catch, %if.end6
+    %retval.0 = phi i32 [ 1, %catch ], [ 0, %if.end6 ]
+    ret i32 %retval.0
+  }
+
+  declare dso_local void @mythrow()
+
+  declare dso_local i32 @__CxxFrameHandler3(...)
+
+  attributes #0 = { uwtable }
+
+  !llvm.module.flags = !{!0, !1}
+
+  !0 = !{i32 1, !"wchar_size", i32 2}
+  !1 = !{i32 7, !"PIC Level", i32 2}
+
+...
+---
+name:            '?multi_throw@@YAH_N00@Z'
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       true
+registers:       []
+liveins:
+  - { reg: '$cl', virtual-reg: '' }
+  - { reg: '$dl', virtual-reg: '' }
+  - { reg: '$r8b', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       56
+  offsetAdjustment: -56
+  maxAlignment:    8
+  adjustsStack:    true
+  hasCalls:        true
+  stackProtector:  ''
+  maxCallFrameSize: 32
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: true
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:
+  - { id: 0, type: default, offset: -24, size: 8, alignment: 8, stack-id: default,
+      isImmutable: false, isAliased: false, callee-saved-register: '',
+      callee-saved-restored: true, debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
+  - { id: 1, type: spill-slot, offset: -16, size: 8, alignment: 16, stack-id: default,
+      callee-saved-register: '', callee-saved-restored: true, debug-info-variable: '',
+      debug-info-expression: '', debug-info-location: '' }
+stack:
+  - { id: 0, name: '', type: spill-slot, offset: -28, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+callSites:       []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x00000001), %bb.3(0x7fffffff)
+    liveins: $cl, $dl, $r8b
+
+    frame-setup PUSH64r killed $rbp, implicit-def $rsp, implicit $rsp
+    frame-setup SEH_PushReg 50
+    $rsp = frame-setup SUB64ri8 $rsp, 48, implicit-def dead $eflags
+    frame-setup SEH_StackAlloc 48
+    $rbp = LEA64r $rsp, 1, $noreg, 48, $noreg
+    frame-setup SEH_SetFrame 50, 48
+    frame-setup SEH_EndPrologue
+    MOV64mi32 $rbp, 1, $noreg, -8, $noreg, -2 :: (store 8 into %fixed-stack.0)
+    TEST8rr killed renamable $cl, renamable $cl, implicit-def $eflags
+    JCC_1 %bb.1, 5, implicit $eflags
+
+  bb.3.if.end:
+    successors: %bb.4(0x00000001), %bb.5(0x7fffffff)
+    liveins: $dl, $r8b
+
+    TEST8rr killed renamable $dl, renamable $dl, implicit-def $eflags
+    JCC_1 %bb.4, 5, implicit $eflags
+
+  bb.5.if.end6:
+    successors: %bb.6(0x00000001), %bb.8(0x7fffffff)
+    liveins: $r8b
+
+    MOV32mi $rbp, 1, $noreg, -12, $noreg, 0 :: (store 4 into %stack.0)
+    TEST8rr killed renamable $r8b, renamable $r8b, implicit-def $eflags
+    JCC_1 %bb.6, 5, implicit $eflags
+
+  bb.8.return (address-taken):
+    $eax = MOV32rm $rbp, 1, $noreg, -12, $noreg :: (load 4 from %stack.0)
+    SEH_Epilogue
+    $rsp = frame-destroy ADD64ri8 $rsp, 48, implicit-def dead $eflags
+    $rbp = frame-destroy POP64r implicit-def $rsp, implicit $rsp
+    RETQ $eax
+
+  bb.1.if.then:
+    successors: %bb.2(0x7ffff800), %bb.7(0x00000800)
+
+    EH_LABEL <mcsymbol .Leh1>
+    CALL64pcrel32 @mythrow, csr_win64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp
+    EH_LABEL <mcsymbol .Leh2>
+    JMP_1 %bb.2
+
+  bb.4.if.then4:
+    successors: %bb.2(0x7ffff800), %bb.7(0x00000800)
+
+    EH_LABEL <mcsymbol .Leh3>
+    CALL64pcrel32 @mythrow, csr_win64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp
+    EH_LABEL <mcsymbol .Leh4>
+    JMP_1 %bb.2
+
+  bb.6.if.then8:
+    successors: %bb.2(0x7ffff800), %bb.7(0x00000800)
+
+    EH_LABEL <mcsymbol .Leh5>
+    CALL64pcrel32 @mythrow, csr_win64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp
+    EH_LABEL <mcsymbol .Leh6>
+
+  bb.2.unreachable:
+    successors:
+
+
+  bb.7.catch (landing-pad, ehfunclet-entry):
+    successors: %bb.8(0x80000000)
+    liveins: $rdx
+
+    frame-setup MOV64mr killed $rsp, 1, $noreg, 16, $noreg, $rdx
+    frame-setup PUSH64r killed $rbp, implicit-def $rsp, implicit $rsp
+    frame-setup SEH_PushReg 50
+    $rsp = frame-setup SUB64ri8 $rsp, 32, implicit-def dead $eflags
+    frame-setup SEH_StackAlloc 32
+    $rbp = LEA64r $rdx, 1, $noreg, 48, $noreg
+    frame-setup SEH_EndPrologue
+    MOV32mi $rbp, 1, $noreg, -12, $noreg, 1 :: (store 4 into %stack.0)
+    $rax = LEA64r $rip, 0, $noreg, %bb.8, $noreg
+    SEH_Epilogue
+    $rsp = frame-destroy ADD64ri8 $rsp, 32, implicit-def dead $eflags
+    $rbp = frame-destroy POP64r implicit-def $rsp, implicit $rsp
+    CATCHRET %bb.8, %bb.0
+
+...

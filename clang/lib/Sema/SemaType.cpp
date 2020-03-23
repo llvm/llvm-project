@@ -6502,6 +6502,7 @@ namespace {
       Desugar,
       Attributed,
       Parens,
+      Array,
       Pointer,
       BlockPointer,
       Reference,
@@ -6522,6 +6523,10 @@ namespace {
         } else if (isa<ParenType>(Ty)) {
           T = cast<ParenType>(Ty)->getInnerType();
           Stack.push_back(Parens);
+        } else if (isa<ConstantArrayType>(Ty) || isa<VariableArrayType>(Ty) ||
+                   isa<IncompleteArrayType>(Ty)) {
+          T = cast<ArrayType>(Ty)->getElementType();
+          Stack.push_back(Array);
         } else if (isa<PointerType>(Ty)) {
           T = cast<PointerType>(Ty)->getPointeeType();
           Stack.push_back(Pointer);
@@ -6598,6 +6603,27 @@ namespace {
 
       case MacroQualified:
         return wrap(C, cast<MacroQualifiedType>(Old)->getUnderlyingType(), I);
+
+      case Array: {
+        if (const auto *CAT = dyn_cast<ConstantArrayType>(Old)) {
+          QualType New = wrap(C, CAT->getElementType(), I);
+          return C.getConstantArrayType(New, CAT->getSize(), CAT->getSizeExpr(),
+                                        CAT->getSizeModifier(),
+                                        CAT->getIndexTypeCVRQualifiers());
+        }
+
+        if (const auto *VAT = dyn_cast<VariableArrayType>(Old)) {
+          QualType New = wrap(C, VAT->getElementType(), I);
+          return C.getVariableArrayType(
+              New, VAT->getSizeExpr(), VAT->getSizeModifier(),
+              VAT->getIndexTypeCVRQualifiers(), VAT->getBracketsRange());
+        }
+
+        const auto *IAT = cast<IncompleteArrayType>(Old);
+        QualType New = wrap(C, IAT->getElementType(), I);
+        return C.getIncompleteArrayType(New, IAT->getSizeModifier(),
+                                        IAT->getIndexTypeCVRQualifiers());
+      }
 
       case Pointer: {
         QualType New = wrap(C, cast<PointerType>(Old)->getPointeeType(), I);

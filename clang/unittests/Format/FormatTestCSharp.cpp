@@ -562,6 +562,17 @@ var myDict = new Dictionary<string, string> {
                Style);
 }
 
+TEST_F(FormatTestCSharp, CSharpArrayInitializers) {
+  FormatStyle Style = getGoogleStyle(FormatStyle::LK_CSharp);
+  
+  verifyFormat(R"(//
+private MySet<Node>[] setPoints = {
+  new Point<Node>(),
+  new Point<Node>(),
+};)",
+               Style);
+}
+
 TEST_F(FormatTestCSharp, CSharpNamedArguments) {
   FormatStyle Style = getGoogleStyle(FormatStyle::LK_CSharp);
 
@@ -686,6 +697,14 @@ class Dictionary<TKey, TVal>
   public void MyMethod<T>(T t)
       where T : IMyInterface { doThing(); }
 })",
+               Style);
+
+  verifyFormat(R"(//
+class ItemFactory<T>
+    where T : new(),
+              IAnInterface<T>,
+              IAnotherInterface<T>,
+              IAnotherInterfaceStill<T> {})",
                Style);
 }
 

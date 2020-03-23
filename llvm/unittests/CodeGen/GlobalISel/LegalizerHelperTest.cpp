@@ -2516,4 +2516,53 @@ TEST_F(GISelMITest, LowerBSWAP) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
+// Test widening of G_UNMERGE_VALUES
+TEST_F(GISelMITest, WidenUnmerge) {
+  setUp();
+  if (!TM)
+    return;
+
+  DefineLegalizerInfo(A, {});
+
+  // Check that widening G_UNMERGE_VALUES to a larger type than the source type
+  // works as expected
+  LLT P0{LLT::pointer(0, 64)};
+  LLT S32{LLT::scalar(32)};
+  LLT S96{LLT::scalar(96)};
+
+  auto IntToPtr = B.buildIntToPtr(P0, Copies[0]);
+  auto UnmergePtr = B.buildUnmerge(S32, IntToPtr);
+  auto UnmergeScalar = B.buildUnmerge(S32, Copies[0]);
+
+  AInfo Info(MF->getSubtarget());
+  DummyGISelObserver Observer;
+  LegalizerHelper Helper(*MF, Info, Observer, B);
+
+  // Perform Legalization
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.widenScalar(*UnmergePtr, 0, S96));
+
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.widenScalar(*UnmergeScalar, 0, S96));
+
+  const auto *CheckStr = R"(
+  CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY
+  CHECK: [[PTR:%[0-9]+]]:_(p0) = G_INTTOPTR [[COPY]]
+  CHECK: [[INT:%[0-9]+]]:_(s64) = G_PTRTOINT [[PTR]]
+  CHECK: [[ANYEXT:%[0-9]+]]:_(s96) = G_ANYEXT [[INT]]
+  CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[ANYEXT]]
+  CHECK: [[C:%[0-9]+]]:_(s96) = G_CONSTANT i96 32
+  CHECK: [[LSHR:%[0-9]+]]:_(s96) = G_LSHR [[ANYEXT]]:_, [[C]]
+  CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[LSHR]]
+  CHECK: [[ANYEXT:%[0-9]+]]:_(s96) = G_ANYEXT [[COPY]]
+  CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[ANYEXT]]
+  CHECK: [[C:%[0-9]+]]:_(s96) = G_CONSTANT i96 32
+  CHECK: [[LSHR:%[0-9]+]]:_(s96) = G_LSHR [[ANYEXT]]:_, [[C]]
+  CHECK: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[LSHR]]
+  )";
+
+  // Check
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
+
 } // namespace

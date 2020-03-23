@@ -1264,6 +1264,108 @@ define i8 @undef_collapse_caller() {
   ret i8 %a
 }
 
+define i32 @ret1or2(i1 %c) {
+; CHECK-LABEL: define {{[^@]+}}@ret1or2
+; CHECK-SAME: (i1 [[C:%.*]])
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i32 1, i32 2
+; CHECK-NEXT:    ret i32 [[S]]
+;
+  %s = select i1 %c, i32 1, i32 2
+  ret i32 %s
+}
+define i1 @callee_range_1(i1 %c1, i1 %c2, i1 %c3) {
+; OLD_PM-LABEL: define {{[^@]+}}@callee_range_1
+; OLD_PM-SAME: (i1 [[C1:%.*]], i1 [[C2:%.*]], i1 [[C3:%.*]])
+; OLD_PM-NEXT:    [[F:%.*]] = and i1 true, true
+; OLD_PM-NEXT:    ret i1 [[F]]
+;
+; NEW_PM-LABEL: define {{[^@]+}}@callee_range_1
+; NEW_PM-SAME: (i1 [[C1:%.*]], i1 [[C2:%.*]], i1 [[C3:%.*]])
+; NEW_PM-NEXT:    [[F:%.*]] = and i1 true, true
+; NEW_PM-NEXT:    ret i1 [[F]]
+;
+; CGSCC_OLD_PM-LABEL: define {{[^@]+}}@callee_range_1
+; CGSCC_OLD_PM-SAME: (i1 [[C1:%.*]], i1 [[C2:%.*]], i1 [[C3:%.*]])
+; CGSCC_OLD_PM-NEXT:    [[R1:%.*]] = call i32 @ret1or2(i1 [[C1]])
+; CGSCC_OLD_PM-NEXT:    [[R2:%.*]] = call i32 @ret1or2(i1 [[C2]])
+; CGSCC_OLD_PM-NEXT:    [[INDIRECTION:%.*]] = select i1 [[C3]], i32 [[R1]], i32 [[R2]]
+; CGSCC_OLD_PM-NEXT:    [[A:%.*]] = add i32 [[R1]], [[INDIRECTION]]
+; CGSCC_OLD_PM-NEXT:    [[I1:%.*]] = icmp sle i32 [[A]], 4
+; CGSCC_OLD_PM-NEXT:    [[I2:%.*]] = icmp sge i32 [[A]], 2
+; CGSCC_OLD_PM-NEXT:    [[F:%.*]] = and i1 [[I1]], [[I2]]
+; CGSCC_OLD_PM-NEXT:    ret i1 [[F]]
+;
+; CGSCC_NEW_PM-LABEL: define {{[^@]+}}@callee_range_1
+; CGSCC_NEW_PM-SAME: (i1 [[C1:%.*]], i1 [[C2:%.*]], i1 [[C3:%.*]])
+; CGSCC_NEW_PM-NEXT:    [[R1:%.*]] = call i32 @ret1or2(i1 [[C1]])
+; CGSCC_NEW_PM-NEXT:    [[R2:%.*]] = call i32 @ret1or2(i1 [[C2]])
+; CGSCC_NEW_PM-NEXT:    [[INDIRECTION:%.*]] = select i1 [[C3]], i32 [[R1]], i32 [[R2]]
+; CGSCC_NEW_PM-NEXT:    [[A:%.*]] = add i32 [[R1]], [[INDIRECTION]]
+; CGSCC_NEW_PM-NEXT:    [[I1:%.*]] = icmp sle i32 [[A]], 4
+; CGSCC_NEW_PM-NEXT:    [[I2:%.*]] = icmp sge i32 [[A]], 2
+; CGSCC_NEW_PM-NEXT:    [[F:%.*]] = and i1 [[I1]], [[I2]]
+; CGSCC_NEW_PM-NEXT:    ret i1 [[F]]
+;
+  %r1 = call i32 @ret1or2(i1 %c1)
+  %r2 = call i32 @ret1or2(i1 %c2)
+  %indirection = select i1 %c3, i32 %r1, i32 %r2
+  %a = add i32 %r1, %indirection
+  %i1 = icmp sle i32 %a, 4
+  %i2 = icmp sge i32 %a, 2
+  %f = and i1 %i1, %i2
+  ret i1 %f
+}
+
+define i1 @callee_range_2(i1 %c1, i1 %c2) {
+; OLD_PM-LABEL: define {{[^@]+}}@callee_range_2
+; OLD_PM-SAME: (i1 [[C1:%.*]], i1 [[C2:%.*]])
+; OLD_PM-NEXT:    [[R1:%.*]] = call i32 @ret1or2(i1 [[C1]]) #2, !range !4
+; OLD_PM-NEXT:    [[R2:%.*]] = call i32 @ret1or2(i1 [[C2]]) #3, !range !4
+; OLD_PM-NEXT:    [[A:%.*]] = add i32 [[R1]], [[R2]]
+; OLD_PM-NEXT:    [[I1:%.*]] = icmp sle i32 [[A]], 3
+; OLD_PM-NEXT:    [[I2:%.*]] = icmp sge i32 [[A]], 2
+; OLD_PM-NEXT:    [[F:%.*]] = and i1 [[I1]], [[I2]]
+; OLD_PM-NEXT:    ret i1 [[F]]
+;
+; NEW_PM-LABEL: define {{[^@]+}}@callee_range_2
+; NEW_PM-SAME: (i1 [[C1:%.*]], i1 [[C2:%.*]])
+; NEW_PM-NEXT:    [[R1:%.*]] = call i32 @ret1or2(i1 [[C1]]) #2, !range !5
+; NEW_PM-NEXT:    [[R2:%.*]] = call i32 @ret1or2(i1 [[C2]]) #3, !range !5
+; NEW_PM-NEXT:    [[A:%.*]] = add i32 [[R1]], [[R2]]
+; NEW_PM-NEXT:    [[I1:%.*]] = icmp sle i32 [[A]], 3
+; NEW_PM-NEXT:    [[I2:%.*]] = icmp sge i32 [[A]], 2
+; NEW_PM-NEXT:    [[F:%.*]] = and i1 [[I1]], [[I2]]
+; NEW_PM-NEXT:    ret i1 [[F]]
+;
+; CGSCC_OLD_PM-LABEL: define {{[^@]+}}@callee_range_2
+; CGSCC_OLD_PM-SAME: (i1 [[C1:%.*]], i1 [[C2:%.*]])
+; CGSCC_OLD_PM-NEXT:    [[R1:%.*]] = call i32 @ret1or2(i1 [[C1]])
+; CGSCC_OLD_PM-NEXT:    [[R2:%.*]] = call i32 @ret1or2(i1 [[C2]])
+; CGSCC_OLD_PM-NEXT:    [[A:%.*]] = add i32 [[R1]], [[R2]]
+; CGSCC_OLD_PM-NEXT:    [[I1:%.*]] = icmp sle i32 [[A]], 3
+; CGSCC_OLD_PM-NEXT:    [[I2:%.*]] = icmp sge i32 [[A]], 2
+; CGSCC_OLD_PM-NEXT:    [[F:%.*]] = and i1 [[I1]], [[I2]]
+; CGSCC_OLD_PM-NEXT:    ret i1 [[F]]
+;
+; CGSCC_NEW_PM-LABEL: define {{[^@]+}}@callee_range_2
+; CGSCC_NEW_PM-SAME: (i1 [[C1:%.*]], i1 [[C2:%.*]])
+; CGSCC_NEW_PM-NEXT:    [[R1:%.*]] = call i32 @ret1or2(i1 [[C1]])
+; CGSCC_NEW_PM-NEXT:    [[R2:%.*]] = call i32 @ret1or2(i1 [[C2]])
+; CGSCC_NEW_PM-NEXT:    [[A:%.*]] = add i32 [[R1]], [[R2]]
+; CGSCC_NEW_PM-NEXT:    [[I1:%.*]] = icmp sle i32 [[A]], 3
+; CGSCC_NEW_PM-NEXT:    [[I2:%.*]] = icmp sge i32 [[A]], 2
+; CGSCC_NEW_PM-NEXT:    [[F:%.*]] = and i1 [[I1]], [[I2]]
+; CGSCC_NEW_PM-NEXT:    ret i1 [[F]]
+;
+  %r1 = call i32 @ret1or2(i1 %c1)
+  %r2 = call i32 @ret1or2(i1 %c2)
+  %a = add i32 %r1, %r2
+  %i1 = icmp sle i32 %a, 3
+  %i2 = icmp sge i32 %a, 2
+  %f = and i1 %i1, %i2
+  ret i1 %f
+}
+
 
 !0 = !{i32 0, i32 10}
 !1 = !{i32 10, i32 100}

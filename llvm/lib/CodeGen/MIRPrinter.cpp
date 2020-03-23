@@ -630,6 +630,11 @@ void MIPrinter::print(const MachineBasicBlock &MBB) {
     OS << "landing-pad";
     HasAttributes = true;
   }
+  if (MBB.isEHFuncletEntry()) {
+    OS << (HasAttributes ? ", " : " (");
+    OS << "ehfunclet-entry";
+    HasAttributes = true;
+  }
   if (MBB.getAlignment() != Align(1)) {
     OS << (HasAttributes ? ", " : " (");
     OS << "align " << MBB.getAlignment().value();

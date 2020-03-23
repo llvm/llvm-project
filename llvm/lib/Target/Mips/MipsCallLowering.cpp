@@ -179,8 +179,9 @@ Register IncomingValueHandler::getStackAddress(const CCValAssign &VA,
       MachinePointerInfo::getFixedStack(MIRBuilder.getMF(), FI);
 
   const TargetFrameLowering *TFL = MF.getSubtarget().getFrameLowering();
-  unsigned Align = MinAlign(TFL->getStackAlignment(), Offset);
-  MMO = MF.getMachineMemOperand(MPO, MachineMemOperand::MOLoad, Size, Align);
+  Align Alignment = commonAlignment(TFL->getStackAlign(), Offset);
+  MMO = MF.getMachineMemOperand(MPO, MachineMemOperand::MOLoad, Size,
+                                Alignment.value());
 
   return MIRBuilder.buildFrameIndex(LLT::pointer(0, 32), FI).getReg(0);
 }

@@ -798,6 +798,9 @@ void OMPClauseProfiler::VisitOMPNontemporalClause(
 void OMPClauseProfiler::VisitOMPInclusiveClause(const OMPInclusiveClause *C) {
   VisitOMPClauseList(C);
 }
+void OMPClauseProfiler::VisitOMPExclusiveClause(const OMPExclusiveClause *C) {
+  VisitOMPClauseList(C);
+}
 void OMPClauseProfiler::VisitOMPOrderClause(const OMPOrderClause *C) {}
 } // namespace
 

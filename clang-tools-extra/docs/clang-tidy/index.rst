@@ -62,11 +62,13 @@ Name prefix            Description
 ``boost-``             Checks related to Boost library.
 ``bugprone-``          Checks that target bugprone code constructs.
 ``cert-``              Checks related to CERT Secure Coding Guidelines.
-``cppcoreguidelines-`` Checks related to C++ Core Guidelines.
 ``clang-analyzer-``    Clang Static Analyzer checks.
+``cppcoreguidelines-`` Checks related to C++ Core Guidelines.
+``darwin-``            Checks related to Darwin coding conventions.
 ``fuchsia-``           Checks related to Fuchsia coding conventions.
 ``google-``            Checks related to Google coding conventions.
 ``hicpp-``             Checks related to High Integrity C++ Coding Standard.
+``linuxkernel-``       Checks related to the Linux Kernel coding conventions.
 ``llvm-``              Checks related to the LLVM coding conventions.
 ``llvmlibc-``          Checks related to the LLVM-libc coding standards.
 ``misc-``              Checks that we didn't have a better category for.

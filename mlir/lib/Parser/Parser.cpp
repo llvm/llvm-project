@@ -3322,8 +3322,13 @@ public:
   Operation *parseGenericOperation(Block *insertBlock,
                                    Block::iterator insertPt);
 
+  /// This is the structure of a result specifier in the assembly syntax,
+  /// including the name, number of results, and location.
+  typedef std::tuple<StringRef, unsigned, SMLoc> ResultRecord;
+
   /// Parse an operation instance that is in the op-defined custom form.
-  Operation *parseCustomOperation();
+  /// resultInfo specifies information about the "%name =" specifiers.
+  Operation *parseCustomOperation(ArrayRef<ResultRecord> resultInfo);
 
   //===--------------------------------------------------------------------===//
   // Region Parsing
@@ -3728,7 +3733,7 @@ Value OperationParser::createForwardRefPlaceholder(SMLoc loc, Type type) {
 ///
 ParseResult OperationParser::parseOperation() {
   auto loc = getToken().getLoc();
-  SmallVector<std::tuple<StringRef, unsigned, SMLoc>, 1> resultIDs;
+  SmallVector<ResultRecord, 1> resultIDs;
   size_t numExpectedResults = 0;
   if (getToken().is(Token::percent_identifier)) {
     // Parse the group of result ids.
@@ -3769,7 +3774,7 @@ ParseResult OperationParser::parseOperation() {
 
   Operation *op;
   if (getToken().is(Token::bare_identifier) || getToken().isKeyword())
-    op = parseCustomOperation();
+    op = parseCustomOperation(resultIDs);
   else if (getToken().is(Token::string))
     op = parseGenericOperation();
   else
@@ -3790,7 +3795,7 @@ ParseResult OperationParser::parseOperation() {
 
     // Add definitions for each of the result groups.
     unsigned opResI = 0;
-    for (std::tuple<StringRef, unsigned, SMLoc> &resIt : resultIDs) {
+    for (ResultRecord &resIt : resultIDs) {
       for (unsigned subRes : llvm::seq<unsigned>(0, std::get<1>(resIt))) {
         if (addDefinition({std::get<0>(resIt), subRes, std::get<2>(resIt)},
                           op->getResult(opResI++)))
@@ -3955,9 +3960,12 @@ Operation *OperationParser::parseGenericOperation(Block *insertBlock,
 namespace {
 class CustomOpAsmParser : public OpAsmParser {
 public:
-  CustomOpAsmParser(SMLoc nameLoc, const AbstractOperation *opDefinition,
+  CustomOpAsmParser(SMLoc nameLoc,
+                    ArrayRef<OperationParser::ResultRecord> resultIDs,
+                    const AbstractOperation *opDefinition,
                     OperationParser &parser)
-      : nameLoc(nameLoc), opDefinition(opDefinition), parser(parser) {}
+      : nameLoc(nameLoc), resultIDs(resultIDs), opDefinition(opDefinition),
+        parser(parser) {}
 
   /// Parse an instance of the operation described by 'opDefinition' into the
   /// provided operation state.
@@ -3991,6 +3999,41 @@ public:
   }
 
   Builder &getBuilder() const override { return parser.builder; }
+
+  /// Return the name of the specified result in the specified syntax, as well
+  /// as the subelement in the name.  For example, in this operation:
+  ///
+  ///  %x, %y:2, %z = foo.op
+  ///
+  ///    getResultName(0) == {"x", 0 }
+  ///    getResultName(1) == {"y", 0 }
+  ///    getResultName(2) == {"y", 1 }
+  ///    getResultName(3) == {"z", 0 }
+  std::pair<StringRef, unsigned>
+  getResultName(unsigned resultNo) const override {
+    // Scan for the resultID that contains this result number.
+    for (unsigned nameID = 0, e = resultIDs.size(); nameID != e; ++nameID) {
+      const auto &entry = resultIDs[nameID];
+      if (resultNo < std::get<1>(entry)) {
+        // Don't pass on the leading %.
+        StringRef name = std::get<0>(entry).drop_front();
+        return {name, resultNo};
+      }
+      resultNo -= std::get<1>(entry);
+    }
+
+    // Invalid result number.
+    return {"", ~0U};
+  }
+
+  /// Return the number of declared SSA results.  This returns 4 for the foo.op
+  /// example in the comment for getResultName.
+  size_t getNumResults() const override {
+    size_t count = 0;
+    for (auto &entry : resultIDs)
+      count += std::get<1>(entry);
+    return count;
+  }
 
   llvm::SMLoc getNameLoc() const override { return nameLoc; }
 
@@ -4500,6 +4543,9 @@ private:
   /// The source location of the operation name.
   SMLoc nameLoc;
 
+  /// Information about the result name specifiers.
+  ArrayRef<OperationParser::ResultRecord> resultIDs;
+
   /// The abstract information of the operation.
   const AbstractOperation *opDefinition;
 
@@ -4511,7 +4557,8 @@ private:
 };
 } // end anonymous namespace.
 
-Operation *OperationParser::parseCustomOperation() {
+Operation *
+OperationParser::parseCustomOperation(ArrayRef<ResultRecord> resultIDs) {
   auto opLoc = getToken().getLoc();
   auto opName = getTokenSpelling();
 
@@ -4544,7 +4591,7 @@ Operation *OperationParser::parseCustomOperation() {
   // Have the op implementation take a crack and parsing this.
   OperationState opState(srcLocation, opDefinition->name);
   CleanupOpStateRegions guard{opState};
-  CustomOpAsmParser opAsmParser(opLoc, opDefinition, *this);
+  CustomOpAsmParser opAsmParser(opLoc, resultIDs, opDefinition, *this);
   if (opAsmParser.parseOperation(opState))
     return nullptr;
 

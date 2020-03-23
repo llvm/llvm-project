@@ -654,7 +654,7 @@ bool MIRParserImpl::initializeFrameInfo(PerFunctionMIParsingState &PFS,
   MFI.setStackSize(YamlMFI.StackSize);
   MFI.setOffsetAdjustment(YamlMFI.OffsetAdjustment);
   if (YamlMFI.MaxAlignment)
-    MFI.ensureMaxAlignment(YamlMFI.MaxAlignment);
+    MFI.ensureMaxAlignment(Align(YamlMFI.MaxAlignment));
   MFI.setAdjustsStack(YamlMFI.AdjustsStack);
   MFI.setHasCalls(YamlMFI.HasCalls);
   if (YamlMFI.MaxCallFrameSize != ~0u)

@@ -147,6 +147,7 @@ const OMPClauseWithPreInit *OMPClauseWithPreInit::get(const OMPClause *C) {
   case OMPC_destroy:
   case OMPC_detach:
   case OMPC_inclusive:
+  case OMPC_exclusive:
     break;
   }
 
@@ -235,6 +236,7 @@ const OMPClauseWithPostUpdate *OMPClauseWithPostUpdate::get(const OMPClause *C) 
   case OMPC_destroy:
   case OMPC_detach:
   case OMPC_inclusive:
+  case OMPC_exclusive:
     break;
   }
 
@@ -1268,6 +1270,24 @@ OMPInclusiveClause *OMPInclusiveClause::CreateEmpty(const ASTContext &C,
   return new (Mem) OMPInclusiveClause(N);
 }
 
+OMPExclusiveClause *OMPExclusiveClause::Create(const ASTContext &C,
+                                               SourceLocation StartLoc,
+                                               SourceLocation LParenLoc,
+                                               SourceLocation EndLoc,
+                                               ArrayRef<Expr *> VL) {
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(VL.size()));
+  auto *Clause =
+      new (Mem) OMPExclusiveClause(StartLoc, LParenLoc, EndLoc, VL.size());
+  Clause->setVarRefs(VL);
+  return Clause;
+}
+
+OMPExclusiveClause *OMPExclusiveClause::CreateEmpty(const ASTContext &C,
+                                                    unsigned N) {
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(N));
+  return new (Mem) OMPExclusiveClause(N);
+}
+
 //===----------------------------------------------------------------------===//
 //  OpenMP clauses printing methods
 //===----------------------------------------------------------------------===//
@@ -1828,6 +1848,14 @@ void OMPClausePrinter::VisitOMPOrderClause(OMPOrderClause *Node) {
 void OMPClausePrinter::VisitOMPInclusiveClause(OMPInclusiveClause *Node) {
   if (!Node->varlist_empty()) {
     OS << "inclusive";
+    VisitOMPClauseList(Node, '(');
+    OS << ")";
+  }
+}
+
+void OMPClausePrinter::VisitOMPExclusiveClause(OMPExclusiveClause *Node) {
+  if (!Node->varlist_empty()) {
+    OS << "exclusive";
     VisitOMPClauseList(Node, '(');
     OS << ")";
   }

@@ -145,6 +145,7 @@ void initializeFixupLEAPassPass(PassRegistry &);
 void initializeFPSPass(PassRegistry &);
 void initializeWinEHStatePassPass(PassRegistry &);
 void initializeX86AvoidSFBPassPass(PassRegistry &);
+void initializeX86AvoidTrailingCallPassPass(PassRegistry &);
 void initializeX86CallFrameOptimizationPass(PassRegistry &);
 void initializeX86CmovConverterPassPass(PassRegistry &);
 void initializeX86CondBrFoldingPassPass(PassRegistry &);

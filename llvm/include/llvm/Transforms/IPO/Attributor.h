@@ -894,7 +894,7 @@ struct Attributor {
   ///
   /// This method will evaluate \p Pred on all (transitive) uses of the
   /// associated value and return true if \p Pred holds every time.
-  bool checkForAllUses(const function_ref<bool(const Use &, bool &)> &Pred,
+  bool checkForAllUses(function_ref<bool(const Use &, bool &)> Pred,
                        const AbstractAttribute &QueryingAA, const Value &V,
                        DepClassTy LivenessDepClass = DepClassTy::OPTIONAL);
 
@@ -1006,7 +1006,7 @@ struct Attributor {
   /// all call sites are known, hence the function has internal linkage.
   /// If true is returned, \p AllCallSitesKnown is set if all possible call
   /// sites of the function have been visited.
-  bool checkForAllCallSites(const function_ref<bool(AbstractCallSite)> &Pred,
+  bool checkForAllCallSites(function_ref<bool(AbstractCallSite)> Pred,
                             const AbstractAttribute &QueryingAA,
                             bool RequireAllCallSites, bool &AllCallSitesKnown);
 
@@ -1017,22 +1017,21 @@ struct Attributor {
   /// matched with their respective return instructions. Returns true if \p Pred
   /// holds on all of them.
   bool checkForAllReturnedValuesAndReturnInsts(
-      const function_ref<bool(Value &, const SmallSetVector<ReturnInst *, 4> &)>
-          &Pred,
+      function_ref<bool(Value &, const SmallSetVector<ReturnInst *, 4> &)> Pred,
       const AbstractAttribute &QueryingAA);
 
   /// Check \p Pred on all values potentially returned by the function
   /// associated with \p QueryingAA.
   ///
   /// This is the context insensitive version of the method above.
-  bool checkForAllReturnedValues(const function_ref<bool(Value &)> &Pred,
+  bool checkForAllReturnedValues(function_ref<bool(Value &)> Pred,
                                  const AbstractAttribute &QueryingAA);
 
   /// Check \p Pred on all instructions with an opcode present in \p Opcodes.
   ///
   /// This method will evaluate \p Pred on all instructions with an opcode
   /// present in \p Opcode and return true if \p Pred holds on all of them.
-  bool checkForAllInstructions(const function_ref<bool(Instruction &)> &Pred,
+  bool checkForAllInstructions(function_ref<bool(Instruction &)> Pred,
                                const AbstractAttribute &QueryingAA,
                                const ArrayRef<unsigned> &Opcodes,
                                bool CheckBBLivenessOnly = false);
@@ -1040,9 +1039,8 @@ struct Attributor {
   /// Check \p Pred on all call-like instructions (=CallBased derived).
   ///
   /// See checkForAllCallLikeInstructions(...) for more information.
-  bool
-  checkForAllCallLikeInstructions(const function_ref<bool(Instruction &)> &Pred,
-                                  const AbstractAttribute &QueryingAA) {
+  bool checkForAllCallLikeInstructions(function_ref<bool(Instruction &)> Pred,
+                                       const AbstractAttribute &QueryingAA) {
     return checkForAllInstructions(Pred, QueryingAA,
                                    {(unsigned)Instruction::Invoke,
                                     (unsigned)Instruction::CallBr,
@@ -1054,9 +1052,8 @@ struct Attributor {
   /// This method will evaluate \p Pred on all instructions that read or write
   /// to memory present in the information cache and return true if \p Pred
   /// holds on all of them.
-  bool checkForAllReadWriteInstructions(
-      const llvm::function_ref<bool(Instruction &)> &Pred,
-      AbstractAttribute &QueryingAA);
+  bool checkForAllReadWriteInstructions(function_ref<bool(Instruction &)> Pred,
+                                        AbstractAttribute &QueryingAA);
 
   /// Return the data layout associated with the anchor scope.
   const DataLayout &getDataLayout() const { return InfoCache.DL; }
@@ -1069,7 +1066,7 @@ private:
   /// all call sites are known, hence the function has internal linkage.
   /// If true is returned, \p AllCallSitesKnown is set if all possible call
   /// sites of the function have been visited.
-  bool checkForAllCallSites(const function_ref<bool(AbstractCallSite)> &Pred,
+  bool checkForAllCallSites(function_ref<bool(AbstractCallSite)> Pred,
                             const Function &Fn, bool RequireAllCallSites,
                             const AbstractAttribute *QueryingAA,
                             bool &AllCallSitesKnown);
@@ -1918,8 +1915,8 @@ struct AAReturnedValues
   /// Note: Unlike the Attributor::checkForAllReturnedValuesAndReturnInsts
   /// method, this one will not filter dead return instructions.
   virtual bool checkForAllReturnedValuesAndReturnInsts(
-      const function_ref<bool(Value &, const SmallSetVector<ReturnInst *, 4> &)>
-          &Pred) const = 0;
+      function_ref<bool(Value &, const SmallSetVector<ReturnInst *, 4> &)> Pred)
+      const = 0;
 
   using iterator =
       MapVector<Value *, SmallSetVector<ReturnInst *, 4>>::iterator;
@@ -2723,8 +2720,9 @@ struct AAMemoryLocation
   /// underlying accessed memory pointer) and it will return true if \p Pred
   /// holds every time.
   virtual bool checkForAllAccessesToMemoryKind(
-      const function_ref<bool(const Instruction *, const Value *, AccessKind,
-                              MemoryLocationsKind)> &Pred,
+      function_ref<bool(const Instruction *, const Value *, AccessKind,
+                        MemoryLocationsKind)>
+          Pred,
       MemoryLocationsKind MLK) const = 0;
 
   /// Create an abstract attribute view for the position \p IRP.

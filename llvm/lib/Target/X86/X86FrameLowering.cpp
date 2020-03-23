@@ -1764,7 +1764,7 @@ X86FrameLowering::getWinEHFuncletFrameSize(const MachineFunction &MF) const {
   // RBP is not included in the callee saved register block. After pushing RBP,
   // everything is 16 byte aligned. Everything we allocate before an outgoing
   // call must also be 16 byte aligned.
-  unsigned FrameSizeMinusRBP = alignTo(CSSize + UsedSize, getStackAlignment());
+  unsigned FrameSizeMinusRBP = alignTo(CSSize + UsedSize, getStackAlign());
   // Subtract out the size of the callee saved registers. This is how much stack
   // each funclet will allocate.
   return FrameSizeMinusRBP + XMMSize - CSSize;
@@ -2051,7 +2051,8 @@ int X86FrameLowering::getWin64EHFrameIndexRef(const MachineFunction &MF,
     return getFrameIndexReference(MF, FI, FrameReg);
 
   FrameReg = TRI->getStackRegister();
-  return alignDown(MFI.getMaxCallFrameSize(), getStackAlignment()) + it->second;
+  return alignDown(MFI.getMaxCallFrameSize(), getStackAlign().value()) +
+         it->second;
 }
 
 int X86FrameLowering::getFrameIndexReferenceSP(const MachineFunction &MF,
@@ -2229,16 +2230,16 @@ bool X86FrameLowering::assignCalleeSavedSpillSlots(
 
     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg, VT);
     unsigned Size = TRI->getSpillSize(*RC);
-    unsigned Align = TRI->getSpillAlignment(*RC);
+    Align Alignment = TRI->getSpillAlign(*RC);
     // ensure alignment
     assert(SpillSlotOffset < 0 && "SpillSlotOffset should always < 0 on X86");
-    SpillSlotOffset = -alignTo(-SpillSlotOffset, Align);
+    SpillSlotOffset = -alignTo(-SpillSlotOffset, Alignment);
 
     // spill into slot
     SpillSlotOffset -= Size;
     int SlotIndex = MFI.CreateFixedSpillStackObject(Size, SpillSlotOffset);
     CSI[i - 1].setFrameIdx(SlotIndex);
-    MFI.ensureMaxAlignment(Align);
+    MFI.ensureMaxAlignment(Alignment);
 
     // Save the start offset and size of XMM in stack frame for funclets.
     if (X86::VR128RegClass.contains(Reg)) {
@@ -2996,8 +2997,7 @@ eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
     // We need to keep the stack aligned properly.  To do this, we round the
     // amount of space needed for the outgoing arguments up to the next
     // alignment boundary.
-    unsigned StackAlign = getStackAlignment();
-    Amount = alignTo(Amount, StackAlign);
+    Amount = alignTo(Amount, getStackAlign());
 
     const Function &F = MF.getFunction();
     bool WindowsCFI = MF.getTarget().getMCAsmInfo()->usesWindowsCFI();

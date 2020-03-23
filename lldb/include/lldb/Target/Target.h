@@ -211,6 +211,8 @@ public:
 
   bool GetAutoInstallMainExecutable() const;
 
+  void UpdateLaunchInfoFromProperties();
+
 private:
   // Callbacks for m_launch_info.
   void Arg0ValueChangedCallback();
@@ -223,9 +225,12 @@ private:
   void DisableASLRValueChangedCallback();
   void DisableSTDIOValueChangedCallback();
 
+  Environment ComputeEnvironment() const;
+
   // Member variables.
   ProcessLaunchInfo m_launch_info;
   std::unique_ptr<TargetExperimentalProperties> m_experimental_properties_up;
+  Target *m_target;
 };
 
 class EvaluateExpressionOptions {

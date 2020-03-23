@@ -130,7 +130,7 @@ static inline unsigned getFnStackAlignment(const TargetSubtargetInfo *STI,
                                            const Function &F) {
   if (F.hasFnAttribute(Attribute::StackAlignment))
     return F.getFnStackAlignment();
-  return STI->getFrameLowering()->getStackAlignment();
+  return STI->getFrameLowering()->getStackAlign().value();
 }
 
 MachineFunction::MachineFunction(const Function &F,
@@ -172,7 +172,7 @@ void MachineFunction::init() {
           F.hasFnAttribute(Attribute::StackAlignment));
 
   if (F.hasFnAttribute(Attribute::StackAlignment))
-    FrameInfo->ensureMaxAlignment(F.getFnStackAlignment());
+    FrameInfo->ensureMaxAlignment(*F.getFnStackAlign());
 
   ConstantPool = new (Allocator) MachineConstantPool(getDataLayout());
   Alignment = STI->getTargetLowering()->getMinFunctionAlignment();
