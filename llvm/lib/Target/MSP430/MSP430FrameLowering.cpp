@@ -223,8 +223,6 @@ MachineBasicBlock::iterator MSP430FrameLowering::eliminateCallFramePseudoInstr(
     MachineBasicBlock::iterator I) const {
   const MSP430InstrInfo &TII =
       *static_cast<const MSP430InstrInfo *>(MF.getSubtarget().getInstrInfo());
-  unsigned StackAlign = getStackAlignment();
-
   if (!hasReservedCallFrame(MF)) {
     // If the stack pointer can be changed after prologue, turn the
     // adjcallstackup instruction into a 'sub SP, <amt>' and the
@@ -236,7 +234,7 @@ MachineBasicBlock::iterator MSP430FrameLowering::eliminateCallFramePseudoInstr(
       // We need to keep the stack aligned properly.  To do this, we round the
       // amount of space needed for the outgoing arguments up to the next
       // alignment boundary.
-      Amount = (Amount+StackAlign-1)/StackAlign*StackAlign;
+      Amount = alignTo(Amount, getStackAlign());
 
       MachineInstr *New = nullptr;
       if (Old.getOpcode() == TII.getCallFrameSetupOpcode()) {

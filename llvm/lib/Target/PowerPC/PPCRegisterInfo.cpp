@@ -498,9 +498,9 @@ void PPCRegisterInfo::lowerDynamicAlloc(MachineBasicBlock::iterator II) const {
 
   // Get stack alignments.
   const PPCFrameLowering *TFI = getFrameLowering(MF);
-  unsigned TargetAlign = TFI->getStackAlignment();
-  unsigned MaxAlign = MFI.getMaxAlign().value();
-  assert((maxCallFrameSize & (MaxAlign-1)) == 0 &&
+  Align TargetAlign = TFI->getStackAlign();
+  Align MaxAlign = MFI.getMaxAlign();
+  assert(isAligned(MaxAlign, maxCallFrameSize) &&
          "Maximum call-frame size not sufficiently aligned");
 
   // Determine the previous frame's address.  If FrameSize can't be
@@ -545,7 +545,7 @@ void PPCRegisterInfo::lowerDynamicAlloc(MachineBasicBlock::iterator II) const {
       // Unfortunately, there is no andi, only andi., and we can't insert that
       // here because we might clobber cr0 while it is live.
       BuildMI(MBB, II, dl, TII.get(PPC::LI8), NegSizeReg)
-        .addImm(~(MaxAlign-1));
+          .addImm(~(MaxAlign.value() - 1));
 
       unsigned NegSizeReg1 = NegSizeReg;
       NegSizeReg = MF.getRegInfo().createVirtualRegister(G8RC);
@@ -570,7 +570,7 @@ void PPCRegisterInfo::lowerDynamicAlloc(MachineBasicBlock::iterator II) const {
       // Unfortunately, there is no andi, only andi., and we can't insert that
       // here because we might clobber cr0 while it is live.
       BuildMI(MBB, II, dl, TII.get(PPC::LI), NegSizeReg)
-        .addImm(~(MaxAlign-1));
+          .addImm(~(MaxAlign.value() - 1));
 
       unsigned NegSizeReg1 = NegSizeReg;
       NegSizeReg = MF.getRegInfo().createVirtualRegister(GPRC);

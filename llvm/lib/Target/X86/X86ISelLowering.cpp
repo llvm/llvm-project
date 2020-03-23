@@ -4424,7 +4424,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 unsigned
 X86TargetLowering::GetAlignedArgumentStackSize(const unsigned StackSize,
                                                SelectionDAG &DAG) const {
-  const Align StackAlignment(Subtarget.getFrameLowering()->getStackAlignment());
+  const Align StackAlignment = Subtarget.getFrameLowering()->getStackAlign();
   const uint64_t SlotSize = Subtarget.getRegisterInfo()->getSlotSize();
   assert(StackSize % SlotSize == 0 &&
          "StackSize must be a multiple of SlotSize");
@@ -23338,7 +23338,7 @@ X86TargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
                     " not tell us which reg is the stack pointer!");
 
     const TargetFrameLowering &TFI = *Subtarget.getFrameLowering();
-    const Align StackAlign(TFI.getStackAlignment());
+    const Align StackAlign = TFI.getStackAlign();
     if (hasInlineStackProbe(MF)) {
       MachineRegisterInfo &MRI = MF.getRegInfo();
 
