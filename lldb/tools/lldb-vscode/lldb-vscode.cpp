@@ -2818,7 +2818,7 @@ int main(int argc, char *argv[]) {
   }
   auto request_handlers = GetRequestHandlers();
   uint32_t packet_idx = 0;
-  while (true) {
+  while (!g_vsc.sent_terminated_event) {
     std::string json = g_vsc.ReadJSON();
     if (json.empty())
       break;

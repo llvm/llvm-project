@@ -72,7 +72,7 @@ def IsNotSingleFloat : Predicate<"!Subtarget->isSingleFloat()">,
                        AssemblerPredicate<(all_of (not FeatureSingleFloat))>;
 def IsNotSoftFloat   : Predicate<"!Subtarget->useSoftFloat()">,
                        AssemblerPredicate<(all_of (not FeatureSoftFloat))>;
-def Mips3D           : Predicate<"Subtarget->has3D()">,
+def HasMips3D        : Predicate<"Subtarget->has3D()">,
                        AssemblerPredicate<(all_of FeatureMips3D)>;
 
 //===----------------------------------------------------------------------===//
@@ -479,7 +479,7 @@ let DecoderNamespace = "MipsFP64" in {
 }
 
 let DecoderNamespace = "MipsFP64" in {
-  let AdditionalPredicates = [Mips3D] in {
+  let AdditionalPredicates = [HasMips3D] in {
     def ADDR_PS64   : ADDS_FT<"addr.ps", FGR64Opnd, II_ADDR_PS, 0>,
                       ADDS_FM<0x18, 22>, ISA_MIPS32R2_NOT_32R6_64R6, FGR_64;
     def MULR_PS64   : ADDS_FT<"mulr.ps", FGR64Opnd, II_MULR_PS, 0>,

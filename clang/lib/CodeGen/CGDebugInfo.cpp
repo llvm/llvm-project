@@ -631,7 +631,7 @@ void CGDebugInfo::CreateCompileUnit() {
           ? llvm::DICompileUnit::DebugNameTableKind::None
           : static_cast<llvm::DICompileUnit::DebugNameTableKind>(
                 CGOpts.DebugNameTable),
-      CGOpts.DebugRangesBaseAddress, Sysroot, SDK);
+      CGOpts.DebugRangesBaseAddress, remapDIPath(Sysroot), SDK);
 }
 
 llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
@@ -2492,12 +2492,20 @@ llvm::DIModule *CGDebugInfo::getOrCreateModuleRef(ASTSourceDescriptor Mod,
             ? (uint64_t)Mod.getSignature()[1] << 32 | Mod.getSignature()[0]
             : ~1ULL;
     llvm::DIBuilder DIB(CGM.getModule());
+    SmallString<0> PCM;
+    if (!llvm::sys::path::is_absolute(Mod.getASTFile()))
+      PCM = Mod.getPath();
+    llvm::sys::path::append(PCM, Mod.getASTFile());
+    std::string RemappedPCM = remapDIPath(PCM);
+    StringRef RelativePCM(RemappedPCM);
+    StringRef CompDir = TheCU->getDirectory();
+    if (RelativePCM.consume_front(CompDir))
+      RelativePCM.consume_front(llvm::sys::path::get_separator());
     DIB.createCompileUnit(TheCU->getSourceLanguage(),
                           // TODO: Support "Source" from external AST providers?
-                          DIB.createFile(Mod.getModuleName(), Mod.getPath()),
-                          TheCU->getProducer(), true, StringRef(), 0,
-                          Mod.getASTFile(), llvm::DICompileUnit::FullDebug,
-                          Signature);
+                          DIB.createFile(Mod.getModuleName(), CompDir),
+                          TheCU->getProducer(), false, StringRef(), 0, RelativePCM,
+                          llvm::DICompileUnit::FullDebug, Signature);
     DIB.finalize();
   }
 

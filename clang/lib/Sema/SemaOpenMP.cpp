@@ -154,6 +154,7 @@ private:
     bool CancelRegion = false;
     bool LoopStart = false;
     bool BodyComplete = false;
+    SourceLocation PrevScanLocation;
     SourceLocation InnerTeamsRegionLoc;
     /// Reference to the taskgroup task_reduction reference expression.
     Expr *TaskgroupReductionRef = nullptr;
@@ -779,6 +780,22 @@ public:
   bool isCancelRegion() const {
     const SharingMapTy *Top = getTopOfStackOrNull();
     return Top ? Top->CancelRegion : false;
+  }
+
+  /// Mark that parent region already has scan directive.
+  void setParentHasScanDirective(SourceLocation Loc) {
+    if (SharingMapTy *Parent = getSecondOnStackOrNull())
+      Parent->PrevScanLocation = Loc;
+  }
+  /// Return true if current region has inner cancel construct.
+  bool doesParentHasScanDirective() const {
+    const SharingMapTy *Top = getSecondOnStackOrNull();
+    return Top ? Top->PrevScanLocation.isValid() : false;
+  }
+  /// Return true if current region has inner cancel construct.
+  SourceLocation getParentScanDirectiveLoc() const {
+    const SharingMapTy *Top = getSecondOnStackOrNull();
+    return Top ? Top->PrevScanLocation : SourceLocation();
   }
 
   /// Set collapse value for the region.
@@ -8795,11 +8812,21 @@ StmtResult Sema::ActOnOpenMPDepobjDirective(ArrayRef<OMPClause *> Clauses,
 StmtResult Sema::ActOnOpenMPScanDirective(ArrayRef<OMPClause *> Clauses,
                                           SourceLocation StartLoc,
                                           SourceLocation EndLoc) {
+  // Check that exactly one clause is specified.
   if (Clauses.size() != 1) {
     Diag(Clauses.empty() ? EndLoc : Clauses[1]->getBeginLoc(),
          diag::err_omp_scan_single_clause_expected);
     return StmtError();
   }
+  // Check that only one instance of scan directives is used in the same outer
+  // region.
+  if (DSAStack->doesParentHasScanDirective()) {
+    Diag(StartLoc, diag::err_omp_several_scan_directives_in_region);
+    Diag(DSAStack->getParentScanDirectiveLoc(),
+         diag::note_omp_previous_scan_directive);
+    return StmtError();
+  }
+  DSAStack->setParentHasScanDirective(StartLoc);
   return OMPScanDirective::Create(Context, StartLoc, EndLoc, Clauses);
 }
 

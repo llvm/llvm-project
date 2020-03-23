@@ -2648,38 +2648,12 @@ int X86TTIImpl::getAddressComputationCost(Type *Ty, ScalarEvolution *SE,
 
 int X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, Type *ValTy,
                                            bool IsPairwise) {
+  // Just use the default implementation for pair reductions.
+  if (IsPairwise)
+    return BaseT::getArithmeticReductionCost(Opcode, ValTy, IsPairwise);
+
   // We use the Intel Architecture Code Analyzer(IACA) to measure the throughput
   // and make it as the cost.
-
-  static const CostTblEntry SLMCostTblPairWise[] = {
-    { ISD::FADD,  MVT::v2f64,   3 },
-    { ISD::ADD,   MVT::v2i64,   5 },
-  };
-
-  static const CostTblEntry SSE2CostTblPairWise[] = {
-    { ISD::FADD,  MVT::v2f64,   2 },
-    { ISD::FADD,  MVT::v4f32,   4 },
-    { ISD::ADD,   MVT::v2i64,   2 },      // The data reported by the IACA tool is "1.6".
-    { ISD::ADD,   MVT::v2i32,   2 }, // FIXME: chosen to be less than v4i32.
-    { ISD::ADD,   MVT::v4i32,   3 },      // The data reported by the IACA tool is "3.5".
-    { ISD::ADD,   MVT::v2i16,   3 }, // FIXME: chosen to be less than v4i16
-    { ISD::ADD,   MVT::v4i16,   4 }, // FIXME: chosen to be less than v8i16
-    { ISD::ADD,   MVT::v8i16,   5 },
-    { ISD::ADD,   MVT::v2i8,    2 },
-    { ISD::ADD,   MVT::v4i8,    2 },
-    { ISD::ADD,   MVT::v8i8,    2 },
-    { ISD::ADD,   MVT::v16i8,   3 },
-  };
-
-  static const CostTblEntry AVX1CostTblPairWise[] = {
-    { ISD::FADD,  MVT::v4f64,   5 },
-    { ISD::FADD,  MVT::v8f32,   7 },
-    { ISD::ADD,   MVT::v2i64,   1 },      // The data reported by the IACA tool is "1.5".
-    { ISD::ADD,   MVT::v4i64,   5 },      // The data reported by the IACA tool is "4.8".
-    { ISD::ADD,   MVT::v8i32,   5 },
-    { ISD::ADD,   MVT::v16i16,  6 },
-    { ISD::ADD,   MVT::v32i8,   4 },
-  };
 
   static const CostTblEntry SLMCostTblNoPairWise[] = {
     { ISD::FADD,  MVT::v2f64,   3 },
@@ -2721,62 +2695,44 @@ int X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, Type *ValTy,
   EVT VT = TLI->getValueType(DL, ValTy);
   if (VT.isSimple()) {
     MVT MTy = VT.getSimpleVT();
-    if (IsPairwise) {
-      if (ST->isSLM())
-        if (const auto *Entry = CostTableLookup(SLMCostTblPairWise, ISD, MTy))
-          return Entry->Cost;
+    if (ST->isSLM())
+      if (const auto *Entry = CostTableLookup(SLMCostTblNoPairWise, ISD, MTy))
+        return Entry->Cost;
 
-      if (ST->hasAVX())
-        if (const auto *Entry = CostTableLookup(AVX1CostTblPairWise, ISD, MTy))
-          return Entry->Cost;
+    if (ST->hasAVX())
+      if (const auto *Entry = CostTableLookup(AVX1CostTblNoPairWise, ISD, MTy))
+        return Entry->Cost;
 
-      if (ST->hasSSE2())
-        if (const auto *Entry = CostTableLookup(SSE2CostTblPairWise, ISD, MTy))
-          return Entry->Cost;
-    } else {
-      if (ST->isSLM())
-        if (const auto *Entry = CostTableLookup(SLMCostTblNoPairWise, ISD, MTy))
-          return Entry->Cost;
-
-      if (ST->hasAVX())
-        if (const auto *Entry = CostTableLookup(AVX1CostTblNoPairWise, ISD, MTy))
-          return Entry->Cost;
-
-      if (ST->hasSSE2())
-        if (const auto *Entry = CostTableLookup(SSE2CostTblNoPairWise, ISD, MTy))
-          return Entry->Cost;
-    }
+    if (ST->hasSSE2())
+      if (const auto *Entry = CostTableLookup(SSE2CostTblNoPairWise, ISD, MTy))
+        return Entry->Cost;
   }
 
   std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, ValTy);
 
   MVT MTy = LT.second;
 
-  if (IsPairwise) {
-    if (ST->isSLM())
-      if (const auto *Entry = CostTableLookup(SLMCostTblPairWise, ISD, MTy))
-        return LT.first * Entry->Cost;
-
-    if (ST->hasAVX())
-      if (const auto *Entry = CostTableLookup(AVX1CostTblPairWise, ISD, MTy))
-        return LT.first * Entry->Cost;
-
-    if (ST->hasSSE2())
-      if (const auto *Entry = CostTableLookup(SSE2CostTblPairWise, ISD, MTy))
-        return LT.first * Entry->Cost;
-  } else {
-    if (ST->isSLM())
-      if (const auto *Entry = CostTableLookup(SLMCostTblNoPairWise, ISD, MTy))
-        return LT.first * Entry->Cost;
-
-    if (ST->hasAVX())
-      if (const auto *Entry = CostTableLookup(AVX1CostTblNoPairWise, ISD, MTy))
-        return LT.first * Entry->Cost;
-
-    if (ST->hasSSE2())
-      if (const auto *Entry = CostTableLookup(SSE2CostTblNoPairWise, ISD, MTy))
-        return LT.first * Entry->Cost;
+  unsigned ArithmeticCost = 0;
+  if (LT.first != 1 && MTy.isVector() &&
+      MTy.getVectorNumElements() < ValTy->getVectorNumElements()) {
+    // Type needs to be split. We need LT.first - 1 arithmetic ops.
+    Type *SingleOpTy = VectorType::get(ValTy->getVectorElementType(),
+                                       MTy.getVectorNumElements());
+    ArithmeticCost = getArithmeticInstrCost(Opcode, SingleOpTy);
+    ArithmeticCost *= LT.first - 1;
   }
+
+  if (ST->isSLM())
+    if (const auto *Entry = CostTableLookup(SLMCostTblNoPairWise, ISD, MTy))
+      return ArithmeticCost + Entry->Cost;
+
+  if (ST->hasAVX())
+    if (const auto *Entry = CostTableLookup(AVX1CostTblNoPairWise, ISD, MTy))
+      return ArithmeticCost + Entry->Cost;
+
+  if (ST->hasSSE2())
+    if (const auto *Entry = CostTableLookup(SSE2CostTblNoPairWise, ISD, MTy))
+      return ArithmeticCost + Entry->Cost;
 
   // FIXME: These assume a naive kshift+binop lowering, which is probably
   // conservative in most cases.
@@ -2825,9 +2781,9 @@ int X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, Type *ValTy,
   };
 
   // Handle bool allof/anyof patterns.
-  if (!IsPairwise && ValTy->getVectorElementType()->isIntegerTy(1)) {
+  if (ValTy->getVectorElementType()->isIntegerTy(1)) {
     unsigned ArithmeticCost = 0;
-    if (MTy.isVector() &&
+    if (LT.first != 1 && MTy.isVector() &&
         MTy.getVectorNumElements() < ValTy->getVectorNumElements()) {
       // Type needs to be split. We need LT.first - 1 arithmetic ops.
       Type *SingleOpTy = VectorType::get(ValTy->getVectorElementType(),
@@ -2848,9 +2804,77 @@ int X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, Type *ValTy,
     if (ST->hasSSE2())
       if (const auto *Entry = CostTableLookup(SSE2BoolReduction, ISD, MTy))
         return ArithmeticCost + Entry->Cost;
+
+    return BaseT::getArithmeticReductionCost(Opcode, ValTy, IsPairwise);
   }
 
-  return BaseT::getArithmeticReductionCost(Opcode, ValTy, IsPairwise);
+  unsigned NumVecElts = ValTy->getVectorNumElements();
+  unsigned ScalarSize = ValTy->getScalarSizeInBits();
+
+  // Special case power of 2 reductions where the scalar type isn't changed
+  // by type legalization.
+  if (!isPowerOf2_32(NumVecElts) || ScalarSize != MTy.getScalarSizeInBits())
+    return BaseT::getArithmeticReductionCost(Opcode, ValTy, IsPairwise);
+
+  unsigned ReductionCost = 0;
+
+  Type *Ty = ValTy;
+  if (LT.first != 1 && MTy.isVector() &&
+      MTy.getVectorNumElements() < ValTy->getVectorNumElements()) {
+    // Type needs to be split. We need LT.first - 1 arithmetic ops.
+    Ty = VectorType::get(ValTy->getVectorElementType(),
+                         MTy.getVectorNumElements());
+    ReductionCost = getArithmeticInstrCost(Opcode, Ty);
+    ReductionCost *= LT.first - 1;
+    NumVecElts = MTy.getVectorNumElements();
+  }
+
+  // Now handle reduction with the legal type, taking into account size changes
+  // at each level.
+  while (NumVecElts > 1) {
+    // Determine the size of the remaining vector we need to reduce.
+    unsigned Size = NumVecElts * ScalarSize;
+    NumVecElts /= 2;
+    // If we're reducing from 256/512 bits, use an extract_subvector.
+    if (Size > 128) {
+      Type *SubTy = VectorType::get(ValTy->getVectorElementType(), NumVecElts);
+      ReductionCost +=
+          getShuffleCost(TTI::SK_ExtractSubvector, Ty, NumVecElts, SubTy);
+      Ty = SubTy;
+    } else if (Size == 128) {
+      // Reducing from 128 bits is a permute of v2f64/v2i64.
+      Type *ShufTy;
+      if (ValTy->isFloatingPointTy())
+        ShufTy = VectorType::get(Type::getDoubleTy(ValTy->getContext()), 2);
+      else
+        ShufTy = VectorType::get(Type::getInt64Ty(ValTy->getContext()), 2);
+      ReductionCost +=
+          getShuffleCost(TTI::SK_PermuteSingleSrc, ShufTy, 0, nullptr);
+    } else if (Size == 64) {
+      // Reducing from 64 bits is a shuffle of v4f32/v4i32.
+      Type *ShufTy;
+      if (ValTy->isFloatingPointTy())
+        ShufTy = VectorType::get(Type::getFloatTy(ValTy->getContext()), 4);
+      else
+        ShufTy = VectorType::get(Type::getInt32Ty(ValTy->getContext()), 4);
+      ReductionCost +=
+          getShuffleCost(TTI::SK_PermuteSingleSrc, ShufTy, 0, nullptr);
+    } else {
+      // Reducing from smaller size is a shift by immediate.
+      Type *ShiftTy = VectorType::get(
+          Type::getIntNTy(ValTy->getContext(), Size), 128 / Size);
+      ReductionCost += getArithmeticInstrCost(
+          Instruction::LShr, ShiftTy, TargetTransformInfo::OK_AnyValue,
+          TargetTransformInfo::OK_UniformConstantValue,
+          TargetTransformInfo::OP_None, TargetTransformInfo::OP_None);
+    }
+
+    // Add the arithmetic op for this level.
+    ReductionCost += getArithmeticInstrCost(Opcode, Ty);
+  }
+
+  // Add the final extract element to the cost.
+  return ReductionCost + getVectorInstrCost(Instruction::ExtractElement, Ty, 0);
 }
 
 int X86TTIImpl::getMinMaxReductionCost(Type *ValTy, Type *CondTy,

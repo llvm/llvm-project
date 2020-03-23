@@ -38,7 +38,7 @@ versions of LLVM in parallel.  The following configure flags are relevant:
     should turn it back on to let users debug their programs.
 
 ``--enable-optimized``
-    (For svn checkouts) Builds LLVM with ``-O2`` and, by default, turns off
+    (For git checkouts) Builds LLVM with ``-O2`` and, by default, turns off
     debug symbols.  Also available by setting ``ENABLE_OPTIMIZED=0|1`` in
     ``make``'s environment.  This defaults to enabled when not in a
     checkout.

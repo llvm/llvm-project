@@ -9420,6 +9420,49 @@ static bool isBetterMultiversionCandidate(const OverloadCandidate &Cand1,
   llvm_unreachable("No way to get here unless both had cpu_dispatch");
 }
 
+/// Compute the type of the implicit object parameter for the given function,
+/// if any. Returns None if there is no implicit object parameter, and a null
+/// QualType if there is a 'matches anything' implicit object parameter.
+static Optional<QualType> getImplicitObjectParamType(ASTContext &Context,
+                                                     const FunctionDecl *F) {
+  if (!isa<CXXMethodDecl>(F) || isa<CXXConstructorDecl>(F))
+    return llvm::None;
+
+  auto *M = cast<CXXMethodDecl>(F);
+  // Static member functions' object parameters match all types.
+  if (M->isStatic())
+    return QualType();
+
+  QualType T = M->getThisObjectType();
+  if (M->getRefQualifier() == RQ_RValue)
+    return Context.getRValueReferenceType(T);
+  return Context.getLValueReferenceType(T);
+}
+
+static bool haveSameParameterTypes(ASTContext &Context, const FunctionDecl *F1,
+                                   const FunctionDecl *F2, unsigned NumParams) {
+  if (declaresSameEntity(F1, F2))
+    return true;
+
+  auto NextParam = [&](const FunctionDecl *F, unsigned &I, bool First) {
+    if (First) {
+      if (Optional<QualType> T = getImplicitObjectParamType(Context, F))
+        return *T;
+    }
+    assert(I < F->getNumParams());
+    return F->getParamDecl(I++)->getType();
+  };
+
+  unsigned I1 = 0, I2 = 0;
+  for (unsigned I = 0; I != NumParams; ++I) {
+    QualType T1 = NextParam(F1, I1, I == 0);
+    QualType T2 = NextParam(F2, I2, I == 0);
+    if (!T1.isNull() && !T1.isNull() && !Context.hasSameUnqualifiedType(T1, T2))
+      return false;
+  }
+  return true;
+}
+
 /// isBetterOverloadCandidate - Determines whether the first overload
 /// candidate is a better candidate than the second (C++ 13.3.3p1).
 bool clang::isBetterOverloadCandidate(
@@ -9487,18 +9530,20 @@ bool clang::isBetterOverloadCandidate(
       break;
 
     case ImplicitConversionSequence::Worse:
-      if (Cand1.Function && Cand1.Function == Cand2.Function &&
-          Cand2.isReversed()) {
+      if (Cand1.Function && Cand2.Function &&
+          Cand1.isReversed() != Cand2.isReversed() &&
+          haveSameParameterTypes(S.Context, Cand1.Function, Cand2.Function,
+                                 NumArgs)) {
         // Work around large-scale breakage caused by considering reversed
         // forms of operator== in C++20:
         //
-        // When comparing a function against its reversed form, if we have a
-        // better conversion for one argument and a worse conversion for the
-        // other, we prefer the non-reversed form.
+        // When comparing a function against a reversed function with the same
+        // parameter types, if we have a better conversion for one argument and
+        // a worse conversion for the other, the implicit conversion sequences
+        // are treated as being equally good.
         //
-        // This prevents a conversion function from being considered ambiguous
-        // with its own reversed form in various where it's only incidentally
-        // heterogeneous.
+        // This prevents a comparison function from being considered ambiguous
+        // with a reversed form that is written in the same way.
         //
         // We diagnose this as an extension from CreateOverloadedBinOp.
         HasWorseConversion = true;
@@ -9516,10 +9561,8 @@ bool clang::isBetterOverloadCandidate(
 
   //    -- for some argument j, ICSj(F1) is a better conversion sequence than
   //       ICSj(F2), or, if not that,
-  if (HasBetterConversion)
+  if (HasBetterConversion && !HasWorseConversion)
     return true;
-  if (HasWorseConversion)
-    return false;
 
   //   -- the context is an initialization by user-defined conversion
   //      (see 8.5, 13.3.1.5) and the standard conversion sequence
@@ -13256,36 +13299,56 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
         //   resolution for an operator@, its return type shall be cv bool
         if (Best->RewriteKind && ChosenOp == OO_EqualEqual &&
             !FnDecl->getReturnType()->isBooleanType()) {
-          Diag(OpLoc, diag::err_ovl_rewrite_equalequal_not_bool)
+          bool IsExtension =
+              FnDecl->getReturnType()->isIntegralOrUnscopedEnumerationType();
+          Diag(OpLoc, IsExtension ? diag::ext_ovl_rewrite_equalequal_not_bool
+                                  : diag::err_ovl_rewrite_equalequal_not_bool)
               << FnDecl->getReturnType() << BinaryOperator::getOpcodeStr(Opc)
               << Args[0]->getSourceRange() << Args[1]->getSourceRange();
           Diag(FnDecl->getLocation(), diag::note_declared_at);
-          return ExprError();
+          if (!IsExtension)
+            return ExprError();
         }
 
         if (AllowRewrittenCandidates && !IsReversed &&
-            CandidateSet.getRewriteInfo().shouldAddReversed(ChosenOp)) {
-          // We could have reversed this operator, but didn't. Check if the
+            CandidateSet.getRewriteInfo().isReversible()) {
+          // We could have reversed this operator, but didn't. Check if some
           // reversed form was a viable candidate, and if so, if it had a
           // better conversion for either parameter. If so, this call is
           // formally ambiguous, and allowing it is an extension.
+          llvm::SmallVector<FunctionDecl*, 4> AmbiguousWith;
           for (OverloadCandidate &Cand : CandidateSet) {
-            if (Cand.Viable && Cand.Function == FnDecl &&
-                Cand.isReversed()) {
+            if (Cand.Viable && Cand.Function && Cand.isReversed() &&
+                haveSameParameterTypes(Context, Cand.Function, FnDecl, 2)) {
               for (unsigned ArgIdx = 0; ArgIdx < 2; ++ArgIdx) {
                 if (CompareImplicitConversionSequences(
                         *this, OpLoc, Cand.Conversions[ArgIdx],
                         Best->Conversions[ArgIdx]) ==
                     ImplicitConversionSequence::Better) {
-                  Diag(OpLoc, diag::ext_ovl_ambiguous_oper_binary_reversed)
-                      << BinaryOperator::getOpcodeStr(Opc)
-                      << Args[0]->getType() << Args[1]->getType()
-                      << Args[0]->getSourceRange() << Args[1]->getSourceRange();
-                  Diag(FnDecl->getLocation(),
-                       diag::note_ovl_ambiguous_oper_binary_reversed_candidate);
+                  AmbiguousWith.push_back(Cand.Function);
+                  break;
                 }
               }
-              break;
+            }
+          }
+
+          if (!AmbiguousWith.empty()) {
+            bool AmbiguousWithSelf =
+                AmbiguousWith.size() == 1 &&
+                declaresSameEntity(AmbiguousWith.front(), FnDecl);
+            Diag(OpLoc, diag::ext_ovl_ambiguous_oper_binary_reversed)
+                << BinaryOperator::getOpcodeStr(Opc)
+                << Args[0]->getType() << Args[1]->getType() << AmbiguousWithSelf
+                << Args[0]->getSourceRange() << Args[1]->getSourceRange();
+            if (AmbiguousWithSelf) {
+              Diag(FnDecl->getLocation(),
+                   diag::note_ovl_ambiguous_oper_binary_reversed_self);
+            } else {
+              Diag(FnDecl->getLocation(),
+                   diag::note_ovl_ambiguous_oper_binary_selected_candidate);
+              for (auto *F : AmbiguousWith)
+                Diag(F->getLocation(),
+                     diag::note_ovl_ambiguous_oper_binary_reversed_candidate);
             }
           }
         }

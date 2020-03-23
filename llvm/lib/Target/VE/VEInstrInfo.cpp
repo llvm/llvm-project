@@ -36,8 +36,7 @@ using namespace llvm;
 void VEInstrInfo::anchor() {}
 
 VEInstrInfo::VEInstrInfo(VESubtarget &ST)
-    : VEGenInstrInfo(VE::ADJCALLSTACKDOWN, VE::ADJCALLSTACKUP), RI(),
-      Subtarget(ST) {}
+    : VEGenInstrInfo(VE::ADJCALLSTACKDOWN, VE::ADJCALLSTACKUP), RI() {}
 
 static bool IsIntegerCC(unsigned CC) { return (CC < VECC::CC_AF); }
 

@@ -1649,11 +1649,16 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   case Builtin::BI__builtin_nontemporal_store:
     return SemaBuiltinNontemporalOverloaded(TheCallResult);
   case Builtin::BI__builtin_memcpy_inline: {
-    // __builtin_memcpy_inline size argument is a constant by definition.
-    if (TheCall->getArg(2)->EvaluateKnownConstInt(Context).isNullValue())
+    clang::Expr *SizeOp = TheCall->getArg(2);
+    // We warn about copying to or from `nullptr` pointers when `size` is
+    // greater than 0. When `size` is value dependent we cannot evaluate its
+    // value so we bail out.
+    if (SizeOp->isValueDependent())
       break;
-    CheckNonNullArgument(*this, TheCall->getArg(0), TheCall->getExprLoc());
-    CheckNonNullArgument(*this, TheCall->getArg(1), TheCall->getExprLoc());
+    if (!SizeOp->EvaluateKnownConstInt(Context).isNullValue()) {
+      CheckNonNullArgument(*this, TheCall->getArg(0), TheCall->getExprLoc());
+      CheckNonNullArgument(*this, TheCall->getArg(1), TheCall->getExprLoc());
+    }
     break;
   }
 #define BUILTIN(ID, TYPE, ATTRS)

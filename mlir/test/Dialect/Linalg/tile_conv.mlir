@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -linalg-tile -linalg-tile-sizes=2,3,0,0,4 | FileCheck %s -check-prefix=TILE-23004
+// RUN: mlir-opt %s -linalg-tile="linalg-tile-sizes=2,3,0,0,4" | FileCheck %s -check-prefix=TILE-23004
 
 // TILE-23004-DAG: #[[D0x30pS0x10:.*]] = affine_map<(d0) -> (d0 * 30)>
 // TILE-23004-DAG: #[[S0x10p90:.*]] = affine_map<()[s0] -> (s0 * 10 + 90)>

@@ -1934,14 +1934,14 @@ alpha.security
 alpha.security.cert
 ^^^^^^^^^^^^^^^^^^^
 
-SEI CERT checkers which tries to find errors based on their `C coding rules<https://wiki.sei.cmu.edu/confluence/display/c/2+Rules>`_.
+SEI CERT checkers which tries to find errors based on their `C coding rules <https://wiki.sei.cmu.edu/confluence/display/c/2+Rules>`_.
 
 .. _alpha-security-cert-pos-checkers:
 
 alpha.security.cert.pos
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-SEI CERT checkers of POSIX `C coding rules<https://wiki.sei.cmu.edu/confluence/pages/viewpage.action?pageId=87152405>`_.
+SEI CERT checkers of `POSIX C coding rules <https://wiki.sei.cmu.edu/confluence/pages/viewpage.action?pageId=87152405>`_.
 
 .. _alpha-security-cert-pos-34c:
 
@@ -2199,9 +2199,9 @@ lck_rw_try_lock_exclusive, lck_rw_try_lock_shared, pthread_mutex_unlock, pthread
 alpha.unix.SimpleStream (C)
 """""""""""""""""""""""""""
 Check for misuses of stream APIs. Check for misuses of stream APIs: ``fopen, fclose``
-(demo checker, the subject of the demo (`Slides <http://llvm.org/devmtg/2012-11/Zaks-Rose-Checker24Hours.pdf>`_ ,
+(demo checker, the subject of the demo (`Slides <https://llvm.org/devmtg/2012-11/Zaks-Rose-Checker24Hours.pdf>`_ ,
 `Video <https://youtu.be/kdxlsP5QVPw>`_) by Anna Zaks and Jordan Rose presented at the
-`2012 LLVM Developers' Meeting <http://llvm.org/devmtg/2012-11/>`_).
+`2012 LLVM Developers' Meeting <https://llvm.org/devmtg/2012-11/>`_).
 
 .. code-block:: c
 

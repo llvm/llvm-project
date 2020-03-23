@@ -8,14 +8,13 @@ define dso_local arm_aapcs_vfpcc void @sext_i8(i16* noalias nocapture %a, i8* no
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    it eq
 ; CHECK-NEXT:    popeq {r7, pc}
-; CHECK-NEXT:    mov r3, r0
 ; CHECK-NEXT:    dlstp.16 lr, r2
-; CHECK:  	.LBB0_1: @ %vector.body
-; CHECK:    	 vldrb.s16 q0, [r1], #8
-; CHECK-NEXT:    vldrh.u16 q1, [r3], #16
+; CHECK-NEXT:  .LBB0_1: @ %vector.body
+; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vldrb.s16 q0, [r1], #8
+; CHECK-NEXT:    vldrh.u16 q1, [r0]
 ; CHECK-NEXT:    vadd.i16 q0, q1, q0
-; CHECK-NEXT:    vstrh.16 q0, [r0]
-; CHECK-NEXT:    mov r0, r3
+; CHECK-NEXT:    vstrh.16 q0, [r0], #16
 ; CHECK-NEXT:    letp lr, .LBB0_1
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}
@@ -63,14 +62,13 @@ define dso_local arm_aapcs_vfpcc void @zext_i8(i16* noalias nocapture %a, i8* no
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    it eq
 ; CHECK-NEXT:    popeq {r7, pc}
-; CHECK-NEXT:    mov r3, r0
 ; CHECK-NEXT:    dlstp.16 lr, r2
-; CHECK:  	.LBB1_1: @ %vector.body
-; CHECK:    	 vldrb.u16 q0, [r1], #8
-; CHECK-NEXT:    vldrh.u16 q1, [r3], #16
+; CHECK-NEXT:  .LBB1_1: @ %vector.body
+; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vldrb.u16 q0, [r1], #8
+; CHECK-NEXT:    vldrh.u16 q1, [r0]
 ; CHECK-NEXT:    vadd.i16 q0, q1, q0
-; CHECK-NEXT:    vstrh.16 q0, [r0]
-; CHECK-NEXT:    mov r0, r3
+; CHECK-NEXT:    vstrh.16 q0, [r0], #16
 ; CHECK-NEXT:    letp lr, .LBB1_1
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}
@@ -118,14 +116,13 @@ define dso_local arm_aapcs_vfpcc void @sext_i16(i32* noalias nocapture %a, i16* 
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    it eq
 ; CHECK-NEXT:    popeq {r7, pc}
-; CHECK-NEXT:    mov r3, r0
 ; CHECK-NEXT:    dlstp.32 lr, r2
-; CHECK:  	.LBB2_1: @ %vector.body
-; CHECK:    	 vldrh.s32 q0, [r1], #8
-; CHECK-NEXT:    vldrw.u32 q1, [r3], #16
+; CHECK-NEXT:  .LBB2_1: @ %vector.body
+; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vldrh.s32 q0, [r1], #8
+; CHECK-NEXT:    vldrw.u32 q1, [r0]
 ; CHECK-NEXT:    vadd.i32 q0, q1, q0
-; CHECK-NEXT:    vstrw.32 q0, [r0]
-; CHECK-NEXT:    mov r0, r3
+; CHECK-NEXT:    vstrw.32 q0, [r0], #16
 ; CHECK-NEXT:    letp lr, .LBB2_1
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}
@@ -173,14 +170,13 @@ define dso_local arm_aapcs_vfpcc void @zext_i16(i32* noalias nocapture %a, i16* 
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    it eq
 ; CHECK-NEXT:    popeq {r7, pc}
-; CHECK-NEXT:    mov r3, r0
 ; CHECK-NEXT:    dlstp.32 lr, r2
-; CHECK:  	 .LBB3_1: @ %vector.body
-; CHECK:    	 vldrh.u32 q0, [r1], #8
-; CHECK-NEXT:    vldrw.u32 q1, [r3], #16
+; CHECK-NEXT:  .LBB3_1: @ %vector.body
+; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vldrh.u32 q0, [r1], #8
+; CHECK-NEXT:    vldrw.u32 q1, [r0]
 ; CHECK-NEXT:    vadd.i32 q0, q1, q0
-; CHECK-NEXT:    vstrw.32 q0, [r0]
-; CHECK-NEXT:    mov r0, r3
+; CHECK-NEXT:    vstrw.32 q0, [r0], #16
 ; CHECK-NEXT:    letp lr, .LBB3_1
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}

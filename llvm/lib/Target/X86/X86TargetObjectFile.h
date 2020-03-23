@@ -44,7 +44,6 @@ namespace llvm {
     X86ELFTargetObjectFile() {
       PLTRelativeVariantKind = MCSymbolRefExpr::VK_PLT;
     }
-    void Initialize(MCContext &Ctx, const TargetMachine &TM) override;
     /// Describe a TLS variable address within debug info.
     const MCExpr *getDebugThreadLocalSymbol(const MCSymbol *Sym) const override;
   };

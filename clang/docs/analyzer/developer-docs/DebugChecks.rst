@@ -281,7 +281,7 @@ ExprInspection checks
   This is useful in tests, where we don't want to issue warning for all tainted
   expressions but only check for certain expressions.
   This would help to reduce the *noise* that the `TaintTest` debug checker would
-  introduce and let you focus on the `expected-warning`s that you really care
+  introduce and let you focus on the `expected-warning`'s that you really care
   about.
 
   Example usage::

@@ -257,7 +257,8 @@ AffineMap AffineMap::replaceDimsAndSymbols(ArrayRef<AffineExpr> dimReplacements,
     results.push_back(
         expr.replaceDimsAndSymbols(dimReplacements, symReplacements));
 
-  return get(numResultDims, numResultSyms, results);
+  return results.empty() ? get(numResultDims, 0, getContext())
+                         : get(numResultDims, numResultSyms, results);
 }
 
 AffineMap AffineMap::compose(AffineMap map) {

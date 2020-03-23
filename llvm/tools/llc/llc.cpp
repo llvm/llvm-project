@@ -597,10 +597,10 @@ static int compileModule(char **argv, LLVMContext &Context) {
       return 1;
     }
 
+    const_cast<TargetLoweringObjectFile *>(LLVMTM.getObjFileLowering())
+        ->Initialize(MMIWP->getMMI().getContext(), *Target);
     if (MIR) {
       assert(MMIWP && "Forgot to create MMIWP?");
-      const_cast<TargetLoweringObjectFile *>(LLVMTM.getObjFileLowering())
-          ->Initialize(MMIWP->getMMI().getContext(), *Target);
       if (MIR->parseMachineFunctions(*M, MMIWP->getMMI()))
         return 1;
     }

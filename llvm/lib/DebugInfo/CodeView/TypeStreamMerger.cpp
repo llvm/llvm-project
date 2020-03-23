@@ -389,11 +389,9 @@ ArrayRef<uint8_t>
 TypeStreamMerger::remapIndices(const CVType &OriginalType,
                                MutableArrayRef<uint8_t> Storage) {
   unsigned Align = OriginalType.RecordData.size() & 3;
-  unsigned AlignedSize = alignTo(OriginalType.RecordData.size(), 4);
-  assert(Storage.size() == AlignedSize &&
+  assert(Storage.size() == alignTo(OriginalType.RecordData.size(), 4) &&
          "The storage buffer size is not a multiple of 4 bytes which will "
          "cause misalignment in the output TPI stream!");
-  (void)AlignedSize;
 
   SmallVector<TiReference, 4> Refs;
   discoverTypeIndices(OriginalType.RecordData, Refs);

@@ -944,7 +944,7 @@ multidimensional index from one index space to another. For example, the
 following figure shows an index map which maps a 2-dimensional index from a 2x2
 index space to a 3x3 index space, using symbols `S0` and `S1` as offsets.
 
-![Index Map Example](includes/img/index-map.svg)
+![Index Map Example](/includes/img/index-map.svg)
 
 The number of domain dimensions and range dimensions of an index map can be
 different, but must match the number of dimensions of the input and output index

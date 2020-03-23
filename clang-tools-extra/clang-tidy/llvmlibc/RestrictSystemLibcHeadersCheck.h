@@ -10,6 +10,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_LLVMLIBC_RESTRICTSYSTEMLIBCHEADERSCHECK_H
 
 #include "../ClangTidyCheck.h"
+#include "../portability/RestrictSystemIncludesCheck.h"
 
 namespace clang {
 namespace tidy {
@@ -20,10 +21,11 @@ namespace llvm_libc {
 ///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/llvmlibc-restrict-system-libc-headers.html
-class RestrictSystemLibcHeadersCheck : public ClangTidyCheck {
+class RestrictSystemLibcHeadersCheck
+    : public portability::RestrictSystemIncludesCheck {
 public:
   RestrictSystemLibcHeadersCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context) {}
+      : portability::RestrictSystemIncludesCheck(Name, Context, "-*") {}
   void registerPPCallbacks(const SourceManager &SM, Preprocessor *PP,
                            Preprocessor *ModuleExpanderPP) override;
 };

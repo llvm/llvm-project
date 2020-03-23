@@ -69,31 +69,51 @@ entry:
 ; }
 
 define i32 @test_mul(i32* nocapture readonly %p) {
-; CHECK-LABEL: @test_mul(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[P:%.*]], align 4
-; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 1
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[ARRAYIDX_1]], align 4
-; CHECK-NEXT:    [[MUL_18:%.*]] = mul i32 [[TMP1]], [[TMP0]]
-; CHECK-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 2
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[ARRAYIDX_2]], align 4
-; CHECK-NEXT:    [[MUL_29:%.*]] = mul i32 [[TMP2]], [[MUL_18]]
-; CHECK-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 3
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, i32* [[ARRAYIDX_3]], align 4
-; CHECK-NEXT:    [[MUL_310:%.*]] = mul i32 [[TMP3]], [[MUL_29]]
-; CHECK-NEXT:    [[ARRAYIDX_4:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 4
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, i32* [[ARRAYIDX_4]], align 4
-; CHECK-NEXT:    [[MUL_411:%.*]] = mul i32 [[TMP4]], [[MUL_310]]
-; CHECK-NEXT:    [[ARRAYIDX_5:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 5
-; CHECK-NEXT:    [[TMP5:%.*]] = load i32, i32* [[ARRAYIDX_5]], align 4
-; CHECK-NEXT:    [[MUL_512:%.*]] = mul i32 [[TMP5]], [[MUL_411]]
-; CHECK-NEXT:    [[ARRAYIDX_6:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 6
-; CHECK-NEXT:    [[TMP6:%.*]] = load i32, i32* [[ARRAYIDX_6]], align 4
-; CHECK-NEXT:    [[MUL_613:%.*]] = mul i32 [[TMP6]], [[MUL_512]]
-; CHECK-NEXT:    [[ARRAYIDX_7:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 7
-; CHECK-NEXT:    [[TMP7:%.*]] = load i32, i32* [[ARRAYIDX_7]], align 4
-; CHECK-NEXT:    [[MUL_714:%.*]] = mul i32 [[TMP7]], [[MUL_613]]
-; CHECK-NEXT:    ret i32 [[MUL_714]]
+; AVX-LABEL: @test_mul(
+; AVX-NEXT:  entry:
+; AVX-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i32, i32* [[P:%.*]], i64 1
+; AVX-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 2
+; AVX-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 3
+; AVX-NEXT:    [[ARRAYIDX_4:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 4
+; AVX-NEXT:    [[ARRAYIDX_5:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 5
+; AVX-NEXT:    [[ARRAYIDX_6:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 6
+; AVX-NEXT:    [[ARRAYIDX_7:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 7
+; AVX-NEXT:    [[TMP0:%.*]] = bitcast i32* [[P]] to <8 x i32>*
+; AVX-NEXT:    [[TMP1:%.*]] = load <8 x i32>, <8 x i32>* [[TMP0]], align 4
+; AVX-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
+; AVX-NEXT:    [[BIN_RDX:%.*]] = mul <8 x i32> [[TMP1]], [[RDX_SHUF]]
+; AVX-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <8 x i32> [[BIN_RDX]], <8 x i32> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; AVX-NEXT:    [[BIN_RDX2:%.*]] = mul <8 x i32> [[BIN_RDX]], [[RDX_SHUF1]]
+; AVX-NEXT:    [[RDX_SHUF3:%.*]] = shufflevector <8 x i32> [[BIN_RDX2]], <8 x i32> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; AVX-NEXT:    [[BIN_RDX4:%.*]] = mul <8 x i32> [[BIN_RDX2]], [[RDX_SHUF3]]
+; AVX-NEXT:    [[TMP2:%.*]] = extractelement <8 x i32> [[BIN_RDX4]], i32 0
+; AVX-NEXT:    ret i32 [[TMP2]]
+;
+; SSE-LABEL: @test_mul(
+; SSE-NEXT:  entry:
+; SSE-NEXT:    [[TMP0:%.*]] = load i32, i32* [[P:%.*]], align 4
+; SSE-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 1
+; SSE-NEXT:    [[TMP1:%.*]] = load i32, i32* [[ARRAYIDX_1]], align 4
+; SSE-NEXT:    [[MUL_18:%.*]] = mul i32 [[TMP1]], [[TMP0]]
+; SSE-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 2
+; SSE-NEXT:    [[TMP2:%.*]] = load i32, i32* [[ARRAYIDX_2]], align 4
+; SSE-NEXT:    [[MUL_29:%.*]] = mul i32 [[TMP2]], [[MUL_18]]
+; SSE-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 3
+; SSE-NEXT:    [[TMP3:%.*]] = load i32, i32* [[ARRAYIDX_3]], align 4
+; SSE-NEXT:    [[MUL_310:%.*]] = mul i32 [[TMP3]], [[MUL_29]]
+; SSE-NEXT:    [[ARRAYIDX_4:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 4
+; SSE-NEXT:    [[TMP4:%.*]] = load i32, i32* [[ARRAYIDX_4]], align 4
+; SSE-NEXT:    [[MUL_411:%.*]] = mul i32 [[TMP4]], [[MUL_310]]
+; SSE-NEXT:    [[ARRAYIDX_5:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 5
+; SSE-NEXT:    [[TMP5:%.*]] = load i32, i32* [[ARRAYIDX_5]], align 4
+; SSE-NEXT:    [[MUL_512:%.*]] = mul i32 [[TMP5]], [[MUL_411]]
+; SSE-NEXT:    [[ARRAYIDX_6:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 6
+; SSE-NEXT:    [[TMP6:%.*]] = load i32, i32* [[ARRAYIDX_6]], align 4
+; SSE-NEXT:    [[MUL_613:%.*]] = mul i32 [[TMP6]], [[MUL_512]]
+; SSE-NEXT:    [[ARRAYIDX_7:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 7
+; SSE-NEXT:    [[TMP7:%.*]] = load i32, i32* [[ARRAYIDX_7]], align 4
+; SSE-NEXT:    [[MUL_714:%.*]] = mul i32 [[TMP7]], [[MUL_613]]
+; SSE-NEXT:    ret i32 [[MUL_714]]
 ;
 entry:
   %0 = load i32, i32* %p, align 4

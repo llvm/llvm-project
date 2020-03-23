@@ -12,7 +12,7 @@ target_link_libraries(MLIRLinalgEDSC
   PUBLIC
   MLIREDSC
   MLIRIR
-  MLIRAffineOps
+  MLIRAffine
   MLIRLinalgOps
   MLIRLoopOps
   MLIRStandardOps

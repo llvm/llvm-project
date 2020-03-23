@@ -6,7 +6,7 @@ Getting Started: Building and Running lld
 This page gives you the shortest path to checking out and building lld. If you
 run into problems, please file bugs in the `LLVM Bugzilla`__
 
-__ http://llvm.org/bugs/
+__ https://bugs.llvm.org/
 
 Building lld
 ------------
@@ -84,4 +84,4 @@ More Information
 
 For more information on using CMake see the `LLVM CMake guide`_.
 
-.. _LLVM CMake guide: http://llvm.org/docs/CMake.html
+.. _LLVM CMake guide: https://llvm.org/docs/CMake.html

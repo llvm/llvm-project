@@ -14,7 +14,6 @@
 #ifndef MLIR_INITALLPASSES_H_
 #define MLIR_INITALLPASSES_H_
 
-#include "mlir/Analysis/Passes.h"
 #include "mlir/Conversion/AVX512ToLLVM/ConvertAVX512ToLLVM.h"
 #include "mlir/Conversion/GPUToCUDA/GPUToCUDAPass.h"
 #include "mlir/Conversion/GPUToNVVM/GPUToNVVMPass.h"
@@ -25,6 +24,8 @@
 #include "mlir/Conversion/LinalgToSPIRV/LinalgToSPIRVPass.h"
 #include "mlir/Conversion/LoopsToGPU/LoopsToGPUPass.h"
 #include "mlir/Conversion/StandardToSPIRV/ConvertStandardToSPIRVPass.h"
+#include "mlir/Dialect/Affine/Passes.h"
+#include "mlir/Dialect/FxpMathOps/Passes.h"
 #include "mlir/Dialect/FxpMathOps/Passes.h"
 #include "mlir/Dialect/GPU/Passes.h"
 #include "mlir/Dialect/LLVMIR/Transforms/LegalizeForExport.h"
@@ -60,7 +61,7 @@ inline void registerAllPasses() {
   // Init general passes
   createCanonicalizerPass();
   createCSEPass();
-  createVectorizePass({});
+  createSuperVectorizePass({});
   createLoopUnrollPass();
   createLoopUnrollAndJamPass();
   createSimplifyAffineStructuresPass();
@@ -96,10 +97,6 @@ inline void registerAllPasses() {
 
   // CUDA
   createConvertGpuLaunchFuncToCudaCallsPass();
-#if MLIR_CUDA_CONVERSIONS_ENABLED
-  createConvertGPUKernelToCubinPass(
-      [](const std::string &, Location, StringRef) { return nullptr; });
-#endif
   createLowerGpuOpsToNVVMOpsPass();
 
   // Linalg
