@@ -103,7 +103,7 @@ def FP_REG : SIReg<"fp", 0>;
 def SP_REG : SIReg<"sp", 0>;
 
 // Pseudo-register to represent the program-counter DWARF register.
-def PC_REG : SIReg<"pc", 0>, DwarfRegNum<[16]> {
+def PC_REG : SIReg<"pc", 0>, DwarfRegNum<[16, 0]> {
   // There is no physical register corresponding to a "program counter", but
   // we need to encode the concept in debug information in order to represent
   // things like the return value in unwind information.
@@ -117,10 +117,10 @@ def VCC : RegisterWithSubRegs<"vcc", [VCC_LO, VCC_HI]> {
   let HWEncoding = 106;
 }
 
-def EXEC_LO : SIReg<"exec_lo", 126>, DwarfRegNum<[1]>;
+def EXEC_LO : SIReg<"exec_lo", 126>, DwarfRegNum<[1, 1]>;
 def EXEC_HI : SIReg<"exec_hi", 127>;
 
-def EXEC : RegisterWithSubRegs<"exec", [EXEC_LO, EXEC_HI]>, DwarfRegNum<[17]> {
+def EXEC : RegisterWithSubRegs<"exec", [EXEC_LO, EXEC_HI]>, DwarfRegNum<[17, 1]> {
   let Namespace = "AMDGPU";
   let SubRegIndices = [sub0, sub1];
   let HWEncoding = 126;
@@ -211,7 +211,8 @@ def FLAT_SCR : FlatReg<FLAT_SCR_LO, FLAT_SCR_HI, 0>;
 foreach Index = 0-105 in {
   def SGPR#Index :
     SIReg <"s"#Index, Index>,
-    DwarfRegNum<[!if(!le(Index, 63), !add(Index, 32), !add(Index, 1024))]>;
+    DwarfRegNum<[!if(!le(Index, 63), !add(Index, 32), !add(Index, 1024)),
+                 !if(!le(Index, 63), !add(Index, 32), !add(Index, 1024))]>;
 }
 
 // VGPR registers
@@ -222,7 +223,7 @@ foreach Index = 0-255 in {
   let CostPerUse=!if(!gt(Index, 31), !srl(Index, 2), 0) in {
   def VGPR#Index :
       SIReg <"v"#Index, Index>,
-      DwarfRegNum<[!add(Index, 2560)]> {
+      DwarfRegNum<[!add(Index, 2560), !add(Index, 1536)]> {
     let HWEncoding{8} = 1;
   }
   }
@@ -232,7 +233,7 @@ foreach Index = 0-255 in {
 foreach Index = 0-255 in {
   def AGPR#Index :
       SIReg <"a"#Index, Index>,
-      DwarfRegNum<[!add(Index, 3072)]> {
+      DwarfRegNum<[!add(Index, 3072), !add(Index, 2048)]> {
     let HWEncoding{8} = 1;
   }
 }

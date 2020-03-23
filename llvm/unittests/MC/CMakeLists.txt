@@ -12,3 +12,5 @@ add_llvm_unittest(MCTests
   StringTableBuilderTest.cpp
   TargetRegistry.cpp
   )
+
+add_subdirectory(AMDGPU)
