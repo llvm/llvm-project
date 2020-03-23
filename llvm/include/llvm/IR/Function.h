@@ -349,6 +349,13 @@ public:
     return 0;
   }
 
+  /// Return the stack alignment for the function.
+  MaybeAlign getFnStackAlign() const {
+    if (!hasFnAttribute(Attribute::StackAlignment))
+      return None;
+    return AttributeSets.getStackAlignment(AttributeList::FunctionIndex);
+  }
+
   /// hasGC/getGC/setGC/clearGC - The name of the garbage collection algorithm
   ///                             to use during code generation.
   bool hasGC() const {

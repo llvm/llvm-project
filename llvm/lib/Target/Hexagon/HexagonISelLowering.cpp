@@ -432,7 +432,7 @@ HexagonTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       DAG.getCopyFromReg(Chain, dl, HRI.getStackRegister(), PtrVT);
 
   bool NeedsArgAlign = false;
-  unsigned LargestAlignSeen = 0;
+  Align LargestAlignSeen;
   // Walk the register/memloc assignments, inserting copies/loads.
   for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
     CCValAssign &VA = ArgLocs[i];
@@ -469,8 +469,8 @@ HexagonTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                                         StackPtr.getValueType());
       MemAddr = DAG.getNode(ISD::ADD, dl, MVT::i32, StackPtr, MemAddr);
       if (ArgAlign)
-        LargestAlignSeen = std::max(LargestAlignSeen,
-                             (unsigned)VA.getLocVT().getStoreSizeInBits() >> 3);
+        LargestAlignSeen = std::max(
+            LargestAlignSeen, Align(VA.getLocVT().getStoreSizeInBits() / 8));
       if (Flags.isByVal()) {
         // The argument is a struct passed by value. According to LLVM, "Arg"
         // is a pointer.
@@ -493,7 +493,7 @@ HexagonTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   if (NeedsArgAlign && Subtarget.hasV60Ops()) {
     LLVM_DEBUG(dbgs() << "Function needs byte stack align due to call args\n");
-    unsigned VecAlign = HRI.getSpillAlignment(Hexagon::HvxVRRegClass);
+    Align VecAlign(HRI.getSpillAlignment(Hexagon::HvxVRRegClass));
     LargestAlignSeen = std::max(LargestAlignSeen, VecAlign);
     MFI.ensureMaxAlignment(LargestAlignSeen);
   }

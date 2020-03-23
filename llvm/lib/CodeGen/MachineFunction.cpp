@@ -172,7 +172,7 @@ void MachineFunction::init() {
           F.hasFnAttribute(Attribute::StackAlignment));
 
   if (F.hasFnAttribute(Attribute::StackAlignment))
-    FrameInfo->ensureMaxAlignment(F.getFnStackAlignment());
+    FrameInfo->ensureMaxAlignment(*F.getFnStackAlign());
 
   ConstantPool = new (Allocator) MachineConstantPool(getDataLayout());
   Alignment = STI->getTargetLowering()->getMinFunctionAlignment();
