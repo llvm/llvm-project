@@ -243,6 +243,15 @@ These each perform their respective integer arithmetic on a scalar.
 
   %2:_(s32) = G_ADD %0:_(s32), %1:_(s32)
 
+G_SADDSAT, G_UADDSAT, G_SSUBSAT, G_USUBSAT
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Signed and unsigned addition and subtraction with saturation.
+
+.. code-block:: none
+
+  %2:_(s32) = G_SADDSAT %0:_(s32), %1:_(s32)
+
 G_SHL, G_LSHR, G_ASHR
 ^^^^^^^^^^^^^^^^^^^^^
 
