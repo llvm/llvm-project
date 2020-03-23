@@ -15,10 +15,8 @@ add_llvm_library(MLIRTestTransforms
   TestMemRefBoundCheck.cpp
   TestMemRefDependenceCheck.cpp
   TestMemRefStrideCalculation.cpp
-  TestParallelismDetection.cpp
   TestVectorToLoopsConversion.cpp
   TestVectorTransforms.cpp
-  TestVectorizationUtils.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Transforms

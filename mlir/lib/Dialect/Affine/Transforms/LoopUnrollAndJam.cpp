@@ -32,10 +32,9 @@
 // Note: 'if/else' blocks are not jammed. So, if there are loops inside if
 // op's, bodies of those loops will not be jammed.
 //===----------------------------------------------------------------------===//
-#include "mlir/Transforms/Passes.h"
-
 #include "mlir/Analysis/LoopAnalysis.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Affine/Passes.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BlockAndValueMapping.h"

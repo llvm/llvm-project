@@ -61,7 +61,7 @@ inline void registerAllPasses() {
   // Init general passes
   createCanonicalizerPass();
   createCSEPass();
-  createVectorizePass({});
+  createSuperVectorizePass({});
   createLoopUnrollPass();
   createLoopUnrollAndJamPass();
   createSimplifyAffineStructuresPass();

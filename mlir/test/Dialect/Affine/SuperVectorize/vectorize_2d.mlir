@@ -1,5 +1,5 @@
-// RUN: mlir-opt %s -affine-vectorize="virtual-vector-size=4,8" | FileCheck %s -check-prefix=VECT
-// RUN: mlir-opt %s -affine-vectorize="virtual-vector-size=32,256 test-fastest-varying=1,0" | FileCheck %s
+// RUN: mlir-opt %s -affine-super-vectorize="virtual-vector-size=4,8" | FileCheck %s -check-prefix=VECT
+// RUN: mlir-opt %s -affine-super-vectorize="virtual-vector-size=32,256 test-fastest-varying=1,0" | FileCheck %s
 
 // Permutation maps used in vectorization.
 // CHECK-DAG: #[[map_id1:map[0-9]+]] = affine_map<(d0) -> (d0)>

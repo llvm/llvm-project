@@ -26,7 +26,6 @@ struct TestParallelismDetection
 
 } // end anonymous namespace
 
-
 // Walks the function and emits a note for all 'affine.for' ops detected as
 // parallel.
 void TestParallelismDetection::runOnFunction() {
