@@ -1317,7 +1317,7 @@ ChangeStatus AAReturnedValuesImpl::manifest(Attributor &A) {
 
   // Callback to replace the uses of CB with the constant C.
   auto ReplaceCallSiteUsersWith = [&A](CallBase &CB, Constant &C) {
-    if (CB.getNumUses() == 0 || CB.isMustTailCall())
+    if (CB.getNumUses() == 0)
       return ChangeStatus::UNCHANGED;
     if (A.changeValueAfterManifest(CB, C))
       return ChangeStatus::CHANGED;
@@ -3207,14 +3207,6 @@ struct AAIsDeadCallSiteReturned : public AAIsDeadFloating {
     return Changed;
   }
 
-  /// See AbstractAttribute::manifest(...).
-  ChangeStatus manifest(Attributor &A) override {
-    if (auto *CI = dyn_cast<CallInst>(&getAssociatedValue()))
-      if (CI->isMustTailCall())
-        return ChangeStatus::UNCHANGED;
-    return AAIsDeadFloating::manifest(A);
-  }
-
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
     if (IsAssumedSideEffectFree)
@@ -3264,9 +3256,6 @@ struct AAIsDeadReturned : public AAIsDeadValueImpl {
     UndefValue &UV = *UndefValue::get(getAssociatedFunction()->getReturnType());
     auto RetInstPred = [&](Instruction &I) {
       ReturnInst &RI = cast<ReturnInst>(I);
-      if (auto *CI = dyn_cast<CallInst>(RI.getReturnValue()))
-        if (CI->isMustTailCall())
-          return true;
       if (!isa<UndefValue>(RI.getReturnValue()))
         AnyChange |= A.changeUseAfterManifest(RI.getOperandUse(0), UV);
       return true;
@@ -4855,9 +4844,6 @@ struct AAValueSimplifyReturned : AAValueSimplifyImpl {
             // We can replace the AssociatedValue with the constant.
             if (&V == C || V.getType() != C->getType() || isa<UndefValue>(V))
               return true;
-            if (auto *CI = dyn_cast<CallInst>(&V))
-              if (CI->isMustTailCall())
-                return true;
 
             for (ReturnInst *RI : RetInsts) {
               if (RI->getFunction() != getAnchorScope())
@@ -4965,9 +4951,6 @@ struct AAValueSimplifyCallSiteReturned : AAValueSimplifyReturned {
 
   /// See AbstractAttribute::manifest(...).
   ChangeStatus manifest(Attributor &A) override {
-    if (auto *CI = dyn_cast<CallInst>(&getAssociatedValue()))
-      if (CI->isMustTailCall())
-        return ChangeStatus::UNCHANGED;
     return AAValueSimplifyImpl::manifest(A);
   }
 
@@ -7879,6 +7862,14 @@ ChangeStatus Attributor::run() {
       Use *U = It.first;
       Value *NewV = It.second;
       Value *OldV = U->get();
+
+      // Do not replace uses in returns if the value is a must-tail call we will
+      // not delete.
+      if (isa<ReturnInst>(U->getUser()))
+        if (auto *CI = dyn_cast<CallInst>(OldV->stripPointerCasts()))
+          if (CI->isMustTailCall() && !ToBeDeletedInsts.count(CI))
+            continue;
+
       LLVM_DEBUG(dbgs() << "Use " << *NewV << " in " << *U->getUser()
                         << " instead of " << *OldV << "\n");
       U->set(NewV);
