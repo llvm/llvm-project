@@ -2,6 +2,12 @@
 
 // RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=core,cplusplus,debug.DebugIteratorModeling,debug.ExprInspection -analyzer-config aggressive-binary-operation-simplification=true -analyzer-config c++-container-inlining=true -DINLINE=1 %s -verify
 
+// RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=core,cplusplus,debug.DebugIteratorModeling,debug.ExprInspection -analyzer-config aggressive-binary-operation-simplification=true -analyzer-config c++-container-inlining=true -DINLINE=1 -DSTD_ADVANCE_INLINE_LEVEL=0 %s -verify
+
+// RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=core,cplusplus,debug.DebugIteratorModeling,debug.ExprInspection -analyzer-config aggressive-binary-operation-simplification=true -analyzer-config c++-container-inlining=true -DINLINE=1 -DSTD_ADVANCE_INLINE_LEVEL=1 %s -verify
+
+// RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=core,cplusplus,debug.DebugIteratorModeling,debug.ExprInspection -analyzer-config aggressive-binary-operation-simplification=true -analyzer-config c++-container-inlining=true -DINLINE=1 -DSTD_ADVANCE_INLINE_LEVEL=2 %s -verify
+
 // RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=core,cplusplus,alpha.cplusplus.IteratorModeling,debug.ExprInspection -analyzer-config aggressive-binary-operation-simplification=true %s 2>&1 | FileCheck %s
 
 #include "Inputs/system-header-simulator-cxx.h"
@@ -231,6 +237,68 @@ void copy_and_decrement2(const std::vector<int> &v) {
 
   clang_analyzer_express(clang_analyzer_iterator_position(i1)); //expected-warning{{$v.end()}}
   clang_analyzer_express(clang_analyzer_iterator_position(i2)); //expected-warning{{$v.end() - 1}}
+}
+
+/// std::advance(), std::prev(), std::next()
+
+void std_advance_minus(const std::vector<int> &v) {
+  auto i = v.end();
+
+  clang_analyzer_denote(clang_analyzer_container_end(v), "$v.end()");
+
+  std::advance(i, -1);
+
+  clang_analyzer_express(clang_analyzer_iterator_position(i)); //expected-warning{{$v.end() - 1}}
+}
+
+void std_advance_plus(const std::vector<int> &v) {
+  auto i = v.begin();
+
+  clang_analyzer_denote(clang_analyzer_container_begin(v), "$v.begin()");
+
+  std::advance(i, 1);
+
+  clang_analyzer_express(clang_analyzer_iterator_position(i)); //expected-warning{{$v.begin() + 1}}
+}
+
+void std_prev(const std::vector<int> &v) {
+  auto i = v.end();
+
+  clang_analyzer_denote(clang_analyzer_container_end(v), "$v.end()");
+
+  auto j = std::prev(i);
+
+  clang_analyzer_express(clang_analyzer_iterator_position(j)); //expected-warning{{$v.end() - 1}}
+}
+
+void std_prev2(const std::vector<int> &v) {
+  auto i = v.end();
+
+  clang_analyzer_denote(clang_analyzer_container_end(v), "$v.end()");
+
+  auto j = std::prev(i, 2);
+
+  clang_analyzer_express(clang_analyzer_iterator_position(j)); //expected-warning{{$v.end() - 2}}
+}
+
+void std_next(const std::vector<int> &v) {
+  auto i = v.begin();
+
+  clang_analyzer_denote(clang_analyzer_container_begin(v), "$v.begin()");
+
+  auto j = std::next(i);
+
+  clang_analyzer_express(clang_analyzer_iterator_position(j)); //expected-warning{{$v.begin() + 1}}
+}
+
+void std_next2(const std::vector<int> &v) {
+  auto i = v.begin();
+
+  clang_analyzer_denote(clang_analyzer_container_begin(v), "$v.begin()");
+
+  auto j = std::next(i, 2);
+
+  clang_analyzer_express(clang_analyzer_iterator_position(j)); //expected-warning{{$v.begin() + 2}}
 }
 
 ////////////////////////////////////////////////////////////////////////////////
