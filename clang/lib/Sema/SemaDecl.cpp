@@ -13141,20 +13141,20 @@ void Sema::FinalizeDeclaration(Decl *ThisDecl) {
     if (!MagicValueExpr) {
       continue;
     }
-    llvm::APSInt MagicValueInt;
-    if (!MagicValueExpr->isIntegerConstantExpr(MagicValueInt, Context)) {
+    Optional<llvm::APSInt> MagicValueInt;
+    if (!(MagicValueInt = MagicValueExpr->getIntegerConstantExpr(Context))) {
       Diag(I->getRange().getBegin(),
            diag::err_type_tag_for_datatype_not_ice)
         << LangOpts.CPlusPlus << MagicValueExpr->getSourceRange();
       continue;
     }
-    if (MagicValueInt.getActiveBits() > 64) {
+    if (MagicValueInt->getActiveBits() > 64) {
       Diag(I->getRange().getBegin(),
            diag::err_type_tag_for_datatype_too_large)
         << LangOpts.CPlusPlus << MagicValueExpr->getSourceRange();
       continue;
     }
-    uint64_t MagicValue = MagicValueInt.getZExtValue();
+    uint64_t MagicValue = MagicValueInt->getZExtValue();
     RegisterTypeTagForDatatype(I->getArgumentKind(),
                                MagicValue,
                                I->getMatchingCType(),
