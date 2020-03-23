@@ -56,6 +56,7 @@ add_llvm_component_library(LLVMCodeGen
   LiveIntervalUnion.cpp
   LivePhysRegs.cpp
   LiveRangeCalc.cpp
+  LiveIntervalCalc.cpp
   LiveRangeEdit.cpp
   LiveRangeShrink.cpp
   LiveRegMatrix.cpp

@@ -1,4 +1,4 @@
-//===- LiveRangeCalc.h - Calculate live ranges ------------------*- C++ -*-===//
+//===- LiveRangeCalc.h - Calculate live ranges -----------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,15 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// The LiveRangeCalc class can be used to compute live ranges from scratch.  It
-// caches information about values in the CFG to speed up repeated operations
-// on the same live range.  The cache can be shared by non-overlapping live
-// ranges.  SplitKit uses that when computing the live range of split products.
+// The LiveRangeCalc class can be used to implement the computation of
+// live ranges from scratch.
+// It caches information about values in the CFG to speed up repeated
+// operations on the same live range.  The cache can be shared by
+// non-overlapping live ranges. SplitKit uses that when computing the live
+// range of split products.
 //
 // A low-level interface is available to clients that know where a variable is
 // live, but don't know which value it has as every point.  LiveRangeCalc will
 // propagate values down the dominator tree, and even insert PHI-defs where
-// needed.  SplitKit uses this faster interface when possible.
+// needed. SplitKit uses this faster interface when possible.
 //
 //===----------------------------------------------------------------------===//
 
@@ -159,18 +161,14 @@ class LiveRangeCalc {
   /// the given @p LiveOuts.
   void updateFromLiveIns();
 
-  /// Extend the live range of @p LR to reach all uses of Reg.
-  ///
-  /// If @p LR is a main range, or if @p LI is null, then all uses must be
-  /// jointly dominated by the definitions from @p LR. If @p LR is a subrange
-  /// of the live interval @p LI, corresponding to lane mask @p LaneMask,
-  /// all uses must be jointly dominated by the definitions from @p LR
-  /// together with definitions of other lanes where @p LR becomes undefined
-  /// (via <def,read-undef> operands).
-  /// If @p LR is a main range, the @p LaneMask should be set to ~0, i.e.
-  /// LaneBitmask::getAll().
-  void extendToUses(LiveRange &LR, unsigned Reg, LaneBitmask LaneMask,
-                    LiveInterval *LI = nullptr);
+protected:
+  /// Some getters to expose in a read-only way some private fields to
+  /// subclasses.
+  const MachineFunction *getMachineFunction() { return MF; }
+  const MachineRegisterInfo *getRegInfo() const { return MRI; }
+  SlotIndexes *getIndexes() { return Indexes; }
+  MachineDominatorTree *getDomTree() { return DomTree; }
+  VNInfo::Allocator *getVNAlloc() { return Alloc; }
 
   /// Reset Map and Seen fields.
   void resetLiveOutMap();
@@ -209,29 +207,6 @@ public:
   /// PhysReg, when set, is used to verify live-in lists on basic blocks.
   void extend(LiveRange &LR, SlotIndex Use, unsigned PhysReg,
               ArrayRef<SlotIndex> Undefs);
-
-  /// createDeadDefs - Create a dead def in LI for every def operand of Reg.
-  /// Each instruction defining Reg gets a new VNInfo with a corresponding
-  /// minimal live range.
-  void createDeadDefs(LiveRange &LR, unsigned Reg);
-
-  /// Extend the live range of @p LR to reach all uses of Reg.
-  ///
-  /// All uses must be jointly dominated by existing liveness.  PHI-defs are
-  /// inserted as needed to preserve SSA form.
-  void extendToUses(LiveRange &LR, unsigned PhysReg) {
-    extendToUses(LR, PhysReg, LaneBitmask::getAll());
-  }
-
-  /// Calculates liveness for the register specified in live interval @p LI.
-  /// Creates subregister live ranges as needed if subreg liveness tracking is
-  /// enabled.
-  void calculate(LiveInterval &LI, bool TrackSubRegs);
-
-  /// For live interval \p LI with correct SubRanges construct matching
-  /// information for the main live range. Expects the main live range to not
-  /// have any segments or value numbers.
-  void constructMainRangeFromSubranges(LiveInterval &LI);
 
   //===--------------------------------------------------------------------===//
   // Low-level interface.
