@@ -437,7 +437,7 @@ define void @f8_nested_conds(i32 %a, i32 %b) {
 ; CHECK:       false.2:
 ; CHECK-NEXT:    [[F_6:%.*]] = icmp eq i32 [[B]], 254
 ; CHECK-NEXT:    call void @use(i1 [[F_6]])
-; CHECK-NEXT:    [[F_7:%.*]] = icmp ugt i32 [[B]], 256
+; CHECK-NEXT:    [[F_7:%.*]] = icmp ult i32 [[B]], 255
 ; CHECK-NEXT:    call void @use(i1 [[F_7]])
 ; CHECK-NEXT:    [[T_5:%.*]] = icmp ne i32 [[B]], 254
 ; CHECK-NEXT:    call void @use(i1 [[T_5]])
@@ -498,7 +498,7 @@ false.2: ;%b in [255, 0)
   ; Conditions below are false;
   %f.6 = icmp eq i32 %b, 254
   call void @use(i1 %f.6)
-  %f.7 = icmp ugt i32 %b, 256
+  %f.7 = icmp ult i32 %b, 255
   call void @use(i1 %f.7)
 
   ; Conditions below are true;
@@ -560,13 +560,17 @@ define void @f9_nested_conds(i32 %a, i32 %b) {
 ; CHECK-NEXT:    call void @use(i1 [[F_5]])
 ; CHECK-NEXT:    [[F_6:%.*]] = icmp ugt i32 [[B]], 21
 ; CHECK-NEXT:    call void @use(i1 [[F_6]])
+; CHECK-NEXT:    [[F_7:%.*]] = icmp ne i32 [[B]], 5
+; CHECK-NEXT:    call void @use(i1 [[F_7]])
 ; CHECK-NEXT:    [[T_5:%.*]] = icmp ne i32 [[B]], 21
 ; CHECK-NEXT:    call void @use(i1 [[T_5]])
 ; CHECK-NEXT:    [[T_6:%.*]] = icmp ult i32 [[B]], 21
 ; CHECK-NEXT:    call void @use(i1 [[T_6]])
+; CHECK-NEXT:    [[T_7:%.*]] = icmp ne i32 [[B]], 5
+; CHECK-NEXT:    call void @use(i1 [[T_7]])
 ; CHECK-NEXT:    [[C_6:%.*]] = icmp eq i32 [[B]], 11
 ; CHECK-NEXT:    call void @use(i1 [[C_6]])
-; CHECK-NEXT:    [[C_7:%.*]] = icmp ne i32 [[B]], 5
+; CHECK-NEXT:    [[C_7:%.*]] = icmp ne i32 [[B]], 15
 ; CHECK-NEXT:    call void @use(i1 [[C_7]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       false:
@@ -620,24 +624,87 @@ true.2: ; %b in [21, 0)
   call void @use(i1 %c.5)
   ret void
 
-false.2: ;%b in [0, 21)
+false.2: ;%b in [11, 21)
   ; Conditions below are false;
   %f.5 = icmp eq i32 %b, 21
   call void @use(i1 %f.5)
   %f.6 = icmp ugt i32 %b, 21
   call void @use(i1 %f.6)
+  %f.7 = icmp ne i32 %b, 5
+  call void @use(i1 %f.7)
 
   ; Conditions below are true;
   %t.5 = icmp ne i32 %b, 21
   call void @use(i1 %t.5)
   %t.6 = icmp ult i32 %b, 21
   call void @use(i1 %t.6)
+  %t.7 = icmp ne i32 %b, 5
+  call void @use(i1 %t.7)
 
   ; Conditions below cannot be simplified.
   %c.6 = icmp eq i32 %b, 11
   call void @use(i1 %c.6)
-  %c.7 = icmp ne i32 %b, 5
+  %c.7 = icmp ne i32 %b, 15
   call void @use(i1 %c.7)
+  ret void
+
+false:
+  ret void
+}
+
+
+; Test with with nested conditions where the second conditions is more limiting than the first one.
+define void @f10_cond_does_not_restrict_range(i32 %a, i32 %b) {
+; CHECK-LABEL: @f10_cond_does_not_restrict_range(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[B_255:%.*]] = and i32 [[B:%.*]], 255
+; CHECK-NEXT:    br label [[TRUE:%.*]]
+; CHECK:       true:
+; CHECK-NEXT:    [[F_1:%.*]] = icmp eq i32 [[B_255]], 256
+; CHECK-NEXT:    call void @use(i1 [[F_1]])
+; CHECK-NEXT:    [[F_2:%.*]] = icmp eq i32 [[B_255]], 300
+; CHECK-NEXT:    call void @use(i1 [[F_2]])
+; CHECK-NEXT:    [[T_1:%.*]] = icmp ult i32 [[B_255]], 256
+; CHECK-NEXT:    call void @use(i1 [[T_1]])
+; CHECK-NEXT:    [[T_2:%.*]] = icmp ult i32 [[B_255]], 300
+; CHECK-NEXT:    call void @use(i1 [[T_2]])
+; CHECK-NEXT:    [[T_3:%.*]] = icmp ne i32 [[B_255]], 256
+; CHECK-NEXT:    call void @use(i1 [[T_3]])
+; CHECK-NEXT:    [[T_4:%.*]] = icmp ne i32 [[B_255]], 300
+; CHECK-NEXT:    call void @use(i1 [[T_4]])
+; CHECK-NEXT:    [[C_1:%.*]] = icmp eq i32 [[B_255]], 11
+; CHECK-NEXT:    call void @use(i1 [[C_1]])
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ugt i32 [[B_255]], 30
+; CHECK-NEXT:    call void @use(i1 [[C_2]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %b.255 = and i32 %b, 255
+  %bc.1 = icmp ult i32 %b.255, 300
+  br i1 %bc.1, label %true, label %false
+
+true: ; %b in [0, 256)
+  ; Conditions below are false.
+  %f.1 = icmp eq i32 %b.255, 256
+  call void @use(i1 %f.1)
+  %f.2 = icmp eq i32 %b.255, 300
+  call void @use(i1 %f.2)
+
+  ; Conditions below are true.
+  %t.1 = icmp ult i32 %b.255, 256
+  call void @use(i1 %t.1)
+  %t.2 = icmp ult i32 %b.255, 300
+  call void @use(i1 %t.2)
+  %t.3 = icmp ne i32 %b.255, 256
+  call void @use(i1 %t.3)
+  %t.4 = icmp ne i32 %b.255, 300
+  call void @use(i1 %t.4)
+
+  ; Conditions below cannot be simplified.
+  %c.1 = icmp eq i32 %b.255, 11
+  call void @use(i1 %c.1)
+  %c.2 = icmp ugt i32 %b.255, 30
+  call void @use(i1 %c.2)
   ret void
 
 false:
