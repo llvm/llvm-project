@@ -32,5 +32,7 @@ add_subdirectory(utils)
 # and libraries potentially draw from the components present in all
 # of the other directories.
 add_subdirectory(lib)
-add_subdirectory(test)
-add_subdirectory(fuzzing)
+if(LLVM_INCLUDE_TESTS)
+  add_subdirectory(test)
+  add_subdirectory(fuzzing)
+endif()
