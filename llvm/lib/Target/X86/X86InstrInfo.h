@@ -474,7 +474,7 @@ public:
                                       unsigned OpNum,
                                       ArrayRef<MachineOperand> MOs,
                                       MachineBasicBlock::iterator InsertPt,
-                                      unsigned Size, unsigned Alignment,
+                                      unsigned Size, Align Alignment,
                                       bool AllowCommute) const;
 
   bool isHighLatencyDef(int opc) const override;
@@ -594,7 +594,7 @@ private:
                                         unsigned OpNum,
                                         ArrayRef<MachineOperand> MOs,
                                         MachineBasicBlock::iterator InsertPt,
-                                        unsigned Size, unsigned Align) const;
+                                        unsigned Size, Align Alignment) const;
 
   /// isFrameOperand - Return true and the FrameIndex if the specified
   /// operand and follow operands form a reference to the stack frame.
