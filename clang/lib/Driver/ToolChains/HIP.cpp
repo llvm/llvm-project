@@ -378,12 +378,6 @@ HIPToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
   const OptTable &Opts = getDriver().getOpts();
 
   for (Arg *A : Args) {
-    if (A->getOption().matches(options::OPT_Xarch__)) {
-      // Skip this argument unless the architecture matches BoundArch.
-      if (BoundArch.empty() || A->getValue(0) != BoundArch)
-        continue;
-      TranslateXarchArgs(Args, A, DAL);
-    }
     DAL->append(A);
   }
 

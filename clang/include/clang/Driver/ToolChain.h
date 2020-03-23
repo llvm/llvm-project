@@ -296,10 +296,20 @@ public:
       SmallVectorImpl<llvm::opt::Arg *> &AllocatedArgs) const;
 
   /// Append the argument following \p A to \p DAL assuming \p A is an Xarch
-  /// argument.
-  virtual void TranslateXarchArgs(const llvm::opt::DerivedArgList &Args,
-                                  llvm::opt::Arg *&A,
-                                  llvm::opt::DerivedArgList *DAL) const;
+  /// argument. If \p AllocatedArgs is null pointer, synthesized arguments are
+  /// added to \p DAL, otherwise they are appended to \p AllocatedArgs.
+  virtual void TranslateXarchArgs(
+      const llvm::opt::DerivedArgList &Args, llvm::opt::Arg *&A,
+      llvm::opt::DerivedArgList *DAL,
+      SmallVectorImpl<llvm::opt::Arg *> *AllocatedArgs = nullptr) const;
+
+  /// Translate -Xarch_ arguments. If there are no such arguments, return
+  /// a null pointer, otherwise return a DerivedArgList containing the
+  /// translated arguments.
+  virtual llvm::opt::DerivedArgList *
+  TranslateXarchArgs(const llvm::opt::DerivedArgList &Args, StringRef BoundArch,
+                     Action::OffloadKind DeviceOffloadKind,
+                     SmallVectorImpl<llvm::opt::Arg *> *AllocatedArgs) const;
 
   /// Choose a tool to use to handle the action \p JA.
   ///

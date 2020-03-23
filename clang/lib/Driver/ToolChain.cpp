@@ -1103,11 +1103,20 @@ llvm::opt::DerivedArgList *ToolChain::TranslateOpenMPTargetArgs(
   return nullptr;
 }
 
-void ToolChain::TranslateXarchArgs(const llvm::opt::DerivedArgList &Args,
-                                   llvm::opt::Arg *&A,
-                                   llvm::opt::DerivedArgList *DAL) const {
+// TODO: Currently argument values separated by space e.g.
+// -Xclang -mframe-pointer=no cannot be passed by -Xarch_. This should be
+// fixed.
+void ToolChain::TranslateXarchArgs(
+    const llvm::opt::DerivedArgList &Args, llvm::opt::Arg *&A,
+    llvm::opt::DerivedArgList *DAL,
+    SmallVectorImpl<llvm::opt::Arg *> *AllocatedArgs) const {
   const OptTable &Opts = getDriver().getOpts();
-  unsigned Index = Args.getBaseArgs().MakeIndex(A->getValue(1));
+  unsigned ValuePos = 1;
+  if (A->getOption().matches(options::OPT_Xarch_device) ||
+      A->getOption().matches(options::OPT_Xarch_host))
+    ValuePos = 0;
+
+  unsigned Index = Args.getBaseArgs().MakeIndex(A->getValue(ValuePos));
   unsigned Prev = Index;
   std::unique_ptr<llvm::opt::Arg> XarchArg(Opts.ParseOneArg(Args, Index));
 
@@ -1130,5 +1139,49 @@ void ToolChain::TranslateXarchArgs(const llvm::opt::DerivedArgList &Args,
   }
   XarchArg->setBaseArg(A);
   A = XarchArg.release();
-  DAL->AddSynthesizedArg(A);
+  if (!AllocatedArgs)
+    DAL->AddSynthesizedArg(A);
+  else
+    AllocatedArgs->push_back(A);
+}
+
+llvm::opt::DerivedArgList *ToolChain::TranslateXarchArgs(
+    const llvm::opt::DerivedArgList &Args, StringRef BoundArch,
+    Action::OffloadKind OFK,
+    SmallVectorImpl<llvm::opt::Arg *> *AllocatedArgs) const {
+  DerivedArgList *DAL = new DerivedArgList(Args.getBaseArgs());
+  bool Modified = false;
+
+  bool IsGPU = OFK == Action::OFK_Cuda || OFK == Action::OFK_HIP;
+  for (Arg *A : Args) {
+    bool NeedTrans = false;
+    bool Skip = false;
+    if (A->getOption().matches(options::OPT_Xarch_device)) {
+      NeedTrans = IsGPU;
+      Skip = !IsGPU;
+    } else if (A->getOption().matches(options::OPT_Xarch_host)) {
+      NeedTrans = !IsGPU;
+      Skip = IsGPU;
+    } else if (A->getOption().matches(options::OPT_Xarch__) && IsGPU) {
+      // Do not translate -Xarch_ options for non CUDA/HIP toolchain since
+      // they may need special translation.
+      // Skip this argument unless the architecture matches BoundArch
+      if (BoundArch.empty() || A->getValue(0) != BoundArch)
+        Skip = true;
+      else
+        NeedTrans = true;
+    }
+    if (NeedTrans || Skip)
+      Modified = true;
+    if (NeedTrans)
+      TranslateXarchArgs(Args, A, DAL, AllocatedArgs);
+    if (!Skip)
+      DAL->append(A);
+  }
+
+  if (Modified)
+    return DAL;
+
+  delete DAL;
+  return nullptr;
 }
