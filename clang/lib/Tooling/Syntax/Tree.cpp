@@ -58,22 +58,33 @@ bool syntax::Leaf::classof(const Node *N) {
 
 syntax::Node::Node(NodeKind Kind)
     : Parent(nullptr), NextSibling(nullptr), Kind(static_cast<unsigned>(Kind)),
-      Role(static_cast<unsigned>(NodeRole::Detached)), Original(false),
-      CanModify(false) {}
+      Role(0), Original(false), CanModify(false) {
+  this->setRole(NodeRole::Detached);
+}
 
 bool syntax::Node::isDetached() const { return role() == NodeRole::Detached; }
+
+void syntax::Node::setRole(NodeRole NR) {
+  this->Role = static_cast<unsigned>(NR);
+}
 
 bool syntax::Tree::classof(const Node *N) { return N->kind() > NodeKind::Leaf; }
 
 void syntax::Tree::prependChildLowLevel(Node *Child, NodeRole Role) {
-  assert(Child->Parent == nullptr);
-  assert(Child->NextSibling == nullptr);
   assert(Child->role() == NodeRole::Detached);
   assert(Role != NodeRole::Detached);
 
+  Child->setRole(Role);
+  prependChildLowLevel(Child);
+}
+
+void syntax::Tree::prependChildLowLevel(Node *Child) {
+  assert(Child->Parent == nullptr);
+  assert(Child->NextSibling == nullptr);
+  assert(Child->role() != NodeRole::Detached);
+
   Child->Parent = this;
   Child->NextSibling = this->FirstChild;
-  Child->Role = static_cast<unsigned>(Role);
   this->FirstChild = Child;
 }
 
@@ -94,7 +105,7 @@ void syntax::Tree::replaceChildRangeLowLevel(Node *BeforeBegin, Node *End,
        N != End;) {
     auto *Next = N->NextSibling;
 
-    N->Role = static_cast<unsigned>(NodeRole::Detached);
+    N->setRole(NodeRole::Detached);
     N->Parent = nullptr;
     N->NextSibling = nullptr;
     if (N->Original)
