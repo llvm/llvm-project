@@ -640,9 +640,12 @@ TEST_F(FormatTestCSharp, CSharpSpaces) {
   verifyFormat(R"(private float[,] Values;)", Style);
   verifyFormat(R"(Result this[Index x] => Foo(x);)", Style);
 
+  verifyFormat(R"(char[,,] rawCharArray = MakeCharacterGrid();)", Style);
+
   Style.SpacesInSquareBrackets = true;
   verifyFormat(R"(private float[ , ] Values;)", Style);
   verifyFormat(R"(string dirPath = args?[ 0 ];)", Style);
+  verifyFormat(R"(char[ ,, ] rawCharArray = MakeCharacterGrid();)", Style);
 }
 
 TEST_F(FormatTestCSharp, CSharpNullableTypes) {
