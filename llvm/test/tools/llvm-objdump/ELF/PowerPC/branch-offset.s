@@ -8,10 +8,10 @@
 # RUN: llvm-objdump -d --no-show-raw-insn %t.64.o | FileCheck --check-prefixes=ELF64,CHECK %s
 
 # CHECK-LABEL: <bl>:
-# ELF32-NEXT:   bl .-4
-# ELF64-NEXT:   bl .-4
-# CHECK-NEXT:   bl .+0
-# CHECK-NEXT:   bl .+4
+# ELF32-NEXT:   bl 0xfffffffc
+# ELF64-NEXT:   bl 0xfffffffffffffffc
+# CHECK-NEXT:   bl 0x4
+# CHECK-NEXT:   bl 0xc
 
 bl:
   bl .-4

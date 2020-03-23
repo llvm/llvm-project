@@ -27,9 +27,9 @@
 # CHECK: <_start>:
 # CHECK-NEXT:                 addis 2, 12, 2
 # CHECK-NEXT:                 addi 2, 2, -32636
-# CHECK-NEXT: 1001021c:       bl .+32
+# CHECK-NEXT: 1001021c:       bl 0x1001023c
 # CHECK-NEXT:                 ld 2, 24(1)
-# CHECK-NEXT: 10010224:       bl .+44
+# CHECK-NEXT: 10010224:       bl 0x10010250
 # CHECK-NEXT:                 ld 2, 24(1)
 # CHECK-NEXT:                 addis 3, 2, -2
 # CHECK-NEXT:                 addi 3, 3, 32748
