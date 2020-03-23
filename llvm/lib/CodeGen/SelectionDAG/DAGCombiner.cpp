@@ -14248,9 +14248,24 @@ static bool shouldCombineToPostInc(SDNode *N, SDValue Ptr, SDNode *PtrUse,
   if (isa<FrameIndexSDNode>(BasePtr) || isa<RegisterSDNode>(BasePtr))
     return false;
 
+  SmallPtrSet<const SDNode *, 32> Visited;
   for (SDNode *Use : BasePtr.getNode()->uses()) {
     if (Use == Ptr.getNode())
       continue;
+
+    // No if there's a later user which could perform the index instead.
+    if (isa<MemSDNode>(Use)) {
+      bool IsLoad = true;
+      bool IsMasked = false;
+      SDValue OtherPtr;
+      if (getCombineLoadStoreParts(Use, ISD::POST_INC, ISD::POST_DEC, IsLoad,
+                                   IsMasked, OtherPtr, TLI)) {
+        SmallVector<const SDNode *, 2> Worklist;
+        Worklist.push_back(Use);
+        if (SDNode::hasPredecessorHelper(N, Visited, Worklist))
+          return false;
+      }
+    }
 
     // If all the uses are load / store addresses, then don't do the
     // transformation.
