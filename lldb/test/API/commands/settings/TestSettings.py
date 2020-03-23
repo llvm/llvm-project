@@ -204,10 +204,15 @@ class SettingsCommandTestCase(TestBase):
 
     @skipIfDarwinEmbedded   # <rdar://problem/34446098> debugserver on ios etc can't write files
     def test_run_args_and_env_vars(self):
+        self.do_test_run_args_and_env_vars(use_launchsimple=False)
+
+    @skipIfDarwinEmbedded   # <rdar://problem/34446098> debugserver on ios etc can't write files
+    def test_launchsimple_args_and_env_vars(self):
+        self.do_test_run_args_and_env_vars(use_launchsimple=True)
+
+    def do_test_run_args_and_env_vars(self, use_launchsimple):
         """Test that run-args and env-vars are passed to the launched process."""
         self.build()
-        exe = self.getBuildArtifact("a.out")
-        self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # Set the run-args and the env-vars.
         # And add hooks to restore the settings during tearDown().
@@ -218,7 +223,11 @@ class SettingsCommandTestCase(TestBase):
         self.addTearDownHook(
             lambda: self.runCmd("settings clear target.env-vars"))
 
-        launch_info = self.dbg.GetTargetAtIndex(0).GetLaunchInfo()
+        exe = self.getBuildArtifact("a.out")
+        self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
+
+        target = self.dbg.GetTargetAtIndex(0)
+        launch_info = target.GetLaunchInfo()
         found_env_var = False
         for i in range(0, launch_info.GetNumEnvironmentEntries()):
             if launch_info.GetEnvironmentEntryAtIndex(i) == "MY_ENV_VAR=YES":
@@ -227,7 +236,12 @@ class SettingsCommandTestCase(TestBase):
         self.assertTrue(found_env_var,
                         "MY_ENV_VAR was not set in LunchInfo object")
 
-        self.runCmd("process launch --working-dir '{0}'".format(self.get_process_working_directory()),
+        wd = self.get_process_working_directory()
+        if use_launchsimple:
+            process = target.LaunchSimple(None, None, wd)
+            self.assertTrue(process)
+        else:
+            self.runCmd("process launch --working-dir '{0}'".format(wd),
                 RUN_SUCCEEDED)
 
         # Read the output file produced by running the program.
