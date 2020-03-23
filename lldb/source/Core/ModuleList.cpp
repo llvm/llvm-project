@@ -136,6 +136,11 @@ bool ModuleListProperties::GetUseSwiftDWARFImporter() const {
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
       NULL, idx, g_modulelist_properties[idx].default_uint_value != 0);
 }
+
+bool ModuleListProperties::SetUseSwiftDWARFImporter(bool new_value) {
+    return m_collection_sp->SetPropertyAtIndexAsBoolean(
+            nullptr, ePropertyUseSwiftDWARFImporter, new_value);
+}
 // END SWIFT
 
 bool ModuleListProperties::SetClangModulesCachePath(llvm::StringRef path) {
