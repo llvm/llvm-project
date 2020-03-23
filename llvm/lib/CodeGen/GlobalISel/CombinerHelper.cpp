@@ -9,6 +9,7 @@
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
+#include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineDominators.h"
@@ -23,6 +24,7 @@
 #define DEBUG_TYPE "gi-combiner"
 
 using namespace llvm;
+using namespace MIPatternMatch;
 
 // Option to allow testing of the combiner while no targets know about indexed
 // addressing.
@@ -1544,6 +1546,13 @@ bool CombinerHelper::matchEqualDefs(const MachineOperand &MOP1,
   // On the off-chance that there's some target instruction feeding into the
   // instruction, let's use produceSameValue instead of isIdenticalTo.
   return Builder.getTII().produceSameValue(*I1, *I2, &MRI);
+}
+
+bool CombinerHelper::matchConstantOp(const MachineOperand &MOP, int64_t C) {
+  if (!MOP.isReg())
+    return false;
+  int64_t Cst;
+  return mi_match(MOP.getReg(), MRI, m_ICst(Cst)) && Cst == C;
 }
 
 bool CombinerHelper::replaceSingleDefInstWithOperand(MachineInstr &MI,
