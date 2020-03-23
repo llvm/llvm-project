@@ -333,9 +333,6 @@ def parseOptionsAndInitTestdirs():
     if args.swiftcompiler:
         configuration.swiftCompiler = args.swiftcompiler
 
-    if args.swiftlibrary:
-        configuration.swiftLibrary = args.swiftlibrary
-
     cflags_extras = ""
     if args.E:
         os.environ['CFLAGS_EXTRAS'] = args.E
@@ -1100,8 +1097,6 @@ def run_suite():
     os.environ["CC"] = configuration.compiler
     if configuration.swiftCompiler:
         os.environ["SWIFTC"] = configuration.swiftCompiler
-    if configuration.swiftLibrary:
-        os.environ["USERSWIFTLIBRARY"] = configuration.swiftLibrary
     configString = "arch=%s compiler=%s" % (configuration.arch,
                                             configuration.compiler)
 
