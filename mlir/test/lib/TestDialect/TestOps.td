@@ -496,6 +496,18 @@ def AttrSizedResultOp : TEST_Op<"attr_sized_results",
   );
 }
 
+// This is used to test encoding of a string attribute into an SSA name of a
+// pretty printed value name.
+def StringAttrPrettyNameOp
+ : TEST_Op<"string_attr_pretty_name",
+           [DeclareOpInterfaceMethods<OpAsmOpInterface>]> {
+  let arguments = (ins StrArrayAttr:$names);
+  let results = (outs Variadic<I32>:$r);
+
+  let printer = [{ return ::print(p, *this); }];
+  let parser = [{ return ::parse$cppClass(parser, result); }];
+}
+
 //===----------------------------------------------------------------------===//
 // Test Patterns
 //===----------------------------------------------------------------------===//

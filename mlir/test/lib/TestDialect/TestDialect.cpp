@@ -392,6 +392,87 @@ void SideEffectOp::getEffects(
 }
 
 //===----------------------------------------------------------------------===//
+// StringAttrPrettyNameOp
+//===----------------------------------------------------------------------===//
+
+// This op has fancy handling of its SSA result name.
+static ParseResult parseStringAttrPrettyNameOp(OpAsmParser &parser,
+                                               OperationState &result) {
+  // Add the result types.
+  for (size_t i = 0, e = parser.getNumResults(); i != e; ++i)
+    result.addTypes(parser.getBuilder().getIntegerType(32));
+
+  if (parser.parseOptionalAttrDictWithKeyword(result.attributes))
+    return failure();
+
+  // If the attribute dictionary contains no 'names' attribute, infer it from
+  // the SSA name (if specified).
+  bool hadNames = llvm::any_of(result.attributes, [](NamedAttribute attr) {
+    return attr.first.is("names");
+  });
+
+  // If there was no name specified, check to see if there was a useful name
+  // specified in the asm file.
+  if (hadNames || parser.getNumResults() == 0)
+    return success();
+
+  SmallVector<StringRef, 4> names;
+  auto *context = result.getContext();
+
+  for (size_t i = 0, e = parser.getNumResults(); i != e; ++i) {
+    auto resultName = parser.getResultName(i);
+    StringRef nameStr;
+    if (!resultName.first.empty() && !isdigit(resultName.first[0]))
+      nameStr = resultName.first;
+
+    names.push_back(nameStr);
+  }
+
+  auto namesAttr = parser.getBuilder().getStrArrayAttr(names);
+  result.attributes.push_back({Identifier::get("names", context), namesAttr});
+  return success();
+}
+
+static void print(OpAsmPrinter &p, StringAttrPrettyNameOp op) {
+  p << "test.string_attr_pretty_name";
+
+  // Note that we only need to print the "name" attribute if the asmprinter
+  // result name disagrees with it.  This can happen in strange cases, e.g.
+  // when there are conflicts.
+  bool namesDisagree = op.names().size() != op.getNumResults();
+
+  SmallString<32> resultNameStr;
+  for (size_t i = 0, e = op.getNumResults(); i != e && !namesDisagree; ++i) {
+    resultNameStr.clear();
+    llvm::raw_svector_ostream tmpStream(resultNameStr);
+    p.printOperand(op.getResult(i), tmpStream);
+
+    auto expectedName = op.names()[i].dyn_cast<StringAttr>();
+    if (!expectedName ||
+        tmpStream.str().drop_front() != expectedName.getValue()) {
+      namesDisagree = true;
+    }
+  }
+
+  if (namesDisagree)
+    p.printOptionalAttrDictWithKeyword(op.getAttrs());
+  else
+    p.printOptionalAttrDictWithKeyword(op.getAttrs(), {"names"});
+}
+
+// We set the SSA name in the asm syntax to the contents of the name
+// attribute.
+void StringAttrPrettyNameOp::getAsmResultNames(
+    function_ref<void(Value, StringRef)> setNameFn) {
+
+  auto value = names();
+  for (size_t i = 0, e = value.size(); i != e; ++i)
+    if (auto str = value[i].dyn_cast<StringAttr>())
+      if (!str.getValue().empty())
+        setNameFn(getResult(i), str.getValue());
+}
+
+//===----------------------------------------------------------------------===//
 // Dialect Registration
 //===----------------------------------------------------------------------===//
 
