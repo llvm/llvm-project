@@ -119,7 +119,7 @@ struct OpenMPOpt {
   }
 
 private:
-  /// Try to delete parallel regions if possible
+  /// Try to delete parallel regions if possible.
   bool deleteParallelRegions() {
     const unsigned CallbackCalleeOperand = 2;
 
@@ -385,6 +385,32 @@ private:
     return nullptr;
   }
 
+  /// Returns true if the function declaration \p F matches the runtime
+  /// function types, that is, return type \p RTFRetType, and argument types
+  /// \p RTFArgTypes.
+  static bool declMatchesRTFTypes(Function *F, Type *RTFRetType,
+                                  SmallVector<Type *, 8> &RTFArgTypes) {
+    // TODO: We should output information to the user (under debug output
+    //       and via remarks).
+
+    if (!F)
+      return false;
+    if (F->getReturnType() != RTFRetType)
+      return false;
+    if (F->arg_size() != RTFArgTypes.size())
+      return false;
+
+    auto RTFTyIt = RTFArgTypes.begin();
+    for (Argument &Arg : F->args()) {
+      if (Arg.getType() != *RTFTyIt)
+        return false;
+
+      ++RTFTyIt;
+    }
+
+    return true;
+  }
+
   /// Helper to initialize all runtime function information for those defined in
   /// OpenMPKinds.def.
   void initializeRuntimeFunctions() {
@@ -415,26 +441,29 @@ private:
 
 #define OMP_RTL(_Enum, _Name, _IsVarArg, _ReturnType, ...)                     \
   {                                                                            \
-    auto &RFI = RFIs[_Enum];                                                   \
-    RFI.Kind = _Enum;                                                          \
-    RFI.Name = _Name;                                                          \
-    RFI.IsVarArg = _IsVarArg;                                                  \
-    RFI.ReturnType = _ReturnType;                                              \
-    RFI.ArgumentTypes = SmallVector<Type *, 8>({__VA_ARGS__});                 \
-    RFI.Declaration = M.getFunction(_Name);                                    \
-    unsigned NumUses = CollectUses(RFI);                                       \
-    (void)NumUses;                                                             \
-    LLVM_DEBUG({                                                               \
-      dbgs() << TAG << RFI.Name << (RFI.Declaration ? "" : " not")             \
-             << " found\n";                                                    \
-      if (RFI.Declaration)                                                     \
-        dbgs() << TAG << "-> got " << NumUses << " uses in "                   \
-               << RFI.UsesMap.size() << " different functions.\n";             \
-    });                                                                        \
+    SmallVector<Type *, 8> ArgsTypes({__VA_ARGS__});                           \
+    Function *F = M.getFunction(_Name);                                        \
+    if (declMatchesRTFTypes(F, _ReturnType , ArgsTypes)) {                     \
+      auto &RFI = RFIs[_Enum];                                                 \
+      RFI.Kind = _Enum;                                                        \
+      RFI.Name = _Name;                                                        \
+      RFI.IsVarArg = _IsVarArg;                                                \
+      RFI.ReturnType = _ReturnType;                                            \
+      RFI.ArgumentTypes = std::move(ArgsTypes);                                \
+      RFI.Declaration = F;                                                     \
+      unsigned NumUses = CollectUses(RFI);                                     \
+      (void)NumUses;                                                           \
+      LLVM_DEBUG({                                                             \
+        dbgs() << TAG << RFI.Name << (RFI.Declaration ? "" : " not")           \
+              << " found\n";                                                   \
+        if (RFI.Declaration)                                                   \
+          dbgs() << TAG << "-> got " << NumUses << " uses in "                 \
+                << RFI.UsesMap.size() << " different functions.\n";            \
+      });                                                                      \
+    }                                                                          \
   }
 #include "llvm/Frontend/OpenMP/OMPKinds.def"
 
-    // TODO: We should validate the declaration agains the types we expect.
     // TODO: We should attach the attributes defined in OMPKinds.def.
   }
 
