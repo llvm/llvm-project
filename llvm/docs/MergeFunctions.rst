@@ -99,8 +99,8 @@ and a ``void*`` as equal.
 This is just an example; more possible details are described a bit below.
 
 As another example, the reader may imagine two more functions. The first
-function performs a multiplication on 2, while the second one performs an
-arithmetic right shift on 1.
+function performs a multiplication by 2, while the second one performs an
+logical left shift by 1.
 
 Possible solutions
 ^^^^^^^^^^^^^^^^^^
