@@ -275,6 +275,16 @@ def AffineIfOp : Affine_Op<"if",
     /// list of AffineIf is not resizable.
     void setConditional(IntegerSet set, ValueRange operands);
 
+    Block *getThenBlock() {
+      assert(!thenRegion().empty() && "Unexpected empty 'then' region.");
+      return &thenRegion().front();
+    }
+
+    Block *getElseBlock() {
+      assert(!elseRegion().empty() && "Empty 'else' region.");
+      return &elseRegion().front();
+    }
+
     OpBuilder getThenBodyBuilder() {
       assert(!thenRegion().empty() && "Unexpected empty 'then' region.");
       Block &body = thenRegion().front();
@@ -401,7 +411,7 @@ def AffineParallelOp : Affine_Op<"parallel", [ImplicitAffineTerminator]> {
 
     /// Get ranges as constants, may fail in dynamic case.
     Optional<SmallVector<int64_t, 8>> getConstantRanges();
-    
+
     Block *getBody();
     OpBuilder getBodyBuilder();
     void setSteps(ArrayRef<int64_t> newSteps);
