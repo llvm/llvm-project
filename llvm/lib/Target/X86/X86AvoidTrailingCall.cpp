@@ -6,10 +6,29 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// The Windows x64 unwinder has trouble unwinding the stack when a return
-// address points to the end of the function. This pass maintains the invariant
-// that every return address is inside the bounds of its parent function or
-// funclet by inserting int3 if the last instruction would otherwise be a call.
+// The Windows x64 unwinder decodes the instruction stream during unwinding.
+// The unwinder decodes forward from the current PC to detect epilogue code
+// patterns.
+//
+// First, this means that there must be an instruction after every
+// call instruction for the unwinder to decode. LLVM must maintain the invariant
+// that the last instruction of a function or funclet is not a call, or the
+// unwinder may decode into the next function. Similarly, a call may not
+// immediately precede an epilogue code pattern. As of this writing, the
+// SEH_Epilogue pseudo instruction takes care of that.
+//
+// Second, all non-tail call jump targets must be within the *half-open*
+// interval of the bounds of the function. The unwinder distinguishes between
+// internal jump instructions and tail calls in an epilogue sequence by checking
+// the jump target against the function bounds from the .pdata section. This
+// means that the last regular MBB of an LLVM function must not be empty if
+// there are regular jumps targeting it.
+//
+// This pass upholds these invariants by ensuring that blocks at the end of a
+// function or funclet are a) not empty and b) do not end in a CALL instruction.
+//
+// Unwinder implementation for reference:
+// https://github.com/dotnet/coreclr/blob/a9f3fc16483eecfc47fb79c362811d870be02249/src/unwinder/amd64/unwinder_amd64.cpp#L1015
 //
 //===----------------------------------------------------------------------===//
 
@@ -18,32 +37,34 @@
 #include "X86Subtarget.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 
-#define DEBUG_TYPE "x86-avoid-trailing-call"
+#define AVOIDCALL_DESC "X86 avoid trailing call pass"
+#define AVOIDCALL_NAME "x86-avoid-trailing-call"
+
+#define DEBUG_TYPE AVOIDCALL_NAME
 
 using namespace llvm;
 
 namespace {
-
 class X86AvoidTrailingCallPass : public MachineFunctionPass {
 public:
   X86AvoidTrailingCallPass() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
-private:
-  StringRef getPassName() const override {
-    return "X86 avoid trailing call pass";
-  }
   static char ID;
+
+private:
+  StringRef getPassName() const override { return AVOIDCALL_DESC; }
 };
+} // end anonymous namespace
 
 char X86AvoidTrailingCallPass::ID = 0;
-
-} // end anonymous namespace
 
 FunctionPass *llvm::createX86AvoidTrailingCallPass() {
   return new X86AvoidTrailingCallPass();
 }
+
+INITIALIZE_PASS(X86AvoidTrailingCallPass, AVOIDCALL_NAME, AVOIDCALL_DESC, false, false)
 
 // A real instruction is a non-meta, non-pseudo instruction.  Some pseudos
 // expand to nothing, and some expand to code. This logic conservatively assumes
@@ -62,6 +83,11 @@ bool X86AvoidTrailingCallPass::runOnMachineFunction(MachineFunction &MF) {
   const X86InstrInfo &TII = *STI.getInstrInfo();
   assert(STI.isTargetWin64() && "pass only runs on Win64");
 
+  // We don't need to worry about any of the invariants described above if there
+  // is no unwind info (CFI).
+  if (!MF.hasWinCFI())
+    return false;
+
   // FIXME: Perhaps this pass should also replace SEH_Epilogue by inserting nops
   // before epilogues.
 
@@ -73,33 +99,34 @@ bool X86AvoidTrailingCallPass::runOnMachineFunction(MachineFunction &MF) {
     if (NextMBB && !NextMBB->isEHFuncletEntry())
       continue;
 
-    // Find the last real instruction in this block, or previous blocks if this
-    // block is empty.
-    MachineBasicBlock::reverse_iterator LastRealInstr;
-    for (MachineBasicBlock &RMBB :
-         make_range(MBB.getReverseIterator(), MF.rend())) {
-      LastRealInstr = llvm::find_if(reverse(RMBB), isRealInstruction);
-      if (LastRealInstr != RMBB.rend())
-        break;
-    }
+    // Find the last real instruction in this block.
+    auto LastRealInstr = llvm::find_if(reverse(MBB), isRealInstruction);
 
-    // Do nothing if this function or funclet has no instructions.
-    if (LastRealInstr == MF.begin()->rend())
-      continue;
-
-    // If this is a call instruction, insert int3 right after it with the same
-    // DebugLoc. Convert back to a forward iterator and advance the insertion
-    // position once.
-    if (isCallInstruction(*LastRealInstr)) {
+    // If the block is empty or the last real instruction is a call instruction,
+    // insert an int3. If there is a call instruction, insert the int3 between
+    // the call and any labels or other meta instructions. If the block is
+    // empty, insert at block end.
+    bool IsEmpty = LastRealInstr == MBB.rend();
+    bool IsCall = !IsEmpty && isCallInstruction(*LastRealInstr);
+    if (IsEmpty || IsCall) {
       LLVM_DEBUG({
-        dbgs() << "inserting int3 after trailing call instruction:\n";
-        LastRealInstr->dump();
-        dbgs() << '\n';
+        if (IsCall) {
+          dbgs() << "inserting int3 after trailing call instruction:\n";
+          LastRealInstr->dump();
+          dbgs() << '\n';
+        } else {
+          dbgs() << "inserting int3 in trailing empty MBB:\n";
+          MBB.dump();
+        }
       });
 
-      MachineBasicBlock::iterator MBBI = std::next(LastRealInstr.getReverse());
-      BuildMI(*LastRealInstr->getParent(), MBBI, LastRealInstr->getDebugLoc(),
-              TII.get(X86::INT3));
+      MachineBasicBlock::iterator MBBI = MBB.end();
+      DebugLoc DL;
+      if (IsCall) {
+        MBBI = std::next(LastRealInstr.getReverse());
+        DL = LastRealInstr->getDebugLoc();
+      }
+      BuildMI(MBB, MBBI, DL, TII.get(X86::INT3));
       Changed = true;
     }
   }

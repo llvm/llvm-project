@@ -79,6 +79,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeX86Target() {
   initializeX86ExecutionDomainFixPass(PR);
   initializeX86DomainReassignmentPass(PR);
   initializeX86AvoidSFBPassPass(PR);
+  initializeX86AvoidTrailingCallPassPass(PR);
   initializeX86SpeculativeLoadHardeningPassPass(PR);
   initializeX86FlagsCopyLoweringPassPass(PR);
   initializeX86CondBrFoldingPassPass(PR);
