@@ -270,8 +270,5 @@ if (LIBCXX_INSTALL_HEADERS)
                               -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
     # Stripping is a no-op for headers
     add_custom_target(install-${CXX_HEADER_TARGET}-stripped DEPENDS install-${CXX_HEADER_TARGET})
-
-    add_custom_target(install-libcxx-headers DEPENDS install-${CXX_HEADER_TARGET})
-    add_custom_target(install-libcxx-headers-stripped DEPENDS install-${CXX_HEADER_TARGET}-stripped)
   endif()
 endif()
