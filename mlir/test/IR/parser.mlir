@@ -1185,3 +1185,43 @@ func @custom_asm_names() -> (i32, i32, i32, i32, i32, i32, i32) {
   // CHECK: return %[[FIRST]], %[[MIDDLE]]#0, %[[MIDDLE]]#1, %[[LAST]], %[[FIRST_2]], %[[LAST_2]]
   return %0, %1#0, %1#1, %2, %3, %4, %5 : i32, i32, i32, i32, i32, i32, i32
 }
+
+
+// CHECK-LABEL: func @pretty_names
+
+// This tests the behavior
+func @pretty_names() {
+  // Simple case, should parse and print as %x being an implied 'name'
+  // attribute.
+  %x = test.string_attr_pretty_name
+  // CHECK: %x = test.string_attr_pretty_name
+  // CHECK-NOT: attributes
+  
+  // This specifies an explicit name, which should override the result.
+  %YY = test.string_attr_pretty_name attributes { names = ["y"] }
+  // CHECK: %y = test.string_attr_pretty_name
+  // CHECK-NOT: attributes
+  
+  // Conflicts with the 'y' name, so need an explicit attribute.
+  %0 = "test.string_attr_pretty_name"() { names = ["y"]} : () -> i32
+  // CHECK: %y_0 = test.string_attr_pretty_name attributes {names = ["y"]}
+
+  // Name contains a space.
+  %1 = "test.string_attr_pretty_name"() { names = ["space name"]} : () -> i32
+  // CHECK: %space_name = test.string_attr_pretty_name attributes {names = ["space name"]}
+
+  "unknown.use"(%x, %YY, %0, %1) : (i32, i32, i32, i32) -> ()
+
+  // Multi-result support.
+
+  %a, %b, %c = test.string_attr_pretty_name
+  // CHECK: %a, %b, %c = test.string_attr_pretty_name
+  // CHECK-NOT: attributes
+
+  %q:3, %r = test.string_attr_pretty_name
+  // CHECK: %q, %q_1, %q_2, %r = test.string_attr_pretty_name attributes {names = ["q", "q", "q", "r"]}
+
+  // CHECK: return
+  return
+}
+
