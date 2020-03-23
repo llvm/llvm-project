@@ -10690,6 +10690,22 @@ void SelectionDAGBuilder::visitSwitch(const SwitchInst &SI) {
 }
 
 void SelectionDAGBuilder::visitFreeze(const FreezeInst &I) {
-  SDValue N = getValue(I.getOperand(0));
-  setValue(&I, N);
+  SDNodeFlags Flags;
+
+  SDValue Op = getValue(I.getOperand(0));
+  if (I.getOperand(0)->getType()->isAggregateType()) {
+    EVT VT = Op.getValueType();
+    SmallVector<SDValue, 1> Values;
+    for (unsigned i = 0; i < Op.getNumOperands(); ++i) {
+      SDValue Arg(Op.getNode(), i);
+      SDValue UnNodeValue = DAG.getNode(ISD::FREEZE, getCurSDLoc(), VT, Arg, Flags);
+      Values.push_back(UnNodeValue);
+    }
+    SDValue MergedValue = DAG.getMergeValues(Values, getCurSDLoc());
+    setValue(&I, MergedValue);
+  } else {
+    SDValue UnNodeValue = DAG.getNode(ISD::FREEZE, getCurSDLoc(), Op.getValueType(),
+                                      Op, Flags);
+    setValue(&I, UnNodeValue);
+  }
 }
