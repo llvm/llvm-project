@@ -659,9 +659,6 @@ static bool AllUsesOfValueWillTrapIfNull(const Value *V,
       // checked.
       if (PHIs.insert(PN).second && !AllUsesOfValueWillTrapIfNull(PN, PHIs))
         return false;
-    } else if (isa<ICmpInst>(U) &&
-               isa<ConstantPointerNull>(U->getOperand(1))) {
-      // Ignore icmp X, null
     } else {
       //cerr << "NONTRAPPING USE: " << *U;
       return false;
