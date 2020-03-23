@@ -39,11 +39,11 @@ int main(int argc, char **argv) {
 // CHECK: static int a;
 #pragma omp for simd
   for (int i = 0; i < 10; ++i) {
-#pragma omp scan inclusive(a)
+#pragma omp scan exclusive(a, argc)
   }
 // CHECK-NEXT: #pragma omp for simd
 // CHECK-NEXT: for (int i = 0; i < 10; ++i) {
-// CHECK-NEXT: #pragma omp scan inclusive(a){{$}}
+// CHECK-NEXT: #pragma omp scan exclusive(a,argc){{$}}
   return tmain(argc) + tmain(argv[0][0]) + a;
 }
 

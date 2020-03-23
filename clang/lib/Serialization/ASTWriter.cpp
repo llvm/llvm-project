@@ -6611,6 +6611,13 @@ void OMPClauseWriter::VisitOMPInclusiveClause(OMPInclusiveClause *C) {
     Record.AddStmt(VE);
 }
 
+void OMPClauseWriter::VisitOMPExclusiveClause(OMPExclusiveClause *C) {
+  Record.push_back(C->varlist_size());
+  Record.AddSourceLocation(C->getLParenLoc());
+  for (auto *VE : C->varlists())
+    Record.AddStmt(VE);
+}
+
 void OMPClauseWriter::VisitOMPOrderClause(OMPOrderClause *C) {
   Record.writeEnum(C->getKind());
   Record.AddSourceLocation(C->getLParenLoc());

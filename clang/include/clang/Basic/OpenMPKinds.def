@@ -285,9 +285,11 @@ OPENMP_CLAUSE(depobj, OMPDepobjClause)
 OPENMP_CLAUSE(destroy, OMPDestroyClause)
 OPENMP_CLAUSE(detach, OMPDetachClause)
 OPENMP_CLAUSE(inclusive, OMPInclusiveClause)
+OPENMP_CLAUSE(exclusive, OMPExclusiveClause)
 
 // Clauses allowed for OpenMP directive 'scan'.
 OPENMP_SCAN_CLAUSE(inclusive)
+OPENMP_SCAN_CLAUSE(exclusive)
 
 // Clauses allowed for OpenMP directive 'parallel'.
 OPENMP_PARALLEL_CLAUSE(if)

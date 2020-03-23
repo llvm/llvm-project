@@ -11845,6 +11845,9 @@ OMPClause *OMPClauseReader::readClause() {
   case OMPC_inclusive:
     C = OMPInclusiveClause::CreateEmpty(Context, Record.readInt());
     break;
+  case OMPC_exclusive:
+    C = OMPExclusiveClause::CreateEmpty(Context, Record.readInt());
+    break;
   case OMPC_order:
     C = new (Context) OMPOrderClause();
     break;
@@ -12656,6 +12659,16 @@ void OMPClauseReader::VisitOMPNontemporalClause(OMPNontemporalClause *C) {
 }
 
 void OMPClauseReader::VisitOMPInclusiveClause(OMPInclusiveClause *C) {
+  C->setLParenLoc(Record.readSourceLocation());
+  unsigned NumVars = C->varlist_size();
+  SmallVector<Expr *, 16> Vars;
+  Vars.reserve(NumVars);
+  for (unsigned i = 0; i != NumVars; ++i)
+    Vars.push_back(Record.readSubExpr());
+  C->setVarRefs(Vars);
+}
+
+void OMPClauseReader::VisitOMPExclusiveClause(OMPExclusiveClause *C) {
   C->setLParenLoc(Record.readSourceLocation());
   unsigned NumVars = C->varlist_size();
   SmallVector<Expr *, 16> Vars;
