@@ -1692,7 +1692,7 @@ example:
     functions.
 ``safestack``
     This attribute indicates that
-    `SafeStack <http://clang.llvm.org/docs/SafeStack.html>`_
+    `SafeStack <https://clang.llvm.org/docs/SafeStack.html>`_
     protection is enabled for this function.
 
     If a function that has a ``safestack`` attribute is inlined into a
@@ -6690,7 +6690,7 @@ TypeIdInfo
 ^^^^^^^^^^
 
 The optional ``TypeIdInfo`` field, used for
-`Control Flow Integrity <http://clang.llvm.org/docs/ControlFlowIntegrity.html>`_,
+`Control Flow Integrity <https://clang.llvm.org/docs/ControlFlowIntegrity.html>`_,
 looks like:
 
 .. code-block:: text
@@ -6767,7 +6767,7 @@ Type ID Summary Entry
 
 Each type id summary entry corresponds to a type identifier resolution
 which is generated during the LTO link portion of the compile when building
-with `Control Flow Integrity <http://clang.llvm.org/docs/ControlFlowIntegrity.html>`_,
+with `Control Flow Integrity <https://clang.llvm.org/docs/ControlFlowIntegrity.html>`_,
 so these are only present in a combined summary index.
 
 Example:

@@ -53,8 +53,8 @@ LLVM and API reference documentation.
 API Reference
 -------------
 
-`Doxygen generated documentation <http://llvm.org/doxygen/>`_
-  (`classes <http://llvm.org/doxygen/inherits.html>`_)
+`Doxygen generated documentation <https://llvm.org/doxygen/>`_
+  (`classes <https://llvm.org/doxygen/inherits.html>`_)
 
 :doc:`HowToUseAttributes`
   Answers some questions about the new Attributes infrastructure.

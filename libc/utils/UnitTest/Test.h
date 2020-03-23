@@ -249,13 +249,20 @@ private:
 #define UNIQUE_VAR(prefix) __CAT(prefix, __LINE__)
 
 #define EXPECT_THAT(MATCH, MATCHER)                                            \
-  auto UNIQUE_VAR(__matcher) = (MATCHER);                                      \
-  __llvm_libc::testing::Test::testMatch(                                       \
-      Ctx, UNIQUE_VAR(__matcher).match((MATCH)), UNIQUE_VAR(__matcher),        \
-      #MATCH, #MATCHER, __FILE__, __LINE__)
+  do {                                                                         \
+    auto UNIQUE_VAR(__matcher) = (MATCHER);                                    \
+    __llvm_libc::testing::Test::testMatch(                                     \
+        Ctx, UNIQUE_VAR(__matcher).match((MATCH)), UNIQUE_VAR(__matcher),      \
+        #MATCH, #MATCHER, __FILE__, __LINE__);                                 \
+  } while (0)
 
 #define ASSERT_THAT(MATCH, MATCHER)                                            \
-  if (!EXPECT_THAT(MATCH, MATCHER))                                            \
-  return
+  do {                                                                         \
+    auto UNIQUE_VAR(__matcher) = (MATCHER);                                    \
+    if (!__llvm_libc::testing::Test::testMatch(                                \
+            Ctx, UNIQUE_VAR(__matcher).match((MATCH)), UNIQUE_VAR(__matcher),  \
+            #MATCH, #MATCHER, __FILE__, __LINE__))                             \
+      return;                                                                  \
+  } while (0)
 
 #endif // LLVM_LIBC_UTILS_UNITTEST_H

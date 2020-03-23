@@ -7060,10 +7060,10 @@ struct OMPTraitInfo {
   llvm::SmallVector<OMPTraitSet, 4> Sets;
 
   bool anyScoreOrCondition(
-      const llvm::function_ref<bool(Expr *&, bool /* IsScore */)> &Cond) {
-    return llvm::any_of(Sets, [&Cond](OMPTraitInfo::OMPTraitSet &Set) {
+      llvm::function_ref<bool(Expr *&, bool /* IsScore */)> Cond) {
+    return llvm::any_of(Sets, [Cond](OMPTraitInfo::OMPTraitSet &Set) {
       return llvm::any_of(
-          Set.Selectors, [&Cond](OMPTraitInfo::OMPTraitSelector &Selector) {
+          Set.Selectors, [Cond](OMPTraitInfo::OMPTraitSelector &Selector) {
             return Cond(Selector.ScoreOrCondition,
                         /* IsScore */ Selector.Kind !=
                             llvm::omp::TraitSelector::user_condition);

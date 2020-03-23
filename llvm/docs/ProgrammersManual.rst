@@ -24,7 +24,7 @@ continuously growing source code that makes up the LLVM infrastructure.  Note
 that this manual is not intended to serve as a replacement for reading the
 source code, so if you think there should be a method in one of these classes to
 do something, but it's not listed, check the source.  Links to the `doxygen
-<http://llvm.org/doxygen/>`__ sources are provided to make this as easy as
+<https://llvm.org/doxygen/>`__ sources are provided to make this as easy as
 possible.
 
 The first section of this document describes general information that is useful
@@ -32,7 +32,7 @@ to know when working in the LLVM infrastructure, and the second describes the
 Core LLVM classes.  In the future this manual will be extended with information
 describing how to use extension libraries, such as dominator information, CFG
 traversal routines, and useful utilities like the ``InstVisitor`` (`doxygen
-<http://llvm.org/doxygen/InstVisitor_8h_source.html>`__) template.
+<https://llvm.org/doxygen/InstVisitor_8h_source.html>`__) template.
 
 .. _general:
 
@@ -108,7 +108,7 @@ they don't have some drawbacks (primarily stemming from the fact that
 ``dynamic_cast<>`` only works on classes that have a v-table).  Because they are
 used so often, you must know what they do and how they work.  All of these
 templates are defined in the ``llvm/Support/Casting.h`` (`doxygen
-<http://llvm.org/doxygen/Casting_8h_source.html>`__) file (note that you very
+<https://llvm.org/doxygen/Casting_8h_source.html>`__) file (note that you very
 rarely have to include this file directly).
 
 ``isa<>``:
@@ -231,7 +231,7 @@ and clients can call it using any one of:
 Similarly, APIs which need to return a string may return a ``StringRef``
 instance, which can be used directly or converted to an ``std::string`` using
 the ``str`` member function.  See ``llvm/ADT/StringRef.h`` (`doxygen
-<http://llvm.org/doxygen/StringRef_8h_source.html>`__) for more
+<https://llvm.org/doxygen/StringRef_8h_source.html>`__) for more
 information.
 
 You should rarely use the ``StringRef`` class directly, because it contains
@@ -243,7 +243,7 @@ passed by value.
 The ``Twine`` class
 ^^^^^^^^^^^^^^^^^^^
 
-The ``Twine`` (`doxygen <http://llvm.org/doxygen/classllvm_1_1Twine.html>`__)
+The ``Twine`` (`doxygen <https://llvm.org/doxygen/classllvm_1_1Twine.html>`__)
 class is an efficient way for APIs to accept concatenated strings.  For example,
 a common LLVM paradigm is to name one instruction based on the name of another
 instruction with a suffix, for example:
@@ -261,7 +261,7 @@ of strings until it is actually required, at which point it can be efficiently
 rendered directly into a character array.  This avoids unnecessary heap
 allocation involved in constructing the temporary results of string
 concatenation.  See ``llvm/ADT/Twine.h`` (`doxygen
-<http://llvm.org/doxygen/Twine_8h_source.html>`__) and :ref:`here <dss_twine>`
+<https://llvm.org/doxygen/Twine_8h_source.html>`__) and :ref:`here <dss_twine>`
 for more information.
 
 As with a ``StringRef``, ``Twine`` objects point to external memory and should
@@ -1056,7 +1056,7 @@ The ``function_ref`` class template
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The ``function_ref``
-(`doxygen <http://llvm.org/doxygen/classllvm_1_1function__ref_3_01Ret_07Params_8_8_8_08_4.html>`__) class
+(`doxygen <https://llvm.org/doxygen/classllvm_1_1function__ref_3_01Ret_07Params_8_8_8_08_4.html>`__) class
 template represents a reference to a callable object, templated over the type
 of the callable. This is a good choice for passing a callback to a function,
 if you don't need to hold onto the callback after the function returns. In this
@@ -1106,7 +1106,7 @@ you don't want them to always be noisy.  A standard compromise is to comment
 them out, allowing you to enable them if you need them in the future.
 
 The ``llvm/Support/Debug.h`` (`doxygen
-<http://llvm.org/doxygen/Debug_8h_source.html>`__) file provides a macro named
+<https://llvm.org/doxygen/Debug_8h_source.html>`__) file provides a macro named
 ``LLVM_DEBUG()`` that is a much nicer solution to this problem.  Basically, you can
 put arbitrary code into the argument of the ``LLVM_DEBUG`` macro, and it is only
 executed if '``opt``' (or any other tool) is run with the '``-debug``' command
@@ -1203,7 +1203,7 @@ The ``Statistic`` class & ``-stats`` option
 -------------------------------------------
 
 The ``llvm/ADT/Statistic.h`` (`doxygen
-<http://llvm.org/doxygen/Statistic_8h_source.html>`__) file provides a class
+<https://llvm.org/doxygen/Statistic_8h_source.html>`__) file provides a class
 named ``Statistic`` that is used as a unified way to keep track of what the LLVM
 compiler is doing and how effective various optimizations are.  It is useful to
 see what optimizations are contributing to making a particular program run
@@ -1298,7 +1298,7 @@ They provide a framework for making parts of your code only execute a
 certain number of times.
 
 The ``llvm/Support/DebugCounter.h`` (`doxygen
-<http://llvm.org/doxygen/DebugCounter_8h_source.html>`__) file
+<https://llvm.org/doxygen/DebugCounter_8h_source.html>`__) file
 provides a class named ``DebugCounter`` that can be used to create
 command line counter options that control execution of parts of your code.
 
@@ -2513,7 +2513,7 @@ If you're finding that you commonly iterate over a ``Function``'s
 ``BasicBlock``\ s and then that ``BasicBlock``'s ``Instruction``\ s,
 ``InstIterator`` should be used instead.  You'll need to include
 ``llvm/IR/InstIterator.h`` (`doxygen
-<http://llvm.org/doxygen/InstIterator_8h.html>`__) and then instantiate
+<https://llvm.org/doxygen/InstIterator_8h.html>`__) and then instantiate
 ``InstIterator``\ s explicitly in your code.  Here's a small example that shows
 how to dump all instructions in a function to the standard error stream:
 
@@ -2664,7 +2664,7 @@ and in other situations, you may find that you want to treat ``CallInst``\ s and
 ``InvokeInst``\ s the same way, even though their most-specific common base
 class is ``Instruction``, which includes lots of less closely-related things.
 For these cases, LLVM provides a handy wrapper class called ``CallSite``
-(`doxygen <http://llvm.org/doxygen/classllvm_1_1CallSite.html>`__) It is
+(`doxygen <https://llvm.org/doxygen/classllvm_1_1CallSite.html>`__) It is
 essentially a wrapper around an ``Instruction`` pointer, with some methods that
 provide functionality common to ``CallInst``\ s and ``InvokeInst``\ s.
 
@@ -2680,7 +2680,7 @@ Iterating over def-use & use-def chains
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Frequently, we might have an instance of the ``Value`` class (`doxygen
-<http://llvm.org/doxygen/classllvm_1_1Value.html>`__) and we want to determine
+<https://llvm.org/doxygen/classllvm_1_1Value.html>`__) and we want to determine
 which ``User``\ s use the ``Value``.  The list of all ``User``\ s of a particular
 ``Value`` is called a *def-use* chain.  For example, let's say we have a
 ``Function*`` named ``F`` to a particular function ``foo``.  Finding all of the
@@ -2698,7 +2698,7 @@ chain of ``F``:
     }
 
 Alternatively, it's common to have an instance of the ``User`` Class (`doxygen
-<http://llvm.org/doxygen/classllvm_1_1User.html>`__) and need to know what
+<https://llvm.org/doxygen/classllvm_1_1User.html>`__) and need to know what
 ``Value``\ s are used by it.  The list of all ``Value``\ s used by a ``User`` is
 known as a *use-def* chain.  Instances of class ``Instruction`` are common
 ``User`` s, so we might want to iterate over all of the values that a particular
@@ -2770,7 +2770,7 @@ will create an ``AllocaInst`` instance that represents the allocation of one
 integer in the current stack frame, at run time.  Each ``Instruction`` subclass
 is likely to have varying default parameters which change the semantics of the
 instruction, so refer to the `doxygen documentation for the subclass of
-Instruction <http://llvm.org/doxygen/classllvm_1_1Instruction.html>`_ that
+Instruction <https://llvm.org/doxygen/classllvm_1_1Instruction.html>`_ that
 you're interested in instantiating.
 
 *Naming values*
@@ -2928,7 +2928,7 @@ Replacing individual instructions
 """""""""""""""""""""""""""""""""
 
 Including "`llvm/Transforms/Utils/BasicBlockUtils.h
-<http://llvm.org/doxygen/BasicBlockUtils_8h_source.html>`_" permits use of two
+<https://llvm.org/doxygen/BasicBlockUtils_8h_source.html>`_" permits use of two
 very useful replace functions: ``ReplaceInstWithValue`` and
 ``ReplaceInstWithInst``.
 
@@ -2974,8 +2974,8 @@ Replacing multiple uses of Users and Values
 
 You can use ``Value::replaceAllUsesWith`` and ``User::replaceUsesOfWith`` to
 change more than one use at a time.  See the doxygen documentation for the
-`Value Class <http://llvm.org/doxygen/classllvm_1_1Value.html>`_ and `User Class
-<http://llvm.org/doxygen/classllvm_1_1User.html>`_, respectively, for more
+`Value Class <https://llvm.org/doxygen/classllvm_1_1Value.html>`_ and `User Class
+<https://llvm.org/doxygen/classllvm_1_1User.html>`_, respectively, for more
 information.
 
 .. _schanges_deletingGV:
@@ -3103,7 +3103,7 @@ The ``ValueSymbolTable`` class
 ------------------------------
 
 The ``ValueSymbolTable`` (`doxygen
-<http://llvm.org/doxygen/classllvm_1_1ValueSymbolTable.html>`__) class provides
+<https://llvm.org/doxygen/classllvm_1_1ValueSymbolTable.html>`__) class provides
 a symbol table that the :ref:`Function <c_Function>` and Module_ classes use for
 naming value definitions.  The symbol table can provide a name for any Value_.
 
@@ -3124,10 +3124,10 @@ autoinsert it into the appropriate symbol table.
 The ``User`` and owned ``Use`` classes' memory layout
 -----------------------------------------------------
 
-The ``User`` (`doxygen <http://llvm.org/doxygen/classllvm_1_1User.html>`__)
+The ``User`` (`doxygen <https://llvm.org/doxygen/classllvm_1_1User.html>`__)
 class provides a basis for expressing the ownership of ``User`` towards other
-`Value instance <http://llvm.org/doxygen/classllvm_1_1Value.html>`_\ s.  The
-``Use`` (`doxygen <http://llvm.org/doxygen/classllvm_1_1Use.html>`__) helper
+`Value instance <https://llvm.org/doxygen/classllvm_1_1Value.html>`_\ s.  The
+``Use`` (`doxygen <https://llvm.org/doxygen/classllvm_1_1Use.html>`__) helper
 class is employed to do the bookkeeping and to facilitate *O(1)* addition and
 removal.
 
@@ -3414,9 +3414,9 @@ The Core LLVM Class Hierarchy Reference
 
 ``#include "llvm/IR/Type.h"``
 
-header source: `Type.h <http://llvm.org/doxygen/Type_8h_source.html>`_
+header source: `Type.h <https://llvm.org/doxygen/Type_8h_source.html>`_
 
-doxygen info: `Type Classes <http://llvm.org/doxygen/classllvm_1_1Type.html>`_
+doxygen info: `Type Classes <https://llvm.org/doxygen/classllvm_1_1Type.html>`_
 
 The Core LLVM classes are the primary means of representing the program being
 inspected or transformed.  The core LLVM classes are defined in header files in
@@ -3518,9 +3518,9 @@ The ``Module`` class
 
 ``#include "llvm/IR/Module.h"``
 
-header source: `Module.h <http://llvm.org/doxygen/Module_8h_source.html>`_
+header source: `Module.h <https://llvm.org/doxygen/Module_8h_source.html>`_
 
-doxygen info: `Module Class <http://llvm.org/doxygen/classllvm_1_1Module.html>`_
+doxygen info: `Module Class <https://llvm.org/doxygen/classllvm_1_1Module.html>`_
 
 The ``Module`` class represents the top level structure present in LLVM
 programs.  An LLVM module is effectively either a translation unit of the
@@ -3611,9 +3611,9 @@ The ``Value`` class
 
 ``#include "llvm/IR/Value.h"``
 
-header source: `Value.h <http://llvm.org/doxygen/Value_8h_source.html>`_
+header source: `Value.h <https://llvm.org/doxygen/Value_8h_source.html>`_
 
-doxygen info: `Value Class <http://llvm.org/doxygen/classllvm_1_1Value.html>`_
+doxygen info: `Value Class <https://llvm.org/doxygen/classllvm_1_1Value.html>`_
 
 The ``Value`` class is the most important class in the LLVM Source base.  It
 represents a typed value that may be used (among other things) as an operand to
@@ -3702,9 +3702,9 @@ The ``User`` class
 
 ``#include "llvm/IR/User.h"``
 
-header source: `User.h <http://llvm.org/doxygen/User_8h_source.html>`_
+header source: `User.h <https://llvm.org/doxygen/User_8h_source.html>`_
 
-doxygen info: `User Class <http://llvm.org/doxygen/classllvm_1_1User.html>`_
+doxygen info: `User Class <https://llvm.org/doxygen/classllvm_1_1User.html>`_
 
 Superclass: Value_
 
@@ -3749,10 +3749,10 @@ The ``Instruction`` class
 ``#include "llvm/IR/Instruction.h"``
 
 header source: `Instruction.h
-<http://llvm.org/doxygen/Instruction_8h_source.html>`_
+<https://llvm.org/doxygen/Instruction_8h_source.html>`_
 
 doxygen info: `Instruction Class
-<http://llvm.org/doxygen/classllvm_1_1Instruction.html>`_
+<https://llvm.org/doxygen/classllvm_1_1Instruction.html>`_
 
 Superclasses: User_, Value_
 
@@ -3773,7 +3773,7 @@ instructions in LLVM.  It describes the enum values that are used as opcodes
 concrete sub-classes of ``Instruction`` that implement the instruction (for
 example BinaryOperator_ and CmpInst_).  Unfortunately, the use of macros in this
 file confuses doxygen, so these enum values don't show up correctly in the
-`doxygen output <http://llvm.org/doxygen/classllvm_1_1Instruction.html>`_.
+`doxygen output <https://llvm.org/doxygen/classllvm_1_1Instruction.html>`_.
 
 .. _s_Instruction:
 
@@ -3890,10 +3890,10 @@ The ``GlobalValue`` class
 ``#include "llvm/IR/GlobalValue.h"``
 
 header source: `GlobalValue.h
-<http://llvm.org/doxygen/GlobalValue_8h_source.html>`_
+<https://llvm.org/doxygen/GlobalValue_8h_source.html>`_
 
 doxygen info: `GlobalValue Class
-<http://llvm.org/doxygen/classllvm_1_1GlobalValue.html>`_
+<https://llvm.org/doxygen/classllvm_1_1GlobalValue.html>`_
 
 Superclasses: Constant_, User_, Value_
 
@@ -3948,10 +3948,10 @@ The ``Function`` class
 
 ``#include "llvm/IR/Function.h"``
 
-header source: `Function.h <http://llvm.org/doxygen/Function_8h_source.html>`_
+header source: `Function.h <https://llvm.org/doxygen/Function_8h_source.html>`_
 
 doxygen info: `Function Class
-<http://llvm.org/doxygen/classllvm_1_1Function.html>`_
+<https://llvm.org/doxygen/classllvm_1_1Function.html>`_
 
 Superclasses: GlobalValue_, Constant_, User_, Value_
 
@@ -4057,10 +4057,10 @@ The ``GlobalVariable`` class
 ``#include "llvm/IR/GlobalVariable.h"``
 
 header source: `GlobalVariable.h
-<http://llvm.org/doxygen/GlobalVariable_8h_source.html>`_
+<https://llvm.org/doxygen/GlobalVariable_8h_source.html>`_
 
 doxygen info: `GlobalVariable Class
-<http://llvm.org/doxygen/classllvm_1_1GlobalVariable.html>`_
+<https://llvm.org/doxygen/classllvm_1_1GlobalVariable.html>`_
 
 Superclasses: GlobalValue_, Constant_, User_, Value_
 
@@ -4115,10 +4115,10 @@ The ``BasicBlock`` class
 ``#include "llvm/IR/BasicBlock.h"``
 
 header source: `BasicBlock.h
-<http://llvm.org/doxygen/BasicBlock_8h_source.html>`_
+<https://llvm.org/doxygen/BasicBlock_8h_source.html>`_
 
 doxygen info: `BasicBlock Class
-<http://llvm.org/doxygen/classllvm_1_1BasicBlock.html>`_
+<https://llvm.org/doxygen/classllvm_1_1BasicBlock.html>`_
 
 Superclass: Value_
 

@@ -1102,3 +1102,33 @@ llvm::opt::DerivedArgList *ToolChain::TranslateOpenMPTargetArgs(
   delete DAL;
   return nullptr;
 }
+
+void ToolChain::TranslateXarchArgs(const llvm::opt::DerivedArgList &Args,
+                                   llvm::opt::Arg *&A,
+                                   llvm::opt::DerivedArgList *DAL) const {
+  const OptTable &Opts = getDriver().getOpts();
+  unsigned Index = Args.getBaseArgs().MakeIndex(A->getValue(1));
+  unsigned Prev = Index;
+  std::unique_ptr<llvm::opt::Arg> XarchArg(Opts.ParseOneArg(Args, Index));
+
+  // If the argument parsing failed or more than one argument was
+  // consumed, the -Xarch_ argument's parameter tried to consume
+  // extra arguments. Emit an error and ignore.
+  //
+  // We also want to disallow any options which would alter the
+  // driver behavior; that isn't going to work in our model. We
+  // use isDriverOption() as an approximation, although things
+  // like -O4 are going to slip through.
+  if (!XarchArg || Index > Prev + 1) {
+    getDriver().Diag(diag::err_drv_invalid_Xarch_argument_with_args)
+        << A->getAsString(Args);
+    return;
+  } else if (XarchArg->getOption().hasFlag(options::DriverOption)) {
+    getDriver().Diag(diag::err_drv_invalid_Xarch_argument_isdriver)
+        << A->getAsString(Args);
+    return;
+  }
+  XarchArg->setBaseArg(A);
+  A = XarchArg.release();
+  DAL->AddSynthesizedArg(A);
+}

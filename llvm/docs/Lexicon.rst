@@ -112,7 +112,7 @@ G
 **GEP**
     ``GetElementPtr``. An LLVM IR instruction that is used to get the address
     of a subelement of an aggregate data structure. It is documented in detail
-    `here <http://llvm.org/docs/GetElementPtr.html>`_.
+    `here <https://llvm.org/docs/GetElementPtr.html>`_.
 
 **GVN**
     Global Value Numbering. GVN is a pass that partitions values computed by a

@@ -9,7 +9,7 @@ This document contains information about building LLVM and
 Clang on host machine, targeting another platform.
 
 For more information on how to use Clang as a cross-compiler,
-please check http://clang.llvm.org/docs/CrossCompilation.html.
+please check https://clang.llvm.org/docs/CrossCompilation.html.
 
 TODO: Add MIPS and other platforms to this document.
 
@@ -189,7 +189,7 @@ identification), like:
 
 If you copy that tarball to your target board, you'll be able to use
 it for running the test-suite, for example. Follow the guidelines at
-http://llvm.org/docs/lnt/quickstart.html, unpack the tarball in the
+https://llvm.org/docs/lnt/quickstart.html, unpack the tarball in the
 test directory, and use options:
 
    .. code-block:: bash

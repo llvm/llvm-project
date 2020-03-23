@@ -19,6 +19,199 @@ define i32 @make_const() {
   ret i32 %x
 }
 
+define float @make_const2() {
+; CHECK-LABEL: @make_const2(
+; CHECK-NEXT:    [[X:%.*]] = freeze float 1.000000e+01
+; CHECK-NEXT:    ret float [[X]]
+;
+  %x = freeze float 10.0
+  ret float %x
+}
+
+@glb = constant i32 0
+
+define i32* @make_const_glb() {
+; CHECK-LABEL: @make_const_glb(
+; CHECK-NEXT:    ret i32* @glb
+;
+  %k = freeze i32* @glb
+  ret i32* %k
+}
+
+define i32()* @make_const_fn() {
+; CHECK-LABEL: @make_const_fn(
+; CHECK-NEXT:    [[K:%.*]] = freeze i32 ()* @make_const
+; CHECK-NEXT:    ret i32 ()* [[K]]
+;
+  %k = freeze i32()* @make_const
+  ret i32()* %k
+}
+
+define i32* @make_const_null() {
+; CHECK-LABEL: @make_const_null(
+; CHECK-NEXT:    [[K:%.*]] = freeze i32* null
+; CHECK-NEXT:    ret i32* [[K]]
+;
+  %k = freeze i32* null
+  ret i32* %k
+}
+
+define <2 x i32> @constvector() {
+; CHECK-LABEL: @constvector(
+; CHECK-NEXT:    [[X:%.*]] = freeze <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    ret <2 x i32> [[X]]
+;
+  %x = freeze <2 x i32> <i32 0, i32 1>
+  ret <2 x i32> %x
+}
+
+define <2 x i32> @constvector_noopt() {
+; CHECK-LABEL: @constvector_noopt(
+; CHECK-NEXT:    [[X:%.*]] = freeze <2 x i32> <i32 0, i32 undef>
+; CHECK-NEXT:    ret <2 x i32> [[X]]
+;
+  %x = freeze <2 x i32> <i32 0, i32 undef>
+  ret <2 x i32> %x
+}
+
+define void @alloca() {
+; CHECK-LABEL: @alloca(
+; CHECK-NEXT:    [[P:%.*]] = alloca i8
+; CHECK-NEXT:    [[Y:%.*]] = freeze i8* [[P]]
+; CHECK-NEXT:    call void @f3(i8* [[Y]])
+; CHECK-NEXT:    ret void
+;
+  %p = alloca i8
+  %y = freeze i8* %p
+  call void @f3(i8* %y)
+  ret void
+}
+
+define i8* @gep() {
+; CHECK-LABEL: @gep(
+; CHECK-NEXT:    [[P:%.*]] = alloca [4 x i8]
+; CHECK-NEXT:    [[Q:%.*]] = getelementptr [4 x i8], [4 x i8]* [[P]], i32 0, i32 6
+; CHECK-NEXT:    [[Q2:%.*]] = freeze i8* [[Q]]
+; CHECK-NEXT:    ret i8* [[Q2]]
+;
+  %p = alloca [4 x i8]
+  %q = getelementptr [4 x i8], [4 x i8]* %p, i32 0, i32 6
+  %q2 = freeze i8* %q
+  ret i8* %q2
+}
+
+define i8* @gep_noopt(i32 %arg) {
+; CHECK-LABEL: @gep_noopt(
+; CHECK-NEXT:    [[Q:%.*]] = getelementptr [4 x i8], [4 x i8]* null, i32 0, i32 [[ARG:%.*]]
+; CHECK-NEXT:    [[Q2:%.*]] = freeze i8* [[Q]]
+; CHECK-NEXT:    ret i8* [[Q2]]
+;
+  %q = getelementptr [4 x i8], [4 x i8]* null, i32 0, i32 %arg
+  %q2 = freeze i8* %q
+  ret i8* %q2
+}
+
+define i8* @gep_inbounds() {
+; CHECK-LABEL: @gep_inbounds(
+; CHECK-NEXT:    [[P:%.*]] = alloca [4 x i8]
+; CHECK-NEXT:    [[Q:%.*]] = getelementptr inbounds [4 x i8], [4 x i8]* [[P]], i32 0, i32 0
+; CHECK-NEXT:    [[Q2:%.*]] = freeze i8* [[Q]]
+; CHECK-NEXT:    ret i8* [[Q2]]
+;
+  %p = alloca [4 x i8]
+  %q = getelementptr inbounds [4 x i8], [4 x i8]* %p, i32 0, i32 0
+  %q2 = freeze i8* %q
+  ret i8* %q2
+}
+
+define i8* @gep_inbounds_noopt(i32 %arg) {
+; CHECK-LABEL: @gep_inbounds_noopt(
+; CHECK-NEXT:    [[P:%.*]] = alloca [4 x i8]
+; CHECK-NEXT:    [[Q:%.*]] = getelementptr inbounds [4 x i8], [4 x i8]* [[P]], i32 0, i32 [[ARG:%.*]]
+; CHECK-NEXT:    [[Q2:%.*]] = freeze i8* [[Q]]
+; CHECK-NEXT:    ret i8* [[Q2]]
+;
+  %p = alloca [4 x i8]
+  %q = getelementptr inbounds [4 x i8], [4 x i8]* %p, i32 0, i32 %arg
+  %q2 = freeze i8* %q
+  ret i8* %q2
+}
+
+define i32* @gep_inbounds_null() {
+; CHECK-LABEL: @gep_inbounds_null(
+; CHECK-NEXT:    [[K:%.*]] = freeze i32* null
+; CHECK-NEXT:    ret i32* [[K]]
+;
+  %p = getelementptr inbounds i32, i32* null, i32 0
+  %k = freeze i32* %p
+  ret i32* %k
+}
+
+define i32* @gep_inbounds_null_noopt(i32* %p) {
+; CHECK-LABEL: @gep_inbounds_null_noopt(
+; CHECK-NEXT:    [[K:%.*]] = freeze i32* [[P:%.*]]
+; CHECK-NEXT:    ret i32* [[K]]
+;
+  %q = getelementptr inbounds i32, i32* %p, i32 0
+  %k = freeze i32* %q
+  ret i32* %k
+}
+
+define i1 @icmp(i32 %a, i32 %b) {
+; CHECK-LABEL: @icmp(
+; CHECK-NEXT:    [[A_FR:%.*]] = freeze i32 [[A:%.*]]
+; CHECK-NEXT:    [[B_FR:%.*]] = freeze i32 [[B:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[A_FR]], [[B_FR]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %a.fr = freeze i32 %a
+  %b.fr = freeze i32 %b
+  %c = icmp eq i32 %a.fr, %b.fr
+  %c.fr = freeze i1 %c
+  ret i1 %c.fr
+}
+
+define i1 @icmp_noopt(i32 %a, i32 %b) {
+; CHECK-LABEL: @icmp_noopt(
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[C_FR:%.*]] = freeze i1 [[C]]
+; CHECK-NEXT:    ret i1 [[C_FR]]
+;
+  %c = icmp eq i32 %a, %b
+  %c.fr = freeze i1 %c
+  ret i1 %c.fr
+}
+
+define i1 @fcmp(float %x, float %y) {
+; CHECK-LABEL: @fcmp(
+; CHECK-NEXT:    [[FX:%.*]] = freeze float [[X:%.*]]
+; CHECK-NEXT:    [[FY:%.*]] = freeze float [[Y:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = fcmp oeq float [[FX]], [[FY]]
+; CHECK-NEXT:    [[FC:%.*]] = freeze i1 [[C]]
+; CHECK-NEXT:    ret i1 [[FC]]
+;
+  %fx = freeze float %x
+  %fy = freeze float %y
+  %c = fcmp oeq float %fx, %fy
+  %fc = freeze i1 %c
+  ret i1 %fc
+}
+
+define i1 @fcmp_noopt(float %x, float %y) {
+; CHECK-LABEL: @fcmp_noopt(
+; CHECK-NEXT:    [[FX:%.*]] = freeze float [[X:%.*]]
+; CHECK-NEXT:    [[FY:%.*]] = freeze float [[Y:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = fcmp nnan oeq float [[FX]], [[FY]]
+; CHECK-NEXT:    [[FC:%.*]] = freeze i1 [[C]]
+; CHECK-NEXT:    ret i1 [[FC]]
+;
+  %fx = freeze float %x
+  %fy = freeze float %y
+  %c = fcmp nnan oeq float %fx, %fy
+  %fc = freeze i1 %c
+  ret i1 %fc
+}
+
 define i1 @brcond(i1 %c, i1 %c2) {
 ; CHECK-LABEL: @brcond(
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[A:%.*]], label [[B:%.*]]
@@ -38,6 +231,66 @@ A2:
 B:
   %f2 = freeze i1 %c
   ret i1 %f2
+}
+
+define i32 @phi(i1 %cond, i1 %cond2, i32 %a0, i32 %a1) {
+; CHECK-LABEL: @phi(
+; CHECK-NEXT:  ENTRY:
+; CHECK-NEXT:    [[A0_FR:%.*]] = freeze i32 [[A0:%.*]]
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
+; CHECK:       BB1:
+; CHECK-NEXT:    [[A1_FR:%.*]] = freeze i32 [[A1:%.*]]
+; CHECK-NEXT:    br i1 [[COND2:%.*]], label [[BB2]], label [[EXIT:%.*]]
+; CHECK:       BB2:
+; CHECK-NEXT:    [[PHI1:%.*]] = phi i32 [ [[A0_FR]], [[ENTRY:%.*]] ], [ [[A1_FR]], [[BB1]] ]
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       EXIT:
+; CHECK-NEXT:    [[PHI2:%.*]] = phi i32 [ [[A0_FR]], [[BB1]] ], [ [[PHI1]], [[BB2]] ]
+; CHECK-NEXT:    [[PHI2_FR:%.*]] = freeze i32 [[PHI2]]
+; CHECK-NEXT:    ret i32 [[PHI2_FR]]
+;
+ENTRY:
+  %a0.fr = freeze i32 %a0
+  br i1 %cond, label %BB1, label %BB2
+BB1:
+  %a1.fr = freeze i32 %a1
+  br i1 %cond2, label %BB2, label %EXIT
+BB2:
+  %phi1 = phi i32 [%a0.fr, %ENTRY], [%a1.fr, %BB1]
+  br label %EXIT
+EXIT:
+  %phi2 = phi i32 [%a0.fr, %BB1], [%phi1, %BB2]
+  %phi2.fr = freeze i32 %phi2
+  ret i32 %phi2.fr
+}
+
+define i32 @phi_noopt(i1 %cond, i1 %cond2, i32 %a0, i32 %a1) {
+; CHECK-LABEL: @phi_noopt(
+; CHECK-NEXT:  ENTRY:
+; CHECK-NEXT:    [[A0_FR:%.*]] = freeze i32 [[A0:%.*]]
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
+; CHECK:       BB1:
+; CHECK-NEXT:    br i1 [[COND2:%.*]], label [[BB2]], label [[EXIT:%.*]]
+; CHECK:       BB2:
+; CHECK-NEXT:    [[PHI1:%.*]] = phi i32 [ [[A0_FR]], [[ENTRY:%.*]] ], [ [[A1:%.*]], [[BB1]] ]
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       EXIT:
+; CHECK-NEXT:    [[PHI2:%.*]] = phi i32 [ [[A0_FR]], [[BB1]] ], [ [[PHI1]], [[BB2]] ]
+; CHECK-NEXT:    [[PHI2_FR:%.*]] = freeze i32 [[PHI2]]
+; CHECK-NEXT:    ret i32 [[PHI2_FR]]
+;
+ENTRY:
+  %a0.fr = freeze i32 %a0
+  br i1 %cond, label %BB1, label %BB2
+BB1:
+  br i1 %cond2, label %BB2, label %EXIT
+BB2:
+  %phi1 = phi i32 [%a0.fr, %ENTRY], [%a1, %BB1]
+  br label %EXIT
+EXIT:
+  %phi2 = phi i32 [%a0.fr, %BB1], [%phi1, %BB2]
+  %phi2.fr = freeze i32 %phi2
+  ret i32 %phi2.fr
 }
 
 define i32 @brcond_switch(i32 %x) {
@@ -81,3 +334,4 @@ B:
 }
 declare void @f1(i1)
 declare void @f2()
+declare void @f3(i8*)
