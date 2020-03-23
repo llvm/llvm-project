@@ -17,8 +17,7 @@ define i8* @start(i8 %v) {
 ; CHECK-NEXT:    [[C2:%.*]] = icmp eq i8 [[V]], 1
 ; CHECK-NEXT:    br i1 [[C2]], label [[C2_TRUE:%.*]], label [[C2_FALSE:%.*]]
 ; CHECK:       c2_true:
-; CHECK-NEXT:    [[CA1:%.*]] = musttail call i8* @no_side_effects(i8 undef)
-; CHECK-NEXT:    ret i8* [[CA1]]
+; CHECK-NEXT:    ret i8* null
 ; CHECK:       c2_false:
 ; CHECK-NEXT:    [[CA2:%.*]] = musttail call i8* @dont_zap_me(i8 undef)
 ; CHECK-NEXT:    ret i8* [[CA2]]
@@ -61,10 +60,6 @@ define internal i8* @side_effects(i8 %v) {
 }
 
 define internal i8* @no_side_effects(i8 %v) readonly nounwind {
-; CHECK-LABEL: define {{[^@]+}}@no_side_effects
-; CHECK-SAME: (i8 [[V:%.*]])
-; CHECK-NEXT:    ret i8* undef
-;
   ret i8* null
 }
 
