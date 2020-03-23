@@ -328,6 +328,40 @@ const Value *getSplatValue(const Value *V);
 /// not limited by finding a scalar source value to a splatted vector.
 bool isSplatValue(const Value *V, int Index = -1, unsigned Depth = 0);
 
+/// Scale a shuffle or target shuffle mask, replacing each mask index with the
+/// scaled sequential indices for an equivalent mask of narrowed elements.
+/// Mask elements that are less than 0 (sentinel values) are repeated in the
+/// output mask.
+///
+/// Example with Scale = 4:
+///   <4 x i32> <3, 2, 0, -1> -->
+///   <16 x i8> <12, 13, 14, 15, 8, 9, 10, 11, 0, 1, 2, 3, -1, -1, -1, -1>
+///
+/// This is the reverse process of "canWidenShuffleElements", but can always
+/// succeed.
+template <typename T>
+void scaleShuffleMask(size_t Scale, ArrayRef<T> Mask,
+                      SmallVectorImpl<T> &ScaledMask) {
+  assert(Scale > 0 && "Unexpected scaling factor");
+  size_t NumElts = Mask.size();
+  ScaledMask.assign(NumElts * Scale, -1);
+
+  for (size_t i = 0; i != NumElts; ++i) {
+    int M = Mask[i];
+
+    // Repeat sentinel values in every mask element.
+    if (M < 0) {
+      for (size_t s = 0; s != Scale; ++s)
+        ScaledMask[(Scale * i) + s] = M;
+      continue;
+    }
+
+    // Scale mask element and increment across each mask element.
+    for (size_t s = 0; s != Scale; ++s)
+      ScaledMask[(Scale * i) + s] = (Scale * M) + s;
+  }
+}
+
 /// Compute a map of integer instructions to their minimum legal type
 /// size.
 ///

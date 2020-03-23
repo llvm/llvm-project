@@ -98,6 +98,12 @@ TEST_F(BasicTest, isSplat) {
   EXPECT_FALSE(isSplatValue(SplatWithUndefC));
 }
 
+TEST_F(BasicTest, scaleShuffleMask) {
+  SmallVector<int, 16> ScaledMask;
+  scaleShuffleMask<int>(4, {3,2,0,-1}, ScaledMask);
+  EXPECT_EQ(makeArrayRef<int>(ScaledMask), makeArrayRef<int>({12,13,14,15,8,9,10,11,0,1,2,3,-1,-1,-1,-1}));
+}
+
 TEST_F(BasicTest, getSplatIndex) {
   EXPECT_EQ(getSplatIndex({0,0,0}), 0);
   EXPECT_EQ(getSplatIndex({1,0,0}), -1);     // no splat
