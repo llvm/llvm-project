@@ -42,7 +42,7 @@
 // CHECK-NOT: {{"*.llvm-link"}}
 // CHECK-NOT: {{".*opt"}}
 // CHECK-NOT: {{".*llc"}}
-// CHECK-NOT: {{".*lld"}}
+// CHECK-NOT: {{".*lld.*"}}
 // CHECK-NOT: {{".*clang-offload-bundler"}}
 // CHECK-NOT: {{".*ld.*"}}
 
@@ -67,6 +67,6 @@
 // BUNDLE: {{"*.llvm-link"}}
 // BUNDLE: {{".*opt"}}
 // BUNDLE: {{".*llc"}}
-// BUNDLE: {{".*lld"}}
+// BUNDLE: {{".*lld.*"}}
 // BUNDLE: {{".*clang-offload-bundler"}}
 
