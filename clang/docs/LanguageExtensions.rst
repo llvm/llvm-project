@@ -2129,20 +2129,31 @@ object that overloads ``operator&``.
 ``__builtin_operator_new`` and ``__builtin_operator_delete``
 ------------------------------------------------------------
 
-``__builtin_operator_new`` allocates memory just like a non-placement non-class
-*new-expression*. This is exactly like directly calling the normal
-non-placement ``::operator new``, except that it allows certain optimizations
+A call to ``__builtin_operator_new(args)`` is exactly the same as a call to
+``::operator new(args)``, except that it allows certain optimizations
 that the C++ standard does not permit for a direct function call to
 ``::operator new`` (in particular, removing ``new`` / ``delete`` pairs and
-merging allocations).
+merging allocations), and that the call is required to resolve to a
+`replaceable global allocation function
+<https://en.cppreference.com/w/cpp/memory/new/operator_new>`_.
 
-Likewise, ``__builtin_operator_delete`` deallocates memory just like a
-non-class *delete-expression*, and is exactly like directly calling the normal
-``::operator delete``, except that it permits optimizations. Only the unsized
-form of ``__builtin_operator_delete`` is currently available.
+Likewise, ``__builtin_operator_delete`` is exactly the same as a call to
+``::operator delete(args)``, except that it permits optimizations
+and that the call is required to resolve to a
+`replaceable global deallocation function
+<https://en.cppreference.com/w/cpp/memory/new/operator_delete>`_.
 
 These builtins are intended for use in the implementation of ``std::allocator``
 and other similar allocation libraries, and are only available in C++.
+
+Query for this feature with ``__has_builtin(__builtin_operator_new)`` or
+``__has_builtin(__builtin_operator_delete)``:
+
+  * If the value is at least ``201802L``, the builtins behave as described above.
+
+  * If the value is non-zero, the builtins may not support calling arbitrary
+    replaceable global (de)allocation functions, but do support calling at least
+    ``::operator new(size_t)`` and ``::operator delete(void*)``.
 
 ``__builtin_preserve_access_index``
 -----------------------------------
