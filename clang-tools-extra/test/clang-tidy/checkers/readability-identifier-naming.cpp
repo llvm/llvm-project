@@ -532,3 +532,16 @@ using namespace FOO_NS;
 
 using namespace FOO_NS::InlineNamespace;
 // CHECK-FIXES: {{^}}using namespace foo_ns::inline_namespace;
+
+void QualifiedTypeLocTest(THIS___Structure);
+// CHECK-FIXES: {{^}}void QualifiedTypeLocTest(this_structure);{{$}}
+void QualifiedTypeLocTest(THIS___Structure &);
+// CHECK-FIXES: {{^}}void QualifiedTypeLocTest(this_structure &);{{$}}
+void QualifiedTypeLocTest(THIS___Structure &&);
+// CHECK-FIXES: {{^}}void QualifiedTypeLocTest(this_structure &&);{{$}}
+void QualifiedTypeLocTest(const THIS___Structure);
+// CHECK-FIXES: {{^}}void QualifiedTypeLocTest(const this_structure);{{$}}
+void QualifiedTypeLocTest(const THIS___Structure &);
+// CHECK-FIXES: {{^}}void QualifiedTypeLocTest(const this_structure &);{{$}}
+void QualifiedTypeLocTest(volatile THIS___Structure &);
+// CHECK-FIXES: {{^}}void QualifiedTypeLocTest(volatile this_structure &);{{$}}
