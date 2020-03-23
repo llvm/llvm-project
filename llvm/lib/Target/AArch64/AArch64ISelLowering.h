@@ -859,6 +859,9 @@ private:
   bool shouldNormalizeToSelectSequence(LLVMContext &, EVT) const override;
 
   void finalizeLowering(MachineFunction &MF) const override;
+
+  bool shouldLocalize(const MachineInstr &MI,
+                      const TargetTransformInfo *TTI) const override;
 };
 
 namespace AArch64 {
