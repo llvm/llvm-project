@@ -80,8 +80,9 @@ std::vector<HighlightingToken> getSemanticHighlightings(ParsedAST &AST);
 llvm::StringRef toTextMateScope(HighlightingKind Kind);
 
 /// Convert to LSP's semantic highlighting information.
-std::vector<SemanticHighlightingInformation>
-toSemanticHighlightingInformation(llvm::ArrayRef<LineHighlightings> Tokens);
+std::vector<TheiaSemanticHighlightingInformation>
+toTheiaSemanticHighlightingInformation(
+    llvm::ArrayRef<LineHighlightings> Tokens);
 
 /// Return a line-by-line diff between two highlightings.
 ///  - if the tokens on a line are the same in both highlightings, this line is
