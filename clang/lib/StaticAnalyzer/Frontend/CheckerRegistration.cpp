@@ -10,9 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/StaticAnalyzer/Frontend/AnalyzerHelpFlags.h"
+#include "clang/StaticAnalyzer/Frontend/CheckerRegistration.h"
 #include "clang/Basic/Diagnostic.h"
-#include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
@@ -25,34 +24,53 @@
 using namespace clang;
 using namespace ento;
 
-void ento::printCheckerHelp(raw_ostream &out, CompilerInstance &CI) {
+std::unique_ptr<CheckerManager> ento::createCheckerManager(
+    ASTContext &context,
+    AnalyzerOptions &opts,
+    ArrayRef<std::string> plugins,
+    ArrayRef<std::function<void(CheckerRegistry &)>> checkerRegistrationFns,
+    DiagnosticsEngine &diags) {
+  auto checkerMgr = std::make_unique<CheckerManager>(context, opts);
+
+  CheckerRegistry allCheckers(plugins, diags, opts, context.getLangOpts(),
+                              checkerRegistrationFns);
+
+  allCheckers.initializeManager(*checkerMgr);
+  allCheckers.validateCheckerOptions();
+  checkerMgr->finishedCheckerRegistration();
+
+  return checkerMgr;
+}
+
+void ento::printCheckerHelp(raw_ostream &out, ArrayRef<std::string> plugins,
+                            AnalyzerOptions &anopts,
+                            DiagnosticsEngine &diags,
+                            const LangOptions &langOpts) {
   out << "OVERVIEW: Clang Static Analyzer Checkers List\n\n";
   out << "USAGE: -analyzer-checker <CHECKER or PACKAGE,...>\n\n";
 
-  auto CheckerMgr = std::make_unique<CheckerManager>(
-      *CI.getAnalyzerOpts(), CI.getLangOpts(), CI.getDiagnostics(),
-      CI.getFrontendOpts().Plugins);
-
-  CheckerMgr->getCheckerRegistry().printCheckerWithDescList(out);
+  CheckerRegistry(plugins, diags, anopts, langOpts)
+      .printCheckerWithDescList(out);
 }
 
-void ento::printEnabledCheckerList(raw_ostream &out, CompilerInstance &CI) {
+void ento::printEnabledCheckerList(raw_ostream &out,
+                                   ArrayRef<std::string> plugins,
+                                   AnalyzerOptions &anopts,
+                                   DiagnosticsEngine &diags,
+                                   const LangOptions &langOpts) {
   out << "OVERVIEW: Clang Static Analyzer Enabled Checkers List\n\n";
 
-  auto CheckerMgr = std::make_unique<CheckerManager>(
-      *CI.getAnalyzerOpts(), CI.getLangOpts(), CI.getDiagnostics(),
-      CI.getFrontendOpts().Plugins);
-
-  CheckerMgr->getCheckerRegistry().printEnabledCheckerList(out);
+  CheckerRegistry(plugins, diags, anopts, langOpts)
+      .printEnabledCheckerList(out);
 }
 
-void ento::printCheckerConfigList(raw_ostream &out, CompilerInstance &CI) {
-
-  auto CheckerMgr = std::make_unique<CheckerManager>(
-      *CI.getAnalyzerOpts(), CI.getLangOpts(), CI.getDiagnostics(),
-      CI.getFrontendOpts().Plugins);
-
-  CheckerMgr->getCheckerRegistry().printCheckerOptionList(out);
+void ento::printCheckerConfigList(raw_ostream &OS,
+                                  ArrayRef<std::string> plugins,
+                                  AnalyzerOptions &opts,
+                                  DiagnosticsEngine &diags,
+                                  const LangOptions &LangOpts) {
+  CheckerRegistry(plugins, diags, opts, LangOpts)
+      .printCheckerOptionList(OS);
 }
 
 void ento::printAnalyzerConfigList(raw_ostream &out) {

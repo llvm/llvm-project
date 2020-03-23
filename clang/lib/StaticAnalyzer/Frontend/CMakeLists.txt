@@ -6,7 +6,7 @@ set(LLVM_LINK_COMPONENTS
 
 add_clang_library(clangStaticAnalyzerFrontend
   AnalysisConsumer.cpp
-  AnalyzerHelpFlags.cpp
+  CheckerRegistration.cpp
   CheckerRegistry.cpp
   FrontendActions.cpp
   ModelConsumer.cpp
