@@ -343,23 +343,17 @@ template <typename T>
 void scaleShuffleMask(size_t Scale, ArrayRef<T> Mask,
                       SmallVectorImpl<T> &ScaledMask) {
   assert(Scale > 0 && "Unexpected scaling factor");
-  size_t NumElts = Mask.size();
-  ScaledMask.assign(NumElts * Scale, -1);
 
-  for (size_t i = 0; i != NumElts; ++i) {
-    int M = Mask[i];
-
-    // Repeat sentinel values in every mask element.
-    if (M < 0) {
-      for (size_t s = 0; s != Scale; ++s)
-        ScaledMask[(Scale * i) + s] = M;
-      continue;
-    }
-
-    // Scale mask element and increment across each mask element.
-    for (size_t s = 0; s != Scale; ++s)
-      ScaledMask[(Scale * i) + s] = (Scale * M) + s;
+  // Fast-path: if no scaling, then it is just a copy.
+  if (Scale == 1) {
+    ScaledMask.assign(Mask.begin(), Mask.end());
+    return;
   }
+
+  ScaledMask.clear();
+  for (int MaskElt : Mask)
+    for (int ScaleElt = 0; ScaleElt != (int)Scale; ++ScaleElt)
+      ScaledMask.push_back(MaskElt < 0 ? MaskElt : Scale * MaskElt + ScaleElt);
 }
 
 /// Compute a map of integer instructions to their minimum legal type
