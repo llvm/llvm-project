@@ -23,6 +23,7 @@
 #include "AMDGPUTargetTransformInfo.h"
 #include "GCNIterativeScheduler.h"
 #include "GCNSchedStrategy.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "R600MachineScheduler.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIMachineScheduler.h"
@@ -375,6 +376,12 @@ AMDGPUTargetMachine::AMDGPUTargetMachine(const Target &T, const Triple &TT,
                         getEffectiveCodeModel(CM, CodeModel::Small), OptLevel),
       TLOF(createTLOF(getTargetTriple())) {
   initAsmInfo();
+  if (TT.getArch() == Triple::amdgcn) {
+    if (getMCSubtargetInfo()->checkFeatures("+wavefrontsize64"))
+      MRI.reset(llvm::createGCNMCRegisterInfo(AMDGPUDwarfFlavour::Wave64));
+    else if (getMCSubtargetInfo()->checkFeatures("+wavefrontsize32"))
+      MRI.reset(llvm::createGCNMCRegisterInfo(AMDGPUDwarfFlavour::Wave32));
+  }
 }
 
 bool AMDGPUTargetMachine::EnableLateStructurizeCFG = false;
