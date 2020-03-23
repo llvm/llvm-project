@@ -415,3 +415,71 @@ define float @ext14_ext15_fmul_v16f32(<16 x float> %x) {
   %r = fadd float %e0, %e1
   ret float %r
 }
+
+define <4 x float> @ins_bo_ext_ext(<4 x float> %a, <4 x float> %b) {
+; CHECK-LABEL: @ins_bo_ext_ext(
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[A:%.*]], <4 x float> undef, <4 x i32> <i32 undef, i32 undef, i32 3, i32 undef>
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd <4 x float> [[A]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[TMP2]], i32 2
+; CHECK-NEXT:    [[V3:%.*]] = insertelement <4 x float> [[B:%.*]], float [[TMP3]], i32 3
+; CHECK-NEXT:    ret <4 x float> [[V3]]
+;
+  %a2 = extractelement <4 x float> %a, i32 2
+  %a3 = extractelement <4 x float> %a, i32 3
+  %a23 = fadd float %a2, %a3
+  %v3 = insertelement <4 x float> %b, float %a23, i32 3
+  ret <4 x float> %v3
+}
+
+define <4 x float> @ins_bo_ext_ext_uses(<4 x float> %a, <4 x float> %b) {
+; CHECK-LABEL: @ins_bo_ext_ext_uses(
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[A:%.*]], <4 x float> undef, <4 x i32> <i32 undef, i32 undef, i32 3, i32 undef>
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd <4 x float> [[A]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[TMP2]], i32 2
+; CHECK-NEXT:    call void @use_f32(float [[TMP3]])
+; CHECK-NEXT:    [[V3:%.*]] = insertelement <4 x float> [[B:%.*]], float [[TMP3]], i32 3
+; CHECK-NEXT:    ret <4 x float> [[V3]]
+;
+  %a2 = extractelement <4 x float> %a, i32 2
+  %a3 = extractelement <4 x float> %a, i32 3
+  %a23 = fadd float %a2, %a3
+  call void @use_f32(float %a23)
+  %v3 = insertelement <4 x float> %b, float %a23, i32 3
+  ret <4 x float> %v3
+}
+
+define <4 x float> @PR34724(<4 x float> %a, <4 x float> %b) {
+; CHECK-LABEL: @PR34724(
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[A:%.*]], <4 x float> undef, <4 x i32> <i32 undef, i32 undef, i32 3, i32 undef>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[B:%.*]], <4 x float> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[B]], <4 x float> undef, <4 x i32> <i32 undef, i32 undef, i32 3, i32 undef>
+; CHECK-NEXT:    [[TMP4:%.*]] = fadd <4 x float> [[A]], [[TMP1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x float> [[TMP4]], i32 2
+; CHECK-NEXT:    [[TMP6:%.*]] = fadd <4 x float> [[B]], [[TMP2]]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x float> [[TMP6]], i32 0
+; CHECK-NEXT:    [[TMP8:%.*]] = fadd <4 x float> [[B]], [[TMP3]]
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x float> [[TMP8]], i32 2
+; CHECK-NEXT:    [[V1:%.*]] = insertelement <4 x float> undef, float [[TMP5]], i32 1
+; CHECK-NEXT:    [[V2:%.*]] = insertelement <4 x float> [[V1]], float [[TMP7]], i32 2
+; CHECK-NEXT:    [[V3:%.*]] = insertelement <4 x float> [[V2]], float [[TMP9]], i32 3
+; CHECK-NEXT:    ret <4 x float> [[V3]]
+;
+  %a0 = extractelement <4 x float> %a, i32 0
+  %a1 = extractelement <4 x float> %a, i32 1
+  %a2 = extractelement <4 x float> %a, i32 2
+  %a3 = extractelement <4 x float> %a, i32 3
+
+  %b0 = extractelement <4 x float> %b, i32 0
+  %b1 = extractelement <4 x float> %b, i32 1
+  %b2 = extractelement <4 x float> %b, i32 2
+  %b3 = extractelement <4 x float> %b, i32 3
+
+  %a23 = fadd float %a2, %a3
+  %b01 = fadd float %b0, %b1
+  %b23 = fadd float %b2, %b3
+
+  %v1 = insertelement <4 x float> undef, float %a23, i32 1
+  %v2 = insertelement <4 x float> %v1, float %b01, i32 2
+  %v3 = insertelement <4 x float> %v2, float %b23, i32 3
+  ret <4 x float> %v3
+}
