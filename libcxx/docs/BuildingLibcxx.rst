@@ -68,7 +68,7 @@ rebuilding LLVM as often. An out-of-tree build would look like this:
           -DLIBCXX_CXX_ABI_INCLUDE_PATHS=path/to/separate/libcxxabi/include \
           path/to/llvm-project/libcxx
   $ make
-  $ make check-cxx # optional
+  $ make check-libcxx # optional
 
 
 Experimental Support for Windows
