@@ -442,6 +442,18 @@ HANDLE_TARGET_OPCODE(G_UMULH)
 // the high half of the result.
 HANDLE_TARGET_OPCODE(G_SMULH)
 
+/// Generic saturating unsigned addition.
+HANDLE_TARGET_OPCODE(G_UADDSAT)
+
+/// Generic saturating signed addition.
+HANDLE_TARGET_OPCODE(G_SADDSAT)
+
+/// Generic saturating unsigned subtraction.
+HANDLE_TARGET_OPCODE(G_USUBSAT)
+
+/// Generic saturating signed subtraction.
+HANDLE_TARGET_OPCODE(G_SSUBSAT)
+
 /// Generic FP addition.
 HANDLE_TARGET_OPCODE(G_FADD)
 
