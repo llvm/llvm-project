@@ -44,10 +44,6 @@ def create_parser():
         '--swift-compiler',
         dest='swiftcompiler',
         help='The path to a valid Swift compiler')
-    group.add_argument(
-        '--swift-library',
-        dest='swiftlibrary',
-        help='The path to a folder that contains valid Swift library files')
     if sys.platform == 'darwin':
         group.add_argument('--apple-sdk', metavar='apple_sdk', dest='apple_sdk', default="macosx", help=textwrap.dedent(
             '''Specify the name of the Apple SDK (macosx, macosx.internal, iphoneos, iphoneos.internal, or path to SDK) and use the appropriate tools from that SDK's toolchain.'''))
