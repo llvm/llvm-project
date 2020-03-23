@@ -8672,9 +8672,9 @@ static bool runAttributorOnFunctions(InformationCache &InfoCache,
     A.identifyDefaultAbstractAttributes(*F);
   }
 
+  Module &M = *Functions.front()->getParent();
   ChangeStatus Changed = A.run();
-  assert(!verifyModule(*Functions.front()->getParent(), &errs()) &&
-         "Module verification failed!");
+  assert(!verifyModule(M, &errs()) && "Module verification failed!");
   LLVM_DEBUG(dbgs() << "[Attributor] Done with " << Functions.size()
                     << " functions, result: " << Changed << ".\n");
   return Changed == ChangeStatus::CHANGED;
