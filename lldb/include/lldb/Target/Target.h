@@ -207,6 +207,8 @@ public:
 
   bool GetRequireHardwareBreakpoints() const;
 
+  void UpdateLaunchInfoFromProperties();
+
 private:
   // Callbacks for m_launch_info.
   static void Arg0ValueChangedCallback(void *target_property_ptr,
@@ -230,9 +232,12 @@ private:
   static void DisableSTDIOValueChangedCallback(void *target_property_ptr,
                                                OptionValue *);
 
+  Environment ComputeEnvironment() const;
+
   // Member variables.
   ProcessLaunchInfo m_launch_info;
   std::unique_ptr<TargetExperimentalProperties> m_experimental_properties_up;
+  Target *m_target;
 };
 
 class EvaluateExpressionOptions {

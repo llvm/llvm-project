@@ -371,10 +371,19 @@ SBProcess SBTarget::Launch(SBListener &listener, char const **argv,
     Module *exe_module = target_sp->GetExecutableModulePointer();
     if (exe_module)
       launch_info.SetExecutableFile(exe_module->GetPlatformFileSpec(), true);
-    if (argv)
+    if (argv) {
       launch_info.GetArguments().AppendArguments(argv);
-    if (envp)
+    } else {
+      auto default_launch_info = target_sp->GetProcessLaunchInfo();
+      launch_info.GetArguments().AppendArguments(
+          default_launch_info.GetArguments());
+    }
+    if (envp) {
       launch_info.GetEnvironment() = Environment(envp);
+    } else {
+      auto default_launch_info = target_sp->GetProcessLaunchInfo();
+      launch_info.GetEnvironment() = default_launch_info.GetEnvironment();
+    }
 
     if (listener.IsValid())
       launch_info.SetListener(listener.GetSP());
