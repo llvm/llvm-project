@@ -9749,6 +9749,40 @@ INTERCEPTOR(int, sigaltstack, void *ss, void *oss) {
 #define INIT_SIGALTSTACK
 #endif
 
+#if SANITIZER_INTERCEPT_UNAME
+INTERCEPTOR(int, uname, struct utsname *utsname) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, uname, utsname);
+  int res = REAL(uname)(utsname);
+  if (!res)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, utsname,
+                                   __sanitizer::struct_utsname_sz);
+  return res;
+}
+#define INIT_UNAME COMMON_INTERCEPT_FUNCTION(uname)
+#else
+#define INIT_UNAME
+#endif
+
+#if SANITIZER_INTERCEPT___XUNAME
+// FreeBSD's <sys/utsname.h> define uname() as
+// static __inline int uname(struct utsname *name) {
+//   return __xuname(SYS_NMLN, (void*)name);
+// }
+INTERCEPTOR(int, __xuname, int size, void *utsname) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, __xuname, size, utsname);
+  int res = REAL(__xuname)(size, utsname);
+  if (!res)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, utsname,
+                                   __sanitizer::struct_utsname_sz);
+  return res;
+}
+#define INIT___XUNAME COMMON_INTERCEPT_FUNCTION(__xuname)
+#else
+#define INIT___XUNAME
+#endif
+
 #include "sanitizer_common_interceptors_netbsd_compat.inc"
 
 static void InitializeCommonInterceptors() {
@@ -10055,6 +10089,8 @@ static void InitializeCommonInterceptors() {
   INIT_QSORT;
   INIT_QSORT_R;
   INIT_SIGALTSTACK;
+  INIT_UNAME;
+  INIT___XUNAME;
 
   INIT___PRINTF_CHK;
 }
