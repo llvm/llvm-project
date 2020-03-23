@@ -4048,13 +4048,10 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
     return FirstAnswer;
   }
 
-  // Okay, we know that the sign bit in Mask is set.  Use CLZ to determine
+  // Okay, we know that the sign bit in Mask is set.  Use CLO to determine
   // the number of identical bits in the top of the input value.
-  Mask = ~Mask;
   Mask <<= Mask.getBitWidth()-VTBits;
-  // Return # leading zeros.  We use 'min' here in case Val was zero before
-  // shifting.  We don't want to return '64' as for an i32 "0".
-  return std::max(FirstAnswer, std::min(VTBits, Mask.countLeadingZeros()));
+  return std::max(FirstAnswer, Mask.countLeadingOnes());
 }
 
 bool SelectionDAG::isBaseWithConstantOffset(SDValue Op) const {
