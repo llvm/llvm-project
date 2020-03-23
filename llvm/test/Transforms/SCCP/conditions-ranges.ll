@@ -8,60 +8,137 @@ define void @f1(i32 %a, i32 %b) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_255:%.*]] = and i32 [[A:%.*]], 255
 ; CHECK-NEXT:    [[A_2:%.*]] = add i32 [[A_255]], 20
-; CHECK-NEXT:    [[C_1:%.*]] = icmp ugt i32 [[B:%.*]], [[A_2]]
-; CHECK-NEXT:    br i1 [[C_1]], label [[TRUE:%.*]], label [[FALSE:%.*]]
+; CHECK-NEXT:    [[BC:%.*]] = icmp ugt i32 [[B:%.*]], [[A_2]]
+; CHECK-NEXT:    br i1 [[BC]], label [[TRUE:%.*]], label [[FALSE:%.*]]
 ; CHECK:       true:
-; CHECK-NEXT:    [[C_2:%.*]] = icmp eq i32 [[B]], 0
+; CHECK-NEXT:    [[F_1:%.*]] = icmp eq i32 [[B]], 0
+; CHECK-NEXT:    call void @use(i1 [[F_1]])
+; CHECK-NEXT:    [[F_2:%.*]] = icmp eq i32 [[B]], 20
+; CHECK-NEXT:    call void @use(i1 [[F_2]])
+; CHECK-NEXT:    [[F_3:%.*]] = icmp ult i32 [[B]], 20
+; CHECK-NEXT:    call void @use(i1 [[F_3]])
+; CHECK-NEXT:    [[T_1:%.*]] = icmp ugt i32 [[B]], 5
+; CHECK-NEXT:    call void @use(i1 [[T_1]])
+; CHECK-NEXT:    [[T_2:%.*]] = icmp ne i32 [[B]], 20
+; CHECK-NEXT:    call void @use(i1 [[T_2]])
+; CHECK-NEXT:    [[C_1:%.*]] = icmp eq i32 [[B]], 21
+; CHECK-NEXT:    call void @use(i1 [[C_1]])
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ugt i32 [[B]], 21
 ; CHECK-NEXT:    call void @use(i1 [[C_2]])
-; CHECK-NEXT:    [[C_3:%.*]] = icmp eq i32 [[B]], 20
+; CHECK-NEXT:    [[C_3:%.*]] = icmp ugt i32 [[B]], 255
 ; CHECK-NEXT:    call void @use(i1 [[C_3]])
-; CHECK-NEXT:    [[C_4:%.*]] = icmp eq i32 [[B]], 21
-; CHECK-NEXT:    call void @use(i1 [[C_4]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       false:
+; CHECK-NEXT:    [[F_4:%.*]] = icmp eq i32 [[B]], 276
+; CHECK-NEXT:    call void @use(i1 [[F_4]])
+; CHECK-NEXT:    [[F_5:%.*]] = icmp ugt i32 [[B]], 275
+; CHECK-NEXT:    call void @use(i1 [[F_5]])
+; CHECK-NEXT:    [[T_3:%.*]] = icmp ne i32 [[B]], 276
+; CHECK-NEXT:    call void @use(i1 [[T_3]])
+; CHECK-NEXT:    [[T_4:%.*]] = icmp ule i32 [[B]], 275
+; CHECK-NEXT:    call void @use(i1 [[T_4]])
+; CHECK-NEXT:    [[C_4:%.*]] = icmp eq i32 [[B]], 21
+; CHECK-NEXT:    call void @use(i1 [[C_4]])
+; CHECK-NEXT:    [[C_5:%.*]] = icmp eq i32 [[B]], 275
+; CHECK-NEXT:    call void @use(i1 [[C_5]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %a.255 = and i32 %a, 255
   %a.2 = add i32 %a.255, 20
-  %c.1 = icmp ugt i32 %b, %a.2
-  br i1 %c.1, label %true, label %false
+  %bc = icmp ugt i32 %b, %a.2
+  br i1 %bc, label %true, label %false
 
-true:
-  %c.2 = icmp eq i32 %b, 0
+true: ; %b in [21, 0)
+  ; Conditions below are false.
+  %f.1 = icmp eq i32 %b, 0
+  call void @use(i1 %f.1)
+  %f.2 = icmp eq i32 %b, 20
+  call void @use(i1 %f.2)
+  %f.3 = icmp ult i32 %b, 20
+  call void @use(i1 %f.3)
+
+  ; Conditions below are true.
+  %t.1 = icmp ugt i32 %b, 5
+  call void @use(i1 %t.1)
+  %t.2 = icmp ne i32 %b, 20
+  call void @use(i1 %t.2)
+
+  ; Conditions below cannot be simplified.
+  %c.1 = icmp eq i32 %b, 21
+  call void @use(i1 %c.1)
+  %c.2 = icmp ugt i32 %b, 21
   call void @use(i1 %c.2)
-  %c.3 = icmp eq i32 %b, 20
+  %c.3 = icmp ugt i32 %b, 255
   call void @use(i1 %c.3)
-  %c.4 = icmp eq i32 %b, 21
-  call void @use(i1 %c.4)
   ret void
 
-false:
+false: ;%b in [0, 276)
+  ; Conditions below are false;
+  %f.4 = icmp eq i32 %b, 276
+  call void @use(i1 %f.4)
+  %f.5 = icmp ugt i32 %b, 275
+  call void @use(i1 %f.5)
+
+  ; Conditions below are true;
+  %t.3 = icmp ne i32 %b, 276
+  call void @use(i1 %t.3)
+  %t.4 = icmp ule i32 %b, 275
+  call void @use(i1 %t.4)
+
+  ; Conditions below cannot be simplified.
+  %c.4 = icmp eq i32 %b, 21
+  call void @use(i1 %c.4)
+  %c.5 = icmp eq i32 %b, 275
+  call void @use(i1 %c.5)
   ret void
 }
 
-
-define void @f2(i8* %a) {
-; CHECK-LABEL: @f2(
+; TODO: Use information %a != 0 in false branch.
+define void @f2_ptr(i8* %a, i8* %b) {
+; CHECK-LABEL: @f2_ptr(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[C_1:%.*]] = icmp eq i8* [[A:%.*]], null
-; CHECK-NEXT:    br i1 [[C_1]], label [[TRUE:%.*]], label [[FALSE:%.*]]
+; CHECK-NEXT:    [[BC:%.*]] = icmp eq i8* [[A:%.*]], null
+; CHECK-NEXT:    br i1 [[BC]], label [[TRUE:%.*]], label [[FALSE:%.*]]
 ; CHECK:       true:
+; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    [[C_1:%.*]] = icmp eq i8* null, [[B:%.*]]
+; CHECK-NEXT:    call void @use(i1 [[C_1]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       false:
+; CHECK-NEXT:    [[F_2:%.*]] = icmp eq i8* [[A]], null
+; CHECK-NEXT:    call void @use(i1 [[F_2]])
+; CHECK-NEXT:    [[T_2:%.*]] = icmp ne i8* [[A]], null
+; CHECK-NEXT:    call void @use(i1 [[T_2]])
+; CHECK-NEXT:    [[C_2:%.*]] = icmp eq i8* [[A]], [[B]]
+; CHECK-NEXT:    call void @use(i1 [[C_2]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %c.1 = icmp eq i8* %a, null
-  br i1 %c.1, label %true, label %false
+  %bc = icmp eq i8* %a, null
+  br i1 %bc, label %true, label %false
 
-true:
-  %c.2 = icmp eq i8*%a, null
-  call void @use(i1 %c.2)
+true: ; %a == 0
+  %f.1 = icmp ne i8* %a, null
+  call void @use(i1 %f.1)
+
+  %t.1 = icmp eq i8* %a, null
+  call void @use(i1 %t.1)
+
+  %c.1 = icmp eq i8* %a, %b
+  call void @use(i1 %c.1)
   ret void
 
-false:
+false: ; %a != 0
+  %f.2 = icmp eq i8* %a, null
+  call void @use(i1 %f.2)
+
+  %t.2 = icmp ne i8* %a, null
+  call void @use(i1 %t.2)
+
+  %c.2 = icmp eq i8* %a, %b
+  call void @use(i1 %c.2)
   ret void
 }
 
@@ -102,7 +179,6 @@ exit.2:
 false:
   ret i8* null
 }
-
 
 define i32 @f5(i64 %sz) {
 ; CHECK-LABEL: @f5(
@@ -155,7 +231,6 @@ true:
 false:
   ret void
 }
-
 
 define void @loop.1() {
 entry:
@@ -232,8 +307,8 @@ for.body14:
   br label %for.cond11
 }
 
-define i32 @foo(i64 %sz) {
-; CHECK-LABEL: @foo(
+define i32 @udiv_1(i64 %sz) {
+; CHECK-LABEL: @udiv_1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 4088, [[SZ:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_END:%.*]]
@@ -259,8 +334,9 @@ cond.end:                                         ; preds = %entry, %cond.true
   ret i32 %conv
 }
 
-define i32 @bar(i64 %sz) {
-; CHECK-LABEL: @bar(
+; Same as @udiv_1, but with the condition switched.
+define i32 @udiv_2(i64 %sz) {
+; CHECK-LABEL: @udiv_2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[SZ:%.*]], 4088
 ; CHECK-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_END:%.*]]
@@ -284,4 +360,286 @@ cond.end:                                         ; preds = %entry, %cond.true
   %cond = phi i64 [ %div, %cond.true ], [ 1, %entry ]
   %conv = trunc i64 %cond to i32
   ret i32 %conv
+}
+
+; Test with 2 unrelated nested conditions.
+define void @f7_nested_conds(i32* %a, i32 %b) {
+; CHECK-LABEL: @f7_nested_conds(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A_V:%.*]] = load i32, i32* [[A:%.*]]
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ne i32 [[A_V]], 0
+; CHECK-NEXT:    br i1 [[C_1]], label [[TRUE:%.*]], label [[FALSE:%.*]]
+; CHECK:       false:
+; CHECK-NEXT:    br i1 true, label [[TRUE_2:%.*]], label [[TRUE]]
+; CHECK:       true.2:
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    ret void
+; CHECK:       true:
+; CHECK-NEXT:    store i32 [[B:%.*]], i32* [[A]]
+; CHECK-NEXT:    ret void
+;
+entry:
+  %a.v = load i32, i32* %a
+  %c.1 = icmp ne i32 %a.v, 0
+  br i1 %c.1, label %true, label %false
+
+false:
+  %c.2 = icmp ult i32 %a.v, 3
+  br i1 %c.2, label %true.2, label %true
+
+true.2:
+  %c.3 = icmp eq i32 %a.v, 0
+  call void @use(i1 %c.3)
+  ret void
+
+true:
+  store i32 %b, i32* %a
+  ret void
+}
+
+; Test with 2 related nested conditions (%b > [20, 276) && %b < 255).
+define void @f8_nested_conds(i32 %a, i32 %b) {
+; CHECK-LABEL: @f8_nested_conds(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A_255:%.*]] = and i32 [[A:%.*]], 255
+; CHECK-NEXT:    [[A_2:%.*]] = add i32 [[A_255]], 20
+; CHECK-NEXT:    [[BC_1:%.*]] = icmp ugt i32 [[B:%.*]], [[A_2]]
+; CHECK-NEXT:    br i1 [[BC_1]], label [[TRUE:%.*]], label [[FALSE:%.*]]
+; CHECK:       true:
+; CHECK-NEXT:    [[BC_2:%.*]] = icmp ult i32 [[B]], 255
+; CHECK-NEXT:    br i1 [[BC_2]], label [[TRUE_2:%.*]], label [[FALSE_2:%.*]]
+; CHECK:       true.2:
+; CHECK-NEXT:    [[F_1:%.*]] = icmp eq i32 [[B]], 0
+; CHECK-NEXT:    call void @use(i1 [[F_1]])
+; CHECK-NEXT:    [[F_2:%.*]] = icmp eq i32 [[B]], 20
+; CHECK-NEXT:    call void @use(i1 [[F_2]])
+; CHECK-NEXT:    [[F_3:%.*]] = icmp ult i32 [[B]], 20
+; CHECK-NEXT:    call void @use(i1 [[F_3]])
+; CHECK-NEXT:    [[F_4:%.*]] = icmp eq i32 [[B]], 255
+; CHECK-NEXT:    call void @use(i1 [[F_4]])
+; CHECK-NEXT:    [[F_5:%.*]] = icmp ugt i32 [[B]], 255
+; CHECK-NEXT:    call void @use(i1 [[F_5]])
+; CHECK-NEXT:    [[T_1:%.*]] = icmp ugt i32 [[B]], 5
+; CHECK-NEXT:    call void @use(i1 [[T_1]])
+; CHECK-NEXT:    [[T_2:%.*]] = icmp ne i32 [[B]], 20
+; CHECK-NEXT:    call void @use(i1 [[T_2]])
+; CHECK-NEXT:    [[T_3:%.*]] = icmp ult i32 [[B]], 255
+; CHECK-NEXT:    call void @use(i1 [[T_3]])
+; CHECK-NEXT:    [[T_4:%.*]] = icmp ne i32 [[B]], 300
+; CHECK-NEXT:    call void @use(i1 [[T_4]])
+; CHECK-NEXT:    [[C_1:%.*]] = icmp eq i32 [[B]], 21
+; CHECK-NEXT:    call void @use(i1 [[C_1]])
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ugt i32 [[B]], 21
+; CHECK-NEXT:    call void @use(i1 [[C_2]])
+; CHECK-NEXT:    [[C_3:%.*]] = icmp ugt i32 [[B]], 34
+; CHECK-NEXT:    call void @use(i1 [[C_3]])
+; CHECK-NEXT:    ret void
+; CHECK:       false.2:
+; CHECK-NEXT:    [[F_6:%.*]] = icmp eq i32 [[B]], 254
+; CHECK-NEXT:    call void @use(i1 [[F_6]])
+; CHECK-NEXT:    [[F_7:%.*]] = icmp ugt i32 [[B]], 256
+; CHECK-NEXT:    call void @use(i1 [[F_7]])
+; CHECK-NEXT:    [[T_5:%.*]] = icmp ne i32 [[B]], 254
+; CHECK-NEXT:    call void @use(i1 [[T_5]])
+; CHECK-NEXT:    [[T_6:%.*]] = icmp uge i32 [[B]], 255
+; CHECK-NEXT:    call void @use(i1 [[T_6]])
+; CHECK-NEXT:    [[C_4:%.*]] = icmp eq i32 [[B]], 255
+; CHECK-NEXT:    call void @use(i1 [[C_4]])
+; CHECK-NEXT:    [[C_5:%.*]] = icmp ne i32 [[B]], 275
+; CHECK-NEXT:    call void @use(i1 [[C_5]])
+; CHECK-NEXT:    ret void
+; CHECK:       false:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %a.255 = and i32 %a, 255
+  %a.2 = add i32 %a.255, 20
+  %bc.1 = icmp ugt i32 %b, %a.2
+  br i1 %bc.1, label %true, label %false
+
+true: ; %b in [21, 0)
+  %bc.2 = icmp ult i32 %b, 255
+  br i1 %bc.2, label %true.2, label %false.2
+
+true.2: ; %b in [21, 255)
+  ; Conditions below are false.
+  %f.1 = icmp eq i32 %b, 0
+  call void @use(i1 %f.1)
+  %f.2 = icmp eq i32 %b, 20
+  call void @use(i1 %f.2)
+  %f.3 = icmp ult i32 %b, 20
+  call void @use(i1 %f.3)
+  %f.4 = icmp eq i32 %b, 255
+  call void @use(i1 %f.4)
+  %f.5 = icmp ugt i32 %b, 255
+  call void @use(i1 %f.5)
+
+
+  ; Conditions below are true.
+  %t.1 = icmp ugt i32 %b, 5
+  call void @use(i1 %t.1)
+  %t.2 = icmp ne i32 %b, 20
+  call void @use(i1 %t.2)
+  %t.3 = icmp ult i32 %b, 255
+  call void @use(i1 %t.3)
+  %t.4 = icmp ne i32 %b,  300
+  call void @use(i1 %t.4)
+
+  ; Conditions below cannot be simplified.
+  %c.1 = icmp eq i32 %b, 21
+  call void @use(i1 %c.1)
+  %c.2 = icmp ugt i32 %b, 21
+  call void @use(i1 %c.2)
+  %c.3 = icmp ugt i32 %b, 34
+  call void @use(i1 %c.3)
+  ret void
+
+false.2: ;%b in [255, 0)
+  ; Conditions below are false;
+  %f.6 = icmp eq i32 %b, 254
+  call void @use(i1 %f.6)
+  %f.7 = icmp ugt i32 %b, 256
+  call void @use(i1 %f.7)
+
+  ; Conditions below are true;
+  %t.5 = icmp ne i32 %b, 254
+  call void @use(i1 %t.5)
+  %t.6 = icmp uge i32 %b, 255
+  call void @use(i1 %t.6)
+
+  ; Conditions below cannot be simplified.
+  %c.4 = icmp eq i32 %b, 255
+  call void @use(i1 %c.4)
+  %c.5 = icmp ne i32 %b, 275
+  call void @use(i1 %c.5)
+  ret void
+
+false:
+  ret void
+}
+
+; Test with with nested conditions where the second conditions is more limiting than the first one.
+define void @f9_nested_conds(i32 %a, i32 %b) {
+; CHECK-LABEL: @f9_nested_conds(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[BC_1:%.*]] = icmp ugt i32 [[B:%.*]], 10
+; CHECK-NEXT:    br i1 [[BC_1]], label [[TRUE:%.*]], label [[FALSE:%.*]]
+; CHECK:       true:
+; CHECK-NEXT:    [[F_1:%.*]] = icmp eq i32 [[B]], 0
+; CHECK-NEXT:    call void @use(i1 [[F_1]])
+; CHECK-NEXT:    [[F_2:%.*]] = icmp eq i32 [[B]], 10
+; CHECK-NEXT:    call void @use(i1 [[F_2]])
+; CHECK-NEXT:    [[T_1:%.*]] = icmp ugt i32 [[B]], 5
+; CHECK-NEXT:    call void @use(i1 [[T_1]])
+; CHECK-NEXT:    [[T_2:%.*]] = icmp ne i32 [[B]], 10
+; CHECK-NEXT:    call void @use(i1 [[T_2]])
+; CHECK-NEXT:    [[C_1:%.*]] = icmp eq i32 [[B]], 11
+; CHECK-NEXT:    call void @use(i1 [[C_1]])
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ugt i32 [[B]], 11
+; CHECK-NEXT:    call void @use(i1 [[C_2]])
+; CHECK-NEXT:    [[BC_2:%.*]] = icmp ugt i32 [[B]], 20
+; CHECK-NEXT:    br i1 [[BC_2]], label [[TRUE_2:%.*]], label [[FALSE_2:%.*]]
+; CHECK:       true.2:
+; CHECK-NEXT:    [[F_3:%.*]] = icmp eq i32 [[B]], 11
+; CHECK-NEXT:    call void @use(i1 [[F_3]])
+; CHECK-NEXT:    [[F_4:%.*]] = icmp eq i32 [[B]], 20
+; CHECK-NEXT:    call void @use(i1 [[F_4]])
+; CHECK-NEXT:    [[T_3:%.*]] = icmp ugt i32 [[B]], 11
+; CHECK-NEXT:    call void @use(i1 [[T_3]])
+; CHECK-NEXT:    [[T_4:%.*]] = icmp ne i32 [[B]], 20
+; CHECK-NEXT:    call void @use(i1 [[T_4]])
+; CHECK-NEXT:    [[C_3:%.*]] = icmp eq i32 [[B]], 21
+; CHECK-NEXT:    call void @use(i1 [[C_3]])
+; CHECK-NEXT:    [[C_4:%.*]] = icmp ugt i32 [[B]], 21
+; CHECK-NEXT:    call void @use(i1 [[C_4]])
+; CHECK-NEXT:    [[C_5:%.*]] = icmp ugt i32 [[B]], 34
+; CHECK-NEXT:    call void @use(i1 [[C_5]])
+; CHECK-NEXT:    ret void
+; CHECK:       false.2:
+; CHECK-NEXT:    [[F_5:%.*]] = icmp eq i32 [[B]], 21
+; CHECK-NEXT:    call void @use(i1 [[F_5]])
+; CHECK-NEXT:    [[F_6:%.*]] = icmp ugt i32 [[B]], 21
+; CHECK-NEXT:    call void @use(i1 [[F_6]])
+; CHECK-NEXT:    [[T_5:%.*]] = icmp ne i32 [[B]], 21
+; CHECK-NEXT:    call void @use(i1 [[T_5]])
+; CHECK-NEXT:    [[T_6:%.*]] = icmp ult i32 [[B]], 21
+; CHECK-NEXT:    call void @use(i1 [[T_6]])
+; CHECK-NEXT:    [[C_6:%.*]] = icmp eq i32 [[B]], 11
+; CHECK-NEXT:    call void @use(i1 [[C_6]])
+; CHECK-NEXT:    [[C_7:%.*]] = icmp ne i32 [[B]], 5
+; CHECK-NEXT:    call void @use(i1 [[C_7]])
+; CHECK-NEXT:    ret void
+; CHECK:       false:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %bc.1 = icmp ugt i32 %b, 10
+  br i1 %bc.1, label %true, label %false
+
+true: ; %b in [11, 0)
+  ; Conditions below are false.
+  %f.1 = icmp eq i32 %b, 0
+  call void @use(i1 %f.1)
+  %f.2 = icmp eq i32 %b, 10
+  call void @use(i1 %f.2)
+
+  ; Conditions below are true.
+  %t.1 = icmp ugt i32 %b, 5
+  call void @use(i1 %t.1)
+  %t.2 = icmp ne i32 %b, 10
+  call void @use(i1 %t.2)
+
+  ; Conditions below cannot be simplified.
+  %c.1 = icmp eq i32 %b, 11
+  call void @use(i1 %c.1)
+  %c.2 = icmp ugt i32 %b, 11
+  call void @use(i1 %c.2)
+
+  %bc.2 = icmp ugt i32 %b, 20
+  br i1 %bc.2, label %true.2, label %false.2
+
+true.2: ; %b in [21, 0)
+  ; Conditions below are false.
+  %f.3 = icmp eq i32 %b, 11
+  call void @use(i1 %f.3)
+  %f.4 = icmp eq i32 %b, 20
+  call void @use(i1 %f.4)
+
+  ; Conditions below are true.
+  %t.3 = icmp ugt i32 %b, 11
+  call void @use(i1 %t.3)
+  %t.4 = icmp ne i32 %b, 20
+  call void @use(i1 %t.4)
+
+  ; Conditions below cannot be simplified.
+  %c.3 = icmp eq i32 %b, 21
+  call void @use(i1 %c.3)
+  %c.4 = icmp ugt i32 %b, 21
+  call void @use(i1 %c.4)
+  %c.5 = icmp ugt i32 %b, 34
+  call void @use(i1 %c.5)
+  ret void
+
+false.2: ;%b in [0, 21)
+  ; Conditions below are false;
+  %f.5 = icmp eq i32 %b, 21
+  call void @use(i1 %f.5)
+  %f.6 = icmp ugt i32 %b, 21
+  call void @use(i1 %f.6)
+
+  ; Conditions below are true;
+  %t.5 = icmp ne i32 %b, 21
+  call void @use(i1 %t.5)
+  %t.6 = icmp ult i32 %b, 21
+  call void @use(i1 %t.6)
+
+  ; Conditions below cannot be simplified.
+  %c.6 = icmp eq i32 %b, 11
+  call void @use(i1 %c.6)
+  %c.7 = icmp ne i32 %b, 5
+  call void @use(i1 %c.7)
+  ret void
+
+false:
+  ret void
 }
