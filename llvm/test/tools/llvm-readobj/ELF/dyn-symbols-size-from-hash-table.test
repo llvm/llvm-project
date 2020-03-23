@@ -1,0 +1,314 @@
+## This test shows how llvm-readobj uses the hash table section to derive the
+## size of a dynamic symbol table. This allows dumping of the dynamic symbol
+## table in the event of an object without section headers.
+
+## Case 1a) Table size is derived from hash table, with DT_SYMTAB before DT_HASH.
+# RUN: yaml2obj --docnum=1 %s -o %t1a-64 -DBITS=64 \
+# RUN:          -DTAG1=DT_SYMTAB -DTAG2=DT_HASH -DVAL1=0x400 -DVAL2=0x600
+# RUN: llvm-strip --strip-sections %t1a-64
+# RUN: llvm-readobj --dyn-symbols %t1a-64 2>&1 | \
+# RUN:   FileCheck %s --check-prefixes=LLVM1,STRIP --implicit-check-not=warning:
+# RUN: llvm-readelf --dyn-symbols %t1a-64 2>&1 | \
+# RUN:   FileCheck %s --check-prefixes=GNU1,GNU1-STRIP --implicit-check-not=warning:
+# RUN: yaml2obj --docnum=1 %s -o %t1a-32 -DBITS=32 \
+# RUN:          -DTAG1=DT_SYMTAB -DTAG2=DT_HASH -DVAL1=0x400 -DVAL2=0x600
+# RUN: llvm-strip --strip-sections %t1a-32
+# RUN: llvm-readobj --dyn-symbols %t1a-32 2>&1 | \
+# RUN:   FileCheck %s --check-prefixes=LLVM1,STRIP --implicit-check-not=warning:
+# RUN: llvm-readelf --dyn-symbols %t1a-32 2>&1 | \
+# RUN:   FileCheck %s --check-prefixes=GNU1,GNU1-STRIP --implicit-check-not=warning:
+
+## 1b) Table size is derived from hash table, with DT_HASH before DT_SYMTAB.
+## We don't bother testing 32 and 64-bit here. The above cases show that reading
+## the nchain value is correct for all formats, and other tests show the basic
+## printing behaviour.
+# RUN: yaml2obj --docnum=1 %s -o %t1b-64 -DBITS=64 \
+# RUN:          -DTAG1=DT_HASH -DTAG2=DT_SYMTAB -DVAL1=0x600 -DVAL2=0x400
+# RUN: llvm-strip --strip-sections %t1b-64
+# RUN: llvm-readobj --dyn-symbols %t1b-64 2>&1 | \
+# RUN:   FileCheck %s --check-prefixes=LLVM1,STRIP --implicit-check-not=warning:
+# RUN: llvm-readelf --dyn-symbols %t1b-64 2>&1 | \
+# RUN:   FileCheck %s --check-prefixes=GNU1,GNU1-STRIP --implicit-check-not=warning:
+
+# LLVM1:      DynamicSymbols [
+# LLVM1-NEXT:   Symbol {
+# LLVM1-NEXT:     Name:  (0)
+# LLVM1-NEXT:     Value: 0x0
+# LLVM1-NEXT:     Size: 0
+# LLVM1-NEXT:     Binding: Local (0x0)
+# LLVM1-NEXT:     Type: None (0x0)
+# LLVM1-NEXT:     Other: 0
+# LLVM1-NEXT:     Section: Undefined (0x0)
+# LLVM1-NEXT:   }
+# LLVM1-NEXT:   Symbol {
+# LLVM1-NEXT:     Name: foo (5)
+# LLVM1-NEXT:     Value: 0x100
+# LLVM1-NEXT:     Size: 0
+# LLVM1-NEXT:     Binding: Local (0x0)
+# LLVM1-NEXT:     Type: Function (0x2)
+# LLVM1-NEXT:     Other: 0
+# STRIP-NEXT:     Section: <?> (0x1)
+# NOSTRIP-NEXT:   Section: .text (0x1)
+# LLVM1-NEXT:   }
+# LLVM1-NEXT:   Symbol {
+# LLVM1-NEXT:     Name: bar (1)
+# LLVM1-NEXT:     Value: 0x200
+# LLVM1-NEXT:     Size: 0
+# LLVM1-NEXT:     Binding: Local (0x0)
+# LLVM1-NEXT:     Type: Object (0x1)
+# LLVM1-NEXT:     Other: 0
+# STRIP-NEXT:     Section: <?> (0x2)
+# NOSTRIP-NEXT:   Section: .data (0x2)
+# LLVM1-NEXT:   }
+# LLVM1-NEXT: ]
+
+# GNU1-STRIP:   Symbol table for image contains 3 entries:
+# GNU1-NOSTRIP: Symbol table '.dynsym' contains 3 entries:
+# GNU1-NEXT:      Num:    Value        Size Type    Bind   Vis       Ndx Name
+# GNU1-NEXT:        0: {{0*}}00000000     0 NOTYPE  LOCAL  DEFAULT   UND
+# GNU1-NEXT:        1: {{0*}}00000100     0 FUNC    LOCAL  DEFAULT     1 foo
+# GNU1-NEXT:        2: {{0*}}00000200     0 OBJECT  LOCAL  DEFAULT     2 bar
+# GNU1-EMPTY:
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS[[BITS]]
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:         .text
+    Type:         SHT_PROGBITS
+  - Name:         .data
+    Type:         SHT_PROGBITS
+  - Name:         .dynsym
+    Type:         SHT_DYNSYM
+    Flags:        [ SHF_ALLOC ]
+    Address:      0x400
+    AddressAlign: 0x400
+  - Name:         .hash
+    Type:         SHT_HASH
+    Flags:        [ SHF_ALLOC ]
+    Address:      0x600
+    AddressAlign: 0x200
+    Bucket:       [ 1 ]
+    Chain:        [ 1, 2, 3 ]
+  - Name:         .dynstr
+    Type:         SHT_STRTAB
+    Flags:        [ SHF_ALLOC ]
+    Address:      0x800
+    AddressAlign: 0x200
+  - Name:         .dynamic
+    Type:         SHT_DYNAMIC
+    Flags:        [ SHF_ALLOC ]
+    Address:      0xA00
+    AddressAlign: 0x200
+    Entries:
+      - Tag:   DT_STRTAB
+        Value: 0x800
+      - Tag:   DT_STRSZ
+        Value: 9
+      - Tag:   [[TAG1]]
+        Value: [[VAL1]]
+      - Tag:   [[TAG2]]
+        Value: [[VAL2]]
+      - Tag:   DT_NULL
+        Value: 0
+DynamicSymbols:
+  - Name:    foo
+    Type:    STT_FUNC
+    Section: .text
+    Value:   0x100
+  - Name:    bar
+    Type:    STT_OBJECT
+    Section: .data
+    Value:   0x200
+ProgramHeaders:
+  - Type:  PT_LOAD
+    VAddr: 0
+    Sections:
+      - Section: .text
+      - Section: .data
+  - Type:  PT_LOAD
+    VAddr: 0x400
+    Sections:
+      - Section: .dynsym
+      - Section: .hash
+      - Section: .dynstr
+      - Section: .dynamic
+  - Type:  PT_DYNAMIC
+    VAddr: 0xA00
+    Sections:
+      - Section: .dynamic
+
+## Case 2: Table size from DT_HASH does not match size from section header.
+# RUN: yaml2obj --docnum=2 %s -o %t2-smaller -DCHAIN="[1, 2]"
+# RUN: llvm-readobj --dyn-symbols %t2-smaller 2>&1 | \
+# RUN:   FileCheck %s --check-prefixes=LLVM2,WARN \
+# RUN:              --implicit-check-not=warning: -DNCHAIN=2
+# RUN: llvm-readelf --dyn-symbols %t2-smaller 2>&1 | \
+# RUN:   FileCheck %s --check-prefixes=GNU2,WARN \
+# RUN:                --implicit-check-not=warning: -DNCHAIN=2
+
+# RUN: yaml2obj --docnum=2 %s -o %t2-larger -DCHAIN="[1, 2, 3, 4]"
+# RUN: llvm-readobj --dyn-symbols %t2-larger 2>&1 | \
+# RUN:   FileCheck %s --check-prefixes=LLVM2,LLVM2-MORE,LLVM2-ALL,WARN \
+# RUN:                --implicit-check-not=warning: -DNCHAIN=4
+# RUN: llvm-readelf --dyn-symbols %t2-larger 2>&1 | \
+# RUN:   FileCheck %s --check-prefixes=GNU2,GNU2-MORE,GNU2-ALL,WARN \
+# RUN:                --implicit-check-not=warning: -DNCHAIN=4
+
+## Show there's no warning if the sizes match
+# RUN: yaml2obj --docnum=2 %s -o %t2-same -DCHAIN="[1, 2, 3]"
+# RUN: llvm-readobj --dyn-symbols %t2-same 2>&1 | \
+# RUN:   FileCheck %s --check-prefixes=LLVM2,LLVM2-MORE --implicit-check-not=warning:
+# RUN: llvm-readelf --dyn-symbols %t2-same 2>&1 | \
+# RUN:   FileCheck %s --check-prefixes=GNU2,GNU2-MORE \
+# RUN:                --implicit-check-not=warning: -DNCHAIN=3
+
+# WARN: warning: '{{.*}}2-{{.*}}': hash table nchain ([[NCHAIN]]) differs from symbol count derived from SHT_DYNSYM section header (3)
+
+# LLVM2:           DynamicSymbols [
+# LLVM2-NEXT:        Symbol {
+# LLVM2-NEXT:          Name:  (0)
+# LLVM2-NEXT:          Value: 0x0
+# LLVM2-NEXT:          Size: 0
+# LLVM2-NEXT:          Binding: Local (0x0)
+# LLVM2-NEXT:          Type: None (0x0)
+# LLVM2-NEXT:          Other: 0
+# LLVM2-NEXT:          Section: Undefined (0x0)
+# LLVM2-NEXT:        }
+# LLVM2-NEXT:        Symbol {
+# LLVM2-NEXT:          Name: foo (9)
+# LLVM2-NEXT:          Value: 0x100
+# LLVM2-NEXT:          Size: 0
+# LLVM2-NEXT:          Binding: Local (0x0)
+# LLVM2-NEXT:          Type: Function (0x2)
+# LLVM2-NEXT:          Other: 0
+# LLVM2-NEXT:          Section: .text (0x1)
+# LLVM2-NEXT:        }
+# LLVM2-MORE-NEXT:   Symbol {
+# LLVM2-MORE-NEXT:     Name: bar (5)
+# LLVM2-MORE-NEXT:     Value: 0x200
+# LLVM2-MORE-NEXT:     Size: 0
+# LLVM2-MORE-NEXT:     Binding: Local (0x0)
+# LLVM2-MORE-NEXT:     Type: Object (0x1)
+# LLVM2-MORE-NEXT:     Other: 0
+# LLVM2-MORE-NEXT:     Section: .data (0x2)
+# LLVM2-MORE-NEXT:   }
+# LLVM2-ALL-NEXT:    Symbol {
+# LLVM2-ALL-NEXT:      Name: baz (1)
+# LLVM2-ALL-NEXT:      Value: 0x300
+# LLVM2-ALL-NEXT:      Size: 0
+# LLVM2-ALL-NEXT:      Binding: Local (0x0)
+# LLVM2-ALL-NEXT:      Type: Object (0x1)
+# LLVM2-ALL-NEXT:      Other: 0
+# LLVM2-ALL-NEXT:      Section: .data (0x2)
+# LLVM2-ALL-NEXT:    }
+# LLVM2-NEXT:      ]
+
+# GNU2:           Symbol table '.dynsym' contains [[NCHAIN]] entries:
+# GNU2-NEXT:        Num:    Value        Size Type    Bind   Vis       Ndx Name
+# GNU2-NEXT:          0: {{0*}}00000000     0 NOTYPE  LOCAL  DEFAULT   UND
+# GNU2-NEXT:          1: {{0*}}00000100     0 FUNC    LOCAL  DEFAULT     1 foo
+# GNU2-MORE-NEXT:     2: {{0*}}00000200     0 OBJECT  LOCAL  DEFAULT     2 bar
+# GNU2-ALL-NEXT:      3: {{0*}}00000300     0 OBJECT  LOCAL  DEFAULT     2 baz
+# GNU2-EMPTY:
+
+## In this YAML, we define 4 dynamic symbols (including the null symbol), but
+## constrain the .dynsym section header to say there are only 3. This means that
+## when a size of 4 is derived from the hash table, we still have a valid symbol
+## to dump.
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:         .text
+    Type:         SHT_PROGBITS
+  - Name:         .data
+    Type:         SHT_PROGBITS
+  - Name:         .dynsym
+    Type:         SHT_DYNSYM
+    Flags:        [ SHF_ALLOC ]
+    ShSize:       0x48
+    Address:      0x400
+    AddressAlign: 0x400
+  - Name:         .hash
+    Type:         SHT_HASH
+    Flags:        [ SHF_ALLOC ]
+    Address:      0x600
+    AddressAlign: 0x200
+    Bucket:       [ 1 ]
+    Chain:        [[CHAIN]]
+  - Name:         .dynstr
+    Type:         SHT_STRTAB
+    Flags:        [ SHF_ALLOC ]
+    Address:      0x800
+    AddressAlign: 0x200
+  - Name:         .dynamic
+    Type:         SHT_DYNAMIC
+    Flags:        [ SHF_ALLOC ]
+    Address:      0xA00
+    AddressAlign: 0x200
+    Entries:
+      - Tag:   DT_SYMTAB
+        Value: 0x400
+      - Tag:   DT_HASH
+        Value: 0x600
+      - Tag:   DT_STRTAB
+        Value: 0x800
+      - Tag:   DT_STRSZ
+        Value: 13
+      - Tag:   DT_NULL
+        Value: 0
+DynamicSymbols:
+  - Name:    foo
+    Type:    STT_FUNC
+    Section: .text
+    Value:   0x100
+  - Name:    bar
+    Type:    STT_OBJECT
+    Section: .data
+    Value:   0x200
+  - Name:    baz
+    Type:    STT_OBJECT
+    Section: .data
+    Value:   0x300
+ProgramHeaders:
+  - Type:  PT_LOAD
+    VAddr: 0
+    Sections:
+      - Section: .text
+      - Section: .data
+  - Type:  PT_LOAD
+    VAddr: 0x400
+    Sections:
+      - Section: .dynsym
+      - Section: .hash
+      - Section: .dynstr
+      - Section: .dynamic
+  - Type:  PT_DYNAMIC
+    VAddr: 0xA00
+    Sections:
+      - Section: .dynamic
+
+## Case 3: DT_HASH is missing.
+## Show that no warning occurs if there are section headers.
+# RUN: yaml2obj --docnum=1 %s -o %t3 -DTAG1=DT_SYMTAB -DVAL1=0x400 -DTAG2=DT_NULL -DVAL2=0 -DBITS=64
+# RUN: llvm-readobj --dyn-symbols %t3 2>&1 | \
+# RUN:   FileCheck %s --check-prefixes=LLVM1,NOSTRIP --implicit-check-not=warning:
+# RUN: llvm-readelf --dyn-symbols %t3 2>&1 | \
+# RUN:   FileCheck %s --check-prefixes=GNU1,GNU1-NOSTRIP --implicit-check-not=warning:
+
+## Show that size is treated as zero, if no section headers are present.
+# RUN: llvm-strip --strip-sections %t3
+# RUN: llvm-readobj --dyn-symbols %t3 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=LLVM3 --implicit-check-not=warning:
+# RUN: llvm-readelf --dyn-symbols %t3 2>&1 | \
+# RUN:   FileCheck %s --implicit-check-not={{.}} --allow-empty
+
+# LLVM3: DynamicSymbols [
+# LLVM3: ]
