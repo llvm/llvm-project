@@ -44,8 +44,8 @@ if (llvm_targets_to_build == "host") {
 # and remember which targets are built where needed (for conditionally-built
 # unittest targets).
 llvm_build_AArch64 = false
-llvm_build_ARM = false
 llvm_build_AMDGPU = false
+llvm_build_ARM = false
 llvm_build_BPF = false
 llvm_build_Mips = false
 llvm_build_PowerPC = false
