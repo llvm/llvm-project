@@ -33,6 +33,10 @@ class Target;
 class Triple;
 class raw_pwrite_stream;
 
+enum AMDGPUDwarfFlavour { Wave64 = 0, Wave32 = 1 };
+
+MCRegisterInfo *createGCNMCRegisterInfo(AMDGPUDwarfFlavour DwarfFlavour);
+
 MCCodeEmitter *createR600MCCodeEmitter(const MCInstrInfo &MCII,
                                        const MCRegisterInfo &MRI,
                                        MCContext &Ctx);
