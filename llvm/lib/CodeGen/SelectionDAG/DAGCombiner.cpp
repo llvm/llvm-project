@@ -19780,16 +19780,6 @@ SDValue DAGCombiner::visitVECTOR_SHUFFLE(SDNode *N) {
   if (N0.getOpcode() == ISD::BITCAST && N0.hasOneUse() &&
       N1.isUndef() && Level < AfterLegalizeVectorOps &&
       TLI.isTypeLegal(VT)) {
-    auto ScaleShuffleMask = [](ArrayRef<int> Mask, int Scale) {
-      if (Scale == 1)
-        return SmallVector<int, 8>(Mask.begin(), Mask.end());
-
-      SmallVector<int, 8> NewMask;
-      for (int M : Mask)
-        for (int s = 0; s != Scale; ++s)
-          NewMask.push_back(M < 0 ? -1 : Scale * M + s);
-      return NewMask;
-    };
 
     SDValue BC0 = peekThroughOneUseBitcasts(N0);
     if (BC0.getOpcode() == ISD::VECTOR_SHUFFLE && BC0.hasOneUse()) {
@@ -19809,10 +19799,10 @@ SDValue DAGCombiner::visitVECTOR_SHUFFLE(SDNode *N) {
 
         // Scale the shuffle masks to the smaller scalar type.
         ShuffleVectorSDNode *InnerSVN = cast<ShuffleVectorSDNode>(BC0);
-        SmallVector<int, 8> InnerMask =
-            ScaleShuffleMask(InnerSVN->getMask(), InnerScale);
-        SmallVector<int, 8> OuterMask =
-            ScaleShuffleMask(SVN->getMask(), OuterScale);
+        SmallVector<int, 8> InnerMask;
+        SmallVector<int, 8> OuterMask;
+        scaleShuffleMask<int>(InnerScale, InnerSVN->getMask(), InnerMask);
+        scaleShuffleMask<int>(OuterScale, SVN->getMask(), OuterMask);
 
         // Merge the shuffle masks.
         SmallVector<int, 8> NewMask;
