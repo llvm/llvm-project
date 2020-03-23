@@ -687,6 +687,14 @@ class Dictionary<TKey, TVal>
       where T : IMyInterface { doThing(); }
 })",
                Style);
+
+  verifyFormat(R"(//
+class ItemFactory<T>
+    where T : new(),
+              IAnInterface<T>,
+              IAnotherInterface<T>,
+              IAnotherInterfaceStill<T> {})",
+               Style);
 }
 
 } // namespace format
