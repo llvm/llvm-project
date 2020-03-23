@@ -1895,7 +1895,7 @@ TEST_F(FileSystemTest, widenPath) {
   // Result should not start with the long path prefix.
   EXPECT_TRUE(std::wmemcmp(Result.data(), LongPathPrefix.c_str(),
                            LongPathPrefix.size()) != 0);
-  EXPECT_EQ(Result.size(), MAX_PATH - 1);
+  EXPECT_EQ(Result.size(), (size_t)MAX_PATH - 1);
 
   // Add another Pi to exceed the MAX_PATH limit.
   Input += Pi;
@@ -1921,7 +1921,7 @@ TEST_F(FileSystemTest, widenPath) {
   // Result should not start with the long path prefix.
   EXPECT_TRUE(std::wmemcmp(Result.data(), LongPathPrefix.c_str(),
                            LongPathPrefix.size()) != 0);
-  EXPECT_EQ(Result.size(), MAX_PATH - 1);
+  EXPECT_EQ(Result.size(), (size_t)MAX_PATH - 1);
 
   // Extend the directory name so the input exceeds the MAX_PATH limit.
   DirName += DirChar;
