@@ -218,6 +218,15 @@ class SettingsCommandTestCase(TestBase):
         self.addTearDownHook(
             lambda: self.runCmd("settings clear target.env-vars"))
 
+        launch_info = self.dbg.GetTargetAtIndex(0).GetLaunchInfo()
+        found_env_var = False
+        for i in range(0, launch_info.GetNumEnvironmentEntries()):
+            if launch_info.GetEnvironmentEntryAtIndex(i) == "MY_ENV_VAR=YES":
+                found_env_var = True
+                break
+        self.assertTrue(found_env_var,
+                        "MY_ENV_VAR was not set in LunchInfo object")
+
         self.runCmd("process launch --working-dir '{0}'".format(self.get_process_working_directory()),
                 RUN_SUCCEEDED)
 
@@ -238,15 +247,6 @@ class SettingsCommandTestCase(TestBase):
         """Test that the host env vars are passed to the launched process."""
         self.build()
 
-        exe = self.getBuildArtifact("a.out")
-        self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
-
-        # By default, inherit-env is 'true'.
-        self.expect(
-            'settings show target.inherit-env',
-            "Default inherit-env is 'true'",
-            startstr="target.inherit-env (boolean) = true")
-
         # Set some host environment variables now.
         os.environ["MY_HOST_ENV_VAR1"] = "VAR1"
         os.environ["MY_HOST_ENV_VAR2"] = "VAR2"
@@ -255,6 +255,15 @@ class SettingsCommandTestCase(TestBase):
         def unset_env_variables():
             os.environ.pop("MY_HOST_ENV_VAR1")
             os.environ.pop("MY_HOST_ENV_VAR2")
+
+        exe = self.getBuildArtifact("a.out")
+        self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
+
+        # By default, inherit-env is 'true'.
+        self.expect(
+            'settings show target.inherit-env',
+            "Default inherit-env is 'true'",
+            startstr="target.inherit-env (boolean) = true")
 
         self.addTearDownHook(unset_env_variables)
         self.runCmd("process launch --working-dir '{0}'".format(self.get_process_working_directory()),
