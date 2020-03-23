@@ -724,7 +724,6 @@ bool IRPosition::getAttrsFromIRAttr(Attribute::AttrKind AK,
   return HasAttr;
 }
 
-
 void IRPosition::verify() {
   switch (KindOrArgNo) {
   default:
@@ -5633,7 +5632,7 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
           createReplacementValues(
               PrivatizableType.getValue(), ACS,
               ACS.getCallArgOperand(ARI.getReplacedArg().getArgNo()),
-                                  NewArgOperands);
+              NewArgOperands);
         };
 
     // Collect the types that will replace the privatizable type in the function
