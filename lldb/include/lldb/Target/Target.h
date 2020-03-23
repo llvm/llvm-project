@@ -233,6 +233,8 @@ public:
 
   bool GetAutoInstallMainExecutable() const;
 
+  void UpdateLaunchInfoFromProperties();
+
 private:
   // Callbacks for m_launch_info.
   void Arg0ValueChangedCallback();
