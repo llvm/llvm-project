@@ -1,43 +1,35 @@
-# RUN: llvm-mc -triple=powerpc64le-unknown-linux -filetype=obj %s -o %t.o
-# RUN: llvm-objdump -d %t.o | FileCheck %s
+# RUN: llvm-mc -triple=powerpc -filetype=obj %s -o %t.32.o
+# RUN: llvm-objdump -d --no-show-raw-insn %t.32.o | FileCheck --check-prefixes=ELF32,CHECK %s
 
-# RUN: llvm-mc -triple=powerpc64-unknown-linux -filetype=obj %s -o %t.o
-# RUN: llvm-objdump -d %t.o | FileCheck %s
+# RUN: llvm-mc -triple=powerpc64le -filetype=obj %s -o %t.64.o
+# RUN: llvm-objdump -d --no-show-raw-insn %t.64.o | FileCheck --check-prefixes=ELF64,CHECK %s
 
-# RUN: llvm-mc -triple=powerpc-unknown-linux -filetype=obj %s -o %t.o
-# RUN: llvm-objdump -d %t.o | FileCheck %s
+# RUN: llvm-mc -triple=powerpc64 -filetype=obj %s -o %t.64.o
+# RUN: llvm-objdump -d --no-show-raw-insn %t.64.o | FileCheck --check-prefixes=ELF64,CHECK %s
 
-# CHECK: {{0*}}00000000 <callee_back>:
-# CHECK: 18: {{.*}} bl .-24
-# CHECK: 20: {{.*}} bl .+16
-# CHECK: {{0*}}00000030 <callee_forward>:
+# CHECK-LABEL: <bl>:
+# ELF32-NEXT:   bl .-4
+# ELF64-NEXT:   bl .-4
+# CHECK-NEXT:   bl .+0
+# CHECK-NEXT:   bl .+4
 
-        .text
-        .global caller
-        .type caller,@function
-        .type callee_forward,@function
-        .type callee_back,@function
+bl:
+  bl .-4
+  bl .
+  bl .+4
 
-        .p2align 4
-callee_back:
-        li 3, 55
-        blr
+# CHECK-LABEL: <b>:
+# CHECK-NEXT:   b .+67108860
+# CHECK-NEXT:   b .+0
+# CHECK-NEXT:   b .+4
 
-        .p2align 4
-caller:
-.Lgep:
-        addis 2, 12, .TOC.-.Lgep@ha
-        addi 2, 2, .TOC.-.Lgep@l
-.Llep:
-        .localentry caller, .Llep-.Lgep
-        bl callee_back
-        mr 31, 3
-        bl callee_forward
-        add 3, 3, 31
-        blr
+b:
+  b .-4
+  b .
+  b .+4
 
-        .p2align 4
-callee_forward:
-        li 3, 66
-        blr
+# CHECK-LABEL: <bt>:
+# CHECK-NEXT:   bt 2, .+65532
 
+bt:
+  bt 2, .-4
