@@ -53,7 +53,9 @@ void populateVectorSlicesLoweringPatterns(OwningRewritePatternList &patterns,
 /// Collect a set of transformation patterns that are related to contracting
 /// or expanding vector operations:
 ///   ContractionOpLowering,
-///   ShapeCastOp2DDownCastRewritePattern, ShapeCastOp2DUpCastRewritePattern
+///   ShapeCastOp2DDownCastRewritePattern,
+///   ShapeCastOp2DUpCastRewritePattern
+///   TransposeOpLowering
 ///   OuterproductOpLowering
 /// These transformation express higher level vector ops in terms of more
 /// elementary extraction, insertion, reduction, product, and broadcast ops.
