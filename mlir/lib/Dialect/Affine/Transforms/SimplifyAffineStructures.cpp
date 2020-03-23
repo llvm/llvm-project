@@ -11,12 +11,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Analysis/AffineStructures.h"
-#include "mlir/IR/IntegerSet.h"
-#include "mlir/Pass/Pass.h"
-#include "mlir/Dialect/Affine/IR/AffineValueMap.h"
+#include "mlir/Analysis/Utils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Affine/IR/AffineValueMap.h"
 #include "mlir/Dialect/Affine/Passes.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/IR/IntegerSet.h"
+#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/Utils.h"
 
 #define DEBUG_TYPE "simplify-affine-structure"
@@ -58,15 +59,7 @@ struct SimplifyAffineStructures
     op->setAttr(name, simplified);
   }
 
-  /// Performs basic integer set simplifications. Checks if it's empty, and
-  /// replaces it with the canonical empty set if it is.
-  IntegerSet simplify(IntegerSet set) {
-    FlatAffineConstraints fac(set);
-    if (fac.isEmpty())
-      return IntegerSet::getEmptySet(set.getNumDims(), set.getNumSymbols(),
-                                     &getContext());
-    return set;
-  }
+  IntegerSet simplify(IntegerSet set) { return simplifyIntegerSet(set); }
 
   /// Performs basic affine map simplifications.
   AffineMap simplify(AffineMap map) {

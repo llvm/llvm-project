@@ -1,7 +1,7 @@
-// RUN: mlir-opt %s -simplify-affine-structures | FileCheck %s
+// RUN: mlir-opt %s -split-input-file -simplify-affine-structures | FileCheck %s
 
 // CHECK-DAG: [[SET_EMPTY_2D:#set[0-9]+]] = affine_set<(d0, d1) : (1 == 0)>
-// CHECK-DAG: #set1 = affine_set<(d0, d1) : (d0 - 100 == 0, d1 - 10 == 0, -d0 + 100 >= 0, d1 >= 0, d1 + 101 >= 0)>
+// CHECK-DAG: #set1 = affine_set<(d0, d1) : (d0 - 100 == 0, d1 - 10 == 0, -d0 + 100 >= 0, d1 >= 0)>
 // CHECK-DAG: #set2 = affine_set<(d0, d1)[s0, s1] : (1 == 0)>
 // CHECK-DAG: #set3 = affine_set<(d0, d1)[s0, s1] : (d0 * 7 + d1 * 5 + s0 * 11 + s1 == 0, d0 * 5 - d1 * 11 + s0 * 7 + s1 == 0, d0 * 11 + d1 * 7 - s0 * 5 + s1 == 0, d0 * 7 + d1 * 5 + s0 * 11 + s1 == 0)>
 // CHECK-DAG: [[SET_EMPTY_1D:#set[0-9]+]] = affine_set<(d0) : (1 == 0)>
@@ -235,4 +235,24 @@ func @test_empty_set(%N : index) {
   }
 
   return
+}
+
+// -----
+
+// CHECK-DAG: #[[SET1:.*]] = affine_set<(d0, d1) : (d0 >= 0, -d0 + 50 >= 0)
+// CHECK-DAG: #[[SET2:.*]] = affine_set<(d0, d1) : (1 == 0)
+// CHECK-DAG: #[[SET3:.*]] = affine_set<(d0, d1) : (0 == 0)
+
+// CHECK-LABEL: func @simplify_set
+func @simplify_set(%a : index, %b : index) {
+  // CHECK: affine.if #[[SET1]]
+  affine.if affine_set<(d0, d1) : (d0 - d1 + d1 + d0 >= 0, 2 >= 0, d0 >= 0, -d0 + 50 >= 0, -d0 + 100 >= 0)>(%a, %b) {
+  }
+  // CHECK: affine.if #[[SET2]]
+  affine.if affine_set<(d0, d1) : (d0 mod 2 - 1 == 0, d0 - 2 * (d0 floordiv 2) == 0)>(%a, %b) {
+  }
+  // CHECK: affine.if #[[SET3]]
+  affine.if affine_set<(d0, d1) : (1 >= 0, 3 >= 0)>(%a, %b) {
+  }
+	return
 }
