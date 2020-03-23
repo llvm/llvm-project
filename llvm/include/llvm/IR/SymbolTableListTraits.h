@@ -76,9 +76,11 @@ private:
   /// getListOwner - Return the object that owns this list.  If this is a list
   /// of instructions, it returns the BasicBlock that owns them.
   ItemParentClass *getListOwner() {
-    size_t Offset(size_t(&((ItemParentClass*)nullptr->*ItemParentClass::
-                           getSublistAccess(static_cast<ValueSubClass*>(nullptr)))));
-    ListTy *Anchor(static_cast<ListTy *>(this));
+    size_t Offset = reinterpret_cast<size_t>(
+        &((ItemParentClass *)nullptr->*ItemParentClass::getSublistAccess(
+                                           static_cast<ValueSubClass *>(
+                                               nullptr))));
+    ListTy *Anchor = static_cast<ListTy *>(this);
     return reinterpret_cast<ItemParentClass*>(reinterpret_cast<char*>(Anchor)-
                                               Offset);
   }
