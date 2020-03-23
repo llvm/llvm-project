@@ -682,6 +682,41 @@ protected:
   OptionGroupBoolean m_cleanup_option;
 };
 
+class CommandObjectTargetShowLaunchEnvironment : public CommandObjectParsed {
+public:
+  CommandObjectTargetShowLaunchEnvironment(CommandInterpreter &interpreter)
+      : CommandObjectParsed(
+            interpreter, "target show-launch-environment",
+            "Shows the environment being passed to the process when launched, "
+            "taking info account 3 settings: target.env-vars, "
+            "target.inherit-env and target.unset-env-vars.",
+            nullptr, eCommandRequiresTarget) {}
+
+  ~CommandObjectTargetShowLaunchEnvironment() override = default;
+
+protected:
+  bool DoExecute(Args &args, CommandReturnObject &result) override {
+    Target *target = m_exe_ctx.GetTargetPtr();
+    Environment env = target->GetEnvironment();
+
+    std::vector<Environment::value_type *> env_vector;
+    env_vector.reserve(env.size());
+    for (auto &KV : env)
+      env_vector.push_back(&KV);
+    std::sort(env_vector.begin(), env_vector.end(),
+              [](Environment::value_type *a, Environment::value_type *b) {
+                return a->first() < b->first();
+              });
+
+    auto &strm = result.GetOutputStream();
+    for (auto &KV : env_vector)
+      strm.Format("{0}={1}\n", KV->first(), KV->second);
+
+    result.SetStatus(eReturnStatusSuccessFinishResult);
+    return result.Succeeded();
+  }
+};
+
 #pragma mark CommandObjectTargetVariable
 
 // "target variable"
@@ -4876,6 +4911,9 @@ CommandObjectMultiwordTarget::CommandObjectMultiwordTarget(
                  CommandObjectSP(new CommandObjectTargetList(interpreter)));
   LoadSubCommand("select",
                  CommandObjectSP(new CommandObjectTargetSelect(interpreter)));
+  LoadSubCommand("show-launch-environment",
+                 CommandObjectSP(new CommandObjectTargetShowLaunchEnvironment(
+                     interpreter)));
   LoadSubCommand(
       "stop-hook",
       CommandObjectSP(new CommandObjectMultiwordTargetStopHooks(interpreter)));

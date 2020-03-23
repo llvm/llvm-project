@@ -236,6 +236,10 @@ class SettingsCommandTestCase(TestBase):
         self.assertTrue(found_env_var,
                         "MY_ENV_VAR was not set in LunchInfo object")
 
+        self.expect(
+            'target show-launch-environment',
+            substrs=["MY_ENV_VAR=YES"])
+
         wd = self.get_process_working_directory()
         if use_launchsimple:
             process = target.LaunchSimple(None, None, wd)
@@ -256,6 +260,31 @@ class SettingsCommandTestCase(TestBase):
                 "argv[3] matches",
                 "Environment variable 'MY_ENV_VAR' successfully passed."])
 
+        # Check that env-vars overrides unset-env-vars.
+        self.runCmd('settings set target.unset-env-vars MY_ENV_VAR')
+
+        self.expect(
+            'target show-launch-environment',
+            'env-vars overrides unset-env-vars',
+            substrs=["MY_ENV_VAR=YES"])
+
+        wd = self.get_process_working_directory()
+        if use_launchsimple:
+            process = target.LaunchSimple(None, None, wd)
+            self.assertTrue(process)
+        else:
+            self.runCmd("process launch --working-dir '{0}'".format(wd),
+                RUN_SUCCEEDED)
+
+        # Read the output file produced by running the program.
+        output = lldbutil.read_file_from_process_wd(self, "output2.txt")
+
+        self.expect(
+            output,
+            exe=False,
+            substrs=[
+                "Environment variable 'MY_ENV_VAR' successfully passed."])
+
     @skipIfRemote  # it doesn't make sense to send host env to remote target
     def test_pass_host_env_vars(self):
         """Test that the host env vars are passed to the launched process."""
@@ -269,6 +298,7 @@ class SettingsCommandTestCase(TestBase):
         def unset_env_variables():
             os.environ.pop("MY_HOST_ENV_VAR1")
             os.environ.pop("MY_HOST_ENV_VAR2")
+        self.addTearDownHook(unset_env_variables)
 
         exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
@@ -279,7 +309,10 @@ class SettingsCommandTestCase(TestBase):
             "Default inherit-env is 'true'",
             startstr="target.inherit-env (boolean) = true")
 
-        self.addTearDownHook(unset_env_variables)
+        self.expect(
+            'target show-launch-environment',
+            'Host environment is passed correctly',
+            substrs=['MY_HOST_ENV_VAR1=VAR1', 'MY_HOST_ENV_VAR2=VAR2'])
         self.runCmd("process launch --working-dir '{0}'".format(self.get_process_working_directory()),
                 RUN_SUCCEEDED)
 
@@ -291,6 +324,61 @@ class SettingsCommandTestCase(TestBase):
             exe=False,
             substrs=[
                 "The host environment variable 'MY_HOST_ENV_VAR1' successfully passed.",
+                "The host environment variable 'MY_HOST_ENV_VAR2' successfully passed."])
+
+        # Now test that we can prevent the inferior from inheriting the
+        # environment.
+        self.runCmd('settings set target.inherit-env false')
+
+        self.expect(
+            'target show-launch-environment',
+            'target.inherit-env affects `target show-launch-environment`',
+            matching=False,
+            substrs = ['MY_HOST_ENV_VAR1=VAR1', 'MY_HOST_ENV_VAR2=VAR2'])
+
+        self.runCmd("process launch --working-dir '{0}'".format(self.get_process_working_directory()),
+                RUN_SUCCEEDED)
+
+        # Read the output file produced by running the program.
+        output = lldbutil.read_file_from_process_wd(self, "output1.txt")
+
+        self.expect(
+            output,
+            exe=False,
+            matching=False,
+            substrs=[
+                "The host environment variable 'MY_HOST_ENV_VAR1' successfully passed.",
+                "The host environment variable 'MY_HOST_ENV_VAR2' successfully passed."])
+
+        # Now test that we can unset variables from the inherited environment.
+        self.runCmd('settings set target.inherit-env true')
+        self.runCmd('settings set target.unset-env-vars MY_HOST_ENV_VAR1')
+        self.runCmd("process launch --working-dir '{0}'".format(self.get_process_working_directory()),
+                RUN_SUCCEEDED)
+
+        # Read the output file produced by running the program.
+        output = lldbutil.read_file_from_process_wd(self, "output1.txt")
+
+        self.expect(
+            'target show-launch-environment',
+            'MY_HOST_ENV_VAR1 is unset, it shouldn\'t be in `target show-launch-environment`',
+            matching=False,
+            substrs = ['MY_HOST_ENV_VAR1=VAR1'])
+        self.expect(
+            'target show-launch-environment',
+            'MY_HOST_ENV_VAR2 shouldn be in `target show-launch-environment`',
+            substrs = ['MY_HOST_ENV_VAR2=VAR2'])
+
+        self.expect(
+            output,
+            exe=False,
+            matching=False,
+            substrs=[
+                "The host environment variable 'MY_HOST_ENV_VAR1' successfully passed."])
+        self.expect(
+            output,
+            exe=False,
+            substrs=[
                 "The host environment variable 'MY_HOST_ENV_VAR2' successfully passed."])
 
     @skipIfDarwinEmbedded   # <rdar://problem/34446098> debugserver on ios etc can't write files
