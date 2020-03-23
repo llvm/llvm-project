@@ -36,6 +36,7 @@
 #include "llvm/Support/Host.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/PluginLoader.h"
 #include <cstdlib>
 
 using namespace lld;
