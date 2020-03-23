@@ -133,26 +133,24 @@ define void @fma_tailpred(float* noalias nocapture readonly %A, float* noalias n
 ; CHECK-NEXT:    bic r12, r12, #3
 ; CHECK-NEXT:    mov.w lr, #1
 ; CHECK-NEXT:    sub.w r12, r12, #4
-; CHECK-NEXT:    subs r3, #1
 ; CHECK-NEXT:    vldrw.u32 q0, [r4]
-; CHECK-NEXT:    vdup.32 q1, r3
 ; CHECK-NEXT:    add.w lr, lr, r12, lsr #2
-; CHECK-NEXT:    mov.w r12, #0
-; CHECK-NEXT:    mov r3, r2
+; CHECK-NEXT:    sub.w r12, r3, #1
+; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    vdup.32 q1, r12
 ; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB1_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vdup.32 q2, r12
-; CHECK-NEXT:    add.w r12, r12, #4
+; CHECK-NEXT:    vdup.32 q2, r3
+; CHECK-NEXT:    adds r3, #4
 ; CHECK-NEXT:    vorr q2, q2, q0
 ; CHECK-NEXT:    vpttt.u32 cs, q1, q2
 ; CHECK-NEXT:    vldrwt.u32 q2, [r0], #16
 ; CHECK-NEXT:    vldrwt.u32 q3, [r1], #16
-; CHECK-NEXT:    vldrwt.u32 q4, [r3], #16
+; CHECK-NEXT:    vldrwt.u32 q4, [r2]
 ; CHECK-NEXT:    vfma.f32 q4, q3, q2
 ; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vstrwt.32 q4, [r2]
-; CHECK-NEXT:    mov r2, r3
+; CHECK-NEXT:    vstrwt.32 q4, [r2], #16
 ; CHECK-NEXT:    le lr, .LBB1_2
 ; CHECK-NEXT:  .LBB1_3: @ %for.cond.cleanup
 ; CHECK-NEXT:    vpop {d8, d9}
