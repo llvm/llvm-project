@@ -2229,16 +2229,16 @@ bool X86FrameLowering::assignCalleeSavedSpillSlots(
 
     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg, VT);
     unsigned Size = TRI->getSpillSize(*RC);
-    unsigned Align = TRI->getSpillAlignment(*RC);
+    Align Alignment = TRI->getSpillAlign(*RC);
     // ensure alignment
     assert(SpillSlotOffset < 0 && "SpillSlotOffset should always < 0 on X86");
-    SpillSlotOffset = -alignTo(-SpillSlotOffset, Align);
+    SpillSlotOffset = -alignTo(-SpillSlotOffset, Alignment);
 
     // spill into slot
     SpillSlotOffset -= Size;
     int SlotIndex = MFI.CreateFixedSpillStackObject(Size, SpillSlotOffset);
     CSI[i - 1].setFrameIdx(SlotIndex);
-    MFI.ensureMaxAlignment(Align);
+    MFI.ensureMaxAlignment(Alignment);
 
     // Save the start offset and size of XMM in stack frame for funclets.
     if (X86::VR128RegClass.contains(Reg)) {

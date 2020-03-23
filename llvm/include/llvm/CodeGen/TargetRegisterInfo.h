@@ -285,6 +285,12 @@ public:
     return getRegClassInfo(RC).SpillAlignment / 8;
   }
 
+  /// Return the minimum required alignment in bytes for a spill slot for
+  /// a register of this class.
+  Align getSpillAlign(const TargetRegisterClass &RC) const {
+    return Align(getRegClassInfo(RC).SpillAlignment / 8);
+  }
+
   /// Return true if the given TargetRegisterClass has the ValueType T.
   bool isTypeLegalForClass(const TargetRegisterClass &RC, MVT T) const {
     for (auto I = legalclasstypes_begin(RC); *I != MVT::Other; ++I)
