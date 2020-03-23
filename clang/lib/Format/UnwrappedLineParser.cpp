@@ -1460,6 +1460,11 @@ void UnwrappedLineParser::parseStructuralElement() {
 
       nextToken();
       if (FormatTok->Tok.is(tok::l_brace)) {
+        // Block kind should probably be set to BK_BracedInit for any language.
+        // C# needs this change to ensure that array initialisers and object
+        // initialisers are indented the same way.
+        if (Style.isCSharp())
+          FormatTok->BlockKind = BK_BracedInit;
         nextToken();
         parseBracedList();
       } else if (Style.Language == FormatStyle::LK_Proto &&
@@ -1652,7 +1657,7 @@ bool UnwrappedLineParser::tryToParseBracedList() {
 bool UnwrappedLineParser::parseBracedList(bool ContinueOnSemicolons,
                                           tok::TokenKind ClosingBraceKind) {
   bool HasError = false;
-
+  
   // FIXME: Once we have an expression parser in the UnwrappedLineParser,
   // replace this by using parseAssigmentExpression() inside.
   do {
