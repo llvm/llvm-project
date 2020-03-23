@@ -27,7 +27,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 
-#define DEBUG_TYPE "affine-vectorizer-test"
+#define DEBUG_TYPE "affine-super-vectorizer-test"
 
 using namespace mlir;
 
@@ -284,6 +284,7 @@ void VectorizerTestPass::runOnFunction() {
 namespace mlir {
 void registerVectorizerTestPass() {
   PassRegistration<VectorizerTestPass> pass(
-      "affine-vectorizer-test", "Tests vectorizer standalone functionality.");
+      "affine-super-vectorizer-test",
+      "Tests vectorizer standalone functionality.");
 }
 } // namespace mlir

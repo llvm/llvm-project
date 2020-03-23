@@ -1,6 +1,10 @@
 add_mlir_dialect_library(MLIRAffineTransforms
   AffineDataCopyGeneration.cpp
   AffineLoopInvariantCodeMotion.cpp
+  LoopTiling.cpp
+  LoopUnroll.cpp
+  LoopUnrollAndJam.cpp
+  SuperVectorize.cpp
   SimplifyAffineStructures.cpp
 
   ADDITIONAL_HEADER_DIRS

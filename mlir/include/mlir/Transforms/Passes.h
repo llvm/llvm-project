@@ -32,27 +32,6 @@ std::unique_ptr<Pass> createCanonicalizerPass();
 /// Creates a pass to perform common sub expression elimination.
 std::unique_ptr<Pass> createCSEPass();
 
-/// Creates a pass to vectorize loops, operations and data types using a
-/// target-independent, n-D super-vector abstraction.
-std::unique_ptr<OpPassBase<FuncOp>>
-createVectorizePass(ArrayRef<int64_t> virtualVectorSize);
-
-/// Creates a loop unrolling pass with the provided parameters.
-/// 'getUnrollFactor' is a function callback for clients to supply a function
-/// that computes an unroll factor - the callback takes precedence over unroll
-/// factors supplied through other means. If -1 is passed as the unrollFactor
-/// and no callback is provided, anything passed from the command-line (if at
-/// all) or the default unroll factor is used (LoopUnroll:kDefaultUnrollFactor).
-std::unique_ptr<OpPassBase<FuncOp>> createLoopUnrollPass(
-    int unrollFactor = -1, int unrollFull = -1,
-    const std::function<unsigned(AffineForOp)> &getUnrollFactor = nullptr);
-
-/// Creates a loop unroll jam pass to unroll jam by the specified factor. A
-/// factor of -1 lets the pass use the default factor or the one on the command
-/// line if provided.
-std::unique_ptr<OpPassBase<FuncOp>>
-createLoopUnrollAndJamPass(int unrollJamFactor = -1);
-
 /// Creates a loop fusion pass which fuses loops. Buffers of size less than or
 /// equal to `localBufSizeThreshold` are promoted to memory space
 /// `fastMemorySpace'.
@@ -65,10 +44,6 @@ createLoopFusionPass(unsigned fastMemorySpace = 0,
 /// instructions out of the loop.
 std::unique_ptr<Pass> createLoopInvariantCodeMotionPass();
 
-/// Creates a loop invariant code motion pass that hoists loop invariant
-/// instructions out of affine loop.
-std::unique_ptr<OpPassBase<FuncOp>> createAffineLoopInvariantCodeMotionPass();
-
 /// Creates a pass to pipeline explicit movement of data across levels of the
 /// memory hierarchy.
 std::unique_ptr<OpPassBase<FuncOp>> createPipelineDataTransferPass();
@@ -77,10 +52,6 @@ std::unique_ptr<OpPassBase<FuncOp>> createPipelineDataTransferPass();
 /// to equivalent lower-level constructs (flow of basic blocks and arithmetic
 /// primitives).
 std::unique_ptr<OpPassBase<FuncOp>> createLowerAffinePass();
-
-/// Creates a pass to perform tiling on loop nests.
-std::unique_ptr<OpPassBase<FuncOp>>
-createLoopTilingPass(uint64_t cacheSizeBytes);
 
 /// Creates a pass that transforms perfectly nested loops with independent
 /// bounds into a single loop.
