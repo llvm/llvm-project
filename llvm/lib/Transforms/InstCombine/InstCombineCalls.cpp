@@ -1333,7 +1333,8 @@ static Instruction *foldCtpop(IntrinsicInst &II, InstCombiner &IC) {
     return IC.replaceOperand(II, 0, X);
 
   // ctpop(x | -x) -> bitwidth - cttz(x, false)
-  if (match(Op0, m_c_Or(m_Value(X), m_Neg(m_Deferred(X))))) {
+  if (Op0->hasOneUse() &&
+      match(Op0, m_c_Or(m_Value(X), m_Neg(m_Deferred(X))))) {
     Function *F =
         Intrinsic::getDeclaration(II.getModule(), Intrinsic::cttz, Ty);
     auto *Cttz = IC.Builder.CreateCall(F, {X, IC.Builder.getFalse()});
@@ -1342,7 +1343,8 @@ static Instruction *foldCtpop(IntrinsicInst &II, InstCombiner &IC) {
   }
 
   // ctpop(~x & (x - 1)) -> cttz(x, false)
-  if (match(Op0,
+  if (Op0->hasOneUse() &&
+      match(Op0,
             m_c_And(m_Not(m_Value(X)), m_Add(m_Deferred(X), m_AllOnes())))) {
     Function *F =
         Intrinsic::getDeclaration(II.getModule(), Intrinsic::cttz, Ty);
