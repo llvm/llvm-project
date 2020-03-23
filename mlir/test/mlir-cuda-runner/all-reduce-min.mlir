@@ -23,7 +23,12 @@ func @main() {
   %c4 = constant 4 : index
   %c5 = constant 5 : index
   %c6 = constant 6 : index
-    
+
+  %cast_data = memref_cast %data : memref<2x6xi32> to memref<?x?xi32>
+  call @mcuMemHostRegisterMemRef2dInt32(%cast_data) : (memref<?x?xi32>) -> ()
+  %cast_sum = memref_cast %sum : memref<2xi32> to memref<?xi32>
+  call @mcuMemHostRegisterMemRef1dInt32(%cast_sum) : (memref<?xi32>) -> ()
+
   store %cst0, %data[%c0, %c0] : memref<2x6xi32>
   store %cst1, %data[%c0, %c1] : memref<2x6xi32>
   store %cst2, %data[%c0, %c2] : memref<2x6xi32>
@@ -54,5 +59,7 @@ func @main() {
   return
 }
 
+func @mcuMemHostRegisterMemRef1dInt32(%ptr : memref<?xi32>)
+func @mcuMemHostRegisterMemRef2dInt32(%ptr : memref<?x?xi32>)
 func @print_memref_i32(memref<*xi32>)
 

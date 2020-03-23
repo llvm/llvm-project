@@ -25,6 +25,13 @@ func @main() {
   %c5 = constant 5 : index
   %c6 = constant 6 : index
 
+  %cast_data = memref_cast %data : memref<2x6xf32> to memref<?x?xf32>
+  call @mcuMemHostRegisterMemRef2dFloat(%cast_data) : (memref<?x?xf32>) -> ()
+  %cast_sum = memref_cast %sum : memref<2xf32> to memref<?xf32>
+  call @mcuMemHostRegisterMemRef1dFloat(%cast_sum) : (memref<?xf32>) -> ()
+  %cast_mul = memref_cast %mul : memref<2xf32> to memref<?xf32>
+  call @mcuMemHostRegisterMemRef1dFloat(%cast_mul) : (memref<?xf32>) -> ()
+
   store %cst0, %data[%c0, %c0] : memref<2x6xf32>
   store %cst1, %data[%c0, %c1] : memref<2x6xf32>
   store %cst2, %data[%c0, %c2] : memref<2x6xf32>
@@ -61,4 +68,6 @@ func @main() {
   return
 }
 
+func @mcuMemHostRegisterMemRef1dFloat(%ptr : memref<?xf32>)
+func @mcuMemHostRegisterMemRef2dFloat(%ptr : memref<?x?xf32>)
 func @print_memref_f32(memref<*xf32>)
