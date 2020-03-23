@@ -398,8 +398,8 @@ static Value *constructPointer(Type *ResTy, Value *Ptr, int64_t Offset,
 template <typename AAType, typename StateTy>
 static bool genericValueTraversal(
     Attributor &A, IRPosition IRP, const AAType &QueryingAA, StateTy &State,
-    const function_ref<bool(Value &, StateTy &, bool)> &VisitValueCB,
-    int MaxValues = 8, const function_ref<Value *(Value *)> StripCB = nullptr) {
+    function_ref<bool(Value &, StateTy &, bool)> VisitValueCB,
+    int MaxValues = 8, function_ref<Value *(Value *)> StripCB = nullptr) {
 
   const AAIsDead *LivenessAA = nullptr;
   if (IRP.getAnchorScope())
@@ -1272,8 +1272,8 @@ public:
 
   /// See AbstractState::checkForAllReturnedValues(...).
   bool checkForAllReturnedValuesAndReturnInsts(
-      const function_ref<bool(Value &, const SmallSetVector<ReturnInst *, 4> &)>
-          &Pred) const override;
+      function_ref<bool(Value &, const SmallSetVector<ReturnInst *, 4> &)> Pred)
+      const override;
 
   /// Pretty print the attribute similar to the IR representation.
   const std::string getAsStr() const override;
@@ -1399,8 +1399,8 @@ AAReturnedValuesImpl::getAssumedUniqueReturnValue(Attributor &A) const {
 }
 
 bool AAReturnedValuesImpl::checkForAllReturnedValuesAndReturnInsts(
-    const function_ref<bool(Value &, const SmallSetVector<ReturnInst *, 4> &)>
-        &Pred) const {
+    function_ref<bool(Value &, const SmallSetVector<ReturnInst *, 4> &)> Pred)
+    const {
   if (!isValidState())
     return false;
 
@@ -6384,8 +6384,9 @@ struct AAMemoryLocationImpl : public AAMemoryLocation {
 
   /// See AAMemoryLocation::checkForAllAccessesToMemoryKind(...).
   bool checkForAllAccessesToMemoryKind(
-      const function_ref<bool(const Instruction *, const Value *, AccessKind,
-                              MemoryLocationsKind)> &Pred,
+      function_ref<bool(const Instruction *, const Value *, AccessKind,
+                        MemoryLocationsKind)>
+          Pred,
       MemoryLocationsKind RequestedMLK) const override {
     if (!isValidState())
       return false;
@@ -7366,10 +7367,9 @@ bool Attributor::isAssumedDead(const IRPosition &IRP,
   return false;
 }
 
-bool Attributor::checkForAllUses(
-    const function_ref<bool(const Use &, bool &)> &Pred,
-    const AbstractAttribute &QueryingAA, const Value &V,
-    DepClassTy LivenessDepClass) {
+bool Attributor::checkForAllUses(function_ref<bool(const Use &, bool &)> Pred,
+                                 const AbstractAttribute &QueryingAA,
+                                 const Value &V, DepClassTy LivenessDepClass) {
 
   // Check the trivial case first as it catches void values.
   if (V.use_empty())
@@ -7428,10 +7428,10 @@ bool Attributor::checkForAllUses(
   return true;
 }
 
-bool Attributor::checkForAllCallSites(
-    const function_ref<bool(AbstractCallSite)> &Pred,
-    const AbstractAttribute &QueryingAA, bool RequireAllCallSites,
-    bool &AllCallSitesKnown) {
+bool Attributor::checkForAllCallSites(function_ref<bool(AbstractCallSite)> Pred,
+                                      const AbstractAttribute &QueryingAA,
+                                      bool RequireAllCallSites,
+                                      bool &AllCallSitesKnown) {
   // We can try to determine information from
   // the call sites. However, this is only possible all call sites are known,
   // hence the function has internal linkage.
@@ -7448,10 +7448,11 @@ bool Attributor::checkForAllCallSites(
                               &QueryingAA, AllCallSitesKnown);
 }
 
-bool Attributor::checkForAllCallSites(
-    const function_ref<bool(AbstractCallSite)> &Pred, const Function &Fn,
-    bool RequireAllCallSites, const AbstractAttribute *QueryingAA,
-    bool &AllCallSitesKnown) {
+bool Attributor::checkForAllCallSites(function_ref<bool(AbstractCallSite)> Pred,
+                                      const Function &Fn,
+                                      bool RequireAllCallSites,
+                                      const AbstractAttribute *QueryingAA,
+                                      bool &AllCallSitesKnown) {
   if (RequireAllCallSites && !Fn.hasLocalLinkage()) {
     LLVM_DEBUG(
         dbgs()
@@ -7533,8 +7534,7 @@ bool Attributor::checkForAllCallSites(
 }
 
 bool Attributor::checkForAllReturnedValuesAndReturnInsts(
-    const function_ref<bool(Value &, const SmallSetVector<ReturnInst *, 4> &)>
-        &Pred,
+    function_ref<bool(Value &, const SmallSetVector<ReturnInst *, 4> &)> Pred,
     const AbstractAttribute &QueryingAA) {
 
   const IRPosition &IRP = QueryingAA.getIRPosition();
@@ -7556,8 +7556,7 @@ bool Attributor::checkForAllReturnedValuesAndReturnInsts(
 }
 
 bool Attributor::checkForAllReturnedValues(
-    const function_ref<bool(Value &)> &Pred,
-    const AbstractAttribute &QueryingAA) {
+    function_ref<bool(Value &)> Pred, const AbstractAttribute &QueryingAA) {
 
   const IRPosition &IRP = QueryingAA.getIRPosition();
   const Function *AssociatedFunction = IRP.getAssociatedFunction();
@@ -7578,9 +7577,9 @@ bool Attributor::checkForAllReturnedValues(
 
 static bool checkForAllInstructionsImpl(
     Attributor *A, InformationCache::OpcodeInstMapTy &OpcodeInstMap,
-    const function_ref<bool(Instruction &)> &Pred,
-    const AbstractAttribute *QueryingAA, const AAIsDead *LivenessAA,
-    const ArrayRef<unsigned> &Opcodes, bool CheckBBLivenessOnly = false) {
+    function_ref<bool(Instruction &)> Pred, const AbstractAttribute *QueryingAA,
+    const AAIsDead *LivenessAA, const ArrayRef<unsigned> &Opcodes,
+    bool CheckBBLivenessOnly = false) {
   for (unsigned Opcode : Opcodes) {
     for (Instruction *I : OpcodeInstMap[Opcode]) {
       // Skip dead instructions.
@@ -7595,10 +7594,10 @@ static bool checkForAllInstructionsImpl(
   return true;
 }
 
-bool Attributor::checkForAllInstructions(
-    const llvm::function_ref<bool(Instruction &)> &Pred,
-    const AbstractAttribute &QueryingAA, const ArrayRef<unsigned> &Opcodes,
-    bool CheckBBLivenessOnly) {
+bool Attributor::checkForAllInstructions(function_ref<bool(Instruction &)> Pred,
+                                         const AbstractAttribute &QueryingAA,
+                                         const ArrayRef<unsigned> &Opcodes,
+                                         bool CheckBBLivenessOnly) {
 
   const IRPosition &IRP = QueryingAA.getIRPosition();
   // Since we need to provide instructions we have to have an exact definition.
@@ -7621,8 +7620,7 @@ bool Attributor::checkForAllInstructions(
 }
 
 bool Attributor::checkForAllReadWriteInstructions(
-    const llvm::function_ref<bool(Instruction &)> &Pred,
-    AbstractAttribute &QueryingAA) {
+    function_ref<bool(Instruction &)> Pred, AbstractAttribute &QueryingAA) {
 
   const Function *AssociatedFunction =
       QueryingAA.getIRPosition().getAssociatedFunction();
