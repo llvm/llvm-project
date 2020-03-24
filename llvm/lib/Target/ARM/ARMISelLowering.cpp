@@ -12954,6 +12954,26 @@ static SDValue PerformVMOVhrCombine(SDNode *N, TargetLowering::DAGCombinerInfo &
   return NewCopy;
 }
 
+static SDValue PerformVMOVrhCombine(SDNode *N,
+                                    TargetLowering::DAGCombinerInfo &DCI) {
+  SDValue N0 = N->getOperand(0);
+  EVT VT = N->getValueType(0);
+
+  // fold (VMOVrh (load x)) -> (zextload (i16*)x)
+  if (ISD::isNormalLoad(N0.getNode()) && N0.hasOneUse()) {
+    LoadSDNode *LN0 = cast<LoadSDNode>(N0);
+
+    SDValue Load =
+        DCI.DAG.getExtLoad(ISD::ZEXTLOAD, SDLoc(N), VT, LN0->getChain(),
+                           LN0->getBasePtr(), MVT::i16, LN0->getMemOperand());
+    DCI.DAG.ReplaceAllUsesOfValueWith(SDValue(N, 0), Load.getValue(0));
+    DCI.DAG.ReplaceAllUsesOfValueWith(N0.getValue(1), Load.getValue(1));
+    return Load;
+  }
+
+  return SDValue();
+}
+
 /// hasNormalLoadOperand - Check if any of the operands of a BUILD_VECTOR node
 /// are normal, non-volatile loads.  If so, it is profitable to bitcast an
 /// i64 vector to have f64 elements, since the value can then be loaded
@@ -15145,6 +15165,7 @@ SDValue ARMTargetLowering::PerformDAGCombine(SDNode *N,
   case ARMISD::VMOVRRD: return PerformVMOVRRDCombine(N, DCI, Subtarget);
   case ARMISD::VMOVDRR: return PerformVMOVDRRCombine(N, DCI.DAG);
   case ARMISD::VMOVhr:  return PerformVMOVhrCombine(N, DCI);
+  case ARMISD::VMOVrh:  return PerformVMOVrhCombine(N, DCI);
   case ISD::STORE:      return PerformSTORECombine(N, DCI, Subtarget);
   case ISD::BUILD_VECTOR: return PerformBUILD_VECTORCombine(N, DCI, Subtarget);
   case ISD::INSERT_VECTOR_ELT: return PerformInsertEltCombine(N, DCI);
