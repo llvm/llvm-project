@@ -4,7 +4,11 @@ set(LLVM_LINK_COMPONENTS
 
 add_lld_tool(lld
   lld.cpp
+
+  ENABLE_PLUGINS
+  SUPPORT_PLUGINS
   )
+export_executable_symbols_for_plugins(lld)
 
 target_link_libraries(lld
   PRIVATE
