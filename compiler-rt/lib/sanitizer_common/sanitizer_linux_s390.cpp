@@ -15,13 +15,14 @@
 
 #if SANITIZER_LINUX && SANITIZER_S390
 
-#include "sanitizer_libc.h"
-#include "sanitizer_linux.h"
-
+#include <dlfcn.h>
 #include <errno.h>
 #include <sys/syscall.h>
 #include <sys/utsname.h>
 #include <unistd.h>
+
+#include "sanitizer_libc.h"
+#include "sanitizer_linux.h"
 
 namespace __sanitizer {
 
@@ -122,8 +123,12 @@ static bool FixedCVE_2016_2143() {
   // adjust this for their own kernels.
   struct utsname buf;
   unsigned int major, minor, patch = 0;
+  // Depending on the concrete sanitizer being used, uname may or may not
+  // be intercepted. Make sure we use the libc version in either case.
+  using Uname = int (*)(struct utsname *);
+  Uname uname = reinterpret_cast<Uname>(dlsym(RTLD_NEXT, "uname"));
   // This should never fail, but just in case...
-  if (uname(&buf))
+  if (uname == nullptr || uname(&buf))
     return false;
   const char *ptr = buf.release;
   major = internal_simple_strtoll(ptr, &ptr, 10);
