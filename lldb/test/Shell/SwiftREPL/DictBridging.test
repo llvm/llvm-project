@@ -42,6 +42,33 @@ let d2: Dictionary<NSObject,AnyObject> = [
 // DICT-NEXT:    }
 // DICT-NEXT:  }
 
+// Test formatters in Objective-C context.
+
+// Empty singleton
+let d_objc1 = NSArray(object: [:] as [NSNumber: NSNumber] as NSDictionary)
+// DICT-LABEL: d_objc1: NSArray = 1 element {
+// DICT-NEXT:    [0] = 0 key/value pairs
+// DICT-NEXT:  }
+
+// Verbatim bridging
+let d_objc2 = NSArray(object: [1: 2] as [NSNumber: NSNumber] as NSDictionary)
+// DICT-LABEL: d_objc2: NSArray = 1 element {
+// DICT-NEXT:    [0] = 1 key/value pair {
+// DICT-NEXT:      [0] = {
+// DICT-NEXT:        key = Int64(1)
+// DICT-NEXT:        value = Int64(2)
+// DICT-NEXT:      }
+// DICT-NEXT:    }
+// DICT-NEXT:  }
+
+// Non-verbatim bridging
+let d_objc3 = NSArray(object: [1: 2] as [Int: Int] as NSDictionary)
+// DICT-LABEL: d_objc3: NSArray = 1 element {
+// DICT-NEXT:    [0] = 1 key/value pair {
+// DICT-NEXT:      [0] = (key = 1, value = 2)
+// DICT-NEXT:    }
+// DICT-NEXT:  }
+
 // Verbatim bridging from Swift to Objective-C
 let d2b = d2 as NSDictionary
 // DICT-LABEL: d2b: {{(_HashableTypedNativeDictionaryStorage|_DictionaryStorage)}}<NSObject, AnyObject> = 1 key/value pair {
@@ -78,32 +105,5 @@ let d3b2 = d3 as! [Int: Int]
 // DICT-NEXT:    [0] = {
 // DICT-NEXT:      key = 1
 // DICT-NEXT:      value = 2
-// DICT-NEXT:    }
-// DICT-NEXT:  }
-
-// Test formatters in Objective-C context.
-
-// Empty singleton
-let d4 = NSArray(object: [:] as [NSNumber: NSNumber] as NSDictionary)
-// DICT-LABEL: d4: NSArray = 1 element {
-// DICT-NEXT:    [0] = 0 key/value pairs
-// DICT-NEXT:  }
-
-// Verbatim bridging
-let d5 = NSArray(object: [1: 2] as [NSNumber: NSNumber] as NSDictionary)
-// DICT-LABEL: d5: NSArray = 1 element {
-// DICT-NEXT:    [0] = 1 key/value pair {
-// DICT-NEXT:      [0] = {
-// DICT-NEXT:        key = Int64(1)
-// DICT-NEXT:        value = Int64(2)
-// DICT-NEXT:      }
-// DICT-NEXT:    }
-// DICT-NEXT:  }
-
-// Non-verbatim bridging
-let d6 = NSArray(object: [1: 2] as [Int: Int] as NSDictionary)
-// DICT-LABEL: d6: NSArray = 1 element {
-// DICT-NEXT:    [0] = 1 key/value pair {
-// DICT-NEXT:      [0] = (key = 1, value = 2)
 // DICT-NEXT:    }
 // DICT-NEXT:  }
