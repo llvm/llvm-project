@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
+// RUN: %clang_cc1 -emit-llvm-only -verify -std=c++11 %s
 struct A {};
 
 enum Foo { F };
@@ -92,6 +92,9 @@ namespace PR11339 {
 template<typename T> using Id = T;
 void AliasTemplate(int *p) {
   p->~Id<int>();
+  p->template ~Id<int>(); // expected-error {{'template' keyword not permitted in destructor name}}
+  (0).~Id<int>();
+  (0).template ~Id<int>(); // expected-error {{'template' keyword not permitted in destructor name}}
 }
 
 namespace dotPointerAccess {
