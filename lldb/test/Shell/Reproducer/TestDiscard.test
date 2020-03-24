@@ -1,4 +1,3 @@
-# UNSUPPORTED: system-windows
 # This ensures that the reproducer properly cleans up after itself.
 
 # Build the inferior.
