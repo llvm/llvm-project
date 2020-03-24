@@ -110,6 +110,26 @@ define <2 x float> @constvector_FP_noopt() {
   ret <2 x float> %x
 }
 
+@g = external global i16, align 1
+
+define float @constant_expr() {
+; CHECK-LABEL: @constant_expr(
+; CHECK-NEXT:    [[R:%.*]] = freeze float bitcast (i32 ptrtoint (i16* @g to i32) to float)
+; CHECK-NEXT:    ret float [[R]]
+;
+  %r = freeze float bitcast (i32 ptrtoint (i16* @g to i32) to float)
+  ret float %r
+}
+
+define <2 x i31> @vector_element_constant_expr() {
+; CHECK-LABEL: @vector_element_constant_expr(
+; CHECK-NEXT:    [[R:%.*]] = freeze <2 x i31> <i31 34, i31 ptrtoint (i16* @g to i31)>
+; CHECK-NEXT:    ret <2 x i31> [[R]]
+;
+  %r = freeze <2 x i31> <i31 34, i31 ptrtoint (i16* @g to i31)>
+  ret <2 x i31> %r
+}
+
 define void @alloca() {
 ; CHECK-LABEL: @alloca(
 ; CHECK-NEXT:    [[P:%.*]] = alloca i8
