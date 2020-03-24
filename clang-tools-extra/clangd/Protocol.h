@@ -433,9 +433,11 @@ struct ClientCapabilities {
   /// textDocument.codeAction.codeActionLiteralSupport.
   bool CodeActionStructure = false;
 
-  /// Client supports semantic highlighting.
+  /// Client supports Theia semantic highlighting extension.
+  /// https://github.com/microsoft/vscode-languageserver-node/pull/367
   /// textDocument.semanticHighlightingCapabilities.semanticHighlighting
-  bool SemanticHighlighting = false;
+  /// FIXME: drop this support once clients support LSP 3.16 Semantic Tokens.
+  bool TheiaSemanticHighlighting = false;
 
   /// Supported encodings for LSP character offsets. (clangd extension).
   llvm::Optional<std::vector<OffsetEncoding>> offsetEncoding;
@@ -1342,7 +1344,7 @@ llvm::json::Value toJSON(const FileStatus &FStatus);
 
 /// Represents a semantic highlighting information that has to be applied on a
 /// specific line of the text document.
-struct SemanticHighlightingInformation {
+struct TheiaSemanticHighlightingInformation {
   /// The line these highlightings belong to.
   int Line = 0;
   /// The base64 encoded string of highlighting tokens.
@@ -1353,18 +1355,19 @@ struct SemanticHighlightingInformation {
   /// clients should combine line style and token style if possible.
   bool IsInactive = false;
 };
-bool operator==(const SemanticHighlightingInformation &Lhs,
-                const SemanticHighlightingInformation &Rhs);
-llvm::json::Value toJSON(const SemanticHighlightingInformation &Highlighting);
+bool operator==(const TheiaSemanticHighlightingInformation &Lhs,
+                const TheiaSemanticHighlightingInformation &Rhs);
+llvm::json::Value
+toJSON(const TheiaSemanticHighlightingInformation &Highlighting);
 
 /// Parameters for the semantic highlighting (server-side) push notification.
-struct SemanticHighlightingParams {
+struct TheiaSemanticHighlightingParams {
   /// The textdocument these highlightings belong to.
   VersionedTextDocumentIdentifier TextDocument;
   /// The lines of highlightings that should be sent.
-  std::vector<SemanticHighlightingInformation> Lines;
+  std::vector<TheiaSemanticHighlightingInformation> Lines;
 };
-llvm::json::Value toJSON(const SemanticHighlightingParams &Highlighting);
+llvm::json::Value toJSON(const TheiaSemanticHighlightingParams &Highlighting);
 
 struct SelectionRangeParams {
   /// The text document.
