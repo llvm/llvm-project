@@ -3923,9 +3923,12 @@ kmp_task_t *__kmp_task_dup_alloc(kmp_info_t *thread, kmp_task_t *task_src) {
   }
   taskdata->td_alloc_thread = thread;
   taskdata->td_parent = parent_task;
-  taskdata->td_taskgroup =
-      parent_task
-          ->td_taskgroup; // task inherits the taskgroup from the parent task
+  // task inherits the taskgroup from the parent task
+  taskdata->td_taskgroup = parent_task->td_taskgroup;
+  // tied task needs to initialize the td_last_tied at creation,
+  // untied one does this when it is scheduled for execution
+  if (taskdata->td_flags.tiedness == TASK_TIED)
+    taskdata->td_last_tied = taskdata;
 
   // Only need to keep track of child task counts if team parallel and tasking
   // not serialized
