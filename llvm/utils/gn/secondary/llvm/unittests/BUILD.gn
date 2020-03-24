@@ -56,6 +56,12 @@ group("unittests") {
       "tools/llvm-exegesis/AArch64:LLVMExegesisAArch64Tests",
     ]
   }
+  if (llvm_build_AMDGPU) {
+    deps += [
+      "MC/AMDGPU:AMDGPUDwarfTests",
+      "Target/AMDGPU:AMDGPUTests",
+    ]
+  }
   if (llvm_build_ARM) {
     deps += [
       "Target/ARM:ARMTests",
