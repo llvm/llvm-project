@@ -13,7 +13,6 @@
 #include "common.h"
 #include "flags.h"
 #include "flags_parser.h"
-#include "interface.h"
 #include "local_cache.h"
 #include "memtag.h"
 #include "quarantine.h"
@@ -21,6 +20,8 @@
 #include "secondary.h"
 #include "string_utils.h"
 #include "tsd.h"
+
+#include "scudo/interface.h"
 
 #ifdef GWP_ASAN_HOOKS
 #include "gwp_asan/guarded_pool_allocator.h"

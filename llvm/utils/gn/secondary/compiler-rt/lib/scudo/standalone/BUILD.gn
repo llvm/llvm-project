@@ -88,7 +88,10 @@ source_set("cxx_wrapper_sources") {
 }
 
 config("scudo_config") {
-  include_dirs = [ "//compiler-rt/lib/scudo/standalone" ]
+  include_dirs = [
+    "//compiler-rt/lib/scudo/standalone",
+    "//compiler-rt/lib/scudo/standalone/include",
+  ]
   if (current_os == "android") {
     cflags = [ "-fno-emulated-tls" ]
   }

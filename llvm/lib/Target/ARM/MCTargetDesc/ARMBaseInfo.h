@@ -396,6 +396,10 @@ namespace ARMII {
     // Whether an instruction can be included in an MVE tail-predicated loop.
     ValidForTailPredication = 1 << 20,
 
+    // Whether an instruction writes to the top/bottom half of a vector element
+    // and leaves the other half untouched.
+    RetainsPreviousHalfElement = 1 << 21,
+
     //===------------------------------------------------------------------===//
     // Code domain.
     DomainShift   = 15,

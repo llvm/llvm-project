@@ -3,7 +3,7 @@ if (COMPILER_RT_HAS_GWP_ASAN)
   add_dependencies(scudo_standalone gwp_asan)
 endif()
 
-include_directories(../..)
+include_directories(../.. include)
 
 set(SCUDO_CFLAGS)
 
@@ -56,7 +56,6 @@ set(SCUDO_HEADERS
   flags.h
   flags_parser.h
   fuchsia.h
-  interface.h
   internal_defs.h
   linux.h
   list.h
@@ -78,6 +77,8 @@ set(SCUDO_HEADERS
   vector.h
   wrappers_c_checks.h
   wrappers_c.h
+
+  include/scudo/interface.h
   )
 
 set(SCUDO_SOURCES

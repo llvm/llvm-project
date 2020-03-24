@@ -443,16 +443,17 @@ public:
   /// identifier. Returns None if it's not a constant. This method employs
   /// trivial (low complexity / cost) checks and detection. Symbolic identifiers
   /// are treated specially, i.e., it looks for constant differences between
-  /// affine expressions involving only the symbolic identifiers. See comments
-  /// at function definition for examples. 'lb' and 'lbDivisor', if provided,
-  /// are used to express the lower bound associated with the constant
-  /// difference: 'lb' has the coefficients and lbDivisor, the divisor. For eg.,
-  /// if the lower bound is [(s0 + s2 - 1) floordiv 32] for a system with three
-  /// symbolic identifiers, *lb = [1, 0, 1], lbDivisor = 32.
+  /// affine expressions involving only the symbolic identifiers. `lb` and
+  /// `ub` (along with the `boundFloorDivisor`) are set to represent the lower
+  /// and upper bound associated with the constant difference: `lb`, `ub` have
+  /// the coefficients, and boundFloorDivisor, their divisor.
+  /// Ex: if the lower bound is [(s0 + s2 - 1) floordiv 32] for a system with
+  /// three symbolic identifiers, *lb = [1, 0, 1], boundDivisor = 32. See
+  /// comments at function definition for examples.
   Optional<int64_t>
   getConstantBoundOnDimSize(unsigned pos,
                             SmallVectorImpl<int64_t> *lb = nullptr,
-                            int64_t *lbFloorDivisor = nullptr,
+                            int64_t *boundFloorDivisor = nullptr,
                             SmallVectorImpl<int64_t> *ub = nullptr) const;
 
   /// Returns the constant lower bound for the pos^th identifier if there is

@@ -30,6 +30,14 @@
 //       dst->clock[i] = max(dst->clock[i], clock[i]);
 //   }
 //
+//   void ThreadClock::releaseStoreAcquire(SyncClock *sc) const {
+//     for (int i = 0; i < kMaxThreads; i++) {
+//       tmp = clock[i];
+//       clock[i] = max(clock[i], sc->clock[i]);
+//       sc->clock[i] = tmp;
+//     }
+//   }
+//
 //   void ThreadClock::ReleaseStore(SyncClock *dst) const {
 //     for (int i = 0; i < kMaxThreads; i++)
 //       dst->clock[i] = clock[i];
@@ -175,6 +183,36 @@ void ThreadClock::acquire(ClockCache *c, SyncClock *src) {
     last_acquire_ = clk_[tid_];
     ResetCached(c);
   }
+}
+
+void ThreadClock::releaseStoreAcquire(ClockCache *c, SyncClock *sc) {
+  DCHECK_LE(nclk_, kMaxTid);
+  DCHECK_LE(dst->size_, kMaxTid);
+
+  if (sc->size_ == 0) {
+    // ReleaseStore will correctly set release_store_tid_,
+    // which can be important for future operations.
+    ReleaseStore(c, sc);
+    return;
+  }
+
+  // Check if we need to resize dst.
+  if (sc->size_ < nclk_)
+    sc->Resize(c, nclk_);
+
+  sc->Unshare(c);
+  // Update sc->clk_.
+  sc->FlushDirty();
+  uptr i = 0;
+  for (ClockElem &ce : *sc) {
+    u64 tmp = clk_[i];
+    clk_[i] = max(ce.epoch, clk_[i]);
+    ce.epoch = tmp;
+    ce.reused = 0;
+    i++;
+  }
+  sc->release_store_tid_ = kInvalidTid;
+  sc->release_store_reused_ = 0;
 }
 
 void ThreadClock::release(ClockCache *c, SyncClock *dst) {
