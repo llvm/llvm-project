@@ -185,7 +185,7 @@ static FeatureBitset getFeatures(StringRef CPU, StringRef FS,
     // Check for help
     if (Feature == "+help")
       Help(ProcDesc, ProcFeatures);
-    else if (Feature == "+cpuHelp")
+    else if (Feature == "+cpuhelp")
       cpuHelp(ProcDesc);
     else
       ApplyFeatureFlag(Bits, Feature, ProcFeatures);
