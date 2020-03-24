@@ -327,11 +327,25 @@ enum class ToolType { Objcopy, Strip, InstallNameTool };
 int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
   ToolName = argv[0];
-  ToolType Tool = StringSwitch<ToolType>(sys::path::stem(ToolName))
-                      .EndsWith("strip", ToolType::Strip)
-                      .EndsWith("install-name-tool", ToolType::InstallNameTool)
-                      .EndsWith("install_name_tool", ToolType::InstallNameTool)
-                      .Default(ToolType::Objcopy);
+
+  StringRef Stem = sys::path::stem(ToolName);
+  auto Is = [=](StringRef Tool) {
+    // We need to recognize the following filenames:
+    //
+    // llvm-objcopy -> objcopy
+    // strip-10.exe -> strip
+    // powerpc64-unknown-freebsd13-objcopy -> objcopy
+    // llvm-install-name-tool -> install-name-tool
+    auto I = Stem.rfind_lower(Tool);
+    return I != StringRef::npos &&
+           (I + Tool.size() == Stem.size() || !isAlnum(Stem[I + Tool.size()]));
+  };
+  ToolType Tool = ToolType::Objcopy;
+  if (Is("strip"))
+    Tool = ToolType::Strip;
+  else if (Is("install-name-tool") || Is("install_name_tool"))
+    Tool = ToolType::InstallNameTool;
+
   // Expand response files.
   // TODO: Move these lines, which are copied from lib/Support/CommandLine.cpp,
   // into a separate function in the CommandLine library and call that function
