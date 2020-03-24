@@ -6123,3 +6123,412 @@ entry:
   %splat.splat = shufflevector <2 x i64> %splat.splatinsert, <2 x i64> undef, <2 x i32> zeroinitializer
   ret <2 x i64> %splat.splat
 }
+
+; Some additional patterns that come up in real code.
+define dso_local <2 x double> @sint_to_fp_widen02(<4 x i32> %a) {
+; P9BE-LABEL: sint_to_fp_widen02:
+; P9BE:       # %bb.0: # %entry
+; P9BE-NEXT:    xvcvsxwdp v2, v2
+; P9BE-NEXT:    blr
+;
+; P9LE-LABEL: sint_to_fp_widen02:
+; P9LE:       # %bb.0: # %entry
+; P9LE-NEXT:    xxsldwi vs0, v2, v2, 1
+; P9LE-NEXT:    xvcvsxwdp v2, vs0
+; P9LE-NEXT:    blr
+;
+; P8BE-LABEL: sint_to_fp_widen02:
+; P8BE:       # %bb.0: # %entry
+; P8BE-NEXT:    xvcvsxwdp v2, v2
+; P8BE-NEXT:    blr
+;
+; P8LE-LABEL: sint_to_fp_widen02:
+; P8LE:       # %bb.0: # %entry
+; P8LE-NEXT:    xxsldwi vs0, v2, v2, 1
+; P8LE-NEXT:    xvcvsxwdp v2, vs0
+; P8LE-NEXT:    blr
+entry:
+  %vecext = extractelement <4 x i32> %a, i32 0
+  %conv = sitofp i32 %vecext to double
+  %vecinit = insertelement <2 x double> undef, double %conv, i32 0
+  %vecext1 = extractelement <4 x i32> %a, i32 2
+  %conv2 = sitofp i32 %vecext1 to double
+  %vecinit3 = insertelement <2 x double> %vecinit, double %conv2, i32 1
+  ret <2 x double> %vecinit3
+}
+
+define dso_local <2 x double> @sint_to_fp_widen13(<4 x i32> %a) {
+; P9BE-LABEL: sint_to_fp_widen13:
+; P9BE:       # %bb.0: # %entry
+; P9BE-NEXT:    xxsldwi vs0, v2, v2, 3
+; P9BE-NEXT:    xvcvsxwdp v2, vs0
+; P9BE-NEXT:    blr
+;
+; P9LE-LABEL: sint_to_fp_widen13:
+; P9LE:       # %bb.0: # %entry
+; P9LE-NEXT:    xvcvsxwdp v2, v2
+; P9LE-NEXT:    blr
+;
+; P8BE-LABEL: sint_to_fp_widen13:
+; P8BE:       # %bb.0: # %entry
+; P8BE-NEXT:    xxsldwi vs0, v2, v2, 3
+; P8BE-NEXT:    xvcvsxwdp v2, vs0
+; P8BE-NEXT:    blr
+;
+; P8LE-LABEL: sint_to_fp_widen13:
+; P8LE:       # %bb.0: # %entry
+; P8LE-NEXT:    xvcvsxwdp v2, v2
+; P8LE-NEXT:    blr
+entry:
+  %vecext = extractelement <4 x i32> %a, i32 1
+  %conv = sitofp i32 %vecext to double
+  %vecinit = insertelement <2 x double> undef, double %conv, i32 0
+  %vecext1 = extractelement <4 x i32> %a, i32 3
+  %conv2 = sitofp i32 %vecext1 to double
+  %vecinit3 = insertelement <2 x double> %vecinit, double %conv2, i32 1
+  ret <2 x double> %vecinit3
+}
+
+define dso_local <2 x double> @uint_to_fp_widen02(<4 x i32> %a) {
+; P9BE-LABEL: uint_to_fp_widen02:
+; P9BE:       # %bb.0: # %entry
+; P9BE-NEXT:    xvcvuxwdp v2, v2
+; P9BE-NEXT:    blr
+;
+; P9LE-LABEL: uint_to_fp_widen02:
+; P9LE:       # %bb.0: # %entry
+; P9LE-NEXT:    xxsldwi vs0, v2, v2, 1
+; P9LE-NEXT:    xvcvuxwdp v2, vs0
+; P9LE-NEXT:    blr
+;
+; P8BE-LABEL: uint_to_fp_widen02:
+; P8BE:       # %bb.0: # %entry
+; P8BE-NEXT:    xvcvuxwdp v2, v2
+; P8BE-NEXT:    blr
+;
+; P8LE-LABEL: uint_to_fp_widen02:
+; P8LE:       # %bb.0: # %entry
+; P8LE-NEXT:    xxsldwi vs0, v2, v2, 1
+; P8LE-NEXT:    xvcvuxwdp v2, vs0
+; P8LE-NEXT:    blr
+entry:
+  %vecext = extractelement <4 x i32> %a, i32 0
+  %conv = uitofp i32 %vecext to double
+  %vecinit = insertelement <2 x double> undef, double %conv, i32 0
+  %vecext1 = extractelement <4 x i32> %a, i32 2
+  %conv2 = uitofp i32 %vecext1 to double
+  %vecinit3 = insertelement <2 x double> %vecinit, double %conv2, i32 1
+  ret <2 x double> %vecinit3
+}
+
+define dso_local <2 x double> @uint_to_fp_widen13(<4 x i32> %a) {
+; P9BE-LABEL: uint_to_fp_widen13:
+; P9BE:       # %bb.0: # %entry
+; P9BE-NEXT:    xxsldwi vs0, v2, v2, 3
+; P9BE-NEXT:    xvcvuxwdp v2, vs0
+; P9BE-NEXT:    blr
+;
+; P9LE-LABEL: uint_to_fp_widen13:
+; P9LE:       # %bb.0: # %entry
+; P9LE-NEXT:    xvcvuxwdp v2, v2
+; P9LE-NEXT:    blr
+;
+; P8BE-LABEL: uint_to_fp_widen13:
+; P8BE:       # %bb.0: # %entry
+; P8BE-NEXT:    xxsldwi vs0, v2, v2, 3
+; P8BE-NEXT:    xvcvuxwdp v2, vs0
+; P8BE-NEXT:    blr
+;
+; P8LE-LABEL: uint_to_fp_widen13:
+; P8LE:       # %bb.0: # %entry
+; P8LE-NEXT:    xvcvuxwdp v2, v2
+; P8LE-NEXT:    blr
+entry:
+  %vecext = extractelement <4 x i32> %a, i32 1
+  %conv = uitofp i32 %vecext to double
+  %vecinit = insertelement <2 x double> undef, double %conv, i32 0
+  %vecext1 = extractelement <4 x i32> %a, i32 3
+  %conv2 = uitofp i32 %vecext1 to double
+  %vecinit3 = insertelement <2 x double> %vecinit, double %conv2, i32 1
+  ret <2 x double> %vecinit3
+}
+
+define dso_local <2 x double> @fp_extend01(<4 x float> %a) {
+; P9BE-LABEL: fp_extend01:
+; P9BE:       # %bb.0: # %entry
+; P9BE-NEXT:    xxmrghw vs0, v2, v2
+; P9BE-NEXT:    xvcvspdp v2, vs0
+; P9BE-NEXT:    blr
+;
+; P9LE-LABEL: fp_extend01:
+; P9LE:       # %bb.0: # %entry
+; P9LE-NEXT:    xxmrglw vs0, v2, v2
+; P9LE-NEXT:    xvcvspdp v2, vs0
+; P9LE-NEXT:    blr
+;
+; P8BE-LABEL: fp_extend01:
+; P8BE:       # %bb.0: # %entry
+; P8BE-NEXT:    xxmrghw vs0, v2, v2
+; P8BE-NEXT:    xvcvspdp v2, vs0
+; P8BE-NEXT:    blr
+;
+; P8LE-LABEL: fp_extend01:
+; P8LE:       # %bb.0: # %entry
+; P8LE-NEXT:    xxmrglw vs0, v2, v2
+; P8LE-NEXT:    xvcvspdp v2, vs0
+; P8LE-NEXT:    blr
+entry:
+  %vecext = extractelement <4 x float> %a, i32 0
+  %conv = fpext float %vecext to double
+  %vecinit = insertelement <2 x double> undef, double %conv, i32 0
+  %vecext1 = extractelement <4 x float> %a, i32 1
+  %conv2 = fpext float %vecext1 to double
+  %vecinit3 = insertelement <2 x double> %vecinit, double %conv2, i32 1
+  ret <2 x double> %vecinit3
+}
+
+define dso_local <2 x double> @fp_extend10(<4 x float> %a) {
+; P9BE-LABEL: fp_extend10:
+; P9BE:       # %bb.0: # %entry
+; P9BE-NEXT:    xxmrghw vs0, v2, v2
+; P9BE-NEXT:    xvcvspdp vs0, vs0
+; P9BE-NEXT:    xxswapd v2, vs0
+; P9BE-NEXT:    blr
+;
+; P9LE-LABEL: fp_extend10:
+; P9LE:       # %bb.0: # %entry
+; P9LE-NEXT:    xxmrglw vs0, v2, v2
+; P9LE-NEXT:    xvcvspdp vs0, vs0
+; P9LE-NEXT:    xxswapd v2, vs0
+; P9LE-NEXT:    blr
+;
+; P8BE-LABEL: fp_extend10:
+; P8BE:       # %bb.0: # %entry
+; P8BE-NEXT:    xxmrghw vs0, v2, v2
+; P8BE-NEXT:    xvcvspdp vs0, vs0
+; P8BE-NEXT:    xxswapd v2, vs0
+; P8BE-NEXT:    blr
+;
+; P8LE-LABEL: fp_extend10:
+; P8LE:       # %bb.0: # %entry
+; P8LE-NEXT:    xxmrglw vs0, v2, v2
+; P8LE-NEXT:    xvcvspdp vs0, vs0
+; P8LE-NEXT:    xxswapd v2, vs0
+; P8LE-NEXT:    blr
+entry:
+  %vecext = extractelement <4 x float> %a, i32 1
+  %conv = fpext float %vecext to double
+  %vecinit = insertelement <2 x double> undef, double %conv, i32 0
+  %vecext1 = extractelement <4 x float> %a, i32 0
+  %conv2 = fpext float %vecext1 to double
+  %vecinit3 = insertelement <2 x double> %vecinit, double %conv2, i32 1
+  ret <2 x double> %vecinit3
+}
+
+define dso_local <2 x double> @fp_extend02(<4 x float> %a) {
+; P9BE-LABEL: fp_extend02:
+; P9BE:       # %bb.0: # %entry
+; P9BE-NEXT:    xvcvspdp v2, v2
+; P9BE-NEXT:    blr
+;
+; P9LE-LABEL: fp_extend02:
+; P9LE:       # %bb.0: # %entry
+; P9LE-NEXT:    xxsldwi vs0, v2, v2, 1
+; P9LE-NEXT:    xvcvspdp v2, vs0
+; P9LE-NEXT:    blr
+;
+; P8BE-LABEL: fp_extend02:
+; P8BE:       # %bb.0: # %entry
+; P8BE-NEXT:    xvcvspdp v2, v2
+; P8BE-NEXT:    blr
+;
+; P8LE-LABEL: fp_extend02:
+; P8LE:       # %bb.0: # %entry
+; P8LE-NEXT:    xxsldwi vs0, v2, v2, 1
+; P8LE-NEXT:    xvcvspdp v2, vs0
+; P8LE-NEXT:    blr
+entry:
+  %vecext = extractelement <4 x float> %a, i32 0
+  %conv = fpext float %vecext to double
+  %vecinit = insertelement <2 x double> undef, double %conv, i32 0
+  %vecext1 = extractelement <4 x float> %a, i32 2
+  %conv2 = fpext float %vecext1 to double
+  %vecinit3 = insertelement <2 x double> %vecinit, double %conv2, i32 1
+  ret <2 x double> %vecinit3
+}
+
+define dso_local <2 x double> @fp_extend13(<4 x float> %a) {
+; P9BE-LABEL: fp_extend13:
+; P9BE:       # %bb.0: # %entry
+; P9BE-NEXT:    xxsldwi vs0, v2, v2, 3
+; P9BE-NEXT:    xvcvspdp v2, vs0
+; P9BE-NEXT:    blr
+;
+; P9LE-LABEL: fp_extend13:
+; P9LE:       # %bb.0: # %entry
+; P9LE-NEXT:    xvcvspdp v2, v2
+; P9LE-NEXT:    blr
+;
+; P8BE-LABEL: fp_extend13:
+; P8BE:       # %bb.0: # %entry
+; P8BE-NEXT:    xxsldwi vs0, v2, v2, 3
+; P8BE-NEXT:    xvcvspdp v2, vs0
+; P8BE-NEXT:    blr
+;
+; P8LE-LABEL: fp_extend13:
+; P8LE:       # %bb.0: # %entry
+; P8LE-NEXT:    xvcvspdp v2, v2
+; P8LE-NEXT:    blr
+entry:
+  %vecext = extractelement <4 x float> %a, i32 1
+  %conv = fpext float %vecext to double
+  %vecinit = insertelement <2 x double> undef, double %conv, i32 0
+  %vecext1 = extractelement <4 x float> %a, i32 3
+  %conv2 = fpext float %vecext1 to double
+  %vecinit3 = insertelement <2 x double> %vecinit, double %conv2, i32 1
+  ret <2 x double> %vecinit3
+}
+
+define dso_local <2 x double> @fp_extend23(<4 x float> %a) {
+; P9BE-LABEL: fp_extend23:
+; P9BE:       # %bb.0: # %entry
+; P9BE-NEXT:    xxmrglw vs0, v2, v2
+; P9BE-NEXT:    xvcvspdp v2, vs0
+; P9BE-NEXT:    blr
+;
+; P9LE-LABEL: fp_extend23:
+; P9LE:       # %bb.0: # %entry
+; P9LE-NEXT:    xxmrghw vs0, v2, v2
+; P9LE-NEXT:    xvcvspdp v2, vs0
+; P9LE-NEXT:    blr
+;
+; P8BE-LABEL: fp_extend23:
+; P8BE:       # %bb.0: # %entry
+; P8BE-NEXT:    xxmrglw vs0, v2, v2
+; P8BE-NEXT:    xvcvspdp v2, vs0
+; P8BE-NEXT:    blr
+;
+; P8LE-LABEL: fp_extend23:
+; P8LE:       # %bb.0: # %entry
+; P8LE-NEXT:    xxmrghw vs0, v2, v2
+; P8LE-NEXT:    xvcvspdp v2, vs0
+; P8LE-NEXT:    blr
+entry:
+  %vecext = extractelement <4 x float> %a, i32 2
+  %conv = fpext float %vecext to double
+  %vecinit = insertelement <2 x double> undef, double %conv, i32 0
+  %vecext1 = extractelement <4 x float> %a, i32 3
+  %conv2 = fpext float %vecext1 to double
+  %vecinit3 = insertelement <2 x double> %vecinit, double %conv2, i32 1
+  ret <2 x double> %vecinit3
+}
+
+define dso_local <2 x double> @fp_extend32(<4 x float> %a) {
+; P9BE-LABEL: fp_extend32:
+; P9BE:       # %bb.0: # %entry
+; P9BE-NEXT:    xxmrglw vs0, v2, v2
+; P9BE-NEXT:    xvcvspdp vs0, vs0
+; P9BE-NEXT:    xxswapd v2, vs0
+; P9BE-NEXT:    blr
+;
+; P9LE-LABEL: fp_extend32:
+; P9LE:       # %bb.0: # %entry
+; P9LE-NEXT:    xxmrghw vs0, v2, v2
+; P9LE-NEXT:    xvcvspdp vs0, vs0
+; P9LE-NEXT:    xxswapd v2, vs0
+; P9LE-NEXT:    blr
+;
+; P8BE-LABEL: fp_extend32:
+; P8BE:       # %bb.0: # %entry
+; P8BE-NEXT:    xxmrglw vs0, v2, v2
+; P8BE-NEXT:    xvcvspdp vs0, vs0
+; P8BE-NEXT:    xxswapd v2, vs0
+; P8BE-NEXT:    blr
+;
+; P8LE-LABEL: fp_extend32:
+; P8LE:       # %bb.0: # %entry
+; P8LE-NEXT:    xxmrghw vs0, v2, v2
+; P8LE-NEXT:    xvcvspdp vs0, vs0
+; P8LE-NEXT:    xxswapd v2, vs0
+; P8LE-NEXT:    blr
+entry:
+  %vecext = extractelement <4 x float> %a, i32 3
+  %conv = fpext float %vecext to double
+  %vecinit = insertelement <2 x double> undef, double %conv, i32 0
+  %vecext1 = extractelement <4 x float> %a, i32 2
+  %conv2 = fpext float %vecext1 to double
+  %vecinit3 = insertelement <2 x double> %vecinit, double %conv2, i32 1
+  ret <2 x double> %vecinit3
+}
+
+define dso_local <2 x double> @fp_extend_two00(<4 x float> %a, <4 x float> %b) {
+; P9BE-LABEL: fp_extend_two00:
+; P9BE:       # %bb.0: # %entry
+; P9BE-NEXT:    xxmrghd vs0, v2, v3
+; P9BE-NEXT:    xvcvspdp v2, vs0
+; P9BE-NEXT:    blr
+;
+; P9LE-LABEL: fp_extend_two00:
+; P9LE:       # %bb.0: # %entry
+; P9LE-NEXT:    xxmrgld vs0, v3, v2
+; P9LE-NEXT:    xxsldwi vs0, vs0, vs0, 1
+; P9LE-NEXT:    xvcvspdp v2, vs0
+; P9LE-NEXT:    blr
+;
+; P8BE-LABEL: fp_extend_two00:
+; P8BE:       # %bb.0: # %entry
+; P8BE-NEXT:    xxmrghd vs0, v2, v3
+; P8BE-NEXT:    xvcvspdp v2, vs0
+; P8BE-NEXT:    blr
+;
+; P8LE-LABEL: fp_extend_two00:
+; P8LE:       # %bb.0: # %entry
+; P8LE-NEXT:    xxmrgld vs0, v3, v2
+; P8LE-NEXT:    xxsldwi vs0, vs0, vs0, 1
+; P8LE-NEXT:    xvcvspdp v2, vs0
+; P8LE-NEXT:    blr
+entry:
+  %vecext = extractelement <4 x float> %a, i32 0
+  %conv = fpext float %vecext to double
+  %vecinit = insertelement <2 x double> undef, double %conv, i32 0
+  %vecext1 = extractelement <4 x float> %b, i32 0
+  %conv2 = fpext float %vecext1 to double
+  %vecinit3 = insertelement <2 x double> %vecinit, double %conv2, i32 1
+  ret <2 x double> %vecinit3
+}
+
+define dso_local <2 x double> @fp_extend_two33(<4 x float> %a, <4 x float> %b) {
+; P9BE-LABEL: fp_extend_two33:
+; P9BE:       # %bb.0: # %entry
+; P9BE-NEXT:    xxmrgld vs0, v2, v3
+; P9BE-NEXT:    xxsldwi vs0, vs0, vs0, 1
+; P9BE-NEXT:    xvcvspdp v2, vs0
+; P9BE-NEXT:    blr
+;
+; P9LE-LABEL: fp_extend_two33:
+; P9LE:       # %bb.0: # %entry
+; P9LE-NEXT:    xxmrghd vs0, v3, v2
+; P9LE-NEXT:    xvcvspdp v2, vs0
+; P9LE-NEXT:    blr
+;
+; P8BE-LABEL: fp_extend_two33:
+; P8BE:       # %bb.0: # %entry
+; P8BE-NEXT:    xxmrgld vs0, v2, v3
+; P8BE-NEXT:    xxsldwi vs0, vs0, vs0, 1
+; P8BE-NEXT:    xvcvspdp v2, vs0
+; P8BE-NEXT:    blr
+;
+; P8LE-LABEL: fp_extend_two33:
+; P8LE:       # %bb.0: # %entry
+; P8LE-NEXT:    xxmrghd vs0, v3, v2
+; P8LE-NEXT:    xvcvspdp v2, vs0
+; P8LE-NEXT:    blr
+entry:
+  %vecext = extractelement <4 x float> %a, i32 3
+  %conv = fpext float %vecext to double
+  %vecinit = insertelement <2 x double> undef, double %conv, i32 0
+  %vecext1 = extractelement <4 x float> %b, i32 3
+  %conv2 = fpext float %vecext1 to double
+  %vecinit3 = insertelement <2 x double> %vecinit, double %conv2, i32 1
+  ret <2 x double> %vecinit3
+}
