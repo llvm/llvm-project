@@ -404,14 +404,14 @@ struct_arr16 func_ret_struct_arr16()
   return s;
 }
 
-// CHECK: define void @func_ret_struct_arr32(%struct.struct_arr32 addrspace(5)* noalias nocapture sret %agg.result)
+// CHECK: define void @func_ret_struct_arr32(%struct.struct_arr32 addrspace(5)* noalias nocapture sret align 4 %agg.result)
 struct_arr32 func_ret_struct_arr32()
 {
   struct_arr32 s = { 0 };
   return s;
 }
 
-// CHECK: define void @func_ret_struct_arr33(%struct.struct_arr33 addrspace(5)* noalias nocapture sret %agg.result)
+// CHECK: define void @func_ret_struct_arr33(%struct.struct_arr33 addrspace(5)* noalias nocapture sret align 4 %agg.result)
 struct_arr33 func_ret_struct_arr33()
 {
   struct_arr33 s = { 0 };
@@ -440,7 +440,7 @@ different_size_type_pair func_different_size_type_pair_ret()
   return s;
 }
 
-// CHECK: define void @func_flexible_array_ret(%struct.flexible_array addrspace(5)* noalias nocapture sret %agg.result)
+// CHECK: define void @func_flexible_array_ret(%struct.flexible_array addrspace(5)* noalias nocapture sret align 4 %agg.result)
 flexible_array func_flexible_array_ret()
 {
   flexible_array s = { 0 };
