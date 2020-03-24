@@ -3219,12 +3219,15 @@ llvm::Constant *CGOpenMPRuntime::getOrCreateInternalVariable(
            "OMP internal variable has different type than requested");
     return &*Elem.second;
   }
-
+  llvm::GlobalValue::LinkageTypes Linkage =
+      (CGM.getTriple().isAMDGCN())
+          ? llvm::GlobalValue::PrivateLinkage
+          : llvm::GlobalValue::CommonLinkage;
   return Elem.second = new llvm::GlobalVariable(
-             CGM.getModule(), Ty, /*IsConstant*/ false,
-             llvm::GlobalValue::CommonLinkage, llvm::Constant::getNullValue(Ty),
-             Elem.first(), /*InsertBefore=*/nullptr,
-             llvm::GlobalValue::NotThreadLocal, AddressSpace);
+             CGM.getModule(), Ty, /*IsConstant*/ false, Linkage,
+             llvm::Constant::getNullValue(Ty), Elem.first(),
+             /*InsertBefore=*/nullptr, llvm::GlobalValue::NotThreadLocal,
+             AddressSpace);
 }
 
 llvm::Value *CGOpenMPRuntime::getCriticalRegionLock(StringRef CriticalName) {
@@ -4377,6 +4380,47 @@ void CGOpenMPRuntime::emitKmpRoutineEntryT(QualType KmpInt32Ty) {
         C.getFunctionType(KmpInt32Ty, KmpRoutineEntryTyArgs, EPI));
     KmpRoutineEntryPtrTy = CGM.getTypes().ConvertType(KmpRoutineEntryPtrQTy);
   }
+}
+
+/// Emit structure descriptor for a kernel
+void CGOpenMPRuntime::emitStructureKernelDesc(CodeGenModule &CGM,
+                                              StringRef Name, int16_t WG_Size,
+                                              int8_t Mode, int8_t HostServices,
+                                              int8_t MaxParallelLevel) {
+
+  // Create all device images
+  llvm::Constant *AttrData[] = {
+      llvm::ConstantInt::get(CGM.Int16Ty, 2), // Version
+      llvm::ConstantInt::get(CGM.Int16Ty, 9), // Size in bytes
+      llvm::ConstantInt::get(CGM.Int16Ty, WG_Size),
+      llvm::ConstantInt::get(CGM.Int8Ty, Mode), // 0 => SPMD, 1 => GENERIC
+      llvm::ConstantInt::get(CGM.Int8Ty, HostServices), // 1 => use HostServices
+      llvm::ConstantInt::get(CGM.Int8Ty, MaxParallelLevel)}; // number of nests
+
+  llvm::GlobalVariable *AttrImages = createGlobalStruct(
+      CGM, getTgtAttributeStructQTy(), isDefaultLocationConstant(), AttrData,
+      Name + Twine("_kern_desc"), llvm::GlobalValue::WeakAnyLinkage);
+  CGM.addCompilerUsedGlobal(AttrImages);
+}
+
+// Create Tgt Attribute Sruct type.
+QualType CGOpenMPRuntime::getTgtAttributeStructQTy() {
+  ASTContext &C = CGM.getContext();
+  QualType KmpInt8Ty = C.getIntTypeForBitwidth(/*Width=*/8, /*Signed=*/1);
+  QualType KmpInt16Ty = C.getIntTypeForBitwidth(/*Width=*/16, /*Signed=*/1);
+  if (TgtAttributeStructQTy.isNull()) {
+    RecordDecl *RD = C.buildImplicitRecord("__tgt_attribute_struct");
+    RD->startDefinition();
+    addFieldToRecordDecl(C, RD, KmpInt16Ty); // Version
+    addFieldToRecordDecl(C, RD, KmpInt16Ty); // Struct Size in bytes.
+    addFieldToRecordDecl(C, RD, KmpInt16Ty); // WG_size
+    addFieldToRecordDecl(C, RD, KmpInt8Ty);  // Mode
+    addFieldToRecordDecl(C, RD, KmpInt8Ty);  // HostServices
+    addFieldToRecordDecl(C, RD, KmpInt8Ty);  // MaxParallelLevel
+    RD->completeDefinition();
+    TgtAttributeStructQTy = C.getRecordType(RD);
+  }
+  return TgtAttributeStructQTy;
 }
 
 QualType CGOpenMPRuntime::getTgtOffloadEntryQTy() {

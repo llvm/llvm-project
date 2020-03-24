@@ -472,6 +472,9 @@ private:
   ///   int32_t flags;
   ///   int32_t reserved;
   /// };
+  //
+  QualType TgtAttributeStructQTy;
+
   QualType TgtOffloadEntryQTy;
   /// Entity that registers the offloading constants that were emitted so
   /// far.
@@ -1712,6 +1715,14 @@ public:
   emitOutlinedFunctionCall(CodeGenFunction &CGF, SourceLocation Loc,
                            llvm::FunctionCallee OutlinedFn,
                            ArrayRef<llvm::Value *> Args = llvm::None) const;
+
+  /// Returns __tgt_attribute_struct type.
+  QualType getTgtAttributeStructQTy();
+
+  /// Emit structure descriptor for a kernel
+  void emitStructureKernelDesc(CodeGenModule &CGM, StringRef Name,
+                               int16_t WG_Size, int8_t Mode,
+                               int8_t HostServices, int8_t MaxParallelLevel);
 
   /// Emits OpenMP-specific function prolog.
   /// Required for device constructs.
