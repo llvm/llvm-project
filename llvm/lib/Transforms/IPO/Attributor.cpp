@@ -558,7 +558,7 @@ ChangeStatus AbstractAttribute::update(Attributor &A) {
 ChangeStatus
 IRAttributeManifest::manifestAttrs(Attributor &A, const IRPosition &IRP,
                                    const ArrayRef<Attribute> &DeducedAttrs) {
-  Function *ScopeFn = IRP.getAssociatedFunction();
+  Function *ScopeFn = IRP.getAnchorScope();
   IRPosition::Kind PK = IRP.getPositionKind();
 
   // In the following some generic code that will manifest attributes in
@@ -627,8 +627,7 @@ SubsumingPositionIterator::SubsumingPositionIterator(const IRPosition &IRP) {
     return;
   case IRPosition::IRP_ARGUMENT:
   case IRPosition::IRP_RETURNED:
-    IRPositions.emplace_back(
-        IRPosition::function(*IRP.getAssociatedFunction()));
+    IRPositions.emplace_back(IRPosition::function(*IRP.getAnchorScope()));
     return;
   case IRPosition::IRP_CALL_SITE:
     assert(ICS && "Expected call site!");
@@ -2528,7 +2527,7 @@ struct AAWillReturnImpl : public AAWillReturn {
   void initialize(Attributor &A) override {
     AAWillReturn::initialize(A);
 
-    Function *F = getAssociatedFunction();
+    Function *F = getAnchorScope();
     if (!F || !A.isFunctionIPOAmendable(*F) || mayContainUnboundedCycle(*F, A))
       indicatePessimisticFixpoint();
   }
@@ -3113,7 +3112,7 @@ struct AAIsDeadArgument : public AAIsDeadFloating {
 
   /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
-    if (!A.isFunctionIPOAmendable(*getAssociatedFunction()))
+    if (!A.isFunctionIPOAmendable(*getAnchorScope()))
       indicatePessimisticFixpoint();
   }
 
@@ -3273,7 +3272,7 @@ struct AAIsDeadFunction : public AAIsDead {
 
   /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
-    const Function *F = getAssociatedFunction();
+    const Function *F = getAnchorScope();
     if (F && !F->isDeclaration()) {
       ToBeExploredFrom.insert(&F->getEntryBlock().front());
       assumeLive(A, F->getEntryBlock());
@@ -3283,7 +3282,7 @@ struct AAIsDeadFunction : public AAIsDead {
   /// See AbstractAttribute::getAsStr().
   const std::string getAsStr() const override {
     return "Live[#BB " + std::to_string(AssumedLiveBlocks.size()) + "/" +
-           std::to_string(getAssociatedFunction()->size()) + "][#TBEP " +
+           std::to_string(getAnchorScope()->size()) + "][#TBEP " +
            std::to_string(ToBeExploredFrom.size()) + "][#KDE " +
            std::to_string(KnownDeadEnds.size()) + "]";
   }
@@ -3294,7 +3293,7 @@ struct AAIsDeadFunction : public AAIsDead {
            "Attempted to manifest an invalid state!");
 
     ChangeStatus HasChanged = ChangeStatus::UNCHANGED;
-    Function &F = *getAssociatedFunction();
+    Function &F = *getAnchorScope();
 
     if (AssumedLiveBlocks.empty()) {
       A.deleteAfterManifest(F);
@@ -3346,7 +3345,7 @@ struct AAIsDeadFunction : public AAIsDead {
 
   /// See AAIsDead::isAssumedDead(BasicBlock *).
   bool isAssumedDead(const BasicBlock *BB) const override {
-    assert(BB->getParent() == getAssociatedFunction() &&
+    assert(BB->getParent() == getAnchorScope() &&
            "BB must be in the same anchor scope function.");
 
     if (!getAssumed())
@@ -3361,7 +3360,7 @@ struct AAIsDeadFunction : public AAIsDead {
 
   /// See AAIsDead::isAssumed(Instruction *I).
   bool isAssumedDead(const Instruction *I) const override {
-    assert(I->getParent()->getParent() == getAssociatedFunction() &&
+    assert(I->getParent()->getParent() == getAnchorScope() &&
            "Instruction must be in the same anchor scope function.");
 
     if (!getAssumed())
@@ -3515,7 +3514,7 @@ ChangeStatus AAIsDeadFunction::updateImpl(Attributor &A) {
   ChangeStatus Change = ChangeStatus::UNCHANGED;
 
   LLVM_DEBUG(dbgs() << "[AAIsDead] Live [" << AssumedLiveBlocks.size() << "/"
-                    << getAssociatedFunction()->size() << "] BBs and "
+                    << getAnchorScope()->size() << "] BBs and "
                     << ToBeExploredFrom.size() << " exploration points and "
                     << KnownDeadEnds.size() << " known dead ends\n");
 
@@ -3595,7 +3594,7 @@ ChangeStatus AAIsDeadFunction::updateImpl(Attributor &A) {
   // discovered any non-trivial dead end and (2) not ruled unreachable code
   // dead.
   if (ToBeExploredFrom.empty() &&
-      getAssociatedFunction()->size() == AssumedLiveBlocks.size() &&
+      getAnchorScope()->size() == AssumedLiveBlocks.size() &&
       llvm::all_of(KnownDeadEnds, [](const Instruction *DeadEndI) {
         return DeadEndI->isTerminator() && DeadEndI->getNumSuccessors() == 0;
       }))
@@ -3935,7 +3934,7 @@ struct AAAlignImpl : AAAlign {
       takeKnownMaximum(Attr.getValueAsInt());
 
     if (getIRPosition().isFnInterfaceKind() &&
-        (!getAssociatedFunction() ||
+        (!getAnchorScope() ||
          !A.isFunctionIPOAmendable(*getAssociatedFunction())))
       indicatePessimisticFixpoint();
   }
@@ -4736,7 +4735,7 @@ struct AAValueSimplifyArgument final : AAValueSimplifyImpl {
 
   void initialize(Attributor &A) override {
     AAValueSimplifyImpl::initialize(A);
-    if (!getAssociatedFunction() || getAssociatedFunction()->isDeclaration())
+    if (!getAnchorScope() || getAnchorScope()->isDeclaration())
       indicatePessimisticFixpoint();
     if (hasAttr({Attribute::InAlloca, Attribute::StructRet, Attribute::Nest},
                 /* IgnoreSubsumingPositions */ true))
@@ -4980,7 +4979,7 @@ struct AAHeapToStackImpl : public AAHeapToStack {
            "Attempted to manifest an invalid state!");
 
     ChangeStatus HasChanged = ChangeStatus::UNCHANGED;
-    Function *F = getAssociatedFunction();
+    Function *F = getAnchorScope();
     const auto *TLI = A.getInfoCache().getTargetLibraryInfoForFunction(*F);
 
     for (Instruction *MallocCall : MallocCalls) {
@@ -5057,7 +5056,7 @@ struct AAHeapToStackImpl : public AAHeapToStack {
 };
 
 ChangeStatus AAHeapToStackImpl::updateImpl(Attributor &A) {
-  const Function *F = getAssociatedFunction();
+  const Function *F = getAnchorScope();
   const auto *TLI = A.getInfoCache().getTargetLibraryInfoForFunction(*F);
 
   MustBeExecutedContextExplorer &Explorer =
@@ -7655,7 +7654,7 @@ ChangeStatus Attributor::run() {
 
   unsigned IterationCounter = 1;
 
-  SmallVector<AbstractAttribute *, 64> ChangedAAs;
+  SmallVector<AbstractAttribute *, 32> ChangedAAs;
   SetVector<AbstractAttribute *> Worklist, InvalidAAs;
   Worklist.insert(AllAbstractAttributes.begin(), AllAbstractAttributes.end());
 
@@ -8306,7 +8305,7 @@ void Attributor::initializeInformationCache(Function &F) {
     switch (I.getOpcode()) {
     default:
       assert((!ImmutableCallSite(&I)) && (!isa<CallBase>(&I)) &&
-             "New call site/base instruction type needs to be known int the "
+             "New call site/base instruction type needs to be known in the "
              "Attributor.");
       break;
     case Instruction::Load:
@@ -8635,6 +8634,10 @@ static bool runAttributorOnFunctions(InformationCache &InfoCache,
   // while we identify default attribute opportunities.
   Attributor A(Functions, InfoCache, CGUpdater, DepRecInterval);
 
+  // Note: _Don't_ combine/fuse this loop with the one below because
+  // when A.identifyDefaultAbstractAttributes() is called for one
+  // function, it assumes that the information cach has been
+  // initialized for _all_ functions.
   for (Function *F : Functions)
     A.initializeInformationCache(*F);
 
