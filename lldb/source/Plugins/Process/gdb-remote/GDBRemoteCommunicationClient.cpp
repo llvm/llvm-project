@@ -2797,12 +2797,10 @@ size_t GDBRemoteCommunicationClient::GetCurrentThreadIDs(
       thread_ids.push_back(1);
     }
   } else {
-#if !defined(LLDB_CONFIGURATION_DEBUG)
     Log *log(ProcessGDBRemoteLog::GetLogIfAnyCategoryIsSet(GDBR_LOG_PROCESS |
                                                            GDBR_LOG_PACKETS));
-    LLDB_LOGF(log, "error: failed to get packet sequence mutex, not sending "
-                   "packet 'qfThreadInfo'");
-#endif
+    LLDB_LOG(log, "error: failed to get packet sequence mutex, not sending "
+                  "packet 'qfThreadInfo'");
     sequence_mutex_unavailable = true;
   }
   return thread_ids.size();
