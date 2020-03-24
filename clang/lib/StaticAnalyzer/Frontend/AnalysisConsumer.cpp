@@ -33,6 +33,7 @@
 #include "clang/StaticAnalyzer/Core/PathDiagnosticConsumers.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
+#include "clang/StaticAnalyzer/Frontend/CheckerRegistration.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/PostOrderIterator.h"
@@ -347,8 +348,8 @@ public:
 
   void Initialize(ASTContext &Context) override {
     Ctx = &Context;
-    checkerMgr = std::make_unique<CheckerManager>(*Ctx, *Opts, Plugins,
-                                                  CheckerRegistrationFns);
+    checkerMgr = createCheckerManager(
+        *Ctx, *Opts, Plugins, CheckerRegistrationFns, PP.getDiagnostics());
 
     Mgr = std::make_unique<AnalysisManager>(*Ctx, PP, PathConsumers,
                                             CreateStoreMgr, CreateConstraintMgr,
