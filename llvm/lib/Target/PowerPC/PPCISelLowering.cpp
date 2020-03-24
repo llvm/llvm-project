@@ -7059,12 +7059,10 @@ SDValue PPCTargetLowering::LowerFormalArguments_AIX(
 
   SmallVector<SDValue, 8> MemOps;
 
-  for (CCValAssign &VA : ArgLocs) {
-    EVT ValVT = VA.getValVT();
+  for (size_t I = 0, End = ArgLocs.size(); I != End; /* No increment here */) {
+    CCValAssign &VA = ArgLocs[I++];
     MVT LocVT = VA.getLocVT();
     ISD::ArgFlagsTy Flags = Ins[VA.getValNo()].Flags;
-    assert((VA.isRegLoc() || VA.isMemLoc()) &&
-           "Unexpected location for function call argument.");
 
     // For compatibility with the AIX XL compiler, the float args in the
     // parameter save area are initialized even if the argument is available
@@ -7092,42 +7090,64 @@ SDValue PPCTargetLowering::LowerFormalArguments_AIX(
     if (Flags.isByVal()) {
       assert(VA.isRegLoc() && "MemLocs should already be handled.");
 
-      const unsigned ByValSize = Flags.getByValSize();
-      if (ByValSize > PtrByteSize)
-        report_fatal_error("Formal arguments greater then register size not "
-                           "implemented yet.");
-
       const MCPhysReg ArgReg = VA.getLocReg();
       const PPCFrameLowering *FL = Subtarget.getFrameLowering();
-      const unsigned Offset = mapArgRegToOffsetAIX(ArgReg, FL);
 
-      const unsigned StackSize = alignTo(ByValSize, PtrByteSize);
+      if (Flags.getByValAlign() > PtrByteSize)
+        report_fatal_error("Over aligned byvals not supported yet.");
+
+      const unsigned StackSize = alignTo(Flags.getByValSize(), PtrByteSize);
       const int FI = MF.getFrameInfo().CreateFixedObject(
-          StackSize, Offset, /* IsImmutable */ false, /* IsAliased */ true);
+          StackSize, mapArgRegToOffsetAIX(ArgReg, FL), /* IsImmutable */ false,
+          /* IsAliased */ true);
       SDValue FIN = DAG.getFrameIndex(FI, PtrVT);
-
       InVals.push_back(FIN);
 
-      const unsigned VReg = MF.addLiveIn(ArgReg, IsPPC64 ? &PPC::G8RCRegClass
-                                                         : &PPC::GPRCRegClass);
+      // Add live ins for all the RegLocs for the same ByVal.
+      const TargetRegisterClass *RegClass =
+          IsPPC64 ? &PPC::G8RCRegClass : &PPC::GPRCRegClass;
 
-      // Since the callers side has left justified the aggregate in the
-      // register, we can simply store the entire register into the stack
-      // slot.
-      // The store to the fixedstack object is needed becuase accessing a
-      // field of the ByVal will use a gep and load. Ideally we will optimize
-      // to extracting the value from the register directly, and elide the
-      // stores when the arguments address is not taken, but that will need to
-      // be future work.
-      SDValue CopyFrom = DAG.getCopyFromReg(Chain, dl, VReg, LocVT);
-      SDValue Store =
-          DAG.getStore(CopyFrom.getValue(1), dl, CopyFrom, FIN,
-                       MachinePointerInfo::getFixedStack(MF, FI, 0));
+      auto HandleRegLoc = [&, RegClass, LocVT](const MCPhysReg PhysReg,
+                                               unsigned Offset) {
+        const unsigned VReg = MF.addLiveIn(PhysReg, RegClass);
+        // Since the callers side has left justified the aggregate in the
+        // register, we can simply store the entire register into the stack
+        // slot.
+        SDValue CopyFrom = DAG.getCopyFromReg(Chain, dl, VReg, LocVT);
+        // The store to the fixedstack object is needed becuase accessing a
+        // field of the ByVal will use a gep and load. Ideally we will optimize
+        // to extracting the value from the register directly, and elide the
+        // stores when the arguments address is not taken, but that will need to
+        // be future work.
+        SDValue Store =
+            DAG.getStore(CopyFrom.getValue(1), dl, CopyFrom,
+                         DAG.getObjectPtrOffset(dl, FIN, Offset),
+                         MachinePointerInfo::getFixedStack(MF, FI, Offset));
 
-      MemOps.push_back(Store);
+        MemOps.push_back(Store);
+      };
+
+      unsigned Offset = 0;
+      HandleRegLoc(VA.getLocReg(), Offset);
+      Offset += PtrByteSize;
+      for (; Offset != StackSize; Offset += PtrByteSize) {
+        assert(I != End &&
+               "Expecting enough RegLocs to copy entire ByVal arg.");
+
+        if (!ArgLocs[I].isRegLoc())
+          report_fatal_error("Passing ByVals split between registers and stack "
+                             "not yet implemented.");
+
+        assert(ArgLocs[I].getValNo() == VA.getValNo() &&
+               "Expecting more RegLocs for ByVal argument.");
+
+        const CCValAssign RL = ArgLocs[I++];
+        HandleRegLoc(RL.getLocReg(), Offset);
+      }
       continue;
     }
 
+    EVT ValVT = VA.getValVT();
     if (VA.isRegLoc()) {
       MVT::SimpleValueType SVT = ValVT.getSimpleVT().SimpleTy;
       unsigned VReg =
