@@ -201,18 +201,25 @@ ForOp mlir::loop::getForInductionVarOwner(Value val) {
 
 void IfOp::build(Builder *builder, OperationState &result, Value cond,
                  bool withElseRegion) {
-  build(builder, result, /*resultTypes=*/llvm::None, cond, withElseRegion);
+    build(builder, result, /*resultTypes=*/llvm::None, cond, withElseRegion);
 }
 
 void IfOp::build(Builder *builder, OperationState &result,
                  TypeRange resultTypes, Value cond, bool withElseRegion) {
   result.addOperands(cond);
   result.addTypes(resultTypes);
+
   Region *thenRegion = result.addRegion();
+  thenRegion->push_back(new Block());
+  if (resultTypes.empty())
+    IfOp::ensureTerminator(*thenRegion, *builder, result.location);
+
   Region *elseRegion = result.addRegion();
-  IfOp::ensureTerminator(*thenRegion, *builder, result.location);
-  if (withElseRegion)
-    IfOp::ensureTerminator(*elseRegion, *builder, result.location);
+  if (withElseRegion) {
+    elseRegion->push_back(new Block());
+    if (resultTypes.empty())
+      IfOp::ensureTerminator(*elseRegion, *builder, result.location);
+  }
 }
 
 static LogicalResult verify(IfOp op) {
