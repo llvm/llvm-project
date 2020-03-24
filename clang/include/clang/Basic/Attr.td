@@ -962,6 +962,19 @@ def Cleanup : InheritableAttr {
   let Documentation = [Undocumented];
 }
 
+def CmseNSEntry : InheritableAttr, TargetSpecificAttr<TargetARM> {
+  let Spellings = [GNU<"cmse_nonsecure_entry">];
+  let Subjects = SubjectList<[Function]>;
+  let LangOpts = [Cmse];
+  let Documentation = [ArmCmseNSEntryDocs];
+}
+
+def CmseNSCall : TypeAttr, TargetSpecificAttr<TargetARM> {
+  let Spellings = [GNU<"cmse_nonsecure_call">];
+  let LangOpts = [Cmse];
+  let Documentation = [ArmCmseNSCallDocs];
+}
+
 def Cold : InheritableAttr {
   let Spellings = [GCC<"cold">];
   let Subjects = SubjectList<[Function]>;

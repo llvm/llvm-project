@@ -249,13 +249,17 @@ let Class = FunctionType in {
   def : Property<"noCfCheck", Bool> {
     let Read = [{ node->getExtInfo().getNoCfCheck() }];
   }
+  def : Property<"cmseNSCall", Bool> {
+    let Read = [{ node->getExtInfo().getCmseNSCall() }];
+  }
 }
 
 let Class = FunctionNoProtoType in {
   def : Creator<[{
     auto extInfo = FunctionType::ExtInfo(noReturn, hasRegParm, regParm,
                                          callingConvention, producesResult,
-                                         noCallerSavedRegs, noCfCheck);
+                                         noCallerSavedRegs, noCfCheck,
+                                         cmseNSCall);
     return ctx.getFunctionNoProtoType(returnType, extInfo);
   }]>;
 }
@@ -288,7 +292,8 @@ let Class = FunctionProtoType in {
   def : Creator<[{
     auto extInfo = FunctionType::ExtInfo(noReturn, hasRegParm, regParm,
                                          callingConvention, producesResult,
-                                         noCallerSavedRegs, noCfCheck);
+                                         noCallerSavedRegs, noCfCheck,
+                                         cmseNSCall);
     FunctionProtoType::ExtProtoInfo epi;
     epi.ExtInfo = extInfo;
     epi.Variadic = variadic;

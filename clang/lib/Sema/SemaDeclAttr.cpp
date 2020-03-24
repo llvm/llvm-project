@@ -1992,6 +1992,20 @@ static void handleCommonAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     D->addAttr(CA);
 }
 
+static void handleCmseNSEntryAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  if (S.LangOpts.CPlusPlus && !D->getDeclContext()->isExternCContext()) {
+    S.Diag(AL.getLoc(), diag::err_attribute_not_clinkage) << AL;
+    return;
+  }
+
+  if (cast<FunctionDecl>(D)->getStorageClass() == SC_Static) {
+    S.Diag(AL.getLoc(), diag::warn_attribute_cmse_entry_static);
+    return;
+  }
+
+  D->addAttr(::new (S.Context) CmseNSEntryAttr(S.Context, AL));
+}
+
 static void handleNakedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (checkAttrMutualExclusion<DisableTailCallsAttr>(S, D, AL))
     return;
@@ -7144,6 +7158,9 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
     break;
   case ParsedAttr::AT_NoDebug:
     handleNoDebugAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_CmseNSEntry:
+    handleCmseNSEntryAttr(S, D, AL);
     break;
   case ParsedAttr::AT_StdCall:
   case ParsedAttr::AT_CDecl:

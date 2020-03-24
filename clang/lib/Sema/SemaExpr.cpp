@@ -8029,6 +8029,24 @@ ExprResult Sema::ActOnConditionalOp(SourceLocation QuestionLoc,
       ColonLoc, result, VK, OK);
 }
 
+// Check if we have a conversion between incompatible cmse function pointer
+// types, that is, a conversion between a function pointer with the
+// cmse_nonsecure_call attribute and one without.
+static bool IsInvalidCmseNSCallConversion(Sema &S, QualType FromType,
+                                          QualType ToType) {
+  if (const auto *ToFn =
+          dyn_cast<FunctionType>(S.Context.getCanonicalType(ToType))) {
+    if (const auto *FromFn =
+            dyn_cast<FunctionType>(S.Context.getCanonicalType(FromType))) {
+      FunctionType::ExtInfo ToEInfo = ToFn->getExtInfo();
+      FunctionType::ExtInfo FromEInfo = FromFn->getExtInfo();
+
+      return ToEInfo.getCmseNSCall() != FromEInfo.getCmseNSCall();
+    }
+  }
+  return false;
+}
+
 // checkPointerTypesForAssignment - This is a very tricky routine (despite
 // being closely modeled after the C99 spec:-). The odd characteristic of this
 // routine is it effectively iqnores the qualifiers on the top level pointee.
@@ -8166,6 +8184,8 @@ checkPointerTypesForAssignment(Sema &S, QualType LHSType, QualType RHSType) {
   }
   if (!S.getLangOpts().CPlusPlus &&
       S.IsFunctionConversion(ltrans, rtrans, ltrans))
+    return Sema::IncompatibleFunctionPointer;
+  if (IsInvalidCmseNSCallConversion(S, ltrans, rtrans))
     return Sema::IncompatibleFunctionPointer;
   return ConvTy;
 }
