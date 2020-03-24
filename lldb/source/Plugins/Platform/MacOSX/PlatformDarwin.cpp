@@ -58,6 +58,17 @@ PlatformDarwin::PlatformDarwin(bool is_host)
 /// inherited from by the plug-in instance.
 PlatformDarwin::~PlatformDarwin() {}
 
+lldb_private::Status
+PlatformDarwin::PutFile(const lldb_private::FileSpec &source,
+                        const lldb_private::FileSpec &destination, uint32_t uid,
+                        uint32_t gid) {
+  // Unconditionally unlink the destination. If it is an executable,
+  // simply opening it and truncating its contents would invalidate
+  // its cached code signature.
+  Unlink(destination);
+  return PlatformPOSIX::PutFile(source, destination, uid, gid);
+}
+
 FileSpecList PlatformDarwin::LocateExecutableScriptingResources(
     Target *target, Module &module, Stream *feedback_stream) {
   FileSpecList file_list;
