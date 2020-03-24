@@ -135,7 +135,8 @@ private:
   void applyConfiguration(const ConfigurationSettings &Settings);
 
   /// Sends a "publishSemanticHighlighting" notification to the LSP client.
-  void publishSemanticHighlighting(const SemanticHighlightingParams &);
+  void
+  publishTheiaSemanticHighlighting(const TheiaSemanticHighlightingParams &);
 
   /// Sends a "publishDiagnostics" notification to the LSP client.
   void publishDiagnostics(const PublishDiagnosticsParams &);
