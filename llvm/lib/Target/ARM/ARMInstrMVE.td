@@ -2688,6 +2688,7 @@ class MVE_VxSHRN<string iname, string suffix, bit bit_12, bit bit_28,
   let Inst{4} = 0b0;
   let Inst{0} = 0b1;
   let validForTailPredication = 1;
+  let retainsPreviousHalfElement = 1;
 }
 
 def MVE_VRSHRNi16bh : MVE_VxSHRN<"vrshrnb", "i16", 0b0, 0b1, shr_imm8> {
@@ -2730,6 +2731,7 @@ class MVE_VxQRSHRUN<string iname, string suffix, bit bit_28, bit bit_12,
   let Inst{4} = 0b0;
   let Inst{0} = 0b0;
   let validForTailPredication = 1;
+  let retainsPreviousHalfElement = 1;
 }
 
 def MVE_VQRSHRUNs16bh : MVE_VxQRSHRUN<
@@ -2779,6 +2781,7 @@ class MVE_VxQRSHRN<string iname, string suffix, bit bit_0, bit bit_12,
   let Inst{4} = 0b0;
   let Inst{0} = bit_0;
   let validForTailPredication = 1;
+  let retainsPreviousHalfElement = 1;
 }
 
 multiclass MVE_VxQRSHRN_types<string iname, bit bit_0, bit bit_12> {
@@ -4492,6 +4495,7 @@ class MVE_VxMOVxN<string iname, string suffix, bit bit_28, bit bit_17,
   let Inst{7} = !if(!eq(bit_17, 0), 1, 0);
   let Inst{0} = 0b1;
   let validForTailPredication = 1;
+  let retainsPreviousHalfElement = 1;
 }
 
 multiclass MVE_VxMOVxN_halves<string iname, string suffix,
@@ -4589,6 +4593,7 @@ class MVE_VCVT_ff<string iname, string suffix, bit op, bit T,
   let Inst{0} = 0b1;
 
   let Predicates = [HasMVEFloat];
+  let retainsPreviousHalfElement = 1;
 }
 
 multiclass MVE_VCVT_f2h_m<string iname, int half> {

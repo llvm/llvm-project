@@ -10,11 +10,110 @@
 
 using namespace llvm;
 
+TEST(MachineInstructionRetainsPreviousHalfElement, IsCorrect) {
+  using namespace ARM;
+
+  auto RetainsPreviousHalfElement = [](unsigned Opcode) {
+    switch (Opcode) {
+    default:
+      break;
+    case MVE_VMOVNi16bh:
+    case MVE_VMOVNi16th:
+    case MVE_VMOVNi32bh:
+    case MVE_VMOVNi32th:
+    case MVE_VQMOVNs16bh:
+    case MVE_VQMOVNs16th:
+    case MVE_VQMOVNs32bh:
+    case MVE_VQMOVNs32th:
+    case MVE_VQMOVNu16bh:
+    case MVE_VQMOVNu16th:
+    case MVE_VQMOVNu32bh:
+    case MVE_VQMOVNu32th:
+    case MVE_VQMOVUNs16bh:
+    case MVE_VQMOVUNs16th:
+    case MVE_VQMOVUNs32bh:
+    case MVE_VQMOVUNs32th:
+    case MVE_VQRSHRNbhs16:
+    case MVE_VQRSHRNbhs32:
+    case MVE_VQRSHRNbhu16:
+    case MVE_VQRSHRNbhu32:
+    case MVE_VQRSHRNths16:
+    case MVE_VQRSHRNths32:
+    case MVE_VQRSHRNthu16:
+    case MVE_VQRSHRNthu32:
+    case MVE_VQRSHRUNs16bh:
+    case MVE_VQRSHRUNs16th:
+    case MVE_VQRSHRUNs32bh:
+    case MVE_VQRSHRUNs32th:
+    case MVE_VQSHRNbhs16:
+    case MVE_VQSHRNbhs32:
+    case MVE_VQSHRNbhu16:
+    case MVE_VQSHRNbhu32:
+    case MVE_VQSHRNths16:
+    case MVE_VQSHRNths32:
+    case MVE_VQSHRNthu16:
+    case MVE_VQSHRNthu32:
+    case MVE_VQSHRUNs16bh:
+    case MVE_VQSHRUNs16th:
+    case MVE_VQSHRUNs32bh:
+    case MVE_VQSHRUNs32th:
+    case MVE_VRSHRNi16bh:
+    case MVE_VRSHRNi16th:
+    case MVE_VRSHRNi32bh:
+    case MVE_VRSHRNi32th:
+    case MVE_VSHRNi16bh:
+    case MVE_VSHRNi16th:
+    case MVE_VSHRNi32bh:
+    case MVE_VSHRNi32th:
+    case MVE_VCVTf16f32bh:
+    case MVE_VCVTf16f32th:
+    case MVE_VCVTf32f16bh:
+    case MVE_VCVTf32f16th:
+      return true;
+    }
+    return false;
+  };
+
+  LLVMInitializeARMTargetInfo();
+  LLVMInitializeARMTarget();
+  LLVMInitializeARMTargetMC();
+
+  auto TT(Triple::normalize("thumbv8.1m.main-arm-none-eabi"));
+  std::string Error;
+  const Target *T = TargetRegistry::lookupTarget(TT, Error);
+  if (!T) {
+    dbgs() << Error;
+    return;
+  }
+
+  TargetOptions Options;
+  auto TM = std::unique_ptr<LLVMTargetMachine>(
+    static_cast<LLVMTargetMachine*>(
+      T->createTargetMachine(TT, "generic", "", Options, None, None,
+                             CodeGenOpt::Default)));
+  ARMSubtarget ST(TM->getTargetTriple(), std::string(TM->getTargetCPU()),
+                  std::string(TM->getTargetFeatureString()),
+                  *static_cast<const ARMBaseTargetMachine *>(TM.get()), false);
+  const ARMBaseInstrInfo *TII = ST.getInstrInfo();
+  auto MII = TM->getMCInstrInfo();
+
+  for (unsigned i = 0; i < ARM::INSTRUCTION_LIST_END; ++i) {
+    const MCInstrDesc &Desc = TII->get(i);
+
+    uint64_t Flags = Desc.TSFlags;
+    if ((Flags & ARMII::DomainMask) != ARMII::DomainMVE)
+      continue;
+
+    bool Valid = (Flags & ARMII::RetainsPreviousHalfElement) != 0;
+    ASSERT_EQ(RetainsPreviousHalfElement(i), Valid)
+              << MII->getName(i)
+              << ": mismatched expectation for tail-predicated safety\n";
+  }
+}
 // Test for instructions that aren't immediately obviously valid within a
 // tail-predicated loop. This should be marked up in their tablegen
 // descriptions. Currently we, conservatively, disallow:
 // - cross beat carries.
-// - narrowing of results.
 // - complex operations.
 // - horizontal operations.
 // - byte swapping.
