@@ -13,6 +13,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/StmtOpenMP.h"
 #include "clang/Basic/OpenMPKinds.h"
+#include "clang/Basic/TokenKinds.h"
 #include "clang/Parse/ParseDiagnostic.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
@@ -754,7 +755,7 @@ static bool parseDeclareSimdClauses(
                  "Unexpected linear modifier.");
           if (P.getActions().CheckOpenMPLinearModifier(
                   static_cast<OpenMPLinearClauseKind>(Data.ExtraModifier),
-                  Data.DepLinMapLastLoc))
+                  Data.ExtraModifierLoc))
             Data.ExtraModifier = OMPC_LINEAR_val;
           LinModifiers.append(Linears.size() - LinModifiers.size(),
                               Data.ExtraModifier);
@@ -3016,6 +3017,17 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
   // Handle reduction-identifier for reduction clause.
   if (Kind == OMPC_reduction || Kind == OMPC_task_reduction ||
       Kind == OMPC_in_reduction) {
+    Data.ExtraModifier = OMPC_REDUCTION_unknown;
+    if (Kind == OMPC_reduction && getLangOpts().OpenMP >= 50 &&
+        (Tok.is(tok::identifier) || Tok.is(tok::kw_default)) &&
+        NextToken().is(tok::comma)) {
+      // Parse optional reduction modifier.
+      Data.ExtraModifier = getOpenMPSimpleClauseType(Kind, PP.getSpelling(Tok));
+      Data.ExtraModifierLoc = Tok.getLocation();
+      ConsumeToken();
+      assert(Tok.is(tok::comma) && "Expected comma.");
+      (void)ConsumeToken();
+    }
     ColonProtectionRAIIObject ColonRAII(*this);
     if (getLangOpts().CPlusPlus)
       ParseOptionalCXXScopeSpecifier(Data.ReductionOrMapperIdScopeSpec,
@@ -3040,7 +3052,7 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
     ColonProtectionRAIIObject ColonRAII(*this);
     Data.ExtraModifier = getOpenMPSimpleClauseType(
         Kind, Tok.is(tok::identifier) ? PP.getSpelling(Tok) : "");
-    Data.DepLinMapLastLoc = Tok.getLocation();
+    Data.ExtraModifierLoc = Tok.getLocation();
     if (Data.ExtraModifier == OMPC_DEPEND_unknown) {
       SkipUntil(tok::colon, tok::r_paren, tok::annot_pragma_openmp_end,
                 StopBeforeMatch);
@@ -3065,7 +3077,7 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
     Data.ExtraModifier = OMPC_LINEAR_val;
     if (Tok.is(tok::identifier) && PP.LookAhead(0).is(tok::l_paren)) {
       Data.ExtraModifier = getOpenMPSimpleClauseType(Kind, PP.getSpelling(Tok));
-      Data.DepLinMapLastLoc = ConsumeToken();
+      Data.ExtraModifierLoc = ConsumeToken();
       LinearT.consumeOpen();
       NeedRParenForLinear = true;
     }
@@ -3078,13 +3090,8 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
          !isOpenMPTaskLoopDirective(DKind)) &&
         Tok.is(tok::identifier) && PP.LookAhead(0).is(tok::colon)) {
       Data.ExtraModifier = getOpenMPSimpleClauseType(Kind, PP.getSpelling(Tok));
-      Data.DepLinMapLastLoc = Tok.getLocation();
-      if (Data.ExtraModifier == OMPC_LASTPRIVATE_unknown) {
-        SkipUntil(tok::colon, tok::r_paren, tok::annot_pragma_openmp_end,
-                  StopBeforeMatch);
-      } else {
-        ConsumeToken();
-      }
+      Data.ExtraModifierLoc = Tok.getLocation();
+      ConsumeToken();
       assert(Tok.is(tok::colon) && "Expected colon.");
       Data.ColonLoc = ConsumeToken();
     }
@@ -3096,7 +3103,7 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
     // map-type-modifier. The map-type can also be delete which has the same
     // spelling of the C++ delete keyword.
     Data.ExtraModifier = OMPC_MAP_unknown;
-    Data.DepLinMapLastLoc = Tok.getLocation();
+    Data.ExtraModifierLoc = Tok.getLocation();
 
     // Check for presence of a colon in the map clause.
     TentativeParsingAction TPA(*this);
@@ -3256,7 +3263,7 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
 ///    aligned-clause:
 ///       'aligned' '(' list [ ':' alignment ] ')'
 ///    reduction-clause:
-///       'reduction' '(' reduction-identifier ':' list ')'
+///       'reduction' '(' [ modifier ',' ] reduction-identifier ':' list ')'
 ///    task_reduction-clause:
 ///       'task_reduction' '(' reduction-identifier ':' list ')'
 ///    in_reduction-clause:
@@ -3310,6 +3317,6 @@ OMPClause *Parser::ParseOpenMPVarListClause(OpenMPDirectiveKind DKind,
       Kind, Vars, Data.TailExpr, Locs, Data.ColonLoc,
       Data.ReductionOrMapperIdScopeSpec, Data.ReductionOrMapperId,
       Data.ExtraModifier, Data.MapTypeModifiers, Data.MapTypeModifiersLoc,
-      Data.IsMapTypeImplicit, Data.DepLinMapLastLoc);
+      Data.IsMapTypeImplicit, Data.ExtraModifierLoc);
 }
 

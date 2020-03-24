@@ -159,6 +159,11 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind,
 #define OPENMP_DEVICE_MODIFIER(Name) .Case(#Name, OMPC_DEVICE_##Name)
 #include "clang/Basic/OpenMPKinds.def"
         .Default(OMPC_DEVICE_unknown);
+  case OMPC_reduction:
+    return llvm::StringSwitch<OpenMPReductionClauseModifier>(Str)
+#define OPENMP_REDUCTION_MODIFIER(Name) .Case(#Name, OMPC_REDUCTION_##Name)
+#include "clang/Basic/OpenMPKinds.def"
+        .Default(OMPC_REDUCTION_unknown);
   case OMPC_unknown:
   case OMPC_threadprivate:
   case OMPC_if:
@@ -172,7 +177,6 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind,
   case OMPC_private:
   case OMPC_firstprivate:
   case OMPC_shared:
-  case OMPC_reduction:
   case OMPC_task_reduction:
   case OMPC_in_reduction:
   case OMPC_aligned:
@@ -396,6 +400,16 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
 #include "clang/Basic/OpenMPKinds.def"
     }
     llvm_unreachable("Invalid OpenMP 'device' clause modifier");
+  case OMPC_reduction:
+    switch (Type) {
+    case OMPC_REDUCTION_unknown:
+      return "unknown";
+#define OPENMP_REDUCTION_MODIFIER(Name)                                        \
+  case OMPC_REDUCTION_##Name:                                                  \
+    return #Name;
+#include "clang/Basic/OpenMPKinds.def"
+    }
+    llvm_unreachable("Invalid OpenMP 'reduction' clause modifier");
   case OMPC_unknown:
   case OMPC_threadprivate:
   case OMPC_if:
@@ -409,7 +423,6 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
   case OMPC_private:
   case OMPC_firstprivate:
   case OMPC_shared:
-  case OMPC_reduction:
   case OMPC_task_reduction:
   case OMPC_in_reduction:
   case OMPC_aligned:
