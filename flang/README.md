@@ -53,14 +53,22 @@ git clone https://github.com/flang-compiler/f18.git
 
 ### Supported C++ compilers
 
-F18 is written in C++17.
+F18 is written in C++17 and it has LLVM libraries dependency.
 
 The code has been compiled and tested with
-GCC versions 7.2.0, 7.3.0, 8.1.0, and 8.2.0.
+GCC versions from 7.2.0 to 9.3.0.
 
 The code has been compiled and tested with
-clang version 7.0 and 8.0
+clang version 7.0, 8.0, 9.0 and 10.0
 using either GNU's libstdc++ or LLVM's libc++.
+
+The code has been compiled on
+AArch64, x86_64 and ppc64le servers
+with CentOS7, Ubuntu18.04, Rhel, MacOs, Mojave, XCode and
+Apple LLVM version 10.0.1.
+
+The code does not compile with Windows and
+a compiler that does not have support for C++17.
 
 ### LLVM dependency
 
