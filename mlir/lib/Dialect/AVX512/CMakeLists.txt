@@ -11,5 +11,6 @@ target_link_libraries(MLIRAVX512
   PUBLIC
   MLIRIR
   MLIRSideEffects
+  MLIRVectorToLLVM
   LLVMSupport
   )

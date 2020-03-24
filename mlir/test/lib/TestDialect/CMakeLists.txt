@@ -27,6 +27,7 @@ target_link_libraries(MLIRTestDialect
   MLIRLinalgTransforms
   MLIRPass
   MLIRStandardOps
+  MLIRStandardToStandard
   MLIRTransforms
   MLIRTransformUtils
   MLIRInferTypeOpInterface
