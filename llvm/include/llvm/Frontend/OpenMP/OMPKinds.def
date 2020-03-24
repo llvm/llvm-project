@@ -427,6 +427,9 @@ __OMP_PROC_BIND_KIND(unknown, 7)
 #ifndef OMP_TRAIT_PROPERTY
 #define OMP_TRAIT_PROPERTY(Enum, TraitSetEnum, TraitSelectorEnum, Str)
 #endif
+#ifndef OMP_LAST_TRAIT_PROPERTY
+#define OMP_LAST_TRAIT_PROPERTY(Enum)
+#endif
 
 #define __OMP_TRAIT_SET(Name) OMP_TRAIT_SET(Name, #Name)
 #define __OMP_TRAIT_SELECTOR(TraitSet, Name, RequiresProperty)                 \
@@ -534,10 +537,14 @@ __OMP_REQUIRES_TRAIT(reverse_offload)
 __OMP_REQUIRES_TRAIT(dynamic_allocators)
 __OMP_REQUIRES_TRAIT(atomic_default_mem_order)
 
+OMP_LAST_TRAIT_PROPERTY(
+    implementation_atomic_default_mem_order_atomic_default_mem_order)
+
 #undef __OMP_TRAIT_SELECTOR_AND_PROPERTY
 #undef OMP_TRAIT_SELECTOR
 #undef __OMP_TRAIT_SELECTOR
 #undef OMP_TRAIT_PROPERTY
+#undef OMP_LAST_TRAIT_PROPERTY
 #undef __OMP_TRAIT_PROPERTY
 #undef __OMP_REQUIRES_TRAIT
 #undef OMP_REQUIRES_TRAIT
