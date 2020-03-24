@@ -3241,57 +3241,54 @@ CastInst::castIsValid(Instruction::CastOps op, Value *S, Type *DstTy) {
       SrcTy->isAggregateType() || DstTy->isAggregateType())
     return false;
 
-  // Get the size of the types in bits, we'll need this later
-  unsigned SrcBitSize = SrcTy->getScalarSizeInBits();
-  unsigned DstBitSize = DstTy->getScalarSizeInBits();
+  // Get the size of the types in bits, and whether we are dealing
+  // with vector types, we'll need this later.
+  bool SrcIsVec = isa<VectorType>(SrcTy);
+  bool DstIsVec = isa<VectorType>(DstTy);
+  unsigned SrcScalarBitSize = SrcTy->getScalarSizeInBits();
+  unsigned DstScalarBitSize = DstTy->getScalarSizeInBits();
 
   // If these are vector types, get the lengths of the vectors (using zero for
   // scalar types means that checking that vector lengths match also checks that
   // scalars are not being converted to vectors or vectors to scalars).
-  unsigned SrcLength = SrcTy->isVectorTy() ?
-    cast<VectorType>(SrcTy)->getNumElements() : 0;
-  unsigned DstLength = DstTy->isVectorTy() ?
-    cast<VectorType>(DstTy)->getNumElements() : 0;
+  ElementCount SrcEC = SrcIsVec ? cast<VectorType>(SrcTy)->getElementCount()
+                                : ElementCount(0, false);
+  ElementCount DstEC = DstIsVec ? cast<VectorType>(DstTy)->getElementCount()
+                                : ElementCount(0, false);
 
   // Switch on the opcode provided
   switch (op) {
   default: return false; // This is an input error
   case Instruction::Trunc:
     return SrcTy->isIntOrIntVectorTy() && DstTy->isIntOrIntVectorTy() &&
-      SrcLength == DstLength && SrcBitSize > DstBitSize;
+           SrcEC == DstEC && SrcScalarBitSize > DstScalarBitSize;
   case Instruction::ZExt:
     return SrcTy->isIntOrIntVectorTy() && DstTy->isIntOrIntVectorTy() &&
-      SrcLength == DstLength && SrcBitSize < DstBitSize;
+           SrcEC == DstEC && SrcScalarBitSize < DstScalarBitSize;
   case Instruction::SExt:
     return SrcTy->isIntOrIntVectorTy() && DstTy->isIntOrIntVectorTy() &&
-      SrcLength == DstLength && SrcBitSize < DstBitSize;
+           SrcEC == DstEC && SrcScalarBitSize < DstScalarBitSize;
   case Instruction::FPTrunc:
     return SrcTy->isFPOrFPVectorTy() && DstTy->isFPOrFPVectorTy() &&
-      SrcLength == DstLength && SrcBitSize > DstBitSize;
+           SrcEC == DstEC && SrcScalarBitSize > DstScalarBitSize;
   case Instruction::FPExt:
     return SrcTy->isFPOrFPVectorTy() && DstTy->isFPOrFPVectorTy() &&
-      SrcLength == DstLength && SrcBitSize < DstBitSize;
+           SrcEC == DstEC && SrcScalarBitSize < DstScalarBitSize;
   case Instruction::UIToFP:
   case Instruction::SIToFP:
     return SrcTy->isIntOrIntVectorTy() && DstTy->isFPOrFPVectorTy() &&
-      SrcLength == DstLength;
+           SrcEC == DstEC;
   case Instruction::FPToUI:
   case Instruction::FPToSI:
     return SrcTy->isFPOrFPVectorTy() && DstTy->isIntOrIntVectorTy() &&
-      SrcLength == DstLength;
+           SrcEC == DstEC;
   case Instruction::PtrToInt:
-    if (isa<VectorType>(SrcTy) != isa<VectorType>(DstTy))
+    if (SrcEC != DstEC)
       return false;
-    if (VectorType *VT = dyn_cast<VectorType>(SrcTy))
-      if (VT->getNumElements() != cast<VectorType>(DstTy)->getNumElements())
-        return false;
     return SrcTy->isPtrOrPtrVectorTy() && DstTy->isIntOrIntVectorTy();
   case Instruction::IntToPtr:
-    if (isa<VectorType>(SrcTy) != isa<VectorType>(DstTy))
+    if (SrcEC != DstEC)
       return false;
-    if (VectorType *VT = dyn_cast<VectorType>(SrcTy))
-      if (VT->getNumElements() != cast<VectorType>(DstTy)->getNumElements())
-        return false;
     return SrcTy->isIntOrIntVectorTy() && DstTy->isPtrOrPtrVectorTy();
   case Instruction::BitCast: {
     PointerType *SrcPtrTy = dyn_cast<PointerType>(SrcTy->getScalarType());
@@ -3312,14 +3309,12 @@ CastInst::castIsValid(Instruction::CastOps op, Value *S, Type *DstTy) {
       return false;
 
     // A vector of pointers must have the same number of elements.
-    VectorType *SrcVecTy = dyn_cast<VectorType>(SrcTy);
-    VectorType *DstVecTy = dyn_cast<VectorType>(DstTy);
-    if (SrcVecTy && DstVecTy)
-      return (SrcVecTy->getNumElements() == DstVecTy->getNumElements());
-    if (SrcVecTy)
-      return SrcVecTy->getNumElements() == 1;
-    if (DstVecTy)
-      return DstVecTy->getNumElements() == 1;
+    if (SrcIsVec && DstIsVec)
+      return SrcEC == DstEC;
+    if (SrcIsVec)
+      return SrcEC == ElementCount(1, false);
+    if (DstIsVec)
+      return DstEC == ElementCount(1, false);
 
     return true;
   }
@@ -3335,14 +3330,7 @@ CastInst::castIsValid(Instruction::CastOps op, Value *S, Type *DstTy) {
     if (SrcPtrTy->getAddressSpace() == DstPtrTy->getAddressSpace())
       return false;
 
-    if (VectorType *SrcVecTy = dyn_cast<VectorType>(SrcTy)) {
-      if (VectorType *DstVecTy = dyn_cast<VectorType>(DstTy))
-        return (SrcVecTy->getNumElements() == DstVecTy->getNumElements());
-
-      return false;
-    }
-
-    return true;
+    return SrcEC == DstEC;
   }
   }
 }
