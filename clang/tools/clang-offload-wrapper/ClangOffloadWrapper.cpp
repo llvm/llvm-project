@@ -190,7 +190,10 @@ private:
     auto *DummyInit =
         ConstantAggregateZero::get(ArrayType::get(getEntryTy(), 0u));
     auto *DummyEntry = new GlobalVariable(
-        M, DummyInit->getType(), true, GlobalVariable::ExternalLinkage,
+        M, DummyInit->getType(), true,
+        Triple(Target).isAMDGCN() ?
+          GlobalVariable::WeakAnyLinkage :
+          GlobalVariable::ExternalLinkage,
         DummyInit, "__dummy.omp_offloading.entry");
     DummyEntry->setSection("omp_offloading_entries");
     DummyEntry->setVisibility(GlobalValue::HiddenVisibility);
