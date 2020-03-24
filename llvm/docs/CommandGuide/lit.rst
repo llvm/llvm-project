@@ -251,11 +251,16 @@ convenient and flexible support for out-of-tree builds.
 TEST STATUS RESULTS
 -------------------
 
-Each test ultimately produces one of the following six results:
+Each test ultimately produces one of the following eight results:
 
 **PASS**
 
  The test succeeded.
+
+**FLAKYPASS**
+
+ The test succeeded after being re-run more than once. This only applies to
+ tests containing an ``ALLOW_RETRIES:`` annotation.
 
 **XFAIL**
 
@@ -282,6 +287,11 @@ Each test ultimately produces one of the following six results:
 
  The test is not supported in this environment.  This is used by test formats
  which can report unsupported tests.
+
+**TIMEOUT**
+
+ The test was run, but it timed out before it was able to complete. This is
+ considered a failure.
 
 Depending on the test format tests may produce additional information about
 their status (generally only for failures).  See the :ref:`output-options`
