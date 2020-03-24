@@ -1,6 +1,6 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
-# RUN: echo "SECTIONS { .text : { *(.text.*) } }" > %t.script
+# RUN: echo 'SECTIONS { .rodata : {*(.rodata.*)} .text : {*(.text.*)} }' > %t.script
 
 # RUN: echo "_bar" > %t.ord
 # RUN: echo "_foo" >> %t.ord
