@@ -6,5 +6,5 @@ fptrs_t p __attribute__((noreturn));
 void __attribute__((noreturn)) f() {
   p[0]();
 }
-// CHECK: call
+// CHECK: call void
 // CHECK-NEXT: unreachable
