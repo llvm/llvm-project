@@ -79,7 +79,7 @@ struct OpenMPOpt {
     SmallVector<Type *, 8> ArgumentTypes;
 
     /// The declaration if available.
-    Function *Declaration;
+    Function *Declaration = nullptr;
 
     /// Uses of this runtime function per function containing the use.
     DenseMap<Function *, SmallPtrSet<Use *, 16>> UsesMap;
