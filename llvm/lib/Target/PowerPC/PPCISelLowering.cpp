@@ -15398,7 +15398,7 @@ bool PPCTargetLowering::isProfitableToHoist(Instruction *I) const {
   assert(User && "A single use instruction with no uses.");
 
   if (User->getOpcode() != Instruction::FSub &&
-      User->getOpcode() == Instruction::FAdd)
+      User->getOpcode() != Instruction::FAdd)
     return true;
 
   const TargetOptions &Options = getTargetMachine().Options;
