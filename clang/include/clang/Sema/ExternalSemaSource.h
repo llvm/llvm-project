@@ -193,6 +193,15 @@ public:
       llvm::MapVector<const FunctionDecl *, std::unique_ptr<LateParsedTemplate>>
           &LPTMap) {}
 
+  /// Read the set of decls to be checked for deferred diags.
+  ///
+  /// The external source should append its own potentially emitted function
+  /// and variable decls which may cause deferred diags. Note that this routine
+  /// may be invoked multiple times; the external source should take care not to
+  /// introduce the same declarations repeatedly.
+  virtual void ReadDeclsToCheckForDeferredDiags(
+      llvm::SmallVector<Decl *, 4> &Decls) {}
+
   /// \copydoc Sema::CorrectTypo
   /// \note LookupKind must correspond to a valid Sema::LookupNameKind
   ///

@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 %s --std=c++11 -triple x86_64-unknown-linux -emit-llvm -o - \
 // RUN:   -verify -verify-ignore-unexpected=note
 // RUN: %clang_cc1 %s --std=c++11 -triple x86_64-unknown-linux -emit-llvm -o - \
-// RUN:   -verify -verify-ignore-unexpected=note -fopenmp
+// RUN:   -verify=expected,omp -verify-ignore-unexpected=note -fopenmp
 
 // Note: This test won't work with -fsyntax-only, because some of these errors
 // are emitted during codegen.
@@ -39,7 +39,7 @@ __host__ __device__ void T::hd3() {
 }
 
 template <typename T> __host__ __device__ void hd2() { device_fn(); }
-// expected-error@-1 2 {{reference to __device__ function 'device_fn' in __host__ __device__ function}}
+// expected-error@-1 {{reference to __device__ function 'device_fn' in __host__ __device__ function}}
 void host_fn() { hd2<int>(); }
 
 __host__ __device__ void hd() { device_fn(); }

@@ -632,6 +632,12 @@ namespace serialization {
 
       /// The stack of open #ifs/#ifdefs recorded in a preamble.
       PP_CONDITIONAL_STACK = 62,
+
+      /// A table of skipped ranges within the preprocessing record.
+      PPD_SKIPPED_RANGES = 63,
+
+      /// Record code for the Decls to be checked for deferred diags.
+      DECLS_TO_CHECK_FOR_DEFERRED_DIAGS = 64,
     };
 
     /// Record types used within a source manager block.
