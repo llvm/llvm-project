@@ -150,21 +150,6 @@ llvm::Error validateEdits(const DraftStore &DraftMgr, const FileEdits &FE) {
           llvm::to_string(InvalidFileCount - 1) + " others)");
 }
 
-// Converts a list of Ranges to a LinkedList of SelectionRange.
-SelectionRange render(const std::vector<Range> &Ranges) {
-  if (Ranges.empty())
-    return {};
-  SelectionRange Result;
-  Result.range = Ranges[0];
-  auto *Next = &Result.parent;
-  for (const auto &R : llvm::make_range(Ranges.begin() + 1, Ranges.end())) {
-    *Next = std::make_unique<SelectionRange>();
-    Next->get()->range = R;
-    Next = &Next->get()->parent;
-  }
-  return Result;
-}
-
 } // namespace
 
 // MessageHandler dispatches incoming LSP messages.
@@ -1206,24 +1191,13 @@ void ClangdLSPServer::onSymbolInfo(const TextDocumentPositionParams &Params,
 void ClangdLSPServer::onSelectionRange(
     const SelectionRangeParams &Params,
     Callback<std::vector<SelectionRange>> Reply) {
-  if (Params.positions.size() != 1) {
-    elog("{0} positions provided to SelectionRange. Supports exactly one "
-         "position.",
-         Params.positions.size());
-    return Reply(llvm::make_error<LSPError>(
-        "SelectionRange supports exactly one position",
-        ErrorCode::InvalidRequest));
-  }
   Server->semanticRanges(
-      Params.textDocument.uri.file(), Params.positions[0],
+      Params.textDocument.uri.file(), Params.positions,
       [Reply = std::move(Reply)](
-          llvm::Expected<std::vector<Range>> Ranges) mutable {
-        if (!Ranges) {
+          llvm::Expected<std::vector<SelectionRange>> Ranges) mutable {
+        if (!Ranges)
           return Reply(Ranges.takeError());
-        }
-        std::vector<SelectionRange> Result;
-        Result.emplace_back(render(std::move(*Ranges)));
-        return Reply(std::move(Result));
+        return Reply(std::move(*Ranges));
       });
 }
 
