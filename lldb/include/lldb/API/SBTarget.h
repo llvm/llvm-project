@@ -94,6 +94,15 @@ public:
   ///     A platform object.
   lldb::SBPlatform GetPlatform();
 
+  /// Return the environment variables that would be used to launch a new
+  /// process.
+  ///
+  /// \return
+  ///     An lldb::SBEnvironment object which is a copy of the target's
+  ///     environment.
+
+  SBEnvironment GetEnvironment();
+
   /// Install any binaries that need to be installed.
   ///
   /// This function does nothing when debugging on the host system.
