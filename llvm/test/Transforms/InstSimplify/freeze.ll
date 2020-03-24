@@ -65,6 +65,24 @@ define <2 x i32> @constvector() {
   ret <2 x i32> %x
 }
 
+define <3 x i5> @constvector_weird() {
+; CHECK-LABEL: @constvector_weird(
+; CHECK-NEXT:    [[X:%.*]] = freeze <3 x i5> <i5 0, i5 1, i5 10>
+; CHECK-NEXT:    ret <3 x i5> [[X]]
+;
+  %x = freeze <3 x i5> <i5 0, i5 1, i5 42>
+  ret <3 x i5> %x
+}
+
+define <2 x float> @constvector_FP() {
+; CHECK-LABEL: @constvector_FP(
+; CHECK-NEXT:    [[X:%.*]] = freeze <2 x float> <float 0.000000e+00, float 1.000000e+00>
+; CHECK-NEXT:    ret <2 x float> [[X]]
+;
+  %x = freeze <2 x float> <float 0.0, float 1.0>
+  ret <2 x float> %x
+}
+
 define <2 x i32> @constvector_noopt() {
 ; CHECK-LABEL: @constvector_noopt(
 ; CHECK-NEXT:    [[X:%.*]] = freeze <2 x i32> <i32 0, i32 undef>
@@ -72,6 +90,24 @@ define <2 x i32> @constvector_noopt() {
 ;
   %x = freeze <2 x i32> <i32 0, i32 undef>
   ret <2 x i32> %x
+}
+
+define <3 x i5> @constvector_weird_noopt() {
+; CHECK-LABEL: @constvector_weird_noopt(
+; CHECK-NEXT:    [[X:%.*]] = freeze <3 x i5> <i5 0, i5 undef, i5 10>
+; CHECK-NEXT:    ret <3 x i5> [[X]]
+;
+  %x = freeze <3 x i5> <i5 0, i5 undef, i5 42>
+  ret <3 x i5> %x
+}
+
+define <2 x float> @constvector_FP_noopt() {
+; CHECK-LABEL: @constvector_FP_noopt(
+; CHECK-NEXT:    [[X:%.*]] = freeze <2 x float> <float 0.000000e+00, float undef>
+; CHECK-NEXT:    ret <2 x float> [[X]]
+;
+  %x = freeze <2 x float> <float 0.0, float undef>
+  ret <2 x float> %x
 }
 
 define void @alloca() {
