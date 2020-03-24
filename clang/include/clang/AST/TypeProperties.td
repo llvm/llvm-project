@@ -249,13 +249,17 @@ let Class = FunctionType in {
   def : Property<"noCfCheck", Bool> {
     let Read = [{ node->getExtInfo().getNoCfCheck() }];
   }
+  def : Property<"cmseNSCall", Bool> {
+    let Read = [{ node->getExtInfo().getCmseNSCall() }];
+  }
 }
 
 let Class = FunctionNoProtoType in {
   def : Creator<[{
     auto extInfo = FunctionType::ExtInfo(noReturn, hasRegParm, regParm,
                                          callingConvention, producesResult,
-                                         noCallerSavedRegs, noCfCheck);
+                                         noCallerSavedRegs, noCfCheck,
+                                         cmseNSCall);
     return ctx.getFunctionNoProtoType(returnType, extInfo);
   }]>;
 }
@@ -288,7 +292,8 @@ let Class = FunctionProtoType in {
   def : Creator<[{
     auto extInfo = FunctionType::ExtInfo(noReturn, hasRegParm, regParm,
                                          callingConvention, producesResult,
-                                         noCallerSavedRegs, noCfCheck);
+                                         noCallerSavedRegs, noCfCheck,
+                                         cmseNSCall);
     FunctionProtoType::ExtProtoInfo epi;
     epi.ExtInfo = extInfo;
     epi.Variadic = variadic;
@@ -453,7 +458,9 @@ let Class = TagType in {
 let Class = EnumType in {
   def : Creator<[{
     QualType result = ctx.getEnumType(cast<EnumDecl>(declaration));
-    const_cast<Type*>(result.getTypePtr())->setDependent(dependent);
+    if (dependent)
+      const_cast<Type *>(result.getTypePtr())
+          ->addDependence(TypeDependence::DependentInstantiation);
     return result;
   }]>;
 }
@@ -462,7 +469,9 @@ let Class = RecordType in {
   def : Creator<[{
     auto record = cast<RecordDecl>(declaration);
     QualType result = ctx.getRecordType(record);
-    const_cast<Type*>(result.getTypePtr())->setDependent(dependent);
+    if (dependent)
+      const_cast<Type *>(result.getTypePtr())
+          ->addDependence(TypeDependence::DependentInstantiation);
     return result;
   }]>;
 }
@@ -605,7 +614,9 @@ let Class = TemplateSpecializationType in {
                                                  templateArguments,
                                                  *underlyingType);
     }
-    const_cast<Type*>(result.getTypePtr())->setDependent(dependent);
+    if (dependent)
+      const_cast<Type *>(result.getTypePtr())
+          ->addDependence(TypeDependence::DependentInstantiation);
     return result;
   }]>;
 }

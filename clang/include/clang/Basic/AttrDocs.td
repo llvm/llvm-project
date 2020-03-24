@@ -4853,3 +4853,28 @@ other than overloading.
 
     }];
 }
+
+def ArmCmseNSCallDocs : Documentation {
+  let Category = DocCatType;
+  let Content = [{
+This attribute declares a non-secure function type.  When compiling for secure
+state, a call to such a function would switch from secure to non-secure state.
+All non-secure function calls must happen only through a function pointer, and
+a non-secure function type should only be used as a base type of a pointer.
+See `ARMv8-M Security Extensions: Requirements on Development
+Tools - Engineering Specification Documentation
+<https://developer.arm.com/docs/ecm0359818/latest/>`_ for more information.
+  }];
+}
+
+def ArmCmseNSEntryDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+This attribute declares a function that can be called from non-secure state, or
+from secure state. Entering from and returning to non-secure state would switch
+to and from secure state, respectively, and prevent flow of information
+to non-secure state, except via return values. See `ARMv8-M Security Extensions:
+Requirements on Development Tools - Engineering Specification Documentation
+<https://developer.arm.com/docs/ecm0359818/latest/>`_ for more information.
+  }];
+}

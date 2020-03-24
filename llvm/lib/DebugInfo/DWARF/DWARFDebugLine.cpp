@@ -255,8 +255,8 @@ parseV5DirFileTables(const DWARFDataExtractor &DebugLineData,
     return DirDescriptors.takeError();
 
   // Get the directory entries, according to the format described above.
-  int DirEntryCount = DebugLineData.getU8(OffsetPtr);
-  for (int I = 0; I != DirEntryCount; ++I) {
+  uint64_t DirEntryCount = DebugLineData.getULEB128(OffsetPtr);
+  for (uint64_t I = 0; I != DirEntryCount; ++I) {
     for (auto Descriptor : *DirDescriptors) {
       DWARFFormValue Value(Descriptor.Form);
       switch (Descriptor.Type) {
@@ -283,8 +283,8 @@ parseV5DirFileTables(const DWARFDataExtractor &DebugLineData,
     return FileDescriptors.takeError();
 
   // Get the file entries, according to the format described above.
-  int FileEntryCount = DebugLineData.getU8(OffsetPtr);
-  for (int I = 0; I != FileEntryCount; ++I) {
+  uint64_t FileEntryCount = DebugLineData.getULEB128(OffsetPtr);
+  for (uint64_t I = 0; I != FileEntryCount; ++I) {
     DWARFDebugLine::FileNameEntry FileEntry;
     for (auto Descriptor : *FileDescriptors) {
       DWARFFormValue Value(Descriptor.Form);

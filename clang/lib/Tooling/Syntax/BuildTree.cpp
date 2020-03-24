@@ -1059,7 +1059,7 @@ void syntax::TreeBuilder::markStmtChild(Stmt *Child, NodeRole Role) {
 
   // This is an expression in a statement position, consume the trailing
   // semicolon and form an 'ExpressionStatement' node.
-  if (auto *E = dyn_cast<Expr>(Child)) {
+  if (isa<Expr>(Child)) {
     setRole(ChildNode, NodeRole::ExpressionStatement_expression);
     ChildNode = new (allocator()) syntax::ExpressionStatement;
     // (!) 'getStmtRange()' ensures this covers a trailing semicolon.

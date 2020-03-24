@@ -10,8 +10,6 @@
 ; Mem-move
 ; CHECK-NEXT: movl
 ; CHECK-NEXT: andl
-; CHECK-NEXT: LBB0
-; CHECK-NEXT: in Loop
 ; CHECK-NEXT: testl
 ; CHECK-NEXT: jne
 ; CHECK: cond.true.i.i217
@@ -19,20 +17,20 @@
 ; Mem-move
 ; CHECK-NEXT: movl
 ; CHECK-NEXT: andl
-; CHECK-NEXT: LBB0
-; CHECK-NEXT: in Loop
 ; CHECK-NEXT: testl
 ; CHECK-NEXT: je
 ; CHECK: cond.false.i.i
 ; CHECK: maskrune
 ; CHECK-NEXT: movzbl
 ; CHECK-NEXT: movzbl
-; CHECK-NEXT: jmp
+; CHECK-NEXT: testl
+; CHECK-NEXT: je
 ; CHECK: cond.false.i.i219
 ; CHECK: maskrune
 ; CHECK-NEXT: movzbl
 ; CHECK-NEXT: movzbl
-; CHECK-NEXT: jmp
+; CHECK-NEXT: testl
+; CHECK-NEXT: jne
 
 %struct.List_o_links_struct = type { i32, i32, i32, %struct.List_o_links_struct* }
 %struct.Connector_struct = type { i16, i16, i8, i8, %struct.Connector_struct*, i8* }

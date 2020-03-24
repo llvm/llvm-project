@@ -558,3 +558,12 @@ void DAGTypeLegalizer::SplitRes_UNDEF(SDNode *N, SDValue &Lo, SDValue &Hi) {
   Lo = DAG.getUNDEF(LoVT);
   Hi = DAG.getUNDEF(HiVT);
 }
+
+void DAGTypeLegalizer::SplitRes_FREEZE(SDNode *N, SDValue &Lo, SDValue &Hi) {
+  SDValue L, H;
+  SDLoc dl(N);
+  GetSplitOp(N->getOperand(0), L, H);
+
+  Lo = DAG.getNode(ISD::FREEZE, dl, L.getValueType(), L);
+  Hi = DAG.getNode(ISD::FREEZE, dl, H.getValueType(), H);
+}

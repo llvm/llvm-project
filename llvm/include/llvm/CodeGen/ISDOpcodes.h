@@ -178,6 +178,11 @@ namespace ISD {
     /// UNDEF - An undefined node.
     UNDEF,
 
+    // FREEZE - FREEZE(VAL) returns an arbitrary value if VAL is UNDEF (or
+    // is evaluated to UNDEF), or returns VAL otherwise. Note that each
+    // read of UNDEF can yield different value, but FREEZE(UNDEF) cannot.
+    FREEZE,
+
     /// EXTRACT_ELEMENT - This is used to get the lower or upper (determined by
     /// a Constant, which is required to be operand #1) half of the integer or
     /// float value specified as operand #0.  This is only for use before

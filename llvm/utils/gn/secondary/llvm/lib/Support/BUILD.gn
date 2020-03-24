@@ -93,6 +93,7 @@ static_library("Support") {
     "MathExtras.cpp",
     "MemoryBuffer.cpp",
     "NativeFormatting.cpp",
+    "OptimalLayout.cpp",
     "Optional.cpp",
     "Parallel.cpp",
     "PluginLoader.cpp",

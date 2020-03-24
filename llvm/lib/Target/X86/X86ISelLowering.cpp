@@ -37027,6 +37027,51 @@ static bool checkBitcastSrcVectorSize(SDValue Src, unsigned Size) {
   return false;
 }
 
+// Helper to flip between AND/OR/XOR opcodes and their X86ISD FP equivalents.
+static unsigned getAltBitOpcode(unsigned Opcode) {
+  switch(Opcode) {
+  case ISD::AND: return X86ISD::FAND;
+  case ISD::OR: return X86ISD::FOR;
+  case ISD::XOR: return X86ISD::FXOR;
+  case X86ISD::ANDNP: return X86ISD::FANDN;
+  }
+  llvm_unreachable("Unknown bitwise opcode");
+}
+
+// Helper to adjust v4i32 MOVMSK expansion to work with SSE1-only targets.
+static SDValue adjustBitcastSrcVectorSSE1(SelectionDAG &DAG, SDValue Src,
+                                          const SDLoc &DL) {
+  EVT SrcVT = Src.getValueType();
+  if (SrcVT != MVT::v4i1)
+    return SDValue();
+
+  switch (Src.getOpcode()) {
+  case ISD::SETCC:
+    if (Src.getOperand(0).getValueType() == MVT::v4i32 &&
+        ISD::isBuildVectorAllZeros(Src.getOperand(1).getNode()) &&
+        cast<CondCodeSDNode>(Src.getOperand(2))->get() == ISD::SETLT) {
+      SDValue Op0 = Src.getOperand(0);
+      if (ISD::isNormalLoad(Op0.getNode()))
+        return DAG.getBitcast(MVT::v4f32, Op0);
+      if (Op0.getOpcode() == ISD::BITCAST &&
+          Op0.getOperand(0).getValueType() == MVT::v4f32)
+        return Op0.getOperand(0);
+    }
+    break;
+  case ISD::AND:
+  case ISD::XOR:
+  case ISD::OR: {
+    SDValue Op0 = adjustBitcastSrcVectorSSE1(DAG, Src.getOperand(0), DL);
+    SDValue Op1 = adjustBitcastSrcVectorSSE1(DAG, Src.getOperand(1), DL);
+    if (Op0 && Op1)
+      return DAG.getNode(getAltBitOpcode(Src.getOpcode()), DL, MVT::v4f32, Op0,
+                         Op1);
+    break;
+  }
+  }
+  return SDValue();
+}
+
 // Helper to push sign extension of vXi1 SETCC result through bitops.
 static SDValue signExtendBitcastSrcVector(SelectionDAG &DAG, EVT SExtVT,
                                           SDValue Src, const SDLoc &DL) {
@@ -37056,6 +37101,16 @@ static SDValue combineBitcastvxi1(SelectionDAG &DAG, EVT VT, SDValue Src,
   EVT SrcVT = Src.getValueType();
   if (!SrcVT.isSimple() || SrcVT.getScalarType() != MVT::i1)
     return SDValue();
+
+  // Recognize the IR pattern for the movmsk intrinsic under SSE1 before type
+  // legalization destroys the v4i32 type.
+  if (Subtarget.hasSSE1() && !Subtarget.hasSSE2()) {
+    if (SDValue V = adjustBitcastSrcVectorSSE1(DAG, Src, DL)) {
+      V = DAG.getNode(X86ISD::MOVMSK, DL, MVT::i32,
+                      DAG.getBitcast(MVT::v4f32, V));
+      return DAG.getZExtOrTrunc(V, DL, VT);
+    }
+  }
 
   // If the input is a truncate from v16i8 or v32i8 go ahead and use a
   // movmskb even with avx512. This will be better than truncating to vXi1 and
@@ -37318,24 +37373,6 @@ static SDValue combineBitcast(SDNode *N, SelectionDAG &DAG,
     SDLoc dl(N);
     if (SDValue V = combineBitcastvxi1(DAG, VT, N0, dl, Subtarget))
       return V;
-
-    // Recognize the IR pattern for the movmsk intrinsic under SSE1 before type
-    // legalization destroys the v4i32 type.
-    if (Subtarget.hasSSE1() && !Subtarget.hasSSE2() && SrcVT == MVT::v4i1 &&
-        VT.isScalarInteger() && N0.getOpcode() == ISD::SETCC &&
-        N0.getOperand(0).getValueType() == MVT::v4i32 &&
-        ISD::isBuildVectorAllZeros(N0.getOperand(1).getNode()) &&
-        cast<CondCodeSDNode>(N0.getOperand(2))->get() == ISD::SETLT) {
-      SDValue N00 = N0.getOperand(0);
-      // Only do this if we can avoid scalarizing the input.
-      if (ISD::isNormalLoad(N00.getNode()) ||
-          (N00.getOpcode() == ISD::BITCAST &&
-           N00.getOperand(0).getValueType() == MVT::v4f32)) {
-        SDValue V = DAG.getNode(X86ISD::MOVMSK, dl, MVT::i32,
-                                DAG.getBitcast(MVT::v4f32, N00));
-        return DAG.getZExtOrTrunc(V, dl, VT);
-      }
-    }
 
     // If this is a bitcast between a MVT::v4i1/v2i1 and an illegal integer
     // type, widen both sides to avoid a trip through memory.

@@ -12954,6 +12954,26 @@ static SDValue PerformVMOVhrCombine(SDNode *N, TargetLowering::DAGCombinerInfo &
   return NewCopy;
 }
 
+static SDValue PerformVMOVrhCombine(SDNode *N,
+                                    TargetLowering::DAGCombinerInfo &DCI) {
+  SDValue N0 = N->getOperand(0);
+  EVT VT = N->getValueType(0);
+
+  // fold (VMOVrh (load x)) -> (zextload (i16*)x)
+  if (ISD::isNormalLoad(N0.getNode()) && N0.hasOneUse()) {
+    LoadSDNode *LN0 = cast<LoadSDNode>(N0);
+
+    SDValue Load =
+        DCI.DAG.getExtLoad(ISD::ZEXTLOAD, SDLoc(N), VT, LN0->getChain(),
+                           LN0->getBasePtr(), MVT::i16, LN0->getMemOperand());
+    DCI.DAG.ReplaceAllUsesOfValueWith(SDValue(N, 0), Load.getValue(0));
+    DCI.DAG.ReplaceAllUsesOfValueWith(N0.getValue(1), Load.getValue(1));
+    return Load;
+  }
+
+  return SDValue();
+}
+
 /// hasNormalLoadOperand - Check if any of the operands of a BUILD_VECTOR node
 /// are normal, non-volatile loads.  If so, it is profitable to bitcast an
 /// i64 vector to have f64 elements, since the value can then be loaded
@@ -13872,6 +13892,33 @@ static SDValue PerformSplittingToNarrowingStores(StoreSDNode *St,
   if (NumElements == 0 || FromVT.getVectorNumElements() == NumElements ||
       FromVT.getVectorNumElements() % NumElements != 0)
     return SDValue();
+
+  // Test if the Trunc will be convertable to a VMOVN with a shuffle, and if so
+  // use the VMOVN over splitting the store. We are looking for patterns of:
+  // !rev: 0 N 1 N+1 2 N+2 ...
+  //  rev: N 0 N+1 1 N+2 2 ...
+  auto isVMOVNOriginalMask = [&](ArrayRef<int> M, bool rev) {
+    unsigned NumElts = ToVT.getVectorNumElements();
+    if (NumElts != M.size() || (ToVT != MVT::v8i16 && ToVT != MVT::v16i8))
+      return false;
+
+    unsigned Off0 = rev ? NumElts : 0;
+    unsigned Off1 = rev ? 0 : NumElts;
+
+    for (unsigned i = 0; i < NumElts; i += 2) {
+      if (M[i] >= 0 && M[i] != (int)(Off0 + i / 2))
+        return false;
+      if (M[i + 1] >= 0 && M[i + 1] != (int)(Off1 + i / 2))
+        return false;
+    }
+
+    return true;
+  };
+
+  if (auto *Shuffle = dyn_cast<ShuffleVectorSDNode>(Trunc->getOperand(0)))
+    if (isVMOVNOriginalMask(Shuffle->getMask(), false) ||
+        isVMOVNOriginalMask(Shuffle->getMask(), true))
+      return SDValue();
 
   SDLoc DL(St);
   // Details about the old store
@@ -15118,6 +15165,7 @@ SDValue ARMTargetLowering::PerformDAGCombine(SDNode *N,
   case ARMISD::VMOVRRD: return PerformVMOVRRDCombine(N, DCI, Subtarget);
   case ARMISD::VMOVDRR: return PerformVMOVDRRCombine(N, DCI.DAG);
   case ARMISD::VMOVhr:  return PerformVMOVhrCombine(N, DCI);
+  case ARMISD::VMOVrh:  return PerformVMOVrhCombine(N, DCI);
   case ISD::STORE:      return PerformSTORECombine(N, DCI, Subtarget);
   case ISD::BUILD_VECTOR: return PerformBUILD_VECTORCombine(N, DCI, Subtarget);
   case ISD::INSERT_VECTOR_ELT: return PerformInsertEltCombine(N, DCI);

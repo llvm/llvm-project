@@ -182,6 +182,9 @@ struct Configuration {
   llvm::StringMap<int> order;
 
   // Used for /lldmap.
+  std::string lldmapFile;
+
+  // Used for /map.
   std::string mapFile;
 
   // Used for /thinlto-index-only:

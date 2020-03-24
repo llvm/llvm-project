@@ -456,6 +456,15 @@ ExprDependence clang::computeDependence(DeclRefExpr *E, const ASTContext &Ctx) {
   return Deps;
 }
 
+ExprDependence clang::computeDependence(RecoveryExpr *E) {
+  // FIXME: drop type+value+instantiation once Error is sufficient to suppress
+  // bogus dianostics.
+  auto D = ExprDependence::TypeValueInstantiation | ExprDependence::Error;
+  for (auto *S : E->subExpressions())
+    D |= S->getDependence();
+  return D;
+}
+
 ExprDependence clang::computeDependence(PredefinedExpr *E) {
   return toExprDependence(E->getType()->getDependence()) &
          ~ExprDependence::UnexpandedPack;

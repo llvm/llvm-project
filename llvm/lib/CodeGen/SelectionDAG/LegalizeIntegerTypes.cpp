@@ -201,6 +201,10 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::VECREDUCE_UMIN:
     Res = PromoteIntRes_VECREDUCE(N);
     break;
+
+  case ISD::FREEZE:
+    Res = PromoteIntRes_FREEZE(N);
+    break;
   }
 
   // If the result is null then the sub-method took care of registering it.
@@ -399,6 +403,12 @@ static EVT getShiftAmountTyForConstant(EVT VT, const TargetLowering &TLI,
       ShiftVT.getSizeInBits() < Log2_32_Ceil(VT.getSizeInBits()))
     ShiftVT = MVT::i32;
   return ShiftVT;
+}
+
+SDValue DAGTypeLegalizer::PromoteIntRes_FREEZE(SDNode *N) {
+  SDValue V = GetPromotedInteger(N->getOperand(0));
+  return DAG.getNode(ISD::FREEZE, SDLoc(N),
+                     V.getValueType(), V);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_BSWAP(SDNode *N) {
@@ -1868,6 +1878,7 @@ void DAGTypeLegalizer::ExpandIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::SELECT:       SplitRes_SELECT(N, Lo, Hi); break;
   case ISD::SELECT_CC:    SplitRes_SELECT_CC(N, Lo, Hi); break;
   case ISD::UNDEF:        SplitRes_UNDEF(N, Lo, Hi); break;
+  case ISD::FREEZE:       SplitRes_FREEZE(N, Lo, Hi); break;
 
   case ISD::BITCAST:            ExpandRes_BITCAST(N, Lo, Hi); break;
   case ISD::BUILD_PAIR:         ExpandRes_BUILD_PAIR(N, Lo, Hi); break;
