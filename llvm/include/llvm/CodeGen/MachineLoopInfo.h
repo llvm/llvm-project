@@ -67,10 +67,6 @@ public:
   /// it returns an unknown location.
   DebugLoc getStartLoc() const;
 
-  /// Returns true if a machine loop has blocks that have static profiling
-  /// information---e.g. from '__builtin_expect()'.
-  bool hasStaticProfInfo() const;
-
   void dump() const;
 
 private:

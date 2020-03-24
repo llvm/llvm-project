@@ -111,13 +111,6 @@ DebugLoc MachineLoop::getStartLoc() const {
   return DebugLoc();
 }
 
-bool MachineLoop::hasStaticProfInfo() const {
-  return llvm::any_of(blocks(), [](const MachineBasicBlock *MBB){
-    const BasicBlock *BB = MBB->getBasicBlock();
-    return BB && BB->getTerminator()->hasMetadata(LLVMContext::MD_prof);
-  });
-}
-
 MachineBasicBlock *
 MachineLoopInfo::findLoopPreheader(MachineLoop *L,
                                    bool SpeculativePreheader) const {
