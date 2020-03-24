@@ -1222,7 +1222,7 @@ mlir-tblgen --gen-op-decls -I /path/to/mlir/include /path/to/input/td/file
 # To see op C++ class definition
 mlir-tblgen --gen-op-defs -I /path/to/mlir/include /path/to/input/td/file
 # To see op documentation
-mlir-tblgen --gen-op-doc -I /path/to/mlir/include /path/to/input/td/file
+mlir-tblgen --gen-dialect-doc -I /path/to/mlir/include /path/to/input/td/file
 
 # To see op interface C++ class declaration
 mlir-tblgen --gen-op-interface-decls -I /path/to/mlir/include /path/to/input/td/file
@@ -1231,7 +1231,6 @@ mlir-tblgen --gen-op-interface-defs -I /path/to/mlir/include /path/to/input/td/f
 # To see op interface documentation
 mlir-tblgen --gen-op-interface-doc -I /path/to/mlir/include /path/to/input/td/file
 ```
-
 
 ## Appendix
 
