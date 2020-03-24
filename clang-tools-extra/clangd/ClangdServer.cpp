@@ -685,6 +685,18 @@ void ClangdServer::documentLinks(PathRef File,
                            TUScheduler::InvalidateOnUpdate);
 }
 
+void ClangdServer::semanticHighlights(
+    PathRef File, Callback<std::vector<HighlightingToken>> CB) {
+  auto Action =
+      [CB = std::move(CB)](llvm::Expected<InputsAndAST> InpAST) mutable {
+        if (!InpAST)
+          return CB(InpAST.takeError());
+        CB(clangd::getSemanticHighlightings(InpAST->AST));
+      };
+  WorkScheduler.runWithAST("SemanticHighlights", File, std::move(Action),
+                           TUScheduler::InvalidateOnUpdate);
+}
+
 std::vector<std::pair<Path, std::size_t>>
 ClangdServer::getUsedBytesPerFile() const {
   return WorkScheduler.getUsedBytesPerFile();

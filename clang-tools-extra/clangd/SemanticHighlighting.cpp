@@ -445,6 +445,83 @@ bool operator==(const LineHighlightings &L, const LineHighlightings &R) {
   return std::tie(L.Line, L.Tokens) == std::tie(R.Line, R.Tokens);
 }
 
+std::vector<SemanticToken>
+toSemanticTokens(llvm::ArrayRef<HighlightingToken> Tokens) {
+  assert(std::is_sorted(Tokens.begin(), Tokens.end()));
+  std::vector<SemanticToken> Result;
+  const HighlightingToken *Last = nullptr;
+  for (const HighlightingToken &Tok : Tokens) {
+    // FIXME: support inactive code - we need to provide the actual bounds.
+    if (Tok.Kind == HighlightingKind::InactiveCode)
+      continue;
+    Result.emplace_back();
+    SemanticToken &Out = Result.back();
+    // deltaStart/deltaLine are relative if possible.
+    if (Last) {
+      assert(Tok.R.start.line >= Last->R.start.line);
+      Out.deltaLine = Tok.R.start.line - Last->R.start.line;
+      if (Out.deltaLine == 0) {
+        assert(Tok.R.start.character >= Last->R.start.character);
+        Out.deltaStart = Tok.R.start.character - Last->R.start.character;
+      } else {
+        Out.deltaStart = Tok.R.start.character;
+      }
+    } else {
+      Out.deltaLine = Tok.R.start.line;
+      Out.deltaStart = Tok.R.start.character;
+    }
+    assert(Tok.R.end.line == Tok.R.start.line);
+    Out.length = Tok.R.end.character - Tok.R.start.character;
+    Out.tokenType = static_cast<unsigned>(Tok.Kind);
+
+    Last = &Tok;
+  }
+  return Result;
+}
+llvm::StringRef toSemanticTokenType(HighlightingKind Kind) {
+  switch (Kind) {
+  case HighlightingKind::Variable:
+  case HighlightingKind::LocalVariable:
+  case HighlightingKind::StaticField:
+    return "variable";
+  case HighlightingKind::Parameter:
+    return "parameter";
+  case HighlightingKind::Function:
+    return "function";
+  case HighlightingKind::Method:
+    return "member";
+  case HighlightingKind::StaticMethod:
+    // FIXME: better function/member with static modifier?
+    return "function";
+  case HighlightingKind::Field:
+    return "member";
+  case HighlightingKind::Class:
+    return "class";
+  case HighlightingKind::Enum:
+    return "enum";
+  case HighlightingKind::EnumConstant:
+    return "enumConstant"; // nonstandard
+  case HighlightingKind::Typedef:
+    return "type";
+  case HighlightingKind::DependentType:
+    return "dependent"; // nonstandard
+  case HighlightingKind::DependentName:
+    return "dependent"; // nonstandard
+  case HighlightingKind::Namespace:
+    return "namespace";
+  case HighlightingKind::TemplateParameter:
+    return "typeParameter";
+  case HighlightingKind::Concept:
+    return "concept"; // nonstandard
+  case HighlightingKind::Primitive:
+    return "type";
+  case HighlightingKind::Macro:
+    return "macro";
+  case HighlightingKind::InactiveCode:
+    return "comment";
+  }
+}
+
 std::vector<TheiaSemanticHighlightingInformation>
 toTheiaSemanticHighlightingInformation(
     llvm::ArrayRef<LineHighlightings> Tokens) {
