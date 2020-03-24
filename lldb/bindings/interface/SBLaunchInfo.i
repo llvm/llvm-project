@@ -65,12 +65,6 @@ public:
     SetEnvironmentEntries (const char **envp, bool append);
 
     void
-    SetEnvironment(const SBEnvironment &env, bool append);
-
-    SBEnvironment
-    GetEnvironment();
-
-    void
     Clear ();
 
     const char *
