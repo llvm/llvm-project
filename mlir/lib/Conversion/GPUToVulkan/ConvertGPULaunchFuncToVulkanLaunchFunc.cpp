@@ -55,7 +55,8 @@ private:
   bool isSupportedType(Type type) {
     // TODO(denis0x0D): Handle other types.
     if (auto memRefType = type.dyn_cast_or_null<MemRefType>())
-      return memRefType.hasRank() && memRefType.getRank() == 1;
+      return memRefType.hasRank() &&
+             (memRefType.getRank() == 1 || memRefType.getRank() == 2);
     return false;
   }
 
@@ -98,7 +99,8 @@ LogicalResult ConvertGpuLaunchFuncToVulkanLaunchFunc::declareVulkanLaunchFunc(
 
   // Check that all operands have supported types except those for the launch
   // configuration.
-  for (auto type : llvm::drop_begin(vulkanLaunchTypes, 6)) {
+  for (auto type :
+       llvm::drop_begin(vulkanLaunchTypes, gpu::LaunchOp::kNumConfigOperands)) {
     if (!isSupportedType(type))
       return launchOp.emitError() << type << " is unsupported to run on Vulkan";
   }
