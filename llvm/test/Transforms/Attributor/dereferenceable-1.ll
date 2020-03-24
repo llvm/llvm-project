@@ -455,5 +455,67 @@ if.end8:                                          ; preds = %if.then5, %if.else6
   ret void
 }
 
+declare void @unknown()
+define void @nonnull_assume_pos(i8* %arg1, i8* %arg2, i8* %arg3, i8* %arg4) {
+; ATTRIBUTOR-LABEL: define {{[^@]+}}@nonnull_assume_pos
+; ATTRIBUTOR-SAME: (i8* nocapture nofree nonnull readnone dereferenceable(101) [[ARG1:%.*]], i8* nocapture nofree readnone dereferenceable_or_null(31) [[ARG2:%.*]], i8* nocapture nofree nonnull readnone [[ARG3:%.*]], i8* nocapture nofree readnone dereferenceable_or_null(42) [[ARG4:%.*]])
+; ATTRIBUTOR-NEXT:    call void @llvm.assume(i1 true) #6 [ "nonnull"(i8* undef), "dereferenceable"(i8* undef, i64 1), "dereferenceable"(i8* undef, i64 2), "dereferenceable"(i8* undef, i64 101), "dereferenceable_or_null"(i8* undef, i64 31), "dereferenceable_or_null"(i8* undef, i64 42) ]
+; ATTRIBUTOR-NEXT:    call void @unknown()
+; ATTRIBUTOR-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) [ "nonnull"(i8* %arg3), "dereferenceable"(i8* %arg1, i64 1), "dereferenceable"(i8* %arg1, i64 2), "dereferenceable"(i8* %arg1, i64 101), "dereferenceable_or_null"(i8* %arg2, i64 31), "dereferenceable_or_null"(i8* %arg4, i64 42)]
+  call void @unknown()
+  ret void
+}
+define void @nonnull_assume_neg(i8* %arg1, i8* %arg2, i8* %arg3) {
+; ATTRIBUTOR-LABEL: define {{[^@]+}}@nonnull_assume_neg
+; ATTRIBUTOR-SAME: (i8* nocapture nofree readnone [[ARG1:%.*]], i8* nocapture nofree readnone [[ARG2:%.*]], i8* nocapture nofree readnone [[ARG3:%.*]])
+; ATTRIBUTOR-NEXT:    call void @unknown()
+; ATTRIBUTOR-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i8* undef, i64 101), "dereferenceable"(i8* undef, i64 -2), "dereferenceable_or_null"(i8* undef, i64 31) ]
+; ATTRIBUTOR-NEXT:    ret void
+;
+  call void @unknown()
+  call void @llvm.assume(i1 true) ["dereferenceable"(i8* %arg1, i64 101), "dereferenceable"(i8* %arg2, i64 -2), "dereferenceable_or_null"(i8* %arg3, i64 31)]
+  ret void
+}
+define void @nonnull_assume_call(i8* %arg1, i8* %arg2, i8* %arg3, i8* %arg4) {
+; ATTRIBUTOR-LABEL: define {{[^@]+}}@nonnull_assume_call
+; ATTRIBUTOR-SAME: (i8* [[ARG1:%.*]], i8* [[ARG2:%.*]], i8* [[ARG3:%.*]], i8* [[ARG4:%.*]])
+; ATTRIBUTOR-NEXT:    call void @unknown()
+; ATTRIBUTOR-NEXT:    [[P:%.*]] = call nonnull dereferenceable(101) i32* @unkown_ptr()
+; ATTRIBUTOR-NEXT:    call void @unknown_use32(i32* nonnull dereferenceable(101) [[P]])
+; ATTRIBUTOR-NEXT:    call void @unknown_use8(i8* nonnull dereferenceable(42) [[ARG4]])
+; ATTRIBUTOR-NEXT:    call void @unknown_use8(i8* nonnull [[ARG3]])
+; ATTRIBUTOR-NEXT:    call void @unknown_use8(i8* nonnull dereferenceable(31) [[ARG2]])
+; ATTRIBUTOR-NEXT:    call void @unknown_use8(i8* nonnull dereferenceable(2) [[ARG1]])
+; ATTRIBUTOR-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(i8* [[ARG3]]), "dereferenceable"(i8* [[ARG1]], i64 1), "dereferenceable"(i8* [[ARG1]], i64 2), "dereferenceable"(i32* [[P]], i64 101), "dereferenceable_or_null"(i8* [[ARG2]], i64 31), "dereferenceable_or_null"(i8* [[ARG4]], i64 42) ]
+; ATTRIBUTOR-NEXT:    call void @unknown_use8(i8* nonnull dereferenceable(2) [[ARG1]])
+; ATTRIBUTOR-NEXT:    call void @unknown_use8(i8* nonnull dereferenceable(31) [[ARG2]])
+; ATTRIBUTOR-NEXT:    call void @unknown_use8(i8* nonnull [[ARG3]])
+; ATTRIBUTOR-NEXT:    call void @unknown_use8(i8* nonnull dereferenceable(42) [[ARG4]])
+; ATTRIBUTOR-NEXT:    call void @unknown_use32(i32* nonnull dereferenceable(101) [[P]])
+; ATTRIBUTOR-NEXT:    call void @unknown()
+; ATTRIBUTOR-NEXT:    ret void
+;
+  call void @unknown()
+  %p = call i32* @unkown_ptr()
+  call void @unknown_use32(i32* %p)
+  call void @unknown_use8(i8* %arg4)
+  call void @unknown_use8(i8* %arg3)
+  call void @unknown_use8(i8* %arg2)
+  call void @unknown_use8(i8* %arg1)
+  call void @llvm.assume(i1 true) [ "nonnull"(i8* %arg3), "dereferenceable"(i8* %arg1, i64 1), "dereferenceable"(i8* %arg1, i64 2), "dereferenceable"(i32* %p, i64 101), "dereferenceable_or_null"(i8* %arg2, i64 31), "dereferenceable_or_null"(i8* %arg4, i64 42)]
+  call void @unknown_use8(i8* %arg1)
+  call void @unknown_use8(i8* %arg2)
+  call void @unknown_use8(i8* %arg3)
+  call void @unknown_use8(i8* %arg4)
+  call void @unknown_use32(i32* %p)
+  call void @unknown()
+  ret void
+}
+declare void @unknown_use8(i8*) willreturn nounwind
+declare void @unknown_use32(i32*) willreturn nounwind
+declare void @llvm.assume(i1)
+
 !0 = !{i64 10, i64 100}
 
