@@ -1618,6 +1618,9 @@ namespace serialization {
       /// An AtomicExpr record.
       EXPR_ATOMIC,
 
+      /// A RecoveryExpr record.
+      EXPR_RECOVERY,
+
       // Objective-C
 
       /// An ObjCStringLiteral record.

@@ -786,6 +786,16 @@ void ASTStmtWriter::VisitCallExpr(CallExpr *E) {
   Code = serialization::EXPR_CALL;
 }
 
+void ASTStmtWriter::VisitRecoveryExpr(RecoveryExpr *E) {
+  VisitExpr(E);
+  Record.push_back(std::distance(E->children().begin(), E->children().end()));
+  Record.AddSourceLocation(E->getBeginLoc());
+  Record.AddSourceLocation(E->getEndLoc());
+  for (Stmt *Child : E->children())
+    Record.AddStmt(Child);
+  Code = serialization::EXPR_RECOVERY;
+}
+
 void ASTStmtWriter::VisitMemberExpr(MemberExpr *E) {
   VisitExpr(E);
 
