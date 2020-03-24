@@ -66,3 +66,41 @@ body: |
    Twine(MIRFunc) + Twine("...\n"))
       .toNullTerminatedStringRef(S);
 }
+
+std::unique_ptr<LLVMTargetMachine>
+AMDGPUGISelMITest::createTargetMachine() const {
+  Triple TargetTriple("amdgcn-amd-amdhsa");
+  std::string Error;
+  const Target *T = TargetRegistry::lookupTarget("", TargetTriple, Error);
+  if (!T)
+    return nullptr;
+
+  TargetOptions Options;
+  return std::unique_ptr<LLVMTargetMachine>(
+      static_cast<LLVMTargetMachine *>(T->createTargetMachine(
+          "amdgcn-amd-amdhsa", "gfx900", "", Options, None, None,
+          CodeGenOpt::Aggressive)));
+}
+
+void AMDGPUGISelMITest::getTargetTestModuleString(
+  SmallString<512> &S, StringRef MIRFunc) const {
+  (Twine(R"MIR(
+---
+...
+name: func
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+body: |
+  bb.1:
+    liveins: $vgpr0, $vgpr1, $vgpr2
+
+    %0(s32) = COPY $vgpr0
+    %1(s32) = COPY $vgpr1
+    %2(s32) = COPY $vgpr2
+)MIR") + Twine(MIRFunc) + Twine("...\n"))
+                            .toNullTerminatedStringRef(S);
+}
