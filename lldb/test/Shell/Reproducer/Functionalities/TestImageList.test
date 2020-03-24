@@ -1,4 +1,4 @@
-# UNSUPPORTED: system-windows, system-freebsd
+# UNSUPPORTED: system-freebsd
 
 # This tests that image list works when replaying. We arbitrarily assume
 # there's at least two entries and compare that they're identical.

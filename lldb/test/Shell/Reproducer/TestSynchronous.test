@@ -1,5 +1,4 @@
 # REQUIRES: python
-# UNSUPPORTED: system-windows
 # Ensure that replay happens in synchronous mode.
 
 # RUN: rm -rf %t.repro
