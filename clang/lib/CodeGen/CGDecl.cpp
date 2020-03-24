@@ -416,6 +416,12 @@ void CodeGenFunction::EmitStaticVarDecl(const VarDecl &D,
   // If this value has an initializer, emit it.
   if (D.getInit() && !isCudaSharedVar)
     var = AddInitializerToStaticVarDecl(D, var);
+  // amdgcn does not support initializers in LDS
+  if ((var->getType()->getAddressSpace() ==
+       CGM.getContext().getTargetAddressSpace(LangAS::cuda_shared)) &&
+      (CGM.getContext().getTargetInfo().getTriple().isAMDGCN()))
+    var->setInitializer(
+        llvm::UndefValue::get(var->getType()->getElementType()));
 
   var->setAlignment(alignment.getAsAlign());
 
