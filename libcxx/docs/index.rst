@@ -100,7 +100,7 @@ Linux        i386, x86_64         Clang, GCC   libc++abi
 
 The following minimum compiler versions are strongly recommended.
 
-* Clang 3.5 and above
+* Clang 4.0 and above
 * GCC 5.0 and above.
 
 The C++03 dialect is only supported for Clang compilers.

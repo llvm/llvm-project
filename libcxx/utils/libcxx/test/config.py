@@ -452,10 +452,6 @@ class Configuration(object):
 
         if self.cxx.hasCompileFlag('-faligned-allocation'):
             self.config.available_features.add('-faligned-allocation')
-        else:
-            # FIXME remove this once more than just clang-4.0 support
-            # C++17 aligned allocation.
-            self.config.available_features.add('no-aligned-allocation')
 
         if self.cxx.hasCompileFlag('-fdelayed-template-parsing'):
             self.config.available_features.add('fdelayed-template-parsing')
