@@ -556,7 +556,7 @@ RUN lines:
    output affects test results.  It's usually easy to tell: just look for
    redirection or piping of the ``FileCheck`` call's stdout or stderr.
 
-To add more substituations, look at ``test/lit.cfg`` or ``lit.local.cfg``.
+To add more substitutions, look at ``test/lit.cfg`` or ``lit.local.cfg``.
 
 
 Options
@@ -593,7 +593,7 @@ To make the output more useful, :program:`lit` will scan
 the lines of the test case for ones that contain a pattern that matches
 ``PR[0-9]+``. This is the syntax for specifying a PR (Problem Report) number
 that is related to the test case. The number after "PR" specifies the
-LLVM bugzilla number. When a PR number is specified, it will be used in
+LLVM Bugzilla number. When a PR number is specified, it will be used in
 the pass/fail reporting. This is useful to quickly get some context when
 a test fails.
 
