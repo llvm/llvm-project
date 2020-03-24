@@ -232,136 +232,6 @@ false:
   ret void
 }
 
-define void @loop.1() {
-entry:
-  br label %for.cond
-
-for.cond:                                         ; preds = %for.cond.cleanup13, %if.then
-  %i.0 = phi i32 [ 0, %entry ], [ %inc27, %for.cond.cleanup13 ]
-  %cmp9 = icmp sle i32 %i.0, 3
-  br i1 %cmp9, label %for.body, label %for.cond.cleanup
-
-for.cond.cleanup:                                 ; preds = %for.cond
-  ret void
-
-for.body:                                         ; preds = %for.cond
-  br label %for.cond11
-
-for.cond11:                                       ; preds = %arrayctor.cont21, %for.body
-   br label %for.cond.cleanup13
-
-for.cond.cleanup13:                               ; preds = %for.cond11
-  %inc27 = add nsw i32 %i.0, 1
-  br label %for.cond
-}
-
-
-define void @loop() {
-; CHECK-LABEL: @loop(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br label [[FOR_COND:%.*]]
-; CHECK:       for.cond:
-; CHECK-NEXT:    [[I_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC27:%.*]], [[FOR_COND_CLEANUP13:%.*]] ]
-; CHECK-NEXT:    [[CMP9:%.*]] = icmp sle i32 [[I_0]], 3
-; CHECK-NEXT:    br i1 [[CMP9]], label [[FOR_BODY:%.*]], label [[FOR_COND_CLEANUP:%.*]]
-; CHECK:       for.cond.cleanup:
-; CHECK-NEXT:    ret void
-; CHECK:       for.body:
-; CHECK-NEXT:    br label [[FOR_COND11:%.*]]
-; CHECK:       for.cond11:
-; CHECK-NEXT:    [[J_0:%.*]] = phi i32 [ 0, [[FOR_BODY]] ], [ [[INC:%.*]], [[FOR_BODY14:%.*]] ]
-; CHECK-NEXT:    [[CMP12:%.*]] = icmp slt i32 [[J_0]], 2
-; CHECK-NEXT:    br i1 [[CMP12]], label [[FOR_BODY14]], label [[FOR_COND_CLEANUP13]]
-; CHECK:       for.cond.cleanup13:
-; CHECK-NEXT:    [[INC27]] = add nsw i32 [[I_0]], 1
-; CHECK-NEXT:    br label [[FOR_COND]]
-; CHECK:       for.body14:
-; CHECK-NEXT:    [[INC]] = add nsw i32 [[J_0]], 1
-; CHECK-NEXT:    br label [[FOR_COND11]]
-;
-entry:
-  br label %for.cond
-
-for.cond:                                         ; preds = %for.cond.cleanup13, %if.then
-  %i.0 = phi i32 [ 0, %entry ], [ %inc27, %for.cond.cleanup13 ]
-  %cmp9 = icmp sle i32 %i.0, 3
-  br i1 %cmp9, label %for.body, label %for.cond.cleanup
-
-for.cond.cleanup:                                 ; preds = %for.cond
-  ret void
-
-for.body:                                         ; preds = %for.cond
-  br label %for.cond11
-
-for.cond11:                                       ; preds = %arrayctor.cont21, %for.body
-  %j.0 = phi i32 [ 0, %for.body ], [ %inc, %for.body14 ]
-  %cmp12 = icmp slt i32 %j.0, 2
-  br i1 %cmp12, label %for.body14, label %for.cond.cleanup13
-
-for.cond.cleanup13:                               ; preds = %for.cond11
-  %inc27 = add nsw i32 %i.0, 1
-  br label %for.cond
-
-for.body14:
-  %inc = add nsw i32 %j.0, 1
-  br label %for.cond11
-}
-
-define i32 @udiv_1(i64 %sz) {
-; CHECK-LABEL: @udiv_1(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 4088, [[SZ:%.*]]
-; CHECK-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_END:%.*]]
-; CHECK:       cond.true:
-; CHECK-NEXT:    [[DIV:%.*]] = udiv i64 4088, [[SZ]]
-; CHECK-NEXT:    br label [[COND_END]]
-; CHECK:       cond.end:
-; CHECK-NEXT:    [[COND:%.*]] = phi i64 [ [[DIV]], [[COND_TRUE]] ], [ 1, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[CONV:%.*]] = trunc i64 [[COND]] to i32
-; CHECK-NEXT:    ret i32 [[CONV]]
-;
-entry:
-  %cmp = icmp ugt i64 4088, %sz
-  br i1 %cmp, label %cond.true, label %cond.end
-
-cond.true:                                        ; preds = %entry
-  %div = udiv i64 4088, %sz
-  br label %cond.end
-
-cond.end:                                         ; preds = %entry, %cond.true
-  %cond = phi i64 [ %div, %cond.true ], [ 1, %entry ]
-  %conv = trunc i64 %cond to i32
-  ret i32 %conv
-}
-
-; Same as @udiv_1, but with the condition switched.
-define i32 @udiv_2(i64 %sz) {
-; CHECK-LABEL: @udiv_2(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[SZ:%.*]], 4088
-; CHECK-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_END:%.*]]
-; CHECK:       cond.true:
-; CHECK-NEXT:    [[DIV:%.*]] = udiv i64 4088, [[SZ]]
-; CHECK-NEXT:    br label [[COND_END]]
-; CHECK:       cond.end:
-; CHECK-NEXT:    [[COND:%.*]] = phi i64 [ [[DIV]], [[COND_TRUE]] ], [ 1, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[CONV:%.*]] = trunc i64 [[COND]] to i32
-; CHECK-NEXT:    ret i32 [[CONV]]
-;
-entry:
-  %cmp = icmp ugt i64 %sz, 4088
-  br i1 %cmp, label %cond.true, label %cond.end
-
-cond.true:                                        ; preds = %entry
-  %div = udiv i64 4088, %sz
-  br label %cond.end
-
-cond.end:                                         ; preds = %entry, %cond.true
-  %cond = phi i64 [ %div, %cond.true ], [ 1, %entry ]
-  %conv = trunc i64 %cond to i32
-  ret i32 %conv
-}
-
 ; Test with 2 unrelated nested conditions.
 define void @f7_nested_conds(i32* %a, i32 %b) {
 ; CHECK-LABEL: @f7_nested_conds(
@@ -709,4 +579,274 @@ true: ; %b in [0, 256)
 
 false:
   ret void
+}
+
+define void @f11_contradiction(i32 %a, i32 %b) {
+; CHECK-LABEL: @f11_contradiction(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[BC_1:%.*]] = icmp eq i32 [[B:%.*]], 10
+; CHECK-NEXT:    br i1 [[BC_1]], label [[TRUE:%.*]], label [[FALSE:%.*]]
+; CHECK:       true:
+; CHECK-NEXT:    br label [[FALSE]]
+; CHECK:       false:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %bc.1 = icmp eq i32 %b, 10
+  br i1 %bc.1, label %true, label %false
+
+true: ; %b in [10, 11)
+  %bc.2 = icmp eq i32 %b, 20
+  br i1 %bc.2, label %true.2, label %false
+
+true.2:
+  %f.1 = icmp eq i32 %b, 256
+  call void @use(i1 %f.1)
+  %f.2 = icmp ne i32 %b, 300
+  call void @use(i1 %f.2)
+  ret void
+
+false:
+  ret void
+}
+
+define void @f12_float(float %b) {
+; CHECK-LABEL: @f12_float(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[BC_1:%.*]] = fcmp olt float 1.000000e+00, [[B:%.*]]
+; CHECK-NEXT:    br i1 [[BC_1]], label [[TRUE:%.*]], label [[FALSE:%.*]]
+; CHECK:       true:
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    ret void
+; CHECK:       false:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %a = fadd float 0.0, 1.0
+  %bc.1 = fcmp olt float %a, %b
+  br i1 %bc.1, label %true, label %false
+
+true: ; %b in [10, 11)
+  %f.1 = fcmp one float %a, 1.0
+  call void @use(i1 %f.1)
+
+  %t.1 = fcmp oeq float %a, 1.0
+  call void @use(i1 %t.1)
+  ret void
+
+false:
+  ret void
+}
+
+
+@A = global i32 17
+@B = global i32 17
+
+define void @f13_constexpr1() {
+; CHECK-LABEL: @f13_constexpr1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[BC_1:%.*]] = icmp eq i32 add (i32 ptrtoint (i32* @A to i32), i32 10), 55
+; CHECK-NEXT:    br i1 [[BC_1]], label [[TRUE:%.*]], label [[FALSE:%.*]]
+; CHECK:       true:
+; CHECK-NEXT:    [[F_1:%.*]] = icmp eq i32 add (i32 ptrtoint (i32* @A to i32), i32 10), 10
+; CHECK-NEXT:    call void @use(i1 [[F_1]])
+; CHECK-NEXT:    [[F_2:%.*]] = icmp eq i32 add (i32 ptrtoint (i32* @A to i32), i32 10), 55
+; CHECK-NEXT:    call void @use(i1 [[F_2]])
+; CHECK-NEXT:    ret void
+; CHECK:       false:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %a = add i32 ptrtoint (i32* @A to i32), 10
+  %bc.1 = icmp eq i32 %a, 55
+  br i1 %bc.1, label %true, label %false
+
+true: ; %b in [10, 11)
+  %f.1 = icmp eq i32 %a, 10
+  call void @use(i1 %f.1)
+  %f.2 = icmp eq i32 %a, 55
+  call void @use(i1 %f.2)
+
+  ret void
+
+false:
+  ret void
+}
+
+; TODO: can we fold the compares in the true block?
+define void @f14_constexpr2() {
+; CHECK-LABEL: @f14_constexpr2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 icmp eq (i32 ptrtoint (i32* @A to i32), i32 ptrtoint (i32* @B to i32)), label [[TRUE:%.*]], label [[FALSE:%.*]]
+; CHECK:       true:
+; CHECK-NEXT:    call void @use(i1 icmp ne (i32 ptrtoint (i32* @A to i32), i32 ptrtoint (i32* @B to i32)))
+; CHECK-NEXT:    call void @use(i1 icmp eq (i32 ptrtoint (i32* @A to i32), i32 ptrtoint (i32* @B to i32)))
+; CHECK-NEXT:    ret void
+; CHECK:       false:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %a = add i32 ptrtoint (i32* @A to i32), 0
+  %b = add i32 ptrtoint (i32* @B to i32), 0
+  %bc.1 = icmp eq i32 %a, %b
+  br i1 %bc.1, label %true, label %false
+
+true: ; %b in [10, 11)
+  %f.1 = icmp ne i32 %a, %b
+  call void @use(i1 %f.1)
+  %f.2 = icmp eq i32 %a,  %b
+  call void @use(i1 %f.2)
+
+  ret void
+
+false:
+  ret void
+}
+
+define void @loop_1() {
+; CHECK-LABEL: @loop_1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_COND:%.*]]
+; CHECK:       for.cond:
+; CHECK-NEXT:    [[I_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC27:%.*]], [[FOR_COND_CLEANUP13:%.*]] ]
+; CHECK-NEXT:    [[CMP9:%.*]] = icmp sle i32 [[I_0]], 3
+; CHECK-NEXT:    br i1 [[CMP9]], label [[FOR_BODY:%.*]], label [[FOR_COND_CLEANUP:%.*]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    ret void
+; CHECK:       for.body:
+; CHECK-NEXT:    br label [[FOR_COND11:%.*]]
+; CHECK:       for.cond11:
+; CHECK-NEXT:    br label [[FOR_COND_CLEANUP13]]
+; CHECK:       for.cond.cleanup13:
+; CHECK-NEXT:    [[INC27]] = add nsw i32 [[I_0]], 1
+; CHECK-NEXT:    br label [[FOR_COND]]
+;
+entry:
+  br label %for.cond
+
+for.cond:                                         ; preds = %for.cond.cleanup13, %if.then
+  %i.0 = phi i32 [ 0, %entry ], [ %inc27, %for.cond.cleanup13 ]
+  %cmp9 = icmp sle i32 %i.0, 3
+  br i1 %cmp9, label %for.body, label %for.cond.cleanup
+
+for.cond.cleanup:                                 ; preds = %for.cond
+  ret void
+
+for.body:                                         ; preds = %for.cond
+  br label %for.cond11
+
+for.cond11:                                       ; preds = %arrayctor.cont21, %for.body
+  br label %for.cond.cleanup13
+
+for.cond.cleanup13:                               ; preds = %for.cond11
+  %inc27 = add nsw i32 %i.0, 1
+  br label %for.cond
+}
+
+
+define void @loop() {
+; CHECK-LABEL: @loop(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_COND:%.*]]
+; CHECK:       for.cond:
+; CHECK-NEXT:    [[I_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC27:%.*]], [[FOR_COND_CLEANUP13:%.*]] ]
+; CHECK-NEXT:    [[CMP9:%.*]] = icmp sle i32 [[I_0]], 3
+; CHECK-NEXT:    br i1 [[CMP9]], label [[FOR_BODY:%.*]], label [[FOR_COND_CLEANUP:%.*]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    ret void
+; CHECK:       for.body:
+; CHECK-NEXT:    br label [[FOR_COND11:%.*]]
+; CHECK:       for.cond11:
+; CHECK-NEXT:    [[J_0:%.*]] = phi i32 [ 0, [[FOR_BODY]] ], [ [[INC:%.*]], [[FOR_BODY14:%.*]] ]
+; CHECK-NEXT:    [[CMP12:%.*]] = icmp slt i32 [[J_0]], 2
+; CHECK-NEXT:    br i1 [[CMP12]], label [[FOR_BODY14]], label [[FOR_COND_CLEANUP13]]
+; CHECK:       for.cond.cleanup13:
+; CHECK-NEXT:    [[INC27]] = add nsw i32 [[I_0]], 1
+; CHECK-NEXT:    br label [[FOR_COND]]
+; CHECK:       for.body14:
+; CHECK-NEXT:    [[INC]] = add nsw i32 [[J_0]], 1
+; CHECK-NEXT:    br label [[FOR_COND11]]
+;
+entry:
+  br label %for.cond
+
+for.cond:                                         ; preds = %for.cond.cleanup13, %if.then
+  %i.0 = phi i32 [ 0, %entry ], [ %inc27, %for.cond.cleanup13 ]
+  %cmp9 = icmp sle i32 %i.0, 3
+  br i1 %cmp9, label %for.body, label %for.cond.cleanup
+
+for.cond.cleanup:                                 ; preds = %for.cond
+  ret void
+
+for.body:                                         ; preds = %for.cond
+  br label %for.cond11
+
+for.cond11:                                       ; preds = %arrayctor.cont21, %for.body
+  %j.0 = phi i32 [ 0, %for.body ], [ %inc, %for.body14 ]
+  %cmp12 = icmp slt i32 %j.0, 2
+  br i1 %cmp12, label %for.body14, label %for.cond.cleanup13
+
+for.cond.cleanup13:                               ; preds = %for.cond11
+  %inc27 = add nsw i32 %i.0, 1
+  br label %for.cond
+
+for.body14:
+  %inc = add nsw i32 %j.0, 1
+  br label %for.cond11
+}
+
+define i32 @udiv_1(i64 %sz) {
+; CHECK-LABEL: @udiv_1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 4088, [[SZ:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_END:%.*]]
+; CHECK:       cond.true:
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i64 4088, [[SZ]]
+; CHECK-NEXT:    br label [[COND_END]]
+; CHECK:       cond.end:
+; CHECK-NEXT:    [[COND:%.*]] = phi i64 [ [[DIV]], [[COND_TRUE]] ], [ 1, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[CONV:%.*]] = trunc i64 [[COND]] to i32
+; CHECK-NEXT:    ret i32 [[CONV]]
+;
+entry:
+  %cmp = icmp ugt i64 4088, %sz
+  br i1 %cmp, label %cond.true, label %cond.end
+
+cond.true:                                        ; preds = %entry
+  %div = udiv i64 4088, %sz
+  br label %cond.end
+
+cond.end:                                         ; preds = %entry, %cond.true
+  %cond = phi i64 [ %div, %cond.true ], [ 1, %entry ]
+  %conv = trunc i64 %cond to i32
+  ret i32 %conv
+}
+
+; Same as @udiv_1, but with the condition switched.
+define i32 @udiv_2(i64 %sz) {
+; CHECK-LABEL: @udiv_2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[SZ:%.*]], 4088
+; CHECK-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_END:%.*]]
+; CHECK:       cond.true:
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i64 4088, [[SZ]]
+; CHECK-NEXT:    br label [[COND_END]]
+; CHECK:       cond.end:
+; CHECK-NEXT:    [[COND:%.*]] = phi i64 [ [[DIV]], [[COND_TRUE]] ], [ 1, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[CONV:%.*]] = trunc i64 [[COND]] to i32
+; CHECK-NEXT:    ret i32 [[CONV]]
+;
+entry:
+  %cmp = icmp ugt i64 %sz, 4088
+  br i1 %cmp, label %cond.true, label %cond.end
+
+cond.true:                                        ; preds = %entry
+  %div = udiv i64 4088, %sz
+  br label %cond.end
+
+cond.end:                                         ; preds = %entry, %cond.true
+  %cond = phi i64 [ %div, %cond.true ], [ 1, %entry ]
+  %conv = trunc i64 %cond to i32
+  ret i32 %conv
 }
