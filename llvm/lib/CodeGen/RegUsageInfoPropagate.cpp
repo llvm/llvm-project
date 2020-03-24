@@ -118,8 +118,8 @@ bool RegUsageInfoPropagation::runOnMachineFunction(MachineFunction &MF) {
         continue;
       LLVM_DEBUG(
           dbgs()
-          << "Call Instruction Before Register Usage Info Propagation : \n");
-      LLVM_DEBUG(dbgs() << MI << "\n");
+          << "Call Instruction Before Register Usage Info Propagation : \n"
+          << MI << "\n");
 
       auto UpdateRegMask = [&](const Function &F) {
         const ArrayRef<uint32_t> RegMask = PRUI->getRegUsageInfo(F);
@@ -140,8 +140,9 @@ bool RegUsageInfoPropagation::runOnMachineFunction(MachineFunction &MF) {
       }
 
       LLVM_DEBUG(
-          dbgs() << "Call Instruction After Register Usage Info Propagation : "
-                 << MI << '\n');
+          dbgs()
+          << "Call Instruction After Register Usage Info Propagation : \n"
+          << MI << '\n');
     }
   }
 
