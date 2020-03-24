@@ -3332,6 +3332,16 @@ public:
                                                    const SelectionDAG &DAG,
                                                    unsigned Depth = 0) const;
 
+  /// This method can be implemented by targets that want to expose additional
+  /// information about sign bits to GlobalISel combiners. The DemandedElts
+  /// argument allows us to only collect the minimum sign bits that are shared
+  /// by the requested vector elements.
+  virtual unsigned computeNumSignBitsForTargetInstr(GISelKnownBits &Analysis,
+                                                    Register R,
+                                                    const APInt &DemandedElts,
+                                                    const MachineRegisterInfo &MRI,
+                                                    unsigned Depth = 0) const;
+
   /// Attempt to simplify any target nodes based on the demanded vector
   /// elements, returning true on success. Otherwise, analyze the expression and
   /// return a mask of KnownUndef and KnownZero elements for the expression

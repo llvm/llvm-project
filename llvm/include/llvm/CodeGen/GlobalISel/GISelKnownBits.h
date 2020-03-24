@@ -50,6 +50,9 @@ public:
 
   // KnownBitsAPI
   KnownBits getKnownBits(Register R);
+  KnownBits getKnownBits(Register R, const APInt &DemandedElts,
+                         unsigned Depth = 0);
+
   // Calls getKnownBits for first operand def of MI.
   KnownBits getKnownBits(MachineInstr &MI);
   APInt getKnownZeroes(Register R);

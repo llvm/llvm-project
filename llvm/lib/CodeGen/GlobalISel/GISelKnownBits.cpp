@@ -65,12 +65,18 @@ KnownBits GISelKnownBits::getKnownBits(MachineInstr &MI) {
 }
 
 KnownBits GISelKnownBits::getKnownBits(Register R) {
-  KnownBits Known;
-  LLT Ty = MRI.getType(R);
+  const LLT Ty = MRI.getType(R);
   APInt DemandedElts =
       Ty.isVector() ? APInt::getAllOnesValue(Ty.getNumElements()) : APInt(1, 1);
+  return getKnownBits(R, DemandedElts);
+}
+
+KnownBits GISelKnownBits::getKnownBits(Register R, const APInt &DemandedElts,
+                                       unsigned Depth) {
   // For now, we only maintain the cache during one request.
   assert(ComputeKnownBitsCache.empty() && "Cache should have been cleared");
+
+  KnownBits Known;
   computeKnownBitsImpl(R, Known, DemandedElts);
   ComputeKnownBitsCache.clear();
   return Known;
@@ -428,6 +434,7 @@ unsigned GISelKnownBits::computeNumSignBits(Register R,
     return 1; // No demanded elts, better to assume we don't know anything.
 
   LLT DstTy = MRI.getType(R);
+  const unsigned TyBits = DstTy.getScalarSizeInBits();
 
   // Handle the case where this is called on a register that does not have a
   // type constraint. This is unlikely to occur except by looking through copies
@@ -436,6 +443,7 @@ unsigned GISelKnownBits::computeNumSignBits(Register R,
   if (!DstTy.isValid())
     return 1;
 
+  unsigned FirstAnswer = 1;
   switch (Opcode) {
   case TargetOpcode::COPY: {
     MachineOperand &Src = MI.getOperand(1);
@@ -465,13 +473,34 @@ unsigned GISelKnownBits::computeNumSignBits(Register R,
       return NumSrcSignBits - (NumSrcBits - DstTyBits);
     break;
   }
-  default:
+  case TargetOpcode::G_INTRINSIC:
+  case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
+  default: {
+    unsigned NumBits =
+      TL.computeNumSignBitsForTargetInstr(*this, R, DemandedElts, MRI, Depth);
+    if (NumBits > 1)
+      FirstAnswer = std::max(FirstAnswer, NumBits);
     break;
   }
+  }
 
-  // TODO: Handle target instructions
-  // TODO: Fall back to known bits
-  return 1;
+  // Finally, if we can prove that the top bits of the result are 0's or 1's,
+  // use this information.
+  KnownBits Known = getKnownBits(R, DemandedElts, Depth);
+  APInt Mask;
+  if (Known.isNonNegative()) {        // sign bit is 0
+    Mask = Known.Zero;
+  } else if (Known.isNegative()) {  // sign bit is 1;
+    Mask = Known.One;
+  } else {
+    // Nothing known.
+    return FirstAnswer;
+  }
+
+  // Okay, we know that the sign bit in Mask is set.  Use CLO to determine
+  // the number of identical bits in the top of the input value.
+  Mask <<= Mask.getBitWidth() - TyBits;
+  return std::max(FirstAnswer, Mask.countLeadingOnes());
 }
 
 unsigned GISelKnownBits::computeNumSignBits(Register R, unsigned Depth) {
