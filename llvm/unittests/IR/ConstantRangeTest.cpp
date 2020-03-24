@@ -2317,4 +2317,20 @@ TEST_F(ConstantRangeTest, castOps) {
   EXPECT_EQ(64u, IntToPtr.getBitWidth());
   EXPECT_TRUE(IntToPtr.isFullSet());
 }
+
+TEST_F(ConstantRangeTest, binaryXor) {
+  // Single element ranges.
+  ConstantRange R16(APInt(8, 16));
+  ConstantRange R20(APInt(8, 20));
+  EXPECT_EQ(*R16.binaryXor(R16).getSingleElement(), APInt(8, 0));
+  EXPECT_EQ(*R16.binaryXor(R20).getSingleElement(), APInt(8, 16 ^ 20));
+
+  // Ranges with more than a single element. Handled conservatively for now.
+  ConstantRange R16_35(APInt(8, 16), APInt(8, 35));
+  ConstantRange R0_99(APInt(8, 0), APInt(8, 99));
+  EXPECT_TRUE(R16_35.binaryXor(R16_35).isFullSet());
+  EXPECT_TRUE(R16_35.binaryXor(R0_99).isFullSet());
+  EXPECT_TRUE(R0_99.binaryXor(R16_35).isFullSet());
+}
+
 }  // anonymous namespace
