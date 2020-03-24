@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Include okay for this redirector.
+// NOLINTNEXTLINE(llvmlibc-restrict-system-libc-headers)
 #include <math.h>
 
 namespace __llvm_libc {
