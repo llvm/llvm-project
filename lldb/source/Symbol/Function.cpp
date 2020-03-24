@@ -120,27 +120,36 @@ size_t InlineFunctionInfo::MemorySize() const {
 /// @name Call site related structures
 /// @{
 
-lldb::addr_t CallEdge::GetReturnPCAddress(Function &caller,
-                                          Target &target) const {
+lldb::addr_t CallEdge::GetLoadAddress(lldb::addr_t unresolved_pc,
+                                      Function &caller, Target &target) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
 
   const Address &caller_start_addr = caller.GetAddressRange().GetBaseAddress();
 
   ModuleSP caller_module_sp = caller_start_addr.GetModule();
   if (!caller_module_sp) {
-    LLDB_LOG(log, "GetReturnPCAddress: cannot get Module for caller");
+    LLDB_LOG(log, "GetLoadAddress: cannot get Module for caller");
     return LLDB_INVALID_ADDRESS;
   }
 
   SectionList *section_list = caller_module_sp->GetSectionList();
   if (!section_list) {
-    LLDB_LOG(log, "GetReturnPCAddress: cannot get SectionList for Module");
+    LLDB_LOG(log, "GetLoadAddress: cannot get SectionList for Module");
     return LLDB_INVALID_ADDRESS;
   }
 
-  Address return_pc_addr = Address(return_pc, section_list);
-  lldb::addr_t ret_addr = return_pc_addr.GetLoadAddress(&target);
-  return ret_addr;
+  Address the_addr = Address(unresolved_pc, section_list);
+  lldb::addr_t load_addr = the_addr.GetLoadAddress(&target);
+  return load_addr;
+}
+
+lldb::addr_t CallEdge::GetReturnPCAddress(Function &caller,
+                                          Target &target) const {
+  return GetLoadAddress(return_pc, caller, target);
+}
+
+lldb::addr_t CallEdge::GetCallInstPC(Function &caller, Target &target) const {
+  return GetLoadAddress(call_inst_pc, caller, target);
 }
 
 void DirectCallEdge::ParseSymbolFileAndResolve(ModuleList &images) {
