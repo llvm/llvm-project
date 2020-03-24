@@ -72,6 +72,9 @@ Changes to the ARM Backend
 
 During this release ...
 
+* Implemented C-language intrinsics for the full Arm v8.1-M MVE instruction
+  set. ``<arm_mve.h>`` now supports the complete API defined in the Arm C
+  Language Extensions.
 
 Changes to the MIPS Target
 --------------------------
