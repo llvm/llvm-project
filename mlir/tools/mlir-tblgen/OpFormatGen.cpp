@@ -1830,19 +1830,13 @@ void mlir::tblgen::generateOpFormat(const Operator &constOp, OpClass &opClass) {
   // TODO(riverriddle) Operator doesn't expose all necessary functionality via
   // the const interface.
   Operator &op = const_cast<Operator &>(constOp);
-
-  // Check if the operation specified the format field.
-  StringRef formatStr;
-  TypeSwitch<llvm::Init *>(op.getDef().getValueInit("assemblyFormat"))
-      .Case<llvm::StringInit, llvm::CodeInit>(
-          [&](auto *init) { formatStr = init->getValue(); });
-  if (formatStr.empty())
+  if (!op.hasAssemblyFormat())
     return;
 
   // Parse the format description.
   llvm::SourceMgr mgr;
-  mgr.AddNewSourceBuffer(llvm::MemoryBuffer::getMemBuffer(formatStr),
-                         llvm::SMLoc());
+  mgr.AddNewSourceBuffer(
+      llvm::MemoryBuffer::getMemBuffer(op.getAssemblyFormat()), llvm::SMLoc());
   OperationFormat format(op);
   if (failed(FormatParser(mgr, format, op).parse())) {
     // Exit the process if format errors are treated as fatal.

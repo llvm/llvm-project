@@ -39,7 +39,8 @@ is declared using add_mlir_dialect().
 
 ```cmake
 
-add_mlir_dialect(FooOps foo FooOps)
+add_mlir_dialect(FooOps foo)
+add_mlir_doc(FooOps -gen-dialect-doc FooDialect Dialects/)
 
 ```
 

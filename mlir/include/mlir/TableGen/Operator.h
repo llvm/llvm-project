@@ -198,6 +198,10 @@ public:
   bool hasSummary() const;
   StringRef getSummary() const;
 
+  // Query functions for the assembly format of the operator.
+  bool hasAssemblyFormat() const;
+  StringRef getAssemblyFormat() const;
+
   // Returns this op's extra class declaration code.
   StringRef getExtraClassDeclaration() const;
 
