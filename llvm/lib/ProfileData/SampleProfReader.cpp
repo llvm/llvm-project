@@ -196,6 +196,8 @@ std::error_code SampleProfileReaderText::readImpl() {
   sampleprof_error Result = sampleprof_error::success;
 
   InlineCallStack InlineStack;
+  int CSProfileCount = 0;
+  int RegularProfileCount = 0;
 
   for (; !LineIt.is_at_eof(); ++LineIt) {
     if ((*LineIt)[(*LineIt).find_first_not_of(' ')] == '#')
@@ -220,9 +222,15 @@ std::error_code SampleProfileReaderText::readImpl() {
                     "Expected 'mangled_name:NUM:NUM', found " + *LineIt);
         return sampleprof_error::malformed;
       }
-      Profiles[FName] = FunctionSamples();
-      FunctionSamples &FProfile = Profiles[FName];
-      FProfile.setName(FName);
+      SampleContext FContext(FName);
+      if (FContext.hasContext())
+        ++CSProfileCount;
+      else
+        ++RegularProfileCount;
+      Profiles[FContext] = FunctionSamples();
+      FunctionSamples &FProfile = Profiles[FContext];
+      FProfile.setName(FContext.getName());
+      FProfile.setContext(FContext);
       MergeResult(Result, FProfile.addTotalSamples(NumSamples));
       MergeResult(Result, FProfile.addHeadSamples(NumHeadSamples));
       InlineStack.clear();
@@ -264,6 +272,11 @@ std::error_code SampleProfileReaderText::readImpl() {
       }
     }
   }
+
+  assert((RegularProfileCount == 0 || CSProfileCount == 0) &&
+         "Cannot have both context-sensitive and regular profile");
+  ProfileIsCS = (CSProfileCount > 0);
+
   if (Result == sampleprof_error::success)
     computeSummary();
 
@@ -1292,6 +1305,8 @@ void SampleProfileReaderItaniumRemapper::applyRemapping(LLVMContext &Ctx) {
     return;
   }
 
+  // CSSPGO-TODO: Remapper is not yet supported.
+  // We will need to remap the entire context string.
   assert(Remappings && "should be initialized while creating remapper");
   for (auto &Sample : Reader.getProfiles()) {
     DenseSet<StringRef> NamesInSample;
