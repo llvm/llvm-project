@@ -182,6 +182,11 @@ DisableSLPVectorization("disable-slp-vectorization",
                         cl::desc("Disable the slp vectorization pass"),
                         cl::init(false));
 
+static cl::opt<bool>
+DisableLoopStripmining("disable-loop-stripmining",
+                        cl::desc("Disable loop stripmining pass"),
+                        cl::init(false));
+
 static cl::opt<bool> EmitSummaryIndex("module-summary",
                                       cl::desc("Emit module summary index"),
                                       cl::init(false));
@@ -396,6 +401,13 @@ static void AddOptimizationPasses(legacy::PassManagerBase &MPM,
   Builder.SLPVectorize =
       DisableSLPVectorization ? false : OptLevel > 1 && SizeLevel < 2;
 
+  // This is final, unless there is a relevant #pragma.
+  if (DisableLoopStripmining)
+    Builder.LoopStripmine = false;
+  // If option wasn't forced via cmd line (-stripmine-loops, -loop-stripmine)
+  else if (!Builder.LoopStripmine)
+    Builder.LoopStripmine = OptLevel > 1 && SizeLevel < 2;
+
   if (TM)
     TM->adjustPassManager(Builder);
 
@@ -505,6 +517,7 @@ int main(int argc, char **argv) {
   initializeScalarOpts(Registry);
   initializeObjCARCOpts(Registry);
   initializeVectorization(Registry);
+  initializeTapirOpts(Registry);
   initializeIPO(Registry);
   initializeAnalysis(Registry);
   initializeTransformUtils(Registry);
@@ -535,6 +548,7 @@ int main(int argc, char **argv) {
   initializeWasmEHPreparePass(Registry);
   initializeWriteBitcodePassPass(Registry);
   initializeHardwareLoopsPass(Registry);
+  initializeTapirCleanupPass(Registry);
 
 #ifdef LINK_POLLY_INTO_TOOLS
   polly::initializePollyPasses(Registry);

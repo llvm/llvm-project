@@ -250,11 +250,12 @@ public:
   /// Return all blocks inside the loop that have successors outside of the
   /// loop. These are the blocks _inside of the current loop_ which branch out.
   /// The returned list is always unique.
-  void getExitingBlocks(SmallVectorImpl<BlockT *> &ExitingBlocks) const;
+  void getExitingBlocks(SmallVectorImpl<BlockT *> &ExitingBlocks,
+                        bool IgnoreDetachUnwind = false) const;
 
   /// If getExitingBlocks would return exactly one block, return that block.
   /// Otherwise return null.
-  BlockT *getExitingBlock() const;
+  BlockT *getExitingBlock(bool IgnoreDetachUnwind = false) const;
 
   /// Return all of the successor blocks of this loop. These are the blocks
   /// _outside of the current loop_ which are branched to.
@@ -524,6 +525,16 @@ public:
     explicit operator bool() const { return Start && End; }
   };
 
+  /// Return all blocks inside the loop that have successors outside of the
+  /// loop. These are the blocks _inside of the current loop_ which branch out.
+  /// The returned list is always unique.
+  void getExitingBlocks(SmallVectorImpl<BasicBlock *> &ExitingBlocks,
+                        bool IgnoreDetachUnwind = false) const;
+
+  /// If getExitingBlocks would return exactly one block, return that block.
+  /// Otherwise return null.
+  BasicBlock *getExitingBlock(bool IgnoreDetachUnwind = false) const;
+
   /// Return true if the specified value is loop invariant.
   bool isLoopInvariant(const Value *V) const;
 
@@ -779,6 +790,14 @@ public:
   /// from being unrolled more than is directed by a pragma if the loop
   /// unrolling pass is run more than once (which it generally is).
   void setLoopAlreadyUnrolled();
+
+  /// Add llvm.loop.from.tapir.loop to this loop's loop id metadata, to indicate
+  /// that this loop was derived from a Tapir loop.
+  void setDerivedFromTapirLoop();
+
+  /// Returns true if the loop was derived from a Tapir loop, according to its
+  /// metadata.
+  bool wasDerivedFromTapirLoop() const;
 
   void dump() const;
   void dumpVerbose() const;

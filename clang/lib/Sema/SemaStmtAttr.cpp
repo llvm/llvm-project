@@ -85,13 +85,22 @@ static Attr *handleLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
   StringRef PragmaName =
       llvm::StringSwitch<StringRef>(PragmaNameLoc->Ident->getName())
           .Cases("unroll", "nounroll", "unroll_and_jam", "nounroll_and_jam",
-                 PragmaNameLoc->Ident->getName())
+                 "cilk", PragmaNameLoc->Ident->getName())
           .Default("clang loop");
+
+  if ((PragmaName == "cilk") &&
+      (St->getStmtClass() != Stmt::CilkForStmtClass)) {
+    S.Diag(St->getBeginLoc(), diag::err_pragma_cilk_precedes_noncilk)
+      << "#pragma cilk";
+    return nullptr;
+  }
 
   if (St->getStmtClass() != Stmt::DoStmtClass &&
       St->getStmtClass() != Stmt::ForStmtClass &&
       St->getStmtClass() != Stmt::CXXForRangeStmtClass &&
-      St->getStmtClass() != Stmt::WhileStmtClass) {
+      St->getStmtClass() != Stmt::WhileStmtClass &&
+      St->getStmtClass() != Stmt::CilkForStmtClass &&
+      St->getStmtClass() != Stmt::ForallStmtClass) {
     std::string Pragma = "#pragma " + std::string(PragmaName);
     S.Diag(St->getBeginLoc(), diag::err_pragma_loop_precedes_nonloop) << Pragma;
     return nullptr;
@@ -124,6 +133,19 @@ static Attr *handleLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
       SetHints(LoopHintAttr::UnrollAndJamCount, LoopHintAttr::Numeric);
     else
       SetHints(LoopHintAttr::UnrollAndJam, LoopHintAttr::Enable);
+  } else if (PragmaName == "cilk") {
+    Spelling = LoopHintAttr::Pragma_cilk;
+    Option = llvm::StringSwitch<LoopHintAttr::OptionType>(
+                 OptionLoc->Ident->getName())
+                 .Case("grainsize", LoopHintAttr::TapirGrainsize)
+                 .Default(LoopHintAttr::TapirGrainsize);
+    if (Option == LoopHintAttr::TapirGrainsize) {
+      assert(ValueExpr && "Attribute must have a valid value expression.");
+      if (S.CheckLoopHintExpr(ValueExpr, St->getBeginLoc()))
+        return nullptr;
+      State = LoopHintAttr::Numeric;
+    } else
+      llvm_unreachable("bad loop hint");
   } else {
     // #pragma clang loop ...
     assert(OptionLoc && OptionLoc->Ident &&
@@ -176,12 +198,12 @@ static Attr *handleLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
 static void
 CheckForIncompatibleAttributes(Sema &S,
                                const SmallVectorImpl<const Attr *> &Attrs) {
-  // There are 6 categories of loop hints attributes: vectorize, interleave,
-  // unroll, unroll_and_jam, pipeline and distribute. Except for distribute they
-  // come in two variants: a state form and a numeric form.  The state form
-  // selectively defaults/enables/disables the transformation for the loop
-  // (for unroll, default indicates full unrolling rather than enabling the
-  // transformation). The numeric form form provides an integer hint (for
+  // There are 7 categories of loop hints attributes: vectorize, interleave,
+  // unroll, unroll_and_jam, pipeline, distribute, and (Tapir) grainsize. Except
+  // for distribute they come in two variants: a state form and a numeric form.
+  // The state form selectively defaults/enables/disables the transformation for
+  // the loop (for unroll, default indicates full unrolling rather than enabling
+  // the transformation). The numeric form form provides an integer hint (for
   // example, unroll count) to the transformer. The following array accumulates
   // the hints encountered while iterating through the attributes to check for
   // compatibility.
@@ -189,7 +211,8 @@ CheckForIncompatibleAttributes(Sema &S,
     const LoopHintAttr *StateAttr;
     const LoopHintAttr *NumericAttr;
   } HintAttrs[] = {{nullptr, nullptr}, {nullptr, nullptr}, {nullptr, nullptr},
-                   {nullptr, nullptr}, {nullptr, nullptr}, {nullptr, nullptr}};
+                   {nullptr, nullptr}, {nullptr, nullptr}, {nullptr, nullptr},
+                   {nullptr, nullptr}};
 
   for (const auto *I : Attrs) {
     const LoopHintAttr *LH = dyn_cast<LoopHintAttr>(I);
@@ -205,7 +228,8 @@ CheckForIncompatibleAttributes(Sema &S,
       Unroll,
       UnrollAndJam,
       Distribute,
-      Pipeline
+      Pipeline,
+      TapirGrainsize
     } Category;
     switch (Option) {
     case LoopHintAttr::Vectorize:
@@ -231,6 +255,9 @@ CheckForIncompatibleAttributes(Sema &S,
     case LoopHintAttr::PipelineDisabled:
     case LoopHintAttr::PipelineInitiationInterval:
       Category = Pipeline;
+      break;
+    case LoopHintAttr::TapirGrainsize:
+      Category = TapirGrainsize;
       break;
     };
 
@@ -315,6 +342,71 @@ static Attr *handleOpenCLUnrollHint(Sema &S, Stmt *St, const ParsedAttr &A,
   return OpenCLUnrollHintAttr::CreateImplicit(S.Context, UnrollFactor);
 }
 
+// +===== Handle kitsune-centric attributes 
+// 
+static Attr *handleKitsuneTargetAttr(Sema &S, Stmt *St, 
+				     const ParsedAttr &A,
+				     SourceRange Range)
+{
+  if (A.getNumArgs() != 1) {
+    S.Diag(A.getLoc(), diag::err_kitsune_target_attr_wrong_nargs);
+    return nullptr;
+  }
+
+  StringRef      targetStr;
+  SourceLocation argLoc;
+
+  if (!S.checkStringLiteralArgumentAttr(A, 0, targetStr, &argLoc)) {
+    S.Diag(A.getLoc(), diag::err_kitsune_target_unknown);
+    return nullptr;
+  }
+
+  KitsuneTargetAttr::KitsuneTargetTy   targetKind;
+  if(!KitsuneTargetAttr::ConvertStrToKitsuneTargetTy(targetStr, targetKind)) {
+    // FIXME: Is this redundant w/ CheckString call above???
+    S.Diag(A.getLoc(), diag::err_kitsune_target_unknown)
+      << A.getName() << targetStr << argLoc;
+    return nullptr;
+  }
+
+  unsigned Index = A.getAttributeSpellingListIndex();
+  return ::new(S.Context)
+    KitsuneTargetAttr(A.getLoc(), S.Context, targetKind, Index);
+}
+
+
+static Attr *handleKitsuneStrategyAttr(Sema &S, Stmt *St, 
+				       const ParsedAttr &A,
+				       SourceRange Range) 
+{
+  if (A.getNumArgs() != 1) {
+    S.Diag(A.getLoc(), diag::err_kitsune_strategy_attr_wrong_nargs);
+    return nullptr;
+  }
+
+  StringRef      strategyStr;
+  SourceLocation argLoc;
+  if (!S.checkStringLiteralArgumentAttr(A, 0, strategyStr, &argLoc)) {
+    S.Diag(A.getLoc(), diag::err_kitsune_strategy_unknown);
+    return nullptr;
+  }
+
+  KitsuneStrategyAttr::KitsuneStrategyTy strategyKind;
+  if (!KitsuneStrategyAttr::ConvertStrToKitsuneStrategyTy(strategyStr, strategyKind)) {
+    // FIXME: Is this redundant w/ CheckString call above???
+    S.Diag(A.getLoc(), diag::err_kitsune_strategy_unknown)
+      << A.getName() << strategyStr << argLoc;
+    return nullptr;
+  }
+
+  unsigned Index = A.getAttributeSpellingListIndex();
+  return ::new (S.Context)
+    KitsuneStrategyAttr(A.getLoc(), S.Context, strategyKind, Index);
+}
+
+// =====+
+
+
 static Attr *ProcessStmtAttribute(Sema &S, Stmt *St, const ParsedAttr &A,
                                   SourceRange Range) {
   switch (A.getKind()) {
@@ -332,6 +424,14 @@ static Attr *ProcessStmtAttribute(Sema &S, Stmt *St, const ParsedAttr &A,
     return handleOpenCLUnrollHint(S, St, A, Range);
   case ParsedAttr::AT_Suppress:
     return handleSuppressAttr(S, St, A, Range);
+  // +==== kitsune attr support 
+  case ParsedAttr::AT_KitsuneTarget:
+    return handleKitsuneTargetAttr(S, St, A, Range);
+    break;
+  case ParsedAttr::AT_KitsuneStrategy:
+    return handleKitsuneStrategyAttr(S, St, A, Range);
+    break;
+  // =====+
   default:
     // if we're here, then we parsed a known attribute, but didn't recognize
     // it as a statement attribute => it is declaration attribute

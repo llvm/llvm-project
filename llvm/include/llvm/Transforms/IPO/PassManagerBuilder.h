@@ -14,6 +14,7 @@
 #ifndef LLVM_TRANSFORMS_IPO_PASSMANAGERBUILDER_H
 #define LLVM_TRANSFORMS_IPO_PASSMANAGERBUILDER_H
 
+#include "llvm/Transforms/Tapir/TapirTargetIDs.h"
 #include <functional>
 #include <memory>
 #include <string>
@@ -113,6 +114,14 @@ public:
     /// function simplification passes run by CGPassManager.
     EP_CGSCCOptimizerLate,
 
+    /// EP_TapirLate - This extension point allows adding passes just before
+    /// Tapir instructions are lowered to calls into a parallel runtime system.
+    EP_TapirLate,
+
+    /// EP_TapirLoopEnd - This extension point allows adding passes just before
+    /// Tapir loops are processed by lowering, but before additional lowering.
+    EP_TapirLoopEnd,
+
     /// EP_FullLinkTimeOptimizationEarly - This extensions point allow adding
     /// passes that
     /// run at Link Time, before Full Link Time Optimization.
@@ -131,6 +140,9 @@ public:
   /// SizeLevel - How much we're optimizing for size.
   ///    0 = none, 1 = -Os, 2 = -Oz
   unsigned SizeLevel;
+
+  /// What runtime ABI to lower Tapir instructions to.  None if no lowering.
+  TapirTargetID TapirTarget;
 
   /// LibraryInfo - Specifies information about the runtime library for the
   /// optimizer.  If this is non-null, it is added to both the function and
@@ -156,6 +168,7 @@ public:
   bool SLPVectorize;
   bool LoopVectorize;
   bool LoopsInterleaved;
+  bool LoopStripmine;
   bool RerollLoops;
   bool NewGVN;
   bool DisableGVNLoadPRE;
@@ -205,6 +218,7 @@ private:
   void addPGOInstrPasses(legacy::PassManagerBase &MPM, bool IsCS);
   void addFunctionSimplificationPasses(legacy::PassManagerBase &MPM);
   void addInstructionCombiningPass(legacy::PassManagerBase &MPM) const;
+  void prepopulateModulePassManager(legacy::PassManagerBase &MPM);
 
 public:
   /// populateFunctionPassManager - This fills in the function pass manager,

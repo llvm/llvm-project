@@ -297,6 +297,11 @@ VALUE_LANGOPT(VtorDispMode, 2, 1, "How many vtordisps to insert")
 
 LANGOPT(ApplePragmaPack, 1, 0, "Apple gcc-compatible #pragma pack handling")
 
+LANGOPT(Cilk, 1, 0, "Enable Cilk language extensions")
+
+BENIGN_ENUM_LANGOPT(Cilktool, CilktoolKind, 3,
+                    Cilktool_None, "turn on the specified Cilk tool")
+
 LANGOPT(RetainCommentsFromSystemHeaders, 1, 0, "retain documentation comments from system headers in the AST")
 
 LANGOPT(SanitizeAddressFieldPadding, 2, 0, "controls how aggressive is ASan "
@@ -304,6 +309,9 @@ LANGOPT(SanitizeAddressFieldPadding, 2, 0, "controls how aggressive is ASan "
                                            "aggressive, 2: more aggressive)")
 
 LANGOPT(Cmse, 1, 0, "ARM Security extensions support")
+
+BENIGN_ENUM_LANGOPT(ComprehensiveStaticInstrumentation, CSIExtensionPoint, 3,
+                    CSI_None, "turn on Comprehensive Static Instrumentation")
 
 LANGOPT(XRayInstrument, 1, 0, "controls whether to do XRay instrumentation")
 LANGOPT(XRayAlwaysEmitCustomEvents, 1, 0,
@@ -329,6 +337,13 @@ LANGOPT(PaddingOnUnsignedFixedPoint, 1, 0,
         "unsigned fixed point types having one extra padding bit")
 
 LANGOPT(RegisterStaticDestructors, 1, 1, "Register C++ static destructors")
+
+
+// kitsune: Kokkos support. 
+BENIGN_LANGOPT(Kokkos, 1, 0, "Enable specialized Kokkos code generation")
+
+// kitsune: FleCSI support. 
+BENIGN_LANGOPT(FleCSI, 1, 0, "Enable specialized FleCSI code generation")
 
 #undef LANGOPT
 #undef COMPATIBLE_LANGOPT

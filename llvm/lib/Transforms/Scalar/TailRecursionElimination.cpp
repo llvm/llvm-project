@@ -581,11 +581,17 @@ static bool eliminateRecursiveTailCall(
     if (TailCallsAreMarkedTail)
       // Move all fixed sized allocas from OldEntry to NewEntry.
       for (BasicBlock::iterator OEBI = OldEntry->begin(), E = OldEntry->end(),
-             NEBI = NewEntry->begin(); OEBI != E; )
-        if (AllocaInst *AI = dyn_cast<AllocaInst>(OEBI++))
+             NEBI = NewEntry->begin(); OEBI != E; ) {
+        auto I = OEBI++;
+        if (AllocaInst *AI = dyn_cast<AllocaInst>(I)) {
           if (isa<ConstantInt>(AI->getArraySize()))
             AI->moveBefore(&*NEBI);
-
+        } else if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
+          // Also move syncregions to NewEntry.
+          if (Intrinsic::syncregion_start == II->getIntrinsicID())
+            II->moveBefore(&*NEBI);
+        }
+      }
     // Now that we have created a new block, which jumps to the entry
     // block, insert a PHI node for each argument of the function.
     // For now, we initialize each PHI to only have the real arguments
@@ -683,6 +689,38 @@ static bool eliminateRecursiveTailCall(
   return true;
 }
 
+static void getReturnBlocksToSync(
+    BasicBlock *Entry, SyncInst *Sync,
+    SmallVectorImpl<BasicBlock *> &ReturnBlocksToSync) {
+  // Walk the CFG from the entry block, stopping traversal at any sync within
+  // the same region.  Record all blocks found that are terminated by a return
+  // instruction.
+  Value *SyncRegion = Sync->getSyncRegion();
+  SmallVector<BasicBlock *, 8> WorkList;
+  SmallPtrSet<BasicBlock *, 8> Visited;
+  WorkList.push_back(Entry);
+  while (!WorkList.empty()) {
+    BasicBlock *BB = WorkList.pop_back_val();
+    if (!Visited.insert(BB).second)
+      continue;
+
+    // Skip paths that are synced within the same region.
+    if (SyncInst *SI = dyn_cast<SyncInst>(BB->getTerminator()))
+      if (SI->getSyncRegion() == SyncRegion)
+        continue;
+
+    // If we find a return, we must add a sync before it if we eliminate a
+    // recursive tail call.
+    if (isa<ReturnInst>(BB->getTerminator()))
+      ReturnBlocksToSync.push_back(BB);
+
+    // Queue up successors to search.
+    for (BasicBlock *Succ : successors(BB))
+      if (Succ != Sync->getParent())
+        WorkList.push_back(Succ);
+  }
+}
+
 static bool foldReturnAndProcessPred(
     BasicBlock *BB, ReturnInst *Ret, BasicBlock *&OldEntry,
     bool &TailCallsAreMarkedTail, SmallVectorImpl<PHINode *> &ArgumentPHIs,
@@ -699,13 +737,17 @@ static bool foldReturnAndProcessPred(
   // predecessors and perform TRE there. Look for predecessors that end
   // in unconditional branch and recursive call(s).
   SmallVector<BranchInst*, 8> UncondBranchPreds;
+  SmallVector<SyncInst*, 8> SyncPreds;
   for (pred_iterator PI = pred_begin(BB), E = pred_end(BB); PI != E; ++PI) {
     BasicBlock *Pred = *PI;
     Instruction *PTI = Pred->getTerminator();
     if (BranchInst *BI = dyn_cast<BranchInst>(PTI))
       if (BI->isUnconditional())
         UncondBranchPreds.push_back(BI);
+    if (SyncInst *SI = dyn_cast<SyncInst>(PTI))
+      SyncPreds.push_back(SI);
   }
+  BasicBlock *OldEntryBlock = &BB->getParent()->getEntryBlock();
 
   while (!UncondBranchPreds.empty()) {
     BranchInst *BI = UncondBranchPreds.pop_back_val();
@@ -729,6 +771,77 @@ static bool foldReturnAndProcessPred(
     }
   }
 
+  // If this loop runs, then the previous one could not have erased BB, because
+  // BB has a predecessor that is not an unconditional branch.
+  while (!SyncPreds.empty()) {
+    SyncInst *SI = SyncPreds.pop_back_val();
+    BasicBlock *Pred = SI->getParent();
+    if (CallInst *CI =
+        findTRECandidate(SI, CannotTailCallElimCallsMarkedTail, TTI)) {
+      // Check that all instructions between the candidate tail call and the
+      // sync can be moved above the call.  In particular, we disallow
+      // accumulator recursion elimination for tail calls before a sync.
+      BasicBlock::iterator BBI(CI);
+      for (++BBI; &*BBI != SI; ++BBI)
+        if (!canMoveAboveCall(&*BBI, CI, AA))
+          break;
+      if (&*BBI != SI)
+        continue;
+
+      // Get the sync region for this sync.
+      Value *SyncRegion = SI->getSyncRegion();
+
+      // Check that the sync region begins in the entry block of the function.
+      if (cast<Instruction>(SyncRegion)->getParent() != OldEntryBlock) {
+        LLVM_DEBUG(dbgs() << "Cannot eliminate tail call " << *CI <<
+                   ": sync region does not start in entry block.");
+        continue;
+      }
+
+      // Get returns reachable from newly created loop.
+      SmallVector<BasicBlock *, 8> ReturnBlocksToSync;
+      getReturnBlocksToSync(OldEntryBlock, SI, ReturnBlocksToSync);
+
+      // Remove the sync.
+      LLVM_DEBUG(dbgs() << "FOLDING: " << *BB
+                 << "INTO SYNC PRED: " << *Pred);
+      ReturnInst *RI = FoldReturnIntoUncondBranch(Ret, BB, Pred, &DTU);
+
+      // Cleanup: if all predecessors of BB have been eliminated by
+      // FoldReturnIntoUncondBranch, delete it.  It is important to empty it,
+      // because the ret instruction in there is still using a value which
+      // eliminateRecursiveTailCall will attempt to remove.
+      if (!BB->hasAddressTaken() && pred_begin(BB) == pred_end(BB))
+        DTU.deleteBB(BB);
+
+      bool EliminatedTail =
+        eliminateRecursiveTailCall(CI, RI, OldEntry, TailCallsAreMarkedTail,
+                                   ArgumentPHIs, AA, ORE, DTU);
+
+      // If a recursive tail was eliminated, fix up the syncs and sync region in
+      // the CFG.
+      if (EliminatedTail) {
+        // Move the sync region start to the new entry block.
+        BasicBlock *NewEntry = &OldEntry->getParent()->getEntryBlock();
+        cast<Instruction>(SyncRegion)->moveBefore(&*(NewEntry->begin()));
+        // Insert syncs before relevant return blocks.
+        for (BasicBlock *RetBlock : ReturnBlocksToSync) {
+          BasicBlock *NewRetBlock = SplitBlock(RetBlock,
+                                               RetBlock->getTerminator(),
+                                               &DTU.getDomTree());
+          ReplaceInstWithInst(RetBlock->getTerminator(),
+                              SyncInst::Create(NewRetBlock, SyncRegion));
+        }
+        Change = true;
+      } else {
+        // Restore the sync that was eliminated.
+        BasicBlock *RetBlock = RI->getParent();
+        BasicBlock *NewRetBlock = SplitBlock(RetBlock, RI, &DTU.getDomTree());
+        ReplaceInstWithInst(RetBlock->getTerminator(),
+                            SyncInst::Create(NewRetBlock, SyncRegion));
+      }
+    }
+  }
   return Change;
 }
 

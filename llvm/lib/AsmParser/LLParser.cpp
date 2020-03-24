@@ -1309,6 +1309,8 @@ bool LLParser::ParseFnAttributeValuePairs(AttrBuilder &B,
       B.addAttribute(Attribute::ShadowCallStack); break;
     case lltok::kw_sanitize_address:
       B.addAttribute(Attribute::SanitizeAddress); break;
+    case lltok::kw_sanitize_cilk:
+      B.addAttribute(Attribute::SanitizeCilk); break;
     case lltok::kw_sanitize_hwaddress:
       B.addAttribute(Attribute::SanitizeHWAddress); break;
     case lltok::kw_sanitize_memtag:
@@ -1320,6 +1322,7 @@ bool LLParser::ParseFnAttributeValuePairs(AttrBuilder &B,
     case lltok::kw_speculative_load_hardening:
       B.addAttribute(Attribute::SpeculativeLoadHardening);
       break;
+    case lltok::kw_stealable: B.addAttribute(Attribute::Stealable); break;
     case lltok::kw_strictfp: B.addAttribute(Attribute::StrictFP); break;
     case lltok::kw_uwtable: B.addAttribute(Attribute::UWTable); break;
     case lltok::kw_willreturn: B.addAttribute(Attribute::WillReturn); break;
@@ -1669,6 +1672,7 @@ bool LLParser::ParseOptionalParamAttrs(AttrBuilder &B) {
     case lltok::kw_optsize:
     case lltok::kw_returns_twice:
     case lltok::kw_sanitize_address:
+    case lltok::kw_sanitize_cilk:
     case lltok::kw_sanitize_hwaddress:
     case lltok::kw_sanitize_memtag:
     case lltok::kw_sanitize_memory:
@@ -1679,6 +1683,7 @@ bool LLParser::ParseOptionalParamAttrs(AttrBuilder &B) {
     case lltok::kw_sspstrong:
     case lltok::kw_safestack:
     case lltok::kw_shadowcallstack:
+    case lltok::kw_stealable:
     case lltok::kw_strictfp:
     case lltok::kw_uwtable:
       HaveError |= Error(Lex.getLoc(), "invalid use of function-only attribute");
@@ -1768,6 +1773,7 @@ bool LLParser::ParseOptionalReturnAttrs(AttrBuilder &B) {
     case lltok::kw_optsize:
     case lltok::kw_returns_twice:
     case lltok::kw_sanitize_address:
+    case lltok::kw_sanitize_cilk:
     case lltok::kw_sanitize_hwaddress:
     case lltok::kw_sanitize_memtag:
     case lltok::kw_sanitize_memory:
@@ -1778,6 +1784,7 @@ bool LLParser::ParseOptionalReturnAttrs(AttrBuilder &B) {
     case lltok::kw_sspstrong:
     case lltok::kw_safestack:
     case lltok::kw_shadowcallstack:
+    case lltok::kw_stealable:
     case lltok::kw_strictfp:
     case lltok::kw_uwtable:
       HaveError |= Error(Lex.getLoc(), "invalid use of function-only attribute");
@@ -5689,6 +5696,9 @@ int LLParser::ParseInstruction(Instruction *&Inst, BasicBlock *BB,
   case lltok::kw_catchpad:    return ParseCatchPad(Inst, PFS);
   case lltok::kw_cleanuppad:  return ParseCleanupPad(Inst, PFS);
   case lltok::kw_callbr:      return ParseCallBr(Inst, PFS);
+  case lltok::kw_detach:      return ParseDetach(Inst, PFS);
+  case lltok::kw_reattach:    return ParseReattach(Inst, PFS);
+  case lltok::kw_sync:        return ParseSync(Inst, PFS);
   // Unary Operators.
   case lltok::kw_fneg: {
     FastMathFlags FMF = EatFastMathFlagsIfPresent();
@@ -5908,6 +5918,98 @@ bool LLParser::ParseBr(Instruction *&Inst, PerFunctionState &PFS) {
     return true;
 
   Inst = BranchInst::Create(Op1, Op2, Op0);
+  return false;
+}
+
+/// ParseDetach
+///   ::= 'detach' within SyncRegion ',' TypeAndValue ',' TypeAndValue
+///   ::= 'detach' within SyncRegion ',' TypeAndValue ',' TypeAndValue \
+///         unwind TypeAndValue
+bool LLParser::ParseDetach(Instruction *&Inst, PerFunctionState &PFS) {
+  LocTy Loc, Loc2;
+  Value *SR;
+  BasicBlock *Op1, *Op2;
+
+  if (ParseToken(lltok::kw_within, "expected 'within' after detach"))
+    return true;
+
+  if (Lex.getKind() != lltok::kw_none && Lex.getKind() != lltok::LocalVar &&
+      Lex.getKind() != lltok::LocalVarID)
+    return TokError("expected scope value for detach");
+
+  if (ParseValue(Type::getTokenTy(Context), SR, PFS))
+    return true;
+
+  if (ParseToken(lltok::comma, "expected ',' after detach scope"))
+    return true;
+
+  if (ParseTypeAndBasicBlock(Op1, Loc, PFS) ||
+      ParseToken(lltok::comma, "expected ',' after detached destination") ||
+      ParseTypeAndBasicBlock(Op2, Loc2, PFS))
+    return true;
+
+  LocTy Loc3;
+  BasicBlock *UnwindBB = nullptr;
+  if (EatIfPresent(lltok::kw_unwind)) {
+    if (ParseTypeAndBasicBlock(UnwindBB, Loc3, PFS))
+      return true;
+    Inst = DetachInst::Create(Op1, Op2, UnwindBB, SR);
+  } else
+    Inst = DetachInst::Create(Op1, Op2, SR);
+  return false;
+}
+
+/// ParseReattach
+///   ::= 'reattach' within SyncRegion ',' TypeAndValue
+bool LLParser::ParseReattach(Instruction *&Inst, PerFunctionState &PFS) {
+  LocTy Loc;
+  Value *SR;
+  BasicBlock *Op;
+
+  if (ParseToken(lltok::kw_within, "expected 'within' after reatach"))
+    return true;
+
+  if (Lex.getKind() != lltok::kw_none && Lex.getKind() != lltok::LocalVar &&
+      Lex.getKind() != lltok::LocalVarID)
+    return TokError("expected scope value for reattach");
+
+  if (ParseValue(Type::getTokenTy(Context), SR, PFS))
+    return true;
+
+  if (ParseToken(lltok::comma, "expected ',' after reattach scope"))
+    return true;
+
+  if (ParseTypeAndBasicBlock(Op, Loc, PFS))
+    return true;
+
+  Inst = ReattachInst::Create(Op, SR);
+  return false;
+}
+
+/// ParseSync
+///   ::= 'sync' within SyncRegion ',' TypeAndValue
+bool LLParser::ParseSync(Instruction *&Inst, PerFunctionState &PFS) {
+  LocTy Loc;
+  Value *SR;
+  BasicBlock *Op;
+
+  if (ParseToken(lltok::kw_within, "expected 'within' after sync"))
+    return true;
+
+  if (Lex.getKind() != lltok::kw_none && Lex.getKind() != lltok::LocalVar &&
+      Lex.getKind() != lltok::LocalVarID)
+    return TokError("expected scope value for reattach");
+
+  if (ParseValue(Type::getTokenTy(Context), SR, PFS))
+    return true;
+
+  if (ParseToken(lltok::comma, "expected ',' after scope in sync"))
+    return true;
+
+  if (ParseTypeAndBasicBlock(Op, Loc, PFS))
+    return true;
+
+  Inst = SyncInst::Create(Op, SR);
   return false;
 }
 

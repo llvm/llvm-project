@@ -130,6 +130,8 @@ void nacltools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 
+  ToolChain.AddTapirRuntimeLibArgs(Args, CmdArgs);
+
   if (D.CCCIsCXX() &&
       !Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
     if (ToolChain.ShouldLinkCXXStdlib(Args)) {

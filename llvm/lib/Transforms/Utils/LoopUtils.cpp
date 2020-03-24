@@ -25,6 +25,7 @@
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
 #include "llvm/Analysis/ScalarEvolutionExpander.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/Analysis/TapirTaskInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/DIBuilder.h"
@@ -38,6 +39,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/TapirUtils.h"
 
 using namespace llvm;
 using namespace llvm::PatternMatch;
@@ -169,6 +171,8 @@ void llvm::getLoopAnalysisUsage(AnalysisUsage &AU) {
   AU.addPreserved<SCEVAAWrapperPass>();
   AU.addRequired<ScalarEvolutionWrapperPass>();
   AU.addPreserved<ScalarEvolutionWrapperPass>();
+  AU.addRequired<TaskInfoWrapperPass>();
+  AU.addPreserved<TaskInfoWrapperPass>();
 }
 
 /// Manually defined generic "LoopPass" dependency initialization. This is used
@@ -189,6 +193,7 @@ void llvm::initializeLoopPassPass(PassRegistry &Registry) {
   INITIALIZE_PASS_DEPENDENCY(GlobalsAAWrapperPass)
   INITIALIZE_PASS_DEPENDENCY(SCEVAAWrapperPass)
   INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
+  INITIALIZE_PASS_DEPENDENCY(TaskInfoWrapperPass)
 }
 
 /// Find string metadata for loop
@@ -426,6 +431,30 @@ TransformationMode llvm::hasLICMVersioningTransformation(Loop *L) {
   return TM_Unspecified;
 }
 
+TransformationMode llvm::hasLoopStripmineTransformation(Loop *L) {
+  if (getBooleanLoopAttribute(L, "tapir.loop.stripmine.disable"))
+    return TM_Disable;
+
+  if (getBooleanLoopAttribute(L, "tapir.loop.stripmine.enabe"))
+    return TM_ForcedByUser;
+
+  return TM_Unspecified;
+}
+
+TransformationMode llvm::hasLoopSpawningTransformation(Loop *L) {
+  TapirLoopHints Hints(L);
+
+  switch (Hints.getStrategy()) {
+  case TapirLoopHints::ST_DAC: {
+    dbgs() << "Has forced spawning transformation: " << *L << "\n";
+    return TM_ForcedByUser;
+  } case TapirLoopHints::ST_SEQ:
+    return TM_Disable;
+  default:
+    return TM_Unspecified;
+  }
+}
+
 /// Does a BFS from a given node to all of its children inside a given loop.
 /// The returned vector of nodes includes the starting point.
 SmallVector<DomTreeNode *, 16>
@@ -449,7 +478,8 @@ llvm::collectChildrenInLoop(DomTreeNode *N, const Loop *CurLoop) {
 
 void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT = nullptr,
                           ScalarEvolution *SE = nullptr,
-                          LoopInfo *LI = nullptr) {
+                          LoopInfo *LI = nullptr,
+                          TaskInfo *TI = nullptr) {
   assert((!DT || L->isLCSSAForm(*DT)) && "Expected LCSSA!");
   auto *Preheader = L->getLoopPreheader();
   assert(Preheader && "Preheader should exist!");
@@ -618,6 +648,12 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT = nullptr,
     // The last step is to update LoopInfo now that we've eliminated this loop.
     LI->erase(L);
   }
+
+  if (TI && DT)
+    // Recompute task info.
+    // FIXME: Figure out a way to update task info that is less computationally
+    // wasteful.
+    TI->recalculate(*DT->getRoot()->getParent(), *DT);
 }
 
 Optional<unsigned> llvm::getLoopEstimatedTripCount(Loop *L) {

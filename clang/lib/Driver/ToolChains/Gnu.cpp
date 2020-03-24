@@ -520,10 +520,29 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("--no-demangle");
 
   bool NeedsSanitizerDeps = addSanitizerRuntimes(ToolChain, Args, CmdArgs);
+  bool NeedsCilkSanitizerDeps = needsCilkSanitizerDeps(ToolChain, Args);
   bool NeedsXRayDeps = addXRayRuntime(ToolChain, Args, CmdArgs);
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
   // The profile runtime also needs access to system libraries.
   getToolChain().addProfileRTLibs(Args, CmdArgs);
+
+  addCSIRuntime(ToolChain, Args, CmdArgs);
+  addCilktoolRuntime(ToolChain, Args, CmdArgs);
+
+  ToolChain.AddTapirRuntimeLibArgs(Args, CmdArgs);
+  if (Args.hasArg(options::OPT_ftapir_EQ)) {
+    if (Arg *A = Args.getLastArg(options::OPT_ftapir_EQ)) {
+      StringRef Name = A->getValue();
+      if (Name == "cilk") 
+        CmdArgs.push_back("-lcilkrts");
+      else if (Name == "qthreads"){
+        CmdArgs.push_back("-lqthread");
+        CmdArgs.push_back("-lhwloc");
+        CmdArgs.push_back("-lnuma");
+        CmdArgs.push_back("-lpthread");
+      }
+    }
+  }
 
   if (D.CCCIsCXX() &&
       !Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
@@ -538,6 +557,7 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     }
     CmdArgs.push_back("-lm");
   }
+
   // Silence warnings when linking C code with a C++ '-stdlib' argument.
   Args.ClaimAllArgs(options::OPT_stdlib_EQ);
 
@@ -548,6 +568,9 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
       if (NeedsSanitizerDeps)
         linkSanitizerRuntimeDeps(ToolChain, CmdArgs);
+
+      if (NeedsCilkSanitizerDeps)
+        linkCilkSanitizerRuntimeDeps(ToolChain, CmdArgs);
 
       if (NeedsXRayDeps)
         linkXRayRuntimeDeps(ToolChain, CmdArgs);
@@ -1744,6 +1767,7 @@ static llvm::StringRef getGCCToolchainDir(const ArgList &Args,
 
   return GCC_INSTALL_PREFIX;
 }
+
 
 /// Initialize a GCCInstallationDetector from the driver.
 ///

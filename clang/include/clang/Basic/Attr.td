@@ -2973,18 +2973,23 @@ def LoopHint : Attr {
   /// boolean: fully unrolls loop if State == Enable.
   /// expression: unrolls loop 'Value' times.
 
+  /// #pragma cilk grainsize <argument> directive
+  /// expression: coarsens the loop with grainsize 'Value'.
+
   let Spellings = [Pragma<"clang", "loop">, Pragma<"", "unroll">,
                    Pragma<"", "nounroll">, Pragma<"", "unroll_and_jam">,
-                   Pragma<"", "nounroll_and_jam">];
+                   Pragma<"", "nounroll_and_jam">, Pragma<"", "cilk">];
 
   /// State of the loop optimization specified by the spelling.
   let Args = [EnumArgument<"Option", "OptionType",
                           ["vectorize", "vectorize_width", "interleave", "interleave_count",
                            "unroll", "unroll_count", "unroll_and_jam", "unroll_and_jam_count",
-                           "pipeline", "pipeline_initiation_interval", "distribute"],
+                           "pipeline", "pipeline_initiation_interval", "distribute",
+                           "grainsize"],
                           ["Vectorize", "VectorizeWidth", "Interleave", "InterleaveCount",
                            "Unroll", "UnrollCount", "UnrollAndJam", "UnrollAndJamCount",
-                           "PipelineDisabled", "PipelineInitiationInterval", "Distribute"]>,
+                           "PipelineDisabled", "PipelineInitiationInterval", "Distribute",
+                           "TapirGrainsize"]>,
               EnumArgument<"State", "LoopHintState",
                            ["enable", "disable", "numeric", "assume_safety", "full"],
                            ["Enable", "Disable", "Numeric", "AssumeSafety", "Full"]>,
@@ -3004,6 +3009,7 @@ def LoopHint : Attr {
     case PipelineDisabled: return "pipeline";
     case PipelineInitiationInterval: return "pipeline_initiation_interval";
     case Distribute: return "distribute";
+    case TapirGrainsize: return "grainsize";
     }
     llvm_unreachable("Unhandled LoopHint option.");
   }
@@ -3016,6 +3022,9 @@ def LoopHint : Attr {
       return;
     else if (SpellingIndex == Pragma_unroll || SpellingIndex == Pragma_unroll_and_jam) {
       OS << ' ' << getValueString(Policy);
+      return;
+    } else if (SpellingIndex == Pragma_cilk) {
+      OS << getOptionName(option) << getValueString(Policy);
       return;
     }
 
@@ -3055,6 +3064,8 @@ def LoopHint : Attr {
     else if (SpellingIndex == Pragma_unroll_and_jam)
       return "#pragma unroll_and_jam" +
         (option == UnrollAndJamCount ? getValueString(Policy) : "");
+    else if (SpellingIndex == Pragma_cilk)
+      return getOptionName(option) + getValueString(Policy);
 
     assert(SpellingIndex == Pragma_clang_loop && "Unexpected spelling");
     return getOptionName(option) + getValueString(Policy);
@@ -3274,3 +3285,31 @@ def ObjCExternallyRetained : InheritableAttr {
   let Subjects = SubjectList<[NonParmVar, Function, Block, ObjCMethod]>;
   let Documentation = [ObjCExternallyRetainedDocs];
 }
+
+
+// +===== kitsune-centric attributes 
+
+def KitsuneTarget : StmtAttr {
+    let Spellings = [CXX11<"kitsune","target">];
+    let Args = [ 
+    	EnumArgument<"KitsuneTargetType", "KitsuneTargetTy", 
+	["qthreads", "realm", "omp", "cuda", "rocm"],
+	["KitsuneTargetQthreads", "KitsuneTargetRealm", "KitsuneTargetOMP", 
+         "KitsuneTargetCuda", "KitsuneTargetROCm"], 0>
+    ];
+    // FIXME -- how do we document this?
+    let Documentation = [Undocumented];
+}
+
+def KitsuneStrategy : StmtAttr {
+  let Spellings = [CXX11<"tapir", "strategy">];
+  let Args = [
+      EnumArgument<"KitsuneStrategyType", "KitsuneStrategyTy",
+      ["gpu", "seq", "dac"],
+      ["KitsuneGPUStrategy", "KitsuneSequentialStrategy", "KitsuneDivAndConquerStrategy"], 0>
+  ];
+  // FIXME -- how do we document this?
+  let Documentation = [Undocumented];
+}
+
+// =====+

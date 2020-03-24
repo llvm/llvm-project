@@ -76,6 +76,10 @@ public:
     return findMangledSymbol(mangle(Name));
   }
 
+  JITSymbol findSymbolInModule(VModuleKey K, const std::string Name) {
+    return findMangledSymbolIn(K, mangle(Name));
+  }
+
 private:
   std::string mangle(const std::string &Name) {
     std::string MangledName;
@@ -84,6 +88,25 @@ private:
       Mangler::getNameWithPrefix(MangledNameStream, Name, DL);
     }
     return MangledName;
+  }
+
+  JITSymbol findMangledSymbolIn(VModuleKey K, const std::string &Name) {
+#ifdef _WIN32
+    // The symbol lookup of ObjectLinkingLayer uses the SymbolRef::SF_Exported
+    // flag to decide whether a symbol will be visible or not, when we call
+    // IRCompileLayer::findSymbolIn with ExportedSymbolsOnly set to true.
+    //
+    // But for Windows COFF objects, this flag is currently never set.
+    // For a potential solution see: https://reviews.llvm.org/rL258665
+    // For now, we allow non-exported symbols on Windows as a workaround.
+    const bool ExportedSymbolsOnly = false;
+#else
+    const bool ExportedSymbolsOnly = true;
+#endif
+    if (auto Sym = CompileLayer.findSymbolIn(K, Name, ExportedSymbolsOnly))
+      return Sym;
+
+    return nullptr;
   }
 
   JITSymbol findMangledSymbol(const std::string &Name) {

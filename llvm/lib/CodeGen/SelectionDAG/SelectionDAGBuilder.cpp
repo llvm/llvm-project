@@ -2777,6 +2777,11 @@ void SelectionDAGBuilder::visitInvoke(const InvokeInst &I) {
       DAG.setRoot(DAG.getNode(ISD::INTRINSIC_VOID, getCurSDLoc(), VTs, Ops));
       break;
     }
+    case Intrinsic::detached_rethrow:
+      // Treat detached_rethrow intrinsics like resumes.
+      llvm_unreachable("SelectionDAGBuilder shouldn't visit detached_rethrow "
+                       "instructions!");
+      break;
     }
   } else if (I.countOperandBundlesOfType(LLVMContext::OB_deopt)) {
     // Currently we do not lower any intrinsic calls with deopt operand bundles.
@@ -2951,6 +2956,66 @@ void SelectionDAGBuilder::visitUnreachable(const UnreachableInst &I) {
 
   DAG.setRoot(DAG.getNode(ISD::TRAP, getCurSDLoc(), MVT::Other, DAG.getRoot()));
 }
+
+void SelectionDAGBuilder::visitDetach(const DetachInst &I) {
+  MachineBasicBlock *DetachMBB = FuncInfo.MBB;
+
+  // Update machine-CFG edges.
+  MachineBasicBlock *Detached = FuncInfo.MBBMap[I.getSuccessor(0)];
+  //MachineBasicBlock *Continue = FuncInfo.MBBMap[I.getSuccessor(1)];
+
+  // Update machine-CFG edges.
+  DetachMBB->addSuccessor(Detached);
+
+  // If this is not a fall-through branch or optimizations are switched off,
+  // emit the branch.
+  if (Detached != NextBlock(DetachMBB) || TM.getOptLevel() == CodeGenOpt::None)
+    DAG.setRoot(DAG.getNode(ISD::BR, getCurSDLoc(),
+                            MVT::Other, getControlRoot(),
+                            DAG.getBasicBlock(Detached)));
+
+  return;
+
+}
+
+void SelectionDAGBuilder::visitReattach(const ReattachInst &I) {
+  MachineBasicBlock *ReattachMBB = FuncInfo.MBB;
+
+  // Update machine-CFG edges.
+  MachineBasicBlock *Continue = FuncInfo.MBBMap[I.getSuccessor(0)];
+
+  // Update machine-CFG edges.
+  ReattachMBB->addSuccessor(Continue);
+
+  // If this is not a fall-through branch or optimizations are switched off,
+  // emit the branch.
+  if (Continue != NextBlock(ReattachMBB) || TM.getOptLevel() == CodeGenOpt::None)
+    DAG.setRoot(DAG.getNode(ISD::BR, getCurSDLoc(),
+                            MVT::Other, getControlRoot(),
+                            DAG.getBasicBlock(Continue)));
+
+  return;
+}
+
+void SelectionDAGBuilder::visitSync(const SyncInst &I) {
+  MachineBasicBlock *SyncMBB = FuncInfo.MBB;
+
+  // Update machine-CFG edges.
+  MachineBasicBlock *Continue = FuncInfo.MBBMap[I.getSuccessor(0)];
+
+  // Update machine-CFG edges.
+  SyncMBB->addSuccessor(Continue);
+
+  // If this is not a fall-through branch or optimizations are switched off,
+  // emit the branch.
+  if (Continue != NextBlock(SyncMBB) || TM.getOptLevel() == CodeGenOpt::None)
+    DAG.setRoot(DAG.getNode(ISD::BR, getCurSDLoc(),
+                            MVT::Other, getControlRoot(),
+                            DAG.getBasicBlock(Continue)));
+
+  return;
+}
+
 
 void SelectionDAGBuilder::visitFSub(const User &I) {
   // -0.0 - X --> fneg
@@ -6818,6 +6883,12 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     setValue(&I, Val);
     return;
   }
+    // Tapir intrinsics
+    //
+    // Lower the starting point of a sync region to a no-op.
+  case Intrinsic::syncregion_start:
+    // Lower the starting point of a Tapir sync region to a no-op.
+    return;
   }
 }
 

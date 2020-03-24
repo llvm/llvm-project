@@ -21,6 +21,7 @@
 #include "llvm/Analysis/CFLAndersAliasAnalysis.h"
 #include "llvm/Analysis/CFLSteensAliasAnalysis.h"
 #include "llvm/Analysis/CallPrinter.h"
+#include "llvm/Analysis/DataRaceFreeAliasAnalysis.h"
 #include "llvm/Analysis/DomPrinter.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/IntervalPartition.h"
@@ -52,6 +53,7 @@
 #include "llvm/Transforms/Scalar/InstSimplifyPass.h"
 #include "llvm/Transforms/Scalar/Scalarizer.h"
 #include "llvm/Transforms/Utils.h"
+#include "llvm/Transforms/Tapir.h"
 #include "llvm/Transforms/Utils/SymbolRewriter.h"
 #include "llvm/Transforms/Utils/UnifyFunctionExitNodes.h"
 #include "llvm/Transforms/Vectorize.h"
@@ -77,6 +79,7 @@ namespace {
       (void) llvm::createSCEVAAWrapperPass();
       (void) llvm::createTypeBasedAAWrapperPass();
       (void) llvm::createScopedNoAliasAAWrapperPass();
+      (void) llvm::createDRFAAWrapperPass();
       (void) llvm::createBoundsCheckingLegacyPass();
       (void) llvm::createBreakCriticalEdgesPass();
       (void) llvm::createCallGraphDOTPrinterPass();
@@ -91,6 +94,7 @@ namespace {
       (void) llvm::createConstantPropagationPass();
       (void) llvm::createControlHeightReductionLegacyPass();
       (void) llvm::createCostModelAnalysisPass();
+      (void) llvm::createDRFScopedNoAliasWrapperPass();
       (void) llvm::createDeadArgEliminationPass();
       (void) llvm::createDeadCodeEliminationPass();
       (void) llvm::createDeadInstEliminationPass();
@@ -132,7 +136,9 @@ namespace {
       (void) llvm::createLoopPredicationPass();
       (void) llvm::createLoopSimplifyPass();
       (void) llvm::createLoopSimplifyCFGPass();
+      (void) llvm::createLoopSpawningTIPass();
       (void) llvm::createLoopStrengthReducePass();
+      (void) llvm::createLoopStripMinePass();
       (void) llvm::createLoopRerollPass();
       (void) llvm::createLoopUnrollPass();
       (void) llvm::createLoopUnrollAndJamPass();
@@ -143,6 +149,7 @@ namespace {
       (void) llvm::createLowerExpectIntrinsicPass();
       (void) llvm::createLowerInvokePass();
       (void) llvm::createLowerSwitchPass();
+      (void) llvm::createLowerTapirToTargetPass();
       (void) llvm::createNaryReassociatePass();
       (void) llvm::createObjCARCAAWrapperPass();
       (void) llvm::createObjCARCAPElimPass();
@@ -224,6 +231,7 @@ namespace {
       (void) llvm::createScalarizeMaskedMemIntrinPass();
       (void) llvm::createWarnMissedTransformationsPass();
       (void) llvm::createHardwareLoopsPass();
+      (void) llvm::createTaskSimplifyPass();
 
       (void)new llvm::IntervalPartition();
       (void)new llvm::ScalarEvolutionWrapperPass();

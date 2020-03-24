@@ -254,6 +254,7 @@ void netbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   bool NeedsSanitizerDeps = addSanitizerRuntimes(getToolChain(), Args, CmdArgs);
   bool NeedsXRayDeps = addXRayRuntime(ToolChain, Args, CmdArgs);
+  bool NeedsCilkSanitizerDeps = needsCilkSanitizerDeps(getToolChain(), Args);
   AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
 
   const SanitizerArgs &SanArgs = ToolChain.getSanitizerArgs();
@@ -262,6 +263,9 @@ void netbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Args.MakeArgString(
         ToolChain.getCompilerRTPath().c_str()));
   }
+
+  addCSIRuntime(getToolChain(), Args, CmdArgs);
+  addCilktoolRuntime(getToolChain(), Args, CmdArgs);
 
   unsigned Major, Minor, Micro;
   ToolChain.getTriple().getOSVersion(Major, Minor, Micro);
@@ -299,6 +303,8 @@ void netbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       linkSanitizerRuntimeDeps(getToolChain(), CmdArgs);
     if (NeedsXRayDeps)
       linkXRayRuntimeDeps(ToolChain, CmdArgs);
+    if (NeedsCilkSanitizerDeps)
+      linkCilkSanitizerRuntimeDeps(getToolChain(), CmdArgs);
     if (Args.hasArg(options::OPT_pthread))
       CmdArgs.push_back("-lpthread");
     CmdArgs.push_back("-lc");

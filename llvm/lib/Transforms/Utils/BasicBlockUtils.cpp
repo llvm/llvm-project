@@ -183,6 +183,18 @@ bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DomTreeUpdater *DTU,
   // Don't break unwinding instructions.
   if (PredBB->getTerminator()->isExceptionalTerminator())
     return false;
+  // For now, don't break syncs.
+  // TODO: Don't break syncs unless they don't sync anything.
+  if (isa<SyncInst>(PredBB->getTerminator())) return false;
+  // Don't break entry blocks of detached CFG's.
+  for (pred_iterator PI = pred_begin(PredBB), PE = pred_end(PredBB);
+       PI != PE; ++PI) {
+    BasicBlock *PredPredBB = *PI;
+    if (const DetachInst *DI =
+        dyn_cast<DetachInst>(PredPredBB->getTerminator()))
+      if (DI->getDetached() == PredBB)
+        return false;
+  }
 
   // Can't merge if there are multiple distinct successors.
   if (PredBB->getUniqueSuccessor() != BB)
@@ -346,7 +358,17 @@ BasicBlock *llvm::SplitEdge(BasicBlock *BB, BasicBlock *Succ, DominatorTree *DT,
   // block.
   assert(BB->getTerminator()->getNumSuccessors() == 1 &&
          "Should have a single succ!");
-  return SplitBlock(BB, BB->getTerminator(), DT, LI, MSSAU);
+  BasicBlock *NewBB = SplitBlock(BB, BB->getTerminator(), DT, LI, MSSAU);
+  if (SyncInst *OldSI = dyn_cast<SyncInst>(NewBB->getTerminator())) {
+    // Make sure the original BB is terminated by the sync.
+    SyncInst *SI = SyncInst::Create(NewBB, OldSI->getSyncRegion(),
+                                    BB->getTerminator());
+    BranchInst::Create(Succ, OldSI);
+    SI->setDebugLoc(OldSI->getDebugLoc());
+    BB->getTerminator()->eraseFromParent();
+    OldSI->eraseFromParent();
+  }
+  return NewBB;
 }
 
 unsigned

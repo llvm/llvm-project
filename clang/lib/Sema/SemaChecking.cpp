@@ -12404,6 +12404,17 @@ public:
     notePostMod(O, UO, UK_ModAsSideEffect);
   }
 
+  void VisitCilkSpawnExpr(CilkSpawnExpr *E) {
+    Object O = getObject(E->getSpawnedExpr(), true);
+    if (!O)
+      return VisitExpr(E);
+
+    // Cilk_spawn removes sequencing of the spawned expression.
+    // notePreUse(O, E);
+    Visit(E->getSpawnedExpr());
+    // notePostUse(O, E);
+  }
+
   /// Don't visit the RHS of '&&' or '||' if it might not be evaluated.
   void VisitBinLOr(BinaryOperator *BO) {
     // The side-effects of the LHS of an '&&' are sequenced before the

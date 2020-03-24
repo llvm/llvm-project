@@ -141,9 +141,26 @@ llvm::SplitCriticalEdge(Instruction *TI, unsigned SuccNum,
 
   assert(!isa<IndirectBrInst>(TI) &&
          "Cannot split critical edge from IndirectBrInst");
+  assert(!isa<ReattachInst>(TI) &&
+         "Cannot split critical edge from ReattachInst");
+
+  bool SplittingDetachContinue = isa<DetachInst>(TI) && (1 == SuccNum);
+  if (SplittingDetachContinue)
+    assert((Options.SplitDetachContinue && Options.DT) &&
+           "Cannot split critical continuation edge from a detach");
 
   BasicBlock *TIBB = TI->getParent();
   BasicBlock *DestBB = TI->getSuccessor(SuccNum);
+
+  // If we're splitting a detach-continue edge, get the associated reattaches.
+  SmallVector<BasicBlock *, 1> Reattaches;
+  if (SplittingDetachContinue) {
+    BasicBlockEdge DetachEdge(TIBB, TI->getSuccessor(0));
+    for (BasicBlock *Pred : predecessors(DestBB))
+      if (isa<ReattachInst>(Pred->getTerminator()))
+        if (Options.DT->dominates(DetachEdge, Pred))
+          Reattaches.push_back(Pred);
+  }
 
   // Splitting the critical edge to a pad block is non-trivial. Don't do
   // it in this generic function.
@@ -166,6 +183,12 @@ llvm::SplitCriticalEdge(Instruction *TI, unsigned SuccNum,
 
   // Branch to the new block, breaking the edge.
   TI->setSuccessor(SuccNum, NewBB);
+
+  // If we're splitting a detach-continue edge, redirect all appropriate
+  // reattach edges to branch to the new block
+  if (SplittingDetachContinue)
+    for (BasicBlock *RBB : Reattaches)
+      RBB->getTerminator()->setSuccessor(0, NewBB);
 
   // Insert the block into the function... right after the block TI lives in.
   Function &F = *TIBB->getParent();
@@ -190,6 +213,28 @@ llvm::SplitCriticalEdge(Instruction *TI, unsigned SuccNum,
       if (PN->getIncomingBlock(BBIdx) != TIBB)
         BBIdx = PN->getBasicBlockIndex(TIBB);
       PN->setIncomingBlock(BBIdx, NewBB);
+    }
+
+    // Update the PHI node entries for the reattach predecessors as well.
+    if (SplittingDetachContinue) {
+      for (BasicBlock *RBB : Reattaches) {
+        unsigned BBIdx = 0;
+        for (BasicBlock::iterator I = DestBB->begin(); isa<PHINode>(I); ++I) {
+          // We no longer enter through RBB, now we come in through NewBB.
+          // Revector exactly one entry in the PHI node that used to come from
+          // TIBB to come from NewBB.
+          PHINode *PN = cast<PHINode>(I);
+
+          // Reuse the previous value of BBIdx if it lines up.  In cases where we
+          // have multiple phi nodes with *lots* of predecessors, this is a speed
+          // win because we don't have to scan the PHI looking for TIBB.  This
+          // happens because the BB list of PHI nodes are usually in the same
+          // order.
+          if (PN->getIncomingBlock(BBIdx) != RBB)
+            BBIdx = PN->getBasicBlockIndex(RBB);
+          PN->removeIncomingValue(BBIdx);
+        }
+      }
     }
   }
 

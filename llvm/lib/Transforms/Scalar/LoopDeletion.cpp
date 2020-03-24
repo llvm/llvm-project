@@ -133,7 +133,8 @@ static bool isLoopNeverExecuted(Loop *L) {
 /// is unable to delete it due to hoisting trivially loop invariant
 /// instructions out of the loop.
 static LoopDeletionResult deleteLoopIfDead(Loop *L, DominatorTree &DT,
-                                           ScalarEvolution &SE, LoopInfo &LI) {
+                                           ScalarEvolution &SE, LoopInfo &LI,
+                                           TaskInfo &TI) {
   assert(L->isLCSSAForm(DT) && "Expected LCSSA!");
 
   // We can only remove the loop if there is a preheader that we can branch from
@@ -163,7 +164,7 @@ static LoopDeletionResult deleteLoopIfDead(Loop *L, DominatorTree &DT,
       std::fill(P.incoming_values().begin(), P.incoming_values().end(),
                 UndefValue::get(P.getType()));
     }
-    deleteDeadLoop(L, &DT, &SE, &LI);
+    deleteDeadLoop(L, &DT, &SE, &LI, &TI);
     ++NumDeleted;
     return LoopDeletionResult::Deleted;
   }
@@ -199,7 +200,7 @@ static LoopDeletionResult deleteLoopIfDead(Loop *L, DominatorTree &DT,
   }
 
   LLVM_DEBUG(dbgs() << "Loop is invariant, delete it!");
-  deleteDeadLoop(L, &DT, &SE, &LI);
+  deleteDeadLoop(L, &DT, &SE, &LI, &TI);
   ++NumDeleted;
 
   return LoopDeletionResult::Deleted;
@@ -212,7 +213,7 @@ PreservedAnalyses LoopDeletionPass::run(Loop &L, LoopAnalysisManager &AM,
   LLVM_DEBUG(dbgs() << "Analyzing Loop for deletion: ");
   LLVM_DEBUG(L.dump());
   std::string LoopName = L.getName();
-  auto Result = deleteLoopIfDead(&L, AR.DT, AR.SE, AR.LI);
+  auto Result = deleteLoopIfDead(&L, AR.DT, AR.SE, AR.LI, AR.TI);
   if (Result == LoopDeletionResult::Unmodified)
     return PreservedAnalyses::all();
 
@@ -254,11 +255,12 @@ bool LoopDeletionLegacyPass::runOnLoop(Loop *L, LPPassManager &LPM) {
   DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   ScalarEvolution &SE = getAnalysis<ScalarEvolutionWrapperPass>().getSE();
   LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+  TaskInfo &TI = getAnalysis<TaskInfoWrapperPass>().getTaskInfo();
 
   LLVM_DEBUG(dbgs() << "Analyzing Loop for deletion: ");
   LLVM_DEBUG(L->dump());
 
-  LoopDeletionResult Result = deleteLoopIfDead(L, DT, SE, LI);
+  LoopDeletionResult Result = deleteLoopIfDead(L, DT, SE, LI, TI);
 
   if (Result == LoopDeletionResult::Deleted)
     LPM.markLoopAsDeleted(*L);

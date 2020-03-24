@@ -4025,10 +4025,70 @@ public:
                          CES_AllowExceptionVariables),
   };
 
+  StmtResult ActOnSyncStmt(SourceLocation SyncLoc, StringRef sv);
+  StmtResult ActOnSpawnStmt(SourceLocation SpawnLoc, StringRef sv, Stmt *S);
+
   VarDecl *getCopyElisionCandidate(QualType ReturnType, Expr *E,
                                    CopyElisionSemanticsKind CESK);
   bool isCopyElisionCandidate(QualType ReturnType, const VarDecl *VD,
                               CopyElisionSemanticsKind CESK);
+
+  void DiagnoseCilkSpawn(Stmt *S);
+  StmtResult ActOnCilkSyncStmt(SourceLocation SyncLoc);
+  StmtResult ActOnCilkSpawnStmt(SourceLocation SpawnLoc, Stmt *S);
+  ExprResult ActOnCilkSpawnExpr(SourceLocation SpawnLoc, Expr *E);
+  StmtResult HandleSimpleCilkForStmt(SourceLocation CilkForLoc,
+                                     SourceLocation LParenLoc,
+                                     Stmt *First,
+                                     Expr *Condition,
+                                     Expr *Increment,
+                                     SourceLocation RParenLoc,
+                                     Stmt *Body);
+  StmtResult LiftCilkForLoopLimit(SourceLocation CilkForLoc,
+                                  Stmt *First, Expr **Second);
+  StmtResult ActOnCilkForStmt(SourceLocation CilkForLoc,
+                              SourceLocation LParenLoc,
+                              Stmt *Init, DeclStmt *Limit,
+                              ConditionResult InitCond,
+                              DeclStmt *Begin, DeclStmt *End,
+                              ConditionResult second,
+                              FullExprArg third,
+                              SourceLocation RParenLoc,
+                              Stmt *Body,
+                              VarDecl *LoopVar = nullptr);
+
+  StmtResult BuildCilkForStmt(SourceLocation CilkForLoc,
+                              SourceLocation LParenLoc,
+                              Stmt *Init, Expr *Cond, Expr *Inc,
+                              SourceLocation RParenLoc, Stmt *Body,
+                              Expr *LoopCount, Expr *Stride,
+                              QualType SpanType);
+
+  StmtResult ActOnForallStmt(SourceLocation ForLoc,
+                          SourceLocation LParenLoc,
+                          Stmt *First,
+                          ConditionResult Second,
+                          FullExprArg Third,
+                          SourceLocation RParenLoc,
+                          Stmt *Body);
+
+  StmtResult ActOnCXXForallRangeStmt(Scope *S, SourceLocation ForLoc,
+                                  SourceLocation CoawaitLoc,
+                                  Stmt *InitStmt,
+                                  Stmt *LoopVar,
+                                  SourceLocation ColonLoc, Expr *Collection,
+                                  SourceLocation RParenLoc,
+                                  BuildForRangeKind Kind);
+  StmtResult BuildCXXForallRangeStmt(SourceLocation ForLoc,
+                                  SourceLocation CoawaitLoc,
+                                  Stmt *InitStmt,
+                                  SourceLocation ColonLoc,
+                                  Stmt *RangeDecl, Stmt *Begin, Stmt *End,
+                                  Expr *Cond, Expr *Inc,
+                                  Stmt *LoopVarDecl,
+                                  SourceLocation RParenLoc,
+                                  BuildForRangeKind Kind);
+  StmtResult FinishCXXForallRangeStmt(Stmt *ForRange, Stmt *Body);
 
   StmtResult ActOnReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
                              Scope *CurScope);

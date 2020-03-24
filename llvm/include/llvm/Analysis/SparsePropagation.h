@@ -335,6 +335,11 @@ void SparseSolver<LatticeKey, LatticeVal, KeyInfo>::getFeasibleSuccessors(
     return;
   }
 
+  if (isa<DetachInst>(TI) || isa<ReattachInst>(TI) || isa<SyncInst>(TI)) {
+    Succs.assign(Succs.size(), true);
+    return;
+  }
+
   SwitchInst &SI = cast<SwitchInst>(TI);
   LatticeVal SCValue;
   if (AggressiveUndef)

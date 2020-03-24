@@ -678,11 +678,13 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(safestack);
   KEYWORD(shadowcallstack);
   KEYWORD(sanitize_address);
+  KEYWORD(sanitize_cilk);
   KEYWORD(sanitize_hwaddress);
   KEYWORD(sanitize_memtag);
   KEYWORD(sanitize_thread);
   KEYWORD(sanitize_memory);
   KEYWORD(speculative_load_hardening);
+  KEYWORD(stealable);
   KEYWORD(swifterror);
   KEYWORD(swiftself);
   KEYWORD(uwtable);
@@ -870,6 +872,9 @@ lltok::Kind LLLexer::LexIdentifier() {
   INSTKEYWORD(resume,      Resume);
   INSTKEYWORD(unreachable, Unreachable);
   INSTKEYWORD(callbr,      CallBr);
+  INSTKEYWORD(detach,      Detach);
+  INSTKEYWORD(reattach,    Reattach);
+  INSTKEYWORD(sync,        Sync);
 
   INSTKEYWORD(alloca,      Alloca);
   INSTKEYWORD(load,        Load);

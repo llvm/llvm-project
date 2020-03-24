@@ -54,6 +54,7 @@ static Attribute::AttrKind parseAttrKind(StringRef Kind) {
       .Case("safestack", Attribute::SafeStack)
       .Case("shadowcallstack", Attribute::ShadowCallStack)
       .Case("sanitize_address", Attribute::SanitizeAddress)
+      .Case("sanitize_cilk", Attribute::SanitizeCilk)
       .Case("sanitize_hwaddress", Attribute::SanitizeHWAddress)
       .Case("sanitize_memory", Attribute::SanitizeMemory)
       .Case("sanitize_thread", Attribute::SanitizeThread)
@@ -62,6 +63,7 @@ static Attribute::AttrKind parseAttrKind(StringRef Kind) {
       .Case("ssp", Attribute::StackProtect)
       .Case("sspreq", Attribute::StackProtectReq)
       .Case("sspstrong", Attribute::StackProtectStrong)
+      .Case("stealable", Attribute::Stealable)
       .Case("strictfp", Attribute::StrictFP)
       .Case("uwtable", Attribute::UWTable)
       .Default(Attribute::None);

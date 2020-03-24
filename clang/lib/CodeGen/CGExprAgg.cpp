@@ -150,6 +150,7 @@ public:
   void VisitBinAssign(const BinaryOperator *E);
   void VisitBinComma(const BinaryOperator *E);
   void VisitBinCmp(const BinaryOperator *E);
+  void VisitCilkSpawnExpr(CilkSpawnExpr *E);
 
   void VisitObjCMessageExpr(ObjCMessageExpr *E);
   void VisitObjCIvarRefExpr(ObjCIvarRefExpr *E) {
@@ -882,6 +883,19 @@ void AggExprEmitter::VisitCastExpr(CastExpr *E) {
   }
 }
 
+void AggExprEmitter::VisitCilkSpawnExpr(CilkSpawnExpr *E) {
+  CGF.IsSpawned = true;
+  CGF.PushDetachScope();
+
+  Visit(E->getSpawnedExpr());
+
+  // Pop the detach scope
+  assert(CGF.IsSpawned && CGF.CurDetachScope->IsDetachStarted() &&
+         "Processing _Cilk_spawn of expression did not produce a detach.");
+  CGF.IsSpawned = false;
+  CGF.PopDetachScope();
+}
+
 void AggExprEmitter::VisitCallExpr(const CallExpr *E) {
   if (E->getCallReturnType(CGF.getContext())->isReferenceType()) {
     EmitAggLoadOfLValue(E);
@@ -1177,6 +1191,12 @@ void AggExprEmitter::VisitBinAssign(const BinaryOperator *E) {
     EnsureDest(E->getRHS()->getType());
     Visit(E->getRHS());
     CGF.EmitAtomicStore(Dest.asRValue(), LHS, /*isInit*/ false);
+    if (CGF.IsSpawned) {
+      assert(CGF.CurDetachScope && CGF.CurDetachScope->IsDetachStarted() &&
+             "Processing _Cilk_spawn of expression did not produce a detach.");
+      CGF.IsSpawned = false;
+      CGF.PopDetachScope();
+    }
     return;
   }
 
@@ -1195,6 +1215,13 @@ void AggExprEmitter::VisitBinAssign(const BinaryOperator *E) {
 
   // Copy into the destination if the assignment isn't ignored.
   EmitFinalDestCopy(E->getType(), LHS);
+
+  if (CGF.IsSpawned) {
+    assert(CGF.CurDetachScope && CGF.CurDetachScope->IsDetachStarted() &&
+           "Processing _Cilk_spawn of expression did not produce a detach.");
+    CGF.IsSpawned = false;
+    CGF.PopDetachScope();
+  }
 }
 
 void AggExprEmitter::
@@ -1337,7 +1364,16 @@ AggExprEmitter::VisitLambdaExpr(LambdaExpr *E) {
 void AggExprEmitter::VisitExprWithCleanups(ExprWithCleanups *E) {
   CGF.enterFullExpression(E);
   CodeGenFunction::RunCleanupsScope cleanups(CGF);
+  // If this expression is spawned, associate these cleanups with the detach
+  // scope.
+  bool CleanupsSaved = false;
+  if (CGF.IsSpawned)
+    CleanupsSaved = CGF.CurDetachScope->MaybeSaveCleanupsScope(&cleanups);
   Visit(E->getSubExpr());
+  // If this expression was spawned, then we must clean up the detach before
+  // forcing the scope's cleanup.
+  if (CleanupsSaved)
+    CGF.CurDetachScope->CleanupDetach();
 }
 
 void AggExprEmitter::VisitCXXScalarValueInitExpr(CXXScalarValueInitExpr *E) {

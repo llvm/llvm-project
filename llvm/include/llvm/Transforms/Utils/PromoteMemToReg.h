@@ -21,6 +21,7 @@ class AllocaInst;
 class DominatorTree;
 class AliasSetTracker;
 class AssumptionCache;
+class TaskInfo;
 
 /// Return true if this alloca is legal for promotion.
 ///
@@ -38,7 +39,7 @@ bool isAllocaPromotable(const AllocaInst *AI);
 /// the same function.
 ///
 void PromoteMemToReg(ArrayRef<AllocaInst *> Allocas, DominatorTree &DT,
-                     AssumptionCache *AC = nullptr);
+                     AssumptionCache *AC = nullptr, TaskInfo *TI = nullptr);
 
 } // End llvm namespace
 

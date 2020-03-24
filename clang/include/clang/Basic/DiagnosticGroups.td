@@ -593,6 +593,7 @@ def UnusedCommandLineArgument : DiagGroup<"unused-command-line-argument">;
 def IgnoredOptimizationArgument : DiagGroup<"ignored-optimization-argument">;
 def InvalidCommandLineArgument : DiagGroup<"invalid-command-line-argument",
                                            [IgnoredOptimizationArgument]>;
+def UnknownRuntime : DiagGroup<"unknown-runtime">;
 def UnusedComparison : DiagGroup<"unused-comparison">;
 def UnusedExceptionParameter : DiagGroup<"unused-exception-parameter">;
 def UnneededInternalDecl : DiagGroup<"unneeded-internal-declaration">;
@@ -779,6 +780,11 @@ def Move : DiagGroup<"move", [
     ReturnStdMove,
     SelfMove
   ]>;
+
+// Cilk Plus warnings.
+def SourceUsesCilkPlus : DiagGroup<"source-uses-cilk-plus">;
+def CilkPlusLoopControlVarModification : DiagGroup<"cilk-loop-control-var-modification">;
+def ReturnCilkSpawn : DiagGroup<"return-cilk-spawn">;
 
 def Extra : DiagGroup<"extra", [
     MissingFieldInitializers,

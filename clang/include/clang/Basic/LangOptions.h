@@ -19,6 +19,7 @@
 #include "clang/Basic/ObjCRuntime.h"
 #include "clang/Basic/Sanitizers.h"
 #include "clang/Basic/Visibility.h"
+#include "clang/Basic/Tapir.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
 #include <string>
@@ -178,6 +179,26 @@ public:
     FEA_On
   };
 
+
+  enum CSIExtensionPoint {
+    // Don't run CSI
+    CSI_None = 0,
+    // The following extension points should be consistent with the extension
+    // points allowed by the pass manager, except for EnabledOnOptLevel0.
+    CSI_EarlyAsPossible,
+    CSI_ModuleOptimizerEarly,
+    CSI_OptimizerLast,
+    CSI_TapirLate,
+    CSI_TapirLoopEnd
+  };
+public:
+  TapirTargetID Tapir = TapirTargetID::Last_TapirTargetID;
+
+  enum CilktoolKind {
+    // No Cilktool
+    Cilktool_None = 0,
+    Cilktool_Cilkscale
+  };
 
 public:
   /// Set of enabled sanitizers.

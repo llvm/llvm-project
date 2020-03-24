@@ -1299,6 +1299,12 @@ static uint64_t getRawAttributeMask(Attribute::AttrKind Val) {
   case Attribute::SanitizeMemTag:
     llvm_unreachable("sanitize_memtag attribute not supported in raw format");
     break;
+  case Attribute::SanitizeCilk:
+    llvm_unreachable("sanitize_cilk attribute not supported in raw format");
+    break;
+  case Attribute::Stealable:
+    llvm_unreachable("stealable attribute not supported in raw format");
+    break;
   }
   llvm_unreachable("Unsupported attribute type");
 }
@@ -1313,7 +1319,9 @@ static void addRawAttributeValue(AttrBuilder &B, uint64_t Val) {
         I == Attribute::DereferenceableOrNull ||
         I == Attribute::ArgMemOnly ||
         I == Attribute::AllocSize ||
-        I == Attribute::NoSync)
+        I == Attribute::NoSync ||
+        I == Attribute::SanitizeCilk ||
+        I == Attribute::Stealable)
       continue;
     if (uint64_t A = (Val & getRawAttributeMask(I))) {
       if (I == Attribute::Alignment)
@@ -1510,12 +1518,16 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::SafeStack;
   case bitc::ATTR_KIND_SHADOWCALLSTACK:
     return Attribute::ShadowCallStack;
+  case bitc::ATTR_KIND_STEALABLE:
+    return Attribute::Stealable;
   case bitc::ATTR_KIND_STRICT_FP:
     return Attribute::StrictFP;
   case bitc::ATTR_KIND_STRUCT_RET:
     return Attribute::StructRet;
   case bitc::ATTR_KIND_SANITIZE_ADDRESS:
     return Attribute::SanitizeAddress;
+  case bitc::ATTR_KIND_SANITIZE_CILK:
+    return Attribute::SanitizeCilk;
   case bitc::ATTR_KIND_SANITIZE_HWADDRESS:
     return Attribute::SanitizeHWAddress;
   case bitc::ATTR_KIND_SANITIZE_THREAD:
@@ -4621,6 +4633,70 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       I = new UnreachableInst(Context);
       InstructionList.push_back(I);
       break;
+    case bitc::FUNC_CODE_INST_DETACH: { // DETACH: [bb#, bb#, [bb#,] val]
+      if (Record.size() != 3 && Record.size() != 4)
+        return error("Invalid record");
+      BasicBlock *Detached = getBasicBlock(Record[0]);
+      if (!Detached)
+        return error("Invalid record");
+
+      BasicBlock *Continue = getBasicBlock(Record[1]);
+      if (!Continue)
+        return error("Invalid record");
+
+      unsigned SREntry = 2;
+      BasicBlock *Unwind = nullptr;
+      if (Record.size() == 4) {
+        Unwind = getBasicBlock(Record[SREntry++]);
+        if (!Unwind)
+          return error("Invalid record");
+      }
+
+      Value *SyncRegion =
+        getValue(Record, SREntry, NextValueNo, Type::getTokenTy(Context));
+      if (!SyncRegion)
+        return error("Invalid record");
+
+      if (Unwind)
+        I = DetachInst::Create(Detached, Continue, Unwind, SyncRegion);
+      else
+        I = DetachInst::Create(Detached, Continue, SyncRegion);
+      InstructionList.push_back(I);
+      break;
+    }
+      case bitc::FUNC_CODE_INST_REATTACH: { // REATTACH: [bb#, val]
+      if (Record.size() != 2)
+        return error("Invalid record");
+
+      BasicBlock *DetachContinue = getBasicBlock(Record[0]);
+      if (!DetachContinue)
+        return error("Invalid record");
+
+      Value *SyncRegion =
+        getValue(Record, 1, NextValueNo, Type::getTokenTy(Context));
+      if (!SyncRegion)
+        return error("Invalid record");
+
+      I = ReattachInst::Create(DetachContinue, SyncRegion);
+      InstructionList.push_back(I);
+      break;
+    }
+    case bitc::FUNC_CODE_INST_SYNC: { // Sync: [bb#, val]
+      if (Record.size() != 2)
+        return error("Invalid record");
+      BasicBlock *Continue = getBasicBlock(Record[0]);
+      if (!Continue)
+        return error("Invalid record");
+
+      Value *SyncRegion =
+        getValue(Record, 1, NextValueNo, Type::getTokenTy(Context));
+      if (!SyncRegion)
+        return error("Invalid record");
+
+      I = SyncInst::Create(Continue, SyncRegion);
+      InstructionList.push_back(I);
+      break;
+    }
     case bitc::FUNC_CODE_INST_PHI: { // PHI: [ty, val0,bb0, ...]
       if (Record.size() < 1 || ((Record.size()-1)&1))
         return error("Invalid record");

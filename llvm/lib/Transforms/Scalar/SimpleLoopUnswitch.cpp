@@ -2879,6 +2879,11 @@ PreservedAnalyses SimpleLoopUnswitchPass::run(Loop &L, LoopAnalysisManager &AM,
   // in asserts builds.
   assert(AR.DT.verify(DominatorTree::VerificationLevel::Fast));
 
+  // Recompute task info.
+  // FIXME: Figure out a way to update task info that is less computationally
+  // wasteful.
+  AR.TI.recalculate(F, AR.DT);
+
   auto PA = getLoopPassPreservedAnalyses();
   if (EnableMSSALoopDependency)
     PA.preserve<MemorySSAAnalysis>();
@@ -2933,6 +2938,8 @@ bool SimpleLoopUnswitchLegacyPass::runOnLoop(Loop *L, LPPassManager &LPM) {
     MSSA = &getAnalysis<MemorySSAWrapperPass>().getMSSA();
     MSSAU = MemorySSAUpdater(MSSA);
   }
+  auto *TIWP = getAnalysisIfAvailable<TaskInfoWrapperPass>();
+  auto *TI = TIWP ? &TIWP->getTaskInfo() : nullptr;
 
   auto *SEWP = getAnalysisIfAvailable<ScalarEvolutionWrapperPass>();
   auto *SE = SEWP ? &SEWP->getSE() : nullptr;
@@ -2968,6 +2975,12 @@ bool SimpleLoopUnswitchLegacyPass::runOnLoop(Loop *L, LPPassManager &LPM) {
   // Historically this pass has had issues with the dominator tree so verify it
   // in asserts builds.
   assert(DT.verify(DominatorTree::VerificationLevel::Fast));
+
+  if (TI && Changed)
+    // Recompute task info.
+    // FIXME: Figure out a way to update task info that is less computationally
+    // wasteful.
+    TI->recalculate(F, DT);
 
   return Changed;
 }

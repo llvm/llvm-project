@@ -224,6 +224,14 @@ public:
                  static_cast<const BasicBlock *>(this)->getSinglePredecessor());
   }
 
+  /// \brief Return the predecessor of this block if it has a single non-reattach predecessor
+  /// block. Otherwise return a null pointer.
+  const BasicBlock *getSingleNonReattachPredecessor() const;
+  BasicBlock *getSingleNonReattachPredecessor() {
+    return const_cast<BasicBlock *>(
+                 static_cast<const BasicBlock *>(this)->getSingleNonReattachPredecessor());
+  }
+
   /// Return the predecessor of this block if it has a unique predecessor
   /// block. Otherwise return a null pointer.
   ///
@@ -381,6 +389,7 @@ public:
   ///
   /// Also note that this doesn't preserve any passes. To split blocks while
   /// keeping loop information consistent, use the SplitBlock utility function.
+  BasicBlock *splitBasicBlockWithTerminator(const Twine &BBName = "");
   BasicBlock *splitBasicBlock(iterator I, const Twine &BBName = "");
   BasicBlock *splitBasicBlock(Instruction *I, const Twine &BBName = "") {
     return splitBasicBlock(I->getIterator(), BBName);

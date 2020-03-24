@@ -595,6 +595,25 @@ void tools::linkSanitizerRuntimeDeps(const ToolChain &TC,
     CmdArgs.push_back("-lexecinfo");
 }
 
+// CilkSanitizer has different runtime requirements than typical sanitizers.
+bool tools::needsCilkSanitizerDeps(const ToolChain &TC, const ArgList &Args) {
+  const SanitizerArgs &SanArgs = TC.getSanitizerArgs();
+  if (Args.hasArg(options::OPT_shared) || SanArgs.needsSharedRt()) {
+    // Don't link static runtimes into DSOs or if -shared-libasan.
+    return false;
+  }
+  return SanArgs.needsCilksanRt();
+}
+
+void tools::linkCilkSanitizerRuntimeDeps(const ToolChain &TC,
+                                         ArgStringList &CmdArgs) {
+  // Force linking against the system libraries sanitizers depends on
+  // (see PR15823 why this is necessary).
+  CmdArgs.push_back("--no-as-needed");
+  // Link in the C++ standard library
+  CmdArgs.push_back("-lstdc++");
+}
+
 static void
 collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
                          SmallVectorImpl<StringRef> &SharedRuntimes,
@@ -624,6 +643,8 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
     }
     if (SanArgs.needsHwasanRt())
       SharedRuntimes.push_back("hwasan");
+    if (SanArgs.needsCilksanRt())
+      SharedRuntimes.push_back("cilksan");
   }
 
   // The stats_client library is also statically linked into DSOs.
@@ -640,6 +661,8 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
     if (SanArgs.linkCXXRuntimes())
       StaticRuntimes.push_back("asan_cxx");
   }
+  if (SanArgs.needsCilksanRt())
+    StaticRuntimes.push_back("cilksan");
 
   if (SanArgs.needsHwasanRt()) {
     StaticRuntimes.push_back("hwasan");
@@ -772,6 +795,26 @@ void tools::linkXRayRuntimeDeps(const ToolChain &TC, ArgStringList &CmdArgs) {
       !TC.getTriple().isOSNetBSD() &&
       !TC.getTriple().isOSOpenBSD())
     CmdArgs.push_back("-ldl");
+}
+
+bool tools::addCSIRuntime(const ToolChain &TC, const ArgList &Args,
+                          ArgStringList &CmdArgs) {
+  // Only add the CSI runtime library if -fcsi is specified.
+  if (!Args.hasArg(options::OPT_fcsi_EQ) && !Args.hasArg(options::OPT_fcsi))
+    return false;
+
+  CmdArgs.push_back(TC.getCompilerRTArgString(Args, "csi"));
+  return true;
+}
+
+bool tools::addCilktoolRuntime(const ToolChain &TC, const ArgList &Args,
+                               ArgStringList &CmdArgs) {
+  if (Arg *A = Args.getLastArg(options::OPT_fcilktool_EQ)) {
+    StringRef Val = A->getValue();
+    CmdArgs.push_back(TC.getCompilerRTArgString(Args, Val));
+    return true;
+  }
+  return false;
 }
 
 bool tools::areOptimizationsEnabled(const ArgList &Args) {

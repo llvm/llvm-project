@@ -61,6 +61,8 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Transforms/Utils/Cloning.h"
+#include "llvm/Transforms/Utils/Local.h"
+#include "llvm/Transforms/Utils/TapirUtils.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <algorithm>
 #include <cassert>
@@ -575,6 +577,53 @@ static BasicBlock *HandleCallsInBlockInlinedThroughInvoke(
   return nullptr;
 }
 
+/// detachedTaskCanThrow - Return true if task detached by the given detach
+/// instruction can throw, false otherwise.
+static bool CheckDetachedTaskForCallsThatThrow(const DetachInst *DI) {
+  const BasicBlock *Detached = DI->getDetached();
+  SmallVector<const BasicBlock *, 4> WorkList;
+  SmallPtrSet<const BasicBlock *, 8> Visited;
+  WorkList.push_back(Detached);
+  while (!WorkList.empty()) {
+    const BasicBlock *CurBB = WorkList.pop_back_val();
+    if (!Visited.insert(CurBB).second)
+      continue;
+
+    for (const Instruction &I : *CurBB)
+      // Check for a call instruction that can throw.
+      if (const CallInst *CI = dyn_cast<CallInst>(&I))
+        if (!CI->doesNotThrow())
+          return true;
+
+    // Handle nested detached tasks recursively.
+    if (const DetachInst *NestedDI =
+        dyn_cast<DetachInst>(CurBB->getTerminator())) {
+      if (!NestedDI->hasUnwindDest() &&
+          CheckDetachedTaskForCallsThatThrow(NestedDI))
+        return true;
+      else {
+        // Only add the continuations of the detach for additional search.
+        WorkList.push_back(NestedDI->getContinue());
+        if (NestedDI->hasUnwindDest())
+          WorkList.push_back(NestedDI->getUnwindDest());
+        continue;
+      }
+    }
+
+    // Terminate search at matching reattaches and detached rethrows.
+    if (const ReattachInst *RI = dyn_cast<ReattachInst>(CurBB->getTerminator()))
+      if (ReattachMatchesDetach(RI, DI))
+        continue;
+    if (isDetachedRethrow(CurBB->getTerminator(), DI->getSyncRegion()))
+      continue;
+
+    // Add successors of this basic block.
+    for (const BasicBlock *Succ : successors(CurBB))
+      WorkList.push_back(Succ);
+  }
+  return false;
+}
+
 /// If we inlined an invoke site, we need to convert calls
 /// in the body of the inlined function into invokes.
 ///
@@ -619,6 +668,15 @@ static void HandleInlinedLandingPad(InvokeInst *II, BasicBlock *FirstNewBlock,
         // Update any PHI nodes in the exceptional block to indicate that there
         // is now a new entry in them.
         Invoke.addIncomingPHIValuesFor(NewBB);
+
+#ifndef NDEBUG
+    if (DetachInst *DI = dyn_cast<DetachInst>(BB->getTerminator()))
+      // Check if any calls in the detached task might throw, requiring a new
+      // unwind destination to be added to this detach.
+      assert((!DI->hasUnwindDest() ||
+              !CheckDetachedTaskForCallsThatThrow(DI)) &&
+             "Need to add an unwind destination to an inlined detach!");
+#endif
 
     // Forward any resumes that are remaining here.
     if (ResumeInst *RI = dyn_cast<ResumeInst>(BB->getTerminator()))
@@ -1662,6 +1720,18 @@ llvm::InlineResult llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
         !isa<ConstantTokenNone>(CallSiteUnwindDestToken);
   }
 
+  // Get the entry block of the detached context into which we're inlining.  If
+  // we move allocas from the inlined code, we must move them to this block.
+  BasicBlock *DetachedCtxEntryBlock;
+  {
+    BasicBlock *CallingBlock = TheCall->getParent();
+    DetachedCtxEntryBlock = GetDetachedCtx(CallingBlock);
+    assert(((&(CallingBlock->getParent()->getEntryBlock()) ==
+             DetachedCtxEntryBlock) ||
+            DetachedCtxEntryBlock->getSinglePredecessor()) &&
+           "Entry block of detached context has multiple predecessors.");
+  }
+
   // Get an iterator to the last basic block in the function, which will have
   // the new function inlined after it.
   Function::iterator LastBlock = --Caller->end();
@@ -1820,7 +1890,8 @@ llvm::InlineResult llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
   // calculate which instruction they should be inserted before.  We insert the
   // instructions at the end of the current alloca list.
   {
-    BasicBlock::iterator InsertPoint = Caller->begin()->begin();
+    // BasicBlock::iterator InsertPoint = Caller->begin()->begin();
+    BasicBlock::iterator InsertPoint = DetachedCtxEntryBlock->begin();
     for (BasicBlock::iterator I = FirstNewBlock->begin(),
          E = FirstNewBlock->end(); I != E; ) {
       AllocaInst *AI = dyn_cast<AllocaInst>(I++);
@@ -1850,13 +1921,32 @@ llvm::InlineResult llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
       // Transfer all of the allocas over in a block.  Using splice means
       // that the instructions aren't removed from the symbol table, then
       // reinserted.
-      Caller->getEntryBlock().getInstList().splice(
+      // Caller->getEntryBlock().getInstList().splice(
+      //     InsertPoint, FirstNewBlock->getInstList(), AI->getIterator(), I);
+      DetachedCtxEntryBlock->getInstList().splice(
           InsertPoint, FirstNewBlock->getInstList(), AI->getIterator(), I);
     }
     // Move any dbg.declares describing the allocas into the entry basic block.
     DIBuilder DIB(*Caller->getParent());
     for (auto &AI : IFI.StaticAllocas)
       replaceDbgDeclareForAlloca(AI, AI, DIB, DIExpression::ApplyOffset, 0);
+
+    // Move any syncregion_start's into the entry basic block.
+    for (BasicBlock::iterator I = FirstNewBlock->begin(),
+         E = FirstNewBlock->end(); I != E; ) {
+      IntrinsicInst *II = dyn_cast<IntrinsicInst>(I++);
+      if (!II) continue;
+      if (Intrinsic::syncregion_start != II->getIntrinsicID())
+        continue;
+
+      while (isa<IntrinsicInst>(I) &&
+             Intrinsic::syncregion_start ==
+             cast<IntrinsicInst>(I)->getIntrinsicID())
+        ++I;
+
+      DetachedCtxEntryBlock->getInstList().splice(
+          InsertPoint, FirstNewBlock->getInstList(), II->getIterator(), I);
+    }
   }
 
   SmallVector<Value*,4> VarArgsToForward;
@@ -2262,6 +2352,7 @@ llvm::InlineResult llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
   // this is an invoke instruction or a call instruction.
   BasicBlock *AfterCallBB;
   BranchInst *CreatedBranchToNormalDest = nullptr;
+
   if (InvokeInst *II = dyn_cast<InvokeInst>(TheCall)) {
 
     // Add an unconditional branch to make this look like the CallInst case...

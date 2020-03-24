@@ -334,7 +334,7 @@ declare i32 @__gxx_personality_v0(...)
 ; }
 
 ; FIXME: missing willreturn
-; FNATTR: Function Attrs: noinline norecurse nounwind readonly uwtable
+; FNATTR: Function Attrs: argmemonly noinline norecurse nounwind readonly uwtable
 ; FNATTR-NEXT: define i32 @loop_constant_trip_count(i32* nocapture readonly)
 ; ATTRIBUTOR: Function Attrs: nofree noinline nosync nounwind uwtable
 ; ATTRIBUTOR-NEXT: define i32 @loop_constant_trip_count(i32* nocapture readonly)
@@ -366,7 +366,7 @@ define i32 @loop_constant_trip_count(i32* nocapture readonly) #0 {
 ;     }
 ;     return ans;
 ; }
-; FNATTR: Function Attrs: noinline norecurse nounwind readonly uwtable
+; FNATTR: Function Attrs: argmemonly noinline norecurse nounwind readonly uwtable
 ; FNATTR-NOT: willreturn
 ; FNATTR-NEXT: define i32 @loop_trip_count_unbound(i32, i32, i32* nocapture readonly, i32) local_unnamed_addr
 ; ATTRIBUTOR: Function Attrs: nofree noinline nosync nounwind uwtable
@@ -405,7 +405,7 @@ define i32 @loop_trip_count_unbound(i32, i32, i32* nocapture readonly, i32) loca
 
 
 ; FIXME: missing willreturn
-; FNATTR: Function Attrs: noinline norecurse nounwind readonly uwtable
+; FNATTR: Function Attrs: argmemonly noinline norecurse nounwind readonly uwtable
 ; FNATTR-NEXT: define i32 @loop_trip_dec(i32, i32* nocapture readonly)
 ; ATTRIBUTOR: Function Attrs: nofree noinline nosync nounwind uwtable
 ; ATTRIBUTOR-NEXT: define i32 @loop_trip_dec(i32, i32* nocapture readonly) local_unnamed_addr

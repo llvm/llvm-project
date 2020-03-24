@@ -111,6 +111,7 @@ class Function;
 class Instruction;
 class MemoryAccess;
 class MemorySSAWalker;
+class TaskInfo;
 class LLVMContext;
 class raw_ostream;
 
@@ -702,7 +703,7 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(MemoryPhi, MemoryAccess)
 /// accesses.
 class MemorySSA {
 public:
-  MemorySSA(Function &, AliasAnalysis *, DominatorTree *);
+  MemorySSA(Function &, AliasAnalysis *, DominatorTree *, TaskInfo * = nullptr);
 
   // MemorySSA must remain where it's constructed; Walkers it creates store
   // pointers to it.
@@ -868,6 +869,7 @@ private:
   void renumberBlock(const BasicBlock *) const;
   AliasAnalysis *AA;
   DominatorTree *DT;
+  TaskInfo *TI;
   Function &F;
 
   // Memory SSA mappings
@@ -904,7 +906,7 @@ protected:
 
   // This function should not be used by new passes.
   static bool defClobbersUseOrDef(MemoryDef *MD, const MemoryUseOrDef *MU,
-                                  AliasAnalysis &AA);
+                                  AliasAnalysis &AA, TaskInfo *TI = nullptr);
 };
 
 // This pass does eager building and then printing of MemorySSA. It is used by

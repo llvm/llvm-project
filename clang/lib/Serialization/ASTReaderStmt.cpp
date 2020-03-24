@@ -1406,6 +1406,22 @@ void ASTStmtReader::VisitCXXForRangeStmt(CXXForRangeStmt *S) {
   S->setBody(Record.readSubStmt());
 }
 
+void ASTStmtReader::VisitCXXForallRangeStmt(CXXForallRangeStmt *S) {
+  VisitStmt(S);
+  S->ForLoc = ReadSourceLocation();
+  S->CoawaitLoc = ReadSourceLocation();
+  S->ColonLoc = ReadSourceLocation();
+  S->RParenLoc = ReadSourceLocation();
+  S->setInit(Record.readSubStmt());
+  S->setRangeStmt(Record.readSubStmt());
+  S->setBeginStmt(Record.readSubStmt());
+  S->setEndStmt(Record.readSubStmt());
+  S->setCond(Record.readSubExpr());
+  S->setInc(Record.readSubExpr());
+  S->setLoopVarStmt(Record.readSubStmt());
+  S->setBody(Record.readSubStmt());
+}
+
 void ASTStmtReader::VisitMSDependentExistsStmt(MSDependentExistsStmt *S) {
   VisitStmt(S);
   S->KeywordLoc = ReadSourceLocation();
@@ -2349,6 +2365,63 @@ void ASTStmtReader::VisitOMPTargetTeamsDistributeSimdDirective(
 }
 
 //===----------------------------------------------------------------------===//
+// Cilk spawn, Cilk sync, Cilk for
+//===----------------------------------------------------------------------===//
+
+void ASTStmtReader::VisitCilkSpawnStmt(CilkSpawnStmt *S) {
+  VisitStmt(S);
+  S->setSpawnLoc(ReadSourceLocation());
+  S->setSpawnedStmt(Record.readSubStmt());
+}
+
+void ASTStmtReader::VisitCilkSpawnExpr(CilkSpawnExpr *E) {
+  VisitExpr(E);
+  E->setSpawnLoc(ReadSourceLocation());
+  E->setSpawnedExpr(Record.readSubExpr());
+}
+
+void ASTStmtReader::VisitCilkSyncStmt(CilkSyncStmt *S) {
+  VisitStmt(S);
+  S->setSyncLoc(ReadSourceLocation());
+}
+
+void ASTStmtReader::VisitCilkForStmt(CilkForStmt *S) {
+  VisitStmt(S);
+  S->setInit(Record.readSubStmt());
+  S->setCond(Record.readSubExpr());
+  // S->setConditionVariable(Record.getContext(), ReadDeclAs<VarDecl>());
+  S->setInc(Record.readSubExpr());
+  S->setLoopVariable(Record.getContext(), ReadDeclAs<VarDecl>());
+  S->setBody(Record.readSubStmt());
+  S->setCilkForLoc(ReadSourceLocation());
+  S->setLParenLoc(ReadSourceLocation());
+  S->setRParenLoc(ReadSourceLocation());
+}
+
+//===----------------------------------------------------------------------===//
+void ASTStmtReader::VisitSpawnStmt(SpawnStmt *S) {
+  VisitStmt(S);
+  S->setSpawnLoc(ReadSourceLocation());
+  S->setSpawnedStmt(Record.readSubStmt());
+}
+
+void ASTStmtReader::VisitSyncStmt(SyncStmt *S) {
+  VisitStmt(S);
+  S->setSyncLoc(ReadSourceLocation());
+}
+
+void ASTStmtReader::VisitForallStmt(ForallStmt *S) {
+  VisitStmt(S);
+  S->setInit(Record.readSubStmt());
+  S->setCond(Record.readSubExpr());
+  S->setConditionVariable(Record.getContext(), ReadDeclAs<VarDecl>());
+  S->setInc(Record.readSubExpr());
+  S->setBody(Record.readSubStmt());
+  S->setForallLoc(ReadSourceLocation());
+  S->setLParenLoc(ReadSourceLocation());
+  S->setRParenLoc(ReadSourceLocation());
+}
+
 // ASTReader Implementation
 //===----------------------------------------------------------------------===//
 
@@ -2545,6 +2618,34 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
           static_cast<ConstantExpr::ResultStorageKind>(
               Record[ASTStmtReader::NumExprFields]),
           Empty);
+      break;
+
+    case STMT_CILKSPAWN:
+      S = new (Context) CilkSpawnStmt(Empty);
+      break;
+
+    case EXPR_CILKSPAWN:
+      S = new (Context) CilkSpawnExpr(Empty);
+      break;
+
+    case STMT_CILKSYNC:
+      S = new (Context) CilkSyncStmt(Empty);
+      break;
+
+    case STMT_CILKFOR:
+      S = new (Context) CilkForStmt(Empty);
+      break;
+
+    case STMT_SPAWN:
+      S = new (Context) SpawnStmt(Empty);
+      break;
+
+    case STMT_SYNC:
+      S = new (Context) SyncStmt(Empty);
+      break;
+
+    case STMT_FORALL:
+      S = new (Context) ForallStmt(Empty);
       break;
 
     case EXPR_PREDEFINED:
@@ -2866,6 +2967,10 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
 
     case STMT_CXX_FOR_RANGE:
       S = new (Context) CXXForRangeStmt(Empty);
+      break;
+
+    case STMT_CXX_FORALL_RANGE:
+      S = new (Context) CXXForallRangeStmt(Empty);
       break;
 
     case STMT_MS_DEPENDENT_EXISTS:

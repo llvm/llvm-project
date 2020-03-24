@@ -19,6 +19,7 @@
 #include "clang/Driver/Job.h"
 #include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
+#include "clang/Driver/Tapir.h"
 #include "clang/Driver/XRayArgs.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
@@ -41,6 +42,7 @@
 #include <cassert>
 #include <cstddef>
 #include <cstring>
+#include <cstdio> // kitsune - FIXME: remove this. 
 #include <string>
 
 using namespace clang;
@@ -855,6 +857,98 @@ void ToolChain::AddCXXStdlibLibArgs(const ArgList &Args,
   }
 }
 
+
+/// The string produced by CMake configuration parameters for multiple
+/// libraries (e.g. "-lkokkos -ldl -lrt") do not work well for direct
+/// use as arguments.  This helper extracts them into individal
+/// arguments.
+void ToolChain::ExtractArgsFromString(const char *s, 
+				      ArgStringList &CmdArgs, 
+				      const ArgList &Args,
+				      const char delimiter) const {
+  std::string ArgString(s);
+  std::string token;
+  std::istringstream TokenStream(ArgString);
+  while(std::getline(TokenStream, token, delimiter)) {
+    CmdArgs.push_back(Args.MakeArgStringRef(token));
+  }
+}
+
+void ToolChain::AddKitsuneIncludeArgs(const ArgList &Args,
+				      ArgStringList &CmdArgs) const {
+  if (D.CCCIsCXX() && Args.hasArg(options::OPT_fkokkos)) {
+    if (KITSUNE_ENABLE_KOKKOS) { 
+      CmdArgs.push_back("-I" KITSUNE_KOKKOS_INCLUDE_DIR);
+    } else {
+      getDriver().Diag(diag::warn_kokkos_missing_build_params);
+    }
+  }
+}
+
+void ToolChain::AddKitsuneLibArgs(const ArgList &Args, 
+				  ArgStringList &CmdArgs) const {
+
+  if (D.CCCIsCXX() && Args.hasArg(options::OPT_fkokkos)) {
+    if (KITSUNE_ENABLE_KOKKOS) {
+      const std::string LibraryPath(KITSUNE_KOKKOS_LIBRARY_DIR);
+      CmdArgs.push_back("-L" KITSUNE_KOKKOS_LIBRARY_DIR);
+      ExtractArgsFromString(KITSUNE_KOKKOS_LINK_LIBS, CmdArgs, Args);
+    } else {
+      getDriver().Diag(diag::warn_kokkos_missing_build_params);
+    }
+  }
+
+  if (Args.hasArg(options::OPT_ftapir_EQ)) {
+    if (Arg *A = Args.getLastArg(options::OPT_ftapir_EQ)) {
+      StringRef Name = A->getValue();
+      if (Name == "cilk") { 
+	if (KITSUNE_ENABLE_CILKRTS) {
+	  CmdArgs.push_back("-L" KITSUNE_CILKRTS_LIBRARY_DIR);
+	  CmdArgs.push_back("-rpath=" KITSUNE_CILKRTS_LIBRARY_DIR);
+	  ExtractArgsFromString(KITSUNE_CILKRTS_LINK_LIBS, CmdArgs, Args);
+	} else {
+	  getDriver().Diag(diag::warn_cilkrts_missing_build_params);
+	}
+      } else if (Name == "omp") {
+	if (KITSUNE_ENABLE_OPENMP) { 
+	  CmdArgs.push_back("-L" KITSUNE_OPENMP_LIBRARY_DIR);
+	  CmdArgs.push_back("-rpath=" KITSUNE_OPENMP_LIBRARY_DIR);
+	  ExtractArgsFromString(KITSUNE_OPENMP_LINK_LIBS, CmdArgs, Args);
+	}	  
+      } else if (Name == "qthreads") {
+	if (KITSUNE_ENABLE_QTHREADS) { 
+	  CmdArgs.push_back("-L" KITSUNE_QTHREADS_LIBRARY_DIR);
+	  CmdArgs.push_back("-rpath=" KITSUNE_QTHREADS_LIBRARY_DIR);
+	  ExtractArgsFromString(KITSUNE_QTHREADS_LINK_LIBS, CmdArgs, Args);
+	} else {
+	  getDriver().Diag(diag::warn_qthreads_missing_build_params);
+	}
+      } else if (Name == "realm") {
+	if (KITSUNE_ENABLE_REALM) { 
+	  CmdArgs.push_back("-L" KITSUNE_REALM_LIBRARY_DIR);
+	  CmdArgs.push_back("-rpath=" KITSUNE_REALM_LIBRARY_DIR);
+	  ExtractArgsFromString(KITSUNE_REALM_LINK_LIBS, CmdArgs, Args);
+	} else {
+	  getDriver().Diag(diag::warn_realm_missing_build_params);	  
+	}
+      } else if (Name == "cuda") { 
+	if (KITSUNE_ENABLE_CUDA) { 
+	  CmdArgs.push_back("-L" KITSUNE_CUDA_LIBRARY_DIR);
+	  CmdArgs.push_back("-rpath=" KITSUNE_CUDA_LIBRARY_DIR);
+	  ExtractArgsFromString(KITSUNE_CUDA_LINK_LIBS, CmdArgs, Args);
+	} else {
+	  getDriver().Diag(diag::warn_cuda_missing_build_params);
+	}
+      } else {
+	// no-op -- FIXME -- probably want a warning here but we 
+	// can fall back to user-specified command line arguments 
+	// in unsupported/missing configurations... 
+	;
+      }
+    }
+  }
+}
+
 void ToolChain::AddFilePathLibArgs(const ArgList &Args,
                                    ArgStringList &CmdArgs) const {
   for (const auto &LibPath : getFilePaths())
@@ -1041,4 +1135,35 @@ llvm::opt::DerivedArgList *ToolChain::TranslateOpenMPTargetArgs(
 
   delete DAL;
   return nullptr;
+}
+
+void ToolChain::AddTapirRuntimeLibArgs(const ArgList &Args,
+                                       ArgStringList &CmdArgs) const {
+  TapirTargetID TapirTarget = parseTapirTarget(Args);
+  if (TapirTarget == TapirTargetID::Last_TapirTargetID)
+    if (const Arg *A = Args.getLastArg(options::OPT_ftapir_EQ))
+      getDriver().Diag(diag::err_drv_invalid_value) << A->getAsString(Args)
+                                                    << A->getValue();
+
+  switch (TapirTarget) {
+  case TapirTargetID::Cheetah:
+    CmdArgs.push_back("-lcheetah");
+    CmdArgs.push_back("-lpthread");
+    break;
+  case TapirTargetID::Cilk:
+    CmdArgs.push_back("-lcilkrts");
+    break;
+  case TapirTargetID::CilkR:
+    CmdArgs.push_back("-lcilkr");
+    CmdArgs.push_back("-lpthread");
+    break;
+  case TapirTargetID::OpenMP:
+    CmdArgs.push_back("-lomp");
+    break;
+  case TapirTargetID::Qthreads:
+    CmdArgs.push_back("-lqthread");
+    break;
+  default:
+    break;
+  }
 }

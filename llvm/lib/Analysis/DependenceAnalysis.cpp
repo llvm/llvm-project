@@ -54,6 +54,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -304,6 +305,26 @@ bool FullDependence::isSplitable(unsigned Level) const {
   return DV[Level - 1].Splitable;
 }
 
+
+//===----------------------------------------------------------------------===//
+// GeneralAccess methods
+
+raw_ostream &llvm::operator<<(raw_ostream &OS, const GeneralAccess &GA) {
+  if (!GA.isValid())
+    OS << "(invalid GeneralAccess)";
+  else {
+    OS << "(GA.I: " << *GA.I;
+    OS << ", GA.Loc: ";
+    if (!GA.Loc)
+      OS << "nullptr";
+    else
+      OS << *GA.Loc->Ptr;
+    OS << ", GA.OperandNum: " << static_cast<int>(GA.OperandNum);
+    OS << ", GA.ModRef: " << static_cast<int>(GA.ModRef);
+    OS << ")";
+  }
+  return OS;
+}
 
 //===----------------------------------------------------------------------===//
 // DependenceInfo::Constraint methods
@@ -758,6 +779,7 @@ void DependenceInfo::establishNestingLevels(const Instruction *Src,
   }
   CommonLevels = SrcLevel;
   MaxLevels -= CommonLevels;
+  CommonLoop = SrcLoop;
 }
 
 
@@ -965,7 +987,7 @@ DependenceInfo::classifyPair(const SCEV *Src, const Loop *SrcLoopNest,
 // we try simple subtraction, which seems to help in some cases
 // involving symbolics.
 bool DependenceInfo::isKnownPredicate(ICmpInst::Predicate Pred, const SCEV *X,
-                                      const SCEV *Y) const {
+                                      const SCEV *Y, const Loop *L) const {
   if (Pred == CmpInst::ICMP_EQ ||
       Pred == CmpInst::ICMP_NE) {
     if ((isa<SCEVSignExtendExpr>(X) &&
@@ -983,6 +1005,9 @@ bool DependenceInfo::isKnownPredicate(ICmpInst::Predicate Pred, const SCEV *X,
     }
   }
   if (SE->isKnownPredicate(Pred, X, Y))
+    return true;
+  if (L && isLoopInvariant(X, L) && isLoopInvariant(Y, L) &&
+      isTrueAtLoopEntry(L, Pred, X, Y))
     return true;
   // If SE->isKnownPredicate can't prove the condition,
   // we try the brute-force approach of subtracting
@@ -2718,10 +2743,10 @@ bool DependenceInfo::testBounds(unsigned char DirKind, unsigned Level,
                                 BoundInfo *Bound, const SCEV *Delta) const {
   Bound[Level].Direction = DirKind;
   if (const SCEV *LowerBound = getLowerBound(Bound))
-    if (isKnownPredicate(CmpInst::ICMP_SGT, LowerBound, Delta))
+    if (isKnownPredicate(CmpInst::ICMP_SGT, LowerBound, Delta, CommonLoop))
       return false;
   if (const SCEV *UpperBound = getUpperBound(Bound))
-    if (isKnownPredicate(CmpInst::ICMP_SGT, Delta, UpperBound))
+    if (isKnownPredicate(CmpInst::ICMP_SGT, Delta, UpperBound, CommonLoop))
       return false;
   return true;
 }
@@ -2756,10 +2781,12 @@ void DependenceInfo::findBoundsALL(CoefficientInfo *A, CoefficientInfo *B,
   }
   else {
     // If the difference is 0, we won't need to know the number of iterations.
-    if (isKnownPredicate(CmpInst::ICMP_EQ, A[K].NegPart, B[K].PosPart))
+    if (isKnownPredicate(CmpInst::ICMP_EQ, A[K].NegPart, B[K].PosPart,
+                         CommonLoop))
       Bound[K].Lower[Dependence::DVEntry::ALL] =
           SE->getZero(A[K].Coeff->getType());
-    if (isKnownPredicate(CmpInst::ICMP_EQ, A[K].PosPart, B[K].NegPart))
+    if (isKnownPredicate(CmpInst::ICMP_EQ, A[K].PosPart, B[K].NegPart,
+                         CommonLoop))
       Bound[K].Upper[Dependence::DVEntry::ALL] =
           SE->getZero(A[K].Coeff->getType());
   }
@@ -2894,14 +2921,43 @@ void DependenceInfo::findBoundsGT(CoefficientInfo *A, CoefficientInfo *B,
 }
 
 
+// Returns true if predicate LHS `Pred` RHS is true at entry of L.
+bool DependenceInfo::isTrueAtLoopEntry(const Loop *L, ICmpInst::Predicate Pred,
+                                       const SCEV *LHS, const SCEV *RHS) const {
+  return SE->isLoopEntryGuardedByCond(L, Pred, LHS, RHS);
+}
+
+
 // X^+ = max(X, 0)
 const SCEV *DependenceInfo::getPositivePart(const SCEV *X) const {
+  if (CommonLoop) {
+    const SCEV *Zero = SE->getZero(X->getType());
+    if (!SE->isLoopInvariant(X, CommonLoop))
+      return SE->getSMaxExpr(X, SE->getZero(X->getType()));
+    if (isTrueAtLoopEntry(CommonLoop, CmpInst::ICMP_SGT, X, Zero) ||
+        isTrueAtLoopEntry(CommonLoop, CmpInst::ICMP_SGT,
+                          Zero, SE->getNegativeSCEV(X)))
+      return X;
+    if (isTrueAtLoopEntry(CommonLoop, CmpInst::ICMP_SGE, Zero, X))
+      return Zero;
+  }
   return SE->getSMaxExpr(X, SE->getZero(X->getType()));
 }
 
 
 // X^- = min(X, 0)
 const SCEV *DependenceInfo::getNegativePart(const SCEV *X) const {
+  if (CommonLoop) {
+    const SCEV *Zero = SE->getZero(X->getType());
+    if (!SE->isLoopInvariant(X, CommonLoop))
+      return SE->getSMinExpr(X, SE->getZero(X->getType()));
+    if (isTrueAtLoopEntry(CommonLoop, CmpInst::ICMP_SGT, Zero, X) ||
+        isTrueAtLoopEntry(CommonLoop, CmpInst::ICMP_SGT,
+                          SE->getNegativeSCEV(X), Zero))
+      return X;
+    if (isTrueAtLoopEntry(CommonLoop, CmpInst::ICMP_SGE, X, Zero))
+      return Zero;
+  }
   return SE->getSMinExpr(X, SE->getZero(X->getType()));
 }
 
@@ -2927,6 +2983,14 @@ DependenceInfo::collectCoeffInfo(const SCEV *Subscript, bool SrcFlag,
     CI[K].PosPart = getPositivePart(CI[K].Coeff);
     CI[K].NegPart = getNegativePart(CI[K].Coeff);
     CI[K].Iterations = collectUpperBound(L, Subscript->getType());
+    if (const SCEVCastExpr *Cast =
+        dyn_cast<SCEVSignExtendExpr>(CI[K].PosPart)) {
+      auto *ReplSCEV = SE->getZeroExtendExpr(Cast->getOperand(),
+                                             Subscript->getType());
+      if (CI[K].Coeff == CI[K].PosPart)
+        CI[K].Coeff = ReplSCEV;
+      CI[K].PosPart = ReplSCEV;
+    }
     Subscript = AddRec->getStart();
   }
   Constant = Subscript;
@@ -4006,4 +4070,509 @@ const SCEV *DependenceInfo::getSplitIteration(const Dependence &Dep,
   }
   llvm_unreachable("somehow reached end of routine");
   return nullptr;
+}
+
+static
+Value *getGeneralAccessPointerOperand(GeneralAccess *A) {
+  return const_cast<Value *>(A->Loc->Ptr);
+}
+
+static
+const SCEV *getElementSize(GeneralAccess *A, ScalarEvolution *SE) {
+  Type *Ty = getGeneralAccessPointerOperand(A)->getType();
+  Type *ETy = SE->getEffectiveSCEVType(PointerType::getUnqual(Ty));
+  return SE->getSizeOfExpr(ETy, Ty);
+}
+
+/// Check if we can delinearize the subscripts. If the SCEVs representing the
+/// source and destination array references are recurrences on a nested loop,
+/// this function flattens the nested recurrences into separate recurrences
+/// for each loop level.
+bool DependenceInfo::tryDelinearize(GeneralAccess *SrcA, GeneralAccess *DstA,
+                                    SmallVectorImpl<Subscript> &Pair) {
+  Value *SrcPtr = getGeneralAccessPointerOperand(SrcA);
+  Value *DstPtr = getGeneralAccessPointerOperand(DstA);
+
+  Loop *SrcLoop = LI->getLoopFor(SrcA->I->getParent());
+  Loop *DstLoop = LI->getLoopFor(DstA->I->getParent());
+
+  // Below code mimics the code in Delinearization.cpp
+  const SCEV *SrcAccessFn =
+    SE->getSCEVAtScope(SrcPtr, SrcLoop);
+  const SCEV *DstAccessFn =
+    SE->getSCEVAtScope(DstPtr, DstLoop);
+
+  const SCEVUnknown *SrcBase =
+      dyn_cast<SCEVUnknown>(SE->getPointerBase(SrcAccessFn));
+  const SCEVUnknown *DstBase =
+      dyn_cast<SCEVUnknown>(SE->getPointerBase(DstAccessFn));
+
+  if (!SrcBase || !DstBase || SrcBase != DstBase)
+    return false;
+
+  const SCEV *ElementSize = getElementSize(SrcA, SE);
+  if (ElementSize != getElementSize(DstA, SE))
+    return false;
+
+  const SCEV *SrcSCEV = SE->getMinusSCEV(SrcAccessFn, SrcBase);
+  const SCEV *DstSCEV = SE->getMinusSCEV(DstAccessFn, DstBase);
+
+  const SCEVAddRecExpr *SrcAR = dyn_cast<SCEVAddRecExpr>(SrcSCEV);
+  const SCEVAddRecExpr *DstAR = dyn_cast<SCEVAddRecExpr>(DstSCEV);
+  if (!SrcAR || !DstAR || !SrcAR->isAffine() || !DstAR->isAffine())
+    return false;
+
+  // First step: collect parametric terms in both array references.
+  SmallVector<const SCEV *, 4> Terms;
+  SE->collectParametricTerms(SrcAR, Terms);
+  SE->collectParametricTerms(DstAR, Terms);
+
+  // Second step: find subscript sizes.
+  SmallVector<const SCEV *, 4> Sizes;
+  SE->findArrayDimensions(Terms, Sizes, ElementSize);
+
+  // Third step: compute the access functions for each subscript.
+  SmallVector<const SCEV *, 4> SrcSubscripts, DstSubscripts;
+  SE->computeAccessFunctions(SrcAR, SrcSubscripts, Sizes);
+  SE->computeAccessFunctions(DstAR, DstSubscripts, Sizes);
+
+  // Fail when there is only a subscript: that's a linearized access function.
+  if (SrcSubscripts.size() < 2 || DstSubscripts.size() < 2 ||
+      SrcSubscripts.size() != DstSubscripts.size())
+    return false;
+
+  int size = SrcSubscripts.size();
+
+  // Statically check that the array bounds are in-range. The first subscript we
+  // don't have a size for and it cannot overflow into another subscript, so is
+  // always safe. The others need to be 0 <= subscript[i] < bound, for both src
+  // and dst.
+  // FIXME: It may be better to record these sizes and add them as constraints
+  // to the dependency checks.
+  for (int i = 1; i < size; ++i) {
+    if (!isKnownNonNegative(SrcSubscripts[i], SrcPtr))
+      return false;
+
+    if (!isKnownLessThan(SrcSubscripts[i], Sizes[i - 1]))
+      return false;
+
+    if (!isKnownNonNegative(DstSubscripts[i], DstPtr))
+      return false;
+
+    if (!isKnownLessThan(DstSubscripts[i], Sizes[i - 1]))
+      return false;
+  }
+
+  LLVM_DEBUG({
+    dbgs() << "\nSrcSubscripts: ";
+    for (int i = 0; i < size; i++)
+      dbgs() << *SrcSubscripts[i];
+    dbgs() << "\nDstSubscripts: ";
+    for (int i = 0; i < size; i++)
+      dbgs() << *DstSubscripts[i];
+  });
+
+  // The delinearization transforms a single-subscript MIV dependence test into
+  // a multi-subscript SIV dependence test that is easier to compute. So we
+  // resize Pair to contain as many pairs of subscripts as the delinearization
+  // has found, and then initialize the pairs following the delinearization.
+  Pair.resize(size);
+  for (int i = 0; i < size; ++i) {
+    Pair[i].Src = SrcSubscripts[i];
+    Pair[i].Dst = DstSubscripts[i];
+    unifySubscriptType(&Pair[i]);
+  }
+
+  return true;
+}
+
+// depends -
+// Returns NULL if there is no dependence.
+// Otherwise, return a Dependence with as many details as possible.
+// Corresponds to Section 3.1 in the paper
+//
+//            Practical Dependence Testing
+//            Goff, Kennedy, Tseng
+//            PLDI 1991
+std::unique_ptr<Dependence>
+DependenceInfo::depends(GeneralAccess *SrcA, GeneralAccess *DstA,
+                        bool PossiblyLoopIndependent) {
+  if (SrcA == DstA)
+    PossiblyLoopIndependent = false;
+
+  Instruction *Src = SrcA->I;
+  Instruction *Dst = DstA->I;
+
+  if (!Src || !Dst)
+    // If we don't have a source or destination instruction, we don't have a
+    // dependence.
+    return nullptr;
+
+  if (!SrcA->isValid() || !DstA->isValid()) {
+    LLVM_DEBUG(dbgs() << "could not interpret general accesses\n");
+    return make_unique<Dependence>(Src, Dst);
+  }
+
+  Value *SrcPtr = getGeneralAccessPointerOperand(SrcA);
+  Value *DstPtr = getGeneralAccessPointerOperand(DstA);
+
+  switch (underlyingObjectsAlias(AA, F->getParent()->getDataLayout(),
+                                 *DstA->Loc, *SrcA->Loc)) {
+  case MayAlias:
+  case PartialAlias:
+    // cannot analyse objects if we don't understand their aliasing.
+    LLVM_DEBUG(dbgs() << "can't analyze may or partial alias\n");
+    return make_unique<Dependence>(Src, Dst);
+  case NoAlias:
+    // If the objects noalias, they are distinct, accesses are independent.
+    LLVM_DEBUG(dbgs() << "no alias\n");
+    return nullptr;
+  case MustAlias:
+    break; // The underlying objects alias; test accesses for dependence.
+  }
+
+  // establish loop nesting levels
+  establishNestingLevels(Src, Dst);
+  LLVM_DEBUG(dbgs() << "    common nesting levels = " << CommonLevels << "\n");
+  LLVM_DEBUG(dbgs() << "    maximum nesting levels = " << MaxLevels << "\n");
+
+  FullDependence Result(Src, Dst, PossiblyLoopIndependent, CommonLevels);
+  ++TotalArrayPairs;
+
+  unsigned Pairs = 1;
+  SmallVector<Subscript, 2> Pair(Pairs);
+  if (!SE->isSCEVable(SrcPtr->getType()) ||
+      !SE->isSCEVable(DstPtr->getType())) {
+    LLVM_DEBUG(dbgs() << "can't analyze non-scevable pointers\n");
+    return make_unique<Dependence>(Src, Dst);
+  }
+  const SCEV *SrcSCEV = SE->getSCEV(SrcPtr);
+  const SCEV *DstSCEV = SE->getSCEV(DstPtr);
+  LLVM_DEBUG(dbgs() << "    SrcSCEV = " << *SrcSCEV << "\n");
+  LLVM_DEBUG(dbgs() << "    DstSCEV = " << *DstSCEV << "\n");
+  Pair[0].Src = SrcSCEV;
+  Pair[0].Dst = DstSCEV;
+
+  if (Delinearize) {
+    if (tryDelinearize(SrcA, DstA, Pair)) {
+      LLVM_DEBUG(dbgs() << "    delinearized\n");
+      Pairs = Pair.size();
+    }
+  }
+
+  for (unsigned P = 0; P < Pairs; ++P) {
+    Pair[P].Loops.resize(MaxLevels + 1);
+    Pair[P].GroupLoops.resize(MaxLevels + 1);
+    Pair[P].Group.resize(Pairs);
+    removeMatchingExtensions(&Pair[P]);
+    Pair[P].Classification =
+      classifyPair(Pair[P].Src, LI->getLoopFor(Src->getParent()),
+                   Pair[P].Dst, LI->getLoopFor(Dst->getParent()),
+                   Pair[P].Loops);
+    Pair[P].GroupLoops = Pair[P].Loops;
+    Pair[P].Group.set(P);
+    LLVM_DEBUG(dbgs() << "    subscript " << P << "\n");
+    LLVM_DEBUG(dbgs() << "\tsrc = " << *Pair[P].Src << "\n");
+    LLVM_DEBUG(dbgs() << "\tdst = " << *Pair[P].Dst << "\n");
+    LLVM_DEBUG(dbgs() << "\tclass = " << Pair[P].Classification << "\n");
+    LLVM_DEBUG(dbgs() << "\tloops = ");
+    LLVM_DEBUG(dumpSmallBitVector(Pair[P].Loops));
+  }
+
+  SmallBitVector Separable(Pairs);
+  SmallBitVector Coupled(Pairs);
+
+  // Partition subscripts into separable and minimally-coupled groups
+  // Algorithm in paper is algorithmically better;
+  // this may be faster in practice. Check someday.
+  //
+  // Here's an example of how it works. Consider this code:
+  //
+  //   for (i = ...) {
+  //     for (j = ...) {
+  //       for (k = ...) {
+  //         for (l = ...) {
+  //           for (m = ...) {
+  //             A[i][j][k][m] = ...;
+  //             ... = A[0][j][l][i + j];
+  //           }
+  //         }
+  //       }
+  //     }
+  //   }
+  //
+  // There are 4 subscripts here:
+  //    0 [i] and [0]
+  //    1 [j] and [j]
+  //    2 [k] and [l]
+  //    3 [m] and [i + j]
+  //
+  // We've already classified each subscript pair as ZIV, SIV, etc.,
+  // and collected all the loops mentioned by pair P in Pair[P].Loops.
+  // In addition, we've initialized Pair[P].GroupLoops to Pair[P].Loops
+  // and set Pair[P].Group = {P}.
+  //
+  //      Src Dst    Classification Loops  GroupLoops Group
+  //    0 [i] [0]         SIV       {1}      {1}        {0}
+  //    1 [j] [j]         SIV       {2}      {2}        {1}
+  //    2 [k] [l]         RDIV      {3,4}    {3,4}      {2}
+  //    3 [m] [i + j]     MIV       {1,2,5}  {1,2,5}    {3}
+  //
+  // For each subscript SI 0 .. 3, we consider each remaining subscript, SJ.
+  // So, 0 is compared against 1, 2, and 3; 1 is compared against 2 and 3, etc.
+  //
+  // We begin by comparing 0 and 1. The intersection of the GroupLoops is empty.
+  // Next, 0 and 2. Again, the intersection of their GroupLoops is empty.
+  // Next 0 and 3. The intersection of their GroupLoop = {1}, not empty,
+  // so Pair[3].Group = {0,3} and Done = false (that is, 0 will not be added
+  // to either Separable or Coupled).
+  //
+  // Next, we consider 1 and 2. The intersection of the GroupLoops is empty.
+  // Next, 1 and 3. The intersectionof their GroupLoops = {2}, not empty,
+  // so Pair[3].Group = {0, 1, 3} and Done = false.
+  //
+  // Next, we compare 2 against 3. The intersection of the GroupLoops is empty.
+  // Since Done remains true, we add 2 to the set of Separable pairs.
+  //
+  // Finally, we consider 3. There's nothing to compare it with,
+  // so Done remains true and we add it to the Coupled set.
+  // Pair[3].Group = {0, 1, 3} and GroupLoops = {1, 2, 5}.
+  //
+  // In the end, we've got 1 separable subscript and 1 coupled group.
+  for (unsigned SI = 0; SI < Pairs; ++SI) {
+    if (Pair[SI].Classification == Subscript::NonLinear) {
+      // ignore these, but collect loops for later
+      ++NonlinearSubscriptPairs;
+      collectCommonLoops(Pair[SI].Src,
+                         LI->getLoopFor(Src->getParent()),
+                         Pair[SI].Loops);
+      collectCommonLoops(Pair[SI].Dst,
+                         LI->getLoopFor(Dst->getParent()),
+                         Pair[SI].Loops);
+      Result.Consistent = false;
+    } else if (Pair[SI].Classification == Subscript::ZIV) {
+      // always separable
+      Separable.set(SI);
+    }
+    else {
+      // SIV, RDIV, or MIV, so check for coupled group
+      bool Done = true;
+      for (unsigned SJ = SI + 1; SJ < Pairs; ++SJ) {
+        SmallBitVector Intersection = Pair[SI].GroupLoops;
+        Intersection &= Pair[SJ].GroupLoops;
+        if (Intersection.any()) {
+          // accumulate set of all the loops in group
+          Pair[SJ].GroupLoops |= Pair[SI].GroupLoops;
+          // accumulate set of all subscripts in group
+          Pair[SJ].Group |= Pair[SI].Group;
+          Done = false;
+        }
+      }
+      if (Done) {
+        if (Pair[SI].Group.count() == 1) {
+          Separable.set(SI);
+          ++SeparableSubscriptPairs;
+        }
+        else {
+          Coupled.set(SI);
+          ++CoupledSubscriptPairs;
+        }
+      }
+    }
+  }
+
+  LLVM_DEBUG(dbgs() << "    Separable = ");
+  LLVM_DEBUG(dumpSmallBitVector(Separable));
+  LLVM_DEBUG(dbgs() << "    Coupled = ");
+  LLVM_DEBUG(dumpSmallBitVector(Coupled));
+
+  Constraint NewConstraint;
+  NewConstraint.setAny(SE);
+
+  // test separable subscripts
+  for (unsigned SI : Separable.set_bits()) {
+    LLVM_DEBUG(dbgs() << "testing subscript " << SI);
+    switch (Pair[SI].Classification) {
+    case Subscript::ZIV:
+      LLVM_DEBUG(dbgs() << ", ZIV\n");
+      if (testZIV(Pair[SI].Src, Pair[SI].Dst, Result))
+        return nullptr;
+      break;
+    case Subscript::SIV: {
+      LLVM_DEBUG(dbgs() << ", SIV\n");
+      unsigned Level;
+      const SCEV *SplitIter = nullptr;
+      if (testSIV(Pair[SI].Src, Pair[SI].Dst, Level, Result, NewConstraint,
+                  SplitIter))
+        return nullptr;
+      break;
+    }
+    case Subscript::RDIV:
+      LLVM_DEBUG(dbgs() << ", RDIV\n");
+      if (testRDIV(Pair[SI].Src, Pair[SI].Dst, Result))
+        return nullptr;
+      break;
+    case Subscript::MIV:
+      LLVM_DEBUG(dbgs() << ", MIV\n");
+      if (testMIV(Pair[SI].Src, Pair[SI].Dst, Pair[SI].Loops, Result))
+        return nullptr;
+      break;
+    default:
+      llvm_unreachable("subscript has unexpected classification");
+    }
+  }
+
+  if (Coupled.count()) {
+    // test coupled subscript groups
+    LLVM_DEBUG(dbgs() << "starting on coupled subscripts\n");
+    LLVM_DEBUG(dbgs() << "MaxLevels + 1 = " << MaxLevels + 1 << "\n");
+    SmallVector<Constraint, 4> Constraints(MaxLevels + 1);
+    for (unsigned II = 0; II <= MaxLevels; ++II)
+      Constraints[II].setAny(SE);
+    for (unsigned SI : Coupled.set_bits()) {
+      LLVM_DEBUG(dbgs() << "testing subscript group " << SI << " { ");
+      SmallBitVector Group(Pair[SI].Group);
+      SmallBitVector Sivs(Pairs);
+      SmallBitVector Mivs(Pairs);
+      SmallBitVector ConstrainedLevels(MaxLevels + 1);
+      SmallVector<Subscript *, 4> PairsInGroup;
+      for (unsigned SJ : Group.set_bits()) {
+        LLVM_DEBUG(dbgs() << SJ << " ");
+        if (Pair[SJ].Classification == Subscript::SIV)
+          Sivs.set(SJ);
+        else
+          Mivs.set(SJ);
+        PairsInGroup.push_back(&Pair[SJ]);
+      }
+      unifySubscriptType(PairsInGroup);
+      LLVM_DEBUG(dbgs() << "}\n");
+      while (Sivs.any()) {
+        bool Changed = false;
+        for (unsigned SJ : Sivs.set_bits()) {
+          LLVM_DEBUG(dbgs() << "testing subscript " << SJ << ", SIV\n");
+          // SJ is an SIV subscript that's part of the current coupled group
+          unsigned Level;
+          const SCEV *SplitIter = nullptr;
+          LLVM_DEBUG(dbgs() << "SIV\n");
+          if (testSIV(Pair[SJ].Src, Pair[SJ].Dst, Level, Result, NewConstraint,
+                      SplitIter))
+            return nullptr;
+          ConstrainedLevels.set(Level);
+          if (intersectConstraints(&Constraints[Level], &NewConstraint)) {
+            if (Constraints[Level].isEmpty()) {
+              ++DeltaIndependence;
+              return nullptr;
+            }
+            Changed = true;
+          }
+          Sivs.reset(SJ);
+        }
+        if (Changed) {
+          // propagate, possibly creating new SIVs and ZIVs
+          LLVM_DEBUG(dbgs() << "    propagating\n");
+          LLVM_DEBUG(dbgs() << "\tMivs = ");
+          LLVM_DEBUG(dumpSmallBitVector(Mivs));
+          for (unsigned SJ : Mivs.set_bits()) {
+            // SJ is an MIV subscript that's part of the current coupled group
+            LLVM_DEBUG(dbgs() << "\tSJ = " << SJ << "\n");
+            if (propagate(Pair[SJ].Src, Pair[SJ].Dst, Pair[SJ].Loops,
+                          Constraints, Result.Consistent)) {
+              LLVM_DEBUG(dbgs() << "\t    Changed\n");
+              ++DeltaPropagations;
+              Pair[SJ].Classification =
+                classifyPair(Pair[SJ].Src, LI->getLoopFor(Src->getParent()),
+                             Pair[SJ].Dst, LI->getLoopFor(Dst->getParent()),
+                             Pair[SJ].Loops);
+              switch (Pair[SJ].Classification) {
+              case Subscript::ZIV:
+                LLVM_DEBUG(dbgs() << "ZIV\n");
+                if (testZIV(Pair[SJ].Src, Pair[SJ].Dst, Result))
+                  return nullptr;
+                Mivs.reset(SJ);
+                break;
+              case Subscript::SIV:
+                Sivs.set(SJ);
+                Mivs.reset(SJ);
+                break;
+              case Subscript::RDIV:
+              case Subscript::MIV:
+                break;
+              default:
+                llvm_unreachable("bad subscript classification");
+              }
+            }
+          }
+        }
+      }
+
+      // test & propagate remaining RDIVs
+      for (unsigned SJ : Mivs.set_bits()) {
+        if (Pair[SJ].Classification == Subscript::RDIV) {
+          LLVM_DEBUG(dbgs() << "RDIV test\n");
+          if (testRDIV(Pair[SJ].Src, Pair[SJ].Dst, Result))
+            return nullptr;
+          // I don't yet understand how to propagate RDIV results
+          Mivs.reset(SJ);
+        }
+      }
+
+      // test remaining MIVs
+      // This code is temporary.
+      // Better to somehow test all remaining subscripts simultaneously.
+      for (unsigned SJ : Mivs.set_bits()) {
+        if (Pair[SJ].Classification == Subscript::MIV) {
+          LLVM_DEBUG(dbgs() << "MIV test\n");
+          if (testMIV(Pair[SJ].Src, Pair[SJ].Dst, Pair[SJ].Loops, Result))
+            return nullptr;
+        }
+        else
+          llvm_unreachable("expected only MIV subscripts at this point");
+      }
+
+      // update Result.DV from constraint vector
+      LLVM_DEBUG(dbgs() << "    updating\n");
+      for (unsigned SJ : ConstrainedLevels.set_bits()) {
+        if (SJ > CommonLevels)
+          break;
+        updateDirection(Result.DV[SJ - 1], Constraints[SJ]);
+        if (Result.DV[SJ - 1].Direction == Dependence::DVEntry::NONE)
+          return nullptr;
+      }
+    }
+  }
+
+  // Make sure the Scalar flags are set correctly.
+  SmallBitVector CompleteLoops(MaxLevels + 1);
+  for (unsigned SI = 0; SI < Pairs; ++SI)
+    CompleteLoops |= Pair[SI].Loops;
+  for (unsigned II = 1; II <= CommonLevels; ++II)
+    if (CompleteLoops[II])
+      Result.DV[II - 1].Scalar = false;
+
+  if (PossiblyLoopIndependent) {
+    // Make sure the LoopIndependent flag is set correctly.
+    // All directions must include equal, otherwise no
+    // loop-independent dependence is possible.
+    for (unsigned II = 1; II <= CommonLevels; ++II) {
+      if (!(Result.getDirection(II) & Dependence::DVEntry::EQ)) {
+        Result.LoopIndependent = false;
+        break;
+      }
+    }
+  }
+  else {
+    // On the other hand, if all directions are equal and there's no
+    // loop-independent dependence possible, then no dependence exists.
+    bool AllEqual = true;
+    for (unsigned II = 1; II <= CommonLevels; ++II) {
+      if (Result.getDirection(II) != Dependence::DVEntry::EQ) {
+        AllEqual = false;
+        break;
+      }
+    }
+    if (AllEqual)
+      return nullptr;
+  }
+
+  return make_unique<FullDependence>(std::move(Result));
 }

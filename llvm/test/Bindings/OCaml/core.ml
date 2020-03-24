@@ -1110,6 +1110,35 @@ let test_builder () =
     ignore (build_ptrdiff p1 p0 "build_ptrdiff" atentry);
   end;
 
+  group "parallel"; begin
+    (* CHECK: %sync_region = tail call token @llvm.syncregion.start()
+     * CHECK: detach within %sync_region, label %Bb02, label %Bb03
+     * CHECK: reattach within %sync_region, label %Bb03
+     * CHECK: sync within %sync_region, label %Bb04
+     *)
+
+    (* Sync region faux function. *)
+    let srty = function_type token_type [| |] in
+    let sr_fn = declare_function "llvm.syncregion.start" srty m in
+
+    (* Function that does detach, reattach, and sync. *)
+    let fty = function_type void_type [| |] in
+    let fn = declare_function "parallel_fcn" fty m in
+    let b = builder_at_end context (append_block context "Bb01" fn) in
+    let detach_bb = append_block context "Bb02" fn in
+    let sync_bb = append_block context "Bb03" in
+    let exit_bb = append_block context "Bb04" in
+
+    let sr = build_call sr_fn [| |] "sync_region" b in
+    ignore(build_detach detach_bb sync_bb sr b);
+    position_at_end detach_bb b;
+    ignore(build_reattach sync_bb sr b);
+    position_at_end sync_bb b;
+    ignore(build_sync exit_bb sr b);
+    position_at_end exit_bb b;
+    ignore(build_ret_void b)
+  end;
+
   group "miscellaneous"; begin
     (* CHECK: %build_call = tail call cc63 zeroext i32 @{{.*}}(i32 signext %P2, i32 %P1)
      * CHECK: %build_select = select i1 %build_icmp, i32 %P1, i32 %P2

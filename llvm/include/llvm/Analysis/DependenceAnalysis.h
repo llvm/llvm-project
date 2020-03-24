@@ -266,6 +266,46 @@ template <typename T> class ArrayRef;
     friend class DependenceInfo;
   };
 
+  struct GeneralAccess {
+    Instruction *I = nullptr;
+    Optional<MemoryLocation> Loc;
+    unsigned OperandNum = unsigned(-1);
+    ModRefInfo ModRef = ModRefInfo::NoModRef;
+
+    GeneralAccess() = default;
+    GeneralAccess(Instruction *I, Optional<MemoryLocation> Loc,
+                  unsigned OperandNum, ModRefInfo MRI)
+        : I(I), Loc(Loc), OperandNum(OperandNum), ModRef(MRI) {}
+    GeneralAccess(Instruction *I, Optional<MemoryLocation> Loc, ModRefInfo MRI)
+        : I(I), Loc(Loc), ModRef(MRI) {}
+
+    bool isValid() const {
+      return (I && Loc);
+    }
+    const Value *getPtr() const {
+      if (!Loc)
+        return nullptr;
+      return Loc->Ptr;
+    }
+    bool isRef() const {
+      return isRefSet(ModRef);
+    }
+    bool isMod() const {
+      return isModSet(ModRef);
+    }
+
+    inline bool operator==(const GeneralAccess &RHS) {
+      if (!isValid() && !RHS.isValid())
+        return true;
+      if (!isValid() || !RHS.isValid())
+        return false;
+      return (I == RHS.I) && (Loc == RHS.Loc) &&
+          (OperandNum == RHS.OperandNum) && (ModRef == RHS.ModRef);
+    }
+  };
+
+  raw_ostream &operator<<(raw_ostream &OS, const GeneralAccess &GA);
+
   /// DependenceInfo - This class is the main dependence-analysis driver.
   ///
   class DependenceInfo {
@@ -332,6 +372,17 @@ template <typename T> class ArrayRef;
 
     Function *getFunction() const { return F; }
 
+    AliasAnalysis *getAA() const { return AA; }
+
+    /// depends - Tests for a dependence between the general accesses SrcA and
+    /// DstA.  Returns NULL if no dependence; otherwise, returns a Dependence
+    /// (or a FullDependence) with as much information as can be gleaned.  The
+    /// flag PossiblyLoopIndependent should be set by the caller if it appears
+    /// that control flow can reach from Src to Dst without traversing a loop
+    /// back edge.
+    std::unique_ptr<Dependence> depends(GeneralAccess *SrcA,
+                                        GeneralAccess *DstA,
+                                        bool PossiblyLoopIndependent);
   private:
     AliasAnalysis *AA;
     ScalarEvolution *SE;
@@ -509,6 +560,7 @@ template <typename T> class ArrayRef;
                                 const Instruction *Dst);
 
     unsigned CommonLevels, SrcLevels, MaxLevels;
+    const Loop *CommonLoop;
 
     /// mapSrcLoop - Given one of the loops containing the source, return
     /// its level index in our numbering scheme.
@@ -521,6 +573,11 @@ template <typename T> class ArrayRef;
     /// isLoopInvariant - Returns true if Expression is loop invariant
     /// in LoopNest.
     bool isLoopInvariant(const SCEV *Expression, const Loop *LoopNest) const;
+
+    /// isTrueAtLoopEntry - Returns true if the predicate LHS `Pred` RHS is true
+    /// at entry of L.
+    bool isTrueAtLoopEntry(const Loop *L, ICmpInst::Predicate Pred,
+                           const SCEV *LHS, const SCEV *RHS) const;
 
     /// Makes sure all subscript pairs share the same integer type by
     /// sign-extending as necessary.
@@ -558,7 +615,8 @@ template <typename T> class ArrayRef;
     /// extensions and symbolics.
     bool isKnownPredicate(ICmpInst::Predicate Pred,
                           const SCEV *X,
-                          const SCEV *Y) const;
+                          const SCEV *Y,
+                          const Loop *L = nullptr) const;
 
     /// isKnownLessThan - Compare to see if S is less than Size
     /// Another wrapper for isKnownNegative(S - max(Size, 1)) with some extra
@@ -925,6 +983,9 @@ template <typename T> class ArrayRef;
                          const Constraint &CurConstraint) const;
 
     bool tryDelinearize(Instruction *Src, Instruction *Dst,
+                        SmallVectorImpl<Subscript> &Pair);
+
+    bool tryDelinearize(GeneralAccess *SrcA, GeneralAccess *DstA,
                         SmallVectorImpl<Subscript> &Pair);
   }; // class DependenceInfo
 

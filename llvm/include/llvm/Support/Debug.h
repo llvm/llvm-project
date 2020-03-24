@@ -97,6 +97,10 @@ extern bool VerifyLoopInfo;
 ///
 extern bool VerifyMemorySSA;
 
+/// Enables verification of Tapir task info.
+///
+extern bool VerifyTaskInfo;
+
 ///\}
 
 /// EnableDebugBuffering - This defaults to false.  If true, the debug

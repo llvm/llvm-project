@@ -23,6 +23,7 @@ class MemorySSAUpdater;
 class ScalarEvolution;
 struct SimplifyQuery;
 class TargetTransformInfo;
+class TaskInfo;
 
 /// Convert a loop into a loop with bottom test. It may
 /// perform loop latch simplication as well if the flag RotationOnly
@@ -32,8 +33,9 @@ class TargetTransformInfo;
 /// LoopRotation. If it is true, the profitability heuristic will be ignored.
 bool LoopRotation(Loop *L, LoopInfo *LI, const TargetTransformInfo *TTI,
                   AssumptionCache *AC, DominatorTree *DT, ScalarEvolution *SE,
-                  MemorySSAUpdater *MSSAU, const SimplifyQuery &SQ,
-                  bool RotationOnly, unsigned Threshold, bool IsUtilMode);
+                  MemorySSAUpdater *MSSAU, TaskInfo *TI,
+                  const SimplifyQuery &SQ, bool RotationOnly,
+                  unsigned Threshold, bool IsUtilMode);
 
 } // namespace llvm
 

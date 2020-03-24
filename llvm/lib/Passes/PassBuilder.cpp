@@ -27,6 +27,7 @@
 #include "llvm/Analysis/CFLSteensAliasAnalysis.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/CallGraph.h"
+#include "llvm/Analysis/DataRaceFreeAliasAnalysis.h"
 #include "llvm/Analysis/DemandedBits.h"
 #include "llvm/Analysis/DependenceAnalysis.h"
 #include "llvm/Analysis/DominanceFrontier.h"
@@ -48,6 +49,8 @@
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
 #include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/Analysis/StackSafetyAnalysis.h"
+#include "llvm/Analysis/TapirRaceDetect.h"
+#include "llvm/Analysis/TapirTaskInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
@@ -93,6 +96,8 @@
 #include "llvm/Transforms/Instrumentation/AddressSanitizer.h"
 #include "llvm/Transforms/Instrumentation/BoundsChecking.h"
 #include "llvm/Transforms/Instrumentation/CGProfile.h"
+#include "llvm/Transforms/Instrumentation/CilkSanitizer.h"
+#include "llvm/Transforms/Instrumentation/ComprehensiveStaticInstrumentation.h"
 #include "llvm/Transforms/Instrumentation/ControlHeightReduction.h"
 #include "llvm/Transforms/Instrumentation/GCOVProfiler.h"
 #include "llvm/Transforms/Instrumentation/HWAddressSanitizer.h"
@@ -160,6 +165,11 @@
 #include "llvm/Transforms/Scalar/SpeculativeExecution.h"
 #include "llvm/Transforms/Scalar/TailRecursionElimination.h"
 #include "llvm/Transforms/Scalar/WarnMissedTransforms.h"
+#include "llvm/Transforms/Tapir/LoopSpawningTI.h"
+#include "llvm/Transforms/Tapir/LoopStripMinePass.h"
+#include "llvm/Transforms/Tapir/SerializeSmallTasks.h"
+#include "llvm/Transforms/Tapir/TapirToTarget.h"
+#include "llvm/Transforms/Tapir/DRFScopedNoAliasAA.h"
 #include "llvm/Transforms/Utils/AddDiscriminators.h"
 #include "llvm/Transforms/Utils/BreakCriticalEdges.h"
 #include "llvm/Transforms/Utils/CanonicalizeAliases.h"
@@ -172,6 +182,7 @@
 #include "llvm/Transforms/Utils/NameAnonGlobals.h"
 #include "llvm/Transforms/Utils/SymbolRewriter.h"
 #include "llvm/Transforms/Vectorize/LoadStoreVectorizer.h"
+#include "llvm/Transforms/Utils/TaskSimplify.h"
 #include "llvm/Transforms/Vectorize/LoopVectorize.h"
 #include "llvm/Transforms/Vectorize/SLPVectorizer.h"
 
@@ -219,6 +230,7 @@ PipelineTuningOptions::PipelineTuningOptions() {
   LoopInterleaving = EnableLoopInterleaving;
   LoopVectorization = EnableLoopVectorization;
   SLPVectorization = RunSLPVectorization;
+  LoopStripmine = EnableTapirLoopStripmine;
   LoopUnrolling = true;
   ForgetAllSCEVInLoopUnroll = ForgetSCEVInLoopUnroll;
   LicmMssaOptCap = SetLicmMssaOptCap;
@@ -409,6 +421,7 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   FPM.addPass(JumpThreadingPass());
   FPM.addPass(CorrelatedValuePropagationPass());
   FPM.addPass(SimplifyCFGPass());
+  FPM.addPass(TaskSimplifyPass());
   if (Level == O3)
     FPM.addPass(AggressiveInstCombinePass());
   FPM.addPass(InstCombinePass());
@@ -426,6 +439,7 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
 
   FPM.addPass(TailCallElimPass());
   FPM.addPass(SimplifyCFGPass());
+  FPM.addPass(TaskSimplifyPass());
 
   // Form canonically associated expression trees, and simplify the trees using
   // basic mathematical properties. For example, this will form (nearly)
@@ -477,6 +491,7 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   FPM.addPass(RequireAnalysisPass<OptimizationRemarkEmitterAnalysis, Function>());
   FPM.addPass(createFunctionToLoopPassAdaptor(std::move(LPM1), DebugLogging));
   FPM.addPass(SimplifyCFGPass());
+  FPM.addPass(TaskSimplifyPass());
   FPM.addPass(InstCombinePass());
   FPM.addPass(createFunctionToLoopPassAdaptor(std::move(LPM2), DebugLogging));
 
@@ -524,6 +539,7 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   // the simplifications and basic cleanup after all the simplifications.
   FPM.addPass(ADCEPass());
   FPM.addPass(SimplifyCFGPass());
+  FPM.addPass(TaskSimplifyPass());
   FPM.addPass(InstCombinePass());
   invokePeepholeEPCallbacks(FPM, Level);
 
@@ -715,6 +731,7 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   invokePeepholeEPCallbacks(GlobalCleanupPM, Level);
 
   GlobalCleanupPM.addPass(SimplifyCFGPass());
+  GlobalCleanupPM.addPass(TaskSimplifyPass());
   MPM.addPass(createModuleToFunctionPassAdaptor(std::move(GlobalCleanupPM)));
 
   // Add all the requested passes for instrumentation PGO, if requested.
@@ -859,6 +876,23 @@ ModulePassManager PassBuilder::buildModuleOptimizationPipeline(
   // rather than on each loop in an inside-out manner, and so they are actually
   // function passes.
 
+  // Stripmine Tapir loops, if pass is enabled.
+  if (PTO.LoopStripmine && Level != O1 && !isOptimizingForSize(Level)) {
+    OptimizePM.addPass(LoopStripMinePass());
+    // Cleanup tasks after stripmining loops.
+    OptimizePM.addPass(TaskSimplifyPass());
+    // Cleanup after stripmining loops.
+    LoopPassManager LPM(DebugLogging);
+    LPM.addPass(LoopSimplifyCFGPass());
+    LPM.addPass(IndVarSimplifyPass());
+    OptimizePM.addPass(createFunctionToLoopPassAdaptor(std::move(LPM),
+                                                       DebugLogging));
+    OptimizePM.addPass(EarlyCSEPass(true /* Enable mem-ssa. */));
+    OptimizePM.addPass(JumpThreadingPass());
+    OptimizePM.addPass(CorrelatedValuePropagationPass());
+    OptimizePM.addPass(InstCombinePass());
+  }
+
   for (auto &C : VectorizerStartEPCallbacks)
     C(OptimizePM, Level);
 
@@ -882,6 +916,9 @@ ModulePassManager PassBuilder::buildModuleOptimizationPipeline(
 
   // Cleanup after the loop optimization passes.
   OptimizePM.addPass(InstCombinePass());
+
+  // Cleanup tasks after the loop optimization passes.
+  OptimizePM.addPass(TaskSimplifyPass());
 
   // Now that we've formed fast to execute loop structures, we do further
   // optimizations. These are run afterward as they might block doing complex
@@ -953,6 +990,9 @@ ModulePassManager PassBuilder::buildModuleOptimizationPipeline(
   // resulted in single-entry-single-exit or empty blocks. Clean up the CFG.
   OptimizePM.addPass(SimplifyCFGPass());
 
+  // Cleanup tasks as well.
+  OptimizePM.addPass(TaskSimplifyPass());
+
   // Optimize PHIs by speculating around them when profitable. Note that this
   // pass needs to be run after any PRE or similar pass as it is essentially
   // inserting redundancies into the program. This even includes SimplifyCFG.
@@ -977,11 +1017,61 @@ ModulePassManager PassBuilder::buildModuleOptimizationPipeline(
 }
 
 ModulePassManager
+PassBuilder::buildTapirLoweringPipeline(OptimizationLevel Level,
+                                        ThinLTOPhase Phase,
+                                        bool DebugLogging) {
+  ModulePassManager MPM(DebugLogging);
+
+  // Add passes to run just before Tapir lowering.
+  for (auto &C : TapirLateEPCallbacks)
+    C(MPM, Level);
+
+  LoopPassManager LPM1(DebugLogging), LPM2(DebugLogging);
+
+  // Rotate Loop - disable header duplication at -Oz
+  LPM1.addPass(LoopRotatePass(Level != Oz));
+  LPM2.addPass(IndVarSimplifyPass());
+
+  FunctionPassManager FPM(DebugLogging);
+  FPM.addPass(createFunctionToLoopPassAdaptor(std::move(LPM1), DebugLogging));
+  FPM.addPass(SimplifyCFGPass());
+  FPM.addPass(InstCombinePass());
+  FPM.addPass(createFunctionToLoopPassAdaptor(std::move(LPM2), DebugLogging));
+  MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
+
+  // Outline Tapir loops as needed.
+  MPM.addPass(LoopSpawningPass());
+
+  // The LoopSpawning pass may leave cruft around.  Clean it up using the
+  // function simplification pipeline.
+  MPM.addPass(
+      createModuleToFunctionPassAdaptor(
+          buildFunctionSimplificationPipeline(Level, Phase, DebugLogging)));
+
+  // Add passes to run just after Tapir loops are processed.
+  for (auto &C : TapirLoopEndEPCallbacks)
+    C(MPM, Level);
+
+  // Lower Tapir to target runtime calls.
+  MPM.addPass(TapirToTargetPass());
+
+  // The TapirToTarget pass may leave cruft around.  Clean it up using the
+  // function simplification pipeline.
+  MPM.addPass(
+      createModuleToFunctionPassAdaptor(
+          buildFunctionSimplificationPipeline(Level, Phase, DebugLogging)));
+
+  return MPM;
+}
+
+ModulePassManager
 PassBuilder::buildPerModuleDefaultPipeline(OptimizationLevel Level,
-                                           bool DebugLogging, bool LTOPreLink) {
+                                           bool DebugLogging, bool LTOPreLink,
+                                           bool LowerTapir) {
   assert(Level != O0 && "Must request optimizations for the default pipeline!");
 
   ModulePassManager MPM(DebugLogging);
+  bool TapirHasBeenLowered = !LowerTapir;
 
   // Force any function attributes we want the rest of the pipeline to observe.
   MPM.addPass(ForceFunctionAttrsPass());
@@ -999,6 +1089,11 @@ PassBuilder::buildPerModuleDefaultPipeline(OptimizationLevel Level,
 
   // Now add the optimization pipeline.
   MPM.addPass(buildModuleOptimizationPipeline(Level, DebugLogging, LTOPreLink));
+
+  // Lower Tapir if necessary
+  if (!TapirHasBeenLowered)
+    MPM.addPass(buildTapirLoweringPipeline(Level, ThinLTOPhase::None,
+                                           DebugLogging));
 
   return MPM;
 }
@@ -1044,8 +1139,9 @@ PassBuilder::buildThinLTOPreLinkDefaultPipeline(OptimizationLevel Level,
 
 ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
     OptimizationLevel Level, bool DebugLogging,
-    const ModuleSummaryIndex *ImportSummary) {
+    const ModuleSummaryIndex *ImportSummary, bool LowerTapir) {
   ModulePassManager MPM(DebugLogging);
+  bool TapirHasBeenLowered = !LowerTapir;
 
   if (ImportSummary) {
     // These passes import type identifier resolutions for whole-program
@@ -1080,6 +1176,11 @@ ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
   // Now add the optimization pipeline.
   MPM.addPass(buildModuleOptimizationPipeline(Level, DebugLogging));
 
+  // Lower Tapir if necessary
+  if (!TapirHasBeenLowered)
+    MPM.addPass(buildTapirLoweringPipeline(Level, ThinLTOPhase::PostLink,
+                                           DebugLogging));
+
   return MPM;
 }
 
@@ -1094,8 +1195,10 @@ PassBuilder::buildLTOPreLinkDefaultPipeline(OptimizationLevel Level,
 
 ModulePassManager
 PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level, bool DebugLogging,
-                                     ModuleSummaryIndex *ExportSummary) {
+                                     ModuleSummaryIndex *ExportSummary,
+                                     bool LowerTapir) {
   ModulePassManager MPM(DebugLogging);
+  bool TapirHasBeenLowered = !LowerTapir;
 
   if (Level == O0) {
     // The WPD and LowerTypeTest passes need to run at -O0 to lower type
@@ -1140,11 +1243,11 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level, bool DebugLogging,
     // Propagate constants at call sites into the functions they call.  This
     // opens opportunities for globalopt (and inlining) by substituting function
     // pointers passed as arguments to direct uses of functions.
-   MPM.addPass(IPSCCPPass());
+    MPM.addPass(IPSCCPPass());
 
-   // Attach metadata to indirect call sites indicating the set of functions
-   // they may target at run-time. This should follow IPSCCP.
-   MPM.addPass(CalledValuePropagationPass());
+    // Attach metadata to indirect call sites indicating the set of functions
+    // they may target at run-time. This should follow IPSCCP.
+    MPM.addPass(CalledValuePropagationPass());
   }
 
   // Now deduce any function attributes based in the current code.
@@ -1311,6 +1414,11 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level, bool DebugLogging,
   // Now that we have optimized the program, discard unreachable functions.
   MPM.addPass(GlobalDCEPass());
 
+  // Lower Tapir if necessary
+  if (!TapirHasBeenLowered)
+    MPM.addPass(buildTapirLoweringPipeline(Level, ThinLTOPhase::None,
+                                           DebugLogging));
+
   // FIXME: Maybe enable MergeFuncs conditionally after it's ported.
   return MPM;
 }
@@ -1336,6 +1444,11 @@ AAManager PassBuilder::buildDefaultAAPipeline() {
   // analysis, all that the `AAManager` can do is query for any *cached*
   // results from `GlobalsAA` through a readonly proxy.
   AA.registerModuleAnalysis<GlobalsAA>();
+
+  if (EnableDRFAA)
+    // Add support for using Tapir parallel control flow to inform alias
+    // analysis based on the data-race-free assumption.
+    AA.registerFunctionAnalysis<DRFAA>();
 
   return AA;
 }

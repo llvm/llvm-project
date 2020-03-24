@@ -196,6 +196,14 @@ def SanitizeMemTag : EnumAttr<"sanitize_memtag">;
 /// this attribute will always be lowered with hardening enabled.
 def SpeculativeLoadHardening : EnumAttr<"speculative_load_hardening">;
 
+/// CilkSanitizer is on.
+def SanitizeCilk : EnumAttr<"sanitize_cilk">;
+
+/// From the Cilk perspective, a continuation in the function can be
+/// stolen.  This attribute is used ensure correct code generation for
+/// such functions.
+def Stealable : EnumAttr<"stealable">;
+
 /// Argument is swift error.
 def SwiftError : EnumAttr<"swifterror">;
 

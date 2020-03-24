@@ -49,6 +49,7 @@ class ScalarEvolution;
 class SCEV;
 class TargetLibraryInfo;
 class TargetTransformInfo;
+class TaskInfo;
 
 BasicBlock *InsertPreheaderForLoop(Loop *L, DominatorTree *DT, LoopInfo *LI,
                                    MemorySSAUpdater *MSSAU, bool PreserveLCSSA);
@@ -120,7 +121,8 @@ struct SinkAndHoistLICMFlags {
 bool sinkRegion(DomTreeNode *, AliasAnalysis *, LoopInfo *, DominatorTree *,
                 TargetLibraryInfo *, TargetTransformInfo *, Loop *,
                 AliasSetTracker *, MemorySSAUpdater *, ICFLoopSafetyInfo *,
-                SinkAndHoistLICMFlags &, OptimizationRemarkEmitter *);
+                SinkAndHoistLICMFlags &, TaskInfo *,
+                OptimizationRemarkEmitter *);
 
 /// Walk the specified region of the CFG (defined by all blocks
 /// dominated by the specified block, and that are in the current loop) in depth
@@ -133,7 +135,8 @@ bool sinkRegion(DomTreeNode *, AliasAnalysis *, LoopInfo *, DominatorTree *,
 bool hoistRegion(DomTreeNode *, AliasAnalysis *, LoopInfo *, DominatorTree *,
                  TargetLibraryInfo *, Loop *, AliasSetTracker *,
                  MemorySSAUpdater *, ICFLoopSafetyInfo *,
-                 SinkAndHoistLICMFlags &, OptimizationRemarkEmitter *);
+                 SinkAndHoistLICMFlags &, TaskInfo *,
+                 OptimizationRemarkEmitter *);
 
 /// This function deletes dead loops. The caller of this function needs to
 /// guarantee that the loop is infact dead.
@@ -142,12 +145,12 @@ bool hoistRegion(DomTreeNode *, AliasAnalysis *, LoopInfo *, DominatorTree *,
 ///   - The loop needs to have a Preheader
 ///   - A unique dedicated exit block must exist
 ///
-/// This also updates the relevant analysis information in \p DT, \p SE, and \p
-/// LI if pointers to those are provided.
-/// It also updates the loop PM if an updater struct is provided.
+/// This also updates the relevant analysis information in \p DT, \p SE, \p LI,
+/// and \p TI if pointers to those are provided.  It also updates the loop PM if
+/// an updater struct is provided.
 
 void deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
-                    LoopInfo *LI);
+                    LoopInfo *LI, TaskInfo *TI);
 
 /// Try to promote memory values to scalars by sinking stores out of
 /// the loop and moving loads to before the loop.  We do this by looping over
@@ -162,7 +165,7 @@ bool promoteLoopAccessesToScalars(
     SmallVectorImpl<Instruction *> &, SmallVectorImpl<MemoryAccess *> &,
     PredIteratorCache &, LoopInfo *, DominatorTree *, const TargetLibraryInfo *,
     Loop *, AliasSetTracker *, MemorySSAUpdater *, ICFLoopSafetyInfo *,
-    OptimizationRemarkEmitter *);
+    TaskInfo *, OptimizationRemarkEmitter *);
 
 /// Does a BFS from a given node to all of its children inside a given loop.
 /// The returned vector of nodes includes the starting point.
@@ -249,6 +252,8 @@ TransformationMode hasUnrollAndJamTransformation(Loop *L);
 TransformationMode hasVectorizeTransformation(Loop *L);
 TransformationMode hasDistributeTransformation(Loop *L);
 TransformationMode hasLICMVersioningTransformation(Loop *L);
+TransformationMode hasLoopStripmineTransformation(Loop *L);
+TransformationMode hasLoopSpawningTransformation(Loop *L);
 /// @}
 
 /// Set input string into loop metadata by keeping other values intact.
@@ -284,6 +289,7 @@ void getLoopAnalysisUsage(AnalysisUsage &AU);
 bool canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
                         Loop *CurLoop, AliasSetTracker *CurAST,
                         MemorySSAUpdater *MSSAU, bool TargetExecutesOncePerLoop,
+                        TaskInfo *TI,
                         SinkAndHoistLICMFlags *LICMFlags = nullptr,
                         OptimizationRemarkEmitter *ORE = nullptr);
 

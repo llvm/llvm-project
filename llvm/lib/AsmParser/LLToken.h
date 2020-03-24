@@ -222,9 +222,11 @@ enum Kind {
   kw_safestack,
   kw_shadowcallstack,
   kw_sret,
+  kw_sanitize_cilk,
   kw_sanitize_thread,
   kw_sanitize_memory,
   kw_speculative_load_hardening,
+  kw_stealable,
   kw_strictfp,
   kw_swifterror,
   kw_swiftself,
@@ -350,6 +352,11 @@ enum Kind {
   kw_extractvalue,
   kw_insertvalue,
   kw_blockaddress,
+
+  // Tapir types
+  kw_detach,
+  kw_reattach,
+  kw_sync,
 
   // Metadata types.
   kw_distinct,

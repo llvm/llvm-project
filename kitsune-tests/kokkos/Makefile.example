@@ -1,0 +1,36 @@
+CLANGXX=/projects/kitsune/bin/clang++
+OPT=/projects/kitsune/bin/opt 
+
+KXXFLAGS=-fkokkos 
+CXXFLAGS=-std=c++14 -fPIC -I/projects/kitsune/include 
+
+LIBS   =-lkokkos -ldl -lrt 
+LDFLAGS= -L/projects/kitsune/lib ${LIBS}
+
+types=kitsune kokkos
+
+sources=$(patsubst %.cpp,%,$(wildcard *.cpp))
+targets=$(foreach f,${sources}, $(foreach t, ${types}, ${f}_${t}))
+
+all: ${targets}
+
+%_kitsune: %.cpp
+	${CLANGXX} ${KXXFLAGS} ${CXXFLAGS} -S -emit-llvm -o $@.ll $<
+	${CLANGXX} ${KXXFLAGS} ${CXXFLAGS} -o $@ $< ${LDFLAGS}
+	@echo -n "c++ line count: " > $@.stats 
+	@/usr/bin/wc -l $< | cut -d ' ' -f1 >> $@.stats
+	@echo -n "ir line count: " >> $@.stats
+	@/usr/bin/wc -l $@.ll | cut -d ' ' -f1 >> $@.stats
+
+%_kokkos: %.cpp
+	${CLANGXX} ${CXXFLAGS} -S -emit-llvm -o $@.ll $< 
+	${CLANGXX} ${CXXFLAGS} -o $@ $< ${LDFLAGS}
+	@echo -n "c++ line count: " > $@.stats 
+	@/usr/bin/wc -l $< | cut -d ' ' -f1 >> $@.stats
+	@echo -n "ir line count: " >> $@.stats
+	@/usr/bin/wc -l $@.ll | cut -d ' ' -f1 >> $@.stats
+
+clean:
+	rm -f ${targets} *.ll *.stats *~ 
+
+

@@ -96,6 +96,7 @@ TEST_F(TargetLibraryInfoTest, ValidProto) {
       "declare float @acoshf(float)\n"
       "declare x86_fp80 @acoshl(x86_fp80)\n"
       "declare x86_fp80 @acosl(x86_fp80)\n"
+      "declare i8* @aligned_alloc(i64, i64)\n"
       "declare double @asin(double)\n"
       "declare float @asinf(float)\n"
       "declare double @asinh(double)\n"

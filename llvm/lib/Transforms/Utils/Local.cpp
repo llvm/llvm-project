@@ -76,6 +76,7 @@
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
+#include "llvm/Transforms/Utils/TapirUtils.h"
 #include <algorithm>
 #include <cassert>
 #include <climits>
@@ -2189,6 +2190,16 @@ void llvm::removeUnwindEdge(BasicBlock *BB, DomTreeUpdater *DTU) {
   Instruction *TI = BB->getTerminator();
 
   if (auto *II = dyn_cast<InvokeInst>(TI)) {
+    // If we're removing the unwind destination of a detached rethrow, simply
+    // remove the detached rethrow.
+    if (auto *Called = II->getCalledFunction()) {
+      if (Intrinsic::detached_rethrow == Called->getIntrinsicID()) {
+        BranchInst::Create(II->getNormalDest(), II);
+        II->getUnwindDest()->removePredecessor(BB);
+        II->eraseFromParent();
+        return;
+      }
+    }
     changeToCall(II, DTU);
     return;
   }
@@ -2208,6 +2219,10 @@ void llvm::removeUnwindEdge(BasicBlock *BB, DomTreeUpdater *DTU) {
 
     NewTI = NewCatchSwitch;
     UnwindDest = CatchSwitch->getUnwindDest();
+  } else if (auto *DI = dyn_cast<DetachInst>(TI)) {
+    NewTI = DetachInst::Create(DI->getDetached(), DI->getContinue(),
+                               DI->getSyncRegion(), DI);
+    UnwindDest = DI->getUnwindDest();
   } else {
     llvm_unreachable("Could not find unwind successor");
   }
@@ -2295,7 +2310,75 @@ bool llvm::removeUnreachableBlocks(Function &F, LazyValueInfo *LVI,
     if (!Deleted)
       return false;
   }
+  removeDeadDetachUnwinds(F, LVI, DTU, MSSAU);
   return true;
+}
+
+// Recursively check the task starting at TaskEntry to find detached-rethrows
+// for tasks that cannot throw.
+static bool recursivelyCheckDetachedRethrows(
+    BasicBlock *TaskEntry, SmallPtrSetImpl<BasicBlock *> &DeadDU) {
+  SmallVector<BasicBlock*, 128> Worklist;
+  SmallPtrSet<BasicBlock*, 32> Visited;
+  BasicBlock *BB = TaskEntry;
+  Worklist.push_back(BB);
+  Visited.insert(BB);
+  do {
+    BB = Worklist.pop_back_val();
+
+    // Ignore reattach terminators
+    if (isa<ReattachInst>(BB->getTerminator()))
+      continue;
+
+    // Detached-rethrow terminators indicate that the parent detach has a live
+    // unwind.
+    if (isDetachedRethrow(BB->getTerminator()))
+      return true;
+
+    if (DetachInst *DI = dyn_cast<DetachInst>(BB->getTerminator())) {
+      if (DI->hasUnwindDest()) {
+        // Recursively check all blocks in the detached task.
+        if (!recursivelyCheckDetachedRethrows(DI->getDetached(), DeadDU))
+          DeadDU.insert(DI->getUnwindDest());
+        else if (Visited.insert(DI->getUnwindDest()).second)
+          // If the detach-unwind isn't dead, add it to the worklist.
+          Worklist.push_back(DI->getUnwindDest());
+      }
+
+      // We don't have to check the detached task for a detach with no unwind
+      // destination, because those tasks will not throw any exception.
+
+      // Add the continuation to the worklist.
+      if (Visited.insert(DI->getContinue()).second)
+        Worklist.push_back(DI->getContinue());
+    } else {
+      for (BasicBlock *Successor : successors(BB))
+        if (Visited.insert(Successor).second)
+          Worklist.push_back(Successor);
+    }
+  } while (!Worklist.empty());
+  return false;
+}
+
+bool llvm::removeDeadDetachUnwinds(Function &F, LazyValueInfo *LVI,
+                                   DomTreeUpdater *DTU,
+                                   MemorySSAUpdater *MSSAU) {
+  SmallPtrSet<BasicBlock *, 16> DeadDU;
+  // Recusirvely check all tasks for dead detach-unwinds.
+  recursivelyCheckDetachedRethrows(&F.front(), DeadDU);
+  bool Changed = false;
+  // Scan the detach instructions and remove any dead detach-unwind edges.
+  for (BasicBlock &BB : F)
+    if (DetachInst *DI = dyn_cast<DetachInst>(BB.getTerminator()))
+      if (DI->hasUnwindDest())
+        if (DeadDU.count(DI->getUnwindDest())) {
+          removeUnwindEdge(&BB, DTU);
+          Changed = true;
+        }
+  // If any dead detach-unwinds were removed, remove unreachable blocks.
+  if (Changed)
+    removeUnreachableBlocks(F, LVI, DTU, MSSAU);
+  return Changed;
 }
 
 void llvm::combineMetadata(Instruction *K, const Instruction *J,

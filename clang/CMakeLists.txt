@@ -215,6 +215,11 @@ if(LLVM_ENABLE_LIBXML2)
   endif()
 endif()
 
+find_package(Kokkos QUIET) 
+find_package(CilkRTS QUIET) 
+find_package(Qthreads QUIET) 
+find_package(Realm QUIET)
+
 include(CheckIncludeFile)
 check_include_file(sys/resource.h CLANG_HAVE_RLIMITS)
 
@@ -301,6 +306,9 @@ if (NOT DEFINED MATCHED_ARCH OR "${CMAKE_MATCH_1}" LESS 35)
   set(CLANG_OPENMP_NVPTX_DEFAULT_ARCH "sm_35" CACHE STRING
     "Default architecture for OpenMP offloading to Nvidia GPUs." FORCE)
 endif()
+
+set(CLANG_DEFAULT_TAPIR_RUNTIME "cilk" CACHE STRING
+  "Default Tapir runtime used by -ftapir.")
 
 set(CLANG_VENDOR ${PACKAGE_VENDOR} CACHE STRING
   "Vendor-specific text for showing with version information.")

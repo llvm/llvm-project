@@ -176,6 +176,8 @@ void tools::CrossWindows::Linker::ConstructJob(
       CmdArgs.push_back("-Bdynamic");
   }
 
+  TC.AddTapirRuntimeLibArgs(Args, CmdArgs);
+
   if (!Args.hasArg(options::OPT_nostdlib)) {
     if (!Args.hasArg(options::OPT_nodefaultlibs)) {
       // TODO handle /MT[d] /MD[d]

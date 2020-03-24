@@ -65,6 +65,9 @@ private:
     // Marker for existing PHIs that match.
     PhiT *PHITag = nullptr;
 
+    // Flag to indicate that the AvailableVal would be used after a Reattach.
+    bool DetachedUse = false;
+
     BBInfo(BlkT *ThisBB, ValT V)
       : BB(ThisBB), AvailableVal(V), DefBB(V ? this : nullptr) {}
   };
@@ -75,6 +78,10 @@ private:
 
   SmallVectorImpl<PhiT *> *InsertedPHIs;
 
+  using  ValIsDetachedTy = DenseMap<BlkT *, bool>;
+
+  ValIsDetachedTy *ValIsDetached;
+
   using BlockListTy = SmallVectorImpl<BBInfo *>;
   using BBMapTy = DenseMap<BlkT *, BBInfo *>;
 
@@ -83,8 +90,9 @@ private:
 
 public:
   explicit SSAUpdaterImpl(UpdaterT *U, AvailableValsTy *A,
-                          SmallVectorImpl<PhiT *> *Ins) :
-    Updater(U), AvailableVals(A), InsertedPHIs(Ins) {}
+                          SmallVectorImpl<PhiT *> *Ins,
+                          ValIsDetachedTy *D = nullptr) :
+      Updater(U), AvailableVals(A), InsertedPHIs(Ins), ValIsDetached(D) {}
 
   /// GetValue - Check to see if AvailableVals has an entry for the specified
   /// BB and if so, return it.  If not, construct SSA form by first
@@ -349,6 +357,10 @@ public:
       (*AvailableVals)[Info->BB] = PHI;
     }
 
+    // Set of blocks with detached values that would be used except
+    // for Reattach.
+    SmallVector<BBInfo*, 64> DetachedValBlocks;
+
     // Now go back through the worklist in reverse order to fill in the
     // arguments for any new PHIs added in the forward traversal.
     for (typename BlockListTy::reverse_iterator I = BlockList->rbegin(),
@@ -367,14 +379,34 @@ public:
       if (!PHI)
         continue;
 
+      // TODO: Change this so we do not assume that a block has at
+      // most one Detach and Reattach predecessor.
+      BBInfo *DetachPredInfo = nullptr;
+      BBInfo *ReattachPredInfo = nullptr;
       // Iterate through the block's predecessors.
       for (unsigned p = 0; p != Info->NumPreds; ++p) {
         BBInfo *PredInfo = Info->Preds[p];
         BlkT *Pred = PredInfo->BB;
+        if (Traits::BlockReattaches(Pred, Updater)) {
+          ReattachPredInfo = PredInfo;
+          continue;
+        }
         // Skip to the nearest preceding definition.
         if (PredInfo->DefBB != PredInfo)
           PredInfo = PredInfo->DefBB;
         Traits::AddPHIOperand(PHI, PredInfo->AvailableVal, Pred);
+        if (Traits::BlockDetaches(Pred, Updater))
+          DetachPredInfo = PredInfo;
+      }
+      if (ReattachPredInfo) {
+        assert(DetachPredInfo &&
+               "Reattach predecessor found with no corresponding Detach predecessor.");
+        // Available value from predecessor through a reattach is the
+        // same as that for the corresponding detach.
+        Traits::AddPHIOperand(PHI, DetachPredInfo->AvailableVal,
+                              ReattachPredInfo->BB);
+        if (DetachPredInfo->AvailableVal != ReattachPredInfo->AvailableVal)
+          DetachedValBlocks.push_back(Info);
       }
 
       LLVM_DEBUG(dbgs() << "  Inserted PHI: " << *PHI << "\n");
@@ -382,6 +414,9 @@ public:
       // If the client wants to know about all new instructions, tell it.
       if (InsertedPHIs) InsertedPHIs->push_back(PHI);
     }
+
+    // Mark any definitions that are detached from their use.
+    MarkDetachedDefs(&DetachedValBlocks);
   }
 
   /// FindExistingPHI - Look through the PHI nodes in a block to see if any of
@@ -415,7 +450,21 @@ public:
       for (typename Traits::PHI_iterator I = Traits::PHI_begin(PHI),
              E = Traits::PHI_end(PHI); I != E; ++I) {
         ValT IncomingVal = I.getIncomingValue();
-        BBInfo *PredInfo = BBMap[I.getIncomingBlock()];
+        BlkT *BB = I.getIncomingBlock();
+
+        // Replace a reattach predecessor with the corresponding
+        // detach predecessor.
+        //
+        // TODO: Remove the implicit assumption here that each basic
+        // block has at most one reattach predecessor.
+        if (Traits::BlockReattaches(BB, Updater))
+          for (typename Traits::PHI_iterator PI = Traits::PHI_begin(PHI),
+                   PE = Traits::PHI_end(PHI); PI != PE; ++PI)
+            if (Traits::BlockDetaches(PI.getIncomingBlock(), Updater)) {
+              BB = PI.getIncomingBlock();
+              break;
+            }
+        BBInfo *PredInfo = BBMap[BB];
         // Skip to the nearest preceding definition.
         if (PredInfo->DefBB != PredInfo)
           PredInfo = PredInfo->DefBB;
@@ -458,6 +507,30 @@ public:
         BBMap[BB]->AvailableVal = PHIVal;
       }
   }
+
+  /// MarkDetachedDefs - Mark all definitions that reach the basic
+  /// blocks in WorkList as having detached uses.
+  void MarkDetachedDefs(SmallVector<BBInfo*, 64> *WorkList) {
+    BBInfo *Info;
+    while (!WorkList->empty()) {
+      Info = WorkList->pop_back_val();
+      Info->DetachedUse = true;
+
+      ValT AvailableVal = Info->AvailableVal;
+      if (!AvailableVal)
+        continue;
+
+      if (ValIsDetached)
+        (*ValIsDetached)[Info->BB] = true;
+
+      if (Traits::ValueIsPHI(AvailableVal, Updater) ||
+          Info->DefBB != Info)
+        for (unsigned p = 0; p != Info->NumPreds; ++p)
+          if (!Info->Preds[p]->DetachedUse)
+            WorkList->push_back(Info->Preds[p]);
+    }
+  }
+
 };
 
 } // end namespace llvm

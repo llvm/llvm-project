@@ -22,6 +22,7 @@ add_llvm_library(LLVMAnalysis
   CostModel.cpp
   CodeMetrics.cpp
   ConstantFolding.cpp
+  DataRaceFreeAliasAnalysis.cpp
   Delinearization.cpp
   DemandedBits.cpp
   DependenceAnalysis.cpp
@@ -84,6 +85,8 @@ add_llvm_library(LLVMAnalysis
   StackSafetyAnalysis.cpp
   SyncDependenceAnalysis.cpp
   SyntheticCountsUtils.cpp
+  TapirRaceDetect.cpp
+  TapirTaskInfo.cpp
   TargetLibraryInfo.cpp
   TargetTransformInfo.cpp
   Trace.cpp
@@ -94,6 +97,7 @@ add_llvm_library(LLVMAnalysis
   ValueLatticeUtils.cpp
   ValueTracking.cpp
   VectorUtils.cpp
+  WorkSpanAnalysis.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Analysis

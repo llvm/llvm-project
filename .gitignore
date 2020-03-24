@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 #==============================================================================#
 # This file specifies intentionally untracked files that git should ignore.
 # See: http://www.kernel.org/pub/software/scm/git/docs/gitignore.html
@@ -54,3 +55,38 @@ autoconf/autom4te.cache
 .vs
 # clangd index
 .clangd
+||||||| parent of 1a8eede97ac... Initial tweaks for kokkos support.  Buggy (generated IR looks wrong!).
+=======
+#==============================================================================#
+# This file specifies intentionally untracked files that git should ignore.
+# See: http://www.kernel.org/pub/software/scm/git/docs/gitignore.html
+#
+# This file is intentionally different from the output of `git svn show-ignore`,
+# as most of those are useless.
+#==============================================================================#
+
+#==============================================================================#
+# File extensions to be ignored anywhere in the tree.
+#==============================================================================#
+# Temp files created by most text editors.
+*~
+# Merge files created by git.
+*.orig
+# Byte compiled python modules.
+*.pyc
+# vim swap files
+.*.sw?
+.sw?
+
+#==============================================================================#
+# Explicit files to ignore (only matches one).
+#==============================================================================#
+cscope.files
+cscope.out
+/tags
+build
+
+# VS2017 and VSCode config files.
+.vscode
+.vs
+>>>>>>> 1a8eede97ac... Initial tweaks for kokkos support.  Buggy (generated IR looks wrong!).

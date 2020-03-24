@@ -41,11 +41,13 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
+#include "llvm/Analysis/DataRaceFreeAliasAnalysis.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
+#include "llvm/Analysis/TapirTaskInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Dominators.h"
@@ -303,6 +305,7 @@ public:
                                        AM.getResult<ScalarEvolutionAnalysis>(F),
                                        AM.getResult<TargetLibraryAnalysis>(F),
                                        AM.getResult<TargetIRAnalysis>(F),
+                                       AM.getResult<TaskAnalysis>(F),
                                        MSSA};
 
     // Setup the loop analysis manager from its proxy. It is important that
@@ -384,12 +387,14 @@ public:
     PA.preserve<ScalarEvolutionAnalysis>();
     if (EnableMSSALoopDependency)
       PA.preserve<MemorySSAAnalysis>();
+    PA.preserve<TaskAnalysis>();
     // FIXME: What we really want to do here is preserve an AA category, but
     // that concept doesn't exist yet.
     PA.preserve<AAManager>();
     PA.preserve<BasicAA>();
     PA.preserve<GlobalsAA>();
     PA.preserve<SCEVAA>();
+    PA.preserve<DRFAA>();
     return PA;
   }
 

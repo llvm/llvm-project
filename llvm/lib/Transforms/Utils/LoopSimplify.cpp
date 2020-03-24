@@ -539,6 +539,13 @@ ReprocessLoop:
     if (Preheader)
       Changed = true;
   }
+  // Ensure that the preheader is not terminated by a sync.
+  if (Preheader && isa<SyncInst>(Preheader->getTerminator())) {
+    LLVM_DEBUG(dbgs()
+               << "LoopSimplify: Splitting sync-terminated preheader.\n");
+    SplitEdge(Preheader, L->getHeader(), DT, LI);
+    Preheader = L->getLoopPreheader();
+  }
 
   // Next, check to make sure that all exit nodes of the loop only have
   // predecessors that are inside of the loop.  This check guarantees that the

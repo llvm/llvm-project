@@ -16,6 +16,7 @@ set(LLVM_LINK_COMPONENTS
   ObjCARCOpts
   ScalarOpts
   Support
+  TapirOpts
   Target
   TransformUtils
   Vectorize

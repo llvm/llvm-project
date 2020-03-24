@@ -2550,8 +2550,31 @@ enum CXCursorKind {
    */
   CXCursor_BuiltinBitCastExpr = 280,
 
-  CXCursor_LastStmt = CXCursor_BuiltinBitCastExpr,
+  /** A _Cilk_spawn statement.
+   */
+  CXCursor_CilkSpawnStmt                 = 281,
 
+  /** Wrapper for an expression preceded by _Cilk_spawn.
+   */
+  CXCursor_CilkSpawnExpr                 = 282,
+
+  /** A _Cilk_sync statement.
+   */
+  CXCursor_CilkSyncStmt                  = 283,
+
+
+
+  /** A _Cilk_for statement.
+   */
+  CXCursor_CilkForStmt                   = 284,
+
+  CXCursor_ForallStmt               = 285,
+  CXCursor_CXXForallRangeStmt       = 286,
+  CXCursor_SpawnStmt                 = 287,
+  CXCursor_SyncStmt                 = 288,
+
+
+  CXCursor_LastStmt = CXCursor_SyncStmt,
   /**
    * Cursor that represents the translation unit itself.
    *

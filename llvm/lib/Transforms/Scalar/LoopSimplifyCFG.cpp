@@ -701,6 +701,11 @@ PreservedAnalyses LoopSimplifyCFGPass::run(Loop &L, LoopAnalysisManager &AM,
   if (DeleteCurrentLoop)
     LPMU.markLoopAsDeleted(L, "loop-simplifycfg");
 
+  // Recompute task info.
+  // FIXME: Figure out a way to update task info that is less computationally
+  // wasteful.
+  AR.TI.recalculate(*AR.DT.getRoot()->getParent(), AR.DT);
+
   auto PA = getLoopPassPreservedAnalyses();
   if (EnableMSSALoopDependency)
     PA.preserve<MemorySSAAnalysis>();
@@ -722,6 +727,8 @@ public:
     DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
     LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
     ScalarEvolution &SE = getAnalysis<ScalarEvolutionWrapperPass>().getSE();
+    auto *TIWP = getAnalysisIfAvailable<TaskInfoWrapperPass>();
+    TaskInfo *TI = TIWP ? &TIWP->getTaskInfo() : nullptr;
     Optional<MemorySSAUpdater> MSSAU;
     if (EnableMSSALoopDependency) {
       MemorySSA *MSSA = &getAnalysis<MemorySSAWrapperPass>().getMSSA();
@@ -735,6 +742,11 @@ public:
         DeleteCurrentLoop);
     if (DeleteCurrentLoop)
       LPM.markLoopAsDeleted(*L);
+    if (TI && Changed)
+      // Recompute task info.
+      // FIXME: Figure out a way to update task info that is less
+      // computationally wasteful.
+      TI->recalculate(*DT.getRoot()->getParent(), DT);
     return Changed;
   }
 

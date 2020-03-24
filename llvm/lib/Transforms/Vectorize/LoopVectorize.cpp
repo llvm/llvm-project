@@ -93,6 +93,7 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpander.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/Analysis/TapirTaskInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/VectorUtils.h"
@@ -2799,6 +2800,10 @@ BasicBlock *InnerLoopVectorizer::createVectorizedLoopSkeleton() {
   assert(VectorPH && "Invalid loop structure");
   assert(ExitBlock && "Must have an exit block");
 
+  BasicBlock *SyncSplit = nullptr;
+  if (isa<SyncInst>(VectorPH->getTerminator()))
+    VectorPH = SplitEdge(VectorPH, OldBasicBlock, DT, LI);
+
   // Some loops have a single integer induction variable, while other loops
   // don't. One example is c++ iterators that often have multiple pointer
   // induction variables. In the code below we also support a case where we
@@ -2831,6 +2836,7 @@ BasicBlock *InnerLoopVectorizer::createVectorizedLoopSkeleton() {
     ParentLoop->addChildLoop(Lp);
     ParentLoop->addBasicBlockToLoop(ScalarPH, *LI);
     ParentLoop->addBasicBlockToLoop(MiddleBlock, *LI);
+    if (SyncSplit) ParentLoop->addBasicBlockToLoop(SyncSplit, *LI);
   } else {
     LI->addTopLevelLoop(Lp);
   }
@@ -7660,6 +7666,7 @@ PreservedAnalyses LoopVectorizePass::run(Function &F,
     auto &AC = AM.getResult<AssumptionAnalysis>(F);
     auto &DB = AM.getResult<DemandedBitsAnalysis>(F);
     auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
+    auto &TI = AM.getResult<TaskAnalysis>(F);
     MemorySSA *MSSA = EnableMSSALoopDependency
                           ? &AM.getResult<MemorySSAAnalysis>(F).getMSSA()
                           : nullptr;
@@ -7667,7 +7674,7 @@ PreservedAnalyses LoopVectorizePass::run(Function &F,
     auto &LAM = AM.getResult<LoopAnalysisManagerFunctionProxy>(F).getManager();
     std::function<const LoopAccessInfo &(Loop &)> GetLAA =
         [&](Loop &L) -> const LoopAccessInfo & {
-      LoopStandardAnalysisResults AR = {AA, AC, DT, LI, SE, TLI, TTI, MSSA};
+      LoopStandardAnalysisResults AR = {AA, AC, DT, LI, SE, TLI, TTI, TI, MSSA};
       return LAM.getResult<LoopAccessAnalysis>(L, AR);
     };
     const ModuleAnalysisManager &MAM =

@@ -58,6 +58,42 @@ static cl::opt<bool, true>
 // Loop implementation
 //
 
+static bool succIsDetachUnwind(BasicBlock *BB, BasicBlock *Succ) {
+  if (DetachInst *DI = dyn_cast<DetachInst>(BB->getTerminator()))
+    return Succ == DI->getUnwindDest();
+  return false;
+}
+
+/// getExitingBlocks - Return all blocks inside the loop that have successors
+/// outside of the loop.  These are the blocks _inside of the current loop_
+/// which branch out.  The returned list is always unique.
+///
+void Loop::getExitingBlocks(
+    SmallVectorImpl<BasicBlock *> &ExitingBlocks,
+    bool IgnoreDetachUnwind) const {
+  assert(!isInvalid() && "Loop not in a valid state!");
+  for (const auto BB : blocks())
+    for (const auto &Succ : children<BasicBlock *>(BB))
+      if (!contains(Succ)) {
+        if (IgnoreDetachUnwind && succIsDetachUnwind(BB, Succ))
+          continue;
+        // Not in current loop? It must be an exit block.
+        ExitingBlocks.push_back(BB);
+        break;
+      }
+}
+
+/// getExitingBlock - If getExitingBlocks would return exactly one block,
+/// return that block. Otherwise return null.
+BasicBlock *Loop::getExitingBlock(bool IgnoreDetachUnwind) const {
+  assert(!isInvalid() && "Loop not in a valid state!");
+  SmallVector<BasicBlock *, 8> ExitingBlocks;
+  getExitingBlocks(ExitingBlocks, IgnoreDetachUnwind);
+  if (ExitingBlocks.size() == 1)
+    return ExitingBlocks[0];
+  return nullptr;
+}
+
 bool Loop::isLoopInvariant(const Value *V) const {
   if (const Instruction *I = dyn_cast<Instruction>(V))
     return !contains(I);
@@ -492,6 +528,52 @@ void Loop::setLoopAlreadyUnrolled() {
   MDNode *NewLoopID = makePostTransformationMetadata(
       Context, LoopID, {"llvm.loop.unroll."}, {DisableUnrollMD});
   setLoopID(NewLoopID);
+}
+
+void Loop::setDerivedFromTapirLoop() {
+  MDNode *LoopID = getLoopID();
+  // First Gather all existing loop metadata.
+  SmallVector<Metadata *, 4> MDs;
+  // Reserve first location for self reference to the LoopID metadata node.
+  MDs.push_back(nullptr);
+
+  if (LoopID)
+    for (unsigned i = 1, ie = LoopID->getNumOperands(); i < ie; ++i)
+      MDs.push_back(LoopID->getOperand(i));
+
+  // Add metadata to indicate the loop was derived from a Tapir loop.
+  LLVMContext &Context = getHeader()->getContext();
+  SmallVector<Metadata *, 1> WasTapirOperands;
+  WasTapirOperands.push_back(MDString::get(Context,
+                                           "llvm.loop.from.tapir.loop"));
+  MDNode *WasTapirNode = MDNode::get(Context, WasTapirOperands);
+  MDs.push_back(WasTapirNode);
+
+  MDNode *NewLoopID = MDNode::get(Context, MDs);
+  // Set operand 0 to refer to the loop id itself.
+  NewLoopID->replaceOperandWith(0, NewLoopID);
+  setLoopID(NewLoopID);
+}
+
+bool Loop::wasDerivedFromTapirLoop() const {
+  MDNode *LoopID = getLoopID();
+
+  if (!LoopID)
+    return false;
+
+  for (unsigned i = 1, e = LoopID->getNumOperands(); i < e; ++i) {
+    MDNode *MD = dyn_cast<MDNode>(LoopID->getOperand(i));
+    if (!MD)
+      continue;
+
+    MDString *S = dyn_cast<MDString>(MD->getOperand(0));
+    if (!S)
+      continue;
+
+    if (S->getString().equals("llvm.loop.from.tapir.loop"))
+      return true;
+  }
+  return false;
 }
 
 bool Loop::isAnnotatedParallel() const {

@@ -3582,6 +3582,7 @@ recurse:
   case Expr::TypoExprClass:  // This should no longer exist in the AST by now.
   case Expr::OMPArraySectionExprClass:
   case Expr::CXXInheritedCtorInitExprClass:
+  case Expr::CilkSpawnExprClass:
     llvm_unreachable("unexpected statement kind");
 
   case Expr::ConstantExprClass:

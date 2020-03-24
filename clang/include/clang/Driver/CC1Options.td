@@ -327,6 +327,8 @@ def vectorize_loops : Flag<["-"], "vectorize-loops">,
   HelpText<"Run the Loop vectorization passes">;
 def vectorize_slp : Flag<["-"], "vectorize-slp">,
   HelpText<"Run the SLP vectorization passes">;
+def stripmine_loops : Flag<["-"], "stripmine-loops">,
+  HelpText<"Run the Tapir Loop stripmining passes">;
 def dependent_lib : Joined<["--"], "dependent-lib=">,
   HelpText<"Add dependent library">;
 def linker_option : Joined<["--"], "linker-option=">,

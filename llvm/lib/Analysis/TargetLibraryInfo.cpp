@@ -28,6 +28,22 @@ static cl::opt<TargetLibraryInfoImpl::VectorLibrary> ClVectorLibrary(
                clEnumValN(TargetLibraryInfoImpl::SVML, "SVML",
                           "Intel SVML library")));
 
+static cl::opt<TapirTargetID> ClTapirTarget(
+    "tapir-target", cl::Hidden, cl::desc("Target runtime for Tapir"),
+    cl::init(TapirTargetID::Cilk),
+    cl::values(clEnumValN(TapirTargetID::None,
+                          "none", "None"),
+               clEnumValN(TapirTargetID::Serial,
+                          "serial", "Serial code"),
+               clEnumValN(TapirTargetID::Cilk,
+                          "cilk", "Cilk Plus"),
+               clEnumValN(TapirTargetID::OpenMP,
+                          "openmp", "OpenMP"),
+               clEnumValN(TapirTargetID::CilkR,
+                          "cilkr", "CilkR"),
+               clEnumValN(TapirTargetID::Cheetah,
+                          "cheetah", "Cheetah")));
+
 StringRef const TargetLibraryInfoImpl::StandardNames[LibFunc::NumLibFuncs] = {
 #define TLI_DEFINE_STRING
 #include "llvm/Analysis/TargetLibraryInfo.def"
@@ -557,6 +573,8 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
   }
 
   TLI.addVectorizableFunctionsFromVecLib(ClVectorLibrary);
+
+  TLI.setTapirTarget(ClTapirTarget);
 }
 
 TargetLibraryInfoImpl::TargetLibraryInfoImpl() {
@@ -576,7 +594,8 @@ TargetLibraryInfoImpl::TargetLibraryInfoImpl(const Triple &T) {
 TargetLibraryInfoImpl::TargetLibraryInfoImpl(const TargetLibraryInfoImpl &TLI)
     : CustomNames(TLI.CustomNames), ShouldExtI32Param(TLI.ShouldExtI32Param),
       ShouldExtI32Return(TLI.ShouldExtI32Return),
-      ShouldSignExtI32Param(TLI.ShouldSignExtI32Param) {
+      ShouldSignExtI32Param(TLI.ShouldSignExtI32Param),
+      TapirTarget(TLI.TapirTarget) {
   memcpy(AvailableArray, TLI.AvailableArray, sizeof(AvailableArray));
   VectorDescs = TLI.VectorDescs;
   ScalarDescs = TLI.ScalarDescs;
@@ -586,7 +605,8 @@ TargetLibraryInfoImpl::TargetLibraryInfoImpl(TargetLibraryInfoImpl &&TLI)
     : CustomNames(std::move(TLI.CustomNames)),
       ShouldExtI32Param(TLI.ShouldExtI32Param),
       ShouldExtI32Return(TLI.ShouldExtI32Return),
-      ShouldSignExtI32Param(TLI.ShouldSignExtI32Param) {
+      ShouldSignExtI32Param(TLI.ShouldSignExtI32Param),
+      TapirTarget(TLI.TapirTarget) {
   std::move(std::begin(TLI.AvailableArray), std::end(TLI.AvailableArray),
             AvailableArray);
   VectorDescs = TLI.VectorDescs;
@@ -598,6 +618,7 @@ TargetLibraryInfoImpl &TargetLibraryInfoImpl::operator=(const TargetLibraryInfoI
   ShouldExtI32Param = TLI.ShouldExtI32Param;
   ShouldExtI32Return = TLI.ShouldExtI32Return;
   ShouldSignExtI32Param = TLI.ShouldSignExtI32Param;
+  TapirTarget = TLI.TapirTarget;
   memcpy(AvailableArray, TLI.AvailableArray, sizeof(AvailableArray));
   return *this;
 }
@@ -607,6 +628,7 @@ TargetLibraryInfoImpl &TargetLibraryInfoImpl::operator=(TargetLibraryInfoImpl &&
   ShouldExtI32Param = TLI.ShouldExtI32Param;
   ShouldExtI32Return = TLI.ShouldExtI32Return;
   ShouldSignExtI32Param = TLI.ShouldSignExtI32Param;
+  TapirTarget = TLI.TapirTarget;
   std::move(std::begin(TLI.AvailableArray), std::end(TLI.AvailableArray),
             AvailableArray);
   return *this;
@@ -1170,6 +1192,9 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
   // new[](unsigned long, align_val_t, nothrow)
   case LibFunc_ZnamSt11align_val_tRKSt9nothrow_t:
     return (NumParams == 3 && FTy.getReturnType()->isPointerTy());
+
+  case LibFunc_aligned_alloc:
+    return (NumParams == 2 && FTy.getReturnType()->isPointerTy());
 
   // void operator delete[](void*);
   case LibFunc_ZdaPv:

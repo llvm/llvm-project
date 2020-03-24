@@ -53,6 +53,9 @@ private:
   /// the vector.
   SmallVectorImpl<PHINode *> *InsertedPHIs;
 
+  /// This keeps track of which values are defined in detached blocks.
+  void *VID = nullptr;
+
 public:
   /// If InsertedPHIs is specified, it will be filled
   /// in with all PHI Nodes created by rewriting.
@@ -104,6 +107,8 @@ public:
   /// a block.  Because of this, we need to insert a new PHI node in SomeBB to
   /// merge the appropriate values, and this value isn't live out of the block.
   Value *GetValueInMiddleOfBlock(BasicBlock *BB);
+
+  bool GetValueIsDetachedInBlock(BasicBlock *BB);
 
   /// Rewrite a use of the symbolic value.
   ///

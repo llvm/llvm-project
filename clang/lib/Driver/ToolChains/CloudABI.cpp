@@ -83,6 +83,9 @@ void cloudabi::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (ToolChain.ShouldLinkCXXStdlib(Args))
     ToolChain.AddCXXStdlibLibArgs(Args, CmdArgs);
+
+  ToolChain.AddTapirRuntimeLibArgs(Args, CmdArgs);
+
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
     CmdArgs.push_back("-lc");
     CmdArgs.push_back("-lcompiler_rt");

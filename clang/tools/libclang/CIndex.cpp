@@ -5509,6 +5509,18 @@ CXString clang_getCursorKindSpelling(enum CXCursorKind Kind) {
       return cxstring::createRef("attribute(warn_unused_result)");
   case CXCursor_AlignedAttr:
       return cxstring::createRef("attribute(aligned)");
+  case CXCursor_CilkSpawnStmt:
+    return cxstring::createRef("CilkSpawnStmt");
+  case CXCursor_CilkSpawnExpr:
+    return cxstring::createRef("CilkSpawnExpr");
+  case CXCursor_CilkSyncStmt:
+    return cxstring::createRef("CilkSyncStmt");
+  case CXCursor_CilkForStmt:
+    return cxstring::createRef("CilkForStmt");
+  case CXCursor_SpawnStmt:
+    return cxstring::createRef("SpawnStmt");
+  case CXCursor_SyncStmt:
+    return cxstring::createRef("SyncStmt");
   }
 
   llvm_unreachable("Unhandled CXCursorKind");

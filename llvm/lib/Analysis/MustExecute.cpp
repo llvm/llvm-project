@@ -10,6 +10,7 @@
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/Passes.h"
+#include "llvm/Analysis/TapirTaskInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/AssemblyAnnotationWriter.h"
 #include "llvm/IR/DataLayout.h"
@@ -236,10 +237,33 @@ bool LoopSafetyInfo::allLoopPathsLeadToBlock(const Loop *CurLoop,
   return true;
 }
 
+// Helper function to check if an instruction is guaranteed to execute in the
+// task T containing it.
+static bool isGuaranteedToExecuteInTask(const Instruction &Inst,
+                                        const DominatorTree *DT,
+                                        const Task *T) {
+  assert(T && T->encloses(Inst.getParent()) && "Inst is not in given task.");
+  // Examine all exiting blocks of the task.
+  for (const Spindle *S :
+         depth_first<InTask<Spindle *>>(T->getEntrySpindle())) {
+    for (const BasicBlock *Exit : S->spindle_exits()) {
+      if (!T->isTaskExiting(Exit))
+        continue;
+
+      // If Inst does not dominate the exiting block, then it's not guaranteed
+      // to execute.
+      if (!DT->dominates(Inst.getParent(), Exit))
+        return false;
+    }
+  }
+  return true;
+}
+
 /// Returns true if the instruction in a loop is guaranteed to execute at least
 /// once.
 bool SimpleLoopSafetyInfo::isGuaranteedToExecute(const Instruction &Inst,
                                                  const DominatorTree *DT,
+                                                 const TaskInfo *TI,
                                                  const Loop *CurLoop) const {
   // If the instruction is in the header block for the loop (which is very
   // common), it is always guaranteed to dominate the exit blocks.  Since this
@@ -252,16 +276,75 @@ bool SimpleLoopSafetyInfo::isGuaranteedToExecute(const Instruction &Inst,
     return !HeaderMayThrow ||
            Inst.getParent()->getFirstNonPHIOrDbg() == &Inst;
 
+  // If the instruction is inside of a subtask, verify that it dominates the
+  // exits of the subtask, and use the corresponding detach to determine whether
+  // the instruction is guaranteed to execute.
+  bool InstGuaranteedToExecuteInSubtask = true;
+  const Instruction *RepInst = &Inst;
+  if (TI) {
+    const Task *LoopTask = TI->getTaskFor(CurLoop->getHeader());
+    while (InstGuaranteedToExecuteInSubtask) {
+      const Task *T = TI->getTaskFor(RepInst->getParent());
+      // If the representative instruction and loop are in the same task, we're
+      // done traversing subtasks.
+      if (T == LoopTask)
+        break;
+
+      // Check if the instruction is guaranteed to execute in its task.
+      if (!isGuaranteedToExecuteInTask(*RepInst, DT, T))
+        InstGuaranteedToExecuteInSubtask = false;
+      else
+        // Use the task's detach in place of the original instruction.
+        RepInst = T->getDetach();
+    }
+  }
+
+  // If a subtask was found in which the instruction is not guaranteed to
+  // execute, then the instruction is not guaranteed to execute.
+  if (!InstGuaranteedToExecuteInSubtask)
+    return false;
+
   // If there is a path from header to exit or latch that doesn't lead to our
   // instruction's block, return false.
-  return allLoopPathsLeadToBlock(CurLoop, Inst.getParent(), DT);
+  return allLoopPathsLeadToBlock(CurLoop, RepInst->getParent(), DT);
 }
 
 bool ICFLoopSafetyInfo::isGuaranteedToExecute(const Instruction &Inst,
                                               const DominatorTree *DT,
+                                              const TaskInfo *TI,
                                               const Loop *CurLoop) const {
-  return !ICF.isDominatedByICFIFromSameBlock(&Inst) &&
-         allLoopPathsLeadToBlock(CurLoop, Inst.getParent(), DT);
+  if (ICF.isDominatedByICFIFromSameBlock(&Inst))
+    return false;
+
+  // If the instruction is inside of a subtask, verify that it dominates the
+  // exits of the subtask, and use the corresponding detach to determine whether
+  // the instruction is guaranteed to execute.
+  bool InstGuaranteedToExecuteInSubtask = true;
+  const Instruction *RepInst = &Inst;
+  if (TI) {
+    const Task *LoopTask = TI->getTaskFor(CurLoop->getHeader());
+    while (InstGuaranteedToExecuteInSubtask) {
+      const Task *T = TI->getTaskFor(RepInst->getParent());
+      // If the representative instruction and loop are in the same task, we're
+      // done traversing subtasks.
+      if (T == LoopTask)
+        break;
+
+      // Check if the instruction is guaranteed to execute in its task.
+      if (!isGuaranteedToExecuteInTask(*RepInst, DT, T))
+        InstGuaranteedToExecuteInSubtask = false;
+      else
+        // Use the task's detach in place of the original instruction.
+        RepInst = T->getDetach();
+    }
+  }
+
+  // If a subtask was found in which the instruction is not guaranteed to
+  // execute, then the instruction is not guaranteed to execute.
+  if (!InstGuaranteedToExecuteInSubtask)
+    return false;
+
+  return allLoopPathsLeadToBlock(CurLoop, RepInst->getParent(), DT);
 }
 
 bool ICFLoopSafetyInfo::doesNotWriteMemoryBefore(const BasicBlock *BB,
@@ -303,6 +386,7 @@ namespace {
       AU.setPreservesAll();
       AU.addRequired<DominatorTreeWrapperPass>();
       AU.addRequired<LoopInfoWrapperPass>();
+      AU.addRequired<TaskInfoWrapperPass>();
     }
     bool runOnFunction(Function &F) override;
   };
@@ -313,6 +397,7 @@ INITIALIZE_PASS_BEGIN(MustExecutePrinter, "print-mustexecute",
                       "Instructions which execute on loop entry", false, true)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(TaskInfoWrapperPass)
 INITIALIZE_PASS_END(MustExecutePrinter, "print-mustexecute",
                     "Instructions which execute on loop entry", false, true)
 
@@ -320,13 +405,14 @@ FunctionPass *llvm::createMustExecutePrinter() {
   return new MustExecutePrinter();
 }
 
-static bool isMustExecuteIn(const Instruction &I, Loop *L, DominatorTree *DT) {
+static bool isMustExecuteIn(const Instruction &I, Loop *L, DominatorTree *DT,
+                            TaskInfo *TI) {
   // TODO: merge these two routines.  For the moment, we display the best
   // result obtained by *either* implementation.  This is a bit unfair since no
   // caller actually gets the full power at the moment.
   SimpleLoopSafetyInfo LSI;
   LSI.computeLoopSafetyInfo(L);
-  return LSI.isGuaranteedToExecute(I, DT, L) ||
+  return LSI.isGuaranteedToExecute(I, DT, TI, L) ||
     isGuaranteedToExecuteForEveryIteration(&I, L);
 }
 
@@ -338,11 +424,11 @@ class MustExecuteAnnotatedWriter : public AssemblyAnnotationWriter {
 
 public:
   MustExecuteAnnotatedWriter(const Function &F,
-                             DominatorTree &DT, LoopInfo &LI) {
+                             DominatorTree &DT, LoopInfo &LI, TaskInfo &TI) {
     for (auto &I: instructions(F)) {
       Loop *L = LI.getLoopFor(I.getParent());
       while (L) {
-        if (isMustExecuteIn(I, L, &DT)) {
+        if (isMustExecuteIn(I, L, &DT, &TI)) {
           MustExec[&I].push_back(L);
         }
         L = L->getParentLoop();
@@ -350,12 +436,12 @@ public:
     }
   }
   MustExecuteAnnotatedWriter(const Module &M,
-                             DominatorTree &DT, LoopInfo &LI) {
+                             DominatorTree &DT, LoopInfo &LI, TaskInfo &TI) {
     for (auto &F : M)
     for (auto &I: instructions(F)) {
       Loop *L = LI.getLoopFor(I.getParent());
       while (L) {
-        if (isMustExecuteIn(I, L, &DT)) {
+        if (isMustExecuteIn(I, L, &DT, &TI)) {
           MustExec[&I].push_back(L);
         }
         L = L->getParentLoop();
@@ -390,8 +476,9 @@ public:
 bool MustExecutePrinter::runOnFunction(Function &F) {
   auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+  auto &TI = getAnalysis<TaskInfoWrapperPass>().getTaskInfo();
 
-  MustExecuteAnnotatedWriter Writer(F, DT, LI);
+  MustExecuteAnnotatedWriter Writer(F, DT, LI, TI);
   F.print(dbgs(), &Writer);
 
   return false;

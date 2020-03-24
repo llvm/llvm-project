@@ -1100,8 +1100,12 @@ bool GVN::PerformLoadPRE(LoadInst *LI, AvailValInBlkVect &ValuesPerBlock,
     if (IsValueFullyAvailableInBlock(Pred, FullyAvailableBlocks, 0)) {
       continue;
     }
+    if (isa<ReattachInst>(Pred->getTerminator())) {
+      continue;
+    }
 
-    if (Pred->getTerminator()->getNumSuccessors() != 1) {
+    if (Pred->getTerminator()->getNumSuccessors() != 1 &&
+        !isa<DetachInst>(Pred->getTerminator())) {
       if (isa<IndirectBrInst>(Pred->getTerminator())) {
         LLVM_DEBUG(
             dbgs() << "COULD NOT PRE LOAD BECAUSE OF INDBR CRITICAL EDGE '"
@@ -1309,6 +1313,20 @@ bool GVN::processNonLocalLoad(LoadInst *LI) {
     LLVM_DEBUG(dbgs() << "GVN: non-local load "; LI->printAsOperand(dbgs());
                dbgs() << " has unknown dependencies\n";);
     return false;
+  }
+
+  // If we depend on a detach instruction, reject.
+  for (unsigned i = 0, e = NumDeps; i != e; ++i) {
+    MemDepResult DepInfo = Deps[i].getResult();
+    if (!(DepInfo.getInst()))
+      continue;
+    if (isa<DetachInst>(DepInfo.getInst())||
+        isa<SyncInst>(DepInfo.getInst())) {
+      LLVM_DEBUG(dbgs() << "GVN: Cannot process" << *LI <<
+                 " due to dependency on" <<
+                 *(DepInfo.getInst()) << "\n");
+      return false;
+    }
   }
 
   // If this load follows a GEP, see if we can PRE the indices before analyzing.
@@ -2211,6 +2229,8 @@ bool GVN::performScalarPRE(Instruction *CurInst) {
   if (InvalidBlockRPONumbers)
     assignBlockRPONumber(*CurrentBlock->getParent());
 
+  SmallVector<std::pair<Value *, ReattachInst *>, 8> Reattaches;
+  SmallVector<std::pair<Value *, DetachInst *>, 8> Detaches;
   SmallVector<std::pair<Value *, BasicBlock *>, 8> predMap;
   for (BasicBlock *P : predecessors(CurrentBlock)) {
     // We're not interested in PRE where blocks with predecessors that are
@@ -2237,15 +2257,27 @@ bool GVN::performScalarPRE(Instruction *CurInst) {
     uint32_t TValNo = VN.phiTranslate(P, CurrentBlock, ValNo, *this);
     Value *predV = findLeader(P, TValNo);
     if (!predV) {
-      predMap.push_back(std::make_pair(static_cast<Value *>(nullptr), P));
-      PREPred = P;
-      ++NumWithout;
+      if (!isa<ReattachInst>(P->getTerminator())) {
+        predMap.push_back(std::make_pair(static_cast<Value *>(nullptr), P));
+        PREPred = P;
+        ++NumWithout;
+      }
+      // Record any detach and reattach predecessors.
+      if (DetachInst *DI = dyn_cast<DetachInst>(P->getTerminator()))
+        Detaches.push_back(std::make_pair(static_cast<Value *>(nullptr), DI));
+      if (ReattachInst *RI = dyn_cast<ReattachInst>(P->getTerminator()))
+        Reattaches.push_back(std::make_pair(static_cast<Value *>(nullptr), RI));
     } else if (predV == CurInst) {
       /* CurInst dominates this predecessor. */
       NumWithout = 2;
       break;
     } else {
       predMap.push_back(std::make_pair(predV, P));
+      // Record any detach and reattach predecessors.
+      if (DetachInst *DI = dyn_cast<DetachInst>(P->getTerminator()))
+        Detaches.push_back(std::make_pair(predV, DI));
+      if (ReattachInst *RI = dyn_cast<ReattachInst>(P->getTerminator()))
+        Reattaches.push_back(std::make_pair(predV, RI));
       ++NumWith;
     }
   }
@@ -2254,6 +2286,23 @@ bool GVN::performScalarPRE(Instruction *CurInst) {
   // we would need to insert instructions in more than one pred.
   if (NumWithout > 1 || NumWith == 0)
     return false;
+
+  for (auto RV : Reattaches) {
+    ReattachInst *RI = RV.second;
+    bool DetachFound = false;
+    for (auto DV : Detaches) {
+      DetachInst *DI = DV.second;
+      // Get the detach edge from DI.
+      BasicBlockEdge DetachEdge(DI->getParent(), DI->getDetached());
+      if (DT->dominates(DetachEdge, RI->getParent())) {
+        DetachFound = true;
+        if (RV.first && (RV.first != DV.first))
+          return false;
+      }
+    }
+    assert(DetachFound &&
+           "Reattach predecessor found with no detach predecessor");
+  }
 
   // We may have a case where all predecessors have the instruction,
   // and we just need to insert a phi node. Otherwise, perform
@@ -2283,7 +2332,8 @@ bool GVN::performScalarPRE(Instruction *CurInst) {
     // the edge to be split and perform the PRE the next time we iterate
     // on the function.
     unsigned SuccNum = GetSuccessorNumber(PREPred, CurrentBlock);
-    if (isCriticalEdge(PREPred->getTerminator(), SuccNum)) {
+    if (isCriticalEdge(PREPred->getTerminator(), SuccNum) &&
+        !isa<DetachInst>(PREPred->getTerminator())) {
       toSplit.push_back(std::make_pair(PREPred->getTerminator(), SuccNum));
       return false;
     }
@@ -2294,6 +2344,22 @@ bool GVN::performScalarPRE(Instruction *CurInst) {
       LLVM_DEBUG(verifyRemoved(PREInstr));
       PREInstr->deleteValue();
       return false;
+    } else if (isa<DetachInst>(PREPred->getTerminator())) {
+      for (auto RV : Reattaches) {
+        ReattachInst *RI = RV.second;
+        for (auto DV : Detaches) {
+          DetachInst *DI = DV.second;
+          // Get the detach edge from DI.
+          BasicBlockEdge DetachEdge(DI->getParent(), DI->getDetached());
+          if (DT->dominates(DetachEdge, RI->getParent())) {
+            if (DI->getParent() == PREPred) {
+              assert(nullptr == DV.first &&
+                     "Detach predecessor already had a value.");
+              predMap.push_back(std::make_pair(PREInstr, RI->getParent()));
+            }
+          }
+        }
+      }
     }
   }
 

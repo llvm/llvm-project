@@ -23,6 +23,7 @@
 #include "clang/AST/DeclOpenMP.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/ExprCilk.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/ExprOpenMP.h"
@@ -30,9 +31,11 @@
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/OpenMPClause.h"
 #include "clang/AST/Stmt.h"
+#include "clang/AST/StmtCilk.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtObjC.h"
 #include "clang/AST/StmtOpenMP.h"
+#include "clang/AST/StmtTapir.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/TemplateName.h"
 #include "clang/AST/Type.h"
@@ -2587,6 +2590,26 @@ DEF_TRAVERSE_STMT(CXXOperatorCallExpr, {})
 DEF_TRAVERSE_STMT(OpaqueValueExpr, {})
 DEF_TRAVERSE_STMT(TypoExpr, {})
 DEF_TRAVERSE_STMT(CUDAKernelCallExpr, {})
+
+DEF_TRAVERSE_STMT(SpawnStmt, {})
+DEF_TRAVERSE_STMT(SyncStmt, {})
+DEF_TRAVERSE_STMT(ForallStmt, {})
+DEF_TRAVERSE_STMT(CXXForallRangeStmt, {
+  if (!getDerived().shouldVisitImplicitCode()) {
+    if (S->getInit())
+      TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(S->getInit());
+    TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(S->getLoopVarStmt());
+    TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(S->getRangeInit());
+    TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(S->getBody());
+    // Visit everything else only if shouldVisitImplicitCode().
+    ShouldVisitChildren = false;
+  }
+})
+
+DEF_TRAVERSE_STMT(CilkSpawnStmt, {})
+DEF_TRAVERSE_STMT(CilkSpawnExpr, {})
+DEF_TRAVERSE_STMT(CilkSyncStmt, {})
+DEF_TRAVERSE_STMT(CilkForStmt, {})
 
 // These operators (all of them) do not need any action except
 // iterating over the children.

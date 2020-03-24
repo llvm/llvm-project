@@ -846,6 +846,62 @@ bool IRTranslator::translateIndirectBr(const User &U,
   return true;
 }
 
+bool IRTranslator::translateDetach(const User &U,
+                                   MachineIRBuilder &MIRBuilder) {
+  const DetachInst &DetInst = cast<DetachInst>(U);
+
+  // Lowering of Tapir instructions should have happened already.  At this
+  // stage, treat Detach like an unconditional branch to the detached successor.
+  const BasicBlock &DetTgt = *cast<BasicBlock>(DetInst.getDetached());
+  MachineBasicBlock &TgtBB = getMBB(DetTgt);
+  MachineBasicBlock &CurBB = MIRBuilder.getMBB();
+
+  // If the detached successor is the layout successor, fallthrough.
+  if (!CurBB.isLayoutSuccessor(&TgtBB))
+    MIRBuilder.buildBr(TgtBB);
+
+  // Link detached successor.
+  CurBB.addSuccessor(&getMBB(*cast<BasicBlock>(DetInst.getDetached())));
+  return true;
+}
+
+bool IRTranslator::translateReattach(const User &U,
+                                     MachineIRBuilder &MIRBuilder) {
+  const ReattachInst &ReatInst = cast<ReattachInst>(U);
+
+  // Lowering of Tapir instructions should have happened already.  At this
+  // stage, treat Reattach like an unconditional branch to its successor.
+  const BasicBlock &ReatTgt = *cast<BasicBlock>(ReatInst.getSuccessor(0));
+  MachineBasicBlock &TgtBB = getMBB(ReatTgt);
+  MachineBasicBlock &CurBB = MIRBuilder.getMBB();
+
+  // If the reattach successor is the layout successor, fallthrough.
+  if (!CurBB.isLayoutSuccessor(&TgtBB))
+    MIRBuilder.buildBr(TgtBB);
+
+  // Link the Reattach instruction's successor.
+  CurBB.addSuccessor(&getMBB(*cast<BasicBlock>(ReatInst.getSuccessor(0))));
+  return true;
+}
+
+bool IRTranslator::translateSync(const User &U, MachineIRBuilder &MIRBuilder) {
+  const SyncInst &SInst = cast<SyncInst>(U);
+
+  // Lowering of Tapir instructions should have happened already.  At this
+  // stage, treat Sync like an unconditional branch to its successor.
+  const BasicBlock &STgt = *cast<BasicBlock>(SInst.getSuccessor(0));
+  MachineBasicBlock &TgtBB = getMBB(STgt);
+  MachineBasicBlock &CurBB = MIRBuilder.getMBB();
+
+  // If the sync successor is the layout successor, fallthrough.
+  if (!CurBB.isLayoutSuccessor(&TgtBB))
+    MIRBuilder.buildBr(TgtBB);
+
+  // Link the Sync instruction's successor.
+  CurBB.addSuccessor(&getMBB(*cast<BasicBlock>(SInst.getSuccessor(0))));
+  return true;
+}
+
 static bool isSwiftError(const Value *V) {
   if (auto Arg = dyn_cast<Argument>(V))
     return Arg->hasSwiftErrorAttr();

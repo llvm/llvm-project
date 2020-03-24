@@ -41,6 +41,7 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpander.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/Analysis/TapirTaskInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -81,6 +82,7 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/SimplifyIndVar.h"
+#include "llvm/Transforms/Utils/TapirUtils.h"
 #include <cassert>
 #include <cstdint>
 #include <utility>
@@ -135,6 +137,7 @@ class IndVarSimplify {
   const DataLayout &DL;
   TargetLibraryInfo *TLI;
   const TargetTransformInfo *TTI;
+  TaskInfo *TI;
 
   SmallVector<WeakTrackingVH, 16> DeadInsts;
 
@@ -160,8 +163,8 @@ class IndVarSimplify {
 public:
   IndVarSimplify(LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT,
                  const DataLayout &DL, TargetLibraryInfo *TLI,
-                 TargetTransformInfo *TTI)
-      : LI(LI), SE(SE), DT(DT), DL(DL), TLI(TLI), TTI(TTI) {}
+                 TargetTransformInfo *TTI, TaskInfo *TI)
+      : LI(LI), SE(SE), DT(DT), DL(DL), TLI(TLI), TTI(TTI), TI(TI) {}
 
   bool run(Loop *L);
 };
@@ -2043,7 +2046,7 @@ static bool isLoopExitTestBasedOn(Value *V, BasicBlock *ExitingBB) {
 
 /// linearFunctionTestReplace policy. Return true unless we can show that the
 /// current exit test is already sufficiently canonical.
-static bool needsLFTR(Loop *L, BasicBlock *ExitingBB) {
+static bool needsLFTR(Loop *L, BasicBlock *ExitingBB, TaskInfo *TI) {
   assert(L->getLoopLatch() && "Must be in simplified form");
 
   // Avoid converting a constant or loop invariant test back to a runtime
@@ -2087,7 +2090,18 @@ static bool needsLFTR(Loop *L, BasicBlock *ExitingBB) {
 
   // Do LFTR if the exit condition's IV is *not* a simple counter.
   Value *IncV = Phi->getIncomingValue(Idx);
-  return Phi != getLoopPhiForCounter(IncV, L);
+  if (Phi != getLoopPhiForCounter(IncV, L))
+    return true;
+
+  // Tapir loops are particularly picky about having canonical induction
+  // variables that start at 0, so check if LFTR needs to create one.
+  if (getTaskIfTapirLoop(L, TI))
+    if (BasicBlock *Preheader = L->getLoopPreheader())
+      if (Constant *Start =
+          dyn_cast<Constant>(Phi->getIncomingValueForBlock(Preheader)))
+        return !(Start->isZeroValue());
+
+  return false;
 }
 
 /// Return true if undefined behavior would provable be executed on the path to
@@ -2442,6 +2456,7 @@ linearFunctionTestReplace(Loop *L, BasicBlock *ExitingBB,
       BO->setHasNoUnsignedWrap(AR->hasNoUnsignedWrap());
     if (BO->hasNoSignedWrap())
       BO->setHasNoSignedWrap(AR->hasNoSignedWrap());
+
   }
 
   Value *ExitCnt = genLoopLimit(
@@ -2729,6 +2744,31 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L) {
   return Changed;
 }
 
+static bool ensureZeroStartIV(Loop *L, const DataLayout &DL,
+                              ScalarEvolution *SE, DominatorTree *DT) {
+  BasicBlock *LatchBlock = L->getLoopLatch();
+
+  const SCEV *ExitCount = SE->getExitCount(L, LatchBlock);
+  if (isa<SCEVCouldNotCompute>(ExitCount))
+    return false;
+
+  PHINode *IndVar = FindLoopCounter(L, LatchBlock, ExitCount, SE, DT);
+  if (!IndVar)
+    return false;
+
+  Instruction * const IncVar =
+      cast<Instruction>(IndVar->getIncomingValueForBlock(LatchBlock));
+
+  const SCEVAddRecExpr *AR = cast<SCEVAddRecExpr>(SE->getSCEV(IncVar));
+
+  if (!AR->getStart()->isZero()) {
+    SCEVExpander ARRewriter(*SE, DL, "indvars");
+    ARRewriter.expandCodeFor(AR, AR->getType(),
+                             &L->getHeader()->front());
+  }
+  return true;
+}
+
 //===----------------------------------------------------------------------===//
 //  IndVarSimplify driver. Manage several subpasses of IV simplification.
 //===----------------------------------------------------------------------===//
@@ -2755,7 +2795,15 @@ bool IndVarSimplify::run(Loop *L) {
   // transform them to use integer recurrences.
   Changed |= rewriteNonIntegerIVs(L);
 
+  // See if we need to create a canonical IV that starts at 0.  Right now we
+  // only check for a Tapir loop, but this check might be generalized.
+  bool IsTapirLoop = (nullptr != getTaskIfTapirLoop(L, TI));
+  if (IsTapirLoop)
+    Changed |= ensureZeroStartIV(L, DL, SE, DT);
+
   const SCEV *BackedgeTakenCount = SE->getBackedgeTakenCount(L);
+  if (IsTapirLoop)
+    BackedgeTakenCount = SE->getExitCount(L, L->getLoopLatch());
 
   // Create a rewriter object which we'll use to transform the code with.
   SCEVExpander Rewriter(*SE, DL, "indvars");
@@ -2803,7 +2851,7 @@ bool IndVarSimplify::run(Loop *L) {
       if (LI->getLoopFor(ExitingBB) != L)
         continue;
       
-      if (!needsLFTR(L, ExitingBB))
+      if (!needsLFTR(L, ExitingBB, TI))
         continue;
 
       const SCEV *ExitCount = SE->getExitCount(L, ExitingBB);
@@ -2823,7 +2871,7 @@ bool IndVarSimplify::run(Loop *L) {
       
       // Avoid high cost expansions.  Note: This heuristic is questionable in
       // that our definition of "high cost" is not exactly principled.  
-      if (Rewriter.isHighCostExpansion(ExitCount, L))
+      if (!IsTapirLoop && Rewriter.isHighCostExpansion(ExitCount, L))
         continue;
       
       // Check preconditions for proper SCEVExpander operation. SCEV does not
@@ -2898,7 +2946,7 @@ PreservedAnalyses IndVarSimplifyPass::run(Loop &L, LoopAnalysisManager &AM,
   Function *F = L.getHeader()->getParent();
   const DataLayout &DL = F->getParent()->getDataLayout();
 
-  IndVarSimplify IVS(&AR.LI, &AR.SE, &AR.DT, DL, &AR.TLI, &AR.TTI);
+  IndVarSimplify IVS(&AR.LI, &AR.SE, &AR.DT, DL, &AR.TLI, &AR.TTI, &AR.TI);
   if (!IVS.run(&L))
     return PreservedAnalyses::all();
 
@@ -2927,9 +2975,10 @@ struct IndVarSimplifyLegacyPass : public LoopPass {
     auto *TLI = TLIP ? &TLIP->getTLI() : nullptr;
     auto *TTIP = getAnalysisIfAvailable<TargetTransformInfoWrapperPass>();
     auto *TTI = TTIP ? &TTIP->getTTI(*L->getHeader()->getParent()) : nullptr;
+    auto *TI = &getAnalysis<TaskInfoWrapperPass>().getTaskInfo();
     const DataLayout &DL = L->getHeader()->getModule()->getDataLayout();
 
-    IndVarSimplify IVS(LI, SE, DT, DL, TLI, TTI);
+    IndVarSimplify IVS(LI, SE, DT, DL, TLI, TTI, TI);
     return IVS.run(L);
   }
 

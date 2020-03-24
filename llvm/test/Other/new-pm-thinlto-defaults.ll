@@ -73,6 +73,7 @@
 ; CHECK-O-NEXT: Running analysis: AssumptionAnalysis
 ; CHECK-O-NEXT: Running pass: SROA
 ; CHECK-O-NEXT: Running analysis: DominatorTreeAnalysis
+; CHECK-O-NEXT: Running analysis: TaskAnalysis
 ; CHECK-O-NEXT: Running pass: EarlyCSEPass
 ; CHECK-O-NEXT: Running analysis: TargetLibraryAnalysis
 ; CHECK-O-NEXT: Running pass: LowerExpectIntrinsicPass
@@ -90,6 +91,7 @@
 ; CHECK-O-NEXT: Running analysis: AAManager
 ; CHECK-O-NEXT: Running analysis: OuterAnalysisManagerProxy
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass
+; CHECK-O-NEXT: Running pass: TaskSimplifyPass
 ; CHECK-O-NEXT: Finished llvm::Function pass manager run.
 ; CHECK-O-NEXT: Running pass: RequireAnalysisPass<{{.*}}GlobalsAA
 ; CHECK-O-NEXT: Running analysis: GlobalsAA
@@ -116,6 +118,7 @@
 ; CHECK-O-NEXT: Running analysis: LazyValueAnalysis
 ; CHECK-O-NEXT: Running pass: CorrelatedValuePropagationPass
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass
+; CHECK-O-NEXT: Running pass: TaskSimplifyPass
 ; CHECK-O3-NEXT: Running pass: AggressiveInstCombinePass
 ; CHECK-O-NEXT: Running pass: InstCombinePass
 ; CHECK-O1-NEXT: Running pass: LibCallsShrinkWrapPass
@@ -123,6 +126,7 @@
 ; CHECK-O3-NEXT: Running pass: LibCallsShrinkWrapPass
 ; CHECK-O-NEXT: Running pass: TailCallElimPass
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass
+; CHECK-O-NEXT: Running pass: TaskSimplifyPass
 ; CHECK-O-NEXT: Running pass: ReassociatePass
 ; CHECK-O-NEXT: Running pass: RequireAnalysisPass<{{.*}}OptimizationRemarkEmitterAnalysis
 ; CHECK-O-NEXT: Running pass: FunctionToLoopPassAdaptor<{{.*}}LoopStandardAnalysisResults{{.*}}>
@@ -143,6 +147,7 @@
 ; CHECK-O-NEXT: Running pass: SimpleLoopUnswitchPass
 ; CHECK-O-NEXT: Finished Loop pass manager run.
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass
+; CHECK-O-NEXT: Running pass: TaskSimplifyPass
 ; CHECK-O-NEXT: Running pass: InstCombinePass
 ; CHECK-O-NEXT: Running pass: FunctionToLoopPassAdaptor<{{.*}}LoopStandardAnalysisResults{{.*}}>
 ; CHECK-O-NEXT: Starting llvm::Function pass manager run
@@ -189,6 +194,7 @@
 ; CHECK-O-NEXT: Running pass: ADCEPass
 ; CHECK-O-NEXT: Running analysis: PostDominatorTreeAnalysis
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass
+; CHECK-O-NEXT: Running pass: TaskSimplifyPass
 ; CHECK-O-NEXT: Running pass: InstCombinePass
 ; CHECK-O-NEXT: Finished llvm::Function pass manager run.
 ; CHECK-O-NEXT: Finished CGSCC pass manager run.
@@ -204,6 +210,36 @@
 ; CHECK-POSTLINK-O-NEXT: Running pass: ModuleToFunctionPassAdaptor<{{.*}}PassManager{{.*}}>
 ; CHECK-POSTLINK-O-NEXT: Starting llvm::Function pass manager run.
 ; CHECK-POSTLINK-O-NEXT: Running pass: Float2IntPass
+; CHECK-POSTLINK-O2-NEXT: Running pass: LoopStripMinePass on foo
+; CHECK-POSTLINK-O2-NEXT: Running pass: TaskSimplifyPass on foo
+; CHECK-POSTLINK-O2-NEXT: Running pass: FunctionToLoopPassAdaptor<{{.*}}LoopStandardAnalysisResults{{.*}}>
+; CHECK-POSTLINK-O2-NEXT: Starting llvm::Function pass manager run.
+; CHECK-POSTLINK-O2-NEXT: Running pass: LoopSimplifyPass
+; CHECK-POSTLINK-O2-NEXT: Running pass: LCSSAPass
+; CHECK-POSTLINK-O2-NEXT: Finished llvm::Function pass manager run.
+; CHECK-POSTLINK-O2-NEXT: Starting Loop pass manager run.
+; CHECK-POSTLINK-O2-NEXT: Running pass: LoopSimplifyCFGPass
+; CHECK-POSTLINK-O2-NEXT: Running pass: IndVarSimplifyPass
+; CHECK-POSTLINK-O2-NEXT: Finished Loop pass manager run.
+; CHECK-POSTLINK-O2-NEXT: Running pass: EarlyCSEPass
+; CHECK-POSTLINK-O2-NEXT: Running pass: JumpThreadingPass
+; CHECK-POSTLINK-O2-NEXT: Running pass: CorrelatedValuePropagationPass
+; CHECK-POSTLINK-O2-NEXT: Running pass: InstCombinePass
+; CHECK-POSTLINK-O3-NEXT: Running pass: LoopStripMinePass on foo
+; CHECK-POSTLINK-O3-NEXT: Running pass: TaskSimplifyPass on foo
+; CHECK-POSTLINK-O3-NEXT: Running pass: FunctionToLoopPassAdaptor<{{.*}}LoopStandardAnalysisResults{{.*}}>
+; CHECK-POSTLINK-O3-NEXT: Starting llvm::Function pass manager run.
+; CHECK-POSTLINK-O3-NEXT: Running pass: LoopSimplifyPass
+; CHECK-POSTLINK-O3-NEXT: Running pass: LCSSAPass
+; CHECK-POSTLINK-O3-NEXT: Finished llvm::Function pass manager run.
+; CHECK-POSTLINK-O3-NEXT: Starting Loop pass manager run.
+; CHECK-POSTLINK-O3-NEXT: Running pass: LoopSimplifyCFGPass
+; CHECK-POSTLINK-O3-NEXT: Running pass: IndVarSimplifyPass
+; CHECK-POSTLINK-O3-NEXT: Finished Loop pass manager run.
+; CHECK-POSTLINK-O3-NEXT: Running pass: EarlyCSEPass
+; CHECK-POSTLINK-O3-NEXT: Running pass: JumpThreadingPass
+; CHECK-POSTLINK-O3-NEXT: Running pass: CorrelatedValuePropagationPass
+; CHECK-POSTLINK-O3-NEXT: Running pass: InstCombinePass
 ; CHECK-POSTLINK-O-NEXT: Running pass: FunctionToLoopPassAdaptor<{{.*}}LoopRotatePass
 ; CHECK-POSTLINK-O-NEXT: Starting llvm::Function pass manager run
 ; CHECK-POSTLINK-O-NEXT: Running pass: LoopSimplifyPass
@@ -216,6 +252,7 @@
 ; CHECK-POSTLINK-O-NEXT: Running pass: LoopLoadEliminationPass
 ; CHECK-POSTLINK-O-NEXT: Running analysis: LoopAccessAnalysis
 ; CHECK-POSTLINK-O-NEXT: Running pass: InstCombinePass
+; CHECK-POSTLINK-O-NEXT: Running pass: TaskSimplifyPass
 ; CHECK-POSTLINK-O-NEXT: Running pass: SimplifyCFGPass
 ; CHECK-POSTLINK-O-NEXT: Running pass: InstCombinePass
 ; CHECK-POSTLINK-O-NEXT: Running pass: LoopUnrollPass
@@ -232,6 +269,7 @@
 ; CHECK-POSTLINK-O-NEXT: Running pass: InstSimplifyPass
 ; CHECK-POSTLINK-O-NEXT: Running pass: DivRemPairsPass
 ; CHECK-POSTLINK-O-NEXT: Running pass: SimplifyCFGPass
+; CHECK-POSTLINK-O-NEXT: Running pass: TaskSimplifyPass
 ; CHECK-POSTLINK-O-NEXT: Running pass: SpeculateAroundPHIsPass
 ; CHECK-POSTLINK-O-NEXT: Finished llvm::Function pass manager run.
 ; CHECK-POSTLINK-O-NEXT: Running pass: CGProfilePass

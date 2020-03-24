@@ -495,6 +495,29 @@ public:
                                 TargetLibraryInfo *LibInfo,
                                 HardwareLoopInfo &HWLoopInfo) const;
 
+  /// Parameters that control the generic loop stripmining transformation.
+  struct StripMiningPreferences {
+    /// A forced stripmining factor (the number of iterations of the original
+    /// loop in the stripmined inner-loop body). When set to 0, the stripmining
+    /// transformation will select an stripmining factor based on the current
+    /// cost threshold and other factors.
+    unsigned Count;
+    /// Allow emitting expensive instructions (such as divisions) when computing
+    /// the trip count of a loop for runtime unrolling.
+    bool AllowExpensiveTripCount;
+    /// Default factor for coarsening a task to amortize the cost of creating
+    /// it.
+    unsigned DefaultCoarseningFactor;
+    /// Allow unrolling of all the iterations of the runtime loop remainder.
+    bool UnrollRemainder;
+  };
+
+  /// Get target-customized preferences for the generic Tapir loop stripmining
+  /// transformation. The caller will initialize SMP with the current
+  /// target-independent defaults.
+  void getStripMiningPreferences(Loop *L, ScalarEvolution &,
+                               StripMiningPreferences &SMP) const;
+
   /// @}
 
   /// \name Scalar Target Information
@@ -1162,6 +1185,8 @@ public:
                                         AssumptionCache &AC,
                                         TargetLibraryInfo *LibInfo,
                                         HardwareLoopInfo &HWLoopInfo) = 0;
+  virtual void getStripMiningPreferences(Loop *L, ScalarEvolution &,
+                                         StripMiningPreferences &SMP) = 0;
   virtual bool isLegalAddImmediate(int64_t Imm) = 0;
   virtual bool isLegalICmpImmediate(int64_t Imm) = 0;
   virtual bool isLegalAddressingMode(Type *Ty, GlobalValue *BaseGV,
@@ -1407,6 +1432,10 @@ public:
                                 TargetLibraryInfo *LibInfo,
                                 HardwareLoopInfo &HWLoopInfo) override {
     return Impl.isHardwareLoopProfitable(L, SE, AC, LibInfo, HWLoopInfo);
+  }
+  void getStripMiningPreferences(Loop *L, ScalarEvolution &SE,
+                                 StripMiningPreferences &SMP) override {
+    return Impl.getStripMiningPreferences(L, SE, SMP);
   }
   bool isLegalAddImmediate(int64_t Imm) override {
     return Impl.isLegalAddImmediate(Imm);

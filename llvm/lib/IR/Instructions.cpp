@@ -1124,6 +1124,179 @@ UnreachableInst::UnreachableInst(LLVMContext &Context, BasicBlock *InsertAtEnd)
                   0, InsertAtEnd) {}
 
 //===----------------------------------------------------------------------===//
+//                        DetachInst Implementation
+//===----------------------------------------------------------------------===//
+
+void DetachInst::AssertOK() {
+  assert(getSyncRegion()->getType()->isTokenTy() &&
+         "Sync region must be a token!");
+}
+
+void DetachInst::init(Value *SyncRegion, BasicBlock *Detached,
+                      BasicBlock *Continue, BasicBlock *Unwind) {
+  Op<-1>() = SyncRegion;
+  Op<-2>() = Detached;
+  Op<-3>() = Continue;
+  if (Unwind) {
+    setInstructionSubclassData(getSubclassDataFromInstruction() | 1);
+    Op<-4>() = Unwind;
+  }
+#ifndef NDEBUG
+  AssertOK();
+#endif
+}
+
+DetachInst::DetachInst(BasicBlock *Detached, BasicBlock *Continue,
+                       Value *SyncRegion, Instruction *InsertBefore)
+    : Instruction(Type::getVoidTy(Detached->getContext()),
+                  Instruction::Detach,
+                  OperandTraits<DetachInst>::op_end(this) - 3, 3,
+                  InsertBefore) {
+  init(SyncRegion, Detached, Continue);
+}
+
+DetachInst::DetachInst(BasicBlock *Detached, BasicBlock *Continue,
+                       Value *SyncRegion, BasicBlock *InsertAtEnd)
+    : Instruction(Type::getVoidTy(Detached->getContext()),
+                  Instruction::Detach,
+                  OperandTraits<DetachInst>::op_end(this) - 3, 3,
+                  InsertAtEnd) {
+  init(SyncRegion, Detached, Continue);
+}
+
+DetachInst::DetachInst(BasicBlock *Detached, BasicBlock *Continue,
+                       BasicBlock *Unwind, Value *SyncRegion,
+                       Instruction *InsertBefore)
+    : Instruction(Type::getVoidTy(Detached->getContext()),
+                  Instruction::Detach,
+                  OperandTraits<DetachInst>::op_end(this) - 4, 4,
+                  InsertBefore) {
+  init(SyncRegion, Detached, Continue, Unwind);
+}
+
+DetachInst::DetachInst(BasicBlock *Detached, BasicBlock *Continue,
+                       BasicBlock *Unwind, Value *SyncRegion,
+                       BasicBlock *InsertAtEnd)
+    : Instruction(Type::getVoidTy(Detached->getContext()),
+                  Instruction::Detach,
+                  OperandTraits<DetachInst>::op_end(this) - 4, 4,
+                  InsertAtEnd) {
+  init(SyncRegion, Detached, Continue, Unwind);
+}
+
+DetachInst::DetachInst(const DetachInst &DI)
+    : Instruction(Type::getVoidTy(DI.getContext()), Instruction::Detach,
+                  OperandTraits<DetachInst>::op_end(this) -
+                  DI.getNumOperands(),
+                  DI.getNumOperands()) {
+  setInstructionSubclassData(DI.getSubclassDataFromInstruction());
+  Op<-1>() = DI.Op<-1>();
+  Op<-2>() = DI.Op<-2>();
+  Op<-3>() = DI.Op<-3>();
+  if (DI.hasUnwindDest()) {
+    Op<-4>() = DI.Op<-4>();
+    assert(DI.getNumOperands() == 4 && "Detach must have 4 operands!");
+  } else
+    assert(DI.getNumOperands() == 3 && "Detach must have 3 operands!");
+}
+
+LandingPadInst *DetachInst::getLandingPadInst() const {
+  if (!hasUnwindDest())
+    return nullptr;
+  return cast<LandingPadInst>(getUnwindDest()->getFirstNonPHI());
+}
+
+//===----------------------------------------------------------------------===//
+//                      ReattachInst Implementation
+//===----------------------------------------------------------------------===//
+
+void ReattachInst::AssertOK() {
+  assert(getSyncRegion()->getType()->isTokenTy() &&
+         "Sync region must be a token!");
+}
+
+ReattachInst::ReattachInst(BasicBlock *DetachContinue, Value *SyncRegion,
+                           Instruction *InsertBefore)
+    : Instruction(Type::getVoidTy(DetachContinue->getContext()),
+                  Instruction::Reattach,
+                  OperandTraits<ReattachInst>::op_end(this) - 2, 2,
+                  InsertBefore) {
+  Op<-1>() = SyncRegion;
+  Op<-2>() = DetachContinue;
+#ifndef NDEBUG
+  AssertOK();
+#endif
+}
+
+ReattachInst::ReattachInst(BasicBlock *DetachContinue, Value *SyncRegion,
+                           BasicBlock *InsertAtEnd)
+    : Instruction(Type::getVoidTy(DetachContinue->getContext()),
+                  Instruction::Reattach,
+                  OperandTraits<ReattachInst>::op_end(this) - 2, 2,
+                  InsertAtEnd) {
+  Op<-1>() = SyncRegion;
+  Op<-2>() = DetachContinue;
+#ifndef NDEBUG
+  AssertOK();
+#endif
+}
+
+ReattachInst::ReattachInst(const ReattachInst &RI)
+    : Instruction(Type::getVoidTy(RI.getContext()), Instruction::Reattach,
+                  OperandTraits<ReattachInst>::op_end(this) -
+                  RI.getNumOperands(),
+                  RI.getNumOperands()) {
+  Op<-1>() = RI.Op<-1>();
+  Op<-2>() = RI.Op<-2>();
+  assert(RI.getNumOperands() == 2 && "Reattach must have 2 operands!");
+  SubclassOptionalData = RI.SubclassOptionalData;
+}
+
+//===----------------------------------------------------------------------===//
+//                        SyncInst Implementation
+//===----------------------------------------------------------------------===//
+
+void SyncInst::AssertOK() {
+  assert(getSyncRegion()->getType()->isTokenTy() &&
+         "Sync region must be a token!");
+}
+
+SyncInst::SyncInst(BasicBlock *Continue, Value *SyncRegion,
+                   Instruction *InsertBefore)
+    : Instruction(Type::getVoidTy(Continue->getContext()), Instruction::Sync,
+                  OperandTraits<SyncInst>::op_end(this) - 2, 2,
+                  InsertBefore) {
+  Op<-1>() = SyncRegion;
+  Op<-2>() = Continue;
+#ifndef NDEBUG
+  AssertOK();
+#endif
+}
+
+SyncInst::SyncInst(BasicBlock *Continue, Value *SyncRegion,
+                   BasicBlock *InsertAtEnd)
+    : Instruction(Type::getVoidTy(Continue->getContext()), Instruction::Sync,
+                  OperandTraits<SyncInst>::op_end(this) - 2, 2,
+                  InsertAtEnd) {
+  Op<-1>() = SyncRegion;
+  Op<-2>() = Continue;
+#ifndef NDEBUG
+  AssertOK();
+#endif
+}
+
+
+SyncInst::SyncInst(const SyncInst &SI)
+    : Instruction(Type::getVoidTy(SI.getContext()), Instruction::Sync,
+                  OperandTraits<SyncInst>::op_end(this) - SI.getNumOperands(),
+                  SI.getNumOperands()) {
+  Op<-1>() = SI.Op<-1>();
+  Op<-2>() = SI.Op<-2>();
+  assert(SI.getNumOperands() == 2 && "Sync must have 2 operands!");
+  SubclassOptionalData = SI.SubclassOptionalData;
+}
+
+//===----------------------------------------------------------------------===//
 //                        BranchInst Implementation
 //===----------------------------------------------------------------------===//
 
@@ -4315,4 +4488,16 @@ FuncletPadInst *FuncletPadInst::cloneImpl() const {
 UnreachableInst *UnreachableInst::cloneImpl() const {
   LLVMContext &Context = getContext();
   return new UnreachableInst(Context);
+}
+
+DetachInst *DetachInst::cloneImpl() const {
+  return new(getNumOperands()) DetachInst(*this);
+}
+
+ReattachInst *ReattachInst::cloneImpl() const {
+  return new(getNumOperands()) ReattachInst(*this);
+}
+
+SyncInst *SyncInst::cloneImpl() const {
+  return new(getNumOperands()) SyncInst(*this);
 }

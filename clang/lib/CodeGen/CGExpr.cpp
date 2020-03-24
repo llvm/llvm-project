@@ -380,6 +380,11 @@ static Address createReferenceTemporary(CodeGenFunction &CGF,
     // promoted. This is easier on the optimizer and generally emits fewer
     // instructions.
     QualType Ty = Inner->getType();
+    if (CGF.IsSpawned) {
+      CGF.PushDetachScope();
+      return CGF.CurDetachScope->CreateDetachedMemTemp(
+          Ty, M->getStorageDuration(), "det.ref.tmp");
+    }
     if (CGF.CGM.getCodeGenOpts().MergeAllConstants &&
         (Ty->isArrayType() || Ty->isRecordType()) &&
         CGF.CGM.isTypeConstant(Ty, true))
@@ -500,6 +505,7 @@ EmitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *M) {
       EmitAnyExprToMem(E, Object, Qualifiers(), /*IsInit*/true);
     }
   } else {
+    if (!IsSpawned) {
     switch (M->getStorageDuration()) {
     case SD_Automatic:
       if (auto *Size = EmitLifetimeStart(
@@ -549,6 +555,7 @@ EmitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *M) {
 
     default:
       break;
+    }
     }
     EmitAnyExprToMem(E, Object, Qualifiers(), /*IsInit*/true);
   }
@@ -1297,12 +1304,19 @@ LValue CodeGenFunction::EmitLValue(const Expr *E) {
     return EmitCXXUuidofLValue(cast<CXXUuidofExpr>(E));
   case Expr::LambdaExprClass:
     return EmitAggExprToLValue(E);
+  case Expr::CilkSpawnExprClass:
+    return EmitCilkSpawnExprLValue(cast<CilkSpawnExpr>(E));
 
   case Expr::ExprWithCleanupsClass: {
     const auto *cleanups = cast<ExprWithCleanups>(E);
     enterFullExpression(cleanups);
     RunCleanupsScope Scope(*this);
+    bool CleanupsSaved = false;
+    if (IsSpawned)
+      CleanupsSaved = CurDetachScope->MaybeSaveCleanupsScope(&Scope);
     LValue LV = EmitLValue(cleanups->getSubExpr());
+    if (CleanupsSaved)
+      CurDetachScope->CleanupDetach();
     if (LV.isSimple()) {
       // Defend against branches out of gnu statement expressions surrounded by
       // cleanups.
@@ -2561,6 +2575,23 @@ LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
 
     // Check for captured variables.
     if (E->refersToEnclosingVariableOrCapture()) {
+
+      // kitsune: if we are generating a kokkos-based lambda construct
+      // we are likely going to eventually tarnsform it into a parallel 
+      // loop construct. Thus we have to carefully consider how we handle 
+      // captures within the lambda... 
+      // 
+      // kitsune FIXME: Not sure that everything we are doing here is
+      // sound...
+      if (InKokkosConstruct) {
+        auto I = LocalDeclMap.find(VD);
+        assert(I != LocalDeclMap.end());
+	if (VD->getType()->isReferenceType())
+	  return EmitLoadOfReferenceLValue(I->second, VD->getType(),
+					   AlignmentSource::Decl);
+	return MakeAddrLValue(I->second, T);
+      }
+
       VD = VD->getCanonicalDecl();
       if (auto *FD = LambdaCaptureFields.lookup(VD))
         return EmitCapturedFieldLValue(*this, FD, CXXABIThisValue);
@@ -4488,6 +4519,27 @@ RValue CodeGenFunction::EmitRValueForField(LValue LV,
 
 RValue CodeGenFunction::EmitCallExpr(const CallExpr *E,
                                      ReturnValueSlot ReturnValue) {
+  // kitsune: handle kokkos-centric details -- specifically we are
+  // dealing with a case where we transform a lambda construct into 
+  // a traditional loop construct -- thus our result is not a call expr 
+  // but essentially the removal of the call. 
+  // 
+  // FIXME: is this sound in all lambda use cases?  --PM 
+  // 
+  if (getLangOpts().Kokkos) {
+    const FunctionDecl *fdecl = E->getDirectCallee();
+    if (fdecl) {
+      std::string qname = fdecl->getQualifiedNameAsString();
+      if (qname == "Kokkos::parallel_for" || 
+          qname == "Kokkos::parallel_reduce") {
+	if (EmitKokkosConstruct(E))
+	  return RValue::get(nullptr);
+	// else fall through to standard C++ support. 
+      }
+    }
+  }
+  
+  
   // Builtins never have block type.
   if (E->getCallee()->getType()->isBlockPointerType())
     return EmitBlockCallExpr(E, ReturnValue);
@@ -4616,6 +4668,28 @@ LValue CodeGenFunction::EmitBinaryOperatorLValue(const BinaryOperator *E) {
     case Qualifiers::OCL_ExplicitNone:
     case Qualifiers::OCL_Weak:
       break;
+    }
+
+    if (isa<CilkSpawnExpr>(E->getRHS()->IgnoreImplicit())) {
+      // Emit the LHS before the RHS.
+      LValue LV = EmitCheckedLValue(E->getLHS(), TCK_Store);
+
+      // Set up to perform a detach.
+      assert(!IsSpawned &&
+             "_Cilk_spawn statement found in spawning environment.");
+      IsSpawned = true;
+
+      // Emit the expression.
+      RValue RV = EmitAnyExpr(E->getRHS());
+      EmitStoreThroughLValue(RV, LV);
+
+      // Finish the detach.
+      assert(CurDetachScope && CurDetachScope->IsDetachStarted() &&
+             "Processing _Cilk_spawn of expression did not produce a detach.");
+      PopDetachScope();
+      IsSpawned = false;
+
+      return LV;
     }
 
     RValue RV = EmitAnyExpr(E->getRHS());
@@ -4757,6 +4831,8 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType, const CGCallee &OrigCallee
   // function type or a block pointer type.
   assert(CalleeType->isFunctionPointerType() &&
          "Call must have function pointer type!");
+
+  IsSpawnedScope SpawnedScp(this);
 
   const Decl *TargetDecl =
       OrigCallee.getAbstractInfo().getCalleeDecl().getDecl();
@@ -4920,6 +4996,7 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType, const CGCallee &OrigCallee
     Callee.setFunctionPointer(CalleePtr);
   }
 
+  SpawnedScp.RestoreOldScope();
   llvm::CallBase *CallOrInvoke = nullptr;
   RValue Call = EmitCall(FnInfo, Callee, ReturnValue, Args, &CallOrInvoke,
                          E->getExprLoc());

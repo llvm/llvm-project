@@ -207,6 +207,18 @@ def MSDependentExistsStmt : Stmt;
 // OpenCL Extensions.
 def AsTypeExpr : DStmt<Expr>;
 
+// Tapir Extensions.
+def SyncStmt : Stmt;
+def SpawnStmt : Stmt;
+def ForallStmt : Stmt;
+def CXXForallRangeStmt : Stmt;
+
+// Cilk Plus Extensions.
+def CilkSyncStmt : Stmt;
+def CilkSpawnStmt : Stmt;
+def CilkSpawnExpr : DStmt<Expr>;
+def CilkForStmt : Stmt;
+
 // OpenMP Directives.
 def OMPExecutableDirective : Stmt<1>;
 def OMPLoopDirective : DStmt<OMPExecutableDirective, 1>;

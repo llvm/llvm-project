@@ -19,13 +19,16 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/ExprCilk.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/ExprOpenMP.h"
 #include "clang/AST/Stmt.h"
+#include "clang/AST/StmtCilk.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtObjC.h"
 #include "clang/AST/StmtOpenMP.h"
+#include "clang/AST/StmtTapir.h"
 #include "clang/Sema/Designator.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Ownership.h"
@@ -1338,6 +1341,35 @@ public:
                                   Inc, RParenLoc, Body);
   }
 
+  /// Build a new Cilk for statement.
+  ///
+  /// By default, performs semantic analysis to build the new statement.
+  /// Subclasses may override this routine to provide different behavior.
+  StmtResult RebuildCilkForStmt(SourceLocation ForLoc, SourceLocation LParenLoc,
+                                Stmt *Init, Stmt *Limit,
+                                Sema::ConditionResult InitCond, Stmt *Begin,
+                                Stmt *End,  Sema::ConditionResult Cond,
+                                Sema::FullExprArg Inc, SourceLocation RParenLoc,
+                                VarDecl *LoopVar, Stmt *Body) {
+    return getSema().ActOnCilkForStmt(ForLoc, LParenLoc, Init,
+                                      cast_or_null<DeclStmt>(Limit), InitCond,
+                                      cast_or_null<DeclStmt>(Begin),
+                                      cast_or_null<DeclStmt>(End), Cond, Inc,
+                                      RParenLoc, Body, LoopVar);
+  }
+
+  /// Build a new for statement.
+  ///
+  /// By default, performs semantic analysis to build the new statement.
+  /// Subclasses may override this routine to provide different behavior.
+  StmtResult RebuildForallStmt(SourceLocation ForLoc, SourceLocation LParenLoc,
+                            Stmt *Init, Sema::ConditionResult Cond,
+                            Sema::FullExprArg Inc, SourceLocation RParenLoc,
+                            Stmt *Body) {
+    return getSema().ActOnForallStmt(ForLoc, LParenLoc, Init, Cond,
+                                  Inc, RParenLoc, Body);
+  }
+
   /// Build a new goto statement.
   ///
   /// By default, performs semantic analysis to build the new statement.
@@ -1363,6 +1395,30 @@ public:
   /// Subclasses may override this routine to provide different behavior.
   StmtResult RebuildReturnStmt(SourceLocation ReturnLoc, Expr *Result) {
     return getSema().BuildReturnStmt(ReturnLoc, Result);
+  }
+
+  /// Build a new Cilk spawn statment.
+  ///
+  /// By default, performs semantic analysis to build the new expression.
+  /// Subclasses may override this routine to provide different behavior.
+  StmtResult RebuildCilkSpawnStmt(SourceLocation SpawnLoc, Stmt *S) {
+    return getSema().ActOnCilkSpawnStmt(SpawnLoc, S);
+  }
+
+  /// Build a new Cilk spawn expression.
+  ///
+  /// By default, performs semantic analysis to build the new expression.
+  /// Subclasses may override this routine to provide different behavior.
+  ExprResult RebuildCilkSpawnExpr(SourceLocation SpawnLoc, Expr *E) {
+    return getSema().ActOnCilkSpawnExpr(SpawnLoc, E);
+  }
+
+  /// Build a new spawn statment.
+  ///
+  /// By default, performs semantic analysis to build the new expression.
+  /// Subclasses may override this routine to provide different behavior.
+  StmtResult RebuildSpawnStmt(SourceLocation SpawnLoc, StringRef SV, Stmt *S) {
+    return getSema().ActOnSpawnStmt(SpawnLoc, SV, S);
   }
 
   /// Build a new declaration statement.
@@ -2105,6 +2161,42 @@ public:
                                           RParenLoc, Sema::BFRK_Rebuild);
   }
 
+  StmtResult RebuildCXXForallRangeStmt(SourceLocation ForLoc,
+                                    SourceLocation CoawaitLoc, Stmt *Init,
+                                    SourceLocation ColonLoc, Stmt *Range,
+                                    Stmt *Begin, Stmt *End, Expr *Cond,
+                                    Expr *Inc, Stmt *LoopVar,
+                                    SourceLocation RParenLoc) {
+    // If we've just learned that the range is actually an Objective-C
+    // collection, treat this as an Objective-C fast enumeration loop.
+    if (DeclStmt *RangeStmt = dyn_cast<DeclStmt>(Range)) {
+      if (RangeStmt->isSingleDecl()) {
+        if (VarDecl *RangeVar = dyn_cast<VarDecl>(RangeStmt->getSingleDecl())) {
+          if (RangeVar->isInvalidDecl())
+            return StmtError();
+
+          Expr *RangeExpr = RangeVar->getInit();
+          if (!RangeExpr->isTypeDependent() &&
+              RangeExpr->getType()->isObjCObjectPointerType()) {
+            // FIXME: Support init-statements in Objective-C++20 ranged for
+            // statement.
+            if (Init) {
+              return SemaRef.Diag(Init->getBeginLoc(),
+                                  diag::err_objc_for_range_init_stmt)
+                         << Init->getSourceRange();
+            }
+            return getSema().ActOnObjCForCollectionStmt(ForLoc, LoopVar,
+                                                        RangeExpr, RParenLoc);
+          }
+        }
+      }
+    }
+
+    return getSema().BuildCXXForallRangeStmt(ForLoc, CoawaitLoc, Init, ColonLoc,
+                                          Range, Begin, End, Cond, Inc, LoopVar,
+                                          RParenLoc, Sema::BFRK_Rebuild);
+  }
+
   /// Build a new C++0x range-based for statement.
   ///
   /// By default, performs semantic analysis to build the new statement.
@@ -2116,6 +2208,14 @@ public:
                                           Stmt *Nested) {
     return getSema().BuildMSDependentExistsStmt(KeywordLoc, IsIfExists,
                                                 QualifierLoc, NameInfo, Nested);
+  }
+
+  /// Attach body to a C++0x range-based for statement.
+  ///
+  /// By default, performs semantic analysis to finish the new statement.
+  /// Subclasses may override this routine to provide different behavior.
+  StmtResult FinishCXXForallRangeStmt(Stmt *ForRange, Stmt *Body) {
+    return getSema().FinishCXXForallRangeStmt(ForRange, Body);
   }
 
   /// Attach body to a C++0x range-based for statement.
@@ -7662,6 +7762,88 @@ TreeTransform<Derived>::TransformCXXForRangeStmt(CXXForRangeStmt *S) {
   return FinishCXXForRangeStmt(NewStmt.get(), Body.get());
 }
 
+template<typename Derived>
+StmtResult
+TreeTransform<Derived>::TransformCXXForallRangeStmt(CXXForallRangeStmt *S) {
+  StmtResult Init =
+      S->getInit() ? getDerived().TransformStmt(S->getInit()) : StmtResult();
+  if (Init.isInvalid())
+    return StmtError();
+
+  StmtResult Range = getDerived().TransformStmt(S->getRangeStmt());
+  if (Range.isInvalid())
+    return StmtError();
+
+  StmtResult Begin = getDerived().TransformStmt(S->getBeginStmt());
+  if (Begin.isInvalid())
+    return StmtError();
+  StmtResult End = getDerived().TransformStmt(S->getEndStmt());
+  if (End.isInvalid())
+    return StmtError();
+
+  ExprResult Cond = getDerived().TransformExpr(S->getCond());
+  if (Cond.isInvalid())
+    return StmtError();
+  if (Cond.get())
+    Cond = SemaRef.CheckBooleanCondition(S->getColonLoc(), Cond.get());
+  if (Cond.isInvalid())
+    return StmtError();
+  if (Cond.get())
+    Cond = SemaRef.MaybeCreateExprWithCleanups(Cond.get());
+
+  ExprResult Inc = getDerived().TransformExpr(S->getInc());
+  if (Inc.isInvalid())
+    return StmtError();
+  if (Inc.get())
+    Inc = SemaRef.MaybeCreateExprWithCleanups(Inc.get());
+
+  StmtResult LoopVar = getDerived().TransformStmt(S->getLoopVarStmt());
+  if (LoopVar.isInvalid())
+    return StmtError();
+
+  StmtResult NewStmt = S;
+  if (getDerived().AlwaysRebuild() ||
+      Init.get() != S->getInit() ||
+      Range.get() != S->getRangeStmt() ||
+      Begin.get() != S->getBeginStmt() ||
+      End.get() != S->getEndStmt() ||
+      Cond.get() != S->getCond() ||
+      Inc.get() != S->getInc() ||
+      LoopVar.get() != S->getLoopVarStmt()) {
+    NewStmt = getDerived().RebuildCXXForallRangeStmt(S->getForLoc(),
+                                                  S->getCoawaitLoc(), Init.get(),
+                                                  S->getColonLoc(), Range.get(),
+                                                  Begin.get(), End.get(),
+                                                  Cond.get(),
+                                                  Inc.get(), LoopVar.get(),
+                                                  S->getRParenLoc());
+    if (NewStmt.isInvalid())
+      return StmtError();
+  }
+
+  StmtResult Body = getDerived().TransformStmt(S->getBody());
+  if (Body.isInvalid())
+    return StmtError();
+
+  // Body has changed but we didn't rebuild the for-range statement. Rebuild
+  // it now so we have a new statement to attach the body to.
+  if (Body.get() != S->getBody() && NewStmt.get() == S) {
+    NewStmt = getDerived().RebuildCXXForRangeStmt(S->getForLoc(),
+                                                  S->getCoawaitLoc(), Init.get(),
+                                                  S->getColonLoc(), Range.get(),
+                                                  Begin.get(), End.get(),
+                                                  Cond.get(),
+                                                  Inc.get(), LoopVar.get(),
+                                                  S->getRParenLoc());
+    if (NewStmt.isInvalid())
+      return StmtError();
+  }
+
+  if (NewStmt.get() == S)
+    return S;
+
+  return FinishCXXForRangeStmt(NewStmt.get(), Body.get());
+}
 template<typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformMSDependentExistsStmt(
@@ -13252,6 +13434,204 @@ TreeTransform<Derived>::TransformCapturedStmt(CapturedStmt *S) {
   }
 
   return getSema().ActOnCapturedRegionEnd(Body.get());
+}
+
+template<typename Derived>
+StmtResult
+TreeTransform<Derived>::TransformCilkSpawnStmt(CilkSpawnStmt *S) {
+  StmtResult Child = getDerived().TransformStmt(S->getSpawnedStmt());
+  if (Child.isInvalid())
+    return StmtError();
+
+  if (!getDerived().AlwaysRebuild() &&
+      Child.get() == S->getSpawnedStmt())
+    return S;
+
+  return getDerived().RebuildCilkSpawnStmt(S->getSpawnLoc(), Child.get());
+}
+
+template<typename Derived>
+ExprResult
+TreeTransform<Derived>::TransformCilkSpawnExpr(CilkSpawnExpr *E) {
+  ExprResult SpawnedExpr = getDerived().TransformExpr(E->getSpawnedExpr());
+  if (SpawnedExpr.isInvalid())
+    return ExprError();
+
+  if (!getDerived().AlwaysRebuild() && SpawnedExpr.get() == E->getSpawnedExpr())
+    return E;
+
+  return getDerived().RebuildCilkSpawnExpr(E->getSpawnLoc(), SpawnedExpr.get());
+}
+
+template<typename Derived>
+StmtResult
+TreeTransform<Derived>::TransformCilkSyncStmt(CilkSyncStmt *S) {
+  return S;
+}
+
+template<typename Derived>
+StmtResult
+TreeTransform<Derived>::TransformCilkForStmt(CilkForStmt *S) {
+  // Transform the initialization statement
+  StmtResult Init = getDerived().TransformStmt(S->getInit());
+  if (Init.isInvalid())
+    return StmtError();
+
+  // Transform the limit statement
+  StmtResult Limit;
+  if (S->getLimitStmt()) {
+    Limit = getDerived().TransformStmt(S->getLimitStmt());
+    if (Limit.isInvalid())
+      return StmtError();
+  }
+
+  // Transform the init-condition statement
+  Sema::ConditionResult InitCond;
+  if (S->getInitCond()) {
+    InitCond = getDerived().TransformCondition(
+        S->getCilkForLoc(), nullptr, S->getInitCond(),
+        Sema::ConditionKind::Boolean);
+    if (InitCond.isInvalid())
+      return StmtError();
+  }
+
+  // Transform the begin statement
+  StmtResult Begin;
+  if (S->getBeginStmt()) {
+    Begin = getDerived().TransformStmt(S->getBeginStmt());
+    if (Begin.isInvalid())
+      return StmtError();
+  }
+
+  // Transform the end statement
+  StmtResult End;
+  if (S->getEndStmt()) {
+    End = getDerived().TransformStmt(S->getEndStmt());
+    if (End.isInvalid())
+      return StmtError();
+  }
+
+  // // In OpenMP loop region loop control variable must be captured and be
+  // // private. Perform analysis of first part (if any).
+  // if (getSema().getLangOpts().OpenMP && Init.isUsable())
+  //   getSema().ActOnOpenMPLoopInitialization(S->getCilkForLoc(), Init.get());
+
+  // Transform the condition
+  Sema::ConditionResult Cond = getDerived().TransformCondition(
+      S->getCilkForLoc(), nullptr, S->getCond(),
+      Sema::ConditionKind::Boolean);
+  if (Cond.isInvalid())
+    return StmtError();
+
+  // Transform the increment
+  ExprResult Inc = getDerived().TransformExpr(S->getInc());
+  if (Inc.isInvalid())
+    return StmtError();
+
+  Sema::FullExprArg FullInc(getSema().MakeFullDiscardedValueExpr(Inc.get()));
+  if (S->getInc() && !FullInc.get())
+    return StmtError();
+
+  // Transform the extracted loop-variable declaration
+  VarDecl *LoopVar = nullptr;
+  if (VarDecl *LV = S->getLoopVariable()) {
+    LoopVar = dyn_cast<VarDecl>(
+        getDerived().TransformDefinition(LV->getLocation(), LV));
+    if (!LoopVar)
+      return StmtError();
+  }
+
+  // Transform loop body
+  StmtResult Body = getDerived().TransformStmt(S->getBody());
+  if (Body.isInvalid())
+    return StmtError();
+
+  if (!getDerived().AlwaysRebuild() &&
+      Init.get() == S->getInit() &&
+      Limit.get() == S->getLimitStmt() &&
+      InitCond.get() == std::make_pair((clang::VarDecl*)nullptr,
+                                       S->getInitCond()) &&
+      Begin.get() == S->getBeginStmt() &&
+      End.get() == S->getEndStmt() &&
+      Cond.get() == std::make_pair((clang::VarDecl*)nullptr, S->getCond()) &&
+      Inc.get() == S->getInc() &&
+      LoopVar == S->getLoopVariable() &&
+      Body.get() == S->getBody())
+    return S;
+
+  return getDerived().RebuildCilkForStmt(
+      S->getCilkForLoc(), S->getLParenLoc(), Init.get(), Limit.get(),
+      InitCond, Begin.get(), End.get(), Cond, FullInc, S->getRParenLoc(),
+      LoopVar, Body.get());
+}
+
+template<typename Derived>
+StmtResult
+TreeTransform<Derived>::TransformForallStmt(ForallStmt *S) {
+  if (getSema().getLangOpts().OpenMP)
+    getSema().startOpenMPLoop();
+
+  // Transform the initialization statement
+  StmtResult Init = getDerived().TransformStmt(S->getInit());
+  if (Init.isInvalid())
+    return StmtError();
+
+  // In OpenMP loop region loop control variable must be captured and be
+  // private. Perform analysis of first part (if any).
+  if (getSema().getLangOpts().OpenMP && Init.isUsable())
+    getSema().ActOnOpenMPLoopInitialization(S->getForallLoc(), Init.get());
+
+  // Transform the condition
+  Sema::ConditionResult Cond = getDerived().TransformCondition(
+      S->getForallLoc(), S->getConditionVariable(), S->getCond(),
+      Sema::ConditionKind::Boolean);
+  if (Cond.isInvalid())
+    return StmtError();
+
+  // Transform the increment
+  ExprResult Inc = getDerived().TransformExpr(S->getInc());
+  if (Inc.isInvalid())
+    return StmtError();
+
+  Sema::FullExprArg FullInc(getSema().MakeFullDiscardedValueExpr(Inc.get()));
+  if (S->getInc() && !FullInc.get())
+    return StmtError();
+
+  // Transform the body
+  StmtResult Body = getDerived().TransformStmt(S->getBody());
+  if (Body.isInvalid())
+    return StmtError();
+
+  if (!getDerived().AlwaysRebuild() &&
+      Init.get() == S->getInit() &&
+      Cond.get() == std::make_pair(S->getConditionVariable(), S->getCond()) &&
+      Inc.get() == S->getInc() &&
+      Body.get() == S->getBody())
+    return S;
+
+  return getDerived().RebuildForallStmt(S->getForallLoc(), S->getLParenLoc(),
+                                     Init.get(), Cond, FullInc,
+                                     S->getRParenLoc(), Body.get());
+}
+
+template<typename Derived>
+StmtResult
+TreeTransform<Derived>::TransformSpawnStmt(SpawnStmt *S) {
+  StmtResult Child = getDerived().TransformStmt(S->getSpawnedStmt());
+  if (Child.isInvalid())
+    return StmtError();
+
+  if (!getDerived().AlwaysRebuild() &&
+      Child.get() == S->getSpawnedStmt())
+    return S;
+
+  return getDerived().RebuildSpawnStmt(S->getSpawnLoc(), S->getSyncVar(), Child.get());
+}
+
+template<typename Derived>
+StmtResult
+TreeTransform<Derived>::TransformSyncStmt(SyncStmt *S) {
+  return S; 
 }
 
 } // end namespace clang

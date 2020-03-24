@@ -259,7 +259,11 @@ void freebsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   bool NeedsSanitizerDeps = addSanitizerRuntimes(ToolChain, Args, CmdArgs);
   bool NeedsXRayDeps = addXRayRuntime(ToolChain, Args, CmdArgs);
+  bool NeedsCilkSanitizerDeps = needsCilkSanitizerDeps(ToolChain, Args);
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
+
+  addCSIRuntime(ToolChain, Args, CmdArgs);
+  addCilktoolRuntime(ToolChain, Args, CmdArgs);
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
     addOpenMPRuntime(CmdArgs, ToolChain, Args);
@@ -275,6 +279,8 @@ void freebsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       linkSanitizerRuntimeDeps(ToolChain, CmdArgs);
     if (NeedsXRayDeps)
       linkXRayRuntimeDeps(ToolChain, CmdArgs);
+    if (NeedsCilkSanitizerDeps)
+      linkCilkSanitizerRuntimeDeps(ToolChain, CmdArgs);
     // FIXME: For some reason GCC passes -lgcc and -lgcc_s before adding
     // the default system libraries. Just mimic this for now.
     if (Args.hasArg(options::OPT_pg))
@@ -416,6 +422,7 @@ SanitizerMask FreeBSD::getSupportedSanitizers() const {
   if (IsX86_64 || IsMIPS64) {
     Res |= SanitizerKind::Leak;
     Res |= SanitizerKind::Thread;
+    Res |= SanitizerKind::Cilk;
   }
   if (IsX86 || IsX86_64) {
     Res |= SanitizerKind::Function;

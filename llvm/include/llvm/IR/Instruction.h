@@ -555,6 +555,7 @@ public:
     // This list should be kept in sync with the list in mayWriteToMemory for
     // all opcodes which don't have a memory location.
     case Instruction::Fence:
+    case Instruction::Sync: // Like Instruction::Fence
     case Instruction::CatchPad:
     case Instruction::CatchRet:
     case Instruction::Call:

@@ -258,6 +258,15 @@ public:
   RetTy visitCatchSwitchInst(CatchSwitchInst &I) {
     return static_cast<SubClass *>(this)->visitTerminator(I);
   }
+  RetTy visitDetachInst(DetachInst &I) {
+    return static_cast<SubClass *>(this)->visitTerminator(I);
+  }
+  RetTy visitReattachInst(ReattachInst &I) {
+    return static_cast<SubClass *>(this)->visitTerminator(I);
+  }
+  RetTy visitSyncInst(SyncInst &I) {
+    return static_cast<SubClass *>(this)->visitTerminator(I);
+  }
   RetTy visitTerminator(Instruction &I)    { DELEGATE(Instruction);}
 
   // Next level propagators: If the user does not overload a specific

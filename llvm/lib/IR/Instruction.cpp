@@ -304,6 +304,9 @@ const char *Instruction::getOpcodeName(unsigned OpCode) {
   case CatchPad: return "catchpad";
   case CatchSwitch: return "catchswitch";
   case CallBr: return "callbr";
+  case Detach: return "detach";
+  case Reattach: return "reattach";
+  case Sync:   return "sync";
 
   // Standard unary operators...
   case FNeg: return "fneg";
@@ -516,6 +519,7 @@ bool Instruction::mayReadFromMemory() const {
   case Instruction::VAArg:
   case Instruction::Load:
   case Instruction::Fence: // FIXME: refine definition of mayReadFromMemory
+  case Instruction::Sync: // Like Instruction::Fence
   case Instruction::AtomicCmpXchg:
   case Instruction::AtomicRMW:
   case Instruction::CatchPad:
@@ -534,6 +538,7 @@ bool Instruction::mayWriteToMemory() const {
   switch (getOpcode()) {
   default: return false;
   case Instruction::Fence: // FIXME: refine definition of mayWriteToMemory
+  case Instruction::Sync: // Like Instruction::Fence
   case Instruction::Store:
   case Instruction::VAArg:
   case Instruction::AtomicCmpXchg:

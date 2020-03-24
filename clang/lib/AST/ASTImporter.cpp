@@ -535,6 +535,12 @@ namespace clang {
     ExpectedStmt VisitObjCAtSynchronizedStmt(ObjCAtSynchronizedStmt *S);
     ExpectedStmt VisitObjCAtThrowStmt(ObjCAtThrowStmt *S);
     ExpectedStmt VisitObjCAutoreleasePoolStmt(ObjCAutoreleasePoolStmt *S);
+    ExpectedStmt VisitCilkSpawnStmt(CilkSpawnStmt *S);
+    ExpectedStmt VisitCilkSyncStmt(CilkSyncStmt *S);
+    ExpectedStmt VisitCilkForStmt(CilkForStmt *S);
+    ExpectedStmt VisitForallStmt(ForallStmt *S);
+    ExpectedStmt VisitSpawnStmt(SpawnStmt *S);
+    ExpectedStmt VisitSyncStmt(SyncStmt *S);
 
     // Importing expressions
     ExpectedStmt VisitExpr(Expr *E);
@@ -6116,6 +6122,93 @@ ExpectedStmt ASTNodeImporter::VisitObjCAutoreleasePoolStmt(
     return ToSubStmtOrErr.takeError();
   return new (Importer.getToContext()) ObjCAutoreleasePoolStmt(*ToAtLocOrErr,
                                                                *ToSubStmtOrErr);
+}
+
+ExpectedStmt ASTNodeImporter::VisitCilkSpawnStmt(CilkSpawnStmt *S) {
+  ExpectedSLoc ToSpawnLocOrErr = import(S->getSpawnLoc());
+  if (!ToSpawnLocOrErr)
+    return ToSpawnLocOrErr.takeError();
+  ExpectedStmt ToChildOrErr = import(S->getSpawnedStmt());
+  if (!ToChildOrErr)
+    return ToChildOrErr.takeError();
+  return new (Importer.getToContext()) CilkSpawnStmt(*ToSpawnLocOrErr,
+                                                     *ToChildOrErr);
+}
+
+ExpectedStmt ASTNodeImporter::VisitSpawnStmt(SpawnStmt *S) {
+  ExpectedSLoc ToSpawnLocOrErr = import(S->getSpawnLoc());
+  if (!ToSpawnLocOrErr)
+    return ToSpawnLocOrErr.takeError();
+  ExpectedStmt ToChildOrErr = import(S->getSpawnedStmt());
+  if (!ToChildOrErr)
+    return ToChildOrErr.takeError();
+  StringRef SV = S->getSyncVar();
+  return new (Importer.getToContext()) SpawnStmt(*ToSpawnLocOrErr, SV,
+                                                     *ToChildOrErr);
+}
+
+ExpectedStmt ASTNodeImporter::VisitCilkSyncStmt(CilkSyncStmt *S) {
+  ExpectedSLoc ToSyncLocOrErr = import(S->getSyncLoc());
+  if (!ToSyncLocOrErr)
+    return ToSyncLocOrErr.takeError();
+  return new (Importer.getToContext()) CilkSyncStmt(*ToSyncLocOrErr);
+}
+
+ExpectedStmt ASTNodeImporter::VisitSyncStmt(SyncStmt *S) {
+  ExpectedSLoc ToSyncLocOrErr = import(S->getSyncLoc());
+  StringRef SV = S->getSyncVar();
+  if (!ToSyncLocOrErr)
+    return ToSyncLocOrErr.takeError();
+  return new (Importer.getToContext()) SyncStmt(*ToSyncLocOrErr, SV);
+}
+
+ExpectedStmt ASTNodeImporter::VisitCilkForStmt(CilkForStmt *S) {
+  auto Imp = importSeq(
+      S->getInit(), S->getLimitStmt(), S->getInitCond(), S->getBeginStmt(),
+      S->getEndStmt(), S->getCond(), /*S->getConditionVariable(),*/ S->getInc(),
+      S->getLoopVariable(), S->getBody(), S->getCilkForLoc(), S->getLParenLoc(),
+      S->getRParenLoc());
+  if (!Imp)
+    return Imp.takeError();
+
+  Stmt *ToInit;
+  DeclStmt *ToLimitStmt, *ToBeginStmt, *ToEndStmt;
+  Expr *ToInitCond, *ToCond, *ToInc;
+  // VarDecl *ToConditionVariable;
+  VarDecl *ToLoopVariable;
+  Stmt *ToBody;
+  SourceLocation ToCilkForLoc, ToLParenLoc, ToRParenLoc;
+  std::tie(
+      ToInit, ToLimitStmt, ToInitCond, ToBeginStmt, ToEndStmt, ToCond,
+      /*ToConditionVariable,*/ ToInc, ToLoopVariable, ToBody,
+      ToCilkForLoc, ToLParenLoc, ToRParenLoc) = *Imp;
+
+  return new (Importer.getToContext()) CilkForStmt(
+      Importer.getToContext(), ToInit, ToLimitStmt, ToInitCond, ToBeginStmt,
+      ToEndStmt, ToCond, /*ToConditionVariable,*/ ToInc,
+      ToLoopVariable, ToBody, ToCilkForLoc, ToLParenLoc, ToRParenLoc);
+}
+
+ExpectedStmt ASTNodeImporter::VisitForallStmt(ForallStmt *S) {
+  auto Imp = importSeq(
+      S->getInit(), S->getCond(), S->getConditionVariable(), S->getInc(),
+      S->getBody(), S->getForallLoc(), S->getLParenLoc(), S->getRParenLoc());
+  if (!Imp)
+    return Imp.takeError();
+
+  Stmt *ToInit;
+  Expr *ToCond, *ToInc;
+  VarDecl *ToConditionVariable;
+  Stmt *ToBody;
+  SourceLocation ToForallLoc, ToLParenLoc, ToRParenLoc;
+  std::tie(
+      ToInit, ToCond, ToConditionVariable,  ToInc, ToBody, ToForallLoc,
+      ToLParenLoc, ToRParenLoc) = *Imp;
+
+  return new (Importer.getToContext()) ForallStmt(
+      Importer.getToContext(),
+      ToInit, ToCond, ToConditionVariable, ToInc, ToBody, ToForallLoc, ToLParenLoc,
+      ToRParenLoc);
 }
 
 //----------------------------------------------------------------------------

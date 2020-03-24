@@ -228,6 +228,7 @@ CODEGENOPT(TimePasses        , 1, 0) ///< Set when -ftime-report is enabled.
 CODEGENOPT(TimeTrace         , 1, 0) ///< Set when -ftime-trace is enabled.
 CODEGENOPT(UnrollLoops       , 1, 0) ///< Control whether loops are unrolled.
 CODEGENOPT(RerollLoops       , 1, 0) ///< Control whether loops are rerolled.
+CODEGENOPT(StripmineLoop     , 1, 0) ///< Run Tapir loop stripmining.
 CODEGENOPT(NoUseJumpTables   , 1, 0) ///< Set when -fno-jump-tables is enabled.
 CODEGENOPT(UnsafeFPMath      , 1, 0) ///< Allow unsafe floating point optzns.
 CODEGENOPT(UnwindTables      , 1, 0) ///< Emit unwind tables.
@@ -311,6 +312,9 @@ ENUM_CODEGENOPT(Inlining, InliningMethod, 2, NormalInlining)
 
 // Vector functions library to use.
 ENUM_CODEGENOPT(VecLib, VectorLibrary, 2, NoLibrary)
+
+/// Tapir target runtime library to use.
+ENUM_CODEGENOPT(TapirTarget, TapirTargetID, 8, TapirTargetID::Last_TapirTargetID)
 
 /// The default TLS model to use.
 ENUM_CODEGENOPT(DefaultTLSModel, TLSModel, 2, GeneralDynamicTLSModel)

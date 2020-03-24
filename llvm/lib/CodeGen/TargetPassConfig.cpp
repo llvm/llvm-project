@@ -658,6 +658,9 @@ void TargetPassConfig::addIRPasses() {
   // Make sure that no unreachable blocks are instruction selected.
   addPass(createUnreachableBlockEliminationPass());
 
+  // Make sure there are no remaining Tapir instructions.
+  addPass(createTapirCleanupPass());
+
   // Prepare expensive constants for SelectionDAG.
   if (getOptLevel() != CodeGenOpt::None && !DisableConstantHoisting)
     addPass(createConstantHoistingPass());

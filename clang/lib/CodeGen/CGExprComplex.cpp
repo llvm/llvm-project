@@ -45,9 +45,16 @@ class ComplexExprEmitter
   CGBuilderTy &Builder;
   bool IgnoreReal;
   bool IgnoreImag;
+  bool DoSpawnedInit = false;
+  LValue LValueToSpawnInit;
 public:
   ComplexExprEmitter(CodeGenFunction &cgf, bool ir=false, bool ii=false)
     : CGF(cgf), Builder(CGF.Builder), IgnoreReal(ir), IgnoreImag(ii) {
+  }
+  ComplexExprEmitter(CodeGenFunction &cgf, LValue LValueToSpawnInit,
+                     bool ir=false, bool ii=false)
+    : CGF(cgf), Builder(CGF.Builder), IgnoreReal(ir), IgnoreImag(ii),
+      DoSpawnedInit(true), LValueToSpawnInit(LValueToSpawnInit) {
   }
 
 
@@ -120,6 +127,22 @@ public:
   }
   ComplexPairTy VisitUnaryCoawait(const UnaryOperator *E) {
     return Visit(E->getSubExpr());
+  }
+  ComplexPairTy VisitCilkSpawnExpr(CilkSpawnExpr *CSE) {
+    CGF.IsSpawned = true;
+    CGF.PushDetachScope();
+    ComplexPairTy C = Visit(CSE->getSpawnedExpr());
+    if (DoSpawnedInit) {
+      assert(CGF.CurDetachScope && CGF.CurDetachScope->IsDetachStarted() &&
+             "Processing _Cilk_spawn of expression did not produce detach.");
+      LValue LV = LValueToSpawnInit;
+      EmitStoreOfComplex(C, LV, /*init*/ true);
+
+      // Pop the detach scope
+      CGF.IsSpawned = false;
+      CGF.PopDetachScope();
+    }
+    return C;
   }
 
   ComplexPairTy emitConstant(const CodeGenFunction::ConstantEmission &Constant,
@@ -223,7 +246,16 @@ public:
   ComplexPairTy VisitExprWithCleanups(ExprWithCleanups *E) {
     CGF.enterFullExpression(E);
     CodeGenFunction::RunCleanupsScope Scope(CGF);
+    // If this expression is spawned, associate these cleanups with the detach
+    // scope.
+    bool CleanupsSaved = false;
+    if (CGF.IsSpawned)
+      CleanupsSaved = CGF.CurDetachScope->MaybeSaveCleanupsScope(&Scope);
     ComplexPairTy Vals = Visit(E->getSubExpr());
+    // If this expression was spawned, then we must clean up the detach before
+    // forcing the scope's cleanup.
+    if (CleanupsSaved)
+      CGF.CurDetachScope->CleanupDetach();
     // Defend against dominance problems caused by jumps out of expression
     // evaluation through the shared cleanup block.
     Scope.ForceCleanup({&Vals.first, &Vals.second});
@@ -973,6 +1005,31 @@ LValue ComplexExprEmitter::EmitBinAssignLValue(const BinaryOperator *E,
   TestAndClearIgnoreReal();
   TestAndClearIgnoreImag();
 
+  if (isa<CilkSpawnExpr>(E->getRHS()->IgnoreImplicit())) {
+    assert(!CGF.IsSpawned &&
+           "_Cilk_spawn statement found in spawning environment.");
+
+    // Compute the address to store into.
+    LValue LHS = CGF.EmitLValue(E->getLHS());
+
+    // Prepare to detach.
+    CGF.IsSpawned = true;
+
+    // Emit the spawned RHS.
+    Val = Visit(E->getRHS());
+
+    // Store the result value into the LHS lvalue.
+    EmitStoreOfComplex(Val, LHS, /*isInit*/ false);
+
+    // Finish the detach.
+    assert(CGF.CurDetachScope && CGF.CurDetachScope->IsDetachStarted() &&
+           "Processing _Cilk_spawn of expression did not produce detach.");
+    CGF.IsSpawned = false;
+    CGF.PopDetachScope();
+
+    return LHS;
+  }
+
   // Emit the RHS.  __block variables need the RHS evaluated first.
   Val = Visit(E->getRHS());
 
@@ -1112,6 +1169,10 @@ void CodeGenFunction::EmitComplexExprIntoLValue(const Expr *E, LValue dest,
                                                 bool isInit) {
   assert(E && getComplexType(E->getType()) &&
          "Invalid complex expression to emit");
+  if (isa<CilkSpawnExpr>(E) && isInit) {
+    ComplexExprEmitter(*this, dest).Visit(const_cast<Expr*>(E));
+    return;
+  }
   ComplexExprEmitter Emitter(*this);
   ComplexPairTy Val = Emitter.Visit(const_cast<Expr*>(E));
   Emitter.EmitStoreOfComplex(Val, dest, isInit);

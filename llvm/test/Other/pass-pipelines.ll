@@ -59,6 +59,8 @@
 ; CHECK-O2-NOT: Manager
 ; CHECK-O2: Combine redundant instructions
 ; CHECK-O2-NOT: Manager
+; To handle Tapir, we now check the task information and try to
+; simplify induction variables.
 ; CHECK-O2: Loop Pass Manager
 ; CHECK-O2-NOT: Manager
 ; FIXME: It isn't clear that we need yet another loop pass pipeline
@@ -82,6 +84,10 @@
 ; Next is the late function pass pipeline.
 ; CHECK-O2: FunctionPass Manager
 ; CHECK-O2-NOT: Manager
+; CHECK-O2: Loop Pass Manager
+; CHECK-O2-NEXT: Stripmine Tapir loops
+; CHECK-O2: Loop Pass Manager
+; CHECK-O2-NEXT: Simplify loop CFG
 ; We rotate loops prior to vectorization.
 ; CHECK-O2: Loop Pass Manager
 ; CHECK-O2-NEXT: Rotate Loops
