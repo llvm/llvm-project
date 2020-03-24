@@ -27,4 +27,4 @@ add_llvm_tool(llc
   SUPPORT_PLUGINS
   )
 
-export_executable_symbols(llc)
+export_executable_symbols_for_plugins(llc)
