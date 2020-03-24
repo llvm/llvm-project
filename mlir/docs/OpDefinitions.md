@@ -180,6 +180,10 @@ values, including two categories:
    shape of type. This is mostly used for convenience interface generation or
    interaction with other frameworks/translation.
 
+   All derived attributes should be materializable as an Attribute. That is,
+   even though they are not materialized, it should be possible to store as
+   an attribute.
+
 Both operands and attributes are specified inside the `dag`-typed `arguments`,
 led by `ins`:
 
