@@ -86,6 +86,8 @@ class SymbolizerProcess {
   // Customizable by subclasses.
   virtual bool StartSymbolizerSubprocess();
   virtual bool ReadFromSymbolizer(char *buffer, uptr max_length);
+  // Return the environment to run the symbolizer in.
+  virtual char **GetEnvP() { return GetEnviron(); }
 
  private:
   virtual bool ReachedEndOfOutput(const char *buffer, uptr length) const {
