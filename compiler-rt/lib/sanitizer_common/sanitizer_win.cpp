@@ -1064,7 +1064,8 @@ char **GetEnviron() {
 }
 
 pid_t StartSubprocess(const char *program, const char *const argv[],
-                      fd_t stdin_fd, fd_t stdout_fd, fd_t stderr_fd) {
+                      const char *const envp[], fd_t stdin_fd, fd_t stdout_fd,
+                      fd_t stderr_fd) {
   // FIXME: implement on this platform
   // Should be implemented based on
   // SymbolizerProcess::StarAtSymbolizerSubprocess
