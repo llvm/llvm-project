@@ -146,6 +146,13 @@ public:
     return static_cast<Intrinsic::ID>(0);
   }
 
+  /// Return if this call is to an intrinsic.
+  bool isIntrinsic() const {
+    if (auto *F = getCalledFunction())
+      return F->isIntrinsic();
+    return false;
+  }
+
   /// Determine whether the passed iterator points to the callee operand's Use.
   bool isCallee(Value::const_user_iterator UI) const {
     return isCallee(&UI.getUse());

@@ -491,7 +491,7 @@ void ConstantHoistingPass::collectConstantCandidates(
     // take constant variables is lower than `TargetTransformInfo::TCC_Basic`.
     // So it's safe for us to collect constant candidates from all
     // IntrinsicInsts.
-    if (canReplaceOperandWithVariable(Inst, Idx) || isa<IntrinsicInst>(Inst)) {
+    if (canReplaceOperandWithVariable(Inst, Idx)) {
       collectConstantCandidates(ConstCandMap, Inst, Idx);
     }
   } // end of for all operands
