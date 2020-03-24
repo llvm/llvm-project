@@ -520,6 +520,49 @@ llvm::Optional<HoverInfo> getHoverContents(const Expr *E, ParsedAST &AST) {
   }
   return llvm::None;
 }
+
+bool isParagraphLineBreak(llvm::StringRef Str, size_t LineBreakIndex) {
+  return Str.substr(LineBreakIndex + 1)
+      .drop_while([](auto C) { return C == ' ' || C == '\t'; })
+      .startswith("\n");
+};
+
+bool isPunctuationLineBreak(llvm::StringRef Str, size_t LineBreakIndex) {
+  constexpr llvm::StringLiteral Punctuation = R"txt(.:,;!?)txt";
+
+  return LineBreakIndex > 0 && Punctuation.contains(Str[LineBreakIndex - 1]);
+};
+
+bool isFollowedByHardLineBreakIndicator(llvm::StringRef Str,
+                                        size_t LineBreakIndex) {
+  // '-'/'*' md list, '@'/'\' documentation command, '>' md blockquote,
+  // '#' headings, '`' code blocks
+  constexpr llvm::StringLiteral LinbreakIdenticators = R"txt(-*@\>#`)txt";
+
+  auto NextNonSpaceCharIndex = Str.find_first_not_of(' ', LineBreakIndex + 1);
+
+  if (NextNonSpaceCharIndex == llvm::StringRef::npos) {
+    return false;
+  }
+
+  auto FollowedBySingleCharIndicator =
+      LinbreakIdenticators.find(Str[NextNonSpaceCharIndex]) !=
+      llvm::StringRef::npos;
+
+  auto FollowedByNumberedListIndicator =
+      llvm::isDigit(Str[NextNonSpaceCharIndex]) &&
+      NextNonSpaceCharIndex + 1 < Str.size() &&
+      (Str[NextNonSpaceCharIndex + 1] == '.' ||
+       Str[NextNonSpaceCharIndex + 1] == ')');
+
+  return FollowedBySingleCharIndicator || FollowedByNumberedListIndicator;
+};
+
+bool isHardLineBreak(llvm::StringRef Str, size_t LineBreakIndex) {
+  return isPunctuationLineBreak(Str, LineBreakIndex) ||
+         isFollowedByHardLineBreakIndicator(Str, LineBreakIndex);
+}
+
 } // namespace
 
 llvm::Optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
@@ -652,7 +695,7 @@ markup::Document HoverInfo::present() const {
   }
 
   if (!Documentation.empty())
-    Output.addParagraph().appendText(Documentation);
+    parseDocumentation(Documentation, Output);
 
   if (!Definition.empty()) {
     Output.addRuler();
@@ -673,6 +716,45 @@ markup::Document HoverInfo::present() const {
     Output.addCodeBlock(ScopeComment + Definition);
   }
   return Output;
+}
+
+void parseDocumentation(llvm::StringRef Input, markup::Document &Output) {
+
+  constexpr auto WhiteSpaceChars = "\t\n\v\f\r ";
+
+  auto TrimmedInput = Input.trim();
+
+  std::string CurrentLine;
+
+  for (size_t CharIndex = 0; CharIndex < TrimmedInput.size();) {
+    if (TrimmedInput[CharIndex] == '\n') {
+      // Trim whitespace infront of linebreak
+      const auto LastNonSpaceCharIndex =
+          CurrentLine.find_last_not_of(WhiteSpaceChars) + 1;
+      CurrentLine.erase(LastNonSpaceCharIndex);
+
+      if (isParagraphLineBreak(TrimmedInput, CharIndex) ||
+          isHardLineBreak(TrimmedInput, CharIndex)) {
+        // FIXME: maybe distinguish between line breaks and paragraphs
+        Output.addParagraph().appendText(CurrentLine);
+        CurrentLine = "";
+      } else {
+        // Ommit linebreak
+        CurrentLine += ' ';
+      }
+
+      CharIndex++;
+      // After a linebreak always remove spaces to avoid 4 space markdown code
+      // blocks, also skip all additional linebreaks since they have no effect
+      CharIndex = TrimmedInput.find_first_not_of(WhiteSpaceChars, CharIndex);
+    } else {
+      CurrentLine += TrimmedInput[CharIndex];
+      CharIndex++;
+    }
+  }
+  if (!CurrentLine.empty()) {
+    Output.addParagraph().appendText(CurrentLine);
+  }
 }
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
