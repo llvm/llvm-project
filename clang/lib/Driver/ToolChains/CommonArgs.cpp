@@ -504,6 +504,42 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   addX86AlignBranchArgs(D, Args, CmdArgs, /*IsLTO=*/true);
 }
 
+std::string tools::FindDebugInLibraryPath() {
+  const char *DirList = ::getenv("LIBRARY_PATH");
+  if (!DirList)
+    return "";
+  StringRef Dirs(DirList);
+  if (Dirs.empty()) // Empty string should not add '.'.
+    return "";
+
+  StringRef::size_type Delim;
+  while ((Delim = Dirs.find(llvm::sys::EnvPathSeparator)) != StringRef::npos) {
+    if (Delim != 0) { // Leading colon.
+      if (Dirs.substr(0, Delim).endswith("lib-debug"))
+        return Dirs.substr(0, Delim).str();
+    }
+    Dirs = Dirs.substr(Delim + 1);
+  }
+  if (!Dirs.empty()) {
+    if (Dirs.endswith("lib-debug"))
+      return Dirs.str();
+  }
+  return "";
+}
+
+void tools::addOpenMPRuntimeSpecificRPath(const ToolChain &TC, const ArgList &Args,
+					  ArgStringList &CmdArgs) {
+  const Driver &D = TC.getDriver();
+  std::string CandidateRPath = FindDebugInLibraryPath();
+  if (CandidateRPath.empty())
+    CandidateRPath = D.Dir + "/../lib";
+
+  if (TC.getVFS().exists(CandidateRPath)) {
+    CmdArgs.push_back("-rpath");
+    CmdArgs.push_back(Args.MakeArgString(CandidateRPath.c_str()));
+  }
+}
+
 void tools::addArchSpecificRPath(const ToolChain &TC, const ArgList &Args,
                                  ArgStringList &CmdArgs) {
   if (!Args.hasFlag(options::OPT_frtlib_add_rpath,
@@ -549,6 +585,9 @@ bool tools::addOpenMPRuntime(ArgStringList &CmdArgs, const ToolChain &TC,
 
   if (ForceStaticHostRuntime)
     CmdArgs.push_back("-Bdynamic");
+
+  if (RTKind == Driver::OMPRT_OMP)
+    addOpenMPRuntimeSpecificRPath(TC, Args, CmdArgs);
 
   if (RTKind == Driver::OMPRT_GOMP && GompNeedsRT)
       CmdArgs.push_back("-lrt");

@@ -50,8 +50,13 @@ const char *Action::getClassName(ActionClass AC) {
 
 void Action::propagateDeviceOffloadInfo(OffloadKind OKind, const char *OArch) {
   // Offload action set its own kinds on their dependences.
-  if (Kind == OffloadClass)
+  // But we still need to preserve OffloadingDeviceKind and OffloadingArch
+  // where toplevel action is an unbundle.
+  if (Kind == OffloadClass) {
+    OffloadingDeviceKind = OKind;
+    OffloadingArch = OArch;
     return;
+  }
   // Unbundling actions use the host kinds.
   if (Kind == OffloadUnbundlingJobClass)
     return;

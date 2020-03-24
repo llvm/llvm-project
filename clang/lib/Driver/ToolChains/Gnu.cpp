@@ -507,6 +507,12 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     ToolChain.addFastMathRuntimeIfAvailable(Args, CmdArgs);
   }
 
+  // Make sure openmp finds it libomp.so before all others.
+  if (JA.isHostOffloading(Action::OFK_OpenMP)) {
+    addDirectoryList(Args, CmdArgs, "-L", "LIBRARY_PATH");
+    CmdArgs.push_back(Args.MakeArgString("-L" + D.Dir + "/../lib"));
+  }
+
   Args.AddAllArgs(CmdArgs, options::OPT_L);
   Args.AddAllArgs(CmdArgs, options::OPT_u);
 
