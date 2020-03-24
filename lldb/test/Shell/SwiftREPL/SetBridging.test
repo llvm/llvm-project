@@ -31,6 +31,30 @@ let s2: Set<NSObject> = [NSNumber(value: 1)]
 // SET-NEXT:    [0] = Int64(1)
 // SET-NEXT:  }
 
+// Test formatters in Objective-C context.
+
+// Empty singleton
+let s_objc1 = NSArray(object: [] as Set<NSNumber> as NSSet)
+// SET-LABEL: s_objc1: NSArray = 1 element {
+// SET-NEXT:    [0] = 0 values
+// SET-NEXT:  }
+
+// Verbatim bridging
+let s_objc2 = NSArray(object: [1] as Set<NSNumber> as NSSet)
+// SET-LABEL: s_objc2: NSArray = 1 element {
+// SET-NEXT:    [0] = 1 value {
+// SET-NEXT:      [0] = Int64(1)
+// SET-NEXT:    }
+// SET-NEXT:  }
+
+// Non-verbatim bridging
+let s_objc3 = NSArray(object: [1] as Set<Int> as NSSet)
+// SET-LABEL: s_objc3: NSArray = 1 element {
+// SET-NEXT:    [0] = 1 value {
+// SET-NEXT:      [0] = 1
+// SET-NEXT:    }
+// SET-NEXT:  }
+
 // Verbatim bridging from Swift to Objective-C
 let s2b = s2 as NSSet
 // SET-LABEL: s2b: {{(_HashableTypedNativeSetStorage|_SetStorage)}}<NSObject> = 1 value {
@@ -57,28 +81,4 @@ let s3b2 = s3 as! Set<Int>
 // SET-LABEL: s3b2: Set<Int> = 2 values {
 // SET-NEXT:    [0] = {{[12]}}
 // SET-NEXT:    [1] = {{[12]}}
-// SET-NEXT:  }
-
-// Test formatters in Objective-C context.
-
-// Empty singleton
-let s4 = NSArray(object: [] as Set<NSNumber> as NSSet)
-// SET-LABEL: s4: NSArray = 1 element {
-// SET-NEXT:    [0] = 0 values
-// SET-NEXT:  }
-
-// Verbatim bridging
-let s5 = NSArray(object: [1] as Set<NSNumber> as NSSet)
-// SET-LABEL: s5: NSArray = 1 element {
-// SET-NEXT:    [0] = 1 value {
-// SET-NEXT:      [0] = Int64(1)
-// SET-NEXT:    }
-// SET-NEXT:  }
-
-// Non-verbatim bridging
-let s6 = NSArray(object: [1] as Set<Int> as NSSet)
-// SET-LABEL: s6: NSArray = 1 element {
-// SET-NEXT:    [0] = 1 value {
-// SET-NEXT:      [0] = 1
-// SET-NEXT:    }
 // SET-NEXT:  }
