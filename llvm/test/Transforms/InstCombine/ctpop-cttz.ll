@@ -78,7 +78,7 @@ define i32 @ctpop2_multiuse(i32 %0) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = xor i32 [[TMP0:%.*]], -1
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[TMP0]], -1
 ; CHECK-NEXT:    [[TMP4:%.*]] = and i32 [[TMP3]], [[TMP2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[TMP4]]), !range !0
+; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.cttz.i32(i32 [[TMP0]], i1 false), !range !0
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i32 [[TMP5]], [[TMP4]]
 ; CHECK-NEXT:    ret i32 [[TMP6]]
 ;
