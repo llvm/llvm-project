@@ -305,9 +305,7 @@ private:
 
 // Misc test types
 
-#define CONCAT2(LHS, RHS) LHS##RHS
-#define CONCAT(LHS, RHS) CONCAT2(LHS, RHS)
-#define MKSTR(Str) {Str, CONCAT(L, Str), CONCAT(u, Str), CONCAT(U, Str)}
+#define MKSTR(Str) {Str, TEST_CONCAT(L, Str), TEST_CONCAT(u, Str), TEST_CONCAT(U, Str)}
 
 struct MultiStringType {
   const char* s;
