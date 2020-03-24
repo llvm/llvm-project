@@ -10,7 +10,7 @@
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 
-TEST_F(GISelMITest, TestKnownBitsCst) {
+TEST_F(AArch64GISelMITest, TestKnownBitsCst) {
   StringRef MIRString = "  %3:_(s8) = G_CONSTANT i8 1\n"
                         "  %4:_(s8) = COPY %3\n";
   setUp(MIRString);
@@ -30,7 +30,7 @@ TEST_F(GISelMITest, TestKnownBitsCst) {
   EXPECT_EQ(Res.Zero.getZExtValue(), Res2.Zero.getZExtValue());
 }
 
-TEST_F(GISelMITest, TestKnownBitsCstWithClass) {
+TEST_F(AArch64GISelMITest, TestKnownBitsCstWithClass) {
   StringRef MIRString = "  %10:gpr32 = MOVi32imm 1\n"
                         "  %4:_(s32) = COPY %10\n";
   setUp(MIRString);
@@ -58,7 +58,7 @@ TEST_F(GISelMITest, TestKnownBitsCstWithClass) {
 
 // Check that we are able to track bits through PHIs
 // and get the intersections of everything we know on each operand.
-TEST_F(GISelMITest, TestKnownBitsCstPHI) {
+TEST_F(AArch64GISelMITest, TestKnownBitsCstPHI) {
   StringRef MIRString = "  bb.10:\n"
                         "  %10:_(s8) = G_CONSTANT i8 3\n"
                         "  %11:_(s1) = G_IMPLICIT_DEF\n"
@@ -92,7 +92,7 @@ TEST_F(GISelMITest, TestKnownBitsCstPHI) {
 // Check that we report we know nothing when we hit a
 // non-generic register.
 // Note: this could be improved though!
-TEST_F(GISelMITest, TestKnownBitsCstPHIToNonGenericReg) {
+TEST_F(AArch64GISelMITest, TestKnownBitsCstPHIToNonGenericReg) {
   StringRef MIRString = "  bb.10:\n"
                         "  %10:gpr32 = MOVi32imm 3\n"
                         "  %11:_(s1) = G_IMPLICIT_DEF\n"
@@ -129,7 +129,7 @@ TEST_F(GISelMITest, TestKnownBitsCstPHIToNonGenericReg) {
 // here to cover the code that stops the analysis of PHIs
 // earlier. In that case, we would not even look at the
 // second incoming value.
-TEST_F(GISelMITest, TestKnownBitsUnknownPHI) {
+TEST_F(AArch64GISelMITest, TestKnownBitsUnknownPHI) {
   StringRef MIRString =
       "  bb.10:\n"
       "  %10:_(s64) = COPY %0\n"
@@ -165,7 +165,7 @@ TEST_F(GISelMITest, TestKnownBitsUnknownPHI) {
 // For now, the analysis just stops and assumes it knows nothing,
 // eventually we could teach it how to properly track phis that
 // loop back.
-TEST_F(GISelMITest, TestKnownBitsCstPHIWithLoop) {
+TEST_F(AArch64GISelMITest, TestKnownBitsCstPHIWithLoop) {
   StringRef MIRString =
       "  bb.10:\n"
       "  %10:_(s8) = G_CONSTANT i8 3\n"
@@ -210,7 +210,7 @@ TEST_F(GISelMITest, TestKnownBitsCstPHIWithLoop) {
 // on PHIs, but eventually we could teach it how to properly track
 // phis that loop back without relying on the luck effect of max
 // depth.
-TEST_F(GISelMITest, TestKnownBitsDecreasingCstPHIWithLoop) {
+TEST_F(AArch64GISelMITest, TestKnownBitsDecreasingCstPHIWithLoop) {
   StringRef MIRString = "  bb.10:\n"
                         "  %10:_(s8) = G_CONSTANT i8 5\n"
                         "  %11:_(s8) = G_CONSTANT i8 1\n"
@@ -243,7 +243,7 @@ TEST_F(GISelMITest, TestKnownBitsDecreasingCstPHIWithLoop) {
   EXPECT_EQ(Res.Zero.getZExtValue(), Res2.Zero.getZExtValue());
 }
 
-TEST_F(GISelMITest, TestKnownBitsPtrToIntViceVersa) {
+TEST_F(AArch64GISelMITest, TestKnownBitsPtrToIntViceVersa) {
   StringRef MIRString = "  %3:_(s16) = G_CONSTANT i16 256\n"
                         "  %4:_(p0) = G_INTTOPTR %3\n"
                         "  %5:_(s32) = G_PTRTOINT %4\n"
@@ -259,7 +259,7 @@ TEST_F(GISelMITest, TestKnownBitsPtrToIntViceVersa) {
   EXPECT_EQ(256u, Res.One.getZExtValue());
   EXPECT_EQ(0xfffffeffu, Res.Zero.getZExtValue());
 }
-TEST_F(GISelMITest, TestKnownBitsXOR) {
+TEST_F(AArch64GISelMITest, TestKnownBitsXOR) {
   StringRef MIRString = "  %3:_(s8) = G_CONSTANT i8 4\n"
                         "  %4:_(s8) = G_CONSTANT i8 7\n"
                         "  %5:_(s8) = G_XOR %3, %4\n"
@@ -276,7 +276,7 @@ TEST_F(GISelMITest, TestKnownBitsXOR) {
   EXPECT_EQ(252u, Res.Zero.getZExtValue());
 }
 
-TEST_F(GISelMITest, TestKnownBits) {
+TEST_F(AArch64GISelMITest, TestKnownBits) {
 
   StringRef MIR = "  %3:_(s32) = G_TRUNC %0\n"
                   "  %4:_(s32) = G_TRUNC %1\n"
@@ -306,7 +306,7 @@ TEST_F(GISelMITest, TestKnownBits) {
   EXPECT_EQ(Known.Zero, Zeroes);
 }
 
-TEST_F(GISelMITest, TestSignBitIsZero) {
+TEST_F(AArch64GISelMITest, TestSignBitIsZero) {
   setUp();
   if (!TM)
     return;
@@ -321,7 +321,7 @@ TEST_F(GISelMITest, TestSignBitIsZero) {
   EXPECT_FALSE(KnownBits.signBitIsZero(SignBit.getReg(0)));
 }
 
-TEST_F(GISelMITest, TestNumSignBitsConstant) {
+TEST_F(AArch64GISelMITest, TestNumSignBitsConstant) {
   StringRef MIRString = "  %3:_(s8) = G_CONSTANT i8 1\n"
                         "  %4:_(s8) = COPY %3\n"
 
@@ -353,7 +353,7 @@ TEST_F(GISelMITest, TestNumSignBitsConstant) {
   EXPECT_EQ(3u, Info.computeNumSignBits(CopyRegNeg32));
 }
 
-TEST_F(GISelMITest, TestNumSignBitsSext) {
+TEST_F(AArch64GISelMITest, TestNumSignBitsSext) {
   StringRef MIRString = "  %3:_(p0) = G_IMPLICIT_DEF\n"
                         "  %4:_(s8) = G_LOAD %3 :: (load 1)\n"
                         "  %5:_(s32) = G_SEXT %4\n"
@@ -373,7 +373,7 @@ TEST_F(GISelMITest, TestNumSignBitsSext) {
   EXPECT_EQ(32u, Info.computeNumSignBits(CopySextNeg1));
 }
 
-TEST_F(GISelMITest, TestNumSignBitsTrunc) {
+TEST_F(AArch64GISelMITest, TestNumSignBitsTrunc) {
   StringRef MIRString = "  %3:_(p0) = G_IMPLICIT_DEF\n"
                         "  %4:_(s32) = G_LOAD %3 :: (load 4)\n"
                         "  %5:_(s8) = G_TRUNC %4\n"
