@@ -717,8 +717,8 @@ if.end:
 
 ; CHECK-LABEL: @common_addrspacecast(
 ; CHECK: %. = select i1 %flag, i32 9, i32 10
-; CHECK: %a = addrspacecast i32* %x to i32 addrspace(1)*
-; CHECK: store i32 %., i32 addrspace(1)* %a
+; CHECK: %[[a:.*]] = addrspacecast i32* %x to i32 addrspace(1)*
+; CHECK: store i32 %., i32 addrspace(1)* %[[a]]
 define i32 @common_addrspacecast(i1 zeroext %flag, i32* %x) {
 entry:
   br i1 %flag, label %if.then, label %if.else
