@@ -49,6 +49,7 @@ SBRegistry::SBRegistry() {
   RegisterMethods<SBDebugger>(R);
   RegisterMethods<SBDeclaration>(R);
   RegisterMethods<SBError>(R);
+  RegisterMethods<SBEnvironment>(R);
   RegisterMethods<SBEvent>(R);
   RegisterMethods<SBExecutionContext>(R);
   RegisterMethods<SBExpressionOptions>(R);
