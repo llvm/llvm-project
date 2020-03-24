@@ -15,8 +15,8 @@
 using namespace llvm;
 
 #ifndef NDEBUG
-void checkValidLayout(ArrayRef<OptimalLayoutField> Fields,
-                      uint64_t Size, Align MaxAlign) {
+static void checkValidLayout(ArrayRef<OptimalLayoutField> Fields, uint64_t Size,
+                             Align MaxAlign) {
   uint64_t LastEnd = 0;
   Align ComputedMaxAlign;
   for (auto &Field : Fields) {
