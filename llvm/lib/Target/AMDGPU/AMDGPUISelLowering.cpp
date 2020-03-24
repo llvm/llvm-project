@@ -4587,6 +4587,29 @@ unsigned AMDGPUTargetLowering::ComputeNumSignBitsForTargetNode(
   }
 }
 
+unsigned AMDGPUTargetLowering::computeNumSignBitsForTargetInstr(
+  GISelKnownBits &Analysis, Register R,
+  const APInt &DemandedElts, const MachineRegisterInfo &MRI,
+  unsigned Depth) const {
+  const MachineInstr *MI = MRI.getVRegDef(R);
+  if (!MI)
+    return 1;
+
+  // TODO: Check range metadata on MMO.
+  switch (MI->getOpcode()) {
+  case AMDGPU::G_AMDGPU_BUFFER_LOAD_SBYTE:
+    return 25;
+  case AMDGPU::G_AMDGPU_BUFFER_LOAD_SSHORT:
+    return 17;
+  case AMDGPU::G_AMDGPU_BUFFER_LOAD_UBYTE:
+    return 24;
+  case AMDGPU::G_AMDGPU_BUFFER_LOAD_USHORT:
+    return 16;
+  default:
+    return 1;
+  }
+}
+
 bool AMDGPUTargetLowering::isKnownNeverNaNForTargetNode(SDValue Op,
                                                         const SelectionDAG &DAG,
                                                         bool SNaN,
