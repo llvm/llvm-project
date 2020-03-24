@@ -33,26 +33,8 @@ start:
 define i32 @test_and(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: test_and:
 ; CHECK:       ## %bb.0: ## %start
-; CHECK-NEXT:    subl $28, %esp
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    andps %xmm1, %xmm0
-; CHECK-NEXT:    movaps %xmm0, (%esp)
-; CHECK-NEXT:    cmpl $0, (%esp)
-; CHECK-NEXT:    sets %al
-; CHECK-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    sets %cl
-; CHECK-NEXT:    addb %cl, %cl
-; CHECK-NEXT:    orb %al, %cl
-; CHECK-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    sets %al
-; CHECK-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    sets %dl
-; CHECK-NEXT:    addb %dl, %dl
-; CHECK-NEXT:    orb %al, %dl
-; CHECK-NEXT:    shlb $2, %dl
-; CHECK-NEXT:    orb %cl, %dl
-; CHECK-NEXT:    movzbl %dl, %eax
-; CHECK-NEXT:    addl $28, %esp
+; CHECK-NEXT:    movmskps %xmm0, %eax
 ; CHECK-NEXT:    retl
 start:
   %0 = bitcast <4 x float> %a to <4 x i32>
@@ -68,26 +50,8 @@ start:
 define i32 @test_or(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: test_or:
 ; CHECK:       ## %bb.0: ## %start
-; CHECK-NEXT:    subl $28, %esp
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    orps %xmm1, %xmm0
-; CHECK-NEXT:    movaps %xmm0, (%esp)
-; CHECK-NEXT:    cmpl $0, (%esp)
-; CHECK-NEXT:    sets %al
-; CHECK-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    sets %cl
-; CHECK-NEXT:    addb %cl, %cl
-; CHECK-NEXT:    orb %al, %cl
-; CHECK-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    sets %al
-; CHECK-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    sets %dl
-; CHECK-NEXT:    addb %dl, %dl
-; CHECK-NEXT:    orb %al, %dl
-; CHECK-NEXT:    shlb $2, %dl
-; CHECK-NEXT:    orb %cl, %dl
-; CHECK-NEXT:    movzbl %dl, %eax
-; CHECK-NEXT:    addl $28, %esp
+; CHECK-NEXT:    movmskps %xmm0, %eax
 ; CHECK-NEXT:    retl
 start:
   %0 = bitcast <4 x float> %a to <4 x i32>
@@ -103,42 +67,8 @@ start:
 define i32 @test_xor(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: test_xor:
 ; CHECK:       ## %bb.0: ## %start
-; CHECK-NEXT:    pushl %ebx
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
-; CHECK-NEXT:    subl $40, %esp
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-NEXT:    .cfi_offset %ebx, -8
-; CHECK-NEXT:    movaps %xmm0, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movaps %xmm1, (%esp)
-; CHECK-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    sets %al
-; CHECK-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    sets %cl
-; CHECK-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    sets %dl
-; CHECK-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    sets %ah
-; CHECK-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    sets %ch
-; CHECK-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    sets %dh
-; CHECK-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    sets %bl
-; CHECK-NEXT:    cmpl $0, (%esp)
-; CHECK-NEXT:    sets %bh
-; CHECK-NEXT:    xorb %ah, %bh
-; CHECK-NEXT:    xorb %dl, %bl
-; CHECK-NEXT:    addb %bl, %bl
-; CHECK-NEXT:    orb %bh, %bl
-; CHECK-NEXT:    xorb %cl, %dh
-; CHECK-NEXT:    xorb %al, %ch
-; CHECK-NEXT:    addb %ch, %ch
-; CHECK-NEXT:    orb %dh, %ch
-; CHECK-NEXT:    shlb $2, %ch
-; CHECK-NEXT:    orb %bl, %ch
-; CHECK-NEXT:    movzbl %ch, %eax
-; CHECK-NEXT:    addl $40, %esp
-; CHECK-NEXT:    popl %ebx
+; CHECK-NEXT:    xorps %xmm1, %xmm0
+; CHECK-NEXT:    movmskps %xmm0, %eax
 ; CHECK-NEXT:    retl
 start:
   %0 = bitcast <4 x float> %a to <4 x i32>
