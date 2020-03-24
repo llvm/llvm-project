@@ -51,15 +51,6 @@ void FormatCache::Entry::Set(lldb::SyntheticChildrenSP synthetic_sp) {
   m_synthetic_sp = synthetic_sp;
 }
 
-FormatCache::FormatCache()
-    : m_map(), m_mutex()
-#ifdef LLDB_CONFIGURATION_DEBUG
-      ,
-      m_cache_hits(0), m_cache_misses(0)
-#endif
-{
-}
-
 FormatCache::Entry &FormatCache::GetEntry(ConstString type) {
   auto i = m_map.find(type), e = m_map.end();
   if (i != e)
@@ -87,15 +78,11 @@ bool FormatCache::Get(ConstString type, ImplSP &format_impl_sp) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   auto entry = GetEntry(type);
   if (entry.IsCached<ImplSP>()) {
-#ifdef LLDB_CONFIGURATION_DEBUG
     m_cache_hits++;
-#endif
     entry.Get(format_impl_sp);
     return true;
   }
-#ifdef LLDB_CONFIGURATION_DEBUG
   m_cache_misses++;
-#endif
   format_impl_sp.reset();
   return false;
 }
