@@ -116,7 +116,7 @@ class ObjCPropertyDecl;
 class ObjCPropertyImplDecl;
 class ObjCProtocolDecl;
 class ObjCTypeParamDecl;
-struct OMPTraitInfo;
+class OMPTraitInfo;
 struct ParsedTargetAttr;
 class Preprocessor;
 class Stmt;
