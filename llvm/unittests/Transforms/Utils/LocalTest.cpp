@@ -1001,3 +1001,63 @@ TEST(Local, SimplifyCFGWithNullAC) {
   // %test.bb is expected to be simplified by FoldCondBranchOnPHI.
   EXPECT_TRUE(simplifyCFG(TestBB, TTI, Options));
 }
+
+TEST(Local, CanReplaceOperandWithVariable) {
+  LLVMContext Ctx;
+  Module M("test_module", Ctx);
+  IRBuilder<> B(Ctx);
+
+  FunctionType *FnType =
+    FunctionType::get(Type::getVoidTy(Ctx), {}, false);
+
+  FunctionType *VarArgFnType =
+    FunctionType::get(Type::getVoidTy(Ctx), {B.getInt32Ty()}, true);
+
+  Function *TestBody = Function::Create(FnType, GlobalValue::ExternalLinkage,
+                                        0, "", &M);
+
+  BasicBlock *BB0 = BasicBlock::Create(Ctx, "", TestBody);
+  B.SetInsertPoint(BB0);
+
+  Value *Intrin = M.getOrInsertFunction("llvm.foo", FnType).getCallee();
+  Value *Func = M.getOrInsertFunction("foo", FnType).getCallee();
+  Value *VarArgFunc
+    = M.getOrInsertFunction("foo.vararg", VarArgFnType).getCallee();
+  Value *VarArgIntrin
+    = M.getOrInsertFunction("llvm.foo.vararg", VarArgFnType).getCallee();
+
+  auto *CallToIntrin = B.CreateCall(Intrin);
+  auto *CallToFunc = B.CreateCall(Func);
+
+  // Test if it's valid to replace the callee operand.
+  EXPECT_FALSE(canReplaceOperandWithVariable(CallToIntrin, 0));
+  EXPECT_TRUE(canReplaceOperandWithVariable(CallToFunc, 0));
+
+  // That it's invalid to replace an argument in the variadic argument list for
+  // an intrinsic, but OK for a normal function.
+  auto *CallToVarArgFunc = B.CreateCall(
+    VarArgFunc, {B.getInt32(0), B.getInt32(1), B.getInt32(2)});
+  EXPECT_TRUE(canReplaceOperandWithVariable(CallToVarArgFunc, 0));
+  EXPECT_TRUE(canReplaceOperandWithVariable(CallToVarArgFunc, 1));
+  EXPECT_TRUE(canReplaceOperandWithVariable(CallToVarArgFunc, 2));
+  EXPECT_TRUE(canReplaceOperandWithVariable(CallToVarArgFunc, 3));
+
+  auto *CallToVarArgIntrin = B.CreateCall(
+    VarArgIntrin, {B.getInt32(0), B.getInt32(1), B.getInt32(2)});
+  EXPECT_TRUE(canReplaceOperandWithVariable(CallToVarArgIntrin, 0));
+  EXPECT_FALSE(canReplaceOperandWithVariable(CallToVarArgIntrin, 1));
+  EXPECT_FALSE(canReplaceOperandWithVariable(CallToVarArgIntrin, 2));
+  EXPECT_FALSE(canReplaceOperandWithVariable(CallToVarArgIntrin, 3));
+
+  // Test that it's invalid to replace gcroot operands, even though it can't use
+  // immarg.
+  Type *PtrPtr = B.getInt8Ty()->getPointerTo(0);
+  Value *Alloca = B.CreateAlloca(PtrPtr, (unsigned)0);
+  CallInst *GCRoot = B.CreateIntrinsic(Intrinsic::gcroot, {},
+    {Alloca, Constant::getNullValue(PtrPtr)});
+  EXPECT_TRUE(canReplaceOperandWithVariable(GCRoot, 0)); // Alloca
+  EXPECT_FALSE(canReplaceOperandWithVariable(GCRoot, 1));
+  EXPECT_FALSE(canReplaceOperandWithVariable(GCRoot, 2));
+
+  BB0->dropAllReferences();
+}
