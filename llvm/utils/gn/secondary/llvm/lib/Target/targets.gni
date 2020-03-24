@@ -45,6 +45,7 @@ if (llvm_targets_to_build == "host") {
 # unittest targets).
 llvm_build_AArch64 = false
 llvm_build_ARM = false
+llvm_build_AMDGPU = false
 llvm_build_BPF = false
 llvm_build_Mips = false
 llvm_build_PowerPC = false
@@ -53,6 +54,8 @@ llvm_build_X86 = false
 foreach(target, llvm_targets_to_build) {
   if (target == "AArch64") {
     llvm_build_AArch64 = true
+  } else if (target == "AMDGPU") {
+    llvm_build_AMDGPU = true
   } else if (target == "ARM") {
     llvm_build_ARM = true
   } else if (target == "BPF") {
@@ -65,7 +68,7 @@ foreach(target, llvm_targets_to_build) {
     llvm_build_WebAssembly = true
   } else if (target == "X86") {
     llvm_build_X86 = true
-  } else if (target == "AMDGPU" || target == "AVR" || target == "Hexagon" ||
+  } else if (target == "AVR" || target == "Hexagon" ||
              target == "Lanai" || target == "NVPTX" || target == "RISCV" ||
              target == "Sparc" || target == "SystemZ") {
     # Nothing to do.
