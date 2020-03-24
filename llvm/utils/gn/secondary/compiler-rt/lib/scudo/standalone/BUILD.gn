@@ -25,7 +25,7 @@ source_set("sources") {
     "flags_parser.h",
     "fuchsia.cpp",
     "fuchsia.h",
-    "include/sudo/interface.h",
+    "include/scudo/interface.h",
     "internal_defs.h",
     "linux.cpp",
     "linux.h",
