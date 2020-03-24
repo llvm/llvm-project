@@ -223,20 +223,21 @@ def IfOp : Loop_Op<"if",
     OpBuilder<"Builder *builder, OperationState &result, "
               "Value cond, bool withElseRegion">,
     OpBuilder<"Builder *builder, OperationState &result, "
-              "TypeRange resultTypes, Value cond, "
-              "bool withElseRegion">
+              "TypeRange resultTypes, Value cond, bool withElseRegion">
   ];
 
   let extraClassDeclaration = [{
     OpBuilder getThenBodyBuilder() {
       assert(!thenRegion().empty() && "Unexpected empty 'then' region.");
       Block &body = thenRegion().front();
-      return OpBuilder(&body, std::prev(body.end()));
+      return OpBuilder(&body,
+                       results().empty() ? std::prev(body.end()) : body.end());
     }
     OpBuilder getElseBodyBuilder() {
       assert(!elseRegion().empty() && "Unexpected empty 'else' region.");
       Block &body = elseRegion().front();
-      return OpBuilder(&body, std::prev(body.end()));
+      return OpBuilder(&body,
+                       results().empty() ? std::prev(body.end()) : body.end());
     }
   }];
 }
