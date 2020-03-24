@@ -1502,9 +1502,9 @@ define i32 @not_rotate_if_extra_branch(i32 %count) {
 ; CHECK: %.header
 ; CHECK: %.middle
 ; CHECK: %.backedge
+; CHECK: %.slow
 ; CHECK: %.bailout
 ; CHECK: %.stop
-; CHECK: %.slow
 .entry:
   %sum.0 = shl nsw i32 %count, 1
   br label %.header
