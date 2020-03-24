@@ -180,6 +180,10 @@ values, including two categories:
    shape of type. This is mostly used for convenience interface generation or
    interaction with other frameworks/translation.
 
+   All derived attributes should be materializable as an Attribute. That is,
+   even though they are not materialized, it should be possible to store as
+   an attribute.
+
 Both operands and attributes are specified inside the `dag`-typed `arguments`,
 led by `ins`:
 
@@ -1222,7 +1226,7 @@ mlir-tblgen --gen-op-decls -I /path/to/mlir/include /path/to/input/td/file
 # To see op C++ class definition
 mlir-tblgen --gen-op-defs -I /path/to/mlir/include /path/to/input/td/file
 # To see op documentation
-mlir-tblgen --gen-op-doc -I /path/to/mlir/include /path/to/input/td/file
+mlir-tblgen --gen-dialect-doc -I /path/to/mlir/include /path/to/input/td/file
 
 # To see op interface C++ class declaration
 mlir-tblgen --gen-op-interface-decls -I /path/to/mlir/include /path/to/input/td/file
@@ -1231,7 +1235,6 @@ mlir-tblgen --gen-op-interface-defs -I /path/to/mlir/include /path/to/input/td/f
 # To see op interface documentation
 mlir-tblgen --gen-op-interface-doc -I /path/to/mlir/include /path/to/input/td/file
 ```
-
 
 ## Appendix
 

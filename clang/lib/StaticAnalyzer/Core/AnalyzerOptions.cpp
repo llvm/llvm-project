@@ -134,9 +134,9 @@ StringRef AnalyzerOptions::getCheckerStringOption(StringRef CheckerName,
     CheckerName = CheckerName.substr(0, Pos);
   } while (!CheckerName.empty() && SearchInParents);
 
-  assert(false && "Unknown checker option! Did you call getChecker*Option "
-                  "with incorrect parameters? User input must've been "
-                  "verified by CheckerRegistry.");
+  llvm_unreachable("Unknown checker option! Did you call getChecker*Option "
+                   "with incorrect parameters? User input must've been "
+                   "verified by CheckerRegistry.");
 
   return "";
 }

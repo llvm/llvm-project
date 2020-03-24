@@ -1056,6 +1056,10 @@ unsigned DWARFLinker::DIECloner::cloneAddressAttribute(
     if (Die.getTag() == dwarf::DW_TAG_call_site)
       Addr = (Info.OrigCallReturnPc ? Info.OrigCallReturnPc : Addr) +
              Info.PCOffset;
+  } else if (AttrSpec.Attr == dwarf::DW_AT_call_pc) {
+    // Relocate the address of a branch instruction within a call site entry.
+    if (Die.getTag() == dwarf::DW_TAG_call_site)
+      Addr = (Info.OrigCallPc ? Info.OrigCallPc : Addr) + Info.PCOffset;
   }
 
   Die.addValue(DIEAlloc, static_cast<dwarf::Attribute>(AttrSpec.Attr),

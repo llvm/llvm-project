@@ -49,13 +49,13 @@ private:
   CacheMap m_map;
   std::recursive_mutex m_mutex;
 
-  uint64_t m_cache_hits;
-  uint64_t m_cache_misses;
+  uint64_t m_cache_hits = 0;
+  uint64_t m_cache_misses = 0;
 
   Entry &GetEntry(ConstString type);
 
 public:
-  FormatCache();
+  FormatCache() = default;
 
   template <typename ImplSP> bool Get(ConstString type, ImplSP &format_impl_sp);
   void Set(ConstString type, lldb::TypeFormatImplSP &format_sp);

@@ -576,6 +576,9 @@ private:
       /// Value of DW_AT_call_return_pc in the input DIE
       uint64_t OrigCallReturnPc = 0;
 
+      /// Value of DW_AT_call_pc in the input DIE
+      uint64_t OrigCallPc = 0;
+
       /// Offset to apply to PC addresses inside a function.
       int64_t PCOffset = 0;
 

@@ -403,13 +403,13 @@ namespace Elision {
     // CHECK-NEXT: call void @_ZN7Elision1AC1Ev([[A]]* [[I]])
     A i = (foo(), A());
 
-    // CHECK-NEXT: call void @_ZN7Elision4fooAEv([[A]]* sret [[T0]])
+    // CHECK-NEXT: call void @_ZN7Elision4fooAEv([[A]]* sret align 8 [[T0]])
     // CHECK-NEXT: call void @_ZN7Elision1AC1Ev([[A]]* [[J]])
     // CHECK-NEXT: call void @_ZN7Elision1AD1Ev([[A]]* [[T0]])
     A j = (fooA(), A());
 
     // CHECK-NEXT: call void @_ZN7Elision1AC1Ev([[A]]* [[T1]])
-    // CHECK-NEXT: call void @_ZN7Elision4fooAEv([[A]]* sret [[K]])
+    // CHECK-NEXT: call void @_ZN7Elision4fooAEv([[A]]* sret align 8 [[K]])
     // CHECK-NEXT: call void @_ZN7Elision1AD1Ev([[A]]* [[T1]])
     A k = (A(), fooA());
 
@@ -436,7 +436,7 @@ namespace Elision {
     // CHECK-NEXT: call void @_ZN7Elision1AD1Ev([[A]]* [[I]])
   }
 
-  // CHECK: define void @_ZN7Elision5test2Ev([[A]]* noalias sret
+  // CHECK: define void @_ZN7Elision5test2Ev([[A]]* noalias sret align 8
   A test2() {
     // CHECK:      call void @_ZN7Elision3fooEv()
     // CHECK-NEXT: call void @_ZN7Elision1AC1Ev([[A]]* [[RET:%.*]])
@@ -444,7 +444,7 @@ namespace Elision {
     return (foo(), A());
   }
 
-  // CHECK: define void @_ZN7Elision5test3EiNS_1AE([[A]]* noalias sret
+  // CHECK: define void @_ZN7Elision5test3EiNS_1AE([[A]]* noalias sret align 8
   A test3(int v, A x) {
     if (v < 5)
     // CHECK:      call void @_ZN7Elision1AC1Ev([[A]]* [[RET:%.*]])
@@ -485,7 +485,7 @@ namespace Elision {
   }
 
   // rdar://problem/8433352
-  // CHECK: define void @_ZN7Elision5test5Ev([[A]]* noalias sret
+  // CHECK: define void @_ZN7Elision5test5Ev([[A]]* noalias sret align 8
   struct B { A a; B(); };
   A test5() {
     // CHECK:      [[AT0:%.*]] = alloca [[A]], align 8
@@ -523,7 +523,7 @@ namespace Elision {
   void test6(const C *x) {
     // CHECK:      [[T0:%.*]] = alloca [[A]], align 8
     // CHECK:      [[X:%.*]] = load [[C]]*, [[C]]** {{%.*}}, align 8
-    // CHECK-NEXT: call void @_ZNK7Elision1CcvNS_1AEEv([[A]]* sret [[T0]], [[C]]* [[X]])
+    // CHECK-NEXT: call void @_ZNK7Elision1CcvNS_1AEEv([[A]]* sret align 8 [[T0]], [[C]]* [[X]])
     // CHECK-NEXT: call void @_ZNK7Elision1A3fooEv([[A]]* [[T0]])
     // CHECK-NEXT: call void @_ZN7Elision1AD1Ev([[A]]* [[T0]])
     // CHECK-NEXT: ret void

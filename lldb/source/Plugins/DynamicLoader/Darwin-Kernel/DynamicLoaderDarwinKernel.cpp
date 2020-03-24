@@ -245,6 +245,7 @@ DynamicLoaderDarwinKernel::SearchForKernelWithDebugHints(Process *process) {
 
   Status read_err;
   addr_t kernel_addresses_64[] = {
+      0xfffffff000002010ULL,
       0xfffffff000004010ULL, // newest arm64 devices
       0xffffff8000004010ULL, // 2014-2015-ish arm64 devices
       0xffffff8000002010ULL, // oldest arm64 devices

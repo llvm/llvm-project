@@ -14,7 +14,7 @@
 
 ; RUN: %llc_dwarf -mtriple=x86_64-- < %s -o - | FileCheck %s -check-prefix=ASM
 ; RUN: %llc_dwarf -debugger-tune=lldb -mtriple=x86_64-- < %s -filetype=obj -o %t.o
-; RUN: llvm-dwarfdump %t.o -o - | FileCheck %s -check-prefix=OBJ -implicit-check-not=DW_TAG_call_site
+; RUN: llvm-dwarfdump %t.o -o - | FileCheck %s -check-prefix=OBJ -implicit-check-not=DW_TAG_call -implicit-check-not=DW_AT_call
 ; RUN: llvm-dwarfdump -verify %t.o 2>&1 | FileCheck %s -check-prefix=VERIFY
 ; RUN: llvm-dwarfdump -statistics %t.o | FileCheck %s -check-prefix=STATS
 ; RUN: llvm-as < %s | llvm-dis | llvm-as | llvm-dis -o /dev/null
@@ -75,6 +75,7 @@ entry:
 ; OBJ:   DW_TAG_call_site
 ; OBJ:     DW_AT_call_origin ([[bat_sp]])
 ; OBJ:     DW_AT_call_tail_call
+; OBJ:     DW_AT_call_pc
 define void @_Z3foov() !dbg !25 {
 entry:
   tail call void @__has_no_subprogram()

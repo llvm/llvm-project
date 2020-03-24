@@ -167,7 +167,6 @@ define void @test13_helper() {
   tail call void @test13(i8* %nonnullptr, i8* %maybenullptr, i8* %nonnullptr)
   ret void
 }
-declare void @use_i8_ptr(i8* nofree nocapture readnone) nounwind
 define internal void @test13(i8* %a, i8* %b, i8* %c) {
 ; ATTRIBUTOR: define internal void @test13(i8* noalias nocapture nofree nonnull readnone %a, i8* noalias nocapture nofree readnone %b, i8* noalias nocapture nofree readnone %c)
   call void @use_i8_ptr(i8* %a)
@@ -838,6 +837,45 @@ define i8* @mybasename(i8* nofree readonly %str) {
   %cond = select i1 %tobool, i8* %add.ptr, i8* %str
   ret i8* %cond
 }
+
+define void @nonnull_assume_pos(i8* %arg) {
+; ATTRIBUTOR-LABEL: define {{[^@]+}}@nonnull_assume_pos
+; ATTRIBUTOR-SAME: (i8* nocapture nofree nonnull readnone [[ARG:%.*]])
+; ATTRIBUTOR-NEXT:    call void @llvm.assume(i1 true) #11 [ "nonnull"(i8* [[ARG]]) ]
+; ATTRIBUTOR-NEXT:    call void @use_i8_ptr(i8* noalias nocapture nofree nonnull readnone [[ARG]])
+; ATTRIBUTOR-NEXT:    [[TMP1:%.*]] = call i8* @unknown()
+; ATTRIBUTOR-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) ["nonnull"(i8* %arg)]
+  call void @use_i8_ptr(i8* %arg)
+  call i8* @unknown()
+  ret void
+}
+define void @nonnull_assume_neg(i8* %arg) {
+; ATTRIBUTOR-LABEL: define {{[^@]+}}@nonnull_assume_neg
+; ATTRIBUTOR-SAME: (i8* nocapture nofree readnone [[ARG:%.*]])
+; ATTRIBUTOR-NEXT:    [[TMP1:%.*]] = call i8* @unknown()
+; ATTRIBUTOR-NEXT:    call void @use_i8_ptr(i8* noalias nocapture nofree readnone [[ARG]])
+; ATTRIBUTOR-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(i8* [[ARG]]) ]
+; ATTRIBUTOR-NEXT:    call void @use_i8_ptr(i8* noalias nocapture nofree nonnull readnone [[ARG]])
+; ATTRIBUTOR-NEXT:    [[TMP2:%.*]] = call i8* @unknown()
+; ATTRIBUTOR-NEXT:    call void @use_i8_ptr_ret(i8* noalias nocapture nofree nonnull readnone [[ARG]])
+; ATTRIBUTOR-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(i8* [[ARG]]) ]
+; ATTRIBUTOR-NEXT:    call void @use_i8_ptr_ret(i8* noalias nocapture nofree nonnull readnone [[ARG]])
+; ATTRIBUTOR-NEXT:    ret void
+;
+  call i8* @unknown()
+  call void @use_i8_ptr(i8* %arg)
+  call void @llvm.assume(i1 true) ["nonnull"(i8* %arg)]
+  call void @use_i8_ptr(i8* %arg)
+  call i8* @unknown()
+  call void @use_i8_ptr_ret(i8* %arg)
+  call void @llvm.assume(i1 true) ["nonnull"(i8* %arg)]
+  call void @use_i8_ptr_ret(i8* %arg)
+  ret void
+}
+declare void @use_i8_ptr(i8* nofree nocapture readnone) nounwind
+declare void @use_i8_ptr_ret(i8* nofree nocapture readnone) nounwind willreturn
 
 attributes #0 = { "null-pointer-is-valid"="true" }
 attributes #1 = { nounwind willreturn}

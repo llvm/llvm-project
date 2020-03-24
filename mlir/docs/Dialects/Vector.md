@@ -1,5 +1,7 @@
 # Vector Dialect
 
+[TOC]
+
 MLIR supports multi-dimensional `vector` types and custom operations on those
 types. A generic, retargetable, higher-order ``vector`` type (`n-D` with `n >
 1`) is a structured type, that carries semantic information useful for
@@ -488,6 +490,6 @@ low-level abstraction.
 The use of special intrinsics in a `1-D` LLVM world is still available thanks
 to an explicit `vector.cast` op.
 
+## Operations
 
-### Operations
-
+[include "Dialects/VectorOps.md"]
