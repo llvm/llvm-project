@@ -75,8 +75,7 @@ std::error_code widenPath(const Twine &Path8, SmallVectorImpl<wchar_t> &Path16,
   SmallString<MAX_PATH> Path8Str;
   Path8.toVector(Path8Str);
 
-  std::error_code EC = UTF8ToUTF16(Path8Str, Path16);
-  if (EC)
+  if (std::error_code EC = UTF8ToUTF16(Path8Str, Path16))
     return EC;
 
   const bool IsAbsolute = llvm::sys::path::is_absolute(Path8);
@@ -97,7 +96,7 @@ std::error_code widenPath(const Twine &Path8, SmallVectorImpl<wchar_t> &Path16,
     return std::error_code();
 
   if (!IsAbsolute) {
-    if (EC = llvm::sys::fs::make_absolute(Path8Str))
+    if (std::error_code EC = llvm::sys::fs::make_absolute(Path8Str))
       return EC;
   }
 
