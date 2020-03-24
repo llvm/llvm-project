@@ -3015,6 +3015,10 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     if (Right.is(TT_CSharpNullConditionalLSquare))
       return false;
 
+    // No space between consecutive commas '[,,]'.
+    if (Left.is(tok::comma) && Right.is(tok::comma))
+      return false;
+
     // Possible space inside `?[ 0 ]`.
     if (Left.is(TT_CSharpNullConditionalLSquare))
       return Style.SpacesInSquareBrackets;
