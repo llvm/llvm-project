@@ -76,6 +76,7 @@ class DynamicCheckerFunctions;
 class DynamicLoader;
 class Editline;
 class EmulateInstruction;
+class Environment;
 class EvaluateExpressionOptions;
 class Event;
 class EventData;
