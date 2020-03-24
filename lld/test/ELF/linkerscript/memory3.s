@@ -18,6 +18,6 @@
 # CHECK:   0       00000000 0000000000000000
 # CHECK:   1 .text 00000001 0000000000001000
 
-.section .text.foo,"ax",%progbits
+.section .text,"ax",%progbits
 foo:
   nop

@@ -30,7 +30,9 @@
 
 ## With a SECTIONS command, SHT_INIT_ARRAY prirotities are ignored.
 ## All .init_array* are shuffled together.
-# RUN: echo 'SECTIONS {}' > %t.script
+# RUN: echo 'SECTIONS { \
+# RUN:   .init_array : { *(.init_array*) } \
+# RUN:   .fini_array : { *(.fini_array*) }}' > %t.script
 # RUN: ld.lld -T %t.script %t.o -o %t2
 # RUN: llvm-readelf -x .init -x .fini -x .init_array -x .fini_array %t2 | \
 # RUN:   FileCheck --check-prefixes=CHECK2,ORDERED2 %s

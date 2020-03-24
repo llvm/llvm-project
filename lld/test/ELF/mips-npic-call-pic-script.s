@@ -87,13 +87,13 @@ __start:
 # ORPH1: Disassembly of section .text:
 # ORPH1-EMPTY:
 # ORPH1-NEXT: <__start>:
-# ORPH1-NEXT:    20000:       jal     131156 <__LA25Thunk_foo1a>
+# ORPH1-NEXT:    20000:       jal     131168 <__LA25Thunk_foo1a>
 # ORPH1-NEXT:    20004:       nop
-# ORPH1-NEXT:    20008:       jal     131208 <__LA25Thunk_foo2>
+# ORPH1-NEXT:    20008:       jal     131216 <__LA25Thunk_foo2>
 # ORPH1-NEXT:    2000c:       nop
-# ORPH1-NEXT:    20010:       jal     131172 <__LA25Thunk_foo1b>
+# ORPH1-NEXT:    20010:       jal     131184 <__LA25Thunk_foo1b>
 # ORPH1-NEXT:    20014:       nop
-# ORPH1-NEXT:    20018:       jal     131208 <__LA25Thunk_foo2>
+# ORPH1-NEXT:    20018:       jal     131216 <__LA25Thunk_foo2>
 # ORPH1-NEXT:    2001c:       nop
 # ORPH1-NEXT:    20020:       jal     131120 <__LA25Thunk_fpic>
 # ORPH1-NEXT:    20024:       nop
@@ -113,16 +113,16 @@ __start:
 # ORPH1-NEXT:    20050:       nop
 
 # ORPH1: <__LA25Thunk_foo1a>:
-# ORPH1-NEXT:    20054:       lui     $25, 2
-# ORPH1-NEXT:    20058:       j       131200 <foo1a>
-# ORPH1-NEXT:    2005c:       addiu   $25, $25, 128
-# ORPH1-NEXT:    20060:       nop
+# ORPH1-NEXT:    20060:       lui     $25, 2
+# ORPH1-NEXT:                 j       131200 <foo1a>
+# ORPH1-NEXT:                 addiu   $25, $25, 128
+# ORPH1-NEXT:                 nop
 
 # ORPH1: <__LA25Thunk_foo1b>:
-# ORPH1-NEXT:    20064:       lui     $25, 2
-# ORPH1-NEXT:    20068:       j       131204 <foo1b>
-# ORPH1-NEXT:    2006c:       addiu   $25, $25, 132
-# ORPH1-NEXT:    20070:       nop
+# ORPH1-NEXT:    20070:       lui     $25, 2
+# ORPH1-NEXT:                 j       131204 <foo1b>
+# ORPH1-NEXT:                 addiu   $25, $25, 132
+# ORPH1-NEXT:                 nop
 
 # ORPH1: <foo1a>:
 # ORPH1-NEXT:    20080:       nop
@@ -131,17 +131,17 @@ __start:
 # ORPH1-NEXT:    20084:       nop
 
 # ORPH1: <__LA25Thunk_foo2>:
-# ORPH1-NEXT:    20088:       lui     $25, 2
-# ORPH1-NEXT:    2008c:       j       131232 <foo2>
-# ORPH1-NEXT:    20090:       addiu   $25, $25, 160
-# ORPH1-NEXT:    20094:       nop
+# ORPH1-NEXT:    20090:       lui     $25, 2
+# ORPH1-NEXT:                 j       131232 <foo2>
+# ORPH1-NEXT:                 addiu   $25, $25, 160
+# ORPH1-NEXT:                 nop
 
 # ORPH1: <foo2>:
 # ORPH1-NEXT:    200a0:       nop
 
 # Test script with orphans added to new OutputSection, the .text.1 and
 # .text.2 sections will form a new OutputSection .text
-# RUN: echo "SECTIONS { .out 0x20000 : { *(.text) }  }" > %t3.script
+# RUN: echo "SECTIONS { .out 0x20000 : { *(.text) } .text : {*(.text*)} }" > %t3.script
 # RUN: ld.lld --script %t3.script %t-npic.o %t-pic.o %t-sto-pic.o -o %t3.exe
 # RUN: llvm-objdump -d --no-show-raw-insn %t3.exe | FileCheck --check-prefix=ORPH2 %s
 
