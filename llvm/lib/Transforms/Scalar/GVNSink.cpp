@@ -475,6 +475,7 @@ public:
     case Instruction::PtrToInt:
     case Instruction::IntToPtr:
     case Instruction::BitCast:
+    case Instruction::AddrSpaceCast:
     case Instruction::Select:
     case Instruction::ExtractElement:
     case Instruction::InsertElement:
