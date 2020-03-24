@@ -236,17 +236,13 @@ void StackFrameList::GetOnlyConcreteFramesUpTo(uint32_t end_idx,
   m_frames.resize(num_frames);
 }
 
-/// A sequence of calls that comprise some portion of a backtrace. Each frame
-/// is represented as a pair of a callee (Function *) and an address within the
-/// callee.
-using CallSequence = std::vector<std::pair<Function *, addr_t>>;
-
 /// Find the unique path through the call graph from \p begin (with return PC
 /// \p return_pc) to \p end. On success this path is stored into \p path, and 
 /// on failure \p path is unchanged.
 static void FindInterveningFrames(Function &begin, Function &end,
                                   ExecutionContext &exe_ctx, Target &target,
-                                  addr_t return_pc, CallSequence &path,
+                                  addr_t return_pc,
+                                  std::vector<Function *> &path,
                                   ModuleList &images, Log *log) {
   LLDB_LOG(log, "Finding frames between {0} and {1}, retn-pc={2:x}",
            begin.GetDisplayName(), end.GetDisplayName(), return_pc);
@@ -279,27 +275,24 @@ static void FindInterveningFrames(Function &begin, Function &end,
   // Fully explore the set of functions reachable from the first edge via tail
   // calls in order to detect ambiguous executions.
   struct DFS {
-    CallSequence active_path = {};
-    CallSequence solution_path = {};
+    std::vector<Function *> active_path = {};
+    std::vector<Function *> solution_path = {};
     llvm::SmallPtrSet<Function *, 2> visited_nodes = {};
     bool ambiguous = false;
     Function *end;
     ModuleList &images;
-    Target &target;
     ExecutionContext &context;
 
-    DFS(Function *end, ModuleList &images, Target &target,
-        ExecutionContext &context)
-        : end(end), images(images), target(target), context(context) {}
+    DFS(Function *end, ModuleList &images, ExecutionContext &context)
+        : end(end), images(images), context(context) {}
 
-    void search(CallEdge &first_edge, Function &first_callee,
-                CallSequence &path) {
-      dfs(first_edge, first_callee);
+    void search(Function &first_callee, std::vector<Function *> &path) {
+      dfs(first_callee);
       if (!ambiguous)
         path = std::move(solution_path);
     }
 
-    void dfs(CallEdge &current_edge, Function &callee) {
+    void dfs(Function &callee) {
       // Found a path to the target function.
       if (&callee == end) {
         if (solution_path.empty())
@@ -319,16 +312,13 @@ static void FindInterveningFrames(Function &begin, Function &end,
       }
 
       // Search the calls made from this callee.
-      active_path.emplace_back(&callee, LLDB_INVALID_ADDRESS);
+      active_path.push_back(&callee);
       for (const auto &edge : callee.GetTailCallingEdges()) {
         Function *next_callee = edge->GetCallee(images, context);
         if (!next_callee)
           continue;
 
-        addr_t tail_call_pc = edge->GetCallInstPC(callee, target);
-        active_path.back().second = tail_call_pc;
-
-        dfs(*edge, *next_callee);
+        dfs(*next_callee);
         if (ambiguous)
           return;
       }
@@ -336,7 +326,7 @@ static void FindInterveningFrames(Function &begin, Function &end,
     }
   };
 
-  DFS(&end, images, target, exe_ctx).search(*first_edge, *first_callee, path);
+  DFS(&end, images, exe_ctx).search(*first_callee, path);
 }
 
 /// Given that \p next_frame will be appended to the frame list, synthesize
@@ -389,7 +379,7 @@ void StackFrameList::SynthesizeTailCallFrames(StackFrame &next_frame) {
 
   // Try to find the unique sequence of (tail) calls which led from next_frame
   // to prev_frame.
-  CallSequence path;
+  std::vector<Function *> path;
   addr_t return_pc = next_reg_ctx_sp->GetPC();
   Target &target = *target_sp.get();
   ModuleList &images = next_frame.CalculateTarget()->GetImages();
@@ -399,13 +389,13 @@ void StackFrameList::SynthesizeTailCallFrames(StackFrame &next_frame) {
                         path, images, log);
 
   // Push synthetic tail call frames.
-  for (auto calleeInfo : llvm::reverse(path)) {
-    Function *callee = calleeInfo.first;
+  for (Function *callee : llvm::reverse(path)) {
     uint32_t frame_idx = m_frames.size();
     uint32_t concrete_frame_idx = next_frame.GetConcreteFrameIndex();
     addr_t cfa = LLDB_INVALID_ADDRESS;
     bool cfa_is_valid = false;
-    addr_t pc = calleeInfo.second;
+    addr_t pc =
+        callee->GetAddressRange().GetBaseAddress().GetLoadAddress(&target);
     constexpr bool behaves_like_zeroth_frame = false;
     SymbolContext sc;
     callee->CalculateSymbolContext(&sc);
@@ -414,7 +404,7 @@ void StackFrameList::SynthesizeTailCallFrames(StackFrame &next_frame) {
         cfa_is_valid, pc, StackFrame::Kind::Artificial,
         behaves_like_zeroth_frame, &sc);
     m_frames.push_back(synth_frame);
-    LLDB_LOG(log, "Pushed frame {0} at {1:x}", callee->GetDisplayName(), pc);
+    LLDB_LOG(log, "Pushed frame {0}", callee->GetDisplayName());
   }
 
   // If any frames were created, adjust next_frame's index.
