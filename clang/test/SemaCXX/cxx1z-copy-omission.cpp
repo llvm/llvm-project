@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++1z -verify %s
+// RUN: %clang_cc1 -std=c++1z -verify -Wno-unused %s
 
 struct Noncopyable {
   Noncopyable();
@@ -107,8 +107,10 @@ void test_expressions(bool b) {
   sizeof(make_indestructible()); // expected-error {{deleted}}
   sizeof(make_incomplete()); // expected-error {{incomplete}}
   typeid(Indestructible{}); // expected-error {{deleted}}
-  typeid(make_indestructible()); // expected-error {{deleted}}
-  typeid(make_incomplete()); // expected-error {{incomplete}}
+  typeid(make_indestructible()); // expected-error {{deleted}} \
+                                 // expected-error {{need to include <typeinfo>}}
+  typeid(make_incomplete()); // expected-error {{incomplete}} \
+                             // expected-error {{need to include <typeinfo>}}
 
   // FIXME: The first two cases here are now also valid in C++17 onwards.
   using I = decltype(Indestructible()); // expected-error {{deleted}}
