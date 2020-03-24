@@ -226,6 +226,8 @@ defm threads: B<"threads",
 // Flags for debugging
 def lldmap : F<"lldmap">;
 def lldmap_file : Joined<["/", "-", "/?", "-?"], "lldmap:">;
+def map : F<"map">;
+def map_file : Joined<["/", "-", "/?", "-?"], "map:">;
 def show_timing : F<"time">;
 def summary : F<"summary">;
 
