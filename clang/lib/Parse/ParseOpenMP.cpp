@@ -2344,7 +2344,8 @@ bool Parser::ParseOpenMPSimpleVarList(
 ///       from-clause | is_device_ptr-clause | task_reduction-clause |
 ///       in_reduction-clause | allocator-clause | allocate-clause |
 ///       acq_rel-clause | acquire-clause | release-clause | relaxed-clause |
-///       depobj-clause | destroy-clause | detach-clause | inclusive-clause
+///       depobj-clause | destroy-clause | detach-clause | inclusive-clause |
+///       exclusive-clause
 ///
 OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
                                      OpenMPClauseKind CKind, bool FirstClause) {
@@ -2514,6 +2515,7 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
   case OMPC_allocate:
   case OMPC_nontemporal:
   case OMPC_inclusive:
+  case OMPC_exclusive:
     Clause = ParseOpenMPVarListClause(DKind, CKind, WrongDirective);
     break;
   case OMPC_device_type:
@@ -3239,7 +3241,7 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
 
 /// Parsing of OpenMP clause 'private', 'firstprivate', 'lastprivate',
 /// 'shared', 'copyin', 'copyprivate', 'flush', 'reduction', 'task_reduction',
-/// 'in_reduction', 'nontemporal' or 'inclusive'.
+/// 'in_reduction', 'nontemporal', 'exclusive' or 'inclusive'.
 ///
 ///    private-clause:
 ///       'private' '(' list ')'
@@ -3283,6 +3285,8 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
 ///       'nontemporal' '(' list ')'
 ///    inclusive-clause:
 ///       'inclusive' '(' list ')'
+///    exclusive-clause:
+///       'exclusive' '(' list ')'
 ///
 /// For 'linear' clause linear-list may have the following forms:
 ///  list
