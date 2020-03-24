@@ -35,10 +35,7 @@ class LocInfoType : public Type {
   TypeSourceInfo *DeclInfo;
 
   LocInfoType(QualType ty, TypeSourceInfo *TInfo)
-      : Type((TypeClass)LocInfo, ty, ty->isDependentType(),
-             ty->isInstantiationDependentType(), ty->isVariablyModifiedType(),
-             ty->containsUnexpandedParameterPack()),
-        DeclInfo(TInfo) {
+      : Type((TypeClass)LocInfo, ty, ty->getDependence()), DeclInfo(TInfo) {
     assert(getTypeClass() == (TypeClass)LocInfo && "LocInfo didn't fit in TC?");
   }
   friend class Sema;

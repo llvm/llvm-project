@@ -10,6 +10,7 @@
 #include "Config.h"
 #include "DLL.h"
 #include "InputFiles.h"
+#include "LLDMapFile.h"
 #include "MapFile.h"
 #include "PDB.h"
 #include "SymbolTable.h"
@@ -633,6 +634,7 @@ void Writer::run() {
   }
   writeBuildId();
 
+  writeLLDMapFile(outputSections);
   writeMapFile(outputSections);
 
   if (errorCount())

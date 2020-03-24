@@ -730,11 +730,11 @@ StmtResult Sema::ActOnStartOfSwitchStmt(SourceLocation SwitchLoc,
 
   if (CondExpr && !CondExpr->isTypeDependent()) {
     // We have already converted the expression to an integral or enumeration
-    // type, when we parsed the switch condition. If we don't have an
-    // appropriate type now, enter the switch scope but remember that it's
-    // invalid.
-    assert(CondExpr->getType()->isIntegralOrEnumerationType() &&
-           "invalid condition type");
+    // type, when we parsed the switch condition. There are cases where we don't
+    // have an appropriate type, e.g. a typo-expr Cond was corrected to an
+    // inappropriate-type expr, we just return an error.
+    if (!CondExpr->getType()->isIntegralOrEnumerationType())
+      return StmtError();
     if (CondExpr->isKnownToHaveBooleanValue()) {
       // switch(bool_expr) {...} is often a programmer error, e.g.
       //   switch(n && mask) { ... }  // Doh - should be "n & mask".

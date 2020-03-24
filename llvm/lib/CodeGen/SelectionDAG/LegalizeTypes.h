@@ -309,6 +309,7 @@ private:
   SDValue PromoteIntRes_EXTRACT_VECTOR_ELT(SDNode *N);
   SDValue PromoteIntRes_FP_TO_XINT(SDNode *N);
   SDValue PromoteIntRes_FP_TO_FP16(SDNode *N);
+  SDValue PromoteIntRes_FREEZE(SDNode *N);
   SDValue PromoteIntRes_INT_EXTEND(SDNode *N);
   SDValue PromoteIntRes_LOAD(LoadSDNode *N);
   SDValue PromoteIntRes_MLOAD(MaskedLoadSDNode *N);
@@ -961,6 +962,7 @@ private:
   void SplitRes_SELECT      (SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitRes_SELECT_CC   (SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitRes_UNDEF       (SDNode *N, SDValue &Lo, SDValue &Hi);
+  void SplitRes_FREEZE      (SDNode *N, SDValue &Lo, SDValue &Hi);
 
   void SplitVSETCC(const SDNode *N);
 

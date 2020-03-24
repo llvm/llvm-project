@@ -764,7 +764,7 @@ bool ValueObject::IsCStringContainer(bool check_pointer) {
     return true;
   addr_t cstr_address = LLDB_INVALID_ADDRESS;
   AddressType cstr_address_type = eAddressTypeInvalid;
-  cstr_address = GetAddressOf(true, &cstr_address_type);
+  cstr_address = GetPointerValue(&cstr_address_type);
   return (cstr_address != LLDB_INVALID_ADDRESS);
 }
 
