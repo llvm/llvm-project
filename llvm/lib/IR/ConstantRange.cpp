@@ -802,6 +802,8 @@ ConstantRange ConstantRange::binaryOp(Instruction::BinaryOps BinOp,
     return binaryAnd(Other);
   case Instruction::Or:
     return binaryOr(Other);
+  case Instruction::Xor:
+    return binaryXor(Other);
   // Note: floating point operations applied to abstract ranges are just
   // ideal integer operations with a lossy representation
   case Instruction::FAdd:
@@ -1209,6 +1211,18 @@ ConstantRange::binaryOr(const ConstantRange &Other) const {
 
   APInt umax = APIntOps::umax(getUnsignedMin(), Other.getUnsignedMin());
   return getNonEmpty(std::move(umax), APInt::getNullValue(getBitWidth()));
+}
+
+ConstantRange ConstantRange::binaryXor(const ConstantRange &Other) const {
+  if (isEmptySet() || Other.isEmptySet())
+    return getEmpty();
+
+  // Use APInt's implementation of XOR for single element ranges.
+  if (isSingleElement() && Other.isSingleElement())
+    return {*getSingleElement() ^ *Other.getSingleElement()};
+
+  // TODO: replace this with something less conservative
+  return getFull();
 }
 
 ConstantRange
