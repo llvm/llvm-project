@@ -2340,16 +2340,6 @@ lldb::SBValue SBTarget::EvaluateExpression(const char *expr,
     Target *target = exe_ctx.GetTargetPtr();
 
     if (target) {
-#ifdef LLDB_CONFIGURATION_DEBUG
-      StreamString frame_description;
-      if (frame)
-        frame->DumpUsingSettingsFormat(&frame_description);
-      llvm::PrettyStackTraceFormat stack_trace(
-          "SBTarget::EvaluateExpression (expr = \"%s\", fetch_dynamic_value = "
-          "%u) %s",
-          expr, options.GetFetchDynamicValue(),
-          frame_description.GetString().str().c_str());
-#endif
       target->EvaluateExpression(expr, frame, expr_value_sp, options.ref());
 
       expr_result.SetSP(expr_value_sp, options.GetFetchDynamicValue());
