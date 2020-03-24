@@ -28,6 +28,7 @@
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtObjC.h"
 #include "clang/AST/StmtOpenMP.h"
+#include "clang/Basic/OpenMPKinds.h"
 #include "clang/Sema/Designator.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Ownership.h"
@@ -1717,17 +1718,16 @@ public:
   ///
   /// By default, performs semantic analysis to build the new statement.
   /// Subclasses may override this routine to provide different behavior.
-  OMPClause *RebuildOMPReductionClause(ArrayRef<Expr *> VarList,
-                                       SourceLocation StartLoc,
-                                       SourceLocation LParenLoc,
-                                       SourceLocation ColonLoc,
-                                       SourceLocation EndLoc,
-                                       CXXScopeSpec &ReductionIdScopeSpec,
-                                       const DeclarationNameInfo &ReductionId,
-                                       ArrayRef<Expr *> UnresolvedReductions) {
+  OMPClause *RebuildOMPReductionClause(
+      ArrayRef<Expr *> VarList, OpenMPReductionClauseModifier Modifier,
+      SourceLocation StartLoc, SourceLocation LParenLoc,
+      SourceLocation ModifierLoc, SourceLocation ColonLoc,
+      SourceLocation EndLoc, CXXScopeSpec &ReductionIdScopeSpec,
+      const DeclarationNameInfo &ReductionId,
+      ArrayRef<Expr *> UnresolvedReductions) {
     return getSema().ActOnOpenMPReductionClause(
-        VarList, StartLoc, LParenLoc, ColonLoc, EndLoc, ReductionIdScopeSpec,
-        ReductionId, UnresolvedReductions);
+        VarList, Modifier, StartLoc, LParenLoc, ModifierLoc, ColonLoc, EndLoc,
+        ReductionIdScopeSpec, ReductionId, UnresolvedReductions);
   }
 
   /// Build a new OpenMP 'task_reduction' clause.
@@ -9083,8 +9083,9 @@ TreeTransform<Derived>::TransformOMPReductionClause(OMPReductionClause *C) {
       UnresolvedReductions.push_back(nullptr);
   }
   return getDerived().RebuildOMPReductionClause(
-      Vars, C->getBeginLoc(), C->getLParenLoc(), C->getColonLoc(),
-      C->getEndLoc(), ReductionIdScopeSpec, NameInfo, UnresolvedReductions);
+      Vars, C->getModifier(), C->getBeginLoc(), C->getLParenLoc(),
+      C->getModifierLoc(), C->getColonLoc(), C->getEndLoc(),
+      ReductionIdScopeSpec, NameInfo, UnresolvedReductions);
 }
 
 template <typename Derived>

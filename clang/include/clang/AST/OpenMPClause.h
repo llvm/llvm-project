@@ -2703,6 +2703,12 @@ class OMPReductionClause final
   friend OMPVarListClause;
   friend TrailingObjects;
 
+  /// Reduction modifier.
+  OpenMPReductionClauseModifier Modifier = OMPC_REDUCTION_unknown;
+
+  /// Reduction modifier location.
+  SourceLocation ModifierLoc;
+
   /// Location of ':'.
   SourceLocation ColonLoc;
 
@@ -2716,18 +2722,22 @@ class OMPReductionClause final
   ///
   /// \param StartLoc Starting location of the clause.
   /// \param LParenLoc Location of '('.
-  /// \param EndLoc Ending location of the clause.
+  /// \param ModifierLoc Modifier location.
   /// \param ColonLoc Location of ':'.
+  /// \param EndLoc Ending location of the clause.
   /// \param N Number of the variables in the clause.
   /// \param QualifierLoc The nested-name qualifier with location information
   /// \param NameInfo The full name info for reduction identifier.
   OMPReductionClause(SourceLocation StartLoc, SourceLocation LParenLoc,
-                     SourceLocation ColonLoc, SourceLocation EndLoc, unsigned N,
+                     SourceLocation ModifierLoc, SourceLocation ColonLoc,
+                     SourceLocation EndLoc,
+                     OpenMPReductionClauseModifier Modifier, unsigned N,
                      NestedNameSpecifierLoc QualifierLoc,
                      const DeclarationNameInfo &NameInfo)
       : OMPVarListClause<OMPReductionClause>(OMPC_reduction, StartLoc,
                                              LParenLoc, EndLoc, N),
-        OMPClauseWithPostUpdate(this), ColonLoc(ColonLoc),
+        OMPClauseWithPostUpdate(this), Modifier(Modifier),
+        ModifierLoc(ModifierLoc), ColonLoc(ColonLoc),
         QualifierLoc(QualifierLoc), NameInfo(NameInfo) {}
 
   /// Build an empty clause.
@@ -2738,6 +2748,12 @@ class OMPReductionClause final
                                              SourceLocation(), SourceLocation(),
                                              N),
         OMPClauseWithPostUpdate(this) {}
+
+  /// Sets reduction modifier.
+  void setModifier(OpenMPReductionClauseModifier M) { Modifier = M; }
+
+  /// Sets location of the modifier.
+  void setModifierLoc(SourceLocation Loc) { ModifierLoc = Loc; }
 
   /// Sets location of ':' symbol in clause.
   void setColonLoc(SourceLocation CL) { ColonLoc = CL; }
@@ -2808,6 +2824,7 @@ public:
   ///
   /// \param StartLoc Starting location of the clause.
   /// \param LParenLoc Location of '('.
+  /// \param ModifierLoc Modifier location.
   /// \param ColonLoc Location of ':'.
   /// \param EndLoc Ending location of the clause.
   /// \param VL The variables in the clause.
@@ -2838,8 +2855,9 @@ public:
   /// OpenMP region with this clause.
   static OMPReductionClause *
   Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation LParenLoc,
-         SourceLocation ColonLoc, SourceLocation EndLoc, ArrayRef<Expr *> VL,
-         NestedNameSpecifierLoc QualifierLoc,
+         SourceLocation ModifierLoc, SourceLocation ColonLoc,
+         SourceLocation EndLoc, OpenMPReductionClauseModifier Modifier,
+         ArrayRef<Expr *> VL, NestedNameSpecifierLoc QualifierLoc,
          const DeclarationNameInfo &NameInfo, ArrayRef<Expr *> Privates,
          ArrayRef<Expr *> LHSExprs, ArrayRef<Expr *> RHSExprs,
          ArrayRef<Expr *> ReductionOps, Stmt *PreInit, Expr *PostUpdate);
@@ -2849,6 +2867,12 @@ public:
   /// \param C AST context.
   /// \param N The number of variables.
   static OMPReductionClause *CreateEmpty(const ASTContext &C, unsigned N);
+
+  /// Returns modifier.
+  OpenMPReductionClauseModifier getModifier() const { return Modifier; }
+
+  /// Returns modifier location.
+  SourceLocation getModifierLoc() const { return ModifierLoc; }
 
   /// Gets location of ':' symbol in clause.
   SourceLocation getColonLoc() const { return ColonLoc; }
