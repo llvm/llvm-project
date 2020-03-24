@@ -83,8 +83,8 @@ Token Lexer::lexToken() {
       // marker that llvm::MemoryBuffer guarantees will be there.
       if (curPtr - 1 == curBuffer.end())
         return formToken(Token::eof, tokStart);
+      continue;
 
-      LLVM_FALLTHROUGH;
     case ':':
       return formToken(Token::colon, tokStart);
     case ',':
