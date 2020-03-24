@@ -29,7 +29,7 @@
 // automatically capture a potential dependence from Q to P. This dependence
 // will cause P to be reevaluated whenever Q changes in the future.
 //
-// The Attributor will only reevaluated abstract attributes that might have
+// The Attributor will only reevaluate abstract attributes that might have
 // changed since the last iteration. That means that the Attribute will not
 // revisit all instructions/blocks/functions in the module but only query
 // an update from a subset of the abstract attributes.
@@ -152,8 +152,8 @@ struct IRPosition {
 
   /// The positions we distinguish in the IR.
   ///
-  /// The values are chosen such that the KindOrArgNo member has a value >= 1
-  /// if it is an argument or call site argument while a value < 1 indicates the
+  /// The values are chosen such that the KindOrArgNo member has a value >= 0
+  /// if it is an argument or call site argument while a value < 0 indicates the
   /// respective kind of that value.
   enum Kind : int {
     IRP_INVALID = -6, ///< An invalid position.
@@ -273,18 +273,11 @@ struct IRPosition {
 
   /// Return the associated function, if any.
   Function *getAssociatedFunction() const {
-    if (auto *CB = dyn_cast<CallBase>(AnchorVal))
-      return CB->getCalledFunction();
     assert(KindOrArgNo != IRP_INVALID &&
            "Invalid position does not have an anchor scope!");
-    Value &V = getAnchorValue();
-    if (isa<Function>(V))
-      return &cast<Function>(V);
-    if (isa<Argument>(V))
-      return cast<Argument>(V).getParent();
-    if (isa<Instruction>(V))
-      return cast<Instruction>(V).getFunction();
-    return nullptr;
+    if (auto *CB = dyn_cast<CallBase>(AnchorVal))
+      return CB->getCalledFunction();
+    return getAnchorScope();
   }
 
   /// Return the associated argument, if any.
@@ -474,7 +467,10 @@ protected:
   /// The value this position is anchored at.
   Value *AnchorVal;
 
-  /// The argument number, if non-negative, or the position "kind".
+  /// If AnchorVal is Argument or CallBase then this number should be
+  /// non-negative and it denotes the argument or call site argument index
+  /// respectively. Otherwise, it denotes the kind of this IRPosition according
+  /// to Kind above.
   int KindOrArgNo;
 };
 
@@ -2288,7 +2284,8 @@ struct DerefState : AbstractState {
 
   /// Add accessed bytes to the map.
   void addAccessedBytes(int64_t Offset, uint64_t Size) {
-    AccessedBytesMap[Offset] = std::max(AccessedBytesMap[Offset], Size);
+    uint64_t &AccessedBytes = AccessedBytesMap[Offset];
+    AccessedBytes = std::max(AccessedBytes, Size);
 
     // Known bytes might increase.
     computeKnownDerefBytesFromAccessedMap();

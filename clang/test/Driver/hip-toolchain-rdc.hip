@@ -44,7 +44,7 @@
 // CHECK-SAME: "-filetype=obj"
 // CHECK-SAME: "-o" [[OBJ_DEV1:".*-gfx803-.*o"]]
 
-// CHECK: [[LLD: ".*lld"]] "-flavor" "gnu" "-shared"
+// CHECK: [[LLD: ".*lld.*"]] "-flavor" "gnu" "-shared"
 // CHECK-SAME: "-o" "[[IMG_DEV1:.*out]]" [[OBJ_DEV1]]
 
 // CHECK: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa"

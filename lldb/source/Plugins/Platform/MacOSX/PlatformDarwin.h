@@ -25,6 +25,11 @@ public:
 
   ~PlatformDarwin() override;
 
+  lldb_private::Status PutFile(const lldb_private::FileSpec &source,
+                               const lldb_private::FileSpec &destination,
+                               uint32_t uid = UINT32_MAX,
+                               uint32_t gid = UINT32_MAX) override;
+
   // lldb_private::Platform functions
   lldb_private::Status
   ResolveSymbolFile(lldb_private::Target &target,

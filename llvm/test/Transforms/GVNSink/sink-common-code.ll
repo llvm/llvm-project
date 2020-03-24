@@ -692,6 +692,73 @@ if.end:
 ; CHECK-NOT: exact
 ; CHECK: }
 
+
+; CHECK-LABEL: @common_bitcast(
+; CHECK: %. = select i1 %flag, float 2.000000e+00, float 1.000000e+00
+; CHECK: %a = bitcast i32* %x to float*
+; CHECK: store float %., float* %a
+define i32 @common_bitcast(i1 zeroext %flag, i32* %x) {
+entry:
+  br i1 %flag, label %if.then, label %if.else
+
+if.then:
+  %a = bitcast i32* %x to float*
+  store float 2.0, float* %a
+  br label %if.end
+
+if.else:
+  %b = bitcast i32* %x to float*
+  store float 1.0, float* %b
+  br label %if.end
+
+if.end:
+  ret i32 1
+}
+
+; CHECK-LABEL: @common_addrspacecast(
+; CHECK: %. = select i1 %flag, i32 9, i32 10
+; CHECK: %a = addrspacecast i32* %x to i32 addrspace(1)*
+; CHECK: store i32 %., i32 addrspace(1)* %a
+define i32 @common_addrspacecast(i1 zeroext %flag, i32* %x) {
+entry:
+  br i1 %flag, label %if.then, label %if.else
+
+if.then:
+  %a = addrspacecast i32* %x to i32 addrspace(1)*
+  store i32 9, i32 addrspace(1)* %a
+  br label %if.end
+
+if.else:
+  %b = addrspacecast i32* %x to i32 addrspace(1)*
+  store i32 10, i32 addrspace(1)* %b
+  br label %if.end
+
+if.end:
+  ret i32 1
+}
+
+; Don't merge different address spaces
+; CHECK-LABEL: @no_common_addrspacecast(
+; CHECK: addrspacecast i32* %x to i32 addrspace(1)*
+; CHECK: addrspacecast i32* %x to i32 addrspace(3)*
+define i32 @no_common_addrspacecast(i1 zeroext %flag, i32* %x) {
+entry:
+  br i1 %flag, label %if.then, label %if.else
+
+if.then:
+  %a = addrspacecast i32* %x to i32 addrspace(1)*
+  store i32 9, i32 addrspace(1)* %a
+  br label %if.end
+
+if.else:
+  %b = addrspacecast i32* %x to i32 addrspace(3)*
+  store i32 10, i32 addrspace(3)* %b
+  br label %if.end
+
+if.end:
+  ret i32 1
+}
+
 ; CHECK: !0 = !{!1, !1, i64 0}
 ; CHECK: !1 = !{!"float", !2}
 ; CHECK: !2 = !{!"an example type tree"}

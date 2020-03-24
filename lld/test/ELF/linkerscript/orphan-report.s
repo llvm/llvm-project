@@ -24,7 +24,7 @@
 # RUN:   %t.o 2>&1 | FileCheck %s --check-prefixes=COMMON,DYNSYM,SYMTAB
 
 # COMMON:      {{.*}}.o:(.text) is being placed in '.text'
-# COMMON-NEXT: {{.*}}.o:(.text.2) is being placed in '.text'
+# COMMON-NEXT: {{.*}}.o:(.text.2) is being placed in '.text.2'
 # COMMON-NEXT: <internal>:(.comment) is being placed in '.comment'
 # DYNSYM-NEXT: <internal>:(.dynsym) is being placed in '.dynsym'
 # DYNSYM-NEXT: <internal>:(.gnu.hash) is being placed in '.gnu.hash'

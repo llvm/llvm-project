@@ -2783,6 +2783,12 @@ unsigned TargetLowering::ComputeNumSignBitsForTargetNode(SDValue Op,
   return 1;
 }
 
+unsigned TargetLowering::computeNumSignBitsForTargetInstr(
+  GISelKnownBits &Analysis, Register R, const APInt &DemandedElts,
+  const MachineRegisterInfo &MRI, unsigned Depth) const {
+  return 1;
+}
+
 bool TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     SDValue Op, const APInt &DemandedElts, APInt &KnownUndef, APInt &KnownZero,
     TargetLoweringOpt &TLO, unsigned Depth) const {

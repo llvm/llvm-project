@@ -2884,6 +2884,22 @@ bool Parser::ParseUnqualifiedId(CXXScopeSpec &SS, ParsedType ObjectType,
     // Parse the '~'.
     SourceLocation TildeLoc = ConsumeToken();
 
+    if (TemplateSpecified) {
+      // C++ [temp.names]p3:
+      //   A name prefixed by the keyword template shall be a template-id [...]
+      //
+      // A template-id cannot begin with a '~' token. This would never work
+      // anyway: x.~A<int>() would specify that the destructor is a template,
+      // not that 'A' is a template.
+      //
+      // FIXME: Suggest replacing the attempted destructor name with a correct
+      // destructor name and recover. (This is not trivial if this would become
+      // a pseudo-destructor name).
+      Diag(*TemplateKWLoc, diag::err_unexpected_template_in_destructor_name)
+        << Tok.getLocation();
+      return true;
+    }
+
     if (SS.isEmpty() && Tok.is(tok::kw_decltype)) {
       DeclSpec DS(AttrFactory);
       SourceLocation EndLoc = ParseDecltypeSpecifier(DS);
@@ -2903,7 +2919,7 @@ bool Parser::ParseUnqualifiedId(CXXScopeSpec &SS, ParsedType ObjectType,
 
     // If the user wrote ~T::T, correct it to T::~T.
     DeclaratorScopeObj DeclScopeObj(*this, SS);
-    if (!TemplateSpecified && NextToken().is(tok::coloncolon)) {
+    if (NextToken().is(tok::coloncolon)) {
       // Don't let ParseOptionalCXXScopeSpecifier() "correct"
       // `int A; struct { ~A::A(); };` to `int A; struct { ~A:A(); };`,
       // it will confuse this recovery logic.

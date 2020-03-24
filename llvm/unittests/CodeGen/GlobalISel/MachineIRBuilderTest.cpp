@@ -9,7 +9,7 @@
 #include "GISelMITest.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 
-TEST_F(GISelMITest, TestBuildConstantFConstant) {
+TEST_F(AArch64GISelMITest, TestBuildConstantFConstant) {
   setUp();
   if (!TM)
     return;
@@ -37,11 +37,10 @@ TEST_F(GISelMITest, TestBuildConstantFConstant) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
-
 #ifdef GTEST_HAS_DEATH_TEST
 #ifndef NDEBUG
 
-TEST_F(GISelMITest, TestBuildConstantFConstantDeath) {
+TEST_F(AArch64GISelMITest, TestBuildConstantFConstantDeath) {
   setUp();
   if (!TM)
     return;
@@ -73,7 +72,7 @@ TEST_F(GISelMITest, TestBuildConstantFConstantDeath) {
 #endif
 #endif
 
-TEST_F(GISelMITest, DstOpSrcOp) {
+TEST_F(AArch64GISelMITest, DstOpSrcOp) {
   setUp();
   if (!TM)
     return;
@@ -99,7 +98,7 @@ TEST_F(GISelMITest, DstOpSrcOp) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
-TEST_F(GISelMITest, BuildUnmerge) {
+TEST_F(AArch64GISelMITest, BuildUnmerge) {
   setUp();
   if (!TM)
     return;
@@ -120,7 +119,7 @@ TEST_F(GISelMITest, BuildUnmerge) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
-TEST_F(GISelMITest, TestBuildFPInsts) {
+TEST_F(AArch64GISelMITest, TestBuildFPInsts) {
   setUp();
   if (!TM)
     return;
@@ -156,7 +155,7 @@ TEST_F(GISelMITest, TestBuildFPInsts) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
-TEST_F(GISelMITest, BuildIntrinsic) {
+TEST_F(AArch64GISelMITest, BuildIntrinsic) {
   setUp();
   if (!TM)
     return;
@@ -185,7 +184,7 @@ TEST_F(GISelMITest, BuildIntrinsic) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
-TEST_F(GISelMITest, BuildXor) {
+TEST_F(AArch64GISelMITest, BuildXor) {
   setUp();
   if (!TM)
     return;
@@ -214,7 +213,7 @@ TEST_F(GISelMITest, BuildXor) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
-TEST_F(GISelMITest, BuildBitCounts) {
+TEST_F(AArch64GISelMITest, BuildBitCounts) {
   setUp();
   if (!TM)
     return;
@@ -242,7 +241,7 @@ TEST_F(GISelMITest, BuildBitCounts) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
-TEST_F(GISelMITest, BuildCasts) {
+TEST_F(AArch64GISelMITest, BuildCasts) {
   setUp();
   if (!TM)
     return;
@@ -267,7 +266,7 @@ TEST_F(GISelMITest, BuildCasts) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
-TEST_F(GISelMITest, BuildMinMax) {
+TEST_F(AArch64GISelMITest, BuildMinMax) {
   setUp();
   if (!TM)
     return;
@@ -293,7 +292,7 @@ TEST_F(GISelMITest, BuildMinMax) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
-TEST_F(GISelMITest, BuildAtomicRMW) {
+TEST_F(AArch64GISelMITest, BuildAtomicRMW) {
   setUp();
   if (!TM)
     return;
@@ -324,7 +323,7 @@ TEST_F(GISelMITest, BuildAtomicRMW) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
-TEST_F(GISelMITest, BuildMerge) {
+TEST_F(AArch64GISelMITest, BuildMerge) {
   setUp();
   if (!TM)
     return;
@@ -363,7 +362,7 @@ TEST_F(GISelMITest, BuildMerge) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
-TEST_F(GISelMITest, BuildAddoSubo) {
+TEST_F(AArch64GISelMITest, BuildAddoSubo) {
   setUp();
   if (!TM)
     return;

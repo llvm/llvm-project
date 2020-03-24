@@ -218,6 +218,9 @@
 #ifndef OPENMP_SCAN_CLAUSE
 #define OPENMP_SCAN_CLAUSE(Name)
 #endif
+#ifndef OPENMP_REDUCTION_MODIFIER
+#define OPENMP_REDUCTION_MODIFIER(Name)
+#endif
 
 // OpenMP clauses.
 OPENMP_CLAUSE(allocator, OMPAllocatorClause)
@@ -1107,6 +1110,10 @@ OPENMP_DEPOBJ_CLAUSE(depend)
 OPENMP_DEPOBJ_CLAUSE(destroy)
 OPENMP_DEPOBJ_CLAUSE(update)
 
+// Modifiers for 'reduction' clause.
+OPENMP_REDUCTION_MODIFIER(default)
+
+#undef OPENMP_REDUCTION_MODIFIER
 #undef OPENMP_SCAN_CLAUSE
 #undef OPENMP_DEVICE_MODIFIER
 #undef OPENMP_DEPOBJ_CLAUSE

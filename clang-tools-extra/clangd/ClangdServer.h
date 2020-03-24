@@ -143,7 +143,7 @@ public:
     std::vector<std::string> QueryDriverGlobs;
 
     /// Enable semantic highlighting features.
-    bool SemanticHighlighting = false;
+    bool TheiaSemanticHighlighting = false;
 
     /// Returns true if the tweak should be enabled.
     std::function<bool(const Tweak &)> TweakFilter = [](const Tweak &T) {

@@ -221,11 +221,7 @@ public:
                            uint32_t addr_byte_size) = 0;
 
   /// Return a new persistent variable name with the specified prefix.
-  ConstString GetNextPersistentVariableName(Target &target,
-                                            llvm::StringRef prefix);
-
-  virtual llvm::StringRef
-  GetPersistentVariablePrefix(bool is_error = false) const = 0;
+  virtual ConstString GetNextPersistentVariableName(bool is_error = false) = 0;
 
   virtual void
   RemovePersistentVariable(lldb::ExpressionVariableSP variable) = 0;
@@ -236,6 +232,10 @@ public:
   virtual lldb::addr_t LookupSymbol(ConstString name);
 
   void RegisterExecutionUnit(lldb::IRExecutionUnitSP &execution_unit_sp);
+
+protected:
+  virtual llvm::StringRef
+  GetPersistentVariablePrefix(bool is_error = false) const = 0;
 
 private:
   LLVMCastKind m_kind;

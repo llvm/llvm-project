@@ -10,4 +10,3 @@ add_llvm_tool(llvm-stress
   DEPENDS
   intrinsics_gen
   )
-export_executable_symbols(llvm-stress)

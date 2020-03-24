@@ -50,8 +50,14 @@ public:
 void ento::createSarifDiagnosticConsumer(
     AnalyzerOptions &AnalyzerOpts, PathDiagnosticConsumers &C,
     const std::string &Output, const Preprocessor &PP,
-    const cross_tu::CrossTranslationUnitContext &) {
+    const cross_tu::CrossTranslationUnitContext &CTU) {
+
+  // TODO: Emit an error here.
+  if (Output.empty())
+    return;
+
   C.push_back(new SarifDiagnostics(AnalyzerOpts, Output, PP.getLangOpts()));
+  createTextMinimalPathDiagnosticConsumer(AnalyzerOpts, C, Output, PP, CTU);
 }
 
 static StringRef getFileName(const FileEntry &FE) {

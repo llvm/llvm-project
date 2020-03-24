@@ -295,7 +295,7 @@ bool fromJSON(const llvm::json::Value &Params, ClientCapabilities &R) {
             TextDocument->getObject("semanticHighlightingCapabilities")) {
       if (auto SemanticHighlightingSupport =
               SemanticHighlighting->getBoolean("semanticHighlighting"))
-        R.SemanticHighlighting = *SemanticHighlightingSupport;
+        R.TheiaSemanticHighlighting = *SemanticHighlightingSupport;
     }
     if (auto *Diagnostics = TextDocument->getObject("publishDiagnostics")) {
       if (auto CategorySupport = Diagnostics->getBoolean("categorySupport"))
@@ -1131,18 +1131,19 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, OffsetEncoding Enc) {
   return OS << toString(Enc);
 }
 
-bool operator==(const SemanticHighlightingInformation &Lhs,
-                const SemanticHighlightingInformation &Rhs) {
+bool operator==(const TheiaSemanticHighlightingInformation &Lhs,
+                const TheiaSemanticHighlightingInformation &Rhs) {
   return Lhs.Line == Rhs.Line && Lhs.Tokens == Rhs.Tokens;
 }
 
-llvm::json::Value toJSON(const SemanticHighlightingInformation &Highlighting) {
+llvm::json::Value
+toJSON(const TheiaSemanticHighlightingInformation &Highlighting) {
   return llvm::json::Object{{"line", Highlighting.Line},
                             {"tokens", Highlighting.Tokens},
                             {"isInactive", Highlighting.IsInactive}};
 }
 
-llvm::json::Value toJSON(const SemanticHighlightingParams &Highlighting) {
+llvm::json::Value toJSON(const TheiaSemanticHighlightingParams &Highlighting) {
   return llvm::json::Object{
       {"textDocument", Highlighting.TextDocument},
       {"lines", std::move(Highlighting.Lines)},
