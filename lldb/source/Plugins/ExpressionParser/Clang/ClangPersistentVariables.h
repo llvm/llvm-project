@@ -62,7 +62,7 @@ public:
 
   void RemovePersistentVariable(lldb::ExpressionVariableSP variable) override;
 
-  virtual ConstString GetNextPersistentVariableName(bool is_error = false);
+  ConstString GetNextPersistentVariableName(bool is_error = false) override;
 
   // This just adds this module to the list of hand-loaded modules, it doesn't
   // actually load it.
