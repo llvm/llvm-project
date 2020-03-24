@@ -59,3 +59,46 @@ if.end:
   ret i32 0
 }
 
+@tls_gv = common thread_local global i32 0, align 4
+
+; This test checks that we don't try to localize TLS variables on Darwin.
+; If the user happens to be inside a call sequence, we could end up rematerializing
+; below a physreg write, clobbering it (TLS accesses on Darwin need a function call).
+; For now, we check we don't localize at all. We could in theory make sure that
+; we don't localize into the middle of a call sequence instead.
+define i32 @darwin_tls() {
+  ; CHECK-LABEL: name: darwin_tls
+  ; CHECK: bb.1.entry:
+  ; CHECK:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
+  ; CHECK:   [[GV:%[0-9]+]]:gpr(p0) = G_GLOBAL_VALUE @tls_gv
+  ; CHECK:   [[GV1:%[0-9]+]]:gpr(p0) = G_GLOBAL_VALUE @var2
+  ; CHECK:   [[C:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 0
+  ; CHECK:   [[GV2:%[0-9]+]]:gpr(p0) = G_GLOBAL_VALUE @var1
+  ; CHECK:   [[LOAD:%[0-9]+]]:gpr(s32) = G_LOAD [[GV2]](p0) :: (dereferenceable load 4 from @var1)
+  ; CHECK:   [[C1:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 1
+  ; CHECK:   [[ICMP:%[0-9]+]]:gpr(s32) = G_ICMP intpred(ne), [[LOAD]](s32), [[C1]]
+  ; CHECK:   [[TRUNC:%[0-9]+]]:gpr(s1) = G_TRUNC [[ICMP]](s32)
+  ; CHECK:   G_BRCOND [[TRUNC]](s1), %bb.3
+  ; CHECK: bb.2.if.then:
+  ; CHECK:   successors: %bb.3(0x80000000)
+  ; CHECK:   [[LOAD1:%[0-9]+]]:gpr(s32) = G_LOAD [[GV]](p0) :: (dereferenceable load 4 from @tls_gv)
+  ; CHECK:   [[GV3:%[0-9]+]]:gpr(p0) = G_GLOBAL_VALUE @var2
+  ; CHECK:   G_STORE [[LOAD1]](s32), [[GV3]](p0) :: (store 4 into @var2)
+  ; CHECK: bb.3.if.end:
+  ; CHECK:   [[C2:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 0
+  ; CHECK:   $w0 = COPY [[C2]](s32)
+  ; CHECK:   RET_ReallyLR implicit $w0
+entry:
+  %0 = load i32, i32* @var1, align 4
+  %cmp = icmp eq i32 %0, 1
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:
+  %tls = load i32, i32* @tls_gv, align 4
+  store i32 %tls, i32* @var2, align 4
+  br label %if.end
+
+if.end:
+  ret i32 0
+}
+
