@@ -1184,6 +1184,28 @@ AppleObjCRuntimeV2::GetClassDescriptorFromISA(ObjCISA isa) {
   return class_descriptor_sp;
 }
 
+static std::pair<bool, ConstString> ObjCGetClassNameRaw(
+                                      AppleObjCRuntime::ObjCISA isa,
+                                      Process *process) {
+  StreamString expr_string;
+  std::string input = std::to_string(isa);
+  expr_string.Printf("(const char *)objc_debug_class_getNameRaw(%s)",
+                     input.c_str());
+
+  ValueObjectSP result_sp;
+  EvaluateExpressionOptions eval_options;
+  eval_options.SetLanguage(lldb::eLanguageTypeObjC);
+  eval_options.SetResultIsInternal(true);
+  eval_options.SetGenerateDebugInfo(true);
+  eval_options.SetTimeout(process->GetUtilityExpressionTimeout());
+  auto eval_result = process->GetTarget().EvaluateExpression(
+      expr_string.GetData(),
+      process->GetThreadList().GetSelectedThread()->GetSelectedFrame().get(),
+      result_sp, eval_options);
+  ConstString type_name(result_sp->GetSummaryAsCString());
+  return std::make_pair(eval_result == eExpressionCompleted, type_name);
+}
+
 ObjCLanguageRuntime::ClassDescriptorSP
 AppleObjCRuntimeV2::GetClassDescriptor(ValueObject &valobj) {
   ClassDescriptorSP objc_class_sp;
@@ -1200,32 +1222,43 @@ AppleObjCRuntimeV2::GetClassDescriptor(ValueObject &valobj) {
   // if we get an invalid VO (which might still happen when playing around with
   // pointers returned by the expression parser, don't consider this a valid
   // ObjC object)
-  if (valobj.GetCompilerType().IsValid()) {
-    addr_t isa_pointer = valobj.GetPointerValue();
+  if (!valobj.GetCompilerType().IsValid())
+    return objc_class_sp;
+  addr_t isa_pointer = valobj.GetPointerValue();
 
-    // tagged pointer
-    if (IsTaggedPointer(isa_pointer)) {
-      return m_tagged_pointer_vendor_up->GetClassDescriptor(isa_pointer);
-    } else {
-      ExecutionContext exe_ctx(valobj.GetExecutionContextRef());
+  // tagged pointer
+  if (IsTaggedPointer(isa_pointer))
+    return m_tagged_pointer_vendor_up->GetClassDescriptor(isa_pointer);
+  ExecutionContext exe_ctx(valobj.GetExecutionContextRef());
 
-      Process *process = exe_ctx.GetProcessPtr();
-      if (process) {
-        Status error;
-        ObjCISA isa = process->ReadPointerFromMemory(isa_pointer, error);
-        if (isa != LLDB_INVALID_ADDRESS) {
-          objc_class_sp = GetClassDescriptorFromISA(isa);
-          if (isa && !objc_class_sp) {
-            Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
-            LLDB_LOGF(log,
-                      "0x%" PRIx64
-                      ": AppleObjCRuntimeV2::GetClassDescriptor() ISA was "
-                      "not in class descriptor cache 0x%" PRIx64,
-                      isa_pointer, isa);
-          }
-        }
-      }
-    }
+  Process *process = exe_ctx.GetProcessPtr();
+  if (!process)
+    return objc_class_sp;
+
+  Status error;
+  ObjCISA isa = process->ReadPointerFromMemory(isa_pointer, error);
+  if (isa == LLDB_INVALID_ADDRESS)
+    return objc_class_sp;
+
+  objc_class_sp = GetClassDescriptorFromISA(isa);
+
+  if (objc_class_sp)
+    return objc_class_sp;
+  else {
+    Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS |
+                                      LIBLLDB_LOG_TYPES));
+    LLDB_LOGF(log,
+              "0x%" PRIx64
+              ": AppleObjCRuntimeV2::GetClassDescriptor() ISA was "
+              "not in class descriptor cache 0x%" PRIx64,
+              isa_pointer, isa);
+  }
+
+  ClassDescriptorSP descriptor_sp(new ClassDescriptorV2(*this, isa, nullptr));
+  auto resolved = ObjCGetClassNameRaw(isa, process);
+  if (resolved.first == true) {
+    AddClass(isa, descriptor_sp, resolved.second.AsCString());
+    objc_class_sp = descriptor_sp;
   }
   return objc_class_sp;
 }
