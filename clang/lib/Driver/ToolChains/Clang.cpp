@@ -4430,14 +4430,24 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   bool IsPIE;
   std::tie(RelocationModel, PICLevel, IsPIE) = ParsePICArgs(TC, Args);
 
-  const char *RMName = RelocationModelName(RelocationModel);
+  bool IsROPI = RelocationModel == llvm::Reloc::ROPI ||
+                RelocationModel == llvm::Reloc::ROPI_RWPI;
+  bool IsRWPI = RelocationModel == llvm::Reloc::RWPI ||
+                RelocationModel == llvm::Reloc::ROPI_RWPI;
 
-  if ((RelocationModel == llvm::Reloc::ROPI ||
-       RelocationModel == llvm::Reloc::ROPI_RWPI) &&
-      types::isCXX(Input.getType()) &&
+  if (Args.hasArg(options::OPT_mcmse) &&
+      !Args.hasArg(options::OPT_fallow_unsupported)) {
+    if (IsROPI)
+      D.Diag(diag::err_cmse_pi_are_incompatible) << IsROPI;
+    if (IsRWPI)
+      D.Diag(diag::err_cmse_pi_are_incompatible) << !IsRWPI;
+  }
+
+  if (IsROPI && types::isCXX(Input.getType()) &&
       !Args.hasArg(options::OPT_fallow_unsupported))
     D.Diag(diag::err_drv_ropi_incompatible_with_cxx);
 
+  const char *RMName = RelocationModelName(RelocationModel);
   if (RMName) {
     CmdArgs.push_back("-mrelocation-model");
     CmdArgs.push_back(RMName);

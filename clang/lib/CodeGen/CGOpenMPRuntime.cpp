@@ -11393,7 +11393,7 @@ static const FunctionDecl *getDeclareVariantFunction(CodeGenModule &CGM,
   SmallVector<Expr *, 8> VariantExprs;
   SmallVector<VariantMatchInfo, 8> VMIs;
   for (const auto *A : FD->specific_attrs<OMPDeclareVariantAttr>()) {
-    const OMPTraitInfo &TI = A->getTraitInfos();
+    const OMPTraitInfo &TI = *A->getTraitInfos();
     VMIs.push_back(VariantMatchInfo());
     TI.getAsVariantMatchInfo(CGM.getContext(), VMIs.back());
     VariantExprs.push_back(A->getVariantFuncRef());

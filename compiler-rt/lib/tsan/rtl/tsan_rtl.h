@@ -813,10 +813,12 @@ void Acquire(ThreadState *thr, uptr pc, uptr addr);
 // approximation of the actual required synchronization.
 void AcquireGlobal(ThreadState *thr, uptr pc);
 void Release(ThreadState *thr, uptr pc, uptr addr);
+void ReleaseStoreAcquire(ThreadState *thr, uptr pc, uptr addr);
 void ReleaseStore(ThreadState *thr, uptr pc, uptr addr);
 void AfterSleep(ThreadState *thr, uptr pc);
 void AcquireImpl(ThreadState *thr, uptr pc, SyncClock *c);
 void ReleaseImpl(ThreadState *thr, uptr pc, SyncClock *c);
+void ReleaseStoreAcquireImpl(ThreadState *thr, uptr pc, SyncClock *c);
 void ReleaseStoreImpl(ThreadState *thr, uptr pc, SyncClock *c);
 void AcquireReleaseImpl(ThreadState *thr, uptr pc, SyncClock *c);
 

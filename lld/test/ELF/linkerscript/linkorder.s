@@ -1,11 +1,11 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
 
-# RUN: echo "SECTIONS { .text : { *(.text.bar) *(.text.foo)  } }" > %t.script
+# RUN: echo "SECTIONS { .rodata : {*(.rodata*)} .text : {*(.text.bar) *(.text.foo)} }" > %t.script
 # RUN: ld.lld -o %t --script %t.script %t.o
 # RUN: llvm-objdump -s %t | FileCheck %s
 
-# RUN: echo "SECTIONS { .text : { *(.text.foo) *(.text.bar) } }" > %t.script
+# RUN: echo "SECTIONS { .rodata : {*(.rodata*)} .text : {*(.text.foo) *(.text.bar)} }" > %t.script
 # RUN: ld.lld -o %t --script %t.script %t.o
 # RUN: llvm-objdump -s %t | FileCheck --check-prefix=INV %s
 

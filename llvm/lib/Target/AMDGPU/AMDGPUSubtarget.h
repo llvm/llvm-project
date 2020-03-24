@@ -16,6 +16,7 @@
 
 #include "AMDGPU.h"
 #include "AMDGPUCallLowering.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "R600FrameLowering.h"
 #include "R600ISelLowering.h"
 #include "R600InstrInfo.h"
@@ -245,6 +246,13 @@ public:
   }
   uint64_t getExplicitKernArgSize(const Function &F, Align &MaxAlign) const;
   unsigned getKernArgSegmentSize(const Function &F, Align &MaxAlign) const;
+
+  /// \returns Corresponsing DWARF register number mapping flavour for the
+  /// \p WavefrontSize.
+  AMDGPUDwarfFlavour getAMDGPUDwarfFlavour() const {
+    return WavefrontSize == 32 ? AMDGPUDwarfFlavour::Wave32
+                               : AMDGPUDwarfFlavour::Wave64;
+  }
 
   virtual ~AMDGPUSubtarget() {}
 };

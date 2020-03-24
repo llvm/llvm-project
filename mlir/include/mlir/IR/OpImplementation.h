@@ -37,6 +37,7 @@ public:
 
   /// Print implementations for various things an operation contains.
   virtual void printOperand(Value value) = 0;
+  virtual void printOperand(Value value, raw_ostream &os) = 0;
 
   /// Print a comma separated list of operands.
   template <typename ContainerType>
@@ -244,6 +245,24 @@ public:
     *loc = getCurrentLocation();
     return success();
   }
+
+  /// Return the name of the specified result in the specified syntax, as well
+  /// as the sub-element in the name.  It returns an empty string and ~0U for
+  /// invalid result numbers.  For example, in this operation:
+  ///
+  ///  %x, %y:2, %z = foo.op
+  ///
+  ///    getResultName(0) == {"x", 0 }
+  ///    getResultName(1) == {"y", 0 }
+  ///    getResultName(2) == {"y", 1 }
+  ///    getResultName(3) == {"z", 0 }
+  ///    getResultName(4) == {"", ~0U }
+  virtual std::pair<StringRef, unsigned>
+  getResultName(unsigned resultNo) const = 0;
+
+  /// Return the number of declared SSA results.  This returns 4 for the foo.op
+  /// example in the comment for `getResultName`.
+  virtual size_t getNumResults() const = 0;
 
   /// Return the location of the original name token.
   virtual llvm::SMLoc getNameLoc() const = 0;

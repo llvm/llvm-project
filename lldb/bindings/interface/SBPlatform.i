@@ -194,6 +194,9 @@ public:
     lldb::SBUnixSignals
     GetUnixSignals();
 
+    lldb::SBEnvironment
+    GetEnvironment();
+
 };
 
 } // namespace lldb

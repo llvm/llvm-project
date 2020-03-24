@@ -328,6 +328,34 @@ const Value *getSplatValue(const Value *V);
 /// not limited by finding a scalar source value to a splatted vector.
 bool isSplatValue(const Value *V, int Index = -1, unsigned Depth = 0);
 
+/// Scale a shuffle or target shuffle mask, replacing each mask index with the
+/// scaled sequential indices for an equivalent mask of narrowed elements.
+/// Mask elements that are less than 0 (sentinel values) are repeated in the
+/// output mask.
+///
+/// Example with Scale = 4:
+///   <4 x i32> <3, 2, 0, -1> -->
+///   <16 x i8> <12, 13, 14, 15, 8, 9, 10, 11, 0, 1, 2, 3, -1, -1, -1, -1>
+///
+/// This is the reverse process of "canWidenShuffleElements", but can always
+/// succeed.
+template <typename T>
+void scaleShuffleMask(size_t Scale, ArrayRef<T> Mask,
+                      SmallVectorImpl<T> &ScaledMask) {
+  assert(Scale > 0 && "Unexpected scaling factor");
+
+  // Fast-path: if no scaling, then it is just a copy.
+  if (Scale == 1) {
+    ScaledMask.assign(Mask.begin(), Mask.end());
+    return;
+  }
+
+  ScaledMask.clear();
+  for (int MaskElt : Mask)
+    for (int ScaleElt = 0; ScaleElt != (int)Scale; ++ScaleElt)
+      ScaledMask.push_back(MaskElt < 0 ? MaskElt : Scale * MaskElt + ScaleElt);
+}
+
 /// Compute a map of integer instructions to their minimum legal type
 /// size.
 ///
@@ -530,7 +558,10 @@ public:
 
   bool isReverse() const { return Reverse; }
   uint32_t getFactor() const { return Factor; }
-  uint32_t getAlignment() const { return Alignment.value(); }
+  LLVM_ATTRIBUTE_DEPRECATED(uint32_t getAlignment() const,
+                            "Use getAlign instead.") {
+    return Alignment.value();
+  }
   Align getAlign() const { return Alignment; }
   uint32_t getNumMembers() const { return Members.size(); }
 

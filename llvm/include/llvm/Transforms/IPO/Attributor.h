@@ -29,7 +29,7 @@
 // automatically capture a potential dependence from Q to P. This dependence
 // will cause P to be reevaluated whenever Q changes in the future.
 //
-// The Attributor will only reevaluated abstract attributes that might have
+// The Attributor will only reevaluate abstract attributes that might have
 // changed since the last iteration. That means that the Attribute will not
 // revisit all instructions/blocks/functions in the module but only query
 // an update from a subset of the abstract attributes.
@@ -152,8 +152,8 @@ struct IRPosition {
 
   /// The positions we distinguish in the IR.
   ///
-  /// The values are chosen such that the KindOrArgNo member has a value >= 1
-  /// if it is an argument or call site argument while a value < 1 indicates the
+  /// The values are chosen such that the KindOrArgNo member has a value >= 0
+  /// if it is an argument or call site argument while a value < 0 indicates the
   /// respective kind of that value.
   enum Kind : int {
     IRP_INVALID = -6, ///< An invalid position.
@@ -273,18 +273,11 @@ struct IRPosition {
 
   /// Return the associated function, if any.
   Function *getAssociatedFunction() const {
-    if (auto *CB = dyn_cast<CallBase>(AnchorVal))
-      return CB->getCalledFunction();
     assert(KindOrArgNo != IRP_INVALID &&
            "Invalid position does not have an anchor scope!");
-    Value &V = getAnchorValue();
-    if (isa<Function>(V))
-      return &cast<Function>(V);
-    if (isa<Argument>(V))
-      return cast<Argument>(V).getParent();
-    if (isa<Instruction>(V))
-      return cast<Instruction>(V).getFunction();
-    return nullptr;
+    if (auto *CB = dyn_cast<CallBase>(AnchorVal))
+      return CB->getCalledFunction();
+    return getAnchorScope();
   }
 
   /// Return the associated argument, if any.
@@ -474,7 +467,10 @@ protected:
   /// The value this position is anchored at.
   Value *AnchorVal;
 
-  /// The argument number, if non-negative, or the position "kind".
+  /// If AnchorVal is Argument or CallBase then this number should be
+  /// non-negative and it denotes the argument or call site argument index
+  /// respectively. Otherwise, it denotes the kind of this IRPosition according
+  /// to Kind above.
   int KindOrArgNo;
 };
 
@@ -894,7 +890,7 @@ struct Attributor {
   ///
   /// This method will evaluate \p Pred on all (transitive) uses of the
   /// associated value and return true if \p Pred holds every time.
-  bool checkForAllUses(const function_ref<bool(const Use &, bool &)> &Pred,
+  bool checkForAllUses(function_ref<bool(const Use &, bool &)> Pred,
                        const AbstractAttribute &QueryingAA, const Value &V,
                        DepClassTy LivenessDepClass = DepClassTy::OPTIONAL);
 
@@ -1006,7 +1002,7 @@ struct Attributor {
   /// all call sites are known, hence the function has internal linkage.
   /// If true is returned, \p AllCallSitesKnown is set if all possible call
   /// sites of the function have been visited.
-  bool checkForAllCallSites(const function_ref<bool(AbstractCallSite)> &Pred,
+  bool checkForAllCallSites(function_ref<bool(AbstractCallSite)> Pred,
                             const AbstractAttribute &QueryingAA,
                             bool RequireAllCallSites, bool &AllCallSitesKnown);
 
@@ -1017,22 +1013,21 @@ struct Attributor {
   /// matched with their respective return instructions. Returns true if \p Pred
   /// holds on all of them.
   bool checkForAllReturnedValuesAndReturnInsts(
-      const function_ref<bool(Value &, const SmallSetVector<ReturnInst *, 4> &)>
-          &Pred,
+      function_ref<bool(Value &, const SmallSetVector<ReturnInst *, 4> &)> Pred,
       const AbstractAttribute &QueryingAA);
 
   /// Check \p Pred on all values potentially returned by the function
   /// associated with \p QueryingAA.
   ///
   /// This is the context insensitive version of the method above.
-  bool checkForAllReturnedValues(const function_ref<bool(Value &)> &Pred,
+  bool checkForAllReturnedValues(function_ref<bool(Value &)> Pred,
                                  const AbstractAttribute &QueryingAA);
 
   /// Check \p Pred on all instructions with an opcode present in \p Opcodes.
   ///
   /// This method will evaluate \p Pred on all instructions with an opcode
   /// present in \p Opcode and return true if \p Pred holds on all of them.
-  bool checkForAllInstructions(const function_ref<bool(Instruction &)> &Pred,
+  bool checkForAllInstructions(function_ref<bool(Instruction &)> Pred,
                                const AbstractAttribute &QueryingAA,
                                const ArrayRef<unsigned> &Opcodes,
                                bool CheckBBLivenessOnly = false);
@@ -1040,9 +1035,8 @@ struct Attributor {
   /// Check \p Pred on all call-like instructions (=CallBased derived).
   ///
   /// See checkForAllCallLikeInstructions(...) for more information.
-  bool
-  checkForAllCallLikeInstructions(const function_ref<bool(Instruction &)> &Pred,
-                                  const AbstractAttribute &QueryingAA) {
+  bool checkForAllCallLikeInstructions(function_ref<bool(Instruction &)> Pred,
+                                       const AbstractAttribute &QueryingAA) {
     return checkForAllInstructions(Pred, QueryingAA,
                                    {(unsigned)Instruction::Invoke,
                                     (unsigned)Instruction::CallBr,
@@ -1054,9 +1048,8 @@ struct Attributor {
   /// This method will evaluate \p Pred on all instructions that read or write
   /// to memory present in the information cache and return true if \p Pred
   /// holds on all of them.
-  bool checkForAllReadWriteInstructions(
-      const llvm::function_ref<bool(Instruction &)> &Pred,
-      AbstractAttribute &QueryingAA);
+  bool checkForAllReadWriteInstructions(function_ref<bool(Instruction &)> Pred,
+                                        AbstractAttribute &QueryingAA);
 
   /// Return the data layout associated with the anchor scope.
   const DataLayout &getDataLayout() const { return InfoCache.DL; }
@@ -1069,7 +1062,7 @@ private:
   /// all call sites are known, hence the function has internal linkage.
   /// If true is returned, \p AllCallSitesKnown is set if all possible call
   /// sites of the function have been visited.
-  bool checkForAllCallSites(const function_ref<bool(AbstractCallSite)> &Pred,
+  bool checkForAllCallSites(function_ref<bool(AbstractCallSite)> Pred,
                             const Function &Fn, bool RequireAllCallSites,
                             const AbstractAttribute *QueryingAA,
                             bool &AllCallSitesKnown);
@@ -1918,8 +1911,8 @@ struct AAReturnedValues
   /// Note: Unlike the Attributor::checkForAllReturnedValuesAndReturnInsts
   /// method, this one will not filter dead return instructions.
   virtual bool checkForAllReturnedValuesAndReturnInsts(
-      const function_ref<bool(Value &, const SmallSetVector<ReturnInst *, 4> &)>
-          &Pred) const = 0;
+      function_ref<bool(Value &, const SmallSetVector<ReturnInst *, 4> &)> Pred)
+      const = 0;
 
   using iterator =
       MapVector<Value *, SmallSetVector<ReturnInst *, 4>>::iterator;
@@ -2291,7 +2284,8 @@ struct DerefState : AbstractState {
 
   /// Add accessed bytes to the map.
   void addAccessedBytes(int64_t Offset, uint64_t Size) {
-    AccessedBytesMap[Offset] = std::max(AccessedBytesMap[Offset], Size);
+    uint64_t &AccessedBytes = AccessedBytesMap[Offset];
+    AccessedBytes = std::max(AccessedBytes, Size);
 
     // Known bytes might increase.
     computeKnownDerefBytesFromAccessedMap();
@@ -2723,8 +2717,9 @@ struct AAMemoryLocation
   /// underlying accessed memory pointer) and it will return true if \p Pred
   /// holds every time.
   virtual bool checkForAllAccessesToMemoryKind(
-      const function_ref<bool(const Instruction *, const Value *, AccessKind,
-                              MemoryLocationsKind)> &Pred,
+      function_ref<bool(const Instruction *, const Value *, AccessKind,
+                        MemoryLocationsKind)>
+          Pred,
       MemoryLocationsKind MLK) const = 0;
 
   /// Create an abstract attribute view for the position \p IRP.

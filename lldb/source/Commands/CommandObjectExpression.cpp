@@ -486,7 +486,8 @@ bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
     }
   }
 
-  return true;
+  return (success != eExpressionSetupError &&
+          success != eExpressionParseError);
 }
 
 void CommandObjectExpression::IOHandlerInputComplete(IOHandler &io_handler,

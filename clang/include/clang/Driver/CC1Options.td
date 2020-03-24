@@ -566,6 +566,11 @@ def fno_concept_satisfaction_caching : Flag<["-"],
                                             "fno-concept-satisfaction-caching">,
   HelpText<"Disable satisfaction caching for C++2a Concepts.">;
 
+def frecovery_ast : Flag<["-"], "frecovery-ast">,
+  HelpText<"Preserve expressions in AST rather than dropping them when "
+           "encountering semantic errors">;
+def fno_recovery_ast : Flag<["-"], "fno-recovery-ast">;
+
 let Group = Action_Group in {
 
 def Eonly : Flag<["-"], "Eonly">,

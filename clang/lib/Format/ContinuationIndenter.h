@@ -208,7 +208,8 @@ struct ParenState {
         LastOperatorWrapped(true), ContainsLineBreak(false),
         ContainsUnwrappedBuilder(false), AlignColons(true),
         ObjCSelectorNameFound(false), HasMultipleNestedBlocks(false),
-        NestedBlockInlined(false), IsInsideObjCArrayLiteral(false) {}
+        NestedBlockInlined(false), IsInsideObjCArrayLiteral(false),
+        IsCSharpGenericTypeConstraint(false) {}
 
   /// \brief The token opening this parenthesis level, or nullptr if this level
   /// is opened by fake parenthesis.
@@ -329,6 +330,8 @@ struct ParenState {
   /// array literal.
   bool IsInsideObjCArrayLiteral : 1;
 
+  bool IsCSharpGenericTypeConstraint : 1;
+
   bool operator<(const ParenState &Other) const {
     if (Indent != Other.Indent)
       return Indent < Other.Indent;
@@ -366,6 +369,8 @@ struct ParenState {
       return ContainsUnwrappedBuilder;
     if (NestedBlockInlined != Other.NestedBlockInlined)
       return NestedBlockInlined;
+    if (IsCSharpGenericTypeConstraint != Other.IsCSharpGenericTypeConstraint)
+      return IsCSharpGenericTypeConstraint;
     return false;
   }
 };

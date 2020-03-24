@@ -26,8 +26,9 @@ using namespace omp;
 OMPContext::OMPContext(bool IsDeviceCompilation, Triple TargetTriple) {
   // Add the appropriate device kind trait based on the triple and the
   // IsDeviceCompilation flag.
-  ActiveTraits.insert(IsDeviceCompilation ? TraitProperty::device_kind_nohost
-                                          : TraitProperty::device_kind_host);
+  ActiveTraits.set(unsigned(IsDeviceCompilation
+                                ? TraitProperty::device_kind_nohost
+                                : TraitProperty::device_kind_host));
   switch (TargetTriple.getArch()) {
   case Triple::arm:
   case Triple::armeb:
@@ -43,12 +44,12 @@ OMPContext::OMPContext(bool IsDeviceCompilation, Triple TargetTriple) {
   case Triple::ppc64le:
   case Triple::x86:
   case Triple::x86_64:
-    ActiveTraits.insert(TraitProperty::device_kind_cpu);
+    ActiveTraits.set(unsigned(TraitProperty::device_kind_cpu));
     break;
   case Triple::amdgcn:
   case Triple::nvptx:
   case Triple::nvptx64:
-    ActiveTraits.insert(TraitProperty::device_kind_gpu);
+    ActiveTraits.set(unsigned(TraitProperty::device_kind_gpu));
     break;
   default:
     break;
@@ -58,7 +59,7 @@ OMPContext::OMPContext(bool IsDeviceCompilation, Triple TargetTriple) {
 #define OMP_TRAIT_PROPERTY(Enum, TraitSetEnum, TraitSelectorEnum, Str)         \
   if (TraitSelector::TraitSelectorEnum == TraitSelector::device_arch)          \
     if (TargetTriple.getArch() == TargetTriple.getArchTypeForLLVMName(Str))    \
-      ActiveTraits.insert(TraitProperty::Enum);
+      ActiveTraits.set(unsigned(TraitProperty::Enum));
 #include "llvm/Frontend/OpenMP/OMPKinds.def"
 
   // TODO: What exactly do we want to see as device ISA trait?
@@ -67,20 +68,22 @@ OMPContext::OMPContext(bool IsDeviceCompilation, Triple TargetTriple) {
 
   // LLVM is the "OpenMP vendor" but we could also interpret vendor as the
   // target vendor.
-  ActiveTraits.insert(TraitProperty::implementation_vendor_llvm);
+  ActiveTraits.set(unsigned(TraitProperty::implementation_vendor_llvm));
 
   // The user condition true is accepted but not false.
-  ActiveTraits.insert(TraitProperty::user_condition_true);
+  ActiveTraits.set(unsigned(TraitProperty::user_condition_true));
 
   // This is for sure some device.
-  ActiveTraits.insert(TraitProperty::device_kind_any);
+  ActiveTraits.set(unsigned(TraitProperty::device_kind_any));
 
   LLVM_DEBUG({
     dbgs() << "[" << DEBUG_TYPE
            << "] New OpenMP context with the following properties:\n";
-    for (auto &Property : ActiveTraits)
+    for (const auto &SetBitsIt : ActiveTraits.set_bits()) {
+      TraitProperty Property = TraitProperty(SetBitsIt);
       dbgs() << "\t " << getOpenMPContextTraitPropertyFullName(Property)
              << "\n";
+    }
   });
 }
 
@@ -122,17 +125,24 @@ static bool isStrictSubset(const VariantMatchInfo &VMI0,
   // If all required traits are a strict subset and the ordered vectors storing
   // the construct traits, we say it is a strict subset. Note that the latter
   // relation is not required to be strict.
-  return set_is_strict_subset(VMI0.RequiredTraits, VMI1.RequiredTraits) &&
-         isSubset<TraitProperty>(VMI0.ConstructTraits, VMI1.ConstructTraits);
+  if (VMI0.RequiredTraits.count() >= VMI1.RequiredTraits.count())
+    return false;
+  for (const auto &SetBitsIt : VMI0.RequiredTraits.set_bits())
+    if (!VMI1.RequiredTraits.test(SetBitsIt))
+      return false;
+  if (!isSubset<TraitProperty>(VMI0.ConstructTraits, VMI1.ConstructTraits))
+    return false;
+  return true;
 }
 
 static int isVariantApplicableInContextHelper(
     const VariantMatchInfo &VMI, const OMPContext &Ctx,
     SmallVectorImpl<unsigned> *ConstructMatches) {
 
-  for (TraitProperty Property : VMI.RequiredTraits) {
+  for (const auto &SetBitsIt : VMI.RequiredTraits.set_bits()) {
+    TraitProperty Property = TraitProperty(SetBitsIt);
 
-    bool IsActiveTrait = Ctx.ActiveTraits.count(Property);
+    bool IsActiveTrait = Ctx.ActiveTraits.test(unsigned(Property));
     if (!IsActiveTrait) {
       LLVM_DEBUG(dbgs() << "[" << DEBUG_TYPE << "] Property "
                         << getOpenMPContextTraitPropertyName(Property)
@@ -181,7 +191,8 @@ static APInt getVariantMatchScore(const VariantMatchInfo &VMI,
   APInt Score(64, 1);
 
   unsigned NoConstructTraits = VMI.ConstructTraits.size();
-  for (TraitProperty Property : VMI.RequiredTraits) {
+  for (const auto &SetBitsIt : VMI.RequiredTraits.set_bits()) {
+    TraitProperty Property = TraitProperty(SetBitsIt);
     // If there is a user score attached, use it.
     if (VMI.ScoreMap.count(Property)) {
       const APInt &UserScore = VMI.ScoreMap.lookup(Property);

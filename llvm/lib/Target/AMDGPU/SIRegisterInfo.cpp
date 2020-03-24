@@ -38,12 +38,9 @@ static cl::opt<bool> EnableSpillSGPRToVGPR(
   cl::ReallyHidden,
   cl::init(true));
 
-SIRegisterInfo::SIRegisterInfo(const GCNSubtarget &ST) :
-  AMDGPUGenRegisterInfo(0),
-  ST(ST),
-  SpillSGPRToVGPR(EnableSpillSGPRToVGPR),
-  isWave32(ST.isWave32()) {
-}
+SIRegisterInfo::SIRegisterInfo(const GCNSubtarget &ST)
+    : AMDGPUGenRegisterInfo(AMDGPU::PC_REG, ST.getAMDGPUDwarfFlavour()), ST(ST),
+      SpillSGPRToVGPR(EnableSpillSGPRToVGPR), isWave32(ST.isWave32()) {}
 
 void SIRegisterInfo::reserveRegisterTuples(BitVector &Reserved,
                                            unsigned Reg) const {

@@ -35,6 +35,7 @@ add_lldb_library(liblldb SHARED ${option_framework}
   SBData.cpp
   SBDebugger.cpp
   SBDeclaration.cpp
+  SBEnvironment.cpp
   SBError.cpp
   SBEvent.cpp
   SBExecutionContext.cpp

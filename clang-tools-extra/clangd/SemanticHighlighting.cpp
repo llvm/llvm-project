@@ -445,14 +445,15 @@ bool operator==(const LineHighlightings &L, const LineHighlightings &R) {
   return std::tie(L.Line, L.Tokens) == std::tie(R.Line, R.Tokens);
 }
 
-std::vector<SemanticHighlightingInformation>
-toSemanticHighlightingInformation(llvm::ArrayRef<LineHighlightings> Tokens) {
+std::vector<TheiaSemanticHighlightingInformation>
+toTheiaSemanticHighlightingInformation(
+    llvm::ArrayRef<LineHighlightings> Tokens) {
   if (Tokens.size() == 0)
     return {};
 
   // FIXME: Tokens might be multiple lines long (block comments) in this case
   // this needs to add multiple lines for those tokens.
-  std::vector<SemanticHighlightingInformation> Lines;
+  std::vector<TheiaSemanticHighlightingInformation> Lines;
   Lines.reserve(Tokens.size());
   for (const auto &Line : Tokens) {
     llvm::SmallVector<char, 128> LineByteTokens;

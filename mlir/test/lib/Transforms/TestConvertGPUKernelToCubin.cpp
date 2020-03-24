@@ -9,18 +9,15 @@
 #include "mlir/Conversion/GPUToCUDA/GPUToCUDAPass.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
-
 using namespace mlir;
 
-namespace {
+#if MLIR_CUDA_CONVERSIONS_ENABLED
 static OwnedCubin compilePtxToCubinForTesting(const std::string &, Location,
                                               StringRef) {
   const char data[] = "CUBIN";
   return std::make_unique<std::vector<char>>(data, data + sizeof(data) - 1);
 }
-} // end anonymous namespace
 
-#if MLIR_CUDA_CONVERSIONS_ENABLED
 namespace mlir {
 void registerTestConvertGPUKernelToCubinPass() {
   PassPipelineRegistration<>("test-kernel-to-cubin",

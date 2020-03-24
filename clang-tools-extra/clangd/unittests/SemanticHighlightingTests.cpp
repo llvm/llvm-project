@@ -720,7 +720,7 @@ TEST(SemanticHighlighting, GeneratesHighlightsWhenFileChange) {
   ASSERT_EQ(Counter.Count, 1);
 }
 
-TEST(SemanticHighlighting, toSemanticHighlightingInformation) {
+TEST(SemanticHighlighting, toTheiaSemanticHighlightingInformation) {
   auto CreatePosition = [](int Line, int Character) -> Position {
     Position Pos;
     Pos.line = Line;
@@ -739,9 +739,9 @@ TEST(SemanticHighlighting, toSemanticHighlightingInformation) {
        {{HighlightingKind::Variable,
          Range{CreatePosition(1, 1), CreatePosition(1, 5)}}},
        /* IsInactive = */ true}};
-  std::vector<SemanticHighlightingInformation> ActualResults =
-      toSemanticHighlightingInformation(Tokens);
-  std::vector<SemanticHighlightingInformation> ExpectedResults = {
+  std::vector<TheiaSemanticHighlightingInformation> ActualResults =
+      toTheiaSemanticHighlightingInformation(Tokens);
+  std::vector<TheiaSemanticHighlightingInformation> ExpectedResults = {
       {3, "AAAACAAEAAAAAAAEAAMAAw=="}, {1, "AAAAAQAEAAA="}};
   EXPECT_EQ(ActualResults, ExpectedResults);
 }

@@ -2,9 +2,7 @@
 
 func @main() {
   %data = alloc() : memref<2x6xi32>
-  %sum_and = alloc() : memref<2xi32>
-  %sum_or = alloc() : memref<2xi32>
-  %sum_min = alloc() : memref<2xi32>
+  %sum = alloc() : memref<2xi32>
   %cst0 = constant 0 : i32
   %cst1 = constant 1 : i32
   %cst2 = constant 2 : i32
@@ -25,7 +23,12 @@ func @main() {
   %c4 = constant 4 : index
   %c5 = constant 5 : index
   %c6 = constant 6 : index
-    
+
+  %cast_data = memref_cast %data : memref<2x6xi32> to memref<?x?xi32>
+  call @mcuMemHostRegisterMemRef2dInt32(%cast_data) : (memref<?x?xi32>) -> ()
+  %cast_sum = memref_cast %sum : memref<2xi32> to memref<?xi32>
+  call @mcuMemHostRegisterMemRef1dInt32(%cast_sum) : (memref<?xi32>) -> ()
+
   store %cst0, %data[%c0, %c0] : memref<2x6xi32>
   store %cst1, %data[%c0, %c1] : memref<2x6xi32>
   store %cst2, %data[%c0, %c2] : memref<2x6xi32>
@@ -44,17 +47,19 @@ func @main() {
   gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %c2, %grid_y = %c1, %grid_z = %c1)
              threads(%tx, %ty, %tz) in (%block_x = %c6, %block_y = %c1, %block_z = %c1) {
     %val = load %data[%bx, %tx] : memref<2x6xi32>
-    %reduced_and = "gpu.all_reduce"(%val) ({}) { op = "and" } : (i32) -> (i32)
-    store %reduced_and, %sum_and[%bx] : memref<2xi32>
+    %reduced = "gpu.all_reduce"(%val) ({}) { op = "and" } : (i32) -> (i32)
+    store %reduced, %sum[%bx] : memref<2xi32>
     gpu.terminator
   }
 
-  %ptr_and = memref_cast %sum_and : memref<2xi32> to memref<*xi32>
-  call @print_memref_i32(%ptr_and) : (memref<*xi32>) -> ()
+  %ptr = memref_cast %sum : memref<2xi32> to memref<*xi32>
+  call @print_memref_i32(%ptr) : (memref<*xi32>) -> ()
   // CHECK: [0, 2]
 
   return
 }
 
+func @mcuMemHostRegisterMemRef1dInt32(%ptr : memref<?xi32>)
+func @mcuMemHostRegisterMemRef2dInt32(%ptr : memref<?x?xi32>)
 func @print_memref_i32(memref<*xi32>)
 

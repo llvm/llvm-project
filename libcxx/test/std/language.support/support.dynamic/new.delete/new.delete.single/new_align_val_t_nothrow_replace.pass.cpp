@@ -31,9 +31,6 @@
 // XFAIL: (apple-clang-9 || apple-clang-10) && with_system_cxx_lib=macosx10.8
 // XFAIL: (apple-clang-9 || apple-clang-10) && with_system_cxx_lib=macosx10.7
 
-// NOTE: gcc doesn't provide -faligned-allocation flag to test for
-// XFAIL: no-aligned-allocation && !gcc
-
 // On Windows libc++ doesn't provide its own definitions for new/delete
 // but instead depends on the ones in VCRuntime. However VCRuntime does not
 // yet provide aligned new/delete definitions so this test fails.

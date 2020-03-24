@@ -6,7 +6,8 @@
 ; REQUIRES: asserts
 ;
 ; DBG: fun1 function optimized for not having CSR
-; DBG: Call Instruction After Register Usage Info Propagation : CallBRASL @fun1{{.*}} $r14d $r15d
+; DBG: Call Instruction After Register Usage Info Propagation :
+; DBG-NEXT: CallBRASL @fun1{{.*}} $r14d $r15d
 
 declare dso_local fastcc signext i32 @foo(i16*, i32 signext) unnamed_addr
 

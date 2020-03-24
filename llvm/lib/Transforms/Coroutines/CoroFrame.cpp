@@ -108,7 +108,6 @@ struct SuspendCrossingInfo {
     size_t const DefIndex = Mapping.blockToIndex(DefBB);
     size_t const UseIndex = Mapping.blockToIndex(UseBB);
 
-    assert(Block[UseIndex].Consumes[DefIndex] && "use must consume def");
     bool const Result = Block[UseIndex].Kills[DefIndex];
     LLVM_DEBUG(dbgs() << UseBB->getName() << " => " << DefBB->getName()
                       << " answer is " << Result << "\n");
@@ -1396,6 +1395,24 @@ void coro::buildCoroutineFrame(Function &F, Shape &Shape) {
     Spills.clear();
   }
 
+  // Collect lifetime.start info for each alloca.
+  using LifetimeStart = SmallPtrSet<Instruction *, 2>;
+  llvm::DenseMap<Instruction *, std::unique_ptr<LifetimeStart>> LifetimeMap;
+  for (Instruction &I : instructions(F)) {
+    auto *II = dyn_cast<IntrinsicInst>(&I);
+    if (!II || II->getIntrinsicID() != Intrinsic::lifetime_start)
+      continue;
+
+    if (auto *OpInst = dyn_cast<BitCastInst>(I.getOperand(1)))
+      if (auto *AI = dyn_cast<AllocaInst>(OpInst->getOperand(0))) {
+
+        if (LifetimeMap.find(AI) == LifetimeMap.end())
+          LifetimeMap[AI] = std::make_unique<LifetimeStart>();
+
+        LifetimeMap[AI]->insert(OpInst);
+      }
+  }
+
   // Collect the spills for arguments and other not-materializable values.
   for (Argument &A : F.args())
     for (User *U : A.users())
@@ -1441,14 +1458,27 @@ void coro::buildCoroutineFrame(Function &F, Shape &Shape) {
       continue;
     }
 
-    for (User *U : I.users())
-      if (Checker.isDefinitionAcrossSuspend(I, U)) {
+    auto Iter = LifetimeMap.find(&I);
+    for (User *U : I.users()) {
+      bool NeedSpill = false;
+
+      // Check against lifetime.start if the instruction has the info.
+      if (Iter != LifetimeMap.end())
+        for (auto *S : *Iter->second) {
+          if ((NeedSpill = Checker.isDefinitionAcrossSuspend(*S, U)))
+            break;
+        }
+      else
+        NeedSpill = Checker.isDefinitionAcrossSuspend(I, U);
+
+      if (NeedSpill) {
         // We cannot spill a token.
         if (I.getType()->isTokenTy())
           report_fatal_error(
               "token definition is separated from the use by a suspend point");
         Spills.emplace_back(&I, U);
       }
+    }
   }
   LLVM_DEBUG(dump("Spills", Spills));
   Shape.FrameTy = buildFrameType(F, Shape, Spills);

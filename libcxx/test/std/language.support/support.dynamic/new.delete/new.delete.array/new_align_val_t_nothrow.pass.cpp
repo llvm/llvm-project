@@ -11,9 +11,6 @@
 // asan and msan will not call the new handler.
 // UNSUPPORTED: sanitizer-new-delete
 
-// FIXME turn this into an XFAIL
-// UNSUPPORTED: no-aligned-allocation && !gcc
-
 // Aligned allocation was not provided before macosx10.14 and as a result we
 // get availability errors when the deployment target is older than macosx10.14.
 // However, AppleClang 10 (and older) don't trigger availability errors, and

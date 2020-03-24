@@ -211,6 +211,8 @@ public:
 
   bool GetAutoInstallMainExecutable() const;
 
+  void UpdateLaunchInfoFromProperties();
+
 private:
   // Callbacks for m_launch_info.
   void Arg0ValueChangedCallback();
@@ -223,9 +225,12 @@ private:
   void DisableASLRValueChangedCallback();
   void DisableSTDIOValueChangedCallback();
 
+  Environment ComputeEnvironment() const;
+
   // Member variables.
   ProcessLaunchInfo m_launch_info;
   std::unique_ptr<TargetExperimentalProperties> m_experimental_properties_up;
+  Target *m_target;
 };
 
 class EvaluateExpressionOptions {
@@ -1094,11 +1099,6 @@ public:
       std::string *fixed_expression = nullptr, ValueObject *ctx_obj = nullptr);
 
   lldb::ExpressionVariableSP GetPersistentVariable(ConstString name);
-
-  /// Return the next available number for numbered persistent variables.
-  unsigned GetNextPersistentVariableIndex() {
-    return m_next_persistent_variable_index++;
-  }
 
   lldb::addr_t GetPersistentSymbol(ConstString name);
 

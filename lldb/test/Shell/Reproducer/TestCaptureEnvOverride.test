@@ -1,4 +1,3 @@
-# UNSUPPORTED: system-windows
 # This tests the LLDB_CAPTURE_REPRODUCER override.
 
 # RUN: %lldb -b -o 'reproducer status' --capture --capture-path %t.repro /bin/ls | FileCheck %s --check-prefix CAPTURE

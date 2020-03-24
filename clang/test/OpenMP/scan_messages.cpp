@@ -54,25 +54,25 @@ T tmain(T argc) {
 #pragma omp simd
   for (int i = 0; i < 10; ++i)
   switch (argc) {
-#pragma omp scan inclusive(argc) // expected-note 2 {{previous 'scan' directive used here}}
+#pragma omp scan exclusive(argc) // expected-note 2 {{previous 'scan' directive used here}}
   case 1:
-#pragma omp scan inclusive(argc) // expected-error {{exactly one 'scan' directive must appear in the loop body of an enclosing directive}}
+#pragma omp scan exclusive(argc) // expected-error {{exactly one 'scan' directive must appear in the loop body of an enclosing directive}}
     break;
   default: {
-#pragma omp scan inclusive(argc) // expected-error {{exactly one 'scan' directive must appear in the loop body of an enclosing directive}}
+#pragma omp scan exclusive(argc) // expected-error {{exactly one 'scan' directive must appear in the loop body of an enclosing directive}}
   } break;
   }
 #pragma omp simd
   for (int i = 0; i < 10; ++i)
   for (;;)
-#pragma omp scan inclusive(argc) // expected-error {{'#pragma omp scan' cannot be an immediate substatement}}
+#pragma omp scan exclusive(argc) // expected-error {{'#pragma omp scan' cannot be an immediate substatement}}
     for (;;) {
-#pragma omp scan inclusive(argc)
+#pragma omp scan exclusive(argc)
     }
 #pragma omp simd
   for (int i = 0; i < 10; ++i) {
 label:
-#pragma omp scan inclusive(argc)
+#pragma omp scan exclusive(argc)
   }
 #pragma omp simd
   for (int i = 0; i < 10; ++i) {
@@ -87,6 +87,16 @@ int main(int argc, char **argv) {
 #pragma omp simd
   for (int i = 0; i < 10; ++i) {
 #pragma omp scan inclusive(argc) inclusive(argc) // expected-error {{exactly one of 'inclusive' or 'exclusive' clauses is expected}}
+  ;
+  }
+#pragma omp simd
+  for (int i = 0; i < 10; ++i) {
+#pragma omp scan exclusive(argc) inclusive(argc) // expected-error {{exactly one of 'inclusive' or 'exclusive' clauses is expected}}
+  ;
+  }
+#pragma omp simd
+  for (int i = 0; i < 10; ++i) {
+#pragma omp scan exclusive(argc) exclusive(argc) // expected-error {{exactly one of 'inclusive' or 'exclusive' clauses is expected}}
   ;
   }
 #pragma omp simd
@@ -117,18 +127,18 @@ int main(int argc, char **argv) {
 #pragma omp simd
   for (int i = 0; i < 10; ++i)
   do {
-#pragma omp scan inclusive(argc)
+#pragma omp scan exclusive(argc)
   } while (argc);
 #pragma omp simd
   for (int i = 0; i < 10; ++i)
   switch (argc)
-#pragma omp scan inclusive(argc) // expected-error {{'#pragma omp scan' cannot be an immediate substatement}}
+#pragma omp scan exclusive(argc) // expected-error {{'#pragma omp scan' cannot be an immediate substatement}}
     switch (argc)
     case 1:
-#pragma omp scan inclusive(argc) // expected-error {{'#pragma omp scan' cannot be an immediate substatement}}
+#pragma omp scan exclusive(argc) // expected-error {{'#pragma omp scan' cannot be an immediate substatement}}
   switch (argc)
   case 1: {
-#pragma omp scan inclusive(argc)
+#pragma omp scan exclusive(argc)
   }
 #pragma omp simd
   for (int i = 0; i < 10; ++i)

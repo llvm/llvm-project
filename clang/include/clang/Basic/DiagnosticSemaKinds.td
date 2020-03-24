@@ -2894,6 +2894,10 @@ def err_attribute_address_multiple_qualifiers : Error<
 def warn_attribute_address_multiple_identical_qualifiers : Warning<
   "multiple identical address spaces specified for type">,
   InGroup<DuplicateDeclSpecifier>;
+def err_attribute_not_clinkage : Error<
+  "function type with %0 attribute must have C linkage">;
+def err_function_decl_cmse_ns_call : Error<
+  "functions may not be declared with 'cmse_nonsecure_call' attribute">;
 def err_attribute_address_function_type : Error<
   "function type may not be qualified with an address space">;
 def err_as_qualified_auto_decl : Error<
@@ -3114,6 +3118,9 @@ def warn_attribute_weak_on_local : Warning<
   InGroup<IgnoredAttributes>;
 def warn_weak_identifier_undeclared : Warning<
   "weak identifier %0 never declared">;
+def warn_attribute_cmse_entry_static : Warning<
+  "'cmse_nonsecure_entry' cannot be applied to functions with internal linkage">,
+  InGroup<IgnoredAttributes>;
 def err_attribute_weak_static : Error<
   "weak declaration cannot have internal linkage">;
 def err_attribute_selectany_non_extern_data : Error<

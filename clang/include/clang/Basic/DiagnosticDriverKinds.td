@@ -377,6 +377,9 @@ def err_drv_ropi_incompatible_with_cxx : Error<
 def err_stack_tagging_requires_hardware_feature : Error<
   "'-fsanitize=memtag' requires hardware support (+memtag)">;
 
+def err_cmse_pi_are_incompatible : Error<
+  "cmse is not compatible with %select{RWPI|ROPI}0">;
+
 def warn_target_unsupported_nan2008 : Warning<
   "ignoring '-mnan=2008' option because the '%0' architecture does not support it">,
   InGroup<UnsupportedNan>;

@@ -61,6 +61,8 @@ using namespace llvm;
 
 namespace {
 
+  using InstSet = SmallPtrSetImpl<MachineInstr *>;
+
   class PostOrderLoopTraversal {
     MachineLoop &ML;
     MachineLoopInfo &MLI;
@@ -518,6 +520,59 @@ static bool isRegInClass(const MachineOperand &MO,
   return MO.isReg() && MO.getReg() && Class->contains(MO.getReg());
 }
 
+// Can this instruction generate a non-zero result when given only zeroed
+// operands? This allows us to know that, given operands with false bytes
+// zeroed by masked loads, that the result will also contain zeros in those
+// bytes.
+static bool canGenerateNonZeros(const MachineInstr &MI) {
+  switch (MI.getOpcode()) {
+  default:
+    break;
+  // FIXME: FP minus 0?
+  //case ARM::MVE_VNEGf16:
+  //case ARM::MVE_VNEGf32:
+  case ARM::MVE_VMVN:
+  case ARM::MVE_VORN:
+  case ARM::MVE_VCLZs8:
+  case ARM::MVE_VCLZs16:
+  case ARM::MVE_VCLZs32:
+    return true;
+  }
+  return false;
+}
+
+// MVE 'narrowing' operate on half a lane, reading from half and writing
+// to half, which are referred to has the top and bottom half. The other
+// half retains its previous value.
+static bool retainsPreviousHalfElement(const MachineInstr &MI) {
+  const MCInstrDesc &MCID = MI.getDesc();
+  uint64_t Flags = MCID.TSFlags;
+  return (Flags & ARMII::RetainsPreviousHalfElement) != 0;
+}
+
+// Look at its register uses to see if it only can only receive zeros
+// into its false lanes which would then produce zeros. Also check that
+// the output register is also defined by an FalseLaneZeros instruction
+// so that if tail-predication happens, the lanes that aren't updated will
+// still be zeros.
+static bool producesFalseLaneZeros(MachineInstr &MI,
+                                   const TargetRegisterClass *QPRs,
+                                   const ReachingDefAnalysis &RDA,
+                                   InstSet &FalseLaneZeros) {
+  if (canGenerateNonZeros(MI))
+    return false;
+  for (auto &MO : MI.operands()) {
+    if (!MO.isReg() || !MO.getReg())
+      continue;
+    if (auto *OpDef = RDA.getMIOperand(&MI, MO))
+      if (FalseLaneZeros.count(OpDef))
+       continue;
+    return false;
+  }
+  LLVM_DEBUG(dbgs() << "ARM Loops: Always False Zeros: " << MI);
+  return true;
+}
+
 bool LowOverheadLoop::ValidateLiveOuts() const {
   // We want to find out if the tail-predicated version of this loop will
   // produce the same values as the loop in its original form. For this to
@@ -538,12 +593,14 @@ bool LowOverheadLoop::ValidateLiveOuts() const {
   // operands, or stored results are equivalent already. Other explicitly
   // predicated instructions will perform the same operation in the original
   // loop and the tail-predicated form too. Because of this, we can insert
-  // loads, stores and other predicated instructions into our KnownFalseZeros
+  // loads, stores and other predicated instructions into our Predicated
   // set and build from there.
   const TargetRegisterClass *QPRs = TRI.getRegClass(ARM::MQPRRegClassID);
-  SetVector<MachineInstr *> UnknownFalseLanes;
-  SmallPtrSet<MachineInstr *, 4> KnownFalseZeros;
+  SetVector<MachineInstr *> Unknown;
+  SmallPtrSet<MachineInstr *, 4> FalseLaneZeros;
+  SmallPtrSet<MachineInstr *, 4> Predicated;
   MachineBasicBlock *MBB = ML.getHeader();
+
   for (auto &MI : *MBB) {
     const MCInstrDesc &MCID = MI.getDesc();
     uint64_t Flags = MCID.TSFlags;
@@ -551,63 +608,49 @@ bool LowOverheadLoop::ValidateLiveOuts() const {
       continue;
 
     if (isVectorPredicated(&MI)) {
-      KnownFalseZeros.insert(&MI);
+      if (MI.mayLoad())
+        FalseLaneZeros.insert(&MI);
+      Predicated.insert(&MI);
       continue;
     }
 
     if (MI.getNumDefs() == 0)
       continue;
 
-    // Only evaluate instructions which produce a single value.
-    assert((MI.getNumDefs() == 1 && MI.defs().begin()->isReg()) &&
-           "Expected no more than one register def");
-
-    Register DefReg = MI.defs().begin()->getReg();
-    for (auto &MO : MI.operands()) {
-      if (!isRegInClass(MO, QPRs) || !MO.isUse() || MO.getReg() != DefReg)
-        continue;
-
-      // If this instruction overwrites one of its operands, and that register
-      // has known lanes, then this instruction also has known predicated false
-      // lanes.
-      if (auto *OpDef = RDA.getMIOperand(&MI, MO)) {
-        if (KnownFalseZeros.count(OpDef)) {
-          KnownFalseZeros.insert(&MI);
-          break;
-        }
-      }
-    }
-    if (!KnownFalseZeros.count(&MI))
-      UnknownFalseLanes.insert(&MI);
+    if (producesFalseLaneZeros(MI, QPRs, RDA, FalseLaneZeros))
+      FalseLaneZeros.insert(&MI);
+    else if (retainsPreviousHalfElement(MI))
+      return false;
+    else
+      Unknown.insert(&MI);
   }
 
-  auto HasKnownUsers = [this](MachineInstr *MI, const MachineOperand &MO,
-                              SmallPtrSetImpl<MachineInstr *> &Knowns) {
+  auto HasPredicatedUsers = [this](MachineInstr *MI, const MachineOperand &MO,
+                              SmallPtrSetImpl<MachineInstr *> &Predicated) {
     SmallPtrSet<MachineInstr *, 2> Uses;
     RDA.getGlobalUses(MI, MO.getReg(), Uses);
     for (auto *Use : Uses) {
-      if (Use != MI && !Knowns.count(Use))
+      if (Use != MI && !Predicated.count(Use))
         return false;
     }
     return true;
   };
 
-  // Now for all the unknown values, see if they're only consumed by known
-  // instructions. Visit in reverse so that we can start at the values being
+  // Visit the unknowns in reverse so that we can start at the values being
   // stored and then we can work towards the leaves, hopefully adding more
-  // instructions to KnownFalseZeros.
-  for (auto *MI : reverse(UnknownFalseLanes)) {
+  // instructions to Predicated.
+  for (auto *MI : reverse(Unknown)) {
     for (auto &MO : MI->operands()) {
       if (!isRegInClass(MO, QPRs) || !MO.isDef())
         continue;
-      if (!HasKnownUsers(MI, MO, KnownFalseZeros)) {
+      if (!HasPredicatedUsers(MI, MO, Predicated)) {
         LLVM_DEBUG(dbgs() << "ARM Loops: Found an unknown def of : "
                           << TRI.getRegAsmName(MO.getReg()) << " at " << *MI);
         return false;
       }
     }
     // Any unknown false lanes have been masked away by the user(s).
-    KnownFalseZeros.insert(MI);
+    Predicated.insert(MI);
   }
 
   // Collect Q-regs that are live in the exit blocks. We don't collect scalars

@@ -3938,10 +3938,8 @@ bool X86FastISel::tryToFoldLoadIntoMI(MachineInstr *MI, unsigned OpNo,
   const X86InstrInfo &XII = (const X86InstrInfo &)TII;
 
   unsigned Size = DL.getTypeAllocSize(LI->getType());
-  unsigned Alignment = LI->getAlignment();
-
-  if (Alignment == 0)  // Ensure that codegen never sees alignment 0
-    Alignment = DL.getABITypeAlignment(LI->getType());
+  Align Alignment =
+      DL.getValueOrABITypeAlignment(LI->getAlign(), LI->getType());
 
   SmallVector<MachineOperand, 8> AddrOps;
   AM.getFullAddress(AddrOps);

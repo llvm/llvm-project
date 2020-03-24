@@ -3015,6 +3015,10 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     if (Right.is(TT_CSharpNullConditionalLSquare))
       return false;
 
+    // No space between consecutive commas '[,,]'.
+    if (Left.is(tok::comma) && Right.is(tok::comma))
+      return false;
+
     // Possible space inside `?[ 0 ]`.
     if (Left.is(TT_CSharpNullConditionalLSquare))
       return Style.SpacesInSquareBrackets;
@@ -3620,6 +3624,9 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
     if (Left.isOneOf(TT_CSharpNamedArgumentColon, TT_AttributeColon) ||
         Right.isOneOf(TT_CSharpNamedArgumentColon, TT_AttributeColon))
       return false;
+    // Only break after commas for generic type constraints.
+    if (Line.First->is(TT_CSharpGenericTypeConstraint))
+      return Left.is(TT_CSharpGenericTypeConstraintComma);
   } else if (Style.Language == FormatStyle::LK_Java) {
     if (Left.isOneOf(Keywords.kw_throws, Keywords.kw_extends,
                      Keywords.kw_implements))

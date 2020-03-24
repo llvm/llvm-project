@@ -798,6 +798,9 @@ void OMPClauseProfiler::VisitOMPNontemporalClause(
 void OMPClauseProfiler::VisitOMPInclusiveClause(const OMPInclusiveClause *C) {
   VisitOMPClauseList(C);
 }
+void OMPClauseProfiler::VisitOMPExclusiveClause(const OMPExclusiveClause *C) {
+  VisitOMPClauseList(C);
+}
 void OMPClauseProfiler::VisitOMPOrderClause(const OMPOrderClause *C) {}
 } // namespace
 
@@ -2021,6 +2024,8 @@ void StmtProfiler::VisitTypoExpr(const TypoExpr *E) {
 void StmtProfiler::VisitSourceLocExpr(const SourceLocExpr *E) {
   VisitExpr(E);
 }
+
+void StmtProfiler::VisitRecoveryExpr(const RecoveryExpr *E) { VisitExpr(E); }
 
 void StmtProfiler::VisitObjCStringLiteral(const ObjCStringLiteral *S) {
   VisitExpr(S);

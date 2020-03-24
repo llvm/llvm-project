@@ -51,6 +51,7 @@ add_llvm_unittest(SupportTests
   MemoryBufferTest.cpp
   MemoryTest.cpp
   NativeFormatTests.cpp
+  OptimalLayoutTest.cpp
   ParallelTest.cpp
   Path.cpp
   ProcessTest.cpp

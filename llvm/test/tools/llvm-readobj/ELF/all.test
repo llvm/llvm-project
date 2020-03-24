@@ -112,4 +112,5 @@ ProgramHeaders:
     Sections:
       - Section: .note.gnu.build-id
 Symbols: []
-DynamicSymbols: []
+DynamicSymbols:
+  - Name: foo

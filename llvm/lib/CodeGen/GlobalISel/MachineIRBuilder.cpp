@@ -959,7 +959,11 @@ MachineInstrBuilder MachineIRBuilder::buildInstr(unsigned Opc,
   case TargetOpcode::G_SMIN:
   case TargetOpcode::G_SMAX:
   case TargetOpcode::G_UMIN:
-  case TargetOpcode::G_UMAX: {
+  case TargetOpcode::G_UMAX:
+  case TargetOpcode::G_UADDSAT:
+  case TargetOpcode::G_SADDSAT:
+  case TargetOpcode::G_USUBSAT:
+  case TargetOpcode::G_SSUBSAT: {
     // All these are binary ops.
     assert(DstOps.size() == 1 && "Invalid Dst");
     assert(SrcOps.size() == 2 && "Invalid Srcs");

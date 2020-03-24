@@ -13609,6 +13609,13 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     return emitRangedBuiltin(*this, Intrinsic::r600_read_tidig_y, 0, 1024);
   case AMDGPU::BI__builtin_r600_read_tidig_z:
     return emitRangedBuiltin(*this, Intrinsic::r600_read_tidig_z, 0, 1024);
+  case AMDGPU::BI__builtin_amdgcn_alignbit: {
+    llvm::Value *Src0 = EmitScalarExpr(E->getArg(0));
+    llvm::Value *Src1 = EmitScalarExpr(E->getArg(1));
+    llvm::Value *Src2 = EmitScalarExpr(E->getArg(2));
+    Function *F = CGM.getIntrinsic(Intrinsic::fshr, Src0->getType());
+    return Builder.CreateCall(F, { Src0, Src1, Src2 });
+  }
   default:
     return nullptr;
   }

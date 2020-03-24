@@ -1029,6 +1029,13 @@ function(export_executable_symbols target)
   endif()
 endfunction()
 
+# Export symbols if LLVM plugins are enabled.
+function(export_executable_symbols_for_plugins target)
+  if(LLVM_ENABLE_PLUGINS)
+    export_executable_symbols(${target})
+  endif()
+endfunction()
+
 if(NOT LLVM_TOOLCHAIN_TOOLS)
   set (LLVM_TOOLCHAIN_TOOLS
     llvm-ar

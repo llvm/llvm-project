@@ -134,6 +134,7 @@ class ThreadClock {
   uptr size() const;
 
   void acquire(ClockCache *c, SyncClock *src);
+  void releaseStoreAcquire(ClockCache *c, SyncClock *src);
   void release(ClockCache *c, SyncClock *dst);
   void acq_rel(ClockCache *c, SyncClock *dst);
   void ReleaseStore(ClockCache *c, SyncClock *dst);

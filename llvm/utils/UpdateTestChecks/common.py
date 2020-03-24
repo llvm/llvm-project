@@ -67,16 +67,16 @@ UTC_ARGS_KEY = 'UTC_ARGS:'
 UTC_ARGS_CMD = re.compile(r'.*' + UTC_ARGS_KEY + '\s*(?P<cmd>.*)\s*$')
 
 OPT_FUNCTION_RE = re.compile(
-    r'^\s*define\s+(?:internal\s+)?[^@]*@(?P<func>[\w-]+?)\s*'
-    r'(?P<args_and_sig>\((\)|(.*?[\w\.\-]+?)\))[^{]*)\{\n(?P<body>.*?)^\}$',
+    r'^\s*define\s+(?:internal\s+)?[^@]*@(?P<func>[\w.-]+?)\s*'
+    r'(?P<args_and_sig>\((\)|(.*?[\w.-]+?)\))[^{]*)\{\n(?P<body>.*?)^\}$',
     flags=(re.M | re.S))
 
 ANALYZE_FUNCTION_RE = re.compile(
-    r'^\s*\'(?P<analysis>[\w\s-]+?)\'\s+for\s+function\s+\'(?P<func>[\w-]+?)\':'
+    r'^\s*\'(?P<analysis>[\w\s-]+?)\'\s+for\s+function\s+\'(?P<func>[\w.-]+?)\':'
     r'\s*\n(?P<body>.*)$',
     flags=(re.X | re.S))
 
-IR_FUNCTION_RE = re.compile(r'^\s*define\s+(?:internal\s+)?[^@]*@([\w.]+)\s*\(')
+IR_FUNCTION_RE = re.compile(r'^\s*define\s+(?:internal\s+)?[^@]*@([\w.-]+)\s*\(')
 TRIPLE_IR_RE = re.compile(r'^\s*target\s+triple\s*=\s*"([^"]+)"$')
 TRIPLE_ARG_RE = re.compile(r'-mtriple[= ]([^ ]+)')
 MARCH_ARG_RE = re.compile(r'-march[= ]([^ ]+)')
@@ -215,7 +215,7 @@ SCRUB_IR_COMMENT_RE = re.compile(r'\s*;.*')
 
 # Match things that look at identifiers, but only if they are followed by
 # spaces, commas, paren, or end of the string
-IR_VALUE_RE = re.compile(r'(\s+)%([\w\.\-]+?)([,\s\(\)]|\Z)')
+IR_VALUE_RE = re.compile(r'(\s+)%([\w.-]+?)([,\s\(\)]|\Z)')
 
 # Create a FileCheck variable name based on an IR name.
 def get_value_name(var):

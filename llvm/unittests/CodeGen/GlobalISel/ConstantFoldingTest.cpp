@@ -17,7 +17,7 @@ using namespace llvm;
 
 namespace {
 
-TEST_F(GISelMITest, FoldWithBuilder) {
+TEST_F(AArch64GISelMITest, FoldWithBuilder) {
   setUp();
   if (!TM)
     return;
@@ -68,7 +68,7 @@ TEST_F(GISelMITest, FoldWithBuilder) {
   EXPECT_EQ(-0x80, Cst);
 }
 
-TEST_F(GISelMITest, FoldBinOp) {
+TEST_F(AArch64GISelMITest, FoldBinOp) {
   setUp();
   if (!TM)
     return;

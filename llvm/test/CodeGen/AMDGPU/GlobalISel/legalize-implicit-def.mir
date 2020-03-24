@@ -175,6 +175,48 @@ body: |
 ...
 
 ---
+name: test_implicit_def_s1025
+body: |
+  bb.0:
+
+    ; CHECK-LABEL: name: test_implicit_def_s1025
+    ; CHECK: [[DEF:%[0-9]+]]:_(s1025) = G_IMPLICIT_DEF
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[DEF]](s1025)
+    ; CHECK: $vgpr0 = COPY [[TRUNC]](s32)
+    %0:_(s1025) = G_IMPLICIT_DEF
+    %1:_(s32) = G_TRUNC %0
+    $vgpr0 = COPY %1
+...
+
+---
+name: test_implicit_def_s1056
+body: |
+  bb.0:
+
+    ; CHECK-LABEL: name: test_implicit_def_s1056
+    ; CHECK: [[DEF:%[0-9]+]]:_(s1056) = G_IMPLICIT_DEF
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[DEF]](s1056)
+    ; CHECK: $vgpr0 = COPY [[TRUNC]](s32)
+    %0:_(s1056) = G_IMPLICIT_DEF
+    %1:_(s32) = G_TRUNC %0
+    $vgpr0 = COPY %1
+...
+
+---
+name: test_implicit_def_s2048
+body: |
+  bb.0:
+
+    ; CHECK-LABEL: name: test_implicit_def_s2048
+    ; CHECK: [[DEF:%[0-9]+]]:_(s1024) = G_IMPLICIT_DEF
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[DEF]](s1024)
+    ; CHECK: $vgpr0 = COPY [[TRUNC]](s32)
+    %0:_(s2048) = G_IMPLICIT_DEF
+    %1:_(s32) = G_TRUNC %0
+    $vgpr0 = COPY %1
+...
+
+---
 name: test_implicit_def_v2s32
 body: |
   bb.0:
@@ -292,6 +334,38 @@ body: |
     ; CHECK: S_NOP 0, implicit [[DEF]](<32 x s32>)
     %0:_(<32 x s32>) = G_IMPLICIT_DEF
     S_NOP 0, implicit %0
+...
+
+---
+name: test_implicit_def_v33s32
+body: |
+  bb.0:
+
+    ; CHECK-LABEL: name: test_implicit_def_v33s32
+    ; CHECK: [[DEF:%[0-9]+]]:_(<33 x s32>) = G_IMPLICIT_DEF
+    ; CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32), [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32), [[UV14:%[0-9]+]]:_(s32), [[UV15:%[0-9]+]]:_(s32), [[UV16:%[0-9]+]]:_(s32), [[UV17:%[0-9]+]]:_(s32), [[UV18:%[0-9]+]]:_(s32), [[UV19:%[0-9]+]]:_(s32), [[UV20:%[0-9]+]]:_(s32), [[UV21:%[0-9]+]]:_(s32), [[UV22:%[0-9]+]]:_(s32), [[UV23:%[0-9]+]]:_(s32), [[UV24:%[0-9]+]]:_(s32), [[UV25:%[0-9]+]]:_(s32), [[UV26:%[0-9]+]]:_(s32), [[UV27:%[0-9]+]]:_(s32), [[UV28:%[0-9]+]]:_(s32), [[UV29:%[0-9]+]]:_(s32), [[UV30:%[0-9]+]]:_(s32), [[UV31:%[0-9]+]]:_(s32), [[UV32:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[DEF]](<33 x s32>)
+    ; CHECK: S_NOP 0, implicit [[UV]](s32), implicit [[UV32]](s32)
+    %0:_(<33 x s32>) = G_IMPLICIT_DEF
+    %1:_(s32), %2:_(s32), %3:_(s32), %4:_(s32), %5:_(s32), %6:_(s32), %7:_(s32), %8:_(s32), %9:_(s32), %10:_(s32), %11:_(s32), %12:_(s32), %13:_(s32), %14:_(s32), %15:_(s32), %16:_(s32), %17:_(s32), %18:_(s32), %19:_(s32), %20:_(s32), %21:_(s32), %22:_(s32), %23:_(s32), %24:_(s32), %25:_(s32), %26:_(s32), %27:_(s32), %28:_(s32), %29:_(s32), %30:_(s32), %31:_(s32), %32:_(s32), %33:_(s32) = G_UNMERGE_VALUES %0
+  S_NOP 0, implicit %1, implicit %33
+...
+
+---
+name: test_implicit_def_v64s32
+body: |
+  bb.0:
+
+    ; CHECK-LABEL: name: test_implicit_def_v64s32
+    ; CHECK: [[DEF:%[0-9]+]]:_(<16 x s32>) = G_IMPLICIT_DEF
+    ; CHECK: [[COPY:%[0-9]+]]:_(<16 x s32>) = COPY [[DEF]](<16 x s32>)
+    ; CHECK: [[COPY1:%[0-9]+]]:_(<16 x s32>) = COPY [[DEF]](<16 x s32>)
+    ; CHECK: [[COPY2:%[0-9]+]]:_(<16 x s32>) = COPY [[DEF]](<16 x s32>)
+    ; CHECK: [[CONCAT_VECTORS:%[0-9]+]]:_(<64 x s32>) = G_CONCAT_VECTORS [[DEF]](<16 x s32>), [[COPY]](<16 x s32>), [[COPY1]](<16 x s32>), [[COPY2]](<16 x s32>)
+    ; CHECK: [[CONCAT_VECTORS1:%[0-9]+]]:_(<32 x s32>) = G_CONCAT_VECTORS [[DEF]](<16 x s32>), [[COPY]](<16 x s32>)
+    ; CHECK: S_NOP 0, implicit [[CONCAT_VECTORS]](<64 x s32>), implicit [[CONCAT_VECTORS1]](<32 x s32>)
+    %0:_(<64 x s32>) = G_IMPLICIT_DEF
+    %1:_(<32 x s32>), %2:_(<32 x s32>) = G_UNMERGE_VALUES %0
+  S_NOP 0, implicit %0, implicit %1
 ...
 
 ---
@@ -583,4 +657,34 @@ body: |
     ; CHECK: $vgpr0_vgpr1 = COPY [[DEF]](p999)
     %0:_(p999) = G_IMPLICIT_DEF
     $vgpr0_vgpr1 = COPY %0
+
+...
+
+---
+name: test_implicit_def_v2s1024
+body: |
+  bb.0:
+
+    ; CHECK-LABEL: name: test_implicit_def_v2s1024
+    ; CHECK: [[DEF:%[0-9]+]]:_(<2 x s1024>) = G_IMPLICIT_DEF
+    ; CHECK: [[UV:%[0-9]+]]:_(s1024), [[UV1:%[0-9]+]]:_(s1024) = G_UNMERGE_VALUES [[DEF]](<2 x s1024>)
+    ; CHECK: S_ENDPGM 0, implicit [[UV]](s1024), implicit [[UV1]](s1024)
+    %0:_(<2 x s1024>) = G_IMPLICIT_DEF
+    %1:_(s1024), %2:_(s1024) = G_UNMERGE_VALUES %0
+    S_ENDPGM 0, implicit %1, implicit %2
+...
+
+---
+
+name: test_implicit_def_v3s1024
+body: |
+  bb.0:
+
+    ; CHECK-LABEL: name: test_implicit_def_v3s1024
+    ; CHECK: [[DEF:%[0-9]+]]:_(<3 x s1024>) = G_IMPLICIT_DEF
+    ; CHECK: [[UV:%[0-9]+]]:_(s1024), [[UV1:%[0-9]+]]:_(s1024), [[UV2:%[0-9]+]]:_(s1024) = G_UNMERGE_VALUES [[DEF]](<3 x s1024>)
+    ; CHECK: S_ENDPGM 0, implicit [[UV]](s1024), implicit [[UV1]](s1024), implicit [[UV2]](s1024)
+    %0:_(<3 x s1024>) = G_IMPLICIT_DEF
+    %1:_(s1024), %2:_(s1024), %3:_(s1024) = G_UNMERGE_VALUES %0
+    S_ENDPGM 0, implicit %1, implicit %2, implicit %3
 ...

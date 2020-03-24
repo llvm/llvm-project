@@ -476,11 +476,24 @@ int GCNTTIImpl::getArithmeticInstrCost(unsigned Opcode, Type *Ty,
                                        Opd1PropInfo, Opd2PropInfo);
 }
 
+// Return true if there's a potential benefit from using v2f16 instructions for
+// an intrinsic, even if it requires nontrivial legalization.
+static bool intrinsicHasPackedVectorBenefit(Intrinsic::ID ID) {
+  switch (ID) {
+  case Intrinsic::fma: // TODO: fmuladd
+  // There's a small benefit to using vector ops in the legalized code.
+  case Intrinsic::round:
+    return true;
+  default:
+    return false;
+  }
+}
+
 template <typename T>
 int GCNTTIImpl::getIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
                                       ArrayRef<T *> Args, FastMathFlags FMF,
                                       unsigned VF, const Instruction *I) {
-  if (ID != Intrinsic::fma)
+  if (!intrinsicHasPackedVectorBenefit(ID))
     return BaseT::getIntrinsicInstrCost(ID, RetTy, Args, FMF, VF, I);
 
   EVT OrigTy = TLI->getValueType(DL, RetTy);
@@ -502,8 +515,14 @@ int GCNTTIImpl::getIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
   if (ST->has16BitInsts() && SLT == MVT::f16)
     NElts = (NElts + 1) / 2;
 
-  return LT.first * NElts * (ST->hasFastFMAF32() ? getHalfRateInstrCost()
-                                                 : getQuarterRateInstrCost());
+  // TODO: Get more refined intrinsic costs?
+  unsigned InstRate = getQuarterRateInstrCost();
+  if (ID == Intrinsic::fma) {
+    InstRate = ST->hasFastFMAF32() ? getHalfRateInstrCost()
+                                   : getQuarterRateInstrCost();
+  }
+
+  return LT.first * NElts * InstRate;
 }
 
 int GCNTTIImpl::getIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,

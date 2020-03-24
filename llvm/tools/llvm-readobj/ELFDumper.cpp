@@ -283,7 +283,7 @@ private:
   DynRegionInfo DynRelaRegion;
   DynRegionInfo DynRelrRegion;
   DynRegionInfo DynPLTRelRegion;
-  DynRegionInfo DynSymRegion;
+  Optional<DynRegionInfo> DynSymRegion;
   DynRegionInfo DynamicTable;
   StringRef DynamicStringTable;
   std::string SOName = "<Not found>";
@@ -322,7 +322,9 @@ public:
   }
 
   Elf_Sym_Range dynamic_symbols() const {
-    return DynSymRegion.getAsArrayRef<Elf_Sym>();
+    if (!DynSymRegion)
+      return Elf_Sym_Range();
+    return DynSymRegion->getAsArrayRef<Elf_Sym>();
   }
 
   Elf_Rel_Range dyn_rels() const;
@@ -667,8 +669,8 @@ void ELFDumper<ELFT>::printSymbolsHelper(bool IsDynamic) const {
     StrTable = DynamicStringTable;
     Syms = dynamic_symbols();
     SymtabName = DynSymtabName;
-    if (DynSymRegion.Addr)
-      Entries = DynSymRegion.Size / DynSymRegion.EntSize;
+    if (DynSymRegion)
+      Entries = DynSymRegion->Size / DynSymRegion->EntSize;
   } else {
     if (!DotSymtabSec)
       return;
@@ -993,7 +995,7 @@ std::error_code createELFDumper(const object::ObjectFile *Obj,
 
 template <class ELFT> Error ELFDumper<ELFT>::LoadVersionMap() const {
   // If there is no dynamic symtab or version table, there is nothing to do.
-  if (!DynSymRegion.Addr || !SymbolVersionSection)
+  if (!DynSymRegion || !SymbolVersionSection)
     return Error::success();
 
   // Has the VersionMap already been loaded?
@@ -1043,10 +1045,11 @@ Expected<StringRef> ELFDumper<ELFT>::getSymbolVersion(const Elf_Sym *Sym,
     return "";
   }
 
+  assert(DynSymRegion && "DynSymRegion has not been initialised");
   // Determine the position in the symbol table of this entry.
   size_t EntryIndex = (reinterpret_cast<uintptr_t>(Sym) -
-                        reinterpret_cast<uintptr_t>(DynSymRegion.Addr)) /
-                       sizeof(Elf_Sym);
+                       reinterpret_cast<uintptr_t>(DynSymRegion->Addr)) /
+                      sizeof(Elf_Sym);
 
   // Get the corresponding version index entry.
   const Elf_Versym *Versym = unwrapOrError(
@@ -1980,8 +1983,12 @@ ELFDumper<ELFT>::ELFDumper(const object::ELFObjectFile<ELFT> *ObjF,
                            ScopedPrinter &Writer)
     : ObjDumper(Writer), ObjF(ObjF), DynRelRegion(ObjF->getFileName()),
       DynRelaRegion(ObjF->getFileName()), DynRelrRegion(ObjF->getFileName()),
-      DynPLTRelRegion(ObjF->getFileName()), DynSymRegion(ObjF->getFileName()),
-      DynamicTable(ObjF->getFileName()) {
+      DynPLTRelRegion(ObjF->getFileName()), DynamicTable(ObjF->getFileName()) {
+  if (opts::Output == opts::GNU)
+    ELFDumperStyle.reset(new GNUStyle<ELFT>(Writer, this));
+  else
+    ELFDumperStyle.reset(new LLVMStyle<ELFT>(Writer, this));
+
   const ELFFile<ELFT> *Obj = ObjF->getELFFile();
   typename ELFT::ShdrRange Sections =
       unwrapOrError(ObjF->getFileName(), Obj->sections());
@@ -1992,9 +1999,9 @@ ELFDumper<ELFT>::ELFDumper(const object::ELFObjectFile<ELFT> *ObjF,
         DotSymtabSec = &Sec;
       break;
     case ELF::SHT_DYNSYM:
-      if (!DynSymRegion.Size) {
+      if (!DynSymRegion) {
         DynSymRegion = createDRIFrom(&Sec);
-        DynSymRegion.Context =
+        DynSymRegion->Context =
             ("section with index " + Twine(&Sec - &Sections.front())).str();
         // This is only used (if Elf_Shdr present)for naming section in GNU
         // style
@@ -2034,11 +2041,6 @@ ELFDumper<ELFT>::ELFDumper(const object::ELFObjectFile<ELFT> *ObjF,
   }
 
   loadDynamicTable(Obj);
-
-  if (opts::Output == opts::GNU)
-    ELFDumperStyle.reset(new GNUStyle<ELFT>(Writer, this));
-  else
-    ELFDumperStyle.reset(new LLVMStyle<ELFT>(Writer, this));
 }
 
 template <typename ELFT>
@@ -2059,6 +2061,7 @@ void ELFDumper<ELFT>::parseDynamicTable(const ELFFile<ELFT> *Obj) {
   uint64_t SONameOffset = 0;
   const char *StringTableBegin = nullptr;
   uint64_t StringTableSize = 0;
+  Optional<DynRegionInfo> DynSymFromTable;
   for (const Elf_Dyn &Dyn : dynamic_table()) {
     switch (Dyn.d_tag) {
     case ELF::DT_HASH:
@@ -2077,26 +2080,13 @@ void ELFDumper<ELFT>::parseDynamicTable(const ELFFile<ELFT> *Obj) {
       StringTableSize = Dyn.getVal();
       break;
     case ELF::DT_SYMTAB: {
-      // Often we find the information about the dynamic symbol table
-      // location in the SHT_DYNSYM section header. However, the value in
-      // DT_SYMTAB has priority, because it is used by dynamic loaders to
-      // locate .dynsym at runtime. The location we find in the section header
-      // and the location we find here should match. If we can't map the
-      // DT_SYMTAB value to an address (e.g. when there are no program headers), we
-      // ignore its value.
+      // If we can't map the DT_SYMTAB value to an address (e.g. when there are
+      // no program headers), we ignore its value.
       if (const uint8_t *VA = toMappedAddr(Dyn.getTag(), Dyn.getPtr())) {
-        // EntSize is non-zero if the dynamic symbol table has been found via a
-        // section header.
-        if (DynSymRegion.EntSize && VA != DynSymRegion.Addr)
-          reportWarning(
-              createError(
-                  "SHT_DYNSYM section header and DT_SYMTAB disagree about "
-                  "the location of the dynamic symbol table"),
-              ObjF->getFileName());
-
-        DynSymRegion.Addr = VA;
-        DynSymRegion.EntSize = sizeof(Elf_Sym);
-        DynSymRegion.EntSizePrintName = "";
+        DynSymFromTable.emplace(ObjF->getFileName());
+        DynSymFromTable->Addr = VA;
+        DynSymFromTable->EntSize = sizeof(Elf_Sym);
+        DynSymFromTable->EntSizePrintName = "";
       }
       break;
     }
@@ -2176,6 +2166,48 @@ void ELFDumper<ELFT>::parseDynamicTable(const ELFFile<ELFT> *Obj) {
   if (StringTableBegin)
     DynamicStringTable = StringRef(StringTableBegin, StringTableSize);
   SOName = getDynamicString(SONameOffset);
+
+  if (DynSymRegion) {
+    // Often we find the information about the dynamic symbol table
+    // location in the SHT_DYNSYM section header. However, the value in
+    // DT_SYMTAB has priority, because it is used by dynamic loaders to
+    // locate .dynsym at runtime. The location we find in the section header
+    // and the location we find here should match.
+    if (DynSymFromTable && DynSymFromTable->Addr != DynSymRegion->Addr)
+      ELFDumperStyle->reportUniqueWarning(
+          createError("SHT_DYNSYM section header and DT_SYMTAB disagree about "
+                      "the location of the dynamic symbol table"));
+
+    // According to the ELF gABI: "The number of symbol table entries should
+    // equal nchain". Check to see if the DT_HASH hash table nchain value
+    // conflicts with the number of symbols in the dynamic symbol table
+    // according to the section header.
+    if (HashTable &&
+        HashTable->nchain != DynSymRegion->Size / DynSymRegion->EntSize)
+      ELFDumperStyle->reportUniqueWarning(createError(
+          "hash table nchain (" + Twine(HashTable->nchain) +
+          ") differs from symbol count derived from SHT_DYNSYM section "
+          "header (" +
+          Twine(DynSymRegion->Size / DynSymRegion->EntSize) + ")"));
+  }
+
+  // Delay the creation of the actual dynamic symbol table until now, so that
+  // checks can always be made against the section header-based properties,
+  // without worrying about tag order.
+  if (DynSymFromTable) {
+    if (!DynSymRegion) {
+      DynSymRegion = DynSymFromTable;
+    } else {
+      DynSymRegion->Addr = DynSymFromTable->Addr;
+      DynSymRegion->EntSize = DynSymFromTable->EntSize;
+      DynSymRegion->EntSizePrintName = DynSymFromTable->EntSizePrintName;
+    }
+  }
+
+  // Derive the dynamic symbol table size from the DT_HASH hash table, if
+  // present.
+  if (HashTable && DynSymRegion)
+    DynSymRegion->Size = HashTable->nchain * DynSymRegion->EntSize;
 }
 
 template <typename ELFT>
@@ -2591,7 +2623,7 @@ template <typename ELFT> void ELFDumper<ELFT>::printGnuHashTable() {
   ArrayRef<Elf_Word> Buckets = GnuHashTable->buckets();
   W.printList("Buckets", Buckets);
 
-  if (!DynSymRegion.Addr) {
+  if (!DynSymRegion) {
     reportWarning(createError("unable to dump 'Values' for the SHT_GNU_HASH "
                               "section: no dynamic symbol table found"),
                   ObjF->getFileName());
@@ -3689,10 +3721,10 @@ void GNUStyle<ELFT>::printSymtabMessage(const ELFO *Obj, StringRef Name,
                                         size_t Entries,
                                         bool NonVisibilityBitsUsed) {
   if (!Name.empty())
-    OS << "\nSymbol table '" << Name << "' contains " << Entries
-       << " entries:\n";
+    OS << "\nSymbol table '" << Name << "'";
   else
-    OS << "\n Symbol table for image:\n";
+    OS << "\nSymbol table for image";
+  OS << " contains " << Entries << " entries:\n";
 
   if (ELFT::Is64Bits)
     OS << "   Num:    Value          Size Type    Bind   Vis";
@@ -5885,7 +5917,12 @@ void LLVMStyle<ELFT>::printSymbolSection(const Elf_Sym *Symbol,
   Expected<StringRef> SectionName =
       this->dumper()->getSymbolSectionName(Symbol, *SectionIndex);
   if (!SectionName) {
-    this->reportUniqueWarning(SectionName.takeError());
+    // Don't report an invalid section name if the section headers are missing.
+    // In such situations, all sections will be "invalid".
+    if (!this->dumper()->getElfObject()->sections().empty())
+      this->reportUniqueWarning(SectionName.takeError());
+    else
+      consumeError(SectionName.takeError());
     W.printHex("Section", "<?>", *SectionIndex);
   } else {
     W.printHex("Section", *SectionName, *SectionIndex);
