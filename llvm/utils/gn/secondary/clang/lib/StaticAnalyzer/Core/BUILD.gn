@@ -57,6 +57,7 @@ static_library("Core") {
     "Store.cpp",
     "SubEngine.cpp",
     "SymbolManager.cpp",
+    "TextDiagnostics.cpp",
     "WorkList.cpp",
   ]
 }
