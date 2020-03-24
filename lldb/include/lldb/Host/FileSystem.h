@@ -186,6 +186,9 @@ public:
     return m_fs;
   }
 
+  void Collect(const FileSpec &file_spec);
+  void Collect(const llvm::Twine &file);
+
 private:
   static llvm::Optional<FileSystem> &InstanceImpl();
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> m_fs;

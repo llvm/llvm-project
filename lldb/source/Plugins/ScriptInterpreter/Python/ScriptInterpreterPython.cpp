@@ -2748,6 +2748,7 @@ bool ScriptInterpreterPythonImpl::LoadScriptingModule(
   {
     FileSpec target_file(pathname);
     FileSystem::Instance().Resolve(target_file);
+    FileSystem::Instance().Collect(target_file);
     std::string basename(target_file.GetFilename().GetCString());
 
     StreamString command_stream;
