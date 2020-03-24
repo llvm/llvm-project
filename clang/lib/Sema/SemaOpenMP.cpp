@@ -5100,6 +5100,7 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
       case OMPC_order:
       case OMPC_destroy:
       case OMPC_inclusive:
+      case OMPC_exclusive:
         continue;
       case OMPC_allocator:
       case OMPC_flush:
@@ -11084,6 +11085,7 @@ OMPClause *Sema::ActOnOpenMPSingleExprClause(OpenMPClauseKind Kind, Expr *Expr,
   case OMPC_order:
   case OMPC_destroy:
   case OMPC_inclusive:
+  case OMPC_exclusive:
     llvm_unreachable("Clause is not allowed.");
   }
   return Res;
@@ -11820,6 +11822,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
   case OMPC_destroy:
   case OMPC_detach:
   case OMPC_inclusive:
+  case OMPC_exclusive:
     llvm_unreachable("Unexpected OpenMP clause.");
   }
   return CaptureRegion;
@@ -12258,6 +12261,7 @@ OMPClause *Sema::ActOnOpenMPSimpleClause(
   case OMPC_destroy:
   case OMPC_detach:
   case OMPC_inclusive:
+  case OMPC_exclusive:
     llvm_unreachable("Clause is not allowed.");
   }
   return Res;
@@ -12482,6 +12486,7 @@ OMPClause *Sema::ActOnOpenMPSingleExprWithArgClause(
   case OMPC_destroy:
   case OMPC_detach:
   case OMPC_inclusive:
+  case OMPC_exclusive:
     llvm_unreachable("Clause is not allowed.");
   }
   return Res;
@@ -12713,6 +12718,7 @@ OMPClause *Sema::ActOnOpenMPClause(OpenMPClauseKind Kind,
   case OMPC_order:
   case OMPC_detach:
   case OMPC_inclusive:
+  case OMPC_exclusive:
     llvm_unreachable("Clause is not allowed.");
   }
   return Res;
@@ -12922,6 +12928,9 @@ OMPClause *Sema::ActOnOpenMPVarListClause(
     break;
   case OMPC_inclusive:
     Res = ActOnOpenMPInclusiveClause(VarList, StartLoc, LParenLoc, EndLoc);
+    break;
+  case OMPC_exclusive:
+    Res = ActOnOpenMPExclusiveClause(VarList, StartLoc, LParenLoc, EndLoc);
     break;
   case OMPC_if:
   case OMPC_depobj:
@@ -18007,4 +18016,32 @@ OMPClause *Sema::ActOnOpenMPInclusiveClause(ArrayRef<Expr *> VarList,
     return nullptr;
 
   return OMPInclusiveClause::Create(Context, StartLoc, LParenLoc, EndLoc, Vars);
+}
+
+OMPClause *Sema::ActOnOpenMPExclusiveClause(ArrayRef<Expr *> VarList,
+                                            SourceLocation StartLoc,
+                                            SourceLocation LParenLoc,
+                                            SourceLocation EndLoc) {
+  SmallVector<Expr *, 8> Vars;
+  for (Expr *RefExpr : VarList) {
+    assert(RefExpr && "NULL expr in OpenMP nontemporal clause.");
+    SourceLocation ELoc;
+    SourceRange ERange;
+    Expr *SimpleRefExpr = RefExpr;
+    auto Res = getPrivateItem(*this, SimpleRefExpr, ELoc, ERange,
+                              /*AllowArraySection=*/true);
+    if (Res.second)
+      // It will be analyzed later.
+      Vars.push_back(RefExpr);
+    ValueDecl *D = Res.first;
+    if (!D)
+      continue;
+
+    Vars.push_back(RefExpr);
+  }
+
+  if (Vars.empty())
+    return nullptr;
+
+  return OMPExclusiveClause::Create(Context, StartLoc, LParenLoc, EndLoc, Vars);
 }
