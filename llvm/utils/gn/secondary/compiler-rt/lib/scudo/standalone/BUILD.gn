@@ -25,7 +25,7 @@ source_set("sources") {
     "flags_parser.h",
     "fuchsia.cpp",
     "fuchsia.h",
-    "interface.h",
+    "include/sudo/interface.h",
     "internal_defs.h",
     "linux.cpp",
     "linux.h",
@@ -89,6 +89,7 @@ source_set("cxx_wrapper_sources") {
 
 config("scudo_config") {
   include_dirs = [
+    "include",
     "//compiler-rt/lib/scudo/standalone",
     "//compiler-rt/lib/scudo/standalone/include",
   ]
