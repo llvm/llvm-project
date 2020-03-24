@@ -75,10 +75,11 @@ TEST(AMDGPUDwarfRegMappingTests, TestWave32DwarfRegMapping) {
       auto MRI = ST.getRegisterInfo();
       if (MRI) {
         // Wave32 Dwarf register mapping test numbers
-        // PC_32 => 0, EXEC_MASK_32 => 1, S0 => 32, S63 => 95,
+        // PC_64 => 16, EXEC_MASK_32 => 1, S0 => 32, S63 => 95,
         // S64 => 1088, S105 => 1129, V0 => 1536, V255 => 1791,
         // A0 => 2048, A255 => 2303
-        for (int llvmReg : {0, 1, 32, 95, 1088, 1129, 1536, 1791, 2048, 2303}) {
+        for (int llvmReg :
+             {16, 1, 32, 95, 1088, 1129, 1536, 1791, 2048, 2303}) {
           MCRegister PCReg(*MRI->getLLVMRegNum(llvmReg, false));
           EXPECT_EQ(llvmReg, MRI->getDwarfRegNum(PCReg, false));
         }
