@@ -692,6 +692,10 @@ public:
     return getArch() == Triple::nvptx || getArch() == Triple::nvptx64;
   }
 
+  bool isAMDGCN() const {
+    return getArch() == Triple::amdgcn;
+  }
+
   bool isAMDGPU() const {
     return getArch() == Triple::r600 || getArch() == Triple::amdgcn;
   }

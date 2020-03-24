@@ -3224,6 +3224,13 @@ unsigned FunctionDecl::getBuiltinID(bool ConsiderWrapperFunctions) const {
       !(BuiltinID == Builtin::BIprintf || BuiltinID == Builtin::BImalloc))
     return 0;
 
+
+  if (Context.getTargetInfo().getTriple().isAMDGCN() &&
+      Context.getLangOpts().OpenMPIsDevice &&
+      Context.BuiltinInfo.isPredefinedLibFunction(BuiltinID) &&
+      !(BuiltinID == Builtin::BIprintf || BuiltinID == Builtin::BImalloc))
+    return 0;
+
   return BuiltinID;
 }
 
