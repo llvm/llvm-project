@@ -78,8 +78,8 @@ public:
 
   /// For a shared lock, wait until the owner releases the lock.
   /// Total timeout for the file to appear is ~1.5 minutes.
-  /// \param MaxSeconds the maximum wait time per iteration in seconds.
-  WaitForUnlockResult waitForUnlock(const unsigned MaxSeconds = 40);
+  /// \param MaxSeconds the maximum total wait time in seconds.
+  WaitForUnlockResult waitForUnlock(const unsigned MaxSeconds = 90);
 
   /// Remove the lock file.  This may delete a different lock file than
   /// the one previously read if there is a race.
