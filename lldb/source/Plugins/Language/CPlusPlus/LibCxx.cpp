@@ -144,6 +144,43 @@ bool lldb_private::formatters::LibcxxSmartPointerSummaryProvider(
   return true;
 }
 
+bool lldb_private::formatters::LibcxxUniquePointerSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  ValueObjectSP valobj_sp(valobj.GetNonSyntheticValue());
+  if (!valobj_sp)
+    return false;
+
+  ValueObjectSP ptr_sp(
+      valobj_sp->GetChildMemberWithName(ConstString("__ptr_"), true));
+  if (!ptr_sp)
+    return false;
+
+  ptr_sp = GetValueOfLibCXXCompressedPair(*ptr_sp);
+  if (!ptr_sp)
+    return false;
+
+  if (ptr_sp->GetValueAsUnsigned(0) == 0) {
+    stream.Printf("nullptr");
+    return true;
+  } else {
+    bool print_pointee = false;
+    Status error;
+    ValueObjectSP pointee_sp = ptr_sp->Dereference(error);
+    if (pointee_sp && error.Success()) {
+      if (pointee_sp->DumpPrintableRepresentation(
+              stream, ValueObject::eValueObjectRepresentationStyleSummary,
+              lldb::eFormatInvalid,
+              ValueObject::PrintableRepresentationSpecialCases::eDisable,
+              false))
+        print_pointee = true;
+    }
+    if (!print_pointee)
+      stream.Printf("ptr = 0x%" PRIx64, ptr_sp->GetValueAsUnsigned(0));
+  }
+
+  return true;
+}
+
 /*
  (lldb) fr var ibeg --raw --ptr-depth 1
  (std::__1::__map_iterator<std::__1::__tree_iterator<std::__1::pair<int,
@@ -447,6 +484,67 @@ lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEndCreator(
     CXXSyntheticChildren *, lldb::ValueObjectSP valobj_sp) {
   return (valobj_sp ? new LibcxxSharedPtrSyntheticFrontEnd(valobj_sp)
                     : nullptr);
+}
+
+lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::
+    LibcxxUniquePtrSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp)
+    : SyntheticChildrenFrontEnd(*valobj_sp), m_compressed_pair_sp() {
+  if (valobj_sp)
+    Update();
+}
+
+lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::
+    ~LibcxxUniquePtrSyntheticFrontEnd() = default;
+
+SyntheticChildrenFrontEnd *
+lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEndCreator(
+    CXXSyntheticChildren *, lldb::ValueObjectSP valobj_sp) {
+  return (valobj_sp ? new LibcxxUniquePtrSyntheticFrontEnd(valobj_sp)
+                    : nullptr);
+}
+
+size_t lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::
+    CalculateNumChildren() {
+  return (m_compressed_pair_sp ? 1 : 0);
+}
+
+lldb::ValueObjectSP
+lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::GetChildAtIndex(
+    size_t idx) {
+  if (!m_compressed_pair_sp)
+    return lldb::ValueObjectSP();
+
+  if (idx != 0)
+    return lldb::ValueObjectSP();
+
+  return m_compressed_pair_sp;
+}
+
+bool lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::Update() {
+  ValueObjectSP valobj_sp = m_backend.GetSP();
+  if (!valobj_sp)
+    return false;
+
+  ValueObjectSP ptr_sp(
+      valobj_sp->GetChildMemberWithName(ConstString("__ptr_"), true));
+  if (!ptr_sp)
+    return false;
+
+  m_compressed_pair_sp = GetValueOfLibCXXCompressedPair(*ptr_sp);
+
+  return false;
+}
+
+bool lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::
+    MightHaveChildren() {
+  return true;
+}
+
+size_t lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::
+    GetIndexOfChildWithName(ConstString name) {
+  if (name == "__value_")
+    return 0;
+  return UINT32_MAX;
 }
 
 bool lldb_private::formatters::LibcxxContainerSummaryProvider(
