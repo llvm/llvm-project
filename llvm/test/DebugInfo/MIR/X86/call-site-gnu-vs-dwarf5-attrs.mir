@@ -1,16 +1,24 @@
 # Test the call site encoding in DWARF5 vs GNU extensions.
 #
+# === DWARF4, tune for gdb ===
 # RUN: llc -emit-call-site-info -dwarf-version 4 -debugger-tune=gdb -filetype=obj \
 # RUN:     -mtriple=x86_64-unknown-unknown -start-after=machineverifier -o - %s  \
-# RUN:     | llvm-dwarfdump - | FileCheck %s -check-prefixes=CHECK-GNU
+# RUN:     | llvm-dwarfdump - | FileCheck %s -check-prefixes=CHECK-GNU -implicit-check-not=DW_AT_call
 #
-# RUN: llc -emit-call-site-info -dwarf-version 5 -debugger-tune=lldb -filetype=obj \
-# RUN:     -mtriple=x86_64-unknown-unknown -start-after=machineverifier -o - %s   \
-# RUN:     | llvm-dwarfdump - | FileCheck %s -check-prefixes=CHECK-DWARF5
+# === DWARF5, tune for gdb ===
+# RUN: llc -dwarf-version 5 -debugger-tune=gdb -emit-call-site-info -filetype=obj \
+# RUN:     -mtriple=x86_64-unknown-unknown -start-after=machineverifier -o - %s  \
+# RUN:     | llvm-dwarfdump - | FileCheck %s -check-prefixes=CHECK-DWARF5 -implicit-check-not=DW_AT_call
 #
-# RUN: llc -emit-call-site-info -dwarf-version 5 -filetype=obj \
+# === DWARF4, tune for lldb ===
+# RUN: llc -dwarf-version 4 -debugger-tune=lldb -emit-call-site-info -filetype=obj \
 # RUN:     -mtriple=x86_64-unknown-unknown -start-after=machineverifier -o - %s   \
-# RUN:     | llvm-dwarfdump - | FileCheck %s -check-prefixes=CHECK-DWARF5
+# RUN:     | llvm-dwarfdump - | FileCheck %s -check-prefixes=CHECK-DWARF5 -implicit-check-not=DW_AT_call
+#
+# === DWARF5, tune for lldb ===
+# RUN: llc -dwarf-version 5 -debugger-tune=lldb -emit-call-site-info -filetype=obj \
+# RUN:     -mtriple=x86_64-unknown-unknown -start-after=machineverifier -o - %s   \
+# RUN:     | llvm-dwarfdump - | FileCheck %s -check-prefixes=CHECK-DWARF5 -implicit-check-not=DW_AT_call
 #
 # RUN: llc -emit-call-site-info -dwarf-version 5 -filetype=obj -debugger-tune=sce \
 # RUN:     -emit-debug-entry-values -debug-entry-values -mtriple=x86_64-unknown-unknown \
@@ -49,12 +57,16 @@
 # CHECK-GNU:        DW_TAG_GNU_call_site
 # CHECK-GNU-NEXT:     DW_AT_abstract_origin
 # CHECK-GNU-NEXT:     DW_AT_GNU_tail_call
+# CHECK-GNU-NEXT:     DW_AT_low_pc
 #
 #
 # Check DWARF 5:
 #
 # CHECK-DWARF5:        DW_TAG_subprogram
 # CHECK-DWARF5:          DW_AT_call_all_calls    (true)
+# CHECK-DWARF5:        DW_TAG_call_site
+# CHECK-DWARF5-NEXT:     DW_AT_call_origin
+# CHECK-DWARF5-NEXT:     DW_AT_call_return_pc
 # CHECK-DWARF5:        DW_TAG_call_site
 # CHECK-DWARF5-NEXT:     DW_AT_call_origin
 # CHECK-DWARF5-NEXT:     DW_AT_call_return_pc
@@ -67,6 +79,7 @@
 # CHECK-DWARF5:        DW_TAG_call_site
 # CHECK-DWARF5-NEXT:     DW_AT_call_origin
 # CHECK-DWARF5-NEXT:     DW_AT_call_tail_call
+# CHECK-DWARF5-NEXT:     DW_AT_call_pc
 #
 --- |
   ; ModuleID = 'call-site-attrs.c'
