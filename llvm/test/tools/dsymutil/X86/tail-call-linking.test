@@ -1,0 +1,4 @@
+RUN: dsymutil -oso-prepend-path=%p %p/Inputs/tail-call.macho.x86_64 -o %t.dSYM
+RUN: llvm-dwarfdump %t.dSYM | FileCheck %s -implicit-check-not=DW_AT_call_pc
+
+CHECK: DW_AT_call_pc  (0x0000000100000f95)
