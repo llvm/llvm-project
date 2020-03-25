@@ -22,10 +22,6 @@ using namespace llvm;
 extern cl::opt<bool> ShouldPreserveAllAttributes;
 extern cl::opt<bool> EnableKnowledgeRetention;
 
-static IntrinsicInst *buildAssumeFromInst(Instruction *I) {
-  return cast_or_null<IntrinsicInst>(BuildAssumeFromInst(I));
-}
-
 static void RunTest(
     StringRef Head, StringRef Tail,
     std::vector<std::pair<StringRef, llvm::function_ref<void(Instruction *)>>>
