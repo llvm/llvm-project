@@ -92,6 +92,8 @@ public:
 
   void RemovePersistentVariable(lldb::ExpressionVariableSP variable) override;
 
+  ConstString GetNextPersistentVariableName(bool is_error = false) override;
+
   llvm::Optional<CompilerType>
   GetCompilerTypeFromPersistentDecl(ConstString type_name) override;
 
