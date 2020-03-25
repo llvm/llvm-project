@@ -126,6 +126,11 @@ void func(int sel) {
 
   const_volatile_int8 = local_int8; // expected-error {{cannot assign to variable 'const_volatile_int8' with const-qualified type 'const volatile svint8_t'}}
 
+  init_int8 = sel ? init_int8 : local_int8;
+  init_int8 = sel ? init_int8 : const_int8;
+  init_int8 = sel ? volatile_int8 : const_int8;
+  init_int8 = sel ? volatile_int8 : const_volatile_int8;
+
   pass_int8(local_int8);
   pass_int8(local_int16); // expected-error {{passing 'svint16_t' (aka '__SVInt16_t') to parameter of incompatible type 'svint8_t'}}
 
