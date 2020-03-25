@@ -1,15 +1,23 @@
-; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -O1 < %s | FileCheck -check-prefix=OPT %s
+; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -O1 < %s | FileCheck -check-prefixes=OPT,OPT-EXT %s
+; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -O1 --amdgpu-internalize-symbols < %s | FileCheck -check-prefixes=OPT,OPT-INT %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefix=LLC %s
 
 ; OPT: declare void @foo4() local_unnamed_addr #0
-; OPT: define internal fastcc void @foo3.2() unnamed_addr #1
-; OPT: define void @foo2() local_unnamed_addr #1
-; OPT: define internal fastcc void @foo1.1() unnamed_addr #1
+; OPT: define internal fastcc void @0() unnamed_addr #1
+; OPT-EXT: define void @foo3() local_unnamed_addr #1
+; OPT-INT: define internal fastcc void @foo3.2() unnamed_addr #1
+; OPT-EXT: define void @foo2() local_unnamed_addr #1
+; OPT-INT: define internal fastcc void @foo2() unnamed_addr #1
+; OPT-EXT: define void @foo1() local_unnamed_addr #1
+; OPT-INT: define internal fastcc void @foo1.1() unnamed_addr #1
 ; OPT: define amdgpu_kernel void @kernel1() local_unnamed_addr #2
 ; OPT: define amdgpu_kernel void @kernel2() local_unnamed_addr #3
 ; OPT: define amdgpu_kernel void @kernel3() local_unnamed_addr #3
-; OPT: define void @foo1() local_unnamed_addr #4
-; OPT: define void @foo3() local_unnamed_addr #4
+; OPT-EXT: define internal fastcc void @foo1.1() unnamed_addr #4
+; OPT-INT: define internal fastcc void @foo1() unnamed_addr #4
+; OPT: define internal fastcc void @1() unnamed_addr #4
+; OPT-EXT: define internal fastcc void @foo3.2() unnamed_addr #4
+; OPT-INT: define internal fastcc void @foo3() unnamed_addr #4
 ; OPT: attributes #0 = { {{.*}} "target-features"="+wavefrontsize64" }
 ; OPT: attributes #1 = { {{.*}} "target-features"="{{.*}},-wavefrontsize16,-wavefrontsize32,+wavefrontsize64{{.*}}" }
 ; OPT: attributes #2 = { {{.*}} "target-features"="+wavefrontsize32" }
@@ -29,6 +37,8 @@
 ; LLC: foo2@gotpcrel32@hi+4
 ; LLC: foo1@gotpcrel32@lo+4
 ; LLC: foo1@gotpcrel32@hi+4
+; LLC: __unnamed_1@gotpcrel32@lo+4
+; LLC: __unnamed_1@gotpcrel32@hi+4
 ; LLC: kernel1:
 ; LLC: foo1@gotpcrel32@lo+4
 ; LLC: foo1@gotpcrel32@hi+4
@@ -40,6 +50,12 @@
 ; LLC: foo1@gotpcrel32@hi+4
 
 declare void @foo4() #1
+
+define void @0() #1 {
+entry:
+  call void asm sideeffect "; sample asm", ""()
+  ret void
+}
 
 define void @foo3() #1 {
 entry:
@@ -60,6 +76,7 @@ entry:
   tail call void @foo2()
   tail call void @foo2()
   tail call void @foo1()
+  tail call void @0()
   ret void
 }
 
