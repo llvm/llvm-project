@@ -266,6 +266,16 @@ void Target::SetREPL(lldb::LanguageType language, lldb::REPLSP repl_sp) {
   lldbassert(!m_repl_map.count(language));
 
   m_repl_map[language] = repl_sp;
+
+  if (language == eLanguageTypeSwift) {
+    // The DWARFImporter always claims to be able to load a module, even if it
+    // doesn't exist, because it doesn't "import" anything until the first type is
+    // requested. To make the REPL behave more like the compiler and diagnose when
+    // Clang modules can't be located up front, the DWARFImporter is disabled in
+    // the REPL. There are use-cases for loading Clang types from debug info, but
+    // this needs a better diagnostic mechanism before it can be enabled.
+    ModuleList::GetGlobalModuleListProperties().SetUseSwiftDWARFImporter(repl_sp == NULL);
+  }
 }
 
 void Target::Destroy() {
