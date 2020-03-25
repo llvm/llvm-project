@@ -108,6 +108,8 @@ void func(int sel) {
 
   sel = local_int8; // expected-error {{assigning to 'int' from incompatible type 'svint8_t'}}
 
+  local_int8 = (svint8_t)local_int8;
+  local_int8 = (const svint8_t)local_int8;
   local_int8 = (svint8_t)local_int16; // expected-error {{used type 'svint8_t' (aka '__SVInt8_t') where arithmetic or pointer type is required}}
   local_int8 = (svint8_t)0;           // expected-error {{used type 'svint8_t' (aka '__SVInt8_t') where arithmetic or pointer type is required}}
   sel = (int)local_int8;              // expected-error {{operand of type 'svint8_t' (aka '__SVInt8_t') where arithmetic or pointer type is required}}
