@@ -37,6 +37,7 @@ static_library("profile") {
     "InstrProfilingBiasVar.c",
     "InstrProfilingBuffer.c",
     "InstrProfilingFile.c",
+    "InstrProfilingInternal.c",
     "InstrProfilingInternal.h",
     "InstrProfilingMerge.c",
     "InstrProfilingMergeFile.c",
