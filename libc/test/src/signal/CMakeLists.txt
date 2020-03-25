@@ -23,7 +23,6 @@ add_libc_unittest(
     signal_h
     errno_h
     __errno_location
-    __restore
 )
 
 add_libc_unittest(
