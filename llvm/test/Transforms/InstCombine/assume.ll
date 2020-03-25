@@ -289,9 +289,9 @@ define i1 @nonnull3(i32** %a, i1 %control) {
 ; CHECK-LABEL: @nonnull3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i32*, i32** [[A:%.*]], align 8
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32* [[LOAD]], null
 ; CHECK-NEXT:    br i1 [[CONTROL:%.*]], label [[TAKEN:%.*]], label [[NOT_TAKEN:%.*]]
 ; CHECK:       taken:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32* [[LOAD]], null
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       not_taken:
@@ -412,6 +412,117 @@ define i32 @PR40940(<4 x i8> %x) {
   %t3 = icmp ult i32 %t2, 65536
   call void @llvm.assume(i1 %t3)
   ret i32 %t2
+}
+
+define i1 @nonnull3A(i32** %a, i1 %control) {
+; CHECK-LABEL: @nonnull3A(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32*, i32** [[A:%.*]], align 8
+; CHECK-NEXT:    br i1 [[CONTROL:%.*]], label [[TAKEN:%.*]], label [[NOT_TAKEN:%.*]]
+; CHECK:       taken:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32* [[LOAD]], null
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    ret i1 true
+; CHECK:       not_taken:
+; CHECK-NEXT:    [[RVAL_2:%.*]] = icmp sgt i32* [[LOAD]], null
+; CHECK-NEXT:    ret i1 [[RVAL_2]]
+;
+entry:
+  %load = load i32*, i32** %a
+  %cmp = icmp ne i32* %load, null
+  br i1 %control, label %taken, label %not_taken
+taken:
+  call void @llvm.assume(i1 %cmp)
+  ret i1 %cmp
+not_taken:
+  call void @llvm.assume(i1 %cmp)
+  %rval.2 = icmp sgt i32* %load, null
+  ret i1 %rval.2
+}
+
+define i1 @nonnull3B(i32** %a, i1 %control) {
+; CHECK-LABEL: @nonnull3B(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[CONTROL:%.*]], label [[TAKEN:%.*]], label [[NOT_TAKEN:%.*]]
+; CHECK:       taken:
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32*, i32** [[A:%.*]], align 8
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32* [[LOAD]], null
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]]) [ "nonnull"(i32* [[LOAD]]), "nonnull"(i1 [[CMP]]) ]
+; CHECK-NEXT:    ret i1 true
+; CHECK:       not_taken:
+; CHECK-NEXT:    ret i1 [[CONTROL]]
+;
+entry:
+  %load = load i32*, i32** %a
+  %cmp = icmp ne i32* %load, null
+  br i1 %control, label %taken, label %not_taken
+taken:
+  call void @llvm.assume(i1 %cmp) ["nonnull"(i32* %load), "nonnull"(i1 %cmp)]
+  ret i1 %cmp
+not_taken:
+  call void @llvm.assume(i1 %cmp) ["nonnull"(i32* %load), "nonnull"(i1 %cmp)]
+  ret i1 %control
+}
+
+declare i1 @tmp1(i1)
+
+define i1 @nonnull3C(i32** %a, i1 %control) {
+; CHECK-LABEL: @nonnull3C(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[CONTROL:%.*]], label [[TAKEN:%.*]], label [[NOT_TAKEN:%.*]]
+; CHECK:       taken:
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32*, i32** [[A:%.*]], align 8
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32* [[LOAD]], null
+; CHECK-NEXT:    [[CMP2:%.*]] = call i1 @tmp1(i1 [[CMP]])
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i1 [[CMP2]]
+; CHECK:       not_taken:
+; CHECK-NEXT:    ret i1 [[CONTROL]]
+;
+entry:
+  %load = load i32*, i32** %a
+  %cmp = icmp ne i32* %load, null
+  br i1 %control, label %taken, label %not_taken
+taken:
+  %cmp2 = call i1 @tmp1(i1 %cmp)
+  br label %exit
+exit:
+  ; FIXME: this shouldn't be dropped because it is still dominated by the new position of %load
+  call void @llvm.assume(i1 %cmp) ["nonnull"(i32* %load), "nonnull"(i1 %cmp)]
+  ret i1 %cmp2
+not_taken:
+  call void @llvm.assume(i1 %cmp)
+  ret i1 %control
+}
+
+define i1 @nonnull3D(i32** %a, i1 %control) {
+; CHECK-LABEL: @nonnull3D(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[CONTROL:%.*]], label [[TAKEN:%.*]], label [[NOT_TAKEN:%.*]]
+; CHECK:       taken:
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32*, i32** [[A:%.*]], align 8
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32* [[LOAD]], null
+; CHECK-NEXT:    [[CMP2:%.*]] = call i1 @tmp1(i1 [[CMP]])
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i1 [[CMP2]]
+; CHECK:       not_taken:
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "ignore"(i32* undef), "ignore"(i1 undef), "nonnull"(i1 [[CONTROL]]) ]
+; CHECK-NEXT:    ret i1 [[CONTROL]]
+;
+entry:
+  %load = load i32*, i32** %a
+  %cmp = icmp ne i32* %load, null
+  br i1 %control, label %taken, label %not_taken
+taken:
+  %cmp2 = call i1 @tmp1(i1 %cmp)
+  br label %exit
+exit:
+  ret i1 %cmp2
+not_taken:
+  call void @llvm.assume(i1 %cmp) ["nonnull"(i32* %load), "nonnull"(i1 %cmp), "nonnull"(i1 %control)]
+  ret i1 %control
 }
 
 declare void @llvm.dbg.value(metadata, metadata, metadata)
