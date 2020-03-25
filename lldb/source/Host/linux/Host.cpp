@@ -221,8 +221,8 @@ static bool GetProcessAndStatInfo(::pid_t pid,
   return true;
 }
 
-uint32_t Host::FindProcesses(const ProcessInstanceInfoMatch &match_info,
-                             ProcessInstanceInfoList &process_infos) {
+uint32_t Host::FindProcessesImpl(const ProcessInstanceInfoMatch &match_info,
+                                 ProcessInstanceInfoList &process_infos) {
   static const char procdir[] = "/proc/";
 
   DIR *dirproc = opendir(procdir);
@@ -262,14 +262,14 @@ uint32_t Host::FindProcesses(const ProcessInstanceInfoMatch &match_info,
         continue;
 
       if (match_info.Matches(process_info)) {
-        process_infos.Append(process_info);
+        process_infos.push_back(process_info);
       }
     }
 
     closedir(dirproc);
   }
 
-  return process_infos.GetSize();
+  return process_infos.size();
 }
 
 bool Host::FindProcessThreads(const lldb::pid_t pid, TidMap &tids_to_attach) {
