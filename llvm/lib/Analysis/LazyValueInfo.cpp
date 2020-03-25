@@ -348,9 +348,7 @@ class LazyValueInfoImpl;
 class LazyValueInfoAnnotatedWriter : public AssemblyAnnotationWriter {
   LazyValueInfoImpl *LVIImpl;
   // While analyzing which blocks we can solve values for, we need the dominator
-  // information. Since this is an optional parameter in LVI, we require this
-  // DomTreeAnalysis pass in the printer pass, and pass the dominator
-  // tree to the LazyValueInfoAnnotatedWriter.
+  // information.
   DominatorTree &DT;
 
 public:
@@ -395,8 +393,6 @@ namespace {
 
     AssumptionCache *AC;  ///< A pointer to the cache of @llvm.assume calls.
     const DataLayout &DL; ///< A mandatory DataLayout
-    DominatorTree *DT;    ///< An optional DT pointer.
-    DominatorTree *DisabledDT; ///< Stores DT if it's disabled.
 
   Optional<ValueLatticeElement> getBlockValue(Value *Val, BasicBlock *BB);
   Optional<ValueLatticeElement> getEdgeValue(Value *V, BasicBlock *F,
@@ -471,30 +467,12 @@ namespace {
       TheCache.eraseBlock(BB);
     }
 
-    /// Disables use of the DominatorTree within LVI.
-    void disableDT() {
-      if (DT) {
-        assert(!DisabledDT && "Both DT and DisabledDT are not nullptr!");
-        std::swap(DT, DisabledDT);
-      }
-    }
-
-    /// Enables use of the DominatorTree within LVI. Does nothing if the class
-    /// instance was initialized without a DT pointer.
-    void enableDT() {
-      if (DisabledDT) {
-        assert(!DT && "Both DT and DisabledDT are not nullptr!");
-        std::swap(DT, DisabledDT);
-      }
-    }
-
     /// This is the update interface to inform the cache that an edge from
     /// PredBB to OldSucc has been threaded to be from PredBB to NewSucc.
     void threadEdge(BasicBlock *PredBB,BasicBlock *OldSucc,BasicBlock *NewSucc);
 
-    LazyValueInfoImpl(AssumptionCache *AC, const DataLayout &DL,
-                       DominatorTree *DT = nullptr)
-        : AC(AC), DL(DL), DT(DT), DisabledDT(nullptr) {}
+    LazyValueInfoImpl(AssumptionCache *AC, const DataLayout &DL)
+        : AC(AC), DL(DL) {}
   };
 } // end anonymous namespace
 
@@ -1546,11 +1524,10 @@ void LazyValueInfoImpl::threadEdge(BasicBlock *PredBB, BasicBlock *OldSucc,
 
 /// This lazily constructs the LazyValueInfoImpl.
 static LazyValueInfoImpl &getImpl(void *&PImpl, AssumptionCache *AC,
-                                  const DataLayout *DL,
-                                  DominatorTree *DT = nullptr) {
+                                  const DataLayout *DL) {
   if (!PImpl) {
     assert(DL && "getCache() called with a null DataLayout");
-    PImpl = new LazyValueInfoImpl(AC, *DL, DT);
+    PImpl = new LazyValueInfoImpl(AC, *DL);
   }
   return *static_cast<LazyValueInfoImpl*>(PImpl);
 }
@@ -1558,14 +1535,10 @@ static LazyValueInfoImpl &getImpl(void *&PImpl, AssumptionCache *AC,
 bool LazyValueInfoWrapperPass::runOnFunction(Function &F) {
   Info.AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
   const DataLayout &DL = F.getParent()->getDataLayout();
-
-  DominatorTreeWrapperPass *DTWP =
-      getAnalysisIfAvailable<DominatorTreeWrapperPass>();
-  Info.DT = DTWP ? &DTWP->getDomTree() : nullptr;
   Info.TLI = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
 
   if (Info.PImpl)
-    getImpl(Info.PImpl, Info.AC, &DL, Info.DT).clear();
+    getImpl(Info.PImpl, Info.AC, &DL).clear();
 
   // Fully lazy.
   return false;
@@ -1594,8 +1567,7 @@ bool LazyValueInfo::invalidate(Function &F, const PreservedAnalyses &PA,
   // We need to invalidate if we have either failed to preserve this analyses
   // result directly or if any of its dependencies have been invalidated.
   auto PAC = PA.getChecker<LazyValueAnalysis>();
-  if (!(PAC.preserved() || PAC.preservedSet<AllAnalysesOn<Function>>()) ||
-      (DT && Inv.invalidate<DominatorTreeAnalysis>(F, PA)))
+  if (!(PAC.preserved() || PAC.preservedSet<AllAnalysesOn<Function>>()))
     return true;
 
   return false;
@@ -1607,9 +1579,8 @@ LazyValueInfo LazyValueAnalysis::run(Function &F,
                                      FunctionAnalysisManager &FAM) {
   auto &AC = FAM.getResult<AssumptionAnalysis>(F);
   auto &TLI = FAM.getResult<TargetLibraryAnalysis>(F);
-  auto *DT = FAM.getCachedResult<DominatorTreeAnalysis>(F);
 
-  return LazyValueInfo(&AC, &F.getParent()->getDataLayout(), &TLI, DT);
+  return LazyValueInfo(&AC, &F.getParent()->getDataLayout(), &TLI);
 }
 
 /// Returns true if we can statically tell that this value will never be a
@@ -1634,7 +1605,7 @@ Constant *LazyValueInfo::getConstant(Value *V, BasicBlock *BB,
 
   const DataLayout &DL = BB->getModule()->getDataLayout();
   ValueLatticeElement Result =
-      getImpl(PImpl, AC, &DL, DT).getValueInBlock(V, BB, CxtI);
+      getImpl(PImpl, AC, &DL).getValueInBlock(V, BB, CxtI);
 
   if (Result.isConstant())
     return Result.getConstant();
@@ -1653,7 +1624,7 @@ ConstantRange LazyValueInfo::getConstantRange(Value *V, BasicBlock *BB,
   unsigned Width = V->getType()->getIntegerBitWidth();
   const DataLayout &DL = BB->getModule()->getDataLayout();
   ValueLatticeElement Result =
-      getImpl(PImpl, AC, &DL, DT).getValueInBlock(V, BB, CxtI);
+      getImpl(PImpl, AC, &DL).getValueInBlock(V, BB, CxtI);
   if (Result.isUnknown())
     return ConstantRange::getEmpty(Width);
   if (Result.isConstantRange(UndefAllowed))
@@ -1672,7 +1643,7 @@ Constant *LazyValueInfo::getConstantOnEdge(Value *V, BasicBlock *FromBB,
                                            Instruction *CxtI) {
   const DataLayout &DL = FromBB->getModule()->getDataLayout();
   ValueLatticeElement Result =
-      getImpl(PImpl, AC, &DL, DT).getValueOnEdge(V, FromBB, ToBB, CxtI);
+      getImpl(PImpl, AC, &DL).getValueOnEdge(V, FromBB, ToBB, CxtI);
 
   if (Result.isConstant())
     return Result.getConstant();
@@ -1691,7 +1662,7 @@ ConstantRange LazyValueInfo::getConstantRangeOnEdge(Value *V,
   unsigned Width = V->getType()->getIntegerBitWidth();
   const DataLayout &DL = FromBB->getModule()->getDataLayout();
   ValueLatticeElement Result =
-      getImpl(PImpl, AC, &DL, DT).getValueOnEdge(V, FromBB, ToBB, CxtI);
+      getImpl(PImpl, AC, &DL).getValueOnEdge(V, FromBB, ToBB, CxtI);
 
   if (Result.isUnknown())
     return ConstantRange::getEmpty(Width);
@@ -1777,7 +1748,7 @@ LazyValueInfo::getPredicateOnEdge(unsigned Pred, Value *V, Constant *C,
                                   Instruction *CxtI) {
   const DataLayout &DL = FromBB->getModule()->getDataLayout();
   ValueLatticeElement Result =
-      getImpl(PImpl, AC, &DL, DT).getValueOnEdge(V, FromBB, ToBB, CxtI);
+      getImpl(PImpl, AC, &DL).getValueOnEdge(V, FromBB, ToBB, CxtI);
 
   return getPredicateResult(Pred, C, Result, DL, TLI);
 }
@@ -1797,7 +1768,7 @@ LazyValueInfo::getPredicateAt(unsigned Pred, Value *V, Constant *C,
     else if (Pred == ICmpInst::ICMP_NE)
       return LazyValueInfo::True;
   }
-  ValueLatticeElement Result = getImpl(PImpl, AC, &DL, DT).getValueAt(V, CxtI);
+  ValueLatticeElement Result = getImpl(PImpl, AC, &DL).getValueAt(V, CxtI);
   Tristate Ret = getPredicateResult(Pred, C, Result, DL, TLI);
   if (Ret != Unknown)
     return Ret;
@@ -1887,32 +1858,22 @@ void LazyValueInfo::threadEdge(BasicBlock *PredBB, BasicBlock *OldSucc,
                                BasicBlock *NewSucc) {
   if (PImpl) {
     const DataLayout &DL = PredBB->getModule()->getDataLayout();
-    getImpl(PImpl, AC, &DL, DT).threadEdge(PredBB, OldSucc, NewSucc);
+    getImpl(PImpl, AC, &DL).threadEdge(PredBB, OldSucc, NewSucc);
   }
 }
 
 void LazyValueInfo::eraseBlock(BasicBlock *BB) {
   if (PImpl) {
     const DataLayout &DL = BB->getModule()->getDataLayout();
-    getImpl(PImpl, AC, &DL, DT).eraseBlock(BB);
+    getImpl(PImpl, AC, &DL).eraseBlock(BB);
   }
 }
 
 
 void LazyValueInfo::printLVI(Function &F, DominatorTree &DTree, raw_ostream &OS) {
   if (PImpl) {
-    getImpl(PImpl, AC, DL, DT).printLVI(F, DTree, OS);
+    getImpl(PImpl, AC, DL).printLVI(F, DTree, OS);
   }
-}
-
-void LazyValueInfo::disableDT() {
-  if (PImpl)
-    getImpl(PImpl, AC, DL, DT).disableDT();
-}
-
-void LazyValueInfo::enableDT() {
-  if (PImpl)
-    getImpl(PImpl, AC, DL, DT).enableDT();
 }
 
 // Print the LVI for the function arguments at the start of each basic block.
