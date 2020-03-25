@@ -45,7 +45,7 @@ cleanup:
 ; CHECK-NEXT:    ret { i8*, i32 } [[T1]]
 ; CHECK-NEXT:  }
 
-; CHECK-LABEL: define internal void @f.resume.0(i8* noalias nonnull %0, i1 zeroext %1)
+; CHECK-LABEL: define internal void @f.resume.0(i8* noalias nonnull align 8 dereferenceable(8) %0, i1 zeroext %1)
 ; CHECK-NEXT:  :
 ; CHECK-NEXT:    br i1 %1,
 ; CHECK:       :
@@ -57,7 +57,7 @@ cleanup:
 ; CHECK-NEXT:    ret void
 ; CHECK-NEXT:  }
 
-; CHECK-LABEL: define internal void @f.resume.1(i8* noalias nonnull %0, i1 zeroext %1)
+; CHECK-LABEL: define internal void @f.resume.1(i8* noalias nonnull align 8 dereferenceable(8) %0, i1 zeroext %1)
 ; CHECK-NEXT:  :
 ; CHECK-NEXT:    br i1 %1,
 ; CHECK:       :
