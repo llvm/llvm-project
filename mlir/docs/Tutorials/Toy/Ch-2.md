@@ -491,8 +491,7 @@ def ConstantOp : Toy_Op<"constant"> {
 
 #### Specifying a Custom Assembly Format
 
-At this point we can generate our "Toy IR". A simplified version of the previous
-example:
+At this point we can generate our "Toy IR". For example, the following:
 
 ```toy
 # User defined generic function that operates on unknown shaped arguments.
@@ -514,22 +513,22 @@ Results in the following IR:
 ```mlir
 module {
   func @multiply_transpose(%arg0: tensor<*xf64>, %arg1: tensor<*xf64>) -> tensor<*xf64> {
-    %0 = "toy.transpose"(%arg0) : (tensor<*xf64>) -> tensor<*xf64> loc("test/codegen.toy":5:10)
-    %1 = "toy.transpose"(%arg1) : (tensor<*xf64>) -> tensor<*xf64> loc("test/codegen.toy":5:25)
-    %2 = "toy.mul"(%0, %1) : (tensor<*xf64>, tensor<*xf64>) -> tensor<*xf64> loc("test/codegen.toy":5:25)
-    "toy.return"(%2) : (tensor<*xf64>) -> () loc("test/codegen.toy":5:3)
-  } loc("test/codegen.toy":4:1)
+    %0 = "toy.transpose"(%arg0) : (tensor<*xf64>) -> tensor<*xf64> loc("test/Examples/Toy/Ch2/codegen.toy":5:10)
+    %1 = "toy.transpose"(%arg1) : (tensor<*xf64>) -> tensor<*xf64> loc("test/Examples/Toy/Ch2/codegen.toy":5:25)
+    %2 = "toy.mul"(%0, %1) : (tensor<*xf64>, tensor<*xf64>) -> tensor<*xf64> loc("test/Examples/Toy/Ch2/codegen.toy":5:25)
+    "toy.return"(%2) : (tensor<*xf64>) -> () loc("test/Examples/Toy/Ch2/codegen.toy":5:3)
+  } loc("test/Examples/Toy/Ch2/codegen.toy":4:1)
   func @main() {
-    %0 = "toy.constant"() {value = dense<[[1.000000e+00, 2.000000e+00, 3.000000e+00], [4.000000e+00, 5.000000e+00, 6.000000e+00]]> : tensor<2x3xf64>} : () -> tensor<2x3xf64> loc("test/codegen.toy":9:17)
-    %1 = "toy.reshape"(%0) : (tensor<2x3xf64>) -> tensor<2x3xf64> loc("test/codegen.toy":9:3)
-    %2 = "toy.constant"() {value = dense<[1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00, 5.000000e+00, 6.000000e+00]> : tensor<6xf64>} : () -> tensor<6xf64> loc("test/codegen.toy":10:17)
-    %3 = "toy.reshape"(%2) : (tensor<6xf64>) -> tensor<2x3xf64> loc("test/codegen.toy":10:3)
-    %4 = "toy.generic_call"(%1, %3) {callee = @multiply_transpose} : (tensor<2x3xf64>, tensor<2x3xf64>) -> tensor<*xf64> loc("test/codegen.toy":11:11)
-    %5 = "toy.generic_call"(%3, %1) {callee = @multiply_transpose} : (tensor<2x3xf64>, tensor<2x3xf64>) -> tensor<*xf64> loc("test/codegen.toy":12:11)
-    "toy.print"(%5) : (tensor<*xf64>) -> () loc("test/codegen.toy":13:3)
-    "toy.return"() : () -> () loc("test/codegen.toy":8:1)
-  } loc("test/codegen.toy":8:1)
-} loc("test/codegen.toy":0:0)
+    %0 = "toy.constant"() {value = dense<[[1.000000e+00, 2.000000e+00, 3.000000e+00], [4.000000e+00, 5.000000e+00, 6.000000e+00]]> : tensor<2x3xf64>} : () -> tensor<2x3xf64> loc("test/Examples/Toy/Ch2/codegen.toy":9:17)
+    %1 = "toy.reshape"(%0) : (tensor<2x3xf64>) -> tensor<2x3xf64> loc("test/Examples/Toy/Ch2/codegen.toy":9:3)
+    %2 = "toy.constant"() {value = dense<[1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00, 5.000000e+00, 6.000000e+00]> : tensor<6xf64>} : () -> tensor<6xf64> loc("test/Examples/Toy/Ch2/codegen.toy":10:17)
+    %3 = "toy.reshape"(%2) : (tensor<6xf64>) -> tensor<2x3xf64> loc("test/Examples/Toy/Ch2/codegen.toy":10:3)
+    %4 = "toy.generic_call"(%1, %3) {callee = @multiply_transpose} : (tensor<2x3xf64>, tensor<2x3xf64>) -> tensor<*xf64> loc("test/Examples/Toy/Ch2/codegen.toy":11:11)
+    %5 = "toy.generic_call"(%3, %1) {callee = @multiply_transpose} : (tensor<2x3xf64>, tensor<2x3xf64>) -> tensor<*xf64> loc("test/Examples/Toy/Ch2/codegen.toy":12:11)
+    "toy.print"(%5) : (tensor<*xf64>) -> () loc("test/Examples/Toy/Ch2/codegen.toy":13:3)
+    "toy.return"() : () -> () loc("test/Examples/Toy/Ch2/codegen.toy":8:1)
+  } loc("test/Examples/Toy/Ch2/codegen.toy":8:1)
+} loc(unknown)
 ```
 
 One thing to notice here is that all of our Toy operations are printed using the
@@ -645,22 +644,22 @@ now get a much more readable:
 ```mlir
 module {
   func @multiply_transpose(%arg0: tensor<*xf64>, %arg1: tensor<*xf64>) -> tensor<*xf64> {
-    %0 = toy.transpose(%arg0 : tensor<*xf64>) to tensor<*xf64> loc("test/codegen.toy":5:10)
-    %1 = toy.transpose(%arg1 : tensor<*xf64>) to tensor<*xf64> loc("test/codegen.toy":5:25)
-    %2 = toy.mul %0, %1 : tensor<*xf64> loc("test/codegen.toy":5:25)
-    toy.return %2 : tensor<*xf64> loc("test/codegen.toy":5:3)
-  } loc("test/codegen.toy":4:1)
+    %0 = toy.transpose(%arg0 : tensor<*xf64>) to tensor<*xf64> loc("test/Examples/Toy/Ch2/codegen.toy":5:10)
+    %1 = toy.transpose(%arg1 : tensor<*xf64>) to tensor<*xf64> loc("test/Examples/Toy/Ch2/codegen.toy":5:25)
+    %2 = toy.mul %0, %1 : tensor<*xf64> loc("test/Examples/Toy/Ch2/codegen.toy":5:25)
+    toy.return %2 : tensor<*xf64> loc("test/Examples/Toy/Ch2/codegen.toy":5:3)
+  } loc("test/Examples/Toy/Ch2/codegen.toy":4:1)
   func @main() {
-    %0 = toy.constant dense<[[1.000000e+00, 2.000000e+00, 3.000000e+00], [4.000000e+00, 5.000000e+00, 6.000000e+00]]> : tensor<2x3xf64> loc("test/codegen.toy":9:17)
-    %1 = toy.reshape(%0 : tensor<2x3xf64>) to tensor<2x3xf64> loc("test/codegen.toy":9:3)
-    %2 = toy.constant dense<[1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00, 5.000000e+00, 6.000000e+00]> : tensor<6xf64> loc("test/codegen.toy":10:17)
-    %3 = toy.reshape(%2 : tensor<6xf64>) to tensor<2x3xf64> loc("test/codegen.toy":10:3)
-    %4 = toy.generic_call @multiply_transpose(%1, %3) : (tensor<2x3xf64>, tensor<2x3xf64>) -> tensor<*xf64> loc("test/codegen.toy":11:11)
-    %5 = toy.generic_call @multiply_transpose(%3, %1) : (tensor<2x3xf64>, tensor<2x3xf64>) -> tensor<*xf64> loc("test/codegen.toy":12:11)
-    toy.print %5 : tensor<*xf64> loc("test/codegen.toy":13:3)
-    toy.return loc("test/codegen.toy":8:1)
-  } loc("test/codegen.toy":8:1)
-} loc("test/codegen.toy":0:0)
+    %0 = toy.constant dense<[[1.000000e+00, 2.000000e+00, 3.000000e+00], [4.000000e+00, 5.000000e+00, 6.000000e+00]]> : tensor<2x3xf64> loc("test/Examples/Toy/Ch2/codegen.toy":9:17)
+    %1 = toy.reshape(%0 : tensor<2x3xf64>) to tensor<2x3xf64> loc("test/Examples/Toy/Ch2/codegen.toy":9:3)
+    %2 = toy.constant dense<[1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00, 5.000000e+00, 6.000000e+00]> : tensor<6xf64> loc("test/Examples/Toy/Ch2/codegen.toy":10:17)
+    %3 = toy.reshape(%2 : tensor<6xf64>) to tensor<2x3xf64> loc("test/Examples/Toy/Ch2/codegen.toy":10:3)
+    %4 = toy.generic_call @multiply_transpose(%1, %3) : (tensor<2x3xf64>, tensor<2x3xf64>) -> tensor<*xf64> loc("test/Examples/Toy/Ch2/codegen.toy":11:11)
+    %5 = toy.generic_call @multiply_transpose(%3, %1) : (tensor<2x3xf64>, tensor<2x3xf64>) -> tensor<*xf64> loc("test/Examples/Toy/Ch2/codegen.toy":12:11)
+    toy.print %5 : tensor<*xf64> loc("test/Examples/Toy/Ch2/codegen.toy":13:3)
+    toy.return loc("test/Examples/Toy/Ch2/codegen.toy":8:1)
+  } loc("test/Examples/Toy/Ch2/codegen.toy":8:1)
+} loc(unknown)
 ```
 
 Above we introduce several of the concepts for defining operations in the ODS
@@ -670,53 +669,12 @@ variadic operands, etc. Check out the
 
 ## Complete Toy Example
 
-At this point we can generate our "Toy IR". A simplified version of the previous
-example:
-
-```toy
-# User defined generic function that operates on unknown shaped arguments.
-def multiply_transpose(a, b) {
-  return transpose(a) * transpose(b);
-}
-
-def main() {
-  var a<2, 3> = [[1, 2, 3], [4, 5, 6]];
-  var b<2, 3> = [1, 2, 3, 4, 5, 6];
-  var c = multiply_transpose(a, b);
-  var d = multiply_transpose(b, a);
-  print(d);
-}
-```
-
-Results in the following IR:
-
-```mlir
-module {
-  func @multiply_transpose(%arg0: tensor<*xf64>, %arg1: tensor<*xf64>) -> tensor<*xf64> {
-    %0 = toy.transpose(%arg0 : tensor<*xf64>) to tensor<*xf64> loc("test/codegen.toy":5:10)
-    %1 = toy.transpose(%arg1 : tensor<*xf64>) to tensor<*xf64> loc("test/codegen.toy":5:25)
-    %2 = toy.mul %0, %1 : tensor<*xf64> loc("test/codegen.toy":5:25)
-    toy.return %2 : tensor<*xf64> loc("test/codegen.toy":5:3)
-  } loc("test/codegen.toy":4:1)
-  func @main() {
-    %0 = toy.constant dense<[[1.000000e+00, 2.000000e+00, 3.000000e+00], [4.000000e+00, 5.000000e+00, 6.000000e+00]]> : tensor<2x3xf64> loc("test/codegen.toy":9:17)
-    %1 = toy.reshape(%0 : tensor<2x3xf64>) to tensor<2x3xf64> loc("test/codegen.toy":9:3)
-    %2 = toy.constant dense<[1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00, 5.000000e+00, 6.000000e+00]> : tensor<6xf64> loc("test/codegen.toy":10:17)
-    %3 = toy.reshape(%2 : tensor<6xf64>) to tensor<2x3xf64> loc("test/codegen.toy":10:3)
-    %4 = toy.generic_call @multiply_transpose(%1, %3) : (tensor<2x3xf64>, tensor<2x3xf64>) -> tensor<*xf64> loc("test/codegen.toy":11:11)
-    %5 = toy.generic_call @multiply_transpose(%3, %1) : (tensor<2x3xf64>, tensor<2x3xf64>) -> tensor<*xf64> loc("test/codegen.toy":12:11)
-    toy.print %5 : tensor<*xf64> loc("test/codegen.toy":13:3)
-    toy.return loc("test/codegen.toy":8:1)
-  } loc("test/codegen.toy":8:1)
-} loc("test/codegen.toy":0:0)
-```
-
-You can build `toyc-ch2` and try yourself: `toyc-ch2
-test/Examples/Toy/Ch2/codegen.toy -emit=mlir -mlir-print-debuginfo`. We can also
-check our RoundTrip: `toyc-ch2 test/Examples/Toy/Ch2/codegen.toy -emit=mlir
--mlir-print-debuginfo 2> codegen.mlir` followed by `toyc-ch2 codegen.mlir
--emit=mlir`. You should also use `mlir-tblgen` on the final definition file and
-study the generated C++ code.
+We can now generate our "Toy IR". You can build `toyc-ch2` and try yourself on
+the above example: `toyc-ch2 test/Examples/Toy/Ch2/codegen.toy -emit=mlir 
+-mlir-print-debuginfo`. We can also check our RoundTrip: `toyc-ch2 
+test/Examples/Toy/Ch2/codegen.toy -emit=mlir -mlir-print-debuginfo 2> 
+codegen.mlir` followed by `toyc-ch2 codegen.mlir -emit=mlir`. You should also 
+use `mlir-tblgen` on the final definition file and study the generated C++ code.
 
 At this point, MLIR knows about our Toy dialect and operations. In the
 [next chapter](Ch-3.md), we will leverage our new dialect to implement some

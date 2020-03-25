@@ -1,0 +1,16 @@
+# RUN: toyc-ch6 %s -emit=mlir 2>&1 | FileCheck %s
+
+def main() {
+  var a<2,1> = [1, 2];
+  var b<2,1> = a;
+  var c<2,1> = b;
+  print(c);
+}
+
+# CHECK-LABEL: func @main()
+# CHECK-NEXT:    [[VAL_0:%.*]] = toy.constant dense<[1.000000e+00, 2.000000e+00]> : tensor<2xf64>
+# CHECK-NEXT:    [[VAL_1:%.*]] = toy.reshape([[VAL_0]] : tensor<2xf64>) to tensor<2x1xf64>
+# CHECK-NEXT:    [[VAL_2:%.*]] = toy.reshape([[VAL_1]] : tensor<2x1xf64>) to tensor<2x1xf64>
+# CHECK-NEXT:    [[VAL_3:%.*]] = toy.reshape([[VAL_2]] : tensor<2x1xf64>) to tensor<2x1xf64>
+# CHECK-NEXT:    toy.print [[VAL_3]] : tensor<2x1xf64>
+# CHECK-NEXT:    toy.return

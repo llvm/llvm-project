@@ -222,7 +222,7 @@ def PrintOp : Toy_Op<"print"> {
 
 ## Complete Toy Example
 
-Looking back at our current working example:
+Let's take a concrete example:
 
 ```mlir
 func @main() {
@@ -336,8 +336,8 @@ func @main() {
 
 Here, we can see that a redundant allocation was removed, the two loop nests
 were fused, and some unnecessary `load`s were removed. You can build `toyc-ch5`
-and try yourself: `toyc-ch5 test/lowering.toy -emit=mlir-affine`. We can also
-check our optimizations by adding `-opt`.
+and try yourself: `toyc-ch5 test/Examples/Toy/Ch5/affine-lowering.mlir 
+-emit=mlir-affine`. We can also check our optimizations by adding `-opt`.
 
 In this chapter we explored some aspects of partial lowering, with the intent to
 optimize. In the [next chapter](Ch-6.md) we will continue the discussion about
