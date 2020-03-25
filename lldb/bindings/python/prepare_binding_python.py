@@ -419,7 +419,7 @@ def main(options):
 
     # Setup paths used during swig invocation.
     settings.input_file = os.path.normcase(
-        os.path.join(options.src_root, "bindings", "lldb.swig"))
+        os.path.join(options.src_root, "bindings", "python.swig"))
     bindings_python_dir = os.path.dirname(os.path.realpath(__file__))
     settings.extensions_file = os.path.normcase(
         os.path.join(bindings_python_dir, "python-extensions.swig"))
