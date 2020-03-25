@@ -1923,42 +1923,41 @@ EmitMul16WithCustomInserter(MachineInstr &MI, MachineBasicBlock *BB,
   unsigned int Op1 = MI.getOperand(1).getReg();
   unsigned int Op2 = MI.getOperand(2).getReg();
 
-  unsigned int RegDest = DPU::R12;
-  unsigned int RegAcc = DPU::R13;
+  MachineRegisterInfo &RI = F->getRegInfo();
+  unsigned int LLDest = RI.createVirtualRegister(&DPU::GP_REGRegClass);
+  unsigned int HLDest = RI.createVirtualRegister(&DPU::GP_REGRegClass);
+  unsigned int HL2Dest = RI.createVirtualRegister(&DPU::GP_REGRegClass);
+  unsigned int HHDest = RI.createVirtualRegister(&DPU::GP_REGRegClass);
+  unsigned int LSL1Dest = RI.createVirtualRegister(&DPU::GP_REGRegClass);
+  unsigned int LSL2Dest = RI.createVirtualRegister(&DPU::GP_REGRegClass);
+  unsigned int LSL3Dest = RI.createVirtualRegister(&DPU::GP_REGRegClass);
 
-  BB->addLiveIn(RegDest);
-  BuildMI(BB, dl, TII.get(MulLL), RegDest)
+  BuildMI(BB, dl, TII.get(MulLL), LLDest)
       .addReg(Op1)
       .addReg(Op2)
       .addImm(DPUAsmCondition::Small)
       .addMBB(fastMBB);
 
-  slowMBB->addLiveIn(RegDest);
-  slowMBB->addLiveIn(RegAcc);
-  BuildMI(slowMBB, dl, TII.get(MulHL), RegAcc).addReg(Op1).addReg(Op2);
-
-  BuildMI(slowMBB, dl, TII.get(DPU::LSL_ADDrrri), RegDest)
-      .addReg(RegDest)
-      .addReg(RegAcc)
+  BuildMI(slowMBB, dl, TII.get(MulHL), HLDest).addReg(Op1).addReg(Op2);
+  BuildMI(slowMBB, dl, TII.get(DPU::LSL_ADDrrri), LSL1Dest)
+      .addReg(LLDest)
+      .addReg(HLDest)
       .addImm(8);
 
-  BuildMI(slowMBB, dl, TII.get(MulHL2), RegAcc).addReg(Op2).addReg(Op1);
-
-  BuildMI(slowMBB, dl, TII.get(DPU::LSL_ADDrrri), RegDest)
-      .addReg(RegDest)
-      .addReg(RegAcc)
+  BuildMI(slowMBB, dl, TII.get(MulHL2), HL2Dest).addReg(Op2).addReg(Op1);
+  BuildMI(slowMBB, dl, TII.get(DPU::LSL_ADDrrri), LSL2Dest)
+      .addReg(HL2Dest)
+      .addReg(LSL1Dest)
       .addImm(8);
 
-  BuildMI(slowMBB, dl, TII.get(MulHH), RegAcc).addReg(Op1).addReg(Op2);
-
-  BuildMI(slowMBB, dl, TII.get(DPU::LSL_ADDrrri), RegDest)
-      .addReg(RegDest)
-      .addReg(RegAcc)
+  BuildMI(slowMBB, dl, TII.get(MulHH), HHDest).addReg(Op1).addReg(Op2);
+  BuildMI(slowMBB, dl, TII.get(DPU::LSL_ADDrrri), LSL3Dest)
+      .addReg(HHDest)
+      .addReg(LSL2Dest)
       .addImm(16);
 
-  fastMBB->addLiveIn(RegDest);
-  BuildMI(*fastMBB, fastMBB->begin(), dl, TII.get(TargetOpcode::COPY), Dest)
-      .addReg(RegDest);
+  BuildMI(*fastMBB, fastMBB->begin(), dl, TII.get(TargetOpcode::PHI), Dest)
+    .addReg(LLDest).addMBB(BB).addReg(LSL3Dest).addMBB(slowMBB);
 
   MI.eraseFromParent(); // The pseudo instruction is gone now.
   return fastMBB;
