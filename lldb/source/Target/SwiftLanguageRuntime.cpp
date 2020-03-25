@@ -1090,10 +1090,8 @@ ValueObjectSP SwiftLanguageRuntime::CalculateErrorValueObjectFromValue(
     auto *persistent_state =
         target.GetSwiftPersistentExpressionState(*exe_scope);
 
-    const bool is_error = true;
-    auto prefix = persistent_state->GetPersistentVariablePrefix(is_error);
     ConstString persistent_variable_name(
-        persistent_state->GetNextPersistentVariableName(target, prefix));
+        persistent_state->GetNextPersistentVariableName(/*is_error*/ true));
 
     lldb::ValueObjectSP const_valobj_sp;
 

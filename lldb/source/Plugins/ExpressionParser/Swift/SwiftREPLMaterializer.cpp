@@ -125,11 +125,9 @@ public:
       return;
     }
 
-    auto prefix = persistent_state->GetPersistentVariablePrefix();
-    ConstString name =
-        m_delegate ? m_delegate->GetName()
-                   : persistent_state->GetNextPersistentVariableName(*target_sp,
-                                                                     prefix);
+    ConstString name = m_delegate
+                           ? m_delegate->GetName()
+                           : persistent_state->GetNextPersistentVariableName();
 
     lldb::ExpressionVariableSP ret;
 
