@@ -8168,6 +8168,21 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call) {
             : OpInfo;
     GetRegistersForValue(DAG, getCurSDLoc(), OpInfo, RefOpInfo);
 
+    auto DetectWriteToReservedRegister = [&]() {
+      const MachineFunction &MF = DAG.getMachineFunction();
+      const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
+      for (unsigned Reg : OpInfo.AssignedRegs.Regs) {
+        if (Register::isPhysicalRegister(Reg) &&
+            TRI.isInlineAsmReadOnlyReg(MF, Reg)) {
+          const char *RegName = TRI.getName(Reg);
+          emitInlineAsmError(CS, "write to reserved register '" +
+                                     Twine(RegName) + "'");
+          return true;
+        }
+      }
+      return false;
+    };
+
     switch (OpInfo.Type) {
     case InlineAsm::isOutput:
       if (OpInfo.ConstraintType == TargetLowering::C_Memory) {
@@ -8192,6 +8207,9 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call) {
                         Twine(OpInfo.ConstraintCode) + "'");
           return;
         }
+
+        if (DetectWriteToReservedRegister())
+          return;
 
         // Add information to the INLINEASM node to know that this register is
         // set.
@@ -8338,6 +8356,9 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call) {
                                Twine(OpInfo.ConstraintCode) + "'");
         return;
       }
+
+      if (DetectWriteToReservedRegister())
+        return;
 
       SDLoc dl = getCurSDLoc();
 
