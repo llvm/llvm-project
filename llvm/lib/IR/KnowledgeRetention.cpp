@@ -8,6 +8,7 @@
 
 #include "llvm/IR/KnowledgeRetention.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
@@ -173,9 +174,49 @@ struct AssumeBuilderState {
         FnAssume, ArrayRef<Value *>({ConstantInt::getTrue(C)}), OpBundle));
   }
 
-  void addInstruction(const Instruction *I) {
+  void addAttr(Attribute::AttrKind Kind, Value *Ptr, unsigned Argument = 0) {
+    AssumedKnowledge AK;
+    AK.Name = Attribute::getNameFromAttrKind(Kind).data();
+    AK.WasOn.setPointer(Ptr);
+    if (Attribute::doesAttrKindHaveArgument(Kind)) {
+      AK.Argument =
+          ConstantInt::get(Type::getInt64Ty(M->getContext()), Argument);
+    } else {
+      AK.Argument = nullptr;
+      assert(Argument == 0 && "there should be no argument");
+    }
+    AssumedKnowledgeSet.insert(AK);
+  };
+
+  void addLoadOrStore(Instruction *I) {
+    auto Impl = [&](auto *MemInst, Type *T) {
+      uint64_t DerefSize =
+          I->getModule()->getDataLayout().getTypeStoreSize(T).getKnownMinSize();
+      if (DerefSize != 0) {
+        addAttr(Attribute::Dereferenceable, MemInst->getPointerOperand(),
+                DerefSize);
+        if (!NullPointerIsDefined(MemInst->getFunction(),
+                                  MemInst->getPointerOperand()
+                                      ->getType()
+                                      ->getPointerAddressSpace()))
+          addAttr(Attribute::NonNull, MemInst->getPointerOperand());
+      }
+      MaybeAlign MA = MemInst->getAlign();
+      if (MA.valueOrOne() > 1)
+        addAttr(Attribute::Alignment, MemInst->getPointerOperand(),
+                MA.valueOrOne().value());
+    };
+    if (auto *Load = dyn_cast<LoadInst>(I))
+      Impl(Load, Load->getType());
+    if (auto *Store = dyn_cast<StoreInst>(I))
+      Impl(Store, Store->getValueOperand()->getType());
+  }
+
+  void addInstruction(Instruction *I) {
     if (auto *Call = dyn_cast<CallBase>(I))
-      addCall(Call);
+      return addCall(Call);
+    if (isa<LoadInst>(I) || isa<StoreInst>(I))
+      return addLoadOrStore(I);
     // TODO: Add support for the other Instructions.
     // TODO: Maybe we should look around and merge with other llvm.assume.
   }
