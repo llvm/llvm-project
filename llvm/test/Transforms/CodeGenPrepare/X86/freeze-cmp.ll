@@ -105,5 +105,31 @@ define i1 @fcmp_nan(float %a) {
   ret i1 %fr
 }
 
+define void @and(i32 %flag) {
+; CHECK-LABEL: @and(
+; CHECK-NEXT:    [[V:%.*]] = and i32 [[FLAG:%.*]], 1
+; CHECK-NEXT:    [[FR:%.*]] = freeze i32 [[V]]
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[FR]], 0
+; CHECK-NEXT:    br i1 [[C]], label [[A:%.*]], label [[B:%.*]]
+; CHECK:       A:
+; CHECK-NEXT:    call void @g1()
+; CHECK-NEXT:    ret void
+; CHECK:       B:
+; CHECK-NEXT:    call void @g2()
+; CHECK-NEXT:    ret void
+;
+  %v = and i32 %flag, 1
+  %c = icmp eq i32 %v, 0
+  %fr = freeze i1 %c
+  br i1 %fr, label %A, label %B
+A:
+  call void @g1()
+  ret void
+B:
+  call void @g2()
+  ret void
+}
+
+
 declare void @g1()
 declare void @g2()
