@@ -19,10 +19,10 @@ add_header(
     llvm_libc_common_h
 )
 
-add_header(
+add_gen_header(
   math_h
-  HDR
-    math.h
+  DEF_FILE math.h.def
+  GEN_HDR math.h
   DEPENDS
     llvm_libc_common_h
 )

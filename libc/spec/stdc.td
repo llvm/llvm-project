@@ -160,15 +160,28 @@ def StdC : StandardSpec<"stdc"> {
 
   HeaderSpec Math = HeaderSpec<
       "math.h",
-      [], // Macros
+      [
+          Macro<"MATH_ERRNO">,
+          Macro<"MATH_ERREXCEPT">,
+          Macro<"math_errhandling">,
+
+          Macro<"INFINITY">,
+          Macro<"NAN">,
+
+          Macro<"isfinite">,
+          Macro<"isinf">,
+          Macro<"isnan">,
+      ],
       [
           NamedType<"float_t">,
           NamedType<"double_t">,
       ],
       [], // Enumerations
       [
-          FunctionSpec<"acos", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
-          FunctionSpec<"acosl", RetValSpec<LongDoubleType>, [ArgSpec<LongDoubleType>]>,
+          FunctionSpec<"cosf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
+          FunctionSpec<"sinf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
+
+          FunctionSpec<"round", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
       ]
   >;
 
