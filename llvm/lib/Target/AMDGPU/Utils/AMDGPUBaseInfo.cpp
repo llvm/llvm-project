@@ -108,6 +108,7 @@ namespace AMDGPU {
 #define GET_MIMGInfoTable_IMPL
 #define GET_MIMGLZMappingTable_IMPL
 #define GET_MIMGMIPMappingTable_IMPL
+#define GET_MIMGG16MappingTable_IMPL
 #include "AMDGPUGenSearchableTables.inc"
 
 int getMIMGOpcode(unsigned BaseOpcode, unsigned MIMGEncoding,
@@ -941,6 +942,10 @@ bool hasMIMG_R128(const MCSubtargetInfo &STI) {
 
 bool hasGFX10A16(const MCSubtargetInfo &STI) {
   return STI.getFeatureBits()[AMDGPU::FeatureGFX10A16];
+}
+
+bool hasG16(const MCSubtargetInfo &STI) {
+  return STI.getFeatureBits()[AMDGPU::FeatureG16];
 }
 
 bool hasPackedD16(const MCSubtargetInfo &STI) {
