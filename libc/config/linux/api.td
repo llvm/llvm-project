@@ -71,10 +71,53 @@ def AssertAPI : PublicAPI<"assert.h"> {
   ];
 }
 
+def MathErrHandlingMacro : MacroDef<"math_errhandling"> {
+  let Defn = [{
+    #ifndef math_errhandling
+    #ifdef __FAST_MATH__
+    #define math_errhandling 0
+    #elif defined __NO_MATH_ERRNO__
+    #define math_errhandling (MATH_ERREXCEPT)
+    #else
+    #define math_errhandling (MATH_ERRNO | MATH_ERREXCEPT)
+    #endif
+    #endif // math_errhandling not defined
+  }];
+}
+
+def IsFiniteMacro : MacroDef<"isfinite"> {
+  let Defn = [{
+    #define isfinite(x) __builtin_isfinite(x)
+  }];
+}
+
+def IsInfMacro : MacroDef<"isinf"> {
+  let Defn = [{
+    #define isinf(x) __builtin_isinf(x)
+  }];
+}
+
+def IsNanMacro : MacroDef<"isnan"> {
+  let Defn = [{
+    #define isnan(x) __builtin_isnan(x)
+  }];
+}
+
 def MathAPI : PublicAPI<"math.h"> {
+  let Macros = [
+    SimpleMacroDef<"MATH_ERRNO", "1">,
+    SimpleMacroDef<"MATH_ERREXCEPT", "2">,
+    MathErrHandlingMacro,
+
+    SimpleMacroDef<"INFINITY", "__builtin_inff()">,
+    SimpleMacroDef<"NAN", "__builtin_nanf(\"\")">,
+
+    IsFiniteMacro,
+    IsInfMacro,
+    IsNanMacro,
+  ];
   let Functions = [
-   "acos",
-   "acosl",
+   "round",
   ];
 }
 
