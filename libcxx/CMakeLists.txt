@@ -1,4 +1,5 @@
-# See www/CMake.html for instructions on how to build libcxx with CMake.
+# See https://libcxx.llvm.org/docs/BuildingLibcxx.html for instructions on how
+# to build libcxx with CMake.
 
 #===============================================================================
 # Setup Project
