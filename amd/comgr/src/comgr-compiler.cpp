@@ -719,6 +719,11 @@ amd_comgr_status_t AMDGPUCompiler::processFile(const char *InputFilePath,
 
   Argv.push_back(InputFilePath);
 
+  // Disable bitcode selection and linking by the driver.
+  // FIXME: We should let the driver take care of bitcode library
+  // selection and linking when we have a consistent path to use.
+  Argv.push_back("-nogpulib");
+
   Argv.push_back("-o");
   Argv.push_back(OutputFilePath);
 
