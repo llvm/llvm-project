@@ -15036,6 +15036,13 @@ TEST_F(FormatTest, OperatorSpacing) {
   verifyFormat("Foo::operator&&();", Style);
   verifyFormat("operator&&(int(&&)(), class Foo);", Style);
 
+  // PR45107
+  verifyFormat("operator Vector<String>&();", Style);
+  verifyFormat("operator foo::Bar*();", Style);
+  verifyFormat("operator const Foo<X>::Bar<Y>*();", Style);
+  verifyFormat("operator/*a*/ const /*b*/ Foo /*c*/<X> /*d*/ ::Bar<Y>*();",
+               Style);
+
   Style.PointerAlignment = FormatStyle::PAS_Middle;
   verifyFormat("Foo::operator*();", Style);
   verifyFormat("Foo::operator void *();", Style);
