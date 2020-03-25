@@ -2483,17 +2483,6 @@ llvm::DIModule *CGDebugInfo::getOrCreateModuleRef(ASTSourceDescriptor Mod,
     assert(StringRef(M->Name).startswith(CGM.getLangOpts().ModuleName) &&
            "clang module without ASTFile must be specified by -fmodule-name");
 
-  // Return a StringRef to the remapped Path.
-  auto RemapPath = [this](StringRef Path) -> std::string {
-    std::string Remapped = remapDIPath(Path);
-    StringRef Relative(Remapped);
-    StringRef CompDir = TheCU->getDirectory();
-    if (Relative.consume_front(CompDir))
-      Relative.consume_front(llvm::sys::path::get_separator());
-
-    return Relative.str();
-  };
-
   if (CreateSkeletonCU && IsRootModule && !Mod.getASTFile().empty()) {
     // PCH files don't have a signature field in the control block,
     // but LLVM detects skeleton CUs by looking for a non-zero DWO id.
@@ -2507,12 +2496,16 @@ llvm::DIModule *CGDebugInfo::getOrCreateModuleRef(ASTSourceDescriptor Mod,
     if (!llvm::sys::path::is_absolute(Mod.getASTFile()))
       PCM = Mod.getPath();
     llvm::sys::path::append(PCM, Mod.getASTFile());
-    DIB.createCompileUnit(
-        TheCU->getSourceLanguage(),
-        // TODO: Support "Source" from external AST providers?
-        DIB.createFile(Mod.getModuleName(), TheCU->getDirectory()),
-        TheCU->getProducer(), false, StringRef(), 0, RemapPath(PCM),
-        llvm::DICompileUnit::FullDebug, Signature);
+    std::string RemappedPCM = remapDIPath(PCM);
+    StringRef RelativePCM(RemappedPCM);
+    StringRef CompDir = TheCU->getDirectory();
+    if (RelativePCM.consume_front(CompDir))
+      RelativePCM.consume_front(llvm::sys::path::get_separator());
+    DIB.createCompileUnit(TheCU->getSourceLanguage(),
+                          // TODO: Support "Source" from external AST providers?
+                          DIB.createFile(Mod.getModuleName(), CompDir),
+                          TheCU->getProducer(), false, StringRef(), 0, RelativePCM,
+                          llvm::DICompileUnit::FullDebug, Signature);
     DIB.finalize();
   }
 
@@ -2520,10 +2513,9 @@ llvm::DIModule *CGDebugInfo::getOrCreateModuleRef(ASTSourceDescriptor Mod,
       IsRootModule ? nullptr
                    : getOrCreateModuleRef(ASTSourceDescriptor(*M->Parent),
                                           CreateSkeletonCU);
-  std::string IncludePath = Mod.getPath().str();
   llvm::DIModule *DIMod =
       DBuilder.createModule(Parent, Mod.getModuleName(), ConfigMacros,
-                            RemapPath(IncludePath));
+                            Mod.getPath());
   ModuleCache[M].reset(DIMod);
   return DIMod;
 }

@@ -34,11 +34,9 @@
 
 // RUN: %clang_cc1 -debug-info-kind=limited -fmodules -fimplicit-module-maps \
 // RUN:   -fmodules-cache-path=%t -fdebug-prefix-map=%t=/MODULE-CACHE \
-// RUN:   -fdebug-prefix-map=%S=/SRCDIR \
 // RUN:   -fmodule-format=obj -dwarf-ext-refs \
 // RUN:   %s -I %S/Inputs -isysroot /tmp/.. -I %t -emit-llvm -o - \
 // RUN:     | FileCheck %s --check-prefix=SKEL-CHECK
-// SKEL-CHECK: includePath: "/SRCDIR/Inputs"
 // SKEL-CHECK: distinct !DICompileUnit({{.*}}file: ![[CUFILE:[0-9]+]]
 // SKEL-CHECK: ![[CUFILE]] = !DIFile({{.*}}directory: "[[COMP_DIR:.*]]"
 // SKEL-CHECK: distinct !DICompileUnit({{.*}}file: ![[DWOFILE:[0-9]+]]{{.*}}splitDebugFilename: "/MODULE-CACHE{{.*}}dwoId
