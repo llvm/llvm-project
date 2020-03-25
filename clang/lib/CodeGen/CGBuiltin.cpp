@@ -17370,6 +17370,16 @@ Value *CodeGenFunction::EmitDPUBuiltinExpr(unsigned BuiltinID, const CallExpr *E
     Value *Arg2 = EmitScalarExpr(E->getArg(2));
     return Builder.CreateCall(Callee, {Arg0, Arg1, Arg2});
   }
+  case DPU::BI__builtin_dpu_seqread_get: {
+    llvm::Type *ResultType = ConvertType(E->getType());
+    Value *ArgPtr = EmitScalarExpr(E->getArg(0));
+    Value *ArgInc = EmitScalarExpr(E->getArg(1));
+    Value *ArgReader = EmitPointerWithAlignment(E->getArg(2)).getPointer();
+    Value *ArgPageSize = EmitScalarExpr(E->getArg(3));
+
+    llvm::Function *Callee = CGM.getIntrinsic(Intrinsic::dpu_seqread_get, ResultType);
+    return Builder.CreateCall(Callee, {ArgPtr, ArgInc, ArgReader, ArgPageSize});
+  }
 
   default:
     return nullptr;

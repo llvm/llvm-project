@@ -58,6 +58,10 @@ def SDT_DMA  : SDTypeProfile<0, 3, [SDTCisInt<2>, SDTCisVT<0, iPTR>, SDTCisVT<1,
 def SDT_Ldma : SDNode<"DPUISD::LDMA", SDT_DMA, [SDNPHasChain]>;
 def SDT_Sdma : SDNode<"DPUISD::SDMA", SDT_DMA, [SDNPHasChain]>;
 
+def SDT_SEQREAD_GET : SDTypeProfile<1, 5, [SDTCisInt<0>, SDTCisInt<1>, SDTCisVT<2, iPTR>, SDTCisInt<3>, SDTCisInt<4>]>;
+def DPUSeqreadGet : SDNode<"DPUISD::SEQREAD_GET", SDT_SEQREAD_GET, []>;
+def DPUSeqreadGetCst : SDNode<"DPUISD::SEQREAD_GET_CST", SDT_SEQREAD_GET, []>;
+
 // To promote special types of operands to registers (see the patterns below).
 def SDTDPUWrapper       : SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>, SDTCisPtrTy<0>]>;
 def DPUWrapper          : SDNode<"DPUISD::Wrapper", SDTDPUWrapper>;
@@ -72,6 +76,20 @@ def DPULwBig : SDNode <"DPUISD::LW_BIG", SDT_DPULoadBig, [SDNPHasChain, SDNPMayL
 def DPULdBig : SDNode <"DPUISD::LD_BIG", SDT_DPULoadBig, [SDNPHasChain, SDNPMayLoad]>;
 
 include "DPUInstrFormats.td"
+
+let usesCustomInserter = 1 in {
+def SEQREAD_GET: PseudoDPUInstruction<
+    (outs SimpleReg:$rc),
+    (ins SimpleReg:$ptr, SimpleReg:$inc, SimpleReg:$reader, i32imm:$cc, i32imm:$pageSize),
+    "",
+    [(set i32:$rc, (DPUSeqreadGet i32:$ptr, i32:$inc, i32:$reader, (i32 imm:$cc), (i32 imm:$pageSize)))]>;
+
+def SEQREAD_GET_CST: PseudoDPUInstruction<
+    (outs SimpleReg:$rc),
+    (ins SimpleReg:$ptr, s8_imm:$inc, SimpleReg:$reader, i32imm:$cc, i32imm:$pageSize),
+    "",
+    [(set i32:$rc, (DPUSeqreadGetCst i32:$ptr, (s8_imm:$inc), i32:$reader, (i32 imm:$cc), (i32 imm:$pageSize)))]>;
+}
 
 def ADD_VAStart: PseudoDPUInstruction<
                     (outs SimpleReg:$rc), (ins SimpleReg:$ra),

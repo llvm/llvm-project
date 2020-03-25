@@ -399,6 +399,10 @@ const char *DPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
   switch (Opcode) {
   default:
     return nullptr;
+  case DPUISD::SEQREAD_GET:
+    return "DPUISD::SEQREAD_GET";
+  case DPUISD::SEQREAD_GET_CST:
+    return "DPUISD::SEQREAD_GET_CST";
   case DPUISD::LHU_BIG:
     return "DPUISD::LHU_BIG";
   case DPUISD::LHS_BIG:
@@ -1755,6 +1759,8 @@ SDValue DPUTargetLowering::LowerShift(SDValue Op, SelectionDAG &DAG,
   }
 }
 
+static uint64_t FormatDMASize(uint64_t size) { return (size >> 3) - 1; }
+
 SDValue DPUTargetLowering::LowerDMA(SDValue Op, SelectionDAG &DAG,
                                     int DPUISD) const {
   SDLoc dl(Op);
@@ -1786,7 +1792,7 @@ SDValue DPUTargetLowering::LowerDMA(SDValue Op, SelectionDAG &DAG,
           Op, DAG,
           "DMA transfer size needs to be a multiple of 8 in range [8; 2048]");
     }
-    immDma = DAG.getConstant((size >> 3) - 1, dl, MVT::i32);
+    immDma = DAG.getConstant(FormatDMASize(size), dl, MVT::i32);
   } else {
     const EVT &raVT = ra.getValueType();
     // to + (((nb_of_bytes >> 3) - 1) << 24);
@@ -1801,6 +1807,42 @@ SDValue DPUTargetLowering::LowerDMA(SDValue Op, SelectionDAG &DAG,
 
   SDValue Ops[] = {chain, ra, rb, immDma};
   return DAG.getNode(DPUISD, dl, evt, Ops);
+}
+
+static uint64_t PageSizeLog2ToNcCondition(uint64_t pageSize) {
+  if (pageSize >= 10) {
+    return DPUAsmCondition::NotCarry10 + pageSize - 10;
+  } else {
+    return DPUAsmCondition::NotCarry5 + pageSize - 5;
+  }
+}
+
+SDValue DPUTargetLowering::LowerSeqreadGet(SDValue Op, SelectionDAG &DAG) const {
+  SDLoc dl(Op);
+  const EVT &evt = Op.getValueType();
+  SDValue incValue = Op.getOperand(3);
+  SDValue pageSizeValue = Op.getOperand(5);
+  uint64_t pageSize, pageSizeLog2, inc;
+  if (!canFetchConstantTo(pageSizeValue, &pageSize)) {
+    LowerUnsupported(
+        Op, DAG, "NC only apply on constant and staticaly defined page size");
+  }
+  pageSizeLog2 = (uint64_t)log2((double)pageSize);
+  if (pageSize != ((uint64_t)pow(2, (double)pageSizeLog2)) ||
+      pageSizeLog2 < 5 || pageSizeLog2 > 14) {
+    LowerUnsupported(Op, DAG, "NC only apply on a page size of a power of 2 in range [64;32768]");
+  }
+
+  int Opcode = DPUISD::SEQREAD_GET;
+  SDValue cond =
+      DAG.getConstant(PageSizeLog2ToNcCondition(pageSizeLog2), dl, MVT::i32);
+  if (canFetchConstantTo(incValue, &inc)) {
+    Opcode = DPUISD::SEQREAD_GET_CST;
+    incValue = DAG.getConstant(inc, dl, MVT::i32);
+  }
+
+  SDValue Ops[] = {Op.getOperand(2), incValue, Op.getOperand(4), cond, pageSizeValue};
+  return DAG.getNode(Opcode, dl, evt, Ops);
 }
 
 SDValue DPUTargetLowering::LowerIntrinsic(SDValue Op, SelectionDAG &DAG,
@@ -1823,6 +1865,12 @@ SDValue DPUTargetLowering::LowerIntrinsic(SDValue Op, SelectionDAG &DAG,
     }
     break;
   case ISD::INTRINSIC_W_CHAIN:
+    switch (cast<ConstantSDNode>(Op->getOperand(1))->getZExtValue()) {
+    case Intrinsic::dpu_seqread_get: {
+      result = LowerSeqreadGet(Op, DAG);
+      break;
+    }
+    }
     break;
   case ISD::INTRINSIC_VOID:
     switch (cast<ConstantSDNode>(Op->getOperand(1))->getZExtValue()) {
@@ -2962,12 +3010,92 @@ static MachineBasicBlock *EmitClz64WithCustomInserter(MachineInstr &MI,
   return endMBB;
 }
 
+static MachineBasicBlock *
+EmitSeqreadGet(MachineInstr &MI, MachineBasicBlock *BB, bool IsIncCst) {
+  const TargetInstrInfo &TII = *BB->getParent()->getSubtarget().getInstrInfo();
+  DebugLoc dl = MI.getDebugLoc();
+  const BasicBlock *LLVM_BB = BB->getBasicBlock();
+  MachineFunction::iterator I = ++BB->getIterator();
+  MachineFunction *F = BB->getParent();
+  MachineBasicBlock *slowMBB = F->CreateMachineBasicBlock(LLVM_BB);
+  MachineBasicBlock *fastMBB = F->CreateMachineBasicBlock(LLVM_BB);
+  F->insert(I, slowMBB);
+  F->insert(I, fastMBB);
+  // Update machine-CFG edges by transferring all successors of the current
+  // block to the new block which will contain the Phi node for the select.
+  fastMBB->splice(fastMBB->begin(), BB,
+                  std::next(MachineBasicBlock::iterator(MI)), BB->end());
+  fastMBB->transferSuccessorsAndUpdatePHIs(BB);
+  // Next, add the true and fallthrough blocks as its successors.
+  BB->addSuccessor(slowMBB);
+  BB->addSuccessor(fastMBB);
+  slowMBB->addSuccessor(fastMBB);
+
+  unsigned int Dest = MI.getOperand(0).getReg();
+  unsigned int PtrInit = MI.getOperand(1).getReg();
+  unsigned int Reader = MI.getOperand(3).getReg();
+  unsigned int Cond = MI.getOperand(4).getImm();
+  unsigned int PageSize = MI.getOperand(5).getImm();
+
+  MachineRegisterInfo &RI = F->getRegInfo();
+  unsigned int PtrIncremented = RI.createVirtualRegister(&DPU::GP_REGRegClass);
+
+  if (IsIncCst) {
+    BuildMI(BB, dl, TII.get(DPU::ADDrrici), PtrIncremented)
+        .addReg(PtrInit)
+        .addImm(MI.getOperand(2).getImm())
+        .addImm(Cond)
+        .addMBB(fastMBB);
+  } else {
+    BuildMI(BB, dl, TII.get(DPU::ADDrrrci), PtrIncremented)
+        .addReg(PtrInit)
+        .addReg(MI.getOperand(2).getReg())
+        .addImm(Cond)
+        .addMBB(fastMBB);
+  }
+
+  unsigned int WramCache = RI.createVirtualRegister(&DPU::GP_REGRegClass);
+  unsigned int MramCache = RI.createVirtualRegister(&DPU::GP_REGRegClass);
+  unsigned int MramCacheUpdated =
+      RI.createVirtualRegister(&DPU::GP_REGRegClass);
+  unsigned int PtrUpdated = RI.createVirtualRegister(&DPU::GP_REGRegClass);
+  BuildMI(slowMBB, dl, TII.get(DPU::LWrri), MramCache).addReg(Reader).addImm(4);
+  BuildMI(slowMBB, dl, TII.get(DPU::ADDrri), MramCacheUpdated)
+      .addReg(MramCache)
+      .addImm(PageSize);
+  BuildMI(slowMBB, dl, TII.get(DPU::SWrir))
+      .addReg(Reader)
+      .addImm(4)
+      .addReg(MramCacheUpdated);
+  BuildMI(slowMBB, dl, TII.get(DPU::LWrri), WramCache).addReg(Reader).addImm(0);
+  BuildMI(slowMBB, dl, TII.get(DPU::LDMArri))
+      .addReg(WramCache)
+      .addReg(MramCacheUpdated)
+      .addImm(FormatDMASize(PageSize * 2));
+  BuildMI(slowMBB, dl, TII.get(DPU::ADDrri), PtrUpdated)
+      .addReg(PtrIncremented)
+      .addImm(-PageSize);
+
+  BuildMI(*fastMBB, fastMBB->begin(), dl, TII.get(TargetOpcode::PHI), Dest)
+      .addReg(PtrIncremented)
+      .addMBB(BB)
+      .addReg(PtrUpdated)
+      .addMBB(slowMBB);
+
+  MI.eraseFromParent(); // The pseudo instruction is gone now.
+  return fastMBB;
+}
+
 MachineBasicBlock *
 DPUTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                                                MachineBasicBlock *BB) const {
   switch (MI.getOpcode()) {
   default:
     llvm_unreachable("Unexpected instr type to insert");
+  case DPU::SEQREAD_GET:
+    return EmitSeqreadGet(MI, BB, false);
+  case DPU::SEQREAD_GET_CST:
+    return EmitSeqreadGet(MI, BB, true);
   case DPU::Mul16UUrr:
     return EmitMul16WithCustomInserter(MI, BB, DPU::MUL_UL_ULrrrci,
                                        DPU::MUL_UH_ULrrr, DPU::MUL_UH_ULrrr,

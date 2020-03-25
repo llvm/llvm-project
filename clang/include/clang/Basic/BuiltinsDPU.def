@@ -17,5 +17,6 @@
 BUILTIN(__builtin_dpu_tid, "UiC", "nc")
 BUILTIN(__builtin_dpu_sdma, "vvC*v*Ui", "")
 BUILTIN(__builtin_dpu_ldma, "vv*vC*Ui", "")
+BUILTIN(__builtin_dpu_seqread_get, "iiiv*UiC", "")
 
 #undef BUILTIN
