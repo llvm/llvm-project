@@ -226,7 +226,7 @@ static void my_pthread_introspection_hook(unsigned int event, pthread_t thread,
     if (thread == pthread_self()) {
       ThreadState *thr = cur_thread();
       if (thr->tctx) {
-        DestroyThreadState();
+        ThreadFinish(thr);
       }
     }
   }

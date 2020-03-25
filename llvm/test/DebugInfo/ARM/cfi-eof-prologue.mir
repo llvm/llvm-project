@@ -139,6 +139,7 @@
 ---
 name:            _ZN1BC2Ev
 alignment:       2
+tracksRegLiveness: true
 liveins:         
   - { reg: '$r0' }
 frameInfo:       
@@ -154,6 +155,8 @@ stack:
       callee-saved-register: '$r4' }
 body:             |
   bb.0.entry:
+    liveins: $r0, $r4, $lr
+
     frame-setup tPUSH 14, $noreg, killed $r4, killed $lr, implicit-def $sp, implicit $sp
     frame-setup CFI_INSTRUCTION def_cfa_offset 8
     frame-setup CFI_INSTRUCTION offset $lr, -4
@@ -175,6 +178,7 @@ body:             |
 ---
 name:            _ZN1BC1Ev
 alignment:       2
+tracksRegLiveness: true
 liveins:         
   - { reg: '$r0' }
 frameInfo:       
@@ -190,6 +194,8 @@ stack:
       callee-saved-register: '$r4' }
 body:             |
   bb.0.entry:
+    liveins: $r0, $r4, $lr
+
     frame-setup tPUSH 14, $noreg, killed $r4, killed $lr, implicit-def $sp, implicit $sp
     frame-setup CFI_INSTRUCTION def_cfa_offset 8
     frame-setup CFI_INSTRUCTION offset $lr, -4

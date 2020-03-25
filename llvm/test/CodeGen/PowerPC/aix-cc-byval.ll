@@ -22,11 +22,10 @@
 define void @call_test_byval_1Byte() {
 entry:
   %s0 = alloca %struct.S0, align 8
-  call void @test_byval_1Byte(%struct.S0* byval(%struct.S0) align 1 %s0, %struct.S1* byval(%struct.S1) align 1 @gS1)
+  %call = call zeroext i8 @test_byval_1Byte(%struct.S0* byval(%struct.S0) align 1 %s0, %struct.S1* byval(%struct.S1) align 1 @gS1)
   ret void
 }
 
-declare void @test_byval_1Byte(%struct.S0* byval(%struct.S0) align 1, %struct.S1* byval(%struct.S1) align 1)
 
 ; CHECK-LABEL: name: call_test_byval_1Byte{{.*}}
 
@@ -63,17 +62,58 @@ declare void @test_byval_1Byte(%struct.S0* byval(%struct.S0) align 1, %struct.S1
 ; ASM64-NEXT:  nop
 ; ASM64-NEXT:  addi 1, 1, 128
 
+
+define zeroext i8 @test_byval_1Byte(%struct.S0* byval(%struct.S0) align 1 %s0, %struct.S1* byval(%struct.S1) align 1 %s) {
+entry:
+  %arrayidx = getelementptr inbounds %struct.S1, %struct.S1* %s, i32 0, i32 0, i32 0
+  %0 = load i8, i8* %arrayidx, align 1
+  ret i8 %0
+}
+
+; CHECK-LABEL: name:            test_byval_1Byte
+
+; 32BIT:       fixedStack:
+; 32BIT-NEXT:    - { id: 0, type: default, offset: 24, size: 4, alignment: 8, stack-id: default,
+; 32BIT-NEXT:        isImmutable: false, isAliased: true, callee-saved-register: '', callee-saved-restored: true,
+; 32BIT:         - { id: 1, type: default, offset: 24, size: 4, alignment: 8, stack-id: default,
+; 32BIT-NEXT:        isImmutable: false, isAliased: true, callee-saved-register: '', callee-saved-restored: true,
+
+; 32BIT:       bb.0.entry:
+; 32BIT-NEXT:    liveins: $r3
+; 32BIT:         STW killed renamable $r3, 0, %fixed-stack.0 :: (store 4 into %fixed-stack.0, align 8)
+; 32BIT-NEXT:    renamable $r3 = LBZ 0,  %fixed-stack.0 :: (dereferenceable load 1
+; 32BIT-NEXT:    BLR
+
+; 64BIT:       fixedStack:
+; 64BIT-NEXT:    - { id: 0, type: default, offset: 48, size: 8, alignment: 16, stack-id: default,
+; 64BIT-NEXT:        isImmutable: false, isAliased: true, callee-saved-register: '', callee-saved-restored: true,
+; 64BIT:         - { id: 1, type: default, offset: 48, size: 8, alignment: 16, stack-id: default,
+; 64BIT-NEXT:        isImmutable: false, isAliased: true, callee-saved-register: '', callee-saved-restored: true,
+
+; 64BIT:      bb.0.entry:
+; 64BIT-NEXT:   liveins: $x3
+; 64BIT:        STD killed renamable $x3, 0, %fixed-stack.0 :: (store 8 into %fixed-stack.0, align 16)
+; 64BIT-NEXT:   renamable $x3 = LBZ8 0, %fixed-stack.0 :: (dereferenceable load 1
+
+; CHECKASM-LABEL: .test_byval_1Byte:
+
+; ASM32:        stw 3, 24(1)
+; ASM32-NEXT:   lbz 3, 24(1)
+; ASM32-NEXT:   blr
+
+; ASM64:        std 3, 48(1)
+; ASM64-NEXT:   lbz 3, 48(1)
+; ASM64-NEXT:   blr
+
 %struct.S2 = type { [2 x i8] }
 
 @gS2 = external global %struct.S2, align 1
 
 define void @call_test_byval_2Byte() {
 entry:
-  call void @test_byval_2Byte(%struct.S2* byval(%struct.S2) align 1 @gS2)
+  %call = call zeroext i8 @test_byval_2Byte(%struct.S2* byval(%struct.S2) align 1 @gS2)
   ret void
 }
-
-declare void @test_byval_2Byte(%struct.S2* byval(%struct.S2) align 1)
 
 ; CHECK-LABEL: name: call_test_byval_2Byte{{.*}}
 
@@ -110,17 +150,50 @@ declare void @test_byval_2Byte(%struct.S2* byval(%struct.S2) align 1)
 ; ASM64-NEXT:  nop
 ; ASM64-NEXT:  addi 1, 1, 112
 
-%struct.S3 = type <{ i8, i16 }>
 
+define zeroext i8 @test_byval_2Byte(%struct.S2* byval(%struct.S2) align 1 %s) {
+entry:
+  %arrayidx = getelementptr inbounds %struct.S2, %struct.S2* %s, i32 0, i32 0, i32 1
+  %0 = load i8, i8* %arrayidx, align 1
+  ret i8 %0
+}
+
+; CHECK-LABEL: name:            test_byval_2Byte
+; 32BIT:      fixedStack:
+; 32BIT-NEXT:   - { id: 0, type: default, offset: 24, size: 4, alignment: 8, stack-id: default,
+
+; 32BIT:      bb.0.entry:
+; 32BIT-NEXT:   liveins: $r3
+; 32BIT:        STW killed renamable $r3, 0, %fixed-stack.0 :: (store 4 into %fixed-stack.0, align 8)
+; 32BIT-NEXT:   renamable $r3 = LBZ 1, %fixed-stack.0 :: (dereferenceable load 1
+
+; 64BIT:      fixedStack:
+; 64BIT-NEXT:   - { id: 0, type: default, offset: 48, size: 8, alignment: 16, stack-id: default,
+
+; 64BIT:      bb.0.entry:
+; 64BIT-NEXT:   liveins: $x3
+; 64BIT:        STD killed renamable $x3, 0, %fixed-stack.0 :: (store 8 into %fixed-stack.0, align 16)
+; 64BIT-NEXT:   renamable $x3 = LBZ8 1, %fixed-stack.0 :: (dereferenceable load 1
+
+; CHECKASM-LABEL: .test_byval_2Byte:
+
+; ASM32:        stw 3, 24(1)
+; ASM32-NEXT:   lbz 3, 25(1)
+; ASM32-NEXT:   blr
+
+; ASM64:        std 3, 48(1)
+; ASM64-NEXT:   lbz 3, 49(1)
+; ASM64-NEXT:   blr
+
+
+%struct.S3 = type <{ i8, i16 }>
 @gS3 = external global %struct.S3, align 1
 
 define void @call_test_byval_3Byte() {
 entry:
-  call void @test_byval_3Byte(%struct.S3* byval(%struct.S3) align 1 @gS3)
+  %call = call zeroext i16 @test_byval_3Byte(%struct.S3* byval(%struct.S3) align 1 @gS3)
   ret void
 }
-
-declare void @test_byval_3Byte(%struct.S3* byval(%struct.S3) align 1)
 
 ; CHECK-LABEL: name: call_test_byval_3Byte{{.*}}
 
@@ -166,6 +239,44 @@ declare void @test_byval_3Byte(%struct.S3* byval(%struct.S3) align 1)
 ; ASM64-NEXT:  bl .test_byval_3Byte
 ; ASM64-NEXT:  nop
 
+
+define zeroext i16 @test_byval_3Byte(%struct.S3* byval(%struct.S3) align 1 %s) {
+entry:
+  %gep = getelementptr inbounds %struct.S3, %struct.S3* %s, i32 0, i32 1
+  %0 = load i16, i16* %gep, align 1
+  ret i16 %0
+}
+
+; CHECK-LABEL: name:            test_byval_3Byte
+
+; 32BIT:      fixedStack:
+; 32BIT-NEXT:   - { id: 0, type: default, offset: 24, size: 4, alignment: 8, stack-id: default,
+
+; 32BIT:      bb.0.entry:
+; 32BIT-NEXT:   liveins: $r3
+; 32BIT:        STW killed renamable $r3, 0, %fixed-stack.0 :: (store 4 into %fixed-stack.0, align 8)
+; 32BIT-NEXT:   renamable $r3 = LHZ 1, %fixed-stack.0 :: (dereferenceable load 2
+
+; 64BIT:      fixedStack:
+; 64BIT-NEXT:   - { id: 0, type: default, offset: 48, size: 8, alignment: 16, stack-id: default,
+
+; 64BIT:      bb.0.entry:
+; 64BIT-NEXT:   liveins: $x3
+; 64BIT:        STD killed renamable $x3, 0, %fixed-stack.0 :: (store 8 into %fixed-stack.0, align 16)
+; 64BIT-NEXT:   renamable $x3 = LHZ8 1, %fixed-stack.0 :: (dereferenceable load 2
+
+
+; CHECKASM-LABEL: .test_byval_3Byte:
+
+; ASM32:        stw 3, 24(1)
+; ASM32-NEXT:   lhz 3, 25(1)
+; ASM32-NEXT:   blr
+
+; ASM64:        std 3, 48(1)
+; ASM64-NEXT:   lhz 3, 49(1)
+; ASM64-NEXT:   blr
+
+
 %struct.S4 = type { [4 x i8] }
 %struct.S4A = type { i32 }
 
@@ -175,11 +286,9 @@ define void @call_test_byval_4Byte() {
 entry:
   %s0 = alloca %struct.S0, align 8
   %s4a = alloca %struct.S4A, align 4
-  call void @test_byval_4Byte(%struct.S4* byval(%struct.S4) align 1 @gS4, %struct.S0* byval(%struct.S0) align 1 %s0, %struct.S4A* byval(%struct.S4A) align 4 %s4a)
+  %call = call signext i32 @test_byval_4Byte(%struct.S4* byval(%struct.S4) align 1 @gS4, %struct.S0* byval(%struct.S0) align 1 %s0, %struct.S4A* byval(%struct.S4A) align 4 %s4a)
   ret void
 }
-
-declare void @test_byval_4Byte(%struct.S4* byval(%struct.S4) align 1, %struct.S0* byval(%struct.S0) align 1, %struct.S4A* byval(%struct.S4A) align 4)
 
 ; CHECK-LABEL: name: call_test_byval_4Byte{{.*}}
 
@@ -219,3 +328,66 @@ declare void @test_byval_4Byte(%struct.S4* byval(%struct.S4) align 1, %struct.S0
 ; ASM64-NEXT:  nop
 ; ASM64-NEXT:  addi 1, 1, 128
 
+
+define signext i32 @test_byval_4Byte(%struct.S4* byval(%struct.S4) align 1 %s, %struct.S0* byval(%struct.S0) align 1, %struct.S4A* byval(%struct.S4A) align 4 %s4a) {
+entry:
+  %arrayidx = getelementptr inbounds %struct.S4, %struct.S4* %s, i32 0, i32 0, i32 3
+  %gep = getelementptr inbounds %struct.S4A, %struct.S4A* %s4a, i32 0, i32 0
+  %1 = load i8, i8* %arrayidx, align 1
+  %2 = load i32, i32* %gep, align 4
+  %conv = zext i8 %1 to i32
+  %add = add nsw i32 %2, %conv
+  ret i32 %add
+}
+
+; CHECK-LABEL: name:            test_byval_4Byte
+
+; 32BIT:      fixedStack:
+; 32BIT-NEXT:   - { id: 0, type: default, offset: 28, size: 4, alignment: 4, stack-id: default,
+; 32BIT-NEXT:       isImmutable: false, isAliased: true, callee-saved-register: '', callee-saved-restored: true,
+; 32BIT:        - { id: 1, type: default, offset: 28, size: 4, alignment: 4, stack-id: default,
+; 32BIT-NEXT:       isImmutable: false, isAliased: true, callee-saved-register: '', callee-saved-restored: true,
+; 32BIT:        - { id: 2, type: default, offset: 24, size: 4, alignment: 8, stack-id: default,
+; 32BIT-NEXT:       isImmutable: false, isAliased: true, callee-saved-register: '', callee-saved-restored: true,
+
+; 32BIT:      bb.0.entry:
+; 32BIT-NEXT:   liveins: $r3
+; 32BIT:        STW renamable $r3, 0, %fixed-stack.2 :: (store 4 into %fixed-stack.2, align 8)
+; 32BIT-DAG:    STW killed renamable $r4, 0, %fixed-stack.0 :: (store 4 into %fixed-stack.0)
+; 32BIT-DAG:    renamable $r[[SCRATCH:[0-9]+]] = RLWINM killed renamable $r3, 0, 24, 31
+; 32BIT-DAG:    renamable $r3 = nsw ADD4 renamable $r4, killed renamable $r[[SCRATCH]]
+; 32BIT:        BLR
+
+; 64BIT:      fixedStack:
+; 64BIT-NEXT: - { id: 0, type: default, offset: 56, size: 8, alignment: 8, stack-id: default,
+; 64BIT-NEXT:     isImmutable: false, isAliased: true, callee-saved-register: '', callee-saved-restored: true,
+; 64BIT:      - { id: 1, type: default, offset: 56, size: 8, alignment: 8, stack-id: default,
+; 64BIT-NEXT:     isImmutable: false, isAliased: true, callee-saved-register: '', callee-saved-restored: true,
+; 64BIT:      - { id: 2, type: default, offset: 48, size: 8, alignment: 16, stack-id: default,
+; 64BIT-NEXT:     isImmutable: false, isAliased: true, callee-saved-register: '', callee-saved-restored: true,
+
+; 64BIT:      bb.0.entry:
+; 64BIT-NEXT:   liveins: $x3
+; 64BIT:        STD killed renamable $x3, 0, %fixed-stack.2 :: (store 8 into %fixed-stack.2, align 16)
+; 64BIT-NEXT:   STD killed renamable $x4, 0, %fixed-stack.0 :: (store 8 into %fixed-stack.0)
+; 64BIT-DAG:    renamable $r[[SCRATCH1:[0-9]+]] = LBZ 3, %fixed-stack.2 :: (dereferenceable load 1
+; 64BIT-DAG:    renamable $r[[SCRATCH2:[0-9]+]] = LWZ 0, %fixed-stack.0 :: (dereferenceable load 4
+; 64BIT-NEXT:   renamable $r[[SCRATCH3:[0-9]+]] = nsw ADD4 killed renamable $r[[SCRATCH2]], killed renamable $r[[SCRATCH1]]
+; 64BIT-NEXT:   renamable $x3 = EXTSW_32_64 killed renamable $r[[SCRATCH3]]
+; 64BIT-NEXT:   BLR8
+
+; CHECKASM-LABEL: .test_byval_4Byte:
+
+; ASM32:        stw 3, 24(1)
+; ASM32-DAG:    stw 4, 28(1)
+; ASM32-DAG:    clrlwi  [[SCRATCH:[0-9]+]], 3, 24
+; ASM32-DAG:    add 3, 4, [[SCRATCH]]
+; ASM32-NEXT:   blr
+
+; ASM64:        std 3, 48(1)
+; ASM64-NEXT:   std 4, 56(1)
+; ASM64-DAG:    lbz [[SCRATCH1:[0-9]+]], 51(1)
+; ASM64-DAG:    lwz [[SCRATCH2:[0-9]+]], 56(1)
+; ASM64-NEXT:   add [[SCRATCH3:[0-9]+]], [[SCRATCH2]], [[SCRATCH1]]
+; ASM64-NEXT:   extsw 3, [[SCRATCH3]]
+; ASM64-NEXT:   blr

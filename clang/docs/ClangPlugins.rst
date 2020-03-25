@@ -110,6 +110,9 @@ attribute, are:
  * ``existsInTarget``, which checks if the attribute is permitted for the given
    target.
 
+To see a working example of an attribute plugin, see `the Attribute.cpp example
+<https://github.com/llvm/llvm-project/blob/master/clang/examples/Attribute/Attribute.cpp>`_.
+
 Putting it all together
 =======================
 

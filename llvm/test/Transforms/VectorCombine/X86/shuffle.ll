@@ -24,6 +24,28 @@ define <4 x float> @bitcast_shuf_same_size(<4 x i32> %v) {
   ret <4 x float> %r
 }
 
+define <16 x i8> @bitcast_shuf_narrow_element_wrong_size(<2 x i32> %v) {
+; CHECK-LABEL: @bitcast_shuf_narrow_element_wrong_size(
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <2 x i32> [[V:%.*]], <2 x i32> undef, <4 x i32> <i32 1, i32 0, i32 1, i32 0>
+; CHECK-NEXT:    [[R:%.*]] = bitcast <4 x i32> [[SHUF]] to <16 x i8>
+; CHECK-NEXT:    ret <16 x i8> [[R]]
+;
+  %shuf = shufflevector <2 x i32> %v, <2 x i32> undef, <4 x i32> <i32 1, i32 0, i32 1, i32 0>
+  %r = bitcast <4 x i32> %shuf to <16 x i8>
+  ret <16 x i8> %r
+}
+
+define i128 @bitcast_shuf_narrow_element_wrong_type(<4 x i32> %v) {
+; CHECK-LABEL: @bitcast_shuf_narrow_element_wrong_type(
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i32> [[V:%.*]], <4 x i32> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[R:%.*]] = bitcast <4 x i32> [[SHUF]] to i128
+; CHECK-NEXT:    ret i128 [[R]]
+;
+  %shuf = shufflevector <4 x i32> %v, <4 x i32> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %r = bitcast <4 x i32> %shuf to i128
+  ret i128 %r
+}
+
 define <4 x i32> @bitcast_shuf_wide_element(<8 x i16> %v) {
 ; CHECK-LABEL: @bitcast_shuf_wide_element(
 ; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <8 x i16> [[V:%.*]], <8 x i16> undef, <8 x i32> <i32 0, i32 1, i32 0, i32 1, i32 2, i32 3, i32 2, i32 3>
