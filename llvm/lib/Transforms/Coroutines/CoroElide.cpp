@@ -34,7 +34,8 @@ struct Lowerer : coro::LowererBase {
 
   Lowerer(Module &M) : LowererBase(M) {}
 
-  void elideHeapAllocations(Function *F, Type *FrameTy, AAResults &AA);
+  void elideHeapAllocations(Function *F, uint64_t FrameSize,
+                            MaybeAlign FrameAlign, AAResults &AA);
   bool shouldElide(Function *F, DominatorTree &DT) const;
   void collectPostSplitCoroIds(Function *F);
   bool processCoroId(CoroIdInst *, AAResults &AA, DominatorTree &DT);
@@ -92,10 +93,23 @@ static void removeTailCallAttribute(AllocaInst *Frame, AAResults &AA) {
       }
 }
 
-// Given a resume function @f.resume(%f.frame* %frame), returns %f.frame type.
-static Type *getFrameType(Function *Resume) {
-  auto *ArgType = Resume->arg_begin()->getType();
-  return cast<PointerType>(ArgType)->getElementType();
+// Given a resume function @f.resume(%f.frame* %frame), returns the size
+// and expected alignment of %f.frame type.
+static std::pair<uint64_t, MaybeAlign> getFrameLayout(Function *Resume) {
+  // Prefer to pull information from the function attributes.
+  auto Size = Resume->getParamDereferenceableBytes(0);
+  auto Align = Resume->getParamAlign(0);
+
+  // If those aren't given, extract them from the type.
+  if (Size == 0 || !Align) {
+    auto *FrameTy = Resume->arg_begin()->getType()->getPointerElementType();
+
+    const DataLayout &DL = Resume->getParent()->getDataLayout();
+    if (!Size) Size = DL.getTypeAllocSize(FrameTy);
+    if (!Align) Align = DL.getABITypeAlign(FrameTy);
+  }
+
+  return std::make_pair(Size, Align);
 }
 
 // Finds first non alloca instruction in the entry block of a function.
@@ -108,8 +122,9 @@ static Instruction *getFirstNonAllocaInTheEntryBlock(Function *F) {
 
 // To elide heap allocations we need to suppress code blocks guarded by
 // llvm.coro.alloc and llvm.coro.free instructions.
-void Lowerer::elideHeapAllocations(Function *F, Type *FrameTy, AAResults &AA) {
-  LLVMContext &C = FrameTy->getContext();
+void Lowerer::elideHeapAllocations(Function *F, uint64_t FrameSize,
+                                   MaybeAlign FrameAlign, AAResults &AA) {
+  LLVMContext &C = F->getContext();
   auto *InsertPt =
       getFirstNonAllocaInTheEntryBlock(CoroIds.front()->getFunction());
 
@@ -130,7 +145,9 @@ void Lowerer::elideHeapAllocations(Function *F, Type *FrameTy, AAResults &AA) {
   // here. Possibly we will need to do a mini SROA here and break the coroutine
   // frame into individual AllocaInst recreating the original alignment.
   const DataLayout &DL = F->getParent()->getDataLayout();
+  auto FrameTy = ArrayType::get(Type::getInt8Ty(C), FrameSize);
   auto *Frame = new AllocaInst(FrameTy, DL.getAllocaAddrSpace(), "", InsertPt);
+  Frame->setAlignment(FrameAlign);
   auto *FrameVoidPtr =
       new BitCastInst(Frame, Type::getInt8PtrTy(C), "vFrame", InsertPt);
 
@@ -319,8 +336,9 @@ bool Lowerer::processCoroId(CoroIdInst *CoroId, AAResults &AA,
     replaceWithConstant(DestroyAddrConstant, It.second);
 
   if (ShouldElide) {
-    auto *FrameTy = getFrameType(cast<Function>(ResumeAddrConstant));
-    elideHeapAllocations(CoroId->getFunction(), FrameTy, AA);
+    auto FrameSizeAndAlign = getFrameLayout(cast<Function>(ResumeAddrConstant));
+    elideHeapAllocations(CoroId->getFunction(), FrameSizeAndAlign.first,
+                         FrameSizeAndAlign.second, AA);
     coro::replaceCoroFree(CoroId, /*Elide=*/true);
   }
 

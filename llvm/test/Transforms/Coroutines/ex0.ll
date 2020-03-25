@@ -1,6 +1,6 @@
 ; First example from Doc/Coroutines.rst (two block loop)
-; RUN: opt < %s -enable-coroutines -O2 -S | FileCheck %s
-; RUN: opt < %s -enable-coroutines -aa-pipeline=basic-aa -passes='default<O2>' -S | FileCheck %s
+; RUN: opt < %s -enable-coroutines -O2 -preserve-alignment-assumptions-during-inlining=false -S | FileCheck %s
+; RUN: opt < %s -enable-coroutines -aa-pipeline=basic-aa -passes='default<O2>' -preserve-alignment-assumptions-during-inlining=false -S | FileCheck %s
 
 define i8* @f(i32 %n) {
 entry:

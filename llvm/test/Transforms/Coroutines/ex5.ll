@@ -1,6 +1,6 @@
 ; Fifth example from Doc/Coroutines.rst (final suspend)
-; RUN: opt < %s -O2 -enable-coroutines -S | FileCheck %s
-; RUN: opt < %s -aa-pipeline=basic-aa -passes='default<O2>' -enable-coroutines -S | FileCheck %s
+; RUN: opt < %s -O2 -enable-coroutines -preserve-alignment-assumptions-during-inlining=false -S | FileCheck %s
+; RUN: opt < %s -aa-pipeline=basic-aa -passes='default<O2>' -enable-coroutines -preserve-alignment-assumptions-during-inlining=false -S | FileCheck %s
 
 define i8* @f(i32 %n) {
 entry:
