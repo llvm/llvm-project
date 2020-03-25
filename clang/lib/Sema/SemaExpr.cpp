@@ -9201,7 +9201,13 @@ static bool tryGCCVectorConvertAndSplat(Sema &S, ExprResult *Scalar,
       // Reject cases where the scalar type is not a constant and has a higher
       // Order than the vector element type.
       llvm::APFloat Result(0.0);
-      bool CstScalar = Scalar->get()->EvaluateAsFloat(Result, S.Context);
+
+      // Determine whether this is a constant scalar. In the event that the
+      // value is dependent (and thus cannot be evaluated by the constant
+      // evaluator), skip the evaluation. This will then diagnose once the
+      // expression is instantiated.
+      bool CstScalar = Scalar->get()->isValueDependent() ||
+                       Scalar->get()->EvaluateAsFloat(Result, S.Context);
       int Order = S.Context.getFloatingTypeOrder(VectorEltTy, ScalarTy);
       if (!CstScalar && Order < 0)
         return true;
