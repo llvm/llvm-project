@@ -238,7 +238,7 @@ LANGOPT(CUDAHostDeviceConstexpr, 1, 1, "treating unattributed constexpr function
 LANGOPT(CUDADeviceApproxTranscendentals, 1, 0, "using approximate transcendental functions")
 LANGOPT(GPURelocatableDeviceCode, 1, 0, "generate relocatable device code")
 LANGOPT(GPUAllowDeviceInit, 1, 0, "allowing device side global init functions for HIP")
-LANGOPT(GPUMaxThreadsPerBlock, 32, 256, "default max threads per block for kernel launch bounds for HIP")
+LANGOPT(GPUMaxThreadsPerBlock, 32, 1024, "default max threads per block for kernel launch bounds for HIP")
 
 LANGOPT(SYCL              , 1, 0, "SYCL")
 LANGOPT(SYCLIsDevice      , 1, 0, "Generate code for SYCL device")
