@@ -34,9 +34,15 @@
 #include "InstrProfilingInternal.h"
 #include "InstrProfilingUtil.h"
 
+COMPILER_RT_VISIBILITY unsigned lprofProfileDumped() {
+  return 1;
+}
+COMPILER_RT_VISIBILITY void lprofSetProfileDumped(unsigned Value) {}
+
 COMPILER_RT_VISIBILITY unsigned lprofRuntimeCounterRelocation(void) {
   return 1;
 }
+COMPILER_RT_VISIBILITY void lprofSetRuntimeCounterRelocation(unsigned Value) {}
 
 /* VMO that contains the profile data for this module. */
 static zx_handle_t __llvm_profile_vmo;
