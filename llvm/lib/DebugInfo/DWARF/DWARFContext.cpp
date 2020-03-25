@@ -1931,14 +1931,10 @@ Error DWARFContext::loadRegisterInfo(const object::ObjectFile &Obj) {
 uint8_t DWARFContext::getCUAddrSize() {
   // In theory, different compile units may have different address byte
   // sizes, but for simplicity we just use the address byte size of the
-  // last compile unit. In practice the address size field is repeated across
+  // first compile unit. In practice the address size field is repeated across
   // various DWARF headers (at least in version 5) to make it easier to dump
   // them independently, not to enable varying the address size.
-  uint8_t Addr = 0;
-  for (const auto &CU : compile_units()) {
-    Addr = CU->getAddressByteSize();
-    break;
-  }
-  return Addr;
+  unit_iterator_range CUs = compile_units();
+  return CUs.empty() ? 0 : (*CUs.begin())->getAddressByteSize();
 }
 
