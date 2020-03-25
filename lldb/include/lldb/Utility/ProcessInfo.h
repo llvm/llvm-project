@@ -9,13 +9,13 @@
 #ifndef LLDB_UTILITY_PROCESSINFO_H
 #define LLDB_UTILITY_PROCESSINFO_H
 
-// LLDB headers
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/Environment.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/NameMatches.h"
-
+#include "lldb/Utility/Reproducer.h"
+#include "llvm/Support/YAMLTraits.h"
 #include <vector>
 
 namespace lldb_private {
@@ -89,6 +89,7 @@ public:
   const Environment &GetEnvironment() const { return m_environment; }
 
 protected:
+  template <class T> friend struct llvm::yaml::MappingTraits;
   FileSpec m_executable;
   std::string m_arg0; // argv[0] if supported. If empty, then use m_executable.
   // Not all process plug-ins support specifying an argv[0] that differs from
@@ -150,46 +151,13 @@ public:
                       bool verbose) const;
 
 protected:
+  friend struct llvm::yaml::MappingTraits<ProcessInstanceInfo>;
   uint32_t m_euid;
   uint32_t m_egid;
   lldb::pid_t m_parent_pid;
 };
 
-class ProcessInstanceInfoList {
-public:
-  ProcessInstanceInfoList() = default;
-
-  void Clear() { m_infos.clear(); }
-
-  size_t GetSize() { return m_infos.size(); }
-
-  void Append(const ProcessInstanceInfo &info) { m_infos.push_back(info); }
-
-  llvm::StringRef GetProcessNameAtIndex(size_t idx) {
-    return ((idx < m_infos.size()) ? m_infos[idx].GetNameAsStringRef() : "");
-  }
-
-  lldb::pid_t GetProcessIDAtIndex(size_t idx) {
-    return ((idx < m_infos.size()) ? m_infos[idx].GetProcessID() : 0);
-  }
-
-  bool GetInfoAtIndex(size_t idx, ProcessInstanceInfo &info) {
-    if (idx < m_infos.size()) {
-      info = m_infos[idx];
-      return true;
-    }
-    return false;
-  }
-
-  // You must ensure "idx" is valid before calling this function
-  const ProcessInstanceInfo &GetProcessInfoAtIndex(size_t idx) const {
-    assert(idx < m_infos.size());
-    return m_infos[idx];
-  }
-
-protected:
-  std::vector<ProcessInstanceInfo> m_infos;
-};
+typedef std::vector<ProcessInstanceInfo> ProcessInstanceInfoList;
 
 // ProcessInstanceInfoMatch
 //
@@ -248,6 +216,52 @@ protected:
   bool m_match_all_users;
 };
 
+namespace repro {
+class ProcessInfoRecorder : public AbstractRecorder {
+public:
+  ProcessInfoRecorder(const FileSpec &filename, std::error_code &ec)
+      : AbstractRecorder(filename, ec) {}
+
+  static llvm::Expected<std::unique_ptr<ProcessInfoRecorder>>
+  Create(const FileSpec &filename);
+
+  void Record(const ProcessInstanceInfoList &process_infos);
+};
+
+class ProcessInfoProvider : public repro::Provider<ProcessInfoProvider> {
+public:
+  struct Info {
+    static const char *name;
+    static const char *file;
+  };
+
+  ProcessInfoProvider(const FileSpec &directory) : Provider(directory) {}
+
+  ProcessInfoRecorder *GetNewProcessInfoRecorder();
+
+  void Keep() override;
+  void Discard() override;
+
+  static char ID;
+
+private:
+  std::unique_ptr<llvm::raw_fd_ostream> m_stream_up;
+  std::vector<std::unique_ptr<ProcessInfoRecorder>> m_process_info_recorders;
+};
+
+llvm::Optional<ProcessInstanceInfoList> GetReplayProcessInstanceInfoList();
+
+} // namespace repro
 } // namespace lldb_private
 
-#endif // #ifndef LLDB_UTILITY_PROCESSINFO_H
+LLVM_YAML_IS_SEQUENCE_VECTOR(lldb_private::ProcessInstanceInfo)
+
+namespace llvm {
+namespace yaml {
+template <> struct MappingTraits<lldb_private::ProcessInstanceInfo> {
+  static void mapping(IO &io, lldb_private::ProcessInstanceInfo &PII);
+};
+} // namespace yaml
+} // namespace llvm
+
+#endif // LLDB_UTILITY_PROCESSINFO_H

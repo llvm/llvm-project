@@ -1128,7 +1128,7 @@ protected:
               ProcessInstanceInfo::DumpTableHeader(ostrm, m_options.show_args,
                                                    m_options.verbose);
               for (uint32_t i = 0; i < matches; ++i) {
-                proc_infos.GetProcessInfoAtIndex(i).DumpAsTableRow(
+                proc_infos[i].DumpAsTableRow(
                     ostrm, platform_sp->GetUserIDResolver(),
                     m_options.show_args, m_options.verbose);
               }
@@ -1462,12 +1462,12 @@ public:
         match_info.SetNameMatchType(NameMatch::StartsWith);
       }
       platform_sp->FindProcesses(match_info, process_infos);
-      const uint32_t num_matches = process_infos.GetSize();
+      const uint32_t num_matches = process_infos.size();
       if (num_matches == 0)
         return;
 
       for (uint32_t i = 0; i < num_matches; ++i) {
-        request.AddCompletion(process_infos.GetProcessNameAtIndex(i));
+        request.AddCompletion(process_infos[i].GetNameAsStringRef());
       }
       return;
     }

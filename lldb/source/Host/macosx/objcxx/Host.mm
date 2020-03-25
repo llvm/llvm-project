@@ -591,8 +591,8 @@ static bool GetMacOSXProcessUserAndGroup(ProcessInstanceInfo &process_info) {
   return false;
 }
 
-uint32_t Host::FindProcesses(const ProcessInstanceInfoMatch &match_info,
-                             ProcessInstanceInfoList &process_infos) {
+uint32_t Host::FindProcessesImpl(const ProcessInstanceInfoMatch &match_info,
+                                 ProcessInstanceInfoList &process_infos) {
   std::vector<struct kinfo_proc> kinfos;
 
   int mib[3] = {CTL_KERN, KERN_PROC, KERN_PROC_ALL};
@@ -660,11 +660,11 @@ uint32_t Host::FindProcesses(const ProcessInstanceInfoMatch &match_info,
     if (GetMacOSXProcessCPUType(process_info)) {
       if (GetMacOSXProcessArgs(&match_info, process_info)) {
         if (match_info.Matches(process_info))
-          process_infos.Append(process_info);
+          process_infos.push_back(process_info);
       }
     }
   }
-  return process_infos.GetSize();
+  return process_infos.size();
 }
 
 bool Host::GetProcessInfo(lldb::pid_t pid, ProcessInstanceInfo &process_info) {

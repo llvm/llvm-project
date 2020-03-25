@@ -26,10 +26,12 @@ public:
 
   DNBArchMachARM64(MachThread *thread)
       : m_thread(thread), m_state(), m_disabled_watchpoints(),
-        m_watchpoint_hw_index(-1), m_watchpoint_did_occur(false),
+        m_disabled_breakpoints(), m_watchpoint_hw_index(-1),
+        m_watchpoint_did_occur(false),
         m_watchpoint_resume_single_step_enabled(false),
         m_saved_register_states() {
     m_disabled_watchpoints.resize(16);
+    m_disabled_breakpoints.resize(16);
     memset(&m_dbg_save, 0, sizeof(m_dbg_save));
   }
 
@@ -62,7 +64,13 @@ public:
   static const uint8_t *SoftwareBreakpointOpcode(nub_size_t byte_size);
   static uint32_t GetCPUType();
 
+  virtual uint32_t NumSupportedHardwareBreakpoints();
   virtual uint32_t NumSupportedHardwareWatchpoints();
+
+  virtual uint32_t EnableHardwareBreakpoint(nub_addr_t addr, nub_size_t size,
+                                            bool also_set_on_task);
+  virtual bool DisableHardwareBreakpoint(uint32_t hw_break_index,
+                                         bool also_set_on_task);
   virtual uint32_t EnableHardwareWatchpoint(nub_addr_t addr, nub_size_t size,
                                             bool read, bool write,
                                             bool also_set_on_task);
@@ -229,10 +237,11 @@ protected:
   State m_state;
   arm_debug_state64_t m_dbg_save;
 
-  // arm64 doesn't keep the disabled watchpoint values in the debug register
-  // context like armv7;
+  // arm64 doesn't keep the disabled watchpoint and breakpoint values in the
+  // debug register context like armv7;
   // we need to save them aside when we disable them temporarily.
   std::vector<disabled_watchpoint> m_disabled_watchpoints;
+  std::vector<disabled_watchpoint> m_disabled_breakpoints;
 
   // The following member variables should be updated atomically.
   int32_t m_watchpoint_hw_index;

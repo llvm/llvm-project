@@ -142,6 +142,9 @@ public:
   static llvm::Error ConnectLocally(GDBRemoteCommunication &client,
                                     GDBRemoteCommunication &server);
 
+  /// Expand GDB run-length encoding.
+  static std::string ExpandRLE(std::string);
+
 protected:
   std::chrono::seconds m_packet_timeout;
   uint32_t m_echo_number;
