@@ -1759,6 +1759,33 @@ static Optional<APFloat> buildHexadecimalFloatLiteral(Parser *p, FloatType type,
   return APFloat(type.getFloatSemantics(), apInt);
 }
 
+/// Construct an APint from a parsed value, a known attribute type and
+/// sign.
+static Optional<APInt> buildAttributeAPInt(Type type, bool isNegative,
+                                           uint64_t value) {
+  // We have the integer literal as an uint64_t in val, now convert it into an
+  // APInt and check that we don't overflow.
+  int width = type.isIndex() ? 64 : type.getIntOrFloatBitWidth();
+  APInt apInt(width, value, isNegative);
+  if (apInt != value)
+    return llvm::None;
+
+  if (isNegative) {
+    // The value is negative, we have an overflow if the sign bit is not set
+    // in the negated apInt.
+    apInt.negate();
+    if (!apInt.isSignBitSet())
+      return llvm::None;
+  } else if ((type.isSignedInteger() || type.isIndex()) &&
+             apInt.isSignBitSet()) {
+    // The value is a positive signed integer or index,
+    // we have an overflow if the sign bit is set.
+    return llvm::None;
+  }
+
+  return apInt;
+}
+
 /// Parse a decimal or a hexadecimal literal, which can be either an integer
 /// or a float attribute.
 Attribute Parser::parseDecOrHexAttr(Type type, bool isNegative) {
@@ -1809,19 +1836,12 @@ Attribute Parser::parseDecOrHexAttr(Type type, bool isNegative) {
     return nullptr;
   }
 
-  // Parse the integer literal.
-  int width = type.isIndex() ? 64 : type.getIntOrFloatBitWidth();
-  APInt apInt(width, *val, isNegative);
-  if (apInt != *val)
+  Optional<APInt> apInt = buildAttributeAPInt(type, isNegative, *val);
+
+  if (!apInt)
     return emitError(loc, "integer constant out of range for attribute"),
            nullptr;
-
-  // Otherwise construct an integer attribute.
-  if (isNegative ? (int64_t)-val.getValue() >= 0 : (int64_t)val.getValue() < 0)
-    return emitError(loc, "integer constant out of range for attribute"),
-           nullptr;
-
-  return builder.getIntegerAttr(type, isNegative ? -apInt : apInt);
+  return builder.getIntegerAttr(type, *apInt);
 }
 
 /// Parse elements values stored within a hex etring. On success, the values are
@@ -2038,16 +2058,15 @@ DenseElementsAttr TensorLiteralParser::getIntAttr(llvm::SMLoc loc,
 
     // Create APInt values for each element with the correct bitwidth.
     auto val = token.getUInt64IntegerValue();
-    if (!val.hasValue() || (isNegative ? (int64_t)-val.getValue() >= 0
-                                       : (int64_t)val.getValue() < 0)) {
+    if (!val.hasValue()) {
       p.emitError(tokenLoc, "integer constant out of range for attribute");
       return nullptr;
     }
-    APInt apInt(eltTy.getWidth(), val.getValue(), isNegative);
-    if (apInt != val.getValue())
+    Optional<APInt> apInt = buildAttributeAPInt(eltTy, isNegative, *val);
+    if (!apInt)
       return (p.emitError(tokenLoc, "integer constant out of range for type"),
               nullptr);
-    intElements.push_back(isNegative ? -apInt : apInt);
+    intElements.push_back(*apInt);
   }
 
   return DenseElementsAttr::get(type, intElements);
