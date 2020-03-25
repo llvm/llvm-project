@@ -35,16 +35,6 @@
 #include "InstrProfilingPort.h"
 #include "InstrProfilingUtil.h"
 
-static int RuntimeCounterRelocation = 0;
-
-COMPILER_RT_VISIBILITY unsigned lprofRuntimeCounterRelocation(void) {
-  return RuntimeCounterRelocation;
-}
-
-COMPILER_RT_VISIBILITY void lprofSetRuntimeCounterRelocation(void) {
-  RuntimeCounterRelocation = 1;
-}
-
 /* From where is profile name specified.
  * The order the enumerators define their
  * precedence. Re-order them may lead to
@@ -974,7 +964,7 @@ void __llvm_profile_initialize_file(void) {
   int hasCommandLineOverrider = (INSTR_PROF_PROFILE_NAME_VAR[0] != 0);
 
   if (__llvm_profile_counter_bias != -1)
-    lprofSetRuntimeCounterRelocation();
+    lprofSetRuntimeCounterRelocation(1);
 
   EnvFilenamePat = getFilenamePatFromEnv();
   if (EnvFilenamePat) {
@@ -1072,7 +1062,7 @@ int __llvm_profile_dump(void) {
               "in profile name or change profile name before dumping.\n",
               "online profile merging is not on");
   int rc = __llvm_profile_write_file();
-  lprofSetProfileDumped();
+  lprofSetProfileDumped(1);
   return rc;
 }
 
