@@ -522,7 +522,7 @@ PredefinedExpr::PredefinedExpr(SourceLocation L, QualType FnTy, IdentKind IK,
 }
 
 PredefinedExpr::PredefinedExpr(SourceLocation L, QualType FnTy, IdentKind IK,
-                               Expr *Info)
+                               Expr *E)
     : Expr(PredefinedExprClass, FnTy, VK_LValue, OK_Ordinary) {
   PredefinedExprBits.Kind = IK;
   assert((getIdentKind() == IK) &&
@@ -531,7 +531,7 @@ PredefinedExpr::PredefinedExpr(SourceLocation L, QualType FnTy, IdentKind IK,
          "Constructor only valid with UniqueStableNameExpr");
   PredefinedExprBits.HasFunctionName = false;
   PredefinedExprBits.Loc = L;
-  setExpr(Info);
+  setExpr(E);
   setDependence(computeDependence(this));
 }
 

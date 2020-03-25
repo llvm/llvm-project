@@ -4824,7 +4824,7 @@ public:
                                        SourceLocation RParen, ParsedType Ty);
   ExprResult ActOnUniqueStableNameExpr(SourceLocation OpLoc,
                                        SourceLocation LParen,
-                                       SourceLocation RParen, Expr *Operand);
+                                       SourceLocation RParen, Expr *E);
 
   bool CheckLoopHintExpr(Expr *E, SourceLocation Loc);
 
