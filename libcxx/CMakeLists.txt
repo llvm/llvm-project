@@ -520,10 +520,10 @@ remove_flags(-Wno-pedantic -pedantic-errors -pedantic)
 # Required flags ==============================================================
 function(cxx_add_basic_build_flags target)
 
-  # Require C++17 for all targets. C++17 is needed to use aligned allocation
-  # in the dylib.
+  # Require C++14 for all targets. C++14 is needed to ensure constant
+  # initialization for certain globals (ex global memory resources).
   set_target_properties(${target} PROPERTIES
-    CXX_STANDARD 17
+    CXX_STANDARD 14
     CXX_STANDARD_REQUIRED YES
     CXX_EXTENSIONS NO)
 
