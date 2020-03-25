@@ -129,7 +129,7 @@ std::vector<T> FuzzedDataProvider::ConsumeRemainingBytes() {
 // |.c_str()| on the resulting string is the best way to get an immutable
 // null-terminated C string. If fewer than |num_bytes| of data remain, returns
 // a shorter std::string containing all of the data that's left.
-std::string FuzzedDataProvider::ConsumeBytesAsString(size_t num_bytes) {
+inline std::string FuzzedDataProvider::ConsumeBytesAsString(size_t num_bytes) {
   static_assert(sizeof(std::string::value_type) == sizeof(uint8_t),
                 "ConsumeBytesAsString cannot convert the data to a string.");
 
@@ -144,7 +144,8 @@ std::string FuzzedDataProvider::ConsumeBytesAsString(size_t num_bytes) {
 // input data, returns what remains of the input. Designed to be more stable
 // with respect to a fuzzer inserting characters than just picking a random
 // length and then consuming that many bytes with |ConsumeBytes|.
-std::string FuzzedDataProvider::ConsumeRandomLengthString(size_t max_length) {
+inline std::string
+FuzzedDataProvider::ConsumeRandomLengthString(size_t max_length) {
   // Reads bytes from the start of |data_ptr_|. Maps "\\" to "\", and maps "\"
   // followed by anything else to the end of the string. As a result of this
   // logic, a fuzzer can insert characters into the string, and the string
@@ -172,14 +173,14 @@ std::string FuzzedDataProvider::ConsumeRandomLengthString(size_t max_length) {
 }
 
 // Returns a std::string of length from 0 to |remaining_bytes_|.
-std::string FuzzedDataProvider::ConsumeRandomLengthString() {
+inline std::string FuzzedDataProvider::ConsumeRandomLengthString() {
   return ConsumeRandomLengthString(remaining_bytes_);
 }
 
 // Returns a std::string containing all remaining bytes of the input data.
 // Prefer using |ConsumeRemainingBytes| unless you actually need a std::string
 // object.
-std::string FuzzedDataProvider::ConsumeRemainingBytesAsString() {
+inline std::string FuzzedDataProvider::ConsumeRemainingBytesAsString() {
   return ConsumeBytesAsString(remaining_bytes_);
 }
 
@@ -280,7 +281,7 @@ template <typename T> T FuzzedDataProvider::ConsumeProbability() {
 }
 
 // Reads one byte and returns a bool, or false when no data remains.
-bool FuzzedDataProvider::ConsumeBool() {
+inline bool FuzzedDataProvider::ConsumeBool() {
   return 1 & ConsumeIntegral<uint8_t>();
 }
 
@@ -315,19 +316,21 @@ T FuzzedDataProvider::PickValueInArray(std::initializer_list<const T> list) {
 // In general, it's better to avoid using this function, but it may be useful
 // in cases when it's necessary to fill a certain buffer or object with
 // fuzzing data.
-size_t FuzzedDataProvider::ConsumeData(void *destination, size_t num_bytes) {
+inline size_t FuzzedDataProvider::ConsumeData(void *destination,
+                                              size_t num_bytes) {
   num_bytes = std::min(num_bytes, remaining_bytes_);
   CopyAndAdvance(destination, num_bytes);
   return num_bytes;
 }
 
 // Private methods.
-void FuzzedDataProvider::CopyAndAdvance(void *destination, size_t num_bytes) {
+inline void FuzzedDataProvider::CopyAndAdvance(void *destination,
+                                               size_t num_bytes) {
   std::memcpy(destination, data_ptr_, num_bytes);
   Advance(num_bytes);
 }
 
-void FuzzedDataProvider::Advance(size_t num_bytes) {
+inline void FuzzedDataProvider::Advance(size_t num_bytes) {
   if (num_bytes > remaining_bytes_)
     abort();
 
