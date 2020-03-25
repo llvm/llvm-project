@@ -36,5 +36,7 @@ RUN ln -s /opt/llvm-tot/bin/clang /usr/local/bin/clang
 RUN ln -s /opt/llvm-tot/bin/clang++ /usr/local/bin/clang++
 
 
+USER buildbot
+
 ADD run_buildbot.sh /
 CMD /run_buildbot.sh /run/secrets/buildbot-auth
