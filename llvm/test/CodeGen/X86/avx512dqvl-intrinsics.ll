@@ -1381,7 +1381,7 @@ define <8 x float>@test_int_x86_avx512_mask_reduce_ps_256(<8 x float> %x0, <8 x 
 ; X86:       # %bb.0:
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
 ; X86-NEXT:    vreduceps $11, %ymm0, %ymm1 {%k1} # encoding: [0x62,0xf3,0x7d,0x29,0x56,0xc8,0x0b]
-; X86-NEXT:    vreduceps $11, %ymm0, %ymm0 # encoding: [0x62,0xf3,0x7d,0x28,0x56,0xc0,0x0b]
+; X86-NEXT:    vreduceps $12, %ymm0, %ymm0 # encoding: [0x62,0xf3,0x7d,0x28,0x56,0xc0,0x0c]
 ; X86-NEXT:    vaddps %ymm0, %ymm1, %ymm0 # EVEX TO VEX Compression encoding: [0xc5,0xf4,0x58,0xc0]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
@@ -1389,11 +1389,11 @@ define <8 x float>@test_int_x86_avx512_mask_reduce_ps_256(<8 x float> %x0, <8 x 
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
 ; X64-NEXT:    vreduceps $11, %ymm0, %ymm1 {%k1} # encoding: [0x62,0xf3,0x7d,0x29,0x56,0xc8,0x0b]
-; X64-NEXT:    vreduceps $11, %ymm0, %ymm0 # encoding: [0x62,0xf3,0x7d,0x28,0x56,0xc0,0x0b]
+; X64-NEXT:    vreduceps $12, %ymm0, %ymm0 # encoding: [0x62,0xf3,0x7d,0x28,0x56,0xc0,0x0c]
 ; X64-NEXT:    vaddps %ymm0, %ymm1, %ymm0 # EVEX TO VEX Compression encoding: [0xc5,0xf4,0x58,0xc0]
 ; X64-NEXT:    retq # encoding: [0xc3]
   %res = call <8 x float> @llvm.x86.avx512.mask.reduce.ps.256(<8 x float> %x0, i32 11, <8 x float> %x2, i8 %x3)
-  %res1 = call <8 x float> @llvm.x86.avx512.mask.reduce.ps.256(<8 x float> %x0, i32 11, <8 x float> %x2, i8 -1)
+  %res1 = call <8 x float> @llvm.x86.avx512.mask.reduce.ps.256(<8 x float> %x0, i32 12, <8 x float> %x2, i8 -1)
   %res2 = fadd <8 x float> %res, %res1
   ret <8 x float> %res2
 }
