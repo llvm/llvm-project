@@ -120,6 +120,9 @@ LegalizerHelper::legalizeInstrStep(MachineInstr &MI) {
   case WidenScalar:
     LLVM_DEBUG(dbgs() << ".. Widen scalar\n");
     return widenScalar(MI, Step.TypeIdx, Step.NewType);
+  case Bitcast:
+    LLVM_DEBUG(dbgs() << ".. Bitcast type\n");
+    return bitcast(MI, Step.TypeIdx, Step.NewType);
   case Lower:
     LLVM_DEBUG(dbgs() << ".. Lower\n");
     return lower(MI, Step.TypeIdx, Step.NewType);
@@ -1251,6 +1254,19 @@ void LegalizerHelper::moreElementsVectorSrc(MachineInstr &MI, LLT MoreTy,
   MO.setReg(MoreReg);
 }
 
+void LegalizerHelper::bitcastSrc(MachineInstr &MI, LLT CastTy, unsigned OpIdx) {
+  MachineOperand &Op = MI.getOperand(OpIdx);
+  Op.setReg(MIRBuilder.buildBitcast(CastTy, Op).getReg(0));
+}
+
+void LegalizerHelper::bitcastDst(MachineInstr &MI, LLT CastTy, unsigned OpIdx) {
+  MachineOperand &MO = MI.getOperand(OpIdx);
+  Register CastDst = MRI.createGenericVirtualRegister(CastTy);
+  MIRBuilder.setInsertPt(MIRBuilder.getMBB(), ++MIRBuilder.getInsertPt());
+  MIRBuilder.buildBitcast(MO, CastDst);
+  MO.setReg(CastDst);
+}
+
 LegalizerHelper::LegalizeResult
 LegalizerHelper::widenScalarMergeValues(MachineInstr &MI, unsigned TypeIdx,
                                         LLT WideTy) {
@@ -2102,6 +2118,61 @@ LegalizerHelper::lowerBitcast(MachineInstr &MI) {
   }
 
   return UnableToLegalize;
+}
+
+LegalizerHelper::LegalizeResult
+LegalizerHelper::bitcast(MachineInstr &MI, unsigned TypeIdx, LLT CastTy) {
+  MIRBuilder.setInstr(MI);
+
+  switch (MI.getOpcode()) {
+  case TargetOpcode::G_LOAD: {
+    if (TypeIdx != 0)
+      return UnableToLegalize;
+
+    Observer.changingInstr(MI);
+    bitcastDst(MI, CastTy, 0);
+    Observer.changedInstr(MI);
+    return Legalized;
+  }
+  case TargetOpcode::G_STORE: {
+    if (TypeIdx != 0)
+      return UnableToLegalize;
+
+    Observer.changingInstr(MI);
+    bitcastSrc(MI, CastTy, 0);
+    Observer.changedInstr(MI);
+    return Legalized;
+  }
+  case TargetOpcode::G_SELECT: {
+    if (TypeIdx != 0)
+      return UnableToLegalize;
+
+    if (MRI.getType(MI.getOperand(1).getReg()).isVector()) {
+      LLVM_DEBUG(
+          dbgs() << "bitcast action not implemented for vector select\n");
+      return UnableToLegalize;
+    }
+
+    Observer.changingInstr(MI);
+    bitcastSrc(MI, CastTy, 2);
+    bitcastSrc(MI, CastTy, 3);
+    bitcastDst(MI, CastTy, 0);
+    Observer.changedInstr(MI);
+    return Legalized;
+  }
+  case TargetOpcode::G_AND:
+  case TargetOpcode::G_OR:
+  case TargetOpcode::G_XOR: {
+    Observer.changingInstr(MI);
+    bitcastSrc(MI, CastTy, 1);
+    bitcastSrc(MI, CastTy, 2);
+    bitcastDst(MI, CastTy, 0);
+    Observer.changedInstr(MI);
+    return Legalized;
+  }
+  default:
+    return UnableToLegalize;
+  }
 }
 
 LegalizerHelper::LegalizeResult

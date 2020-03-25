@@ -68,6 +68,9 @@ enum LegalizeAction : std::uint8_t {
   /// the first two results.
   MoreElements,
 
+  /// Perform the operation on a different, but equivalently sized type.
+  Bitcast,
+
   /// The operation itself must be expressed in terms of simpler actions on
   /// this target. E.g. a SREM replaced by an SDIV and subtraction.
   Lower,
