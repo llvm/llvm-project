@@ -62,14 +62,15 @@ public:
   struct DSAVarData {
     OpenMPDirectiveKind DKind = OMPD_unknown;
     OpenMPClauseKind CKind = OMPC_unknown;
+    unsigned Modifier = 0;
     const Expr *RefExpr = nullptr;
     DeclRefExpr *PrivateCopy = nullptr;
     SourceLocation ImplicitDSALoc;
     DSAVarData() = default;
     DSAVarData(OpenMPDirectiveKind DKind, OpenMPClauseKind CKind,
                const Expr *RefExpr, DeclRefExpr *PrivateCopy,
-               SourceLocation ImplicitDSALoc)
-        : DKind(DKind), CKind(CKind), RefExpr(RefExpr),
+               SourceLocation ImplicitDSALoc, unsigned Modifier)
+        : DKind(DKind), CKind(CKind), Modifier(Modifier), RefExpr(RefExpr),
           PrivateCopy(PrivateCopy), ImplicitDSALoc(ImplicitDSALoc) {}
   };
   using OperatorOffsetTy =
@@ -80,6 +81,7 @@ public:
 private:
   struct DSAInfo {
     OpenMPClauseKind Attributes = OMPC_unknown;
+    unsigned Modifier = 0;
     /// Pointer to a reference expression and a flag which shows that the
     /// variable is marked as lastprivate(true) or not (false).
     llvm::PointerIntPair<const Expr *, 1, bool> RefExpr;
@@ -164,6 +166,8 @@ private:
     /// List of globals marked as declare target link in this target region
     /// (isOpenMPTargetExecutionDirective(Directive) == true).
     llvm::SmallVector<DeclRefExpr *, 4> DeclareTargetLinkVarDecls;
+    /// List of decls used in inclusive/exclusive clauses of the scan directive.
+    llvm::DenseSet<CanonicalDeclPtr<Decl>> UsedInScanDirective;
     SharingMapTy(OpenMPDirectiveKind DKind, DeclarationNameInfo Name,
                  Scope *CurScope, SourceLocation Loc)
         : Directive(DKind), DirectiveName(Name), CurScope(CurScope),
@@ -469,9 +473,21 @@ public:
   /// parent directive.
   const ValueDecl *getParentLoopControlVariable(unsigned I) const;
 
+  /// Marks the specified decl \p D as used in scan directive.
+  void markDeclAsUsedInScanDirective(ValueDecl *D) {
+    SharingMapTy *Stack = getSecondOnStackOrNull();
+    Stack->UsedInScanDirective.insert(D);
+  }
+
+  /// Checks if the specified declaration was used in the inner scan directive.
+  bool isUsedInScanDirective(ValueDecl *D) const {
+    const SharingMapTy &Stack = getTopOfStack();
+    return Stack.UsedInScanDirective.count(D) > 0;
+  }
+
   /// Adds explicit data sharing attribute to the specified declaration.
   void addDSA(const ValueDecl *D, const Expr *E, OpenMPClauseKind A,
-              DeclRefExpr *PrivateCopy = nullptr);
+              DeclRefExpr *PrivateCopy = nullptr, unsigned Modifier = 0);
 
   /// Adds additional information for the reduction items with the reduction id
   /// represented as an operator.
@@ -1079,6 +1095,7 @@ DSAStackTy::DSAVarData DSAStackTy::getDSA(const_iterator &Iter,
     DVar.PrivateCopy = Data.PrivateCopy;
     DVar.CKind = Data.Attributes;
     DVar.ImplicitDSALoc = Iter->DefaultAttrLoc;
+    DVar.Modifier = Data.Modifier;
     return DVar;
   }
 
@@ -1226,19 +1243,21 @@ const ValueDecl *DSAStackTy::getParentLoopControlVariable(unsigned I) const {
 }
 
 void DSAStackTy::addDSA(const ValueDecl *D, const Expr *E, OpenMPClauseKind A,
-                        DeclRefExpr *PrivateCopy) {
+                        DeclRefExpr *PrivateCopy, unsigned Modifier) {
   D = getCanonicalDecl(D);
   if (A == OMPC_threadprivate) {
     DSAInfo &Data = Threadprivates[D];
     Data.Attributes = A;
     Data.RefExpr.setPointer(E);
     Data.PrivateCopy = nullptr;
+    Data.Modifier = Modifier;
   } else {
     DSAInfo &Data = getTopOfStack().SharingMap[D];
     assert(Data.Attributes == OMPC_unknown || (A == Data.Attributes) ||
            (A == OMPC_firstprivate && Data.Attributes == OMPC_lastprivate) ||
            (A == OMPC_lastprivate && Data.Attributes == OMPC_firstprivate) ||
            (isLoopControlVariable(D).first && A == OMPC_private));
+    Data.Modifier = Modifier;
     if (A == OMPC_lastprivate && Data.Attributes == OMPC_firstprivate) {
       Data.RefExpr.setInt(/*IntVal=*/true);
       return;
@@ -1250,6 +1269,7 @@ void DSAStackTy::addDSA(const ValueDecl *D, const Expr *E, OpenMPClauseKind A,
     Data.PrivateCopy = PrivateCopy;
     if (PrivateCopy) {
       DSAInfo &Data = getTopOfStack().SharingMap[PrivateCopy->getDecl()];
+      Data.Modifier = Modifier;
       Data.Attributes = A;
       Data.RefExpr.setPointerAndInt(PrivateCopy, IsLastprivate);
       Data.PrivateCopy = nullptr;
@@ -1355,7 +1375,7 @@ const DSAStackTy::DSAVarData DSAStackTy::getTopMostTaskgroupReductionData(
                                        "set.");
     TaskgroupDescriptor = I->TaskgroupReductionRef;
     return DSAVarData(OMPD_taskgroup, OMPC_reduction, Data.RefExpr.getPointer(),
-                      Data.PrivateCopy, I->DefaultAttrLoc);
+                      Data.PrivateCopy, I->DefaultAttrLoc, /*Modifier=*/0);
   }
   return DSAVarData();
 }
@@ -1380,7 +1400,7 @@ const DSAStackTy::DSAVarData DSAStackTy::getTopMostTaskgroupReductionData(
                                        "set.");
     TaskgroupDescriptor = I->TaskgroupReductionRef;
     return DSAVarData(OMPD_taskgroup, OMPC_reduction, Data.RefExpr.getPointer(),
-                      Data.PrivateCopy, I->DefaultAttrLoc);
+                      Data.PrivateCopy, I->DefaultAttrLoc, /*Modifier=*/0);
   }
   return DSAVarData();
 }
@@ -1455,6 +1475,7 @@ const DSAStackTy::DSAVarData DSAStackTy::getTopDSA(ValueDecl *D,
   if (TI != Threadprivates.end()) {
     DVar.RefExpr = TI->getSecond().RefExpr.getPointer();
     DVar.CKind = OMPC_threadprivate;
+    DVar.Modifier = TI->getSecond().Modifier;
     return DVar;
   }
   if (VD && VD->hasAttr<OMPThreadPrivateDeclAttr>()) {
@@ -1546,6 +1567,7 @@ const DSAStackTy::DSAVarData DSAStackTy::getTopDSA(ValueDecl *D,
       DVar.CKind = Data.Attributes;
       DVar.ImplicitDSALoc = I->DefaultAttrLoc;
       DVar.DKind = I->Directive;
+      DVar.Modifier = Data.Modifier;
       return DVar;
     }
 
@@ -1592,6 +1614,7 @@ const DSAStackTy::DSAVarData DSAStackTy::getTopDSA(ValueDecl *D,
     DVar.CKind = Data.Attributes;
     DVar.ImplicitDSALoc = I->DefaultAttrLoc;
     DVar.DKind = I->Directive;
+    DVar.Modifier = Data.Modifier;
   }
 
   return DVar;
@@ -2299,11 +2322,64 @@ void Sema::EndOpenMPClause() {
   DSAStack->setClauseParsingMode(/*K=*/OMPC_unknown);
 }
 
-static void checkAllocateClauses(Sema &S, DSAStackTy *Stack,
-                                 ArrayRef<OMPClause *> Clauses);
 static std::pair<ValueDecl *, bool>
 getPrivateItem(Sema &S, Expr *&RefExpr, SourceLocation &ELoc,
                SourceRange &ERange, bool AllowArraySection = false);
+
+/// Check consistency of the reduction clauses.
+static void checkReductionClauses(Sema &S, DSAStackTy *Stack,
+                                 ArrayRef<OMPClause *> Clauses) {
+  bool InscanFound = false;
+  SourceLocation InscanLoc;
+  // OpenMP 5.0, 2.19.5.4 reduction Clause, Restrictions.
+  // A reduction clause without the inscan reduction-modifier may not appear on
+  // a construct on which a reduction clause with the inscan reduction-modifier
+  // appears.
+  for (OMPClause *C : Clauses) {
+    if (C->getClauseKind() != OMPC_reduction)
+      continue;
+    auto *RC = cast<OMPReductionClause>(C);
+    if (RC->getModifier() == OMPC_REDUCTION_inscan) {
+      InscanFound = true;
+      InscanLoc = RC->getModifierLoc();
+      break;
+    }
+  }
+  if (InscanFound) {
+    for (OMPClause *C : Clauses) {
+      if (C->getClauseKind() != OMPC_reduction)
+        continue;
+      auto *RC = cast<OMPReductionClause>(C);
+      if (RC->getModifier() != OMPC_REDUCTION_inscan) {
+        S.Diag(RC->getModifier() == OMPC_REDUCTION_unknown
+                   ? RC->getBeginLoc()
+                   : RC->getModifierLoc(),
+               diag::err_omp_inscan_reduction_expected);
+        S.Diag(InscanLoc, diag::note_omp_previous_inscan_reduction);
+        continue;
+      }
+      for (Expr *Ref : RC->varlists()) {
+        assert(Ref && "NULL expr in OpenMP nontemporal clause.");
+        SourceLocation ELoc;
+        SourceRange ERange;
+        Expr *SimpleRefExpr = Ref;
+        auto Res = getPrivateItem(S, SimpleRefExpr, ELoc, ERange,
+                                  /*AllowArraySection=*/true);
+        ValueDecl *D = Res.first;
+        if (!D)
+          continue;
+        if (!Stack->isUsedInScanDirective(getCanonicalDecl(D))) {
+          S.Diag(Ref->getExprLoc(),
+                 diag::err_omp_reduction_not_inclusive_exclusive)
+              << Ref->getSourceRange();
+        }
+      }
+    }
+  }
+}
+
+static void checkAllocateClauses(Sema &S, DSAStackTy *Stack,
+                                 ArrayRef<OMPClause *> Clauses);
 static DeclRefExpr *buildCapture(Sema &S, ValueDecl *D, Expr *CaptureExpr,
                                  bool WithInit);
 
@@ -2380,6 +2456,7 @@ void Sema::EndOpenMPDSABlock(Stmt *CurDirective) {
     // Check allocate clauses.
     if (!CurContext->isDependentContext())
       checkAllocateClauses(*this, DSAStack, D->clauses());
+    checkReductionClauses(*this, DSAStack, D->clauses());
   }
 
   DSAStack->pop();
@@ -4177,7 +4254,7 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
     if (ParentRegion == OMPD_unknown &&
         !isOpenMPNestingTeamsDirective(CurrentRegion) &&
         CurrentRegion != OMPD_cancellation_point &&
-        CurrentRegion != OMPD_cancel)
+        CurrentRegion != OMPD_cancel && CurrentRegion != OMPD_scan)
       return false;
     if (CurrentRegion == OMPD_cancellation_point ||
         CurrentRegion == OMPD_cancel) {
@@ -4298,7 +4375,8 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
       NestingProhibited =
           SemaRef.LangOpts.OpenMP < 50 ||
           (ParentRegion != OMPD_simd && ParentRegion != OMPD_for &&
-           ParentRegion != OMPD_for_simd);
+           ParentRegion != OMPD_for_simd && ParentRegion != OMPD_parallel_for &&
+           ParentRegion != OMPD_parallel_for_simd);
       OrphanSeen = ParentRegion == OMPD_unknown;
       Recommend = ShouldBeInLoopSimdRegion;
     }
@@ -13971,9 +14049,11 @@ struct ReductionData {
   SmallVector<Decl *, 4> ExprCaptures;
   /// List of postupdate expressions.
   SmallVector<Expr *, 4> ExprPostUpdates;
+  /// Reduction modifier.
+  unsigned RedModifier = 0;
   ReductionData() = delete;
   /// Reserves required memory for the reduction data.
-  ReductionData(unsigned Size) {
+  ReductionData(unsigned Size, unsigned Modifier = 0) : RedModifier(Modifier) {
     Vars.reserve(Size);
     Privates.reserve(Size);
     LHSs.reserve(Size);
@@ -14691,7 +14771,8 @@ static bool actOnOMPReductionKindClause(
     }
     // All reduction items are still marked as reduction (to do not increase
     // code base size).
-    Stack->addDSA(D, RefExpr->IgnoreParens(), OMPC_reduction, Ref);
+    Stack->addDSA(D, RefExpr->IgnoreParens(), OMPC_reduction, Ref,
+                  RD.RedModifier);
     if (CurrDir == OMPD_taskgroup) {
       if (DeclareReductionRef.isUsable())
         Stack->addTaskgroupReductionData(D, ReductionIdRange,
@@ -14718,8 +14799,22 @@ OMPClause *Sema::ActOnOpenMPReductionClause(
         << getOpenMPClauseName(OMPC_reduction);
     return nullptr;
   }
+  // OpenMP 5.0, 2.19.5.4 reduction Clause, Restrictions
+  // A reduction clause with the inscan reduction-modifier may only appear on a
+  // worksharing-loop construct, a worksharing-loop SIMD construct, a simd
+  // construct, a parallel worksharing-loop construct or a parallel
+  // worksharing-loop SIMD construct.
+  if (Modifier == OMPC_REDUCTION_inscan &&
+      (DSAStack->getCurrentDirective() != OMPD_for &&
+       DSAStack->getCurrentDirective() != OMPD_for_simd &&
+       DSAStack->getCurrentDirective() != OMPD_simd &&
+       DSAStack->getCurrentDirective() != OMPD_parallel_for &&
+       DSAStack->getCurrentDirective() != OMPD_parallel_for_simd)) {
+    Diag(ModifierLoc, diag::err_omp_wrong_inscan_reduction);
+    return nullptr;
+  }
 
-  ReductionData RD(VarList.size());
+  ReductionData RD(VarList.size(), Modifier);
   if (actOnOMPReductionKindClause(*this, DSAStack, OMPC_reduction, VarList,
                                   StartLoc, LParenLoc, ColonLoc, EndLoc,
                                   ReductionIdScopeSpec, ReductionId,
@@ -18021,6 +18116,19 @@ OMPClause *Sema::ActOnOpenMPInclusiveClause(ArrayRef<Expr *> VarList,
     if (!D)
       continue;
 
+    const DSAStackTy::DSAVarData DVar =
+        DSAStack->getTopDSA(D, /*FromParent=*/true);
+    // OpenMP 5.0, 2.9.6, scan Directive, Restrictions.
+    // A list item that appears in the inclusive or exclusive clause must appear
+    // in a reduction clause with the inscan modifier on the enclosing
+    // worksharing-loop, worksharing-loop SIMD, or simd construct.
+    if (DVar.CKind != OMPC_reduction ||
+        DVar.Modifier != OMPC_REDUCTION_inscan)
+      Diag(ELoc, diag::err_omp_inclusive_exclusive_not_reduction)
+          << RefExpr->getSourceRange();
+
+    if (DSAStack->getParentDirective() != OMPD_unknown)
+      DSAStack->markDeclAsUsedInScanDirective(D);
     Vars.push_back(RefExpr);
   }
 
@@ -18049,6 +18157,19 @@ OMPClause *Sema::ActOnOpenMPExclusiveClause(ArrayRef<Expr *> VarList,
     if (!D)
       continue;
 
+    const DSAStackTy::DSAVarData DVar =
+        DSAStack->getTopDSA(D, /*FromParent=*/true);
+    // OpenMP 5.0, 2.9.6, scan Directive, Restrictions.
+    // A list item that appears in the inclusive or exclusive clause must appear
+    // in a reduction clause with the inscan modifier on the enclosing
+    // worksharing-loop, worksharing-loop SIMD, or simd construct.
+    if (DVar.CKind != OMPC_reduction ||
+        DVar.Modifier != OMPC_REDUCTION_inscan)
+      Diag(ELoc, diag::err_omp_inclusive_exclusive_not_reduction)
+          << RefExpr->getSourceRange();
+
+    if (DSAStack->getParentDirective() != OMPD_unknown)
+      DSAStack->markDeclAsUsedInScanDirective(D);
     Vars.push_back(RefExpr);
   }
 
