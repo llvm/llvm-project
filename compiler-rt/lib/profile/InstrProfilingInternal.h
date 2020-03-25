@@ -184,7 +184,10 @@ uint64_t lprofGetLoadModuleSignature();
 unsigned lprofProfileDumped();
 void lprofSetProfileDumped();
 
-COMPILER_RT_VISIBILITY extern int RuntimeCounterRelocation;
+/* Return non zero value if counters are being relocated at runtime. */
+unsigned lprofRuntimeCounterRelocation(void);
+void lprofSetRuntimeCounterRelocation(void);
+
 COMPILER_RT_VISIBILITY extern void (*FreeHook)(void *);
 COMPILER_RT_VISIBILITY extern uint8_t *DynamicBufferIOBuffer;
 COMPILER_RT_VISIBILITY extern uint32_t VPBufferSize;
