@@ -527,6 +527,24 @@ void test_get_local_id(int d, global int *out)
 	}
 }
 
+// CHECK-LABEL: @test_get_workgroup_size(
+// CHECK: call align 4 dereferenceable(64) i8 addrspace(4)* @llvm.amdgcn.dispatch.ptr()
+// CHECK: getelementptr i8, i8 addrspace(4)* %{{.*}}, i64 4
+// CHECK: load i16, i16 addrspace(4)* %{{.*}}, align 4, !range [[$WS_RANGE:![0-9]*]], !invariant.load
+// CHECK: getelementptr i8, i8 addrspace(4)* %{{.*}}, i64 6
+// CHECK: load i16, i16 addrspace(4)* %{{.*}}, align 2, !range [[$WS_RANGE:![0-9]*]], !invariant.load
+// CHECK: getelementptr i8, i8 addrspace(4)* %{{.*}}, i64 8
+// CHECK: load i16, i16 addrspace(4)* %{{.*}}, align 4, !range [[$WS_RANGE:![0-9]*]], !invariant.load
+void test_get_workgroup_size(int d, global int *out)
+{
+	switch (d) {
+	case 0: *out = __builtin_amdgcn_workgroup_size_x(); break;
+	case 1: *out = __builtin_amdgcn_workgroup_size_y(); break;
+	case 2: *out = __builtin_amdgcn_workgroup_size_z(); break;
+	default: *out = 0;
+	}
+}
+
 // CHECK-LABEL: @test_fmed3_f32
 // CHECK: call float @llvm.amdgcn.fmed3.f32(
 void test_fmed3_f32(global float* out, float a, float b, float c)
@@ -698,6 +716,7 @@ kernel void test_mqsad_u32_u8(global uint4* out, ulong src0, uint src1, uint4 sr
 }
 
 // CHECK-DAG: [[$WI_RANGE]] = !{i32 0, i32 1024}
+// CHECK-DAG: [[$WS_RANGE]] = !{i16 1, i16 1025}
 // CHECK-DAG: attributes #[[$NOUNWIND_READONLY:[0-9]+]] = { nounwind readonly }
 // CHECK-DAG: attributes #[[$READ_EXEC_ATTRS]] = { convergent }
 // CHECK-DAG: ![[$EXEC]] = !{!"exec"}

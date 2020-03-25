@@ -133,6 +133,8 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : TargetOpts(), Triple(T) {
   // Default to an unknown platform name.
   PlatformName = "unknown";
   PlatformMinVersion = VersionTuple();
+
+  MaxOpenCLWorkGroupSize = 1024;
 }
 
 // Out of line virtual dtor for TargetInfo.
