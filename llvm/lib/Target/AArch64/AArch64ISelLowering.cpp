@@ -13926,3 +13926,16 @@ void AArch64TargetLowering::finalizeLowering(MachineFunction &MF) const {
 bool AArch64TargetLowering::needsFixedCatchObjects() const {
   return false;
 }
+
+bool AArch64TargetLowering::shouldLocalize(
+    const MachineInstr &MI, const TargetTransformInfo *TTI) const {
+  if (MI.getOpcode() == TargetOpcode::G_GLOBAL_VALUE) {
+    // On Darwin, TLS global vars get selected into function calls, which
+    // we don't want localized, as they can get moved into the middle of a
+    // another call sequence.
+    const GlobalValue &GV = *MI.getOperand(1).getGlobal();
+    if (GV.isThreadLocal() && Subtarget->isTargetMachO())
+      return false;
+  }
+  return TargetLoweringBase::shouldLocalize(MI, TTI);
+}

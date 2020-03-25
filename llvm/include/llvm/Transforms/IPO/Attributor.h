@@ -110,11 +110,13 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/ConstantRange.h"
+#include "llvm/IR/KnowledgeRetention.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Transforms/Utils/CallGraphUpdater.h"
 
 namespace llvm {
 
+struct Attributor;
 struct AbstractAttribute;
 struct InformationCache;
 struct AAIsDead;
@@ -391,7 +393,8 @@ struct IRPosition {
   ///                                 e.g., the function position if this is an
   ///                                 argument position, should be ignored.
   bool hasAttr(ArrayRef<Attribute::AttrKind> AKs,
-               bool IgnoreSubsumingPositions = false) const;
+               bool IgnoreSubsumingPositions = false,
+               Attributor *A = nullptr) const;
 
   /// Return the attributes of any kind in \p AKs existing in the IR at a
   /// position that will affect this one. While each position can only have a
@@ -403,7 +406,8 @@ struct IRPosition {
   ///                                 argument position, should be ignored.
   void getAttrs(ArrayRef<Attribute::AttrKind> AKs,
                 SmallVectorImpl<Attribute> &Attrs,
-                bool IgnoreSubsumingPositions = false) const;
+                bool IgnoreSubsumingPositions = false,
+                Attributor *A = nullptr) const;
 
   /// Remove the attribute of kind \p AKs existing in the IR at this position.
   void removeAttrs(ArrayRef<Attribute::AttrKind> AKs) const {
@@ -462,6 +466,12 @@ private:
   /// Return the attributes of kind \p AK existing in the IR as attribute.
   bool getAttrsFromIRAttr(Attribute::AttrKind AK,
                           SmallVectorImpl<Attribute> &Attrs) const;
+
+  /// Return the attributes of kind \p AK existing in the IR as operand bundles
+  /// of an llvm.assume.
+  bool getAttrsFromAssumes(Attribute::AttrKind AK,
+                           SmallVectorImpl<Attribute> &Attrs,
+                           Attributor &A) const;
 
 protected:
   /// The value this position is anchored at.
@@ -607,6 +617,9 @@ struct InformationCache {
   /// Return datalayout used in the module.
   const DataLayout &getDL() { return DL; }
 
+  /// Return the map conaining all the knowledge we have from `llvm.assume`s.
+  const RetainedKnowledgeMap &getKnowledgeMap() const { return KnowledgeMap; }
+
 private:
   /// A map type from functions to opcode to instruction maps.
   using FuncInstOpcodeMapTy = DenseMap<const Function *, OpcodeInstMapTy>;
@@ -626,6 +639,9 @@ private:
 
   /// MustBeExecutedContextExplorer
   MustBeExecutedContextExplorer Explorer;
+
+  /// A map with knowledge retained in `llvm.assume` instructions.
+  RetainedKnowledgeMap KnowledgeMap;
 
   /// Getters for analysis.
   AnalysisGetter &AG;
@@ -1710,7 +1726,8 @@ struct IRAttribute : public IRPosition, public Base {
   /// See AbstractAttribute::initialize(...).
   virtual void initialize(Attributor &A) override {
     const IRPosition &IRP = this->getIRPosition();
-    if (isa<UndefValue>(IRP.getAssociatedValue()) || hasAttr(getAttrKind())) {
+    if (isa<UndefValue>(IRP.getAssociatedValue()) ||
+        hasAttr(getAttrKind(), /* IgnoreSubsumingPositions */ false, &A)) {
       this->getState().indicateOptimisticFixpoint();
       return;
     }

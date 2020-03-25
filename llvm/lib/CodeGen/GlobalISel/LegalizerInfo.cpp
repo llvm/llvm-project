@@ -59,6 +59,9 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, LegalizeAction Action) {
   case MoreElements:
     OS << "MoreElements";
     break;
+  case Bitcast:
+    OS << "Bitcast";
+    break;
   case Lower:
     OS << "Lower";
     break;
@@ -172,6 +175,9 @@ static bool mutationIsSane(const LegalizeRule &Rule,
     }
 
     return true;
+  }
+  case Bitcast: {
+    return OldTy != NewTy && OldTy.getSizeInBits() == NewTy.getSizeInBits();
   }
   default:
     return true;
@@ -575,6 +581,7 @@ LegalizerInfo::findAction(const SizeAndActionsVec &Vec, const uint32_t Size) {
   LegalizeAction Action = Vec[VecIdx].second;
   switch (Action) {
   case Legal:
+  case Bitcast:
   case Lower:
   case Libcall:
   case Custom:

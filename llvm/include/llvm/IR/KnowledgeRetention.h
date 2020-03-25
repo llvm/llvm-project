@@ -22,6 +22,7 @@
 #include "llvm/ADT/DenseMap.h"
 
 namespace llvm {
+class IntrinsicInst;
 
 /// Build a call to llvm.assume to preserve informations that can be derived
 /// from the given instruction.
@@ -84,7 +85,14 @@ struct MinMax {
   unsigned Max;
 };
 
-using RetainedKnowledgeMap = DenseMap<RetainedKnowledgeKey, MinMax>;
+/// A mapping from intrinsics (=`llvm.assume` calls) to a value range
+/// (=knowledge) that is encoded in them. How the value range is interpreted
+/// depends on the RetainedKnowledgeKey that was used to get this out of the
+/// RetainedKnowledgeMap.
+using Assume2KnowledgeMap = DenseMap<IntrinsicInst *, MinMax>;
+
+using RetainedKnowledgeMap =
+    DenseMap<RetainedKnowledgeKey, Assume2KnowledgeMap>;
 
 /// Insert into the map all the informations contained in the operand bundles of
 /// the llvm.assume. This should be used instead of hasAttributeInAssume when

@@ -33,6 +33,26 @@ define float @freeze_float() {
   ret float %t1
 }
 
+define half @freeze_half() {
+; X86ASM-LABEL: freeze_half:
+; X86ASM:       # %bb.0:
+; X86ASM-NEXT:    pushq %rax
+; X86ASM-NEXT:    .cfi_def_cfa_offset 16
+; X86ASM-NEXT:    xorl %edi, %edi
+; X86ASM-NEXT:    callq __gnu_h2f_ieee
+; X86ASM-NEXT:    callq __gnu_f2h_ieee
+; X86ASM-NEXT:    movzwl %ax, %edi
+; X86ASM-NEXT:    callq __gnu_h2f_ieee
+; X86ASM-NEXT:    addss %xmm0, %xmm0
+; X86ASM-NEXT:    callq __gnu_f2h_ieee
+; X86ASM-NEXT:    popq %rcx
+; X86ASM-NEXT:    .cfi_def_cfa_offset 8
+; X86ASM-NEXT:    retq
+  %y1 = freeze half undef
+  %t1 = fadd half %y1, %y1
+  ret half %t1
+}
+
 define <2 x i32> @freeze_ivec() {
 ; X86ASM-LABEL: freeze_ivec:
 ; X86ASM:       # %bb.0:

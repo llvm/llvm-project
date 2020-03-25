@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/TableGen/Operator.h"
+#include "mlir/ADT/TypeSwitch.h"
 #include "mlir/TableGen/OpTrait.h"
 #include "mlir/TableGen/Predicate.h"
 #include "mlir/TableGen/Type.h"
@@ -409,6 +410,17 @@ bool tblgen::Operator::hasSummary() const {
 
 StringRef tblgen::Operator::getSummary() const {
   return def.getValueAsString("summary");
+}
+
+bool tblgen::Operator::hasAssemblyFormat() const {
+  auto *valueInit = def.getValueInit("assemblyFormat");
+  return isa<llvm::CodeInit>(valueInit) || isa<llvm::StringInit>(valueInit);
+}
+
+StringRef tblgen::Operator::getAssemblyFormat() const {
+  return TypeSwitch<llvm::Init *, StringRef>(def.getValueInit("assemblyFormat"))
+      .Case<llvm::StringInit, llvm::CodeInit>(
+          [&](auto *init) { return init->getValue(); });
 }
 
 void tblgen::Operator::print(llvm::raw_ostream &os) const {

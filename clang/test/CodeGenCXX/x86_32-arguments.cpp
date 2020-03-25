@@ -6,7 +6,7 @@ struct S {
   short s;
 };
 
-// CHECK-LABEL: define void @_Z1fv(%struct.S* noalias sret %
+// CHECK-LABEL: define void @_Z1fv(%struct.S* noalias sret align 2 %
 S f() { return S(); }
 // CHECK-LABEL: define void @_Z1f1S(%struct.S* %0)
 void f(S) { }
@@ -18,7 +18,7 @@ public:
   double c;
 };
 
-// CHECK-LABEL: define void @_Z1gv(%class.C* noalias sret %
+// CHECK-LABEL: define void @_Z1gv(%class.C* noalias sret align 4 %
 C g() { return C(); }
 
 // CHECK-LABEL: define void @_Z1f1C(%class.C* %0) 
@@ -103,13 +103,13 @@ struct s7_1 { double x; };
 struct s7 : s7_0, s7_1 { };
 s7 f7() { return s7(); }
 
-// CHECK-LABEL: define void @_Z2f8v(%struct.s8* noalias sret %agg.result)
+// CHECK-LABEL: define void @_Z2f8v(%struct.s8* noalias sret align 4 %agg.result)
 struct s8_0 { };
 struct s8_1 { double x; };
 struct s8 { s8_0 a; s8_1 b; };
 s8 f8() { return s8(); }
 
-// CHECK-LABEL: define void @_Z2f9v(%struct.s9* noalias sret %agg.result)
+// CHECK-LABEL: define void @_Z2f9v(%struct.s9* noalias sret align 4 %agg.result)
 struct s9_0 { unsigned : 0; };
 struct s9_1 { double x; };
 struct s9 { s9_0 a; s9_1 b; };

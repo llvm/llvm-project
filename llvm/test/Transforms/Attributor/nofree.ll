@@ -247,6 +247,64 @@ define void @test14(i8* nocapture %0, i8* nocapture %1) {
 	ret void
 }
 
+; UTC_ARGS: --enable
+
+define void @nonnull_assume_pos(i8* %arg1, i8* %arg2, i8* %arg3, i8* %arg4) {
+; ATTRIBUTOR-LABEL: define {{[^@]+}}@nonnull_assume_pos
+; ATTRIBUTOR-SAME: (i8* nofree [[ARG1:%.*]], i8* [[ARG2:%.*]], i8* nofree [[ARG3:%.*]], i8* [[ARG4:%.*]])
+; ATTRIBUTOR-NEXT:    call void @llvm.assume(i1 true) #11 [ "nofree"(i8* [[ARG1]]), "nofree"(i8* [[ARG3]]) ]
+; ATTRIBUTOR-NEXT:    call void @unknown(i8* nofree [[ARG1]], i8* [[ARG2]], i8* nofree [[ARG3]], i8* [[ARG4]])
+; ATTRIBUTOR-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) ["nofree"(i8* %arg1), "nofree"(i8* %arg3)]
+  call void @unknown(i8* %arg1, i8* %arg2, i8* %arg3, i8* %arg4)
+  ret void
+}
+define void @nonnull_assume_neg(i8* %arg1, i8* %arg2, i8* %arg3, i8* %arg4) {
+; ATTRIBUTOR-LABEL: define {{[^@]+}}@nonnull_assume_neg
+; ATTRIBUTOR-SAME: (i8* [[ARG1:%.*]], i8* [[ARG2:%.*]], i8* [[ARG3:%.*]], i8* [[ARG4:%.*]])
+; ATTRIBUTOR-NEXT:    call void @unknown(i8* [[ARG1]], i8* [[ARG2]], i8* [[ARG3]], i8* [[ARG4]])
+; ATTRIBUTOR-NEXT:    call void @llvm.assume(i1 true) [ "nofree"(i8* [[ARG1]]), "nofree"(i8* [[ARG3]]) ]
+; ATTRIBUTOR-NEXT:    ret void
+;
+  call void @unknown(i8* %arg1, i8* %arg2, i8* %arg3, i8* %arg4)
+  call void @llvm.assume(i1 true) ["nofree"(i8* %arg1), "nofree"(i8* %arg3)]
+  ret void
+}
+define void @nonnull_assume_call(i8* %arg1, i8* %arg2, i8* %arg3, i8* %arg4) {
+; ATTRIBUTOR-LABEL: define {{[^@]+}}@nonnull_assume_call
+; ATTRIBUTOR-SAME: (i8* [[ARG1:%.*]], i8* [[ARG2:%.*]], i8* [[ARG3:%.*]], i8* [[ARG4:%.*]])
+; ATTRIBUTOR-NEXT:    call void @unknown(i8* [[ARG1]], i8* [[ARG2]], i8* [[ARG3]], i8* [[ARG4]])
+; ATTRIBUTOR-NEXT:    call void @use_i8_ptr(i8* noalias readnone [[ARG1]])
+; ATTRIBUTOR-NEXT:    call void @use_i8_ptr(i8* noalias readnone [[ARG2]])
+; ATTRIBUTOR-NEXT:    call void @llvm.assume(i1 true) [ "nofree"(i8* [[ARG1]]), "nofree"(i8* [[ARG3]]) ]
+; ATTRIBUTOR-NEXT:    call void @use_i8_ptr(i8* noalias nofree readnone [[ARG3]])
+; ATTRIBUTOR-NEXT:    call void @use_i8_ptr(i8* noalias readnone [[ARG4]])
+; ATTRIBUTOR-NEXT:    call void @use_i8_ptr_ret(i8* noalias nofree readnone [[ARG1]])
+; ATTRIBUTOR-NEXT:    call void @use_i8_ptr_ret(i8* noalias readnone [[ARG2]])
+; ATTRIBUTOR-NEXT:    call void @llvm.assume(i1 true) [ "nofree"(i8* [[ARG1]]), "nofree"(i8* [[ARG4]]) ]
+; ATTRIBUTOR-NEXT:    call void @use_i8_ptr_ret(i8* noalias nofree readnone [[ARG3]])
+; ATTRIBUTOR-NEXT:    call void @use_i8_ptr_ret(i8* noalias nofree readnone [[ARG4]])
+; ATTRIBUTOR-NEXT:    ret void
+;
+  call void @unknown(i8* %arg1, i8* %arg2, i8* %arg3, i8* %arg4)
+  call void @use_i8_ptr(i8* %arg1)
+  call void @use_i8_ptr(i8* %arg2)
+  call void @llvm.assume(i1 true) ["nofree"(i8* %arg1), "nofree"(i8* %arg3)]
+  call void @use_i8_ptr(i8* %arg3)
+  call void @use_i8_ptr(i8* %arg4)
+  call void @use_i8_ptr_ret(i8* %arg1)
+  call void @use_i8_ptr_ret(i8* %arg2)
+  call void @llvm.assume(i1 true) ["nofree"(i8* %arg1), "nofree"(i8* %arg4)]
+  call void @use_i8_ptr_ret(i8* %arg3)
+  call void @use_i8_ptr_ret(i8* %arg4)
+  ret void
+}
+declare void @llvm.assume(i1)
+declare void @unknown(i8*, i8*, i8*, i8*)
+declare void @use_i8_ptr(i8* nocapture readnone) nounwind
+declare void @use_i8_ptr_ret(i8* nocapture readnone) nounwind willreturn
+
 declare noalias i8* @malloc(i64)
 
 attributes #0 = { nounwind uwtable noinline }

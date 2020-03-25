@@ -3,7 +3,7 @@
 // 2-d parallel loop mapped to block.y and block.x
 
 func @parallel_loop_bidy_bidx(%arg0 : index, %arg1 : index, %arg2 : index,
-                              %arg3 : index, %arg4 : index, 
+                              %arg3 : index, %arg4 : index,
                               %buf : memref<?x?xf32>,
                               %res : memref<?x?xf32>) {
   %step = constant 2 : index
@@ -334,7 +334,7 @@ func @parallel_loop_loop_variant_bound(%arg0 : index, %arg1 : index, %arg2 : ind
   // expected-error@+1 {{failed to legalize operation 'loop.parallel'}}
   loop.parallel (%i0, %i1) = (%arg0, %arg1) to (%arg2, %arg3)
                                           step (%four, %four)  {
-    // expected-error@+1 {{cannot derive loop-invariant upper bound}}                                        
+    // expected-error@+1 {{cannot derive loop-invariant upper bound}}
     loop.parallel (%si0, %si1) = (%zero, %zero) to (%i0, %i1)
                                             step (%one, %one)  {
       %idx0 = addi %i0, %si0 : index

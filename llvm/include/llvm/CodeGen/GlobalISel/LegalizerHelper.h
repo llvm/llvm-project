@@ -74,6 +74,9 @@ public:
   /// precision, ignoring the unused bits).
   LegalizeResult widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy);
 
+  /// Legalize an instruction by replacing the value type
+  LegalizeResult bitcast(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
+
   /// Legalize an instruction by splitting it into simpler parts, hopefully
   /// understood by the target.
   LegalizeResult lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
@@ -127,6 +130,14 @@ public:
   /// Use by producing a vector with undefined high elements, extracting the
   /// original vector type, and replacing the vreg of the operand in place.
   void moreElementsVectorSrc(MachineInstr &MI, LLT MoreTy, unsigned OpIdx);
+
+  /// Legalize a single operand \p OpIdx of the machine instruction \p MI as a
+  /// use by inserting a G_BITCAST to \p CastTy
+  void bitcastSrc(MachineInstr &MI, LLT CastTy, unsigned OpIdx);
+
+  /// Legalize a single operand \p OpIdx of the machine instruction \p MI as a
+  /// def by inserting a G_BITCAST from \p CastTy
+  void bitcastDst(MachineInstr &MI, LLT CastTy, unsigned OpIdx);
 
 private:
   LegalizeResult

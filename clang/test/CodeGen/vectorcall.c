@@ -86,8 +86,8 @@ struct HVA4 __vectorcall hva6(struct HVA4 a, struct HVA4 b) { return b;}
 // X64: define dso_local x86_vectorcallcc %struct.HVA4 @"\01hva6@@128"(%struct.HVA4 inreg %a.coerce, %struct.HVA4* %b)
 
 struct HVA5 __vectorcall hva7() {struct HVA5 a = {}; return a;}
-// X32: define dso_local x86_vectorcallcc void @"\01hva7@@0"(%struct.HVA5* inreg noalias sret %agg.result)
-// X64: define dso_local x86_vectorcallcc void @"\01hva7@@0"(%struct.HVA5* noalias sret %agg.result)
+// X32: define dso_local x86_vectorcallcc void @"\01hva7@@0"(%struct.HVA5* inreg noalias sret align 16 %agg.result)
+// X64: define dso_local x86_vectorcallcc void @"\01hva7@@0"(%struct.HVA5* noalias sret align 16 %agg.result)
 
 v4f32 __vectorcall hva8(v4f32 a, v4f32 b, v4f32 c, v4f32 d, int e, v4f32 f) {return f;}
 // X32: define dso_local x86_vectorcallcc <4 x float> @"\01hva8@@84"(<4 x float> inreg %a, <4 x float> inreg %b, <4 x float> inreg %c, <4 x float> inreg %d, i32 inreg %e, <4 x float> inreg %f)

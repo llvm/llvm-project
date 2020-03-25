@@ -1538,14 +1538,14 @@ struct AggDtor getAggDtor(void);
 void test71(void) {
   // CHECK: %[[T:[^ ]+]] = bitcast %struct.AggDtor* %[[TMP1:[^ ]+]] to i8*
   // CHECK: call void @llvm.lifetime.start.p0i8({{[^,]+}}, i8* %[[T]])
-  // CHECK: call void @getAggDtor(%struct.AggDtor* sret %[[TMP1]])
+  // CHECK: call void @getAggDtor(%struct.AggDtor* sret align 8 %[[TMP1]])
   // CHECK: %[[T:[^ ]+]] = bitcast %struct.AggDtor* %[[TMP1]] to i8**
   // CHECK: call void @__destructor_8_s40(i8** %[[T]])
   // CHECK: %[[T:[^ ]+]] = bitcast %struct.AggDtor* %[[TMP1:[^ ]+]] to i8*
   // CHECK: call void @llvm.lifetime.end.p0i8({{[^,]+}}, i8* %[[T]])
   // CHECK: %[[T:[^ ]+]] = bitcast %struct.AggDtor* %[[TMP2:[^ ]+]] to i8*
   // CHECK: call void @llvm.lifetime.start.p0i8({{[^,]+}}, i8* %[[T]])
-  // CHECK: call void @getAggDtor(%struct.AggDtor* sret %[[TMP2]])
+  // CHECK: call void @getAggDtor(%struct.AggDtor* sret align 8 %[[TMP2]])
   // CHECK: %[[T:[^ ]+]] = bitcast %struct.AggDtor* %[[TMP2]] to i8**
   // CHECK: call void @__destructor_8_s40(i8** %[[T]])
   // CHECK: %[[T:[^ ]+]] = bitcast %struct.AggDtor* %[[TMP2:[^ ]+]] to i8*
