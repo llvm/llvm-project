@@ -88,7 +88,7 @@ static SmallString<64> normalizeName(const IdentifierInfo *Name,
   SmallString<64> FullName = ScopeName;
   if (!ScopeName.empty()) {
     assert(SyntaxUsed == AttributeCommonInfo::AS_CXX11 ||
-           SyntaxUsed == AttributeCommonInfo::AS_C2X);
+           SyntaxUsed == AttributeCommonInfo::AS_C2x);
     FullName += "::";
   }
   FullName += AttrName;
