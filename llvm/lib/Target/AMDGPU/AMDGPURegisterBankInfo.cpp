@@ -3293,6 +3293,10 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_AMDGPU_FMIN_LEGACY:
   case AMDGPU::G_AMDGPU_FMAX_LEGACY:
   case AMDGPU::G_AMDGPU_RCP_IFLAG:
+  case AMDGPU::G_AMDGPU_CVT_F32_UBYTE0:
+  case AMDGPU::G_AMDGPU_CVT_F32_UBYTE1:
+  case AMDGPU::G_AMDGPU_CVT_F32_UBYTE2:
+  case AMDGPU::G_AMDGPU_CVT_F32_UBYTE3:
     return getDefaultMappingVOP(MI);
   case AMDGPU::G_UMULH:
   case AMDGPU::G_SMULH: {
