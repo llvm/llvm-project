@@ -368,16 +368,16 @@ Optional<uint64_t> mlir::getMemRefSizeInBytes(MemRefType memRefType) {
   return sizeInBytes;
 }
 
-template <typename LoadOrStoreOpPointer>
-LogicalResult mlir::boundCheckLoadOrStoreOp(LoadOrStoreOpPointer loadOrStoreOp,
+template <typename LoadOrStoreOp>
+LogicalResult mlir::boundCheckLoadOrStoreOp(LoadOrStoreOp loadOrStoreOp,
                                             bool emitError) {
-  static_assert(std::is_same<LoadOrStoreOpPointer, AffineLoadOp>::value ||
-                    std::is_same<LoadOrStoreOpPointer, AffineStoreOp>::value,
-                "argument should be either a AffineLoadOp or a AffineStoreOp");
+  static_assert(
+      llvm::is_one_of<LoadOrStoreOp, AffineLoadOp, AffineStoreOp>::value,
+      "argument should be either a AffineLoadOp or a AffineStoreOp");
 
-  Operation *opInst = loadOrStoreOp.getOperation();
-  MemRefRegion region(opInst->getLoc());
-  if (failed(region.compute(opInst, /*loopDepth=*/0, /*sliceState=*/nullptr,
+  Operation *op = loadOrStoreOp.getOperation();
+  MemRefRegion region(op->getLoc());
+  if (failed(region.compute(op, /*loopDepth=*/0, /*sliceState=*/nullptr,
                             /*addMemRefDimBounds=*/false)))
     return success();
 

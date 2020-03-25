@@ -220,9 +220,9 @@ DenseSet<Value> mlir::getInvariantAccesses(Value iv, ArrayRef<Value> indices) {
 template <typename LoadOrStoreOp>
 static bool isContiguousAccess(Value iv, LoadOrStoreOp memoryOp,
                                int *memRefDim) {
-  static_assert(std::is_same<LoadOrStoreOp, AffineLoadOp>::value ||
-                    std::is_same<LoadOrStoreOp, AffineStoreOp>::value,
-                "Must be called on either const LoadOp & or const StoreOp &");
+  static_assert(
+      llvm::is_one_of<LoadOrStoreOp, AffineLoadOp, AffineStoreOp>::value,
+      "Must be called on either LoadOp or StoreOp");
   assert(memRefDim && "memRefDim == nullptr");
   auto memRefType = memoryOp.getMemRefType();
 
