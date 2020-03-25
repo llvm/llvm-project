@@ -1282,6 +1282,8 @@ class SVE_gather_prf_vector_base_scalar_offset
 // Loads
 //
 
+def int_aarch64_sve_ld1   : AdvSIMD_1Vec_PredLoad_Intrinsic;
+
 def int_aarch64_sve_ldnt1 : AdvSIMD_1Vec_PredLoad_Intrinsic;
 def int_aarch64_sve_ldnf1 : AdvSIMD_1Vec_PredLoad_Intrinsic;
 def int_aarch64_sve_ldff1 : AdvSIMD_1Vec_PredLoad_Intrinsic;
@@ -1289,6 +1291,8 @@ def int_aarch64_sve_ldff1 : AdvSIMD_1Vec_PredLoad_Intrinsic;
 //
 // Stores
 //
+
+def int_aarch64_sve_st1   : AdvSIMD_1Vec_PredStore_Intrinsic;
 
 def int_aarch64_sve_stnt1 : AdvSIMD_1Vec_PredStore_Intrinsic;
 
