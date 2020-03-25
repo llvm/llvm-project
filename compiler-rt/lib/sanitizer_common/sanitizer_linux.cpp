@@ -26,7 +26,7 @@
 #include "sanitizer_placement_new.h"
 #include "sanitizer_procmaps.h"
 
-#if SANITIZER_LINUX
+#if SANITIZER_LINUX && !SANITIZER_GO
 #include <asm/param.h>
 #endif
 
@@ -552,7 +552,8 @@ const char *GetEnv(const char *name) {
 #endif
 }
 
-#if !SANITIZER_FREEBSD && !SANITIZER_NETBSD && !SANITIZER_OPENBSD
+#if !SANITIZER_FREEBSD && !SANITIZER_NETBSD && !SANITIZER_OPENBSD && \
+    !SANITIZER_GO
 extern "C" {
 SANITIZER_WEAK_ATTRIBUTE extern void *__libc_stack_end;
 }
@@ -584,7 +585,7 @@ static void ReadNullSepFileToArray(const char *path, char ***arr,
 }
 #endif
 
-#if !SANITIZER_OPENBSD
+#if !SANITIZER_OPENBSD && !SANITIZER_GO
 static void GetArgsAndEnv(char ***argv, char ***envp) {
 #if SANITIZER_FREEBSD
   // On FreeBSD, retrieving the argument and environment arrays is done via the
@@ -1071,7 +1072,8 @@ uptr GetMaxUserVirtualAddress() {
 
 #if !SANITIZER_ANDROID
 uptr GetPageSize() {
-#if SANITIZER_LINUX && (defined(__x86_64__) || defined(__i386__))
+#if SANITIZER_LINUX && (defined(__x86_64__) || defined(__i386__)) && \
+    defined(EXEC_PAGESIZE)
   return EXEC_PAGESIZE;
 #elif SANITIZER_FREEBSD || SANITIZER_NETBSD
 // Use sysctl as sysconf can trigger interceptors internally.
