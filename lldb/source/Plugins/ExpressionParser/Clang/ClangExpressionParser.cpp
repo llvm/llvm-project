@@ -281,23 +281,22 @@ ClangExpressionParser::ClangExpressionParser(
 
   // We can't compile expressions without a target.  So if the exe_scope is
   // null or doesn't have a target, then we just need to get out of here.  I'll
-  // lldb_assert and not make any of the compiler objects since
+  // lldbassert and not make any of the compiler objects since
   // I can't return errors directly from the constructor.  Further calls will
   // check if the compiler was made and
   // bag out if it wasn't.
 
   if (!exe_scope) {
-    lldb_assert(exe_scope, "Can't make an expression parser with a null scope.",
-                __FUNCTION__, __FILE__, __LINE__);
+    lldbassert(exe_scope &&
+               "Can't make an expression parser with a null scope.");
     return;
   }
 
   lldb::TargetSP target_sp;
   target_sp = exe_scope->CalculateTarget();
   if (!target_sp) {
-    lldb_assert(target_sp.get(),
-                "Can't make an expression parser with a null target.",
-                __FUNCTION__, __FILE__, __LINE__);
+    lldbassert(target_sp.get() &&
+               "Can't make an expression parser with a null target.");
     return;
   }
 
