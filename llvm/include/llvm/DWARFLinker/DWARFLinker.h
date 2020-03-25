@@ -226,6 +226,7 @@ typedef std::function<ErrorOr<DwarfFile &>(StringRef ContainerName,
                                            StringRef Path)>
     objFileLoader;
 typedef std::map<std::string, std::string> swiftInterfacesMap;
+typedef std::map<std::string, std::string> objectPrefixMap;
 
 /// The core of the Dwarf linking logic.
 ///
@@ -309,6 +310,11 @@ public:
   /// Set map for Swift interfaces.
   void setSwiftInterfacesMap(swiftInterfacesMap *Map) {
     Options.ParseableSwiftInterfaces = Map;
+  }
+
+  /// Set prefix map for objects.
+  void setObjectPrefixMap(objectPrefixMap *Map) {
+    Options.ObjectPrefixMap = Map;
   }
 
 private:
@@ -783,6 +789,9 @@ private:
     /// per compile unit, which is why this is a std::map.
     /// this is dsymutil specific fag.
     swiftInterfacesMap *ParseableSwiftInterfaces = nullptr;
+
+    /// A list of remappings to apply to file paths.
+    objectPrefixMap *ObjectPrefixMap = nullptr;
   } Options;
 };
 

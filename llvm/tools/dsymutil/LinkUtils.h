@@ -57,6 +57,9 @@ struct LinkOptions {
   /// -oso-prepend-path
   std::string PrependPath;
 
+  /// The -object-prefix-map.
+  std::map<std::string, std::string> ObjectPrefixMap;
+
   /// The Resources directory in the .dSYM bundle.
   Optional<std::string> ResourceDir;
 

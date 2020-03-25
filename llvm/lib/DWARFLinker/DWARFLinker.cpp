@@ -1918,6 +1918,14 @@ static uint64_t getDwoId(const DWARFDie &CUDie, const DWARFUnit &Unit) {
   return 0;
 }
 
+static std::string remapPath(StringRef Path,
+                             const objectPrefixMap &ObjectPrefixMap) {
+  for (const auto &Entry : ObjectPrefixMap)
+    if (Path.startswith(Entry.first))
+      return (Twine(Entry.second) + Path.substr(Entry.first.size())).str();
+  return Path.str();
+}
+
 bool DWARFLinker::registerModuleReference(
     DWARFDie CUDie, const DWARFUnit &Unit, const DwarfFile &File,
     OffsetsStringPool &StringPool, UniquingStringPool &UniquingStringPool,
@@ -1927,6 +1935,8 @@ bool DWARFLinker::registerModuleReference(
       CUDie.find({dwarf::DW_AT_dwo_name, dwarf::DW_AT_GNU_dwo_name}), "");
   if (PCMfile.empty())
     return false;
+  if (Options.ObjectPrefixMap)
+    PCMfile = remapPath(PCMfile, *Options.ObjectPrefixMap);
 
   // Clang module DWARF skeleton CUs abuse this for the path to the module.
   uint64_t DwoId = getDwoId(CUDie, Unit);

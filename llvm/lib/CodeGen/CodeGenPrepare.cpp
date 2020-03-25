@@ -7200,7 +7200,7 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, bool &ModifiedDT) {
   }
 
   if (FreezeInst *FI = dyn_cast<FreezeInst>(I)) {
-    // br(freeze(icmp a, const)) -> br(icmp (freeze a), const)
+    // freeze(icmp a, const)) -> icmp (freeze a), const
     // This helps generate efficient conditional jumps.
     Instruction *CmpI = nullptr;
     if (ICmpInst *II = dyn_cast<ICmpInst>(FI->getOperand(0)))

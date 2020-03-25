@@ -14,28 +14,48 @@
 #ifndef MLIR_DIALECT_GPU_PARALLELLOOPMAPPER_H
 #define MLIR_DIALECT_GPU_PARALLELLOOPMAPPER_H
 
+#include "mlir/IR/Attributes.h"
+#include "mlir/Support/LLVM.h"
+#include "llvm/ADT/DenseMap.h"
+
+#include "mlir/Dialect/GPU/ParallelLoopMapperEnums.h.inc"
+
 namespace mlir {
 
+class AffineMap;
+struct LogicalResult;
+class Operation;
 class Region;
+
+#include "mlir/Dialect/GPU/ParallelLoopMapperAttr.h.inc"
+
+namespace loop {
+class ParallelOp;
+}
 
 namespace gpu {
 
 /// Name of the mapping attribute produced by loop mappers.
-static constexpr const char *kMappingAttributeName = "mapping";
-/// Name of the processor sub-attribute that identifies the hardware id
-/// to map a loop to.
-static constexpr const char *kProcessorEntryName = "processor";
-/// Name of the map sub-attribute that identifies the affine map to apply
-/// to the hardware id to compute the iteration number of the loop. This
-/// map is expected to be extended by step and lower bound computations:
-///   index = map(hardware_id) * step + lowerbound
-static constexpr const char *kIndexMapEntryName = "map";
-/// Name of the bound sub-attribute that itendities the affine map to
-/// compute an upper bound of iterations for the hardware id. This is
-/// applied to an upper bound on the number of iterations:
-///   launchBound = bound(upperbound-lowerbound ceildiv step)
-static constexpr const char *kBoundMapEntryName = "bound";
+StringRef getMappingAttrName();
 
+/// Get the value of the processor in the ParallelLoopDimMapping attribute.
+inline Processor getProcessor(ParallelLoopDimMapping attr) {
+  return static_cast<Processor>(attr.processor().getInt());
+}
+
+/// Helper function to create a ParallelDimMapperAttr.
+/// TODO(ravishankarm/antiagainst): Replace its uses with an auto-gened method.
+ParallelLoopDimMapping getParallelLoopDimMappingAttr(Processor processor,
+                                                     AffineMap map,
+                                                     AffineMap bound);
+
+/// Sets the mapping attribute of a loop.parallel operation. Verifies that the
+/// mapping passed is valid.
+/// - the number of DimMapperAttr provided is same as the number of loops of
+///   the `ploopOp`.
+/// - the mapping does not map multiple loops to the same processor.
+LogicalResult setMappingAttr(loop::ParallelOp ploopOp,
+                             ArrayRef<ParallelLoopDimMapping> mapping);
 } // end namespace gpu
 
 /// Maps the parallel loops found in the given function to workgroups. The first
@@ -46,5 +66,4 @@ static constexpr const char *kBoundMapEntryName = "bound";
 void greedilyMapParallelLoopsToGPU(Region &region);
 
 } // end namespace mlir
-
 #endif // MLIR_DIALECT_GPU_PARALLELLOOPMAPPER_H

@@ -23,6 +23,43 @@ using namespace mlir;
 using namespace mlir::gpu;
 using namespace mlir::loop;
 
+#include "mlir/Dialect/GPU/ParallelLoopMapperEnums.cpp.inc"
+namespace mlir {
+
+#include "mlir/Dialect/GPU/ParallelLoopMapperAttr.cpp.inc"
+namespace gpu {
+
+StringRef getMappingAttrName() { return "mapping"; }
+
+ParallelLoopDimMapping getParallelLoopDimMappingAttr(Processor processor,
+                                                     AffineMap map,
+                                                     AffineMap bound) {
+  MLIRContext *context = map.getContext();
+  OpBuilder builder(context);
+  return ParallelLoopDimMapping::get(
+      builder.getI64IntegerAttr(static_cast<int32_t>(processor)),
+      AffineMapAttr::get(map), AffineMapAttr::get(bound), context);
+}
+
+LogicalResult setMappingAttr(loop::ParallelOp ploopOp,
+                             ArrayRef<ParallelLoopDimMapping> mapping) {
+  // Verify that each processor is mapped to only once.
+  llvm::DenseSet<gpu::Processor> specifiedMappings;
+  for (auto dimAttr : mapping) {
+    gpu::Processor processor = getProcessor(dimAttr);
+    if (processor != gpu::Processor::Sequential &&
+        specifiedMappings.count(processor))
+      return ploopOp.emitError(
+          "invalid mapping multiple loops to same processor");
+  }
+  ArrayRef<Attribute> mappingAsAttrs(mapping.data(), mapping.size());
+  ploopOp.setAttr(getMappingAttrName(),
+                  ArrayAttr::get(mappingAsAttrs, ploopOp.getContext()));
+  return success();
+}
+} // namespace gpu
+} // namespace mlir
+
 namespace {
 
 enum MappingLevel { MapGrid = 0, MapBlock = 1, Sequential = 2 };
@@ -43,10 +80,41 @@ MappingLevel &operator++(MappingLevel &mappingLevel) {
 /// Computed the hardware id to use for a given mapping level. Will
 /// assign x,y and z hardware ids for the first 3 dimensions and use
 /// sequential after.
-static int64_t getHardwareIdForMapping(MappingLevel level, int dimension) {
+/// TODO(ravishankarm/herhut) : Make this use x for the inner-most loop that is
+/// distributed to map to x, the next innermost to y and the next innermost to
+/// z.
+static gpu::Processor getHardwareIdForMapping(MappingLevel level,
+                                              int dimension) {
+
   if (dimension >= kNumHardwareIds || level == Sequential)
-    return Sequential * kNumHardwareIds;
-  return (level * kNumHardwareIds) + dimension;
+    return Processor::Sequential;
+  switch (level) {
+  case MapGrid:
+    switch (dimension) {
+    case 0:
+      return Processor::BlockX;
+    case 1:
+      return Processor::BlockY;
+    case 2:
+      return Processor::BlockZ;
+    default:
+      return Processor::Sequential;
+    }
+    break;
+  case MapBlock:
+    switch (dimension) {
+    case 0:
+      return Processor::ThreadX;
+    case 1:
+      return Processor::ThreadY;
+    case 2:
+      return Processor::ThreadZ;
+    default:
+      return Processor::Sequential;
+    }
+  default:;
+  }
+  return Processor::Sequential;
 }
 
 /// Add mapping information to the given parallel loop. Do not add
@@ -55,26 +123,20 @@ static int64_t getHardwareIdForMapping(MappingLevel level, int dimension) {
 static void mapParallelOp(ParallelOp parallelOp,
                           MappingLevel mappingLevel = MapGrid) {
   // Do not try to add a mapping to already mapped loops or nested loops.
-  if (parallelOp.getAttr(gpu::kMappingAttributeName) ||
+  if (parallelOp.getAttr(getMappingAttrName()) ||
       ((mappingLevel == MapGrid) && parallelOp.getParentOfType<ParallelOp>()))
     return;
 
   MLIRContext *ctx = parallelOp.getContext();
   Builder b(ctx);
-  SmallVector<Attribute, 4> attrs;
+  SmallVector<ParallelLoopDimMapping, 4> attrs;
   attrs.reserve(parallelOp.getNumInductionVars());
   for (int i = 0, e = parallelOp.getNumInductionVars(); i < e; ++i) {
-    SmallVector<NamedAttribute, 3> entries;
-    entries.emplace_back(b.getNamedAttr(
-        kProcessorEntryName,
-        b.getI64IntegerAttr(getHardwareIdForMapping(mappingLevel, i))));
-    entries.emplace_back(b.getNamedAttr(
-        kIndexMapEntryName, AffineMapAttr::get(b.getDimIdentityMap())));
-    entries.emplace_back(b.getNamedAttr(
-        kBoundMapEntryName, AffineMapAttr::get(b.getDimIdentityMap())));
-    attrs.push_back(DictionaryAttr::get(entries, ctx));
+    attrs.push_back(getParallelLoopDimMappingAttr(
+        getHardwareIdForMapping(mappingLevel, i), b.getDimIdentityMap(),
+        b.getDimIdentityMap()));
   }
-  parallelOp.setAttr(kMappingAttributeName, ArrayAttr::get(attrs, ctx));
+  setMappingAttr(parallelOp, attrs);
   ++mappingLevel;
   // Parallel loop operations are immediately nested, so do not use
   // walk but just iterate over the operations.
