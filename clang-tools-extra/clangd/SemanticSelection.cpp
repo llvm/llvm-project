@@ -64,7 +64,7 @@ llvm::Expected<SelectionRange> getSemanticRanges(ParsedAST &AST, Position Pos) {
     // Return an empty range at the point.
     SelectionRange Empty;
     Empty.range.start = Empty.range.end = Pos;
-    return Empty;
+    return std::move(Empty);
   }
 
   // Convert to the LSP linked-list representation.
@@ -78,7 +78,7 @@ llvm::Expected<SelectionRange> getSemanticRanges(ParsedAST &AST, Position Pos) {
     Tail->range = std::move(Range);
   }
 
-  return Head;
+  return std::move(Head);
 }
 
 } // namespace clangd
