@@ -409,6 +409,7 @@ class InstTemplate<AddrMode am, int sz, IndexMode im,
 
   bit validForTailPredication = 0;
   bit retainsPreviousHalfElement = 0;
+  bit horizontalReduction = 0;
 
   // If this is a pseudo instruction, mark it isCodeGenOnly.
   let isCodeGenOnly = !eq(!cast<string>(f), "Pseudo");
@@ -423,6 +424,7 @@ class InstTemplate<AddrMode am, int sz, IndexMode im,
   let TSFlags{19}    = thumbArithFlagSetting;
   let TSFlags{20}    = validForTailPredication;
   let TSFlags{21}    = retainsPreviousHalfElement;
+  let TSFlags{22}    = horizontalReduction;
 
   let Constraints = cstr;
   let Itinerary = itin;
