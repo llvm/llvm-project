@@ -8,7 +8,7 @@
 //
 // UNSUPPORTED: libcpp-has-no-threads
 // UNSUPPORTED: c++98, c++03
-// FLAKY_TEST.
+// ALLOW_RETRIES: 2
 
 // <future>
 
