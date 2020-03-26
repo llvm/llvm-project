@@ -1091,6 +1091,13 @@ static void sectionMapping(IO &IO, ELFYAML::HashSection &Section) {
   IO.mapOptional("Bucket", Section.Bucket);
   IO.mapOptional("Chain", Section.Chain);
   IO.mapOptional("Size", Section.Size);
+
+  // obj2yaml does not dump these fields. They can be used to override nchain
+  // and nbucket values for creating broken sections.
+  assert(!IO.outputting() ||
+         (!Section.NBucket.hasValue() && !Section.NChain.hasValue()));
+  IO.mapOptional("NChain", Section.NChain);
+  IO.mapOptional("NBucket", Section.NBucket);
 }
 
 static void sectionMapping(IO &IO, ELFYAML::NoteSection &Section) {
