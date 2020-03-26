@@ -283,11 +283,6 @@ unsigned getMaxWorkGroupsPerCU(const MCSubtargetInfo *STI,
   return std::min(N, 16u);
 }
 
-unsigned getMaxWavesPerCU(const MCSubtargetInfo *STI,
-                          unsigned FlatWorkGroupSize) {
-  return getWavesPerWorkGroup(STI, FlatWorkGroupSize);
-}
-
 unsigned getMinWavesPerEU(const MCSubtargetInfo *STI) {
   return 1;
 }
@@ -301,7 +296,8 @@ unsigned getMaxWavesPerEU(const MCSubtargetInfo *STI) {
 
 unsigned getMaxWavesPerEU(const MCSubtargetInfo *STI,
                           unsigned FlatWorkGroupSize) {
-  return divideCeil(getMaxWavesPerCU(STI, FlatWorkGroupSize), getEUsPerCU(STI));
+  return divideCeil(getWavesPerWorkGroup(STI, FlatWorkGroupSize),
+                    getEUsPerCU(STI));
 }
 
 unsigned getMinFlatWorkGroupSize(const MCSubtargetInfo *STI) {
