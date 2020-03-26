@@ -210,6 +210,12 @@ public:
                                      ValueRange operands, bool eq,
                                      bool lower = true);
 
+  /// Returns the constraint system as an integer set. Returns a null integer
+  /// set if the system has no constraints, or if an integer set couldn't be
+  /// constructed as a result of a local variable's explicit representation not
+  /// being known and such a local variable appearing in any of the constraints.
+  IntegerSet getAsIntegerSet(MLIRContext *context) const;
+
   /// Computes the lower and upper bounds of the first 'num' dimensional
   /// identifiers (starting at 'offset') as an affine map of the remaining
   /// identifiers (dimensional and symbolic). This method is able to detect
@@ -484,7 +490,8 @@ public:
   /// that can be detected as redundant as a result of differing only in their
   /// constant term part. A constraint of the form <non-negative constant> >= 0
   /// is considered trivially true. This method is a linear time method on the
-  /// constraints, does a single scan, and updates in place.
+  /// constraints, does a single scan, and updates in place. It also normalizes
+  /// constraints by their GCD and performs GCD tightening on inequalities.
   void removeTrivialRedundancy();
 
   /// A more expensive check to detect redundant inequalities thatn
