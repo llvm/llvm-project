@@ -4,7 +4,7 @@
 define <8 x i16> @mul(<8 x i16> %m, <8 x i16> %n) {
 ; CHECK-LABEL: mul:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xxlxor 36, 36, 36
+; CHECK-NEXT:    vxor 4, 4, 4
 ; CHECK-NEXT:    vmladduhm 2, 2, 3, 4
 ; CHECK-NEXT:    blr
 entry:
@@ -15,9 +15,7 @@ entry:
 define <8 x i16> @madd(<8 x i16> %m, <8 x i16> %n, <8 x i16> %o) {
 ; CHECK-LABEL: madd:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xxlxor 37, 37, 37
-; CHECK-NEXT:    vmladduhm 2, 2, 3, 5
-; CHECK-NEXT:    vadduhm 2, 2, 4
+; CHECK-NEXT:    vmladduhm 2, 2, 3, 4
 ; CHECK-NEXT:    blr
 entry:
   %0 = mul <8 x i16> %m, %n
