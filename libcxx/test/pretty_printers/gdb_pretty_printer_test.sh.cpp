@@ -153,6 +153,16 @@ void string_test() {
                             "\"mehmet bizim dostumuz agzi kirik testimiz\"");
 }
 
+namespace a_namespace {
+// To test name-lookup in the presence of using inside a namespace. Inside this
+// namespace, unqualified string_view variables will appear in the debug info as
+// "a_namespace::string_view, rather than "std::string_view".
+//
+// There is nothing special here about string_view; it's just the data structure
+// where lookup with using inside a namespace wasn't always working.
+
+using string_view = std::string_view;
+
 void string_view_test() {
   std::string_view i_am_empty;
   ComparePrettyPrintToChars(i_am_empty, "std::string_view of length 0: \"\"");
@@ -166,6 +176,12 @@ void string_view_test() {
   std::string_view wonderful(&char_arr[7], 9);
   ComparePrettyPrintToChars(
       wonderful, "std::string_view of length 9: \"wonderful\"");
+
+  const char char_arr1[] = "namespace_stringview";
+  string_view namespace_stringview(&char_arr1[10], 10);
+  ComparePrettyPrintToChars(
+      namespace_stringview, "std::string_view of length 10: \"stringview\"");
+}
 }
 
 void u16string_test() {
@@ -628,7 +644,7 @@ int main(int argc, char* argv[]) {
   framework_self_test();
 
   string_test();
-  string_view_test();
+  a_namespace::string_view_test();
 
   u32string_test();
   tuple_test();
