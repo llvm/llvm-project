@@ -69,7 +69,7 @@ public:
 
 /// This is separate because in Vulkan workgroup size is exposed to shaders via
 /// a constant with WorkgroupSize decoration. So here we cannot generate a
-/// builtin variable; instead the infromation in the `spv.entry_point_abi`
+/// builtin variable; instead the information in the `spv.entry_point_abi`
 /// attribute on the surrounding FuncOp is used to replace the gpu::BlockDimOp.
 class WorkGroupSizeConversion : public SPIRVOpLowering<gpu::BlockDimOp> {
 public:

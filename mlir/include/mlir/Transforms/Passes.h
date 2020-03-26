@@ -68,7 +68,7 @@ std::unique_ptr<OpPassBase<FuncOp>> createMemRefDataFlowOptPass();
 /// Creates a pass to strip debug information from a function.
 std::unique_ptr<Pass> createStripDebugInfoPass();
 
-/// Creates a pass which prints the list of ops and the number of occurences in
+/// Creates a pass which prints the list of ops and the number of occurrences in
 /// the module.
 std::unique_ptr<OpPassBase<ModuleOp>> createPrintOpStatsPass();
 

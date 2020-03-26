@@ -2136,7 +2136,7 @@ LogicalResult AffinePrefetchOp::fold(ArrayRef<Attribute> cstOperands,
 
 void AffineParallelOp::build(Builder *builder, OperationState &result,
                              ArrayRef<int64_t> ranges) {
-  // Default initalize empty maps.
+  // Default initialize empty maps.
   auto lbMap = AffineMap::get(builder->getContext());
   auto ubMap = AffineMap::get(builder->getContext());
   // If there are ranges, set each to [0, N).

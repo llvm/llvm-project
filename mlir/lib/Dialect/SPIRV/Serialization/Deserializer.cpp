@@ -553,11 +553,11 @@ LogicalResult Deserializer::processHeader() {
       MIN_VERSION_CASE(5);
 #undef MIN_VERSION_CASE
     default:
-      return emitError(unknownLoc, "unspported SPIR-V minor version: ")
+      return emitError(unknownLoc, "unsupported SPIR-V minor version: ")
              << minorVersion;
     }
   } else {
-    return emitError(unknownLoc, "unspported SPIR-V major version: ")
+    return emitError(unknownLoc, "unsupported SPIR-V major version: ")
            << majorVersion;
   }
 

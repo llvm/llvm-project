@@ -898,7 +898,7 @@ public:
     mlir::interleaveComma(c, os, each_fn);
   }
 
-  /// This enum descripes the different kinds of elision for the type of an
+  /// This enum describes the different kinds of elision for the type of an
   /// attribute when printing it.
   enum class AttrTypeElision {
     /// The type must not be elided,
@@ -2025,7 +2025,7 @@ public:
     state->getSSANameState().shadowRegionArgs(region, namesToUse);
   }
 
-  /// Print the given affine map with the smybol and dimension operands printed
+  /// Print the given affine map with the symbol and dimension operands printed
   /// inline with the map.
   void printAffineMapOfSSAIds(AffineMapAttr mapAttr,
                               ValueRange operands) override;
