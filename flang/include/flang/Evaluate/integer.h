@@ -49,7 +49,7 @@ namespace Fortran::evaluate::value {
 // Member functions that correspond to Fortran intrinsic functions are
 // named accordingly in ALL CAPS so that they can be referenced easily in
 // the language standard.
-template<int BITS, bool IS_LITTLE_ENDIAN = isHostLittleEndian,
+template <int BITS, bool IS_LITTLE_ENDIAN = isHostLittleEndian,
     int PARTBITS = BITS <= 32 ? BITS : 32,
     typename PART = HostUnsignedInt<PARTBITS>,
     typename BIGPART = HostUnsignedInt<PARTBITS * 2>>
@@ -110,13 +110,13 @@ public:
   };
 
   // Constructors and value-generating static functions
-  constexpr Integer() { Clear(); }  // default constructor: zero
+  constexpr Integer() { Clear(); } // default constructor: zero
   constexpr Integer(const Integer &) = default;
   constexpr Integer(Integer &&) = default;
 
   // C++'s integral types can all be converted to Integer
   // with silent truncation.
-  template<typename INT, typename = std::enable_if_t<std::is_integral_v<INT>>>
+  template <typename INT, typename = std::enable_if_t<std::is_integral_v<INT>>>
   constexpr Integer(INT n) {
     constexpr int nBits = CHAR_BIT * sizeof n;
     if constexpr (nBits < partBits) {
@@ -175,11 +175,23 @@ public:
 
   constexpr Integer &operator=(const Integer &) = default;
 
+  constexpr bool operator<(const Integer &that) const {
+    return CompareUnsigned(that) == Ordering::Less;
+  }
+  constexpr bool operator<=(const Integer &that) const {
+    return CompareUnsigned(that) != Ordering::Greater;
+  }
   constexpr bool operator==(const Integer &that) const {
     return CompareUnsigned(that) == Ordering::Equal;
   }
   constexpr bool operator!=(const Integer &that) const {
     return !(*this == that);
+  }
+  constexpr bool operator>=(const Integer &that) const {
+    return CompareUnsigned(that) != Ordering::Less;
+  }
+  constexpr bool operator>(const Integer &that) const {
+    return CompareUnsigned(that) == Ordering::Greater;
   }
 
   // Left-justified mask (e.g., MASKL(1) has only its sign bit set)
@@ -265,7 +277,7 @@ public:
     return {result, overflow};
   }
 
-  template<typename FROM>
+  template <typename FROM>
   static constexpr ValueWithOverflow ConvertUnsigned(const FROM &that) {
     std::uint64_t field{that.ToUInt64()};
     ValueWithOverflow result{field, false};
@@ -286,7 +298,7 @@ public:
     return result;
   }
 
-  template<typename FROM>
+  template <typename FROM>
   static constexpr ValueWithOverflow ConvertSigned(const FROM &that) {
     ValueWithOverflow result{ConvertUnsigned(that)};
     if constexpr (bits > FROM::bits) {
@@ -344,7 +356,7 @@ public:
     return result;
   }
 
-  static constexpr int DIGITS{bits - 1};  // don't count the sign bit
+  static constexpr int DIGITS{bits - 1}; // don't count the sign bit
   static constexpr Integer HUGE() { return MASKR(bits - 1); }
   static constexpr int RANGE{// in the sense of SELECTED_INT_KIND
       // This magic value is LOG10(2.)*1E12.
@@ -404,9 +416,9 @@ public:
   constexpr bool POPPAR() const { return POPCNT() & 1; }
 
   constexpr int TRAILZ() const {
-    auto minus1{AddUnsigned(MASKR(bits))};  // { x-1, carry = x > 0 }
+    auto minus1{AddUnsigned(MASKR(bits))}; // { x-1, carry = x > 0 }
     if (!minus1.carry) {
-      return bits;  // was zero
+      return bits; // was zero
     } else {
       // x ^ (x-1) has all bits set at and below original least-order set bit.
       return IEOR(minus1.value).POPCNT() - 1;
@@ -786,7 +798,7 @@ public:
   }
 
   constexpr Product MultiplyUnsigned(const Integer &y) const {
-    Part product[2 * parts]{};  // little-endian full product
+    Part product[2 * parts]{}; // little-endian full product
     for (int j{0}; j < parts; ++j) {
       if (Part xpart{LEPart(j)}) {
         for (int k{0}; k < parts; ++k) {
@@ -842,7 +854,7 @@ public:
 
   constexpr QuotientWithRemainder DivideUnsigned(const Integer &divisor) const {
     if (divisor.IsZero()) {
-      return {MASKR(bits), Integer{}, true, false};  // overflow to max value
+      return {MASKR(bits), Integer{}, true, false}; // overflow to max value
     }
     int bitsDone{LEADZ()};
     Integer top{SHIFTL(bitsDone)};
@@ -942,13 +954,13 @@ public:
         result.divisionByZero = true;
         result.power = MASKR(bits - 1);
       } else if (CompareSigned(Integer{1}) == Ordering::Equal) {
-        result.power = *this;  // 1**x -> 1
+        result.power = *this; // 1**x -> 1
       } else if (CompareSigned(Integer{-1}) == Ordering::Equal) {
         if (exponent.BTEST(0)) {
-          result.power = *this;  // (-1)**x -> -1 if x is odd
+          result.power = *this; // (-1)**x -> -1 if x is odd
         }
       } else {
-        result.power.Clear();  // j**k -> 0 if |j| > 1 and k < 0
+        result.power.Clear(); // j**k -> 0 if |j| > 1 and k < 0
       }
     } else {
       Integer shifted{*this};
@@ -1016,5 +1028,5 @@ extern template class Integer<32>;
 extern template class Integer<64>;
 extern template class Integer<80>;
 extern template class Integer<128>;
-}
-#endif  // FORTRAN_EVALUATE_INTEGER_H_
+} // namespace Fortran::evaluate::value
+#endif // FORTRAN_EVALUATE_INTEGER_H_
