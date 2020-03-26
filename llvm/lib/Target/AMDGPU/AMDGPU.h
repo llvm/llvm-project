@@ -166,6 +166,9 @@ extern char &SILowerControlFlowID;
 void initializeSIRemoveShortExecBranchesPass(PassRegistry &);
 extern char &SIRemoveShortExecBranchesID;
 
+void initializeSIPreEmitPeepholePass(PassRegistry &);
+extern char &SIPreEmitPeepholeID;
+
 void initializeSIInsertSkipsPass(PassRegistry &);
 extern char &SIInsertSkipsPassID;
 

@@ -240,6 +240,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeSIWholeQuadModePass(*PR);
   initializeSILowerControlFlowPass(*PR);
   initializeSIRemoveShortExecBranchesPass(*PR);
+  initializeSIPreEmitPeepholePass(*PR);
   initializeSIInsertSkipsPass(*PR);
   initializeSIMemoryLegalizerPass(*PR);
   initializeSIOptimizeExecMaskingPass(*PR);
@@ -1029,6 +1030,7 @@ void GCNPassConfig::addPreEmitPass() {
   addPass(&PostRAHazardRecognizerID);
 
   addPass(&SIRemoveShortExecBranchesID);
+  addPass(&SIPreEmitPeepholeID);
   addPass(&SIInsertSkipsPassID);
   addPass(&BranchRelaxationPassID);
 }
