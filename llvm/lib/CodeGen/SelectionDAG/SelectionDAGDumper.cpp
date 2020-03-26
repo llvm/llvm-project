@@ -553,9 +553,6 @@ void SDNode::print_details(raw_ostream &OS, const SelectionDAG *G) const {
   if (getFlags().hasAllowReassociation())
     OS << " reassoc";
 
-  if (getFlags().hasVectorReduction())
-    OS << " vector-reduction";
-
   if (getFlags().hasNoFPExcept())
     OS << " nofpexcept";
 

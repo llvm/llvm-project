@@ -180,14 +180,14 @@ define i32 @_Z9test_charPcS_i_256(i8* nocapture readonly, i8* nocapture readonly
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB8_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vpmovsxbw (%rdi,%rcx), %ymm3
-; CHECK-NEXT:    vpmovsxbw 16(%rdi,%rcx), %ymm4
-; CHECK-NEXT:    vpmovsxbw (%rsi,%rcx), %ymm5
+; CHECK-NEXT:    vpmovsxbw 16(%rdi,%rcx), %ymm3
+; CHECK-NEXT:    vpmovsxbw (%rdi,%rcx), %ymm4
+; CHECK-NEXT:    vpmovsxbw 16(%rsi,%rcx), %ymm5
 ; CHECK-NEXT:    vpmaddwd %ymm3, %ymm5, %ymm3
-; CHECK-NEXT:    vpaddd %ymm1, %ymm3, %ymm1
-; CHECK-NEXT:    vpmovsxbw 16(%rsi,%rcx), %ymm3
-; CHECK-NEXT:    vpmaddwd %ymm4, %ymm3, %ymm3
 ; CHECK-NEXT:    vpaddd %ymm2, %ymm3, %ymm2
+; CHECK-NEXT:    vpmovsxbw (%rsi,%rcx), %ymm3
+; CHECK-NEXT:    vpmaddwd %ymm4, %ymm3, %ymm3
+; CHECK-NEXT:    vpaddd %ymm1, %ymm3, %ymm1
 ; CHECK-NEXT:    addq $32, %rcx
 ; CHECK-NEXT:    cmpq %rcx, %rax
 ; CHECK-NEXT:    jne .LBB8_1
