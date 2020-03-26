@@ -1477,25 +1477,43 @@ def parseIntegratedTestScript(test, additional_parsers=[],
 
 
 def _runShTest(test, litConfig, useExternalSh, script, tmpBase):
+    def runOnce(execdir):
+        if useExternalSh:
+            res = executeScript(test, litConfig, tmpBase, script, execdir)
+        else:
+            res = executeScriptInternal(test, litConfig, tmpBase, script, execdir)
+        if isinstance(res, lit.Test.Result):
+            return res
+
+        out,err,exitCode,timeoutInfo = res
+        if exitCode == 0:
+            status = Test.PASS
+        else:
+            if timeoutInfo is None:
+                status = Test.FAIL
+            else:
+                status = Test.TIMEOUT
+        return out,err,exitCode,timeoutInfo,status
+
     # Create the output directory if it does not already exist.
     lit.util.mkdir_p(os.path.dirname(tmpBase))
 
+    # Re-run failed tests up to test.allowed_retries times.
     execdir = os.path.dirname(test.getExecPath())
-    if useExternalSh:
-        res = executeScript(test, litConfig, tmpBase, script, execdir)
-    else:
-        res = executeScriptInternal(test, litConfig, tmpBase, script, execdir)
-    if isinstance(res, lit.Test.Result):
-        return res
+    attempts = test.allowed_retries + 1
+    for i in range(attempts):
+        res = runOnce(execdir)
+        if isinstance(res, lit.Test.Result):
+            return res
 
-    out,err,exitCode,timeoutInfo = res
-    if exitCode == 0:
-        status = Test.PASS
-    else:
-        if timeoutInfo is None:
-            status = Test.FAIL
-        else:
-            status = Test.TIMEOUT
+        out,err,exitCode,timeoutInfo,status = res
+        if status != Test.FAIL:
+            break
+
+    # If we had to run the test more than once, count it as a flaky pass. These
+    # will be printed separately in the test summary.
+    if i > 0 and status == Test.PASS:
+        status = Test.FLAKYPASS
 
     # Form the output log.
     output = """Script:\n--\n%s\n--\nExit Code: %d\n""" % (
@@ -1536,14 +1554,4 @@ def executeShTest(test, litConfig, useExternalSh,
     script = applySubstitutions(script, substitutions,
                                 recursion_limit=litConfig.recursiveExpansionLimit)
 
-    # Re-run failed tests up to test.allowed_retries times.
-    attempts = test.allowed_retries + 1
-    for i in range(attempts):
-        res = _runShTest(test, litConfig, useExternalSh, script, tmpBase)
-        if res.code != Test.FAIL:
-            break
-    # If we had to run the test more than once, count it as a flaky pass. These
-    # will be printed separately in the test summary.
-    if i > 0 and res.code == Test.PASS:
-        res.code = Test.FLAKYPASS
-    return res
+    return _runShTest(test, litConfig, useExternalSh, script, tmpBase)
