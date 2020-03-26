@@ -70,8 +70,6 @@ struct VSCode {
   OutputStream output;
   lldb::SBDebugger debugger;
   lldb::SBTarget target;
-  lldb::SBAttachInfo attach_info;
-  lldb::SBLaunchInfo launch_info;
   lldb::SBValueList variables;
   lldb::SBBroadcaster broadcaster;
   int64_t num_regs;
