@@ -28,6 +28,10 @@ add_subdirectory(config)
 add_subdirectory(include)
 add_subdirectory(utils)
 
+# The loader can potentially depend on the library components so add it
+# after the library implementation directories.
+add_subdirectory(loader)
+
 # The lib and test directories are added at the very end as tests
 # and libraries potentially draw from the components present in all
 # of the other directories.
