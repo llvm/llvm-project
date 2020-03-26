@@ -304,6 +304,13 @@ private:
   GISelChangeObserver &Observer;
 };
 
+/// Helper function that creates a libcall to the given \p Name using the given
+/// calling convention \p CC.
+LegalizerHelper::LegalizeResult
+createLibcall(MachineIRBuilder &MIRBuilder, const char *Name,
+              const CallLowering::ArgInfo &Result,
+              ArrayRef<CallLowering::ArgInfo> Args, CallingConv::ID CC);
+
 /// Helper function that creates the given libcall.
 LegalizerHelper::LegalizeResult
 createLibcall(MachineIRBuilder &MIRBuilder, RTLIB::Libcall Libcall,
