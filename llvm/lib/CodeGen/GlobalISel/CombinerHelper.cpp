@@ -1514,8 +1514,35 @@ bool CombinerHelper::matchEqualDefs(const MachineOperand &MOP1,
   if (!I2)
     return false;
 
+  // Check for physical registers on the instructions first to avoid cases like
+  // this:
+  //
+  // %a = COPY $physreg
+  // ...
+  // SOMETHING implicit-def $physreg
+  // ...
+  // %b = COPY $physreg
+  //
+  // These copies are not equivalent.
+  if (any_of(I1->uses(), [](const MachineOperand &MO) {
+        return MO.isReg() && MO.getReg().isPhysical();
+      })) {
+    // Check if we have a case like this:
+    //
+    // %a = COPY $physreg
+    // %b = COPY %a
+    //
+    // In this case, I1 and I2 will both be equal to %a = COPY $physreg.
+    // From that, we know that they must have the same value, since they must
+    // have come from the same COPY.
+    return I1->isIdenticalTo(*I2);
+  }
+
+  // We don't have any physical registers, so we don't necessarily need the
+  // same vreg defs.
+  //
   // On the off-chance that there's some target instruction feeding into the
-  // select, let's use produceSameValue instead of isIdenticalTo.
+  // instruction, let's use produceSameValue instead of isIdenticalTo.
   return Builder.getTII().produceSameValue(*I1, *I2, &MRI);
 }
 
