@@ -240,7 +240,7 @@ bool BranchProbabilityInfo::calcUnreachableHeuristics(const BasicBlock *BB) {
   SmallVector<unsigned, 4> UnreachableEdges;
   SmallVector<unsigned, 4> ReachableEdges;
 
-  for (succ_const_iterator I = succ_begin(BB), E = succ_end(BB); I != E; ++I)
+  for (const_succ_iterator I = succ_begin(BB), E = succ_end(BB); I != E; ++I)
     if (PostDominatedByUnreachable.count(*I))
       UnreachableEdges.push_back(I.getSuccessorIndex());
     else
@@ -386,7 +386,7 @@ bool BranchProbabilityInfo::calcColdCallHeuristics(const BasicBlock *BB) {
   // Determine which successors are post-dominated by a cold block.
   SmallVector<unsigned, 4> ColdEdges;
   SmallVector<unsigned, 4> NormalEdges;
-  for (succ_const_iterator I = succ_begin(BB), E = succ_end(BB); I != E; ++I)
+  for (const_succ_iterator I = succ_begin(BB), E = succ_end(BB); I != E; ++I)
     if (PostDominatedByColdCall.count(*I))
       ColdEdges.push_back(I.getSuccessorIndex());
     else
@@ -614,7 +614,7 @@ bool BranchProbabilityInfo::calcLoopBranchHeuristics(const BasicBlock *BB,
   SmallVector<unsigned, 8> InEdges; // Edges from header to the loop.
   SmallVector<unsigned, 8> UnlikelyEdges;
 
-  for (succ_const_iterator I = succ_begin(BB), E = succ_end(BB); I != E; ++I) {
+  for (const_succ_iterator I = succ_begin(BB), E = succ_end(BB); I != E; ++I) {
     // Use LoopInfo if we have it, otherwise fall-back to SCC info to catch
     // irreducible loops.
     if (L) {
@@ -871,7 +871,7 @@ void BranchProbabilityInfo::print(raw_ostream &OS) const {
   // or the function it is currently running over.
   assert(LastF && "Cannot print prior to running over a function");
   for (const auto &BI : *LastF) {
-    for (succ_const_iterator SI = succ_begin(&BI), SE = succ_end(&BI); SI != SE;
+    for (const_succ_iterator SI = succ_begin(&BI), SE = succ_end(&BI); SI != SE;
          ++SI) {
       printEdgeProbability(OS << "  ", &BI, *SI);
     }
@@ -890,7 +890,7 @@ BranchProbabilityInfo::getHotSucc(const BasicBlock *BB) const {
   auto MaxProb = BranchProbability::getZero();
   const BasicBlock *MaxSucc = nullptr;
 
-  for (succ_const_iterator I = succ_begin(BB), E = succ_end(BB); I != E; ++I) {
+  for (const_succ_iterator I = succ_begin(BB), E = succ_end(BB); I != E; ++I) {
     const BasicBlock *Succ = *I;
     auto Prob = getEdgeProbability(BB, Succ);
     if (Prob > MaxProb) {
@@ -923,7 +923,7 @@ BranchProbabilityInfo::getEdgeProbability(const BasicBlock *Src,
 
 BranchProbability
 BranchProbabilityInfo::getEdgeProbability(const BasicBlock *Src,
-                                          succ_const_iterator Dst) const {
+                                          const_succ_iterator Dst) const {
   return getEdgeProbability(Src, Dst.getSuccessorIndex());
 }
 
@@ -934,7 +934,7 @@ BranchProbabilityInfo::getEdgeProbability(const BasicBlock *Src,
                                           const BasicBlock *Dst) const {
   auto Prob = BranchProbability::getZero();
   bool FoundProb = false;
-  for (succ_const_iterator I = succ_begin(Src), E = succ_end(Src); I != E; ++I)
+  for (const_succ_iterator I = succ_begin(Src), E = succ_end(Src); I != E; ++I)
     if (*I == Dst) {
       auto MapI = Probs.find(std::make_pair(Src, I.getSuccessorIndex()));
       if (MapI != Probs.end()) {

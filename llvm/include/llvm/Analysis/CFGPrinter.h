@@ -128,7 +128,7 @@ struct DOTGraphTraits<const Function*> : public DefaultDOTGraphTraits {
   }
 
   static std::string getEdgeSourceLabel(const BasicBlock *Node,
-                                        succ_const_iterator I) {
+                                        const_succ_iterator I) {
     // Label source of conditional branches with "T" or "F"
     if (const BranchInst *BI = dyn_cast<BranchInst>(Node->getTerminator()))
       if (BI->isConditional())
@@ -150,7 +150,7 @@ struct DOTGraphTraits<const Function*> : public DefaultDOTGraphTraits {
   }
 
   /// Display the raw branch weights from PGO.
-  std::string getEdgeAttributes(const BasicBlock *Node, succ_const_iterator I,
+  std::string getEdgeAttributes(const BasicBlock *Node, const_succ_iterator I,
                                 const Function *F) {
     const Instruction *TI = Node->getTerminator();
     if (TI->getNumSuccessors() == 1)
