@@ -65,7 +65,7 @@ SystemZShortenInst::SystemZShortenInst(const SystemZTargetMachine &tm)
 
 // Tie operands if MI has become a two-address instruction.
 static void tieOpsIfNeeded(MachineInstr &MI) {
-  if (MI.getDesc().getOperandConstraint(0, MCOI::TIED_TO) &&
+  if (MI.getDesc().getOperandConstraint(1, MCOI::TIED_TO) == 0 &&
       !MI.getOperand(0).isTied())
     MI.tieOperands(0, 1);
 }
