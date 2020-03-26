@@ -1853,7 +1853,7 @@ SDValue DPUTargetLowering::LowerSeqreadGet(SDValue Op, SelectionDAG &DAG) const 
   int Opcode = DPUISD::SEQREAD_GET;
   SDValue cond =
       DAG.getConstant(PageSizeLog2ToNcCondition(pageSizeLog2), dl, MVT::i32);
-  if (canFetchConstantTo(incValue, &inc)) {
+  if (canFetchConstantTo(incValue, &inc) && (inc > 0) && (inc < 128)) {
     Opcode = DPUISD::SEQREAD_GET_CST;
     incValue = DAG.getConstant(inc, dl, MVT::i32);
   }
