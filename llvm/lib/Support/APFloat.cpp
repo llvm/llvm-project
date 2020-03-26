@@ -171,6 +171,12 @@ namespace llvm {
     return semPPCDoubleDouble;
   }
 
+  constexpr RoundingMode APFloatBase::rmNearestTiesToEven;
+  constexpr RoundingMode APFloatBase::rmTowardPositive;
+  constexpr RoundingMode APFloatBase::rmTowardNegative;
+  constexpr RoundingMode APFloatBase::rmTowardZero;
+  constexpr RoundingMode APFloatBase::rmNearestTiesToAway;
+
   /* A tight upper bound on number of parts required to hold the value
      pow(5, power) is
 
@@ -1323,6 +1329,9 @@ bool IEEEFloat::roundAwayFromZero(roundingMode rounding_mode,
 
   case rmTowardNegative:
     return sign;
+
+  default:
+    break;
   }
   llvm_unreachable("Invalid rounding mode found");
 }

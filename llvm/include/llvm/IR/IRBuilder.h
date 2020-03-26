@@ -105,7 +105,7 @@ protected:
 
   bool IsFPConstrained;
   fp::ExceptionBehavior DefaultConstrainedExcept;
-  fp::RoundingMode DefaultConstrainedRounding;
+  RoundingMode DefaultConstrainedRounding;
 
   ArrayRef<OperandBundleDef> DefaultOperandBundles;
 
@@ -116,7 +116,7 @@ public:
       : Context(context), Folder(Folder), Inserter(Inserter),
         DefaultFPMathTag(FPMathTag), IsFPConstrained(false),
         DefaultConstrainedExcept(fp::ebStrict),
-        DefaultConstrainedRounding(fp::rmDynamic),
+        DefaultConstrainedRounding(RoundingMode::Dynamic),
         DefaultOperandBundles(OpBundles) {
     ClearInsertionPoint();
   }
@@ -268,7 +268,7 @@ public:
   }
 
   /// Set the rounding mode handling to be used with constrained floating point
-  void setDefaultConstrainedRounding(fp::RoundingMode NewRounding) {
+  void setDefaultConstrainedRounding(RoundingMode NewRounding) {
     DefaultConstrainedRounding = NewRounding;
   }
 
@@ -278,7 +278,7 @@ public:
   }
 
   /// Get the rounding mode handling used with constrained floating point
-  fp::RoundingMode getDefaultConstrainedRounding() {
+  RoundingMode getDefaultConstrainedRounding() {
     return DefaultConstrainedRounding;
   }
 
@@ -1130,8 +1130,8 @@ private:
     return (LC && RC) ? Insert(Folder.CreateBinOp(Opc, LC, RC), Name) : nullptr;
   }
 
-  Value *getConstrainedFPRounding(Optional<fp::RoundingMode> Rounding) {
-    fp::RoundingMode UseRounding = DefaultConstrainedRounding;
+  Value *getConstrainedFPRounding(Optional<RoundingMode> Rounding) {
+    RoundingMode UseRounding = DefaultConstrainedRounding;
 
     if (Rounding.hasValue())
       UseRounding = Rounding.getValue();
@@ -1522,7 +1522,7 @@ public:
   CallInst *CreateConstrainedFPBinOp(
       Intrinsic::ID ID, Value *L, Value *R, Instruction *FMFSource = nullptr,
       const Twine &Name = "", MDNode *FPMathTag = nullptr,
-      Optional<fp::RoundingMode> Rounding = None,
+      Optional<RoundingMode> Rounding = None,
       Optional<fp::ExceptionBehavior> Except = None);
 
   Value *CreateNeg(Value *V, const Twine &Name = "",
@@ -2145,7 +2145,7 @@ public:
       Intrinsic::ID ID, Value *V, Type *DestTy,
       Instruction *FMFSource = nullptr, const Twine &Name = "",
       MDNode *FPMathTag = nullptr,
-      Optional<fp::RoundingMode> Rounding = None,
+      Optional<RoundingMode> Rounding = None,
       Optional<fp::ExceptionBehavior> Except = None);
 
   // Provided to resolve 'CreateIntCast(Ptr, Ptr, "...")', giving a
@@ -2368,7 +2368,7 @@ public:
 
   CallInst *CreateConstrainedFPCall(
       Function *Callee, ArrayRef<Value *> Args, const Twine &Name = "",
-      Optional<fp::RoundingMode> Rounding = None,
+      Optional<RoundingMode> Rounding = None,
       Optional<fp::ExceptionBehavior> Except = None);
 
   Value *CreateSelect(Value *C, Value *True, Value *False,

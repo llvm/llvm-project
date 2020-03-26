@@ -104,7 +104,7 @@ Value *InstrProfIncrementInst::getStep() const {
   return ConstantInt::get(Type::getInt64Ty(Context), 1);
 }
 
-Optional<fp::RoundingMode> ConstrainedFPIntrinsic::getRoundingMode() const {
+Optional<RoundingMode> ConstrainedFPIntrinsic::getRoundingMode() const {
   unsigned NumOperands = getNumArgOperands();
   Metadata *MD =
       cast<MetadataAsValue>(getArgOperand(NumOperands - 2))->getMetadata();

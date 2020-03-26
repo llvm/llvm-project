@@ -9592,7 +9592,7 @@ public:
   void ActOnPragmaFEnvAccess(LangOptions::FEnvAccessModeKind FPC);
 
   /// Called to set rounding mode for floating point operations.
-  void setRoundingMode(LangOptions::FPRoundingModeKind);
+  void setRoundingMode(llvm::RoundingMode);
 
   /// Called to set exception behavior for floating point operations.
   void setExceptionMode(LangOptions::FPExceptionModeKind);

@@ -50,6 +50,7 @@
 #include "llvm/Support/SaveAndRestore.h"
 using namespace clang;
 using namespace sema;
+using llvm::RoundingMode;
 
 /// Determine whether the use of this declaration is valid, without
 /// emitting diagnostics.
@@ -13639,7 +13640,7 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
     CompLHSTy = UsualUnaryConversions(LHS.get()).get()->getType();
 
   if (ResultTy->isRealFloatingType() &&
-      (getLangOpts().getFPRoundingMode() != LangOptions::FPR_ToNearest ||
+      (getLangOpts().getFPRoundingMode() != RoundingMode::NearestTiesToEven ||
        getLangOpts().getFPExceptionMode() != LangOptions::FPE_Ignore))
     // Mark the current function as usng floating point constrained intrinsics
     if (FunctionDecl *F = dyn_cast<FunctionDecl>(CurContext)) {

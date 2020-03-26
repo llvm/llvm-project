@@ -18,6 +18,32 @@
 
 namespace llvm {
 
+/// Rounding mode.
+///
+/// Enumerates supported rounding modes, as well as some special values. The set
+/// of the modes must agree with IEEE-754, 4.3.1 and 4.3.2. The constants
+/// assigned to the IEEE rounding modes must agree with the values used by
+/// FLT_ROUNDS (C11, 5.2.4.2.2p8).
+///
+/// This value is packed into bitfield in some cases, including \c FPOptions, so
+/// the rounding mode values and the special value \c Dynamic must fit into the
+/// the bit field (now - 3 bits). The value \c Invalid is used only in values
+/// returned by intrinsics to indicate errors, it should never be stored as
+/// rounding mode value, so it does not need to fit the bit fields.
+///
+enum class RoundingMode : int8_t {
+  // Rounding mode defined in IEEE-754.
+  TowardZero        = 0,    ///< roundTowardZero.
+  NearestTiesToEven = 1,    ///< roundTiesToEven.
+  TowardPositive    = 2,    ///< roundTowardPositive.
+  TowardNegative    = 3,    ///< roundTowardNegative.
+  NearestTiesToAway = 4,    ///< roundTiesToAway.
+
+  // Special values.
+  Dynamic = 7,    ///< Denotes mode unknown at compile time.
+  Invalid = -1    ///< Denotes invalid value.
+};
+
 /// Represent ssubnormal handling kind for floating point instruction inputs and
 /// outputs.
 struct DenormalMode {

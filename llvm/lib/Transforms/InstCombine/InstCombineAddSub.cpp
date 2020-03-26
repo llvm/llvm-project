@@ -270,7 +270,7 @@ void FAddendCoef::operator=(const FAddendCoef &That) {
 }
 
 void FAddendCoef::operator+=(const FAddendCoef &That) {
-  enum APFloat::roundingMode RndMode = APFloat::rmNearestTiesToEven;
+  RoundingMode RndMode = RoundingMode::NearestTiesToEven;
   if (isInt() == That.isInt()) {
     if (isInt())
       IntVal += That.IntVal;

@@ -47,6 +47,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/CachedHashString.h"
+#include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
@@ -3188,9 +3189,9 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
       Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args) << Val;
   }
 
-  LangOptions::FPRoundingModeKind FPRM = LangOptions::FPR_ToNearest;
+  auto FPRM = llvm::RoundingMode::NearestTiesToEven;
   if (Args.hasArg(OPT_frounding_math)) {
-    FPRM = LangOptions::FPR_Dynamic;
+    FPRM = llvm::RoundingMode::Dynamic;
   }
   Opts.setFPRoundingMode(FPRM);
 
