@@ -486,8 +486,8 @@ public:
   /// non-null. Use \p State to translate given VPValues to IR values in the
   /// vectorized loop.
   void vectorizeMemoryInstruction(Instruction *Instr, VPTransformState &State,
-                                  VPValue *Addr,
-                                  VPValue *BlockInMask = nullptr);
+                                  VPValue *Addr, VPValue *StoredValue,
+                                  VPValue *BlockInMask);
 
   /// Set the debug location in the builder using the debug location in
   /// the instruction.
@@ -2348,12 +2348,15 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(Instruction *Instr,
 void InnerLoopVectorizer::vectorizeMemoryInstruction(Instruction *Instr,
                                                      VPTransformState &State,
                                                      VPValue *Addr,
+                                                     VPValue *StoredValue,
                                                      VPValue *BlockInMask) {
   // Attempt to issue a wide load.
   LoadInst *LI = dyn_cast<LoadInst>(Instr);
   StoreInst *SI = dyn_cast<StoreInst>(Instr);
 
   assert((LI || SI) && "Invalid Load/Store instruction");
+  assert((!SI || StoredValue) && "No stored value provided for widened store");
+  assert((!LI || !StoredValue) && "Stored value provided for widened load");
 
   LoopVectorizationCostModel::InstWidening Decision =
       Cost->getWideningDecision(Instr, VF);
@@ -2425,7 +2428,7 @@ void InnerLoopVectorizer::vectorizeMemoryInstruction(Instruction *Instr,
 
     for (unsigned Part = 0; Part < UF; ++Part) {
       Instruction *NewSI = nullptr;
-      Value *StoredVal = getOrCreateVectorValue(SI->getValueOperand(), Part);
+      Value *StoredVal = State.get(StoredValue, Part);
       if (CreateGatherScatter) {
         Value *MaskPart = isMaskRequired ? BlockInMaskParts[Part] : nullptr;
         Value *VectorGep = State.get(Addr, Part);
@@ -6807,7 +6810,12 @@ VPRecipeBuilder::tryToWidenMemory(Instruction *I, VFRange &Range,
     Mask = createBlockInMask(I->getParent(), Plan);
 
   VPValue *Addr = Plan->getOrAddVPValue(getLoadStorePointerOperand(I));
-  return new VPWidenMemoryInstructionRecipe(*I, Addr, Mask);
+  if (LoadInst *Load = dyn_cast<LoadInst>(I))
+    return new VPWidenMemoryInstructionRecipe(*Load, Addr, Mask);
+
+  StoreInst *Store = cast<StoreInst>(I);
+  VPValue *StoredValue = Plan->getOrAddVPValue(Store->getValueOperand());
+  return new VPWidenMemoryInstructionRecipe(*Store, Addr, StoredValue, Mask);
 }
 
 VPWidenIntOrFpInductionRecipe *
@@ -7515,7 +7523,9 @@ void VPPredInstPHIRecipe::execute(VPTransformState &State) {
 }
 
 void VPWidenMemoryInstructionRecipe::execute(VPTransformState &State) {
-  State.ILV->vectorizeMemoryInstruction(&Instr, State, getAddr(), getMask());
+  VPValue *StoredValue = isa<StoreInst>(Instr) ? getStoredValue() : nullptr;
+  State.ILV->vectorizeMemoryInstruction(&Instr, State, getAddr(), StoredValue,
+                                        getMask());
 }
 
 // Determine how to lower the scalar epilogue, which depends on 1) optimising
