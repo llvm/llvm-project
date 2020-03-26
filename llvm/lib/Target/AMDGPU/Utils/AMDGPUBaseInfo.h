@@ -95,10 +95,10 @@ unsigned getMinWavesPerEU(const MCSubtargetInfo *STI);
 /// STI without any kind of limitation.
 unsigned getMaxWavesPerEU(const MCSubtargetInfo *STI);
 
-/// \returns Maximum number of waves per execution unit for given subtarget \p
-/// STI and limited by given \p FlatWorkGroupSize.
-unsigned getMaxWavesPerEU(const MCSubtargetInfo *STI,
-                          unsigned FlatWorkGroupSize);
+/// \returns Number of waves per execution unit required to support the given \p
+/// FlatWorkGroupSize.
+unsigned getWavesPerEUForWorkGroup(const MCSubtargetInfo *STI,
+                                   unsigned FlatWorkGroupSize);
 
 /// \returns Minimum flat work group size for given subtarget \p STI.
 unsigned getMinFlatWorkGroupSize(const MCSubtargetInfo *STI);
@@ -107,7 +107,7 @@ unsigned getMinFlatWorkGroupSize(const MCSubtargetInfo *STI);
 unsigned getMaxFlatWorkGroupSize(const MCSubtargetInfo *STI);
 
 /// \returns Number of waves per work group for given subtarget \p STI and
-/// limited by given \p FlatWorkGroupSize.
+/// \p FlatWorkGroupSize.
 unsigned getWavesPerWorkGroup(const MCSubtargetInfo *STI,
                               unsigned FlatWorkGroupSize);
 

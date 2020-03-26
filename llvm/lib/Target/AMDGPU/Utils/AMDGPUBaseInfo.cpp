@@ -294,8 +294,8 @@ unsigned getMaxWavesPerEU(const MCSubtargetInfo *STI) {
   return 20;
 }
 
-unsigned getMaxWavesPerEU(const MCSubtargetInfo *STI,
-                          unsigned FlatWorkGroupSize) {
+unsigned getWavesPerEUForWorkGroup(const MCSubtargetInfo *STI,
+                                   unsigned FlatWorkGroupSize) {
   return divideCeil(getWavesPerWorkGroup(STI, FlatWorkGroupSize),
                     getEUsPerCU(STI));
 }
