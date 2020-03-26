@@ -30,11 +30,11 @@ suspend:
 }
 
 ; See if %this was added to the frame
-; CHECK: %f_copy.Frame = type { void (%f_copy.Frame*)*, void (%f_copy.Frame*)*, i1, i1, i64 }
+; CHECK: %f_copy.Frame = type { void (%f_copy.Frame*)*, void (%f_copy.Frame*)*, i64, i1 }
 
 ; See that %this is spilled into the frame
 ; CHECK-LABEL: define i8* @f_copy(i64 %this_arg)
-; CHECK:  %this.spill.addr = getelementptr inbounds %f_copy.Frame, %f_copy.Frame* %FramePtr, i32 0, i32 4
+; CHECK:  %this.spill.addr = getelementptr inbounds %f_copy.Frame, %f_copy.Frame* %FramePtr, i32 0, i32 2
 ; CHECK:  store i64 %this_arg, i64* %this.spill.addr
 ; CHECK: ret i8* %hdl
 

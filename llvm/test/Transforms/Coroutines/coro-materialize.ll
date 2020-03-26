@@ -34,7 +34,7 @@ suspend:
 }
 
 ; See that we only spilled one value
-; CHECK: %f.Frame = type { void (%f.Frame*)*, void (%f.Frame*)*, i1, i1, i32 }
+; CHECK: %f.Frame = type { void (%f.Frame*)*, void (%f.Frame*)*, i32, i1 }
 ; CHECK-LABEL: @f(
 
 declare i8* @llvm.coro.free(token, i8*)

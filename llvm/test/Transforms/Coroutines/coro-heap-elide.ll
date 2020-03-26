@@ -57,7 +57,7 @@ if.end:
 ; CHECK-LABEL: @callResume(
 define void @callResume() {
 entry:
-; CHECK: alloca %f.frame
+; CHECK: alloca [4 x i8], align 4
 ; CHECK-NOT: coro.begin
 ; CHECK-NOT: CustomAlloc
 ; CHECK: call void @may_throw()
@@ -87,7 +87,7 @@ entry:
 ; CHECK-LABEL: @callResume_with_coro_suspend_1(
 define void @callResume_with_coro_suspend_1() {
 entry:
-; CHECK: alloca %f.frame
+; CHECK: alloca [4 x i8], align 4
 ; CHECK-NOT: coro.begin
 ; CHECK-NOT: CustomAlloc
 ; CHECK: call void @may_throw()
@@ -134,7 +134,7 @@ coro.ret:
 ; CHECK-LABEL: @callResume_with_coro_suspend_2(
 define void @callResume_with_coro_suspend_2() personality i8* null {
 entry:
-; CHECK: alloca %f.frame
+; CHECK: alloca [4 x i8], align 4
 ; CHECK-NOT: coro.begin
 ; CHECK-NOT: CustomAlloc
 ; CHECK: call void @may_throw()
@@ -199,7 +199,7 @@ coro.ret:
 ; CHECK-LABEL: @callResume_with_coro_suspend_3(
 define void @callResume_with_coro_suspend_3(i8 %cond) {
 entry:
-; CHECK: alloca %f.frame
+; CHECK: alloca [4 x i8], align 4
   switch i8 %cond, label  %coro.ret [
     i8 0, label %init.suspend
     i8 1, label %coro.ret
@@ -287,7 +287,7 @@ return:
 define void @callResume_PR34897_elision(i1 %cond) {
 ; CHECK-LABEL: entry:
 entry:
-; CHECK: alloca %f.frame
+; CHECK: alloca [4 x i8], align 4
 ; CHECK: tail call void @bar(
   tail call void @bar(i8* null)
   br i1 %cond, label %if.then, label %if.else
