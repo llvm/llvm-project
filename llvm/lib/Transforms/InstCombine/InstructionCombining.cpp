@@ -3505,7 +3505,7 @@ bool InstCombiner::run() {
 
         // Get the block the use occurs in.
         if (PHINode *PN = dyn_cast<PHINode>(UserInst))
-          UserParent = PN->getIncomingBlock(*I->use_begin());
+          UserParent = PN->getIncomingBlock(*SingleUse);
         else
           UserParent = UserInst->getParent();
 
