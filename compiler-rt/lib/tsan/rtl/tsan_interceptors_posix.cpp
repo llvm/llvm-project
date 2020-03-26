@@ -885,21 +885,19 @@ STDCXX_INTERCEPTOR(void, __cxa_guard_abort, atomic_uint32_t *g) {
 }
 
 namespace __tsan {
-void PlatformThreadFinished(ThreadState *thr) {
+void DestroyThreadState() {
+  ThreadState *thr = cur_thread();
+  Processor *proc = thr->proc();
+  ThreadFinish(thr);
+  ProcUnwire(proc, thr);
+  ProcDestroy(proc);
   ThreadSignalContext *sctx = thr->signal_ctx;
   if (sctx) {
-    thr->signal_ctx = nullptr;
+    thr->signal_ctx = 0;
     UnmapOrDie(sctx, sizeof(*sctx));
   }
-
-  if (thr->tctx->thread_type != ThreadType::Fiber) {
-    CHECK_EQ(thr, cur_thread());
-    Processor *proc = thr->proc();
-    ProcUnwire(proc, thr);
-    ProcDestroy(proc);
-    DTLS_Destroy();
-    cur_thread_finalize();
-  }
+  DTLS_Destroy();
+  cur_thread_finalize();
 }
 }  // namespace __tsan
 
@@ -914,7 +912,7 @@ static void thread_finalize(void *v) {
     }
     return;
   }
-  ThreadFinish(cur_thread());
+  DestroyThreadState();
 }
 #endif
 
@@ -2553,7 +2551,7 @@ TSAN_INTERCEPTOR(void *, __tls_get_addr, void *arg) {
 #if SANITIZER_NETBSD
 TSAN_INTERCEPTOR(void, _lwp_exit) {
   SCOPED_TSAN_INTERCEPTOR(_lwp_exit);
-  ThreadFinish(cur_thread());
+  DestroyThreadState();
   REAL(_lwp_exit)();
 }
 #define TSAN_MAYBE_INTERCEPT__LWP_EXIT TSAN_INTERCEPT(_lwp_exit)
@@ -2564,7 +2562,7 @@ TSAN_INTERCEPTOR(void, _lwp_exit) {
 #if SANITIZER_FREEBSD
 TSAN_INTERCEPTOR(void, thr_exit, tid_t *state) {
   SCOPED_TSAN_INTERCEPTOR(thr_exit, state);
-  ThreadFinish(cur_thread());
+  DestroyThreadState();
   REAL(thr_exit(state));
 }
 #define TSAN_MAYBE_INTERCEPT_THR_EXIT TSAN_INTERCEPT(thr_exit)
