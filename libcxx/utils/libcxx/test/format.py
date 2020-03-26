@@ -241,18 +241,6 @@ class LibcxxTestFormat(object):
             test_cxx.useWarnings()
             if '-Wuser-defined-warnings' in test_cxx.warning_flags:
                 test_cxx.warning_flags += ['-Wno-error=user-defined-warnings']
-        else:
-            # We still need to enable certain warnings on .fail.cpp test when
-            # -verify isn't enabled. Such as -Werror=unused-result. However,
-            # we don't want it enabled too liberally, which might incorrectly
-            # allow unrelated failure tests to 'pass'.
-            #
-            # Therefore, we check if the test was expected to fail because of
-            # nodiscard before enabling it
-            test_str_list = [b'ignoring return value', b'nodiscard',
-                             b'NODISCARD']
-            if any(test_str in contents for test_str in test_str_list):
-                test_cxx.flags += ['-Werror=unused-result']
         cmd, out, err, rc = test_cxx.compile(source_path, out=os.devnull)
         check_rc = lambda rc: rc == 0 if use_verify else rc != 0
         report = libcxx.util.makeReport(cmd, out, err, rc)
