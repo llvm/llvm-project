@@ -1810,10 +1810,27 @@ SDValue DPUTargetLowering::LowerDMA(SDValue Op, SelectionDAG &DAG,
 }
 
 static uint64_t PageSizeLog2ToNcCondition(uint64_t pageSize) {
-  if (pageSize >= 10) {
-    return DPUAsmCondition::NotCarry10 + pageSize - 10;
-  } else {
-    return DPUAsmCondition::NotCarry5 + pageSize - 5;
+  switch (pageSize) {
+  case 5:
+    return DPUAsmCondition::NotCarry5;
+  case 6:
+    return DPUAsmCondition::NotCarry6;
+  case 7:
+    return DPUAsmCondition::NotCarry7;
+  case 8:
+    return DPUAsmCondition::NotCarry8;
+  case 9:
+    return DPUAsmCondition::NotCarry9;
+  case 10:
+    return DPUAsmCondition::NotCarry10;
+  case 11:
+    return DPUAsmCondition::NotCarry11;
+  case 12:
+    return DPUAsmCondition::NotCarry12;
+  case 13:
+    return DPUAsmCondition::NotCarry13;
+  case 14:
+    return DPUAsmCondition::NotCarry14;
   }
 }
 
