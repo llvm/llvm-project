@@ -168,6 +168,12 @@ $CC $DIR/gotsan.cpp -c -o $DIR/race_$SUFFIX.syso $FLAGS $CFLAGS
 
 $CC $OSCFLAGS $ARCHCFLAGS test.c $DIR/race_$SUFFIX.syso -g -o $DIR/test $OSLDFLAGS $LDFLAGS
 
+# Verify that no glibc specific code is present
+if nm race_$SUFFIX.syso | grep -q __libc_; then
+	printf -- '%s seems to link to libc\n' "race_$SUFFIX.syso"
+	exit 1
+fi
+
 export GORACE="exitcode=0 atexit_sleep_ms=0"
 if [ "$SILENT" != "1" ]; then
   $DIR/test
