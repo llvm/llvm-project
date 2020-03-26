@@ -76,8 +76,7 @@ void push_back(std::vector<int> &V, int n) {
   clang_analyzer_denote(clang_analyzer_container_begin(V), "$V.begin()");
   clang_analyzer_denote(clang_analyzer_container_end(V), "$V.end()");
 
-  V.push_back(n); // expected-note{{Container 'V' extended to the back by 1 position}}
-                  // expected-note@-1{{Container 'V' extended to the back by 1 position}}
+  V.push_back(n); // expected-note 2{{Container 'V' extended to the back by 1 position}}
 
   clang_analyzer_express(clang_analyzer_container_begin(V)); // expected-warning{{$V.begin()}}
                                                              // expected-note@-1{{$V.begin()}}
@@ -98,7 +97,6 @@ void emplace_back(std::vector<int> &V, int n) {
   clang_analyzer_denote(clang_analyzer_container_end(V), "$V.end()");
 
   V.emplace_back(n); // expected-note 2{{Container 'V' extended to the back by 1 position}}
-
 
   clang_analyzer_express(clang_analyzer_container_begin(V)); // expected-warning{{$V.begin()}}
                                                              // expected-note@-1{{$V.begin()}}
@@ -217,10 +215,10 @@ void push_back1(std::vector<int> &V1, std::vector<int> &V2, int n) {
 
   clang_analyzer_denote(clang_analyzer_container_begin(V1), "$V1.begin()");
 
-  V2.push_back(n); // expected-note{{Container 'V2' extended to the back by 1 position}} FIXME: This note should not appear since `V2` is not affected in the "bug"
+  V2.push_back(n); // no-note
 
   clang_analyzer_express(clang_analyzer_container_begin(V1)); // expected-warning{{$V1.begin()}}
-                                                             // expected-note@-1{{$V1.begin()}}
+                                                              // expected-note@-1{{$V1.begin()}}
 }
 
 void push_back2(std::vector<int> &V1, std::vector<int> &V2, int n) {
@@ -232,15 +230,14 @@ void push_back2(std::vector<int> &V1, std::vector<int> &V2, int n) {
   clang_analyzer_denote(clang_analyzer_container_begin(V1), "$V1.begin()");
   clang_analyzer_denote(clang_analyzer_container_begin(V2), "$V2.begin()");
 
-  V1.push_back(n); // expected-note 2{{Container 'V1' extended to the back by 1 position}}
-                   // FIXME: This should appear only once since there is only
-                   // one "bug" where `V1` is affected
+  V1.push_back(n); // expected-note{{Container 'V1' extended to the back by 1 position}}
+                   // Only once!
 
   clang_analyzer_express(clang_analyzer_container_begin(V1)); // expected-warning{{$V1.begin()}}
-                                                             // expected-note@-1{{$V1.begin()}}
+                                                              // expected-note@-1{{$V1.begin()}}
 
   clang_analyzer_express(clang_analyzer_container_begin(V2)); // expected-warning{{$V2.begin()}}
-                                                             // expected-note@-1{{$V2.begin()}}
+                                                              // expected-note@-1{{$V2.begin()}}
 }
 
 /// Print Container Data as Part of the Program State

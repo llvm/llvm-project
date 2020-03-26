@@ -52,9 +52,12 @@ class ExprInspectionChecker : public Checker<eval::Call, check::DeadSymbols,
   typedef void (ExprInspectionChecker::*FnCheck)(const CallExpr *,
                                                  CheckerContext &C) const;
 
-  ExplodedNode *reportBug(llvm::StringRef Msg, CheckerContext &C) const;
+  // Optional parameter `ExprVal` for expression value to be marked interesting.
+  ExplodedNode *reportBug(llvm::StringRef Msg, CheckerContext &C,
+                          Optional<SVal> ExprVal = None) const;
   ExplodedNode *reportBug(llvm::StringRef Msg, BugReporter &BR,
-                          ExplodedNode *N) const;
+                          ExplodedNode *N,
+                          Optional<SVal> ExprVal = None) const;
 
 public:
   bool evalCall(const CallEvent &Call, CheckerContext &C) const;
@@ -144,22 +147,28 @@ static const char *getArgumentValueString(const CallExpr *CE,
 }
 
 ExplodedNode *ExprInspectionChecker::reportBug(llvm::StringRef Msg,
-                                               CheckerContext &C) const {
+                                               CheckerContext &C,
+                                               Optional<SVal> ExprVal) const {
   ExplodedNode *N = C.generateNonFatalErrorNode();
-  reportBug(Msg, C.getBugReporter(), N);
+  reportBug(Msg, C.getBugReporter(), N, ExprVal);
   return N;
 }
 
 ExplodedNode *ExprInspectionChecker::reportBug(llvm::StringRef Msg,
                                                BugReporter &BR,
-                                               ExplodedNode *N) const {
+                                               ExplodedNode *N,
+                                               Optional<SVal> ExprVal) const {
   if (!N)
     return nullptr;
 
   if (!BT)
     BT.reset(new BugType(this, "Checking analyzer assumptions", "debug"));
 
-  BR.emitReport(std::make_unique<PathSensitiveBugReport>(*BT, Msg, N));
+  auto R = std::make_unique<PathSensitiveBugReport>(*BT, Msg, N);
+  if (ExprVal) {
+    R->markInteresting(*ExprVal);
+  }
+  BR.emitReport(std::move(R));
   return N;
 }
 
@@ -406,7 +415,8 @@ void ExprInspectionChecker::analyzerExpress(const CallExpr *CE,
     return;
   }
 
-  SymbolRef Sym = C.getSVal(CE->getArg(0)).getAsSymbol();
+  SVal ArgVal = C.getSVal(CE->getArg(0));
+  SymbolRef Sym = ArgVal.getAsSymbol();
   if (!Sym) {
     reportBug("Not a symbol", C);
     return;
@@ -419,7 +429,7 @@ void ExprInspectionChecker::analyzerExpress(const CallExpr *CE,
     return;
   }
 
-  reportBug(*Str, C);
+  reportBug(*Str, C, ArgVal);
 }
 
 void ExprInspectionChecker::analyzerIsTainted(const CallExpr *CE,
