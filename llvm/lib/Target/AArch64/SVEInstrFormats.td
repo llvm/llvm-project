@@ -7394,6 +7394,96 @@ multiclass sve2_crypto_unary_op<bit opc, string asm, SDPatternOperator op> {
   def : SVE_1_Op_Pat<nxv16i8, op, nxv16i8, !cast<Instruction>(NAME)>;
 }
 
+//===----------------------------------------------------------------------===//
+// SVE BFloat16 Group
+//===----------------------------------------------------------------------===//
+
+class sve_bfloat_dot_base<bits<2> opc, string asm, string ops, dag iops>
+: I<(outs ZPR32:$Zda), iops, asm, ops, "", []>, Sched<[]> {
+  bits<5> Zda;
+  bits<5> Zn;
+  let Inst{31-21} = 0b01100100011;
+  let Inst{15-14} = opc;
+  let Inst{13-10} = 0b0000;
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Zda;
+
+  let Constraints = "$Zda = $_Zda";
+  let DestructiveInstType = DestructiveOther;
+  let ElementSize = ElementSizeH;
+}
+
+class sve_bfloat_dot<string asm>
+: sve_bfloat_dot_base<0b10, asm, "\t$Zda, $Zn, $Zm",
+  (ins ZPR32:$_Zda, ZPR16:$Zn, ZPR16:$Zm)> {
+  bits<5> Zm;
+  let Inst{20-16} = Zm;
+}
+
+class sve_bfloat_dot_indexed<string asm>
+: sve_bfloat_dot_base<0b01, asm, "\t$Zda, $Zn, $Zm$iop",
+  (ins ZPR32:$_Zda, ZPR16:$Zn, ZPR3b16:$Zm, VectorIndexS:$iop)> {
+  bits<2> iop;
+  bits<3> Zm;
+  let Inst{20-19} = iop;
+  let Inst{18-16} = Zm;
+}
+
+class sve_bfloat_matmul<string asm>
+: I<(outs ZPR32:$Zda), (ins ZPR32:$_Zda, ZPR16:$Zn, ZPR16:$Zm),
+  asm, "\t$Zda, $Zn, $Zm", "", []>, Sched<[]> {
+  bits<5> Zm;
+  bits<5> Zda;
+  bits<5> Zn;
+  let Inst{31-21} = 0b01100100011;
+  let Inst{20-16} = Zm;
+  let Inst{15-10} = 0b111001;
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Zda;
+
+  let Constraints = "$Zda = $_Zda";
+  let DestructiveInstType = DestructiveOther;
+  let ElementSize = ElementSizeH;
+}
+
+class sve_bfloat_matmul_longvecl<bit BT, string asm>
+: sve_bfloat_matmul<asm> {
+  let Inst{23}    = 0b1;
+  let Inst{14-13} = 0b00;
+  let Inst{10}    = BT;
+}
+
+class sve_bfloat_matmul_longvecl_idx<bit BT, string asm>
+: sve_bfloat_dot_base<0b01, asm, "\t$Zda, $Zn, $Zm$iop",
+  (ins ZPR32:$_Zda, ZPR16:$Zn, ZPR3b16:$Zm, VectorIndexH:$iop)> {
+  bits<3> iop;
+  bits<3> Zm;
+  let Inst{23}    = 0b1;
+  let Inst{20-19} = iop{2-1};
+  let Inst{18-16} = Zm;
+  let Inst{11}    = iop{0};
+  let Inst{10}    = BT;
+}
+
+class sve_bfloat_convert<bit N, string asm>
+: I<(outs ZPR16:$Zd), (ins ZPR16:$_Zd, PPR3bAny:$Pg, ZPR32:$Zn),
+  asm, "\t$Zd, $Pg/m, $Zn", "", []>, Sched<[]> {
+  bits<5> Zd;
+  bits<3> Pg;
+  bits<5> Zn;
+  let Inst{31-25} = 0b0110010;
+  let Inst{24}    = N;
+  let Inst{23-13} = 0b10001010101;
+  let Inst{12-10} = Pg;
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Zd;
+
+  let Constraints = "$Zd = $_Zd";
+  let DestructiveInstType = DestructiveOther;
+  let hasSideEffects = 1;
+  let ElementSize = ElementSizeS;
+}
+
 /// Addressing modes
 def am_sve_indexed_s4 :ComplexPattern<i64, 2, "SelectAddrModeIndexedSVE<-8,7>", [], [SDNPWantRoot]>;
 def am_sve_indexed_s6 :ComplexPattern<i64, 2, "SelectAddrModeIndexedSVE<-32,31>", [], [SDNPWantRoot]>;
