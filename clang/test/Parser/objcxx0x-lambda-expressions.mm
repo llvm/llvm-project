@@ -11,8 +11,7 @@ class C {
 
     []; // expected-error {{expected body of lambda expression}}
     [=,foo+] {}; // expected-error {{expected ',' or ']' in lambda capture list}}
-    [&this] {}; // expected-error {{cannot take the address of an rvalue of type 'C *'}} \
-                // expected-error {{expected identifier}}
+    [&this] {}; // expected-error {{cannot take the address of an rvalue of type 'C *'}}
     [] {}; 
     [=] (int i) {}; 
     [&] (int) mutable -> void {}; 
@@ -25,8 +24,7 @@ class C {
     [foo{bar}] () {};
     [foo = {bar}] () {}; // expected-error {{<initializer_list>}}
 
-    [foo(bar) baz] () {}; // expected-error {{called object type 'int' is not a function}} \
-                          // expected-error {{expected ';'}}
+    [foo(bar) baz] () {}; // expected-error {{called object type 'int' is not a function}}
     [foo(bar), baz] () {}; // ok
 
     [foo = bar baz]; // expected-warning {{receiver type 'int'}} expected-warning {{instance method '-baz'}}

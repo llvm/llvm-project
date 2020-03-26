@@ -487,7 +487,6 @@ TEST(PreferredTypeTest, NoCrashOnInvalidTypes) {
     auto x = decltype(&1)(^);
     auto y = new decltype(&1)(^);
   )cpp";
-  EXPECT_THAT(collectPreferredTypes(Code),
-              Each("decltype(<recovery-expr>(1))"));
+  EXPECT_THAT(collectPreferredTypes(Code), Each("NULL TYPE"));
 }
 } // namespace
