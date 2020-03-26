@@ -1867,6 +1867,35 @@ def VULTOD : AVConv1XInsD_Encode<0b11101, 0b11, 0b1011, 0b1011, 1,
 
 } // End of 'let Constraints = "$a = $dst" in'
 
+// BFloat16  - Single precision, unary, predicated
+class BF16_VCVT<string opc, bits<2> op7_6>
+   : VFPAI<(outs SPR:$Sd), (ins SPR:$dst, SPR:$Sm),
+           VFPUnaryFrm, NoItinerary,
+           opc, ".bf16.f32\t$Sd, $Sm", []>,
+      RegConstraint<"$dst = $Sd">,
+      Requires<[HasBF16]>,
+     Sched<[]> {
+  bits<5> Sd;
+  bits<5> Sm;
+
+  // Encode instruction operands.
+  let Inst{3-0}   = Sm{4-1};
+  let Inst{5}     = Sm{0};
+  let Inst{15-12} = Sd{4-1};
+  let Inst{22}    = Sd{0};
+
+  let Inst{27-23} = 0b11101; // opcode1
+  let Inst{21-20} = 0b11;    // opcode2
+  let Inst{19-16} = 0b0011;  // opcode3
+  let Inst{11-8}  = 0b1001;
+  let Inst{7-6}   = op7_6;
+  let Inst{4}     = 0;
+  let DecoderNamespace = "VFPV8";
+}
+
+def BF16_VCVTB : BF16_VCVT<"vcvtb", 0b01>;
+def BF16_VCVTT : BF16_VCVT<"vcvtt", 0b11>;
+
 //===----------------------------------------------------------------------===//
 // FP Multiply-Accumulate Operations.
 //

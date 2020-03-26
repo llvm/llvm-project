@@ -26,9 +26,9 @@ const char *ARMArch[] = {
     "armv7e-m",    "armv7em",      "armv8-a",     "armv8",        "armv8a",
     "armv8l",      "armv8.1-a",    "armv8.1a",    "armv8.2-a",    "armv8.2a",
     "armv8.3-a",   "armv8.3a",     "armv8.4-a",   "armv8.4a",     "armv8.5-a",
-    "armv8.5a",     "armv8-r",     "armv8r",      "armv8-m.base", "armv8m.base",
-    "armv8-m.main", "armv8m.main", "iwmmxt",      "iwmmxt2",      "xscale",
-    "armv8.1-m.main",
+    "armv8.5a",     "armv8.6-a",   "armv8.6a",     "armv8-r",     "armv8r",
+    "armv8-m.base", "armv8m.base", "armv8-m.main", "armv8m.main", "iwmmxt",
+    "iwmmxt2",      "xscale",      "armv8.1-m.main",
 };
 
 bool testARMCPU(StringRef CPUName, StringRef ExpectedArch,
@@ -411,6 +411,9 @@ TEST(TargetParserTest, testARMArch) {
       testARMArch("armv8.5-a", "generic", "v8.5a",
                           ARMBuildAttrs::CPUArch::v8_A));
   EXPECT_TRUE(
+      testARMArch("armv8.6-a", "generic", "v8.6a",
+                          ARMBuildAttrs::CPUArch::v8_A));
+  EXPECT_TRUE(
       testARMArch("armv8-r", "cortex-r52", "v8r",
                           ARMBuildAttrs::CPUArch::v8_R));
   EXPECT_TRUE(
@@ -678,7 +681,7 @@ TEST(TargetParserTest, ARMparseArchEndianAndISA) {
       "v7",   "v7a",    "v7ve",  "v7hl",   "v7l",   "v7-r",   "v7r",   "v7-m",
       "v7m",  "v7k",    "v7s",   "v7e-m",  "v7em",  "v8-a",   "v8",    "v8a",
       "v8l",  "v8.1-a", "v8.1a", "v8.2-a", "v8.2a", "v8.3-a", "v8.3a", "v8.4-a",
-      "v8.4a", "v8.5-a","v8.5a", "v8-r",   "v8m.base", "v8m.main", "v8.1m.main"
+      "v8.4a", "v8.5-a","v8.5a", "v8.6-a", "v8.6a", "v8-r",   "v8m.base", "v8m.main", "v8.1m.main"
   };
 
   for (unsigned i = 0; i < array_lengthof(Arch); i++) {
@@ -743,6 +746,7 @@ TEST(TargetParserTest, ARMparseArchProfile) {
     case ARM::ArchKind::ARMV8_3A:
     case ARM::ArchKind::ARMV8_4A:
     case ARM::ArchKind::ARMV8_5A:
+    case ARM::ArchKind::ARMV8_6A:
       EXPECT_EQ(ARM::ProfileKind::A, ARM::parseArchProfile(ARMArch[i]));
       break;
     default:
@@ -1007,6 +1011,8 @@ TEST(TargetParserTest, testAArch64Arch) {
   EXPECT_TRUE(testAArch64Arch("armv8.4-a", "generic", "v8.4a",
                               ARMBuildAttrs::CPUArch::v8_A));
   EXPECT_TRUE(testAArch64Arch("armv8.5-a", "generic", "v8.5a",
+                              ARMBuildAttrs::CPUArch::v8_A));
+  EXPECT_TRUE(testAArch64Arch("armv8.6-a", "generic", "v8.6a",
                               ARMBuildAttrs::CPUArch::v8_A));
 }
 
