@@ -2026,7 +2026,8 @@ public:
 
   static StringRef getIdentKindName(IdentKind IK);
   static std::string ComputeName(IdentKind IK, const Decl *CurrentDecl);
-  static std::string ComputeName(ASTContext &Ctx, IdentKind IK, const QualType Ty);
+  static std::string ComputeName(ASTContext &Context, IdentKind IK,
+                                 const QualType Ty);
 
   SourceLocation getBeginLoc() const { return getLocation(); }
   SourceLocation getEndLoc() const { return getLocation(); }
