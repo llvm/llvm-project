@@ -106,6 +106,33 @@ static ParseResult parseConstantOp(OpAsmParser &parser,
 
 static LogicalResult verify(ConstantOp &op) { return success(); }
 
+//===----------------------------------------------------------------------===//
+// SplitAtOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult SplitAtOp::inferReturnTypes(
+    MLIRContext *context, Optional<Location> location, ValueRange operands,
+    ArrayRef<NamedAttribute> attributes, RegionRange regions,
+    SmallVectorImpl<Type> &inferredReturnTypes) {
+  auto shapeType = ShapeType::get(context);
+  inferredReturnTypes.push_back(shapeType);
+  inferredReturnTypes.push_back(shapeType);
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// ConcatOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult ConcatOp::inferReturnTypes(
+    MLIRContext *context, Optional<Location> location, ValueRange operands,
+    ArrayRef<NamedAttribute> attributes, RegionRange regions,
+    SmallVectorImpl<Type> &inferredReturnTypes) {
+  auto shapeType = ShapeType::get(context);
+  inferredReturnTypes.push_back(shapeType);
+  return success();
+}
+
 namespace mlir {
 namespace shape {
 
