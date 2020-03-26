@@ -102,3 +102,75 @@ uint64x2_t test_vcx3q(uint64x2_t n, float32x4_t m) {
 int8x16_t test_vcx3qa(int8x16_t acc, uint16x8_t n, float32x4_t m) {
   return __arm_vcx3qa(1, acc, n, m, 13);
 }
+
+// CHECK-LABEL: @test_vcx1q_m(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <8 x i16> @llvm.arm.cde.vcx1q.predicated.v8i16.v8i1(i32 0, <8 x i16> [[INACTIVE:%.*]], i32 1111, <8 x i1> [[TMP1]])
+// CHECK-NEXT:    ret <8 x i16> [[TMP2]]
+//
+uint16x8_t test_vcx1q_m(uint16x8_t inactive, mve_pred16_t p) {
+  return __arm_vcx1q_m(0, inactive, 1111, p);
+}
+
+// CHECK-LABEL: @test_vcx1qa_m(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// CHECK-NEXT:    [[TMP1:%.*]] = call <16 x i1> @llvm.arm.mve.pred.i2v.v16i1(i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <16 x i8> @llvm.arm.cde.vcx1qa.predicated.v16i8.v16i1(i32 1, <16 x i8> [[ACC:%.*]], i32 1112, <16 x i1> [[TMP1]])
+// CHECK-NEXT:    ret <16 x i8> [[TMP2]]
+//
+uint8x16_t test_vcx1qa_m(uint8x16_t acc, mve_pred16_t p) {
+  return __arm_vcx1qa_m(1, acc, 1112, p);
+}
+
+// CHECK-LABEL: @test_vcx2q_m(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x float> [[N:%.*]] to <16 x i8>
+// CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[P:%.*]] to i32
+// CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP1]])
+// CHECK-NEXT:    [[TMP3:%.*]] = call <4 x i32> @llvm.arm.cde.vcx2q.predicated.v4i32.v4i1(i32 0, <4 x i32> [[INACTIVE:%.*]], <16 x i8> [[TMP0]], i32 111, <4 x i1> [[TMP2]])
+// CHECK-NEXT:    ret <4 x i32> [[TMP3]]
+//
+int32x4_t test_vcx2q_m(int32x4_t inactive, float32x4_t n, mve_pred16_t p) {
+  return __arm_vcx2q_m(0, inactive, n, 111, p);
+}
+
+// CHECK-LABEL: @test_vcx2qa_m(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <8 x half> [[N:%.*]] to <16 x i8>
+// CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[P:%.*]] to i32
+// CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP1]])
+// CHECK-NEXT:    [[TMP3:%.*]] = call <4 x float> @llvm.arm.cde.vcx2qa.predicated.v4f32.v4i1(i32 0, <4 x float> [[ACC:%.*]], <16 x i8> [[TMP0]], i32 112, <4 x i1> [[TMP2]])
+// CHECK-NEXT:    ret <4 x float> [[TMP3]]
+//
+float32x4_t test_vcx2qa_m(float32x4_t acc, float16x8_t n, mve_pred16_t p) {
+  return __arm_vcx2qa_m(0, acc, n, 112, p);
+}
+
+// CHECK-LABEL: @test_vcx3q_m(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x float> [[N:%.*]] to <16 x i8>
+// CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[P:%.*]] to i32
+// CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP1]])
+// CHECK-NEXT:    [[TMP3:%.*]] = call <2 x i64> @llvm.arm.cde.vcx3q.predicated.v2i64.v4i1(i32 1, <2 x i64> [[INACTIVE:%.*]], <16 x i8> [[TMP0]], <16 x i8> [[M:%.*]], i32 11, <4 x i1> [[TMP2]])
+// CHECK-NEXT:    ret <2 x i64> [[TMP3]]
+//
+int64x2_t test_vcx3q_m(int64x2_t inactive, float32x4_t n, int8x16_t m, mve_pred16_t p) {
+  return __arm_vcx3q_m(1, inactive, n, m, 11, p);
+}
+
+// CHECK-LABEL: @test_vcx3qa_m(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <8 x half> [[N:%.*]] to <16 x i8>
+// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[M:%.*]] to <16 x i8>
+// CHECK-NEXT:    [[TMP2:%.*]] = zext i16 [[P:%.*]] to i32
+// CHECK-NEXT:    [[TMP3:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP2]])
+// CHECK-NEXT:    [[TMP4:%.*]] = call <4 x float> @llvm.arm.cde.vcx3qa.predicated.v4f32.v4i1(i32 1, <4 x float> [[INACTIVE:%.*]], <16 x i8> [[TMP0]], <16 x i8> [[TMP1]], i32 12, <4 x i1> [[TMP3]])
+// CHECK-NEXT:    [[TMP5:%.*]] = bitcast <4 x float> [[TMP4]] to <8 x half>
+// CHECK-NEXT:    ret <8 x half> [[TMP5]]
+//
+float16x8_t test_vcx3qa_m(float32x4_t inactive, float16x8_t n, uint32x4_t m, mve_pred16_t p) {
+  return __arm_vcx3qa_m(1, inactive, n, m, 12, p);
+}
