@@ -1731,6 +1731,119 @@ bool X86TargetInfo::validateAsmConstraint(
   }
 }
 
+// Below is based on the following information:
+// +------------------------------------+-------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------+
+// |           Processor Name           | Cache Line Size (Bytes) |                                                                            Source                                                                            |
+// +------------------------------------+-------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------+
+// | i386                               |                      64 | https://www.intel.com/content/dam/www/public/us/en/documents/manuals/64-ia-32-architectures-optimization-manual.pdf                                          |
+// | i486                               |                      16 | "four doublewords" (doubleword = 32 bits, 4 bits * 32 bits = 16 bytes) https://en.wikichip.org/w/images/d/d3/i486_MICROPROCESSOR_HARDWARE_REFERENCE_MANUAL_%281990%29.pdf and http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.126.4216&rep=rep1&type=pdf (page 29) |
+// | i586/Pentium MMX                   |                      32 | https://www.7-cpu.com/cpu/P-MMX.html                                                                                                                         |
+// | i686/Pentium                       |                      32 | https://www.7-cpu.com/cpu/P6.html                                                                                                                            |
+// | Netburst/Pentium4                  |                      64 | https://www.7-cpu.com/cpu/P4-180.html                                                                                                                        |
+// | Atom                               |                      64 | https://www.7-cpu.com/cpu/Atom.html                                                                                                                          |
+// | Westmere                           |                      64 | https://en.wikichip.org/wiki/intel/microarchitectures/sandy_bridge_(client) "Cache Architecture"                                                             |
+// | Sandy Bridge                       |                      64 | https://en.wikipedia.org/wiki/Sandy_Bridge and https://www.7-cpu.com/cpu/SandyBridge.html                                                                    |
+// | Ivy Bridge                         |                      64 | https://blog.stuffedcow.net/2013/01/ivb-cache-replacement/ and https://www.7-cpu.com/cpu/IvyBridge.html                                                      |
+// | Haswell                            |                      64 | https://www.7-cpu.com/cpu/Haswell.html                                                                                                                       |
+// | Boadwell                           |                      64 | https://www.7-cpu.com/cpu/Broadwell.html                                                                                                                     |
+// | Skylake (including skylake-avx512) |                      64 | https://www.nas.nasa.gov/hecc/support/kb/skylake-processors_550.html "Cache Hierarchy"                                                                       |
+// | Cascade Lake                       |                      64 | https://www.nas.nasa.gov/hecc/support/kb/cascade-lake-processors_579.html "Cache Hierarchy"                                                                  |
+// | Skylake                            |                      64 | https://en.wikichip.org/wiki/intel/microarchitectures/kaby_lake "Memory Hierarchy"                                                                           |
+// | Ice Lake                           |                      64 | https://www.7-cpu.com/cpu/Ice_Lake.html                                                                                                                      |
+// | Knights Landing                    |                      64 | https://software.intel.com/en-us/articles/intel-xeon-phi-processor-7200-family-memory-management-optimizations "The Intel® Xeon Phi™ Processor Architecture" |
+// | Knights Mill                       |                      64 | https://software.intel.com/sites/default/files/managed/9e/bc/64-ia-32-architectures-optimization-manual.pdf?countrylabel=Colombia "2.5.5.2 L1 DCache "       |
+// +------------------------------------+-------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------+
+Optional<unsigned> X86TargetInfo::getCPUCacheLineSize() const {
+  switch (CPU) {
+    // i386
+    case CK_i386:
+    // i486
+    case CK_i486:
+    case CK_WinChipC6:
+    case CK_WinChip2:
+    case CK_C3:
+    // Lakemont
+    case CK_Lakemont:
+      return 16;
+
+    // i586
+    case CK_i586:
+    case CK_Pentium:
+    case CK_PentiumMMX:
+    // i686
+    case CK_PentiumPro:
+    case CK_i686:
+    case CK_Pentium2:
+    case CK_Pentium3:
+    case CK_PentiumM:
+    case CK_C3_2:
+    // K6
+    case CK_K6:
+    case CK_K6_2:
+    case CK_K6_3:
+    // Geode
+    case CK_Geode:
+      return 32;
+
+    // Netburst
+    case CK_Pentium4:
+    case CK_Prescott:
+    case CK_Nocona:
+    // Atom
+    case CK_Bonnell:
+    case CK_Silvermont:
+    case CK_Goldmont:
+    case CK_GoldmontPlus:
+    case CK_Tremont:
+
+    case CK_Westmere:
+    case CK_SandyBridge:
+    case CK_IvyBridge:
+    case CK_Haswell:
+    case CK_Broadwell:
+    case CK_SkylakeClient:
+    case CK_SkylakeServer:
+    case CK_Cascadelake:
+    case CK_Nehalem:
+    case CK_Cooperlake:
+    case CK_Cannonlake:
+    case CK_Tigerlake:
+    case CK_IcelakeClient:
+    case CK_IcelakeServer:
+    case CK_KNL:
+    case CK_KNM:
+    // K7
+    case CK_Athlon:
+    case CK_AthlonXP:
+    // K8
+    case CK_K8:
+    case CK_K8SSE3:
+    case CK_AMDFAM10:
+    // Bobcat
+    case CK_BTVER1:
+    case CK_BTVER2:
+    // Bulldozer
+    case CK_BDVER1:
+    case CK_BDVER2:
+    case CK_BDVER3:
+    case CK_BDVER4:
+    // Zen
+    case CK_ZNVER1:
+    case CK_ZNVER2:
+    // Deprecated
+    case CK_x86_64:
+    case CK_Yonah:
+    case CK_Penryn:
+    case CK_Core2:
+      return 64;
+
+    // The following currently have unknown cache line sizes (but they are probably all 64):
+    // Core
+    case CK_Generic:
+      return None;
+  }
+}
+
 bool X86TargetInfo::validateOutputSize(const llvm::StringMap<bool> &FeatureMap,
                                        StringRef Constraint,
                                        unsigned Size) const {
