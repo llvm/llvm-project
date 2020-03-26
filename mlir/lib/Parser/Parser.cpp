@@ -4253,6 +4253,13 @@ public:
     return success();
   }
 
+  /// Parse a single operand if present.
+  OptionalParseResult parseOptionalOperand(OperandType &result) override {
+    if (parser.getToken().is(Token::percent_identifier))
+      return parseOperand(result);
+    return llvm::None;
+  }
+
   /// Parse zero or more SSA comma-separated operand references with a specified
   /// surrounding delimiter, and an optional required operand count.
   ParseResult parseOperandList(SmallVectorImpl<OperandType> &result,
