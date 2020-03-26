@@ -292,8 +292,8 @@ public:
                   Callback<std::vector<SymbolDetails>> CB);
 
   /// Get semantic ranges around a specified position in a file.
-  void semanticRanges(PathRef File, Position Pos,
-                      Callback<std::vector<Range>> CB);
+  void semanticRanges(PathRef File, const std::vector<Position> &Pos,
+                      Callback<std::vector<SelectionRange>> CB);
 
   /// Get all document links in a file.
   void documentLinks(PathRef File, Callback<std::vector<DocumentLink>> CB);
