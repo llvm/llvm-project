@@ -23,7 +23,7 @@
 int main(int, char**)
 {
     std::match_results<const char*> c;
-    c.empty();  // expected-error {{ignoring return value of function declared with 'nodiscard' attribute}}
+    c.empty(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 
     return 0;
 }

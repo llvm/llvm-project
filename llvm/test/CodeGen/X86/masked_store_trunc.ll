@@ -4652,10 +4652,10 @@ define void @truncstore_v32i16_v32i8(<32 x i16> %x, <32 x i8>* %p, <32 x i8> %ma
 ; SSE4-LABEL: truncstore_v32i16_v32i8:
 ; SSE4:       # %bb.0:
 ; SSE4-NEXT:    pxor %xmm7, %xmm7
-; SSE4-NEXT:    movdqa {{.*#+}} xmm6 = <0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u>
-; SSE4-NEXT:    pshufb %xmm6, %xmm1
-; SSE4-NEXT:    pshufb %xmm6, %xmm0
-; SSE4-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE4-NEXT:    movdqa {{.*#+}} xmm6 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
+; SSE4-NEXT:    pand %xmm6, %xmm1
+; SSE4-NEXT:    pand %xmm6, %xmm0
+; SSE4-NEXT:    packuswb %xmm1, %xmm0
 ; SSE4-NEXT:    pcmpeqb %xmm7, %xmm4
 ; SSE4-NEXT:    pmovmskb %xmm4, %ecx
 ; SSE4-NEXT:    xorl $65535, %ecx # imm = 0xFFFF
@@ -4711,14 +4711,14 @@ define void @truncstore_v32i16_v32i8(<32 x i16> %x, <32 x i8>* %p, <32 x i8> %ma
 ; SSE4-NEXT:  .LBB15_29: # %cond.store27
 ; SSE4-NEXT:    pextrb $14, %xmm0, 14(%rdi)
 ; SSE4-NEXT:  .LBB15_30: # %else28
-; SSE4-NEXT:    pshufb %xmm6, %xmm3
-; SSE4-NEXT:    pshufb %xmm6, %xmm2
+; SSE4-NEXT:    pand %xmm6, %xmm3
+; SSE4-NEXT:    pand %xmm6, %xmm2
 ; SSE4-NEXT:    testl $32768, %eax # imm = 0x8000
 ; SSE4-NEXT:    je .LBB15_32
 ; SSE4-NEXT:  # %bb.31: # %cond.store29
 ; SSE4-NEXT:    pextrb $15, %xmm0, 15(%rdi)
 ; SSE4-NEXT:  .LBB15_32: # %else30
-; SSE4-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm3[0]
+; SSE4-NEXT:    packuswb %xmm3, %xmm2
 ; SSE4-NEXT:    testl $65536, %eax # imm = 0x10000
 ; SSE4-NEXT:    jne .LBB15_33
 ; SSE4-NEXT:  # %bb.34: # %else32
@@ -5750,10 +5750,10 @@ define void @truncstore_v16i16_v16i8(<16 x i16> %x, <16 x i8>* %p, <16 x i8> %ma
 ; SSE4-LABEL: truncstore_v16i16_v16i8:
 ; SSE4:       # %bb.0:
 ; SSE4-NEXT:    pxor %xmm3, %xmm3
-; SSE4-NEXT:    movdqa {{.*#+}} xmm4 = <0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u>
-; SSE4-NEXT:    pshufb %xmm4, %xmm1
-; SSE4-NEXT:    pshufb %xmm4, %xmm0
-; SSE4-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE4-NEXT:    movdqa {{.*#+}} xmm4 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
+; SSE4-NEXT:    pand %xmm4, %xmm1
+; SSE4-NEXT:    pand %xmm4, %xmm0
+; SSE4-NEXT:    packuswb %xmm1, %xmm0
 ; SSE4-NEXT:    pcmpeqb %xmm2, %xmm3
 ; SSE4-NEXT:    pmovmskb %xmm3, %eax
 ; SSE4-NEXT:    xorl $65535, %eax # imm = 0xFFFF

@@ -116,6 +116,8 @@ bool AArch64::getArchFeatures(AArch64::ArchKind AK,
     Features.push_back("+v8.4a");
   if (AK == ArchKind::ARMV8_5A)
     Features.push_back("+v8.5a");
+  if (AK == AArch64::ArchKind::ARMV8_6A)
+    Features.push_back("+v8.6a");
 
   return AK != ArchKind::INVALID;
 }

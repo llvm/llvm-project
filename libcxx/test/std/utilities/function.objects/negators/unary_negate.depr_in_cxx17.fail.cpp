@@ -25,7 +25,7 @@ struct Predicate {
 };
 
 int main(int, char**) {
-    std::unary_negate<Predicate> f((Predicate())); // expected-error{{'unary_negate<Predicate>' is deprecated}}
+    std::unary_negate<Predicate> f((Predicate())); // expected-warning {{'unary_negate<Predicate>' is deprecated}}
     (void)f;
 
   return 0;

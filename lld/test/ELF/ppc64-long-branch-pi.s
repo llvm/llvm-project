@@ -30,10 +30,10 @@
 # RELOC-NEXT: }
 
 # CHECK:      <_start>:
-# CHECK-NEXT:     2000:       bl .+16
-# CHECK-NEXT:                 bl .+33554428
-# CHECK-NEXT:                 bl .+24
-# CHECK-NEXT:                 bl .+36
+# CHECK-NEXT:     2000:       bl 0x2010
+# CHECK-NEXT:                 bl 0x2002000
+# CHECK-NEXT:                 bl 0x2020
+# CHECK-NEXT:                 bl 0x2030
 
 ## &.branch_lt[0] - .TOC. = .branch_lt - (.got+0x8000) = -32752
 # CHECK:      <__long_branch_>:
@@ -65,9 +65,9 @@ bl .text_high+8   # Need a thunk
 bl .text_high+0xc # Need a thunk
 
 # CHECK:      <high_target>:
-# CHECK-NEXT:  2002000:   bl .-33554428
-# CHECK-NEXT:             bl .-33554432
-# CHECK-NEXT:             bl .+8
+# CHECK-NEXT:  2002000:   bl 0x2004
+# CHECK-NEXT:             bl 0x2004
+# CHECK-NEXT:             bl 0x2002010
 
 ## &.branch_lt[3] - .TOC. = .branch_lt - (.got+0x8000) = -32728
 # CHECK:      <__long_branch_>:

@@ -41,8 +41,8 @@
 // DISASM:      <bar>:
 // DISASM-NEXT:   2012d9:       retq
 // DISASM:      <_start>:
-// DISASM-NEXT:   2012da:       callq   65
-// DISASM-NEXT:   2012df:       callq   76
+// DISASM-NEXT:   2012da:       callq   0x201320
+// DISASM-NEXT:   2012df:       callq   0x201330
 // DISASM-NEXT:                 callq   {{.*}} <bar2@plt>
 // DISASM-NEXT:                 callq   {{.*}} <zed2@plt>
 // DISASM-EMPTY:
@@ -56,22 +56,22 @@
 // DISASM-NEXT:   <bar2@plt>:
 // DISASM-NEXT:   201300:       jmpq    *8514(%rip)
 // DISASM-NEXT:   201306:       pushq   $0
-// DISASM-NEXT:   20130b:       jmp     -32 <.plt>
+// DISASM-NEXT:   20130b:       jmp     0x2012f0 <.plt>
 // DISASM-EMPTY:
 // DISASM-NEXT:   <zed2@plt>:
 // DISASM-NEXT:   201310:       jmpq    *8506(%rip)
 // DISASM-NEXT:   201316:       pushq   $1
-// DISASM-NEXT:   20131b:       jmp     -48 <.plt>
+// DISASM-NEXT:   20131b:       jmp     0x2012f0 <.plt>
 // DISASM-EMPTY:
 // DISASM-NEXT: Disassembly of section .iplt:
 // DISASM-EMPTY:
 // DISASM-NEXT: <.iplt>:
 // DISASM-NEXT:   201320:       jmpq    *8498(%rip)
 // DISASM-NEXT:   201326:       pushq   $0
-// DISASM-NEXT:   20132b:       jmp     -64 <.plt>
+// DISASM-NEXT:   20132b:       jmp     0x2012f0 <.plt>
 // DISASM-NEXT:   201330:       jmpq    *8490(%rip)
 // DISASM-NEXT:   201336:       pushq   $1
-// DISASM-NEXT:   20133b:       jmp     -80 <.plt>
+// DISASM-NEXT:   20133b:       jmp     0x2012f0 <.plt>
 
 .text
 .type foo STT_GNU_IFUNC

@@ -59,7 +59,7 @@
 ; TEXT-01-EMPTY:
 ; TEXT-01-NEXT: <.text>:
 ; TEXT-01-NEXT: subq	$40, %rsp
-; TEXT-01-NEXT: callq	23
+; TEXT-01-NEXT: callq	0x140001020
 ; TEXT-01-NEXT: xorl	%eax, %eax
 ; TEXT-01-NEXT: addq	$40, %rsp
 ; TEXT-01-NEXT: retq
@@ -118,7 +118,7 @@
 ; TEXT-10-NEXT: int3
 ; TEXT-10-NEXT: int3
 ; TEXT-10-NEXT: subq	$40, %rsp
-; TEXT-10-NEXT: callq	-41
+; TEXT-10-NEXT: callq	0x140001000
 ; TEXT-10-NEXT: xorl	%eax, %eax
 ; TEXT-10-NEXT: addq	$40, %rsp
 ; TEXT-10-NEXT: retq

@@ -1969,36 +1969,20 @@ define <16 x i8> @shuffle_v16i8_02_03_04_05_06_07_00_01_10_11_12_13_14_15_08_09(
 }
 
 define <16 x i8> @PR12412(<16 x i8> %inval1, <16 x i8> %inval2) {
-; SSE2-LABEL: PR12412:
-; SSE2:       # %bb.0: # %entry
-; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
-; SSE2-NEXT:    pand %xmm2, %xmm1
-; SSE2-NEXT:    pand %xmm2, %xmm0
-; SSE2-NEXT:    packuswb %xmm1, %xmm0
-; SSE2-NEXT:    retq
-;
-; SSSE3-LABEL: PR12412:
-; SSSE3:       # %bb.0: # %entry
-; SSSE3-NEXT:    movdqa {{.*#+}} xmm2 = <0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u>
-; SSSE3-NEXT:    pshufb %xmm2, %xmm1
-; SSSE3-NEXT:    pshufb %xmm2, %xmm0
-; SSSE3-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; SSSE3-NEXT:    retq
-;
-; SSE41-LABEL: PR12412:
-; SSE41:       # %bb.0: # %entry
-; SSE41-NEXT:    movdqa {{.*#+}} xmm2 = <0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u>
-; SSE41-NEXT:    pshufb %xmm2, %xmm1
-; SSE41-NEXT:    pshufb %xmm2, %xmm0
-; SSE41-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; SSE41-NEXT:    retq
+; SSE-LABEL: PR12412:
+; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
+; SSE-NEXT:    pand %xmm2, %xmm1
+; SSE-NEXT:    pand %xmm2, %xmm0
+; SSE-NEXT:    packuswb %xmm1, %xmm0
+; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: PR12412:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = <0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u>
-; AVX1-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
-; AVX1-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
-; AVX1-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
+; AVX1-NEXT:    vpand %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpand %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: PR12412:

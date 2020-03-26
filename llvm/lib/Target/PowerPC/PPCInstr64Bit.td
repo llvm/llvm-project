@@ -1127,7 +1127,7 @@ def ADDISgotTprelHA: PPCEmitTimePseudo<(outs g8rc:$rD), (ins g8rc_nox0:$reg, s16
                            (PPCaddisGotTprelHA i64:$reg,
                                                tglobaltlsaddr:$disp))]>,
                   isPPC64;
-def LDgotTprelL: PPCEmitTimePseudo<(outs g8rc:$rD), (ins s16imm64:$disp, g8rc_nox0:$reg),
+def LDgotTprelL: PPCEmitTimePseudo<(outs g8rc_nox0:$rD), (ins s16imm64:$disp, g8rc_nox0:$reg),
                         "#LDgotTprelL",
                         [(set i64:$rD,
                           (PPCldGotTprelL tglobaltlsaddr:$disp, i64:$reg))]>,

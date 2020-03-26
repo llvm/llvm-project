@@ -1197,6 +1197,18 @@ multiclass sve_prefetch<SDPatternOperator prefetch, ValueType PredTy, Instructio
   defm FRECPX_ZPmZ : sve_fp_2op_p_zd_HSD<0b01100, "frecpx", int_aarch64_sve_frecpx>;
   defm FSQRT_ZPmZ  : sve_fp_2op_p_zd_HSD<0b01101, "fsqrt",  int_aarch64_sve_fsqrt>;
 
+  let Predicates = [HasBF16, HasSVE] in {
+    def BFDOT_ZZZ    : sve_bfloat_dot<"bfdot">;
+    def BFDOT_ZZI    : sve_bfloat_dot_indexed<"bfdot">;
+    def BFMMLA_ZZZ  : sve_bfloat_matmul<"bfmmla">;
+    def BFMMLA_B_ZZZ  : sve_bfloat_matmul_longvecl<0b0, "bfmlalb">;
+    def BFMMLA_T_ZZZ  : sve_bfloat_matmul_longvecl<0b1, "bfmlalt">;
+    def BFMMLA_B_ZZI  : sve_bfloat_matmul_longvecl_idx<0b0, "bfmlalb">;
+    def BFMMLA_T_ZZI  : sve_bfloat_matmul_longvecl_idx<0b1, "bfmlalt">;
+    def BFCVT_ZPmZ   : sve_bfloat_convert<0b1, "bfcvt">;
+    def BFCVTNT_ZPmZ : sve_bfloat_convert<0b0, "bfcvtnt">;
+  }
+
   // InstAliases
   def : InstAlias<"mov $Zd, $Zn",
                   (ORR_ZZZ ZPR64:$Zd, ZPR64:$Zn, ZPR64:$Zn), 1>;

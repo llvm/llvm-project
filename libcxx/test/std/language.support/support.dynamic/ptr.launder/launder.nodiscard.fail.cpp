@@ -23,7 +23,7 @@
 int main(int, char**)
 {
     int *p = nullptr;
-    std::launder(p);  // expected-error {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::launder(p); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 
     return 0;
 }

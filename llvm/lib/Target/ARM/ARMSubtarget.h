@@ -108,6 +108,7 @@ protected:
     ARMv83a,
     ARMv84a,
     ARMv85a,
+    ARMv86a,
     ARMv8a,
     ARMv8mBaseline,
     ARMv8mMainline,
@@ -157,6 +158,7 @@ protected:
   bool HasV8_3aOps = false;
   bool HasV8_4aOps = false;
   bool HasV8_5aOps = false;
+  bool HasV8_6aOps = false;
   bool HasV8MBaselineOps = false;
   bool HasV8MMainlineOps = false;
   bool HasV8_1MMainlineOps = false;
@@ -254,6 +256,9 @@ protected:
 
   /// HasFP16FML - True if subtarget supports half-precision FP fml operations
   bool HasFP16FML = false;
+
+  /// HasBF16 - True if subtarget supports BFloat16 floating point operations
+  bool HasBF16 = false;
 
   /// HasD32 - True if subtarget has the full 32 double precision
   /// FP registers for VFPv3.
@@ -581,6 +586,7 @@ public:
   bool hasV8_3aOps() const { return HasV8_3aOps; }
   bool hasV8_4aOps() const { return HasV8_4aOps; }
   bool hasV8_5aOps() const { return HasV8_5aOps; }
+  bool hasV8_6aOps() const { return HasV8_6aOps; }
   bool hasV8MBaselineOps() const { return HasV8MBaselineOps; }
   bool hasV8MMainlineOps() const { return HasV8MMainlineOps; }
   bool hasV8_1MMainlineOps() const { return HasV8_1MMainlineOps; }

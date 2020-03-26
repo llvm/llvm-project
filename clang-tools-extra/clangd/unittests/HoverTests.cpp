@@ -1567,7 +1567,7 @@ TEST(Hover, All) {
             HI.Kind = index::SymbolKind::Variable;
             HI.NamespaceScope = "";
             HI.Name = "foo";
-            HI.Type = "cls<cls<cls<int> > >";
+            HI.Type = "cls<cls<cls<int>>>";
             HI.Value = "{}";
           }},
       {
@@ -1579,7 +1579,7 @@ TEST(Hover, All) {
             HI.Definition = "template <> struct cls<cls<cls<int>>> {}";
             HI.Kind = index::SymbolKind::Struct;
             HI.NamespaceScope = "";
-            HI.Name = "cls<cls<cls<int> > >";
+            HI.Name = "cls<cls<cls<int>>>";
             HI.Documentation = "type of nested templates.";
           }},
       {

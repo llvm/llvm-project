@@ -16,12 +16,12 @@
 # SEC: There are no relocations in this file.
 
 # CHECK:      <_start>:
-# CHECK-NEXT:     2000: bl .+24
-# CHECK-NEXT:           bl .+20
-# CHECK-NEXT:           bl .+16
-# CHECK-NEXT:           bl .+33554428
-# PD-NEXT:              bl .+24
-# PI-NEXT:              bl .+40
+# CHECK-NEXT:     2000: bl 0x2018
+# CHECK-NEXT:           bl 0x2018
+# CHECK-NEXT:           bl 0x2018
+# CHECK-NEXT:           bl 0x2002008
+# PD-NEXT:              bl 0x2028
+# PI-NEXT:              bl 0x2038
 
 ## high = 0x02002008 = 65536*512+8200
 # PD:         <__LongThunk_high>:
@@ -70,8 +70,8 @@ bl .text_high+16  # Need a thunk
 blr
 
 # PD:         02002008 <high>:
-# PD-NEXT:              bl .-33554432
-# PD-NEXT:              bl .+4
+# PD-NEXT:              bl 0x2008
+# PD-NEXT:              bl 0x2002010
 # PD:         <__LongThunk_>:
 # PD-NEXT:     2002010: lis 12, 0
 # PD-NEXT:              addi 12, 12, 8200

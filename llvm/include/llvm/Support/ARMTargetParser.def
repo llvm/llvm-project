@@ -112,6 +112,11 @@ ARM_ARCH("armv8.5-a", ARMV8_5A, "8.5-A", "v8.5a",
          (ARM::AEK_SEC | ARM::AEK_MP | ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
           ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP | ARM::AEK_CRC | ARM::AEK_RAS |
           ARM::AEK_DOTPROD))
+ARM_ARCH("armv8.6-a", ARMV8_6A, "8.6-A", "v8.6a",
+         ARMBuildAttrs::CPUArch::v8_A, FK_CRYPTO_NEON_FP_ARMV8,
+         (ARM::AEK_SEC        | ARM::AEK_MP   | ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
+          ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP  | ARM::AEK_CRC  | ARM::AEK_RAS |
+          ARM::AEK_DOTPROD    | ARM::AEK_BF16 | ARM::AEK_SHA2 | ARM::AEK_AES))
 ARM_ARCH("armv8-r", ARMV8R, "8-R", "v8r", ARMBuildAttrs::CPUArch::v8_R,
           FK_NEON_FP_ARMV8,
           (ARM::AEK_MP | ARM::AEK_VIRT | ARM::AEK_HWDIVARM | ARM::AEK_HWDIVTHUMB |
@@ -164,6 +169,7 @@ ARM_ARCH_EXT_NAME("iwmmxt2",  ARM::AEK_IWMMXT2,  nullptr,  nullptr)
 ARM_ARCH_EXT_NAME("maverick", ARM::AEK_MAVERICK, nullptr,  nullptr)
 ARM_ARCH_EXT_NAME("xscale",   ARM::AEK_XSCALE,   nullptr,  nullptr)
 ARM_ARCH_EXT_NAME("fp16fml",  ARM::AEK_FP16FML,  "+fp16fml", "-fp16fml")
+ARM_ARCH_EXT_NAME("bf16",     ARM::AEK_BF16,     "+bf16",    "-bf16")
 ARM_ARCH_EXT_NAME("sb",       ARM::AEK_SB,       "+sb",      "-sb")
 ARM_ARCH_EXT_NAME("lob",      ARM::AEK_LOB,      "+lob",   "-lob")
 ARM_ARCH_EXT_NAME("cdecp0",   ARM::AEK_CDECP0,   "+cdecp0",  "-cdecp0")

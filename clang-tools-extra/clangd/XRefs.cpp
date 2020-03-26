@@ -226,23 +226,21 @@ locateASTReferent(SourceLocation CurLoc, const syntax::Token *TouchedIdentifier,
   llvm::DenseMap<SymbolID, size_t> ResultIndex;
 
   auto AddResultDecl = [&](const NamedDecl *D) {
-    const NamedDecl *Def = getDefinition(D);
-    const NamedDecl *Preferred = Def ? Def : D;
-
-    auto Loc = makeLocation(AST.getASTContext(), nameLocation(*Preferred, SM),
-                            MainFilePath);
+    D = llvm::cast<NamedDecl>(D->getCanonicalDecl());
+    auto Loc =
+        makeLocation(AST.getASTContext(), nameLocation(*D, SM), MainFilePath);
     if (!Loc)
       return;
 
     Result.emplace_back();
-    Result.back().Name = printName(AST.getASTContext(), *Preferred);
+    Result.back().Name = printName(AST.getASTContext(), *D);
     Result.back().PreferredDeclaration = *Loc;
-    // Preferred is always a definition if possible, so this check works.
-    if (Def == Preferred)
-      Result.back().Definition = *Loc;
+    if (const NamedDecl *Def = getDefinition(D))
+      Result.back().Definition = makeLocation(
+          AST.getASTContext(), nameLocation(*Def, SM), MainFilePath);
 
     // Record SymbolID for index lookup later.
-    if (auto ID = getSymbolID(Preferred))
+    if (auto ID = getSymbolID(D))
       ResultIndex[*ID] = Result.size() - 1;
   };
 

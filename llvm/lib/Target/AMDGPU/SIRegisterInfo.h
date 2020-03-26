@@ -274,7 +274,7 @@ public:
 
   // \returns a DWORD offset of a \p SubReg
   unsigned getChannelFromSubReg(unsigned SubReg) const {
-    return SubReg ? alignTo(getSubRegIdxOffset(SubReg), 32) / 32 : 0;
+    return SubReg ? divideCeil(getSubRegIdxOffset(SubReg), 32) : 0;
   }
 
   // \returns a DWORD size of a \p SubReg

@@ -726,15 +726,14 @@ LogicalResult FlatAffineConstraints::addAffineForOpDomain(AffineForOp forOp) {
 // equality (isEq=true) or inequality (isEq=false) constraints.
 // Returns true and sets row found in search in 'rowIdx'.
 // Returns false otherwise.
-static bool
-findConstraintWithNonZeroAt(const FlatAffineConstraints &constraints,
-                            unsigned colIdx, bool isEq, unsigned *rowIdx) {
+static bool findConstraintWithNonZeroAt(const FlatAffineConstraints &cst,
+                                        unsigned colIdx, bool isEq,
+                                        unsigned *rowIdx) {
+  assert(colIdx < cst.getNumCols() && "position out of bounds");
   auto at = [&](unsigned rowIdx) -> int64_t {
-    return isEq ? constraints.atEq(rowIdx, colIdx)
-                : constraints.atIneq(rowIdx, colIdx);
+    return isEq ? cst.atEq(rowIdx, colIdx) : cst.atIneq(rowIdx, colIdx);
   };
-  unsigned e =
-      isEq ? constraints.getNumEqualities() : constraints.getNumInequalities();
+  unsigned e = isEq ? cst.getNumEqualities() : cst.getNumInequalities();
   for (*rowIdx = 0; *rowIdx < e; ++(*rowIdx)) {
     if (at(*rowIdx) != 0) {
       return true;
@@ -2191,13 +2190,16 @@ void FlatAffineConstraints::dump() const { print(llvm::errs()); }
 //  Uses a DenseSet to hash and detect duplicates followed by a linear scan to
 //  remove duplicates in place.
 void FlatAffineConstraints::removeTrivialRedundancy() {
-  SmallDenseSet<ArrayRef<int64_t>, 8> rowSet;
+  GCDTightenInequalities();
+  normalizeConstraintsByGCD();
 
   // A map used to detect redundancy stemming from constraints that only differ
   // in their constant term. The value stored is <row position, const term>
   // for a given row.
   SmallDenseMap<ArrayRef<int64_t>, std::pair<unsigned, int64_t>>
       rowsWithoutConstTerm;
+  // To unique rows.
+  SmallDenseSet<ArrayRef<int64_t>, 8> rowSet;
 
   // Check if constraint is of the form <non-negative-constant> >= 0.
   auto isTriviallyValid = [&](unsigned r) -> bool {
@@ -2689,4 +2691,90 @@ FlatAffineConstraints::unionBoundingBox(const FlatAffineConstraints &otherCst) {
   // shouldn't be discarding any other constraints on the symbols.
 
   return success();
+}
+
+/// Compute an explicit representation for local vars. For all systems coming
+/// from MLIR integer sets, maps, or expressions where local vars were
+/// introduced to model floordivs and mods, this always succeeds.
+static LogicalResult computeLocalVars(const FlatAffineConstraints &cst,
+                                      SmallVectorImpl<AffineExpr> &memo,
+                                      MLIRContext *context) {
+  unsigned numDims = cst.getNumDimIds();
+  unsigned numSyms = cst.getNumSymbolIds();
+
+  // Initialize dimensional and symbolic identifiers.
+  for (unsigned i = 0; i < numDims; i++)
+    memo[i] = getAffineDimExpr(i, context);
+  for (unsigned i = numDims, e = numDims + numSyms; i < e; i++)
+    memo[i] = getAffineSymbolExpr(i - numDims, context);
+
+  bool changed;
+  do {
+    // Each time `changed` is true at the end of this iteration, one or more
+    // local vars would have been detected as floordivs and set in memo; so the
+    // number of null entries in memo[...] strictly reduces; so this converges.
+    changed = false;
+    for (unsigned i = 0, e = cst.getNumLocalIds(); i < e; ++i)
+      if (!memo[numDims + numSyms + i] &&
+          detectAsFloorDiv(cst, /*pos=*/numDims + numSyms + i, context, memo))
+        changed = true;
+  } while (changed);
+
+  ArrayRef<AffineExpr> localExprs =
+      ArrayRef<AffineExpr>(memo).take_back(cst.getNumLocalIds());
+  return success(
+      llvm::all_of(localExprs, [](AffineExpr expr) { return expr; }));
+}
+
+/// Returns true if the pos^th column is all zero for both inequalities and
+/// equalities..
+static bool isColZero(const FlatAffineConstraints &cst, unsigned pos) {
+  unsigned rowPos;
+  return !findConstraintWithNonZeroAt(cst, pos, /*isEq=*/false, &rowPos) &&
+         !findConstraintWithNonZeroAt(cst, pos, /*isEq=*/true, &rowPos);
+}
+
+IntegerSet FlatAffineConstraints::getAsIntegerSet(MLIRContext *context) const {
+  if (getNumConstraints() == 0)
+    // Return universal set (always true): 0 == 0.
+    return IntegerSet::get(getNumDimIds(), getNumSymbolIds(),
+                           getAffineConstantExpr(/*constant=*/0, context),
+                           true);
+
+  // Construct local references.
+  SmallVector<AffineExpr, 8> memo(getNumIds(), AffineExpr());
+
+  if (failed(computeLocalVars(*this, memo, context))) {
+    // Check if the local variables without an explicit representation have
+    // zero coefficients everywhere.
+    for (unsigned i = getNumDimAndSymbolIds(), e = getNumIds(); i < e; ++i) {
+      if (!memo[i] && !isColZero(*this, /*pos=*/i)) {
+        LLVM_DEBUG(llvm::dbgs() << "one or more local exprs do not have an "
+                                   "explicit representation");
+        return IntegerSet();
+      }
+    }
+  }
+
+  ArrayRef<AffineExpr> localExprs =
+      ArrayRef<AffineExpr>(memo).take_back(getNumLocalIds());
+
+  // Construct the IntegerSet from the equalities/inequalities.
+  unsigned numDims = getNumDimIds();
+  unsigned numSyms = getNumSymbolIds();
+
+  SmallVector<bool, 16> eqFlags(getNumConstraints());
+  std::fill(eqFlags.begin(), eqFlags.begin() + getNumEqualities(), true);
+  std::fill(eqFlags.begin() + getNumEqualities(), eqFlags.end(), false);
+
+  SmallVector<AffineExpr, 8> exprs;
+  exprs.reserve(getNumConstraints());
+
+  for (unsigned i = 0, e = getNumEqualities(); i < e; ++i)
+    exprs.push_back(getAffineExprFromFlatForm(getEquality(i), numDims, numSyms,
+                                              localExprs, context));
+  for (unsigned i = 0, e = getNumInequalities(); i < e; ++i)
+    exprs.push_back(getAffineExprFromFlatForm(getInequality(i), numDims,
+                                              numSyms, localExprs, context));
+  return IntegerSet::get(numDims, numSyms, exprs, eqFlags);
 }

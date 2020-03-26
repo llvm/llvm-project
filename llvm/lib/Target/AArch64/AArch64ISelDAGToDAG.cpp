@@ -223,6 +223,9 @@ public:
   /// unchanged; otherwise a REG_SEQUENCE value is returned.
   SDValue createDTuple(ArrayRef<SDValue> Vecs);
   SDValue createQTuple(ArrayRef<SDValue> Vecs);
+  // Form a sequence of SVE registers for instructions using list of vectors,
+  // e.g. structured loads and stores (ldN, stN).
+  SDValue createZTuple(ArrayRef<SDValue> Vecs);
 
   /// Generic helper for the createDTuple/createQTuple
   /// functions. Those should almost always be called instead.
@@ -258,6 +261,7 @@ public:
   void SelectPostStore(SDNode *N, unsigned NumVecs, unsigned Opc);
   void SelectStoreLane(SDNode *N, unsigned NumVecs, unsigned Opc);
   void SelectPostStoreLane(SDNode *N, unsigned NumVecs, unsigned Opc);
+  void SelectPredicatedStore(SDNode *N, unsigned NumVecs, const unsigned Opc);
 
   bool tryBitfieldExtractOp(SDNode *N);
   bool tryBitfieldExtractOpFromSExt(SDNode *N);
@@ -1192,6 +1196,16 @@ SDValue AArch64DAGToDAGISel::createQTuple(ArrayRef<SDValue> Regs) {
   return createTuple(Regs, RegClassIDs, SubRegs);
 }
 
+SDValue AArch64DAGToDAGISel::createZTuple(ArrayRef<SDValue> Regs) {
+  static const unsigned RegClassIDs[] = {AArch64::ZPR2RegClassID,
+                                         AArch64::ZPR3RegClassID,
+                                         AArch64::ZPR4RegClassID};
+  static const unsigned SubRegs[] = {AArch64::zsub0, AArch64::zsub1,
+                                     AArch64::zsub2, AArch64::zsub3};
+
+  return createTuple(Regs, RegClassIDs, SubRegs);
+}
+
 SDValue AArch64DAGToDAGISel::createTuple(ArrayRef<SDValue> Regs,
                                          const unsigned RegClassIDs[],
                                          const unsigned SubRegs[]) {
@@ -1410,6 +1424,23 @@ void AArch64DAGToDAGISel::SelectStore(SDNode *N, unsigned NumVecs,
   // Transfer memoperands.
   MachineMemOperand *MemOp = cast<MemIntrinsicSDNode>(N)->getMemOperand();
   CurDAG->setNodeMemRefs(cast<MachineSDNode>(St), {MemOp});
+
+  ReplaceNode(N, St);
+}
+
+void AArch64DAGToDAGISel::SelectPredicatedStore(SDNode *N, unsigned NumVecs,
+                                                const unsigned Opc) {
+  SDLoc dl(N);
+
+  // Form a REG_SEQUENCE to force register allocation.
+  SmallVector<SDValue, 4> Regs(N->op_begin() + 2, N->op_begin() + 2 + NumVecs);
+  SDValue RegSeq = createZTuple(Regs);
+
+  SDValue Ops[] = {RegSeq, N->getOperand(NumVecs + 2),         // predicate
+                   N->getOperand(NumVecs + 3),                 // address
+                   CurDAG->getTargetConstant(0, dl, MVT::i64), // offset
+                   N->getOperand(0)};                          // chain
+  SDNode *St = CurDAG->getMachineNode(Opc, dl, N->getValueType(0), Ops);
 
   ReplaceNode(N, St);
 }
@@ -3873,6 +3904,54 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       } else if (VT == MVT::v2i64 || VT == MVT::v1i64 || VT == MVT::v2f64 ||
                  VT == MVT::v1f64) {
         SelectStoreLane(Node, 4, AArch64::ST4i64);
+        return;
+      }
+      break;
+    }
+    case Intrinsic::aarch64_sve_st2: {
+      if (VT == MVT::nxv16i8) {
+        SelectPredicatedStore(Node, 2, AArch64::ST2B_IMM);
+        return;
+      } else if (VT == MVT::nxv8i16 || VT == MVT::nxv8f16) {
+        SelectPredicatedStore(Node, 2, AArch64::ST2H_IMM);
+        return;
+      } else if (VT == MVT::nxv4i32 || VT == MVT::nxv4f32) {
+        SelectPredicatedStore(Node, 2, AArch64::ST2W_IMM);
+        return;
+      } else if (VT == MVT::nxv2i64 || VT == MVT::nxv2f64) {
+        SelectPredicatedStore(Node, 2, AArch64::ST2D_IMM);
+        return;
+      }
+      break;
+    }
+    case Intrinsic::aarch64_sve_st3: {
+      if (VT == MVT::nxv16i8) {
+        SelectPredicatedStore(Node, 3, AArch64::ST3B_IMM);
+        return;
+      } else if (VT == MVT::nxv8i16 || VT == MVT::nxv8f16) {
+        SelectPredicatedStore(Node, 3, AArch64::ST3H_IMM);
+        return;
+      } else if (VT == MVT::nxv4i32 || VT == MVT::nxv4f32) {
+        SelectPredicatedStore(Node, 3, AArch64::ST3W_IMM);
+        return;
+      } else if (VT == MVT::nxv2i64 || VT == MVT::nxv2f64) {
+        SelectPredicatedStore(Node, 3, AArch64::ST3D_IMM);
+        return;
+      }
+      break;
+    }
+    case Intrinsic::aarch64_sve_st4: {
+      if (VT == MVT::nxv16i8) {
+        SelectPredicatedStore(Node, 4, AArch64::ST4B_IMM);
+        return;
+      } else if (VT == MVT::nxv8i16 || VT == MVT::nxv8f16) {
+        SelectPredicatedStore(Node, 4, AArch64::ST4H_IMM);
+        return;
+      } else if (VT == MVT::nxv4i32 || VT == MVT::nxv4f32) {
+        SelectPredicatedStore(Node, 4, AArch64::ST4W_IMM);
+        return;
+      } else if (VT == MVT::nxv2i64 || VT == MVT::nxv2f64) {
+        SelectPredicatedStore(Node, 4, AArch64::ST4D_IMM);
         return;
       }
       break;

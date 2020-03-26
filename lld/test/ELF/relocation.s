@@ -93,7 +93,7 @@ lulz:
 // CHECK: Disassembly of section .text:
 // CHECK-EMPTY:
 // CHECK-NEXT: <_start>:
-// CHECK-NEXT:   201310:  e8 04 00 00 00   callq 4
+// CHECK-NEXT:   201310:  e8 04 00 00 00   callq 0x201319
 // CHECK-NEXT:   201315:
 
 // CHECK:      <lulz>:
@@ -132,7 +132,7 @@ R_X86_64_PC32:
 // CHECK:      Disassembly of section .R_X86_64_PC32:
 // CHECK-EMPTY:
 // CHECK-NEXT: <R_X86_64_PC32>:
-// CHECK-NEXT:  201327:   {{.*}}  callq  36
+// CHECK-NEXT:  201327:   {{.*}}  callq  0x201350
 // CHECK-NEXT:  20132c:   {{.*}}  movl $2102096, %eax
 
 .section .R_X86_64_32S_2,"ax",@progbits

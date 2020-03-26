@@ -17,6 +17,7 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/IR/IntegerSet.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -1006,4 +1007,18 @@ bool mlir::isLoopParallel(AffineForOp forOp) {
     }
   }
   return true;
+}
+
+IntegerSet mlir::simplifyIntegerSet(IntegerSet set) {
+  FlatAffineConstraints fac(set);
+  MLIRContext *context = set.getContext();
+  if (fac.isEmpty())
+    return IntegerSet::getEmptySet(set.getNumDims(), set.getNumSymbols(),
+                                   context);
+  fac.removeTrivialRedundancy();
+
+  auto simplifiedSet = fac.getAsIntegerSet(context);
+  assert(simplifiedSet && "guaranteed to succeed while roundtripping");
+
+  return simplifiedSet;
 }

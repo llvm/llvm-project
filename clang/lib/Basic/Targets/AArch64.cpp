@@ -151,6 +151,7 @@ void AArch64TargetInfo::fillValidCPUList(
 
 void AArch64TargetInfo::getTargetDefinesARMV81A(const LangOptions &Opts,
                                                 MacroBuilder &Builder) const {
+  // FIXME: Armv8.1 makes __ARM_FEATURE_CRC32 mandatory. Handle it here.
   Builder.defineMacro("__ARM_FEATURE_QRDMX", "1");
 }
 
@@ -171,17 +172,26 @@ void AArch64TargetInfo::getTargetDefinesARMV83A(const LangOptions &Opts,
 void AArch64TargetInfo::getTargetDefinesARMV84A(const LangOptions &Opts,
                                                 MacroBuilder &Builder) const {
   // Also include the Armv8.3 defines
-  // FIXME: Armv8.4 makes some extensions mandatory. Handle them here.
+  // FIXME: Armv8.4 makes __ARM_FEATURE_ATOMICS, defined in GCC, mandatory.
+  // Add and handle it here.
   getTargetDefinesARMV83A(Opts, Builder);
 }
 
 void AArch64TargetInfo::getTargetDefinesARMV85A(const LangOptions &Opts,
                                                 MacroBuilder &Builder) const {
   // Also include the Armv8.4 defines
-  // FIXME: Armv8.5 makes some extensions mandatory. Handle them here.
   getTargetDefinesARMV84A(Opts, Builder);
 }
 
+void AArch64TargetInfo::getTargetDefinesARMV86A(const LangOptions &Opts,
+                                                MacroBuilder &Builder) const {
+  // Also include the Armv8.5 defines
+  // FIXME: Armv8.6 makes the following extensions mandatory:
+  // - __ARM_FEATURE_BF16
+  // - __ARM_FEATURE_MATMUL_INT8
+  // Handle them here.
+  getTargetDefinesARMV85A(Opts, Builder);
+}
 
 void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
                                          MacroBuilder &Builder) const {
@@ -290,6 +300,9 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   case llvm::AArch64::ArchKind::ARMV8_5A:
     getTargetDefinesARMV85A(Opts, Builder);
     break;
+  case llvm::AArch64::ArchKind::ARMV8_6A:
+    getTargetDefinesARMV86A(Opts, Builder);
+    break;
   }
 
   // All of the __sync_(bool|val)_compare_and_swap_(1|2|4|8) builtins work.
@@ -344,6 +357,8 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       ArchKind = llvm::AArch64::ArchKind::ARMV8_4A;
     if (Feature == "+v8.5a")
       ArchKind = llvm::AArch64::ArchKind::ARMV8_5A;
+    if (Feature == "+v8.6a")
+      ArchKind = llvm::AArch64::ArchKind::ARMV8_6A;
     if (Feature == "+fullfp16")
       HasFullFP16 = true;
     if (Feature == "+dotprod")

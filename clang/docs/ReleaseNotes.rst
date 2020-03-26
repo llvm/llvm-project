@@ -111,7 +111,9 @@ New Pragmas in Clang
 Attribute Changes in Clang
 --------------------------
 
-- ...
+- Attributes can now be specified by clang plugins. See the
+  `Clang Plugins <ClangPlugins.html#defining-attributes>`_ documentation for
+  details.
 
 Windows Support
 ---------------

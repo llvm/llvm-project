@@ -36,6 +36,16 @@ using namespace mlir;
 using llvm::SetVector;
 using llvm::SmallMapVector;
 
+namespace {
+// This structure is to pass and return sets of loop parameters without
+// confusing the order.
+struct LoopParams {
+  Value lowerBound;
+  Value upperBound;
+  Value step;
+};
+} // namespace
+
 /// Computes the cleanup loop lower bound of the loop being unrolled with
 /// the specified unroll factor; this bound will also be upper bound of the main
 /// part of the unrolled loop. Computes the bound as an AffineMap with its
@@ -1094,69 +1104,78 @@ replaceAllUsesExcept(Value orig, Value replacement,
   }
 }
 
-// Transform a loop with a strictly positive step
-//   for %i = %lb to %ub step %s
-// into a 0-based loop with step 1
-//   for %ii = 0 to ceildiv(%ub - %lb, %s) step 1 {
-//     %i = %ii * %s + %lb
-// Insert the induction variable remapping in the body of `inner`, which is
-// expected to be either `loop` or another loop perfectly nested under `loop`.
-// Insert the definition of new bounds immediate before `outer`, which is
-// expected to be either `loop` or its parent in the loop nest.
-static void normalizeLoop(loop::ForOp loop, loop::ForOp outer,
-                          loop::ForOp inner) {
-  OpBuilder builder(outer);
-  Location loc = loop.getLoc();
-
+/// Return the new lower bound, upper bound, and step in that order. Insert any
+/// additional bounds calculations before the given builder and any additional
+/// conversion back to the original loop induction value inside the given Block.
+static LoopParams normalizeLoop(OpBuilder &boundsBuilder,
+                                OpBuilder &insideLoopBuilder, Location loc,
+                                Value lowerBound, Value upperBound, Value step,
+                                Value inductionVar) {
   // Check if the loop is already known to have a constant zero lower bound or
   // a constant one step.
   bool isZeroBased = false;
   if (auto ubCst =
-          dyn_cast_or_null<ConstantIndexOp>(loop.lowerBound().getDefiningOp()))
+          dyn_cast_or_null<ConstantIndexOp>(lowerBound.getDefiningOp()))
     isZeroBased = ubCst.getValue() == 0;
 
   bool isStepOne = false;
-  if (auto stepCst =
-          dyn_cast_or_null<ConstantIndexOp>(loop.step().getDefiningOp()))
+  if (auto stepCst = dyn_cast_or_null<ConstantIndexOp>(step.getDefiningOp()))
     isStepOne = stepCst.getValue() == 1;
 
-  if (isZeroBased && isStepOne)
-    return;
 
   // Compute the number of iterations the loop executes: ceildiv(ub - lb, step)
   // assuming the step is strictly positive.  Update the bounds and the step
   // of the loop to go from 0 to the number of iterations, if necessary.
   // TODO(zinenko): introduce support for negative steps or emit dynamic asserts
   // on step positivity, whatever gets implemented first.
-  Value diff =
-      builder.create<SubIOp>(loc, loop.upperBound(), loop.lowerBound());
-  Value numIterations = ceilDivPositive(builder, loc, diff, loop.step());
-  loop.setUpperBound(numIterations);
+  if (isZeroBased && isStepOne)
+    return {/*lowerBound=*/lowerBound, /*upperBound=*/upperBound,
+            /*step=*/step};
 
-  Value lb = loop.lowerBound();
-  if (!isZeroBased) {
-    Value cst0 = builder.create<ConstantIndexOp>(loc, 0);
-    loop.setLowerBound(cst0);
-  }
+  Value diff = boundsBuilder.create<SubIOp>(loc, upperBound, lowerBound);
+  Value newUpperBound = ceilDivPositive(boundsBuilder, loc, diff, step);
 
-  Value step = loop.step();
-  if (!isStepOne) {
-    Value cst1 = builder.create<ConstantIndexOp>(loc, 1);
-    loop.setStep(cst1);
-  }
+  Value newLowerBound =
+      isZeroBased ? lowerBound : boundsBuilder.create<ConstantIndexOp>(loc, 0);
+  Value newStep =
+      isStepOne ? step : boundsBuilder.create<ConstantIndexOp>(loc, 1);
 
   // Insert code computing the value of the original loop induction variable
   // from the "normalized" one.
-  builder.setInsertionPointToStart(inner.getBody());
   Value scaled =
-      isStepOne ? loop.getInductionVar()
-                : builder.create<MulIOp>(loc, loop.getInductionVar(), step);
+      isStepOne ? inductionVar
+                : insideLoopBuilder.create<MulIOp>(loc, inductionVar, step);
   Value shifted =
-      isZeroBased ? scaled : builder.create<AddIOp>(loc, scaled, lb);
+      isZeroBased ? scaled
+                  : insideLoopBuilder.create<AddIOp>(loc, scaled, lowerBound);
 
   SmallPtrSet<Operation *, 2> preserve{scaled.getDefiningOp(),
                                        shifted.getDefiningOp()};
-  replaceAllUsesExcept(loop.getInductionVar(), shifted, preserve);
+  replaceAllUsesExcept(inductionVar, shifted, preserve);
+  return {/*lowerBound=*/newLowerBound, /*upperBound=*/newUpperBound,
+          /*step=*/newStep};
+}
+
+/// Transform a loop with a strictly positive step
+///   for %i = %lb to %ub step %s
+/// into a 0-based loop with step 1
+///   for %ii = 0 to ceildiv(%ub - %lb, %s) step 1 {
+///     %i = %ii * %s + %lb
+/// Insert the induction variable remapping in the body of `inner`, which is
+/// expected to be either `loop` or another loop perfectly nested under `loop`.
+/// Insert the definition of new bounds immediate before `outer`, which is
+/// expected to be either `loop` or its parent in the loop nest.
+static void normalizeLoop(loop::ForOp loop, loop::ForOp outer,
+                          loop::ForOp inner) {
+  OpBuilder builder(outer);
+  OpBuilder innerBuilder(inner.getBody(), inner.getBody()->begin());
+  auto loopPieces =
+      normalizeLoop(builder, innerBuilder, loop.getLoc(), loop.lowerBound(),
+                    loop.upperBound(), loop.step(), loop.getInductionVar());
+
+  loop.setLowerBound(loopPieces.lowerBound);
+  loop.setUpperBound(loopPieces.upperBound);
+  loop.setStep(loopPieces.step);
 }
 
 void mlir::coalesceLoops(MutableArrayRef<loop::ForOp> loops) {
@@ -1212,6 +1231,86 @@ void mlir::coalesceLoops(MutableArrayRef<loop::ForOp> loops) {
       Block::iterator(second.getOperation()),
       innermost.getBody()->getOperations());
   second.erase();
+}
+
+void mlir::collapsePLoops(loop::ParallelOp loops,
+                          ArrayRef<std::vector<unsigned>> combinedDimensions) {
+  OpBuilder outsideBuilder(loops);
+  Location loc = loops.getLoc();
+
+  // Normalize ParallelOp's iteration pattern.
+  SmallVector<Value, 3> normalizedLowerBounds;
+  SmallVector<Value, 3> normalizedSteps;
+  SmallVector<Value, 3> normalizedUpperBounds;
+  for (unsigned i = 0, e = loops.getNumLoops(); i < e; ++i) {
+    OpBuilder insideLoopBuilder(loops.getBody(), loops.getBody()->begin());
+    auto resultBounds =
+        normalizeLoop(outsideBuilder, insideLoopBuilder, loc,
+                      loops.lowerBound()[i], loops.upperBound()[i],
+                      loops.step()[i], loops.getBody()->getArgument(i));
+
+    normalizedLowerBounds.push_back(resultBounds.lowerBound);
+    normalizedUpperBounds.push_back(resultBounds.upperBound);
+    normalizedSteps.push_back(resultBounds.step);
+  }
+
+  // Combine iteration spaces
+  SmallVector<Value, 3> lowerBounds;
+  SmallVector<Value, 3> steps;
+  SmallVector<Value, 3> upperBounds;
+  auto cst0 = outsideBuilder.create<ConstantIndexOp>(loc, 0);
+  auto cst1 = outsideBuilder.create<ConstantIndexOp>(loc, 1);
+  for (unsigned i = 0, e = combinedDimensions.size(); i < e; ++i) {
+    Value newUpperBound = outsideBuilder.create<ConstantIndexOp>(loc, 1);
+    for (auto idx : combinedDimensions[i]) {
+      newUpperBound = outsideBuilder.create<MulIOp>(loc, newUpperBound,
+                                                    normalizedUpperBounds[idx]);
+    }
+    lowerBounds.push_back(cst0);
+    steps.push_back(cst1);
+    upperBounds.push_back(newUpperBound);
+  }
+
+  // Create new ParallelLoop with conversions to the original induction values.
+  // The loop below uses divisions to get the relevant range of values in the
+  // new induction value that represent each range of the original induction
+  // value. The remainders then determine based on that range, which iteration
+  // of the original induction value this represents. This is a normalized value
+  // that is un-normalized already by the previous logic.
+  auto newPloop = outsideBuilder.create<loop::ParallelOp>(loc, lowerBounds,
+                                                          upperBounds, steps);
+  OpBuilder insideBuilder(newPloop.getBody(), newPloop.getBody()->begin());
+  for (unsigned i = 0, e = combinedDimensions.size(); i < e; ++i) {
+    Value previous = newPloop.getBody()->getArgument(i);
+    unsigned numberCombinedDimensions = combinedDimensions[i].size();
+    // Iterate over all except the last induction value.
+    for (unsigned j = 0, e = numberCombinedDimensions - 1; j < e; ++j) {
+      unsigned idx = combinedDimensions[i][j];
+
+      // Determine the current induction value's current loop iteration
+      Value iv = insideBuilder.create<SignedRemIOp>(loc, previous,
+                                                    normalizedUpperBounds[idx]);
+      replaceAllUsesInRegionWith(loops.getBody()->getArgument(idx), iv,
+                                 loops.region());
+
+      // Remove the effect of the current induction value to prepare for the
+      // next value.
+      previous = insideBuilder.create<SignedDivIOp>(
+          loc, previous, normalizedUpperBounds[idx + 1]);
+    }
+
+    // The final induction value is just the remaining value.
+    unsigned idx = combinedDimensions[i][numberCombinedDimensions - 1];
+    replaceAllUsesInRegionWith(loops.getBody()->getArgument(idx), previous,
+                               loops.region());
+  }
+
+  // Replace the old loop with the new loop.
+  loops.getBody()->back().erase();
+  newPloop.getBody()->getOperations().splice(
+      Block::iterator(newPloop.getBody()->back()),
+      loops.getBody()->getOperations());
+  loops.erase();
 }
 
 void mlir::mapLoopToProcessorIds(loop::ForOp forOp, ArrayRef<Value> processorId,

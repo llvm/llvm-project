@@ -11,6 +11,7 @@ add_mlir_library(MLIRTransforms
   LoopInvariantCodeMotion.cpp
   MemRefDataFlowOpt.cpp
   OpStats.cpp
+  ParallelLoopCollapsing.cpp
   PipelineDataTransfer.cpp
   StripDebugInfo.cpp
   SymbolDCE.cpp

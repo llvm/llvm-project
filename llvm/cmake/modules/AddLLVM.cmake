@@ -1031,7 +1031,7 @@ endfunction()
 
 # Export symbols if LLVM plugins are enabled.
 function(export_executable_symbols_for_plugins target)
-  if(LLVM_ENABLE_PLUGINS)
+  if(LLVM_ENABLE_PLUGINS OR LLVM_EXPORT_SYMBOLS_FOR_PLUGINS)
     export_executable_symbols(${target})
   endif()
 endfunction()

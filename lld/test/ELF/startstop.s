@@ -5,9 +5,9 @@
 // RUN: llvm-readobj --symbols -r %t.so | FileCheck -check-prefix=SYMBOL %s
 
 // DISASM: <_start>:
-// DISASM:    1330:       callq   10 <__start_foo>
-// DISASM:    1335:       callq   8 <__start_bar>
-// DISASM:    133a:       callq   3 <__start_bar>
+// DISASM:    1330:       callq   0x133f <__start_foo>
+// DISASM:    1335:       callq   0x1342 <__start_bar>
+// DISASM:    133a:       callq   0x1342 <__start_bar>
 // DISASM: Disassembly of section foo:
 // DISASM-EMPTY:
 // DISASM: <__start_foo>:

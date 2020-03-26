@@ -415,7 +415,7 @@ declare i32 @bar(i32)
 ; DIS-NEXT:        4: 90 01 00 08                   stw 0, 8(1)
 ; DIS-NEXT:        8: 94 21 ff c0                   stwu 1, -64(1)
 ; DIS-NEXT:        c: 38 60 00 01                   li 3, 1
-; DIS-NEXT:       10: 4b ff ff f1                   bl .-16
+; DIS-NEXT:       10: 4b ff ff f1                   bl 0x0
 ; DIS-NEXT:       14: 60 00 00 00                   nop
 ; DIS-NEXT:       18: 80 82 00 00                   lwz 4, 0(2)
 ; DIS-NEXT:       1c: 80 a2 00 04                   lwz 5, 4(2)

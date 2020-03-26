@@ -12,7 +12,7 @@
 // CHECK:        Disassembly of section .text:
 // CHECK-EMPTY:
 // CHECK-NEXT: <_start>:
-// CHECK-NEXT:      200:       jmp -1
+// CHECK-NEXT:      200:       jmp 0x202
 //              0x10202 - 0x203 == 0xffff
 
 // RUN: not ld.lld -Ttext 0x200 %t.o %t2.o -o /dev/null 2>&1 | FileCheck --check-prefix=ERR %s

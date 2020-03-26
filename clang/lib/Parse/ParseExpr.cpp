@@ -2102,8 +2102,14 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
                                             OpKind, SS, TemplateKWLoc, Name,
                                  CurParsedObjCImpl ? CurParsedObjCImpl->Dcl
                                                    : nullptr);
-      if (!LHS.isInvalid() && Tok.is(tok::less))
-        checkPotentialAngleBracket(LHS);
+      if (!LHS.isInvalid()) {
+        if (Tok.is(tok::less))
+          checkPotentialAngleBracket(LHS);
+      } else if (OrigLHS && Name.isValid()) {
+        // Preserve the LHS if the RHS is an invalid member.
+        LHS = Actions.CreateRecoveryExpr(OrigLHS->getBeginLoc(),
+                                         Name.getEndLoc(), {OrigLHS});
+      }
       break;
     }
     case tok::plusplus:    // postfix-expression: postfix-expression '++'

@@ -1195,9 +1195,7 @@ TEST(SignatureHelpTest, OpeningParen) {
     int foo(int a, int b, int c);
     int main() {
     #define ID(X) X
-      // FIXME: figure out why ID(foo (foo(10), )) doesn't work when preserving
-      // the recovery expression.
-      ID(foo $p^( 10, ^ ))
+      ID(foo $p^( foo(10), ^ ))
     })cpp"};
 
   for (auto Test : Tests) {
@@ -1860,6 +1858,7 @@ TEST(CompletionTest, RenderWithFixItNonMerged) {
 TEST(CompletionTest, CompletionTokenRange) {
   MockFSProvider FS;
   MockCompilationDatabase CDB;
+  FS.Files["foo/abc/foo.h"] = "";
   ClangdServer Server(CDB, FS, ClangdServer::optsForTest());
 
   constexpr const char *TestCodes[] = {
@@ -1882,7 +1881,14 @@ TEST(CompletionTest, CompletionTokenRange) {
           Auxilary x;
           x.[[]]^;
         }
-      )cpp"};
+      )cpp",
+      R"cpp(
+        #include "foo/[[a^/]]foo.h"
+      )cpp",
+      R"cpp(
+        #include "foo/abc/[[fo^o.h"]]
+      )cpp",
+      };
   for (const auto &Text : TestCodes) {
     Annotations TestCode(Text);
     auto Results = completions(Server, TestCode.code(), TestCode.point());

@@ -3,4 +3,4 @@
 
 # RUN: llvm-objdump -d %p/Inputs/hello.exe.macho-i386 | FileCheck %s
 
-# CHECK: 1f47:   e8 00 00 00 00  calll   0 <_main+0xc>
+# CHECK: 1f47:   e8 00 00 00 00  calll   0x1f4c <_main+0xc>

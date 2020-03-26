@@ -7786,6 +7786,110 @@ class BaseSIMDIndexedTied<bit Q, bit U, bit Scalar, bits<2> size, bits<4> opc,
   let Inst{4-0}   = Rd;
 }
 
+
+//----------------------------------------------------------------------------
+// Armv8.6 BFloat16 Extension
+//----------------------------------------------------------------------------
+let mayStore = 0, mayLoad = 0, hasSideEffects = 0 in {
+
+class BaseSIMDThreeSameVectorBFDot<bit Q, bit U, string asm, string kind1,
+                                   string kind2, RegisterOperand RegType,
+                                   ValueType AccumType, ValueType InputType>
+  : BaseSIMDThreeSameVectorTied<Q, U, 0b010, 0b11111, RegType, asm, kind1, []> {
+  let AsmString = !strconcat(asm,
+                             "{\t$Rd" # kind1 # ", $Rn" # kind2 #
+                               ", $Rm" # kind2 # "}");
+}
+
+multiclass SIMDThreeSameVectorBFDot<bit U, string asm> {
+  def v4f16 : BaseSIMDThreeSameVectorBFDot<0, U, asm, ".2s", ".4h", V64,
+                                           v2f32, v8i8>;
+  def v8f16 : BaseSIMDThreeSameVectorBFDot<1, U, asm, ".4s", ".8h", V128,
+                                           v4f32, v16i8>;
+}
+
+class BaseSIMDThreeSameVectorBF16DotI<bit Q, bit U, string asm,
+                                      string dst_kind, string lhs_kind,
+                                      string rhs_kind,
+                                      RegisterOperand RegType,
+                                      ValueType AccumType,
+                                      ValueType InputType>
+  : BaseSIMDIndexedTied<Q, U, 0b0, 0b01, 0b1111,
+                        RegType, RegType, V128, VectorIndexS,
+                        asm, "", dst_kind, lhs_kind, rhs_kind,
+        []> {
+
+  bits<2> idx;
+  let Inst{21}    = idx{0};  // L
+  let Inst{11}    = idx{1};  // H
+}
+
+multiclass SIMDThreeSameVectorBF16DotI<bit U, string asm> {
+
+  def v4f16  : BaseSIMDThreeSameVectorBF16DotI<0, U, asm, ".2s", ".4h",
+                                               ".2h", V64, v2f32, v8i8>;
+  def v8f16 : BaseSIMDThreeSameVectorBF16DotI<1, U, asm, ".4s", ".8h",
+                                              ".2h", V128, v4f32, v16i8>;
+}
+
+class SIMDBF16MLAL<bit Q, string asm>
+  : BaseSIMDThreeSameVectorTied<Q, 0b1, 0b110, 0b11111, V128, asm, ".4s",
+              []> { // TODO: Add intrinsics
+  let AsmString = !strconcat(asm, "{\t$Rd.4s, $Rn.8h, $Rm.8h}");
+}
+
+class SIMDBF16MLALIndex<bit Q, string asm>
+  : I<(outs V128:$dst),
+      (ins V128:$Rd, V128:$Rn, V128_lo:$Rm, VectorIndexH:$idx), asm,
+      "{\t$Rd.4s, $Rn.8h, $Rm.h$idx}", "$Rd = $dst",
+          []>, // TODO: Add intrinsics
+    Sched<[WriteV]> {
+  bits<5> Rd;
+  bits<5> Rn;
+  bits<4> Rm;
+  bits<3> idx;
+
+  let Inst{31}    = 0;
+  let Inst{30}    = Q;
+  let Inst{29-22} = 0b00111111;
+  let Inst{21-20} = idx{1-0};
+  let Inst{19-16} = Rm;
+  let Inst{15-12} = 0b1111;
+  let Inst{11}    = idx{2};   // H
+  let Inst{10}    = 0;
+  let Inst{9-5}   = Rn;
+  let Inst{4-0}   = Rd;
+}
+
+class SIMDThreeSameVectorBF16MatrixMul<string asm>
+  : BaseSIMDThreeSameVectorTied<1, 1, 0b010, 0b11101,
+                                V128, asm, ".4s",
+                          []> {
+  let AsmString = !strconcat(asm, "{\t$Rd", ".4s", ", $Rn", ".8h",
+                                    ", $Rm", ".8h", "}");
+}
+
+class SIMD_BFCVTN
+  : BaseSIMDMixedTwoVector<0, 0, 0b10, 0b10110, V128, V128,
+                           "bfcvtn", ".4h", ".4s",
+    []>;
+
+class SIMD_BFCVTN2
+  : BaseSIMDMixedTwoVectorTied<1, 0, 0b10, 0b10110, V128, V128,
+                           "bfcvtn2", ".8h", ".4s",
+    []>;
+
+class BF16ToSinglePrecision<string asm>
+  : I<(outs FPR16:$Rd), (ins FPR32:$Rn), asm, "\t$Rd, $Rn", "", []>,
+    Sched<[WriteFCvt]> {
+  bits<5> Rd;
+  bits<5> Rn;
+  let Inst{31-10} = 0b0001111001100011010000;
+  let Inst{9-5}   = Rn;
+  let Inst{4-0}   = Rd;
+}
+} // End of let mayStore = 0, mayLoad = 0, hasSideEffects = 0
+
 // ARMv8.2-A Dot Product Instructions (Indexed)
 class BaseSIMDThreeSameVectorDotIndex<bit Q, bit U, string asm, string dst_kind,
                                       string lhs_kind, string rhs_kind,

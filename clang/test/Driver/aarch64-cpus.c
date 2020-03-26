@@ -603,6 +603,39 @@
 // RUN: %clang -target aarch64 -march=armv8.5-a+fp16 -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV85A-FP16 %s
 // GENERICV85A-FP16: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "generic" "-target-feature" "+neon" "-target-feature" "+v8.5a" "-target-feature" "+fullfp16"
 
+// RUN: %clang -target aarch64 -march=armv8.6a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV86A %s
+// RUN: %clang -target aarch64 -march=armv8.6-a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV86A %s
+// RUN: %clang -target aarch64 -mlittle-endian -march=armv8.6a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV86A %s
+// RUN: %clang -target aarch64 -mlittle-endian -march=armv8.6-a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV86A %s
+// RUN: %clang -target aarch64_be -mlittle-endian -march=armv8.6a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV86A %s
+// RUN: %clang -target aarch64_be -mlittle-endian -march=armv8.6-a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV86A %s
+// GENERICV86A: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "generic" "-target-feature" "+neon" "-target-feature" "+v8.6a"
+
+// RUN: %clang -target aarch64_be -march=armv8.6a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV86A-BE %s
+// RUN: %clang -target aarch64_be -march=armv8.6-a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV86A-BE %s
+// RUN: %clang -target aarch64 -mbig-endian -march=armv8.6a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV86A-BE %s
+// RUN: %clang -target aarch64 -mbig-endian -march=armv8.6-a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV86A-BE %s
+// RUN: %clang -target aarch64_be -mbig-endian -march=armv8.6a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV86A-BE %s
+// RUN: %clang -target aarch64_be -mbig-endian -march=armv8.6-a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV86A-BE %s
+// GENERICV86A-BE: "-cc1"{{.*}} "-triple" "aarch64_be{{.*}}" "-target-cpu" "generic" "-target-feature" "+neon" "-target-feature" "+v8.6a"
+
+// The SVE extension is an optional extension for Armv8-A.
+// RUN: %clang -target aarch64 -march=armv8a+sve -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV8A-SVE %s
+// RUN: %clang -target aarch64 -march=armv8.6a+sve -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV8A-SVE %s
+// GENERICV8A-SVE: "-target-feature" "+sve"
+// RUN: %clang -target aarch64 -march=armv8a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV8A-NOSVE %s
+// RUN: %clang -target aarch64 -march=armv8.6a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV8A-NOSVE %s
+// GENERICV8A-NOSVE-NOT: "-target-feature" "+sve"
+
+// The BFloat16 extension is a mandatory component of the Armv8.6-A extensions, but is permitted as an
+// optional feature for any implementation of Armv8.2-A to Armv8.5-A (inclusive)
+// RUN: %clang -target aarch64 -march=armv8.5a+bf16 -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV85A-BF16 %s
+// GENERICV85A-BF16: "-target-feature" "+bf16"
+// RUN: %clang -target aarch64 -march=armv8.5a+bf16+nobf16 -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV85A-BF16-NO-BF16 %s
+// GENERICV85A-BF16-NO-BF16: "-target-feature" "-bf16"
+// RUN: %clang -target aarch64 -march=armv8.5a+bf16+sve -### -c %s 2>&1 | FileCheck -check-prefixes=GENERICV85A-BF16-SVE %s
+// GENERICV85A-BF16-SVE: "-target-feature" "+bf16" "-target-feature" "+sve"
+
 // fullfp16 is off by default for v8a, feature must not be mentioned
 // RUN: %clang -target aarch64 -march=armv8a  -### -c %s 2>&1 | FileCheck -check-prefix=V82ANOFP16 -check-prefix=GENERIC %s
 // RUN: %clang -target aarch64 -march=armv8-a -### -c %s 2>&1 | FileCheck -check-prefix=V82ANOFP16 -check-prefix=GENERIC %s

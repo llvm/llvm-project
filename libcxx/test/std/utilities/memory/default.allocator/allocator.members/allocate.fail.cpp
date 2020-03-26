@@ -23,7 +23,7 @@
 int main(int, char**)
 {
     std::allocator<int> a;
-    a.allocate(3);          // expected-error {{ignoring return value of function declared with 'nodiscard' attribute}}
+    a.allocate(3); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 
     return 0;
 }

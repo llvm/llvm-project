@@ -221,7 +221,12 @@ void IteratorRangeChecker::reportBug(const StringRef &Message, SVal Val,
                                      ExplodedNode *ErrNode) const {
   auto R = std::make_unique<PathSensitiveBugReport>(*OutOfRangeBugType, Message,
                                                     ErrNode);
+
+  const auto *Pos = getIteratorPosition(C.getState(), Val);
+  assert(Pos && "Iterator without known position cannot be out-of-range.");
+
   R->markInteresting(Val);
+  R->markInteresting(Pos->getContainer());
   C.emitReport(std::move(R));
 }
 

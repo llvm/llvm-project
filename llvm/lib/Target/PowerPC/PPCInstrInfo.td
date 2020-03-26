@@ -3213,7 +3213,7 @@ def PPC32GOT: PPCEmitTimePseudo<(outs gprc:$rD), (ins), "#PPC32GOT",
 def PPC32PICGOT: PPCEmitTimePseudo<(outs gprc:$rD, gprc:$rT), (ins), "#PPC32PICGOT", 
                 []>, NoEncode<"$rT">;
 
-def LDgotTprelL32: PPCEmitTimePseudo<(outs gprc:$rD), (ins s16imm:$disp, gprc_nor0:$reg),
+def LDgotTprelL32: PPCEmitTimePseudo<(outs gprc_nor0:$rD), (ins s16imm:$disp, gprc_nor0:$reg),
                            "#LDgotTprelL32",
                            [(set i32:$rD,
                              (PPCldGotTprelL tglobaltlsaddr:$disp, i32:$reg))]>;
@@ -4613,19 +4613,6 @@ def : InstAlias<"mfdccr $Rx", (MFSPR gprc:$Rx, 1018)>, Requires<[IsPPC4xx]>;
 
 def : InstAlias<"mticcr $Rx", (MTSPR 1019, gprc:$Rx)>, Requires<[IsPPC4xx]>;
 def : InstAlias<"mficcr $Rx", (MFSPR gprc:$Rx, 1019)>, Requires<[IsPPC4xx]>;
-
-def : InstAlias<"mtasr $RS", (MTSPR 280, gprc:$RS)>;
-
-def : InstAlias<"mfdec $RT", (MFSPR gprc:$RT, 22)>;
-def : InstAlias<"mtdec $RT", (MTSPR 22, gprc:$RT)>;
-
-def : InstAlias<"mfsdr1 $RT", (MFSPR gprc:$RT, 25)>;
-def : InstAlias<"mtsdr1 $RT", (MTSPR 25, gprc:$RT)>;
-
-def : InstAlias<"mfsrr0 $RT", (MFSPR gprc:$RT, 26)>;
-def : InstAlias<"mfsrr1 $RT", (MFSPR gprc:$RT, 27)>;
-def : InstAlias<"mtsrr0 $RT", (MTSPR 26, gprc:$RT)>;
-def : InstAlias<"mtsrr1 $RT", (MTSPR 27, gprc:$RT)>;
 
 
 def : InstAlias<"tlbie $RB", (TLBIE R0, gprc:$RB)>;
