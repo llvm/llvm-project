@@ -309,16 +309,6 @@ struct MemorySection : Section {
   std::vector<Limits> Memories;
 };
 
-struct GlobalSection : Section {
-  GlobalSection() : Section(wasm::WASM_SEC_GLOBAL) {}
-
-  static bool classof(const Section *S) {
-    return S->Type == wasm::WASM_SEC_GLOBAL;
-  }
-
-  std::vector<Global> Globals;
-};
-
 struct EventSection : Section {
   EventSection() : Section(wasm::WASM_SEC_EVENT) {}
 
@@ -327,6 +317,16 @@ struct EventSection : Section {
   }
 
   std::vector<Event> Events;
+};
+
+struct GlobalSection : Section {
+  GlobalSection() : Section(wasm::WASM_SEC_GLOBAL) {}
+
+  static bool classof(const Section *S) {
+    return S->Type == wasm::WASM_SEC_GLOBAL;
+  }
+
+  std::vector<Global> Globals;
 };
 
 struct ExportSection : Section {
