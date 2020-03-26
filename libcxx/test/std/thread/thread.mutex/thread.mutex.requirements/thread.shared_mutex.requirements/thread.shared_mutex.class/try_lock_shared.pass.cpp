@@ -9,7 +9,7 @@
 // UNSUPPORTED: libcpp-has-no-threads
 // UNSUPPORTED: c++98, c++03, c++11, c++14
 
-// FLAKY_TEST.
+// ALLOW_RETRIES: 2
 
 // <shared_mutex>
 
