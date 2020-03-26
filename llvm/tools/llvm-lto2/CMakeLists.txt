@@ -21,3 +21,4 @@ add_llvm_tool(llvm-lto2
   DEPENDS
   intrinsics_gen
   )
+export_executable_symbols_for_plugins(llvm-lto2)

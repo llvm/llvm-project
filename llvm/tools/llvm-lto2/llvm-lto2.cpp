@@ -20,9 +20,11 @@
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/LTO/Caching.h"
 #include "llvm/LTO/LTO.h"
+#include "llvm/Passes/PassPlugin.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/PluginLoader.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/Threading.h"
 
@@ -142,6 +144,10 @@ static cl::opt<bool>
 static cl::opt<std::string>
     StatsFile("stats-file", cl::desc("Filename to write statistics to"));
 
+static cl::list<std::string>
+    PassPlugins("load-pass-plugin",
+                cl::desc("Load passes from plugin library"));
+
 static void check(Error E, std::string Msg) {
   if (!E)
     return;
@@ -252,6 +258,8 @@ static int run(int argc, char **argv) {
 
   Conf.OptLevel = OptLevel - '0';
   Conf.UseNewPM = UseNewPM;
+  for (auto &PluginFN : PassPlugins)
+    Conf.PassPlugins.push_back(PluginFN);
   switch (CGOptLevel) {
   case '0':
     Conf.CGOptLevel = CodeGenOpt::None;
