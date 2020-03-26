@@ -8725,6 +8725,7 @@ CXSourceRangeList *clang_getSkippedRanges(CXTranslationUnit TU, CXFile file) {
   SourceManager &sm = Ctx.getSourceManager();
   FileEntry *fileEntry = static_cast<FileEntry *>(file);
   FileID wantedFileID = sm.translateFile(fileEntry);
+  bool isMainFile = wantedFileID == sm.getMainFileID();
 
   const std::vector<SourceRange> &SkippedRanges = ppRec->getSkippedRanges();
   std::vector<SourceRange> wantedRanges;
