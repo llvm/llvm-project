@@ -400,3 +400,77 @@ namespace swizzle_typo_correction {
     return A.xyzw < B.x && B.y > A.y; // OK, not a typo for 'xyzv'
   }
 }
+
+namespace PR45299 {
+typedef float float4 __attribute__((vector_size(16)));
+
+// In this example, 'k' is value dependent. PR45299 reported that this asserted
+// because of that, since the truncation check attempted to constant evaluate k,
+// which it could not do because it is dependent.
+template <typename T>
+struct NormalMember {
+  float4 f(float4 x) {
+    return k * x;
+  }
+  float k;
+};
+
+#if __cplusplus >= 201103L
+// This should not diagnose, since the constant evaluator (during instantiation)
+// can tell that this isn't a truncation.
+template <typename T>
+struct ConstantValueNoDiag {
+  float4 f(float4 x) {
+    return k * x;
+  }
+  static constexpr double k = 1;
+};
+
+// The following two both diagnose because they cause a truncation.  Test both
+// the dependent type and non-dependent type versions.
+template <typename T>
+struct DiagTrunc {
+  float4 f(float4 x) {
+    // expected-error@+1{{as implicit conversion would cause truncation}}
+    return k * x;
+  }
+  static constexpr double k = 1340282346638528859811704183484516925443.000000;
+};
+template <typename T>
+struct DiagTruncDependentType {
+  float4 f(float4 x) {
+    // expected-error@+1{{as implicit conversion would cause truncation}}
+    return k * x;
+  }
+  static constexpr T k = 1340282346638528859811704183484516925443.000000;
+};
+
+template <typename T>
+struct PR45298 {
+    T k1 = T(0);
+};
+
+// Ensure this no longer asserts.
+template <typename T>
+struct PR45298Consumer {
+  float4 f(float4 x) {
+    return (float)s.k1 * x;
+  }
+
+  PR45298<T> s;
+};
+#endif // __cplusplus >= 201103L
+
+void use() {
+  float4 theFloat4;
+  NormalMember<double>().f(theFloat4);
+#if __cplusplus >= 201103L
+  ConstantValueNoDiag<double>().f(theFloat4);
+  // expected-note@+1{{in instantiation of member function}}
+  DiagTrunc<double>().f(theFloat4);
+  // expected-note@+1{{in instantiation of member function}}
+  DiagTruncDependentType<double>().f(theFloat4);
+  PR45298Consumer<double>().f(theFloat4);
+#endif // __cplusplus >= 201103L
+}
+}

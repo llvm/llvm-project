@@ -28,8 +28,8 @@ namespace lldb_vscode {
 VSCode g_vsc;
 
 VSCode::VSCode()
-    : launch_info(nullptr), variables(), broadcaster("lldb-vscode"),
-      num_regs(0), num_locals(0), num_globals(0), log(),
+    : variables(), broadcaster("lldb-vscode"), num_regs(0), num_locals(0),
+      num_globals(0), log(),
       exception_breakpoints(
           {{"cpp_catch", "C++ Catch", lldb::eLanguageTypeC_plus_plus},
            {"cpp_throw", "C++ Throw", lldb::eLanguageTypeC_plus_plus},

@@ -182,6 +182,8 @@ public:
       StringRef Name,
       llvm::SmallVectorImpl<StringRef> &Features) const override;
 
+  Optional<unsigned> getCPUCacheLineSize() const override;
+
   bool validateAsmConstraint(const char *&Name,
                              TargetInfo::ConstraintInfo &info) const override;
 

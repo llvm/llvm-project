@@ -37,10 +37,10 @@
 // DISASM:      <bar>:
 // DISASM-NEXT:    4011b5:       retl
 // DISASM:      <_start>:
-// DISASM-NEXT:    4011b6:       calll   69 <zed2+0x401200>
-// DISASM-NEXT:                  calll   80 <zed2+0x401210>
-// DISASM-NEXT:                  calll   27 <bar2@plt>
-// DISASM-NEXT:                  calll   38 <zed2@plt>
+// DISASM-NEXT:    4011b6:       calll   0x401200 <zed2+0x401200>
+// DISASM-NEXT:                  calll   0x401210 <zed2+0x401210>
+// DISASM-NEXT:                  calll   0x4011e0 <bar2@plt>
+// DISASM-NEXT:                  calll   0x4011f0 <zed2@plt>
 // DISASM-EMPTY:
 // DISASM-NEXT: Disassembly of section .plt:
 // DISASM-EMPTY:
@@ -55,22 +55,22 @@
 // DISASM-NEXT:   <bar2@plt>:
 // DISASM-NEXT:    4011e0:       jmpl    *4207268
 // DISASM-NEXT:                  pushl   $0
-// DISASM-NEXT:                  jmp     -32 <.plt>
+// DISASM-NEXT:                  jmp     0x4011d0 <.plt>
 // DISASM-EMPTY:
 // DISASM-NEXT:   <zed2@plt>:
 // DISASM-NEXT:    4011f0:       jmpl    *4207272
 // DISASM-NEXT:                  pushl   $8
-// DISASM-NEXT:                  jmp     -48 <.plt>
+// DISASM-NEXT:                  jmp     0x4011d0 <.plt>
 // DISASM-EMPTY:
 // DISASM-NEXT: Disassembly of section .iplt:
 // DISASM-EMPTY:
 // DISASM-NEXT: <.iplt>:
 // DISASM-NEXT:                  jmpl    *4207276
 // DISASM-NEXT:                  pushl   $0
-// DISASM-NEXT:                  jmp     -64 <.plt>
+// DISASM-NEXT:                  jmp     0x4011d0 <.plt>
 // DISASM-NEXT:                  jmpl    *4207280
 // DISASM-NEXT:                  pushl   $8
-// DISASM-NEXT:                  jmp     -80 <.plt>
+// DISASM-NEXT:                  jmp     0x4011d0 <.plt>
 
 .text
 .type foo STT_GNU_IFUNC

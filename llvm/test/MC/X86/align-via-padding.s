@@ -35,12 +35,12 @@ foo:
   # fewer nops by relaxing the branch, even though we don't need to
   # CHECK: <loop_preheader>:
   # CHECK: 45: 48 85 c0                       testq %rax, %rax
-  # CHECK: 48: 2e 2e 2e 2e 0f 8e 1e 00 00 00  jle 30 <loop_exit>
+  # CHECK: 48: 2e 2e 2e 2e 0f 8e 1e 00 00 00  jle 0x70 <loop_exit>
   # CHECK: 52: 66 66 66 66 66 2e 0f 1f 84 00 00 00 00 00    	nopw	%cs:(%rax,%rax)
   # CHECK: <loop_header>:
   # CHECK: 60: 48 83 e8 01                    subq $1, %rax
   # CHECK: 64: 48 85 c0                       testq %rax, %rax
-  # CHECK: 67: 7e 07                          jle 7 <loop_exit>
+  # CHECK: 67: 7e 07                          jle 0x70 <loop_exit>
   # CHECK: 69: 2e 2e e9 f0 ff ff ff           jmp
   # CHECK: <loop_exit>:
   # CHECK: 70: c3                             retq
@@ -62,7 +62,7 @@ loop_exit:
   # Correctness cornercase - can't prefix pad jmp without having relaxed it
   # first as doing so would make the relative offset too large
   # CHECK: fd: cc                             int3
-  # CHECK: fe: eb 80                          jmp -128 <loop_exit+0x10>
+  # CHECK: fe: eb 80                          jmp 0x80 <loop_exit+0x10>
   # CHECK: 100: cc                           	int3
 .p2align 5
 .L1:

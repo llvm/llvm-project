@@ -365,6 +365,9 @@ def FeatureTaggedGlobals : SubtargetFeature<"tagged-globals",
     "true", "Use an instruction sequence for taking the address of a global "
     "that allows a memory tag in the upper address bits">;
 
+def FeatureBF16 : SubtargetFeature<"bf16", "HasBF16",
+    "true", "Enable BFloat16 Extension" >;
+
 //===----------------------------------------------------------------------===//
 // Architectures.
 //
@@ -391,8 +394,11 @@ def HasV8_5aOps : SubtargetFeature<
   "v8.5a", "HasV8_5aOps", "true", "Support ARM v8.5a instructions",
   [HasV8_4aOps, FeatureAltFPCmp, FeatureFRInt3264, FeatureSpecRestrict,
    FeatureSSBS, FeatureSB, FeaturePredRes, FeatureCacheDeepPersist,
-   FeatureBranchTargetId]
->;
+   FeatureBranchTargetId]>;
+
+def HasV8_6aOps : SubtargetFeature<
+  "v8.6a", "HasV8_6aOps", "true", "Support ARM v8.6a instructions",
+  [HasV8_5aOps, FeatureBF16]>;
 
 //===----------------------------------------------------------------------===//
 // Register File Description

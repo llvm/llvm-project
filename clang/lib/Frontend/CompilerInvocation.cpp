@@ -2909,7 +2909,7 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   if (Args.hasArg(OPT_fconcepts_ts))
     Diags.Report(diag::warn_fe_concepts_ts_flag);
   Opts.RecoveryAST =
-      Args.hasFlag(OPT_frecovery_ast, OPT_fno_recovery_ast, Opts.CPlusPlus);
+      Args.hasFlag(OPT_frecovery_ast, OPT_fno_recovery_ast, false);
   Opts.HeinousExtensions = Args.hasArg(OPT_fheinous_gnu_extensions);
   Opts.AccessControl = !Args.hasArg(OPT_fno_access_control);
   Opts.ElideConstructors = !Args.hasArg(OPT_fno_elide_constructors);

@@ -3,13 +3,13 @@
 # RUN: llvm-mc -filetype=obj -triple=powerpc64le-unknown-linux %s -o %t1.o
 # RUN: llvm-mc -filetype=obj -triple=powerpc64le-unknown-linux %p/Inputs/ppc64-bsymbolic-local-def.s  -o %t2.o
 # RUN: ld.lld -Bsymbolic -shared %t1.o %t2.o -o %t
-# RUN: llvm-objdump -d -r %t | FileCheck %s
+# RUN: llvm-objdump -d -r --no-show-raw-insn %t | FileCheck %s
 # RUN: not ld.lld -shared %t1.o %t2.o -o /dev/null 2>&1 | FileCheck --check-prefix=FAIL %s
 
 # RUN: llvm-mc -filetype=obj -triple=powerpc64-unknown-linux %s -o %t1.o
 # RUN: llvm-mc -filetype=obj -triple=powerpc64-unknown-linux %p/Inputs/ppc64-bsymbolic-local-def.s  -o %t2.o
 # RUN: ld.lld -Bsymbolic -shared %t1.o %t2.o -o %t
-# RUN: llvm-objdump -d -r %t | FileCheck %s
+# RUN: llvm-objdump -d -r --no-show-raw-insn %t | FileCheck %s
 # RUN: not ld.lld -shared %t1.o %t2.o -o /dev/null 2>&1 | FileCheck --check-prefix=FAIL %s
 
 # FAIL: call to def lacks nop, can't restore toc
@@ -51,9 +51,9 @@ caller:
 # being called.
 
 # CHECK-LABEL: caller
-# CHECK:         bl .+44
+# CHECK:         bl 0x[[DEF:[0-9a-f]+]]
 # CHECK-NEXT:    mr 31, 3
-# CHECK-NEXT:    bl .+44
+# CHECK-NEXT:    bl 0x[[NOT_DEFINED:[0-9a-f]+]]
 # CHECK-NEXT:    ld 2, 24(1)
 # CHECK-NEXT:    add 3, 3, 31
 # CHECK-NEXT:    addi 1, 1, 32
@@ -64,5 +64,7 @@ caller:
 # CHECK-NEXT:  <def>:
 # CHECK-NEXT:    addis 2, 12, 2
 # CHECK-NEXT:    addi 2, 2, -32456
-# CHECK-NEXT:    li 3, 55
+# CHECK-NEXT:    [[DEF]]: li 3, 55
 # CHECK-NEXT:    blr
+# CHECK-EMPTY:
+# CHECK-NEXT:  00000000000[[NOT_DEFINED]] <__plt_not_defined>:

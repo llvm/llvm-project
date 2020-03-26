@@ -400,6 +400,9 @@ namespace ARMII {
     // and leaves the other half untouched.
     RetainsPreviousHalfElement = 1 << 21,
 
+    // Whether the instruction produces a scalar result from vector operands.
+    HorizontalReduction = 1 << 22,
+
     //===------------------------------------------------------------------===//
     // Code domain.
     DomainShift   = 15,

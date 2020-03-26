@@ -33,7 +33,7 @@ R_386_PC32_2:
 // CHECK: Disassembly of section .R_386_PC32:
 // CHECK-EMPTY:
 // CHECK-NEXT: <R_386_PC32>:
-// CHECK-NEXT:   calll 4
+// CHECK-NEXT:   calll 0x4011ba
 
 // CHECK:      <R_386_PC32_2>:
 // CHECK-NEXT:   nop
@@ -77,7 +77,7 @@ R_386_GOTPC:
 // CHECK:      Disassembly of section .dynamic_reloc:
 // CHECK-EMPTY:
 // CHECK-NEXT: <.dynamic_reloc>:
-// CHECK-NEXT:   4011c5:       calll 38 <bar@plt>
+// CHECK-NEXT:   4011c5:       calll 0x4011f0 <bar@plt>
 
 .section .R_386_GOT32,"ax",@progbits
 .global R_386_GOT32

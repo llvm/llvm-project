@@ -20,10 +20,10 @@
 int main() {
     // Note:
     // We use sizeof() to require it to be a complete type. We don't create a
-    // variable because otherwise we get two errors for each variable (the
-    // second error is when the destructor is implicitly called).
-    (void)sizeof(std::function<void ()>); // expected-error{{'function<void ()>' is deprecated}}
-    (void)sizeof(std::function<void (int)>); // expected-error{{'function<void (int)>' is deprecated}}
-    (void)sizeof(std::function<void (int, int)>); // expected-error{{'function<void (int, int)>' is deprecated}}
-    (void)sizeof(std::function<void (int, int, int)>); // expected-error{{'function<void (int, int, int)>' is deprecated}}
+    // variable because otherwise we get two warnings for each variable (the
+    // second warning is when the destructor is implicitly called).
+    (void)sizeof(std::function<void ()>); // expected-warning {{'function<void ()>' is deprecated}}
+    (void)sizeof(std::function<void (int)>); // expected-warning {{'function<void (int)>' is deprecated}}
+    (void)sizeof(std::function<void (int, int)>); // expected-warning {{'function<void (int, int)>' is deprecated}}
+    (void)sizeof(std::function<void (int, int, int)>); // expected-warning {{'function<void (int, int, int)>' is deprecated}}
 }

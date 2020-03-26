@@ -189,6 +189,40 @@ def vcx3qa : FunctionMacro<
   "__arm_vcx3qa_impl((cp), (acc), __arm_vreinterpretq_u8(n), "
                      "__arm_vreinterpretq_u8(m), (imm))">;
 
+class CDEIntrinsicMasked<string irname, dag argsReg, dag imm, dag cgArgs>
+  : CDEIntrinsic<Vector,
+      !con((args imm_coproc:$cp, Vector:$inactive_or_acc),
+           argsReg, imm, (args Predicate:$pred)),
+      !con((CDEIRInt<irname # "_predicated", [Vector,Predicate]>
+            $cp, $inactive_or_acc), cgArgs, (? $imm, $pred))> {
+  let params = T.All;
+  let polymorphicOnly = 1;
+}
+
+def vcx1q_m : CDEIntrinsicMasked<"vcx1q", (args), (args imm_12b:$imm), (?)>;
+def vcx1qa_m : CDEIntrinsicMasked<"vcx1qa", (args), (args imm_12b:$imm), (?)>;
+
+multiclass VCXPredicated<dag argsReg, dag imm, dag cgArgs,
+                         list<string> macroArgs, string macro> {
+  def _m_impl : CDEIntrinsicMasked<NAME, argsReg, imm, cgArgs>;
+  def a_m_impl : CDEIntrinsicMasked<NAME#"a", argsReg, imm, cgArgs>;
+
+  def _m: FunctionMacro<
+    !listconcat(["cp", "inactive"], macroArgs, ["imm", "pred"]),
+    "__arm_"#NAME#"_m_impl((cp), (inactive), "#macro#" (imm), (pred))">;
+  def a_m: FunctionMacro<
+    !listconcat(["cp", "acc"], macroArgs, ["imm", "pred"]),
+    "__arm_"#NAME#"a_m_impl((cp), (acc), "#macro#" (imm), (pred))">;
+}
+
+defm vcx2q :
+  VCXPredicated<(args v16u8:$n), (args imm_7b:$imm), (? $n), ["n"],
+                "__arm_vreinterpretq_u8(n),">;
+defm vcx3q :
+  VCXPredicated<(args v16u8:$n, v16u8:$m), (args imm_4b:$imm), (? $n, $m),
+                ["n", "m"], "__arm_vreinterpretq_u8(n), "
+                            "__arm_vreinterpretq_u8(m),">;
+
 // vreinterpretq intrinsics required by the ACLE CDE specification
 
 foreach desttype = [/* no u8 */ s8, u16, s16, u32, s32, u64, s64, f16, f32] in {

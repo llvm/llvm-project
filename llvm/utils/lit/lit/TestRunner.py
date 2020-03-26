@@ -147,7 +147,7 @@ class ShellCommandResult(object):
         self.exitCode = exitCode
         self.timeoutReached = timeoutReached
         self.outputFiles = list(outputFiles)
-               
+
 def executeShCmd(cmd, shenv, results, timeout=0):
     """
         Wrapper around _executeShCmd that handles
@@ -844,7 +844,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
                         data = None
                     if data is not None:
                         output_files.append((name, path, data))
-            
+
         results.append(ShellCommandResult(
             cmd.commands[i], out, err, res, timeoutHelper.timeoutReached(),
             output_files))
@@ -917,7 +917,7 @@ def executeScriptInternal(test, litConfig, tmpBase, commands, cwd):
                 else:
                     out += data
                 out += "\n"
-                    
+
         if result.stdout.strip():
             out += '# command output:\n%s\n' % (result.stdout,)
         if result.stderr.strip():
@@ -1180,7 +1180,7 @@ class ParserKind(object):
     TAG: A keyword taking no value. Ex 'END.'
     COMMAND: A keyword taking a list of shell commands. Ex 'RUN:'
     LIST: A keyword taking a comma-separated list of values.
-    BOOLEAN_EXPR: A keyword taking a comma-separated list of 
+    BOOLEAN_EXPR: A keyword taking a comma-separated list of
         boolean expressions. Ex 'XFAIL:'
     INTEGER: A keyword taking a single integer. Ex 'ALLOW_RETRIES:'
     CUSTOM: A keyword with custom parsing semantics.
@@ -1375,7 +1375,7 @@ def parseIntegratedTestScript(test, additional_parsers=[],
         IntegratedTestKeywordParser('END.', ParserKind.TAG)
     ]
     keyword_parsers = {p.keyword: p for p in builtin_parsers}
-    
+
     # Install user-defined additional parsers.
     for parser in additional_parsers:
         if not isinstance(parser, IntegratedTestKeywordParser):
@@ -1385,7 +1385,7 @@ def parseIntegratedTestScript(test, additional_parsers=[],
             raise ValueError("Parser for keyword '%s' already exists"
                              % parser.keyword)
         keyword_parsers[parser.keyword] = parser
-        
+
     # Collect the test lines from the script.
     sourcepath = test.getSourcePath()
     for line_number, command_type, ln in \

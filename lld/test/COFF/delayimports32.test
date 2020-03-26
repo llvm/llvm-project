@@ -72,14 +72,14 @@ BASEREL-NEXT:   }
 BASEREL-NEXT: ]
 
 DISASM:      1029:      b8 20 30 40 00  movl    $4206624, %eax
-DISASM-NEXT: 102e:      e9 0a 00 00 00  jmp     10 <.text+0x3d>
+DISASM-NEXT: 102e:      e9 0a 00 00 00  jmp     0x40103d <.text+0x3d>
 DISASM-NEXT: 1033:      b8 24 30 40 00  movl    $4206628, %eax
-DISASM-NEXT: 1038:      e9 00 00 00 00  jmp     0 <.text+0x3d>
+DISASM-NEXT: 1038:      e9 00 00 00 00  jmp     0x40103d <.text+0x3d>
 DISASM-NEXT: 103d:      51      pushl   %ecx
 DISASM-NEXT: 103e:      52      pushl   %edx
 DISASM-NEXT: 103f:      50      pushl   %eax
 DISASM-NEXT: 1040:      68 00 20 40 00  pushl   $4202496
-DISASM-NEXT: 1045:      e8 b6 ff ff ff  calll   -74 <.text>
+DISASM-NEXT: 1045:      e8 b6 ff ff ff  calll   0x401000 <.text>
 DISASM-NEXT: 104a:      5a      popl    %edx
 DISASM-NEXT: 104b:      59      popl    %ecx
 DISASM-NEXT: 104c:      ff e0   jmpl    *%eax

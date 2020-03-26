@@ -58,15 +58,15 @@ test:
 # Check that we are branching to the definitions, and not range-extending
 # thunks.
 # CHECK-LABEL: test
-# CHECK:  10010014:       bl .+33554428
+# CHECK:  10010014:       bl 0x12010010
 # CHECK:  10010024:       b  .+33554428
 
 # NEGOFFSET-LABEL: test
-# NEGOFFSET:  10010014:       bl .-33554432
+# NEGOFFSET:  10010014:       bl 0xe010014
 # NEGOFFSET:  10010024:       b  .+33554432
 
 # THUNK-LABEL: <test>:
-# THUNK: 10010014:       bl .+20
+# THUNK: 10010014:       bl 0x10010028
 # THUNK: 10010024:       b .+20
 
 # .branch_lt[0]

@@ -100,7 +100,7 @@ protected:
                      const MCSubtargetInfo &STI, raw_ostream &O);
   void printInverseCondCode(const MCInst *MI, unsigned OpNum,
                             const MCSubtargetInfo &STI, raw_ostream &O);
-  void printAlignedLabel(const MCInst *MI, unsigned OpNum,
+  void printAlignedLabel(const MCInst *MI, uint64_t Address, unsigned OpNum,
                          const MCSubtargetInfo &STI, raw_ostream &O);
   void printUImm12Offset(const MCInst *MI, unsigned OpNum, unsigned Scale,
                          raw_ostream &O);

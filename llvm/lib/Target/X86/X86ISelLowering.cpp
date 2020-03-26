@@ -7417,15 +7417,20 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
       }
     }
 
+    // Peek through trunc/aext/zext.
+    // TODO: aext shouldn't require SM_SentinelZero padding.
+    // TODO: handle shift of scalars.
+    while (Scl.getOpcode() == ISD::TRUNCATE ||
+           Scl.getOpcode() == ISD::ANY_EXTEND ||
+           Scl.getOpcode() == ISD::ZERO_EXTEND)
+      Scl = Scl.getOperand(0);
+
     // Attempt to find the source vector the scalar was extracted from.
-    // TODO: Handle truncate/zext/shift of scalars.
     SDValue SrcExtract;
-    if ((Scl.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
-         Scl.getOperand(0).getValueType() == VT) ||
-        (Scl.getOpcode() == X86ISD::PEXTRW &&
-         Scl.getOperand(0).getValueType() == MVT::v8i16) ||
-        (Scl.getOpcode() == X86ISD::PEXTRB &&
-         Scl.getOperand(0).getValueType() == MVT::v16i8)) {
+    if ((Scl.getOpcode() == ISD::EXTRACT_VECTOR_ELT ||
+         Scl.getOpcode() == X86ISD::PEXTRW ||
+         Scl.getOpcode() == X86ISD::PEXTRB) &&
+        Scl.getOperand(0).getValueSizeInBits() == NumSizeInBits) {
       SrcExtract = Scl;
     }
     if (!SrcExtract || !isa<ConstantSDNode>(SrcExtract.getOperand(1)))
@@ -7437,8 +7442,7 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
     unsigned NumZeros =
         std::max<int>((NumBitsPerElt / SrcVT.getScalarSizeInBits()) - 1, 0);
 
-    if (SrcVT.getSizeInBits() != VT.getSizeInBits() ||
-        (NumSrcElts % NumElts) != 0)
+    if ((NumSrcElts % NumElts) != 0)
       return false;
 
     unsigned SrcIdx = SrcExtract.getConstantOperandVal(1);
@@ -7496,6 +7500,20 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
       Ops.push_back(N1);
 
     createPackShuffleMask(VT, Mask, IsUnary);
+    return true;
+  }
+  case ISD::TRUNCATE:
+  case X86ISD::VTRUNC: {
+    SDValue Src = N.getOperand(0);
+    MVT SrcVT = Src.getSimpleValueType();
+    unsigned NumSrcElts = SrcVT.getVectorNumElements();
+    unsigned NumBitsPerSrcElt = SrcVT.getScalarSizeInBits();
+    unsigned Scale = NumBitsPerSrcElt / NumBitsPerElt;
+    assert((NumBitsPerSrcElt % NumBitsPerElt) == 0 && "Illegal truncation");
+    for (unsigned i = 0; i != NumSrcElts; ++i)
+      Mask.push_back(i * Scale);
+    Mask.append(NumElts - NumSrcElts, SM_SentinelZero);
+    Ops.push_back(Src);
     return true;
   }
   case X86ISD::VSHLI:
@@ -11060,6 +11078,45 @@ static SDValue lowerShuffleWithUNPCK256(const SDLoc &DL, MVT VT,
                             DAG.getUNDEF(MVT::v4f64), {0, 2, 1, 3});
   V1 = DAG.getBitcast(VT, V1);
   return DAG.getNode(UnpackOpcode, DL, VT, V1, V1);
+}
+
+// Check if the mask can be mapped to a TRUNCATE or VTRUNC, truncating the
+// source into the lower elements and zeroing the upper elements.
+// TODO: Merge with matchShuffleAsVPMOV.
+static bool matchShuffleAsVTRUNC(MVT &SrcVT, MVT &DstVT, MVT VT,
+                                 ArrayRef<int> Mask, const APInt &Zeroable,
+                                 const X86Subtarget &Subtarget) {
+  if (!VT.is512BitVector() && !Subtarget.hasVLX())
+    return false;
+
+  unsigned NumElts = Mask.size();
+  unsigned EltSizeInBits = VT.getScalarSizeInBits();
+  unsigned MaxScale = 64 / EltSizeInBits;
+
+  for (unsigned Scale = 2; Scale <= MaxScale; Scale += Scale) {
+    unsigned SrcEltBits = EltSizeInBits * Scale;
+    if (SrcEltBits < 32 && !Subtarget.hasBWI())
+      continue;
+    unsigned NumSrcElts = NumElts / Scale;
+    if (!isSequentialOrUndefInRange(Mask, 0, NumSrcElts, 0, Scale))
+      continue;
+    unsigned UpperElts = NumElts - NumSrcElts;
+    if (!Zeroable.extractBits(UpperElts, NumSrcElts).isAllOnesValue())
+      continue;
+    SrcVT = MVT::getIntegerVT(EltSizeInBits * Scale);
+    SrcVT = MVT::getVectorVT(SrcVT, NumSrcElts);
+    DstVT = MVT::getIntegerVT(EltSizeInBits);
+    if ((NumSrcElts * EltSizeInBits) >= 128) {
+      // ISD::TRUNCATE
+      DstVT = MVT::getVectorVT(DstVT, NumSrcElts);
+    } else {
+      // X86ISD::VTRUNC
+      DstVT = MVT::getVectorVT(DstVT, 128 / EltSizeInBits);
+    }
+    return true;
+  }
+
+  return false;
 }
 
 static bool matchShuffleAsVPMOV(ArrayRef<int> Mask, bool SwappedOps,
@@ -14760,6 +14817,10 @@ static SDValue lowerV16I8Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
                                               Zeroable, Subtarget, DAG))
     return V;
 
+  // Check for compaction patterns.
+  bool IsSingleInput = V2.isUndef();
+  int NumEvenDrops = canLowerByDroppingEvenElements(Mask, IsSingleInput);
+
   // Check for SSSE3 which lets us lower all v16i8 shuffles much more directly
   // with PSHUFB. It is important to do this before we attempt to generate any
   // blends but after all of the single-input lowerings. If the single input
@@ -14770,10 +14831,16 @@ static SDValue lowerV16I8Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
   // and there are *very* few patterns that would actually be faster than the
   // PSHUFB approach because of its ability to zero lanes.
   //
+  // If the mask is a binary compaction, we can more efficiently perform this
+  // as a PACKUS(AND(),AND()) - which is quicker than UNPACK(PSHUFB(),PSHUFB()).
+  // TODO: AVX2+ sees a regression as they fail to see through VBROADCAST_LOAD
+  // masks.
+  //
   // FIXME: The only exceptions to the above are blends which are exact
   // interleavings with direct instructions supporting them. We currently don't
   // handle those well here.
-  if (Subtarget.hasSSSE3()) {
+  if (Subtarget.hasSSSE3() &&
+      (Subtarget.hasInt256() || IsSingleInput || NumEvenDrops != 1)) {
     bool V1InUse = false;
     bool V2InUse = false;
 
@@ -14831,8 +14898,7 @@ static SDValue lowerV16I8Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
   // We special case these as they can be particularly efficiently handled with
   // the PACKUSB instruction on x86 and they show up in common patterns of
   // rearranging bytes to truncate wide elements.
-  bool IsSingleInput = V2.isUndef();
-  if (int NumEvenDrops = canLowerByDroppingEvenElements(Mask, IsSingleInput)) {
+  if (NumEvenDrops) {
     // NumEvenDrops is the power of two stride of the elements. Another way of
     // thinking about it is that we need to drop the even elements this many
     // times to get the original input.
@@ -33192,11 +33258,12 @@ unsigned X86TargetLowering::ComputeNumSignBitsForTargetNode(
     return VTBits;
 
   case X86ISD::VTRUNC: {
-    // TODO: Add DemandedElts support.
     SDValue Src = Op.getOperand(0);
-    unsigned NumSrcBits = Src.getScalarValueSizeInBits();
+    MVT SrcVT = Src.getSimpleValueType();
+    unsigned NumSrcBits = SrcVT.getScalarSizeInBits();
     assert(VTBits < NumSrcBits && "Illegal truncation input type");
-    unsigned Tmp = DAG.ComputeNumSignBits(Src, Depth + 1);
+    APInt DemandedSrc = DemandedElts.zextOrTrunc(SrcVT.getVectorNumElements());
+    unsigned Tmp = DAG.ComputeNumSignBits(Src, DemandedSrc, Depth + 1);
     if (Tmp > (NumSrcBits - VTBits))
       return Tmp - (NumSrcBits - VTBits);
     return 1;
@@ -34090,6 +34157,43 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
       Res = DAG.getNode(X86ISD::INSERTQI, DL, IntMaskVT, V1, V2,
                         DAG.getTargetConstant(BitLen, DL, MVT::i8),
                         DAG.getTargetConstant(BitIdx, DL, MVT::i8));
+      return DAG.getBitcast(RootVT, Res);
+    }
+  }
+
+  // Match shuffle against TRUNCATE patterns.
+  if (AllowIntDomain && MaskEltSizeInBits < 64 && Subtarget.hasAVX512()) {
+    // Match against a VTRUNC instruction, accounting for src/dst sizes.
+    if (matchShuffleAsVTRUNC(ShuffleSrcVT, ShuffleVT, IntMaskVT, Mask, Zeroable,
+                             Subtarget)) {
+      bool IsTRUNCATE = ShuffleVT.getVectorNumElements() ==
+                        ShuffleSrcVT.getVectorNumElements();
+      unsigned Opc = IsTRUNCATE ? ISD::TRUNCATE : X86ISD::VTRUNC;
+      if (Depth == 0 && Root.getOpcode() == Opc)
+        return SDValue(); // Nothing to do!
+      V1 = DAG.getBitcast(ShuffleSrcVT, V1);
+      Res = DAG.getNode(Opc, DL, ShuffleVT, V1);
+      if (ShuffleVT.getSizeInBits() < RootSizeInBits)
+        Res = widenSubVector(Res, true, Subtarget, DAG, DL, RootSizeInBits);
+      return DAG.getBitcast(RootVT, Res);
+    }
+
+    // Do we need a more general binary truncation pattern?
+    if (RootSizeInBits < 512 &&
+        ((RootVT.is256BitVector() && Subtarget.useAVX512Regs()) ||
+         (RootVT.is128BitVector() && Subtarget.hasVLX())) &&
+        (MaskEltSizeInBits > 8 || Subtarget.hasBWI()) &&
+        isSequentialOrUndefInRange(Mask, 0, NumMaskElts, 0, 2)) {
+      if (Depth == 0 && Root.getOpcode() == ISD::TRUNCATE)
+        return SDValue(); // Nothing to do!
+      ShuffleSrcVT = MVT::getIntegerVT(MaskEltSizeInBits * 2);
+      ShuffleSrcVT = MVT::getVectorVT(ShuffleSrcVT, NumMaskElts / 2);
+      V1 = DAG.getBitcast(ShuffleSrcVT, V1);
+      V2 = DAG.getBitcast(ShuffleSrcVT, V2);
+      ShuffleSrcVT = MVT::getIntegerVT(MaskEltSizeInBits * 2);
+      ShuffleSrcVT = MVT::getVectorVT(ShuffleSrcVT, NumMaskElts);
+      Res = DAG.getNode(ISD::CONCAT_VECTORS, DL, ShuffleSrcVT, V1, V2);
+      Res = DAG.getNode(ISD::TRUNCATE, DL, IntMaskVT, Res);
       return DAG.getBitcast(RootVT, Res);
     }
   }

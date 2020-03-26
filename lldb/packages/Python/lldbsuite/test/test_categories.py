@@ -37,6 +37,7 @@ all_categories = {
     'darwin-log': 'Darwin log tests',
     'watchpoint': 'Watchpoint-related tests',
     'lldb-vscode': 'Visual Studio Code debug adaptor tests',
+    'lldb-server': 'Tests related to lldb-server',
 }
 
 

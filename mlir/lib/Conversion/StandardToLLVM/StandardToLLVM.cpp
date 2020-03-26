@@ -1737,56 +1737,6 @@ struct RsqrtOpLowering : public LLVMLegalizationPattern<RsqrtOp> {
   }
 };
 
-// A `tanh` is converted into a call to the `tanh` function.
-struct TanhOpLowering : public LLVMLegalizationPattern<TanhOp> {
-  using LLVMLegalizationPattern<TanhOp>::LLVMLegalizationPattern;
-
-  LogicalResult
-  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
-                  ConversionPatternRewriter &rewriter) const override {
-
-    using LLVMFuncOpT = LLVM::LLVMFuncOp;
-    using LLVMTypeT = LLVM::LLVMType;
-
-    OperandAdaptor<TanhOp> transformed(operands);
-    LLVMTypeT operandType =
-        transformed.operand().getType().dyn_cast<LLVM::LLVMType>();
-
-    if (!operandType)
-      return failure();
-
-    std::string functionName;
-    if (operandType.isFloatTy())
-      functionName = "tanhf";
-    else if (operandType.isDoubleTy())
-      functionName = "tanh";
-    else
-      return failure();
-
-    // Get a reference to the tanh function, inserting it if necessary.
-    Operation *tanhFunc =
-        SymbolTable::lookupNearestSymbolFrom(op, functionName);
-
-    LLVMFuncOpT tanhLLVMFunc;
-    if (tanhFunc) {
-      tanhLLVMFunc = cast<LLVMFuncOpT>(tanhFunc);
-    } else {
-      PatternRewriter::InsertionGuard insertGuard(rewriter);
-      auto module = op->getParentOfType<ModuleOp>();
-      rewriter.setInsertionPointToStart(module.getBody());
-      tanhLLVMFunc = rewriter.create<LLVMFuncOpT>(
-          module.getLoc(), functionName,
-          LLVMTypeT::getFunctionTy(operandType, operandType,
-                                   /*isVarArg=*/false));
-    }
-
-    rewriter.replaceOpWithNewOp<LLVM::CallOp>(
-        op, operandType, rewriter.getSymbolRefAttr(tanhLLVMFunc),
-        transformed.operand());
-    return success();
-  }
-};
-
 struct MemRefCastOpLowering : public LLVMLegalizationPattern<MemRefCastOp> {
   using LLVMLegalizationPattern<MemRefCastOp>::LLVMLegalizationPattern;
 
@@ -2833,7 +2783,6 @@ void mlir::populateStdToLLVMNonMemoryConversionPatterns(
       SqrtOpLowering,
       SubFOpLowering,
       SubIOpLowering,
-      TanhOpLowering,
       TruncateIOpLowering,
       UnsignedDivIOpLowering,
       UnsignedRemIOpLowering,
@@ -3022,6 +2971,7 @@ mlir::LLVMConversionTarget::LLVMConversionTarget(MLIRContext &ctx)
     : ConversionTarget(ctx) {
   this->addLegalDialect<LLVM::LLVMDialect>();
   this->addIllegalOp<LLVM::DialectCastOp>();
+  this->addIllegalOp<TanhOp>();
 }
 
 std::unique_ptr<OpPassBase<ModuleOp>>

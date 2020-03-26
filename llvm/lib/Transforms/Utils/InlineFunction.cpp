@@ -1703,7 +1703,7 @@ llvm::InlineResult llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
     AddAlignmentAssumptions(CS, IFI);
 
     /// Preserve all attributes on of the call and its parameters.
-    if (Instruction *Assume = BuildAssumeFromInst(CS.getInstruction()))
+    if (Instruction *Assume = buildAssumeFromInst(CS.getInstruction()))
       Assume->insertBefore(CS.getInstruction());
 
     // We want the inliner to prune the code as it copies.  We would LOVE to

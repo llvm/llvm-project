@@ -47,6 +47,7 @@ def CharType : NamedType<"char">;
 // Common types
 def VoidPtr : PtrType<VoidType>;
 def SizeTType : NamedType<"size_t">;
+def FloatPtr : PtrType<FloatType>;
 
 // _Noreturn is really not a type, but it is convenient to treat it as a type.
 def NoReturn : NamedType<"_Noreturn void">;

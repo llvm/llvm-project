@@ -735,9 +735,15 @@ public:
     unsigned Column = OS.tell() - Start;
     OS.indent(Column < TabStop - 1 ? TabStop - 1 - Column : 7 - Column % 8);
 
-    if (MI)
-      IP.printInst(MI, Address.Address, "", STI, OS);
-    else
+    if (MI) {
+      // See MCInstPrinter::printInst. On targets where a PC relative immediate
+      // is relative to the next instruction and the length of a MCInst is
+      // difficult to measure (x86), this is the address of the next
+      // instruction.
+      uint64_t Addr =
+          Address.Address + (STI.getTargetTriple().isX86() ? Bytes.size() : 0);
+      IP.printInst(MI, Addr, "", STI, OS);
+    } else
       OS << "\t<unknown>";
   }
 };
@@ -1202,11 +1208,13 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
   StringSaver Saver(A);
   addPltEntries(Obj, AllSymbols, Saver);
 
-  // Create a mapping from virtual address to section.
+  // Create a mapping from virtual address to section. An empty section can
+  // cause more than one section at the same address. Use a stable sort to
+  // stabilize the output.
   std::vector<std::pair<uint64_t, SectionRef>> SectionAddresses;
   for (SectionRef Sec : Obj->sections())
     SectionAddresses.emplace_back(Sec.getAddress(), Sec);
-  array_pod_sort(SectionAddresses.begin(), SectionAddresses.end());
+  stable_sort(SectionAddresses);
 
   // Linked executables (.exe and .dll files) typically don't include a real
   // symbol table but they might contain an export table.
@@ -1236,11 +1244,12 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
   }
 
   // Sort all the symbols, this allows us to use a simple binary search to find
-  // a symbol near an address.
+  // Multiple symbols can have the same address. Use a stable sort to stabilize
+  // the output.
   StringSet<> FoundDisasmSymbolSet;
   for (std::pair<const SectionRef, SectionSymbolsTy> &SecSyms : AllSymbols)
-    array_pod_sort(SecSyms.second.begin(), SecSyms.second.end());
-  array_pod_sort(AbsoluteSymbols.begin(), AbsoluteSymbols.end());
+    stable_sort(SecSyms.second);
+  stable_sort(AbsoluteSymbols);
 
   for (const SectionRef &Section : ToolSectionFilter(*Obj)) {
     if (FilterSections.empty() && !DisassembleAll &&
@@ -1421,7 +1430,7 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
         // them. Otherwise we might want to skip zero bytes we see.
         if (!DisassembleZeroes) {
           uint64_t MaxOffset = End - Index;
-          // For -reloc: print zero blocks patched by relocations, so that
+          // For --reloc: print zero blocks patched by relocations, so that
           // relocations can be shown in the dump.
           if (RelCur != RelEnd)
             MaxOffset = RelCur->getOffset() - Index;
@@ -1632,6 +1641,7 @@ static void disassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
     reportError(Obj->getFileName(),
                 "no instruction printer for target " + TripleName);
   IP->setPrintImmHex(PrintImmHex);
+  IP->setPrintBranchImmAsAddress(true);
 
   PrettyPrinter &PIP = selectPrettyPrinter(Triple(TripleName));
   SourcePrinter SP(Obj, TheTarget->getName());

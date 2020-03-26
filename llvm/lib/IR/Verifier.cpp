@@ -3084,7 +3084,9 @@ static AttrBuilder getParameterABIAttributes(int I, AttributeList Attrs) {
     if (Attrs.hasParamAttribute(I, AK))
       Copy.addAttribute(AK);
   }
-  if (Attrs.hasParamAttribute(I, Attribute::Alignment))
+  // `align` is ABI-affecting only in combination with `byval`.
+  if (Attrs.hasParamAttribute(I, Attribute::Alignment) &&
+      Attrs.hasParamAttribute(I, Attribute::ByVal))
     Copy.addAlignmentAttr(Attrs.getParamAlignment(I));
   return Copy;
 }

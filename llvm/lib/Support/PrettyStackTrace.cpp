@@ -142,9 +142,17 @@ using CrashHandlerStringStorage =
 static CrashHandlerStringStorage crashHandlerStringStorage;
 #endif
 
+static const char *BugReportMsg =
+    "PLEASE submit a bug report to " BUG_REPORT_URL
+    " and include the crash backtrace.\n";
+
+void llvm::setBugReportMsg(const char *Msg) { BugReportMsg = Msg; }
+
 /// This callback is run if a fatal signal is delivered to the process, it
 /// prints the pretty stack trace.
 static void CrashHandler(void *) {
+  errs() << BugReportMsg ;
+
 #ifndef __APPLE__
   // On non-apple systems, just emit the crash stack trace to stderr.
   PrintCurStackTrace(errs());

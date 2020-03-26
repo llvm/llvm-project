@@ -13,7 +13,7 @@
 
 #include <experimental/filesystem>
 
-using namespace std::experimental::filesystem; // expected-error {{'filesystem' is deprecated: std::experimental::filesystem has now been deprecated in favor of C++17's std::filesystem. Please stop using it and start using std::filesystem. This experimental version will be removed in LLVM 11. You can remove this warning by defining the _LIBCPP_NO_EXPERIMENTAL_DEPRECATION_WARNING_FILESYSTEM macro.}}
+using namespace std::experimental::filesystem; // expected-warning {{'filesystem' is deprecated: std::experimental::filesystem has now been deprecated in favor of C++17's std::filesystem. Please stop using it and start using std::filesystem. This experimental version will be removed in LLVM 11. You can remove this warning by defining the _LIBCPP_NO_EXPERIMENTAL_DEPRECATION_WARNING_FILESYSTEM macro.}}
 
 int main(int, char**) {
   return 0;

@@ -74,9 +74,16 @@ TEST(UriParserTest, LongPath) {
   VALIDATE
 }
 
-TEST(UriParserTest, TypicalPortPath) {
+TEST(UriParserTest, TypicalPortPathIPv4) {
   const UriTestCase testCase("connect://192.168.100.132:5432/", "connect",
                              "192.168.100.132", 5432, "/");
+  VALIDATE;
+}
+
+TEST(UriParserTest, TypicalPortPathIPv6) {
+  const UriTestCase testCase(
+      "connect://[2601:600:107f:db64:a42b:4faa:284:3082]:5432/", "connect",
+      "2601:600:107f:db64:a42b:4faa:284:3082", 5432, "/");
   VALIDATE;
 }
 
@@ -99,6 +106,21 @@ TEST(UriParserTest, BracketedHostnamePort) {
 TEST(UriParserTest, BracketedHostname) {
   const UriTestCase testCase("connect://[192.168.100.132]", "connect",
                              "192.168.100.132", -1, "/");
+  VALIDATE
+}
+
+TEST(UriParserTest, BracketedHostnameWithPortIPv4) {
+  // Android device over IPv4: port is a part of the hostname.
+  const UriTestCase testCase("connect://[192.168.100.132:1234]", "connect",
+                             "192.168.100.132:1234", -1, "/");
+  VALIDATE
+}
+
+TEST(UriParserTest, BracketedHostnameWithPortIPv6) {
+  // Android device over IPv6: port is a part of the hostname.
+  const UriTestCase testCase(
+      "connect://[[2601:600:107f:db64:a42b:4faa:284]:1234]", "connect",
+      "[2601:600:107f:db64:a42b:4faa:284]:1234", -1, "/");
   VALIDATE
 }
 

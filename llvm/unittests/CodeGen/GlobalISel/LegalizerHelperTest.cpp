@@ -2722,4 +2722,30 @@ TEST_F(AArch64GISelMITest, BitcastBitOps) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
+TEST_F(AArch64GISelMITest, CreateLibcall) {
+  setUp();
+  if (!TM)
+    return;
+
+  DefineLegalizerInfo(A, {});
+
+  AInfo Info(MF->getSubtarget());
+  DummyGISelObserver Observer;
+
+  LLVMContext &Ctx = MF->getFunction().getContext();
+  auto *RetTy = Type::getVoidTy(Ctx);
+
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            createLibcall(B, "abort", {{}, RetTy}, {}, CallingConv::C));
+
+  auto CheckStr = R"(
+  CHECK: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
+  CHECK: BL &abort
+  CHECK: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
+  )";
+
+  // Check
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
+
 } // namespace

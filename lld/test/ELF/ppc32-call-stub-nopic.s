@@ -20,10 +20,10 @@
 
 ## .got2+0x8000-0x10004 = 0x30000+0x8000-0x10004 = 65536*2+32764
 # CHECK-LABEL: <_start>:
-# CHECK-NEXT:    bl .+16
-# CHECK-NEXT:    bl .+12
-# CHECK-NEXT:    bl .+24
-# CHECK-NEXT:    bl .+20
+# CHECK-NEXT:    bl 0x100101d0
+# CHECK-NEXT:    bl 0x100101d0
+# CHECK-NEXT:    bl 0x100101e0
+# CHECK-NEXT:    bl 0x100101e0
 # CHECK-EMPTY:
 
 ## -fno-PIC call stubs of f and g.

@@ -127,8 +127,9 @@ class ItaniumMangleContextImpl : public ItaniumMangleContext {
 
 public:
   explicit ItaniumMangleContextImpl(ASTContext &Context,
-                                    DiagnosticsEngine &Diags)
-      : ItaniumMangleContext(Context, Diags) {}
+                                    DiagnosticsEngine &Diags,
+                                    bool IsUniqueNameMangler)
+      : ItaniumMangleContext(Context, Diags, IsUniqueNameMangler) {}
 
   /// @name Mangler Entry Points
   /// @{
@@ -1393,7 +1394,8 @@ void CXXNameMangler::mangleUnqualifiedName(GlobalDecl GD,
     // <lambda-sig> ::= <template-param-decl>* <parameter-type>+
     //     # Parameter types or 'v' for 'void'.
     if (const CXXRecordDecl *Record = dyn_cast<CXXRecordDecl>(TD)) {
-      if (Record->isLambda() && Record->getLambdaManglingNumber()) {
+      if (Record->isLambda() && (Record->getLambdaManglingNumber() ||
+                                 Context.isUniqueNameMangler())) {
         assert(!AdditionalAbiTags &&
                "Lambda type cannot have additional abi tags");
         mangleLambda(Record);
@@ -1768,6 +1770,37 @@ void CXXNameMangler::mangleTemplateParamDecl(const NamedDecl *Decl) {
   }
 }
 
+// Handles the __builtin_unique_stable_name feature for lambdas.  Instead of the
+// ordinal of the lambda in its mangling, this does line/column to uniquely and
+// reliably identify the lambda.  Additionally, macro expansions are expressed
+// as well to prevent macros causing duplicates.
+static void mangleUniqueNameLambda(CXXNameMangler &Mangler, SourceManager &SM,
+                                   raw_ostream &Out,
+                                   const CXXRecordDecl *Lambda) {
+  SourceLocation Loc = Lambda->getLocation();
+
+  PresumedLoc PLoc = SM.getPresumedLoc(Loc);
+  Mangler.mangleNumber(PLoc.getLine());
+  Out << "->";
+  Mangler.mangleNumber(PLoc.getColumn());
+
+  while(Loc.isMacroID()) {
+    SourceLocation SLToPrint = Loc;
+    if (SM.isMacroArgExpansion(Loc))
+      SLToPrint = SM.getImmediateExpansionRange(Loc).getBegin();
+
+    PLoc = SM.getPresumedLoc(SM.getSpellingLoc(SLToPrint));
+    Out << "~";
+    Mangler.mangleNumber(PLoc.getLine());
+    Out << "->";
+    Mangler.mangleNumber(PLoc.getColumn());
+
+    Loc = SM.getImmediateMacroCallerLoc(Loc);
+    if (Loc.isFileID())
+      Loc = SM.getImmediateMacroCallerLoc(SLToPrint);
+  }
+}
+
 void CXXNameMangler::mangleLambda(const CXXRecordDecl *Lambda) {
   // If the context of a closure type is an initializer for a class member
   // (static or nonstatic), it is encoded in a qualified name with a final
@@ -1797,6 +1830,12 @@ void CXXNameMangler::mangleLambda(const CXXRecordDecl *Lambda) {
   Out << "Ul";
   mangleLambdaSig(Lambda);
   Out << "E";
+
+  if (Context.isUniqueNameMangler()) {
+    mangleUniqueNameLambda(
+        *this, Context.getASTContext().getSourceManager(), Out, Lambda);
+    return;
+  }
 
   // The number is omitted for the first closure type with a given
   // <lambda-sig> in a given context; it is n-2 for the nth closure type
@@ -5203,7 +5242,8 @@ void ItaniumMangleContextImpl::mangleLambdaSig(const CXXRecordDecl *Lambda,
   Mangler.mangleLambdaSig(Lambda);
 }
 
-ItaniumMangleContext *
-ItaniumMangleContext::create(ASTContext &Context, DiagnosticsEngine &Diags) {
-  return new ItaniumMangleContextImpl(Context, Diags);
+ItaniumMangleContext *ItaniumMangleContext::create(ASTContext &Context,
+                                                   DiagnosticsEngine &Diags,
+                                                   bool IsUniqueNameMangler) {
+  return new ItaniumMangleContextImpl(Context, Diags, IsUniqueNameMangler);
 }

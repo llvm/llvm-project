@@ -34,7 +34,7 @@
 ; CHECK-O: Running analysis: OptimizationRemarkEmitterAnalysis on main
 ; CHECK-O: Running analysis: PassInstrumentationAnalysis on main
 ; CHECK-O: Running pass: InferFunctionAttrsPass
-; CHECK-O: Running pass: ModuleToFunctionPassAdaptor<{{.*}}PassManager<{{.*}}Function> >
+; CHECK-O: Running pass: ModuleToFunctionPassAdaptor<{{.*}}PassManager<{{.*}}Function>{{ ?}}>
 ; CHECK-O: Starting {{.*}}Function pass manager run.
 ; CHECK-O: Running pass: SimplifyCFGPass on main
 ; CHECK-O: Running analysis: TargetIRAnalysis on main
@@ -57,7 +57,7 @@
 ; CHECK-O: Running analysis: PassInstrumentationAnalysis on main
 ; CHECK-O: Running analysis: AssumptionAnalysis on main
 ; CHECK-O: Running pass: DeadArgumentEliminationPass
-; CHECK-O: Running pass: ModuleToFunctionPassAdaptor<{{.*}}PassManager<{{.*}}Function> >
+; CHECK-O: Running pass: ModuleToFunctionPassAdaptor<{{.*}}PassManager<{{.*}}Function>{{ ?}}>
 ; CHECK-O: Starting {{.*}}Function pass manager run.
 ; CHECK-O: Running pass: InstCombinePass on main
 ; CHECK-O: Running analysis: TargetLibraryAnalysis on main
@@ -179,7 +179,7 @@
 ; CHECK-O: Running pass: ReversePostOrderFunctionAttrsPass
 ; CHECK-O: Running analysis: CallGraphAnalysis
 ; CHECK-O: Running pass: RequireAnalysisPass<{{.*}}GlobalsAA
-; CHECK-O: Running pass: ModuleToFunctionPassAdaptor<{{.*}}PassManager<{{.*}}Function> >
+; CHECK-O: Running pass: ModuleToFunctionPassAdaptor<{{.*}}PassManager<{{.*}}Function>{{ ?}}>
 ; CHECK-O: Starting {{.*}}Function pass manager run.
 ; CHECK-O: Running pass: Float2IntPass on main
 ; CHECK-O: Running pass: LowerConstantIntrinsicsPass on main

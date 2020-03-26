@@ -44,6 +44,13 @@ AARCH64_ARCH("armv8.5-a", ARMV8_5A, "8.5-A", "v8.5a",
              (AArch64::AEK_CRC | AArch64::AEK_CRYPTO | AArch64::AEK_FP |
               AArch64::AEK_SIMD | AArch64::AEK_RAS | AArch64::AEK_LSE |
               AArch64::AEK_RDM | AArch64::AEK_RCPC | AArch64::AEK_DOTPROD))
+AARCH64_ARCH("armv8.6-a", ARMV8_6A, "8.6-A", "v8.6a",
+             ARMBuildAttrs::CPUArch::v8_A, FK_CRYPTO_NEON_FP_ARMV8,
+             (AArch64::AEK_CRC  | AArch64::AEK_FP   |
+              AArch64::AEK_SIMD | AArch64::AEK_RAS  | AArch64::AEK_LSE     |
+              AArch64::AEK_RDM  | AArch64::AEK_RCPC | AArch64::AEK_DOTPROD |
+              AArch64::AEK_SM4  | AArch64::AEK_SHA3 | AArch64::AEK_BF16    |
+              AArch64::AEK_SHA2 | AArch64::AEK_AES  | AArch64::AEK_I8MM))
 #undef AARCH64_ARCH
 
 #ifndef AARCH64_ARCH_EXT_NAME
@@ -79,6 +86,8 @@ AARCH64_ARCH_EXT_NAME("memtag",       AArch64::AEK_MTE,         "+mte",   "-mte"
 AARCH64_ARCH_EXT_NAME("ssbs",         AArch64::AEK_SSBS,        "+ssbs",  "-ssbs")
 AARCH64_ARCH_EXT_NAME("sb",           AArch64::AEK_SB,          "+sb",    "-sb")
 AARCH64_ARCH_EXT_NAME("predres",      AArch64::AEK_PREDRES,     "+predres", "-predres")
+AARCH64_ARCH_EXT_NAME("bf16",         AArch64::AEK_BF16,        "+bf16",  "-bf16")
+AARCH64_ARCH_EXT_NAME("i8mm",         AArch64::AEK_I8MM,        "+i8mm",  "-i8mm")
 AARCH64_ARCH_EXT_NAME("tme",          AArch64::AEK_TME,         "+tme",   "-tme")
 #undef AARCH64_ARCH_EXT_NAME
 

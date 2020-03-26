@@ -3739,10 +3739,8 @@ void EmitClangAttrParsedAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
     for (const auto &S : GetFlattenedSpellings(Attr)) {
       const std::string &RawSpelling = S.name();
       std::string Spelling;
-      if (S.variety() == "CXX11" || S.variety() == "C2x") {
-        Spelling += S.nameSpace();
-        Spelling += "::";
-      }
+      if (!S.nameSpace().empty())
+        Spelling += S.nameSpace() + "::";
       if (S.variety() == "GNU")
         Spelling += NormalizeGNUAttrSpelling(RawSpelling);
       else
@@ -3815,12 +3813,12 @@ void EmitClangAttrParsedAttrKinds(RecordKeeper &Records, raw_ostream &OS) {
         const std::string &Variety = S.variety();
         if (Variety == "CXX11") {
           Matches = &CXX11;
-          Spelling += S.nameSpace();
-          Spelling += "::";
+          if (!S.nameSpace().empty())
+            Spelling += S.nameSpace() + "::";
         } else if (Variety == "C2x") {
           Matches = &C2x;
-          Spelling += S.nameSpace();
-          Spelling += "::";
+          if (!S.nameSpace().empty())
+            Spelling += S.nameSpace() + "::";
         } else if (Variety == "GNU")
           Matches = &GNU;
         else if (Variety == "Declspec")

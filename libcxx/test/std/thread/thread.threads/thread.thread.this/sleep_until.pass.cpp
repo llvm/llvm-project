@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // UNSUPPORTED: libcpp-has-no-threads
-// FLAKY_TEST.
+// ALLOW_RETRIES: 2
 
 // <thread>
 

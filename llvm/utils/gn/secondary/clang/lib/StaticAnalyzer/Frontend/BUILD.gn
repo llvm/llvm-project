@@ -14,8 +14,9 @@ static_library("Frontend") {
   ]
   sources = [
     "AnalysisConsumer.cpp",
-    "CheckerRegistration.cpp",
+    "AnalyzerHelpFlags.cpp",
     "CheckerRegistry.cpp",
+    "CreateCheckerManager.cpp",
     "FrontendActions.cpp",
     "ModelConsumer.cpp",
     "ModelInjector.cpp",

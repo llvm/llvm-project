@@ -599,8 +599,6 @@ struct SemiNCAInfo {
     // Loop over all of the discovered blocks in the function...
     for (size_t i = 1, e = NumToNode.size(); i != e; ++i) {
       NodePtr W = NumToNode[i];
-      LLVM_DEBUG(dbgs() << "\tdiscovered a new reachable node "
-                        << BlockNamePrinter(W) << "\n");
 
       // Don't replace this with 'count', the insertion side effect is important
       if (DT.DomTreeNodes[W]) continue;  // Haven't calculated this node yet?

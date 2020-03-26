@@ -15512,13 +15512,25 @@ bool ARMTargetLowering::shouldSinkOperands(Instruction *I,
   if (!Subtarget->hasMVEIntegerOps())
     return false;
 
-  auto IsSinker = [](Instruction *I, int Operand) {
+  auto IsFMSMul = [&](Instruction *I) {
+    if (!I->hasOneUse())
+      return false;
+    auto *Sub = cast<Instruction>(*I->users().begin());
+    return Sub->getOpcode() == Instruction::FSub && Sub->getOperand(1) == I;
+  };
+
+  auto IsSinker = [&](Instruction *I, int Operand) {
     switch (I->getOpcode()) {
     case Instruction::Add:
     case Instruction::Mul:
+    case Instruction::FAdd:
     case Instruction::ICmp:
+    case Instruction::FCmp:
       return true;
+    case Instruction::FMul:
+      return !IsFMSMul(I);
     case Instruction::Sub:
+    case Instruction::FSub:
     case Instruction::Shl:
     case Instruction::LShr:
     case Instruction::AShr:

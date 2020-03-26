@@ -29,6 +29,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/circular_raw_ostream.h"
+#include "llvm/Support/OptimalLayout.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
@@ -340,51 +341,181 @@ namespace {
 // coroutine frame and if the alignment specified on the Alloca instruction
 // differs from the natural alignment of the alloca type we will need to insert
 // padding.
-struct PaddingCalculator {
+class FrameTypeBuilder {
+  struct Field {
+    uint64_t Size;
+    uint64_t Offset;
+    Spill *ForSpill;
+    Type *Ty;
+    unsigned FieldIndex;
+    Align Alignment;
+    Align TyAlignment;
+  };
+
   const DataLayout &DL;
   LLVMContext &Context;
-  unsigned StructSize = 0;
+  uint64_t StructSize = 0;
+  Align StructAlign;
+  bool IsFinished = false;
 
-  PaddingCalculator(LLVMContext &Context, DataLayout const &DL)
-      : DL(DL), Context(Context) {}
+  SmallVector<Field, 8> Fields;
+  DenseMap<Value*, unsigned> FieldIndexByKey;
 
-  // Replicate the logic from IR/DataLayout.cpp to match field offset
-  // computation for LLVM structs.
-  void addType(Type *Ty) {
-    unsigned TyAlign = DL.getABITypeAlignment(Ty);
-    if ((StructSize & (TyAlign - 1)) != 0)
-      StructSize = alignTo(StructSize, TyAlign);
+public:
+  FrameTypeBuilder(LLVMContext &Context, DataLayout const &DL)
+    : DL(DL), Context(Context) {}
 
-    StructSize += DL.getTypeAllocSize(Ty); // Consume space for this data item.
+  class FieldId {
+    size_t Value;
+    explicit FieldId(size_t Value) : Value(Value) {}
+
+    friend class FrameTypeBuilder;
+  };
+
+  /// Add a field to this structure for the storage of an `alloca`
+  /// instruction.
+  FieldId addFieldForAlloca(AllocaInst *AI, Spill *ForSpill = nullptr,
+                            bool IsHeader = false) {
+    Type *Ty = AI->getAllocatedType();
+
+    // Make an array type if this is a static array allocation.
+    if (AI->isArrayAllocation()) {
+      if (auto *CI = dyn_cast<ConstantInt>(AI->getArraySize()))
+        Ty = ArrayType::get(Ty, CI->getValue().getZExtValue());
+      else
+        report_fatal_error("Coroutines cannot handle non static allocas yet");
+    }
+
+    return addField(Ty, AI->getAlign(), ForSpill, IsHeader);
   }
 
-  void addTypes(SmallVectorImpl<Type *> const &Types) {
-    for (auto *Ty : Types)
-      addType(Ty);
+  /// Add a field to this structure.
+  FieldId addField(Type *Ty, MaybeAlign FieldAlignment,
+                   Spill *ForSpill = nullptr,
+                   bool IsHeader = false) {
+    assert(!IsFinished && "adding fields to a finished builder");
+    assert(Ty && "must provide a type for a field");
+
+    // The field size is always the alloc size of the type.
+    uint64_t FieldSize = DL.getTypeAllocSize(Ty);
+
+    // The field alignment might not be the type alignment, but we need
+    // to remember the type alignment anyway to build the type.
+    Align TyAlignment = DL.getABITypeAlign(Ty);
+    if (!FieldAlignment) FieldAlignment = TyAlignment;
+
+    // Lay out header fields immediately.
+    uint64_t Offset;
+    if (IsHeader) {
+      Offset = alignTo(StructSize, FieldAlignment);
+      StructSize = Offset + FieldSize;
+
+    // Everything else has a flexible offset.
+    } else {
+      Offset = OptimalLayoutField::FlexibleOffset;
+    }
+
+    Fields.push_back({FieldSize, Offset, ForSpill, Ty, 0,
+                      *FieldAlignment, TyAlignment});
+    return FieldId(Fields.size() - 1);
   }
 
-  unsigned computePadding(Type *Ty, unsigned ForcedAlignment) {
-    unsigned TyAlign = DL.getABITypeAlignment(Ty);
-    auto Natural = alignTo(StructSize, TyAlign);
-    auto Forced = alignTo(StructSize, ForcedAlignment);
+  /// Finish the layout and set the body on the given type.
+  void finish(StructType *Ty);
 
-    // Return how many bytes of padding we need to insert.
-    if (Natural != Forced)
-      return std::max(Natural, Forced) - StructSize;
-
-    // Rely on natural alignment.
-    return 0;
+  uint64_t getStructSize() const {
+    assert(IsFinished && "not yet finished!");
+    return StructSize;
   }
 
-  // If padding required, return the padding field type to insert.
-  ArrayType *getPaddingType(Type *Ty, unsigned ForcedAlignment) {
-    if (auto Padding = computePadding(Ty, ForcedAlignment))
-      return ArrayType::get(Type::getInt8Ty(Context), Padding);
+  Align getStructAlign() const {
+    assert(IsFinished && "not yet finished!");
+    return StructAlign;
+  }
 
-    return nullptr;
+  unsigned getFieldIndex(FieldId Id) const {
+    assert(IsFinished && "not yet finished!");
+    return Fields[Id.Value].FieldIndex;
   }
 };
 } // namespace
+
+void FrameTypeBuilder::finish(StructType *Ty) {
+  assert(!IsFinished && "already finished!");
+
+  // Prepare the optimal-layout field array.
+  // The Id in the layout field is a pointer to our Field for it.
+  SmallVector<OptimalLayoutField, 8> LayoutFields;
+  LayoutFields.reserve(Fields.size());
+  for (auto &Field : Fields) {
+    LayoutFields.emplace_back(&Field, Field.Size, Field.Alignment,
+                              Field.Offset);
+  }
+
+  // Perform layout.
+  auto SizeAndAlign = performOptimalLayout(LayoutFields);
+  StructSize = SizeAndAlign.first;
+  StructAlign = SizeAndAlign.second;
+
+  auto getField = [](const OptimalLayoutField &LayoutField) -> Field & {
+    return *static_cast<Field *>(const_cast<void*>(LayoutField.Id));
+  };
+
+  // We need to produce a packed struct type if there's a field whose
+  // assigned offset isn't a multiple of its natural type alignment.
+  bool Packed = [&] {
+    for (auto &LayoutField : LayoutFields) {
+      auto &F = getField(LayoutField);
+      if (!isAligned(F.TyAlignment, LayoutField.Offset))
+        return true;
+    }
+    return false;
+  }();
+
+  // Build the struct body.
+  SmallVector<Type*, 16> FieldTypes;
+  FieldTypes.reserve(LayoutFields.size() * 3 / 2);
+  uint64_t LastOffset = 0;
+  for (auto &LayoutField : LayoutFields) {
+    auto &F = getField(LayoutField);
+
+    auto Offset = LayoutField.Offset;
+
+    // Add a padding field if there's a padding gap and we're either
+    // building a packed struct or the padding gap is more than we'd
+    // get from aligning to the field type's natural alignment.
+    assert(Offset >= LastOffset);
+    if (Offset != LastOffset) {
+      if (Packed || alignTo(LastOffset, F.TyAlignment) != Offset)
+        FieldTypes.push_back(ArrayType::get(Type::getInt8Ty(Context),
+                                            Offset - LastOffset));
+    }
+
+    // Record the layout information into both the Field and the
+    // original Spill, if there is one.
+    F.Offset = Offset;
+    F.FieldIndex = FieldTypes.size();
+    if (F.ForSpill) {
+      F.ForSpill->setFieldIndex(F.FieldIndex);
+    }
+
+    FieldTypes.push_back(F.Ty);
+    LastOffset = Offset + F.Size;
+  }
+
+  Ty->setBody(FieldTypes, Packed);
+
+#ifndef NDEBUG
+  // Check that the IR layout matches the offsets we expect.
+  auto Layout = DL.getStructLayout(Ty);
+  for (auto &F : Fields) {
+    assert(Ty->getElementType(F.FieldIndex) == F.Ty);
+    assert(Layout->getElementOffset(F.FieldIndex) == F.Offset);
+  }
+#endif
+
+  IsFinished = true;
+}
 
 // Build a struct that will keep state for an active coroutine.
 //   struct f.frame {
@@ -398,13 +529,17 @@ static StructType *buildFrameType(Function &F, coro::Shape &Shape,
                                   SpillInfo &Spills) {
   LLVMContext &C = F.getContext();
   const DataLayout &DL = F.getParent()->getDataLayout();
-  PaddingCalculator Padder(C, DL);
-  SmallString<32> Name(F.getName());
-  Name.append(".Frame");
-  StructType *FrameTy = StructType::create(C, Name);
-  SmallVector<Type *, 8> Types;
+  StructType *FrameTy = [&] {
+    SmallString<32> Name(F.getName());
+    Name.append(".Frame");
+    return StructType::create(C, Name);
+  }();
+
+  FrameTypeBuilder B(C, DL);
 
   AllocaInst *PromiseAlloca = Shape.getPromiseAlloca();
+  Optional<FrameTypeBuilder::FieldId> PromiseFieldId;
+  Optional<FrameTypeBuilder::FieldId> SwitchIndexFieldId;
 
   if (Shape.ABI == coro::ABI::Switch) {
     auto *FramePtrTy = FrameTy->getPointerTo();
@@ -412,74 +547,74 @@ static StructType *buildFrameType(Function &F, coro::Shape &Shape,
                                    /*IsVarArg=*/false);
     auto *FnPtrTy = FnTy->getPointerTo();
 
-    // Figure out how wide should be an integer type storing the suspend index.
+    // Add header fields for the resume and destroy functions.
+    // We can rely on these being perfectly packed.
+    B.addField(FnPtrTy, None, nullptr, /*header*/ true);
+    B.addField(FnPtrTy, None, nullptr, /*header*/ true);
+
+    // Add a header field for the promise if there is one.
+    if (PromiseAlloca) {
+      PromiseFieldId =
+        B.addFieldForAlloca(PromiseAlloca, nullptr, /*header*/ true);
+    }
+
+    // Add a field to store the suspend index.  This doesn't need to
+    // be in the header.
     unsigned IndexBits = std::max(1U, Log2_64_Ceil(Shape.CoroSuspends.size()));
-    Type *PromiseType = PromiseAlloca
-                            ? PromiseAlloca->getType()->getElementType()
-                            : Type::getInt1Ty(C);
     Type *IndexType = Type::getIntNTy(C, IndexBits);
-    Types.push_back(FnPtrTy);
-    Types.push_back(FnPtrTy);
-    Types.push_back(PromiseType);
-    Types.push_back(IndexType);
+
+    SwitchIndexFieldId = B.addField(IndexType, None);
   } else {
     assert(PromiseAlloca == nullptr && "lowering doesn't support promises");
   }
 
   Value *CurrentDef = nullptr;
 
-  Padder.addTypes(Types);
-
   // Create an entry for every spilled value.
   for (auto &S : Spills) {
+    // We can have multiple entries in Spills for a single value, but
+    // they should form a contiguous run.  Ignore all but the first.
     if (CurrentDef == S.def())
       continue;
 
     CurrentDef = S.def();
-    // PromiseAlloca was already added to Types array earlier.
-    if (CurrentDef == PromiseAlloca)
-      continue;
 
-    uint64_t Count = 1;
-    Type *Ty = nullptr;
+    assert(CurrentDef != PromiseAlloca &&
+           "recorded spill use of promise alloca?");
+
     if (auto *AI = dyn_cast<AllocaInst>(CurrentDef)) {
-      Ty = AI->getAllocatedType();
-      if (unsigned AllocaAlignment = AI->getAlignment()) {
-        // If alignment is specified in alloca, see if we need to insert extra
-        // padding.
-        if (auto PaddingTy = Padder.getPaddingType(Ty, AllocaAlignment)) {
-          Types.push_back(PaddingTy);
-          Padder.addType(PaddingTy);
-        }
-      }
-      if (auto *CI = dyn_cast<ConstantInt>(AI->getArraySize()))
-        Count = CI->getValue().getZExtValue();
-      else
-        report_fatal_error("Coroutines cannot handle non static allocas yet");
+      B.addFieldForAlloca(AI, &S);
     } else {
-      Ty = CurrentDef->getType();
+      Type *Ty = CurrentDef->getType();
+      B.addField(Ty, None, &S);
     }
-    S.setFieldIndex(Types.size());
-    if (Count == 1)
-      Types.push_back(Ty);
-    else
-      Types.push_back(ArrayType::get(Ty, Count));
-    Padder.addType(Ty);
   }
-  FrameTy->setBody(Types);
+
+  B.finish(FrameTy);
+  Shape.FrameAlign = B.getStructAlign();
+  Shape.FrameSize = B.getStructSize();
 
   switch (Shape.ABI) {
+  // In the switch ABI, remember the field indices for the promise and
+  // switch-index fields.
   case coro::ABI::Switch:
+    Shape.SwitchLowering.IndexField =
+      B.getFieldIndex(*SwitchIndexFieldId);
+    Shape.SwitchLowering.PromiseField =
+      (PromiseAlloca ? B.getFieldIndex(*PromiseFieldId) : 0);
+
+    // Also round the frame size up to a multiple of its alignment, as is
+    // generally expected in C/C++.
+    Shape.FrameSize = alignTo(Shape.FrameSize, Shape.FrameAlign);
     break;
 
-  // Remember whether the frame is inline in the storage.
+  // In the retcon ABI, remember whether the frame is inline in the storage.
   case coro::ABI::Retcon:
   case coro::ABI::RetconOnce: {
-    auto &Layout = F.getParent()->getDataLayout();
     auto Id = Shape.getRetconCoroId();
     Shape.RetconLowering.IsFrameInlineInStorage
-      = (Layout.getTypeAllocSize(FrameTy) <= Id->getStorageSize() &&
-         Layout.getABITypeAlignment(FrameTy) <= Id->getStorageAlignment());
+      = (B.getStructSize() <= Id->getStorageSize() &&
+         B.getStructAlign() <= Id->getStorageAlignment());
     break;
   }
   }
@@ -608,10 +743,12 @@ static Instruction *insertSpills(const SpillInfo &Spills, coro::Shape &Shape) {
   // we remember allocas and their indices to be handled once we processed
   // all the spills.
   SmallVector<std::pair<AllocaInst *, unsigned>, 4> Allocas;
-  // Promise alloca (if present) has a fixed field number.
+
+  // Promise alloca (if present) doesn't show in the spills and has a
+  // special field number.
   if (auto *PromiseAlloca = Shape.getPromiseAlloca()) {
     assert(Shape.ABI == coro::ABI::Switch);
-    Allocas.emplace_back(PromiseAlloca, coro::Shape::SwitchFieldIndex::Promise);
+    Allocas.emplace_back(PromiseAlloca, Shape.getPromiseField());
   }
 
   // Create a GEP with the given index into the coroutine frame for the original

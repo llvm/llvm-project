@@ -88,10 +88,6 @@ unsigned getMaxWorkGroupsPerCU(const MCSubtargetInfo *STI,
                                unsigned FlatWorkGroupSize);
 
 /// \returns Maximum number of waves per compute unit for given subtarget \p
-/// STI without any kind of limitation.
-unsigned getMaxWavesPerCU(const MCSubtargetInfo *STI);
-
-/// \returns Maximum number of waves per compute unit for given subtarget \p
 /// STI and limited by given \p FlatWorkGroupSize.
 unsigned getMaxWavesPerCU(const MCSubtargetInfo *STI,
                           unsigned FlatWorkGroupSize);

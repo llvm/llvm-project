@@ -52,10 +52,10 @@
 // DISASM-NEXT:  4011bc:
 // DISASM-NEXT:  4011be:
 // DISASM:       <_start>:
-// DISASM-NEXT: 4011c0:       jmp 0x2b <bar@plt>
-// DISASM-NEXT: 4011c5:       jmp 0x26 <bar@plt>
-// DISASM-NEXT: 4011ca:       jmp 0x31 <zed@plt>
-// DISASM-NEXT: 4011cf:       jmp -0x18 <local>
+// DISASM-NEXT: 4011c0:       jmp 0x4011f0 <bar@plt>
+// DISASM-NEXT: 4011c5:       jmp 0x4011f0 <bar@plt>
+// DISASM-NEXT: 4011ca:       jmp 0x401200 <zed@plt>
+// DISASM-NEXT: 4011cf:       jmp 0x4011bc <local>
 
 // DISASM:      Disassembly of section .plt:
 // DISASM-EMPTY:
@@ -72,13 +72,13 @@
 /// .got.plt[3] = 0x403278 + 12 = 0x403284
 // DISASM-NEXT: 4011f0:       jmpl *0x403284
 // DISASM-NEXT:               pushl $0x0
-// DISASM-NEXT:               jmp -0x20 <.plt>
+// DISASM-NEXT:               jmp 0x4011e0 <.plt>
 // DISASM-EMPTY:
 // DISASM-NEXT: <zed@plt>:
 /// .got.plt[4] = 0x403278 + 16 = 0x403288
 // DISASM-NEXT: 401200:       jmpl *0x403288
 // DISASM-NEXT:               pushl $0x8
-// DISASM-NEXT:               jmp -0x30 <.plt>
+// DISASM-NEXT:               jmp 0x4011e0 <.plt>
 
 // CHECKSHARED:        Name: .plt
 // CHECKSHARED-NEXT:   Type: SHT_PROGBITS
@@ -122,10 +122,10 @@
 // DISASMSHARED-NEXT: 11e0:
 // DISASMSHARED-NEXT: 11e2:
 // DISASMSHARED:      <_start>:
-// DISASMSHARED-NEXT: 11e4:       jmp 39 <bar@plt>
-// DISASMSHARED-NEXT:             jmp 34 <bar@plt>
-// DISASMSHARED-NEXT:             jmp 45 <zed@plt>
-// DISASMSHARED-NEXT:             jmp -24 <local>
+// DISASMSHARED-NEXT: 11e4:       jmp 0x1210 <bar@plt>
+// DISASMSHARED-NEXT:             jmp 0x1210 <bar@plt>
+// DISASMSHARED-NEXT:             jmp 0x1220 <zed@plt>
+// DISASMSHARED-NEXT:             jmp 0x11e0 <local>
 // DISASMSHARED-EMPTY:
 // DISASMSHARED-NEXT: Disassembly of section .plt:
 // DISASMSHARED-EMPTY:
@@ -139,11 +139,11 @@
 // DISASMSHARED:      <bar@plt>:
 // DISASMSHARED-NEXT: 1210:       jmpl *12(%ebx)
 // DISASMSHARED-NEXT:             pushl $0
-// DISASMSHARED-NEXT:             jmp -32 <.plt>
+// DISASMSHARED-NEXT:             jmp 0x1200 <.plt>
 // DISASMSHARED:      <zed@plt>:
 // DISASMSHARED-NEXT: 1220:       jmpl *16(%ebx)
 // DISASMSHARED-NEXT:             pushl $8
-// DISASMSHARED-NEXT:             jmp -48 <.plt>
+// DISASMSHARED-NEXT:             jmp 0x1200 <.plt>
 
 // DISASMPIE:      Disassembly of section .plt:
 // DISASMPIE-EMPTY:
@@ -158,12 +158,12 @@
 // DISASMPIE-NEXT: <bar@plt>:
 // DISASMPIE-NEXT: 11f0:       jmpl *12(%ebx)
 // DISASMPIE-NEXT:             pushl $0
-// DISASMPIE-NEXT:             jmp -32 <.plt>
+// DISASMPIE-NEXT:             jmp 0x11e0 <.plt>
 // DISASMPIE-EMPTY:
 // DISASMPIE-NEXT: <zed@plt>:
 // DISASMPIE-NEXT: 1200:       jmpl *16(%ebx)
 // DISASMPIE-NEXT:             pushl $8
-// DISASMPIE-NEXT:             jmp -48 <.plt>
+// DISASMPIE-NEXT:             jmp 0x11e0 <.plt>
 
 local:
 .long 0

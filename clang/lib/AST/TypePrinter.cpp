@@ -1722,13 +1722,13 @@ static void printTo(raw_ostream &OS, ArrayRef<TA> Args,
 
     OS << ArgString;
 
-    NeedSpace = (!ArgString.empty() && ArgString.back() == '>');
+    // If the last character of our string is '>', add another space to
+    // keep the two '>''s separate tokens.
+    NeedSpace = Policy.SplitTemplateClosers && !ArgString.empty() &&
+                ArgString.back() == '>';
     FirstArg = false;
   }
 
-  // If the last character of our string is '>', add another space to
-  // keep the two '>''s separate tokens. We don't *have* to do this in
-  // C++0x, but it's still good hygiene.
   if (NeedSpace)
     OS << ' ';
 

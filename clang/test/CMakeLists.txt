@@ -81,6 +81,7 @@ endif ()
 
 if (CLANG_BUILD_EXAMPLES)
   list(APPEND CLANG_TEST_DEPS
+    Attribute
     AnnotateFunctions
     clang-interpreter
     PrintFunctionNames

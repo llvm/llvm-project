@@ -128,7 +128,7 @@
 # DEFHDR-NEXT:      PF_X (0x1)
 # DEFHDR-NEXT:    ]
 
-# BADHDR:       {{.*}}.script:1: section header 'bar' is not listed in PHDRS
+# BADHDR:       {{.*}}.script:1: program header 'bar' is not listed in PHDRS
 
 # RUN: echo "PHDRS { text PT_LOAD FOOHDR; }" > %t1.script
 # RUN: not ld.lld -o /dev/null --script %t1.script %t 2>&1 | FileCheck --check-prefix=FOOHDR %s

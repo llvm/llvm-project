@@ -87,8 +87,33 @@ define <4 x float> @v4f32_no_daz(<4 x float> %f) #0 {
 define <8 x float> @v8f32_no_daz(<8 x float> %f) #0 {
 ; NHM-LABEL: v8f32_no_daz:
 ; NHM:       # %bb.0:
-; NHM-NEXT:    sqrtps %xmm0, %xmm0
-; NHM-NEXT:    sqrtps %xmm1, %xmm1
+; NHM-NEXT:    movaps %xmm0, %xmm2
+; NHM-NEXT:    rsqrtps %xmm0, %xmm3
+; NHM-NEXT:    mulps %xmm3, %xmm0
+; NHM-NEXT:    movaps {{.*#+}} xmm4 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
+; NHM-NEXT:    movaps %xmm0, %xmm5
+; NHM-NEXT:    mulps %xmm4, %xmm5
+; NHM-NEXT:    mulps %xmm3, %xmm0
+; NHM-NEXT:    movaps {{.*#+}} xmm3 = [-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0]
+; NHM-NEXT:    addps %xmm3, %xmm0
+; NHM-NEXT:    mulps %xmm5, %xmm0
+; NHM-NEXT:    movaps {{.*#+}} xmm5 = [NaN,NaN,NaN,NaN]
+; NHM-NEXT:    andps %xmm5, %xmm2
+; NHM-NEXT:    movaps {{.*#+}} xmm6 = [1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38]
+; NHM-NEXT:    movaps %xmm6, %xmm7
+; NHM-NEXT:    cmpleps %xmm2, %xmm7
+; NHM-NEXT:    andps %xmm7, %xmm0
+; NHM-NEXT:    rsqrtps %xmm1, %xmm7
+; NHM-NEXT:    movaps %xmm1, %xmm2
+; NHM-NEXT:    mulps %xmm7, %xmm2
+; NHM-NEXT:    mulps %xmm2, %xmm4
+; NHM-NEXT:    mulps %xmm7, %xmm2
+; NHM-NEXT:    addps %xmm3, %xmm2
+; NHM-NEXT:    mulps %xmm4, %xmm2
+; NHM-NEXT:    andps %xmm5, %xmm1
+; NHM-NEXT:    cmpleps %xmm1, %xmm6
+; NHM-NEXT:    andps %xmm6, %xmm2
+; NHM-NEXT:    movaps %xmm2, %xmm1
 ; NHM-NEXT:    retq
 ;
 ; SNB-LABEL: v8f32_no_daz:
@@ -209,8 +234,28 @@ define <4 x float> @v4f32_daz(<4 x float> %f) #1 {
 define <8 x float> @v8f32_daz(<8 x float> %f) #1 {
 ; NHM-LABEL: v8f32_daz:
 ; NHM:       # %bb.0:
-; NHM-NEXT:    sqrtps %xmm0, %xmm0
-; NHM-NEXT:    sqrtps %xmm1, %xmm1
+; NHM-NEXT:    rsqrtps %xmm0, %xmm2
+; NHM-NEXT:    movaps %xmm0, %xmm3
+; NHM-NEXT:    mulps %xmm2, %xmm3
+; NHM-NEXT:    movaps {{.*#+}} xmm4 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
+; NHM-NEXT:    movaps %xmm3, %xmm5
+; NHM-NEXT:    mulps %xmm4, %xmm5
+; NHM-NEXT:    mulps %xmm2, %xmm3
+; NHM-NEXT:    movaps {{.*#+}} xmm2 = [-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0]
+; NHM-NEXT:    addps %xmm2, %xmm3
+; NHM-NEXT:    mulps %xmm5, %xmm3
+; NHM-NEXT:    xorps %xmm5, %xmm5
+; NHM-NEXT:    cmpneqps %xmm5, %xmm0
+; NHM-NEXT:    andps %xmm3, %xmm0
+; NHM-NEXT:    rsqrtps %xmm1, %xmm3
+; NHM-NEXT:    movaps %xmm1, %xmm6
+; NHM-NEXT:    mulps %xmm3, %xmm6
+; NHM-NEXT:    mulps %xmm6, %xmm4
+; NHM-NEXT:    mulps %xmm3, %xmm6
+; NHM-NEXT:    addps %xmm2, %xmm6
+; NHM-NEXT:    mulps %xmm4, %xmm6
+; NHM-NEXT:    cmpneqps %xmm5, %xmm1
+; NHM-NEXT:    andps %xmm6, %xmm1
 ; NHM-NEXT:    retq
 ;
 ; SNB-LABEL: v8f32_daz:

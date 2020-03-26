@@ -42,13 +42,13 @@
 
 int main(int, char**)
 {
-    typedef std::allocator<char>::size_type AST;          // expected-error{{'size_type' is deprecated}}
-    typedef std::allocator<char>::difference_type ADT;    // expected-error{{'difference_type' is deprecated}}
-    typedef std::allocator<char>::pointer AP;             // expected-error{{'pointer' is deprecated}}
-    typedef std::allocator<char>::const_pointer ACP;      // expected-error{{'const_pointer' is deprecated}}
-    typedef std::allocator<char>::reference AR;           // expected-error{{'reference' is deprecated}}
-    typedef std::allocator<char>::const_reference ACR;    // expected-error{{'const_reference' is deprecated}}
-    typedef std::allocator<char>::rebind<int>::other ARO; // expected-error{{'rebind<int>' is deprecated}}
+    typedef std::allocator<char>::size_type AST;          // expected-warning {{'size_type' is deprecated}}
+    typedef std::allocator<char>::difference_type ADT;    // expected-warning {{'difference_type' is deprecated}}
+    typedef std::allocator<char>::pointer AP;             // expected-warning {{'pointer' is deprecated}}
+    typedef std::allocator<char>::const_pointer ACP;      // expected-warning {{'const_pointer' is deprecated}}
+    typedef std::allocator<char>::reference AR;           // expected-warning {{'reference' is deprecated}}
+    typedef std::allocator<char>::const_reference ACR;    // expected-warning {{'const_reference' is deprecated}}
+    typedef std::allocator<char>::rebind<int>::other ARO; // expected-warning {{'rebind<int>' is deprecated}}
 
   return 0;
 }

@@ -38,18 +38,18 @@ suspend:
 }
 
 ; See if the i8* for coro.begin was added to f.Frame
-; CHECK-LABEL: %f.Frame = type { void (%f.Frame*)*, void (%f.Frame*)*, i1, i1, i8* }
+; CHECK-LABEL: %f.Frame = type { void (%f.Frame*)*, void (%f.Frame*)*, i8*, i1 }
 
 ; See if the g's coro.begin was spilled into the frame
 ; CHECK-LABEL: @f(
 ; CHECK: %innerid = call token @llvm.coro.id(i32 0, i8* null, i8* null, i8* bitcast ([3 x void (%g.Frame*)*]* @g.resumers to i8*))
 ; CHECK: %innerhdl = call noalias nonnull i8* @llvm.coro.begin(token %innerid, i8* null)
-; CHECK: %[[spilladdr:.+]] = getelementptr inbounds %f.Frame, %f.Frame* %FramePtr, i32 0, i32 4
+; CHECK: %[[spilladdr:.+]] = getelementptr inbounds %f.Frame, %f.Frame* %FramePtr, i32 0, i32 2
 ; CHECK: store i8* %innerhdl, i8** %[[spilladdr]]
 
 ; See if the coro.begin was loaded from the frame
 ; CHECK-LABEL: @f.resume(
-; CHECK: %[[innerhdlAddr:.+]] = getelementptr inbounds %f.Frame, %f.Frame* %{{.+}}, i32 0, i32 4
+; CHECK: %[[innerhdlAddr:.+]] = getelementptr inbounds %f.Frame, %f.Frame* %{{.+}}, i32 0, i32 2
 ; CHECK: %[[innerhdl:.+]] = load i8*, i8** %[[innerhdlAddr]]
 ; CHECK: %[[gframe:.+]] = bitcast i8* %[[innerhdl]] to %g.Frame*
 ; CHECK: %[[gvarAddr:.+]] = getelementptr inbounds %g.Frame, %g.Frame* %[[gframe]], i32 0, i32 4

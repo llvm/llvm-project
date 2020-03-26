@@ -23,6 +23,8 @@ def HasV8_4a         : Predicate<"Subtarget->hasV8_4aOps()">,
                                  AssemblerPredicate<(all_of HasV8_4aOps), "armv8.4a">;
 def HasV8_5a         : Predicate<"Subtarget->hasV8_5aOps()">,
                                  AssemblerPredicate<(all_of HasV8_5aOps), "armv8.5a">;
+def HasV8_6a         : Predicate<"Subtarget->hasV8_6aOps()">,
+                                 AssemblerPredicate<(all_of HasV8_6aOps), "armv8.6a">;
 def HasVH            : Predicate<"Subtarget->hasVH()">,
                        AssemblerPredicate<(all_of FeatureVH), "vh">;
 
@@ -142,6 +144,8 @@ def HasETE           : Predicate<"Subtarget->hasETE()">,
                        AssemblerPredicate<(all_of FeatureETE), "ete">;
 def HasTRBE          : Predicate<"Subtarget->hasTRBE()">,
                        AssemblerPredicate<(all_of FeatureTRBE), "trbe">;
+def HasBF16          : Predicate<"Subtarget->hasBF16()">,
+                       AssemblerPredicate<(all_of FeatureBF16), "bf16">;
 def IsLE             : Predicate<"Subtarget->isLittleEndian()">;
 def IsBE             : Predicate<"!Subtarget->isLittleEndian()">;
 def IsWindows        : Predicate<"Subtarget->isTargetWindows()">;
@@ -744,6 +748,20 @@ defm SDOT : SIMDThreeSameVectorDot<0, "sdot", int_aarch64_neon_sdot>;
 defm UDOT : SIMDThreeSameVectorDot<1, "udot", int_aarch64_neon_udot>;
 defm SDOTlane : SIMDThreeSameVectorDotIndex<0, "sdot", int_aarch64_neon_sdot>;
 defm UDOTlane : SIMDThreeSameVectorDotIndex<1, "udot", int_aarch64_neon_udot>;
+}
+
+// ARMv8.6-A BFloat
+let Predicates = [HasBF16] in {
+defm BFDOT       : SIMDThreeSameVectorBFDot<1, "bfdot">;
+defm BF16DOTlane : SIMDThreeSameVectorBF16DotI<0, "bfdot">;
+def BFMMLA       : SIMDThreeSameVectorBF16MatrixMul<"bfmmla">;
+def BFMLALB      : SIMDBF16MLAL<0, "bfmlalb">;
+def BFMLALT      : SIMDBF16MLAL<1, "bfmlalt">;
+def BFMLALBIdx   : SIMDBF16MLALIndex<0, "bfmlalb">;
+def BFMLALTIdx   : SIMDBF16MLALIndex<1, "bfmlalt">;
+def BFCVTN       : SIMD_BFCVTN;
+def BFCVTN2      : SIMD_BFCVTN2;
+def BFCVT        : BF16ToSinglePrecision<"bfcvt">;
 }
 
 // ARMv8.2-A FP16 Fused Multiply-Add Long
