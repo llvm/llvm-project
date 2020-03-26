@@ -85,12 +85,12 @@ static SmallString<64> normalizeName(const IdentifierInfo *Name,
   StringRef ScopeName = normalizeAttrScopeName(Scope, SyntaxUsed);
   StringRef AttrName = normalizeAttrName(Name, ScopeName, SyntaxUsed);
 
-  // Ensure that in the case of C++11 attributes, we look for '::foo' if it is
-  // unscoped.
   SmallString<64> FullName = ScopeName;
-  if (Scope || SyntaxUsed == AttributeCommonInfo::AS_CXX11 ||
-      SyntaxUsed == AttributeCommonInfo::AS_C2x)
+  if (!ScopeName.empty()) {
+    assert(SyntaxUsed == AttributeCommonInfo::AS_CXX11 ||
+           SyntaxUsed == AttributeCommonInfo::AS_C2X);
     FullName += "::";
+  }
   FullName += AttrName;
 
   return FullName;
