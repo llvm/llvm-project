@@ -273,7 +273,7 @@ func @const_fold_scalar_imul_flow() -> (i32, i32, i32) {
   %c1 = spv.constant 2 : i32
   %c2 = spv.constant 4 : i32
   %c3 = spv.constant 4294967295 : i32  // 2^32 - 1 : 0xffff ffff
-  %c4 = spv.constant -2147483649 : i32 // -2^31 - 1: 0x7fff ffff
+  %c4 = spv.constant 2147483647 : i32  // 2^31 - 1 : 0x7fff ffff
 
   // (0xffff ffff << 1) = 0x1 ffff fffe -> 0xffff fffe
   // CHECK: %[[CST2:.*]] = spv.constant -2
@@ -331,7 +331,7 @@ func @const_fold_scalar_isub_flow() -> (i32, i32, i32, i32) {
   %c1 = spv.constant 0 : i32
   %c2 = spv.constant 1 : i32
   %c3 = spv.constant 4294967295 : i32  // 2^32 - 1 : 0xffff ffff
-  %c4 = spv.constant -2147483649 : i32 // -2^31 - 1: 0x7fff ffff
+  %c4 = spv.constant 2147483647 : i32  // 2^31     : 0x7fff ffff
   %c5 = spv.constant -1 : i32          //          : 0xffff ffff
   %c6 = spv.constant -2 : i32          //          : 0xffff fffe
 
