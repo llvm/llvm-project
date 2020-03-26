@@ -33,6 +33,83 @@ func @int_attrs_pass() {
 
 // -----
 
+//===----------------------------------------------------------------------===//
+// Check that the maximum and minumum integer attribute values are
+// representable and preserved during a round-trip.
+//===----------------------------------------------------------------------===//
+
+func @int_attrs_pass() {
+  "test.in_range_attrs"() {
+    // CHECK: attr_00 = -128 : i8
+    attr_00 = -128 : i8,
+    // CHECK-SAME: attr_01 = 127 : i8
+    attr_01 = 127 : i8,
+    // CHECK-SAME: attr_02 = -128 : si8
+    attr_02 = -128 : si8,
+    // CHECK-SAME: attr_03 = 127 : si8
+    attr_03 = 127 : si8,
+    // CHECK-SAME: attr_04 = 255 : ui8
+    attr_04 = 255 : ui8,
+    // CHECK-SAME: attr_05 = -32768 : i16
+    attr_05 = -32768 : i16,
+    // CHECK-SAME: attr_06 = 32767 : i16
+    attr_06 = 32767 : i16,
+    // CHECK-SAME: attr_07 = -32768 : si16
+    attr_07 = -32768 : si16,
+    // CHECK-SAME: attr_08 = 32767 : si16
+    attr_08 = 32767 : si16,
+    // CHECK-SAME: attr_09 = 65535 : ui16
+    attr_09 = 65535 : ui16,
+    // CHECK-SAME: attr_10 = -2147483647 : i32
+    attr_10 = -2147483647 : i32,
+    // CHECK-SAME: attr_11 = 2147483646 : i32
+    attr_11 = 2147483646 : i32,
+    // CHECK-SAME: attr_12 = -2147483647 : si32
+    attr_12 = -2147483647 : si32,
+    // CHECK-SAME: attr_13 = 2147483646 : si32
+    attr_13 = 2147483646 : si32,
+    // CHECK-SAME: attr_14 = 4294967295 : ui32
+    attr_14 = 4294967295 : ui32,
+    // CHECK-SAME: attr_15 = -9223372036854775808 : i64
+    attr_15 = -9223372036854775808 : i64,
+    // CHECK-SAME: attr_16 = 9223372036854775807 : i64
+    attr_16 = 9223372036854775807 : i64,
+    // CHECK-SAME: attr_17 = -9223372036854775808 : si64
+    attr_17 = -9223372036854775808 : si64,
+    // CHECK-SAME: attr_18 = 9223372036854775807 : si64
+    attr_18 = 9223372036854775807 : si64,
+    // CHECK-SAME: attr_19 = 18446744073709551615 : ui64
+    attr_19 = 18446744073709551615 : ui64
+  } : () -> ()
+
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// Check that positive values larger than 2^n-1 for signless integers
+// are mapped to their negative signed counterpart. This behaviour is
+// undocumented in the language specification, but it is what the
+// parser currently does.
+//===----------------------------------------------------------------------===//
+
+func @int_attrs_pass() {
+  "test.i8_attr"() {
+    // CHECK: attr_00 = -1 : i8
+    attr_00 = 255 : i8,
+    // CHECK-SAME: attr_01 = -1 : i16
+    attr_01 = 65535 : i16,
+    // CHECK-SAME: attr_02 = -1 : i32
+    attr_02 = 4294967295 : i32,
+    // CHECK-SAME: attr_03 = -1 : i64
+    attr_03 = 18446744073709551615 : i64
+  } : () -> ()
+  return
+}
+// -----
+
+
 func @wrong_int_attrs_signedness_fail() {
   // expected-error @+1 {{'si32_attr' failed to satisfy constraint: 32-bit signed integer attribute}}
   "test.int_attrs"() {
