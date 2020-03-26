@@ -28,21 +28,20 @@ cleanup:
 
 ; CHECK-LABEL: define { i8*, i8*, i32 } @f(i8* %buffer, i32 %n)
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[T0:%.*]] = bitcast i8* %buffer to i32*
-; CHECK-NEXT:    store i32 %n, i32* [[T0]], align 4
-; CHECK-NEXT:    [[ALLOC:%.*]] = tail call i8* @allocate(i32 %n)
 ; CHECK-NEXT:    [[T0:%.*]] = getelementptr inbounds i8, i8* %buffer, i64 8
-; CHECK-NEXT:    [[T1:%.*]] = bitcast i8* [[T0]] to i8**
+; CHECK-NEXT:    [[T1:%.*]] = bitcast i8* [[T0]] to i32*
+; CHECK-NEXT:    store i32 %n, i32* [[T1]], align 4
+; CHECK-NEXT:    [[ALLOC:%.*]] = tail call i8* @allocate(i32 %n)
+; CHECK-NEXT:    [[T1:%.*]] = bitcast i8* %buffer to i8**
 ; CHECK-NEXT:    store i8* [[ALLOC]], i8** [[T1]], align 8
 ; CHECK-NEXT:    [[T0:%.*]] = insertvalue { i8*, i8*, i32 } { i8* bitcast ({ i8*, i8*, i32 } (i8*, i1)* @f.resume.0 to i8*), i8* undef, i32 undef }, i8* [[ALLOC]], 1
 ; CHECK-NEXT:    [[RET:%.*]] = insertvalue { i8*, i8*, i32 } [[T0]], i32 %n, 2
 ; CHECK-NEXT:    ret { i8*, i8*, i32 } [[RET]]
 ; CHECK-NEXT:  }
 
-; CHECK-LABEL: define internal { i8*, i8*, i32 } @f.resume.0(i8* noalias nonnull %0, i1 %1)
+; CHECK-LABEL: define internal { i8*, i8*, i32 } @f.resume.0(i8* noalias nonnull align 8 dereferenceable(1024) %0, i1 %1)
 ; CHECK-NEXT:  :
-; CHECK-NEXT:    [[T0:%.*]] = getelementptr inbounds i8, i8* %0, i64 8
-; CHECK-NEXT:    [[T1:%.*]] = bitcast i8* [[T0]] to i8**
+; CHECK-NEXT:    [[T1:%.*]] = bitcast i8* %0 to i8**
 ; CHECK-NEXT:    [[ALLOC:%.*]] = load i8*, i8** [[T1]], align 8
 ; CHECK-NEXT:    tail call void @deallocate(i8* [[ALLOC]])
 ; CHECK-NEXT:    br i1 %1,
@@ -83,14 +82,14 @@ cleanup:
 ; CHECK-NEXT:    ret { i8*, i32 } [[RET]]
 ; CHECK-NEXT:  }
 
-; CHECK-LABEL: define internal { i8*, i32 } @g.resume.0(i8* noalias nonnull %0, i1 %1)
+; CHECK-LABEL: define internal { i8*, i32 } @g.resume.0(i8* noalias nonnull align 8 dereferenceable(1024) %0, i1 %1)
 ; CHECK-NEXT:  :
 ; CHECK-NEXT:    br i1 %1,
 ; CHECK:       :
 ; CHECK-NEXT:    [[T0:%.*]] = bitcast i8* %0 to i32*
-; CHECK-NEXT:    [[T1:%.*]] = load i32, i32* [[T0]], align 4
+; CHECK-NEXT:    [[T1:%.*]] = load i32, i32* [[T0]], align 8
 ; CHECK-NEXT:    %inc = add i32 [[T1]], 1
-; CHECK-NEXT:    store i32 %inc, i32* [[T0]], align 4
+; CHECK-NEXT:    store i32 %inc, i32* [[T0]], align 8
 ; CHECK-NEXT:    [[T0:%.*]] = zext i32 %inc to i64
 ; CHECK-NEXT:    [[ALLOC:%.*]] = alloca i8, i64 [[T0]], align 8
 ; CHECK-NEXT:    call void @use(i8* nonnull [[ALLOC]])
@@ -132,17 +131,17 @@ cleanup:
 ; CHECK-NEXT:    ret { i8*, i32 } [[RET]]
 ; CHECK-NEXT:  }
 
-; CHECK-LABEL: define internal { i8*, i32 } @h.resume.0(i8* noalias nonnull %0, i1 %1)
+; CHECK-LABEL: define internal { i8*, i32 } @h.resume.0(i8* noalias nonnull align 8 dereferenceable(1024) %0, i1 %1)
 ; CHECK-NEXT:  :
 ; CHECK-NEXT:    br i1 %1,
 ; CHECK:       :
 ; CHECK-NEXT:    [[NSLOT:%.*]] = bitcast i8* %0 to i32*
-; CHECK-NEXT:    [[T1:%.*]] = load i32, i32* [[NSLOT]], align 4
+; CHECK-NEXT:    [[T1:%.*]] = load i32, i32* [[NSLOT]], align 8
 ; CHECK-NEXT:    %inc = add i32 [[T1]], 1
 ; CHECK-NEXT:    [[T0:%.*]] = zext i32 %inc to i64
 ; CHECK-NEXT:    [[ALLOC:%.*]] = alloca i8, i64 [[T0]], align 8
 ; CHECK-NEXT:    call void @use(i8* nonnull [[ALLOC]])
-; CHECK-NEXT:    store i32 %inc, i32* [[NSLOT]], align 4
+; CHECK-NEXT:    store i32 %inc, i32* [[NSLOT]], align 8
 ; CHECK-NEXT:    [[RET:%.*]] = insertvalue { i8*, i32 } { i8* bitcast ({ i8*, i32 } (i8*, i1)* @h.resume.0 to i8*), i32 undef }, i32 %inc, 1
 ; CHECK-NEXT:    ret { i8*, i32 } [[RET]]
 ; CHECK:       :
@@ -180,14 +179,14 @@ loop2:
 ; CHECK-NEXT:    ret { i8*, i32 } [[RET]]
 ; CHECK-NEXT:  }
 
-; CHECK-LABEL: define internal { i8*, i32 } @i.resume.0(i8* noalias nonnull %0)
+; CHECK-LABEL: define internal { i8*, i32 } @i.resume.0(i8* noalias nonnull align 8 dereferenceable(1024) %0)
 ; CHECK-NEXT:  :
 ; CHECK-NEXT:    [[NSLOT:%.*]] = bitcast i8* %0 to i32*
-; CHECK-NEXT:    [[T1:%.*]] = load i32, i32* [[NSLOT]], align 4
+; CHECK-NEXT:    [[T1:%.*]] = load i32, i32* [[NSLOT]], align 8
 ; CHECK-NEXT:    %inc = add i32 [[T1]], 1
 ; CHECK-NEXT:    br label %loop2
 ; CHECK:       :
-; CHECK-NEXT:    store i32 %k, i32* [[NSLOT]], align 4
+; CHECK-NEXT:    store i32 %k, i32* [[NSLOT]], align 8
 ; CHECK-NEXT:    [[RET:%.*]] = insertvalue { i8*, i32 } { i8* bitcast ({ i8*, i32 } (i8*)* @i.resume.0 to i8*), i32 undef }, i32 %k, 1
 ; CHECK-NEXT:    ret { i8*, i32 } [[RET]]
 ; CHECK:       loop2:

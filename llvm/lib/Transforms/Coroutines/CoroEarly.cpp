@@ -61,14 +61,14 @@ void Lowerer::lowerResumeOrDestroy(CallSite CS,
 // TODO: Handle the case when coroutine promise alloca has align override.
 void Lowerer::lowerCoroPromise(CoroPromiseInst *Intrin) {
   Value *Operand = Intrin->getArgOperand(0);
-  unsigned Alignement = Intrin->getAlignment();
+  Align Alignment = Intrin->getAlignment();
   Type *Int8Ty = Builder.getInt8Ty();
 
   auto *SampleStruct =
       StructType::get(Context, {AnyResumeFnPtrTy, AnyResumeFnPtrTy, Int8Ty});
   const DataLayout &DL = TheModule.getDataLayout();
   int64_t Offset = alignTo(
-      DL.getStructLayout(SampleStruct)->getElementOffset(2), Alignement);
+      DL.getStructLayout(SampleStruct)->getElementOffset(2), Alignment);
   if (Intrin->isFromPromise())
     Offset = -Offset;
 

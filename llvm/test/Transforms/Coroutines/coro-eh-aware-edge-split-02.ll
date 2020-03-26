@@ -32,13 +32,13 @@ invoke2:
 
 ; CHECK: pad.with.phi.from.invoke2:
 ; CHECK:   %0 = cleanuppad within none []
-; CHECK:   %y.reload.addr = getelementptr inbounds %h.Frame, %h.Frame* %FramePtr, i32 0, i32 6
+; CHECK:   %y.reload.addr = getelementptr inbounds %h.Frame, %h.Frame* %FramePtr, i32 0, i32 3
 ; CHECK:   %y.reload = load i32, i32* %y.reload.addr
 ; CHECK:   cleanupret from %0 unwind label %pad.with.phi
 
 ; CHECK: pad.with.phi.from.invoke1:
 ; CHECK:   %1 = cleanuppad within none []
-; CHECK:   %x.reload.addr = getelementptr inbounds %h.Frame, %h.Frame* %FramePtr, i32 0, i32 5
+; CHECK:   %x.reload.addr = getelementptr inbounds %h.Frame, %h.Frame* %FramePtr, i32 0, i32 2
 ; CHECK:   %x.reload = load i32, i32* %x.reload.addr
 ; CHECK:   cleanupret from %1 unwind label %pad.with.phi
 
