@@ -1075,7 +1075,9 @@ static llvm::Constant *constWithPadding(CodeGenModule &CGM, IsPattern isPattern,
     auto *NewArrayTy = llvm::ArrayType::get(NewElemTy, Size);
     return llvm::ConstantArray::get(NewArrayTy, Values);
   }
-  // FIXME: Do we need to handle tail padding in vectors?
+  // FIXME: Add handling for tail padding in vectors. Vectors don't
+  // have padding between or inside elements, but the total amount of
+  // data can be less than the allocated size.
   return constant;
 }
 

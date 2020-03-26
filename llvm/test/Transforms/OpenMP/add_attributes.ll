@@ -9,6 +9,7 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 
 %struct.omp_lock_t = type { i8* }
 %struct.omp_nest_lock_t = type { i8* }
+%struct.ident_t = type { i32, i32, i32, i32, i8* }
 
 define void @call_all(i32 %schedule, %struct.omp_lock_t* %lock, i32 %lock_hint, %struct.omp_nest_lock_t* %nest_lock, i32 %i, i8* %s, i64 %st, i8* %vp, double %d, i32 %proc_bind, i64 %allocator_handle, i8* %cp, i64 %event_handle, i32 %pause_resource) {
 entry:
@@ -460,6 +461,40 @@ declare dso_local i32 @omp_pause_resource_all(i32)
 
 declare dso_local i32 @omp_get_supported_active_levels()
 
+declare void @__kmpc_barrier(%struct.ident_t*, i32)
+
+declare i32 @__kmpc_cancel(%struct.ident_t*, i32, i32)
+
+declare i32 @__kmpc_cancel_barrier(%struct.ident_t*, i32)
+
+declare void @__kmpc_flush(%struct.ident_t*)
+
+declare i32 @__kmpc_global_thread_num(%struct.ident_t*)
+
+declare void @__kmpc_fork_call(%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...)
+
+declare i32 @__kmpc_omp_taskwait(%struct.ident_t*, i32)
+
+declare i32 @__kmpc_omp_taskyield(%struct.ident_t*, i32, i32)
+
+declare void @__kmpc_push_num_threads(%struct.ident_t*, i32, i32)
+
+declare void @__kmpc_push_proc_bind(%struct.ident_t*, i32, i32)
+
+declare void @__kmpc_serialized_parallel(%struct.ident_t*, i32)
+
+declare void @__kmpc_end_serialized_parallel(%struct.ident_t*, i32)
+
+declare i32 @__kmpc_master(%struct.ident_t*, i32)
+
+declare void @__kmpc_end_master(%struct.ident_t*, i32)
+
+declare void @__kmpc_critical(%struct.ident_t*, i32, [8 x i32]*)
+
+declare void @__kmpc_critical_with_hint(%struct.ident_t*, i32, [8 x i32]*, i32)
+
+declare void @__kmpc_end_critical(%struct.ident_t*, i32, [8 x i32]*)
+
 ; CHECK: ; Function Attrs: nounwind
 ; CHECK-NEXT: declare dso_local void @omp_set_num_threads(i32)
 
@@ -685,67 +720,118 @@ declare dso_local i32 @omp_get_supported_active_levels()
 ; CHECK: ; Function Attrs: nounwind
 ; CHECK-NEXT: declare dso_local i32 @omp_get_supported_active_levels() #0
 
-; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind writeonly
+; CHECK: Function Attrs: inaccessiblemem_or_argmemonly
+; CHECK-NEXT: declare void @__kmpc_barrier(%struct.ident_t*, i32)
+
+; CHECK: Function Attrs: inaccessiblemem_or_argmemonly
+; CHECK-NEXT: declare i32 @__kmpc_cancel(%struct.ident_t*, i32, i32)
+
+; CHECK: Function Attrs: inaccessiblemem_or_argmemonly
+; CHECK-NEXT: declare i32 @__kmpc_cancel_barrier(%struct.ident_t*, i32)
+
+; CHECK: Function Attrs: inaccessiblemem_or_argmemonly
+; CHECK-NEXT: declare void @__kmpc_flush(%struct.ident_t*)
+
+; CHECK: Function Attrs: nounwind
+; CHECK-NEXT: declare i32 @__kmpc_global_thread_num(%struct.ident_t*)
+
+; CHECK: Function Attrs: nounwind
+; CHECK-NEXT: declare void @__kmpc_fork_call(%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...)
+
+; CHECK: Function Attrs: inaccessiblemem_or_argmemonly
+; CHECK-NEXT: declare i32 @__kmpc_omp_taskwait(%struct.ident_t*, i32)
+
+; CHECK: Function Attrs: inaccessiblemem_or_argmemonly
+; CHECK-NEXT: declare i32 @__kmpc_omp_taskyield(%struct.ident_t*, i32, i32)
+
+; CHECK: Function Attrs: inaccessiblemem_or_argmemonly
+; CHECK-NEXT: declare void @__kmpc_push_num_threads(%struct.ident_t*, i32, i32)
+
+; CHECK: Function Attrs: inaccessiblemem_or_argmemonly
+; CHECK-NEXT: declare void @__kmpc_push_proc_bind(%struct.ident_t*, i32, i32)
+
+; CHECK: Function Attrs: inaccessiblemem_or_argmemonly
+; CHECK-NEXT: declare void @__kmpc_serialized_parallel(%struct.ident_t*, i32)
+
+; CHECK: Function Attrs: inaccessiblemem_or_argmemonly
+; CHECK-NEXT: declare void @__kmpc_end_serialized_parallel(%struct.ident_t*, i32)
+
+; CHECK: Function Attrs: inaccessiblemem_or_argmemonly
+; CHECK-NEXT: declare i32 @__kmpc_master(%struct.ident_t*, i32)
+
+; CHECK: Function Attrs: inaccessiblemem_or_argmemonly
+; CHECK-NEXT: declare void @__kmpc_end_master(%struct.ident_t*, i32)
+
+; CHECK: Function Attrs: inaccessiblemem_or_argmemonly
+; CHECK-NEXT: declare void @__kmpc_critical(%struct.ident_t*, i32, [8 x i32]*)
+
+; CHECK: Function Attrs: inaccessiblemem_or_argmemonly
+; CHECK-NEXT: declare void @__kmpc_critical_with_hint(%struct.ident_t*, i32, [8 x i32]*, i32)
+
+; CHECK: Function Attrs: inaccessiblemem_or_argmemonly
+; CHECK-NEXT: declare void @__kmpc_end_critical(%struct.ident_t*, i32, [8 x i32]*)
+
+; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind writeonly
 ; OPTIMISTIC-NEXT: declare dso_local void @omp_set_num_threads(i32)
 
-; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind writeonly
+; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind writeonly
 ; OPTIMISTIC-NEXT: declare dso_local void @omp_set_dynamic(i32)
 
-; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind writeonly
+; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind writeonly
 ; OPTIMISTIC-NEXT: declare dso_local void @omp_set_nested(i32)
 
-; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind writeonly
+; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind writeonly
 ; OPTIMISTIC-NEXT: declare dso_local void @omp_set_max_active_levels(i32)
 
-; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind writeonly
+; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind writeonly
 ; OPTIMISTIC-NEXT: declare dso_local void @omp_set_schedule(i32, i32)
 
-; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind readonly
+; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly
 ; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_num_threads() #1
 
 ; OPTIMISTIC-NOT: Function Attrs
 ; OPTIMISTIC: declare dso_local void @use_int(i32)
 
-; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind readonly
+; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly
 ; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_dynamic() #1
 
-; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind readonly
+; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly
 ; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_nested() #1
 
-; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind readonly
+; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly
 ; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_max_threads() #1
 
-; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind readonly
+; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly
 ; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_thread_num() #1
 
-; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind readonly
+; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly
 ; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_num_procs() #1
 
-; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind readonly
+; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly
 ; OPTIMISTIC-NEXT: declare dso_local i32 @omp_in_parallel() #1
 
-; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind readonly
+; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly
 ; OPTIMISTIC-NEXT: declare dso_local i32 @omp_in_final() #1
 
-; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind readonly
+; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly
 ; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_active_level() #1
 
-; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind readonly
+; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly
 ; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_level() #1
 
-; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind readonly
+; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly
 ; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_ancestor_thread_num(i32) #1
 
-; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind readonly
+; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly
 ; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_team_size(i32) #1
 
-; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind readonly
+; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly
 ; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_thread_limit() #1
 
-; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind readonly
+; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly
 ; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_max_active_levels() #1
 
-; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind
+; OPTIMISTIC: ; Function Attrs: inaccessiblemem_or_argmemonly nofree nosync nounwind
 ; OPTIMISTIC-NEXT: declare dso_local void @omp_get_schedule(i32* nocapture writeonly, i32* nocapture writeonly) #2
 
 ; OPTIMISTIC-NOT: Function Attrs
@@ -814,7 +900,7 @@ declare dso_local i32 @omp_get_supported_active_levels()
 ; OPTIMISTIC-NOT: Function Attrs
 ; OPTIMISTIC: declare dso_local i32 @omp_get_team_num()
 
-; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind readonly
+; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly
 ; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_cancellation() #1
 
 ; OPTIMISTIC-NOT: Function Attrs
@@ -844,25 +930,25 @@ declare dso_local i32 @omp_get_supported_active_levels()
 ; OPTIMISTIC-NOT: Function Attrs
 ; OPTIMISTIC: declare dso_local i32 @omp_get_device_num()
 
-; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind readonly
+; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly
 ; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_proc_bind() #1
 
-; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind readonly
+; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly
 ; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_num_places() #1
 
 ; OPTIMISTIC-NOT: Function Attrs
 ; OPTIMISTIC: declare dso_local i32 @omp_get_place_num_procs(i32)
 
-; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind
+; OPTIMISTIC: ; Function Attrs: inaccessiblemem_or_argmemonly nofree nosync nounwind
 ; OPTIMISTIC-NEXT: declare dso_local void @omp_get_place_proc_ids(i32, i32* nocapture writeonly) #2
 
-; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind readonly
+; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly
 ; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_place_num() #1
 
-; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind readonly
+; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly
 ; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_partition_num_places() #1
 
-; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind readonly
+; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly
 ; OPTIMISTIC-NEXT: declare dso_local void @omp_get_partition_place_nums(i32*) #1
 
 ; OPTIMISTIC-NOT: Function Attrs
@@ -907,5 +993,8 @@ declare dso_local i32 @omp_get_supported_active_levels()
 ; OPTIMISTIC-NOT: Function Attrs
 ; OPTIMISTIC: declare dso_local i32 @omp_pause_resource_all(i32)
 
-; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind readonly
+; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly
 ; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_supported_active_levels() #1
+
+; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly
+; OPTIMISTIC-NEXT: declare i32 @__kmpc_global_thread_num(%struct.ident_t*)

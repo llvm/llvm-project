@@ -16,6 +16,8 @@
 // GCC 7 is the first version to introduce [[nodiscard]]
 // UNSUPPORTED: gcc-5, gcc-6
 
+// REQUIRES: verify-support
+
 // MODULES_DEFINES: _LIBCPP_ENABLE_NODISCARD
 #define _LIBCPP_ENABLE_NODISCARD
 

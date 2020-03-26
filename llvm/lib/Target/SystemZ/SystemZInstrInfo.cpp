@@ -1078,6 +1078,32 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
     return BuiltMI;
   }
 
+  unsigned MemImmOpc = 0;
+  switch (Opcode) {
+  case SystemZ::LHIMux:
+  case SystemZ::LHI:    MemImmOpc = SystemZ::MVHI;  break;
+  case SystemZ::LGHI:   MemImmOpc = SystemZ::MVGHI; break;
+  case SystemZ::CHIMux:
+  case SystemZ::CHI:    MemImmOpc = SystemZ::CHSI;  break;
+  case SystemZ::CGHI:   MemImmOpc = SystemZ::CGHSI; break;
+  case SystemZ::CLFIMux:
+  case SystemZ::CLFI:
+    if (isUInt<16>(MI.getOperand(1).getImm()))
+      MemImmOpc = SystemZ::CLFHSI;
+    break;
+  case SystemZ::CLGFI:
+    if (isUInt<16>(MI.getOperand(1).getImm()))
+      MemImmOpc = SystemZ::CLGHSI;
+    break;
+  default: break;
+  }
+  if (MemImmOpc)
+    return BuildMI(*InsertPt->getParent(), InsertPt, MI.getDebugLoc(),
+                   get(MemImmOpc))
+               .addFrameIndex(FrameIndex)
+               .addImm(0)
+               .addImm(MI.getOperand(1).getImm());
+
   if (Opcode == SystemZ::LGDR || Opcode == SystemZ::LDGR) {
     bool Op0IsGPR = (Opcode == SystemZ::LGDR);
     bool Op1IsGPR = (Opcode == SystemZ::LDGR);

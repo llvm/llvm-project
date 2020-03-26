@@ -11,6 +11,7 @@
 //	#define _LIBCPP_NODISCARD_AFTER_CXX17 [[nodiscard]]
 
 // UNSUPPORTED: c++98, c++03, c++11, c++14, c++17
+// REQUIRES: verify-support
 
 #include <__config>
 
@@ -20,5 +21,5 @@ int main(int, char**)
 {
 	foo();	// expected-error {{ignoring return value of function declared with 'nodiscard' attribute}}
 
-  return 0;
+    return 0;
 }

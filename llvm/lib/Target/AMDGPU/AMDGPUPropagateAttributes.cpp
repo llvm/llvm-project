@@ -192,12 +192,13 @@ bool AMDGPUPropagateAttributes::process() {
     NewRoots.clear();
 
     for (auto &F : M.functions()) {
-      if (F.isDeclaration() || Roots.count(&F) || Roots.count(&F))
+      if (F.isDeclaration())
         continue;
 
       const FeatureBitset &CalleeBits =
         TM->getSubtargetImpl(F)->getFeatureBits();
       SmallVector<std::pair<CallBase *, Function *>, 32> ToReplace;
+      SmallSet<CallBase *, 32> Visited;
 
       for (User *U : F.users()) {
         Instruction *I = dyn_cast<Instruction>(U);
@@ -207,16 +208,17 @@ bool AMDGPUPropagateAttributes::process() {
         if (!CI)
           continue;
         Function *Caller = CI->getCaller();
-        if (!Caller)
+        if (!Caller || !Visited.insert(CI).second)
           continue;
-        if (!Roots.count(Caller))
+        if (!Roots.count(Caller) && !NewRoots.count(Caller))
           continue;
 
         const FeatureBitset &CallerBits =
           TM->getSubtargetImpl(*Caller)->getFeatureBits() & TargetFeatures;
 
         if (CallerBits == (CalleeBits  & TargetFeatures)) {
-          NewRoots.insert(&F);
+          if (!Roots.count(&F))
+            NewRoots.insert(&F);
           continue;
         }
 
@@ -258,6 +260,9 @@ bool AMDGPUPropagateAttributes::process() {
       F->eraseFromParent();
   }
 
+  Roots.clear();
+  Clones.clear();
+
   return Changed;
 }
 
@@ -269,17 +274,15 @@ AMDGPUPropagateAttributes::cloneWithFeatures(Function &F,
   ValueToValueMapTy dummy;
   Function *NewF = CloneFunction(&F, dummy);
   setFeatures(*NewF, NewFeatures);
+  NewF->setVisibility(GlobalValue::DefaultVisibility);
+  NewF->setLinkage(GlobalValue::InternalLinkage);
 
   // Swap names. If that is the only clone it will retain the name of now
-  // dead value.
-  if (F.hasName()) {
+  // dead value. Preserve original name for externally visible functions.
+  if (F.hasName() && F.hasLocalLinkage()) {
     std::string NewName = std::string(NewF->getName());
     NewF->takeName(&F);
     F.setName(NewName);
-
-    // Name has changed, it does not need an external symbol.
-    F.setVisibility(GlobalValue::DefaultVisibility);
-    F.setLinkage(GlobalValue::InternalLinkage);
   }
 
   return NewF;

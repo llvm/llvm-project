@@ -241,6 +241,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeSIWholeQuadModePass(*PR);
   initializeSILowerControlFlowPass(*PR);
   initializeSIRemoveShortExecBranchesPass(*PR);
+  initializeSIPreEmitPeepholePass(*PR);
   initializeSIInsertSkipsPass(*PR);
   initializeSIMemoryLegalizerPass(*PR);
   initializeSIOptimizeExecMaskingPass(*PR);
@@ -438,11 +439,11 @@ void AMDGPUTargetMachine::adjustPassManager(PassManagerBuilder &Builder) {
       }
       PM.add(createAMDGPUUnifyMetadataPass());
       PM.add(createAMDGPUPrintfRuntimeBinding());
-      PM.add(createAMDGPUPropagateAttributesLatePass(this));
-      if (Internalize) {
+      if (Internalize)
         PM.add(createInternalizePass(mustPreserveGV));
+      PM.add(createAMDGPUPropagateAttributesLatePass(this));
+      if (Internalize)
         PM.add(createGlobalDCEPass());
-      }
       if (EarlyInline)
         PM.add(createAMDGPUAlwaysInlinePass(false));
   });
@@ -1036,6 +1037,7 @@ void GCNPassConfig::addPreEmitPass() {
   addPass(&PostRAHazardRecognizerID);
 
   addPass(&SIRemoveShortExecBranchesID);
+  addPass(&SIPreEmitPeepholeID);
   addPass(&SIInsertSkipsPassID);
   addPass(&BranchRelaxationPassID);
 }

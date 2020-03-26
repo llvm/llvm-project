@@ -1231,3 +1231,243 @@ func @negative_value_in_unsigned_vector_attr() {
   // expected-error @+1 {{expected unsigned integer elements, but parsed negative value}}
   "foo"() {bar = dense<[5, -5]> : vector<2xui32>} : () -> ()
 }
+
+// -----
+
+func @large_bound() {
+  "test.out_of_range_attribute"() {
+    // expected-error @+1 {{integer constant out of range for attribute}}
+    attr = -129 : i8
+  } : () -> ()
+  return
+}
+
+// -----
+
+func @large_bound() {
+  "test.out_of_range_attribute"() {
+    // expected-error @+1 {{integer constant out of range for attribute}}
+    attr = 256 : i8
+  } : () -> ()
+  return
+}
+
+// -----
+
+func @large_bound() {
+  "test.out_of_range_attribute"() {
+    // expected-error @+1 {{integer constant out of range for attribute}}
+    attr = -129 : si8
+  } : () -> ()
+  return
+}
+
+// -----
+
+func @large_bound() {
+  "test.out_of_range_attribute"() {
+    // expected-error @+1 {{integer constant out of range for attribute}}
+    attr = 129 : si8
+  } : () -> ()
+  return
+}
+
+// -----
+
+func @large_bound() {
+  "test.out_of_range_attribute"() {
+    // expected-error @+1 {{negative integer literal not valid for unsigned integer type}}
+    attr = -1 : ui8
+  } : () -> ()
+  return
+}
+
+// -----
+
+func @large_bound() {
+  "test.out_of_range_attribute"() {
+    // expected-error @+1 {{integer constant out of range for attribute}}
+    attr = 256 : ui8
+  } : () -> ()
+  return
+}
+
+// -----
+
+func @large_bound() {
+  "test.out_of_range_attribute"() {
+    // expected-error @+1 {{integer constant out of range for attribute}}
+    attr = -32769 : i16
+  } : () -> ()
+  return
+}
+
+// -----
+
+func @large_bound() {
+  "test.out_of_range_attribute"() {
+    // expected-error @+1 {{integer constant out of range for attribute}}
+    attr = 65536 : i16
+  } : () -> ()
+  return
+}
+
+// -----
+
+func @large_bound() {
+  "test.out_of_range_attribute"() {
+    // expected-error @+1 {{integer constant out of range for attribute}}
+    attr = -32769 : si16
+  } : () -> ()
+  return
+}
+
+// -----
+
+func @large_bound() {
+  "test.out_of_range_attribute"() {
+    // expected-error @+1 {{integer constant out of range for attribute}}
+    attr = 32768 : si16
+  } : () -> ()
+  return
+}
+
+// -----
+
+func @large_bound() {
+  "test.out_of_range_attribute"() {
+    // expected-error @+1 {{negative integer literal not valid for unsigned integer type}}
+    attr = -1 : ui16
+  } : () -> ()
+  return
+}
+
+// -----
+
+func @large_bound() {
+  "test.out_of_range_attribute"() {
+    // expected-error @+1 {{integer constant out of range for attribute}}
+    attr = 65536: ui16
+  } : () -> ()
+  return
+}
+
+// -----
+
+func @large_bound() {
+  "test.out_of_range_attribute"() {
+    // expected-error @+1 {{integer constant out of range for attribute}}
+    attr = -2147483649 : i32
+  } : () -> ()
+  return
+}
+
+// -----
+
+func @large_bound() {
+  "test.out_of_range_attribute"() {
+    // expected-error @+1 {{integer constant out of range for attribute}}
+    attr = 4294967296 : i32
+  } : () -> ()
+  return
+}
+
+// -----
+
+func @large_bound() {
+  "test.out_of_range_attribute"() {
+    // expected-error @+1 {{integer constant out of range for attribute}}
+    attr = -2147483649 : si32
+  } : () -> ()
+  return
+}
+
+// -----
+
+func @large_bound() {
+  "test.out_of_range_attribute"() {
+    // expected-error @+1 {{integer constant out of range for attribute}}
+    attr = 2147483648 : si32
+  } : () -> ()
+  return
+}
+
+// -----
+
+func @large_bound() {
+  "test.out_of_range_attribute"() {
+    // expected-error @+1 {{negative integer literal not valid for unsigned integer type}}
+    attr = -1 : ui32
+  } : () -> ()
+  return
+}
+
+// -----
+
+func @large_bound() {
+  "test.out_of_range_attribute"() {
+    // expected-error @+1 {{integer constant out of range for attribute}}
+    attr = 4294967296 : ui32
+  } : () -> ()
+  return
+}
+
+// -----
+
+func @large_bound() {
+  "test.out_of_range_attribute"() {
+    // expected-error @+1 {{integer constant out of range for attribute}}
+    attr = -9223372036854775809 : i64
+  } : () -> ()
+  return
+}
+
+// -----
+
+func @large_bound() {
+  "test.out_of_range_attribute"() {
+    // expected-error @+1 {{integer constant out of range for attribute}}
+    attr = 18446744073709551616 : i64
+  } : () -> ()
+  return
+}
+
+// -----
+
+func @large_bound() {
+  "test.out_of_range_attribute"() {
+    // expected-error @+1 {{integer constant out of range for attribute}}
+    attr = -9223372036854775809 : si64
+  } : () -> ()
+  return
+}
+
+// -----
+
+func @large_bound() {
+  "test.out_of_range_attribute"() {
+    // expected-error @+1 {{integer constant out of range for attribute}}
+    attr = 9223372036854775808 : si64
+  } : () -> ()
+  return
+}
+
+// -----
+
+func @large_bound() {
+  "test.out_of_range_attribute"() {
+    // expected-error @+1 {{negative integer literal not valid for unsigned integer type}}
+    attr = -1 : ui64
+  } : () -> ()
+  return
+}
+
+// -----
+
+func @large_bound() {
+  "test.out_of_range_attribute"() {
+    // expected-error @+1 {{integer constant out of range for attribute}}
+    attr = 18446744073709551616 : ui64
+  } : () -> ()
+  return
+}

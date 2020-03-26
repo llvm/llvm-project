@@ -1206,6 +1206,10 @@ public:
         "cpu_specific Multiversioning not implemented on this target");
   }
 
+  // Get the cache line size of a given cpu. This method switches over
+  // the given cpu and returns "None" if the CPU is not found.
+  virtual Optional<unsigned> getCPUCacheLineSize() const { return None; }
+
   // Returns maximal number of args passed in registers.
   unsigned getRegParmMax() const {
     assert(RegParmMax < 7 && "RegParmMax value is larger than AST can handle");

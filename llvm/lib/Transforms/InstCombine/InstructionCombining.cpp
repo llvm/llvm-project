@@ -3352,7 +3352,7 @@ Instruction *InstCombiner::visitFreeze(FreezeInst &I) {
 /// instruction past all of the instructions between it and the end of its
 /// block.
 static bool TryToSinkInstruction(Instruction *I, BasicBlock *DestBlock) {
-  assert(I->hasOneUse() && "Invariants didn't hold!");
+  assert(I->getSingleUndroppableUse() && "Invariants didn't hold!");
   BasicBlock *SrcBlock = I->getParent();
 
   // Cannot move control-flow-involving, volatile loads, vaarg, etc.
@@ -3385,6 +3385,15 @@ static bool TryToSinkInstruction(Instruction *I, BasicBlock *DestBlock) {
       if (Scan->mayWriteToMemory())
         return false;
   }
+
+  I->dropDroppableUses([DestBlock](const Use *U) {
+    if (auto *I = dyn_cast<Instruction>(U->getUser()))
+      return I->getParent() != DestBlock;
+    return true;
+  });
+  /// FIXME: We could remove droppable uses that are not dominated by
+  /// the new position.
+
   BasicBlock::iterator InsertPos = DestBlock->getFirstInsertionPt();
   I->moveBefore(&*InsertPos);
   ++NumSunkInst;
@@ -3488,44 +3497,46 @@ bool InstCombiner::run() {
     }
 
     // See if we can trivially sink this instruction to a successor basic block.
-    if (EnableCodeSinking && I->hasOneUse()) {
-      BasicBlock *BB = I->getParent();
-      Instruction *UserInst = cast<Instruction>(*I->user_begin());
-      BasicBlock *UserParent;
+    if (EnableCodeSinking)
+      if (Use *SingleUse = I->getSingleUndroppableUse()) {
+        BasicBlock *BB = I->getParent();
+        Instruction *UserInst = cast<Instruction>(SingleUse->getUser());
+        BasicBlock *UserParent;
 
-      // Get the block the use occurs in.
-      if (PHINode *PN = dyn_cast<PHINode>(UserInst))
-        UserParent = PN->getIncomingBlock(*I->use_begin());
-      else
-        UserParent = UserInst->getParent();
+        // Get the block the use occurs in.
+        if (PHINode *PN = dyn_cast<PHINode>(UserInst))
+          UserParent = PN->getIncomingBlock(*I->use_begin());
+        else
+          UserParent = UserInst->getParent();
 
-      if (UserParent != BB) {
-        bool UserIsSuccessor = false;
-        // See if the user is one of our successors.
-        for (succ_iterator SI = succ_begin(BB), E = succ_end(BB); SI != E; ++SI)
-          if (*SI == UserParent) {
-            UserIsSuccessor = true;
-            break;
-          }
+        if (UserParent != BB) {
+          bool UserIsSuccessor = false;
+          // See if the user is one of our successors.
+          for (succ_iterator SI = succ_begin(BB), E = succ_end(BB); SI != E;
+               ++SI)
+            if (*SI == UserParent) {
+              UserIsSuccessor = true;
+              break;
+            }
 
-        // If the user is one of our immediate successors, and if that successor
-        // only has us as a predecessors (we'd have to split the critical edge
-        // otherwise), we can keep going.
-        if (UserIsSuccessor && UserParent->getUniquePredecessor()) {
-          // Okay, the CFG is simple enough, try to sink this instruction.
-          if (TryToSinkInstruction(I, UserParent)) {
-            LLVM_DEBUG(dbgs() << "IC: Sink: " << *I << '\n');
-            MadeIRChange = true;
-            // We'll add uses of the sunk instruction below, but since sinking
-            // can expose opportunities for it's *operands* add them to the
-            // worklist
-            for (Use &U : I->operands())
-              if (Instruction *OpI = dyn_cast<Instruction>(U.get()))
-                Worklist.push(OpI);
+          // If the user is one of our immediate successors, and if that
+          // successor only has us as a predecessors (we'd have to split the
+          // critical edge otherwise), we can keep going.
+          if (UserIsSuccessor && UserParent->getUniquePredecessor()) {
+            // Okay, the CFG is simple enough, try to sink this instruction.
+            if (TryToSinkInstruction(I, UserParent)) {
+              LLVM_DEBUG(dbgs() << "IC: Sink: " << *I << '\n');
+              MadeIRChange = true;
+              // We'll add uses of the sunk instruction below, but since sinking
+              // can expose opportunities for it's *operands* add them to the
+              // worklist
+              for (Use &U : I->operands())
+                if (Instruction *OpI = dyn_cast<Instruction>(U.get()))
+                  Worklist.push(OpI);
+            }
           }
         }
       }
-    }
 
     // Now that we have an instruction, try combining it to simplify it.
     Builder.SetInsertPoint(I);

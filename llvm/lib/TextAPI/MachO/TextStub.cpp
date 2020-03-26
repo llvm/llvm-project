@@ -450,10 +450,8 @@ template <> struct MappingTraits<const InterfaceFile *> {
       if (File->isInstallAPI())
         Flags |= TBDFlags::InstallAPI;
 
-      for (const auto &Iter : File->umbrellas()) {
-        ParentUmbrella = Iter.second;
-        break;
-      }
+      if (!File->umbrellas().empty())
+        ParentUmbrella = File->umbrellas().begin()->second;
 
       std::set<ArchitectureSet> ArchSet;
       for (const auto &Library : File->allowableClients())

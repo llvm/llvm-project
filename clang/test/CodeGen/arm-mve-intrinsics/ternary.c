@@ -357,6 +357,47 @@ int32x4_t test_vqdmlahq_n_s32(int32x4_t a, int32x4_t b, int32_t c) {
 #endif /* POLYMORPHIC */
 }
 
+// CHECK-LABEL: @test_vqdmlashq_n_s8(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = zext i8 [[ADD:%.*]] to i32
+// CHECK-NEXT:    [[TMP1:%.*]] = call <16 x i8> @llvm.arm.mve.vqdmlash.v16i8(<16 x i8> [[M1:%.*]], <16 x i8> [[M2:%.*]], i32 [[TMP0]])
+// CHECK-NEXT:    ret <16 x i8> [[TMP1]]
+//
+int8x16_t test_vqdmlashq_n_s8(int8x16_t m1, int8x16_t m2, int8_t add) {
+#ifdef POLYMORPHIC
+  return vqdmlashq(m1, m2, add);
+#else  /* POLYMORPHIC */
+  return vqdmlashq_n_s8(m1, m2, add);
+#endif /* POLYMORPHIC */
+}
+
+// CHECK-LABEL: @test_vqdmlashq_n_s16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[ADD:%.*]] to i32
+// CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i16> @llvm.arm.mve.vqdmlash.v8i16(<8 x i16> [[M1:%.*]], <8 x i16> [[M2:%.*]], i32 [[TMP0]])
+// CHECK-NEXT:    ret <8 x i16> [[TMP1]]
+//
+int16x8_t test_vqdmlashq_n_s16(int16x8_t m1, int16x8_t m2, int16_t add) {
+#ifdef POLYMORPHIC
+  return vqdmlashq(m1, m2, add);
+#else  /* POLYMORPHIC */
+  return vqdmlashq_n_s16(m1, m2, add);
+#endif /* POLYMORPHIC */
+}
+
+// CHECK-LABEL: @test_vqdmlashq_n_s32(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = call <4 x i32> @llvm.arm.mve.vqdmlash.v4i32(<4 x i32> [[M1:%.*]], <4 x i32> [[M2:%.*]], i32 [[ADD:%.*]])
+// CHECK-NEXT:    ret <4 x i32> [[TMP0]]
+//
+int32x4_t test_vqdmlashq_n_s32(int32x4_t m1, int32x4_t m2, int32_t add) {
+#ifdef POLYMORPHIC
+  return vqdmlashq(m1, m2, add);
+#else  /* POLYMORPHIC */
+  return vqdmlashq_n_s32(m1, m2, add);
+#endif /* POLYMORPHIC */
+}
+
 // CHECK-LABEL: @test_vqrdmlahq_n_s8(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i8 [[C:%.*]] to i32
@@ -810,6 +851,53 @@ int32x4_t test_vqdmlahq_m_n_s32(int32x4_t a, int32x4_t b, int32_t c, mve_pred16_
 #endif /* POLYMORPHIC */
 }
 
+// CHECK-LABEL: @test_vqdmlashq_m_n_s8(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = zext i8 [[ADD:%.*]] to i32
+// CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[P:%.*]] to i32
+// CHECK-NEXT:    [[TMP2:%.*]] = call <16 x i1> @llvm.arm.mve.pred.i2v.v16i1(i32 [[TMP1]])
+// CHECK-NEXT:    [[TMP3:%.*]] = call <16 x i8> @llvm.arm.mve.vqdmlash.predicated.v16i8.v16i1(<16 x i8> [[M1:%.*]], <16 x i8> [[M2:%.*]], i32 [[TMP0]], <16 x i1> [[TMP2]])
+// CHECK-NEXT:    ret <16 x i8> [[TMP3]]
+//
+int8x16_t test_vqdmlashq_m_n_s8(int8x16_t m1, int8x16_t m2, int8_t add, mve_pred16_t p) {
+#ifdef POLYMORPHIC
+  return vqdmlashq_m(m1, m2, add, p);
+#else  /* POLYMORPHIC */
+  return vqdmlashq_m_n_s8(m1, m2, add, p);
+#endif /* POLYMORPHIC */
+}
+
+// CHECK-LABEL: @test_vqdmlashq_m_n_s16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[ADD:%.*]] to i32
+// CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[P:%.*]] to i32
+// CHECK-NEXT:    [[TMP2:%.*]] = call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[TMP1]])
+// CHECK-NEXT:    [[TMP3:%.*]] = call <8 x i16> @llvm.arm.mve.vqdmlash.predicated.v8i16.v8i1(<8 x i16> [[M1:%.*]], <8 x i16> [[M2:%.*]], i32 [[TMP0]], <8 x i1> [[TMP2]])
+// CHECK-NEXT:    ret <8 x i16> [[TMP3]]
+//
+int16x8_t test_vqdmlashq_m_n_s16(int16x8_t m1, int16x8_t m2, int16_t add, mve_pred16_t p) {
+#ifdef POLYMORPHIC
+  return vqdmlashq_m(m1, m2, add, p);
+#else  /* POLYMORPHIC */
+  return vqdmlashq_m_n_s16(m1, m2, add, p);
+#endif /* POLYMORPHIC */
+}
+
+// CHECK-LABEL: @test_vqdmlashq_m_n_s32(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
+// CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i32> @llvm.arm.mve.vqdmlash.predicated.v4i32.v4i1(<4 x i32> [[M1:%.*]], <4 x i32> [[M2:%.*]], i32 [[ADD:%.*]], <4 x i1> [[TMP1]])
+// CHECK-NEXT:    ret <4 x i32> [[TMP2]]
+//
+int32x4_t test_vqdmlashq_m_n_s32(int32x4_t m1, int32x4_t m2, int32_t add, mve_pred16_t p) {
+#ifdef POLYMORPHIC
+  return vqdmlashq_m(m1, m2, add, p);
+#else  /* POLYMORPHIC */
+  return vqdmlashq_m_n_s32(m1, m2, add, p);
+#endif /* POLYMORPHIC */
+}
+
 // CHECK-LABEL: @test_vqrdmlahq_m_n_s8(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i8 [[C:%.*]] to i32
@@ -903,4 +991,3 @@ int32x4_t test_vqrdmlashq_m_n_s32(int32x4_t a, int32x4_t b, int32_t c, mve_pred1
   return vqrdmlashq_m_n_s32(a, b, c, p);
 #endif /* POLYMORPHIC */
 }
-

@@ -56,8 +56,9 @@ SymbolSlab runFuzzyFind(const SymbolIndex &Index, StringRef Query);
 SymbolSlab runFuzzyFind(const SymbolIndex &Index, const FuzzyFindRequest &Req);
 RefSlab getRefs(const SymbolIndex &Index, SymbolID ID);
 
-llvm::Expected<std::vector<Range>>
-runSemanticRanges(ClangdServer &Server, PathRef File, Position Pos);
+llvm::Expected<std::vector<SelectionRange>>
+runSemanticRanges(ClangdServer &Server, PathRef File,
+                  const std::vector<Position> &Pos);
 
 llvm::Expected<llvm::Optional<clangd::Path>>
 runSwitchHeaderSource(ClangdServer &Server, PathRef File);

@@ -1332,6 +1332,17 @@ multiclass CDEVCXVecIntrinsics<list<LLVMType> args> {
     !listconcat([llvm_i32_ty /* coproc */, llvm_v16i8_ty /* acc */],
                 args, [llvm_i32_ty /* imm */]),
     [IntrNoMem, ImmArg<0>, ImmArg<!add(!size(args), 2)>]>;
+
+  def _predicated : Intrinsic<
+    [llvm_anyvector_ty],
+    !listconcat([llvm_i32_ty /* coproc */, LLVMMatchType<0> /* inactive */],
+                args, [llvm_i32_ty /* imm */, llvm_anyvector_ty /* mask */]),
+    [IntrNoMem, ImmArg<0>, ImmArg<!add(!size(args), 2)>]>;
+  def a_predicated : Intrinsic<
+    [llvm_anyvector_ty],
+    !listconcat([llvm_i32_ty /* coproc */, LLVMMatchType<0> /* acc */],
+                args, [llvm_i32_ty /* imm */, llvm_anyvector_ty /* mask */]),
+    [IntrNoMem, ImmArg<0>, ImmArg<!add(!size(args), 2)>]>;
 }
 
 defm int_arm_cde_vcx1q : CDEVCXVecIntrinsics<[]>;

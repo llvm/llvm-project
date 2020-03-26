@@ -274,6 +274,7 @@ uptr ReadBinaryNameCached(/*out*/char *buf, uptr buf_len) {
   return name_len;
 }
 
+#if !SANITIZER_GO
 void PrintCmdline() {
   char **argv = GetArgv();
   if (!argv) return;
@@ -282,6 +283,7 @@ void PrintCmdline() {
     Printf("%s ", argv[i]);
   Printf("\n\n");
 }
+#endif
 
 // Malloc hooks.
 static const int kMaxMallocFreeHooks = 5;

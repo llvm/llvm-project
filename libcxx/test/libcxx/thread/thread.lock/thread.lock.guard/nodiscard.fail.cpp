@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: libcpp-has-no-threads
+// REQUIRES: verify-support
 
 // [[nodiscard]] on constructors isn't supported by all compilers
 // UNSUPPORTED: clang-6, clang-7, clang-8, clang-9

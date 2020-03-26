@@ -242,8 +242,8 @@ private:
   Error parseFunctionSection(ReadContext &Ctx);
   Error parseTableSection(ReadContext &Ctx);
   Error parseMemorySection(ReadContext &Ctx);
-  Error parseGlobalSection(ReadContext &Ctx);
   Error parseEventSection(ReadContext &Ctx);
+  Error parseGlobalSection(ReadContext &Ctx);
   Error parseExportSection(ReadContext &Ctx);
   Error parseStartSection(ReadContext &Ctx);
   Error parseElemSection(ReadContext &Ctx);
@@ -290,8 +290,8 @@ private:
   uint32_t NumImportedEvents = 0;
   uint32_t CodeSection = 0;
   uint32_t DataSection = 0;
-  uint32_t GlobalSection = 0;
   uint32_t EventSection = 0;
+  uint32_t GlobalSection = 0;
 };
 
 class WasmSectionOrderChecker {
@@ -307,8 +307,8 @@ public:
     WASM_SEC_ORDER_FUNCTION,
     WASM_SEC_ORDER_TABLE,
     WASM_SEC_ORDER_MEMORY,
-    WASM_SEC_ORDER_GLOBAL,
     WASM_SEC_ORDER_EVENT,
+    WASM_SEC_ORDER_GLOBAL,
     WASM_SEC_ORDER_EXPORT,
     WASM_SEC_ORDER_START,
     WASM_SEC_ORDER_ELEM,
