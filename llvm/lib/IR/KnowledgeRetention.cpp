@@ -149,7 +149,7 @@ struct AssumeBuilderState {
       addAttrList(Fn->getAttributes());
   }
 
-  CallInst *build() {
+  IntrinsicInst *build() {
     if (AssumedKnowledgeSet.empty())
       return nullptr;
     Function *FnAssume = Intrinsic::getDeclaration(M, Intrinsic::assume);
@@ -169,8 +169,8 @@ struct AssumeBuilderState {
       OpBundle.push_back(OperandBundleDefT<Value *>(Elem.Name, Args));
     }
     llvm::sort(OpBundle, isLowerOpBundle);
-    return CallInst::Create(
-        FnAssume, ArrayRef<Value *>({ConstantInt::getTrue(C)}), OpBundle);
+    return cast<IntrinsicInst>(CallInst::Create(
+        FnAssume, ArrayRef<Value *>({ConstantInt::getTrue(C)}), OpBundle));
   }
 
   void addInstruction(const Instruction *I) {
@@ -183,15 +183,15 @@ struct AssumeBuilderState {
 
 } // namespace
 
-CallInst *llvm::BuildAssumeFromInst(const Instruction *I, Module *M) {
+IntrinsicInst *llvm::buildAssumeFromInst(Instruction *I) {
   if (!EnableKnowledgeRetention)
     return nullptr;
-  AssumeBuilderState Builder(M);
+  AssumeBuilderState Builder(I->getModule());
   Builder.addInstruction(I);
   return Builder.build();
 }
 
-static bool BundleHasArguement(const CallBase::BundleOpInfo &BOI,
+static bool bundleHasArgument(const CallBase::BundleOpInfo &BOI,
                                unsigned Idx) {
   return BOI.End - BOI.Begin > Idx;
 }
@@ -199,7 +199,7 @@ static bool BundleHasArguement(const CallBase::BundleOpInfo &BOI,
 static Value *getValueFromBundleOpInfo(IntrinsicInst &Assume,
                                 const CallBase::BundleOpInfo &BOI,
                                 unsigned Idx) {
-  assert(BundleHasArguement(BOI, Idx) && "index out of range");
+  assert(bundleHasArgument(BOI, Idx) && "index out of range");
   return (Assume.op_begin() + BOI.Begin + Idx)->get();
 }
 
@@ -249,12 +249,12 @@ void llvm::fillMapFromAssume(CallInst &AssumeCI, RetainedKnowledgeMap &Result) {
   for (auto &Bundles : Assume.bundle_op_infos()) {
     std::pair<Value *, Attribute::AttrKind> Key{
         nullptr, Attribute::getAttrKindFromName(Bundles.Tag->getKey())};
-    if (BundleHasArguement(Bundles, BOIE_WasOn))
+    if (bundleHasArgument(Bundles, BOIE_WasOn))
       Key.first = getValueFromBundleOpInfo(Assume, Bundles, BOIE_WasOn);
 
     if (Key.first == nullptr && Key.second == Attribute::None)
       continue;
-    if (!BundleHasArguement(Bundles, BOIE_Argument)) {
+    if (!bundleHasArgument(Bundles, BOIE_Argument)) {
       Result[Key][&Assume] = {0, 0};
       continue;
     }
@@ -301,7 +301,7 @@ bool llvm::isAssumeWithEmptyBundle(CallInst &CI) {
 PreservedAnalyses AssumeBuilderPass::run(Function &F,
                                          FunctionAnalysisManager &AM) {
   for (Instruction &I : instructions(F))
-    if (Instruction *Assume = BuildAssumeFromInst(&I))
+    if (Instruction *Assume = buildAssumeFromInst(&I))
       Assume->insertBefore(&I);
   return PreservedAnalyses::all();
 }
