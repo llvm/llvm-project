@@ -476,8 +476,7 @@ static void RunRandTest(uint64_t Seed, int Size, int MinCount, int MaxCount,
   }
 
   auto *Assume = cast<IntrinsicInst>(IntrinsicInst::Create(
-      FnAssume, ArrayRef<Value *>({ConstantInt::getTrue(C)}),
-      std::move(OpBundle)));
+      FnAssume, ArrayRef<Value *>({ConstantInt::getTrue(C)}), OpBundle));
   Assume->insertBefore(&F->begin()->front());
   RetainedKnowledgeMap Map;
   fillMapFromAssume(*Assume, Map);
