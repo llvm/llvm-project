@@ -269,17 +269,15 @@ AMDGPUPropagateAttributes::cloneWithFeatures(Function &F,
   ValueToValueMapTy dummy;
   Function *NewF = CloneFunction(&F, dummy);
   setFeatures(*NewF, NewFeatures);
+  NewF->setVisibility(GlobalValue::DefaultVisibility);
+  NewF->setLinkage(GlobalValue::InternalLinkage);
 
   // Swap names. If that is the only clone it will retain the name of now
-  // dead value.
-  if (F.hasName()) {
+  // dead value. Preserve original name for externally visible functions.
+  if (F.hasName() && F.hasLocalLinkage()) {
     std::string NewName = std::string(NewF->getName());
     NewF->takeName(&F);
     F.setName(NewName);
-
-    // Name has changed, it does not need an external symbol.
-    F.setVisibility(GlobalValue::DefaultVisibility);
-    F.setLinkage(GlobalValue::InternalLinkage);
   }
 
   return NewF;
