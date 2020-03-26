@@ -1831,6 +1831,8 @@ static uint64_t PageSizeLog2ToNcCondition(uint64_t pageSize) {
     return DPUAsmCondition::NotCarry13;
   case 14:
     return DPUAsmCondition::NotCarry14;
+  default:
+    return DPUAsmCondition::NR_CONDITIONS;
   }
 }
 
