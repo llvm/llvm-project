@@ -3236,7 +3236,7 @@ entry:
 define <2 x i64> @test_mm_cvtepi32_epi8(<2 x i64> %__A) {
 ; CHECK-LABEL: test_mm_cvtepi32_epi8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,4,8,12],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vpmovdb %xmm0, %xmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
 entry:
   %0 = bitcast <2 x i64> %__A to <4 x i32>
@@ -3249,7 +3249,7 @@ entry:
 define <2 x i64> @test_mm_cvtepi32_epi16(<2 x i64> %__A) {
 ; CHECK-LABEL: test_mm_cvtepi32_epi16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13],zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vpmovdw %xmm0, %xmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
 entry:
   %0 = bitcast <2 x i64> %__A to <4 x i32>
@@ -3262,7 +3262,7 @@ entry:
 define <2 x i64> @test_mm_cvtepi64_epi8(<2 x i64> %__A) {
 ; CHECK-LABEL: test_mm_cvtepi64_epi8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,8],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vpmovqb %xmm0, %xmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
 entry:
   %conv.i = trunc <2 x i64> %__A to <2 x i8>
@@ -3274,7 +3274,7 @@ entry:
 define <2 x i64> @test_mm_cvtepi64_epi16(<2 x i64> %__A) {
 ; CHECK-LABEL: test_mm_cvtepi64_epi16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,8,9],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vpmovqw %xmm0, %xmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
 entry:
   %conv.i = trunc <2 x i64> %__A to <2 x i16>
@@ -3286,7 +3286,7 @@ entry:
 define <2 x i64> @test_mm_cvtepi64_epi32(<2 x i64> %__A) {
 ; CHECK-LABEL: test_mm_cvtepi64_epi32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,2],zero,zero
+; CHECK-NEXT:    vpmovqd %xmm0, %xmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
 entry:
   %conv.i = trunc <2 x i64> %__A to <2 x i32>
