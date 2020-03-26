@@ -460,7 +460,7 @@ void ReplaceSystemMalloc() { }
 #if !SANITIZER_GO
 #if SANITIZER_ANDROID
 // On Android, one thread can call intercepted functions after
-// DestroyThreadState(), so add a fake thread state for "dead" threads.
+// ThreadFinish(), so add a fake thread state for "dead" threads.
 static ThreadState *dead_thread_state = nullptr;
 
 ThreadState *cur_thread() {

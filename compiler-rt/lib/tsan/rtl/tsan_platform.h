@@ -1020,7 +1020,7 @@ int call_pthread_cancel_with_cleanup(int(*fn)(void *c, void *m,
     void *abstime), void *c, void *m, void *abstime,
     void(*cleanup)(void *arg), void *arg);
 
-void DestroyThreadState();
+void PlatformThreadFinished(ThreadState *thr);
 
 }  // namespace __tsan
 
