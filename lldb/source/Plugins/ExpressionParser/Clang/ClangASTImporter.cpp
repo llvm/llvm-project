@@ -1036,6 +1036,8 @@ static void MaybeCompleteReturnType(ClangASTImporter &importer,
   clang::RecordDecl *rd = return_type->getPointeeType()->getAsRecordDecl();
   if (!rd)
     return;
+  if (rd->getDefinition())
+    return;
 
   importer.CompleteTagDecl(rd);
 }

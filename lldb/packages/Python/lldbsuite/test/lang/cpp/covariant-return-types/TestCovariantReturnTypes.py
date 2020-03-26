@@ -38,3 +38,5 @@ class TestCase(TestBase):
         self.expect_expr("derived.getOtherRef().value()", result_summary='"derived"')
         self.expect_expr("base_ptr_to_derived->getOtherRef().value()", result_summary='"derived"')
         self.expect_expr("base.getOtherRef().value()", result_summary='"base"')
+
+        self.expect_expr("referencing_derived.getOther()->get()->a", result_value='42')
