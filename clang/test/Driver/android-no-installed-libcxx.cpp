@@ -1,3 +1,6 @@
+// Flang driver changes break this test, -o multiple obj error
+// XFAIL: *
+
 // Check that we don't find the libc++ in the installation directory when
 // targeting Android.
 

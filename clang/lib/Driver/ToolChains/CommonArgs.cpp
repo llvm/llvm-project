@@ -211,9 +211,9 @@ void tools::AddLinkerInputs(const ToolChain &TC, const InputInfoList &Inputs,
     }
   }
 
-  if (!SeenFirstLinkerInput && needFortranMain(D, Args)) {
-    CmdArgs.push_back("-lflangmain");
-  }
+   if (!SeenFirstLinkerInput && needFortranMain(D, Args)) {
+     CmdArgs.push_back("-lflangmain");
+   }
 
   // Claim "no Fortran main" arguments
   for (auto Arg :

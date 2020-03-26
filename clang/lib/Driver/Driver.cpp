@@ -3590,6 +3590,9 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
     return;
   }
 
+  Arg *FinalPhaseArg;
+  phases::ID FinalPhase = getFinalPhase(Args, &FinalPhaseArg);
+
   // Reject -Z* at the top level, these options should never have been exposed
   // by gcc.
   if (Arg *A = Args.getLastArg(options::OPT_Z_Joined))
@@ -3657,6 +3660,10 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
       break;
 
     for (phases::ID Phase : PL) {
+
+      // We are done if this step is past what the user requested.
+      if (Phase > FinalPhase)
+        break;
 
       // Add any offload action the host action depends on.
       Current = OffloadBuilder.addDeviceDependencesToHostAction(

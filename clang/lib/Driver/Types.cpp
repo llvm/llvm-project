@@ -90,6 +90,12 @@ const char *types::getTypeTempSuffix(ID Id, bool CLMode) {
   return getInfo(Id).TempSuffix;
 }
 
+bool types::onlyAssembleType(ID Id) {
+  return getInfo(Id).Phases.contains(phases::Assemble) &&
+         !getInfo(Id).Phases.contains(phases::Compile) &&
+         !getInfo(Id).Phases.contains(phases::Backend);
+}
+
 bool types::onlyPrecompileType(ID Id) {
   return getInfo(Id).Phases.contains(phases::Precompile) &&
          !isPreprocessedModuleType(Id);
@@ -258,8 +264,8 @@ types::ID types::lookupTypeForExtension(llvm::StringRef Ext) {
   return llvm::StringSwitch<types::ID>(Ext)
            .Case("c", TY_C)
            .Case("C", TY_CXX)
-           .Case("F", TY_Fortran) // TY_F_FixedForm
-           .Case("f", TY_PP_Fortran) // TY_PP_F_FixedForm
+           .Case("F", TY_F_FixedForm)
+           .Case("f", TY_PP_F_FixedForm)
            .Case("h", TY_CHeader)
            .Case("H", TY_CXXHeader)
            .Case("i", TY_PP_C)
@@ -296,10 +302,10 @@ types::ID types::lookupTypeForExtension(llvm::StringRef Ext) {
            .Case("f90", TY_PP_Fortran)
            .Case("F95", TY_Fortran)
            .Case("f95", TY_PP_Fortran)
-           .Case("for", TY_PP_Fortran) // TY_PP_F_FixedForm
-           .Case("FOR", TY_PP_Fortran) // TY_PP_F_FixedForm
-           .Case("fpp", TY_Fortran) // TY_F_FixedForm
-           .Case("FPP", TY_Fortran) // TY_F_FixedForm
+           .Case("for", TY_PP_F_FixedForm)
+           .Case("FOR", TY_PP_F_FixedForm)
+           .Case("fpp", TY_F_FixedForm)
+           .Case("FPP", TY_F_FixedForm)
            .Case("f03", TY_PP_Fortran)
            .Case("f08", TY_PP_Fortran)
            .Case("F03", TY_Fortran)
@@ -338,6 +344,37 @@ types::ID types::lookupTypeForTypeSpecifier(const char *Name) {
 llvm::SmallVector<phases::ID, phases::MaxNumberOfPhases>
 types::getCompilationPhases(ID Id, phases::ID LastPhase) {
   llvm::SmallVector<phases::ID, phases::MaxNumberOfPhases> P;
+  if (isFortran(Id)) {
+    // Delegate preprocessing to the "upper" part of Fortran compiler,
+    // preprocess for other preprocessable inputs
+    if (getPreprocessedType(Id) != TY_INVALID && !isFortran(Id)) {
+      P.push_back(phases::Preprocess);
+    }
+
+    if (getPrecompiledType(Id) != TY_INVALID) {
+      P.push_back(phases::Precompile);
+    }
+
+    if (!onlyPrecompileType(Id)) {
+      if (!onlyAssembleType(Id)) {
+        if (isFortran(Id)) {
+          P.push_back(phases::FortranFrontend);
+          P.push_back(phases::Compile);
+          P.push_back(phases::Backend);
+        } else {
+          P.push_back(phases::Compile);
+          P.push_back(phases::Backend);
+        }
+      }
+      P.push_back(phases::Assemble);
+    }
+    if (!onlyPrecompileType(Id)) {
+      P.push_back(phases::Link);
+    }
+    assert(0 < P.size() && "Not enough phases in list");
+    return P;
+  }
+
   const auto &Info = getInfo(Id);
   for (int I = 0; I <= LastPhase; ++I)
     if (Info.Phases.contains(static_cast<phases::ID>(I)))

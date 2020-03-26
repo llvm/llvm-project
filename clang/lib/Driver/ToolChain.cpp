@@ -357,6 +357,9 @@ Tool *ToolChain::getTool(Action::ActionClass AC) const {
   case Action::OffloadUnbundlingJobClass:
     return getOffloadBundler();
 
+  case Action::FortranFrontendJobClass:
+    return getFlang();
+
   case Action::OffloadWrapperJobClass:
     return getOffloadWrapper();
   }

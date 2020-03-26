@@ -17,6 +17,8 @@
 #include "llvm/Support/Compiler.h"
 
 namespace clang {
+class ObjCRuntime;
+
 namespace driver {
 
 namespace tools {

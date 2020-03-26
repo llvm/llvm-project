@@ -45,6 +45,9 @@ namespace types {
   /// temp file of this type, or null if unspecified.
   const char *getTypeTempSuffix(ID Id, bool CLMode = false);
 
+  /// onlyAssembleType - Should this type only be assembled.
+  bool onlyAssembleType(ID Id);
+
   /// onlyPrecompileType - Should this type only be precompiled.
   bool onlyPrecompileType(ID Id);
 
