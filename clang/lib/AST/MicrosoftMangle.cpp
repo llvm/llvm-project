@@ -2940,11 +2940,17 @@ void MicrosoftCXXNameMangler::mangleType(const AtomicType *T, Qualifiers,
 
 void MicrosoftCXXNameMangler::mangleType(const PipeType *T, Qualifiers,
                                          SourceRange Range) {
-  DiagnosticsEngine &Diags = Context.getDiags();
-  unsigned DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
-    "cannot mangle this OpenCL pipe type yet");
-  Diags.Report(Range.getBegin(), DiagID)
-    << Range;
+  QualType ElementType = T->getElementType();
+
+  llvm::SmallString<64> TemplateMangling;
+  llvm::raw_svector_ostream Stream(TemplateMangling);
+  MicrosoftCXXNameMangler Extra(Context, Stream);
+  Stream << "?$";
+  Extra.mangleSourceName("ocl_pipe");
+  Extra.mangleType(ElementType, Range, QMM_Escape);
+  Extra.mangleIntegerLiteral(llvm::APSInt::get(T->isReadOnly()), true);
+
+  mangleArtificialTagType(TTK_Struct, TemplateMangling, {"__clang"});
 }
 
 void MicrosoftMangleContextImpl::mangleCXXName(GlobalDecl GD,
