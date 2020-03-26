@@ -7,17 +7,54 @@
 ; OPT-EXT: define void @foo3() local_unnamed_addr #1
 ; OPT-INT: define internal fastcc void @foo3.2() unnamed_addr #1
 ; OPT-EXT: define void @foo2() local_unnamed_addr #1
-; OPT-INT: define internal fastcc void @foo2() unnamed_addr #1
+; OPT-INT: define internal fastcc void @foo2.3() unnamed_addr #1
 ; OPT-EXT: define void @foo1() local_unnamed_addr #1
+; OPT-EXT:  tail call void @foo4()
+; OPT-EXT:  tail call void @foo3()
+; OPT-EXT:  tail call void @foo2()
+; OPT-EXT:  tail call void @foo2()
+; OPT-EXT:  tail call void @foo1()
+; OPT-EXT:  tail call fastcc void @0()
 ; OPT-INT: define internal fastcc void @foo1.1() unnamed_addr #1
+; OPT-INT:  tail call void @foo4()
+; OPT-INT:  tail call fastcc void @foo3.2()
+; OPT-INT:  tail call fastcc void @foo2.3()
+; OPT-INT:  tail call fastcc void @foo2.3()
+; OPT-INT:  tail call fastcc void @foo1.1()
+; OPT-INT:  tail call fastcc void @0()
+; OPT:      ret void
 ; OPT: define amdgpu_kernel void @kernel1() local_unnamed_addr #2
+; OPT-EXT:  tail call fastcc void @foo1.1()
+; OPT-INT:  tail call fastcc void @foo1()
+; OPT:      ret void
 ; OPT: define amdgpu_kernel void @kernel2() local_unnamed_addr #3
+; OPT-EXT:  tail call void @foo2()
+; OPT-INT:  tail call fastcc void @foo2.3()
+; OPT:      ret void
 ; OPT: define amdgpu_kernel void @kernel3() local_unnamed_addr #3
+; OPT-EXT:  tail call void @foo1()
+; OPT-INT:  tail call fastcc void @foo1.1()
+; OPT:      ret void
 ; OPT-EXT: define internal fastcc void @foo1.1() unnamed_addr #4
+; OPT-EXT:  tail call void @foo4()
+; OPT-EXT:  tail call fastcc void @foo3.2()
+; OPT-EXT:  tail call fastcc void @foo2.3()
+; OPT-EXT:  tail call fastcc void @foo2.3()
+; OPT-EXT:  tail call fastcc void @foo1.1()
+; OPT-EXT:  tail call fastcc void @1()
 ; OPT-INT: define internal fastcc void @foo1() unnamed_addr #4
+; OPT-INT:  tail call void @foo4()
+; OPT-INT:  tail call fastcc void @foo3()
+; OPT-INT:  tail call fastcc void @foo2()
+; OPT-INT:  tail call fastcc void @foo2()
+; OPT-INT:  tail call fastcc void @foo1()
+; OPT-INT:  tail call fastcc void @1()
+; OPT:      ret void
 ; OPT: define internal fastcc void @1() unnamed_addr #4
 ; OPT-EXT: define internal fastcc void @foo3.2() unnamed_addr #4
 ; OPT-INT: define internal fastcc void @foo3() unnamed_addr #4
+; OPT-EXT: define internal fastcc void @foo2.3() unnamed_addr #4
+; OPT-INT: define internal fastcc void @foo2() unnamed_addr #4
 ; OPT: attributes #0 = { {{.*}} "target-features"="+wavefrontsize64" }
 ; OPT: attributes #1 = { {{.*}} "target-features"="{{.*}},-wavefrontsize16,-wavefrontsize32,+wavefrontsize64{{.*}}" }
 ; OPT: attributes #2 = { {{.*}} "target-features"="+wavefrontsize32" }
