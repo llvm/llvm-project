@@ -6861,9 +6861,14 @@ static bool CC_AIX(unsigned ValNo, MVT ValVT, MVT LocVT,
 
     const unsigned ByValSize = ArgFlags.getByValSize();
 
-    // An empty aggregate parameter takes up no storage and no registers.
-    if (ByValSize == 0)
+    // An empty aggregate parameter takes up no storage and no registers,
+    // but needs a MemLoc for a stack slot for the formal arguments side.
+    if (ByValSize == 0) {
+      State.addLoc(CCValAssign::getMem(ValNo, MVT::INVALID_SIMPLE_VALUE_TYPE,
+                                       State.getNextStackOffset(), RegVT,
+                                       LocInfo));
       return false;
+    }
 
     if (ByValSize <= PtrByteSize) {
       State.AllocateStack(PtrByteSize, PtrByteSize);
@@ -6978,6 +6983,24 @@ static SDValue truncateScalarIntegerArg(ISD::ArgFlagsTy Flags, EVT ValVT,
   return DAG.getNode(ISD::TRUNCATE, dl, ValVT, ArgValue);
 }
 
+static unsigned mapArgRegToOffsetAIX(unsigned Reg, const PPCFrameLowering *FL) {
+  const unsigned LASize = FL->getLinkageSize();
+
+  if (PPC::GPRCRegClass.contains(Reg)) {
+    assert(Reg >= PPC::R3 && Reg <= PPC::R10 &&
+           "Reg must be a valid argument register!");
+    return LASize + 4 * (Reg - PPC::R3);
+  }
+
+  if (PPC::G8RCRegClass.contains(Reg)) {
+    assert(Reg >= PPC::X3 && Reg <= PPC::X10 &&
+           "Reg must be a valid argument register!");
+    return LASize + 8 * (Reg - PPC::X3);
+  }
+
+  llvm_unreachable("Only general purpose registers expected.");
+}
+
 SDValue PPCTargetLowering::LowerFormalArguments_AIX(
     SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
     const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
@@ -7015,12 +7038,12 @@ SDValue PPCTargetLowering::LowerFormalArguments_AIX(
   CCInfo.AllocateStack(LinkageSize, PtrByteSize);
   CCInfo.AnalyzeFormalArguments(Ins, CC_AIX);
 
+  SmallVector<SDValue, 8> MemOps;
+
   for (CCValAssign &VA : ArgLocs) {
     EVT ValVT = VA.getValVT();
     MVT LocVT = VA.getLocVT();
     ISD::ArgFlagsTy Flags = Ins[VA.getValNo()].Flags;
-    assert(!Flags.isByVal() &&
-           "Passing structure by value is unimplemented for formal arguments.");
     assert((VA.isRegLoc() || VA.isMemLoc()) &&
            "Unexpected location for function call argument.");
 
@@ -7032,6 +7055,59 @@ SDValue PPCTargetLowering::LowerFormalArguments_AIX(
     // the register.
     if (VA.isMemLoc() && VA.needsCustom())
       continue;
+
+    if (Flags.isByVal() && VA.isMemLoc()) {
+      if (Flags.getByValSize() != 0)
+        report_fatal_error(
+            "ByVal arguments passed on stack not implemented yet");
+
+      const int FI = MF.getFrameInfo().CreateFixedObject(
+          PtrByteSize, VA.getLocMemOffset(), /* IsImmutable */ false,
+          /* IsAliased */ true);
+      SDValue FIN = DAG.getFrameIndex(FI, PtrVT);
+      InVals.push_back(FIN);
+
+      continue;
+    }
+
+    if (Flags.isByVal()) {
+      assert(VA.isRegLoc() && "MemLocs should already be handled.");
+
+      const unsigned ByValSize = Flags.getByValSize();
+      if (ByValSize > PtrByteSize)
+        report_fatal_error("Formal arguments greater then register size not "
+                           "implemented yet.");
+
+      const MCPhysReg ArgReg = VA.getLocReg();
+      const PPCFrameLowering *FL = Subtarget.getFrameLowering();
+      const unsigned Offset = mapArgRegToOffsetAIX(ArgReg, FL);
+
+      const unsigned StackSize = alignTo(ByValSize, PtrByteSize);
+      const int FI = MF.getFrameInfo().CreateFixedObject(
+          StackSize, Offset, /* IsImmutable */ false, /* IsAliased */ true);
+      SDValue FIN = DAG.getFrameIndex(FI, PtrVT);
+
+      InVals.push_back(FIN);
+
+      const unsigned VReg = MF.addLiveIn(ArgReg, IsPPC64 ? &PPC::G8RCRegClass
+                                                         : &PPC::GPRCRegClass);
+
+      // Since the callers side has left justified the aggregate in the
+      // register, we can simply store the entire register into the stack
+      // slot.
+      // The store to the fixedstack object is needed becuase accessing a
+      // field of the ByVal will use a gep and load. Ideally we will optimize
+      // to extracting the value from the register directly, and elide the
+      // stores when the arguments address is not taken, but that will need to
+      // be future work.
+      SDValue CopyFrom = DAG.getCopyFromReg(Chain, dl, VReg, LocVT);
+      SDValue Store =
+          DAG.getStore(CopyFrom.getValue(1), dl, CopyFrom, FIN,
+                       MachinePointerInfo::getFixedStack(MF, FI, 0));
+
+      MemOps.push_back(Store);
+      continue;
+    }
 
     if (VA.isRegLoc()) {
       MVT::SimpleValueType SVT = ValVT.getSimpleVT().SimpleTy;
@@ -7079,6 +7155,9 @@ SDValue PPCTargetLowering::LowerFormalArguments_AIX(
       EnsureStackAlignment(Subtarget.getFrameLowering(), CallerReservedArea);
   PPCFunctionInfo *FuncInfo = MF.getInfo<PPCFunctionInfo>();
   FuncInfo->setMinReservedArea(CallerReservedArea);
+
+  if (!MemOps.empty())
+    Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, MemOps);
 
   return Chain;
 }
@@ -7156,8 +7235,13 @@ SDValue PPCTargetLowering::LowerCall_AIX(
 
     if (Flags.isByVal()) {
       const unsigned ByValSize = Flags.getByValSize();
+
+      // Nothing to do for zero-sized ByVals on the caller side.
+      if (!ByValSize)
+        continue;
+
       assert(
-          VA.isRegLoc() && ByValSize > 0 && ByValSize <= PtrByteSize &&
+          VA.isRegLoc() && ByValSize <= PtrByteSize &&
           "Pass-by-value arguments are only supported in a single register.");
 
       // Loads must be a power-of-2 size and cannot be larger than the
