@@ -92,8 +92,12 @@ llvm::Constant *ModuleTranslation::getLLVMConstant(llvm::Type *llvmType,
     emitError(loc, "struct types are not supported in constants");
     return nullptr;
   }
+  // For integer types, we allow a mismatch in sizes as the index type in
+  // MLIR might have a different size than the index type in the LLVM module.
   if (auto intAttr = attr.dyn_cast<IntegerAttr>())
-    return llvm::ConstantInt::get(llvmType, intAttr.getValue());
+    return llvm::ConstantInt::get(
+        llvmType,
+        intAttr.getValue().sextOrTrunc(llvmType->getIntegerBitWidth()));
   if (auto boolAttr = attr.dyn_cast<BoolAttr>())
     return llvm::ConstantInt::get(llvmType, boolAttr.getValue());
   if (auto floatAttr = attr.dyn_cast<FloatAttr>())
@@ -103,7 +107,7 @@ llvm::Constant *ModuleTranslation::getLLVMConstant(llvm::Type *llvmType,
         functionMapping.lookup(funcAttr.getValue()), llvmType);
   if (auto splatAttr = attr.dyn_cast<SplatElementsAttr>()) {
     auto *sequentialType = cast<llvm::SequentialType>(llvmType);
-    auto elementType = sequentialType->getElementType();
+    auto *elementType = sequentialType->getElementType();
     uint64_t numElements = sequentialType->getNumElements();
     // Splat value is a scalar. Extract it only if the element type is not
     // another sequence type. The recursion terminates because each step removes
@@ -119,7 +123,7 @@ llvm::Constant *ModuleTranslation::getLLVMConstant(llvm::Type *llvmType,
       return llvm::ConstantVector::getSplat(
           llvm::ElementCount(numElements, /*Scalable=*/false), child);
     if (llvmType->isArrayTy()) {
-      auto arrayType = llvm::ArrayType::get(elementType, numElements);
+      auto *arrayType = llvm::ArrayType::get(elementType, numElements);
       SmallVector<llvm::Constant *, 8> constants(numElements, child);
       return llvm::ConstantArray::get(arrayType, constants);
     }
