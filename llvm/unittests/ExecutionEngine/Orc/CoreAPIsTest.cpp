@@ -91,6 +91,25 @@ TEST_F(CoreAPIsStandardTest, EmptyLookup) {
   EXPECT_TRUE(OnCompletionRun) << "OnCompletion was not run for empty query";
 }
 
+TEST_F(CoreAPIsStandardTest, ResolveUnrequestedSymbol) {
+  // Test that all symbols in a MaterializationUnit materialize corretly when
+  // only a subset of symbols is looked up.
+  // The aim here is to ensure that we're not relying on the query to set up
+  // state needed to materialize the unrequested symbols.
+
+  cantFail(JD.define(std::make_unique<SimpleMaterializationUnit>(
+      SymbolFlagsMap({{Foo, FooSym.getFlags()}, {Bar, BarSym.getFlags()}}),
+      [this](MaterializationResponsibility R) {
+        cantFail(R.notifyResolved({{Foo, FooSym}, {Bar, BarSym}}));
+        cantFail(R.notifyEmitted());
+      })));
+
+  auto Result =
+      cantFail(ES.lookup(makeJITDylibSearchOrder(&JD), SymbolLookupSet({Foo})));
+  EXPECT_EQ(Result.size(), 1U) << "Unexpected number of results";
+  EXPECT_TRUE(Result.count(Foo)) << "Expected result for \"Foo\"";
+}
+
 TEST_F(CoreAPIsStandardTest, RemoveSymbolsTest) {
   // Test that:
   // (1) Missing symbols generate a SymbolsNotFound error.
