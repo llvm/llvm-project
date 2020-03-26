@@ -208,7 +208,7 @@ public:
 
   void Initialize(ASTContext &Context) override {
     Ctx = &Context;
-    checkerMgr = std::make_unique<CheckerManager>(*Ctx, *Opts, Plugins,
+    checkerMgr = std::make_unique<CheckerManager>(*Ctx, *Opts, PP, Plugins,
                                                   CheckerRegistrationFns);
 
     Mgr = std::make_unique<AnalysisManager>(*Ctx, PP, PathConsumers,
