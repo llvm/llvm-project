@@ -314,16 +314,16 @@
 # DEBUG-NEXT: G_SMULH (opcode {{[0-9]+}}): 1 type index, 0 imm indices
 # DEBUG-NEXT: .. the first uncovered type index: 1, OK
 # DEBUG-NEXT: .. the first uncovered imm index: 0, OK
-# DEBUG-NEXT: G_UADDSAT (opcode 117): 1 type index, 0 imm indices
+# DEBUG-NEXT: G_UADDSAT (opcode {{[0-9]+}}): 1 type index, 0 imm indices
 # DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
 # DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
-# DEBUG-NEXT: G_SADDSAT (opcode 118): 1 type index, 0 imm indices
+# DEBUG-NEXT: G_SADDSAT (opcode {{[0-9]+}}): 1 type index, 0 imm indices
 # DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
 # DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
-# DEBUG-NEXT: G_USUBSAT (opcode 119): 1 type index, 0 imm indices
+# DEBUG-NEXT: G_USUBSAT (opcode {{[0-9]+}}): 1 type index, 0 imm indices
 # DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
 # DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
-# DEBUG-NEXT: G_SSUBSAT (opcode 120): 1 type index, 0 imm indices
+# DEBUG-NEXT: G_SSUBSAT (opcode {{[0-9]+}}): 1 type index, 0 imm indices
 # DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
 # DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
 # DEBUG-NEXT: G_FADD (opcode {{[0-9]+}}): 1 type index, 0 imm indices
