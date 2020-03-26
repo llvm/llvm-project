@@ -3173,9 +3173,10 @@ std::string ExprEngine::DumpGraph(bool trim, StringRef Filename) {
                             /*Title=*/"Exploded Graph",
                             /*Filename=*/std::string(Filename));
   }
-#endif
+#else
   llvm::errs() << "Warning: dumping graph requires assertions" << "\n";
   return "";
+#endif
 }
 
 std::string ExprEngine::DumpGraph(ArrayRef<const ExplodedNode*> Nodes,
