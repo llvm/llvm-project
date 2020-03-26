@@ -192,12 +192,13 @@ bool AMDGPUPropagateAttributes::process() {
     NewRoots.clear();
 
     for (auto &F : M.functions()) {
-      if (F.isDeclaration() || Roots.count(&F) || Roots.count(&F))
+      if (F.isDeclaration())
         continue;
 
       const FeatureBitset &CalleeBits =
         TM->getSubtargetImpl(F)->getFeatureBits();
       SmallVector<std::pair<CallBase *, Function *>, 32> ToReplace;
+      SmallSet<CallBase *, 32> Visited;
 
       for (User *U : F.users()) {
         Instruction *I = dyn_cast<Instruction>(U);
@@ -207,16 +208,17 @@ bool AMDGPUPropagateAttributes::process() {
         if (!CI)
           continue;
         Function *Caller = CI->getCaller();
-        if (!Caller)
+        if (!Caller || !Visited.insert(CI).second)
           continue;
-        if (!Roots.count(Caller))
+        if (!Roots.count(Caller) && !NewRoots.count(Caller))
           continue;
 
         const FeatureBitset &CallerBits =
           TM->getSubtargetImpl(*Caller)->getFeatureBits() & TargetFeatures;
 
         if (CallerBits == (CalleeBits  & TargetFeatures)) {
-          NewRoots.insert(&F);
+          if (!Roots.count(&F))
+            NewRoots.insert(&F);
           continue;
         }
 
@@ -257,6 +259,9 @@ bool AMDGPUPropagateAttributes::process() {
     if (F->use_empty())
       F->eraseFromParent();
   }
+
+  Roots.clear();
+  Clones.clear();
 
   return Changed;
 }
