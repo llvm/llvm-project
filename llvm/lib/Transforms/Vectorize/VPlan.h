@@ -1061,6 +1061,9 @@ public:
 };
 
 /// A Recipe for widening load/store operations.
+/// The recipe uses the following VPValues:
+/// - For load: Address, optional mask
+/// - For store: Address, stored value, optional mask
 /// TODO: We currently execute only per-part unless a specific instance is
 /// provided.
 class VPWidenMemoryInstructionRecipe : public VPRecipeBase {
@@ -1068,12 +1071,28 @@ private:
   Instruction &Instr;
   VPUser User;
 
+  void setMask(VPValue *Mask) {
+    if (!Mask)
+      return;
+    User.addOperand(Mask);
+  }
+
+  bool isMasked() const {
+    return (isa<LoadInst>(Instr) && User.getNumOperands() == 2) ||
+           (isa<StoreInst>(Instr) && User.getNumOperands() == 3);
+  }
+
 public:
-  VPWidenMemoryInstructionRecipe(Instruction &Instr, VPValue *Addr,
-                                 VPValue *Mask)
-      : VPRecipeBase(VPWidenMemoryInstructionSC), Instr(Instr), User({Addr}) {
-    if (Mask)
-      User.addOperand(Mask);
+  VPWidenMemoryInstructionRecipe(LoadInst &Load, VPValue *Addr, VPValue *Mask)
+      : VPRecipeBase(VPWidenMemoryInstructionSC), Instr(Load), User({Addr}) {
+    setMask(Mask);
+  }
+
+  VPWidenMemoryInstructionRecipe(StoreInst &Store, VPValue *Addr,
+                                 VPValue *StoredValue, VPValue *Mask)
+      : VPRecipeBase(VPWidenMemoryInstructionSC), Instr(Store),
+        User({Addr, StoredValue}) {
+    setMask(Mask);
   }
 
   /// Method to support type inquiry through isa, cast, and dyn_cast.
@@ -1089,8 +1108,15 @@ public:
   /// Return the mask used by this recipe. Note that a full mask is represented
   /// by a nullptr.
   VPValue *getMask() const {
-    // Mask is optional and therefore the last, currently 2nd operand.
-    return User.getNumOperands() == 2 ? User.getOperand(1) : nullptr;
+    // Mask is optional and therefore the last operand.
+    return isMasked() ? User.getOperand(User.getNumOperands() - 1) : nullptr;
+  }
+
+  /// Return the address accessed by this recipe.
+  VPValue *getStoredValue() const {
+    assert(isa<StoreInst>(Instr) &&
+           "Stored value only available for store instructions");
+    return User.getOperand(1); // Stored value is the 2nd, mandatory operand.
   }
 
   /// Generate the wide load/store.
