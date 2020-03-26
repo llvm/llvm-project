@@ -140,7 +140,7 @@ define void @avg_v24i8(<24 x i8>* %a, <24 x i8>* %b) nounwind {
 ; SSE2-NEXT:    psrld $1, %xmm4
 ; SSE2-NEXT:    psrld $1, %xmm2
 ; SSE2-NEXT:    psrld $1, %xmm3
-; SSE2-NEXT:    movdqa {{.*#+}} xmm6 = [255,0,0,0,255,0,0,0,255,0,0,0,255,0,0,0]
+; SSE2-NEXT:    movdqa {{.*#+}} xmm6 = [255,0,255,0,255,0,255,0]
 ; SSE2-NEXT:    pand %xmm6, %xmm3
 ; SSE2-NEXT:    pand %xmm6, %xmm2
 ; SSE2-NEXT:    packuswb %xmm3, %xmm2
@@ -413,7 +413,7 @@ define void @avg_v48i8(<48 x i8>* %a, <48 x i8>* %b) nounwind {
 ; SSE2-NEXT:    psubd %xmm5, %xmm0
 ; SSE2-NEXT:    psrld $1, %xmm3
 ; SSE2-NEXT:    psrld $1, %xmm8
-; SSE2-NEXT:    movdqa {{.*#+}} xmm7 = [255,0,0,0,255,0,0,0,255,0,0,0,255,0,0,0]
+; SSE2-NEXT:    movdqa {{.*#+}} xmm7 = [255,0,255,0,255,0,255,0]
 ; SSE2-NEXT:    pand %xmm7, %xmm8
 ; SSE2-NEXT:    pand %xmm7, %xmm3
 ; SSE2-NEXT:    packuswb %xmm8, %xmm3

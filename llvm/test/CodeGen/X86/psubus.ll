@@ -622,7 +622,7 @@ define <16 x i8> @test14(<16 x i8> %x, <16 x i32> %y) nounwind {
 ; SSE2-NEXT:    psubd %xmm5, %xmm4
 ; SSE2-NEXT:    por %xmm0, %xmm5
 ; SSE2-NEXT:    pcmpgtd %xmm9, %xmm5
-; SSE2-NEXT:    movdqa {{.*#+}} xmm9 = [255,0,0,0,255,0,0,0,255,0,0,0,255,0,0,0]
+; SSE2-NEXT:    movdqa {{.*#+}} xmm9 = [255,0,255,0,255,0,255,0]
 ; SSE2-NEXT:    pand %xmm9, %xmm5
 ; SSE2-NEXT:    movdqa %xmm3, %xmm7
 ; SSE2-NEXT:    pxor %xmm0, %xmm7

@@ -15,7 +15,7 @@
 define void @shuffle_v32i8_to_v16i8(<32 x i8>* %L, <16 x i8>* %S) nounwind {
 ; AVX1-LABEL: shuffle_v32i8_to_v16i8:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm0 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm0 = [255,255,255,255,255,255,255,255]
 ; AVX1-NEXT:    vpand 16(%rdi), %xmm0, %xmm1
 ; AVX1-NEXT:    vpand (%rdi), %xmm0, %xmm0
 ; AVX1-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
