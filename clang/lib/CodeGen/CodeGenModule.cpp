@@ -1955,9 +1955,9 @@ void CodeGenModule::SetFunctionAttributes(GlobalDecl GD, llvm::Function *F,
   }
 }
 
-void CodeGenModule::addUsedGlobal(llvm::GlobalValue *GV, bool SkipCheck) {
-  assert(SkipCheck || (!GV->isDeclaration() &&
-                       "Only globals with definition can force usage."));
+void CodeGenModule::addUsedGlobal(llvm::GlobalValue *GV) {
+  assert(!GV->isDeclaration() &&
+         "Only globals with definition can force usage.");
   LLVMUsed.emplace_back(GV);
 }
 
@@ -2520,7 +2520,6 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
           !Global->hasAttr<CUDAGlobalAttr>() &&
           !Global->hasAttr<CUDAConstantAttr>() &&
           !Global->hasAttr<CUDASharedAttr>() &&
-          !(LangOpts.HIP && Global->hasAttr<HIPPinnedShadowAttr>()) &&
           !Global->getType()->isCUDADeviceBuiltinSurfaceType() &&
           !Global->getType()->isCUDADeviceBuiltinTextureType())
         return;
@@ -3928,10 +3927,8 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
        D->getType()->isCUDADeviceBuiltinTextureType());
   // HIP pinned shadow of initialized host-side global variables are also
   // left undefined.
-  bool IsHIPPinnedShadowVar =
-      getLangOpts().CUDAIsDevice && D->hasAttr<HIPPinnedShadowAttr>();
-  if (getLangOpts().CUDA && (IsCUDASharedVar || IsCUDAShadowVar ||
-                             IsCUDADeviceShadowVar || IsHIPPinnedShadowVar))
+  if (getLangOpts().CUDA &&
+      (IsCUDASharedVar || IsCUDAShadowVar || IsCUDADeviceShadowVar))
     Init = llvm::UndefValue::get(getTypes().ConvertType(ASTTy));
   else if (D->hasAttr<LoaderUninitializedAttr>())
     Init = llvm::UndefValue::get(getTypes().ConvertType(ASTTy));
@@ -4039,8 +4036,7 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
       // global variables become internal definitions. These have to
       // be internal in order to prevent name conflicts with global
       // host variables with the same name in a different TUs.
-      if (D->hasAttr<CUDADeviceAttr>() || D->hasAttr<CUDAConstantAttr>() ||
-          D->hasAttr<HIPPinnedShadowAttr>()) {
+      if (D->hasAttr<CUDADeviceAttr>() || D->hasAttr<CUDAConstantAttr>()) {
         Linkage = llvm::GlobalValue::InternalLinkage;
         // Shadow variables and their properties must be registered with CUDA
         // runtime. Skip Extern global variables, which will be registered in
@@ -4087,15 +4083,7 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
     }
   }
 
-  // HIPPinnedShadowVar should remain in the final code object irrespective of
-  // whether it is used or not within the code. Add it to used list, so that
-  // it will not get eliminated when it is unused. Also, it is an extern var
-  // within device code, and it should *not* get initialized within device code.
-  if (IsHIPPinnedShadowVar)
-    addUsedGlobal(GV, /*SkipCheck=*/true);
-  else
-    GV->setInitializer(Init);
-
+  GV->setInitializer(Init);
   if (emitter)
     emitter->finalize(GV);
 

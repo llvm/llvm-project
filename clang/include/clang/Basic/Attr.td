@@ -322,7 +322,6 @@ class LangOpt<string name, code customCode = [{}]> {
 def MicrosoftExt : LangOpt<"MicrosoftExt">;
 def Borland : LangOpt<"Borland">;
 def CUDA : LangOpt<"CUDA">;
-def HIP : LangOpt<"HIP">;
 def SYCL : LangOpt<"SYCLIsDevice">;
 def COnly : LangOpt<"", "!LangOpts.CPlusPlus">;
 def CPlusPlus : LangOpt<"CPlusPlus">;
@@ -1050,13 +1049,6 @@ def CUDADevice : InheritableAttr {
   let Subjects = SubjectList<[Function, Var]>;
   let LangOpts = [CUDA];
   let Documentation = [Undocumented];
-}
-
-def HIPPinnedShadow : InheritableAttr {
-  let Spellings = [GNU<"hip_pinned_shadow">, Declspec<"__hip_pinned_shadow__">];
-  let Subjects = SubjectList<[Var]>;
-  let LangOpts = [HIP];
-  let Documentation = [HIPPinnedShadowDocs];
 }
 
 def CUDADeviceBuiltin : IgnoredAttr {

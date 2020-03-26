@@ -6930,10 +6930,6 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
   case ParsedAttr::AT_CUDAHost:
     handleSimpleAttributeWithExclusions<CUDAHostAttr, CUDAGlobalAttr>(S, D, AL);
     break;
-  case ParsedAttr::AT_HIPPinnedShadow:
-    handleSimpleAttributeWithExclusions<HIPPinnedShadowAttr, CUDADeviceAttr,
-                                        CUDAConstantAttr>(S, D, AL);
-    break;
   case ParsedAttr::AT_CUDADeviceBuiltinSurfaceType:
     handleSimpleAttributeWithExclusions<CUDADeviceBuiltinSurfaceTypeAttr,
                                         CUDADeviceBuiltinTextureTypeAttr>(S, D,
