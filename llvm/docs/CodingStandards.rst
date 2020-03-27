@@ -1153,6 +1153,13 @@ builds), ``llvm_unreachable`` becomes a hint to compilers to skip generating
 code for this branch. If the compiler does not support this, it will fall back
 to the "abort" implementation.
 
+Use ``llvm_unreachable`` to mark a specific point in code that should never be
+reached. This is especially desirable for addressing warnings about unreachable
+branches, etc., but can be used whenever reaching a particular code path is
+unconditionally a bug (not originating from user input; see below) of some kind.
+Use of ``assert`` should always include a testable predicate (as opposed to
+``assert(false)``).
+
 Neither assertions or ``llvm_unreachable`` will abort the program on a release
 build. If the error condition can be triggered by user input then the
 recoverable error mechanism described in :doc:`ProgrammersManual` should be
