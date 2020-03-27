@@ -124,7 +124,7 @@ public:
     return callback(callable, std::forward<Params>(params)...);
   }
 
-  operator bool() const { return callback; }
+  explicit operator bool() const { return callback; }
 };
 
 // deleter - Very very very simple method that is used to invoke operator
