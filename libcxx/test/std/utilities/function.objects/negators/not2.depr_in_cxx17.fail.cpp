@@ -26,7 +26,7 @@ struct Predicate {
 };
 
 int main(int, char**) {
-    std::not2(Predicate()); // expected-error{{'not2<Predicate>' is deprecated}}
+    std::not2(Predicate()); // expected-warning {{'not2<Predicate>' is deprecated}}
 
-  return 0;
+    return 0;
 }

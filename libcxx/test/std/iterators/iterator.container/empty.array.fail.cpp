@@ -24,7 +24,7 @@
 int main(int, char**)
 {
     int c[5];
-    std::empty(c);  // expected-error {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::empty(c); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 
     return 0;
 }

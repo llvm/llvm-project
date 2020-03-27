@@ -26,8 +26,8 @@ struct Predicate {
 };
 
 int main(int, char**) {
-    std::binary_negate<Predicate> f((Predicate())); // expected-error{{'binary_negate<Predicate>' is deprecated}}
+    std::binary_negate<Predicate> f((Predicate())); // expected-warning {{'binary_negate<Predicate>' is deprecated}}
     (void)f;
 
-  return 0;
+    return 0;
 }

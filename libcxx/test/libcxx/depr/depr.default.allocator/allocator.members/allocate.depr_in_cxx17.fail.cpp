@@ -25,7 +25,7 @@
 int main(int, char**)
 {
     std::allocator<int> a;
-    TEST_IGNORE_NODISCARD a.allocate(3, nullptr); // expected-error {{'allocate' is deprecated}}
+    TEST_IGNORE_NODISCARD a.allocate(3, nullptr); // expected-warning {{'allocate' is deprecated}}
 
     return 0;
 }
