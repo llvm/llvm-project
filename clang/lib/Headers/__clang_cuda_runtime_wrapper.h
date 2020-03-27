@@ -83,15 +83,13 @@
 #if CUDA_VERSION < 9000
 #define __CUDABE__
 #else
-#define __CUDACC__
 #define __CUDA_LIBDEVICE__
 #endif
 // Disables definitions of device-side runtime support stubs in
 // cuda_device_runtime_api.h
-#include "host_defines.h"
-#undef __CUDACC__
 #include "driver_types.h"
 #include "host_config.h"
+#include "host_defines.h"
 
 // Temporarily replace "nv_weak" with weak, so __attribute__((nv_weak)) in
 // cuda_device_runtime_api.h ends up being __attribute__((weak)) which is the
