@@ -130,10 +130,16 @@ int score_and_cond_const();
 template <int C>
 int score_and_cond_const_inst();
 
+__attribute__((pure)) int pure() { return 0; }
+
+#pragma omp declare variant(pure) match(user = {condition(1)}) // expected-warning {{ignoring return value of function declared with pure attribute}}
+int unused_warning_after_specialization() { return foo(); }
+
 void score_and_cond_inst() {
   score_and_cond_non_const();
   score_and_cond_non_const_inst<8>(); // expected-note {{in instantiation of function template specialization 'score_and_cond_non_const_inst<8>' requested here}}
   score_and_cond_const_inst<9>();
+  unused_warning_after_specialization();
 }
 
 #pragma omp declare variant(barbar <int>) match(implementation = {}) // expected-warning {{expected identifier or string literal describing a context selector; selector skipped}} expected-note {{context selector options are: 'vendor' 'extension' 'unified_address' 'unified_shared_memory' 'reverse_offload' 'dynamic_allocators' 'atomic_default_mem_order'}} expected-note {{the ignored selector spans until here}}

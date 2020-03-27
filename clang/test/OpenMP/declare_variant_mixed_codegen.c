@@ -7,7 +7,6 @@
 // RUN: %clang_cc1 -verify -fopenmp -x c -triple nvptx64-unknown-unknown -aux-triple powerpc64le-unknown-unknown -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -include-pch %t -o - -fopenmp-version=50 | FileCheck %s --check-prefix GPU
 // expected-no-diagnostics
 
-// HOST: @base = alias i32 (double), i32 (double)* @hst
 #ifndef HEADER
 #define HEADER
 
@@ -20,9 +19,9 @@ int hst(double i) { return 1; }
 int base();
 
 // HOST-LABEL: define void @foo()
-// HOST: call i32 (double, ...) bitcast (i32 (double)* @base to i32 (double, ...)*)(double -1.000000e+00)
+// HOST: call i32 @hst(double -1.000000e+00)
 // HOST: call i32 @hst(double -2.000000e+00)
-// HOST: call void [[OFFL:@.+_foo_l29]]()
+// HOST: call void [[OFFL:@.+_foo_l28]]()
 void foo() {
   base(-1);
   hst(-2);
@@ -34,15 +33,14 @@ void foo() {
 }
 
 // HOST: define {{.*}}void [[OFFL]]()
-// HOST: call i32 (double, ...) bitcast (i32 (double)* @base to i32 (double, ...)*)(double -3.000000e+00)
+// HOST: call i32 @hst(double -3.000000e+00)
 // HOST: call i32 @dev(double -4.000000e+00)
 
-// GPU: define {{.*}}void @__omp_offloading_{{.+}}_foo_l29()
-// GPU: call i32 @base(double -3.000000e+00)
+// GPU: define {{.*}}void @__omp_offloading_{{.+}}_foo_l28()
+// GPU: call i32 @dev(double -3.000000e+00)
 // GPU: call i32 @dev(double -4.000000e+00)
 
-// GPU: define {{.*}}i32 @base(double
-// GPU: ret i32 0
+// GPU-NOT: @base
 // GPU: define {{.*}}i32 @dev(double
 // GPU: ret i32 0
 

@@ -7146,6 +7146,9 @@ class OMPTraitInfo {
   friend class ASTContext;
 
 public:
+  /// Reconstruct a (partial) OMPTraitInfo object from a mangled name.
+  OMPTraitInfo(StringRef MangledName);
+
   struct OMPTraitProperty {
     llvm::omp::TraitProperty Kind = llvm::omp::TraitProperty::invalid;
   };
@@ -7183,6 +7186,9 @@ public:
   void getAsVariantMatchInfo(ASTContext &ASTCtx,
                              llvm::omp::VariantMatchInfo &VMI,
                              bool DeviceSetOnly) const;
+
+  /// Return a string representation identifying this context selector.
+  std::string getMangledName() const;
 
   /// Print a human readable representation into \p OS.
   void print(llvm::raw_ostream &OS, const PrintingPolicy &Policy) const;
