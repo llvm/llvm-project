@@ -4624,6 +4624,28 @@ the initializer on host side.
   }];
 }
 
+def CUDADeviceBuiltinSurfaceTypeDocs : Documentation {
+  let Category = DocCatType;
+  let Content = [{
+The ``device_builtin_surface_type`` attribute can be applied to a class
+template when declaring the surface reference. A surface reference variable
+could be accessed on the host side and, on the device side, might be translated
+into an internal surface object, which is established through surface bind and
+unbind runtime APIs.
+  }];
+}
+
+def CUDADeviceBuiltinTextureTypeDocs : Documentation {
+  let Category = DocCatType;
+  let Content = [{
+The ``device_builtin_texture_type`` attribute can be applied to a class
+template when declaring the texture reference. A texture reference variable
+could be accessed on the host side and, on the device side, might be translated
+into an internal texture object, which is established through texture bind and
+unbind runtime APIs.
+  }];
+}
+
 def LifetimeOwnerDocs : Documentation {
   let Category = DocCatDecl;
   let Content = [{

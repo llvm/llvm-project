@@ -599,6 +599,25 @@ public:
   }
 };
 
+class AddrSpaceCastOperator
+    : public ConcreteOperator<Operator, Instruction::AddrSpaceCast> {
+  friend class AddrSpaceCastInst;
+  friend class ConstantExpr;
+
+public:
+  Value *getPointerOperand() { return getOperand(0); }
+
+  const Value *getPointerOperand() const { return getOperand(0); }
+
+  unsigned getSrcAddressSpace() const {
+    return getPointerOperand()->getType()->getPointerAddressSpace();
+  }
+
+  unsigned getDestAddressSpace() const {
+    return getType()->getPointerAddressSpace();
+  }
+};
+
 } // end namespace llvm
 
 #endif // LLVM_IR_OPERATOR_H

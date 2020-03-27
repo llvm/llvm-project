@@ -6,16 +6,19 @@
 // RUN: %clang_cc1 -DEXPECT_WARNINGS -fms-extensions -fsyntax-only -verify -x c %s
 
 #if defined(EXPECT_WARNINGS)
-// expected-warning@+12 {{'__device__' attribute ignored}}
-// expected-warning@+12 {{'__global__' attribute ignored}}
-// expected-warning@+12 {{'__constant__' attribute ignored}}
-// expected-warning@+12 {{'__shared__' attribute ignored}}
-// expected-warning@+12 {{'__host__' attribute ignored}}
+// expected-warning@+15 {{'__device__' attribute ignored}}
+// expected-warning@+15 {{'__global__' attribute ignored}}
+// expected-warning@+15 {{'__constant__' attribute ignored}}
+// expected-warning@+15 {{'__shared__' attribute ignored}}
+// expected-warning@+15 {{'__host__' attribute ignored}}
+// expected-warning@+20 {{'__device_builtin_surface_type__' attribute ignored}}
+// expected-warning@+20 {{'__device_builtin_texture_type__' attribute ignored}}
 //
 // (Currently we don't for the other attributes. They are implemented with
 // IgnoredAttr, which is ignored irrespective of any LangOpts.)
 #else
-// expected-no-diagnostics
+// expected-warning@+14 {{'__device_builtin_surface_type__' attribute only applies to classes}}
+// expected-warning@+14 {{'__device_builtin_texture_type__' attribute only applies to classes}}
 #endif
 
 __declspec(__device__) void f_device();
