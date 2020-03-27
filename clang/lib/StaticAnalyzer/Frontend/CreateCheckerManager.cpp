@@ -18,11 +18,11 @@ namespace clang {
 namespace ento {
 
 CheckerManager::CheckerManager(
-    ASTContext &Context, AnalyzerOptions &AOptions,
+    ASTContext &Context, AnalyzerOptions &AOptions, const Preprocessor &PP,
     ArrayRef<std::string> plugins,
     ArrayRef<std::function<void(CheckerRegistry &)>> checkerRegistrationFns)
     : Context(&Context), LangOpts(Context.getLangOpts()), AOptions(AOptions),
-      Diags(Context.getDiagnostics()),
+      PP(&PP), Diags(Context.getDiagnostics()),
       Registry(
           std::make_unique<CheckerRegistry>(plugins, Context.getDiagnostics(),
                                             AOptions, checkerRegistrationFns)) {
@@ -31,9 +31,6 @@ CheckerManager::CheckerManager(
   finishedCheckerRegistration();
 }
 
-/// Constructs a CheckerManager without requiring an AST. No checker
-/// registration will take place. Only useful for retrieving the
-/// CheckerRegistry and print for help flags where the AST is unavalaible.
 CheckerManager::CheckerManager(AnalyzerOptions &AOptions,
                                const LangOptions &LangOpts,
                                DiagnosticsEngine &Diags,
