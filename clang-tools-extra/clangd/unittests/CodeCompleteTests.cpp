@@ -1195,9 +1195,7 @@ TEST(SignatureHelpTest, OpeningParen) {
     int foo(int a, int b, int c);
     int main() {
     #define ID(X) X
-      // FIXME: figure out why ID(foo (foo(10), )) doesn't work when preserving
-      // the recovery expression.
-      ID(foo $p^( 10, ^ ))
+      ID(foo $p^( foo(10), ^ ))
     })cpp"};
 
   for (auto Test : Tests) {

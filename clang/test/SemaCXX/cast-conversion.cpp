@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -triple x86_64-unknown-unknown -verify %s -std=c++11 -Wno-unused
+// RUN: %clang_cc1 -fsyntax-only -triple x86_64-unknown-unknown -verify %s -std=c++11
 
 struct R {
   R(int);
