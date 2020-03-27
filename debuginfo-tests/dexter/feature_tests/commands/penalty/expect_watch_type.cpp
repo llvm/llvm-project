@@ -2,11 +2,11 @@
 //      Check that \DexExpectWatchType applies penalties when expected
 //      types are not found and unexpected types are.
 //
-// REQUIRES: system-linux, lldb
+// NOTE: This test passes but not in the expected way on Windows.
+// TODO: Reduce this test's coverage and be more specific about
+// expected behaviour.
 //
-// RUN: not %dexter_base test --fail-lt 1.0 -w \
-// RUN:     --builder 'clang' --debugger 'lldb' --cflags "-O0 -g" -- %s \
-// RUN:     | FileCheck %s
+// RUN: not %dexter_regression_test -- %s | FileCheck %s
 // CHECK: expect_watch_type.cpp:
 
 template<class T>
