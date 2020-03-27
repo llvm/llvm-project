@@ -113,6 +113,7 @@ inline void registerAllPasses() {
   LLVM::createLegalizeForExportPass();
 
   // LoopOps
+  createParallelLoopCollapsingPass();
   createParallelLoopFusionPass();
   createParallelLoopSpecializationPass();
   createParallelLoopTilingPass();
