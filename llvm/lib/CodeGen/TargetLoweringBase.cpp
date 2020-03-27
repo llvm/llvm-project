@@ -1557,7 +1557,7 @@ bool TargetLoweringBase::allowsMemoryAccessForAlignment(
     LLVMContext &Context, const DataLayout &DL, EVT VT,
     const MachineMemOperand &MMO, bool *Fast) const {
   return allowsMemoryAccessForAlignment(Context, DL, VT, MMO.getAddrSpace(),
-                                        MMO.getAlignment(), MMO.getFlags(),
+                                        MMO.getAlign().value(), MMO.getFlags(),
                                         Fast);
 }
 
@@ -1573,7 +1573,7 @@ bool TargetLoweringBase::allowsMemoryAccess(LLVMContext &Context,
                                             const MachineMemOperand &MMO,
                                             bool *Fast) const {
   return allowsMemoryAccess(Context, DL, VT, MMO.getAddrSpace(),
-                            MMO.getAlignment(), MMO.getFlags(), Fast);
+                            MMO.getAlign().value(), MMO.getFlags(), Fast);
 }
 
 BranchProbability TargetLoweringBase::getPredictableBranchThreshold() const {

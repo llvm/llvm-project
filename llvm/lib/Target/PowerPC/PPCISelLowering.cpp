@@ -13650,8 +13650,8 @@ SDValue PPCTargetLowering::expandVSXLoadForLE(SDNode *N,
 
   // Do not expand to PPCISD::LXVD2X + PPCISD::XXSWAPD when the load is
   // aligned and the type is a vector with elements up to 4 bytes
-  if (Subtarget.needsSwapsForVSXMemOps() && !(MMO->getAlignment()%16)
-      && VecTy.getScalarSizeInBits() <= 32 ) {
+  if (Subtarget.needsSwapsForVSXMemOps() && MMO->getAlign() >= Align(16) &&
+      VecTy.getScalarSizeInBits() <= 32) {
     return SDValue();
   }
 
@@ -13721,8 +13721,8 @@ SDValue PPCTargetLowering::expandVSXStoreForLE(SDNode *N,
 
   // Do not expand to PPCISD::XXSWAPD and PPCISD::STXVD2X when the load is
   // aligned and the type is a vector with elements up to 4 bytes
-  if (Subtarget.needsSwapsForVSXMemOps() && !(MMO->getAlignment()%16)
-      && VecTy.getScalarSizeInBits() <= 32 ) {
+  if (Subtarget.needsSwapsForVSXMemOps() && MMO->getAlign() >= Align(16) &&
+      VecTy.getScalarSizeInBits() <= 32) {
     return SDValue();
   }
 

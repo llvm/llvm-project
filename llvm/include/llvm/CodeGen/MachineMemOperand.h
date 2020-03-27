@@ -225,11 +225,25 @@ public:
 
   /// Return the minimum known alignment in bytes of the actual memory
   /// reference.
-  uint64_t getAlignment() const;
+  /// FIXME: Remove once transition to Align is over.
+  LLVM_ATTRIBUTE_DEPRECATED(uint64_t getAlignment() const,
+                            "Use getAlign instead");
+
+  /// Return the minimum known alignment in bytes of the actual memory
+  /// reference.
+  Align getAlign() const;
 
   /// Return the minimum known alignment in bytes of the base address, without
   /// the offset.
-  uint64_t getBaseAlignment() const { return BaseAlign.value(); }
+  /// FIXME: Remove once transition to Align is over.
+  LLVM_ATTRIBUTE_DEPRECATED(uint64_t getBaseAlignment() const,
+                            "Use getBaseAlign instead") {
+    return BaseAlign.value();
+  }
+
+  /// Return the minimum known alignment in bytes of the base address, without
+  /// the offset.
+  Align getBaseAlign() const { return BaseAlign; }
 
   /// Return the AA tags for the memory reference.
   AAMDNodes getAAInfo() const { return AAInfo; }
@@ -307,7 +321,7 @@ public:
            LHS.getFlags() == RHS.getFlags() &&
            LHS.getAAInfo() == RHS.getAAInfo() &&
            LHS.getRanges() == RHS.getRanges() &&
-           LHS.getAlignment() == RHS.getAlignment() &&
+           LHS.getAlign() == RHS.getAlign() &&
            LHS.getAddrSpace() == RHS.getAddrSpace();
   }
 
