@@ -45902,131 +45902,6 @@ static SDValue combineAddOrSubToADCOrSBB(SDNode *N, SelectionDAG &DAG) {
                      DAG.getConstant(0, DL, VT), Cmp1.getValue(1));
 }
 
-static SDValue combineLoopMAddPattern(SDNode *N, SelectionDAG &DAG,
-                                      const X86Subtarget &Subtarget) {
-  if (!Subtarget.hasSSE2())
-    return SDValue();
-
-  EVT VT = N->getValueType(0);
-
-  // If the vector size is less than 128, or greater than the supported RegSize,
-  // do not use PMADD.
-  if (!VT.isVector() || VT.getVectorNumElements() < 8)
-    return SDValue();
-
-  SDValue Op0 = N->getOperand(0);
-  SDValue Op1 = N->getOperand(1);
-
-  auto UsePMADDWD = [&](SDValue Op) {
-    ShrinkMode Mode;
-    return Op.getOpcode() == ISD::MUL &&
-           canReduceVMulWidth(Op.getNode(), DAG, Mode) &&
-           Mode != ShrinkMode::MULU16 &&
-           (!Subtarget.hasSSE41() ||
-            (Op->isOnlyUserOf(Op.getOperand(0).getNode()) &&
-             Op->isOnlyUserOf(Op.getOperand(1).getNode())));
-  };
-
-  SDValue MulOp, OtherOp;
-  if (UsePMADDWD(Op0)) {
-    MulOp = Op0;
-    OtherOp = Op1;
-  } else if (UsePMADDWD(Op1)) {
-    MulOp = Op1;
-    OtherOp = Op0;
-  } else
-   return SDValue();
-
-  SDLoc DL(N);
-  EVT ReducedVT = EVT::getVectorVT(*DAG.getContext(), MVT::i16,
-                                   VT.getVectorNumElements());
-  EVT MAddVT = EVT::getVectorVT(*DAG.getContext(), MVT::i32,
-                                VT.getVectorNumElements() / 2);
-
-  // Shrink the operands of mul.
-  SDValue N0 = DAG.getNode(ISD::TRUNCATE, DL, ReducedVT, MulOp->getOperand(0));
-  SDValue N1 = DAG.getNode(ISD::TRUNCATE, DL, ReducedVT, MulOp->getOperand(1));
-
-  // Madd vector size is half of the original vector size
-  auto PMADDWDBuilder = [](SelectionDAG &DAG, const SDLoc &DL,
-                           ArrayRef<SDValue> Ops) {
-    MVT OpVT = MVT::getVectorVT(MVT::i32, Ops[0].getValueSizeInBits() / 32);
-    return DAG.getNode(X86ISD::VPMADDWD, DL, OpVT, Ops);
-  };
-  SDValue Madd = SplitOpsAndApply(DAG, Subtarget, DL, MAddVT, { N0, N1 },
-                                  PMADDWDBuilder);
-  // Fill the rest of the output with 0
-  SDValue Zero = DAG.getConstant(0, DL, Madd.getSimpleValueType());
-  SDValue Concat = DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Madd, Zero);
-
-  // Preserve the reduction flag on the ADD. We may need to revisit for the
-  // other operand.
-  SDNodeFlags Flags;
-  Flags.setVectorReduction(true);
-  return DAG.getNode(ISD::ADD, DL, VT, Concat, OtherOp, Flags);
-}
-
-static SDValue combineLoopSADPattern(SDNode *N, SelectionDAG &DAG,
-                                     const X86Subtarget &Subtarget) {
-  if (!Subtarget.hasSSE2())
-    return SDValue();
-
-  SDLoc DL(N);
-  EVT VT = N->getValueType(0);
-
-  // TODO: There's nothing special about i32, any integer type above i16 should
-  // work just as well.
-  if (!VT.isVector() || !isPowerOf2_32(VT.getVectorNumElements()) ||
-      VT.getVectorElementType() != MVT::i32)
-    return SDValue();
-
-  // We know N is a reduction add. To match SAD, we need one of the operands to
-  // be an ABS.
-  SDValue AbsOp = N->getOperand(0);
-  SDValue OtherOp = N->getOperand(1);
-  if (AbsOp.getOpcode() != ISD::ABS)
-    std::swap(AbsOp, OtherOp);
-  if (AbsOp.getOpcode() != ISD::ABS)
-    return SDValue();
-
-  // Check whether we have an abs-diff pattern feeding into the select.
-  SDValue SadOp0, SadOp1;
-  if(!detectZextAbsDiff(AbsOp, SadOp0, SadOp1))
-    return SDValue();
-
-  // SAD pattern detected. Now build a SAD instruction and an addition for
-  // reduction. Note that the number of elements of the result of SAD is less
-  // than the number of elements of its input. Therefore, we could only update
-  // part of elements in the reduction vector.
-  SDValue Sad = createPSADBW(DAG, SadOp0, SadOp1, DL, Subtarget);
-
-  // The output of PSADBW is a vector of i64.
-  // We need to turn the vector of i64 into a vector of i32.
-  // If the reduction vector is at least as wide as the psadbw result, just
-  // bitcast. If it's narrower which can only occur for v2i32, bits 127:16 of
-  // the PSADBW will be zero.
-  MVT ResVT = MVT::getVectorVT(MVT::i32, Sad.getValueSizeInBits() / 32);
-  Sad = DAG.getNode(ISD::BITCAST, DL, ResVT, Sad);
-
-  if (VT.getSizeInBits() > ResVT.getSizeInBits()) {
-    // Fill the upper elements with zero to match the add width.
-    assert(VT.getSizeInBits() % ResVT.getSizeInBits() == 0 && "Unexpected VTs");
-    unsigned NumConcats = VT.getSizeInBits() / ResVT.getSizeInBits();
-    SmallVector<SDValue, 4> Ops(NumConcats, DAG.getConstant(0, DL, ResVT));
-    Ops[0] = Sad;
-    Sad = DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Ops);
-  } else if (VT.getSizeInBits() < ResVT.getSizeInBits()) {
-    Sad = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Sad,
-                      DAG.getIntPtrConstant(0, DL));
-  }
-
-  // Preserve the reduction flag on the ADD. We may need to revisit for the
-  // other operand.
-  SDNodeFlags Flags;
-  Flags.setVectorReduction(true);
-  return DAG.getNode(ISD::ADD, DL, VT, Sad, OtherOp, Flags);
-}
-
 static SDValue matchPMADDWD(SelectionDAG &DAG, SDValue Op0, SDValue Op1,
                             const SDLoc &DL, EVT VT,
                             const X86Subtarget &Subtarget) {
@@ -46116,30 +45991,25 @@ static SDValue matchPMADDWD(SelectionDAG &DAG, SDValue Op0, SDValue Op1,
       Mode == ShrinkMode::MULU16)
     return SDValue();
 
+  EVT TruncVT = EVT::getVectorVT(*DAG.getContext(), MVT::i16,
+                                 VT.getVectorNumElements() * 2);
+  SDValue N0 = DAG.getNode(ISD::TRUNCATE, DL, TruncVT, Mul.getOperand(0));
+  SDValue N1 = DAG.getNode(ISD::TRUNCATE, DL, TruncVT, Mul.getOperand(1));
+
   auto PMADDBuilder = [](SelectionDAG &DAG, const SDLoc &DL,
                          ArrayRef<SDValue> Ops) {
-    // Shrink by adding truncate nodes and let DAGCombine fold with the
-    // sources.
     EVT InVT = Ops[0].getValueType();
-    assert(InVT.getScalarType() == MVT::i32 &&
-           "Unexpected scalar element type");
     assert(InVT == Ops[1].getValueType() && "Operands' types mismatch");
     EVT ResVT = EVT::getVectorVT(*DAG.getContext(), MVT::i32,
                                  InVT.getVectorNumElements() / 2);
-    EVT TruncVT = EVT::getVectorVT(*DAG.getContext(), MVT::i16,
-                                   InVT.getVectorNumElements());
-    return DAG.getNode(X86ISD::VPMADDWD, DL, ResVT,
-                       DAG.getNode(ISD::TRUNCATE, DL, TruncVT, Ops[0]),
-                       DAG.getNode(ISD::TRUNCATE, DL, TruncVT, Ops[1]));
+    return DAG.getNode(X86ISD::VPMADDWD, DL, ResVT, Ops[0], Ops[1]);
   };
-  return SplitOpsAndApply(DAG, Subtarget, DL, VT,
-                          { Mul.getOperand(0), Mul.getOperand(1) },
-                          PMADDBuilder);
+  return SplitOpsAndApply(DAG, Subtarget, DL, VT, { N0, N1 }, PMADDBuilder);
 }
 
 // Attempt to turn this pattern into PMADDWD.
-// (mul (add (sext (build_vector)), (sext (build_vector))),
-//      (add (sext (build_vector)), (sext (build_vector)))
+// (add (mul (sext (build_vector)), (sext (build_vector))),
+//      (mul (sext (build_vector)), (sext (build_vector)))
 static SDValue matchPMADDWD_2(SelectionDAG &DAG, SDValue N0, SDValue N1,
                               const SDLoc &DL, EVT VT,
                               const X86Subtarget &Subtarget) {
@@ -46261,13 +46131,6 @@ static SDValue matchPMADDWD_2(SelectionDAG &DAG, SDValue N0, SDValue N1,
 static SDValue combineAdd(SDNode *N, SelectionDAG &DAG,
                           TargetLowering::DAGCombinerInfo &DCI,
                           const X86Subtarget &Subtarget) {
-  const SDNodeFlags Flags = N->getFlags();
-  if (Flags.hasVectorReduction()) {
-    if (SDValue Sad = combineLoopSADPattern(N, DAG, Subtarget))
-      return Sad;
-    if (SDValue MAdd = combineLoopMAddPattern(N, DAG, Subtarget))
-      return MAdd;
-  }
   EVT VT = N->getValueType(0);
   SDValue Op0 = N->getOperand(0);
   SDValue Op1 = N->getOperand(1);
