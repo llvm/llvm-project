@@ -24,10 +24,6 @@ func @indexvector(vector<4 x index>) -> () // expected-error {{vector elements m
 func @indexmemref(memref<? x index>) -> () // expected-error {{invalid memref element type}}
 
 // -----
-
-func @indextensor(tensor<4 x index>) -> () // expected-error {{invalid tensor element type}}
-
-// -----
 // Test no map in memref type.
 func @memrefs(memref<2x4xi8, >) // expected-error {{expected list element}}
 
