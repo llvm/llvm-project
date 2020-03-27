@@ -32,3 +32,6 @@ define void @_start() {
 ; CHECK-NEXT:       - Index:           0
 ; CHECK-NEXT:         Attribute:       0
 ; CHECK-NEXT:         SigIndex:        1
+
+; Global section has to come after event section
+; CHECK:        - Type:            GLOBAL
