@@ -4389,7 +4389,7 @@ static bool getShuffleInput(const SmallVectorImpl<int> &Bytes, unsigned Start,
 }
 
 // Bytes is a VPERM-like permute vector, except that -1 is used for
-// undefined bytes.  Return true if it can be performed using VSLDI.
+// undefined bytes.  Return true if it can be performed using VSLDB.
 // When returning true, set StartIndex to the shift amount and OpNo0
 // and OpNo1 to the VPERM operands that should be used as the first
 // and second shift operand respectively.
@@ -4449,14 +4449,14 @@ static SDValue getPermuteNode(SelectionDAG &DAG, const SDLoc &DL,
 
 // Bytes is a VPERM-like permute vector, except that -1 is used for
 // undefined bytes.  Implement it on operands Ops[0] and Ops[1] using
-// VSLDI or VPERM.
+// VSLDB or VPERM.
 static SDValue getGeneralPermuteNode(SelectionDAG &DAG, const SDLoc &DL,
                                      SDValue *Ops,
                                      const SmallVectorImpl<int> &Bytes) {
   for (unsigned I = 0; I < 2; ++I)
     Ops[I] = DAG.getNode(ISD::BITCAST, DL, MVT::v16i8, Ops[I]);
 
-  // First see whether VSLDI can be used.
+  // First see whether VSLDB can be used.
   unsigned StartIndex, OpNo0, OpNo1;
   if (isShlDoublePermute(Bytes, StartIndex, OpNo0, OpNo1))
     return DAG.getNode(SystemZISD::SHL_DOUBLE, DL, MVT::v16i8, Ops[OpNo0],
