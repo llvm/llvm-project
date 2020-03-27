@@ -1065,7 +1065,7 @@ class Configuration(object):
         run_py = os.path.join(self.libcxx_src_root, 'utils', 'run.py')
         env_vars = ' '.join('%s=%s' % (k, pipes.quote(v)) for (k, v) in self.exec_env.items())
         exec_str = '%s %s --codesign_identity "%s" --working_directory "%%S" ' \
-                  '--dependencies %%file_dependencies --env %s -- ' %  \
+                   '--dependencies %%{file_dependencies} --env %s -- ' %  \
             (pipes.quote(sys.executable), pipes.quote(run_py),
              codesign_ident, env_vars)
         sub.append(('%{exec}', exec_str))

@@ -9,4 +9,4 @@
 
 // FILE_DEPENDENCIES: test.pass.cpp
 
-// RUN: echo %file_dependencies | grep 'test.pass.cpp'
+// RUN: echo %{file_dependencies} | grep 'test.pass.cpp'
