@@ -34,11 +34,19 @@ public:
   /// Recalculate the dominance info.
   void recalculate(Operation *op);
 
+  /// Finds the nearest common dominator block for the two given blocks a
+  /// and b. If no common dominator can be found, this function will return
+  /// nullptr.
+  Block *findNearestCommonDominator(Block *a, Block *b) const;
+
   /// Get the root dominance node of the given region.
   DominanceInfoNode *getRootNode(Region *region) {
     assert(dominanceInfos.count(region) != 0);
     return dominanceInfos[region]->getRootNode();
   }
+
+  /// Return the dominance node from the Region containing block A.
+  DominanceInfoNode *getNode(Block *a);
 
 protected:
   using super = DominanceInfoBase<IsPostDom>;
@@ -81,9 +89,6 @@ public:
   bool properlyDominates(Block *a, Block *b) {
     return super::properlyDominates(a, b);
   }
-
-  /// Return the dominance node from the Region containing block A.
-  DominanceInfoNode *getNode(Block *a);
 
   /// Update the internal DFS numbers for the dominance nodes.
   void updateDFSNumbers();

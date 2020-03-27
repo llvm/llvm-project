@@ -91,6 +91,7 @@ void ento::registerObjCAtSyncChecker(CheckerManager &mgr) {
   mgr.registerChecker<ObjCAtSyncChecker>();
 }
 
-bool ento::shouldRegisterObjCAtSyncChecker(const LangOptions &LO) {
+bool ento::shouldRegisterObjCAtSyncChecker(const CheckerManager &mgr) {
+  const LangOptions &LO = mgr.getLangOpts();
   return LO.ObjC;
 }

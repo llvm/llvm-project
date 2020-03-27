@@ -1435,7 +1435,7 @@ bool X86InstructionSelector::materializeFP(MachineInstr &I,
   const Register DstReg = I.getOperand(0).getReg();
   const LLT DstTy = MRI.getType(DstReg);
   const RegisterBank &RegBank = *RBI.getRegBank(DstReg, MRI, TRI);
-  unsigned Align = DstTy.getSizeInBits();
+  unsigned Align = DstTy.getSizeInBytes();
   const DebugLoc &DbgLoc = I.getDebugLoc();
 
   unsigned Opc = getLoadStoreOp(DstTy, RegBank, TargetOpcode::G_LOAD, Align);

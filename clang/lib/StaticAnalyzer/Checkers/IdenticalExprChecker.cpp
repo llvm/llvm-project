@@ -513,6 +513,6 @@ void ento::registerIdenticalExprChecker(CheckerManager &Mgr) {
   Mgr.registerChecker<FindIdenticalExprChecker>();
 }
 
-bool ento::shouldRegisterIdenticalExprChecker(const LangOptions &LO) {
+bool ento::shouldRegisterIdenticalExprChecker(const CheckerManager &mgr) {
   return true;
 }

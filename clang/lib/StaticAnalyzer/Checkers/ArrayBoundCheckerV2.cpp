@@ -356,6 +356,6 @@ void ento::registerArrayBoundCheckerV2(CheckerManager &mgr) {
   mgr.registerChecker<ArrayBoundCheckerV2>();
 }
 
-bool ento::shouldRegisterArrayBoundCheckerV2(const LangOptions &LO) {
+bool ento::shouldRegisterArrayBoundCheckerV2(const CheckerManager &mgr) {
   return true;
 }

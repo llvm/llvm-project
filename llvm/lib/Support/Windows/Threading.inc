@@ -131,6 +131,10 @@ struct ProcessorGroup {
   unsigned UsableThreads;
   unsigned ThreadsPerCore;
   uint64_t Affinity;
+
+  unsigned useableCores() const {
+    return std::max(1U, UsableThreads / ThreadsPerCore);
+  }
 };
 
 template <typename F>
@@ -232,33 +236,41 @@ int computeHostNumHardwareThreads() {
   return Threads;
 }
 
-// Assign the current thread to a more appropriate CPU socket or CPU group
-void llvm::ThreadPoolStrategy::apply_thread_strategy(
-    unsigned ThreadPoolNum) const {
+// Finds the proper CPU socket where a thread number should go. Returns 'None'
+// if the thread shall remain on the actual CPU socket.
+Optional<unsigned>
+llvm::ThreadPoolStrategy::compute_cpu_socket(unsigned ThreadPoolNum) const {
   ArrayRef<ProcessorGroup> Groups = getProcessorGroups();
+  // Only one CPU socket in the system or process affinity was set, no need to
+  // move the thread(s) to another CPU socket.
+  if (Groups.size() <= 1)
+    return None;
+
+  // We ask for less threads than there are hardware threads per CPU socket, no
+  // need to dispatch threads to other CPU sockets.
+  unsigned MaxThreadsPerSocket =
+      UseHyperThreads ? Groups[0].UsableThreads : Groups[0].useableCores();
+  if (compute_thread_count() <= MaxThreadsPerSocket)
+    return None;
 
   assert(ThreadPoolNum < compute_thread_count() &&
          "The thread index is not within thread strategy's range!");
 
-  // In this mode, the ThreadNumber represents the core number, not the
-  // hyper-thread number. Assumes all NUMA groups have the same amount of
-  // hyper-threads.
-  if (!UseHyperThreads)
-    ThreadPoolNum *= Groups[0].ThreadsPerCore;
+  // Assumes the same number of hardware threads per CPU socket.
+  return (ThreadPoolNum * Groups.size()) / compute_thread_count();
+}
 
-  unsigned ThreadRangeStart = 0;
-  for (unsigned I = 0; I < Groups.size(); ++I) {
-    const ProcessorGroup &G = Groups[I];
-    if (ThreadPoolNum >= ThreadRangeStart &&
-        ThreadPoolNum < ThreadRangeStart + G.UsableThreads) {
-
-      GROUP_AFFINITY Affinity{};
-      Affinity.Group = G.ID;
-      Affinity.Mask = G.Affinity;
-      SetThreadGroupAffinity(GetCurrentThread(), &Affinity, nullptr);
-    }
-    ThreadRangeStart += G.UsableThreads;
-  }
+// Assign the current thread to a more appropriate CPU socket or CPU group
+void llvm::ThreadPoolStrategy::apply_thread_strategy(
+    unsigned ThreadPoolNum) const {
+  Optional<unsigned> Socket = compute_cpu_socket(ThreadPoolNum);
+  if (!Socket)
+    return;
+  ArrayRef<ProcessorGroup> Groups = getProcessorGroups();
+  GROUP_AFFINITY Affinity{};
+  Affinity.Group = Groups[*Socket].ID;
+  Affinity.Mask = Groups[*Socket].Affinity;
+  SetThreadGroupAffinity(GetCurrentThread(), &Affinity, nullptr);
 }
 
 llvm::BitVector llvm::get_thread_affinity_mask() {

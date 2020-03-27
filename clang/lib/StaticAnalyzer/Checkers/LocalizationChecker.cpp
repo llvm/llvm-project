@@ -1403,7 +1403,7 @@ void ento::registerNonLocalizedStringChecker(CheckerManager &mgr) {
           checker, "AggressiveReport");
 }
 
-bool ento::shouldRegisterNonLocalizedStringChecker(const LangOptions &LO) {
+bool ento::shouldRegisterNonLocalizedStringChecker(const CheckerManager &mgr) {
   return true;
 }
 
@@ -1412,7 +1412,7 @@ void ento::registerEmptyLocalizationContextChecker(CheckerManager &mgr) {
 }
 
 bool ento::shouldRegisterEmptyLocalizationContextChecker(
-                                                        const LangOptions &LO) {
+                                                    const CheckerManager &mgr) {
   return true;
 }
 
@@ -1420,6 +1420,6 @@ void ento::registerPluralMisuseChecker(CheckerManager &mgr) {
   mgr.registerChecker<PluralMisuseChecker>();
 }
 
-bool ento::shouldRegisterPluralMisuseChecker(const LangOptions &LO) {
+bool ento::shouldRegisterPluralMisuseChecker(const CheckerManager &mgr) {
   return true;
 }

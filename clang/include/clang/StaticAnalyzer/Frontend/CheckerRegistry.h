@@ -69,7 +69,6 @@ namespace clang {
 
 class AnalyzerOptions;
 class DiagnosticsEngine;
-class LangOptions;
 
 namespace ento {
 
@@ -96,7 +95,7 @@ public:
   /// Initialization functions perform any necessary setup for a checker.
   /// They should include a call to CheckerManager::registerChecker.
   using InitializationFunction = void (*)(CheckerManager &);
-  using ShouldRegisterFunction = bool (*)(const LangOptions &);
+  using ShouldRegisterFunction = bool (*)(const CheckerManager &);
 
   /// Specifies a command line option. It may either belong to a checker or a
   /// package.
@@ -168,12 +167,12 @@ public:
 
     ConstCheckerInfoList Dependencies;
 
-    bool isEnabled(const LangOptions &LO) const {
-      return State == StateFromCmdLine::State_Enabled && ShouldRegister(LO);
+    bool isEnabled(const CheckerManager &mgr) const {
+      return State == StateFromCmdLine::State_Enabled && ShouldRegister(mgr);
     }
 
-    bool isDisabled(const LangOptions &LO) const {
-      return State == StateFromCmdLine::State_Disabled || !ShouldRegister(LO);
+    bool isDisabled(const CheckerManager &mgr) const {
+      return State == StateFromCmdLine::State_Disabled || !ShouldRegister(mgr);
     }
 
     // Since each checker must have a different full name, we can identify
@@ -220,7 +219,7 @@ private:
     mgr.template registerChecker<T>();
   }
 
-  template <typename T> static bool returnTrue(const LangOptions &) {
+  template <typename T> static bool returnTrue(const CheckerManager &mgr) {
     return true;
   }
 

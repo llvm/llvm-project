@@ -1477,7 +1477,7 @@ void ento::registerRetainCountBase(CheckerManager &Mgr) {
   Mgr.registerChecker<RetainCountChecker>();
 }
 
-bool ento::shouldRegisterRetainCountBase(const LangOptions &LO) {
+bool ento::shouldRegisterRetainCountBase(const CheckerManager &mgr) {
   return true;
 }
 
@@ -1503,7 +1503,7 @@ void ento::registerRetainCountChecker(CheckerManager &Mgr) {
                                        "true");
 }
 
-bool ento::shouldRegisterRetainCountChecker(const LangOptions &LO) {
+bool ento::shouldRegisterRetainCountChecker(const CheckerManager &mgr) {
   return true;
 }
 
@@ -1515,6 +1515,6 @@ void ento::registerOSObjectRetainCountChecker(CheckerManager &Mgr) {
     Chk->TrackOSObjects = true;
 }
 
-bool ento::shouldRegisterOSObjectRetainCountChecker(const LangOptions &LO) {
+bool ento::shouldRegisterOSObjectRetainCountChecker(const CheckerManager &mgr) {
   return true;
 }

@@ -225,6 +225,6 @@ void ento::registerGCDAntipattern(CheckerManager &Mgr) {
   Mgr.registerChecker<GCDAntipatternChecker>();
 }
 
-bool ento::shouldRegisterGCDAntipattern(const LangOptions &LO) {
+bool ento::shouldRegisterGCDAntipattern(const CheckerManager &mgr) {
   return true;
 }

@@ -76,6 +76,6 @@ void ento::registerCXXSelfAssignmentChecker(CheckerManager &Mgr) {
   Mgr.registerChecker<CXXSelfAssignmentChecker>();
 }
 
-bool ento::shouldRegisterCXXSelfAssignmentChecker(const LangOptions &LO) {
+bool ento::shouldRegisterCXXSelfAssignmentChecker(const CheckerManager &mgr) {
   return true;
 }

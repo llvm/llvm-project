@@ -6679,9 +6679,9 @@ inline bool Type::isTemplateTypeParmType() const {
 }
 
 inline bool Type::isSpecificBuiltinType(unsigned K) const {
-  if (const BuiltinType *BT = getAs<BuiltinType>())
-    if (BT->getKind() == (BuiltinType::Kind) K)
-      return true;
+  if (const BuiltinType *BT = getAs<BuiltinType>()) {
+    return BT->getKind() == static_cast<BuiltinType::Kind>(K);
+  }
   return false;
 }
 
@@ -6700,9 +6700,7 @@ inline const BuiltinType *Type::getAsPlaceholderType() const {
 
 inline bool Type::isSpecificPlaceholderType(unsigned K) const {
   assert(BuiltinType::isPlaceholderTypeKind((BuiltinType::Kind) K));
-  if (const auto *BT = dyn_cast<BuiltinType>(this))
-    return (BT->getKind() == (BuiltinType::Kind) K);
-  return false;
+  return isSpecificBuiltinType(K);
 }
 
 inline bool Type::isNonOverloadPlaceholderType() const {
@@ -6712,34 +6710,24 @@ inline bool Type::isNonOverloadPlaceholderType() const {
 }
 
 inline bool Type::isVoidType() const {
-  if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType))
-    return BT->getKind() == BuiltinType::Void;
-  return false;
+  return isSpecificBuiltinType(BuiltinType::Void);
 }
 
 inline bool Type::isHalfType() const {
-  if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType))
-    return BT->getKind() == BuiltinType::Half;
   // FIXME: Should we allow complex __fp16? Probably not.
-  return false;
+  return isSpecificBuiltinType(BuiltinType::Half);
 }
 
 inline bool Type::isFloat16Type() const {
-  if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType))
-    return BT->getKind() == BuiltinType::Float16;
-  return false;
+  return isSpecificBuiltinType(BuiltinType::Float16);
 }
 
 inline bool Type::isFloat128Type() const {
-  if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType))
-    return BT->getKind() == BuiltinType::Float128;
-  return false;
+  return isSpecificBuiltinType(BuiltinType::Float128);
 }
 
 inline bool Type::isNullPtrType() const {
-  if (const auto *BT = getAs<BuiltinType>())
-    return BT->getKind() == BuiltinType::NullPtr;
-  return false;
+  return isSpecificBuiltinType(BuiltinType::NullPtr);
 }
 
 bool IsEnumDeclComplete(EnumDecl *);

@@ -96,6 +96,6 @@ void ento::registerBoolAssignmentChecker(CheckerManager &mgr) {
     mgr.registerChecker<BoolAssignmentChecker>();
 }
 
-bool ento::shouldRegisterBoolAssignmentChecker(const LangOptions &LO) {
+bool ento::shouldRegisterBoolAssignmentChecker(const CheckerManager &mgr) {
   return true;
 }

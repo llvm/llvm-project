@@ -99,7 +99,7 @@ void registerPrerequisiteChecker(CheckerManager &mgr) {
   mgr.registerChecker<PrerequisiteChecker>();
 }
 
-bool shouldRegisterPrerequisiteChecker(const LangOptions &LO) {
+bool shouldRegisterPrerequisiteChecker(const CheckerManager &mgr) {
   return false;
 }
 
@@ -117,7 +117,7 @@ void registerDependentChecker(CheckerManager &mgr) {
   mgr.registerChecker<DependentChecker>();
 }
 
-bool shouldRegisterDependentChecker(const LangOptions &LO) {
+bool shouldRegisterDependentChecker(const CheckerManager &mgr) {
   return true;
 }
 

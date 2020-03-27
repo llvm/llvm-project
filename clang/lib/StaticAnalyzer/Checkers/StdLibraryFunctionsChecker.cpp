@@ -939,7 +939,7 @@ void ento::registerStdCLibraryFunctionsChecker(CheckerManager &mgr) {
   mgr.registerChecker<StdLibraryFunctionsChecker>();
 }
 
-bool ento::shouldRegisterStdCLibraryFunctionsChecker(const LangOptions &LO) {
+bool ento::shouldRegisterStdCLibraryFunctionsChecker(const CheckerManager &mgr) {
   return true;
 }
 
@@ -952,6 +952,6 @@ bool ento::shouldRegisterStdCLibraryFunctionsChecker(const LangOptions &LO) {
         mgr.getCurrentCheckerName();                                           \
   }                                                                            \
                                                                                \
-  bool ento::shouldRegister##name(const LangOptions &LO) { return true; }
+  bool ento::shouldRegister##name(const CheckerManager &mgr) { return true; }
 
 REGISTER_CHECKER(StdCLibraryFunctionArgsChecker)

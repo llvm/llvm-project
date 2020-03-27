@@ -92,6 +92,6 @@ void ento::registerArrayBoundChecker(CheckerManager &mgr) {
   mgr.registerChecker<ArrayBoundChecker>();
 }
 
-bool ento::shouldRegisterArrayBoundChecker(const LangOptions &LO) {
+bool ento::shouldRegisterArrayBoundChecker(const CheckerManager &mgr) {
   return true;
 }

@@ -18,7 +18,7 @@
 
 // Test that intypes.h re-exports stdint.h
 
-// RUN: %build_module
+// RUN: %{build_module}
 
 #include <inttypes.h>
 

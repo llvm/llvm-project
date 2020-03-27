@@ -628,6 +628,6 @@ void ento::registerUninitializedObjectChecker(CheckerManager &Mgr) {
         "\"" + ErrorMsg + "\"");
 }
 
-bool ento::shouldRegisterUninitializedObjectChecker(const LangOptions &LO) {
+bool ento::shouldRegisterUninitializedObjectChecker(const CheckerManager &mgr) {
   return true;
 }
