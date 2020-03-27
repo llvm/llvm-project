@@ -1,5 +1,5 @@
-// RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=core,cplusplus,alpha.cplusplus.IteratorRange -analyzer-config aggressive-binary-operation-simplification=true -analyzer-config c++-container-inlining=false %s -verify
-// RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=core,cplusplus,alpha.cplusplus.IteratorRange -analyzer-config aggressive-binary-operation-simplification=true -analyzer-config c++-container-inlining=true -DINLINE=1 %s -verify
+// RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=core,cplusplus,alpha.cplusplus.IteratorRange -analyzer-config aggressive-binary-operation-simplification=true -analyzer-config c++-container-inlining=false -analyzer-output=text %s -verify
+// RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=core,cplusplus,alpha.cplusplus.IteratorRange -analyzer-config aggressive-binary-operation-simplification=true -analyzer-config c++-container-inlining=true -DINLINE=1 -analyzer-output=text %s -verify
 
 #include "Inputs/system-header-simulator-cxx.h"
 
@@ -32,6 +32,7 @@ void deref_ahead_of_end(const std::vector<int> &V) {
 void deref_end(const std::vector<int> &V) {
   auto i = V.end();
   *i; // expected-warning{{Past-the-end iterator dereferenced}}
+      // expected-note@-1{{Past-the-end iterator dereferenced}}
 }
 
 // Prefix increment - operator++()
@@ -59,6 +60,7 @@ void incr_ahead_of_end(const std::vector<int> &V) {
 void incr_end(const std::vector<int> &V) {
   auto i = V.end();
   ++i; // expected-warning{{Iterator incremented behind the past-the-end iterator}}
+       // expected-note@-1{{Iterator incremented behind the past-the-end iterator}}
 }
 
 // Postfix increment - operator++(int)
@@ -86,6 +88,7 @@ void ahead_of_end_incr(const std::vector<int> &V) {
 void end_incr(const std::vector<int> &V) {
   auto i = V.end();
   i++; // expected-warning{{Iterator incremented behind the past-the-end iterator}}
+       // expected-note@-1{{Iterator incremented behind the past-the-end iterator}}
 }
 
 // Prefix decrement - operator--()
@@ -93,6 +96,7 @@ void end_incr(const std::vector<int> &V) {
 void decr_begin(const std::vector<int> &V) {
   auto i = V.begin();
   --i; // expected-warning{{Iterator decremented ahead of its valid range}}
+       // expected-note@-1{{Iterator decremented ahead of its valid range}}
 }
 
 void decr_behind_begin(const std::vector<int> &V) {
@@ -120,6 +124,7 @@ void decr_end(const std::vector<int> &V) {
 void begin_decr(const std::vector<int> &V) {
   auto i = V.begin();
   i--; // expected-warning{{Iterator decremented ahead of its valid range}}
+       // expected-note@-1{{Iterator decremented ahead of its valid range}}
 }
 
 void behind_begin_decr(const std::vector<int> &V) {
@@ -168,11 +173,13 @@ void incr_by_2_ahead_by_2_of_end(const std::vector<int> &V) {
 void incr_by_2_ahead_of_end(const std::vector<int> &V) {
   auto i = --V.end();
   i += 2; // expected-warning{{Iterator incremented behind the past-the-end iterator}}
+          // expected-note@-1{{Iterator incremented behind the past-the-end iterator}}
 }
 
 void incr_by_2_end(const std::vector<int> &V) {
   auto i = V.end();
   i += 2; // expected-warning{{Iterator incremented behind the past-the-end iterator}}
+          // expected-note@-1{{Iterator incremented behind the past-the-end iterator}}
 }
 
 // Addition - operator+(int)
@@ -201,11 +208,13 @@ void incr_by_2_copy_ahead_by_2_of_end(const std::vector<int> &V) {
 void incr_by_2_copy_ahead_of_end(const std::vector<int> &V) {
   auto i = --V.end();
   auto j = i + 2; // expected-warning{{Iterator incremented behind the past-the-end iterator}}
+                  // expected-note@-1{{Iterator incremented behind the past-the-end iterator}}
 }
 
 void incr_by_2_copy_end(const std::vector<int> &V) {
   auto i = V.end();
   auto j = i + 2; // expected-warning{{Iterator incremented behind the past-the-end iterator}}
+                  // expected-note@-1{{Iterator incremented behind the past-the-end iterator}}
 }
 
 // Subtraction assignment - operator-=(int)
@@ -213,11 +222,13 @@ void incr_by_2_copy_end(const std::vector<int> &V) {
 void decr_by_2_begin(const std::vector<int> &V) {
   auto i = V.begin();
   i -= 2; // expected-warning{{Iterator decremented ahead of its valid range}}
+          // expected-note@-1{{Iterator decremented ahead of its valid range}}
 }
 
 void decr_by_2_behind_begin(const std::vector<int> &V) {
   auto i = ++V.begin();
   i -= 2; // expected-warning{{Iterator decremented ahead of its valid range}}
+          // expected-note@-1{{Iterator decremented ahead of its valid range}}
 }
 
 void decr_by_2_behind_begin_by_2(const std::vector<int> &V) {
@@ -246,11 +257,13 @@ void decr_by_2_end(const std::vector<int> &V) {
 void decr_by_2_copy_begin(const std::vector<int> &V) {
   auto i = V.begin();
   auto j = i - 2; // expected-warning{{Iterator decremented ahead of its valid range}}
+                  // expected-note@-1{{Iterator decremented ahead of its valid range}}
 }
 
 void decr_by_2_copy_behind_begin(const std::vector<int> &V) {
   auto i = ++V.begin();
   auto j = i - 2; // expected-warning{{Iterator decremented ahead of its valid range}}
+                  // expected-note@-1{{Iterator decremented ahead of its valid range}}
 }
 
 void decr_by_2_copy_behind_begin_by_2(const std::vector<int> &V) {
@@ -303,6 +316,7 @@ void subscript_zero_ahead_of_end(const std::vector<int> &V) {
 void subscript_zero_end(const std::vector<int> &V) {
   auto i = V.end();
   auto j = i[0]; // expected-warning{{Past-the-end iterator dereferenced}}
+                 // expected-note@-1{{Past-the-end iterator dereferenced}}
 }
 
 // By negative number
@@ -329,7 +343,8 @@ void subscript_negative_ahead_of_end(const std::vector<int> &V) {
 
 void subscript_negative_end(const std::vector<int> &V) {
   auto i = V.end();
-  auto j = i[-1]; // // expected-warning{{Past-the-end iterator dereferenced}} FIXME: expect no warning
+  auto j = i[-1]; // expected-warning{{Past-the-end iterator dereferenced}} FIXME: expect no warning
+                  // expected-note@-1{{Past-the-end iterator dereferenced}}
 }
 
 // By positive number
@@ -357,6 +372,7 @@ void subscript_positive_ahead_of_end(const std::vector<int> &V) {
 void subscript_positive_end(const std::vector<int> &V) {
   auto i = V.end();
   auto j = i[1]; // expected-warning{{Past-the-end iterator dereferenced}} FIXME: expect warning Iterator incremented behind the past-the-end iterator
+                 // expected-note@-1{{Past-the-end iterator dereferenced}} FIXME: expect note@-1 Iterator incremented behind the past-the-end iterator
 }
 
 //
@@ -388,6 +404,7 @@ void advance_plus_1_ahead_of_end(const std::vector<int> &V) {
 void advance_plus_1_end(const std::vector<int> &V) {
   auto i = V.end();
   std::advance(i, 1); // expected-warning{{Iterator incremented behind the past-the-end iterator}}
+                      // expected-note@-1{{Iterator incremented behind the past-the-end iterator}}
 }
 
 // std::advance() by -1
@@ -395,6 +412,7 @@ void advance_plus_1_end(const std::vector<int> &V) {
 void advance_minus_1_begin(const std::vector<int> &V) {
   auto i = V.begin();
   std::advance(i, -1); // expected-warning{{Iterator decremented ahead of its valid range}}
+                       // expected-note@-1{{Iterator decremented ahead of its valid range}}
 }
 
 void advance_minus_1_behind_begin(const std::vector<int> &V) {
@@ -437,11 +455,13 @@ void advance_plus_2_unknown(const std::vector<int> &V) {
 void advance_plus_2_ahead_of_end(const std::vector<int> &V) {
   auto i = --V.end();
   std::advance(i, 2); // expected-warning{{Iterator incremented behind the past-the-end iterator}}
+                      // expected-note@-1{{Iterator incremented behind the past-the-end iterator}}
 }
 
 void advance_plus_2_end(const std::vector<int> &V) {
   auto i = V.end();
   std::advance(i, 2); // expected-warning{{Iterator incremented behind the past-the-end iterator}}
+                      // expected-note@-1{{Iterator incremented behind the past-the-end iterator}}
 }
 
 // std::advance() by -2
@@ -449,11 +469,13 @@ void advance_plus_2_end(const std::vector<int> &V) {
 void advance_minus_2_begin(const std::vector<int> &V) {
   auto i = V.begin();
   std::advance(i, -2); // expected-warning{{Iterator decremented ahead of its valid range}}
+                       // expected-note@-1{{Iterator decremented ahead of its valid range}}
 }
 
 void advance_minus_2_behind_begin(const std::vector<int> &V) {
   auto i = ++V.begin();
   std::advance(i, -2); // expected-warning{{Iterator decremented ahead of its valid range}}
+                       // expected-note@-1{{Iterator decremented ahead of its valid range}}
 }
 
 void advance_minus_2_unknown(const std::vector<int> &V) {
@@ -527,6 +549,7 @@ void next_plus_1_ahead_of_end(const std::vector<int> &V) {
 void next_plus_1_end(const std::vector<int> &V) {
   auto i = V.end();
   auto j = std::next(i); // expected-warning{{Iterator incremented behind the past-the-end iterator}}
+                         // expected-note@-1{{Iterator incremented behind the past-the-end iterator}}
 }
 
 // std::next() by -1
@@ -534,6 +557,7 @@ void next_plus_1_end(const std::vector<int> &V) {
 void next_minus_1_begin(const std::vector<int> &V) {
   auto i = V.begin();
   auto j = std::next(i, -1); // expected-warning{{Iterator decremented ahead of its valid range}}
+                             // expected-note@-1{{Iterator decremented ahead of its valid range}}
 }
 
 void next_minus_1_behind_begin(const std::vector<int> &V) {
@@ -576,11 +600,13 @@ void next_plus_2_unknown(const std::vector<int> &V) {
 void next_plus_2_ahead_of_end(const std::vector<int> &V) {
   auto i = --V.end();
   auto j = std::next(i, 2); // expected-warning{{Iterator incremented behind the past-the-end iterator}}
+                            // expected-note@-1{{Iterator incremented behind the past-the-end iterator}}
 }
 
 void next_plus_2_end(const std::vector<int> &V) {
   auto i = V.end();
   auto j = std::next(i, 2); // expected-warning{{Iterator incremented behind the past-the-end iterator}}
+                            // expected-note@-1{{Iterator incremented behind the past-the-end iterator}}
 }
 
 // std::next() by -2
@@ -588,11 +614,13 @@ void next_plus_2_end(const std::vector<int> &V) {
 void next_minus_2_begin(const std::vector<int> &V) {
   auto i = V.begin();
   auto j = std::next(i, -2); // expected-warning{{Iterator decremented ahead of its valid range}}
+                             // expected-note@-1{{Iterator decremented ahead of its valid range}}
 }
 
 void next_minus_2_behind_begin(const std::vector<int> &V) {
   auto i = ++V.begin();
   auto j = std::next(i, -2); // expected-warning{{Iterator decremented ahead of its valid range}}
+                             // expected-note@-1{{Iterator decremented ahead of its valid range}}
 }
 
 void next_minus_2_unknown(const std::vector<int> &V) {
@@ -646,6 +674,7 @@ void next_0_end(const std::vector<int> &V) {
 void prev_plus_1_begin(const std::vector<int> &V) {
   auto i = V.begin();
   auto j = std::prev(i); // expected-warning{{Iterator decremented ahead of its valid range}}
+                         // expected-note@-1{{Iterator decremented ahead of its valid range}}
 }
 
 void prev_plus_1_behind_begin(const std::vector<int> &V) {
@@ -693,6 +722,7 @@ void prev_minus_1_ahead_of_end(const std::vector<int> &V) {
 void prev_minus_1_end(const std::vector<int> &V) {
   auto i = V.end();
   auto j = std::prev(i, -1); // expected-warning{{Iterator incremented behind the past-the-end iterator}}
+                             // expected-note@-1{{Iterator incremented behind the past-the-end iterator}}
 }
 
 // std::prev() by +2
@@ -700,11 +730,13 @@ void prev_minus_1_end(const std::vector<int> &V) {
 void prev_plus_2_begin(const std::vector<int> &V) {
   auto i = V.begin();
   auto j = std::prev(i, 2); // expected-warning{{Iterator decremented ahead of its valid range}}
+                            // expected-note@-1{{Iterator decremented ahead of its valid range}}
 }
 
 void prev_plus_2_behind_begin(const std::vector<int> &V) {
   auto i = ++V.begin();
   auto j = std::prev(i, 2); // expected-warning{{Iterator decremented ahead of its valid range}}
+                            // expected-note@-1{{Iterator decremented ahead of its valid range}}
 }
 
 void prev_plus_2_unknown(const std::vector<int> &V) {
@@ -742,11 +774,13 @@ void prev_minus_2_unknown(const std::vector<int> &V) {
 void prev_minus_2_ahead_of_end(const std::vector<int> &V) {
   auto i = --V.end();
   auto j = std::prev(i, -2); // expected-warning{{Iterator incremented behind the past-the-end iterator}}
+                             // expected-note@-1{{Iterator incremented behind the past-the-end iterator}}
 }
 
 void prev_minus_2_end(const std::vector<int> &V) {
   auto i = V.end();
   auto j = std::prev(i, -2); // expected-warning{{Iterator incremented behind the past-the-end iterator}}
+                             // expected-note@-1{{Iterator incremented behind the past-the-end iterator}}
 }
 
 // std::prev() by 0
@@ -793,5 +827,17 @@ void arrow_deref_begin(const std::vector<S> &V) {
 
 void arrow_deref_end(const std::vector<S> &V) {
   auto i = V.end();
-  int n = i->n; //  expected-warning{{Past-the-end iterator dereferenced}}
+  int n = i->n; // expected-warning{{Past-the-end iterator dereferenced}}
+                // expected-note@-1{{Past-the-end iterator dereferenced}}
+}
+
+// Container modification - test path notes
+
+void deref_end_after_pop_back(std::vector<int> &V) {
+  const auto i = --V.end();
+
+  V.pop_back(); // expected-note{{Container 'V' shrank from the back by 1 position}}
+
+  *i; // expected-warning{{Past-the-end iterator dereferenced}}
+      // expected-note@-1{{Past-the-end iterator dereferenced}}
 }
