@@ -7,16 +7,19 @@
 // RUN: %clang_cc1 -DEXPECT_WARNINGS -fsyntax-only -verify -x c %s
 
 #if defined(EXPECT_WARNINGS)
-// expected-warning@+12 {{'device' attribute ignored}}
-// expected-warning@+12 {{'global' attribute ignored}}
-// expected-warning@+12 {{'constant' attribute ignored}}
-// expected-warning@+12 {{'shared' attribute ignored}}
-// expected-warning@+12 {{'host' attribute ignored}}
+// expected-warning@+15 {{'device' attribute ignored}}
+// expected-warning@+15 {{'global' attribute ignored}}
+// expected-warning@+15 {{'constant' attribute ignored}}
+// expected-warning@+15 {{'shared' attribute ignored}}
+// expected-warning@+15 {{'host' attribute ignored}}
+// expected-warning@+21 {{'device_builtin_surface_type' attribute ignored}}
+// expected-warning@+21 {{'device_builtin_texture_type' attribute ignored}}
 //
 // NOTE: IgnoredAttr in clang which is used for the rest of
 // attributes ignores LangOpts, so there are no warnings.
 #else
-// expected-no-diagnostics
+// expected-warning@+15 {{'device_builtin_surface_type' attribute only applies to classes}}
+// expected-warning@+15 {{'device_builtin_texture_type' attribute only applies to classes}}
 #endif
 
 __attribute__((device)) void f_device();
