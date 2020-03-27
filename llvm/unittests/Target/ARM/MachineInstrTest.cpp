@@ -10,6 +10,103 @@
 
 using namespace llvm;
 
+TEST(MachineInstructionDoubleWidthResult, IsCorrect) {
+  using namespace ARM;
+
+  auto DoubleWidthResult = [](unsigned Opcode) {
+    switch (Opcode) {
+    default:
+      break;
+    case MVE_VMULLBp16:
+    case MVE_VMULLBp8:
+    case MVE_VMULLBs16:
+    case MVE_VMULLBs32:
+    case MVE_VMULLBs8:
+    case MVE_VMULLBu16:
+    case MVE_VMULLBu32:
+    case MVE_VMULLBu8:
+    case MVE_VMULLTp16:
+    case MVE_VMULLTp8:
+    case MVE_VMULLTs16:
+    case MVE_VMULLTs32:
+    case MVE_VMULLTs8:
+    case MVE_VMULLTu16:
+    case MVE_VMULLTu32:
+    case MVE_VMULLTu8:
+    case MVE_VQDMULL_qr_s16bh:
+    case MVE_VQDMULL_qr_s16th:
+    case MVE_VQDMULL_qr_s32bh:
+    case MVE_VQDMULL_qr_s32th:
+    case MVE_VQDMULLs16bh:
+    case MVE_VQDMULLs16th:
+    case MVE_VQDMULLs32bh:
+    case MVE_VQDMULLs32th:
+    case MVE_VMOVLs16bh:
+    case MVE_VMOVLs16th:
+    case MVE_VMOVLs8bh:
+    case MVE_VMOVLs8th:
+    case MVE_VMOVLu16bh:
+    case MVE_VMOVLu16th:
+    case MVE_VMOVLu8bh:
+    case MVE_VMOVLu8th:
+    case MVE_VSHLL_imms16bh:
+    case MVE_VSHLL_imms16th:
+    case MVE_VSHLL_imms8bh:
+    case MVE_VSHLL_imms8th:
+    case MVE_VSHLL_immu16bh:
+    case MVE_VSHLL_immu16th:
+    case MVE_VSHLL_immu8bh:
+    case MVE_VSHLL_immu8th:
+    case MVE_VSHLL_lws16bh:
+    case MVE_VSHLL_lws16th:
+    case MVE_VSHLL_lws8bh:
+    case MVE_VSHLL_lws8th:
+    case MVE_VSHLL_lwu16bh:
+    case MVE_VSHLL_lwu16th:
+    case MVE_VSHLL_lwu8bh:
+    case MVE_VSHLL_lwu8th:
+      return true;
+    }
+    return false;
+  };
+
+  LLVMInitializeARMTargetInfo();
+  LLVMInitializeARMTarget();
+  LLVMInitializeARMTargetMC();
+
+  auto TT(Triple::normalize("thumbv8.1m.main-arm-none-eabi"));
+  std::string Error;
+  const Target *T = TargetRegistry::lookupTarget(TT, Error);
+  if (!T) {
+    dbgs() << Error;
+    return;
+  }
+
+  TargetOptions Options;
+  auto TM = std::unique_ptr<LLVMTargetMachine>(
+    static_cast<LLVMTargetMachine*>(
+      T->createTargetMachine(TT, "generic", "", Options, None, None,
+                             CodeGenOpt::Default)));
+  ARMSubtarget ST(TM->getTargetTriple(), std::string(TM->getTargetCPU()),
+                  std::string(TM->getTargetFeatureString()),
+                  *static_cast<const ARMBaseTargetMachine *>(TM.get()), false);
+  const ARMBaseInstrInfo *TII = ST.getInstrInfo();
+  auto MII = TM->getMCInstrInfo();
+
+  for (unsigned i = 0; i < ARM::INSTRUCTION_LIST_END; ++i) {
+    const MCInstrDesc &Desc = TII->get(i);
+
+    uint64_t Flags = Desc.TSFlags;
+    if ((Flags & ARMII::DomainMask) != ARMII::DomainMVE)
+      continue;
+
+    bool Valid = (Flags & ARMII::DoubleWidthResult) != 0;
+    ASSERT_EQ(DoubleWidthResult(i), Valid)
+              << MII->getName(i)
+              << ": mismatched expectation for tail-predicated safety\n";
+  }
+}
+
 TEST(MachineInstructionHorizontalReduction, IsCorrect) {
   using namespace ARM;
 
@@ -159,7 +256,6 @@ TEST(MachineInstructionHorizontalReduction, IsCorrect) {
     uint64_t Flags = Desc.TSFlags;
     if ((Flags & ARMII::DomainMask) != ARMII::DomainMVE)
       continue;
-
     bool Valid = (Flags & ARMII::HorizontalReduction) != 0;
     ASSERT_EQ(HorizontalReduction(i), Valid)
               << MII->getName(i)

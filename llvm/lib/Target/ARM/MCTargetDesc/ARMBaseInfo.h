@@ -403,6 +403,10 @@ namespace ARMII {
     // Whether the instruction produces a scalar result from vector operands.
     HorizontalReduction = 1 << 22,
 
+    // Whether this instruction produces a vector result that is larger than
+    // its input, typically reading from the top/bottom halves of the input(s).
+    DoubleWidthResult = 1 << 23,
+
     //===------------------------------------------------------------------===//
     // Code domain.
     DomainShift   = 15,

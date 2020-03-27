@@ -2513,6 +2513,7 @@ class MVE_VMOVL<string iname, string suffix, bits<2> sz, bit U, bit top,
   let Inst{11-6} = 0b111101;
   let Inst{4} = 0b0;
   let Inst{0} = 0b0;
+  let doubleWidthResult = 1;
 }
 
 multiclass MVE_VMOVL_m<bit top, string chr, MVEVectorVTInfo OutVTI,
@@ -2580,6 +2581,8 @@ class MVE_VSHLL_imm<string iname, string suffix, bit U, bit th,
 
   // For the MVE_VSHLL_patterns multiclass to refer to
   Operand immediateType = immtype;
+
+  let doubleWidthResult = 1;
 }
 
 // The immediate VSHLL instructions accept shift counts from 1 up to
@@ -2623,6 +2626,7 @@ class MVE_VSHLL_by_lane_width<string iname, string suffix, bits<2> size,
   let Inst{11-6} = 0b111000;
   let Inst{4} = 0b0;
   let Inst{0} = 0b1;
+  let doubleWidthResult = 1;
 }
 
 multiclass MVE_VSHLL_lw<string iname, string suffix, bits<2> sz, bit U,
@@ -4357,6 +4361,7 @@ class MVE_VMULL<string iname, string suffix, bit bit_28, bits<2> bits_21_20,
   let Inst{7} = Qn{3};
   let Inst{0} = 0b0;
   let validForTailPredication = 1;
+  let doubleWidthResult = 1;
 }
 
 multiclass MVE_VMULL_m<MVEVectorVTInfo VTI,
@@ -4731,6 +4736,7 @@ class MVE_VQDMULL<string iname, string suffix, bit size, bit T,
   let Inst{7} = Qn{3};
   let Inst{0} = 0b1;
   let validForTailPredication = 1;
+  let doubleWidthResult = 1;
 }
 
 multiclass MVE_VQDMULL_m<string iname, MVEVectorVTInfo VTI, bit size, bit T,
@@ -4937,6 +4943,7 @@ class MVE_VQDMULL_qr<string iname, string suffix, bit size,
   let Inst{8} = 0b1;
   let Inst{5} = 0b1;
   let validForTailPredication = 1;
+  let doubleWidthResult = 1;
 }
 
 multiclass MVE_VQDMULL_qr_m<string iname, MVEVectorVTInfo VTI, bit size,
