@@ -40,8 +40,8 @@ public:
   static const char *getRegisterName(unsigned RegNo);
 
   bool printAliasInstr(const MCInst *MI, uint64_t Address, raw_ostream &OS);
-  void printCustomAliasOperand(const MCInst *MI, unsigned OpIdx,
-                               unsigned PrintMethodIdx,
+  void printCustomAliasOperand(const MCInst *MI, uint64_t Address,
+                               unsigned OpIdx, unsigned PrintMethodIdx,
                                raw_ostream &OS);
 
   void printOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);

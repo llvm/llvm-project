@@ -34,8 +34,8 @@ public:
                                 const MCSubtargetInfo &STI, raw_ostream &O);
   virtual bool printAliasInstr(const MCInst *MI, uint64_t Address,
                                const MCSubtargetInfo &STI, raw_ostream &O);
-  virtual void printCustomAliasOperand(const MCInst *MI, unsigned OpIdx,
-                                       unsigned PrintMethodIdx,
+  virtual void printCustomAliasOperand(const MCInst *MI, uint64_t Address,
+                                       unsigned OpIdx, unsigned PrintMethodIdx,
                                        const MCSubtargetInfo &STI,
                                        raw_ostream &O);
 
@@ -207,8 +207,8 @@ public:
                         const MCSubtargetInfo &STI, raw_ostream &O) override;
   bool printAliasInstr(const MCInst *MI, uint64_t Address,
                        const MCSubtargetInfo &STI, raw_ostream &O) override;
-  void printCustomAliasOperand(const MCInst *MI, unsigned OpIdx,
-                               unsigned PrintMethodIdx,
+  void printCustomAliasOperand(const MCInst *MI, uint64_t Address,
+                               unsigned OpIdx, unsigned PrintMethodIdx,
                                const MCSubtargetInfo &STI,
                                raw_ostream &O) override;
 
