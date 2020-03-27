@@ -124,7 +124,8 @@ class LibcxxTestFormat(object):
         substitutions = lit.TestRunner.getDefaultSubstitutions(test, tmpDir,
                                                                tmpBase)
         substitutions.append(('%file_dependencies', ' '.join(data_files)))
-        script = lit.TestRunner.applySubstitutions(script, substitutions)
+        script = lit.TestRunner.applySubstitutions(script, substitutions,
+                                                   recursion_limit=lit_config.recursiveExpansionLimit)
 
         test_cxx = copy.deepcopy(self.cxx)
         if is_fail_test:
