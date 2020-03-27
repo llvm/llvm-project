@@ -1836,7 +1836,8 @@ static uint64_t PageSizeLog2ToNcCondition(uint64_t pageSize) {
   }
 }
 
-SDValue DPUTargetLowering::LowerSeqreadGet(SDValue Op, SelectionDAG &DAG) const {
+SDValue DPUTargetLowering::LowerSeqreadGet(SDValue Op,
+                                           SelectionDAG &DAG) const {
   SDLoc dl(Op);
   const EVT &evt = Op.getValueType();
   SDValue incValue = Op.getOperand(3);
@@ -1849,7 +1850,9 @@ SDValue DPUTargetLowering::LowerSeqreadGet(SDValue Op, SelectionDAG &DAG) const 
   pageSizeLog2 = (uint64_t)log2((double)pageSize);
   if (pageSize != ((uint64_t)pow(2, (double)pageSizeLog2)) ||
       pageSizeLog2 < 5 || pageSizeLog2 > 14) {
-    LowerUnsupported(Op, DAG, "NC only apply on a page size of a power of 2 in range [64;32768]");
+    LowerUnsupported(
+        Op, DAG,
+        "NC only apply on a page size of a power of 2 in range [64;32768]");
   }
 
   int Opcode = DPUISD::SEQREAD_GET;
@@ -1860,7 +1863,8 @@ SDValue DPUTargetLowering::LowerSeqreadGet(SDValue Op, SelectionDAG &DAG) const 
     incValue = DAG.getConstant(inc, dl, MVT::i32);
   }
 
-  SDValue Ops[] = {Op.getOperand(2), incValue, Op.getOperand(4), cond, pageSizeValue};
+  SDValue Ops[] = {Op.getOperand(2), incValue, Op.getOperand(4), cond,
+                   pageSizeValue};
   return DAG.getNode(Opcode, dl, evt, Ops);
 }
 
@@ -1976,7 +1980,10 @@ EmitMul16WithCustomInserter(MachineInstr &MI, MachineBasicBlock *BB,
       .addImm(16);
 
   BuildMI(*fastMBB, fastMBB->begin(), dl, TII.get(TargetOpcode::PHI), Dest)
-    .addReg(LLDest).addMBB(BB).addReg(LSL3Dest).addMBB(slowMBB);
+      .addReg(LLDest)
+      .addMBB(BB)
+      .addReg(LSL3Dest)
+      .addMBB(slowMBB);
 
   MI.eraseFromParent(); // The pseudo instruction is gone now.
   return fastMBB;
@@ -3028,8 +3035,8 @@ static MachineBasicBlock *EmitClz64WithCustomInserter(MachineInstr &MI,
   return endMBB;
 }
 
-static MachineBasicBlock *
-EmitSeqreadGet(MachineInstr &MI, MachineBasicBlock *BB, bool IsIncCst) {
+static MachineBasicBlock *EmitSeqreadGet(MachineInstr &MI,
+                                         MachineBasicBlock *BB, bool IsIncCst) {
   const TargetInstrInfo &TII = *BB->getParent()->getSubtarget().getInstrInfo();
   DebugLoc dl = MI.getDebugLoc();
   const BasicBlock *LLVM_BB = BB->getBasicBlock();
