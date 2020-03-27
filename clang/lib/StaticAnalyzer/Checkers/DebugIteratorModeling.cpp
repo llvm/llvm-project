@@ -139,6 +139,6 @@ void ento::registerDebugIteratorModeling(CheckerManager &mgr) {
   mgr.registerChecker<DebugIteratorModeling>();
 }
 
-bool ento::shouldRegisterDebugIteratorModeling(const LangOptions &LO) {
+bool ento::shouldRegisterDebugIteratorModeling(const CheckerManager &mgr) {
   return true;
 }

@@ -206,6 +206,6 @@ void ento::registerAutoreleaseWriteChecker(CheckerManager &Mgr) {
   Mgr.registerChecker<ObjCAutoreleaseWriteChecker>();
 }
 
-bool ento::shouldRegisterAutoreleaseWriteChecker(const LangOptions &LO) {
+bool ento::shouldRegisterAutoreleaseWriteChecker(const CheckerManager &mgr) {
   return true;
 }

@@ -120,6 +120,6 @@ void ento::registerCastToStructChecker(CheckerManager &mgr) {
   mgr.registerChecker<CastToStructChecker>();
 }
 
-bool ento::shouldRegisterCastToStructChecker(const LangOptions &LO) {
+bool ento::shouldRegisterCastToStructChecker(const CheckerManager &mgr) {
   return true;
 }

@@ -1188,7 +1188,7 @@ void ento::registerNullabilityBase(CheckerManager &mgr) {
   mgr.registerChecker<NullabilityChecker>();
 }
 
-bool ento::shouldRegisterNullabilityBase(const LangOptions &LO) {
+bool ento::shouldRegisterNullabilityBase(const CheckerManager &mgr) {
   return true;
 }
 
@@ -1204,7 +1204,7 @@ bool ento::shouldRegisterNullabilityBase(const LangOptions &LO) {
             checker, "NoDiagnoseCallsToSystemHeaders", true);                  \
   }                                                                            \
                                                                                \
-  bool ento::shouldRegister##name##Checker(const LangOptions &LO) {            \
+  bool ento::shouldRegister##name##Checker(const CheckerManager &mgr) {            \
     return true;                                                               \
   }
 

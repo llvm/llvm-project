@@ -284,6 +284,6 @@ void ento::registerObjCSuperDeallocChecker(CheckerManager &Mgr) {
   Mgr.registerChecker<ObjCSuperDeallocChecker>();
 }
 
-bool ento::shouldRegisterObjCSuperDeallocChecker(const LangOptions &LO) {
+bool ento::shouldRegisterObjCSuperDeallocChecker(const CheckerManager &mgr) {
   return true;
 }
