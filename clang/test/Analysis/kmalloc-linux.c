@@ -1,4 +1,7 @@
-// RUN: %clang_analyze_cc1 -triple x86_64-unknown-linux %s
+// RUN: %clang_analyze_cc1 -triple x86_64-unknown-linux %s -verify \
+// RUN:   -Wno-incompatible-library-redeclaration \
+// RUN:   -analyzer-checker=core \
+// RUN:   -analyzer-checker=unix.Malloc
 
 #define __GFP_ZERO 0x8000
 #define NULL ((void *)0)
@@ -6,6 +9,7 @@
 typedef __typeof(sizeof(int)) size_t;
 
 void *kmalloc(size_t, int);
+void kfree(void *);
 
 struct test {
 };
@@ -61,6 +65,8 @@ typedef unsigned long long uint64_t;
 
 struct malloc_type;
 
+// 3 parameter malloc:
+// https://www.freebsd.org/cgi/man.cgi?query=malloc&sektion=9
 void *malloc(unsigned long size, struct malloc_type *mtp, int flags);
 
 void test_3arg_malloc(struct malloc_type *mtp) {
@@ -97,7 +103,7 @@ void test_3arg_malloc_indeterminate(struct malloc_type *mtp, int flags) {
   struct test **list, *t;
   int i;
 
-  list = alloc(sizeof(*list) * 10, mtp, flags);
+  list = malloc(sizeof(*list) * 10, mtp, flags);
   if (list == NULL)
     return;
 
@@ -107,3 +113,11 @@ void test_3arg_malloc_indeterminate(struct malloc_type *mtp, int flags) {
   }
   kfree(list);
 }
+
+void test_3arg_malloc_leak(struct malloc_type *mtp, int flags) {
+  struct test **list;
+
+  list = malloc(sizeof(*list) * 10, mtp, flags);
+  if (list == NULL)
+    return;
+} // expected-warning{{Potential leak of memory pointed to by 'list'}}
