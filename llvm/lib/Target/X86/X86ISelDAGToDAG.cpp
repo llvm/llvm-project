@@ -259,6 +259,8 @@ namespace {
                           SDValue &Index, SDValue &Disp,
                           SDValue &Segment);
 
+    bool isProfitableToFormMaskedOp(SDNode *N) const;
+
     /// Implement addressing mode selection for inline asm expressions.
     bool SelectInlineAsmMemoryOperand(const SDValue &Op,
                                       unsigned ConstraintID,
@@ -720,6 +722,20 @@ X86DAGToDAGISel::IsProfitableToFold(SDValue N, SDNode *U, SDNode *Root) const {
     return false;
 
   return true;
+}
+
+// Indicates it is profitable to form an AVX512 masked operation. Returning
+// false will favor a masked register-register masked move or vblendm and the
+// operation will be selected separately.
+bool X86DAGToDAGISel::isProfitableToFormMaskedOp(SDNode *N) const {
+  assert(
+      (N->getOpcode() == ISD::VSELECT || N->getOpcode() == X86ISD::SELECTS) &&
+      "Unexpected opcode!");
+
+  // If the operation has additional users, the operation will be duplicated.
+  // Check the use count to prevent that.
+  // FIXME: Are there cheap opcodes we might want to duplicate?
+  return N->getOperand(1).hasOneUse();
 }
 
 /// Replace the original chain operand of the call with
