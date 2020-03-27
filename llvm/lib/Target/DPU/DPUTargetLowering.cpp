@@ -1969,14 +1969,14 @@ EmitMul16WithCustomInserter(MachineInstr &MI, MachineBasicBlock *BB,
 
   BuildMI(slowMBB, dl, TII.get(MulHL2), HL2Dest).addReg(Op2).addReg(Op1);
   BuildMI(slowMBB, dl, TII.get(DPU::LSL_ADDrrri), LSL2Dest)
-      .addReg(HL2Dest)
       .addReg(LSL1Dest)
+      .addReg(HL2Dest)
       .addImm(8);
 
   BuildMI(slowMBB, dl, TII.get(MulHH), HHDest).addReg(Op1).addReg(Op2);
   BuildMI(slowMBB, dl, TII.get(DPU::LSL_ADDrrri), LSL3Dest)
-      .addReg(HHDest)
       .addReg(LSL2Dest)
+      .addReg(HHDest)
       .addImm(16);
 
   BuildMI(*fastMBB, fastMBB->begin(), dl, TII.get(TargetOpcode::PHI), Dest)
