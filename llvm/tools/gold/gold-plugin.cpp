@@ -274,7 +274,7 @@ namespace options {
       StringRef Num(opt_ + 5);
       if (!get_threadpool_strategy(Num))
         message(LDPL_FATAL, "Invalid parallelism level: %s", Num.data());
-      Parallelism = Num;
+      Parallelism = Num.str();
     } else if (opt.startswith("lto-partitions=")) {
       if (opt.substr(strlen("lto-partitions="))
               .getAsInteger(10, ParallelCodeGenParallelismLevel))
