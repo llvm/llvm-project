@@ -87,8 +87,9 @@ public:
                  const MCSubtargetInfo &STI, raw_ostream &O) override;
 
   bool printAliasInstr(const MCInst *MI, uint64_t Address, raw_ostream &OS);
-  void printCustomAliasOperand(const MCInst *MI, unsigned OpIdx,
-                               unsigned PrintMethodIdx, raw_ostream &O);
+  void printCustomAliasOperand(const MCInst *MI, uint64_t Address,
+                               unsigned OpIdx, unsigned PrintMethodIdx,
+                               raw_ostream &O);
 
 private:
   void printOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
