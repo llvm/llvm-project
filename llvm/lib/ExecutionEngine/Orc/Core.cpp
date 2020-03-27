@@ -759,8 +759,6 @@ void JITDylib::addDependencies(const SymbolStringPtr &Name,
 
       // If the dependency was not in the error state then add it to
       // our list of dependencies.
-      assert(OtherJITDylib.MaterializingInfos.count(OtherSymbol) &&
-             "No MaterializingInfo for dependency");
       auto &OtherMI = OtherJITDylib.MaterializingInfos[OtherSymbol];
 
       if (OtherSymEntry.getState() == SymbolState::Emitted)
@@ -841,7 +839,11 @@ Error JITDylib::resolve(const SymbolMap &Resolved) {
       SymI->second.setFlags(ResolvedFlags);
       SymI->second.setState(SymbolState::Resolved);
 
-      auto &MI = MaterializingInfos[Name];
+      auto MII = MaterializingInfos.find(Name);
+      if (MII == MaterializingInfos.end())
+        continue;
+
+      auto &MI = MII->second;
       for (auto &Q : MI.takeQueriesMeeting(SymbolState::Resolved)) {
         Q->notifySymbolMetRequiredState(Name, ResolvedSym);
         Q->removeQueryDependence(*this, Name);
@@ -909,8 +911,14 @@ Error JITDylib::emit(const SymbolFlagsMap &Emitted) {
       SymEntry.setState(SymbolState::Emitted);
 
       auto MII = MaterializingInfos.find(Name);
-      assert(MII != MaterializingInfos.end() &&
-             "Missing MaterializingInfo entry");
+
+      // If this symbol has no MaterializingInfo then it's trivially ready.
+      // Update its state and continue.
+      if (MII == MaterializingInfos.end()) {
+        SymEntry.setState(SymbolState::Ready);
+        continue;
+      }
+
       auto &MI = MII->second;
 
       // For each dependant, transfer this node's emitted dependencies to
