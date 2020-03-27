@@ -85,7 +85,7 @@ class RISCVCompressInstEmitter {
     MapKind Kind;
     union {
       unsigned Operand; // Operand number mapped to.
-      uint64_t Imm;     // Integer immediate value.
+      int64_t Imm;      // Integer immediate value.
       Record *Reg;      // Physical register.
     } Data;
     int TiedOpIdx = -1; // Tied operand index within the instruction.
