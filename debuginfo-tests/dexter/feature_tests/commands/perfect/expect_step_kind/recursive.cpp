@@ -3,7 +3,11 @@
 //      Specifically, ensure recursive calls count towards 'FUNC' and not
 //      'VERTICAL_BACKWARD'.
 //
-// RUN: %dexter_regression_test -- %s | FileCheck %s
+// REQUIRES: system-linux, lldb
+//
+// RUN: %dexter_base test --fail-lt 1.0 -w  \
+// RUN:     --builder 'clang' --debugger 'lldb' --cflags "-O0 -g" -- %s \
+// RUN:     | FileCheck %s
 // CHECK: recursive.cpp:
 
 int func(int i) {
