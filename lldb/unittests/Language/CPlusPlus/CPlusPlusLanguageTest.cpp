@@ -140,12 +140,20 @@ TEST(CPlusPlusLanguage, ExtractContextAndIdentifier) {
        "std::vector<Class, std::allocator<Class>>",
        "_M_emplace_back_aux<Class const&>"},
       {"`anonymous namespace'::foo", "`anonymous namespace'", "foo"},
-      {"`operator<<A>'::`2'::B<0>::operator>",
-       "`operator<<A>'::`2'::B<0>",
+      {"`operator<<A>'::`2'::B<0>::operator>", "`operator<<A>'::`2'::B<0>",
        "operator>"},
       {"`anonymous namespace'::S::<<::__l2::Foo",
-       "`anonymous namespace'::S::<<::__l2",
-       "Foo"}};
+       "`anonymous namespace'::S::<<::__l2", "Foo"},
+      // These cases are idiosyncratic in how clang generates debug info for
+      // names when we have template parameters. They are not valid C++ names
+      // but if we fix this we need to support them for older compilers.
+      {"A::operator><A::B>", "A", "operator><A::B>"},
+      {"operator><A::B>", "", "operator><A::B>"},
+      {"A::operator<<A::B>", "A", "operator<<A::B>"},
+      {"operator<<A::B>", "", "operator<<A::B>"},
+      {"A::operator<<<A::B>", "A", "operator<<<A::B>"},
+      {"operator<<<A::B>", "", "operator<<<A::B>"},
+  };
 
   llvm::StringRef context, basename;
   for (const auto &test : test_cases) {
@@ -169,6 +177,12 @@ TEST(CPlusPlusLanguage, ExtractContextAndIdentifier) {
       "abc::", context, basename));
   EXPECT_FALSE(CPlusPlusLanguage::ExtractContextAndIdentifier(
       "f<A<B><C>>", context, basename));
+
+  // We expect these cases to fail until we turn on C++2a
+  EXPECT_FALSE(CPlusPlusLanguage::ExtractContextAndIdentifier(
+      "A::operator<=><A::B>", context, basename));
+  EXPECT_FALSE(CPlusPlusLanguage::ExtractContextAndIdentifier(
+      "operator<=><A::B>", context, basename));
 }
 
 static std::set<std::string> FindAlternate(llvm::StringRef Name) {
