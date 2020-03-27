@@ -363,7 +363,7 @@ Constant *llvm::ConstantFoldLoadThroughBitcast(Constant *C, Type *DestTy,
       Constant *ElemC;
       do {
         ElemC = C->getAggregateElement(Elem++);
-      } while (ElemC && DL.getTypeSizeInBits(ElemC->getType()) == 0);
+      } while (ElemC && DL.getTypeSizeInBits(ElemC->getType()).isZero());
       C = ElemC;
     } else {
       C = C->getAggregateElement(0u);
