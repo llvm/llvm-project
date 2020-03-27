@@ -146,8 +146,6 @@ static const char *BugReportMsg =
     "PLEASE submit a bug report to " BUG_REPORT_URL
     " and include the crash backtrace.\n";
 
-void llvm::setBugReportMsg(const char *Msg) { BugReportMsg = Msg; }
-
 /// This callback is run if a fatal signal is delivered to the process, it
 /// prints the pretty stack trace.
 static void CrashHandler(void *) {
@@ -203,6 +201,12 @@ static void printForSigInfoIfNeeded() {
 }
 
 #endif // ENABLE_BACKTRACES
+
+void llvm::setBugReportMsg(const char *Msg) {
+#if ENABLE_BACKTRACES
+  BugReportMsg = Msg;
+#endif
+}
 
 PrettyStackTraceEntry::PrettyStackTraceEntry() {
 #if ENABLE_BACKTRACES
