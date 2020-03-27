@@ -2200,20 +2200,14 @@ TEST_F(VFSFromYAMLTest, YAMLVFSWriterTest) {
   ScopedDir _g(TestDirectory + "/g");
   ScopedFile _h(TestDirectory + "/h", "");
 
-  // This test exposes a bug/shortcoming in the YAMLVFSWriter. Below we call
-  // addFileMapping for _a and _e, which causes _ab and _ef not to exists in
-  // the deserialized file system, because _a and _e got emitted as regular
-  // files. The counter example is _c, if we only call addFileMapping for _cd,
-  // things work as expected.
-
   vfs::YAMLVFSWriter VFSWriter;
-  VFSWriter.addFileMapping(_a.Path, "//root/a");
+  VFSWriter.addDirectoryMapping(_a.Path, "//root/a");
   VFSWriter.addFileMapping(_ab.Path, "//root/a/b");
   VFSWriter.addFileMapping(_cd.Path, "//root/c/d");
-  VFSWriter.addFileMapping(_e.Path, "//root/e");
-  VFSWriter.addFileMapping(_ef.Path, "//root/e/f");
+  VFSWriter.addDirectoryMapping(_e.Path, "//root/e");
+  VFSWriter.addDirectoryMapping(_ef.Path, "//root/e/f");
   VFSWriter.addFileMapping(_g.Path, "//root/g");
-  VFSWriter.addFileMapping(_h.Path, "//root/h");
+  VFSWriter.addDirectoryMapping(_h.Path, "//root/h");
 
   std::string Buffer;
   raw_string_ostream OS(Buffer);
@@ -2236,11 +2230,11 @@ TEST_F(VFSFromYAMLTest, YAMLVFSWriterTest) {
   ASSERT_TRUE(FS.get() != nullptr);
 
   EXPECT_TRUE(FS->exists(_a.Path));
-  EXPECT_FALSE(FS->exists(_ab.Path)); // FIXME: See explanation above.
+  EXPECT_TRUE(FS->exists(_ab.Path));
   EXPECT_TRUE(FS->exists(_c.Path));
   EXPECT_TRUE(FS->exists(_cd.Path));
   EXPECT_TRUE(FS->exists(_e.Path));
-  EXPECT_FALSE(FS->exists(_ef.Path)); // FIXME: See explanation above.
+  EXPECT_TRUE(FS->exists(_ef.Path));
   EXPECT_TRUE(FS->exists(_g.Path));
   EXPECT_TRUE(FS->exists(_h.Path));
 }
