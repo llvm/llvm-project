@@ -198,6 +198,20 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
          { MVT::nxv2i8, MVT::nxv2i16, MVT::nxv2i32, MVT::nxv2i64, MVT::nxv4i8,
            MVT::nxv4i16, MVT::nxv4i32, MVT::nxv8i8, MVT::nxv8i16 })
       setOperationAction(ISD::SIGN_EXTEND_INREG, VT, Legal);
+
+    for (auto VT :
+         { MVT::nxv2f16, MVT::nxv4f16, MVT::nxv8f16, MVT::nxv2f32, MVT::nxv4f32,
+           MVT::nxv2f64 }) {
+      setCondCodeAction(ISD::SETO, VT, Expand);
+      setCondCodeAction(ISD::SETOLT, VT, Expand);
+      setCondCodeAction(ISD::SETOLE, VT, Expand);
+      setCondCodeAction(ISD::SETULT, VT, Expand);
+      setCondCodeAction(ISD::SETULE, VT, Expand);
+      setCondCodeAction(ISD::SETUGE, VT, Expand);
+      setCondCodeAction(ISD::SETUGT, VT, Expand);
+      setCondCodeAction(ISD::SETUEQ, VT, Expand);
+      setCondCodeAction(ISD::SETUNE, VT, Expand);
+    }
   }
 
   // Compute derived properties from the register classes
@@ -7544,9 +7558,15 @@ SDValue AArch64TargetLowering::LowerSPLAT_VECTOR(SDValue Op,
   // FPRs don't have this restriction.
   switch (ElemVT.getSimpleVT().SimpleTy) {
   case MVT::i1: {
+    // The only legal i1 vectors are SVE vectors, so we can use SVE-specific
+    // lowering code.
+    if (auto *ConstVal = dyn_cast<ConstantSDNode>(SplatVal)) {
+      if (ConstVal->isOne())
+        return getPTrue(DAG, dl, VT, AArch64SVEPredPattern::all);
+      // TODO: Add special case for constant false
+    }
     // The general case of i1.  There isn't any natural way to do this,
     // so we use some trickery with whilelo.
-    // TODO: Add special cases for splat of constant true/false.
     SplatVal = DAG.getAnyExtOrTrunc(SplatVal, dl, MVT::i64);
     SplatVal = DAG.getNode(ISD::SIGN_EXTEND_INREG, dl, MVT::i64, SplatVal,
                            DAG.getValueType(MVT::i1));
