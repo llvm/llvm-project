@@ -2189,3 +2189,53 @@ TEST_F(VFSFromYAMLTest, WorkingDirectoryFallthroughInvalid) {
   Status = FS->status("foo/a");
   ASSERT_TRUE(Status.getError());
 }
+
+TEST_F(VFSFromYAMLTest, YAMLVFSWriterTest) {
+  ScopedDir TestDirectory("virtual-file-system-test", /*Unique*/ true);
+  ScopedDir _a(TestDirectory + "/a");
+  ScopedFile _ab(TestDirectory + "/a/b", "");
+  ScopedDir _c(TestDirectory + "/c");
+  ScopedFile _cd(TestDirectory + "/c/d", "");
+  ScopedDir _e(TestDirectory + "/e");
+  ScopedDir _ef(TestDirectory + "/e/f");
+  ScopedDir _g(TestDirectory + "/g");
+  ScopedFile _h(TestDirectory + "/h", "");
+
+  vfs::YAMLVFSWriter VFSWriter;
+  VFSWriter.addDirectoryMapping(_a.Path, "//root/a");
+  VFSWriter.addFileMapping(_ab.Path, "//root/a/b");
+  VFSWriter.addFileMapping(_cd.Path, "//root/c/d");
+  VFSWriter.addDirectoryMapping(_e.Path, "//root/e");
+  VFSWriter.addDirectoryMapping(_ef.Path, "//root/e/f");
+  VFSWriter.addFileMapping(_g.Path, "//root/g");
+  VFSWriter.addDirectoryMapping(_h.Path, "//root/h");
+
+  std::string Buffer;
+  raw_string_ostream OS(Buffer);
+  VFSWriter.write(OS);
+  OS.flush();
+
+  IntrusiveRefCntPtr<ErrorDummyFileSystem> Lower(new ErrorDummyFileSystem());
+  Lower->addDirectory("//root/");
+  Lower->addDirectory("//root/a");
+  Lower->addRegularFile("//root/a/b");
+  Lower->addDirectory("//root/b");
+  Lower->addDirectory("//root/c");
+  Lower->addRegularFile("//root/c/d");
+  Lower->addDirectory("//root/e");
+  Lower->addDirectory("//root/e/f");
+  Lower->addDirectory("//root/g");
+  Lower->addRegularFile("//root/h");
+
+  IntrusiveRefCntPtr<vfs::FileSystem> FS = getFromYAMLRawString(Buffer, Lower);
+  ASSERT_TRUE(FS.get() != nullptr);
+
+  EXPECT_TRUE(FS->exists(_a.Path));
+  EXPECT_TRUE(FS->exists(_ab.Path));
+  EXPECT_TRUE(FS->exists(_c.Path));
+  EXPECT_TRUE(FS->exists(_cd.Path));
+  EXPECT_TRUE(FS->exists(_e.Path));
+  EXPECT_TRUE(FS->exists(_ef.Path));
+  EXPECT_TRUE(FS->exists(_g.Path));
+  EXPECT_TRUE(FS->exists(_h.Path));
+}
