@@ -68,8 +68,7 @@ void X86ATTInstPrinter::printInst(const MCInst *MI, uint64_t Address,
    OS << "\tdata32";
   }
   // Try to print any aliases first.
-  else if (!printAliasInstr(MI, OS) &&
-           !printVecCompareInstr(MI, OS))
+  else if (!printAliasInstr(MI, Address, OS) && !printVecCompareInstr(MI, OS))
     printInstruction(MI, Address, OS);
 
   // Next always print the annotation.

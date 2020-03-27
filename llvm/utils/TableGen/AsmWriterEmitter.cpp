@@ -985,7 +985,8 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
 
   HeaderO << "bool " << Target.getName() << ClassName
           << "::printAliasInstr(const MCInst"
-          << " *MI, " << (PassSubtarget ? "const MCSubtargetInfo &STI, " : "")
+          << " *MI, uint64_t Address, "
+          << (PassSubtarget ? "const MCSubtargetInfo &STI, " : "")
           << "raw_ostream &OS) {\n";
 
   std::string PatternsForOpcode;
