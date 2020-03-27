@@ -14833,14 +14833,11 @@ static SDValue lowerV16I8Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
   //
   // If the mask is a binary compaction, we can more efficiently perform this
   // as a PACKUS(AND(),AND()) - which is quicker than UNPACK(PSHUFB(),PSHUFB()).
-  // TODO: AVX2+ sees a regression as they fail to see through VBROADCAST_LOAD
-  // masks.
   //
   // FIXME: The only exceptions to the above are blends which are exact
   // interleavings with direct instructions supporting them. We currently don't
   // handle those well here.
-  if (Subtarget.hasSSSE3() &&
-      (Subtarget.hasInt256() || IsSingleInput || NumEvenDrops != 1)) {
+  if (Subtarget.hasSSSE3() && (IsSingleInput || NumEvenDrops != 1)) {
     bool V1InUse = false;
     bool V2InUse = false;
 
