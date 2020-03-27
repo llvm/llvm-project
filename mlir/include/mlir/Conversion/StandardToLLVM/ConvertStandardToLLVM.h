@@ -416,6 +416,11 @@ LogicalResult oneToOneRewrite(Operation *op, StringRef targetOp,
                               ValueRange operands,
                               LLVMTypeConverter &typeConverter,
                               ConversionPatternRewriter &rewriter);
+
+LogicalResult vectorOneToOneRewrite(Operation *op, StringRef targetOp,
+                                    ValueRange operands,
+                                    LLVMTypeConverter &typeConverter,
+                                    ConversionPatternRewriter &rewriter);
 } // namespace detail
 } // namespace LLVM
 
@@ -438,6 +443,29 @@ public:
     return LLVM::detail::oneToOneRewrite(op, TargetOp::getOperationName(),
                                          operands, this->typeConverter,
                                          rewriter);
+  }
+};
+
+/// Basic lowering implementation for rewriting from Ops to LLVM Dialect Ops
+/// with one result. This supports higher-dimensional vector types.
+template <typename SourceOp, typename TargetOp>
+class VectorConvertToLLVMPattern : public ConvertOpToLLVMPattern<SourceOp> {
+public:
+  using ConvertOpToLLVMPattern<SourceOp>::ConvertOpToLLVMPattern;
+  using Super = VectorConvertToLLVMPattern<SourceOp, TargetOp>;
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    static_assert(
+        std::is_base_of<OpTrait::OneResult<SourceOp>, SourceOp>::value,
+        "expected single result op");
+    static_assert(std::is_base_of<OpTrait::SameOperandsAndResultType<SourceOp>,
+                                  SourceOp>::value,
+                  "expected same operands and result type");
+    return LLVM::detail::vectorOneToOneRewrite(op, TargetOp::getOperationName(),
+                                               operands, this->typeConverter,
+                                               rewriter);
   }
 };
 
