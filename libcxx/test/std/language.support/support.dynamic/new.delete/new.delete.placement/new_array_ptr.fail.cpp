@@ -22,7 +22,7 @@
 int main(int, char**)
 {
     char buffer[100];
-    ::operator new[](4, buffer);  // expected-error {{ignoring return value of function declared with 'nodiscard' attribute}}
+    ::operator new[](4, buffer); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 
     return 0;
 }

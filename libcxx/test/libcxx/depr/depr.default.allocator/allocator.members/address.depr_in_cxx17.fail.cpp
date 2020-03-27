@@ -28,7 +28,7 @@ int main(int, char**)
   int x = 0;
   std::allocator<int> a;
 
-  int* p = a.address(x); // expected-error{{'address' is deprecated}}
+  int* p = a.address(x); // expected-warning {{'address' is deprecated}}
   (void)p;
 
   return 0;
