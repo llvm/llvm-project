@@ -483,6 +483,20 @@ bool MipsSEInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   return true;
 }
 
+/// isBranchWithImm - Return true if the branch contains an immediate
+/// operand (\see lib/Target/Mips/MipsBranchExpansion.cpp).
+bool MipsSEInstrInfo::isBranchWithImm(unsigned Opc) const {
+  switch (Opc) {
+  default:
+    return false;
+  case Mips::BBIT0:
+  case Mips::BBIT1:
+  case Mips::BBIT032:
+  case Mips::BBIT132:
+    return true;
+  }
+}
+
 /// getOppositeBranchOpc - Return the inverse of the specified
 /// opcode, e.g. turning BEQ to BNE.
 unsigned MipsSEInstrInfo::getOppositeBranchOpc(unsigned Opc) const {

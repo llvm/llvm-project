@@ -106,6 +106,10 @@ public:
 
   virtual unsigned getOppositeBranchOpc(unsigned Opc) const = 0;
 
+  virtual bool isBranchWithImm(unsigned Opc) const {
+    return false;
+  }
+
   /// Return the number of bytes of code the specified instruction may be.
   unsigned getInstSizeInBytes(const MachineInstr &MI) const override;
 
