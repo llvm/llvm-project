@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
@@ -62,7 +63,7 @@ bool getEnableNoSignedZerosFPMath();
 
 bool getEnableNoTrappingFPMath();
 
-llvm::FPDenormal::DenormalMode getDenormalFPMath();
+DenormalMode::DenormalModeKind getDenormalFPMath();
 
 bool getEnableHonorSignDependentRoundingFPMath();
 
