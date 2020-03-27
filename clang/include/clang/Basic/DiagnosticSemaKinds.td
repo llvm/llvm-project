@@ -7967,29 +7967,6 @@ def err_cuda_ovl_target : Error<
 def note_cuda_ovl_candidate_target_mismatch : Note<
     "candidate template ignored: target attributes do not match">;
 
-def err_cuda_device_builtin_surftex_cls_template : Error<
-    "illegal device builtin %select{surface|texture}0 reference "
-    "class template %1 declared here">;
-def note_cuda_device_builtin_surftex_cls_should_have_n_args : Note<
-    "%0 needs to have exactly %1 template parameters">;
-def note_cuda_device_builtin_surftex_cls_should_have_match_arg : Note<
-    "the %select{1st|2nd|3rd}1 template parameter of %0 needs to be "
-    "%select{a type|an integer or enum value}2">;
-
-def err_cuda_device_builtin_surftex_ref_decl : Error<
-    "illegal device builtin %select{surface|texture}0 reference "
-    "type %1 declared here">;
-def note_cuda_device_builtin_surftex_should_be_template_class : Note<
-    "%0 needs to be instantiated from a class template with proper "
-    "template arguments">;
-def note_cuda_device_builtin_surftex_should_have_n_args : Note<
-    "%0 needs to be instantiated from a class template with exactly "
-    "%1 template arguments">;
-def note_cuda_device_builtin_surftex_should_have_match_arg : Note<
-    "%0 needs to be instantiated from a class template with the "
-    "%select{1st|2nd|3rd}1 template argument as "
-    "%select{a type|an integral value}2">;
-
 def warn_non_pod_vararg_with_format_string : Warning<
   "cannot pass %select{non-POD|non-trivial}0 object of type %1 to variadic "
   "%select{function|block|method|constructor}2; expected type from format "

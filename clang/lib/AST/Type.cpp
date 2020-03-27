@@ -4084,20 +4084,6 @@ bool Type::isCARCBridgableType() const {
   return Pointee->isVoidType() || Pointee->isRecordType();
 }
 
-/// Check if the specified type is the CUDA device builtin surface type.
-bool Type::isCUDADeviceBuiltinSurfaceType() const {
-  if (const auto *RT = getAs<RecordType>())
-    return RT->getDecl()->hasAttr<CUDADeviceBuiltinSurfaceTypeAttr>();
-  return false;
-}
-
-/// Check if the specified type is the CUDA device builtin texture type.
-bool Type::isCUDADeviceBuiltinTextureType() const {
-  if (const auto *RT = getAs<RecordType>())
-    return RT->getDecl()->hasAttr<CUDADeviceBuiltinTextureTypeAttr>();
-  return false;
-}
-
 bool Type::hasSizedVLAType() const {
   if (!isVariablyModifiedType()) return false;
 

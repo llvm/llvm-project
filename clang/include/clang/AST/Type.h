@@ -2111,11 +2111,6 @@ public:
   /// than implicitly __strong.
   bool isObjCARCImplicitlyUnretainedType() const;
 
-  /// Check if the type is the CUDA device builtin surface type.
-  bool isCUDADeviceBuiltinSurfaceType() const;
-  /// Check if the type is the CUDA device builtin texture type.
-  bool isCUDADeviceBuiltinTextureType() const;
-
   /// Return the implicit lifetime for this type, which must not be dependent.
   Qualifiers::ObjCLifetime getObjCARCImplicitLifetime() const;
 

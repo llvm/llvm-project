@@ -1064,20 +1064,16 @@ def CUDADeviceBuiltin : IgnoredAttr {
   let LangOpts = [CUDA];
 }
 
-def CUDADeviceBuiltinSurfaceType : InheritableAttr {
+def CUDADeviceBuiltinSurfaceType : IgnoredAttr {
   let Spellings = [GNU<"device_builtin_surface_type">,
                    Declspec<"__device_builtin_surface_type__">];
   let LangOpts = [CUDA];
-  let Subjects = SubjectList<[CXXRecord]>;
-  let Documentation = [CUDADeviceBuiltinSurfaceTypeDocs];
 }
 
-def CUDADeviceBuiltinTextureType : InheritableAttr {
+def CUDADeviceBuiltinTextureType : IgnoredAttr {
   let Spellings = [GNU<"device_builtin_texture_type">,
                    Declspec<"__device_builtin_texture_type__">];
   let LangOpts = [CUDA];
-  let Subjects = SubjectList<[CXXRecord]>;
-  let Documentation = [CUDADeviceBuiltinTextureTypeDocs];
 }
 
 def CUDAGlobal : InheritableAttr {
