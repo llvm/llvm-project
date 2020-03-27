@@ -816,50 +816,51 @@ enum {
 
 // Section types.
 enum : unsigned {
-  SHT_NULL = 0,                         // No associated section (inactive entry).
-  SHT_PROGBITS = 1,                     // Program-defined contents.
-  SHT_SYMTAB = 2,                       // Symbol table.
-  SHT_STRTAB = 3,                       // String table.
-  SHT_RELA = 4,                         // Relocation entries; explicit addends.
-  SHT_HASH = 5,                         // Symbol hash table.
-  SHT_DYNAMIC = 6,                      // Information for dynamic linking.
-  SHT_NOTE = 7,                         // Information about the file.
-  SHT_NOBITS = 8,                       // Data occupies no space in the file.
-  SHT_REL = 9,                          // Relocation entries; no explicit addends.
-  SHT_SHLIB = 10,                       // Reserved.
-  SHT_DYNSYM = 11,                      // Symbol table.
-  SHT_INIT_ARRAY = 14,                  // Pointers to initialization functions.
-  SHT_FINI_ARRAY = 15,                  // Pointers to termination functions.
-  SHT_PREINIT_ARRAY = 16,               // Pointers to pre-init functions.
-  SHT_GROUP = 17,                       // Section group.
-  SHT_SYMTAB_SHNDX = 18,                // Indices for SHN_XINDEX entries.
+  SHT_NULL = 0,           // No associated section (inactive entry).
+  SHT_PROGBITS = 1,       // Program-defined contents.
+  SHT_SYMTAB = 2,         // Symbol table.
+  SHT_STRTAB = 3,         // String table.
+  SHT_RELA = 4,           // Relocation entries; explicit addends.
+  SHT_HASH = 5,           // Symbol hash table.
+  SHT_DYNAMIC = 6,        // Information for dynamic linking.
+  SHT_NOTE = 7,           // Information about the file.
+  SHT_NOBITS = 8,         // Data occupies no space in the file.
+  SHT_REL = 9,            // Relocation entries; no explicit addends.
+  SHT_SHLIB = 10,         // Reserved.
+  SHT_DYNSYM = 11,        // Symbol table.
+  SHT_INIT_ARRAY = 14,    // Pointers to initialization functions.
+  SHT_FINI_ARRAY = 15,    // Pointers to termination functions.
+  SHT_PREINIT_ARRAY = 16, // Pointers to pre-init functions.
+  SHT_GROUP = 17,         // Section group.
+  SHT_SYMTAB_SHNDX = 18,  // Indices for SHN_XINDEX entries.
   // Experimental support for SHT_RELR sections. For details, see proposal
   // at https://groups.google.com/forum/#!topic/generic-abi/bX460iggiKg
-  SHT_RELR = 19,                        // Relocation entries; only offsets.
-  SHT_LOOS = 0x60000000,                // Lowest operating system-specific type.
+  SHT_RELR = 19,         // Relocation entries; only offsets.
+  SHT_LOOS = 0x60000000, // Lowest operating system-specific type.
   // Android packed relocation section types.
   // https://android.googlesource.com/platform/bionic/+/6f12bfece5dcc01325e0abba56a46b1bcf991c69/tools/relocation_packer/src/elf_file.cc#37
   SHT_ANDROID_REL = 0x60000001,
   SHT_ANDROID_RELA = 0x60000002,
-  SHT_LLVM_ODRTAB = 0x6fff4c00,         // LLVM ODR table.
-  SHT_LLVM_LINKER_OPTIONS = 0x6fff4c01, // LLVM Linker Options.
+  SHT_LLVM_ODRTAB = 0x6fff4c00,             // LLVM ODR table.
+  SHT_LLVM_LINKER_OPTIONS = 0x6fff4c01,     // LLVM Linker Options.
   SHT_LLVM_CALL_GRAPH_PROFILE = 0x6fff4c02, // LLVM Call Graph Profile.
-  SHT_LLVM_ADDRSIG = 0x6fff4c03,        // List of address-significant symbols
-                                        // for safe ICF.
-  SHT_LLVM_DEPENDENT_LIBRARIES = 0x6fff4c04, // LLVM Dependent Library Specifiers.
-  SHT_LLVM_SYMPART = 0x6fff4c05,        // Symbol partition specification.
-  SHT_LLVM_PART_EHDR = 0x6fff4c06,      // ELF header for loadable partition.
-  SHT_LLVM_PART_PHDR = 0x6fff4c07,      // Phdrs for loadable partition.
+  SHT_LLVM_ADDRSIG = 0x6fff4c03, // List of address-significant symbols
+                                 // for safe ICF.
+  SHT_LLVM_DEPENDENT_LIBRARIES =
+      0x6fff4c04,                  // LLVM Dependent Library Specifiers.
+  SHT_LLVM_SYMPART = 0x6fff4c05,   // Symbol partition specification.
+  SHT_LLVM_PART_EHDR = 0x6fff4c06, // ELF header for loadable partition.
+  SHT_LLVM_PART_PHDR = 0x6fff4c07, // Phdrs for loadable partition.
   // Android's experimental support for SHT_RELR sections.
   // https://android.googlesource.com/platform/bionic/+/b7feec74547f84559a1467aca02708ff61346d2a/libc/include/elf.h#512
-  SHT_ANDROID_RELR = 0x6fffff00,        // Relocation entries; only offsets.
-  SHT_GNU_ATTRIBUTES = 0x6ffffff5,      // Object attributes.
-  SHT_GNU_HASH = 0x6ffffff6,            // GNU-style hash table.
-  SHT_GNU_verdef = 0x6ffffffd,          // GNU version definitions.
-  SHT_GNU_verneed = 0x6ffffffe,         // GNU version references.
-  SHT_GNU_versym = 0x6fffffff,          // GNU symbol versions table.
-  SHT_HIOS = 0x6fffffff,                // Highest operating system-specific type.
-  SHT_LOPROC = 0x70000000,              // Lowest processor arch-specific type.
+  SHT_ANDROID_RELR = 0x6fffff00,   // Relocation entries; only offsets.
+  SHT_GNU_ATTRIBUTES = 0x6ffffff5, // Object attributes.
+  SHT_GNU_HASH = 0x6ffffff6,       // GNU-style hash table.
+  SHT_GNU_verdef = 0x6ffffffd,     // GNU version definitions.
+  SHT_GNU_verneed = 0x6ffffffe,    // GNU version references.
+  SHT_GNU_versym = 0x6fffffff,     // GNU symbol versions table.
+  SHT_HIOS = 0x6fffffff,           // Highest operating system-specific type.
+  SHT_LOPROC = 0x70000000,         // Lowest processor arch-specific type.
   // Fixme: All this is duplicated in MCSectionELF. Why??
   // Exception Index table
   SHT_ARM_EXIDX = 0x70000001U,
@@ -869,20 +870,20 @@ enum : unsigned {
   SHT_ARM_ATTRIBUTES = 0x70000003U,
   SHT_ARM_DEBUGOVERLAY = 0x70000004U,
   SHT_ARM_OVERLAYSECTION = 0x70000005U,
-  SHT_HEX_ORDERED = 0x70000000,         // Link editor is to sort the entries in
-                                        // this section based on their sizes
-  SHT_X86_64_UNWIND = 0x70000001,       // Unwind information
+  SHT_HEX_ORDERED = 0x70000000,   // Link editor is to sort the entries in
+                                  // this section based on their sizes
+  SHT_X86_64_UNWIND = 0x70000001, // Unwind information
 
-  SHT_MIPS_REGINFO = 0x70000006,        // Register usage information
-  SHT_MIPS_OPTIONS = 0x7000000d,        // General options
-  SHT_MIPS_DWARF = 0x7000001e,          // DWARF debugging section.
-  SHT_MIPS_ABIFLAGS = 0x7000002a,       // ABI information.
+  SHT_MIPS_REGINFO = 0x70000006,  // Register usage information
+  SHT_MIPS_OPTIONS = 0x7000000d,  // General options
+  SHT_MIPS_DWARF = 0x7000001e,    // DWARF debugging section.
+  SHT_MIPS_ABIFLAGS = 0x7000002a, // ABI information.
 
   SHT_MSP430_ATTRIBUTES = 0x70000003U,
 
-  SHT_HIPROC = 0x7fffffff,              // Highest processor arch-specific type.
-  SHT_LOUSER = 0x80000000,              // Lowest type reserved for applications.
-  SHT_HIUSER = 0xffffffff               // Highest type reserved for applications.
+  SHT_HIPROC = 0x7fffffff, // Highest processor arch-specific type.
+  SHT_LOUSER = 0x80000000, // Lowest type reserved for applications.
+  SHT_HIUSER = 0xffffffff  // Highest type reserved for applications.
 };
 
 // Section flags.
