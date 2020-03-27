@@ -436,6 +436,7 @@ namespace {
     SDValue visitZERO_EXTEND_VECTOR_INREG(SDNode *N);
     SDValue visitTRUNCATE(SDNode *N);
     SDValue visitBITCAST(SDNode *N);
+    SDValue visitFREEZE(SDNode *N);
     SDValue visitBUILD_PAIR(SDNode *N);
     SDValue visitFADD(SDNode *N);
     SDValue visitFSUB(SDNode *N);
@@ -1622,6 +1623,7 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::LIFETIME_END:       return visitLIFETIME_END(N);
   case ISD::FP_TO_FP16:         return visitFP_TO_FP16(N);
   case ISD::FP16_TO_FP:         return visitFP16_TO_FP(N);
+  case ISD::FREEZE:             return visitFREEZE(N);
   case ISD::VECREDUCE_FADD:
   case ISD::VECREDUCE_FMUL:
   case ISD::VECREDUCE_ADD:
@@ -11574,6 +11576,20 @@ SDValue DAGCombiner::visitBITCAST(SDNode *N) {
 SDValue DAGCombiner::visitBUILD_PAIR(SDNode *N) {
   EVT VT = N->getValueType(0);
   return CombineConsecutiveLoads(N, VT);
+}
+
+SDValue DAGCombiner::visitFREEZE(SDNode *N) {
+  SDValue N0 = N->getOperand(0);
+
+  // (freeze (freeze x)) -> (freeze x)
+  if (N0.getOpcode() == ISD::FREEZE)
+    return N0;
+
+  // If the input is a constant, return it.
+  if (isa<ConstantSDNode>(N0) || isa<ConstantFPSDNode>(N0))
+    return N0;
+
+  return SDValue();
 }
 
 /// We know that BV is a build_vector node with Constant, ConstantFP or Undef

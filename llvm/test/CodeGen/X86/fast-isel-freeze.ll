@@ -5,8 +5,8 @@
 define i32 @freeze(i32 %t) {
 ; SDAG-LABEL: freeze:
 ; SDAG:       # %bb.0:
-; SDAG-NEXT:    movl $10, %eax
-; SDAG-NEXT:    xorl %edi, %eax
+; SDAG-NEXT:    movl %edi, %eax
+; SDAG-NEXT:    xorl $10, %eax
 ; SDAG-NEXT:    retq
 ;
 ; FAST-LABEL: freeze:
