@@ -56,7 +56,7 @@ entry:
 ; CHECK-NEXT:     Value (RelocatableAddress): 0x4
 ; CHECK-NEXT:     Section: .data
 ; CHECK-NEXT:     Type: 0x0
-; CHECK-NEXT:     StorageClass: C_HIDEXT (0x6B)
+; CHECK-NEXT:     StorageClass: C_EXT (0x2)
 ; CHECK-NEXT:     NumberOfAuxEntries: 1
 ; CHECK-NEXT:     CSECT Auxiliary Entry {
 ; CHECK-NEXT:       Index: [[#Index+5]]
@@ -72,26 +72,6 @@ entry:
 ; CHECK-NEXT:   }
 ; CHECK-NEXT:   Symbol {
 ; CHECK-NEXT:     Index: [[#Index+6]]
-; CHECK-NEXT:     Name: foo
-; CHECK-NEXT:     Value (RelocatableAddress): 0x4
-; CHECK-NEXT:     Section: .data
-; CHECK-NEXT:     Type: 0x0
-; CHECK-NEXT:     StorageClass: C_EXT (0x2)
-; CHECK-NEXT:     NumberOfAuxEntries: 1
-; CHECK-NEXT:     CSECT Auxiliary Entry {
-; CHECK-NEXT:       Index: [[#Index+7]]
-; CHECK-NEXT:       ContainingCsectSymbolIndex: [[#Index+4]]
-; CHECK-NEXT:       ParameterHashIndex: 0x0
-; CHECK-NEXT:       TypeChkSectNum: 0x0
-; CHECK-NEXT:       SymbolAlignmentLog2: 0
-; CHECK-NEXT:       SymbolType: XTY_LD (0x2)
-; CHECK-NEXT:       StorageMappingClass: XMC_DS (0xA)
-; CHECK-NEXT:       StabInfoIndex: 0x0
-; CHECK-NEXT:       StabSectNum: 0x0
-; CHECK-NEXT:     }
-; CHECK-NEXT:   }
-; CHECK-NEXT:   Symbol {
-; CHECK-NEXT:     Index: [[#Index+8]]
 ; CHECK-NEXT:     Name: TOC
 ; CHECK-NEXT:     Value (RelocatableAddress): 0x10
 ; CHECK-NEXT:     Section: .data
@@ -99,7 +79,7 @@ entry:
 ; CHECK-NEXT:     StorageClass: C_HIDEXT (0x6B)
 ; CHECK-NEXT:     NumberOfAuxEntries: 1
 ; CHECK-NEXT:     CSECT Auxiliary Entry {
-; CHECK-NEXT:       Index: [[#Index+9]]
+; CHECK-NEXT:       Index: [[#Index+7]]
 ; CHECK-NEXT:       SectionLen: 0
 ; CHECK-NEXT:       ParameterHashIndex: 0x0
 ; CHECK-NEXT:       TypeChkSectNum: 0x0

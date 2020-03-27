@@ -2022,9 +2022,11 @@ XCOFF::StorageClass TargetLoweringObjectFileXCOFF::getStorageClassForGlobal(
 }
 
 MCSection *TargetLoweringObjectFileXCOFF::getSectionForFunctionDescriptor(
-    const MCSymbol *FuncSym) const {
-  return getContext().getXCOFFSection(FuncSym->getName(), XCOFF::XMC_DS,
-                                      XCOFF::XTY_SD, XCOFF::C_HIDEXT,
+    const Function *F, const TargetMachine &TM) const {
+  SmallString<128> NameStr;
+  getNameWithPrefix(NameStr, F, TM);
+  return getContext().getXCOFFSection(NameStr, XCOFF::XMC_DS, XCOFF::XTY_SD,
+                                      getStorageClassForGlobal(F),
                                       SectionKind::getData());
 }
 
