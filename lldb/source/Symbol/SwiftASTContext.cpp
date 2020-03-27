@@ -5322,7 +5322,7 @@ CompilerType SwiftASTContext::ImportType(CompilerType &type, Status &error) {
   auto *ts = type.GetTypeSystem();
   SwiftASTContext *swift_ast_ctx = llvm::dyn_cast_or_null<SwiftASTContext>(ts);
 
-  if (swift_ast_ctx == nullptr && !llvm::isa<TypeSystemSwift>(ts)) {
+  if (swift_ast_ctx == nullptr && (!ts || !llvm::isa<TypeSystemSwift>(ts))) {
     error.SetErrorString("Can't import clang type into a Swift ASTContext.");
     return CompilerType();
   } else if (swift_ast_ctx == this) {
