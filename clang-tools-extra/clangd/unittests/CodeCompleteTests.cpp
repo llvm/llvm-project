@@ -1860,6 +1860,7 @@ TEST(CompletionTest, RenderWithFixItNonMerged) {
 TEST(CompletionTest, CompletionTokenRange) {
   MockFSProvider FS;
   MockCompilationDatabase CDB;
+  FS.Files["foo/abc/foo.h"] = "";
   ClangdServer Server(CDB, FS, ClangdServer::optsForTest());
 
   constexpr const char *TestCodes[] = {
@@ -1882,7 +1883,14 @@ TEST(CompletionTest, CompletionTokenRange) {
           Auxilary x;
           x.[[]]^;
         }
-      )cpp"};
+      )cpp",
+      R"cpp(
+        #include "foo/[[a^/]]foo.h"
+      )cpp",
+      R"cpp(
+        #include "foo/abc/[[fo^o.h"]]
+      )cpp",
+      };
   for (const auto &Text : TestCodes) {
     Annotations TestCode(Text);
     auto Results = completions(Server, TestCode.code(), TestCode.point());
