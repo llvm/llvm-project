@@ -342,9 +342,8 @@ PlatformRemoteDarwinDevice::GetSDKDirectoryForLatestOSVersion() {
 const char *PlatformRemoteDarwinDevice::GetDeviceSupportDirectory() {
   std::string platform_dir = "/Platforms/" + GetPlatformName() + "/DeviceSupport";
   if (m_device_support_directory.empty()) {
-    const char *device_support_dir = GetDeveloperDirectory();
-    if (device_support_dir) {
-      m_device_support_directory.assign(device_support_dir);
+    if (FileSpec fspec = GetXcodeDeveloperDirectory()) {
+      m_device_support_directory = fspec.GetPath();
       m_device_support_directory.append(platform_dir.c_str());
     } else {
       // Assign a single NULL character so we know we tried to find the device
