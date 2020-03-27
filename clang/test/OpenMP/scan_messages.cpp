@@ -20,14 +20,14 @@ T tmain(T argc) {
     if (argc)
 #pragma omp scan inclusive(argc) // expected-error {{'#pragma omp scan' cannot be an immediate substatement}}
     if (argc) {
-#pragma omp scan inclusive(argc)
+#pragma omp scan inclusive(argc) // expected-error {{orphaned 'omp scan' directives are prohibited; perhaps you forget to enclose the directive into a for, simd, for simd, parallel for, or parallel for simd region?}}
     }
 #pragma omp simd
   for (int i = 0; i < 10; ++i)
   while (argc)
 #pragma omp scan inclusive(argc) // expected-error {{'#pragma omp scan' cannot be an immediate substatement}}
     while (argc) {
-#pragma omp scan inclusive(argc)
+#pragma omp scan inclusive(argc) // expected-error {{orphaned 'omp scan' directives are prohibited; perhaps you forget to enclose the directive into a for, simd, for simd, parallel for, or parallel for simd region?}}
     }
 #pragma omp simd
   for (int i = 0; i < 10; ++i)
@@ -46,10 +46,10 @@ T tmain(T argc) {
 #pragma omp scan inclusive(argc) // expected-error {{'#pragma omp scan' cannot be an immediate substatement}}
     switch (argc)
     case 1:
-#pragma omp scan inclusive(argc) // expected-error {{'#pragma omp scan' cannot be an immediate substatement}}
+#pragma omp scan inclusive(argc) // expected-error {{'#pragma omp scan' cannot be an immediate substatement}} expected-error {{orphaned 'omp scan' directives are prohibited; perhaps you forget to enclose the directive into a for, simd, for simd, parallel for, or parallel for simd region?}}
   switch (argc)
   case 1: {
-#pragma omp scan inclusive(argc)
+#pragma omp scan inclusive(argc) // expected-error {{orphaned 'omp scan' directives are prohibited; perhaps you forget to enclose the directive into a for, simd, for simd, parallel for, or parallel for simd region?}}
   }
 #pragma omp simd
   for (int i = 0; i < 10; ++i)
@@ -67,7 +67,7 @@ T tmain(T argc) {
   for (;;)
 #pragma omp scan exclusive(argc) // expected-error {{'#pragma omp scan' cannot be an immediate substatement}}
     for (;;) {
-#pragma omp scan exclusive(argc)
+#pragma omp scan exclusive(argc) // expected-error {{orphaned 'omp scan' directives are prohibited; perhaps you forget to enclose the directive into a for, simd, for simd, parallel for, or parallel for simd region?}}
     }
 #pragma omp simd
   for (int i = 0; i < 10; ++i) {
@@ -109,14 +109,14 @@ int main(int argc, char **argv) {
   if (argc)
 #pragma omp scan inclusive(argc) // expected-error {{'#pragma omp scan' cannot be an immediate substatement}}
     if (argc) {
-#pragma omp scan inclusive(argc)
+#pragma omp scan inclusive(argc) // expected-error {{orphaned 'omp scan' directives are prohibited; perhaps you forget to enclose the directive into a for, simd, for simd, parallel for, or parallel for simd region?}}
     }
 #pragma omp simd
   for (int i = 0; i < 10; ++i)
   while (argc)
 #pragma omp scan inclusive(argc) // expected-error {{'#pragma omp scan' cannot be an immediate substatement}}
     while (argc) {
-#pragma omp scan inclusive(argc)
+#pragma omp scan inclusive(argc) // expected-error {{orphaned 'omp scan' directives are prohibited; perhaps you forget to enclose the directive into a for, simd, for simd, parallel for, or parallel for simd region?}}
     }
 #pragma omp simd
   for (int i = 0; i < 10; ++i)
@@ -135,10 +135,10 @@ int main(int argc, char **argv) {
 #pragma omp scan exclusive(argc) // expected-error {{'#pragma omp scan' cannot be an immediate substatement}}
     switch (argc)
     case 1:
-#pragma omp scan exclusive(argc) // expected-error {{'#pragma omp scan' cannot be an immediate substatement}}
+#pragma omp scan exclusive(argc) // expected-error {{'#pragma omp scan' cannot be an immediate substatement}} expected-error {{orphaned 'omp scan' directives are prohibited; perhaps you forget to enclose the directive into a for, simd, for simd, parallel for, or parallel for simd region?}}
   switch (argc)
   case 1: {
-#pragma omp scan exclusive(argc)
+#pragma omp scan exclusive(argc) // expected-error {{orphaned 'omp scan' directives are prohibited; perhaps you forget to enclose the directive into a for, simd, for simd, parallel for, or parallel for simd region?}}
   }
 #pragma omp simd
   for (int i = 0; i < 10; ++i)
@@ -156,7 +156,7 @@ int main(int argc, char **argv) {
   for (;;)
 #pragma omp scan inclusive(argc) // expected-error {{'#pragma omp scan' cannot be an immediate substatement}}
     for (;;) {
-#pragma omp scan inclusive(argc)
+#pragma omp scan inclusive(argc) // expected-error {{orphaned 'omp scan' directives are prohibited; perhaps you forget to enclose the directive into a for, simd, for simd, parallel for, or parallel for simd region?}}
     }
 #pragma omp simd
   for (int i = 0; i < 10; ++i) {

@@ -1711,9 +1711,8 @@ bool HexagonFrameLowering::assignCalleeSavedSpillSlots(MachineFunction &MF,
     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(R);
     unsigned Size = TRI->getSpillSize(*RC);
     int Off = MinOffset - Size;
-    unsigned Align = std::min(TRI->getSpillAlignment(*RC), getStackAlignment());
-    assert(isPowerOf2_32(Align));
-    Off &= -Align;
+    Align Alignment = std::min(TRI->getSpillAlign(*RC), getStackAlign());
+    Off &= -Alignment.value();
     int FI = MFI.CreateFixedSpillStackObject(Size, Off);
     MinOffset = std::min(MinOffset, Off);
     CSI.push_back(CalleeSavedInfo(R, FI));

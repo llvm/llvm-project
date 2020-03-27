@@ -1224,6 +1224,9 @@ public:
   SDValue getAddrSpaceCast(const SDLoc &dl, EVT VT, SDValue Ptr, unsigned SrcAS,
                            unsigned DestAS);
 
+  /// Return a freeze using the SDLoc of the value operand.
+  SDValue getFreeze(SDValue V);
+
   /// Return the specified value casted to
   /// the target's desired shift amount type.
   SDValue getShiftAmountOperand(EVT LHSTy, SDValue Op);

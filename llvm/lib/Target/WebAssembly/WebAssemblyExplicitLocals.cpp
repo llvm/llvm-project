@@ -313,6 +313,8 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
                     .addReg(NewReg);
             // After the drop instruction, this reg operand will not be used
             Drop->getOperand(0).setIsKill();
+            if (MFI.isFrameBaseVirtual() && OldReg == MFI.getFrameBaseVreg())
+              MFI.clearFrameBaseVreg();
           } else {
             unsigned LocalId = getLocalId(Reg2Local, MFI, CurLocal, OldReg);
             unsigned Opc = getLocalSetOpcode(RC);

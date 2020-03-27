@@ -1971,7 +1971,7 @@ define <16 x i8> @shuffle_v16i8_02_03_04_05_06_07_00_01_10_11_12_13_14_15_08_09(
 define <16 x i8> @PR12412(<16 x i8> %inval1, <16 x i8> %inval2) {
 ; SSE-LABEL: PR12412:
 ; SSE:       # %bb.0: # %entry
-; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
+; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [255,255,255,255,255,255,255,255]
 ; SSE-NEXT:    pand %xmm2, %xmm1
 ; SSE-NEXT:    pand %xmm2, %xmm0
 ; SSE-NEXT:    packuswb %xmm1, %xmm0
@@ -1979,7 +1979,7 @@ define <16 x i8> @PR12412(<16 x i8> %inval1, <16 x i8> %inval2) {
 ;
 ; AVX1-LABEL: PR12412:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [255,255,255,255,255,255,255,255]
 ; AVX1-NEXT:    vpand %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vpand %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
@@ -1987,10 +1987,10 @@ define <16 x i8> @PR12412(<16 x i8> %inval1, <16 x i8> %inval2) {
 ;
 ; AVX2-LABEL: PR12412:
 ; AVX2:       # %bb.0: # %entry
-; AVX2-NEXT:    vmovdqa {{.*#+}} xmm2 = <0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u>
-; AVX2-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
-; AVX2-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
-; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX2-NEXT:    vmovdqa {{.*#+}} xmm2 = [255,255,255,255,255,255,255,255]
+; AVX2-NEXT:    vpand %xmm2, %xmm1, %xmm1
+; AVX2-NEXT:    vpand %xmm2, %xmm0, %xmm0
+; AVX2-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512VL-LABEL: PR12412:

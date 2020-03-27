@@ -601,9 +601,9 @@ needsFrameBaseReg(MachineInstr *MI, int64_t Offset) const {
   // The FP is only available if there is no dynamic realignment. We
   // don't know for sure yet whether we'll need that, so we guess based
   // on whether there are any local variables that would trigger it.
-  unsigned StackAlign = TFI->getStackAlignment();
   if (TFI->hasFP(MF) &&
-      !((MFI.getLocalFrameMaxAlign() > StackAlign) && canRealignStack(MF))) {
+      !((MFI.getLocalFrameMaxAlign() > TFI->getStackAlign()) &&
+        canRealignStack(MF))) {
     if (isFrameOffsetLegal(MI, getFrameRegister(MF), FPOffset))
       return false;
   }

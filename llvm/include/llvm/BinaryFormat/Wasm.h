@@ -132,7 +132,7 @@ struct WasmFunction {
   uint32_t CodeSectionOffset;
   uint32_t Size;
   uint32_t CodeOffset;  // start of Locals and Body
-  StringRef ExportName; // from the "export" section
+  Optional<StringRef> ExportName; // from the "export" section
   StringRef SymbolName; // from the "linking" section
   StringRef DebugName;  // from the "name" section
   uint32_t Comdat;      // from the "comdat info" section

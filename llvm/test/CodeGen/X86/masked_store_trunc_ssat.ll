@@ -2138,7 +2138,7 @@ define void @truncstore_v4i64_v4i8(<4 x i64> %x, <4 x i8>* %p, <4 x i32> %mask) 
 ; SSE2-NEXT:    pand %xmm1, %xmm5
 ; SSE2-NEXT:    pandn %xmm8, %xmm1
 ; SSE2-NEXT:    por %xmm5, %xmm1
-; SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [255,0,0,0,0,0,0,0,255,0,0,0,0,0,0,0]
+; SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [255,0,0,0,255,0,0,0]
 ; SSE2-NEXT:    pand %xmm3, %xmm1
 ; SSE2-NEXT:    pand %xmm3, %xmm0
 ; SSE2-NEXT:    packuswb %xmm1, %xmm0

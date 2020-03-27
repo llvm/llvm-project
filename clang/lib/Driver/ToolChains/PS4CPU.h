@@ -88,6 +88,11 @@ public:
   // capable of unit splitting.
   bool canSplitThinLTOUnit() const override { return false; }
 
+  void addClangTargetOptions(
+    const llvm::opt::ArgList &DriverArgs,
+    llvm::opt::ArgStringList &CC1Args,
+    Action::OffloadKind DeviceOffloadingKind) const override;
+
   llvm::DenormalMode getDefaultDenormalModeForType(
     const llvm::opt::ArgList &DriverArgs,
     Action::OffloadKind DeviceOffloadKind,

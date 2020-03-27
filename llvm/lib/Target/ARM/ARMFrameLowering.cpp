@@ -1596,7 +1596,7 @@ checkNumAlignedDPRCS2Regs(MachineFunction &MF, BitVector &SavedRegs) {
     return;
 
   // Don't bother if the default stack alignment is sufficiently high.
-  if (MF.getSubtarget().getFrameLowering()->getStackAlignment() >= 8)
+  if (MF.getSubtarget().getFrameLowering()->getStackAlign() >= Align(8))
     return;
 
   // Aligned spills require stack realignment.
@@ -2292,8 +2292,8 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
     // of GPRs, spill one extra callee save GPR so we won't have to pad between
     // the integer and double callee save areas.
     LLVM_DEBUG(dbgs() << "NumGPRSpills = " << NumGPRSpills << "\n");
-    unsigned TargetAlign = getStackAlignment();
-    if (TargetAlign >= 8 && (NumGPRSpills & 1)) {
+    const Align TargetAlign = getStackAlign();
+    if (TargetAlign >= Align(8) && (NumGPRSpills & 1)) {
       if (CS1Spilled && !UnspilledCS1GPRs.empty()) {
         for (unsigned i = 0, e = UnspilledCS1GPRs.size(); i != e; ++i) {
           unsigned Reg = UnspilledCS1GPRs[i];
@@ -2330,7 +2330,7 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
     if (BigFrameOffsets && !ExtraCSSpill) {
       // If any non-reserved CS register isn't spilled, just spill one or two
       // extra. That should take care of it!
-      unsigned NumExtras = TargetAlign / 4;
+      unsigned NumExtras = TargetAlign.value() / 4;
       SmallVector<unsigned, 2> Extras;
       while (NumExtras && !UnspilledCS1GPRs.empty()) {
         unsigned Reg = UnspilledCS1GPRs.back();
