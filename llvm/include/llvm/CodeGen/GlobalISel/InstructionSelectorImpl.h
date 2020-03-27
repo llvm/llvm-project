@@ -429,7 +429,7 @@ bool InstructionSelector::executeMatchTable(
                       dbgs() << CurrentIdx << ": GIM_CheckMemoryAlignment"
                       << "(MIs[" << InsnID << "]->memoperands() + " << MMOIdx
                       << ")->getAlignment() >= " << MinAlign << ")\n");
-      if (MMO->getAlignment() < MinAlign && handleReject() == RejectAndGiveUp)
+      if (MMO->getAlign() < MinAlign && handleReject() == RejectAndGiveUp)
         return false;
 
       break;

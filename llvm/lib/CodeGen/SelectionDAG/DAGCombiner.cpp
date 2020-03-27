@@ -21342,16 +21342,16 @@ bool DAGCombiner::isAlias(SDNode *Op0, SDNode *Op1) const {
   // multiples of the size of the data.
   int64_t SrcValOffset0 = MUC0.MMO->getOffset();
   int64_t SrcValOffset1 = MUC1.MMO->getOffset();
-  unsigned OrigAlignment0 = MUC0.MMO->getBaseAlignment();
-  unsigned OrigAlignment1 = MUC1.MMO->getBaseAlignment();
+  Align OrigAlignment0 = MUC0.MMO->getBaseAlign();
+  Align OrigAlignment1 = MUC1.MMO->getBaseAlign();
   auto &Size0 = MUC0.NumBytes;
   auto &Size1 = MUC1.NumBytes;
   if (OrigAlignment0 == OrigAlignment1 && SrcValOffset0 != SrcValOffset1 &&
       Size0.hasValue() && Size1.hasValue() && *Size0 == *Size1 &&
       OrigAlignment0 > *Size0 && SrcValOffset0 % *Size0 == 0 &&
       SrcValOffset1 % *Size1 == 0) {
-    int64_t OffAlign0 = SrcValOffset0 % OrigAlignment0;
-    int64_t OffAlign1 = SrcValOffset1 % OrigAlignment1;
+    int64_t OffAlign0 = SrcValOffset0 % OrigAlignment0.value();
+    int64_t OffAlign1 = SrcValOffset1 % OrigAlignment1.value();
 
     // There is no overlap between these relatively aligned accesses of
     // similar size. Return no alias.

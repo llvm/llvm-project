@@ -1292,12 +1292,8 @@ public:
   bool writeMem() const { return MMO->isStore(); }
 
   /// Returns alignment and volatility of the memory access
-  unsigned getOriginalAlignment() const {
-    return MMO->getBaseAlignment();
-  }
-  unsigned getAlignment() const {
-    return MMO->getAlignment();
-  }
+  unsigned getOriginalAlignment() const { return MMO->getBaseAlign().value(); }
+  unsigned getAlignment() const { return MMO->getAlign().value(); }
 
   /// Return the SubclassData value, without HasDebugValue. This contains an
   /// encoding of the volatile flag, as well as bits used by subclasses. This

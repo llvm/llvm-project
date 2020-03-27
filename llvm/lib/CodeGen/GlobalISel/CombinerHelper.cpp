@@ -1268,7 +1268,7 @@ bool CombinerHelper::tryCombineMemCpyFamily(MachineInstr &MI, unsigned MaxLen) {
   if (IsVolatile)
     return false;
 
-  Align DstAlign(MemOp->getBaseAlignment());
+  Align DstAlign = MemOp->getBaseAlign();
   Align SrcAlign;
   Register Dst = MI.getOperand(1).getReg();
   Register Src = MI.getOperand(2).getReg();
@@ -1277,7 +1277,7 @@ bool CombinerHelper::tryCombineMemCpyFamily(MachineInstr &MI, unsigned MaxLen) {
   if (ID != Intrinsic::memset) {
     assert(MMOIt != MI.memoperands_end() && "Expected a second MMO on MI");
     MemOp = *(++MMOIt);
-    SrcAlign = Align(MemOp->getBaseAlignment());
+    SrcAlign = MemOp->getBaseAlign();
   }
 
   // See if this is a constant length copy
