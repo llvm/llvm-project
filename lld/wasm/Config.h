@@ -53,7 +53,7 @@ struct Configuration {
   unsigned ltoPartitions;
   unsigned ltoo;
   unsigned optimize;
-  unsigned thinLTOJobs;
+  llvm::StringRef thinLTOJobs;
 
   llvm::StringRef entry;
   llvm::StringRef outputFile;

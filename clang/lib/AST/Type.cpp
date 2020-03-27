@@ -2496,6 +2496,9 @@ bool QualType::isCXX11PODType(const ASTContext &Context) const {
   const Type *BaseTy = ty->getBaseElementTypeUnsafe();
   assert(BaseTy && "NULL element type");
 
+  if (BaseTy->isSizelessBuiltinType())
+    return true;
+
   // Return false for incomplete types after skipping any incomplete array
   // types which are expressly allowed by the standard and thus our API.
   if (BaseTy->isIncompleteType())
@@ -4082,20 +4085,6 @@ bool Type::isCARCBridgableType() const {
 
   QualType Pointee = Pointer->getPointeeType();
   return Pointee->isVoidType() || Pointee->isRecordType();
-}
-
-/// Check if the specified type is the CUDA device builtin surface type.
-bool Type::isCUDADeviceBuiltinSurfaceType() const {
-  if (const auto *RT = getAs<RecordType>())
-    return RT->getDecl()->hasAttr<CUDADeviceBuiltinSurfaceTypeAttr>();
-  return false;
-}
-
-/// Check if the specified type is the CUDA device builtin texture type.
-bool Type::isCUDADeviceBuiltinTextureType() const {
-  if (const auto *RT = getAs<RecordType>())
-    return RT->getDecl()->hasAttr<CUDADeviceBuiltinTextureTypeAttr>();
-  return false;
 }
 
 bool Type::hasSizedVLAType() const {

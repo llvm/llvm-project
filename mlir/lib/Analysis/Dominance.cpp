@@ -13,6 +13,7 @@
 
 #include "mlir/Analysis/Dominance.h"
 #include "mlir/IR/Operation.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/GenericDomTreeConstruction.h"
 
 using namespace mlir;
@@ -43,6 +44,99 @@ void DominanceInfoBase<IsPostDom>::recalculate(Operation *op) {
   });
 }
 
+/// Walks up the list of containers of the given block and calls the
+/// user-defined traversal function for every pair of a region and block that
+/// could be found during traversal. If the user-defined function returns true
+/// for a given pair, traverseAncestors will return the current block. Nullptr
+/// otherwise.
+template <typename FuncT>
+Block *traverseAncestors(Block *block, const FuncT &func) {
+  // Invoke the user-defined traversal function in the beginning for the current
+  // block.
+  if (func(block))
+    return block;
+
+  Region *region = block->getParent();
+  while (region) {
+    Operation *ancestor = region->getParentOp();
+    // If we have reached to top... return.
+    if (!ancestor || !(block = ancestor->getBlock()))
+      break;
+
+    // Update the nested region using the new ancestor block.
+    region = block->getParent();
+
+    // Invoke the user-defined traversal function and check whether we can
+    // already return.
+    if (func(block))
+      return block;
+  }
+  return nullptr;
+}
+
+/// Tries to update the given block references to live in the same region by
+/// exploring the relationship of both blocks with respect to their regions.
+static bool tryGetBlocksInSameRegion(Block *&a, Block *&b) {
+  // If both block do not live in the same region, we will have to check their
+  // parent operations.
+  if (a->getParent() == b->getParent())
+    return true;
+
+  // Iterate over all ancestors of a and insert them into the map. This allows
+  // for efficient lookups to find a commonly shared region.
+  llvm::SmallDenseMap<Region *, Block *, 4> ancestors;
+  traverseAncestors(a, [&](Block *block) {
+    ancestors[block->getParent()] = block;
+    return false;
+  });
+
+  // Try to find a common ancestor starting with regionB.
+  b = traverseAncestors(
+      b, [&](Block *block) { return ancestors.count(block->getParent()) > 0; });
+
+  // If there is no match, we will not be able to find a common dominator since
+  // both regions do not share a common parent region.
+  if (!b)
+    return false;
+
+  // We have found a common parent region. Update block a to refer to this
+  // region.
+  auto it = ancestors.find(b->getParent());
+  assert(it != ancestors.end());
+  a = it->second;
+  return true;
+}
+
+template <bool IsPostDom>
+Block *
+DominanceInfoBase<IsPostDom>::findNearestCommonDominator(Block *a,
+                                                         Block *b) const {
+  // If either a or b are null, then conservatively return nullptr.
+  if (!a || !b)
+    return nullptr;
+
+  // Try to find blocks that are in the same region.
+  if (!tryGetBlocksInSameRegion(a, b))
+    return nullptr;
+
+  // Get and verify dominance information of the common parent region.
+  Region *parentRegion = a->getParent();
+  auto infoAIt = dominanceInfos.find(parentRegion);
+  if (infoAIt == dominanceInfos.end())
+    return nullptr;
+
+  // Since the blocks live in the same region, we can rely on already
+  // existing dominance functionality.
+  return infoAIt->second->findNearestCommonDominator(a, b);
+}
+
+template <bool IsPostDom>
+DominanceInfoNode *DominanceInfoBase<IsPostDom>::getNode(Block *a) {
+  auto *region = a->getParent();
+  assert(dominanceInfos.count(region) != 0);
+  return dominanceInfos[region]->getNode(a);
+}
+
 /// Return true if the specified block A properly dominates block B.
 template <bool IsPostDom>
 bool DominanceInfoBase<IsPostDom>::properlyDominates(Block *a, Block *b) {
@@ -57,21 +151,17 @@ bool DominanceInfoBase<IsPostDom>::properlyDominates(Block *a, Block *b) {
   // If both blocks are not in the same region, 'a' properly dominates 'b' if
   // 'b' is defined in an operation region that (recursively) ends up being
   // dominated by 'a'. Walk up the list of containers enclosing B.
-  auto *regionA = a->getParent(), *regionB = b->getParent();
-  if (regionA != regionB) {
-    Operation *bAncestor;
-    do {
-      bAncestor = regionB->getParentOp();
-      // If 'bAncestor' is the top level region, then 'a' is a block that post
-      // dominates 'b'.
-      if (!bAncestor || !bAncestor->getBlock())
-        return IsPostDom;
+  auto *regionA = a->getParent();
+  if (regionA != b->getParent()) {
+    b = traverseAncestors(
+        b, [&](Block *block) { return block->getParent() == regionA; });
 
-      regionB = bAncestor->getBlock()->getParent();
-    } while (regionA != regionB);
+    // If we could not find a valid block b then it is either a not a dominator
+    // or a post dominator.
+    if (!b)
+      return IsPostDom;
 
     // Check to see if the ancestor of 'b' is the same block as 'a'.
-    b = bAncestor->getBlock();
     if (a == b)
       return true;
   }
@@ -130,12 +220,6 @@ bool DominanceInfo::properlyDominates(Value a, Operation *b) {
   // block arguments properly dominate all operations in their own block, so
   // we use a dominates check here, not a properlyDominates check.
   return dominates(a.cast<BlockArgument>().getOwner(), b->getBlock());
-}
-
-DominanceInfoNode *DominanceInfo::getNode(Block *a) {
-  auto *region = a->getParent();
-  assert(dominanceInfos.count(region) != 0);
-  return dominanceInfos[region]->getNode(a);
 }
 
 void DominanceInfo::updateDFSNumbers() {

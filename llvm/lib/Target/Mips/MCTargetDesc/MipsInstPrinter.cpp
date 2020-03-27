@@ -109,7 +109,7 @@ void MipsInstPrinter::printInst(const MCInst *MI, uint64_t Address,
   }
 
   // Try to print any aliases first.
-  if (!printAliasInstr(MI, O) && !printAlias(*MI, O))
+  if (!printAliasInstr(MI, Address, O) && !printAlias(*MI, O))
     printInstruction(MI, Address, O);
   printAnnotation(O, Annot);
 

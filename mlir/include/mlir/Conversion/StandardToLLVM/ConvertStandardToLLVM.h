@@ -42,6 +42,10 @@ struct LLVMTypeConverterCustomization {
   /// Customize the type conversion of function arguments.
   CustomCallback funcArgConverter;
 
+  /// Used to determine the bitwidth of the LLVM integer type that the index
+  /// type gets lowered to. Defaults to deriving the size from the data layout.
+  unsigned indexBitwidth;
+
   /// Initialize customization to default callbacks.
   LLVMTypeConverterCustomization();
 };
@@ -122,6 +126,13 @@ public:
                                    ArrayRef<Value> values,
                                    Location loc) override;
 
+  /// Gets the LLVM representation of the index type. The returned type is an
+  /// integer type with the size confgured for this type converter.
+  LLVM::LLVMType getIndexType();
+
+  /// Gets the bitwidth of the index type when converted to LLVM.
+  unsigned getIndexTypeBitwidth() { return customizations.indexBitwidth; }
+
 protected:
   /// LLVM IR module used to parse/create types.
   llvm::Module *module;
@@ -180,10 +191,6 @@ private:
 
   // Convert a 1D vector type into an LLVM vector type.
   Type convertVectorType(VectorType type);
-
-  // Get the LLVM representation of the index type based on the bitwidth of the
-  // pointer as defined by the data layout of the module.
-  LLVM::LLVMType getIndexType();
 
   /// Callbacks for customizing the type conversion.
   LLVMTypeConverterCustomization customizations;
@@ -378,7 +385,7 @@ public:
   llvm::Module &getModule() const;
 
   /// Gets the MLIR type wrapping the LLVM integer type whose bit width is
-  /// defined by the pointer size used in the LLVM module.
+  /// defined by the used type converter.
   LLVM::LLVMType getIndexType() const;
 
   /// Gets the MLIR type wrapping the LLVM void type.

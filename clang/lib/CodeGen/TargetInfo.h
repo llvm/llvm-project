@@ -315,32 +315,6 @@ public:
   virtual bool shouldEmitStaticExternCAliases() const { return true; }
 
   virtual void setCUDAKernelCallingConvention(const FunctionType *&FT) const {}
-
-  /// Return the device-side type for the CUDA device builtin surface type.
-  virtual llvm::Type *getCUDADeviceBuiltinSurfaceDeviceType() const {
-    // By default, no change from the original one.
-    return nullptr;
-  }
-  /// Return the device-side type for the CUDA device builtin texture type.
-  virtual llvm::Type *getCUDADeviceBuiltinTextureDeviceType() const {
-    // By default, no change from the original one.
-    return nullptr;
-  }
-
-  /// Emit the device-side copy of the builtin surface type.
-  virtual bool emitCUDADeviceBuiltinSurfaceDeviceCopy(CodeGenFunction &CGF,
-                                                      LValue Dst,
-                                                      LValue Src) const {
-    // DO NOTHING by default.
-    return false;
-  }
-  /// Emit the device-side copy of the builtin texture type.
-  virtual bool emitCUDADeviceBuiltinTextureDeviceCopy(CodeGenFunction &CGF,
-                                                      LValue Dst,
-                                                      LValue Src) const {
-    // DO NOTHING by default.
-    return false;
-  }
 };
 
 } // namespace CodeGen

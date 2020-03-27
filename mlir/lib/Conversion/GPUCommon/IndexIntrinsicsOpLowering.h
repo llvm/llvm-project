@@ -34,16 +34,12 @@ private:
         .Default(invalid);
   }
 
-  static unsigned getIndexBitWidth(LLVMTypeConverter &type_converter) {
-    auto dialect = type_converter.getDialect();
-    return dialect->getLLVMModule().getDataLayout().getPointerSizeInBits();
-  }
-
 public:
-  explicit GPUIndexIntrinsicOpLowering(LLVMTypeConverter &lowering_)
+  explicit GPUIndexIntrinsicOpLowering(LLVMTypeConverter &typeConverter)
       : ConvertToLLVMPattern(Op::getOperationName(),
-                             lowering_.getDialect()->getContext(), lowering_),
-        indexBitwidth(getIndexBitWidth(lowering_)) {}
+                             typeConverter.getDialect()->getContext(),
+                             typeConverter),
+        indexBitwidth(typeConverter.getIndexTypeBitwidth()) {}
 
   // Convert the kernel arguments to an LLVM type, preserve the rest.
   LogicalResult

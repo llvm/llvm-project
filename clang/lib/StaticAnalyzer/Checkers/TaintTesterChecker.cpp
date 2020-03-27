@@ -63,6 +63,6 @@ void ento::registerTaintTesterChecker(CheckerManager &mgr) {
   mgr.registerChecker<TaintTesterChecker>();
 }
 
-bool ento::shouldRegisterTaintTesterChecker(const LangOptions &LO) {
+bool ento::shouldRegisterTaintTesterChecker(const CheckerManager &mgr) {
   return true;
 }

@@ -203,6 +203,6 @@ void ento::registerDynamicTypeChecker(CheckerManager &mgr) {
   mgr.registerChecker<DynamicTypeChecker>();
 }
 
-bool ento::shouldRegisterDynamicTypeChecker(const LangOptions &LO) {
+bool ento::shouldRegisterDynamicTypeChecker(const CheckerManager &mgr) {
   return true;
 }

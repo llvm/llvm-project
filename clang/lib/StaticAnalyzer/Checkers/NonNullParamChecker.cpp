@@ -226,6 +226,6 @@ void ento::registerNonNullParamChecker(CheckerManager &mgr) {
   mgr.registerChecker<NonNullParamChecker>();
 }
 
-bool ento::shouldRegisterNonNullParamChecker(const LangOptions &LO) {
+bool ento::shouldRegisterNonNullParamChecker(const CheckerManager &mgr) {
   return true;
 }

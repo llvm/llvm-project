@@ -334,17 +334,6 @@ protected:
   /// default location.
   virtual unsigned getDefaultLocationReserved2Flags() const { return 0; }
 
-  /// Tries to emit declare variant function for \p OldGD from \p NewGD.
-  /// \param OrigAddr LLVM IR value for \p OldGD.
-  /// \param IsForDefinition true, if requested emission for the definition of
-  /// \p OldGD.
-  /// \returns true, was able to emit a definition function for \p OldGD, which
-  /// points to \p NewGD.
-  virtual bool tryEmitDeclareVariant(const GlobalDecl &NewGD,
-                                     const GlobalDecl &OldGD,
-                                     llvm::GlobalValue *OrigAddr,
-                                     bool IsForDefinition);
-
   /// Returns default flags for the barriers depending on the directive, for
   /// which this barier is going to be emitted.
   static unsigned getDefaultFlagsForBarriers(OpenMPDirectiveKind Kind);
@@ -685,12 +674,6 @@ private:
   /// List of variables that can become declare target implicitly and, thus,
   /// must be emitted.
   llvm::SmallDenseSet<const VarDecl *> DeferredGlobalVariables;
-
-  /// Mapping of the original functions to their variants and original global
-  /// decl.
-  llvm::MapVector<CanonicalDeclPtr<const FunctionDecl>,
-                  std::pair<GlobalDecl, GlobalDecl>>
-      DeferredVariantFunction;
 
   using NontemporalDeclsSet = llvm::SmallDenseSet<CanonicalDeclPtr<const Decl>>;
   /// Stack for list of declarations in current context marked as nontemporal.
@@ -1725,9 +1708,6 @@ public:
 
   /// Return whether the unified_shared_memory has been specified.
   bool hasRequiresUnifiedSharedMemory() const;
-
-  /// Emits the definition of the declare variant function.
-  virtual bool emitDeclareVariant(GlobalDecl GD, bool IsForDefinition);
 
   /// Checks if the \p VD variable is marked as nontemporal declaration in
   /// current context.

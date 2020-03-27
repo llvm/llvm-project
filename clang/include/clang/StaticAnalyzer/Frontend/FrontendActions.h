@@ -20,6 +20,8 @@ class AnalyzerOptions;
 
 namespace ento {
 
+class CheckerManager;
+
 //===----------------------------------------------------------------------===//
 // AST Consumer Actions
 //===----------------------------------------------------------------------===//
@@ -52,7 +54,6 @@ private:
 };
 
 } // namespace ento
-
 } // end namespace clang
 
 #endif

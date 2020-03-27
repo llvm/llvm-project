@@ -14,8 +14,26 @@
 ; RUN: llvm-nm %t31.lto.o | FileCheck %s --check-prefix=NM1
 ; RUN: llvm-nm %t32.lto.o | FileCheck %s --check-prefix=NM2
 
-; Check without --thinlto-jobs (which currently default to hardware_concurrency)
-; RUN: wasm-ld -r %t1.o %t2.o -o %t3
+; Test with all threads, on all cores, on all CPU sockets
+; RUN: rm -f %t31.lto.o %t32.lto.o
+; RUN: wasm-ld -r -save-temps --thinlto-jobs=all %t1.o %t2.o -o %t3
+; RUN: llvm-nm %t31.lto.o | FileCheck %s --check-prefix=NM1
+; RUN: llvm-nm %t32.lto.o | FileCheck %s --check-prefix=NM2
+
+; Test with many more threads than the system has
+; RUN: rm -f %t31.lto.o %t32.lto.o
+; RUN: wasm-ld -r -save-temps --thinlto-jobs=1000 %t1.o %t2.o -o %t3
+; RUN: llvm-nm %t31.lto.o | FileCheck %s --check-prefix=NM1
+; RUN: llvm-nm %t32.lto.o | FileCheck %s --check-prefix=NM2
+
+; Test with a bad value
+; RUN: rm -f %t31.lto.o %t32.lto.o
+; RUN: not wasm-ld -r -save-temps --thinlto-jobs=foo %t1.o %t2.o -o %t3 2>&1 | FileCheck %s --check-prefix=BAD-JOBS
+; BAD-JOBS: error: --thinlto-jobs: invalid job count: foo
+
+; Check without --thinlto-jobs (which currently defaults to heavyweight_hardware_concurrency, meanning one thread per hardware core -- not SMT)
+; RUN: rm -f %t31.lto.o %t32.lto.o
+; RUN: wasm-ld -r -save-temps %t1.o %t2.o -o %t3
 ; RUN: llvm-nm %t31.lto.o | FileCheck %s --check-prefix=NM1
 ; RUN: llvm-nm %t32.lto.o | FileCheck %s --check-prefix=NM2
 

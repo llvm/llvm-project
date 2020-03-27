@@ -165,6 +165,6 @@ void ento::registerReturnValueChecker(CheckerManager &Mgr) {
   Mgr.registerChecker<ReturnValueChecker>();
 }
 
-bool ento::shouldRegisterReturnValueChecker(const LangOptions &LO) {
+bool ento::shouldRegisterReturnValueChecker(const CheckerManager &mgr) {
   return true;
 }

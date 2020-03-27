@@ -1608,7 +1608,7 @@ static bool isMemoryOp(const MachineInstr &MI) {
 
   // Unaligned ldr/str is emulated by some kernels, but unaligned ldm/stm is
   // not.
-  if (MMO.getAlignment() < 4)
+  if (MMO.getAlign() < Align(4))
     return false;
 
   // str <undef> could probably be eliminated entirely, but for now we just want
@@ -2183,12 +2183,12 @@ ARMPreAllocLoadStoreOpt::CanFormLdStDWord(MachineInstr *Op0, MachineInstr *Op1,
       (*Op0->memoperands_begin())->isAtomic())
     return false;
 
-  unsigned Align = (*Op0->memoperands_begin())->getAlignment();
+  Align Alignment = (*Op0->memoperands_begin())->getAlign();
   const Function &Func = MF->getFunction();
-  unsigned ReqAlign = STI->hasV6Ops()
-    ? TD->getABITypeAlignment(Type::getInt64Ty(Func.getContext()))
-    : 8;  // Pre-v6 need 8-byte align
-  if (Align < ReqAlign)
+  Align ReqAlign =
+      STI->hasV6Ops() ? TD->getABITypeAlign(Type::getInt64Ty(Func.getContext()))
+                      : Align(8); // Pre-v6 need 8-byte align
+  if (Alignment < ReqAlign)
     return false;
 
   // Then make sure the immediate offset fits.

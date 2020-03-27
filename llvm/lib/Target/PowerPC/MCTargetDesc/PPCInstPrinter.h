@@ -39,9 +39,9 @@ public:
   void printInstruction(const MCInst *MI, uint64_t Address, raw_ostream &O);
   static const char *getRegisterName(unsigned RegNo);
 
-  bool printAliasInstr(const MCInst *MI, raw_ostream &OS);
-  void printCustomAliasOperand(const MCInst *MI, unsigned OpIdx,
-                               unsigned PrintMethodIdx,
+  bool printAliasInstr(const MCInst *MI, uint64_t Address, raw_ostream &OS);
+  void printCustomAliasOperand(const MCInst *MI, uint64_t Address,
+                               unsigned OpIdx, unsigned PrintMethodIdx,
                                raw_ostream &OS);
 
   void printOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);

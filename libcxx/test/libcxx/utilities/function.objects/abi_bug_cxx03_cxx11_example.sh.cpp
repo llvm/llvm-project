@@ -13,10 +13,10 @@
 // This tests is meant to demonstrate an existing ABI bug between the
 // C++03 and C++11 implementations of std::function. It is not a real test.
 
-// RUN: %cxx -c %s -o %t.first.o %flags %compile_flags -std=c++03 -g
-// RUN: %cxx -c %s -o %t.second.o -DWITH_MAIN %flags %compile_flags -g -std=c++11
-// RUN: %cxx -o %t.exe %t.first.o %t.second.o %flags %link_flags -g
-// RUN: %run
+// RUN: %{cxx} -c %s -o %t.first.o %{flags} %{compile_flags} -std=c++03 -g
+// RUN: %{cxx} -c %s -o %t.second.o -DWITH_MAIN %{flags} %{compile_flags} -g -std=c++11
+// RUN: %{cxx} -o %t.exe %t.first.o %t.second.o %{flags} %{link_flags} -g
+// RUN: %{run}
 
 #include <functional>
 #include <cassert>

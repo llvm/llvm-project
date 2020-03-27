@@ -436,6 +436,6 @@ void ento::registerCastValueChecker(CheckerManager &Mgr) {
   Mgr.registerChecker<CastValueChecker>();
 }
 
-bool ento::shouldRegisterCastValueChecker(const LangOptions &LO) {
+bool ento::shouldRegisterCastValueChecker(const CheckerManager &mgr) {
   return true;
 }

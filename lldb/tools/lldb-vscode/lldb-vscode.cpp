@@ -1733,70 +1733,45 @@ void request_setBreakpoints(const llvm::json::Object &request) {
   const auto path = GetString(source, "path");
   auto breakpoints = arguments->getArray("breakpoints");
   llvm::json::Array response_breakpoints;
+
   // Decode the source breakpoint infos for this "setBreakpoints" request
   SourceBreakpointMap request_bps;
   for (const auto &bp : *breakpoints) {
     auto bp_obj = bp.getAsObject();
     if (bp_obj) {
       SourceBreakpoint src_bp(*bp_obj);
-      request_bps[src_bp.line] = std::move(src_bp);
+      request_bps[src_bp.line] = src_bp;
+
+      // We check if this breakpoint already exists to update it
+      auto existing_source_bps = g_vsc.source_breakpoints.find(path);
+      if (existing_source_bps != g_vsc.source_breakpoints.end()) {
+        const auto &existing_bp = existing_source_bps->second.find(src_bp.line);
+        if (existing_bp != existing_source_bps->second.end()) {
+          existing_bp->second.UpdateBreakpoint(src_bp);
+          AppendBreakpoint(existing_bp->second.bp, response_breakpoints);
+          continue;
+        }
+      }
+      // At this point the breakpoint is new
+      src_bp.SetBreakpoint(path.data());
+      AppendBreakpoint(src_bp.bp, response_breakpoints);
+      g_vsc.source_breakpoints[path][src_bp.line] = std::move(src_bp);
     }
   }
 
-  // See if we already have breakpoints set for this source file from a
-  // previous "setBreakpoints" request
+  // Delete any breakpoints in this source file that aren't in the
+  // request_bps set. There is no call to remove breakpoints other than
+  // calling this function with a smaller or empty "breakpoints" list.
   auto old_src_bp_pos = g_vsc.source_breakpoints.find(path);
   if (old_src_bp_pos != g_vsc.source_breakpoints.end()) {
-
-    // We have already set breakpoints in this source file and they are giving
-    // use a new list of lines to set breakpoints on. Some breakpoints might
-    // already be set, and some might not. We need to remove any breakpoints
-    // whose lines are not contained in the any breakpoints lines in in the
-    // "breakpoints" array.
-
-    // Delete any breakpoints in this source file that aren't in the
-    // request_bps set. There is no call to remove breakpoints other than
-    // calling this function with a smaller or empty "breakpoints" list.
-    std::vector<uint32_t> remove_lines;
-    for (auto &pair: old_src_bp_pos->second) {
-      auto request_pos = request_bps.find(pair.first);
+    for (auto &old_bp : old_src_bp_pos->second) {
+      auto request_pos = request_bps.find(old_bp.first);
       if (request_pos == request_bps.end()) {
         // This breakpoint no longer exists in this source file, delete it
-        g_vsc.target.BreakpointDelete(pair.second.bp.GetID());
-        remove_lines.push_back(pair.first);
-      } else {
-        pair.second.UpdateBreakpoint(request_pos->second);
-        // Remove this breakpoint from the request breakpoints since we have
-        // handled it here and we don't need to set a new breakpoint below.
-        request_bps.erase(request_pos);
-        // Add this breakpoint info to the response
-        AppendBreakpoint(pair.second.bp, response_breakpoints);
+        g_vsc.target.BreakpointDelete(old_bp.second.bp.GetID());
+        old_src_bp_pos->second.erase(old_bp.first);
       }
     }
-    // Remove any lines from this existing source breakpoint map
-    for (auto line: remove_lines)
-     old_src_bp_pos->second.erase(line);
-
-    // Now add any breakpoint infos left over in request_bps are the
-    // breakpoints that weren't set in this source file yet. We need to update
-    // thread source breakpoint info for the source file in the variable
-    // "old_src_bp_pos->second" so the info for this source file is up to date.
-    for (auto &pair : request_bps) {
-      pair.second.SetBreakpoint(path.data());
-      // Add this breakpoint info to the response
-      AppendBreakpoint(pair.second.bp, response_breakpoints);
-      old_src_bp_pos->second[pair.first] = std::move(pair.second);
-    }
-  } else {
-    // No breakpoints were set for this source file yet. Set all breakpoints
-    // for each line and add them to the response and create an entry in
-    // g_vsc.source_breakpoints for this source file.
-    for (auto &pair : request_bps) {
-      pair.second.SetBreakpoint(path.data());
-      // Add this breakpoint info to the response
-      AppendBreakpoint(pair.second.bp, response_breakpoints);
-    }
-    g_vsc.source_breakpoints[path] = std::move(request_bps);
   }
 
   llvm::json::Object body;

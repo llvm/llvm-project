@@ -337,6 +337,6 @@ void ento::registerMallocOverflowSecurityChecker(CheckerManager &mgr) {
   mgr.registerChecker<MallocOverflowSecurityChecker>();
 }
 
-bool ento::shouldRegisterMallocOverflowSecurityChecker(const LangOptions &LO) {
+bool ento::shouldRegisterMallocOverflowSecurityChecker(const CheckerManager &mgr) {
   return true;
 }

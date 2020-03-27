@@ -447,6 +447,6 @@ void ento::registerExprInspectionChecker(CheckerManager &Mgr) {
   Mgr.registerChecker<ExprInspectionChecker>();
 }
 
-bool ento::shouldRegisterExprInspectionChecker(const LangOptions &LO) {
+bool ento::shouldRegisterExprInspectionChecker(const CheckerManager &mgr) {
   return true;
 }

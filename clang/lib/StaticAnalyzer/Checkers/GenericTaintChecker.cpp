@@ -948,6 +948,6 @@ void ento::registerGenericTaintChecker(CheckerManager &Mgr) {
     Checker->parseConfiguration(Mgr, Option, std::move(Config.getValue()));
 }
 
-bool ento::shouldRegisterGenericTaintChecker(const LangOptions &LO) {
+bool ento::shouldRegisterGenericTaintChecker(const CheckerManager &mgr) {
   return true;
 }

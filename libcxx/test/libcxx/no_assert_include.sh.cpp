@@ -10,7 +10,7 @@
 // Ensure that none of the standard C++ headers implicitly include cassert or
 // assert.h (because assert() is implemented as a macro).
 
-// RUN: %compile -fsyntax-only
+// RUN: %{compile} -fsyntax-only
 
 // Prevent <ext/hash_map> from generating deprecated warnings for this test.
 #if defined(__DEPRECATED)

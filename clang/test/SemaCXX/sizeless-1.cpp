@@ -266,6 +266,7 @@ int vararg_receiver(int count, svint8_t first, ...) {
   __builtin_va_list va;
 
   __builtin_va_start(va, first);
+  __builtin_va_arg(va, svint8_t);
   __builtin_va_end(va);
   return count;
 }
@@ -491,6 +492,16 @@ void cxx_only(int sel) {
   _Static_assert(!__is_assignable(svint8_t, svint8_t), "");
   _Static_assert(__is_assignable(svint8_t &, svint8_t), "");
   _Static_assert(!__is_assignable(svint8_t &, svint16_t), "");
+  _Static_assert(__has_nothrow_assign(svint8_t), "");
+  _Static_assert(__has_nothrow_move_assign(svint8_t), "");
+  _Static_assert(__has_nothrow_copy(svint8_t), "");
+  _Static_assert(__has_nothrow_constructor(svint8_t), "");
+  _Static_assert(__has_trivial_assign(svint8_t), "");
+  _Static_assert(__has_trivial_move_assign(svint8_t), "");
+  _Static_assert(__has_trivial_copy(svint8_t), "");
+  _Static_assert(__has_trivial_constructor(svint8_t), "");
+  _Static_assert(__has_trivial_move_constructor(svint8_t), "");
+  _Static_assert(__has_trivial_destructor(svint8_t), "");
   _Static_assert(!__has_virtual_destructor(svint8_t), "");
   _Static_assert(!__is_abstract(svint8_t), "");
   _Static_assert(!__is_aggregate(svint8_t), "");
@@ -502,6 +513,7 @@ void cxx_only(int sel) {
   _Static_assert(!__is_enum(svint8_t), "");
   _Static_assert(!__is_final(svint8_t), "");
   _Static_assert(!__is_literal(svint8_t), "");
+  _Static_assert(__is_pod(svint8_t), "");
   _Static_assert(!__is_polymorphic(svint8_t), "");
   _Static_assert(__is_object(svint8_t), "");
   _Static_assert(!__is_arithmetic(svint8_t), "");

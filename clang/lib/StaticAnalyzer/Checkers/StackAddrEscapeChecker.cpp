@@ -365,7 +365,7 @@ void ento::registerStackAddrEscapeBase(CheckerManager &mgr) {
   mgr.registerChecker<StackAddrEscapeChecker>();
 }
 
-bool ento::shouldRegisterStackAddrEscapeBase(const LangOptions &LO) {
+bool ento::shouldRegisterStackAddrEscapeBase(const CheckerManager &mgr) {
   return true;
 }
 
@@ -376,7 +376,7 @@ bool ento::shouldRegisterStackAddrEscapeBase(const LangOptions &LO) {
     Chk->ChecksEnabled[StackAddrEscapeChecker::CK_##name] = true;              \
   }                                                                            \
                                                                                \
-  bool ento::shouldRegister##name(const LangOptions &LO) {                     \
+  bool ento::shouldRegister##name(const CheckerManager &mgr) {                     \
     return true;                                                               \
   }
 

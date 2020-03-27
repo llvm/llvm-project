@@ -52,9 +52,9 @@ static LLVM::LLVMType unwrap(Type type) {
 }
 
 /// Initialize customization to default callbacks.
-LLVMTypeConverterCustomization::LLVMTypeConverterCustomization() {
-  funcArgConverter = structFuncArgTypeConverter;
-}
+LLVMTypeConverterCustomization::LLVMTypeConverterCustomization()
+    : funcArgConverter(structFuncArgTypeConverter),
+      indexBitwidth(kDeriveIndexBitwidthFromDataLayout) {}
 
 /// Callback to convert function argument types. It converts a MemRef function
 /// argument to a list of non-aggregate types containing descriptor
@@ -133,6 +133,9 @@ LLVMTypeConverter::LLVMTypeConverter(
       customizations(customs) {
   assert(llvmDialect && "LLVM IR dialect is not registered");
   module = &llvmDialect->getLLVMModule();
+  if (customizations.indexBitwidth == kDeriveIndexBitwidthFromDataLayout)
+    customizations.indexBitwidth =
+        module->getDataLayout().getPointerSizeInBits();
 
   // Register conversions for the standard types.
   addConversion([&](FloatType type) { return convertFloatType(type); });
@@ -159,8 +162,7 @@ llvm::LLVMContext &LLVMTypeConverter::getLLVMContext() {
 }
 
 LLVM::LLVMType LLVMTypeConverter::getIndexType() {
-  return LLVM::LLVMType::getIntNTy(
-      llvmDialect, module->getDataLayout().getPointerSizeInBits());
+  return LLVM::LLVMType::getIntNTy(llvmDialect, getIndexTypeBitwidth());
 }
 
 Type LLVMTypeConverter::convertIndexType(IndexType type) {
@@ -717,8 +719,7 @@ llvm::Module &ConvertToLLVMPattern::getModule() const {
 }
 
 LLVM::LLVMType ConvertToLLVMPattern::getIndexType() const {
-  return LLVM::LLVMType::getIntNTy(
-      &getDialect(), getModule().getDataLayout().getPointerSizeInBits());
+  return typeConverter.getIndexType();
 }
 
 LLVM::LLVMType ConvertToLLVMPattern::getVoidType() const {
@@ -1208,119 +1209,46 @@ LogicalResult LLVM::detail::vectorOneToOneRewrite(
 }
 
 namespace {
-// Specific lowerings.
-// FIXME: this should be tablegen'ed.
-struct AbsFOpLowering
-    : public VectorConvertToLLVMPattern<AbsFOp, LLVM::FAbsOp> {
-  using Super::Super;
-};
-struct CeilFOpLowering
-    : public VectorConvertToLLVMPattern<CeilFOp, LLVM::FCeilOp> {
-  using Super::Super;
-};
-struct CosOpLowering : public VectorConvertToLLVMPattern<CosOp, LLVM::CosOp> {
-  using Super::Super;
-};
-struct ExpOpLowering : public VectorConvertToLLVMPattern<ExpOp, LLVM::ExpOp> {
-  using Super::Super;
-};
-struct LogOpLowering : public VectorConvertToLLVMPattern<LogOp, LLVM::LogOp> {
-  using Super::Super;
-};
-struct Log10OpLowering
-    : public VectorConvertToLLVMPattern<Log10Op, LLVM::Log10Op> {
-  using Super::Super;
-};
-struct Log2OpLowering
-    : public VectorConvertToLLVMPattern<Log2Op, LLVM::Log2Op> {
-  using Super::Super;
-};
-struct NegFOpLowering
-    : public VectorConvertToLLVMPattern<NegFOp, LLVM::FNegOp> {
-  using Super::Super;
-};
-struct AddIOpLowering : public VectorConvertToLLVMPattern<AddIOp, LLVM::AddOp> {
-  using Super::Super;
-};
-struct SubIOpLowering : public VectorConvertToLLVMPattern<SubIOp, LLVM::SubOp> {
-  using Super::Super;
-};
-struct MulIOpLowering : public VectorConvertToLLVMPattern<MulIOp, LLVM::MulOp> {
-  using Super::Super;
-};
-struct SignedDivIOpLowering
-    : public VectorConvertToLLVMPattern<SignedDivIOp, LLVM::SDivOp> {
-  using Super::Super;
-};
-struct SqrtOpLowering
-    : public VectorConvertToLLVMPattern<SqrtOp, LLVM::SqrtOp> {
-  using Super::Super;
-};
-struct UnsignedDivIOpLowering
-    : public VectorConvertToLLVMPattern<UnsignedDivIOp, LLVM::UDivOp> {
-  using Super::Super;
-};
-struct SignedRemIOpLowering
-    : public VectorConvertToLLVMPattern<SignedRemIOp, LLVM::SRemOp> {
-  using Super::Super;
-};
-struct UnsignedRemIOpLowering
-    : public VectorConvertToLLVMPattern<UnsignedRemIOp, LLVM::URemOp> {
-  using Super::Super;
-};
-struct AndOpLowering : public VectorConvertToLLVMPattern<AndOp, LLVM::AndOp> {
-  using Super::Super;
-};
-struct OrOpLowering : public VectorConvertToLLVMPattern<OrOp, LLVM::OrOp> {
-  using Super::Super;
-};
-struct XOrOpLowering : public VectorConvertToLLVMPattern<XOrOp, LLVM::XOrOp> {
-  using Super::Super;
-};
-struct AddFOpLowering
-    : public VectorConvertToLLVMPattern<AddFOp, LLVM::FAddOp> {
-  using Super::Super;
-};
-struct SubFOpLowering
-    : public VectorConvertToLLVMPattern<SubFOp, LLVM::FSubOp> {
-  using Super::Super;
-};
-struct MulFOpLowering
-    : public VectorConvertToLLVMPattern<MulFOp, LLVM::FMulOp> {
-  using Super::Super;
-};
-struct DivFOpLowering
-    : public VectorConvertToLLVMPattern<DivFOp, LLVM::FDivOp> {
-  using Super::Super;
-};
-struct RemFOpLowering
-    : public VectorConvertToLLVMPattern<RemFOp, LLVM::FRemOp> {
-  using Super::Super;
-};
-struct CopySignOpLowering
-    : public VectorConvertToLLVMPattern<CopySignOp, LLVM::CopySignOp> {
-  using Super::Super;
-};
-struct SelectOpLowering
-    : public OneToOneConvertToLLVMPattern<SelectOp, LLVM::SelectOp> {
-  using Super::Super;
-};
-struct ConstLLVMOpLowering
-    : public OneToOneConvertToLLVMPattern<ConstantOp, LLVM::ConstantOp> {
-  using Super::Super;
-};
-struct ShiftLeftOpLowering
-    : public OneToOneConvertToLLVMPattern<ShiftLeftOp, LLVM::ShlOp> {
-  using Super::Super;
-};
-struct SignedShiftRightOpLowering
-    : public OneToOneConvertToLLVMPattern<SignedShiftRightOp, LLVM::AShrOp> {
-  using Super::Super;
-};
-struct UnsignedShiftRightOpLowering
-    : public OneToOneConvertToLLVMPattern<UnsignedShiftRightOp, LLVM::LShrOp> {
-  using Super::Super;
-};
+// Straightforward lowerings.
+using AbsFOpLowering = VectorConvertToLLVMPattern<AbsFOp, LLVM::FAbsOp>;
+using AddFOpLowering = VectorConvertToLLVMPattern<AddFOp, LLVM::FAddOp>;
+using AddIOpLowering = VectorConvertToLLVMPattern<AddIOp, LLVM::AddOp>;
+using AndOpLowering = VectorConvertToLLVMPattern<AndOp, LLVM::AndOp>;
+using CeilFOpLowering = VectorConvertToLLVMPattern<CeilFOp, LLVM::FCeilOp>;
+using ConstLLVMOpLowering =
+    OneToOneConvertToLLVMPattern<ConstantOp, LLVM::ConstantOp>;
+using CopySignOpLowering =
+    VectorConvertToLLVMPattern<CopySignOp, LLVM::CopySignOp>;
+using CosOpLowering = VectorConvertToLLVMPattern<CosOp, LLVM::CosOp>;
+using DivFOpLowering = VectorConvertToLLVMPattern<DivFOp, LLVM::FDivOp>;
+using ExpOpLowering = VectorConvertToLLVMPattern<ExpOp, LLVM::ExpOp>;
+using Log10OpLowering = VectorConvertToLLVMPattern<Log10Op, LLVM::Log10Op>;
+using Log2OpLowering = VectorConvertToLLVMPattern<Log2Op, LLVM::Log2Op>;
+using LogOpLowering = VectorConvertToLLVMPattern<LogOp, LLVM::LogOp>;
+using MulFOpLowering = VectorConvertToLLVMPattern<MulFOp, LLVM::FMulOp>;
+using MulIOpLowering = VectorConvertToLLVMPattern<MulIOp, LLVM::MulOp>;
+using NegFOpLowering = VectorConvertToLLVMPattern<NegFOp, LLVM::FNegOp>;
+using OrOpLowering = VectorConvertToLLVMPattern<OrOp, LLVM::OrOp>;
+using RemFOpLowering = VectorConvertToLLVMPattern<RemFOp, LLVM::FRemOp>;
+using SelectOpLowering = OneToOneConvertToLLVMPattern<SelectOp, LLVM::SelectOp>;
+using ShiftLeftOpLowering =
+    OneToOneConvertToLLVMPattern<ShiftLeftOp, LLVM::ShlOp>;
+using SignedDivIOpLowering =
+    VectorConvertToLLVMPattern<SignedDivIOp, LLVM::SDivOp>;
+using SignedRemIOpLowering =
+    VectorConvertToLLVMPattern<SignedRemIOp, LLVM::SRemOp>;
+using SignedShiftRightOpLowering =
+    OneToOneConvertToLLVMPattern<SignedShiftRightOp, LLVM::AShrOp>;
+using SqrtOpLowering = VectorConvertToLLVMPattern<SqrtOp, LLVM::SqrtOp>;
+using SubFOpLowering = VectorConvertToLLVMPattern<SubFOp, LLVM::FSubOp>;
+using SubIOpLowering = VectorConvertToLLVMPattern<SubIOp, LLVM::SubOp>;
+using UnsignedDivIOpLowering =
+    VectorConvertToLLVMPattern<UnsignedDivIOp, LLVM::UDivOp>;
+using UnsignedRemIOpLowering =
+    VectorConvertToLLVMPattern<UnsignedRemIOp, LLVM::URemOp>;
+using UnsignedShiftRightOpLowering =
+    OneToOneConvertToLLVMPattern<UnsignedShiftRightOp, LLVM::LShrOp>;
+using XOrOpLowering = VectorConvertToLLVMPattern<XOrOp, LLVM::XOrOp>;
 
 // Check if the MemRefType `type` is supported by the lowering. We currently
 // only support memrefs with identity maps.
@@ -2869,11 +2797,12 @@ namespace {
 /// A pass converting MLIR operations into the LLVM IR dialect.
 struct LLVMLoweringPass : public ModulePass<LLVMLoweringPass> {
   /// Creates an LLVM lowering pass.
-  explicit LLVMLoweringPass(bool useAlloca, bool useBarePtrCallConv,
-                            bool emitCWrappers) {
+  LLVMLoweringPass(bool useAlloca, bool useBarePtrCallConv, bool emitCWrappers,
+                   unsigned indexBitwidth) {
     this->useAlloca = useAlloca;
     this->useBarePtrCallConv = useBarePtrCallConv;
     this->emitCWrappers = emitCWrappers;
+    this->indexBitwidth = indexBitwidth;
   }
   explicit LLVMLoweringPass() {}
   LLVMLoweringPass(const LLVMLoweringPass &pass) {}
@@ -2893,6 +2822,7 @@ struct LLVMLoweringPass : public ModulePass<LLVMLoweringPass> {
     LLVMTypeConverterCustomization customs;
     customs.funcArgConverter = useBarePtrCallConv ? barePtrFuncArgTypeConverter
                                                   : structFuncArgTypeConverter;
+    customs.indexBitwidth = indexBitwidth;
     LLVMTypeConverter typeConverter(&getContext(), customs);
 
     OwningRewritePatternList patterns;
@@ -2926,6 +2856,13 @@ struct LLVMLoweringPass : public ModulePass<LLVMLoweringPass> {
       *this, "emit-c-wrappers",
       llvm::cl::desc("Emit C-compatible wrapper functions"),
       llvm::cl::init(false)};
+
+  /// Configure the bitwidth of the index type when lowered to LLVM.
+  Option<unsigned> indexBitwidth{
+      *this, "index-bitwidth",
+      llvm::cl::desc(
+          "Bitwidth of the index type, 0 to use size of machine word"),
+      llvm::cl::init(kDeriveIndexBitwidthFromDataLayout)};
 };
 } // end namespace
 
@@ -2938,9 +2875,9 @@ mlir::LLVMConversionTarget::LLVMConversionTarget(MLIRContext &ctx)
 
 std::unique_ptr<OpPassBase<ModuleOp>>
 mlir::createLowerToLLVMPass(bool useAlloca, bool useBarePtrCallConv,
-                            bool emitCWrappers) {
+                            bool emitCWrappers, unsigned indexBitwidth) {
   return std::make_unique<LLVMLoweringPass>(useAlloca, useBarePtrCallConv,
-                                            emitCWrappers);
+                                            emitCWrappers, indexBitwidth);
 }
 
 static PassRegistration<LLVMLoweringPass>

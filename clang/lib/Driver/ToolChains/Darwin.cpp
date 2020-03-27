@@ -23,6 +23,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/TargetParser.h"
+#include "llvm/Support/Threading.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include <cstdlib> // ::getenv
 
@@ -605,10 +606,12 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   getMachOToolChain().addProfileRTLibs(Args, CmdArgs);
 
-  if (unsigned Parallelism =
-          getLTOParallelism(Args, getToolChain().getDriver())) {
+  StringRef Parallelism = getLTOParallelism(Args, getToolChain().getDriver());
+  if (!Parallelism.empty()) {
     CmdArgs.push_back("-mllvm");
-    CmdArgs.push_back(Args.MakeArgString("-threads=" + Twine(Parallelism)));
+    unsigned NumThreads =
+        llvm::get_threadpool_strategy(Parallelism)->compute_thread_count();
+    CmdArgs.push_back(Args.MakeArgString("-threads=" + Twine(NumThreads)));
   }
 
   if (getToolChain().ShouldLinkCXXStdlib(Args))
