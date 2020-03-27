@@ -285,7 +285,7 @@ struct MemFunctionInfoTy {
       CD_strdup{{"strdup"}, 1}, CD_win_strdup{{"_strdup"}, 1},
       CD_kmalloc{{"kmalloc"}, 2}, CD_if_nameindex{{"if_nameindex"}, 1},
       CD_if_freenameindex{{"if_freenameindex"}, 1}, CD_wcsdup{{"wcsdup"}, 1},
-      CD_win_wcsdup{{"_wcsdup"}, 1}, CD_kfree{{"kfree"}, 2},
+      CD_win_wcsdup{{"_wcsdup"}, 1}, CD_kfree{{"kfree"}, 1},
       CD_g_malloc{{"g_malloc"}, 1}, CD_g_malloc0{{"g_malloc0"}, 1},
       CD_g_realloc{{"g_realloc"}, 2}, CD_g_try_malloc{{"g_try_malloc"}, 1},
       CD_g_try_malloc0{{"g_try_malloc0"}, 1},
