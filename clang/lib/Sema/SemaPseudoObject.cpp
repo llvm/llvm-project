@@ -1663,6 +1663,8 @@ Expr *Sema::recreateSyntacticForm(PseudoObjectExpr *E) {
                                         bop->getType(), bop->getValueKind(),
                                         bop->getObjectKind(),
                                         bop->getOperatorLoc(), FPOptions());
+  } else if (isa<CallExpr>(syntax)) {
+    return syntax;
   } else {
     assert(syntax->hasPlaceholderType(BuiltinType::PseudoObject));
     return stripOpaqueValuesFromPseudoObjectRef(*this, syntax);
