@@ -123,7 +123,7 @@ class LibcxxTestFormat(object):
         tmpDir, tmpBase = lit.TestRunner.getTempPaths(test)
         substitutions = lit.TestRunner.getDefaultSubstitutions(test, tmpDir,
                                                                tmpBase)
-        substitutions.append(('%file_dependencies', ' '.join(data_files)))
+        substitutions.append(('%{file_dependencies}', ' '.join(data_files)))
         script = lit.TestRunner.applySubstitutions(script, substitutions,
                                                    recursion_limit=lit_config.recursiveExpansionLimit)
 
