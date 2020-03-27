@@ -525,13 +525,13 @@ bool isParagraphLineBreak(llvm::StringRef Str, size_t LineBreakIndex) {
   return Str.substr(LineBreakIndex + 1)
       .drop_while([](auto C) { return C == ' ' || C == '\t'; })
       .startswith("\n");
-};
+}
 
 bool isPunctuationLineBreak(llvm::StringRef Str, size_t LineBreakIndex) {
   constexpr llvm::StringLiteral Punctuation = R"txt(.:,;!?)txt";
 
   return LineBreakIndex > 0 && Punctuation.contains(Str[LineBreakIndex - 1]);
-};
+}
 
 bool isFollowedByHardLineBreakIndicator(llvm::StringRef Str,
                                         size_t LineBreakIndex) {
@@ -556,7 +556,7 @@ bool isFollowedByHardLineBreakIndicator(llvm::StringRef Str,
        Str[NextNonSpaceCharIndex + 1] == ')');
 
   return FollowedBySingleCharIndicator || FollowedByNumberedListIndicator;
-};
+}
 
 bool isHardLineBreak(llvm::StringRef Str, size_t LineBreakIndex) {
   return isPunctuationLineBreak(Str, LineBreakIndex) ||
