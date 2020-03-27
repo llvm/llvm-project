@@ -45,6 +45,7 @@
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/MachOUniversal.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Object/XCOFFObjectFile.h"
 #include "llvm/Object/Wasm.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
@@ -500,6 +501,8 @@ static Error getRelocationValueString(const RelocationRef &Rel,
     return getWasmRelocationValueString(Wasm, Rel, Result);
   if (auto *MachO = dyn_cast<MachOObjectFile>(Obj))
     return getMachORelocationValueString(MachO, Rel, Result);
+  if (auto *XCOFF = dyn_cast<XCOFFObjectFile>(Obj))
+    return getXCOFFRelocationValueString(XCOFF, Rel, Result);
   llvm_unreachable("unknown object file format");
 }
 

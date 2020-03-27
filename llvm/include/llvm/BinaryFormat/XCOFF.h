@@ -258,6 +258,7 @@ enum CFileCpuId : uint8_t {
 };
 
 StringRef getMappingClassString(XCOFF::StorageMappingClass SMC);
+StringRef getRelocationTypeString(XCOFF::RelocationType Type);
 
 } // end namespace XCOFF
 } // end namespace llvm
