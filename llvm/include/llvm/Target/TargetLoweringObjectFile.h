@@ -221,7 +221,9 @@ public:
 
   /// On targets that use separate function descriptor symbols, return a section
   /// for the descriptor given its symbol. Use only with defined functions.
-  virtual MCSection *getSectionForFunctionDescriptor(const MCSymbol *S) const {
+  virtual MCSection *
+  getSectionForFunctionDescriptor(const Function *F,
+                                  const TargetMachine &TM) const {
     return nullptr;
   }
 

@@ -27,10 +27,9 @@ entry:
   ret i32 3
 }
 
-; CHECK: .globl foo
+; CHECK: .globl foo[DS]
 ; CHECK: .globl .foo
 ; CHECK: .csect foo[DS]
-; CHECK-NEXT: foo:
 ; 32BIT: .long .foo
 ; 32BIT-NEXT: .long TOC[TC0]
 ; 32BIT-NEXT: .long 0
@@ -40,10 +39,9 @@ entry:
 ; CHECK-NEXT: .csect .text[PR]
 ; CHECK-LABEL: .foo:
 
-; CHECK: .globl main
+; CHECK: .globl main[DS]
 ; CHECK: .globl .main
 ; CHECK: .csect main[DS]
-; CHECK-NEXT: main:
 ; 32BIT: .long .main
 ; 32BIT-NEXT: .long TOC[TC0]
 ; 32BIT-NEXT: .long 0
@@ -58,7 +56,6 @@ entry:
 
 ; CHECK: .lglobl .static_foo
 ; CHECK: .csect static_foo[DS]
-; CHECK-NEXT: static_foo:
 ; 32BIT: .long .static_foo
 ; 32BIT-NEXT: .long TOC[TC0]
 ; 32BIT-NEXT: .long 0

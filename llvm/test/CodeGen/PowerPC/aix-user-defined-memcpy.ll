@@ -68,7 +68,7 @@ declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture writeonly, i8* nocapture r
 ; 32-REL-NEXT:  }
 ; 32-REL-NEXT:  Relocation {
 ; 32-REL-NEXT:    Virtual Address: 0x38
-; 32-REL-NEXT:    Symbol: TOC (14)
+; 32-REL-NEXT:    Symbol: TOC (10)
 ; 32-REL-NEXT:    IsSigned: No
 ; 32-REL-NEXT:    FixupBitValue: 0
 ; 32-REL-NEXT:    Length: 32
@@ -84,7 +84,7 @@ declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture writeonly, i8* nocapture r
 ; 32-REL-NEXT:  }
 ; 32-REL-NEXT:  Relocation {
 ; 32-REL-NEXT:    Virtual Address: 0x44
-; 32-REL-NEXT:    Symbol: TOC (14)
+; 32-REL-NEXT:    Symbol: TOC (10)
 ; 32-REL-NEXT:    IsSigned: No
 ; 32-REL-NEXT:    FixupBitValue: 0
 ; 32-REL-NEXT:    Length: 32
