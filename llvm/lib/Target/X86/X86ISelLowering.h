@@ -1359,7 +1359,6 @@ namespace llvm {
     SDValue LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerLRINT_LLRINT(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSETCC(SDValue Op, SelectionDAG &DAG) const;
-    SDValue LowerSTRICT_FSETCC(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSETCCCARRY(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSELECT(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerBRCOND(SDValue Op, SelectionDAG &DAG) const;
