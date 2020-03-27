@@ -1842,7 +1842,7 @@ Optional<unsigned> X86TargetInfo::getCPUCacheLineSize() const {
     case CK_Generic:
       return None;
   }
-  return None;
+  llvm_unreachable("Unknown CPU kind");
 }
 
 bool X86TargetInfo::validateOutputSize(const llvm::StringMap<bool> &FeatureMap,
