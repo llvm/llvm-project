@@ -9844,8 +9844,6 @@ def err_omp_reduction_in_task : Error<
   "reduction variables may not be accessed in an explicit task">;
 def err_omp_reduction_id_not_compatible : Error<
   "list item of type %0 is not valid for specified reduction operation: unable to provide default initialization value">;
-def err_omp_in_reduction_not_task_reduction : Error<
-  "in_reduction variable must appear in a task_reduction clause">;
 def err_omp_reduction_identifier_mismatch : Error<
   "in_reduction variable must have the same reduction operation as in a task_reduction clause">;
 def note_omp_previous_reduction_identifier : Note<

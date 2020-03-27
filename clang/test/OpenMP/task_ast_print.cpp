@@ -182,6 +182,10 @@ int main(int argc, char **argv) {
   // CHECK-NEXT: #pragma omp task in_reduction(min: arr1)
   foo();
   // CHECK-NEXT: foo();
+  // CHECK-NEXT: #pragma omp task in_reduction(+: arr1)
+#pragma omp task in_reduction(+: arr1)
+  foo();
+  // CHECK-NEXT: foo();
   return tmain<int, 5>(b, &b) + tmain<long, 1>(x, &x);
 }
 

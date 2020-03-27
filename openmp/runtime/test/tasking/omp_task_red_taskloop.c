@@ -36,7 +36,7 @@ printf("th %d passed bar0\n", th_gen);
   for (i = 1; i < 4; ++i) {
     bar(i);
 printf("th %d (gen by th %d) passed bar%d in taskloop\n", omp_get_thread_num(), th_gen, i);
-//  #pragma omp task in_reduction(+:r)
+  #pragma omp task in_reduction(+:r)
     r += i;
   }
   return 0;
