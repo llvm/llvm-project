@@ -108,6 +108,7 @@ void ento::registerPointerSortingChecker(CheckerManager &Mgr) {
   Mgr.registerChecker<PointerSortingChecker>();
 }
 
-bool ento::shouldRegisterPointerSortingChecker(const LangOptions &LO) {
+bool ento::shouldRegisterPointerSortingChecker(const CheckerManager &mgr) {
+  const LangOptions &LO = mgr.getLangOpts();
   return LO.CPlusPlus;
 }

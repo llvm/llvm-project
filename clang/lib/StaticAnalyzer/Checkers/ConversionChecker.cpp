@@ -196,6 +196,6 @@ void ento::registerConversionChecker(CheckerManager &mgr) {
   mgr.registerChecker<ConversionChecker>();
 }
 
-bool ento::shouldRegisterConversionChecker(const LangOptions &LO) {
+bool ento::shouldRegisterConversionChecker(const CheckerManager &mgr) {
   return true;
 }

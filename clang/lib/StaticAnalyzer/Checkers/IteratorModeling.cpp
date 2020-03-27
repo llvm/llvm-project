@@ -717,6 +717,6 @@ void ento::registerIteratorModeling(CheckerManager &mgr) {
   mgr.registerChecker<IteratorModeling>();
 }
 
-bool ento::shouldRegisterIteratorModeling(const LangOptions &LO) {
+bool ento::shouldRegisterIteratorModeling(const CheckerManager &mgr) {
   return true;
 }

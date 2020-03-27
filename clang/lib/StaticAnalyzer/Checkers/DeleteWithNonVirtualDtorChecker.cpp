@@ -148,6 +148,6 @@ void ento::registerDeleteWithNonVirtualDtorChecker(CheckerManager &mgr) {
 }
 
 bool ento::shouldRegisterDeleteWithNonVirtualDtorChecker(
-                                                        const LangOptions &LO) {
+                                                    const CheckerManager &mgr) {
   return true;
 }

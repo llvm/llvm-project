@@ -184,6 +184,6 @@ void ento::registerBlockInCriticalSectionChecker(CheckerManager &mgr) {
   mgr.registerChecker<BlockInCriticalSectionChecker>();
 }
 
-bool ento::shouldRegisterBlockInCriticalSectionChecker(const LangOptions &LO) {
+bool ento::shouldRegisterBlockInCriticalSectionChecker(const CheckerManager &mgr) {
   return true;
 }

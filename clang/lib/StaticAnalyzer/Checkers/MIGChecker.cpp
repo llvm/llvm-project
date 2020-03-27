@@ -293,6 +293,6 @@ void ento::registerMIGChecker(CheckerManager &Mgr) {
   Mgr.registerChecker<MIGChecker>();
 }
 
-bool ento::shouldRegisterMIGChecker(const LangOptions &LO) {
+bool ento::shouldRegisterMIGChecker(const CheckerManager &mgr) {
   return true;
 }

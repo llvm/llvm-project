@@ -228,7 +228,7 @@ collectDependencies(const CheckerRegistry::CheckerInfo &checker,
 
 void CheckerRegistry::initializeRegistry(const CheckerManager &Mgr) {
   for (const CheckerInfo &Checker : Checkers) {
-    if (!Checker.isEnabled(Mgr.getLangOpts()))
+    if (!Checker.isEnabled(Mgr))
       continue;
 
     // Recursively enable its dependencies.
@@ -276,7 +276,7 @@ collectDependenciesImpl(const CheckerRegistry::ConstCheckerInfoList &Deps,
 
   for (const CheckerRegistry::CheckerInfo *Dependency : Deps) {
 
-    if (Dependency->isDisabled(Mgr.getLangOpts()))
+    if (Dependency->isDisabled(Mgr))
       return false;
 
     // Collect dependencies recursively.

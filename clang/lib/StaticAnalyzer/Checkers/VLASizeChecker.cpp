@@ -187,6 +187,6 @@ void ento::registerVLASizeChecker(CheckerManager &mgr) {
   mgr.registerChecker<VLASizeChecker>();
 }
 
-bool ento::shouldRegisterVLASizeChecker(const LangOptions &LO) {
+bool ento::shouldRegisterVLASizeChecker(const CheckerManager &mgr) {
   return true;
 }
