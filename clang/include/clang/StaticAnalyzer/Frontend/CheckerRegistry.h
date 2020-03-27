@@ -241,8 +241,9 @@ public:
                   bool IsHidden = false) {
     // Avoid MSVC's Compiler Error C2276:
     // http://msdn.microsoft.com/en-us/library/850cstw1(v=VS.80).aspx
-    addChecker(&initializeManager<CheckerManager, T>, &returnTrue<T>, FullName,
-               Desc, DocsUri, IsHidden);
+    addChecker(&CheckerRegistry::initializeManager<CheckerManager, T>,
+               &CheckerRegistry::returnTrue<T>, FullName, Desc, DocsUri,
+               IsHidden);
   }
 
   /// Makes the checker with the full name \p fullName depends on the checker
