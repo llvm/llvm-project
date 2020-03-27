@@ -1,6 +1,8 @@
 ## Check we are able to dump library soname properly.
 
-# RUN: yaml2obj %s -o %t.o
+## Test a valid object case first. We set 'FileSize' to 0x48, because this is a no-op,
+## i.e. this value would be set if we had no 'FileSize' at all.
+# RUN: yaml2obj -DDTSTRTABVAL=0x0 -DPHDRFILESIZE="0x48" %s -o %t.o
 # RUN: llvm-readobj %t.o | FileCheck %s --check-prefix LLVM
 # RUN: llvm-readelf --dynamic-table %t.o | FileCheck %s --check-prefix GNU
 
@@ -33,7 +35,7 @@ Sections:
     Link:  .dynstr
     Entries:
       - Tag:   DT_STRTAB
-        Value: 0x0000000000000000
+        Value: [[DTSTRTABVAL]]
       - Tag:   DT_STRSZ
         Value: 0x0000000000000007
       - Tag:   DT_SONAME
@@ -41,9 +43,23 @@ Sections:
       - Tag:   DT_NULL
         Value: 0x0000000000000000
 ProgramHeaders:
-  - Type:  PT_LOAD
-    Flags: [ PF_R ]
-    VAddr: 0x0000
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    VAddr:    0x0000
+    FileSize: [[PHDRFILESIZE]]
     Sections:
       - Section: .dynstr
       - Section: .dynamic
+
+## Check we do not crash when an object contains a DT_STRTAB entry whose address
+## is past the end of the object.
+## Note that we have to set p_filesz for PT_LOAD larger than DT_STRTAB value
+## to trigger this particular warning.
+
+# RUN: yaml2obj -DDTSTRTABVAL=0xFFFE -DPHDRFILESIZE=0xFFFF %s -o %t.err.1.o
+# RUN: llvm-readobj %t.err.1.o 2>&1 | FileCheck %s -DFILE=%t.err.1.o --check-prefixes=BROKEN-OFFSET,BROKEN-OFFSET-LLVM
+# RUN: llvm-readelf --dynamic-table %t.err.1.o 2>&1 | FileCheck %s -DFILE=%t.err.1.o --check-prefixes=BROKEN-OFFSET,BROKEN-OFFSET-GNU
+
+# BROKEN-OFFSET:      warning: '[[FILE]]': Unable to parse DT_STRTAB: can't map virtual address 0xfffe to the segment with index 1: the segment ends at 0x10077, which is greater than the file size (0x228)
+# BROKEN-OFFSET-LLVM: LoadName: <String table is empty or was not found>
+# BROKEN-OFFSET-GNU:  0x000000000000000e (SONAME) Library soname: [<String table is empty or was not found>]
