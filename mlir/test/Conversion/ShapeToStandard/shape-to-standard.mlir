@@ -1,4 +1,4 @@
-// RUN: mlir-opt --split-input-file --convert-shape-to-std --verify-diagnostics %s | FileCheck %s --dump-input-on-failure
+// RUN: mlir-opt --split-input-file --convert-shape-to-std --verify-diagnostics %s | FileCheck %s
 
 // Convert `size` to `index` type.
 // CHECK-LABEL: @size_id

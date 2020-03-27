@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -parallel-loop-specialization -split-input-file | FileCheck %s --dump-input-on-failure
+// RUN: mlir-opt %s -parallel-loop-specialization -split-input-file | FileCheck %s
 
 #map0 = affine_map<()[s0, s1] -> (1024, s0 - s1)>
 #map1 = affine_map<()[s0, s1] -> (64, s0 - s1)>

@@ -1,4 +1,4 @@
-// RUN: mlir-opt -test-buffer-placement-preparation -split-input-file %s | FileCheck %s -dump-input-on-failure
+// RUN: mlir-opt -test-buffer-placement-preparation -split-input-file %s | FileCheck %s
 
 // CHECK-LABEL: func @func_signature_conversion
 func @func_signature_conversion(%arg0: tensor<4x8xf32>) {

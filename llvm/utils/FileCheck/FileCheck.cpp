@@ -106,15 +106,6 @@ static cl::opt<bool> VerboseVerbose(
     cl::desc("Print information helpful in diagnosing internal FileCheck\n"
              "issues, or add it to the input dump if enabled.  Implies\n"
              "-v.\n"));
-static const char * DumpInputEnv = "FILECHECK_DUMP_INPUT_ON_FAILURE";
-
-static cl::opt<bool> DumpInputOnFailure(
-    "dump-input-on-failure",
-    cl::init(std::getenv(DumpInputEnv) && *std::getenv(DumpInputEnv)),
-    cl::desc("Dump original input to stderr before failing.\n"
-             "The value can be also controlled using\n"
-             "FILECHECK_DUMP_INPUT_ON_FAILURE environment variable.\n"
-             "This option is deprecated in favor of -dump-input=fail.\n"));
 
 // The order of DumpInputValue members affects their precedence, as documented
 // for -dump-input below.
@@ -678,7 +669,7 @@ int main(int argc, char **argv) {
                         SMLoc());
 
   if (DumpInput == DumpInputDefault)
-    DumpInput = DumpInputOnFailure ? DumpInputFail : DumpInputNever;
+    DumpInput = DumpInputFail;
 
   std::vector<FileCheckDiag> Diags;
   int ExitCode = FC.checkInput(SM, InputFileText,

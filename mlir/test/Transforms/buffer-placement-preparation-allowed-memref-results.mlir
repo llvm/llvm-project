@@ -1,4 +1,4 @@
-// RUN: mlir-opt -test-buffer-placement-preparation-with-allowed-memref-results -split-input-file %s | FileCheck %s -dump-input-on-failure
+// RUN: mlir-opt -test-buffer-placement-preparation-with-allowed-memref-results -split-input-file %s | FileCheck %s
 
 // Since allowMemrefEscaping is on for Buffer Placement in this test pass, all
 // tensor typed function results are converted to memref and remain as function

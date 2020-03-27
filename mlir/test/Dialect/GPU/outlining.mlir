@@ -1,4 +1,4 @@
-// RUN: mlir-opt -allow-unregistered-dialect -gpu-kernel-outlining -split-input-file -verify-diagnostics %s | FileCheck %s -dump-input-on-failure
+// RUN: mlir-opt -allow-unregistered-dialect -gpu-kernel-outlining -split-input-file -verify-diagnostics %s | FileCheck %s
 
 // CHECK: module attributes {gpu.container_module}
 
