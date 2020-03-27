@@ -20,6 +20,7 @@ add_llvm_tool(llvm-objdump
   ELFDump.cpp
   MachODump.cpp
   WasmDump.cpp
+  XCOFFDump.cpp
   )
 
 if(HAVE_LIBXAR)
