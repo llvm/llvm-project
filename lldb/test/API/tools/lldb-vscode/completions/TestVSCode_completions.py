@@ -17,10 +17,10 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
 
     def verify_completions(self, actual_list, expected_list, not_expected_list=[]):
         for expected_item in expected_list:
-            self.assertTrue(expected_item in actual_list)
+            self.assertIn(expected_item, actual_list)
 
         for not_expected_item in not_expected_list:
-            self.assertFalse(not_expected_item in actual_list)
+            self.assertNotIn(not_expected_item, actual_list)
 
     @skipIfWindows
     @skipIfDarwin # Skip this test for now until we can figure out why tings aren't working on build bots
@@ -44,7 +44,7 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
             [
                 {
                     "text": "var",
-                    "label": "var -- vector<basic_string<char, char_traits<char>, allocator<char> >, allocator<basic_string<char, char_traits<char>, allocator<char> > > > &",
+                    "label": "var -- vector<basic_string<char, char_traits<char>, allocator<char>>, allocator<basic_string<char, char_traits<char>, allocator<char>>>> &",
                 }
             ],
             [{"text": "var1", "label": "var1 -- int &"}],
