@@ -183,24 +183,23 @@ define arm_aapcs_vfpcc void @thresh_f32(float* %data, i16 zeroext %N, float %T) 
 ; CHECK-NEXT:    cmp r1, #0
 ; CHECK-NEXT:    it eq
 ; CHECK-NEXT:    popeq {r7, pc}
+; CHECK-NEXT:    vneg.f32 s2, s0
 ; CHECK-NEXT:    mvn r2, #3
 ; CHECK-NEXT:    add.w r1, r2, r1, lsl #2
 ; CHECK-NEXT:    movs r2, #1
-; CHECK-NEXT:    vmov.i32 q2, #0x0
 ; CHECK-NEXT:    add.w lr, r2, r1, lsr #2
-; CHECK-NEXT:    vmov r1, s0
-; CHECK-NEXT:    vdup.32 q0, r1
+; CHECK-NEXT:    vmov r2, s0
 ; CHECK-NEXT:    dls lr, lr
-; CHECK-NEXT:    eor r1, r1, #-2147483648
-; CHECK-NEXT:    vdup.32 q1, r1
+; CHECK-NEXT:    vmov r1, s2
+; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:  .LBB3_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrw.u32 q3, [r0]
-; CHECK-NEXT:    vpt.f32 le, q0, q3
-; CHECK-NEXT:    vcmpt.f32 le, q3, q1
+; CHECK-NEXT:    vldrw.u32 q1, [r0]
+; CHECK-NEXT:    vpt.f32 ge, q1, r2
+; CHECK-NEXT:    vcmpt.f32 le, q1, r1
 ; CHECK-NEXT:    vpnot
 ; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vstrwt.32 q2, [r0], #16
+; CHECK-NEXT:    vstrwt.32 q0, [r0], #16
 ; CHECK-NEXT:    le lr, .LBB3_1
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}
@@ -247,22 +246,20 @@ define arm_aapcs_vfpcc void @thresh_f16(half* %data, i16 zeroext %N, float %T.co
 ; CHECK-NEXT:    mvn r2, #7
 ; CHECK-NEXT:    add.w r1, r2, r1, lsl #3
 ; CHECK-NEXT:    movs r2, #1
-; CHECK-NEXT:    vmov.i32 q2, #0x0
+; CHECK-NEXT:    vneg.f16 s2, s0
 ; CHECK-NEXT:    add.w lr, r2, r1, lsr #3
-; CHECK-NEXT:    vmov.f16 r1, s0
-; CHECK-NEXT:    vneg.f16 s0, s0
-; CHECK-NEXT:    vdup.16 q1, r1
+; CHECK-NEXT:    vmov.f16 r1, s2
 ; CHECK-NEXT:    vmov.f16 r2, s0
+; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:    dls lr, lr
-; CHECK-NEXT:    vdup.16 q0, r2
 ; CHECK-NEXT:  .LBB4_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrh.u16 q3, [r0]
-; CHECK-NEXT:    vpt.f16 le, q1, q3
-; CHECK-NEXT:    vcmpt.f16 le, q3, q0
+; CHECK-NEXT:    vldrh.u16 q1, [r0]
+; CHECK-NEXT:    vpt.f16 ge, q1, r2
+; CHECK-NEXT:    vcmpt.f16 le, q1, r1
 ; CHECK-NEXT:    vpnot
 ; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vstrht.16 q2, [r0], #16
+; CHECK-NEXT:    vstrht.16 q0, [r0], #16
 ; CHECK-NEXT:    le lr, .LBB4_1
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}
@@ -485,24 +482,23 @@ define arm_aapcs_vfpcc void @thresh_rev_f32(float* %data, i16 zeroext %N, float 
 ; CHECK-NEXT:    cmp r1, #0
 ; CHECK-NEXT:    it eq
 ; CHECK-NEXT:    popeq {r7, pc}
+; CHECK-NEXT:    vneg.f32 s2, s0
 ; CHECK-NEXT:    mvn r2, #3
 ; CHECK-NEXT:    add.w r1, r2, r1, lsl #2
 ; CHECK-NEXT:    movs r2, #1
-; CHECK-NEXT:    vmov.i32 q2, #0x0
 ; CHECK-NEXT:    add.w lr, r2, r1, lsr #2
-; CHECK-NEXT:    vmov r1, s0
-; CHECK-NEXT:    vdup.32 q0, r1
+; CHECK-NEXT:    vmov r2, s0
 ; CHECK-NEXT:    dls lr, lr
-; CHECK-NEXT:    eor r1, r1, #-2147483648
-; CHECK-NEXT:    vdup.32 q1, r1
+; CHECK-NEXT:    vmov r1, s2
+; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:  .LBB8_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrw.u32 q3, [r0]
-; CHECK-NEXT:    vpt.f32 le, q0, q3
-; CHECK-NEXT:    vcmpt.f32 le, q3, q1
+; CHECK-NEXT:    vldrw.u32 q1, [r0]
+; CHECK-NEXT:    vpt.f32 ge, q1, r2
+; CHECK-NEXT:    vcmpt.f32 le, q1, r1
 ; CHECK-NEXT:    vpnot
 ; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vstrwt.32 q2, [r0], #16
+; CHECK-NEXT:    vstrwt.32 q0, [r0], #16
 ; CHECK-NEXT:    le lr, .LBB8_1
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}
@@ -549,22 +545,20 @@ define arm_aapcs_vfpcc void @thresh_rev_f16(half* %data, i16 zeroext %N, float %
 ; CHECK-NEXT:    mvn r2, #7
 ; CHECK-NEXT:    add.w r1, r2, r1, lsl #3
 ; CHECK-NEXT:    movs r2, #1
-; CHECK-NEXT:    vmov.i32 q2, #0x0
+; CHECK-NEXT:    vneg.f16 s2, s0
 ; CHECK-NEXT:    add.w lr, r2, r1, lsr #3
-; CHECK-NEXT:    vmov.f16 r1, s0
-; CHECK-NEXT:    vneg.f16 s0, s0
-; CHECK-NEXT:    vdup.16 q1, r1
+; CHECK-NEXT:    vmov.f16 r1, s2
 ; CHECK-NEXT:    vmov.f16 r2, s0
+; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:    dls lr, lr
-; CHECK-NEXT:    vdup.16 q0, r2
 ; CHECK-NEXT:  .LBB9_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrh.u16 q3, [r0]
-; CHECK-NEXT:    vpt.f16 le, q1, q3
-; CHECK-NEXT:    vcmpt.f16 le, q3, q0
+; CHECK-NEXT:    vldrh.u16 q1, [r0]
+; CHECK-NEXT:    vpt.f16 ge, q1, r2
+; CHECK-NEXT:    vcmpt.f16 le, q1, r1
 ; CHECK-NEXT:    vpnot
 ; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vstrht.16 q2, [r0], #16
+; CHECK-NEXT:    vstrht.16 q0, [r0], #16
 ; CHECK-NEXT:    le lr, .LBB9_1
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}
