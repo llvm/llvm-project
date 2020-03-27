@@ -352,7 +352,7 @@ define i1 @trunc_v8i32_v8i1(<8 x i32>) {
 define i1 @trunc_v16i16_v16i1(<16 x i16>) {
 ; SSE-LABEL: trunc_v16i16_v16i1:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
+; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [255,255,255,255,255,255,255,255]
 ; SSE-NEXT:    pand %xmm2, %xmm1
 ; SSE-NEXT:    pand %xmm2, %xmm0
 ; SSE-NEXT:    packuswb %xmm1, %xmm0
@@ -679,7 +679,7 @@ define i1 @trunc_v16i32_v16i1(<16 x i32>) {
 define i1 @trunc_v32i16_v32i1(<32 x i16>) {
 ; SSE-LABEL: trunc_v32i16_v32i1:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa {{.*#+}} xmm4 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
+; SSE-NEXT:    movdqa {{.*#+}} xmm4 = [255,255,255,255,255,255,255,255]
 ; SSE-NEXT:    pand %xmm4, %xmm3
 ; SSE-NEXT:    pand %xmm4, %xmm2
 ; SSE-NEXT:    packuswb %xmm3, %xmm2

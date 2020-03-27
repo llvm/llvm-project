@@ -14906,23 +14906,23 @@ static SDValue lowerV16I8Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
     // First we need to zero all the dropped bytes.
     assert(NumEvenDrops <= 3 &&
            "No support for dropping even elements more than 3 times.");
-    SmallVector<SDValue, 16> ByteClearOps(16, DAG.getConstant(0, DL, MVT::i8));
-    for (unsigned i = 0; i != 16; i += 1 << NumEvenDrops)
-      ByteClearOps[i] = DAG.getConstant(0xFF, DL, MVT::i8);
-    SDValue ByteClearMask = DAG.getBuildVector(MVT::v16i8, DL, ByteClearOps);
-    V1 = DAG.getNode(ISD::AND, DL, MVT::v16i8, V1, ByteClearMask);
+    SmallVector<SDValue, 8> WordClearOps(8, DAG.getConstant(0, DL, MVT::i16));
+    for (unsigned i = 0; i != 8; i += 1 << (NumEvenDrops - 1))
+      WordClearOps[i] = DAG.getConstant(0xFF, DL, MVT::i16);
+    SDValue WordClearMask = DAG.getBuildVector(MVT::v8i16, DL, WordClearOps);
+    V1 = DAG.getNode(ISD::AND, DL, MVT::v8i16, DAG.getBitcast(MVT::v8i16, V1),
+                     WordClearMask);
     if (!IsSingleInput)
-      V2 = DAG.getNode(ISD::AND, DL, MVT::v16i8, V2, ByteClearMask);
+      V2 = DAG.getNode(ISD::AND, DL, MVT::v8i16, DAG.getBitcast(MVT::v8i16, V2),
+                       WordClearMask);
 
     // Now pack things back together.
-    V1 = DAG.getBitcast(MVT::v8i16, V1);
-    V2 = IsSingleInput ? V1 : DAG.getBitcast(MVT::v8i16, V2);
-    SDValue Result = DAG.getNode(X86ISD::PACKUS, DL, MVT::v16i8, V1, V2);
+    SDValue Result = DAG.getNode(X86ISD::PACKUS, DL, MVT::v16i8, V1,
+                                 IsSingleInput ? V1 : V2);
     for (int i = 1; i < NumEvenDrops; ++i) {
       Result = DAG.getBitcast(MVT::v8i16, Result);
       Result = DAG.getNode(X86ISD::PACKUS, DL, MVT::v16i8, Result, Result);
     }
-
     return Result;
   }
 
