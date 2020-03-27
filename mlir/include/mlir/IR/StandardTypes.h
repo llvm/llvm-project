@@ -330,7 +330,7 @@ public:
     // element type within that dialect.
     return type.isa<ComplexType>() || type.isa<FloatType>() ||
            type.isa<IntegerType>() || type.isa<OpaqueType>() ||
-           type.isa<VectorType>() ||
+           type.isa<VectorType>() || type.isa<IndexType>() ||
            (type.getKind() > Type::Kind::LAST_STANDARD_TYPE);
   }
 
