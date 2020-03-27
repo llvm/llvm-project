@@ -3069,8 +3069,12 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
     // ~(C >>s Y) --> ~C >>u Y (when inverting the replicated sign bits)
     Constant *C;
     if (match(NotVal, m_AShr(m_Constant(C), m_Value(Y))) &&
-        match(C, m_Negative()))
-      return BinaryOperator::CreateLShr(ConstantExpr::getNot(C), Y);
+        match(C, m_Negative())) {
+      Constant *NewC = ConstantExpr::getNot(C);
+      if (C->getType()->isVectorTy())
+        NewC = getSafeVectorConstantForBinop(Instruction::LShr, NewC, false);
+      return BinaryOperator::CreateLShr(NewC, Y);
+    }
 
     // ~(C >>u Y) --> ~C >>s Y (when inverting the replicated sign bits)
     if (match(NotVal, m_LShr(m_Constant(C), m_Value(Y))) &&
