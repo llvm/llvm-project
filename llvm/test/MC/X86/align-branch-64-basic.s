@@ -103,32 +103,14 @@ test_indirect:
 bar:
   retq
 
-  # CHECK: <test_pad_via_relax>:
-  # CHECK: 200: testq
-  # CHECK: 203: jne
-  # CHECK: 209: int3
-  # note 6 byte jne which could be a 2 byte jne, but is instead
-  # expanded for padding purposes
-  # CHECK-NOT: nop
-  # CHECK: 220: callq
-  .global test_pad_via_relax
-  .p2align  5
-test_pad_via_relax:
-  testq %rax, %rax
-  jnz bar
-  .rept 23
-  int3
-  .endr
-  callq bar
-
   # This case looks really tempting to pad, but doing so for the call causes
   # the jmp to be misaligned.
   # CHECK: <test_pad_via_relax_neg1>:
-  # CHECK: 240: int3
-  # CHECK: 25a: testq
-  # CHECK: 25d: jne
-  # CHECK: 25f: nop
-  # CHECK: 260: callq
+  # CHECK: 200: int3
+  # CHECK: 21a: testq
+  # CHECK: 21d: jne
+  # CHECK: 21f: nop
+  # CHECK: 220: callq
   .global test_pad_via_relax_neg1
   .p2align  5
 test_pad_via_relax_neg1:
@@ -141,10 +123,10 @@ test_pad_via_relax_neg1:
 
   # Same as previous, but without fusion
   # CHECK: <test_pad_via_relax_neg2>:
-  # CHECK: 280: int3
-  # CHECK: 29d: jmp
-  # CHECK: 29f: nop
-  # CHECK: 2a0: callq
+  # CHECK: 240: int3
+  # CHECK: 25d: jmp
+  # CHECK: 25f: nop
+  # CHECK: 260: callq
   .global test_pad_via_relax_neg2
   .p2align  5
 test_pad_via_relax_neg2:
@@ -154,7 +136,7 @@ test_pad_via_relax_neg2:
   jmp bar2
   callq bar2
 
-bar2: 
+bar2:
 
   .section "unknown"
   .p2align 4
