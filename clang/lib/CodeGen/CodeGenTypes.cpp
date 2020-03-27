@@ -383,20 +383,6 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
 
   const Type *Ty = T.getTypePtr();
 
-  // For the device-side compilation, CUDA device builtin surface/texture types
-  // may be represented in different types.
-  if (Context.getLangOpts().CUDAIsDevice) {
-    if (T->isCUDADeviceBuiltinSurfaceType()) {
-      if (auto *Ty = CGM.getTargetCodeGenInfo()
-                         .getCUDADeviceBuiltinSurfaceDeviceType())
-        return Ty;
-    } else if (T->isCUDADeviceBuiltinTextureType()) {
-      if (auto *Ty = CGM.getTargetCodeGenInfo()
-                         .getCUDADeviceBuiltinTextureDeviceType())
-        return Ty;
-    }
-  }
-
   // RecordTypes are cached and processed specially.
   if (const RecordType *RT = dyn_cast<RecordType>(Ty))
     return ConvertRecordDeclType(RT->getDecl());

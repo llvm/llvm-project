@@ -70,27 +70,3 @@ void host_fn() {
 __device__ void device_fn() {
   __constant__ int c; // expected-error {{__constant__ variables must be global}}
 }
-
-typedef __attribute__((device_builtin_surface_type)) unsigned long long s0_ty; // expected-warning {{'device_builtin_surface_type' attribute only applies to classes}}
-typedef __attribute__((device_builtin_texture_type)) unsigned long long t0_ty; // expected-warning {{'device_builtin_texture_type' attribute only applies to classes}}
-
-struct __attribute__((device_builtin_surface_type)) s1_ref {}; // expected-error {{illegal device builtin surface reference type 's1_ref' declared here}}
-// expected-note@-1 {{'s1_ref' needs to be instantiated from a class template with proper template arguments}}
-struct __attribute__((device_builtin_texture_type)) t1_ref {}; // expected-error {{illegal device builtin texture reference type 't1_ref' declared here}}
-// expected-note@-1 {{'t1_ref' needs to be instantiated from a class template with proper template arguments}}
-
-template <typename T>
-struct __attribute__((device_builtin_surface_type)) s2_cls_template {}; // expected-error {{illegal device builtin surface reference class template 's2_cls_template' declared here}}
-// expected-note@-1 {{'s2_cls_template' needs to have exactly 2 template parameters}}
-template <typename T>
-struct __attribute__((device_builtin_texture_type)) t2_cls_template {}; // expected-error {{illegal device builtin texture reference class template 't2_cls_template' declared here}}
-// expected-note@-1 {{'t2_cls_template' needs to have exactly 3 template parameters}}
-
-template <int val, void *ptr>
-struct __attribute__((device_builtin_surface_type)) s3_cls_template {}; // expected-error {{illegal device builtin surface reference class template 's3_cls_template' declared here}}
-// expected-note@-1 {{the 1st template parameter of 's3_cls_template' needs to be a type}}
-// expected-note@-2 {{the 2nd template parameter of 's3_cls_template' needs to be an integer or enum value}}
-template <int val, int type, typename T>
-struct __attribute__((device_builtin_texture_type)) t3_cls_template {}; // expected-error {{illegal device builtin texture reference class template 't3_cls_template' declared here}}
-// expected-note@-1 {{the 1st template parameter of 't3_cls_template' needs to be a type}}
-// expected-note@-2 {{the 3rd template parameter of 't3_cls_template' needs to be an integer or enum value}}

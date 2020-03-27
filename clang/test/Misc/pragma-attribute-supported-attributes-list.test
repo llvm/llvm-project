@@ -30,8 +30,6 @@
 // CHECK-NEXT: CPUSpecific (SubjectMatchRule_function)
 // CHECK-NEXT: CUDAConstant (SubjectMatchRule_variable)
 // CHECK-NEXT: CUDADevice (SubjectMatchRule_function, SubjectMatchRule_variable)
-// CHECK-NEXT: CUDADeviceBuiltinSurfaceType (SubjectMatchRule_record)
-// CHECK-NEXT: CUDADeviceBuiltinTextureType (SubjectMatchRule_record)
 // CHECK-NEXT: CUDAGlobal (SubjectMatchRule_function)
 // CHECK-NEXT: CUDAHost (SubjectMatchRule_function)
 // CHECK-NEXT: CUDALaunchBounds (SubjectMatchRule_objc_method, SubjectMatchRule_hasType_functionType)
