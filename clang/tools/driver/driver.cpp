@@ -38,6 +38,7 @@
 #include "llvm/Support/Host.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Regex.h"
@@ -342,6 +343,9 @@ static int ExecuteCC1Tool(SmallVectorImpl<const char *> &ArgV) {
 int main(int argc_, const char **argv_) {
   noteBottomOfStack();
   llvm::InitLLVM X(argc_, argv_);
+  llvm::setBugReportMsg("PLEASE submit a bug report to " BUG_REPORT_URL
+                        " and include the crash backtrace, preprocessed "
+                        "source, and associated run script.\n");
   SmallVector<const char *, 256> argv(argv_, argv_ + argc_);
 
   if (llvm::sys::Process::FixupStandardFileDescriptors())
