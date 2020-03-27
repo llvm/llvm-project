@@ -284,9 +284,9 @@ public:
   uint64_t getSize() const { return size; }
 
   InputSegment *segment = nullptr;
+  uint32_t offset = 0;
 
 protected:
-  uint64_t offset = 0;
   uint64_t size = 0;
 };
 
