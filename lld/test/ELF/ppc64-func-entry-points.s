@@ -70,8 +70,8 @@ glob:
 # point and we branch to start of foo_external_same.
 
 // CHECK-LABEL: <_start>:
-// CHECK:         100101f0: bl .+144
-// CHECK:         10010204: bl .+84
+// CHECK:         100101f0: bl 0x10010280
+// CHECK:         10010204: bl 0x10010258
 // CHECK-LABEL: <foo_external_diff>:
 // CHECK-NEXT:    10010250: addis 2, 12, 2
 // CHECK-NEXT:    10010254: addi 2, 2, -32696

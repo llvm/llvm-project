@@ -24,7 +24,7 @@
 # RELOC: 0x10030010 R_PPC64_JMP_SLOT foo 0x0
 
 # CHECK:      <_start>:
-# CHECK:      10010298: bl .+16
+# CHECK:      10010298: bl 0x100102a8
 
 # CHECK-LABEL: 00000000100102a8 <__plt_foo>:
 # CHECK-NEXT:      std 2, 24(1)

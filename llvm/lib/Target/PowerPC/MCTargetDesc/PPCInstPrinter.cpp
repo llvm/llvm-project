@@ -413,23 +413,30 @@ void PPCInstPrinter::printU16ImmOperand(const MCInst *MI, unsigned OpNo,
     printOperand(MI, OpNo, O);
 }
 
-void PPCInstPrinter::printBranchOperand(const MCInst *MI, unsigned OpNo,
-                                        raw_ostream &O) {
+void PPCInstPrinter::printBranchOperand(const MCInst *MI, uint64_t Address,
+                                        unsigned OpNo, raw_ostream &O,
+                                        bool RelativeForm) {
   if (!MI->getOperand(OpNo).isImm())
     return printOperand(MI, OpNo, O);
-
-  // Branches can take an immediate operand. This is used by the branch
-  // selection pass to print, for example `.+8` (for ELF) or `$+8` (for AIX) to
-  // express an eight byte displacement from the program counter.
-  if (!TT.isOSAIX())
-    O << ".";
-  else
-    O << "$";
-
   int32_t Imm = SignExtend32<32>((unsigned)MI->getOperand(OpNo).getImm() << 2);
-  if (Imm >= 0)
-    O << "+";
-  O << Imm;
+  if (PrintBranchImmAsAddress && !RelativeForm) {
+    uint64_t Target = Address + Imm;
+    if (!TT.isPPC64())
+      Target &= 0xffffffff;
+    O << formatHex(Target);
+  } else {
+    // Branches can take an immediate operand. This is used by the branch
+    // selection pass to print, for example `.+8` (for ELF) or `$+8` (for AIX)
+    // to express an eight byte displacement from the program counter.
+    if (!TT.isOSAIX())
+      O << ".";
+    else
+      O << "$";
+
+    if (Imm >= 0)
+      O << "+";
+    O << Imm;
+  }
 }
 
 void PPCInstPrinter::printAbsBranchOperand(const MCInst *MI, unsigned OpNo,

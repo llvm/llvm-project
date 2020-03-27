@@ -37,25 +37,34 @@
 # PIE-NEXT:    10210: mflr 30
 # PIE-NEXT:           addis 30, 30, 3
 # PIE-NEXT:           addi 30, 30, -32412
+## Two bl 00008000.got2.plt_pic32.f
+# PIE-NEXT:           bl 0x10244
+# PIE-NEXT:           bl 0x10244
+## Two bl 00008000.got2.plt_pic32.g
+# PIE-NEXT:           bl 0x10254
+# PIE-NEXT:           bl 0x10254
+## Two bl 00008000.got2.plt_pic32.h
+# PIE-NEXT:           bl 0x10264
+# PIE-NEXT:           bl 0x10264
+# PIE-NEXT:           addis 30, 30, {{.*}}
+# PIE-NEXT:           addi 30, 30, {{.*}}
+## bl 00008000.plt_pic32.f
+# PIE-NEXT:           bl 0x10274
+## bl 00008000.plt_pic32.f
+# PIE-NEXT:           bl 0x10284
 # SHARED-NEXT: 10230: mflr 30
 # SHARED-NEXT:        addis 30, 30, 3
 # SHARED-NEXT:        addi 30, 30, -32420
-
-## Two bl 00008000.got2.plt_pic32.f
-# CHECK-NEXT:    bl .+40
-# CHECK-NEXT:    bl .+36
-## Two bl 00008000.got2.plt_pic32.g
-# CHECK-NEXT:    bl .+48
-# CHECK-NEXT:    bl .+44
-## Two bl 00008000.got2.plt_pic32.h
-# CHECK-NEXT:    bl .+56
-# CHECK-NEXT:    bl .+52
-# CHECK-NEXT:    addis 30, 30, {{.*}}
-# CHECK-NEXT:    addi 30, 30, {{.*}}
-## bl 00008000.plt_pic32.f
-# CHECK-NEXT:    bl .+56
-## bl 00008000.plt_pic32.f
-# CHECK-NEXT:    bl .+68
+# SHARED-NEXT:        bl 0x10264
+# SHARED-NEXT:        bl 0x10264
+# SHARED-NEXT:        bl 0x10274
+# SHARED-NEXT:        bl 0x10274
+# SHARED-NEXT:        bl 0x10284
+# SHARED-NEXT:        bl 0x10284
+# SHARED-NEXT:        addis 30, 30, {{.*}}
+# SHARED-NEXT:        addi 30, 30, {{.*}}
+# SHARED-NEXT:        bl 0x10294
+# SHARED-NEXT:        bl 0x102a4
 # CHECK-EMPTY:
 
 ## -fPIC call stubs of f and g.
