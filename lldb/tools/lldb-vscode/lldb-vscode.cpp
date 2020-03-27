@@ -508,13 +508,14 @@ void request_attach(const llvm::json::Object &request) {
   llvm::json::Object response;
   lldb::SBError error;
   FillResponse(request, response);
+  lldb::SBAttachInfo attach_info;
   auto arguments = request.getObject("arguments");
   const lldb::pid_t pid =
       GetUnsigned(arguments, "pid", LLDB_INVALID_PROCESS_ID);
   if (pid != LLDB_INVALID_PROCESS_ID)
-    g_vsc.attach_info.SetProcessID(pid);
+    attach_info.SetProcessID(pid);
   const auto wait_for = GetBoolean(arguments, "waitFor", false);
-  g_vsc.attach_info.SetWaitForLaunch(wait_for, false /*async*/);
+  attach_info.SetWaitForLaunch(wait_for, false /*async*/);
   g_vsc.init_commands = GetStrings(arguments, "initCommands");
   g_vsc.pre_run_commands = GetStrings(arguments, "preRunCommands");
   g_vsc.stop_commands = GetStrings(arguments, "stopCommands");
@@ -547,20 +548,19 @@ void request_attach(const llvm::json::Object &request) {
   g_vsc.RunPreRunCommands();
 
   if (pid == LLDB_INVALID_PROCESS_ID && wait_for) {
-    char attach_info[256];
-    auto attach_info_len =
-        snprintf(attach_info, sizeof(attach_info),
-                 "Waiting to attach to \"%s\"...",
-                 g_vsc.target.GetExecutable().GetFilename());
-    g_vsc.SendOutput(OutputType::Console, llvm::StringRef(attach_info,
-                                                          attach_info_len));
+    char attach_msg[256];
+    auto attach_msg_len = snprintf(attach_msg, sizeof(attach_msg),
+                                   "Waiting to attach to \"%s\"...",
+                                   g_vsc.target.GetExecutable().GetFilename());
+    g_vsc.SendOutput(OutputType::Console,
+                     llvm::StringRef(attach_msg, attach_msg_len));
   }
   if (attachCommands.empty()) {
     // No "attachCommands", just attach normally.
     // Disable async events so the attach will be successful when we return from
     // the launch call and the launch will happen synchronously
     g_vsc.debugger.SetAsync(false);
-    g_vsc.target.Attach(g_vsc.attach_info, error);
+    g_vsc.target.Attach(attach_info, error);
     // Reenable async events
     g_vsc.debugger.SetAsync(true);
   } else {
@@ -1381,26 +1381,26 @@ void request_launch(const llvm::json::Object &request) {
   }
 
   // Instantiate a launch info instance for the target.
-  g_vsc.launch_info = g_vsc.target.GetLaunchInfo();
+  auto launch_info = g_vsc.target.GetLaunchInfo();
 
   // Grab the current working directory if there is one and set it in the
   // launch info.
   const auto cwd = GetString(arguments, "cwd");
   if (!cwd.empty())
-    g_vsc.launch_info.SetWorkingDirectory(cwd.data());
+    launch_info.SetWorkingDirectory(cwd.data());
 
   // Extract any extra arguments and append them to our program arguments for
   // when we launch
   auto args = GetStrings(arguments, "args");
   if (!args.empty())
-    g_vsc.launch_info.SetArguments(MakeArgv(args).data(), true);
+    launch_info.SetArguments(MakeArgv(args).data(), true);
 
   // Pass any environment variables along that the user specified.
   auto envs = GetStrings(arguments, "env");
   if (!envs.empty())
-    g_vsc.launch_info.SetEnvironmentEntries(MakeArgv(envs).data(), true);
+    launch_info.SetEnvironmentEntries(MakeArgv(envs).data(), true);
 
-  auto flags = g_vsc.launch_info.GetLaunchFlags();
+  auto flags = launch_info.GetLaunchFlags();
 
   if (GetBoolean(arguments, "disableASLR", true))
     flags |= lldb::eLaunchFlagDisableASLR;
@@ -1409,9 +1409,9 @@ void request_launch(const llvm::json::Object &request) {
   if (GetBoolean(arguments, "shellExpandArguments", false))
     flags |= lldb::eLaunchFlagShellExpandArguments;
   const bool detatchOnError = GetBoolean(arguments, "detachOnError", false);
-  g_vsc.launch_info.SetDetachOnError(detatchOnError);
-  g_vsc.launch_info.SetLaunchFlags(flags | lldb::eLaunchFlagDebug |
-                                   lldb::eLaunchFlagStopAtEntry);
+  launch_info.SetDetachOnError(detatchOnError);
+  launch_info.SetLaunchFlags(flags | lldb::eLaunchFlagDebug |
+                             lldb::eLaunchFlagStopAtEntry);
 
   // Run any pre run LLDB commands the user specified in the launch.json
   g_vsc.RunPreRunCommands();
@@ -1419,7 +1419,7 @@ void request_launch(const llvm::json::Object &request) {
     // Disable async events so the launch will be successful when we return from
     // the launch call and the launch will happen synchronously
     g_vsc.debugger.SetAsync(false);
-    g_vsc.target.Launch(g_vsc.launch_info, error);
+    g_vsc.target.Launch(launch_info, error);
     g_vsc.debugger.SetAsync(true);
   } else {
     g_vsc.RunLLDBCommands("Running launchCommands:", launchCommands);
