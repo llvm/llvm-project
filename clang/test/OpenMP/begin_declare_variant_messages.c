@@ -4,20 +4,20 @@
 
 
 #pragma omp begin // expected-error {{expected an OpenMP directive}}
-#pragma omp end declare variant
+#pragma omp end declare variant // expected-error {{'#pragma omp end declare variant' with no matching '#pragma omp begin declare variant'}}
 #pragma omp begin declare // expected-error {{expected an OpenMP directive}}
-#pragma omp end declare variant
+#pragma omp end declare variant // expected-error {{'#pragma omp end declare variant' with no matching '#pragma omp begin declare variant'}}
 #pragma omp begin variant // expected-error {{expected an OpenMP directive}}
-#pragma omp end declare variant
+#pragma omp end declare variant // expected-error {{'#pragma omp end declare variant' with no matching '#pragma omp begin declare variant'}}
 #pragma omp variant begin // expected-error {{expected an OpenMP directive}}
 #pragma omp declare variant end // expected-error {{function declaration is expected after 'declare variant' directive}}
 #pragma omp begin declare variant // expected-error {{expected 'match' clause on 'omp declare variant' directive}}
 #pragma omp end declare variant
 // TODO: Issue an error message
-#pragma omp end declare variant
-#pragma omp end declare variant
-#pragma omp end declare variant
-#pragma omp end declare variant
+#pragma omp end declare variant // expected-error {{'#pragma omp end declare variant' with no matching '#pragma omp begin declare variant'}}
+#pragma omp end declare variant // expected-error {{'#pragma omp end declare variant' with no matching '#pragma omp begin declare variant'}}
+#pragma omp end declare variant // expected-error {{'#pragma omp end declare variant' with no matching '#pragma omp begin declare variant'}}
+#pragma omp end declare variant // expected-error {{'#pragma omp end declare variant' with no matching '#pragma omp begin declare variant'}}
 
 int foo(void);
 const int var;
@@ -121,6 +121,28 @@ const int var;
 #pragma omp begin declare variant match(device = {kind(score(<expr>): cpu)}) // expected-error {{expected expression}} expected-error {{use of undeclared identifier 'expr'}} expected-error {{expected expression}} expected-warning {{the context selector 'kind' in the context set 'device' cannot have a score ('<invalid>'); score ignored}}
 #pragma omp end declare variant
 
+#pragma omp begin declare variant match(device={kind(cpu)})
+static int defined_twice_a(void) { // expected-note {{previous definition is here}}
+  return 0;
+}
+int defined_twice_b(void) { // expected-note {{previous definition is here}}
+  return 0;
+}
+inline int defined_twice_c(void) { // expected-note {{previous definition is here}}
+  return 0;
+}
+#pragma omp end declare variant
+#pragma omp begin declare variant match(device={kind(cpu)})
+static int defined_twice_a(void) { // expected-error {{redefinition of 'defined_twice_a[device={kind(cpu)}]'}}
+  return 1;
+}
+int defined_twice_b(void) { // expected-error {{redefinition of 'defined_twice_b[device={kind(cpu)}]'}}
+  return 1;
+}
+inline int defined_twice_c(void) { // expected-error {{redefinition of 'defined_twice_c[device={kind(cpu)}]'}}
+  return 1;
+}
+#pragma omp end declare variant
 
 
 // TODO: Issue an error message

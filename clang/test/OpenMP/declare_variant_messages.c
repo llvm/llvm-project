@@ -78,8 +78,8 @@ int main();
 
 
 
-#pragma omp declare variant(foo) match(xxx={}) // expected-error {{function declaration is expected after 'declare variant' directive}}
-#pragma omp declare variant(foo) match(xxx={}) // expected-error {{function declaration is expected after 'declare variant' directive}}
+#pragma omp declare variant(foo) match(implementation={vendor(llvm)}) // expected-error {{function declaration is expected after 'declare variant' directive}}
+#pragma omp declare variant(foo) match(implementation={vendor(llvm)}) // expected-error {{function declaration is expected after 'declare variant' directive}}
 #pragma init_seg(compiler)
 int main();
 
