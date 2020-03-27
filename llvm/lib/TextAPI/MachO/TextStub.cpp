@@ -959,7 +959,8 @@ template <> struct MappingTraits<const InterfaceFile *> {
 
           for (auto &sym : CurrentSection.WeakSymbols)
             File->addSymbol(SymbolKind::GlobalSymbol, sym,
-                            CurrentSection.Targets);
+                            CurrentSection.Targets, SymbolFlags::WeakDefined);
+
           for (auto &sym : CurrentSection.TlvSymbols)
             File->addSymbol(SymbolKind::GlobalSymbol, sym,
                             CurrentSection.Targets,
