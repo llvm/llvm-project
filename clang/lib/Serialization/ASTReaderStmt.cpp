@@ -50,6 +50,7 @@
 #include "clang/Lex/Token.h"
 #include "clang/Serialization/ASTBitCodes.h"
 #include "clang/Serialization/ASTRecordReader.h"
+#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -107,7 +108,7 @@ namespace clang {
     /// The number of record fields required for the Expr class
     /// itself.
     static const unsigned NumExprFields =
-        NumStmtFields + ExprDependenceBits + 3;
+        NumStmtFields + llvm::BitWidth<ExprDependence> + 3;
 
     /// Read and initialize a ExplicitTemplateArgumentList structure.
     void ReadTemplateKWAndArgsInfo(ASTTemplateKWAndArgsInfo &Args,
