@@ -370,7 +370,8 @@ ExprDependence clang::computeDependence(DeclRefExpr *E, const ASTContext &Ctx) {
   auto Deps = ExprDependence::None;
 
   if (auto *NNS = E->getQualifier())
-    Deps |= toExprDependence(NNS->getDependence());
+    Deps |= toExprDependence(NNS->getDependence() &
+                             ~NestedNameSpecifierDependence::Dependent);
 
   if (auto *FirstArg = E->getTemplateArgs()) {
     unsigned NumArgs = E->getNumTemplateArgs();
@@ -590,7 +591,8 @@ ExprDependence clang::computeDependence(CXXPseudoDestructorExpr *E) {
     D |= turnTypeToValueDependence(
         toExprDependence(ST->getType()->getDependence()));
   if (auto *Q = E->getQualifier())
-    D |= toExprDependence(Q->getDependence());
+    D |= toExprDependence(Q->getDependence() &
+                          ~NestedNameSpecifierDependence::Dependent);
   return D;
 }
 
@@ -616,7 +618,8 @@ clang::computeDependence(OverloadExpr *E, bool KnownDependent,
     Deps |= ExprDependence::UnexpandedPack;
   Deps |= getDependenceInExpr(E->getNameInfo());
   if (auto *Q = E->getQualifier())
-    Deps |= toExprDependence(Q->getDependence());
+    Deps |= toExprDependence(Q->getDependence() &
+                             ~NestedNameSpecifierDependence::Dependent);
   for (auto *D : E->decls()) {
     if (D->getDeclContext()->isDependentContext() ||
         isa<UnresolvedUsingValueDecl>(D))
