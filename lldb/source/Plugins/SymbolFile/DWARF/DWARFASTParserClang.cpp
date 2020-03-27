@@ -2668,9 +2668,19 @@ void DWARFASTParserClang::ParseSingleMember(
               }
 
               // If we have a gap between the last_field_end and the current
-              // field we have an unnamed bit-field
+              // field we have an unnamed bit-field.
+              // If we have a base class, we assume there is no unnamed
+              // bit-field if this is the first field since the gap can be
+              // attributed to the members from the base class. This assumption
+              // is not correct if the first field of the derived class is
+              // indeed an unnamed bit-field. We currently do not have the
+              // machinary to track the offset of the last field of classes we
+              // have seen before, so we are not handling this case.
               if (this_field_info.bit_offset != last_field_end &&
-                  !(this_field_info.bit_offset < last_field_end)) {
+                  this_field_info.bit_offset > last_field_end &&
+                  !(last_field_info.bit_offset == 0 &&
+                    last_field_info.bit_size == 0 &&
+                    layout_info.base_offsets.size() != 0)) {
                 unnamed_field_info = FieldInfo{};
                 unnamed_field_info->bit_size =
                     this_field_info.bit_offset - last_field_end;
