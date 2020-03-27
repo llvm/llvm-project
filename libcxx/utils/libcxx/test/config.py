@@ -1054,26 +1054,19 @@ class Configuration(object):
         sub.append(('%flags', flags_str))
         sub.append(('%compile_flags', compile_flags_str))
         sub.append(('%link_flags', link_flags_str))
-        sub.append(('%all_flags', all_flags))
         if self.cxx.isVerifySupported():
             verify_str = ' ' + ' '.join(self.cxx.verify_flags) + ' '
             sub.append(('%verify', verify_str))
         # Add compile and link shortcuts
         compile_str = (cxx_path + ' -o %t.o %s -c ' + flags_str
                        + ' ' + compile_flags_str)
-        link_str = (cxx_path + ' -o %t.exe %t.o ' + flags_str + ' '
-                    + link_flags_str)
-        assert type(link_str) is str
         build_str = cxx_path + ' -o %t.exe %s ' + all_flags
         if self.cxx.use_modules:
-            sub.append(('%compile_module', compile_str))
             sub.append(('%build_module', build_str))
         elif self.cxx.modules_flags is not None:
             modules_str = ' '.join(self.cxx.modules_flags) + ' '
-            sub.append(('%compile_module', compile_str + ' ' + modules_str))
             sub.append(('%build_module', build_str + ' ' + modules_str))
         sub.append(('%compile', compile_str))
-        sub.append(('%link', link_str))
         sub.append(('%build', build_str))
         # Configure exec prefix substitutions.
         # Configure run env substitution.
