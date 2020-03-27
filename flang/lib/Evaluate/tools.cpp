@@ -25,7 +25,7 @@ Expr<SomeType> Parenthesize(Expr<SomeType> &&expr) {
         using T = std::decay_t<decltype(x)>;
         if constexpr (common::HasMember<T, TypelessExpression> ||
             std::is_same_v<T, Expr<SomeDerived>>) {
-          return expr;  // no parentheses around typeless or derived type
+          return expr; // no parentheses around typeless or derived type
         } else {
           return std::visit(
               [](auto &&y) {
@@ -38,7 +38,7 @@ Expr<SomeType> Parenthesize(Expr<SomeType> &&expr) {
       std::move(expr.u));
 }
 
-std::optional<DataRef> ExtractDataRef(const Substring &substring) {
+std::optional<DataRef> ExtractSubstringBase(const Substring &substring) {
   return std::visit(
       common::visitors{
           [&](const DataRef &x) -> std::optional<DataRef> { return x; },
@@ -126,7 +126,7 @@ ConvertRealOperandsResult ConvertRealOperands(
             return {AsSameKindExprs<TypeCategory::Real>(
                 ConvertTo(ry, std::move(bx)), std::move(ry))};
           },
-          [&](auto &&, auto &&) -> ConvertRealOperandsResult {  // C718
+          [&](auto &&, auto &&) -> ConvertRealOperandsResult { // C718
             messages.Say("operands must be INTEGER or REAL"_err_en_US);
             return std::nullopt;
           },
@@ -137,11 +137,11 @@ ConvertRealOperandsResult ConvertRealOperands(
 // Helpers for NumericOperation and its subroutines below.
 static std::optional<Expr<SomeType>> NoExpr() { return std::nullopt; }
 
-template<TypeCategory CAT>
+template <TypeCategory CAT>
 std::optional<Expr<SomeType>> Package(Expr<SomeKind<CAT>> &&catExpr) {
   return {AsGenericExpr(std::move(catExpr))};
 }
-template<TypeCategory CAT>
+template <TypeCategory CAT>
 std::optional<Expr<SomeType>> Package(
     std::optional<Expr<SomeKind<CAT>>> &&catExpr) {
   if (catExpr) {
@@ -152,7 +152,7 @@ std::optional<Expr<SomeType>> Package(
 
 // Mixed REAL+INTEGER operations.  REAL**INTEGER is a special case that
 // does not require conversion of the exponent expression.
-template<template<typename> class OPR>
+template <template <typename> class OPR>
 std::optional<Expr<SomeType>> MixedRealLeft(
     Expr<SomeReal> &&rx, Expr<SomeInteger> &&iy) {
   return Package(std::visit(
@@ -220,7 +220,7 @@ Expr<SomeComplex> PromoteRealToComplex(Expr<SomeReal> &&someX) {
 // Handle mixed COMPLEX+REAL (or INTEGER) operations in a better way
 // than just converting the second operand to COMPLEX and performing the
 // corresponding COMPLEX+COMPLEX operation.
-template<template<typename> class OPR, TypeCategory RCAT>
+template <template <typename> class OPR, TypeCategory RCAT>
 std::optional<Expr<SomeType>> MixedComplexLeft(
     parser::ContextualMessages &messages, Expr<SomeComplex> &&zx,
     Expr<SomeKind<RCAT>> &&iry, int defaultRealKind) {
@@ -261,7 +261,7 @@ std::optional<Expr<SomeType>> MixedComplexLeft(
               AsExpr(RealToIntPower<Ty>{std::move(zxk), std::move(iry)}));
         },
         std::move(zx.u)));
-  } else if (defaultRealKind != 666) {  // dodge unused parameter warning
+  } else if (defaultRealKind != 666) { // dodge unused parameter warning
     // (a,b) ** x -> (a,b) ** (x,0)
     if constexpr (RCAT == TypeCategory::Integer) {
       Expr<SomeComplex> zy{ConvertTo(zx, std::move(iry))};
@@ -279,7 +279,7 @@ std::optional<Expr<SomeType>> MixedComplexLeft(
 //  x - (a,b) -> (x-a, -b)
 //  x * (a,b) -> (x*a, x*b)
 //  x / (a,b) -> (x,0) / (a,b)   (and **)
-template<template<typename> class OPR, TypeCategory LCAT>
+template <template <typename> class OPR, TypeCategory LCAT>
 std::optional<Expr<SomeType>> MixedComplexRight(
     parser::ContextualMessages &messages, Expr<SomeKind<LCAT>> &&irx,
     Expr<SomeComplex> &&zy, int defaultRealKind) {
@@ -300,7 +300,7 @@ std::optional<Expr<SomeType>> MixedComplexRight(
       return Package(ConstructComplex(messages, std::move(*rr),
           AsGenericExpr(-std::move(zi)), defaultRealKind));
     }
-  } else if (defaultRealKind != 666) {  // dodge unused parameter warning
+  } else if (defaultRealKind != 666) { // dodge unused parameter warning
     // x / (a,b) -> (x,0) / (a,b)
     if constexpr (LCAT == TypeCategory::Integer) {
       Expr<SomeComplex> zx{ConvertTo(zy, std::move(irx))};
@@ -316,7 +316,7 @@ std::optional<Expr<SomeType>> MixedComplexRight(
 // N.B. When a "typeless" BOZ literal constant appears as one (not both!) of
 // the operands to a dyadic operation where one is permitted, it assumes the
 // type and kind of the other operand.
-template<template<typename> class OPR>
+template <template <typename> class OPR>
 std::optional<Expr<SomeType>> NumericOperation(
     parser::ContextualMessages &messages, Expr<SomeType> &&x,
     Expr<SomeType> &&y, int defaultRealKind) {
@@ -458,7 +458,7 @@ Expr<SomeLogical> LogicalNegation(Expr<SomeLogical> &&x) {
       std::move(x.u));
 }
 
-template<typename T>
+template <typename T>
 Expr<LogicalResult> PackageRelation(
     RelationalOperator opr, Expr<T> &&x, Expr<T> &&y) {
   static_assert(IsSpecificIntrinsicType<T>);
@@ -466,7 +466,7 @@ Expr<LogicalResult> PackageRelation(
       Relational<SomeType>{Relational<T>{opr, std::move(x), std::move(y)}}};
 }
 
-template<TypeCategory CAT>
+template <TypeCategory CAT>
 Expr<LogicalResult> PromoteAndRelate(
     RelationalOperator opr, Expr<SomeKind<CAT>> &&x, Expr<SomeKind<CAT>> &&y) {
   return std::visit(
@@ -576,7 +576,7 @@ Expr<SomeLogical> BinaryLogicalOperation(
       AsSameKindExprs(std::move(x), std::move(y)));
 }
 
-template<TypeCategory TO>
+template <TypeCategory TO>
 std::optional<Expr<SomeType>> ConvertToNumeric(int kind, Expr<SomeType> &&x) {
   static_assert(common::IsNumericTypeCategory(TO));
   return std::visit(
@@ -772,7 +772,7 @@ const Symbol &ResolveAssociations(const Symbol &symbol) {
 }
 
 struct CollectSymbolsHelper
-  : public SetTraverse<CollectSymbolsHelper, semantics::SymbolSet> {
+    : public SetTraverse<CollectSymbolsHelper, semantics::SymbolSet> {
   using Base = SetTraverse<CollectSymbolsHelper, semantics::SymbolSet>;
   CollectSymbolsHelper() : Base{*this} {}
   using Base::operator();
@@ -780,7 +780,7 @@ struct CollectSymbolsHelper
     return {symbol};
   }
 };
-template<typename A> semantics::SymbolSet CollectSymbols(const A &x) {
+template <typename A> semantics::SymbolSet CollectSymbols(const A &x) {
   return CollectSymbolsHelper{}(x);
 }
 template semantics::SymbolSet CollectSymbols(const Expr<SomeType> &);
@@ -796,7 +796,7 @@ struct HasVectorSubscriptHelper : public AnyTraverse<HasVectorSubscriptHelper> {
     return !std::holds_alternative<Triplet>(ss.u) && ss.Rank() > 0;
   }
   bool operator()(const ProcedureRef &) const {
-    return false;  // don't descend into function call arguments
+    return false; // don't descend into function call arguments
   }
 };
 
@@ -841,13 +841,13 @@ parser::Message *AttachDeclaration(
 }
 
 class FindImpureCallHelper
-  : public AnyTraverse<FindImpureCallHelper, std::optional<std::string>> {
+    : public AnyTraverse<FindImpureCallHelper, std::optional<std::string>> {
   using Result = std::optional<std::string>;
   using Base = AnyTraverse<FindImpureCallHelper, Result>;
 
 public:
   explicit FindImpureCallHelper(const IntrinsicProcTable &intrinsics)
-    : Base{*this}, intrinsics_{intrinsics} {}
+      : Base{*this}, intrinsics_{intrinsics} {}
   using Base::operator();
   Result operator()(const ProcedureRef &call) const {
     if (auto chars{characteristics::Procedure::Characterize(
@@ -872,4 +872,4 @@ std::optional<std::string> FindImpureCall(
   return FindImpureCallHelper{intrinsics}(proc);
 }
 
-}
+} // namespace Fortran::evaluate

@@ -36,7 +36,7 @@ public:
   AssignmentContext(const AssignmentContext &) = delete;
   bool operator==(const AssignmentContext &x) const { return this == &x; }
 
-  template<typename A> void PushWhereContext(const A &);
+  template <typename A> void PushWhereContext(const A &);
   void PopWhereContext();
   void Analyze(const parser::AssignmentStmt &);
   void Analyze(const parser::PointerAssignmentStmt &);
@@ -46,7 +46,7 @@ private:
   bool CheckForPureContext(const SomeExpr &lhs, const SomeExpr &rhs,
       parser::CharBlock rhsSource, bool isPointerAssignment);
   void CheckShape(parser::CharBlock, const SomeExpr *);
-  template<typename... A>
+  template <typename... A>
   parser::Message *Say(parser::CharBlock at, A &&... args) {
     return &context_.Say(at, std::forward<A>(args)...);
   }
@@ -55,7 +55,7 @@ private:
   }
 
   SemanticsContext &context_;
-  int whereDepth_{0};  // number of WHEREs currently nested in
+  int whereDepth_{0}; // number of WHEREs currently nested in
   // shape of masks in LHS of assignments in current WHERE:
   std::vector<std::optional<std::int64_t>> whereExtents_;
 };
@@ -67,7 +67,7 @@ void AssignmentContext::Analyze(const parser::AssignmentStmt &stmt) {
     auto lhsLoc{std::get<parser::Variable>(stmt.t).GetSource()};
     auto rhsLoc{std::get<parser::Expr>(stmt.t).source};
     auto shape{evaluate::GetShape(foldingContext(), lhs)};
-    if (shape && !shape->empty() && !shape->back().has_value()) {  // C1014
+    if (shape && !shape->empty() && !shape->back().has_value()) { // C1014
       Say(lhsLoc,
           "Left-hand side of assignment may not be a whole assumed-size array"_err_en_US);
     }
@@ -178,7 +178,7 @@ bool AssignmentContext::CheckForPureContext(const SomeExpr &lhs,
           "A pure subprogram may not define a coindexed object"_err_en_US);
     } else if (const Symbol * base{GetFirstSymbol(lhs)}) {
       if (const auto *assoc{base->detailsIf<AssocEntityDetails>()}) {
-        auto dataRef{ExtractDataRef(assoc->expr())};
+        auto dataRef{ExtractDataRef(assoc->expr(), true)};
         // ASSOCIATE(a=>x) -- check x, not a, for "a=..."
         base = dataRef ? &dataRef->GetFirstSymbol() : nullptr;
       }
@@ -190,7 +190,7 @@ bool AssignmentContext::CheckForPureContext(const SomeExpr &lhs,
     if (isPointerAssignment) {
       if (const Symbol * base{GetFirstSymbol(rhs)}) {
         if (const char *why{
-                WhyBaseObjectIsSuspicious(*base, scope)}) {  // C1594(3)
+                WhyBaseObjectIsSuspicious(*base, scope)}) { // C1594(3)
           evaluate::SayWithDeclaration(messages, *base,
               "A pure subprogram may not use '%s' as the target of pointer assignment because it is %s"_err_en_US,
               base->name(), why);
@@ -249,7 +249,7 @@ void AssignmentContext::CheckShape(parser::CharBlock at, const SomeExpr *expr) {
   }
 }
 
-template<typename A> void AssignmentContext::PushWhereContext(const A &x) {
+template <typename A> void AssignmentContext::PushWhereContext(const A &x) {
   const auto &expr{std::get<parser::LogicalExpr>(x.t)};
   CheckShape(expr.thing.value().source, GetExpr(expr));
   ++whereDepth_;
@@ -265,7 +265,7 @@ void AssignmentContext::PopWhereContext() {
 AssignmentChecker::~AssignmentChecker() {}
 
 AssignmentChecker::AssignmentChecker(SemanticsContext &context)
-  : context_{new AssignmentContext{context}} {}
+    : context_{new AssignmentContext{context}} {}
 void AssignmentChecker::Enter(const parser::AssignmentStmt &x) {
   context_.value().Analyze(x);
 }
@@ -291,6 +291,6 @@ void AssignmentChecker::Leave(const parser::MaskedElsewhereStmt &) {
   context_.value().PopWhereContext();
 }
 
-}
+} // namespace Fortran::semantics
 template class Fortran::common::Indirection<
     Fortran::semantics::AssignmentContext>;
