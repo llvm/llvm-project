@@ -6507,11 +6507,27 @@ On exit from a function:
     * FLAT_SCRATCH
     * EXEC
     * GFX6-8: M0
-    * All SGPR and VGPR registers except the clobbered registers of SGPR4-31 and
-      VGPR0-31.
+    * All SGPR registers except the clobbered registers of SGPR4-31.
+    * VGPR40-47
+      VGPR56-63
+      VGPR72-79
+      VGPR88-95
+      VGPR104-111
+      VGPR120-127
+      VGPR136-143
+      VGPR152-159
+      VGPR168-175
+      VGPR184-191
+      VGPR200-207
+      VGPR216-223
+      VGPR232-239
+      VGPR248-255
+        *Except the argument registers, the VGPR cloberred and the preserved
+        registers are intermixed at regular intervals in order to
+        get a better occupancy.*
 
       For the AMDGPU backend, an inter-procedural register allocation (IPRA)
-      optimization may mark some of clobbered SGPR4-31 and VGPR0-31 registers as
+      optimization may mark some of clobbered SGPR and VGPR registers as
       preserved if it can be determined that the called function does not change
       their value.
 

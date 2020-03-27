@@ -89,6 +89,24 @@ def CSR_AMDGPU_VGPRs_32_255 : CalleeSavedRegs<
   (sequence "VGPR%u", 32, 255)
 >;
 
+def CSR_AMDGPU_VGPRs : CalleeSavedRegs<
+  // The CSRs & scratch-registers are interleaved at a split boundary of 8.
+  (add (sequence "VGPR%u", 40, 47),
+    (sequence "VGPR%u", 56, 63),
+    (sequence "VGPR%u", 72, 79),
+    (sequence "VGPR%u", 88, 95),
+    (sequence "VGPR%u", 104, 111),
+    (sequence "VGPR%u", 120, 127),
+    (sequence "VGPR%u", 136, 143),
+    (sequence "VGPR%u", 152, 159),
+    (sequence "VGPR%u", 168, 175),
+    (sequence "VGPR%u", 184, 191),
+    (sequence "VGPR%u", 200, 207),
+    (sequence "VGPR%u", 216, 223),
+    (sequence "VGPR%u", 232, 239),
+    (sequence "VGPR%u", 248, 255))
+>;
+
 def CSR_AMDGPU_SGPRs_32_105 : CalleeSavedRegs<
   (sequence "SGPR%u", 32, 105)
 >;
@@ -104,7 +122,7 @@ def CSR_AMDGPU_AllAllocatableSRegs : CalleeSavedRegs<
 >;
 
 def CSR_AMDGPU_HighRegs : CalleeSavedRegs<
-  (add CSR_AMDGPU_VGPRs_32_255, CSR_AMDGPU_SGPRs_32_105)
+  (add CSR_AMDGPU_VGPRs, CSR_AMDGPU_SGPRs_32_105)
 >;
 
 // Calling convention for leaf functions
