@@ -21,10 +21,7 @@ define void @foo(<3 x float> %in, <4 x i8>* nocapture %out) nounwind {
 ; SSE41-LABEL: foo:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    cvttps2dq %xmm0, %xmm0
-; SSE41-NEXT:    pextrb $8, %xmm0, %eax
-; SSE41-NEXT:    pextrb $4, %xmm0, %ecx
-; SSE41-NEXT:    pinsrb $1, %ecx, %xmm0
-; SSE41-NEXT:    pinsrb $2, %eax, %xmm0
+; SSE41-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,4,8,3,u,u,u,u,u,u,u,u,u,u,u,u]
 ; SSE41-NEXT:    movl $255, %eax
 ; SSE41-NEXT:    pinsrb $3, %eax, %xmm0
 ; SSE41-NEXT:    movd %xmm0, (%rdi)

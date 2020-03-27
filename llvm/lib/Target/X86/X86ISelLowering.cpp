@@ -7417,15 +7417,20 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
       }
     }
 
+    // Peek through trunc/aext/zext.
+    // TODO: aext shouldn't require SM_SentinelZero padding.
+    // TODO: handle shift of scalars.
+    while (Scl.getOpcode() == ISD::TRUNCATE ||
+           Scl.getOpcode() == ISD::ANY_EXTEND ||
+           Scl.getOpcode() == ISD::ZERO_EXTEND)
+      Scl = Scl.getOperand(0);
+
     // Attempt to find the source vector the scalar was extracted from.
-    // TODO: Handle truncate/zext/shift of scalars.
     SDValue SrcExtract;
-    if ((Scl.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
-         Scl.getOperand(0).getValueType() == VT) ||
-        (Scl.getOpcode() == X86ISD::PEXTRW &&
-         Scl.getOperand(0).getValueType() == MVT::v8i16) ||
-        (Scl.getOpcode() == X86ISD::PEXTRB &&
-         Scl.getOperand(0).getValueType() == MVT::v16i8)) {
+    if ((Scl.getOpcode() == ISD::EXTRACT_VECTOR_ELT ||
+         Scl.getOpcode() == X86ISD::PEXTRW ||
+         Scl.getOpcode() == X86ISD::PEXTRB) &&
+        Scl.getOperand(0).getValueSizeInBits() == NumSizeInBits) {
       SrcExtract = Scl;
     }
     if (!SrcExtract || !isa<ConstantSDNode>(SrcExtract.getOperand(1)))
@@ -7437,8 +7442,7 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
     unsigned NumZeros =
         std::max<int>((NumBitsPerElt / SrcVT.getScalarSizeInBits()) - 1, 0);
 
-    if (SrcVT.getSizeInBits() != VT.getSizeInBits() ||
-        (NumSrcElts % NumElts) != 0)
+    if ((NumSrcElts % NumElts) != 0)
       return false;
 
     unsigned SrcIdx = SrcExtract.getConstantOperandVal(1);
