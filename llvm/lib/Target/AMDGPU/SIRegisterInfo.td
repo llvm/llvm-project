@@ -103,7 +103,7 @@ def FP_REG : SIReg<"fp", 0>;
 def SP_REG : SIReg<"sp", 0>;
 
 // Pseudo-register to represent the program-counter DWARF register.
-def PC_REG : SIReg<"pc", 0>, DwarfRegNum<[16, 0]> {
+def PC_REG : SIReg<"pc", 0>, DwarfRegNum<[16, 16]> {
   // There is no physical register corresponding to a "program counter", but
   // we need to encode the concept in debug information in order to represent
   // things like the return value in unwind information.
