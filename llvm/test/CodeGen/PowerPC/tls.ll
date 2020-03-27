@@ -11,11 +11,11 @@
 ;OPT1-LABEL:          localexec:
 define i32 @localexec() nounwind {
 entry:
-;OPT0:          addis [[REG1:[0-9]+]], 13, a@tprel@ha
-;OPT0-NEXT:     addi [[REG2:[0-9]+]], [[REG1]], a@tprel@l
+;OPT0:          addis [[REG1:[1-9][0-9]*]], 13, a@tprel@ha
+;OPT0-NEXT:     addi [[REG2:[1-9][0-9]*]], [[REG1]], a@tprel@l
 ;OPT0-NEXT:     li [[REG3:[0-9]+]], 42
 ;OPT0:          stw [[REG3]], 0([[REG2]])
-;OPT1:          addis [[REG1:[0-9]+]], 13, a@tprel@ha
+;OPT1:          addis [[REG1:[1-9][0-9]*]], 13, a@tprel@ha
 ;OPT1-NEXT:     li [[REG3:[0-9]+]], 42
 ;OPT1:     stw [[REG3]], a@tprel@l([[REG1]])
   store i32 42, i32* @a, align 4
@@ -36,19 +36,19 @@ entry:
 }
 
 ; OPT1-LABEL: main2:
-; OPT1: addis [[REG1:[0-9]+]], 2, a2@got@tprel@ha
+; OPT1: addis [[REG1:[1-9][0-9]*]], 2, a2@got@tprel@ha
 ; OPT1: ld [[REG2:[0-9]+]], a2@got@tprel@l([[REG1]])
 ; OPT1: add {{[0-9]+}}, [[REG2]], a2@tls
 
 ;OPT0-PPC32-LABEL:    main2:
-;OPT0-PPC32:       li [[REG1:[0-9]+]], _GLOBAL_OFFSET_TABLE_@l
+;OPT0-PPC32:       li [[REG1:[1-9][0-9]*]], _GLOBAL_OFFSET_TABLE_@l
 ;OPT0-PPC32:       addis [[REG1]], [[REG1]], _GLOBAL_OFFSET_TABLE_@ha
-;OPT0-PPC32:       lwz [[REG2:[0-9]+]], a2@got@tprel([[REG1]])
+;OPT0-PPC32:       lwz [[REG2:[1-9][0-9]*]], a2@got@tprel([[REG1]])
 ;OPT0-PPC32:       add 3, [[REG2]], a2@tls
 
 ;OPT0-PPC32-PIC-LABEL:  main2:
 ;OPT0-PPC32-PIC:        .long _GLOBAL_OFFSET_TABLE_-{{.*}}
 ;OPT0-PPC32-PIC-NOT:    li {{[0-9]+}}, _GLOBAL_OFFSET_TABLE_@l
-;OPT0-PPC32-PIC-NOT:    addis {{[0-9]+}}, {{[0-9+]}}, _GLOBAL_OFFSET_TABLE_@ha
+;OPT0-PPC32-PIC-NOT:    addis {{[0-9]+}}, {{[1-9][0-9*]}}, _GLOBAL_OFFSET_TABLE_@ha
 ;OPT0-PPC32-PIC-NOT:    bl __tls_get_addr(a2@tlsgd)@PLT
-;OPT0-PPC32-PIC:        lwz {{[0-9]+}}, a2@got@tprel({{[0-9]+}})
+;OPT0-PPC32-PIC:        lwz {{[0-9]+}}, a2@got@tprel({{[1-9][0-9]*}})
