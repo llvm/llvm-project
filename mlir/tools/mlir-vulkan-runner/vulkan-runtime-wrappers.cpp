@@ -111,9 +111,27 @@ void bindMemRef1DFloat(void *vkRuntimeManager, DescriptorSetIndex setIndex,
       ->setResourceData(setIndex, bindIndex, memBuffer);
 }
 
+/// Binds the given 2D float memref to the given descriptor set and descriptor
+/// index.
+void bindMemRef2DFloat(void *vkRuntimeManager, DescriptorSetIndex setIndex,
+                       BindingIndex bindIndex,
+                       MemRefDescriptor<float, 2> *ptr) {
+  VulkanHostMemoryBuffer memBuffer{
+      ptr->allocated,
+      static_cast<uint32_t>(ptr->sizes[0] * ptr->sizes[1] * sizeof(float))};
+  reinterpret_cast<VulkanRuntimeManager *>(vkRuntimeManager)
+      ->setResourceData(setIndex, bindIndex, memBuffer);
+}
+
 /// Fills the given 1D float memref with the given float value.
 void _mlir_ciface_fillResource1DFloat(MemRefDescriptor<float, 1> *ptr, // NOLINT
                                       float value) {
   std::fill_n(ptr->allocated, ptr->sizes[0], value);
+}
+
+/// Fills the given 2D float memref with the given float value.
+void _mlir_ciface_fillResource2DFloat(MemRefDescriptor<float, 2> *ptr, // NOLINT
+                                      float value) {
+  std::fill_n(ptr->allocated, ptr->sizes[0] * ptr->sizes[1], value);
 }
 }
