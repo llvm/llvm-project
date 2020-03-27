@@ -5811,7 +5811,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
   // Determine the alignment of the load.
   Align Alignment;
   if (LoadMI.hasOneMemOperand())
-    Alignment = Align((*LoadMI.memoperands_begin())->getAlignment());
+    Alignment = (*LoadMI.memoperands_begin())->getAlign();
   else
     switch (LoadMI.getOpcode()) {
     case X86::AVX512_512_SET0:
@@ -6092,7 +6092,7 @@ bool X86InstrInfo::unfoldMemoryOperand(
       Opc = getBroadcastOpcode(I, RC, Subtarget);
     } else {
       unsigned Alignment = std::max<uint32_t>(TRI.getSpillSize(*RC), 16);
-      bool isAligned = !MMOs.empty() && MMOs.front()->getAlignment() >= Alignment;
+      bool isAligned = !MMOs.empty() && MMOs.front()->getAlign() >= Alignment;
       Opc = getLoadRegOpcode(Reg, RC, isAligned, Subtarget);
     }
 
@@ -6169,7 +6169,7 @@ bool X86InstrInfo::unfoldMemoryOperand(
     const TargetRegisterClass *DstRC = getRegClass(MCID, 0, &RI, MF);
     auto MMOs = extractStoreMMOs(MI.memoperands(), MF);
     unsigned Alignment = std::max<uint32_t>(TRI.getSpillSize(*DstRC), 16);
-    bool isAligned = !MMOs.empty() && MMOs.front()->getAlignment() >= Alignment;
+    bool isAligned = !MMOs.empty() && MMOs.front()->getAlign() >= Alignment;
     unsigned Opc = getStoreRegOpcode(Reg, DstRC, isAligned, Subtarget);
     DebugLoc DL;
     MachineInstrBuilder MIB = BuildMI(MF, DL, get(Opc));
@@ -6236,7 +6236,7 @@ X86InstrInfo::unfoldMemoryOperand(SelectionDAG &DAG, SDNode *N,
       Opc = getBroadcastOpcode(I, RC, Subtarget);
     } else {
       unsigned Alignment = std::max<uint32_t>(TRI.getSpillSize(*RC), 16);
-      bool isAligned = !MMOs.empty() && MMOs.front()->getAlignment() >= Alignment;
+      bool isAligned = !MMOs.empty() && MMOs.front()->getAlign() >= Alignment;
       Opc = getLoadRegOpcode(0, RC, isAligned, Subtarget);
     }
 
@@ -6302,7 +6302,7 @@ X86InstrInfo::unfoldMemoryOperand(SelectionDAG &DAG, SDNode *N,
     // FIXME: If a VR128 can have size 32, we should be checking if a 32-byte
     // memory access is slow above.
     unsigned Alignment = std::max<uint32_t>(TRI.getSpillSize(*RC), 16);
-    bool isAligned = !MMOs.empty() && MMOs.front()->getAlignment() >= Alignment;
+    bool isAligned = !MMOs.empty() && MMOs.front()->getAlign() >= Alignment;
     SDNode *Store =
         DAG.getMachineNode(getStoreRegOpcode(0, DstRC, isAligned, Subtarget),
                            dl, MVT::Other, AddrOps);

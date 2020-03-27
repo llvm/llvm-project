@@ -4,6 +4,7 @@
 ; RUN: llvm-readobj --relocs --expand-relocs %t.o | FileCheck --check-prefix=RELOC %s
 ; RUN: llvm-readobj -t %t.o | FileCheck --check-prefix=SYM %s
 ; RUN: llvm-objdump -D %t.o | FileCheck --check-prefix=DIS %s
+; RUN: llvm-objdump -r %t.o | FileCheck --check-prefix=DIS_REL %s
 
 ; RUN: not --crash llc -verify-machineinstrs -mcpu=pwr4 -mtriple powerpc64-ibm-aix-xcoff -mattr=-altivec -filetype=obj < %s 2>&1 | \
 ; RUN: FileCheck --check-prefix=XCOFF64 %s
@@ -426,3 +427,17 @@ declare i32 @bar(i32)
 ; DIS-NEXT:       80: 00 00 00 40                   <unknown>
 ; DIS:      00000084 <globalB>:
 ; DIS-NEXT:       84: 00 00 00 44                   <unknown>
+
+; DIS_REL:       {{.*}}aix-xcoff-reloc.ll.tmp.o:   file format aixcoff-rs6000
+; DIS_REL:       RELOCATION RECORDS FOR [.text]:
+; DIS_REL-NEXT:  OFFSET   TYPE                     VALUE
+; DIS_REL-NEXT:  00000010 R_RBR                    .bar
+; DIS_REL-NEXT:  0000001a R_TOC                    globalA
+; DIS_REL-NEXT:  0000001e R_TOC                    globalB
+; DIS_REL:       RELOCATION RECORDS FOR [.data]:
+; DIS_REL-NEXT:  OFFSET   TYPE                     VALUE
+; DIS_REL-NEXT:  00000030 R_POS                    arr
+; DIS_REL-NEXT:  00000034 R_POS                    .foo
+; DIS_REL-NEXT:  00000038 R_POS                    TOC
+; DIS_REL-NEXT:  00000040 R_POS                    globalA
+; DIS_REL-NEXT:  00000044 R_POS                    globalB

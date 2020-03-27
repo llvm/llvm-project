@@ -52,7 +52,7 @@ bool MipsPreLegalizerCombinerInfo::combine(GISelChangeObserver &Observer,
         static_cast<const MipsSubtarget &>(MI.getMF()->getSubtarget());
     if (!isPowerOf2_64(MMO->getSize()))
       return false;
-    bool isUnaligned = MMO->getSize() > MMO->getAlignment();
+    bool isUnaligned = MMO->getAlign() < MMO->getSize();
     if (!STI.systemSupportsUnalignedAccess() && isUnaligned)
       return false;
 

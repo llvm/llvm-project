@@ -3777,7 +3777,7 @@ unsigned ARMBaseInstrInfo::getNumMicroOps(const InstrItineraryData *ItinData,
       // If there are odd number of registers or if it's not 64-bit aligned,
       // then it takes an extra AGU (Address Generation Unit) cycle.
       if ((NumRegs % 2) || !MI.hasOneMemOperand() ||
-          (*MI.memoperands_begin())->getAlignment() < 8)
+          (*MI.memoperands_begin())->getAlign() < Align(8))
         ++UOps;
       return UOps;
       }
@@ -4364,10 +4364,10 @@ int ARMBaseInstrInfo::getOperandLatencyImpl(
     return -1;
 
   unsigned DefAlign = DefMI.hasOneMemOperand()
-                          ? (*DefMI.memoperands_begin())->getAlignment()
+                          ? (*DefMI.memoperands_begin())->getAlign().value()
                           : 0;
   unsigned UseAlign = UseMI.hasOneMemOperand()
-                          ? (*UseMI.memoperands_begin())->getAlignment()
+                          ? (*UseMI.memoperands_begin())->getAlign().value()
                           : 0;
 
   // Get the itinerary's latency if possible, and handle variable_ops.
@@ -4414,10 +4414,12 @@ ARMBaseInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
   const MCInstrDesc &UseMCID = get(UseNode->getMachineOpcode());
   auto *DefMN = cast<MachineSDNode>(DefNode);
   unsigned DefAlign = !DefMN->memoperands_empty()
-    ? (*DefMN->memoperands_begin())->getAlignment() : 0;
+                          ? (*DefMN->memoperands_begin())->getAlign().value()
+                          : 0;
   auto *UseMN = cast<MachineSDNode>(UseNode);
   unsigned UseAlign = !UseMN->memoperands_empty()
-    ? (*UseMN->memoperands_begin())->getAlignment() : 0;
+                          ? (*UseMN->memoperands_begin())->getAlign().value()
+                          : 0;
   int Latency = getOperandLatency(ItinData, DefMCID, DefIdx, DefAlign,
                                   UseMCID, UseIdx, UseAlign);
 
@@ -4708,7 +4710,7 @@ unsigned ARMBaseInstrInfo::getInstrLatency(const InstrItineraryData *ItinData,
 
   // Adjust for dynamic def-side opcode variants not captured by the itinerary.
   unsigned DefAlign =
-      MI.hasOneMemOperand() ? (*MI.memoperands_begin())->getAlignment() : 0;
+      MI.hasOneMemOperand() ? (*MI.memoperands_begin())->getAlign().value() : 0;
   int Adj = adjustDefLatency(Subtarget, MI, MCID, DefAlign);
   if (Adj >= 0 || (int)Latency > -Adj) {
     return Latency + Adj;

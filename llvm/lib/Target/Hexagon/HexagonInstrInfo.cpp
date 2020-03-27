@@ -1027,10 +1027,9 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   auto UseAligned = [&] (const MachineInstr &MI, unsigned NeedAlign) {
     if (MI.memoperands().empty())
       return false;
-    return all_of(MI.memoperands(),
-                  [NeedAlign] (const MachineMemOperand *MMO) {
-                    return NeedAlign <= MMO->getAlignment();
-                  });
+    return all_of(MI.memoperands(), [NeedAlign](const MachineMemOperand *MMO) {
+      return MMO->getAlign() >= NeedAlign;
+    });
   };
 
   switch (Opc) {

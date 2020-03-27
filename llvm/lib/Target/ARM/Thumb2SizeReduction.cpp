@@ -457,7 +457,7 @@ Thumb2SizeReduce::ReduceLoadStore(MachineBasicBlock &MBB, MachineInstr *MI,
       return false;
 
     if (!MI->hasOneMemOperand() ||
-        (*MI->memoperands_begin())->getAlignment() < 4)
+        (*MI->memoperands_begin())->getAlign() < Align(4))
       return false;
 
     // We're creating a completely different type of load/store - LDM from LDR.

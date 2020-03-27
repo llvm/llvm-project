@@ -1014,7 +1014,6 @@ MachineMemOperand::MachineMemOperand(MachinePointerInfo ptrinfo, Flags f,
   assert((PtrInfo.V.isNull() || PtrInfo.V.is<const PseudoSourceValue *>() ||
           isa<PointerType>(PtrInfo.V.get<const Value *>()->getType())) &&
          "invalid pointer value");
-  assert(getBaseAlignment() == a && a != 0 && "Alignment is not a power of 2!");
   assert((isLoad() || isStore()) && "Not a load/store!");
 
   AtomicInfo.SSID = static_cast<unsigned>(SSID);
@@ -1032,7 +1031,7 @@ void MachineMemOperand::Profile(FoldingSetNodeID &ID) const {
   ID.AddInteger(Size);
   ID.AddPointer(getOpaqueValue());
   ID.AddInteger(getFlags());
-  ID.AddInteger(getBaseAlignment());
+  ID.AddInteger(getBaseAlign().value());
 }
 
 void MachineMemOperand::refineAlignment(const MachineMemOperand *MMO) {
@@ -1041,9 +1040,9 @@ void MachineMemOperand::refineAlignment(const MachineMemOperand *MMO) {
   assert(MMO->getFlags() == getFlags() && "Flags mismatch!");
   assert(MMO->getSize() == getSize() && "Size mismatch!");
 
-  if (MMO->getBaseAlignment() >= getBaseAlignment()) {
+  if (MMO->getBaseAlign() >= getBaseAlign()) {
     // Update the alignment value.
-    BaseAlign = Align(MMO->getBaseAlignment());
+    BaseAlign = MMO->getBaseAlign();
     // Also update the base and offset, because the new alignment may
     // not be applicable with the old ones.
     PtrInfo = MMO->PtrInfo;
@@ -1052,8 +1051,12 @@ void MachineMemOperand::refineAlignment(const MachineMemOperand *MMO) {
 
 /// getAlignment - Return the minimum known alignment in bytes of the
 /// actual memory reference.
-uint64_t MachineMemOperand::getAlignment() const {
-  return MinAlign(getBaseAlignment(), getOffset());
+uint64_t MachineMemOperand::getAlignment() const { return getAlign().value(); }
+
+/// getAlign - Return the minimum known alignment in bytes of the
+/// actual memory reference.
+Align MachineMemOperand::getAlign() const {
+  return commonAlignment(getBaseAlign(), getOffset());
 }
 
 void MachineMemOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
@@ -1148,8 +1151,8 @@ void MachineMemOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
     }
   }
   MachineOperand::printOperandOffset(OS, getOffset());
-  if (getBaseAlignment() != getSize())
-    OS << ", align " << getBaseAlignment();
+  if (getBaseAlign() != getSize())
+    OS << ", align " << getBaseAlign().value();
   auto AAInfo = getAAInfo();
   if (AAInfo.TBAA) {
     OS << ", !tbaa ";

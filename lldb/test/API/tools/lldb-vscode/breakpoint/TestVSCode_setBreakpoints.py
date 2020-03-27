@@ -36,7 +36,7 @@ class TestVSCode_setBreakpoints(lldbvscode_testcase.VSCodeTestCaseBase):
         first_line = line_number('main.cpp', 'break 12')
         second_line = line_number('main.cpp', 'break 13')
         third_line = line_number('main.cpp', 'break 14')
-        lines = [first_line, second_line, third_line]
+        lines = [first_line, third_line, second_line]
 
         # Visual Studio Code Debug Adaptors have no way to specify the file
         # without launching or attaching to a process, so we must start a
@@ -51,8 +51,9 @@ class TestVSCode_setBreakpoints(lldbvscode_testcase.VSCodeTestCaseBase):
             breakpoints = response['body']['breakpoints']
             self.assertEquals(len(breakpoints), len(lines),
                             "expect %u source breakpoints" % (len(lines)))
-            for breakpoint in breakpoints:
+            for (breakpoint, index) in zip(breakpoints, range(len(lines))):
                 line = breakpoint['line']
+                self.assertTrue(line, lines[index])
                 # Store the "id" of the breakpoint that was set for later
                 line_to_id[line] = breakpoint['id']
                 self.assertTrue(line in lines, "line expected in lines array")
@@ -74,8 +75,9 @@ class TestVSCode_setBreakpoints(lldbvscode_testcase.VSCodeTestCaseBase):
             breakpoints = response['body']['breakpoints']
             self.assertEquals(len(breakpoints), len(lines),
                             "expect %u source breakpoints" % (len(lines)))
-            for breakpoint in breakpoints:
+            for (breakpoint, index) in zip(breakpoints, range(len(lines))):
                 line = breakpoint['line']
+                self.assertTrue(line, lines[index])
                 # Verify the same breakpoints are still set within LLDB by
                 # making sure the breakpoint ID didn't change
                 self.assertEquals(line_to_id[line], breakpoint['id'],

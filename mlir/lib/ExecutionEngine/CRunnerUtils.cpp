@@ -17,6 +17,8 @@
 #include <cinttypes>
 #include <cstdio>
 
+#ifdef MLIR_CRUNNERUTILS_DEFINE_FUNCTIONS
+
 // Small runtime support "lib" for vector.print lowering.
 // By providing elementary printing methods only, this
 // library can remain fully unaware of low-level implementation
@@ -29,3 +31,5 @@ extern "C" void print_open() { fputs("( ", stdout); }
 extern "C" void print_close() { fputs(" )", stdout); }
 extern "C" void print_comma() { fputs(", ", stdout); }
 extern "C" void print_newline() { fputc('\n', stdout); }
+
+#endif
