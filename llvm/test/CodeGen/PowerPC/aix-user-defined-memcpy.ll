@@ -105,7 +105,7 @@ declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture writeonly, i8* nocapture r
 ; 32-DIS-NEXT:       10: 7c 08 02 a6                   mflr 0
 ; 32-DIS-NEXT:       14: 90 01 00 08                   stw 0, 8(1)
 ; 32-DIS-NEXT:       18: 94 21 ff c0                   stwu 1, -64(1)
-; 32-DIS-NEXT:       1c: 4b ff ff e5                   bl .-28
+; 32-DIS-NEXT:       1c: 4b ff ff e5                   bl 0x0
 ; 32-DIS-NEXT:       20: 60 00 00 00                   nop
 ; 32-DIS-NEXT:       24: 38 21 00 40                   addi 1, 1, 64
 ; 32-DIS-NEXT:       28: 80 01 00 08                   lwz 0, 8(1)

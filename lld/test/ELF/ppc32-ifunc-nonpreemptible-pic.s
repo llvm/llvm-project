@@ -21,7 +21,7 @@
 # CHECK:      <.text>:
 # CHECK-NEXT: 10188: blr
 # CHECK:      <_start>:
-# CHECK-NEXT:   bl .+12
+# CHECK-NEXT:   bl 0x10198
 # CHECK-NEXT:   lis 9, 1
 # CHECK-NEXT:   addi 9, 9, 424
 # CHECK-EMPTY:
