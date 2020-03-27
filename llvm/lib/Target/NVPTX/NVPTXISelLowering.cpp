@@ -88,11 +88,6 @@ static cl::opt<bool> UsePrecSqrtF32(
     cl::desc("NVPTX Specific: 0 use sqrt.approx, 1 use sqrt.rn."),
     cl::init(true));
 
-static cl::opt<bool> FtzEnabled(
-    "nvptx-f32ftz", cl::ZeroOrMore, cl::Hidden,
-    cl::desc("NVPTX Specific: Flush f32 subnormals to sign-preserving zero."),
-    cl::init(false));
-
 int NVPTXTargetLowering::getDivF32Level() const {
   if (UsePrecDivF32.getNumOccurrences() > 0) {
     // If nvptx-prec-div32=N is used on the command-line, always honor it
@@ -117,12 +112,6 @@ bool NVPTXTargetLowering::usePrecSqrtF32() const {
 }
 
 bool NVPTXTargetLowering::useF32FTZ(const MachineFunction &MF) const {
-  // TODO: Get rid of this flag; there can be only one way to do this.
-  if (FtzEnabled.getNumOccurrences() > 0) {
-    // If nvptx-f32ftz is used on the command-line, always honor it
-    return FtzEnabled;
-  }
-
   return MF.getDenormalMode(APFloat::IEEEsingle()).Output ==
          DenormalMode::PreserveSign;
 }
