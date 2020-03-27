@@ -2777,7 +2777,11 @@ bool DwarfLinker::link(const DebugMap &Map) {
   // This Dwarf string pool which is used for emission. It must be used
   // serially as the order of calling getStringOffset matters for
   // reproducibility.
-  OffsetsStringPool OffsetsStringPool(Options.Translator, true);
+  std::function<StringRef(StringRef)> TranslationLambda =
+      Options.Translator
+          ? [&](StringRef Input) { return Options.Translator(Input); }
+          : static_cast<std::function<StringRef(StringRef)>>(nullptr);
+  OffsetsStringPool OffsetsStringPool(TranslationLambda, true);
 
   // ODR Contexts for the link.
   DeclContextTree ODRContexts;
