@@ -48,10 +48,17 @@ public:
 } // end anonymous namespace
 
 Optional<MCFixupKind> ARMAsmBackend::getFixupKind(StringRef Name) const {
-  if (STI.getTargetTriple().isOSBinFormatELF() && Name == "R_ARM_NONE")
-    return FK_NONE;
+  if (!STI.getTargetTriple().isOSBinFormatELF())
+    return None;
 
-  return MCAsmBackend::getFixupKind(Name);
+  unsigned Type = llvm::StringSwitch<unsigned>(Name)
+#define ELF_RELOC(X, Y) .Case(#X, Y)
+#include "llvm/BinaryFormat/ELFRelocs/ARM.def"
+#undef ELF_RELOC
+                      .Default(-1u);
+  if (Type == -1u)
+    return None;
+  return static_cast<MCFixupKind>(FirstLiteralRelocationKind + Type);
 }
 
 const MCFixupKindInfo &ARMAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
@@ -171,6 +178,11 @@ const MCFixupKindInfo &ARMAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       {"fixup_wls", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
       {"fixup_le", 0, 32, MCFixupKindInfo::FKF_IsPCRel}
   };
+
+  // Fixup kinds from .reloc directive are like R_ARM_NONE. They do not require
+  // any extra processing.
+  if (Kind >= FirstLiteralRelocationKind)
+    return MCAsmBackend::getFixupKindInfo(FK_NONE);
 
   if (Kind < FirstTargetFixupKind)
     return MCAsmBackend::getFixupKindInfo(Kind);
@@ -438,7 +450,6 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
   default:
     Ctx.reportError(Fixup.getLoc(), "bad relocation fixup type");
     return 0;
-  case FK_NONE:
   case FK_Data_1:
   case FK_Data_2:
   case FK_Data_4:
@@ -871,7 +882,7 @@ bool ARMAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
   const MCSymbolRefExpr *A = Target.getSymA();
   const MCSymbol *Sym = A ? &A->getSymbol() : nullptr;
   const unsigned FixupKind = Fixup.getKind();
-  if (FixupKind == FK_NONE)
+  if (FixupKind >= FirstLiteralRelocationKind)
     return true;
   if (FixupKind == ARM::fixup_arm_thumb_bl) {
     assert(Sym && "How did we resolve this?");
@@ -914,9 +925,6 @@ static unsigned getFixupKindNumBytes(unsigned Kind) {
   switch (Kind) {
   default:
     llvm_unreachable("Unknown fixup kind!");
-
-  case FK_NONE:
-    return 0;
 
   case FK_Data_1:
   case ARM::fixup_arm_thumb_bcc:
@@ -979,9 +987,6 @@ static unsigned getFixupKindContainerSizeBytes(unsigned Kind) {
   default:
     llvm_unreachable("Unknown fixup kind!");
 
-  case FK_NONE:
-    return 0;
-
   case FK_Data_1:
     return 1;
   case FK_Data_2:
@@ -1037,7 +1042,10 @@ void ARMAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                                MutableArrayRef<char> Data, uint64_t Value,
                                bool IsResolved,
                                const MCSubtargetInfo* STI) const {
-  unsigned NumBytes = getFixupKindNumBytes(Fixup.getKind());
+  unsigned Kind = Fixup.getKind();
+  if (Kind >= FirstLiteralRelocationKind)
+    return;
+  unsigned NumBytes = getFixupKindNumBytes(Kind);
   MCContext &Ctx = Asm.getContext();
   Value = adjustFixupValue(Asm, Fixup, Target, Value, IsResolved, Ctx, STI);
   if (!Value)
@@ -1049,7 +1057,7 @@ void ARMAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
   // Used to point to big endian bytes.
   unsigned FullSizeBytes;
   if (Endian == support::big) {
-    FullSizeBytes = getFixupKindContainerSizeBytes(Fixup.getKind());
+    FullSizeBytes = getFixupKindContainerSizeBytes(Kind);
     assert((Offset + FullSizeBytes) <= Data.size() && "Invalid fixup size!");
     assert(NumBytes <= FullSizeBytes && "Invalid fixup size!");
   }
