@@ -10078,6 +10078,19 @@ def err_omp_depobj_single_clause_expected : Error<
   "exactly one of 'depend', 'destroy', or 'update' clauses is expected">;
 def err_omp_scan_single_clause_expected : Error<
   "exactly one of 'inclusive' or 'exclusive' clauses is expected">;
+def err_omp_inclusive_exclusive_not_reduction : Error<
+  "the list item must appear in 'reduction' clause with the 'inscan' modifier "
+  "of the parent directive">;
+def err_omp_reduction_not_inclusive_exclusive : Error<
+  "the inscan reduction list item must appear as a list item in an 'inclusive' or"
+  " 'exclusive' clause on an inner 'omp scan' directive">;
+def err_omp_wrong_inscan_reduction : Error<
+  "'inscan' modifier can be used only in 'omp for', 'omp simd', 'omp for simd',"
+  " 'omp parallel for', or 'omp parallel for simd' directive">;
+def err_omp_inscan_reduction_expected : Error<
+  "expected 'reduction' clause with the 'inscan' modifier">;
+def note_omp_previous_inscan_reduction : Note<
+  "'reduction' clause with 'inscan' modifier is used here">;
 def err_omp_expected_predefined_allocator : Error<
   "expected one of the predefined allocators for the variables with the static "
   "storage: 'omp_default_mem_alloc', 'omp_large_cap_mem_alloc', "
