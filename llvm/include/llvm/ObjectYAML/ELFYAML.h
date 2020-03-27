@@ -177,6 +177,9 @@ struct Section : public Chunk {
   // When they are, this flag is used to signal about that.
   bool IsImplicit;
 
+  // Holds the original section index.
+  unsigned OriginalSecNdx;
+
   Section(ChunkKind Kind, bool IsImplicit = false)
       : Chunk(Kind), IsImplicit(IsImplicit) {}
 
