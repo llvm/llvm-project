@@ -53,7 +53,7 @@
 #include <utility>
 
 /// The semantic version combined as a string.
-#define LLVM_COVERAGE_EXPORT_JSON_STR "2.0.0"
+#define LLVM_COVERAGE_EXPORT_JSON_STR "2.0.1"
 
 /// Unique type identifier for JSON coverage export.
 #define LLVM_COVERAGE_EXPORT_JSON_TYPE_STR "llvm.coverage.json.export"
@@ -72,8 +72,9 @@ int64_t clamp_uint64_to_int64(uint64_t u) {
 }
 
 json::Array renderSegment(const coverage::CoverageSegment &Segment) {
-  return json::Array({Segment.Line, Segment.Col, clamp_uint64_to_int64(Segment.Count),
-                      Segment.HasCount, Segment.IsRegionEntry});
+  return json::Array({Segment.Line, Segment.Col,
+                      clamp_uint64_to_int64(Segment.Count), Segment.HasCount,
+                      Segment.IsRegionEntry, Segment.IsGapRegion});
 }
 
 json::Array renderRegion(const coverage::CountedRegion &Region) {
