@@ -1208,119 +1208,46 @@ LogicalResult LLVM::detail::vectorOneToOneRewrite(
 }
 
 namespace {
-// Specific lowerings.
-// FIXME: this should be tablegen'ed.
-struct AbsFOpLowering
-    : public VectorConvertToLLVMPattern<AbsFOp, LLVM::FAbsOp> {
-  using Super::Super;
-};
-struct CeilFOpLowering
-    : public VectorConvertToLLVMPattern<CeilFOp, LLVM::FCeilOp> {
-  using Super::Super;
-};
-struct CosOpLowering : public VectorConvertToLLVMPattern<CosOp, LLVM::CosOp> {
-  using Super::Super;
-};
-struct ExpOpLowering : public VectorConvertToLLVMPattern<ExpOp, LLVM::ExpOp> {
-  using Super::Super;
-};
-struct LogOpLowering : public VectorConvertToLLVMPattern<LogOp, LLVM::LogOp> {
-  using Super::Super;
-};
-struct Log10OpLowering
-    : public VectorConvertToLLVMPattern<Log10Op, LLVM::Log10Op> {
-  using Super::Super;
-};
-struct Log2OpLowering
-    : public VectorConvertToLLVMPattern<Log2Op, LLVM::Log2Op> {
-  using Super::Super;
-};
-struct NegFOpLowering
-    : public VectorConvertToLLVMPattern<NegFOp, LLVM::FNegOp> {
-  using Super::Super;
-};
-struct AddIOpLowering : public VectorConvertToLLVMPattern<AddIOp, LLVM::AddOp> {
-  using Super::Super;
-};
-struct SubIOpLowering : public VectorConvertToLLVMPattern<SubIOp, LLVM::SubOp> {
-  using Super::Super;
-};
-struct MulIOpLowering : public VectorConvertToLLVMPattern<MulIOp, LLVM::MulOp> {
-  using Super::Super;
-};
-struct SignedDivIOpLowering
-    : public VectorConvertToLLVMPattern<SignedDivIOp, LLVM::SDivOp> {
-  using Super::Super;
-};
-struct SqrtOpLowering
-    : public VectorConvertToLLVMPattern<SqrtOp, LLVM::SqrtOp> {
-  using Super::Super;
-};
-struct UnsignedDivIOpLowering
-    : public VectorConvertToLLVMPattern<UnsignedDivIOp, LLVM::UDivOp> {
-  using Super::Super;
-};
-struct SignedRemIOpLowering
-    : public VectorConvertToLLVMPattern<SignedRemIOp, LLVM::SRemOp> {
-  using Super::Super;
-};
-struct UnsignedRemIOpLowering
-    : public VectorConvertToLLVMPattern<UnsignedRemIOp, LLVM::URemOp> {
-  using Super::Super;
-};
-struct AndOpLowering : public VectorConvertToLLVMPattern<AndOp, LLVM::AndOp> {
-  using Super::Super;
-};
-struct OrOpLowering : public VectorConvertToLLVMPattern<OrOp, LLVM::OrOp> {
-  using Super::Super;
-};
-struct XOrOpLowering : public VectorConvertToLLVMPattern<XOrOp, LLVM::XOrOp> {
-  using Super::Super;
-};
-struct AddFOpLowering
-    : public VectorConvertToLLVMPattern<AddFOp, LLVM::FAddOp> {
-  using Super::Super;
-};
-struct SubFOpLowering
-    : public VectorConvertToLLVMPattern<SubFOp, LLVM::FSubOp> {
-  using Super::Super;
-};
-struct MulFOpLowering
-    : public VectorConvertToLLVMPattern<MulFOp, LLVM::FMulOp> {
-  using Super::Super;
-};
-struct DivFOpLowering
-    : public VectorConvertToLLVMPattern<DivFOp, LLVM::FDivOp> {
-  using Super::Super;
-};
-struct RemFOpLowering
-    : public VectorConvertToLLVMPattern<RemFOp, LLVM::FRemOp> {
-  using Super::Super;
-};
-struct CopySignOpLowering
-    : public VectorConvertToLLVMPattern<CopySignOp, LLVM::CopySignOp> {
-  using Super::Super;
-};
-struct SelectOpLowering
-    : public OneToOneConvertToLLVMPattern<SelectOp, LLVM::SelectOp> {
-  using Super::Super;
-};
-struct ConstLLVMOpLowering
-    : public OneToOneConvertToLLVMPattern<ConstantOp, LLVM::ConstantOp> {
-  using Super::Super;
-};
-struct ShiftLeftOpLowering
-    : public OneToOneConvertToLLVMPattern<ShiftLeftOp, LLVM::ShlOp> {
-  using Super::Super;
-};
-struct SignedShiftRightOpLowering
-    : public OneToOneConvertToLLVMPattern<SignedShiftRightOp, LLVM::AShrOp> {
-  using Super::Super;
-};
-struct UnsignedShiftRightOpLowering
-    : public OneToOneConvertToLLVMPattern<UnsignedShiftRightOp, LLVM::LShrOp> {
-  using Super::Super;
-};
+// Straightforward lowerings.
+using AbsFOpLowering = VectorConvertToLLVMPattern<AbsFOp, LLVM::FAbsOp>;
+using AddFOpLowering = VectorConvertToLLVMPattern<AddFOp, LLVM::FAddOp>;
+using AddIOpLowering = VectorConvertToLLVMPattern<AddIOp, LLVM::AddOp>;
+using AndOpLowering = VectorConvertToLLVMPattern<AndOp, LLVM::AndOp>;
+using CeilFOpLowering = VectorConvertToLLVMPattern<CeilFOp, LLVM::FCeilOp>;
+using ConstLLVMOpLowering =
+    OneToOneConvertToLLVMPattern<ConstantOp, LLVM::ConstantOp>;
+using CopySignOpLowering =
+    VectorConvertToLLVMPattern<CopySignOp, LLVM::CopySignOp>;
+using CosOpLowering = VectorConvertToLLVMPattern<CosOp, LLVM::CosOp>;
+using DivFOpLowering = VectorConvertToLLVMPattern<DivFOp, LLVM::FDivOp>;
+using ExpOpLowering = VectorConvertToLLVMPattern<ExpOp, LLVM::ExpOp>;
+using Log10OpLowering = VectorConvertToLLVMPattern<Log10Op, LLVM::Log10Op>;
+using Log2OpLowering = VectorConvertToLLVMPattern<Log2Op, LLVM::Log2Op>;
+using LogOpLowering = VectorConvertToLLVMPattern<LogOp, LLVM::LogOp>;
+using MulFOpLowering = VectorConvertToLLVMPattern<MulFOp, LLVM::FMulOp>;
+using MulIOpLowering = VectorConvertToLLVMPattern<MulIOp, LLVM::MulOp>;
+using NegFOpLowering = VectorConvertToLLVMPattern<NegFOp, LLVM::FNegOp>;
+using OrOpLowering = VectorConvertToLLVMPattern<OrOp, LLVM::OrOp>;
+using RemFOpLowering = VectorConvertToLLVMPattern<RemFOp, LLVM::FRemOp>;
+using SelectOpLowering = OneToOneConvertToLLVMPattern<SelectOp, LLVM::SelectOp>;
+using ShiftLeftOpLowering =
+    OneToOneConvertToLLVMPattern<ShiftLeftOp, LLVM::ShlOp>;
+using SignedDivIOpLowering =
+    VectorConvertToLLVMPattern<SignedDivIOp, LLVM::SDivOp>;
+using SignedRemIOpLowering =
+    VectorConvertToLLVMPattern<SignedRemIOp, LLVM::SRemOp>;
+using SignedShiftRightOpLowering =
+    OneToOneConvertToLLVMPattern<SignedShiftRightOp, LLVM::AShrOp>;
+using SqrtOpLowering = VectorConvertToLLVMPattern<SqrtOp, LLVM::SqrtOp>;
+using SubFOpLowering = VectorConvertToLLVMPattern<SubFOp, LLVM::FSubOp>;
+using SubIOpLowering = VectorConvertToLLVMPattern<SubIOp, LLVM::SubOp>;
+using UnsignedDivIOpLowering =
+    VectorConvertToLLVMPattern<UnsignedDivIOp, LLVM::UDivOp>;
+using UnsignedRemIOpLowering =
+    VectorConvertToLLVMPattern<UnsignedRemIOp, LLVM::URemOp>;
+using UnsignedShiftRightOpLowering =
+    OneToOneConvertToLLVMPattern<UnsignedShiftRightOp, LLVM::LShrOp>;
+using XOrOpLowering = VectorConvertToLLVMPattern<XOrOp, LLVM::XOrOp>;
 
 // Check if the MemRefType `type` is supported by the lowering. We currently
 // only support memrefs with identity maps.
