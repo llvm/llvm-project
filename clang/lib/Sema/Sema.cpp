@@ -1494,6 +1494,13 @@ public:
   DeferredDiagnosticsEmitter(Sema &S)
       : Inherited(S), ShouldEmit(false), InOMPDeviceContext(0) {}
 
+  void VisitDeclRefExpr(DeclRefExpr *E) {
+    auto *D = E->getDecl();
+    if (isa<FunctionDecl>(D)) {
+      visitUsedDecl(E->getLocation(), D);
+    }
+  }
+
   void VisitOMPTargetDirective(OMPTargetDirective *Node) {
     ++InOMPDeviceContext;
     Inherited::VisitOMPTargetDirective(Node);
@@ -1525,6 +1532,11 @@ public:
       UseStack.pop_back();
       Visited.erase(D);
     } else if (auto *VD = dyn_cast<VarDecl>(D)) {
+      assert(Visited.count(D) == 0 &&
+             "Variables should not recursively visited");
+      Visited.insert(D);
+      assert(VD->hasGlobalStorage() &&
+             "Should only check variables with global storage");
       if (auto *Init = VD->getInit()) {
         auto DevTy = OMPDeclareTargetDeclAttr::getDeviceType(VD);
         bool IsDev = DevTy && (*DevTy == OMPDeclareTargetDeclAttr::DT_NoHost ||
@@ -1535,6 +1547,7 @@ public:
         if (IsDev)
           --InOMPDeviceContext;
       }
+      Visited.erase(D);
     } else
       Inherited::visitUsedDecl(Loc, D);
   }
