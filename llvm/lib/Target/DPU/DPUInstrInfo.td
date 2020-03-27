@@ -59,8 +59,8 @@ def SDT_Ldma : SDNode<"DPUISD::LDMA", SDT_DMA, [SDNPHasChain]>;
 def SDT_Sdma : SDNode<"DPUISD::SDMA", SDT_DMA, [SDNPHasChain]>;
 
 def SDT_SEQREAD_GET : SDTypeProfile<1, 5, [SDTCisInt<0>, SDTCisInt<1>, SDTCisVT<2, iPTR>, SDTCisInt<3>, SDTCisInt<4>]>;
-def DPUSeqreadGet : SDNode<"DPUISD::SEQREAD_GET", SDT_SEQREAD_GET, []>;
-def DPUSeqreadGetCst : SDNode<"DPUISD::SEQREAD_GET_CST", SDT_SEQREAD_GET, []>;
+def DPUSeqreadGet : SDNode<"DPUISD::SEQREAD_GET", SDT_SEQREAD_GET, [SDNPHasChain]>;
+def DPUSeqreadGetCst : SDNode<"DPUISD::SEQREAD_GET_CST", SDT_SEQREAD_GET, [SDNPHasChain]>;
 
 // To promote special types of operands to registers (see the patterns below).
 def SDTDPUWrapper       : SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>, SDTCisPtrTy<0>]>;

@@ -1863,9 +1863,16 @@ SDValue DPUTargetLowering::LowerSeqreadGet(SDValue Op,
     incValue = DAG.getConstant(inc, dl, MVT::i32);
   }
 
-  SDValue Ops[] = {Op.getOperand(2), incValue, Op.getOperand(4), cond,
-                   pageSizeValue};
-  return DAG.getNode(Opcode, dl, evt, Ops);
+  SmallVector<EVT, 2> ResTys;
+
+  for (SDNode::value_iterator I = Op->value_begin(), E = Op->value_end();
+       I != E; ++I)
+    ResTys.push_back(*I);
+
+  SDValue Ops[] = {
+      Op.getOperand(0), Op.getOperand(2), incValue, Op.getOperand(4), cond,
+      pageSizeValue};
+  return DAG.getNode(Opcode, dl, ResTys, Ops);
 }
 
 SDValue DPUTargetLowering::LowerIntrinsic(SDValue Op, SelectionDAG &DAG,
