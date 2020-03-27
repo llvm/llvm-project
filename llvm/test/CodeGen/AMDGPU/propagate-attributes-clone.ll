@@ -55,11 +55,11 @@
 ; OPT-INT: define internal fastcc void @foo3() unnamed_addr #4
 ; OPT-EXT: define internal fastcc void @foo2.3() unnamed_addr #4
 ; OPT-INT: define internal fastcc void @foo2() unnamed_addr #4
-; OPT: attributes #0 = { {{.*}} "target-features"="+wavefrontsize64" }
+; OPT: attributes #0 = { {{.*}} "amdgpu-waves-per-eu"="1,1" "target-features"="+wavefrontsize64" }
 ; OPT: attributes #1 = { {{.*}} "target-features"="{{.*}},-wavefrontsize16,-wavefrontsize32,+wavefrontsize64{{.*}}" }
-; OPT: attributes #2 = { {{.*}} "target-features"="+wavefrontsize32" }
+; OPT: attributes #2 = { {{.*}} "amdgpu-waves-per-eu"="2,4" "target-features"="+wavefrontsize32" }
 ; OPT: attributes #3 = { {{.*}} "target-features"="+wavefrontsize64" }
-; OPT: attributes #4 = { {{.*}} "target-features"="{{.*}},-wavefrontsize16,+wavefrontsize32,-wavefrontsize64{{.*}}" }
+; OPT: attributes #4 = { {{.*}} "amdgpu-waves-per-eu"="2,4" "target-features"="{{.*}},-wavefrontsize16,+wavefrontsize32,-wavefrontsize64{{.*}}" }
 
 ; LLC: foo3:
 ; LLC: sample asm
@@ -94,7 +94,7 @@ entry:
   ret void
 }
 
-define void @foo3() #1 {
+define void @foo3() #4 {
 entry:
   call void asm sideeffect "; sample asm", ""()
   ret void
@@ -135,7 +135,8 @@ entry:
   ret void
 }
 
-attributes #0 = { nounwind "target-features"="+wavefrontsize32" }
-attributes #1 = { noinline nounwind "target-features"="+wavefrontsize64" }
+attributes #0 = { nounwind "target-features"="+wavefrontsize32" "amdgpu-waves-per-eu"="2,4" }
+attributes #1 = { noinline nounwind "target-features"="+wavefrontsize64" "amdgpu-waves-per-eu"="1,1" }
 attributes #2 = { nounwind "target-features"="+wavefrontsize64" }
 attributes #3 = { nounwind "target-features"="+wavefrontsize64" }
+attributes #4 = { noinline nounwind "target-features"="+wavefrontsize64" "amdgpu-waves-per-eu"="2,4" }
