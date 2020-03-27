@@ -35,8 +35,8 @@ public:
                         const MCSubtargetInfo &STI, raw_ostream &O);
   bool printAliasInstr(const MCInst *MI, uint64_t Address,
                        const MCSubtargetInfo &STI, raw_ostream &O);
-  void printCustomAliasOperand(const MCInst *MI, unsigned OpIdx,
-                               unsigned PrintMethodIdx,
+  void printCustomAliasOperand(const MCInst *MI, uint64_t Address,
+                               unsigned OpIdx, unsigned PrintMethodIdx,
                                const MCSubtargetInfo &STI, raw_ostream &O);
   static const char *getRegisterName(unsigned RegNo);
 

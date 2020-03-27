@@ -783,7 +783,7 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
   // before it can be matched to the mnemonic.
   std::map<std::string, std::vector<IAPrinter>> IAPrinterMap;
 
-  std::vector<std::string> PrintMethods;
+  std::vector<std::pair<std::string, bool>> PrintMethods;
 
   // A list of MCOperandPredicates for all operands in use, and the reverse map
   std::vector<const Record*> MCOpPredicates;
@@ -855,11 +855,16 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
           if (Rec->isSubClassOf("RegisterOperand") ||
               Rec->isSubClassOf("Operand")) {
             StringRef PrintMethod = Rec->getValueAsString("PrintMethod");
+            bool IsPCRel =
+                Rec->getValueAsString("OperandType") == "OPERAND_PCREL";
             if (PrintMethod != "" && PrintMethod != "printOperand") {
-              PrintMethodIdx =
-                  llvm::find(PrintMethods, PrintMethod) - PrintMethods.begin();
+              PrintMethodIdx = llvm::find_if(PrintMethods,
+                                             [&](auto &X) {
+                                               return X.first == PrintMethod;
+                                             }) -
+                               PrintMethods.begin();
               if (static_cast<unsigned>(PrintMethodIdx) == PrintMethods.size())
-                PrintMethods.push_back(std::string(PrintMethod));
+                PrintMethods.emplace_back(std::string(PrintMethod), IsPCRel);
             }
           }
 
@@ -1149,7 +1154,7 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
   O << "          ++I;\n";
   O << "          int OpIdx = AsmString[I++] - 1;\n";
   O << "          int PrintMethodIdx = AsmString[I++] - 1;\n";
-  O << "          printCustomAliasOperand(MI, OpIdx, PrintMethodIdx, ";
+  O << "          printCustomAliasOperand(MI, Address, OpIdx, PrintMethodIdx, ";
   O << (PassSubtarget ? "STI, " : "");
   O << "OS);\n";
   O << "        } else\n";
@@ -1171,7 +1176,7 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
 
   O << "void " << Target.getName() << ClassName << "::"
     << "printCustomAliasOperand(\n"
-    << "         const MCInst *MI, unsigned OpIdx,\n"
+    << "         const MCInst *MI, uint64_t Address, unsigned OpIdx,\n"
     << "         unsigned PrintMethodIdx,\n"
     << (PassSubtarget ? "         const MCSubtargetInfo &STI,\n" : "")
     << "         raw_ostream &OS) {\n";
@@ -1185,7 +1190,8 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
 
     for (unsigned i = 0; i < PrintMethods.size(); ++i) {
       O << "  case " << i << ":\n"
-        << "    " << PrintMethods[i] << "(MI, OpIdx, "
+        << "    " << PrintMethods[i].first << "(MI, "
+        << (PrintMethods[i].second ? "Address, " : "") << "OpIdx, "
         << (PassSubtarget ? "STI, " : "") << "OS);\n"
         << "    break;\n";
     }
