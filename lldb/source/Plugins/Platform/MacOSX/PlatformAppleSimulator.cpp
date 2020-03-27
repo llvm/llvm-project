@@ -77,9 +77,10 @@ void PlatformAppleSimulator::GetStatus(Stream &strm) {
   // simulator
   PlatformAppleSimulator::LoadCoreSimulator();
 
+  std::string developer_dir = GetXcodeDeveloperDirectory().GetPath();
   CoreSimulatorSupport::DeviceSet devices =
       CoreSimulatorSupport::DeviceSet::GetAvailableDevices(
-          GetDeveloperDirectory());
+          developer_dir.c_str());
   const size_t num_devices = devices.GetNumDevices();
   if (num_devices) {
     strm.Printf("Available devices:\n");
@@ -123,9 +124,10 @@ Status PlatformAppleSimulator::ConnectRemote(Args &args) {
     const char *arg_cstr = args.GetArgumentAtIndex(0);
     if (arg_cstr) {
       std::string arg_str(arg_cstr);
+      std::string developer_dir = GetXcodeDeveloperDirectory().GetPath();
       CoreSimulatorSupport::DeviceSet devices =
           CoreSimulatorSupport::DeviceSet::GetAvailableDevices(
-              GetDeveloperDirectory());
+              developer_dir.c_str());
       devices.ForEach(
           [this, &arg_str](const CoreSimulatorSupport::Device &device) -> bool {
             if (arg_str == device.GetUDID() || arg_str == device.GetName()) {
@@ -212,12 +214,12 @@ FileSpec PlatformAppleSimulator::GetCoreSimulatorPath() {
 #if defined(__APPLE__)
   std::lock_guard<std::mutex> guard(m_core_sim_path_mutex);
   if (!m_core_simulator_framework_path.hasValue()) {
-    const char *developer_dir = GetDeveloperDirectory();
-    if (developer_dir) {
+    if (FileSpec fspec = GetXcodeDeveloperDirectory()) {
+      std::string developer_dir = fspec.GetPath();
       StreamString cs_path;
       cs_path.Printf(
           "%s/Library/PrivateFrameworks/CoreSimulator.framework/CoreSimulator",
-          developer_dir);
+          developer_dir.c_str());
       m_core_simulator_framework_path = FileSpec(cs_path.GetData());
       FileSystem::Instance().Resolve(*m_core_simulator_framework_path);
     }
@@ -245,8 +247,9 @@ CoreSimulatorSupport::Device PlatformAppleSimulator::GetSimulatorDevice() {
   if (!m_device.hasValue()) {
     const CoreSimulatorSupport::DeviceType::ProductFamilyID dev_id =
         CoreSimulatorSupport::DeviceType::ProductFamilyID::iPhone;
+    std::string developer_dir = GetXcodeDeveloperDirectory().GetPath();
     m_device = CoreSimulatorSupport::DeviceSet::GetAvailableDevices(
-                   GetDeveloperDirectory())
+                   developer_dir.c_str())
                    .GetFanciest(dev_id);
   }
 
