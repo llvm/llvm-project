@@ -90,6 +90,6 @@ void ento::registerInvalidatedIteratorChecker(CheckerManager &mgr) {
   mgr.registerChecker<InvalidatedIteratorChecker>();
 }
 
-bool ento::shouldRegisterInvalidatedIteratorChecker(const LangOptions &LO) {
+bool ento::shouldRegisterInvalidatedIteratorChecker(const CheckerManager &mgr) {
   return true;
 }

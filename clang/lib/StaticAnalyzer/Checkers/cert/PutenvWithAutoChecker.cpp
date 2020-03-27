@@ -63,4 +63,4 @@ void ento::registerPutenvWithAuto(CheckerManager &Mgr) {
   Mgr.registerChecker<PutenvWithAutoChecker>();
 }
 
-bool ento::shouldRegisterPutenvWithAuto(const LangOptions &) { return true; }
+bool ento::shouldRegisterPutenvWithAuto(const CheckerManager &) { return true; }

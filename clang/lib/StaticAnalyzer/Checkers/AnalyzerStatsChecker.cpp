@@ -140,6 +140,6 @@ void ento::registerAnalyzerStatsChecker(CheckerManager &mgr) {
   mgr.registerChecker<AnalyzerStatsChecker>();
 }
 
-bool ento::shouldRegisterAnalyzerStatsChecker(const LangOptions &LO) {
+bool ento::shouldRegisterAnalyzerStatsChecker(const CheckerManager &mgr) {
   return true;
 }

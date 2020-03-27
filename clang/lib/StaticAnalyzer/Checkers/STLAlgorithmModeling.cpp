@@ -174,7 +174,7 @@ void ento::registerSTLAlgorithmModeling(CheckerManager &Mgr) {
                                                   "AggressiveStdFindModeling");
 }
 
-bool ento::shouldRegisterSTLAlgorithmModeling(const LangOptions &LO) {
+bool ento::shouldRegisterSTLAlgorithmModeling(const CheckerManager &mgr) {
   return true;
 }
 

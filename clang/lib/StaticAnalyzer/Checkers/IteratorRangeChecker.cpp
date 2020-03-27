@@ -309,6 +309,6 @@ void ento::registerIteratorRangeChecker(CheckerManager &mgr) {
   mgr.registerChecker<IteratorRangeChecker>();
 }
 
-bool ento::shouldRegisterIteratorRangeChecker(const LangOptions &LO) {
+bool ento::shouldRegisterIteratorRangeChecker(const CheckerManager &mgr) {
   return true;
 }

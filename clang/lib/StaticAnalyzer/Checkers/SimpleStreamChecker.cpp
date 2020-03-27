@@ -271,6 +271,6 @@ void ento::registerSimpleStreamChecker(CheckerManager &mgr) {
 }
 
 // This checker should be enabled regardless of how language options are set.
-bool ento::shouldRegisterSimpleStreamChecker(const LangOptions &LO) {
+bool ento::shouldRegisterSimpleStreamChecker(const CheckerManager &mgr) {
   return true;
 }

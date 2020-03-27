@@ -186,6 +186,6 @@ void ento::registerAnalysisOrderChecker(CheckerManager &mgr) {
   mgr.registerChecker<AnalysisOrderChecker>();
 }
 
-bool ento::shouldRegisterAnalysisOrderChecker(const LangOptions &LO) {
+bool ento::shouldRegisterAnalysisOrderChecker(const CheckerManager &mgr) {
   return true;
 }

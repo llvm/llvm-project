@@ -503,7 +503,7 @@ void UnixAPIPortabilityChecker::checkPreStmt(const CallExpr *CE,
     mgr.registerChecker<CHECKERNAME>();                                        \
   }                                                                            \
                                                                                \
-  bool ento::shouldRegister##CHECKERNAME(const LangOptions &LO) {              \
+  bool ento::shouldRegister##CHECKERNAME(const CheckerManager &mgr) {              \
     return true;                                                               \
   }
 

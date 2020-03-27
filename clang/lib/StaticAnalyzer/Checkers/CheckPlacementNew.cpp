@@ -129,6 +129,6 @@ void ento::registerPlacementNewChecker(CheckerManager &mgr) {
   mgr.registerChecker<PlacementNewChecker>();
 }
 
-bool ento::shouldRegisterPlacementNewChecker(const LangOptions &LO) {
+bool ento::shouldRegisterPlacementNewChecker(const CheckerManager &mgr) {
   return true;
 }

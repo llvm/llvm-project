@@ -304,6 +304,6 @@ void ento::registerDereferenceChecker(CheckerManager &mgr) {
   mgr.registerChecker<DereferenceChecker>();
 }
 
-bool ento::shouldRegisterDereferenceChecker(const LangOptions &LO) {
+bool ento::shouldRegisterDereferenceChecker(const CheckerManager &mgr) {
   return true;
 }
