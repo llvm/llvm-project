@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// RUN: %compile -fsyntax-only
+// RUN: %{compile} -fsyntax-only
 
 #ifdef _MSC_VER
 

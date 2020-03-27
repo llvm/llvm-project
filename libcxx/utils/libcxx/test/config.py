@@ -1044,30 +1044,30 @@ class Configuration(object):
         sub = self.config.substitutions
         cxx_path = tool_env + pipes.quote(self.cxx.path)
         # Configure compiler substitutions
-        sub.append(('%cxx', cxx_path))
-        sub.append(('%libcxx_src_root', self.libcxx_src_root))
+        sub.append(('%{cxx}', cxx_path))
+        sub.append(('%{libcxx_src_root}', self.libcxx_src_root))
         # Configure flags substitutions
         flags_str = ' '.join([pipes.quote(f) for f in self.cxx.flags])
         compile_flags_str = ' '.join([pipes.quote(f) for f in self.cxx.compile_flags])
         link_flags_str = ' '.join([pipes.quote(f) for f in self.cxx.link_flags])
         all_flags = '%s %s %s' % (flags_str, compile_flags_str, link_flags_str)
-        sub.append(('%flags', flags_str))
-        sub.append(('%compile_flags', compile_flags_str))
-        sub.append(('%link_flags', link_flags_str))
+        sub.append(('%{flags}', flags_str))
+        sub.append(('%{compile_flags}', compile_flags_str))
+        sub.append(('%{link_flags}', link_flags_str))
         if self.cxx.isVerifySupported():
             verify_str = ' ' + ' '.join(self.cxx.verify_flags) + ' '
-            sub.append(('%verify', verify_str))
+            sub.append(('%{verify}', verify_str))
         # Add compile and link shortcuts
         compile_str = (cxx_path + ' -o %t.o %s -c ' + flags_str
                        + ' ' + compile_flags_str)
         build_str = cxx_path + ' -o %t.exe %s ' + all_flags
         if self.cxx.use_modules:
-            sub.append(('%build_module', build_str))
+            sub.append(('%{build_module}', build_str))
         elif self.cxx.modules_flags is not None:
             modules_str = ' '.join(self.cxx.modules_flags) + ' '
-            sub.append(('%build_module', build_str + ' ' + modules_str))
-        sub.append(('%compile', compile_str))
-        sub.append(('%build', build_str))
+            sub.append(('%{build_module}', build_str + ' ' + modules_str))
+        sub.append(('%{compile}', compile_str))
+        sub.append(('%{build}', build_str))
         # Configure exec prefix substitutions.
         # Configure run env substitution.
         codesign_ident = self.get_lit_conf('llvm_codesign_identity', '')
@@ -1078,14 +1078,14 @@ class Configuration(object):
             (pipes.quote(sys.executable), pipes.quote(run_py),
              codesign_ident, env_vars)
         run_str = exec_str + '%t.exe'
-        sub.append(('%exec', exec_str))
-        sub.append(('%run', run_str))
+        sub.append(('%{exec}', exec_str))
+        sub.append(('%{run}', run_str))
         # Configure not program substitutions
         not_py = os.path.join(self.libcxx_src_root, 'utils', 'not.py')
         not_str = '%s %s ' % (pipes.quote(sys.executable), pipes.quote(not_py))
-        sub.append(('not ', not_str))
+        sub.append(('%{not} ', not_str))
         if self.get_lit_conf('libcxx_gdb'):
-            sub.append(('%libcxx_gdb', self.get_lit_conf('libcxx_gdb')))
+            sub.append(('%{libcxx_gdb}', self.get_lit_conf('libcxx_gdb')))
 
     def can_use_deployment(self):
         # Check if the host is on an Apple platform using clang.

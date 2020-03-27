@@ -17,13 +17,13 @@
 
 // REQUIRES: modules-support
 
-// NOTE: The -std=XXX flag is present in %flags, so we overwrite it by passing it after %flags.
-// RUN: %cxx %flags %compile_flags -fmodules -fcxx-modules -fsyntax-only -std=c++98 %s
-// RUN: %cxx %flags %compile_flags -fmodules -fcxx-modules -fsyntax-only -std=c++03 %s
-// RUN: %cxx %flags %compile_flags -fmodules -fcxx-modules -fsyntax-only -std=c++11 %s
-// RUN: %cxx %flags %compile_flags -fmodules -fcxx-modules -fsyntax-only -std=c++14 %s
-// RUN: %cxx %flags %compile_flags -fmodules -fcxx-modules -fsyntax-only -std=c++17 %s
-// RUN: %cxx %flags %compile_flags -fmodules -fcxx-modules -fsyntax-only -std=c++2a %s
+// NOTE: The -std=XXX flag is present in %{flags}, so we overwrite it by passing it after %{flags}.
+// RUN: %{cxx} %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -std=c++98 %s
+// RUN: %{cxx} %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -std=c++03 %s
+// RUN: %{cxx} %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -std=c++11 %s
+// RUN: %{cxx} %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -std=c++14 %s
+// RUN: %{cxx} %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -std=c++17 %s
+// RUN: %{cxx} %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -std=c++2a %s
 
 #include <vector>
 

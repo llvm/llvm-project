@@ -17,7 +17,7 @@
 // REQUIRES: modules-support
 // UNSUPPORTED: c++98, c++03
 
-// RUN: %build_module
+// RUN: %{build_module}
 
 #include <clocale>
 

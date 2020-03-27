@@ -1,4 +1,4 @@
-@ RUN: %cxx %flags %link_flags %s -o %t.exe
+@ RUN: %{cxx} %{flags} %{link_flags} %s -o %t.exe
 @ RUN: %t.exe
 @ UNSUPPORTED: libcxxabi-no-exceptions
 

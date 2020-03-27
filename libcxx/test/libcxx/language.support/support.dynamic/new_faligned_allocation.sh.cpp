@@ -25,8 +25,8 @@
 // XFAIL: with_system_cxx_lib=macosx10.8
 // XFAIL: with_system_cxx_lib=macosx10.7
 
-// RUN: %build -faligned-allocation
-// RUN: %run
+// RUN: %{build} -faligned-allocation
+// RUN: %{run}
 
 #include <new>
 #include <typeinfo>

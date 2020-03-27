@@ -18,7 +18,7 @@
 
 // Test that <cinttypes> re-exports <cstdint>
 
-// RUN: %build_module
+// RUN: %{build_module}
 
 #include <cinttypes>
 

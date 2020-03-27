@@ -10,8 +10,8 @@
 
 // REQUIRES: fdelayed-template-parsing
 
-// RUN: %build -fdelayed-template-parsing
-// RUN: %run
+// RUN: %{build} -fdelayed-template-parsing
+// RUN: %{run}
 
 #include <cmath>
 #include <cassert>

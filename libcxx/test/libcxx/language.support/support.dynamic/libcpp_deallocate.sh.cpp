@@ -39,14 +39,14 @@
 // GCC doesn't support the aligned-allocation flags.
 // XFAIL: gcc
 
-// RUN: %build -faligned-allocation -fsized-deallocation
-// RUN: %run
-// RUN: %build -faligned-allocation -fno-sized-deallocation -DNO_SIZE
-// RUN: %run
-// RUN: %build -fno-aligned-allocation -fsized-deallocation -DNO_ALIGN
-// RUN: %run
-// RUN: %build -fno-aligned-allocation -fno-sized-deallocation -DNO_ALIGN -DNO_SIZE
-// RUN: %run
+// RUN: %{build} -faligned-allocation -fsized-deallocation
+// RUN: %{run}
+// RUN: %{build} -faligned-allocation -fno-sized-deallocation -DNO_SIZE
+// RUN: %{run}
+// RUN: %{build} -fno-aligned-allocation -fsized-deallocation -DNO_ALIGN
+// RUN: %{run}
+// RUN: %{build} -fno-aligned-allocation -fno-sized-deallocation -DNO_ALIGN -DNO_SIZE
+// RUN: %{run}
 
 #include <new>
 #include <typeinfo>
