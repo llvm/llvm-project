@@ -1861,6 +1861,105 @@ SignalContext::WriteFlag SignalContext::GetWriteFlag() const {
 #endif
   u32 instr = *(u32 *)pc;
   return (instr >> 21) & 1 ? WRITE: READ;
+#elif defined(__riscv)
+  unsigned long pc = ucontext->uc_mcontext.__gregs[REG_PC];
+  unsigned faulty_instruction = *(uint16_t *)pc;
+
+#if defined(__riscv_compressed)
+  if ((faulty_instruction & 0x3) != 0x3) {  // it's a compressed instruction
+    // set op_bits to the instruction bits [1, 0, 15, 14, 13]
+    unsigned op_bits =
+        ((faulty_instruction & 0x3) << 3) | (faulty_instruction >> 13);
+    unsigned rd = faulty_instruction & 0xF80;  // bits 7-11, inclusive
+    switch (op_bits) {
+      case 0b10'010:  // c.lwsp (rd != x0)
+#if __riscv_xlen == 64
+      case 0b10'011:  // c.ldsp (rd != x0)
+#endif
+        return rd ? SignalContext::READ : SignalContext::UNKNOWN;
+      case 0b00'010:  // c.lw
+#if __riscv_flen >= 32 && __riscv_xlen == 32
+      case 0b10'011:  // c.flwsp
+#endif
+#if __riscv_flen >= 32 || __riscv_xlen == 64
+      case 0b00'011:  // c.flw / c.ld
+#endif
+#if __riscv_flen == 64
+      case 0b00'001:  // c.fld
+      case 0b10'001:  // c.fldsp
+#endif
+        return SignalContext::READ;
+      case 0b00'110:  // c.sw
+      case 0b10'110:  // c.swsp
+#if __riscv_flen >= 32 || __riscv_xlen == 64
+      case 0b00'111:  // c.fsw / c.sd
+      case 0b10'111:  // c.fswsp / c.sdsp
+#endif
+#if __riscv_flen == 64
+      case 0b00'101:  // c.fsd
+      case 0b10'101:  // c.fsdsp
+#endif
+        return SignalContext::WRITE;
+      default:
+        return SignalContext::UNKNOWN;
+    }
+  }
+#endif
+
+  unsigned opcode = faulty_instruction & 0x7f;         // lower 7 bits
+  unsigned funct3 = (faulty_instruction >> 12) & 0x7;  // bits 12-14, inclusive
+  switch (opcode) {
+    case 0b0000011:  // loads
+      switch (funct3) {
+        case 0b000:  // lb
+        case 0b001:  // lh
+        case 0b010:  // lw
+#if __riscv_xlen == 64
+        case 0b011:  // ld
+#endif
+        case 0b100:  // lbu
+        case 0b101:  // lhu
+          return SignalContext::READ;
+        default:
+          return SignalContext::UNKNOWN;
+      }
+    case 0b0100011:  // stores
+      switch (funct3) {
+        case 0b000:  // sb
+        case 0b001:  // sh
+        case 0b010:  // sw
+#if __riscv_xlen == 64
+        case 0b011:  // sd
+#endif
+          return SignalContext::WRITE;
+        default:
+          return SignalContext::UNKNOWN;
+      }
+#if __riscv_flen >= 32
+    case 0b0000111:  // floating-point loads
+      switch (funct3) {
+        case 0b010:  // flw
+#if __riscv_flen == 64
+        case 0b011:  // fld
+#endif
+          return SignalContext::READ;
+        default:
+          return SignalContext::UNKNOWN;
+      }
+    case 0b0100111:  // floating-point stores
+      switch (funct3) {
+        case 0b010:  // fsw
+#if __riscv_flen == 64
+        case 0b011:  // fsd
+#endif
+          return SignalContext::WRITE;
+        default:
+          return SignalContext::UNKNOWN;
+      }
+#endif
+    default:
+      return SignalContext::UNKNOWN;
+  }
 #else
   (void)ucontext;
   return UNKNOWN;  // FIXME: Implement.
