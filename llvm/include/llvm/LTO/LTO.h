@@ -228,7 +228,7 @@ using ThinBackend = std::function<std::unique_ptr<ThinBackendProc>(
 
 /// This ThinBackend runs the individual backend jobs in-process.
 /// The default value means to use one job per hardware core (not hyper-thread).
-ThinBackend createInProcessThinBackend(unsigned ParallelismLevel = 0);
+ThinBackend createInProcessThinBackend(ThreadPoolStrategy Parallelism);
 
 /// This ThinBackend writes individual module indexes to files, instead of
 /// running the individual backend jobs. This backend is for distributed builds

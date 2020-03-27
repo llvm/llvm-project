@@ -273,7 +273,7 @@ SetThreadPriorityResult llvm::set_thread_priority(ThreadPriority Priority) {
 int computeHostNumHardwareThreads() {
 #if defined(HAVE_SCHED_GETAFFINITY) && defined(HAVE_CPU_COUNT)
   cpu_set_t Set;
-  if (sched_getaffinity(0, sizeof(Set), &Set))
+  if (sched_getaffinity(0, sizeof(Set), &Set) == 0)
     return CPU_COUNT(&Set);
 #endif
   // Guard against std::thread::hardware_concurrency() returning 0.

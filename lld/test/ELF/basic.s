@@ -249,9 +249,21 @@ _start:
 # RUN: not ld.lld %t --plugin-opt=lto-partitions=0 2>&1 | FileCheck --check-prefix=NOTHREADS %s
 # NOTHREADS: --lto-partitions: number of threads must be > 0
 
-# RUN: not ld.lld %t --thinlto-jobs=0 2>&1 | FileCheck --check-prefix=NOTHREADSTHIN %s
-# RUN: not ld.lld %t --plugin-opt=jobs=0 2>&1 | FileCheck --check-prefix=NOTHREADSTHIN %s
-# NOTHREADSTHIN: --thinlto-jobs: number of threads must be > 0
+# RUN: ld.lld %t --thinlto-jobs=0 -verbose 2>&1 | FileCheck --check-prefix=THREADSTHIN %s
+# RUN: ld.lld %t --thinlto-jobs=1 -verbose 2>&1 | FileCheck --check-prefix=THREADSTHIN %s
+# RUN: ld.lld %t --thinlto-jobs=2 -verbose 2>&1 | FileCheck --check-prefix=THREADSTHIN %s
+# RUN: ld.lld %t --thinlto-jobs=all -verbose 2>&1 | FileCheck --check-prefix=THREADSTHIN %s
+# RUN: ld.lld %t --thinlto-jobs=1000 -verbose 2>&1 | FileCheck --check-prefix=THREADSTHIN %s
+# THREADSTHIN: basic.s.tmp
+# RUN: not ld.lld %t --thinlto-jobs=foo -verbose 2>&1 | FileCheck --check-prefix=BADTHREADSTHIN %s
+# BADTHREADSTHIN: error: --thinlto-jobs: invalid job count: foo
+
+# RUN: ld.lld %t --plugin-opt=jobs=0 -verbose 2>&1 | FileCheck --check-prefix=THREADSTHIN %s
+# RUN: ld.lld %t --plugin-opt=jobs=1 -verbose 2>&1 | FileCheck --check-prefix=THREADSTHIN %s
+# RUN: ld.lld %t --plugin-opt=jobs=2 -verbose 2>&1 | FileCheck --check-prefix=THREADSTHIN %s
+# RUN: ld.lld %t --plugin-opt=jobs=all -verbose 2>&1 | FileCheck --check-prefix=THREADSTHIN %s
+# RUN: ld.lld %t --plugin-opt=jobs=1000 -verbose 2>&1 | FileCheck --check-prefix=THREADSTHIN %s
+# RUN: not ld.lld %t --plugin-opt=jobs=foo -verbose 2>&1 | FileCheck --check-prefix=BADTHREADSTHIN %s
 
 # RUN: not ld.lld %t -z ifunc-noplt -z text 2>&1 | FileCheck --check-prefix=NOIFUNCPLTNOTEXTREL %s
 # NOIFUNCPLTNOTEXTREL: -z text and -z ifunc-noplt may not be used together

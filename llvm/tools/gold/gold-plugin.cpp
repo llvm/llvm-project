@@ -28,6 +28,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
 #include <list>
 #include <map>
@@ -134,11 +135,9 @@ namespace options {
   };
   static OutputType TheOutputType = OT_NORMAL;
   static unsigned OptLevel = 2;
-  // Default parallelism of 0 used to indicate that user did not specify.
-  // Actual parallelism default value depends on implementation.
   // Currently only affects ThinLTO, where the default is the max cores in the
-  // system.
-  static unsigned Parallelism = 0;
+  // system. See llvm::get_threadpool_strategy() for acceptable values.
+  static std::string Parallelism;
   // Default regular LTO codegen parallelism (number of partitions).
   static unsigned ParallelCodeGenParallelismLevel = 1;
 #ifdef NDEBUG
@@ -272,8 +271,10 @@ namespace options {
         message(LDPL_FATAL, "Optimization level must be between 0 and 3");
       OptLevel = opt[1] - '0';
     } else if (opt.startswith("jobs=")) {
-      if (StringRef(opt_ + 5).getAsInteger(10, Parallelism))
-        message(LDPL_FATAL, "Invalid parallelism level: %s", opt_ + 5);
+      StringRef Num(opt_ + 5);
+      if (!get_threadpool_strategy(Num))
+        message(LDPL_FATAL, "Invalid parallelism level: %s", Num.data());
+      Parallelism = Num;
     } else if (opt.startswith("lto-partitions=")) {
       if (opt.substr(strlen("lto-partitions="))
               .getAsInteger(10, ParallelCodeGenParallelismLevel))
@@ -877,14 +878,15 @@ static std::unique_ptr<LTO> createLTO(IndexWriteCallback OnIndexWrite,
   Conf.PTO.LoopVectorization = options::OptLevel > 1;
   Conf.PTO.SLPVectorization = options::OptLevel > 1;
 
-  if (options::Parallelism)
-    Backend = createInProcessThinBackend(options::Parallelism);
   if (options::thinlto_index_only) {
     std::string OldPrefix, NewPrefix;
     getThinLTOOldAndNewPrefix(OldPrefix, NewPrefix);
     Backend = createWriteIndexesThinBackend(OldPrefix, NewPrefix,
                                             options::thinlto_emit_imports_files,
                                             LinkedObjectsFile, OnIndexWrite);
+  } else {
+    Backend = createInProcessThinBackend(
+        llvm::heavyweight_hardware_concurrency(options::Parallelism));
   }
 
   Conf.OverrideTriple = options::triple;
