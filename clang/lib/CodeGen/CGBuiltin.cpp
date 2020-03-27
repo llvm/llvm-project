@@ -17349,7 +17349,8 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
   }
 }
 
-Value *CodeGenFunction::EmitDPUBuiltinExpr(unsigned BuiltinID, const CallExpr *E) {
+Value *CodeGenFunction::EmitDPUBuiltinExpr(unsigned BuiltinID,
+                                           const CallExpr *E) {
   switch (BuiltinID) {
   case DPU::BI__builtin_dpu_tid: {
     llvm::Type *ResultType = ConvertType(E->getType());
@@ -17377,7 +17378,8 @@ Value *CodeGenFunction::EmitDPUBuiltinExpr(unsigned BuiltinID, const CallExpr *E
     Value *ArgReader = EmitPointerWithAlignment(E->getArg(2)).getPointer();
     Value *ArgPageSize = EmitScalarExpr(E->getArg(3));
 
-    llvm::Function *Callee = CGM.getIntrinsic(Intrinsic::dpu_seqread_get, ResultType);
+    llvm::Function *Callee =
+        CGM.getIntrinsic(Intrinsic::dpu_seqread_get, ResultType);
     return Builder.CreateCall(Callee, {ArgPtr, ArgInc, ArgReader, ArgPageSize});
   }
 
