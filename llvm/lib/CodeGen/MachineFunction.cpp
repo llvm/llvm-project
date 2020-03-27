@@ -486,14 +486,14 @@ MachineFunction::getMachineMemOperand(const MachineMemOperand *MMO,
 
   // If there is no pointer value, the offset isn't tracked so we need to adjust
   // the base alignment.
-  unsigned Align = PtrInfo.V.isNull()
-                       ? MinAlign(MMO->getBaseAlignment(), Offset)
-                       : MMO->getBaseAlignment();
+  Align Alignment = PtrInfo.V.isNull()
+                        ? commonAlignment(MMO->getBaseAlign(), Offset)
+                        : MMO->getBaseAlign();
 
-  return new (Allocator)
-      MachineMemOperand(PtrInfo.getWithOffset(Offset), MMO->getFlags(), Size,
-                        Align, AAMDNodes(), nullptr, MMO->getSyncScopeID(),
-                        MMO->getOrdering(), MMO->getFailureOrdering());
+  return new (Allocator) MachineMemOperand(
+      PtrInfo.getWithOffset(Offset), MMO->getFlags(), Size, Alignment.value(),
+      AAMDNodes(), nullptr, MMO->getSyncScopeID(), MMO->getOrdering(),
+      MMO->getFailureOrdering());
 }
 
 MachineMemOperand *
@@ -503,18 +503,17 @@ MachineFunction::getMachineMemOperand(const MachineMemOperand *MMO,
              MachinePointerInfo(MMO->getValue(), MMO->getOffset()) :
              MachinePointerInfo(MMO->getPseudoValue(), MMO->getOffset());
 
-  return new (Allocator)
-             MachineMemOperand(MPI, MMO->getFlags(), MMO->getSize(),
-                               MMO->getBaseAlignment(), AAInfo,
-                               MMO->getRanges(), MMO->getSyncScopeID(),
-                               MMO->getOrdering(), MMO->getFailureOrdering());
+  return new (Allocator) MachineMemOperand(
+      MPI, MMO->getFlags(), MMO->getSize(), MMO->getBaseAlign().value(), AAInfo,
+      MMO->getRanges(), MMO->getSyncScopeID(), MMO->getOrdering(),
+      MMO->getFailureOrdering());
 }
 
 MachineMemOperand *
 MachineFunction::getMachineMemOperand(const MachineMemOperand *MMO,
                                       MachineMemOperand::Flags Flags) {
   return new (Allocator) MachineMemOperand(
-      MMO->getPointerInfo(), Flags, MMO->getSize(), MMO->getBaseAlignment(),
+      MMO->getPointerInfo(), Flags, MMO->getSize(), MMO->getBaseAlign().value(),
       MMO->getAAInfo(), MMO->getRanges(), MMO->getSyncScopeID(),
       MMO->getOrdering(), MMO->getFailureOrdering());
 }

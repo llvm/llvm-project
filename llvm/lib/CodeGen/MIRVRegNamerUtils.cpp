@@ -112,7 +112,7 @@ std::string VRegRenamer::getInstructionOpcodeHash(MachineInstr &MI) {
     MIOperands.push_back((unsigned)Op->getOrdering());
     MIOperands.push_back((unsigned)Op->getAddrSpace());
     MIOperands.push_back((unsigned)Op->getSyncScopeID());
-    MIOperands.push_back((unsigned)Op->getBaseAlignment());
+    MIOperands.push_back((unsigned)Op->getBaseAlign().value());
     MIOperands.push_back((unsigned)Op->getFailureOrdering());
   }
 
