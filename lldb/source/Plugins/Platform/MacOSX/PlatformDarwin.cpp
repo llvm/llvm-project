@@ -48,9 +48,7 @@ using namespace lldb;
 using namespace lldb_private;
 
 /// Default Constructor
-PlatformDarwin::PlatformDarwin(bool is_host)
-    : PlatformPOSIX(is_host), // This is the local host platform
-      m_developer_directory() {}
+PlatformDarwin::PlatformDarwin(bool is_host) : PlatformPOSIX(is_host) {}
 
 /// Destructor.
 ///
@@ -1135,88 +1133,17 @@ static FileSpec GetXcodeSelectPath() {
   return g_xcode_select_filespec;
 }
 
-// Return a directory path like /Applications/Xcode.app/Contents/Developer
-const char *PlatformDarwin::GetDeveloperDirectory() {
-  std::lock_guard<std::mutex> guard(m_mutex);
-  if (m_developer_directory.empty()) {
-    bool developer_dir_path_valid = false;
-    char developer_dir_path[PATH_MAX];
-
-    // Get the lldb framework's file path, and if it exists, truncate some
-    // components to only the developer directory path.
-    FileSpec temp_file_spec = HostInfo::GetShlibDir();
-    if (temp_file_spec) {
-      if (temp_file_spec.GetPath(developer_dir_path,
-                                 sizeof(developer_dir_path))) {
-        // e.g.
-        // /Applications/Xcode.app/Contents/SharedFrameworks/LLDB.framework
-        char *shared_frameworks =
-            strstr(developer_dir_path, "/SharedFrameworks/LLDB.framework");
-        if (shared_frameworks) {
-          shared_frameworks[0] = '\0';  // truncate developer_dir_path at this point
-          strncat (developer_dir_path, "/Developer", sizeof (developer_dir_path) - 1); // add /Developer on
-          developer_dir_path_valid = true;
-        } else {
-          // e.g.
-          // /Applications/Xcode.app/Contents/Developer/Toolchains/iOS11.2.xctoolchain/System/Library/PrivateFrameworks/LLDB.framework
-          char *developer_toolchains =
-            strstr(developer_dir_path, "/Contents/Developer/Toolchains/");
-          if (developer_toolchains) {
-            developer_toolchains += sizeof ("/Contents/Developer") - 1;
-            developer_toolchains[0] = '\0'; // truncate developer_dir_path at this point
-            developer_dir_path_valid = true;
-          }
-        }
-      }
+lldb_private::FileSpec PlatformDarwin::GetXcodeDeveloperDirectory() {
+  static lldb_private::FileSpec g_developer_directory;
+  static llvm::once_flag g_once_flag;
+  llvm::call_once(g_once_flag, []() {
+    if (FileSpec fspec = GetXcodeContentsDirectory()) {
+      fspec.AppendPathComponent("Developer");
+      if (FileSystem::Instance().Exists(fspec))
+        g_developer_directory = fspec;
     }
-
-    if (!developer_dir_path_valid) {
-      std::string xcode_dir_path;
-      const char *xcode_select_prefix_dir = getenv("XCODE_SELECT_PREFIX_DIR");
-      if (xcode_select_prefix_dir)
-        xcode_dir_path.append(xcode_select_prefix_dir);
-      xcode_dir_path.append("/usr/share/xcode-select/xcode_dir_path");
-      temp_file_spec.SetFile(xcode_dir_path, FileSpec::Style::native);
-      auto dir_buffer =
-          FileSystem::Instance().CreateDataBuffer(temp_file_spec.GetPath());
-      if (dir_buffer && dir_buffer->GetByteSize() > 0) {
-        llvm::StringRef path_ref(dir_buffer->GetChars());
-        // Trim tailing newlines and make sure there is enough room for a null
-        // terminator.
-        path_ref =
-            path_ref.rtrim("\r\n").take_front(sizeof(developer_dir_path) - 1);
-        ::memcpy(developer_dir_path, path_ref.data(), path_ref.size());
-        developer_dir_path[path_ref.size()] = '\0';
-        developer_dir_path_valid = true;
-      }
-    }
-
-    if (!developer_dir_path_valid) {
-      FileSpec devel_dir = GetXcodeSelectPath();
-      if (FileSystem::Instance().IsDirectory(devel_dir)) {
-        devel_dir.GetPath(&developer_dir_path[0], sizeof(developer_dir_path));
-        developer_dir_path_valid = true;
-      }
-    }
-
-    if (developer_dir_path_valid) {
-      temp_file_spec.SetFile(developer_dir_path, FileSpec::Style::native);
-      if (FileSystem::Instance().Exists(temp_file_spec)) {
-        m_developer_directory.assign(developer_dir_path);
-        return m_developer_directory.c_str();
-      }
-    }
-    // Assign a single NULL character so we know we tried to find the device
-    // support directory and we don't keep trying to find it over and over.
-    m_developer_directory.assign(1, '\0');
-  }
-
-  // We should have put a single NULL character into m_developer_directory or
-  // it should have a valid path if the code gets here
-  assert(m_developer_directory.empty() == false);
-  if (m_developer_directory[0])
-    return m_developer_directory.c_str();
-  return nullptr;
+  });
+  return g_developer_directory;
 }
 
 BreakpointSP PlatformDarwin::SetThreadCreationBreakpoint(Target &target) {
