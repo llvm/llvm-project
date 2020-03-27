@@ -358,15 +358,15 @@ TEST(LocateSymbol, All) {
       )cpp",
 
       R"cpp(// Forward class declaration
-        class Foo;
-        class [[Foo]] {};
+        class $decl[[Foo]];
+        class $def[[Foo]] {};
         F^oo* foo();
       )cpp",
 
       R"cpp(// Function declaration
-        void foo();
+        void $decl[[foo]]();
         void g() { f^oo(); }
-        void [[foo]]() {}
+        void $def[[foo]]() {}
       )cpp",
 
       R"cpp(
