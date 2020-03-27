@@ -1,5 +1,5 @@
 ; First example from Doc/Coroutines.rst (one block loop)
-; RUN: opt < %s -O2 -enable-coroutines -S | FileCheck %s
+; RUN: opt < %s -O2 -enable-coroutines -preserve-alignment-assumptions-during-inlining=false -S | FileCheck %s
 
 define i8* @f(i32 %n) {
 entry:
