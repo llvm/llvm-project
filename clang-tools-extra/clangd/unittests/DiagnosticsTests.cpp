@@ -678,7 +678,7 @@ void foo() {
 TEST(IncludeFixerTest, NoCrashMemebrAccess) {
   Annotations Test(R"cpp(// error-ok
     struct X { int  xyz; };
-    void g() { X x; x.$[[xy]] }
+    void g() { X x; x.$[[xy]]; }
   )cpp");
   auto TU = TestTU::withCode(Test.code());
   auto Index = buildIndexWithSymbol(
