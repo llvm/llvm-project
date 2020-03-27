@@ -1678,6 +1678,12 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     break;
   }
 
+  // FIXME: we want resulting declarations to be marked invalid, but claiming
+  // the type is invalid is too strong - e.g. it causes ActOnTypeName to return
+  // a null type.
+  if (Result->containsErrors())
+    declarator.setInvalidType();
+
   if (S.getLangOpts().OpenCL &&
       S.checkOpenCLDisabledTypeDeclSpec(DS, Result))
     declarator.setInvalidType(true);

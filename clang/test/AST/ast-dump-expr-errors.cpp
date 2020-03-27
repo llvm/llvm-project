@@ -42,5 +42,9 @@ int d = static_cast<int>(bar() + 1);
 
 // FIXME: store initializer even when 'auto' could not be deduced.
 // Expressions with errors currently do not keep initializers around.
-// CHECK:     `-VarDecl {{.*}} invalid e 'auto'
+// CHECK: -VarDecl {{.*}} invalid e 'auto'
 auto e = bar();
+
+// Error type should result in an invalid decl.
+// CHECK: -VarDecl {{.*}} invalid f 'decltype(<recovery-expr>(bar))'
+decltype(bar()) f;
