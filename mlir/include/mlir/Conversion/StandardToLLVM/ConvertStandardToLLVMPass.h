@@ -53,13 +53,18 @@ void populateStdToLLVMBarePtrConversionPatterns(
     LLVMTypeConverter &converter, OwningRewritePatternList &patterns,
     bool useAlloca = false);
 
+/// Value to pass as bitwidth for the index type when the converter is expected
+/// to derive the bitwith from the LLVM data layout.
+static constexpr unsigned kDeriveIndexBitwidthFromDataLayout = 0;
+
 /// Creates a pass to convert the Standard dialect into the LLVMIR dialect.
 /// By default stdlib malloc/free are used for allocating MemRef payloads.
 /// Specifying `useAlloca-true` emits stack allocations instead. In the future
 /// this may become an enum when we have concrete uses for other options.
-std::unique_ptr<OpPassBase<ModuleOp>>
-createLowerToLLVMPass(bool useAlloca = false, bool useBarePtrCallConv = false,
-                      bool emitCWrappers = false);
+std::unique_ptr<OpPassBase<ModuleOp>> createLowerToLLVMPass(
+    bool useAlloca = false, bool useBarePtrCallConv = false,
+    bool emitCWrappers = false,
+    unsigned indexBitwidth = kDeriveIndexBitwidthFromDataLayout);
 
 } // namespace mlir
 
