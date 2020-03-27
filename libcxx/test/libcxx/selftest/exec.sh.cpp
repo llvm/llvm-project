@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// RUN: %build
-// RUN: %exec %t.exe "HELLO"
+// RUN: %{build}
+// RUN: %{exec} %t.exe "HELLO"
 
 #include <cassert>
 #include <string>

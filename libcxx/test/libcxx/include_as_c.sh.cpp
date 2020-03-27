@@ -12,7 +12,7 @@
 // NOTE: It's not common or recommended to have libc++ in the header search
 // path when compiling C files, but it does happen often enough.
 
-// RUN: %cxx -c -xc %s -fsyntax-only %flags %compile_flags -std=c99
+// RUN: %{cxx} -c -xc %s -fsyntax-only %{flags} %{compile_flags} -std=c99
 
 #include <complex.h>
 #include <ctype.h>

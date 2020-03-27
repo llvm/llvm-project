@@ -12,8 +12,8 @@
 
 // class directory_entry
 
-// RUN: %build -I%libcxx_src_root/src/filesystem
-// RUN: %run
+// RUN: %{build} -I%{libcxx_src_root}/src/filesystem
+// RUN: %{run}
 
 #include "filesystem_include.h"
 #include <type_traits>

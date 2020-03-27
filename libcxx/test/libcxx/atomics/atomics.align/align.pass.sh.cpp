@@ -8,8 +8,8 @@
 //
 // UNSUPPORTED: libcpp-has-no-threads, c++98, c++03
 // REQUIRES: libatomic
-// RUN: %build -latomic
-// RUN: %run
+// RUN: %{build} -latomic
+// RUN: %{run}
 //
 // GCC currently fails because it needs -fabi-version=6 to fix mangling of
 // std::atomic when used with __attribute__((vector(X))).

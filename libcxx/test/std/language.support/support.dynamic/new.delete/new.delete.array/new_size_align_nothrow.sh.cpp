@@ -15,7 +15,7 @@
 // UNSUPPORTED: clang-3.3, clang-3.4, clang-3.5, clang-3.6, clang-3.7, clang-3.8
 
 // REQUIRES: -faligned-allocation
-// RUN: %compile %verify -faligned-allocation
+// RUN: %{compile} %{verify} -faligned-allocation
 
 #include <new>
 

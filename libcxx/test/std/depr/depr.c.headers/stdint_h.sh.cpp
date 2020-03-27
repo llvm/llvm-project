@@ -12,8 +12,8 @@
 // _STD_TYPES_T, stdint.h can be entered to get to macros like UINT32_MAX.
 //
 // REQUIRES: aix
-// RUN: %compile -c
-// RUN: %compile -c -D_XOPEN_SOURCE=700
+// RUN: %{compile} -c
+// RUN: %{compile} -c -D_XOPEN_SOURCE=700
 
 // test <stdint.h>
 //

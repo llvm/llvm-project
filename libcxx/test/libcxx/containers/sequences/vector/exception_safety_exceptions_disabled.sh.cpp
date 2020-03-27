@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// RUN: %build -fno-exceptions
-// RUN: %run
+// RUN: %{build} -fno-exceptions
+// RUN: %{run}
 
 // UNSUPPORTED: c++98, c++03
 
