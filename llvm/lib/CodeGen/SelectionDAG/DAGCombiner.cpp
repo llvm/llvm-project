@@ -967,10 +967,6 @@ SDValue DAGCombiner::reassociateOpsCommutative(unsigned Opc, const SDLoc &DL,
   if (N0.getOpcode() != Opc)
     return SDValue();
 
-  // Don't reassociate reductions.
-  if (N0->getFlags().hasVectorReduction())
-    return SDValue();
-
   if (DAG.isConstantIntBuildVectorOrConstantInt(N0.getOperand(1))) {
     if (DAG.isConstantIntBuildVectorOrConstantInt(N1)) {
       // Reassociate: (op (op x, c1), c2) -> (op x, (op c1, c2))
@@ -995,9 +991,6 @@ SDValue DAGCombiner::reassociateOpsCommutative(unsigned Opc, const SDLoc &DL,
 SDValue DAGCombiner::reassociateOps(unsigned Opc, const SDLoc &DL, SDValue N0,
                                     SDValue N1, SDNodeFlags Flags) {
   assert(TLI.isCommutativeBinOp(Opc) && "Operation not commutative.");
-  // Don't reassociate reductions.
-  if (Flags.hasVectorReduction())
-    return SDValue();
 
   // Floating-point reassociation is not allowed without loose FP math.
   if (N0.getValueType().isFloatingPoint() ||
