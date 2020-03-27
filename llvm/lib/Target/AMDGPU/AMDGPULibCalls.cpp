@@ -32,7 +32,6 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/Target/TargetOptions.h"
 #include <cmath>
 #include <vector>
 
@@ -170,16 +169,13 @@ namespace {
 
   class AMDGPUSimplifyLibCalls : public FunctionPass {
 
-  const TargetOptions Options;
-
   AMDGPULibCalls Simplifier;
 
   public:
     static char ID; // Pass identification
 
-    AMDGPUSimplifyLibCalls(const TargetOptions &Opt = TargetOptions(),
-                           const TargetMachine *TM = nullptr)
-      : FunctionPass(ID), Options(Opt), Simplifier(TM) {
+    AMDGPUSimplifyLibCalls(const TargetMachine *TM = nullptr)
+      : FunctionPass(ID), Simplifier(TM) {
       initializeAMDGPUSimplifyLibCallsPass(*PassRegistry::getPassRegistry());
     }
 
@@ -1711,33 +1707,12 @@ bool AMDGPULibCalls::evaluateCall(CallInst *aCI, FuncInfo &FInfo) {
 }
 
 // Public interface to the Simplify LibCalls pass.
-FunctionPass *llvm::createAMDGPUSimplifyLibCallsPass(const TargetOptions &Opt,
-                                                     const TargetMachine *TM) {
-  return new AMDGPUSimplifyLibCalls(Opt, TM);
+FunctionPass *llvm::createAMDGPUSimplifyLibCallsPass(const TargetMachine *TM) {
+  return new AMDGPUSimplifyLibCalls(TM);
 }
 
 FunctionPass *llvm::createAMDGPUUseNativeCallsPass() {
   return new AMDGPUUseNativeCalls();
-}
-
-static bool setFastFlags(Function &F, const TargetOptions &Options) {
-  AttrBuilder B;
-
-  if (Options.UnsafeFPMath || Options.NoInfsFPMath)
-    B.addAttribute("no-infs-fp-math", "true");
-  if (Options.UnsafeFPMath || Options.NoNaNsFPMath)
-    B.addAttribute("no-nans-fp-math", "true");
-  if (Options.UnsafeFPMath) {
-    B.addAttribute("less-precise-fpmad", "true");
-    B.addAttribute("unsafe-fp-math", "true");
-  }
-
-  if (!B.hasAttributes())
-    return false;
-
-  F.addAttributes(AttributeList::FunctionIndex, B);
-
-  return true;
 }
 
 bool AMDGPUSimplifyLibCalls::runOnFunction(Function &F) {
@@ -1749,9 +1724,6 @@ bool AMDGPUSimplifyLibCalls::runOnFunction(Function &F) {
 
   LLVM_DEBUG(dbgs() << "AMDIC: process function ";
              F.printAsOperand(dbgs(), false, F.getParent()); dbgs() << '\n';);
-
-  if (!EnablePreLink)
-    Changed |= setFastFlags(F, Options);
 
   for (auto &BB : F) {
     for (BasicBlock::iterator I = BB.begin(), E = BB.end(); I != E; ) {
