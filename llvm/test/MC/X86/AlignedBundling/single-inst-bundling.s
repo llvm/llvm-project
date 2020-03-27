@@ -30,8 +30,8 @@ foo:
   jle     .L_ELSE
 # Due to the padding that's inserted before the addl, the jump target
 # becomes farther by one byte.
-# CHECK-OPT:     jle 5
-# CHECK-RELAX:   jle 7
+# CHECK-OPT:     jle 0x24
+# CHECK-RELAX:   jle 0x2d
 
   addl    %ebp, %eax
 # CHECK-OPT:     nop

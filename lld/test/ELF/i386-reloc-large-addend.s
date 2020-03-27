@@ -10,7 +10,7 @@
 // CHECK:        Disassembly of section .text:
 // CHECK-EMPTY:
 // CHECK-NEXT: <_start>:
-// CHECK-NEXT:     7000:       e9 fe 1f        jmp     8190
+// CHECK-NEXT:     7000:       e9 fe 1f        jmp     0x9001
 //                            0x1 + 0x9000 - 0x7003 == 8190
         .global _start
 _start:

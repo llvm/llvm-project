@@ -42,9 +42,9 @@
 # MACHO-i386:        3:       c7 44 24 08 00 00 00 00                         movl    $0, 8(%esp)
 # MACHO-i386:        b:       c7 04 24 24 00 00 00                            movl    $36, (%esp)
 # MACHO-i386:                                e: GENERIC_RELOC_VANILLA __cstring
-# MACHO-i386:       12:       e8 1f 00 00 00                                  calll   31
+# MACHO-i386:       12:       e8 1f 00 00 00                                  calll   0x36
 # MACHO-i386:                               13: GENERIC_RELOC_VANILLA __jump_table
-# MACHO-i386:       17:       e8 15 00 00 00                                  calll   21
+# MACHO-i386:       17:       e8 15 00 00 00                                  calll   0x31
 # MACHO-i386:                               18: GENERIC_RELOC_VANILLA __jump_table
 # MACHO-i386:       1c:       8b 44 24 08                                     movl    8(%esp), %eax
 # MACHO-i386:       20:       83 c4 0c                                        addl    $12, %esp
@@ -79,9 +79,9 @@
 # ELF-i386:        3:     c7 44 24 08 00 00 00 00                         movl    $0, 8(%esp)
 # ELF-i386:        b:     c7 04 24 00 00 00 00                            movl    $0, (%esp)
 # ELF-i386:                              e: R_386_32      .rodata.str1.1
-# ELF-i386:       12:     e8 fc ff ff ff                                  calll   -4
+# ELF-i386:       12:     e8 fc ff ff ff                                  calll   0x13
 # ELF-i386:                             13: R_386_PC32    puts
-# ELF-i386:       17:     e8 fc ff ff ff                                  calll   -4
+# ELF-i386:       17:     e8 fc ff ff ff                                  calll   0x18
 # ELF-i386:                             18: R_386_PC32    SomeOtherFunction
 # ELF-i386:       1c:     8b 44 24 08                                     movl    8(%esp), %eax
 # ELF-i386:       20:     83 c4 0c                                        addl    $12, %esp

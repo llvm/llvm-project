@@ -34,8 +34,8 @@
 # ELF-i386:        0: 83 ec 0c                        subl    $12, %esp
 # ELF-i386:        3: c7 44 24 08 00 00 00 00         movl    $0, 8(%esp)
 # ELF-i386:        b: c7 04 24 00 00 00 00            movl    $0, (%esp)
-# ELF-i386:       12: e8 fc ff ff ff                  calll   -4
-# ELF-i386:       17: e8 fc ff ff ff                  calll   -4
+# ELF-i386:       12: e8 fc ff ff ff                  calll   0x13
+# ELF-i386:       17: e8 fc ff ff ff                  calll   0x18
 # ELF-i386:       1c: 8b 44 24 08                     movl    8(%esp), %eax
 # ELF-i386:       20: 83 c4 0c                        addl    $12, %esp
 # ELF-i386:       23: c3                              ret

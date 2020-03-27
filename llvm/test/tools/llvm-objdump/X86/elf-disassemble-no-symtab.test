@@ -8,7 +8,7 @@
 # CHECK:       Disassembly of section .text:
 # CHECK-EMPTY:
 # CHECK-NEXT:  0000000000004000 <.text>:
-# CHECK-NEXT:    4000: e8 42 00 00 00                callq   66 <.text+0x47>
+# CHECK-NEXT:    4000: e8 42 00 00 00                callq   0x4047 <.text+0x47>
 
 --- !ELF
 FileHeader:

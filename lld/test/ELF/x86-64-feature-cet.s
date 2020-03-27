@@ -42,8 +42,8 @@
 
 # DISASM:      Disassembly of section .text:
 # DISASM:      0000000000201330 <func1>:
-# DISASM-NEXT: 201330:       callq   0x2b <func2+0x201360>
-# DISASM-NEXT: 201335:       callq   0x36 <func2+0x201370>
+# DISASM-NEXT: 201330:       callq   0x201360 <func2+0x201360>
+# DISASM-NEXT: 201335:       callq   0x201370 <func2+0x201370>
 # DISASM-NEXT:               retq
 
 # DISASM:      Disassembly of section .plt:
@@ -53,7 +53,7 @@
 # DISASM-NEXT:               nopl    (%rax)
 # DISASM-NEXT:               endbr64
 # DISASM-NEXT:               pushq   $0x0
-# DISASM-NEXT:               jmp     -0x1e <.plt>
+# DISASM-NEXT:               jmp     0x201340 <.plt>
 # DISASM-NEXT:               nop
 
 # DISASM:      Disassembly of section .plt.sec:

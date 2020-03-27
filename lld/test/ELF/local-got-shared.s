@@ -14,7 +14,7 @@ foo:
 
 // 0x22E0 - 0x1228 - 5 = 4275
 // DISASM:      <bar>:
-// DISASM-NEXT:   1228:       callq 4275
+// DISASM-NEXT:   1228:       callq 0x22e0
 
 // DISASM:      <foo>:
 // DISASM-NEXT:   122d:       nop

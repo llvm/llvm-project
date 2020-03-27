@@ -33,19 +33,19 @@
 # DISASM-NEXT: leaq -72(%rip), %rax
 # DISASM-NEXT: movq 4192(%rip), %rax
 # DISASM-NEXT: movq 4185(%rip), %rax
-# DISASM-NEXT: callq -93 <foo>
-# DISASM-NEXT: callq -99 <foo>
-# DISASM-NEXT: callq -104 <hid>
-# DISASM-NEXT: callq -110 <hid>
+# DISASM-NEXT: callq 0x201170 <foo>
+# DISASM-NEXT: callq 0x201170 <foo>
+# DISASM-NEXT: callq 0x201171 <hid>
+# DISASM-NEXT: callq 0x201171 <hid>
 # DISASM-NEXT: callq *4155(%rip)
 # DISASM-NEXT: callq *4149(%rip)
-# DISASM-NEXT: jmp   -128 <foo>
+# DISASM-NEXT: jmp   0x201170 <foo>
 # DISASM-NEXT: nop
-# DISASM-NEXT: jmp   -134 <foo>
+# DISASM-NEXT: jmp   0x201170 <foo>
 # DISASM-NEXT: nop
-# DISASM-NEXT: jmp   -139 <hid>
+# DISASM-NEXT: jmp   0x201171 <hid>
 # DISASM-NEXT: nop
-# DISASM-NEXT: jmp   -145 <hid>
+# DISASM-NEXT: jmp   0x201171 <hid>
 # DISASM-NEXT: nop
 # DISASM-NEXT: jmpq  *4119(%rip)
 # DISASM-NEXT: jmpq  *4113(%rip)
