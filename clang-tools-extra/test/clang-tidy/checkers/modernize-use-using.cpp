@@ -247,19 +247,19 @@ typedef Q<T{0 < 0}.b> Q3_t;
 
 typedef TwoArgTemplate<TwoArgTemplate<int, Q<T{0 < 0}.b> >, S<(0 < 0), Q<b[0 < 0]> > > Nested_t;
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
-// CHECK-FIXES: using Nested_t = TwoArgTemplate<TwoArgTemplate<int, Q<T{0 < 0}.b> >, S<(0 < 0), Q<b[0 < 0]> > >;
+// CHECK-FIXES: using Nested_t = TwoArgTemplate<TwoArgTemplate<int, Q<T{0 < 0}.b>>, S<(0 < 0), Q<b[0 < 0]>>>;
 
 template <typename... Args>
 class Variadic {};
 
 typedef Variadic<Variadic<int, bool, Q<T{0 < 0}.b> >, S<(0 < 0), Variadic<Q<b[0 < 0]> > > > Variadic_t;
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
-// CHECK-FIXES: using Variadic_t = Variadic<Variadic<int, bool, Q<T{0 < 0}.b> >, S<(0 < 0), Variadic<Q<b[0 < 0]> > > >
+// CHECK-FIXES: using Variadic_t = Variadic<Variadic<int, bool, Q<T{0 < 0}.b>>, S<(0 < 0), Variadic<Q<b[0 < 0]>>>>
 
 typedef Variadic<Variadic<int, bool, Q<T{0 < 0}.b> >, S<(0 < 0), Variadic<Q<b[0 < 0]> > > > Variadic_t, *Variadic_p;
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
 // CHECK-MESSAGES: :[[@LINE-2]]:103: warning: use 'using' instead of 'typedef'
-// CHECK-FIXES: using Variadic_t = Variadic<Variadic<int, bool, Q<T{0 < 0}.b> >, S<(0 < 0), Variadic<Q<b[0 < 0]> > > >;
+// CHECK-FIXES: using Variadic_t = Variadic<Variadic<int, bool, Q<T{0 < 0}.b>>, S<(0 < 0), Variadic<Q<b[0 < 0]>>>>;
 // CHECK-FIXES-NEXT: using Variadic_p = Variadic_t*;
 
 typedef struct { int a; } R_t, *R_p;

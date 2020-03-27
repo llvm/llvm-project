@@ -63,7 +63,7 @@ template<typename T> struct invalid { typename T::type x; };
 // expected-error@-1 {{typename specifier refers to non-type member 'type' in 'D'}}
 using r1i5 = r1<invalid<D>>;
 // expected-error@-1 {{constraints not satisfied for class template 'r1' [with T = invalid<D>]}}
-// expected-note@-2 {{while checking constraint satisfaction for template 'r1<invalid<D> >' required here}}
+// expected-note@-2 {{while checking constraint satisfaction for template 'r1<invalid<D>>' required here}}
 
 // mismatching template arguments
 
