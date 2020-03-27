@@ -2,7 +2,11 @@
 //      Check that \DexExpectWatchValue correctly applies a penalty when
 //      expected values are not found.
 //
-// RUN: not %dexter_regression_test -- %s | FileCheck %s
+// REQUIRES: system-linux, lldb
+//
+// RUN: not %dexter_base test --fail-lt 1.0 -w \
+// RUN:     --builder 'clang' --debugger 'lldb' --cflags "-O0 -g" -- %s \
+// RUN:     | FileCheck %s
 // CHECK: expect_watch_value.cpp:
 
 int main()

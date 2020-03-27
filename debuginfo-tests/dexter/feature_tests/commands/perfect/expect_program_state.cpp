@@ -2,7 +2,11 @@
 //      Check that \DexExpectWatchValue applies no penalties when expected
 //      program states are found.
 //
-// RUN: %dexter_regression_test -- %s | FileCheck %s
+// REQUIRES: system-linux, lldb
+//
+// RUN: %dexter_base test --fail-lt 1.0 -w \
+// RUN:     --builder 'clang' --debugger 'lldb' --cflags "-O0 -glldb" -- %s \
+// RUN:     | FileCheck %s
 // CHECK: expect_program_state.cpp:
 
 int GCD(int lhs, int rhs)
