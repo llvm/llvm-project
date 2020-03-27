@@ -118,7 +118,13 @@ void AsynchronousSymbolQuery::notifySymbolMetRequiredState(
   assert(I != ResolvedSymbols.end() &&
          "Resolving symbol outside the requested set");
   assert(I->second.getAddress() == 0 && "Redundantly resolving symbol Name");
-  I->second = std::move(Sym);
+
+  // If this is a materialization-side-effects-only symbol then drop it,
+  // otherwise update its map entry with its resolved address.
+  if (Sym.getFlags().hasMaterializationSideEffectsOnly())
+    ResolvedSymbols.erase(I);
+  else
+    I->second = std::move(Sym);
   --OutstandingSymbolsCount;
 }
 
@@ -159,6 +165,14 @@ void AsynchronousSymbolQuery::removeQueryDependence(
     QueryRegistrations.erase(QRI);
 }
 
+void AsynchronousSymbolQuery::dropSymbol(const SymbolStringPtr &Name) {
+  auto I = ResolvedSymbols.find(Name);
+  assert(I != ResolvedSymbols.end() &&
+         "Redundant removal of weakly-referenced symbol");
+  ResolvedSymbols.erase(I);
+  --OutstandingSymbolsCount;
+}
+
 void AsynchronousSymbolQuery::detach() {
   ResolvedSymbols.clear();
   OutstandingSymbolsCount = 0;
@@ -186,6 +200,8 @@ Error MaterializationResponsibility::notifyResolved(const SymbolMap &Symbols) {
     auto I = SymbolFlags.find(KV.first);
     assert(I != SymbolFlags.end() &&
            "Resolving symbol outside this responsibility set");
+    assert(!I->second.hasMaterializationSideEffectsOnly() &&
+           "Can't resolve materialization-side-effects-only symbol");
     assert((KV.second.getFlags() & ~WeakFlags) == (I->second & ~WeakFlags) &&
            "Resolving symbol with incorrect flags");
   }
@@ -398,11 +414,13 @@ void ReExportsMaterializationUnit::materialize(
     SymbolAliasMap Aliases;
   };
 
-  // Build a list of queries to issue. In each round we build the largest set of
-  // aliases that we can resolve without encountering a chain definition of the
-  // form Foo -> Bar, Bar -> Baz. Such a form would deadlock as the query would
-  // be waitin on a symbol that it itself had to resolve. Usually this will just
-  // involve one round and a single query.
+  // Build a list of queries to issue. In each round we build a query for the
+  // largest set of aliases that we can resolve without encountering a chain of
+  // aliases (e.g. Foo -> Bar, Bar -> Baz). Such a chain would deadlock as the
+  // query would be waiting on a symbol that it itself had to resolve. Creating
+  // a new query for each link in such a chain eliminates the possibility of
+  // deadlock. In practice chains are likely to be rare, and this algorithm will
+  // usually result in a single query to issue.
 
   std::vector<std::pair<SymbolLookupSet, std::shared_ptr<OnResolveInfo>>>
       QueryInfos;
@@ -419,7 +437,10 @@ void ReExportsMaterializationUnit::materialize(
         continue;
 
       ResponsibilitySymbols.insert(KV.first);
-      QuerySymbols.add(KV.second.Aliasee);
+      QuerySymbols.add(KV.second.Aliasee,
+                       KV.second.AliasFlags.hasMaterializationSideEffectsOnly()
+                           ? SymbolLookupFlags::WeaklyReferencedSymbol
+                           : SymbolLookupFlags::RequiredSymbol);
       QueryAliases[KV.first] = std::move(KV.second);
     }
 
@@ -468,8 +489,13 @@ void ReExportsMaterializationUnit::materialize(
       if (Result) {
         SymbolMap ResolutionMap;
         for (auto &KV : QueryInfo->Aliases) {
-          assert(Result->count(KV.second.Aliasee) &&
+          assert((KV.second.AliasFlags.hasMaterializationSideEffectsOnly() ||
+                  Result->count(KV.second.Aliasee)) &&
                  "Result map missing entry?");
+          // Don't try to resolve materialization-side-effects-only symbols.
+          if (KV.second.AliasFlags.hasMaterializationSideEffectsOnly())
+            continue;
+
           ResolutionMap[KV.first] = JITEvaluatedSymbol(
               (*Result)[KV.second.Aliasee].getAddress(), KV.second.AliasFlags);
         }
@@ -906,7 +932,9 @@ Error JITDylib::emit(const SymbolFlagsMap &Emitted) {
       auto &SymEntry = SymI->second;
 
       // Move symbol to the emitted state.
-      assert(SymEntry.getState() == SymbolState::Resolved &&
+      assert(((SymEntry.getFlags().hasMaterializationSideEffectsOnly() &&
+               SymEntry.getState() == SymbolState::Materializing) ||
+              SymEntry.getState() == SymbolState::Resolved) &&
              "Emitting from state other than Resolved");
       SymEntry.setState(SymbolState::Emitted);
 
@@ -1311,6 +1339,12 @@ Error JITDylib::lodgeQueryImpl(MaterializationUnitList &MUs,
         if (SymI == Symbols.end())
           return false;
 
+        // If we match against a materialization-side-effects only symbol then
+        // make sure it is weakly-referenced. Otherwise bail out with an error.
+        if (SymI->second.getFlags().hasMaterializationSideEffectsOnly() &&
+            SymLookupFlags != SymbolLookupFlags::WeaklyReferencedSymbol)
+          return make_error<SymbolsNotFound>(SymbolNameVector({Name}));
+
         // If this is a non exported symbol and we're matching exported symbols
         // only then skip this symbol without removal.
         if (!SymI->second.getFlags().isExported() &&
@@ -1580,6 +1614,9 @@ JITDylib::JITDylib(ExecutionSession &ES, std::string Name)
 }
 
 Error JITDylib::defineImpl(MaterializationUnit &MU) {
+
+  LLVM_DEBUG({ dbgs() << "  " << MU.getSymbols() << "\n"; });
+
   SymbolNameSet Duplicates;
   std::vector<SymbolStringPtr> ExistingDefsOverridden;
   std::vector<SymbolStringPtr> MUDefsOverridden;
@@ -1604,14 +1641,26 @@ Error JITDylib::defineImpl(MaterializationUnit &MU) {
   }
 
   // If there were any duplicate definitions then bail out.
-  if (!Duplicates.empty())
+  if (!Duplicates.empty()) {
+    LLVM_DEBUG(
+        { dbgs() << "  Error: Duplicate symbols " << Duplicates << "\n"; });
     return make_error<DuplicateDefinition>(std::string(**Duplicates.begin()));
+  }
 
   // Discard any overridden defs in this MU.
+  LLVM_DEBUG({
+    if (!MUDefsOverridden.empty())
+      dbgs() << "  Defs in this MU overridden: " << MUDefsOverridden << "\n";
+  });
   for (auto &S : MUDefsOverridden)
     MU.doDiscard(*this, S);
 
   // Discard existing overridden defs.
+  LLVM_DEBUG({
+    if (!ExistingDefsOverridden.empty())
+      dbgs() << "  Existing defs overridden by this MU: " << MUDefsOverridden
+             << "\n";
+  });
   for (auto &S : ExistingDefsOverridden) {
 
     auto UMII = UnmaterializedInfos.find(S);
