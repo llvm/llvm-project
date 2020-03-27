@@ -11,7 +11,7 @@
 ## Check the case when relocations are inlined into disassembly.
 # RUN: llvm-objdump -d -r --demangle %t | FileCheck %s --check-prefix=INLINE
 # INLINE:      <foo()>:
-# INLINE-NEXT:  0: {{.*}}  callq   0 <_Z3foov+0x5>
+# INLINE-NEXT:  0: {{.*}}  callq   0x5 <_Z3foov+0x5>
 # INLINE-NEXT:  0000000000000001:  R_X86_64_PLT32 foo()-0x4
 
 .text

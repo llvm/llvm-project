@@ -24,8 +24,8 @@ baz32:
 
 	
 // CHECK16-LABEL: bar16
-// CHECK16-NEXT: e9 fe ff 	jmp	-2 <bar16+0x1>
+// CHECK16-NEXT: e9 fe ff 	jmp	0x1 <bar16+0x1>
 // CHECK32-LABEL: baz32
-// CHECK32-NEXT: e9 fc ff ff ff 	jmp	-4 <baz32+0x1>
+// CHECK32-NEXT: e9 fc ff ff ff 	jmp	0x1 <baz32+0x1>
 
 	

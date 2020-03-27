@@ -31,7 +31,7 @@ foo:
 // CHECK-EMPTY:
 // CHECK-NEXT: <bar>:
 // 0x1234 - 0x1235 - 5 = -6
-// CHECK-NEXT:   1235:	{{.*}}  callq  -6
+// CHECK-NEXT:   1235:	{{.*}}  callq  0x1234
 
         .section .text3,"axG",@progbits,zed,comdat,unique,0
 

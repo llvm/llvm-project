@@ -30,10 +30,10 @@
 // DISASM-NEXT:   201321:      	retq
 // DISASM-EMPTY:
 // DISASM-NEXT: 0000000000201322 <_start>:
-// DISASM-NEXT:   201322:      	callq	0 <_start+0x5>
-// DISASM-NEXT:   201327:      	callq	0 <_start+0xa>
-// DISASM-NEXT:   20132c:      	callq	31 <bar2@plt>
-// DISASM-NEXT:   201331:      	callq	42 <zed2@plt>
+// DISASM-NEXT:   201322:      	callq	0x201327 <_start+0x5>
+// DISASM-NEXT:   201327:      	callq	0x20132c <_start+0xa>
+// DISASM-NEXT:   20132c:      	callq	0x201350 <bar2@plt>
+// DISASM-NEXT:   201331:      	callq	0x201360 <zed2@plt>
 // DISASM-EMPTY:
 // DISASM-NEXT: Disassembly of section .plt:
 // DISASM-EMPTY:
@@ -45,12 +45,12 @@
 // DISASM-NEXT: 0000000000201350 <bar2@plt>:
 // DISASM-NEXT:   201350:      	jmpq	*8514(%rip)
 // DISASM-NEXT:   201356:      	pushq	$0
-// DISASM-NEXT:   20135b:      	jmp	-32 <.plt>
+// DISASM-NEXT:   20135b:      	jmp	0x201340 <.plt>
 // DISASM-EMPTY:
 // DISASM-NEXT: 0000000000201360 <zed2@plt>:
 // DISASM-NEXT:   201360:      	jmpq	*8506(%rip)
 // DISASM-NEXT:   201366:      	pushq	$1
-// DISASM-NEXT:   20136b:      	jmp	-48 <.plt>
+// DISASM-NEXT:   20136b:      	jmp	0x201340 <.plt>
 
 .text
 .type foo STT_GNU_IFUNC

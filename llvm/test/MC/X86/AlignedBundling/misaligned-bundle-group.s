@@ -16,8 +16,8 @@ foo:
 # CHECK-RELAX:      1a: nop
 # CHECK-RELAX:      20: nopw %cs:(%eax,%eax)
 # CHECK-RELAX:      2a: nopw %cs:(%eax,%eax)
-# CHECK-OPT:        1b: calll -4
-# CHECK-RELAX:      3b: calll -4
+# CHECK-OPT:        1b: calll 0x1c
+# CHECK-RELAX:      3b: calll 0x3c
         calll   bar # 5 bytes
         .bundle_unlock
         ret         # 1 byte
