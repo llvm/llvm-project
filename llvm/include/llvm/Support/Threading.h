@@ -166,7 +166,19 @@ void llvm_execute_on_thread_async(
     /// sockets. \p ThreadPoolNum represents a number bounded by [0,
     /// compute_thread_count()).
     void apply_thread_strategy(unsigned ThreadPoolNum) const;
+
+    /// Finds the CPU socket where a thread should go. Returns 'None' if the
+    /// thread shall remain on the actual CPU socket.
+    Optional<unsigned> compute_cpu_socket(unsigned ThreadPoolNum) const;
   };
+
+  /// Build a strategy from a number of threads as a string provided in \p Num.
+  /// When Num is above the max number of threads specified by the \p Default
+  /// strategy, we attempt to equally allocate the threads on all CPU sockets.
+  /// "0" or an empty string will return the \p Default strategy.
+  /// "all" for using all hardware threads.
+  Optional<ThreadPoolStrategy>
+  get_threadpool_strategy(StringRef Num, ThreadPoolStrategy Default = {});
 
   /// Returns a thread strategy for tasks requiring significant memory or other
   /// resources. To be used for workloads where hardware_concurrency() proves to
@@ -180,6 +192,18 @@ void llvm_execute_on_thread_async(
     S.UseHyperThreads = false;
     S.ThreadsRequested = ThreadCount;
     return S;
+  }
+
+  /// Like heavyweight_hardware_concurrency() above, but builds a strategy
+  /// based on the rules described for get_threadpool_strategy().
+  /// If \p Num is invalid, returns a default strategy where one thread per
+  /// hardware core is used.
+  inline ThreadPoolStrategy heavyweight_hardware_concurrency(StringRef Num) {
+    Optional<ThreadPoolStrategy> S =
+        get_threadpool_strategy(Num, heavyweight_hardware_concurrency());
+    if (S)
+      return *S;
+    return heavyweight_hardware_concurrency();
   }
 
   /// Returns a default thread strategy where all available hardware ressources
