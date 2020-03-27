@@ -58,6 +58,11 @@ protected:
   /// Which style to use for printing hexadecimal values.
   HexStyle::Style PrintHexStyle = HexStyle::C;
 
+  /// If true, a branch immediate (e.g. bl 4) will be printed as a hexadecimal
+  /// address (e.g. bl 0x20004). This is useful for a stream disassembler
+  /// (llvm-objdump -d).
+  bool PrintBranchImmAsAddress = false;
+
   /// Utility function for printing annotations.
   void printAnnotation(raw_ostream &OS, StringRef Annot);
 
@@ -99,6 +104,10 @@ public:
   void setPrintImmHex(bool Value) { PrintImmHex = Value; }
 
   void setPrintHexStyle(HexStyle::Style Value) { PrintHexStyle = Value; }
+
+  void setPrintBranchImmAsAddress(bool Value) {
+    PrintBranchImmAsAddress = Value;
+  }
 
   /// Utility function to print immediates in decimal or hex.
   format_object<int64_t> formatImm(int64_t Value) const {
