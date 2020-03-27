@@ -1210,7 +1210,7 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
 
   // Create a mapping from virtual address to section. An empty section can
   // cause more than one section at the same address. Use a stable sort to
-  // stabalize the output.
+  // stabilize the output.
   std::vector<std::pair<uint64_t, SectionRef>> SectionAddresses;
   for (SectionRef Sec : Obj->sections())
     SectionAddresses.emplace_back(Sec.getAddress(), Sec);
@@ -1244,7 +1244,7 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
   }
 
   // Sort all the symbols, this allows us to use a simple binary search to find
-  // Multiple symbols can have the same address. Use a stable sort to stabalize
+  // Multiple symbols can have the same address. Use a stable sort to stabilize
   // the output.
   StringSet<> FoundDisasmSymbolSet;
   for (std::pair<const SectionRef, SectionSymbolsTy> &SecSyms : AllSymbols)
@@ -1430,7 +1430,7 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
         // them. Otherwise we might want to skip zero bytes we see.
         if (!DisassembleZeroes) {
           uint64_t MaxOffset = End - Index;
-          // For -reloc: print zero blocks patched by relocations, so that
+          // For --reloc: print zero blocks patched by relocations, so that
           // relocations can be shown in the dump.
           if (RelCur != RelEnd)
             MaxOffset = RelCur->getOffset() - Index;
