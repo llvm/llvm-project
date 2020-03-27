@@ -52,9 +52,9 @@ static LLVM::LLVMType unwrap(Type type) {
 }
 
 /// Initialize customization to default callbacks.
-LLVMTypeConverterCustomization::LLVMTypeConverterCustomization() {
-  funcArgConverter = structFuncArgTypeConverter;
-}
+LLVMTypeConverterCustomization::LLVMTypeConverterCustomization()
+    : funcArgConverter(structFuncArgTypeConverter),
+      indexBitwidth(kDeriveIndexBitwidthFromDataLayout) {}
 
 /// Callback to convert function argument types. It converts a MemRef function
 /// argument to a list of non-aggregate types containing descriptor
@@ -133,6 +133,9 @@ LLVMTypeConverter::LLVMTypeConverter(
       customizations(customs) {
   assert(llvmDialect && "LLVM IR dialect is not registered");
   module = &llvmDialect->getLLVMModule();
+  if (customizations.indexBitwidth == kDeriveIndexBitwidthFromDataLayout)
+    customizations.indexBitwidth =
+        module->getDataLayout().getPointerSizeInBits();
 
   // Register conversions for the standard types.
   addConversion([&](FloatType type) { return convertFloatType(type); });
@@ -159,8 +162,7 @@ llvm::LLVMContext &LLVMTypeConverter::getLLVMContext() {
 }
 
 LLVM::LLVMType LLVMTypeConverter::getIndexType() {
-  return LLVM::LLVMType::getIntNTy(
-      llvmDialect, module->getDataLayout().getPointerSizeInBits());
+  return LLVM::LLVMType::getIntNTy(llvmDialect, getIndexTypeBitwidth());
 }
 
 Type LLVMTypeConverter::convertIndexType(IndexType type) {
@@ -717,8 +719,7 @@ llvm::Module &ConvertToLLVMPattern::getModule() const {
 }
 
 LLVM::LLVMType ConvertToLLVMPattern::getIndexType() const {
-  return LLVM::LLVMType::getIntNTy(
-      &getDialect(), getModule().getDataLayout().getPointerSizeInBits());
+  return typeConverter.getIndexType();
 }
 
 LLVM::LLVMType ConvertToLLVMPattern::getVoidType() const {
@@ -2796,11 +2797,12 @@ namespace {
 /// A pass converting MLIR operations into the LLVM IR dialect.
 struct LLVMLoweringPass : public ModulePass<LLVMLoweringPass> {
   /// Creates an LLVM lowering pass.
-  explicit LLVMLoweringPass(bool useAlloca, bool useBarePtrCallConv,
-                            bool emitCWrappers) {
+  LLVMLoweringPass(bool useAlloca, bool useBarePtrCallConv, bool emitCWrappers,
+                   unsigned indexBitwidth) {
     this->useAlloca = useAlloca;
     this->useBarePtrCallConv = useBarePtrCallConv;
     this->emitCWrappers = emitCWrappers;
+    this->indexBitwidth = indexBitwidth;
   }
   explicit LLVMLoweringPass() {}
   LLVMLoweringPass(const LLVMLoweringPass &pass) {}
@@ -2820,6 +2822,7 @@ struct LLVMLoweringPass : public ModulePass<LLVMLoweringPass> {
     LLVMTypeConverterCustomization customs;
     customs.funcArgConverter = useBarePtrCallConv ? barePtrFuncArgTypeConverter
                                                   : structFuncArgTypeConverter;
+    customs.indexBitwidth = indexBitwidth;
     LLVMTypeConverter typeConverter(&getContext(), customs);
 
     OwningRewritePatternList patterns;
@@ -2853,6 +2856,13 @@ struct LLVMLoweringPass : public ModulePass<LLVMLoweringPass> {
       *this, "emit-c-wrappers",
       llvm::cl::desc("Emit C-compatible wrapper functions"),
       llvm::cl::init(false)};
+
+  /// Configure the bitwidth of the index type when lowered to LLVM.
+  Option<unsigned> indexBitwidth{
+      *this, "index-bitwidth",
+      llvm::cl::desc(
+          "Bitwidth of the index type, 0 to use size of machine word"),
+      llvm::cl::init(kDeriveIndexBitwidthFromDataLayout)};
 };
 } // end namespace
 
@@ -2865,9 +2875,9 @@ mlir::LLVMConversionTarget::LLVMConversionTarget(MLIRContext &ctx)
 
 std::unique_ptr<OpPassBase<ModuleOp>>
 mlir::createLowerToLLVMPass(bool useAlloca, bool useBarePtrCallConv,
-                            bool emitCWrappers) {
+                            bool emitCWrappers, unsigned indexBitwidth) {
   return std::make_unique<LLVMLoweringPass>(useAlloca, useBarePtrCallConv,
-                                            emitCWrappers);
+                                            emitCWrappers, indexBitwidth);
 }
 
 static PassRegistration<LLVMLoweringPass>

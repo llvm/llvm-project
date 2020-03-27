@@ -1,4 +1,5 @@
 // RUN: mlir-opt -convert-std-to-llvm %s -split-input-file | FileCheck %s
+// RUN: mlir-opt -convert-std-to-llvm='index-bitwidth=32' %s -split-input-file | FileCheck --check-prefix=CHECK32 %s
 
 // CHECK-LABEL: func @empty() {
 // CHECK-NEXT:  llvm.return
@@ -12,15 +13,21 @@ func @empty() {
 func @body(index)
 
 // CHECK-LABEL: func @simple_loop() {
+// CHECK32-LABEL: func @simple_loop() {
 func @simple_loop() {
 ^bb0:
 // CHECK-NEXT:  llvm.br ^bb1
+// CHECK32-NEXT:  llvm.br ^bb1
   br ^bb1
 
 // CHECK-NEXT: ^bb1:	// pred: ^bb0
 // CHECK-NEXT:  {{.*}} = llvm.mlir.constant(1 : index) : !llvm.i64
 // CHECK-NEXT:  {{.*}} = llvm.mlir.constant(42 : index) : !llvm.i64
 // CHECK-NEXT:  llvm.br ^bb2({{.*}} : !llvm.i64)
+// CHECK32-NEXT: ^bb1:	// pred: ^bb0
+// CHECK32-NEXT:  {{.*}} = llvm.mlir.constant(1 : index) : !llvm.i32
+// CHECK32-NEXT:  {{.*}} = llvm.mlir.constant(42 : index) : !llvm.i32
+// CHECK32-NEXT:  llvm.br ^bb2({{.*}} : !llvm.i32)
 ^bb1:	// pred: ^bb0
   %c1 = constant 1 : index
   %c42 = constant 42 : index
@@ -29,6 +36,9 @@ func @simple_loop() {
 // CHECK:      ^bb2({{.*}}: !llvm.i64):	// 2 preds: ^bb1, ^bb3
 // CHECK-NEXT:  {{.*}} = llvm.icmp "slt" {{.*}}, {{.*}} : !llvm.i64
 // CHECK-NEXT:  llvm.cond_br {{.*}}, ^bb3, ^bb4
+// CHECK32:      ^bb2({{.*}}: !llvm.i32):	// 2 preds: ^bb1, ^bb3
+// CHECK32-NEXT:  {{.*}} = llvm.icmp "slt" {{.*}}, {{.*}} : !llvm.i32
+// CHECK32-NEXT:  llvm.cond_br {{.*}}, ^bb3, ^bb4
 ^bb2(%0: index):	// 2 preds: ^bb1, ^bb3
   %1 = cmpi "slt", %0, %c42 : index
   cond_br %1, ^bb3, ^bb4
@@ -38,6 +48,11 @@ func @simple_loop() {
 // CHECK-NEXT:  {{.*}} = llvm.mlir.constant(1 : index) : !llvm.i64
 // CHECK-NEXT:  {{.*}} = llvm.add {{.*}}, {{.*}} : !llvm.i64
 // CHECK-NEXT:  llvm.br ^bb2({{.*}} : !llvm.i64)
+// CHECK32:      ^bb3:	// pred: ^bb2
+// CHECK32-NEXT:  llvm.call @body({{.*}}) : (!llvm.i32) -> ()
+// CHECK32-NEXT:  {{.*}} = llvm.mlir.constant(1 : index) : !llvm.i32
+// CHECK32-NEXT:  {{.*}} = llvm.add {{.*}}, {{.*}} : !llvm.i32
+// CHECK32-NEXT:  llvm.br ^bb2({{.*}} : !llvm.i32)
 ^bb3:	// pred: ^bb2
   call @body(%0) : (index) -> ()
   %c1_0 = constant 1 : index
@@ -81,13 +96,18 @@ func @ml_caller() {
 }
 
 // CHECK-LABEL: func @body_args(!llvm.i64) -> !llvm.i64
+// CHECK32-LABEL: func @body_args(!llvm.i32) -> !llvm.i32
 func @body_args(index) -> index
 // CHECK-LABEL: func @other(!llvm.i64, !llvm.i32) -> !llvm.i32
+// CHECK32-LABEL: func @other(!llvm.i32, !llvm.i32) -> !llvm.i32
 func @other(index, i32) -> i32
 
 // CHECK-LABEL: func @func_args(%arg0: !llvm.i32, %arg1: !llvm.i32) -> !llvm.i32 {
 // CHECK-NEXT:  {{.*}} = llvm.mlir.constant(0 : i32) : !llvm.i32
 // CHECK-NEXT:  llvm.br ^bb1
+// CHECK32-LABEL: func @func_args(%arg0: !llvm.i32, %arg1: !llvm.i32) -> !llvm.i32 {
+// CHECK32-NEXT:  {{.*}} = llvm.mlir.constant(0 : i32) : !llvm.i32
+// CHECK32-NEXT:  llvm.br ^bb1
 func @func_args(i32, i32) -> i32 {
 ^bb0(%arg0: i32, %arg1: i32):
   %c0_i32 = constant 0 : i32
@@ -97,6 +117,10 @@ func @func_args(i32, i32) -> i32 {
 // CHECK-NEXT:  {{.*}} = llvm.mlir.constant(0 : index) : !llvm.i64
 // CHECK-NEXT:  {{.*}} = llvm.mlir.constant(42 : index) : !llvm.i64
 // CHECK-NEXT:  llvm.br ^bb2({{.*}} : !llvm.i64)
+// CHECK32-NEXT: ^bb1:	// pred: ^bb0
+// CHECK32-NEXT:  {{.*}} = llvm.mlir.constant(0 : index) : !llvm.i32
+// CHECK32-NEXT:  {{.*}} = llvm.mlir.constant(42 : index) : !llvm.i32
+// CHECK32-NEXT:  llvm.br ^bb2({{.*}} : !llvm.i32)
 ^bb1:	// pred: ^bb0
   %c0 = constant 0 : index
   %c42 = constant 42 : index
@@ -105,6 +129,9 @@ func @func_args(i32, i32) -> i32 {
 // CHECK-NEXT: ^bb2({{.*}}: !llvm.i64):	// 2 preds: ^bb1, ^bb3
 // CHECK-NEXT:  {{.*}} = llvm.icmp "slt" {{.*}}, {{.*}} : !llvm.i64
 // CHECK-NEXT:  llvm.cond_br {{.*}}, ^bb3, ^bb4
+// CHECK32-NEXT: ^bb2({{.*}}: !llvm.i32):	// 2 preds: ^bb1, ^bb3
+// CHECK32-NEXT:  {{.*}} = llvm.icmp "slt" {{.*}}, {{.*}} : !llvm.i32
+// CHECK32-NEXT:  llvm.cond_br {{.*}}, ^bb3, ^bb4
 ^bb2(%0: index):	// 2 preds: ^bb1, ^bb3
   %1 = cmpi "slt", %0, %c42 : index
   cond_br %1, ^bb3, ^bb4
@@ -117,6 +144,14 @@ func @func_args(i32, i32) -> i32 {
 // CHECK-NEXT:  {{.*}} = llvm.mlir.constant(1 : index) : !llvm.i64
 // CHECK-NEXT:  {{.*}} = llvm.add {{.*}}, {{.*}} : !llvm.i64
 // CHECK-NEXT:  llvm.br ^bb2({{.*}} : !llvm.i64)
+// CHECK32-NEXT: ^bb3:	// pred: ^bb2
+// CHECK32-NEXT:  {{.*}} = llvm.call @body_args({{.*}}) : (!llvm.i32) -> !llvm.i32
+// CHECK32-NEXT:  {{.*}} = llvm.call @other({{.*}}, %arg0) : (!llvm.i32, !llvm.i32) -> !llvm.i32
+// CHECK32-NEXT:  {{.*}} = llvm.call @other({{.*}}, {{.*}}) : (!llvm.i32, !llvm.i32) -> !llvm.i32
+// CHECK32-NEXT:  {{.*}} = llvm.call @other({{.*}}, %arg1) : (!llvm.i32, !llvm.i32) -> !llvm.i32
+// CHECK32-NEXT:  {{.*}} = llvm.mlir.constant(1 : index) : !llvm.i32
+// CHECK32-NEXT:  {{.*}} = llvm.add {{.*}}, {{.*}} : !llvm.i32
+// CHECK32-NEXT:  llvm.br ^bb2({{.*}} : !llvm.i32)
 ^bb3:	// pred: ^bb2
   %2 = call @body_args(%0) : (index) -> index
   %3 = call @other(%2, %arg0) : (index, i32) -> i32
@@ -130,6 +165,10 @@ func @func_args(i32, i32) -> i32 {
 // CHECK-NEXT:  {{.*}} = llvm.mlir.constant(0 : index) : !llvm.i64
 // CHECK-NEXT:  {{.*}} = llvm.call @other({{.*}}, {{.*}}) : (!llvm.i64, !llvm.i32) -> !llvm.i32
 // CHECK-NEXT:  llvm.return {{.*}} : !llvm.i32
+// CHECK32-NEXT: ^bb4:	// pred: ^bb2
+// CHECK32-NEXT:  {{.*}} = llvm.mlir.constant(0 : index) : !llvm.i32
+// CHECK32-NEXT:  {{.*}} = llvm.call @other({{.*}}, {{.*}}) : (!llvm.i32, !llvm.i32) -> !llvm.i32
+// CHECK32-NEXT:  llvm.return {{.*}} : !llvm.i32
 ^bb4:	// pred: ^bb2
   %c0_0 = constant 0 : index
   %7 = call @other(%c0_0, %c0_i32) : (index, i32) -> i32
@@ -137,12 +176,15 @@ func @func_args(i32, i32) -> i32 {
 }
 
 // CHECK-LABEL: func @pre(!llvm.i64)
+// CHECK32-LABEL: func @pre(!llvm.i32)
 func @pre(index)
 
 // CHECK-LABEL: func @body2(!llvm.i64, !llvm.i64)
+// CHECK32-LABEL: func @body2(!llvm.i32, !llvm.i32)
 func @body2(index, index)
 
 // CHECK-LABEL: func @post(!llvm.i64)
+// CHECK32-LABEL: func @post(!llvm.i32)
 func @post(index)
 
 // CHECK-LABEL: func @imperfectly_nested_loops() {
@@ -326,14 +368,19 @@ func @get_i64() -> (i64)
 // CHECK-LABEL: func @get_f32() -> !llvm.float
 func @get_f32() -> (f32)
 // CHECK-LABEL: func @get_memref() -> !llvm<"{ float*, float*, i64, [4 x i64], [4 x i64] }">
+// CHECK32-LABEL: func @get_memref() -> !llvm<"{ float*, float*, i32, [4 x i32], [4 x i32] }">
 func @get_memref() -> (memref<42x?x10x?xf32>)
 
 // CHECK-LABEL: func @multireturn() -> !llvm<"{ i64, float, { float*, float*, i64, [4 x i64], [4 x i64] } }"> {
+// CHECK32-LABEL: func @multireturn() -> !llvm<"{ i64, float, { float*, float*, i32, [4 x i32], [4 x i32] } }"> {
 func @multireturn() -> (i64, f32, memref<42x?x10x?xf32>) {
 ^bb0:
 // CHECK-NEXT:  {{.*}} = llvm.call @get_i64() : () -> !llvm.i64
 // CHECK-NEXT:  {{.*}} = llvm.call @get_f32() : () -> !llvm.float
 // CHECK-NEXT:  {{.*}} = llvm.call @get_memref() : () -> !llvm<"{ float*, float*, i64, [4 x i64], [4 x i64] }">
+// CHECK32-NEXT:  {{.*}} = llvm.call @get_i64() : () -> !llvm.i64
+// CHECK32-NEXT:  {{.*}} = llvm.call @get_f32() : () -> !llvm.float
+// CHECK32-NEXT:  {{.*}} = llvm.call @get_memref() : () -> !llvm<"{ float*, float*, i32, [4 x i32], [4 x i32] }">
   %0 = call @get_i64() : () -> (i64)
   %1 = call @get_f32() : () -> (f32)
   %2 = call @get_memref() : () -> (memref<42x?x10x?xf32>)
@@ -342,17 +389,27 @@ func @multireturn() -> (i64, f32, memref<42x?x10x?xf32>) {
 // CHECK-NEXT:  {{.*}} = llvm.insertvalue {{.*}}, {{.*}}[1] : !llvm<"{ i64, float, { float*, float*, i64, [4 x i64], [4 x i64] } }">
 // CHECK-NEXT:  {{.*}} = llvm.insertvalue {{.*}}, {{.*}}[2] : !llvm<"{ i64, float, { float*, float*, i64, [4 x i64], [4 x i64] } }">
 // CHECK-NEXT:  llvm.return {{.*}} : !llvm<"{ i64, float, { float*, float*, i64, [4 x i64], [4 x i64] } }">
+// CHECK32-NEXT:  {{.*}} = llvm.mlir.undef : !llvm<"{ i64, float, { float*, float*, i32, [4 x i32], [4 x i32] } }">
+// CHECK32-NEXT:  {{.*}} = llvm.insertvalue {{.*}}, {{.*}}[0] : !llvm<"{ i64, float, { float*, float*, i32, [4 x i32], [4 x i32] } }">
+// CHECK32-NEXT:  {{.*}} = llvm.insertvalue {{.*}}, {{.*}}[1] : !llvm<"{ i64, float, { float*, float*, i32, [4 x i32], [4 x i32] } }">
+// CHECK32-NEXT:  {{.*}} = llvm.insertvalue {{.*}}, {{.*}}[2] : !llvm<"{ i64, float, { float*, float*, i32, [4 x i32], [4 x i32] } }">
+// CHECK32-NEXT:  llvm.return {{.*}} : !llvm<"{ i64, float, { float*, float*, i32, [4 x i32], [4 x i32] } }">
   return %0, %1, %2 : i64, f32, memref<42x?x10x?xf32>
 }
 
 
 // CHECK-LABEL: func @multireturn_caller() {
+// CHECK32-LABEL: func @multireturn_caller() {
 func @multireturn_caller() {
 ^bb0:
 // CHECK-NEXT:  {{.*}} = llvm.call @multireturn() : () -> !llvm<"{ i64, float, { float*, float*, i64, [4 x i64], [4 x i64] } }">
 // CHECK-NEXT:  {{.*}} = llvm.extractvalue {{.*}}[0] : !llvm<"{ i64, float, { float*, float*, i64, [4 x i64], [4 x i64] } }">
 // CHECK-NEXT:  {{.*}} = llvm.extractvalue {{.*}}[1] : !llvm<"{ i64, float, { float*, float*, i64, [4 x i64], [4 x i64] } }">
 // CHECK-NEXT:  {{.*}} = llvm.extractvalue {{.*}}[2] : !llvm<"{ i64, float, { float*, float*, i64, [4 x i64], [4 x i64] } }">
+// CHECK32-NEXT:  {{.*}} = llvm.call @multireturn() : () -> !llvm<"{ i64, float, { float*, float*, i32, [4 x i32], [4 x i32] } }">
+// CHECK32-NEXT:  {{.*}} = llvm.extractvalue {{.*}}[0] : !llvm<"{ i64, float, { float*, float*, i32, [4 x i32], [4 x i32] } }">
+// CHECK32-NEXT:  {{.*}} = llvm.extractvalue {{.*}}[1] : !llvm<"{ i64, float, { float*, float*, i32, [4 x i32], [4 x i32] } }">
+// CHECK32-NEXT:  {{.*}} = llvm.extractvalue {{.*}}[2] : !llvm<"{ i64, float, { float*, float*, i32, [4 x i32], [4 x i32] } }">
   %0:3 = call @multireturn() : () -> (i64, f32, memref<42x?x10x?xf32>)
   %1 = constant 42 : i64
 // CHECK:       {{.*}} = llvm.add {{.*}}, {{.*}} : !llvm.i64
@@ -740,9 +797,16 @@ func @view(%arg0 : index, %arg1 : index, %arg2 : index) {
 // CHECK:         %[[ARG0:[a-zA-Z0-9]*]]: !llvm.i64,
 // CHECK:         %[[ARG1:[a-zA-Z0-9]*]]: !llvm.i64,
 // CHECK:         %[[ARG2:.*]]: !llvm.i64)
+// CHECK32-LABEL: func @subview(
+// CHECK32-COUNT-2: !llvm<"float*">,
+// CHECK32-COUNT-5: {{%[a-zA-Z0-9]*}}: !llvm.i32,
+// CHECK32:         %[[ARG0:[a-zA-Z0-9]*]]: !llvm.i32,
+// CHECK32:         %[[ARG1:[a-zA-Z0-9]*]]: !llvm.i32,
+// CHECK32:         %[[ARG2:.*]]: !llvm.i32)
 func @subview(%0 : memref<64x4xf32, affine_map<(d0, d1) -> (d0 * 4 + d1)>>, %arg0 : index, %arg1 : index, %arg2 : index) {
   // The last "insertvalue" that populates the memref descriptor from the function arguments.
   // CHECK: %[[MEMREF:.*]] = llvm.insertvalue %{{.*}}, %{{.*}}[4, 1]
+  // CHECK32: %[[MEMREF:.*]] = llvm.insertvalue %{{.*}}, %{{.*}}[4, 1]
 
   // CHECK: %[[DESC:.*]] = llvm.mlir.undef : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
   // CHECK: %[[DESC0:.*]] = llvm.insertvalue %{{.*}}, %[[DESC]][0] : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
@@ -761,15 +825,34 @@ func @subview(%0 : memref<64x4xf32, affine_map<(d0, d1) -> (d0 * 4 + d1)>>, %arg
   // CHECK: %[[DESC5:.*]] = llvm.insertvalue %[[ARG0]], %[[DESC4]][3, 0] : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
   // CHECK: %[[DESCSTRIDE0:.*]] = llvm.mul %[[ARG0]], %[[STRIDE0]] : !llvm.i64
   // CHECK: llvm.insertvalue %[[DESCSTRIDE0]], %[[DESC5]][4, 0] : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
+  // CHECK32: %[[DESC:.*]] = llvm.mlir.undef : !llvm<"{ float*, float*, i32, [2 x i32], [2 x i32] }">
+  // CHECK32: %[[DESC0:.*]] = llvm.insertvalue %{{.*}}, %[[DESC]][0] : !llvm<"{ float*, float*, i32, [2 x i32], [2 x i32] }">
+  // CHECK32: %[[DESC1:.*]] = llvm.insertvalue %{{.*}}, %[[DESC0]][1] : !llvm<"{ float*, float*, i32, [2 x i32], [2 x i32] }">
+  // CHECK32: %[[STRIDE0:.*]] = llvm.extractvalue %[[MEMREF]][4, 0] : !llvm<"{ float*, float*, i32, [2 x i32], [2 x i32] }">
+  // CHECK32: %[[STRIDE1:.*]] = llvm.extractvalue %[[MEMREF]][4, 1] : !llvm<"{ float*, float*, i32, [2 x i32], [2 x i32] }">
+  // CHECK32: %[[OFF:.*]] = llvm.extractvalue %[[MEMREF]][2] : !llvm<"{ float*, float*, i32, [2 x i32], [2 x i32] }">
+  // CHECK32: %[[OFFINC:.*]] = llvm.mul %[[ARG0]], %[[STRIDE0]] : !llvm.i32
+  // CHECK32: %[[OFF1:.*]] = llvm.add %[[OFF]], %[[OFFINC]] : !llvm.i32
+  // CHECK32: %[[OFFINC1:.*]] = llvm.mul %[[ARG1]], %[[STRIDE1]] : !llvm.i32
+  // CHECK32: %[[OFF2:.*]] = llvm.add %[[OFF1]], %[[OFFINC1]] : !llvm.i32
+  // CHECK32: %[[DESC2:.*]] = llvm.insertvalue %[[OFF2]], %[[DESC1]][2] : !llvm<"{ float*, float*, i32, [2 x i32], [2 x i32] }">
+  // CHECK32: %[[DESC3:.*]] = llvm.insertvalue %[[ARG1]], %[[DESC2]][3, 1] : !llvm<"{ float*, float*, i32, [2 x i32], [2 x i32] }">
+  // CHECK32: %[[DESCSTRIDE1:.*]] = llvm.mul %[[ARG1]], %[[STRIDE1]] : !llvm.i32
+  // CHECK32: %[[DESC4:.*]] = llvm.insertvalue %[[DESCSTRIDE1]], %[[DESC3]][4, 1] : !llvm<"{ float*, float*, i32, [2 x i32], [2 x i32] }">
+  // CHECK32: %[[DESC5:.*]] = llvm.insertvalue %[[ARG0]], %[[DESC4]][3, 0] : !llvm<"{ float*, float*, i32, [2 x i32], [2 x i32] }">
+  // CHECK32: %[[DESCSTRIDE0:.*]] = llvm.mul %[[ARG0]], %[[STRIDE0]] : !llvm.i32
+
   %1 = subview %0[%arg0, %arg1][%arg0, %arg1][%arg0, %arg1] :
     memref<64x4xf32, affine_map<(d0, d1) -> (d0 * 4 + d1)>> to memref<?x?xf32, affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s1 + d1 * s2 + s0)>>
   return
 }
 
 // CHECK-LABEL: func @subview_const_size(
+// CHECK32-LABEL: func @subview_const_size(
 func @subview_const_size(%0 : memref<64x4xf32, affine_map<(d0, d1) -> (d0 * 4 + d1)>>, %arg0 : index, %arg1 : index, %arg2 : index) {
   // The last "insertvalue" that populates the memref descriptor from the function arguments.
   // CHECK: %[[MEMREF:.*]] = llvm.insertvalue %{{.*}}, %{{.*}}[4, 1]
+  // CHECK32: %[[MEMREF:.*]] = llvm.insertvalue %{{.*}}, %{{.*}}[4, 1]
 
   // CHECK: %[[DESC:.*]] = llvm.mlir.undef : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
   // CHECK: %[[DESC0:.*]] = llvm.insertvalue %{{.*}}, %[[DESC]][0] : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
@@ -790,15 +873,36 @@ func @subview_const_size(%0 : memref<64x4xf32, affine_map<(d0, d1) -> (d0 * 4 + 
   // CHECK: %[[DESC5:.*]] = llvm.insertvalue %[[CST4]], %[[DESC4]][3, 0] : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
   // CHECK: %[[DESCSTRIDE0:.*]] = llvm.mul %[[ARG0]], %[[STRIDE0]] : !llvm.i64
   // CHECK: llvm.insertvalue %[[DESCSTRIDE0]], %[[DESC5]][4, 0] : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
+  // CHECK32: %[[DESC:.*]] = llvm.mlir.undef : !llvm<"{ float*, float*, i32, [2 x i32], [2 x i32] }">
+  // CHECK32: %[[DESC0:.*]] = llvm.insertvalue %{{.*}}, %[[DESC]][0] : !llvm<"{ float*, float*, i32, [2 x i32], [2 x i32] }">
+  // CHECK32: %[[DESC1:.*]] = llvm.insertvalue %{{.*}}, %[[DESC0]][1] : !llvm<"{ float*, float*, i32, [2 x i32], [2 x i32] }">
+  // CHECK32: %[[STRIDE0:.*]] = llvm.extractvalue %[[MEMREF]][4, 0] : !llvm<"{ float*, float*, i32, [2 x i32], [2 x i32] }">
+  // CHECK32: %[[STRIDE1:.*]] = llvm.extractvalue %[[MEMREF]][4, 1] : !llvm<"{ float*, float*, i32, [2 x i32], [2 x i32] }">
+  // CHECK32: %[[CST4:.*]] = llvm.mlir.constant(4 : i64)
+  // CHECK32: %[[CST2:.*]] = llvm.mlir.constant(2 : i64)
+  // CHECK32: %[[OFF:.*]] = llvm.extractvalue %[[MEMREF]][2] : !llvm<"{ float*, float*, i32, [2 x i32], [2 x i32] }">
+  // CHECK32: %[[OFFINC:.*]] = llvm.mul %[[ARG0]], %[[STRIDE0]] : !llvm.i32
+  // CHECK32: %[[OFF1:.*]] = llvm.add %[[OFF]], %[[OFFINC]] : !llvm.i32
+  // CHECK32: %[[OFFINC1:.*]] = llvm.mul %[[ARG1]], %[[STRIDE1]] : !llvm.i32
+  // CHECK32: %[[OFF2:.*]] = llvm.add %[[OFF1]], %[[OFFINC1]] : !llvm.i32
+  // CHECK32: %[[DESC2:.*]] = llvm.insertvalue %[[OFF2]], %[[DESC1]][2] : !llvm<"{ float*, float*, i32, [2 x i32], [2 x i32] }">
+  // CHECK32: %[[DESC3:.*]] = llvm.insertvalue %[[CST2]], %[[DESC2]][3, 1] : !llvm<"{ float*, float*, i32, [2 x i32], [2 x i32] }">
+  // CHECK32: %[[DESCSTRIDE1:.*]] = llvm.mul %[[ARG1]], %[[STRIDE1]] : !llvm.i32
+  // CHECK32: %[[DESC4:.*]] = llvm.insertvalue %[[DESCSTRIDE1]], %[[DESC3]][4, 1] : !llvm<"{ float*, float*, i32, [2 x i32], [2 x i32] }">
+  // CHECK32: %[[DESC5:.*]] = llvm.insertvalue %[[CST4]], %[[DESC4]][3, 0] : !llvm<"{ float*, float*, i32, [2 x i32], [2 x i32] }">
+  // CHECK32: %[[DESCSTRIDE0:.*]] = llvm.mul %[[ARG0]], %[[STRIDE0]] : !llvm.i32
+  // CHECK32: llvm.insertvalue %[[DESCSTRIDE0]], %[[DESC5]][4, 0] : !llvm<"{ float*, float*, i32, [2 x i32], [2 x i32] }">
   %1 = subview %0[%arg0, %arg1][][%arg0, %arg1] :
     memref<64x4xf32, affine_map<(d0, d1) -> (d0 * 4 + d1)>> to memref<4x2xf32, affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s1 + d1 * s2 + s0)>>
   return
 }
 
 // CHECK-LABEL: func @subview_const_stride(
+// CHECK32-LABEL: func @subview_const_stride(
 func @subview_const_stride(%0 : memref<64x4xf32, affine_map<(d0, d1) -> (d0 * 4 + d1)>>, %arg0 : index, %arg1 : index, %arg2 : index) {
   // The last "insertvalue" that populates the memref descriptor from the function arguments.
   // CHECK: %[[MEMREF:.*]] = llvm.insertvalue %{{.*}}, %{{.*}}[4, 1]
+  // CHECK32: %[[MEMREF:.*]] = llvm.insertvalue %{{.*}}, %{{.*}}[4, 1]
 
   // CHECK: %[[DESC:.*]] = llvm.mlir.undef : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
   // CHECK: %[[DESC0:.*]] = llvm.insertvalue %{{.*}}, %[[DESC]][0] : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
@@ -817,15 +921,34 @@ func @subview_const_stride(%0 : memref<64x4xf32, affine_map<(d0, d1) -> (d0 * 4 
   // CHECK: %[[DESC5:.*]] = llvm.insertvalue %[[ARG0]], %[[DESC4]][3, 0] : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
   // CHECK: %[[CST4:.*]] = llvm.mlir.constant(4 : i64)
   // CHECK: llvm.insertvalue %[[CST4]], %[[DESC5]][4, 0] : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
+  // CHECK32: %[[DESC:.*]] = llvm.mlir.undef : !llvm<"{ float*, float*, i32, [2 x i32], [2 x i32] }">
+  // CHECK32: %[[DESC0:.*]] = llvm.insertvalue %{{.*}}, %[[DESC]][0] : !llvm<"{ float*, float*, i32, [2 x i32], [2 x i32] }">
+  // CHECK32: %[[DESC1:.*]] = llvm.insertvalue %{{.*}}, %[[DESC0]][1] : !llvm<"{ float*, float*, i32, [2 x i32], [2 x i32] }">
+  // CHECK32: %[[STRIDE0:.*]] = llvm.extractvalue %[[MEMREF]][4, 0] : !llvm<"{ float*, float*, i32, [2 x i32], [2 x i32] }">
+  // CHECK32: %[[STRIDE1:.*]] = llvm.extractvalue %[[MEMREF]][4, 1] : !llvm<"{ float*, float*, i32, [2 x i32], [2 x i32] }">
+  // CHECK32: %[[OFF:.*]] = llvm.extractvalue %[[MEMREF]][2] : !llvm<"{ float*, float*, i32, [2 x i32], [2 x i32] }">
+  // CHECK32: %[[OFFINC:.*]] = llvm.mul %[[ARG0]], %[[STRIDE0]] : !llvm.i32
+  // CHECK32: %[[OFF1:.*]] = llvm.add %[[OFF]], %[[OFFINC]] : !llvm.i32
+  // CHECK32: %[[OFFINC1:.*]] = llvm.mul %[[ARG1]], %[[STRIDE1]] : !llvm.i32
+  // CHECK32: %[[OFF2:.*]] = llvm.add %[[OFF1]], %[[OFFINC1]] : !llvm.i32
+  // CHECK32: %[[DESC2:.*]] = llvm.insertvalue %[[OFF2]], %[[DESC1]][2] : !llvm<"{ float*, float*, i32, [2 x i32], [2 x i32] }">
+  // CHECK32: %[[DESC3:.*]] = llvm.insertvalue %[[ARG1]], %[[DESC2]][3, 1] : !llvm<"{ float*, float*, i32, [2 x i32], [2 x i32] }">
+  // CHECK32: %[[CST2:.*]] = llvm.mlir.constant(2 : i64)
+  // CHECK32: %[[DESC4:.*]] = llvm.insertvalue %[[CST2]], %[[DESC3]][4, 1] : !llvm<"{ float*, float*, i32, [2 x i32], [2 x i32] }">
+  // CHECK32: %[[DESC5:.*]] = llvm.insertvalue %[[ARG0]], %[[DESC4]][3, 0] : !llvm<"{ float*, float*, i32, [2 x i32], [2 x i32] }">
+  // CHECK32: %[[CST4:.*]] = llvm.mlir.constant(4 : i64)
+  // CHECK32: llvm.insertvalue %[[CST4]], %[[DESC5]][4, 0] : !llvm<"{ float*, float*, i32, [2 x i32], [2 x i32] }">
   %1 = subview %0[%arg0, %arg1][%arg0, %arg1][] :
     memref<64x4xf32, affine_map<(d0, d1) -> (d0 * 4 + d1)>> to memref<?x?xf32, affine_map<(d0, d1)[s0] -> (d0 * 4 + d1 * 2 + s0)>>
   return
 }
 
 // CHECK-LABEL: func @subview_const_stride_and_offset(
+// CHECK32-LABEL: func @subview_const_stride_and_offset(
 func @subview_const_stride_and_offset(%0 : memref<64x4xf32, affine_map<(d0, d1) -> (d0 * 4 + d1)>>) {
   // The last "insertvalue" that populates the memref descriptor from the function arguments.
   // CHECK: %[[MEMREF:.*]] = llvm.insertvalue %{{.*}}, %{{.*}}[4, 1]
+  // CHECK32: %[[MEMREF:.*]] = llvm.insertvalue %{{.*}}, %{{.*}}[4, 1]
 
   // CHECK: %[[DESC:.*]] = llvm.mlir.undef : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
   // CHECK: %[[DESC0:.*]] = llvm.insertvalue %{{.*}}, %[[DESC]][0] : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
@@ -842,6 +965,21 @@ func @subview_const_stride_and_offset(%0 : memref<64x4xf32, affine_map<(d0, d1) 
   // CHECK: %[[DESC5:.*]] = llvm.insertvalue %[[CST62]], %[[DESC4]][3, 0] : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
   // CHECK: %[[CST4:.*]] = llvm.mlir.constant(4 : i64)
   // CHECK: llvm.insertvalue %[[CST4]], %[[DESC5]][4, 0] : !llvm<"{ float*, float*, i64, [2 x i64], [2 x i64] }">
+  // CHECK32: %[[DESC:.*]] = llvm.mlir.undef : !llvm<"{ float*, float*, i32, [2 x i32], [2 x i32] }">
+  // CHECK32: %[[DESC0:.*]] = llvm.insertvalue %{{.*}}, %[[DESC]][0] : !llvm<"{ float*, float*, i32, [2 x i32], [2 x i32] }">
+  // CHECK32: %[[DESC1:.*]] = llvm.insertvalue %{{.*}}, %[[DESC0]][1] : !llvm<"{ float*, float*, i32, [2 x i32], [2 x i32] }">
+  // CHECK32: %[[STRIDE0:.*]] = llvm.extractvalue %[[MEMREF]][4, 0] : !llvm<"{ float*, float*, i32, [2 x i32], [2 x i32] }">
+  // CHECK32: %[[STRIDE1:.*]] = llvm.extractvalue %[[MEMREF]][4, 1] : !llvm<"{ float*, float*, i32, [2 x i32], [2 x i32] }">
+  // CHECK32: %[[CST62:.*]] = llvm.mlir.constant(62 : i64)
+  // CHECK32: %[[CST3:.*]] = llvm.mlir.constant(3 : i64)
+  // CHECK32: %[[CST8:.*]] = llvm.mlir.constant(8 : index)
+  // CHECK32: %[[DESC2:.*]] = llvm.insertvalue %[[CST8]], %[[DESC1]][2] : !llvm<"{ float*, float*, i32, [2 x i32], [2 x i32] }">
+  // CHECK32: %[[DESC3:.*]] = llvm.insertvalue %[[CST3]], %[[DESC2]][3, 1] : !llvm<"{ float*, float*, i32, [2 x i32], [2 x i32] }">
+  // CHECK32: %[[CST1:.*]] = llvm.mlir.constant(1 : i64)
+  // CHECK32: %[[DESC4:.*]] = llvm.insertvalue %[[CST1]], %[[DESC3]][4, 1] : !llvm<"{ float*, float*, i32, [2 x i32], [2 x i32] }">
+  // CHECK32: %[[DESC5:.*]] = llvm.insertvalue %[[CST62]], %[[DESC4]][3, 0] : !llvm<"{ float*, float*, i32, [2 x i32], [2 x i32] }">
+  // CHECK32: %[[CST4:.*]] = llvm.mlir.constant(4 : i64)
+  // CHECK32: llvm.insertvalue %[[CST4]], %[[DESC5]][4, 0] : !llvm<"{ float*, float*, i32, [2 x i32], [2 x i32] }">
   %1 = subview %0[][][] :
     memref<64x4xf32, affine_map<(d0, d1) -> (d0 * 4 + d1)>> to memref<62x3xf32, affine_map<(d0, d1) -> (d0 * 4 + d1 + 8)>>
   return
