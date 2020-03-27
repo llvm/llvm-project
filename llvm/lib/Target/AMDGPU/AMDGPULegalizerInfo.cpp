@@ -2243,12 +2243,8 @@ bool AMDGPULegalizerInfo::legalizeFFloor(MachineInstr &MI,
 bool AMDGPULegalizerInfo::legalizeBuildVector(
   MachineInstr &MI, MachineRegisterInfo &MRI, MachineIRBuilder &B) const {
   Register Dst = MI.getOperand(0).getReg();
-  LLT DstTy = MRI.getType(Dst);
   const LLT S32 = LLT::scalar(32);
-  const LLT V2S16 = LLT::vector(2, 16);
-  (void)DstTy;
-  (void)V2S16;
-  assert(DstTy == V2S16);
+  assert(MRI.getType(Dst) == LLT::vector(2, 16));
 
   Register Src0 = MI.getOperand(1).getReg();
   Register Src1 = MI.getOperand(2).getReg();
