@@ -301,8 +301,7 @@ unsigned getMaxWavesPerEU(const MCSubtargetInfo *STI) {
 
 unsigned getMaxWavesPerEU(const MCSubtargetInfo *STI,
                           unsigned FlatWorkGroupSize) {
-  return alignTo(getMaxWavesPerCU(STI, FlatWorkGroupSize),
-                 getEUsPerCU(STI)) / getEUsPerCU(STI);
+  return divideCeil(getMaxWavesPerCU(STI, FlatWorkGroupSize), getEUsPerCU(STI));
 }
 
 unsigned getMinFlatWorkGroupSize(const MCSubtargetInfo *STI) {
@@ -316,8 +315,7 @@ unsigned getMaxFlatWorkGroupSize(const MCSubtargetInfo *STI) {
 
 unsigned getWavesPerWorkGroup(const MCSubtargetInfo *STI,
                               unsigned FlatWorkGroupSize) {
-  return alignTo(FlatWorkGroupSize, getWavefrontSize(STI)) /
-                 getWavefrontSize(STI);
+  return divideCeil(FlatWorkGroupSize, getWavefrontSize(STI));
 }
 
 unsigned getSGPRAllocGranule(const MCSubtargetInfo *STI) {
