@@ -440,9 +440,11 @@ void toolchains::PS4CPU::addClangTargetOptions(
       ArgStringList &CC1Args,
       Action::OffloadKind DeviceOffloadingKind) const {
   // PS4 does not use init arrays.
-  if (DriverArgs.hasArg(clang::driver::options::OPT_fuse_init_array))
+  if (DriverArgs.hasArg(options::OPT_fuse_init_array)) {
+    Arg *A = DriverArgs.getLastArg(options::OPT_fuse_init_array);
     getDriver().Diag(clang::diag::err_drv_unsupported_opt_for_target)
-      << "-fuse-init-array" << getTriple().str();
+        << A->getAsString(DriverArgs) << getTriple().str();
+  }
 
   CC1Args.push_back("-fno-use-init-array");
 }
