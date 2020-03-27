@@ -9,8 +9,8 @@
 
 // REQUIRES: fcoroutines-ts
 
-// RUN: %build -fcoroutines-ts
-// RUN: %run
+// RUN: %{build} -fcoroutines-ts
+// RUN: %{run}
 
 // A simple "breathing" test that checks that <experimental/coroutine>
 // can be parsed and used in all dialects, including C++03 in order to match

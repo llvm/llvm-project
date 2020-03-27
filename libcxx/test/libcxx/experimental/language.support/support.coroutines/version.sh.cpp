@@ -10,8 +10,8 @@
 // UNSUPPORTED: c++98, c++03, c++11
 // REQUIRES: fcoroutines-ts
 
-// RUN: %build -fcoroutines-ts
-// RUN: %run
+// RUN: %{build} -fcoroutines-ts
+// RUN: %{run}
 
 #include <experimental/coroutine>
 

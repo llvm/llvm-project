@@ -14,7 +14,7 @@
 
 // Test that int8_t and the like are exported from stdint.h not inttypes.h
 
-// RUN: %build_module
+// RUN: %{build_module}
 
 #include <stdint.h>
 
