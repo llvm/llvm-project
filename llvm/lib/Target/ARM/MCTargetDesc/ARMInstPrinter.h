@@ -43,6 +43,10 @@ public:
 
   void printOperand(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                     raw_ostream &O);
+  void printOperand(const MCInst *MI, uint64_t /*Address*/, unsigned OpNum,
+                    const MCSubtargetInfo &STI, raw_ostream &O) {
+    printOperand(MI, OpNum, STI, O);
+  }
 
   void printSORegRegOperand(const MCInst *MI, unsigned OpNum,
                             const MCSubtargetInfo &STI, raw_ostream &O);
@@ -109,6 +113,12 @@ public:
   template <unsigned scale>
   void printAdrLabelOperand(const MCInst *MI, unsigned OpNum,
                             const MCSubtargetInfo &STI, raw_ostream &O);
+  template <unsigned scale>
+  void printAdrLabelOperand(const MCInst *MI, uint64_t /*Address*/,
+                            unsigned OpNum, const MCSubtargetInfo &STI,
+                            raw_ostream &O) {
+    printAdrLabelOperand<scale>(MI, OpNum, STI, O);
+  }
   void printThumbS4ImmOperand(const MCInst *MI, unsigned OpNum,
                               const MCSubtargetInfo &STI, raw_ostream &O);
   void printThumbSRImm(const MCInst *MI, unsigned OpNum,
@@ -206,6 +216,11 @@ public:
                     const MCSubtargetInfo &STI, raw_ostream &O);
   void printThumbLdrLabelOperand(const MCInst *MI, unsigned OpNum,
                                  const MCSubtargetInfo &STI, raw_ostream &O);
+  void printThumbLdrLabelOperand(const MCInst *MI, uint64_t /*Address*/,
+                                 unsigned OpNum, const MCSubtargetInfo &STI,
+                                 raw_ostream &O) {
+    printThumbLdrLabelOperand(MI, OpNum, STI, O);
+  }
   void printFBits16(const MCInst *MI, unsigned OpNum,
                     const MCSubtargetInfo &STI, raw_ostream &O);
   void printFBits32(const MCInst *MI, unsigned OpNum,

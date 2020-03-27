@@ -29,7 +29,9 @@ public:
   void printVPCMPMnemonic(const MCInst *MI, raw_ostream &OS);
   void printCMPMnemonic(const MCInst *MI, bool IsVCmp, raw_ostream &OS);
   void printRoundingControl(const MCInst *MI, unsigned Op, raw_ostream &O);
-  void printPCRelImm(const MCInst *MI, unsigned OpNo, raw_ostream &O);
+  void printPCRelImm(const MCInst *MI, uint64_t Address, unsigned OpNo,
+                     raw_ostream &O);
+
 protected:
   void printInstFlags(const MCInst *MI, raw_ostream &O);
   void printOptionalSegReg(const MCInst *MI, unsigned OpNo, raw_ostream &O);

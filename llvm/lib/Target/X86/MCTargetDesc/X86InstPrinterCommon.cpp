@@ -291,8 +291,8 @@ void X86InstPrinterCommon::printRoundingControl(const MCInst *MI, unsigned Op,
 /// being encoded as a pc-relative value (e.g. for jumps and calls).  In
 /// Intel-style these print slightly differently than normal immediates.
 /// for example, a $ is not emitted.
-void X86InstPrinterCommon::printPCRelImm(const MCInst *MI, unsigned OpNo,
-                                         raw_ostream &O) {
+void X86InstPrinterCommon::printPCRelImm(const MCInst *MI, uint64_t Address,
+                                         unsigned OpNo, raw_ostream &O) {
   const MCOperand &Op = MI->getOperand(OpNo);
   if (Op.isImm())
     O << formatImm(Op.getImm());
