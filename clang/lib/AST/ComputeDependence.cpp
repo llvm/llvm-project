@@ -172,7 +172,7 @@ ExprDependence clang::computeDependence(VAArgExpr *E) {
 
 ExprDependence clang::computeDependence(NoInitExpr *E) {
   return toExprDependence(E->getType()->getDependence()) &
-         (ExprDependence::Instantiation & ExprDependence::Error);
+         (ExprDependence::Instantiation | ExprDependence::Error);
 }
 
 ExprDependence clang::computeDependence(ArrayInitLoopExpr *E) {
