@@ -38,6 +38,9 @@ raw_ostream &operator<<(raw_ostream &OS, const SymbolNameSet &Symbols);
 /// Render a SymbolNameVector.
 raw_ostream &operator<<(raw_ostream &OS, const SymbolNameVector &Symbols);
 
+/// Render an array of SymbolStringPtrs.
+raw_ostream &operator<<(raw_ostream &OS, ArrayRef<SymbolStringPtr> Symbols);
+
 /// Render JITSymbolFlags.
 raw_ostream &operator<<(raw_ostream &OS, const JITSymbolFlags &Flags);
 

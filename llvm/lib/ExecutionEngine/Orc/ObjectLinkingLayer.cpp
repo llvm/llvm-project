@@ -145,34 +145,50 @@ public:
       if (auto Err = MR.defineMaterializing(ExtraSymbolsToClaim))
         return notifyFailed(std::move(Err));
 
-    if (const auto &InitSym = MR.getInitializerSymbol())
-      InternedResult[InitSym] = JITEvaluatedSymbol();
-
     {
+
       // Check that InternedResult matches up with MR.getSymbols().
       // This guards against faulty transformations / compilers / object caches.
 
-      if (InternedResult.size() > MR.getSymbols().size()) {
-        SymbolNameVector ExtraSymbols;
-        for (auto &KV : InternedResult)
-          if (!MR.getSymbols().count(KV.first))
+      // First check that there aren't any missing symbols.
+      size_t NumMaterializationSideEffectsOnlySymbols = 0;
+      SymbolNameVector ExtraSymbols;
+      SymbolNameVector MissingSymbols;
+      for (auto &KV : MR.getSymbols()) {
+
+        // If this is a materialization-side-effects only symbol then bump
+        // the counter and make sure it's *not* defined, otherwise make
+        // sure that it is defined.
+        if (KV.second.hasMaterializationSideEffectsOnly()) {
+          ++NumMaterializationSideEffectsOnlySymbols;
+          if (InternedResult.count(KV.first))
             ExtraSymbols.push_back(KV.first);
-        ES.reportError(
-          make_error<UnexpectedSymbolDefinitions>(G.getName(),
-                                                  std::move(ExtraSymbols)));
+          continue;
+        } else if (!InternedResult.count(KV.first))
+          MissingSymbols.push_back(KV.first);
+      }
+
+      // If there were missing symbols then report the error.
+      if (!MissingSymbols.empty()) {
+        ES.reportError(make_error<MissingSymbolDefinitions>(
+            G.getName(), std::move(MissingSymbols)));
         MR.failMaterialization();
         return;
       }
 
-      SymbolNameVector MissingSymbols;
-      for (auto &KV : MR.getSymbols())
-        if (!InternedResult.count(KV.first))
-          MissingSymbols.push_back(KV.first);
+      // If there are more definitions than expected, add them to the
+      // ExtraSymbols vector.
+      if (InternedResult.size() >
+          MR.getSymbols().size() - NumMaterializationSideEffectsOnlySymbols) {
+        for (auto &KV : InternedResult)
+          if (!MR.getSymbols().count(KV.first))
+            ExtraSymbols.push_back(KV.first);
+      }
 
-      if (!MissingSymbols.empty()) {
-        ES.reportError(
-          make_error<MissingSymbolDefinitions>(G.getName(),
-                                               std::move(MissingSymbols)));
+      // If there were extra definitions then report the error.
+      if (!ExtraSymbols.empty()) {
+        ES.reportError(make_error<UnexpectedSymbolDefinitions>(
+            G.getName(), std::move(ExtraSymbols)));
         MR.failMaterialization();
         return;
       }
