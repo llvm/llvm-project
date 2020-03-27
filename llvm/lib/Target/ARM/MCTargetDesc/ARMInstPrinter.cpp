@@ -288,7 +288,7 @@ void ARMInstPrinter::printInst(const MCInst *MI, uint64_t Address,
   case ARM::t2DSB:
     switch (MI->getOperand(0).getImm()) {
     default:
-      if (!printAliasInstr(MI, STI, O))
+      if (!printAliasInstr(MI, Address, STI, O))
         printInstruction(MI, Address, STI, O);
       break;
     case 0:
@@ -302,7 +302,7 @@ void ARMInstPrinter::printInst(const MCInst *MI, uint64_t Address,
     return;
   }
 
-  if (!printAliasInstr(MI, STI, O))
+  if (!printAliasInstr(MI, Address, STI, O))
     printInstruction(MI, Address, STI, O);
 
   printAnnotation(O, Annot);

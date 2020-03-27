@@ -2544,15 +2544,15 @@ static SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG,
                                        const SparcSubtarget *Subtarget) {
   SDValue Chain = Op.getOperand(0);  // Legalize the chain.
   SDValue Size  = Op.getOperand(1);  // Legalize the size.
-  unsigned Align = cast<ConstantSDNode>(Op.getOperand(2))->getZExtValue();
-  unsigned StackAlign = Subtarget->getFrameLowering()->getStackAlignment();
+  MaybeAlign Alignment(cast<ConstantSDNode>(Op.getOperand(2))->getZExtValue());
+  Align StackAlign = Subtarget->getFrameLowering()->getStackAlign();
   EVT VT = Size->getValueType(0);
   SDLoc dl(Op);
 
   // TODO: implement over-aligned alloca. (Note: also implies
   // supporting support for overaligned function frames + dynamic
   // allocations, at all, which currently isn't supported)
-  if (Align > StackAlign) {
+  if (Alignment && *Alignment > StackAlign) {
     const MachineFunction &MF = DAG.getMachineFunction();
     report_fatal_error("Function \"" + Twine(MF.getName()) + "\": "
                        "over-aligned dynamic alloca not supported.");

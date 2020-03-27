@@ -1485,7 +1485,7 @@ bool ento::shouldRegisterRetainCountBase(const LangOptions &LO) {
 // it should be possible to enable the NS/CF retain count checker as
 // osx.cocoa.RetainCount, and it should be possible to disable
 // osx.OSObjectRetainCount using osx.cocoa.RetainCount:CheckOSObject=false.
-static bool getOption(AnalyzerOptions &Options,
+static bool getOption(const AnalyzerOptions &Options,
                       StringRef Postfix,
                       StringRef Value) {
   auto I = Options.Config.find(

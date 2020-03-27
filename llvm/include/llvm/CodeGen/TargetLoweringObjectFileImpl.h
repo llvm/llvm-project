@@ -253,7 +253,9 @@ public:
 
   static XCOFF::StorageClass getStorageClassForGlobal(const GlobalObject *GO);
 
-  MCSection *getSectionForFunctionDescriptor(const MCSymbol *) const override;
+  MCSection *
+  getSectionForFunctionDescriptor(const Function *F,
+                                  const TargetMachine &TM) const override;
   MCSection *getSectionForTOCEntry(const MCSymbol *Sym) const override;
 
   /// For external functions, this will always return a function descriptor

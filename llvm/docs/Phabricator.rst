@@ -169,7 +169,7 @@ yourself.
 Using the Arcanist tool can simplify the process of committing reviewed code as
 it will retrieve reviewers, the ``Differential Revision``, etc from the review
 and place it in the commit message. You may also commit an accepted change
-directly using ``git llvm push``, per the section in the :ref:`getting started
+directly using ``git push``, per the section in the :ref:`getting started
 guide <commit_from_git>`.
 
 Note that if you commit the change without using Arcanist and forget to add the
@@ -194,8 +194,15 @@ This will create a new branch called ``arcpatch-D<Revision>`` based on the
 current ``master`` and will create a commit corresponding to ``D<Revision>`` with a
 commit message derived from information in the Phabricator review.
 
-Check you are happy with the commit message and amend it if necessary. Then,
-make sure the commit is up-to-date, and commit it. This can be done by running
+Check you are happy with the commit message and amend it if necessary.
+For example, ensure the 'Author' property of the commit is set to the original author.
+You can use a command to correct the author property if it is incorrect:
+
+::
+
+  git commit --amend --author="John Doe <jdoe@llvm.org>"
+
+Then, make sure the commit is up-to-date, and commit it. This can be done by running
 the following:
 
 ::
@@ -203,7 +210,7 @@ the following:
   git pull --rebase origin master
   git show # Ensure the patch looks correct.
   ninja check-$whatever # Rerun the appropriate tests if needed.
-  git llvm push
+  git push
 
 Or
 

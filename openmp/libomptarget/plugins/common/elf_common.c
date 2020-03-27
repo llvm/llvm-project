@@ -45,6 +45,7 @@ static inline int32_t elf_check_machine(__tgt_device_image *image,
   // Check if ELF is the right kind.
   if (elf_kind(e) != ELF_K_ELF) {
     DP("Unexpected ELF type!\n");
+    elf_end(e);
     return 0;
   }
   Elf64_Ehdr *eh64 = elf64_getehdr(e);

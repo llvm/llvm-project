@@ -169,7 +169,7 @@ private:
   MachinePointerInfo PtrInfo;
   uint64_t Size;
   Flags FlagVals;
-  uint16_t BaseAlignLog2; // log_2(base_alignment) + 1
+  Align BaseAlign;
   MachineAtomicInfo AtomicInfo;
   AAMDNodes AAInfo;
   const MDNode *Ranges;
@@ -229,7 +229,7 @@ public:
 
   /// Return the minimum known alignment in bytes of the base address, without
   /// the offset.
-  uint64_t getBaseAlignment() const { return (1ull << BaseAlignLog2) >> 1; }
+  uint64_t getBaseAlignment() const { return BaseAlign.value(); }
 
   /// Return the AA tags for the memory reference.
   AAMDNodes getAAInfo() const { return AAInfo; }

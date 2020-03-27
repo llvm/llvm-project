@@ -368,7 +368,6 @@ private:
   bool NoInfs : 1;
   bool NoSignedZeros : 1;
   bool AllowReciprocal : 1;
-  bool VectorReduction : 1;
   bool AllowContract : 1;
   bool ApproximateFuncs : 1;
   bool AllowReassociation : 1;
@@ -385,7 +384,7 @@ public:
   SDNodeFlags()
       : AnyDefined(false), NoUnsignedWrap(false), NoSignedWrap(false),
         Exact(false), NoNaNs(false), NoInfs(false),
-        NoSignedZeros(false), AllowReciprocal(false), VectorReduction(false),
+        NoSignedZeros(false), AllowReciprocal(false),
         AllowContract(false), ApproximateFuncs(false),
         AllowReassociation(false), NoFPExcept(false) {}
 
@@ -434,10 +433,6 @@ public:
     setDefined();
     AllowReciprocal = b;
   }
-  void setVectorReduction(bool b) {
-    setDefined();
-    VectorReduction = b;
-  }
   void setAllowContract(bool b) {
     setDefined();
     AllowContract = b;
@@ -463,7 +458,6 @@ public:
   bool hasNoInfs() const { return NoInfs; }
   bool hasNoSignedZeros() const { return NoSignedZeros; }
   bool hasAllowReciprocal() const { return AllowReciprocal; }
-  bool hasVectorReduction() const { return VectorReduction; }
   bool hasAllowContract() const { return AllowContract; }
   bool hasApproximateFuncs() const { return ApproximateFuncs; }
   bool hasAllowReassociation() const { return AllowReassociation; }
@@ -481,7 +475,6 @@ public:
     NoInfs &= Flags.NoInfs;
     NoSignedZeros &= Flags.NoSignedZeros;
     AllowReciprocal &= Flags.AllowReciprocal;
-    VectorReduction &= Flags.VectorReduction;
     AllowContract &= Flags.AllowContract;
     ApproximateFuncs &= Flags.ApproximateFuncs;
     AllowReassociation &= Flags.AllowReassociation;
