@@ -520,27 +520,6 @@ static bool isRegInClass(const MachineOperand &MO,
   return MO.isReg() && MO.getReg() && Class->contains(MO.getReg());
 }
 
-// Can this instruction generate a non-zero result when given only zeroed
-// operands? This allows us to know that, given operands with false bytes
-// zeroed by masked loads, that the result will also contain zeros in those
-// bytes.
-static bool canGenerateNonZeros(const MachineInstr &MI) {
-  switch (MI.getOpcode()) {
-  default:
-    break;
-  // FIXME: FP minus 0?
-  //case ARM::MVE_VNEGf16:
-  //case ARM::MVE_VNEGf32:
-  case ARM::MVE_VMVN:
-  case ARM::MVE_VORN:
-  case ARM::MVE_VCLZs8:
-  case ARM::MVE_VCLZs16:
-  case ARM::MVE_VCLZs32:
-    return true;
-  }
-  return false;
-}
-
 // MVE 'narrowing' operate on half a lane, reading from half and writing
 // to half, which are referred to has the top and bottom half. The other
 // half retains its previous value.
@@ -549,6 +528,44 @@ static bool retainsPreviousHalfElement(const MachineInstr &MI) {
   uint64_t Flags = MCID.TSFlags;
   return (Flags & ARMII::RetainsPreviousHalfElement) != 0;
 }
+
+// Some MVE instructions read from the top/bottom halves of their operand(s)
+// and generate a vector result with result elements that are double the
+// width of the input.
+static bool producesDoubleWidthResult(const MachineInstr &MI) {
+  const MCInstrDesc &MCID = MI.getDesc();
+  uint64_t Flags = MCID.TSFlags;
+  return (Flags & ARMII::DoubleWidthResult) != 0;
+}
+
+// Can this instruction generate a non-zero result when given only zeroed
+// operands? This allows us to know that, given operands with false bytes
+// zeroed by masked loads, that the result will also contain zeros in those
+// bytes.
+static bool canGenerateNonZeros(const MachineInstr &MI) {
+
+  // Check for instructions which can write into a larger element size,
+  // possibly writing into a previous zero'd lane.
+  if (producesDoubleWidthResult(MI))
+    return true;
+
+  switch (MI.getOpcode()) {
+  default:
+    break;
+  // FIXME: VNEG FP and -0? I think we'll need to handle this once we allow
+  // fp16 -> fp32 vector conversions.
+  // Instructions that perform a NOT will generate 1s from 0s.
+  case ARM::MVE_VMVN:
+  case ARM::MVE_VORN:
+  // Count leading zeros will do just that!
+  case ARM::MVE_VCLZs8:
+  case ARM::MVE_VCLZs16:
+  case ARM::MVE_VCLZs32:
+    return true;
+  }
+  return false;
+}
+
 
 // Look at its register uses to see if it only can only receive zeros
 // into its false lanes which would then produce zeros. Also check that
