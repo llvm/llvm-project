@@ -15,6 +15,7 @@
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
 #include "ConstantEmitter.h"
+#include "TargetInfo.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclCXX.h"
@@ -1942,6 +1943,18 @@ void CodeGenFunction::EmitAggregateCopy(LValue Dest, LValue Src, QualType Ty,
              "constructor or assignment operator");
       // Ignore empty classes in C++.
       if (Record->isEmpty())
+        return;
+    }
+  }
+
+  if (getLangOpts().CUDAIsDevice) {
+    if (Ty->isCUDADeviceBuiltinSurfaceType()) {
+      if (getTargetHooks().emitCUDADeviceBuiltinSurfaceDeviceCopy(*this, Dest,
+                                                                  Src))
+        return;
+    } else if (Ty->isCUDADeviceBuiltinTextureType()) {
+      if (getTargetHooks().emitCUDADeviceBuiltinTextureDeviceCopy(*this, Dest,
+                                                                  Src))
         return;
     }
   }
