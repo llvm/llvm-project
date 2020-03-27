@@ -255,14 +255,14 @@ EnumerateDirectoryCallback(void *baton, llvm::sys::fs::file_type ft,
 const char *PlatformAppleTVSimulator::GetSDKDirectoryAsCString() {
   std::lock_guard<std::mutex> guard(m_sdk_dir_mutex);
   if (m_sdk_directory.empty()) {
-    const char *developer_dir = GetDeveloperDirectory();
-    if (developer_dir) {
+    if (FileSpec fspec = GetXcodeDeveloperDirectory()) {
+      std::string developer_dir = fspec.GetPath();
       char sdks_directory[PATH_MAX];
       char sdk_dirname[PATH_MAX];
       sdk_dirname[0] = '\0';
       snprintf(sdks_directory, sizeof(sdks_directory),
                "%s/Platforms/AppleTVSimulator.platform/Developer/SDKs",
-               developer_dir);
+               developer_dir.c_str());
       FileSpec simulator_sdk_spec;
       bool find_directories = true;
       bool find_files = false;
