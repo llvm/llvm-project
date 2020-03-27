@@ -68,9 +68,10 @@ static cl::opt<bool>
                                        "distributed backend case"));
 
 // Default to using all available threads in the system, but using only one
-// thread per core, as indicated by the usage of
-// heavyweight_hardware_concurrency() in the InProcessThinBackend constructor.
-static cl::opt<int> Threads("thinlto-threads", cl::init(0));
+// thread per core (no SMT).
+// Use -thinlto-threads=all to use hardware_concurrency() instead, which means
+// to use all hardware threads or cores in the system.
+static cl::opt<std::string> Threads("thinlto-threads");
 
 static cl::list<std::string> SymbolResolutions(
     "r",
@@ -286,7 +287,8 @@ static int run(int argc, char **argv) {
                                             /* LinkedObjectsFile */ nullptr,
                                             /* OnWrite */ {});
   else
-    Backend = createInProcessThinBackend(Threads);
+    Backend = createInProcessThinBackend(
+        llvm::heavyweight_hardware_concurrency(Threads));
   LTO Lto(std::move(Conf), std::move(Backend));
 
   bool HasErrors = false;

@@ -50,6 +50,7 @@
 #include "llvm/Support/Program.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/TargetParser.h"
+#include "llvm/Support/Threading.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/YAMLParser.h"
 
@@ -338,14 +339,14 @@ std::string tools::getCPUName(const ArgList &Args, const llvm::Triple &T,
   }
 }
 
-unsigned tools::getLTOParallelism(const ArgList &Args, const Driver &D) {
-  unsigned Parallelism = 0;
+llvm::StringRef tools::getLTOParallelism(const ArgList &Args, const Driver &D) {
   Arg *LtoJobsArg = Args.getLastArg(options::OPT_flto_jobs_EQ);
-  if (LtoJobsArg &&
-      StringRef(LtoJobsArg->getValue()).getAsInteger(10, Parallelism))
-    D.Diag(diag::err_drv_invalid_int_value) << LtoJobsArg->getAsString(Args)
-                                            << LtoJobsArg->getValue();
-  return Parallelism;
+  if (!LtoJobsArg)
+    return {};
+  if (!llvm::get_threadpool_strategy(LtoJobsArg->getValue()))
+    D.Diag(diag::err_drv_invalid_int_value)
+        << LtoJobsArg->getAsString(Args) << LtoJobsArg->getValue();
+  return LtoJobsArg->getValue();
 }
 
 // CloudABI uses -ffunction-sections and -fdata-sections by default.
@@ -410,7 +411,8 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   if (IsThinLTO)
     CmdArgs.push_back("-plugin-opt=thinlto");
 
-  if (unsigned Parallelism = getLTOParallelism(Args, ToolChain.getDriver()))
+  StringRef Parallelism = getLTOParallelism(Args, ToolChain.getDriver());
+  if (!Parallelism.empty())
     CmdArgs.push_back(
         Args.MakeArgString("-plugin-opt=jobs=" + Twine(Parallelism)));
 
