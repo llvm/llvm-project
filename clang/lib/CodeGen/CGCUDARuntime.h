@@ -42,9 +42,17 @@ protected:
 
 public:
   // Global variable properties that must be passed to CUDA runtime.
-  enum DeviceVarFlags {
-    ExternDeviceVar = 0x01,   // extern
-    ConstantDeviceVar = 0x02, // __constant__
+  struct DeviceVarFlags {
+    enum DeviceVarKind : unsigned {
+      Variable, // Variable
+      Surface,  // Builtin surface
+      Texture,  // Builtin texture
+    };
+    DeviceVarKind Kind : 2;
+    unsigned Extern : 1;
+    unsigned Constant : 1;   // Constant variable.
+    unsigned Normalized : 1; // Normalized texture.
+    int SurfTexType;         // Type of surface/texutre.
   };
 
   CGCUDARuntime(CodeGenModule &CGM) : CGM(CGM) {}
@@ -57,7 +65,11 @@ public:
   /// Emits a kernel launch stub.
   virtual void emitDeviceStub(CodeGenFunction &CGF, FunctionArgList &Args) = 0;
   virtual void registerDeviceVar(const VarDecl *VD, llvm::GlobalVariable &Var,
-                                 unsigned Flags) = 0;
+                                 bool Extern, bool Constant) = 0;
+  virtual void registerDeviceSurf(const VarDecl *VD, llvm::GlobalVariable &Var,
+                                  bool Extern, int Type) = 0;
+  virtual void registerDeviceTex(const VarDecl *VD, llvm::GlobalVariable &Var,
+                                 bool Extern, int Type, bool Normalized) = 0;
 
   /// Constructs and returns a module initialization function or nullptr if it's
   /// not needed. Must be called after all kernels have been emitted.
