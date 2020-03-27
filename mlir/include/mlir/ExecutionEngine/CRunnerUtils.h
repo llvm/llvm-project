@@ -20,6 +20,7 @@
 #ifdef mlir_c_runner_utils_EXPORTS
 /* We are building this library */
 #define MLIR_CRUNNERUTILS_EXPORT __declspec(dllexport)
+#define MLIR_CRUNNERUTILS_DEFINE_FUNCTIONS
 #else
 /* We are using this library */
 #define MLIR_CRUNNERUTILS_EXPORT __declspec(dllimport)
@@ -27,6 +28,7 @@
 #endif // MLIR_CRUNNERUTILS_EXPORT
 #else
 #define MLIR_CRUNNERUTILS_EXPORT
+#define MLIR_CRUNNERUTILS_DEFINE_FUNCTIONS
 #endif // _WIN32
 
 #include <cstdint>
