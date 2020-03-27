@@ -42,7 +42,7 @@ void VEInstPrinter::printRegName(raw_ostream &OS, unsigned RegNo) const {
 void VEInstPrinter::printInst(const MCInst *MI, uint64_t Address,
                               StringRef Annot, const MCSubtargetInfo &STI,
                               raw_ostream &OS) {
-  if (!printAliasInstr(MI, STI, OS))
+  if (!printAliasInstr(MI, Address, STI, OS))
     printInstruction(MI, Address, STI, OS);
   printAnnotation(OS, Annot);
 }
