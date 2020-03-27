@@ -527,14 +527,13 @@ protected:
     m_option_group.NotifyOptionParsingStarting(&exe_ctx);
 
     OptionsWithRaw args_with_suffix(raw_command_line);
-    const char *remainder = args_with_suffix.GetRawPart().c_str();
 
     if (args_with_suffix.HasArgs())
       if (!ParseOptionsAndNotify(args_with_suffix.GetArgs(), result,
                                  m_option_group, exe_ctx))
         return false;
 
-    llvm::StringRef raw_command_string(remainder);
+    llvm::StringRef raw_command_string = args_with_suffix.GetRawPart();
     Args args(raw_command_string);
 
     if (args.GetArgumentCount() < 2) {
@@ -1171,14 +1170,9 @@ private:
       return llvm::makeArrayRef(g_regex_options);
     }
 
-    // TODO: Convert these functions to return StringRefs.
-    const char *GetHelp() {
-      return (m_help.empty() ? nullptr : m_help.c_str());
-    }
+    llvm::StringRef GetHelp() { return m_help; }
 
-    const char *GetSyntax() {
-      return (m_syntax.empty() ? nullptr : m_syntax.c_str());
-    }
+    llvm::StringRef GetSyntax() { return m_syntax; }
 
   protected:
     // Instance variables to hold the values for command options.
