@@ -1806,51 +1806,31 @@ void InnerLoopVectorizer::widenIntOrFpInduction(PHINode *IV, TruncInst *Trunc) {
   auto ID = II->second;
   assert(IV->getType() == ID.getStartValue()->getType() && "Types must match");
 
-  // The scalar value to broadcast. This will be derived from the canonical
-  // induction variable.
-  Value *ScalarIV = nullptr;
-
   // The value from the original loop to which we are mapping the new induction
   // variable.
   Instruction *EntryVal = Trunc ? cast<Instruction>(Trunc) : IV;
 
-  // True if we have vectorized the induction variable.
-  auto VectorizedIV = false;
-
-  // Determine if we want a scalar version of the induction variable. This is
-  // true if the induction variable itself is not widened, or if it has at
-  // least one user in the loop that is not widened.
-  auto NeedsScalarIV = VF > 1 && needsScalarInduction(EntryVal);
+  auto &DL = OrigLoop->getHeader()->getModule()->getDataLayout();
 
   // Generate code for the induction step. Note that induction steps are
   // required to be loop-invariant
-  assert(PSE.getSE()->isLoopInvariant(ID.getStep(), OrigLoop) &&
-         "Induction step should be loop invariant");
-  auto &DL = OrigLoop->getHeader()->getModule()->getDataLayout();
-  Value *Step = nullptr;
-  if (PSE.getSE()->isSCEVable(IV->getType())) {
-    SCEVExpander Exp(*PSE.getSE(), DL, "induction");
-    Step = Exp.expandCodeFor(ID.getStep(), ID.getStep()->getType(),
-                             LoopVectorPreHeader->getTerminator());
-  } else {
-    Step = cast<SCEVUnknown>(ID.getStep())->getValue();
-  }
+  auto CreateStepValue = [&](const SCEV *Step) -> Value * {
+    assert(PSE.getSE()->isLoopInvariant(Step, OrigLoop) &&
+           "Induction step should be loop invariant");
+    if (PSE.getSE()->isSCEVable(IV->getType())) {
+      SCEVExpander Exp(*PSE.getSE(), DL, "induction");
+      return Exp.expandCodeFor(Step, Step->getType(),
+                               LoopVectorPreHeader->getTerminator());
+    }
+    return cast<SCEVUnknown>(Step)->getValue();
+  };
 
-  // Try to create a new independent vector induction variable. If we can't
-  // create the phi node, we will splat the scalar induction variable in each
-  // loop iteration.
-  if (VF > 1 && !shouldScalarizeInstruction(EntryVal)) {
-    createVectorIntOrFpInductionPHI(ID, Step, EntryVal);
-    VectorizedIV = true;
-  }
-
-  // If we haven't yet vectorized the induction variable, or if we will create
-  // a scalar one, we need to define the scalar induction variable and step
-  // values. If we were given a truncation type, truncate the canonical
+  // The scalar value to broadcast. This is derived from the canonical
+  // induction variable. If a truncation type is given, truncate the canonical
   // induction variable and step. Otherwise, derive these values from the
   // induction descriptor.
-  if (!VectorizedIV || NeedsScalarIV) {
-    ScalarIV = Induction;
+  auto CreateScalarIV = [&](Value *&Step) -> Value * {
+    Value *ScalarIV = Induction;
     if (IV != OldInduction) {
       ScalarIV = IV->getType()->isIntegerTy()
                      ? Builder.CreateSExtOrTrunc(Induction, IV->getType())
@@ -1866,12 +1846,12 @@ void InnerLoopVectorizer::widenIntOrFpInduction(PHINode *IV, TruncInst *Trunc) {
       ScalarIV = Builder.CreateTrunc(ScalarIV, TruncType);
       Step = Builder.CreateTrunc(Step, TruncType);
     }
-  }
+    return ScalarIV;
+  };
 
-  // If we haven't yet vectorized the induction variable, splat the scalar
-  // induction variable, and build the necessary step vectors.
-  // TODO: Don't do it unless the vectorized IV is really required.
-  if (!VectorizedIV) {
+  // Create the vector values from the scalar IV, in the absence of creating a
+  // vector IV.
+  auto CreateSplatIV = [&](Value *ScalarIV, Value *Step) {
     Value *Broadcasted = getBroadcastInstrs(ScalarIV);
     for (unsigned Part = 0; Part < UF; ++Part) {
       Value *EntryPart =
@@ -1881,16 +1861,45 @@ void InnerLoopVectorizer::widenIntOrFpInduction(PHINode *IV, TruncInst *Trunc) {
         addMetadata(EntryPart, Trunc);
       recordVectorLoopValueForInductionCast(ID, EntryVal, EntryPart, Part);
     }
+  };
+
+  // Now do the actual transformations, and start with creating the step value.
+  Value *Step = CreateStepValue(ID.getStep());
+  if (VF <= 1) {
+    Value *ScalarIV = CreateScalarIV(Step);
+    CreateSplatIV(ScalarIV, Step);
+    return;
   }
 
-  // If an induction variable is only used for counting loop iterations or
-  // calculating addresses, it doesn't need to be widened. Create scalar steps
-  // that can be used by instructions we will later scalarize. Note that the
-  // addition of the scalar steps will not increase the number of instructions
-  // in the loop in the common case prior to InstCombine. We will be trading
-  // one vector extract for each scalar step.
-  if (NeedsScalarIV)
+  // Determine if we want a scalar version of the induction variable. This is
+  // true if the induction variable itself is not widened, or if it has at
+  // least one user in the loop that is not widened.
+  auto NeedsScalarIV = needsScalarInduction(EntryVal);
+  if (!NeedsScalarIV) {
+    createVectorIntOrFpInductionPHI(ID, Step, EntryVal);
+    return;
+  }
+
+  // Try to create a new independent vector induction variable. If we can't
+  // create the phi node, we will splat the scalar induction variable in each
+  // loop iteration.
+  if (!shouldScalarizeInstruction(EntryVal)) {
+    createVectorIntOrFpInductionPHI(ID, Step, EntryVal);
+    Value *ScalarIV = CreateScalarIV(Step);
+    // Create scalar steps that can be used by instructions we will later
+    // scalarize. Note that the addition of the scalar steps will not increase
+    // the number of instructions in the loop in the common case prior to
+    // InstCombine. We will be trading one vector extract for each scalar step.
     buildScalarSteps(ScalarIV, Step, EntryVal, ID);
+    return;
+  }
+
+  // If we haven't yet vectorized the induction variable, splat the scalar
+  // induction variable, and build the necessary step vectors.
+  // TODO: Don't do it unless the vectorized IV is really required.
+  Value *ScalarIV = CreateScalarIV(Step);
+  CreateSplatIV(ScalarIV, Step);
+  buildScalarSteps(ScalarIV, Step, EntryVal, ID);
 }
 
 Value *InnerLoopVectorizer::getStepVector(Value *Val, int StartIdx, Value *Step,
