@@ -1,9 +1,9 @@
-<!--===- README.md 
-  
+<!--===- README.md
+
    Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
    See https://llvm.org/LICENSE.txt for license information.
    SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-  
+
 -->
 
 # F18
@@ -72,12 +72,16 @@ https://llvm.org/docs/GettingStarted.html.
 We highly recommend using the same compiler to compile both llvm and f18.
 
 The f18 CMakeList.txt file uses
-the variable `LLVM_DIR` to find the installed components.
+the variable `LLVM_DIR` to find the installed LLVM components
+and
+the variable `MLIR_DIR` to find the installed MLIR components.
 
-To get the correct LLVM libraries included in your f18 build,
-define LLVM_DIR on the cmake command line.
+To get the correct LLVM and MLIR libraries included in your f18 build,
+define LLVM_DIR and MLIR_DIR on the cmake command line.
 ```
-LLVM=<LLVM_BUILD_DIR>/lib/cmake/llvm cmake -DLLVM_DIR=$LLVM ...
+LLVM=<LLVM_BUILD_DIR>/lib/cmake/llvm \
+MLIR=<LLVM_BUILD_DIR>/lib/cmake/mlir \
+cmake -DLLVM_DIR=$LLVM -DMLIR_DIR=$MLIR ...
 ```
 where `LLVM_BUILD_DIR` is
 the top-level directory where LLVM was built.
@@ -121,7 +125,11 @@ make install
 ```
 
 Then, `-DLLVM_DIR` would have to be set to
- `<where/you/want/to/build/llvm>/install/lib/cmake/llvm` in f18 cmake command.
+ `<where/you/want/to/build/llvm>/install/lib/cmake/llvm`
+and, `-DMLIR_DIR` would have to be set to
+ `<where/you/want/to/build/llvm>/install/lib/cmake/mlir`
+
+in f18 cmake command.
 
 To run lit tests,
 `-DLLVM_EXTERNAL_LIT=<where/you/want/to/build/llvm>/build/bin/llvm-lit` must be
@@ -142,13 +150,13 @@ Or,
 cmake will use the variable CXX to find the C++ compiler.
 CXX should include the full path to the compiler
 or a name that will be found on your PATH,
-e.g. g++-7.2, assuming g++-7.2 is on your PATH.
+e.g. g++-8.3, assuming g++-8.3 is on your PATH.
 ```
-export CXX=g++-7.2
+export CXX=g++-8.3
 ```
 or
 ```
-CXX=/opt/gcc-7.2/bin/g++-7.2 cmake ...
+CXX=/opt/gcc-8.3/bin/g++-8.3 cmake ...
 ```
 
 ### Building f18 with clang
@@ -189,7 +197,7 @@ Release builds execute quickly.
 ### Build F18
 ```
 cd ~/f18/build
-cmake -DLLVM_DIR=$LLVM ~/f18/src
+cmake -DLLVM_DIR=$LLVM -DMLIR_DIR=$MLIR ~/f18/src
 make
 ```
 
@@ -198,7 +206,7 @@ make
 To run all tests:
 ```
 cd ~/f18/build
-cmake -DLLVM_DIR=$LLVM ~/f18/src
+cmake -DLLVM_DIR=$LLVM -DMLIR_DIR=$MLIR ~/f18/src
 make test check-all
 ```
 
