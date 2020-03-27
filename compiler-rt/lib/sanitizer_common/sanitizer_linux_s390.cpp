@@ -123,12 +123,8 @@ static bool FixedCVE_2016_2143() {
   // adjust this for their own kernels.
   struct utsname buf;
   unsigned int major, minor, patch = 0;
-  // Depending on the concrete sanitizer being used, uname may or may not
-  // be intercepted. Make sure we use the libc version in either case.
-  using Uname = int (*)(struct utsname *);
-  Uname uname = reinterpret_cast<Uname>(dlsym(RTLD_NEXT, "uname"));
   // This should never fail, but just in case...
-  if (uname == nullptr || uname(&buf))
+  if (internal_uname(&buf))
     return false;
   const char *ptr = buf.release;
   major = internal_simple_strtoll(ptr, &ptr, 10);
