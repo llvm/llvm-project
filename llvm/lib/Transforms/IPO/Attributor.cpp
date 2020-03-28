@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements an inter procedural pass that deduces and/or propagating
+// This file implements an interprocedural pass that deduces and/or propagates
 // attributes. This is done in an abstract interpretation style fixpoint
 // iteration. See the Attributor.h file comment and the class descriptions in
 // that file for more information.
@@ -54,9 +54,9 @@ using namespace llvm;
 #define DEBUG_TYPE "attributor"
 
 STATISTIC(NumFnWithExactDefinition,
-          "Number of function with exact definitions");
+          "Number of functions with exact definitions");
 STATISTIC(NumFnWithoutExactDefinition,
-          "Number of function without exact definitions");
+          "Number of functions without exact definitions");
 STATISTIC(NumAttributesTimedOut,
           "Number of abstract attributes timed out before fixpoint");
 STATISTIC(NumAttributesValidFixpoint,
@@ -1334,7 +1334,7 @@ ChangeStatus AAReturnedValuesImpl::manifest(Attributor &A) {
   // Bookkeeping.
   assert(isValidState());
   STATS_DECLTRACK(KnownReturnValues, FunctionReturn,
-                  "Number of function with known return values");
+                  "Number of functions with known return values");
 
   // Check if we have an assumed unique return value that we could manifest.
   Optional<Value *> UniqueRV = getAssumedUniqueReturnValue(A);
@@ -1344,7 +1344,7 @@ ChangeStatus AAReturnedValuesImpl::manifest(Attributor &A) {
 
   // Bookkeeping.
   STATS_DECLTRACK(UniqueReturnValue, FunctionReturn,
-                  "Number of function with unique return");
+                  "Number of functions with a unique return");
 
   // Callback to replace the uses of CB with the constant C.
   auto ReplaceCallSiteUsersWith = [&A](CallBase &CB, Constant &C) {
@@ -5033,7 +5033,7 @@ struct AAHeapToStackImpl : public AAHeapToStack {
       Constant *Size;
       if (isCallocLikeFn(MallocCall, TLI)) {
         auto *Num = cast<ConstantInt>(MallocCall->getOperand(0));
-        auto *SizeT = dyn_cast<ConstantInt>(MallocCall->getOperand(1));
+        auto *SizeT = cast<ConstantInt>(MallocCall->getOperand(1));
         APInt TotalSize = SizeT->getValue() * Num->getValue();
         Size =
             ConstantInt::get(MallocCall->getOperand(0)->getType(), TotalSize);
@@ -5059,6 +5059,7 @@ struct AAHeapToStackImpl : public AAHeapToStack {
         A.deleteAfterManifest(*MallocCall);
       }
 
+      // Zero out the allocated memory if it was a calloc.
       if (isCallocLikeFn(MallocCall, TLI)) {
         auto *BI = new BitCastInst(AI, MallocCall->getType(), "calloc_bc",
                                    AI->getNextNode());
@@ -5216,7 +5217,7 @@ ChangeStatus AAHeapToStackImpl::updateImpl(Attributor &A) {
 struct AAHeapToStackFunction final : public AAHeapToStackImpl {
   AAHeapToStackFunction(const IRPosition &IRP) : AAHeapToStackImpl(IRP) {}
 
-  /// See AbstractAttribute::trackStatistics()
+  /// See AbstractAttribute::trackStatistics().
   void trackStatistics() const override {
     STATS_DECL(MallocCalls, Function,
                "Number of malloc calls converted to allocas");

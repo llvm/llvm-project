@@ -197,18 +197,20 @@ public:
   /// token range R.
   llvm::ArrayRef<syntax::Token> expandedTokens(SourceRange R) const;
 
-  /// Find the subrange of spelled tokens that produced the corresponding \p
-  /// Expanded tokens.
+  /// Returns the subrange of spelled tokens corresponding to AST node spanning
+  /// \p Expanded. This is the text that should be replaced if a refactoring
+  /// were to rewrite the node. If \p Expanded is empty, the returned value is
+  /// llvm::None.
   ///
-  /// EXPECTS: \p Expanded is a subrange of expandedTokens().
-  ///
-  /// Will fail if the expanded tokens do not correspond to a
-  /// sequence of spelled tokens. E.g. for the following example:
+  /// Will fail if the expanded tokens do not correspond to a sequence of
+  /// spelled tokens. E.g. for the following example:
   ///
   ///   #define FIRST f1 f2 f3
   ///   #define SECOND s1 s2 s3
+  ///   #define ID2(X, Y) X Y
   ///
   ///   a FIRST b SECOND c // expanded tokens are: a f1 f2 f3 b s1 s2 s3 c
+  ///   d ID2(e f g, h) i  // expanded tokens are: d e f g h i
   ///
   /// the results would be:
   ///   expanded   => spelled
@@ -218,8 +220,10 @@ public:
   ///   a f1 f2 f3 => a FIRST
   ///         a f1 => can't map
   ///        s1 s2 => can't map
+  ///         e f  => e f
+  ///         g h  => can't map
   ///
-  /// If \p Expanded is empty, the returned value is llvm::None.
+  /// EXPECTS: \p Expanded is a subrange of expandedTokens().
   /// Complexity is logarithmic.
   llvm::Optional<llvm::ArrayRef<syntax::Token>>
   spelledForExpanded(llvm::ArrayRef<syntax::Token> Expanded) const;

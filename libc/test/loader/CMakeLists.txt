@@ -32,7 +32,7 @@ function(add_loader_test target_name)
   if(ADD_LOADER_TEST_DEPENDS)
     add_dependencies(${target_name} ${ADD_LOADER_TEST_DEPENDS})
     foreach(dep IN LISTS ADD_LOADER_TEST_DEPENDS)
-      get_target_property(objfile ${dep} "OBJECT_FILE")
+      get_target_property(objfile ${dep} "OBJECT_FILES")
       if(NOT objfile)
         message(
             FATAL_ERROR

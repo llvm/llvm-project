@@ -6,9 +6,9 @@ function(add_loader_object name)
     "DEPENDS;COMPILE_OPTIONS" # Multi value arguments
     ${ARGN}
   )
-  add_object(
+  add_object_library(
     ${name}_object
-    SRC ${ADD_LOADER_OBJECT_SRC}
+    SRCS ${ADD_LOADER_OBJECT_SRC}
     DEPENDS ${ADD_LOADER_OBJECT_DEPENDS}
     COMPILE_OPTIONS ${ADD_LOADER_OBJECT_COMPILE_OPTIONS}
   )
@@ -27,7 +27,7 @@ function(add_loader_object name)
     ${name}
     PROPERTIES
       "TARGET_TYPE" "LOADER_OBJECT"
-      "OBJECT_FILE" ${objfile}
+      "OBJECT_FILES" ${objfile}
   )
 endfunction()
 

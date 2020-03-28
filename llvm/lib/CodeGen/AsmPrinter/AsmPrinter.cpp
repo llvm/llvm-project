@@ -414,7 +414,7 @@ void AsmPrinter::emitLinkage(const GlobalValue *GV, MCSymbol *GVSym) const {
         OutStreamer->emitSymbolAttribute(GVSym, MCSA_WeakDefinition);
       else
         OutStreamer->emitSymbolAttribute(GVSym, MCSA_WeakDefAutoPrivate);
-    } else if (MAI->hasLinkOnceDirective()) {
+    } else if (MAI->avoidWeakIfComdat() && GV->hasComdat()) {
       // .globl _foo
       OutStreamer->emitSymbolAttribute(GVSym, MCSA_Global);
       //NOTE: linkonce is handled by the section the symbol was assigned to.

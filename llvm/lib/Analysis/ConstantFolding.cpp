@@ -38,6 +38,7 @@
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsX86.h"
@@ -1396,41 +1397,19 @@ llvm::ConstantFoldLoadThroughGEPIndices(Constant *C,
 //
 
 bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
-  if (Call->isNoBuiltin() || Call->isStrictFP())
+  if (Call->isNoBuiltin())
     return false;
   switch (F->getIntrinsicID()) {
-  case Intrinsic::fabs:
-  case Intrinsic::minnum:
-  case Intrinsic::maxnum:
-  case Intrinsic::minimum:
-  case Intrinsic::maximum:
-  case Intrinsic::log:
-  case Intrinsic::log2:
-  case Intrinsic::log10:
-  case Intrinsic::exp:
-  case Intrinsic::exp2:
-  case Intrinsic::floor:
-  case Intrinsic::ceil:
-  case Intrinsic::sqrt:
-  case Intrinsic::sin:
-  case Intrinsic::cos:
-  case Intrinsic::trunc:
-  case Intrinsic::rint:
-  case Intrinsic::nearbyint:
-  case Intrinsic::pow:
-  case Intrinsic::powi:
+  // Operations that do not operate floating-point numbers and do not depend on
+  // FP environment can be folded even in strictfp functions.
   case Intrinsic::bswap:
   case Intrinsic::ctpop:
   case Intrinsic::ctlz:
   case Intrinsic::cttz:
   case Intrinsic::fshl:
   case Intrinsic::fshr:
-  case Intrinsic::fma:
-  case Intrinsic::fmuladd:
-  case Intrinsic::copysign:
   case Intrinsic::launder_invariant_group:
   case Intrinsic::strip_invariant_group:
-  case Intrinsic::round:
   case Intrinsic::masked_load:
   case Intrinsic::sadd_with_overflow:
   case Intrinsic::uadd_with_overflow:
@@ -1444,9 +1423,31 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case Intrinsic::usub_sat:
   case Intrinsic::smul_fix:
   case Intrinsic::smul_fix_sat:
+  case Intrinsic::bitreverse:
+  case Intrinsic::is_constant:
+    return true;
+
+  // Floating point operations cannot be folded in strictfp functions in
+  // general case. They can be folded if FP environment is known to compiler.
+  case Intrinsic::minnum:
+  case Intrinsic::maxnum:
+  case Intrinsic::minimum:
+  case Intrinsic::maximum:
+  case Intrinsic::log:
+  case Intrinsic::log2:
+  case Intrinsic::log10:
+  case Intrinsic::exp:
+  case Intrinsic::exp2:
+  case Intrinsic::sqrt:
+  case Intrinsic::sin:
+  case Intrinsic::cos:
+  case Intrinsic::pow:
+  case Intrinsic::powi:
+  case Intrinsic::fma:
+  case Intrinsic::fmuladd:
   case Intrinsic::convert_from_fp16:
   case Intrinsic::convert_to_fp16:
-  case Intrinsic::bitreverse:
+  // The intrinsics below depend on rounding mode in MXCSR.
   case Intrinsic::amdgcn_cubeid:
   case Intrinsic::amdgcn_cubema:
   case Intrinsic::amdgcn_cubesc:
@@ -1477,14 +1478,35 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case Intrinsic::x86_avx512_vcvtsd2usi64:
   case Intrinsic::x86_avx512_cvttsd2usi:
   case Intrinsic::x86_avx512_cvttsd2usi64:
-  case Intrinsic::is_constant:
+    return !Call->isStrictFP();
+
+  // Sign operations are actually bitwise operations, they do not raise
+  // exceptions even for SNANs.
+  case Intrinsic::fabs:
+  case Intrinsic::copysign:
+  // Non-constrained variants of rounding operations means default FP
+  // environment, they can be folded in any case.
+  case Intrinsic::ceil:
+  case Intrinsic::floor:
+  case Intrinsic::round:
+  case Intrinsic::trunc:
+  case Intrinsic::nearbyint:
+  case Intrinsic::rint:
+  // Constrained intrinsics can be folded if FP environment is known
+  // to compiler.
+  case Intrinsic::experimental_constrained_ceil:
+  case Intrinsic::experimental_constrained_floor:
+  case Intrinsic::experimental_constrained_round:
+  case Intrinsic::experimental_constrained_trunc:
+  case Intrinsic::experimental_constrained_nearbyint:
+  case Intrinsic::experimental_constrained_rint:
     return true;
   default:
     return false;
   case Intrinsic::not_intrinsic: break;
   }
 
-  if (!F->hasName())
+  if (!F->hasName() || Call->isStrictFP())
     return false;
 
   // In these cases, the check of the length is required.  We don't want to
@@ -1790,6 +1812,55 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       APFloat AlmostOne(U.getSemantics(), 1);
       AlmostOne.next(/*nextDown*/ true);
       return ConstantFP::get(Ty->getContext(), minimum(FractU, AlmostOne));
+    }
+
+    // Rounding operations (floor, trunc, ceil, round and nearbyint) do not
+    // raise FP exceptions, unless the argument is signaling NaN.
+
+    Optional<APFloat::roundingMode> RM;
+    switch (IntrinsicID) {
+    default:
+      break;
+    case Intrinsic::experimental_constrained_nearbyint:
+    case Intrinsic::experimental_constrained_rint: {
+      auto CI = cast<ConstrainedFPIntrinsic>(Call);
+      Optional<fp::RoundingMode> RMOp = CI->getRoundingMode();
+      if (RMOp)
+        RM = getAPFloatRoundingMode(*RMOp);
+      if (!RM)
+        return nullptr;
+      break;
+    }
+    case Intrinsic::experimental_constrained_round:
+      RM = APFloat::rmNearestTiesToAway;
+      break;
+    case Intrinsic::experimental_constrained_ceil:
+      RM = APFloat::rmTowardPositive;
+      break;
+    case Intrinsic::experimental_constrained_floor:
+      RM = APFloat::rmTowardNegative;
+      break;
+    case Intrinsic::experimental_constrained_trunc:
+      RM = APFloat::rmTowardZero;
+      break;
+    }
+    if (RM) {
+      auto CI = cast<ConstrainedFPIntrinsic>(Call);
+      if (U.isFinite()) {
+        APFloat::opStatus St = U.roundToIntegral(*RM);
+        if (IntrinsicID == Intrinsic::experimental_constrained_rint &&
+            St == APFloat::opInexact) {
+          Optional<fp::ExceptionBehavior> EB = CI->getExceptionBehavior();
+          if (EB && *EB == fp::ebStrict)
+            return nullptr;
+        }
+      } else if (U.isSignaling()) {
+        Optional<fp::ExceptionBehavior> EB = CI->getExceptionBehavior();
+        if (EB && *EB != fp::ebIgnore)
+          return nullptr;
+        U = APFloat::getQNaN(U.getSemantics());
+      }
+      return ConstantFP::get(Ty->getContext(), U);
     }
 
     /// We only fold functions with finite arguments. Folding NaN and inf is
@@ -2573,7 +2644,7 @@ static Constant *ConstantFoldVectorCall(StringRef Name,
 Constant *llvm::ConstantFoldCall(const CallBase *Call, Function *F,
                                  ArrayRef<Constant *> Operands,
                                  const TargetLibraryInfo *TLI) {
-  if (Call->isNoBuiltin() || Call->isStrictFP())
+  if (Call->isNoBuiltin())
     return nullptr;
   if (!F->hasName())
     return nullptr;

@@ -18,5 +18,5 @@ class InvalidArgsLogTestCase(TestBase):
 
     @no_debug_info_test
     def test_timer_empty(self):
-        self.expect("log timer", error=True,
+        self.expect("log timers", error=True,
                     substrs=["error: Missing subcommand"])
