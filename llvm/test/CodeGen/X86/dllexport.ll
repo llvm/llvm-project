@@ -45,16 +45,20 @@ define dllexport x86_thiscallcc void @thisfun() nounwind {
 }
 
 ; CHECK: .globl _lnk1
-define linkonce_odr dllexport void @lnk1() {
+$lnk1 = comdat any
+
+define linkonce_odr dllexport void @lnk1() comdat {
 	ret void
 }
 
 ; CHECK: .globl _lnk2
-define linkonce_odr dllexport void @lnk2() alwaysinline {
+$lnk2 = comdat any
+
+define linkonce_odr dllexport void @lnk2() alwaysinline comdat {
 	ret void
 }
 
-; CHECK: .globl _weak1
+; CHECK: .weak _weak1
 define weak_odr dllexport void @weak1() {
 	ret void
 }
@@ -71,10 +75,10 @@ define weak_odr dllexport void @weak1() {
 ; CHECK: .comm _Var3
 @Var3 = common dllexport global i32 0, align 4
 
-; CHECK: .globl _WeakVar1
+; CHECK: .weak _WeakVar1
 @WeakVar1 = weak_odr dllexport global i32 1, align 4
 
-; CHECK: .globl _WeakVar2
+; CHECK: .weak _WeakVar2
 @WeakVar2 = weak_odr dllexport unnamed_addr constant i32 1
 
 

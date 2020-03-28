@@ -26,7 +26,7 @@ MCAsmInfoCOFF::MCAsmInfoCOFF() {
   HasDotTypeDotSizeDirective = false;
   HasSingleParameterDotFile = true;
   WeakRefDirective = "\t.weak\t";
-  HasLinkOnceDirective = true;
+  AvoidWeakIfComdat = true;
 
   // Doesn't support visibility:
   HiddenVisibilityAttr = HiddenDeclarationVisibilityAttr = MCSA_Invalid;
