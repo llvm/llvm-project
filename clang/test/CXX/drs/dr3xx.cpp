@@ -123,7 +123,7 @@ namespace dr305 { // dr305: no
     template<typename T> using T2 = T;
   };
   void k(Z *z) {
-    z->~T1<int>(); // expected-error {{no member named 'T1' in 'dr305::Z'}} expected-error +{{}}
+    z->~T1<int>(); // expected-error {{no member named 'T1' in 'dr305::Z'}}
     z->~T2<int>(); // expected-error {{no member named '~int'}}
     z->~T2<Z>();
   }

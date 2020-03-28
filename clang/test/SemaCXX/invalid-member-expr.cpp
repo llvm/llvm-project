@@ -54,10 +54,7 @@ namespace test3 {
 namespace rdar11293995 {
 
 struct Length {
-  // FIXME: We try to annotate the template-id here during tentative parsing,
-  // and fail, then try again during the actual parse. This results in the same
-  // diagnostic being produced twice. :(
-  explicit Length(PassRefPtr<CalculationValue>); // expected-error 2{{undeclared identifier 'CalculationValue'}}
+  explicit Length(PassRefPtr<CalculationValue>); // expected-error {{undeclared identifier 'CalculationValue'}}
 };
 
 struct LengthSize {
