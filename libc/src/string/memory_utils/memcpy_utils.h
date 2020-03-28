@@ -20,13 +20,13 @@
 #define USE_BUILTIN_MEMCPY
 #endif
 
+namespace __llvm_libc {
+
 // This is useful for testing.
 #if defined(LLVM_LIBC_MEMCPY_MONITOR)
 extern "C" void LLVM_LIBC_MEMCPY_MONITOR(char *__restrict,
                                          const char *__restrict, size_t);
 #endif
-
-namespace __llvm_libc {
 
 // Copies `kBlockSize` bytes from `src` to `dst`.
 template <size_t kBlockSize>

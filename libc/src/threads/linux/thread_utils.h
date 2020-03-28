@@ -14,6 +14,8 @@
 #include <stdatomic.h>
 #include <stdint.h>
 
+namespace __llvm_libc {
+
 // The futex data has to be exactly 4 bytes long. However, we use a uint type
 // here as we do not want to use `_Atomic uint32_t` as the _Atomic keyword which
 // is C only. The header stdatomic.h does not define an atomic type
@@ -34,5 +36,7 @@ struct ThreadParams {
   static constexpr uintptr_t DefaultStackSize = 1 << 16; // 64 KB
   static constexpr uint32_t ClearTIDValue = 0xABCD1234;
 };
+
+} // namespace __llvm_libc
 
 #endif // LLVM_LIBC_SRC_THREADS_LINUX_THREAD_UTILS_H
