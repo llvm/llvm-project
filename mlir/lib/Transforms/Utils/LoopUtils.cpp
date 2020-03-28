@@ -716,7 +716,7 @@ static bool isPerfectlyNested(ArrayRef<AffineForOp> loops) {
 
 // input[i] should move from position i -> permMap[i]. Returns the position in
 // `input` that becomes the new outermost loop.
-unsigned mlir::permuteLoops(ArrayRef<AffineForOp> input,
+unsigned mlir::permuteLoops(MutableArrayRef<AffineForOp> input,
                             ArrayRef<unsigned> permMap) {
   assert(input.size() == permMap.size() && "invalid permutation map size");
   // Check whether the permutation spec is valid. This is a small vector - we'll
@@ -733,19 +733,55 @@ unsigned mlir::permuteLoops(ArrayRef<AffineForOp> input,
 
   assert(isPerfectlyNested(input) && "input not perfectly nested");
 
-  Optional<unsigned> loopNestRootIndex;
-  for (int i = input.size() - 1; i >= 0; --i) {
-    int permIndex = static_cast<int>(permMap[i]);
-    // Store the index of the for loop which will be the new loop nest root.
-    if (permIndex == 0)
-      loopNestRootIndex = i;
-    if (permIndex > i) {
-      // Sink loop 'i' by 'permIndex - i' levels deeper into the loop nest.
-      sinkLoop(input[i], permIndex - i);
-    }
+  // Compute the inverse mapping, invPermMap: since input[i] goes to position
+  // permMap[i], position i of the permuted nest is at input[invPermMap[i]].
+  SmallVector<std::pair<unsigned, unsigned>, 4> invPermMap;
+  for (unsigned i = 0, e = input.size(); i < e; ++i)
+    invPermMap.push_back({permMap[i], i});
+  llvm::sort(invPermMap);
+
+  // Move the innermost loop body to the loop that would be the innermost in the
+  // permuted nest (only if the innermost loop is going to change).
+  if (permMap.back() != input.size() - 1) {
+    auto *destBody = input[invPermMap.back().second].getBody();
+    auto *srcBody = input.back().getBody();
+    destBody->getOperations().splice(destBody->begin(),
+                                     srcBody->getOperations(), srcBody->begin(),
+                                     std::prev(srcBody->end()));
   }
-  assert(loopNestRootIndex.hasValue());
-  return loopNestRootIndex.getValue();
+
+  // We'll move each loop in `input` in the reverse order so that its body is
+  // empty when we are moving it; this incurs zero copies and no erasing.
+  for (int i = input.size() - 1; i >= 0; --i) {
+    // If this has to become the outermost loop after permutation, add it to the
+    // parent block of the original root.
+    if (permMap[i] == 0) {
+      // If the root remains the same, nothing to do.
+      if (i == 0)
+        continue;
+      // Make input[i] the new outermost loop moving it into parentBlock.
+      auto *parentBlock = input[0].getOperation()->getBlock();
+      parentBlock->getOperations().splice(
+          Block::iterator(input[0]),
+          input[i].getOperation()->getBlock()->getOperations(),
+          Block::iterator(input[i]));
+      continue;
+    }
+
+    // If the parent in the permuted order is the same as in the original,
+    // nothing to do.
+    unsigned parentPosInInput = invPermMap[permMap[i] - 1].second;
+    if (i > 0 && static_cast<unsigned>(i - 1) == parentPosInInput)
+      continue;
+
+    // Move input[i] to its surrounding loop in the transformed nest.
+    auto *destBody = input[parentPosInInput].getBody();
+    destBody->getOperations().splice(
+        destBody->begin(), input[i].getOperation()->getBlock()->getOperations(),
+        Block::iterator(input[i]));
+  }
+
+  return invPermMap[0].second;
 }
 
 // Sinks all sequential loops to the innermost levels (while preserving
@@ -801,15 +837,6 @@ AffineForOp mlir::sinkSequentialLoops(AffineForOp forOp) {
   // Perform loop interchange according to permutation 'loopPermMap'.
   unsigned loopNestRootIndex = permuteLoops(loops, loopPermMap);
   return loops[loopNestRootIndex];
-}
-
-/// Performs a series of loop interchanges to sink 'forOp' 'loopDepth' levels
-/// deeper in the loop nest.
-void mlir::sinkLoop(AffineForOp forOp, unsigned loopDepth) {
-  for (unsigned i = 0; i < loopDepth; ++i) {
-    AffineForOp nextForOp = cast<AffineForOp>(forOp.getBody()->front());
-    interchangeLoops(forOp, nextForOp);
-  }
 }
 
 // Factors out common behavior to add a new `iv` (resp. `iv` + `offset`) to the
