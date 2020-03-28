@@ -214,6 +214,8 @@ protected:
 
   unsigned PointerAuthSupported : 1;
 
+  unsigned MaxOpenCLWorkGroupSize;
+
   // TargetInfo Constructor.  Default initializes all fields.
   TargetInfo(const llvm::Triple &T);
 
@@ -664,6 +666,8 @@ public:
   /// value is type-specific, but this alignment can be used for most of the
   /// types for the given target.
   unsigned getSimdDefaultAlign() const { return SimdDefaultAlign; }
+
+  unsigned getMaxOpenCLWorkGroupSize() const { return MaxOpenCLWorkGroupSize; }
 
   /// Return the alignment (in bits) of the thrown exception object. This is
   /// only meaningful for targets that allocate C++ exceptions in a system
