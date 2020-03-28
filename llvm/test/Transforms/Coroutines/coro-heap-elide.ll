@@ -54,7 +54,7 @@ if.end:
 ; CHECK-LABEL: @callResume(
 define void @callResume() {
 entry:
-; CHECK: alloca %f.frame
+; CHECK: alloca [4 x i8], align 4
 ; CHECK-NOT: coro.begin
 ; CHECK-NOT: CustomAlloc
 ; CHECK: call void @may_throw()

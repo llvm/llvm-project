@@ -328,7 +328,7 @@ void PlatformDarwinKernel::CollectKextAndKernelDirectories() {
 
   // DeveloperDirectory is something like
   // "/Applications/Xcode.app/Contents/Developer"
-  std::string developer_dir = GetDeveloperDirectory();
+  std::string developer_dir = GetXcodeDeveloperDirectory().GetPath();
   if (developer_dir.empty())
     developer_dir = "/Applications/Xcode.app/Contents/Developer";
 

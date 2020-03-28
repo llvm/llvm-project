@@ -1,5 +1,5 @@
 ; Third example from Doc/Coroutines.rst (two suspend points)
-; RUN: opt < %s -O2 -enable-coroutines -S | FileCheck %s
+; RUN: opt < %s -O2 -enable-coroutines -preserve-alignment-assumptions-during-inlining=false -S | FileCheck %s
 
 define i8* @f(i32 %n) {
 entry:

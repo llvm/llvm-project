@@ -96,17 +96,22 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
   struct SwitchFieldIndex {
     enum {
       Resume,
-      Destroy,
-      Promise,
-      Index,
-      /// The index of the first spill field.
-      FirstSpill
+      Destroy
+
+      // The promise field is always at a fixed offset from the start of
+      // frame given its type, but the index isn't a constant for all
+      // possible frames.
+
+      // The switch-index field isn't at a fixed offset or index, either;
+      // we just work it in where it fits best.
     };
   };
 
   coro::ABI ABI;
 
   StructType *FrameTy;
+  Align FrameAlign;
+  uint64_t FrameSize;
   Instruction *FramePtr;
   BasicBlock *AllocaSpillBlock;
 
@@ -114,6 +119,8 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
     SwitchInst *ResumeSwitch;
     AllocaInst *PromiseAlloca;
     BasicBlock *ResumeEntryBlock;
+    unsigned IndexField;
+    unsigned PromiseField;
     bool HasFinalSuspend;
   };
 
@@ -141,10 +148,15 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
     return cast<AnyCoroIdRetconInst>(CoroBegin->getId());
   }
 
+  unsigned getSwitchIndexField() const {
+    assert(ABI == coro::ABI::Switch);
+    assert(FrameTy && "frame type not assigned");
+    return SwitchLowering.IndexField;
+  }
   IntegerType *getIndexType() const {
     assert(ABI == coro::ABI::Switch);
     assert(FrameTy && "frame type not assigned");
-    return cast<IntegerType>(FrameTy->getElementType(SwitchFieldIndex::Index));
+    return cast<IntegerType>(FrameTy->getElementType(getSwitchIndexField()));
   }
   ConstantInt *getIndex(uint64_t Value) const {
     return ConstantInt::get(getIndexType(), Value);
@@ -203,22 +215,16 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
     llvm_unreachable("Unknown coro::ABI enum");
   }
 
-  unsigned getFirstSpillFieldIndex() const {
-    switch (ABI) {
-    case coro::ABI::Switch:
-      return SwitchFieldIndex::FirstSpill;
-
-    case coro::ABI::Retcon:
-    case coro::ABI::RetconOnce:
-      return 0;
-    }
-    llvm_unreachable("Unknown coro::ABI enum");
-  }
-
   AllocaInst *getPromiseAlloca() const {
     if (ABI == coro::ABI::Switch)
       return SwitchLowering.PromiseAlloca;
     return nullptr;
+  }
+  unsigned getPromiseField() const {
+    assert(ABI == coro::ABI::Switch);
+    assert(FrameTy && "frame type not assigned");
+    assert(SwitchLowering.PromiseAlloca && "no promise alloca");
+    return SwitchLowering.PromiseField;
   }
 
   /// Allocate memory according to the rules of the active lowering.
