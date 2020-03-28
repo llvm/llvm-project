@@ -441,24 +441,6 @@ private:
     return LV;
   }
 
-  LatticeVal toLatticeVal(const ValueLatticeElement &V, Type *T) {
-    LatticeVal Res;
-    if (V.isUnknownOrUndef())
-      return Res;
-
-    if (V.isConstant()) {
-      Res.markConstant(V.getConstant());
-      return Res;
-    }
-    if (V.isConstantRange() && V.getConstantRange().isSingleElement()) {
-      Res.markConstant(
-          ConstantInt::get(T, *V.getConstantRange().getSingleElement()));
-      return Res;
-    }
-    Res.markOverdefined();
-    return Res;
-  }
-
   /// getStructValueState - Return the LatticeVal object that corresponds to the
   /// value/field pair.  This function handles the case when the value hasn't
   /// been seen yet by properly seeding constants etc.
