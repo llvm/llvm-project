@@ -466,18 +466,19 @@ llvm::Function *CGNVCUDARuntime::makeRegisterGlobalsFn() {
   for (auto &&Info : DeviceVars) {
     llvm::GlobalVariable *Var = Info.Var;
     llvm::Constant *VarName = makeConstantString(getDeviceSideName(Info.D));
-    switch (Info.Flags.Kind) {
+    switch (Info.Flags.getKind()) {
     case DeviceVarFlags::Variable: {
       uint64_t VarSize =
           CGM.getDataLayout().getTypeAllocSize(Var->getValueType());
-      llvm::Value *Args[] = {&GpuBinaryHandlePtr,
-                             Builder.CreateBitCast(Var, VoidPtrTy),
-                             VarName,
-                             VarName,
-                             llvm::ConstantInt::get(IntTy, Info.Flags.Extern),
-                             llvm::ConstantInt::get(IntTy, VarSize),
-                             llvm::ConstantInt::get(IntTy, Info.Flags.Constant),
-                             llvm::ConstantInt::get(IntTy, 0)};
+      llvm::Value *Args[] = {
+          &GpuBinaryHandlePtr,
+          Builder.CreateBitCast(Var, VoidPtrTy),
+          VarName,
+          VarName,
+          llvm::ConstantInt::get(IntTy, Info.Flags.isExtern()),
+          llvm::ConstantInt::get(IntTy, VarSize),
+          llvm::ConstantInt::get(IntTy, Info.Flags.isConstant()),
+          llvm::ConstantInt::get(IntTy, 0)};
       Builder.CreateCall(RegisterVar, Args);
       break;
     }
@@ -485,16 +486,16 @@ llvm::Function *CGNVCUDARuntime::makeRegisterGlobalsFn() {
       Builder.CreateCall(
           RegisterSurf,
           {&GpuBinaryHandlePtr, Builder.CreateBitCast(Var, VoidPtrTy), VarName,
-           VarName, llvm::ConstantInt::get(IntTy, Info.Flags.SurfTexType),
-           llvm::ConstantInt::get(IntTy, Info.Flags.Extern)});
+           VarName, llvm::ConstantInt::get(IntTy, Info.Flags.getSurfTexType()),
+           llvm::ConstantInt::get(IntTy, Info.Flags.isExtern())});
       break;
     case DeviceVarFlags::Texture:
       Builder.CreateCall(
           RegisterTex,
           {&GpuBinaryHandlePtr, Builder.CreateBitCast(Var, VoidPtrTy), VarName,
-           VarName, llvm::ConstantInt::get(IntTy, Info.Flags.SurfTexType),
-           llvm::ConstantInt::get(IntTy, Info.Flags.Normalized),
-           llvm::ConstantInt::get(IntTy, Info.Flags.Extern)});
+           VarName, llvm::ConstantInt::get(IntTy, Info.Flags.getSurfTexType()),
+           llvm::ConstantInt::get(IntTy, Info.Flags.isNormalized()),
+           llvm::ConstantInt::get(IntTy, Info.Flags.isExtern())});
       break;
     }
   }
