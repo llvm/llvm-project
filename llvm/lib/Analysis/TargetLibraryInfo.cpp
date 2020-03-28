@@ -901,6 +901,8 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
             FTy.getParamType(1)->isPointerTy());
   case LibFunc_write:
     return (NumParams == 3 && FTy.getParamType(1)->isPointerTy());
+  case LibFunc_aligned_alloc:
+    return (NumParams == 2 && FTy.getReturnType()->isPointerTy());
   case LibFunc_bcopy:
   case LibFunc_bcmp:
     return (NumParams == 3 && FTy.getParamType(0)->isPointerTy() &&
