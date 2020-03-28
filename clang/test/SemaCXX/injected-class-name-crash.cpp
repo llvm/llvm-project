@@ -3,7 +3,7 @@
 template <class T>
 struct X : public Foo<Bar { // expected-error {{unknown template name 'Foo'}} expected-error {{use of undeclared identifier 'Bar'}}
   X();
-}; // expected-error {{expected '{' after base class list}}
+}; // expected-error {{expected '>'}} expected-error {{expected '{' after base class list}}
 
 
 template <class T>
