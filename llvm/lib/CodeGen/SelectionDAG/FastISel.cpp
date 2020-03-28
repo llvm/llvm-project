@@ -225,6 +225,21 @@ static bool isRegUsedByPhiNodes(unsigned DefReg,
   return false;
 }
 
+static bool isTerminatingEHLabel(MachineBasicBlock *MBB, MachineInstr &MI) {
+  // Ignore non-EH labels.
+  if (!MI.isEHLabel())
+    return false;
+
+  // Any EH label outside a landing pad must be for an invoke. Consider it a
+  // terminator.
+  if (!MBB->isEHPad())
+    return true;
+
+  // If this is a landingpad, the first non-phi instruction will be an EH_LABEL.
+  // Don't consider that label to be a terminator.
+  return MI.getIterator() != MBB->getFirstNonPHI();
+}
+
 /// Build a map of instruction orders. Return the first terminator and its
 /// order. Consider EH_LABEL instructions to be terminators as well, since local
 /// values for phis after invokes must be materialized before the call.
@@ -233,7 +248,7 @@ void FastISel::InstOrderMap::initialize(
   unsigned Order = 0;
   for (MachineInstr &I : *MBB) {
     if (!FirstTerminator &&
-        (I.isTerminator() || (I.isEHLabel() && &I != &MBB->front()))) {
+        (I.isTerminator() || isTerminatingEHLabel(MBB, I))) {
       FirstTerminator = &I;
       FirstTerminatorOrder = Order;
     }
