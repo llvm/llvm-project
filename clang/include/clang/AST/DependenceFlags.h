@@ -36,7 +36,6 @@ struct ExprDependenceScope {
   };
 };
 using ExprDependence = ExprDependenceScope::ExprDependence;
-static constexpr unsigned ExprDependenceBits = 5;
 
 struct TypeDependenceScope {
   enum TypeDependence : uint8_t {
@@ -62,7 +61,6 @@ struct TypeDependenceScope {
   };
 };
 using TypeDependence = TypeDependenceScope::TypeDependence;
-static constexpr unsigned TypeDependenceBits = 4;
 
 #define LLVM_COMMON_DEPENDENCE(NAME)                                           \
   struct NAME##Scope {                                                         \
@@ -78,8 +76,7 @@ static constexpr unsigned TypeDependenceBits = 4;
       LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/Dependent)                    \
     };                                                                         \
   };                                                                           \
-  using NAME = NAME##Scope::NAME;                                              \
-  static constexpr unsigned NAME##Bits = 3;
+  using NAME = NAME##Scope::NAME;
 
 LLVM_COMMON_DEPENDENCE(NestedNameSpecifierDependence)
 LLVM_COMMON_DEPENDENCE(TemplateNameDependence)
