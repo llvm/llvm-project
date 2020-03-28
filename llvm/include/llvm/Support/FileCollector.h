@@ -18,17 +18,19 @@
 #include <mutex>
 
 namespace llvm {
-
+class FileCollectorFileSystem;
 /// Collects files into a directory and generates a mapping that can be used by
 /// the VFS.
 class FileCollector {
 public:
   FileCollector(std::string Root, std::string OverlayRoot);
+  virtual ~FileCollector() = default;
 
-  void addFile(const Twine &file);
+  virtual void addFile(const Twine &file);
+  virtual void addDirectory(const Twine &Dir);
 
   /// Write the yaml mapping (for the VFS) to the given file.
-  std::error_code writeMapping(StringRef mapping_file);
+  std::error_code writeMapping(StringRef MappingFile);
 
   /// Copy the files into the root directory.
   ///
@@ -44,7 +46,7 @@ public:
                      std::shared_ptr<FileCollector> Collector);
 
 private:
-  void addFileImpl(StringRef SrcPath);
+  friend FileCollectorFileSystem;
 
   bool markAsSeen(StringRef Path) {
     if (Path.empty())
@@ -55,10 +57,19 @@ private:
   bool getRealPath(StringRef SrcPath, SmallVectorImpl<char> &Result);
 
   void addFileToMapping(StringRef VirtualPath, StringRef RealPath) {
-    VFSWriter.addFileMapping(VirtualPath, RealPath);
+    if (sys::fs::is_directory(VirtualPath))
+      VFSWriter.addDirectoryMapping(VirtualPath, RealPath);
+    else
+      VFSWriter.addFileMapping(VirtualPath, RealPath);
   }
 
 protected:
+  void addFileImpl(StringRef SrcPath);
+
+  llvm::vfs::directory_iterator
+  addDirectoryImpl(const llvm::Twine &Dir,
+                   IntrusiveRefCntPtr<vfs::FileSystem> FS, std::error_code &EC);
+
   /// Synchronizes adding files.
   std::mutex Mutex;
 
