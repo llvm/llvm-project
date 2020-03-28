@@ -3685,6 +3685,18 @@ static bool prepareICWorklistFromFunction(Function &F, const DataLayout &DL,
       Worklist.push_back(SuccBB);
   } while (!Worklist.empty());
 
+  // Remove instructions inside unreachable blocks. This prevents the
+  // instcombine code from having to deal with some bad special cases, and
+  // reduces use counts of instructions.
+  for (BasicBlock &BB : F) {
+    if (Visited.count(&BB))
+      continue;
+
+    unsigned NumDeadInstInBB = removeAllNonTerminatorAndEHPadInstructions(&BB);
+    MadeIRChange |= NumDeadInstInBB > 0;
+    NumDeadInst += NumDeadInstInBB;
+  }
+
   // Once we've found all of the instructions to add to instcombine's worklist,
   // add them in reverse order.  This way instcombine will visit from the top
   // of the function down.  This jives well with the way that it adds all uses
@@ -3704,18 +3716,6 @@ static bool prepareICWorklistFromFunction(Function &F, const DataLayout &DL,
     }
 
     ICWorklist.push(Inst);
-  }
-
-  // Do a quick scan over the function.  If we find any blocks that are
-  // unreachable, remove any instructions inside of them.  This prevents
-  // the instcombine code from having to deal with some bad special cases.
-  for (BasicBlock &BB : F) {
-    if (Visited.count(&BB))
-      continue;
-
-    unsigned NumDeadInstInBB = removeAllNonTerminatorAndEHPadInstructions(&BB);
-    MadeIRChange |= NumDeadInstInBB > 0;
-    NumDeadInst += NumDeadInstInBB;
   }
 
   return MadeIRChange;
