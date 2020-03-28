@@ -56,7 +56,7 @@ namespace ExceptionSpecification {
 namespace DefaultArgument {
   struct Default {
     struct T {
-      T(int = ExceptionIf<noexcept(Default())::f()); // expected-error {{call to implicitly-deleted default constructor}} expected-error {{expected '>'}}
+      T(int = ExceptionIf<noexcept(Default())::f()); // expected-error {{call to implicitly-deleted default constructor}} expected-error {{expected '>'}} expected-note {{to match this '<'}}
     } t; // expected-note {{has no default constructor}}
   };
 }
