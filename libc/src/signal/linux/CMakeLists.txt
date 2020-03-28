@@ -12,9 +12,9 @@ add_entrypoint_object(
     signal_h
 )
 
-add_object(
+add_object_library(
   __restore
-  SRC
+  SRCS
     __restore.cpp
   COMPILE_OPTIONS
     -fomit-frame-pointer
@@ -41,8 +41,6 @@ add_entrypoint_object(
     sys_syscall_h
     linux_syscall_h
     signal_h
-  SPECIAL_OBJECTS
-    __restore
 )
 
 add_entrypoint_object(
