@@ -44,6 +44,8 @@ int main(int argc, char **argv) {
 #pragma omp task in_reduction(+:a) in_reduction(-:d) allocate(omp_high_bw_mem_alloc: d)
     a += d[a];
   }
+#pragma omp task in_reduction(+:a)
+  ++a;
   return 0;
 }
 
@@ -91,4 +93,10 @@ int main(int argc, char **argv) {
 // CHECK:       add nsw i32
 // CHECK:       store i32 %
 // CHECK-NOT:   call i8* @__kmpc_threadprivate_cached(
+
+// CHECK: [[A_PTR:%.+]] = call i8* @__kmpc_task_reduction_get_th_data(i32 %{{.+}}, i8* null, i8* %{{.+}})
+// CHECK-NEXT: [[A_ADDR:%.+]] = bitcast i8* [[A_PTR]] to i32*
+// CHECK-NEXT: [[A:%.+]] = load i32, i32* [[A_ADDR]],
+// CHECK-NEXT: [[NEW:%.+]] = add nsw i32 [[A]], 1
+// CHECK-NEXT: store i32 [[NEW]], i32* [[A_ADDR]],
 #endif
