@@ -187,7 +187,7 @@ void ThreadClock::acquire(ClockCache *c, SyncClock *src) {
 
 void ThreadClock::releaseStoreAcquire(ClockCache *c, SyncClock *sc) {
   DCHECK_LE(nclk_, kMaxTid);
-  DCHECK_LE(dst->size_, kMaxTid);
+  DCHECK_LE(sc->size_, kMaxTid);
 
   if (sc->size_ == 0) {
     // ReleaseStore will correctly set release_store_tid_,
