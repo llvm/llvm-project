@@ -120,29 +120,6 @@ TEST(FileCollectorTest, addFile) {
   EXPECT_FALSE(FileCollector.hasSeen("/path/to/d"));
 }
 
-TEST(FileCollectorTest, addDirectory) {
-  ScopedDir file_root("file_root", true);
-  ScopedFile a(file_root + "/aaa");
-  ScopedFile b(file_root + "/bbb");
-  ScopedFile c(file_root + "/ccc");
-
-  std::string root_fs = std::string(file_root.Path.str());
-  TestingFileCollector FileCollector(root_fs, root_fs);
-
-  FileCollector.addDirectory(file_root.Path);
-
-  // Make sure the root is correct.
-  EXPECT_EQ(FileCollector.Root, root_fs);
-
-  // Make sure we've seen all the added files.
-  EXPECT_TRUE(FileCollector.hasSeen(a.Path));
-  EXPECT_TRUE(FileCollector.hasSeen(b.Path));
-  EXPECT_TRUE(FileCollector.hasSeen(c.Path));
-
-  // Make sure we've only seen the added files.
-  EXPECT_FALSE(FileCollector.hasSeen("/file_root/ddd"));
-}
-
 TEST(FileCollectorTest, copyFiles) {
   ScopedDir file_root("file_root", true);
   ScopedFile a(file_root + "/aaa");
