@@ -5030,6 +5030,7 @@ struct AAHeapToStackImpl : public AAHeapToStack {
       LLVM_DEBUG(dbgs() << "H2S: Removing malloc call: " << *MallocCall
                         << "\n");
 
+      MaybeAlign Alignment;
       Constant *Size;
       if (isCallocLikeFn(MallocCall, TLI)) {
         auto *Num = cast<ConstantInt>(MallocCall->getOperand(0));
@@ -5037,13 +5038,19 @@ struct AAHeapToStackImpl : public AAHeapToStack {
         APInt TotalSize = SizeT->getValue() * Num->getValue();
         Size =
             ConstantInt::get(MallocCall->getOperand(0)->getType(), TotalSize);
+      } else if (isAlignedAllocLikeFn(MallocCall, TLI)) {
+        Size = cast<ConstantInt>(MallocCall->getOperand(1));
+        Alignment = MaybeAlign(cast<ConstantInt>(MallocCall->getOperand(0))
+                                   ->getValue()
+                                   .getZExtValue());
       } else {
         Size = cast<ConstantInt>(MallocCall->getOperand(0));
       }
 
       unsigned AS = cast<PointerType>(MallocCall->getType())->getAddressSpace();
-      Instruction *AI = new AllocaInst(Type::getInt8Ty(F->getContext()), AS,
-                                       Size, "", MallocCall->getNextNode());
+      Instruction *AI =
+          new AllocaInst(Type::getInt8Ty(F->getContext()), AS, Size, Alignment,
+                         "", MallocCall->getNextNode());
 
       if (AI->getType() != MallocCall->getType())
         AI = new BitCastInst(AI, MallocCall->getType(), "malloc_bc",
@@ -5175,14 +5182,23 @@ ChangeStatus AAHeapToStackImpl::updateImpl(Attributor &A) {
       return true;
 
     bool IsMalloc = isMallocLikeFn(&I, TLI);
+    bool IsAlignedAllocLike = isAlignedAllocLikeFn(&I, TLI);
     bool IsCalloc = !IsMalloc && isCallocLikeFn(&I, TLI);
-    if (!IsMalloc && !IsCalloc) {
+    if (!IsMalloc && !IsAlignedAllocLike && !IsCalloc) {
       BadMallocCalls.insert(&I);
       return true;
     }
 
     if (IsMalloc) {
       if (auto *Size = dyn_cast<ConstantInt>(I.getOperand(0)))
+        if (Size->getValue().ule(MaxHeapToStackSize))
+          if (UsesCheck(I) || FreeCheck(I)) {
+            MallocCalls.insert(&I);
+            return true;
+          }
+    } else if (IsAlignedAllocLike && isa<ConstantInt>(I.getOperand(0))) {
+      // Only if the alignment and sizes are constant.
+      if (auto *Size = dyn_cast<ConstantInt>(I.getOperand(1)))
         if (Size->getValue().ule(MaxHeapToStackSize))
           if (UsesCheck(I) || FreeCheck(I)) {
             MallocCalls.insert(&I);
@@ -5219,8 +5235,9 @@ struct AAHeapToStackFunction final : public AAHeapToStackImpl {
 
   /// See AbstractAttribute::trackStatistics().
   void trackStatistics() const override {
-    STATS_DECL(MallocCalls, Function,
-               "Number of malloc calls converted to allocas");
+    STATS_DECL(
+        MallocCalls, Function,
+        "Number of malloc/calloc/aligned_alloc calls converted to allocas");
     for (auto *C : MallocCalls)
       if (!BadMallocCalls.count(C))
         ++BUILD_STAT_NAME(MallocCalls, Function);
