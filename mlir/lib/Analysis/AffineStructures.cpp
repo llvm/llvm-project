@@ -1200,37 +1200,57 @@ static bool detectAsMod(const FlatAffineConstraints &cst, unsigned pos,
   return false;
 }
 
-/// Gather all lower and upper bounds of the identifier at `pos`. The bounds are
-/// to be independent of [offset, offset + num) identifiers.
-static void getLowerAndUpperBoundIndices(const FlatAffineConstraints &cst,
-                                         unsigned pos,
-                                         SmallVectorImpl<unsigned> *lbIndices,
-                                         SmallVectorImpl<unsigned> *ubIndices,
-                                         unsigned offset = 0,
-                                         unsigned num = 0) {
-  assert(pos < cst.getNumIds() && "invalid position");
+/// Gather all lower and upper bounds of the identifier at `pos`, and
+/// optionally any equalities on it. In addition, the bounds are to be
+/// independent of identifiers in position range [`offset`, `offset` + `num`).
+void FlatAffineConstraints::getLowerAndUpperBoundIndices(
+    unsigned pos, SmallVectorImpl<unsigned> *lbIndices,
+    SmallVectorImpl<unsigned> *ubIndices, SmallVectorImpl<unsigned> *eqIndices,
+    unsigned offset, unsigned num) const {
+  assert(pos < getNumIds() && "invalid position");
+  assert(offset + num < getNumCols() && "invalid range");
+
+  // Checks for a constraint that has a non-zero coeff for the identifiers in
+  // the position range [offset, offset + num) while ignoring `pos`.
+  auto containsConstraintDependentOnRange = [&](unsigned r, bool isEq) {
+    unsigned c, f;
+    auto cst = isEq ? getEquality(r) : getInequality(r);
+    for (c = offset, f = offset + num; c < f; ++c) {
+      if (c == pos)
+        continue;
+      if (cst[c] != 0)
+        break;
+    }
+    return c < f;
+  };
 
   // Gather all lower bounds and upper bounds of the variable. Since the
   // canonical form c_1*x_1 + c_2*x_2 + ... + c_0 >= 0, a constraint is a lower
   // bound for x_i if c_i >= 1, and an upper bound if c_i <= -1.
-  for (unsigned r = 0, e = cst.getNumInequalities(); r < e; r++) {
+  for (unsigned r = 0, e = getNumInequalities(); r < e; r++) {
     // The bounds are to be independent of [offset, offset + num) columns.
-    unsigned c, f;
-    for (c = offset, f = offset + num; c < f; ++c) {
-      if (c == pos)
-        continue;
-      if (cst.atIneq(r, c) != 0)
-        break;
-    }
-    if (c < f)
+    if (containsConstraintDependentOnRange(r, /*isEq=*/false))
       continue;
-    if (cst.atIneq(r, pos) >= 1) {
+    if (atIneq(r, pos) >= 1) {
       // Lower bound.
       lbIndices->push_back(r);
-    } else if (cst.atIneq(r, pos) <= -1) {
+    } else if (atIneq(r, pos) <= -1) {
       // Upper bound.
       ubIndices->push_back(r);
     }
+  }
+
+  // An equality is both a lower and upper bound. Record any equalities
+  // involving the pos^th identifier.
+  if (!eqIndices)
+    return;
+
+  for (unsigned r = 0, e = getNumEqualities(); r < e; r++) {
+    if (atEq(r, pos) == 0)
+      continue;
+    if (containsConstraintDependentOnRange(r, /*isEq=*/true))
+      continue;
+    eqIndices->push_back(r);
   }
 }
 
@@ -1247,7 +1267,7 @@ static bool detectAsFloorDiv(const FlatAffineConstraints &cst, unsigned pos,
   assert(pos < cst.getNumIds() && "invalid position");
 
   SmallVector<unsigned, 4> lbIndices, ubIndices;
-  getLowerAndUpperBoundIndices(cst, pos, &lbIndices, &ubIndices);
+  cst.getLowerAndUpperBoundIndices(pos, &lbIndices, &ubIndices);
 
   // Check if any lower bound, upper bound pair is of the form:
   // divisor * id >=  expr - (divisor - 1)    <-- Lower bound for 'id'
@@ -1376,7 +1396,7 @@ std::pair<AffineMap, AffineMap> FlatAffineConstraints::getLowerAndUpperBound(
          "incorrect local exprs count");
 
   SmallVector<unsigned, 4> lbIndices, ubIndices;
-  getLowerAndUpperBoundIndices(*this, pos + offset, &lbIndices, &ubIndices);
+  getLowerAndUpperBoundIndices(pos + offset, &lbIndices, &ubIndices);
 
   /// Add to 'b' from 'a' in set [0, offset) U [offset + num, symbStartPos).
   auto addCoeffs = [&](ArrayRef<int64_t> a, SmallVectorImpl<int64_t> &b) {
@@ -1872,7 +1892,21 @@ void FlatAffineConstraints::removeEquality(unsigned pos) {
   std::copy(equalities.begin() + inputIndex,
             equalities.begin() + inputIndex + numElemsToCopy,
             equalities.begin() + outputIndex);
+  assert(equalities.size() >= numReservedCols);
   equalities.resize(equalities.size() - numReservedCols);
+}
+
+void FlatAffineConstraints::removeInequality(unsigned pos) {
+  unsigned numInequalities = getNumInequalities();
+  assert(pos < numInequalities && "invalid position");
+  unsigned outputIndex = pos * numReservedCols;
+  unsigned inputIndex = (pos + 1) * numReservedCols;
+  unsigned numElemsToCopy = (numInequalities - pos - 1) * numReservedCols;
+  std::copy(inequalities.begin() + inputIndex,
+            inequalities.begin() + inputIndex + numElemsToCopy,
+            inequalities.begin() + outputIndex);
+  assert(inequalities.size() >= numReservedCols);
+  inequalities.resize(inequalities.size() - numReservedCols);
 }
 
 /// Finds an equality that equates the specified identifier to a constant.
@@ -1951,14 +1985,22 @@ void FlatAffineConstraints::constantFoldIdRange(unsigned pos, unsigned num) {
 //       ceil(s0 - 7 / 8) = floor(s0 / 8)).
 Optional<int64_t> FlatAffineConstraints::getConstantBoundOnDimSize(
     unsigned pos, SmallVectorImpl<int64_t> *lb, int64_t *boundFloorDivisor,
-    SmallVectorImpl<int64_t> *ub) const {
+    SmallVectorImpl<int64_t> *ub, unsigned *minLbPos,
+    unsigned *minUbPos) const {
   assert(pos < getNumDimIds() && "Invalid identifier position");
-  assert(getNumLocalIds() == 0);
 
   // Find an equality for 'pos'^th identifier that equates it to some function
   // of the symbolic identifiers (+ constant).
   int eqPos = findEqualityToConstant(*this, pos, /*symbolic=*/true);
   if (eqPos != -1) {
+    auto eq = getEquality(eqPos);
+    // If the equality involves a local var, punt for now.
+    // TODO: this can be handled in the future by using the explicit
+    // representation of the local vars.
+    if (!std::all_of(eq.begin() + getNumDimAndSymbolIds(), eq.end() - 1,
+                     [](int64_t coeff) { return coeff == 0; }))
+      return None;
+
     // This identifier can only take a single value.
     if (lb) {
       // Set lb to that symbolic value.
@@ -1979,6 +2021,10 @@ Optional<int64_t> FlatAffineConstraints::getConstantBoundOnDimSize(
              "both lb and divisor or none should be provided");
       *boundFloorDivisor = 1;
     }
+    if (minLbPos)
+      *minLbPos = eqPos;
+    if (minUbPos)
+      *minUbPos = eqPos;
     return 1;
   }
 
@@ -1999,8 +2045,8 @@ Optional<int64_t> FlatAffineConstraints::getConstantBoundOnDimSize(
   // the bounds can only involve symbolic (and local) identifiers. Since the
   // canonical form c_1*x_1 + c_2*x_2 + ... + c_0 >= 0, a constraint is a lower
   // bound for x_i if c_i >= 1, and an upper bound if c_i <= -1.
-  getLowerAndUpperBoundIndices(*this, pos, &lbIndices, &ubIndices,
-                               /*offset=*/0,
+  getLowerAndUpperBoundIndices(pos, &lbIndices, &ubIndices,
+                               /*eqIndices=*/nullptr, /*offset=*/0,
                                /*num=*/getNumDimIds());
 
   Optional<int64_t> minDiff = None;
@@ -2054,6 +2100,10 @@ Optional<int64_t> FlatAffineConstraints::getConstantBoundOnDimSize(
     // the constant term for the lower bound.
     (*lb)[getNumSymbolIds()] += atIneq(minLbPosition, pos) - 1;
   }
+  if (minLbPos)
+    *minLbPos = minLbPosition;
+  if (minUbPos)
+    *minUbPos = minUbPosition;
   return minDiff;
 }
 
@@ -2726,6 +2776,51 @@ static LogicalResult computeLocalVars(const FlatAffineConstraints &cst,
       llvm::all_of(localExprs, [](AffineExpr expr) { return expr; }));
 }
 
+void FlatAffineConstraints::getIneqAsAffineValueMap(
+    unsigned pos, unsigned ineqPos, AffineValueMap &vmap,
+    MLIRContext *context) const {
+  unsigned numDims = getNumDimIds();
+  unsigned numSyms = getNumSymbolIds();
+
+  assert(pos < numDims && "invalid position");
+  assert(ineqPos < getNumInequalities() && "invalid inequality position");
+
+  // Get expressions for local vars.
+  SmallVector<AffineExpr, 8> memo(getNumIds(), AffineExpr());
+  if (failed(computeLocalVars(*this, memo, context)))
+    assert(false &&
+           "one or more local exprs do not have an explicit representation");
+  auto localExprs = ArrayRef<AffineExpr>(memo).take_back(getNumLocalIds());
+
+  // Compute the AffineExpr lower/upper bound for this inequality.
+  ArrayRef<int64_t> inequality = getInequality(ineqPos);
+  SmallVector<int64_t, 8> bound;
+  bound.reserve(getNumCols() - 1);
+  // Everything other than the coefficient at `pos`.
+  bound.append(inequality.begin(), inequality.begin() + pos);
+  bound.append(inequality.begin() + pos + 1, inequality.end());
+
+  if (inequality[pos] > 0)
+    // Lower bound.
+    std::transform(bound.begin(), bound.end(), bound.begin(),
+                   std::negate<int64_t>());
+  else
+    // Upper bound (which is exclusive).
+    bound.back() += 1;
+
+  // Convert to AffineExpr (tree) form.
+  auto boundExpr = getAffineExprFromFlatForm(bound, numDims - 1, numSyms,
+                                             localExprs, context);
+
+  // Get the values to bind to this affine expr (all dims and symbols).
+  SmallVector<Value, 4> operands;
+  getIdValues(0, pos, &operands);
+  SmallVector<Value, 4> trailingOperands;
+  getIdValues(pos + 1, getNumDimAndSymbolIds(), &trailingOperands);
+  operands.append(trailingOperands.begin(), trailingOperands.end());
+  vmap.reset(AffineMap::get(numDims - 1, numSyms, boundExpr), operands);
+}
+
 /// Returns true if the pos^th column is all zero for both inequalities and
 /// equalities..
 static bool isColZero(const FlatAffineConstraints &cst, unsigned pos) {
@@ -2739,7 +2834,7 @@ IntegerSet FlatAffineConstraints::getAsIntegerSet(MLIRContext *context) const {
     // Return universal set (always true): 0 == 0.
     return IntegerSet::get(getNumDimIds(), getNumSymbolIds(),
                            getAffineConstantExpr(/*constant=*/0, context),
-                           true);
+                           /*eqFlags=*/true);
 
   // Construct local references.
   SmallVector<AffineExpr, 8> memo(getNumIds(), AffineExpr());
@@ -2777,4 +2872,53 @@ IntegerSet FlatAffineConstraints::getAsIntegerSet(MLIRContext *context) const {
     exprs.push_back(getAffineExprFromFlatForm(getInequality(i), numDims,
                                               numSyms, localExprs, context));
   return IntegerSet::get(numDims, numSyms, exprs, eqFlags);
+}
+
+/// Find positions of inequalities and equalities that do not have a coefficient
+/// for [pos, pos + num) identifiers.
+static void getIndependentConstraints(const FlatAffineConstraints &cst,
+                                      unsigned pos, unsigned num,
+                                      SmallVectorImpl<unsigned> &nbIneqIndices,
+                                      SmallVectorImpl<unsigned> &nbEqIndices) {
+  assert(pos < cst.getNumIds() && "invalid start position");
+  assert(pos + num <= cst.getNumIds() && "invalid limit");
+
+  for (unsigned r = 0, e = cst.getNumInequalities(); r < e; r++) {
+    // The bounds are to be independent of [offset, offset + num) columns.
+    unsigned c;
+    for (c = pos; c < pos + num; ++c) {
+      if (cst.atIneq(r, c) != 0)
+        break;
+    }
+    if (c == pos + num)
+      nbIneqIndices.push_back(r);
+  }
+
+  for (unsigned r = 0, e = cst.getNumEqualities(); r < e; r++) {
+    // The bounds are to be independent of [offset, offset + num) columns.
+    unsigned c;
+    for (c = pos; c < pos + num; ++c) {
+      if (cst.atEq(r, c) != 0)
+        break;
+    }
+    if (c == pos + num)
+      nbEqIndices.push_back(r);
+  }
+}
+
+void FlatAffineConstraints::removeIndependentConstraints(unsigned pos,
+                                                         unsigned num) {
+  assert(pos + num <= getNumIds() && "invalid range");
+
+  // Remove constraints that are independent of these identifiers.
+  SmallVector<unsigned, 4> nbIneqIndices, nbEqIndices;
+  getIndependentConstraints(*this, /*pos=*/0, num, nbIneqIndices, nbEqIndices);
+
+  // Iterate in reverse so that indices don't have to be updated.
+  // TODO: This method can be made more efficient (because removal of each
+  // inequality leads to much shifting/copying in the underlying buffer).
+  for (auto nbIndex : llvm::reverse(nbIneqIndices))
+    removeInequality(nbIndex);
+  for (auto nbIndex : llvm::reverse(nbEqIndices))
+    removeEquality(nbIndex);
 }

@@ -1,5 +1,6 @@
 // RUN: mlir-opt %s -split-input-file  -affine-loop-tile -affine-tile-size=32 | FileCheck %s
 // RUN: mlir-opt %s -split-input-file -affine-loop-tile -affine-tile-cache-size=512 | FileCheck %s --check-prefix=MODEL
+// RUN: mlir-opt %s -split-input-file -affine-loop-tile -affine-tile-size=32 -affine-tile-separate | FileCheck %s --check-prefix=SEPARATE
 
 // -----
 
@@ -169,6 +170,8 @@ func @tile_with_loop_upper_bounds_in_two_symbols(%arg0: memref<?xf32>, %limit: i
 
 // -----
 
+// CHECK-LABEL: func @trip_count_1
+// SEPARATE-LABEL: func @trip_count_1
 func @trip_count_1(%arg0: memref<196608x1xf32>, %arg1: memref<196608x1xf32>)
     -> memref<196608x1xf32> {
   affine.for %i1 = 0 to 196608 {
@@ -177,8 +180,65 @@ func @trip_count_1(%arg0: memref<196608x1xf32>, %arg1: memref<196608x1xf32>)
       affine.store %4, %arg1[%i1, %i3] : memref<196608x1xf32>
     }
   }
+  // CHECK: affine.load %{{.*}}[%{{.*}}, %{{.*}}] : memref<196608x1xf32>
   return %arg1 : memref<196608x1xf32>
 }
+// SEPARATE: return
 
-// CHECK: %{{.*}} = affine.load %{{.*}}[%{{.*}}, %{{.*}}] : memref<196608x1xf32>
+// -----
 
+func @separate_full_tile_2d(%M : index, %N : index) {
+  affine.for %i0 = 0 to %M {
+    affine.for %i1 = 0 to %N {
+      "foo"() : () -> ()
+    }
+  }
+  return
+}
+
+// SEPARATE-DAG: #[[SEP_COND:.*]] = affine_set<(d0, d1)[s0, s1] : (-d0 + s0 - 32 >= 0, -d1 + s1 - 32 >= 0)>
+// SEPARATE-DAG: #[[LB:.*]] = affine_map<(d0) -> (d0)>
+// SEPARATE-DAG: #[[FULL_TILE_UB:.*]] = affine_map<(d0) -> (d0 + 32)>
+// SEPARATE-DAG: #[[PART_TILE_UB:.*]] = affine_map<(d0)[s0] -> (d0 + 32, s0)>
+
+// SEPARATE:       affine.for %arg2
+// SEPARATE-NEXT:    affine.for %arg3
+// SEPARATE-NEXT:      affine.if #[[SEP_COND]](%arg2, %arg3)[%arg0, %arg1] {
+// SEPARATE-NEXT:        affine.for %arg4 = #[[LB]](%arg2) to #[[FULL_TILE_UB]](%arg2) {
+// SEPARATE-NEXT:          affine.for %arg5 = #[[LB]](%arg3) to #[[FULL_TILE_UB]](%arg3) {
+// SEPARATE-NEXT:           "foo"
+// SEPARATE-NEXT:          }
+// SEPARATE-NEXT:        }
+// SEPARATE-NEXT:      } else {
+// SEPARATE-NEXT:        affine.for %arg4 = #[[LB]](%arg2) to min #[[PART_TILE_UB]](%arg2)[%arg0] {
+// SEPARATE-NEXT:          affine.for %arg5 = #[[LB]](%arg3) to min #[[PART_TILE_UB]](%arg3)[%arg1] {
+// SEPARATE-NEXT:           "foo"
+// SEPARATE-NEXT:          }
+// SEPARATE-NEXT:        }
+// SEPARATE-NEXT:      }
+// SEPARATE-NEXT:    }
+// SEPARATE-NEXT:  }
+// SEPARATE-NEXT:  return
+
+// -----
+
+func @separate_full_tile_1d_max_min(%M : index, %N : index, %P : index, %Q : index) {
+  affine.for %i0 = max affine_map<(d0, d1) -> (d0, d1)>  (%M, %N) to min affine_map< (d0, d1) -> (d0, d1)> (%P, %Q) {
+  }
+  return
+}
+
+// SEPARATE-DAG: #[[SEP_COND:.*]] = affine_set<(d0)[s0, s1] : (-d0 + s0 - 32 >= 0, -d0 + s1 - 32 >= 0)>
+// SEPARATE-DAG: #[[TILE_LB:.*]] = affine_map<(d0) -> (d0)>
+// SEPARATE-DAG: #[[FULL_TILE_UB:.*]] = affine_map<(d0) -> (d0 + 32)>
+// SEPARATE-DAG: #[[PARTIAL_TILE_UB:.*]] = affine_map<(d0, d1, d2) -> (d2 + 32, d0, d1)>
+
+// SEPARATE:         affine.for %arg4
+// SEPARATE-NEXT:      affine.if #[[SEP_COND]](%arg4)[%arg2, %arg3] {
+// SEPARATE-NEXT:        affine.for %arg5 = #[[TILE_LB]](%arg4) to #[[FULL_TILE_UB]](%arg4) {
+// SEPARATE-NEXT:        }
+// SEPARATE-NEXT:      } else {
+// SEPARATE-NEXT:        affine.for %arg5 = #[[TILE_LB]](%arg4) to min #[[PARTIAL_TILE_UB]](%arg2, %arg3, %arg4) {
+// SEPARATE-NEXT:        }
+// SEPARATE-NEXT:      }
+// SEPARATE-NEXT:    }
