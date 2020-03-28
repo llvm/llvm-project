@@ -13681,11 +13681,10 @@ TreeTransform<Derived>::RebuildTemplateName(CXXScopeSpec &SS,
   UnqualifiedId TemplateName;
   TemplateName.setIdentifier(&Name, NameLoc);
   Sema::TemplateTy Template;
-  getSema().ActOnDependentTemplateName(/*Scope=*/nullptr,
-                                       SS, TemplateKWLoc, TemplateName,
-                                       ParsedType::make(ObjectType),
-                                       /*EnteringContext=*/false,
-                                       Template, AllowInjectedClassName);
+  getSema().ActOnTemplateName(/*Scope=*/nullptr, SS, TemplateKWLoc,
+                              TemplateName, ParsedType::make(ObjectType),
+                              /*EnteringContext=*/false, Template,
+                              AllowInjectedClassName);
   return Template.get();
 }
 
@@ -13702,11 +13701,9 @@ TreeTransform<Derived>::RebuildTemplateName(CXXScopeSpec &SS,
   SourceLocation SymbolLocations[3] = { NameLoc, NameLoc, NameLoc };
   Name.setOperatorFunctionId(NameLoc, Operator, SymbolLocations);
   Sema::TemplateTy Template;
-  getSema().ActOnDependentTemplateName(/*Scope=*/nullptr,
-                                       SS, TemplateKWLoc, Name,
-                                       ParsedType::make(ObjectType),
-                                       /*EnteringContext=*/false,
-                                       Template, AllowInjectedClassName);
+  getSema().ActOnTemplateName(
+      /*Scope=*/nullptr, SS, TemplateKWLoc, Name, ParsedType::make(ObjectType),
+      /*EnteringContext=*/false, Template, AllowInjectedClassName);
   return Template.get();
 }
 
