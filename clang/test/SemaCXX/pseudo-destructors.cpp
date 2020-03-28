@@ -119,3 +119,54 @@ void test2(Foo d) {
   d.~Derived(); // expected-error {{member reference type 'dotPointerAccess::Foo' (aka 'dotPointerAccess::Derived *') is a pointer; did you mean to use '->'}}
 }
 }
+
+int pr45294 = 1 .~undeclared_tempate_name<>(); // expected-error {{use of undeclared 'undeclared_tempate_name'}}
+
+namespace TwoPhaseLookup {
+  namespace NonTemplate {
+    struct Y {};
+    using G = Y;
+    template<typename T> void f(T *p) { p->~G(); } // expected-error {{no member named '~Y'}}
+    void h1(Y *p) { p->~G(); }
+    void h2(Y *p) { f(p); }
+    namespace N { struct G{}; }
+    void h3(N::G *p) { p->~G(); }
+    void h4(N::G *p) { f(p); } // expected-note {{instantiation of}}
+  }
+
+  namespace NonTemplateUndeclared {
+    struct Y {};
+    template<typename T> void f(T *p) { p->~G(); } // expected-error {{undeclared identifier 'G' in destructor name}}
+    using G = Y;
+    void h1(Y *p) { p->~G(); }
+    void h2(Y *p) { f(p); } // expected-note {{instantiation of}}
+    namespace N { struct G{}; }
+    void h3(N::G *p) { p->~G(); }
+    void h4(N::G *p) { f(p); }
+  }
+
+  namespace Template {
+    template<typename T> struct Y {};
+    template<class U> using G = Y<U>;
+    template<typename T> void f(T *p) { p->~G<int>(); } // expected-error {{no member named '~Y'}}
+    void h1(Y<int> *p) { p->~G<int>(); }
+    void h2(Y<int> *p) { f(p); }
+    namespace N { template<typename T> struct G {}; }
+    void h3(N::G<int> *p) { p->~G<int>(); }
+    void h4(N::G<int> *p) { f(p); } // expected-note {{instantiation of}}
+  }
+
+  namespace TemplateUndeclared {
+    template<typename T> struct Y {};
+    // FIXME: Formally, this is ill-formed before we hit any instantiation,
+    // because we aren't supposed to treat the '<' as introducing a template
+    // name.
+    template<typename T> void f(T *p) { p->~G<int>(); } // expected-error {{no member named 'G'}}
+    template<class U> using G = Y<U>;
+    void h1(Y<int> *p) { p->~G<int>(); }
+    void h2(Y<int> *p) { f(p); } // expected-note {{instantiation of}}
+    namespace N { template<typename T> struct G {}; }
+    void h3(N::G<int> *p) { p->~G<int>(); }
+    void h4(N::G<int> *p) { f(p); }
+  }
+}

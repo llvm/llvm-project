@@ -4919,6 +4919,9 @@ def err_template_kw_refers_to_non_template : Error<
   "%0 following the 'template' keyword does not refer to a template">;
 def note_template_kw_refers_to_non_template : Note<
   "declared as a non-template here">;
+def err_template_kw_refers_to_dependent_non_template : Error<
+  "%0%select{| following the 'template' keyword}1 "
+  "cannot refer to a dependent template">;
 def err_template_kw_refers_to_class_template : Error<
   "'%0%1' instantiated to a class template, not a function template">;
 def note_referenced_class_template : Note<
