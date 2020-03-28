@@ -1773,6 +1773,12 @@ Parser::ParseCXXPseudoDestructor(Expr *Base, SourceLocation OpLoc,
 
   // If there is a '<', the second type name is a template-id. Parse
   // it as such.
+  //
+  // FIXME: This is not a context in which a '<' is assumed to start a template
+  // argument list. This affects examples such as
+  //   void f(auto *p) { p->~X<int>(); }
+  // ... but there's no ambiguity, and nowhere to write 'template' in such an
+  // example, so we accept it anyway.
   if (Tok.is(tok::less) &&
       ParseUnqualifiedIdTemplateId(
           SS, ObjectType, Base && Base->containsErrors(), SourceLocation(),
