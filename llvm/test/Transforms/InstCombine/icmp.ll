@@ -3609,9 +3609,8 @@ define <2 x i32> @Op1Negated_Vec(<2 x i32> %x) {
 
 define i1 @signbit_bitcast_fpext(float %x) {
 ; CHECK-LABEL: @signbit_bitcast_fpext(
-; CHECK-NEXT:    [[F:%.*]] = fpext float [[X:%.*]] to double
-; CHECK-NEXT:    [[B:%.*]] = bitcast double [[F]] to i64
-; CHECK-NEXT:    [[R:%.*]] = icmp slt i64 [[B]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float [[X:%.*]] to i32
+; CHECK-NEXT:    [[R:%.*]] = icmp slt i32 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %f = fpext float %x to double
@@ -3622,9 +3621,8 @@ define i1 @signbit_bitcast_fpext(float %x) {
 
 define <2 x i1> @signbit_bitcast_fpext_vec(<2 x half> %x) {
 ; CHECK-LABEL: @signbit_bitcast_fpext_vec(
-; CHECK-NEXT:    [[F:%.*]] = fpext <2 x half> [[X:%.*]] to <2 x float>
-; CHECK-NEXT:    [[B:%.*]] = bitcast <2 x float> [[F]] to <2 x i32>
-; CHECK-NEXT:    [[R:%.*]] = icmp slt <2 x i32> [[B]], zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x half> [[X:%.*]] to <2 x i16>
+; CHECK-NEXT:    [[R:%.*]] = icmp slt <2 x i16> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %f = fpext <2 x half> %x to <2 x float>
@@ -3635,9 +3633,8 @@ define <2 x i1> @signbit_bitcast_fpext_vec(<2 x half> %x) {
 
 define i1 @signbit_bitcast_fptrunc(float %x) {
 ; CHECK-LABEL: @signbit_bitcast_fptrunc(
-; CHECK-NEXT:    [[F:%.*]] = fptrunc float [[X:%.*]] to half
-; CHECK-NEXT:    [[B:%.*]] = bitcast half [[F]] to i16
-; CHECK-NEXT:    [[R:%.*]] = icmp sgt i16 [[B]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float [[X:%.*]] to i32
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt i32 [[TMP1]], -1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %f = fptrunc float %x to half
@@ -3648,9 +3645,8 @@ define i1 @signbit_bitcast_fptrunc(float %x) {
 
 define <2 x i1> @signbit_bitcast_fptrunc_vec(<2 x double> %x) {
 ; CHECK-LABEL: @signbit_bitcast_fptrunc_vec(
-; CHECK-NEXT:    [[F:%.*]] = fptrunc <2 x double> [[X:%.*]] to <2 x half>
-; CHECK-NEXT:    [[B:%.*]] = bitcast <2 x half> [[F]] to <2 x i16>
-; CHECK-NEXT:    [[R:%.*]] = icmp sgt <2 x i16> [[B]], <i16 -1, i16 -1>
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x double> [[X:%.*]] to <2 x i64>
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt <2 x i64> [[TMP1]], <i64 -1, i64 -1>
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %f = fptrunc <2 x double> %x to <2 x half>
@@ -3670,6 +3666,19 @@ define i1 @signbit_bitcast_fpext_wrong_cmp(float %x) {
   %b = bitcast double %f to i64
   %r = icmp slt i64 %b, 1
   ret i1 %r
+}
+
+define <4 x i1> @signbit_bitcast_fpext_vec_wrong_bitcast(<2 x half> %x) {
+; CHECK-LABEL: @signbit_bitcast_fpext_vec_wrong_bitcast(
+; CHECK-NEXT:    [[F:%.*]] = fpext <2 x half> [[X:%.*]] to <2 x float>
+; CHECK-NEXT:    [[B:%.*]] = bitcast <2 x float> [[F]] to <4 x i16>
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt <4 x i16> [[B]], <i16 -1, i16 -1, i16 -1, i16 -1>
+; CHECK-NEXT:    ret <4 x i1> [[R]]
+;
+  %f = fpext <2 x half> %x to <2 x float>
+  %b = bitcast <2 x float> %f to <4 x i16>
+  %r = icmp sgt <4 x i16> %b, <i16 -1, i16 -1, i16 -1, i16 -1>
+  ret <4 x i1> %r
 }
 
 declare void @use_i64(i64)
