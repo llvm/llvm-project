@@ -2760,6 +2760,30 @@ static Instruction *foldICmpBitCast(ICmpInst &Cmp,
     if (match(BCSrcOp, m_UIToFP(m_Value(X))))
       if (Cmp.isEquality() && match(Op1, m_Zero()))
         return new ICmpInst(Pred, X, ConstantInt::getNullValue(X->getType()));
+
+    // If this is a sign-bit test of a bitcast of a casted FP value, eliminate
+    // the FP cast because the FP cast does not change the sign-bit.
+    const APInt *C;
+    bool TrueIfSigned;
+    if (match(Op1, m_APInt(C)) && Bitcast->hasOneUse() &&
+        isSignBitCheck(Pred, *C, TrueIfSigned)) {
+      if (match(BCSrcOp, m_FPExt(m_Value(X))) ||
+          match(BCSrcOp, m_FPTrunc(m_Value(X)))) {
+        // (bitcast (fpext/fptrunc X)) to iX) < 0 --> (bitcast X to iY) < 0
+        // (bitcast (fpext/fptrunc X)) to iX) > -1 --> (bitcast X to iY) > -1
+        Type *XType = X->getType();
+        Type *NewType = Builder.getIntNTy(XType->getScalarSizeInBits());
+        if (XType->isVectorTy())
+          NewType = VectorType::get(NewType, XType->getVectorNumElements());
+        Value *NewBitcast = Builder.CreateBitCast(X, NewType);
+        if (TrueIfSigned)
+          return new ICmpInst(ICmpInst::ICMP_SLT, NewBitcast,
+                              ConstantInt::getNullValue(NewType));
+        else
+          return new ICmpInst(ICmpInst::ICMP_SGT, NewBitcast,
+                              ConstantInt::getAllOnesValue(NewType));
+      }
+    }
   }
 
   // Test to see if the operands of the icmp are casted versions of other
