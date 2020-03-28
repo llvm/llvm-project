@@ -1216,7 +1216,7 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
     }
 
     CmdArgs.push_back("-include");
-    CmdArgs.push_back("__clang_openmp_math_declares.h");
+    CmdArgs.push_back("__clang_openmp_device_functions.h");
   }
 
   // Add -i* options, and automatically translate to
