@@ -57,7 +57,7 @@ struct NumWorkGroups {
 struct DescriptorSetInfo {
   /// Index of a descriptor set in descriptor sets.
   DescriptorSetIndex descriptorSet{0};
-  /// Number of desriptors in a set.
+  /// Number of descriptors in a set.
   uint32_t descriptorSize{0};
   /// Type of a descriptor set.
   VkDescriptorType descriptorType{VK_DESCRIPTOR_TYPE_MAX_ENUM};

@@ -61,9 +61,9 @@ FunctionPass *createSIMemoryLegalizerPass();
 FunctionPass *createSIInsertWaitcntsPass();
 FunctionPass *createSIPreAllocateWWMRegsPass();
 FunctionPass *createSIFormMemoryClausesPass();
+
 FunctionPass *createSIPostRABundlerPass();
-FunctionPass *createAMDGPUSimplifyLibCallsPass(const TargetOptions &,
-                                               const TargetMachine *);
+FunctionPass *createAMDGPUSimplifyLibCallsPass(const TargetMachine *);
 FunctionPass *createAMDGPUUseNativeCallsPass();
 FunctionPass *createAMDGPUCodeGenPreparePass();
 FunctionPass *createAMDGPUMachineCFGStructurizerPass();

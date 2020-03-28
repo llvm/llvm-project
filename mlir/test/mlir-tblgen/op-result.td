@@ -38,6 +38,10 @@ def OpC : NS_Op<"three_normal_result_op", []> {
 // CHECK-NEXT:   odsState.addTypes(resultType1)
 // CHECK-NEXT:   odsState.addTypes(z)
 
+// CHECK:      void OpC::build(Builder *odsBuilder, OperationState &odsState, ArrayRef<Type> resultTypes) {
+// CHECK-NEXT:   assert(resultTypes.size() == 3u && "mismatched number of results");
+// CHECK-NEXT:   odsState.addTypes(resultTypes);
+
 def IntegerTypeAttr : TypeAttrBase<"IntegerType", "Integer type attribute">;
 def OpD : NS_Op<"type_attr_as_result_type", [FirstAttrDerivedResultType]> {
   let arguments = (ins I32:$x, IntegerTypeAttr:$attr, F32Attr:$f32);

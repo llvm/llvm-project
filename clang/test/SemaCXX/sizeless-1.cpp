@@ -478,6 +478,7 @@ void cxx_only(int sel) {
   (void)typeid(ref_int8);
   (void)typeid(static_int8_ptr);
 
+  _Static_assert(__is_trivially_copyable(svint8_t), "");
   _Static_assert(__is_trivially_destructible(svint8_t), "");
   _Static_assert(!__is_nothrow_assignable(svint8_t, svint8_t), "");
   _Static_assert(__is_nothrow_assignable(svint8_t &, svint8_t), "");
@@ -515,6 +516,7 @@ void cxx_only(int sel) {
   _Static_assert(!__is_literal(svint8_t), "");
   _Static_assert(__is_pod(svint8_t), "");
   _Static_assert(!__is_polymorphic(svint8_t), "");
+  _Static_assert(__is_trivial(svint8_t), "");
   _Static_assert(__is_object(svint8_t), "");
   _Static_assert(!__is_arithmetic(svint8_t), "");
   _Static_assert(!__is_floating_point(svint8_t), "");
@@ -591,9 +593,7 @@ void cxx_only(int sel) {
   for (const svint8_t &x : wrapper<svint8_t>()) { // expected-warning {{loop variable 'x' binds to a temporary value produced by a range of type 'wrapper<svint8_t>'}} expected-note {{use non-reference type}}
     (void)x;
   }
-  // This warning is bogus and will be removed by a later patch.
-  // The point is to show that it's being removed for the right reasons.
-  for (const svint8_t x : wrapper<const svint8_t &>()) { // expected-warning {{loop variable 'x' creates a copy from type 'const svint8_t'}} expected-note {{use reference type}}
+  for (const svint8_t x : wrapper<const svint8_t &>()) {
     (void)x;
   }
 #endif

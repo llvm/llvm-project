@@ -2249,6 +2249,9 @@ bool QualType::isTrivialType(const ASTContext &Context) const {
   if ((*this)->isArrayType())
     return Context.getBaseElementType(*this).isTrivialType(Context);
 
+  if ((*this)->isSizelessBuiltinType())
+    return true;
+
   // Return false for incomplete types after skipping any incomplete array
   // types which are expressly allowed by the standard and thus our API.
   if ((*this)->isIncompleteType())
@@ -2302,6 +2305,9 @@ bool QualType::isTriviallyCopyableType(const ASTContext &Context) const {
   QualType CanonicalType = getCanonicalType();
   if (CanonicalType->isDependentType())
     return false;
+
+  if (CanonicalType->isSizelessBuiltinType())
+    return true;
 
   // Return false for incomplete types after skipping any incomplete array types
   // which are expressly allowed by the standard and thus our API.
@@ -4085,6 +4091,20 @@ bool Type::isCARCBridgableType() const {
 
   QualType Pointee = Pointer->getPointeeType();
   return Pointee->isVoidType() || Pointee->isRecordType();
+}
+
+/// Check if the specified type is the CUDA device builtin surface type.
+bool Type::isCUDADeviceBuiltinSurfaceType() const {
+  if (const auto *RT = getAs<RecordType>())
+    return RT->getDecl()->hasAttr<CUDADeviceBuiltinSurfaceTypeAttr>();
+  return false;
+}
+
+/// Check if the specified type is the CUDA device builtin texture type.
+bool Type::isCUDADeviceBuiltinTextureType() const {
+  if (const auto *RT = getAs<RecordType>())
+    return RT->getDecl()->hasAttr<CUDADeviceBuiltinTextureTypeAttr>();
+  return false;
 }
 
 bool Type::hasSizedVLAType() const {

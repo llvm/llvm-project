@@ -106,6 +106,9 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
                                               const MCValue &Target,
                                               const MCFixup &Fixup,
                                               bool IsPCRel) const {
+  unsigned Kind = Fixup.getTargetKind();
+  if (Kind >= FirstLiteralRelocationKind)
+    return Kind - FirstLiteralRelocationKind;
   AArch64MCExpr::VariantKind RefKind =
       static_cast<AArch64MCExpr::VariantKind>(Target.getRefKind());
   AArch64MCExpr::VariantKind SymLoc = AArch64MCExpr::getSymbolLoc(RefKind);
@@ -120,7 +123,7 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
          "Should only be expression-level modifiers here");
 
   if (IsPCRel) {
-    switch (Fixup.getTargetKind()) {
+    switch (Kind) {
     case FK_Data_1:
       Ctx.reportError(Fixup.getLoc(), "1-byte data relocations not supported");
       return ELF::R_AARCH64_NONE;
@@ -185,8 +188,6 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
     if (IsILP32 && isNonILP32reloc(Fixup, RefKind, Ctx))
       return ELF::R_AARCH64_NONE;
     switch (Fixup.getTargetKind()) {
-    case FK_NONE:
-      return ELF::R_AARCH64_NONE;
     case FK_Data_1:
       Ctx.reportError(Fixup.getLoc(), "1-byte data relocations not supported");
       return ELF::R_AARCH64_NONE;

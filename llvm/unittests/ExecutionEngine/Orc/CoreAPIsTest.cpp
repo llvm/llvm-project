@@ -91,6 +91,62 @@ TEST_F(CoreAPIsStandardTest, EmptyLookup) {
   EXPECT_TRUE(OnCompletionRun) << "OnCompletion was not run for empty query";
 }
 
+TEST_F(CoreAPIsStandardTest, ResolveUnrequestedSymbol) {
+  // Test that all symbols in a MaterializationUnit materialize corretly when
+  // only a subset of symbols is looked up.
+  // The aim here is to ensure that we're not relying on the query to set up
+  // state needed to materialize the unrequested symbols.
+
+  cantFail(JD.define(std::make_unique<SimpleMaterializationUnit>(
+      SymbolFlagsMap({{Foo, FooSym.getFlags()}, {Bar, BarSym.getFlags()}}),
+      [this](MaterializationResponsibility R) {
+        cantFail(R.notifyResolved({{Foo, FooSym}, {Bar, BarSym}}));
+        cantFail(R.notifyEmitted());
+      })));
+
+  auto Result =
+      cantFail(ES.lookup(makeJITDylibSearchOrder(&JD), SymbolLookupSet({Foo})));
+  EXPECT_EQ(Result.size(), 1U) << "Unexpected number of results";
+  EXPECT_TRUE(Result.count(Foo)) << "Expected result for \"Foo\"";
+}
+
+TEST_F(CoreAPIsStandardTest, MaterializationSideEffctsOnlyTest) {
+  // Test that basic materialization-side-effects-only symbols work as expected:
+  // that they can be emitted without being resolved, that queries for them
+  // don't return until they're emitted, and that they don't appear in query
+  // results.
+
+  Optional<MaterializationResponsibility> FooR;
+  Optional<SymbolMap> Result;
+
+  cantFail(JD.define(std::make_unique<SimpleMaterializationUnit>(
+      SymbolFlagsMap(
+          {{Foo, JITSymbolFlags::Exported |
+                     JITSymbolFlags::MaterializationSideEffectsOnly}}),
+      [&](MaterializationResponsibility R) { FooR.emplace(std::move(R)); })));
+
+  ES.lookup(
+      LookupKind::Static, makeJITDylibSearchOrder(&JD),
+      SymbolLookupSet({Foo}, SymbolLookupFlags::WeaklyReferencedSymbol),
+      SymbolState::Ready,
+      [&](Expected<SymbolMap> LookupResult) {
+        if (LookupResult)
+          Result = std::move(*LookupResult);
+        else
+          ADD_FAILURE() << "Unexpected lookup error: "
+                        << toString(LookupResult.takeError());
+      },
+      NoDependenciesToRegister);
+
+  EXPECT_FALSE(Result) << "Lookup returned unexpectedly";
+  EXPECT_TRUE(FooR) << "Lookup failed to trigger materialization";
+  EXPECT_THAT_ERROR(FooR->notifyEmitted(), Succeeded())
+      << "Emission of materialization-side-effects-only symbol failed";
+
+  EXPECT_TRUE(Result) << "Lookup failed to return";
+  EXPECT_TRUE(Result->empty()) << "Lookup result contained unexpected value";
+}
+
 TEST_F(CoreAPIsStandardTest, RemoveSymbolsTest) {
   // Test that:
   // (1) Missing symbols generate a SymbolsNotFound error.

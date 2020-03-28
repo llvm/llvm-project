@@ -92,7 +92,7 @@ public:
 };
 
 /// An attribute that specifies the target version, allowed extensions and
-/// capabilities, and resource limits. These information describles a SPIR-V
+/// capabilities, and resource limits. These information describes a SPIR-V
 /// target environment.
 class TargetEnvAttr
     : public Attribute::AttrBase<TargetEnvAttr, Attribute,

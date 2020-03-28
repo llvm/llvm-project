@@ -448,11 +448,10 @@ void AMDGPUTargetMachine::adjustPassManager(PassManagerBuilder &Builder) {
         PM.add(createAMDGPUAlwaysInlinePass(false));
   });
 
-  const auto &Opt = Options;
   Builder.addExtension(
     PassManagerBuilder::EP_EarlyAsPossible,
-    [AMDGPUAA, LibCallSimplify, &Opt, this](const PassManagerBuilder &,
-                                            legacy::PassManagerBase &PM) {
+    [AMDGPUAA, LibCallSimplify, this](const PassManagerBuilder &,
+                                      legacy::PassManagerBase &PM) {
       if (AMDGPUAA) {
         PM.add(createAMDGPUAAWrapperPass());
         PM.add(createAMDGPUExternalAAWrapperPass());
@@ -460,7 +459,7 @@ void AMDGPUTargetMachine::adjustPassManager(PassManagerBuilder &Builder) {
       PM.add(llvm::createAMDGPUPropagateAttributesEarlyPass(this));
       PM.add(llvm::createAMDGPUUseNativeCallsPass());
       if (LibCallSimplify)
-        PM.add(llvm::createAMDGPUSimplifyLibCallsPass(Opt, this));
+        PM.add(llvm::createAMDGPUSimplifyLibCallsPass(this));
   });
 
   Builder.addExtension(

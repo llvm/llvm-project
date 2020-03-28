@@ -534,7 +534,16 @@ if config.host_os == 'Darwin':
   config.default_sanitizer_opts += ['abort_on_error=0']
   config.default_sanitizer_opts += ['log_to_syslog=0']
   if lit.util.which('log'):
-    config.available_features.add('darwin_log_cmd')
+    # Querying the log can only done by a privileged user so
+    # so check if we can query the log.
+    exit_code = -1
+    with open('/dev/null', 'r') as f:
+      # Run a `log show` command the should finish fairly quickly and produce very little output.
+      exit_code = subprocess.call(['log', 'show', '--last', '1m', '--predicate', '1 == 0'], stdout=f, stderr=f)
+    if exit_code == 0:
+      config.available_features.add('darwin_log_cmd')
+    else:
+      lit_config.warning('log command found but cannot queried')
   else:
     lit_config.warning('log command not found. Some tests will be skipped.')
 elif config.android:

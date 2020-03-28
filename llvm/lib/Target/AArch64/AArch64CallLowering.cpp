@@ -420,7 +420,7 @@ bool AArch64CallLowering::lowerFormalArguments(
   SmallVector<ArgInfo, 8> SplitArgs;
   unsigned i = 0;
   for (auto &Arg : F.args()) {
-    if (DL.getTypeStoreSize(Arg.getType()) == 0)
+    if (DL.getTypeStoreSize(Arg.getType()).isZero())
       continue;
 
     ArgInfo OrigArg{VRegs[i], Arg.getType()};

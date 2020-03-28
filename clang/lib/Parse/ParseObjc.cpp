@@ -523,10 +523,9 @@ ObjCTypeParamList *Parser::parseObjCTypeParamListOrProtocolRefs(
     SkipUntil(tok::greater, tok::at, StopBeforeMatch);
     if (Tok.is(tok::greater))
       ConsumeToken();
-  } else if (ParseGreaterThanInTemplateList(rAngleLoc,
+  } else if (ParseGreaterThanInTemplateList(lAngleLoc, rAngleLoc,
                                             /*ConsumeLastToken=*/true,
                                             /*ObjCGenericList=*/true)) {
-    Diag(lAngleLoc, diag::note_matching) << "'<'";
     SkipUntil({tok::greater, tok::greaterequal, tok::at, tok::minus,
                tok::minus, tok::plus, tok::colon, tok::l_paren, tok::l_brace,
                tok::comma, tok::semi },
@@ -1551,7 +1550,7 @@ ParseObjCProtocolReferences(SmallVectorImpl<Decl *> &Protocols,
   }
 
   // Consume the '>'.
-  if (ParseGreaterThanInTemplateList(EndLoc, consumeLastToken,
+  if (ParseGreaterThanInTemplateList(LAngleLoc, EndLoc, consumeLastToken,
                                      /*ObjCGenericList=*/false))
     return true;
 
@@ -1649,7 +1648,7 @@ void Parser::parseObjCTypeArgsOrProtocolQualifiers(
   if (allSingleIdentifiers) {
     // Parse the closing '>'.
     SourceLocation rAngleLoc;
-    (void)ParseGreaterThanInTemplateList(rAngleLoc, consumeLastToken,
+    (void)ParseGreaterThanInTemplateList(lAngleLoc, rAngleLoc, consumeLastToken,
                                          /*ObjCGenericList=*/true);
 
     // Let Sema figure out what we parsed.
@@ -1755,7 +1754,7 @@ void Parser::parseObjCTypeArgsOrProtocolQualifiers(
 
   // Parse the closing '>'.
   SourceLocation rAngleLoc;
-  (void)ParseGreaterThanInTemplateList(rAngleLoc, consumeLastToken,
+  (void)ParseGreaterThanInTemplateList(lAngleLoc, rAngleLoc, consumeLastToken,
                                        /*ObjCGenericList=*/true);
 
   if (invalid) {

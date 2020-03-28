@@ -270,7 +270,7 @@ struct VectorState {
 //                           insertslice
 //                                |
 
-// TODO(andydavis) Add the following canonicalization/simplifcation patterns:
+// TODO(andydavis) Add the following canonicalization/simplification patterns:
 // *) Add pattern which matches InsertStridedSlice -> StridedSlice and forwards
 //    InsertStridedSlice operand to StridedSlice.
 // *) Add pattern which matches SourceOp -> StridedSlice -> UserOp which checks

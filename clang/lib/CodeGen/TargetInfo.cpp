@@ -28,6 +28,7 @@
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm> // std::sort
@@ -6414,9 +6415,14 @@ Address ARMABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
 
 namespace {
 
+class NVPTXTargetCodeGenInfo;
+
 class NVPTXABIInfo : public ABIInfo {
+  NVPTXTargetCodeGenInfo &CGInfo;
+
 public:
-  NVPTXABIInfo(CodeGenTypes &CGT) : ABIInfo(CGT) {}
+  NVPTXABIInfo(CodeGenTypes &CGT, NVPTXTargetCodeGenInfo &Info)
+      : ABIInfo(CGT), CGInfo(Info) {}
 
   ABIArgInfo classifyReturnType(QualType RetTy) const;
   ABIArgInfo classifyArgumentType(QualType Ty) const;
@@ -6429,16 +6435,61 @@ public:
 class NVPTXTargetCodeGenInfo : public TargetCodeGenInfo {
 public:
   NVPTXTargetCodeGenInfo(CodeGenTypes &CGT)
-    : TargetCodeGenInfo(new NVPTXABIInfo(CGT)) {}
+      : TargetCodeGenInfo(new NVPTXABIInfo(CGT, *this)) {}
 
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
                            CodeGen::CodeGenModule &M) const override;
   bool shouldEmitStaticExternCAliases() const override;
 
+  llvm::Type *getCUDADeviceBuiltinSurfaceDeviceType() const override {
+    // On the device side, surface reference is represented as an object handle
+    // in 64-bit integer.
+    return llvm::Type::getInt64Ty(getABIInfo().getVMContext());
+  }
+
+  llvm::Type *getCUDADeviceBuiltinTextureDeviceType() const override {
+    // On the device side, texture reference is represented as an object handle
+    // in 64-bit integer.
+    return llvm::Type::getInt64Ty(getABIInfo().getVMContext());
+  }
+
+  bool emitCUDADeviceBuiltinSurfaceDeviceCopy(CodeGenFunction &CGF, LValue Dst,
+                                              LValue Src) const override {
+    emitBuiltinSurfTexDeviceCopy(CGF, Dst, Src);
+    return true;
+  }
+
+  bool emitCUDADeviceBuiltinTextureDeviceCopy(CodeGenFunction &CGF, LValue Dst,
+                                              LValue Src) const override {
+    emitBuiltinSurfTexDeviceCopy(CGF, Dst, Src);
+    return true;
+  }
+
 private:
-  // Adds a NamedMDNode with F, Name, and Operand as operands, and adds the
+  // Adds a NamedMDNode with GV, Name, and Operand as operands, and adds the
   // resulting MDNode to the nvvm.annotations MDNode.
-  static void addNVVMMetadata(llvm::Function *F, StringRef Name, int Operand);
+  static void addNVVMMetadata(llvm::GlobalValue *GV, StringRef Name,
+                              int Operand);
+
+  static void emitBuiltinSurfTexDeviceCopy(CodeGenFunction &CGF, LValue Dst,
+                                           LValue Src) {
+    llvm::Value *Handle = nullptr;
+    llvm::Constant *C =
+        llvm::dyn_cast<llvm::Constant>(Src.getAddress(CGF).getPointer());
+    // Lookup `addrspacecast` through the constant pointer if any.
+    if (auto *ASC = llvm::dyn_cast_or_null<llvm::AddrSpaceCastOperator>(C))
+      C = llvm::cast<llvm::Constant>(ASC->getPointerOperand());
+    if (auto *GV = llvm::dyn_cast_or_null<llvm::GlobalVariable>(C)) {
+      // Load the handle from the specific global variable using
+      // `nvvm.texsurf.handle.internal` intrinsic.
+      Handle = CGF.EmitRuntimeCall(
+          CGF.CGM.getIntrinsic(llvm::Intrinsic::nvvm_texsurf_handle_internal,
+                               {GV->getType()}),
+          {GV}, "texsurf_handle");
+    } else
+      Handle = CGF.EmitLoadOfScalar(Src, SourceLocation());
+    CGF.EmitStoreOfScalar(Handle, Dst);
+  }
 };
 
 /// Checks if the type is unsupported directly by the current target.
@@ -6511,8 +6562,19 @@ ABIArgInfo NVPTXABIInfo::classifyArgumentType(QualType Ty) const {
     Ty = EnumTy->getDecl()->getIntegerType();
 
   // Return aggregates type as indirect by value
-  if (isAggregateTypeForABI(Ty))
+  if (isAggregateTypeForABI(Ty)) {
+    // Under CUDA device compilation, tex/surf builtin types are replaced with
+    // object types and passed directly.
+    if (getContext().getLangOpts().CUDAIsDevice) {
+      if (Ty->isCUDADeviceBuiltinSurfaceType())
+        return ABIArgInfo::getDirect(
+            CGInfo.getCUDADeviceBuiltinSurfaceDeviceType());
+      if (Ty->isCUDADeviceBuiltinTextureType())
+        return ABIArgInfo::getDirect(
+            CGInfo.getCUDADeviceBuiltinTextureDeviceType());
+    }
     return getNaturalAlignIndirect(Ty, /* byval */ true);
+  }
 
   return (Ty->isPromotableIntegerType() ? ABIArgInfo::getExtend(Ty)
                                         : ABIArgInfo::getDirect());
@@ -6540,6 +6602,17 @@ void NVPTXTargetCodeGenInfo::setTargetAttributes(
     const Decl *D, llvm::GlobalValue *GV, CodeGen::CodeGenModule &M) const {
   if (GV->isDeclaration())
     return;
+  const VarDecl *VD = dyn_cast_or_null<VarDecl>(D);
+  if (VD) {
+    if (M.getLangOpts().CUDA) {
+      if (VD->getType()->isCUDADeviceBuiltinSurfaceType())
+        addNVVMMetadata(GV, "surface", 1);
+      else if (VD->getType()->isCUDADeviceBuiltinTextureType())
+        addNVVMMetadata(GV, "texture", 1);
+      return;
+    }
+  }
+
   const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D);
   if (!FD) return;
 
@@ -6588,16 +6661,16 @@ void NVPTXTargetCodeGenInfo::setTargetAttributes(
   }
 }
 
-void NVPTXTargetCodeGenInfo::addNVVMMetadata(llvm::Function *F, StringRef Name,
-                                             int Operand) {
-  llvm::Module *M = F->getParent();
+void NVPTXTargetCodeGenInfo::addNVVMMetadata(llvm::GlobalValue *GV,
+                                             StringRef Name, int Operand) {
+  llvm::Module *M = GV->getParent();
   llvm::LLVMContext &Ctx = M->getContext();
 
   // Get "nvvm.annotations" metadata node
   llvm::NamedMDNode *MD = M->getOrInsertNamedMetadata("nvvm.annotations");
 
   llvm::Metadata *MDVals[] = {
-      llvm::ConstantAsMetadata::get(F), llvm::MDString::get(Ctx, Name),
+      llvm::ConstantAsMetadata::get(GV), llvm::MDString::get(Ctx, Name),
       llvm::ConstantAsMetadata::get(
           llvm::ConstantInt::get(llvm::Type::getInt32Ty(Ctx), Operand))};
   // Append metadata to nvvm.annotations

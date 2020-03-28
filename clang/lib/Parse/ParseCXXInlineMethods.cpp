@@ -1114,17 +1114,14 @@ bool Parser::ConsumeAndStoreInitializer(CachedTokens &Toks,
           break;
         }
 
-        // If what follows could be a declaration, it is a declaration.
-        if (Result != TPResult::False && Result != TPResult::Error) {
-          PA.Revert();
-          return true;
-        }
-
-        // In the uncommon case that we decide the following tokens are part
-        // of a template argument, revert any annotations we've performed in
-        // those tokens. We're not going to look them up until we've parsed
-        // the rest of the class, and that might add more declarations.
+        // Put the token stream back and undo any annotations we performed
+        // after the comma. They may reflect a different parse than the one
+        // we will actually perform at the end of the class.
         PA.RevertAnnotations();
+
+        // If what follows could be a declaration, it is a declaration.
+        if (Result != TPResult::False && Result != TPResult::Error)
+          return true;
       }
 
       // Keep going. We know we're inside a template argument list now.

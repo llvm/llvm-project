@@ -1565,12 +1565,12 @@ void PPCAIXAsmPrinter::ValidateGV(const GlobalVariable *GV) {
 
 const MCExpr *PPCAIXAsmPrinter::lowerConstant(const Constant *CV) {
   if (const Function *F = dyn_cast<Function>(CV)) {
-      MCSectionXCOFF *Csect = cast<MCSectionXCOFF>(
-          F->isDeclaration()
-              ? getObjFileLowering().getSectionForExternalReference(F, TM)
-              : getObjFileLowering().getSectionForFunctionDescriptor(F, TM));
+    MCSectionXCOFF *Csect = cast<MCSectionXCOFF>(
+        F->isDeclaration()
+            ? getObjFileLowering().getSectionForExternalReference(F, TM)
+            : getObjFileLowering().getSectionForFunctionDescriptor(F, TM));
 
-      return MCSymbolRefExpr::create(Csect->getQualNameSymbol(), OutContext);
+    return MCSymbolRefExpr::create(Csect->getQualNameSymbol(), OutContext);
   }
   return PPCAsmPrinter::lowerConstant(CV);
 }

@@ -543,6 +543,12 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Args.MakeArgString("-lto-stats-file=" + StatsFile.str()));
   }
 
+  // Forward -fno-unroll-loops to the linker in LTO.
+  if (Args.hasArg(options::OPT_fno_unroll_loops)) {
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back(Args.MakeArgString("-lto-no-unroll-loops"));
+  }
+
   // It seems that the 'e' option is completely ignored for dynamic executables
   // (the default), and with static executables, the last one wins, as expected.
   Args.AddAllArgs(CmdArgs, {options::OPT_d_Flag, options::OPT_s, options::OPT_t,

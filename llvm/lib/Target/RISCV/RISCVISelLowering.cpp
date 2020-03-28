@@ -210,6 +210,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::TRAP, MVT::Other, Legal);
   setOperationAction(ISD::DEBUGTRAP, MVT::Other, Legal);
+  setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
 
   if (Subtarget.hasStdExtA()) {
     setMaxAtomicSizeInBitsSupported(Subtarget.getXLen());
@@ -429,6 +430,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     SDValue FPConv = DAG.getNode(RISCVISD::FMV_W_X_RV64, DL, MVT::f32, NewOp0);
     return FPConv;
   }
+  case ISD::INTRINSIC_WO_CHAIN:
+    return LowerINTRINSIC_WO_CHAIN(Op, DAG);
   }
 }
 
@@ -830,6 +833,20 @@ SDValue RISCVTargetLowering::lowerShiftRightParts(SDValue Op, SelectionDAG &DAG,
 
   SDValue Parts[2] = {Lo, Hi};
   return DAG.getMergeValues(Parts, DL);
+}
+
+SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
+                                                     SelectionDAG &DAG) const {
+  unsigned IntNo = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
+  SDLoc DL(Op);
+  switch (IntNo) {
+  default:
+    return SDValue();    // Don't custom lower most intrinsics.
+  case Intrinsic::thread_pointer: {
+    EVT PtrVT = getPointerTy(DAG.getDataLayout());
+    return DAG.getRegister(RISCV::X4, PtrVT);
+  }
+  }
 }
 
 // Returns the opcode of the target-specific SDNode that implements the 32-bit

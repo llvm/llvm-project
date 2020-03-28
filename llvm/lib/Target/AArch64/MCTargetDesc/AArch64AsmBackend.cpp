@@ -69,6 +69,11 @@ public:
         {"fixup_aarch64_pcrel_call26", 0, 26, PCRelFlagVal},
         {"fixup_aarch64_tlsdesc_call", 0, 0, 0}};
 
+    // Fixup kinds from .reloc directive are like R_AARCH64_NONE. They do not
+    // require any extra processing.
+    if (Kind >= FirstLiteralRelocationKind)
+      return MCAsmBackend::getFixupKindInfo(FK_NONE);
+
     if (Kind < FirstTargetFixupKind)
       return MCAsmBackend::getFixupKindInfo(Kind);
 
@@ -109,7 +114,6 @@ static unsigned getFixupKindNumBytes(unsigned Kind) {
   default:
     llvm_unreachable("Unknown fixup kind!");
 
-  case FK_NONE:
   case AArch64::fixup_aarch64_tlsdesc_call:
     return 0;
 
@@ -330,7 +334,6 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, const MCValue &Target,
     if (!valueFitsIntoFixupKind(Fixup.getTargetKind(), Value))
       Ctx.reportError(Fixup.getLoc(), "fixup value too large for data type!");
     LLVM_FALLTHROUGH;
-  case FK_NONE:
   case FK_SecRel_2:
   case FK_SecRel_4:
     return Value;
@@ -338,9 +341,17 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, const MCValue &Target,
 }
 
 Optional<MCFixupKind> AArch64AsmBackend::getFixupKind(StringRef Name) const {
-  if (TheTriple.isOSBinFormatELF() && Name == "R_AARCH64_NONE")
-    return FK_NONE;
-  return MCAsmBackend::getFixupKind(Name);
+  if (!TheTriple.isOSBinFormatELF())
+    return None;
+
+  unsigned Type = llvm::StringSwitch<unsigned>(Name)
+#define ELF_RELOC(X, Y)  .Case(#X, Y)
+#include "llvm/BinaryFormat/ELFRelocs/AArch64.def"
+#undef ELF_RELOC
+                      .Default(-1u);
+  if (Type == -1u)
+    return None;
+  return static_cast<MCFixupKind>(FirstLiteralRelocationKind + Type);
 }
 
 /// getFixupKindContainereSizeInBytes - The number of bytes of the
@@ -387,9 +398,12 @@ void AArch64AsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                                    MutableArrayRef<char> Data, uint64_t Value,
                                    bool IsResolved,
                                    const MCSubtargetInfo *STI) const {
-  unsigned NumBytes = getFixupKindNumBytes(Fixup.getKind());
   if (!Value)
     return; // Doesn't change encoding.
+  unsigned Kind = Fixup.getKind();
+  if (Kind >= FirstLiteralRelocationKind)
+    return;
+  unsigned NumBytes = getFixupKindNumBytes(Kind);
   MCFixupKindInfo Info = getFixupKindInfo(Fixup.getKind());
   MCContext &Ctx = Asm.getContext();
   int64_t SignedValue = static_cast<int64_t>(Value);
@@ -475,7 +489,7 @@ bool AArch64AsmBackend::shouldForceRelocation(const MCAssembler &Asm,
                                               const MCFixup &Fixup,
                                               const MCValue &Target) {
   unsigned Kind = Fixup.getKind();
-  if (Kind == FK_NONE)
+  if (Kind >= FirstLiteralRelocationKind)
     return true;
 
   // The ADRP instruction adds some multiple of 0x1000 to the current PC &

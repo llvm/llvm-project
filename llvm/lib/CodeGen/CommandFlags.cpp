@@ -54,7 +54,8 @@ CGOPT(bool, EnableNoInfsFPMath)
 CGOPT(bool, EnableNoNaNsFPMath)
 CGOPT(bool, EnableNoSignedZerosFPMath)
 CGOPT(bool, EnableNoTrappingFPMath)
-CGOPT(FPDenormal::DenormalMode, DenormalFPMath)
+CGOPT(DenormalMode::DenormalModeKind, DenormalFPMath)
+CGOPT(DenormalMode::DenormalModeKind, DenormalFP32Math)
 CGOPT(bool, EnableHonorSignDependentRoundingFPMath)
 CGOPT(FloatABI::ABIType, FloatABIForCalls)
 CGOPT(FPOpFusion::FPOpFusionMode, FuseFPOps)
@@ -212,19 +213,29 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
       cl::init(false));
   CGBINDOPT(EnableNoTrappingFPMath);
 
-  static cl::opt<FPDenormal::DenormalMode> DenormalFPMath(
-      "denormal-fp-math",
-      cl::desc(
-          "Select which denormal numbers the code is permitted to require"),
-      cl::init(FPDenormal::IEEE),
-      cl::values(
-          clEnumValN(FPDenormal::IEEE, "ieee", "IEEE 754 denormal numbers"),
-          clEnumValN(FPDenormal::PreserveSign, "preserve-sign",
-                     "the sign of a  flushed-to-zero number is preserved "
-                     "in the sign of 0"),
-          clEnumValN(FPDenormal::PositiveZero, "positive-zero",
-                     "denormals are flushed to positive zero")));
+  static const auto DenormFlagEnumOptions =
+  cl::values(clEnumValN(DenormalMode::IEEE, "ieee",
+                        "IEEE 754 denormal numbers"),
+             clEnumValN(DenormalMode::PreserveSign, "preserve-sign",
+                        "the sign of a  flushed-to-zero number is preserved "
+                        "in the sign of 0"),
+             clEnumValN(DenormalMode::PositiveZero, "positive-zero",
+                        "denormals are flushed to positive zero"));
+
+  // FIXME: Doesn't have way to specify separate input and output modes.
+  static cl::opt<DenormalMode::DenormalModeKind> DenormalFPMath(
+    "denormal-fp-math",
+    cl::desc("Select which denormal numbers the code is permitted to require"),
+    cl::init(DenormalMode::IEEE),
+    DenormFlagEnumOptions);
   CGBINDOPT(DenormalFPMath);
+
+  static cl::opt<DenormalMode::DenormalModeKind> DenormalFP32Math(
+    "denormal-fp-math-f32",
+    cl::desc("Select which denormal numbers the code is permitted to require for float"),
+    cl::init(DenormalMode::Invalid),
+    DenormFlagEnumOptions);
+  CGBINDOPT(DenormalFP32Math);
 
   static cl::opt<bool> EnableHonorSignDependentRoundingFPMath(
       "enable-sign-dependent-rounding-fp-math", cl::Hidden,
@@ -425,7 +436,12 @@ TargetOptions codegen::InitTargetOptionsFromCodeGenFlags() {
   Options.NoNaNsFPMath = getEnableNoNaNsFPMath();
   Options.NoSignedZerosFPMath = getEnableNoSignedZerosFPMath();
   Options.NoTrappingFPMath = getEnableNoTrappingFPMath();
-  Options.FPDenormalMode = getDenormalFPMath();
+
+  DenormalMode::DenormalModeKind DenormKind = getDenormalFPMath();
+
+  // FIXME: Should have separate input and output flags
+  Options.setFPDenormalMode(DenormalMode(DenormKind, DenormKind));
+
   Options.HonorSignDependentRoundingFPMathOption =
       getEnableHonorSignDependentRoundingFPMath();
   if (getFloatABIForCalls() != FloatABI::Default)
@@ -562,6 +578,25 @@ void codegen::setFunctionAttributes(StringRef CPU, StringRef Features,
   HANDLE_BOOL_ATTR(EnableNoInfsFPMathView, "no-infs-fp-math");
   HANDLE_BOOL_ATTR(EnableNoNaNsFPMathView, "no-nans-fp-math");
   HANDLE_BOOL_ATTR(EnableNoSignedZerosFPMathView, "no-signed-zeros-fp-math");
+
+  if (DenormalFPMathView->getNumOccurrences() > 0 &&
+      !F.hasFnAttribute("denormal-fp-math")) {
+    DenormalMode::DenormalModeKind DenormKind = getDenormalFPMath();
+
+    // FIXME: Command line flag should expose separate input/output modes.
+    NewAttrs.addAttribute("denormal-fp-math",
+                          DenormalMode(DenormKind, DenormKind).str());
+  }
+
+  if (DenormalFP32MathView->getNumOccurrences() > 0 &&
+      !F.hasFnAttribute("denormal-fp-math-f32")) {
+    // FIXME: Command line flag should expose separate input/output modes.
+    DenormalMode::DenormalModeKind DenormKind = getDenormalFP32Math();
+
+    NewAttrs.addAttribute(
+      "denormal-fp-math-f32",
+      DenormalMode(DenormKind, DenormKind).str());
+  }
 
   if (TrapFuncNameView->getNumOccurrences() > 0)
     for (auto &B : F)

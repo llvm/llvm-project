@@ -210,6 +210,15 @@ public:
                                      ValueRange operands, bool eq,
                                      bool lower = true);
 
+  /// Returns the bound for the identifier at `pos` from the inequality at
+  /// `ineqPos` as a 1-d affine value map (affine map + operands). The returned
+  /// affine value map can either be a lower bound or an upper bound depending
+  /// on the sign of atIneq(ineqPos, pos). Asserts if the row at `ineqPos` does
+  /// not involve the `pos`th identifier.
+  void getIneqAsAffineValueMap(unsigned pos, unsigned ineqPos,
+                               AffineValueMap &vmap,
+                               MLIRContext *context) const;
+
   /// Returns the constraint system as an integer set. Returns a null integer
   /// set if the system has no constraints, or if an integer set couldn't be
   /// constructed as a result of a local variable's explicit representation not
@@ -452,15 +461,17 @@ public:
   /// affine expressions involving only the symbolic identifiers. `lb` and
   /// `ub` (along with the `boundFloorDivisor`) are set to represent the lower
   /// and upper bound associated with the constant difference: `lb`, `ub` have
-  /// the coefficients, and boundFloorDivisor, their divisor.
+  /// the coefficients, and boundFloorDivisor, their divisor. `minLbPos` and
+  /// `minUbPos` if non-null are set to the position of the constant lower bound
+  /// and upper bound respectively (to the same if they are from an equality).
   /// Ex: if the lower bound is [(s0 + s2 - 1) floordiv 32] for a system with
-  /// three symbolic identifiers, *lb = [1, 0, 1], boundDivisor = 32. See
-  /// comments at function definition for examples.
-  Optional<int64_t>
-  getConstantBoundOnDimSize(unsigned pos,
-                            SmallVectorImpl<int64_t> *lb = nullptr,
-                            int64_t *boundFloorDivisor = nullptr,
-                            SmallVectorImpl<int64_t> *ub = nullptr) const;
+  /// three symbolic identifiers, *lb = [1, 0, 1], lbDivisor = 32. See comments
+  /// at function definition for examples.
+  Optional<int64_t> getConstantBoundOnDimSize(
+      unsigned pos, SmallVectorImpl<int64_t> *lb = nullptr,
+      int64_t *boundFloorDivisor = nullptr,
+      SmallVectorImpl<int64_t> *ub = nullptr, unsigned *minLbPos = nullptr,
+      unsigned *minUbPos = nullptr) const;
 
   /// Returns the constant lower bound for the pos^th identifier if there is
   /// one; None otherwise.
@@ -481,6 +492,20 @@ public:
   getLowerAndUpperBound(unsigned pos, unsigned offset, unsigned num,
                         unsigned symStartPos, ArrayRef<AffineExpr> localExprs,
                         MLIRContext *context) const;
+
+  /// Gather positions of all lower and upper bounds of the identifier at `pos`,
+  /// and optionally any equalities on it. In addition, the bounds are to be
+  /// independent of identifiers in position range [`offset`, `offset` + `num`).
+  void
+  getLowerAndUpperBoundIndices(unsigned pos,
+                               SmallVectorImpl<unsigned> *lbIndices,
+                               SmallVectorImpl<unsigned> *ubIndices,
+                               SmallVectorImpl<unsigned> *eqIndices = nullptr,
+                               unsigned offset = 0, unsigned num = 0) const;
+
+  /// Removes constraints that are independent of (i.e., do not have a
+  /// coefficient for) for identifiers in the range [pos, pos + num).
+  void removeIndependentConstraints(unsigned pos, unsigned num);
 
   /// Returns true if the set can be trivially detected as being
   /// hyper-rectangular on the specified contiguous set of identifiers.

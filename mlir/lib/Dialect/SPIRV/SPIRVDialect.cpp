@@ -751,7 +751,7 @@ Attribute SPIRVDialect::parseAttribute(DialectAsmParser &parser,
   if (attrKind == spirv::VerCapExtAttr::getKindName())
     return parseVerCapExtAttr(parser);
 
-  parser.emitError(parser.getNameLoc(), "unknown SPIR-V attriubte kind: ")
+  parser.emitError(parser.getNameLoc(), "unknown SPIR-V attribute kind: ")
       << attrKind;
   return {};
 }
