@@ -3739,7 +3739,7 @@ void EmitClangAttrParsedAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
     }
     OS << "struct ParsedAttrInfo" << I->first
        << " final : public ParsedAttrInfo {\n";
-    OS << "  constexpr ParsedAttrInfo" << I->first << "() {\n";
+    OS << "  ParsedAttrInfo" << I->first << "() {\n";
     OS << "    AttrKind = ParsedAttr::AT_" << AttrName << ";\n";
     emitArgInfo(Attr, OS);
     OS << "    HasCustomParsing = ";
