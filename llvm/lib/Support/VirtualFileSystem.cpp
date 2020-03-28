@@ -1912,11 +1912,21 @@ UniqueID vfs::getNextVirtualUniqueID() {
   return UniqueID(std::numeric_limits<uint64_t>::max(), ID);
 }
 
-void YAMLVFSWriter::addFileMapping(StringRef VirtualPath, StringRef RealPath) {
+void YAMLVFSWriter::addEntry(StringRef VirtualPath, StringRef RealPath,
+                             bool IsDirectory) {
   assert(sys::path::is_absolute(VirtualPath) && "virtual path not absolute");
   assert(sys::path::is_absolute(RealPath) && "real path not absolute");
   assert(!pathHasTraversal(VirtualPath) && "path traversal is not supported");
-  Mappings.emplace_back(VirtualPath, RealPath);
+  Mappings.emplace_back(VirtualPath, RealPath, IsDirectory);
+}
+
+void YAMLVFSWriter::addFileMapping(StringRef VirtualPath, StringRef RealPath) {
+  addEntry(VirtualPath, RealPath, /*IsDirectory=*/false);
+}
+
+void YAMLVFSWriter::addDirectoryMapping(StringRef VirtualPath,
+                                        StringRef RealPath) {
+  addEntry(VirtualPath, RealPath, /*IsDirectory=*/true);
 }
 
 namespace {
@@ -2017,7 +2027,10 @@ void JSONWriter::write(ArrayRef<YAMLVFSEntry> Entries,
 
   if (!Entries.empty()) {
     const YAMLVFSEntry &Entry = Entries.front();
-    startDirectory(path::parent_path(Entry.VPath));
+    bool first_entry_is_directory = Entry.IsDirectory;
+    StringRef Dir =
+        first_entry_is_directory ? Entry.VPath : path::parent_path(Entry.VPath);
+    startDirectory(Dir);
 
     StringRef RPath = Entry.RPath;
     if (UseOverlayRelative) {
@@ -2027,13 +2040,18 @@ void JSONWriter::write(ArrayRef<YAMLVFSEntry> Entries,
       RPath = RPath.slice(OverlayDirLen, RPath.size());
     }
 
-    writeEntry(path::filename(Entry.VPath), RPath);
+    if (!first_entry_is_directory)
+      writeEntry(path::filename(Entry.VPath), RPath);
 
     for (const auto &Entry : Entries.slice(1)) {
-      StringRef Dir = path::parent_path(Entry.VPath);
-      if (Dir == DirStack.back())
-        OS << ",\n";
-      else {
+      StringRef Dir =
+          Entry.IsDirectory ? Entry.VPath : path::parent_path(Entry.VPath);
+      if (Dir == DirStack.back()) {
+        if (!first_entry_is_directory) {
+          OS << ",\n";
+          first_entry_is_directory = false;
+        }
+      } else {
         while (!DirStack.empty() && !containedIn(DirStack.back(), Dir)) {
           OS << "\n";
           endDirectory();
