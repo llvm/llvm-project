@@ -4,11 +4,11 @@
 // RUN:   -emit-interface-stubs -emit-merged-ifs -S | \
 // RUN: FileCheck -check-prefix=CHECK-IFS %s
 
- // CHECK-IFS: --- !experimental-ifs-v1
- // CHECK-IFS: IfsVersion:      1.0
- // CHECK-IFS: Triple: powerpc64le
- // CHECK-IFS: Symbols:
- // CHECK-IFS:   _Z8helloPPCv: { Type: Func }
- // CHECK-IFS: ...
+// CHECK-IFS: --- !experimental-ifs-v2
+// CHECK-IFS: IfsVersion: 2.0
+// CHECK-IFS: Triple: powerpc64le
+// CHECK-IFS: Symbols:
+// CHECK-IFS:   - { Name: _Z8helloPPCv, Type: Func }
+// CHECK-IFS: ...
 
 int helloPPC();
