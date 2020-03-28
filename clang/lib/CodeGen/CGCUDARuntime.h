@@ -42,17 +42,30 @@ protected:
 
 public:
   // Global variable properties that must be passed to CUDA runtime.
-  struct DeviceVarFlags {
-    enum DeviceVarKind : unsigned {
+  class DeviceVarFlags {
+  public:
+    enum DeviceVarKind {
       Variable, // Variable
       Surface,  // Builtin surface
       Texture,  // Builtin texture
     };
-    DeviceVarKind Kind : 2;
+
+  private:
+    unsigned Kind : 2;
     unsigned Extern : 1;
     unsigned Constant : 1;   // Constant variable.
     unsigned Normalized : 1; // Normalized texture.
     int SurfTexType;         // Type of surface/texutre.
+
+  public:
+    DeviceVarFlags(DeviceVarKind K, bool E, bool C, bool N, int T)
+        : Kind(K), Extern(E), Constant(C), Normalized(N), SurfTexType(T) {}
+
+    DeviceVarKind getKind() const { return static_cast<DeviceVarKind>(Kind); }
+    bool isExtern() const { return Extern; }
+    bool isConstant() const { return Constant; }
+    bool isNormalized() const { return Normalized; }
+    int getSurfTexType() const { return SurfTexType; }
   };
 
   CGCUDARuntime(CodeGenModule &CGM) : CGM(CGM) {}
