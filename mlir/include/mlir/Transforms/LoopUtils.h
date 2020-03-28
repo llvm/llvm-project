@@ -108,11 +108,15 @@ void interchangeLoops(AffineForOp forOpA, AffineForOp forOpB);
 bool isValidLoopInterchangePermutation(ArrayRef<AffineForOp> loops,
                                        ArrayRef<unsigned> loopPermMap);
 
-/// Performs a sequence of loop interchanges on perfectly nested 'loops', as
-/// specified by permutation 'loopPermMap' (loop 'i' in 'loops' is mapped to
-/// location 'j = 'loopPermMap[i]' after the loop interchange).
-unsigned interchangeLoops(ArrayRef<AffineForOp> loops,
-                          ArrayRef<unsigned> loopPermMap);
+/// Performs a loop permutation on a perfectly nested loop nest `inputNest`
+/// (where the contained loops appear from outer to inner) as specified by the
+/// permutation `permMap`: loop 'i' in `inputNest` is mapped to location
+/// 'loopPermMap[i]', where positions 0, 1, ... are from the outermost position
+/// to inner. Returns the position in `inputNest` of the AffineForOp that
+/// becomes the new outermost loop of this nest. This method always succeeds,
+/// asserts out on invalid input / specifications.
+unsigned permuteLoops(ArrayRef<AffineForOp> inputNest,
+                      ArrayRef<unsigned> permMap);
 
 // Sinks all sequential loops to the innermost levels (while preserving
 // relative order among them) and moves all parallel loops to the
