@@ -7181,7 +7181,7 @@ SDValue ARMTargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
       return DAG.getUNDEF(VT);
 
     if ((ST->hasNEON() && SplatBitSize <= 64) ||
-        (ST->hasMVEIntegerOps() && SplatBitSize <= 32)) {
+        (ST->hasMVEIntegerOps() && SplatBitSize <= 64)) {
       // Check if an immediate VMOV works.
       EVT VmovVT;
       SDValue Val = isVMOVModifiedImm(SplatBits.getZExtValue(),

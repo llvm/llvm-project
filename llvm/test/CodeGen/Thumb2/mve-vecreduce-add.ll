@@ -36,8 +36,7 @@ entry:
 define arm_aapcs_vfpcc i64 @add_v2i32_v2i64_zext(<2 x i32> %x) {
 ; CHECK-LABEL: add_v2i32_v2i64_zext:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    adr r0, .LCPI3_0
-; CHECK-NEXT:    vldrw.u32 q1, [r0]
+; CHECK-NEXT:    vmov.i64 q1, #0xffffffff
 ; CHECK-NEXT:    vand q0, q0, q1
 ; CHECK-NEXT:    vmov r0, s2
 ; CHECK-NEXT:    vmov r3, s0
@@ -46,13 +45,6 @@ define arm_aapcs_vfpcc i64 @add_v2i32_v2i64_zext(<2 x i32> %x) {
 ; CHECK-NEXT:    adds r0, r0, r3
 ; CHECK-NEXT:    adcs r1, r2
 ; CHECK-NEXT:    bx lr
-; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  @ %bb.1:
-; CHECK-NEXT:  .LCPI3_0:
-; CHECK-NEXT:    .long 4294967295 @ 0xffffffff
-; CHECK-NEXT:    .long 0 @ 0x0
-; CHECK-NEXT:    .long 4294967295 @ 0xffffffff
-; CHECK-NEXT:    .long 0 @ 0x0
 entry:
   %xx = zext <2 x i32> %x to <2 x i64>
   %z = call i64 @llvm.experimental.vector.reduce.add.v2i64(<2 x i64> %xx)
@@ -138,11 +130,10 @@ define arm_aapcs_vfpcc i64 @add_v8i16_v8i64_zext(<8 x i16> %x) {
 ; CHECK-LABEL: add_v8i16_v8i64_zext:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov.u16 r0, q0[0]
+; CHECK-NEXT:    vmov.i64 q1, #0xffff
 ; CHECK-NEXT:    vmov.32 q2[0], r0
 ; CHECK-NEXT:    vmov.u16 r0, q0[1]
 ; CHECK-NEXT:    vmov.32 q2[2], r0
-; CHECK-NEXT:    adr r0, .LCPI10_0
-; CHECK-NEXT:    vldrw.u32 q1, [r0]
 ; CHECK-NEXT:    vand q2, q2, q1
 ; CHECK-NEXT:    vmov r0, s10
 ; CHECK-NEXT:    vmov r1, s8
@@ -182,13 +173,6 @@ define arm_aapcs_vfpcc i64 @add_v8i16_v8i64_zext(<8 x i16> %x) {
 ; CHECK-NEXT:    adds r0, r0, r3
 ; CHECK-NEXT:    adcs r1, r2
 ; CHECK-NEXT:    bx lr
-; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  @ %bb.1:
-; CHECK-NEXT:  .LCPI10_0:
-; CHECK-NEXT:    .long 65535 @ 0xffff
-; CHECK-NEXT:    .long 0 @ 0x0
-; CHECK-NEXT:    .long 65535 @ 0xffff
-; CHECK-NEXT:    .long 0 @ 0x0
 entry:
   %xx = zext <8 x i16> %x to <8 x i64>
   %z = call i64 @llvm.experimental.vector.reduce.add.v8i64(<8 x i64> %xx)
@@ -265,21 +249,13 @@ entry:
 define arm_aapcs_vfpcc i64 @add_v2i16_v2i64_zext(<2 x i16> %x) {
 ; CHECK-LABEL: add_v2i16_v2i64_zext:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    adr r0, .LCPI12_0
-; CHECK-NEXT:    vldrw.u32 q1, [r0]
+; CHECK-NEXT:    vmov.i64 q1, #0xffff
 ; CHECK-NEXT:    vand q0, q0, q1
 ; CHECK-NEXT:    vmov r0, s2
 ; CHECK-NEXT:    vmov r1, s0
 ; CHECK-NEXT:    add r0, r1
 ; CHECK-NEXT:    vmov r1, s3
 ; CHECK-NEXT:    bx lr
-; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  @ %bb.1:
-; CHECK-NEXT:  .LCPI12_0:
-; CHECK-NEXT:    .long 65535 @ 0xffff
-; CHECK-NEXT:    .long 0 @ 0x0
-; CHECK-NEXT:    .long 65535 @ 0xffff
-; CHECK-NEXT:    .long 0 @ 0x0
 entry:
   %xx = zext <2 x i16> %x to <2 x i64>
   %z = call i64 @llvm.experimental.vector.reduce.add.v2i64(<2 x i64> %xx)
@@ -489,11 +465,10 @@ define arm_aapcs_vfpcc i64 @add_v16i8_v16i64_zext(<16 x i8> %x) {
 ; CHECK-LABEL: add_v16i8_v16i64_zext:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov.u8 r0, q0[0]
+; CHECK-NEXT:    vmov.i64 q1, #0xff
 ; CHECK-NEXT:    vmov.32 q2[0], r0
 ; CHECK-NEXT:    vmov.u8 r0, q0[1]
 ; CHECK-NEXT:    vmov.32 q2[2], r0
-; CHECK-NEXT:    adr r0, .LCPI23_0
-; CHECK-NEXT:    vldrw.u32 q1, [r0]
 ; CHECK-NEXT:    vand q2, q2, q1
 ; CHECK-NEXT:    vmov r0, s10
 ; CHECK-NEXT:    vmov r1, s8
@@ -585,13 +560,6 @@ define arm_aapcs_vfpcc i64 @add_v16i8_v16i64_zext(<16 x i8> %x) {
 ; CHECK-NEXT:    adds r0, r0, r3
 ; CHECK-NEXT:    adcs r1, r2
 ; CHECK-NEXT:    bx lr
-; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  @ %bb.1:
-; CHECK-NEXT:  .LCPI23_0:
-; CHECK-NEXT:    .long 255 @ 0xff
-; CHECK-NEXT:    .long 0 @ 0x0
-; CHECK-NEXT:    .long 255 @ 0xff
-; CHECK-NEXT:    .long 0 @ 0x0
 entry:
   %xx = zext <16 x i8> %x to <16 x i64>
   %z = call i64 @llvm.experimental.vector.reduce.add.v16i64(<16 x i64> %xx)
@@ -736,21 +704,13 @@ entry:
 define arm_aapcs_vfpcc i64 @add_v2i8_v2i64_zext(<2 x i8> %x) {
 ; CHECK-LABEL: add_v2i8_v2i64_zext:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    adr r0, .LCPI25_0
-; CHECK-NEXT:    vldrw.u32 q1, [r0]
+; CHECK-NEXT:    vmov.i64 q1, #0xff
 ; CHECK-NEXT:    vand q0, q0, q1
 ; CHECK-NEXT:    vmov r0, s2
 ; CHECK-NEXT:    vmov r1, s0
 ; CHECK-NEXT:    add r0, r1
 ; CHECK-NEXT:    vmov r1, s3
 ; CHECK-NEXT:    bx lr
-; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  @ %bb.1:
-; CHECK-NEXT:  .LCPI25_0:
-; CHECK-NEXT:    .long 255 @ 0xff
-; CHECK-NEXT:    .long 0 @ 0x0
-; CHECK-NEXT:    .long 255 @ 0xff
-; CHECK-NEXT:    .long 0 @ 0x0
 entry:
   %xx = zext <2 x i8> %x to <2 x i64>
   %z = call i64 @llvm.experimental.vector.reduce.add.v2i64(<2 x i64> %xx)
@@ -832,8 +792,7 @@ define arm_aapcs_vfpcc i64 @add_v2i32_v2i64_acc_zext(<2 x i32> %x, i64 %a) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    adr r2, .LCPI31_0
-; CHECK-NEXT:    vldrw.u32 q1, [r2]
+; CHECK-NEXT:    vmov.i64 q1, #0xffffffff
 ; CHECK-NEXT:    vand q0, q0, q1
 ; CHECK-NEXT:    vmov r2, s2
 ; CHECK-NEXT:    vmov r3, s0
@@ -844,13 +803,6 @@ define arm_aapcs_vfpcc i64 @add_v2i32_v2i64_acc_zext(<2 x i32> %x, i64 %a) {
 ; CHECK-NEXT:    adds r0, r0, r2
 ; CHECK-NEXT:    adcs r1, r3
 ; CHECK-NEXT:    pop {r7, pc}
-; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  @ %bb.1:
-; CHECK-NEXT:  .LCPI31_0:
-; CHECK-NEXT:    .long 4294967295 @ 0xffffffff
-; CHECK-NEXT:    .long 0 @ 0x0
-; CHECK-NEXT:    .long 4294967295 @ 0xffffffff
-; CHECK-NEXT:    .long 0 @ 0x0
 entry:
   %xx = zext <2 x i32> %x to <2 x i64>
   %z = call i64 @llvm.experimental.vector.reduce.add.v2i64(<2 x i64> %xx)
@@ -947,11 +899,10 @@ define arm_aapcs_vfpcc i64 @add_v8i16_v8i64_acc_zext(<8 x i16> %x, i64 %a) {
 ; CHECK-NEXT:    .save {r4, lr}
 ; CHECK-NEXT:    push {r4, lr}
 ; CHECK-NEXT:    vmov.u16 r2, q0[0]
+; CHECK-NEXT:    vmov.i64 q1, #0xffff
 ; CHECK-NEXT:    vmov.32 q2[0], r2
 ; CHECK-NEXT:    vmov.u16 r2, q0[1]
 ; CHECK-NEXT:    vmov.32 q2[2], r2
-; CHECK-NEXT:    adr r2, .LCPI38_0
-; CHECK-NEXT:    vldrw.u32 q1, [r2]
 ; CHECK-NEXT:    vand q2, q2, q1
 ; CHECK-NEXT:    vmov r2, s10
 ; CHECK-NEXT:    vmov r3, s8
@@ -993,13 +944,6 @@ define arm_aapcs_vfpcc i64 @add_v8i16_v8i64_acc_zext(<8 x i16> %x, i64 %a) {
 ; CHECK-NEXT:    adds r0, r0, r2
 ; CHECK-NEXT:    adcs r1, r3
 ; CHECK-NEXT:    pop {r4, pc}
-; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  @ %bb.1:
-; CHECK-NEXT:  .LCPI38_0:
-; CHECK-NEXT:    .long 65535 @ 0xffff
-; CHECK-NEXT:    .long 0 @ 0x0
-; CHECK-NEXT:    .long 65535 @ 0xffff
-; CHECK-NEXT:    .long 0 @ 0x0
 entry:
   %xx = zext <8 x i16> %x to <8 x i64>
   %z = call i64 @llvm.experimental.vector.reduce.add.v8i64(<8 x i64> %xx)
@@ -1082,8 +1026,7 @@ entry:
 define arm_aapcs_vfpcc i64 @add_v2i16_v2i64_acc_zext(<2 x i16> %x, i64 %a) {
 ; CHECK-LABEL: add_v2i16_v2i64_acc_zext:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    adr r2, .LCPI40_0
-; CHECK-NEXT:    vldrw.u32 q1, [r2]
+; CHECK-NEXT:    vmov.i64 q1, #0xffff
 ; CHECK-NEXT:    vand q0, q0, q1
 ; CHECK-NEXT:    vmov r2, s2
 ; CHECK-NEXT:    vmov r3, s0
@@ -1092,13 +1035,6 @@ define arm_aapcs_vfpcc i64 @add_v2i16_v2i64_acc_zext(<2 x i16> %x, i64 %a) {
 ; CHECK-NEXT:    adds r0, r0, r2
 ; CHECK-NEXT:    adcs r1, r3
 ; CHECK-NEXT:    bx lr
-; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  @ %bb.1:
-; CHECK-NEXT:  .LCPI40_0:
-; CHECK-NEXT:    .long 65535 @ 0xffff
-; CHECK-NEXT:    .long 0 @ 0x0
-; CHECK-NEXT:    .long 65535 @ 0xffff
-; CHECK-NEXT:    .long 0 @ 0x0
 entry:
   %xx = zext <2 x i16> %x to <2 x i64>
   %z = call i64 @llvm.experimental.vector.reduce.add.v2i64(<2 x i64> %xx)
@@ -1323,11 +1259,10 @@ define arm_aapcs_vfpcc i64 @add_v16i8_v16i64_acc_zext(<16 x i8> %x, i64 %a) {
 ; CHECK-NEXT:    .save {r4, lr}
 ; CHECK-NEXT:    push {r4, lr}
 ; CHECK-NEXT:    vmov.u8 r2, q0[0]
+; CHECK-NEXT:    vmov.i64 q1, #0xff
 ; CHECK-NEXT:    vmov.32 q2[0], r2
 ; CHECK-NEXT:    vmov.u8 r2, q0[1]
 ; CHECK-NEXT:    vmov.32 q2[2], r2
-; CHECK-NEXT:    adr r2, .LCPI51_0
-; CHECK-NEXT:    vldrw.u32 q1, [r2]
 ; CHECK-NEXT:    vand q2, q2, q1
 ; CHECK-NEXT:    vmov r2, s10
 ; CHECK-NEXT:    vmov r3, s8
@@ -1421,13 +1356,6 @@ define arm_aapcs_vfpcc i64 @add_v16i8_v16i64_acc_zext(<16 x i8> %x, i64 %a) {
 ; CHECK-NEXT:    adds r0, r0, r2
 ; CHECK-NEXT:    adcs r1, r3
 ; CHECK-NEXT:    pop {r4, pc}
-; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  @ %bb.1:
-; CHECK-NEXT:  .LCPI51_0:
-; CHECK-NEXT:    .long 255 @ 0xff
-; CHECK-NEXT:    .long 0 @ 0x0
-; CHECK-NEXT:    .long 255 @ 0xff
-; CHECK-NEXT:    .long 0 @ 0x0
 entry:
   %xx = zext <16 x i8> %x to <16 x i64>
   %z = call i64 @llvm.experimental.vector.reduce.add.v16i64(<16 x i64> %xx)
@@ -1578,8 +1506,7 @@ entry:
 define arm_aapcs_vfpcc i64 @add_v2i8_v2i64_acc_zext(<2 x i8> %x, i64 %a) {
 ; CHECK-LABEL: add_v2i8_v2i64_acc_zext:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    adr r2, .LCPI53_0
-; CHECK-NEXT:    vldrw.u32 q1, [r2]
+; CHECK-NEXT:    vmov.i64 q1, #0xff
 ; CHECK-NEXT:    vand q0, q0, q1
 ; CHECK-NEXT:    vmov r2, s2
 ; CHECK-NEXT:    vmov r3, s0
@@ -1588,13 +1515,6 @@ define arm_aapcs_vfpcc i64 @add_v2i8_v2i64_acc_zext(<2 x i8> %x, i64 %a) {
 ; CHECK-NEXT:    adds r0, r0, r2
 ; CHECK-NEXT:    adcs r1, r3
 ; CHECK-NEXT:    bx lr
-; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  @ %bb.1:
-; CHECK-NEXT:  .LCPI53_0:
-; CHECK-NEXT:    .long 255 @ 0xff
-; CHECK-NEXT:    .long 0 @ 0x0
-; CHECK-NEXT:    .long 255 @ 0xff
-; CHECK-NEXT:    .long 0 @ 0x0
 entry:
   %xx = zext <2 x i8> %x to <2 x i64>
   %z = call i64 @llvm.experimental.vector.reduce.add.v2i64(<2 x i64> %xx)
