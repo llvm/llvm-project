@@ -1545,7 +1545,9 @@ Parser::isCXXDeclarationSpecifier(Parser::TPResult BracedCastResult,
     TemplateIdAnnotation *TemplateId = takeTemplateIdAnnotation(Tok);
     // If lookup for the template-name found nothing, don't assume we have a
     // definitive disambiguation result yet.
-    if (TemplateId->Kind == TNK_Undeclared_template && InvalidAsDeclSpec) {
+    if ((TemplateId->hasInvalidName() ||
+         TemplateId->Kind == TNK_Undeclared_template) &&
+        InvalidAsDeclSpec) {
       // 'template-id(' can be a valid expression but not a valid decl spec if
       // the template-name is not declared, but we don't consider this to be a
       // definitive disambiguation. In any other context, it's an error either
@@ -1574,8 +1576,13 @@ Parser::isCXXDeclarationSpecifier(Parser::TPResult BracedCastResult,
           NextToken().is(tok::annot_template_id)) {
         TemplateIdAnnotation *TemplateId =
             takeTemplateIdAnnotation(NextToken());
-        if (TemplateId->hasInvalidName())
+        if (TemplateId->hasInvalidName()) {
+          if (InvalidAsDeclSpec) {
+            *InvalidAsDeclSpec = NextToken().is(tok::l_paren);
+            return TPResult::Ambiguous;
+          }
           return TPResult::Error;
+        }
         if (IsPlaceholderSpecifier(TemplateId, /*Lookahead=*/1))
           return TPResult::True;
       }
