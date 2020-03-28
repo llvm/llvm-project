@@ -3596,27 +3596,27 @@ bool InstCombiner::run() {
   return MadeIRChange;
 }
 
-/// Walk the function in depth-first order, adding all reachable code to the
-/// worklist.
+/// Populate the IC worklist from a function, by walking it in depth-first
+/// order and adding all reachable code to the worklist.
 ///
 /// This has a couple of tricks to make the code faster and more powerful.  In
 /// particular, we constant fold and DCE instructions as we go, to avoid adding
 /// them to the worklist (this significantly speeds up instcombine on code where
 /// many instructions are dead or constant).  Additionally, if we find a branch
 /// whose condition is a known constant, we only visit the reachable successors.
-static bool AddReachableCodeToWorklist(BasicBlock *BB, const DataLayout &DL,
-                                       SmallPtrSetImpl<BasicBlock *> &Visited,
-                                       InstCombineWorklist &ICWorklist,
-                                       const TargetLibraryInfo *TLI) {
+static bool prepareICWorklistFromFunction(Function &F, const DataLayout &DL,
+                                          const TargetLibraryInfo *TLI,
+                                          InstCombineWorklist &ICWorklist) {
   bool MadeIRChange = false;
+  SmallPtrSet<BasicBlock *, 32> Visited;
   SmallVector<BasicBlock*, 256> Worklist;
-  Worklist.push_back(BB);
+  Worklist.push_back(&F.front());
 
   SmallVector<Instruction*, 128> InstrsForInstCombineWorklist;
   DenseMap<Constant *, Constant *> FoldedConstants;
 
   do {
-    BB = Worklist.pop_back_val();
+    BasicBlock *BB = Worklist.pop_back_val();
 
     // We have now visited this block!  If we've already been here, ignore it.
     if (!Visited.insert(BB).second)
@@ -3705,26 +3705,6 @@ static bool AddReachableCodeToWorklist(BasicBlock *BB, const DataLayout &DL,
 
     ICWorklist.push(Inst);
   }
-
-  return MadeIRChange;
-}
-
-/// Populate the IC worklist from a function, and prune any dead basic
-/// blocks discovered in the process.
-///
-/// This also does basic constant propagation and other forward fixing to make
-/// the combiner itself run much faster.
-static bool prepareICWorklistFromFunction(Function &F, const DataLayout &DL,
-                                          TargetLibraryInfo *TLI,
-                                          InstCombineWorklist &ICWorklist) {
-  bool MadeIRChange = false;
-
-  // Do a depth-first traversal of the function, populate the worklist with
-  // the reachable instructions.  Ignore blocks that are not reachable.  Keep
-  // track of which blocks we visit.
-  SmallPtrSet<BasicBlock *, 32> Visited;
-  MadeIRChange |=
-      AddReachableCodeToWorklist(&F.front(), DL, Visited, ICWorklist, TLI);
 
   // Do a quick scan over the function.  If we find any blocks that are
   // unreachable, remove any instructions inside of them.  This prevents
