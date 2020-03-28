@@ -63,12 +63,12 @@ struct ParsedAttrInfo {
   /// The syntaxes supported by this attribute and how they're spelled.
   struct Spelling {
     AttributeCommonInfo::Syntax Syntax;
-    std::string NormalizedFullName;
+    const char *NormalizedFullName;
   };
-  std::vector<Spelling> Spellings;
+  ArrayRef<Spelling> Spellings;
 
-  ParsedAttrInfo(AttributeCommonInfo::Kind AttrKind =
-                     AttributeCommonInfo::NoSemaHandlerAttribute)
+  constexpr ParsedAttrInfo(AttributeCommonInfo::Kind AttrKind =
+                               AttributeCommonInfo::NoSemaHandlerAttribute)
       : AttrKind(AttrKind), NumArgs(0), OptArgs(0), HasCustomParsing(0),
         IsTargetSpecific(0), IsType(0), IsStmt(0), IsKnownToGCC(0),
         IsSupportedByPragmaAttribute(0) {}

@@ -3719,8 +3719,27 @@ void EmitClangAttrParsedAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
     // ParsedAttr.cpp.
     const std::string &AttrName = I->first;
     const Record &Attr = *I->second;
-    OS << "struct ParsedAttrInfo" << I->first << " : public ParsedAttrInfo {\n";
-    OS << "  ParsedAttrInfo" << I->first << "() {\n";
+    auto Spellings = GetFlattenedSpellings(Attr);
+    if (!Spellings.empty()) {
+      OS << "static constexpr ParsedAttrInfo::Spelling " << I->first
+         << "Spellings[] = {\n";
+      for (const auto &S : Spellings) {
+        const std::string &RawSpelling = S.name();
+        std::string Spelling;
+        if (!S.nameSpace().empty())
+          Spelling += S.nameSpace() + "::";
+        if (S.variety() == "GNU")
+          Spelling += NormalizeGNUAttrSpelling(RawSpelling);
+        else
+          Spelling += RawSpelling;
+        OS << "  {AttributeCommonInfo::AS_" << S.variety();
+        OS << ", \"" << Spelling << "\"},\n";
+      }
+      OS << "};\n";
+    }
+    OS << "struct ParsedAttrInfo" << I->first
+       << " final : public ParsedAttrInfo {\n";
+    OS << "  constexpr ParsedAttrInfo" << I->first << "() {\n";
     OS << "    AttrKind = ParsedAttr::AT_" << AttrName << ";\n";
     emitArgInfo(Attr, OS);
     OS << "    HasCustomParsing = ";
@@ -3736,18 +3755,8 @@ void EmitClangAttrParsedAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
     OS << IsKnownToGCC(Attr) << ";\n";
     OS << "    IsSupportedByPragmaAttribute = ";
     OS << PragmaAttributeSupport.isAttributedSupported(*I->second) << ";\n";
-    for (const auto &S : GetFlattenedSpellings(Attr)) {
-      const std::string &RawSpelling = S.name();
-      std::string Spelling;
-      if (!S.nameSpace().empty())
-        Spelling += S.nameSpace() + "::";
-      if (S.variety() == "GNU")
-        Spelling += NormalizeGNUAttrSpelling(RawSpelling);
-      else
-        Spelling += RawSpelling;
-      OS << "    Spellings.push_back({AttributeCommonInfo::AS_" << S.variety();
-      OS << ",\"" << Spelling << "\"});\n";
-    }
+    if (!Spellings.empty())
+      OS << "    Spellings = " << I->first << "Spellings;\n";
     OS << "  }\n";
     GenerateAppertainsTo(Attr, OS);
     GenerateLangOptRequirements(Attr, OS);
