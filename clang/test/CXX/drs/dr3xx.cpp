@@ -20,7 +20,7 @@ namespace dr301 { // dr301: yes
              (void(*)(S, S))operator+<S>;
     bool b = (void(*)(S, S))operator- <
              (void(*)(S, S))operator-;
-    bool c = (void(*)(S, S))operator+ <
+    bool c = (void(*)(S, S))operator+ < // expected-note {{to match this '<'}}
              (void(*)(S, S))operator-; // expected-error {{expected '>'}}
   }
 
