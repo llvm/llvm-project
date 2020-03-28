@@ -142,8 +142,7 @@ namespace PR9449 {
 
   template <typename T>
   void f() {
-    int s<T>::template n<T>::* f; // expected-error{{implicit instantiation of undefined template 'PR9449::s<int>'}} \
-    // expected-error{{no member named 'n'}}
+    int s<T>::template n<T>::* f; // expected-error{{implicit instantiation of undefined template 'PR9449::s<int>'}}
   }
 
   template void f<int>(); // expected-note{{in instantiation of}}
