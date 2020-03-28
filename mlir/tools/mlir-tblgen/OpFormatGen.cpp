@@ -1234,12 +1234,12 @@ private:
     Optional<StringRef> transformer;
   };
 
-  /// Given the values of an `AllTypesMatch` trait, check for inferrable type
+  /// Given the values of an `AllTypesMatch` trait, check for inferable type
   /// resolution.
   void handleAllTypesMatchConstraint(
       ArrayRef<StringRef> values,
       llvm::StringMap<TypeResolutionInstance> &variableTyResolver);
-  /// Check for inferrable type resolution given all operands, and or results,
+  /// Check for inferable type resolution given all operands, and or results,
   /// have the same type. If 'includeResults' is true, the results also have the
   /// same type as all of the operands.
   void handleSameTypesConstraint(

@@ -301,8 +301,8 @@ ParallelLowering::matchAndRewrite(ParallelOp parallelOp,
       // A loop is constructed with an empty "yield" terminator by default.
       // Replace it with another "yield" that forwards the results of the nested
       // loop to the parent loop. We need to explicitly make sure the new
-      // terminator is the last operation in the block because further transfoms
-      // rely on this.
+      // terminator is the last operation in the block because further
+      // transforms rely on this.
       rewriter.setInsertionPointToEnd(rewriter.getInsertionBlock());
       rewriter.replaceOpWithNewOp<YieldOp>(
           rewriter.getInsertionBlock()->getTerminator(), forOp.getResults());

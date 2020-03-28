@@ -138,7 +138,7 @@ LogicalResult VulkanRuntime::destroy() {
   // For each descriptor set.
   for (auto &deviceMemoryBufferMapPair : deviceMemoryBufferMap) {
     auto &deviceMemoryBuffers = deviceMemoryBufferMapPair.second;
-    // For each descirptor binding.
+    // For each descriptor binding.
     for (auto &memoryBuffer : deviceMemoryBuffers) {
       vkFreeMemory(device, memoryBuffer.deviceMemory, nullptr);
       vkDestroyBuffer(device, memoryBuffer.buffer, nullptr);
@@ -254,14 +254,14 @@ LogicalResult VulkanRuntime::createDevice() {
   if (failed(getBestComputeQueue()))
     return failure();
 
-  const float queuePrioritory = 1.0f;
+  const float queuePriority = 1.0f;
   VkDeviceQueueCreateInfo deviceQueueCreateInfo = {};
   deviceQueueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
   deviceQueueCreateInfo.pNext = nullptr;
   deviceQueueCreateInfo.flags = 0;
   deviceQueueCreateInfo.queueFamilyIndex = queueFamilyIndex;
   deviceQueueCreateInfo.queueCount = 1;
-  deviceQueueCreateInfo.pQueuePriorities = &queuePrioritory;
+  deviceQueueCreateInfo.pQueuePriorities = &queuePriority;
 
   // Structure specifying parameters of a newly created device.
   VkDeviceCreateInfo deviceCreateInfo = {};
@@ -599,7 +599,7 @@ LogicalResult VulkanRuntime::createDescriptorPool() {
 
 LogicalResult VulkanRuntime::allocateDescriptorSets() {
   VkDescriptorSetAllocateInfo descriptorSetAllocateInfo = {};
-  // Size of desciptor sets and descriptor layout sets is the same.
+  // Size of descriptor sets and descriptor layout sets is the same.
   descriptorSets.resize(descriptorSetLayouts.size());
   descriptorSetAllocateInfo.sType =
       VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -631,7 +631,7 @@ LogicalResult VulkanRuntime::setWriteDescriptors() {
       VkWriteDescriptorSet wSet = {};
       wSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
       wSet.pNext = nullptr;
-      // Descirptor set.
+      // Descriptor set.
       wSet.dstSet = *descriptorSetIt;
       wSet.dstBinding = memoryBuffer.bindingIndex;
       wSet.dstArrayElement = 0;
