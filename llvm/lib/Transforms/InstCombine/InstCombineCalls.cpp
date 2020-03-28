@@ -4441,7 +4441,8 @@ static void annotateAnyAllocSite(CallBase &Call, const TargetLibraryInfo *TLI) {
   ConstantInt *Op0C = dyn_cast<ConstantInt>(Call.getOperand(0));
   ConstantInt *Op1C =
       (NumArgs == 1) ? nullptr : dyn_cast<ConstantInt>(Call.getOperand(1));
-  // Bail out if the allocation size is zero.
+  // Bail out if the allocation size is zero (or an invalid alignment of zero
+  // with aligned_alloc).
   if ((Op0C && Op0C->isNullValue()) || (Op1C && Op1C->isNullValue()))
     return;
 
@@ -4454,6 +4455,18 @@ static void annotateAnyAllocSite(CallBase &Call, const TargetLibraryInfo *TLI) {
       Call.addAttribute(AttributeList::ReturnIndex,
                         Attribute::getWithDereferenceableOrNullBytes(
                             Call.getContext(), Op0C->getZExtValue()));
+  } else if (isAlignedAllocLikeFn(&Call, TLI) && Op1C) {
+    Call.addAttribute(AttributeList::ReturnIndex,
+                      Attribute::getWithDereferenceableOrNullBytes(
+                          Call.getContext(), Op1C->getZExtValue()));
+    // Add alignment attribute if alignment is a power of two constant.
+    if (Op0C) {
+      uint64_t AlignmentVal = Op0C->getZExtValue();
+      if (llvm::isPowerOf2_64(AlignmentVal))
+        Call.addAttribute(AttributeList::ReturnIndex,
+                          Attribute::getWithAlignment(Call.getContext(),
+                                                      Align(AlignmentVal)));
+    }
   } else if (isReallocLikeFn(&Call, TLI) && Op1C) {
     Call.addAttribute(AttributeList::ReturnIndex,
                       Attribute::getWithDereferenceableOrNullBytes(
