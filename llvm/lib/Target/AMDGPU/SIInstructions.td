@@ -779,14 +779,14 @@ def : RsqPat<V_RSQ_F64_e32, f64>;
 def : GCNPat <
   (f32 (fsub (f32 (VOP3Mods f32:$x, i32:$mods)),
              (f32 (ffloor (f32 (VOP3Mods f32:$x, i32:$mods)))))),
-  (V_FRACT_F32_e64 $mods, $x, DSTCLAMP.NONE, DSTOMOD.NONE)
+  (V_FRACT_F32_e64 $mods, $x)
 >;
 
 // Convert (x + (-floor(x))) to fract(x)
 def : GCNPat <
   (f64 (fadd (f64 (VOP3Mods f64:$x, i32:$mods)),
              (f64 (fneg (f64 (ffloor (f64 (VOP3Mods f64:$x, i32:$mods)))))))),
-  (V_FRACT_F64_e64 $mods, $x, DSTCLAMP.NONE, DSTOMOD.NONE)
+  (V_FRACT_F64_e64 $mods, $x)
 >;
 
 } // End OtherPredicates = [UnsafeFPMath]
@@ -795,27 +795,27 @@ def : GCNPat <
 // f16_to_fp patterns
 def : GCNPat <
   (f32 (f16_to_fp i32:$src0)),
-  (V_CVT_F32_F16_e64 SRCMODS.NONE, $src0, DSTCLAMP.NONE, DSTOMOD.NONE)
+  (V_CVT_F32_F16_e64 SRCMODS.NONE, $src0)
 >;
 
 def : GCNPat <
   (f32 (f16_to_fp (and_oneuse i32:$src0, 0x7fff))),
-  (V_CVT_F32_F16_e64 SRCMODS.ABS, $src0, DSTCLAMP.NONE, DSTOMOD.NONE)
+  (V_CVT_F32_F16_e64 SRCMODS.ABS, $src0)
 >;
 
 def : GCNPat <
   (f32 (f16_to_fp (i32 (srl_oneuse (and_oneuse i32:$src0, 0x7fff0000), (i32 16))))),
-  (V_CVT_F32_F16_e64 SRCMODS.ABS, (i32 (V_LSHRREV_B32_e64 (i32 16), i32:$src0)), DSTCLAMP.NONE, DSTOMOD.NONE)
+  (V_CVT_F32_F16_e64 SRCMODS.ABS, (i32 (V_LSHRREV_B32_e64 (i32 16), i32:$src0)))
 >;
 
 def : GCNPat <
   (f32 (f16_to_fp (or_oneuse i32:$src0, 0x8000))),
-  (V_CVT_F32_F16_e64 SRCMODS.NEG_ABS, $src0, DSTCLAMP.NONE, DSTOMOD.NONE)
+  (V_CVT_F32_F16_e64 SRCMODS.NEG_ABS, $src0)
 >;
 
 def : GCNPat <
   (f32 (f16_to_fp (xor_oneuse i32:$src0, 0x8000))),
-  (V_CVT_F32_F16_e64 SRCMODS.NEG, $src0, DSTCLAMP.NONE, DSTOMOD.NONE)
+  (V_CVT_F32_F16_e64 SRCMODS.NEG, $src0)
 >;
 
 def : GCNPat <
@@ -826,7 +826,7 @@ def : GCNPat <
 // fp_to_fp16 patterns
 def : GCNPat <
   (i32 (AMDGPUfp_to_f16 (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)))),
-  (V_CVT_F16_F32_e64 $src0_modifiers, f32:$src0, DSTCLAMP.NONE, DSTOMOD.NONE)
+  (V_CVT_F16_F32_e64 $src0_modifiers, f32:$src0)
 >;
 
 def : GCNPat <
@@ -1870,12 +1870,12 @@ def : GCNPat <
 let OtherPredicates = [NoFP16Denormals] in {
 def : GCNPat<
   (fcanonicalize (f16 (VOP3Mods f16:$src, i32:$src_mods))),
-  (V_MUL_F16_e64 0, (i32 CONST.FP16_ONE), $src_mods, $src, 0, 0)
+  (V_MUL_F16_e64 0, (i32 CONST.FP16_ONE), $src_mods, $src)
 >;
 
 def : GCNPat<
   (fcanonicalize (f16 (fneg (VOP3Mods f16:$src, i32:$src_mods)))),
-  (V_MUL_F16_e64 0, (i32 CONST.FP16_NEG_ONE), $src_mods, $src, 0, 0)
+  (V_MUL_F16_e64 0, (i32 CONST.FP16_NEG_ONE), $src_mods, $src)
 >;
 
 def : GCNPat<
@@ -1901,53 +1901,53 @@ def : GCNPat<
 let OtherPredicates = [NoFP32Denormals] in {
 def : GCNPat<
   (fcanonicalize (f32 (VOP3Mods f32:$src, i32:$src_mods))),
-  (V_MUL_F32_e64 0, (i32 CONST.FP32_ONE), $src_mods, $src, 0, 0)
+  (V_MUL_F32_e64 0, (i32 CONST.FP32_ONE), $src_mods, $src)
 >;
 
 def : GCNPat<
   (fcanonicalize (f32 (fneg (VOP3Mods f32:$src, i32:$src_mods)))),
-  (V_MUL_F32_e64 0, (i32 CONST.FP32_NEG_ONE), $src_mods, $src, 0, 0)
+  (V_MUL_F32_e64 0, (i32 CONST.FP32_NEG_ONE), $src_mods, $src)
 >;
 }
 
 let OtherPredicates = [FP32Denormals] in {
 def : GCNPat<
   (fcanonicalize (f32 (VOP3Mods f32:$src, i32:$src_mods))),
-  (V_MAX_F32_e64 $src_mods, $src, $src_mods, $src, 0, 0)
+  (V_MAX_F32_e64 $src_mods, $src, $src_mods, $src)
 >;
 }
 
 let OtherPredicates = [NoFP64Denormals] in {
 def : GCNPat<
   (fcanonicalize (f64 (VOP3Mods f64:$src, i32:$src_mods))),
-  (V_MUL_F64 0, CONST.FP64_ONE, $src_mods, $src, 0, 0)
+  (V_MUL_F64 0, CONST.FP64_ONE, $src_mods, $src)
 >;
 }
 
 let OtherPredicates = [FP64Denormals] in {
 def : GCNPat<
   (fcanonicalize (f64 (VOP3Mods f64:$src, i32:$src_mods))),
-  (V_MAX_F64 $src_mods, $src, $src_mods, $src, 0, 0)
+  (V_MAX_F64 $src_mods, $src, $src_mods, $src)
 >;
 }
 
 let OtherPredicates = [HasDLInsts] in {
 def : GCNPat <
-  (fma (f32 (VOP3Mods0 f32:$src0, i32:$src0_modifiers, i1:$clamp, i32:$omod)),
+  (fma (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)),
        (f32 (VOP3Mods f32:$src1, i32:$src1_modifiers)),
        (f32 (VOP3NoMods f32:$src2))),
   (V_FMAC_F32_e64 $src0_modifiers, $src0, $src1_modifiers, $src1,
-                  SRCMODS.NONE, $src2, $clamp, $omod)
+                  SRCMODS.NONE, $src2)
 >;
 } // End OtherPredicates = [HasDLInsts]
 
 let SubtargetPredicate = isGFX10Plus in
 def : GCNPat <
-  (fma (f16 (VOP3Mods0 f32:$src0, i32:$src0_modifiers, i1:$clamp, i32:$omod)),
+  (fma (f16 (VOP3Mods f32:$src0, i32:$src0_modifiers)),
        (f16 (VOP3Mods f32:$src1, i32:$src1_modifiers)),
        (f16 (VOP3NoMods f32:$src2))),
   (V_FMAC_F16_e64 $src0_modifiers, $src0, $src1_modifiers, $src1,
-                  SRCMODS.NONE, $src2, $clamp, $omod)
+                  SRCMODS.NONE, $src2)
 >;
 
 // COPY is workaround tablegen bug from multiple outputs
@@ -2075,13 +2075,11 @@ def : GCNPat <
       (V_CNDMASK_B64_PSEUDO
          (V_MIN_F64
              SRCMODS.NONE,
-             (V_FRACT_F64_e64 $mods, $x, DSTCLAMP.NONE, DSTOMOD.NONE),
+             (V_FRACT_F64_e64 $mods, $x),
              SRCMODS.NONE,
-             (V_MOV_B64_PSEUDO 0x3fefffffffffffff),
-             DSTCLAMP.NONE, DSTOMOD.NONE),
+             (V_MOV_B64_PSEUDO 0x3fefffffffffffff)),
          $x,
-         (V_CMP_CLASS_F64_e64 SRCMODS.NONE, $x, (i32 3 /*NaN*/))),
-      DSTCLAMP.NONE, DSTOMOD.NONE)
+         (V_CMP_CLASS_F64_e64 SRCMODS.NONE, $x, (i32 3 /*NaN*/))))
 >;
 
 } // End SubtargetPredicates = isGFX6
