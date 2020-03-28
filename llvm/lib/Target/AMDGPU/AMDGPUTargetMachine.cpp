@@ -192,6 +192,11 @@ static cl::opt<bool> EnableScalarIRPasses(
   cl::init(true),
   cl::Hidden);
 
+static cl::opt<bool> EnableStructurizerWorkarounds(
+    "amdgpu-enable-structurizer-workarounds",
+    cl::desc("Enable workarounds for the StructurizeCFG pass"), cl::init(false),
+    cl::Hidden);
+
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   // Register the target
   RegisterTargetMachine<R600TargetMachine> X(getTheAMDGPUTarget());
@@ -858,6 +863,9 @@ bool GCNPassConfig::addPreISel() {
   // regions formed by them.
   addPass(&AMDGPUUnifyDivergentExitNodesID);
   if (!LateCFGStructurize) {
+    if (EnableStructurizerWorkarounds) {
+      addPass(createUnifyLoopExitsPass());
+    }
     addPass(createStructurizeCFGPass(true)); // true -> SkipUniformRegions
   }
   addPass(createSinkingPass());

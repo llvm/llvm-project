@@ -229,7 +229,8 @@ namespace {
       (void) llvm::createScalarizeMaskedMemIntrinPass();
       (void) llvm::createWarnMissedTransformationsPass();
       (void) llvm::createHardwareLoopsPass();
-      (void)llvm::createInjectTLIMappingsLegacyPass();
+      (void) llvm::createInjectTLIMappingsLegacyPass();
+      (void) llvm::createUnifyLoopExitsPass();
 
       (void)new llvm::IntervalPartition();
       (void)new llvm::ScalarEvolutionWrapperPass();

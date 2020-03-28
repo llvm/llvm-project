@@ -44,6 +44,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/SSAUpdater.h"
 #include <algorithm>
 #include <cassert>
@@ -217,8 +218,6 @@ class StructurizeCFG : public RegionPass {
   unsigned getAdjustedLoopDepth(RegionNode *RN);
 
   void analyzeLoops(RegionNode *N);
-
-  Value *invert(Value *Condition);
 
   Value *buildCondition(BranchInst *Term, unsigned Idx, bool Invert);
 
@@ -405,39 +404,6 @@ void StructurizeCFG::analyzeLoops(RegionNode *N) {
   }
 }
 
-/// Invert the given condition
-Value *StructurizeCFG::invert(Value *Condition) {
-  // First: Check if it's a constant
-  if (Constant *C = dyn_cast<Constant>(Condition))
-    return ConstantExpr::getNot(C);
-
-  // Second: If the condition is already inverted, return the original value
-  Value *NotCondition;
-  if (match(Condition, m_Not(m_Value(NotCondition))))
-    return NotCondition;
-
-  if (Instruction *Inst = dyn_cast<Instruction>(Condition)) {
-    // Third: Check all the users for an invert
-    BasicBlock *Parent = Inst->getParent();
-    for (User *U : Condition->users())
-      if (Instruction *I = dyn_cast<Instruction>(U))
-        if (I->getParent() == Parent && match(I, m_Not(m_Specific(Condition))))
-          return I;
-
-    // Last option: Create a new instruction
-    return BinaryOperator::CreateNot(Condition, "", Parent->getTerminator());
-  }
-
-  if (Argument *Arg = dyn_cast<Argument>(Condition)) {
-    BasicBlock &EntryBlock = Arg->getParent()->getEntryBlock();
-    return BinaryOperator::CreateNot(Condition,
-                                     Arg->getName() + ".inv",
-                                     EntryBlock.getTerminator());
-  }
-
-  llvm_unreachable("Unhandled condition to invert");
-}
-
 /// Build the condition for one edge
 Value *StructurizeCFG::buildCondition(BranchInst *Term, unsigned Idx,
                                       bool Invert) {
@@ -446,7 +412,7 @@ Value *StructurizeCFG::buildCondition(BranchInst *Term, unsigned Idx,
     Cond = Term->getCondition();
 
     if (Idx != (unsigned)Invert)
-      Cond = invert(Cond);
+      Cond = invertCondition(Cond);
   }
   return Cond;
 }

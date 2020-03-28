@@ -415,6 +415,7 @@ void initializeTwoAddressInstructionPassPass(PassRegistry&);
 void initializeTypeBasedAAWrapperPassPass(PassRegistry&);
 void initializeTypePromotionPass(PassRegistry&);
 void initializeUnifyFunctionExitNodesPass(PassRegistry&);
+void initializeUnifyLoopExitsPass(PassRegistry &);
 void initializeUnpackMachineBundlesPass(PassRegistry&);
 void initializeUnreachableBlockElimLegacyPassPass(PassRegistry&);
 void initializeUnreachableMachineBlockElimPass(PassRegistry&);
