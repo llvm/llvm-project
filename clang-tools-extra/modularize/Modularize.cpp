@@ -509,7 +509,7 @@ public:
              HEnd = CurHeaderContents.end();
          H != HEnd; ++H) {
       // Sort contents.
-      std::sort(H->second.begin(), H->second.end());
+      llvm::sort(H->second);
 
       // Check whether we've seen this header before.
       DenseMap<const FileEntry *, HeaderContents>::iterator KnownH =

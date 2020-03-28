@@ -680,7 +680,7 @@ void ClangTidyDiagnosticConsumer::removeIncompatibleErrors() {
   for (auto &FileAndEvents : FileEvents) {
     std::vector<Event> &Events = FileAndEvents.second;
     // Sweep.
-    std::sort(Events.begin(), Events.end());
+    llvm::sort(Events);
     int OpenIntervals = 0;
     for (const auto &Event : Events) {
       if (Event.Type == Event::ET_End)
@@ -726,7 +726,7 @@ struct EqualClangTidyError {
 std::vector<ClangTidyError> ClangTidyDiagnosticConsumer::take() {
   finalizeLastError();
 
-  std::sort(Errors.begin(), Errors.end(), LessClangTidyError());
+  llvm::sort(Errors, LessClangTidyError());
   Errors.erase(std::unique(Errors.begin(), Errors.end(), EqualClangTidyError()),
                Errors.end());
   if (RemoveIncompatibleErrors)
