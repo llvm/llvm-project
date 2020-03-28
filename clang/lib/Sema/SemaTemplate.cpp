@@ -4623,21 +4623,28 @@ Sema::BuildQualifiedTemplateIdExpr(CXXScopeSpec &SS,
   return BuildTemplateIdExpr(SS, TemplateKWLoc, R, /*ADL*/ false, TemplateArgs);
 }
 
-/// Form a dependent template name.
+/// Form a template name from a name that is syntactically required to name a
+/// template, either due to use of the 'template' keyword or because a name in
+/// this syntactic context is assumed to name a template (C++ [temp.names]p2-4).
 ///
-/// This action forms a dependent template name given the template
-/// name and its (presumably dependent) scope specifier. For
-/// example, given "MetaFun::template apply", the scope specifier \p
-/// SS will be "MetaFun::", \p TemplateKWLoc contains the location
+/// This action forms a template name given the name of the template and its
+/// optional scope specifier. This is used when the 'template' keyword is used
+/// or when the parsing context unambiguously treats a following '<' as
+/// introducing a template argument list. Note that this may produce a
+/// non-dependent template name if we can perform the lookup now and identify
+/// the named template.
+///
+/// For example, given "x.MetaFun::template apply", the scope specifier
+/// \p SS will be "MetaFun::", \p TemplateKWLoc contains the location
 /// of the "template" keyword, and "apply" is the \p Name.
-TemplateNameKind Sema::ActOnDependentTemplateName(Scope *S,
-                                                  CXXScopeSpec &SS,
-                                                  SourceLocation TemplateKWLoc,
-                                                  const UnqualifiedId &Name,
-                                                  ParsedType ObjectType,
-                                                  bool EnteringContext,
-                                                  TemplateTy &Result,
-                                                  bool AllowInjectedClassName) {
+TemplateNameKind Sema::ActOnTemplateName(Scope *S,
+                                         CXXScopeSpec &SS,
+                                         SourceLocation TemplateKWLoc,
+                                         const UnqualifiedId &Name,
+                                         ParsedType ObjectType,
+                                         bool EnteringContext,
+                                         TemplateTy &Result,
+                                         bool AllowInjectedClassName) {
   if (TemplateKWLoc.isValid() && S && !S->getTemplateParamParent())
     Diag(TemplateKWLoc,
          getLangOpts().CPlusPlus11 ?

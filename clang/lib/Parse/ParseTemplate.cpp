@@ -1452,15 +1452,14 @@ ParsedTemplateArgument Parser::ParseTemplateTemplateArgument() {
 
       TryConsumeToken(tok::ellipsis, EllipsisLoc);
 
-      // If the next token signals the end of a template argument,
-      // then we have a dependent template name that could be a template
-      // template argument.
+      // If the next token signals the end of a template argument, then we have
+      // a (possibly-dependent) template name that could be a template template
+      // argument.
       TemplateTy Template;
       if (isEndOfTemplateArgument(Tok) &&
-          Actions.ActOnDependentTemplateName(
-              getCurScope(), SS, TemplateKWLoc, Name,
-              /*ObjectType=*/nullptr,
-              /*EnteringContext=*/false, Template))
+          Actions.ActOnTemplateName(getCurScope(), SS, TemplateKWLoc, Name,
+                                    /*ObjectType=*/nullptr,
+                                    /*EnteringContext=*/false, Template))
         Result = ParsedTemplateArgument(SS, Template, Name.StartLocation);
     }
   } else if (Tok.is(tok::identifier)) {
