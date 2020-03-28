@@ -1105,14 +1105,34 @@ inline void array_pod_sort(
         reinterpret_cast<int (*)(const void *, const void *)>(Compare));
 }
 
+namespace detail {
+template <typename T>
+// We can use qsort if the iterator type is a pointer and the underlying value
+// is trivially copyable.
+using sort_trivially_copyable = conjunction<
+    std::is_pointer<T>,
+    is_trivially_copyable<typename std::iterator_traits<T>::value_type>>;
+} // namespace detail
+
 // Provide wrappers to std::sort which shuffle the elements before sorting
 // to help uncover non-deterministic behavior (PR35135).
-template <typename IteratorTy>
+template <typename IteratorTy,
+          std::enable_if_t<!detail::sort_trivially_copyable<IteratorTy>::value,
+                           int> = 0>
 inline void sort(IteratorTy Start, IteratorTy End) {
 #ifdef EXPENSIVE_CHECKS
   detail::presortShuffle<IteratorTy>(Start, End);
 #endif
   std::sort(Start, End);
+}
+
+// Forward trivially copyable types to array_pod_sort. This avoids a large
+// amount of code bloat for a minor performance hit.
+template <typename IteratorTy,
+          std::enable_if_t<detail::sort_trivially_copyable<IteratorTy>::value,
+                           int> = 0>
+inline void sort(IteratorTy Start, IteratorTy End) {
+  array_pod_sort(Start, End);
 }
 
 template <typename Container> inline void sort(Container &&C) {
