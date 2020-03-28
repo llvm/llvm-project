@@ -2140,7 +2140,7 @@ DenseElementsAttr TensorLiteralParser::getHexAttr(llvm::SMLoc loc,
   if (parseElementAttrHexValues(p, hexStorage.getValue(), data))
     return nullptr;
 
-  // Check that the size of the hex data correpsonds to the size of the type, or
+  // Check that the size of the hex data corresponds to the size of the type, or
   // a splat of the type.
   // TODO: bf16 is currently stored as a double, this should be removed when
   // APFloat properly supports it.

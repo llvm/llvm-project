@@ -458,7 +458,7 @@ static Dialect &lookupDialectForSymbol(MLIRContext *ctx,
   return *it->second;
 }
 
-/// Returns the storage unqiuer used for constructing type storage instances.
+/// Returns the storage uniquer used for constructing type storage instances.
 /// This should not be used directly.
 StorageUniquer &MLIRContext::getTypeUniquer() { return getImpl().typeUniquer; }
 

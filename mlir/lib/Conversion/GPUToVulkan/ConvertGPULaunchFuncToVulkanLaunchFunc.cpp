@@ -48,7 +48,7 @@ private:
   LogicalResult createBinaryShader(ModuleOp module,
                                    std::vector<char> &binaryShader);
 
-  /// Converts the given `luanchOp` to vulkan launch call.
+  /// Converts the given `launchOp` to vulkan launch call.
   void convertGpuLaunchFunc(gpu::LaunchFuncOp launchOp);
 
   /// Checks where the given type is supported by Vulkan runtime.
