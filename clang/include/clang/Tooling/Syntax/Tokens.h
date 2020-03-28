@@ -176,6 +176,12 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Token &T);
 class TokenBuffer {
 public:
   TokenBuffer(const SourceManager &SourceMgr) : SourceMgr(&SourceMgr) {}
+
+  TokenBuffer(TokenBuffer &&) = default;
+  TokenBuffer(const TokenBuffer &) = delete;
+  TokenBuffer &operator=(TokenBuffer &&) = default;
+  TokenBuffer &operator=(const TokenBuffer &) = delete;
+
   /// All tokens produced by the preprocessor after all macro replacements,
   /// directives, etc. Source locations found in the clang AST will always
   /// point to one of these tokens.
