@@ -506,10 +506,12 @@ getVFSFromYAML(std::unique_ptr<llvm::MemoryBuffer> Buffer,
 
 struct YAMLVFSEntry {
   template <typename T1, typename T2>
-  YAMLVFSEntry(T1 &&VPath, T2 &&RPath)
-      : VPath(std::forward<T1>(VPath)), RPath(std::forward<T2>(RPath)) {}
+  YAMLVFSEntry(T1 &&VPath, T2 &&RPath, bool IsDirectory = false)
+      : VPath(std::forward<T1>(VPath)), RPath(std::forward<T2>(RPath)),
+        IsDirectory(IsDirectory) {}
   std::string VPath;
   std::string RPath;
+  bool IsDirectory = false;
 };
 
 class VFSFromYamlDirIterImpl;
@@ -771,10 +773,13 @@ class YAMLVFSWriter {
   Optional<bool> UseExternalNames;
   std::string OverlayDir;
 
+  void addEntry(StringRef VirtualPath, StringRef RealPath, bool IsDirectory);
+
 public:
   YAMLVFSWriter() = default;
 
   void addFileMapping(StringRef VirtualPath, StringRef RealPath);
+  void addDirectoryMapping(StringRef VirtualPath, StringRef RealPath);
 
   void setCaseSensitivity(bool CaseSensitive) {
     IsCaseSensitive = CaseSensitive;
