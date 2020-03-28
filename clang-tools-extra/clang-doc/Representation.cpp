@@ -187,7 +187,7 @@ void Info::mergeBase(Info &&Other) {
   // Unconditionally extend the description, since each decl may have a comment.
   std::move(Other.Description.begin(), Other.Description.end(),
             std::back_inserter(Description));
-  std::sort(Description.begin(), Description.end());
+  llvm::sort(Description);
   auto Last = std::unique(Description.begin(), Description.end());
   Description.erase(Last, Description.end());
 }
@@ -202,7 +202,7 @@ void SymbolInfo::merge(SymbolInfo &&Other) {
     DefLoc = std::move(Other.DefLoc);
   // Unconditionally extend the list of locations, since we want all of them.
   std::move(Other.Loc.begin(), Other.Loc.end(), std::back_inserter(Loc));
-  std::sort(Loc.begin(), Loc.end());
+  llvm::sort(Loc);
   auto Last = std::unique(Loc.begin(), Loc.end());
   Loc.erase(Last, Loc.end());
   mergeBase(std::move(Other));
@@ -314,7 +314,7 @@ bool Index::operator<(const Index &Other) const {
 }
 
 void Index::sort() {
-  std::sort(Children.begin(), Children.end());
+  llvm::sort(Children);
   for (auto &C : Children)
     C.sort();
 }
