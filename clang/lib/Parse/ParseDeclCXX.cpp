@@ -1147,9 +1147,7 @@ TypeResult Parser::ParseBaseTypeSpecifier(SourceLocation &BaseLoc,
   // Check whether we have a template-id that names a type.
   if (Tok.is(tok::annot_template_id)) {
     TemplateIdAnnotation *TemplateId = takeTemplateIdAnnotation(Tok);
-    if (TemplateId->Kind == TNK_Type_template ||
-        TemplateId->Kind == TNK_Dependent_template_name ||
-        TemplateId->Kind == TNK_Undeclared_template) {
+    if (TemplateId->mightBeType()) {
       AnnotateTemplateIdTokenAsType(SS, /*IsClassName*/true);
 
       assert(Tok.is(tok::annot_typename) && "template-id -> type failed");
@@ -1176,20 +1174,14 @@ TypeResult Parser::ParseBaseTypeSpecifier(SourceLocation &BaseLoc,
   if (Tok.is(tok::less)) {
     // It looks the user intended to write a template-id here, but the
     // template-name was wrong. Try to fix that.
-    TemplateNameKind TNK = TNK_Type_template;
+    // FIXME: Invoke ParseOptionalCXXScopeSpecifier in a "'template' is neither
+    // required nor permitted" mode, and do this there.
+    TemplateNameKind TNK = TNK_Non_template;
     TemplateTy Template;
     if (!Actions.DiagnoseUnknownTemplateName(*Id, IdLoc, getCurScope(),
                                              &SS, Template, TNK)) {
       Diag(IdLoc, diag::err_unknown_template_name)
         << Id;
-    }
-
-    if (!Template) {
-      TemplateArgList TemplateArgs;
-      SourceLocation LAngleLoc, RAngleLoc;
-      ParseTemplateIdAfterTemplateName(true, LAngleLoc, TemplateArgs,
-                                       RAngleLoc);
-      return true;
     }
 
     // Form the template name
@@ -1200,7 +1192,8 @@ TypeResult Parser::ParseBaseTypeSpecifier(SourceLocation &BaseLoc,
     if (AnnotateTemplateIdToken(Template, TNK, SS, SourceLocation(),
                                 TemplateName))
       return true;
-    if (TNK == TNK_Type_template || TNK == TNK_Dependent_template_name)
+    if (Tok.is(tok::annot_template_id) &&
+        takeTemplateIdAnnotation(Tok)->mightBeType())
       AnnotateTemplateIdTokenAsType(SS, /*IsClassName*/true);
 
     // If we didn't end up with a typename token, there's nothing more we
@@ -1630,9 +1623,9 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
     NameLoc = ConsumeAnnotationToken();
 
     if (TemplateId->Kind == TNK_Undeclared_template) {
-      // Try to resolve the template name to a type template.
-      Actions.ActOnUndeclaredTypeTemplateName(getCurScope(), TemplateId->Template,
-                                              TemplateId->Kind, NameLoc, Name);
+      // Try to resolve the template name to a type template. May update Kind.
+      Actions.ActOnUndeclaredTypeTemplateName(
+          getCurScope(), TemplateId->Template, TemplateId->Kind, NameLoc, Name);
       if (TemplateId->Kind == TNK_Undeclared_template) {
         RecoverFromUndeclaredTemplateName(
             Name, NameLoc,
@@ -1641,10 +1634,9 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
       }
     }
 
-    if (TemplateId && TemplateId->Kind != TNK_Type_template &&
-        TemplateId->Kind != TNK_Dependent_template_name) {
+    if (TemplateId && !TemplateId->mightBeType()) {
       // The template-name in the simple-template-id refers to
-      // something other than a class template. Give an appropriate
+      // something other than a type template. Give an appropriate
       // error message and skip to the ';'.
       SourceRange Range(NameLoc);
       if (SS.isNotEmpty())
@@ -1816,7 +1808,9 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
     // or explicit instantiation.
     ASTTemplateArgsPtr TemplateArgsPtr(TemplateId->getTemplateArgs(),
                                        TemplateId->NumArgs);
-    if (TemplateInfo.Kind == ParsedTemplateInfo::ExplicitInstantiation &&
+    if (TemplateId->isInvalid()) {
+      // Can't build the declaration.
+    } else if (TemplateInfo.Kind == ParsedTemplateInfo::ExplicitInstantiation &&
         TUK == Sema::TUK_Declaration) {
       // This is an explicit instantiation of a class template.
       ProhibitAttributes(attrs);
@@ -3533,9 +3527,7 @@ MemInitResult Parser::ParseMemInitializer(Decl *ConstructorDecl) {
     TemplateIdAnnotation *TemplateId = Tok.is(tok::annot_template_id)
                                            ? takeTemplateIdAnnotation(Tok)
                                            : nullptr;
-    if (TemplateId && (TemplateId->Kind == TNK_Type_template ||
-                       TemplateId->Kind == TNK_Dependent_template_name ||
-                       TemplateId->Kind == TNK_Undeclared_template)) {
+    if (TemplateId && TemplateId->mightBeType()) {
       AnnotateTemplateIdTokenAsType(SS, /*IsClassName*/true);
       assert(Tok.is(tok::annot_typename) && "template-id -> type failed");
       TemplateTypeTy = getTypeAnnotation(Tok);

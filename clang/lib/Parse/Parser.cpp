@@ -1878,6 +1878,8 @@ bool Parser::TryAnnotateTypeOrScopeToken() {
                                      Tok.getLocation());
     } else if (Tok.is(tok::annot_template_id)) {
       TemplateIdAnnotation *TemplateId = takeTemplateIdAnnotation(Tok);
+      if (TemplateId->isInvalid())
+        return true;
       if (TemplateId->Kind != TNK_Type_template &&
           TemplateId->Kind != TNK_Dependent_template_name &&
           TemplateId->Kind != TNK_Undeclared_template) {
