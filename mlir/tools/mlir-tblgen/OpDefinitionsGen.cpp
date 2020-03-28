@@ -702,6 +702,11 @@ void OpEmitter::genSeparateArgParamBuilder() {
       }
       return;
     case TypeParamKind::Collective:
+      body << "  "
+           << "assert(resultTypes.size() "
+           << (op.getNumVariadicResults() == 0 ? "==" : ">=") << " "
+           << (op.getNumResults() - op.getNumVariadicResults())
+           << "u && \"mismatched number of results\");\n";
       body << "  " << builderOpState << ".addTypes(resultTypes);\n";
       return;
     };
