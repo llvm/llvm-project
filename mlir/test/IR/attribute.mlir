@@ -34,7 +34,7 @@ func @int_attrs_pass() {
 // -----
 
 //===----------------------------------------------------------------------===//
-// Check that the maximum and minumum integer attribute values are
+// Check that the maximum and minimum integer attribute values are
 // representable and preserved during a round-trip.
 //===----------------------------------------------------------------------===//
 

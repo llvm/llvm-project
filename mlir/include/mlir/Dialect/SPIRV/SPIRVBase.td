@@ -3285,7 +3285,7 @@ def SPV_OpcodeAttr :
 class SPV_Op<string mnemonic, list<OpTrait> traits = []> :
     Op<SPIRV_Dialect, mnemonic, !listconcat(traits, [
          // TODO(antiagainst): We don't need all of the following traits for
-         // every op; only the suitabble ones should be added automatically
+         // every op; only the suitable ones should be added automatically
          // after ODS supports dialect-specific contents.
          DeclareOpInterfaceMethods<QueryMinVersionInterface>,
          DeclareOpInterfaceMethods<QueryMaxVersionInterface>,

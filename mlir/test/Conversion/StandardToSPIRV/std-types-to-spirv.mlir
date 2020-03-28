@@ -510,7 +510,7 @@ func @dynamic_dim_memref(%arg0: memref<8x?xi32>) { return }
 // Tensor types
 //===----------------------------------------------------------------------===//
 
-// Check that tensor element types are kept untouched with proper capabilites.
+// Check that tensor element types are kept untouched with proper capabilities.
 module attributes {
   spv.target_env = #spv.target_env<
     #spv.vce<v1.0, [Int8, Int16, Int64, Float16, Float64], []>,

@@ -328,7 +328,7 @@ def ConvOp : LinalgStructured_Op<"conv", [NInputs<2>, NOutputs<1>]> {
     //   F(z0, ..., zN-1, q, k) *
     //     I(b, x0 + z0 - pad_low_0, ..., xN-1 + zN-1 - pad_low_N-1, q)
     //   ->  O(b, x0, ..., xN-1, k)
-    // for N equal to `nWindow`. If there is no padding attirbute, it will be
+    // for N equal to `nWindow`. If there is no padding attribute, it will be
     // ignored.
     llvm::Optional<SmallVector<AffineMap, 8>> referenceIndexingMaps() {
       MLIRContext *context = getContext();

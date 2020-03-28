@@ -93,8 +93,8 @@ DiagnosticEngine engine = ctx->getDiagEngine();
 // or failure if the diagnostic should be propagated to the previous handlers.
 DiagnosticEngine::HandlerID id = engine.registerHandler(
     [](Diagnostic &diag) -> LogicalResult {
-  bool should_propage_diagnostic = ...;
-  return failure(should_propage_diagnostic);
+  bool should_propagate_diagnostic = ...;
+  return failure(should_propagate_diagnostic);
 });
 
 
