@@ -75,4 +75,20 @@ Optional<StringRef> ExceptionBehaviorToStr(fp::ExceptionBehavior UseExcept) {
   return ExceptStr;
 }
 
+Optional<APFloatBase::roundingMode>
+getAPFloatRoundingMode(fp::RoundingMode RM) {
+  switch (RM) {
+  case fp::rmDynamic:
+    return None;
+  case fp::rmToNearest:
+    return APFloat::rmNearestTiesToEven;
+  case fp::rmDownward:
+    return APFloat::rmTowardNegative;
+  case fp::rmUpward:
+    return APFloat::rmTowardPositive;
+  case fp::rmTowardZero:
+    return APFloat::rmTowardZero;
+  }
+  llvm_unreachable("Unexpected rounding mode");
+}
 }

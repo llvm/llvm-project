@@ -15,6 +15,7 @@
 #ifndef LLVM_IR_FLOATINGPOINT_H
 #define LLVM_IR_FLOATINGPOINT_H
 
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include <stdint.h>
@@ -66,5 +67,8 @@ Optional<fp::ExceptionBehavior> StrToExceptionBehavior(StringRef);
 /// input in constrained intrinsic exception behavior metadata.
 Optional<StringRef> ExceptionBehaviorToStr(fp::ExceptionBehavior);
 
+/// Converts rounding mode represented by fp::RoundingMode to the rounding mode
+/// index used by APFloat. For fp::rmDynamic it returns None.
+Optional<APFloatBase::roundingMode> getAPFloatRoundingMode(fp::RoundingMode);
 }
 #endif
