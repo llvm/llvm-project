@@ -1385,6 +1385,8 @@ void PDBLinker::printStats() {
       TypeIndex typeIndex;
       uint64_t totalInputSize() const { return uint64_t(dupCount) * typeSize; }
       bool operator<(const TypeSizeInfo &rhs) const {
+        if (totalInputSize() == rhs.totalInputSize())
+          return typeIndex < rhs.typeIndex;
         return totalInputSize() < rhs.totalInputSize();
       }
     };
