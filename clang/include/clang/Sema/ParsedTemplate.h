@@ -186,7 +186,7 @@ namespace clang {
     unsigned NumArgs;
 
     /// Whether an error was encountered in the template arguments.
-    /// If so, NumArgs and the trailing argumentst are best-effort.
+    /// If so, NumArgs and the trailing arguments are best-effort.
     bool ArgsInvalid;
 
     /// Retrieves a pointer to the template arguments

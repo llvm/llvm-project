@@ -1031,7 +1031,8 @@ void Parser::DiagnoseMisplacedEllipsisInDeclarator(SourceLocation EllipsisLoc,
 /// or argument list.
 ///
 /// \returns true, if current token does not start with '>', false otherwise.
-bool Parser::ParseGreaterThanInTemplateList(SourceLocation &RAngleLoc,
+bool Parser::ParseGreaterThanInTemplateList(SourceLocation LAngleLoc,
+                                            SourceLocation &RAngleLoc,
                                             bool ConsumeLastToken,
                                             bool ObjCGenericList) {
   // What will be left once we've consumed the '>'.
@@ -1041,7 +1042,8 @@ bool Parser::ParseGreaterThanInTemplateList(SourceLocation &RAngleLoc,
 
   switch (Tok.getKind()) {
   default:
-    Diag(Tok.getLocation(), diag::err_expected) << tok::greater;
+    Diag(getEndOfPreviousToken(), diag::err_expected) << tok::greater;
+    Diag(LAngleLoc, diag::note_matching) << tok::less;
     return true;
 
   case tok::greater:
@@ -1220,15 +1222,15 @@ Parser::ParseTemplateIdAfterTemplateName(bool ConsumeLastToken,
 
     if (Invalid) {
       // Try to find the closing '>'.
-      // FIXME: Handle `>>`, `>>>`.
-      if (ConsumeLastToken)
-        SkipUntil(tok::greater, StopAtSemi);
+      if (getLangOpts().CPlusPlus11)
+        SkipUntil(tok::greater, tok::greatergreater,
+                  tok::greatergreatergreater, StopAtSemi | StopBeforeMatch);
       else
         SkipUntil(tok::greater, StopAtSemi | StopBeforeMatch);
     }
   }
 
-  return ParseGreaterThanInTemplateList(RAngleLoc, ConsumeLastToken,
+  return ParseGreaterThanInTemplateList(LAngleLoc, RAngleLoc, ConsumeLastToken,
                                         /*ObjCGenericList=*/false) ||
          Invalid;
 }
@@ -1409,7 +1411,8 @@ void Parser::AnnotateTemplateIdTokenAsType(CXXScopeSpec &SS,
 /// Determine whether the given token can end a template argument.
 static bool isEndOfTemplateArgument(Token Tok) {
   // FIXME: Handle '>>>'.
-  return Tok.isOneOf(tok::comma, tok::greater, tok::greatergreater);
+  return Tok.isOneOf(tok::comma, tok::greater, tok::greatergreater,
+                     tok::greatergreatergreater);
 }
 
 /// Parse a C++ template template argument.
@@ -1742,7 +1745,7 @@ bool Parser::diagnoseUnknownTemplateId(ExprResult LHS, SourceLocation Less) {
     TPA.Commit();
 
     SourceLocation Greater;
-    ParseGreaterThanInTemplateList(Greater, true, false);
+    ParseGreaterThanInTemplateList(Less, Greater, true, false);
     Actions.diagnoseExprIntendedAsTemplateName(getCurScope(), LHS,
                                                Less, Greater);
     return true;
@@ -1771,7 +1774,7 @@ void Parser::checkPotentialAngleBracket(ExprResult &PotentialTemplateName) {
        NextToken().isOneOf(tok::greatergreater, tok::greatergreatergreater))) {
     SourceLocation Less = ConsumeToken();
     SourceLocation Greater;
-    ParseGreaterThanInTemplateList(Greater, true, false);
+    ParseGreaterThanInTemplateList(Less, Greater, true, false);
     Actions.diagnoseExprIntendedAsTemplateName(
         getCurScope(), PotentialTemplateName, Less, Greater);
     // FIXME: Perform error recovery.
