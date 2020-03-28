@@ -24,10 +24,9 @@ class FileCollectorFileSystem;
 class FileCollector {
 public:
   FileCollector(std::string Root, std::string OverlayRoot);
-  virtual ~FileCollector() = default;
 
-  virtual void addFile(const Twine &file);
-  virtual void addDirectory(const Twine &Dir);
+  void addFile(const Twine &file);
+  void addDirectory(const Twine &Dir);
 
   /// Write the yaml mapping (for the VFS) to the given file.
   std::error_code writeMapping(StringRef MappingFile);
