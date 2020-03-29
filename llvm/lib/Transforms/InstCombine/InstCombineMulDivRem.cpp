@@ -682,10 +682,8 @@ Instruction *InstCombiner::commonIDivTransforms(BinaryOperator &I) {
   Type *Ty = I.getType();
 
   // The RHS is known non-zero.
-  if (Value *V = simplifyValueKnownNonZero(I.getOperand(1), *this, I)) {
-    I.setOperand(1, V);
-    return &I;
-  }
+  if (Value *V = simplifyValueKnownNonZero(I.getOperand(1), *this, I))
+    return replaceOperand(I, 1, V);
 
   // Handle cases involving: [su]div X, (select Cond, Y, Z)
   // This does not apply for fdiv.
@@ -799,8 +797,8 @@ Instruction *InstCombiner::commonIDivTransforms(BinaryOperator &I) {
     bool HasNSW = cast<OverflowingBinaryOperator>(Op1)->hasNoSignedWrap();
     bool HasNUW = cast<OverflowingBinaryOperator>(Op1)->hasNoUnsignedWrap();
     if ((IsSigned && HasNSW) || (!IsSigned && HasNUW)) {
-      I.setOperand(0, ConstantInt::get(Ty, 1));
-      I.setOperand(1, Y);
+      replaceOperand(I, 0, ConstantInt::get(Ty, 1));
+      replaceOperand(I, 1, Y);
       return &I;
     }
   }
@@ -1276,8 +1274,8 @@ Instruction *InstCombiner::visitFDiv(BinaryOperator &I) {
   // -X / -Y -> X / Y
   Value *X, *Y;
   if (match(Op0, m_FNeg(m_Value(X))) && match(Op1, m_FNeg(m_Value(Y)))) {
-    I.setOperand(0, X);
-    I.setOperand(1, Y);
+    replaceOperand(I, 0, X);
+    replaceOperand(I, 1, Y);
     return &I;
   }
 
@@ -1286,8 +1284,8 @@ Instruction *InstCombiner::visitFDiv(BinaryOperator &I) {
   // We can ignore the possibility that X is infinity because INF/INF is NaN.
   if (I.hasNoNaNs() && I.hasAllowReassoc() &&
       match(Op1, m_c_FMul(m_Specific(Op0), m_Value(Y)))) {
-    I.setOperand(0, ConstantFP::get(I.getType(), 1.0));
-    I.setOperand(1, Y);
+    replaceOperand(I, 0, ConstantFP::get(I.getType(), 1.0));
+    replaceOperand(I, 1, Y);
     return &I;
   }
 
@@ -1313,10 +1311,8 @@ Instruction *InstCombiner::commonIRemTransforms(BinaryOperator &I) {
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
 
   // The RHS is known non-zero.
-  if (Value *V = simplifyValueKnownNonZero(I.getOperand(1), *this, I)) {
-    I.setOperand(1, V);
-    return &I;
-  }
+  if (Value *V = simplifyValueKnownNonZero(I.getOperand(1), *this, I))
+    return replaceOperand(I, 1, V);
 
   // Handle cases involving: rem X, (select Cond, Y, Z)
   if (simplifyDivRemOfSelectWithZeroOp(I))
