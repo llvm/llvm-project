@@ -3671,6 +3671,11 @@ Value *InstCombiner::foldUnsignedMultiplicationOverflowCheck(ICmpInst &I) {
   if (NeedNegation) // This technically increases instruction count.
     Res = Builder.CreateNot(Res, "umul.not.ov");
 
+  // If we replaced the mul, erase it. Do this after all uses of Builder,
+  // as the mul is used as insertion point.
+  if (MulHadOtherUses)
+    eraseInstFromFunction(*Mul);
+
   return Res;
 }
 
