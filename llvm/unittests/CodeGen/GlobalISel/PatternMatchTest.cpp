@@ -137,6 +137,14 @@ TEST_F(AArch64GISelMITest, MatchBinaryOp) {
   EXPECT_TRUE(match);
   EXPECT_EQ(Src0, Copies[0]);
   EXPECT_EQ(Src1, TruncCopy1.getReg(0));
+
+  // Match shl, and make sure a different shift amount type works.
+  auto Shl = B.buildShl(s64, Copies[0], TruncCopy1);
+  match = mi_match(Shl.getReg(0), *MRI,
+                   m_GShl(m_Reg(Src0), m_Reg(Src1)));
+  EXPECT_TRUE(match);
+  EXPECT_EQ(Src0, Copies[0]);
+  EXPECT_EQ(Src1, TruncCopy1.getReg(0));
 }
 
 TEST_F(AArch64GISelMITest, MatchICmp) {
