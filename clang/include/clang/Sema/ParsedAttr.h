@@ -67,8 +67,8 @@ struct ParsedAttrInfo {
   };
   ArrayRef<Spelling> Spellings;
 
-  constexpr ParsedAttrInfo(AttributeCommonInfo::Kind AttrKind =
-                               AttributeCommonInfo::NoSemaHandlerAttribute)
+  ParsedAttrInfo(AttributeCommonInfo::Kind AttrKind =
+                     AttributeCommonInfo::NoSemaHandlerAttribute)
       : AttrKind(AttrKind), NumArgs(0), OptArgs(0), HasCustomParsing(0),
         IsTargetSpecific(0), IsType(0), IsStmt(0), IsKnownToGCC(0),
         IsSupportedByPragmaAttribute(0) {}
