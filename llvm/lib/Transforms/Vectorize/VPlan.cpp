@@ -715,8 +715,7 @@ void VPlanPrinter::printAsIngredient(raw_ostream &O, Value *V) {
 void VPWidenRecipe::print(raw_ostream &O, const Twine &Indent,
                           VPSlotTracker &SlotTracker) const {
   O << " +\n" << Indent << "\"WIDEN\\l\"";
-  for (auto &Instr : make_range(Begin, End))
-    O << " +\n" << Indent << "\"  " << VPlanIngredient(&Instr) << "\\l\"";
+  O << "\"  " << VPlanIngredient(&Ingredient) << "\\l\"";
 }
 
 void VPWidenIntOrFpInductionRecipe::print(raw_ostream &O, const Twine &Indent,

@@ -6976,21 +6976,9 @@ bool VPRecipeBuilder::tryToWiden(Instruction *I, VPBasicBlock *VPBB,
 
   if (!LoopVectorizationPlanner::getDecisionAndClampRange(willWiden, Range))
     return false;
-  // If this ingredient's recipe is to be recorded, keep its recipe a singleton
-  // to avoid having to split recipes later.
-  bool IsSingleton = Ingredient2Recipe.count(I);
 
   // Success: widen this instruction.
-
-  // Use the default widening recipe. We optimize the common case where
-  // consecutive instructions can be represented by a single recipe.
-  if (!IsSingleton && !VPBB->empty() && LastExtensibleRecipe == &VPBB->back() &&
-      LastExtensibleRecipe->appendInstruction(I))
-    return true;
-
-  VPWidenRecipe *WidenRecipe = new VPWidenRecipe(I);
-  if (!IsSingleton)
-    LastExtensibleRecipe = WidenRecipe;
+  VPWidenRecipe *WidenRecipe = new VPWidenRecipe(*I);
   setRecipe(I, WidenRecipe);
   VPBB->appendRecipe(WidenRecipe);
   return true;
@@ -7385,8 +7373,7 @@ void VPInterleaveRecipe::print(raw_ostream &O, const Twine &Indent,
 }
 
 void VPWidenRecipe::execute(VPTransformState &State) {
-  for (auto &Instr : make_range(Begin, End))
-    State.ILV->widenInstruction(Instr);
+  State.ILV->widenInstruction(Ingredient);
 }
 
 void VPWidenGEPRecipe::execute(VPTransformState &State) {
