@@ -261,8 +261,11 @@ static bool runImpl(Function &F, const TargetTransformInfo &TTI,
     // use->defs, so we're more likely to succeed by starting from the bottom.
     // TODO: It could be more efficient to remove dead instructions
     //       iteratively in this loop rather than waiting until the end.
-    for (Instruction &I : make_range(BB.rbegin(), BB.rend()))
+    for (Instruction &I : make_range(BB.rbegin(), BB.rend())) {
+      if (isa<DbgInfoIntrinsic>(I))
+        continue;
       MadeChange |= foldExtractExtract(I, TTI);
+    }
   }
 
   // We're done with transforms, so remove dead instructions.
