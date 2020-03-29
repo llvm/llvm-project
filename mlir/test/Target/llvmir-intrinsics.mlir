@@ -27,6 +27,15 @@ llvm.func @exp_test(%arg0: !llvm.float, %arg1: !llvm<"<8 x float>">) {
   llvm.return
 }
 
+// CHECK-LABEL: @exp2_test
+llvm.func @exp2_test(%arg0: !llvm.float, %arg1: !llvm<"<8 x float>">) {
+  // CHECK: call float @llvm.exp2.f32
+  "llvm.intr.exp2"(%arg0) : (!llvm.float) -> !llvm.float
+  // CHECK: call <8 x float> @llvm.exp2.v8f32
+  "llvm.intr.exp2"(%arg1) : (!llvm<"<8 x float>">) -> !llvm<"<8 x float>">
+  llvm.return
+}
+
 // CHECK-LABEL: @log_test
 llvm.func @log_test(%arg0: !llvm.float, %arg1: !llvm<"<8 x float>">) {
   // CHECK: call float @llvm.log.f32
