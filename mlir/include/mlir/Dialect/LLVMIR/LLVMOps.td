@@ -771,6 +771,7 @@ class LLVM_TernarySameArgsIntrinsicOp<string func, list<OpTrait> traits = []> :
 def LLVM_CopySignOp : LLVM_BinarySameArgsIntrinsicOp<"copysign">;
 def LLVM_CosOp : LLVM_UnaryIntrinsicOp<"cos">;
 def LLVM_ExpOp : LLVM_UnaryIntrinsicOp<"exp">;
+def LLVM_Exp2Op : LLVM_UnaryIntrinsicOp<"exp2">;
 def LLVM_FAbsOp : LLVM_UnaryIntrinsicOp<"fabs">;
 def LLVM_FCeilOp : LLVM_UnaryIntrinsicOp<"ceil">;
 def LLVM_FMAOp : LLVM_TernarySameArgsIntrinsicOp<"fma">;
