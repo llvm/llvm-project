@@ -372,7 +372,7 @@ bool X86PartialReduction::trySADReplacement(Value *Op, BinaryOperator *Add) {
   unsigned Stages = Log2_32(NumSplits);
   for (unsigned s = Stages; s > 0; --s) {
     unsigned NumConcatElts = Ops[0]->getType()->getVectorNumElements() * 2;
-    for (unsigned i = 0; i != 1 << (s - 1); ++i) {
+    for (unsigned i = 0; i != 1U << (s - 1); ++i) {
       SmallVector<uint32_t, 64> ConcatMask(NumConcatElts);
       std::iota(ConcatMask.begin(), ConcatMask.end(), 0);
       Ops[i] = Builder.CreateShuffleVector(Ops[i*2], Ops[i*2+1], ConcatMask);
