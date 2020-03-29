@@ -33963,9 +33963,24 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
 
   // Handle 128-bit lane shuffles of 256-bit vectors.
   if (RootVT.is256BitVector() && NumBaseMaskElts == 2) {
+    MVT ShuffleVT = (FloatDomain ? MVT::v4f64 : MVT::v4i64);
+
+    // If the upper half is zeroable, then an extract+insert is more optimal
+    // than using X86ISD::VPERM2X128. The insertion is free, even if it has to
+    // zero the upper half.
+    if (isUndefOrZero(BaseMask[1])) {
+      if (Depth == 0 && Root.getOpcode() == ISD::INSERT_SUBVECTOR)
+        return SDValue(); // Nothing to do!
+      assert(isInRange(BaseMask[0], 0, 2) && "Unexpected lane shuffle");
+      Res = DAG.getBitcast(ShuffleVT, V1);
+      Res = extract128BitVector(Res, BaseMask[0] * 2, DAG, DL);
+      Res = widenSubVector(Res, BaseMask[1] == SM_SentinelZero, Subtarget, DAG,
+                           DL, 256);
+      return DAG.getBitcast(RootVT, Res);
+    }
+
     if (Depth == 0 && Root.getOpcode() == X86ISD::VPERM2X128)
       return SDValue(); // Nothing to do!
-    MVT ShuffleVT = (FloatDomain ? MVT::v4f64 : MVT::v4i64);
 
     // If we have AVX2, prefer to use VPERMQ/VPERMPD for unary shuffles unless
     // we need to use the zeroing feature.
@@ -46588,7 +46603,8 @@ static SDValue combineInsertSubvector(SDNode *N, SelectionDAG &DAG,
   // if the insert or extract can be represented with a subregister operation.
   if (SubVec.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
       SubVec.getOperand(0).getSimpleValueType() == OpVT &&
-      (IdxVal != 0 || !Vec.isUndef())) {
+      (IdxVal != 0 ||
+       !(Vec.isUndef() || ISD::isBuildVectorAllZeros(Vec.getNode())))) {
     int ExtIdxVal = SubVec.getConstantOperandVal(1);
     if (ExtIdxVal != 0) {
       int VecNumElts = OpVT.getVectorNumElements();
