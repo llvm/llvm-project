@@ -1975,8 +1975,6 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     if (DI == -1) {
       // All the GEPs feeding the PHI are identical. Clone one down into our
       // BB so that it can be merged with the current GEP.
-      GEP.getParent()->getInstList().insert(
-          GEP.getParent()->getFirstInsertionPt(), NewGEP);
     } else {
       // All the GEPs feeding the PHI differ at a single offset. Clone a GEP
       // into the current block so it can be merged, and create a new PHI to
@@ -1994,11 +1992,10 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
                            PN->getIncomingBlock(I));
 
       NewGEP->setOperand(DI, NewPN);
-      GEP.getParent()->getInstList().insert(
-          GEP.getParent()->getFirstInsertionPt(), NewGEP);
-      NewGEP->setOperand(DI, NewPN);
     }
 
+    GEP.getParent()->getInstList().insert(
+        GEP.getParent()->getFirstInsertionPt(), NewGEP);
     GEP.setOperand(0, NewGEP);
     PtrOp = NewGEP;
   }
