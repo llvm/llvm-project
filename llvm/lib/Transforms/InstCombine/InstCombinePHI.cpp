@@ -1203,7 +1203,7 @@ Instruction *InstCombiner::visitPHINode(PHINode &PN) {
             NonZeroConst = GetAnyNonZeroConstInt(PN);
 
           if (NonZeroConst != VA) {
-            PN.setIncomingValue(i, NonZeroConst);
+            replaceOperand(PN, i, NonZeroConst);
             MadeChange = true;
           }
         }
