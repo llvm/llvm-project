@@ -311,7 +311,7 @@ with NVCC from a textual representation. While this was a pragmatic
 short-term solution it made it hard to perform low-level rewrites that
 would have helped with register reuse in the ***compute-bound regime***.
 - The same reliance on emitting CUDA code made it difficult to
-create cost models when time came. This made it artifically harder to
+create cost models when time came. This made it artificially harder to
 prune out bad solutions than necessary. This resulted in excessive
 runtime evaluation, as reported in the paper [Machine Learning Systems
 are Stuck in a Rut](https://dl.acm.org/doi/10.1145/3317550.3321441).
