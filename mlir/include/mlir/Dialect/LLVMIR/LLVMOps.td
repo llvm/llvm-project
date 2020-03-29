@@ -865,7 +865,7 @@ def LLVM_MatrixMultiplyOp
 
 /// Create a llvm.matrix.transpose call, transposing a `rows` x `columns` 2-D
 /// `matrix`, as specified in the LLVM MatrixBuilder.
-def LLVM_MatrixTranposeOp
+def LLVM_MatrixTransposeOp
     : LLVM_OneResultOp<"intr.matrix.transpose">,
       Arguments<(ins LLVM_Type:$matrix, I32Attr:$rows, I32Attr:$columns)> {
   string llvmBuilder = [{

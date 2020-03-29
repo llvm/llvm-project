@@ -443,7 +443,7 @@ def GPU_ReturnOp : GPU_Op<"return", [HasParent<"GPUFuncOp">, NoSideEffect,
   let description = [{
     A terminator operation for regions that appear in the body of  `gpu.func`
     functions. The operands to the `gpu.return` are the result values returned
-    by an incovation of the `gpu.func`.
+    by an invocation of the `gpu.func`.
   }];
 
   let builders = [OpBuilder<"Builder *builder, OperationState &result", " // empty">];

@@ -5,7 +5,7 @@
 // writing a local test source. We filter out platform-specific intrinsic
 // includes from the main file to avoid unnecessary dependencies and decrease
 // the test cost. The command-line flags further ensure a specific intrinsic is
-// processed and we only check the ouptut below.
+// processed and we only check the output below.
 // We also verify emission of type specialization for overloadable intrinsics.
 //
 // RUN: cat %S/../../../llvm/include/llvm/IR/Intrinsics.td \

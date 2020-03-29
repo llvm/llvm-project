@@ -126,7 +126,7 @@ def quant_ConstFakeQuant : quant_Op<"const_fake_quant",
     Given a const min, max, num_bits and narrow_range attribute, applies the
     same uniform quantization simulation as is done by the TensorFlow
     fake_quant_with_min_max_args op. See the fakeQuantAttrsToType() utility
-    method and the quant-convert-simulated-quantization pass for futher details.
+    method and the quant-convert-simulated-quantization pass for further details.
   }];
 
   let arguments = (ins
@@ -155,7 +155,7 @@ def quant_ConstFakeQuantPerAxis : quant_Op<"const_fake_quant_per_axis",
     Given a const min, max, num_bits and narrow_range attribute, applies the
     same per axis uniform quantization simulation as is done by the TensorFlow
     fake_quant_with_min_max_vars_per_channel op. See the fakeQuantAttrsToType()
-    utility method and the quant-convert-simulated-quantization pass for futher
+    utility method and the quant-convert-simulated-quantization pass for further
     details.
   }];
 

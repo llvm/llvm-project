@@ -1286,7 +1286,7 @@ def Vector_TransposeOp :
     the permutation of ranks in the n-sized integer array attribute.
     In the operation
     ```mlir
-      %1 = vector.tranpose %0, [i_1, .., i_n]
+      %1 = vector.transpose %0, [i_1, .., i_n]
         : vector<d_1 x .. x d_n x f32>
         to vector<d_trans[0] x .. x d_trans[n-1] x f32>
     ```
@@ -1294,7 +1294,7 @@ def Vector_TransposeOp :
 
     Example:
     ```mlir
-    %1 = vector.tranpose %0, [1, 0] : vector<2x3xf32> to vector<3x2xf32>
+    %1 = vector.transpose %0, [1, 0] : vector<2x3xf32> to vector<3x2xf32>
 
      [ [a, b, c],       [ [a, d],
        [d, e, f] ]  ->    [b, e],

@@ -394,7 +394,7 @@ struct MemRefDescriptor {
   T *aligned;
   intptr_t offset;
   intptr_t sizes[N];
-  intptr_t stides[N];
+  intptr_t strides[N];
 };
 ```
 
