@@ -11914,11 +11914,11 @@ static SDValue lowerShuffleAsBitRotate(const SDLoc &DL, MVT VT, SDValue V1,
   return DAG.getBitcast(VT, Rot);
 }
 
-/// Try to lower a vector shuffle as a byte rotation.
+/// Try to match a vector shuffle as an element rotation.
 ///
 /// This is used for support PALIGNR for SSSE3 or VALIGND/Q for AVX512.
-static int matchShuffleAsByteRotate(SDValue &V1, SDValue &V2,
-                                    ArrayRef<int> Mask) {
+static int matchShuffleAsElementRotate(SDValue &V1, SDValue &V2,
+                                       ArrayRef<int> Mask) {
   int NumElts = Mask.size();
 
   // We need to detect various ways of spelling a rotation:
@@ -12013,7 +12013,7 @@ static int matchShuffleAsByteRotate(MVT VT, SDValue &V1, SDValue &V2,
   if (!is128BitLaneRepeatedShuffleMask(VT, Mask, RepeatedMask))
     return -1;
 
-  int Rotation = matchShuffleAsByteRotate(V1, V2, RepeatedMask);
+  int Rotation = matchShuffleAsElementRotate(V1, V2, RepeatedMask);
   if (Rotation <= 0)
     return -1;
 
@@ -12093,7 +12093,7 @@ static SDValue lowerShuffleAsVALIGN(const SDLoc &DL, MVT VT, SDValue V1,
          && "VLX required for 128/256-bit vectors");
 
   SDValue Lo = V1, Hi = V2;
-  int Rotation = matchShuffleAsByteRotate(Lo, Hi, Mask);
+  int Rotation = matchShuffleAsElementRotate(Lo, Hi, Mask);
   if (Rotation <= 0)
     return SDValue();
 
