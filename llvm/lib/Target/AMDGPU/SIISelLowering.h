@@ -107,7 +107,7 @@ private:
 
   /// Converts \p Op, which must be of floating point type, to the
   /// floating point type \p VT, by either extending or truncating it.
-  SDValue getFPExtOrFPTrunc(SelectionDAG &DAG,
+  SDValue getFPExtOrFPRound(SelectionDAG &DAG,
                             SDValue Op,
                             const SDLoc &DL,
                             EVT VT) const;
