@@ -3863,7 +3863,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
     OS << "    std::string Info;\n";
     OS << "    if (!getParser().getTargetParser().\n";
     OS << "        getTargetOptions().MCNoDeprecatedWarn &&\n";
-    OS << "        MII.get(Inst.getOpcode()).getDeprecatedInfo(Inst, getSTI(), Info)) {\n";
+    OS << "        MII.getDeprecatedInfo(Inst, getSTI(), Info)) {\n";
     OS << "      SMLoc Loc = ((" << Target.getName()
        << "Operand&)*Operands[0]).getStartLoc();\n";
     OS << "      getParser().Warning(Loc, Info, None);\n";
