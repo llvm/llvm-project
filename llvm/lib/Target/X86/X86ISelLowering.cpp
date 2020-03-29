@@ -4752,6 +4752,7 @@ static bool isTargetShuffle(unsigned Opcode) {
   case X86ISD::INSERTPS:
   case X86ISD::EXTRQI:
   case X86ISD::INSERTQI:
+  case X86ISD::VALIGN:
   case X86ISD::PALIGNR:
   case X86ISD::VSHLDQ:
   case X86ISD::VSRLDQ:
@@ -6731,6 +6732,17 @@ static bool getTargetShuffleMask(SDNode *N, MVT VT, bool AllowSentinelZero,
     assert(N->getOperand(1).getValueType() == VT && "Unexpected value type");
     DecodeMOVLHPSMask(NumElems, Mask);
     IsUnary = IsFakeUnary = N->getOperand(0) == N->getOperand(1);
+    break;
+  case X86ISD::VALIGN:
+    assert((VT.getScalarType() == MVT::i32 || VT.getScalarType() == MVT::i64) &&
+           "Only 32-bit and 64-bit elements are supported!");
+    assert(N->getOperand(0).getValueType() == VT && "Unexpected value type");
+    assert(N->getOperand(1).getValueType() == VT && "Unexpected value type");
+    ImmN = N->getConstantOperandVal(N->getNumOperands() - 1);
+    DecodeVALIGNMask(NumElems, ImmN, Mask);
+    IsUnary = IsFakeUnary = N->getOperand(0) == N->getOperand(1);
+    Ops.push_back(N->getOperand(1));
+    Ops.push_back(N->getOperand(0));
     break;
   case X86ISD::PALIGNR:
     assert(VT.getScalarType() == MVT::i8 && "Byte vector expected");
@@ -47251,6 +47263,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::INSERTPS:
   case X86ISD::EXTRQI:
   case X86ISD::INSERTQI:
+  case X86ISD::VALIGN:
   case X86ISD::PALIGNR:
   case X86ISD::VSHLDQ:
   case X86ISD::VSRLDQ:
