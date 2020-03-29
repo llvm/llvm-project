@@ -4570,7 +4570,7 @@ SDValue SITargetLowering::lowerFMINNUM_FMAXNUM(SDValue Op,
   const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
   bool IsIEEEMode = Info->getMode().IEEE;
 
-  // FIXME: Assert during eslection that this is only selected for
+  // FIXME: Assert during selection that this is only selected for
   // ieee_mode. Currently a combine can produce the ieee version for non-ieee
   // mode functions, but this happens to be OK since it's only done in cases
   // where there is known no sNaN.
