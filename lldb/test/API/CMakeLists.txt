@@ -31,12 +31,12 @@ option(LLDB_TEST_SWIFT "Use in-tree swift when testing lldb" On)
 
 if(LLDB_TEST_SWIFT)
   set(LLDB_SWIFTC ${SWIFT_BINARY_DIR}/bin/swiftc CACHE STRING "Path to swift compiler")
-  set(LLDB_SWIFT_LIBS ${SWIFT_LIBRARY_DIR}/swift/macosx CACHE STRING "Path to swift libraries")
+  set(LLDB_SWIFT_LIBS ${SWIFT_LIBRARY_DIR}/swift CACHE STRING "Path to swift libraries")
   set(SWIFT_TEST_ARGS
     --swift-compiler ${LLDB_SWIFTC}
-    --inferior-env "DYLD_LIBRARY_PATH=\\\"${LLDB_SWIFT_LIBS}\\\""
-    --inferior-env "LD_LIBRARY_PATH=\\\"${LLDB_SWIFT_LIBS}\\\""
-    --inferior-env "SIMCTL_CHILD_DYLD_LIBRARY_PATH=\\\"${LLDB_SWIFT_LIBS}\\\""
+    --inferior-env "DYLD_LIBRARY_PATH=\\\"${LLDB_SWIFT_LIBS}/macosx\\\""
+    --inferior-env "LD_LIBRARY_PATH=\\\"${LLDB_SWIFT_LIBS}/${CMAKE_SYSTEM_PROCESSOR}\\\""
+    --inferior-env "SIMCTL_CHILD_DYLD_LIBRARY_PATH=\\\"${LLDB_SWIFT_LIBS}/macosx\\\""
   )
 endif()
 # END - Swift Mods
