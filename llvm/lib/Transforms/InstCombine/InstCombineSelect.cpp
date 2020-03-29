@@ -2057,7 +2057,7 @@ static Instruction *foldSelectCmpBitcasts(SelectInst &Sel,
 ///   %1 = extractvalue { i64, i1 } %0, 0
 ///   ret i64 %1
 ///
-static Instruction *foldSelectCmpXchg(SelectInst &SI) {
+static Value *foldSelectCmpXchg(SelectInst &SI) {
   // A helper that determines if V is an extractvalue instruction whose
   // aggregate operand is a cmpxchg instruction and whose single index is equal
   // to I. If such conditions are true, the helper returns the cmpxchg
@@ -2089,19 +2089,15 @@ static Instruction *foldSelectCmpXchg(SelectInst &SI) {
   // value of the same cmpxchg used by the condition, and the false value is the
   // cmpxchg instruction's compare operand.
   if (auto *X = isExtractFromCmpXchg(SI.getTrueValue(), 0))
-    if (X == CmpXchg && X->getCompareOperand() == SI.getFalseValue()) {
-      SI.setTrueValue(SI.getFalseValue());
-      return &SI;
-    }
+    if (X == CmpXchg && X->getCompareOperand() == SI.getFalseValue())
+      return SI.getFalseValue();
 
   // Check the false value case: The false value of the select is the returned
   // value of the same cmpxchg used by the condition, and the true value is the
   // cmpxchg instruction's compare operand.
   if (auto *X = isExtractFromCmpXchg(SI.getFalseValue(), 0))
-    if (X == CmpXchg && X->getCompareOperand() == SI.getTrueValue()) {
-      SI.setTrueValue(SI.getFalseValue());
-      return &SI;
-    }
+    if (X == CmpXchg && X->getCompareOperand() == SI.getTrueValue())
+      return SI.getFalseValue();
 
   return nullptr;
 }
@@ -2816,8 +2812,8 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
     return BitCastSel;
 
   // Simplify selects that test the returned flag of cmpxchg instructions.
-  if (Instruction *Select = foldSelectCmpXchg(SI))
-    return Select;
+  if (Value *V = foldSelectCmpXchg(SI))
+    return replaceInstUsesWith(SI, V);
 
   if (Instruction *Select = foldSelectBinOpIdentity(SI, TLI, *this))
     return Select;
