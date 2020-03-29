@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -split-input-file -test-constant-fold | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect %s -split-input-file -test-constant-fold | FileCheck %s
 
 // -----
 

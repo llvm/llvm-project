@@ -47,6 +47,7 @@ static MLIRContext &globalContext() {
   }();
   (void)init_once;
   static thread_local MLIRContext context;
+  context.allowUnregisteredDialects();
   return context;
 }
 

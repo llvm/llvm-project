@@ -1,6 +1,6 @@
-// RUN: mlir-opt %s -split-input-file  -affine-loop-tile -affine-tile-size=32 | FileCheck %s
-// RUN: mlir-opt %s -split-input-file -affine-loop-tile -affine-tile-cache-size=512 | FileCheck %s --check-prefix=MODEL
-// RUN: mlir-opt %s -split-input-file -affine-loop-tile -affine-tile-size=32 -affine-tile-separate | FileCheck %s --check-prefix=SEPARATE
+// RUN: mlir-opt -allow-unregistered-dialect %s -split-input-file  -affine-loop-tile -affine-tile-size=32 | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect %s -split-input-file -affine-loop-tile -affine-tile-cache-size=512 | FileCheck %s --check-prefix=MODEL
+// RUN: mlir-opt -allow-unregistered-dialect %s -split-input-file -affine-loop-tile -affine-tile-size=32 -affine-tile-separate | FileCheck %s --check-prefix=SEPARATE
 
 // -----
 

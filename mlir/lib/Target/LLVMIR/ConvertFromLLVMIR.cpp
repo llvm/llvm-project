@@ -446,7 +446,7 @@ Value Importer::processValue(llvm::Value *value) {
   // We don't expect to see instructions in dominator order. If we haven't seen
   // this instruction yet, create an unknown op and remap it later.
   if (isa<llvm::Instruction>(value)) {
-    OperationState state(UnknownLoc::get(context), "unknown");
+    OperationState state(UnknownLoc::get(context), "llvm.unknown");
     LLVMType type = processType(value->getType());
     if (!type)
       return nullptr;

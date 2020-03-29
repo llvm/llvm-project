@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -split-input-file | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect %s -split-input-file | FileCheck %s
 
 // -----
 // All per-layer params specified:

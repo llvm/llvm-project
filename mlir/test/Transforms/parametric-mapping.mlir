@@ -1,4 +1,4 @@
-// RUN: mlir-opt -test-mapping-to-processing-elements %s | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect -test-mapping-to-processing-elements %s | FileCheck %s
 
 // CHECK-LABEL: @map1d
 //       CHECK: (%[[lb:.*]]: index, %[[ub:.*]]: index, %[[step:.*]]: index) {

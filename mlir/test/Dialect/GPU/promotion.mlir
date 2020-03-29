@@ -1,4 +1,4 @@
-// RUN: mlir-opt -test-gpu-memory-promotion -split-input-file %s | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect -test-gpu-memory-promotion -split-input-file %s | FileCheck %s
 
 module @foo attributes {gpu.kernel_module} {
   // Verify that the attribution was indeed introduced
