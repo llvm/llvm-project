@@ -1,5 +1,5 @@
 # LLDB init file for the LIT tests.
-env DYLD_LIBRARY_PATH='@LLDB_SWIFT_LIBS@' LD_LIBRARY_PATH='@LLDB_SWIFT_LIBS@' SIMCTL_CHILD_DYLD_LIBRARY_PATH='@LLDB_SWIFT_LIBS@'
+env DYLD_LIBRARY_PATH='@LLDB_SWIFT_LIBS@/macosx' LD_LIBRARY_PATH='@LLDB_SWIFT_LIBS@/@CMAKE_SYSTEM_PROCESSOR@' SIMCTL_CHILD_DYLD_LIBRARY_PATH='@LLDB_SWIFT_LIBS@/macosx'
 settings set symbols.enable-external-lookup false
 settings set plugin.process.gdb-remote.packet-timeout 60
 settings set interpreter.echo-comment-commands false
