@@ -1330,6 +1330,7 @@ static Instruction *processUGT_ADDCST_ADD(ICmpInst &I, Value *A, Value *B,
   // The inner add was the result of the narrow add, zero extended to the
   // wider type.  Replace it with the result computed by the intrinsic.
   IC.replaceInstUsesWith(*OrigAdd, ZExt);
+  IC.eraseInstFromFunction(*OrigAdd);
 
   // The original icmp gets replaced with the overflow value.
   return ExtractValueInst::Create(Call, 1, "sadd.overflow");
