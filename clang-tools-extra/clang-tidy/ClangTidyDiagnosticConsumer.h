@@ -216,15 +216,12 @@ private:
 /// This does not handle suppression of notes following a suppressed diagnostic;
 /// that is left to the caller is it requires maintaining state in between calls
 /// to this function.
-/// The `CheckMacroExpansion` parameter determines whether the function should
-/// handle the case where the diagnostic is inside a macro expansion. A degree
-/// of control over this is needed because handling this case can require
-/// examining source files other than the one in which the diagnostic is
-/// located, and in some use cases we cannot rely on such other files being
-/// mapped in the SourceMapper.
+/// If `AllowIO` is false, the function does not attempt to read source files
+/// from disk which are not already mapped into memory; such files are treated
+/// as not containing a suppression comment.
 bool shouldSuppressDiagnostic(DiagnosticsEngine::Level DiagLevel,
                               const Diagnostic &Info, ClangTidyContext &Context,
-                              bool CheckMacroExpansion = true);
+                              bool AllowIO = true);
 
 /// A diagnostic consumer that turns each \c Diagnostic into a
 /// \c SourceManager-independent \c ClangTidyError.
