@@ -378,6 +378,10 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setOnlyReadsMemory(F, 1);
     return Changed;
+  case LibFunc_aligned_alloc:
+    Changed |= setDoesNotThrow(F);
+    Changed |= setRetDoesNotAlias(F);
+    return Changed;
   case LibFunc_bcopy:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 0);
