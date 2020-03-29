@@ -5435,6 +5435,11 @@ static bool isAnyInRange(ArrayRef<int> Mask, int Low, int Hi) {
   return llvm::any_of(Mask, [Low, Hi](int M) { return isInRange(M, Low, Hi); });
 }
 
+/// Return true if the value of any element in Mask is the zero sentinel value.
+static bool isAnyZero(ArrayRef<int> Mask) {
+  return llvm::any_of(Mask, [](int M) { return M == SM_SentinelZero; });
+}
+
 /// Return true if Val is undef or if its value falls within the
 /// specified range (L, H].
 static bool isUndefOrInRange(int Val, int Low, int Hi) {
@@ -34231,8 +34236,7 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
   int VariableShuffleDepth = Subtarget.hasFastVariableShuffle() ? 1 : 2;
   AllowVariableMask &= (Depth >= VariableShuffleDepth) || HasVariableMask;
 
-  bool MaskContainsZeros =
-      any_of(Mask, [](int M) { return M == SM_SentinelZero; });
+  bool MaskContainsZeros = isAnyZero(Mask);
 
   if (is128BitLaneCrossingShuffleMask(MaskVT, Mask)) {
     // If we have a single input lane-crossing shuffle then lower to VPERMV.
