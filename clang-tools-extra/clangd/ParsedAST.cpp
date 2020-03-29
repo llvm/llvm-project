@@ -310,14 +310,13 @@ ParsedAST::build(llvm::StringRef Version,
           // Check for suppression comment. Skip the check for diagnostics not
           // in the main file, because we don't want that function to query the
           // source buffer for preamble files. For the same reason, we ask
-          // shouldSuppressDiagnostic not to follow macro expansions, since
-          // those might take us into a preamble file as well.
+          // shouldSuppressDiagnostic to avoid I/O.
           bool IsInsideMainFile =
               Info.hasSourceManager() &&
               isInsideMainFile(Info.getLocation(), Info.getSourceManager());
-          if (IsInsideMainFile && tidy::shouldSuppressDiagnostic(
-                                      DiagLevel, Info, *CTContext,
-                                      /* CheckMacroExpansion = */ false)) {
+          if (IsInsideMainFile &&
+              tidy::shouldSuppressDiagnostic(DiagLevel, Info, *CTContext,
+                                             /*AllowIO=*/false)) {
             return DiagnosticsEngine::Ignored;
           }
         }
