@@ -1194,15 +1194,22 @@ Instruction *InstCombiner::visitPHINode(PHINode &PN) {
     if (CmpInst && isa<IntegerType>(PN.getType()) && CmpInst->isEquality() &&
         match(CmpInst->getOperand(1), m_Zero())) {
       ConstantInt *NonZeroConst = nullptr;
+      bool MadeChange = false;
       for (unsigned i = 0, e = PN.getNumIncomingValues(); i != e; ++i) {
         Instruction *CtxI = PN.getIncomingBlock(i)->getTerminator();
         Value *VA = PN.getIncomingValue(i);
         if (isKnownNonZero(VA, DL, 0, &AC, CtxI, &DT)) {
           if (!NonZeroConst)
             NonZeroConst = GetAnyNonZeroConstInt(PN);
-          PN.setIncomingValue(i, NonZeroConst);
+
+          if (NonZeroConst != VA) {
+            PN.setIncomingValue(i, NonZeroConst);
+            MadeChange = true;
+          }
         }
       }
+      if (MadeChange)
+        return &PN;
     }
   }
 
