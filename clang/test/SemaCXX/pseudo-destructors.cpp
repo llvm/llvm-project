@@ -169,4 +169,17 @@ namespace TwoPhaseLookup {
     void h3(N::G<int> *p) { p->~G<int>(); }
     void h4(N::G<int> *p) { f(p); }
   }
+
+  namespace TemplateNamesNonTemplate {
+    int A; // expected-note 2{{non-template here}}
+    template<typename> int B; // expected-note 2{{variable template 'B' declared here}} expected-warning {{extension}}
+    using C = int; // expected-note 2{{non-template here}}
+
+    template<typename T> void f1(int *p) { p->~A<int>(); } // expected-error {{'A' does not refer to a template}}
+    template<typename T> void f2(int *p) { p->~B<int>(); } // expected-error {{template name refers to non-type template 'B'}}
+    template<typename T> void f3(int *p) { p->~C<int>(); } // expected-error {{'C' does not refer to a template}}
+    template<typename T> void f4(int *p) { p->TemplateNamesNonTemplate::C::~A<int>(); } // expected-error {{'A' does not refer to a template}}
+    template<typename T> void f5(int *p) { p->TemplateNamesNonTemplate::C::~B<int>(); } // expected-error {{template name refers to non-type template 'TemplateNamesNonTemplate::B'}}
+    template<typename T> void f6(int *p) { p->TemplateNamesNonTemplate::C::~C<int>(); } // expected-error {{'C' does not refer to a template}}
+  }
 }
