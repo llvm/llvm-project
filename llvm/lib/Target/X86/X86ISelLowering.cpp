@@ -33964,7 +33964,29 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
     }
   }
 
-  // TODO - handle 128/256-bit lane shuffles of 512-bit vectors.
+  // Handle 128/256-bit lane shuffles of 512-bit vectors.
+  if (RootVT.is512BitVector() &&
+      (NumBaseMaskElts == 2 || NumBaseMaskElts == 4)) {
+    MVT ShuffleVT = (FloatDomain ? MVT::v8f64 : MVT::v8i64);
+
+    // If the upper subvectors are zeroable, then an extract+insert is more
+    // optimal than using X86ISD::SHUF128. The insertion is free, even if it has
+    // to zero the upper subvectors.
+    if (isUndefOrZeroInRange(BaseMask, 1, NumBaseMaskElts - 1)) {
+      if (Depth == 0 && Root.getOpcode() == ISD::INSERT_SUBVECTOR)
+        return SDValue(); // Nothing to do!
+      assert(isInRange(BaseMask[0], 0, NumBaseMaskElts) &&
+             "Unexpected lane shuffle");
+      Res = DAG.getBitcast(ShuffleVT, V1);
+      unsigned SubIdx = BaseMask[0] * (8 / NumBaseMaskElts);
+      bool UseZero = isAnyZero(BaseMask);
+      Res = extractSubVector(Res, SubIdx, DAG, DL, BaseMaskEltSizeInBits);
+      Res = widenSubVector(Res, UseZero, Subtarget, DAG, DL, RootSizeInBits);
+      return DAG.getBitcast(RootVT, Res);
+    }
+
+    // TODO - handle AVX512 cases with X86ISD::SHUF128.
+  }
 
   // Handle 128-bit lane shuffles of 256-bit vectors.
   if (RootVT.is256BitVector() && NumBaseMaskElts == 2) {
