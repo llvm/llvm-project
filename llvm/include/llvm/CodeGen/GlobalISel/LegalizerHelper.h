@@ -98,6 +98,13 @@ public:
   /// Expose LegalizerInfo so the clients can re-use.
   const LegalizerInfo &getLegalizerInfo() const { return LI; }
 
+  /// Cast the given value to an LLT::scalar with an equivalent size. Returns
+  /// the register to use if an instruction was inserted. Returns the original
+  /// register if no coercion was necessary.
+  //
+  // This may also fail and return Register() if there is no legal way to cast.
+  Register coerceToScalar(Register Val);
+
   /// Legalize a single operand \p OpIdx of the machine instruction \p MI as a
   /// Use by extending the operand's type to \p WideTy using the specified \p
   /// ExtOpcode for the extension instruction, and replacing the vreg of the

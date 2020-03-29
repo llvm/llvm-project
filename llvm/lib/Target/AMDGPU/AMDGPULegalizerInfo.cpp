@@ -1229,17 +1229,11 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     };
 
     auto &Builder = getActionDefinitionsBuilder(Op)
-      .lowerFor({{S16, V2S16}});
-
-    // FIXME: Hack until unmerge handled
-    if (Op == G_MERGE_VALUES) {
-      Builder.lowerIf([=](const LegalityQuery &Query) {
+      .lowerFor({{S16, V2S16}})
+      .lowerIf([=](const LegalityQuery &Query) {
           const LLT BigTy = Query.Types[BigTyIdx];
           return BigTy.getSizeInBits() == 32;
-        });
-    }
-
-    Builder
+        })
       // Try to widen to s16 first for small types.
       // TODO: Only do this on targets with legal s16 shifts
       .minScalarOrEltIf(narrowerThan(LitTyIdx, 16), LitTyIdx, S16)
